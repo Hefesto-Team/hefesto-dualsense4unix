@@ -361,6 +361,62 @@ if [[ "${1:-}" == "--sdp-cache-only" ]]; then
     exit 0
 fi
 
+# O-VIGIA-DO-RADIO-SO-TOCA-OS-CONTROLES-DO-HEFESTO-01 (09/10/2026): as vigias 2
+# e 2b pareavam e davam confiança a QUALQUER aparelho conectado, e três
+# acessórios BLE de outro dono receberam `Pair()` a cada tique (30 s cada, com a
+# trava do rádio na mão). A pergunta «isto é um controle?» é a mesma que o
+# produto faz em Python (`e_controle_pelo_info`, em memoria_dos_controles.py):
+# classe maior 0x05, sem os bits de teclado e apontador (0xC0), subclasse
+# joystick (1) ou gamepad (2); ou, só LE, aparência 0x03C3 / 0x03C4. Nenhum
+# endereço, nome ou modelo entra na conta, e sem classe nem aparência (ou com
+# valor que não se lê) a resposta é «não é controle»: o vigia não age no que não
+# sabe o que é.
+#: Texto -> inteiro em decimal, ou nada (rc 1). Aceita `0x...` e decimal puro
+#: (o `busctl` devolve decimal); zero à esquerda não vira octal.
+_inteiro_ou_nada() {
+    local v="${1:-}"
+    if [[ "${v}" =~ ^0[xX][0-9a-fA-F]{1,16}$ ]]; then
+        printf '%d' "$((v))"
+        return 0
+    fi
+    if [[ "${v}" =~ ^[0-9]{1,18}$ ]]; then
+        printf '%d' "$((10#${v}))"
+        return 0
+    fi
+    return 1
+}
+#: $1 classe, $2 aparência (decimal ou 0x..; vazio = não anunciou). rc 0 =
+#: controle de jogo; rc 1 = não é (ou não se sabe).
+_e_controle_pelo_anuncio() {
+    local c a
+    if c="$(_inteiro_ou_nada "${1:-}")"; then
+        if (( ((c >> 8) & 0x1F) == 0x05 && (c & 0xC0) == 0 )); then
+            case $(( (c >> 2) & 0x0F )) in
+                1|2) return 0 ;;
+            esac
+        fi
+    fi
+    if a="$(_inteiro_ou_nada "${2:-}")"; then
+        if (( a == 0x03C3 || a == 0x03C4 )); then
+            return 0
+        fi
+    fi
+    return 1
+}
+#: $1 = path D-Bus do device. O que ele anuncia, lido do BlueZ.
+_e_controle() {
+    _e_controle_pelo_anuncio "$(_dbus_device_prop "$1" Class)" "$(_dbus_device_prop "$1" Appearance)"
+}
+# --e-controle <classe> <aparência>: sai 0 se é controle e 1 se não é, sem rodar
+# vigia nenhuma e sem pegar a trava. Existe para a régua comparar a conta do
+# shell com a do Python.
+if [[ "${1:-}" == "--e-controle" ]]; then
+    if _e_controle_pelo_anuncio "${2:-}" "${3:-}"; then
+        exit 0
+    fi
+    exit 1
+fi
+
 # --so-a-trava <SEGUNDOS>: pega a trava como o tique pega, segura por
 # <SEGUNDOS> e sai. Existe para a régua provar que este watchdog e o daemon
 # disputam a MESMA trava, sem rodar vigia nenhuma.
@@ -440,6 +496,8 @@ systemctl is-active --quiet bluetooth.service || { log "bluetooth.service inativ
 # tempo, porque o defeito é do daemon, não do aparelho. Contar aparelhos
 # distintos separa as duas leituras sem inventar instrumento novo.
 DEVICE_PATHS="$(_dbus_device_paths)"
+# A vigia 1 conta TODO aparelho conectado, controle ou não, para adiar o restart:
+# derrubar a sessão de um aparelho de outro dono é pior que adiar.
 RECUSAS=0
 RECUSAS_ORFAS=0
 MACS_RECUSADOS=""
@@ -520,6 +578,9 @@ while IFS= read -r OBJ; do
     # scan seria autorizar quem nunca foi pareado.
     [[ "$(_dbus_device_prop "${OBJ}" Bonded)" == "true" ]] || continue
     [[ "$(_dbus_device_prop "${OBJ}" Trusted)" == "false" ]] || continue
+    # Só controle: o aparelho de outro dono não é assunto do journal do Hefesto
+    # (pula sem log). O deadlock acima é de controle sem trust.
+    _e_controle "${OBJ}" || continue
     MAC_TRUST="${OBJ##*dev_}"
     MAC_TRUST="${MAC_TRUST//_/:}"
     if busctl set-property org.bluez "${OBJ}" org.bluez.Device1 Trusted b true 2>/dev/null; then
@@ -550,6 +611,9 @@ while IFS= read -r OBJ; do
     # Bonded ausente na API (BlueZ < 5.65) => não dá para vigiar; pula.
     [[ -z "${BONDED}" ]] && continue
     if [[ "${BONDED}" == "false" ]]; then
+        # Só controle (sem log): Pair() num fone, teclado ou acessório BLE de
+        # outro dono segura a trava do rádio 30 s por aparelho, a cada boot.
+        _e_controle "${OBJ}" || continue
         STAMP="${STAMP_DIR}/promoted-${MAC//:/-}"
         if [[ -f "${STAMP}" ]]; then
             log "bond temporário persiste em ${MAC} (Paired=${PAIRED}, Bonded=false) — promoção já tentada neste boot; re-pair manual necessário (bluetoothctl remove + pair)"
