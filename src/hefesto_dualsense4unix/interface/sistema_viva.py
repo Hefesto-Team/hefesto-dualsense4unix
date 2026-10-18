@@ -154,6 +154,22 @@ def _exame() -> list[tuple[str, str]] | None:
         return None
 
 
+def _em_colunas(pacote: dict[str, Any]) -> list[list[dict[str, Any]]]:
+    """O Status e o exame em três colunas, pela conta do pacote da aba (a que o produto usa).
+
+    As linhas do Status que o campo dele leva (`LINHAS_DO_STATUS`) mais as do exame viram UMA
+    lista; `em_tres_colunas` reparte (8 viram 3, 3 e 2). Sem achados, o Status fica na
+    primeira coluna e o recado do exame vazio na seguinte, como no produto.
+    """
+    from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
+
+    status = [dict(x) for x in pacote["status"] if x.get("id") in a09.LINHAS_DO_STATUS]
+    achados = [dict(x) for x in pacote["exame"].get("linhas") or []]
+    if not achados:
+        return [status, [], []]
+    return [list(c) for c in a09.em_tres_colunas(status + achados)]
+
+
 #: O último `state_full` visto, para o exame poder usar o denominador honesto
 _ULTIMO_STATE: list[dict[str, Any] | None] = [None]
 
@@ -205,30 +221,34 @@ window.HEF = (function(){
 
   function achado(a){
     const d = document.createElement('div'); d.className = 'saude';
+    if(a.id) d.dataset.id = a.id;
     const s = document.createElement('span'); s.className = 'selo ' + a.cls;
     const sg = document.createElement('span'); sg.className = 'sg'; sg.textContent = a.g;
     s.appendChild(sg); s.appendChild(document.createTextNode(a.selo));
     const t = document.createElement('span'); t.className = 'txt';
     const dentro = document.createElement('span'); dentro.textContent = a.txt;
     t.appendChild(dentro);
+    if(a.dica) t.dataset.dica = a.dica;
     d.appendChild(s); d.appendChild(t);
     return d;
   }
 
-  // A LISTA DO EXAME É UM ENDEREÇO, NÃO OITO. O Python entrega a lista; a
-  // página a desenha nas duas colunas — e as duas continuam sendo
-  // `MEIO = len/2 + len%2`, que é o que o gerador faz.
-  function exame(e){
+  // O STATUS E O EXAME SÃO UMA LISTA SÓ, EM TRÊS COLUNAS. O Python entrega a conta
+  // pronta (`p.colunas`, de `em_tres_colunas` do pacote da aba: 8 linhas viram 3, 3 e
+  // 2): a primeira coluna vai ao campo do Status, as outras duas ao exame. A página
+  // só desenha; contar de novo aqui foi o que a deixou em duas metades.
+  function exame(p){
     let n = 0;
-    const caixa = end('exame-lista'); if(!caixa) return n;
+    const lista = end('status-lista'), caixa = end('exame-lista');
+    if(!lista || !caixa) return n;
     const cols = qa('.col-lista', caixa); if(cols.length !== 2) return n;
-    for(const c of cols) c.innerHTML = '';
-    const meio = Math.ceil(e.linhas.length / 2);
-    e.linhas.forEach((a,i)=>{ cols[i<meio?0:1].appendChild(achado(a)); n++; });
-    if(!e.linhas.length && e.vazio){
+    const alvo = [lista, cols[0], cols[1]];
+    for(const c of alvo) c.innerHTML = '';
+    p.colunas.forEach((col,i)=>{ for(const a of col){ alvo[i].appendChild(achado(a)); n++; } });
+    if(!p.exame.linhas.length && p.exame.vazio){
       const d = document.createElement('div');
       d.className = 'saude'; d.style.cssText = 'color:var(--fg)';
-      d.textContent = e.vazio; cols[0].appendChild(d); n++;
+      d.textContent = p.exame.vazio; cols[0].appendChild(d); n++;
     }
     return n;
   }
@@ -272,7 +292,7 @@ window.HEF = (function(){
         : sel.title);
     }
     n += txt(end('bateria-frase'), p.frase);
-    n += exame(p.exame);
+    n += exame(p);
     const reg = end('registro-texto');
     n += txt(reg, p.registro.txt) + dica(reg, p.registro.dica);
 
@@ -446,7 +466,9 @@ class Janela:
             ambiente=mecanismo,
             perfil=self._perfil_da_mesa(),
         )
-        self.ponte.dizer("HEF.pinta", aba_sistema.pacote(leitura))
+        pacote = aba_sistema.pacote(leitura)
+        pacote["colunas"] = _em_colunas(pacote)
+        self.ponte.dizer("HEF.pinta", pacote)
         self.valores.append(int((time.perf_counter() - t0) * 1_000_000))
         return True
 
