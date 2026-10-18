@@ -1311,6 +1311,35 @@ _NAO_E_PROMESSA: dict[str, str] = {
 }
 
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    # sai com: O-QUE-A-07-ANTIGA-FAZIA-SEM-TELA-VOLTA-OU-SAI-01
+    "integrations/lista_de_exclusao.py::adicionar": (
+        "18/10/2026 — pôr um jogo na lista de exclusão. O caminho se perde porque a aba "
+        "Experimental publicada nesse dia (D-1810-A-ABA-EXPERIMENTAL-SE-PUBLICA-COMO-FICOU) não "
+        "traz o cartão da aba Lançadores antiga que o chamava, e o gesto dele saiu do pacote "
+        "(`a07_lancadores`). Sai quando a O-QUE-A-07-ANTIGA-FAZIA-SEM-TELA-VOLTA-OU-SAI-01 "
+        "devolver o ato à tela ou apagar a função."
+    ),
+    "integrations/lista_de_exclusao.py::tirar_do_disco": (
+        "18/10/2026 — tirar do jogo o que a exclusão pôs no disco. O caminho se perde porque a "
+        "aba Experimental publicada nesse dia (D-1810-A-ABA-EXPERIMENTAL-SE-PUBLICA-COMO-FICOU) "
+        "não traz o cartão da aba Lançadores antiga que o chamava, e o gesto dele saiu do pacote "
+        "(`a07_lancadores`). Sai quando a O-QUE-A-07-ANTIGA-FAZIA-SEM-TELA-VOLTA-OU-SAI-01 "
+        "devolver o ato à tela ou apagar a função."
+    ),
+    "app/actions/launch_wrapper_dialog.py::remove_dismissed_appid": (
+        "18/10/2026 — o «voltar a perguntar» de um jogo dispensado. O caminho se perde porque a "
+        "aba Experimental publicada nesse dia (D-1810-A-ABA-EXPERIMENTAL-SE-PUBLICA-COMO-FICOU) "
+        "não traz o cartão da aba Lançadores antiga que o chamava, e o gesto dele saiu do pacote "
+        "(`a07_lancadores`). Sai quando a O-QUE-A-07-ANTIGA-FAZIA-SEM-TELA-VOLTA-OU-SAI-01 "
+        "devolver o ato à tela ou apagar a função."
+    ),
+    "app/actions/launch_wrapper_dialog.py::wrapper_dialog_decision": (
+        "18/10/2026 — o gatilho do lembrete do atalho no jogo aberto. O caminho se perde porque a "
+        "aba Experimental publicada nesse dia (D-1810-A-ABA-EXPERIMENTAL-SE-PUBLICA-COMO-FICOU) "
+        "não traz o cartão da aba Lançadores antiga que o chamava, e o gesto dele saiu do pacote "
+        "(`a07_lancadores`). Sai quando a O-QUE-A-07-ANTIGA-FAZIA-SEM-TELA-VOLTA-OU-SAI-01 "
+        "devolver o ato à tela ou apagar a função."
+    ),
     # sai com: AS-MARCAS-VIRAM-OS-ESTILOS-VISUAL-NOVEL-E-ADULTO-01
     "profiles/marcas_do_jogo.py::molde_dos_botoes": (
         "13/10/2026 — o molde da tabela de botões que a marca «Visual novel» pede com o "
