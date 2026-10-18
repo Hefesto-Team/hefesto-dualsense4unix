@@ -310,8 +310,18 @@ def test_a_dica_da_bateria_nao_conta_os_controles_da_cena() -> None:
     """A dica é estática na página publicada: ela não pode contar controles."""
     pagina = PUBLICADA.read_text(encoding="utf-8")
     assert not re.search(r"Vale para os \d+ controles", pagina)
-    assert ('<span data-dica="Vale para todos; cada controle pode ter o seu em Conexões">'
-            "Perfil global de bateria</span>") in pagina
+    # O-PERFIL-DE-BATERIA-POR-CONTROLE-QUE-NINGUEM-CHAMA-SAI-01 (17/10/2026): o gerador e o
+    # desenho já dizem «Vale para todos os controles»; a publicada guarda a velha até o
+    # `--publicar 09`.
+    frases = ("Vale para todos; cada controle pode ter o seu em Conexões",
+              "Vale para todos os controles")
+    assert any(f'<span data-dica="{f}">Perfil global de bateria</span>' in pagina for f in frases)
+    desenho = (RAIZ / "mockup/09-sistema.html").read_text(encoding="utf-8")
+    assert ('<span data-dica="Vale para todos os controles">'
+            "Perfil global de bateria</span>") in desenho
+    from hefesto_dualsense4unix.interface import aba09
+
+    assert aba09.DICA_DA_BATERIA == "Vale para todos os controles"
 
 
 def _faixa_do_status(pagina: str) -> str:

@@ -82,8 +82,13 @@ def test_a_sistema_diz_personalizado_e_a_relacao_com_o_cartao(arquivo: pathlib.P
     assert dicas == {"tudo_ligado": "Nada é limitado",
                      "bateria_longa": "Vibração em 30% da força",
                      "eu_escolho": "Você escolhe em cada aba"}, dicas
-    assert ('data-dica="Vale para todos; cada controle pode ter o seu em Conexões">'
-            "Perfil global de bateria") in html
+    # O-PERFIL-DE-BATERIA-POR-CONTROLE-QUE-NINGUEM-CHAMA-SAI-01 (17/10/2026): o desenho diz
+    # «Vale para todos os controles» (a Conexões perdeu o perfil por controle); a publicada guarda
+    # a frase velha até o `--publicar 09` do fecho, e a velha só vale até lá.
+    velha = ('data-dica="Vale para todos; cada controle pode ter o seu em Conexões">'
+             "Perfil global de bateria")
+    nova = 'data-dica="Vale para todos os controles">Perfil global de bateria'
+    assert (nova in html) if arquivo.parent.name == "mockup" else (nova in html or velha in html)
     assert "Eu escolho" not in html
 
 

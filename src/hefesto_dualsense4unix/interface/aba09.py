@@ -449,7 +449,7 @@ DICA_DO_TITULO = "Esta aba é do computador, não de um controle"
 DICA_DO_STATUS = "Linha que falha fica vermelha até se curar"
 DICA_DO_FUNCIONAMENTO = "Parar desliga o serviço inteiro, não só o jogo"
 DICA_DA_INTERFACE = "O tamanho das letras e dos botões, em toda aba"
-DICA_DA_BATERIA = "Vale para todos; cada controle pode ter o seu em Conexões"
+DICA_DA_BATERIA = "Vale para todos os controles"
 DICA_DA_SAUDE = "Verde é ligado. Clique para trocar"
 DICA_DO_REGISTRO = "O registro do serviço; copie para relatar um problema"
 
