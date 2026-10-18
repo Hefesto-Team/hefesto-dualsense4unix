@@ -13,6 +13,7 @@ mentira no PATH, e um lar de mentira no ``HOME``.
 from __future__ import annotations
 
 import hashlib
+import re
 import shutil
 import stat
 import subprocess
@@ -75,6 +76,27 @@ INSTALADOS_DO_POP = {
 }
 
 
+#: As funções do `install.sh` que o passo extraído carrega para o bash de mentira. Função que o
+#: passo chama e não está aqui vira «command not found» e, dentro de um `if`, falso calado: foi
+#: assim que a checagem do pacote a meio ficou fora da régua. O guarda abaixo confere a lista.
+FUNCOES_EXTRAIDAS = (
+    "ask_yn",
+    "_bz_maior_do_archive",
+    "_pw_versao_ii",
+    "_pw_veredito",
+    "_pw_debs_da_maquina",
+    "_pw_versoes_anteriores",
+    "_pw_o_que_sairia",
+    "_pw_steam_aberta",
+    "_pacotes_a_meio",
+    "_avisa_pacote_a_meio",
+    "install_pipewire_da_casa",
+)
+
+#: O que o script da régua define por conta própria, no lugar do `install.sh` inteiro.
+FUNCOES_DUBLADAS = ("step", "warn", "_faria", "_faria_root")
+
+
 def _funcao(nome: str) -> str:
     inicio = INSTALL.index(f"{nome}() {{\n")
     fim = INSTALL.index("\n}\n", inicio) + 3
@@ -121,6 +143,7 @@ def _correr(
     dry_run: bool = False,
     registro_antigo: str = "",
     outra_arquitetura: dict[str, tuple[str, str, str]] | None = None,
+    a_meio: tuple[str, ...] = (),
 ) -> Corrida:
     maquina = MAQUINA_DO_POP if maquina is None else maquina
     lar = tmp_path / "lar"
@@ -163,11 +186,17 @@ def _correr(
         f'  {pkg}) st2="{st}"; bp2="{bp}"; v2="{v}" ;;'
         for pkg, (st, bp, v) in (outra_arquitetura or {}).items()
     )
+    # A pergunta de `_pacotes_a_meio` (todos os pacotes, estado de três letras): a máquina de
+    # mentira só tem `ii`, e `a_meio` acrescenta os pacotes quebrados (`iF  nome`).
+    lista_do_dpkg = "".join(f"{st}{bp.split(':')[0]}\\n" for st, bp, _v in maquina.values())
+    lista_do_dpkg += "".join(f"{linha}\\n" for linha in a_meio)
     _exe(
         fakes,
         "dpkg-query",
         'fmt=""; pkg=""\n'
         'for a in "$@"; do case "$a" in -f=*) fmt="${a#-f=}" ;; -W) ;; *) pkg="$a" ;; esac; done\n'
+        'if [[ -z "$pkg" && "$fmt" == *\'${db:Status-Abbrev}\'*\'${Package}\'* ]]; then\n'
+        f'  printf "{lista_do_dpkg}"; exit 0\nfi\n'
         f'case "${{pkg%%:*}}" in\n{casos}\n'
         '  *) echo "dpkg-query: nenhum pacote casa com $pkg" >&2; exit 1 ;;\n'
         "esac\n"
@@ -218,20 +247,7 @@ def _correr(
     )
     _exe(fakes, "systemctl", f'printf "systemctl %s\\n" "$*" >> "{diario}"\nexit 0\n')
 
-    funcoes = "".join(
-        _funcao(n)
-        for n in (
-            "ask_yn",
-            "_bz_maior_do_archive",
-            "_pw_versao_ii",
-            "_pw_veredito",
-            "_pw_debs_da_maquina",
-            "_pw_versoes_anteriores",
-            "_pw_o_que_sairia",
-            "_pw_steam_aberta",
-            "install_pipewire_da_casa",
-        )
-    )
+    funcoes = "".join(_funcao(n) for n in FUNCOES_EXTRAIDAS)
     script = (
         "set -euo pipefail\n"
         'step() { printf \'\\n[%s] %s\\n\' "$1" "$2"; }\n'
@@ -268,6 +284,50 @@ def test_instala_so_os_pacotes_ii_e_reinicia_o_som(tmp_path: Path) -> None:
     assert c.chamou("systemctl --user restart pipewire pipewire-pulse wireplumber"), c.chamadas
     assert c.chamou("/etc/apt/preferences.d/hefesto-pipewire"), c.chamadas
     assert c.chamou("construtor "), "o passo não chamou o construtor"
+
+
+def test_o_passo_extraido_leva_toda_funcao_do_install_que_ele_chama() -> None:
+    """MORDIDA: tire `_avisa_pacote_a_meio` da lista e a chamada vira «command not found»."""
+    definidas = set(re.findall(r"^([A-Za-z_][A-Za-z_0-9]*)\(\) \{$", INSTALL, re.MULTILINE))
+    corpo = _funcao("install_pipewire_da_casa")
+
+    def chama(nome: str, texto: str) -> bool:
+        return re.search(rf"(?<![\w-]){re.escape(nome)}(?![\w-])", texto) is not None
+
+    chamadas = {nome for nome in definidas if chama(nome, corpo)}
+    # as funções de que as extraídas dependem, uma a uma, fecham o conjunto
+    pendentes = list(chamadas)
+    while pendentes:
+        nome = pendentes.pop()
+        if nome in FUNCOES_DUBLADAS:
+            continue
+        for outra in definidas - chamadas - {nome}:
+            if chama(outra, _funcao(nome)):
+                chamadas.add(outra)
+                pendentes.append(outra)
+    faltam = sorted(chamadas - set(FUNCOES_EXTRAIDAS) - set(FUNCOES_DUBLADAS))
+    assert not faltam, (
+        "o passo extraído chama função do install.sh que o bash de mentira não carrega "
+        f"(vira «command not found» calado dentro de um `if`): {faltam}"
+    )
+
+
+def test_com_pacote_a_meio_o_apt_nao_e_chamado_e_o_recado_sai(tmp_path: Path) -> None:
+    """MORDIDA: sem a checagem no passo (ou sem as duas funções na extração) o apt é chamado."""
+    c = _correr(tmp_path, a_meio=("iF  linux-image-7.2.6-76070206-generic",))
+    assert c.rc == 0, c.saida
+    assert "pacote a meio" in c.saida and "linux-image-7.2.6-76070206-generic" in c.saida, c.saida
+    assert "apt-get install -f" in c.saida, c.saida
+    assert "rode ./install.sh de novo" in c.saida, c.saida
+    assert not c.chamou("apt-get"), c.chamadas
+    assert not c.instalados() and not c.chamou("systemctl"), c.chamadas
+    assert not (c.entrega / "VERSOES-ANTERIORES.txt").exists()
+
+
+def test_com_tudo_em_ii_nao_ha_recado_e_o_caminho_e_o_de_sempre(tmp_path: Path) -> None:
+    c = _correr(tmp_path, a_meio=())
+    assert "a meio" not in c.saida, c.saida
+    assert c.instalados() == INSTALADOS_DO_POP, c.saida
 
 
 def test_o_arquivo_de_volta_so_tem_ii_com_versao(tmp_path: Path) -> None:

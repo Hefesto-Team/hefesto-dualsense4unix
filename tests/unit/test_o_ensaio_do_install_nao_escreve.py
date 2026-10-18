@@ -69,6 +69,42 @@ VERBOS_QUE_MUDAM = (
 
 PEDIDOS_DE_SENHA = ("-v", "-A")
 
+#: O que o `dpkg-query` de mentira responde à pergunta do `_pacotes_a_meio` (todos os pacotes, o
+#: estado em três letras): só estados que NÃO são pacote a meio (`hi` retido, `rc` removido com
+#: configuração, `un` desconhecido). O ensaio mede o install, não o banco do dpkg de quem roda.
+DPKG_TUDO_EM_ORDEM = "ii  bash\nhi  linux-libc-dev\nrc  pacote-removido\nun  pacote-que-nao-veio\n"
+
+#: Um pacote a meio de uma atualização, como o kernel baixado e não configurado (`iF`/`iU`).
+DPKG_COM_PACOTE_A_MEIO = DPKG_TUDO_EM_ORDEM + "iF  linux-image-7.2.6-76070206-generic\n"
+
+DPKG_QUERY_DE_VERDADE = shutil.which("dpkg-query")
+
+
+def _dubla_o_dpkg(dublagem: Path, lista: str) -> None:
+    """Põe um `dpkg-query` de mentira na frente do PATH, só para a pergunta do `_pacotes_a_meio`.
+
+    Sem isto o plano do `run_pkg` muda numa máquina com o dpkg a meio (`iF`/`iU`): o ensaio
+    diria «não faria» onde outra máquina diz «faria», e a régua mediria a máquina, não o install.
+    Qualquer outra pergunta vai ao `dpkg-query` de verdade. Sem `dpkg-query` na máquina não há
+    dublê: o `command -v` do install já dá «sem pacote a meio» e o resto do plano não muda.
+    """
+    if DPKG_QUERY_DE_VERDADE is None:
+        return
+    (dublagem / "dpkg-query.lista").write_text(lista, encoding="utf-8")
+    alvo = dublagem / "dpkg-query"
+    alvo.write_text(
+        "#!/bin/sh\n"
+        'if [ "$#" -eq 2 ] && [ "$1" = "-W" ]; then\n'
+        '  case "$2" in\n'
+        "    *'${db:Status-Abbrev}'*'${Package}'*)\n"
+        f'      cat "{dublagem}/dpkg-query.lista"; exit 0 ;;\n'
+        "  esac\n"
+        "fi\n"
+        f'exec "{DPKG_QUERY_DE_VERDADE}" "$@"\n',
+        encoding="utf-8",
+    )
+    alvo.chmod(0o755)
+
 
 def _sysfs_do_wifi(raiz: Path, *, com_wifi_usb: bool) -> Path:
     """Um sysfs de mentira para o `wifi_usb.sh --lista`: com ou sem um Wi-Fi no barramento USB.
@@ -90,9 +126,18 @@ def _sysfs_do_wifi(raiz: Path, *, com_wifi_usb: bool) -> Path:
 
 
 def _bancada(
-    tmp_path: Path, *, com_credencial: bool = True, com_wifi_usb: bool = False
+    tmp_path: Path,
+    *,
+    com_credencial: bool = True,
+    com_wifi_usb: bool = False,
+    dpkg: str = DPKG_TUDO_EM_ORDEM,
+    dubles_extra: dict[str, str] | None = None,
 ) -> tuple[Path, Path, dict[str, str]]:
-    """Um lar de mentira, um PATH só de dublês, e o ambiente que os usa."""
+    """Um lar de mentira, um PATH só de dublês, e o ambiente que os usa.
+
+    O `dpkg-query` também é dublê (`dpkg`: o que ele lista, tudo em ordem por padrão): o plano
+    sai igual em qualquer máquina, com o dpkg dela a meio ou não.
+    """
     lar = tmp_path / "lar"
     lar.mkdir()
     dublagem = tmp_path / "dubles"
@@ -114,6 +159,10 @@ def _bancada(
             encoding="utf-8",
         )
         alvo.chmod(0o755)
+    _dubla_o_dpkg(dublagem, dpkg)
+    for nome, corpo in (dubles_extra or {}).items():
+        (dublagem / nome).write_text(corpo, encoding="utf-8")
+        (dublagem / nome).chmod(0o755)
 
     ambiente = dict(os.environ)
     ambiente["PATH"] = f"{dublagem}:{ambiente.get('PATH', '/usr/bin:/bin')}"
@@ -129,11 +178,22 @@ def _bancada(
 
 
 def _roda_ensaio(
-    tmp_path: Path, *flags: str, com_credencial: bool = True, com_wifi_usb: bool = False
+    tmp_path: Path,
+    *flags: str,
+    com_credencial: bool = True,
+    com_wifi_usb: bool = False,
+    dpkg: str = DPKG_TUDO_EM_ORDEM,
+    ambiente_extra: dict[str, str] | None = None,
+    dubles_extra: dict[str, str] | None = None,
 ) -> tuple[subprocess.CompletedProcess[str], Path, Path]:
     lar, diario, ambiente = _bancada(
-        tmp_path, com_credencial=com_credencial, com_wifi_usb=com_wifi_usb
+        tmp_path,
+        com_credencial=com_credencial,
+        com_wifi_usb=com_wifi_usb,
+        dpkg=dpkg,
+        dubles_extra=dubles_extra,
     )
+    ambiente.update(ambiente_extra or {})
     resultado = subprocess.run(
         [BASH, str(INSTALL_PATH), "--dry-run", *flags],
         capture_output=True,
@@ -182,6 +242,56 @@ class TestOEnsaioExiste:
             "plano pela metade é pior que nenhum: dá a impressão de que o "
             "install faz só aquilo"
         )
+
+
+#: Um kernel que não tem os cabeçalhos instalados: com o `uname -r` de mentira o passo dos módulos
+#: DKMS não acha `/lib/modules/<versão>/build` e pede o pacote dos cabeçalhos ao `run_pkg`, o passo
+#: do plano que chama o gerenciador de pacotes numa máquina de desenvolvimento com tudo instalado.
+UNAME_SEM_CABECALHOS = (
+    '#!/bin/sh\nif [ "$1" = "-r" ]; then echo 0.0.0-mentira; exit 0; fi\n'
+    f'exec "{shutil.which("uname")}" "$@"\n'
+)
+AMBIENTE_DO_APT = {"HEFESTO_FAMILIA_PACOTES": "apt"}
+O_PACOTE_DOS_CABECALHOS = "pacote(s) linux-headers-0.0.0-mentira"
+
+
+@pytest.mark.skipif(
+    DPKG_QUERY_DE_VERDADE is None or shutil.which("uname") is None,
+    reason="o caso precisa do dpkg-query de verdade para dublar e do uname",
+)
+class TestOPlanoNaoDependeDoDpkgDeQuemRoda:
+    """O ensaio mede o install: o `dpkg-query` de quem roda a régua não entra na conta."""
+
+    def test_com_tudo_em_ordem_o_plano_instalaria_o_pacote(self, tmp_path: Path) -> None:
+        """A MORDIDA: tire o dublê do `_bancada` e, numa máquina com `iF`, este caso reprova."""
+        resultado, _lar, _diario = _roda_ensaio(
+            tmp_path,
+            ambiente_extra=AMBIENTE_DO_APT,
+            dubles_extra={"uname": UNAME_SEM_CABECALHOS},
+        )
+        assert resultado.returncode == 0, resultado.stderr[-2000:]
+        assert "FARIA (root) instalar pacote(s) com apt: linux-headers-0.0.0-mentira" in (
+            resultado.stdout
+        ), resultado.stdout[-2500:]
+        assert "pacote a meio" not in resultado.stdout, resultado.stdout[-2500:]
+
+    def test_com_pacote_a_meio_o_plano_diz_que_nao_instalaria(self, tmp_path: Path) -> None:
+        """A MORDIDA: tire a checagem do `run_pkg` e o plano volta a prometer a instalação."""
+        resultado, _lar, diario = _roda_ensaio(
+            tmp_path,
+            dpkg=DPKG_COM_PACOTE_A_MEIO,
+            ambiente_extra=AMBIENTE_DO_APT,
+            dubles_extra={"uname": UNAME_SEM_CABECALHOS},
+        )
+        assert resultado.returncode == 0, resultado.stderr[-2000:]
+        assert "FIM DO ENSAIO" in resultado.stdout
+        assert (
+            f"não faria:   instalar {O_PACOTE_DOS_CABECALHOS}: o sistema tem pacote a meio "
+            "(linux-image-7.2.6-76070206-generic)"
+        ) in resultado.stdout, resultado.stdout[-2500:]
+        assert "FARIA (root) instalar pacote(s) com apt: linux-headers" not in resultado.stdout
+        chamadas = diario.read_text(encoding="utf-8").splitlines() if diario.exists() else []
+        assert not [linha for linha in chamadas if linha.startswith("apt-get")], chamadas
 
 
 class TestOEnsaioNaoEscreve:
