@@ -9,7 +9,7 @@
 # Mudou o fonte? Rode o construir.sh e grave os dois sha256 aqui no mesmo commit.
 name=peca-gdk-1
 url=https://github.com/Hefesto-Team/hefesto-dualsense4unix/releases/download/v{versao}/xgameruntime.dll
-sha256=2b630b4846bce3e4af5d0b7f2df2dc594d0585d2010cfe3f97a760011afcda21
+sha256=f95fab0d8bd2b8b3ab5fcce5a7c242458e73c7d4b80f21c6c46547a442258d85
 sonda_url=https://github.com/Hefesto-Team/hefesto-dualsense4unix/releases/download/v{versao}/sonda-gdk.exe
 sonda_sha256=728d4f23359af74d820acb0dbde03f2c4f1e4913400ea144e1873a9a7ccde724
 compilar=bash assets/gdk-runtime/construir.sh <saída> --conferir

@@ -967,6 +967,7 @@ static HRESULT async_begin(XAsyncBlock *async, void *context, const void *identi
         LeaveCriticalSection(&g_lock);
         free(st);
         xlog("begin com fila morta %s q=%p", name ? name : "?", (void *)q);
+        fila_recusada("XAsyncBegin", q);
         return E_INVALIDARG_;
     }
     LeaveCriticalSection(&g_lock);
@@ -1496,9 +1497,14 @@ static HRESULT WINAPI thr_RegMon(void *self, queue_obj *q, void *ctx, void *cb, 
     if (!q) q = process_queue();
     if (!g_lock_ready || !cb) return E_INVALIDARG_;
     EnterCriticalSection(&g_lock);
-    if (!queue_live(q) || q->nmon >= 4) {
+    if (!queue_live(q)) {
         LeaveCriticalSection(&g_lock);
-        if (q && !queue_live(q)) fila_recusada("XTaskQueueRegisterMonitor", q);
+        if (!q) return E_FAIL_;
+        fila_recusada("XTaskQueueRegisterMonitor", q);
+        return E_INVALIDARG_;
+    }
+    if (q->nmon >= 4) {
+        LeaveCriticalSection(&g_lock);
         return E_FAIL_;
     }
     q->mon_ctx[q->nmon] = ctx;
@@ -1553,7 +1559,7 @@ static void WINAPI thr_SetProcessQueue(void *self, queue_obj *q)
     EnterCriticalSection(&g_lock);
     if (q && !queue_live(q)) {
         LeaveCriticalSection(&g_lock);
-        xlog("SetCurrentProcessTaskQueue com fila morta %p", (void *)q);
+        fila_recusada("XTaskQueueSetCurrentProcessTaskQueue", q);
         return;
     }
     old = g_process_queue;

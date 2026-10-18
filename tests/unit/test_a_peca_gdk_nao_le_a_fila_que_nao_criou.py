@@ -195,7 +195,7 @@ static void contra(const char *nome, queue_obj *alca, const unsigned char *bloco
     CASO("RegMon");
     hr = VT(RegMon_t, 23)(g_self, alca, NULL, (void *)cb_monitor, &tok);
     snprintf(det, sizeof det, "hr=0x%08lX", (unsigned long)hr);
-    linha(caso, FAILED(hr), det);
+    linha(caso, hr == E_INVALIDARG_, det);
 
     CASO("UnregMon");
     VT(UnregMon_t, 24)(g_self, alca, 1);
@@ -344,6 +344,17 @@ _CASOS_POR_ALCA = (
     "UnregMon", "SetProcessQueue", "QueueCreateComposite", "Begin",
 )
 
+#: O nome com que cada caso da prova assina a recusa no xgr.log: a bancada conta estas linhas.
+_NO_LOG = {
+    "Duplicate": "XTaskQueueDuplicateHandle", "Close": "XTaskQueueCloseHandle",
+    "Submit": "XTaskQueueSubmitCallback", "SubmitDelayed": "XTaskQueueSubmitDelayedCallback",
+    "GetPort": "XTaskQueueGetPort", "Dispatch": "XTaskQueueDispatch",
+    "Terminate": "XTaskQueueTerminate", "RegMon": "XTaskQueueRegisterMonitor",
+    "UnregMon": "XTaskQueueUnregisterMonitor",
+    "SetProcessQueue": "XTaskQueueSetCurrentProcessTaskQueue",
+    "QueueCreateComposite": "XTaskQueueCreateComposite", "Begin": "XAsyncBegin",
+}
+
 
 def _ensaio() -> ModuleType:
     spec = importlib.util.spec_from_file_location("o_contrato_da_peca_gdk_fila", _ENSAIO)
@@ -432,8 +443,13 @@ def _bancada() -> Iterator[tuple[Path, Path]]:
         shutil.rmtree(raiz, ignore_errors=True)
 
 
-def _rodar(bancada: tuple[Path, Path], fonte: str, nome: str) -> list[dict[str, object]]:
+def _rodar(
+    bancada: tuple[Path, Path], fonte: str, nome: str
+) -> tuple[list[dict[str, object]], str]:
+    """As linhas da prova e o trecho do xgr.log (no C: do prefixo de teste) desta rodada."""
     raiz, prefixo = bancada
+    log = prefixo / "drive_c" / "xgr.log"
+    antes = log.stat().st_size if log.exists() else 0
     wine = _WINE
     assert wine is not None
     pasta = raiz / nome
@@ -453,12 +469,13 @@ def _rodar(bancada: tuple[Path, Path], fonte: str, nome: str) -> list[dict[str, 
     for linha in proc.stdout.replace("\r", "").splitlines():
         if linha.startswith("{"):
             linhas.append(json.loads(linha))
-    return linhas
+    escrito = log.read_bytes()[antes:].decode("utf-8", "replace") if log.exists() else ""
+    return linhas, escrito
 
 
 @_precisa
 def test_a_peca_recusa_a_fila_que_nao_criou_sem_cair(_bancada: tuple[Path, Path]) -> None:
-    linhas = _rodar(_bancada, _FONTE.read_text(encoding="utf-8"), "cura")
+    linhas, log = _rodar(_bancada, _FONTE.read_text(encoding="utf-8"), "cura")
     caiu = [ln for ln in linhas if "caiu" in ln]
     assert not caiu, f"a peça caiu: {caiu}"
     assert {"fim": True} in linhas, "a prova não chegou ao fim"
@@ -468,6 +485,15 @@ def test_a_peca_recusa_a_fila_que_nao_criou_sem_cair(_bancada: tuple[Path, Path]
     assert set(casos) == esperados, set(casos) ^ esperados
     reprovados = {k: v.get("det") for k, v in casos.items() if v["ok"] is not True}
     assert not reprovados, reprovados
+    # Toda recusa deixa a linha que a bancada conta, com o teto de 64: as 12 funções vezes as
+    # 5 alças cabem nele, e o vaivém (que recusa milhares) não passa dele.
+    recusas = re.findall(r"\] (\w+) recusou a fila ", log)
+    faltam = {
+        api: recusas.count(nome) for api, nome in _NO_LOG.items()
+        if recusas.count(nome) < len(_ALCAS)
+    }
+    assert not faltam, f"recusa sem a linha no xgr.log: {faltam}"
+    assert len(recusas) == 64, f"o teto das linhas de recusa é 64, e saíram {len(recusas)}"
 
 
 @_precisa
@@ -475,7 +501,7 @@ def test_a_mordida_o_magic_lido_de_volta_derruba_a_prova(_bancada: tuple[Path, P
     texto = _FONTE.read_text(encoding="utf-8")
     quebrado = texto.replace(_CURA, _QUEBRADO, 1)
     assert quebrado != texto
-    linhas = _rodar(_bancada, quebrado, "mordida")
+    linhas, _log = _rodar(_bancada, quebrado, "mordida")
     caiu = [ln for ln in linhas if "caiu" in ln]
     assert caiu, "com o magic lido de volta a prova devia cair, e não caiu: a régua não morde"
     assert {"fim": True} not in linhas
