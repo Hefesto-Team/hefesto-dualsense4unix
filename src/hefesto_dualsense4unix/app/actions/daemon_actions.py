@@ -171,57 +171,6 @@ def _apply_result_count(value: object) -> int:
     return 0
 
 
-def format_apply_wrapper_result(result: object) -> str:
-    """Mensagem pro leigo a partir do dict do ``apply_wrapper_to_all_games``.
-
-    Pura (testável sem GTK) — o miolo do toast do botão "Aplicar aos jogos da
-    Steam". Resposta fora do contrato vira recusa honesta, nunca "Pronto".
-    """
-    if not isinstance(result, dict):
-        return (
-            "Não consegui aplicar — resposta inesperada; veja os "
-            "'Detalhes técnicos'."
-        )
-    applied = _apply_result_count(result.get("applied"))
-    skipped = _apply_result_count(result.get("skipped"))
-    errors = _apply_result_count(result.get("errors"))
-    if applied:
-        msg = (
-            f"Pronto — {applied} jogo(s) agora abrem pelo hefesto-launch "
-            "(as suas opções foram preservadas; backup ao lado de cada "
-            "arquivo)."
-        )
-    elif errors == 0:
-        msg = (
-            "Nada a mudar — os jogos já abrem pelo hefesto-launch (ou não "
-            "encontrei jogos da Steam neste computador)."
-        )
-    else:
-        msg = "Nenhum jogo foi alterado."
-    if skipped:
-        msg += f" {skipped} jogo(s) ficaram como estavam."
-    if errors:
-        msg += (
-            f" Atenção: {errors} jogo(s) falharam — veja os "
-            "'Detalhes técnicos'."
-        )
-    return msg
-
-
-def frase_sem_aplicacao_em_massa() -> str:
-    """A recusa de quem tem uma instalação velha, sem `apply_wrapper_to_all_games`.
-
-    ERA UM LITERAL EM TRÊS LUGARES a partir de 06/09/2026 — os dois caminhos
-    deste módulo (com a Steam fechada e com ela aberta) e o gesto da interface
-    nova. A frase é UMA; o `getattr` que a dispara é do contrato PATH-06, e uma
-    frase com três donos diverge no primeiro dia em que alguém mexe num deles.
-    """
-    return (
-        "Esta instalação ainda não tem a aplicação em massa — "
-        f"{como_atualizar_esta_instalacao()}."
-    )
-
-
 def format_steam_janela_recusa(janela: object) -> str | None:
     """Recusa de `with_steam_closed`, ou None quando a ação chegou a rodar.
 

@@ -147,7 +147,7 @@ dizendo o nome, e ele sai no relato como inventário do que falta. Um botão que
 responde calado é pior que um que recusa — quem clicou conclui que funcionou.
 
 Sete gestos da aba Sistema estão assim de propósito (`reiniciar`, `desligar`,
-`autostart`, `refazer-consertos`…): são `systemctl`, não IPC.
+`autostart`, `corrigir-modo`…): são `systemctl`, não IPC.
 
 ## Duas decisões dela que valem para todas as abas
 

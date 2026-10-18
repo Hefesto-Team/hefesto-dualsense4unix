@@ -412,100 +412,31 @@ def test_o_atualizar_recarrega_antes_de_zerar(a09, ctx):
     assert ordem == ["daemon.reload · cache=cheio"], ordem
 
 
-def _clicar(gesto, ctx, texto: str = ""):
-    """Um clique de verdade, com o que o DOM tinha no botão."""
-    return gesto(ctx, {"texto": texto}, PonteDeMentira())
-
-
-def test_o_primeiro_clique_do_consertos_mede_e_nao_mexe(a09, ctx, monkeypatch):
-    """Clique 1 de "Refazer os consertos automáticos": mede, mostra, não age."""
+def test_o_conserto_roda_os_dois_scripts_com_os_argumentos_deles(a09, monkeypatch):
+    """O duplo clique das correções chega aqui: um `bash` por script, na ordem."""
     rodou: list[list[str]] = []
-    monkeypatch.setattr(a09, "_matriz", lambda: a09._JANELA_ANTIGA[0])
-    monkeypatch.setattr(a09._daemon, "medir_jogos_com_steam_input",
-                        lambda: ["Pragmata", "Mullet Mad Jack"])
     import subprocess
     monkeypatch.setattr(subprocess, "run",
                         lambda *a, **k: rodou.append(list(a[0])) or _RC0())
 
-    carga = _clicar(a09.refazer_consertos, ctx)
-
-    assert not rodou, ("o primeiro clique RODOU os scripts. Ele tem de MEDIR e "
-                       "perguntar — é o consentimento em dois cliques que ela "
-                       "escolheu em 03/09/2026.")
-    painel = carga["mesa"][a09.REGISTRO]
-    assert "Pragmata" in painel and "Mullet Mad Jack" in painel, (
-        "o painel não nomeia os jogos que vão ser tocados. *Nomeia, nunca só "
-        "conta* — é a regra do WRAPPER-EM-TODOS-01, e *'3 jogos com pendência'* "
-        "é o texto que deixou o Pragmata quebrado a noite inteira.")
-    assert "Clique de novo" in painel, painel
-
-
-def test_o_segundo_clique_do_consertos_roda_os_dois_scripts(a09, ctx, monkeypatch,
-                                                           capsys):
-    """Clique 2: os dois scripts do produto, e o recibo é do DONO."""
-    rodou: list[list[str]] = []
-    monkeypatch.setattr(a09, "_matriz", lambda: a09._JANELA_ANTIGA[0])
-    monkeypatch.setattr(a09._daemon, "medir_jogos_com_steam_input", lambda: [])
-    import subprocess
-    monkeypatch.setattr(subprocess, "run",
-                        lambda *a, **k: rodou.append(list(a[0])) or _RC0())
-
-    _clicar(a09.refazer_consertos, ctx)
-    carga = _clicar(a09.refazer_consertos, ctx, a09.CONFIRMA)
+    relatorio = a09._rodar_os_consertos([])
 
     assert len(rodou) == len(a09.CONSERTOS), rodou
     for (relpath, args), comando in zip(a09.CONSERTOS, rodou, strict=True):
         assert comando[0] == "bash" and comando[1].endswith(relpath.split("/")[-1])
         assert comando[2:] == args, comando
-    assert set(carga) == {"blocos"}, carga
-    assert a09._PAINEL[0] is None, "a pergunta do clique 1 ficou no painel"
-    assert a09._daemon.format_fix_safe_result(
-        {"ran": 2, "missing": 0, "steam_input": (0, ""), "steam_input_jogos": []},
-    ) in capsys.readouterr().err
-    assert not a09._LENTO, (
-        "a faixa lenta sobreviveu ao conserto: o exame do cartão ao lado acabou "
-        "de mudar de valor, e mostrar o de até 2 s atrás ao lado do recibo é a "
-        "tela dizendo 'pronto' sobre números que ninguém releu.")
+    assert relatorio["ran"] == len(a09.CONSERTOS) and relatorio["missing"] == 0
 
 
 def test_o_conserto_procura_os_scripts_pelo_localizador_do_produto(a09):
     """Os dois scripts de :data:`CONSERTOS` EXISTEM nesta instalação."""
     a09._JANELA_ANTIGA.clear()
-    achados = {str(c) for c, _ in a09._consertos_no_disco()}
+    achados = {str(c) for c in (a09._matriz()._find_repo_file(r) for r, _ in a09.CONSERTOS)
+               if c is not None}
     assert len(achados) == len(a09.CONSERTOS), (
         f"o localizador do produto achou {len(achados)} dos {len(a09.CONSERTOS)} "
         f"scripts de `CONSERTOS`: {sorted(achados)}. Um nome errado aqui é um "
         "botão que diz 'Correções aplicadas' sem ter rodado nada.")
-
-
-def test_as_camadas_recusam_com_jogo_aberto(a09, ctx, monkeypatch):
-    """O Wine regrava o registro do prefixo ao sair: escrever agora é perder calado."""
-    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
-    from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as rl
-
-    cv.gravar_camadas_da_steam_fora(True)
-    cv.gravar_estado({"222": {"x": {"feito": "desligada", "valor_antes": "00000000"}}})
-    curou: list[object] = []
-    monkeypatch.setattr(rl, "jogo_aberto", lambda: True)
-    monkeypatch.setattr(cv, "curar_todos", lambda **k: curou.append(k) or [])
-    with pytest.raises(RuntimeError) as recusa:
-        a09.corrigir_vulkan(ctx, {}, None)
-    assert "jogo aberto" in str(recusa.value)
-    assert curou == []
-    assert cv.camadas_da_steam_fora() is True
-
-
-def test_ligar_as_camadas_com_jogo_aberto_nao_recusa(a09, ctx, monkeypatch):
-    """Ligar não mexe em registro nenhum: vale no próximo jogo, e não espera."""
-    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
-    from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as rl
-
-    curou: list[object] = []
-    monkeypatch.setattr(rl, "jogo_aberto", lambda: True)
-    monkeypatch.setattr(cv, "curar_todos", lambda **k: curou.append(k) or [])
-    a09.corrigir_vulkan(ctx, {}, None)
-    assert cv.camadas_da_steam_fora() is True
-    assert curou == []
 
 
 def test_nenhum_dos_cinco_destrutivos_ficou_sem_dono(a09):

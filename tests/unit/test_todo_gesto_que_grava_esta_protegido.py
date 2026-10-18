@@ -217,14 +217,6 @@ FORA_DA_ARVORE: dict[tuple[str, str], str] = {
         "`reopen_steam` abre a janela da Steam DESANEXADA: ela não nasce oculta "
         "e não some quando a prova termina. Decisão 17 dela, 03/09/2026 — o "
         "botão liga *e* o gesto entra na lista, e as duas metades são uma só",
-    ("09-sistema.html", "refazer-consertos"):
-        "roda os scripts de `CONSERTOS` por `subprocess.run([\"bash\", "
-        "str(caminho), …])`, com o caminho montado em variável — a árvore vê um "
-        "`run`, que é genérico demais para virar porta sem encher de falso",
-    ("09-sistema.html", "fixar-proton"):
-        "chama `travar()`, que é um `getattr(pin, \"lock_proton_for_all_games\")`, "
-        "e o destravar pelo mesmo `getattr` — o nome não está no fonte como "
-        "chamada, e trava ou solta o Proton de TODOS os jogos dela",
     # 15/10/2026, A-ABA-SISTEMA-DO-TODO-01.
     ("09-sistema.html", "correcoes-automaticas"):
         "escreve o arquivo do interruptor do guarda do jogo novo (`_guardar_o_interruptor`, "

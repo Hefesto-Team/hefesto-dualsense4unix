@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import re
 from pathlib import Path
 
 import pytest
@@ -238,24 +237,3 @@ def test_nada_mais_escreve_o_marcador_caduco(prefixo: Path, casa: Path) -> None:
         cv.prefixo_de_jogo(prefixo, appid="222"), forcar=True, home=casa
     )
     assert cv._FEITO_CADUCO not in _estado_cru(casa), "o «tirar» gravou o marcador"
-
-
-def test_a_interface_nao_ganhou_gesto_novo_por_causa_disto() -> None:
-    """*"sem adicionar nada novo na interface"* — ela, 16/09/2026."""
-    aba = (
-        Path(__file__).resolve().parents[2]
-        / "src"
-        / "hefesto_dualsense4unix"
-        / "interface"
-        / "pacotes"
-        / "a09_sistema.py"
-    )
-    texto = aba.read_text(encoding="utf-8")
-    gestos = texto.count('@gesto("09-sistema.html", "corrigir-vulkan"')
-    assert gestos == 1, f"o gesto das camadas deixou de ser um só: {gestos}"
-    chamada = re.search(r"cv\.curar_todos\(([^)]*)\)", texto)
-    assert chamada is not None, "o botão não chama mais o curar_todos"
-    assert re.search(r"\bforcar=True\b", chamada.group(1)), (
-        "o botão parou de forçar; a regra dela de 09/08/2026 caiu junto"
-    )
-    assert re.search(r"\breligar=True\b", chamada.group(1)), chamada.group(1)

@@ -30,13 +30,10 @@ from tests.unit.test_a_lista_de_exclusao_tem_um_escritor_por_vez import (
 
 exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
-from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
-from hefesto_dualsense4unix.interface.pacotes import Contexto
 from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
 from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 
-GESTO = "aplicar-aos-jogos"
 _CHAVE = "steam_app_1088850"
 _CAIXA = "processo:regua"
 
@@ -111,23 +108,31 @@ class _Ctx:
 _CTX: Any = _Ctx()
 
 
-def _dubles_da_steam(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A Steam por dublê: o `with_steam_closed` de verdade varre o `/proc`."""
-    monkeypatch.setattr(slo, "apply_wrapper_to_all_games",
-                        lambda: {"applied": 1, "skipped": 0, "errors": 0}, raising=False)
-    monkeypatch.setattr(slo, "with_steam_closed", lambda acao: ("ok", acao()))
+def _so_as_estradas(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O duplo clique das correções mudo, menos os outros lançadores."""
+    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+
+    monkeypatch.setattr(a09._daemon, "medir_jogos_com_steam_input", lambda: [])
+    monkeypatch.setattr(a09, "_rodar_os_consertos", lambda jogos: {
+        "ran": 0, "missing": 0, "steam_input": None, "steam_input_jogos": jogos})
+    monkeypatch.setattr(a09._daemon, "format_fix_safe_result", lambda _r: "")
+    monkeypatch.setattr(cv, "gravar_camadas_da_steam_fora", lambda _ligar: None)
+    monkeypatch.setattr(cv, "frase_do_ato", lambda _ligar: "")
+    monkeypatch.setattr(a09, "_o_pino", lambda: (None, None))
+    monkeypatch.setattr(a09, "_porque_o_proton_nao_trava", lambda *_a: None)
+    monkeypatch.setattr(a09, "proton_fixado", lambda: True)
+    monkeypatch.setattr(a09, "_versoes_que_sobram", lambda: [])
 
 
-def _dois_cliques() -> dict[str, Any]:
-    ctx = Contexto(state={"active_profile": "regua"}, mesa=[], conectados=[], estados={})
-    a09.aplicar_aos_jogos(ctx, {"gesto": GESTO, "texto": "x"}, None)
-    return a09.aplicar_aos_jogos(ctx, {"gesto": GESTO, "texto": a09.CONFIRMA}, None)
+def _o_duplo_clique() -> None:
+    """O que o duplo clique faz: reaplica e deixa o recibo no diário."""
+    a09._relatar_o_recibo(a09.CAMPO_DAS_CORRECOES, a09._reaplicar_as_correcoes())
 
 
-# 1. O «Aplicar» espera o prazo da janela
+# 1. O duplo clique das correções espera o prazo da janela
 
 
-def test_o_aplicar_espera_a_trava_e_diz_heroic(
+def test_o_duplo_clique_espera_a_trava_e_diz_heroic(
         tmp_path: Path, _lar: Path, monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str]) -> None:
     """Trava presa além do prazo do serviço e dentro do da janela: o recibo diz «Heroic».
@@ -135,11 +140,11 @@ def test_o_aplicar_espera_a_trava_e_diz_heroic(
     A janela espera 5 s, o serviço 1 s (D-0810-A-LISTA-OCUPADA-DIZ-A-CAUSA).
     """
     monkeypatch.setattr(cpe, "ESPERA_DO_SERVICO_S", 0.3)
-    _dubles_da_steam(monkeypatch)
+    _so_as_estradas(monkeypatch)
     outro = _prender(tmp_path, _lar, segundos=1.5)
     try:
         antes = time.monotonic()
-        _dois_cliques()
+        _o_duplo_clique()
         gasto = time.monotonic() - antes
     finally:
         outro.communicate(timeout=30)
@@ -150,14 +155,14 @@ def test_o_aplicar_espera_a_trava_e_diz_heroic(
     assert "Nenhum outro lançador recebeu" not in recibo
 
 
-def test_o_aplicar_com_a_trava_presa_alem_do_prazo_nao_diz_que_nao_havia_lancador(
+def test_o_duplo_clique_com_a_trava_presa_alem_do_prazo_nao_diz_que_nao_havia_lancador(
         _lar: Path, _trava_presa: subprocess.Popen[str], monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str]) -> None:
     """Passar o prazo da janela não basta: o `()` de «a trava não veio» tem a frase própria."""
     monkeypatch.setattr(cpe, "ESPERA_DA_JANELA_S", 0.4)
-    _dubles_da_steam(monkeypatch)
+    _so_as_estradas(monkeypatch)
     with structlog.testing.capture_logs() as diario:
-        _dois_cliques()
+        _o_duplo_clique()
     recibo = capsys.readouterr().err
     assert cpe.FRASE_DA_TRAVA_QUE_NAO_VEIO in recibo, recibo
     assert "Nenhum outro lançador recebeu" not in recibo, recibo

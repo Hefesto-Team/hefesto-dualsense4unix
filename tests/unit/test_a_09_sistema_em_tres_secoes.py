@@ -152,25 +152,6 @@ def test_o_tique_acende_os_ligaveis_pelo_que_leu(
     assert a09.pacote(ctx)[a09.CAMPO_DAS_CORRECOES] is True
 
 
-def test_desligar_o_proton_destrava_pelo_dono(a09, ctx, monkeypatch, tmp_path) -> None:
-    """Ligado, o clique DESTRAVA — pelo `unlock_games_from_pinned_proton`."""
-    from hefesto_dualsense4unix.integrations import proton_pin
-
-    chamou: list[str] = []
-    conf = tmp_path / "proton-pin.conf"
-    conf.write_text("# prova\n", encoding="utf-8")
-    monkeypatch.setattr(proton_pin, "default_pin_conf_path", lambda: conf)
-    monkeypatch.setattr(proton_pin, "pino_instalado_nesta_maquina", lambda: True)
-    monkeypatch.setattr(proton_pin, "steam_running", lambda: False)
-    monkeypatch.setattr(proton_pin, "lock_proton_for_all_games",
-                        lambda **k: chamou.append("travou") or {})
-    monkeypatch.setattr(proton_pin, "unlock_games_from_pinned_proton",
-                        lambda **k: chamou.append("destravou") or {"status": "unlocked"})
-    monkeypatch.setattr(a09, "proton_fixado", lambda: True)
-    a09.fixar_proton(ctx, {}, None)
-    assert chamou == ["destravou"]
-
-
 def test_o_botao_do_servico_tem_tres_caras(a09) -> None:
     """De pé diz o desenho (Parar), pausado diz Retomar, parado diz Ativar."""
     seletor = '[data-gesto="parar-ou-retomar"]'

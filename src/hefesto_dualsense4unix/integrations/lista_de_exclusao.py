@@ -378,12 +378,6 @@ def prefixos_excluidos(config_home: Path | None = None) -> frozenset[Path]:
     return frozenset(fora)
 
 
-def ids_dos_prefixos(config_home: Path | None = None) -> list[str]:
-    """O que o botão Vulkan pula: o appid na Steam, o caminho resolvido nos outros."""
-    caminhos = sorted(str(p) for p in prefixos_excluidos(config_home))
-    return list(dict.fromkeys([*appids(config_home), *caminhos]))
-
-
 def appids(config_home: Path | None = None) -> list[str]:
     """Os appids da Steam (e do umu) excluídos — o que os donos por appid leem."""
     return [a for a in (appid_da_chave(e.chave) for e in ler(config_home)) if a]
@@ -607,7 +601,6 @@ __all__ = [
     "caminho",
     "contem",
     "e_caixa",
-    "ids_dos_prefixos",
     "ler",
     "o_que_a_carona_pula",
     "prefixos_excluidos",

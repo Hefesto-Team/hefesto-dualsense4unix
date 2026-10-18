@@ -93,10 +93,7 @@ FATOS: dict[str, str] = {
     "o Hefesto não tem como guardar a quem esta ponte pertence":
         "LIMITE DO APARELHO, e a frase nomeia a causa na mesma oração: este "
         "controle não tem endereço fixo, então não há chave por onde guardar — "
-        "11/09/2026",
-    "Esta instalação ainda não tem":
-        "o sujeito é A INSTALAÇÃO dela — o Proton pinado, a aplicação em massa. "
-        "Fato do que está no disco desta máquina — 11/09/2026",}
+        "11/09/2026",}
 
 
 #: sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01

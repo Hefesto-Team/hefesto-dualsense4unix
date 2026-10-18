@@ -72,7 +72,7 @@ def test_os_outros_gestos_da_aba_continuam_sendo_provados() -> None:
     from hefesto_dualsense4unix.interface import regua_do_mockup
 
     outros = {"alvo", "todos", "mic-existe", "sala-altura", "sala-visada",
-              "vizinho-o-que-e", "teto-da-vibracao", "examinar-portas",
+              "vizinho-o-que-e", "custo-mic", "examinar-portas",
               "escolher-aparelho", "luz-nao-acende", "aplicar"}
     perigosos = _perigosos()
     protegidos = {g for p, g in perigosos if p == PAGINA} & outros

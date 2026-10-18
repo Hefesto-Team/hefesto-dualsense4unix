@@ -44,55 +44,7 @@ import pytest
 from hefesto_dualsense4unix.app.actions import daemon_actions
 from hefesto_dualsense4unix.app.actions.daemon_actions import (
     DaemonActionsMixin,
-    format_apply_wrapper_result,
 )
-
-
-class TestFormatDoResultado:
-    def test_contagens_int(self) -> None:
-        msg = format_apply_wrapper_result(
-            {"applied": 3, "skipped": 1, "errors": 0}
-        )
-        assert "3 jogo(s)" in msg
-        assert "hefesto-launch" in msg
-        assert "preservadas" in msg
-        assert "1 jogo(s) ficaram como estavam" in msg
-        assert "falharam" not in msg
-
-    def test_listas_no_lugar_de_contagens(self) -> None:
-        """O contrato aceita listas de itens — a GUI conta, não explode."""
-        msg = format_apply_wrapper_result(
-            {"applied": ["42", "77"], "skipped": [], "errors": ["99"]}
-        )
-        assert "2 jogo(s)" in msg
-        assert "1 jogo(s) falharam" in msg
-
-    def test_nada_a_mudar(self) -> None:
-        msg = format_apply_wrapper_result(
-            {"applied": 0, "skipped": 0, "errors": 0}
-        )
-        assert "Nada a mudar" in msg
-
-    def test_so_erros_nao_diz_pronto(self) -> None:
-        msg = format_apply_wrapper_result(
-            {"applied": 0, "skipped": 0, "errors": 2}
-        )
-        assert "Pronto" not in msg
-        assert "2 jogo(s) falharam" in msg
-
-    @pytest.mark.parametrize("torto", [None, "ok", 7, ["lista"]])
-    def test_resposta_fora_do_contrato_e_recusa_honesta(
-        self, torto: object
-    ) -> None:
-        msg = format_apply_wrapper_result(torto)
-        assert "Pronto" not in msg
-        assert "Não consegui aplicar" in msg
-
-    def test_campos_ausentes_viram_zero(self) -> None:
-        assert "Nada a mudar" in format_apply_wrapper_result({})
-
-    def test_bool_nao_conta_como_int(self) -> None:
-        assert "Nada a mudar" in format_apply_wrapper_result({"applied": True})
 
 
 class _Stub(DaemonActionsMixin):

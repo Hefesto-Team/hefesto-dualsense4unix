@@ -1,53 +1,17 @@
 #!/usr/bin/env python3
-"""A RÉGUA DO "Teto da vibração" POR CONTROLE — aba Conexões, MIGRA-CONEXOES-11.
+"""A cadeia do teto de vibração por controle, do perfil ao motor (17/10/2026).
 
-O CAMPO oferece três coisas por controle: *Segue o global / Sem teto / 30% da
-força*. DUAS delas ganharam fonte em 01/09/2026, e a terceira RECUSA DIZENDO —
-o que também é entrega, e tem caso próprio aqui.
+O CAMPO «Teto da vibração» e o gesto `teto-da-vibracao` da aba Conexões SAÍRAM:
+nenhum elemento da página os chamava, e o dono único de
+`controllers[chave].rumble.policy` é o gesto `forca` da aba Vibração. Os casos
+do gesto e da pintura saíram com ele. Ficam os que medem o que a escolha
+vira no caminho: o perfil, as escalas publicadas no backend e o fator que
+chega ao motor, mais as contas de `conexoes.py` que o desenho ainda cita.
 
-POR QUE ELE PRECISA DE RÉGUA PRÓPRIA, e não de uma linha em `a08_conexoes.PROVAS`:
-aquela régua passa um dublê de ponte e cobra QUAL função dela foi chamada. Este
-gesto exige **perfil ativo**, que o `ctx` dela não tem, e o que ele muda primeiro
-é o **disco** — o `profile.switch` vem depois. Uma prova que só olhasse a ponte
-diria que ele funciona mesmo com o que foi para o arquivo errado.
-
-A PONTE É DUBLÊ, SEMPRE. `perfil.gravar_e_reaplicar` chama
-`p.profile_switch(...)` quando o nome casa o ativo, e uma ponte real mandaria
-isso ao daemon do usuário, que está vivo. Todo `uniq` daqui vem da faixa sintética
-`aa:bb:cc:00:00:01` — há dois portões de anonimato que reprovam o contrário.
-
-O QUE ELA COBRA, e cada item é um jeito diferente de o campo mentir:
-
-1. "30% da força" vira `policy="economia"` no perfil, e mais nada.
-2. O rótulo é REPRODUZIDO de `RUMBLE_POLICY_MULT["economia"]`, nunca digitado.
-3. "Segue o global" APAGA o override, e o segundo clique igual não regrava.
-4. "Sem teto" recusa dizendo, e não toca no arquivo.
-5. O fator que chega ao motor é 0,3 — a conta inteira, do disco ao `forca_do_controle`.
-6. A borda recusa o clique sem dono (sem controle, MAC forjado, rótulo de fora).
-7. A pintura mostra o que está no DISCO, e não o padrão do desenho.
-8. Uma política que o campo não sabe mostrar é DECLARADA, não pintada errada.
-9. A página publicada tem os DOIS endereços de pintura (o campo e o `?`).
-
-E A SEÇÃO 8, DE 01/09/2026, mede a palavra "GLOBAL" — que tinha DOIS donos, e a
-tela reportava o errado. Cada item ali é um jeito diferente de a frase mentir:
-
-10. A dica diz o que chega AO MOTOR, e não o degrau nominal do rótulo — a cadeia
-    inteira, do disco ao `forca_do_controle`, para os três globais vivos.
-11. O global do PERFIL é DENOMINADOR; quem multiplica é o do DAEMON.
-12. O orçamento entra por CIMA da política viva, com `min`.
-13. O que não se sabe não vira a afirmação "Sem teto" — nos três casos.
-14. O orçamento sai da declaração já em cache, e sem arrastar GTK.
-15. A frase do orçamento passa pelo dono do número; o 0,667 é derivado.
-16. A chave que PINTA é a mesma que GRAVA (`_so_hex`).
-17. A recusa sem endereço fala do teto, e não da ponte do microfone.
-18. O piloto não escreve num `<select>` o que ele não oferece.
-19. Os `<option>` da página são os que a borda aceita.
-
-AS MORDIDAS ESTÃO NO DOCSTRING DE CADA CASO, uma a uma, com o que reprova.
+Todo `uniq` daqui vem da faixa sintética `aa:bb:cc:00:00:01`.
 """
 from __future__ import annotations
 
-import json
 import pathlib
 import re
 import sys
@@ -62,34 +26,6 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 UNIQ = "aa:bb:cc:00:00:01"
 CHAVE = "aabbcc000001"
 
-UNIQ_FORJADO = "02:fe:00:00:00:33"
-
-
-def _bancada(**campos):
-    """A `Vibracao` de referência: global vivo `balanceado`, nada mais declarado."""
-    from hefesto_dualsense4unix.interface.conexoes import Vibracao
-
-    return Vibracao(**{"a_viva": "balanceado", **campos})
-
-
-class PonteDeMentira:
-    """Guarda o que foi pedido ao daemon, na ordem. NUNCA fala com o de verdade."""
-
-    def __init__(self) -> None:
-        self.chamadas: list[tuple[str, tuple[Any, ...]]] = []
-
-    def profile_switch(self, nome: str) -> bool:
-        self.chamadas.append(("profile_switch", (nome,)))
-        return True
-
-    def profile_reaplicar(self, nome: str, *, prender: bool = False) -> bool:
-        self.chamadas.append(("profile_reaplicar", (nome,)))
-        return True
-
-    def chamar(self, metodo: str, **_: Any) -> bool:
-        self.chamadas.append(("chamar", (metodo,)))
-        return True
-
 
 def _perfil(nome: str = "Bancada", **campos: Any) -> Any:
     """Um `Profile` DE VERDADE — o esquema é metade do que esta régua mede."""
@@ -97,6 +33,11 @@ def _perfil(nome: str = "Bancada", **campos: Any) -> Any:
 
     return Profile.model_validate(
         {"name": nome, "match": {"type": "criteria"}, **campos})
+
+
+def _perfil_com_economia() -> Any:
+    """O perfil que a escolha «30% da força» da aba Vibração deixa no disco."""
+    return _perfil(controllers={CHAVE: {"rumble": {"policy": "economia"}}})
 
 
 @pytest.fixture(autouse=True)
@@ -113,13 +54,6 @@ def _perfil_ativo_no_disco() -> None:
 
 
 @pytest.fixture
-def pac():
-    import pacotes
-
-    return pacotes
-
-
-@pytest.fixture
 def a08():
     from pacotes import a08_conexoes
 
@@ -131,66 +65,6 @@ def tela():
     from hefesto_dualsense4unix.interface import conexoes as aba_conexoes
 
     return aba_conexoes
-
-
-@pytest.fixture
-def gesto(pac):
-    fn = pac.gesto_da_pagina("08-conexoes.html", "teto-da-vibracao")
-    assert fn is not None, (
-        "08-conexoes.html:teto-da-vibracao perdeu o dono — o clique dela volta a "
-        "não fazer nada.")
-    return fn
-
-
-@pytest.fixture
-def disco(monkeypatch):
-    """Um disco de mentira: guarda o que o gesto mandou gravar."""
-    from hefesto_dualsense4unix.profiles import loader
-
-    gravados: list[Any] = []
-    estado: dict[str, Any] = {}
-
-    def falso_load(nome: str) -> Any:
-        return estado[nome]
-
-    def falso_save(prof: Any, **_: Any) -> None:
-        gravados.append(prof)
-
-    monkeypatch.setattr(loader, "load_profile", falso_load, raising=False)
-    monkeypatch.setattr(loader, "save_profile", falso_save, raising=False)
-    return estado, gravados
-
-
-def _ctx(pac, ativo: str = "Bancada", uniq: str = UNIQ):
-    return pac.Contexto(
-        state={"active_profile": ativo},
-        mesa=[],
-        conectados=[{"uniq": uniq, "connected": True, "transport": "bt", "index": 0}],
-        estados={})
-
-
-def test_a_escolha_de_30_por_cento_vira_economia_no_perfil(
-        pac, a08, tela, gesto, disco) -> None:
-    """A opção do meio-degrau grava `economia`, e o número tem UM dono."""
-    estado, gravados = disco
-    estado["Bancada"] = _perfil()
-    p = PonteDeMentira()
-    _, _, trinta = tela.opcoes_do_teto()
-
-    gesto(_ctx(pac), {"uniq": UNIQ, "valor": trinta}, p)
-
-    assert len(gravados) == 1, f"gravou {len(gravados)} vez(es), esperava uma"
-    dele = (gravados[0].controllers or {}).get(CHAVE)
-    assert dele is not None, (
-        f"não há override para {CHAVE!r} no perfil gravado — as chaves são "
-        f"{sorted((gravados[0].controllers or {}).keys())}. O mapa que chega ao "
-        f"backend é chaveado pelo `uniq` normalizado (`set_rumble_scales`); "
-        f"gravar sob outra chave faz a escolha dela sumir calada.")
-    assert dele.rumble is not None and dele.rumble.policy == "economia", (
-        f"gravou {dele.rumble!r}. O rótulo promete o degrau do "
-        f"`RUMBLE_POLICY_MULT['economia']`, e nenhum outro.")
-    assert dele.triggers is None and dele.leds is None, (
-        f"o override trouxe outras seções junto: {dele!r}")
 
 
 def test_o_rotulo_nao_e_digitado(monkeypatch, tela) -> None:
@@ -214,85 +88,11 @@ def test_o_rotulo_nao_e_digitado(monkeypatch, tela) -> None:
         tela.politica_do_rotulo("30% da força")
 
 
-def test_segue_o_global_limpa_o_override(pac, tela, gesto, disco) -> None:
-    """A opção que não grava nada APAGA o que havia, e o clique repetido cala."""
-    estado, gravados = disco
-    estado["Bancada"] = _perfil(
-        controllers={CHAVE: {"rumble": {"policy": "economia"}}})
-    p = PonteDeMentira()
-    segue, _, _ = tela.opcoes_do_teto()
-
-    gesto(_ctx(pac), {"uniq": UNIQ, "valor": segue}, p)
-
-    assert len(gravados) == 1, f"gravou {len(gravados)} vez(es), esperava uma"
-    dele = (gravados[0].controllers or {}).get(CHAVE)
-    assert dele is not None and dele.rumble is None, (
-        f"a seção `rumble` do override ficou {getattr(dele, 'rumble', '???')!r}. "
-        f"'Segue o global' é a AUSÊNCIA da opinião, e o esquema já diz isso: "
-        f"*campo não escrito = sem opinião*.")
-
-    # O SEGUNDO CLIQUE IGUAL NÃO REGRAVA: um `profile.switch` no meio de uma
-    estado["Bancada"] = gravados[0]
-    p2 = PonteDeMentira()
-    gesto(_ctx(pac), {"uniq": UNIQ, "valor": segue}, p2)
-    assert len(gravados) == 1, "regravou um perfil que já estava sem override"
-    assert p2.chamadas == [], (
-        f"pediu {p2.chamadas} ao daemon sem ter o que mudar")
-
-
-def test_igual_ao_global_do_perfil_tambem_limpa(pac, tela, gesto, disco) -> None:
-    """Override igual à política global não vira override — regra do produto.
-
-    `app/draft_config.with_controller_rumble:1193-1223` já decidiu isso, e a
-    razão é aritmética: `_controllers_to_rumble_scales` calcula `mult / base` e
-    DESCARTA o fator 1,0 (`profiles/manager.py:1132-1133`).
-
-    MORDIDA: tire o desvio `policy == global_` de `_com_o_teto` — o perfil passa
-    a guardar um override que o motor ignora, e este caso reprova.
-    """
-    estado, gravados = disco
-    estado["Bancada"] = _perfil(rumble={"policy": "economia"})
-    p = PonteDeMentira()
-    _, _, trinta = tela.opcoes_do_teto()
-
-    gesto(_ctx(pac), {"uniq": UNIQ, "valor": trinta}, p)
-
-    assert gravados == [], (
-        "gravou um override igual à política global do perfil — o fator seria "
-        "1,0, que `_controllers_to_rumble_scales` descarta de qualquer jeito.")
-
-
-def test_sem_teto_recusa_dizendo_e_nao_grava(pac, tela, gesto, disco) -> None:
-    """A opção sem tradução honesta RECUSA, e a recusa nomeia as duas leituras."""
-    estado, gravados = disco
-    estado["Bancada"] = _perfil()
-    p = PonteDeMentira()
-    _, sem_teto, _ = tela.opcoes_do_teto()
-
-    with pytest.raises(ValueError) as erro:
-        gesto(_ctx(pac), {"uniq": UNIQ, "valor": sem_teto}, p)
-
-    frase = str(erro.value)
-    assert "0,667" in frase or "0.667" in frase, (
-        f"a recusa não nomeia a leitura que 'balanceado' produziria sob um "
-        f"global 'max': {frase!r}")
-    assert "max" in frase and "balanceado" in frase, (
-        f"a recusa não nomeia as duas traduções possíveis: {frase!r}")
-    assert gravados == [], "recusou dizendo E gravou assim mesmo"
-    assert p.chamadas == [], f"falou com o daemon depois de recusar: {p.chamadas}"
-
-
-def test_o_fator_que_chega_ao_hardware_e_zero_ponto_tres(
-        pac, tela, gesto, disco) -> None:
+def test_o_fator_que_chega_ao_hardware_e_zero_ponto_tres() -> None:
     """Do disco ao motor: `economia` sobre base `balanceado` vira `(200,200)→(60,60)`."""
     from hefesto_dualsense4unix.profiles.manager import _controllers_to_rumble_scales
 
-    estado, gravados = disco
-    estado["Bancada"] = _perfil()
-    p = PonteDeMentira()
-    _, _, trinta = tela.opcoes_do_teto()
-    gesto(_ctx(pac), {"uniq": UNIQ, "valor": trinta}, p)
-    novo = gravados[0]
+    novo = _perfil_com_economia()
 
     escalas = _controllers_to_rumble_scales(novo.controllers, novo.rumble)
     assert escalas == {CHAVE: pytest.approx(0.3)}, (
@@ -314,8 +114,7 @@ def test_o_fator_que_chega_ao_hardware_e_zero_ponto_tres(
     assert _no_motor(motor, "aabbcc000002") == 200
 
 
-def test_a_ativacao_do_perfil_publica_as_escalas_no_backend(
-        pac, tela, gesto, disco) -> None:
+def test_a_ativacao_do_perfil_publica_as_escalas_no_backend() -> None:
     """O elo que faz a escolha do usuário VALER AGORA — e que régua nenhuma cobria.
 
     `perfil.gravar_e_reaplicar` pede `profile.switch`; quem o atende chama
@@ -333,11 +132,6 @@ def test_a_ativacao_do_perfil_publica_as_escalas_no_backend(
     from hefesto_dualsense4unix.profiles.manager import ProfileManager
     from hefesto_dualsense4unix.testing.fake_controller import FakeController
 
-    estado, gravados = disco
-    estado["Bancada"] = _perfil()
-    _, _, trinta = tela.opcoes_do_teto()
-    gesto(_ctx(pac), {"uniq": UNIQ, "valor": trinta}, PonteDeMentira())
-
     class Espiao(FakeController):
         def __init__(self, **kw: Any) -> None:
             super().__init__(**kw)
@@ -348,102 +142,12 @@ def test_a_ativacao_do_perfil_publica_as_escalas_no_backend(
 
     fc = Espiao(transport="usb")
     fc.connect()
-    ProfileManager(controller=fc).apply(gravados[0])
+    ProfileManager(controller=fc).apply(_perfil_com_economia())
 
     assert fc.publicadas == [{CHAVE: pytest.approx(0.3)}], (
         f"a ativação publicou {fc.publicadas!r} no backend. Sem o mapa, o "
         f"`escala_de` do funil não tem fator e o motor recebe a força inteira — o "
         f"perfil dela mudaria no disco e o aparelho não.")
-
-
-def test_a_borda_recusa_o_clique_sem_dono(pac, tela, gesto, disco) -> None:
-    """Três recusas, uma por vez — e nenhuma delas grava."""
-    estado, gravados = disco
-    estado["Bancada"] = _perfil()
-    _, _, trinta = tela.opcoes_do_teto()
-
-    with pytest.raises(ValueError):
-        gesto(_ctx(pac), {"uniq": "", "valor": trinta}, PonteDeMentira())
-
-    with pytest.raises(RuntimeError):
-        gesto(_ctx(pac, uniq=UNIQ_FORJADO),
-              {"uniq": UNIQ_FORJADO, "valor": trinta}, PonteDeMentira())
-
-    with pytest.raises(ValueError):
-        gesto(_ctx(pac), {"uniq": UNIQ, "valor": "Dobro da força"}, PonteDeMentira())
-
-    assert gravados == [], f"uma das três recusas gravou assim mesmo: {gravados}"
-
-
-def test_sem_perfil_ativo_recusa_dizendo_onde_escolher(pac, tela, gesto, disco) -> None:
-    """A força de um controle é do PERFIL, não da máquina — e a tela diz onde."""
-    estado, gravados = disco
-    estado["Bancada"] = _perfil()
-    _, _, trinta = tela.opcoes_do_teto()
-
-    with pytest.raises(RuntimeError) as erro:
-        gesto(_ctx(pac, ativo=""), {"uniq": UNIQ, "valor": trinta}, PonteDeMentira())
-
-    frase = str(erro.value)
-    assert "Perfis" in frase, (
-        f"a recusa não diz em que aba escolher um perfil: {frase!r}")
-    assert gravados == [], "recusou e gravou assim mesmo"
-
-
-def test_a_pintura_mostra_o_que_esta_no_disco(a08, tela) -> None:
-    """O campo mostra o OVERRIDE, não o padrão do desenho."""
-    segue, _, trinta = tela.opcoes_do_teto()
-    sem_dono: dict[str, str] = {}
-
-    com = a08._teto_do_controle(
-        {CHAVE: {"rumble": {"policy": "economia"}}}, UNIQ, _bancada(), sem_dono)
-    assert com[0] == trinta, (
-        f"com `policy='economia'` no disco o campo mostrou {com[0]!r}")
-    assert "sobrepõe" in com[1], f"o `?` não diz que este controle sobrepõe: {com[1]!r}"
-    assert tela.ABA_DO_TETO_GLOBAL in com[1] and "RUMBLE_POLICY_MULT" in com[1], (
-        f"a dica pintada perdeu o ponteiro para onde o global se muda: {com[1]!r}")
-
-    sem = a08._teto_do_controle({}, UNIQ, _bancada(), sem_dono)
-    assert sem[0] == segue, f"sem override o campo mostrou {sem[0]!r}"
-    assert "segue o global" in sem[1], f"o `?` não diz que segue: {sem[1]!r}"
-    assert sem_dono == {}, f"declarou sem_dono sem ter motivo: {sem_dono}"
-
-    assert a08._teto_do_controle(
-        {CHAVE: {"rumble": {"policy": "economia"}}}, UNIQ.upper(), _bancada(), {})[0] == trinta
-
-
-def test_a_politica_que_a_tela_nao_oferece_e_declarada(a08, tela) -> None:
-    """`max` no disco: o campo NÃO escolhe nenhuma das três, e a razão fica escrita."""
-    sem_dono: dict[str, str] = {}
-    campo, frase = a08._teto_do_controle(
-        {CHAVE: {"rumble": {"policy": "max"}}}, UNIQ, _bancada(), sem_dono)
-
-    assert campo is None, (
-        f"o campo escolheu {campo!r} para uma política que ele não sabe mostrar "
-        f"— isso é a tela afirmando um estado que o disco contradiz.")
-    assert "max" in frase, f"o `?` não diz o que há no disco: {frase!r}"
-    assert sem_dono, "a política não declarada não entrou em `sem_dono`"
-    assert "max" in next(iter(sem_dono.values()))
-
-    assert a08._teto_do_controle(
-        {CHAVE: {"rumble": {"policy": "balanceado"}}}, UNIQ, _bancada(), {})[0] is None
-
-
-def test_o_pacote_publica_os_dois_enderecos(pac, a08, tela, monkeypatch) -> None:
-    """O `pacote()` inteiro entrega o campo E o `?` de cada controle da mesa."""
-    monkeypatch.setattr(
-        a08.perfil, "ativo",
-        lambda _nome: {"controllers": {CHAVE: {"rumble": {"policy": "economia"}}}})
-    monkeypatch.setattr(a08, "_orcamento_da_mesa", lambda: (None, True))
-
-    saida = a08.pacote(_ctx(pac))
-    coluna = saida["colunas"][UNIQ]
-
-    _, _, trinta = tela.opcoes_do_teto()
-    assert coluna["teto-da-vibracao"] == trinta, (
-        f"o campo veio {coluna.get('teto-da-vibracao')!r}")
-    assert "teto-explica" in coluna and "<b>" in coluna["teto-explica"], (
-        f"a dica do `?` não veio pintada: {coluna.get('teto-explica')!r}")
 
 
 def _pagina_publicada() -> str:
@@ -462,23 +166,6 @@ def test_o_piloto_sabe_pintar_html() -> None:
     ramo = ramo.split("if(alvo ===", 1)[0]
     assert re.search(r"el\.innerHTML\s*=", ramo), (
         "o alvo `html` existe e não escreve `innerHTML`")
-
-
-def test_o_gesto_saiu_do_inventario_do_que_falta(a08) -> None:
-    """Um gesto ligado não pode continuar listado como "sem dono".
-
-    MORDIDA: devolva a entrada `teto-da-vibracao` a `SEM_GESTO` — este caso
-    reprova, e o piloto voltaria a imprimir `[gesto sem dono]` sobre um botão
-    que funciona.
-    """
-    assert "teto-da-vibracao" not in a08.SEM_GESTO, (
-        "o gesto tem dono e continua na lista do que falta")
-    assert "teto-da-vibracao" in a08.SEM_ECO, (
-        "o `state_full` não publica override por controle nenhum — a prova "
-        "deste gesto é o ARQUIVO, e ele tem de estar declarado sem eco.")
-    assert a08.PISO_DA_ABA >= 16, (
-        f"o piso da aba é {a08.PISO_DA_ABA} e só sobe — com 15 a régua dos "
-        f"botões passaria com este gesto apagado.")
 
 
 def test_a_recusa_velha_saiu_dos_dois_lugares(a08, tela) -> None:
@@ -615,43 +302,6 @@ def test_a_divergencia_do_quarto_selo_esta_declarada() -> None:
         "portão `desenho-aprovado` reprova, e com razão")
 
 
-def test_o_json_do_perfil_sobrevive_ao_disco(tmp_path, pac, tela, gesto,
-                                             monkeypatch) -> None:
-    """A prova do DISCO: o que o gesto grava volta a ser lido pelo loader."""
-    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
-    from hefesto_dualsense4unix.profiles import loader
-    from hefesto_dualsense4unix.utils import xdg_paths
-
-    pasta = tmp_path / "hefesto-dualsense4unix" / "profiles"
-    pasta.mkdir(parents=True, exist_ok=True)
-    monkeypatch.setattr(xdg_paths, "profiles_dir",
-                        lambda ensure=False: pasta, raising=False)
-    monkeypatch.setattr(loader, "_profiles_dir", lambda: pasta, raising=False)
-
-    prof = _perfil("Descartavel")
-    loader.save_profile(prof, origem="regua-do-teto")
-    antes = sorted(p.name for p in pasta.glob("*.json"))
-    assert antes, f"o loader não gravou nada em {pasta}"
-
-    p = PonteDeMentira()
-    _, _, trinta = tela.opcoes_do_teto()
-    gesto(_ctx(pac, ativo="Descartavel"), {"uniq": UNIQ, "valor": trinta}, p)
-
-    depois = sorted(p_.name for p_ in pasta.glob("*.json"))
-    assert depois == antes, (
-        f"o gesto criou ou apagou arquivo: {antes} -> {depois}")
-
-    cru = json.loads((pasta / antes[0]).read_text(encoding="utf-8"))
-    assert cru["controllers"][CHAVE]["rumble"]["policy"] == "economia", (
-        f"o JSON em disco ficou {cru.get('controllers')!r}")
-    relido = loader.load_profile("Descartavel")
-    assert relido.controllers[CHAVE].rumble.policy == "economia", (
-        "o loader não conseguiu reler o que o gesto gravou")
-    # (Era o `profile.switch` até 01/10/2026; reaplicar não é escolha do usuário.)
-    assert ("profile_reaplicar", ("Descartavel",)) in p.chamadas, (
-        f"o gesto fez {p.chamadas} e não pediu o `profile.reaplicar`")
-
-
 def _no_motor(motor: Any, uniq: str, viva: str = "balanceado", pedido: int = 200) -> int:
     """O que chega ao motor de ``uniq``: o funil `forca_do_controle`, com a peça
     lida do backend por `escala_de`, como os três caminhos de vibração a leem.
@@ -663,43 +313,6 @@ def _no_motor(motor: Any, uniq: str, viva: str = "balanceado", pedido: int = 200
     cfg.rumble_policy = viva
     forca = forca_do_controle(cfg, uniq, 100, {}, 0.0, escala=motor.escala_de(uniq))
     return max(0, min(255, round(pedido * forca)))
-
-
-def _fator_no_motor(fator: dict[str, float], viva: str, pedido: int = 200) -> int:
-    """O que o funil entrega ao motor, com o mapa por peça publicado no backend."""
-    import threading
-
-    from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
-
-    m = PyDualSenseController.__new__(PyDualSenseController)
-    m._rumble_scale_by_uniq = {}
-    m._io_lock = threading.RLock()
-    m.set_rumble_scales(fator)
-    return _no_motor(m, UNIQ, viva, pedido)
-
-
-@pytest.mark.parametrize("viva", ["balanceado", "economia", "max"])
-def test_a_dica_diz_o_que_chega_ao_motor_e_nao_o_degrau_do_rotulo(tela, a08, viva) -> None:
-    """A CADEIA INTEIRA, medida: a frase do `?` == o que sai do `forca_do_controle`."""
-    from hefesto_dualsense4unix.profiles.manager import _controllers_to_rumble_scales
-
-    prof = _perfil()
-    fator = _controllers_to_rumble_scales(
-        a08._com_o_teto(prof, CHAVE, "economia").controllers, prof.rumble)
-    saiu = _fator_no_motor(fator, viva)
-
-    v = tela.Vibracao(do_controle="economia", do_perfil=prof.rumble.policy, a_viva=viva)
-    campo, frase = tela.teto_que_vale(v)
-    esperado = tela.por_cento(saiu / 200)
-    assert f"<b>{esperado}</b>" in frase, (
-        f"com o global vivo em {viva!r} o motor recebe {saiu}/200 = {esperado}, "
-        f"e a dica disse: {re.sub('<[^>]+>', '', frase)!r}")
-    _, _, trinta = tela.opcoes_do_teto()
-    assert campo == trinta, f"a caixa deixou de mostrar a escolha dela: {campo!r}"
-    if esperado != trinta:
-        assert "RELATIVO" in frase, (
-            f"o motor entrega {esperado} com a caixa em {trinta}, e a dica não "
-            f"explica a diferença: {re.sub('<[^>]+>', '', frase)!r}")
 
 
 def test_o_global_do_perfil_nao_e_o_que_multiplica(tela) -> None:
@@ -758,47 +371,6 @@ def test_o_que_nao_se_sabe_nao_vira_a_afirmacao_sem_teto(tela, campos, porque) -
         f"não disse que não sabe quando {porque}: {frase!r}")
 
 
-def test_o_orcamento_sai_da_declaracao_que_o_modulo_ja_tem_e_sem_gtk(a08, tela) -> None:
-    """`_orcamento_da_mesa` lê o cache do `maquina.json`, e distingue os dois `None`.
-
-    DUAS COISAS, e as duas eram defeito:
-
-    1. ele abria o arquivo DE NOVO a cada tique, por
-       `secao_orcamento.orcamento_em_vigor()`, que arrasta `gi`/`Gtk` para o
-       processo — com a resposta já em memória a 470 linhas de distância
-       (`_DECLARACAO`, o `maquina.json` inteiro já validado);
-    2. o `except Exception: return None` fazia "não consegui ler" e "ninguém
-       declarou" virarem o mesmo valor.
-
-    MORDIDA: devolva `(chave, True)` incondicionalmente — o `assert` do par
-    reprova. Outra: volte ao `orcamento_em_vigor()` em `_orcamento_da_mesa` ou ao
-    `from ...secao_orcamento import SEM_TETO` em `fala_do_teto` — o subprocesso
-    do Gtk reprova.
-    """
-    tela.opcoes_do_teto()
-    tela.teto_que_vale(tela.Vibracao(a_viva="balanceado"))
-    a08._orcamento_da_mesa()
-
-    guardado_cache, guardada = a08._DECLARACAO, a08._declaracao
-    passou: list[bool] = []
-
-    def _mudo(recarregar: bool = False) -> None:
-        passou.append(True)
-        return None
-
-    try:
-        a08._DECLARACAO = None
-        a08._declaracao = _mudo
-        assert a08._orcamento_da_mesa() == (None, False), (
-            "com o `maquina.json` ilegível, `_orcamento_da_mesa` tem de dizer que "
-            "a mesa NÃO respondeu — senão a dica publica `Sem teto` sobre um "
-            "arquivo que ninguém leu.")
-        assert passou, "não passou pelo `_declaracao()` deste módulo"
-    finally:
-        a08._declaracao = guardada
-        a08._DECLARACAO = guardado_cache
-
-
 def test_a_frase_do_orcamento_passa_pelo_dono_do_numero(tela, monkeypatch) -> None:
     """`fala_do_teto` deriva de `core.rumble.teto_do_orcamento`, o dono declarado.
 
@@ -829,40 +401,6 @@ def test_o_numero_da_recusa_e_derivado_e_nao_digitado(tela, monkeypatch) -> None
         tela.politica_do_rotulo("Sem teto")
     assert "1/2 = 0,500" in str(erro.value), (
         f"a conta da recusa não acompanhou o degrau: {erro.value}")
-
-
-def test_a_chave_da_pintura_e_a_mesma_da_gravacao(a08, tela) -> None:
-    """As duas passam pelo `_so_hex`, e um `uniq` sujo não separa o par."""
-    sujo = UNIQ + "\n"
-    assert a08._so_hex(sujo) == CHAVE
-    _, _, trinta = tela.opcoes_do_teto()
-    campo, _frase = a08._teto_do_controle(
-        {CHAVE: {"rumble": {"policy": "economia"}}}, sujo, _bancada(), {})
-    assert campo == trinta, (
-        f"a pintura não achou no disco o que a gravação escreveu: {campo!r}")
-
-
-def test_a_recusa_sem_endereco_fala_do_teto_e_nao_do_microfone(pac, gesto, tela) -> None:
-    """Duas recusas diferentes, duas frases — a do teto deixou de ser a do mic."""
-    ctx = pac.Contexto(
-        state={"active_profile": "Bancada"}, mesa=[],
-        conectados=[{"uniq": UNIQ_FORJADO, "connected": True,
-                     "transport": "usb", "index": 0}],
-        estados={})
-
-    class _PonteQueAceitaTudo:
-        def __getattr__(self, _nome):
-            return lambda *a, **k: True
-
-    _, _, trinta = tela.opcoes_do_teto()
-    with pytest.raises(RuntimeError) as erro:
-        gesto(ctx, {"uniq": UNIQ_FORJADO, "valor": trinta}, _PonteQueAceitaTudo())
-
-    frase = str(erro.value)
-    assert "PONTE" not in frase and "ponte" not in frase, (
-        f"a recusa do teto fala da ponte do microfone: {frase!r}")
-    assert "força" in frase, (
-        f"a recusa do teto não fala da força deste controle: {frase!r}")
 
 
 def test_o_select_do_piloto_nao_conta_pintura_sobre_valor_que_nao_e_opcao() -> None:
@@ -903,5 +441,3 @@ def test_a_camada_de_tela_desta_aba_continua_sem_gtk() -> None:
         "o caminho do teto da vibração puxou `gi.repository.Gtk` para o processo, "
         "e a linha 1 deste módulo promete `sem GTK` — com três consequências "
         f"medidas escritas logo abaixo dela. Saída: {saida.stdout!r}")
-
-

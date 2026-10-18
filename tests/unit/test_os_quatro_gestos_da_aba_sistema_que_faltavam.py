@@ -15,6 +15,9 @@ de cada uma é a própria linha do CSV:
 * **L343** — **"Restaurar de fábrica"**, o último nome de `a09_sistema.SEM_MOTOR`
   (eram cinco em 03/09) e o gesto mais destrutivo da página.
 
+O «Aplicar aos jogos» (L340) saiu em 17/10/2026, junto com os gestos sem elemento: a página não o
+tem, e o trabalho é do interruptor das correções. Os casos dele saíram desta régua.
+
 O QUE ESTA RÉGUA MEDE, e em três camadas — cada uma pega o que a de cima não vê:
 
 1. **os GESTOS**, com o motor dublado no ponto em que ele sairia da máquina: o
@@ -134,12 +137,12 @@ def _confirma(gesto: str) -> dict[str, object]:
     return {"gesto": gesto, "texto": a09.CONFIRMA}
 
 
-def test_os_tres_gestos_novos_declaram_o_que_mexem() -> None:
-    """Sem isto, a prova botão a botão clica os três na máquina do usuário."""
+def test_os_dois_gestos_novos_declaram_o_que_mexem() -> None:
+    """Sem isto, a prova botão a botão clica os dois na máquina do usuário."""
     from hefesto_dualsense4unix.interface import pacotes
 
     perigosos = {g for (pg, g) in pacotes.perigosos() if pg == PAGINA}
-    for nome in ("corrigir-modo", "aplicar-aos-jogos", "restaurar-de-fabrica"):
+    for nome in ("corrigir-modo", "restaurar-de-fabrica"):
         assert (PAGINA, nome) in pacotes.GESTOS, f"`{nome}` não tem dono"
         assert nome in perigosos, (
             f"`{nome}` mexe na máquina dela e NÃO está protegido — declare a "
@@ -151,10 +154,9 @@ def test_a_lista_dos_sem_motor_ficou_vazia() -> None:
     assert a09.SEM_MOTOR == {}, (
         "há gesto declarado sem motor nesta aba, e os cinco fecharam: "
         f"{sorted(a09.SEM_MOTOR)}")
-    assert "aplicar-aos-jogos" in a09.DESTRUTIVOS, (
-        "o «Aplicar aos jogos da Steam» fecha a Steam dela e reescreve a linha "
-        "de lançamento de TODOS os jogos — ele é destrutivo, e sem estar na "
-        "lista o `blocos:` nunca repõe o rótulo do consentimento.")
+    assert "restaurar-de-fabrica" in a09.DESTRUTIVOS, (
+        "o «Restaurar de fábrica» troca o perfil dela — ele é destrutivo, e sem "
+        "estar na lista o `blocos:` nunca repõe o rótulo do consentimento.")
 
 
 def test_o_corrigir_modo_recusa_fora_do_modo_improvisado(
@@ -245,90 +247,6 @@ def test_o_campo_do_modo_improvisado_sai_ate_quando_a_camada_levanta(
     bruto = dict(a09.pacote(_ctx()))
     assert bruto.get("sem_dono"), "o ramo de erro não foi exercido"
     assert bruto[a09.CAMPO_DO_MODO_AVULSO] == a09.MODO_A_CORRIGIR
-
-
-def _com_a_steam(monkeypatch: pytest.MonkeyPatch, *, janela: str = "ok",
-                 resultado: object = None) -> dict[str, list]:
-    """Dubla o motor da Steam no ponto em que ele MEXERIA na máquina do usuário."""
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    visto: dict[str, list] = {"fechou": [], "aplicou": []}
-
-    def _aplicar() -> dict[str, object]:
-        visto["aplicou"].append(True)
-        return resultado if resultado is not None else {
-            "applied": 3, "skipped": 0, "errors": 0}
-
-    def _com_a_steam_fechada(acao):
-        visto["fechou"].append(True)
-        return (janela, acao() if janela == "ok" else None)
-
-    monkeypatch.setattr(slo, "apply_wrapper_to_all_games", _aplicar,
-                        raising=False)
-    monkeypatch.setattr(slo, "with_steam_closed", _com_a_steam_fechada)
-    return visto
-
-
-def test_o_aplicar_aos_jogos_nao_fecha_a_steam_no_primeiro_clique(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """O consentimento é EXIGÊNCIA DO MOTOR: `with_steam_closed` fecha a Steam
-    do usuário por uns 20 segundos, e o primeiro clique só PERGUNTA."""
-    visto = _com_a_steam(monkeypatch)
-    fora = a09.aplicar_aos_jogos(
-        _ctx(), {"gesto": "aplicar-aos-jogos", "texto": "Aplicar aos jogos da Steam"},
-        PonteDeMentira())
-    assert visto["fechou"] == [] and visto["aplicou"] == [], (
-        "a Steam dela foi fechada no PRIMEIRO clique — o consentimento sumiu.")
-    assert a09.CONFIRMA in str(fora["blocos"]), fora["blocos"]
-    esperada = " ".join(_daemon.DaemonActionsMixin._STEAM_APPLY_CORPO.split())
-    assert "recado" not in fora, fora
-    assert esperada in " ".join(fora["mesa"][a09.REGISTRO].split())
-
-
-def test_o_segundo_clique_aplica_o_atalho_a_todos_os_jogos(
-        monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
-    """E o recibo é o do produto, com o número que ele contou."""
-    visto = _com_a_steam(monkeypatch)
-    a09.aplicar_aos_jogos(
-        _ctx(), {"gesto": "aplicar-aos-jogos", "texto": "Aplicar aos jogos da Steam"},
-        PonteDeMentira())
-    fora = a09.aplicar_aos_jogos(_ctx(), _confirma("aplicar-aos-jogos"),
-                                PonteDeMentira())
-    assert visto["fechou"] == [True] and visto["aplicou"] == [True]
-    assert set(fora) == {"blocos"}, fora
-    diario = capsys.readouterr().err
-    assert _daemon.format_apply_wrapper_result(
-        {"applied": 3, "skipped": 0, "errors": 0}) in diario, diario
-    assert "3 jogo(s)" in diario, diario
-
-
-def test_o_jogo_aberto_nao_e_falha_e_diz_o_que_o_gesto_fez(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """O dublê tem de saber RECUSAR a Steam, e o gesto não cai por isso.
-
-    O-APLICAR-SOLUCOES-COM-JOGO-ABERTO-DIZ-O-QUE-FEZ-01 (03/10/2026): os outros
-    lançadores já receberam o ambiente; o painel diz isso e que a Steam espera.
-    """
-    _com_a_steam(monkeypatch, janela="jogo_aberto")
-    a09.aplicar_aos_jogos(
-        _ctx(), {"gesto": "aplicar-aos-jogos", "texto": "x"}, PonteDeMentira())
-    fora = a09.aplicar_aos_jogos(_ctx(), _confirma("aplicar-aos-jogos"),
-                                 PonteDeMentira())
-    frase = fora["mesa"][a09.REGISTRO]
-    assert frase.endswith(a09.STEAM_FICA_PARA_DEPOIS), frase
-    assert "Nada foi mudado" not in frase and "Tem um jogo aberto" not in frase
-
-
-def test_a_instalacao_sem_aplicacao_em_massa_recusa_dizendo_como_atualizar(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """O contrato PATH-06: `getattr` defensivo, e a frase é a do produto."""
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    monkeypatch.delattr(slo, "apply_wrapper_to_all_games", raising=False)
-    with pytest.raises(RuntimeError) as erro:
-        a09.aplicar_aos_jogos(_ctx(), _confirma("aplicar-aos-jogos"),
-                              PonteDeMentira())
-    assert str(erro.value) == _daemon.frase_sem_aplicacao_em_massa()
 
 
 @pytest.fixture()

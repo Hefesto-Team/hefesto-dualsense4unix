@@ -54,7 +54,6 @@ from typing import Any
 from hefesto_dualsense4unix.app.actions import ambiente_na_tela as _ambiente
 from hefesto_dualsense4unix.app.actions import atos_da_bandeja as _bandeja
 from hefesto_dualsense4unix.app.actions import daemon_actions as _daemon
-from hefesto_dualsense4unix.app.actions import emulation_actions as _emulacao
 from hefesto_dualsense4unix.app.actions.config import secao_orcamento as _orcamento
 
 # no topo não custa nada aqui: este módulo já traz `interface.sistema` logo abaixo.
@@ -220,7 +219,7 @@ def _limpar_o_painel() -> None:
 
 
 #: <!-- noqa-acento: citação literal -->
-RECIBO_QUE_FICA_NA_TELA = ("corrigir-vulkan", CAMPO_DAS_CORRECOES)
+RECIBO_QUE_FICA_NA_TELA = (CAMPO_DAS_CORRECOES,)
 
 
 def _relatar_o_recibo(gesto_: str, frase: str) -> None:
@@ -237,13 +236,6 @@ CLIQUE_DE_NOVO = "Clique de novo para confirmar."
 LARGURA_DA_PERGUNTA = 120
 
 
-def _pergunta_da_steam() -> str:
-    """A pergunta do clique 1 de «Aplicar aos jogos da Steam», para o painel."""
-    corpo = " ".join(_daemon.DaemonActionsMixin._STEAM_APPLY_CORPO.split())
-    return f"{textwrap.fill(corpo, LARGURA_DA_PERGUNTA)}\n\n{CLIQUE_DE_NOVO}"
-
-
-#: `tests/unit/test_cada_botao_da_aba_sistema_faz_o_que_diz.py`. Com ela na
 ARMOU = "armou"
 
 _DICAS: dict[str, str] = {}
@@ -1885,8 +1877,7 @@ ATIVAR = "Ativar o serviço"
 
 DESLIGAR = "parar-ou-retomar"
 
-DESTRUTIVOS = (DESLIGAR, "restaurar-de-fabrica", "refazer-consertos",
-               "aplicar-aos-jogos")
+DESTRUTIVOS = (DESLIGAR, "restaurar-de-fabrica")
 
 RETOMAR = "Retomar"
 
@@ -2232,88 +2223,6 @@ def corrigir_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
             "recado": _daemon.MIGRAR_DEU_CERTO}
 
 
-#: O desfecho de `with_steam_closed` quando há um jogo aberto: a Steam NÃO fecha, e
-#: só a Steam espera — o resto do gesto (os outros lançadores) já rodou.
-JANELA_COM_JOGO_ABERTO = "jogo_aberto"
-
-#: O recibo, não a falha (O-APLICAR-SOLUCOES-COM-JOGO-ABERTO-DIZ-O-QUE-FEZ-01):
-#: com um jogo aberto o gesto aplicou o que não exige fechar a Steam, e diz que a
-#: Steam fica para quando o jogo fechar.
-STEAM_FICA_PARA_DEPOIS = "A Steam fica para quando o jogo fechar."
-
-
-@gesto("09-sistema.html", "aplicar-aos-jogos", grava="with_steam_closed")
-def aplicar_aos_jogos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Aplicar soluções nos lançadores» — o atalho na Steam, o ambiente nos outros.
-
-    Desde 01/10/2026 (AS-SOLUCOES-NOS-LANCADORES-01) o botão vale para todo
-    lançador: antes da Steam, a carona dos outros (o Heroic e as caixas do
-    Flatpak) roda na hora. O que vem abaixo é a metade da Steam.
-
-    A LINHA **L340** DO CSV, e ela nunca teve caminho na interface nova: o
-    "Copiar a linha" da `07-lancadores` só entrega o texto na área de
-    transferência, e sem este botão não havia por onde o atalho chegar aos
-    jogos sem ela colar um a um. `D-0609-STEAM-DIVIDIDO` decidiu o endereço:
-    **"Aplicar aos jogos" fica na 09.**
-
-    O MOTOR É O MESMO DA JANELA ANTIGA, e o do "Deixar tudo pronto" que a aba
-    07 teve até 21/09: `steam_launch_options.apply_wrapper_to_all_games` numa
-    janela de `with_steam_closed`. Nada aqui reescreve o ato — nem o `getattr`
-    defensivo, que é o contrato PATH-06: uma instalação antiga sem a aplicação
-    em massa recusa DIZENDO, com a frase do dono
-    (`daemon_actions.frase_sem_aplicacao_em_massa`).
-
-    O CONSENTIMENTO É EXIGÊNCIA DO MOTOR, e não desenho da tela: `with_steam_closed`
-    FECHA a Steam do usuário por uns 20 segundos. A pergunta é a mesma que o diálogo
-    da janela antiga fazia — `DaemonActionsMixin._STEAM_APPLY_CORPO`, palavra
-    por palavra —, e ela sai de lá hoje justamente para não haver duas.
-
-    A PERGUNTA VAI AO PAINEL DE REGISTRO — TELA-CALADA-03, 13/09/2026. Ela ia
-    por `recado`, e desde `8b0a3b48` esta aba não tem cartão nem faixa onde um
-    recado pouse: medido no piloto oculto, o primeiro clique virava o botão em
-    «Confirma?» e a tela não dizia uma palavra sobre o que ia acontecer. Agora
-    ela vai para onde os primeiros cliques de «Refazer os consertos
-    automáticos» e de «Tirar a sobreposição Vulkan» já escrevem
-    (:func:`_pergunta_da_steam`), e chega pelo PACOTE — não depende do canal de
-    recado, que a TELA-CALADA-01 cala para o sucesso.
-
-    OS TRÊS DESFECHOS DO MOTOR ESTÃO COBERTOS, e nenhuma frase é deste pacote: a
-    recusa da janela (`format_steam_janela_recusa` — jogo aberto, a Steam não
-    fechou, resposta inesperada) e o resultado (`format_apply_wrapper_result` —
-    quantos jogos mudaram, quantos ficaram, quantos falharam). **O resultado
-    saiu da tela em 13/09/2026** (é recibo, e a régua dela tira recibo): ele vai
-    ao diário da janela por :func:`_relatar_o_recibo`, e o segundo clique
-    devolve só os rótulos. A recusa continua levantando — menos a do **jogo
-    aberto**, que não é falha (03/10/2026): os outros lançadores já receberam o
-    ambiente, e o painel diz quais e que a Steam fica para quando o jogo fechar.
-    """
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    aplicar = getattr(slo, "apply_wrapper_to_all_games", None)
-    if aplicar is None:
-        raise RuntimeError(_daemon.frase_sem_aplicacao_em_massa())
-    if not _confirmado(o, "aplicar-aos-jogos"):
-        return _so_armou(_de_pe(ctx), _para_o_painel(
-            _pergunta_da_steam(), pergunta_de="aplicar-aos-jogos"))
-    _limpar_o_painel()
-    from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
-
-    das_estradas = cpe.frase_das_estradas(
-        cpe.curar_todas_as_estradas(espera=cpe.ESPERA_DA_JANELA_S))
-    _relatar_o_recibo("aplicar-aos-jogos", das_estradas)
-    janela, resultado = slo.with_steam_closed(aplicar)
-    if janela == JANELA_COM_JOGO_ABERTO:
-        _relatar_o_recibo("aplicar-aos-jogos", STEAM_FICA_PARA_DEPOIS)
-        return {"blocos": blocos_dos_botoes(_de_pe(ctx)),
-                **_para_o_painel(f"{das_estradas} {STEAM_FICA_PARA_DEPOIS}")}
-    recusa = _daemon.format_steam_janela_recusa(janela)
-    if recusa is not None:
-        raise RuntimeError(recusa)
-    _relatar_o_recibo("aplicar-aos-jogos",
-                      _daemon.format_apply_wrapper_result(resultado))
-    return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
-
-
 @gesto("09-sistema.html", "restaurar-de-fabrica", grava="gravar_e_reaplicar")
 def restaurar_de_fabrica(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Restaurar de fábrica" — o último dos cinco sem motor, e o mais destrutivo.
@@ -2429,19 +2338,6 @@ CONSERTOS: tuple[tuple[str, list[str]], ...] = (
 
 SEGUNDOS_DO_CONSERTO = 30
 
-_ANTES_DO_CONSERTO: dict[str, Any] = {}
-
-
-def _consertos_no_disco() -> list[tuple[Any, list[str]]]:
-    """Os scripts de :data:`CONSERTOS` que EXISTEM nesta instalação."""
-    janela = _matriz()
-    achados: list[tuple[Any, list[str]]] = []
-    for relpath, args in CONSERTOS:
-        caminho = janela._find_repo_file(relpath)
-        if caminho is not None:
-            achados.append((caminho, args))
-    return achados
-
 
 def _versoes_que_sobram() -> list[Any]:
     """As versões do Proton sem uso (`proton_pin.versoes_que_sobram`). Nunca levanta."""
@@ -2491,30 +2387,6 @@ def _levar_as_que_sobram(sobras: list[Any]) -> str:
         return f"As versões do Proton sem uso ficaram: {erro}."
 
 
-def _frase_do_que_vai_mudar(jogos: list[str] | None) -> str:
-    """O que o clique 1 escreve no painel: o que EXISTE agora, sem agir."""
-    quantos = len(_consertos_no_disco())
-    if quantos != len(CONSERTOS):
-        falta = f" ({len(CONSERTOS) - quantos} não está nesta instalação)"
-    else:
-        falta = ""
-    linhas = [f"Vou rodar {quantos} "
-              f"{_plural(quantos, 'conserto automático', 'consertos automáticos')}"
-              f"{falta}, sem pedir senha e sem fechar nada."]
-    if jogos is None:
-        linhas.append("  Não consegui olhar quais jogos estão com o Steam Input "
-                      "ligado — o resto continua valendo.")
-    elif not jogos:
-        linhas.append("  Nenhum jogo com Steam Input ligado fora da sua lista de "
-                      "exceções. Nada a desligar aí.")
-    else:
-        linhas.append(f"  Steam Input ligado em {len(jogos)} "
-                      f"{_plural(len(jogos), 'jogo', 'jogos')}: "
-                      + ", ".join(jogos) + ".")
-    linhas.append(f"  {CLIQUE_DE_NOVO}")
-    return "\n".join(linhas)
-
-
 def _rodar_os_consertos(jogos: list[str] | None) -> dict[str, Any]:
     """Roda os scripts de :data:`CONSERTOS` e devolve o relatório que o dono da frase lê."""
     import subprocess
@@ -2535,37 +2407,6 @@ def _rodar_os_consertos(jogos: list[str] | None) -> dict[str, Any]:
                 relatorio["steam_input"] = (proc.returncode,
                                             (proc.stdout or "") + (proc.stderr or ""))
     return relatorio
-
-
-@gesto("09-sistema.html", "refazer-consertos",
-       grava="roda os scripts de conserto do sistema na máquina dela")
-def refazer_consertos(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """"Refazer os consertos automáticos" — mede, mostra, e só então mexe."""
-    if not _confirmado(o, "refazer-consertos"):
-        try:
-            jogos = _daemon.medir_jogos_com_steam_input()
-        except Exception:
-            jogos = None
-        _ANTES_DO_CONSERTO["jogos"] = jogos
-        return _so_armou(_de_pe(ctx), _para_o_painel(
-            _frase_do_que_vai_mudar(jogos), pergunta_de="refazer-consertos"))
-
-    _limpar_o_painel()
-    if "jogos" in _ANTES_DO_CONSERTO:
-        jogos = _ANTES_DO_CONSERTO.pop("jogos")
-    else:
-        try:
-            jogos = _daemon.medir_jogos_com_steam_input()
-        except Exception:
-            jogos = None
-    relatorio = _rodar_os_consertos(jogos)
-    recibo = _daemon.format_fix_safe_result(relatorio)
-    sobra = _levar_as_que_sobram(_versoes_que_sobram())
-    if sobra:
-        recibo = f"{recibo} {sobra}"
-    _LENTO.clear()
-    _relatar_o_recibo("refazer-consertos", recibo)
-    return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
 
 
 LINHAS_DO_DIARIO = 80
@@ -2656,73 +2497,6 @@ def _o_pino() -> tuple[Any, Any]:
     except ImportError:
         pin = None
     return pin, getattr(pin, "lock_proton_for_all_games", None)
-
-
-@gesto("09-sistema.html", "fixar-proton",
-       grava="trava ou destrava o Proton de TODOS os jogos dela, e a Steam "
-             "regrava o arquivo")
-def fixar_proton(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O ligável «Fixar Proton»: liga travando, desliga destravando.
-
-    UM CLIQUE, SEM PERGUNTA — 25/09/2026. O botão de ontem («Refazer a fixação
-    do Proton») perguntava porque só sabia TRAVAR; o ligável desfaz pelo mesmo
-    registro que o travar escreveu (`unlock_games_from_pinned_proton` reverte
-    SÓ o que a trava diz ser nosso). O que ele não pode é agir com a Steam
-    aberta — ela regrava o arquivo ao sair —, e isso continua recusando antes
-    de tocar em nada (:func:`_porque_o_proton_nao_trava`).
-    """
-    _ARMADO.clear()
-    pin, travar = _o_pino()
-    motivo = _porque_o_proton_nao_trava(pin, travar)
-    if motivo:
-        raise RuntimeError(motivo)
-    if proton_fixado():
-        destravar = getattr(pin, "unlock_games_from_pinned_proton", None)
-        if destravar is None:
-            raise RuntimeError(_daemon.frase_sem_o_proton_pinado())
-        resultado = destravar()
-        if str(resultado.get("status")) not in ("unlocked", "noop"):
-            raise RuntimeError(
-                "Não consegui soltar o Proton dos jogos — nada foi mudado.")
-    else:
-        recibo = _daemon.format_proton_lock_result(travar(todos=True))
-        if proton_fixado():
-            sobra = _levar_as_que_sobram(_versoes_que_sobram())
-            if sobra:
-                recibo = f"{recibo} {sobra}"
-        _relatar_o_recibo("fixar-proton", recibo)
-    _BARATO.clear()
-
-
-@gesto("09-sistema.html", "corrigir-vulkan", grava="curar_todos")
-def corrigir_vulkan(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """O ligável «Corrigir Vulkan»: liga tirando as camadas da Steam do jogo."""
-    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
-    from hefesto_dualsense4unix.integrations import lista_de_exclusao
-    from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as rl
-
-    _ARMADO.clear()
-    ligar = not vulkan_corrigido()
-    resultados: list[Any] = []
-    if not ligar and cv.ha_o_que_devolver():
-        if rl.jogo_aberto():
-            raise RuntimeError(
-                "Tem jogo aberto — feche-o e clique de novo. Com o jogo vivo o "
-                "Windows do Proton regrava esse ajuste ao sair, e a mudança seria "
-                "perdida.")
-        resultados = cv.curar_todos(
-            religar=True, forcar=True, excluir=lista_de_exclusao.ids_dos_prefixos())
-    try:
-        cv.gravar_camadas_da_steam_fora(ligar)
-    except OSError as erro:
-        raise RuntimeError(
-            "Não consegui guardar a escolha do Vulkan na pasta de configuração: "
-            f"{erro.strerror or erro}.") from erro
-    _LENTO.clear()
-    frase = cv.frase_do_ato(ligar)
-    if any(r.mexeu or r.erro for r in resultados):
-        frase = f"{frase} {_emulacao.frase_do_resultado(resultados, devolver=True)}"
-    _relatar_o_recibo("corrigir-vulkan", frase)
 
 
 #: O segundo clique que chega antes disto é o duplo clique do interruptor das correções.
@@ -2891,5 +2665,5 @@ PROVAS = [
 #: efeito deles está no SYSTEMD, não no `state_full`. O `enable` muda o que
 #: `restart` derruba e sobe a mesma unit, deixando o `state_full` igual ao que
 SEM_ECO = ("atualizar", "autostart", "perfil-da-mesa", "reiniciar",
-           "copiar-registro", "fixar-proton", "corrigir-vulkan",
-           CAMPO_DAS_CORRECOES, CAMPO_DO_TAMANHO, "salvar-registro", CAMPO_DA_BANDEJA)
+           "copiar-registro", CAMPO_DAS_CORRECOES, CAMPO_DO_TAMANHO, "salvar-registro",
+           CAMPO_DA_BANDEJA)

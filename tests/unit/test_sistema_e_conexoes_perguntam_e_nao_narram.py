@@ -17,7 +17,6 @@ from tests.conftest import exigir_gi_real
 
 exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
-from hefesto_dualsense4unix.app.actions import daemon_actions as _daemon
 from hefesto_dualsense4unix.interface import onde as _onde
 from hefesto_dualsense4unix.interface.pacotes import Contexto, normalizar
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
@@ -26,7 +25,6 @@ from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 UNIQ = "aa:bb:cc:00:00:01"
 CHAVE = "aabbcc000001"
 
-APLICADOS = {"applied": 3, "skipped": 0, "errors": 0}
 
 
 def _ctx() -> Contexto:
@@ -77,121 +75,17 @@ def _confirma(gesto: str) -> dict[str, str]:
     return {"gesto": gesto, "texto": a09.CONFIRMA}
 
 
-def _com_a_steam(monkeypatch: pytest.MonkeyPatch, *, janela: str = "ok") -> dict:
-    """Dubla a Steam no ponto em que o motor a FECHARIA — e sabe recusar."""
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
+def _pergunta_do_restaurar(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
+    """O clique 1 do «Restaurar de fábrica»: a pergunta que o painel guarda."""
+    import tempfile
 
-    visto: dict[str, list] = {"fechou": [], "aplicou": []}
+    from hefesto_dualsense4unix.app.actions import footer_actions
 
-    def _aplicar() -> dict[str, int]:
-        visto["aplicou"].append(True)
-        return dict(APLICADOS)
-
-    def _com_a_steam_fechada(acao):
-        visto["fechou"].append(True)
-        return (janela, acao() if janela == "ok" else None)
-
-    monkeypatch.setattr(slo, "apply_wrapper_to_all_games", _aplicar, raising=False)
-    monkeypatch.setattr(slo, "with_steam_closed", _com_a_steam_fechada)
-    return visto
-
-
-def test_o_primeiro_clique_do_aplicar_poe_a_pergunta_no_painel(monkeypatch) -> None:
-    visto = _com_a_steam(monkeypatch)
-    carga = a09.aplicar_aos_jogos(_ctx(), _primeiro("aplicar-aos-jogos"),
-                                  PonteDeMentira())
-
-    assert visto == {"fechou": [], "aplicou": []}, (
-        "a Steam dela foi fechada no PRIMEIRO clique — o consentimento sumiu")
-    assert "recado" not in carga, (
-        "a pergunta voltou ao `recado`: a aba 09 não tem cartão nem faixa onde "
-        "ele pouse, e o primeiro clique volta a não mostrar nada")
-    painel = (carga.get("mesa") or {}).get(a09.REGISTRO)
-    assert painel, f"o primeiro clique não escreveu no painel de registro: {carga}"
-    corpo = " ".join(_daemon.DaemonActionsMixin._STEAM_APPLY_CORPO.split())
-    assert corpo in " ".join(painel.split()), (
-        "a pergunta não é a do dono, palavra por palavra")
-    assert painel.rstrip().endswith(a09.CLIQUE_DE_NOVO), painel
-    assert a09._no_painel("repouso") == painel, (
-        "a pergunta não sobrevive ao tique: o painel repinta o repouso por cima")
-
-
-def test_a_pergunta_cabe_na_largura_do_painel(monkeypatch) -> None:
-    """A pergunta cabe inteira na largura do painel."""
-    _com_a_steam(monkeypatch)
-    carga = a09.aplicar_aos_jogos(_ctx(), _primeiro("aplicar-aos-jogos"),
-                                  PonteDeMentira())
-    linhas = carga["mesa"][a09.REGISTRO].split("\n")
-    assert max(len(linha) for linha in linhas) <= a09.LARGURA_DA_PERGUNTA, linhas
-
-
-def test_o_segundo_clique_do_aplicar_devolve_so_os_rotulos(monkeypatch, capsys) -> None:
-    visto = _com_a_steam(monkeypatch)
-    a09.aplicar_aos_jogos(_ctx(), _primeiro("aplicar-aos-jogos"), PonteDeMentira())
-    carga = a09.aplicar_aos_jogos(_ctx(), _confirma("aplicar-aos-jogos"),
-                                  PonteDeMentira())
-
-    assert visto["aplicou"] == [True]
-    assert set(carga) == {"blocos"}, (
-        f"o segundo clique voltou a narrar: {sorted(carga)}")
-    assert a09._no_painel("repouso") == "repouso", (
-        "a pergunta do primeiro clique ficou no painel, velha, depois do "
-        "consentimento dado")
-    diario = capsys.readouterr().err
-    assert f"[relato] {a09.PAGINA} · aplicar-aos-jogos: " in diario, diario
-    assert _daemon.format_apply_wrapper_result(APLICADOS) in diario, (
-        "o recibo sumiu em vez de ir ao diário da janela")
-
-
-def test_a_recusa_do_segundo_clique_tambem_tira_a_pergunta(monkeypatch) -> None:
-    """O dublê RECUSA (a Steam não fechou): o gesto levanta e a pergunta não fica.
-
-    O jogo aberto NÃO entra aqui desde 03/10/2026: é recibo, não recusa (ver
-    `test_o_aplicar_com_jogo_aberto_diz_o_que_fez.py`) e é a única exceção ao
-    «não narra» — o painel diz o que os outros lançadores receberam e que a
-    Steam espera.
-    """
-    visto = _com_a_steam(monkeypatch, janela="nao_fechou")
-    a09.aplicar_aos_jogos(_ctx(), _primeiro("aplicar-aos-jogos"), PonteDeMentira())
-    with pytest.raises(RuntimeError) as erro:
-        a09.aplicar_aos_jogos(_ctx(), _confirma("aplicar-aos-jogos"),
-                              PonteDeMentira())
-    assert str(erro.value) == _daemon.format_steam_janela_recusa("nao_fechou")
-    assert visto["aplicou"] == []
-    assert a09._no_painel("repouso") == "repouso"
-
-
-def _dubla_consertos(monkeypatch) -> tuple[Any, str]:
-    monkeypatch.setattr(a09, "CONSERTOS", ())
-    monkeypatch.setattr(a09, "_consertos_no_disco", lambda: [])
-    monkeypatch.setattr(a09._daemon, "medir_jogos_com_steam_input",
-                        lambda: ["Um Jogo"])
-    return a09.refazer_consertos, a09._daemon.format_fix_safe_result(
-        {"ran": 0, "missing": 0, "steam_input": None,
-         "steam_input_jogos": ["Um Jogo"]})
-
-
-@pytest.mark.parametrize(("nome", "dublar"), [
-    ("refazer-consertos", _dubla_consertos),
-])
-def test_o_segundo_clique_limpa_o_painel_e_leva_o_recibo_ao_diario(
-        monkeypatch, capsys, nome: str, dublar) -> None:
-    gesto, recibo = dublar(monkeypatch)
-    a09._PAINEL[0] = "o que estava no painel"
-    gesto(_ctx(), _primeiro(nome), PonteDeMentira())
-    assert a09._no_painel("repouso") != "repouso", (
-        "o dublê não pôs nada no painel antes do segundo clique — a régua "
-        "mediria um painel que já estava limpo")
-
-    carga = gesto(_ctx(), _confirma(nome), PonteDeMentira())
-
-    assert set(carga) == {"blocos"}, f"{nome}: o segundo clique narrou: {carga}"
-    esperado = recibo if nome in a09.RECIBO_QUE_FICA_NA_TELA else "repouso"
-    assert a09._no_painel("repouso") == esperado, (
-        f"{nome}: a pergunta do primeiro clique ficou no painel, velha")
-    diario = capsys.readouterr().err
-    assert f"[relato] {a09.PAGINA} · {nome}: {recibo}" in diario, (
-        f"{nome}: o recibo do dono não chegou ao diário: {diario!r}")
+    asset = pathlib.Path(tempfile.mkdtemp(prefix="hef-regua-")) / "personalizado.json"
+    asset.write_text("{}", encoding="utf-8")
+    monkeypatch.setattr(footer_actions, "_meu_perfil_asset", lambda: asset)
+    return a09.restaurar_de_fabrica(_ctx(), _primeiro("restaurar-de-fabrica"),
+                                    PonteDeMentira())
 
 
 def _camada_levanta(monkeypatch) -> None:
@@ -218,11 +112,9 @@ def test_com_o_servico_parado_o_pacote_escreve_o_painel_e_o_exame(monkeypatch) -
 
 
 def test_com_o_servico_parado_o_que_ela_pediu_continua_no_painel(monkeypatch) -> None:
-    """A pergunta do «Aplicar aos jogos» chega pelo PACOTE, sem o serviço."""
+    """A pergunta do «Restaurar de fábrica» chega pelo PACOTE, sem o serviço."""
     _camada_levanta(monkeypatch)
-    _com_a_steam(monkeypatch)
-    carga = a09.aplicar_aos_jogos(_ctx(), _primeiro("aplicar-aos-jogos"),
-                                  PonteDeMentira())
+    carga = _pergunta_do_restaurar(monkeypatch)
     assert a09.pacote(_ctx())[a09.REGISTRO] == carga["mesa"][a09.REGISTRO]
     a09._PAINEL[0] = "linha do registro que ela pediu"
     assert a09.pacote(_ctx())[a09.REGISTRO] == "linha do registro que ela pediu"
@@ -258,10 +150,8 @@ def no_webkit_09():
         _camada_levanta(mp)
         a09._PAINEL[0] = None
         parado = dict(normalizar(a09.pacote(_ctx())))
-        _com_a_steam(mp)
         a09._ARMADO.clear()
-        pergunta = a09.aplicar_aos_jogos(_ctx(), _primeiro("aplicar-aos-jogos"),
-                                         PonteDeMentira())
+        pergunta = _pergunta_do_restaurar(mp)
         com_a_pergunta = dict(normalizar({a09.REGISTRO: pergunta["mesa"][a09.REGISTRO]}))
     a09._ARMADO.clear()
     a09._PAINEL[0] = None

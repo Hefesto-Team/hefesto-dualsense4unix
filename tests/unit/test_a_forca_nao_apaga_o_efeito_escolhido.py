@@ -1,9 +1,9 @@
-"""A força e o teto de um controle trocam um campo; as escolhas da aba Vibração ficam.
+"""A força de um controle troca um campo; as escolhas da aba Vibração ficam.
 
 A seção ``rumble`` de cada controle guarda a força (``policy``), as barras dos motores e as duas
-escolhas (``efeito_haptico``, ``efeito_imersao``). Os dois gestos de força reescreviam a seção
-inteira: um clique em Economia na aba Vibração, ou no teto da aba Conexões, apagava a Guarda e o
-Coice escolhidos para aquele controle e as barras guardadas.
+escolhas (``efeito_haptico``, ``efeito_imersao``). O gesto de força reescrevia a seção inteira:
+um clique em Economia na aba Vibração apagava a Guarda e o Coice escolhidos para aquele controle
+e as barras guardadas. O segundo escritor, o teto da aba Conexões, saiu em 17/10/2026.
 """
 
 from __future__ import annotations
@@ -62,26 +62,5 @@ def test_seguir_o_global_tira_so_a_forca() -> None:
     assert depois == ESCOLHAS
 
 
-def test_o_teto_da_aba_conexoes_guarda_as_escolhas() -> None:
-    """MORDIDA: volte o ``model_validate({"policy": policy})`` em ``_com_o_teto``."""
-    from pacotes.a08_conexoes import _com_o_teto
-
-    novo = _com_o_teto(_perfil(**ESCOLHAS), CHAVE, "economia")
-    assert _secao(novo.controllers) == {**ESCOLHAS, "policy": "economia"}
-
-
-def test_o_teto_que_volta_ao_global_nao_apaga_as_escolhas() -> None:
-    """MORDIDA: volte o ``novo = None`` do «Segue o global» em ``_com_o_teto``."""
-    from pacotes.a08_conexoes import _com_o_teto
-
-    novo = _com_o_teto(_perfil(policy="economia", **ESCOLHAS), CHAVE, None)
-    assert _secao(novo.controllers) == ESCOLHAS
-    assert _com_o_teto(_perfil(**ESCOLHAS), CHAVE, None) is None, (
-        "regravou o perfil sem ter força nenhuma a tirar")
-
-
 def test_sem_nada_mais_a_secao_some() -> None:
-    from pacotes.a08_conexoes import _com_o_teto
-
-    novo = _com_o_teto(_perfil(policy="economia"), CHAVE, None)
-    assert _secao(novo.controllers) is None
+    assert _forca_da_aba_05(_perfil(policy="economia"), "balanceado") is None

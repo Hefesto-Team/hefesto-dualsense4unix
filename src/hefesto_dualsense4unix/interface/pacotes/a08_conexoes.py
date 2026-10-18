@@ -23,16 +23,13 @@ import html
 import re
 import sys
 import time
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from hefesto_dualsense4unix.app.actions import external_controllers as _marcas
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.interface.monta import dono_na_linha
 
 from . import TODOS_OS_LUGARES, Contexto, em_fundo, nome_do_jogador, perfil, registrar
-
-if TYPE_CHECKING:
-    from hefesto_dualsense4unix.interface.conexoes import Vibracao
 
 #: `state_full` (`radio_ar`, `radio_governador`), que o daemon publica.
 SEM_DONO: dict[str, str] = {}
@@ -1558,73 +1555,6 @@ def colorway_do_controle(m: Any) -> str:
 # A CADEIA JÁ EXISTIA INTEIRA, e nada dela é desta leva. O que faltava era a
 
 
-def _orcamento_da_mesa() -> tuple[str | None, bool]:
-    """``(a chave do orçamento declarada, a mesa respondeu?)``.
-
-    O segundo item existe porque o silêncio virava afirmação (01/09/2026): a função devolvia `str |
-    None` com `except Exception: return None`, o "não consegui ler" era o mesmo `None` de "ninguém
-    declarou" e a dica publicava os dois como **"Sem teto"**. O dono da fonte proíbe
-    (`secao_orcamento.orcamento_em_vigor`: *"None aqui significa 'não sei', nunca 'sem teto'"*).
-
-    Lê da declaração que o módulo já tem em cache: `_declaracao()` (:100) guarda o `maquina.json`
-    validado e `MaquinaConfig.orcamento.teto` é o campo que `orcamento_em_vigor()` devolveria; reler
-    o arquivo a cada tique não traria nada.
-    """
-    declaracao = _declaracao()
-    if declaracao is None:
-        return None, False
-    return getattr(getattr(declaracao, "orcamento", None), "teto", None), True
-
-
-def _teto_do_controle(
-    overrides: dict[str, Any],
-    uniq: str,
-    vibracao: Vibracao,
-    sem_dono: dict[str, str],
-) -> tuple[str | None, str]:
-    """``(o que o CAMPO mostra, a frase do ?)`` para UM controle.
-
-    `vibracao` é a `interface.conexoes.Vibracao` com o que vale para a mesa INTEIRA (global do
-    perfil, global VIVO do daemon e orçamento); aqui só se acrescenta o override desta peça. Eram um
-    argumento `orcamento` só até 01/09/2026 e a tela reportava o errado (*"o global vale Sem teto"*
-    enquanto o daemon cortava a 0,3).
-
-    A chave é o `uniq` NORMALIZADO: doze hexa minúsculos sem separador, pelo :func:`_so_hex` deste
-    arquivo (a cópia que morava aqui perdera o `.strip()` e um `uniq` com espaço gravava numa chave
-    e a pintura procurava outra). É o que `Profile._validate_controllers_keys` canoniza ao carregar
-    (`profiles/schema.py:1641`) e está no disco; `aa:bb:…` não acharia nada e a tela mostraria
-    "Segue o global" para sempre. O `uniq` cru é a segunda chave porque `perfil.ativo` lê o JSON
-    **sem** o pydantic (de propósito, para seção nova não congelar a aba) e arquivo editado à mão
-    pode trazer dois-pontos.
-
-    Política que o campo não sabe mostrar vira `sem_dono`, NÃO uma opção errada: o `<select>` mostra
-    três coisas e `ControllerRumbleOverride` aceita quatro políticas; só `economia` tem opção
-    (`interface.conexoes.rotulo_da_politica` diz por quê), e perfil escrito pela janela estável
-    (`app/actions/rumble_actions.py`) ou à mão guarda uma das outras três.
-
-    O caso é alcançável hoje (fato substituído: a nota "zero dos 33 perfis têm
-    `controllers[*].rumble`" caducou; o bloco de :3183 conta 5 desde 17/09, VIBRA-ACESA-01).
-    Remedido no disco em 19/09/2026: 29 perfis, 6 com override de rumble por controle (11 entradas),
-    5 com override de gatilho (10 entradas).
-    """
-    from hefesto_dualsense4unix.interface import conexoes as _tela
-
-    chave = _so_hex(uniq)
-    dele = overrides.get(chave) or overrides.get(uniq) or {}
-    seu = (dele.get("rumble") or {}) if isinstance(dele, dict) else {}
-    policy = seu.get("policy") if isinstance(seu, dict) else None
-    v = _dataclasses.replace(vibracao, do_controle=policy)
-    campo, _ = _tela.teto_que_vale(v)
-    frase = _tela.dica_do_teto(v)
-    if campo is None:
-        sem_dono[f"controle.{chave}.vibracao.teto"] = (
-            f"o perfil guarda a política {policy!r} para este controle, e o "
-            f"campo desta tela só sabe mostrar {list(_tela.opcoes_do_teto())}. "
-            f"Escolher uma das três seria a tela afirmar um estado que o disco "
-            f"contradiz — o `?` ao lado diz o que há, e a caixa fica parada.")
-    return campo, frase
-
-
 # `controller.target.set`, o daemon obedece, e no tique seguinte a tela
 # aba. Substituído no lugar, e não guardado ao lado.
 TODOS_NA_TELA = "todos"
@@ -1853,23 +1783,6 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
 
     declaracao = _declaracao()
 
-    #
-    # abriria os mesmos arquivos quatro vezes por tique. A viva vem do `state`
-    perfil_ativo = perfil.ativo(st.get("active_profile"))
-    overrides = (perfil_ativo.get("controllers") or {}) if perfil_ativo else {}
-    global_do_perfil = ((perfil_ativo.get("rumble") or {}).get("policy")
-                        if perfil_ativo else None)
-    orcamento, mesa_respondeu = _orcamento_da_mesa()
-    from hefesto_dualsense4unix.interface.conexoes import Vibracao
-
-    vibracao = Vibracao(
-        do_perfil=global_do_perfil,
-        a_viva=st.get("rumble_policy"),
-        orcamento=orcamento,
-        a_mesa_respondeu=mesa_respondeu,
-    )
-    sem_dono: dict[str, str] = {}
-
     da_mesa = {str(m.get("uniq") or ""): m for m in ctx.mesa}
 
     _correr_as_esperas()
@@ -1880,7 +1793,6 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
     comeco_da_gestao = time.perf_counter()
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
-        teto_campo, teto_frase = _teto_do_controle(overrides, uniq, vibracao, sem_dono)
         eu = da_mesa.get(uniq) or {}
         colunas[uniq] = {
             "via": (c.get("transport") or "").upper(),
@@ -1904,10 +1816,7 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
             "luz-espera": linha_da_espera(uniq),
             # O `title` DA LINHA DO MICROFONE — ver :func:`dica_do_microfone`. O
             "mic-dica": dica_do_microfone(str(c.get("transport") or "")),
-            "teto-explica": teto_frase,
         }
-        if teto_campo is not None:
-            colunas[uniq]["teto-da-vibracao"] = teto_campo
         if modo_da_mesa is None:
             modo_da_mesa = modo_da_fileira(st)
         colunas[uniq].update(estado_do_controle(c, eu, st, declaracao, modo_da_mesa))
@@ -1935,12 +1844,12 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
         # (`status_actions.texto_de_controle_nao_adotado`).
         "sem-driver": _frase_do_sem_driver(st),
         "radio-fragil": _frase_do_radio_fragil(st),
-        "sem_dono": sem_dono,
+        "sem_dono": {},
         # que o `alvo-aberto` marca — as ressalvas contam mesmo caladas, porque
         "cobertura": {"pintados": 1 + 2 + 5 + len(confissao)
                       + 1 + 12
                       + sum(len(v) for v in colunas.values()),
-                      "sem_dono": len(SEM_DONO) + len(sem_dono)},
+                      "sem_dono": len(SEM_DONO)},
     }
 
 
@@ -2250,115 +2159,6 @@ def externo_botoes(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 def externo_cor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"Cor" do controle externo, pelos nomes de fábrica que a tela oferece."""
     _declarar_do_externo(ctx, o, p, "cor", set(_nomes_de_cor_do_externo()))
-
-
-def _chave_no_perfil(ctx: Contexto, uniq: str) -> str:
-    """A chave deste controle em ``Profile.controllers`` — doze hexa, ou ``""``.
-
-    Duas réguas que têm de concordar: a do PERFIL é `norm_mac` (`profiles/schema.py:1400`, `aa:bb:…`
-    em `aabbcc…`); a do `maquina.json` é `app.actions.external_controllers.chave_de_maquina`, que
-    também RECUSA o MAC forjado que começa em `02` (o `usb_probe_degrade` soma VID, PID e bus, e
-    dois clones do mesmo modelo o compartilham; persisti-lo gravaria a FUSÃO de dois aparelhos).
-
-    Podem divergir (medido): `chave_de_maquina` usa o `identity` quando o daemon o carimbou
-    (EXTERNOS, `external_key`), e o mapa do backend é chaveado pelo `uniq` (`set_rumble_scales`).
-    Gravar sob o `identity` daria override que o motor nunca casa, a escolha sumindo calada; quando
-    discordam o gesto RECUSA. No DualSense vivo dela (01/09/2026) o item do `state_full` não traz
-    `identity`, `chave_de_maquina` cai no `uniq` e coincidem.
-
-    A normalização é do :func:`_so_hex`, não reescrita: a cópia que gravava e a de
-    `_teto_do_controle` que pintava já divergiam no `.strip()`.
-    """
-    da_maquina = _chave_de_maquina(ctx, uniq)
-    if not da_maquina:
-        return ""
-    do_perfil = _so_hex(uniq)
-    return do_perfil if do_perfil == da_maquina else ""
-
-
-def _com_o_teto(prof: Any, chave: str, policy: str | None) -> Any:
-    """O perfil com o teto DESTE controle trocado, ou ``None`` se nada mudou.
-
-    ``None`` evita regravar perfil idêntico (troca a data e o daemon o reaplica; `profile.switch` no
-    meio da partida não é de graça), como em `_com_os_gatilhos`.
-
-    "Segue o global" apaga o campo (a seção, se nada mais sobra), não grava ``policy=None``:
-    `_controllers_to_rumble_scales` desvia em `cfg.rumble is None` (`profiles/manager.py:2420`) e em
-    `"policy" not in model_fields_set` (`:2481`); o primeiro é o "campo não escrito = sem opinião"
-    do merge por campo (`ControllerRumbleOverride`), e `custom_mult` sem `policy='custom'` a borda
-    já recusa. Igual ao global também apaga (`app/draft_config.with_controller_rumble:1193-1223`):
-    `_controllers_to_rumble_scales` calcula `mult / base` e DESCARTA o fator 1,0
-    (`profiles/manager.py:2367-2400`), então o override seria opinião que o motor ignora.
-    """
-    from hefesto_dualsense4unix.profiles.schema import (
-        ControllerOverrides,
-        rumble_com_a_forca,
-    )
-
-    global_ = getattr(getattr(prof, "rumble", None), "policy", None)
-    if policy is not None and policy == global_:
-        policy = None
-
-    atuais = dict(prof.controllers or {})
-    dele = atuais.get(chave) or ControllerOverrides()
-    antes = dele.rumble
-    if (antes.policy if antes is not None else None) == policy:
-        return None
-    # Só o teto troca: as barras e os efeitos escolhidos na aba Vibração ficam na seção.
-    novo = rumble_com_a_forca(antes, policy)
-    atuais[chave] = dele.model_copy(update={"rumble": novo})
-    return prof.model_copy(update={"controllers": atuais})
-
-
-@gesto("08-conexoes.html", "teto-da-vibracao", grava="gravar_e_reaplicar")
-def teto_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """"Teto da vibração: Segue o global / Sem teto / 30% da força" — POR CONTROLE.
-
-    A cadeia inteira já existia (`POR-UNIDADE-01`, 10/08/2026): o gesto grava
-    `controllers[chave].rumble.policy` no PERFIL; `_controllers_to_rumble_scales` converte em fator
-    RELATIVO, `ProfileManager.apply:459-464` publica o mapa com `set_rumble_scales` e
-    `_escalar_rumble` multiplica o que vai ao motor nas duas rotas de escrita. Nenhum payload nem
-    IPC novo.
-
-    Fato errado substituído: a recusa antiga dizia que o `min` de `core/rumble.py` impedia um 'teto'
-    de AUMENTAR a força e que *"sobrepor mudaria o daemon, não a tela"*. O `min`
-    (`core/rumble.py:48`) compara a política GLOBAL com o teto do ORÇAMENTO, nenhum por controle; o
-    caminho por controle passa abaixo, em `core/backend_pydualsense._escalar_rumble:3797-3818`. E o
-    daemon vivo responde `active_profile = 'meu_perfil'`, não `None`: na bancada o gesto grava no
-    perfil do usuário e `gravar_e_reaplicar` dispara `profile.switch`.
-
-    "Sem teto" continua recusando, e a recusa é a entrega: é a única opção sem tradução honesta,
-    `politica_do_rotulo` levanta com a razão medida e a frase que falta é do usuário. É do perfil,
-    não da máquina: sem perfil ativo não há onde guardar a força de um controle
-    (`profiles/schema.py:1318`) e a recusa diz em que aba escolher um.
-    """
-    from hefesto_dualsense4unix.interface import conexoes as _tela
-
-    uniq = _uniq(o)
-    if not uniq:
-        raise ValueError("teto-da-vibracao: o clique não disse em qual controle")
-    chave = _chave_no_perfil(ctx, uniq)
-    if not chave:
-        raise RuntimeError(
-            "Este controle não tem endereço fixo, e sem ele a força só dele "
-            "não tem onde ser guardada — a escolha cairia noutro aparelho.")
-
-    escolha = str(o.get("valor") or o.get("rotulo") or "").strip()
-    policy = _tela.politica_do_rotulo(escolha)
-
-    nome = perfil.nome_do_ativo(ctx.state).strip()
-    if not nome:
-        raise RuntimeError(
-            "não há perfil ativo agora, e a força da vibração de um controle é "
-            "do perfil — não da máquina. Escolha um perfil na aba Perfis e "
-            "tente de novo.")
-
-    loader = perfil._com_o_src()
-    prof = loader.load_profile(nome)
-    novo = _com_o_teto(prof, chave, policy)
-    if novo is None:
-        return
-    perfil.gravar_e_reaplicar(novo, ctx, p)
 
 
 # `entrada_a_entrada.dar_nome_ao_adaptador`, e é o mesmo da janela estável
@@ -6194,8 +5994,6 @@ RAZAO_DO_SEM_ECO: dict[str, str] = {
                           "que fecha a medida, e o `state_full` não a republica",
     "ignorar": "a dispensa de uma ordem vai ao `maquina.json`; o `state_full` não a publica",
     "examinar-portas": "não toca o daemon: muda a tira do Check-up no tique seguinte",
-    "teto-da-vibracao": "grava no perfil; o efeito vivo vem do `profile.switch`, e o "
-                        "`state_full` não publica override por controle",
     "escolher-aparelho": "primeiro tempo do gesto de dois: guarda o aparelho na mão e "
                          "não chama a ponte",
     "escolher-entrada": _O_MAPA,

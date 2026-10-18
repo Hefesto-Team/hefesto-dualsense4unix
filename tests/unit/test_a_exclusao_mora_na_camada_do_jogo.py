@@ -423,7 +423,7 @@ def _epic_ligada(raiz: Path) -> bool:
     return next(c for c in camadas if c.caminho_windows == EPIC).ligada
 
 
-def test_o_corrigir_vulkan_compara_o_prefixo_pelo_caminho(
+def test_a_cura_dos_prefixos_compara_o_prefixo_pelo_caminho(
         _lar: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Dois prefixos com a mesma pasta em casas diferentes, um excluído."""
     _flatpak(_lar, "com.heroicgameslauncher.hgl")
@@ -440,10 +440,10 @@ def test_o_corrigir_vulkan_compara_o_prefixo_pelo_caminho(
             moradores={outro: ["C"]}, base=200)
     lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar)
     assert _epic_ligada(um) and _epic_ligada(outro)
-    cv.curar_todos(_lar, excluir=lx.ids_dos_prefixos())
-    assert _epic_ligada(um), "o botão desligou a camada do jogo excluído"
+    cv.curar_todos(_lar, excluir=sorted(str(p) for p in lx.prefixos_excluidos()))
+    assert _epic_ligada(um), "a cura desligou a camada do jogo excluído"
     assert not _epic_ligada(outro), (
-        "o botão pulou o prefixo de C, de outra casa, só porque a pasta tem o mesmo nome")
+        "a cura pulou o prefixo de C, de outra casa, só porque a pasta tem o mesmo nome")
 
 
 def test_o_lutris_le_o_umu_id_do_jogo(_lar: Path) -> None:

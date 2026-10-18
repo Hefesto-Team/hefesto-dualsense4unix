@@ -125,31 +125,11 @@ if faltam := {c["pref"] for c in MESA} - set(DA_CONTROLES):
     raise SystemExit(f"ERRO: a MESA tem {sorted(faltam)} e o ESTADO da aba02 não.")
 
 SEGUE_O_GLOBAL = _aba_conexoes.SEGUE_O_GLOBAL
-TETO_DO_CONTROLE = {"p3": COM_TETO}
 BOTAO_DO_MIC = _pacote08.FALA_DO_BOTAO_DO_MIC[True]
 
 
 CASA_DO_TETO_GLOBAL = _aba_conexoes.CASA_DO_TETO_GLOBAL
 ABA_DO_TETO_GLOBAL = _aba_conexoes.ABA_DO_TETO_GLOBAL
-
-GLOBAL_VIVO = _constantes(R / "src/hefesto_dualsense4unix/profiles/manager.py",
-                          {"_RUMBLE_POLICY_PADRAO"})["_RUMBLE_POLICY_PADRAO"]
-
-
-def _vibracao_da_bancada(c):
-    """As quatro pontas que a BANCADA declara para um controle do desenho."""
-    return _aba_conexoes.Vibracao(
-        do_controle=TETO_DO_CONTROLE.get(c["pref"]),
-        do_perfil=None,
-        a_viva=GLOBAL_VIVO,
-        orcamento=ORCAMENTO_DA_MESA,
-    )
-
-
-def teto_que_vale(c):
-    """(o que a tela mostra no CAMPO, a frase de quem manda neste controle)."""
-    return _aba_conexoes.teto_que_vale(_vibracao_da_bancada(c))
-
 
 SEM_NOME = _pacote08.SEM_NOME
 ADAPTADORES = [
@@ -1035,11 +1015,6 @@ BOTAO_DICA_CURTA = (
 #: mirar só este controle (`controller.target.set`).
 SO_ESTE_DICA = ("Escolhe só este controle: a luz, os gatilhos e a vibração "
                 "passam a mirar nele.")
-
-
-def teto_dica(c):
-    """A frase do `?` do teto — desenho de bancada, REPINTADA pelo pacote."""
-    return _aba_conexoes.dica_do_teto(_vibracao_da_bancada(c))
 
 
 # `url(#hachura-sem-hex)`, uma hachura; outros dois usam gradiente

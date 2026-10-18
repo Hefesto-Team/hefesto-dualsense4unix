@@ -483,15 +483,6 @@ def frase_do_ato(fora: bool) -> str:
             "shaders, a partir do próximo jogo que abrir.")
 
 
-def ha_o_que_devolver(home: Path | None = None) -> bool:
-    """O estado diz que NÓS desligamos alguma camada de algum prefixo?"""
-    return any(
-        registro.get("feito") == "desligada"
-        for camadas in ler_estado(home).values()
-        for registro in camadas.values()
-    )
-
-
 def caminho_do_estado(home: Path | None = None) -> Path:
     """`~/.local/state/hefesto-dualsense4unix/camadas-vulkan.json`."""
     base = home or Path.home()

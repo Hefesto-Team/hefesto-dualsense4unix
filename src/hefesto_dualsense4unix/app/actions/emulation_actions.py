@@ -4,9 +4,8 @@ from __future__ import annotations
 
 import contextlib
 import re
-from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import ClassVar
 
 import gi
 
@@ -107,31 +106,6 @@ def descrever_teclado_emulado(bloco: object) -> tuple[bool | None, str]:
     if texto is not None:
         return ligado, texto
     return ligado, f"Ligado, em pausa agora (motivo: {bloqueio})."
-
-
-def frase_do_resultado(resultados: Sequence[Any], *, devolver: bool) -> str:
-    """A frase do rodapé depois de agir. Nunca some, nunca mente."""
-    mexidos = [r for r in resultados if r.desligadas or r.religadas]
-    erros = [r for r in resultados if r.erro]
-    respeitados = [r for r in resultados if r.respeitadas and not r.mexeu]
-    partes: list[str] = []
-    if mexidos:
-        nomes = sorted({n for r in mexidos for n in (r.religadas if devolver else r.desligadas)})
-        verbo = "Devolvi" if devolver else "Tirei"
-        jogos = "1 jogo" if len(mexidos) == 1 else f"{len(mexidos)} jogos"
-        partes.append(f"{verbo} em {jogos}: " + ", ".join(nomes) + ".")
-    if respeitados:
-        partes.append(
-            f"Deixei como estava em {len(respeitados)} jogo(s) — você já tinha "
-            "escolhido manter."
-        )
-    if erros:
-        partes.append(f"Não consegui em {len(erros)} jogo(s): {erros[0].erro}")
-    if not partes:
-        return "Nada mudou — não havia sobreposição para mexer."
-    if not devolver and mexidos:
-        partes.append("Feche e abra o jogo para valer.")
-    return " ".join(partes)
 
 
 class EmulationActionsMixin(WidgetAccessMixin):
@@ -333,5 +307,3 @@ class EmulationActionsMixin(WidgetAccessMixin):
     def _toast_camadas(self, msg: str) -> None:
         """Rodapé das camadas. Contexto próprio para não brigar com os outros."""
         self._status_toast("camadas_vulkan", msg)
-
-

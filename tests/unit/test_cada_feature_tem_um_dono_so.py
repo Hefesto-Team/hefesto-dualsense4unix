@@ -51,7 +51,7 @@ FEATURES: dict[tuple[str, str], tuple[str, frozenset[str]]] = {
     ("atalho do jogo", "voltar a usar e a perguntar, por jogo"): (
         "07-lancadores.html", frozenset({"voltar-a-usar", "voltar-a-perguntar"})),
     ("atalho do jogo", "aplicar nos lançadores, política global"): (
-        "09-sistema.html", frozenset({"aplicar-aos-jogos"})),
+        "09-sistema.html", frozenset({"correcoes-automaticas"})),
 }
 
 PAGINAS = sorted(p.name for p in BANCADA.glob("*.html"))

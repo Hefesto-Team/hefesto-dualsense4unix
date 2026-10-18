@@ -231,33 +231,3 @@ def test_a_vigia_pergunta_ao_dono_da_estrada(
     corpo = fonte[fonte.index("def _ler_do_disco("):]
     assert "_onde_falta_o_ambiente(onde_estao, declarados)" in corpo
 
-
-def test_o_botao_da_sistema_aplica_nos_outros_mesmo_com_a_steam_recusando(
-        monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
-    """Com jogo aberto a Steam recusa, e os outros lançadores já receberam o"""
-    from tests.conftest import exigir_gi_real
-
-    exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-    from hefesto_dualsense4unix.interface.pacotes import Contexto
-    from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
-
-    caronas: list[bool] = []
-    monkeypatch.setattr(cpe, "curar_todas_as_estradas",
-                        lambda *a, **k: caronas.append(True) or ("heroic", "retroarch"))
-    monkeypatch.setattr(slo, "apply_wrapper_to_all_games", lambda: {}, raising=False)
-    monkeypatch.setattr(slo, "with_steam_closed", lambda acao: ("jogo_aberto", None))
-    a09._ARMADO.clear()
-    ctx = Contexto(state={"active_profile": "regua"}, mesa=[], conectados=[], estados={})
-    a09.aplicar_aos_jogos(ctx, {"gesto": "aplicar-aos-jogos", "texto": "rótulo"}, None)
-    assert caronas == [], "o PRIMEIRO clique já aplicou — o consentimento sumiu"
-    fora = a09.aplicar_aos_jogos(
-        ctx, {"gesto": "aplicar-aos-jogos", "texto": a09.CONFIRMA}, None)
-    # jogo aberto não é falha: é o recibo (O-APLICAR-SOLUCOES-COM-JOGO-ABERTO-…)
-    assert fora["mesa"][a09.REGISTRO] == (
-        "O ambiente do Hefesto está em: Heroic, RetroArch. "
-        "A Steam fica para quando o jogo fechar.")
-    a09._ARMADO.clear()
-    a09._PAINEL[0] = None
-    assert caronas == [True]
-    assert "O ambiente do Hefesto está em: Heroic, RetroArch." in capsys.readouterr().err

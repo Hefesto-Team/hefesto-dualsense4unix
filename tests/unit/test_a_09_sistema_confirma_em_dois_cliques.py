@@ -220,10 +220,9 @@ def test_o_tique_repoe_o_rotulo_quando_o_prazo_passa(a09, ctx):
 def test_armar_o_segundo_repoe_o_primeiro(a09, ctx, monkeypatch):
     """Uma pergunta por vez. Dois "Confirma?" na tela seriam duas perguntas."""
     a09.desligar(ctx, _clique("Parar o serviço"), None)
-    carga = a09.aplicar_aos_jogos(
-        ctx, _clique("Aplicar soluções nos lançadores"), None)
+    carga = a09.restaurar_de_fabrica(ctx, _clique("Restaurar de fábrica"), None)
 
-    assert carga["blocos"]['[data-gesto="aplicar-aos-jogos"]'] == a09.CONFIRMA
+    assert carga["blocos"]['[data-gesto="restaurar-de-fabrica"]'] == a09.CONFIRMA
     assert carga["blocos"]['[data-gesto="parar-ou-retomar"]'] == a09._rotulo_do_desenho(
         a09.DESLIGAR)
 

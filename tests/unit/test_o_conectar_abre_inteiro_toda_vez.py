@@ -392,8 +392,7 @@ def test_a_linha_da_08_diz_a_parte_em_que_o_tique_gastou(
 
     for nome, falso in (
             ("_pedir_o_exame_de_entrada", lambda: None), ("_itens_da_tela", lambda: []),
-            ("_declaracao", lambda: {}), ("_orcamento_da_mesa", lambda: (None, False)),
-            ("_correr_as_esperas", lambda: None),
+            ("_declaracao", lambda: {}), ("_correr_as_esperas", lambda: None),
             ("_confissao_do_mapa", lambda: {}), ("campos_do_radio", lambda _ctx: {}),
             ("_html_do_mapa", mapa_lento), ("campos_do_mapear", lambda: {}),
             ("_html_dos_aparelhos", lambda: ""), ("_html_das_dicas", lambda *_a: ""),

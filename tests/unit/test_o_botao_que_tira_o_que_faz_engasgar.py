@@ -79,7 +79,6 @@ _GI_REAL = exigir_gi_real(
 from hefesto_dualsense4unix.app.actions import emulation_actions
 from hefesto_dualsense4unix.app.actions.emulation_actions import (
     EmulationActionsMixin,
-    frase_do_resultado,
 )
 
 _CV_MODNAME = "hefesto_dualsense4unix.integrations.camadas_vulkan"
@@ -126,9 +125,8 @@ def test_o_botao_existe_na_pagina_que_o_produto_serve() -> None:
 
     Desde a D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES o endereço do Vulkan é o do interruptor
     «Permitir correções automáticas», que junta o Proton fixado e o Vulkan: o botão próprio
-    (``corrigir-vulkan``) não está mais na página. O handler dele segue registrado, mas o
-    interruptor não o chama: o duplo clique grava a escolha do Vulkan pelo
-    ``_reaplicar_as_correcoes``.
+    (``corrigir-vulkan``) não está mais na página nem no registro: o duplo clique grava a
+    escolha do Vulkan pelo ``_reaplicar_as_correcoes``.
     """
     pagina = PAGINA_SERVIDA.read_text(encoding="utf-8")
     assert f'data-gesto="{GESTO}"' not in pagina, (
@@ -233,20 +231,23 @@ def test_o_exame_do_desenho_diz_a_frase_que_o_produto_pinta() -> None:
             f"{cv.frase_do_estado(acesa)!r}")
 
 
-def test_o_registro_vivo_entrega_o_clique_a_esse_handler() -> None:
-    """A outra metade, e ela morde sozinha: o decorador tem de ter RODADO."""
+def test_o_registro_vivo_entrega_o_clique_ao_interruptor_e_nao_ao_botao_morto() -> None:
+    """O clique do Vulkan chega pelo interruptor; o gesto próprio saiu do registro.
+
+    MORDIDA: devolva o `@gesto("09-sistema.html", "corrigir-vulkan")` e a primeira
+    metade reprova; tire o decorador do interruptor e a segunda.
+    """
     from hefesto_dualsense4unix.interface import pacotes
 
-    atende = pacotes.gesto_da_pagina(PAGINA, GESTO)
+    assert pacotes.gesto_da_pagina(PAGINA, GESTO) is None, (
+        f"`{GESTO}` voltou ao registro sem elemento na página: é o gesto-fantasma "
+        "que a O-GESTOS-SEM-ELEMENTO-DAS-ABAS-SISTEMA-E-CONEXOES-SAEM-01 tirou.")
+    atende = pacotes.gesto_da_pagina(PAGINA, "correcoes-automaticas")
     assert atende is not None, (
-        f"`gesto_da_pagina({PAGINA!r}, {GESTO!r})` devolveu None — o registro "
-        "está vazio para este botão e o piloto vai recusar o clique.")
-    assert atende.__name__ == _registros_de_gesto(DONO)[(PAGINA, GESTO)], (
-        "quem atende o clique não é a função que o dono declara. Dois donos "
-        "para o mesmo botão é o defeito que o despachante existe para impedir.")
+        "o interruptor das correções não tem handler: o Vulkan ficou sem quem o acione.")
+    assert atende.__name__ == "correcoes_automaticas"
     assert atende.__module__.endswith("a09_sistema"), (
-        f"o clique de `{GESTO}` foi parar em {atende.__module__} — o motor "
-        "mora na aba 09.")
+        f"o clique do interruptor foi parar em {atende.__module__} — o motor mora na aba 09.")
 
 
 def _camada(
@@ -268,42 +269,6 @@ def _camada(
 
 def _prefixo(rotulo: str, *camadas: Any) -> Any:
     return SimpleNamespace(rotulo=rotulo, camadas=camadas)
-
-
-def _resultado(**kw: Any) -> Any:
-    dados: dict[str, Any] = {
-        "desligadas": (), "religadas": (), "respeitadas": (), "erro": "",
-    }
-    dados.update(kw)
-    dados["mexeu"] = bool(dados["desligadas"] or dados["religadas"])
-    return SimpleNamespace(**dados)
-
-
-class TestFraseDoResultado:
-    def test_nada_a_mudar_e_dito_com_todas_as_letras(self) -> None:
-        assert "Nada mudou" in frase_do_resultado([_resultado()], devolver=False)
-
-    def test_conta_jogos_e_nomeia_o_que_tirou(self) -> None:
-        msg = frase_do_resultado(
-            [_resultado(desligadas=("a.json",)), _resultado(desligadas=("b.json",))],
-            devolver=False,
-        )
-        assert "2 jogos" in msg
-        assert "a.json" in msg and "b.json" in msg
-        assert "Feche e abra o jogo" in msg
-
-    def test_devolver_usa_o_verbo_certo_e_nao_manda_reabrir_o_jogo(self) -> None:
-        msg = frase_do_resultado([_resultado(religadas=("a.json",))], devolver=True)
-        assert msg.startswith("Devolvi em 1 jogo")
-        assert "Feche e abra" not in msg
-
-    def test_respeitado_e_dito_como_escolha_dela(self) -> None:
-        msg = frase_do_resultado([_resultado(respeitadas=("a.json",))], devolver=False)
-        assert "escolhido manter" in msg
-
-    def test_erro_nao_e_engolido(self) -> None:
-        msg = frase_do_resultado([_resultado(erro="disco cheio")], devolver=False)
-        assert "disco cheio" in msg
 
 
 class _Stub(EmulationActionsMixin):

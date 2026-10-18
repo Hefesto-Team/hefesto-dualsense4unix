@@ -402,7 +402,7 @@ class Janela:
     def _marcar_gestos_de_mentira(self) -> None:
         """Cliques SINTÉTICOS, para provar o caminho tela → Python → eco."""
         roteiro = [(1400, "retomar"), (1700, "atualizar"), (2000, "ver-detalhes"),
-                   (2300, "restaurar-de-fabrica"), (2600, "refazer-consertos")]
+                   (2300, "restaurar-de-fabrica")]
         for ms, gesto in roteiro:
             script = f"document.querySelector('[data-gesto=\"{gesto}\"]').click()"
             GLib.timeout_add(ms, lambda s=script: (self._js(s), False)[1])

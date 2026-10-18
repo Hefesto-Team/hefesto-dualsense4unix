@@ -68,16 +68,6 @@ GESTOS: dict[str, str] = {
     "atualizar": "`daemon_actions.on_daemon_refresh:2267`",
     "autostart": "`daemon_actions.on_daemon_autostart_toggled:2398`",
     "perfil-da-mesa": "`app/actions/config/secao_orcamento._ao_escolher`",
-    "refazer-consertos": "`daemon_actions.on_storm_fix_safe:1218`",
-    # OS DOIS LIGÁVEIS QUE ERAM BOTÕES DE UM ATO SÓ — 25/09/2026. Ligar faz o
-    # que o «Refazer a fixação do Proton» e o «Tirar a sobreposição Vulkan»
-    "fixar-proton": "`integrations.proton_pin.lock_proton_for_all_games` para "
-    "ligar e `unlock_games_from_pinned_proton` para desligar — o registro da "
-    "trava é a cópia que o destravar lê.",
-    "corrigir-vulkan": "`integrations.camadas_vulkan.gravar_camadas_da_steam_fora` "
-    "— ligar grava a escolha que o lançador entrega ao jogo; desligar a apaga e "
-    "devolve pelo `curar_todos(religar=True)` o que a memória diz que NÓS "
-    "desligamos no registro.",
     "restaurar-de-fabrica": "`app/actions/footer_actions.on_restore_default:1477`, "
     "hoje no RODAPÉ (`main.glade:4272`, botão `btn_footer_restore_default`), "
     "com confirmação em `app/gui_dialogs.confirm_restore_default:696`.",
@@ -85,11 +75,6 @@ GESTOS: dict[str, str] = {
     "que a janela antiga mostrava SÓ no estado `online_avulso`. Lê o pid do "
     "Hefesto improvisado, pede que ele saia, sobe a unit pelo systemd. As duas "
     "frases do recibo são `daemon_actions.MIGRAR_DEU_CERTO` e `MIGRAR_NAO_DEU`.",
-    "aplicar-aos-jogos": "`a09_sistema.aplicar_aos_jogos`: primeiro os outros lançadores "
-    "(`integrations.cura_por_estrada.curar_todas_as_estradas`, sem fechar nada), depois "
-    "a Steam (`integrations.steam_launch_options.apply_wrapper_to_all_games` numa "
-    "janela de `with_steam_closed`); a pergunta é `daemon_actions._STEAM_APPLY_CORPO`. "
-    "Na tela, «Aplicar soluções nos lançadores».",
     "copiar-registro": "`a09_sistema.copiar_registro` — o texto inteiro do "
     "painel na área de transferência (`Gtk.Clipboard`, o mesmo caminho de "
     "`daemon_actions.on_storm_copy_launch`).",

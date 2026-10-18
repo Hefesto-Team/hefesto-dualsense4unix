@@ -959,9 +959,10 @@ def test_toda_aba_que_fecha_a_steam_usa_o_relogio_de_confirmacao() -> None:
         f"abas que fecham a Steam DELA com relógio PRÓPRIO: {com_relogio_proprio}. "
         f"Dois relógios sobre a MESMA Steam deixam dois consentimentos "
         f"pendurados ao mesmo tempo — o relógio é `pacotes/confirmacao.ARMADO`")
-    assert {"a01_jogar.py", "a09_sistema.py"} <= set(fecham), (
+    assert "a01_jogar.py" in fecham and "a09_sistema.py" not in fecham, (
         f"as abas que fecham a Steam mudaram ({fecham}) — esta régua conta com "
-        f"a 01 e a 09; se uma saiu, reescreva-a no mesmo commit")
+        f"a 01 (a 09 deixou de fechá-la quando o «Aplicar aos jogos» saiu, 17/10/2026); "
+        f"se a 09 voltar a fechar, ela usa o relógio de `confirmacao.ARMADO` e entra aqui")
 
 
 def test_o_chip_e_a_aba_09_dividem_um_relogio(lar, monkeypatch) -> None:
@@ -970,16 +971,16 @@ def test_o_chip_e_a_aba_09_dividem_um_relogio(lar, monkeypatch) -> None:
 
     monkeypatch.setattr(slo, "steam_running", lambda: True)
     monkeypatch.setattr(ponte, "steam_running", lambda: True)
-    a09._ARMADO.update(gesto="aplicar-aos-jogos", ate=float("inf"))
-    assert a09._armado_agora() == "aplicar-aos-jogos"
+    a09._ARMADO.update(gesto="restaurar-de-fabrica", ate=float("inf"))
+    assert a09._armado_agora() == "restaurar-de-fabrica"
 
     assert aba.modo_steam(_ctx(), {}, PonteDeMentira()) == _ARMADO_NA_TELA
-    assert a09._armado_agora() != "aplicar-aos-jogos", (
-        "o chip armou e o «Aplicar aos jogos da Steam» continuou armado — dois "
+    assert a09._armado_agora() != "restaurar-de-fabrica", (
+        "o chip armou e o «Restaurar de fábrica» continuou armado — dois "
         "consentimentos pendurados sobre a mesma Steam")
 
     a09._ARMADO.clear()
-    a09._ARMADO.update(gesto="aplicar-aos-jogos", ate=float("inf"))
+    a09._ARMADO.update(gesto="restaurar-de-fabrica", ate=float("inf"))
     assert aba._o_rotulo_do_chip(_ctx().state) == {
         f'[data-gesto="{aba.GESTO_DO_STEAM_INPUT}"]': "Steam Input"}, (
         "a 09 armou e o chip continuou dizendo «Fechar a Steam?»")

@@ -12,10 +12,10 @@ O QUE ESTA RÉGUA COBRA — o §V da sprint:
 1. **o painel em repouso não pede o diário** (`-n 0` no `systemctl status`);
 2. **a pergunta vencida sai no tique seguinte**, e o censo das camadas fica;
 3. **o clique que só arma devolve `armou`**, a chave que o piloto lê;
-4. **o clique 1 de Parar, Restaurar, Proton, Consertos e Aplicar pergunta** no
-   painel, e o clique 2 limpa antes de agir;
-5. **o Proton recusa no clique 1** com a Steam aberta ou sem `proton-pin.conf`,
-   sem armar e sem chamar a fixação;
+4. **o clique 1 de Parar e de Restaurar pergunta** no painel, e o clique 2 limpa
+   antes de agir;
+5. **o duplo clique das correções não fixa o Proton** com a Steam aberta ou sem
+   `proton-pin.conf`, e o recibo diz por quê;
 6. **os consertos rodam só o vigia da Steam** — o `--install` do WirePlumber
    saiu;
 7. **o «Ver os plugins» não está em página nenhuma**;
@@ -32,7 +32,10 @@ o duplo reaplica, e a Steam não fecha). A pergunta mora no `data-dica`, não ma
 O roteiro na tela anda só os botões que a página tem, e dá o duplo clique no interruptor com a
 Steam aberta: é ele que cobre, na tela, o que a recusa do Fixar Proton e o recibo do Aplicar aos
 jogos cobriam (o Proton não se fixa com a Steam aberta, a Steam não fecha, e o recibo fica no
-painel). A alternância e o duplo clique sem tela são do `test_a_aba_sistema_do_todo`.
+painel). Em 17/10/2026 os quatro gestos sem elemento (`refazer-consertos`, `aplicar-aos-jogos`,
+`fixar-proton`, `corrigir-vulkan`) saíram do registro, e os casos do Proton passaram a chamar
+`_reaplicar_as_correcoes`, que o duplo clique roda. A alternância e o duplo clique sem tela
+são do `test_a_aba_sistema_do_todo`.
 
 NENHUM ATO REAL: o `systemctl` é o da janela de mentira, a Steam, o Proton, a
 janela da Steam, o perfil de fábrica e os scripts são dublês. O que a régua mede
@@ -60,10 +63,7 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 PAGINA = "09-sistema.html"
 PUBLICADA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas" / PAGINA
 
-ARMAM = ("parar-ou-retomar", "restaurar-de-fabrica",
-         "refazer-consertos", "aplicar-aos-jogos")
-#: Os dois que a página ainda tem: o roteiro na tela só clica o que existe nela.
-ARMAM_NA_TELA = ("parar-ou-retomar", "restaurar-de-fabrica")
+ARMAM = ("parar-ou-retomar", "restaurar-de-fabrica")
 PERGUNTA_E_O_TITLE = ("parar-ou-retomar", "restaurar-de-fabrica")
 
 RECUSAS = ("atualizar", "corrigir-modo")
@@ -112,7 +112,6 @@ def _limpar(mod: Any) -> None:
     mod._ARMADO.clear()
     mod._PAINEL[0] = None
     mod._PERGUNTA.clear()
-    mod._ANTES_DO_CONSERTO.clear()
 
 
 @pytest.fixture
@@ -164,7 +163,7 @@ def pin(monkeypatch, tmp_path):
 
 @pytest.fixture
 def armaveis(a09, pin, monkeypatch, tmp_path):
-    """O que os cinco precisam para ARMAR sem tocar na máquina de ninguém."""
+    """O que os dois precisam para ARMAR sem tocar na máquina de ninguém."""
     from hefesto_dualsense4unix.app.actions import footer_actions
 
     asset = tmp_path / "personalizado.json"
@@ -275,51 +274,69 @@ def test_a_pergunta_vencida_sai_no_tique_seguinte(a09, ctx):
         "o consentimento venceu e o painel continua pedindo o segundo clique")
 
 
-def test_a_recusa_de_outro_botao_tira_a_pergunta_no_tique(a09, ctx, pin):
+def test_a_recusa_de_outro_botao_tira_a_pergunta_no_tique(a09, ctx, pin, monkeypatch):
     """Outro botão desarmou o `desligar`: a pergunta dele não vale mais."""
     a09.desligar(ctx, _clique(a09._rotulo_do_desenho(a09.DESLIGAR)), None)
-    pin["steam"] = True
+    def nao_gravou(_ligar):
+        raise OSError(13, "Permissão negada")
+
+    monkeypatch.setattr(a09._bandeja, "bandeja_ligada", lambda: False)
+    monkeypatch.setattr(a09._bandeja, "escolher_a_bandeja", nao_gravou)
     with pytest.raises(RuntimeError):
-        a09.fixar_proton(ctx, {}, None)
+        a09.bandeja(ctx, {}, None)
 
     assert a09._armado_agora() == ""
     assert a09._no_painel(REPOUSO) == REPOUSO
 
 
-def test_o_proton_com_a_steam_aberta_recusa_no_clique_1(a09, ctx, pin):
-    """Na máquina do usuário a Steam fica aberta: o botão armava calado e recusava calado.
+@pytest.fixture
+def so_o_proton(a09, monkeypatch):
+    """O duplo clique das correções com tudo mudo, menos o Proton fixado."""
+    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+    from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
 
-    MORDIDA: tire o `_porque_o_proton_nao_trava` de `fixar_proton`.
+    monkeypatch.setattr(a09._daemon, "medir_jogos_com_steam_input", lambda: [])
+    monkeypatch.setattr(a09, "_rodar_os_consertos", lambda jogos: {
+        "ran": 0, "missing": 0, "steam_input": None, "steam_input_jogos": jogos})
+    monkeypatch.setattr(cpe, "curar_todas_as_estradas", lambda **k: [])
+    monkeypatch.setattr(cpe, "frase_das_estradas", lambda r: "")
+    monkeypatch.setattr(cv, "gravar_camadas_da_steam_fora", lambda ligar: None)
+    monkeypatch.setattr(cv, "frase_do_ato", lambda ligar: "")
+    monkeypatch.setattr(a09, "proton_fixado", lambda: False)
+    return a09
+
+
+def test_o_proton_com_a_steam_aberta_nao_trava_e_diz_porque(so_o_proton, pin):
+    """Na máquina do usuário a Steam fica aberta: o duplo clique não trava calado.
+
+    MORDIDA: tire o `_porque_o_proton_nao_trava` de `_reaplicar_as_correcoes`.
     """
     pin["steam"] = True
-    with pytest.raises(RuntimeError):
-        a09.fixar_proton(ctx, {}, None)
+    recibo = so_o_proton._reaplicar_as_correcoes()
 
-    assert a09._PAINEL[0] is None, "a recusa escreveu no painel"
+    assert "A Steam está aberta" in recibo, recibo
     assert pin["travou"] == []
 
 
-def test_o_proton_sem_o_pino_no_disco_recusa_no_clique_1_com_a_frase_dele(a09, ctx, pin):
+def test_o_proton_sem_o_pino_no_disco_diz_a_frase_dele(so_o_proton, pin):
     """O `proton-pin.conf` presente e o Proton pinado ausente — o install sem
-    rede, ou feito antes de existir Steam (INSTALL-UNIVERSAL, 18/09/2026). O
-    botão armava, e no clique 2 a tela dizia "a Steam recusou a mudança": uma
-    causa falsa.
+    rede, ou feito antes de existir Steam (INSTALL-UNIVERSAL, 18/09/2026). A tela
+    dizia "a Steam recusou a mudança": uma causa falsa.
 
     MORDIDA: tire a pergunta ao `pino_instalado_nesta_maquina` de
     `_porque_o_proton_nao_trava`.
     """
     pin["pino"] = False
-    with pytest.raises(RuntimeError) as recusa:
-        a09.fixar_proton(ctx, {}, None)
+    recibo = so_o_proton._reaplicar_as_correcoes()
 
-    assert str(recusa.value) == a09._daemon.frase_sem_o_proton_pinado()
+    assert so_o_proton._daemon.frase_sem_o_proton_pinado() in recibo, recibo
     assert pin["travou"] == []
 
 
-def test_o_proton_no_clique_2_trava_todo_jogo(a09, ctx, pin):
-    """A ordem de 17/09 chega ao botão — INSTALL-UNIVERSAL, 18/09/2026."""
+def test_o_proton_no_duplo_clique_trava_todo_jogo(so_o_proton, pin):
+    """A ordem de 17/09 chega ao interruptor — INSTALL-UNIVERSAL, 18/09/2026."""
     with contextlib.redirect_stderr(io.StringIO()):
-        a09.fixar_proton(ctx, {}, None)
+        so_o_proton._reaplicar_as_correcoes()
 
     assert len(pin["travou"]) == 1, pin
     assert pin["com"][0].get("todos") is True, pin["com"]
@@ -334,18 +351,18 @@ def _levanta() -> None:
 
 
 @pytest.mark.parametrize("como", ["arquivo-ausente", "sem-caminho", "levanta"])
-def test_o_proton_sem_o_conf_recusa_em_vez_de_rebentar(a09, ctx, pin, tmp_path, como):
+def test_o_proton_sem_o_conf_recusa_em_vez_de_rebentar(so_o_proton, pin, tmp_path, como):
     """Instalação por pacote não tem `proton-pin.conf`: recusa, nunca exceção crua."""
     pin["conf"] = {"arquivo-ausente": lambda: tmp_path / "nao-existe.conf",
                    "sem-caminho": _sem_caminho, "levanta": _levanta}[como]
 
-    with pytest.raises(RuntimeError):
-        a09.fixar_proton(ctx, {}, None)
+    recibo = so_o_proton._reaplicar_as_correcoes()
 
+    assert so_o_proton._daemon.frase_sem_o_proton_pinado() in recibo, recibo
     assert pin["travou"] == []
 
 
-def test_os_consertos_so_rodam_o_vigia_da_steam(a09, ctx, monkeypatch):
+def test_os_consertos_so_rodam_o_vigia_da_steam(a09, monkeypatch):
     """O `--install` do WirePlumber é o gesto contrário ao de ligar o mic.
 
     MORDIDA: devolva `("scripts/fix_wireplumber_default_source.sh",
@@ -365,15 +382,9 @@ def test_os_consertos_so_rodam_o_vigia_da_steam(a09, ctx, monkeypatch):
         return Proc()
 
     monkeypatch.setattr(subprocess, "run", run)
-    monkeypatch.setattr(a09._daemon, "medir_jogos_com_steam_input", lambda: [])
-    acao = _gesto("refazer-consertos")
-
-    acao(ctx, _clique(a09._rotulo_do_desenho("refazer-consertos")), None)
-    with contextlib.redirect_stderr(io.StringIO()):
-        acao(ctx, _clique(a09.CONFIRMA), None)
+    a09._rodar_os_consertos([])
 
     assert rodou == [["disable_steam_input.sh", "--apply-quiet"]], rodou
-    assert a09._PAINEL[0] is None
 
 
 def test_a_dica_do_interruptor_nao_promete_o_que_nao_faz():
@@ -837,7 +848,7 @@ def test_na_tela_o_duplo_clique_das_correcoes_reaplica_e_deixa_o_recibo(na_tela:
     assert na_tela["reaplicou"] == ["consertos", "estradas", "vulkan=True"], na_tela["reaplicou"]
 
 
-@pytest.mark.parametrize("marco", [f"arma:{g}" for g in ARMAM_NA_TELA]
+@pytest.mark.parametrize("marco", [f"arma:{g}" for g in ARMAM]
                          + ["rearma:restaurar-de-fabrica"])
 def test_na_tela_o_clique_que_arma_nao_pisca_e_pergunta(na_tela: dict, marco: str) -> None:
     """O estudo mediu o Parar e o Restaurar piscando verde sem uma palavra."""

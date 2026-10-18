@@ -1,9 +1,6 @@
 """As versões do Proton que sobram — O-FIXAR-PROTON-DESINSTALA-AS-VERSOES-QUE-SOBRAM-01."""
 from __future__ import annotations
 
-import contextlib
-import io
-import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -238,7 +235,6 @@ def a09(monkeypatch: pytest.MonkeyPatch) -> Any:
         mod._ARMADO.clear()
         mod._PAINEL[0] = None
         mod._PERGUNTA.clear()
-        mod._ANTES_DO_CONSERTO.clear()
 
     mod._JANELA_ANTIGA[:] = [_Janela()]
     limpar()
@@ -261,36 +257,43 @@ def _ctx() -> Any:
                             mesa=[], conectados=[], estados={})
 
 
+def _tudo_mudo_menos_o_proton(a09: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """O reaplicar das correções sem o Steam Input, as estradas e o Vulkan."""
+    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+    from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
+
+    monkeypatch.setattr(a09._daemon, "medir_jogos_com_steam_input", lambda: [])
+    monkeypatch.setattr(a09, "_rodar_os_consertos", lambda jogos: {
+        "ran": 0, "missing": 0, "steam_input": None, "steam_input_jogos": jogos})
+    monkeypatch.setattr(a09._daemon, "format_fix_safe_result", lambda _r: "")
+    monkeypatch.setattr(cpe, "curar_todas_as_estradas", lambda **k: [])
+    monkeypatch.setattr(cpe, "frase_das_estradas", lambda _r: "")
+    monkeypatch.setattr(cv, "gravar_camadas_da_steam_fora", lambda _ligar: None)
+    monkeypatch.setattr(cv, "frase_do_ato", lambda _ligar: "")
+
+
 def test_o_reaplicar_apaga_as_que_sobram_sem_perguntar_por_elas(
         a09: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O clique 1 só mostra os consertos; as versões saem no 2, e a frase não as cita."""
-    import pacotes
-
+    """O duplo clique das correções leva as versões sem uso, e o recibo diz quantas."""
+    _tudo_mudo_menos_o_proton(a09, monkeypatch)
     sobras = [_sobra("GE-Proton11-1"), _sobra("GE-Proton11-3")]
     monkeypatch.setattr(a09, "_versoes_que_sobram", lambda: list(sobras))
-    monkeypatch.setattr(a09._daemon, "medir_jogos_com_steam_input", lambda: [])
-    monkeypatch.setattr(subprocess, "run",
-                        lambda *a, **k: subprocess.CompletedProcess(a, 0, "", ""))
+    monkeypatch.setattr(a09, "_o_pino", lambda: (object(), lambda **k: {}))
+    monkeypatch.setattr(a09, "_porque_o_proton_nao_trava", lambda *_a: None)
+    monkeypatch.setattr(a09, "proton_fixado", lambda: True)
     levadas: list[str] = []
     monkeypatch.setattr(pp, "desinstalar_as_que_sobram",
                         lambda s: (levadas.extend(x.pasta.name for x in s), (list(s), {}))[1])
-    acao = pacotes.gesto_da_pagina("09-sistema.html", "refazer-consertos")
 
-    acao(_ctx(), {"texto": a09._rotulo_do_desenho("refazer-consertos")}, None)
-    painel = str(a09._PAINEL[0])
-    assert "Proton" not in painel and "lixeira" not in painel.lower()
-    assert levadas == []
-    with contextlib.redirect_stderr(io.StringIO()):
-        acao(_ctx(), {"texto": a09.CONFIRMA}, None)
+    recibo = a09._reaplicar_as_correcoes()
 
     assert levadas == ["GE-Proton11-1", "GE-Proton11-3"]
-    assert "foram apagadas (3,0 GB)" in a09.recibos_da_regua[-1][1]
+    assert "foram apagadas (3,0 GB)" in recibo
 
 
 def test_ligar_o_fixar_proton_apaga_as_que_sobram(
         a09: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    import pacotes
-
+    _tudo_mudo_menos_o_proton(a09, monkeypatch)
     fixado = [False]
     monkeypatch.setattr(a09, "_o_pino",
                         lambda: (object(), lambda **k: fixado.__setitem__(0, True)))
@@ -300,10 +303,9 @@ def test_ligar_o_fixar_proton_apaga_as_que_sobram(
     monkeypatch.setattr(a09, "_versoes_que_sobram", lambda: [_sobra("GE-Proton11-6-x86_64")])
     monkeypatch.setattr(pp, "desinstalar_as_que_sobram", lambda s: (list(s), {}))
 
-    pacotes.gesto_da_pagina("09-sistema.html", "fixar-proton")(_ctx(), {}, None)
+    recibo = a09._reaplicar_as_correcoes()
 
-    assert a09.recibos_da_regua == [
-        ("fixar-proton", "Travei. 1 versão do Proton sem uso foi apagada (1,5 GB).")]
+    assert recibo == "Travei. 1 versão do Proton sem uso foi apagada (1,5 GB)."
 
 
 def test_o_recibo_diz_quantas_e_quantos_gb_e_junta_as_que_ficaram_pelo_mesmo_motivo(
