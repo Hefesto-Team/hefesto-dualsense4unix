@@ -119,7 +119,7 @@ DESIGNADORES = frozenset({"Entrada", "Canal", "Player", "Controle"})
 #: alguma página: o nome que some da tela sai daqui.
 ROTULOS_CITADOS: tuple[str, ...] = (
     "Aplicar", "Salvar perfil", "Conectar", "Parar",
-    "Padrão", "Economia", "Máximo", "Sensor háptico",
+    "Padrão", "Sensor háptico",
     "Interna", "Trocar os botões",
     "Atrás do gabinete", "Gestão de controles", "Rádio e adaptadores", "Mapa das conexões",
     "Personalizado", "Universal", "Adulto",
