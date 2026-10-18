@@ -348,7 +348,8 @@ def _achados_por_conteudo() -> tuple[desenho.SemCenso, ...]:
     except Exception:  # pragma: no cover - o disco do usuário não derruba a aba
         return ()
     de_fabrica = {atalho for item in desenho.SEM_FONTE for atalho in item.atalhos}
-    de_fabrica |= {atalho for atalho in desenho.A_STEAM.atalhos}
+    if desenho.A_STEAM is not None:
+        de_fabrica |= set(desenho.A_STEAM.atalhos)
     return tuple(
         desenho.SemCenso(chave=stem.lower().replace(".", "-"), nome=nome,
                          atalhos=(stem,), comandos=(),
