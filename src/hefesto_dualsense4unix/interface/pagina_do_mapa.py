@@ -6275,8 +6275,9 @@ JS_DA_CADEIA_E_DO_REGISTRO = r"""
       /* A dica fala do que a pessoa faz, não do sistema por baixo. */
       var dica = p ? "Na " + naFraseDe(p) + ". Clique para trocar" : "Sem entrada marcada. Clique e marque a entrada";
       var titulo = a.nomeDeclarado || hub || rotuloDoAparelho(a);
-      /* O que o chip corta com reticências vai inteiro na dica: o nome que a pessoa deu e o do aparelho. */
-      var inteiro = [a.nomeDeclarado || "", a.nome && a.nome !== titulo ? a.nome : ""].filter(Boolean).join(" · ");
+      /* O que o chip corta com reticências vai inteiro na dica: o nome que a pessoa deu (ou o do hub de
+         plástico) e o do aparelho. Com uma fonte de sistema mais larga o título do hub também corta. */
+      var inteiro = [a.nomeDeclarado || hub || "", a.nome && a.nome !== titulo ? a.nome : ""].filter(Boolean).join(" · ");
       if (inteiro) dica = inteiro + ". " + dica;
       var fundo = nivel > 1 ? ' style="margin-left:' + nivel + 'rem;width:calc(100% - ' + nivel + 'rem)"' : "";
       return '<button class="chip' + (nivel ? " recuado" : "") + '" data-ap="' + a.id + '"' + (p ? ' data-alocado="1"' : "")
