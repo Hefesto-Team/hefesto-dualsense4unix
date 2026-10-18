@@ -121,6 +121,10 @@ class _Aperto:
     last_fired: frozenset[str] | None = None
     ps_pressed_at: float | None = None
     ps_combo_fired: bool = False
+    #: Outro botão foi apertado com o PS segurado: o toque não vale como PS sozinho.
+    ps_outro_botao: bool = False
+    #: Os botões do tique anterior, para ver a BORDA do que se aperta com o PS segurado.
+    vistos: frozenset[str] = frozenset()
     ps_long_press_fired: bool = False
     #: Os membros do combo do PS que este controle segura: calados até soltar.
     latch: set[str] = field(default_factory=set)
@@ -334,6 +338,10 @@ class HotkeyManager:
                 aperto.ps_virtual_usou = True
                 aperto.ps_virtual_ate = t
 
+        if ps_now and reais - aperto.vistos - {PS_BUTTON}:
+            aperto.ps_outro_botao = True
+        aperto.vistos = reais
+
         ps_event = self._observe_ps_solo(
             aperto, ps_now=ps_now, buttons=buttons, t=t, combo_fired=combo_fired, de=de
         )
@@ -452,19 +460,30 @@ class HotkeyManager:
 
         if aperto.ps_pressed_at is None:
             aperto.ps_combo_fired = False
+            aperto.ps_outro_botao = False
             aperto.ps_long_press_fired = False
             return None
 
         pressed_at = aperto.ps_pressed_at
         fired_during = aperto.ps_combo_fired
+        outro_botao = aperto.ps_outro_botao
         long_press_fired = aperto.ps_long_press_fired
         aperto.ps_pressed_at = None
         aperto.ps_combo_fired = False
+        aperto.ps_outro_botao = False
         aperto.ps_long_press_fired = False
 
         if fired_during:
             logger.debug(
                 "ps_solo_suppressed_by_combo",
+                held_ms=round((t - pressed_at) * 1000, 1),
+            )
+            return None
+
+        if outro_botao:
+            # Combo removido ou botão que nunca foi combo: o PS com outro botão não é o PS sozinho.
+            logger.debug(
+                "ps_solo_suppressed_by_outro_botao",
                 held_ms=round((t - pressed_at) * 1000, 1),
             )
             return None
