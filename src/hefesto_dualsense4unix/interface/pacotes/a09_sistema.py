@@ -534,7 +534,7 @@ def _perguntar_o_prontuario() -> None:
         examinar=True      6.900 ms       22 jogos   veredito: None
 
     **O ÚNICO CAMPO QUE A LINHA DESTA TELA LÊ É `ponte_divergente`**, e ele não
-    encosta na varredura: `prontuario_dos_jogos.py:424` o define como *"há
+    encosta na varredura: `prontuario_dos_jogos.py:426` o define como *"há
     carimbo de ponte confirmada"* contra *"a lista de exceções de hoje"*, os dois
     lidos do disco em milissegundos. Quem diz isso é o docstring do
     dono, em `:559`: *"O carimbo não depende de ler executável nenhum"*. A
