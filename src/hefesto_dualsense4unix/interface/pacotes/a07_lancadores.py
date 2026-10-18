@@ -163,10 +163,10 @@ import re
 import sys
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from typing import Any
 
-from hefesto_dualsense4unix.integrations import lista_de_exclusao
+from hefesto_dualsense4unix.integrations import kits_de_brinquedo, lista_de_exclusao
 from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
 from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 
@@ -1894,6 +1894,30 @@ def _jogos_com_perfil() -> tuple[tuple[str, str], ...]:
     return tuple(sorted(achados.items(), key=lambda par: (par[1].casefold(), par[0])))
 
 
+def _kits_dos_jogos(
+    chaves: Sequence[str],
+) -> tuple[tuple[str, kits_de_brinquedo.KitDoJogo], ...]:
+    """O kit que a pasta de cada jogo traz, lido do disco; sem pasta ou sem kit, fica de fora."""
+    from hefesto_dualsense4unix.integrations.prontuario_dos_jogos import (
+        jogos_instalados,
+    )
+
+    pedidos = {c.removeprefix("steam_app_") for c in chaves}
+    try:
+        instalados = jogos_instalados()
+    except Exception:
+        _LOG.debug("jogos_instalados_ilegiveis_para_o_kit", exc_info=True)
+        return ()
+    achados = []
+    for appid, _nome, raiz in instalados:
+        if appid not in pedidos or raiz is None:
+            continue
+        kit = kits_de_brinquedo.kit_do_jogo(raiz, appid)
+        if kit is not None:
+            achados.append((f"steam_app_{appid}", kit))
+    return tuple(achados)
+
+
 def _montar_a_janela_da_extensao(mod_id: str, aba: str = "") -> None:
     """O miolo da janela de opções, com o valor de agora de cada opção que o manifesto declara.
 
@@ -1907,11 +1931,13 @@ def _montar_a_janela_da_extensao(mod_id: str, aba: str = "") -> None:
         raise RuntimeError("O manifesto desta extensão não pôde ser lido. Nada foi alterado.")
     valores = opcoes.ler(manifesto, _lugares())
     jogos = _jogos_com_perfil() if any(x.tipo == "jogos" for x in manifesto.opcoes) else ()
+    kit_de = _kits_dos_jogos([chave for chave, _nome in jogos]) if jogos else ()
     linhas = [exp.OpcaoDaJanela(
         mod=mod_id, id=x.id, rotulo=x.rotulo, tipo=x.tipo, valor=_valor_na_tela(valores[x.id]),
         escolhas=tuple(x.escolhas), grupo=x.grupo or "", minimo=x.minimo or 0,
         maximo=x.maximo or 0, passo=x.passo or 1,
-        jogos=jogos if x.tipo == "jogos" else ()) for x in manifesto.opcoes]
+        jogos=jogos if x.tipo == "jogos" else (),
+        kit_de=kit_de if x.tipo == "jogos" else ()) for x in manifesto.opcoes]
     _MEXIDA.mod = mod_id
     _MEXIDA.html_mod = exp.modificacao_miolo_html(
         manifesto.nome, linhas, manifesto.descricao, aba)

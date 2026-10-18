@@ -286,6 +286,9 @@ class OpcaoDaJanela(NamedTuple):
     maximo: float = 0
     passo: float = 1
     jogos: tuple[tuple[str, str], ...] = ()
+    # O kit de brinquedo que a pasta de cada jogo traz, como (chave, ``KitDoJogo``); jogo sem kit
+    # não aparece aqui.
+    kit_de: tuple[tuple[str, kits.KitDoJogo], ...] = ()
 
 
 OPCOES_DE_EXEMPLO = (
@@ -320,15 +323,26 @@ def _controle_da_opcao(o: OpcaoDaJanela) -> str:
             f'value="{_a(o.valor)}" aria-label="{_a(o.rotulo)}">')
 
 
+def _o_kit_do_jogo(kit: kits.KitDoJogo | None) -> str:
+    """A marca do jogo que fala com a Lovense e, sob ela, a linha do que mudar no menu do jogo."""
+    if kit is None:
+        return ""
+    diz = linha_do_kit(kit)
+    sob = f'<span class="jg-porta">{diz}</span>' if diz else ""
+    return f'<span class="jg-kit">{MARCA_DO_KIT}</span>{sob}'
+
+
 def _jogos_da_opcao(o: OpcaoDaJanela) -> str:
     """Uma caixa por jogo que tem perfil; a lista nasce vazia e a caixa age no ``change``."""
     if not o.jogos:
         return '<span class="ext-vazia">Nenhum jogo tem perfil ainda.</span>'
     marcados = set(o.valor) if isinstance(o.valor, (list, tuple)) else set()
+    kit_de = dict(o.kit_de)
     caixas = "".join(
         f'<label class="jg-l"><input type="checkbox"{" checked" if chave in marcados else ""} '
         f'data-gesto="guardar-opcao-da-modificacao" data-v="{_a(o.mod)}:{_a(o.id)}:{_a(chave)}">'
-        f'<span class="jg-n">{_e(nome)}</span></label>' for chave, nome in o.jogos)
+        f'<span class="jg-n">{_e(nome)}</span>{_o_kit_do_jogo(kit_de.get(chave))}</label>'
+        for chave, nome in o.jogos)
     return f'<div class="jg-lista ext-jogos" aria-label="{_a(o.rotulo)}">{caixas}</div>'
 
 
