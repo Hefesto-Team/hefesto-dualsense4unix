@@ -333,6 +333,7 @@ def _chips_na_vista(largura: int, altura: int) -> list[dict[str, Any]]:
 @pytest.mark.parametrize("vista", sorted(VISTAS_DO_MAPA))
 def test_o_nome_do_controle_cabe_no_chip_em_toda_janela(vista: str) -> None:
     """8 (conferência final, 02/10/2026): os chips levam o nome do controle"""
+    # D-1810-O-CHIP-DO-MAPA-EM-UMA-LINHA-COMPACTA-NA-VISTA-ESTREITA
     chips = _chips_na_vista(*VISTAS_DO_MAPA[vista])
     assert len(chips) >= 3, f"a página não tem os chips do «Controle»: {chips}"
     ruins = [c for c in chips if c["vaza"] or c["fora"]]
