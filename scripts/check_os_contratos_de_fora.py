@@ -21,6 +21,12 @@ O que ela conta, por AST em ``src/`` (comentário e docstring não contam):
 Fora de ``src/`` (``scripts/``, ``assets/``, ``install.sh``…), por texto, só a lista curta
 das formas que já quebraram: ``/var/lib/bluetooth``, ``.vdf`` e o ``pactl list`` longo.
 
+Os manifestos de modificação (``hefesto-mod.json``, os de fábrica e qualquer outro versionado)
+também chamam o mundo do outro, e sem ``.py`` no meio: o bloco ``lancador`` declara os
+``comandos`` que o censo procura no ``PATH`` (``shutil.which``), a reposição reabre o
+``reposicao.nativo``, e o ``leitor.executar`` pode ser uma ferramenta do ``PATH``. Cada um é um
+``cmd:<nome>`` com o manifesto como arquivo e ``*`` como ``onde``.
+
 A régua reprova: contato sem linha; linha cujo contato sumiu (ou cujo símbolo não existe
 mais); linha ``interna``/``versão``/``comando`` sem ``motivo`` e sem ``sprint_filha`` que
 exista; ``como_o_doctor_ve`` que cita um contrato do doctor que não existe. E há UMA
@@ -32,6 +38,7 @@ from __future__ import annotations
 
 import ast
 import csv
+import json
 import re
 import subprocess
 import sys
@@ -335,6 +342,46 @@ def contatos_do_texto(texto: str, arquivo: str) -> list[Contato]:
     return achados
 
 
+NOME_DO_MANIFESTO = "hefesto-mod.json"
+
+
+def contatos_do_manifesto(texto: str, arquivo: str, pasta: Path | None = None) -> list[Contato]:
+    """Os comandos de fora que UM ``hefesto-mod.json`` declara no bloco ``lancador``.
+
+    Lê o mesmo bloco que o conferidor do manifesto e o censo dos lançadores aceitam
+    (``censo_dos_lancadores.lancador_da_modificacao``), sem importá-los: o portão roda solto.
+    O que não é lista de textos o conferidor recusa; aqui só se lê o que é texto.
+    ``pasta`` é onde o manifesto mora: um ``leitor.executar`` que é arquivo dela é código da
+    própria modificação, não ferramenta do ``PATH``.
+    """
+    try:
+        dado = json.loads(texto)
+    except ValueError as erro:
+        raise CatracaTorta(f"{arquivo}: o manifesto não é JSON ({erro}); ilegível não é limpo.") from erro
+    bloco = dado.get("lancador") if isinstance(dado, dict) else None
+    if not isinstance(bloco, dict):
+        return []
+    nomes: dict[str, str] = {}
+
+    def anota(valor: object, campo: str) -> None:
+        if isinstance(valor, str) and valor.strip():
+            nomes.setdefault(valor.strip(), campo)
+
+    comandos = bloco.get("comandos")
+    for valor in comandos if isinstance(comandos, list) else ():
+        anota(valor, "lancador.comandos")
+    reposicao = bloco.get("reposicao")
+    if isinstance(reposicao, dict):
+        anota(reposicao.get("nativo"), "lancador.reposicao.nativo")
+    leitor = bloco.get("leitor")
+    executar = leitor.get("executar") if isinstance(leitor, dict) else None
+    if isinstance(executar, list) and executar and isinstance(executar[0], str):
+        primeiro = executar[0].strip()
+        if primeiro and "/" not in primeiro and not (pasta is not None and (pasta / primeiro).exists()):
+            anota(primeiro, "lancador.leitor.executar")
+    return [Contato(arquivo, f"cmd:{nome}", (campo,)) for nome, campo in sorted(nomes.items())]
+
+
 def _arquivos_versionados(raiz: Path) -> list[str]:
     saida = subprocess.run(
         ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
@@ -353,6 +400,9 @@ def varrer(raiz: Path) -> list[Contato]:
             continue
         if rel.startswith(str(PACOTE) + "/") and rel.endswith(".py"):
             achados.extend(contatos_do_codigo(caminho.read_text(encoding="utf-8"), rel))
+        elif caminho.name == NOME_DO_MANIFESTO:
+            achados.extend(contatos_do_manifesto(
+                caminho.read_text(encoding="utf-8"), rel, caminho.parent))
         elif (rel.split("/")[0] in _PASTAS_DE_TEXTO or rel in _SOLTOS_DE_TEXTO) \
                 and caminho.suffix not in _EXTENSOES_BINARIAS and not rel.startswith("scripts/ensaios/"):
             try:
