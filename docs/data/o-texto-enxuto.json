@@ -5,7 +5,7 @@
       "data": "2026-10-17",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 53101,
+      "piso": 53111,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 83,
@@ -160,7 +160,7 @@
         "integrations/quem_o_jogo_le.py": 124,
         "integrations/quem_ouve_o_microfone.py": 104,
         "integrations/radio_da_mesa.py": 270,
-        "integrations/receitas_de_ambiente.py": 44,
+        "integrations/receitas_de_ambiente.py": 54,
         "integrations/receptor_sem_fio.py": 144,
         "integrations/reposicao_dos_lancadores.py": 52,
         "integrations/retrato_do_som.py": 134,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +2 linhas (53099 -> 53101), pagas por Origem: D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO, D-1610-O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO, D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE, D-1610-O-TEXTO-CORTADO-GANHA-DICA, D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO, D-2309-O-PRIMARIO-ESPERA-A-CARTA-1, energia.desligar, entrada.combo.ponte, luz.led_microfone; registrado no fecho, topo 7145265185f6",
+      "razao": "texto-em-src: +10 linhas (53101 -> 53111), pagas por Origem: D-1710-O-INSTALL-NAO-CHAMA-O-APT-COM-PACOTE-A-MEIO; registrado no fecho, topo 5adf7d8e5791",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -300,6 +300,12 @@
           "de": 53099,
           "para": 53101,
           "razao": "texto-em-src: +2 linhas (53099 -> 53101), pagas por Origem: D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO, D-1610-O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO, D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE, D-1610-O-TEXTO-CORTADO-GANHA-DICA, D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO, D-2309-O-PRIMARIO-ESPERA-A-CARTA-1, energia.desligar, entrada.combo.ponte, luz.led_microfone; registrado no fecho, topo 7145265185f6"
+        },
+        {
+          "data": "2026-10-17",
+          "de": 53101,
+          "para": 53111,
+          "razao": "texto-em-src: +10 linhas (53101 -> 53111), pagas por Origem: D-1710-O-INSTALL-NAO-CHAMA-O-APT-COM-PACOTE-A-MEIO; registrado no fecho, topo 5adf7d8e5791"
         }
       ],
       "unidade": "linhas",

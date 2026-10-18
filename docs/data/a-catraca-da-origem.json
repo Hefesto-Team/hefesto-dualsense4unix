@@ -253,14 +253,14 @@
       "data": "2026-10-17",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1142300,
+      "piso": 1143907,
       "por_item": {
-        "docs": 119535,
-        "scripts": 115218,
-        "src": 308039,
-        "tests": 599508
+        "docs": 119545,
+        "scripts": 115521,
+        "src": 308120,
+        "tests": 600721
       },
-      "razao": "tamanho: +43 linhas (1142257 -> 1142300), pagas por Origem: D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO, D-1610-O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO, D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE, D-1610-O-TEXTO-CORTADO-GANHA-DICA, D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO, D-2309-O-PRIMARIO-ESPERA-A-CARTA-1, energia.desligar, entrada.combo.ponte, luz.led_microfone; registrado no fecho, topo 168d95c66449",
+      "razao": "tamanho: +1607 linhas (1142300 -> 1143907), pagas por Origem: D-1710-O-INSTALL-NAO-CHAMA-O-APT-COM-PACOTE-A-MEIO; registrado no fecho, topo 5adf7d8e5791",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -579,10 +579,16 @@
           "de": 1142257,
           "para": 1142300,
           "razao": "tamanho: +43 linhas (1142257 -> 1142300), pagas por Origem: D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO, D-1610-O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO, D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE, D-1610-O-TEXTO-CORTADO-GANHA-DICA, D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO, D-2309-O-PRIMARIO-ESPERA-A-CARTA-1, energia.desligar, entrada.combo.ponte, luz.led_microfone; registrado no fecho, topo 168d95c66449"
+        },
+        {
+          "data": "2026-10-17",
+          "de": 1142300,
+          "para": 1143907,
+          "razao": "tamanho: +1607 linhas (1142300 -> 1143907), pagas por Origem: D-1710-O-INSTALL-NAO-CHAMA-O-APT-COM-PACOTE-A-MEIO; registrado no fecho, topo 5adf7d8e5791"
         }
       ],
       "unidade": "linhas",
-      "universo": 2963
+      "universo": 2966
     }
   }
 }
