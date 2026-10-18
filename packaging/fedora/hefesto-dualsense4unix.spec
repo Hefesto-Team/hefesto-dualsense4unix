@@ -599,6 +599,12 @@ fi
 %{_datadir}/%{app_id}/scripts/sondas/nucleo-por-processo.bt
 %{_datadir}/%{app_id}/scripts/sondas/trava-por-pad.bt
 %{_datadir}/%{app_id}/scripts/sondas/uhid-raw-request.bt
+# O shared-data do wheel (pyproject.toml): a fabrica de perfis, os modelos das units,
+# o pino do Proton e o recibo que o qualifica (o `hefesto doctor` os acha aqui). O
+# installer os grava no %install junto com o wheel; um instalado e nao listado
+# aborta o rpmbuild inteiro.
+%{_datadir}/%{app_id}/assets/
+%{_datadir}/%{app_id}/docs/
 
 %changelog
 * Tue Oct 06 2026 Vitoria Maria <[REDACTED]> - 1:0.9.5-1

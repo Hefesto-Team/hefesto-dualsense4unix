@@ -40,7 +40,6 @@ from tests.unit.test_install_garante_deps_em_qualquer_familia import (
 
 RAIZ = Path(__file__).resolve().parents[2]
 NOME = "hefesto-dualsense4unix"
-COMPARTILHADO = f"share/{NOME}/assets"
 FORMATOS = [
     ("deb", "/usr/bin", "/opt/hefesto-dualsense4unix/venv/bin/python"),
     ("arch", "/usr/bin", "/usr/bin/python3"),
@@ -138,7 +137,8 @@ def test_o_wheel_declara_a_fabrica_e_as_units_no_share() -> None:
     }
     assert esperado <= set(dados), sorted(esperado - set(dados))
     for origem, destino in dados.items():
-        assert destino == f"{COMPARTILHADO}/{Path(origem).name}", (origem, destino)
+        # O destino espelha o caminho do repositório: é `<base>/<caminho>` que quem lê procura.
+        assert destino == f"share/{NOME}/{origem}", (origem, destino)
         assert (RAIZ / origem).exists(), origem
 
 

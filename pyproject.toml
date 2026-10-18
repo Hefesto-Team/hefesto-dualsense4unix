@@ -98,11 +98,16 @@ include = [
 "assets/hefesto-dualsense4unix.service" = "share/hefesto-dualsense4unix/assets/hefesto-dualsense4unix.service"
 "assets/hefesto-dualsense4unix-gui-hotplug.service" = "share/hefesto-dualsense4unix/assets/hefesto-dualsense4unix-gui-hotplug.service"
 "assets/hefesto-dualsense4unix-presenca.service" = "share/hefesto-dualsense4unix/assets/hefesto-dualsense4unix-presenca.service"
+# O pino do Proton e o recibo que o qualifica: o `hefesto doctor` os procura em `<base>/assets/proton-pin.conf`
+# e `<base>/docs/data/proton-qualificacao.csv` (`utils/repo_files.py`), e sem eles numa instalação por pacote o
+# bloco do Proton fixado diz «não veio» e não confere nada. O destino espelha o caminho do repositório.
+"assets/proton-pin.conf" = "share/hefesto-dualsense4unix/assets/proton-pin.conf"
+"docs/data/proton-qualificacao.csv" = "share/hefesto-dualsense4unix/docs/data/proton-qualificacao.csv"
 
 # O sdist leva só o que está listado: sem a lista ele levaria arquivo local que só o
 # `.git/info/exclude` ou o ignore global escondem.
 [tool.hatch.build.targets.sdist]
-only-include = ["src", "assets/profiles_default", "assets/estilos_de_jogo", "assets/hefesto-dualsense4unix.service", "assets/hefesto-dualsense4unix-gui-hotplug.service", "assets/hefesto-dualsense4unix-presenca.service", "tests", "pyproject.toml", "README.md", "LICENSE", "LICENSES", "NOTICE", "CHANGELOG.md"]
+only-include = ["src", "assets/profiles_default", "assets/estilos_de_jogo", "assets/hefesto-dualsense4unix.service", "assets/hefesto-dualsense4unix-gui-hotplug.service", "assets/hefesto-dualsense4unix-presenca.service", "assets/proton-pin.conf", "docs/data/proton-qualificacao.csv", "tests", "pyproject.toml", "README.md", "LICENSE", "LICENSES", "NOTICE", "CHANGELOG.md"]
 
 [tool.ruff]
 line-length = 100
