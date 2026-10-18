@@ -340,10 +340,13 @@ def eixos_de_cada_controle(
     """Os analógicos `(lx, ly, rx, ry)` de cada controle lido neste tique.
 
     O primeiro é o do posto de P1 (`state`, o que o laço leu); os demais, dos mesmos leitores
-    que dão botões e gatilhos aos outros controles: o co-op (`live_snapshots`) ou o leitor
-    passivo do `SensorHub`. `outros` são os MACs dos demais controles (chaves de
-    `poll.gatilhos_de_cada_controle`). Quem não tem leitura neste tique fica de fora. Nunca levanta.
+    e com a mesma regra de `poll.gatilhos_de_cada_controle`: o co-op (`live_snapshots`) ou o
+    leitor passivo do `SensorHub`, e quem o co-op numera sem o vpad de pé fica de fora (o leitor
+    passivo veria o último valor, e a tecla ficaria presa). `outros` são os MACs dos demais
+    controles (chaves de `gatilhos_de_cada_controle`). Nunca levanta.
     """
+    from hefesto_dualsense4unix.daemon.subsystems import poll
+
     centro = acoes.CENTRO_DO_ANALOGICO
     maos = [(
         int(getattr(state, "raw_lx", centro)), int(getattr(state, "raw_ly", centro)),
@@ -352,19 +355,19 @@ def eixos_de_cada_controle(
     if not outros:
         return maos
     try:
-        vivos = getattr(getattr(daemon, "_coop_manager", None), "live_snapshots", None)
-        vivos = vivos() if callable(vivos) else {}
-        entradas: Any = None
+        vivos = poll._snapshots_do_coop(daemon)
+        sem_leitor = [u for u in outros if u not in vivos]
+        sentados = poll._sentados_no_coop(daemon) if sem_leitor else frozenset()
+        passivos = [u for u in sem_leitor if u not in sentados]
+        entradas: Any = poll._entradas_do_hub(daemon) if passivos else None
         for uniq in outros:
-            snap = vivos.get(uniq) if isinstance(vivos, dict) else None
-            if snap is not None:
+            if uniq in vivos:
+                snap = vivos[uniq]
                 leitura: Any = {c: getattr(snap, c, centro) for c in ("lx", "ly", "rx", "ry")}
+            elif uniq in passivos and callable(entradas):
+                leitura = entradas(uniq)
             else:
-                if entradas is None:
-                    garantir = getattr(daemon, "_garantir_sensor_hub", None)
-                    hub = garantir() if callable(garantir) else None
-                    entradas = getattr(hub, "entradas", None)
-                leitura = entradas(uniq) if callable(entradas) else None
+                continue
             if isinstance(leitura, dict):
                 maos.append(tuple(  # type: ignore[arg-type]
                     int(leitura.get(c, centro)) for c in ("lx", "ly", "rx", "ry")))
@@ -451,12 +454,14 @@ class TeclasDoAnalogicoNoDesktop:
 def teclas_do_analogico_no_desktop(daemon: Any, state: Any) -> None:
     """O laço do desktop: as teclas do analógico, se o perfil efetivo as escolheu.
 
-    «Só dentro do jogo» cala o teclado do desktop, e as teclas do analógico são do teclado.
+    As teclas do analógico são do teclado: a «Função do teclado» «Desativado» (sem
+    `_keyboard_device`) e «Só dentro do jogo» calam também estas no desktop.
     """
     atendente = getattr(daemon, "_teclas_do_analogico", None)
     if atendente is None:
         return
-    if getattr(daemon, "_teclado_so_no_jogo", False):
+    if getattr(daemon, "_keyboard_device", None) is None or getattr(
+            daemon, "_teclado_so_no_jogo", False):
         atendente.soltar()
         return
     atendente.tick(daemon, state)

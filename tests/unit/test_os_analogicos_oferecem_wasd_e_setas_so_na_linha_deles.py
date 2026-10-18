@@ -13,7 +13,8 @@ Duas curas, cada uma com a sua régua:
 MORDIDAS (arrancadas e devolvidas): devolver o token à lista geral reprova a primeira; tirar a
 chamada de `teclas_do_analogico_no_desktop` do `dispatch_mouse` reprova as do desktop; tirar o
 `soltar_as_teclas_do_analogico` do `soltar_o_cursor` ou da troca de perfil deixa a tecla presa
-e reprova as de soltura.
+e reprova as de soltura; tirar a condição do `_keyboard_device` reprova a do «Desativado»; ler
+pelo hub quem o co-op numera reprova a do vpad que renasce.
 """
 from __future__ import annotations
 
@@ -143,6 +144,8 @@ def desktop(monkeypatch: pytest.MonkeyPatch) -> tuple[Any, _UinputPorDevice]:
     daemon._mouse_device = _MouseDoDesktop()
     daemon._teclas_do_analogico = None
     daemon._outros = {}
+    # A «Função do teclado» ligada fora do jogo: o teclado do desktop existe.
+    daemon._keyboard_device = types.SimpleNamespace(dispatch=lambda *_a: None, stop=lambda: None)
     return daemon, mod
 
 
@@ -191,18 +194,38 @@ def test_dois_controles_na_mesma_direcao_soltam_so_quando_o_ultimo_solta(
 ) -> None:
     daemon, mod = desktop
     sub_mouse.trocar_a_tabela_no_jogo(daemon, _perfil(**{acoes.EIXO_ESQUERDO: acoes.TOKEN_WASD}))
-    daemon._outros = {"cc:00:00:00:00:02": (frozenset(), 0, 0)}
+    daemon._outros = {"aa:bb:cc:00:00:02": (frozenset(), 0, 0)}
     daemon._coop_manager = types.SimpleNamespace(live_snapshots=lambda: {
-        "cc:00:00:00:00:02": types.SimpleNamespace(lx=20, ly=CENTRO, rx=CENTRO, ry=CENTRO)})
+        "aa:bb:cc:00:00:02": types.SimpleNamespace(lx=20, ly=CENTRO, rx=CENTRO, ry=CENTRO)})
     _tique(daemon, raw_lx=20)
     assert _tecla(mod).count(("KEY_A", 1)) == 1, _tecla(mod)
     _tique(daemon)  # o primário volta ao centro, o outro segue empurrando
     assert ("KEY_A", 0) not in _tecla(mod), "a tecla soltou com o outro controle ainda empurrando"
     daemon._coop_manager = types.SimpleNamespace(live_snapshots=lambda: {
-        "cc:00:00:00:00:02": types.SimpleNamespace(
+        "aa:bb:cc:00:00:02": types.SimpleNamespace(
             lx=CENTRO, ly=CENTRO, rx=CENTRO, ry=CENTRO)})
     _tique(daemon)
     assert ("KEY_A", 0) in _tecla(mod), "o último soltou e a tecla ficou presa"
+
+
+def test_quem_o_coop_numera_sem_vpad_nao_empurra_pelo_leitor_passivo(desktop: Any) -> None:
+    """A regra das fontes é a dos gatilhos: o co-op numera o controle e o vpad dele renasce; o
+    leitor passivo do hub veria o último valor, e a tecla ficaria presa até o vpad voltar."""
+    daemon, mod = desktop
+    sub_mouse.trocar_a_tabela_no_jogo(daemon, _perfil(**{acoes.EIXO_ESQUERDO: acoes.TOKEN_WASD}))
+    mac = "aa:bb:cc:00:00:03"
+    daemon._outros = {mac: (frozenset(), 0, 0)}
+    hub = types.SimpleNamespace(entradas=lambda u: {"lx": 20, "ly": CENTRO, "rx": CENTRO,
+                                                    "ry": CENTRO})
+    daemon._garantir_sensor_hub = lambda: hub
+    daemon._coop_manager = types.SimpleNamespace(
+        live_snapshots=lambda: {}, numeros_de_jogador=lambda: {mac: 2})
+    _tique(daemon)
+    assert ("KEY_A", 1) not in _tecla(mod), "o leitor passivo de quem o co-op numera empurrou"
+    daemon._coop_manager = types.SimpleNamespace(live_snapshots=lambda: {},
+                                                 numeros_de_jogador=lambda: {})
+    _tique(daemon)
+    assert ("KEY_A", 1) in _tecla(mod), "o controle fora do co-op não chegou pelo leitor passivo"
 
 
 def test_trocar_de_perfil_solta_o_que_o_analogico_segurava(desktop: Any) -> None:
@@ -257,16 +280,67 @@ def test_o_teclado_so_dentro_do_jogo_cala_a_tecla_do_analogico(desktop: Any) -> 
     assert not _tecla(mod), "«Só dentro do jogo» digitou no desktop"
 
 
+def test_o_teclado_desativado_cala_a_tecla_do_analogico(desktop: Any) -> None:
+    """«Desativado» é mais que «Só dentro do jogo»: sem o teclado do desktop, o analógico não
+    digita, e o que ele segurava solta quando o teclado desliga."""
+    daemon, mod = desktop
+    sub_mouse.trocar_a_tabela_no_jogo(daemon, _perfil(**{acoes.EIXO_ESQUERDO: acoes.TOKEN_WASD}))
+    _tique(daemon, raw_lx=250)
+    assert ("KEY_D", 1) in _tecla(mod)
+    daemon._keyboard_device = None
+    _tique(daemon, raw_lx=250)
+    assert ("KEY_D", 0) in _tecla(mod), "desligar o teclado deixou a tecla do analógico presa"
+    _tique(daemon, raw_lx=32)
+    assert ("KEY_A", 1) not in _tecla(mod), "«Desativado» digitou no desktop"
+
+
 def test_a_tabela_com_o_jogo_usa_a_uniao_dos_controles(
     desktop: Any,
 ) -> None:
     """A régua do jogo aberto segue verde pela mesma função, agora com a união dos controles."""
     daemon, mod = desktop
     daemon._osk_controller = types.SimpleNamespace(dispatch_token=lambda *a: None)
-    daemon._outros = {"cc:00:00:00:00:02": (frozenset(), 0, 0)}
+    daemon._outros = {"aa:bb:cc:00:00:02": (frozenset(), 0, 0)}
     daemon._coop_manager = types.SimpleNamespace(live_snapshots=lambda: {
-        "cc:00:00:00:00:02": types.SimpleNamespace(lx=CENTRO, ly=CENTRO, rx=CENTRO, ry=20)})
+        "aa:bb:cc:00:00:02": types.SimpleNamespace(lx=CENTRO, ly=CENTRO, rx=CENTRO, ry=20)})
     tabela = sub_mouse.TabelaNoJogo({acoes.EIXO_DIREITO: acoes.TOKEN_SETAS}, None, ligada=True)
     tabela.tick(daemon, _estado(raw_lx=CENTRO, raw_ly=CENTRO, raw_rx=CENTRO, raw_ry=CENTRO),
                 frozenset())
     assert ("KEY_UP", 1) in _tecla(mod), "o analógico do outro controle não chegou à tabela"
+
+
+# -- o perfil gravado antes de a lista encolher ---------------------------------------
+
+
+def test_o_perfil_antigo_com_o_token_fora_da_lista_mostra_o_que_o_botao_faz(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any,
+) -> None:
+    """«Teclas WASD» num botão (e botão do mouse num analógico) carrega sem migração, cai em
+    `sem_dono` e a linha mostra «— Nada —», que é o que o botão faz: a opção não existe mais na
+    lista dela, e sem isto o `escrever()` se calaria e a linha seguiria no de fábrica.
+    MORDIDA: devolver `acoes.rotulo(token)` em `_o_que_a_linha_mostra` reprova."""
+    import pathlib
+
+    monkeypatch.syspath_prepend(
+        str(pathlib.Path(__file__).resolve().parents[2] / "src/hefesto_dualsense4unix/interface"))
+    import pacotes
+    from pacotes import a06_navegacao
+
+    from tests.unit.test_a_06_nao_manda_para_o_vazio import (
+        ESTADO,
+        FALSO,
+        MESA,
+        _perfil_de_mentira,
+    )
+
+    _perfil_de_mentira(monkeypatch, tmp_path, button_actions={
+        "cross": acoes.TOKEN_WASD, acoes.EIXO_ESQUERDO: "BTN_LEFT",
+        "circle": acoes.TOKEN_CURSOR, "square": "KEY_ESC"})
+    ctx = pacotes.Contexto(state=ESTADO, mesa=MESA, conectados=[FALSO], estados={})
+    mesa = a06_navegacao.pacote(ctx)["mesa"]
+    nada = acoes.rotulo(acoes.TOKEN_NADA)
+    assert mesa["acao-cross"] == nada, mesa["acao-cross"]
+    assert mesa[f"acao-{acoes.EIXO_ESQUERDO}"] == nada, mesa[f"acao-{acoes.EIXO_ESQUERDO}"]
+    # O que a lista da linha ainda oferece segue com o próprio nome (a resposta da linha avisa).
+    assert mesa["acao-circle"] == acoes.rotulo(acoes.TOKEN_CURSOR)
+    assert mesa["acao-square"] == "Esc"

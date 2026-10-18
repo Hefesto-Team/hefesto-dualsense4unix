@@ -11,8 +11,8 @@ Recusa na tela: `RuntimeError` e `ValueError` vão ao diário e o botão pisca `
 """
 from __future__ import annotations
 
+import functools
 import html
-import importlib
 import re
 from typing import Any
 
@@ -479,13 +479,34 @@ def _linhas_dos_botoes(p: dict[str, Any]) -> dict[str, str]:
     linhas é a TIRA (`linhas_que_a_lista_nao_sabe_dizer`).
     """
     perfil_ = p or {}
-    tabela = acoes.tabela_efetiva(
-        perfil_.get("button_actions") or None,
-        perfil_.get("key_bindings") or None)
+    escolhas = perfil_.get("button_actions") or None
+    atalhos = perfil_.get("key_bindings") or None
+    tabela = acoes.tabela_efetiva(escolhas, atalhos)
+    _, _, sem_dono = acoes.resolver(escolhas, atalhos)
     return {
-        f"{PREFIXO_DA_ACAO}{botao}": acoes.rotulo(str(tabela.get(botao) or ""))
+        f"{PREFIXO_DA_ACAO}{botao}": _o_que_a_linha_mostra(
+            botao, str(tabela.get(botao) or ""), sem_dono)
         for botao in acoes.BOTOES
     }
+
+
+def _o_que_a_linha_mostra(botao: str, token: str, sem_dono: list[str]) -> str:
+    """O rótulo da linha; o que a lista da linha não oferece e ninguém atende mostra «— Nada —».
+
+    É o que o botão faz: o perfil gravado antes de a lista encolher («Teclas WASD» num botão,
+    botão do mouse num analógico) carrega sem migração calada, e sem isto o `escrever()` não
+    casaria a opção e a linha seguiria mostrando o de fábrica sobre um botão que não age.
+    """
+    rotulo = acoes.rotulo(token)
+    if botao in sem_dono and rotulo not in _oferecidos(botao):
+        return acoes.rotulo(acoes.TOKEN_NADA)
+    return rotulo
+
+
+@functools.cache
+def _oferecidos(botao: str) -> frozenset[str]:
+    """Os rótulos que a lista da linha oferece: `por_grupo(linha)`, a que o gerador desenha."""
+    return frozenset(r for _grupo, rotulos in acoes.por_grupo(botao) for r in rotulos)
 
 
 def _atalho_em_palavras(colado: str) -> str:
@@ -1008,18 +1029,15 @@ def _avisar_se_sem_teclado_na_tela(ctx: Contexto, token: str) -> None:
     """Depois de guardar, diz que a máquina não tem o teclado na tela que a linha escolheu.
 
     O dado é o `osk_disponivel` do bloco `keyboard_emulation` que o daemon publica (ele enxerga o
-    host); sem o bloco, ou sem GTK no ambiente, ninguém olhou e a linha não diz nada.
+    host); sem o bloco, ninguém olhou e a linha não diz nada.
     """
     if token not in (teclas.TOKEN_TOGGLE_OSK, teclas.TOKEN_OPEN_OSK, teclas.TOKEN_CLOSE_OSK):
         return
+    from hefesto_dualsense4unix.app.actions.input_actions import frase_do_teclado_na_tela
+
     bloco = ctx.state.get("keyboard_emulation")
     osk = bloco.get("osk_disponivel") if isinstance(bloco, dict) else None
-    try:
-        modulo = importlib.import_module("hefesto_dualsense4unix.app.actions.input_actions")
-    except Exception:
-        modulo = None
-    sabe = osk if isinstance(osk, bool) else None
-    frase = modulo.frase_do_teclado_na_tela(sabe) if modulo else ""
+    frase = frase_do_teclado_na_tela(osk if isinstance(osk, bool) else None)
     if frase:
         raise RuntimeError(f"guardei, e {frase}")
 
