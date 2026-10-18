@@ -346,5 +346,6 @@ def test_o_perfil_antigo_com_o_token_fora_da_lista_mostra_o_que_o_botao_faz(
     assert mesa["acao-cross"] == nada, mesa["acao-cross"]
     assert mesa[f"acao-{acoes.EIXO_ESQUERDO}"] == nada, mesa[f"acao-{acoes.EIXO_ESQUERDO}"]
     # O que a lista da linha ainda oferece segue com o próprio nome (a resposta da linha avisa).
-    assert mesa["acao-circle"] == acoes.rotulo(acoes.TOKEN_CURSOR)
+    # O cursor num botão deixou de ser oferecido (CURSOR-E-ROLAGEM-SO-NA-LINHA-QUE-OS-ATENDE-01).
+    assert mesa["acao-circle"] == nada
     assert mesa["acao-square"] == "Esc"

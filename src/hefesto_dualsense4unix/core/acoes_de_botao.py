@@ -83,6 +83,17 @@ TECLAS_DO_ANALOGICO: dict[str, tuple[str, str, str, str]] = {
     TOKEN_SETAS: ("KEY_LEFT", "KEY_RIGHT", "KEY_UP", "KEY_DOWN"),
 }
 
+#: AS AÇÕES DE EIXO e a(s) linha(s) que cada uma atende: o dono do que cada tipo de linha oferece
+#: (:func:`por_grupo`) e aceita (:func:`resolver`). O cursor é só do analógico esquerdo, a rolagem
+#: só do direito, as teclas dos dois. Ação fora daqui é de botão, e a linha de um analógico não a
+#: oferece: o atendente do eixo não a emite, e a escolha ficaria sem quem a atenda.
+LINHAS_DA_ACAO_DE_EIXO: dict[str, frozenset[str]] = {
+    TOKEN_CURSOR: frozenset({EIXO_ESQUERDO}),
+    TOKEN_ROLAGEM: frozenset({EIXO_DIREITO}),
+    TOKEN_WASD: frozenset({EIXO_ESQUERDO, EIXO_DIREITO}),
+    TOKEN_SETAS: frozenset({EIXO_ESQUERDO, EIXO_DIREITO}),
+}
+
 #: Quanto o analógico precisa passar do centro (0 a 1) para a direção virar tecla: meia deflexão.
 LIMIAR_DO_ANALOGICO = 0.5
 CENTRO_DO_ANALOGICO = 128
@@ -152,24 +163,23 @@ ORDEM_DOS_GRUPOS: tuple[str, ...] = (
 
 
 def por_grupo(botao: str | None = None) -> list[tuple[str, list[str]]]:
-    """`[(grupo, [rótulo, …]), …]` — exatamente o que a tela desenha.
+    """`[(grupo, [rótulo, …]), …]` — exatamente o que a tela desenha (uma lista só).
 
-    A TELA NÃO GUARDA MAIS A LISTA. Ela era escrita no gerador da aba Navegação,
-    ao lado desta, e as duas já divergiam em três linhas quando este módulo
-    nasceu. Aqui há uma, e o gerador a lê.
-
-    Com ``botao=BOTAO_PS``, a lista da linha do PS: só o que ele digita
-    (:func:`o_ps_aceita`). As outras linhas não oferecem o «— Sem tecla —». «Teclas WASD» e
-    «Setas» só nas linhas dos analógicos, que não oferecem ``BTN_*``. Sem ``botao``, a geral.
+    Com ``botao=BOTAO_PS``, só o que ele digita (:func:`o_ps_aceita`); as outras linhas não
+    oferecem o «— Sem tecla —». Cada ação de eixo (:data:`LINHAS_DA_ACAO_DE_EIXO`) só aparece
+    na linha que a atende, e a linha de botão não oferece nenhuma. Sem ``botao``, a geral.
     """
     def cabe(token: str) -> bool:
         if botao == BOTAO_PS:
             return o_ps_aceita(token)
         if token == TOKEN_SEM_TECLA:
             return False
-        if token in TECLAS_DO_ANALOGICO:
-            return botao is None or botao in _TOKEN_DO_EIXO
-        return not (botao in _TOKEN_DO_EIXO and token.startswith("BTN_"))
+        if token == TOKEN_NADA:
+            return True
+        linhas = LINHAS_DA_ACAO_DE_EIXO.get(token)
+        if linhas is not None:
+            return botao is None or botao in linhas
+        return botao is None or botao not in _TOKEN_DO_EIXO
 
     fora: list[tuple[str, list[str]]] = []
     for grupo in ORDEM_DOS_GRUPOS:
@@ -401,7 +411,7 @@ def resolver(
             # dizer isso, e a linha fica sem dono.
             if token not in (TOKEN_NADA, _TOKEN_DO_EIXO[botao]):
                 do_mouse[botao] = token
-                if token not in TECLAS_DO_ANALOGICO:
+                if botao not in LINHAS_DA_ACAO_DE_EIXO.get(token, frozenset()):
                     sem_dono.append(botao)
             continue
         if token == TOKEN_NADA:
@@ -410,7 +420,7 @@ def resolver(
             sem_dono.append(botao)
         elif token.startswith("BTN_"):
             do_mouse[botao] = token
-        elif token in (TOKEN_CURSOR, TOKEN_ROLAGEM) or token in TECLAS_DO_ANALOGICO:
+        elif token in LINHAS_DA_ACAO_DE_EIXO:
             sem_dono.append(botao)
         else:
             do_teclado[botao] = tuple(token.split("+"))
@@ -488,6 +498,7 @@ __all__ = [
     "GRUPO_NENHUM",
     "GRUPO_TECLADO",
     "LIMIAR_DO_ANALOGICO",
+    "LINHAS_DA_ACAO_DE_EIXO",
     "ORDEM_DOS_GRUPOS",
     "SEM_ATENDENTE",
     "TECLAS_DO_ANALOGICO",
