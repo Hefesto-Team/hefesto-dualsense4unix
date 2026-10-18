@@ -14,6 +14,7 @@ import subprocess
 import sys
 import threading
 import time
+from typing import Any
 
 import pytest
 
@@ -577,7 +578,7 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
             assert pg.is_visible("#contagem")
             assert pg.inner_text("#relogio").strip() != "", "o relógio não conta"
             pg.click("#pular-timer")
-            pg.wait_for_selector(".ctl svg")
+            pg.wait_for_selector("#depois", state="visible")
 
             assert pg.eval_on_selector_all(".ctl svg", "e=>e.length") == 4
             cores = pg.eval_on_selector_all(
@@ -640,8 +641,33 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
             _abre_o_como(pg)
             pg.fill("#gesto", "aba 03 > efeito Arma no P3 · report 0x02")
             pg.fill('textarea[name="n-P3"]', "só o P3 endureceu")
+
+            # O SALVAR É ASSÍNCRONO (dois `fetch` antes de avançar), e a régua
+            # esperava o avanço por um tempo fixo: sob carga o servidor
+            # respondia depois do tempo e ela reprovava sem defeito nenhum.
+            # Agora o gravar fica SEGURADO na rede, a página tem de continuar
+            # onde está, e o avanço é esperado pela condição do DOM (o hash
+            # mudar), que é o comportamento, e não pelo relógio da máquina.
+            seguradas: list[Any] = []
+            solto = {"sim": False}
+
+            def segura(rota: Any) -> None:
+                if solto["sim"]:
+                    rota.continue_()
+                else:
+                    seguradas.append(rota)
+
+            pg.route("**/registro", segura)
             pg.click("#salvar")
-            pg.wait_for_timeout(500)
+            assert pg.evaluate("location.hash") == "#" + alvo.id, (
+                "a página avançou antes de o registro ser gravado")
+            solto["sim"] = True
+            with pg.expect_response("**/registro"):
+                for rota in seguradas:
+                    rota.continue_()
+            pg.wait_for_function(
+                "(id) => location.hash !== '#' + id", arg=alvo.id)
+            pg.unroute("**/registro", segura)
 
             assert pg.evaluate("location.hash") != "#" + alvo.id, (
                 "salvar não avançou para o teste seguinte")

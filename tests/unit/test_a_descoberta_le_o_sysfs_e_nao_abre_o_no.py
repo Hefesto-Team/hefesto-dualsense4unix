@@ -4,6 +4,7 @@ from __future__ import annotations
 import contextlib
 import errno
 import os
+import threading
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -50,6 +51,10 @@ class Mesa:
         self.moradas: dict[str, str] = {}
         self.aberturas: list[str] = []
         self.pedidos_ao_broker: list[str] = []
+        #: A trava que une «marcar a volta» e «criar o nó» do lado do teste, e cada volta do
+        #: aviso do lado do leitor: nenhuma volta cai entre a marca e o nascimento.
+        self.nascimento = threading.Lock()
+        self.ao_nascer: Callable[[], None] | None = None
         numero = 9101
         for uniq, bus in CONTROLES:
             for nome in NOMES.values():
@@ -74,7 +79,10 @@ class Mesa:
         (morada / "phys").write_text("\n", encoding="ascii")
         self.moradas[f"/sys/class/input/{evento}/device"] = str(morada)
         no = Path(caminho)
-        no.write_text("", encoding="ascii")
+        with self.nascimento:
+            if self.ao_nascer is not None:
+                self.ao_nascer()
+            no.write_text("", encoding="ascii")
         no.chmod(0o000)
         self.nos[caminho] = (nome, uniq, bus)
         return caminho
@@ -250,19 +258,41 @@ class _NoDoLeitor:
 
 
 class _AvisoContado:
-    """O `InputDirWatch` DE VERDADE, sobre o `/dev/input` de mentira, contando as voltas."""
+    """O `InputDirWatch` DE VERDADE, sobre o `/dev/input` de mentira, contando as voltas.
 
-    def __init__(self, pasta: Path) -> None:
+    As voltas que importam são as que passam DEPOIS de o nó existir no disco: `nasceu_em` é a
+    contagem no instante do nascimento (marcada sob a trava da mesa) e `vista_em` a da volta que
+    o viu. Contar desde o começo da cena mede o relógio da máquina: sob carga o fio do teste
+    demora a criar o nó e o leitor dá voltas vazias que nada dizem do leitor.
+    """
+
+    def __init__(self, pasta: Path, trava: threading.Lock) -> None:
         self.real = er.InputDirWatch(str(pasta))
         self.voltas = 0
+        self.nasceu_em: int | None = None
+        self.vista_em: int | None = None
+        self._trava = trava
 
     @property
     def nasceu(self) -> bool:
         return self.real.nasceu
 
+    def marcar_o_nascimento(self) -> None:
+        self.nasceu_em = self.voltas
+
+    def voltas_ate_ver(self) -> int | None:
+        """Quantas voltas o leitor deu, depois de o nó existir, até a que o viu."""
+        if self.nasceu_em is None or self.vista_em is None:
+            return None
+        return self.vista_em - self.nasceu_em
+
     def poll(self) -> bool:
-        self.voltas += 1
-        return self.real.poll()
+        with self._trava:
+            self.voltas += 1
+            mudou = self.real.poll()
+            if mudou and self.real.nasceu and self.nasceu_em is not None and self.vista_em is None:
+                self.vista_em = self.voltas
+            return mudou
 
 
 def _esperar(condicao: Callable[[], bool], prazo: float = 5.0) -> bool:
@@ -289,6 +319,10 @@ class _Cena:
         self.mesa = mesa
         self.marcador = marcador
         self.buscas: list[float] = []
+        #: Quantas buscas TERMINARAM. Uma busca que começou ainda está lendo o sysfs, e o nó que
+        #: a mesa publica nesse intervalo pode ser achado por ELA: o que o leitor fez depois de
+        #: uma busca vazia só se mede depois de a busca vazia ter acabado.
+        self.buscas_concluidas = 0
         self.abertos: list[_NoDoLeitor] = []
         self.avisos: list[_AvisoContado] = []
         classe, descobridor = LEITORES[marcador]
@@ -299,6 +333,7 @@ class _Cena:
         def contar() -> dict[str, Path]:
             self.buscas.append(time.monotonic())
             achados: dict[str, Path] = original()
+            self.buscas_concluidas += 1
             acao, self.na_busca = self.na_busca, None
             if acao is not None:
                 acao()
@@ -310,7 +345,7 @@ class _Cena:
             return no
 
         def aviso() -> _AvisoContado:
-            self.avisos.append(_AvisoContado(mesa.dev))
+            self.avisos.append(_AvisoContado(mesa.dev, mesa.nascimento))
             return self.avisos[-1]
 
         monkeypatch.setattr(er, descobridor, contar)
@@ -329,13 +364,18 @@ class _Cena:
         assert _esperar(lambda: len(self.abertos) == 1), "o leitor nem abriu o nó"
         self.mesa.remover(self.AUSENTE)
         os.write(self.abertos[0].w, b"x")
-        assert _esperar(lambda: len(self.buscas) >= 1), "o leitor não procurou o nó"
+        assert _esperar(lambda: self.buscas_concluidas >= 1), "o leitor não procurou o nó"
 
     def devolver(self, *, fechado: bool = True) -> str:
         """O controle volta: o kernel recria o nó, e a pasta muda."""
-        caminho = self.mesa.acrescentar(
-            "event9201", NOMES[self.marcador], self.AUSENTE, 0x05
-        )
+        if self.avisos:
+            self.mesa.ao_nascer = self.avisos[-1].marcar_o_nascimento
+        try:
+            caminho = self.mesa.acrescentar(
+                "event9201", NOMES[self.marcador], self.AUSENTE, 0x05
+            )
+        finally:
+            self.mesa.ao_nascer = None
         if not fechado:
             Path(caminho).chmod(0o660)
         return caminho
@@ -375,14 +415,15 @@ def test_com_o_aviso_o_leitor_descobre_e_abre_na_hora(cena: _Cena) -> None:
     cena.abrir_e_perder()
     assert _esperar(lambda: bool(cena.avisos)), "o leitor não armou o aviso"
     aviso = cena.avisos[-1]
-    voltas = aviso.voltas
     caminho = cena.devolver()
     assert _esperar(lambda: len(cena.abertos) == 2, prazo=5.0), "o leitor não reabriu"
     assert cena.abertos[1].path == caminho
     assert len(cena.buscas) == 2
-    assert aviso.voltas - voltas <= 3, (
-        f"o leitor levou {aviso.voltas - voltas} voltas para ver o nó que voltou"
-    )
+    # As voltas valem DEPOIS de o nó existir no disco (`nasceu_em`), e a conta fecha na volta que
+    # o viu (`vista_em`): o que o relógio da máquina atrasou antes do nascimento não é do leitor.
+    voltas = aviso.voltas_ate_ver()
+    assert voltas is not None, "o aviso nunca viu o nó que nasceu"
+    assert voltas <= 3, f"o leitor levou {voltas} voltas para ver o nó que voltou"
 
 
 def test_o_no_que_nasce_durante_a_procura_acorda_o_leitor(cena: _Cena) -> None:
