@@ -331,9 +331,7 @@ class TestOProntuarioSabeAPonte:
 
     def test_estorvo_automatico_sem_cura_nao_existe(self) -> None:
         """O `automatica=True` é AFIRMAÇÃO, não promessa — inclusive o novo."""
-        automaticos = {
-            chave for chave, (_o, _c, auto) in pdj._ESTORVOS.items() if auto
-        }
+        automaticos = {chave for chave in pdj._ESTORVOS if pdj.Estorvo(chave).automatica}
         assert automaticos <= set(pdj._CURAS)
 
     def test_o_censo_leva_o_carimbo_ate_a_frase(self, tmp_path: Path) -> None:
