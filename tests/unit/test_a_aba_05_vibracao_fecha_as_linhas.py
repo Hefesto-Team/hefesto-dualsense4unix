@@ -402,17 +402,45 @@ def test_o_desenho_nao_tem_linha_de_mesa_nem_o_auto(bancada: str) -> None:
         "outra; um botão a menos é uma mentira a menos.")
 
 
-def test_a_coluna_oferece_os_tres_modos(bancada: str) -> None:
-    """TRÊS botões por coluna, e os três são os de `RUMBLE_POLICY_MULT`."""
+def test_a_coluna_oferece_os_tres_modos() -> None:
+    """TRÊS botões por coluna no PRODUTO, e os três são os de `RUMBLE_POLICY_MULT`.
+
+    A bancada de 18/10/2026 os tirou (r3b-05-12); o publicado os mantém até a segunda passagem
+    de A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01.
+    """
+    import onde
+
     from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
     from hefesto_dualsense4unix.interface import aba05
 
+    bancada = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
     assert {c for _, c in aba05.FORCA} == set(RUMBLE_POLICY_MULT), (
         f"os degraus da aba são {sorted(c for _, c in aba05.FORCA)} e o produto "
         f"tem {sorted(RUMBLE_POLICY_MULT)}")
     for chave in RUMBLE_POLICY_MULT:
         assert f'data-forca="{chave}"' in bancada, (
             f"o degrau {chave!r} não está no desenho")
+
+
+def test_a_forca_da_bancada_e_so_o_trilho(bancada: str) -> None:
+    """O desenho de 18/10/2026 (r3b-05-12): sem botões, um trilho de 0 a 100% por lugar.
+
+    MORDIDA: devolva o `<div class="seg">` dos degraus a `aba05._coluna` e a primeira
+    asserção reprova; troque o `TETO_DA_FORCA` ou o `PASSO_DA_FORCA` e a segunda.
+    """
+    from hefesto_dualsense4unix.interface import aba05
+
+    assert "data-forca=" not in bancada and 'class="seg"' not in bancada, (
+        "os botões da Força voltaram — o desenho os tirou")
+    trilhos = [t for t in re.findall(r'<input class="trilho arrasta"[^>]*>', bancada)
+               if 'data-papel="intensidade"' in t]
+    assert len(trilhos) == len(aba05.MESA), (
+        f"a Força deve ter um trilho por lugar ({len(aba05.MESA)}) e tem {len(trilhos)}")
+    for t in trilhos:
+        assert 'min="0"' in t and f'max="{aba05.TETO_DA_FORCA}"' in t, t
+        assert f'step="{aba05.PASSO_DA_FORCA}"' in t, t
+    assert (aba05.TETO_DA_FORCA, aba05.PASSO_DA_FORCA) == (100, 5)
+    assert bancada.count('class="teto">%</span>') >= len(aba05.MESA)
 
 
 def test_a_coluna_sem_ajuste_proprio_acende_e_diz_que_herdou() -> None:

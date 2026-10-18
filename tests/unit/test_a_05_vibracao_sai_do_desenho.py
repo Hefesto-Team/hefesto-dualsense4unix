@@ -39,8 +39,10 @@ rode ``python3 aba05.py``, e ``test_os_oito_degraus_saem_do_produto`` reprova
 nomeando os oito. Tire o ``data-hef-rotulo`` do «Parar» e
 ``test_os_oito_rotulos_estao_declarados`` reprova nomeando os quatro que ficam.
 
-ONDE ELA MEDE: na **BANCADA** (``mockup/``), que é onde o gerador escreve.
-Apontá-la para o publicado daria verde sobre a página congelada.
+ONDE ELA MEDE: na página PUBLICADA, desde 18/10/2026. A bancada tirou os degraus e o
+`Máx` da Força (r3b-05-12: a Força é só o trilho), e o produto os mantém até a segunda
+passagem de A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01, que
+aposenta este arquivo com eles.
 """
 from __future__ import annotations
 
@@ -71,8 +73,8 @@ def cravados(regua):
     """Os campos do arquivo da BANCADA, em ordem de documento."""
     import onde
 
-    arq = onde.pagina(PAGINA)
-    assert arq.exists(), f"a bancada não tem {PAGINA} — rode `python3 aba05.py`"
+    arq = onde.pagina(PAGINA, publicado=True)
+    assert arq.exists(), f"o publicado não tem {PAGINA}"
     return regua._campos_cravados(arq.read_text(encoding="utf-8"))
 
 
@@ -267,7 +269,7 @@ def test_o_max_e_estado_e_o_espaco_fica_reservado(regua, cravados):
     import onde
 
     from hefesto_dualsense4unix.interface import aba05
-    doc = onde.pagina(PAGINA).read_text(encoding="utf-8")
+    doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
     tetos = [c for c in cravados if c.chave == "mult-teto"]
     assert len(tetos) == len(aba05.MESA), (
         f"o `Máx` é um por lugar da mesa ({len(aba05.MESA)}), e a régua achou "

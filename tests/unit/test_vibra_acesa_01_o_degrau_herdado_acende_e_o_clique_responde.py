@@ -233,10 +233,12 @@ def test_a_marca_tem_onde_pousar_nos_quatro_lugares() -> None:
     """
     import onde
 
-    html = onde.pagina(PAGINA).read_text(encoding="utf-8")
+    # o PUBLICADO: a bancada tirou os degraus em 18/10/2026 (r3b-05-12); a segunda passagem os
+    # tira do produto e daqui
+    html = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
     quantos = html.count('data-campo="degrau-herdado"')
     assert quantos == 4, (
-        f"a marca do herdado aparece {quantos} vez(es) na bancada, e a mesa "
+        f"a marca do herdado aparece {quantos} vez(es) no publicado, e a mesa "
         f"tem quatro lugares — sem ela o degrau do controle que chegar naquela "
         f"coluna acende sem dizer de onde veio")
     assert 'data-hef-classe="herdado"' in html, (

@@ -23,3 +23,6 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## 10-perfis.html
 - **16/10/2026** — a coluna «Ajuste próprio» ganha os glifos da ativação dos botões e da curva dos analógicos, e o vão entre as seções desce de 6 px para 5 px para as dez caberem na célula. Espera o olho dela na sessão dos desenhos. Enquanto isso, o produto continua com as oito seções de hoje na coluna (`perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA`), e esta aba fica sem o contrato do teclado da base comum e sem a alça da divisa pelas setas.
+
+## 05-vibracao.html
+- **18/10/2026** — a «Força da vibração» perde os três botões (Economia, Padrão, Máximo) e fica só o trilho de 0 a 100%, de 5 em 5, com o ícone do DualSense; a linha desce de 79 px para 36 px e o desenho do controle ganha o espaço (r3b-05-12). Espera o olho dela na sessão dos desenhos. Enquanto isso, o produto continua com os três degraus e o teto de 150% (`degraus_da_forca`), e a intensidade que sai do firmware (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01) é a segunda passagem.

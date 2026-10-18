@@ -40,9 +40,10 @@ A MORDIDA:
 * devolva o ``%`` ao ``forca-pct`` e ``test_a_largura_sai_sem_o_por_cento``
   reprova — a barra viraria ``width:46.7%%``, que o CSS descarta.
 
-ONDE ELA MEDE: na **BANCADA**, que é onde o gerador escreve e onde o endereço
-existe. A página publicada ainda não o tem, e é por isso que a tela do usuário não
-muda até o ``--publicar 05``.
+ONDE ELA MEDE: na página PUBLICADA, desde 18/10/2026. A bancada tirou os degraus de
+Força (r3b-05-12: a Força é só o trilho), mas o produto e o pacote ainda os têm até
+a segunda passagem de A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01,
+que aposenta este arquivo com eles.
 """
 from __future__ import annotations
 
@@ -74,8 +75,8 @@ TOKEN_VIZINHO = "maximo"  # (noqa-acento) chave de máquina
 def bancada() -> str:
     import onde
 
-    arq = onde.pagina(PAGINA)
-    assert arq.exists(), f"a bancada não tem {PAGINA} — rode `python3 aba05.py`"
+    arq = onde.pagina(PAGINA, publicado=True)
+    assert arq.exists(), f"o publicado não tem {PAGINA}"
     return arq.read_text(encoding="utf-8")
 
 

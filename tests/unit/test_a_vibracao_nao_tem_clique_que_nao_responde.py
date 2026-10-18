@@ -186,8 +186,19 @@ def test_o_atributo_que_sobrou_e_o_que_nao_dispara_clique(bancada: str) -> None:
 
 
 def test_os_dois_botoes_de_verdade_continuam_clicaveis(bancada: str) -> None:
-    """"Testar", "Parar" e os quatro degraus NÃO podem perder o `data-papel`."""
-    for nome in ("testar", "parar", "forca"):
+    """"Testar" e "Parar" NÃO podem perder o `data-papel` (nem os degraus, no produto).
+
+    Os degraus de Força saíram da BANCADA em 18/10/2026 (r3b-05-12); o `forca` continua
+    registrado e o publicado ainda os tem, até a segunda passagem.
+    """
+    import onde
+
+    publicado = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
+    assert 'data-papel="forca"' in publicado and "forca" in _gestos_registrados(), (
+        "os degraus do produto perderam o `data-papel` ou o gesto `forca`")
+    assert 'data-papel="forca"' not in bancada, (
+        "os botões da Força voltaram à bancada — o desenho de 18/10 os tirou")
+    for nome in ("testar", "parar"):
         assert f'data-papel="{nome}"' in bancada, (
             f"`{nome}` perdeu o `data-papel` — ele TEM gesto, e sem o atributo o "
             f"clique dela para de chegar ao daemon")

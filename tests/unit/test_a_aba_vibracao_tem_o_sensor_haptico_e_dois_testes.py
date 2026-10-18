@@ -103,14 +103,17 @@ def _faixas_da_grade() -> list[str]:
 
 class TestOTrilhoMoraNaForca:
     @pytest.mark.parametrize("pref", [c["pref"] for c in aba05.MESA])
-    def test_o_trilho_e_os_degraus_moram_na_mesma_celula(self, pref: str) -> None:
-        """Régua 1, sobre o HTML que o GERADOR escreve, nos quatro lugares, cheios e vazios."""
+    def test_o_trilho_mora_sozinho_na_celula_da_forca(self, pref: str) -> None:
+        """Régua 1, sobre o HTML que o GERADOR escreve, nos quatro lugares, cheios e vazios.
+
+        Desde 18/10/2026 (r3b-05-12) a Força é só o trilho: os botões de degrau saíram do desenho.
+        """
         coluna = next(c for c in aba05.MESA if c["pref"] == pref)
         elementos = _arvore(aba05._coluna(coluna)).elementos
         (trilho,) = [pais for _t, d, pais in elementos if d.get("data-campo") == "mult-pos"]
-        (degraus,) = [pais for _t, d, pais in elementos if d.get("data-campo") == "degrau-herdado"]
-        assert "forca" in trilho, f"{pref}: o trilho do Personalizado saiu da Força: {trilho}"
-        assert "forca" in degraus, f"{pref}: os degraus saíram da Força: {degraus}"
+        assert "forca" in trilho, f"{pref}: o trilho saiu da Força: {trilho}"
+        degraus = [d for _t, d, _p in elementos if d.get("data-campo") == "degrau-herdado"]
+        assert not degraus, f"{pref}: os degraus voltaram à Força: {degraus}"
 
     def test_cada_coluna_tem_as_faixas_da_grade_e_nenhuma_a_mais(self) -> None:
         """Sete faixas na folha, sete células em cada coluna e sete rótulos."""

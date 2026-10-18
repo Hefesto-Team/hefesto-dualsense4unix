@@ -96,6 +96,13 @@ TETO = round(RUMBLE_CUSTOM_MULT_MAX * 100)
 
 PASSO = math.gcd(*(round(m * 100) for m in RUMBLE_POLICY_MULT.values()), TETO)
 
+#: O DESENHO DE 18/10/2026 (r3b-05-12): a «Força da vibração» é só o trilho de 0 a 100%, de 5 em 5,
+#: sem os três botões. 100% é o que o firmware entrega e o trilho só abaixa; o teto de 150% e os
+#: degraus (`TETO`, `PASSO`, `FORCA`) são do produto de hoje, e a segunda passagem decide como o
+#: porcento vira o degrau do byte de atenuação. O desenho não os desenha.
+TETO_DA_FORCA = 100
+PASSO_DA_FORCA = 5
+
 TETO_DO_MOTOR = MOTOR_PCT_MAX
 
 TETO_DA_HAPTICA = HAPTICA_PCT_MAX
@@ -113,18 +120,18 @@ BARRA_DO_MOTOR_PADRAO = MOTOR_PCT_PADRAO
 #: `rumble_passthrough(True)` — `a05_vibracao.testar` (passos 3 e 4) e
 SEM_A_FAIXA_DE_ESTADO = True
 
-#: A CHAVE `propria` DIZ SE AQUELA COLUNA TEM AJUSTE PRÓPRIO — e ela é chave de  # (noqa-acento) chave da cena
+#: A cena de cada coluna: a força em porcento (0 a 100), os dois motores e a háptica.
 ESTADO = {
-    "p1": {"forca": "max",        "pct": 150, "propria": True,  # (noqa-acento) chave
+    "p1": {"pct": 100,
            "esq": (True, 50),   "dir": (True, 100),
            "hap": (True, HAPTICA_PCT_PADRAO)},
-    "p2": {"forca": "balanceado", "pct": 100, "propria": False,  # (noqa-acento) chave
+    "p2": {"pct": 70,
            "esq": (False, 0),   "dir": (True, 100),
            "hap": (True, 180)},
-    "p3": {"forca": "economia",   "pct": 30,  "propria": True,  # (noqa-acento) chave
+    "p3": {"pct": 30,
            "esq": (True, 100),  "dir": (True, 100),
            "hap": (True, HAPTICA_PCT_PADRAO)},
-    "p4": {"forca": "balanceado", "pct": 100, "propria": True,  # (noqa-acento) chave
+    "p4": {"pct": 100,
            "esq": (True, 100),  "dir": (False, 0),
            "hap": (False, 0)},
 }
@@ -145,6 +152,8 @@ GLIFO_DO_CONTROLE = (
     '<path d="M6.6 11.4V15.4M4.6 13.4H8.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>'
     '<circle cx="25.4" cy="11.9" r="0.9" fill="currentColor"/><circle cx="25.4" cy="14.9" r="0.9" fill="currentColor"/>'
     '<circle cx="23.9" cy="13.4" r="0.9" fill="currentColor"/><circle cx="26.9" cy="13.4" r="0.9" fill="currentColor"/></svg>')
+DICA_DA_FORCA = ("A força de tudo que vibra neste controle: 100% é o que o firmware entrega, "
+               "e o trilho só abaixa")
 BOTAO_DA_FORCA = ('<span class="lado glifo-forca on" role="img" aria-label="O controle inteiro" '
                   'data-dica="Os dois motores e a háptica: tudo o que vibra">' + GLIFO_DO_CONTROLE + '</span>')
 
@@ -196,7 +205,7 @@ CSS = """
      sozinhas, estavam certas.
 
      1. As alturas de faixa foram calculadas para serem EXATAMENTE a altura do
-        conteúdo: `--r-forca` 69 = 36 (`--h-escolha`) + 7 (vão do `.forca`) + 26;
+        conteúdo: `--r-forca` 36 = a linha do trilho (`--r-barra`, desde 18/10);
         `--r-motor` 36 = o `.lado`, que é `--h-escolha`; `--r-acoes` 74 = 34
         (`--h-acao`) + 6 + 34. Sem uma sobra, o filho preenche a célula e o topo
         dele cai em cima da borda.
@@ -240,7 +249,7 @@ CSS = """
     /* A GRADE ENCHE A ALTURA DO QUADRO: as faixas são frações com piso (a do desenho pesa 3), e
        a coluna não deixa vão embaixo. O piso é o que a faixa pede para caber o conteúdo. */
     flex:1 1 auto;min-height:0;grid-template-rows:minmax(0,1fr);
-    --r-des:72px;--r-nome:30px;--r-forca:79px;--r-barra:36px;--r-motor:36px;
+    --r-des:72px;--r-nome:30px;--r-forca:36px;--r-barra:36px;--r-motor:36px;
     --r-efeito:38px;--r-acoes:34px;
     --r-ar:2px;--r-passo:calc(var(--r-ar) * 2);
   }
@@ -279,11 +288,10 @@ CSS = """
     font:500 12.5px 'Space Grotesk',system-ui,sans-serif;cursor:pointer}
   .vib-efeito:hover{border-color:var(--comment)}
   .vib-efeito-dica{display:contents}
-  .vib .acoes-col,.vib .seg{align-content:center}
+  .vib .acoes-col{align-content:center}
   .vib .acoes-col{align-items:center}
   .quadro-topo .modo-auto{margin-left:auto}
   .vib .forca > .motor{position:relative}
-  .vib .forca .teto.mx{position:absolute;top:-3px;right:68px}
   /* criar efeitos novos */
   .vib-criar{margin-top:0;flex:0 0 auto}
   .criar .criar-linha{display:flex;align-items:center;gap:12px;padding:4px 16px;flex-wrap:wrap;min-width:0}
@@ -315,8 +323,7 @@ CSS = """
   .criar .meu{color:var(--texto-suave);cursor:pointer}
   /* O DESENHO NOVO DO USUÁRIO — 02/10/2026 (A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-
      DOIS-TESTES-01, a resposta [26] de 29/09). O trilho do Personalizado sobe
-     para dentro da Força (`--r-forca` 69 = 36 dos degraus, numa linha só, + 7 de vão + 26 do
-     trilho, `--r-barra`), e a faixa que era dele vira a «Sensor háptico», a
+     para dentro da Força (hoje `--r-forca` 36 = só o trilho, `--r-barra`), e a faixa que era dele vira a «Sensor háptico», a
      linha da háptica por áudio (36, com o interruptor). A linha de baixo dos
      motores, que a háptica ocupava desde 29/09 com o desenho pagando 46 px,
      sai. E o «Testar agora» vira UMA linha («Vibração», «Háptica» e «Parar»,
@@ -331,7 +338,6 @@ CSS = """
      chegando a este controle agora. */
   .vib .forca{display:flex;flex-direction:column;justify-content:center;gap:7px}
   .vib .forca > .motor{height:var(--r-barra);flex:none}
-  .vib .ctrl[data-conectado="nao"] .forca > .motor{display:none}
   .motor.haptica .teto.no-ar.on::after{content:'';display:inline-block;width:6px;
     height:6px;border-radius:50%;background:var(--green);margin-left:3px;
     vertical-align:1px}
@@ -419,11 +425,9 @@ CSS = """
      cartão que nascesse com ela ficaria cinza para sempre — agora com o dado
      dela chegando por baixo, invisível. */
   .vib .ctrl[data-conectado="nao"]{border-color:var(--border-forte)}
-  .vib .ctrl[data-conectado="nao"] .seg > *,
   .vib .ctrl[data-conectado="nao"] .motor > *,
   .vib .ctrl[data-conectado="nao"] .efeito-lista > *,
   .vib .ctrl[data-conectado="nao"] .acoes-col > *{display:none}
-  .vib .ctrl[data-conectado="nao"] .seg::after,
   .vib .ctrl[data-conectado="nao"] .motor::after,
   .vib .ctrl[data-conectado="nao"] .acoes-col::after{
     /* O TRAVESSÃO É O CARACTERE, NÃO O ESCAPE — medido em 05/09/2026.
@@ -587,40 +591,6 @@ CSS = """
   .vib .ctrl[data-conectado="nao"] .rot-ctrl{color:var(--fg);border:1px dashed var(--border-sutil);
     background:transparent}
 
-  /* OS TRÊS DEGRAUS DE FORÇA — LADO A LADO, COM A MESMA LARGURA. Pedido de
-     06/10/2026 (*«Esses 3 botões tem que ficarem lado a lado na horizontal com
-     mesma largura»*), que revoga o 2 em cima e o terceiro ocupando a largura,
-     feito quando a coluna não comportava os três (medido em 05/09: a melhor
-     das 27 combinações de vão, fonte e recuo estourava 2px na coluna de
-     então). Agora `repeat(3,1fr)`, vão de 6px, recuo de 4px e fonte de 11,5px
-     na coluna de hoje, e a régua mede no WebKit que nenhum botão estoura
-     (`scrollWidth`). A Força perde a segunda faixa de degraus:
-     `--r-forca` 112 → 69 = 36 + 7 + 26. */
-  .vib .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-  .vib .seg button{min-width:0;padding:0 4px;font-size:11.5px}
-
-  /* O DEGRAU HERDADO TEM CARA PRÓPRIA — VIBRA-ACESA-01, 17/09/2026.
-
-     A coluna que NÃO tem ajuste próprio herda a força geral, e até hoje isso
-     aparecia como NADA: o pacote emitia `degrau=""`, o alvo `classe` apagava os
-     três, e ela leu o resultado como defeito — *"o botão não tá ativo"*, com a
-     coluna ao lado marcando 150%.
-
-     A decisão [05] dela (04/09) mandava o herdado acender na LINHA DE MESA, e a
-     linha de mesa foi apagada em 05/09 pela decisão de produto de não ter mesa em
-     nada da interface. O herdado ficou sem lugar. Aqui ele ganha o lugar que
-     sobrou, que é o botão: ACESO, porque é a força que a mão do usuário sente, e
-     DIFERENTE do escolhido, porque procedência é informação — foi exatamente
-     isso que a decisão [05] pediu, e só o endereço dela é que mudou.
-
-     A MARCA É O TRAÇO, NÃO A COR: o preenchimento de `.seg button.on` continua
-     dizendo "ligado" e a borda tracejada diz "veio de fora". Trocar a cor faria
-     o olho ler outro ESTADO; trocar o traço faz ele ler a mesma força com outra
-     origem. E o peso volta ao normal — negrito é o que o usuário escolheu para esta
-     coluna. */
-  .vib .seg.herdado button.on{background:transparent;border-style:dashed;
-                              font-weight:500}
-
   /* AS TRÊS BARRAS DE UM CONTROLE NA MESMA GRADE — a Força e os dois motores.
      Quatro colunas fixas: interruptor · trilho · número · sufixo. A da Força não
      tem interruptor, e a célula fica vazia de propósito: é o que faz os três
@@ -647,13 +617,6 @@ CSS = """
     text-align:right;justify-self:end;white-space:nowrap}
   /* O GLIFO DA FORÇA É O CONTROLE INTEIRO: tudo o que vibra (mudança 10 do desenho do todo) */
   .glifo-forca{cursor:default;display:inline-flex;align-items:center;justify-content:center}
-  /* O `Máx` SOME RESERVANDO O ESPAÇO — decisão 11 dela, 03/09/2026.
-     `visibility:hidden`, nunca `display:none`: nada se mexe quando ele acende ou
-     apaga, e esta aba é para olhar enquanto o jogo treme. A palavra fica SEMPRE
-     no HTML e quem a acende é a classe `on`, que o produto escreve pelo alvo
-     `classe` (`data-campo="mult-teto"`). */
-  .motor .teto.mx{visibility:hidden}
-  .motor .teto.mx.on{visibility:visible}
   /* o lado desligado não finge que tem força: o trilho fica apagado */
   .motor.off .cheio{background:var(--border-forte)}
   .motor.off .num{color:var(--fg)}
@@ -905,34 +868,14 @@ def _endereco_de_pintura(nome, extra=""):
 
 
 def _trilho_arrastavel(valor, teto, campo):
-    """O trilho da "Personalizado" como `<input type=range>` — 03/09/2026.
+    """O trilho da Força como `<input type=range>`: o `value` dele é o que o piloto lê no `change`.
 
-    DECISÃO DE PRODUTO: *"0 a 200%, e grava na hora."* Até hoje esta linha era
-    LEITURA — um `<div>` sem `value` — e o gesto `forca` recusava o clique nela
-    com um `ValueError` que **não chega à tela**: o contrato do piloto manda
-    `RuntimeError` ao cartão e deixa o `ValueError` no `stderr` de quem lançou a
-    janela (`hefesto_vivo._recusou_dizendo`). Para ela, clicar na barra não
-    fazia nada, sem uma letra de explicação.
-
-    E O `<div>` ERA A CAUSA, por escrito: `a05_vibracao.SEM_DONO["barra:motor"]`
-    já nomeava o mesmo defeito na linha vizinha — *"o ouvinte manda
-    `valor: alvo.value ?? ''` e um `<div>` não tem `value`"*. Um
-    `<input type=range>` tem, e o ouvinte de `change` do piloto já o escuta
-    desde 01/09.
-
-    OS TRÊS NÚMEROS SÃO DERIVADOS: `max` é :data:`TETO` (do
-    `RUMBLE_CUSTOM_MULT_MAX` do esquema), `step` é :data:`PASSO` (o MDC dos
-    degraus com o teto) e `min` é zero — que é o único que se escreve, porque
-    "nada de vibração" não é um número que alguém decidiu, é o fundo da escala.
-
-    O ALVO DE PINTURA É `valor`, e não `largura`: quem move o cursor agora é o
-    `value` do próprio elemento (`hefesto_vivo.escrever`, ramo `alvo ===
-    'valor'`). Pintar `style.width` num `<input>` esticaria o controle em vez de
-    mover o polegar dele.
+    Vai de 0 a :data:`TETO_DA_FORCA`, de 5 em 5 (:data:`PASSO_DA_FORCA`, desenho de 18/10/2026). O
+    alvo de pintura é `valor`, e não `largura`: pintar `style.width` num `<input>` esticaria o
+    controle em vez de mover o polegar.
     """
-    return _trilho(valor, teto, PASSO, campo, "intensidade",
-                   f'Quanto da vibração chega a este controle — 0 a {teto}%.'
-                   f' Grava na hora, só para ele.')
+    return _trilho(valor, teto, PASSO_DA_FORCA, campo, "intensidade",
+                   DICA_DA_FORCA)
 
 
 def _trilho(valor, teto, passo, campo, papel, titulo, extra=""):
@@ -944,82 +887,16 @@ def _trilho(valor, teto, passo, campo, papel, titulo, extra=""):
             f' title="{titulo}">')
 
 
-def _barra(valor, teto, sufixo, ligado=True, botao="", papel="forca", lado="",
-           campo_num="", sufixo_html="", arrasta=False, campo_trilho="",
-           vazio=False):
-    """Uma linha de barra: interruptor · trilho · número · sufixo.
+def _linha_da_forca(pct, vazio=False):
+    """A linha «Força da vibração»: o controle inteiro · trilho de 0 a 100 · número · `%`.
 
-    `vazio` TROCA SÓ O TEXTO DO NÚMERO pelo travessão — 07/09/2026, com a fusão
-    dos dois ramos de coluna (ver :func:`_coluna`). A ESTRUTURA e os ENDEREÇOS
-    são os mesmos nos quatro lugares; o que um lugar sem controle não pode ter é
-    um número afirmado. `0` ali seria a tela dizendo *"este motor está em zero"*
-    sobre um aparelho que não está na mesa — e o travessão é a palavra que esta
-    casa usa para *"isto eu não sei"*.
-
-    `arrasta` troca o trilho de LEITURA pelo `<input type=range>` da decisão de 03/09 — ver :func:`_trilho_arrastavel`. Aqui só a linha do
-    "Personalizado" o pede; as duas de motor têm builder próprio
-    (:func:`_barra_de_motor`) desde 04/09.
-
-    **FATO SUBSTITUÍDO, e quem o derrubou foi o usuário.** Esta linha dizia *"as duas
-    de motor continuam leitura, porque o par `weak`/`strong` viaja JUNTO ao
-    daemon e um arraste por lado mandaria meio par"*. Era verdade enquanto a
-    barra do motor fosse um comando (`rumble.set`). O usuário decidiu em 04/09/2026 —
-    fora das opções que estavam postas — que a barra **não manda o par: ela é
-    POLÍTICA que MULTIPLICA o degrau**, e as duas são independentes de propósito
-    (*"se so a do motor fraco tiver 100 e a outrqa 50% então será 150 em um e  # noqa-acento: citação literal
-    75% no outro"*). O método que grava uma barra sem a outra existe desde o
-    mesmo dia (`rumble.motores.set`, campo omitido não mexe naquela barra).
-
-    `papel`/`lado` são o ENDEREÇO DO CLIQUE, e sem eles a pintura só alcança as
-    três barras de uma coluna por POSIÇÃO — que é o casamento que quebra em
-    silêncio no dia em que alguém trocar duas linhas aqui.
-
-    `campo_num` é o ENDEREÇO DO NÚMERO quando ele NÃO PODE ser o nome do papel,
-    e entrou em 02/09/2026. O pintor procura um valor por
-    `[data-campo=X],[data-papel=X],[data-hef=X]` (`hefesto_vivo.py:74`): um
-    nome que seja `data-papel` de um botão e `data-campo` de um número faz a
-    pintura escrever o valor DENTRO do botão. Era o caso do `forca` — a linha
-    do "Personalizado" tinha `data-papel="forca"` e `data-campo="forca"`, e os
-    quatro degraus da coluna também são `data-papel="forca"`. Um tique escrevia
-    `"balanceado"` em dez elementos e apagava a linha inteira.
-
-    SÓ O NÚMERO TROCA DE NOME, e o trilho continua `forca-pct`. Não é descuido:
-    o trilho nunca esteve em colisão — ele é um `<span>` filho, e o que o apagava
-    era a pintura do PAI. Renomeá-lo junto seria mais bonito e custaria caro
-    agora: o `casamento.py:54` mede contra a página PUBLICADA, e a publicação é
-    ato DO USUÁRIO — um nome novo lá vira órfão até ela publicar. Quando a
-    `05-vibracao` sair da `mockup/DIVERGENCIAS.md`, unificar o par em
-    `mult`/`mult-pct` é uma linha aqui e uma no pacote.
-
-    Quando não se diz nada, o número herda o nome do papel — que é o que as
-    barras dos motores querem (`motor-e`, `motor-d`), porque ali o papel é
-    `motor` e o campo leva o lado junto.
-
-    `sufixo_html` TROCA A ÚLTIMA CÉLULA INTEIRA, e existe para um caso só: o
-    `Máx` do multiplicador, que deixou de ser texto e virou ESTADO (decisão 11
-    dela, 03/09/2026 — ver :func:`_teto_do_multiplicador`). O `sufixo` de texto
-    continua sendo o que as duas barras de motor querem, e ali `/255` é uma
-    unidade, não um estado.
+    Sem os três botões (r3b-05-12): só o trilho, com a porcentagem. `vazio` troca só o texto do
+    número pelo travessão; a estrutura e os endereços são os mesmos nos quatro lugares.
     """
-    pct = round(100 * valor / teto, 1)
-    endereco = (_endereco_de_pintura(papel, f' data-lado="{lado}"' if lado else "")
-                if papel else "")
-
-    campo = f"{papel}-{lado}" if lado else papel
-    cauda = sufixo_html or f'<span class="teto">{sufixo}</span>'
-    trilho = (_trilho_arrastavel(valor, teto, campo_trilho or f"{campo}-pct")
-              if arrasta else
-              f'<span class="trilho"><span class="cheio"'
-              f' data-campo="{campo_trilho or f"{campo}-pct"}"'
-              f' data-hef-alvo="largura" style="width:{pct}%"></span></span>')
-    texto_do_num = VAZIO if vazio else f'{valor}{"%" if teto == TETO else ""}'
-    return (f'<div class="motor{" mult" if arrasta else ""}'
-            f'{"" if ligado else " off"}"{endereco}>'
-            f'{botao or "<span></span>"}'
-            f'{trilho}'
-            f'<span class="num" data-campo="{campo_num or campo}">'
-            f'{texto_do_num}</span>'
-            f'{cauda}</div>')
+    trilho = _trilho_arrastavel(pct, TETO_DA_FORCA, "mult-pos")
+    return (f'<div class="motor mult">{BOTAO_DA_FORCA}{trilho}'
+            f'<span class="num" data-campo="mult">{VAZIO if vazio else pct}</span>'
+            f'<span class="teto">%</span></div>')
 
 
 def _trilho_travado():
@@ -1164,12 +1041,6 @@ def _lista_do_efeito(gesto, campo, campo_dica, nome, escolhas, rotulos, dicas):
             f'{opcoes}</select></span></div>')
 
 
-def _teto_do_multiplicador(no_teto):
-    """A célula do `Máx` — a palavra SEMPRE no HTML, acesa por classe."""
-    return (f'<span class="teto mx{" on" if no_teto else ""}"'
-            f' data-campo="mult-teto" data-hef-alvo="classe">Máx</span>')
-
-
 LADOS = (("e", ESQ, "esq"), ("d", DIR, "dir"))
 
 
@@ -1256,7 +1127,7 @@ def _endereca_a_cor(desenho, pref, cor, com_dono=True):
 
 #: travessão, posto pela folha (`.ctrl[data-conectado="nao"] … ::after`).
 #: botão acende de qualquer jeito, e uma chave real aqui seria o desenho
-ESTADO_DO_LUGAR_VAZIO = {"forca": "", "pct": 0, "propria": False,  # (noqa-acento) chave
+ESTADO_DO_LUGAR_VAZIO = {"pct": 0,
                          "esq": (False, 0), "dir": (False, 0), "hap": (False, 0)}
 
 
@@ -1328,14 +1199,6 @@ def _coluna(c, e=None, conectado=None):
             f'vb-{c["pref"]}'),
         f'vb-{c["pref"]}', c["cor"], com_dono=conectado)
 
-    # nome: `data-campo="degrau" data-hef-alvo="classe" data-hef-quando=<chave>`.
-    # `data-hef-rotulo` esconderia justamente o dado que ele passou a mostrar.
-    degraus = "".join(
-        f'<button class="{"on" if e["propria"] and chave == e["forca"] else ""}" '  # noqa-acento: chave
-        f'data-campo="degrau" data-hef-alvo="classe" data-hef-quando="{chave}" '
-        f'data-papel="forca" data-forca="{chave}">{rot}</button>'
-        for rot, chave in FORCA)
-
     linhas = []
     for sigla, m, k in LADOS:
         ligado, valor = e[k]
@@ -1370,12 +1233,7 @@ def _coluna(c, e=None, conectado=None):
                  data-hef-atributo="title" title="{re.sub(r"<[^>]+>", "", rotulo)}"><span data-hef="identidade">{rotulo}</span></div>
             <div class="forca" data-campo="padrao" data-hef-alvo="classe"
                  data-hef-classe="padrao">
-              <div class="seg" data-campo="degrau-herdado" data-hef-alvo="classe"
-                   data-hef-classe="herdado">{degraus}</div>
-              {_barra(e["pct"], TETO, "", botao=BOTAO_DA_FORCA, papel="", campo_num="mult",
-                      arrasta=True, campo_trilho="mult-pos",
-                      sufixo_html=_teto_do_multiplicador(e["pct"] == TETO),
-                      vazio=not conectado)}
+              {_linha_da_forca(e["pct"], vazio=not conectado)}
             </div>
             {_linha_da_haptica(e["hap"][1], e["hap"][0], vazio=not conectado)}
             {_lista_do_efeito(GESTO_DO_EFEITO_HAPTICO, CAMPO_DO_EFEITO_HAPTICO,
@@ -1449,7 +1307,7 @@ MIOLO = f'''
               <span class="sec-rot" data-dica="O lado que treme acende em laranja; o contorno na cor do plástico diz de quem é o controle. Apagado é lado desligado">Controle</span>
             </div>
             <div><span class="sec-rot">Modelo</span></div>
-            <div><span class="sec-rot" data-dica="Economia 30%, Padrão 100% (o sinal como o jogo mandou) e Máximo 150%. No Padrão as barras ficam verdes e travadas. {DICA_DO_TETO_DA_MESA}">Força da vibração</span></div>
+            <div><span class="sec-rot" data-dica="{DICA_DA_FORCA}. {DICA_DO_TETO_DA_MESA}">Força da vibração</span></div>
             <div><span class="sec-rot" data-dica="A vibração fina que o jogo manda como som, no cabo e no BT. O risco no meio é 100%: o jogo como ele mandou. {DICA_DO_TETO_DA_MESA} Cinza quando o jogo fala direto com o controle, sem passar pelo Hefesto">Sensor háptico</span></div>
             <div><span class="sec-rot" data-dica="A forma do toque háptico deste controle. Do estilo segue o estilo e Sem efeito cala o toque; a força é a do Sensor háptico">Efeito háptico</span></div>
             <div><span class="sec-rot" data-dica="Motor do punho esquerdo: contrapeso maior, som grosso. Desligue um lado e aquele punho para de tremer">{ESQ["rot"]}</span></div>
@@ -1510,13 +1368,13 @@ MIOLO = f'''
 LEGENDA = f'''<div class="nota">
   <h2>O que você pediu, e está aqui</h2>
   <ul>
-    <li><b>O trilho do Personalizado mora dentro da Força</b> (02/10), logo abaixo dos três degraus: o valor que vale é o do trilho, e acende o maior degrau que ele alcança (de 150% para cima, o Máximo). A faixa que era dele virou a <b>Sensor háptico</b>, com a bolinha verde acesa quando a háptica está chegando ao controle; o <b>Testar agora</b> tem <b>Vibração</b>, <b>Háptica</b> e <b>Parar</b> numa linha só; e o desenho do controle voltou aos 124 px. A faixa entre os degraus (o Balanceado de 100 a 149, o Economia de 30 a 99) é o ponto de partida.</li>
+    <li><b>A Força da vibração é só o trilho</b> (18/10): saíram os quatro botões (Forte, Média, Fraca, Desligada), e ficou o trilho de 0 a 100% com a porcentagem e o ícone do DualSense. 100% é o que o firmware entrega, e o trilho só abaixa. A linha ficou mais baixa e o desenho do controle ganhou o espaço. A <b>Sensor háptico</b> tem a bolinha verde acesa quando a háptica está chegando ao controle, e o <b>Testar agora</b> tem <b>Vibração</b>, <b>Háptica</b> e <b>Parar</b> numa linha só.</li>
     <li><b>Os quatro controles, um por coluna, sempre à vista</b> — na mesma ordem da fita do topo, cada um com a sua cor de plástico na borda do desenho.</li>
-    <li><b>A força tem endereço, e o endereço é a coluna</b> — cada uma tem os seus quatro degraus e a sua barra. Como os quatro estão à vista, <b>a fita do topo não escolhe nada aqui</b> e nasce esmaecida (28/08). Também saiu o destaque que a coluna do P1 tinha: com a fita inerte, ele afirmaria na tela uma coisa que a fita já não faz.</li>
+    <li><b>A força tem endereço, e o endereço é a coluna</b> — cada uma tem a sua barra de Força. Como os quatro estão à vista, <b>a fita do topo não escolhe nada aqui</b> e nasce esmaecida (28/08). Também saiu o destaque que a coluna do P1 tinha: com a fita inerte, ele afirmaria na tela uma coisa que a fita já não faz.</li>
     <li><b>As cinco lâmpadas do jogador saíram do desenho</b> (28/08). Medidas neste navegador, nesta aba: <b>2,79 × 0,93 px</b> cada uma. Não é pouco contraste, é pouco pixel — menos de um pixel de altura não diz nada, aceso ou apagado. Quem diz o jogador aqui é o rótulo embaixo da coluna, que se lê. Elas continuam desenhadas na <b>Iluminação</b>, onde o controle é grande.</li>
     <li><b>Um bloco só</b> — as duas áreas viraram uma tabela do mesmo quadro.</li>
     <li><b>Motor esquerdo e direito são o que ATIVA o lado durante o jogo</b> — o interruptor de cada lado, e o desenho mostra qual punho treme.</li>
-    <li><b>A barra de Força para em {TETO}%</b>, que é o Máximo — não passa dele.</li>
+    <li><b>A barra de Força para em {TETO_DA_FORCA}%</b> — não passa dele.</li>
   </ul>
 
   <h2>O que passou a vir do mapa, e deixou de ser digitado</h2>
@@ -1607,10 +1465,10 @@ def _conferir(doc):
                f"o lugar vazio {c['pref']} afirma uma cor de plástico — mesma "
                f"regra do `data-colorway` logo acima")
     #    medido com os quatro DualSense do usuário na mesa. Até aqui ela proibia os
-    for alvo in (".seg > *", ".motor > *", ".efeito-lista > *", ".acoes-col > *"):
+    for alvo in (".motor > *", ".efeito-lista > *", ".acoes-col > *"):
         exigir(f'.vib .ctrl[data-conectado="nao"] {alvo}' in doc,
                f"a folha deixou de esconder `{alvo}` num lugar sem controle — "
-               f"os degraus, os trilhos e o `Testar` voltam a ficar clicáveis "
+               f"os trilhos e o `Testar` voltam a ficar clicáveis "
                f"para um aparelho que não está na mesa")
     exigir('.vib .ctrl[data-conectado="nao"]:not(' not in doc,
            "voltou uma exceção ao `[data-conectado=\"nao\"]` na folha desta "  # (noqa-acento) valor do atributo
@@ -1694,13 +1552,12 @@ def _conferir(doc):
            f"tem de ser um `<input type=range>`, senão o clique dela chega "
            f"ao pacote sem número")
     for tag in por_papel.get("intensidade", []):
-        exigir(f'max="{TETO}"' in tag,
-               f"a barra arrastável não vai até {TETO}% — o teto é o "
-               f"`RUMBLE_CUSTOM_MULT_MAX` do esquema, e é ele que recusa o que "
-               f"passa dele")
-        exigir(f'step="{PASSO}"' in tag,
-               f"o passo do arraste não é {PASSO} — ele é o MDC dos degraus com "
-               f"o teto, e é o que faz cada degrau ter uma parada em cima dele")
+        exigir(f'max="{TETO_DA_FORCA}"' in tag,
+               f"a barra da Força não vai até {TETO_DA_FORCA}% — o desenho de "
+               f"18/10 é o trilho de 0 a 100, e 100% é o que o firmware entrega")
+        exigir(f'step="{PASSO_DA_FORCA}"' in tag,
+               f"o passo da Força não é {PASSO_DA_FORCA} — o desenho de 18/10 "
+               f"anda de 5 em 5")
     da_haptica = por_papel.get("haptica", [])
     de_motor = por_papel.get("motor", [])
     exigir(len(da_haptica) == len(MESA),
@@ -1781,12 +1638,9 @@ def _conferir(doc):
            '*"As duas na dica"*')
     exigir(corpo.count(DICA_DOS_VALORES_QUE_PASSAM) == 1,
            "a nota do Testar aparece mais de uma vez na mesma tela")
-    for _rot, chave in FORCA:
-        degrau = round(RUMBLE_POLICY_MULT[chave] * 100)
-        exigir(degrau % PASSO == 0 and degrau <= TETO,
-               f"o degrau {chave!r} vale {degrau}% e a barra não para nele "
-               f"(passo {PASSO}, teto {TETO}) — clicar o botão e arrastar a "
-               f"barra deixariam de poder dizer o mesmo número")
+    exigir('class="seg"' not in corpo and "data-forca=" not in corpo,
+           "os botões da Força voltaram à tela — o desenho de 18/10 (r3b-05-12) "
+           "os tirou: a Força é só o trilho com a porcentagem")
 
     _faixa = corpo.split('class="vib-estado"', 1)[-1].split(">", 1)[0]
     exigir("data-hef-recado" not in _faixa,

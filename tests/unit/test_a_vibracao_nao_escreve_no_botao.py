@@ -60,8 +60,10 @@ def _todos(no: dict):
 def arvore():
     import onde
 
-    arq = onde.pagina(PAGINA)
-    assert arq.exists(), f"a bancada não tem {PAGINA} — rode `python3 aba05.py`"
+    # o PUBLICADO: os quatro botões de degrau ainda são do produto (a bancada os tirou em
+    # 18/10/2026, r3b-05-12); a segunda passagem os tira do pacote e daqui
+    arq = onde.pagina(PAGINA, publicado=True)
+    assert arq.exists(), f"o publicado não tem {PAGINA}"
     p = _Arvore()
     p.feed(arq.read_text())
     return p.raiz

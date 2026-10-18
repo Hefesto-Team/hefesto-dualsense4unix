@@ -158,8 +158,10 @@ def medido() -> dict[str, Any]:
             v.evaluate_javascript(hefesto_vivo.BOOTSTRAP, -1, None, None, None, instalou)
 
     view.connect("load-changed", carregou)
-    # a BANCADA, e não o publicado: o `--publicar` a copia byte a byte
-    view.load_uri(onde.pagina(PAGINA, publicado=False).as_uri())
+    # o PUBLICADO, desde 18/10/2026: a bancada tirou os três degraus (r3b-05-12) e o produto os
+    # mantém até a segunda passagem de A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-
+    # COMO-NO-PS5-01, que aposenta este arquivo com eles
+    view.load_uri(onde.pagina(PAGINA, publicado=True).as_uri())
     guarda = GLib.timeout_add(20000, Gtk.main_quit)
     try:
         Gtk.main()
