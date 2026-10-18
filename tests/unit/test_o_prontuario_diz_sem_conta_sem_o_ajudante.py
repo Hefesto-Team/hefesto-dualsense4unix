@@ -81,6 +81,7 @@ def _por_o_ajudante(casa: Path) -> Path:
 
 
 def test_o_jogo_gdk_com_a_peca_e_sem_o_ajudante_ganha_o_estorvo_sem_conta(casa: Path) -> None:
+    # D-1710-O-JOGO-GDK-SEM-O-AJUDANTE-AVISA-QUE-ABRE-SEM-CONTA
     _jogo(_biblioteca(casa), "800001")
     ficha = _ficha("800001")
     assert pdj.SEM_CONTA in _chaves(ficha)

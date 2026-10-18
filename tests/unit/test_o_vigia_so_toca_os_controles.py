@@ -237,6 +237,7 @@ def test_o_bond_temporario_so_e_promovido_no_controle(tmp_path: Path) -> None:
 
 
 def test_o_trust_so_e_aplicado_no_controle(tmp_path: Path) -> None:
+    # D-1710-O-VIGIA-DO-RADIO-SO-TOCA-CONTROLE
     env, mentira = _bancada(tmp_path, bonded=True)
     proc = _tique(env)
     assert proc.returncode == 0, proc.stderr

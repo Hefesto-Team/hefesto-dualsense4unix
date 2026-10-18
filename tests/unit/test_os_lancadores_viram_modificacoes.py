@@ -84,6 +84,7 @@ def test_os_manifestos_dao_a_reposicao_de_antes() -> None:
 
 
 def test_os_manifestos_dao_os_cartoes_de_antes_na_mesma_ordem() -> None:
+    # D-1710-OS-LANCADORES-DE-FABRICA-SAO-MODIFICACOES-OFICIAIS
     assert tuple(_como_tupla(x) for x in desenho.EMBUTIDOS) == _EMBUTIDOS_DE_ANTES
     assert tuple(_como_tupla(x) for x in desenho.SEM_FONTE) == _EMBUTIDOS_DE_ANTES[1:]
     assert _como_tupla(desenho.A_STEAM) == _EMBUTIDOS_DE_ANTES[0]

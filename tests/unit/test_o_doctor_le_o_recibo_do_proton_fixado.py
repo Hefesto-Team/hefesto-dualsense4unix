@@ -71,6 +71,7 @@ def _tags(linhas: list[tuple[str, str]]) -> list[str]:
 
 
 def test_o_fixado_com_recibo_passou_e_ok(tmp_path: Path) -> None:
+    # D-1710-O-DOCTOR-MOSTRA-O-PROTON-FIXADO-E-O-DE-CADA-JOGO
     _proton_de_mentira(tmp_path, FIXADA)
     linhas = _linhas(tmp_path, recibo=RECIBO_PASSOU)
     assert linhas[0] == (
