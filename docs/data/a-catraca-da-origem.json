@@ -253,14 +253,14 @@
       "data": "2026-10-17",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1145766,
+      "piso": 1146281,
       "por_item": {
-        "docs": 119558,
+        "docs": 119565,
         "scripts": 114902,
         "src": 308909,
-        "tests": 602397
+        "tests": 602905
       },
-      "razao": "tamanho: +1804 linhas (1143962 -> 1145766), pagas por Origem: D-1710-O-DOCTOR-MOSTRA-O-PROTON-FIXADO-E-O-DE-CADA-JOGO, D-1710-O-JOGO-GDK-SEM-O-AJUDANTE-AVISA-QUE-ABRE-SEM-CONTA, D-1710-O-VIGIA-DO-RADIO-SO-TOCA-CONTROLE, D-1710-OS-LANCADORES-DE-FABRICA-SAO-MODIFICACOES-OFICIAIS; registrado no fecho, topo 2bf4242e47e3",
+      "razao": "tamanho: +515 linhas (1145766 -> 1146281), pagas por Origem: D-1710-A-PECA-GDK-DO-HEFESTO-VAI-PELO-PAR-B-E-WINEDLLPATH, D-1710-A-PECA-GDK-SO-ACEITA-A-FILA-QUE-CRIOU; registrado no fecho, topo 682ed782b1d0",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -603,10 +603,16 @@
           "de": 1143962,
           "para": 1145766,
           "razao": "tamanho: +1804 linhas (1143962 -> 1145766), pagas por Origem: D-1710-O-DOCTOR-MOSTRA-O-PROTON-FIXADO-E-O-DE-CADA-JOGO, D-1710-O-JOGO-GDK-SEM-O-AJUDANTE-AVISA-QUE-ABRE-SEM-CONTA, D-1710-O-VIGIA-DO-RADIO-SO-TOCA-CONTROLE, D-1710-OS-LANCADORES-DE-FABRICA-SAO-MODIFICACOES-OFICIAIS; registrado no fecho, topo 2bf4242e47e3"
+        },
+        {
+          "data": "2026-10-17",
+          "de": 1145766,
+          "para": 1146281,
+          "razao": "tamanho: +515 linhas (1145766 -> 1146281), pagas por Origem: D-1710-A-PECA-GDK-DO-HEFESTO-VAI-PELO-PAR-B-E-WINEDLLPATH, D-1710-A-PECA-GDK-SO-ACEITA-A-FILA-QUE-CRIOU; registrado no fecho, topo 682ed782b1d0"
         }
       ],
       "unidade": "linhas",
-      "universo": 2975
+      "universo": 2976
     }
   }
 }
