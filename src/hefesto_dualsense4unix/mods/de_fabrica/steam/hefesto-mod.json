@@ -1,0 +1,34 @@
+{
+  "id": "steam",
+  "nome": "Steam",
+  "versao": "1",
+  "api": ">=1,<2",
+  "licenca": "MIT",
+  "descricao": "O lançador da Steam, que o Hefesto procura e lê por dentro.",
+  "tipos": [
+    "lancador"
+  ],
+  "permissoes": [
+    "lancador"
+  ],
+  "lancador": {
+    "rotulo": "Steam",
+    "ordem": 0,
+    "interior_lido": true,
+    "atalhos": [
+      "steam",
+      "com.valvesoftware.Steam",
+      "steam-native"
+    ],
+    "comandos": [
+      "steam",
+      "steam-native"
+    ],
+    "reposicao": {
+      "nome": "Steam",
+      "processos": [
+        "steamwebhelper"
+      ]
+    }
+  }
+}

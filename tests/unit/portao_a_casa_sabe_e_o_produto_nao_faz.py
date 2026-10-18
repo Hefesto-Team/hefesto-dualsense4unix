@@ -156,6 +156,16 @@ _PORTAS_DE_AMBIENTE: dict[str, tuple[str, ...]] = {
 
 
 _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
+    "HEFESTO_LANCADORES_DE_FABRICA": (
+        "17/10/2026 — a pasta dos manifestos dos seis lançadores de fábrica "
+        "(`integrations/censo_dos_lancadores.PASTA_DE_FABRICA`). A régua de "
+        "`test_os_lancadores_viram_modificacoes` a aponta para uma cópia sem "
+        "um dos manifestos, num processo à parte, para provar que tirar a "
+        "pasta tira o lançador do censo, da reposição e do desenho. É "
+        "instrumento e não promessa: o produto instalado não a lê (os "
+        "manifestos moram no pacote), nenhum fluxo dela passa por aqui, e "
+        "ligá-la não abre feature nenhuma."
+    ),
     "HEFESTO_RADIO_DE_VERDADE": (
         "22/09/2026 — o ESCAPE da guarda do rádio "
         "(`integrations/gesto_de_reconexao._a_suite_esta_rodando`). Ela nasceu "

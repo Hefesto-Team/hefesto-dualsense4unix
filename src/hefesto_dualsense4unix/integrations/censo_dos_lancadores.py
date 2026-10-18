@@ -131,16 +131,9 @@ class BibliotecaDoLancador:
                 f"{k} {'instalado' if k == 1 else 'instalados'}")
 
 
-_ONDE: dict[str, tuple[str, str]] = {
-    "Heroic": ("com.heroicgameslauncher.hgl", "heroic"),
-    "Lutris": ("net.lutris.Lutris", "lutris"),
-    "RetroArch": ("org.libretro.RetroArch", "retroarch"),
-    "Dolphin": ("org.DolphinEmu.dolphin-emu", "dolphin-emu"),
-    "mGBA": ("io.mgba.mGBA", "mgba"),
-}
-
-
-_CONFIG_CAI_NOS_DADOS = frozenset({"Lutris"})
+# `_ONDE` (o app id do Flatpak e a pasta de cada programa), `_CONFIG_CAI_NOS_DADOS`, `_LEITORES`
+# e `_DO_CARTAO` NÃO são listas daqui: vêm dos manifestos dos lançadores de fábrica, lidos no fim
+# do arquivo (OS-SEIS-LANCADORES-VIRAM-MODIFICACOES-OFICIAIS-01).
 
 
 @dataclass(frozen=True)
@@ -218,10 +211,9 @@ def _instalacoes(lancador: str, onde: _Onde) -> tuple[bool, bool]:
 
 def _agulhas_do_nativo(lancador: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
     """``(atalhos, comandos)`` do programa nativo deste lançador."""
-    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
-
     cartao = next((c for c, nomes in _DO_CARTAO.items() if lancador in nomes), "")
-    item = next((s for s in desenho.SEM_FONTE if s.chave == cartao), None)
+    item = next((f.bloco for f in DE_FABRICA if f.bloco.chave == cartao and not f.interior_lido),
+                None)
     if item is None:
         return (), ()
     if len(_DO_CARTAO[cartao]) == 1:
@@ -910,10 +902,6 @@ def _mgba(pasta: Path) -> BibliotecaDoLancador:
     return BibliotecaDoLancador("mGBA", LIDO, pasta, jogos, [])
 
 
-_LEITORES = {"Heroic": _heroic, "Lutris": _lutris, "RetroArch": _retroarch,
-             "Dolphin": _dolphin, "mGBA": _mgba}
-
-
 def _ler(lancador: str, pasta: Path, onde: _Onde) -> BibliotecaDoLancador:
     """O leitor deste lançador sobre UMA pasta — e nunca levanta por disco."""
     try:
@@ -965,15 +953,6 @@ def biblioteca_de(lancador: str, lar: Path | None = None, *,
     return BibliotecaDoLancador(
         lancador, LIDO if lidas else partes[0].estado,
         (lidas or partes)[0].onde, jogos, [e for b in partes for e in b.erros])
-
-
-_DO_CARTAO: dict[str, tuple[str, ...]] = {
-    "heroic": ("Heroic",),
-    "lutris": ("Lutris",),
-    "retroarch": ("RetroArch",),
-    "emuladores": ("Dolphin", "mGBA"),
-    "flatpak": (),
-}
 
 
 def biblioteca_do_cartao(chave: str, lar: Path | None = None, *,
@@ -1372,3 +1351,175 @@ def _impressoes_da_pasta(nome: str, pasta: Path, onde: _Onde) -> list[tuple[str,
 def sabe_ler(lancador: str) -> bool:
     """Existe leitor de biblioteca para este lançador?"""
     return lancador in _LEITORES
+
+
+# -- os lançadores de fábrica: seis modificações oficiais -----------------------
+#
+# O que o censo, a reposição e a aba Lançadores sabem dos lançadores que vêm no pacote mora em
+# `mods/de_fabrica/<chave>/hefesto-mod.json`, no MESMO bloco ``lancador`` de qualquer modificação
+# (OS-SEIS-LANCADORES-VIRAM-MODIFICACOES-OFICIAIS-01). Tirar a pasta de um deles tira o lançador
+# do censo, da reposição e do desenho; pôr uma pasta com outro bloco o acrescenta.
+#
+# Quatro campos só existem aqui e a modificação de fora não os tem (o conferidor dela os recusa
+# como qualquer campo estranho): ``ordem`` (a ordem dos cartões), ``interior_lido`` (a Steam, cuja
+# biblioteca o produto lê por conta própria), ``programas`` (os programas cuja biblioteca o censo
+# lê, e onde) e ``reposicao`` (os processos que o reinício fecha e reabre). Os dois últimos mexem
+# com arquivo do usuário e com processo dele: modificação de terceiro não escolhe isso.
+
+NOME_DO_MANIFESTO = "hefesto-mod.json"
+
+#: Onde moram os manifestos de fábrica; a variável existe para as réguas apontarem outra pasta.
+PASTA_DE_FABRICA = Path(
+    os.environ.get("HEFESTO_LANCADORES_DE_FABRICA")
+    or Path(__file__).resolve().parent.parent / "mods" / "de_fabrica")
+
+CAMPOS_SO_DE_FABRICA = frozenset({"ordem", "interior_lido", "programas", "reposicao"})
+
+#: Os leitores de biblioteca que o censo sabe (código, não lista de lançadores): o manifesto
+#: escolhe um pelo nome.
+_FUNCOES_DE_LEITURA = {"heroic": _heroic, "lutris": _lutris, "retroarch": _retroarch,
+                       "dolphin": _dolphin, "mgba": _mgba}
+
+
+@dataclass(frozen=True)
+class ProgramaDeFabrica:
+    """Um programa cuja biblioteca o censo lê: o Flatpak dele, a pasta, e qual leitor."""
+
+    nome: str
+    flatpak: str
+    pasta: str
+    leitor: str
+    #: A configuração dele cai nos dados do XDG quando não há pasta de configuração (o Lutris).
+    config_nos_dados: bool = False
+
+
+@dataclass(frozen=True)
+class ReposicaoDeFabrica:
+    """Como o reinício fecha e reabre o lançador (``reposicao_dos_lancadores``)."""
+
+    nome: str
+    processos: tuple[str, ...]
+    flatpak: str | None = None
+    nativo: str | None = None
+
+
+@dataclass(frozen=True)
+class LancadorDeFabrica:
+    """Um lançador que vem no pacote: o bloco de qualquer modificação e o que é só de fábrica."""
+
+    bloco: LancadorDaModificacao
+    ordem: int
+    interior_lido: bool = False
+    programas: tuple[ProgramaDeFabrica, ...] = ()
+    reposicao: ReposicaoDeFabrica | None = None
+
+
+def _texto_de_fabrica(valor: object, onde: str) -> str:
+    if not isinstance(valor, str) or not valor.strip() or len(valor) > 120:
+        raise ValueError(f"«{onde}» precisa ser um texto de 1 a 120 caracteres")
+    return valor.strip()
+
+
+def _programa_de_fabrica(bruto: object) -> ProgramaDeFabrica:
+    exigidos = {"nome", "flatpak", "pasta", "leitor"}
+    if (not isinstance(bruto, dict) or not exigidos <= set(bruto)
+            or set(bruto) - exigidos - {"config_nos_dados"}):
+        raise ValueError("«programas» aceita só nome, flatpak, pasta, leitor e config_nos_dados")
+    leitor = _texto_de_fabrica(bruto["leitor"], "programas.leitor")
+    if leitor not in _FUNCOES_DE_LEITURA:
+        raise ValueError(f"«programas.leitor» {leitor!r} não é um leitor que o censo sabe")
+    nos_dados = bruto.get("config_nos_dados", False)
+    if not isinstance(nos_dados, bool):
+        raise ValueError("«programas.config_nos_dados» precisa ser verdadeiro ou falso")
+    return ProgramaDeFabrica(
+        nome=_texto_de_fabrica(bruto["nome"], "programas.nome"),
+        flatpak=_texto_de_fabrica(bruto["flatpak"], "programas.flatpak"),
+        pasta=_texto_de_fabrica(bruto["pasta"], "programas.pasta"),
+        leitor=leitor, config_nos_dados=nos_dados)
+
+
+def _reposicao_de_fabrica(bruto: object) -> ReposicaoDeFabrica:
+    if (not isinstance(bruto, dict) or not {"nome", "processos"} <= set(bruto)
+            or set(bruto) - {"nome", "processos", "flatpak", "nativo"}):
+        raise ValueError("«reposicao» aceita só nome, processos, flatpak e nativo")
+    processos = bruto["processos"]
+    if not isinstance(processos, list) or not processos:
+        raise ValueError("«reposicao.processos» precisa ser uma lista de textos")
+    return ReposicaoDeFabrica(
+        nome=_texto_de_fabrica(bruto["nome"], "reposicao.nome"),
+        processos=tuple(_texto_de_fabrica(x, "reposicao.processos") for x in processos),
+        flatpak=(_texto_de_fabrica(bruto["flatpak"], "reposicao.flatpak")
+                 if "flatpak" in bruto else None),
+        nativo=(_texto_de_fabrica(bruto["nativo"], "reposicao.nativo")
+                if "nativo" in bruto else None))
+
+
+def _lancador_de_fabrica(mod_id: str, bloco: object, pasta: Path) -> LancadorDeFabrica:
+    """Confere o bloco de um manifesto de fábrica; recusa com ``ValueError``."""
+    if not isinstance(bloco, dict):
+        raise ValueError("«lancador» precisa ser um objeto")
+    so_de_fabrica = {k: v for k, v in bloco.items() if k in CAMPOS_SO_DE_FABRICA}
+    comum = lancador_da_modificacao(
+        mod_id, {k: v for k, v in bloco.items() if k not in CAMPOS_SO_DE_FABRICA}, pasta)
+    ordem = so_de_fabrica.get("ordem")
+    if isinstance(ordem, bool) or not isinstance(ordem, int) or ordem < 0:
+        raise ValueError("«lancador.ordem» precisa ser um inteiro a partir de 0")
+    interior = so_de_fabrica.get("interior_lido", False)
+    if not isinstance(interior, bool):
+        raise ValueError("«lancador.interior_lido» precisa ser verdadeiro ou falso")
+    programas = so_de_fabrica.get("programas", [])
+    if not isinstance(programas, list):
+        raise ValueError("«lancador.programas» precisa ser uma lista")
+    return LancadorDeFabrica(
+        bloco=comum, ordem=ordem, interior_lido=interior,
+        programas=tuple(_programa_de_fabrica(x) for x in programas),
+        reposicao=(_reposicao_de_fabrica(so_de_fabrica["reposicao"])
+                   if "reposicao" in so_de_fabrica else None))
+
+
+def _ler_de_fabrica(arquivo: Path) -> LancadorDeFabrica:
+    try:
+        bruto = json.loads(arquivo.read_text(encoding="utf-8"))
+        pasta = arquivo.parent
+        if not isinstance(bruto, dict) or bruto.get("id") != pasta.name:
+            raise ValueError("o «id» precisa ser o nome da pasta")
+        if bruto.get("tipos") != ["lancador"]:
+            raise ValueError("o «tipos» de um lançador de fábrica é só «lancador»")
+        return _lancador_de_fabrica(pasta.name, bruto.get("lancador"), pasta)
+    except (OSError, ValueError) as erro:
+        raise ValueError(f"{arquivo}: {erro}") from erro
+
+
+def lancadores_de_fabrica(raiz: Path | None = None) -> tuple[LancadorDeFabrica, ...]:
+    """Os lançadores de fábrica de ``raiz`` (o pacote, por padrão), na ordem dos cartões.
+
+    Pasta sem manifesto não conta, e raiz que não existe dá nenhum. Manifesto torto LEVANTA
+    ``ValueError`` com o caminho: é defeito do pacote, não do disco da pessoa.
+    """
+    base = PASTA_DE_FABRICA if raiz is None else raiz
+    try:
+        pastas = sorted(p for p in base.iterdir() if p.is_dir())
+    except OSError:
+        return ()
+    achados = [_ler_de_fabrica(p / NOME_DO_MANIFESTO) for p in pastas
+               if (p / NOME_DO_MANIFESTO).is_file()]
+    return tuple(sorted(achados, key=lambda f: (f.ordem, f.bloco.chave)))
+
+
+#: Os lançadores de fábrica deste processo, lidos uma vez. Quem precisa de outra pasta usa
+#: :func:`lancadores_de_fabrica` com ela.
+DE_FABRICA: tuple[LancadorDeFabrica, ...] = lancadores_de_fabrica()
+
+_PROGRAMAS = tuple(p for f in DE_FABRICA for p in f.programas)
+
+#: ``{programa: (app id do Flatpak, pasta)}``.
+_ONDE: dict[str, tuple[str, str]] = {p.nome: (p.flatpak, p.pasta) for p in _PROGRAMAS}
+
+_CONFIG_CAI_NOS_DADOS = frozenset(p.nome for p in _PROGRAMAS if p.config_nos_dados)
+
+_LEITORES = {p.nome: _FUNCOES_DE_LEITURA[p.leitor] for p in _PROGRAMAS}
+
+#: ``{cartão da aba 07: os programas que ele junta}``. A Steam não entra: o interior dela o
+#: produto lê por outro caminho.
+_DO_CARTAO: dict[str, tuple[str, ...]] = {
+    f.bloco.chave: tuple(p.nome for p in f.programas) for f in DE_FABRICA if not f.interior_lido}

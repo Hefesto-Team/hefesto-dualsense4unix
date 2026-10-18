@@ -49,6 +49,7 @@ import subprocess
 import time
 from dataclasses import dataclass
 
+from hefesto_dualsense4unix.integrations import censo_dos_lancadores as _censo
 from hefesto_dualsense4unix.integrations import fora_do_servico
 from hefesto_dualsense4unix.integrations.ambiente_do_jogo import ambiente_limpo
 from hefesto_dualsense4unix.utils.logging_config import get_logger
@@ -71,13 +72,12 @@ class Lancador:
     nativo: str | None = None
 
 
-LANCADORES: tuple[Lancador, ...] = (
-    Lancador("steam", "Steam", ("steamwebhelper",)),
-    Lancador("heroic", "Heroic", ("heroic",),
-             flatpak="com.heroicgameslauncher.hgl", nativo="heroic"),
-    Lancador("lutris", "Lutris", ("lutris",),
-             flatpak="net.lutris.Lutris", nativo="lutris"),
-)
+#: Os lançadores de fábrica que dizem como se fecham e se reabrem: o bloco ``reposicao`` do
+#: manifesto de cada um (`mods/de_fabrica/`, lido por `censo_dos_lancadores`), na ordem dos cartões.
+LANCADORES: tuple[Lancador, ...] = tuple(
+    Lancador(f.bloco.chave, f.reposicao.nome, f.reposicao.processos,
+             flatpak=f.reposicao.flatpak, nativo=f.reposicao.nativo)
+    for f in _censo.DE_FABRICA if f.reposicao is not None)
 
 
 def _rodar(args: list[str], *, timeout: float = 5.0) -> subprocess.CompletedProcess[str] | None:

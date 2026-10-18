@@ -1,0 +1,42 @@
+{
+  "id": "lutris",
+  "nome": "Lutris",
+  "versao": "1",
+  "api": ">=1,<2",
+  "licenca": "MIT",
+  "descricao": "O Lutris, com a biblioteca que o Hefesto lê.",
+  "tipos": [
+    "lancador"
+  ],
+  "permissoes": [
+    "lancador"
+  ],
+  "lancador": {
+    "rotulo": "Lutris",
+    "ordem": 2,
+    "atalhos": [
+      "net.lutris.Lutris",
+      "lutris"
+    ],
+    "comandos": [
+      "lutris"
+    ],
+    "programas": [
+      {
+        "nome": "Lutris",
+        "flatpak": "net.lutris.Lutris",
+        "pasta": "lutris",
+        "leitor": "lutris",
+        "config_nos_dados": true
+      }
+    ],
+    "reposicao": {
+      "nome": "Lutris",
+      "processos": [
+        "lutris"
+      ],
+      "flatpak": "net.lutris.Lutris",
+      "nativo": "lutris"
+    }
+  }
+}

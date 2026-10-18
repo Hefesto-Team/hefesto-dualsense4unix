@@ -1,0 +1,41 @@
+{
+  "id": "heroic",
+  "nome": "Heroic (Epic · GOG)",
+  "versao": "1",
+  "api": ">=1,<2",
+  "licenca": "MIT",
+  "descricao": "O Heroic, com a biblioteca da Epic e da GOG que o Hefesto lê.",
+  "tipos": [
+    "lancador"
+  ],
+  "permissoes": [
+    "lancador"
+  ],
+  "lancador": {
+    "rotulo": "Heroic (Epic · GOG)",
+    "ordem": 1,
+    "atalhos": [
+      "com.heroicgameslauncher.hgl",
+      "heroic"
+    ],
+    "comandos": [
+      "heroic"
+    ],
+    "programas": [
+      {
+        "nome": "Heroic",
+        "flatpak": "com.heroicgameslauncher.hgl",
+        "pasta": "heroic",
+        "leitor": "heroic"
+      }
+    ],
+    "reposicao": {
+      "nome": "Heroic",
+      "processos": [
+        "heroic"
+      ],
+      "flatpak": "com.heroicgameslauncher.hgl",
+      "nativo": "heroic"
+    }
+  }
+}

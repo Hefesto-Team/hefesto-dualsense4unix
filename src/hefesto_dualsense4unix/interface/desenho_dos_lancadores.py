@@ -615,6 +615,12 @@ class SemCenso:
     modificacao: str = ""
 
 
+def _de_fabrica(item: _censo.LancadorDeFabrica) -> SemCenso:
+    """O cartão de um lançador de fábrica: o que o manifesto dele diz (`mods/de_fabrica/`)."""
+    bloco = item.bloco
+    return SemCenso(bloco.chave, bloco.rotulo, bloco.atalhos, bloco.comandos, janelas=bloco.janelas)
+
+
 #: Os lançadores cujo interior o produto NÃO lê. A lista é dado, não `if`: quando alguém escrever o
 #: censo do Heroic, ele SAI daqui e ganha cartão próprio.
 #:
@@ -637,19 +643,8 @@ class SemCenso:
 #: Epic abrem: **dois cartões da mesma tela procurando o mesmo programa em disco**. Epic e GOG ficam
 #: dentro do Heroic, e o rótulo dele não muda: o «(Epic · GOG)» é o ÚNICO lugar da tela onde a Epic
 #: aparece.
-SEM_FONTE: tuple[SemCenso, ...] = (
-    SemCenso("heroic", "Heroic (Epic · GOG)",
-             ("com.heroicgameslauncher.hgl", "heroic"), ("heroic",)),
-    SemCenso("lutris", "Lutris", ("net.lutris.Lutris", "lutris"), ("lutris",)),
-    SemCenso("flatpak", "Flatpak", (), ("flatpak",)),
-    SemCenso("retroarch", "RetroArch",
-             ("org.libretro.RetroArch", "retroarch"), ("retroarch",),
-             janelas=("com.libretro.RetroArch",)),
-    SemCenso("emuladores", "Dolphin · mGBA",
-             ("org.DolphinEmu.dolphin-emu", "dolphin-emu", "io.mgba.mGBA",
-              "mgba-qt", "mgba"),
-             ("dolphin-emu", "mgba-qt", "mgba")),
-)
+SEM_FONTE: tuple[SemCenso, ...] = tuple(
+    _de_fabrica(f) for f in _censo.DE_FABRICA if not f.interior_lido)
 
 #: A Steam também se procura — 02/09/2026, de uma acusação provada.
 #:
@@ -672,9 +667,9 @@ SEM_FONTE: tuple[SemCenso, ...] = (
 #: `/usr/share/applications`), `com.valvesoftware.Steam` o da Flathub e `steam-native` o da
 #: instalação sem o runtime. O comando entra pelo mesmo motivo dos outros (nesta bancada é
 #: `/usr/games/steam`, fora do `/usr/bin`).
-A_STEAM = SemCenso("steam", "Steam",
-                   ("steam", "com.valvesoftware.Steam", "steam-native"),
-                   ("steam", "steam-native"))
+A_STEAM = next((_de_fabrica(f) for f in _censo.DE_FABRICA if f.interior_lido), None)
+if A_STEAM is None:  # pragma: no cover - pacote sem o manifesto da Steam
+    raise RuntimeError("o pacote não traz o lançador da Steam (mods/de_fabrica/steam)")
 
 #: Os seis que vêm de fábrica.
 #:
@@ -684,7 +679,7 @@ A_STEAM = SemCenso("steam", "Steam",
 #: usuário). O nome antigo `PROCURADOS` morreu de propósito: enquanto uma constante respondesse "o
 #: que se procura", quem a lesse por hábito procuraria só os de fábrica e o lançador acrescentado
 #: seria invisível, calado e só na máquina do usuário.
-EMBUTIDOS: tuple[SemCenso, ...] = (A_STEAM, *SEM_FONTE)
+EMBUTIDOS: tuple[SemCenso, ...] = tuple(_de_fabrica(f) for f in _censo.DE_FABRICA)
 
 
 def procurados(declarados: tuple[SemCenso, ...] = ()) -> tuple[SemCenso, ...]:

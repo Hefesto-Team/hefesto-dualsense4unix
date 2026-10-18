@@ -1,0 +1,44 @@
+{
+  "id": "emuladores",
+  "nome": "Dolphin · mGBA",
+  "versao": "1",
+  "api": ">=1,<2",
+  "licenca": "MIT",
+  "descricao": "O Dolphin e o mGBA, com os jogos recentes que o Hefesto lê.",
+  "tipos": [
+    "lancador"
+  ],
+  "permissoes": [
+    "lancador"
+  ],
+  "lancador": {
+    "rotulo": "Dolphin · mGBA",
+    "ordem": 5,
+    "atalhos": [
+      "org.DolphinEmu.dolphin-emu",
+      "dolphin-emu",
+      "io.mgba.mGBA",
+      "mgba-qt",
+      "mgba"
+    ],
+    "comandos": [
+      "dolphin-emu",
+      "mgba-qt",
+      "mgba"
+    ],
+    "programas": [
+      {
+        "nome": "Dolphin",
+        "flatpak": "org.DolphinEmu.dolphin-emu",
+        "pasta": "dolphin-emu",
+        "leitor": "dolphin"
+      },
+      {
+        "nome": "mGBA",
+        "flatpak": "io.mgba.mGBA",
+        "pasta": "mgba",
+        "leitor": "mgba"
+      }
+    ]
+  }
+}
