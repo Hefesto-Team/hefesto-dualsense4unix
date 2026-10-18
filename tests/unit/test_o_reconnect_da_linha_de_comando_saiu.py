@@ -24,7 +24,6 @@ from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
-import click
 import pytest
 from structlog.testing import capture_logs
 from typer.testing import CliRunner
@@ -72,10 +71,14 @@ def run_daemon_de_mentira(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, Any
     return chamadas
 
 
+_SEM_COR = re.compile(r"\x1b\[[0-9;]*m")
+
+
 def test_a_ajuda_nao_fala_de_reconnect() -> None:
     # Sob `GITHUB_ACTIONS` o rich do Typer força o terminal e pinta `--poll-hz` em pedaços: a
     # régua lê o texto sem os códigos de cor, que é o que a pessoa lê.
-    saida = click.unstyle(runner.invoke(app, ["daemon", "start", "--help"]).output)
+    # O Typer 0.27.3 não traz mais o click como dependência: a cor sai por expressão.
+    saida = _SEM_COR.sub("", runner.invoke(app, ["daemon", "start", "--help"]).output)
     assert "--poll-hz" in saida, "a ajuda não saiu: o teste mediria o vazio"
     assert "reconnect" not in saida.lower()
 
