@@ -303,10 +303,13 @@ def test_ligar_com_permissao_nova_mostra_antes_e_liga_no_segundo(lar, ctx, tmp_p
     a07 = _a07()
     _instalar(a07, ctx, _fonte(tmp_path, permissoes=("rede:local",)))
     primeiro = a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
-    assert "Usar a rede desta casa" in primeiro["recado"]
+    # o recado não chega à tela: a lista aparece no ⋮ aberto da linha, e o clique só armou
+    assert primeiro.get("armou") is True and "recado" not in primeiro
+    assert "Usar a rede desta casa" in primeiro["blocos"][".ext-lista"]
     assert _entrada(lar, "toque").ligada is False, "ligou sem o «sim»"
     segundo = a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
     assert "ligada" in segundo["recado"] and _entrada(lar, "toque").ligada is True
+    assert 'class="ext-menu"' not in segundo["blocos"][".ext-lista"]
     terceiro = a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
     assert "desligada" in terceiro["recado"] and _entrada(lar, "toque").ligada is False
 
@@ -392,7 +395,8 @@ def test_remover_pede_o_segundo_clique_e_apaga_o_codigo_e_os_dados(lar, ctx, tmp
     a07.guardar_opcao_da_modificacao(
         ctx, {"v": "toque:avisar", "evento": "click"}, _Ponte())
     primeiro = a07.mais_da_modificacao(ctx, {"v": "toque:remover"}, _Ponte())
-    assert "Clique em Remover de novo" in primeiro["recado"]
+    assert primeiro.get("armou") is True and "recado" not in primeiro
+    assert "Confirmar remoção" in primeiro["blocos"][".ext-lista"]
     assert _entrada(lar, "toque") is not None, "removeu no primeiro clique"
     segundo = a07.mais_da_modificacao(ctx, {"v": "toque:remover"}, _Ponte())
     assert segundo["recado"] == "Toque removida."

@@ -119,7 +119,7 @@ perde eventos velhos, e o tique do serviço nunca espera.
 
 O `eventos.publicar` `{topico, dados}` passa um evento de uma extensão a todas as que têm `ler:<tópico>`, pela
 mesma fila de 256 por assinatura. Só vale para a lista fechada de tópicos publicáveis, que hoje é um,
-`jogo.brinquedo`, e pede `publicar:jogo.brinquedo` no manifesto (a tela mostra a frase antes do «sim»). Em
+`jogo.brinquedo`, e pede `publicar:jogo.brinquedo` no manifesto (a frase aparece no ⋮ da linha antes do «sim»). Em
 `dados` vai só `funcoes`; o serviço monta o envelope com `origem` e `t`. As recusas:
 
 - sem a permissão: `-32010`;

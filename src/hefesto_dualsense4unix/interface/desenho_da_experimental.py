@@ -175,12 +175,19 @@ def _chave_html(ext: Extensao) -> str:
 SELO_DA_ORIGEM = {"oficial": "Oficial", "comunidade": "Comunidade", "local": "Local"}
 ACOES_DO_MENU = (("atualizar", "Atualizar"), ("permissoes", "Ver permissões"), ("remover", "Remover"))  # (noqa-acento): contrato ASCII
 
+#: O Remover depois do primeiro clique: apagar o código e os dados pede o segundo.
+ROTULO_DA_CONFIRMACAO = "Confirmar remoção"
 
-def menu_html(chave: str, permissoes: Sequence[str] | None = None) -> str:
-    """O conteúdo do ⋮ de uma extensão: três botões e, se pedido, o que ela pode fazer."""
+
+def menu_html(chave: str, permissoes: Sequence[str] | None = None, *, remover: bool = False) -> str:
+    """O conteúdo do ⋮ de uma extensão: três botões e, se pedido, o que ela pode fazer.
+
+    ``remover`` é o primeiro clique em Remover: o botão passa a dizer «Confirmar remoção».
+    """
     botoes = "".join(
         f'<button class="btn mini" data-gesto="mais-da-modificacao" data-v="{_a(chave)}:{acao}">'
-        f"{rotulo}</button>" for acao, rotulo in ACOES_DO_MENU)
+        f"{ROTULO_DA_CONFIRMACAO if remover and acao == 'remover' else rotulo}</button>"
+        for acao, rotulo in ACOES_DO_MENU)
     if permissoes is None:
         return botoes
     itens = "".join(f"<span>{_e(x)}</span>" for x in permissoes) or "<span>Nenhuma permissão.</span>"

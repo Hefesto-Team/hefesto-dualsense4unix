@@ -1813,7 +1813,7 @@ def _extensao_de(item: _Instalada) -> Any:
         pedidas = item.manifesto.permissoes if item.manifesto is not None else e.permissoes_aceitas
         menu = exp.menu_html(
             e.id, [o_que_a_permissao_deixa(x) for x in pedidas]
-            if _MEXIDA.permissoes == e.id else None)
+            if _MEXIDA.permissoes == e.id else None, remover=_MEXIDA.remover == e.id)
     return exp.Extensao(
         chave=e.id, nome=e.nome,
         dica=item.manifesto.descricao if item.manifesto is not None else "",
@@ -1951,18 +1951,24 @@ def _a_pintura_agora(ctx: Contexto) -> dict[str, Any]:
 def ligar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """A chave da extensão. Permissão nova pede um segundo clique, depois de mostrada."""
     recado = _ligar_ou_desligar_a_modificacao(_id_do_clique(o, "ligar-modificacao"))
+    if recado is None:
+        return {**_a_pintura_agora(ctx), "armou": True}
     return {**_a_pintura_agora(ctx), "recado": recado}
 
 
-def _ligar_ou_desligar_a_modificacao(mod_id: str) -> str:
-    """Liga ou desliga pela infra. Permissão nova pede o «sim»: o primeiro clique só a mostra."""
+def _ligar_ou_desligar_a_modificacao(mod_id: str) -> str | None:
+    """Liga ou desliga pela infra. Permissão nova pede o «sim»: o primeiro clique só a mostra.
+
+    A lista aparece no ⋮ aberto da linha (o recado não chega à tela), e o ``None`` é o
+    clique que só armou.
+    """
     from hefesto_dualsense4unix.mods.instalador import (
         desligar,
         ler_registro,
         ligar,
         manifesto_instalado,
     )
-    from hefesto_dualsense4unix.mods.manifesto import o_que_a_permissao_deixa, permissoes_novas
+    from hefesto_dualsense4unix.mods.manifesto import permissoes_novas
 
     lg = _lugares()
     with _dizendo_a_recusa():
@@ -1977,10 +1983,13 @@ def _ligar_ou_desligar_a_modificacao(mod_id: str) -> str:
         if permissoes_novas(entrada.permissoes_aceitas, list(pedidas)) and (
                 _MEXIDA.vistas.get(mod_id) != pedidas):
             _MEXIDA.vistas[mod_id] = pedidas
-            quais = "; ".join(o_que_a_permissao_deixa(x) for x in pedidas)
-            return (f"{entrada.nome} pede: {quais}. Clique na chave de novo para aceitar e ligar.")
+            _MEXIDA.menu = _MEXIDA.permissoes = mod_id
+            _MEXIDA.remover = ""
+            return None
         ligar(mod_id, permissoes_vistas=pedidas, lugares=lg)
         _MEXIDA.vistas.pop(mod_id, None)
+        if _MEXIDA.menu == mod_id:
+            _MEXIDA.menu = _MEXIDA.permissoes = ""
     REGISTRO.esquecer()
     return f"{entrada.nome} ligada."
 
@@ -2061,11 +2070,16 @@ def mais_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
         _MEXIDA.permissoes, _MEXIDA.remover = mod_id, ""
         return _a_pintura_agora(ctx)
     recado = _mexer_na_modificacao(mod_id, acao)
+    if recado is None:
+        return {**_a_pintura_agora(ctx), "armou": True}
     return {**_a_pintura_agora(ctx), "recado": recado}
 
 
-def _mexer_na_modificacao(mod_id: str, acao: str) -> str:
-    """Atualiza ou remove. Remover apaga o código e os dados dela: pede o segundo clique."""
+def _mexer_na_modificacao(mod_id: str, acao: str) -> str | None:
+    """Atualiza ou remove. Remover apaga o código e os dados dela: pede o segundo clique.
+
+    O primeiro clique em Remover troca o botão por «Confirmar remoção» e devolve ``None``.
+    """
     from hefesto_dualsense4unix.mods.instalador import atualizar, remover
 
     item = _a_instalada(mod_id)
@@ -2082,8 +2096,7 @@ def _mexer_na_modificacao(mod_id: str, acao: str) -> str:
             raise RuntimeError("Essa ação do menu não existe. Nada foi alterado.")
         if _MEXIDA.remover != mod_id:
             _MEXIDA.remover = mod_id
-            return (f"Remover {nome} apaga o código e os dados dela. "
-                    "Clique em Remover de novo para confirmar.")
+            return None
         restos = remover(mod_id, lugares=lg)
     _MEXIDA.menu = _MEXIDA.permissoes = _MEXIDA.remover = ""
     if _MEXIDA.mod == mod_id:
@@ -2287,7 +2300,7 @@ def criar_perfil_do_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
     chave = str(o.get("v") or "").strip()
     jogo = next((j for j in _ESCOLHA.jogos if j.chave == chave), None)
     if jogo is None:
-        raise RuntimeError("Esse jogo não está na lista. Abra «Criar perfis» de novo.")
+        raise RuntimeError("Esse jogo não está mais na lista. Nada foi criado.")
     frase = _criar_o_perfil_de(ctx, p, jogo)
     _relatar("criar-perfil-do-jogo", frase)
     _montar_a_escolha_nova(_nome_da_escolha())
