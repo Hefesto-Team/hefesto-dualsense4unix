@@ -253,14 +253,14 @@
       "data": "2026-10-18",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1149018,
+      "piso": 1147139,
       "por_item": {
         "docs": 119579,
-        "scripts": 114959,
-        "src": 309606,
-        "tests": 604874
+        "scripts": 114950,
+        "src": 308905,
+        "tests": 603705
       },
-      "razao": "tamanho: +1573 linhas (1147445 -> 1149018), pagas por Origem: D-1810-O-CHIP-DO-MAPA-EM-UMA-LINHA-COMPACTA-NA-VISTA-ESTREITA, D-A-BORDA-E-A-IDENTIDADE-DA-PECA; registrado no fecho, topo 4633c3d3f6a4",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -636,7 +636,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 2999
+      "universo": 3000
     }
   }
 }
