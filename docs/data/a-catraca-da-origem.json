@@ -253,14 +253,14 @@
       "data": "2026-10-18",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1146712,
+      "piso": 1147483,
       "por_item": {
-        "docs": 119566,
-        "scripts": 114902,
-        "src": 308790,
-        "tests": 603454
+        "docs": 119576,
+        "scripts": 114952,
+        "src": 308820,
+        "tests": 604135
       },
-      "razao": "tamanho: +64 linhas (1146648 -> 1146712), pagas por Origem: D-1510-A-VIBRACAO-MANTEM-O-SELETOR-ATE-A-INTENSIDADE; registrado no fecho, topo e2af817a9c7b",
+      "razao": "tamanho: +771 linhas (1146712 -> 1147483), pagas por Origem: D-1510-A-VIBRACAO-MANTEM-O-SELETOR-ATE-A-INTENSIDADE; registrado no fecho, topo e67ad0ce86c8",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -621,10 +621,16 @@
           "de": 1146648,
           "para": 1146712,
           "razao": "tamanho: +64 linhas (1146648 -> 1146712), pagas por Origem: D-1510-A-VIBRACAO-MANTEM-O-SELETOR-ATE-A-INTENSIDADE; registrado no fecho, topo e2af817a9c7b"
+        },
+        {
+          "data": "2026-10-18",
+          "de": 1146712,
+          "para": 1147483,
+          "razao": "tamanho: +771 linhas (1146712 -> 1147483), pagas por Origem: D-1510-A-VIBRACAO-MANTEM-O-SELETOR-ATE-A-INTENSIDADE; registrado no fecho, topo e67ad0ce86c8"
         }
       ],
       "unidade": "linhas",
-      "universo": 2979
+      "universo": 2981
     }
   }
 }
