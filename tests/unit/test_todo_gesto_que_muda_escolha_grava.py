@@ -99,6 +99,17 @@ ATOS: dict[Chave, str] = {
         "leitura: diz qual jogo está aberto, ou recusa dizendo",
     ("07-lancadores.html", "procurar"):
         "leitura: esquece o cache dos lançadores e relê o disco agora",
+    ("07-lancadores.html", "configurar-lancador"):
+        "tela: abre a janela «Configurar» do lançador (onde está, como entrou e, na Steam, os "
+        "impedimentos lidos agora); quem muda algo é o gesto de lá, que declara `grava=`",
+    ("07-lancadores.html", "configurar-modificacao"):
+        "tela: abre a janela de opções da extensão com o valor de agora; mudar uma opção é o "
+        "`guardar-opcao-da-modificacao`, que declara `grava=`",
+    ("07-lancadores.html", "identificar-lancador"):
+        "leitura: esquece o cache, procura o lançador no disco de novo e diz onde ele está",
+    ("07-lancadores.html", "ver-impedimentos"):
+        "leitura: sonda a Steam de novo e abre a lista dos impedimentos; quem cura é o "
+        "«Resolver», que declara `grava=`",
     ("08-conexoes.html", "abrir-adaptador"):
         "tela: abre um adaptador e fecha os outros (o acordeão)",
     ("08-conexoes.html", "aceitar-sugestao"): _PERGUNTA_DO_RADIO,
