@@ -49,7 +49,6 @@ SEM_AJUDA = ("topo.html", "fim.html", "monta.py", "janela.py", "hefesto_vivo.py"
 #: aba (`abaNN.py`) e as páginas que ela monta saem na sprint da aba (`A-ABA-<nome>-DO-TODO-01`),
 #: que troca o «?» pelo `data-dica`. O número só diminui, e a linha sai quando o arquivo zera.
 ISENTOS: dict[str, int] = {
-    "aba07.py": 1,  # sai com: A-ABA-EXPERIMENTAL-DO-TODO-01
     "desenho_dos_lancadores.py": 2,  # sai com: A-ABA-EXPERIMENTAL-DO-TODO-01
 }
 
@@ -187,7 +186,9 @@ def test_a_folha_do_ajuda_que_sai_vive_so_enquanto_ha_isentos() -> None:
     assert ".ajuda.porque:has(.nada)" in monta.CSS_DO_AJUDA_QUE_SAI
 
 
-def test_a_pagina_com_o_span_leva_a_folha_e_a_sem_span_nao(paginas_geradas: dict[str, str]) -> None:
+def test_a_pagina_com_o_span_leva_a_folha_e_a_sem_span_nao(
+        paginas_geradas: dict[str, str], tmp_path: pathlib.Path,
+        monkeypatch: pytest.MonkeyPatch) -> None:
     """O «?» que ainda sai de uma aba abre a dica e some sem razão; página sem ele não leva a folha.
 
     MORDIDA: tirar a injeção do `monta.monta` reprova as páginas que ainda têm o span.
@@ -199,7 +200,13 @@ def test_a_pagina_com_o_span_leva_a_folha_e_a_sem_span_nao(paginas_geradas: dict
     sobrando = sorted(n for n, doc in paginas_geradas.items()
                       if not _CLASSE_AJUDA.search(doc) and folha in doc)
     assert not sobrando, f"página(s) sem nenhum «?» e com a folha dele: {sobrando}"
-    assert any(folha in doc for doc in paginas_geradas.values()), "a folha não entrou em nenhuma"
+    # 17/10/2026: com a 07 sem o «?», nenhuma aba gerada o traz mais; a injeção se prova numa
+    # página de mentira montada pelo mesmo `monta.monta`, que é o que a mordida de cima arranca.
+    if not any(_CLASSE_AJUDA.search(doc) for doc in paginas_geradas.values()):
+        monkeypatch.setenv("HEFESTO_BANCADA", str(tmp_path))
+        monta.monta("07-lancadores", "Prova", '<div><span class="ajuda">?</span></div>')
+        feita = (tmp_path / "07-lancadores.html").read_text(encoding="utf-8")
+        assert folha in feita, "a folha não entra numa página que ainda tem o span"
 
 
 def test_toda_pagina_tem_a_base_uma_vez_e_identica_ao_arquivo(

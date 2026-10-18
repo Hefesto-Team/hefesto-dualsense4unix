@@ -203,8 +203,10 @@ def test_a_prova_automatica_pula_o_botao_e_nao_reprova_por_isso(desenho):
 
     from hefesto_dualsense4unix.interface import hefesto_vivo, onde, regua_do_mockup
 
+    # O produto ainda abre a Steam pelo cartão: a prova automática mede a página publicada, que é
+    # a que o produto renderiza, até a segunda passagem trazer o desenho do todo (sem o «Abrir»).
     da_pagina = regua_do_mockup._gestos_cravados(
-        onde.pagina(PAGINA).read_text(encoding="utf-8"))
+        onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8"))
     assert desenho.ABRIR in {g.nome for g in da_pagina}, (
         "a página não oferece o `abrir-lancador` — a régua mediria o vazio")
     registrados = {n for (p, n) in pacotes.GESTOS if p in (PAGINA, "*")}
@@ -229,3 +231,19 @@ def test_o_botao_saiu_do_sem_dono(a07, desenho):
     assert "criar-perfil" in a07.SEM_DONO, (
         "o `criar-perfil` continua sem dono por decisão (é da aba Perfis) — se "
         "ele sumiu daqui, a declaração se perdeu junto")
+
+
+def test_o_desenho_do_todo_nao_tem_o_abrir_em_lancador_nenhum():
+    """17/10/2026 (todo-07-6): o «Abrir» sai do cartão; a fila tem só Identificar, Criar o perfil
+    de um jogo e Configurar. O desenho não oferece o gesto, e o instrumento enxerga quando ele
+    volta."""
+    from hefesto_dualsense4unix.interface import onde, regua_do_mockup
+
+    nomes = {g.nome for g in regua_do_mockup._gestos_cravados(
+        onde.pagina(PAGINA).read_text(encoding="utf-8"))}
+    assert nomes, "o desenho não oferece gesto algum — a régua mediria o vazio"
+    assert "abrir-lancador" not in nomes, "o «Abrir» voltou à fila da aba Experimental"
+    # A MORDIDA: a mesma leitura enxerga o gesto numa página que o traz.
+    com = regua_do_mockup._gestos_cravados(
+        '<button data-gesto="abrir-lancador" data-v="steam">Abrir</button>')
+    assert "abrir-lancador" in {g.nome for g in com}

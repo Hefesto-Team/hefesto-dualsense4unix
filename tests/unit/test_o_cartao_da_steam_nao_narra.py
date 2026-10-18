@@ -182,7 +182,6 @@ def test_enquanto_le_o_corpo_do_cartao_cala(desenho):
 
 
 @pytest.mark.parametrize("arquivo", [
-    RAIZ / "mockup" / PAGINA,
     INTERFACE / "paginas" / PAGINA,  # (noqa-acento): nome de pasta
 ])
 def test_a_pagina_nasce_com_o_corpo_calado(arquivo):
@@ -211,3 +210,10 @@ def test_os_tres_ramos_que_narravam_viram_rotulo_de_estado(desenho):
         assert linhas, f"o ramo {nome!r} ficou sem corpo — vazio vira travessão"
         narram = [x for x in linhas if not _e_rotulo_de_estado(x)]
         assert not narram, f"o ramo {nome!r} narra: {narram!r}"
+
+
+def test_o_desenho_da_fila_tambem_nasce_calado():
+    """17/10/2026: o desenho da 07 trocou o cartão pela fila e não tem `steam-diz`; a fila da
+    Steam não narra a leitura nem antes do primeiro tique."""
+    texto = (RAIZ / "mockup" / PAGINA).read_text(encoding="utf-8")
+    assert "Estou lendo" not in texto and "estou lendo" not in texto

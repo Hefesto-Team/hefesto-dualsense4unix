@@ -1,0 +1,32 @@
+<div class="tela-nova" id="novo-lancador">
+  <div class="tn-cx">
+    <div class="tn-topo">
+      <span class="tn-tit" data-dica="Comando, caminho do programa ou nome do atalho">Adicionar um lançador</span>
+
+      <a class="tn-x" href="#" title="Fechar">&times;</a>
+    </div>
+    <div class="tn-corpo">
+      <div class="lanc-novo-campo"><span>Como ele entra</span><div class="seg mini"><button class="on" data-dica="Um programa já instalado nesta máquina">Do sistema</button><button data-dica="Um pacote de extensão, como o Kyty">Como extensão</button></div></div>
+      <label class="lanc-novo-campo">
+        <span>Como ele se chama</span>
+        <input type="text" data-linha="lanc-novo-rotulo" placeholder="Ryujinx">
+      </label>
+      <label class="lanc-novo-campo">
+        <span>Onde ele está</span>
+        <div class="lanc-novo-linha">
+          <input type="text" data-linha="lanc-novo-alvo"
+                 placeholder="Ryujinx  ·  /opt/Ryujinx/Ryujinx  ·  org.ryujinx.Ryujinx">
+          <a class="btn" href="#novo-lancador"
+             data-gesto="procurar-o-arquivo"
+             data-hef-forma="novo-lancador"
+             >Escolher a pasta…</a>
+        </div>
+      </label>
+    </div>
+    <div class="tn-rod">
+      <a class="btn" href="#">Cancelar</a>
+      <a class="btn roxo" href="#" data-gesto="adicionar-lancador"
+         data-hef-forma="novo-lancador">Adicionar</a>
+    </div>
+  </div>
+</div>

@@ -72,10 +72,16 @@ def ctx():
 
 
 def _bancada() -> str:
-    """A página da BANCADA — o desenho de HOJE, não o congelado."""
+    """A página que o PRODUTO renderiza (a publicada).
+
+    17/10/2026: o desenho da 07 virou a aba Experimental do todo (filas e janelas) e anda à
+    frente do pacote, que ainda pinta os cartões. Até o `--publicar` da segunda passagem trazer o
+    desenho ao produto, esta régua mede o par que existe: o pacote e a página que ele pinta.
+    Quando o pacote passar a pintar a fila, `publicado=True` sai daqui e a régua volta ao desenho.
+    """
     from hefesto_dualsense4unix.interface import onde
 
-    caminho = onde.pagina(PAGINA)
+    caminho = onde.pagina(PAGINA, publicado=True)
     if not caminho.exists():
         pytest.fail(f"{caminho} não existe — a régua mediria o vazio.")
     return caminho.read_text(encoding="utf-8")

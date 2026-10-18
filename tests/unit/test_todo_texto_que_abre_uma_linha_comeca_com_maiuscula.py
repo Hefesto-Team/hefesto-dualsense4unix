@@ -60,7 +60,8 @@ ABAS = ("01-jogar", "02-controles", "03-gatilhos", "04-iluminacao", "05-vibracao
         "mapa-das-portas")
 
 LER = r"""(function(){
-  const _MARCAS = /^(iPhone|iPad|iPod|iOS|macOS|dB|dBm|mA|ms|kHz|MHz|GHz)\b/;
+  // https: o endereço de rede não é frase
+  const _MARCAS = /^(iPhone|iPad|iPod|iOS|macOS|dB|dBm|mA|ms|kHz|MHz|GHz|https?:\/\/)/;
   const FORA = new Set(['SCRIPT', 'STYLE', 'TEMPLATE', 'NOSCRIPT']);
   const visivel = e => {
     for (let x = e; x && x.nodeType === 1; x = x.parentElement) {
@@ -210,7 +211,11 @@ def test_a_08_com_a_tela_aberta_por_ancora_abre_toda_linha_com_maiuscula(ancora:
 #: as telas por âncora», em todas as abas.
 ANCORAS_DAS_OUTRAS = (
     ("06-navegacao", "acessibilidade"),
-    ("07-lancadores", "novo-lancador"), ("07-lancadores", "escolher-jogo"))
+    ("07-lancadores", "novo-lancador"), ("07-lancadores", "escolher-jogo"),
+    # 17/10/2026, acessorios-07-depois: as janelas que a aba Experimental do todo ganhou
+    ("07-lancadores", "lovense"), ("07-lancadores", "impedimentos"),
+    ("07-lancadores", "lanc-conf"), ("07-lancadores", "kyty"),
+    ("07-lancadores", "buttplug"), ("07-lancadores", "acessorios"))
 
 
 @pytest.mark.parametrize(("aba", "ancora"), ANCORAS_DAS_OUTRAS)
