@@ -13,11 +13,11 @@ from pathlib import Path
 from typing import Any
 
 from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError, Lugares
-from hefesto_dualsense4unix.mods.manifesto import COR_HEXA, Manifesto, Opcao
+from hefesto_dualsense4unix.mods.manifesto import CHAVE_DE_JOGO, COR_HEXA, Manifesto, Opcao
 
 NOME_DO_ARQUIVO = "opcoes.json"
 
-Valor = str | bool | float
+Valor = str | bool | float | list[str]
 
 
 def caminho(mod_id: str, lugares: Lugares) -> Path:
@@ -29,11 +29,13 @@ def padrao_de(opcao: Opcao) -> Valor:
     if opcao.padrao is not None:
         if opcao.tipo == "cor" and isinstance(opcao.padrao, str):
             return opcao.padrao.lower()
-        return opcao.padrao
+        return list(opcao.padrao) if isinstance(opcao.padrao, list) else opcao.padrao
     if opcao.tipo == "escolha":
         return opcao.escolhas[0]
     if opcao.tipo == "cor":
         return "#ffffff"
+    if opcao.tipo == "jogos":
+        return []
     return False if opcao.tipo == "ligado" else 0.0
 
 
@@ -55,6 +57,15 @@ def validar(opcao: Opcao, valor: Any) -> Valor:
         if not isinstance(valor, str) or not COR_HEXA.match(valor):
             raise InstalacaoRecusadaError(f"«{opcao.rotulo}» pede uma cor no formato #rrggbb.")
         return valor.lower()
+    if opcao.tipo == "jogos":
+        return _jogos_validos(opcao, valor)
+    numero = _numero_valido(opcao, valor)
+    if opcao.tipo == "deslizante":
+        return _na_faixa_do_deslizante(opcao, numero)
+    return numero
+
+
+def _numero_valido(opcao: Opcao, valor: Any) -> float:
     try:
         numero = float(str(valor).replace(",", "."))
     except ValueError:
@@ -62,6 +73,27 @@ def validar(opcao: Opcao, valor: Any) -> Valor:
     if numero != numero or numero in (float("inf"), float("-inf")):
         raise InstalacaoRecusadaError(f"«{opcao.rotulo}» pede um número.")
     return numero
+
+
+def _na_faixa_do_deslizante(opcao: Opcao, numero: float) -> float:
+    """O número no degrau mais perto do passo; fora da faixa do manifesto, a recusa."""
+    minimo, maximo, passo = opcao.minimo, opcao.maximo, opcao.passo
+    if minimo is None or maximo is None or passo is None:
+        raise InstalacaoRecusadaError(f"«{opcao.rotulo}» não declara a faixa.")
+    if not minimo <= numero <= maximo:
+        raise InstalacaoRecusadaError(
+            f"«{opcao.rotulo}» vai de {minimo:g} a {maximo:g}; {numero:g} está fora.")
+    degraus = round((numero - minimo) / passo)
+    return min(maximo, round(minimo + degraus * passo, 6))
+
+
+def _jogos_validos(opcao: Opcao, valor: Any) -> list[str]:
+    """A lista de chaves de jogo, sem repetir e na ordem em que veio."""
+    if not isinstance(valor, (list, tuple)) or not all(
+        isinstance(x, str) and CHAVE_DE_JOGO.match(x) for x in valor
+    ):
+        raise InstalacaoRecusadaError(f"«{opcao.rotulo}» pede uma lista de jogos.")
+    return list(dict.fromkeys(valor))
 
 
 def _guardados(mod_id: str, lugares: Lugares) -> dict[str, Any]:

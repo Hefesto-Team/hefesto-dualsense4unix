@@ -70,29 +70,34 @@ def _o_jogo_em_cena_do_servico(daemon: object) -> Callable[[], int | None]:
 class AnunciadorDoJogo:
     """Diz no barramento o perfil que mudou (`perfil.trocou`) e o jogo que fechou (`jogo.fechou`).
 
-    A-VIBRACAO-DO-CONTROLE-CHEGA-AOS-ACESSORIOS-PELO-BUTTPLUG-01. Olha o que o serviço já
-    sabe a cada leitura da janela, que é o tique do autoswitch: o perfil ativo do store, que
-    toda ativação publica, de qualquer origem (a janela, o jogo em cena, a tela, o terminal), e
-    o `appid_em_cena` do serviço. A primeira leitura diz o perfil de agora (a carga inicial), e
-    o barramento o guarda para quem assina depois. A marca que muda no arquivo do perfil que
-    já está ativo (a pessoa marca o jogo aberto) também é troca: o estado guardado não pode
-    ficar velho. Quando o jogo fecha, quem vibrava recebe primeiro o zero que faltava e só
-    depois sai `jogo.fechou`, e a batida para.
+    O `perfil.trocou` diz QUAL jogo é, e nunca leva marca: `perfil`, `jogo` (`steam_app_<N>`,
+    ou `None` fora de jogo), `estilo` e `controles` (jogador, perfil, jogo e estilo de cada um).
+    Publica só quando o dito muda; a primeira leitura é a carga inicial, que o barramento guarda.
+    Quando o jogo fecha, sai o zero de quem vibrava, depois `jogo.fechou`, depois o perfil sem jogo.
+    `jogo_de(uniq)` dá o appid de UM controle; sem ele, todos estão no jogo em cena do serviço.
     """
 
     _NUNCA: object = object()
 
-    def __init__(self, bus: EventBus, store: Any, daemon: Any) -> None:
+    def __init__(
+        self,
+        bus: EventBus,
+        store: Any,
+        daemon: Any,
+        jogo_de: Callable[[str], int | None] | None = None,
+    ) -> None:
         self._bus = bus
         self._store = store
         self._daemon = daemon
+        self._jogo_de = jogo_de
         self._perfil: object = self._NUNCA
         self._arquivo: object = self._NUNCA
+        self._estilo: str | None = None
         self._appid: int | None = None
 
     def ver(self) -> None:
         """Compara com o que disse da última vez e diz a diferença. Nunca levanta."""
-        for passo in (self._ver_o_perfil, self._ver_o_jogo):
+        for passo in (self._ver_o_jogo, self._ver_o_perfil):
             try:
                 passo()
             except Exception as exc:
@@ -102,21 +107,47 @@ class AnunciadorDoJogo:
         nome = getattr(self._store, "active_profile", None)
         nome = nome if isinstance(nome, str) and nome else None
         arquivo = (nome, _carimbo_do_perfil(nome))
-        if arquivo == self._arquivo:
-            return
-        self._arquivo = arquivo
-        dito = (nome, _marcas_do_perfil(nome))
+        if arquivo != self._arquivo:
+            self._estilo = _estilo_do_perfil(nome)
+            self._arquivo = arquivo
+        controles = self._controles(nome)
+        dito = (nome, self._estilo, _chave_do_jogo(self._em_cena()), controles)
         if dito == self._perfil:
             return
         self._perfil = dito
         self._bus.publish(
             EventTopic.PERFIL_TROCOU,
-            {"perfil": dito[0], "marcas": dito[1], "t": time.monotonic()},
+            {
+                "perfil": dito[0],
+                "estilo": dito[1],
+                "jogo": dito[2],
+                "controles": [dict(c) for c in controles],
+                "t": time.monotonic(),
+            },
         )
 
-    def _ver_o_jogo(self) -> None:
+    def _em_cena(self) -> int | None:
         appid = getattr(self._daemon, "appid_em_cena", None)
-        appid = appid if isinstance(appid, int) and not isinstance(appid, bool) else None
+        return appid if isinstance(appid, int) and not isinstance(appid, bool) else None
+
+    def _controles(self, nome: str | None) -> tuple[tuple[tuple[str, Any], ...], ...]:
+        """Um item por controle, na ordem do serviço; cada item é um mapa congelado (comparável)."""
+        from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import controles_do_daemon
+        from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import _jogador_de
+
+        itens = []
+        for controle in controles_do_daemon(self._daemon):
+            appid = self._jogo_de(controle.uniq) if self._jogo_de is not None else self._em_cena()
+            itens.append((
+                ("jogador", _jogador_de(self._daemon, controle.uniq)),
+                ("perfil", nome),
+                ("jogo", _chave_do_jogo(appid)),
+                ("estilo", self._estilo),
+            ))
+        return tuple(itens)
+
+    def _ver_o_jogo(self) -> None:
+        appid = self._em_cena()
         anterior, self._appid = self._appid, appid
         if anterior is None or appid == anterior:
             return
@@ -145,15 +176,19 @@ def _carimbo_do_perfil(nome: str | None) -> int | None:
     return alvo.stat().st_mtime_ns if alvo.exists() else None
 
 
-def _marcas_do_perfil(nome: str | None) -> list[str]:
-    """As marcas que o arquivo do perfil guarda agora, sem semear nem varrer o disco."""
+def _estilo_do_perfil(nome: str | None) -> str | None:
+    """O estilo que o arquivo do perfil guarda agora, sem semear nem varrer o disco."""
     if nome is None:
-        return []
+        return None
     from hefesto_dualsense4unix.profiles.loader import perfil_em_disco
 
-    perfil = perfil_em_disco(nome)
-    marcas = getattr(perfil, "marcas", None)
-    return [m for m in marcas if isinstance(m, str)] if marcas else []
+    estilo = getattr(perfil_em_disco(nome), "estilo", None)
+    return estilo if isinstance(estilo, str) and estilo else None
+
+
+def _chave_do_jogo(appid: int | None) -> str | None:
+    """A chave do jogo no evento: a classe de janela da Steam, ou `None` fora de jogo."""
+    return f"steam_app_{appid}" if appid is not None and appid > 0 else None
 
 
 def _anunciador_do(bus: object, store: Any, daemon: object) -> AnunciadorDoJogo | None:

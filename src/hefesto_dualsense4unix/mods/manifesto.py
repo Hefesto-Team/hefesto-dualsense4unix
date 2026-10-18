@@ -46,9 +46,10 @@ TOPICOS_DE_LEITURA: dict[str, tuple[str, ...]] = {
     # permissões à parte da vibração, porque são dois sinais diferentes e a extensão escolhe.
     "jogo.gatilho": (EventTopic.JOGO_GATILHO,),  # (noqa-acento): contrato ASCII
     "jogo.haptica": (EventTopic.JOGO_HAPTICA,),  # (noqa-acento): contrato ASCII
-    # O perfil efetivo e as marcas dele. Fica à parte do jogo: saber que o perfil tem a marca
-    # «Adulto» é dado da pessoa, e quem só quer a vibração não o recebe.
-    "perfil.marcas": (EventTopic.PERFIL_TROCOU,),
+    # O perfil efetivo, o jogo e o estilo de cada controle (`perfil.trocou`, sem marca nenhuma).
+    # Fica à parte da vibração: saber QUAL jogo está aberto é dado da pessoa, e quem só quer a
+    # vibração não o recebe.
+    "perfil.jogo": (EventTopic.PERFIL_TROCOU,),
     # Os gestos do PS que comandam os acessórios (sobe, desce, para, perfil…). A mesma permissão
     # deixa a modificação devolver o estado (`acessorios.estado`), que liga e desliga os gestos.
     "acessorios.gesto": (EventTopic.ACESSORIOS_GESTO,),  # (noqa-acento): contrato ASCII
@@ -77,7 +78,7 @@ _O_QUE_DEIXA: dict[str, str] = {
     "ler:jogo.haptica": (  # (noqa-acento): contrato ASCII
         "Saber a intensidade da vibração fina que o jogo manda a cada controle."
     ),
-    "ler:perfil.marcas": "Saber o perfil em uso e as marcas dele.",
+    "ler:perfil.jogo": "Saber o perfil, o jogo e o estilo em uso em cada controle.",
     "ler:acessorios.gesto": (  # (noqa-acento): contrato ASCII
         "Receber os gestos do botão PS que comandam os acessórios, sem receber botão nenhum."
     ),
@@ -98,6 +99,9 @@ _O_QUE_DEIXA: dict[str, str] = {
 
 #: A cor de uma opção ``cor``: ``#rrggbb``, minúsculas ou maiúsculas.
 COR_HEXA = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+#: A chave de um jogo numa opção ``jogos`` e no ``perfil.trocou``: a classe de janela da Steam.
+CHAVE_DE_JOGO = re.compile(r"^steam_app_[0-9]{1,12}$")
 
 _SPDX = re.compile(r"^[A-Za-z0-9.+-]+(?: (?:AND|OR|WITH) [A-Za-z0-9.+-]+)*$")
 _CLAUSULA_DA_FAIXA = re.compile(r"^(>=|<=|==|>|<)?\s*(\d+)$")
@@ -172,9 +176,14 @@ class Opcao(BaseModel):
 
     id: str
     rotulo: str = Field(min_length=1, max_length=60)
-    tipo: Literal["escolha", "ligado", "numero", "cor"]
+    tipo: Literal["escolha", "ligado", "numero", "cor", "deslizante", "jogos"]
     escolhas: list[str] = Field(default_factory=list)
-    padrao: str | bool | float | None = None
+    padrao: str | bool | float | list[str] | None = None
+    # O ``deslizante`` declara a faixa inteira e a posição inicial (obrigatória e
+    # dentro da faixa); os três ficam vazios nos outros tipos.
+    minimo: float | None = None
+    maximo: float | None = None
+    passo: float | None = None
     # A aba interna da janela em que a opção mora; sem ela, a opção vai à primeira aba. Com
     # um grupo só, a janela não desenha aba nenhuma.
     grupo: str | None = Field(default=None, min_length=1, max_length=30)
@@ -194,7 +203,33 @@ class Opcao(BaseModel):
             isinstance(self.padrao, str) and COR_HEXA.match(self.padrao)
         ):
             raise ValueError(f"a opção {self.id} é de cor e o padrão não é #rrggbb")
+        if self.tipo == "deslizante":
+            self._conferir_o_deslizante()
+        elif (self.minimo, self.maximo, self.passo) != (None, None, None):
+            raise ValueError(f"a opção {self.id} não é deslizante e declara faixa ou passo")
+        if self.tipo == "jogos":
+            self._conferir_os_jogos()
+        elif isinstance(self.padrao, list):
+            raise ValueError(f"a opção {self.id} não é de jogos e o padrão é uma lista")
         return self
+
+    def _conferir_o_deslizante(self) -> None:
+        if self.minimo is None or self.maximo is None or self.passo is None:
+            raise ValueError(f"o deslizante {self.id} precisa de mínimo, máximo e passo")
+        if not self.minimo < self.maximo or self.passo <= 0:
+            raise ValueError(f"o deslizante {self.id} tem a faixa ou o passo fora de ordem")
+        if isinstance(self.padrao, bool) or not isinstance(self.padrao, (int, float)):
+            raise ValueError(f"o deslizante {self.id} precisa do padrão: a posição inicial")
+        if not self.minimo <= self.padrao <= self.maximo:
+            raise ValueError(f"o padrão do deslizante {self.id} está fora da faixa")
+
+    def _conferir_os_jogos(self) -> None:
+        if self.padrao is None:
+            return
+        if not isinstance(self.padrao, list) or not all(
+            isinstance(x, str) and CHAVE_DE_JOGO.match(x) for x in self.padrao
+        ):
+            raise ValueError(f"o padrão da opção {self.id} é uma lista de chaves de jogo")
 
 
 class Manifesto(BaseModel):

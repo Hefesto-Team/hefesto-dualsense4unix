@@ -38,6 +38,8 @@ class EventTopic:
     JOGO_FECHOU = "jogo.fechou"
     JOGO_GATILHO = "jogo.gatilho"
     JOGO_HAPTICA = "jogo.haptica"
+    #: `{perfil, jogo, estilo, controles: [{jogador, perfil, jogo, estilo}], t}`: `jogo` é
+    #: `steam_app_<N>` ou `None` fora de jogo, e nenhuma marca sai aqui.
     PERFIL_TROCOU = "perfil.trocou"
     ACESSORIOS_GESTO = "acessorios.gesto"
     ACESSORIOS_ESTADO = "acessorios.estado"

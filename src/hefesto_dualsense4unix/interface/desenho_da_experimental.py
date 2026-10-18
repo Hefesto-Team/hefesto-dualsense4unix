@@ -277,9 +277,15 @@ class OpcaoDaJanela(NamedTuple):
     id: str
     rotulo: str
     tipo: str
-    valor: str | bool | float
+    valor: str | bool | float | Sequence[str]
     escolhas: tuple[str, ...] = ()
     grupo: str = ""
+    # O ``deslizante`` desenha a faixa do manifesto; o ``jogos`` desenha uma caixa por jogo,
+    # cada um como (chave, nome), marcada se a chave está no valor.
+    minimo: float = 0
+    maximo: float = 0
+    passo: float = 1
+    jogos: tuple[tuple[str, str], ...] = ()
 
 
 OPCOES_DE_EXEMPLO = (
@@ -302,13 +308,33 @@ def _controle_da_opcao(o: OpcaoDaJanela) -> str:
     if o.tipo == "cor":
         return (f'<input class="ext-cor-in" type="color" {alvo} '
                 f'value="{_a(o.valor)}" aria-label="{_a(o.rotulo)}">')
+    if o.tipo == "deslizante":
+        return (f'<span class="ext-desl"><input type="range" min="{o.minimo:g}" '
+                f'max="{o.maximo:g}" step="{o.passo:g}" value="{_a(o.valor)}" {alvo} '
+                f'aria-label="{_a(o.rotulo)}" '
+                f'oninput="this.nextElementSibling.textContent=this.value">'
+                f'<b>{_e(o.valor)}</b></span>')
+    if o.tipo == "jogos":
+        return _jogos_da_opcao(o)
     return (f'<input class="ext-num" type="text" inputmode="decimal" {alvo} '
             f'value="{_a(o.valor)}" aria-label="{_a(o.rotulo)}">')
 
 
+def _jogos_da_opcao(o: OpcaoDaJanela) -> str:
+    """Uma caixa por jogo que tem perfil; a lista nasce vazia e a caixa age no ``change``."""
+    if not o.jogos:
+        return '<span class="ext-vazia">Nenhum jogo tem perfil ainda.</span>'
+    marcados = set(o.valor) if isinstance(o.valor, (list, tuple)) else set()
+    caixas = "".join(
+        f'<label class="jg-l"><input type="checkbox"{" checked" if chave in marcados else ""} '
+        f'data-gesto="guardar-opcao-da-modificacao" data-v="{_a(o.mod)}:{_a(o.id)}:{_a(chave)}">'
+        f'<span class="jg-n">{_e(nome)}</span></label>' for chave, nome in o.jogos)
+    return f'<div class="jg-lista ext-jogos" aria-label="{_a(o.rotulo)}">{caixas}</div>'
+
+
 def _linhas_das_opcoes(opcoes: Sequence[OpcaoDaJanela]) -> str:
     return "".join(
-        f'<div class="lc-linha"><span>{_e(o.rotulo)}</span>'
+        f'<div class="lc-linha{" lc-larga" if o.tipo == "jogos" else ""}"><span>{_e(o.rotulo)}</span>'
         f'<span class="lc-val">{_controle_da_opcao(o)}</span></div>' for o in opcoes)
 
 

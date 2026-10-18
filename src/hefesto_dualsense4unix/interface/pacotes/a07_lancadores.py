@@ -1869,6 +1869,31 @@ def _valor_na_tela(valor: Any) -> Any:
     return int(valor) if isinstance(valor, float) and valor == int(valor) else valor
 
 
+def _jogos_com_perfil() -> tuple[tuple[str, str], ...]:
+    """Os jogos que o Hefesto conhece: (``steam_app_<N>``, nome do perfil), na ordem dos nomes.
+
+    É o perfil que declara o jogo (``match.window_class``); sem perfil, o jogo não está aqui.
+    """
+    from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+    from hefesto_dualsense4unix.profiles.schema import MatchCriteria
+    from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
+
+    try:
+        perfis = list(load_all_profiles())
+    except Exception:
+        _LOG.debug("perfis_ilegiveis_para_a_lista_de_jogos", exc_info=True)
+        return ()
+    achados: dict[str, str] = {}
+    for perfil_ in perfis:
+        if not isinstance(perfil_.match, MatchCriteria):
+            continue
+        for classe in perfil_.match.window_class:
+            appid = steam_appid_from_wm_class(classe)
+            if appid is not None:
+                achados.setdefault(f"steam_app_{appid}", perfil_.name)
+    return tuple(sorted(achados.items(), key=lambda par: (par[1].casefold(), par[0])))
+
+
 def _montar_a_janela_da_extensao(mod_id: str, aba: str = "") -> None:
     """O miolo da janela de opções, com o valor de agora de cada opção que o manifesto declara.
 
@@ -1881,9 +1906,12 @@ def _montar_a_janela_da_extensao(mod_id: str, aba: str = "") -> None:
     if manifesto is None:
         raise RuntimeError("O manifesto desta extensão não pôde ser lido. Nada foi alterado.")
     valores = opcoes.ler(manifesto, _lugares())
+    jogos = _jogos_com_perfil() if any(x.tipo == "jogos" for x in manifesto.opcoes) else ()
     linhas = [exp.OpcaoDaJanela(
         mod=mod_id, id=x.id, rotulo=x.rotulo, tipo=x.tipo, valor=_valor_na_tela(valores[x.id]),
-        escolhas=tuple(x.escolhas), grupo=x.grupo or "") for x in manifesto.opcoes]
+        escolhas=tuple(x.escolhas), grupo=x.grupo or "", minimo=x.minimo or 0,
+        maximo=x.maximo or 0, passo=x.passo or 1,
+        jogos=jogos if x.tipo == "jogos" else ()) for x in manifesto.opcoes]
     _MEXIDA.mod = mod_id
     _MEXIDA.html_mod = exp.modificacao_miolo_html(
         manifesto.nome, linhas, manifesto.descricao, aba)
@@ -1943,7 +1971,8 @@ def configurar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str
        grava="_guardar_a_opcao_da_modificacao")
 def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Uma opção da janela. A caixa e o número agem no ``change``; a chave de ligado, no clique."""
-    mod_id, _, opcao_id = _id_do_clique(o, "guardar-opcao-da-modificacao").partition(":")
+    mod_id, _, resto = _id_do_clique(o, "guardar-opcao-da-modificacao").partition(":")
+    opcao_id, _, jogo = resto.partition(":")
     item = _a_instalada(mod_id)
     declaradas = item.manifesto.opcoes if item.manifesto else ()
     opcao = next((x for x in declaradas if x.id == opcao_id), None)
@@ -1954,6 +1983,10 @@ def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
         if evento == "change":
             return None
         valor: Any = not bool(_valor_guardado(item, opcao))
+    elif opcao.tipo == "jogos":
+        if evento == "click":
+            return None
+        valor = _jogos_com_a_caixa(_valor_guardado(item, opcao), jogo)
     else:
         if evento == "click":
             return None
@@ -1961,6 +1994,17 @@ def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
     _guardar_a_opcao_da_modificacao(item, opcao_id, valor)
     _montar_a_janela_da_extensao(mod_id, opcao.grupo or "")
     return _a_pintura_agora(ctx)
+
+
+def _jogos_com_a_caixa(marcados: list[str], jogo: str) -> list[str]:
+    """A lista com a caixa virada: o jogo sai se estava nela, entra no fim se não estava."""
+    if not jogo:
+        raise RuntimeError("Qual jogo? O clique não disse. Nada foi guardado.")
+    if jogo in marcados:
+        return [x for x in marcados if x != jogo]
+    if jogo not in {chave for chave, _nome in _jogos_com_perfil()}:
+        raise RuntimeError("Esse jogo não tem perfil. Nada foi guardado.")
+    return [*marcados, jogo]
 
 
 def _valor_guardado(item: _Instalada, opcao: Any) -> Any:

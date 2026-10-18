@@ -424,6 +424,12 @@
 .ext-menu:empty { display:none }
 .ext-menu .btn.mini { height:26px;padding:0 10px;font-size:11px;text-decoration:none }
 .ext-menu .ext-perm { flex:1 0 100%;display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--texto-suave) }
+.ext-desl { display:flex;align-items:center;gap:8px;width:100% }
+.ext-desl input[type=range] { flex:1;min-width:0;height:24px;accent-color:var(--pink);margin:0 }
+.ext-desl b { font:600 12px 'JetBrains Mono',ui-monospace,monospace;color:var(--fg);min-width:28px;text-align:right }
+.lc-linha.lc-larga { grid-template-columns:minmax(0,1fr);row-gap:4px;padding:6px 0 }
+.lc-larga .lc-val { display:block }
+.ext-jogos { max-height:190px }
 .ext-num { width:84px;height:24px;border-radius:6px;padding:0 8px;border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg);font-family:inherit;font-size:11px }
 .mg-abas { display:flex;flex-wrap:wrap;position:relative }
 .mg-abas > input { position:absolute;width:0;height:0;opacity:0;pointer-events:none }

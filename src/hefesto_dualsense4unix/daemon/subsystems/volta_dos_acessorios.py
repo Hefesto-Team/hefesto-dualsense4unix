@@ -460,7 +460,13 @@ def volta_de_producao(daemon: Any) -> VoltaDosAcessorios:
         bus = getattr(daemon, "bus", None)
         ultimo = getattr(bus, "ultimo", None)  # (noqa-acento): o nome do método do barramento
         carga = ultimo(EventTopic.PERFIL_TROCOU) if callable(ultimo) else None
-        lista = carga.get("marcas") if isinstance(carga, dict) else None
+        nome = carga.get("perfil") if isinstance(carga, dict) else None
+        if not isinstance(nome, str):
+            return frozenset()
+        # O evento não leva marca (diz o jogo e o estilo): a marca é do arquivo do perfil.
+        from hefesto_dualsense4unix.profiles.loader import perfil_em_disco
+
+        lista = getattr(perfil_em_disco(nome), "marcas", None)
         return frozenset(str(m) for m in lista) if isinstance(lista, (list, tuple)) else frozenset()
 
     return VoltaDosAcessorios(Ligacoes(

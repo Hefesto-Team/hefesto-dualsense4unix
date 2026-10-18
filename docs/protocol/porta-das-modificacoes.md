@@ -59,10 +59,14 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   `nome: "jogo.fechou"` (`{appid, t}`) diz que o jogo em cena saiu; quem vibrava recebe antes o zero que
   faltava. A batida roda no tique do gamepad virtual do P1, e `jogo.fechou` sai do tique do autoswitch (só com
   ele ligado): no Modo Nativo o Hefesto não vê a vibração;
-- `perfil.marcas` (`ler:perfil.marcas`) entrega `nome: "perfil.trocou"`: `{perfil, marcas: [...], t}`, a cada
-  troca do perfil efetivo ou das marcas do arquivo dele (a marca posta no jogo já aberto também vale). É estado, não evento: o serviço guarda o último, e quem assina depois recebe o
-  de agora logo na assinatura. As marcas são as do arquivo do perfil (`[]` sem marca), e o envelope leva o
-  `uniq` do posto;
+- `perfil.jogo` (`ler:perfil.jogo`) entrega `nome: "perfil.trocou"`: `{perfil, jogo, estilo, controles: [...], t}`,
+  em que `jogo` é a chave do jogo em cena (`steam_app_<N>`, ou `null` fora de jogo), `perfil` o nome do perfil
+  efetivo e `estilo` a chave do estilo dele (ou `null`). `controles` tem um item por controle,
+  `{jogador, perfil, jogo, estilo}`, com o número que o controle acende (ou `null`): a extensão segue o
+  controle cujo `jogo` está na lista que a pessoa escolheu. Sai a cada troca de perfil, de jogo ou de estilo
+  (no arquivo do perfil), e quando um controle entra ou sai; quando o jogo fecha, sai depois do `jogo.fechou`.
+  É estado, não evento: o serviço guarda o último, e quem assina depois recebe o de agora logo na assinatura.
+  Nenhuma marca do perfil sai neste evento, nem em outro, e o envelope leva o `uniq` do posto;
 - `jogo.gatilho` (`ler:jogo.gatilho`) entrega `nome: "jogo.gatilho"`: o efeito que o jogo escreveu no gatilho de
   UM controle, de P1 a P4, `{uniq, jogador, lado, modo, forca, posicao, t}`. `lado` é `esquerdo` ou `direito`;
   `modo` é `desligado`, `resistencia`, `arco`, `galope`, `arma`, `vibracao`, `metralhadora` ou `outro`; `forca`
@@ -129,15 +133,20 @@ escrever nada:
 A interface desenha a janela «Configurar» de cada extensão do que o `hefesto-mod.json` declara, sem
 código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opcionais, `escolhas`, `padrao` e `grupo`.
 
-- **`tipo`**: `escolha` (lista em `escolhas`), `ligado`, `numero` e `cor`. A `cor` é um seletor de cor da
-  interface; o valor é `#rrggbb` em minúsculas, e um `padrao` que não seja `#rrggbb` recusa o manifesto.
+- **`tipo`**: `escolha` (lista em `escolhas`), `ligado`, `numero`, `cor`, `deslizante` e `jogos`. A `cor` é um
+  seletor de cor da interface; o valor é `#rrggbb` em minúsculas, e um `padrao` que não seja `#rrggbb` recusa
+  o manifesto. O `deslizante` declara `minimo`, `maximo` e `passo` (`minimo` menor que `maximo`, `passo`
+  maior que zero) e o `padrao`, **obrigatório** e dentro da faixa: é a posição inicial; a janela desenha um
+  `input[type=range]` com a faixa dele, e o valor guardado cai no degrau do `passo` mais perto. Os `jogos` são
+  uma lista de chaves `steam_app_<N>`: a janela desenha uma caixa por jogo que tem perfil no Hefesto, o
+  `padrao` é a lista vazia (nenhum jogo marcado) e o valor é a lista das chaves marcadas.
 - **`grupo`**: o nome (até 30 letras) da aba interna em que a opção mora. Com dois ou mais grupos a janela
   desenha uma aba por grupo, na ordem em que aparecem; a opção sem grupo vai à primeira aba; com um grupo
   só, não há aba. Ao mudar uma opção a janela reabre na aba dela.
 - **onde ficam os valores**: a tela grava cada opção em `<dados>/<id>/opcoes.json`, um objeto `{id: valor}`, em
   `0600`, depois de validar contra o manifesto. A extensão lê o mesmo arquivo na pasta de dados
   (`HEFESTO_MOD_DADOS`). Valor ausente, ou que o manifesto não aceita mais, vale o `padrao` (sem `padrao`: a
-  primeira `escolha`, `false`, `0` ou `#ffffff`).
+  primeira `escolha`, `false`, `0`, `#ffffff` ou a lista vazia).
 - **`agora`**: a lista do que a coluna «Agora» mostra, ao vivo, do `acessorios.estado` da extensão:
   `nivel`, `perfil` e `aparelhos`, sem repetir.
 - **`parar_tudo`**: `true` pede o botão «Parar tudo», sempre à vista: ele manda a ela o gesto `para`, e o

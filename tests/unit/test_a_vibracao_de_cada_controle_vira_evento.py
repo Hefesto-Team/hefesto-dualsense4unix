@@ -3,7 +3,7 @@
 O que o jogo pede de vibração a cada controle sai no barramento (``jogo.vibracao``),
 com o ``uniq`` e o número do jogador de CADA um, e uma modificação com a permissão
 ``ler:jogo.vibracao`` o recebe pela porta, junto com ``jogo.fechou``. O perfil
-efetivo e as marcas dele saem em ``perfil.trocou`` (permissão ``ler:perfil.marcas``) e
+efetivo, o jogo e o estilo dele saem em ``perfil.trocou`` (permissão ``ler:perfil.jogo``) e
 chegam também a quem assina depois.
 
 O backend, o ``apply_game_rumble``, o barramento, a porta e o ``AutoSwitcher`` de
@@ -20,7 +20,7 @@ AS MORDIDAS (executadas na implementação, uma a uma, com o md5 conferido na vo
 * tirar o teto de 60 por segundo → ``test_o_teto_de_60_por_segundo_nao_perde_o_ultimo_valor``
   reprova;
 * a batida que não para no zero → ``test_a_batida_para_quando_o_valor_volta_a_zero`` reprova;
-* o ``perfil.trocou`` sem ``marcas`` → ``test_o_perfil_adulto_publica_as_marcas`` reprova;
+* o ``perfil.trocou`` sem ``estilo`` → ``test_o_perfil_publica_o_estilo_e_nenhuma_marca`` reprova;
 * o leitor da janela sem o anunciador (`_anunciando` devolve o leitor puro) →
   `test_as_duas_rotas_de_subida_ligam_o_anunciador` reprova nas duas rotas;
 * o barramento sem guardar o estado → ``test_a_conexao_tardia_recebe_o_perfil_de_agora``
@@ -33,7 +33,7 @@ As da conferência (13/10/2026), na mesma forma:
 * ``jogo.fechou`` publicado antes do zero de quem vibrava →
   ``test_quem_vibrava_recebe_o_zero_antes_do_jogo_fechou`` reprova;
 * o anunciador que só compara o nome do perfil →
-  ``test_a_marca_nova_no_perfil_ativo_vira_troca`` reprova;
+  ``test_o_estilo_novo_no_perfil_ativo_vira_troca`` reprova;
 * a tabela criada sem a trava da criação →
   ``test_dois_controles_que_comecam_juntos_ficam_os_dois_na_tabela`` reprova.
 """
@@ -358,8 +358,8 @@ def test_quem_vibrava_recebe_o_zero_antes_do_jogo_fechou(
     )
 
 
-def test_a_marca_nova_no_perfil_ativo_vira_troca(mesa: _Mesa) -> None:
-    """A pessoa marca «Adulto» no jogo que já está aberto: o estado guardado não fica velho."""
+def test_o_estilo_novo_no_perfil_ativo_vira_troca(mesa: _Mesa) -> None:
+    """A pessoa troca o estilo do perfil que já está ativo: o estado guardado não fica velho."""
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
     save_profile(Profile(name="noite", match=MatchAny(), priority=5))
@@ -370,15 +370,15 @@ def test_a_marca_nova_no_perfil_ativo_vira_troca(mesa: _Mesa) -> None:
 
     arquivo = profiles_dir() / "noite.json"
     antes = arquivo.stat().st_mtime_ns
-    save_profile(Profile(name="noite", match=MatchAny(), priority=5, marcas=["adulto"]))
+    save_profile(Profile(name="noite", match=MatchAny(), priority=5, estilo="terror"))
     os.utime(arquivo, ns=(antes + 10**9, antes + 10**9))  # o relógio do disco andou
     anunciador.ver()
     anunciador.ver()
 
-    assert [(e["perfil"], e["marcas"]) for e in escuta.tudo()] == [
-        ("noite", []),
-        ("noite", ["adulto"]),
-    ], "a marca nova no perfil ativo não chegou a quem acompanha"
+    assert [(e["perfil"], e["estilo"]) for e in escuta.tudo()] == [
+        ("noite", None),
+        ("noite", "terror"),
+    ], "o estilo novo no perfil ativo não chegou a quem acompanha"
 
 
 def test_dois_controles_que_comecam_juntos_ficam_os_dois_na_tabela(mesa: _Mesa) -> None:
@@ -409,8 +409,9 @@ def test_dois_controles_que_comecam_juntos_ficam_os_dois_na_tabela(mesa: _Mesa) 
     assert sorted(vista.linhas) == sorted(UNIQS), "um controle perdeu a batida na largada"
 
 
-def test_o_perfil_adulto_publica_as_marcas(mesa: _Mesa) -> None:
-    save_profile(Profile(name="noite", match=MatchAny(), priority=5, marcas=["adulto"]))
+def test_o_perfil_publica_o_estilo_e_nenhuma_marca(mesa: _Mesa) -> None:
+    save_profile(Profile(name="noite", match=MatchAny(), priority=5, estilo="terror",
+                         marcas=["adulto"]))
     save_profile(Profile(name="dia", match=MatchAny(), priority=5))
     mesa.store.set_active_profile("noite")
     escuta = _Escuta(mesa.daemon.bus, EventTopic.PERFIL_TROCOU)
@@ -422,18 +423,19 @@ def test_o_perfil_adulto_publica_as_marcas(mesa: _Mesa) -> None:
     anunciador.ver()
 
     eventos = escuta.tudo()
-    assert [(e["perfil"], e["marcas"]) for e in eventos] == [("noite", ["adulto"]), ("dia", [])]
+    assert [(e["perfil"], e["estilo"]) for e in eventos] == [("noite", "terror"), ("dia", None)]
+    assert all("marcas" not in e for e in eventos), "o evento voltou a levar a marca do perfil"
 
 
 def test_a_conexao_tardia_recebe_o_perfil_de_agora(mesa: _Mesa) -> None:
-    save_profile(Profile(name="noite", match=MatchAny(), priority=5, marcas=["adulto"]))
+    save_profile(Profile(name="noite", match=MatchAny(), priority=5, estilo="terror"))
     mesa.store.set_active_profile("noite")
     bus = mesa.daemon.bus
     AnunciadorDoJogo(bus, mesa.store, SimpleNamespace()).ver()  # ninguém assinava ainda
 
     tardia = _Escuta(bus, EventTopic.PERFIL_TROCOU)
 
-    assert [(e["perfil"], e["marcas"]) for e in tardia.tudo()] == [("noite", ["adulto"])]
+    assert [(e["perfil"], e["estilo"]) for e in tardia.tudo()] == [("noite", "terror")]
 
 
 def test_so_o_estado_e_guardado_o_evento_nao_se_repete(mesa: _Mesa) -> None:
@@ -483,12 +485,12 @@ def test_a_subida_liga_o_anunciador(
 # 6. A porta: a permissão e a entrega.
 
 def test_as_permissoes_novas_existem_e_cada_uma_entrega_o_seu() -> None:
-    assert permissao_valida("ler:jogo.vibracao") and permissao_valida("ler:perfil.marcas")
+    assert permissao_valida("ler:jogo.vibracao") and permissao_valida("ler:perfil.jogo")
     assert TOPICOS_DE_LEITURA["jogo.vibracao"] == (
         EventTopic.JOGO_VIBRACAO,
         EventTopic.JOGO_FECHOU,
     )
-    assert TOPICOS_DE_LEITURA["perfil.marcas"] == (EventTopic.PERFIL_TROCOU,)
+    assert TOPICOS_DE_LEITURA["perfil.jogo"] == (EventTopic.PERFIL_TROCOU,)
 
 
 class _Cliente:
@@ -535,9 +537,9 @@ def test_a_modificacao_recebe_a_vibracao_de_cada_jogador_pela_porta() -> None:
             try:
                 await asyncio.to_thread(cliente.pedir, "mod.ola", {"ficha": "ficha"})
                 recusa = await asyncio.to_thread(
-                    cliente.pedir, "eventos.assinar", {"topicos": ["perfil.marcas"]})
+                    cliente.pedir, "eventos.assinar", {"topicos": ["perfil.jogo"]})
                 assert recusa["error"]["code"] == CODE_SEM_PERMISSAO
-                assert recusa["error"]["message"] == "falta a permissão ler:perfil.marcas"
+                assert recusa["error"]["message"] == "falta a permissão ler:perfil.jogo"
                 aceita = await asyncio.to_thread(
                     cliente.pedir, "eventos.assinar", {"topicos": ["jogo.vibracao"]})
                 assert aceita["result"] == {"assinados": ["jogo.vibracao"]}

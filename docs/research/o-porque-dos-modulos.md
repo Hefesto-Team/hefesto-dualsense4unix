@@ -1574,3 +1574,13 @@ sessão, e os lugares guardados soltos por gente nova salvo com o jogo segurando
 Quem volta é o 1 já no hotplug, e a carta não troca quando a lâmpada acende; quem estreia continua
 depois de quem está, que é o caso de 14/10. A régua da bancada (`MesaDoJogo.conferir_invariantes`)
 reprova um aparelho com dois pads vivos fora da autoridade do jogo.
+
+## O AnunciadorDoJogo (autoswitch.py), 18/10/2026
+
+Nasceu em A-VIBRACAO-DO-CONTROLE-CHEGA-AOS-ACESSORIOS-PELO-BUTTPLUG-01 e olha o que o serviço já sabe a cada
+tique do autoswitch: o perfil ativo do store (que toda ativação publica, de qualquer origem) e o `appid_em_cena`.
+Em OS-ACESSORIOS-SEGUEM-OS-JOGOS-ESCOLHIDOS-COM-A-FORCA-NO-DESLIZANTE-01 o evento deixou de levar a categoria do
+jogo (`marcas`) e passou a dizer QUAL jogo é, porque a extensão segue uma lista de jogos escolhidos. O estilo é
+recalculado só quando o arquivo do perfil muda. O jogo por controle ainda não existe (perfil e `appid_em_cena`
+são um por sessão), por isso o resolvedor padrão devolve o jogo da sessão e o `jogo_de` espera quem o souber.
+
