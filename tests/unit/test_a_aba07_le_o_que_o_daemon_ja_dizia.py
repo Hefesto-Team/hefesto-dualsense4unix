@@ -9,25 +9,18 @@ a interface nova não a chamava.
 
     o que a GTK faz                         quem responde agora no HTML
     -------------------------------------   ----------------------------------
-    banner "o jogo aberto não passou pelo    `aviso_do_jogo_aberto`, sobre
-    wrapper", sem clique (2 abas)            `home_actions.wrapper_banner_text`
+    banner "o jogo aberto não passou pelo    SAIU desta aba em 18/10/2026, com a
+    wrapper", sem clique (2 abas)            07 antiga: segue na coluna Atenção da
+                                             Jogar, por `home_actions`
     "Não perguntar para este jogo" e         SAÍRAM em 21/09/2026, com os outros
     fechar a Steam por ~20 s                 botões que só a Steam tinha — o
-                                             reparo é do vigia; o «Voltar a
-                                             perguntar» desfaz o que já foi dito
+                                             reparo é do vigia
     a escada de TRÊS evidências do jogo      `a_escada_do_jogo`, sobre
     (inclusive o jogo JÁ FECHADO)            `launch_env` + a wm_class do estado
 
-O QUE CADA TESTE VIGIA, e a MORDIDA de cada um está na docstring dele. As três
-que mais importam:
-
-* troque `ha.wrapper_banner_text(state)` por um teste próprio de `wrapper_used`
-  e o `test_o_aviso_e_a_decisao_da_gtk_e_nao_uma_copia` reprova — é a forma de
-  defeito que esta casa persegue: a segunda cópia de uma regra que já tem dono;
-* apague o `remove_dismissed_appid` do `voltar-a-perguntar` e o
-  `test_voltar_a_perguntar_tira_do_arquivo_de_verdade` reprova;
-* troque a escada pelo `steam_game_running_appid()` e o
-  `test_a_escada_alcanca_o_jogo_que_ela_ja_fechou` reprova.
+O QUE CADA TESTE VIGIA, e a MORDIDA de cada um está na docstring dele. A que mais
+importa: troque a escada pelo `steam_game_running_appid()` e o
+`test_a_escada_alcanca_o_jogo_que_ela_ja_fechou` reprova.
 
 NADA AQUI TOCA A MÁQUINA DO USUÁRIO. O `conftest.py` desta casa desvia `HOME` e os
 quatro `XDG_*`; o que escreve em disco escreve no lar de mentira, e o que
@@ -64,107 +57,6 @@ def a07():
     fn = pacotes.gesto_da_pagina(PAGINA, "adicionar-lancador")
     assert fn is not None, f"{PAGINA}:adicionar-lancador não tem dono — a régua ficaria cega"
     return sys.modules[fn.__module__]
-
-
-@pytest.fixture(scope="module")
-def desenho():
-    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as dl
-
-    return dl
-
-
-def _cartao_da_steam(a07, desenho, lida, state):
-    """O cartão da Steam depois do que só o produto vivo sabe acrescentar."""
-    return a07.com_o_que_o_daemon_diz(desenho.cartoes(lida), state, lida)[0]
-
-
-def test_o_aviso_e_a_decisao_da_gtk_e_nao_uma_copia(a07, monkeypatch):
-    """Quem decide é `home_actions.wrapper_banner_text`. Ponto.
-
-    A MORDIDA: escreva aqui um `state["gamepad_emulation"]["wrapper_used"] is
-    False` em vez de chamar a função da GTK e este teste passa a reprovar —
-    porque ele DUBLA a função e exige que o aviso siga o dublê. Uma cópia da
-    regra sobreviveria a este teste só enquanto as duas concordassem, que é
-    exatamente o dia em que a cópia deixa de importar.
-    """
-    from hefesto_dualsense4unix.app.actions import home_actions as ha
-
-    monkeypatch.setattr(ha, "wrapper_banner_text", lambda s: "FRASE DA GTK")
-    html, _ = a07.aviso_do_jogo_aberto({}, None)
-    assert a07.JOGO_ABERTO_SEM_O_ATALHO in html, (
-        "o aviso não veio de `home_actions.wrapper_banner_text` — o pacote "
-        "está decidindo por conta própria se o jogo passou pelo wrapper")
-    monkeypatch.setattr(ha, "wrapper_banner_text", lambda s: "")
-    assert a07.aviso_do_jogo_aberto(SEM_WRAPPER, None) == ("", ""), (
-        "o dono disse que não há aviso e o pacote acendeu assim mesmo")
-
-
-def test_o_aviso_usa_o_texto_dela_sem_redigitar(a07):
-    """O cartão escreve o RÓTULO de estado, e não uma segunda redação da frase."""
-    from hefesto_dualsense4unix.app.actions import home_actions as ha
-
-    html, _ = a07.aviso_do_jogo_aberto(SEM_WRAPPER, None)
-    assert ha.WRAPPER_MISSING_TEXT not in html
-    assert a07.JOGO_ABERTO_SEM_O_ATALHO in html
-
-
-def test_sem_jogo_aberto_o_aviso_nao_acende(a07):
-    """`None`/ausente NUNCA acende — nada de alarme falso por payload incompleto."""
-    for state in (None, {}, {"gamepad_emulation": {}},
-                  {"gamepad_emulation": {"wrapper_used": None}},
-                  {"gamepad_emulation": {"wrapper_used": True}}):
-        html, appid = a07.aviso_do_jogo_aberto(state, None)
-        assert (html, appid) == ("", ""), f"acendeu com {state!r}"
-
-
-def test_o_aviso_respeita_a_dispensa_dela(a07, desenho):
-    """Se o usuário mandou não perguntar, o aviso não volta para aquele jogo."""
-    lida = desenho.Leitura(dispensados=(("3357650", "Um jogo"),))
-    html, appid = a07.aviso_do_jogo_aberto(SEM_WRAPPER, lida)
-    assert (html, appid) == ("", ""), (
-        "o aviso voltou para um jogo que ela dispensou — o clique dela não "
-        "produziu efeito nenhum na tela")
-    outro = desenho.Leitura(dispensados=(("999", "Outro"),))
-    assert a07.aviso_do_jogo_aberto(SEM_WRAPPER, outro)[0], (
-        "a dispensa de um jogo calou o aviso de todos os outros")
-
-
-def test_o_aviso_chega_ao_cartao(a07, desenho):
-    """O que a função devolve tem de APARECER no cartão que a tela recebe."""
-    from hefesto_dualsense4unix.app.actions import home_actions as ha
-
-    steam = _cartao_da_steam(a07, desenho, desenho.Leitura(com_wrapper=("1",)),
-                             SEM_WRAPPER)
-    assert a07.JOGO_ABERTO_SEM_O_ATALHO in steam.diz
-    assert ha.WRAPPER_MISSING_TEXT not in steam.diz
-    assert 'data-gesto="nao-perguntar"' not in desenho.acoes_html(steam), (
-        "o «Não perguntar» voltou ao cartão — um botão que os outros sete não têm")
-
-
-def test_sem_appid_o_aviso_fica_e_o_botao_some(a07, desenho):
-    """O daemon afirmou que HÁ jogo sem o wrapper; calar seria pior."""
-    state = {"gamepad_emulation": {"wrapper_used": False},
-             "window_detect_last_class": "Hefesto-Dualsense4Unix"}
-    html, appid = a07.aviso_do_jogo_aberto(state, None)
-    assert html and appid == ""
-    steam = _cartao_da_steam(a07, desenho, desenho.Leitura(com_wrapper=("1",)),
-                             state)
-    assert 'data-gesto="nao-perguntar"' not in desenho.acoes_html(steam)
-
-
-def test_a_pintura_do_aviso_nao_toca_o_disco(a07, monkeypatch):
-    """O aviso roda no TIQUE — 2 Hz. Disco ali é o defeito que a vigia cura."""
-    from hefesto_dualsense4unix.daemon import launch_env
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    def _nunca(*a: Any, **kw: Any) -> Any:
-        raise AssertionError("a pintura foi ao disco")
-
-    monkeypatch.setattr(launch_env, "launch_session_appid", _nunca)
-    monkeypatch.setattr(launch_env, "read_last_run_marker", _nunca)
-    monkeypatch.setattr(slo, "rotulo_do_jogo", _nunca)
-    monkeypatch.setattr(slo, "steam_game_running_appid", _nunca)
-    assert a07.aviso_do_jogo_aberto(SEM_WRAPPER, None)[1] == "3357650"
 
 
 def test_a_escada_alcanca_o_jogo_que_ela_ja_fechou(a07, monkeypatch):

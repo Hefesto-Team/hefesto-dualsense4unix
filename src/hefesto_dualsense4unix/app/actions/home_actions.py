@@ -271,8 +271,8 @@ def ela_ja_respondeu_sobre(appid: str) -> bool:
 
     ELA TOCA O DISCO, E O CUSTO ESTÁ MEDIDO — 06/09/2026, ONDA5-07-03. Duas
     leituras de arquivo por chamada, e quem chama é a pintura da aba Jogar, dez
-    vezes por segundo (`jogar/painel.AVISOS_DA_TELA`). A
-    `a07_lancadores.calados` avisa, por escrito, que reler duas listas a cada
+    vezes por segundo (`jogar/painel.AVISOS_DA_TELA`). O
+    `calados` da 07 antiga avisava, por escrito, que reler duas listas a cada
     tique é *"disco na thread da janela"* — e o número diz que este caminho não
     o sente: **0,050 ms por tique** com os dois arquivos existindo e povoados,
     contra 2,85 ms de mediana do tique inteiro. Duas razões, e as duas são de
@@ -307,7 +307,7 @@ def aviso_do_wrapper(state: dict[str, Any] | None) -> str | None:
     `wrapper_banner_text` direto, sem consultar lista nenhuma.
 
     A decisão, 05/09/2026 (pergunta `07-Q3`): *"as duas recusas calam
-    tudo"*. E a `a07_lancadores.calados` já dizia, por escrito, que a conta
+    tudo"*. E o `calados` da 07 antiga já dizia, por escrito, que a conta
     precisava de um dono para a outra metade não a redigitar.
 
     `wrapper_banner_text` continua puro e continua existindo: ele responde

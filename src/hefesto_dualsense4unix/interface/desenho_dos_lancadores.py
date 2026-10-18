@@ -195,9 +195,9 @@ def _e(txt: object) -> str:
 
     `html.escape(quote=True)` emite `&#x27;` e `&quot;`, e o DOM devolve os dois CRUS no texto: um
     jogo com apóstrofo no nome (a biblioteca do usuário tem 63) faria a lista e a grade serem
-    reescritas duas vezes por segundo, para sempre, matando o foco e o `:hover`. A régua é
-    `test_a_marcacao_volta_igual_do_dom`: reserializa a marcação emitida e exige o mesmo texto, sem
-    digitar a tabela.
+    reescritas duas vezes por segundo, para sempre, matando o foco e o `:hover`. A régua dela saiu
+    com a grade da 07 antiga em 18/10/2026; desde 06/09/2026 (A-TELA-SAMBA-01) o piloto compara
+    o bloco com o que ele mesmo escreveu, e não com o `innerHTML`.
     """
     return html.escape(str(txt if txt is not None else ""),
                        quote=False).replace(_DURO, "&nbsp;")

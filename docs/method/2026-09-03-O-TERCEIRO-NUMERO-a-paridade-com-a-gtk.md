@@ -87,11 +87,11 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 04-iluminacao | 35 | 8 | 13 | 6 | 7 | 1 | 23% |
 | 05-vibracao | 31 | 13 | 11 | 4 | 3 | 0 | 42% |
 | 06-navegacao | 40 | 7 | 15 | 9 | 9 | 0 | 18% |
-| 07-lancadores | 26 | 9 | 12 | 0 | 5 | 0 | 35% |
+| 07-lancadores | 24 | 8 | 11 | 2 | 3 | 0 | 33% |
 | 08-conexoes | 49 | 17 | 26 | 6 | 0 | 0 | 35% |
 | 09-sistema | 38 | 13 | 18 | 4 | 3 | 0 | 34% |
 | 10-perfis | 48 | 14 | 19 | 8 | 7 | 0 | 29% |
-| TODAS | 388 | 115 | 172 | 51 | 47 | 3 | 30% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 386 | 114 | 171 | 53 | 45 | 3 | 30% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -712,6 +712,9 @@ defeito.** A soma dos parâmetros escrita no CSV e na §4 era fato errado, e pas
 `D-1810-A-ABA-EXPERIMENTAL-SE-PUBLICA-COMO-FICOU`. A página publicada da 07 é a Experimental, e os
 gestos e pintores da aba antiga, sem elemento nela, saíram do pacote. Três linhas `SO_NO_HTML` saíram,
 porque o botão não existe mais em lado nenhum: **«"Procurar de novo"»**, **«Ver quem foi dispensado, e
-desfazer ("Voltar a perguntar")»** e **«"Não usar neste jogo" / "Voltar a usar"»**. A tabela acima foi
-recontada do CSV: `07-lancadores` vai de `29 · 8 SO_HTML · 31%` para `26 · 5 · 35%`, e `TODAS` de
-`391 · 50 · 29%` para `388 · 47 · 30%`.
+desfazer ("Voltar a perguntar")»** e **«"Não usar neste jogo" / "Voltar a usar"»**. Saíram também a
+**lista permanente dos jogos sem o atalho** e o **carimbo das pontes confirmadas**, que só o cartão
+antigo mostrava. O **lembrete proativo** e o **«Não perguntar»** passam a `FALTA_NO_HTML` (pendiam do
+aviso do cartão da Steam), e o **aviso automático** passa a ser vigiado onde vive, na coluna Atenção da
+Jogar. A tabela acima foi recontada do CSV: `07-lancadores` vai de `29 · 9 IGUAL · 0 FALTA · 8 SO_HTML
+· 31%` para `24 · 8 · 2 · 3 · 33%`, e `TODAS` de `391 · 50 SO_HTML · 29%` para `386 · 45 · 30%`.

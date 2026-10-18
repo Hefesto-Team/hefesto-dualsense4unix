@@ -88,8 +88,6 @@ nomeia um impedimento. Quem faz é o motor, e cada função tem endereço:
 
     integrations/sentinela_do_wrapper.censo_do_wrapper   quem tem e quem não tem
     integrations/steam_launch_options.rotulo_do_jogo     o nome, do `appmanifest`
-    integrations/steam_launch_options.marcar_jogo_sem_wrapper    o "tirar daqui"
-    integrations/steam_launch_options.desmarcar_jogo_sem_wrapper o "voltar a usar"
     integrations/prontuario_dos_jogos.jogos_instalados   os `appmanifest` do disco
     integrations/prontuario_dos_jogos.pontes_confirmadas quem já sabe por onde entrar
     integrations/prontuario_dos_jogos.classes_com_ponte  o mesmo, para os outros
@@ -97,9 +95,7 @@ nomeia um impedimento. Quem faz é o motor, e cada função tem endereço:
     integrations/jogos_locais.pastas_de_atalhos          onde moram os `.desktop`
     integrations/steam_launch_options.WRAPPER_LAUNCH     a linha à mostra
     app/actions/launch_wrapper_dialog.load_dismissed_appids  quem ela dispensou
-    app/actions/launch_wrapper_dialog.remove_dismissed_appid o "voltar a perguntar"
     app/actions/launch_wrapper_dialog.extract_steam_appid    o jogo em foco
-    app/actions/home_actions.wrapper_banner_text         o aviso do jogo aberto
     daemon/launch_env.launch_session_appid               1º degrau da escada
     daemon/launch_env.read_last_run_marker               3º degrau da escada
 
@@ -564,13 +560,6 @@ def _ler_do_disco() -> desenho.Leitura:
     )
 
 
-def _valores(lida: desenho.Leitura | None) -> dict[str, str]:
-    """Os endereços da aba inteira, montados pelo desenho."""
-    return desenho.Quadro(lancadores=desenho.cartoes(lida)).valores()
-
-
-# `gamepad_emulation.wrapper_used` a cada tique.
-# sem clique nenhum (`home_actions.wrapper_banner_text`, consumido pela Início
 def _o_jogo_em_foco(state: dict[str, Any] | None) -> str:
     """O appid do jogo Steam em foco AGORA, ou `""`. **Não toca o disco.**"""
     from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
@@ -580,187 +569,22 @@ def _o_jogo_em_foco(state: dict[str, Any] | None) -> str:
     return lwd.extract_steam_appid(state.get("window_detect_last_class")) or ""
 
 
-def aviso_do_jogo_aberto(
-    state: dict[str, Any] | None, lida: desenho.Leitura | None
-) -> tuple[str, str]:
-    """`(html do aviso, appid)` — ou `("", "")` quando não há o que avisar.
-
-    A DECISÃO É DA GTK, INTEIRA: `home_actions.wrapper_banner_text` só acende
-    no ``False`` LITERAL de `wrapper_used` (``None``/ausente = sem jogo aberto,
-    ou daemon antigo sem o campo → **nunca** alarme falso por payload
-    incompleto). Reescrever esse teste aqui seria a segunda cópia de uma regra
-    que já tem dono — e a cópia envelheceria calada no dia em que o daemon
-    ganhasse um quarto valor.
-
-    **O TEXTO DEIXOU DE SER O DA JANELA VELHA — TELA-CALADA-02, 13/09/2026.**
-    O cartão escreve :data:`JOGO_ABERTO_SEM_O_ATALHO`, um rótulo de estado; a
-    frase longa (`home_actions.WRAPPER_MISSING_TEXT`) continua do dono e não é
-    redigitada aqui. Os dois parágrafos de baixo contam como ela era, e ficam
-    porque a decisão `07-Q2` que eles registram continua valendo para quem
-    ainda a mostra.
-
-    **A FRASE MUDOU EM 06/09/2026 (ONDA5-07-03), e a palavra é de produto.** Ela
-    terminava em *"Copie as opções na aba Sistema."*, e a aba Sistema da
-    interface nova tem doze botões e nenhum copia coisa alguma. A decisão
-    `07-Q2` dela, em 05/09, recusou as TRÊS opções oferecidas — só o fato,
-    apontar o Consertar, duas frases — e respondeu com uma quarta: *"O produto
-    aplica ela"*. A frase passou a dizer o fato **mais** a promessa que o
-    produto cumpre, sem nomear lugar nenhum:
-    *"O jogo está rodando sem o atalho de inicialização — controles podem
-    duplicar. Reponho o atalho no próximo Aplicar ou Salvar perfil, com a Steam
-    fechada."*
-
-    O DONO CONTINUA SENDO UM SÓ (`app/actions/home_actions.WRAPPER_MISSING_TEXT`)
-    e esta aba continua sem redigitar uma palavra. A condição *"com a Steam
-    fechada"* está na frase porque a carona não tem relógio próprio: quem repõe
-    é `carona_do_wrapper.passada`, de carona nos gestos de perfil.
-
-    AS DUAS RECUSAS CALAM — PO, 04/09/2026, `07[03]`. Até hoje só a dispensa
-    (*"Não perguntar para este jogo"*) calava; o *"Não usar neste jogo"* — o
-    `jogos_sem_wrapper.txt`, a lista que o produto INTEIRO respeita no reparo —
-    não calava tela nenhuma. Ela tirava o jogo de propósito e a tela reclamava
-    dele toda vez que ele abrisse. **Um aviso que sobrevive à resposta de produto
-    ensina que o botão não obedece.**
-
-    E AS DUAS SÃO A MESMA FRASE DE PRODUTO, dita de dois jeitos: *"eu sei, deixa
-    assim"*. O desfazer de cada uma já está na lista do cartão — *"Voltar a
-    usar"* e *"Voltar a perguntar"* —, e é o que impede o silêncio por engano
-    de ser um caminho só de ida.
-
-    AS DUAS LISTAS SAEM DA `Leitura` QUE A VIGIA JÁ LEU (`lida.dispensados` e
-    `lida.recusados`), nunca do disco: reler dois arquivos a cada tique seria
-    disco na thread da janela, que é o que a :class:`_Vigia` existe para
-    impedir — e é o custo que a própria decisão nomeia (*"a leitura das duas
-    listas vem de vigia em segundo plano"*).
-
-    SEM O APPID O AVISO CONTINUA, e é decisão: `wrapper_used is False` é o
-    daemon afirmando que HÁ jogo aberto sem o wrapper. Calar porque a
-    `window_detect_last_class` ainda não casou trocaria um aviso verdadeiro por
-    silêncio — o que some é só o botão de dispensar, que sem appid não teria
-    sobre o que agir.
-
-    E AS QUATRO CONDIÇÕES SÃO AS DO DONO — 06/09/2026, `STEAM-INPUT-01`. Até
-    aqui esta função aplicava DUAS das quatro do lembrete da janela velha (o
-    `wrapper_used is False`, que já traz a janela em foco e o jogo sem o
-    atalho, e a dispensa) e **não aplicava a da EMULAÇÃO**. O buraco é medível:
-    no modo nativo não há gamepad virtual, logo não há o que duplicar — e a aba
-    avisava assim mesmo, com um alarme que não podia acontecer. A janela velha
-    nunca teve esse defeito, porque a decisão de produto é uma função PURA
-    (`launch_wrapper_dialog.wrapper_dialog_decision`) e ela pergunta pelo modo.
-
-    ELA É IMPORTADA, E NÃO REDIGITADA. O que esta aba faz é ENTREGAR a evidência
-    que já tem no lugar da que a janela velha vai buscar: o `vdf_cache` do dono
-    responde *"falta o atalho neste jogo?"*, e aqui quem já respondeu isso foi o
-    DAEMON (`wrapper_used is False`), com evidência mais forte — o marker diz se
-    o wrapper de fato RODOU, e não só se a linha está escrita. Os dois campos que
-    não existem numa página (o popup e o diálogo do GTK) vão `False`, que é o
-    que eles são.
-
-    O `shown_this_session` VAI VAZIO DE PROPÓSITO, e é a única condição que não
-    se importa: o anti-spam da janela velha existe porque lá o lembrete é um
-    DIÁLOGO que rouba o foco, e mostrá-lo duas vezes por sessão seria castigo.
-    Aqui ele é uma linha dentro do cartão, que nasce e morre com o jogo aberto —
-    aplicá-lo faria o aviso sumir no segundo tique e voltar nunca, com o jogo
-    ainda rodando sem o atalho.
-
-    SEM O APPID A DECISÃO NÃO É CONSULTADA, e isso mantém a decisão de cima
-    (o aviso continua): o dono responde `SKIP` sem appid, e trocar um aviso
-    verdadeiro do daemon por silêncio seria o contrário do que esta função faz.
-    """
-    from hefesto_dualsense4unix.app.actions import home_actions as ha
-    from hefesto_dualsense4unix.app.actions import launch_wrapper_dialog as lwd
-
-    texto = ha.wrapper_banner_text(state)
-    if not texto:
-        return "", ""
-    appid = _o_jogo_em_foco(state)
-    if appid:
-        acao, _ = lwd.wrapper_dialog_decision(
-            state,
-            # `wrapper_banner_text` acima só devolve texto no `False` LITERAL de
-            vdf_cache={appid: True},
-            dismissed=calados(lida) if lida is not None else set(),
-            shown_this_session=set(),
-            popup_open=False,
-            dialog_open=False,
-        )
-        if acao != lwd.DECISION_PROMPT:
-            return "", ""
-    return f"<b>{_texto(JOGO_ABERTO_SEM_O_ATALHO)}</b><br>", appid
-
-
-#: `home_actions.wrapper_banner_text` (e a dispensa, e o modo). Muda só o que se
-JOGO_ABERTO_SEM_O_ATALHO = "Jogo aberto sem o atalho"
-
-
-def calados(lida: desenho.Leitura | None) -> set[str]:
-    """Os appids sobre os quais ela JÁ RESPONDEU — as duas recusas juntas."""
-    if lida is None:
-        return set()
-    return ({a for a, _ in lida.dispensados} | {a for a, _ in lida.recusados})
-
-
-def com_o_que_o_daemon_diz(
-    lancadores: list[desenho.Lancador],
-    state: dict[str, Any] | None,
-    lida: desenho.Leitura | None,
-) -> list[desenho.Lancador]:
-    """O cartão da Steam com o AVISO VIVO do jogo aberto — e só ele.
-
-    O RÓTULO DO JOGO ABERTO SEM O ATALHO é a única coisa que o produto vivo
-    acrescenta ao cartão: a decisão de acender é de
-    `home_actions.wrapper_banner_text`, e o texto é
-    :data:`JOGO_ABERTO_SEM_O_ATALHO` (ver :func:`aviso_do_jogo_aberto`).
-
-    OS BOTÕES SAÍRAM DAQUI — 21/09/2026, palavra de produto: *"a ideia é termos os
-    mesmos botões pra todos os lançadores. sempre."* Esta função pendurava no
-    cartão da Steam o «Não perguntar para este jogo», o «Posso fechar a Steam
-    por uns 20 segundos?», o «Desligar o Steam Input» e o «Deixar tudo
-    pronto» — botões que só ela tinha, e que faziam à mão o que o produto já faz
-    sozinho: o vigia repõe o atalho e o guarda desliga o Steam Input
-    (`hefesto-steam-input-guard`, a cada 30 min e a cada escrita da Steam). O
-    jogo que ela não quer com o Hefesto vai para a lista de exclusão, que é o
-    «não mexa neste jogo» inteiro.
-
-    POR QUE AQUI E NÃO NO DESENHO: `dataclasses.replace` sobre o cartão que o
-    desenho montou mantém UM dono para a forma do cartão.
-    """
-    if not lancadores:
-        return lancadores
-    steam = lancadores[0]
-    cabeca, _appid = aviso_do_jogo_aberto(state, lida)
-    if cabeca == "":
-        return lancadores
-    fora = list(lancadores)
-    fora[0] = dataclasses.replace(steam, diz=cabeca + steam.diz)
-    return fora
-
-
-def _texto(x: object) -> str:
-    """Escapa para posição de TEXTO, com a aspa CRUA — como o desenho faz."""
-    return str(x).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-
-
-# `mesa_viva.texto_da_contagem` é quem escreve o cabeçalho, e a régua daquela
-
-
 @dataclasses.dataclass
 class _Escolha:
     """Qual cartão abriu a escolha do jogo, e para quê."""
 
     modo: str = ""
     lancador: str = ""
-    miolo: str = ""
     jogos: tuple[desenho.JogoParaEscolher, ...] = ()
     janelas: dict[str, tuple[str, ...]] = dataclasses.field(default_factory=dict)
     #: O título que casa cada jogo, por chave: o jogo de um lançador de
     #: modificação, cuja janela é a do emulador para todos os jogos.
     titulos: dict[str, str] = dataclasses.field(default_factory=dict)
-    #: A mesma lista na estrutura nova da janela «Criar perfis» (Criar / Tem perfil).
+    #: A lista da janela «Criar perfis» (Criar / Tem perfil).
     miolo_novo: str = ""
 
     def limpar(self) -> None:
-        self.modo = self.lancador = self.miolo = self.miolo_novo = ""
+        self.modo = self.lancador = self.miolo_novo = ""
         self.jogos = ()
         self.janelas = {}
         self.titulos = {}
@@ -809,11 +633,9 @@ def _jogos_para_escolher(
     escada (o aberto, ou o último) nasce marcado (D-2109-O-JOGO-SE-ESCOLHE-NA-
     LISTA). Nunca levanta: é chamado de dentro de um clique.
 
-    O LANÇADOR DE MODIFICAÇÃO COM LEITOR, no modo do perfil (``_ESCOLHA.modo``,
-    posto antes da chamada), lista os jogos que o leitor devolve com o ID do
-    título: a janela é a do emulador para todos, e o perfil de UM jogo casa pelo
-    título (os títulos ficam em ``_ESCOLHA.titulos``). A lista de exclusão casa
-    por janela, e lá ele fica na linha «todos os jogos», como os emuladores.
+    O LANÇADOR DE MODIFICAÇÃO COM LEITOR lista os jogos que o leitor devolve com
+    o ID do título: a janela é a do emulador para todos, e o perfil de UM jogo
+    casa pelo título (os títulos ficam em ``_ESCOLHA.titulos``).
     """
     _ESCOLHA.titulos = {}
     appid, _quando = a_escada_do_jogo(state)
@@ -843,8 +665,7 @@ def _jogos_para_escolher(
             chave = _chave_do_emulador(lancador)
             item = next((x for x in desenho.procurados(_declarados())
                          if x.chave == lancador), None)
-            if (item is not None and item.leitor is not None
-                    and _ESCOLHA.modo == desenho.CRIAR_PERFIL):
+            if item is not None and item.leitor is not None:
                 pelo_titulo, titulos = _jogos_pelo_titulo(item, ja)
                 if pelo_titulo:
                     _ESCOLHA.titulos = titulos
@@ -863,63 +684,16 @@ def _jogos_para_escolher(
 
 
 def _abrir_a_escolha(modo: str, lancador: str, state: dict[str, Any] | None) -> None:
-    """Monta a lista do cartão clicado e o miolo da pop-up. Nunca levanta."""
+    """Monta a lista do lançador clicado na janela «Criar perfis». Nunca levanta."""
     lida = VIGIA.agora()
     nomes = {x.chave: x.nome for x in desenho.cartoes(lida)}
     nome = nomes.get(lancador, lancador)
     _ESCOLHA.limpar()
     _ESCOLHA.modo = modo
-    jogos, janelas, emulador = _jogos_para_escolher(lancador, nome, state)
+    jogos, janelas, _emulador = _jogos_para_escolher(lancador, nome, state)
     _ESCOLHA.lancador = lancador
     _ESCOLHA.jogos, _ESCOLHA.janelas = tuple(jogos), janelas
-    _ESCOLHA.miolo = desenho.miolo_da_escolha_html(
-        modo, nome, jogos, emulador=emulador)
-    if modo == desenho.CRIAR_PERFIL:
-        _montar_a_escolha_nova(nome)
-
-
-def com_a_exclusao(
-    lancadores: list[desenho.Lancador], lida: desenho.Leitura | None,
-) -> list[desenho.Lancador]:
-    """O rodapé da exclusão nos cartões LOCALIZADOS, e a lista da Steam sem eles.
-
-    O PÉ DO CARTÃO diz os jogos DAQUELE lançador que estão na lista, cada um com
-    o seu «Tirar da lista». Só onde há o botão de excluir (um cartão que não
-    achou o lançador não tem o que excluir), e SÓ COM JOGO NA LISTA: a frase do
-    vazio saiu em 21/09/2026, palavra de produto — *"é um espaço vertical que
-    ganhamos ao remover"*.
-
-    A LISTA DA STEAM PERDE OS EXCLUÍDOS. A exclusão escreve no
-    `jogos_sem_wrapper.txt`, e a lista do cartão mostra esse arquivo como
-    «você tirou», com um «Voltar a usar» que desfaria SÓ o atalho — metade da
-    exclusão, que é tudo-ou-nada. O jogo excluído aparece num lugar só: aqui.
-    """
-    try:
-        entradas = lista_de_exclusao.ler()
-    except Exception:
-        entradas = []
-    por_cartao: dict[str, list[tuple[str, str]]] = {}
-    for e in entradas:
-        por_cartao.setdefault(e.lancador, []).append((e.chave, e.nome))
-    appids_fora = {
-        a for a in (lista_de_exclusao.appid_da_chave(e.chave) for e in entradas
-                    if "atalho" in e.escritas) if a}
-    saida: list[desenho.Lancador] = []
-    for lanc in lancadores:
-        steam = lanc.chave == desenho.STEAM and lida is not None
-        if (not any(a.gesto == desenho.EXCLUIR for a in lanc.acoes)
-                or not (por_cartao.get(lanc.chave) or (steam and appids_fora))):
-            saida.append(lanc)
-            continue
-        fora = rodape = desenho.rodape_da_exclusao_html(por_cartao.get(lanc.chave, []))
-        if steam and lida is not None:
-            filtrada = dataclasses.replace(
-                lida, recusados=tuple(r for r in lida.recusados if r[0] not in appids_fora))
-            lista = desenho.lista_de_jogos(filtrada)
-            if (desenho.LISTA_VAZIA not in lista and lista.strip()) or not rodape:
-                fora = lista + rodape
-        saida.append(dataclasses.replace(lanc, fora=fora, tem_lista=True))
-    return saida
+    _montar_a_escolha_nova(nome)
 
 
 def _relatar(gesto_: str, frase: str) -> None:
@@ -927,24 +701,10 @@ def _relatar(gesto_: str, frase: str) -> None:
     print(f"[relato] {PAGINA} · {gesto_}: {frase}", file=sys.stderr)
 
 
-def _pintura(lancadores: list[desenho.Lancador]) -> dict[str, Any]:
-    """A carga da aba: os endereços **e a grade inteira**, com as molduras."""
-    quem = {x.chave: x.nome for x in lancadores}
-    valores = desenho.Quadro(lancadores=lancadores).valores()
-    valores[desenho.NOVO_PARA_QUEM] = (
-        desenho.NOVO_PARA_O_CARTAO.format(nome=quem[_PARA_QUEM])
-        if _PARA_QUEM in quem else desenho.NOVO_SEM_ALVO)
-    blocos = {desenho.SELETOR_DA_GRADE: desenho.cartoes_html(lancadores)}
-    if _ESCOLHA.miolo:
-        blocos[f"#{desenho.MIOLO_DA_ESCOLHA}"] = _ESCOLHA.miolo
-    return _com_as_extensoes({"mesa": valores, "blocos": blocos}, lancadores)
-
-
 def _resposta(lida: desenho.Leitura | None,
               state: dict[str, Any] | None = None) -> dict[str, Any]:
-    """O que um gesto devolve para a tela — a mesma carga da pintura."""
-    return _pintura(com_a_exclusao(
-        com_o_que_o_daemon_diz(desenho.cartoes(lida), state, lida), lida))
+    """A carga da aba, a mesma no tique e no gesto: a conta, a fila e as janelas abertas."""
+    return _com_as_extensoes({"mesa": {}, "blocos": {}}, desenho.cartoes(lida))
 
 
 @registrar("07-lancadores.html")
@@ -2019,4 +1779,3 @@ SEM_ECO = (# `maquina.json`: o `state_full` não tem UMA chave sobre lançador.
            "ver-impedimentos", "resolver-impedimento", "resolver-todos-os-impedimentos",
            "identificar-lancador", "configurar-lancador", "criar-perfil-do-jogo")
 
-# bloco «O «Consertar» DOS OUTROS LANÇADORES SAIU», logo abaixo de `calados`.

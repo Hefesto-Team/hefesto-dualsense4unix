@@ -89,12 +89,8 @@ def _bancada() -> str:
     return _pagina(publicado=False)
 
 
-def _pagina_velha() -> str:
-    """O publicado, que ainda é o DOM dos cartões até o `--publicar` da costura.
-
-    O pacote pinta os DOIS DOMs (o piloto ignora o seletor ausente), e as réguas dos cartões
-    medem este enquanto ele for o que o produto renderiza.
-    """
+def _pagina_publicada() -> str:
+    """O publicado: desde 18/10/2026, a Experimental, o mesmo desenho da bancada."""
     return _pagina(publicado=True)
 
 
@@ -107,7 +103,7 @@ def test_todo_endereco_da_pagina_tem_quem_o_pinte(a07, ctx):
     """Zero vazios e zero órfãos — nos DOIS sentidos."""
     fora = a07.pacote(ctx)
     da_grade = "".join(str(v) for v in (fora.get("blocos") or {}).values())
-    da_pagina = (set(CAMPO.findall(_bancada() + _pagina_velha() + da_grade))
+    da_pagina = (set(CAMPO.findall(_bancada() + _pagina_publicada() + da_grade))
                  - _do_topo() - SEM_PINTOR_AINDA)
     emite = {k for k in fora
              if k not in ("sem_dono", "cobertura", "blocos")}
@@ -125,7 +121,7 @@ def test_todo_gesto_do_html_tem_dono_ou_esta_declarado_sem_dono(a07):
     """Um botão com endereço e sem quem o atenda some no clique."""
     import pacotes
 
-    no_html = set(GESTO.findall(_bancada() + _pagina_velha()))
+    no_html = set(GESTO.findall(_bancada() + _pagina_publicada()))
     com_dono = {n for (p, n) in pacotes.GESTOS if p == PAGINA}
     # O menu do botão direito é da casa, com um dono só em `hefesto_vivo` (régua em
     # `test_a_base_comum_das_abas.py`): a página o traz, mas o gesto não é do usuário.
@@ -202,11 +198,11 @@ def test_os_cinco_lancadores_ganharam_leitor_de_biblioteca():
 
 def test_nenhum_cartao_promete_um_numero_de_controles(desenho):
     """A recaída da régua velha do gerador, cobrada também aqui."""
-    grade = _pagina_velha().split('<div class="lancadores">', 1)[-1].split("</div>\n\n")[0]
-    assert 'data-lancador="steam"' in grade, (
-        "a régua não achou a grade de cartões — seletor que casa ZERO é erro, "
+    publicada = _pagina_publicada()
+    assert 'class="lanc-fila"' in publicada, (
+        "a régua não achou a fila dos lançadores — seletor que casa ZERO é erro, "
         "não silêncio")
-    tudo = desenho.cartoes_html(desenho.cartoes(None)) + grade
+    tudo = desenho.cartoes_html(desenho.cartoes(None)) + publicada
     assert not re.findall(r"[Oo]s \d+ controles chegam", tudo), (
         "um cartão voltou a prometer para um NÚMERO de controles")
 
@@ -268,9 +264,11 @@ def test_o_tique_nao_bloqueia_no_disco(a07, ctx, monkeypatch):
     monkeypatch.setattr(a07.VIGIA, "_disparar", lambda: None)
     monkeypatch.setattr(a07.VIGIA, "_dado", None, raising=False)
     pacote = a07.pacote(ctx)
-    assert pacote["steam-jogos"] == a07.desenho.AINDA_LENDO, (
-        "sem leitura o cartão tem de dizer que ainda está lendo — um número "
-        "que não foi lido é um número inventado")
+    fila = pacote["blocos"][".lanc-fila"]
+    assert 'data-lancador="steam"' in fila, "a fila não veio — a régua mediria o vazio"
+    assert not re.search(r"\b\d+ jogos?\b", fila), (
+        "sem leitura a fila não pode trazer contagem — um número que não foi lido é um "
+        "número inventado")
 
 
 def test_esta_regua_nao_alcanca_a_biblioteca_dela():
@@ -595,147 +593,6 @@ def test_a_lista_da_steam_nunca_vira_travessao_em_estado_nenhum(desenho):
             f"aconteceu")
 
 
-def test_a_moldura_do_cartao_segue_o_selo_que_o_produto_mediu(a07, ctx, desenho,
-                                                              monkeypatch):
-    """A borda do cartão e o selo dentro dele não podem discordar."""
-    assert f'class="{desenho.CLASSE_DA_GRADE}"' in _pagina_velha(), (
-        f"a página não tem a grade `{desenho.SELETOR_DA_GRADE}` — o `blocos` "
-        f"cairia no chão, e `querySelector` devolve `null` sem uma linha de erro")
-
-    monkeypatch.setattr(a07.VIGIA, "agora", lambda: None)
-    carga = a07.pacote(ctx)
-    grade = (carga.get("blocos") or {}).get(desenho.SELETOR_DA_GRADE)
-    assert grade, (
-        "o pacote não manda a grade — a classe do contêiner fica a do desenho "
-        "para sempre, e o cartão se pinta como outra coisa do que mede")
-
-    lida = desenho.Leitura(com_wrapper=("1", "2"), instalados=23,
-                           reparaveis=(),
-                           onde_estao=(("heroic", ""), ("lutris", "")))
-    cartoes = desenho.cartoes(lida)
-    html = a07._pintura(cartoes)["blocos"][desenho.SELETOR_DA_GRADE]
-    assert cartoes[0].selo == "localizado", (
-        "a Leitura da régua deixou de ser a do cartão sem impedimento")
-    assert f'class="lanc {desenho.MOLDURA["localizado"]}" data-lancador="steam"' in html, (
-        "a Steam mede `LOCALIZADO` e a moldura dela continua a de `ausente` — é "
-        "o cartão dizendo duas coisas opostas na mesma tela")
-
-    quebrada = desenho.cartoes(desenho.Leitura(
-        com_wrapper=("1",), instalados=2,
-        reparaveis=(("2", "Um jogo", "nunca recebeu o atalho"),)))
-    html_warn = a07._pintura(quebrada)["blocos"][desenho.SELETOR_DA_GRADE]
-    assert f'class="lanc {desenho.MOLDURA["warn"]}" data-lancador="steam"' in (
-        html_warn), (
-        "a Steam mede `NÃO CHEGAM` e a borda não fica laranja — a única coisa "
-        "que esta aba mostra sem ler é a cor")
-
-
-def test_o_valor_pintado_e_o_valor_da_grade_sao_a_mesma_coisa(a07, desenho):
-    """As duas grafias do mesmo valor têm de ser UMA — senão a tela pinga-pongue."""
-    lida = desenho.Leitura(
-        com_wrapper=("1",), instalados=3,
-        reparaveis=(("2", "Um jogo", "nunca recebeu o atalho"),),
-        recusados=(("9", "Outro jogo"),),
-        onde_estao=(("heroic", "/x/h.desktop"), ("lutris", "")))
-    cartoes = desenho.cartoes(lida)
-    grade = a07._pintura(cartoes)["blocos"][desenho.SELETOR_DA_GRADE]
-    valores = desenho.Quadro(lancadores=cartoes).valores()
-
-    for chave, valor in valores.items():
-        if chave == "lanc-conta":
-            continue
-        assert f">{valor}<" in grade, (
-            f"o campo {chave!r} é pintado com uma grafia e a grade traz outra. "
-            f"As duas se corrigem a cada tique, para sempre — foi assim que o "
-            f"piloto contou pintura em 81 de 81 voltas.")
-
-
-_VAZIAS = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link",
-           "meta", "source", "track", "wbr"}
-
-
-def _como_o_dom_devolve(marcacao: str) -> str:
-    """Reserializa a marcação pelas regras que o WEBKIT DO USUÁRIO usa. É medida."""
-    from html.parser import HTMLParser
-
-    def texto(s: str) -> str:
-        return (s.replace("&", "&amp;").replace("<", "&lt;")
-                 .replace(">", "&gt;").replace("\u00a0", "&nbsp;"))
-
-    def atributo(s: str) -> str:
-        return texto(s).replace('"', "&quot;")
-
-    class _Volta(HTMLParser):
-        def __init__(self) -> None:
-            super().__init__(convert_charrefs=True)
-            self.fora: list[str] = []
-
-        def handle_starttag(self, tag, attrs):
-            pedacos = "".join(
-                f" {n}" if v is None else f' {n}="{atributo(v)}"'
-                for n, v in attrs)
-            self.fora.append(f"<{tag}{pedacos}>")
-
-        handle_startendtag = handle_starttag
-
-        def handle_endtag(self, tag):
-            if tag not in _VAZIAS:
-                self.fora.append(f"</{tag}>")
-
-        def handle_data(self, data):
-            self.fora.append(texto(data))
-
-        def handle_comment(self, data):
-            self.fora.append(f"<!--{data}-->")
-
-    leitor = _Volta()
-    leitor.feed(marcacao)
-    leitor.close()
-    return "".join(leitor.fora)
-
-
-_NOMES_QUE_MORDEM = ("Assassin's Creed", 'O jogo "bom"', "Ratchet & Clank",
-                     "a < b > c", "espa\u00e7o\u00a0duro", "Tom Clancy's")
-
-
-@pytest.mark.parametrize("nome", _NOMES_QUE_MORDEM)
-def test_a_marcacao_volta_igual_do_dom(a07, desenho, nome):
-    """Um apóstrofo no nome de UM jogo reescrevia a GRADE INTEIRA, para sempre."""
-    lida = desenho.Leitura(
-        com_wrapper=("1",), instalados=3,
-        reparaveis=((f"2{nome}", nome, "nunca recebeu o atalho"),),
-        recusados=(("9", nome),),
-        dispensados=(("7", nome),),
-        onde_estao=(("heroic", f"/casa/{nome}/h.desktop"), ("lutris", "")))
-    cartoes = desenho.cartoes(lida)
-    carga = a07._pintura(cartoes)
-
-    alvos = {desenho.SELETOR_DA_GRADE: carga["blocos"][desenho.SELETOR_DA_GRADE]}
-    alvos.update({k: v for k, v in carga["mesa"].items()
-                  if k.endswith(("-selo", "-diz", "-acoes", "-fora"))})
-
-    for onde, marcacao in alvos.items():
-        volta = _como_o_dom_devolve(marcacao)
-        assert volta == marcacao, (
-            f"{onde} não volta igual do DOM com o nome {nome!r}. O piloto "
-            f"compara `innerHTML !== valor` como TEXTO, então ele reescreve "
-            f"este elemento a CADA TIQUE, para sempre — 2 por segundo, "
-            f"matando o foco e o `:hover` de quem estiver com o mouse num "
-            f"botão.\n  emitido: {marcacao[:160]!r}\n  do DOM:  {volta[:160]!r}")
-
-
-def test_o_instrumento_do_round_trip_morde(desenho):
-    """A régua acima só vale se ela souber reprovar. Aqui está a prova."""
-    assert _como_o_dom_devolve("<b>a&#x27;b</b>") == "<b>a'b</b>"
-    assert _como_o_dom_devolve("<b>a&quot;b</b>") == '<b>a"b</b>'
-    assert _como_o_dom_devolve('<b x="a&#x27;b"></b>') == '<b x="a\'b"></b>'
-    assert _como_o_dom_devolve('<b x="a&quot;b"></b>') == '<b x="a&quot;b"></b>'
-    assert _como_o_dom_devolve("<b>a\u00a0b</b>") == "<b>a&nbsp;b</b>"
-    assert _como_o_dom_devolve("<b>a&amp;b</b>") == "<b>a&amp;b</b>"
-    assert _como_o_dom_devolve('<b x="a&lt;b"></b>') == '<b x="a&lt;b"></b>'
-    assert _como_o_dom_devolve("<!-- nada -->") == "<!-- nada -->"
-
-
 def test_a_ponte_confirmada_chega_ao_contador(desenho):
     """`◆ N jogos já sabem por onde entrar` — a promessa que estava sem fonte."""
     sem = desenho.Leitura(com_wrapper=("1",), instalados=1)
@@ -786,7 +643,7 @@ def _disco_dublado(monkeypatch, *, dispensados=("4242",), pontes=3,
 
 
 def test_a_leitura_carrega_os_dispensados_e_as_pontes_da_fonte_certa(
-        a07, monkeypatch, tmp_path):
+        a07, desenho, monkeypatch, tmp_path):
     """As duas leituras novas do motor, cobradas em QUEM AS CHAMA.
 
     AS TRÊS MORDIDAS QUE ESTE TESTE MATA, e as três davam 25/25 verde antes
@@ -815,7 +672,7 @@ def test_a_leitura_carrega_os_dispensados_e_as_pontes_da_fonte_certa(
         f"número sem fonte, que é o defeito que esta aba nasceu para matar")
     assert lida.instalados == 7, "a contagem de instalados trocou de fonte"
 
-    valores = a07._valores(lida)
+    valores = desenho.Quadro(lancadores=desenho.cartoes(lida)).valores()
     assert "3 jogos já sabem por onde entrar" in valores["steam-diz"] + (
         valores["steam-acoes"]), (
         "as pontes chegaram à leitura e não chegaram ao carimbo do cartão")
@@ -875,7 +732,7 @@ def test_a_steam_ausente_nao_afirma_que_os_controles_chegam(a07, desenho,
         f"o topo diz {quadro.achados} encontrado(s) numa máquina sem lançador "
         f"nenhum")
     assert desenho._plural(0, "localizado", "localizados") in \
-        a07._valores(lida)["lanc-conta"], (
+        quadro.valores()["lanc-conta"], (
             "a conta chegou certa ao quadro e errada à tela")
 
 
@@ -939,49 +796,6 @@ def test_o_cartao_da_steam_nao_achada_mantem_os_enderecos_da_pagina(desenho):
         "um travessão solto no pé do cartão")
 
 
-_O_QUADRO = re.compile(
-    r"De onde os seus jogos vêm.*?"
-    r'<span class="ajuda">(?P<dica>.*?)</span></span>', re.S)
-
-
-def _dica_da_pagina() -> str:
-    achado = _O_QUADRO.search(_pagina_velha())
-    assert achado, (
-        'a régua não achou o `?` do quadro "De onde os seus jogos vêm" — '
-        "seletor que casa ZERO é erro, não silêncio")
-    return achado.group("dica")
-
-
-def test_o_texto_de_ajuda_nao_conta_controle_por_conta_propria():
-    """Nenhum número solto no "?": quem conta a mesa tem de ter ENDEREÇO.
-
-    O QUE ESTA RÉGUA MEDE, e por que ela não repete a dos cartões: a fatia é o
-    `<span class="ajuda">`, e o que ela cobra é que todo DÍGITO ali dentro
-    esteja dentro de um `data-campo` — quer dizer, que o produto possa
-    reescrevê-lo no tique. Um número fora de endereço é o número do DESENHO,
-    congelado no HTML pelo `monta.CONECTADOS` do gerador.
-
-    MEDIDO NA JANELA DO USUÁRIO EM 03/09/2026, com um DualSense no cabo, antes da
-    cura:
-
-        cabeçalho   ``● 1 controle: 1 USB · 0 BT``   (lido do aparelho)
-        o "?"       ``…vale igual para os 2 (1 no cabo, 1 no rádio)…``
-
-    A MORDIDA: tire o `<span data-campo="lanc-quantos">` do `aba07.py`, regere
-    a bancada, e este teste nomeia os dígitos que sobraram nus.
-    """
-    dica = _dica_da_pagina()
-    nus = re.sub(r'<span data-campo="[^"]+"[^>]*>.*?</span>', " ", dica,
-                 flags=re.S)
-    texto = re.sub(r"<[^>]+>", " ", nus)
-    sobrou = sorted({" ".join(t.split())
-                     for t in re.findall(r"[^.;!?]*\d[^.;!?]*", texto)})
-    assert not sobrou, (
-        f"o texto de ajuda tem número que o produto não reescreve: {sobrou}. "
-        f"Ele vem do `monta.CONECTADOS`, a mesa do DESENHO, e fica na tela "
-        f"dela ao lado de um cabeçalho que lê o aparelho.")
-
-
 #     DualSense na mesa
 _FIM_DA_ABA = "<!-- ===== fim da aba ===== -->"
 
@@ -1008,18 +822,6 @@ def test_o_selo_do_nao_localizado_e_a_palavra_dela(desenho):
     assert desenho.SELOS["off"] == "NÃO LOCALIZADO", (
         f"o selo do estado 'procurei e não achei' diz "
         f"{desenho.SELOS['off']!r}, e a palavra dela é 'NÃO LOCALIZADO'")
-
-
-def test_a_palavra_do_selo_chega_a_pagina_publicada(desenho):
-    """O selo é PINTADO, e por isso a cor dele tem de existir na folha publicada."""
-    doc = _publicada()
-    assert ".lanc-selo.off" in doc, (
-        "a classe do selo NÃO LOCALIZADO não existe no CSS publicado — o selo "
-        "chega pintado pelo produto e nasce sem cor nenhuma")
-    assert desenho.SELOS["off"] not in doc, (
-        f"a página estática já diz {desenho.SELOS['off']!r} — ela nasce no "
-        f"estado 'ainda não procurei', e afirmar 'não localizei' antes de "
-        f"procurar é o desenho fingindo ser produto")
 
 
 def test_nao_ha_cartao_da_epic_e_o_heroic_e_a_porta_das_duas_lojas(desenho):
@@ -1124,9 +926,6 @@ def test_a_tela_de_registro_chega_a_pagina_publicada(desenho):
         assert f'data-campo="{campo}"' not in doc, (
             f"o campo {campo!r} ganhou `data-campo`: o piloto o repintaria dez "
             f"vezes por segundo por cima do que ela está digitando")
-    assert f'data-campo="{desenho.NOVO_PARA_QUEM}"' in doc, (
-        "a tela não diz PARA QUAL cartão ela abriu — quem chega pelo botão de "
-        "um cartão vê dois campos vazios e nenhuma pista")
 
 
 class _PonteQueAnota:
@@ -1166,15 +965,14 @@ def test_o_registro_nao_grava_o_que_nao_esta_no_disco(a07, ctx, desenho):
 def test_o_botao_do_cartao_diz_a_tela_para_qual_lancador(a07, ctx, desenho):
     """A PRIMEIRA METADE DO GESTO: apontar, sem gravar nada."""
     p = _PonteQueAnota()
-    r = a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR,
+    a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR,
                                      "v": "retroarch"}, p)
     assert p.chamadas == [], "o clique que só ABRE a tela gravou alguma coisa"
-    assert "RetroArch" in r["mesa"][desenho.NOVO_PARA_QUEM], (
-        f"a tela não diz que abriu para o RetroArch: "
-        f"{r['mesa'][desenho.NOVO_PARA_QUEM]!r}")
+    assert a07._PARA_QUEM == "retroarch", (
+        f"a tela não guardou que abriu para o RetroArch: {a07._PARA_QUEM!r}")
 
-    vazio = a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "v": ""}, p)
-    assert vazio["mesa"][desenho.NOVO_PARA_QUEM] == desenho.NOVO_SEM_ALVO, (
+    a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "v": ""}, p)
+    assert a07._PARA_QUEM == "", (
         "o botão GLOBAL herdou o alvo do clique anterior — ela pediu um "
         "lançador novo e a tela diria o nome de um cartão que ela não escolheu")
 
@@ -1613,64 +1411,6 @@ def test_a_recusa_do_registro_nunca_confessa_divida_nossa(a07, desenho):
         + "\n\nDecisão dela, 07/09/2026: a dívida vai para o mapa "
           "(`docs/data/paridade-gtk-html.csv`), nunca para a tela. Ou o buraco "
           "fecha, ou ele fica no mapa — a tela não o conta.")
-
-
-_REGRA_DE_SELO = re.compile(r"(?P<seletores>[^{}]+)\{(?P<corpo>[^{}]*)\}")
-
-
-def _folha_da_aba() -> str:
-    """O `<style>` da página da bancada, com a prosa decepada."""
-    return re.sub(r"/\*.*?\*/", " ", _pagina_velha(), flags=re.S)
-
-
-def _corpo_da_regra_do_selo(folha: str, chave: str) -> str | None:
-    """A declaração que pinta `.lanc-selo.<chave>`, ou `None` se não há nenhuma."""
-    agulha = f".lanc-selo.{chave}"
-    for regra in _REGRA_DE_SELO.finditer(folha):
-        seletores = [s.strip() for s in regra.group("seletores").split(",")]
-        if agulha in seletores:
-            return " ".join(regra.group("corpo").split())
-    return None
-
-
-def test_todo_selo_do_produto_tem_cor_na_folha(desenho):
-    """Um selo que o Python emite e a folha não conhece sai SEM PÍLULA."""
-    folha = _folha_da_aba()
-    sem_cor = [k for k in desenho.SELOS
-               if _corpo_da_regra_do_selo(folha, k) is None]
-
-    assert not sem_cor, (
-        f"o produto emite {sorted(sem_cor)} e a folha da aba não pinta "
-        f"nenhum deles: `<span class=\"lanc-selo {sem_cor[0]}\">` cai só na "
-        f"`.lanc-selo` base, que dá tamanho e fonte e NÃO dá fundo — o selo "
-        f"sai como texto solto ao lado do nome do cartão, e foi exatamente "
-        f"isso que ela viu em 11/09/2026. `SELOS` e a folha são duas listas, "
-        f"e quem acrescenta uma chave numa tem de acrescentar na outra.")
-
-
-def test_os_selos_de_uma_mesma_moldura_tem_a_mesma_cor(desenho):
-    """A família do selo já está escrita em `MOLDURA` — a folha a obedece."""
-    folha = _folha_da_aba()
-    familias: dict[str, list[str]] = {}
-    for chave in desenho.SELOS:
-        familias.setdefault(desenho.MOLDURA[chave], []).append(chave)
-
-    discordantes = []
-    for moldura, chaves in sorted(familias.items()):
-        if len(chaves) < 2:
-            continue
-        pintados = {k: _corpo_da_regra_do_selo(folha, k) for k in sorted(chaves)}
-        if len(set(pintados.values())) > 1:
-            discordantes.append(f"moldura {moldura!r}: " + " · ".join(
-                f"{k} → {v!r}" for k, v in pintados.items()))
-
-    assert not discordantes, (
-        "selos da MESMA moldura estão pintados de cores diferentes:\n  "
-        + "\n  ".join(discordantes)
-        + "\n\n`MOLDURA` é quem declara a família, e ela já dá a mesma moldura "
-          "aos dois. Duas cores para o mesmo estado é uma cor a mais para ela "
-          "decodificar — é a razão escrita em `MOLDURA` e a que `off`/`nao_sei` "
-          "já cumprem.")
 
 
 def test_a_lista_vazia_da_steam_nao_ocupa_um_pixel(desenho):

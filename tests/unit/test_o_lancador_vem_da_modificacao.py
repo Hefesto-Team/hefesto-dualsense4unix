@@ -181,16 +181,17 @@ def test_as_janelas_medidas_sao_a_fabrica_mais_as_da_modificacao(
     a07: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
 ) -> None:
     """O RetroArch segue com a janela de fábrica; o KytyPS5 traz a dele."""
-    lg = _plantar(tmp_path)
+    lg = _plantar(tmp_path, leitor="print('[]')\n")
     _no_xdg(monkeypatch, lg)
     _so_as_modificacoes(a07, monkeypatch)
     a07._ESCOLHA.limpar()
-    a07._ESCOLHA.modo = desenho.EXCLUIR
+    a07._ESCOLHA.modo = desenho.CRIAR_PERFIL
     jogos, janelas, emulador = a07._jogos_para_escolher("retroarch", "RetroArch", None)
     assert emulador and "com.libretro.RetroArch" in janelas[jogos[0].chave]
     jogos, janelas, emulador = a07._jogos_para_escolher("kytyps5", "KytyPS5", None)
     assert emulador and jogos[0].chave == "emulador:kytyps5", (
-        "na exclusão, o KytyPS5 fica na linha «todos os jogos»: a lista casa por janela")
+        "sem jogo com o ID no título, o KytyPS5 fica na linha «todos os jogos», "
+        "que casa por janela")
     assert "kyty_emulator" in janelas["emulador:kytyps5"]
     assert not hasattr(a07, "_JANELAS_MEDIDAS"), "o dicionário cravado voltou"
 

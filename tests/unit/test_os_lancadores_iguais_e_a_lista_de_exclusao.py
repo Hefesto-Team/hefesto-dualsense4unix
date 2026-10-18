@@ -632,9 +632,6 @@ def test_a_subida_liga_os_tres_fios(monkeypatch: pytest.MonkeyPatch) -> None:
     assert capturado["exclusao_reader"] is lx.contem
 
 
-_APPID_WO_LONG = "1599660"
-
-
 @pytest.fixture()
 def _aba07(monkeypatch: pytest.MonkeyPatch) -> Iterator[tuple]:
     """O desenho e o pacote da aba 07, com a VIGIA parada."""
@@ -677,16 +674,6 @@ def test_os_cartoes_localizados_tem_a_mesma_fileira(_aba07, dia: str) -> None:
         esperado = [a.rotulo for a in desenho.fileira_comum(lanc.chave)]
         rotulos = [a.rotulo for a in lanc.acoes]
         assert rotulos[:len(esperado)] == esperado, (lanc.chave, rotulos)
-
-
-def test_a_lista_vazia_nao_ocupa_linha_no_cartao(_aba07) -> None:
-    """Sem jogo excluído, o cartão não ganha pé — palavra, 21/09/2026:"""
-    desenho, a07 = _aba07
-    lida = _o_dia_bom(desenho)
-    antes = desenho.cartoes(lida)
-    depois = a07.com_a_exclusao(antes, lida)
-    assert [c.fora for c in depois] == [c.fora for c in antes]
-    assert desenho.rodape_da_exclusao_html([]) == ""
 
 
 def test_nenhum_botao_do_cartao_nasce_sem_gesto(_aba07) -> None:
@@ -740,52 +727,6 @@ def _escolher(monkeypatch: pytest.MonkeyPatch, a07, modo: str) -> None:
         lambda lancador, nome, state: (
             [a07.desenho.JogoParaEscolher(chave=_JANELA, nome="Wo Long")], {}, False))
     a07._abrir_a_escolha(modo, a07.desenho.STEAM, None)
-
-
-def test_o_rodape_diz_o_excluido_e_a_lista_da_steam_nao_o_repete(_aba07) -> None:
-    """ARRANQUE o filtro dos recusados e este teste reprova: o jogo excluído"""
-    desenho, a07 = _aba07
-    lx.adicionar(_JANELA, lancador=desenho.STEAM, nome="Wo Long")
-    lida = desenho.Leitura(
-        com_wrapper=("620",), instalados=1,
-        recusados=((_APPID_WO_LONG, "Wo Long"), ("70", "Jogo tirado")))
-    steam = a07.com_a_exclusao(desenho.cartoes(lida), lida)[0]
-    assert "Na lista de exclusão" in steam.fora and "Wo Long" in steam.fora
-    assert steam.fora.count("Wo Long") == 1, steam.fora
-    assert "Jogo tirado" in steam.fora, "o recusado DELA continua na lista"
-
-
-@pytest.mark.parametrize("lancador", ["heroic", "lutris"])
-def test_o_excluido_de_outro_cartao_tambem_sai_da_lista_da_steam(
-        _aba07, lancador: str) -> None:
-    """O jogo do Heroic ou do Lutris excluído tem a chave `steam_app_<N>` (o umu
-    batiza a janela pelo número), e a exclusão o põe no `jogos_sem_wrapper.txt`
-    como o da Steam. O filtro dos recusados só valia com uma exclusão no cartão
-    da Steam: medido no piloto, num lar de mentira, em 02/10/2026 (conferência
-    final do tema lancadores2), o cartão da Steam dizia «appid 70000 · você
-    tirou · Voltar a usar» para o jogo da GOG excluído pelo cartão do Lutris.
-
-    ARRANQUE o `steam and appids_fora` da guarda do `com_a_exclusao` e este
-    teste reprova: o «Voltar a usar» desfaria só o atalho — metade da exclusão.
-    """
-    desenho, a07 = _aba07
-    lx.adicionar(_JANELA, lancador=lancador, nome="Wo Long")
-    lida = desenho.Leitura(
-        com_wrapper=("620",), instalados=1,
-        recusados=((_APPID_WO_LONG, "Wo Long"), ("70", "Jogo tirado")))
-    cartoes = a07.com_a_exclusao(desenho.cartoes(lida), lida)
-    steam = next(c for c in cartoes if c.chave == desenho.STEAM)
-    assert "Wo Long" not in steam.fora, (
-        f"o excluído pelo cartão {lancador} aparece no da Steam: {steam.fora}")
-    assert "Jogo tirado" in steam.fora, "o recusado DELA continua na lista"
-    sem_outro = desenho.Leitura(com_wrapper=("620",), instalados=1,
-                                recusados=((_APPID_WO_LONG, "Wo Long"),))
-    vazia = next(c for c in a07.com_a_exclusao(desenho.cartoes(sem_outro), sem_outro)
-                 if c.chave == desenho.STEAM)
-    assert "Wo Long" not in vazia.fora, vazia.fora
-    assert vazia.fora == desenho.lista_de_jogos(
-        desenho.Leitura(com_wrapper=("620",), instalados=1)), (
-        "sem outro recusado, o cartão da Steam fica como o de nenhum")
 
 
 def test_criar_perfil_passa_pelo_gravador_da_aba_perfis(
