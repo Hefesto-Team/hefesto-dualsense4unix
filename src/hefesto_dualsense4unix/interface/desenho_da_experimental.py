@@ -101,9 +101,9 @@ JOGOS_DE_EXEMPLO = (
 MARCA_DO_KIT = "Fala com a Lovense"
 _NO_MENU = "No menu Lovense do jogo: IP 127.0.0.1, porta 20010"
 _EXTRA_DO_KIT = {
-    "lovense-unity": "Use HTTP desligado",
-    "lovense-jj": "Conexão HTTP (20010)",
-    "lovense-rpgmaker": "Mobile",
+    "lovense-unity": "«Use HTTP» desligado",
+    "lovense-jj": "«Conexão HTTP (20010)»",
+    "lovense-rpgmaker": "«Mobile»",
 }
 _OUTRA_MAQUINA = "O jogo fala direto com o app do celular"
 

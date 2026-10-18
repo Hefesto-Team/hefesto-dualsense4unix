@@ -9,7 +9,7 @@ rede aparece na tela.
 O DESENHO vem de `desenho_da_experimental.linha_do_kit`, que lê o `KitDoJogo` do produto; a
 segunda passagem pinta a janela com os prontuários vivos.
 
-MORDIDAS (executadas aqui): o kit Unity com «Use HTTP ligado» e a linha desenhada no veredito
+MORDIDAS (executadas aqui): o kit Unity com «Use HTTP» ligado e a linha desenhada no veredito
 `alcanca_a_ponte` reprovam; um IP de rede no HTML também.
 """
 
@@ -48,9 +48,10 @@ def test_a_linha_de_cada_veredito(exp, kits) -> None:
     assert exp.linha_do_kit(None) == ""
     assert exp.linha_do_kit(kit("lovense-unity", kits.ALCANCA_A_PONTE, 20010, "http")) == ""
     assert exp.linha_do_kit(kit("lovense-unity", kits.PORTA_QUE_NADA_ATENDE, 20100, "http")) == (
-        f"{NO_MENU}, Use HTTP desligado")
-    assert exp.linha_do_kit(kit("lovense-jj", kits.NAO_LIDO)) == f"{NO_MENU}, Conexão HTTP (20010)"
-    assert exp.linha_do_kit(kit("lovense-rpgmaker", kits.DESLIGADO)) == f"{NO_MENU}, Mobile"
+        f"{NO_MENU}, «Use HTTP» desligado")
+    assert exp.linha_do_kit(kit("lovense-jj", kits.NAO_LIDO)) == (
+        f"{NO_MENU}, «Conexão HTTP (20010)»")
+    assert exp.linha_do_kit(kit("lovense-rpgmaker", kits.DESLIGADO)) == f"{NO_MENU}, «Mobile»"
     assert exp.linha_do_kit(kit("lovense-unity", kits.APONTA_PARA_OUTRA_MAQUINA)) == (
         "O jogo fala direto com o app do celular")
 
@@ -71,7 +72,7 @@ def test_a_marca_e_a_linha_vao_ao_desenho_so_para_quem_tem_o_kit() -> None:
     for com_kit in ("Neon Nights", "Planet Lust", "MonGirl Conquest", "Third Crisis", "Orpheus"):
         assert "Fala com a Lovense" in por_nome[com_kit], com_kit
     assert "jg-porta" not in por_nome["Third Crisis"], "o que alcança a ponte não leva linha"
-    assert NO_MENU in por_nome["Neon Nights"] and "Use HTTP desligado" in por_nome["Neon Nights"]
+    assert NO_MENU in por_nome["Neon Nights"] and "«Use HTTP» desligado" in por_nome["Neon Nights"]
     assert "app do celular" in por_nome["Orpheus"]
 
 
