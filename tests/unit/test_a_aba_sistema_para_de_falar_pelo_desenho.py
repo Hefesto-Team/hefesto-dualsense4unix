@@ -130,6 +130,9 @@ def test_as_seis_linhas_deixam_de_ser_o_travessao(a09, ctx, monkeypatch, avisos)
     # virtual são do exame (`exame-lista`), e o ambiente saiu da aba.
     assert tuple(ids[:2]) == DO_STATUS, lista
     assert not set(ids[2:]) & set(DO_STATUS), lista
+    # A linha que voltasse do exame ao Status sairia duas vezes nas três colunas.
+    todos = ids + re.findall(r'data-id="([^"]+)"', str(p.get("exame-lista") or ""))
+    assert len(todos) == len(set(todos)), todos
     for ident in ("hefesto-estado", "hefesto-troca-de-perfil"):
         linha = re.search(r'data-id="' + ident + r'".*?</(?:div|a)>', lista)
         assert linha, f"o Status parou de trazer `{ident}`"

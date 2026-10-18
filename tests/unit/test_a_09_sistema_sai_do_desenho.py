@@ -143,12 +143,18 @@ def test_o_pacote_emite_o_glifo_de_cada_linha_do_status(a09, ctx, monkeypatch, a
     dizendo qual pílula saiu sem glifo.
     """
     _com_avisos_a_mais(a09, ctx, monkeypatch, avisos)
-    coluna = a09.pacote(ctx)[a09.CAMPO_DO_STATUS]
+    pac = a09.pacote(ctx)
+    coluna = pac[a09.CAMPO_DO_STATUS]
     ids = re.findall(r'data-id="([^"]+)"', coluna)
     # Desde 15/10/2026 o Status tem DUAS linhas (Serviço e Troca de perfil); o Bluetooth e o resto
     # vivem no exame.
+    assert a09.LINHAS_DO_STATUS == DO_STATUS, a09.LINHAS_DO_STATUS
     assert tuple(ids[:2]) == DO_STATUS, ids
     assert not set(ids[2:]) & set(DO_STATUS), ids
+    # Uma linha que volta do exame ao Status sai duas vezes na lista (a do Bluetooth é a primeira
+    # do exame): cada endereço aparece uma vez só nas três colunas.
+    todos = ids + re.findall(r'data-id="([^"]+)"', str(pac.get("exame-lista") or ""))
+    assert len(todos) == len(set(todos)), todos
     pilulas = _pilulas(coluna)
     assert len(pilulas) >= 2, pilulas
     for glifo, palavra in pilulas:
