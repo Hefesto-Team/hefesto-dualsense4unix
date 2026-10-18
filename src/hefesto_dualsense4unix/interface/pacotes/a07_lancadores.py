@@ -1823,10 +1823,18 @@ def _extensao_de(item: _Instalada) -> Any:
 
 
 def _jogos_da_fila(lanc: desenho.Lancador) -> str:
-    """A contagem da fila: «48 jogos», sem o «instalados» do cartão velho."""
-    if not lanc.presente or lanc.jogos in ("", "—", desenho.AINDA_LENDO):
+    """A contagem da fila: «48 jogos», sem o «instalados» do cartão velho.
+
+    A linha da fila só tem lugar para a contagem: a frase do cartão velho («Abra o Heroic uma
+    vez…») passava por baixo dos três botões, e fica fora.
+    """
+    if not lanc.presente:
         return ""
-    return lanc.jogos.replace("jogos instalados", "jogos").replace("jogo instalado", "jogo")
+    conta = lanc.jogos.replace("jogos instalados", "jogos").replace("jogo instalado", "jogo")
+    return conta if _CONTAGEM_DA_FILA.fullmatch(conta) else ""
+
+
+_CONTAGEM_DA_FILA = re.compile(r"\d+ jogos?")
 
 
 def _fila_de(lancadores: list[desenho.Lancador]) -> list[Any]:

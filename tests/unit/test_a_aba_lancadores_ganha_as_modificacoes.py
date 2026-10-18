@@ -657,3 +657,20 @@ def test_guardar_a_cor_valida_normaliza_e_mantem_a_aba_aberta(lar, ctx, tmp_path
     with pytest.raises(RuntimeError, match="#rrggbb"):
         a07.guardar_opcao_da_modificacao(
             ctx, {"v": "toque:luz", "valor": "vermelho", "evento": "change"}, _Ponte())
+
+
+def test_a_linha_da_fila_so_leva_a_contagem_e_a_frase_do_cartao_velho_fica_fora() -> None:
+    """A frase «Abra o Heroic uma vez…» passava por baixo dos três botões da linha."""
+    from hefesto_dualsense4unix.integrations.censo_dos_lancadores import FRASE_NUNCA_ABERTO
+    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as dl
+
+    a07 = _a07()
+
+    def lanc(jogos: str, presente: bool = True) -> dl.Lancador:
+        return dl.Lancador(chave="heroic", nome="Heroic", selo="", jogos=jogos, diz="",
+                           presente=presente)
+
+    assert a07._jogos_da_fila(lanc("22 jogos instalados")) == "22 jogos"
+    assert a07._jogos_da_fila(lanc("1 jogo instalado")) == "1 jogo"
+    assert a07._jogos_da_fila(lanc(FRASE_NUNCA_ABERTO.format(nome="Heroic"))) == ""
+    assert a07._jogos_da_fila(lanc("22 jogos instalados", presente=False)) == ""
