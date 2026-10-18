@@ -2311,7 +2311,9 @@ if ! "${_PY_DO_GTK}" -c \
         _rc_pkg=0
         run_pkg python-gi python-gi-cairo gtk3 appindicator gi-dev || _rc_pkg=$?
         if (( _rc_pkg == _RC_PACOTE_A_MEIO )); then
-            # O aviso do sistema já saiu: aqui só se diz que o GTK ficou por isso.
+            # O aviso do sistema já saiu, talvez bem antes (ele sai uma vez só):
+            # o comando de consertar vem de novo logo acima da linha do erro.
+            printf '      para consertar o sistema:   sudo apt-get install -f   (ou: sudo dpkg --configure -a)\n'
             die "o GTK3 não foi instalado porque o sistema tem pacote a meio de uma atualização (${_PACOTES_A_MEIO_LISTA}) — conserte o sistema pelo comando acima e reexecute ./install.sh"
         elif (( _rc_pkg )); then
             die "falha ao instalar GTK3 — $([[ "$(_familia_pacotes)" == "imutavel" ]] && printf 'a imagem do sistema não os trouxe; peça-os pela camada de pacotes da sua distro' || printf 'verifique a conexão e tente novamente')"

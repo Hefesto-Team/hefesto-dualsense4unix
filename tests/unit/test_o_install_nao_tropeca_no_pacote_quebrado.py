@@ -450,7 +450,10 @@ def test_o_gtk_com_pacote_a_meio_diz_o_pacote_e_nao_a_conexao(tmp_path: Path) ->
     saida = proc.stdout + proc.stderr
     assert proc.returncode == 42, saida
     assert "linux-image-7.2.6-76070206-generic" in saida
-    assert "GTK3" in saida and "sudo apt-get install -f" in saida
+    assert "GTK3" in proc.stderr and "comando acima" in proc.stderr, proc.stderr
+    # «o comando acima» é a última linha antes do erro: o aviso do sistema sai uma vez só, e
+    # pode ter saído bem antes, num outro pacote que o install pediu
+    assert "sudo apt-get install -f" in proc.stdout.rstrip().splitlines()[-1], proc.stdout
     assert not re.search(r"conex|\brepos\b", saida), saida
     assert _linhas(tmp_path / "pkg.log") == [], "o apt foi chamado com pacote a meio"
 
