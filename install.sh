@@ -756,6 +756,14 @@ _run_pkg_quieto() {
 # o estado `H` (half-installed), `U` (unpacked) ou `F` (half-configured), ou o
 # erro `R` (reinstalação exigida). `hi` (retido), `rc` e `un` não são.
 # Imprime os nomes numa linha só; nada impresso é «sem pacote a meio».
+#
+# O `run_pkg` com pacote a meio devolve este código e não o 1 genérico de «não
+# consegui» (rede, nome que não existe): o aviso do sistema já saiu, e quem lê o
+# código não acrescenta uma causa que não é a certa. 75 é o `EX_TEMPFAIL` do
+# sysexits: «tente de novo depois de consertar». `_PACOTES_A_MEIO_LISTA` guarda
+# os nomes para a mensagem de quem dá causa.
+readonly _RC_PACOTE_A_MEIO=75
+_PACOTES_A_MEIO_LISTA=""
 _pacotes_a_meio() {
     command -v dpkg-query >/dev/null 2>&1 || return 0
     dpkg-query -W -f='${db:Status-Abbrev} ${Package}\n' 2>/dev/null \
@@ -889,9 +897,10 @@ run_pkg() {
     done
     (( ${#_nomes[@]} )) || return 1
     # Pacote a meio no sistema: o apt tentaria reconfigurá-lo e falharia de
-    # novo. O install não chama o apt, diz o que é do sistema e devolve 1, o
-    # «não consegui» que cada chamador já trata. O ensaio devolve 0 como no
-    # ramo imutável, mas não finge que instalaria.
+    # novo. O install não chama o apt, diz o que é do sistema e devolve
+    # `_RC_PACOTE_A_MEIO`, um «não consegui» que cada chamador já trata como 1 e
+    # que quem dá causa distingue. O ensaio devolve 0 como no ramo imutável, mas
+    # não finge que instalaria.
     if [[ "${_familia}" == "apt" ]]; then
         local _meio
         _meio="$(_pacotes_a_meio)"
@@ -902,7 +911,8 @@ run_pkg() {
             fi
             _avisa_pacote_a_meio "${_nomes[*]}" "${_meio}"
             printf '      depois, para instalar o que o Hefesto pede:   %s\n' "$(comando_manual_pkg "$@")"
-            return 1
+            _PACOTES_A_MEIO_LISTA="${_meio}"
+            return "${_RC_PACOTE_A_MEIO}"
         fi
     fi
     # O ensaio devolve 0 de propósito: o plano tem de mostrar o caminho em que a
@@ -2298,8 +2308,14 @@ if ! "${_PY_DO_GTK}" -c \
     ask_yn "instalar agora com sudo?" "${AUTO_YES}"
     if [[ "${REPLY,,}" =~ ^y ]]; then
         printf '      instalando...\n'
-        run_pkg python-gi python-gi-cairo gtk3 appindicator gi-dev \
-            || die "falha ao instalar GTK3 — $([[ "$(_familia_pacotes)" == "imutavel" ]] && printf 'a imagem do sistema não os trouxe; peça-os pela camada de pacotes da sua distro' || printf 'verifique a conexão e tente novamente')"
+        _rc_pkg=0
+        run_pkg python-gi python-gi-cairo gtk3 appindicator gi-dev || _rc_pkg=$?
+        if (( _rc_pkg == _RC_PACOTE_A_MEIO )); then
+            # O aviso do sistema já saiu: aqui só se diz que o GTK ficou por isso.
+            die "o GTK3 não foi instalado porque o sistema tem pacote a meio de uma atualização (${_PACOTES_A_MEIO_LISTA}) — conserte o sistema pelo comando acima e reexecute ./install.sh"
+        elif (( _rc_pkg )); then
+            die "falha ao instalar GTK3 — $([[ "$(_familia_pacotes)" == "imutavel" ]] && printf 'a imagem do sistema não os trouxe; peça-os pela camada de pacotes da sua distro' || printf 'verifique a conexão e tente novamente')"
+        fi
         printf '      GTK3 instalado\n'
     else
         die "GTK3 obrigatório. Instale manualmente e reexecute ./install.sh"
@@ -3740,8 +3756,14 @@ if [[ "${DESKTOP_IS_WLROOTS}" -eq 1 ]]; then
         ask_yn "instalar wlrctl agora?" "${AUTO_YES}" "y"
         if [[ "${REPLY,,}" =~ ^y ]]; then
             if command -v sudo >/dev/null 2>&1; then
-                if run_pkg wlrctl 2>/dev/null; then
+                _rc_pkg=0
+                run_pkg wlrctl 2>/dev/null || _rc_pkg=$?
+                if (( _rc_pkg == 0 )); then
                     printf '      wlrctl instalado (%s)\n' "$(command -v wlrctl)"
+                elif (( _rc_pkg == _RC_PACOTE_A_MEIO )); then
+                    # O aviso do sistema e o comando de depois já saíram; o wlrctl
+                    # fica para depois, sem causa que não seja essa.
+                    :
                 else
                     warn "wlrctl não esta nos repos deste sistema (Ubuntu <24.04?)"
                     printf '      alternativas:\n'

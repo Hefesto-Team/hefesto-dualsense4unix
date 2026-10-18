@@ -23,13 +23,34 @@ from pathlib import Path
 import pytest
 
 from tests.unit.test_install_garante_deps_em_qualquer_familia import (
-    PRELUDO,
+    PRELUDO as PRELUDO_BASE,
+)
+from tests.unit.test_install_garante_deps_em_qualquer_familia import (
     _extrai_funcao,
     _extrai_linha,
-    _roda,
+)
+from tests.unit.test_install_garante_deps_em_qualquer_familia import (
+    _roda as _roda_com,
 )
 
+# O código de «pacote a meio» e a lista dos nomes são variáveis do install, e o
+# prelúdio da outra régua só traz funções: aqui elas vêm junto, do fonte.
+PRELUDO = "\n".join(
+    [
+        PRELUDO_BASE,
+        _extrai_linha(r"^readonly _RC_PACOTE_A_MEIO=.*$"),
+        _extrai_linha(r"^_PACOTES_A_MEIO_LISTA=.*$"),
+    ]
+)
 PRELUDO_ENSAIO = "\n".join([PRELUDO, _extrai_linha(r"^_nao_faria\(\).*$")])
+RC_A_MEIO = 75
+
+
+def _roda(
+    corpo: str, *, preludo: str = PRELUDO, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
+    return _roda_com(corpo, preludo=preludo, env=env)
+
 
 A_MEIO = "iF  linux-image-7.2.6-76070206-generic\niU  linux-generic\nii  bash\n"
 TUDO_INSTALADO = "ii  bash\nhi  linux-libc-dev\nrc  pacote-removido\nun  pacote-que-nao-veio\n"
@@ -80,7 +101,7 @@ def test_pacote_a_meio_o_apt_nao_e_chamado(tmp_path: Path) -> None:
         "run_pkg toolchain-c || echo RC=$?",
         env=_env(tmp_path, "apt", binario),
     )
-    assert "RC=1" in proc.stdout, proc.stdout + proc.stderr
+    assert f"RC={RC_A_MEIO}" in proc.stdout, proc.stdout + proc.stderr
     assert _linhas(tmp_path / "pkg.log") == [], "o apt foi chamado com pacote a meio"
     assert "linux-image-7.2.6-76070206-generic" in proc.stdout
     assert "linux-generic" in proc.stdout
@@ -97,7 +118,7 @@ def test_pacote_a_meio_o_apt_nao_e_chamado(tmp_path: Path) -> None:
 def test_cada_estado_quebrado_barra_o_apt(tmp_path: Path, linha: str) -> None:
     binario = _bancada(tmp_path, dpkg=f"ii  bash\n{linha}\n")
     proc = _roda("run_pkg hidapi || echo RC=$?", env=_env(tmp_path, "apt", binario))
-    assert "RC=1" in proc.stdout, proc.stdout + proc.stderr
+    assert f"RC={RC_A_MEIO}" in proc.stdout, proc.stdout + proc.stderr
     assert "um-pacote" in proc.stdout
     assert _linhas(tmp_path / "pkg.log") == []
 
@@ -378,9 +399,7 @@ def _formato_deb(tmp_path: Path) -> str:
     (raiz / "scripts" / "build_deb.sh").write_text(
         f'mkdir -p "{raiz}/dist"\n: > "{raiz}/dist/hefesto_1_all.deb"\n', encoding="utf-8"
     )
-    return "\n".join(
-        [PRELUDO, "step() { :; }", f'ROOT_DIR="{raiz}"', _extrai_funcao("format_deb")]
-    )
+    return "\n".join([PRELUDO, "step() { :; }", f'ROOT_DIR="{raiz}"', _extrai_funcao("format_deb")])
 
 
 def test_o_deb_com_pacote_a_meio_nao_chama_o_apt(tmp_path: Path) -> None:
@@ -399,3 +418,84 @@ def test_o_deb_com_tudo_em_ii_vai_ao_apt(tmp_path: Path) -> None:
     assert proc.returncode == 0, proc.stdout + proc.stderr
     (chamada,) = _linhas(tmp_path / "pkg.log")
     assert chamada.startswith("apt-get install -y ") and chamada.endswith("hefesto_1_all.deb")
+
+
+# A MENSAGEM DE QUEM DÁ CAUSA (17/10/2026). O `run_pkg` com pacote a meio devolve
+# um código próprio; o GTK e o wlrctl liam o 1 genérico e acrescentavam, depois do
+# aviso certo, uma causa errada («verifique a conexão», «não está nos repos»).
+
+
+def _trecho(padrao: str) -> str:
+    achado = re.search(padrao, INSTALL, re.MULTILINE | re.DOTALL)
+    assert achado is not None, f"trecho ausente em install.sh: {padrao}"
+    return achado.group(0)
+
+
+# Do `run_pkg` do GTK obrigatório até o «GTK3 instalado».
+GTK = _trecho(r"^[ ]*(?:_rc_pkg=0\n[ ]*)?run_pkg python-gi .*?GTK3 instalado\\n'")
+# Do `run_pkg` do wlrctl até o `fi` que fecha o «instalou ou não».
+WLRCTL = _trecho(
+    r"(?:^[ ]*_rc_pkg=0\n[ ]*run_pkg wlrctl|^[ ]*if run_pkg wlrctl).*?"
+    r"brocellous/wlrctl\\n'\n[ ]*fi\n"
+)
+
+
+def test_o_codigo_de_pacote_a_meio_nao_e_o_um_generico() -> None:
+    assert RC_A_MEIO != 1 and f"_RC_PACOTE_A_MEIO={RC_A_MEIO}" in PRELUDO
+
+
+def test_o_gtk_com_pacote_a_meio_diz_o_pacote_e_nao_a_conexao(tmp_path: Path) -> None:
+    binario = _bancada(tmp_path, dpkg=A_MEIO)
+    proc = _roda(GTK, env=_env(tmp_path, "apt", binario))
+    saida = proc.stdout + proc.stderr
+    assert proc.returncode == 42, saida
+    assert "linux-image-7.2.6-76070206-generic" in saida
+    assert "GTK3" in saida and "sudo apt-get install -f" in saida
+    assert not re.search(r"conex|\brepos\b", saida), saida
+    assert _linhas(tmp_path / "pkg.log") == [], "o apt foi chamado com pacote a meio"
+
+
+def test_o_gtk_sem_pacote_a_meio_e_apt_que_falha_continua_na_conexao(tmp_path: Path) -> None:
+    binario = _bancada(tmp_path, apt_rc=100)
+    proc = _roda(GTK, env=_env(tmp_path, "apt", binario))
+    saida = proc.stdout + proc.stderr
+    assert proc.returncode == 42, saida
+    assert "verifique a conexão e tente novamente" in saida
+    assert "pacote a meio" not in saida
+
+
+def test_o_wlrctl_com_pacote_a_meio_nao_diz_que_falta_nos_repos(tmp_path: Path) -> None:
+    binario = _bancada(tmp_path, dpkg=A_MEIO)
+    proc = _roda(WLRCTL, env=_env(tmp_path, "apt", binario))
+    saida = proc.stdout + proc.stderr
+    assert proc.returncode == 0, saida
+    assert "linux-image-7.2.6-76070206-generic" in saida
+    assert "repos" not in saida and "conexão" not in saida, saida
+    assert "sudo apt install wlrctl" in saida
+    assert _linhas(tmp_path / "pkg.log") == [], "o apt foi chamado com pacote a meio"
+
+
+def test_o_wlrctl_sem_pacote_a_meio_e_apt_que_falha_continua_nos_repos(tmp_path: Path) -> None:
+    binario = _bancada(tmp_path, apt_rc=100)
+    proc = _roda(WLRCTL, env=_env(tmp_path, "apt", binario))
+    saida = proc.stdout + proc.stderr
+    assert proc.returncode == 0, saida
+    assert "wlrctl não esta nos repos deste sistema" in saida
+    assert "pacote a meio" not in saida
+
+
+def test_o_wlrctl_instalado_diz_instalado(tmp_path: Path) -> None:
+    binario = _bancada(tmp_path)
+    alvo = binario / "wlrctl"
+    alvo.write_text("#!/usr/bin/env bash\n", encoding="utf-8")
+    alvo.chmod(0o755)
+    proc = _roda(WLRCTL, env=_env(tmp_path, "apt", binario))
+    assert "wlrctl instalado" in proc.stdout, proc.stdout + proc.stderr
+
+
+def test_o_ensaio_do_gtk_com_pacote_a_meio_segue_sem_morrer(tmp_path: Path) -> None:
+    """O ensaio devolve 0: o plano descreve a instalação que dá certo."""
+    binario = _bancada(tmp_path, dpkg=A_MEIO)
+    proc = _roda("DRY_RUN=1\n" + GTK, preludo=PRELUDO_ENSAIO, env=_env(tmp_path, "apt", binario))
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "GTK3 instalado" in proc.stdout
