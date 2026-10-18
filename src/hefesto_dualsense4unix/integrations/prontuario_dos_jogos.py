@@ -73,7 +73,7 @@ try:
     from .api_de_entrada import Evidencia, Veredito, examinar_pasta
     from .ficha_declarada import FichaDeclarada, explicar_a_capa, fichas_dos_jogos
     from .kits_de_brinquedo import KitDoJogo, kit_do_jogo
-    from .receitas_de_ambiente import pecas_que_faltam
+    from .receitas_de_ambiente import jogo_gdk_sem_ajudante, pecas_que_faltam
     from .steam_input_ponte import (
         PONTE_LIGADA,
         PONTE_NADA,
@@ -102,7 +102,10 @@ except ImportError:  # pragma: no cover - executado como script avulso
         fichas_dos_jogos,
     )
     from kits_de_brinquedo import KitDoJogo, kit_do_jogo  # type: ignore[no-redef]
-    from receitas_de_ambiente import pecas_que_faltam  # type: ignore[no-redef]
+    from receitas_de_ambiente import (  # type: ignore[no-redef]
+        jogo_gdk_sem_ajudante,
+        pecas_que_faltam,
+    )
     from steam_input_ponte import (  # type: ignore[no-redef]
         PONTE_LIGADA,
         PONTE_NADA,
@@ -136,6 +139,7 @@ SEM_EXECUTAVEL = "sem_executavel"
 EXCECAO_INERTE = "excecao_inerte"
 PONTE_DIVERGENTE = "ponte_divergente"
 FALTA_A_PECA = "falta_a_peca"
+SEM_CONTA = "sem_conta"
 
 _ESTORVOS: dict[str, tuple[str, str, bool]] = {
     SEM_WRAPPER: (
@@ -178,6 +182,14 @@ _ESTORVOS: dict[str, tuple[str, str, bool]] = {
         "ele a baixa ou a compila, e só a aceita se bate com a versão conferida. Se é "
         "um arquivo do jogo, ponha-o ao lado do executável. Com a peça no lugar, o "
         "Hefesto passa a variável sozinho ao abrir o jogo.",
+        False,
+    ),
+    SEM_CONTA: (
+        "O jogo abre e joga só neste computador: sem conta, sem amigos e sem online. "
+        "A peça GDK do Hefesto não faz o login do Xbox Live, quem o faz é o ajudante "
+        "de login, e ele não está em ~/.local/share/dungeons2-compat/xauth.py.",
+        "Para entrar na conta, instale o ajudante de login da origem nessa pasta; o "
+        "Hefesto não instala um. Para jogar local não precisa de nada.",
         False,
     ),
     PONTE_DIVERGENTE: (
@@ -374,6 +386,8 @@ class Prontuario:
     ponte: Ponte | None = None
     #: As peças que uma receita de ambiente pede ao lado do executável e o disco não tem.
     pecas_que_faltam: tuple[str, ...] = ()
+    #: O jogo recebe a peça GDK do Hefesto e o ajudante de login dela não está instalado.
+    sem_conta: bool = False
     #: O que a Steam e o binário dizem sobre controle. Informa; nunca entra no veredito.
     declarado: FichaDeclarada | None = None
     #: O kit de brinquedo que a pasta traz e o veredito da configuração salva. Informa; não é
@@ -439,6 +453,8 @@ class Prontuario:
             achados.append(Estorvo(SEM_EXECUTAVEL))
         if self.pecas_que_faltam:
             achados.append(Estorvo(FALTA_A_PECA, ", ".join(self.pecas_que_faltam)))
+        if self.sem_conta:
+            achados.append(Estorvo(SEM_CONTA))
         if self.ponte_divergente:
             achados.append(Estorvo(PONTE_DIVERGENTE))
         return achados
@@ -497,6 +513,7 @@ class Prontuario:
             "ponte": self.ponte.como_dicionario() if self.ponte else None,
             "ponte_divergente": self.ponte_divergente,
             "pecas_que_faltam": list(self.pecas_que_faltam),
+            "sem_conta": self.sem_conta,
             "declarado": self.declarado.como_dicionario() if self.declarado else None,
             "capa_da_steam": self.capa_da_steam,
             "kit": self.kit.como_dicionario() if self.kit else None,
@@ -740,6 +757,7 @@ def levantar_censo(
                 na_allowlist=appid in permitidos,
                 ponte=carimbos.get(appid),
                 pecas_que_faltam=pecas_que_faltam(raiz) if examinar else (),
+                sem_conta=jogo_gdk_sem_ajudante(raiz) if examinar else False,
                 declarado=declaradas.get(appid),
                 kit=kit_do_jogo(raiz, appid),
             )

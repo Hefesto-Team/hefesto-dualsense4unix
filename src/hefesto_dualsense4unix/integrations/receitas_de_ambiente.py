@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import os
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -53,6 +54,32 @@ def pasta_da_peca(home: Path | None = None) -> Path:
     """A pasta que o `WINEDLLPATH=@hefesto-wine` nomeia (a mesma do install e do wrapper)."""
     base = home if home is not None else Path.home()
     return base / ".local" / "share" / "hefesto-dualsense4unix" / "wine"
+
+
+#: Onde a peça GDK procura o ajudante de login, em relação à casa: o login do Xbox Live é dele, a
+#: peça não fabrica token. O dono do caminho é o fonte C (`compat_paths` em
+#: `assets/gdk-runtime/xgameruntime.c`); uma régua lê o C e reprova se o Python divergir.
+PASTA_DO_AJUDANTE = (".local", "share", "dungeons2-compat")
+NOME_DO_AJUDANTE = "xauth.py"
+
+
+def _casa_que_a_peca_ve() -> Path:
+    """A casa que a peça enxerga: ``HOME``, ``WINE_HOST_HOME`` e, sem as duas, ``/home/<usuário>``.
+
+    A mesma escada de `compat_paths` no fonte C, e só caminho absoluto vale em cada degrau.
+    """
+    for nome in ("HOME", "WINE_HOST_HOME"):
+        valor = os.environ.get(nome, "")
+        if valor.startswith("/"):
+            return Path(valor)
+    usuario = os.environ.get("USER") or os.environ.get("LOGNAME") or "steamuser"
+    return Path("/home") / usuario
+
+
+def caminho_do_ajudante_de_login(home: Path | None = None) -> Path:
+    """Onde a peça GDK procura o ajudante de login (``…/dungeons2-compat/xauth.py``)."""
+    base = home if home is not None else _casa_que_a_peca_ve()
+    return base.joinpath(*PASTA_DO_AJUDANTE, NOME_DO_AJUDANTE)
 
 
 def _sha256_do_pino(pino: Path | None = None) -> str | None:
@@ -273,6 +300,22 @@ def pecas_que_faltam(
     return tuple(faltam)
 
 
+def jogo_gdk_sem_ajudante(
+    raiz: Path | None, tabela: Iterable[Receita] | None = None, home: Path | None = None
+) -> bool:
+    """O jogo recebe a peça GDK do Hefesto (no lugar, no sha do pino) e falta o ajudante de login.
+
+    Sem o ajudante a peça grava «sem conta, o jogo segue local» no log dela e o jogo abre sem conta,
+    amigos nem online. Jogo que não recebe a peça (sem o sinal, ou com a peça faltando, que o
+    prontuário já diz em ``falta_a_peca``) nunca cai aqui.
+    """
+    recebe = any(
+        leitura.receita.peca == PECA_DO_HEFESTO and leitura.peca_presente is True
+        for leitura in ler_jogo(raiz, tabela, home)
+    )
+    return recebe and not caminho_do_ajudante_de_login(home).exists()
+
+
 def ambientes_dos_jogos(home: Path | None = None) -> dict[str, dict[str, str]]:
     """``{appid: ambiente}`` dos jogos instalados cujo disco liga uma receita com a peça."""
     tabela = carregar_tabela()
@@ -293,7 +336,9 @@ def ambientes_dos_jogos(home: Path | None = None) -> dict[str, dict[str, str]]:
 __all__ = [
     "MODOS_DO_OVERRIDE",
     "NOME_DA_PECA_DO_HEFESTO",
+    "NOME_DO_AJUDANTE",
     "PASTA_DA_PECA",
+    "PASTA_DO_AJUDANTE",
     "PECA_DO_HEFESTO",
     "PECA_E_O_SINAL",
     "PINO_DA_PECA",
@@ -305,7 +350,9 @@ __all__ = [
     "ambiente_do_jogo",
     "ambientes_dos_jogos",
     "arquivos_do_sinal",
+    "caminho_do_ajudante_de_login",
     "carregar_tabela",
+    "jogo_gdk_sem_ajudante",
     "ler_jogo",
     "override_valido",
     "pasta_da_peca",
