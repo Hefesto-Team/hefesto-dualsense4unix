@@ -423,11 +423,16 @@ def test_a_coluna_oferece_os_tres_modos() -> None:
 
 
 def test_a_forca_da_bancada_e_so_o_trilho(bancada: str) -> None:
-    """O desenho de 18/10/2026 (r3b-05-12): sem botões, um trilho de 0 a 100% por lugar.
+    """O desenho de 18/10/2026 (r3b-05-12 e o pedido do dia): sem botões, um trilho de 0 a 200%.
+
+    O corte em 100% da primeira volta estava errado: o controle não tem um nível de 150%, e o
+    trilho de 0 a 200% já existia (`RUMBLE_CUSTOM_MULT_MAX`).
 
     MORDIDA: devolva o `<div class="seg">` dos degraus a `aba05._coluna` e a primeira
-    asserção reprova; troque o `TETO_DA_FORCA` ou o `PASSO_DA_FORCA` e a segunda.
+    asserção reprova; troque o `TETO_DA_FORCA` (volte a 100) ou o `PASSO_DA_FORCA` e a segunda.
     """
+    from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
+
     from hefesto_dualsense4unix.interface import aba05
 
     assert "data-forca=" not in bancada and 'class="seg"' not in bancada, (
@@ -439,7 +444,8 @@ def test_a_forca_da_bancada_e_so_o_trilho(bancada: str) -> None:
     for t in trilhos:
         assert 'min="0"' in t and f'max="{aba05.TETO_DA_FORCA}"' in t, t
         assert f'step="{aba05.PASSO_DA_FORCA}"' in t, t
-    assert (aba05.TETO_DA_FORCA, aba05.PASSO_DA_FORCA) == (100, 5)
+    assert (round(RUMBLE_CUSTOM_MULT_MAX * 100), 5) == (aba05.TETO_DA_FORCA, aba05.PASSO_DA_FORCA)
+    assert aba05.TETO_DA_FORCA == 200, "o trilho da Força vai de 0 a 200%: cortar em 100% erra"
     assert bancada.count('class="teto">%</span>') >= len(aba05.MESA)
 
 

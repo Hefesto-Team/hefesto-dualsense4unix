@@ -96,11 +96,12 @@ TETO = round(RUMBLE_CUSTOM_MULT_MAX * 100)
 
 PASSO = math.gcd(*(round(m * 100) for m in RUMBLE_POLICY_MULT.values()), TETO)
 
-#: O DESENHO DE 18/10/2026 (r3b-05-12): a «Força da vibração» é só o trilho de 0 a 100%, de 5 em 5,
-#: sem os três botões. 100% é o que o firmware entrega e o trilho só abaixa; o trilho até 200% e os
-#: três degraus, com o Máximo em 150% (`TETO`, `PASSO`, `FORCA`), são do produto de hoje, e a segunda
-#: passagem decide como o porcento vira o degrau do byte de atenuação. O desenho não os desenha.
-TETO_DA_FORCA = 100
+#: O DESENHO DE 18/10/2026 (r3b-05-12, e o pedido do mesmo dia): a «Força da vibração» é só o
+#: trilho de 0 a 200%, de 5 em 5, sem os três botões. O teto é o do produto (`TETO`, o
+#: `RUMBLE_CUSTOM_MULT_MAX` do esquema): o controle não tem um nível de 150%, e os 200% do trilho
+#: já existiam. Os três degraus (`PASSO`, `FORCA`) são do produto de hoje; a segunda passagem decide
+#: como o porcento vira o byte de atenuação do firmware. O desenho não os desenha.
+TETO_DA_FORCA = TETO
 PASSO_DA_FORCA = 5
 
 TETO_DO_MOTOR = MOTOR_PCT_MAX
@@ -120,9 +121,9 @@ BARRA_DO_MOTOR_PADRAO = MOTOR_PCT_PADRAO
 #: `rumble_passthrough(True)` — `a05_vibracao.testar` (passos 3 e 4) e
 SEM_A_FAIXA_DE_ESTADO = True
 
-#: A cena de cada coluna: a força em porcento (0 a 100), os dois motores e a háptica.
+#: A cena de cada coluna: a força em porcento (0 a 200), os dois motores e a háptica.
 ESTADO = {
-    "p1": {"pct": 100,
+    "p1": {"pct": 120,
            "esq": (True, 50),   "dir": (True, 100),
            "hap": (True, HAPTICA_PCT_PADRAO)},
     "p2": {"pct": 70,
@@ -152,8 +153,8 @@ GLIFO_DO_CONTROLE = (
     '<path d="M6.6 11.4V15.4M4.6 13.4H8.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>'
     '<circle cx="25.4" cy="11.9" r="0.9" fill="currentColor"/><circle cx="25.4" cy="14.9" r="0.9" fill="currentColor"/>'
     '<circle cx="23.9" cy="13.4" r="0.9" fill="currentColor"/><circle cx="26.9" cy="13.4" r="0.9" fill="currentColor"/></svg>')
-DICA_DA_FORCA = ("A força de tudo que vibra neste controle: 100% é o que o firmware entrega, "
-               "e o trilho só abaixa")
+DICA_DA_FORCA = ("Abaixo de 100% a vibração fica mais fraca; acima, a fraca é reforçada, "
+               "até o máximo do motor")
 BOTAO_DA_FORCA = ('<span class="lado glifo-forca on" role="img" aria-label="O controle inteiro" '
                   'data-dica="Os dois motores e a háptica: tudo o que vibra">' + GLIFO_DO_CONTROLE + '</span>')
 
@@ -888,7 +889,7 @@ def _trilho(valor, teto, passo, campo, papel, titulo, extra=""):
 
 
 def _linha_da_forca(pct, vazio=False):
-    """A linha «Força da vibração»: o controle inteiro · trilho de 0 a 100 · número · `%`.
+    """A linha «Força da vibração»: o controle inteiro · trilho de 0 a 200 · número · `%`.
 
     Sem os três botões (r3b-05-12): só o trilho, com a porcentagem. `vazio` troca só o texto do
     número pelo travessão; a estrutura e os endereços são os mesmos nos quatro lugares.
@@ -1368,13 +1369,13 @@ MIOLO = f'''
 LEGENDA = f'''<div class="nota">
   <h2>O que você pediu, e está aqui</h2>
   <ul>
-    <li><b>A Força da vibração é só o trilho</b> (18/10): saíram os botões de degrau, e ficou o trilho de 0 a 100% com a porcentagem e o ícone do DualSense. 100% é o que o firmware entrega, e o trilho só abaixa. A linha ficou mais baixa e o desenho do controle ganhou o espaço. A <b>Sensor háptico</b> tem a bolinha verde acesa quando a háptica está chegando ao controle, e o <b>Testar agora</b> tem <b>Vibração</b>, <b>Háptica</b> e <b>Parar</b> numa linha só.</li>
+    <li><b>A Força da vibração é só o trilho</b> (18/10): saíram os botões de degrau, e ficou o trilho de 0 a 200% com a porcentagem e o ícone do DualSense. Abaixo de 100% abaixa a vibração; acima, reforça a fraca, até o máximo do motor. A linha ficou mais baixa e o desenho do controle ganhou o espaço. A <b>Sensor háptico</b> tem a bolinha verde acesa quando a háptica está chegando ao controle, e o <b>Testar agora</b> tem <b>Vibração</b>, <b>Háptica</b> e <b>Parar</b> numa linha só.</li>
     <li><b>Os quatro controles, um por coluna, sempre à vista</b> — na mesma ordem da fita do topo, cada um com a sua cor de plástico na borda do desenho.</li>
     <li><b>A força tem endereço, e o endereço é a coluna</b> — cada uma tem a sua barra de Força. Como os quatro estão à vista, <b>a fita do topo não escolhe nada aqui</b> e nasce esmaecida (28/08). Também saiu o destaque que a coluna do P1 tinha: com a fita inerte, ele afirmaria na tela uma coisa que a fita já não faz.</li>
     <li><b>As cinco lâmpadas do jogador saíram do desenho</b> (28/08). Medidas neste navegador, nesta aba: <b>2,79 × 0,93 px</b> cada uma. Não é pouco contraste, é pouco pixel — menos de um pixel de altura não diz nada, aceso ou apagado. Quem diz o jogador aqui é o rótulo embaixo da coluna, que se lê. Elas continuam desenhadas na <b>Iluminação</b>, onde o controle é grande.</li>
     <li><b>Um bloco só</b> — as duas áreas viraram uma tabela do mesmo quadro.</li>
     <li><b>Motor esquerdo e direito são o que ATIVA o lado durante o jogo</b> — o interruptor de cada lado, e o desenho mostra qual punho treme.</li>
-    <li><b>A barra de Força para em {TETO_DA_FORCA}%</b> — não passa dele.</li>
+    <li><b>A barra de Força vai de 0 a {TETO_DA_FORCA}%</b>, de 5 em 5 — o controle não tem nível de 150%, e os {TETO_DA_FORCA}% do trilho já existiam.</li>
   </ul>
 
   <h2>O que passou a vir do mapa, e deixou de ser digitado</h2>
@@ -1554,7 +1555,7 @@ def _conferir(doc):
     for tag in por_papel.get("intensidade", []):
         exigir(f'max="{TETO_DA_FORCA}"' in tag,
                f"a barra da Força não vai até {TETO_DA_FORCA}% — o desenho de "
-               f"18/10 é o trilho de 0 a 100, e 100% é o que o firmware entrega")
+               f"18/10 é o trilho de 0 a 200 (o corte em 100% estava errado)")
         exigir(f'step="{PASSO_DA_FORCA}"' in tag,
                f"o passo da Força não é {PASSO_DA_FORCA} — o desenho de 18/10 "
                f"anda de 5 em 5")
