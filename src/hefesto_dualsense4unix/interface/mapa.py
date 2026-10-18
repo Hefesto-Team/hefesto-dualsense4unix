@@ -378,6 +378,7 @@ CSS_TELA = """
     background:var(--app-bg);color:var(--texto-suave);font:12px var(--f);cursor:pointer;white-space:nowrap;text-align:center}
   .chip.on{background:rgba(189,147,249,.16);color:var(--fg);font-weight:600}
   .chip .pt{color:var(--fg);margin:0 2px}
+  @media (max-width:1000px){.mc-chips{gap:5px}.chip{padding:0 7px}}
   .mc-perfil{display:grid;grid-template-columns:292px minmax(0,1fr) 292px;gap:20px;align-items:center;
     padding:12px 20px;border-bottom:1px solid var(--border-sutil);flex:none}
   .mc-perfil .cel{display:flex;align-items:center;gap:12px;min-width:0}

@@ -2,7 +2,9 @@
 controle mostra.
 
 MORDIDAS: pintar o pisca com o controle errado, esquecer a troca no valor da linha, tirar o
-endereço de um lado, ou soltar a peça do desenho quando a linha pisca reprovam."""
+endereço de um lado, soltar a peça do desenho quando a linha pisca, tirar o `@media` que encolhe
+o chip na vista estreita (reprova sob a DejaVu) ou impor `.chip{width:40px}` (o `vaza` pelo Range
+reprova nas três vistas) reprovam."""
 from __future__ import annotations
 
 import csv
@@ -273,8 +275,14 @@ CHIPS = r"""
       document.querySelectorAll('[data-bloco="controles-do-mapa"] .chip')).map(b => {
     const r = b.getBoundingClientRect(), bloco = b.closest('.mc-chips').getBoundingClientRect();
     const caixa = document.querySelector('.cx').getBoundingClientRect();
+    // o <button> não reporta o transbordo de si no scrollWidth: o texto se mede pelo Range do
+    // conteúdo, que tem de caber dentro da borda do chip
+    const rg = document.createRange(); rg.selectNodeContents(b);
+    const t = rg.getBoundingClientRect();
     return {texto: (b.textContent || '').trim(),
-            vaza: b.scrollHeight > b.clientHeight + 1 || b.scrollWidth > b.clientWidth + 1,
+            vaza: b.scrollHeight > b.clientHeight + 1 || b.scrollWidth > b.clientWidth + 1
+                  || t.left < r.left + 1 || t.right > r.right - 1
+                  || t.top < r.top - 1 || t.bottom > r.bottom + 1,
             fora: r.right > Math.min(bloco.right, caixa.right, window.innerWidth) + 1
                   || r.left < bloco.left - 1};
   }));
