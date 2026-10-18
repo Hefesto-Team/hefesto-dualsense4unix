@@ -29,8 +29,7 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "padrao-da-aba": "devolve a aba ao desenho — é da tela",
     "vizinho-o-que-e": "abre a explicação de um vizinho de porta — é texto",
     "detectar": "detecta o jogo aberto — é leitura da máquina",
-    "procurar": "reprocura os lançadores — é leitura do disco",
-    "abrir-lancador": "abre um programa da máquina dela",
+    "procurar": "filtra a lista dos perfis pelo que ela digitou — é da tela",
     "adicionar-lancador": "registra onde um lançador está — é da máquina",
     "procurar-o-arquivo": "abre o seletor do sistema para ela apontar o "
                           "`.desktop` — é da máquina, e nada aqui toca o "
@@ -457,7 +456,7 @@ def _no_modulo(modulo: str, nome: str, src: pathlib.Path, fundo: int) -> str | N
 
 def _texto(expr: ast.expr, arquivo: pathlib.Path, src: pathlib.Path) -> str | None:
     """O texto de um argumento de `@gesto(...)`: literal, constante do módulo, constante
-    importada (`from x import NOME`) ou atributo de módulo importado (`desenho.ABRIR`)."""
+    importada (`from x import NOME`) ou atributo de módulo importado (`desenho.ADICIONAR`)."""
     if isinstance(expr, ast.Constant) and isinstance(expr.value, str):
         return expr.value
     if isinstance(expr, ast.Name):

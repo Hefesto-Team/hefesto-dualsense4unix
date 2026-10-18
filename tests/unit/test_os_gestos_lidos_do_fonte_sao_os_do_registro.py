@@ -57,12 +57,12 @@ def test_o_fonte_e_o_registro_dizem_os_mesmos_gestos() -> None:
 
 def test_os_gestos_por_constante_estao_na_leitura() -> None:
     """Os que uma regex de literais perderia: página por `PAGINA`, nome por constante de módulo
-    (`GESTO_DO_APELIDO`) e por atributo de módulo importado (`desenho.ABRIR`)."""
+    (`GESTO_DO_APELIDO`) e por atributo de módulo importado (`desenho.ADICIONAR`)."""
     lidos, _sem_texto = regua.registro_do_fonte()
     for par in (
         ("calibrar-sensores.html", "mira-sensibilidade"),
         ("08-conexoes.html", "adaptador-renomear"),
-        ("07-lancadores.html", "abrir-lancador"),
+        ("07-lancadores.html", "adicionar-lancador"),
     ):
         assert par in lidos, f"{par} não está na leitura do fonte"
         assert par in _do_registro(), f"{par} não está no registro do produto"

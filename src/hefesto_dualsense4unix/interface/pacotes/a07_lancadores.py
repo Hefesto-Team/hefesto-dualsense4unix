@@ -233,7 +233,7 @@ class _Vigia:
             self._em_curso = False
 
     def esquecer(self) -> None:
-        """Invalida o cache. É o que o "Procurar de novo" faz de verdade."""
+        """Invalida o cache: a próxima pintura relê o disco."""
         self._quando = 0.0
 
     def ler(self) -> desenho.Leitura:
@@ -973,27 +973,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 # `jogos_sem_wrapper.txt`, dois arquivos em disco. O inventário do daemon
 from . import gesto  # noqa: E402
 
-
-@gesto("07-lancadores.html", "procurar")
-def procurar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """"Procurar de novo": esquece o cache e relê o disco AGORA."""
-    VIGIA.esquecer()
-    return _resposta(VIGIA.ler(), ctx.state)
-
-
-# `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`.
-# Steam a casa já honrou isso (`perfil.com_a_carona`, chamada pelo «Aplicar» e
-
-
-def _com_outra_frase(diz: str,
-                     state: dict[str, Any] | None = None) -> dict[str, Any]:
-    """A aba de novo, com o corpo do cartão da Steam trocado."""
-    lida = VIGIA.agora()
-    cartoes = com_o_que_o_daemon_diz(desenho.cartoes(lida), state, lida)
-    cartoes[0] = dataclasses.replace(cartoes[0], diz=diz)
-    return _pintura(cartoes)
-
-
 FECHADO = "fechado"
 ABERTO = "aberto"
 
@@ -1015,10 +994,10 @@ def a_escada_do_jogo(state: dict[str, Any] | None) -> tuple[int | None, str]:
        fechado**. É o caso que a GTK documenta com todas as letras: *"o jogo
        não funcionou, ela fechou, e só então veio reclamar"*.
 
-    O QUE ISTO CURA, medido em 03/09/2026: o `detectar` usava só
-    `steam_game_running_appid()`, que exige o jogo RODANDO enquanto ela clica na
-    janela do Hefesto — justamente o momento em que ela saiu do jogo. Não era
-    que ele não detectasse: ele detectava pior, e falhava no caso comum.
+    QUEM A USA: a lista da escolha do jogo (o aberto, ou o último, nasce
+    marcado) e a aba Jogar. Com uma evidência só, a do jogo RODANDO enquanto ela
+    clica na janela do Hefesto, a escada falharia justamente quando ela saiu do
+    jogo para clicar.
 
     A ESCADA É DAQUI E O ESTADO VEM DE FORA: a GTK faz uma chamada de IPC no
     degrau 2 (`daemon_state_full()`); aqui o `state` já chegou pelo `Contexto`,
@@ -1053,48 +1032,6 @@ def a_escada_do_jogo(state: dict[str, Any] | None) -> tuple[int | None, str]:
     except Exception:  # pragma: no cover - marker ilegível
         pass
     return None, FECHADO
-
-
-@gesto("07-lancadores.html", "detectar")
-def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """"Detectar o jogo que está aberto": diz QUAL é, ou recusa dizendo."""
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    appid, quando = a_escada_do_jogo(ctx.state)
-    if appid is None:
-        raise RuntimeError(
-            "Nenhum jogo aberto agora. Abra o jogo, volte aqui e clique de "
-            "novo.")
-    lida = VIGIA.agora()
-    if lida is None:
-        lida = VIGIA.ler()
-    tem = str(appid) in lida.com_wrapper
-    nome = f"<b>{desenho._e(slo.rotulo_do_jogo(appid))}</b>"
-    abertura = (f"{nome} está aberto agora e " if quando == ABERTO else
-                f"{nome} foi o último jogo que passou pelo atalho do Hefesto, e "
-                "já fechou. Ele ")
-    return _com_outra_frase(
-        abertura
-        + ("<b>abre pelo atalho do Hefesto</b>." if tem else
-           "<b>não abre pelo atalho do Hefesto</b>"
-           + _quem_repoe_o_atalho(lida, appid)), ctx.state)
-
-
-REPOE_QUANDO_A_STEAM_FECHAR = " — o atalho volta quando a Steam fechar."
-
-
-def _quem_repoe_o_atalho(lida: desenho.Leitura | None, appid: int) -> str:
-    """O fim da frase do jogo sem o atalho — a promessa só quando há quem a cumpra.
-
-    A PROMESSA É SÓ PARA O REPARÁVEL (`Leitura.reparaveis`, da mesma passada do
-    censo que a sentinela usa): o jogo que o usuário tirou (`recusados`, o
-    `jogos_sem_wrapper.txt`) ou o intocável fica sem o atalho de propósito, e
-    prometer que ele volta seria a tela afirmando o que ninguém vai fazer.
-    Sem leitura ainda (`None`), também não se promete — o ponto final basta.
-    """
-    if lida is not None and str(appid) in {a for a, _r, _p in lida.reparaveis}:
-        return REPOE_QUANDO_A_STEAM_FECHAR
-    return "."
 
 
 def _appid_do_clique(o: dict[str, Any], nome: str) -> str:
@@ -1165,77 +1102,6 @@ def voltar_a_perguntar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
             "continua desligado.")
     VIGIA.esquecer()
     return _resposta(VIGIA.ler(), ctx.state)
-
-
-@gesto("07-lancadores.html", desenho.ABRIR,
-       grava="abre a janela da Steam por cima do que ela está fazendo")
-def abrir_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """"Abrir o lançador": abre a Steam. Nos outros cinco, RECUSA dizendo.
-
-    DECISÃO 17 DO USUÁRIO, 03/09/2026: o botão LIGA, e o gesto entra em
-    `hefesto_vivo.PERIGOSOS` — as duas metades, e a segunda não é opcional. Sem
-    ela a `--prova-gesto` clicaria este botão e abriria a Steam na tela do usuário,
-    que é o oposto de toda janela desta casa nascer `--oculta`.
-
-    O FATO QUE CAIU, e ele estava escrito no próprio arquivo:
-    `SEM_DONO["abrir-lancador"]` dizia *"o daemon não tem método para isso"*.
-    É verdade e é a **pergunta errada**. Medido em 03/09/2026:
-    o inventário do daemon (hoje `tests/unit/inventario_do_daemon.metodos()`)
-    tinha **40 métodos**, e o único cujo nome sequer
-    sugere abrir algo é `launch_env.refresh` — que regrava o arquivo de
-    ambiente de inicialização e não abre janela nenhuma. O IPC de fato não sabe
-    abrir a Steam; **o produto sabe**, desde 23/08 e por outro caminho:
-    `steam_launch_options.reopen_steam`, função PÚBLICA, com os
-    dois caminhos já provados (o binário `steam` e o `xdg-open steam://open/main`
-    de quem a instalou por Flatpak ou Snap). Ela tinha **zero chamadores vindos
-    de `interface/`** — é a `A-CASA-SABE-E-O-PRODUTO-NAO-FAZ` na forma mais
-    literal: a casa sabe, e o botão da tela não chamava.
-
-    OS CINCO QUE FICARAM DE FORA, e por quê. `reopen_steam` é da Steam e não
-    tem irmã: **não existe no produto uma função que abra o Heroic, o Lutris, o
-    RetroArch, o Dolphin ou o mGBA** — e o Flatpak nem aplicativo é (a
-    `SemCenso` dele o diz: *"ele não publica atalho próprio, só o comando"*;
-    rodar `/usr/bin/flatpak` sem argumento imprime ajuda num terminal que
-    ninguém vê). O produto sabe ONDE eles estão (`_onde_estao_os_lancadores`
-    devolve o caminho inteiro) e **não sabe abri-los**: lançar um `.desktop`
-    exige ler o `Exec=` com os códigos de campo, ou um `Gio.DesktopAppInfo`,
-    e isso é capacidade NOVA — não é ligar o que já existe. Está em
-    `espera_a_palavra_dela`.
-
-    RECUSAR É MELHOR QUE CALAR, e é a razão de o gesto valer nos SEIS. Até hoje
-    o botão dos cinco não tinha `data-gesto`: o ouvinte do piloto não o
-    reconhecia, o clique não chegava ao Python, e **nada acontecia** — nem na
-    tela, nem no terminal. É o *"botão que responde calado"* que o próprio
-    `SEM_DONO` chamava de pior que a recusa. Agora o clique chega, e a frase
-    diz o que o produto sabe e o que não sabe.
-    """
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    qual = str(o.get("v") or "").strip()
-    if not qual:
-        _LOG.warning(
-            "abrir-lancador: clique sem `data-v`. Cada botão manda a chave do "
-            "cartão ali — sem ela o gesto abriria um lançador escolhido por "
-            "acaso.")
-        raise ValueError(
-            "O clique não disse de qual lançador se trata. Nada foi alterado.")
-    if qual != desenho.STEAM:
-        nomes = {x.chave: x.nome for x in desenho.procurados(_declarados())}
-        raise RuntimeError(
-            f"Abra o {nomes.get(qual, qual)} como você já abre — o perfil "
-            "entra do mesmo jeito, pelo nome do processo e pela janela.")
-    if not slo.reopen_steam():
-        # O `False` tem duas causas desde que o `reopen_steam` confere a Steam
-        # de pé (07/10/2026): sem porta nenhuma, ou o pedido saiu e ela não
-        # apareceu no tempo da conferência. A frase diz a que aconteceu.
-        if not slo.ha_porta_de_reabrir():
-            raise RuntimeError(
-                "Não achei como abrir a Steam nesta máquina. Abra-a pelo seu "
-                "menu — nada foi alterado.")
-        raise RuntimeError(
-            "A Steam foi chamada e não apareceu a tempo. Se ela não abrir, "
-            "abra-a pelo seu menu — nada foi alterado.")
-    return None
 
 
 @gesto("07-lancadores.html", desenho.EXCLUIR)
@@ -2339,9 +2205,7 @@ PISO_DA_ABA = 14
 PROVAS: list[dict[str, Any]] = []
 
 #: TODOS, e não por preguiça: o `state_full` do daemon não tem UMA chave sobre
-SEM_ECO = ("procurar", "detectar",
-           "tirar-daqui", "voltar-a-usar", "voltar-a-perguntar",
-           "abrir-lancador",
+SEM_ECO = ("tirar-daqui", "voltar-a-usar", "voltar-a-perguntar",
            # `maquina.json`, e o `state_full` não tem UMA chave sobre a
            desenho.ADICIONAR, desenho.REMOVER,
            # — e o `state_full` não tem UMA chave sobre lançador.

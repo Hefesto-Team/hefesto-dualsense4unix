@@ -101,13 +101,7 @@ A_ABA_AINDA_TRAZ = {
 #: `aba10.py` exige que não voltem): «Nome do jogo» e «Aplicar em» substituem o Nome, o Funciona em
 #: e o Detectar, e a ordem se arrasta em «Qual vale primeiro». Saem com
 #: OS-GESTOS-QUE-A-PERFIS-DO-TODO-DEIXOU-SEM-BOTAO-SAEM-01.
-#: E os três da aba Lançadores antiga, que a Experimental publicada em 18/10 não traz (o Identificar
-#: e o Criar perfis de cada lançador ficam no lugar deles). Saem com
-#: OS-GESTOS-DA-07-ANTIGA-SEM-BOTAO-SAEM-01.
 SEM_BOTAO_NA_PAGINA = {
-    ("07-lancadores.html", "abrir-lancador"),
-    ("07-lancadores.html", "detectar"),
-    ("07-lancadores.html", "procurar"),
     ("10-perfis.html", "detectar"),
     ("10-perfis.html", "editor.ambiente"),
     ("10-perfis.html", "editor.nome"),

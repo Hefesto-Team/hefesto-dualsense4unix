@@ -187,7 +187,8 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
         (`steam_launch_options.reopen_steam`, que tinha zero chamadores vindos
         de `interface/`). Decisão 17 dela, 03/09: o botão liga, e o gesto entra
         em `hefesto_vivo.PERIGOSOS` para a `--prova-gesto` não abrir a Steam na
-        tela do usuário.
+        tela do usuário. (O botão saiu com a aba antiga em 18/10/2026: a
+        Experimental não o traz.)
 
     **DE CINCO PARA TRÊS — 05/09/2026.** `barra:motor` e
     `forca:auto-da-mesa` saíram CURADOS; a razão de cada um está no dict

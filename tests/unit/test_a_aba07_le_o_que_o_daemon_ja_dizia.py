@@ -26,7 +26,7 @@ que mais importam:
   defeito que esta casa persegue: a segunda cópia de uma regra que já tem dono;
 * apague o `remove_dismissed_appid` do `voltar-a-perguntar` e o
   `test_voltar_a_perguntar_tira_do_arquivo_de_verdade` reprova;
-* devolva `steam_game_running_appid()` para o `detectar` e o
+* troque a escada pelo `steam_game_running_appid()` e o
   `test_a_escada_alcanca_o_jogo_que_ela_ja_fechou` reprova.
 
 NADA AQUI TOCA A MÁQUINA DO USUÁRIO. O `conftest.py` desta casa desvia `HOME` e os
@@ -61,14 +61,8 @@ def a07():
     """O módulo que os GESTOS REGISTRADOS habitam — e não outro com o mesmo nome."""
     import pacotes
 
-    # Os leitores que o «Detectar» importa com `from steam_launch_options import rotulo_do_jogo`
-    # sobem ANTES dos dublês: importados pela primeira vez com o `rotulo_do_jogo` dublado,
-    # guardariam a lambda para o resto da sessão do pytest, e o vizinho da mesma parte quebra.
-    import hefesto_dualsense4unix.integrations.sentinela_do_wrapper
-    import hefesto_dualsense4unix.integrations.steam_input_ponte  # noqa: F401
-
-    fn = pacotes.gesto_da_pagina(PAGINA, "procurar")
-    assert fn is not None, f"{PAGINA}:procurar não tem dono — a régua ficaria cega"
+    fn = pacotes.gesto_da_pagina(PAGINA, "adicionar-lancador")
+    assert fn is not None, f"{PAGINA}:adicionar-lancador não tem dono — a régua ficaria cega"
     return sys.modules[fn.__module__]
 
 
@@ -77,20 +71,6 @@ def desenho():
     from hefesto_dualsense4unix.interface import desenho_dos_lancadores as dl
 
     return dl
-
-
-def _ctx(state: dict[str, Any] | None = None):
-    import pacotes
-
-    return pacotes.Contexto(state=state or {}, mesa=[], conectados=[], estados={})
-
-
-def _gesto(nome: str):
-    import pacotes
-
-    fn = pacotes.gesto_da_pagina(PAGINA, nome)
-    assert fn is not None, f"{PAGINA}:{nome} não tem dono"
-    return fn
 
 
 def _cartao_da_steam(a07, desenho, lida, state):
@@ -230,79 +210,3 @@ def test_sem_evidencia_nenhuma_a_escada_recusa(a07, monkeypatch):
     monkeypatch.setattr(launch_env, "launch_session_appid", lambda **kw: None)
     monkeypatch.setattr(launch_env, "read_last_run_marker", lambda *a, **kw: None)
     assert a07.a_escada_do_jogo({}) == (None, a07.FECHADO)
-    with pytest.raises(RuntimeError, match="jogo"):
-        _gesto("detectar")(_ctx(), {}, None)
-
-
-def test_o_detectar_nao_diz_aberto_sobre_um_jogo_fechado(a07, monkeypatch):
-    """A tela não afirma o que o produto não mediu — nem por reaproveitar frase."""
-    from hefesto_dualsense4unix.daemon import launch_env
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    monkeypatch.setattr(launch_env, "launch_session_appid", lambda **kw: None)
-    monkeypatch.setattr(launch_env, "read_last_run_marker",
-                        lambda *a, **kw: (3357650, 1))
-    monkeypatch.setattr(slo, "rotulo_do_jogo", lambda a: "Um Jogo")
-    monkeypatch.setattr(a07.VIGIA, "agora", lambda: None)
-    diz = _gesto("detectar")(_ctx(), {}, None)["mesa"]["steam-diz"]
-    assert "está aberto agora" not in diz, (
-        "o produto disse que um jogo FECHADO está aberto agora")
-    assert "já fechou" in diz and "Um Jogo" in diz
-
-
-JOGO_DE_TESTE = 999000001
-
-
-def _detectar_com(a07, monkeypatch, *, agora, ler=None) -> str:
-    """A frase do cartão da Steam depois do «Detectar», com a vigia dublada."""
-    from hefesto_dualsense4unix.daemon import launch_env
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    def _nao_pergunte():
-        raise AssertionError("o «Detectar» releu o disco com a leitura na mão")
-
-    monkeypatch.setattr(launch_env, "launch_session_appid", lambda **kw: None)
-    monkeypatch.setattr(launch_env, "read_last_run_marker",
-                        lambda *a, **kw: (JOGO_DE_TESTE, 1))
-    monkeypatch.setattr(slo, "rotulo_do_jogo", lambda a: "Um Jogo")
-    monkeypatch.setattr(a07.VIGIA, "agora", lambda: agora)
-    monkeypatch.setattr(a07.VIGIA, "ler", (lambda: ler) if ler is not None else _nao_pergunte)
-    return _gesto("detectar")(_ctx(), {}, None)["mesa"]["steam-diz"]
-
-
-@pytest.mark.parametrize(("onde", "promete"), [
-    ("reparaveis", True),
-    ("recusados", False),
-    ("sem-leitura", True),
-])
-def test_o_detectar_nao_manda_a_um_botao_que_saiu(a07, desenho, monkeypatch,
-                                                  onde, promete):
-    """O «Consertar» saiu da aba em 21/09/2026, e a frase ainda mandava clicá-lo."""
-    reparavel = desenho.Leitura(reparaveis=((str(JOGO_DE_TESTE), "Um Jogo", "—"),))
-    agora, ler = {
-        "reparaveis": (reparavel, None),
-        "recusados": (desenho.Leitura(recusados=((str(JOGO_DE_TESTE), "Um Jogo"),)), None),
-        "sem-leitura": (None, reparavel),
-    }[onde]
-
-    diz = _detectar_com(a07, monkeypatch, agora=agora, ler=ler)
-
-    assert "Consertar" not in diz, (
-        f"a frase manda clicar num botão que saiu da aba: {diz!r}")
-    assert "não abre pelo atalho do Hefesto" in diz
-    volta = "o atalho volta quando a Steam fechar" in diz
-    assert volta is promete, (
-        f"({onde}) a frase {'promete' if volta else 'não promete'} a volta do "
-        f"atalho, e quem o repõe {'repõe' if promete else 'não repõe'} este "
-        f"jogo: {diz!r}")
-
-
-def test_sem_leitura_o_detectar_pergunta_ao_dono_e_nao_diz_nao(a07, desenho,
-                                                               monkeypatch):
-    """«Não sei» não é «não»: sem leitura, o «Detectar» pergunta ao dono."""
-    com_o_atalho = desenho.Leitura(com_wrapper=(str(JOGO_DE_TESTE),))
-
-    diz = _detectar_com(a07, monkeypatch, agora=None, ler=com_o_atalho)
-
-    assert "<b>abre pelo atalho do Hefesto</b>" in diz, (
-        f"sem leitura na vigia, o «Detectar» respondeu sem perguntar ao dono: {diz!r}")

@@ -327,15 +327,6 @@ def test_tirar_e_voltar_a_usar_escrevem_no_arquivo_de_verdade(ctx, a07):
         "deixa a pessoa presa no estado em que clicou")
 
 
-def test_detectar_recusa_dizendo_quando_nao_ha_jogo(ctx, monkeypatch):
-    """Sem jogo aberto o botão RECUSA — não inventa um jogo nem responde calado."""
-    from hefesto_dualsense4unix.integrations import steam_launch_options as slo
-
-    monkeypatch.setattr(slo, "steam_game_running_appid", lambda: None)
-    with pytest.raises(RuntimeError, match="jogo"):
-        _gesto("detectar")(ctx, {}, None)
-
-
 def test_esta_regua_nao_alcanca_a_biblioteca_dela():
     """A pergunta que custou dez minutos em 02/09, respondida por medição."""
     from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
@@ -930,26 +921,6 @@ def test_a_leitura_carrega_os_dispensados_e_as_pontes_da_fonte_certa(
         "as pontes chegaram à leitura e não chegaram ao carimbo do cartão")
     assert "Jogo 4242" in valores["steam-fora"], (
         "o jogo dispensado chegou à leitura e não chegou à lista do cartão")
-
-
-def test_a_contagem_do_topo_nao_cai_depois_do_gesto(a07, monkeypatch, desenho):
-    """`_com_outra_frase` não pode devolver um cartão com campo perdido."""
-    lida = desenho.Leitura(com_wrapper=("1",), instalados=1,
-                           onde_estao=(("heroic", "h.desktop"), ("lutris", "")))
-    monkeypatch.setattr(a07.VIGIA, "agora", lambda: lida)
-
-    do_tique = a07._valores(lida)["lanc-conta"]
-    do_gesto = a07._com_outra_frase("uma frase qualquer")["mesa"]["lanc-conta"]
-
-    assert desenho._plural(2, "localizado", "localizados") in do_tique, (
-        f"a régua perdeu o pé: a pintura do tique já não conta 2 ({do_tique!r})")
-    assert do_gesto == do_tique, (
-        f"a contagem do topo MUDA depois do gesto — o tique diz {do_tique!r} e "
-        f"o gesto devolve {do_gesto!r}. A tela discorda de si mesma sem que "
-        f"nenhum cartão tenha mudado.")
-
-    assert a07._com_outra_frase("outra")["mesa"]["steam-fora"], (
-        "o cartão trocado perdeu a lista de jogos")
 
 
 def test_a_steam_quebrada_nao_apaga_a_resposta_sobre_os_outros(a07, monkeypatch,

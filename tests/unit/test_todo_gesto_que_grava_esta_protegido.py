@@ -218,10 +218,6 @@ FORA_DA_ARVORE: dict[tuple[str, str], str] = {
     ("01-jogar.html", "modo-xbox"):
         "grava o caminho `xbox` na seção `mode` do perfil ativo pelo daemon, "
         "pela mesma porta do «Sony DualSense», fora da vista da árvore",
-    ("07-lancadores.html", "abrir-lancador"):
-        "`reopen_steam` abre a janela da Steam DESANEXADA: ela não nasce oculta "
-        "e não some quando a prova termina. Decisão 17 dela, 03/09/2026 — o "
-        "botão liga *e* o gesto entra na lista, e as duas metades são uma só",
     # 15/10/2026, A-ABA-SISTEMA-DO-TODO-01.
     ("09-sistema.html", "correcoes-automaticas"):
         "escreve o arquivo do interruptor do guarda do jogo novo (`_guardar_o_interruptor`, "

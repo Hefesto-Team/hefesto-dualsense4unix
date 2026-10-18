@@ -55,12 +55,12 @@ def test_a_isencao_por_pagina_continua_valendo() -> None:
         [_Gesto("detectar")], {"detectar"}, "10-perfis.html",
         hefesto_vivo.PERIGOSOS)
     vistos_lanc, _ = regua_do_mockup._alvos_a_clicar(
-        [_Gesto("detectar")], {"detectar"}, "07-lancadores.html",
+        [_Gesto("detectar")], {"detectar"}, "01-jogar.html",
         hefesto_vivo.PERIGOSOS)
     assert pulados_perfis == ["detectar"], (
         "o `detectar` dos Perfis deixou de ser isento — ele grava no perfil dela")
     assert vistos_lanc == ["detectar"], (
-        "o `detectar` dos Lançadores deixou de ser provado: a qualificação por "
+        "o mesmo nome noutra aba deixou de ser provado: a qualificação por "
         "página parou de valer e o coringa passou a tratar os dois igual")
 
 

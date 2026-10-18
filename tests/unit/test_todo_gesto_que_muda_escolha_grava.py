@@ -95,10 +95,6 @@ ATOS: dict[Chave, str] = {
     ("07-lancadores.html", "criar-perfil-para-um-jogo"):
         "abre a escolha do jogo; quem grava é a confirmação "
         "(`confirmar-perfil`), que declara `grava=`",
-    ("07-lancadores.html", "detectar"):
-        "leitura: diz qual jogo está aberto, ou recusa dizendo",
-    ("07-lancadores.html", "procurar"):
-        "leitura: esquece o cache dos lançadores e relê o disco agora",
     ("07-lancadores.html", "configurar-lancador"):
         "tela: abre a janela «Configurar» do lançador (onde está, como entrou e, na Steam, os "
         "impedimentos lidos agora); quem muda algo é o gesto de lá, que declara `grava=`",
