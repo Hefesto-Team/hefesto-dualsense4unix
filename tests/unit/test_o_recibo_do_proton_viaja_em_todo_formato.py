@@ -31,11 +31,15 @@ import shutil
 import subprocess
 import sys
 import tarfile
-import tomllib
 import zipfile
 from pathlib import Path
 
 import pytest
+
+if sys.version_info >= (3, 11):
+    import tomllib
+else:
+    import tomli as tomllib
 
 RAIZ = Path(__file__).resolve().parents[2]
 NOME = "hefesto-dualsense4unix"
