@@ -2250,19 +2250,23 @@ def configurar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
 
 @gesto("07-lancadores.html", "identificar-lancador")
 def identificar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Identificar»: procura de novo no disco e diz o que achou, ou como ensinar onde ele está."""
+    """«Identificar»: procura de novo no disco e diz o que achou, ou como ensinar onde ele está.
+
+    Achou: a fila repintada mostra a linha achada, e a frase vai ao diário. Não achou: sobe como
+    recusa e o botão pisca a recusa; pelo recado, ele piscaria «deu certo» sem ter achado nada.
+    """
     chave = _id_do_clique(o, "identificar-lancador")
     VIGIA.esquecer()
     lida = VIGIA.ler()
     cartao = next((x for x in desenho.cartoes(lida) if x.chave == chave), None)
     if cartao is None:
         raise RuntimeError("Não conheço esse lançador. Nada foi alterado.")
+    if not cartao.presente:
+        raise RuntimeError(
+            f"Não achei {cartao.nome} nesta máquina. Instale-o, ou aponte o atalho dele "
+            "em «Adicionar um lançador».")
     onde = dict(lida.onde_estao).get(chave, "") if lida is not None else ""
-    if cartao.presente:
-        frase = f"Achei {cartao.nome}" + (f" em {onde}." if onde else ".")
-    else:
-        frase = (f"Não achei {cartao.nome} nesta máquina. Instale-o, ou aponte o atalho dele "
-                 "em «Adicionar um lançador».")
+    frase = f"Achei {cartao.nome}" + (f" em {onde}." if onde else ".")
     return {**_resposta(lida, ctx.state), "recado": frase}
 
 

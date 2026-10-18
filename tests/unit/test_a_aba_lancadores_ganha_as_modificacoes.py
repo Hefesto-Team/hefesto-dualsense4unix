@@ -547,8 +547,10 @@ def test_identificar_diz_o_que_achou_ou_como_ensinar(lar, ctx, monkeypatch) -> N
     monkeypatch.setattr(a07.VIGIA, "esquecer", lambda: None)
     dito = a07.identificar_lancador(ctx, {"v": "flatpak"}, _Ponte())["recado"]
     assert dito.startswith("Achei Flatpak") and "/usr/bin/flatpak" in dito
-    perdido = a07.identificar_lancador(ctx, {"v": "lutris"}, _Ponte())["recado"]
-    assert perdido.startswith("Não achei Lutris") and "Adicionar um lançador" in perdido
+    # O não achado sobe como recusa (o botão pisca a recusa); pelo recado, piscaria «deu certo».
+    # MORDIDA: devolver a frase em `recado` deixa este `raises` sem exceção.
+    with pytest.raises(RuntimeError, match=r"^Não achei Lutris.*Adicionar um lançador"):
+        a07.identificar_lancador(ctx, {"v": "lutris"}, _Ponte())
     with pytest.raises(RuntimeError, match="Não conheço"):
         a07.identificar_lancador(ctx, {"v": "inventado"}, _Ponte())
 
