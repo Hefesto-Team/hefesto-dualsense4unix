@@ -253,14 +253,14 @@
       "data": "2026-10-18",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1147452,
+      "piso": 1150404,
       "por_item": {
-        "docs": 119580,
-        "scripts": 114950,
-        "src": 309019,
-        "tests": 603903
+        "docs": 119651,
+        "scripts": 114967,
+        "src": 310541,
+        "tests": 605245
       },
-      "razao": "tamanho: +313 linhas (1147139 -> 1147452), pagas por Origem: D-1810-O-GATILHO-E-A-VIBRACAO-TEM-O-TRILHO-DE-0-A-200; registrado no fecho, topo e3c347299530",
+      "razao": "tamanho: +2952 linhas (1147452 -> 1150404), pagas por Origem: D-1810-UMA-EXTENSAO-PUBLICA-O-PEDIDO-DO-JOGO-AO-BRINQUEDO-PELA-PORTA; registrado no fecho, topo fe7fd278c079",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -639,10 +639,16 @@
           "de": 1147139,
           "para": 1147452,
           "razao": "tamanho: +313 linhas (1147139 -> 1147452), pagas por Origem: D-1810-O-GATILHO-E-A-VIBRACAO-TEM-O-TRILHO-DE-0-A-200; registrado no fecho, topo e3c347299530"
+        },
+        {
+          "data": "2026-10-18",
+          "de": 1147452,
+          "para": 1150404,
+          "razao": "tamanho: +2952 linhas (1147452 -> 1150404), pagas por Origem: D-1810-UMA-EXTENSAO-PUBLICA-O-PEDIDO-DO-JOGO-AO-BRINQUEDO-PELA-PORTA; registrado no fecho, topo fe7fd278c079"
         }
       ],
       "unidade": "linhas",
-      "universo": 3001
+      "universo": 3005
     }
   }
 }
