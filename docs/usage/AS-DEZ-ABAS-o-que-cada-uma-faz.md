@@ -1,7 +1,7 @@
 # As dez abas
 
 A janela do Hefesto tem dez abas, nesta ordem: **Jogar · Controles · Gatilhos ·
-Iluminação · Vibração · Navegação · Lançadores · Conexões · Sistema · Perfis**.
+Iluminação · Vibração · Navegação · Experimental · Conexões · Sistema · Perfis**.
 
 ## O que vale em todas
 
@@ -123,19 +123,24 @@ Uma coluna por controle. O lado que treme acende em laranja.
 - **O que cada botão faz**: clique de mouse, tecla, teclado na tela, abrir a
   Steam, um programa ou nada. O PS fica de fora: é a saída de emergência.
 
-## 7. Lançadores
+## 7. Experimental
 
-![Aba Lançadores](assets/aba-07-lancadores.png)
+![Aba Experimental](assets/aba-07-lancadores.png)
 
-Um cartão por lançador instalado: **Steam**, **Heroic (Epic · GOG)**,
-**Lutris**, **Flatpak**, **RetroArch** e **Dolphin · mGBA**. O perfil casa pelo
-nome do processo e pela janela, então o jogo pode vir de qualquer um deles.
+Dois quadros: as extensões e os lançadores.
 
-- **Detectar o jogo aberto**: abra o jogo, volte aqui e clique.
-- **Procurar de novo**, **Adicionar um lançador** (um comando, um AppImage ou
-  um atalho), e em cada cartão **Abrir o lançador** e **Criar perfil**.
-- **A lista de exclusão**: um jogo nela vê o controle como se o Hefesto não
-  estivesse instalado. «Tirar da lista» devolve tudo.
+- **Extensões**: cada extensão instalada (como o **Kyty** e a **Lovense**) tem
+  uma chave para ligar e desligar, o ⋮ (Atualizar, Ver permissões, Remover) e a
+  janela das opções que ela declara. **Instalar de um endereço** ou **Escolher a
+  pasta…** traz uma extensão nova.
+- **Lançadores**: uma linha por lançador instalado (**Steam**, **Heroic (Epic ·
+  GOG)**, **Lutris**, **Flatpak**, **RetroArch** e **Dolphin · mGBA**), com a
+  contagem de jogos achados. **Identificar** reconhece o jogo aberto, **Criar
+  perfis** cria o perfil de cada jogo da lista e **Configurar** mostra a pasta, os
+  jogos e os impedimentos (o Steam Input ligado, o jogo fora do Proton fixado),
+  com o botão que resolve cada um.
+- **Adicionar um lançador**: um programa do sistema ou uma extensão, com o nome e
+  o lugar dele.
 
 ## 8. Conexões
 
