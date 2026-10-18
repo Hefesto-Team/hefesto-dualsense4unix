@@ -432,15 +432,19 @@ class TeclasDoAnalogicoNoDesktop:
     def soltar(self) -> None:
         """Solta as teclas que o analógico segura. Idempotente; nunca levanta."""
         if self._teclado is not None:
-            with contextlib.suppress(Exception):
+            try:
                 self._teclado.dispatch(frozenset())
+            except Exception as exc:
+                logger.debug("teclas_do_analogico_soltar_falhou", err=str(exc))
 
     def fechar(self) -> None:
         """Solta e destrói o teclado. Idempotente."""
         self.soltar()
         if self._teclado is not None:
-            with contextlib.suppress(Exception):
+            try:
                 self._teclado.stop()
+            except Exception as exc:
+                logger.debug("teclas_do_analogico_fechar_falhou", err=str(exc))
         self._teclado = None
 
 

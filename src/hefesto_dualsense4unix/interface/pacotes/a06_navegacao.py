@@ -12,6 +12,7 @@ Recusa na tela: `RuntimeError` e `ValueError` vão ao diário e o botão pisca `
 from __future__ import annotations
 
 import html
+import importlib
 import re
 from typing import Any
 
@@ -1014,12 +1015,11 @@ def _avisar_se_sem_teclado_na_tela(ctx: Contexto, token: str) -> None:
     bloco = ctx.state.get("keyboard_emulation")
     osk = bloco.get("osk_disponivel") if isinstance(bloco, dict) else None
     try:
-        from hefesto_dualsense4unix.app.actions.input_actions import (
-            frase_do_teclado_na_tela,
-        )
+        modulo = importlib.import_module("hefesto_dualsense4unix.app.actions.input_actions")
     except Exception:
-        return
-    frase = frase_do_teclado_na_tela(osk if isinstance(osk, bool) else None)
+        modulo = None
+    sabe = osk if isinstance(osk, bool) else None
+    frase = modulo.frase_do_teclado_na_tela(sabe) if modulo else ""
     if frase:
         raise RuntimeError(f"guardei, e {frase}")
 
