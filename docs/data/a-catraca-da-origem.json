@@ -253,14 +253,14 @@
       "data": "2026-10-18",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1147483,
+      "piso": 1147445,
       "por_item": {
         "docs": 119576,
         "scripts": 114952,
         "src": 308820,
-        "tests": 604135
+        "tests": 604097
       },
-      "razao": "tamanho: +771 linhas (1146712 -> 1147483), pagas por Origem: D-1510-A-VIBRACAO-MANTEM-O-SELETOR-ATE-A-INTENSIDADE; registrado no fecho, topo e67ad0ce86c8",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
