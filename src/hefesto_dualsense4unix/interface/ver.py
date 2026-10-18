@@ -26,7 +26,7 @@ ABAS = [
     ("Iluminação", "04-iluminacao.html"),
     ("Vibração", "05-vibracao.html"),
     ("Navegação", "06-navegacao.html"),
-    ("Lançadores", "07-lancadores.html"),
+    ("Experimental", "07-lancadores.html"),
     ("Conexões", "08-conexoes.html"),
     ("Sistema", "09-sistema.html"),
     ("Perfis", "10-perfis.html"),

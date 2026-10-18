@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<title>Hefesto — aba LANÇADORES</title>
+<title>Hefesto — aba EXPERIMENTAL</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -930,272 +930,6 @@
   .fita:not(.inerte) label.chip{cursor:pointer}
 
 
-  /* ---------- Lançadores ---------- */
-  /* A GRADE ROLA POR DENTRO, E O `.miolo` PARA DE ROLAR — ROLAGEM-01, 09/09/2026.
-     Achado dela em 08/09: *"duas paginas ficaram com barra de navegação  (noqa-acento: citação)
-     vertical. tipo a gatilhos e lançadores."*
-
-     A CAUSA, MEDIDA NO WEBKIT VIVO com os quatro na mesa e o daemon do usuário:
-     `DIV.miolo 668>564`. O `.miolo` tem 564px de caixa; o conteúdo desta aba
-     pediu **668**. Não é a `.janela`, que fecha em 775/775 nas dez — é o filho.
-
-     E O CONTEÚDO NÃO TEM TETO, que é o que decide o desenho. Medido duas vezes
-     na MESMA sessão, com meia hora de intervalo: `.lancadores` foi de **493 a
-     534px** sozinha, porque o cartão da Steam saiu de «CHEGAM» para «NÃO
-     CHEGAM» com um jogo pendente — e a lista de pendências (`.lanc-fora`) tem o
-     tamanho que os jogos do usuário tiverem. Some-se «Adicionar novo Lançador», que
-     cria cartão. *Quantos
-     lançadores ela tem, e quantos jogos com pendência, é do usuário — e a caixa não pode crescer com eles.*
-
-     É a mesma frase que declara o `DIV.rolo` da `10-perfis` em `POR_DESENHO`
-     (`scripts/ensaios/a_janela_cabe_no_que_ela_ve.py`), e por isso a cura é a
-     mesma: o `.quadro` vira `estica`, a GRADE ganha a barra, e o que fica
-     pregado acima dela é o que ela precisa ler sem rolar — o título, a conta
-     («N localizados · N com impedimentos») e os três botões. Hoje o inverso
-     acontecia: a página inteira rolava e a conta saía de vista.
-
-     O QUE FOI MEDIDO E NÃO SERVIU — três hipóteses derrubadas na bancada, para
-     ninguém as repetir:
-       * **três colunas** em vez de duas: `.miolo` foi de 627 para **669**. A
-         coluna estreita faz a prosa quebrar em mais linhas do que a fileira que
-         se economiza;
-       * **o caminho do lançador numa linha só** (`.lanc-diz code` com
-         reticências): **668**, pior — `display:inline-block` joga o `<code>`
-         para uma linha de caixa própria;
-       * **espremer** (prosa cortada em 2 linhas, botões à direita da prosa,
-         a fileira de botões subindo para o título): o melhor par chegou a
-         **592**, ainda 28px acima — e ainda assim quebraria no dia seguinte,
-         porque o teto não existe.
-
-     `align-content:start` é o que impede a grade de esticar as fileiras quando
-     sobra espaço: sem ele, com poucos cartões, cada um viraria um retângulo
-     alto e vazio — o defeito que o `.quadro.estica` já teve em 27/08. */
-  /* `minmax(0,1fr)` E NÃO `1fr` — a coluna da direita saía PELA BORDA, e a foto
-     de 09/09 mostra que ela já saía antes desta sprint. `1fr` é
-     `minmax(auto,1fr)`, e o mínimo `auto` de uma coluna de grade é o
-     **min-content** do que há dentro. Dentro há o caminho do lançador num
-     `<code>`, e um caminho não tem espaço onde quebrar:
-     `/home/…/flatpak/exports/share/applications/net.lutris.Lutris.desktop`
-     mede ~470px de min-content, a coluna se recusa a encolher, e as duas somam
-     mais do que a caixa — o cartão da direita ficava cortado ao meio, sem borda
-     e com a prosa decepada.
-     `minmax(0,…)` deixa a coluna encolher, e o `overflow-wrap:anywhere` do
-     `<code>` dá ao caminho onde quebrar. As duas juntas: sem a segunda, o
-     caminho vazaria do cartão em vez de vazar da grade. */
-  .lancadores{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
-              flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:stable;
-              align-content:start}
-  .lanc-diz code{overflow-wrap:anywhere}
-  .lanc{border:1px solid var(--border-sutil);border-radius:8px;background:var(--app-bg);padding:11px 13px}
-  .lanc.chega{border-color:rgba(80,250,123,.28)}
-  .lanc.impede{border-color:var(--orange)}
-  /* O CARTÃO "não achei" DEIXOU DE USAR `opacity` — 30/08/2026, mesma cura da
-     `.fita.inerte` (topo.html) e pelo mesmo motivo medido: com `opacity:.5` o
-     corpo caía a 2,55:1, o selo NÃO ACHEI a 1,95:1 e os dois botões a 3,37 e
-     3,55:1 — e nenhuma régua que leia `color` enxergava, porque a opacidade
-     estava no PAI. Este cartão não é controle desabilitado: ele é informação
-     viva ("instale e clique em Procurar de novo"), e informação se lê. */
-  .lanc.ausente{background:transparent}
-  .lanc.ausente .lanc-nome{color:var(--texto-suave)}
-  .lanc.ausente .lanc-diz,
-  .lanc.ausente .lanc-jogos{color:var(--fg)}
-  .lanc-topo{display:flex;align-items:center;gap:9px;margin-bottom:7px}
-  .lanc-nome{font-size:12.5px;font-weight:600;color:var(--fg)}
-  .lanc-selo{font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600;
-             font-family:'JetBrains Mono',monospace}
-  /* O VERDE DO «LOCALIZADO» — 11/09/2026, LANCADOR-LOCALIZAR-01, e ele nasceu
-     de uma queixa de uso: *"não aparece verde os localizados"*.
-
-     MEDIDO NA PÁGINA VIVA antes da cura, com a grade pintada como o pacote a
-     pinta (`blocos` -> `cartoes_html`): o selo da Steam saía
-     `background: rgb(80,250,123)` e os CINCO `LOCALIZADO` saíam
-     `background: rgba(0,0,0,0)` — transparente. Não era um verde fraco: era
-     verde NENHUM. A pílula não existia, e o selo caía como texto branco solto
-     ao lado do nome do cartão.
-
-     A CAUSA É DE 09/09: `SELOS` ganhou a chave `localizado` no Python
-     (LANCADORES-ZERO-01 §5.2) e `MOLDURA` ganhou o `chega` junto — mas a FOLHA
-     nunca soube da classe nova. O gerador emitia
-     `<span class="lanc-selo localizado">`, e nenhuma regra casava: sobrava só
-     a `.lanc-selo` base, que dá tamanho e fonte e não dá cor.
-
-     ELE DIVIDE O ESTILO COM `ok`, e é a mesma decisão que `off`/`nao_sei` já
-     tinham tomado do outro lado: as duas dizem *"este está aqui e não há
-     impedimento a agir"* — é a razão escrita em `MOLDURA`, que já dá a mesma
-     moldura `chega` aos dois. Um quinto tom só acrescentaria uma cor para ela
-     decodificar; quem separa CHEGAM de LOCALIZADO é a PALAVRA, que é o que o
-     selo existe para dizer.
-
-     E ESTE VERDE É ESTADO, NÃO RESPOSTA A GESTO. A piscada de deu-certo tem
-     outro dono (`hef-deu-certo`) e não passa por aqui: este cartão está verde
-     desde que a página pinta, e continua verde sem ninguém clicar em nada. */
-  .lanc-selo.ok,.lanc-selo.localizado{background:var(--green);color:var(--app-bg)}
-  .lanc-selo.warn{background:var(--orange);color:var(--app-bg)}
-  /* o selo apagado ficava a 3,47:1 sobre o próprio fundo — o texto claro
-     dá 9,3:1 e o selo continua lendo como "desligado" pelo fundo cinza. */
-  /* `nao_sei` DIVIDE O ESTILO COM `off`, e é decisão: as duas dizem "não há o
-     que agir aqui", e um terceiro tom só acrescentaria uma cor para ela
-     decodificar. O selo nasceu em 02/09/2026, quando a medição mostrou que
-     `CHEGAM` e `NÃO CHEGAM` eram as duas afirmações que o produto NÃO pode
-     fazer sobre Heroic, Lutris, RetroArch, Dolphin e mGBA — ele não tem uma
-     função sequer que olhe para eles. */
-  .lanc-selo.off,.lanc-selo.nao_sei{background:var(--border-forte);color:var(--texto-suave)}
-  .lanc-jogos{margin-left:auto;font-size:11px;color:var(--fg);
-              font-family:'JetBrains Mono',monospace}
-  /* DUAS LINHAS CRAVADAS, e é `height` — não `min-height`.
-     Com `min-height:32px` o corpo de uma linha dava 32px e o de duas 33,3px, e a
-     fileira de botões dos dois cartões de uma mesma linha nascia 1,3px torta. A
-     escala do esqueleto tropeçou nisto uma vez (LEIA-ME, cicatriz 2): min-height
-     não encolhe, e aqui também não ESTICA — quem alinha é a altura fixa.
-     2,9em = 1,45 (line-height) × 2 linhas, então o número acompanha a fonte. */
-  /* A ALTURA FIXA CAIU — 02/09/2026, e foi a FOTO que a derrubou.
-     Aqui morava `height:2.9em` ("duas linhas cravadas"), e ela existia para
-     alinhar a fileira de botões dos dois cartões de uma mesma linha da grade:
-     com `min-height` o corpo de uma linha dava 32px e o de duas 33,3px, e a
-     fileira nascia 1,3px torta.
-     Ela só funcionava porque o texto era ESCRITO À MÃO e cabia em duas linhas.
-     Com o corpo vindo do produto isso acabou: a frase da sentinela — que
-     nomeia o jogo e diz o que vai acontecer — tem CINCO linhas, e na primeira
-     foto da aba viva ela atravessou os botões por cima. Um transbordo de 3
-     linhas é muitas ordens de grandeza pior que 1,3px de desalinho.
-     O ALINHAMENTO NÃO SE PERDEU, e é o ponto: quem alinha agora é o cartão,
-     não o parágrafo. `.lanc` vira coluna flex, a grade já iguala a ALTURA dos
-     cartões irmãos (é `grid`), e `.acoes{margin-top:auto}` empurra a fileira
-     para o pé — os dois cartões da mesma linha ficam com os botões na MESMA
-     altura, exatos, com corpos de tamanhos diferentes. O `min-height` continua
-     para o caso curto, que é o que reservava a segunda linha. */
-  .lanc{display:flex;flex-direction:column}
-  .lanc-diz{font-size:11.5px;color:var(--fg);min-height:2.9em;line-height:1.45}
-  .lanc-diz b{color:var(--orange)}
-  .lanc-diz b.roxo-txt{color:var(--purple)}
-  /* `margin-top:auto` E NÃO `8px`: é ele que empurra a fileira para o PÉ do
-     cartão, e é o que substitui a altura fixa do corpo (ver acima). O vão de
-     8px vira `padding-top`, para o caso do cartão curto em que o `auto` não
-     tem folga para consumir. */
-  .lanc .acoes{margin-top:auto;padding-top:8px;gap:6px}
-  /* O BOTÃO DENTRO DO CARTÃO NÃO ENCOLHE. Aqui morava
-     `.lanc .btn{font-size:11px;padding:0 11px}`, e era a ÚNICA quebra de "mesma
-     família, mesma largura" das dez abas: `Procurar de novo` — o MESMO texto, a
-     MESMA classe `btn` — media **130,5px** na fileira do quadro e **114,2px**  (noqa-acento: verbo medir, imperfeito)
-     dentro do cartão do `Dolphin · mGBA`, porque a regra trocava a fonte (12,5
-     → 11px) e o vão lateral (13 → 11px) só de um lado. Dois botões iguais em
-     tamanhos diferentes na mesma tela é o que faz a janela parecer montada por
-     pessoas diferentes.
-     A altura já vinha certa (34px, do `--h-acao` do esqueleto): a regra não a
-     tocava, e por isso a régua de alinhamento passava verde — ela mede altura,
-     não largura. Sem a regra, o `.btn` do `topo.html` responde pelos onze
-     botões da aba, e a fileira mais larga (o RetroArch, com `Aplicar o estilo
-     Retrô/Emulador`) continua cabendo no cartão sem quebrar linha — o que
-     importa porque `.acoes` tem `flex-wrap:wrap` e uma quebra devolveria a
-     altura que o carimbo acabou de economizar. */
-  /* O CARIMBO MORA NA FILEIRA DOS BOTÕES, à direita — e não numa linha própria
-     acima dela. Medido em 28/08: como linha própria ele custava 21px (6 de
-     margem + 13 de altura + 2 de arredondamento) que SÓ o cartão do Steam
-     pagava, e a fileira dele nascia em y=370,3 contra y=349,3 do Heroic, ao
-     lado. Os outros dois pares batiam exato, o que provava que era defeito.
-     A cura é a dela: ENCOLHER O MAIS ALTO. Reservar a linha vazia nos outros
-     cinco cartões alinharia igual, mas engordando a aba em 63px — o inverso da
-     regra, e numa aba que já passa da dobra.
-     Aqui ele também casa com `.lanc-jogos`, que é o outro texto à direita do
-     cartão: um no alto, um no pé. `nowrap` porque `.acoes` quebra linha, e uma
-     quebra devolveria os 21px pela porta dos fundos. */
-  .carimbo{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;color:var(--green);
-           margin-left:auto;white-space:nowrap}
-  /* A LISTA DE JOGOS DENTRO DO CARTÃO — 02/09/2026, e ela NASCE VAZIA.
-     Na máquina do usuário, hoje, os 63 jogos com o atalho estão todos em ordem e a
-     lista não ocupa um pixel: `linhas_de_jogos([])` devolve string vazia, e o
-     bloco fica com altura zero. Ela só aparece quando há o que dizer — que é a
-     mesma regra do carimbo, e o motivo de o cartão não engordar por existir.
-     Sem ela não haveria onde pôr o "tirar/voltar a usar" POR JOGO, e a lista
-     `jogos_sem_wrapper.txt` continuaria sendo um arquivo que só se edita à mão. */
-  .lanc-fora:not(:empty){margin-top:8px;border-top:1px solid var(--border-sutil);padding-top:7px;
-                         display:flex;flex-direction:column;gap:5px}
-  .lanc-jogo{display:flex;align-items:center;gap:8px;font-size:11px}
-  .lanc-jogo-nome{color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .lanc-jogo-porque{color:var(--fg);margin-left:auto;white-space:nowrap}
-  /* O `mini` é o ÚNICO botão menor da aba, e a razão é diferente da que fez o
-     `.lanc .btn` ser removido: lá dois botões IGUAIS mediam diferente por
-     acidente de CSS; aqui a linha de jogo é uma fileira densa, e um botão de
-     34px por jogo empurraria a lista para fora do cartão. */
-  .lanc-fora .btn.mini{height:24px;font-size:10.5px;padding:0 9px;flex:0 0 auto}
-  /* A LINHA DE INICIALIZAÇÃO À MOSTRA — 04/09/2026, decisão `07[01]` do PO.
-     Ela NASCE AUSENTE: `desenho_dos_lancadores.linha_do_wrapper_html` devolve
-     string vazia sempre que não há jogo com a linha intocável, e o bloco não
-     ocupa um pixel — a mesma regra do carimbo e da lista de jogos.
-     `word-break:break-all` E NÃO `pre`: são 143 caracteres sem um espaço onde
-     caiba a quebra, e um `<pre>` empurraria barra de rolagem lateral para
-     dentro de um cartão de meia largura. Aqui ela ocupa três linhas e o cartão
-     continua no lugar.
-     AS CORES SÃO AS DO ESQUELETO, e foram CONFERIDAS antes de escritas:
-     `--elevated`, `--border-sutil` e `--texto-suave` existem no `:root` do
-     `topo.html` (`:14`, `:15`, `:33`). O `--elevated` é o tom que sobe UM
-     degrau sobre o `--app-bg` do cartão — é o que separa o bloco do corpo sem
-     acrescentar cor nova à paleta.
-     `user-select` NÃO É DECLARADO AQUI, e a razão foi medida: o `topo.html`
-     não desliga a seleção em lugar nenhum (`grep user-select` devolve ZERO),
-     então o padrão do WebKit já deixa o Ctrl+C funcionar — que é a SEGUNDA
-     saída desta decisão. Declarar o que já vale seria regra que ninguém
-     consegue provar. */
-  .linha-do-wrapper{margin-top:7px;padding:6px 8px;border-radius:6px;
-    background:var(--elevated);border:1px solid var(--border-sutil)}
-  .linha-do-wrapper code{font-family:'JetBrains Mono',monospace;font-size:10px;
-    line-height:1.5;color:var(--texto-suave);word-break:break-all}
-  /* A TELA DE REGISTRO — 08/09/2026, o registro de lançador que o usuário pediu.
-     A CAIXA, o topo, o corpo e o rodapé vêm do `monta.CSS_POPUP`, que é o dono
-     da `.tela-nova` desde 29/08 e existe justamente para a segunda aba com
-     pop-up não copiar as 49 linhas da primeira. O que é DESTA tela — e só
-     dela — são as três regras abaixo, pela mesma razão que deixou a `.tn-vel`
-     no `aba06.py`: CSS de uma tela só num arquivo comum é a mesma doença pelo
-     avesso.
-     A LINHA DE CIMA É A QUE RESPONDE «PARA QUAL?», e por isso ela é a única com
-     endereço: quem abre a tela pelo botão de um cartão precisa ver de que
-     cartão se trata antes de digitar. */
-  .lanc-novo-para{font-size:11.5px;color:var(--fg);margin-bottom:12px}
-  /* `flex-direction:column` e não uma linha: com o rótulo à esquerda os dois
-     campos ficariam com larguras diferentes (os textos têm tamanhos
-     diferentes), e dois campos de texto desalinhados numa caixa de 660px é o
-     que faz a tela parecer montada por pessoas diferentes. */
-  .lanc-novo-campo{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
-  .lanc-novo-campo > span{font-size:11px;color:var(--texto-suave)}
-  /* A ALTURA É A DO `--h-acao` do esqueleto, que é a dos botões do rodapé desta
-     mesma caixa — um campo mais baixo que o botão que o guarda é a costura à
-     vista. `font-family` monoespaçada porque o que se digita aqui é caminho e
-     comando, e num `l` contra um `1` a diferença decide se o Hefesto acha. */
-  .lanc-novo-campo input{height:var(--h-acao);border-radius:7px;padding:0 10px;
-    background:var(--app-bg);border:1px solid var(--border-forte);color:var(--fg);
-    font-family:'JetBrains Mono',monospace;font-size:11.5px}
-  .lanc-novo-campo input:focus{outline:none;border-color:var(--purple)}
-  /* AS DUAS PORTAS DO «ONDE ELE ESTÁ» — 10/09/2026, decisão de produto (a opção C):
-     o campo que ela digita e o botão que abre o seletor do sistema. A linha é
-     `flex` e o campo é quem estica (`flex:1`), porque o rótulo do botão tem
-     tamanho FIXO e o caminho não tem: dividir a largura ao meio deixaria o
-     campo curto para um `/home/…/.local/share/flatpak/exports/…` e o botão com
-     folga que ele não usa.
-     O `white-space:nowrap` no botão é o que impede a reticência de cair sozinha
-     na segunda linha quando a caixa encolhe — o `.tn-cx` do `CSS_POPUP` já tem
-     largura máxima, e um botão de duas linhas ficaria mais alto que o campo ao
-     lado, que é a costura à vista que a regra do `--h-acao` acima evita.
-     E O `text-decoration:none` ENTRA AQUI porque o `CSS_POPUP` só o desliga em
-     `.tn-rod .btn` — o rodapé da caixa. Este botão é do CORPO, e sem esta linha
-     ele sairia SUBLINHADO ao lado do «Adicionar» que não sai: a mesma quebra
-     que a foto de 08/09 mostrou na fileira dos cartões, duas regras abaixo. */
-  .lanc-novo-linha{display:flex;gap:8px;align-items:center}
-  .lanc-novo-linha input{flex:1;min-width:0}
-  .lanc-novo-linha a.btn{white-space:nowrap;flex:none;text-decoration:none;
-    display:inline-flex;align-items:center;justify-content:center}
-  /* O BOTÃO QUE É ÂNCORA TEM DE PARECER BOTÃO — 08/09/2026, e foi a FOTO que
-     mostrou. Dois dos botões desta aba são `<a class="btn">` porque só uma
-     âncora abre a `.tela-nova` pelo `:target` (ver `desenho_dos_lancadores.
-     Acao.href`); o `.btn` do esqueleto não desliga o sublinhado, que é
-     `text-decoration` padrão de `<a>`. Resultado medido na primeira foto: o
-     botão global e o do cartão que não localizou saíam
-     SUBLINHADOS ao lado de irmãos idênticos que não saíam — a mesma quebra de
-     "mesma família, mesma largura" que fez o `.lanc .btn` cair em 02/09.
-     O `.tn-rod .btn` do `monta.CSS_POPUP` já resolve isto DENTRO da pop-up, e
-     pela mesma razão; esta regra é a mesma lição, na fileira da aba. */
-  .acoes a.btn,.lanc a.btn{text-decoration:none;display:inline-flex;
-    align-items:center;justify-content:center}
-
   /* ---- AS TELAS NOVAS (:target, sem script) ---- */
   .tela-nova{display:none;position:fixed;inset:0;z-index:60;
              background:rgba(9,10,15,.72);align-items:center;justify-content:center}
@@ -1274,29 +1008,452 @@
      22+330 a partir do rótulo passava da borda direita dela. Medido na
      Point-and-click, e vale para toda `.tn-cx` pela mesma aritmética. */
   .tn-cx .dica{left:auto;right:22px}
+.lanc-nome { font-size:12.5px;font-weight:600;color:var(--fg) }
+.lanc-selo { font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600; font-family:'JetBrains Mono',monospace }
+.lanc-jogos { margin-left:auto;font-size:11px;color:var(--fg); font-family:'JetBrains Mono',monospace }
+.lanc-novo-campo { display:flex;flex-direction:column;gap:5px;margin-bottom:12px }
+.lanc-novo-campo > span { font-size:11px;color:var(--texto-suave) }
+.lanc-novo-campo input { height:var(--h-acao);border-radius:7px;padding:0 10px; background:var(--app-bg);border:1px solid var(--border-forte);color:var(--fg); font-family:'JetBrains Mono',monospace;font-size:11.5px }
+.lanc-novo-campo input:focus { outline:none;border-color:var(--purple) }
+.lanc-novo-linha { display:flex;gap:8px;align-items:center }
+.lanc-novo-linha input { flex:1;min-width:0 }
+.lanc-novo-linha a.btn { white-space:nowrap;flex:none;text-decoration:none; display:inline-flex;align-items:center;justify-content:center }
+.tn-x { margin-left:auto;width:26px;height:26px;border-radius:6px;text-decoration:none; border:1px solid var(--border-forte);color:var(--fg);font-size:14px; display:flex;align-items:center;justify-content:center }
+.lanc-selo.oficial { background:rgba(189,147,249,.18);color:var(--purple);border:1px solid rgba(189,147,249,.45) }
+.lanc-selo.comunidade { background:rgba(139,233,253,.14);color:var(--cyan);border:1px solid rgba(139,233,253,.4) }
+.lanc-selo.local { background:rgba(255,184,108,.14);color:var(--orange);border:1px solid rgba(255,184,108,.4) }
+.ext-ico { width:28px;height:28px;flex:0 0 28px;border-radius:7px;display:inline-flex;align-items:center;justify-content:center; background:var(--elevated);border:1px solid var(--border-sutil) }
+.ext-lista { display:flex;flex-direction:column }
+.ext { display:grid;grid-template-columns:28px minmax(150px,1.05fr) minmax(0,2.4fr) 96px 112px auto 26px; align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--border-sutil) }
+.ext:last-child { border-bottom:0 }
+.ext-quem { display:flex;flex-direction:column;gap:4px;min-width:0 }
+.ext-nome { font-size:12.5px;font-weight:600;color:var(--fg) }
+.ext-sub { display:flex;align-items:center;gap:7px }
+.ext-ver { font-size:10.5px;color:var(--fg);font-family:'JetBrains Mono',monospace }
+.ext-faz { font-size:11.5px;color:var(--texto-suave);line-height:1.45 }
+.ext-para,.ext-estado { font-size:11.5px;color:var(--texto-suave);display:flex;align-items:center;gap:6px;white-space:nowrap }
+.ext-rot { font-size:10.5px;color:var(--rot-campo) }
+.bol-ok { color:var(--green);font-size:9px }
+.ext-mais { width:26px;height:26px;border-radius:6px;border:1px solid transparent;background:transparent; color:var(--fg);cursor:pointer;font-size:14px }
+.ext-mais:hover { border-color:var(--linha);color:var(--fg) }
+.nj-tog { display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px; border:1px solid var(--border-forte);border-radius:6px;font-size:11px; color:var(--fg);cursor:pointer;user-select:none;white-space:nowrap }
+.nj-tog .pino { width:7px;height:7px;border-radius:50%;background:var(--border-forte) }
+.nj-tog.ligado { border-color:var(--green);background:rgba(80,250,123,.1);color:var(--green) }
+.nj-tog.ligado .pino { background:var(--green);box-shadow:0 0 6px var(--green) }
+.ext-instalar { display:flex;align-items:center;gap:8px;padding:2px 0 10px;border-bottom:1px solid var(--border-sutil);margin-bottom:2px }
+.ext-inst-rot { font-size:11.5px;color:var(--rot-campo);white-space:nowrap;margin-right:4px }
+.ext-instalar input,.ext-inst-campo input { flex:1;min-width:0;height:var(--h-acao);border-radius:7px;padding:0 10px; border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);font-family:inherit;font-size:12px }
+.ext-instalar input::placeholder,.ext-inst-campo input::placeholder { color:var(--fg) }
+.ext-instalar input:focus,.ext-inst-campo input:focus { outline:none;border-color:var(--purple) }
+.ext-instalar .btn { white-space:nowrap;flex:none;text-decoration:none }
+.lanc-fila { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:22px }
+.lf { display:flex;align-items:center;gap:9px;padding:7px 2px;border-bottom:1px solid var(--border-sutil);min-height:40px }
+.lf .lanc-nome { white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
+.lf.ausente .lanc-nome { color:var(--texto-suave) }
+.lf .lanc-jogos { margin-left:auto;text-align:right;white-space:nowrap;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis }
+.lf > *:not(.lanc-jogos) { flex:none }
+.lf .btn.mini { height:26px;font-size:11px;padding:0 10px;text-decoration:none;white-space:nowrap }
+.lf-nome { display:flex;align-items:center;gap:8px;min-width:0 }
+.quadro:has(> input.abre) .quadro-topo { padding-bottom:11px }
+.quadro:has(> input.abre:checked) .quadro-topo { padding-bottom:5px }
+.quadro:has(> input.abre:checked) > .quadro-corpo { padding-top:4px }
+.ext-instalar-pe { border-bottom:0;border-top:1px solid var(--border-sutil);padding:10px 0 0;margin:2px 0 0 }
+.ext { grid-template-columns:28px minmax(150px,1.05fr) minmax(0,2fr) 196px 112px auto 26px }
+.ext-sel { height:24px;border-radius:6px;font-size:11px;font-family:inherit;padding:0 6px;border:1px solid var(--border-forte);background:var(--panel);color:var(--fg);max-width:150px }
+.ext { padding:7px 4px }
+.ext-faz { white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3 }
+.ext-quem { gap:3px }
+.ext-lista { max-height:186px;overflow-y:auto }
+.bp-cx .ky-ctrl { gap:6px;flex-wrap:nowrap }
+.bp-cx .chip { white-space:nowrap }
+.bp-cx .ky-ctrl .seg.mini button { padding:0 7px }
+.bp-cx .ky-linha { grid-template-columns:auto minmax(0,1fr) }
+.bp-cx .ky-ctrl { justify-content:flex-end;gap:5px }
+.bp-cx .ky-rot .chip { padding-inline:8px }
+.bp-cx .ky-ctrl .seg.mini button { padding:0 6px }
+.bp-cx .campo-num.mini { padding:0 6px }
+.tn-x { margin-left:auto;width:26px;height:26px;border-radius:6px;text-decoration:none; border:1px solid var(--border-forte);color:var(--fg);font-size:14px; display:flex;align-items:center;justify-content:center }
+.moldura { border:1px solid var(--border-sutil);border-radius:7px;background:var(--app-bg); padding:5px 12px }
+.campo-num { display:flex;align-items:center;height:var(--h-escolha);padding:0 11px; border:1px solid var(--border-forte);border-radius:7px;background:var(--app-bg) }
+.campo-num .par { display:flex;align-items:center;gap:9px;flex:0 1 auto;min-width:0 }
+.campo-num .par:last-child { flex:1 1 auto }
+.campo-num .par:not(:first-child):last-child .bignum { margin-left:auto }
+.bignum { display:inline-flex;align-items:center;flex:none }
+.bignum b { font-family:'JetBrains Mono',monospace;font-size:15px;color:var(--fg); font-weight:600;min-width:22px;text-align:center }
+.passo { width:22px;height:24px;border:1px solid var(--border-forte);border-radius:5px; background:transparent;color:var(--fg);font-size:14px;font-family:inherit; cursor:pointer;line-height:1;padding:0 }
+.passo:hover { border-color:var(--purple);color:var(--purple) }
+.campo-linha { width:100%;height:var(--h-escolha);border-radius:6px;font-size:11.5px;font-family:inherit; padding:0 8px;border:1px solid var(--border-forte);background:var(--panel); color:var(--fg);cursor:pointer }
+.campo-linha:hover { border-color:var(--purple) }
+.campo-linha:disabled { border-color:var(--border-sutil);color:var(--fg); cursor:not-allowed }
+.campo-linha:disabled:hover { border-color:var(--border-sutil) }
+.tn-cx.larga { width:1000px }
+.pc-molde { display:flex;align-items:center;gap:10px;margin-bottom:8px }
+.pc-rot { font-size:12px;font-weight:600;color:var(--rot-campo);white-space:nowrap }
+.pc-para { margin-left:auto;font-size:11.5px;color:var(--texto-suave);display:inline-flex;align-items:center;gap:6px;white-space:nowrap }
+.tn-topo .pc-para { margin-left:auto }
+.ext-rot { font-size:10.5px;color:var(--rot-campo) }
+.seg.mini { gap:6px;flex-wrap:nowrap }
+.seg.mini button { min-width:0;flex:0 0 auto;padding:5px 11px;font-size:11.5px }
+.pc-sub { font-size:11.5px;font-weight:600;color:var(--purple);padding:5px 0 5px }
+.campo-num.mini { height:28px;padding:0 9px }
+.campo-num.mini .bignum b { font-size:13px;min-width:34px }
+.campo-num .un { font-size:10.5px;color:var(--fg);white-space:nowrap }
+.ac-card { border:1px solid var(--border-sutil);border-radius:8px;background:var(--app-bg);padding:10px 12px; display:flex;flex-direction:column;gap:8px;min-width:0 }
+.ac-topo { display:flex;align-items:center;gap:8px;height:24px }
+.ac-tit { font-size:12.5px;font-weight:600;color:var(--fg);white-space:nowrap }
+.ac-topo .nj-tog { margin-left:auto }
+.ja-sessao { display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--border-sutil);padding-top:8px }
+.ja-ses-l { display:flex;align-items:center;gap:8px;font-size:11px;color:var(--texto-suave) }
+.ja-ses-l b { font-weight:600;color:var(--fg) }
+.ja-ses-l em { font-style:normal;margin-left:auto;font-size:10.5px;color:var(--fg) }
+.ja-recarga { width:70px;height:6px;border-radius:3px;background:var(--border-sutil);overflow:hidden;margin-left:auto }
+.ja-recarga i { display:block;height:100%;width:100%;background:var(--orange) }
+.ext { grid-template-columns:28px minmax(150px,1.05fr) minmax(0,2fr) 196px 112px auto 30px 26px }
+.ext-conf { width:30px;height:26px;border-radius:6px;border:1px solid var(--border-forte);background:transparent; color:var(--texto-suave);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none }
+.ext-conf:hover,.ext-conf.aberta { border-color:var(--purple);color:var(--purple);background:var(--sel-bg) }
+.tn-cx.ja-cx { width:1130px;height:min(716px,calc(100vh - 34px));max-height:none }
+.tn-cx.ky-cx { width:1000px }
+.ja-cx .tn-topo { gap:10px;padding:13px 18px 0 }
+.ja-cx .tn-topo .pc-molde { margin:0 0 0 14px }
+.ja-cx .tn-topo .pc-para { margin-left:auto }
+.ja-marca { font-size:10px;padding:1px 7px;border-radius:4px;border:1px solid rgba(255,121,198,.45);color:var(--pink);font-weight:600 }
+.ja-parar { height:32px;padding:0 15px;border-radius:7px;border:1px solid var(--red);background:var(--red);color:#1e1f29; font:700 12.5px 'Space Grotesk',system-ui,sans-serif;display:inline-flex;align-items:center;gap:8px;cursor:pointer; box-shadow:0 0 0 3px rgba(255,85,85,.14);white-space:nowrap }
+.ja-parar:hover { background:#ff6e6e }
+.tn-topo .ja-parar + .tn-x { margin-left:4px }
+.ja-corpo { display:grid;grid-template-columns:316px minmax(0,1fr);gap:14px;padding:12px 18px 14px;flex:1;min-height:0 }
+.ja-agora { border:1px solid var(--border-sutil);border-radius:8px;background:var(--app-bg);padding:9px 12px 10px; display:flex;flex-direction:column;gap:9px;min-height:0;min-width:0 }
+.ja-ag-topo { display:flex;align-items:center;gap:8px }
+.ja-ag-topo .pc-sub { padding:0 }
+.ja-srv { margin-left:auto;font-size:11px;color:var(--texto-suave);display:inline-flex;align-items:center;gap:5px;white-space:nowrap }
+.ja-srv .bol-ok { color:var(--green);font-size:9px }
+.ja-rot { font-size:11.5px;font-weight:600;color:var(--rot-campo) }
+.ja-nivel-caixa { border:1px solid var(--border-sutil);border-radius:7px;padding:8px 10px 9px;background:var(--panel); display:flex;flex-direction:column;gap:7px }
+.ja-nivel-linha { display:flex;align-items:center;gap:10px }
+.ja-nivel { display:inline-flex;align-items:baseline;gap:6px }
+.ja-nivel b { font:600 30px/1 'JetBrains Mono',monospace;color:var(--fg) }
+.ja-nivel span { font-size:11px;color:var(--fg) }
+.ja-passos { margin-left:auto;display:inline-flex;gap:6px }
+.ja-passos .passo { width:30px;height:28px;font-size:16px }
+.ja-degraus { display:grid;grid-template-columns:repeat(10,1fr);gap:4px;height:20px }
+.ja-degraus i { border-radius:3px;background:var(--app-bg);border:1px solid var(--border-forte);cursor:pointer }
+.ja-degraus i.on { background:linear-gradient(180deg,#ff8fd0,#d9529f);border-color:#ff8fd0 }
+.ja-degraus i:hover { border-color:var(--purple) }
+.ja-nota { font-size:10.5px;color:var(--fg);line-height:1.45;display:flex;flex-wrap:wrap;gap:3px 10px }
+.ja-nota .gl { width:15px;height:15px;vertical-align:-4px }
+.ja-perfil-linha { display:flex;align-items:center;gap:8px;height:30px }
+.ja-perfil-nome { flex:1;display:flex;align-items:center;gap:8px;justify-content:center;font-size:12.5px;font-weight:600; color:var(--fg);border:1px solid var(--border-forte);border-radius:6px;height:28px;background:var(--panel) }
+.ja-perfil-nome .ja-mini { color:var(--pink) }
+.ja-perfil-linha .passo { width:26px;height:28px }
+.ja-perfil-linha .un { font-size:10.5px;color:var(--fg);white-space:nowrap }
+.ja-aps-topo { display:flex;align-items:center;gap:8px }
+.ja-aps-topo .conta { margin-left:auto;font-size:10.5px;color:var(--fg) }
+.ja-ap { border-top:1px solid var(--border-sutil);padding:7px 0 0;display:flex;flex-direction:column;gap:5px }
+.ja-ap-cab { display:flex;align-items:center;gap:7px }
+.ja-ap-nome { font-size:12px;font-weight:600;color:var(--fg);white-space:nowrap }
+.ja-ap-sub { font-size:10.5px;color:var(--fg);white-space:nowrap }
+.ja-ap-cab .btn.mini { margin-left:auto;height:24px;padding:0 9px;font-size:11px }
+.ja-ap-pe { display:grid;grid-template-columns:minmax(0,1fr) 62px 44px;align-items:center;gap:8px }
+.ja-ap-pe .ext-sel { max-width:none;width:100% }
+.ja-barras { display:flex;flex-direction:column;gap:3px }
+.ja-barras i { height:5px;border-radius:3px;background:var(--border-sutil);position:relative;overflow:hidden;display:block }
+.ja-barras i::after { content:"";position:absolute;inset:0 auto 0 0;width:calc(var(--v) * 100%);background:var(--pink);border-radius:3px }
+.ja-barras i.m2::after { background:var(--cyan) }
+.ja-ap-num { font-size:10.5px;color:var(--texto-suave);text-align:right;font-family:'JetBrains Mono',monospace;white-space:nowrap }
+.ja-dono { margin-top:auto;font-size:11px;color:var(--texto-suave);display:flex;align-items:center;gap:7px; border-top:1px solid var(--border-sutil);padding-top:8px }
+.ja-dono .ext-rot { font-size:10.5px }
+.ja-dono em { font-style:normal;color:var(--fg);margin-left:auto;font-size:10.5px }
+.ja-abas { display:flex;flex-direction:column;min-width:0;min-height:0;position:relative }
+.ja-abas > input { position:absolute;width:0;height:0;opacity:0;pointer-events:none }
+.ja-tira { display:flex;gap:2px;border-bottom:1px solid var(--border-forte);margin-bottom:10px;flex:none }
+.ja-tira label { padding:6px 11px 8px;font-size:12.5px;color:var(--fg);border-bottom:2px solid transparent; margin-bottom:-1px;cursor:pointer;white-space:nowrap }
+.ja-tira label:hover { color:var(--texto-suave) }
+.ja-telas { flex:1;min-height:0;display:flex;flex-direction:column }
+.ja-tela { display:none;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;align-content:start;min-height:0 }
+.ja-tela.l-larga { grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) }
+.ja-tela > .moldura { padding:4px 12px 8px;min-width:0 }
+.ja-linha { display:grid;grid-template-columns:148px minmax(0,1fr);align-items:center;gap:10px;min-height:36px; border-bottom:1px solid var(--border-sutil) }
+.ja-linha:last-child { border-bottom:0 }
+.ja-linha > span:first-child { font-size:11.5px;color:var(--texto-suave);display:flex;align-items:center;gap:6px;line-height:1.25 }
+.ja-linha.empilha { grid-template-columns:1fr;gap:5px;padding:7px 0 8px }
+.ja-ctrl { display:flex;align-items:center;gap:8px;min-width:0;justify-content:flex-start }
+.ja-ctrl .campo-linha { height:28px }
+.ja-ctrl .seg.mini button { height:28px;padding:0 9px }
+.ja-ctrl small { font-size:10.5px;color:var(--fg);white-space:nowrap }
+.ja-ctrl input[type=text] { height:28px;border-radius:6px;border:1px solid var(--border-forte);background:var(--panel); color:var(--fg);padding:0 9px;font:11.5px 'JetBrains Mono',monospace;width:150px }
+.ja-ok { font-size:10.5px;color:var(--green);white-space:nowrap }
+.ja-ops { display:flex;flex-direction:column;gap:6px;padding:4px 0 6px }
+.ja-op { display:flex;align-items:center;gap:10px;text-align:left;padding:7px 10px;border-radius:7px; border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-suave);font-family:inherit;cursor:pointer }
+.ja-op:hover { border-color:var(--comment) }
+.ja-op.on { border-color:var(--purple);background:var(--sel-bg) }
+.ja-op-txt { display:flex;flex-direction:column;gap:2px;min-width:0 }
+.ja-op-txt b { font-size:12px;color:var(--fg);font-weight:600 }
+.ja-op-txt span { font-size:10.5px;color:var(--fg);line-height:1.4 }
+.ja-op.on .ja-op-txt span { color:var(--texto-suave) }
+.ja-op svg { flex:none }
+.ja-gestos { width:100%;border-collapse:collapse;table-layout:fixed;font-size:11.5px }
+.ja-gestos th { color:var(--fg);font-weight:700;text-align:left;font-size:10px;padding:2px 6px 4px 0;border-bottom:1px solid var(--border-forte) }
+.ja-gestos td { height:31px;border-bottom:1px solid var(--border-sutil);color:var(--texto-suave);padding:0 6px 0 0; white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
+.ja-gestos tr:last-child td { border-bottom:0 }
+.ja-gestos td.r { font-size:10.5px;color:var(--fg) }
+.ja-gestos tr.para td:first-child { color:var(--red);font-weight:600 }
+.ja-combo .gl { flex:0 0 20px;width:20px;height:20px }
+.ja-nota .ja-combo .gl { flex:0 0 17px;width:17px;height:17px }
+.ja-combo { display:inline-flex;align-items:center;gap:3px;color:var(--texto-suave) }
+.ja-combo > i { font-style:normal;color:var(--fg);font-size:10.5px }
+.ja-combo em { font-style:normal;font-size:10.5px;color:var(--orange);margin-left:5px }
+.ja-tp { width:100%;height:auto;display:block;margin:4px 0 2px }
+.ja-legenda { display:flex;gap:14px;font-size:10.5px;color:var(--fg);flex-wrap:wrap }
+.ja-legenda i { display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px }
+.ja-tons { display:flex;gap:6px;flex-wrap:nowrap }
+.ja-tons .tom { width:22px;height:22px;border-radius:5px;border:1px solid rgba(255,255,255,.12);cursor:pointer;padding:0;position:relative }
+.ja-tons .tom.on { outline:2px solid var(--fg);outline-offset:2px }
+.ja-tons .tom.nenhuma { background:repeating-linear-gradient(135deg,var(--panel) 0 4px,var(--border-forte) 4px 6px) }
+.ja-luz-prev { display:flex;flex-direction:column;gap:8px;padding:6px 0 4px }
+.ja-barra-luz { height:46px;border-radius:9px;background:#11121a;border:1px solid var(--border-forte);position:relative;overflow:hidden }
+.ja-barra-luz::before,.ja-barra-luz::after { content:"";position:absolute;top:9px;bottom:9px;width:38%;border-radius:6px; background:var(--cor-luz);box-shadow:0 0 18px 4px var(--cor-luz);animation:respira var(--periodo,2.6s) ease-in-out infinite }
+.ja-barra-luz::before { left:4% }
+.ja-barra-luz::after { right:4% }
+.ja-barra-luz > span { position:absolute;left:44%;right:44%;top:8px;bottom:8px;border-radius:5px;border:1px solid var(--border-forte);background:var(--panel) }
+@keyframes respira { 0%,100%{opacity:1}50%{opacity:var(--fundo,0)} }
+.ja-escala { height:12px;border-radius:6px;background:linear-gradient(90deg,#000,var(--cor-luz));border:1px solid var(--border-forte) }
+.ja-escala-rot { display:flex;justify-content:space-between;font-size:10px;color:var(--fg);margin-top:-4px }
+.ja-grafico { width:100%;height:auto;display:block }
+.ja-roda { display:flex;flex-direction:column }
+.ja-roda-l { display:grid;grid-template-columns:24px 66px minmax(0,1fr) auto auto;align-items:center;gap:9px;height:38px; border-bottom:1px solid var(--border-sutil) }
+.ja-roda-l:last-child { border-bottom:0 }
+.ja-roda-l .ja-mini { color:var(--pink) }
+.ja-roda-l.fora .ja-mini { color:var(--fg) }
+.ja-roda-l.atual { background:linear-gradient(90deg,rgba(255,121,198,.08),transparent 70%) }
+.ja-roda-nome { display:flex;flex-direction:column;gap:1px;min-width:0 }
+.ja-roda-nome b { font-size:12px;color:var(--fg);font-weight:600 }
+.ja-roda-nome span { font-size:10.5px;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
+.ja-roda-l.fora .ja-roda-nome b { color:var(--fg) }
+.ja-marcar { width:18px;height:18px;border-radius:4px;border:1px solid var(--border-forte);background:var(--panel); display:inline-flex;align-items:center;justify-content:center;color:var(--green);font-size:12px;cursor:pointer }
+.ja-roda-l .btn.mini { height:24px;padding:0 9px;font-size:11px;text-decoration:none;display:inline-flex;align-items:center }
+.pc-sub .ja-num-roda { margin-left:10px;font-weight:400 }
+.ja-num-roda { font-size:10px;color:var(--fg);font-family:'JetBrains Mono',monospace }
+.ky-grade { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px }
+.ky-linha { display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:10px;min-height:42px; border-bottom:1px solid var(--border-sutil) }
+.ky-linha:last-child { border-bottom:0 }
+.ky-rot { display:flex;flex-direction:column;gap:2px;min-width:0 }
+.ky-rot > span { font-size:11.5px;color:var(--texto-suave);display:flex;align-items:center;gap:6px }
+.ky-rot code { font:10px 'JetBrains Mono',monospace;color:var(--fg) }
+.ky-ctrl { display:flex;align-items:center;gap:8px }
+.ky-ctrl .campo-linha { height:28px;width:170px }
+.ky-ctrl .seg.mini button { height:28px }
+.ky-pasta { display:flex;align-items:center;gap:8px;font:11px 'JetBrains Mono',monospace;color:var(--fg); border:1px solid var(--border-forte);border-radius:6px;background:var(--panel);height:28px;padding:0 4px 0 10px }
+.ky-pasta .btn { height:22px;padding:0 8px;font-size:10.5px;margin-left:auto }
+.ky-selo { font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600;font-family:'JetBrains Mono',monospace; color:#1e1f29;background:var(--green) }
+.ac-card .ac-topo .ac-sub { margin-left:auto;font-size:10.5px;color:var(--fg) }
+#t0:checked ~ .ja-tira label[for=t0] { color:var(--fg);border-bottom-color:var(--pink);font-weight:600 }
+#t0:checked ~ .ja-telas > .t0 { display:grid }
+#t1:checked ~ .ja-tira label[for=t1] { color:var(--fg);border-bottom-color:var(--pink);font-weight:600 }
+#t1:checked ~ .ja-telas > .t1 { display:grid }
+#t2:checked ~ .ja-tira label[for=t2] { color:var(--fg);border-bottom-color:var(--pink);font-weight:600 }
+#t2:checked ~ .ja-telas > .t2 { display:grid }
+#t3:checked ~ .ja-tira label[for=t3] { color:var(--fg);border-bottom-color:var(--pink);font-weight:600 }
+#t3:checked ~ .ja-telas > .t3 { display:grid }
+#t4:checked ~ .ja-tira label[for=t4] { color:var(--fg);border-bottom-color:var(--pink);font-weight:600 }
+#t4:checked ~ .ja-telas > .t4 { display:grid }
+#t5:checked ~ .ja-tira label[for=t5] { color:var(--fg);border-bottom-color:var(--pink);font-weight:600 }
+#t5:checked ~ .ja-telas > .t5 { display:grid }
+#t6:checked ~ .ja-tira label[for=t6] { color:var(--fg);border-bottom-color:var(--pink);font-weight:600 }
+#t6:checked ~ .ja-telas > .t6 { display:grid }
+[data-gesto] { min-height:24px }
+.lf-botoes { display:inline-flex;gap:6px;flex:none }
+.lf .btn.mini.apagado { border-color:var(--border-sutil);color:var(--fg);opacity:.55;pointer-events:none }
+.lf.ausente .lanc-nome { color:var(--fg) }
+.ext { grid-template-columns:28px minmax(170px,1fr) 230px 120px auto 30px 26px }
+.ext-quem { cursor:help }
+.cj-busca { height:var(--h-acao);border-radius:7px;padding:0 10px;border:1px solid var(--border-forte);background:var(--app-bg); color:var(--fg);font-family:inherit;font-size:12px;margin-bottom:10px }
+.cj-lista { list-style:none;margin:0;padding:0;display:flex;flex-direction:column }
+.cj-lista li { display:flex;align-items:center;gap:10px;min-height:40px;border-bottom:1px solid var(--border-sutil);font-size:12.5px;color:var(--fg) }
+.cj-lista li:last-child { border-bottom:0 }
+.cj-lista .btn.mini,.cj-tem { margin-left:auto }
+.cj-lista .btn.mini { height:26px;padding:0 12px;font-size:11px }
+.cj-tem { font-size:11px;color:var(--green) }
+.lc-linha { display:grid;grid-template-columns:200px minmax(0,1fr);align-items:center;gap:12px;min-height:42px;border-bottom:1px solid var(--border-sutil) }
+.lc-linha:last-child { border-bottom:0 }
+.lc-linha > span:first-child { font-size:12px;color:var(--texto-suave) }
+.lc-val { display:flex;align-items:center;gap:10px;font-size:12px;color:var(--fg);min-width:0 }
+.lc-val code { font-family:'JetBrains Mono',monospace;font-size:11.5px }
+.lc-val small { font-size:11px;color:var(--fg) }
+.lc-val .btn.mini { height:26px;padding:0 10px;font-size:11px;text-decoration:none;margin-left:auto }
+.lanc-novo-campo .seg.mini { justify-content:flex-start }
+.lanc-novo-campo .seg.mini button { height:30px;padding:0 14px }
+.ja-tela.t3 > .moldura { padding:6px 14px 10px }
+.ja-tela.t3 .ja-linha { min-height:42px;grid-template-columns:112px minmax(0,1fr) }
+.ja-tela.t3 > .moldura:first-child .ja-linha { grid-template-columns:140px minmax(0,1fr) }
+.ja-tela.t3 .ja-linha.empilha,.ja-tela.t3 > .moldura:first-child .ja-linha.empilha { grid-template-columns:1fr;padding:9px 0 10px }
+.ja-tela.t3 .seg.mini button { height:30px;padding:0 12px }
+.pc-sub[data-dica] { cursor:help }
+.lanc-fila { column-gap:36px }
+.lf { min-height:46px;padding:8px 4px;gap:10px }
+.lf .btn.mini { height:28px;padding:0 12px }
+.lf-botoes { gap:8px }
+.ja-tela.t3 > .moldura { padding:10px 16px 14px }
+.ja-tela.t3 .ja-linha { min-height:52px }
+.ja-tela.t3 .seg.mini button { height:32px;padding:0 14px }
+.ext,.lf { padding-left:0;padding-right:0 }
+.ja-ap-pe { grid-template-columns:minmax(0,1fr) 54px 52px }
+.ja-ctrl > .seg.mini { flex:1 1 auto;min-width:0;width:100%;justify-content:stretch }
+.ja-ctrl > .seg.mini button,.ja-tela.t3 .ja-ctrl > .seg.mini button { flex:1 1 auto;min-width:0;padding:0 10px }
+.ja-ctrl > select,.ja-ctrl > .campo-linha { flex:1 1 auto;min-width:0;width:100%;max-width:none }
+.ja-ctrl > .ja-tons { flex:1 1 auto;display:grid;grid-template-columns:repeat(12,22px);justify-content:space-between }
+.ja-tela.l-larga > .moldura:last-child .ja-linha:not(.empilha) { grid-template-columns:136px minmax(0,1fr) }
+#hef-dica { position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px; background:#1b1c25;border:1px solid var(--border-forte,#44475a);color:var(--texto-suave,#c8ccda); font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none; opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s }
+#hef-dica.visivel { opacity:1;transform:none }
+.ext { padding:11px 0;min-height:60px }
+.ext-quem { cursor:default;gap:5px }
+.ext-sub { gap:8px;min-width:0 }
+.ext-sub .ext-nome { white-space:nowrap }
+.ext-faz { font-size:11.5px;color:var(--texto-suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3 }
+.lanc-fila { flex:1;min-height:0;grid-auto-rows:minmax(48px,1fr);gap:10px 12px }
+.lf { min-height:0;padding:0 12px;gap:10px;border:1px solid var(--border-sutil);border-radius:8px;background:var(--app-bg) }
+.lf-ico { color:var(--cyan) }
+.lf.ausente .lf-ico { color:var(--fg) }
+.lf-novo { border-style:dashed;border-color:var(--linha);background:transparent;text-decoration:none;cursor:pointer }
+.lf-novo .lf-ico { color:var(--purple) }
+.lf-novo .lanc-nome { color:var(--purple);font-weight:500 }
+.lf-novo:hover { border-color:var(--purple);background:var(--sel-bg) }
+.ext-lista { max-height:none;overflow:visible }
+.ext { min-height:50px;padding:6px 0 }
+.ext-instalar-pe { padding-top:8px }
+.lanc-fila { grid-auto-rows:minmax(42px,1fr);gap:8px 12px }
+@media (max-height:860px) {.lf .btn.mini{height:26px} .lf .lf-ico{width:26px;height:26px} .lf{min-height:0}}
+@media (max-height:780px) {.ext{min-height:42px;padding:2px 0} .ext-faz{font-size:11.5px} .lanc-fila{grid-auto-rows:minmax(34px,1fr);gap:6px 12px} .quadro-corpo{padding-bottom:8px} .ext-instalar-pe{padding-top:6px} .ext-instalar .btn,.ext-instalar input{height:30px}}
+.ext-lista { max-height:none;overflow:visible }
+.ext { grid-template-columns:28px minmax(220px,1fr) 180px 104px 30px 26px;column-gap:12px;align-items:center;min-height:0;padding:7px 0 }
+.ext-para { display:flex;align-items:center;gap:8px;white-space:nowrap }
+.ext-sel { width:172px;max-width:none;height:26px }
+.nj-tog { width:104px;height:26px;padding:0;justify-content:center;box-sizing:border-box }
+.ext-conf { width:30px;height:26px }
+.ext-mais { width:26px;height:26px }
+.lf-nome-2 { flex-direction:column;align-items:flex-start;gap:1px;min-width:0 }
+.lf > .lf-nome-2 { flex:1 1 auto }
+.lf-nome-2 .lf-n { font-size:11px;color:var(--fg);font-family:'JetBrains Mono',monospace;white-space:nowrap }
+.lf { gap:8px }
+.lf-botoes { gap:6px }
+.lf-botoes .btn.mini { width:76px;padding:0;justify-content:center;box-sizing:border-box;text-align:center }
+.imp-cx { width:min(720px,92vw) }
+.imp-cx .lc-val { gap:12px }
+.imp-cx .lc-val small { white-space:normal;max-width:262px }
+.imp-cx .lc-val .btn { flex:none }
+.imp-cx .lc-val .btn,.imp-cx .tn-rod .btn { width:176px;padding:0;justify-content:center;text-align:center;box-sizing:border-box }
+@media (max-height:860px) {.ext{padding:5px 0}.ext-forma{padding:3px 0}.ext-grupo{padding-bottom:2px}}
+@media (max-height:830px) and (min-height:781px) {.ext{padding:3px 0}.miolo{gap:10px}.lanc-fila{gap:4px 12px}}
+@media (max-height:780px) {.ext{min-height:0;padding:4px 0}.ext-forma{padding:2px 0}.ext-ramo{margin-top:-4px;height:calc(50% + 4px)} .ext-forma .ext-faz,.ext-grupo .ext-faz{display:none}.ext-forma{min-height:32px}.miolo{gap:10px}.lanc-fila{gap:4px 12px}}
+@media (max-height:860px) {.lanc-fila{grid-auto-rows:minmax(38px,1fr)}}
+@media (max-height:780px) {.lanc-fila{grid-auto-rows:minmax(32px,1fr)}}
+.ext { padding:12px 0 }
+.ext + .ext { border-top:1px solid var(--border-sutil) }
+.ext-lista .ext:last-child { border-bottom:0 }
+@media (max-height:860px) {.ext{padding:10px 0}}
+@media (max-height:780px) {.ext{padding:6px 0}}
+.lv-cx { width:min(1000px,94vw) }
+.lv-cx .tn-corpo { padding:8px 18px 16px }
+.lv-linha { display:grid;grid-template-columns:minmax(0,1fr) 192px 276px 104px 30px;column-gap:14px;align-items:center;min-height:60px; border-bottom:1px solid var(--border-sutil) }
+.lv-linha:last-child { border-bottom:0 }
+.lv-linha .ext-nome { font-size:13px }
+.lv-linha .ext-faz { font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
+.lv-para,.lv-quando { display:flex;align-items:center;gap:8px;white-space:nowrap }
+.lv-para .ext-sel { width:136px }
+.lv-quando .ext-sel { width:196px }
+.lv-cx .ext-rot { font-size:12px }
+.tela-nova .nj-tog .txt,.tela-nova .btn.mini,.tela-nova small,.tela-nova code,.tela-nova .lc-val { font-size:12px }
+#lanc-conf .lc-val .btn.mini { width:132px;box-sizing:border-box;justify-content:center;text-align:center }
+.janela .conta,.janela .lanc-selo,.janela .ext-ver,.janela .ext-faz,.janela .ext-para,.janela .ext-rot,.janela .ext-cor,.janela .ext-inst-rot,.janela .lf-n,.janela .lf-imped,.janela .btn.mini,.janela .nj-tog .txt { font-size:12px }
+.ja-tela.t2 { grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto 1fr;gap:12px;align-content:stretch;height:100% }
+.ja-tela.t2 > .moldura { padding:10px 16px 12px;display:flex;flex-direction:column;gap:8px }
+.ja-tela.t2 .pc-sub { font-size:12px;padding:0 }
+.ja-tela.t2 .ja-ops { display:grid;grid-auto-rows:40px;gap:6px;padding:0 }
+.ja-tela.t2 .ja-op { height:40px;padding:0 12px;gap:12px }
+.ja-tela.t2 .ja-op-txt b { font-size:12.5px }
+.ja-tela.t2 .ja-op svg { width:52px;height:24px }
+.ja-tela.t2 .ja-linha { min-height:40px;border-top:1px solid var(--border-sutil);border-bottom:0;grid-template-columns:minmax(0,1fr) auto }
+.ja-tela.t2 .ja-linha > span:first-child { font-size:12px }
+.ja-tela.t2 .nj-tog .txt { font-size:12px }
+.jg-lista { display:grid;grid-auto-rows:36px }
+.jg-l { display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border-sutil);font-size:12.5px;color:var(--fg);cursor:pointer }
+.jg-l:last-child { border-bottom:0 }
+.jg-l input { width:16px;height:16px;accent-color:var(--pink);margin:0 }
+.fz-tit { display:flex;align-items:baseline;justify-content:space-between }
+.fz-escala { font-weight:400;color:var(--fg) }
+.fz-grade { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:18px;align-items:center }
+.fz-cab { font-size:12px;color:var(--fg);padding-bottom:4px }
+.fz-ap { grid-column:1/-1;font-size:12.5px;color:var(--fg);white-space:nowrap;padding:8px 0 2px;border-top:1px solid var(--border-sutil) }
+.fz-c { display:flex;align-items:center;gap:8px;min-height:28px;padding-bottom:4px }
+.fz-c input[type=range] { flex:1;min-width:0;height:24px;accent-color:var(--pink);margin:0 }
+.fz-c b { font:600 12px 'JetBrains Mono',ui-monospace,monospace;color:var(--fg);min-width:18px;text-align:right }
+.jg-lista { grid-auto-rows:auto;max-height:230px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border-forte) transparent }
+.jg-l { flex-wrap:wrap;align-content:center;row-gap:0;padding:3px 0 }
+.jg-n { flex:0 1 auto }
+.jg-kit { font-size:10.5px;font-weight:600;color:var(--cyan);border:1px solid rgba(139,233,253,.45);border-radius:4px;padding:1px 7px }
+.jg-porta { flex:1 0 100%;padding-left:28px;font-size:11.5px;color:var(--fg) }
 
-  .lanc-excl{font-size:11px;line-height:1.5;color:var(--fg);opacity:.85}
-  .lanc-excl b{font-weight:600}
-  .lanc-excl a.tirar{color:inherit;text-decoration:underline}
-  .excl-lista{max-height:46vh;overflow:auto;display:flex;flex-direction:column;
-    gap:4px;margin:10px 0;padding-right:6px}
-  .excl-jogo{display:flex;gap:10px;align-items:center;padding:6px 10px;font-size:12px;
-    border:1px solid rgba(255,255,255,.08);border-radius:8px;cursor:pointer}
-  .excl-jogo:hover{border-color:rgba(255,255,255,.22)}
-  .excl-tag{font-size:.78em;opacity:.65;margin-left:8px}
-  .excl-tag.ok{opacity:1;color:var(--verde, #3fd98a)}
-  .excl-nota{font-size:12px;opacity:.8;margin-top:8px;line-height:1.45}
+/* A vista estreita (940 px): a janela dos acessórios, a fila dos lançadores e a régua da luz cabem sem nada cruzar */
+.bp-cx .ky-linha { gap:8px }
+.bp-cx .ky-ctrl { flex-wrap:wrap;row-gap:4px;min-width:0 }
+.ja-escala-rot { gap:8px }
+.ja-escala-rot span:nth-child(2) { text-align:center }
+.ja-escala-rot span:last-child { text-align:right }
+@media (max-width:1199px) {
+  .lf > .lf-nome { flex:0 1 auto }
+  .lf .lanc-nome { white-space:normal;line-height:1.15 }
+  .ja-corpo { grid-template-columns:264px minmax(0,1fr);gap:10px;padding:10px 14px 12px }
+  .ja-agora { padding:8px 10px 9px }
+  .ja-ap-cab { gap:5px }
+  .ja-ap-cab .btn.mini { white-space:nowrap;padding:0 7px;flex:none }
+  .ja-ap-sub { min-width:0;overflow:hidden;text-overflow:ellipsis }
+  .ja-ap-pe { grid-template-columns:minmax(0,1fr) 44px 52px;gap:6px }
+  .ja-tira label { padding:6px 7px 8px;font-size:12px }
+  .ja-tela { gap:8px }
+  .ja-tela > .moldura, .ja-tela.t3 > .moldura { padding:4px 9px 8px }
+  .ja-linha, .ja-tela.t3 .ja-linha, .ja-tela.t3 > .moldura:first-child .ja-linha,
+  .ja-tela.l-larga > .moldura:last-child .ja-linha:not(.empilha) { grid-template-columns:96px minmax(0,1fr);gap:6px }
+  .ja-ctrl .seg.mini { gap:3px }
+  .ja-ctrl > .seg.mini button, .ja-tela.t3 .ja-ctrl > .seg.mini button { padding:0 4px;font-size:11px }
+  .ja-ctrl input[type=text] { flex:1 1 auto;min-width:0;width:auto }
+  .ja-ctrl > .ja-tons { grid-template-columns:repeat(12,18px);gap:4px }
+  .ja-tons .tom { width:18px;height:18px }
+  .campo-num.mini { padding:0 5px }
+  .campo-num .par { gap:5px }
+  .campo-num .un { white-space:normal;line-height:1.1;font-size:10px }
+  .ja-gestos { font-size:11px }
+  .ja-gestos td.r { font-size:10px }
+  .ja-gestos .ja-combo { gap:2px }
+  .ja-gestos .ja-combo .gl { flex:0 0 16px;width:16px;height:16px }
+  .ja-gestos .ja-combo em { margin-left:3px;font-size:10px }
+  .ja-roda-l { grid-template-columns:20px 52px minmax(0,1fr) auto auto;gap:6px }
+  .ja-roda-l .ja-mini { width:52px }
+  .ja-roda-nome b { white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
+  .ja-roda-l .btn.mini { padding:0 7px }
+}
+.ext-vazia { padding:14px 2px;font-size:11.5px;color:var(--texto-suave) }
+.ext-menu { grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 0 2px }
+.ext-menu:empty { display:none }
+.ext-menu .btn.mini { height:26px;padding:0 10px;font-size:11px;text-decoration:none }
+.ext-menu .ext-perm { flex:1 0 100%;display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--texto-suave) }
+.ext-desl { display:flex;align-items:center;gap:8px;width:100% }
+.ext-desl input[type=range] { flex:1;min-width:0;height:24px;accent-color:var(--pink);margin:0 }
+.ext-desl b { font:600 12px 'JetBrains Mono',ui-monospace,monospace;color:var(--fg);min-width:28px;text-align:right }
+.lc-linha.lc-larga { grid-template-columns:minmax(0,1fr);row-gap:4px;padding:6px 0 }
+.lc-larga .lc-val { display:block }
+.ext-jogos { max-height:190px }
+.ext-num { width:84px;height:24px;border-radius:6px;padding:0 8px;border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg);font-family:inherit;font-size:11px }
+.mg-abas { display:flex;flex-wrap:wrap;position:relative }
+.mg-abas > input { position:absolute;width:0;height:0;opacity:0;pointer-events:none }
+.mg-abas > label { order:1;padding:6px 11px 8px;font-size:12.5px;color:var(--fg);cursor:pointer;
+  border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap }
+.mg-abas > label:hover { color:var(--texto-suave) }
+.mg-abas > input:checked + label { color:var(--cyan);border-bottom-color:var(--cyan) }
+.mg-abas > input:focus-visible + label { outline:1px solid var(--cyan) }
+.mg-abas::after { content:"";order:1;flex:1;border-bottom:1px solid var(--border-forte);margin-bottom:-1px }
+.mg-painel { order:2;display:none;width:100%;margin-top:6px }
+.mg-abas > input:checked + label + .mg-painel { display:block }
+.ext-cor-in { width:44px;height:26px;padding:2px;border-radius:6px;border:1px solid var(--border-forte);
+  background:var(--panel);cursor:pointer }
 
-
-  .ajuda{width:17px;height:17px;border-radius:50%;flex:0 0 17px;border:1px solid var(--linha);
-    color:var(--fg);font-size:11px;line-height:15px;text-align:center;cursor:help;position:relative}
-  .ajuda:hover,.ajuda:focus{border-color:var(--cyan);color:var(--cyan);outline:none}
-  .ajuda:hover .dica,.ajuda:focus .dica,.ajuda:focus-within .dica{display:block}
-  .quadro-topo .par-modo + .ajuda.esq .dica{left:auto;right:22px}
-  .btn:not(.apagado) + .ajuda.porque,.seg button:not(.apagado) + .ajuda.porque{display:none}
-  .ajuda.porque:has(.dica:empty),.ajuda.porque:has(.nada){display:none}
-  .ajuda.porque{align-self:center;margin-left:-4px}
-  body.nativo.por-controle .par-modo + .ajuda{visibility:hidden}
 </style>
 <style id="base-comum">
 /* ===== Base comum das abas (rodada 2, 12/10/2026) =====
@@ -1498,7 +1655,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <a class="aba" href="04-iluminacao.html">Iluminação</a>
     <a class="aba" href="05-vibracao.html">Vibração</a>
     <a class="aba" href="06-navegacao.html">Navegação</a>
-    <a class="aba ativa" href="07-lancadores.html">Lançadores</a>
+    <a class="aba ativa" href="07-lancadores.html">Experimental</a>
     <a class="aba" href="08-conexoes.html">Conexões</a>
     <a class="aba" href="09-sistema.html">Sistema</a>
     <a class="aba" href="10-perfis.html">Perfis</a>
@@ -1507,96 +1664,98 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <!-- ================= MIOLO ================= -->
   <div class="miolo">
 
-    <div class="quadro estica">
+    <div class="quadro">
+      <input class="abre" type="checkbox" id="cx7-1" checked>
       <div class="quadro-topo">
-        <span class="quadro-titulo">De onde os seus jogos vêm</span>
-        <span class="ajuda">?<span class="dica">
-          Esta aba procura os lançadores instalados nesta máquina. O perfil casa pelo
-          <b>nome do processo</b> e pela <b>janela</b> — o jogo pode vir de qualquer um deles.<br><br>
-          O que impede um jogo de receber o controle é do <b>lançador</b>, nunca do controle.<br><br>
-          <b>Detectar o jogo aberto</b> é o caminho curto: abra o jogo, volte aqui e clique.
-        </span></span>
-        <span class="conta" data-campo="lanc-conta" data-hef-alvo="html">0 localizados <span class="sep">·</span> 0 com impedimentos</span>
+        <label class="quadro-titulo" for="cx7-1">Extensões</label>
+        <span class="conta" data-campo="mod-conta">2 instaladas</span>
       </div>
       <div class="quadro-corpo">
+        <div class="ext-lista">
+          <div class="ext" data-modificacao="kyty">
+            <span class="ext-ico" style="color:var(--cyan)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12a4 4 0 0 1 4 4v1a3 3 0 0 1-5.4 1.8L15 13H9l-1.6 1.8A3 3 0 0 1 2 13v-1a4 4 0 0 1 4-4z"/><path d="M7 10.5v3M5.5 12h3"/><circle cx="16" cy="11" r=".6" fill="currentColor"/><circle cx="18" cy="13" r=".6" fill="currentColor"/></svg></span>
+            <div class="ext-quem">
+              <span class="ext-sub"><span class="ext-nome">Kyty</span><span class="lanc-selo oficial">Oficial</span><span class="ext-ver">0.1.0</span></span>
+              <span class="ext-faz" data-dica="Jogos do Kyty com gatilhos, luz e vibração do controle">Jogos do Kyty com gatilhos, luz e vibração do controle</span>
+            </div>
+            <div class="ext-para"><span class="ext-rot">Para</span>Todos</div>
+            <span class="nj-tog ligado" data-gesto="ligar-modificacao" data-v="kyty" data-dica="Liga ou desliga"><span class="pino"></span><span class="txt">Ligada</span></span>
+            <a class="ext-conf" href="#kyty" data-gesto="configurar-modificacao" data-v="kyty" data-dica="Configurações: Kyty"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
+            <button class="ext-mais" data-gesto="mais-da-modificacao" data-v="kyty" data-dica="Atualizar, ver as permissões ou remover">⋮</button>
+          </div>
+          <div class="ext" data-modificacao="lovense">
+            <span class="ext-ico" style="color:var(--pink)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12c2-5 4-5 6 0s4 5 6 0 4-5 6 0 2 3 2 3"/></svg></span>
+            <div class="ext-quem">
+              <span class="ext-sub"><span class="ext-nome">Lovense</span><span class="lanc-selo oficial">Oficial</span><span class="ext-ver">0.1.0</span></span>
+              <span class="ext-faz" data-dica="Brinquedos da Lovense com o controle, em três jeitos de ligar">Brinquedos da Lovense com o controle, em três jeitos de ligar</span>
+            </div>
+            <div class="ext-para" data-dica="Quantas das três formas estão ligadas. Quem vai para quem fica na engrenagem"><span data-lv-conta>2 de 3 ligadas</span></div>
+            <span class="nj-tog ligado" data-gesto="ligar-modificacao" data-v="lovense" data-dica="Liga ou desliga"><span class="pino"></span><span class="txt">Ligada</span></span>
+            <a class="ext-conf" href="#lovense" data-gesto="configurar-modificacao" data-v="lovense" data-dica="Configurações: Lovense"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
+            <button class="ext-mais" data-gesto="mais-da-modificacao" data-v="lovense" data-dica="Atualizar, ver as permissões ou remover">⋮</button>
+          </div>
+        </div>
+        <div class="ext-instalar ext-instalar-pe" id="ext-instalar">
+          <span class="ext-inst-rot">Instalar de um endereço</span>
+          <input type="text" data-linha="mod-endereco" placeholder="https://github.com/…">
+          <a class="btn" href="#" data-gesto="escolher-arquivo-da-modificacao" data-hef-forma="ext-instalar">Escolher a pasta…</a>
+          <button class="btn roxo" data-gesto="instalar-modificacao" data-hef-forma="ext-instalar">Instalar</button>
+        </div>
+      </div>
+    </div>
 
-        <div class="acoes" style="margin-top:0;margin-bottom:12px">
-          <button class="btn roxo" data-gesto="detectar">Detectar o jogo aberto</button>
-          <button class="btn" data-gesto="procurar">Procurar de novo</button>
-          <a class="btn" href="#novo-lancador" data-gesto="adicionar-lancador">Adicionar um lançador</a>
-        </div>
-
-        <div class="lancadores">
-      <div class="lanc ausente" data-lancador="steam">
-        <div class="lanc-topo">
-          <span class="lanc-nome">Steam</span>
-          <span data-campo="steam-selo" data-hef-alvo="html"><span class="lanc-selo nao_sei">NÃO SEI</span></span>
-          <span class="lanc-jogos" data-campo="steam-jogos">…</span>
-        </div>
-        <div class="lanc-diz" data-campo="steam-diz" data-hef-alvo="html"><!-- a primeira leitura da Steam ainda não voltou --></div>
-        <div class="acoes" data-campo="steam-acoes" data-hef-alvo="html">
-          <button class="btn" data-gesto="abrir-lancador" data-v="steam">Abrir o lançador</button>
-          <a class="btn" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="steam" title="Criar perfil para um jogo">Criar perfil</a>
-        </div>
-        <div class="lanc-fora" data-campo="steam-fora" data-hef-alvo="html"><!-- ainda não há lista para este cartão --></div>
+    <div class="quadro estica">
+      <input class="abre" type="checkbox" id="cx7-2" checked>
+      <div class="quadro-topo">
+        <label class="quadro-titulo" for="cx7-2" data-dica="O perfil casa pelo processo e pela janela do jogo">Lançadores</label>
       </div>
-      <div class="lanc ausente" data-lancador="heroic">
-        <div class="lanc-topo">
-          <span class="lanc-nome">Heroic (Epic · GOG)</span>
-          <span data-campo="heroic-selo" data-hef-alvo="html"><span class="lanc-selo nao_sei">NÃO SEI</span></span>
-          <span class="lanc-jogos" data-campo="heroic-jogos">—</span>
+      <div class="quadro-corpo">
+        <div class="lanc-fila">
+          <div class="lf" data-lancador="steam">
+            <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><path d="M14.5 13.8v5.4l4.6-2.7z"/></svg></span>
+            <span class="lf-nome lf-nome-2"><span class="lanc-nome">Steam</span><span class="lf-n">48 jogos</span></span>
+            <span class="lf-botoes"><button class="btn mini apagado" aria-disabled="true" data-gesto="identificar-lancador" data-v="steam">Identificar</button><a class="btn mini" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="steam">Criar perfis</a><a class="btn mini" href="#lanc-conf" data-gesto="configurar-lancador" data-v="steam">Configurar</a></span>
+          </div>
+          <div class="lf" data-lancador="kyty">
+            <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12a4 4 0 0 1 4 4v1a3 3 0 0 1-5.4 1.8L15 13H9l-1.6 1.8A3 3 0 0 1 2 13v-1a4 4 0 0 1 4-4z"/><path d="M7 10.5v3M5.5 12h3"/><circle cx="16" cy="11" r=".6" fill="currentColor"/><circle cx="18" cy="13" r=".6" fill="currentColor"/></svg></span>
+            <span class="lf-nome lf-nome-2"><span class="lanc-nome">Kyty</span><span class="lf-n">2 jogos</span></span>
+            <span class="lf-botoes"><button class="btn mini apagado" aria-disabled="true" data-gesto="identificar-lancador" data-v="kyty">Identificar</button><a class="btn mini" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="kyty">Criar perfis</a><a class="btn mini" href="#kyty" data-gesto="configurar-lancador" data-v="kyty">Configurar</a></span>
+          </div>
+          <div class="lf ausente" data-lancador="heroic">
+            <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><path d="M14.5 13.8v5.4l4.6-2.7z"/></svg></span>
+            <span class="lf-nome"><span class="lanc-nome">Heroic (Epic · GOG)</span></span>
+            <span class="lanc-jogos"></span>
+            <span class="lf-botoes"><button class="btn mini" data-gesto="identificar-lancador" data-v="heroic">Identificar</button><a class="btn mini apagado" aria-disabled="true" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="heroic">Criar perfis</a><a class="btn mini apagado" aria-disabled="true" href="#lanc-conf" data-gesto="configurar-lancador" data-v="heroic">Configurar</a></span>
+          </div>
+          <div class="lf ausente" data-lancador="lutris">
+            <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><path d="M14.5 13.8v5.4l4.6-2.7z"/></svg></span>
+            <span class="lf-nome"><span class="lanc-nome">Lutris</span></span>
+            <span class="lanc-jogos"></span>
+            <span class="lf-botoes"><button class="btn mini" data-gesto="identificar-lancador" data-v="lutris">Identificar</button><a class="btn mini apagado" aria-disabled="true" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="lutris">Criar perfis</a><a class="btn mini apagado" aria-disabled="true" href="#lanc-conf" data-gesto="configurar-lancador" data-v="lutris">Configurar</a></span>
+          </div>
+          <div class="lf ausente" data-lancador="flatpak">
+            <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2l7.8 4.4v8.8L12 20.8l-7.8-4.4V7.6z"/><path d="M4.2 7.6L12 12l7.8-4.4M12 12v8.8"/></svg></span>
+            <span class="lf-nome"><span class="lanc-nome">Flatpak</span></span>
+            <span class="lanc-jogos"></span>
+            <span class="lf-botoes"><button class="btn mini" data-gesto="identificar-lancador" data-v="flatpak">Identificar</button><a class="btn mini apagado" aria-disabled="true" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="flatpak">Criar perfis</a><a class="btn mini apagado" aria-disabled="true" href="#lanc-conf" data-gesto="configurar-lancador" data-v="flatpak">Configurar</a></span>
+          </div>
+          <div class="lf ausente" data-lancador="retroarch">
+            <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.8" width="12" height="18.4" rx="2.4"/><rect x="8.4" y="5.2" width="7.2" height="5.6" rx="1"/><path d="M9.6 14v3.2M8 15.6h3.2"/><circle cx="15" cy="14.6" r=".7" fill="currentColor"/><circle cx="14" cy="16.9" r=".7" fill="currentColor"/></svg></span>
+            <span class="lf-nome"><span class="lanc-nome">RetroArch</span></span>
+            <span class="lanc-jogos"></span>
+            <span class="lf-botoes"><button class="btn mini" data-gesto="identificar-lancador" data-v="retroarch">Identificar</button><a class="btn mini apagado" aria-disabled="true" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="retroarch">Criar perfis</a><a class="btn mini apagado" aria-disabled="true" href="#lanc-conf" data-gesto="configurar-lancador" data-v="retroarch">Configurar</a></span>
+          </div>
+          <div class="lf ausente" data-lancador="emuladores">
+            <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.8" width="12" height="18.4" rx="2.4"/><rect x="8.4" y="5.2" width="7.2" height="5.6" rx="1"/><path d="M9.6 14v3.2M8 15.6h3.2"/><circle cx="15" cy="14.6" r=".7" fill="currentColor"/><circle cx="14" cy="16.9" r=".7" fill="currentColor"/></svg></span>
+            <span class="lf-nome"><span class="lanc-nome">Dolphin · mGBA</span></span>
+            <span class="lanc-jogos"></span>
+            <span class="lf-botoes"><button class="btn mini" data-gesto="identificar-lancador" data-v="emuladores">Identificar</button><a class="btn mini apagado" aria-disabled="true" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="emuladores">Criar perfis</a><a class="btn mini apagado" aria-disabled="true" href="#lanc-conf" data-gesto="configurar-lancador" data-v="emuladores">Configurar</a></span>
+          </div>
+          <a class="lf lf-novo" href="#novo-lancador" data-gesto="adicionar-lancador" data-dica="Um programa desta máquina ou um pacote de extensão">
+            <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5v13M5.5 12h13"/></svg></span>
+            <span class="lanc-nome">Adicionar um lançador</span>
+          </a>
         </div>
-        <div class="lanc-diz" data-campo="heroic-diz" data-hef-alvo="html"><b>O perfil casa pelo nome do processo e pela janela.</b></div>
-        <div class="acoes" data-campo="heroic-acoes" data-hef-alvo="html">
-          <button class="btn" data-gesto="abrir-lancador" data-v="heroic">Abrir o lançador</button>
-        </div>
-      </div>
-      <div class="lanc ausente" data-lancador="lutris">
-        <div class="lanc-topo">
-          <span class="lanc-nome">Lutris</span>
-          <span data-campo="lutris-selo" data-hef-alvo="html"><span class="lanc-selo nao_sei">NÃO SEI</span></span>
-          <span class="lanc-jogos" data-campo="lutris-jogos">—</span>
-        </div>
-        <div class="lanc-diz" data-campo="lutris-diz" data-hef-alvo="html"><b>O perfil casa pelo nome do processo e pela janela.</b></div>
-        <div class="acoes" data-campo="lutris-acoes" data-hef-alvo="html">
-          <button class="btn" data-gesto="abrir-lancador" data-v="lutris">Abrir o lançador</button>
-        </div>
-      </div>
-      <div class="lanc ausente" data-lancador="flatpak">
-        <div class="lanc-topo">
-          <span class="lanc-nome">Flatpak</span>
-          <span data-campo="flatpak-selo" data-hef-alvo="html"><span class="lanc-selo nao_sei">NÃO SEI</span></span>
-          <span class="lanc-jogos" data-campo="flatpak-jogos">—</span>
-        </div>
-        <div class="lanc-diz" data-campo="flatpak-diz" data-hef-alvo="html"><b>O perfil casa pelo nome do processo e pela janela.</b></div>
-        <div class="acoes" data-campo="flatpak-acoes" data-hef-alvo="html">
-          <button class="btn" data-gesto="abrir-lancador" data-v="flatpak">Abrir o lançador</button>
-        </div>
-      </div>
-      <div class="lanc ausente" data-lancador="retroarch">
-        <div class="lanc-topo">
-          <span class="lanc-nome">RetroArch</span>
-          <span data-campo="retroarch-selo" data-hef-alvo="html"><span class="lanc-selo nao_sei">NÃO SEI</span></span>
-          <span class="lanc-jogos" data-campo="retroarch-jogos">—</span>
-        </div>
-        <div class="lanc-diz" data-campo="retroarch-diz" data-hef-alvo="html"><b>O perfil casa pelo nome do processo e pela janela.</b></div>
-        <div class="acoes" data-campo="retroarch-acoes" data-hef-alvo="html">
-          <button class="btn" data-gesto="abrir-lancador" data-v="retroarch">Abrir o lançador</button>
-        </div>
-      </div>
-      <div class="lanc ausente" data-lancador="emuladores">
-        <div class="lanc-topo">
-          <span class="lanc-nome">Dolphin · mGBA</span>
-          <span data-campo="emuladores-selo" data-hef-alvo="html"><span class="lanc-selo nao_sei">NÃO SEI</span></span>
-          <span class="lanc-jogos" data-campo="emuladores-jogos">—</span>
-        </div>
-        <div class="lanc-diz" data-campo="emuladores-diz" data-hef-alvo="html"><b>O perfil casa pelo nome do processo e pela janela.</b></div>
-        <div class="acoes" data-campo="emuladores-acoes" data-hef-alvo="html">
-          <button class="btn" data-gesto="abrir-lancador" data-v="emuladores">Abrir o lançador</button>
-        </div>
-      </div>
-        </div>
-
       </div>
     </div>
 
@@ -1661,16 +1820,12 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 <div class="tela-nova" id="novo-lancador">
   <div class="tn-cx">
     <div class="tn-topo">
-      <span class="tn-tit">Adicionar um lançador</span>
-      <span class="ajuda">?<span class="dica">
-        Diga o comando, o caminho do programa (é assim que entra um AppImage
-        solto) ou o nome do atalho — os três exemplos estão no campo. Confiro no
-        disco antes de guardar.
-      </span></span>
+      <span class="tn-tit" data-dica="Comando, caminho do programa ou nome do atalho">Adicionar um lançador</span>
+
       <a class="tn-x" href="#" title="Fechar">&times;</a>
     </div>
     <div class="tn-corpo">
-      <div class="lanc-novo-para" data-campo="lanc-novo-para-quem">Um lançador ou emulador que você usa</div>
+      <div class="lanc-novo-campo"><span>Como ele entra</span><div class="seg mini"><button class="on" data-dica="Um programa já instalado nesta máquina">Do sistema</button><button data-dica="Um pacote de extensão, como o Kyty">Como extensão</button></div></div>
       <label class="lanc-novo-campo">
         <span>Como ele se chama</span>
         <input type="text" data-linha="lanc-novo-rotulo" placeholder="Ryujinx">
@@ -1683,7 +1838,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
           <a class="btn" href="#novo-lancador"
              data-gesto="procurar-o-arquivo"
              data-hef-forma="novo-lancador"
-             >Escolher o arquivo…</a>
+             >Escolher a pasta…</a>
         </div>
       </label>
     </div>
@@ -1694,22 +1849,465 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     </div>
   </div>
 </div>
-
 <div class="tela-nova" id="escolher-jogo">
-  <div class="tn-cx" id="lanc-escolha"><div class="tn-topo">
-      <span class="tn-tit">Adicionar à lista de exclusão — </span>
-      <span class="ajuda">?<span class="dica">Adicionar jogo à lista de exclusão do Hefesto: o jogo passa a ver o controle como se o Hefesto não estivesse instalado — sem máscara, sem perfil, sem luz, sem vibração do Hefesto, sem Proton fixado. «Tirar da lista» devolve tudo.</span></span>
-      <a class="tn-x" href="#" title="Fechar">&times;</a>
+  <div class="tn-cx" id="lanc-escolha" role="dialog" aria-modal="true" aria-label="Criar perfis">
+    <div class="tn-topo">
+      <span class="tn-tit" data-dica="Cada jogo ganha um perfil que entra sozinho">Criar perfis · Steam</span>
+      <a class="tn-x" href="#" data-dica="Fechar">×</a>
     </div>
     <div class="tn-corpo">
-      <div class="lanc-novo-para">O jogo que você escolher vai ver o controle <b>como se o Hefesto não estivesse instalado</b>: sem máscara, sem perfil, sem luz e sem vibração do Hefesto. «Tirar da lista» devolve tudo.</div>
-      <div class="excl-nota">Nenhum jogo aqui ainda. Quando houver, eles aparecem nesta lista.</div>
+      <input class="cj-busca" type="text" placeholder="Procurar um jogo">
+      <ul class="cj-lista"><li><span class="cj-nome">Sackboy: A Big Adventure</span><span class="cj-tem">Tem perfil</span></li><li><span class="cj-nome">Resident Evil Village</span><button class="btn mini" data-gesto="criar-perfil-do-jogo" data-v="steam_app_2">Criar</button></li><li><span class="cj-nome">Mortal Kombat 1</span><span class="cj-tem">Tem perfil</span></li><li><span class="cj-nome">Hades II</span><button class="btn mini" data-gesto="criar-perfil-do-jogo" data-v="steam_app_4">Criar</button></li><li><span class="cj-nome">Hollow Knight: Silksong</span><button class="btn mini" data-gesto="criar-perfil-do-jogo" data-v="steam_app_5">Criar</button></li></ul>
+    </div>
+    <div class="tn-rod">
+      <a class="btn" href="#">Fechar</a>
+      <a class="btn roxo" href="#">Criar para todos</a>
+    </div>
+  </div>
+</div>
+<div class="tela-nova" id="lovense">
+  <div class="tn-cx lv-cx" role="dialog" aria-modal="true" aria-label="Lovense">
+    <div class="tn-topo">
+      <span class="tn-tit" data-dica="Uma extensão só, com três jeitos de ligar. Cada um liga e desliga sozinho">Lovense</span>
+      <a class="tn-x" href="#" data-dica="Fechar">×</a>
+    </div>
+    <div class="tn-corpo">
+      <div class="lv-linha" data-modificacao="intiface">
+        <div class="ext-quem"><span class="ext-nome">Pelo Intiface</span><span class="ext-faz" data-dica="O controle vibra os brinquedos, e os programas da Intiface vibram o controle">Nas duas direções, com os programas da Intiface</span></div>
+        <div class="lv-para"><span class="ext-rot">Para</span><select class="ext-sel" aria-label="Para"><option>Todos</option><option selected>Primeiro controle</option><option>Segundo controle</option></select></div>
+        <div class="lv-quando"><span class="ext-rot">Quando</span><select class="ext-sel" aria-label="Quando"><option selected>Os jogos que eu escolher</option><option>Qualquer jogo, com acessório ligado</option><option>Jogos com estilo Adulto</option><option>Só quando eu ligar</option></select></div>
+        <span class="nj-tog ligado" data-gesto="ligar-modificacao" data-v="intiface" data-dica="Liga ou desliga"><span class="pino"></span><span class="txt">Ligada</span></span>
+        <a class="ext-conf" href="#acessorios" data-gesto="configurar-modificacao" data-v="intiface" data-dica="Mais configurações: Lovense pelo Intiface"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
+      </div>
+      <div class="lv-linha" data-modificacao="lovense-celular">
+        <div class="ext-quem"><span class="ext-nome">Pelo celular</span><span class="ext-faz" data-dica="O app da Lovense no celular, pelo Game Mode na rede de casa, como no Planet Lust">O app da Lovense no celular, pelo Game Mode</span></div>
+        <div class="lv-para"><span class="ext-rot">Para</span><select class="ext-sel" aria-label="Para"><option>Todos</option><option>Primeiro controle</option><option selected>Segundo controle</option></select></div>
+        <div class="lv-quando"><span class="ext-rot">Quando</span><select class="ext-sel" aria-label="Quando"><option selected>Os jogos que eu escolher</option><option>Qualquer jogo, com acessório ligado</option><option>Jogos com estilo Adulto</option><option>Só quando eu ligar</option></select></div>
+        <span class="nj-tog ligado" data-gesto="ligar-modificacao" data-v="lovense-celular" data-dica="Liga ou desliga"><span class="pino"></span><span class="txt">Ligada</span></span>
+        <a class="ext-conf" href="#acessorios" data-gesto="configurar-modificacao" data-v="lovense-celular" data-dica="Mais configurações: Lovense pelo celular"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
+      </div>
+      <div class="lv-linha" data-modificacao="buttplug">
+        <div class="ext-quem"><span class="ext-nome">DualSense como brinquedo</span><span class="ext-faz" data-dica="Os apps de brinquedo, como a Intiface, vibram o controle. Nada passa pela nuvem">Os apps de brinquedo vibram o controle, sem nuvem</span></div>
+        <div class="lv-para"><span class="ext-rot">Para</span><select class="ext-sel" aria-label="Para"><option selected>Todos</option><option>Primeiro controle</option><option>Segundo controle</option></select></div>
+        <div class="lv-quando"></div>
+        <span class="nj-tog" data-gesto="ligar-modificacao" data-v="buttplug" data-dica="Liga ou desliga"><span class="pino"></span><span class="txt">Desligada</span></span>
+        <a class="ext-conf" href="#buttplug" data-gesto="configurar-modificacao" data-v="buttplug" data-dica="Mais configurações: DualSense como brinquedo"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
+      </div>
     </div>
     <div class="tn-rod">
       <a class="btn" href="#">Cancelar</a>
-
-    </div></div>
+      <a class="btn roxo" href="#">Guardar</a>
+    </div>
+  </div>
 </div>
+<div class="tela-nova" id="impedimentos">
+  <div class="tn-cx imp-cx" id="imp-janela" role="dialog" aria-modal="true" aria-label="Os jogos com impedimento">
+    <div class="tn-topo">
+      <span class="tn-tit">Steam · 2 jogos com impedimento</span>
+      <a class="tn-x" href="#" data-dica="Fechar">×</a>
+    </div>
+    <div class="tn-corpo">
+      <div class="lc-linha"><span>Sackboy: A Big Adventure</span><span class="lc-val"><small>O Steam Input está ligado: o jogo vê um controle de Xbox</small><a class="btn mini" href="#impedimentos" data-gesto="resolver-impedimento" data-v="entrada:1">Desligar o Steam Input</a></span></div>
+      <div class="lc-linha"><span>Resident Evil Village</span><span class="lc-val"><small>Fora do Proton fixado: a vibração e os gatilhos não chegam</small><a class="btn mini" href="#impedimentos" data-gesto="resolver-impedimento" data-v="proton:2">Usar o Proton fixado</a></span></div>
+    </div>
+    <div class="tn-rod">
+      <a class="btn" href="#">Fechar</a>
+      <a class="btn roxo" href="#impedimentos" data-gesto="resolver-todos-os-impedimentos">Resolver os dois</a>
+    </div>
+  </div>
+</div>
+<div class="tela-nova" id="lanc-conf">
+  <div class="tn-cx" id="lanc-janela" role="dialog" aria-modal="true" aria-label="Configurar o lançador">
+    <div class="tn-topo">
+      <span class="tn-tit">Configurar · Steam</span>
+      <a class="tn-x" href="#" data-dica="Fechar">×</a>
+    </div>
+    <div class="tn-corpo">
+      <div class="lc-linha"><span>Como entrou</span><span class="lc-val">Do sistema</span></div>
+      <div class="lc-linha"><span>Onde ele está</span><span class="lc-val"><code>~/.steam/steam</code><a class="btn mini" href="#lanc-conf">Escolher a pasta…</a></span></div>
+      <div class="lc-linha"><span>Jogos</span><span class="lc-val"><small>48 jogos</small></span></div>
+      <div class="lc-linha"><span>Impedimentos</span><span class="lc-val"><small>2 jogos não recebem gatilhos e vibração</small><a class="btn mini" href="#impedimentos" data-gesto="ver-impedimentos" data-v="steam">Ver e resolver</a></span></div>
+      <div class="lc-linha"><span data-dica="O perfil entra sozinho quando o jogo abre">Cada jogo ganha o seu perfil</span><span class="lc-val"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></span></div>
+    </div>
+    <div class="tn-rod">
+      <a class="btn" href="#">Cancelar</a>
+      <a class="btn roxo" href="#">Guardar</a>
+    </div>
+  </div>
+</div>
+<div class="tela-nova" id="modificacao">
+  <div class="tn-cx" id="mod-janela" role="dialog" aria-modal="true" aria-label="Configurar a extensão">
+    <div class="tn-topo">
+      <span class="tn-tit">Configurar · Kyty</span>
+      <a class="tn-x" href="#" data-dica="Fechar">×</a>
+    </div>
+    <div class="tn-corpo">
+      <div class="lanc-novo-para">Opções que o Kyty declara no manifesto.</div><div class="lc-linha"><span>Quando</span><span class="lc-val"><select class="ext-sel" data-gesto="guardar-opcao-da-modificacao" data-v="kyty:quando" aria-label="Quando"><option selected>Os jogos que eu escolher</option><option>Qualquer jogo</option><option>Só quando eu ligar</option></select></span></div><div class="lc-linha"><span>Avisar quando sair versão nova</span><span class="lc-val"><span class="nj-tog" data-gesto="guardar-opcao-da-modificacao" data-v="kyty:avisar"><span class="pino"></span><span class="txt">Desligado</span></span></span></div>
+    </div>
+    <div class="tn-rod">
+      <a class="btn" href="#">Fechar</a>
+    </div>
+  </div>
+</div>
+<div class="tela-nova" id="kyty">
+  <div class="tn-cx larga ky-cx" role="dialog" aria-modal="true" aria-label="Kyty">
+    <div class="tn-topo">
+      <span class="tn-tit" data-dica="O que o Hefesto passa ao Kyty quando abre um jogo">Kyty</span>
+
+      <div class="pc-molde" style="margin:0 0 0 14px"><span class="pc-rot">Molde</span><div class="seg mini " data-dica="Vibração, cor e som seguem o perfil de cada jogo"><button class="on">Do perfil</button></div>
+</div>
+      <span class="pc-para"><span class="ext-rot">Para</span>Todos</span>
+      <a class="tn-x" href="#" title="Fechar">×</a>
+    </div>
+    <div class="tn-corpo">
+      <div class="ky-grade">
+        <div class="ac-card"><div class="ac-topo"><span class="ac-tit">Programa</span><span class="ac-sub">KytyPS5 para Linux</span></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Versão instalada</span></div><div class="ky-ctrl"><span class="mono" style="font-size:11.5px;color:var(--fg)">2026-10-08 · aa3b2cd</span><span class="ky-selo" title="A soma sha256 confere com a publicada">Conferida</span></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span data-dica="Só procura quando você clica; nunca baixa sozinho">Versão nova</span></div><div class="ky-ctrl"><button class="btn mini">Procurar versão nova</button></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Avisar quando sair versão nova</span></div><div class="ky-ctrl"><span class="nj-tog" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Desligado</span></span></div></div>
+        </div>
+        <div class="ac-card"><div class="ac-topo"><span class="ac-tit">Jogos</span><span class="ac-sub">2 jogos achados</span></div>
+          <div class="ky-linha"><div class="ky-rot"><span data-dica="Lido do Kyty.ini; só escreve com o Kyty fechado">Pastas dos jogos</span></div><div class="ky-ctrl"><span class="ky-pasta">~/Jogos/PS5<button class="btn">Tirar</button></span><button class="btn mini">Adicionar pasta…</button></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span data-dica="Pelo código PPSA no título da janela">Cada jogo ganha o seu perfil</span></div><div class="ky-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Criar o perfil de um jogo</span></div><div class="ky-ctrl"><a class="btn mini" href="#">Escolher o jogo…</a></div></div>
+        </div>
+        <div class="ac-card"><div class="ac-topo"><span class="ac-tit">Controle</span></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Vibração</span></div><div class="ky-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="0" data-max="100" data-passo="5"><button class="passo">−</button><b>100</b><button class="passo">+</button></span><span class="un">%</span></span></div></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Cor da barra</span></div><div class="ky-ctrl"><div class="seg mini "><button class="on">Do perfil</button><button class="">Escolher</button></div></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span data-dica="O Kyty vê só o primeiro controle">Um controle por vez</span></div><div class="ky-ctrl"><span class="nj-tog" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Desligado</span></span></div></div>
+        </div>
+        <div class="ac-card"><div class="ac-topo"><span class="ac-tit">Som</span></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Volume do alto-falante do controle</span></div><div class="ky-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="0" data-max="100" data-passo="5"><button class="passo">−</button><b>100</b><button class="passo">+</button></span><span class="un">%</span></span></div></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Microfone</span></div><div class="ky-ctrl"><select class="campo-linha"><option selected>O do controle</option><option>Nenhum</option><option>Escolher…</option></select></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Testar o alto-falante</span></div><div class="ky-ctrl"><button class="btn mini">Tocar 2 s</button></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="tn-rod">
+      <a class="btn" href="#">Cancelar</a>
+      <a class="btn" href="#">Voltar ao molde</a>
+      <a class="btn roxo" href="#">Guardar</a>
+    </div>
+  </div>
+</div>
+<div class="tela-nova" id="buttplug">
+  <div class="tn-cx larga ky-cx bp-cx" role="dialog" aria-modal="true" aria-label="DualSense como brinquedo">
+    <div class="tn-topo">
+      <span class="tn-tit" data-dica="Cada etapa do caminho, do app ao motor do controle">DualSense como brinquedo</span>
+      <span class="pc-para"><span class="ext-rot">Para</span>Todos</span>
+      <a class="tn-x" href="#" title="Fechar">×</a>
+    </div>
+    <div class="tn-corpo">
+      <div class="ky-grade">
+        <div class="ac-card"><div class="ac-topo"><span class="ac-tit">1 · Servidor</span><span class="ac-sub">Só neste computador</span></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Ligar quando o Hefesto abrir</span></div><div class="ky-ctrl"><span class="nj-tog" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Desligado</span></span></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span data-dica="Nada passa pela nuvem, nas duas escolhas">Quem pode conectar</span></div><div class="ky-ctrl"><select class="campo-linha"><option selected>Só este computador</option><option>A rede de casa</option></select></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Pedir licença a cada app novo</span></div><div class="ky-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Apps conectados agora</span></div><div class="ky-ctrl"><span class="mono" style="font-size:11.5px;color:var(--texto-mudo)">Nenhum</span></div></div>
+        </div>
+        <div class="ac-card"><div class="ac-topo"><span class="ac-tit">2 · Controles</span><span class="ac-sub">O teto e a força de cada um</span></div>
+          <div class="ky-linha"><div class="ky-rot"><span data-dica="O que o app vê, a força e o teto deste controle"><span class="chip" data-campo="controle-1" data-hef-alvo="html">Primeiro controle</span></span></div><div class="ky-ctrl"><span class="nj-tog ligado" data-on="Aparece" data-off="Escondido"><span class="pino"></span><span class="txt">Aparece</span></span><div class="seg mini"><button class="">Forte</button><button class="on">Média</button><button class="">Fraca</button></div><div class="campo-num mini"><span class="par"><span class="bignum" data-min="0" data-max="100" data-passo="5"><button class="passo">−</button><b>80</b><button class="passo">+</button></span><span class="un">%</span></span></div></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span><span class="chip" data-campo="controle-2" data-hef-alvo="html">Segundo controle</span></span></div><div class="ky-ctrl"><span class="nj-tog ligado" data-on="Aparece" data-off="Escondido"><span class="pino"></span><span class="txt">Aparece</span></span><div class="seg mini"><button class="">Forte</button><button class="">Média</button><button class="on">Fraca</button></div><div class="campo-num mini"><span class="par"><span class="bignum" data-min="0" data-max="100" data-passo="5"><button class="passo">−</button><b>60</b><button class="passo">+</button></span><span class="un">%</span></span></div></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Os outros controles</span></div><div class="ky-ctrl"><span class="mono" style="font-size:11.5px;color:var(--texto-mudo)">Desconectados</span></div></div>
+        </div>
+        <div class="ac-card"><div class="ac-topo"><span class="ac-tit">3 · O que vibra</span><span class="ac-sub">Do comando do app à peça</span></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Motor esquerdo</span></div><div class="ky-ctrl"><select class="campo-linha"><option selected>Motor 1 do app</option><option>Motor 2 do app</option><option>Nenhum</option></select></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Motor direito</span></div><div class="ky-ctrl"><select class="campo-linha"><option>Motor 1 do app</option><option selected>Motor 2 do app</option><option>Nenhum</option></select></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Sensor háptico</span></div><div class="ky-ctrl"><select class="campo-linha"><option selected>Desligado</option><option>Segue o motor 1</option></select></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Gatilhos</span></div><div class="ky-ctrl"><select class="campo-linha"><option selected>Desligados</option><option>Resistem com a força</option></select></div></div>
+        </div>
+        <div class="ac-card"><div class="ac-topo"><span class="ac-tit">4 · Parar</span><span class="ac-sub">Tudo para se o controle cair</span></div>
+          <div class="ky-linha"><div class="ky-rot"><span>L2 no fundo para tudo</span></div><div class="ky-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Parar quando um jogo abrir</span></div><div class="ky-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span>Tempo máximo sem pausa</span></div><div class="ky-ctrl"><select class="campo-linha"><option>Sem limite</option><option selected>10 minutos</option><option>30 minutos</option></select></div></div>
+          <div class="ky-linha"><div class="ky-rot"><span data-dica="Fica só neste computador">Guardar o que os apps mandaram</span></div><div class="ky-ctrl"><span class="nj-tog" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Desligado</span></span></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="tn-rod">
+      <a class="btn" href="#">Cancelar</a>
+      <a class="btn roxo" href="#">Guardar</a>
+    </div>
+  </div>
+</div>
+<div class="tela-nova" id="acessorios">
+  <div class="tn-cx ja-cx" role="dialog" aria-modal="true" aria-label="Lovense pelo Intiface">
+    <div class="tn-topo">
+      <span class="tn-tit" data-dica="Tudo aqui só soma ao que o jogo pede">Lovense</span>
+
+      <div class="pc-molde"><span class="pc-rot">Molde</span><div class="seg mini " data-dica="Calmo: degraus. Brincalhão: em onda. Do jeito do jogo: segue o jogo"><button class="">Calmo</button><button class="on">Brincalhão</button><button class="">Do jeito do jogo</button></div>
+</div>
+      <span class="pc-para"><span class="ext-rot">Perfil</span>Meu perfil<span class="ja-marca">Adulto</span></span>
+      <button class="ja-parar" title="Todos os aparelhos a zero na hora. O nível e o perfil ficam guardados."><svg viewBox="0 0 16 16" width="13" height="13"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="currentColor"/></svg>Parar tudo</button>
+      <a class="tn-x" href="#" title="Fechar">×</a>
+    </div>
+    <div class="ja-corpo">
+      <div class="ja-agora">
+      <div class="ja-ag-topo"><span class="pc-sub">Agora</span>
+        <span class="ja-srv"><span class="bol-ok">●</span>Intiface Engine · local</span></div>
+      <div class="ja-nivel-caixa">
+        <div class="ja-nivel-linha"><span class="ja-rot">Nível</span><span class="ja-nivel"><b>4</b><span>/ 10</span></span>
+          <span class="ja-passos"><button class="passo" title="Descer um degrau">−</button><button class="passo" title="Subir um degrau">+</button></span></div>
+        <div class="ja-degraus"><i class="on" title="Nível 1"></i><i class="on" title="Nível 2"></i><i class="on" title="Nível 3"></i><i class="on" title="Nível 4"></i><i class="" title="Nível 5"></i><i class="" title="Nível 6"></i><i class="" title="Nível 7"></i><i class="" title="Nível 8"></i><i class="" title="Nível 9"></i><i class="" title="Nível 10"></i></div>
+        <div class="ja-nota"><span><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><i>+</i><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>R2</title><rect x="4" y="9" width="24" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text></svg></span> Sobe</span><span><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><i>+</i><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>L2</title><rect x="4" y="9" width="24" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text></svg></span> Desce</span><span>L2 no fundo: parar tudo</span></div>
+      </div>
+      <div class="ja-perfil-linha"><span class="ja-rot">Perfil</span><button class="passo" title="Perfil anterior (PS + L1)">‹</button>
+        <span class="ja-perfil-nome"><svg class="ja-mini" width="46" height="16" viewBox="0 0 46 16"><polyline points="0.0,10.6 0.7,10.5 1.4,10.3 2.2,9.8 2.9,9.3 3.6,8.6 4.3,7.8 5.0,6.9 5.8,6.1 6.5,5.2 7.2,4.3 7.9,3.5 8.6,2.8 9.3,2.3 10.1,1.8 10.8,1.6 11.5,1.5 12.2,1.6 12.9,1.8 13.7,2.3 14.4,2.8 15.1,3.5 15.8,4.3 16.5,5.2 17.2,6.0 18.0,6.9 18.7,7.8 19.4,8.6 20.1,9.3 20.8,9.8 21.6,10.3 22.3,10.5 23.0,10.6 23.7,10.5 24.4,10.3 25.2,9.8 25.9,9.3 26.6,8.6 27.3,7.8 28.0,6.9 28.8,6.1 29.5,5.2 30.2,4.3 30.9,3.5 31.6,2.8 32.3,2.3 33.1,1.8 33.8,1.6 34.5,1.5 35.2,1.6 35.9,1.8 36.7,2.3 37.4,2.8 38.1,3.5 38.8,4.3 39.5,5.2 40.2,6.0 41.0,6.9 41.7,7.8 42.4,8.6 43.1,9.3 43.8,9.8 44.6,10.3 45.3,10.5 46.0,10.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>Ondas</span><button class="passo" title="Próximo perfil (PS + R1)">›</button>
+        <span class="un">2 de 7</span></div>
+      <div class="ja-aps">
+        <div class="ja-aps-topo"><span class="ja-rot">Aparelhos e o papel de cada um</span><span class="conta">3 conectados</span></div>
+        <div class="ja-ap">
+          <div class="ja-ap-cab"><span class="ja-ap-nome">Lovense Nora</span><span class="ja-ap-sub">Dois motores</span>
+            <button class="btn mini" title="Liga 1 s a 10 % do teto, só neste aparelho">Testar 1 s</button></div>
+          <div class="ja-ap-pe"><select class="ext-sel"><option selected>O perfil</option><option>O jogo</option><option>Meus toques</option><option>Touchpad, os dois lados</option><option>Touchpad, lado esquerdo</option><option>Touchpad, lado direito</option></select><span class="ja-barras" title="O que o aparelho recebe agora"><i class="m1" style="--v:0.2"></i><i class="m2" style="--v:0.15"></i></span>
+            <span class="ja-ap-num">4 · 3/20</span></div>
+        </div><div class="ja-ap">
+          <div class="ja-ap-cab"><span class="ja-ap-nome">Lovense Domi</span><span class="ja-ap-sub">Um motor</span>
+            <button class="btn mini" title="Liga 1 s a 10 % do teto, só neste aparelho">Testar 1 s</button></div>
+          <div class="ja-ap-pe"><select class="ext-sel"><option>O perfil</option><option>O jogo</option><option>Meus toques</option><option>Touchpad, os dois lados</option><option>Touchpad, lado esquerdo</option><option selected>Touchpad, lado direito</option></select><span class="ja-barras" title="O que o aparelho recebe agora"><i class="m1" style="--v:0.1"></i></span>
+            <span class="ja-ap-num">2/20</span></div>
+        </div><div class="ja-ap">
+          <div class="ja-ap-cab"><span class="ja-ap-nome">Lovense Ferri</span><span class="ja-ap-sub">Um motor</span>
+            <button class="btn mini" title="Liga 1 s a 10 % do teto, só neste aparelho">Testar 1 s</button></div>
+          <div class="ja-ap-pe"><select class="ext-sel"><option>O perfil</option><option>O jogo</option><option>Meus toques</option><option>Touchpad, os dois lados</option><option selected>Touchpad, lado esquerdo</option><option>Touchpad, lado direito</option></select><span class="ja-barras" title="O que o aparelho recebe agora"><i class="m1" style="--v:0.0"></i></span>
+            <span class="ja-ap-num">0/20</span></div>
+        </div>
+      </div>
+      <div class="ja-sessao"><span class="ja-rot">Esta sessão</span>
+        <div class="ja-ses-l" data-dica="Sem gesto e sem jogo, ele para sozinho">Para sozinho em <b>27 min</b></div>
+        <div class="ja-ses-l">Surto <b>Pronto</b><span class="ja-recarga" title="Recarga de 10 s"><i></i></span></div>
+        <div class="ja-ses-l" data-dica="Liga-se na aba Perfis">Surpresa <b>Desligada</b></div>
+      </div>
+      <div class="ja-dono" data-dica="O freio é sempre do dono"><span class="ext-rot">Comanda</span>Primeiro controle</div>
+    </div>
+      <div class="ja-abas">
+        <input type="radio" name="ja-aba" id="t0"><input type="radio" name="ja-aba" id="t1"><input type="radio" name="ja-aba" id="t2"><input type="radio" name="ja-aba" id="t3" checked><input type="radio" name="ja-aba" id="t4"><input type="radio" name="ja-aba" id="t5"><input type="radio" name="ja-aba" id="t6">
+        <div class="ja-tira"><label for="t3" data-dica="Vibrar a cada coisa que você faz no controle">Meus toques</label><label for="t0">Segurança</label><label for="t1">Gestos</label><label for="t2">O que seguem</label><label for="t4">Touchpad</label><label for="t5">Luz</label><label for="t6">Perfis</label></div>
+        <div class="ja-telas"><div class="ja-tela t0">
+    <div class="moldura"><div class="pc-sub">Ligar</div>
+      <div class="ja-linha "><span>A modificação</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligada" data-off="Desligada"><span class="pino"></span><span class="txt">Ligada</span></span></div></div>
+      <div class="ja-linha "><span data-dica="Nos jogos que você escolher, em qualquer jogo, só nos de estilo Adulto ou só quando você ligar">Quando</span><div class="ja-ctrl"><select class="campo-linha"><option selected>Os jogos que eu escolher</option><option>Qualquer jogo, com acessório ligado</option><option>Jogos com estilo Adulto</option><option>Só quando eu ligar</option></select></div></div>
+      <div class="ja-linha "><span data-dica="O nível 10 vale este teto, nunca 100 % do aparelho">Teto geral</span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="5" data-max="100" data-passo="5"><button class="passo">−</button><b>50</b><button class="passo">+</button></span><span class="un">% do aparelho</span></span></div></div></div>
+      <div class="ja-linha "><span>Parar sozinho</span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="5" data-max="120" data-passo="5"><button class="passo">−</button><b>30</b><button class="passo">+</button></span><span class="un">min parado</span></span></div></div></div>
+      <div class="ja-linha "><span data-dica="Aparelho novo começa com o teto pela metade">Aparelho novo</span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="10" data-max="100" data-passo="10"><button class="passo">−</button><b>50</b><button class="passo">+</button></span><span class="un">% do teto</span></span></div></div></div>
+      <div class="pc-sub" style="margin-top:6px">Servidor</div>
+      <div class="ja-linha "><span data-dica="Engine: liga junto. Central: você abre o programa">Servidor</span><div class="ja-ctrl"><div class="seg mini "><button class="on">Engine</button><button class="">Central</button></div></div></div>
+      <div class="ja-linha "><span data-dica="Fora desta máquina, a vibração passa pela rede">Endereço</span><div class="ja-ctrl"><input type="text" value="127.0.0.1:12345"><span class="ja-ok">● local</span></div></div>
+    </div>
+    <div class="moldura"><div class="pc-sub">Teto de cada aparelho</div>
+      <div class="ja-linha "><span>Lovense Nora</span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="5" data-max="100" data-passo="5"><button class="passo">−</button><b>50</b><button class="passo">+</button></span><span class="un">% do aparelho</span></span></div></div></div><div class="ja-linha "><span>Lovense Domi</span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="5" data-max="100" data-passo="5"><button class="passo">−</button><b>50</b><button class="passo">+</button></span><span class="un">% do aparelho</span></span></div></div></div><div class="ja-linha "><span>Lovense Ferri</span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="5" data-max="100" data-passo="5"><button class="passo">−</button><b>50</b><button class="passo">+</button></span><span class="un">% do aparelho</span></span></div></div></div>
+      <div class="pc-sub" style="margin-top:6px" data-dica="Jogo fecha, controle cai ou o Hefesto reinicia">Tudo para sozinho quando</div>
+      <div class="ja-linha "><span data-dica="Funciona com a janela fechada">E também por</span><div class="ja-ctrl"><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><i>+</i><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>L2</title><rect x="4" y="9" width="24" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text></svg><em>até o fundo</em></span></div></div>
+    </div></div><div class="ja-tela t1 l-larga">
+    <div class="moldura"><div class="pc-sub" data-dica="Com o PS segurado, os gatilhos não chegam ao jogo">Os gestos</div>
+      <table class="ja-gestos"><colgroup><col style="width:31%"><col style="width:36%"><col></colgroup>
+        <tr><th>O que fazer</th><th>Gesto</th><th>O controle responde</th></tr><tr class=""><td>Ligar ou subir um</td><td><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><i>+</i><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>R2</title><rect x="4" y="9" width="24" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text></svg><em>toque</em></span></td><td class="r">Toque à direita</td></tr><tr class=""><td>Subir sem parar</td><td><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><i>+</i><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>R2</title><rect x="4" y="9" width="24" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text></svg><em>segurado</em></span></td><td class="r">Um toque por degrau</td></tr><tr class=""><td>Descer um</td><td><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><i>+</i><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>L2</title><rect x="4" y="9" width="24" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text></svg><em>leve</em></span></td><td class="r">Toque à esquerda</td></tr><tr class="para"><td>Parar tudo</td><td><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><i>+</i><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>L2</title><rect x="4" y="9" width="24" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L2</text></svg><em>até o fundo</em></span></td><td class="r">Dois toques longos</td></tr><tr class=""><td>Próximo perfil</td><td><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><i>+</i><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>R1</title><rect x="4" y="9" width="24" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R1</text></svg></span></td><td class="r">Toques = o número dele</td></tr><tr class=""><td>Perfil anterior</td><td><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><i>+</i><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>L1</title><rect x="4" y="9" width="24" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">L1</text></svg></span></td><td class="r">Toques = o número dele</td></tr><tr class=""><td>Surto de 2 s</td><td><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><i>+</i><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>R2</title><rect x="4" y="9" width="24" height="15" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="20.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">R2</text></svg><em>duas vezes</em></span></td><td class="r">Luzinhas: a recarga</td></tr><tr class=""><td>Camada de uma mão</td><td><span class="ja-combo"><svg class="gl" width="18" height="18" viewBox="0 0 32 32"><title>PS</title><circle cx="16" cy="16" r="11" fill="none" stroke="currentColor" stroke-width="2"/><text x="16" y="19.5" text-anchor="middle" font-family="monospace" font-size="9" font-weight="bold" fill="currentColor">PS</text></svg><em>duas vezes</em></span></td><td class="r">Luzinhas: o nível</td></tr></table>
+    </div>
+    <div class="moldura"><div class="pc-sub">Como os gestos respondem</div>
+      <div class="ja-linha "><span data-dica="Segure o PS e aperte R2, L2, R1 ou L1">Gestos do PS</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligados" data-off="Desligados"><span class="pino"></span><span class="txt">Ligados</span></span></div></div>
+      <div class="ja-linha "><span data-dica="Degraus: um por toque. Acelerador: a pressão do R2 é o nível">O R2 sobe por</span><div class="ja-ctrl"><div class="seg mini "><button class="on">Degraus</button><button class="">Acelerador</button></div></div></div>
+      <div class="ja-linha "><span data-dica="Quatro é a régua da PS5">Quantos degraus</span><div class="ja-ctrl"><div class="seg mini "><button class="on">Dez</button><button class="">Quatro</button></div></div></div>
+      <div class="ja-linha "><span data-dica="Para pouca força na mão, baixe o fundo">Freio a partir de</span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="50" data-max="100" data-passo="5"><button class="passo">−</button><b>90</b><button class="passo">+</button></span><span class="un">% do L2</span></span></div></div></div>
+      <div class="ja-linha "><span data-dica="PS duas vezes: os gatilhos sozinhos fazem os gestos">Camada de uma mão</span><div class="ja-ctrl"><span class="nj-tog" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Desligado</span></span></div></div>
+      <div class="ja-linha "><span data-dica="Direito: R2 sobe, R1 desce. O esquerdo é o espelho">Lado único</span><div class="ja-ctrl"><select class="campo-linha"><option selected>Nenhum</option><option>Só a mão direita</option><option>Só a mão esquerda</option></select></div></div>
+      <div class="ja-linha "><span data-dica="No modo nativo o R2 do gesto chega ao jogo">No modo nativo</span><div class="ja-ctrl"><span class="nj-tog" data-on="Valem" data-off="Desligados"><span class="pino"></span><span class="txt">Desligados</span></span></div></div>
+      <div class="ja-linha "><span>Toque de confirmação</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
+      <div class="ja-linha "><span data-dica="O segundo controle sobe e troca; o freio do dono sempre para">Quem comanda</span><div class="ja-ctrl"><select class="campo-linha"><option selected>Primeiro controle</option><option>Segundo controle</option><option>Qualquer um</option></select></div></div>
+    </div></div><div class="ja-tela t2">
+    <div class="moldura t2-segue">
+      <div class="pc-sub" data-dica="Motor esquerdo vai ao motor 1; o direito, ao 2">O que os acessórios seguem</div>
+      <div class="ja-ops"><button class="ja-op on" data-dica="A vibração que o jogo pede ao controle, motor por motor"><span class="ja-op-txt"><b>O jogo</b></span></button><button class="ja-op" data-dica="O jogo e os meus toques, já misturados"><span class="ja-op-txt"><b>O que o controle sente</b></span></button><button class="ja-op" data-dica="O que eu faço no controle; o jogo não entra"><span class="ja-op-txt"><b>Só meus toques</b></span></button></div>
+      <div class="ja-linha"><span data-dica="Cada tranco do jogo vira um acento curto">Acentos do jogo</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligados" data-off="Desligados"><span class="pino"></span><span class="txt">Ligados</span></span></div></div>
+    </div>
+    <div class="moldura t2-juntos">
+      <div class="pc-sub">Como os três tocam juntos</div>
+      <div class="ja-ops"><button class="ja-op" data-dica="Os três tocam a mesma coisa, ao mesmo tempo"><svg width="74" height="34" viewBox="0 0 74 34"><polyline points="0.0,17.0 1.9,13.3 3.7,9.9 5.5,7.3 7.4,5.6 9.2,5.0 11.1,5.6 12.9,7.3 14.8,9.9 16.7,13.3 18.5,17.0 20.4,20.7 22.2,24.1 24.1,26.7 25.9,28.4 27.8,29.0 29.6,28.4 31.4,26.7 33.3,24.1 35.1,20.7 37.0,17.0 38.9,13.3 40.7,9.9 42.5,7.3 44.4,5.6 46.2,5.0 48.1,5.6 50.0,7.3 51.8,9.9 53.6,13.3 55.5,17.0 57.4,20.7 59.2,24.1 61.0,26.7 62.9,28.4 64.8,29.0 66.6,28.4 68.5,26.7 70.3,24.1 72.1,20.7 74.0,17.0" fill="none" stroke="var(--pink)" stroke-width="1.5" opacity="1"/><polyline points="0.0,17.0 1.9,13.3 3.7,9.9 5.5,7.3 7.4,5.6 9.2,5.0 11.1,5.6 12.9,7.3 14.8,9.9 16.7,13.3 18.5,17.0 20.4,20.7 22.2,24.1 24.1,26.7 25.9,28.4 27.8,29.0 29.6,28.4 31.4,26.7 33.3,24.1 35.1,20.7 37.0,17.0 38.9,13.3 40.7,9.9 42.5,7.3 44.4,5.6 46.2,5.0 48.1,5.6 50.0,7.3 51.8,9.9 53.6,13.3 55.5,17.0 57.4,20.7 59.2,24.1 61.0,26.7 62.9,28.4 64.8,29.0 66.6,28.4 68.5,26.7 70.3,24.1 72.1,20.7 74.0,17.0" fill="none" stroke="var(--cyan)" stroke-width="1.5" opacity=".0"/><polyline points="0.0,17.0 1.9,13.3 3.7,9.9 5.5,7.3 7.4,5.6 9.2,5.0 11.1,5.6 12.9,7.3 14.8,9.9 16.7,13.3 18.5,17.0 20.4,20.7 22.2,24.1 24.1,26.7 25.9,28.4 27.8,29.0 29.6,28.4 31.4,26.7 33.3,24.1 35.1,20.7 37.0,17.0 38.9,13.3 40.7,9.9 42.5,7.3 44.4,5.6 46.2,5.0 48.1,5.6 50.0,7.3 51.8,9.9 53.6,13.3 55.5,17.0 57.4,20.7 59.2,24.1 61.0,26.7 62.9,28.4 64.8,29.0 66.6,28.4 68.5,26.7 70.3,24.1 72.1,20.7 74.0,17.0" fill="none" stroke="var(--purple)" stroke-width="1.5" opacity=".0"/></svg><span class="ja-op-txt"><b>Juntos</b></span></button><button class="ja-op" data-dica="O mesmo perfil, um terço de volta atrasado em cada um"><svg width="74" height="34" viewBox="0 0 74 34"><polyline points="0.0,17.0 1.9,13.3 3.7,9.9 5.5,7.3 7.4,5.6 9.2,5.0 11.1,5.6 12.9,7.3 14.8,9.9 16.7,13.3 18.5,17.0 20.4,20.7 22.2,24.1 24.1,26.7 25.9,28.4 27.8,29.0 29.6,28.4 31.4,26.7 33.3,24.1 35.1,20.7 37.0,17.0 38.9,13.3 40.7,9.9 42.5,7.3 44.4,5.6 46.2,5.0 48.1,5.6 50.0,7.3 51.8,9.9 53.6,13.3 55.5,17.0 57.4,20.7 59.2,24.1 61.0,26.7 62.9,28.4 64.8,29.0 66.6,28.4 68.5,26.7 70.3,24.1 72.1,20.7 74.0,17.0" fill="none" stroke="var(--pink)" stroke-width="1.5" opacity="1"/><polyline points="0.0,27.4 1.9,28.7 3.7,28.9 5.5,28.0 7.4,25.9 9.2,23.0 11.1,19.5 12.9,15.7 14.8,12.1 16.7,9.0 18.5,6.6 20.4,5.3 22.2,5.1 24.1,6.0 25.9,8.1 27.8,11.0 29.6,14.5 31.4,18.3 33.3,21.9 35.1,25.0 37.0,27.4 38.9,28.7 40.7,28.9 42.5,28.0 44.4,25.9 46.2,23.0 48.1,19.5 50.0,15.7 51.8,12.1 53.6,9.0 55.5,6.6 57.4,5.3 59.2,5.1 61.0,6.0 62.9,8.1 64.8,11.0 66.6,14.5 68.5,18.3 70.3,21.9 72.1,25.0 74.0,27.4" fill="none" stroke="var(--cyan)" stroke-width="1.5" opacity="1"/><polyline points="0.0,6.6 1.9,9.0 3.7,12.1 5.5,15.7 7.4,19.5 9.2,23.0 11.1,25.9 12.9,28.0 14.8,28.9 16.7,28.7 18.5,27.4 20.4,25.0 22.2,21.9 24.1,18.3 25.9,14.5 27.8,11.0 29.6,8.1 31.4,6.0 33.3,5.1 35.1,5.3 37.0,6.6 38.9,9.0 40.7,12.1 42.5,15.7 44.4,19.5 46.2,23.0 48.1,25.9 50.0,28.0 51.8,28.9 53.6,28.7 55.5,27.4 57.4,25.0 59.2,21.9 61.0,18.3 62.9,14.5 64.8,11.0 66.6,8.1 68.5,6.0 70.3,5.1 72.1,5.3 74.0,6.6" fill="none" stroke="var(--purple)" stroke-width="1.5" opacity="1"/></svg><span class="ja-op-txt"><b>Em onda</b></span></button><button class="ja-op on" data-dica="Cada aparelho segue a fonte escolhida na coluna «Agora»"><svg width="74" height="34" viewBox="0 0 74 34"><polyline points="0.0,17.0 1.9,13.3 3.7,9.9 5.5,7.3 7.4,5.6 9.2,5.0 11.1,5.6 12.9,7.3 14.8,9.9 16.7,13.3 18.5,17.0 20.4,20.7 22.2,24.1 24.1,26.7 25.9,28.4 27.8,29.0 29.6,28.4 31.4,26.7 33.3,24.1 35.1,20.7 37.0,17.0 38.9,13.3 40.7,9.9 42.5,7.3 44.4,5.6 46.2,5.0 48.1,5.6 50.0,7.3 51.8,9.9 53.6,13.3 55.5,17.0 57.4,20.7 59.2,24.1 61.0,26.7 62.9,28.4 64.8,29.0 66.6,28.4 68.5,26.7 70.3,24.1 72.1,20.7 74.0,17.0" fill="none" stroke="var(--pink)" stroke-width="1.5" opacity="1"/><polyline points="0.0,8.0 1.9,9.3 3.7,10.7 5.5,12.0 7.4,13.4 9.2,14.7 11.1,16.1 12.9,17.4 14.8,18.8 16.7,20.1 18.5,21.5 20.4,22.8 22.2,24.2 24.1,25.6 25.9,8.9 27.8,10.2 29.6,11.6 31.4,12.9 33.3,14.3 35.1,15.6 37.0,17.0 38.9,18.4 40.7,19.7 42.5,21.0 44.4,22.4 46.2,23.8 48.1,25.1 50.0,8.5 51.8,9.8 53.6,11.1 55.5,12.5 57.4,13.9 59.2,15.2 61.0,16.5 62.9,17.9 64.8,19.2 66.6,20.6 68.5,22.0 70.3,23.3 72.1,24.6 74.0,8.0" fill="none" stroke="var(--cyan)" stroke-width="1.5" opacity="1"/><polyline points="0.0,8.0 1.9,8.0 3.7,8.0 5.5,8.0 7.4,26.0 9.2,26.0 11.1,26.0 12.9,26.0 14.8,8.0 16.7,8.0 18.5,8.0 20.4,8.0 22.2,26.0 24.1,26.0 25.9,26.0 27.8,26.0 29.6,8.0 31.4,8.0 33.3,8.0 35.1,8.0 37.0,26.0 38.9,26.0 40.7,26.0 42.5,26.0 44.4,8.0 46.2,8.0 48.1,8.0 50.0,8.0 51.8,26.0 53.6,26.0 55.5,26.0 57.4,26.0 59.2,8.0 61.0,8.0 62.9,8.0 64.8,8.0 66.6,26.0 68.5,26.0 70.3,26.0 72.1,26.0 74.0,8.0" fill="none" stroke="var(--purple)" stroke-width="1.5" opacity="1"/></svg><span class="ja-op-txt"><b>Cada um um papel</b></span></button></div>
+    </div>
+    <div class="moldura t2-jogos">
+      <div class="pc-sub" data-dica="Só os jogos com perfil no Hefesto. Nenhum marcado: os acessórios ficam parados">Os jogos que os acessórios seguem</div>
+      <div class="jg-lista"><label class="jg-l"><input type="checkbox" data-jogo="Mortal Kombat"><span class="jg-n">Mortal Kombat</span></label><label class="jg-l"><input type="checkbox" data-jogo="Elden Ring"><span class="jg-n">Elden Ring</span></label><label class="jg-l"><input type="checkbox" data-jogo="Neon Nights"><span class="jg-n">Neon Nights</span><span class="jg-kit">Fala com a Lovense</span><span class="jg-porta">No menu Lovense do jogo: IP 127.0.0.1, porta 20010, «Use HTTP» desligado</span></label><label class="jg-l"><input type="checkbox" data-jogo="Planet Lust"><span class="jg-n">Planet Lust</span><span class="jg-kit">Fala com a Lovense</span><span class="jg-porta">No menu Lovense do jogo: IP 127.0.0.1, porta 20010, «Conexão HTTP (20010)»</span></label><label class="jg-l"><input type="checkbox" data-jogo="MonGirl Conquest"><span class="jg-n">MonGirl Conquest</span><span class="jg-kit">Fala com a Lovense</span><span class="jg-porta">No menu Lovense do jogo: IP 127.0.0.1, porta 20010, «Mobile»</span></label><label class="jg-l"><input type="checkbox" data-jogo="Third Crisis"><span class="jg-n">Third Crisis</span><span class="jg-kit">Fala com a Lovense</span></label><label class="jg-l"><input type="checkbox" data-jogo="Orpheus"><span class="jg-n">Orpheus</span><span class="jg-kit">Fala com a Lovense</span><span class="jg-porta">O jogo fala direto com o app do celular</span></label></div>
+    </div>
+    <div class="moldura t2-forca">
+      <div class="pc-sub fz-tit" data-dica="O que chega de cada canal se multiplica pelo seu deslizante; o aparelho recebe o maior dos três"><span>Força de cada canal</span><span class="fz-escala">de 0 a 20</span></div>
+      <div class="fz-grade"><span class="fz-cab" data-dica="A vibração que o jogo pede ao controle">Vibração</span><span class="fz-cab" data-dica="Os eventos do gatilho">Gatilho</span><span class="fz-cab" data-dica="O som que vibra">Háptica</span><span class="fz-ap">Lovense Nora</span><span class="fz-c"><input type="range" min="0" max="20" step="1" value="10" aria-label="Vibração de Lovense Nora" oninput="this.nextElementSibling.textContent=this.value"><b>10</b></span><span class="fz-c"><input type="range" min="0" max="20" step="1" value="10" aria-label="Gatilho de Lovense Nora" oninput="this.nextElementSibling.textContent=this.value"><b>10</b></span><span class="fz-c"><input type="range" min="0" max="20" step="1" value="10" aria-label="Háptica de Lovense Nora" oninput="this.nextElementSibling.textContent=this.value"><b>10</b></span><span class="fz-ap">Lovense Domi</span><span class="fz-c"><input type="range" min="0" max="20" step="1" value="10" aria-label="Vibração de Lovense Domi" oninput="this.nextElementSibling.textContent=this.value"><b>10</b></span><span class="fz-c"><input type="range" min="0" max="20" step="1" value="10" aria-label="Gatilho de Lovense Domi" oninput="this.nextElementSibling.textContent=this.value"><b>10</b></span><span class="fz-c"><input type="range" min="0" max="20" step="1" value="10" aria-label="Háptica de Lovense Domi" oninput="this.nextElementSibling.textContent=this.value"><b>10</b></span><span class="fz-ap">Lovense Ferri</span><span class="fz-c"><input type="range" min="0" max="20" step="1" value="10" aria-label="Vibração de Lovense Ferri" oninput="this.nextElementSibling.textContent=this.value"><b>10</b></span><span class="fz-c"><input type="range" min="0" max="20" step="1" value="10" aria-label="Gatilho de Lovense Ferri" oninput="this.nextElementSibling.textContent=this.value"><b>10</b></span><span class="fz-c"><input type="range" min="0" max="20" step="1" value="10" aria-label="Háptica de Lovense Ferri" oninput="this.nextElementSibling.textContent=this.value"><b>10</b></span></div>
+    </div>
+</div>
+<div class="ja-tela t3">
+    <div class="moldura"><div class="pc-sub">Vibração</div>
+      <div class="ja-linha empilha"><span>O que vibra</span><div class="ja-ctrl"><div class="seg mini"><button class="">Só o jogo</button><button class="on">Jogo e meus toques</button><button class="">Só meus toques</button></div></div></div>
+      <div class="ja-linha "><span>Mistura</span><div class="ja-ctrl"><div class="seg mini"><button class="on">O maior dos dois</button><button class="">Somar</button></div></div></div>
+      <div class="ja-linha "><span>Força dos meus toques</span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="0" data-max="100" data-passo="5"><button class="passo">−</button><b>30</b><button class="passo">+</button></span><span class="un">% do controle</span></span></div></div></div>
+    </div>
+    <div class="moldura"><div class="pc-sub">Cada entrada</div>
+      <div class="ja-linha "><span>Analógicos</span><div class="ja-ctrl"><div class="seg mini"><button class="">Não</button><button class="on">Movimento</button><button class="">Posição</button></div></div></div>
+      <div class="ja-linha "><span>Botões</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
+      <div class="ja-linha "><span>Gatilhos</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
+      <div class="ja-linha "><span>Chacoalhar</span><div class="ja-ctrl"><span class="nj-tog" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Desligado</span></span></div></div>
+      <div class="ja-linha "><span>Touchpad</span><div class="ja-ctrl"><div class="seg mini"><button class="">Não</button><button class="on">Pelos lados</button><button class="">Mistura</button></div></div></div>
+    </div></div><div class="ja-tela t4">
+    <div class="moldura"><div class="pc-sub" data-dica="O touchpad segue fazendo o que fazia; o Hefesto só escuta">O touchpad vibra</div>
+      <div class="ja-linha "><span data-dica="Pelos lados: cada metade, o seu lado. Mistura: o dedo equilibra">Leitura</span><div class="ja-ctrl"><div class="seg mini "><button class="">Não</button><button class="on">Pelos lados</button><button class="">Mistura</button></div></div></div>
+      <svg class="ja-tp" viewBox="0 0 420 214" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="tp-e" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#bd93f9" stop-opacity=".55"/><stop offset="1" stop-color="#bd93f9" stop-opacity=".06"/></linearGradient>
+    <linearGradient id="tp-d" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff79c6" stop-opacity=".55"/><stop offset="1" stop-color="#ff79c6" stop-opacity=".06"/></linearGradient>
+    <pattern id="tp-m" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="6" fill="#f8f8f2" opacity=".14"/></pattern>
+    <clipPath id="tp-c"><rect x="34" y="12" width="352" height="176" rx="16"/></clipPath>
+  </defs>
+  <g clip-path="url(#tp-c)">
+    <rect x="34" y="12" width="176" height="176" fill="url(#tp-e)"/>
+    <rect x="210" y="12" width="176" height="176" fill="url(#tp-d)"/>
+    <rect x="192.4" y="12" width="35.2" height="176" fill="url(#tp-m)"/>
+  </g>
+  <rect x="34" y="12" width="352" height="176" rx="16" fill="none" stroke="#6272a4" stroke-width="1.5"/>
+  <text x="122" y="88" text-anchor="middle" fill="#f8f8f2" font-family="Space Grotesk, sans-serif" font-size="13" font-weight="600">Motor esquerdo</text>
+  <text x="122" y="106" text-anchor="middle" fill="#c8ccda" font-family="Space Grotesk, sans-serif" font-size="11">Nora motor 1 · Ferri</text>
+  <text x="298" y="88" text-anchor="middle" fill="#f8f8f2" font-family="Space Grotesk, sans-serif" font-size="13" font-weight="600">Motor direito</text>
+  <text x="298" y="106" text-anchor="middle" fill="#c8ccda" font-family="Space Grotesk, sans-serif" font-size="11">Nora motor 2 · Domi</text>
+  <text x="210" y="180" text-anchor="middle" fill="#9a9eb8" font-family="Space Grotesk, sans-serif" font-size="9.5">os dois</text>
+  <circle cx="318" cy="46" r="9" fill="#ff79c6"/>
+  <circle cx="318" cy="46" r="16" fill="none" stroke="#ff79c6" stroke-opacity=".55"/>
+  <circle cx="318" cy="46" r="24" fill="none" stroke="#ff79c6" stroke-opacity=".25"/>
+  <line x1="16" y1="176" x2="16" y2="24" stroke="#9a9eb8" stroke-width="1.4" marker-end="url(#tp-seta)"/>
+  <defs><marker id="tp-seta" viewBox="0 0 8 8" refX="4" refY="4" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#9a9eb8"/></marker></defs>
+  <text x="404" y="30" text-anchor="middle" fill="#9a9eb8" font-family="Space Grotesk, sans-serif" font-size="10">forte</text>
+  <text x="404" y="182" text-anchor="middle" fill="#9a9eb8" font-family="Space Grotesk, sans-serif" font-size="10">fraco</text>
+  <text x="210" y="207" text-anchor="middle" fill="#9a9eb8" font-family="Space Grotesk, sans-serif" font-size="10">a altura do dedo é a força · dois dedos, os dois lados</text>
+</svg>
+    </div>
+    <div class="moldura"><div class="pc-sub">Ajustes</div>
+      <div class="ja-linha "><span data-dica="Força: alto é forte. Fixa: tocar só liga o lado">A altura do dedo</span><div class="ja-ctrl"><div class="seg mini "><button class="on">Força</button><button class="">Invertida</button><button class="">Fixa</button></div></div></div>
+      <div class="ja-linha "><span data-dica="Vibra: enquanto o dedo fica. Só o toque: um pulso">Dedo parado</span><div class="ja-ctrl"><div class="seg mini "><button class="on">Vibra</button><button class="">Só o toque</button></div></div></div>
+      <div class="ja-linha "><span data-dica="Deslize rápido vira um surto no sentido do dedo">Deslize rápido</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
+      <div class="ja-linha "><span data-dica="Apertar o touchpad dá um acento forte nos dois lados">Clique</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
+      <div class="pc-sub" style="margin-top:6px" data-dica="Em lados opostos, o dedo faz o balanço entre os dois">Que lado vai a cada aparelho</div>
+      <div class="ja-linha "><span>Lovense Nora</span><div class="ja-ctrl"><select class="campo-linha"><option selected>Motor 1 esquerda, 2 direita</option><option>Os dois lados juntos</option></select></div></div>
+      <div class="ja-linha "><span>Lovense Domi</span><div class="ja-ctrl"><select class="campo-linha"><option selected>Lado direito</option><option>Lado esquerdo</option><option>O maior dos dois lados</option></select></div></div>
+      <div class="ja-linha "><span>Lovense Ferri</span><div class="ja-ctrl"><select class="campo-linha"><option selected>Lado esquerdo</option><option>Lado direito</option><option>O maior dos dois lados</option></select></div></div>
+    </div></div><div class="ja-tela t5">
+    <div class="moldura"><div class="pc-sub" data-dica="No máximo um ciclo por segundo; o jogo que pinta vence">A barra de luz</div>
+      <div class="ja-linha "><span data-dica="Só em perfil marcado Adulto">A luz acompanha</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligada" data-off="Desligada"><span class="pino"></span><span class="txt">Ligada</span></span></div></div>
+      <div class="ja-linha empilha"><span>Cor</span><div class="ja-ctrl"><div class="ja-tons" data-luz="1"><button class="tom on" style="background:#7A0010" data-cor="#7A0010" title="Vermelho escuro"></button><button class="tom" style="background:#FF5555" data-cor="#FF5555" title="#FF5555"></button><button class="tom" style="background:#50FA7B" data-cor="#50FA7B" title="#50FA7B"></button><button class="tom" style="background:#FF79C6" data-cor="#FF79C6" title="#FF79C6"></button><button class="tom" style="background:#F1FA8C" data-cor="#F1FA8C" title="#F1FA8C"></button><button class="tom" style="background:#8BE9FD" data-cor="#8BE9FD" title="#8BE9FD"></button><button class="tom" style="background:#FFB86C" data-cor="#FFB86C" title="#FFB86C"></button><button class="tom" style="background:#BD93F9" data-cor="#BD93F9" title="#BD93F9"></button><button class="tom" style="background:#B8F976" data-cor="#B8F976" title="#B8F976"></button><button class="tom" style="background:#76F9B8" data-cor="#76F9B8" title="#76F9B8"></button><button class="tom" style="background:#F8F8F2" data-cor="#F8F8F2" title="#F8F8F2"></button></div></div></div>
+      <div class="ja-linha empilha"><span data-dica="O pulso vai da primeira cor a esta, com o nível">Cor que esquenta</span><div class="ja-ctrl"><div class="ja-tons"><button class="tom nenhuma on" title="Nenhuma"></button><button class="tom" style="background:#FF5555" title="#FF5555"></button><button class="tom" style="background:#50FA7B" title="#50FA7B"></button><button class="tom" style="background:#FF79C6" title="#FF79C6"></button><button class="tom" style="background:#F1FA8C" title="#F1FA8C"></button><button class="tom" style="background:#8BE9FD" title="#8BE9FD"></button><button class="tom" style="background:#FFB86C" title="#FFB86C"></button></div></div></div>
+      <div class="ja-linha "><span>O fundo do pulso</span><div class="ja-ctrl"><div class="seg mini "><button class="on">Apaga</button><button class="">20 %</button><button class="">50 %</button></div></div></div>
+      <div class="ja-linha "><span data-dica="O brilho só acompanha o nível, devagar">Sem pisca</span><div class="ja-ctrl"><span class="nj-tog" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Desligado</span></span></div></div>
+    </div>
+    <div class="moldura"><div class="pc-sub" data-dica="O pulso acelera com o nível; parado, a cor fica fixa">Como fica</div>
+      <div class="ja-luz-prev">
+        <div class="ja-barra-luz"><span></span></div>
+        <div class="ja-escala"></div>
+        <div class="ja-escala-rot"><span>apagada</span><span>a escala do brilho, como na aba Iluminação</span><span>o brilho do perfil</span></div>
+        <div class="ja-legenda"><span><i style="background:#ff79c6"></i>nível 4: um ciclo a cada 3 s</span><span><i style="background:#9a9eb8"></i>nível 1: a cada 4 s</span></div>
+        <svg class="ja-grafico" viewBox="0 0 370 118" font-family="Space Grotesk, sans-serif" font-size="9.5" fill="#9a9eb8">
+      <line x1="30" y1="96" x2="360" y2="96" stroke="#44475a"/><line x1="30" y1="12" x2="30" y2="96" stroke="#44475a"/>
+      <text x="25" y="16" text-anchor="end">100 %</text><text x="25" y="99" text-anchor="end">0</text><text x="30" y="112" text-anchor="middle">0 s</text><text x="112" y="112" text-anchor="middle">2 s</text><text x="195" y="112" text-anchor="middle">4 s</text><text x="278" y="112" text-anchor="middle">6 s</text><text x="360" y="112" text-anchor="middle">8 s</text>
+      <polyline points="30.0,12.0 32.1,12.1 34.1,12.5 36.2,13.2 38.2,14.1 40.3,15.2 42.4,16.6 44.4,18.2 46.5,20.0 48.6,22.1 50.6,24.3 52.7,26.7 54.8,29.3 56.8,32.1 58.9,34.9 60.9,37.9 63.0,41.0 65.1,44.2 67.1,47.4 69.2,50.7 71.2,54.0 73.3,57.3 75.4,60.6 77.4,63.8 79.5,67.0 81.6,70.1 83.6,73.1 85.7,75.9 87.8,78.7 89.8,81.3 91.9,83.7 93.9,85.9 96.0,88.0 98.1,89.8 100.1,91.4 102.2,92.8 104.2,93.9 106.3,94.8 108.4,95.5 110.4,95.9 112.5,96.0 114.6,95.9 116.6,95.5 118.7,94.8 120.8,93.9 122.8,92.8 124.9,91.4 126.9,89.8 129.0,88.0 131.1,85.9 133.1,83.7 135.2,81.3 137.2,78.7 139.3,75.9 141.4,73.1 143.4,70.1 145.5,67.0 147.6,63.8 149.6,60.6 151.7,57.3 153.8,54.0 155.8,50.7 157.9,47.4 159.9,44.2 162.0,41.0 164.1,37.9 166.1,34.9 168.2,32.1 170.2,29.3 172.3,26.7 174.4,24.3 176.4,22.1 178.5,20.0 180.6,18.2 182.6,16.6 184.7,15.2 186.8,14.1 188.8,13.2 190.9,12.5 192.9,12.1 195.0,12.0 197.1,12.1 199.1,12.5 201.2,13.2 203.2,14.1 205.3,15.2 207.4,16.6 209.4,18.2 211.5,20.0 213.6,22.1 215.6,24.3 217.7,26.7 219.7,29.3 221.8,32.1 223.9,34.9 225.9,37.9 228.0,41.0 230.1,44.2 232.1,47.4 234.2,50.7 236.2,54.0 238.3,57.3 240.4,60.6 242.4,63.8 244.5,67.0 246.6,70.1 248.6,73.1 250.7,75.9 252.8,78.7 254.8,81.3 256.9,83.7 258.9,85.9 261.0,88.0 263.1,89.8 265.1,91.4 267.2,92.8 269.2,93.9 271.3,94.8 273.4,95.5 275.4,95.9 277.5,96.0 279.6,95.9 281.6,95.5 283.7,94.8 285.8,93.9 287.8,92.8 289.9,91.4 291.9,89.8 294.0,88.0 296.1,85.9 298.1,83.7 300.2,81.3 302.2,78.7 304.3,75.9 306.4,73.1 308.4,70.1 310.5,67.0 312.6,63.8 314.6,60.6 316.7,57.3 318.8,54.0 320.8,50.7 322.9,47.4 324.9,44.2 327.0,41.0 329.1,37.9 331.1,34.9 333.2,32.1 335.2,29.3 337.3,26.7 339.4,24.3 341.4,22.1 343.5,20.0 345.6,18.2 347.6,16.6 349.7,15.2 351.8,14.1 353.8,13.2 355.9,12.5 357.9,12.1 360.0,12.0" fill="none" stroke="#9a9eb8" stroke-width="1.3" opacity="0.55"/><polyline points="30.0,12.0 32.1,12.2 34.1,12.9 36.2,14.1 38.2,15.6 40.3,17.6 42.4,20.0 44.4,22.8 46.5,25.9 48.6,29.3 50.6,33.0 52.7,36.9 54.8,41.0 56.8,45.3 58.9,49.6 60.9,54.0 63.0,58.4 65.1,62.7 67.1,67.0 69.2,71.1 71.2,75.0 73.3,78.7 75.4,82.1 77.4,85.2 79.5,88.0 81.6,90.4 83.6,92.4 85.7,93.9 87.8,95.1 89.8,95.8 91.9,96.0 93.9,95.8 96.0,95.1 98.1,93.9 100.1,92.4 102.2,90.4 104.2,88.0 106.3,85.2 108.4,82.1 110.4,78.7 112.5,75.0 114.6,71.1 116.6,67.0 118.7,62.7 120.8,58.4 122.8,54.0 124.9,49.6 126.9,45.3 129.0,41.0 131.1,36.9 133.1,33.0 135.2,29.3 137.2,25.9 139.3,22.8 141.4,20.0 143.4,17.6 145.5,15.6 147.6,14.1 149.6,12.9 151.7,12.2 153.8,12.0 155.8,12.2 157.9,12.9 159.9,14.1 162.0,15.6 164.1,17.6 166.1,20.0 168.2,22.8 170.2,25.9 172.3,29.3 174.4,33.0 176.4,36.9 178.5,41.0 180.6,45.3 182.6,49.6 184.7,54.0 186.8,58.4 188.8,62.7 190.9,67.0 192.9,71.1 195.0,75.0 197.1,78.7 199.1,82.1 201.2,85.2 203.2,88.0 205.3,90.4 207.4,92.4 209.4,93.9 211.5,95.1 213.6,95.8 215.6,96.0 217.7,95.8 219.7,95.1 221.8,93.9 223.9,92.4 225.9,90.4 228.0,88.0 230.1,85.2 232.1,82.1 234.2,78.7 236.2,75.0 238.3,71.1 240.4,67.0 242.4,62.7 244.5,58.4 246.6,54.0 248.6,49.6 250.7,45.3 252.8,41.0 254.8,36.9 256.9,33.0 258.9,29.3 261.0,25.9 263.1,22.8 265.1,20.0 267.2,17.6 269.2,15.6 271.3,14.1 273.4,12.9 275.4,12.2 277.5,12.0 279.6,12.2 281.6,12.9 283.7,14.1 285.8,15.6 287.8,17.6 289.9,20.0 291.9,22.8 294.0,25.9 296.1,29.3 298.1,33.0 300.2,36.9 302.2,41.0 304.3,45.3 306.4,49.6 308.4,54.0 310.5,58.4 312.6,62.7 314.6,67.0 316.7,71.1 318.8,75.0 320.8,78.7 322.9,82.1 324.9,85.2 327.0,88.0 329.1,90.4 331.1,92.4 333.2,93.9 335.2,95.1 337.3,95.8 339.4,96.0 341.4,95.8 343.5,95.1 345.6,93.9 347.6,92.4 349.7,90.4 351.8,88.0 353.8,85.2 355.9,82.1 357.9,78.7 360.0,75.0" fill="none" stroke="#ff79c6" stroke-width="2.2" opacity="1"/>
+      </svg>
+      </div>
+    </div></div><div class="ja-tela t6 l-larga">
+    <div class="moldura"><div class="pc-sub">A roda dos perfis <span class="ja-num-roda">PS + R1 avança · PS + L1 volta</span></div>
+      <div class="ja-roda"><div class="ja-roda-l"><span class="ja-marcar" title="Na roda do PS + R1 e PS + L1">✓</span>
+          <svg class="ja-mini" width="64" height="22" viewBox="0 0 64 22"><polyline points="0.0,17.6 1.0,17.6 2.0,17.6 3.0,17.6 4.0,17.6 5.0,17.6 6.0,17.6 7.0,17.6 8.0,17.6 9.0,17.6 10.0,17.6 11.0,17.6 12.0,2.4 13.0,2.4 14.0,2.4 15.0,2.4 16.0,2.4 17.0,17.6 18.0,17.6 19.0,17.6 20.0,17.6 21.0,17.6 22.0,17.6 23.0,17.6 24.0,17.6 25.0,17.6 26.0,17.6 27.0,17.6 28.0,17.6 29.0,17.6 30.0,17.6 31.0,17.6 32.0,17.6 33.0,17.6 34.0,17.6 35.0,17.6 36.0,8.1 37.0,8.1 38.0,8.1 39.0,8.1 40.0,8.1 41.0,8.1 42.0,8.1 43.0,8.1 44.0,17.6 45.0,17.6 46.0,17.6 47.0,17.6 48.0,17.6 49.0,17.6 50.0,17.6 51.0,17.6 52.0,17.6 53.0,12.0 54.0,12.0 55.0,12.0 56.0,17.6 57.0,17.6 58.0,17.6 59.0,17.6 60.0,17.6 61.0,17.6 62.0,17.6 63.0,17.6 64.0,17.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span class="ja-roda-nome"><b>Segue o jogo</b><span>o que o jogo pede</span></span>
+          <a class="btn mini" href="05-vibracao.html">Editar</a><button class="btn mini">Duplicar</button></div><div class="ja-roda-l atual"><span class="ja-marcar" title="Na roda do PS + R1 e PS + L1">✓</span>
+          <svg class="ja-mini" width="64" height="22" viewBox="0 0 64 22"><polyline points="0.0,14.8 1.0,14.7 2.0,14.3 3.0,13.7 4.0,12.9 5.0,11.8 6.0,10.7 7.0,9.4 8.0,8.2 9.0,6.9 10.0,5.6 11.0,4.5 12.0,3.4 13.0,2.6 14.0,2.0 15.0,1.6 16.0,1.5 17.0,1.6 18.0,2.0 19.0,2.6 20.0,3.4 21.0,4.5 22.0,5.6 23.0,6.9 24.0,8.1 25.0,9.4 26.0,10.7 27.0,11.8 28.0,12.9 29.0,13.7 30.0,14.3 31.0,14.7 32.0,14.8 33.0,14.7 34.0,14.3 35.0,13.7 36.0,12.9 37.0,11.8 38.0,10.7 39.0,9.4 40.0,8.2 41.0,6.9 42.0,5.6 43.0,4.5 44.0,3.4 45.0,2.6 46.0,2.0 47.0,1.6 48.0,1.5 49.0,1.6 50.0,2.0 51.0,2.6 52.0,3.4 53.0,4.5 54.0,5.6 55.0,6.9 56.0,8.1 57.0,9.4 58.0,10.7 59.0,11.8 60.0,12.9 61.0,13.7 62.0,14.3 63.0,14.7 64.0,14.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span class="ja-roda-nome"><b>Ondas</b><span>4 s · 30 a 100 %</span></span>
+          <a class="btn mini" href="05-vibracao.html">Editar</a><button class="btn mini">Duplicar</button></div><div class="ja-roda-l"><span class="ja-marcar" title="Na roda do PS + R1 e PS + L1">✓</span>
+          <svg class="ja-mini" width="64" height="22" viewBox="0 0 64 22"><polyline points="0.0,20.5 1.0,20.5 2.0,1.5 3.0,1.5 4.0,1.5 5.0,1.5 6.0,1.5 7.0,1.5 8.0,1.5 9.0,1.5 10.0,1.5 11.0,20.5 12.0,20.5 13.0,20.5 14.0,20.5 15.0,20.5 16.0,20.5 17.0,20.5 18.0,20.5 19.0,20.5 20.0,20.5 21.0,20.5 22.0,20.5 23.0,20.5 24.0,1.5 25.0,1.5 26.0,1.5 27.0,1.5 28.0,1.5 29.0,1.5 30.0,1.5 31.0,1.5 32.0,20.5 33.0,20.5 34.0,20.5 35.0,20.5 36.0,20.5 37.0,20.5 38.0,20.5 39.0,20.5 40.0,20.5 41.0,20.5 42.0,20.5 43.0,20.5 44.0,20.5 45.0,1.5 46.0,1.5 47.0,1.5 48.0,1.5 49.0,1.5 50.0,1.5 51.0,1.5 52.0,1.5 53.0,1.5 54.0,20.5 55.0,20.5 56.0,20.5 57.0,20.5 58.0,20.5 59.0,20.5 60.0,20.5 61.0,20.5 62.0,20.5 63.0,20.5 64.0,20.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span class="ja-roda-nome"><b>Pulso</b><span>1 s · 0 a 100 %</span></span>
+          <a class="btn mini" href="05-vibracao.html">Editar</a><button class="btn mini">Duplicar</button></div><div class="ja-roda-l"><span class="ja-marcar" title="Na roda do PS + R1 e PS + L1">✓</span>
+          <svg class="ja-mini" width="64" height="22" viewBox="0 0 64 22"><polyline points="0.0,16.7 1.0,16.7 2.0,1.5 3.0,1.5 4.0,1.5 5.0,16.7 6.0,16.7 7.0,16.7 8.0,16.7 9.0,1.5 10.0,1.5 11.0,1.5 12.0,16.7 13.0,16.7 14.0,16.7 15.0,16.7 16.0,16.7 17.0,16.7 18.0,16.7 19.0,16.7 20.0,16.7 21.0,16.7 22.0,16.7 23.0,16.7 24.0,16.7 25.0,16.7 26.0,16.7 27.0,16.7 28.0,16.7 29.0,16.7 30.0,16.7 31.0,16.7 32.0,16.7 33.0,16.7 34.0,1.5 35.0,1.5 36.0,1.5 37.0,16.7 38.0,16.7 39.0,16.7 40.0,16.7 41.0,1.5 42.0,1.5 43.0,1.5 44.0,16.7 45.0,16.7 46.0,16.7 47.0,16.7 48.0,16.7 49.0,16.7 50.0,16.7 51.0,16.7 52.0,16.7 53.0,16.7 54.0,16.7 55.0,16.7 56.0,16.7 57.0,16.7 58.0,16.7 59.0,16.7 60.0,16.7 61.0,16.7 62.0,16.7 63.0,16.7 64.0,16.7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span class="ja-roda-nome"><b>Batida</b><span>1,2 s · 20 a 100 %</span></span>
+          <a class="btn mini" href="05-vibracao.html">Editar</a><button class="btn mini">Duplicar</button></div><div class="ja-roda-l"><span class="ja-marcar" title="Na roda do PS + R1 e PS + L1">✓</span>
+          <svg class="ja-mini" width="64" height="22" viewBox="0 0 64 22"><polyline points="0.0,18.6 1.0,18.1 2.0,17.5 3.0,17.0 4.0,16.5 5.0,15.9 6.0,15.4 7.0,14.9 8.0,14.3 9.0,13.8 10.0,13.3 11.0,12.7 12.0,12.2 13.0,11.7 14.0,11.1 15.0,10.6 16.0,10.0 17.0,9.5 18.0,9.0 19.0,8.4 20.0,7.9 21.0,7.4 22.0,6.8 23.0,6.3 24.0,5.8 25.0,5.2 26.0,4.7 27.0,4.2 28.0,3.6 29.0,3.1 30.0,2.6 31.0,2.0 32.0,18.6 33.0,18.1 34.0,17.5 35.0,17.0 36.0,16.5 37.0,15.9 38.0,15.4 39.0,14.9 40.0,14.3 41.0,13.8 42.0,13.3 43.0,12.7 44.0,12.2 45.0,11.7 46.0,11.1 47.0,10.6 48.0,10.0 49.0,9.5 50.0,9.0 51.0,8.4 52.0,7.9 53.0,7.4 54.0,6.8 55.0,6.3 56.0,5.8 57.0,5.2 58.0,4.7 59.0,4.2 60.0,3.6 61.0,3.1 62.0,2.6 63.0,2.0 64.0,18.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span class="ja-roda-nome"><b>Rampa</b><span>8 s · 10 a 100 %</span></span>
+          <a class="btn mini" href="05-vibracao.html">Editar</a><button class="btn mini">Duplicar</button></div><div class="ja-roda-l fora"><span class="ja-marcar" title="Na roda do PS + R1 e PS + L1"></span>
+          <svg class="ja-mini" width="64" height="22" viewBox="0 0 64 22"><polyline points="0.0,15.8 1.0,15.8 2.0,15.8 3.0,15.8 4.0,15.8 5.0,15.8 6.0,15.8 7.0,15.8 8.0,15.8 9.0,11.0 10.0,11.0 11.0,11.0 12.0,11.0 13.0,11.0 14.0,11.0 15.0,11.0 16.0,11.0 17.0,11.0 18.0,6.2 19.0,6.2 20.0,6.2 21.0,6.2 22.0,6.2 23.0,6.2 24.0,6.2 25.0,6.2 26.0,1.5 27.0,1.5 28.0,1.5 29.0,1.5 30.0,1.5 31.0,1.5 32.0,1.5 33.0,1.5 34.0,1.5 35.0,1.5 36.0,1.5 37.0,1.5 38.0,1.5 39.0,1.5 40.0,1.5 41.0,1.5 42.0,1.5 43.0,15.8 44.0,15.8 45.0,15.8 46.0,15.8 47.0,15.8 48.0,15.8 49.0,15.8 50.0,15.8 51.0,15.8 52.0,11.0 53.0,11.0 54.0,11.0 55.0,11.0 56.0,11.0 57.0,11.0 58.0,11.0 59.0,11.0 60.0,6.2 61.0,6.2 62.0,6.2 63.0,6.2 64.0,6.2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span class="ja-roda-nome"><b>Escada</b><span>2 s por degrau</span></span>
+          <a class="btn mini" href="05-vibracao.html">Editar</a><button class="btn mini">Duplicar</button></div><div class="ja-roda-l"><span class="ja-marcar" title="Na roda do PS + R1 e PS + L1">✓</span>
+          <svg class="ja-mini" width="64" height="22" viewBox="0 0 64 22"><polyline points="0.0,8.0 1.0,7.7 2.0,7.6 3.0,7.8 4.0,8.0 5.0,8.3 6.0,8.4 7.0,8.4 8.0,8.3 9.0,8.1 10.0,7.9 11.0,7.8 12.0,7.8 13.0,8.1 14.0,8.4 15.0,8.8 16.0,9.1 17.0,9.3 18.0,9.2 19.0,8.9 20.0,8.3 21.0,7.5 22.0,6.8 23.0,6.2 24.0,6.0 25.0,6.1 26.0,6.7 27.0,7.7 28.0,9.0 29.0,10.4 30.0,11.9 31.0,13.2 32.0,14.3 33.0,15.0 34.0,15.5 35.0,15.7 36.0,15.7 37.0,15.7 38.0,15.7 39.0,15.8 40.0,15.9 41.0,16.0 42.0,16.1 43.0,15.9 44.0,15.5 45.0,14.8 46.0,14.0 47.0,13.0 48.0,12.0 49.0,11.2 50.0,10.7 51.0,10.5 52.0,10.7 53.0,11.1 54.0,11.8 55.0,12.5 56.0,13.1 57.0,13.4 58.0,13.4 59.0,12.9 60.0,12.1 61.0,11.1 62.0,10.0 63.0,8.9 64.0,8.0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg><span class="ja-roda-nome"><b>Maré</b><span>ao acaso, suave · 20 a 80 %</span></span>
+          <a class="btn mini" href="05-vibracao.html">Editar</a><button class="btn mini">Duplicar</button></div><div class="ja-roda-l"><span class="ja-marcar" title="Na roda do PS + R1 e PS + L1">✓</span>
+          <svg class="ja-mini" width="64" height="22" viewBox="0 0 64 22"><polyline points="0.0,11.0 1.0,9.1 2.0,7.4 3.0,5.7 4.0,4.3 5.0,3.1 6.0,2.2 7.0,1.7 8.0,1.5 9.0,1.7 10.0,2.2 11.0,3.1 12.0,4.3 13.0,5.7 14.0,7.4 15.0,9.1 16.0,11.0 17.0,12.9 18.0,14.6 19.0,16.3 20.0,17.7 21.0,18.9 22.0,19.8 23.0,20.3 24.0,20.5 25.0,20.3 26.0,19.8 27.0,18.9 28.0,17.7 29.0,16.3 30.0,14.6 31.0,12.9 32.0,11.0 33.0,9.1 34.0,7.4 35.0,5.7 36.0,4.3 37.0,3.1 38.0,2.2 39.0,1.7 40.0,1.5 41.0,1.7 42.0,2.2 43.0,3.1 44.0,4.3 45.0,5.7 46.0,7.4 47.0,9.1 48.0,11.0 49.0,12.9 50.0,14.6 51.0,16.3 52.0,17.7 53.0,18.9 54.0,19.8 55.0,20.3 56.0,20.5 57.0,20.3 58.0,19.8 59.0,18.9 60.0,17.7 61.0,16.3 62.0,14.6 63.0,12.9 64.0,11.0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><polyline points="0.0,11.0 1.0,12.9 2.0,14.6 3.0,16.3 4.0,17.7 5.0,18.9 6.0,19.8 7.0,20.3 8.0,20.5 9.0,20.3 10.0,19.8 11.0,18.9 12.0,17.7 13.0,16.3 14.0,14.6 15.0,12.9 16.0,11.0 17.0,9.1 18.0,7.4 19.0,5.7 20.0,4.3 21.0,3.1 22.0,2.2 23.0,1.7 24.0,1.5 25.0,1.7 26.0,2.2 27.0,3.1 28.0,4.3 29.0,5.7 30.0,7.4 31.0,9.1 32.0,11.0 33.0,12.9 34.0,14.6 35.0,16.3 36.0,17.7 37.0,18.9 38.0,19.8 39.0,20.3 40.0,20.5 41.0,20.3 42.0,19.8 43.0,18.9 44.0,17.7 45.0,16.3 46.0,14.6 47.0,12.9 48.0,11.0 49.0,9.1 50.0,7.4 51.0,5.7 52.0,4.3 53.0,3.1 54.0,2.2 55.0,1.7 56.0,1.5 57.0,1.7 58.0,2.2 59.0,3.1 60.0,4.3 61.0,5.7 62.0,7.4 63.0,9.1 64.0,11.0" fill="none" stroke="var(--cyan)" stroke-width="1.4" opacity=".85"/></svg><span class="ja-roda-nome"><b>Vai e volta</b><span>3 s · um sobe, o outro desce</span></span>
+          <a class="btn mini" href="05-vibracao.html">Editar</a><button class="btn mini">Duplicar</button></div></div>
+    </div>
+    <div class="moldura"><div class="pc-sub">Para brincar</div>
+      <div class="ja-linha "><span data-dica="Depois de 10 min parado, volta no máximo à metade">Lembrar o último nível</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
+      <div class="ja-linha "><span data-dica="PS + R2 duas vezes: 2 s no teto">Surto</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
+      <div class="ja-linha "><span data-dica="Segure PS + R2 no fundo 3 s; soltar dispara">Carga</span><div class="ja-ctrl"><span class="nj-tog" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Desligado</span></span></div></div>
+      <div class="pc-sub" style="margin-top:6px">Surpresa</div>
+      <div class="ja-linha "><span data-dica="Troca perfil e nível sozinha; o freio desfaz">Surpresa</span><div class="ja-ctrl"><span class="nj-tog" data-on="Ligada" data-off="Desligada"><span class="pino"></span><span class="txt">Desligada</span></span></div></div>
+      <div class="ja-linha "><span>A cada</span><div class="ja-ctrl"><select class="campo-linha"><option selected>30 a 90 s, sorteado</option><option>1 a 3 min, sorteado</option><option>3 a 6 min, sorteado</option></select></div></div>
+      <div class="ja-linha "><span>Até</span><div class="ja-ctrl"><div class="campo-num mini"><span class="par"><span class="bignum" data-min="10" data-max="100" data-passo="10"><button class="passo">−</button><b>70</b><button class="passo">+</button></span><span class="un">% do teto</span></span></div></div></div>
+      <div class="ja-linha "><span data-dica="Um toque leve 1 s antes de cada troca">Aviso antes</span><div class="ja-ctrl"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado"><span class="pino"></span><span class="txt">Ligado</span></span></div></div>
+    </div></div></div>
+      </div>
+    </div>
+    <div class="tn-rod">
+      <a class="btn" href="#">Cancelar</a>
+      <a class="btn" href="#">Voltar ao molde</a>
+      <a class="btn roxo" href="#">Guardar</a>
+    </div>
+  </div>
+</div>
+<script data-aba="experimental">
+(function(){
+  var alvo = document.body.dataset.abre;
+  if (alvo && location.href.indexOf('#') < 0) location.replace('#' + alvo);
+  function fmt(v, casas){ return casas ? v.toFixed(casas).replace('.', ',') : String(Math.round(v)); }
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('.seg button');
+    if (b){ b.parentElement.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x === b); });
+            b.dispatchEvent(new CustomEvent('escolha', {bubbles:true})); }
+    var t = e.target.closest('.nj-tog[data-on]');
+    if (t){ t.classList.toggle('ligado'); t.querySelector('.txt').textContent = t.classList.contains('ligado') ? t.dataset.on : t.dataset.off; }
+    var p = e.target.closest('.bignum .passo');
+    if (p){ var bn = p.closest('.bignum'), el = bn.querySelector('b'); var txt = el.textContent.trim();
+            var casas = (txt.split(',')[1] || '').length; var v = parseFloat(txt.replace(',', '.'));
+            var d = parseFloat(bn.dataset.passo || '1') * (p.textContent.trim() === '+' ? 1 : -1);
+            v = Math.min(parseFloat(bn.dataset.max || '100'), Math.max(parseFloat(bn.dataset.min || '0'), v + d));
+            el.textContent = fmt(v, casas); }
+    var o = e.target.closest('.ja-op');
+    if (o){ o.parentElement.querySelectorAll('.ja-op').forEach(function(x){ x.classList.toggle('on', x === o); }); }
+    var c = e.target.closest('.ja-chips .chip, .ac-chips .chip');
+    if (c){ c.classList.toggle('on'); }
+    var m = e.target.closest('.ja-marcar');
+    if (m){ var l = m.closest('.ja-roda-l'); l.classList.toggle('fora'); m.textContent = l.classList.contains('fora') ? '' : '✓'; }
+    var tom = e.target.closest('.ja-tons .tom');
+    if (tom){ tom.parentElement.querySelectorAll('.tom').forEach(function(x){ x.classList.toggle('on', x === tom); });
+              if (tom.parentElement.dataset.luz && tom.dataset.cor) document.documentElement.style.setProperty('--cor-luz', tom.dataset.cor); }
+    var g = e.target.closest('.ja-degraus i');
+    if (g){ var n = Array.prototype.indexOf.call(g.parentElement.children, g) + 1; nivel(n); }
+    var np = e.target.closest('.ja-passos .passo');
+    if (np){ var atual = document.querySelectorAll('.ja-degraus i.on').length; nivel(atual + (np.textContent.trim() === '+' ? 1 : -1)); }
+    if (e.target.closest('.ja-parar')) nivel(0);
+  });
+  function nivel(n){
+    n = Math.max(0, Math.min(10, n));
+    document.querySelectorAll('.ja-degraus i').forEach(function(x, i){ x.classList.toggle('on', i < n); });
+    var b = document.querySelector('.ja-nivel b'); if (b) b.textContent = n;
+    var lz = document.querySelector('.ja-barra-luz');
+    if (lz) lz.style.setProperty('--periodo', n ? (4 - (n - 1) / 3) + 's' : '0s');
+  }
+})();
+(function(){
+  var c = document.querySelector('[data-lv-conta]'); if (!c) return;
+  var chave = document.querySelector('.ext[data-modificacao=lovense] > .nj-tog');
+  function por(t, on){ t.classList.toggle('ligado', on); t.querySelector('.txt').textContent = on ? 'Ligada' : 'Desligada'; }
+  function contar(){ var t = document.querySelectorAll('#lovense .lv-linha .nj-tog');
+    var n = document.querySelectorAll('#lovense .lv-linha .nj-tog.ligado').length;
+    c.textContent = n + ' de ' + t.length + (n === 1 ? ' ligada' : ' ligadas'); return n; }
+  document.addEventListener('click', function(e){
+    var f = e.target.closest('#lovense .lv-linha .nj-tog');
+    if (f){ por(f, !f.classList.contains('ligado')); por(chave, contar() > 0); return; }
+    if (chave && e.target.closest('.ext[data-modificacao=lovense] > .nj-tog')){
+      var ligar = !chave.classList.contains('ligado');
+      if (ligar && contar() === 0){ location.hash = '#lovense'; return; }
+      por(chave, ligar);
+    }
+    setTimeout(contar, 0);
+  });
+  contar();
+})();
+document.addEventListener('DOMContentLoaded', () => {
+  const q = new URLSearchParams(location.search);
+  if (q.get('aba')) { const r = document.getElementById(q.get('aba')); if (r) r.click(); }
+  if (q.get('marcados')) document.querySelectorAll('.jg-l input').forEach((c, i) => { c.checked = i === 0 || i === 2; });
+});
+</script>
 
 <!-- ===== fim da aba ===== -->
 

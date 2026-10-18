@@ -74,6 +74,7 @@ def test_sete_filas_com_os_tres_botoes_e_o_estado_certo() -> None:
 
 
 def test_a_tira_chama_a_aba_de_experimental() -> None:
+    # D-1810-A-ABA-EXPERIMENTAL-SE-PUBLICA-COMO-FICOU
     tira = re.search(r'<div class="tira">(.*?)</div>', _doc(), flags=re.S).group(1)
     ativa = re.findall(r'<a class="aba ativa" href="07-lancadores.html">([^<]+)</a>', tira)
     assert ativa == ["Experimental"], ativa

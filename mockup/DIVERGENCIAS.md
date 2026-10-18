@@ -21,9 +21,6 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 07-lancadores.html
-- **17/10/2026** — a aba vira «Experimental» no desenho do todo: o quadro das extensões (Kyty e Lovense, com chave, engrenagem e «⋮») e as filas de lançador com três botões no lugar dos cartões, mais as janelas da Lovense (três jeitos de ligar), do Kyty, dos acessórios (a coluna «Agora», os toques, os jogos e a força no deslizante, com a porta certa de cada jogo com o kit), do servidor Buttplug, de configurar o lançador e dos impedimentos. Espera o olho dela na sessão dos desenhos. Enquanto isso, o produto continua com os cartões e o pacote `a07_lancadores` pinta a página publicada.
-
 ## 10-perfis.html
 - **16/10/2026** — a coluna «Ajuste próprio» ganha os glifos da ativação dos botões e da curva dos analógicos, e o vão entre as seções desce de 6 px para 5 px para as dez caberem na célula. Espera o olho dela na sessão dos desenhos. Enquanto isso, o produto continua com as oito seções de hoje na coluna (`perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA`), e esta aba fica sem o contrato do teclado da base comum e sem a alça da divisa pelas setas.
 

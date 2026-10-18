@@ -56,7 +56,7 @@ TOPO = TOPO.replace(MARCA_DA_LOGO,
 
 ABAS = [("Jogar","01-jogar"),("Controles","02-controles"),("Gatilhos","03-gatilhos"),
         ("Iluminação","04-iluminacao"),("Vibração","05-vibracao"),("Navegação","06-navegacao"),
-        ("Lançadores","07-lancadores"),("Conexões","08-conexoes"),("Sistema","09-sistema"),
+        ("Experimental","07-lancadores"),("Conexões","08-conexoes"),("Sistema","09-sistema"),
         ("Perfis","10-perfis")]
 
 sys.path.insert(0, str(RAIZ_DO_REPO / "src"))

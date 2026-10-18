@@ -111,7 +111,7 @@ N_BT = sum(1 for c in CONECTADOS if c["via"] == "BT")
 CSS = CSS_POPUP + exp.CSS
 MIOLO = exp.miolo()
 
-_TIRA = '<a class="aba ativa" href="07-lancadores.html">Lançadores</a>'
+_TIRA = '<a class="aba ativa" href="07-lancadores.html">Experimental</a>'
 _CHIP_DE_CONTROLE = re.compile(r'^[ \t]*<label class="chip plastico(?: on)?"[^\n]*\n', re.M)
 _MARCA = "<!-- ===== fim da aba ===== -->"
 
@@ -149,7 +149,6 @@ if __name__ == "__main__":
             "ERRO: a marca do fim da aba ou a tira mudou no `fim.html` ou no `monta.py`; "
             "sem elas as janelas não entram e o clique em «Configurar» abre nada.")
     _DOC = _DOC.replace(_MARCA, exp.telas().strip() + "\n\n" + _MARCA, 1)
-    _DOC = _DOC.replace(_TIRA, _TIRA.replace("Lançadores", exp.ROTULO_DA_TIRA), 1)
 
     _CONGELADOS = _CHIP_DE_CONTROLE.findall(_DOC)
     if not _CONGELADOS:
