@@ -146,11 +146,11 @@ class TestOQueEstaFraseNaoAlcancaNoStateFullDeVerdade:
 
 
     def test_o_gancho_do_l3_ja_tem_dono_e_nao_e_esta_funcao(self) -> None:
-        """Quem fala do teclado na tela na legenda do L3 é a frente da Navegação."""
+        """Quem fala do teclado na tela que falta é a linha da Navegação que o escolhe."""
         from hefesto_dualsense4unix.app.actions import input_actions
 
-        assert input_actions.frase_do_teclado_na_tela(True), (
-            "a frase viva da legenda do L3 sumiu — se ela saiu de propósito, "
+        assert input_actions.frase_do_teclado_na_tela(False), (
+            "a frase do teclado na tela que falta sumiu — se ela saiu de propósito, "
             "o gancho ficou vago e `descrever_teclado_na_tela` volta a ser "
             "candidata (depois de consertado o nível da chave)"
         )

@@ -67,22 +67,6 @@ def is_virtual_token(token: str) -> bool:
     return len(token) >= 4 and token.startswith("__") and token.endswith("__")
 
 
-def parse_binding(spec: str) -> KeyBinding:
-    """Converte `"KEY_LEFTALT+KEY_TAB"` em `("KEY_LEFTALT", "KEY_TAB")`."""
-    if not spec or not spec.strip():
-        return ()
-    tokens = [tok.strip().upper() for tok in spec.split("+") if tok.strip()]
-    for tok in tokens:
-        if is_virtual_token(tok):
-            continue
-        if not tok.startswith("KEY_"):
-            raise ValueError(
-                f"token {tok!r} fora do padrão 'KEY_*' "
-                f"(binding recebido: {spec!r})"
-            )
-    return tuple(tokens)
-
-
 __all__ = [
     "DEFAULT_BUTTON_BINDINGS",
     "PADRAO_QUE_A_TELA_PUBLICADA_NAO_DIZ",
@@ -91,6 +75,5 @@ __all__ = [
     "TOKEN_TOGGLE_OSK",
     "KeyBinding",
     "is_virtual_token",
-    "parse_binding",
 ]
 

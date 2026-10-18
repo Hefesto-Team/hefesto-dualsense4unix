@@ -11,8 +11,6 @@ import pytest
 
 pytest.importorskip("gi")
 
-from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS
-
 
 class _FakeListStore:
     """Stand-in para `Gtk.ListStore` suportando operações mínimas."""
@@ -57,7 +55,7 @@ class _FakeMixin:
 
 
 class TestHumanizacaoTeclado:
-    """KBD-01: exibição amigável  tokens crus (round-trip)."""
+    """KBD-01: exibição amigável dos botões e das teclas."""
 
     def test_humanize_button(self) -> None:
         from hefesto_dualsense4unix.app.actions.input_actions import humanize_button
@@ -74,22 +72,3 @@ class TestHumanizacaoTeclado:
         assert humanize_binding("KEY_SYSRQ") == "PrintScreen"
         assert humanize_binding("__OPEN_OSK__") == "Abrir teclado na tela"
         assert humanize_binding("KEY_C") == "C"
-
-    def test_dehumanize_binding(self) -> None:
-        from hefesto_dualsense4unix.app.actions.input_actions import dehumanize_binding
-
-        assert dehumanize_binding("Alt + Tab") == "KEY_LEFTALT+KEY_TAB"
-        assert dehumanize_binding("PrintScreen") == "KEY_SYSRQ"
-        assert dehumanize_binding("Abrir teclado na tela") == "__OPEN_OSK__"
-        assert dehumanize_binding("KEY_LEFTALT+KEY_TAB") == "KEY_LEFTALT+KEY_TAB"
-
-    def test_round_trip_dos_defaults(self) -> None:
-        """Todo binding default humanizado e de volta reproduz o token cru."""
-        from hefesto_dualsense4unix.app.actions.input_actions import (
-            dehumanize_binding,
-            humanize_binding,
-        )
-
-        for tokens in DEFAULT_BUTTON_BINDINGS.values():
-            cru = "+".join(tokens)
-            assert dehumanize_binding(humanize_binding(cru)) == cru

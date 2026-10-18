@@ -16,6 +16,7 @@ import re
 from typing import Any
 
 from hefesto_dualsense4unix.core import acoes_de_botao as acoes
+from hefesto_dualsense4unix.core import keyboard_mappings as teclas
 from hefesto_dualsense4unix.core import remapeamento_de_botao as remap
 
 from . import (
@@ -998,7 +999,29 @@ def linha_de_botao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] |
     if botao in sem_dono:
         raise RuntimeError(
             f"guardei, e {_nome_do_botao(botao)} fica sem quem o atenda — escolha outra ação.")
+    _avisar_se_sem_teclado_na_tela(ctx, token)
     return {"mesa": {f"{PREFIXO_DA_ACAO}{botao}": rotulo}}
+
+
+def _avisar_se_sem_teclado_na_tela(ctx: Contexto, token: str) -> None:
+    """Depois de guardar, diz que a máquina não tem o teclado na tela que a linha escolheu.
+
+    O dado é o `osk_disponivel` do bloco `keyboard_emulation` que o daemon publica (ele enxerga o
+    host); sem o bloco, ou sem GTK no ambiente, ninguém olhou e a linha não diz nada.
+    """
+    if token not in (teclas.TOKEN_TOGGLE_OSK, teclas.TOKEN_OPEN_OSK, teclas.TOKEN_CLOSE_OSK):
+        return
+    bloco = ctx.state.get("keyboard_emulation")
+    osk = bloco.get("osk_disponivel") if isinstance(bloco, dict) else None
+    try:
+        from hefesto_dualsense4unix.app.actions.input_actions import (
+            frase_do_teclado_na_tela,
+        )
+    except Exception:
+        return
+    frase = frase_do_teclado_na_tela(osk if isinstance(osk, bool) else None)
+    if frase:
+        raise RuntimeError(f"guardei, e {frase}")
 
 
 def _gravar_a_linha(ctx: Contexto, p: Any, botao: str, token: str) -> None:
@@ -1057,6 +1080,7 @@ def _a_linha_do_ps(ctx: Contexto, p: Any, rotulo: str) -> dict[str, Any] | None:
             "guardei a tecla, e o ato do PS continua: " + (motivo or "o Hefesto não respondeu"))
     _esquecer_a_maquina()
     _avisar_se_sem_saida_de_emergencia()
+    _avisar_se_sem_teclado_na_tela(ctx, token)
     return {"mesa": {f"{PREFIXO_DA_ACAO}ps": rotulo}}
 
 

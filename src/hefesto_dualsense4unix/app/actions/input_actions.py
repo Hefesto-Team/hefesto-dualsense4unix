@@ -21,7 +21,7 @@ import gi
 gi.require_version("Gtk", "3.0")
 
 
-# fronteira (`_dehumanize_binding`). Nomes na língua da usuária, não do kernel.
+# Nomes na língua da usuária, não do kernel.
 _BUTTON_LABELS: dict[str, str] = {
     "cross": "X (Cruz)",
     "circle": "Círculo",
@@ -70,9 +70,6 @@ _KEY_LABELS: dict[str, str] = {
     "__CLOSE_OSK__": "Fechar teclado na tela",
 }
 
-_REV_KEY: dict[str, str] = {label.lower(): raw for raw, label in _KEY_LABELS.items()}
-
-
 def humanize_button(button_id: str) -> str:
     """Rótulo amigável de um botão do controle (fallback: o próprio id)."""
     return _BUTTON_LABELS.get(button_id, button_id)
@@ -92,66 +89,20 @@ def humanize_binding(serialized: str) -> str:
     return " + ".join(saida)
 
 
-def _e_nome_de_tecla(tok: str) -> bool:
-    """`True` quando `KEY_<TOK>` existe no vocabulário do `evdev`."""
-    if not tok or not tok.replace("_", "").isalnum():
-        return False
-    try:
-        from evdev import ecodes
-    except Exception:
-        return False
-    return f"KEY_{tok.upper()}" in getattr(ecodes, "ecodes", {})
-
-
-def dehumanize_binding(friendly: str) -> str:
-    """Inverso de `humanize_binding` — 'Alt + Tab' → 'KEY_LEFTALT+KEY_TAB'."""
-    partes = [tok.strip() for tok in friendly.split("+") if tok.strip()]
-    saida = []
-    for tok in partes:
-        chave = tok.lower()
-        if chave in _REV_KEY:
-            saida.append(_REV_KEY[chave])
-        elif tok.startswith("KEY_") or tok.startswith("__"):
-            saida.append(tok)
-        elif (len(tok) == 1 and tok.isalnum()) or _e_nome_de_tecla(tok):
-            saida.append(f"KEY_{tok.upper()}")
-        else:
-            saida.append(tok)
-    return "+".join(saida)
-
-
 def frase_do_teclado_na_tela(osk_disponivel: bool | None) -> str:
-    """O que ESTA máquina tem, sobre o teclado na tela (N12).
+    """O que ESTA máquina não tem, sobre o teclado na tela; `""` quando tem ou ninguém olhou.
 
-    TECLADO-NA-TELA-QUE-A-JANELA-NAO-LE-01. `BINDINGS_LEGEND` diz o que o L3
-    PRECISA (`onboard` ou `wvkbd-mobintl` instalados) e nunca disse se algum
-    está — e a resposta viaja no fio desde 10/08, no `osk_disponivel` do bloco
-    `keyboard_emulation`. Como nenhum atalho de fábrica digita letra, esta é a
-    frase que decide se existe ALGUM caminho para escrever texto com o
-    controle.
-
-    Aditiva, e não uma reescrita da legenda: com `None` devolve `""` e a tela
-    fica exatamente como estava. "Não sei" já está dito no texto fixo, e
-    substituí-lo por "não tem" porque ninguém respondeu mandaria ela instalar um
-    pacote que talvez já esteja lá.
-
-    Os dois nomes saem com o ambiente ao lado porque a ORDEM importa e a janela
-    não a conhece: o `onboard` digita por XTEST e não alcança cliente Wayland
-    nativo; o daemon já escolhe pela sessão viva (`_osk_candidatos`), mas quem
-    lê a legenda está prestes a instalar à mão.
+    O dado vem do daemon, no `osk_disponivel` do bloco `keyboard_emulation`: ele enxerga o host,
+    e a janela num Flatpak olharia o sandbox. `None` não afirma nada, porque "não sei" mandaria
+    instalar um pacote que talvez já esteja lá. A ordem dos pacotes importa: o `onboard` digita
+    por XTEST e não alcança cliente Wayland nativo.
     """
-    if osk_disponivel is None:
+    if osk_disponivel is not False:
         return ""
-    if osk_disponivel:
-        return (
-            "<b>Neste computador:</b> o teclado na tela está instalado — o L3 "
-            "abre."
-        )
     return (
-        "<b>Neste computador:</b> não há teclado na tela instalado, então o L3 "
-        "não vai abrir nada — e, como nenhum atalho de fábrica digita letra, "
-        "hoje não há como escrever texto com o controle. Instale um: "
-        "<tt>wvkbd-mobintl</tt> (Wayland) ou <tt>onboard</tt> (X11)."
+        "não há teclado na tela instalado neste computador: essa ação não abre nada, e sem "
+        "ele não há como escrever texto com o controle. Instale o wvkbd-mobintl (Wayland) "
+        "ou o onboard (X11)."
     )
 
 

@@ -1,12 +1,7 @@
 """Testes de `hefesto_dualsense4unix.core.keyboard_mappings` (FEAT-KEYBOARD-EMULATOR-01)."""
 from __future__ import annotations
 
-import pytest
-
-from hefesto_dualsense4unix.core.keyboard_mappings import (
-    DEFAULT_BUTTON_BINDINGS,
-    parse_binding,
-)
+from hefesto_dualsense4unix.core.keyboard_mappings import DEFAULT_BUTTON_BINDINGS
 
 
 def test_default_bindings_cobertura_sprint_3() -> None:
@@ -55,40 +50,3 @@ def test_default_bindings_nao_colide_com_mouse() -> None:
     assert not colisoes_inesperadas, (
         f"botões {colisoes_inesperadas} colidem inesperadamente com mouse"
     )
-
-
-def test_parse_binding_tecla_unica() -> None:
-    assert parse_binding("KEY_ENTER") == ("KEY_ENTER",)
-
-
-def test_parse_binding_combo() -> None:
-    assert parse_binding("KEY_LEFTALT+KEY_TAB") == ("KEY_LEFTALT", "KEY_TAB")
-    assert parse_binding("KEY_LEFTCTRL+KEY_LEFTSHIFT+KEY_T") == (
-        "KEY_LEFTCTRL", "KEY_LEFTSHIFT", "KEY_T",
-    )
-
-
-def test_parse_binding_strip_e_upper() -> None:
-    assert parse_binding(" key_leftalt + key_tab ") == ("KEY_LEFTALT", "KEY_TAB")
-
-
-def test_parse_binding_vazio() -> None:
-    assert parse_binding("") == ()
-    assert parse_binding("   ") == ()
-
-
-def test_parse_binding_rejeita_formato_invalido() -> None:
-    with pytest.raises(ValueError, match="fora do padrão"):
-        parse_binding("ENTER")
-    with pytest.raises(ValueError, match="fora do padrão"):
-        parse_binding("Ctrl+C")
-
-
-def test_parse_binding_aceita_tokens_virtuais_osk() -> None:
-    """GUI Sprint 4 T1 (perda de dados): tokens virtuais OSK NÃO podem levantar."""
-    assert parse_binding("__TOGGLE_OSK__") == ("__TOGGLE_OSK__",)
-    assert parse_binding("__OPEN_OSK__") == ("__OPEN_OSK__",)
-    assert parse_binding("__CLOSE_OSK__") == ("__CLOSE_OSK__",)
-    assert parse_binding("__open_osk__") == ("__OPEN_OSK__",)
-
-

@@ -18,10 +18,6 @@ DISPENSAS = {
          "por 1px e passa a rolar. É escolha justificada, não descuido. "
          "PREEXISTENTE: existe idêntico no produto publicado, e "
          "`regua.py 06-navegacao.html --publicado` prova."),
-        ('quadro "As opções de ativação"',
-         "01/09/2026 — a mesma razão do quadro acima, e o mesmo 1px de margem. "
-         "Os dois quadros desta aba pagam altura no padding porque o conteúdo "
-         "dela é o mais denso das dez."),
     ],
     "08-conexoes.html": [
         ("titulo x=",

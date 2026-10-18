@@ -207,8 +207,8 @@ def _do_teclado(botao: str) -> str | None:
     """O token que `DEFAULT_BUTTON_BINDINGS` dá àquele botão, já colado.
 
     O produto guarda combos como TUPLA (`("KEY_LEFTALT", "KEY_TAB")`); aqui eles
-    viram a forma com `+`, que é a que `keyboard_mappings.parse_binding` lê de
-    volta. Um round-trip, e não uma segunda grafia.
+    viram a forma com `+`, a que o perfil guarda em `button_actions` e o «Gravar
+    tecla» do mapa do controle captura. Uma grafia só.
     """
     ligacao = DEFAULT_BUTTON_BINDINGS.get(botao)
     if not ligacao:
