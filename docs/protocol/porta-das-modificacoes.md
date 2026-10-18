@@ -33,6 +33,7 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `luz.set` | `{uniq, rgb: [r, g, b], brilho?}` | `escrever:luz` | o resultado do `led.set` |
 | `vibracao.set` | `{uniq, fraco, forte}` (0 a 255) | `escrever:vibracao` | o resultado do `rumble.set` |
 | `gatilho.set` | `{uniq, lado: esquerdo\|direito, modo, params}` | `escrever:gatilho` | o resultado do `trigger.set` |
+| `eventos.publicar` | `{topico, dados}` | `publicar:<tópico>` | `{publicado}` |
 | `acessorios.estado` | `{ligado, nivel (0 a 10), perfil?, aparelhos: [...], ajustes?}` | `ler:acessorios.gesto` | `{recebido}` |
 | `luz.pulso` | `{uniq, cor: [r, g, b], cor_quente?, fundo (0 a 1), periodo_s}` ou `{uniq, parar: true}` | `pedir:luz.pulso` | `{aplicado, motivo, periodo_s?}` |
 
@@ -81,6 +82,14 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   a fonte seca ou com o jogo fechado, o zero sai. No cabo e no Bluetooth é o que o controle recebe: depois do
   ganho da háptica dele, e zero quando a vibração não vai a ele. Não há segundo gravador: o envelope lê o PCM
   que a ponte do rádio e o ouvido da placa já leem;
+- `jogo.brinquedo` (`ler:jogo.brinquedo`) entrega `nome: "jogo.brinquedo"`: o que o jogo pede a um brinquedo,
+  passado por outra extensão, `{funcoes: {<função>: 0 a 1}, origem, t}`. As funções são `vibrar`, `girar`,
+  `bombear`, `empurrar`, `sugar`, `oscilar`, `profundidade`, `curso` e `dedilhar`; o Hefesto não sabe o que é
+  brinquedo, e quem assina traduz cada função para o aparelho dele. `origem` é o `id` da extensão que publicou
+  (o serviço o põe; o que a extensão mandar em `origem` ou `t` cai) e `t` é o `time.monotonic()` do serviço.
+  Quem publica nunca recebe o próprio evento. Quando a extensão que publicou sai (parada, morta ou desligada) com
+  alguma função acima de zero, o serviço publica em nome dela um `jogo.brinquedo` com as nove funções em 0, e
+  quem assina nunca fica com a última força presa. Só existe publicado por extensão: o serviço não o origina;
 - `acessorios.gesto` (`ler:acessorios.gesto`) entrega `nome: "acessorios.gesto"`: o gesto do PS que comanda os
   acessórios, `{uniq, jogador, gesto, valor}`. `gesto` é `sobe`, `desce`, `para`, `perfil_seguinte`,
   `perfil_anterior`, `nivel_ao_vivo` (`valor` de 0 a 1), `surto` ou `camada` (`valor` 1 liga, 0 desliga); nunca um
@@ -105,6 +114,19 @@ Cada evento chega como notificação, sem `id`:
 
 O serviço guarda até 256 eventos por assinatura. Quando a fila enche, o mais antigo sai: quem lê devagar
 perde eventos velhos, e o tique do serviço nunca espera.
+
+## Uma extensão publica para as outras
+
+O `eventos.publicar` `{topico, dados}` passa um evento de uma extensão a todas as que têm `ler:<tópico>`, pela
+mesma fila de 256 por assinatura. Só vale para a lista fechada de tópicos publicáveis, que hoje é um,
+`jogo.brinquedo`, e pede `publicar:jogo.brinquedo` no manifesto (a tela mostra a frase antes do «sim»). Em
+`dados` vai só `funcoes`; o serviço monta o envelope com `origem` e `t`. As recusas:
+
+- sem a permissão: `-32010`;
+- tópico fora da lista, `dados.funcoes` ausente, vazio ou que não seja objeto, função fora da lista ou valor fora
+  de 0 a 1: `-32003`, com a frase;
+- mais de 20 publicações aceitas por segundo da mesma extensão: `-32003`; a janela é de 1 s, e a recusada não
+  conta.
 
 ## A volta dos acessórios no controle
 
@@ -158,7 +180,7 @@ manifesto os aceita, e a janela os desenha quando o serviço entregar o estado e
 
 ## Os erros
 
-Além dos códigos do IPC principal (`-32700`, `-32600`, `-32601`, `-32602`), a porta tem quatro próprios:
+Além dos códigos do IPC principal (`-32700`, `-32600`, `-32601`, e `-32003` para parâmetro inválido), a porta tem quatro próprios:
 
 | código | quando |
 | --- | --- |
@@ -167,6 +189,6 @@ Além dos códigos do IPC principal (`-32700`, `-32600`, `-32601`, `-32602`), a 
 | `-32012` | quem é você: ficha desconhecida, processo estranho ou primeira palavra errada |
 | `-32013` | o serviço não conseguiu aplicar a escrita |
 
-Toda escrita sem `uniq` é recusada com `-32602`, porque escrever em todos é proibido. Em toda escrita,
+Toda escrita sem `uniq` é recusada com `-32003`, porque escrever em todos é proibido. Em toda escrita,
 o jogo tem a vez: se ele está escrevendo a luz, o gatilho ou a vibração daquele controle, a modificação
 espera.

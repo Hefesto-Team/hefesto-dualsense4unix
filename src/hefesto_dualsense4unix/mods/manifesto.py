@@ -50,10 +50,26 @@ TOPICOS_DE_LEITURA: dict[str, tuple[str, ...]] = {
     # Fica à parte da vibração: saber QUAL jogo está aberto é dado da pessoa, e quem só quer a
     # vibração não o recebe.
     "perfil.jogo": (EventTopic.PERFIL_TROCOU,),
+    # O que o jogo pede a um brinquedo, passado de uma extensão a outra (`eventos.publicar`). O
+    # Hefesto não sabe o que é brinquedo: o vocabulário é por função, e quem assina traduz.
+    "jogo.brinquedo": (EventTopic.JOGO_BRINQUEDO,),  # (noqa-acento): contrato ASCII
     # Os gestos do PS que comandam os acessórios (sobe, desce, para, perfil…). A mesma permissão
     # deixa a modificação devolver o estado (`acessorios.estado`), que liga e desliga os gestos.
     "acessorios.gesto": (EventTopic.ACESSORIOS_GESTO,),  # (noqa-acento): contrato ASCII
 }
+
+#: ``publicar:<tópico>``: os tópicos que uma extensão pode publicar para as outras
+#: (``eventos.publicar``), com o tópico do barramento que cada um entrega. Quem lê pede
+#: ``ler:<tópico>``; quem publica pede ``publicar:<tópico>``.
+TOPICOS_DE_PUBLICACAO: dict[str, str] = {
+    "jogo.brinquedo": EventTopic.JOGO_BRINQUEDO,  # (noqa-acento): contrato ASCII
+}
+
+#: As funções de um pedido ao brinquedo, cada uma de 0 a 1; o resto é recusado.
+FUNCOES_DO_BRINQUEDO = (
+    "vibrar", "girar", "bombear", "empurrar", "sugar", "oscilar", "profundidade", "curso",
+    "dedilhar",
+)
 
 #: ``escrever:<canal>``: os canais do controle que uma modificação pode pedir.
 CANAIS_DE_ESCRITA = ("luz", "vibracao", "gatilho")
@@ -79,6 +95,12 @@ _O_QUE_DEIXA: dict[str, str] = {
         "Saber a intensidade da vibração fina que o jogo manda a cada controle."
     ),
     "ler:perfil.jogo": "Saber o perfil, o jogo e o estilo em uso em cada controle.",
+    "ler:jogo.brinquedo": (  # (noqa-acento): contrato ASCII
+        "Receber o que o jogo pede a um brinquedo, passado por outra extensão."
+    ),
+    "publicar:jogo.brinquedo": (  # (noqa-acento): contrato ASCII
+        "Passar a outras extensões o que o jogo pede a um brinquedo."
+    ),
     "ler:acessorios.gesto": (  # (noqa-acento): contrato ASCII
         "Receber os gestos do botão PS que comandam os acessórios, sem receber botão nenhum."
     ),
@@ -362,10 +384,12 @@ __all__ = [
     "ALCANCES_DE_REDE",
     "CANAIS_DE_ESCRITA",
     "COR_HEXA",
+    "FUNCOES_DO_BRINQUEDO",
     "NOME_DO_MANIFESTO",
     "PERMISSOES_SIMPLES",
     "TIPOS",
     "TOPICOS_DE_LEITURA",
+    "TOPICOS_DE_PUBLICACAO",
     "Manifesto",
     "ManifestoRecusadoError",
     "Opcao",  # (noqa-acento): contrato ASCII
