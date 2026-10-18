@@ -232,6 +232,7 @@ def test_o_jogo_que_fecha_diz_fechou_e_depois_o_perfil_sem_jogo() -> None:
 
 def test_nenhum_evento_do_src_publica_marcas() -> None:
     """Em toda chamada `publish(...)` do `src/`, a palavra «marcas» não aparece."""
+    # D-1810-O-PERFIL-TROCOU-DIZ-O-JOGO-E-NAO-LEVA-MARCA
     achados = []
     for arquivo in sorted((RAIZ / "src").rglob("*.py")):
         arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
@@ -268,6 +269,7 @@ def test_o_manifesto_aceita_o_deslizante_com_faixa_passo_e_padrao() -> None:
 
 
 def test_o_deslizante_sem_padrao_o_fora_da_faixa_e_a_faixa_torta_sao_recusados() -> None:
+    # D-1810-O-MANIFESTO-GANHA-O-DESLIZANTE-E-A-LISTA-DE-JOGOS
     sem_padrao = _opcao()
     del sem_padrao["padrao"]  # noqa-acento: chave do contrato
     for ruim in (sem_padrao, _opcao(padrao=21), _opcao(padrao=-1), _opcao(padrao=True),

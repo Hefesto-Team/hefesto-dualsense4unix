@@ -204,6 +204,7 @@ def test_a_janela_do_produto_diz_a_porta_certa_de_cada_jogo_pela_pasta(
 
 
 def test_o_ip_que_o_jogo_guardou_nunca_chega_a_tela(biblioteca, tmp_path) -> None:
+    # D-1810-A-JANELA-DA-EXTENSAO-LE-O-KIT-PELA-PASTA-E-NUNCA-MOSTRA-O-IP
     janela = _janela_da_extensao(tmp_path)
     assert _IP_DE_FORA not in janela
     assert set(re.findall(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", janela)) <= {"127.0.0.1"}

@@ -390,6 +390,7 @@ def test_o_menu_abre_mostra_as_permissoes_e_fecha(lar, ctx, tmp_path) -> None:
 
 
 def test_remover_pede_o_segundo_clique_e_apaga_o_codigo_e_os_dados(lar, ctx, tmp_path) -> None:
+    # D-1810-O-SIM-DAS-PERMISSOES-E-O-REMOVER-SE-CONFIRMAM-NO-MENU-DA-LINHA
     a07 = _a07()
     _instalar(a07, ctx, _fonte(tmp_path, opcoes=_OPCOES))
     a07.guardar_opcao_da_modificacao(
@@ -539,6 +540,7 @@ def test_configurar_o_lancador_abre_a_janela_igual_para_todos(lar, ctx, monkeypa
 
 
 def test_identificar_diz_o_que_achou_ou_como_ensinar(lar, ctx, monkeypatch) -> None:
+    # D-1810-O-IDENTIFICAR-QUE-NAO-ACHA-PISCA-A-RECUSA
     from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 
     a07 = _a07()
@@ -663,6 +665,7 @@ def test_guardar_a_cor_valida_normaliza_e_mantem_a_aba_aberta(lar, ctx, tmp_path
 
 def test_a_linha_da_fila_so_leva_a_contagem_e_a_frase_do_cartao_velho_fica_fora() -> None:
     """A frase «Abra o Heroic uma vez…» passava por baixo dos três botões da linha."""
+    # D-1810-A-LINHA-DO-LANCADOR-LEVA-SO-A-CONTAGEM
     from hefesto_dualsense4unix.integrations.censo_dos_lancadores import FRASE_NUNCA_ABERTO
     from hefesto_dualsense4unix.interface import desenho_dos_lancadores as dl
 

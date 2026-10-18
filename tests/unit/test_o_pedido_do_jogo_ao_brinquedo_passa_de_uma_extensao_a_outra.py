@@ -302,6 +302,7 @@ def test_quem_ja_tinha_zerado_ou_nunca_publicou_nao_deixa_zero_nenhum() -> None:
 
 def test_a_publicacao_parcial_nao_esconde_a_funcao_que_ficou_acima_de_zero() -> None:
     """Quem manda só a função que mudou (vibrar, depois girar em 0) deixa o vibrar preso."""
+    # D-1810-UMA-EXTENSAO-PUBLICA-O-PEDIDO-DO-JOGO-AO-BRINQUEDO-PELA-PORTA
 
     async def corpo(_p: Porta, _b: EventBus, c: dict[str, _Mod]) -> None:
         await c["b"].publicar({"vibrar": 0.8})
