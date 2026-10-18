@@ -97,9 +97,9 @@ TETO = round(RUMBLE_CUSTOM_MULT_MAX * 100)
 PASSO = math.gcd(*(round(m * 100) for m in RUMBLE_POLICY_MULT.values()), TETO)
 
 #: O DESENHO DE 18/10/2026 (r3b-05-12): a «Força da vibração» é só o trilho de 0 a 100%, de 5 em 5,
-#: sem os três botões. 100% é o que o firmware entrega e o trilho só abaixa; o teto de 150% e os
-#: degraus (`TETO`, `PASSO`, `FORCA`) são do produto de hoje, e a segunda passagem decide como o
-#: porcento vira o degrau do byte de atenuação. O desenho não os desenha.
+#: sem os três botões. 100% é o que o firmware entrega e o trilho só abaixa; o trilho até 200% e os
+#: três degraus, com o Máximo em 150% (`TETO`, `PASSO`, `FORCA`), são do produto de hoje, e a segunda
+#: passagem decide como o porcento vira o degrau do byte de atenuação. O desenho não os desenha.
 TETO_DA_FORCA = 100
 PASSO_DA_FORCA = 5
 
@@ -1368,7 +1368,7 @@ MIOLO = f'''
 LEGENDA = f'''<div class="nota">
   <h2>O que você pediu, e está aqui</h2>
   <ul>
-    <li><b>A Força da vibração é só o trilho</b> (18/10): saíram os quatro botões (Forte, Média, Fraca, Desligada), e ficou o trilho de 0 a 100% com a porcentagem e o ícone do DualSense. 100% é o que o firmware entrega, e o trilho só abaixa. A linha ficou mais baixa e o desenho do controle ganhou o espaço. A <b>Sensor háptico</b> tem a bolinha verde acesa quando a háptica está chegando ao controle, e o <b>Testar agora</b> tem <b>Vibração</b>, <b>Háptica</b> e <b>Parar</b> numa linha só.</li>
+    <li><b>A Força da vibração é só o trilho</b> (18/10): saíram os botões de degrau, e ficou o trilho de 0 a 100% com a porcentagem e o ícone do DualSense. 100% é o que o firmware entrega, e o trilho só abaixa. A linha ficou mais baixa e o desenho do controle ganhou o espaço. A <b>Sensor háptico</b> tem a bolinha verde acesa quando a háptica está chegando ao controle, e o <b>Testar agora</b> tem <b>Vibração</b>, <b>Háptica</b> e <b>Parar</b> numa linha só.</li>
     <li><b>Os quatro controles, um por coluna, sempre à vista</b> — na mesma ordem da fita do topo, cada um com a sua cor de plástico na borda do desenho.</li>
     <li><b>A força tem endereço, e o endereço é a coluna</b> — cada uma tem a sua barra de Força. Como os quatro estão à vista, <b>a fita do topo não escolhe nada aqui</b> e nasce esmaecida (28/08). Também saiu o destaque que a coluna do P1 tinha: com a fita inerte, ele afirmaria na tela uma coisa que a fita já não faz.</li>
     <li><b>As cinco lâmpadas do jogador saíram do desenho</b> (28/08). Medidas neste navegador, nesta aba: <b>2,79 × 0,93 px</b> cada uma. Não é pouco contraste, é pouco pixel — menos de um pixel de altura não diz nada, aceso ou apagado. Quem diz o jogador aqui é o rótulo embaixo da coluna, que se lê. Elas continuam desenhadas na <b>Iluminação</b>, onde o controle é grande.</li>

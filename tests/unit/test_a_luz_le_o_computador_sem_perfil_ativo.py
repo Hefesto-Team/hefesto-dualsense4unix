@@ -88,23 +88,28 @@ def test_o_computador_que_esvaziou_nao_deixa_resto() -> None:
     assert perfil is None or luz.plano_do_perfil(perfil, [STARLIGHT]) == {}
 
 
+def _daemon_com_dois_controles() -> Any:
+    """P1 no modo DualSense (pad ``uhid``) e P2 no co-op no modo Xbox (pad ``uinput``), sem jogo."""
+    p2 = SimpleNamespace(vpad=SimpleNamespace(backend="uinput", visto_ha_s={}, game_open=False),
+                         reader=None, motion_reader=None)
+    return SimpleNamespace(
+        store=SimpleNamespace(active_profile=None),
+        controller=SimpleNamespace(primary_uniq=STARLIGHT), _last_state=None,
+        _gamepad_device=SimpleNamespace(backend="uhid", visto_ha_s={}, game_open=False),
+        _coop_manager=SimpleNamespace(_players={BRANCO: p2}),
+        display_authority="unknown")
+
+
 def test_o_passo_do_laco_pinta_o_efeito_do_computador() -> None:
-    """Pelo laço real: sem perfil ativo, o primeiro tique escreve um quadro do efeito."""
+    """Pelo ``Passo`` de produção: sem perfil ativo, o primeiro tique escreve um quadro do efeito
+    nos dois controles, no modo DualSense e no modo Xbox. Antes da cura o plano saía vazio e o
+    tique só soltava a barra."""
     _escolhe(RESPIRAR)
     escritos: list[tuple[str, tuple[int, int, int]]] = []
     animada = luz.LuzAnimada(lambda u, c: escritos.append((u, c)), lambda u: None)
-    daemon = _daemon(None)
-    daemon.controller = SimpleNamespace(
-        list_controllers=lambda: [SimpleNamespace(uniq=STARLIGHT)])
-    passo = luz.Passo(daemon, animada)
-    passo._plano = {}
-    perfil = luz.perfil_ativo(daemon)
-    assert perfil is not None
-    passo._plano = luz.plano_do_perfil(perfil, [STARLIGHT])
 
-    assert passo._plano and STARLIGHT in passo._plano
-    assert animada.tique(1.0, passo._plano) == 1
-    assert escritos and escritos[0][0] == STARLIGHT
+    assert luz.Passo(_daemon_com_dois_controles(), animada)(10.0) == 2
+    assert {u for u, _c in escritos} == {STARLIGHT, BRANCO}
 
 
 def test_o_perfil_ativo_continua_mandando_sobre_o_computador(
