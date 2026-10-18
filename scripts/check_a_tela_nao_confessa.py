@@ -102,10 +102,6 @@ A_DIVIDA: dict[str, str] = {
         "`interface/pacotes/a01_jogar.py` — a tela OFERECE uma máscara que o "
         "produto não constrói. O que falta é o construtor, e a frase é o "
         "recibo disso no cartão dela — medida em 11/09/2026",
-    # fica: a frase descreve a escolha do usuário, e não uma capacidade que devemos
-    "como se o Hefesto não estivesse instalado":
-        "o sujeito é o JOGO excluído por ela; a frase descreve a escolha, não "
-        "uma capacidade que devemos — 21/09/2026",
 }
 
 
