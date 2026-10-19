@@ -95,13 +95,30 @@ def test_a_duracao_do_toque_e_40_vezes_d_sobre_200_de_25_a_60(duracao: int, toqu
     assert tv.duracao_do_toque_do_estilo(duracao) == toque
 
 
-@pytest.mark.parametrize(("chave", "forma"), [
-    ("luta", fh.IMPACTO), ("esportes", fh.IMPACTO), ("ritmo", fh.ESTALO),
-    ("fps", fh.TOQUE), ("acao", fh.TOQUE), ("arco", fh.TOQUE),  # noqa-acento: chave
-    ("aventura", fh.TOQUE), ("plataforma", fh.TOQUE), ("retro", fh.TOQUE),
-])
+FORMA_DO_ESTILO = {
+    "luta": fh.IMPACTO, "esportes": fh.IMPACTO, "ritmo": fh.ESTALO,
+    "fps": fh.TOQUE, "acao": fh.TOQUE, "arco": fh.TOQUE,  # noqa-acento: chave
+    "aventura": fh.TOQUE, "plataforma": fh.TOQUE, "retro": fh.TOQUE,
+    "terror": fh.TOQUE, "corrida": fh.TOQUE, "simulacao": fh.TOQUE,
+    # A resposta de 08/10 («Toque por tiro e lado do som, como nos outros») vence o «Sem efeito»
+    # que a tabela do catálogo de 15/10 dá ao Point and click e à Maratona.
+    "point_and_click": fh.TOQUE, "maratona": fh.TOQUE,
+}
+
+
+@pytest.mark.parametrize(("chave", "forma"), sorted(FORMA_DO_ESTILO.items()))
 def test_o_estilo_escolhe_a_forma_do_toque(chave: str, forma: str) -> None:
     assert fh.forma_que_vale(None, chave) == forma
+
+
+def test_todo_estilo_de_fabrica_tem_a_forma_na_tabela() -> None:
+    """Estilo novo sem linha aqui reprova: a forma dele não nasce por acaso.
+
+    O Nativo é modo (quem manda é o jogo); Visual novel e Adulto ficam para as sprints delas.
+    """
+    fora = ({e.chave for e in ej.DE_FABRICA} - set(FORMA_DO_ESTILO)
+            - {"nativo", "visual_novel", "adulto"})
+    assert not fora, fora
 
 
 def test_nenhuma_forma_longa_e_padrao_de_estilo() -> None:
