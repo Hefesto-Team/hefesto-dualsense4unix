@@ -420,16 +420,6 @@ def a08() -> Any:
     return a08_conexoes
 
 
-@pytest.mark.parametrize("via", ["usb", "bt"])
-def test_a_dica_da_luz_que_a_08_pinta_fala_usb_e_bt(a08: Any, via: str) -> None:
-    """O `title` do «A luz não acende» é repintado a cada tique pelo dono"""
-    dica = a08.dica_da_luz(via)
-    assert palavra("bt") in dica, (
-        f"a dica da luz no {palavra(via)} não diz {palavra('bt')!r}: {dica!r}")
-    assert not _transporte_na_lingua_do_mapa(dica), (
-        f"a dica da luz no {palavra(via)} voltou à língua do mapa: {dica!r}")
-
-
 def test_a_dica_do_microfone_no_bt_conta_o_custo_na_palavra_do_dono(a08: Any) -> None:
     """A metade do custo vem de `secao_controles.frase_da_capacidade_do_mic`.
 

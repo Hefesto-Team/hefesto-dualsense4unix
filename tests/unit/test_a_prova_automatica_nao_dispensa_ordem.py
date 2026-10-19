@@ -73,7 +73,7 @@ def test_os_outros_gestos_da_aba_continuam_sendo_provados() -> None:
 
     outros = {"alvo", "todos", "mic-existe", "sala-altura", "sala-visada",
               "vizinho-o-que-e", "custo-mic", "examinar-portas",
-              "escolher-aparelho", "luz-nao-acende", "aplicar"}
+              "escolher-aparelho", "aplicar"}
     perigosos = _perigosos()
     protegidos = {g for p, g in perigosos if p == PAGINA} & outros
     clicar, pulados = regua_do_mockup._alvos_a_clicar(

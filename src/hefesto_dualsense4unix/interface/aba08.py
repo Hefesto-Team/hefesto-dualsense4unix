@@ -322,8 +322,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .gc-item.off .gc-nome{color:var(--fg)}
   .gc-item.off{cursor:default;border-style:dashed}
   .gc-item.off .gc-cabeca{border-bottom:0}
-  .gc-item.off .gc-resumo,
-  .gc-item.off .gc-corpo{display:none}
+  .gc-item.off .gc-resumo{display:none}
   .gc-item.off .gc-dono,
   .gc-item.off .gc-num{display:none}
   .gc-item.off .gc-nome b{color:var(--texto-suave);font-weight:600}
@@ -566,25 +565,8 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .gc-est .est > .certo{margin-left:auto;font-style:normal;font-weight:700;color:var(--texto-suave)}
   .gc-est .est > b + .certo{margin-left:0}
   .gc-est .est.warn > b{color:var(--orange)}
-  .gc-corpo{display:flex;flex-direction:column;gap:5px;margin-top:auto;padding-top:10px}
-  /* «A LUZ NÃO ACENDE» VIROU BOTÃO — 26/09/2026, pedido: *«A luz não
-     acende isso deveria ser um botão»*. Era link pontilhado.
-     O TEXTO ABAIXO É DE 25/09. «A LUZ NÃO ACENDE» ERA UM LINK DISCRETO, e não um botão do tamanho da
-     economia: é o conserto de um caso raro. A trava continua IRMÃ e colada
-     antes do botão (`></i><button`), porque o `~` só alcança irmãos
-     posteriores — é ela que o apaga no cabo, onde o gesto não vale. */
-  .gc-corpo .gc-luz{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
-  .gc-luz .ressalva{margin-top:0;text-align:center}
-  .gc-corpo .gc-luz{align-items:stretch}
-  .gc-luz .btn{width:100%;height:26px;display:flex;align-items:center;justify-content:center;gap:7px}
-  /* OS BOTÕES MAIS BAIXOS — 26/09/2026, com a janela maximizada: *«diminuir a
-     altura dos botões»*. 26 px no perfil e na luz, 28 px nas quatro
-     ferramentas (o esqueleto dá 34). */
-  .gc-luz .btn .i{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
-                  stroke-linecap:round;stroke-linejoin:round}
-  .gc-corpo .ltrava{display:none}
-  .gc-corpo .ltrava.on ~ .btn{opacity:.55;cursor:help}
-  .gc-corpo .ltrava.on ~ .btn:hover{color:var(--fg)}
+  /* O BOTÃO «A LUZ NÃO ACENDE» SAIU EM 19/10/2026, a pedido, com a espera pelo PS e o
+     gesto: o cartão termina no resumo. */
   /* REGRA DE PRODUTO: *"sempre visível mas só
      acionável quando tiver no rádio"* — botão que SOME ensina que a tela é
      instável. */
@@ -993,11 +975,6 @@ BORDA_NEUTRA = ("A borda é <b>neutra</b> porque a cor deste controle <b>não fo
                 "Uma borda colorida aqui seria uma cor que ninguém leu — e o desenho "
                 "continua na cor que o resto do Hefesto já conhece.")
 
-LUZ_NO_CABO = ("Só funciona com o controle no BT. Este está no USB, onde a barra de luz "
-               "não depende de reconexão.")
-LUZ_NO_RADIO = ("Desliga este controle do BT. Aperte PS para ele voltar, e a barra de luz "
-                "volta a obedecer.")
-
 # continua verdadeira) mais `secao_controles.frase_da_capacidade_do_mic()` (o
 # `frase_da_capacidade_do_mic` foi escrita para impedir.
 MIC_LIGADO_DICA = (
@@ -1150,21 +1127,6 @@ def linha_do_controle(c):
              else f' style="color:{cor_da_zona(c["cor"])}"')
     barra = f'<i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"{tinta}></i>'
     estado = _estado_da_bancada(c) if conectado else {}
-    trava = (f'<i class="ltrava{"" if (no_radio or not conectado) else " on"}" '
-             f'data-campo="luz-trava" '
-             f'data-hef-alvo="classe" '
-             f'data-hef-quando="{_pacote08.LUZ_TRAVADA}"></i>')
-    dica_luz = ('data-campo="luz-dica" data-hef-alvo="atributo" '
-                'data-hef-atributo="title"')
-    rotulo_luz = (f'<span data-campo="luz-texto">'
-                  f'{vale(_pacote08.texto_do_botao_da_luz())}</span>')
-    botao = (f'<button class="btn" data-gesto="luz-nao-acende" {dica_luz} '
-             f'title="{vale(LUZ_NO_RADIO if no_radio else LUZ_NO_CABO)}">'
-             f'<svg class="i" aria-hidden="true"><use href="#rd-lampada"/></svg>'
-             f'{rotulo_luz}</button>')
-    # a COR do jogador nesta função (`player_slot_color`), e ela entra no
-    bloco_da_luz = (f'<span class="gc-luz">{monta_ressalva("luz-espera")}'
-                    f'{trava}{botao}</span>')
     marca = "" if conectado else ' off'
     diz = "" if conectado else ' data-conectado="nao"'
     # `[data-controle][data-conectado="nao"]:not(.vazia){border-color:…}`, e ela
@@ -1189,9 +1151,6 @@ def linha_do_controle(c):
             </div>
             <div class="gc-resumo">
 {chr(10).join(f'              <span class="gc-est" data-campo="{k}" data-hef-alvo="html">{estado.get(k, TRAVESSAO)}</span>' for k in ESTADOS_DA_LINHA)}
-            </div>
-            <div class="gc-corpo">
-              {bloco_da_luz}
             </div>
           </div>'''
 
@@ -1636,7 +1595,7 @@ def _css_do_radio() -> str:
 #: põe no `:root`, e o tema não chegaria à régua. O controle leva o plástico dele, lido do aparelho;
 #: o `--c-controle` é só a cor do desenho de exemplo.
 CORES_NA_REGUA = {
-    "controle": "#7eb8d4", "wifi": "#c3e88d", "teclado": "#ffb86c", "mouse": "#f1fa8c",
+    "controle": "#7eb8d4", "wifi": "#d4d7e0", "teclado": "#ffb86c", "mouse": "#f1fa8c",
     "celular": "#f78c6c", "relogio": "#82aaff", "ruido": "#8a8fa8", "fone": "#8be9fd",
     "caixa": "#bd93f9", "outro": "#9a9eb8", _pacote08.TIPO_ACESSORIO: "#ff79c6",
 }
@@ -1690,8 +1649,12 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
   .radio span.vaga.vaga:not([data-ligada]):not(.fixa):hover{border-color:var(--linha);
                                                           color:var(--fg)}
   .radio .lugar{padding-top:0;padding-bottom:0;min-height:0}
-  .radio .lugar-topo{min-height:26px}
-  .radio .lugar-nome,.radio .abre-lugar{height:24px;padding-top:0;padding-bottom:0}
+  /* O NOME E O «ONDE FICA?» CABEM NA LINHA (19/10/2026, a foto da aba Conexões): o `min-height`
+     de 26 px dos dois vencia a altura compacta e eles encostavam na moldura do adaptador. */
+  .radio .lugar-topo{min-height:28px}
+  .radio .lugar-nome,.radio .abre-lugar{height:22px;min-height:0;padding-top:0;padding-bottom:0}
+  .radio .lugar-topo .ensina{min-height:0;height:20px;padding-top:0;padding-bottom:0}
+  .radio .abre-lugar:disabled{opacity:.35;cursor:default}
   #rd-secao > .quadro-topo{padding-top:6px;padding-bottom:6px}
   #rd-secao .quadro-corpo{padding-top:0;padding-bottom:8px}
   #rd-secao .espectro{margin-bottom:6px}

@@ -1083,8 +1083,7 @@
   .gc-item.off .gc-nome{color:var(--fg)}
   .gc-item.off{cursor:default;border-style:dashed}
   .gc-item.off .gc-cabeca{border-bottom:0}
-  .gc-item.off .gc-resumo,
-  .gc-item.off .gc-corpo{display:none}
+  .gc-item.off .gc-resumo{display:none}
   .gc-item.off .gc-dono,
   .gc-item.off .gc-num{display:none}
   .gc-item.off .gc-nome b{color:var(--texto-suave);font-weight:600}
@@ -1327,25 +1326,8 @@
   .gc-est .est > .certo{margin-left:auto;font-style:normal;font-weight:700;color:var(--texto-suave)}
   .gc-est .est > b + .certo{margin-left:0}
   .gc-est .est.warn > b{color:var(--orange)}
-  .gc-corpo{display:flex;flex-direction:column;gap:5px;margin-top:auto;padding-top:10px}
-  /* «A LUZ NÃO ACENDE» VIROU BOTÃO — 26/09/2026, pedido: *«A luz não
-     acende isso deveria ser um botão»*. Era link pontilhado.
-     O TEXTO ABAIXO É DE 25/09. «A LUZ NÃO ACENDE» ERA UM LINK DISCRETO, e não um botão do tamanho da
-     economia: é o conserto de um caso raro. A trava continua IRMÃ e colada
-     antes do botão (`></i><button`), porque o `~` só alcança irmãos
-     posteriores — é ela que o apaga no cabo, onde o gesto não vale. */
-  .gc-corpo .gc-luz{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
-  .gc-luz .ressalva{margin-top:0;text-align:center}
-  .gc-corpo .gc-luz{align-items:stretch}
-  .gc-luz .btn{width:100%;height:26px;display:flex;align-items:center;justify-content:center;gap:7px}
-  /* OS BOTÕES MAIS BAIXOS — 26/09/2026, com a janela maximizada: *«diminuir a
-     altura dos botões»*. 26 px no perfil e na luz, 28 px nas quatro
-     ferramentas (o esqueleto dá 34). */
-  .gc-luz .btn .i{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
-                  stroke-linecap:round;stroke-linejoin:round}
-  .gc-corpo .ltrava{display:none}
-  .gc-corpo .ltrava.on ~ .btn{opacity:.55;cursor:help}
-  .gc-corpo .ltrava.on ~ .btn:hover{color:var(--fg)}
+  /* O BOTÃO «A LUZ NÃO ACENDE» SAIU EM 19/10/2026, a pedido, com a espera pelo PS e o
+     gesto: o cartão termina no resumo. */
   /* REGRA DE PRODUTO: *"sempre visível mas só
      acionável quando tiver no rádio"* — botão que SOME ensina que a tela é
      instável. */
@@ -2007,8 +1989,12 @@
   .radio span.vaga.vaga:not([data-ligada]):not(.fixa):hover{border-color:var(--linha);
                                                           color:var(--fg)}
   .radio .lugar{padding-top:0;padding-bottom:0;min-height:0}
-  .radio .lugar-topo{min-height:26px}
-  .radio .lugar-nome,.radio .abre-lugar{height:24px;padding-top:0;padding-bottom:0}
+  /* O NOME E O «ONDE FICA?» CABEM NA LINHA (19/10/2026, a foto da aba Conexões): o `min-height`
+     de 26 px dos dois vencia a altura compacta e eles encostavam na moldura do adaptador. */
+  .radio .lugar-topo{min-height:28px}
+  .radio .lugar-nome,.radio .abre-lugar{height:22px;min-height:0;padding-top:0;padding-bottom:0}
+  .radio .lugar-topo .ensina{min-height:0;height:20px;padding-top:0;padding-bottom:0}
+  .radio .abre-lugar:disabled{opacity:.35;cursor:default}
   #rd-secao > .quadro-topo{padding-top:6px;padding-bottom:6px}
   #rd-secao .quadro-corpo{padding-top:0;padding-bottom:8px}
   #rd-secao .espectro{margin-bottom:6px}
@@ -2230,7 +2216,7 @@
     stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
   .tipo-op .i.ds{width:58px;height:40px;color:var(--cyan)}
   .tipo-op:hover{border-color:var(--purple);color:var(--fg)}
-  :root{--c-controle:#7eb8d4;--c-wifi:#c3e88d;--c-teclado:#ffb86c;--c-mouse:#f1fa8c;--c-celular:#f78c6c;--c-relogio:#82aaff;--c-ruido:#8a8fa8;--c-fone:#8be9fd;--c-caixa:#bd93f9;--c-outro:#9a9eb8;--c-acessorio:#ff79c6;--sala-teclado:#8b8fa8;--sala-mouse:#6d7186;--sala-webcam:#a8a08c;--sala-caixa:#8c8299;--sala-fone:#7e9aa8;--sala-outro:#606062;--sala-celular:#a89a96;--sala-relogio:#8a9aa8;--sala-gamepad:#7e8fa8;--sala-acessorio:#a8919f}
+  :root{--c-controle:#7eb8d4;--c-wifi:#d4d7e0;--c-teclado:#ffb86c;--c-mouse:#f1fa8c;--c-celular:#f78c6c;--c-relogio:#82aaff;--c-ruido:#8a8fa8;--c-fone:#8be9fd;--c-caixa:#bd93f9;--c-outro:#9a9eb8;--c-acessorio:#ff79c6;--sala-teclado:#8b8fa8;--sala-mouse:#6d7186;--sala-webcam:#a8a08c;--sala-caixa:#8c8299;--sala-fone:#7e9aa8;--sala-outro:#606062;--sala-celular:#a89a96;--sala-relogio:#8a9aa8;--sala-gamepad:#7e8fa8;--sala-acessorio:#a8919f}
 
 </style>
 <style id="base-comum">
@@ -3213,9 +3199,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
               <span class="gc-est" data-campo="est-modo" data-hef-alvo="html"><span class="est">Modo de conexão <b>Sony DualSense</b></span></span>
               <span class="gc-est" data-campo="est-visto" data-hef-alvo="html"><span class="est">Visto como <b>DualSense</b></span></span>
             </div>
-            <div class="gc-corpo">
-              <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava on" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Só funciona com o controle no BT. Este está no USB, onde a barra de luz não depende de reconexão."><svg class="i" aria-hidden="true"><use href="#rd-lampada"/></svg><span data-campo="luz-texto">A luz não acende</span></button></span>
-            </div>
           </div>
           <div class="gc-item gc-p2" data-controle="p2">
             <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"></i>
@@ -3523,9 +3506,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
               <span class="gc-est" data-campo="est-som" data-hef-alvo="html"><span class="est ok">Som <i class="certo">✓</i></span></span>
               <span class="gc-est" data-campo="est-modo" data-hef-alvo="html"><span class="est">Modo de conexão <b>Sony DualSense</b></span></span>
               <span class="gc-est" data-campo="est-visto" data-hef-alvo="html"><span class="est">Visto como <b>Xbox 360</b></span></span>
-            </div>
-            <div class="gc-corpo">
-              <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="Desliga este controle do BT. Aperte PS para ele voltar, e a barra de luz volta a obedecer."><svg class="i" aria-hidden="true"><use href="#rd-lampada"/></svg><span data-campo="luz-texto">A luz não acende</span></button></span>
             </div>
           </div>
           <div class="gc-item gc-p3 off" data-controle="p3" data-conectado="nao">
@@ -3835,9 +3815,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
               <span class="gc-est" data-campo="est-modo" data-hef-alvo="html">—</span>
               <span class="gc-est" data-campo="est-visto" data-hef-alvo="html">—</span>
             </div>
-            <div class="gc-corpo">
-              <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="—"><svg class="i" aria-hidden="true"><use href="#rd-lampada"/></svg><span data-campo="luz-texto">—</span></button></span>
-            </div>
           </div>
           <div class="gc-item gc-p4 off" data-controle="p4" data-conectado="nao">
             <i class="gc-cor" data-campo="plastico" data-hef-alvo="cor"></i>
@@ -4145,9 +4122,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
               <span class="gc-est" data-campo="est-som" data-hef-alvo="html">—</span>
               <span class="gc-est" data-campo="est-modo" data-hef-alvo="html">—</span>
               <span class="gc-est" data-campo="est-visto" data-hef-alvo="html">—</span>
-            </div>
-            <div class="gc-corpo">
-              <span class="gc-luz"><div class="ressalva" data-campo="luz-espera" data-hef-alvo="html"><i class="nada"></i></div><i class="ltrava" data-campo="luz-trava" data-hef-alvo="classe" data-hef-quando="cabo"></i><button class="btn" data-gesto="luz-nao-acende" data-campo="luz-dica" data-hef-alvo="atributo" data-hef-atributo="title" title="—"><svg class="i" aria-hidden="true"><use href="#rd-lampada"/></svg><span data-campo="luz-texto">—</span></button></span>
             </div>
           </div>
           <!-- OS CONTROLES QUE O HEFESTO SÓ VÊ — EXTERNOS-01, 06/09/2026, e é a

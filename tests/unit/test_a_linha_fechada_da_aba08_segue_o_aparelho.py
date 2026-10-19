@@ -13,9 +13,6 @@ o que a tela dizia           o que a máquina dizia               quem mandava
 "pelo cabo · Placa…" no P1   certo por coincidência: o P2 do     o mockup
 e "pelo rádio · Pela         desenho dizia rádio, e a mesa
 ponte" no P2                 dela não tem P2
-"A luz não acende" ACESO     o lugar do P2 está vazio; o do      o mockup
-no segundo lugar e apagado   P1 está no CABO, onde o botão
-no primeiro                  recusa
 "…não consegui conferir:     a bancada tem **UMA**          o mockup
 **três coisas**"             lacuna (`especie`)
 ===========================  ==================================  ==============
@@ -33,9 +30,7 @@ pacote que emite para um endereço que não existe escreve zero e some.
 
 A MORDIDA — medida, e cada uma reprova SÓ o seu:
 
-* comente `"luz-trava"` do `pacote()`  →  `test_a_trava_da_luz_segue_o_transporte`
-  e `test_o_pacote_emite_o_que_a_bancada_enderecou` reprovam (2);
-* tire o `data-campo="luz-trava"` do `aba08.py` e regenere  →
+* tire o `data-campo="confissao-conta"` do `aba08.py` e regenere  →
   `test_os_enderecos_novos_existem_na_bancada` reprova (1);
 * comente `"mic-caminho"`  →  `test_o_caminho_do_mic_segue_o_transporte` e
   `test_o_pacote_emite_o_que_a_bancada_enderecou` reprovam (2);
@@ -99,12 +94,7 @@ def test_os_enderecos_novos_existem_na_bancada() -> None:
     defeito que a tela mostra e a contagem de campos não vê.
     """
     html = BANCADA.read_text(encoding="utf-8")
-    pac = _pacote()
     esperados = (
-        f'data-campo="luz-trava" data-hef-alvo="classe" '
-        f'data-hef-quando="{pac.LUZ_TRAVADA}"',
-        'data-campo="luz-dica" data-hef-alvo="atributo" '
-        'data-hef-atributo="title"',
         'data-campo="confissao-nada" data-hef-alvo="classe" '
         'data-hef-classe="sumido" data-hef-quando="sim"',
         'data-campo="confissao-conta"',
@@ -115,18 +105,6 @@ def test_os_enderecos_novos_existem_na_bancada() -> None:
             f"produto não tem onde escrever, e a tela volta ao desenho")
     assert 'data-campo="confissao-dica"' not in html, (
         "a dica da confissão voltou à bancada da 08")
-
-
-def test_todo_botao_da_luz_tem_a_trava() -> None:
-    """NENHUM botão "A luz não acende" fica sem endereço de trava."""
-    html = BANCADA.read_text(encoding="utf-8")
-    botoes = re.findall(r'<button[^>]*data-gesto="luz-nao-acende"[^>]*>', html)
-    com_trava = re.findall(
-        r'<i class="ltrava[^"]*" data-campo="luz-trava"[^>]*></i><button[^>]*'
-        r'data-gesto="luz-nao-acende"', html)
-    assert botoes and len(botoes) == len(com_trava), (
-        f"a bancada da 08 tem {len(botoes)} botões da luz e {len(com_trava)} "
-        f"com o interruptor da trava colado antes deles")
 
 
 def test_o_pacote_emite_o_que_a_bancada_enderecou() -> None:
@@ -148,33 +126,6 @@ def test_o_pacote_emite_o_que_a_bancada_enderecou() -> None:
         f"escreva: {sorted(sem_dono)} — endereço mudo é congelado com outro nome")
 
 
-def test_a_trava_da_luz_segue_o_transporte() -> None:
-    """No cabo o botão apaga; no rádio ele acende. E a palavra é a do produto."""
-    pac = _pacote()
-    colunas = _por_transporte(pac.pacote(_ctx()))
-    assert colunas["USB"]["luz-trava"] == pac.LUZ_TRAVADA, (
-        "o controle do CABO não travou o botão da luz — e o gesto vai recusar "
-        "depois do clique com a frase do cabo, que é a metade que a tela deve "
-        "dizer antes")
-    assert colunas["BT"]["luz-trava"] == pac.LUZ_LIVRE, (
-        "o controle do RÁDIO travou o botão que existe justamente para ele")
-
-
-def test_a_trava_da_luz_concorda_com_a_recusa_do_gesto() -> None:
-    """A tela e o gesto usam a MESMA regra — e a régua prova isso agindo."""
-    import pytest
-
-    pac = _pacote()
-    ctx = _ctx()
-    for controle in ctx.conectados:
-        via = str(controle.get("transport") or "")
-        travado = pac.trava_da_luz(via) == pac.LUZ_TRAVADA
-        clique = {"uniq": controle["uniq"], "controle": ""}
-        if travado:
-            with pytest.raises(RuntimeError):
-                pac.luz_nao_acende(ctx, clique, object())
-
-
 def test_o_caminho_do_mic_segue_o_transporte() -> None:
     """A frase do caminho é a do rádio no rádio e a do cabo no cabo."""
     pac = _pacote()
@@ -191,7 +142,6 @@ def test_o_transporte_que_ninguem_leu_nao_promete_a_ponte() -> None:
     """Sem transporte lido, o caminho é o do CABO — nunca o da ponte."""
     pac = _pacote()
     assert pac.caminho_do_microfone("") == pac.caminho_do_microfone("usb")
-    assert pac.trava_da_luz("") == pac.LUZ_TRAVADA
 
 
 def test_o_gerador_e_o_pacote_dizem_a_mesma_frase() -> None:

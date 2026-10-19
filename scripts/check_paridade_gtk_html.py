@@ -118,10 +118,6 @@ PONTES: dict[tuple[str, str], str] = {
         "luz.lightbar.brilho@dualsense",
     ("04-iluminacao", "Mostrar o brilho corrente"):
         "luz.lightbar.brilho@dualsense",
-    ('08-conexoes', '"A luz não acende" — derrubar o controle do rádio'):
-        "luz.lightbar.release_leds@dualsense",
-    ('08-conexoes', '"A luz não acende" — a trava no cabo'):
-        "luz.lightbar.release_leds@dualsense",
     ("01-jogar", "A bateria de cada controle no cartão"):
         "energia.bateria.percentual@dualsense",
     ("02-controles", "Bateria — o número"):
@@ -145,7 +141,7 @@ PONTES: dict[tuple[str, str], str] = {
         "vibracao.rumble.ff@dualsense",
 }
 
-PISO_DAS_PONTES = 26
+PISO_DAS_PONTES = 24
 
 LADOS_DO_MAPA = ("cabo", "radio")
 

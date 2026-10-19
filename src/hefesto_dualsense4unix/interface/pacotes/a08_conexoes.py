@@ -1351,153 +1351,6 @@ def dica_do_microfone(via: str) -> str:
     return fisica
 
 
-LUZ_TRAVADA = "cabo"
-LUZ_LIVRE = "radio"  # (noqa-acento) valor de atributo, ASCII por contrato
-
-
-def trava_da_luz(via: str) -> str:
-    """`"cabo"` quando o botão da luz não tem o que fazer; `"radio"` quando tem."""
-    return LUZ_LIVRE if (via or "").strip().lower() == "bt" else LUZ_TRAVADA
-
-
-def dica_da_luz(via: str) -> str:
-    """A dica do botão "A luz não acende" — a do PRODUTO, e nunca vazia.
-
-    Nenhuma frase nasce aqui: a dica é a do dono, pedida com os três campos que `trava_da_luz` já
-    respondeu (a junção de `secao_controles._BlocoDaLuz` na GTK). `secao_controles.dica_do_botao`
-    decide a cor e a frase juntas; o `title` do desenho é congelado e o botão apagado dizia *"Este
-    controle está no cabo"* mesmo após trocar de transporte (a cor já obedecia desde 03/09, a frase
-    não).
-
-    Saíram em 13/09/2026, quando a ordem tirou frase de aviso da tela em toda forma, `title`
-    incluído (índice da terceira lista, registro «A-TERCEIRA-LISTA-DELA-INDICE»): o AVISO DA MESA
-    SUJA (anexado quando outro programa segurava nó de controle; FRASES-E-DICAS-02) e a RAZÃO de a
-    cura ser oferecida (`frase_do_nascimento`, o carimbo *«▲ nasceu com 1 processo(s) segurando o nó
-    do controle — …»* de `SINAL-NO-NASCIMENTO-01`; FRASES-E-DICAS-03). A função e a frase de reserva
-    saíram do dono; o carimbo `nascimento` segue no `state_full` para o diagnóstico.
-    """
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.app.actions.config.secao_controles import (
-        dica_do_botao,
-    )
-
-    no_radio = trava_da_luz(via) == LUZ_LIVRE
-    dados = _dataclasses.make_dataclass(
-        "ControleDaLuz", ["adotado", "no_cabo", "uniq"])(True, not no_radio, "x")
-    return dica_do_botao(dados)
-
-
-# piloto: o tique é de 100 ms (`hefesto_vivo.TIQUE_MS`) e a espera conta
-
-_ESPERAS: dict[str, _EsperaNaTela] = {}
-
-
-class _EsperaNaTela:
-    """Uma espera pelo PS, com o relógio por fora."""
-
-    def __init__(self, espera: Any, agora: float) -> None:
-        self.espera = espera
-        self.desde = float(agora)
-
-    @property
-    def contando(self) -> bool:
-        return not bool(self.espera.acabou)
-
-    def correr(self, agora: float) -> None:
-        """Entrega ao dono um `tique()` por segundo inteiro decorrido."""
-        if self.espera.acabou:
-            return
-        passou = int(float(agora) - self.desde)
-        if passou <= 0:
-            return
-        self.desde += passou
-        for _ in range(passou):
-            self.espera.tique()
-            if self.espera.acabou:
-                break
-        porque = str(self.espera.porque or "") if self.espera.acabou else ""
-        if porque:
-            print(f"[relato] {PAGINA} · luz-nao-acende: {porque}", file=sys.stderr)
-
-
-def _agora() -> float:
-    """O relógio da espera. MONOTÔNICO — ver o cabeçalho desta seção."""
-    return time.monotonic()
-
-
-def comecar_a_espera(uniq: str, *, agora: float | None = None,
-                     sonda: Any = None) -> Any:
-    """O controle caiu do rádio; a tela entra no estado 2 do desenho."""
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.app.actions.config.secao_controles import (
-        EsperaPeloPS,
-    )
-
-    dele = _EsperaNaTela(
-        EsperaPeloPS(uniq) if sonda is None else EsperaPeloPS(uniq, sonda=sonda),
-        _agora() if agora is None else agora)
-    _ESPERAS[norm_mac(uniq) or ""] = dele
-    return dele
-
-
-def cancelar_a_espera(uniq: str) -> bool:
-    """Ela desistiu. `True` quando havia espera a cancelar."""
-    dele = _ESPERAS.get(norm_mac(uniq) or "")
-    if dele is None or not dele.contando:
-        return False
-    dele.espera.cancelar()
-    return True
-
-
-def esperando(uniq: str) -> bool:
-    """Este controle está no estado 2 do desenho AGORA?"""
-    dele = _ESPERAS.get(norm_mac(uniq) or "")
-    return dele is not None and dele.contando
-
-
-def _correr_as_esperas(agora: float | None = None) -> None:
-    """Um passo do relógio, UMA vez por tique, para todas as esperas vivas."""
-    quando = _agora() if agora is None else agora
-    for chave, dele in list(_ESPERAS.items()):
-        dele.correr(quando)
-        if not dele.contando and _ESPERAS.get(chave) is dele:
-            _ESPERAS.pop(chave, None)
-
-
-def texto_do_botao_da_luz(uniq: str = "") -> str:
-    """O rótulo do botão: `"A luz não acende"`, ou `"Cancelar"` na espera."""
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.app.actions.config.secao_controles import (
-        TEXTO_CANCELAR,
-        TEXTO_DO_BOTAO,
-    )
-
-    return TEXTO_CANCELAR if esperando(uniq) else TEXTO_DO_BOTAO
-
-
-def linha_da_espera(uniq: str) -> str:
-    """A linha de ressalva do cartão: o pedido do PS com a contagem, ou o recado.
-
-    Nenhuma frase nasce aqui (mesma junção de :func:`dica_da_luz`): `FRASE_APERTE_PS` é o aviso do
-    dono (*"▲ aperte PS"* da janela estável) e `frase_da_procura` a contagem dele, palavra por
-    palavra; deste arquivo é a ORDEM e o separador (o pedido, depois o relógio). Fora da espera
-    devolve :func:`_sem_valor`, que faz a `.ressalva` SUMIR em vez de virar `—`, inclusive quando a
-    espera acabou falando (o recado do fim saiu da tela em 13/09/2026, TELA-CALADA-03, e vai ao
-    diário: :meth:`_EsperaNaTela.correr`).
-    """
-    dele = _ESPERAS.get(norm_mac(uniq) or "")
-    if dele is None or not dele.contando:
-        return _sem_valor()
-    perfil._com_o_src()
-    from hefesto_dualsense4unix.app.actions.config.secao_controles import (
-        FRASE_APERTE_PS,
-        frase_da_procura,
-    )
-
-    return (f"▲ {html.escape(FRASE_APERTE_PS)} · "
-            f"{html.escape(frase_da_procura(dele.espera.restantes))}")
-
-
 #: A recusa estava registrada em `SEM_GESTO` e só aparecia no terminal, a cada
 FALA_DO_BOTAO_DO_MIC = {
     True: "O computador inteiro",
@@ -1785,8 +1638,6 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
 
     da_mesa = {str(m.get("uniq") or ""): m for m in ctx.mesa}
 
-    _correr_as_esperas()
-
     nomes = nome_do_jogador.nomes_dos_donos()
     modo_da_mesa: str | None = None
     colunas = {}
@@ -1808,12 +1659,6 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
             "mic-existe": "Ligado" if _mic_declarado(declaracao, uniq) else "Desligado",
             # DESLIGADA no `maquina.json` do usuário (medido em 03/09), a tela
             "mic-caminho": caminho_do_microfone(str(c.get("transport") or "")),
-            # nascia apagado no P1 e aceso no P2 porque foi assim que o mockup
-            "luz-trava": trava_da_luz(str(c.get("transport") or "")),
-            # o `nascimento` do `state_full` fica para o diagnóstico.
-            "luz-dica": dica_da_luz(str(c.get("transport") or "")),
-            "luz-texto": texto_do_botao_da_luz(uniq),
-            "luz-espera": linha_da_espera(uniq),
             # O `title` DA LINHA DO MICROFONE — ver :func:`dica_do_microfone`. O
             "mic-dica": dica_do_microfone(str(c.get("transport") or "")),
         }
@@ -2606,53 +2451,6 @@ def nova_face(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _gravar_o_mapa(p)
 
 
-@gesto("08-conexoes.html", "luz-nao-acende")
-def luz_nao_acende(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Derruba este controle do rádio para ela apertar PS e a luz voltar.
-
-    Cura o que o desenho já dizia: no Bluetooth a barra de luz pode parar de obedecer, e o caminho
-    de volta é a RECONEXÃO (cair do rádio e entrar pelo botão PS). Não é IPC: o `Disconnect` é do
-    BlueZ, por D-Bus, e `integrations/gesto_de_reconexao.desconectar` o pede (puro, o `busctl` entra
-    por argumento, mascara o endereço em todo log e devolve a frase de tela em português; escrito
-    para esta cura, nunca chamado por tela antes).
-
-    A recusa do cabo é do desenho: o `title` do botão apagado (`aba08.LUZ_NO_CABO`, repintado por
-    `secao_controles.DICA_NO_CABO`) diz que só vale no BT, e botão que aceita o clique e não faz
-    nada responde calado. Os quatro desfechos viram dois: `Resultado.caiu` conta `desconectou` E
-    `ja_estava_fora` como sucesso (*"para quem espera o botão PS, os dois estados pedem exatamente o
-    mesmo gesto"*); `nao_deu` e `sem_alvo` LEVANTAM com a frase do módulo. O endereço nunca aparece
-    inteiro: `Resultado.endereco` já vem mascarado, pois dois portões reprovam MAC de doze hexa em
-    arquivo versionado e exceção de tela vira log.
-
-    **Fora do `SEM_ECO` de propósito** (02/09/2026): é o único dos sete acusados que TEM eco, e o
-    maior da aba (derrubar o controle o tira de `controllers` no `state_full`); declará-lo sem eco
-    cegaria a régua onde ela mais enxerga e um "Disconnect" que não derruba nada contaria como
-    sucesso. A recusa medida em 02/09 estava certa: a régua clicou com o controle do CABO e leu "sem
-    efeito" porque o gesto levantou a frase do cabo. **Não conserte**: faltou o instrumento passar o
-    alvo, e o `RuntimeError` que explica o cabo é o comportamento contratado.
-    """
-    from hefesto_dualsense4unix.integrations import gesto_de_reconexao as radio
-
-    uniq = _uniq(o)
-    if not uniq:
-        raise ValueError(
-            "o clique não disse em qual controle — a luz é de um aparelho, não "
-            "de todos.")
-    if cancelar_a_espera(uniq):
-        return
-    dele = ctx.por_uniq(uniq)
-    transporte = str(dele.get("transport") or "").lower()
-    if transporte and transporte != "bt":
-        raise RuntimeError(
-            "Este controle está no cabo, e no cabo a barra de luz não depende "
-            "de reconexão.")
-
-    resultado = radio.desconectar(uniq)
-    if not resultado.caiu:
-        raise RuntimeError(resultado.porque)
-    comecar_a_espera(uniq)
-
-
 #
 import threading  # noqa: E402
 from collections.abc import Callable  # noqa: E402
@@ -3362,12 +3160,29 @@ def _barra_do_lugar(lug: dict[str, Any], cena: dict[str, Any]) -> str:
             + "</div>" + teto + "</div>")
 
 
+NADA_NO_ADAPTADOR = "Nenhum aparelho neste adaptador"
+
+
 def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any], com_hz: bool = False) -> str:
     """O cartão de um adaptador: a linha de cima, e os aparelhos quando aberto."""
     lid = _x(lug["id"])
     pontes = _pontes(cena, str(lug["id"]))
     moradores = _moradores(cena, str(lug["id"]))
-    aberto = cena.get("aberto") == lug["id"]
+    ocupado = _ocupado(cena)
+    apagado = (f'{" apagado" if ocupado else ""}" aria-disabled="{str(ocupado).lower()}" '
+               'data-campo="radio-ocupado" data-hef-alvo="classe" data-hef-classe="apagado" '
+               'data-hef-atributo="aria-disabled')
+    lampada = ""
+    if cena.get("proposta") and cena["proposta"].get("destino") == lug["id"]:
+        lampada = (f'<button class="lampada{apagado}" title="Quem funciona melhor aqui" '
+                   f'aria-label="Quem funciona melhor aqui" data-gesto="sugerir-alocacao" '
+                   f'data-alvo="{lid}">{_ic("lampada")}</button>')
+    # O adaptador sem nada dentro não abre (19/10/2026, a foto da aba Conexões): a seta fica
+    # apagada e o corpo vazio não ocupa a linha. O escolhido para o Conectar abre mesmo vazio:
+    # é nele que o aparelho novo vai chegar.
+    vazio = (not moradores and not lampada
+             and cena.get("destino_do_conectar") != lug["id"])
+    aberto = cena.get("aberto") == lug["id"] and not vazio
     classes = ["lugar"]
     if len(pontes) > PONTES_POR_ADAPTADOR:
         classes.append("cheio")
@@ -3390,10 +3205,12 @@ def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any], com_hz: bool = Fals
                 f'data-gesto="adaptador-historico" data-alvo="{lid}">{_ic("aviso")}</button>')
     chegou = " ".join(sorted(_x(c) for c in lug.get("chegou") or ()))
     unica = len(cena.get("lugares") or ()) == 1
+    if vazio:
+        ver = NADA_NO_ADAPTADOR
     seta = "" if unica else (
         f'<button class="abre-lugar" aria-expanded="{str(aberto).lower()}" title="{ver}" '
-        f'aria-label="{ver}" data-gesto="abrir-adaptador" data-alvo="{lid}">'
-        '<span aria-hidden="true">▶</span></button>')
+        f'aria-label="{ver}" data-gesto="abrir-adaptador" data-alvo="{lid}"'
+        f'{" disabled" if vazio else ""}><span aria-hidden="true">▶</span></button>')
     arrasta = "" if unica else ' draggable="true" title="Arraste para mudar a ordem"'
     topo = (
         f'<div class="lugar-topo"{arrasta}>' + seta
@@ -3404,15 +3221,6 @@ def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any], com_hz: bool = Fals
         + _marcas_de_onde(lug, cena) + sino + _barra_do_lugar(lug, cena)
         + _conta_do_lugar(lug, cena) + "</div>")
     linhas = "".join(html_da_linha(ap, cena, com_hz) for ap in moradores)
-    ocupado = _ocupado(cena)
-    apagado = (f'{" apagado" if ocupado else ""}" aria-disabled="{str(ocupado).lower()}" '
-               'data-campo="radio-ocupado" data-hef-alvo="classe" data-hef-classe="apagado" '
-               'data-hef-atributo="aria-disabled')
-    lampada = ""
-    if cena.get("proposta") and cena["proposta"].get("destino") == lug["id"]:
-        lampada = (f'<button class="lampada{apagado}" title="Quem funciona melhor aqui" '
-                   f'aria-label="Quem funciona melhor aqui" data-gesto="sugerir-alocacao" '
-                   f'data-alvo="{lid}">{_ic("lampada")}</button>')
     # sem «Arraste outro para cá» (desenho aprovado de 05/10/2026): a linha se arrasta, e o
     # Enter nela abre «Para onde vai»
     fila = f'<div class="soltar-fila">{lampada}</div>' if lampada else ""
@@ -4225,7 +4033,7 @@ def html_dos_canais(cena: dict[str, Any]) -> str:
 #: ``var()``: sem tema, vale o hex; com um tema que defina ``--mapa-<tipo>``, vale o do tema.
 PADRAO_DA_FAIXA_NO_MAPA = {
     "controle": "#f8f8f2", "celular": "#ff9a8b", "relogio": "#8fa8ff", "fone": "#8be9fd",
-    "caixa": "#bd93f9", "teclado": "#ffb86c", "mouse": "#f1fa8c", "wifi": "#c3e88d",
+    "caixa": "#bd93f9", "teclado": "#ffb86c", "mouse": "#f1fa8c", "wifi": "#d4d7e0",
     "ruido": "#8a8fa3", "outro": "#9a9eb8", "adaptador": "#6272a4", TIPO_ACESSORIO: "#ff79c6",
 }
 COR_DA_FAIXA_NO_MAPA = {tipo: f"var(--mapa-{tipo},{cor})"
@@ -6032,10 +5840,12 @@ def selo_do_estado(rotulo: str, valor: str = "", estado: str = "ok", dica: str =
     """Um selo da linha: «Mic ✓», «Bateria 64% · carregando», «Visto como Xbox 360».
 
     `dica` é o `title` do selo inteiro, para o que a linha não cabe dizer (a Mira diz os números).
+    O valor ganha a primeira letra maiúscula aqui, o dono único («Mudo», «Sem ponte»): ele fica
+    sozinho à direita da linha, e a tela abre todo texto com maiúscula (19/10/2026).
     """
     miolo = html.escape(rotulo)
     if valor:
-        miolo += f" <b>{html.escape(valor)}</b>"
+        miolo += f" <b>{html.escape(valor[:1].upper() + valor[1:])}</b>"
     if estado == "ok":
         miolo += f' <i class="certo">{CERTO}</i>'
     classe = f"est {estado}" if estado else "est"

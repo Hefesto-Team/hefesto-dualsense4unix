@@ -77,7 +77,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "tirar-daqui": "tira uma declaração da máquina",
     "ignorar": "ignora um aparelho — é da máquina",
     "alvo": "escolhe o alvo do exame — é da tela",
-    "luz-nao-acende": "declara que a luz não acende — é da máquina",
     "dono-renomear": "dá nome a quem joga com o controle, na memória dos controles "
                      "— é da máquina",
     "mapear-comecar": "o Mapear Entradas começa a olhar as portas — é da máquina",

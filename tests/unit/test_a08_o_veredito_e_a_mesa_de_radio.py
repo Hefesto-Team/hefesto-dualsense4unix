@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pathlib
-import re
 import sys
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
@@ -137,99 +136,6 @@ def _ctx():  # type: ignore[no-untyped-def]
                     conectados=conectados, estados={})
 
 
-def test_a_dica_da_luz_segue_o_transporte() -> None:
-    """As duas frases são do dono, e não a mesma congelada."""
-    from hefesto_dualsense4unix.app.actions.config.secao_controles import (
-        DICA_NO_CABO,
-        DICA_NO_RADIO,
-    )
-
-    p = _pacote()
-    assert p.dica_da_luz("usb") == DICA_NO_CABO
-    assert p.dica_da_luz("bt") == DICA_NO_RADIO
-    assert p.dica_da_luz("") == DICA_NO_CABO, (
-        "transporte vazio é TRAVA, pela mesma razão do gesto: `Disconnect` "
-        "sobre um controle cujo transporte ninguém leu é um pedido no escuro")
-
-
-def test_a_dica_da_luz_nao_anexa_o_aviso_da_mesa_suja(monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    """A mesa suja NÃO muda a dica — FRASES-E-DICAS-02, 13/09/2026."""
-    from hefesto_dualsense4unix.app.actions.config.secao_controles import DICA_NO_RADIO
-    from hefesto_dualsense4unix.integrations import sinal_da_barra as sb
-
-    p = _pacote()
-    limpa = p.dica_da_luz("bt")
-    monkeypatch.setattr(sb, "limpo_para_conectar",
-                        lambda *a, **k: (sb.CONFIANCA_SUSPEITA, "dublê", (4242,)))
-    suja = p.dica_da_luz("bt")
-    assert suja == limpa == DICA_NO_RADIO, (
-        "a dica da luz mudou com outro programa segurando controle — o aviso da "
-        f"mesa suja voltou a ser anexado: {suja!r}")
-
-
-def test_a_razao_do_nascimento_nao_chega_a_dica() -> None:
-    """A RAZÃO DO NASCIMENTO SAIU DA DICA — FRASES-E-DICAS-03, 13/09/2026.
-
-    CONTRATO QUE MUDOU: até esta data a condenação escrevia a razão depois do
-    que o botão faz. A ordem de 13/09
-    (o registro «A-TERCEIRA-LISTA-DELA-INDICE» de 13/09/2026) tira da
-    tela frase de aviso em toda forma, `title` incluído: a dica fica com o que o
-    botão faz, e o carimbo `nascimento` fica no `state_full`, para o diagnóstico.
-
-    PASSA PELO TIQUE: os dois controles desta mesa chegam condenados no estado,
-    e o `pacote()` escreve para cada um só a dica do dono.
-    """
-    from hefesto_dualsense4unix.app.actions.config.secao_controles import (
-        DICA_NO_CABO,
-        DICA_NO_RADIO,
-    )
-
-    p = _pacote()
-    porque = "Esta conexão nasceu com outro programa segurando o controle"
-    ctx = _ctx()
-    for controle in ctx.conectados:
-        controle["nascimento"] = {"pede_reconexao": True, "porque": porque}
-    dicas = [coluna.get("luz-dica", "") for coluna in p.pacote(ctx)["colunas"].values()]
-    assert sorted(dicas) == sorted([DICA_NO_CABO, DICA_NO_RADIO]), (
-        "com os dois controles condenados, a dica da luz deixou de ser só a do "
-        f"dono — a razão do carimbo de nascimento voltou à tela: {dicas!r}")
-
-
-def test_o_botao_da_luz_tem_a_dica_e_a_trava_em_nos_diferentes() -> None:
-    """Um `data-campo` por nó — a classe no `<i>`, a dica no `<button>`."""
-    html = BANCADA.read_text()
-    botoes = re.findall(r'<button[^>]*data-gesto="luz-nao-acende"[^>]*>', html)
-    assert botoes, "o botão 'A luz não acende' sumiu do desenho"
-    for botao in botoes:
-        assert 'data-campo="luz-dica"' in botao, (
-            "o botão da luz não tem endereço para a dica — ela continua sendo "
-            "a do desenho e mente quando o controle troca de transporte")
-        assert 'data-hef-atributo="title"' in botao
-        assert 'data-campo="luz-trava"' not in botao, (
-            "a classe e a dica voltaram para o mesmo nó — o vocabulário é UM "
-            "`data-campo` por nó, e uma das duas vai ficar sem endereço")
-    irmaos = re.findall(r'<i class="ltrava[^"]*"[^>]*></i><button[^>]*'
-                        r'data-gesto="luz-nao-acende"', html)
-    assert len(irmaos) == len(botoes), (
-        f"{len(irmaos)} dos {len(botoes)} botões da luz têm o interruptor "
-        f"colado ANTES deles — o `~` do CSS só alcança irmãos posteriores, e o "
-        f"botão sem irmão anterior nunca apaga")
-    for irmao in irmaos:
-        assert 'data-campo="luz-trava"' in irmao, (
-            "o interruptor da trava ficou sem endereço — a classe volta a ser a "
-            "do desenho, cravada pela posição no mockup")
-
-
-def test_a_dica_da_luz_chega_ao_pacote() -> None:
-    """A ligação — uma dica por controle, no `colunas`."""
-    p = _pacote()
-    saiu = p.pacote(_ctx())
-    for uniq, coluna in saiu["colunas"].items():
-        assert coluna.get("luz-dica"), (
-            f"o controle {uniq[:4]}… saiu sem `luz-dica` — o botão fica com o "
-            f"`title` do desenho")
-
-
 def test_o_escopo_le_o_valor_da_maquina() -> None:
     """As duas falas são as do `<select>` que saiu — nem uma palavra nova."""
     p = _pacote()
@@ -271,5 +177,3 @@ def test_o_mic_pelo_cabo_nao_cobra_turno_de_radio() -> None:
     assert p._MIC_NAO_CUSTA_RADIO in cabo
     assert "turnos de rádio" not in cabo.replace(p._MIC_NAO_CUSTA_RADIO, ""), (
         "a frase do cabo trouxe a conta do rádio junto")
-
-

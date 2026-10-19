@@ -184,7 +184,7 @@ CORES_POR_CLASSE: dict[str, str] = {
 #: em todo o app, e as de teclado, mouse, Wi-Fi e caixa de som são as da régua da aba 08
 #: (``aba08`` ``--c-<tipo>``). A webcam leva a da classe.
 COR_POR_TIPO_DECLARADO: dict[str, str] = {
-    "teclado": "#ffb86c", "mouse": "#f1fa8c", "wifi": "#c3e88d",
+    "teclado": "#ffb86c", "mouse": "#f1fa8c", "wifi": "#d4d7e0",
     "caixa_de_som": "#bd93f9", "outro": "#9a9eb8",
 }
 

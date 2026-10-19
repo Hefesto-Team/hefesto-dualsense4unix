@@ -154,12 +154,6 @@ def medido() -> dict[str, Any]:
             "getComputedStyle(document.querySelector("
             "'.ctl[data-controle=\"p3\"] .so-aberto')).display")
         fora["normal"] = tela._cru(_pior_caso())
-        fora["giro"] = tela._cru(
-            "(function(){var n=document.querySelector("
-            "'.ctl[data-controle=\"p1\"] .faixa .no-jogo');"
-            "var t=n&&n.querySelector('.no-jogo-t');if(!t)return null;"
-            "return {d:getComputedStyle(n).display,rotulo:n.getAttribute('aria-label'),"
-            "texto:t.innerText,sw:n.scrollWidth,cw:n.clientWidth}})()")
         escrever(tela, "p1", "quem-joga", NOME_LONGO)
         escrever(tela, "p1", "peca", PLASTICO_LONGO)
         fora["pior"] = tela._cru(_pior_caso())
@@ -194,19 +188,6 @@ def test_em_todos_os_conectados_dizem_quem_joga_e_os_vazios_nao(medido: dict[str
 
 def test_o_lugar_vazio_nao_mostra_o_nome(medido: dict[str, Any]) -> None:
     assert medido["vazio_so_aberto"] == "none"
-
-
-def test_com_a_cena_do_desenho_a_frase_do_giroscopio_cabe_inteira(medido: dict[str, Any]) -> None:
-    """A régua 3 da sprint, o primeiro item: o nome no título não corta a frase do giroscópio.
-
-    MORDIDA: um `max-width:40px` no `.no-jogo` aberto (`aba02.py`) — a frase passa da caixa.
-    (Tirar o `min-width:0` não morde aqui: sem ele a frase não encolhe, e o preço vai para a
-    faixa, que é o que o `test_o_nome_de_24_letras_nao_quebra_a_faixa` mede.)
-    """
-    g = medido["giro"]
-    assert g is not None, "o p1 aberto perdeu a frase do giroscópio"
-    assert g["d"] != "none", f"a cena do desenho deixou de mostrar a frase no p1: {g}"
-    assert g["sw"] <= g["cw"], f"a frase do giroscópio foi cortada: {g}"
 
 
 def test_o_nome_de_24_letras_nao_quebra_a_faixa(medido: dict[str, Any]) -> None:

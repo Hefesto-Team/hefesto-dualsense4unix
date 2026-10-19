@@ -152,7 +152,7 @@ def test_a_declaracao_vale_em_qualquer_coluna_da_linha(regua) -> None:
 
 
 def test_a_declaracao_vale_no_proprio_nome_da_feature(regua) -> None:
-    """É o caso REAL de `"A luz não acende" — a trava no cabo`: o nome já diz."""
+    """Era o caso de `"A luz não acende" — a trava no cabo` (saiu em 19/10/2026): o nome já diz."""
     linhas = [dict(_LINHA) | {"feature": "a trava no cabo", "porque": "—"}]
     falhas, _ = regua.cruzar_com_o_mapa(
         linhas, _celula(cabo_aciona="não", cabo_por_que_nao_aciona="divida"),

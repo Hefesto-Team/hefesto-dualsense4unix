@@ -88,10 +88,10 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 05-vibracao | 31 | 13 | 11 | 4 | 3 | 0 | 42% |
 | 06-navegacao | 40 | 7 | 15 | 9 | 9 | 0 | 18% |
 | 07-lancadores | 24 | 8 | 11 | 2 | 3 | 0 | 33% |
-| 08-conexoes | 49 | 17 | 26 | 6 | 0 | 0 | 35% |
+| 08-conexoes | 44 | 13 | 25 | 6 | 0 | 0 | 30% |
 | 09-sistema | 38 | 13 | 18 | 4 | 3 | 0 | 34% |
 | 10-perfis | 48 | 14 | 19 | 8 | 7 | 0 | 29% |
-| TODAS | 386 | 114 | 171 | 53 | 45 | 3 | 30% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 381 | 110 | 170 | 53 | 45 | 3 | 29% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -718,3 +718,9 @@ antigo mostrava. O **lembrete proativo** e o **«Não perguntar»** passam a `FA
 aviso do cartão da Steam), e o **aviso automático** passa a ser vigiado onde vive, na coluna Atenção da
 Jogar. A tabela acima foi recontada do CSV: `07-lancadores` vai de `29 · 9 IGUAL · 0 FALTA · 8 SO_HTML
 · 31%` para `24 · 8 · 2 · 3 · 33%`, e `TODAS` de `391 · 50 SO_HTML · 29%` para `386 · 45 · 30%`.
+
+**19/10/2026 — o botão «A luz não acende» saiu da aba Conexões** (`D-1910-A-LUZ-NAO-ACENDE-SAI`).
+As cinco linhas da luz saíram do CSV, porque o botão, a espera pelo PS e a frase da procura não existem mais
+em lado nenhum; as duas pontes dessas linhas com o mapa saíram junto, e o piso das pontes desceu de 26 para 24. A tabela
+acima foi recontada do CSV: `08-conexoes` vai de `49 · 17 IGUAL · 26 DIFER · 35%` para `44 · 13 · 25 · 30%`, e
+`TODAS` de `386 · 114 · 171 · 30%` para `381 · 110 · 170 · 29%`.

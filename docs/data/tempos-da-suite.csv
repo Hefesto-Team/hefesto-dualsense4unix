@@ -145,7 +145,6 @@ tests/unit/test_a_coluna_de_ajuste_proprio_mostra_o_disco_inteiro.py,30605,medid
 tests/unit/test_a_coluna_do_ajuste_proprio_acende_pela_classe.py,340,medido
 tests/unit/test_a_coluna_status_diz_o_controle_de_agora.py,2960,medido
 tests/unit/test_a_conexoes_cabe_na_tela.py,17300,medido
-tests/unit/test_a_conexoes_espera_o_ps_e_conta_os_slots.py,6560,medido
 tests/unit/test_a_conexoes_o_que_a_lista_achou.py,16333,medido
 tests/unit/test_a_conferencia_das_tres_levas_de_fonte_externa.py,289,medido
 tests/unit/test_a_conta_de_slots_por_adaptador.py,297,medido
@@ -276,8 +275,6 @@ tests/unit/test_a_luz_do_efeito_morde_cabo_e_radio.py,2017,medido
 tests/unit/test_a_luz_do_mic_diz_quem_te_escuta.py,2086,medido
 tests/unit/test_a_luz_do_mic_pisca_com_quem_ouve_de_fora.py,307,medido
 tests/unit/test_a_luz_do_mic_segue_o_botao_sem_saber_quem_ouve.py,620,medido
-tests/unit/test_a_luz_nao_acende_o_botao_do_card.py,304,medido
-tests/unit/test_a_luz_que_nao_acende_derruba_o_radio.py,297,medido
 tests/unit/test_a_luz_respira_a_cada_tiro.py,327,medido
 tests/unit/test_a_marca_da_cor_nao_some.py,3900,medido
 tests/unit/test_a_marca_do_vpad_no_nome_e_a_de_hoje.py,344,medido
@@ -1482,7 +1479,6 @@ tests/unit/test_o_stop_do_som_tem_orcamento.py,1033,medido
 tests/unit/test_o_subsystem_sobe_e_desce_por_uma_lista_so.py,594,medido
 tests/unit/test_o_sudo_nao_grava_o_endereco.py,5557,medido
 tests/unit/test_o_sufixo_do_no_nao_entrega_o_endereco.py,320,medido
-tests/unit/test_o_sysfs_ilegivel_nao_e_todos_cairam.py,289,medido
 tests/unit/test_o_tato_le_o_computador_sem_perfil_ativo.py,365,medido
 tests/unit/test_o_tato_vivo_so_fala_onde_o_jogo_cala.py,310,medido
 tests/unit/test_o_teclado_avisa_como_sair.py,289,medido

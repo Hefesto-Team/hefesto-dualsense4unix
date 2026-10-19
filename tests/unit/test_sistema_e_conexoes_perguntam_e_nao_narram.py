@@ -19,11 +19,8 @@ exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import onde as _onde
 from hefesto_dualsense4unix.interface.pacotes import Contexto, normalizar
-from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 
-UNIQ = "aa:bb:cc:00:00:01"
-CHAVE = "aabbcc000001"
 
 
 
@@ -47,22 +44,14 @@ def _zerar() -> None:
     a09._ARMADO.clear()
     a09._LENTO.clear()
     a09._PAINEL[0] = None
-    a08._ESPERAS.clear()
 
 
 @pytest.fixture(autouse=True)
 def _limpo():
-    """O consentimento, o painel e as esperas são estado de MÓDULO."""
+    """O consentimento e o painel são estado de MÓDULO."""
     _zerar()
     yield
     _zerar()
-
-
-@pytest.fixture
-def dono():
-    from hefesto_dualsense4unix.app.actions.config import secao_controles
-
-    return secao_controles
 
 
 def _primeiro(gesto: str) -> dict[str, str]:
@@ -232,48 +221,6 @@ def test_no_pixel_a_pergunta_cabe_no_painel_sem_rolar_de_lado(no_webkit_09) -> N
     assert rolagem <= largura, (
         f"a pergunta sai pela direita do painel ({rolagem}px em {largura}px) — "
         "a instrução do segundo tempo fica fora da vista")
-
-
-def test_durante_a_espera_a_instrucao_fica(dono) -> None:
-    a08.comecar_a_espera(UNIQ, agora=a08._agora(), sonda=lambda: {CHAVE})
-    linha = a08.linha_da_espera(UNIQ)
-    assert dono.FRASE_APERTE_PS in linha, linha
-    assert dono.frase_da_procura(dono.ESPERA_PELO_PS_S) in linha, linha
-
-
-def test_a_espera_que_acaba_falando_nao_fala_no_cartao(dono, capsys) -> None:
-    """`nao_caiu` é o desfecho que FALA — e a frase não chega mais ao cartão."""
-    dele = a08.comecar_a_espera(UNIQ, agora=0.0, sonda=lambda: {CHAVE})
-    dele.correr(float(dono.ESPERA_PELO_PS_S))
-    assert not a08.esperando(UNIQ)
-    assert dele.espera.porque == dono.FRASE_NAO_CAIU, (
-        "o dublê não chegou ao desfecho que fala — a régua mediria o silêncio "
-        "de uma espera que não tinha nada a dizer")
-    assert a08.linha_da_espera(UNIQ) == a08._sem_valor(), (
-        f"o recado do fim voltou ao cartão: {a08.linha_da_espera(UNIQ)!r}")
-    assert dono.FRASE_NAO_CAIU in capsys.readouterr().err, (
-        "o fim sumiu em vez de ir ao diário da janela")
-
-
-def test_o_cartao_do_controle_que_esperou_recebe_a_contagem_e_depois_nada(
-        dono) -> None:
-    """Pelo PACOTE, por controle: a contagem na coluna dele, e depois o nada."""
-    cru = {"uniq": UNIQ, "transport": "bt", "connected": True, "index": 0}
-    eu = {"pref": "p1", "uniq": UNIQ, "jogador": 1, "cor": "white",
-          "nome": "White", "via": "rádio", "transporte": "bt",
-          "mascara": "DualSense"}
-    ctx = Contexto(state={"controllers": [cru]}, mesa=[eu], conectados=[cru],
-                   estados={})
-    a08.comecar_a_espera(UNIQ, agora=a08._agora(), sonda=lambda: {CHAVE})
-
-    durante = (a08.pacote(ctx).get("colunas") or {}).get(UNIQ, {}).get("luz-espera")
-    assert durante and dono.FRASE_APERTE_PS in durante, durante
-
-    for dele in a08._ESPERAS.values():
-        dele.desde -= dono.ESPERA_PELO_PS_S + 5
-    depois = (a08.pacote(ctx).get("colunas") or {}).get(UNIQ, {}).get("luz-espera")
-    assert depois == a08._sem_valor(), (
-        f"a espera acabou e o cartão continuou dizendo alguma coisa: {depois!r}")
 
 
 def _achado_grave():

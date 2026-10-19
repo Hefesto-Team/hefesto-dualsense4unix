@@ -23,17 +23,13 @@ A CLASSIFICAÇÃO QUE ESTA RÉGUA TRAVA, e é o que ela existe para não deixar
 regredir:
 
     monte              gestos                          o que a régua cobra
-    (a) recusa certa   luz-nao-acende                  FORA do `SEM_ECO`
     (b) não ecoa       os SEIS do mapa do gabinete     DENTRO, com razão escrita
     (c) mentiu         nenhum                          —
 
-**`luz-nao-acende` fora do `SEM_ECO` é o ponto mais fino daqui.** Ele é o único
-dos sete com eco de verdade — derrubar um controle do rádio o tira da lista
-`controllers` do `state_full`. Declará-lo sem eco cegaria a régua onde ela mais
-enxerga: um `Disconnect` que não derrubasse nada passaria a contar como sucesso.
+O sétimo, `luz-nao-acende`, saiu em 19/10/2026 com o botão «A luz não acende»
+(D-1910-A-LUZ-NAO-ACENDE-SAI).
 
-A MORDIDA: tire `escolher-entrada` do `SEM_ECO` do pacote, ou acrescente
-`luz-nao-acende` a ele — os dois casos reprovam, cada um com a sua frase.
+A MORDIDA: tire `escolher-entrada` do `SEM_ECO` do pacote e a régua reprova.
 """
 from __future__ import annotations
 
@@ -78,7 +74,6 @@ DIRIGIDO: dict[str, dict[str, Any]] = {
     "nova-entrada": {"face": "0"},
     "nova-extensao": {"entrada": "2"},
     "nova-face": {"valor": "Lateral"},
-    "luz-nao-acende": {"uniq": UNIQ_CABO},
 }
 
 DO_GABINETE = ("escolher-aparelho", "escolher-entrada", "tirar-daqui",
@@ -123,33 +118,6 @@ def gabinete_de_bancada(a08, monkeypatch):
                         raising=False)
 
 
-@pytest.fixture(autouse=True)
-def o_radio_nunca_e_tocado(monkeypatch):
-    """`desconectar` vira dublê — e esta trava nasceu de um susto MEDIDO.
-
-    Rodando a MORDIDA desta régua (arrancar a recusa do cabo do
-    `luz_nao_acende`), o caso chegou ao `gesto_de_reconexao.desconectar` de
-    verdade e o log da suíte imprimiu `reconexao_ja_estava_fora` com o endereço
-    do controle do usuário. Naquele instante nada caiu — o do cabo não estava no rádio
-    —, mas o caminho estava aberto: a mesma régua, com o controle do rádio na
-    lista, teria mandado um `Disconnect` no BlueZ da máquina de quem a roda.
-
-    **Um teste unitário não fala com o rádio de ninguém.** O dublê devolve o
-    desfecho de sucesso, que é o pior caso para a régua: se o gesto passar a
-    aceitar o clique do cabo, ele vai parecer que funcionou — e é exatamente o
-    que `test_nenhum_dos_sete_e_o_monte_c` tem de pegar.
-    """
-    from hefesto_dualsense4unix.integrations import gesto_de_reconexao
-
-    def de_mentira(uniq: str, **_):
-        return gesto_de_reconexao.Resultado(
-            estado=gesto_de_reconexao.ESTADO_DESCONECTOU,
-            porque="caiu do rádio (dublê da régua)",
-            endereco=gesto_de_reconexao.mascarar(uniq))
-
-    monkeypatch.setattr(gesto_de_reconexao, "desconectar", de_mentira)
-
-
 def _gesto(pac, nome: str):
     fn = pac.gesto_da_pagina(PAGINA, nome)
     assert fn is not None, f"{PAGINA}:{nome} perdeu o dono"
@@ -161,7 +129,7 @@ def _ctx(pac):
                         conectados=CONECTADOS, estados={})
 
 
-@pytest.mark.parametrize("nome", [*DO_GABINETE, "luz-nao-acende"])
+@pytest.mark.parametrize("nome", DO_GABINETE)
 def test_o_clique_sem_o_argumento_do_botao_recusa_dizendo(pac, nome) -> None:
     """A prova de que a acusação de 02/09 mediu recusa, não mentira."""
     p = PonteDeMentira()
@@ -248,34 +216,6 @@ def test_escolher_entrada_sem_o_primeiro_tempo_recusa_dizendo(pac) -> None:
     assert p.chamadas == []
 
 
-def test_a_luz_no_cabo_recusa_dizendo_e_nao_derruba_nada(pac) -> None:
-    """No cabo a barra de luz não depende de reconexão nenhuma."""
-    p = PonteDeMentira()
-    with pytest.raises(RuntimeError) as caiu:
-        _gesto(pac, "luz-nao-acende")(
-            _ctx(pac), {**CEGO, "uniq": UNIQ_CABO}, p)
-
-    frase = str(caiu.value)
-    assert "cabo" in frase, (
-        f"a recusa virou {frase!r} e parou de dizer POR QUE não dá. Quem lê "
-        f"precisa saber que a cura é do rádio.")
-    assert p.chamadas == [], "recusou e mesmo assim falou com o daemon"
-
-
-def test_a_luz_nao_e_sem_eco_porque_derrubar_do_radio(a08) -> None:
-    """O único dos sete com eco de verdade — e declará-lo cegaria a régua.
-
-    Derrubar um controle do rádio o tira da lista `controllers` do `state_full`.
-    Pôr `luz-nao-acende` em `SEM_ECO` faria um `Disconnect` que não derrubou
-    nada passar a contar como sucesso, e é justamente o desfecho que
-    `gesto_de_reconexao.Resultado.nao_deu` existe para acusar.
-    """
-    assert "luz-nao-acende" not in a08.SEM_ECO, (
-        "`luz-nao-acende` entrou no `SEM_ECO`. Ele NÃO é sem eco: derrubar do "
-        "rádio muda a lista de controles do `state_full`. Se o gesto passou a "
-        "não ter efeito, o defeito é dele — não da régua que o mede.")
-
-
 @pytest.mark.parametrize("nome", DO_GABINETE)
 def test_os_seis_do_gabinete_estao_declarados_sem_eco(a08, nome) -> None:
     """Medido em 02/09: o `state_full` não publica `mapa` nem `maquina`.
@@ -307,7 +247,7 @@ def test_todo_sem_eco_desta_aba_tem_razao_escrita(a08) -> None:
 def test_nenhum_dos_sete_e_o_monte_c(pac, a08) -> None:
     """O fecho da classificação: nenhum dos sete MENTIU, e isso é verificável."""
     mentirosos = []
-    for nome in (*DO_GABINETE, "luz-nao-acende"):
+    for nome in DO_GABINETE:
         p = PonteDeMentira()
         try:
             _gesto(pac, nome)(_ctx(pac), {**CEGO, **DIRIGIDO[nome]}, p)

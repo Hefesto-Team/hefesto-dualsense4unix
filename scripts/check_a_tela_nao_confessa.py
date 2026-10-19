@@ -405,8 +405,6 @@ SEM_LETRA: dict[str, str] = {
         "inteira quando ela difere do desfecho feliz",
     "a05_vibracao.py:parar ← motivo":
         "a recusa do `rumble.stop`, palavra do daemon",
-    "a08_conexoes.py:luz_nao_acende ← resultado.porque":
-        "o campo `porque` do resultado de `app/actions` da barra de luz",
     "a09_sistema.py:reiniciar ← motivo":
         "a recusa do `systemctl restart`, como o systemd a devolve",
     "a09_sistema.py:retomar ← motivo":
