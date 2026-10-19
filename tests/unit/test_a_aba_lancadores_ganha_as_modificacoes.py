@@ -926,6 +926,14 @@ def test_o_mais_do_configurar_da_extensao_fica_ao_lado_do_x_aberto_ou_fechado(na
     pg = navegador.new_page(viewport={"width": 1212, "height": 800})
     try:
         pg.goto(f"{MOCKUP.as_uri()}#lanc-conf")
+        # A folha medida é a do código, não a cópia que o desenho gerado guarda: a da Experimental
+        # fecha o primeiro <style>, e é trocada ali, do começo dela ao fim.
+        trocou = pg.evaluate("""(folha) => {
+          const s = document.querySelector('style');
+          const i = s.textContent.indexOf(folha.slice(0, 120));
+          if (i < 0) return false;
+          s.textContent = s.textContent.slice(0, i) + folha; return true; }""", exp.CSS)
+        assert trocou, "o desenho não tem a folha da Experimental"
         caixas = []
         for conf in (base, base._replace(menu=menu)):
             caixas.append(pg.evaluate("""(miolo) => {
