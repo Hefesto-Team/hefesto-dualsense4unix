@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import json
 import pathlib
-from collections.abc import Sequence
-from typing import NamedTuple
+from collections.abc import Mapping, Sequence
+from typing import Any, NamedTuple
 
 from hefesto_dualsense4unix.integrations import kits_de_brinquedo as kits
 from hefesto_dualsense4unix.interface.desenho_dos_lancadores import _a, _e
@@ -423,25 +423,97 @@ def _cartoes_das_opcoes(opcoes: Sequence[OpcaoDaJanela]) -> str:
     return f'<div class="ky-grade">{"".join(cartoes)}</div>'
 
 
+#: Os pedaços da coluna «Agora» que um manifesto pode declarar, na ordem do desenho.
+PEDACOS_DO_AGORA = ("nivel", "perfil", "aparelhos")
+NIVEL_MAXIMO = 10
+#: O que um pedaço mostra quando a extensão não deu valor (parada, ou ainda sem estado).
+SEM_VALOR = "—"
+DICA_DO_PARAR = "Todos os aparelhos a zero na hora. O nível e o perfil ficam guardados."
+GESTO_DO_PARAR = "parar-tudo-da-modificacao"
+
+
+def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None) -> str:
+    """O miolo da coluna «Agora»: só os pedaços que o manifesto declara, do ``acessorios.estado``.
+
+    Sem estado, ou com a extensão parada (``ligado`` falso), cada pedaço fica vazio: nenhum número
+    que a extensão não deu. O perfil e os nomes dos aparelhos vêm de terceiros: escapados.
+    """
+    vivo = bool(estado and estado.get("ligado") is True)
+    linhas = ['<div class="ja-ag-topo"><span class="pc-sub">Agora</span>'
+              f'<span class="ja-srv">{"Ligada" if vivo else "Parada"}</span></div>']
+    for pedaco in (x for x in PEDACOS_DO_AGORA if x in pedacos):
+        if pedaco == "nivel":
+            nivel = estado.get("nivel") if vivo and estado else None
+            nivel = nivel if isinstance(nivel, int) and not isinstance(nivel, bool) else None
+            numero = (f"<b>{nivel}</b><span>/ {NIVEL_MAXIMO}</span>" if nivel is not None
+                      else f"<b>{SEM_VALOR}</b>")
+            degraus = "".join(f'<i class="{"on" if nivel is not None and n <= nivel else ""}">'
+                              "</i>" for n in range(1, NIVEL_MAXIMO + 1))
+            linhas.append(
+                '<div class="ja-nivel-caixa" data-agora="nivel"><div class="ja-nivel-linha">'
+                f'<span class="ja-rot">Nível</span><span class="ja-nivel">{numero}</span></div>'
+                f'<div class="ja-degraus">{degraus}</div></div>')
+        elif pedaco == "perfil":
+            perfil = estado.get("perfil") if vivo and estado else None
+            texto = _e(perfil) if isinstance(perfil, str) and perfil.strip() else SEM_VALOR
+            linhas.append('<div class="ja-perfil-linha" data-agora="perfil"><span class="ja-rot">'
+                          f'Perfil</span><span class="ja-perfil-nome">{texto}</span></div>')
+        else:
+            bruto = estado.get("aparelhos") if vivo and estado else None
+            nomes = [str(x) for x in bruto] if isinstance(bruto, list) else []
+            conta = (f"{len(nomes)} conectado" + ("" if len(nomes) == 1 else "s")
+                     if nomes else "Nenhum conectado")
+            itens = "".join('<div class="ja-ap"><div class="ja-ap-cab"><span class="ja-ap-nome">'
+                            f"{_e(n)}</span></div></div>" for n in nomes)
+            linhas.append('<div class="ja-aps" data-agora="aparelhos"><div class="ja-aps-topo">'
+                          '<span class="ja-rot">Aparelhos</span>'
+                          f'<span class="conta">{conta}</span></div>{itens}</div>')
+    return "".join(linhas)
+
+
+def parar_tudo_html(mod: str) -> str:
+    """O «Parar tudo» do topo da janela: o gesto ``para`` vai só a esta extensão."""
+    return (f'<button class="ja-parar" data-gesto="{GESTO_DO_PARAR}" data-v="{_a(mod)}" '
+            f'data-dica="{DICA_DO_PARAR}"><svg viewBox="0 0 16 16" width="13" height="13">'
+            '<rect x="3" y="3" width="10" height="10" rx="1.5" fill="currentColor"/></svg>'
+            "Parar tudo</button>")
+
+
+def _com_a_coluna(corpo: str, agora: Sequence[str], estado: Mapping[str, Any] | None) -> str:
+    """O corpo da janela; com pedaços do «Agora» declarados, a coluna à esquerda das opções."""
+    if not agora:
+        return f'''    <div class="tn-corpo">
+      {corpo}
+    </div>'''
+    return f'''    <div class="ja-corpo">
+      <div class="ja-agora" id="mod-agora">{agora_html(agora, estado)}</div>
+      <div class="ja-opcoes">{corpo}</div>
+    </div>'''
+
+
 def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], descricao: str = "",
-                           aba: str = "", *, desenho: bool = False) -> str:
+                           aba: str = "", *, desenho: bool = False, mod: str = "",
+                           agora: Sequence[str] = (), estado: Mapping[str, Any] | None = None,
+                           parar_tudo: bool = False) -> str:
     """O conteúdo da janela de uma extensão: o que o manifesto declara, uma linha por opção.
 
     Com mais de um grupo nas opções, uma aba interna por grupo (``aba`` é a aberta).
     ``desenho`` traz o arranjo de 19/10 (cartões por grupo, Cancelar e Guardar), que o produto ainda
     não atende: o mesmo precedente do «Criar para todos» de ``escolha_miolo_html``.
+    ``agora`` são os pedaços da coluna «Agora» que o manifesto declara (``estado`` é o último
+    ``acessorios.estado`` dela) e ``parar_tudo`` põe o botão no topo; os dois só com ``mod``.
     """
+    parar = parar_tudo_html(mod) if parar_tudo and mod else ""
+    agora = agora if mod else ()
     if desenho:
         corpo = (_cartoes_das_opcoes(opcoes) if opcoes else
                  '<div class="ext-vazia">Esta extensão não tem opções para ajustar.</div>')
         return f'''    <div class="tn-topo">
       <span class="tn-tit">Configurar · {_e(nome)}</span>
-      <span class="pc-para"><span class="ext-rot">Para</span>Todos</span>
+      <span class="pc-para"><span class="ext-rot">Para</span>Todos</span>{parar}
       <a class="tn-x" href="#" data-dica="Fechar">\u00d7</a>
     </div>
-    <div class="tn-corpo">
-      {corpo}
-    </div>
+{_com_a_coluna(corpo, agora, estado)}
     <div class="tn-rod">
       <a class="btn" href="#">Cancelar</a>
       <a class="btn roxo" href="#">Guardar</a>
@@ -450,12 +522,10 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], descricao
     corpo = linhas or '<div class="ext-vazia">Esta extensão não tem opções para ajustar.</div>'
     sub = f'<div class="lanc-novo-para">{_e(descricao)}</div>' if descricao else ""
     return f'''    <div class="tn-topo">
-      <span class="tn-tit">Configurar · {_e(nome)}</span>
+      <span class="tn-tit">Configurar · {_e(nome)}</span>{parar}
       <a class="tn-x" href="#" data-dica="Fechar">\u00d7</a>
     </div>
-    <div class="tn-corpo">
-      {sub}{corpo}
-    </div>
+{_com_a_coluna(sub + corpo, agora, estado)}
     <div class="tn-rod">
       <a class="btn" href="#">Fechar</a>
     </div>'''

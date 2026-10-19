@@ -346,6 +346,8 @@ class Porta:
         self._relogio = relogio
         #: Os instantes dos últimos ``eventos.publicar`` aceitos de cada extensão (a janela de 1 s).
         self._publicacoes: dict[str, deque[float]] = {}
+        #: O último ``acessorios.estado`` de cada extensão: a coluna «Agora» da janela dela.
+        self._estados_dos_acessorios: dict[str, dict[str, Any]] = {}
 
     # -- quem pode entrar -------------------------------------------------
 
@@ -435,9 +437,9 @@ class Porta:
             for topico, fila in con.assinaturas:
                 self.bus.unsubscribe(topico, fila)
             if con.deu_o_estado and con.sessao is not None:
-                self.bus.publish(
-                    EventTopic.ACESSORIOS_ESTADO, estado_vazio_dos_acessorios(con.sessao.mod_id)
-                )
+                vazio = estado_vazio_dos_acessorios(con.sessao.mod_id)
+                self._estados_dos_acessorios[con.sessao.mod_id] = vazio
+                self.bus.publish(EventTopic.ACESSORIOS_ESTADO, vazio)
             if con.brinquedo_preso() and con.sessao is not None:
                 self._soltar_o_brinquedo(con.sessao.mod_id)
             self._conexoes.discard(con)
@@ -580,8 +582,47 @@ class Porta:
             raise RecusaError(CODE_SEM_PERMISSAO, "falta a permissão ler:acessorios.gesto")
         estado = estado_dos_acessorios(con.sessao.mod_id, params)
         con.deu_o_estado = True
+        self._estados_dos_acessorios[con.sessao.mod_id] = estado
         self.bus.publish(EventTopic.ACESSORIOS_ESTADO, estado)
         return {"recebido": True}
+
+    # -- a janela da extensão, pelo IPC principal ---------------------------
+
+    def agora_de(self, mod_id: str) -> dict[str, Any]:
+        """O último ``acessorios.estado`` de ``mod_id``; sem conexão viva, o estado vazio.
+
+        A coluna «Agora» da janela lê daqui: extensão parada ou que nunca devolveu o estado
+        mostra a coluna vazia, sem número inventado.
+        """
+        estado = self.ultimo_estado_de(mod_id)
+        return estado_vazio_dos_acessorios(mod_id) if estado is None else dict(estado)
+
+    def ultimo_estado_de(self, mod_id: str) -> dict[str, Any] | None:
+        """O ``acessorios.estado`` guardado de ``mod_id`` (o próprio objeto), com conexão viva."""
+        viva = any(
+            con.sessao is not None and con.sessao.mod_id == mod_id for con in self._conexoes
+        )
+        return self._estados_dos_acessorios.get(mod_id) if viva else None
+
+    def parar_tudo(self, mod_id: str) -> bool:
+        """O «Parar tudo» da janela: o gesto ``para`` só para ``mod_id``.
+
+        Sai no mesmo tópico do gesto do PS (``acessorios.gesto``), com ``mod`` dizendo a quem
+        ele vai e sem controle (``uniq`` nulo): nenhum controle toca a confirmação, e a outra
+        extensão que assina o tópico não o recebe. ``False`` quando a extensão não está
+        conectada à porta (nada a parar).
+        """
+        viva = any(
+            con.sessao is not None and con.sessao.mod_id == mod_id
+            and "ler:acessorios.gesto" in con.sessao.permissoes
+            for con in self._conexoes
+        )
+        if not viva:
+            return False
+        self.bus.publish(EventTopic.ACESSORIOS_GESTO, {
+            "uniq": None, "jogador": None, "gesto": "para", "valor": 0, "mod": mod_id,
+        })
+        return True
 
     def _pulsar(self, sessao: _Credencial, params: dict[str, Any]) -> dict[str, Any]:
         """O pulso da barra: a porta valida e recusa, e o motor da luz decide e escreve."""
@@ -619,6 +660,13 @@ class Porta:
                 and carga.get("origem") == con.sessao.mod_id
             ):
                 continue  # quem publicou nunca recebe o próprio evento
+            if (
+                topico == EventTopic.ACESSORIOS_GESTO
+                and isinstance(carga, dict)
+                and con.sessao is not None
+                and carga.get("mod") not in (None, con.sessao.mod_id)
+            ):
+                continue  # o «Parar tudo» de uma janela vai só à extensão dela
             uniq = carga.get("uniq") if isinstance(carga, dict) else None
             if not isinstance(uniq, str) or not uniq:
                 uniq = self._uniq_do_posto()

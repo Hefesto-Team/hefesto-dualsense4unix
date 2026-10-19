@@ -93,7 +93,8 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
 - `acessorios.gesto` (`ler:acessorios.gesto`) entrega `nome: "acessorios.gesto"`: o gesto do PS que comanda os
   acessórios, `{uniq, jogador, gesto, valor}`. `gesto` é `sobe`, `desce`, `para`, `perfil_seguinte`,
   `perfil_anterior`, `nivel_ao_vivo` (`valor` de 0 a 1), `surto` ou `camada` (`valor` 1 liga, 0 desliga); nunca um
-  botão cru. Só existe com a modificação ligada e com aparelho: ela devolve o próprio estado por
+  botão cru. O «Parar tudo» da janela chega como `para` com `uniq` e `jogador` nulos e `mod`, o `id` da
+  extensão a que se destina; só ela o recebe. Só existe com a modificação ligada e com aparelho: ela devolve o próprio estado por
   `acessorios.estado`, o Hefesto guarda o último e, sem ele (ou sem aparelho, ou quando a conexão cai), PS + R2 é o
   que sempre foi. Enquanto o gesto vale, o R2, o L2, o R1, o L1 e o direcional que o comandam não chegam ao
   jogo, por controle. `ajustes` aceita `limiar_fundo` (50 a 100 %), `acelerador`, `camada`, `camada_s`,
@@ -175,8 +176,18 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   nível e o perfil ficam guardados.
 
 `agora` e `parar_tudo` só valem com `ler:acessorios.gesto` nas permissões, que é o retorno que os dois usam;
-sem a permissão o manifesto é recusado. A interface ainda não desenha o «Agora» nem o «Parar tudo»: o
-manifesto os aceita, e a janela os desenha quando o serviço entregar o estado e receber o gesto pelo IPC.
+sem a permissão o manifesto é recusado. A janela os pede ao serviço por dois métodos do IPC da interface (o
+`ipc.sock`, não esta porta):
+
+- `mods.agora {mod}` devolve o último `acessorios.estado` daquela extensão, `{mod, ligado, nivel, perfil,
+  aparelhos, ajustes}`. Sem conexão viva dela, ou quando a conexão cai, volta o estado vazio (`ligado: false`), e a
+  coluna mostra cada pedaço vazio, sem número. A janela pergunta no máximo duas vezes por segundo, fora do tique,
+  e desenha só os pedaços do `agora`;
+- `mods.parar_tudo {mod}` publica `acessorios.gesto` com `gesto: "para"`, `uniq` e `jogador` nulos e
+  `mod: <id>`: só aquela extensão o recebe (as outras com `ler:acessorios.gesto` não), nenhum controle dá o
+  toque de confirmação, e o serviço confere o «parar curto» só dela. Volta `{parado}`, falso quando ela não
+  está conectada. Recusa (`-32602`, com a frase) a extensão que não está instalada ou cujo manifesto não declara
+  `parar_tudo`.
 
 ## Os erros
 

@@ -1181,15 +1181,86 @@ class _Mexida:
     html_conf: str = ""
     html_imp: str = ""
     html_mod: str = ""
+    #: Os pedaços da coluna «Agora» que o manifesto da janela aberta declara.
+    agora: tuple[str, ...] = ()
 
     def limpar(self) -> None:
         self.menu = self.permissoes = self.remover = self.conf = self.imp = self.mod = ""
         self.impedimentos = ()
         self.vistas = {}
         self.html_conf = self.html_imp = self.html_mod = ""
+        self.agora = ()
 
 
 _MEXIDA = _Mexida()
+
+#: De quanto em quanto a coluna «Agora» pergunta ao serviço, no máximo.
+TTL_DO_AGORA_S = 0.5
+METODO_DO_AGORA = "mods.agora"
+METODO_DO_PARAR = "mods.parar_tudo"
+
+
+class _Agora:
+    """O último ``acessorios.estado`` da extensão de janela aberta, relido FORA do tique.
+
+    A pintura nunca bloqueia: :meth:`agora` devolve o que tem e, passado o ``TTL_DO_AGORA_S``,
+    dispara a pergunta numa thread, pela ponte que o gesto da engrenagem trouxe. Sem serviço,
+    o valor é ``None`` e a coluna fica vazia.
+    """
+
+    def __init__(self) -> None:
+        self._mod = ""
+        self._ponte: Any = None
+        self._estado: dict[str, Any] | None = None
+        self._quando = float("-inf")
+        self._em_curso = False
+        self._trava = threading.Lock()
+
+    def abrir(self, mod: str, ponte: Any) -> None:
+        with self._trava:
+            if mod != self._mod:
+                self._estado = None
+            self._mod, self._ponte, self._quando = mod, ponte, float("-inf")
+
+    def esquecer(self) -> None:
+        with self._trava:
+            self._quando = float("-inf")
+
+    def agora(self) -> dict[str, Any] | None:
+        """O que se sabe AGORA. Nunca bloqueia, nunca levanta."""
+        with self._trava:
+            precisa = (bool(self._mod) and self._ponte is not None and not self._em_curso
+                       and time.monotonic() - self._quando >= TTL_DO_AGORA_S)
+            if precisa:
+                self._em_curso = True
+            mod, ponte, estado = self._mod, self._ponte, self._estado
+        if precisa:
+            threading.Thread(target=self._corpo, args=(mod, ponte), name="hefesto-agora",
+                             daemon=True).start()
+        return estado
+
+    def _corpo(self, mod: str, ponte: Any) -> None:
+        try:
+            self.ler(mod, ponte)
+        finally:
+            with self._trava:
+                self._em_curso = False
+
+    def ler(self, mod: str, ponte: Any) -> dict[str, Any] | None:
+        """BLOQUEIA: pergunta ao serviço. Só de thread de gesto, nunca do tique."""
+        try:
+            resposta = ponte.resultado(METODO_DO_AGORA, mod=mod)
+        except Exception:
+            _LOG.debug("agora_da_extensao_sem_resposta", exc_info=True)
+            resposta = None
+        estado = resposta if isinstance(resposta, dict) and resposta.get("mod") == mod else None
+        with self._trava:
+            if mod == self._mod:
+                self._estado, self._quando = estado, time.monotonic()
+        return estado
+
+
+_AGORA = _Agora()
 
 
 def _lugares() -> Any:
@@ -1286,6 +1357,8 @@ def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador])
     for seletor, miolo in janelas:
         if miolo:
             blocos[seletor] = miolo
+    if _MEXIDA.html_mod and _MEXIDA.agora:
+        blocos["#mod-agora"] = exp.agora_html(_MEXIDA.agora, _AGORA.agora())
     return carga
 
 
@@ -1379,8 +1452,10 @@ def _montar_a_janela_da_extensao(mod_id: str, aba: str = "") -> None:
         jogos=jogos if x.tipo == "jogos" else (),
         kit_de=kit_de if x.tipo == "jogos" else ()) for x in manifesto.opcoes]
     _MEXIDA.mod = mod_id
+    _MEXIDA.agora = tuple(manifesto.agora)
     _MEXIDA.html_mod = exp.modificacao_miolo_html(
-        manifesto.nome, linhas, manifesto.descricao, aba)
+        manifesto.nome, linhas, manifesto.descricao, aba, mod=mod_id, agora=_MEXIDA.agora,
+        estado=_AGORA.agora() if _MEXIDA.agora else None, parar_tudo=manifesto.parar_tudo)
 
 
 def _a_pintura_agora(ctx: Contexto) -> dict[str, Any]:
@@ -1436,10 +1511,27 @@ def _ligar_ou_desligar_a_modificacao(mod_id: str) -> str | None:
 
 @gesto("07-lancadores.html", "configurar-modificacao")
 def configurar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """A engrenagem da extensão: a janela com as opções que o manifesto dela declara."""
+    """A engrenagem da extensão: a janela com as opções que o manifesto dela declara.
+
+    A coluna «Agora» nasce com o estado lido aqui (o gesto roda em thread) e segue pela ponte.
+    """
     _MEXIDA.menu = _MEXIDA.permissoes = ""
-    _montar_a_janela_da_extensao(_id_do_clique(o, "configurar-modificacao"))
+    mod_id = _id_do_clique(o, "configurar-modificacao")
+    _AGORA.abrir(mod_id, p)
+    _AGORA.ler(mod_id, p)
+    _montar_a_janela_da_extensao(mod_id)
     return _a_pintura_agora(ctx)
+
+
+@gesto("07-lancadores.html", exp.GESTO_DO_PARAR)
+def parar_tudo_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O «Parar tudo» da janela: o serviço publica o gesto ``para`` só para esta extensão."""
+    mod_id = _id_do_clique(o, exp.GESTO_DO_PARAR)
+    ok, motivo = p.chamar_detalhado(METODO_DO_PARAR, mod=mod_id)
+    if not ok:
+        raise RuntimeError(motivo or "O serviço não respondeu. Nada foi parado.")
+    _AGORA.esquecer()
+    return {**_a_pintura_agora(ctx), "recado": "Parar tudo enviado."}
 
 
 @gesto("07-lancadores.html", "guardar-opcao-da-modificacao",
@@ -1760,8 +1852,8 @@ METODO_DA_RECARGA = "launch_env.refresh"
 
 #: o wrapper vive em dois arquivos em disco, e o `state_full` não tem UMA chave
 # `machine_declare` ENTROU EM 08/09/2026 com o lançador declarado pelo usuário: é a
-PONTE: set[str] = {"chamar", "machine_declare", "escolher_arquivo"}
-METODOS: set[str] = {"machine.declare"}
+PONTE: set[str] = {"chamar", "chamar_detalhado", "resultado", "machine_declare", "escolher_arquivo"}
+METODOS: set[str] = {"machine.declare", METODO_DO_AGORA, METODO_DO_PARAR}
 
 
 PAGINA = "07-lancadores.html"
@@ -1777,6 +1869,7 @@ SEM_ECO = (# `maquina.json`: o `state_full` não tem UMA chave sobre lançador.
            # que o daemon devolve não tem chave sobre o registro das modificações nem sobre a Steam.
            "ligar-modificacao", "configurar-modificacao", "guardar-opcao-da-modificacao",
            "mais-da-modificacao", "instalar-modificacao", "escolher-arquivo-da-modificacao",
+           exp.GESTO_DO_PARAR,
            "ver-impedimentos", "resolver-impedimento", "resolver-todos-os-impedimentos",
            "identificar-lancador", "configurar-lancador", "criar-perfil-do-jogo")
 

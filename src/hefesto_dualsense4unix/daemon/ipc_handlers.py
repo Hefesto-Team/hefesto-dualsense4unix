@@ -5059,6 +5059,54 @@ class IpcHandlersMixin:
         total = await ps.reload(ctx)
         return {"status": "ok", "total": total}
 
+    async def _handle_mods_agora(self, params: dict[str, Any]) -> dict[str, Any]:
+        """A coluna «Agora» da janela de uma extensão: o último ``acessorios.estado`` dela.
+
+        ``{mod}`` → ``{mod, ligado, nivel, perfil, aparelhos, ajustes}``; sem conexão viva, o
+        estado vazio (``ligado: false``, nível 0, sem aparelho), e a tela mostra a coluna vazia.
+        """
+        from hefesto_dualsense4unix.mods.porta import estado_vazio_dos_acessorios
+
+        mod = self._mod_do_pedido(params)
+        supervisor = getattr(self.daemon, "_mods_supervisor", None) if self.daemon else None
+        if supervisor is None:
+            return estado_vazio_dos_acessorios(mod)
+        agora: dict[str, Any] = supervisor.porta.agora_de(mod)
+        return agora
+
+    async def _handle_mods_parar_tudo(self, params: dict[str, Any]) -> dict[str, Any]:
+        """O «Parar tudo» da janela: o gesto ``para`` vai só à extensão ``{mod}``.
+
+        Só vale para a extensão cujo manifesto instalado declara ``parar_tudo``. ``{parado}`` é
+        falso quando ela não está conectada à porta (nada a parar).
+        """
+        from hefesto_dualsense4unix.mods.instalador import (
+            InstalacaoRecusadaError,
+            manifesto_instalado,
+        )
+
+        mod = self._mod_do_pedido(params)
+        supervisor = getattr(self.daemon, "_mods_supervisor", None) if self.daemon else None
+        if supervisor is None:
+            return {"parado": False}
+        try:
+            manifesto = await asyncio.to_thread(
+                manifesto_instalado, mod, lugares=supervisor.lugares
+            )
+        except InstalacaoRecusadaError as exc:
+            raise ValueError(exc.frase) from exc
+        if not manifesto.parar_tudo:
+            raise ValueError(f"«{manifesto.nome}» não declara o «Parar tudo».")
+        return {"parado": bool(supervisor.porta.parar_tudo(mod))}
+
+    @staticmethod
+    def _mod_do_pedido(params: dict[str, Any]) -> str:
+        """O ``mod`` dos pedidos da janela da extensão: o ``id`` do manifesto, nunca vazio."""
+        mod = params.get("mod")
+        if not isinstance(mod, str) or not mod.strip():
+            raise ValueError("o pedido não diz de qual extensão se trata (mod)")
+        return mod.strip()
+
     # AR-MEDIDO-01 (23/09/2026), R10 e R11: o gancho do ar no `state_full` fica neste bloco para
     # não deslocar as âncoras de baixo.
 

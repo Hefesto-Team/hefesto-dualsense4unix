@@ -1464,6 +1464,13 @@
 #mod-janela .ky-ctrl { justify-content:flex-end }
 #mod-janela .ky-ctrl .ext-sel { width:220px }
 #mod-janela .ac-card .jg-lista { max-height:150px }
+/* A coluna «Agora» e o «Parar tudo» da janela genérica: a extensão que os declara ganha a largura da
+   janela dos acessórios; os degraus só mostram o nível, não são botão. */
+#mod-janela:has(.ja-corpo) { width:1130px }
+#mod-janela .tn-tit + .ja-parar { margin-left:auto }
+#mod-janela .ja-opcoes { min-width:0;min-height:0;overflow:auto }
+#mod-janela .ja-degraus i, #mod-janela .ja-degraus i:hover { cursor:default;border-color:var(--border-forte) }
+#mod-janela .ja-degraus i.on { border-color:#ff8fd0 }
 /* O menu do ⋮ no desenho de 19/10: A flutua à esquerda do ⋮, na própria linha (ext-pop), e a dica do ⋮
    não o cobre; B abre dentro da linha (ext-dentro);
    os dois só aparecem com o foco na linha, que é o que o clique no ⋮ dá. */
@@ -2062,7 +2069,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <div class="pc-molde"><span class="pc-rot">Molde</span><div class="seg mini " data-dica="Calmo: degraus. Brincalhão: em onda. Do jeito do jogo: segue o jogo"><button class="">Calmo</button><button class="on">Brincalhão</button><button class="">Do jeito do jogo</button></div>
 </div>
       <span class="pc-para"><span class="ext-rot">Perfil</span>Meu perfil<span class="ja-marca">Adulto</span></span>
-      <button class="ja-parar" title="Todos os aparelhos a zero na hora. O nível e o perfil ficam guardados."><svg viewBox="0 0 16 16" width="13" height="13"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="currentColor"/></svg>Parar tudo</button>
+      <button class="ja-parar" data-gesto="parar-tudo-da-modificacao" data-v="intiface" title="Todos os aparelhos a zero na hora. O nível e o perfil ficam guardados."><svg viewBox="0 0 16 16" width="13" height="13"><rect x="3" y="3" width="10" height="10" rx="1.5" fill="currentColor"/></svg>Parar tudo</button>
       <a class="tn-x" href="#" title="Fechar">×</a>
     </div>
     <div class="ja-corpo">
@@ -2408,7 +2415,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const b = e.target.closest && e.target.closest('.modo-auto');
     if (b) setTimeout(() => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'), 0);
   });
-  /* O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar ou Ligar, Reiniciar, Fechar.
+  /* O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar ou Ligar, Reiniciar,
+     Reconectar controles (o mesmo «Reconectar» da aba Jogar, desde 19/10/2026), Fechar.
      Cada item é um `data-gesto` comum: no produto a janela o despacha como qualquer botão. O serviço
      parado ou pausado vira «Ligar», de um clique só; o estado vem do `data-servico` do cabeçalho. */
   const fechar = () => document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
@@ -2424,7 +2432,8 @@ document.addEventListener('DOMContentLoaded', () => {
     m.innerHTML = `<button type="button" role="menuitem" data-menu="copiar" ${sel ? '' : 'disabled'}>Copiar</button><hr>
       <button type="button" role="menuitem" data-gesto="menu-atualizar">Atualizar</button>
       ${item}
-      <button type="button" role="menuitem" data-gesto="menu-reiniciar">Reiniciar</button><hr>
+      <button type="button" role="menuitem" data-gesto="menu-reiniciar">Reiniciar</button>
+      <button type="button" role="menuitem" data-gesto="menu-reconectar" data-dica="Desliga e liga de novo todos os controles">Reconectar controles</button><hr>
       <button type="button" role="menuitem" data-gesto="menu-fechar">Fechar</button>`;
     document.body.append(m);
     const r = m.getBoundingClientRect();

@@ -362,24 +362,28 @@ class Supervisor:
             while True:
                 gesto = await fila.get()
                 if isinstance(gesto, dict) and gesto.get("gesto") == "para":
-                    tarefa = asyncio.create_task(self.conferir_o_parar(), name="mods-parar-curto-1")
+                    alvo = gesto.get("mod") if isinstance(gesto.get("mod"), str) else None
+                    tarefa = asyncio.create_task(
+                        self.conferir_o_parar(alvo), name="mods-parar-curto-1"
+                    )
                     self._parar_curtos.add(tarefa)
                     tarefa.add_done_callback(self._parar_curtos.discard)
         finally:
             self.bus.unsubscribe(EventTopic.ACESSORIOS_GESTO, fila)
 
-    async def conferir_o_parar(self) -> bool:
+    async def conferir_o_parar(self, mod: str | None = None) -> bool:
         """Depois do ``para``, a modificação devolveu ``ligado: false`` a tempo? Senão, é encerrada.
 
         Devolve ``True`` quando o supervisor a encerrou. Quem já estava desligada (``ligado: false``
         antes do gesto) ou não tem processo do supervisor fica como está. Sempre pelo PID que o
         supervisor criou, nunca por nome; a vigia reabre a modificação como reabre qualquer queda.
+        ``mod`` é o alvo do «Parar tudo» da janela: o estado de outra extensão não é conferido.
         """
-        antes = self.bus.ultimo(EventTopic.ACESSORIOS_ESTADO)
+        antes = self._estado_para_o_parar(mod)
         if not isinstance(antes, dict) or antes.get("ligado") is False:
             return False
         await asyncio.sleep(self.prazo_do_parar_curto_s)
-        depois = self.bus.ultimo(EventTopic.ACESSORIOS_ESTADO)
+        depois = self._estado_para_o_parar(mod)
         if isinstance(depois, dict) and depois is not antes and depois.get("ligado") is False:
             return False
         vigiada = self._vigiadas.get(str(antes.get("mod", "")))
@@ -389,6 +393,12 @@ class Supervisor:
         logger.warning("mods_parar_curto", mod=antes.get("mod"), pid=processo.pid)
         await parar_o_grupo(processo, self.prazo_para_parar_s)
         return True
+
+    def _estado_para_o_parar(self, mod: str | None) -> Any:
+        """O último estado que o parar confere: o do barramento, ou o da extensão ``mod``."""
+        if mod is None:
+            return self.bus.ultimo(EventTopic.ACESSORIOS_ESTADO)
+        return self.porta.ultimo_estado_de(mod)
 
     async def _vigiar_o_registro(self) -> None:
         while True:

@@ -454,6 +454,13 @@
 #mod-janela .ky-ctrl { justify-content:flex-end }
 #mod-janela .ky-ctrl .ext-sel { width:220px }
 #mod-janela .ac-card .jg-lista { max-height:150px }
+/* A coluna «Agora» e o «Parar tudo» da janela genérica: a extensão que os declara ganha a largura da
+   janela dos acessórios; os degraus só mostram o nível, não são botão. */
+#mod-janela:has(.ja-corpo) { width:1130px }
+#mod-janela .tn-tit + .ja-parar { margin-left:auto }
+#mod-janela .ja-opcoes { min-width:0;min-height:0;overflow:auto }
+#mod-janela .ja-degraus i, #mod-janela .ja-degraus i:hover { cursor:default;border-color:var(--border-forte) }
+#mod-janela .ja-degraus i.on { border-color:#ff8fd0 }
 /* O menu do ⋮ no desenho de 19/10: A flutua à esquerda do ⋮, na própria linha (ext-pop), e a dica do ⋮
    não o cobre; B abre dentro da linha (ext-dentro);
    os dois só aparecem com o foco na linha, que é o que o clique no ⋮ dá. */
