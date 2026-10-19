@@ -93,7 +93,7 @@ SEM_DONO: dict[str, str] = {}
 #: disco do usuário, `_secoes_do_controle` devolvia seis chaves, esta lista lia cinco,
 SECOES_DA_COLUNA: tuple[str, ...] = (
     "leds", "triggers", "rumble", "speaker", "mic", "sensores", "mascara",
-    "movimento")
+    "movimento", "ativacao", "analogicos")  # (noqa-acento) identificadores ASCII
 
 #: não chega, `perfis_web._secoes_do_controle` não devolve a chave, o pacote lê
 ESPERANDO_O_ESQUEMA: frozenset[str] = frozenset()
