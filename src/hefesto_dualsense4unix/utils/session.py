@@ -572,24 +572,25 @@ def save_navegacao_interna(ligada: bool, tipo: str) -> None:
 
 
 def load_navegacao_interna() -> tuple[bool, str]:
-    """``(ligada, tipo)`` guardados; sem arquivo, nasce desligada no tipo Interna.
+    """``(ligada, tipo)`` guardados; sem arquivo, nasce ligada no tipo Interna.
 
-    Nasce desligada na primeira vez (*«possa Ligar o modo e mandar ver»*), e o
-    tipo que a lista mostra primeiro é a Interna. Conteúdo malformado conta
-    como nunca escolhido.
+    Nasce LIGADA (ordem de 19/10/2026: a Interna só age com a janela na
+    frente, e fora dela os botões voltam ao jogo). Caducou nesse dia o «nasce
+    desligada na primeira vez» (*«possa Ligar o modo e mandar ver»*). A escolha
+    gravada continua valendo; conteúdo malformado conta como nunca escolhido.
     """
     try:
         flag = config_dir() / _NAVEGACAO_INTERNA_FLAG_FILE
         if not flag.exists():
-            return False, TIPOS_DE_NAVEGACAO[0]
+            return True, TIPOS_DE_NAVEGACAO[0]
         data = json.loads(flag.read_text(encoding="utf-8").strip() or "{}")
     except Exception:
-        return False, TIPOS_DE_NAVEGACAO[0]
+        return True, TIPOS_DE_NAVEGACAO[0]
     if not isinstance(data, dict):
-        return False, TIPOS_DE_NAVEGACAO[0]
+        return True, TIPOS_DE_NAVEGACAO[0]
     tipo = data.get("tipo")
     return (
-        data.get("ligada") is True,
+        data.get("ligada") is not False,
         tipo if tipo in TIPOS_DE_NAVEGACAO else TIPOS_DE_NAVEGACAO[0],
     )
 

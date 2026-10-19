@@ -2341,7 +2341,10 @@ NAV_INSTALAR = r"""
             if(window.__hef && op.pref) window.__hef.alvoPadrao = op.pref;
             el.click();
           } else if(op.op === 'escolha'){
-            const i = Math.max(0, Math.min(el.options.length - 1, el.selectedIndex + op.passo));
+            // A LISTA DÁ A VOLTA (pedido de 19/10/2026): do último efeito o passo
+            // seguinte volta ao primeiro, e do primeiro o anterior vai ao último.
+            const n = el.options.length;
+            const i = n ? ((el.selectedIndex + op.passo) % n + n) % n : el.selectedIndex;
             if(i !== el.selectedIndex){
               el.selectedIndex = i;
               el.dispatchEvent(new Event('change', {bubbles: true}));
@@ -2357,6 +2360,16 @@ NAV_INSTALAR = r"""
       return ops.length;
     },
     molduras: function(molduras){
+      // A cor oposta no círculo das cores (o complemento de cada canal); sem
+      // cor legível, o branco.
+      const oposta = function(cor){
+        const k = document.createElement('i');
+        k.style.color = cor || ''; document.body.appendChild(k);
+        const v = (getComputedStyle(k).color.match(/\d+(\.\d+)?/g) || []).map(Number);
+        k.remove();
+        if(!cor || v.length < 3) return '#fff';
+        return 'rgb(' + (255 - v[0]) + ',' + (255 - v[1]) + ',' + (255 - v[2]) + ')';
+      };
       for(const m of document.querySelectorAll('.hef-nav-moldura')) m.remove();
       const por = {};
       for(const m of molduras){
@@ -2371,7 +2384,11 @@ NAV_INSTALAR = r"""
           'border-radius:8px;box-sizing:border-box;' +
           'left:' + (r.left - folga) + 'px;top:' + (r.top - folga) + 'px;' +
           'width:' + (r.width + 2 * folga) + 'px;height:' + (r.height + 2 * folga) + 'px;' +
-          'border:' + (m.dentro ? 3 : 2) + 'px solid ' + (m.cor || 'var(--acento, #6aa0ff)');
+          'border:' + (m.dentro ? 3 : 2) + 'px solid ' + (m.cor || 'var(--acento, #6aa0ff)') +
+          // DENTRO DA LISTA, UM ANEL DE FORA na cor oposta à do plástico (pedido de
+          // 19/10/2026): o controle que escolhe se distingue do que só anda, e o
+          // oposto vale nas quatro cores (o branco sumiria no White).
+          (m.dentro ? ';box-shadow:0 0 0 3px ' + oposta(m.cor) : '');
         const p = document.createElement('span');
         p.textContent = (m.pref || '').toUpperCase();
         p.style.cssText = 'position:absolute;top:-10px;right:-6px;font:600 10px/14px sans-serif;' +

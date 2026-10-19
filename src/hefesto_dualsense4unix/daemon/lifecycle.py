@@ -872,7 +872,7 @@ class Daemon:
         if kbd_pref is not None:
             self.config.keyboard_emulation_enabled = kbd_pref
         # A Navegação Interna guarda a última escolha, como o mouse (a flag de
-        # sessão `navegacao_interna.flag`); na primeira vez nasce desligada.
+        # sessão `navegacao_interna.flag`); na primeira vez nasce ligada (19/10/2026).
         from hefesto_dualsense4unix.daemon.subsystems.navegacao_interna import (
             NavegacaoInterna,
         )

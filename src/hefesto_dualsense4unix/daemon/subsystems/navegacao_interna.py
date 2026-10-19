@@ -66,7 +66,7 @@ class NavegacaoInterna:
     def __init__(
         self,
         *,
-        ligada: bool = False,
+        ligada: bool = True,
         tipo: str = TIPO_INTERNA,
         relogio: Callable[[], float] = time.monotonic,
     ) -> None:
@@ -80,7 +80,7 @@ class NavegacaoInterna:
 
     @classmethod
     def da_sessao(cls) -> NavegacaoInterna:
-        """A escolha guardada (``navegacao_interna.flag``); sem ela, desligada."""
+        """A escolha guardada (``navegacao_interna.flag``); sem ela, ligada (19/10/2026)."""
         from hefesto_dualsense4unix.utils.session import load_navegacao_interna
 
         ligada, tipo = load_navegacao_interna()
