@@ -23,7 +23,7 @@ MORDIDAS (cada uma foi feita e viu reprovar; a lista está no relato do tema des
 * devolver o «Fechar» único ao «Configurar» do lançador -> `test_o_configurar_do_lancador_...`;
 * devolver «Jogos» no lugar de «Pastas dos jogos» no «Configurar» -> o mesmo;
 * deixar no disco uma variante que o gerador não produz mais -> `test_as_variantes_de_10_...`;
-* devolver uma variante da 07, que o usuário escolheu em 19/10 -> `test_a_07_nao_guarda_variante_...`.
+* devolver uma variante da 07, escolhida em 19/10 -> `test_a_07_nao_guarda_variante_...`.
 """
 from __future__ import annotations
 
