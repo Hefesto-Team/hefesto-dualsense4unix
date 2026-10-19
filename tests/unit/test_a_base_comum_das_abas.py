@@ -347,13 +347,31 @@ def test_todo_item_do_menu_tem_um_gesto_com_dono() -> None:
     """Os `data-gesto` do menu da base existem no despachante, em toda página (`("*", gesto)`)."""
     js = (INTERFACE / "base-comum.js").read_text(encoding="utf-8")
     do_menu = set(re.findall(r'data-gesto="(menu-[a-z-]+)"', js))
-    assert do_menu == {"menu-atualizar", "menu-desligar", "menu-reiniciar", "menu-fechar"}, do_menu
+    assert do_menu == {"menu-atualizar", "menu-desligar", "menu-reiniciar", "menu-reconectar",
+                       "menu-fechar"}, do_menu
     hefesto_vivo._registrar_o_menu()
     sem_dono = sorted(g for g in do_menu if ("*", g) not in pacotes.GESTOS)
     assert not sem_dono, f"item(ns) do menu sem gesto registrado: {sem_dono}"
-    assert set(hefesto_vivo.ITENS_DO_MENU_NA_SISTEMA) | {"menu-fechar"} == do_menu
+    assert (set(hefesto_vivo.ITENS_DO_MENU_NA_SISTEMA) | set(hefesto_vivo.ITENS_DO_MENU_NA_JOGAR)
+            | {"menu-fechar"}) == do_menu
     for na_sistema in hefesto_vivo.ITENS_DO_MENU_NA_SISTEMA.values():
         assert ("09-sistema.html", na_sistema) in pacotes.GESTOS, na_sistema
+    for na_jogar in hefesto_vivo.ITENS_DO_MENU_NA_JOGAR.values():
+        assert ("01-jogar.html", na_jogar) in pacotes.GESTOS, na_jogar
+
+
+def test_o_reconectar_do_menu_chama_o_reconectar_da_jogar(monkeypatch: pytest.MonkeyPatch) -> None:
+    """«Reconectar controles» do botão direito (19/10/2026) é o «Reconectar» da Jogar.
+
+    MORDIDA: apontar o item para outro gesto (ou tirá-lo do `ITENS_DO_MENU_NA_JOGAR`) reprova.
+    """
+    hefesto_vivo._registrar_o_menu()
+    chamadas: list[str] = []
+    monkeypatch.setitem(pacotes.GESTOS, ("01-jogar.html", "reconectar"),
+                        lambda ctx, o, ipc: chamadas.append("reconectar") or {"ok": True})
+    assert pacotes.GESTOS[("*", "menu-reconectar")](None, {}, None) == {"ok": True}
+    assert chamadas == ["reconectar"]
+    assert ("*", "menu-reconectar") not in pacotes.perigosos(), "reconectar não grava nada"
 
 
 def test_o_menu_vive_no_nativo() -> None:
@@ -450,12 +468,13 @@ def test_o_automatico_liga_e_a_area_que_ele_governa_esmaece(vivo: dict[str, Any]
                                    "governado": True}, vivo["auto_depois"]
 
 
-def test_o_botao_direito_abre_o_menu_da_casa_com_os_cinco_itens(vivo: dict[str, Any]) -> None:
+def test_o_botao_direito_abre_o_menu_da_casa_com_os_seis_itens(vivo: dict[str, Any]) -> None:
     """MORDIDA: renomear o ouvinte `contextmenu` no JS da base reprova (o menu nem nasce)."""
     assert vivo["menu"] is not None, "o botão direito não abriu o menu do Hefesto"
     assert [(i["texto"], i["gesto"]) for i in vivo["menu"]] == [
         ("Copiar", None), ("Atualizar", "menu-atualizar"), ("Desligar", "menu-desligar"),
-        ("Reiniciar", "menu-reiniciar"), ("Fechar", "menu-fechar")]
+        ("Reiniciar", "menu-reiniciar"), ("Reconectar controles", "menu-reconectar"),
+        ("Fechar", "menu-fechar")]
     assert vivo["menu"][0]["desabilitado"] is True, "Copiar sem seleção tem de ficar cinza"
 
 

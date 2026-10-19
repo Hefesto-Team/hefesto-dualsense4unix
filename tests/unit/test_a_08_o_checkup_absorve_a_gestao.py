@@ -92,7 +92,7 @@ def test_o_mic_desligado_por_escolha_tambem_e_certo() -> None:
     u = UNIQS[0]
     dec = _Declaracao({_hex(u): _Controle(microfone=False)})
     selo = pac.estado_do_controle({"uniq": u, "transport": "bt"}, {}, {}, dec)["est-mic"]
-    assert "desligado" in selo and "certo" in selo
+    assert "Desligado" in selo and "certo" in selo
 
 
 def test_o_mic_pelo_radio_sem_ponte_nao_e_certo() -> None:

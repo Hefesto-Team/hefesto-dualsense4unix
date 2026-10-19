@@ -2,10 +2,10 @@
   "_LEIA": "O PISO DAS CATRACAS. Não se edita à mão: `--aceitar` desce, `--forcar-piso «razão»` sobe com razão e data.",
   "medidas": {
     "casos-especiais-fora-do-dono": {
-      "data": "2026-10-13",
+      "data": "2026-10-19",
       "nota": "ramos por eixo, fora dos arquivos dono de cada eixo",
       "o_que_conta": "ramos que decidem por eixo, escritos fora do dono do eixo",
-      "piso": 39,
+      "piso": 37,
       "por_item": {
         "app/actions/external_controllers.py::transporte": 1,
         "broker/hidraw_broker.py::modelo": 3,
@@ -29,7 +29,7 @@
         "interface/aba10.py::mascara": 1,
         "interface/monta.py::jogador": 1,
         "interface/monta.py::transporte": 2,
-        "interface/pacotes/a08_conexoes.py::transporte": 6,
+        "interface/pacotes/a08_conexoes.py::transporte": 4,
         "interface/sistema.py::transporte": 1,
         "testing/fake_controller.py::transporte": 1
       },
@@ -49,17 +49,16 @@
         }
       ],
       "unidade": "ramos",
-      "universo": 385
+      "universo": 411
     },
     "remendos-de-sintoma": {
-      "data": "2026-10-16",
+      "data": "2026-10-19",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 992,
+      "piso": 990,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
-        "app/actions/config/secao_controles.py": 2,
         "app/actions/config/secao_janela.py": 1,
         "app/actions/config/secao_orcamento.py": 2,
         "app/actions/daemon_actions.py": 4,
@@ -247,20 +246,20 @@
         }
       ],
       "unidade": "remendos",
-      "universo": 405
+      "universo": 411
     },
     "tamanho": {
-      "data": "2026-10-18",
+      "data": "2026-10-19",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1149104,
+      "piso": 1147368,
       "por_item": {
-        "docs": 119664,
-        "scripts": 114956,
-        "src": 310562,
-        "tests": 603922
+        "docs": 119662,
+        "scripts": 114949,
+        "src": 310100,
+        "tests": 602657
       },
-      "razao": "tamanho: +4 linhas (1149100 -> 1149104), pagas por Origem: D-1710-O-DOCTOR-MOSTRA-O-PROTON-FIXADO-E-O-DE-CADA-JOGO; registrado no fecho, topo bc091dd86968",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -666,7 +665,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 3004
+      "universo": 3002
     }
   }
 }

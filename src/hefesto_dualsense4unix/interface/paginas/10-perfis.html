@@ -2805,7 +2805,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     m.innerHTML = `<button type="button" role="menuitem" data-menu="copiar" ${sel ? '' : 'disabled'}>Copiar</button><hr>
       <button type="button" role="menuitem" data-gesto="menu-atualizar">Atualizar</button>
       ${item}
-      <button type="button" role="menuitem" data-gesto="menu-reiniciar">Reiniciar</button><hr>
+      <button type="button" role="menuitem" data-gesto="menu-reiniciar">Reiniciar</button>
+      <button type="button" role="menuitem" data-gesto="menu-reconectar" data-dica="Desliga e liga de novo todos os controles">Reconectar controles</button><hr>
       <button type="button" role="menuitem" data-gesto="menu-fechar">Fechar</button>`;
     document.body.append(m);
     const r = m.getBoundingClientRect();

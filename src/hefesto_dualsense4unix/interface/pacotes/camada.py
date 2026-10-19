@@ -198,8 +198,10 @@ VIVOS_NO_NATIVO: frozenset[tuple[str, str]] = frozenset({
 RODAPE_VIVO_NO_NATIVO = frozenset({"exportar"})
 
 #: O menu do botão direito é de TODA página (`("*", gesto)`) e vive no Nativo: Atualizar,
-#: Desligar, Reiniciar e Fechar são atos do computador e da janela, não escolhas do Hefesto.
-GESTOS_DO_MENU = frozenset({"menu-atualizar", "menu-desligar", "menu-reiniciar", "menu-fechar"})
+#: Desligar, Reiniciar, Reconectar controles e Fechar são atos do computador, do aparelho e da
+#: janela, não escolhas do Hefesto.
+GESTOS_DO_MENU = frozenset({"menu-atualizar", "menu-desligar", "menu-reiniciar", "menu-reconectar",
+                            "menu-fechar"})
 FRASE_NO_NATIVO = "Em modo nativo o jogo lê este controle direto, e o Hefesto não grava aqui."
 MIRA_CINZA_NO_NATIVO = (
     "Em modo nativo o jogo lê este controle direto, e o analógico virtual não grava."

@@ -2139,6 +2139,12 @@ ITENS_DO_MENU_NA_SISTEMA = {
     "menu-reiniciar": "reiniciar",
 }
 
+#: Os itens do menu que chamam um gesto da aba Jogar: «Reconectar controles» (19/10/2026) é o mesmo
+#: «Reconectar» de lá, e não grava nada (`coop.sync` e `identity.renumber`).
+ITENS_DO_MENU_NA_JOGAR = {
+    "menu-reconectar": "reconectar",
+}
+
 #: O que o item do menu mexe na máquina do usuário (`grava=` por frase: a árvore do `agir` não enxerga
 #: o `_systemctl` da aba Sistema). Sem isto, a régua de clique acionaria o item sozinha.
 O_QUE_O_MENU_MEXE = {
@@ -2148,10 +2154,11 @@ O_QUE_O_MENU_MEXE = {
 }
 
 
-def _gesto_do_menu(nome_na_sistema: str) -> Callable[[Any, dict[str, Any], Any], Any]:
-    """O gesto do menu que chama o da aba Sistema, procurado na hora (a tabela se enche ao importar)."""
+def _gesto_do_menu(nome_na_aba: str, aba: str = "09-sistema.html",
+                   ) -> Callable[[Any, dict[str, Any], Any], Any]:
+    """O gesto do menu que chama o de uma aba, procurado na hora (a tabela se enche ao importar)."""
     def agir(ctx: Any, o: dict[str, Any], ipc: Any) -> Any:
-        return pacotes.GESTOS[("09-sistema.html", nome_na_sistema)](ctx, o, ipc)
+        return pacotes.GESTOS[(aba, nome_na_aba)](ctx, o, ipc)
     return agir
 
 
@@ -2167,6 +2174,9 @@ def _registrar_o_menu() -> None:
         if ("*", gesto_do_menu) not in pacotes.GESTOS:
             pacotes.gesto("*", gesto_do_menu, grava=O_QUE_O_MENU_MEXE.get(gesto_do_menu, ""))(
                 _gesto_do_menu(na_sistema))
+    for gesto_do_menu, na_jogar in ITENS_DO_MENU_NA_JOGAR.items():
+        if ("*", gesto_do_menu) not in pacotes.GESTOS:
+            pacotes.gesto("*", gesto_do_menu)(_gesto_do_menu(na_jogar, "01-jogar.html"))
     if ("*", "menu-fechar") not in pacotes.GESTOS:
         pacotes.gesto("*", "menu-fechar", grava=O_QUE_O_MENU_MEXE["menu-fechar"])(
             _fechar_pelo_menu)

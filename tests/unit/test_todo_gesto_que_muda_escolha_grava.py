@@ -59,6 +59,9 @@ ATOS: dict[Chave, str] = {
     ("*", "menu-atualizar"):
         "ato: o botão direito manda reler o que o Hefesto lê (`daemon.reload`); "
         "nenhuma escolha dela muda (A-BASE-COMUM-DAS-ABAS-01)",
+    ("*", "menu-reconectar"):
+        "ato: o botão direito chama o «Reconectar» da aba Jogar (`coop.sync` e "
+        "`identity.renumber`); nenhuma escolha muda (19/10/2026)",
     ("*", "escolher-na-fita"):
         "tela: o chip do «Selecionar:» só escolhe qual controle a aba mira "
         "(`hefesto_vivo.ESCOLHA_DA_FITA`); nada de perfil, nada de daemon",

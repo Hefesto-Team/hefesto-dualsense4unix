@@ -56,6 +56,7 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "menu-atualizar": "o mesmo «atualizar» da aba Sistema, pelo menu do botão direito — é da máquina",
     "menu-desligar": "o mesmo «parar-ou-retomar» da aba Sistema, pelo menu do botão direito — é systemd",
     "menu-reiniciar": "o mesmo «reiniciar» da aba Sistema, pelo menu do botão direito — é systemd",
+    "menu-reconectar": "o mesmo «reconectar» da aba Jogar, pelo menu do botão direito — é de todos os controles",
     "menu-fechar": "fecha a janela do Hefesto — é da tela",
     "autostart": "liga junto com o computador — é do sistema",
     "corrigir-modo": "conserta o modo de execução do serviço — é da máquina",

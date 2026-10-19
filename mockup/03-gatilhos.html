@@ -1517,7 +1517,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     const b = e.target.closest && e.target.closest('.modo-auto');
     if (b) setTimeout(() => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'), 0);
   });
-  /* O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar ou Ligar, Reiniciar, Fechar.
+  /* O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar ou Ligar, Reiniciar,
+     Reconectar controles (o mesmo «Reconectar» da aba Jogar, desde 19/10/2026), Fechar.
      Cada item é um `data-gesto` comum: no produto a janela o despacha como qualquer botão. O serviço
      parado ou pausado vira «Ligar», de um clique só; o estado vem do `data-servico` do cabeçalho. */
   const fechar = () => document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
@@ -1533,7 +1534,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     m.innerHTML = `<button type="button" role="menuitem" data-menu="copiar" ${sel ? '' : 'disabled'}>Copiar</button><hr>
       <button type="button" role="menuitem" data-gesto="menu-atualizar">Atualizar</button>
       ${item}
-      <button type="button" role="menuitem" data-gesto="menu-reiniciar">Reiniciar</button><hr>
+      <button type="button" role="menuitem" data-gesto="menu-reiniciar">Reiniciar</button>
+      <button type="button" role="menuitem" data-gesto="menu-reconectar" data-dica="Desliga e liga de novo todos os controles">Reconectar controles</button><hr>
       <button type="button" role="menuitem" data-gesto="menu-fechar">Fechar</button>`;
     document.body.append(m);
     const r = m.getBoundingClientRect();
