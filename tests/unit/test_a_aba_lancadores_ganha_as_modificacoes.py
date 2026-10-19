@@ -909,3 +909,32 @@ def test_a_linha_da_fila_so_leva_a_contagem_e_a_frase_do_cartao_velho_fica_fora(
     assert a07._jogos_da_fila(lanc("1 jogo instalado")) == "1 jogo"
     assert a07._jogos_da_fila(lanc(FRASE_NUNCA_ABERTO.format(nome="Heroic"))) == ""
     assert a07._jogos_da_fila(lanc("22 jogos instalados", presente=False)) == ""
+
+
+def test_o_mais_do_configurar_da_extensao_fica_ao_lado_do_x_aberto_ou_fechado(navegador) -> None:
+    """Fechado, o ⋮ da extensão vem sem o menu ao lado: ele não pode boiar no meio do topo.
+
+    MORDIDA: sem a regra ``.ext-mais + .tn-x`` o ⋮ fechado fica a 200 px do «Fechar», e pula
+    para o lado dele quando o menu abre.
+    """
+    from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
+
+    base = exp.Conf(chave="kyty", nome="Kyty", entrou="Como extensão", onde="", jogos="3 jogos",
+                    modificacao="kyty")
+    menu = exp.menu_html("kyty", ["Acrescentar um lançador de jogos."], fecha=True)
+    pg = navegador.new_page(viewport={"width": 1212, "height": 800})
+    try:
+        caixas = []
+        for conf in (base, base._replace(menu=menu)):
+            pg.set_content(f"<style>{exp.CSS}</style><div class=\"tela-nova\" id=\"lanc-conf\" "
+                           f"style=\"display:flex\"><div class=\"tn-cx\" id=\"lanc-janela\">"
+                           f"{exp.lanc_conf_miolo_html(conf)}</div></div>")
+            caixas.append(pg.evaluate("""() => {
+              const topo = document.querySelector('#lanc-janela .tn-topo');
+              const r = s => topo.querySelector(s).getBoundingClientRect();
+              return {mais: r('.ext-mais').right, x: r('.tn-x').left}; }"""))
+        fechado, aberto = caixas
+        assert fechado["x"] - fechado["mais"] <= 8, ("o ⋮ fechado boia longe do «Fechar»", fechado)
+        assert abs(fechado["mais"] - aberto["mais"]) <= 1, ("o ⋮ pula quando abre", caixas)
+    finally:
+        pg.close()
