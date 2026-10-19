@@ -192,7 +192,7 @@ def test_a_borda_de_palavra_deixa_o_nome_interno_em_paz() -> None:
         "mesa_viva.py",
         "app/mesa.py",
         "monta.MESA",
-        "MESA_VAZIA",
+        "NADA_ACONTECEU_MESA_VAZIA",
         'data-campo="mesa-frase"',
         "perfil-da-mesa",
         "radio-mesa",

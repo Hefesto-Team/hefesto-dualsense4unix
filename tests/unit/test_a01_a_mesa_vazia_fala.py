@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pathlib
-import re
 import sys
 from typing import Any
 
@@ -41,11 +40,9 @@ def _ctx(quantos: int) -> Contexto:
                     conectados=conectados, estados={})
 
 
-def test_com_a_mesa_vazia_a_aba_diz_alguma_coisa() -> None:
-    """Era o estado MUDO: quatro cartões apagados e nenhuma palavra."""
-    fora = aba.pacote(_ctx(0))
-    assert fora["mesa-frase"] == aba.MESA_VAZIA
-    assert fora["mesa-frase"], "a mesa vazia voltou a ser muda"
+def test_com_a_mesa_vazia_a_linha_nao_existe() -> None:
+    """Os quatro lugares «Desconectado» já dizem; a frase por cima saiu por ordem (19/10/2026)."""
+    assert aba.pacote(_ctx(0))["mesa-frase"] == "", "a frase da mesa vazia voltou"
 
 
 def test_com_a_mesa_cheia_a_linha_nao_existe() -> None:
@@ -64,10 +61,10 @@ def test_sem_daemon_a_aba_nao_afirma_que_a_mesa_esta_vazia() -> None:
 
     Com o serviço parado a linha diz que o Hefesto está desligado (15/10/2026).
     A MORDIDA: troque o `return SERVICO_CALADO` do `if not ctx.state` por
-    `return MESA_VAZIA` e a aba passa a acusar mesa vazia num engasgo de IPC.
+    `return ""` e a aba cala num engasgo de IPC.
     """
     vazio = Contexto(state={}, mesa=[], conectados=[], estados={})
-    assert aba.pacote(vazio)["mesa-frase"] == aba.SERVICO_CALADO != aba.MESA_VAZIA
+    assert aba.pacote(vazio)["mesa-frase"] == aba.SERVICO_CALADO
 
 
 def test_com_cinco_controles_a_tela_conta_os_que_nao_cabem() -> None:
@@ -101,19 +98,3 @@ def test_a_pagina_publica_os_dois_elementos_da_linha() -> None:
         "uma linha por cima dos lugares nasce acesa — ela mudaria a cena que "
         "ela aprovou, que tem a mesa cheia")
 
-
-def test_o_gemeo_da_bancada_ainda_bate() -> None:
-    """A frase da mesa vazia tem UM DONO, e a bancada o usa."""
-    fonte = (INTERFACE / "jogar_vivo.py").read_text(encoding="utf-8")
-    achatado = re.sub(r'"\s*\n\s*"', "", fonte)
-    sem_comentario = re.sub(r"#[^\n]*", "", achatado)
-    usa_o_dono = bool(re.search(r"\bMESA_VAZIA\b", sem_comentario))
-    tem_a_copia = aba.MESA_VAZIA in sem_comentario
-    assert usa_o_dono or tem_a_copia, (
-        "a bancada (`jogar_vivo.py`) não usa `a01_jogar.MESA_VAZIA` nem repete a "
-        "frase dele — se ela tem uma frase própria para a mesa vazia, são duas "
-        "verdades vivas sobre a mesma tela")
-    if usa_o_dono and tem_a_copia:
-        raise AssertionError(
-            "a bancada importa `MESA_VAZIA` E ainda tem a frase digitada — "
-            "a cópia sobrou do fecho e vai divergir na próxima edição")

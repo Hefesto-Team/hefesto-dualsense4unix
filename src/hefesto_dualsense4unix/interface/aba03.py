@@ -134,14 +134,13 @@ CSS = CSS_GLIFO + """
      «Controle». O pacote escreve o nível (0 a 8) em `data-nivel`; a folha acende os degraus
      até ele. O lugar sem controle apaga a escada pela marca do lugar, seja qual for o nível. */
   .g2-forca{display:flex;justify-content:center;align-items:flex-end;gap:22px;height:58px;
-    box-sizing:border-box;padding:4px 0 2px;border-radius:7px;border:1px solid transparent}
+    box-sizing:border-box;padding:4px 0 2px;border-radius:7px;border:1px solid var(--border-forte)}
   .g2-forca .escada{display:flex;flex-direction:column;align-items:center;gap:3px}
   .g2-forca .degraus{display:flex;align-items:flex-end;gap:3px;height:36px}
   .g2-forca .degraus i{display:block;width:6px;border-radius:2px;background:var(--border-forte)}
   .g2-forca .escada b{font:600 11px/13px 'Space Grotesk',system-ui,sans-serif;color:var(--fg)}
   .g2-forca[data-conectado="nao"]{border:1px dashed var(--border-sutil)}
   .g2-forca[data-conectado="nao"] .degraus i{background:var(--border-sutil)}
-  .g2-gl.g2-forca-gl{grid-row:auto;border-right:0}
   /* o chip do controle tem a largura, a altura e a fonte dos campos de baixo */
   .g2-cab > .cabeca,.g2-cab > .cabeca > span{display:flex;width:100%}
   .g2-cab .chip{width:100%;height:36px;box-sizing:border-box;display:flex;align-items:center;
@@ -152,7 +151,8 @@ CSS = CSS_GLIFO + """
   .g2-cab[data-conectado="nao"] .chip{color:var(--fg);border:1px solid var(--border-sutil)}
   .g2-gl{grid-row:span 2;display:flex;align-items:center;justify-content:center;color:var(--fg);
     align-self:stretch;border-right:1px solid var(--border-sutil)}
-  .g2-grade > .g2-gl.g2-ds{grid-column:1;grid-row:auto}
+  /* o DualSense fica entre a «Força do aperto» e o «Controle» (19/10/2026): ocupa as duas linhas */
+  .g2-grade > .g2-gl.g2-ds{grid-column:1;grid-row:span 2;border-right:0}
   .g2-grade .g2-gl.g2-r2{margin-top:6px}
   .sec-rot{font-size:12px;font-weight:600;color:var(--rot-campo);gap:7px}
   .g2-rot{display:flex;align-items:center;min-height:36px}
@@ -365,7 +365,7 @@ def _forcas():
         f'          <div class="g2-forca{_off(not c.get("conectado", True))}" data-controle="{c["pref"]}"'
         f'{_marca(not c.get("conectado", True))}>{_escada(c, "l2")}{_escada(c, "r2")}</div>'
         for c in MESA)
-    return ('          <div class="g2-gl g2-forca-gl" aria-hidden="true"></div>\n'
+    return (f'          <div class="g2-gl g2-ds" aria-label="DualSense">{GLIFO_DO_DUALSENSE}</div>\n'
             '          <div class="g2-rot"><span class="sec-rot" data-dica="O quanto cada gatilho '
             'está apertado agora">Força do aperto</span></div>\n' + celulas)
 
@@ -466,7 +466,6 @@ def _miolo(entra=ONDE_ENTRA_A_INTENSIDADE):
       <div class="quadro-corpo">
         <div class="g2-grade">
 {_forcas()}
-          <div class="g2-gl g2-ds" aria-label="DualSense">{GLIFO_DO_DUALSENSE}</div>
           <div class="g2-canto" aria-label="Controle e estilo de jogo"><span class="sec-rot g2-canto-rot">Controle</span><span class="g2-estilo" data-dica="O estilo escolhido em Perfis. Só leitura"><span class="g2-estilo-rot">Estilo de jogo</span><span class="g2-estilo-nome" data-campo="{CAMPO_DO_ESTILO}" data-hef-alvo="atributo" data-hef-atributo="data-estilo" data-estilo="{ESTILO_DA_CENA}"></span></span></div>
 {_chips()}
 {sob_os_chips}

@@ -75,7 +75,6 @@ def test_a_mesa_diz_por_que_esta_vazia() -> None:
     """A frase do serviço desligado, e nunca a da mesa vazia (haveria controle ligado)."""
     frase = aba.pacote(_parado())["mesa-frase"]
     assert frase == aba.SERVICO_CALADO, f"a mesa disse {frase!r}"
-    assert frase != aba.MESA_VAZIA
     assert frase.startswith(aba.SERVICO_DESLIGADO)
 
 
@@ -101,9 +100,9 @@ def test_com_dois_controles_no_radio_volta_ao_ligado_e_aos_cartoes() -> None:
 
 
 def test_servico_de_pe_sem_controle_continua_dizendo_que_nao_ha_controle() -> None:
-    """O serviço respondeu e a mesa está vazia: aí «Nenhum controle» é verdade."""
+    """O serviço respondeu e a mesa está vazia: aí «Nenhum controle» é verdade, e só o topo diz."""
     ctx = _de_pe_sem_controle()
-    assert aba.pacote(ctx)["mesa-frase"] == aba.MESA_VAZIA
+    assert aba.pacote(ctx)["mesa-frase"] == ""
     assert pacotes.topo(ctx)["conta-b"] == pacotes.SEM_CONTROLE_NA_MESA
 
 

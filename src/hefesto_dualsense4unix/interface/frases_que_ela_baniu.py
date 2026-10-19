@@ -72,7 +72,7 @@ ocorrências visíveis "em o produto"** onde um Chrome com a folha posta mostrav
 
 **A BORDA IGNORA O QUE ESTÁ COLADO A `-`, `_` ou `.`**, e isso não é detalhe de
 regex: é a linha do glossário. `mesa` é nome interno vivo — `mesa_viva.py`,
-`app/mesa.py`, `monta.MESA`, `MESA_VAZIA`, `data-campo="mesa-frase"` — e a
+`app/mesa.py`, `monta.MESA`, `NADA_ACONTECEU_MESA_VAZIA`, `data-campo="mesa-frase"` — e a
 sprint diz com todas as letras que *o nome fica*. Quem trocasse identificador
 por causa desta lista faria estrago, não cura.
 """
@@ -107,7 +107,7 @@ PALAVRAS_BANIDAS: tuple[str, ...] = (
     "compactada",
 )
 
-#: `-` e `_` estão aqui porque `mesa-frase`, `radio-mesa` e `MESA_VAZIA` são
+#: `-` e `_` estão aqui porque `mesa-frase`, `radio-mesa` e `NADA_ACONTECEU_MESA_VAZIA` são
 _COLADO = r"0-9A-Za-zÀ-ÖØ-öø-ÿ_\-"
 
 _MUDOS = re.compile(

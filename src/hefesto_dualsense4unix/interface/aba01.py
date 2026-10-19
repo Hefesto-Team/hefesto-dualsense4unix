@@ -21,7 +21,6 @@ from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (  # noqa: E402
     CHIP_DO_POINT_AND_CLICK,
     ESPERA_DICA,
     MARCA_DO_PRIMARIO,
-    MESA_VAZIA,
     PRIMARIO_DICA,
     RESSALVA_DA_MASCARA,
     ROTULO_DO_NATIVO,
@@ -1327,13 +1326,13 @@ MIOLO = f'''
                  endereço a menos.
 
                  O TEXTO CRAVADO É O ESTADO QUE A LINHA DESCREVE, e não um
-                 exemplo: com a mesa vazia é esta a frase que o produto escreve
-                 (`a01_jogar.MESA_VAZIA`), e fora do modo jogo é esta a ressalva
+                 exemplo: a frase da mesa só existe com mais controles que
+                 lugares, e nasce vazia; fora do modo jogo é esta a ressalva
                  (`RESSALVA_DA_MASCARA`). Quem abrir o arquivo sozinho lê o que
                  a tela diria, não uma legenda de mentira. -->
             <div class="mesa-notas" data-campo="mesa-frase"
                  data-hef-alvo="classe" data-hef-classe="ha">
-              <span class="mesa-nota" data-campo="mesa-frase">{MESA_VAZIA}</span>
+              <span class="mesa-nota" data-campo="mesa-frase"></span>
             </div>
             <div class="mesa-notas" data-campo="mascara-ressalva"
                  data-hef-alvo="classe" data-hef-classe="ha">
@@ -1915,7 +1914,7 @@ def _conferir(doc):
            "a faixa da pendência perdeu o `pendente-ha` — ela volta a mostrar um "
            "travessão solto quando não há o que anunciar")
 
-    for campo, oque in (("mesa-frase", "a frase da mesa vazia"),
+    for campo, oque in (("mesa-frase", "a frase da mesa"),
                         ("mascara-ressalva", "a ressalva da máscara")):
         de_fora = corpo.count(f'data-campo="{campo}"\n                 '
                               f'data-hef-alvo="classe"')

@@ -191,7 +191,7 @@ ACENDER_A_FRASE = ("document.querySelector('.mesa-notas[data-campo=\"mesa-frase\
 CENAS_DO_ESTADO: tuple[tuple[str, str], ...] = (
     ("o serviço não respondeu: os quatro lugares apagam",
      "(a) => { " + APAGAR_OS_QUATRO + " return 0; }"),
-    ("a lista vem vazia: os lugares apagam e a frase da mesa acende",
+    ("o serviço calou: os lugares apagam e a frase da mesa acende",
      "(a) => { " + APAGAR_OS_QUATRO + " " + ACENDER_A_FRASE + " return 0; }"),
 )
 
@@ -465,6 +465,11 @@ def test_sem_resposta_boa_nao_ha_o_que_repintar() -> None:
     assert hv.FolgaDoServicoMudo().mudo(_mudo_por(TimeoutError("timed out"))) == {}
 
 
+def _vazia_pintada(a: dict[str, Any]) -> bool:
+    """A amostra da lista vazia do segundo tique em diante, quando o primeiro já pintou."""
+    return a.get("vazios", 0) >= 2 and a.get("p1") == LUGAR_VAZIO
+
+
 LER_A_FILEIRA = r"""(() => {
   const b = document.querySelector('[data-gesto="reconectar"]');
   const p1 = document.querySelector('[data-controle="p1"]');
@@ -492,7 +497,7 @@ def tique_mudo() -> dict[str, Any]:
 
     import hefesto_vivo as hv
 
-    fase: dict[str, Any] = {"como": "bom", "mudos": 0}
+    fase: dict[str, Any] = {"como": "bom", "mudos": 0, "vazios": 0}
 
     def estado(*_a: Any, **_k: Any) -> dict[str, Any]:
         if fase["como"] == "mudo":
@@ -502,6 +507,7 @@ def tique_mudo() -> dict[str, Any]:
             except TimeoutError as causa:
                 raise hv.mesa_viva.DaemonMudo("timed out") from causa
         if fase["como"] == "vazia":
+            fase["vazios"] += 1
             return {**ESTADO_COM_DOIS, "controllers": []}
         return ESTADO_COM_DOIS
 
@@ -531,14 +537,14 @@ def tique_mudo() -> dict[str, Any]:
             return False
         if not de_pe():
             return True
-        como, mudos = fase["como"], fase["mudos"]
+        como, mudos, vazios = fase["como"], fase["mudos"], fase["vazios"]
 
         def leu(valor: Any, erro: Any) -> None:
             if erro is not None:
                 fora["amostras"].append({"erro": str(erro), "fase": como})
                 return
             lido = json.loads(str(valor))
-            lido.update(fase=como, mudos=mudos)
+            lido.update(fase=como, mudos=mudos, vazios=vazios)
             fora["amostras"].append(lido)
 
         piloto.ponte.perguntar(LER_A_FILEIRA, leu)
@@ -554,7 +560,7 @@ def tique_mudo() -> dict[str, Any]:
         elif fase["como"] == "mudo":
             if fase["mudos"] >= folga + 6:
                 fase["como"] = "vazia"
-        elif sum(1 for a in amostras if a.get("fase") == "vazia" and a.get("frase")) >= 5:
+        elif sum(1 for a in amostras if _vazia_pintada(a)) >= 5:
             fora["completou"] = True
             fora["parar"] = True
             Gtk.main_quit()
@@ -616,14 +622,29 @@ def test_no_webkit_o_botao_nao_anda_com_os_lugares_apagados(
     # desligado (15/10/2026): os lugares apagados se medem pela fase, não pela falta da frase.
     apagados = [a for a in amostras if a["p1"] == LUGAR_VAZIO and a["fase"] == "mudo"]
     acesa = [a for a in amostras if a["frase"]]
-    assert repouso and apagados and acesa, (
-        "a régua não viu o repouso, os lugares apagados ou a frase acesa — "
+    vazia = [a for a in amostras if _vazia_pintada(a)]
+    assert repouso and apagados and acesa and vazia, (
+        "a régua não viu o repouso, os lugares apagados, a frase acesa ou a lista vazia — "
         "ficaria verde sobre nada")
     base = repouso[-1]
     for rotulo, grupo in (("com os lugares apagados", apagados),
-                          ("com a lista vazia e a frase acesa", acesa)):
+                          ("com o serviço calado e a frase acesa", acesa),
+                          ("com a lista vazia", vazia)):
         pior = max(grupo, key=lambda a: abs(a["y"] - base))
         dy = pior["y"] - base
         assert abs(dy) <= TOLERANCIA_DO_ESTADO, (
             f"no WebKit, {rotulo}, o botão {'subiu' if dy < 0 else 'desceu'} "
             f"{abs(dy):.0f} px — y {base:.1f} → {pior['y']:.1f}")
+
+
+def test_no_webkit_a_lista_vazia_nao_acende_frase(tique_mudo: dict[str, Any]) -> None:
+    """Com a lista vazia, os quatro «Desconectado» bastam: a linha por cima saiu (19/10/2026).
+
+    Mede-se do segundo tique vazio em diante: o primeiro ainda chega com a frase do serviço calado
+    pintada pela fase anterior. A MORDIDA: devolva a frase ao `_frase_da_mesa` com a mesa vazia.
+    """
+    vazia = [a for a in tique_mudo["amostras"] if _vazia_pintada(a)]
+    assert vazia, "nenhuma amostra da lista vazia — a régua não viu o que promete"
+    acesas = [a for a in vazia if a["frase"]]
+    assert not acesas, (
+        f"a lista vazia acendeu a frase da mesa em {len(acesas)} de {len(vazia)} amostras")

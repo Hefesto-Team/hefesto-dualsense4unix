@@ -74,11 +74,6 @@ SERVICO_CALADO = (
     "quando ele responder."
 )
 
-MESA_VAZIA = (
-    "Nenhum controle ligado. Conecte um pelo cabo ou pelo "
-    "rádio: ele aparece aqui sozinho."
-)
-
 #: A posição do interruptor Status com o serviço parado (estado vazio): a que o gerador chama
 #: ``desligado``. Quem lê é :func:`_estado_da_tela`.
 POSICAO_COM_O_SERVICO_PARADO = "desligado"
@@ -103,8 +98,8 @@ RESSALVA_DA_MASCARA = (
 #: razão do ESTADO, igual para os quatro cartões, e quem diz o estado é a classe. A palavra é a que
 #: o usuário já leu na janela antiga (decisão de produto). A frase gêmea da GTK exigiria montar a
 #: GTK dentro do pacote das dez abas, o que `_painel()` existe para evitar; **a divergência morre
-#: pela régua** `test_a_aba_01_jogar_fecha_as_linhas`, que lê o fonte da GTK (mesma escolha da
-#: `MESA_VAZIA`). PROVISÓRIO: texto de tela é palavra de produto (PROVA-DE-TELA-01).
+#: pela régua** `test_a_aba_01_jogar_fecha_as_linhas`, que lê o fonte da GTK.
+#: PROVISÓRIO: texto de tela é palavra de produto (PROVA-DE-TELA-01).
 ESPERA_DICA = "O número acende quando o jogo receber o controle"
 
 CADEADO_ROTULO = "Modo Freestyle"
@@ -597,16 +592,13 @@ def coluna_de_atencao(ctx: Contexto) -> list[dict[str, str]]:
 def _frase_da_mesa(ctx: Contexto) -> str:
     """A linha por cima dos lugares apagados — ``""`` quando a mesa cabe na tela.
 
-    Com o serviço parado (estado vazio) a mesa não está vazia por falta de controle: ninguém
-    respondeu, e a linha diz isso (:data:`SERVICO_CALADO`), nunca :data:`MESA_VAZIA`, que afirmaria
-    que não há controle quando há dois ligados pelo rádio (A-TELA-DIZ-DESLIGADO-QUANDO-O-SERVICO-
-    PARA-01, 15/10/2026).
+    Com o serviço parado (estado vazio) a linha diz que ninguém respondeu (:data:`SERVICO_CALADO`).
+    Com a mesa vazia ela não diz nada: os quatro lugares «Desconectado» já dizem (ordem,
+    19/10/2026, que tirou a frase «Nenhum controle ligado…»).
     """
     if not ctx.state:
         return SERVICO_CALADO
     quantos = len(ctx.conectados)
-    if quantos == 0:
-        return MESA_VAZIA
     lugares = lugares_da_mesa()
     if quantos > lugares:
         return (f"Há {quantos} controles ligados e esta tela mostra "

@@ -644,7 +644,7 @@ class Janela:
         mesa = mesa_viva.mesa_do_estado(state, self.leitor_de_cor.conhecidos(), alvo=self.alvo)
         if not mesa:
             self._mesa_ausente(
-                _a01().MESA_VAZIA,
+                "",
                 bolinha="○",
                 cor="var(--orange)",
             )
