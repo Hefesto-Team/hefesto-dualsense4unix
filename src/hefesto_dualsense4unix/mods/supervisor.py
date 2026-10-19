@@ -30,7 +30,7 @@ import secrets
 import shutil
 import signal
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -38,9 +38,12 @@ from typing import Any
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.mods import API_DAS_MODIFICACOES
 from hefesto_dualsense4unix.mods.instalador import (
+    CHAVES_OFICIAIS,
     Entrada,
     InstalacaoRecusadaError,
     Lugares,
+    atualizar,
+    commit_novo,
     ler_registro,
 )
 from hefesto_dualsense4unix.mods.manifesto import (
@@ -86,6 +89,13 @@ INTERVALO_DO_REGISTRO_S = 1.0
 #: O PARAR dos acessórios: quanto a modificação tem para devolver ``ligado: false`` depois do gesto
 #: ``para``. Passou, o supervisor a encerra pelo PID (a vibração não pode seguir depois do freio).
 PRAZO_DO_PARAR_CURTO_S = 0.3
+
+#: O menor intervalo da atualização sozinha, qualquer que seja o do registro: um intervalo
+#: zero ou negativo escrito à mão não vira um ``git ls-remote`` por segundo.
+PISO_DA_ATUALIZACAO_S = 60.0
+
+#: Sem rede (ou com o git recusando), a conferência seguinte não espera o intervalo inteiro.
+ESPERA_DEPOIS_DA_FALHA_S = 600.0
 
 #: Depois do ``SIGKILL``, quanto se espera o kernel recolher o grupo.
 ESPERA_DEPOIS_DO_SIGKILL_S = 2.0
@@ -272,6 +282,7 @@ class Supervisor:
         estavel_s: float = ESTAVEL_DEPOIS_DE_S,
         prazo_para_parar_s: float = PRAZO_PARA_PARAR_S,
         intervalo_s: float = INTERVALO_DO_REGISTRO_S,
+        chaves: Sequence[str] = CHAVES_OFICIAIS,
     ) -> None:
         self.lugares = lugares or Lugares.do_xdg()
         self.porta = Porta(
@@ -297,6 +308,12 @@ class Supervisor:
         self.prazo_do_parar_curto_s = PRAZO_DO_PARAR_CURTO_S
         self._ouvinte_do_parar: asyncio.Task[None] | None = None
         self._parar_curtos: set[asyncio.Task[bool]] = set()
+        self.chaves = tuple(chaves)
+        self.piso_da_atualizacao_s = PISO_DA_ATUALIZACAO_S
+        self.espera_depois_da_falha_s = ESPERA_DEPOIS_DA_FALHA_S
+        #: A hora (``time.monotonic``) em que cada extensão pode perguntar ao git de novo.
+        self._proxima_conferencia: dict[str, float] = {}
+        self._atualizando: asyncio.Task[bool] | None = None
 
     # -- o estado ----------------------------------------------------------
 
@@ -342,7 +359,8 @@ class Supervisor:
     async def parar(self) -> None:
         laco, self._laco = self._laco, None
         ouvinte, self._ouvinte_do_parar = self._ouvinte_do_parar, None
-        for tarefa in (laco, ouvinte, *self._parar_curtos):
+        atualizando, self._atualizando = self._atualizando, None
+        for tarefa in (laco, ouvinte, atualizando, *self._parar_curtos):
             if tarefa is not None:
                 tarefa.cancel()
                 with contextlib.suppress(asyncio.CancelledError):
@@ -404,6 +422,66 @@ class Supervisor:
         while True:
             await asyncio.sleep(self.intervalo_s)
             await self._conferir_o_registro()
+            self._talvez_atualizar()
+
+    # -- a atualização sozinha ---------------------------------------------
+
+    def _talvez_atualizar(self) -> None:
+        """Abre a conferência da primeira extensão do git cujo intervalo passou.
+
+        Uma por vez, numa tarefa à parte: o ``atualizar`` desliga a extensão viva e espera
+        a vigia pará-la, e a vigia é esta volta, que não pode esperar por ele.
+        """
+        if self._atualizando is not None and not self._atualizando.done():
+            return
+        try:
+            registro = ler_registro(self.lugares.registro)
+        except InstalacaoRecusadaError:
+            return
+        agora = time.monotonic()
+        for mod_id in [m for m in self._proxima_conferencia if m not in registro]:
+            self._proxima_conferencia.pop(mod_id, None)
+        for entrada in registro.values():
+            if entrada.origem == "local" or not entrada.atualiza_sozinha:
+                continue
+            if agora < self._proxima_conferencia.get(entrada.id, agora):
+                continue
+            self._atualizando = asyncio.create_task(
+                self.atualizar_sozinha(entrada), name="mods-atualizar-sozinha"
+            )
+            return
+
+    async def atualizar_sozinha(self, entrada: Entrada) -> bool:
+        """Pergunta ao endereço se há commit novo e, havendo, atualiza como o «Atualizar».
+
+        Devolve ``True`` quando o código trocou. Sem rede, sem novidade ou com a versão nova
+        esperando o «Atualizar» (permissão nova, tag que deixou de ser a oficial), a extensão
+        fica na versão de agora, viva como estava.
+        """
+        intervalo = max(float(entrada.intervalo_da_atualizacao_s), self.piso_da_atualizacao_s)
+        self._proxima_conferencia[entrada.id] = time.monotonic() + intervalo
+        try:
+            novo = await asyncio.to_thread(commit_novo, entrada)
+            if novo is None:
+                return False
+            feito = await asyncio.to_thread(
+                atualizar, entrada.id, lugares=self.lugares, chaves=self.chaves, sozinha=True
+            )
+        except InstalacaoRecusadaError as exc:
+            logger.warning("mods_atualizacao_recusada", mod=entrada.id, err=exc.frase)
+        except Exception as exc:
+            logger.warning("mods_atualizacao_falhou", mod=entrada.id, err=str(exc), exc_info=True)
+        else:
+            if feito.trocou:
+                logger.info("mods_atualizada_sozinha", mod=entrada.id, versao=feito.entrada.versao)
+            else:
+                logger.info(
+                    "mods_versao_esperando", mod=entrada.id, motivo=feito.entrada.motivo_da_espera
+                )
+            return feito.trocou
+        espera = min(intervalo, max(self.espera_depois_da_falha_s, self.piso_da_atualizacao_s))
+        self._proxima_conferencia[entrada.id] = time.monotonic() + espera
+        return False
 
     async def _conferir_o_registro(self) -> None:
         """Uma volta da vigia: o registro mudou (outro mtime ou outro inode)?"""

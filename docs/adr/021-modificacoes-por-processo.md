@@ -72,6 +72,13 @@ permissões que a pessoa aceitou.
    - «Oficial» exige uma tag assinada que o `git verify-tag` confere contra `CHAVES_OFICIAIS`, a lista
      de chaves que o produto carrega. O endereço sozinho não basta. Hoje a lista está vazia, então nada
      instala como «oficial» até o time publicar a chave.
+   - **A de git se atualiza sozinha** (19/10/2026). O supervisor pergunta ao endereço, pelo
+     `git ls-remote` e sem baixar, se o `ref` tem commit novo, no intervalo da linha do registro
+     (`intervalo_da_atualizacao_s`, seis horas por padrão; `atualiza_sozinha: false` desliga). Havendo,
+     chama o mesmo `atualizar` do «Atualizar»: a viva para, troca e volta. A versão que pede permissão
+     nova, ou cuja tag deixou de conferir com a chave oficial, não troca o código: a linha guarda
+     `versao_esperando` e espera o «Atualizar». A origem «local» nunca pergunta ao git, e sem rede a
+     extensão fica como está.
 6. **Cada modificação ocupa três lugares**, todos em `utils/xdg_paths.py` e no censo de
    `utils/memoria_dos_controles.py`:
    - o código, em `~/.local/share/hefesto-dualsense4unix/mods/<id>/`;

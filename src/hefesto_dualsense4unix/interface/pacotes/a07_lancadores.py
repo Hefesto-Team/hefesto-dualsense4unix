@@ -1317,11 +1317,17 @@ def _extensao_de(item: _Instalada) -> Any:
         menu = exp.menu_html(
             e.id, [o_que_a_permissao_deixa(x) for x in pedidas]
             if _MEXIDA.permissoes == e.id else None, remover=_MEXIDA.remover == e.id)
+    dica = item.manifesto.descricao if item.manifesto is not None else ""
+    versao = e.versao
+    esperando = getattr(e, "versao_esperando", "")
+    if esperando:
+        # A atualização sozinha baixou e não instalou: a linha diz o que espera o «Atualizar».
+        versao = f"{e.versao} · a {esperando} espera o «Atualizar»"
+        dica = " ".join(x for x in (getattr(e, "motivo_da_espera", ""), dica) if x)
     return exp.Extensao(
-        chave=e.id, nome=e.nome,
-        dica=item.manifesto.descricao if item.manifesto is not None else "",
+        chave=e.id, nome=e.nome, dica=dica,
         para="", janela=JANELA_DA_EXTENSAO, cor=_COR_DA_EXTENSAO.get(e.id, "purple"),
-        versao=e.versao, selo=exp.SELO_DA_ORIGEM.get(e.origem, "Oficial"),
+        versao=versao, selo=exp.SELO_DA_ORIGEM.get(e.origem, "Oficial"),
         ligada=e.ligada, menu=menu)
 
 

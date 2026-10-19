@@ -66,6 +66,15 @@ SINAIS_DO_FIM: tuple[tuple[signal.Signals, float], ...] = (
 
 _PRAZO_DO_GIT_S = 300.0
 
+#: O ``git ls-remote`` da atualização sozinha só pergunta o commit: sem rede, ele
+#: desiste antes de segurar a volta seguinte.
+_PRAZO_DO_LS_REMOTE_S = 60.0
+
+#: De quanto em quanto tempo a extensão instalada pelo git pergunta ao endereço dela se há
+#: commit novo (decisão D-1910-A-EXTENSAO-DO-GIT-CONFERE-A-CADA-SEIS-HORAS, por delegação, a
+#: validar por ela). Cada extensão guarda o seu no registro.
+INTERVALO_DA_ATUALIZACAO_S = 6 * 3600.0
+
 _ESTADOS_VIVOS = frozenset({"ligando", "rodando", "voltando"})
 
 
@@ -113,6 +122,14 @@ class Entrada(BaseModel):
     instalada_em: str = ""
     #: A hora do último «ligar»: ligar de novo a que parou reabre o processo.
     ligada_em: str = ""
+    #: A chave e o intervalo da atualização sozinha; a origem «local» nunca se atualiza.
+    atualiza_sozinha: bool = True
+    intervalo_da_atualizacao_s: float = INTERVALO_DA_ATUALIZACAO_S
+    #: A versão nova que a atualização sozinha baixou e não instalou (pede permissão nova,
+    #: ou a tag deixou de ser a oficial): espera o «Atualizar». Vazio quando nada espera.
+    versao_esperando: str = ""
+    commit_esperando: str = ""
+    motivo_da_espera: str = ""
 
 
 @dataclass(frozen=True)
@@ -122,6 +139,8 @@ class Resultado:
     entrada: Entrada
     manifesto: Manifesto
     permissoes_novas: list[str]
+    #: ``False`` quando a atualização sozinha deixou a versão nova esperando o «Atualizar».
+    trocou: bool = True
 
 
 def _conferir_id(mod_id: str) -> str:
@@ -234,6 +253,43 @@ def _clonar(endereco: str, ref: str | None, destino: Path) -> str:
     return commit
 
 
+def commit_remoto(endereco: str, ref: str | None) -> str | None:
+    """O commit que o ``ref`` aponta no endereço (``HEAD`` sem ``ref``), sem baixar nada.
+
+    ``None`` quando o git não responde (sem rede, endereço que sumiu, prazo): quem pergunta
+    tenta de novo depois, e a extensão instalada fica como está.
+    """
+    padroes = (
+        [f"refs/tags/{ref}", f"refs/tags/{ref}^{{}}", f"refs/heads/{ref}"] if ref else ["HEAD"]
+    )
+    try:
+        feito = subprocess.run(
+            ["git", "ls-remote", "--", endereco, *padroes],
+            env=_ambiente_do_git(),
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=_PRAZO_DO_LS_REMOTE_S,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if feito.returncode != 0:
+        return None
+    achados: dict[str, str] = {}
+    for linha in feito.stdout.splitlines():
+        partes = linha.split()
+        if len(partes) == 2:
+            achados[partes[1]] = partes[0]
+    if not ref:
+        return achados.get("HEAD")
+    # A tag anotada aponta para o objeto da tag; o commit é o «descascado» (``^{}``).
+    for nome in (f"refs/tags/{ref}^{{}}", f"refs/tags/{ref}", f"refs/heads/{ref}"):
+        if nome in achados:
+            return achados[nome]
+    return None
+
+
 def origem_da_tag(pasta: Path, ref: str | None, chaves: Sequence[str]) -> Origem:
     """«oficial» só com tag assinada por uma das ``chaves``, apontando para o HEAD."""
     if not ref or not chaves:
@@ -277,12 +333,17 @@ def instalar(
     ref: str | None = None,
     lugares: Lugares | None = None,
     chaves: Sequence[str] = CHAVES_OFICIAIS,
+    sozinha: bool = False,
 ) -> Resultado:
     """Instala de um endereço git (``--ref`` para a tag) ou de uma pasta.
 
     Instalar não liga: a modificação nova nasce desligada, e ligar é o gesto
     que mostra as permissões. Reinstalar a mesma modificação é atualizar: ela
     segue ligada, a não ser que peça permissão nova, que volta a pedir o «sim».
+
+    ``sozinha`` é a atualização que ninguém pediu: a versão que pede permissão
+    nova, ou cuja tag deixou de conferir com a chave oficial, não troca o código;
+    a linha do registro a guarda em ``versao_esperando`` até o «Atualizar».
     """
     lg = lugares or Lugares.do_xdg()
     pasta_local = Path(origem).expanduser()
@@ -317,6 +378,12 @@ def instalar(
             )
         aceitas = anterior.permissoes_aceitas if anterior is not None else []
         novas = permissoes_novas(aceitas, manifesto.permissoes)
+        if sozinha and anterior is not None:
+            motivo = _o_que_segura_a_atualizacao(lg, anterior, tipo, manifesto)
+            if motivo:
+                return Resultado(
+                    _marcar_a_espera(lg, manifesto, commit, motivo), manifesto, novas, trocou=False
+                )
         seguia_ligada = anterior is not None and anterior.ligada
         if seguia_ligada:
             desligar(manifesto.id, lugares=lg)
@@ -341,12 +408,45 @@ def instalar(
             ligada=seguia_ligada and not novas,
             instalada_em=datetime.now(timezone.utc).isoformat(timespec="microseconds"),
         )
+        if anterior is not None:
+            entrada.atualiza_sozinha = anterior.atualiza_sozinha
+            entrada.intervalo_da_atualizacao_s = anterior.intervalo_da_atualizacao_s
         registro = ler_registro(lg.registro)
         registro[manifesto.id] = entrada
         gravar_registro(lg.registro, registro)
         return Resultado(entrada, manifesto, novas)
     finally:
         shutil.rmtree(temporaria, ignore_errors=True)
+
+
+def _o_que_segura_a_atualizacao(
+    lg: Lugares, anterior: Entrada, tipo: Origem, manifesto: Manifesto
+) -> str:
+    """Por que a atualização sozinha não troca o código; vazio quando troca.
+
+    A permissão nova é a que nem o «sim» dado nem a versão instalada pedem: a extensão que
+    nunca foi ligada não espera por uma permissão que o «ligar» dela ainda vai mostrar.
+    """
+    ja_pedidas = list(anterior.permissoes_aceitas)
+    with contextlib.suppress(ManifestoRecusadoError):
+        ja_pedidas += ler_manifesto(lg.codigo / anterior.id, exigir_api=False).permissoes
+    novas = permissoes_novas(ja_pedidas, manifesto.permissoes)
+    if novas:
+        return f"A versão {manifesto.versao} pede {', '.join(novas)}."
+    if anterior.origem == "oficial" and tipo != "oficial":
+        return f"A tag da versão {manifesto.versao} não confere com a chave oficial."
+    return ""
+
+
+def _marcar_a_espera(lg: Lugares, manifesto: Manifesto, commit: str, motivo: str) -> Entrada:
+    """Grava na linha da extensão a versão que espera o «Atualizar»; o código fica."""
+    registro = ler_registro(lg.registro)
+    entrada = registro[manifesto.id]
+    entrada.versao_esperando = manifesto.versao
+    entrada.commit_esperando = commit
+    entrada.motivo_da_espera = motivo
+    gravar_registro(lg.registro, registro)
+    return entrada
 
 
 def _religar_a_que_seguia(lg: Lugares, mod_id: str) -> None:
@@ -374,18 +474,43 @@ def atualizar(
     ref: str | None = None,
     lugares: Lugares | None = None,
     chaves: Sequence[str] = CHAVES_OFICIAIS,
+    sozinha: bool = False,
 ) -> Resultado:
-    """Baixa de novo do endereço gravado (a tag nova, se ``ref``)."""
+    """Baixa de novo do endereço gravado (a tag nova, se ``ref``).
+
+    ``sozinha`` é a do supervisor (ver :func:`instalar`); a origem «local» a recusa.
+    """
     lg = lugares or Lugares.do_xdg()
     entrada = ler_registro(lg.registro).get(_conferir_id(mod_id))
     if entrada is None:
         raise InstalacaoRecusadaError(f"«{mod_id}» não está instalada.")
+    if sozinha and entrada.origem == "local":
+        raise InstalacaoRecusadaError(
+            f"«{entrada.nome}» veio de uma pasta e não se atualiza sozinha."
+        )
     return instalar(
         entrada.endereco,
         ref=None if entrada.origem == "local" else (ref or entrada.ref),
         lugares=lg,
         chaves=chaves,
+        sozinha=sozinha,
     )
+
+
+def commit_novo(entrada: Entrada) -> str | None:
+    """O commit do endereço quando ele é outro que o instalado e o que já espera.
+
+    ``None`` sem novidade ou para a origem «local», que nunca pergunta ao git; o git que
+    não responde (sem rede) é recusa, para quem pergunta tentar de novo mais cedo.
+    """
+    if entrada.origem == "local":
+        return None
+    remoto = commit_remoto(entrada.endereco, entrada.ref)
+    if not remoto:
+        raise InstalacaoRecusadaError(f"O git não respondeu sobre «{entrada.nome}».")
+    if remoto in (entrada.commit, entrada.commit_esperando):
+        return None
+    return remoto
 
 
 # -- ligar e desligar --------------------------------------------------------
@@ -546,12 +671,15 @@ def remover(
 
 __all__ = [
     "CHAVES_OFICIAIS",
+    "INTERVALO_DA_ATUALIZACAO_S",
     "PRAZO_PARA_PARAR_S",
     "Entrada",
     "InstalacaoRecusadaError",
     "Lugares",
     "Resultado",
     "atualizar",
+    "commit_novo",
+    "commit_remoto",
     "conferir_remocao",
     "desligar",
     "esperar_parar",
