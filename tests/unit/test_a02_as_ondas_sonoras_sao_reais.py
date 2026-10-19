@@ -85,16 +85,18 @@ def test_o_medidor_traduz_o_pico_em_altura(medidor: Any) -> None:
     silencio = m.alturas("no")
     assert silencio == tuple([ondas_de_som.PISO_PCT] * 14), silencio
 
-    fluxos["no"].manda(*([ondas_de_som.PICO_CHEIO] * 14))
+    fluxos["no"].manda(*([1.0] * 14))
     m.bombear(timeout_s=0.2)
     cheio = m.alturas("no")
     assert cheio == tuple([100] * 14), cheio
 
-    fluxos["no"].manda(*([ondas_de_som.PICO_CHEIO / 2] * 14))
+    fluxos["no"].manda(*([0.0164] * 14))
     m.bombear(timeout_s=0.2)
     meio = m.alturas("no")
     assert meio is not None
-    assert ondas_de_som.PISO_PCT < meio[0] < 100, meio
+    # A voz com o volume da captura a 32%: o pico 0,500 chega como 0,0164 (medido em 19/10/2026).
+    # A MORDIDA: a escala linear de antes, com o cheio em 0,5, punha isso em 17% — o piso.
+    assert 40 <= meio[0] <= 60, meio
 
 
 def test_o_medidor_desligado_nao_abre_nada() -> None:

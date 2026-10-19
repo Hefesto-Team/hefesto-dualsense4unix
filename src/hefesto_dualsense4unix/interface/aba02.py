@@ -326,7 +326,7 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      é `.leia`, que é o que ela faz: diz que aquele item tem texto embaixo. */
   .faixa .leia{cursor:help}
   .faixa .div{color:var(--fg)}   /* cor de texto, não de borda (topo.html: `.seta`) */
-  /* ---------- O GIROSCÓPIO NO JOGO — "fluindo para o jogo (~N Hz)" ----------
+  /* ---------- O GIROSCÓPIO NO JOGO — só o Nativo e a máscara Xbox (19/10/2026) ----------
      CONTROLES-VERDADE-01, 06/09/2026. O dono da frase é
      `controller_card.texto_motion`, e nada dela é digitado aqui.
 
@@ -1426,6 +1426,8 @@ _CENA_GLOBAL_DO_GIRO = {
                                 "motion_streaming": True, "motion_hz": 250.0}]},
 }
 GIRO_NO_JOGO_DO_DESENHO = texto_motion(_CENA_DO_GIRO, _CENA_GLOBAL_DO_GIRO) or ""
+#: Sem frase, o `aria-label` não nasce: o `[aria-label]` da folha acenderia um vão vazio.
+_ARIA_DO_GIRO = f' aria-label="{GIRO_NO_JOGO_DO_DESENHO}"' if GIRO_NO_JOGO_DO_DESENHO else ""
 
 # AS CINCO LÂMPADAS SÃO DERIVADAS, E ISSO PRECISA ESTAR DITO. O `state_full`
 # publica o `player_slot` e NÃO publica `player_leds`: o padrão desenhado sai de
@@ -1589,7 +1591,7 @@ def identidade(c, *, bat, carga=None, meio=""):
                O `title` DO `.leia` FICA: ele diz de onde vem a máscara, que é
                o que o controle faz, e não um aviso sobre ele. -->
           <span class="leia" title="{DE_ONDE_VEM_A_MASCARA}"><b data-campo="mascara">{c["mascara"]}</b></span>{meio}
-          <!-- O GIROSCÓPIO NO JOGO — "fluindo para o jogo (~N Hz)".
+          <!-- O GIROSCÓPIO NO JOGO — só o Nativo e a máscara Xbox (o «fluindo» saiu em 19/10/2026).
                CONTROLES-VERDADE-01, 06/09/2026. O número que responde *"o
                giroscópio está chegando ao jogo AGORA?"* não existia deste lado:
                o que a tela mostrava era um número de CATÁLOGO, na dica do
@@ -1631,7 +1633,7 @@ def identidade(c, *, bat, carga=None, meio=""):
                O TEXTO DO ARQUIVO É A CENA DO MOCKUP, e ele fica: é o que ela
                olha na página parada. O produto o troca no primeiro tique. -->
           <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
-                data-hef-atributo="aria-label" aria-label="{GIRO_NO_JOGO_DO_DESENHO}"><span
+                data-hef-atributo="aria-label"{_ARIA_DO_GIRO}><span
                 class="no-jogo-t" data-campo="giro-no-jogo">{GIRO_NO_JOGO_DO_DESENHO}</span></span>
 {sensores_da_peca(c)}
           <!-- A BATERIA GANHOU ENDEREÇO EM 01/09/2026, e até aqui ela era a
@@ -2253,7 +2255,7 @@ def _so_o_travessao(html_do_card: str) -> str:
       · `texto` — o padrão, sem `data-hef-alvo`. Vira `—`.
       · `atributo` — o ramo `if(vazio || t === '—')` REMOVE o atributo. Aqui ele
         sai do desenho pelo mesmo motivo: um
-        `title="Giroscópio: fluindo para o jogo (~250 Hz)"` num assento sem
+        `aria-label` com a frase do giroscópio num assento sem
         controle é o desenho AFIRMANDO o que não existe, e é a mesma família da
         barra de bateria a 64% que a folha veio matar em 03/09. É por ele, e não
         por CSS, que o ♪ de um lugar vazio perde o `data-som` e cai no cinza de

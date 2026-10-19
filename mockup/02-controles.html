@@ -1242,7 +1242,7 @@
      é `.leia`, que é o que ela faz: diz que aquele item tem texto embaixo. */
   .faixa .leia{cursor:help}
   .faixa .div{color:var(--fg)}   /* cor de texto, não de borda (topo.html: `.seta`) */
-  /* ---------- O GIROSCÓPIO NO JOGO — "fluindo para o jogo (~N Hz)" ----------
+  /* ---------- O GIROSCÓPIO NO JOGO — só o Nativo e a máscara Xbox (19/10/2026) ----------
      CONTROLES-VERDADE-01, 06/09/2026. O dono da frase é
      `controller_card.texto_motion`, e nada dela é digitado aqui.
 
@@ -2773,7 +2773,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                o que o controle faz, e não um aviso sobre ele. -->
           <span class="leia" title="O que o jogo vê deste controle. Para trocar, vá à aba Jogar."><b data-campo="mascara">DualSense</b></span><span class="div so-fechado">·</span>
           <span class="leia so-fechado" title="Capturando: o som que entra por este controle chega ao PC.">Microfone <span class="selo-ativo on" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">ATIVO</span></span></span>
-          <!-- O GIROSCÓPIO NO JOGO — "fluindo para o jogo (~N Hz)".
+          <!-- O GIROSCÓPIO NO JOGO — só o Nativo e a máscara Xbox (o «fluindo» saiu em 19/10/2026).
                CONTROLES-VERDADE-01, 06/09/2026. O número que responde *"o
                giroscópio está chegando ao jogo AGORA?"* não existia deste lado:
                o que a tela mostrava era um número de CATÁLOGO, na dica do
@@ -2815,8 +2815,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                O TEXTO DO ARQUIVO É A CENA DO MOCKUP, e ele fica: é o que ela
                olha na página parada. O produto o troca no primeiro tique. -->
           <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
-                data-hef-atributo="aria-label" aria-label="Giroscópio: fluindo para o jogo (~250 Hz)"><span
-                class="no-jogo-t" data-campo="giro-no-jogo">Giroscópio: fluindo para o jogo (~250 Hz)</span></span>
+                data-hef-atributo="aria-label"><span
+                class="no-jogo-t" data-campo="giro-no-jogo"></span></span>
           <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Ligado: o jogo recebe o giro deste controle."><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="O jogo recebe a inclinação e o chacoalhar"><span class="p"></span>Acelerômetro</button>
@@ -3263,7 +3263,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                o que o controle faz, e não um aviso sobre ele. -->
           <span class="leia" title="O que o jogo vê deste controle. Para trocar, vá à aba Jogar."><b data-campo="mascara">Xbox 360</b></span><span class="div so-fechado">·</span>
           <span class="leia so-fechado" title="Microfone calado: a luz vermelha do controle está apagada.">Microfone <span class="selo-ativo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo cortado" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">DESLIGADO</span></span></span>
-          <!-- O GIROSCÓPIO NO JOGO — "fluindo para o jogo (~N Hz)".
+          <!-- O GIROSCÓPIO NO JOGO — só o Nativo e a máscara Xbox (o «fluindo» saiu em 19/10/2026).
                CONTROLES-VERDADE-01, 06/09/2026. O número que responde *"o
                giroscópio está chegando ao jogo AGORA?"* não existia deste lado:
                o que a tela mostrava era um número de CATÁLOGO, na dica do
@@ -3305,8 +3305,8 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                O TEXTO DO ARQUIVO É A CENA DO MOCKUP, e ele fica: é o que ela
                olha na página parada. O produto o troca no primeiro tique. -->
           <span class="no-jogo" data-campo="giro-no-jogo" data-hef-alvo="atributo"
-                data-hef-atributo="aria-label" aria-label="Giroscópio: fluindo para o jogo (~250 Hz)"><span
-                class="no-jogo-t" data-campo="giro-no-jogo">Giroscópio: fluindo para o jogo (~250 Hz)</span></span>
+                data-hef-atributo="aria-label"><span
+                class="no-jogo-t" data-campo="giro-no-jogo"></span></span>
           <span class="sensores-peca" data-campo="mira-fora" data-hef-alvo="classe" data-hef-classe="sem-mira" data-hef-quando="NATIVO">
             <span class="dica-do-giro" data-campo="giro-dica" data-hef-alvo="atributo" data-hef-atributo="data-dica" data-dica="Ligado: o jogo recebe o giro deste controle."><button class="sw" data-gesto="sensor" data-sensor="giroscopio" data-campo="giro-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO"><span class="p"></span>Giroscópio</button></span>
             <button class="sw" data-gesto="sensor" data-sensor="acelerometro" data-campo="accel-ligado" data-hef-alvo="classe" data-hef-classe="off" data-hef-quando="DESLIGADO" data-dica="O jogo recebe a inclinação e o chacoalhar"><span class="p"></span>Acelerômetro</button>
@@ -3753,7 +3753,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                o que o controle faz, e não um aviso sobre ele. -->
           <span class="leia" title="O que o jogo vê deste controle. Para trocar, vá à aba Jogar."><b data-campo="mascara">—</b></span><span class="div so-fechado">·</span>
           <span class="leia so-fechado" title="Capturando: o som que entra por este controle chega ao PC.">Microfone <span class="selo-ativo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span></span>
-          <!-- O GIROSCÓPIO NO JOGO — "fluindo para o jogo (~N Hz)".
+          <!-- O GIROSCÓPIO NO JOGO — só o Nativo e a máscara Xbox (o «fluindo» saiu em 19/10/2026).
                CONTROLES-VERDADE-01, 06/09/2026. O número que responde *"o
                giroscópio está chegando ao jogo AGORA?"* não existia deste lado:
                o que a tela mostrava era um número de CATÁLOGO, na dica do
@@ -4243,7 +4243,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                o que o controle faz, e não um aviso sobre ele. -->
           <span class="leia" title="O que o jogo vê deste controle. Para trocar, vá à aba Jogar."><b data-campo="mascara">—</b></span><span class="div so-fechado">·</span>
           <span class="leia so-fechado" title="Microfone calado: a luz vermelha do controle está apagada.">Microfone <span class="selo-ativo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="on" data-hef-quando="ATIVO"><span class="mic-glifo" data-campo="mic-selo" data-hef-alvo="classe" data-hef-classe="cortado" data-hef-quando="DESLIGADO"><svg viewBox="0 0 24 24" width="9" height="9" aria-hidden="true" focusable="false"><rect x="9" y="2" width="6" height="11" rx="3" fill="currentColor"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 17.5v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span><span class="selo-palavra" data-campo="mic-selo">—</span></span></span>
-          <!-- O GIROSCÓPIO NO JOGO — "fluindo para o jogo (~N Hz)".
+          <!-- O GIROSCÓPIO NO JOGO — só o Nativo e a máscara Xbox (o «fluindo» saiu em 19/10/2026).
                CONTROLES-VERDADE-01, 06/09/2026. O número que responde *"o
                giroscópio está chegando ao jogo AGORA?"* não existia deste lado:
                o que a tela mostrava era um número de CATÁLOGO, na dica do

@@ -46,9 +46,6 @@ def test_fora_do_coop_so_o_primario_mostra_motores_e_giroscopio() -> None:
 
     assert cartao._item_do_vpad(primario, estado) is not None
     assert cartao._item_do_vpad(segundo, estado) is None
-    assert cartao.texto_motion(primario, estado) == (
-        "Giroscópio: fluindo para o jogo (~250 Hz)")
-    assert cartao.texto_motion(segundo, estado) is None
 
 
 def test_no_coop_renumerado_cada_controle_acha_o_vpad_dele() -> None:
@@ -63,8 +60,7 @@ def test_no_coop_renumerado_cada_controle_acha_o_vpad_dele() -> None:
         item = cartao._item_do_vpad(entrada, estado)
         assert item is not None and item["uniq"] == uniq
         assert item["player"] == numero
-        assert cartao.texto_motion(entrada, estado) == (
-            f"Giroscópio: fluindo para o jogo (~{100 + numero} Hz)")
+        assert item["motion_hz"] == 100.0 + numero
 
 
 def test_controle_sem_endereco_nao_casa_com_vpad_nenhum() -> None:

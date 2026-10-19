@@ -445,36 +445,13 @@ def test_sem_o_mouse_emulado_o_tique_da_navegacao_nao_drena(
     assert all(leitor.drenagens == 0 for leitor in nav.mesa.movimento.values())
 
 
-# 5. O «FLUINDO» COM O GIROSCÓPIO DESLIGADO — `controller_card.texto_motion`
+# 5. A FRASE DA XBOX COM O GIROSCÓPIO DESLIGADO — `controller_card.texto_motion`
 
 
 def _com_espelho(jogador: int) -> dict[str, Any]:
     return {"rumble_ff": {"per_vpad": [
         {"player": jogador, "uniq": "aa:bb:cc:00:00:01", "motion_streaming": True,
          "motion_hz": 250.0}]}}
-
-
-@pytest.mark.parametrize(("entrada", "jogador"), [
-    ({"is_primary": True, "uniq": "aa:bb:cc:00:00:01"}, 1),
-    ({"player": 3, "uniq": "aa:bb:cc:00:00:01"}, 3),
-])
-def test_o_giroscopio_desligado_nao_diz_que_flui(entrada: dict[str, Any], jogador: int) -> None:
-    """Com o chip Giroscópio desligado, o filtro tira o giro da janela do
-    report daquele controle, e o `motion_streaming` segue pelo acelerômetro:
-    «fluindo para o jogo» seria fato errado. Só o `False` DITO pelo daemon
-    apaga a linha — sem o bloco `sensores`, ninguém leu.
-
-    MORDIDA: tire a guarda `giroscopio_ligado is False` de `texto_motion` e os
-    dois casos reprovam.
-    """
-    from hefesto_dualsense4unix.interface.cartao_do_controle import texto_motion
-
-    estado = _com_espelho(jogador)
-    ligado = {**entrada, "sensores": {"giroscopio_ligado": True}}
-    desligado = {**entrada, "sensores": {"giroscopio_ligado": False}}
-    assert texto_motion(ligado, estado) == "Giroscópio: fluindo para o jogo (~250 Hz)"
-    assert texto_motion(entrada, estado) == "Giroscópio: fluindo para o jogo (~250 Hz)"
-    assert texto_motion(desligado, estado) is None
 
 
 def test_na_mascara_xbox_o_giroscopio_desligado_nao_diz_que_segue_ativo() -> None:

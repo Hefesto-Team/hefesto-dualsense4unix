@@ -105,6 +105,7 @@ a aba 02 já pagou uma vez, na barra de bateria do lugar vazio.
 from __future__ import annotations
 
 import contextlib
+import math
 import os
 import selectors
 import struct
@@ -126,7 +127,12 @@ BARRAS = 14
 
 PISO_PCT = 16
 
-PICO_CHEIO = 0.5
+#: A ESCALA É EM DECIBÉIS (19/10/2026). Era linear, com a barra cheia em 0,5, e a voz não subia a
+#: barra: o PipeWire aplica o volume da captura antes do `parec` ler, e o volume é cúbico. Medido
+#: num sink de teste com um tom de pico 0,500: a 100% o medidor lê 0,500; a 32% (o volume da
+#: captura do microfone naquele dia), 0,0164, que a escala linear punha no piso. Em decibéis, -60
+#: dBFS é o piso e 0 dBFS o topo: os mesmos 0,0164 (-35,7 dB) dão meia barra.
+DB_DO_PISO = -60.0
 
 _TAM_AMOSTRA = 4
 
@@ -167,7 +173,7 @@ class OndasDeSom:
         agora: Callable[[], float] = time.monotonic,
         barras: int = BARRAS,
         piso_pct: int = PISO_PCT,
-        pico_cheio: float = PICO_CHEIO,
+        db_do_piso: float = DB_DO_PISO,
         mudez_s: float = MUDEZ_S,
         automatico: bool = True,
     ) -> None:
@@ -175,7 +181,7 @@ class OndasDeSom:
         self._agora = agora
         self._barras = max(1, int(barras))
         self._piso = max(0, min(100, int(piso_pct)))
-        self._cheio = pico_cheio if pico_cheio > 0 else PICO_CHEIO
+        self._db_do_piso = db_do_piso if db_do_piso < 0 else DB_DO_PISO
         self._mudez_s = mudez_s
         self._automatico = automatico
         self._lock = threading.RLock()
@@ -229,10 +235,11 @@ class OndasDeSom:
 
 
     def _pct(self, pico: float) -> int:
-        """Pico linear -> altura de barra, entre :data:`PISO_PCT` e 100."""
-        if pico != pico or pico < 0.0:
-            pico = 0.0
-        fatia = min(1.0, pico / self._cheio)
+        """Pico linear -> altura de barra pelo dB, entre :data:`PISO_PCT` e 100."""
+        if pico != pico or pico <= 0.0:
+            return self._piso
+        db = 20.0 * math.log10(pico)
+        fatia = max(0.0, min(1.0, (db - self._db_do_piso) / -self._db_do_piso))
         return round(self._piso + fatia * (100 - self._piso))
 
 
@@ -358,7 +365,7 @@ def parar_o_de_sempre() -> None:
 
 __all__ = [
     "BARRAS",
-    "PICO_CHEIO",
+    "DB_DO_PISO",
     "PISO_PCT",
     "OndasDeSom",
     "ligar",

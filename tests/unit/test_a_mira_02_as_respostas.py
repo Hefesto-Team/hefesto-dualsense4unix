@@ -298,14 +298,11 @@ def test_com_a_mira_acesa_o_cartao_nao_diz_que_o_giroscopio_flui(
     """O MESMO FATO DA RESPOSTA 1, na linha de cima do cartão: com a Mira acesa
     o filtro do report tira o giroscópio da janela daquele controle
     (`virtual_motion.REGISTRO.filtrar`), e o `motion_streaming` do vpad segue
-    ligado pelo acelerômetro. «Giroscópio: fluindo para o jogo» ao lado da dica
-    nova seria a tela dizendo as duas coisas sobre o mesmo giro.
+    ligado pelo acelerômetro. Desde 19/10/2026 o «fluindo para o jogo» saiu de
+    todo caso, e a linha cala com a Mira apagada ou acesa.
 
     O Nativo e a máscara Xbox continuam com a frase deles — as duas seguem
     verdadeiras com a Mira acesa.
-
-    MORDIDA: tire a guarda `mira.ligada` do `controller_card.texto_motion` e
-    este teste reprova, no P1 e no P3.
     """
     import pacotes.a02_controles as a02
 
@@ -316,7 +313,7 @@ def test_com_a_mira_acesa_o_cartao_nao_diz_que_o_giroscopio_flui(
          "motion_hz": 250.0}]}}
     apagada = {**entrada, "mira": {"ligada": False, "virtual": False}}
     acesa = {**entrada, "mira": {"ligada": True, "virtual": True}}
-    assert texto_motion(apagada, estado) == "Giroscópio: fluindo para o jogo (~250 Hz)"
+    assert texto_motion(apagada, estado) is None
     assert texto_motion(acesa, estado) is None
     nativo = texto_motion(acesa, {**estado, "native_mode": True})
     assert nativo and "direto com o controle" in nativo, nativo

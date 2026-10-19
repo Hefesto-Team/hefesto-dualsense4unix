@@ -798,8 +798,8 @@ def test_a_linha_do_giroscopio_e_a_do_dono_palavra_por_palavra() -> None:
     comparações caem juntas — é o dono que decide, não o pacote e muito menos
     esta régua.
     """
-    for hz in (250.0, 61.0):
-        estado = _com_vpad(hz)
+    for estado in ({"native_mode": True},
+                   {**_com_vpad(), "gamepad_emulation": {"flavor": "xbox"}}):
         card = _card({}, state=estado)
         esperado = texto_motion({**BASE}, estado)
         assert esperado, "o dublê não acordou o dono — a régua mediria o vazio"
@@ -808,19 +808,14 @@ def test_a_linha_do_giroscopio_e_a_do_dono_palavra_por_palavra() -> None:
 
 
 def test_as_situacoes_dizem_frases_diferentes_no_cartao() -> None:
-    """Fluindo com hertz, fluindo sem hertz, e sem espelho — três respostas."""
-    com_hz = _card({}, state=_com_vpad())
-    sem_hz = _card({}, state=_com_vpad(hz=None))
-    sem_espelho = _card({}, state={})
-    frases = {com_hz["giro-no-jogo"], sem_hz["giro-no-jogo"],
-              sem_espelho["giro-no-jogo"]}
+    """O Nativo, a máscara Xbox e o caso comum — três respostas, e a comum cala."""
+    nativo = _card({}, state={"native_mode": True})
+    xbox = _card({}, state={**_com_vpad(), "gamepad_emulation": {"flavor": "xbox"}})
+    comum = _card({}, state=_com_vpad())
+    frases = {nativo["giro-no-jogo"], xbox["giro-no-jogo"], comum["giro-no-jogo"]}
     assert len(frases) == 3, (
         f"as três situações do cartão colapsaram em {len(frases)} frase(s): "
         f"{frases!r}")
-    assert sem_espelho["giro-no-jogo"] == "", (
-        "sem espelho de giroscópio o cartão tem de CALAR — o dono devolve "
-        "`None` de propósito: acusar 'sem giroscópio' em todo card seria ruído "
-        "crônico, e quem diagnostica silêncio anômalo é o doctor")
 
 
 def test_a_excecao_do_modo_nativo_chega_ao_cartao() -> None:
@@ -852,17 +847,14 @@ def test_a_excecao_da_mascara_xbox_chega_ao_cartao() -> None:
         f"não TEM giroscópio, e o dado não sai dali — {frase!r}")
 
 
-def test_o_hertz_da_linha_e_medido_e_nunca_cravado() -> None:
-    """O número sai do `motion_hz` do vpad; zero não vira "~0 Hz"."""
-    a = _card({}, state=_com_vpad(250.0))["giro-no-jogo"]
-    b = _card({}, state=_com_vpad(61.0))["giro-no-jogo"]
-    assert a != b, "o hertz do cartão não acompanhou o do aparelho — está cravado"
-    assert "250" in a and "61" in b, (
-        "o número que o cartão mostra não é o que o vpad publicou")
-    zero = _card({}, state=_com_vpad(0.0))["giro-no-jogo"]
-    assert "0 Hz" not in zero, (
-        "com o espelho parado o cartão anunciou '~0 Hz' — uma frequência de "
-        f"zero não é medida, é ausência: {zero!r}")
+def test_o_espelho_ativo_nao_diz_fluindo_nem_hertz() -> None:
+    """O «fluindo para o jogo (~N Hz)» saiu do cartão em 19/10/2026, a pedido.
+
+    MORDE: devolva o ramo do `motion_streaming` ao `texto_motion` e o cartão volta a falar.
+    """
+    for hz in (250.0, 61.0, 0.0, None):
+        assert _card({}, state=_com_vpad(hz))["giro-no-jogo"] == "", (
+            f"com o espelho ativo ({hz} Hz) o cartão voltou a dizer que o giroscópio flui")
 
 
 @pytest.mark.parametrize("transporte", ["usb", "bt"])

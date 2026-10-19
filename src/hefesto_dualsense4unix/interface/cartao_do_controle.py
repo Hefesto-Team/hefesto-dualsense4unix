@@ -322,16 +322,13 @@ def rotulo_lightbar(
 
 
 def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | None:
-    """Linha discreta do giroscópio espelhado (GYRO-03); ``None`` = some.
+    """A linha do giroscópio no cabeçalho do controle; ``None`` = some.
 
-    Só aparece quando o vpad DESTE controle está com o espelho de motion
-    ATIVO (``motion_streaming`` no ``rumble_ff.per_vpad`` do state_full) —
-    a ausência da linha não é alarme: uinput/máscara xbox/Modo nativo não
-    têm espelho por design, e acusar "sem giroscópio" em todo card seria
-    ruído crônico (quem diagnostica silêncio anômalo é o doctor).
-
-    Qual vpad é o deste controle quem responde é o :func:`_item_do_vpad`,
-    pelo endereço: o controle sem vpad próprio não mostra a linha.
+    **O «fluindo para o jogo (~N Hz)» SAIU em 19/10/2026**, a pedido: a linha
+    afirmava o espelho de motion ativo e a taxa, e o caso normal virou silêncio.
+    Ficam só as duas frases que explicam por que o jogo NÃO recebe o giroscópio
+    como ele espera (o Modo nativo e a máscara Xbox). Quem diagnostica silêncio
+    anômalo é o doctor.
 
     PAINEL-DA-VERDADE-01 acrescentou DOIS casos em que o silêncio deixa de
     ser a resposta certa, e só dois. A decisão medida acima continua inteira
@@ -351,15 +348,9 @@ def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | N
 
     Nos dois casos a frase EXPLICA; nos demais o silêncio continua.
 
-    **O GIRO QUE NÃO VAI COMO GIROSCÓPIO NÃO FLUI** — 24/09/2026. Com a Mira
-    Virtual acesa (A-MIRA-POR-MOVIMENTO-NA-TELA-02, o bloco `mira`) ou com o
-    chip Giroscópio desligado por ela (A-MIRA-NA-NAVEGACAO-01, o `False` de
-    `sensores.giroscopio_ligado`), o filtro do report tira o giroscópio da
-    janela daquele controle (`virtual_motion.REGISTRO.filtrar`), e o
-    `motion_streaming` segue ligado pelo acelerômetro: «fluindo para o jogo»
-    seria fato errado, e a linha some. Sem o bloco, ninguém leu, e a linha
-    segue a telemetria. O Nativo vem antes (o jogo lê o `hidraw` do físico, e o
-    interruptor não o alcança); a Xbox, entre os dois: com o Giroscópio desligado
+    O Nativo vem antes (o jogo lê o `hidraw` do físico, e o interruptor não o
+    alcança). Com o chip Giroscópio desligado (o `False` de
+    `sensores.giroscopio_ligado`, A-MIRA-NA-NAVEGACAO-01), a frase da Xbox cala:
     o «no Hefesto ele segue ativo» dela contradiria o chip na mesma linha.
     """
     if bool(state_global.get("native_mode")):
@@ -369,16 +360,7 @@ def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | N
         return None
     if _mascara_e_xbox(state_global, entry):
         return f"Giroscópio: {_FRASE_MASCARA_XBOX['giroscopio']}"
-    mira = entry.get("mira")
-    if isinstance(mira, dict) and mira.get("ligada") is True:
-        return None
-    item = _item_do_vpad(entry, state_global)
-    if item is None or item.get("motion_streaming") is not True:
-        return None
-    hz = item.get("motion_hz")
-    if isinstance(hz, (int, float)) and not isinstance(hz, bool) and hz > 0:
-        return f"Giroscópio: fluindo para o jogo (~{hz:.0f} Hz)"
-    return "Giroscópio: fluindo para o jogo"
+    return None
 
 
 ATIVIDADE_FRESCA_S: Final[float] = 3.0
