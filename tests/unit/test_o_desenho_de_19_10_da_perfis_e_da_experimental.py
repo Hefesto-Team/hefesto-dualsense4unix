@@ -14,7 +14,8 @@ MORDIDAS (cada uma foi feita e viu reprovar; a lista está no relato do tema des
 * devolver a frase longa ao rótulo da variante B -> `test_a_variante_b_do_freestyle_cabe_a_940`;
 * deixar a variante de pé depois de o gerador mudar -> `test_as_variantes_de_10_estao_em_dia`.
 * pôr o comando de volta na linha do «Quando» -> `test_o_comando_do_evento_tem_linha_propria_...`;
-* tirar o `:has` ou o gesto do `.ordem-vale` -> `test_o_comando_aparece_so_com_o_meu_comando_...`.
+* tirar o `:has` ou o gesto do `.ordem-vale` -> `test_o_comando_aparece_so_com_o_meu_comando_...`;
+* devolver a coluna do Status aos 255 px -> `test_a_fileira_das_secoes_cabe_na_celula_...`.
 """
 from __future__ import annotations
 
@@ -241,3 +242,78 @@ def test_a_variante_a_dos_eventos_corta_o_comando_a_940() -> None:
       const c = document.querySelector('.ev-cmd'); return c.getBoundingClientRect().width;
     }""", antes=_ESCOLHE_EVENTO % "meu_comando")
     assert m < 110, m
+
+
+# ---------------------------------------------------------------------------------------------
+# Perfis 3 · AS-TRES-SECOES-DA-ACESSIBILIDADE-GANHAM-IPC-E-O-TOQUE-SEGUE-A-MAO-01
+# ---------------------------------------------------------------------------------------------
+
+VARIANTE_ACESSIBILIDADE_B = VARIANTES / "10-acessibilidade-B-uma-celula.html"
+_SECOES_DE_UMA_LINHA = ("leds", "triggers", "rumble", "speaker", "mic", "sensores", "mascara",
+                        "movimento", "ativacao", "analogicos")  # (noqa-acento) identificador ASCII
+_MEDE_A_FILEIRA = """() => {
+  const linhas = [...document.querySelectorAll('.guarda tbody tr')].filter(
+    tr => tr.querySelector('.gls') && tr.querySelector('.gls').children.length);
+  return linhas.map(tr => {
+    const g = tr.querySelector('.gls'), td = tr.querySelector('.gd-pecas');
+    return {celulas: g.children.length,
+            sobra: Math.round(td.getBoundingClientRect().right
+                              - g.lastElementChild.getBoundingClientRect().right)};
+  });
+}"""
+
+
+def _secoes_da_primeira_linha(html: str) -> list[str]:
+    linha = re.search(r'<td class="gd-pecas">(.*?)</td>', html, re.S)
+    assert linha is not None
+    return re.findall(r'data-hef-secao="([^"]+)"', linha.group(1))
+
+
+def test_a_coluna_de_ajuste_proprio_tem_a_ativacao_e_os_analogicos_depois_do_movimento() -> None:
+    """A (recomendada) é o desenho de 16/10: dez células, cada seção com glifo e ponto."""
+    html = _ler(DEZ)
+    assert tuple(_secoes_da_primeira_linha(html)) == _SECOES_DE_UMA_LINHA
+    assert ".gd-pecas{width:271px}" in html and ".gd-pecas .gls{gap:5px}" in html
+
+
+def test_a_variante_b_junta_a_ativacao_e_os_analogicos_numa_celula() -> None:
+    doc = _ler(VARIANTE_ACESSIBILIDADE_B)
+    secoes = _secoes_da_primeira_linha(doc)
+    assert secoes == [*_SECOES_DE_UMA_LINHA[:8], "acessibilidade"], secoes
+    assert "analogicos" not in re.search(r'<td class="gd-pecas">.*?</td>', doc, re.S).group(0)
+    assert ".gd-pecas .gls{gap:6px}" in doc
+
+
+def _celula(secao: str, ponto: str) -> str:
+    return (f'<span class="gc"><span class="gr" data-hef-secao="{secao}"><svg></svg></span>'
+            f'<span class="gp{ponto}" data-hef="guarda.proprio"></span></span>')
+
+
+def test_o_ponto_da_celula_juntada_acende_se_qualquer_das_duas_guarda() -> None:
+    """A junção da B: o ponto é a soma dos dois, e a célula velha dos analógicos some."""
+    import aba10
+
+    def linha(a: str, b: str) -> str:
+        ativa = _celula("ativacao", a)  # (noqa-acento) identificador ASCII
+        analoga = _celula("analogicos", b)
+        return f'<td class="gd-pecas">{ativa}{analoga}</td>'
+
+    pagina = ".gd-pecas .gls{gap:5px}" + "".join(linha(a, b) for a, b in
+                                                 [("", ""), (" on", ""), ("", " on")])
+    saida = aba10._juntar_ativacao_e_analogicos(pagina)
+    pontos = re.findall(r'<span class="gp( on)?"', saida)
+    assert pontos == ["", " on", " on"], pontos
+    assert "analogicos" not in saida and saida.count('data-hef-secao="acessibilidade"') == 3
+
+
+
+@sem_chrome
+@pytest.mark.parametrize("vista", VISTAS, ids=lambda v: str(v[0]))
+@pytest.mark.parametrize("arquivo,celulas", [(DEZ, 10), (VARIANTE_ACESSIBILIDADE_B, 9)],
+                         ids=["A-recomendada", "B-uma-celula"])
+def test_a_fileira_das_secoes_cabe_na_celula_em_toda_vista(
+        vista: tuple[int, int], arquivo: pathlib.Path, celulas: int) -> None:
+    """A fileira inteira fica dentro da célula do Status (a 940 px a de dez passava 16 px)."""
+    linhas = _no_chrome(arquivo, vista, _MEDE_A_FILEIRA)
+    assert linhas and all(ln["celulas"] == celulas for ln in linhas), linhas
+    assert all(ln["sobra"] >= 0 for ln in linhas), linhas

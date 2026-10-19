@@ -22,8 +22,8 @@ MORDIDAS (cada uma foi feita e viu reprovar):
   `test_o_clique_solto_num_item_da_ordem_nao_e_arrasto` (a tela dizia «não entendi para onde»);
 * devolver o seletor `[data-hef="editor.ordem"] ol` ->
   `test_todo_bloco_do_pacote_acha_um_lugar_na_pagina` (a lista do desenho ficava na tela);
-* devolver `.ev-val select{flex:0 0 150px}`, que o `.campo select.estreito` vence ->
-  `test_o_quando_divide_a_linha_com_o_comando` (o comando ficava com 22 px);
+* tirar o `:has` que revela a linha `.so-comando` ->
+  `test_o_comando_tem_linha_propria_so_no_meu_comando` (19/10: o comando é só do «Meu comando»);
 * esconder pelo `:has(ol:empty)` ou emitir `editor.ordem.ha` sempre cheio ->
   `test_qual_vale_primeiro_aparece_so_com_dois_perfis_do_jogo`;
 * pintar o `editor.jogo` cru, ou gravar o nome como programa ->
@@ -503,20 +503,24 @@ def test_todo_bloco_do_pacote_acha_um_lugar_na_pagina(tela: Any) -> None:
     assert contas == [1, 1, 1], dict(zip(seletores, contas, strict=True))
 
 
-def test_o_quando_divide_a_linha_com_o_comando(tela: Any) -> None:
-    """Com «Eventos», o momento e o comando ficam lado a lado, e o comando cabe a frase de ajuda.
+def test_o_comando_tem_linha_propria_so_no_meu_comando(tela: Any) -> None:
+    """Com «Eventos», o comando só aparece no momento «Meu comando», numa linha própria e larga.
 
-    Medido na bancada (15/10/2026): o `<select>` esticava a 100% e o campo do comando ficava com
-    22 px, sem lugar para uma letra.
+    Medido na bancada (15/10/2026): o comando dividia a linha com o momento e ficava com 22 px.
+    Desde 19/10 ele mora em `.so-comando`, revelada pelo `:has` do `<option>` escolhido (o motor
+    do produto, o WebKitGTK, entende o seletor): some em «Cena» e tem a linha toda em «Meu comando».
     """
     medida = json.loads(tela.executar(r"""
 (function(){
   var c = document.querySelector('.campo.so-eventos'); c.classList.add('on');
-  var s = c.querySelector('select').getBoundingClientRect().width;
-  var i = c.querySelector('.ev-cmd').getBoundingClientRect().width;
-  c.classList.remove('on');
-  return JSON.stringify([s, i]);
+  var s = c.querySelector('select'), i = document.querySelector('.ev-cmd'), v = s.value;
+  s.value = 'cena'; var cena = i.getBoundingClientRect().width;
+  s.value = 'meu_comando'; var meu = i.getBoundingClientRect().width;
+  var sel = s.getBoundingClientRect().width;
+  s.value = v; c.classList.remove('on');
+  return JSON.stringify([sel, cena, meu]);
 })()"""))
-    largura_do_momento, largura_do_comando = medida
-    assert largura_do_momento == 170, medida
-    assert largura_do_comando > 180, f"o campo do comando ficou com {largura_do_comando} px"
+    largura_do_momento, sem_comando, largura_do_comando = medida
+    assert sem_comando == 0, f"o comando aparece fora do «Meu comando»: {medida}"
+    assert largura_do_momento > 250, f"o momento devia ter a linha toda: {medida}"
+    assert largura_do_comando > 250, f"o campo do comando ficou com {largura_do_comando} px"

@@ -821,9 +821,12 @@ CSS = CSS_GLIFO + """
      ignorava. Com `fixed` a sugestão virou ordem: mantido o 150, a fileira de
      glifos era CORTADA — fotografado. O valor agora é o que a tela
      media.  (noqa-acento: verbo medir, imperfeito) */
-  .gd-pecas{width:255px}
+  .gd-pecas{width:271px}
   /* 16/10/2026: com a ativação dos botões e a curva dos analógicos são DEZ seções, e com 6px a
-     última passava 3px da célula. O vão entre seções desceu a 5px (o de dentro segue 2px). */
+     última passava 3px da célula. O vão entre seções desceu a 5px (o de dentro segue 2px).
+     19/10/2026: a fileira pede 271px (catorze glifos de 15px, quatro vãos de 2px e nove de 5px), e a
+     coluna de 255px só a continha a 1272 px porque a folga da tabela a alargava: a 940 px a última
+     seção passava 16px da célula. A coluna passa a 271px; a tabela já rola na horizontal ali. */
   .gd-pecas .gls{gap:5px}
   /* O GLIFO DIZ O CONTROLE AGORA, E O PONTO EMBAIXO DIZ O DISCO — 02/10/2026,
      decidido pelo usuário em 29/09 («Ponto embaixo»): aceso = ligado agora neste
@@ -2167,6 +2170,25 @@ def _trocar(html, trocas):
     return html
 
 
+def _juntar_ativacao_e_analogicos(html):
+    """B da coluna de ajuste próprio: as células da ativação e dos analógicos viram UMA, com um glifo."""
+    padrao = re.compile(
+        r'(<span class="gc"[^>]*>)((?:(?!<span class="gc").)*?)data-hef-secao="ativacao"(.*?)'
+        r'<span class="gp( on)?"[^>]*></span></span>'
+        r'<span class="gc"[^>]*>(?:(?!<span class="gc").)*?data-hef-secao="analogicos".*?'
+        r'<span class="gp( on)?"([^>]*)></span></span>', re.S)
+
+    def junta(m):
+        aceso = " on" if (m.group(4) or m.group(5)) else ""
+        return (f'{m.group(1)}{m.group(2)}data-hef-secao="acessibilidade"{m.group(3)}'
+                f'<span class="gp{aceso}"{m.group(6)}></span></span>')
+
+    novo, quantas = padrao.subn(junta, html)
+    if quantas < 2:
+        raise SystemExit(f"variante 10-acessibilidade-B: só {quantas} linha(s) juntaram")
+    return _trocar(novo, [(".gd-pecas .gls{gap:5px}", ".gd-pecas .gls{gap:6px}")])
+
+
 def variantes(html):
     """Nome do arquivo (sem `.html`) -> página da variante, a partir do desenho recém-gerado."""
     saidas = {}
@@ -2206,6 +2228,11 @@ def variantes(html):
          '.campo.so-comando{display:none}\n  .campo .ev-val select.estreito{flex:0 0 170px;width:170px}'
          '\n  .ev-val .ev-cmd{flex:1;min-width:0;display:none}'
          '\n  .so-eventos:has(option[value="meu_comando"]:checked) .ev-cmd{display:block}')])
+    # Perfis 3 (AS-TRES-SECOES-DA-ACESSIBILIDADE-...): a coluna do ajuste próprio. A é o desenho de
+    # 16/10 (dez células, vão de 5 px: a cruz da ativação e o analógico da curva, cada um com o seu
+    # ponto); B junta os dois numa célula «Acessibilidade» (nove células, vão de volta aos 6 px, um
+    # ponto só, aceso se qualquer das duas seções guarda) e UM glifo só, o da cruz.
+    saidas["10-acessibilidade-B-uma-celula"] = _juntar_ativacao_e_analogicos(html)
     return saidas
 
 
