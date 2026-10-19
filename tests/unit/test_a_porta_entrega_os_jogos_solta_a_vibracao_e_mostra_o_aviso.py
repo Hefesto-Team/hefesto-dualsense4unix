@@ -11,7 +11,9 @@ MORDIDAS (19/10/2026, executadas sobre a cura e devolvidas):
 - o ``_soltar_a_vibracao`` tirado do ``finally`` da conexão reprova
   ``test_a_vibracao_que_a_extensao_deixou_ligada_se_solta_quando_ela_cai``;
 - o ``AvisoParaVerError`` tirado do ``instalar`` reprova
-  ``test_o_aviso_aparece_antes_de_instalar_e_nada_se_grava``.
+  ``test_o_aviso_aparece_antes_de_instalar_e_nada_se_grava``;
+- o ``manifesto.aviso != aviso_aceito`` tirado da recusa do ``instalar`` reprova
+  ``test_reinstalar_pelo_terminal_com_o_aviso_ja_aceito_nao_pergunta_de_novo``.
 """
 from __future__ import annotations
 
@@ -304,3 +306,19 @@ def test_a_linha_de_comando_mostra_o_aviso_e_pergunta(lar: Any, curto: Path) -> 
     sim = runner.invoke(app, ["instalar", str(pasta), "--sim"])
     assert sim.exit_code == 0, sim.output
     assert ler_registro(lar.registro)["avisada"].aviso_aceito == AVISO
+
+
+def test_reinstalar_pelo_terminal_com_o_aviso_ja_aceito_nao_pergunta_de_novo(
+    lar: Any, curto: Path
+) -> None:
+    """O aviso que já teve o «sim» não volta a perguntar, e a extensão segue ligada."""
+    from hefesto_dualsense4unix.cli.cmd_mod import app
+
+    pasta = _pasta_com_aviso(curto)
+    instalar(str(pasta), lugares=lar, aviso_visto=AVISO)
+    ligar("avisada", permissoes_vistas=["tema"], lugares=lar)
+    de_novo = instalar(str(pasta), lugares=lar, aviso_visto="")
+    assert de_novo.entrada.ligada and de_novo.entrada.aviso_aceito == AVISO
+    pelo_terminal = CliRunner().invoke(app, ["instalar", str(pasta)], input="")
+    assert pelo_terminal.exit_code == 0, pelo_terminal.output
+    assert ler_registro(lar.registro)["avisada"].ligada

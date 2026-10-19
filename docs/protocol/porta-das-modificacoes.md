@@ -222,7 +222,7 @@ sem a permissão o manifesto é recusado. A janela os pede ao serviço por dois 
 - `mods.parar_tudo {mod}` publica `acessorios.gesto` com `gesto: "para"`, `uniq` e `jogador` nulos e
   `mod: <id>`: só aquela extensão o recebe (as outras com `ler:acessorios.gesto` não), nenhum controle dá o
   toque de confirmação, e o serviço confere o «parar curto» só dela. Volta `{parado}`, falso quando ela não
-  está conectada. Recusa (`-32602`, com a frase) a extensão que não está instalada ou cujo manifesto não declara
+  está conectada. Recusa (`-32003`, com a frase) a extensão que não está instalada ou cujo manifesto não declara
   `parar_tudo`.
 
 ## Os erros

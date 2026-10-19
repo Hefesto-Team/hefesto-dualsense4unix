@@ -399,7 +399,7 @@ def instalar(
         novas = permissoes_novas(aceitas, manifesto.permissoes)
         aviso_aceito = anterior.aviso_aceito if anterior is not None else ""
         if aviso_visto is not None and manifesto.aviso:
-            if aviso_visto != manifesto.aviso:
+            if aviso_visto != manifesto.aviso and manifesto.aviso != aviso_aceito:
                 raise AvisoParaVerError(manifesto.nome, manifesto.aviso)
             aviso_aceito = manifesto.aviso
         if sozinha and anterior is not None:
