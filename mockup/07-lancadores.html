@@ -1462,14 +1462,15 @@
 #mod-janela .ja-degraus i.on { border-color:#ff8fd0 }
 /* O menu do ⋮ (desenho de 19/10): flutua à esquerda do ⋮, por cima da linha, e não empurra as linhas de
    baixo. No desenho ele aparece com o foco na linha; no produto, o clique no ⋮ o abre (`aberto`) e ele
-   fica até o segundo clique. Com as permissões, ele quebra em duas linhas de largura fixa. */
+   fica até o segundo clique. Com as permissões, ele quebra em duas linhas de largura fixa e desce
+   para baixo da linha, para a chave do «sim» ficar ao alcance do clique. */
 .ext, #lanc-janela .tn-topo { position:relative }
 .ext-pop { display:none }
 .ext:focus-within .ext-pop, .tn-topo:focus-within .ext-pop, .ext-pop.aberto { display:flex;position:absolute;
   right:38px;top:50%;transform:translateY(-50%);z-index:6;
   flex-wrap:nowrap;padding:8px;gap:6px;background:var(--panel);border:1px solid var(--border-forte);
   border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,.5) }
-.ext-pop.aberto:has(.ext-perm) { flex-wrap:wrap;width:360px;top:4px;transform:none }
+.ext-pop.aberto:has(.ext-perm) { flex-wrap:wrap;width:360px;top:calc(100% + 4px);transform:none }
 .ext-pop .btn.mini.apagado { opacity:.45;cursor:default }
 #lanc-janela .tn-topo .ext-mais { margin-left:auto }
 #lanc-janela .tn-topo .ext-mais + .ext-pop { right:44px;top:6px;transform:none }

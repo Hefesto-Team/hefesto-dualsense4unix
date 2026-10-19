@@ -1178,8 +1178,6 @@ class _Mexida:
     impedimentos: tuple[Any, ...] = ()
     #: As permissões (e o aviso, por último) que a pessoa viu antes do «sim» de ligar.
     vistas: dict[str, tuple[str, ...]] = dataclasses.field(default_factory=dict)
-    #: O aviso do manifesto que o primeiro «Instalar» mostrou, por endereço.
-    avisos: dict[str, str] = dataclasses.field(default_factory=dict)
     html_conf: str = ""
     html_imp: str = ""
     html_mod: str = ""
@@ -1196,7 +1194,6 @@ class _Mexida:
         self.menu = self.permissoes = self.remover = self.conf = self.imp = self.mod = ""
         self.impedimentos = ()
         self.vistas = {}
-        self.avisos = {}
         self.html_conf = self.html_imp = self.html_mod = ""
         self.agora = ()
         self.rascunho = {}
@@ -1714,19 +1711,13 @@ def _mexer_na_modificacao(mod_id: str, acao: str) -> str | None:
 def _instalar_a_modificacao(origem: str) -> str:
     """Instala de um endereço git ou de uma pasta local. Não liga: ligar é a chave.
 
-    O manifesto com ``aviso``: o primeiro gesto só o mostra, e o segundo instala.
+    O ``aviso`` do manifesto fica por ver: o recado do gesto não chega à tela, e o ⋮ do
+    primeiro «sim» da chave o mostra antes de a extensão fazer qualquer coisa.
     """
-    from hefesto_dualsense4unix.mods.instalador import AvisoParaVerError, instalar
+    from hefesto_dualsense4unix.mods.instalador import instalar
 
-    try:
-        with _dizendo_a_recusa():
-            feito = instalar(origem, aviso_visto=_MEXIDA.avisos.get(origem, ""))
-    except RuntimeError as exc:
-        if not isinstance(exc.__cause__, AvisoParaVerError):
-            raise
-        _MEXIDA.avisos[origem] = exc.__cause__.aviso
-        return f"{exc} Instale de novo para confirmar."
-    _MEXIDA.avisos.pop(origem, None)
+    with _dizendo_a_recusa():
+        feito = instalar(origem)
     REGISTRO.esquecer()
     return f"{feito.entrada.nome} instalada. Ligue-a na chave quando quiser."
 

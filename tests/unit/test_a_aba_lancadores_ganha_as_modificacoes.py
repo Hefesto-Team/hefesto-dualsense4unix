@@ -317,18 +317,19 @@ def test_ligar_com_permissao_nova_mostra_antes_e_liga_no_segundo(lar, ctx, tmp_p
 _AVISO = "Não é afiliada à marca. Jogue só o que você comprou."
 
 
-def test_o_aviso_do_manifesto_aparece_no_primeiro_instalar_e_o_segundo_instala(
-        lar, ctx, tmp_path) -> None:
+def test_o_instalar_da_tela_deixa_o_aviso_para_o_sim_da_chave(lar, ctx, tmp_path) -> None:
+    """O recado do gesto não chega à tela: o aviso aparece no ⋮ do primeiro «sim»."""
     a07 = _a07()
-    pasta = _fonte(tmp_path, extra={"aviso": _AVISO})
-    primeiro = _instalar(a07, ctx, pasta)
-    assert _AVISO in primeiro["recado"] and "Instale de novo" in primeiro["recado"]
-    assert _entrada(lar, "toque") is None, "instalou antes de mostrar o aviso"
-    segundo = _instalar(a07, ctx, pasta)
-    assert "Toque instalada" in segundo["recado"]
-    assert _entrada(lar, "toque").aviso_aceito == _AVISO
+    feito = _instalar(a07, ctx, _fonte(tmp_path, extra={"aviso": _AVISO}))
+    assert "Toque instalada" in feito["recado"]
+    entrada = _entrada(lar, "toque")
+    assert entrada.ligada is False and entrada.aviso_aceito == ""
+    primeiro = a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    assert primeiro.get("armou") is True and _AVISO in primeiro["blocos"][".ext-lista"]
+    assert _entrada(lar, "toque").ligada is False, "ligou sem o aviso passar pela tela"
     a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
-    assert _entrada(lar, "toque").ligada is True, "o aviso visto no instalar pediu de novo"
+    entrada = _entrada(lar, "toque")
+    assert entrada.ligada is True and entrada.aviso_aceito == _AVISO
 
 
 def test_o_aviso_nao_aceito_vem_primeiro_no_sim_do_ligar(lar, ctx, tmp_path) -> None:

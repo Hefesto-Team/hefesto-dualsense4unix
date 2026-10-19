@@ -158,11 +158,12 @@ conexão viva dela. O leitor da biblioteca do lançador mora na extensão, nunca
 ## O aviso do manifesto
 
 O campo `aviso` (até 400 letras, opcional) é o aviso de uso da extensão: a marca que não a endossa, o jogo
-comprado, a idade. A tela o mostra antes de instalar: o primeiro «Instalar» (ou o «Escolher a pasta…») baixa,
-lê o manifesto e só mostra o aviso, sem gravar nada; o segundo instala. A linha de comando o imprime e
-pergunta (`--sim` aceita). O aviso aceito fica no registro (`aviso_aceito`); a versão nova com outro aviso
-volta a pedir o «sim» do ligar, com o aviso no topo da lista, e a atualização sozinha a deixa esperando o
-«Atualizar». O serviço não abre a extensão cujo aviso ainda não teve o «sim».
+comprado, a idade. A linha de comando o imprime antes de gravar e pergunta (`--sim` aceita). Na tela, o
+«Instalar» grava a extensão desligada, e o primeiro clique da chave abre o ⋮ com o aviso no topo da lista das
+permissões; o segundo liga. O aviso aceito fica no registro (`aviso_aceito`); a versão nova com outro aviso
+volta a pedir o «sim» do ligar, e a atualização sozinha a deixa esperando o «Atualizar». O serviço não abre a
+extensão cujo aviso ainda não teve o «sim». A função `instalar(…, aviso_visto=…)` recusa com
+`AvisoParaVerError` antes de gravar quando o aviso visto é outro.
 
 ## A volta dos acessórios no controle
 
