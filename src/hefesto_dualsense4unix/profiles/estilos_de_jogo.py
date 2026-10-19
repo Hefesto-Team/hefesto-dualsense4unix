@@ -105,7 +105,8 @@ RESPIRA_POR_SEGUNDO = 0.2  # [RESPIRO] 12 por minuto
 TETO_DO_PISCAR = 3.0  # [WCAG] 2.3.1
 DURACAO_DE_SEMPRE_MS = 200  # [MDN]
 
-LuzQueReage = Literal["parada", "respira", "pisca"]
+#: «batida»: a luz sobe na borda do som do jogo, não no tiro (o Ritmo, CATALOGO §3 «Na batida»)
+LuzQueReage = Literal["parada", "respira", "pisca", "batida"]
 
 
 @dataclass(frozen=True)
@@ -193,13 +194,15 @@ ESTILOS: tuple[Estilo, ...] = (
     # (receita invisível ausente = o motor do tato não age). Não é o Modo Nativo, que é outro eixo.
     Estilo("nativo", "Nativo", None, "", (0, 0, 0), 0.0,
            "o jogo decide o gatilho, a vibração, a luz e o toque; o Hefesto não escolhe nada"),
-    Estilo("fps", "FPS", "AutoGun", "max", (255, 40, 40), 1.0,
+    Estilo("fps", "FPS", "Machine", "max", (255, 40, 40), 1.0,
            "o gatilho estala em rajada, que é o gesto do gênero",
-           # frequência: o padrão do produto, na faixa de 0 a 255 Hz [SONY]
-           _respira((("frequency", 60),))),
+           # a Metralhadora a 40 Hz e força 4, do curso 2 ao 9 (CATALOGO §2.4: era a Arma
+           # automática a 60 Hz), na faixa de 0 a 255 Hz [SONY]
+           _respira((("start", 2), ("end", 9), ("strength", 4), ("frequency", 40)))),
+    # o corpo da Corrida e da Simulação é o motor e a pista, não o tiro (CATALOGO §4)
     Estilo("corrida", "Corrida", "Resistance", "balanceado", (255, 140, 0), 1.0,
            "o acelerador tem peso constante; o freio também",
-           Receita()),
+           Receita(toque_por_tiro=False, lado_do_som=False)),
     Estilo("acao", "Ação", "Weapon", "max", (170, 60, 255), 1.0,  # noqa-acento: chave
            "trava, solta no estalo e fica leve — o golpe",
            _respira()),
@@ -208,13 +211,16 @@ ESTILOS: tuple[Estilo, ...] = (
            "a corda tensiona com o curso e solta no disparo",
            # tensão e disparo: o padrão do produto, nas faixas de 0 a 8 [NIELK1]
            _respira((("force", 6), ("snap", 7)))),
-    Estilo("aventura", "Aventura", "Feedback", "balanceado", (40, 200, 90), 1.0,
+    # A Aventura, os Esportes, o Terror e a Luta guardam a chave de hoje (CATALOGO §2.4), com os
+    # números do dono dela (`trigger_specs.PRESETS`), como todo estilo.
+    Estilo("aventura", "Aventura", "Resistance", "balanceado", (40, 200, 90), 1.0,
            "um ponto de resistência que marca a ação, sem cansar",
            Receita()),
-    Estilo("esportes", "Esportes", "SimpleRigid", "balanceado", (40, 120, 255), 1.0,
+    Estilo("esportes", "Esportes", "Resistance", "balanceado", (40, 120, 255), 1.0,
            "curso curto e previsível; o gatilho não conta história",
            Receita()),
-    Estilo("point_and_click", "Point and click", "Off", "economia", (0, 200, 210), 1.0,
+    # a luz fixa a 0,4 não disputa a leitura (CATALOGO §3)
+    Estilo("point_and_click", "Point and click", "Off", "economia", (0, 200, 210), 0.4,
            "o gatilho não é usado; vibração baixa não distrai a leitura",
            # a Navegação é escolha do usuário (ESCOLHAS de 08/10); o toque e o lado também
            Receita(modo="desktop", molde="so_mouse")),
@@ -227,12 +233,12 @@ ESTILOS: tuple[Estilo, ...] = (
     Estilo("adulto", "Adulto", "Off", "max", (250, 128, 114), 1.0,
            "o gatilho é do jogo; a vibração sobe e a luz fica parada, sem reação a tiro",
            Receita()),
-    Estilo("terror", "Terror", "PulseB", "max", (215, 30, 55), 0.7,
+    Estilo("terror", "Terror", "Weapon", "max", (215, 30, 55), 0.7,
            "o pulso irregular é o susto no dedo; a luz baixa não denuncia",
            # pisca abaixo do teto [WCAG]; a vibração dura o dobro [MDN] (escolha)
            Receita(luz="pisca", luz_por_segundo=2.0,
                    duracao_da_vibracao_ms=2 * DURACAO_DE_SEMPRE_MS)),
-    Estilo("luta", "Luta", "SemiAutoGun", "max", (255, 40, 180), 1.0,
+    Estilo("luta", "Luta", "Weapon", "max", (255, 40, 180), 1.0,
            "um estalo por golpe, com volta rápida",
            _respira()),
     Estilo("maratona", "Maratona", "Off", "economia", (120, 120, 140), 0.25,
@@ -247,11 +253,11 @@ ESTILOS: tuple[Estilo, ...] = (
            Receita()),
     Estilo("ritmo", "Ritmo/Música", "Off", "max", (255, 0, 220), 1.0,
            "a vibração É o instrumento; o gatilho atrapalha o tempo",
-           # a luz no compasso, até o teto [WCAG]
-           Receita(luz="respira", luz_por_segundo=TETO_DO_PISCAR)),
-    Estilo("simulacao", "Simulação/Voo", "SlopeFeedback", "economia", (90, 180, 255), 1.0,
+           # a luz na batida da música, até o teto [WCAG]; o lado do estouro não serve à música
+           Receita(luz="batida", luz_por_segundo=TETO_DO_PISCAR, lado_do_som=False)),
+    Estilo("simulacao", "Simulação/Voo", "SlopeFeedback", "economia", (90, 180, 255), 0.6,
            "o manche endurece com o curso, e o voo é longo",
-           Receita()),
+           Receita(toque_por_tiro=False, lado_do_som=False)),
     Estilo("personalizado", "Personalizado", None, "", (0, 0, 0), 0.0,
            "é o estilo que diz 'eu ajusto na mão' — não mexe em nada"),
 )

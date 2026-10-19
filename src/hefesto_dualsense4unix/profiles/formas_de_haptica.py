@@ -58,9 +58,13 @@ DICAS: dict[str, str] = {
 #: As formas longas: a Bateria longa as troca pelo Toque, e o rádio só as toca com fatia livre.
 FORMAS_LONGAS = frozenset({GUARDA, APARO, SOM_NO_CORPO})
 
-#: O que cada estilo pede, quando pede uma forma. Vazio de propósito: nenhum estilo escolhe forma
-#: sozinho até a sprint dos estilos (E1), e o Som no corpo, contínuo, nunca entra aqui.
-POR_ESTILO: dict[str, str] = {}
+#: O que cada estilo pede, quando pede uma forma (CATALOGO §4); o estilo fora daqui toca o Toque.
+#: Nenhuma forma longa entra: o Som no corpo, contínuo, só toca por escolha na aba Vibração.
+POR_ESTILO: dict[str, str] = {
+    "luta": IMPACTO,
+    "esportes": IMPACTO,
+    "ritmo": ESTALO,
+}
 
 
 @dataclass(frozen=True)

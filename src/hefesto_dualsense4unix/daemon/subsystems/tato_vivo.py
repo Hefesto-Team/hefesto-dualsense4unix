@@ -91,12 +91,14 @@ TIPO_RUMBLE = "rumble_tiro"
 TIPO_SOM = "som_tiro"
 #: O dedo largou o gatilho (``energia``: o quanto ele apertou). É o recuo: o Coice toca aqui.
 TIPO_SOLTA = "solta_tiro"
+#: A borda do som do jogo levada a TODOS os controles da mesa: a batida da música é de todos.
+TIPO_BATIDA = "batida_do_som"
 
 LADO_ESQUERDO = "esquerdo"
 LADO_DIREITO = "direito"
 LADO_CENTRO = "centro"
 
-REACOES_DA_LUZ = ("parada", "pulsa", "evento")
+REACOES_DA_LUZ = ("parada", "pulsa", "evento", "batida")
 
 
 @dataclass(frozen=True)
@@ -272,16 +274,31 @@ CAMPOS_DA_RECEITA: tuple[str, ...] = tuple(f.name for f in fields(Receita))
 # cada número tem nome, e cada um é valor de partida.
 #: A força do toque pelo degrau de vibração do estilo (`Estilo.vibracao`).
 FORCA_DO_DEGRAU: dict[str, float] = {"max": 1.0, "balanceado": 0.6, "economia": 0.35}
-#: A luz do estilo que respira ou pisca pulsa a cada tiro; a parada não reage.
+#: A luz do estilo que respira ou pisca pulsa a cada tiro; a da batida sobe no som do jogo;
+#: a parada não reage.
 REACAO_DA_LUZ_DO_ESTILO: dict[str, str] = {
     "parada": "parada",
     "respira": "pulsa",
     "pisca": "pulsa",
+    "batida": "batida",
 }
+#: A duração do toque do motor é a do estilo na escala do toque: os 200 ms de sempre do estilo
+#: são os 40 ms do toque, e o dobro do Terror bate no teto de 60 (o limite de `Receita.de`).
+TOQUE_DE_SEMPRE_MS = 40
+TOQUE_MINIMO_MS = 25
+TOQUE_MAXIMO_MS = 60
 #: Os estilos de arma de rajada: só neles o gatilho acompanha o ritmo do tiro.
 ESTILOS_DE_RAJADA = frozenset({"fps"})
 #: O estalo do tiro no alto-falante do controle nasce desligado em todo estilo.
 SOM_NO_CONTROLE_DO_ESTILO = False
+
+
+def duracao_do_toque_do_estilo(duracao_da_vibracao_ms: int) -> int:
+    """Os ms do toque para a duração da vibração do estilo: ``40 * d / 200``, de 25 a 60."""
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import DURACAO_DE_SEMPRE_MS
+
+    toque = round(TOQUE_DE_SEMPRE_MS * duracao_da_vibracao_ms / DURACAO_DE_SEMPRE_MS)
+    return max(TOQUE_MINIMO_MS, min(TOQUE_MAXIMO_MS, toque))
 
 
 def receita_do_estilo(estilo: Any) -> Receita:
@@ -292,6 +309,7 @@ def receita_do_estilo(estilo: Any) -> Receita:
     return Receita(
         vibracao_por_tiro=bool(invisivel.toque_por_tiro),
         forca_do_toque=FORCA_DO_DEGRAU.get(estilo.vibracao, DESLIGADA.forca_do_toque),
+        duracao_do_toque_ms=duracao_do_toque_do_estilo(int(invisivel.duracao_da_vibracao_ms)),
         gatilho_no_ritmo=estilo.chave in ESTILOS_DE_RAJADA,
         reacao_ao_tiro=REACAO_DA_LUZ_DO_ESTILO.get(invisivel.luz, DESLIGADA.reacao_ao_tiro),
         lado_do_som=bool(invisivel.lado_do_som),
@@ -790,6 +808,13 @@ def anotar_o_rumble(
 JANELA_DO_DISPARO_S = 0.3  # do aperto ao estalo: o quadro do jogo, o buffer e o gravador
 
 
+def pede_o_ouvido(receita: Receita) -> bool:
+    """A receita precisa do som do jogo: o lado, o estalo, o corpo, a pancada ou a batida."""
+    return bool(
+        receita.lado_do_som or receita.som_no_controle or receita.som_no_corpo_escolhido
+        or receita.pancada_escolhida or receita.reacao_ao_tiro == REACAO_BATIDA)
+
+
 def destinos_do_som(
     controles: Sequence[Controle], dedo: BordaDoDedo, instante: float
 ) -> list[str]:
@@ -1176,8 +1201,8 @@ def _plano_do_lado(cfg: Any) -> PlanoDoGatilho | None:
 def _modo_de_hoje_do_estilo(estilo: str) -> str | None:
     """O acionamento que o estilo põe no gatilho, já na chave de hoje (``None``: nenhum).
 
-    O estilo que ainda guarda a chave que saiu da lista de onze (o FPS em `AutoGun`, o Terror
-    em `PulseB`…) vale pelo acionamento de hoje, como a fábrica o leva ao aparelho.
+    A chave que saiu da lista de onze (`AutoGun`, `PulseB`…) vale pelo acionamento de hoje,
+    como a fábrica o leva ao aparelho.
     """
     from hefesto_dualsense4unix.app.actions.trigger_specs import get_spec
     from hefesto_dualsense4unix.core.trigger_effects import traduzir_chave_velha
@@ -1756,6 +1781,8 @@ def _valor(passo: int, forca: float) -> int:
 # pico estende o pico, e a rajada vira um brilho contínuo, nunca um pisca-pisca.
 REACAO_PULSA = "pulsa"
 REACAO_EVENTO = "evento"
+#: a luz sobe na borda do som do jogo (`TIPO_BATIDA`), não no tiro: o Ritmo
+REACAO_BATIDA = "batida"
 TETO_DA_LUZ_POR_S = 3
 JANELA_DA_LUZ_S = 1.0  # a janela do teto: três subidas por segundo
 SEGURA_DA_LUZ_S = 0.12  # o pico; a volta vem no máximo um tique depois
@@ -1828,17 +1855,22 @@ class AtuadorDaLuz:
         cor_de: Callable[[str], tuple[int, int, int] | None],
         devolver: Callable[[str], bool],
         largar: Callable[[str], object] | None = None,
+        na_economia: Callable[[str], bool] | None = None,
     ) -> None:
         self._pintar = pintar
         self._cor_de = cor_de
         self._devolver = devolver
         self._largar = largar
+        #: a Bateria longa vence o estilo: a barra fica fixa na cor do perfil, sem pulso
+        self._na_economia = na_economia or (lambda uniq: False)
         self._base: dict[str, tuple[int, int, int]] = {}
         self._no_pico: set[str] = set()
         self._subidas: dict[str, deque[float]] = {}
 
     @staticmethod
     def _quer(evento: Evento, receita: Receita) -> bool:
+        if receita.reacao_ao_tiro == REACAO_BATIDA:
+            return evento.tipo == TIPO_BATIDA
         return (
             receita.reacao_ao_tiro in (REACAO_PULSA, REACAO_EVENTO)
             and evento.tipo in _TIPOS_DA_LUZ
@@ -1846,6 +1878,8 @@ class AtuadorDaLuz:
 
     def responde_a(self, evento: Evento, receita: Receita) -> bool:
         if not self._quer(evento, receita) or evento.uniq in self._no_pico:
+            return False
+        if self._na_economia(evento.uniq):
             return False
         subidas = self._subidas.setdefault(evento.uniq, deque())
         while subidas and evento.instante - subidas[0] >= JANELA_DA_LUZ_S:
@@ -1865,7 +1899,7 @@ class AtuadorDaLuz:
     def escrever(self, evento: Evento, receita: Receita, agora: float) -> float | None:
         uniq = evento.uniq
         base = self._base[uniq]
-        if receita.reacao_ao_tiro == REACAO_PULSA:
+        if receita.reacao_ao_tiro in (REACAO_PULSA, REACAO_BATIDA):
             cor = pico_do_pulso(base) or base
         else:
             cor = receita.cor_do_evento or COR_DO_EVENTO_PADRAO
@@ -2336,6 +2370,7 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
             cor_de,
             lambda uniq: sessao.soltar(uniq, CANAL_LUZ),
             lambda uniq: sessao.largar(uniq, CANAL_LUZ),
+            na_economia,
         ),
         AtuadorDosMotores(motores, padrao_de, gatilho_vibra, forca_do_padrao),
     ]
@@ -2494,15 +2529,19 @@ class Passo:
         ouvido = self.motor.ouvido
         if ouvido is None:
             return
-        if (receita.lado_do_som or receita.som_no_controle or receita.som_no_corpo_escolhido
-                or receita.pancada_escolhida):
+        if pede_o_ouvido(receita):
             ouvido.comecar()
+        batida = receita.reacao_ao_tiro == REACAO_BATIDA
         for estalo in ouvido.tirar():
             for uniq in destinos_do_som(controles, self.dedo, estalo.instante):
                 self.motor.anotar(
                     Evento(estalo.instante, uniq, TIPO_SOM, estalo.lado, estalo.energia,
                            getattr(estalo, "recorte", None))
                 )
+            for controle in controles if batida else ():
+                self.motor.anotar(
+                    Evento(estalo.instante, controle.uniq, TIPO_BATIDA, estalo.lado,
+                           estalo.energia))
 
 
 async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
@@ -2511,13 +2550,7 @@ async def tato_vivo_loop(daemon: DaemonProtocol, motor: TatoVivo) -> None:
         from hefesto_dualsense4unix.integrations.transiente_do_jogo import OuvidoDoJogo
 
         motor.ouvido = OuvidoDoJogo(
-            lambda: (
-                motor.ligado
-                and (passo.receita_vigente.lado_do_som or passo.receita_vigente.som_no_controle
-                     or passo.receita_vigente.som_no_corpo_escolhido
-                     or passo.receita_vigente.pancada_escolhida)
-                and passo.jogo
-            ),
+            lambda: motor.ligado and pede_o_ouvido(passo.receita_vigente) and passo.jogo,
             recortar=lambda: passo.receita_vigente.som_no_controle,
             ao_pcm=passo.alimentar_o_corpo,
         )
@@ -2600,6 +2633,7 @@ __all__ = [
     "controles_do_daemon",
     "decidir",
     "destinos_do_som",
+    "duracao_do_toque_do_estilo",
     "escolhas_ativas",
     "escolhas_de_imersao_ativas",
     "escolhas_do_perfil",
@@ -2609,6 +2643,7 @@ __all__ = [
     "momentos_ativos",
     "momentos_em_efeito",
     "motor_do",
+    "pede_o_ouvido",
     "pico_do_pulso",
     "planos_do_perfil",
     "receita_do_estilo",
