@@ -87,9 +87,14 @@ def test_o_haptica_toca_a_forma_escolhida_e_so_a_daquele_controle(
         assert dele is None or (dele.toques == [] and dele.nivel == (0, 0)), outro  # type: ignore[attr-defined]
 
 
-def test_cada_controle_toca_a_sua_forma_a_cada_rebate_ate_o_parar(
+def test_cada_controle_toca_a_sua_forma_em_laco_ate_o_parar(
     com_toque: _Mundo, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
+    """D-1910-O-TESTE-DA-HAPTICA-E-CONTINUO: a forma volta no tocador até o «Parar».
+
+    O rebate da janela só renova o prazo (não toca por cima), e a forma trocada no meio vale no
+    rebate seguinte.
+    """
     controles = _no_cabo_os_quatro(com_toque)
     com_toque.mesa.volta(*controles)
     quatro = (formas.IMPACTO, formas.ESTALO, formas.GUARDA, formas.APARO)
@@ -99,13 +104,33 @@ def test_cada_controle_toca_a_sua_forma_a_cada_rebate_ate_o_parar(
         com_toque.sub.testar_a_haptica(uniq, True)
         com_toque.sub.testar_a_haptica(uniq, True)
     for uniq, forma in sua.items():
-        assert _toques(com_toque, uniq) == [forma, forma], uniq
+        assert _toques(com_toque, uniq) == [forma], f"{uniq}: o rebate tocou por cima"
+        assert com_toque.tocador(uniq).tocando_em_laco, uniq  # type: ignore[attr-defined]
         assert com_toque.tocador(uniq).dono == uniq  # type: ignore[attr-defined]
     com_toque.sub.testar_a_haptica(_QUATRO[0], False)
-    com_toque.sub.testar_a_haptica(_QUATRO[1], True)
-    assert _toques(com_toque, _QUATRO[0]) == [formas.IMPACTO] * 2, "o Parar não rebate"
-    assert _toques(com_toque, _QUATRO[1]) == [formas.ESTALO] * 3
+    assert not com_toque.tocador(_QUATRO[0]).tocando_em_laco, "o Parar não soltou o laço"  # type: ignore[attr-defined]
+    assert com_toque.tocador(_QUATRO[1]).tocando_em_laco, "o Parar de um soltou o outro"  # type: ignore[attr-defined]
     assert _QUATRO[0] not in dict(com_toque.sub._teste_da_haptica)
+    _escolher(monkeypatch, {**sua, _QUATRO[1]: formas.TOQUE})
+    com_toque.sub.testar_a_haptica(_QUATRO[1], True)
+    assert _toques(com_toque, _QUATRO[1]) == [formas.ESTALO, formas.TOQUE]
+
+
+def test_a_volta_do_laco_emenda_no_tocador_de_verdade() -> None:
+    """O tocador real volta ao começo da forma no fim dela, e o «Parar» cala no bloco seguinte."""
+    tocador = eh.TocadorDoRumble("prova")
+    volta = af_sub._amostras_do_teste(formas.ESTALO)
+    tocador.tocar_em_laco(volta, "centro", sink="", dono="prova", forma=formas.ESTALO)
+    quadros = 0
+    while quadros < 3 * len(volta):
+        tocador.proximo_bloco((0, 0), (0, 0), 0)
+        quadros += eh.QUADROS_POR_BLOCO
+    assert tocador.tocando_o_toque and tocador.tocando_em_laco, "o laço acabou na primeira volta"
+    tocador.tocar_o_toque(1.0, "centro", 40, sink="", dono="tiro")
+    assert tocador.tocando_em_laco, "um toque do jogo cortou o teste"
+    tocador.soltar_o_laco()
+    assert not tocador.tocando_o_toque
+    tocador.parar()
 
 
 def test_sem_escolha_e_do_estilo_tocam_o_toque_do_que_o_jogo_faria(

@@ -26,6 +26,8 @@ from __future__ import annotations
 import contextlib
 import functools
 import html
+import sys
+import threading
 from time import monotonic as _monotonic
 from time import sleep as _dormir
 from typing import Any
@@ -780,13 +782,74 @@ def parar_o_teste(uniq: str | None = None) -> None:
       próximo arraste de barra tentaria vibrar um aparelho que não está aqui.
     """
     if uniq is None:
+        for um in list(_REPIQUE_DO_PADRAO):
+            _cortar_o_repique(um)
         _EM_TESTE.clear()
         _BATEU_EM.clear()
         _O_GESTO_MANDOU_O_PAR_EM.clear()
         return
+    _cortar_o_repique(uniq)
     _EM_TESTE.discard(uniq)
     _BATEU_EM.pop(uniq, None)
     _O_GESTO_MANDOU_O_PAR_EM.pop(uniq, None)
+
+
+#: O «Testar» com um Efeito imersão escolhido REPETE o padrão até o «Parar» (pedido de 19/10/2026:
+#: ajustar ao vivo). O fio de cada controle roda FORA da fila dele, para o «Parar» cortar na hora,
+#: e cada passo lê as barras de `_PONTOS_AO_VIVO`, que o arraste atualiza.
+_REPIQUE_DO_PADRAO: dict[str, tuple[threading.Event, threading.Thread]] = {}
+_PONTOS_AO_VIVO: dict[str, tuple[int, int]] = {}
+
+
+class _OTesteParouError(Exception):
+    """O «Parar» chegou no meio de uma volta do padrão."""
+
+
+def _cortar_o_repique(uniq: str) -> None:
+    """O padrão em repetição deste controle para, e o último passo já saiu quando volta."""
+    repique = _REPIQUE_DO_PADRAO.pop(uniq, None)
+    _PONTOS_AO_VIVO.pop(uniq, None)
+    if repique is None:
+        return
+    fim, fio = repique
+    fim.set()
+    if fio is not threading.current_thread():
+        fio.join(timeout=1.0)
+
+
+def _repetir_o_padrao(ctx: Contexto, p: Any, uniq: str, padrao: str, motores: str) -> None:
+    """O padrão volta do começo até o «Parar», com as barras de agora em cada passo."""
+    _calar_o_teste_da_haptica(p, uniq)
+    parar_o_teste(uniq)
+    fim = threading.Event()
+    _PONTOS_AO_VIVO[uniq] = _pontos_das_barras(ctx, uniq)
+
+    def enviar(esq: int, dir_: int) -> None:
+        if fim.is_set():
+            raise _OTesteParouError
+        ok, motivo = _resposta(p.rumble_set_checked(dir_, esq, uniq=uniq))
+        if not ok:
+            raise RuntimeError(motivo or "o Hefesto não está rodando — ligue na aba Sistema")
+
+    def esperar(segundos: float) -> None:
+        if fim.wait(segundos):
+            raise _OTesteParouError
+
+    def voltas() -> None:
+        try:
+            while not fim.is_set():
+                esquerdo, direito = _PONTOS_AO_VIVO.get(uniq, (100, 100))
+                _padroes.tocar(padrao, motores, enviar, esperar,
+                               pontos_esquerdo=esquerdo, pontos_direito=direito)
+        except _OTesteParouError:
+            pass
+        except Exception as erro:
+            print(f"[vibração] o padrão em teste parou: {erro}", file=sys.stderr)
+
+    fio = threading.Thread(target=voltas, name=f"padrao-em-teste-{uniq}", daemon=True)
+    _REPIQUE_DO_PADRAO[uniq] = (fim, fio)
+    _EM_TESTE.add(uniq)
+    fio.start()
 
 
 SEGUNDOS_ENTRE_BATIMENTOS = 1.0
@@ -820,6 +883,8 @@ def _bater_o_coracao_do_teste(ctx: Contexto, p: Any) -> dict[str, Batimento]:
         _BATEU_EM[uniq] = agora
         if not any(str(c.get("uniq") or "") == uniq for c in ctx.mesa):
             parar_o_teste(uniq)
+            continue
+        if uniq in _REPIQUE_DO_PADRAO:
             continue
         weak, strong = _par_das_barras(ctx, uniq)
         batidas[uniq] = functools.partial(_rebater_o_teste, p, uniq, weak, strong, agora)
@@ -995,6 +1060,14 @@ def _refrescar_o_teste(
         return
     if not any(str(c.get("uniq") or "") == uniq for c in ctx.mesa):
         parar_o_teste(uniq)
+        return
+    if uniq in _REPIQUE_DO_PADRAO:
+        esquerdo, direito = _pontos_das_barras(ctx, uniq)
+        if acabou_de_gravar is not None and acabou_de_gravar[0] in ("e", "d"):
+            lado, pontos = acabou_de_gravar
+            esquerdo, direito = (pontos, direito) if lado == "e" else (esquerdo, pontos)
+        _PONTOS_AO_VIVO[uniq] = (esquerdo, direito)
+        _O_GESTO_MANDOU_O_PAR_EM[uniq] = _monotonic()
         return
     weak, strong = _par_das_barras(ctx, uniq, acabou_de_gravar=acabou_de_gravar)
     with contextlib.suppress(Exception):
@@ -1683,7 +1756,8 @@ def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     O pedido leva o `uniq` dele; a aba não mira o seletor global (`controller.target.set`).
     Com um padrão de `padroes_de_vibracao.PADROES` (o do chip, a `forma` do quadro de criar ou o
-    Efeito imersão da coluna), o controle toca a forma uma vez e a mão volta ao jogo no fim. O
+    Efeito imersão da coluna), o chip e a área de criar tocam a forma uma vez e devolvem a mão ao
+    jogo; o Efeito imersão da coluna repete o padrão até o «Parar», com as barras ao vivo. O
     porquê está em docs/research/o-porque-dos-modulos.md, «o Testar da aba Vibração».
     """
     # a área de criar manda a `forma`; sem ela escolhida recusa, em vez de ligar o Testar
@@ -1696,8 +1770,9 @@ def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "Clique o botão dentro da coluna do controle que você quer sentir.")
     escolhido = _padrao_escolhido(ctx, uniq)
     if escolhido:
-        _tocar_o_padrao(ctx, dict(o, padrao=escolhido, motores=_padroes.AMBOS), p)
+        _repetir_o_padrao(ctx, p, uniq, escolhido, _padroes.AMBOS)
         return
+    _cortar_o_repique(uniq)
     _calar_o_teste_da_haptica(p, uniq)
     weak, strong = _par_das_barras(ctx, uniq)
     ok, motivo = _resposta(p.rumble_set_checked(weak, strong, uniq=uniq))
@@ -1841,6 +1916,7 @@ def parar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not uniq:
         raise RuntimeError(
             "Clique o botão dentro da coluna do controle que você quer sentir.")
+    _cortar_o_repique(uniq)
     _calar_o_teste_da_haptica(p, uniq)
     ok, motivo = _resposta(p.rumble_stop_checked(uniq=uniq))
     if not ok:

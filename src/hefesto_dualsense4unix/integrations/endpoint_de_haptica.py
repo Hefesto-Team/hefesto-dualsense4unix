@@ -949,6 +949,8 @@ class TocadorDoRumble:
         self._toque_pos = 0
         #: a forma em curso é longa (Guarda, Aparo): nenhum toque novo a corta
         self._toque_longo = False
+        #: o toque em curso volta do começo ao acabar: o «Háptica» da aba Vibração, até o «Parar»
+        self._toque_em_laco = False
         #: o Som no corpo à espera do bloco, e os canais em que ele toca
         self._corpo: array[float] = array("f")
         self._corpo_canais: tuple[int, ...] = CANAIS_DO_LADO["centro"]
@@ -1029,6 +1031,36 @@ class TocadorDoRumble:
             self._garantir_o_fio()
         self._acordar.set()
 
+    def tocar_em_laco(
+        self, amostras: array[float], lado: str, *, sink: str, dono: str, forma: str
+    ) -> None:
+        """As amostras voltam do começo até :meth:`soltar_o_laco`; nenhum toque as corta."""
+        if not len(amostras):
+            return
+        canais = CANAIS_DO_LADO.get(lado, CANAIS_DO_LADO["centro"])
+        with self._trava:
+            self._toque = (amostras, canais)
+            self._toque_pos = 0
+            self._toque_longo = True
+            self._toque_em_laco = True
+            self._sink = str(sink or "")
+            self._dono = str(dono or self._dono)
+            self._garantir_o_fio()
+        self._acordar.set()
+
+    def soltar_o_laco(self) -> None:
+        """O laço do teste cala na hora; um toque comum em curso segue."""
+        with self._trava:
+            if self._toque_em_laco:
+                self._toque = None
+                self._toque_longo = False
+                self._toque_em_laco = False
+        self._acordar.set()
+
+    @property
+    def tocando_em_laco(self) -> bool:
+        return self._toque_em_laco
+
     def levar_o_corpo(
         self, amostras: array[float], lado: str, *, sink: str, dono: str
     ) -> None:
@@ -1071,8 +1103,11 @@ class TocadorDoRumble:
             if toque is not None:
                 self._toque_pos = inicio + QUADROS_POR_BLOCO
                 if self._toque_pos >= len(toque[0]):
-                    self._toque = None
-                    self._toque_longo = False
+                    if self._toque_em_laco:
+                        self._toque_pos = 0
+                    else:
+                        self._toque = None
+                        self._toque_longo = False
             corpo = self._corpo[:QUADROS_POR_BLOCO]
             del self._corpo[:QUADROS_POR_BLOCO]
             canais_do_corpo = self._corpo_canais

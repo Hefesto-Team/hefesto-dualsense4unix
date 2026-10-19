@@ -157,13 +157,29 @@ PAR_DO_TESTE_DA_HAPTICA: tuple[int, int] = (127, 127)
 #: duração curta do Toque do estilo; as outras formas trazem a duração delas.
 ENERGIA_DO_TESTE = 1.0
 DURACAO_DO_TOQUE_DO_TESTE_MS = 40
-#: O grave fixo do Som no corpo no teste: o jogo não toca, então o trecho vem daqui.
+#: O grave fixo do Som no corpo no teste: o jogo não toca, então o trecho vem daqui. Os 50 ms
+#: são quatro ondas inteiras de 80 Hz, e o laço do tocador os emenda sem estalo.
 HZ_DO_GRAVE_DO_TESTE = 80
-MS_DO_GRAVE_DO_TESTE = 1000
+MS_DO_GRAVE_DO_TESTE = 50
+#: O silêncio entre duas voltas da forma curta no teste: Toque, Impacto e Estalo viram um trem
+#: de batidas, e não um zumbido sem forma (pedido de 19/10/2026: contínuo até o «Parar»).
+MS_ENTRE_VOLTAS_DO_TESTE = 60
 FRASE_SEM_EFEITO_NO_TESTE = (
     "O efeito háptico deste controle está em "
     f"«{formas_de_haptica.ROTULOS[formas_de_haptica.SEM_EFEITO]}»: "
     f"{formas_de_haptica.DICAS[formas_de_haptica.SEM_EFEITO].lower()}.")
+
+
+@functools.lru_cache(maxsize=1)
+def _amostras_do_teste(forma: str) -> Any:
+    """Uma volta do teste: o grave do Som no corpo, ou a forma e o silêncio até a próxima."""
+    from array import array
+
+    if forma == formas_de_haptica.SOM_NO_CORPO:
+        return _grave_do_teste()
+    volta = formas_de_haptica.amostras(forma, ENERGIA_DO_TESTE, DURACAO_DO_TOQUE_DO_TESTE_MS)
+    volta.extend(array("f", bytes(4 * (formas_de_haptica.TAXA * MS_ENTRE_VOLTAS_DO_TESTE // 1000))))
+    return volta
 
 
 @functools.lru_cache(maxsize=1)
@@ -764,6 +780,8 @@ class AltoFalanteSubsystem:
     _aparelhos_com_jogo: frozenset[str] = frozenset()
     _sem_registro_no_jogo: frozenset[str] = frozenset()
     _teste_da_haptica: Mapping[str, float] = MappingProxyType({})
+    #: ``{uniq: forma}`` do teste que está em laço no tocador do controle.
+    _forma_em_laco: Mapping[str, str] = MappingProxyType({})
     #: os controles cujo último rebate do teste caiu no par fixo (a forma não pôde tocar).
     _teste_no_par: frozenset[str] = frozenset()
     _com_haptica_de_audio: frozenset[str] = frozenset()
@@ -1360,6 +1378,9 @@ class AltoFalanteSubsystem:
                 {**self._teste_da_haptica, chave: time.monotonic()}
             )
         resposta: dict[str, Any] = {"status": "ok", "uniq": chave, "ligado": True, "forma": forma}
+        if self._a_forma_ja_esta_em_laco(chave, forma):
+            resposta["leva"] = self._a_haptica_leva(chave)
+            return resposta
         if self._tocar_a_forma_do_teste(chave, forma):
             if chave in self._teste_no_par:
                 with self._trava_do_rumble:
@@ -1384,16 +1405,42 @@ class AltoFalanteSubsystem:
         escolha = tato_vivo.escolhas_ativas(self._daemon).get(norm_mac(chave) or "")
         return formas_de_haptica.forma_que_vale(escolha, tato_vivo.estilo_ativo(self._daemon))
 
+    def _a_forma_ja_esta_em_laco(self, chave: str, forma: str) -> bool:
+        """O rebate da janela só renova o prazo: a forma de agora já volta no tocador dele."""
+        if self._forma_em_laco.get(chave) != forma:
+            return False
+        alvo = self._o_tocador_de(chave)
+        return alvo is not None and bool(getattr(alvo[0], "tocando_em_laco", False))
+
     def _tocar_a_forma_do_teste(self, chave: str, forma: str) -> bool:
-        """Um toque da forma no tocador do controle; ``False`` quando ela não pôde tocar."""
-        if forma == formas_de_haptica.SOM_NO_CORPO:
-            return self.tocar_o_corpo(chave, _grave_do_teste())
-        return self.tocar_o_toque(
-            chave, ENERGIA_DO_TESTE, "centro", DURACAO_DO_TOQUE_DO_TESTE_MS, forma)
+        """A forma em laço no tocador do controle, até o «Parar»; ``False`` se não pôde tocar.
+
+        O ganho da linha «Háptica por áudio» vale na volta seguinte, porque quem o aplica é o
+        caminho do controle; trocar o «Efeito háptico» troca a forma no rebate seguinte.
+        """
+        if not self._quer_a_haptica_fina(chave):
+            return False
+        if forma in formas_de_haptica.FORMAS_LONGAS and self._o_radio_cede(chave):
+            return False
+        alvo = self._o_tocador_de(chave)
+        if alvo is None:
+            return False
+        tocador, sink = alvo
+        tocador.tocar_em_laco(_amostras_do_teste(forma), "centro", sink=sink, dono=chave,
+                              forma=forma)
+        with self._trava_do_rumble:
+            self._forma_em_laco = MappingProxyType({**self._forma_em_laco, chave: forma})
+        return True
 
     def _soltar_o_teste_da_haptica(self, chave: str) -> None:
         """O tocador deste controle cala, e o teste sai da lista."""
+        alvo = self._o_tocador_de(chave)
+        if alvo is not None and self._forma_em_laco.get(chave):
+            alvo[0].soltar_o_laco()
         with self._trava_do_rumble:
+            self._forma_em_laco = MappingProxyType(
+                {u: f for u, f in self._forma_em_laco.items() if u != chave}
+            )
             self._teste_da_haptica = MappingProxyType(
                 {u: t for u, t in self._teste_da_haptica.items() if u != chave}
             )

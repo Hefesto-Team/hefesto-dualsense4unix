@@ -22,6 +22,7 @@ from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 from hefesto_dualsense4unix.interface import aba05, pacotes
 from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
+from hefesto_dualsense4unix.profiles import formas_de_haptica as formas
 from hefesto_dualsense4unix.profiles import loader as loader_module
 from hefesto_dualsense4unix.profiles.loader import save_profile
 from hefesto_dualsense4unix.profiles.schema import (
@@ -410,6 +411,25 @@ class _TocadorComToque(_Tocador):
     def levar_o_corpo(self, amostras: Any, lado: str, *, sink: str, dono: str) -> None:
         self.corpos.append(list(amostras))
         self._de_pe(sink, dono)
+
+    def tocar_em_laco(
+        self, amostras: Any, lado: str, *, sink: str, dono: str, forma: str
+    ) -> None:
+        """O laço do teste: anota a volta como o toque ou o corpo dela, e fica tocando."""
+        if forma == formas.SOM_NO_CORPO:
+            self.corpos.append(list(amostras))
+        else:
+            self.toques.append((forma, max(abs(x) for x in amostras), "centro",
+                                len(amostras) * 1000 // formas.TAXA, sink, dono))
+        self.em_laco = True
+        self._de_pe(sink, dono)
+
+    def soltar_o_laco(self) -> None:
+        self.em_laco = False
+
+    @property
+    def tocando_em_laco(self) -> bool:
+        return getattr(self, "em_laco", False)
 
 
 @pytest.fixture
