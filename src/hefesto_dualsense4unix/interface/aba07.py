@@ -131,6 +131,41 @@ def _confere_a_forma() -> None:
 _confere_a_forma()
 
 
+def _trocar(html, trocas):
+    """Aplica cada troca uma vez; uma troca que não casa derruba a geração (variante velha)."""
+    for velho, novo in trocas:
+        if html.count(velho) != 1:
+            raise SystemExit(f"ERRO: a variante não achou {velho[:60]!r} na página gerada")
+        html = html.replace(velho, novo, 1)
+    return html
+
+
+_CONTROLE_EM_DUAS_LINHAS = re.compile(
+    r'<div class="ky-linha bp-cab">(<div class="ky-rot">.*?</div>)'
+    r'<div class="ky-ctrl">(<span class="nj-tog.*?</span></span>)</div></div>\s*'
+    r'<div class="ky-linha bp-ajuste">.*?<div class="ky-ctrl">(<div class="seg mini">.*?</div>)'
+    r'<span class="bp-rot"[^>]*>Teto</span>'
+    r'(<div class="campo-num mini">.*?<span class="un">%</span></span></div>)</div></div>', re.S)
+
+
+def _buttplug_em_uma_linha(html):
+    """A da janela do servidor: o aparece, a força e o teto de cada controle na mesma linha."""
+    novo, quantas = _CONTROLE_EM_DUAS_LINHAS.subn(
+        r'<div class="ky-linha">\1<div class="ky-ctrl">\2\3\4</div></div>', html)
+    if quantas != 2:
+        raise SystemExit(f"ERRO: a variante A do Buttplug achou {quantas} controle(s), e são dois")
+    return _trocar(novo, [("A força e o teto de cada um", "O teto e a força de cada um")])
+
+
+def variantes(html):
+    """Nome do arquivo (sem `.html`) -> página da variante, a partir do desenho recém-gerado."""
+    return {
+        # Perfis 4 (O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01): B é o desenho de agora
+        # (duas linhas por controle, «Força» e «Teto» com nome); A é a linha única de 17/10.
+        "07-buttplug-A-forca-e-teto-numa-linha": _buttplug_em_uma_linha(html),
+    }
+
+
 if __name__ == "__main__":
     import os
     import shutil
@@ -168,5 +203,9 @@ if __name__ == "__main__":
           f"{len(exp.LANCADORES)} lançadores, {len(exp.EXTENSOES)} extensões, "
           f"{len(exp.JANELAS)} janelas · {len(_CONGELADOS)} chip(s) do desenho fora da fita, "
           f"0 dos {len(_MODELOS)} modelos do mapa cravados na página")
+    _variantes = variantes(onde.pagina("07-lancadores.html").read_text(encoding="utf-8"))
     shutil.copyfile(_prova / "07-lancadores.html", _real / "07-lancadores.html")
+    (_real / "variantes").mkdir(exist_ok=True)
+    for _nome, _pagina in _variantes.items():
+        (_real / "variantes" / f"{_nome}.html").write_text(_pagina, encoding="utf-8")
     shutil.rmtree(_prova)
