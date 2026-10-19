@@ -1780,9 +1780,11 @@
   .campo.so-eventos{display:none}
   .campo.so-eventos.on{display:grid}
   .ev-val{display:flex;gap:10px;align-items:center;min-width:0}
-  /* o `.estreito` de baixo estica o select a 100%; aqui ele divide a linha com o comando */
-  .campo .ev-val select.estreito{flex:0 0 170px;width:170px}
-  .ev-val .ev-cmd{flex:1;min-width:0}
+  /* O comando é do «Meu comando» e só dele (19/10/2026): a linha abaixo do «Quando» aparece quando o
+     momento escolhido é esse, e some em qualquer outro. O `:has` lê o `<option>` marcado, então o
+     desenho responde sozinho e a pintura do produto (que só escolhe o `<option>`) faz o mesmo. */
+  .campo.so-comando{display:none}
+  .campo.so-eventos.on:has(option[value="meu_comando"]:checked) + .campo.so-comando{display:grid}
   .campo select.estreito{flex:1 1 auto;width:100%}
   /* «Qual vale primeiro»: só aparece com dois perfis do mesmo jogo */
   .ordem-vale{margin:4px 0 8px;display:none}
@@ -2109,7 +2111,11 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                   <optgroup label="No jogo"><option value="cena">Cena</option><option value="menu">Menu</option><option value="pausa">Pausa</option></optgroup>
                   <optgroup label="No sistema"><option value="controle_conectado">Controle conectado</option><option value="programa_aberto">Programa aberto</option><option value="hora_marcada">Hora marcada</option></optgroup>
                   <optgroup label="Meu"><option value="meu_comando">Meu comando</option></optgroup>
-                </select><input type="text" class="ev-cmd" data-hef="editor.evento.comando" data-hef-gesto="editor.quando" data-que="comando" data-hef-alvo="valor" aria-label="Comando ou arquivo .sh" placeholder="Comando ou arquivo .sh"
+                </select></span>
+              </div>
+              <div class="campo so-comando">
+                <span data-dica="O perfil entra quando o comando termina sem erro">Comando:</span>
+                <span class="val"><input type="text" class="ev-cmd" data-hef="editor.evento.comando" data-hef-gesto="editor.quando" data-que="comando" data-hef-alvo="valor" aria-label="Comando ou arquivo .sh" placeholder="Comando ou arquivo .sh"
                   data-dica="Um comando de terminal ou um arquivo .sh" value=""></span>
               </div>
               <div class="campo">
@@ -2706,6 +2712,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       });
       var quando = document.querySelector('.so-eventos');
       if(quando) quando.classList.toggle('on', b.dataset.v === 'eventos');
+      // Perfil de evento não tem jogo, então não tem «Qual vale primeiro»: o produto apaga o bloco
+      // pelo `editor.ordem.ha`, e o desenho faz o mesmo para a tela não ganhar uma linha de rolagem.
+      var ordem = document.querySelector('.ordem-vale');
+      if(ordem) ordem.classList.toggle('on', b.dataset.v !== 'eventos');
     }, false);
 
     // ---- «Qual vale primeiro»: arrastar um perfil acima ou abaixo do outro -----

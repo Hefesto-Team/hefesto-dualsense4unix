@@ -923,9 +923,11 @@ CSS = CSS_GLIFO + """
   .campo.so-eventos{display:none}
   .campo.so-eventos.on{display:grid}
   .ev-val{display:flex;gap:10px;align-items:center;min-width:0}
-  /* o `.estreito` de baixo estica o select a 100%; aqui ele divide a linha com o comando */
-  .campo .ev-val select.estreito{flex:0 0 170px;width:170px}
-  .ev-val .ev-cmd{flex:1;min-width:0}
+  /* O comando é do «Meu comando» e só dele (19/10/2026): a linha abaixo do «Quando» aparece quando o
+     momento escolhido é esse, e some em qualquer outro. O `:has` lê o `<option>` marcado, então o
+     desenho responde sozinho e a pintura do produto (que só escolhe o `<option>`) faz o mesmo. */
+  .campo.so-comando{display:none}
+  .campo.so-eventos.on:has(option[value="meu_comando"]:checked) + .campo.so-comando{display:grid}
   .campo select.estreito{flex:1 1 auto;width:100%}
   /* «Qual vale primeiro»: só aparece com dois perfis do mesmo jogo */
   .ordem-vale{margin:4px 0 8px;display:none}
@@ -1422,6 +1424,10 @@ ROTEIRO = """
       });
       var quando = document.querySelector('.so-eventos');
       if(quando) quando.classList.toggle('on', b.dataset.v === 'eventos');
+      // Perfil de evento não tem jogo, então não tem «Qual vale primeiro»: o produto apaga o bloco
+      // pelo `editor.ordem.ha`, e o desenho faz o mesmo para a tela não ganhar uma linha de rolagem.
+      var ordem = document.querySelector('.ordem-vale');
+      if(ordem) ordem.classList.toggle('on', b.dataset.v !== 'eventos');
     }, false);
 
     // ---- «Qual vale primeiro»: arrastar um perfil acima ou abaixo do outro -----
@@ -1535,7 +1541,11 @@ MIOLO = f'''
                 <span data-dica="Quando o perfil entra">Quando:</span>
                 <span class="val ev-val"><select class="estreito" data-hef="editor.evento" data-hef-gesto="editor.quando" data-hef-alvo="valor" aria-label="Quando o perfil entra">
 {opcoes_do_quando()}
-                </select><input type="text" class="ev-cmd" data-hef="editor.evento.comando" data-hef-gesto="editor.quando" data-que="comando" data-hef-alvo="valor" aria-label="Comando ou arquivo .sh" placeholder="Comando ou arquivo .sh"
+                </select></span>
+              </div>
+              <div class="campo so-comando">
+                <span data-dica="O perfil entra quando o comando termina sem erro">Comando:</span>
+                <span class="val"><input type="text" class="ev-cmd" data-hef="editor.evento.comando" data-hef-gesto="editor.quando" data-que="comando" data-hef-alvo="valor" aria-label="Comando ou arquivo .sh" placeholder="Comando ou arquivo .sh"
                   data-dica="Um comando de terminal ou um arquivo .sh" value=""></span>
               </div>
               <div class="campo">
@@ -2182,6 +2192,20 @@ def variantes(html):
         ("grid-template-columns:repeat(4,1fr);gap:14px;padding:14px 0 2px",
          "grid-template-columns:repeat(5,1fr);gap:10px;padding:14px 0 2px"),
     ])
+    # Perfis 2 (OS-EVENTOS-DO-PERFIL-...): o comando do «Meu comando». A é a linha do desenho do todo,
+    # com o comando ao lado do momento e só com o «Meu comando»; B (o desenho de agora, recomendado) o
+    # põe numa linha própria, porque a 940 px o campo ao lado fica com o texto cortado.
+    bloco = re.search(r'\n *<div class="campo so-comando">.*?</div>', html, re.S)
+    entrada = re.search(r'<input[^>]*class="ev-cmd"[^>]*>', bloco.group(0), re.S).group(0)
+    sem_linha = html.replace(bloco.group(0), "", 1)
+    ancora = sem_linha.index('aria-label="Quando o perfil entra"')
+    fim = sem_linha.index("</select></span>", ancora)
+    na_mesma = sem_linha[:fim] + "</select>" + entrada + sem_linha[fim + len("</select>"):]
+    saidas["10-eventos-A-comando-na-mesma-linha"] = _trocar(na_mesma, [
+        ('.campo.so-comando{display:none}',
+         '.campo.so-comando{display:none}\n  .campo .ev-val select.estreito{flex:0 0 170px;width:170px}'
+         '\n  .ev-val .ev-cmd{flex:1;min-width:0;display:none}'
+         '\n  .so-eventos:has(option[value="meu_comando"]:checked) .ev-cmd{display:block}')])
     return saidas
 
 

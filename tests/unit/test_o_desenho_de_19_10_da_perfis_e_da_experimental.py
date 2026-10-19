@@ -13,6 +13,8 @@ MORDIDAS (cada uma foi feita e viu reprovar; a lista está no relato do tema des
 * pôr o campo «Nome» de volta no editor -> `test_o_desenho_nao_tem_campo_de_nome_do_perfil`;
 * devolver a frase longa ao rótulo da variante B -> `test_a_variante_b_do_freestyle_cabe_a_940`;
 * deixar a variante de pé depois de o gerador mudar -> `test_as_variantes_de_10_estao_em_dia`.
+* pôr o comando de volta na linha do «Quando» -> `test_o_comando_do_evento_tem_linha_propria_...`;
+* tirar o `:has` ou o gesto do `.ordem-vale` -> `test_o_comando_aparece_so_com_o_meu_comando_...`.
 """
 from __future__ import annotations
 
@@ -168,3 +170,74 @@ def test_a_variante_nunca_entra_na_pagina_publicada() -> None:
     assert not [p for p in onde.paginas() if "variantes" in p.parts]
     publicado = _ler(onde.pagina("10-perfis.html", publicado=True))
     assert "Nome reservado" not in publicado and "Freestyle é o botão" not in publicado
+
+
+# ---------------------------------------------------------------------------------------------
+# Perfis 2 · OS-EVENTOS-DO-PERFIL-ENTRAM-PELO-QUE-O-DAEMON-JA-SABE-01
+# ---------------------------------------------------------------------------------------------
+
+_ESCOLHE_EVENTO = """(function(){
+  document.querySelector('[data-v="eventos"]').click();
+  var s = document.querySelector('[data-hef="editor.evento"]');
+  s.value = '%s';
+  s.dispatchEvent(new Event('change', {bubbles: true}));
+})()"""
+_MEDE_COMANDO = """() => {
+  const c = document.querySelector('.ev-cmd'), g = document.querySelector('.guarda');
+  const q = document.querySelector('.so-eventos'), caixa = c.getBoundingClientRect();
+  const d = document.documentElement;
+  return {visivel: caixa.width > 0 && caixa.height > 0,
+          linha_propria: !q.contains(c),
+          guarda_rola: g.scrollHeight > g.clientHeight + 1,
+          pagina_rola: d.scrollHeight > d.clientHeight, largo: d.scrollWidth > d.clientWidth + 1,
+          ordem_visivel: document.querySelector('.ordem-vale').getBoundingClientRect().height > 0};
+}"""
+
+
+def test_o_comando_do_evento_tem_linha_propria_so_no_meu_comando() -> None:
+    """O campo do comando saiu da linha do «Quando» e mora em `.so-comando`, que o `:has` revela."""
+    doc = _ler(DEZ)
+    corpo = _sem_estilo_nem_script(doc)
+    quando = re.search(r'<div class="campo so-eventos.*?</div>', corpo, re.S)
+    assert quando is not None and 'class="ev-cmd"' not in quando.group(0)
+    linha = re.search(r'<div class="campo so-comando">(.*?)</div>', corpo, re.S)
+    assert linha is not None and 'class="ev-cmd"' in linha.group(1)
+    assert 'data-hef="editor.evento.comando"' in linha.group(1), "o endereço é o mesmo de antes"
+    assert re.search(r'option\[value="meu_comando"\]:checked\) \+ \.campo\.so-comando'
+                     r'\{display:grid\}', doc)
+
+
+@sem_chrome
+@pytest.mark.parametrize("vista", VISTAS, ids=lambda v: str(v[0]))
+@pytest.mark.parametrize("momento,aparece", [("cena", False), ("controle_conectado", False),
+                                             ("meu_comando", True)])
+def test_o_comando_aparece_so_com_o_meu_comando_e_a_tela_nao_rola(
+        vista: tuple[int, int], momento: str, aparece: bool) -> None:
+    m = _no_chrome(DEZ, vista, _MEDE_COMANDO, antes=_ESCOLHE_EVENTO % momento)
+    assert m["visivel"] is aparece, m
+    assert m["linha_propria"], m
+    assert not m["guarda_rola"] and not m["pagina_rola"] and not m["largo"], m
+    assert not m["ordem_visivel"], "evento não tem jogo, então não tem «Qual vale primeiro»"
+
+
+@sem_chrome
+def test_a_aba_jogos_continua_com_a_ordem_do_que_vale() -> None:
+    m = _no_chrome(DEZ, (1272, 860), _MEDE_COMANDO)
+    assert m["ordem_visivel"] and not m["visivel"], m
+
+
+def test_a_variante_a_dos_eventos_poe_o_comando_ao_lado_do_momento() -> None:
+    doc = _ler(VARIANTES / "10-eventos-A-comando-na-mesma-linha.html")
+    corpo = _sem_estilo_nem_script(doc)
+    quando = re.search(r'<div class="campo so-eventos.*?</div>', corpo, re.S)
+    assert quando is not None and 'class="ev-cmd"' in quando.group(0)
+    assert 'class="campo so-comando"' not in corpo
+
+
+@sem_chrome
+def test_a_variante_a_dos_eventos_corta_o_comando_a_940() -> None:
+    """Por que a recomendada é a linha própria: a 940 o campo ao lado fica estreito demais."""
+    m = _no_chrome(VARIANTES / "10-eventos-A-comando-na-mesma-linha.html", (940, 809), """() => {
+      const c = document.querySelector('.ev-cmd'); return c.getBoundingClientRect().width;
+    }""", antes=_ESCOLHE_EVENTO % "meu_comando")
+    assert m < 110, m
