@@ -107,6 +107,14 @@ def _tato_vivo(daemon: Any) -> Any:
     return start_tato_vivo(daemon)
 
 
+def _eventos_do_perfil(daemon: Any) -> Any:
+    from hefesto_dualsense4unix.daemon.subsystems.eventos_do_perfil import (
+        start_eventos_do_perfil,
+    )
+
+    return start_eventos_do_perfil(daemon)
+
+
 def _luz_animada(daemon: Any) -> Any:
     from hefesto_dualsense4unix.daemon.subsystems.luz_animada import start_luz_animada
 
@@ -411,6 +419,8 @@ SUBSYSTEM_REGISTRY: tuple[Passo, ...] = (
         parada=_parar_metrics,
         parar_em=70,
     ),
+    # Depois do controle: a conexão do boot é a sessão restaurada, não o «Controle conectado».
+    Passo("eventos_do_perfil", partida=_eventos_do_perfil, depois_do_controle=True),
     # ADR-021: as modificações rodam FORA do serviço, como processos filhos, e sobem
     # DEPOIS do controle: o supervisor nunca atrasa a primeira conexão. Param PRIMEIRO,
     # cada filho recebe o SIGTERM pelo PID criado e a porta própria fecha.

@@ -332,14 +332,19 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
     "alvo": SecaoDireta(
         razao=(
             "A-ABA-PERFIS-DO-TODO-01 (15/10/2026). Onde o perfil vale (jogos, navegação, "
-            "programas, eventos), lido pela aba Perfis. Só grava; nada chega ao controle."
+            "programas, eventos): a escolha por janela deixa de fora o de evento "
+            "(`Profile.so_entra_por_evento`). Nada chega ao controle."
         )
     ),
     "evento": SecaoDireta(
-        razao="Ver `alvo`: o momento que chama o perfil. Só grava; nada chega ao controle."
+        razao=(
+            "OS-EVENTOS-DO-PERFIL-ENTRAM-PELO-QUE-O-DAEMON-JA-SABE-01: o momento que chama o "
+            "perfil, lido por `daemon/subsystems/eventos_do_perfil` (Controle conectado, Meu "
+            "comando) e pelo autoswitch (Programa aberto). Nada chega ao controle."
+        )
     ),
     "evento_comando": SecaoDireta(
-        razao="Ver `evento`: o comando do «Meu comando». Só grava; nada chega ao controle."
+        razao="Ver `evento`: o comando do «Meu comando», rodado pelo `eventos_do_perfil`."
     ),
     "match": SecaoDireta(
         razao="Critério de SELEÇÃO do perfil, não estado do controle."

@@ -1492,8 +1492,9 @@ class Profile(BaseModel):
     # ISO 8601. None = perfil de antes das datas: a lista mostra «—», nunca uma data inventada.
     criado_em: str | None = None
     modificado_em: str | None = None
-    # O «Aplicar em» e o «Quando» da aba Perfis. SÓ GRAVAM: nenhum motor os lê ainda, e a tela
-    # nunca diz que funcionam. None = o alvo que o `match` já dizia.
+    # O «Aplicar em» e o «Quando» da aba Perfis. None = o alvo que o `match` já dizia. Quem lê:
+    # `daemon/subsystems/eventos_do_perfil.py` (três dos sete momentos) e a escolha por janela,
+    # que deixa de fora o perfil de evento (`so_entra_por_evento`).
     alvo: AlvoDoPerfil | None = None
     evento: EventoDoPerfil | None = None
     evento_comando: str | None = None
@@ -1670,6 +1671,11 @@ class Profile(BaseModel):
 
     def matches(self, window_info: dict[str, Any]) -> bool:
         return self.match.matches(window_info)
+
+    @property
+    def so_entra_por_evento(self) -> bool:
+        """Perfil de «Aplicar em: Eventos» cujo momento não é a janela: a janela não o ativa."""
+        return self.alvo == "eventos" and self.evento != "programa_aberto"
 
     @property
     def e_catch_all(self) -> bool:
@@ -2796,8 +2802,8 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
     ),
     "Profile.evento": Nascimento(
         E_CONTRATO,
-        "`None` = nenhum momento escolhido. Só tem sentido com o alvo «eventos» e hoje só grava: "
-        "nenhum motor o chama.",
+        "`None` = nenhum momento escolhido. Só tem sentido com o alvo «eventos»; o "
+        "`eventos_do_perfil` do daemon chama três dos sete momentos.",
     ),
     "Profile.evento_comando": Nascimento(
         E_CONTRATO,

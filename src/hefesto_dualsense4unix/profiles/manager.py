@@ -1454,7 +1454,8 @@ class ProfileManager:
         escolhido: quem o recebe pode editá-lo sem mexer no guardado.
         """
         wm_class = str(window_info.get("wm_class") or "")
-        casaram = [p for p in perfis_para_consulta() if p.matches(dict(window_info))]
+        casaram = [p for p in perfis_para_consulta()
+                   if not p.so_entra_por_evento and p.matches(dict(window_info))]
         candidates = [p for p in casaram if not p.e_catch_all]
         if e_janela_de_lancador(wm_class):
             # D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO: o lançador (Steam, Heroic,
