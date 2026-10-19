@@ -801,10 +801,6 @@ _REPIQUE_DO_PADRAO: dict[str, tuple[threading.Event, threading.Thread]] = {}
 _PONTOS_AO_VIVO: dict[str, tuple[int, int]] = {}
 
 
-class _OTesteParouError(Exception):
-    """O «Parar» chegou no meio de uma volta do padrão."""
-
-
 def _cortar_o_repique(uniq: str) -> None:
     """O padrão em repetição deste controle para, e o último passo já saiu quando volta."""
     repique = _REPIQUE_DO_PADRAO.pop(uniq, None)
@@ -814,7 +810,9 @@ def _cortar_o_repique(uniq: str) -> None:
     fim, fio = repique
     fim.set()
     if fio is not threading.current_thread():
-        fio.join(timeout=1.0)
+        # Sem prazo próprio: depois do `fim`, a única espera do fio é o pedido em curso ao
+        # daemon, que já tem o prazo da ponte.
+        fio.join()
 
 
 def _repetir_o_padrao(ctx: Contexto, p: Any, uniq: str, padrao: str, motores: str) -> None:
@@ -825,15 +823,15 @@ def _repetir_o_padrao(ctx: Contexto, p: Any, uniq: str, padrao: str, motores: st
     _PONTOS_AO_VIVO[uniq] = _pontos_das_barras(ctx, uniq)
 
     def enviar(esq: int, dir_: int) -> None:
+        # Depois do «Parar», o resto da volta corre sem tocar: as esperas voltam na hora.
         if fim.is_set():
-            raise _OTesteParouError
+            return
         ok, motivo = _resposta(p.rumble_set_checked(dir_, esq, uniq=uniq))
         if not ok:
             raise RuntimeError(motivo or "o Hefesto não está rodando — ligue na aba Sistema")
 
     def esperar(segundos: float) -> None:
-        if fim.wait(segundos):
-            raise _OTesteParouError
+        fim.wait(segundos)
 
     def voltas() -> None:
         try:
@@ -841,8 +839,6 @@ def _repetir_o_padrao(ctx: Contexto, p: Any, uniq: str, padrao: str, motores: st
                 esquerdo, direito = _PONTOS_AO_VIVO.get(uniq, (100, 100))
                 _padroes.tocar(padrao, motores, enviar, esperar,
                                pontos_esquerdo=esquerdo, pontos_direito=direito)
-        except _OTesteParouError:
-            pass
         except Exception as erro:
             print(f"[vibração] o padrão em teste parou: {erro}", file=sys.stderr)
 

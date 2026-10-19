@@ -7,7 +7,8 @@ real. A háptica tem a régua dela em
 MORDIDAS:
   * troque `_repetir_o_padrao` por `_tocar_o_padrao` no `testar`: o padrão toca uma volta só;
   * tire o ramo `_REPIQUE_DO_PADRAO` do `_refrescar_o_teste`: o arraste não muda a volta seguinte;
-  * tire o `_cortar_o_repique` do começo do `parar`: um par sai depois do stop.
+  * tire o `_cortar_o_repique` do começo do `parar`: um par sai depois do stop;
+  * tire o `join` do `_cortar_o_repique`: o stop sai com um pedido ainda em curso.
 """
 from __future__ import annotations
 
@@ -83,6 +84,27 @@ def test_nenhum_par_sai_depois_do_stop(coice: None) -> None:
     ultimo_par = max(i for i, n in enumerate(nomes) if n == "rumble_set_checked")
     assert ultimo_par < nomes.index("rumble_stop_checked"), "um par saiu depois do stop"
 
+
+
+class _PonteDeSetLento(_Ponte):
+    """O pedido que demora: o «Parar» chega com ele em curso, e ele se anota ao VOLTAR."""
+
+    def rumble_set_checked(self, weak: int, strong: int,
+                           uniq: str | None = None) -> tuple[bool, None]:
+        time.sleep(VOLTA_S)
+        return super().rumble_set_checked(weak, strong, uniq=uniq)
+
+
+def test_o_parar_espera_o_pedido_em_curso(coice: None) -> None:
+    """O stop sai depois do último pedido do padrão voltar, nunca no meio dele."""
+    ponte = _PonteDeSetLento()
+    _clicar("testar", ponte)
+    time.sleep(VOLTA_S / 2)
+    _clicar("parar", ponte)
+    nomes = ponte.nomes()
+    ultimo_par = max(i for i, n in enumerate(nomes) if n == "rumble_set_checked")
+    assert ultimo_par < nomes.index("rumble_stop_checked"), (
+        "o stop saiu com um pedido do padrão ainda em curso")
 
 def test_o_arraste_da_barra_vale_na_volta_seguinte(coice: None) -> None:
     ponte = _Ponte()
