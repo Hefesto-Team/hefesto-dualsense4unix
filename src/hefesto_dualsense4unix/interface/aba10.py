@@ -2137,6 +2137,54 @@ def _conferir(html: str) -> None:
                          + "\n  ".join(f"- {f}" for f in falhas))
 
 
+# ---------------------------------------------------------------------------------------------
+# AS VARIANTES DO DESENHO DE 19/10/2026 (a escolher por ela). Só o desenho: nenhuma delas entra
+# na página publicada nem no produto. Cada uma sai de `mockup/10-perfis.html` com trocas
+# EXATAS, e a troca que não casa derruba o gerador: a variante nunca vira cópia velha calada.
+# ---------------------------------------------------------------------------------------------
+FRASE_DO_FREESTYLE = "Freestyle é o botão do controle, não um jogo"
+
+_NOME_DO_JOGO = 'value="Mortal Kombat 1"><span class="exige" data-hef="editor.jogo.exige"'
+_DICA_DA_EXIGENCIA = 'data-hef="editor.jogo.exigencia" data-hef-alvo="html"></span></span>'
+
+
+def _trocar(html, trocas):
+    """Aplica as trocas na ordem; a que não casa derruba o gerador com o nome dela."""
+    for velho, novo in trocas:
+        if velho not in html:
+            raise SystemExit(f"ERRO nas variantes de 10-perfis: a troca não casa: {velho[:70]!r}")
+        html = html.replace(velho, novo, 1)
+    return html
+
+
+def variantes(html):
+    """Nome do arquivo (sem `.html`) -> página da variante, a partir do desenho recém-gerado."""
+    saidas = {}
+    # Perfis 1 (O-EDITOR-DE-PERFIS-MOSTRA-O-ESTILO-RECUSA-O-FREESTYLE-...): o nome «Freestyle»
+    # no «Nome do jogo». A: o ponto laranja que o campo já tem, com a frase na dica.
+    saidas["10-freestyle-A-ponto-com-dica"] = _trocar(html, [
+        (_NOME_DO_JOGO, _NOME_DO_JOGO.replace("Mortal Kombat 1", "Freestyle")
+         .replace('class="exige"', 'class="exige on"')),
+        (_DICA_DA_EXIGENCIA, _DICA_DA_EXIGENCIA.replace("></span></span>", f">{FRASE_DO_FREESTYLE}</span></span>")),
+    ])
+    # B: duas palavras ao lado do campo, no rótulo ao vivo que a 10-Q4 dela tinha (a frase inteira
+    # fica na dica: a 940 px a frase não cabe ao lado do campo).
+    saidas["10-freestyle-B-frase-ao-lado"] = _trocar(html, [
+        (_NOME_DO_JOGO, _NOME_DO_JOGO.replace("Mortal Kombat 1", "Freestyle")),
+        (_DICA_DA_EXIGENCIA, _DICA_DA_EXIGENCIA
+         + f'<span class="rot on" data-dica="{FRASE_DO_FREESTYLE}"><span class="al alerta">Nome reservado</span></span>'),
+    ])
+    # B do renomear: um quinto botão na barra do rodapé (A é o que o desenho do todo tem: não há).
+    saidas["10-renomear-B-botao-na-barra"] = _trocar(html, [
+        ('<button class="btn vermelho" data-hef-gesto="remover"',
+         '<button class="btn" data-hef-gesto="renomear" data-dica="Muda o nome do perfil, não o do jogo">'
+         'Renomear</button>\n          <button class="btn vermelho" data-hef-gesto="remover"'),
+        ("grid-template-columns:repeat(4,1fr);gap:14px;padding:14px 0 2px",
+         "grid-template-columns:repeat(5,1fr);gap:10px;padding:14px 0 2px"),
+    ])
+    return saidas
+
+
 if __name__ == "__main__":
     import os
     import pathlib
@@ -2150,8 +2198,12 @@ if __name__ == "__main__":
     os.environ[onde._DESVIO] = str(_prova)
     n = monta("10-perfis", "Perfis", MIOLO, CSS)
     _conferir(onde.pagina("10-perfis.html").read_text(encoding="utf-8"))
+    _variantes = variantes(onde.pagina("10-perfis.html").read_text(encoding="utf-8"))
     shutil.copyfile(_prova / "10-perfis.html", _real / "10-perfis.html")
     shutil.rmtree(_prova)
+    (_real / "variantes").mkdir(exist_ok=True)
+    for _nome, _doc in _variantes.items():
+        (_real / "variantes" / f"{_nome}.html").write_text(_doc, encoding="utf-8")
     ROT_P = re.search(r"--rot-p:(\d+)px", CSS).group(1)
     FORA = sum(1 for c in MESA if not c.get("conectado", True))
     print(f"10-perfis: OK, {n} divs · rótulo à esquerda com dois pontos, coluna de {ROT_P}px, "
