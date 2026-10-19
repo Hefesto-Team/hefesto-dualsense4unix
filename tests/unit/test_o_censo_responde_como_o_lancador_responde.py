@@ -13,6 +13,7 @@ from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
 from hefesto_dualsense4unix.integrations import jogos_locais as jl
 from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
+from tests.unit import a_exclusao_de_antes as antiga
 
 HEROIC = ".var/app/com.heroicgameslauncher.hgl/config/heroic"
 LUTRIS_ID = "net.lutris.Lutris"
@@ -518,9 +519,9 @@ def test_com_os_dois_heroic_a_carona_e_a_janela_seguem_a_casa_do_jogo(
 
     estradas = cpe.estradas_do_cartao("heroic", atalhos, lar, maquina["raiz"])
     assert {e.arquivo for e in estradas} == {nativo / "config.json", caixa / "config.json"}
-    assert cpe.jogos_do_heroic_pela_janela("steam_app_111", lar) == [
+    assert antiga.jogos_do_heroic_pela_janela("steam_app_111", lar) == [
         nativo / "GamesConfig/nnnn.json"]
-    assert cpe.jogos_do_heroic_pela_janela("steam_app_222", lar) == [
+    assert antiga.jogos_do_heroic_pela_janela("steam_app_222", lar) == [
         caixa / "GamesConfig/cccc.json"]
     assert cpe.onde_falta_o_ambiente("heroic", atalhos, lar=lar, pasta_do_ambiente=ponte,
                                      raiz_sistema=maquina["raiz"]) == ()

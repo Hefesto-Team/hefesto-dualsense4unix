@@ -1504,43 +1504,6 @@ def _sem_o_nosso_no_jogo(
     return "feito", copia
 
 
-def jogos_do_heroic_pela_janela(classe: str, lar: Path | None = None) -> list[Path]:
-    """As cópias (`GamesConfig/<app>.json`) dos jogos do Heroic com esta janela."""
-    alvo = classe.strip()
-    if not alvo:
-        return []
-    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
-
-    vistos: list[Path] = []
-    for biblioteca in censo.bibliotecas_por_casa("Heroic", lar):
-        if biblioteca.onde is None:
-            continue
-        pasta = biblioteca.onde / _PASTA_DOS_JOGOS_DO_HEROIC
-        for jogo in biblioteca.jogos:
-            if jogo.classe_de_janela == alvo and "/" not in jogo.chave:
-                arquivo = pasta / f"{jogo.chave}.json"
-                if arquivo not in vistos:
-                    vistos.append(arquivo)
-    return vistos
-
-
-def tirar_o_nosso_do_jogo_do_heroic(
-    classe: str, *, lar: Path | None = None, pasta_do_ambiente: Path | None = None,
-) -> tuple[tuple[CopiaDoJogo, ...], str]:
-    """O jogo do Heroic com esta janela passa a ter a lista própria sem o nosso."""
-    feitas: list[CopiaDoJogo] = []
-    status = "nada"
-    for alvo in jogos_do_heroic_pela_janela(classe, lar):
-        st, copia = _sem_o_nosso_no_jogo(alvo, alvo.stem, pasta_do_ambiente)
-        if st == "erro" or copia is None:
-            devolver_ao_jogo_do_heroic(feitas)
-            return (), "erro"
-        feitas.append(copia)
-        if st == "feito":
-            status = "feito"
-    return tuple(feitas), status
-
-
 def devolver_ao_jogo_do_heroic(copias: Iterable[CopiaDoJogo]) -> str:
     """A volta: a cópia de cada jogo como estava antes da exclusão."""
     status = "nada"
@@ -1591,39 +1554,6 @@ def devolver_ao_jogo_do_heroic(copias: Iterable[CopiaDoJogo]) -> str:
 
 def _override_da_caixa(app_id: str, lar: Path) -> Path:
     return lar / _PASTA_DOS_OVERRIDES / app_id
-
-
-def tirar_o_nosso_da_caixa(
-    app_ids: Iterable[str], *, lar: Path | None = None,
-    pasta_do_ambiente: Path | None = None,
-) -> str:
-    """A caixa do Flatpak destes `app-id` sem o ambiente que é nosso."""
-    lar = Path.home() if lar is None else lar
-    try:
-        registro = ler_registro(pasta_do_ambiente)
-    except Exception:  # pragma: no cover - ler_registro já não levanta
-        return "erro"
-    mexeu_no_registro = False
-    status = "nada"
-    for app_id in dict.fromkeys(a for a in app_ids if "." in a):
-        alvo = _override_da_caixa(app_id, lar)
-        if not alvo.is_file():
-            continue
-        entrada = registro.get(str(alvo), Entrada(FLATPAK_OVERRIDE))
-        feito = _desfazer_no_arquivo(alvo, entrada)
-        if feito.erro:
-            return "erro"
-        if str(alvo) in registro:
-            del registro[str(alvo)]
-            mexeu_no_registro = True
-        if feito.tiradas or feito.devolvidas or feito.apagado:
-            status = "feito"
-    if mexeu_no_registro:
-        try:
-            gravar_registro(registro, pasta_do_ambiente)
-        except OSError:
-            return "erro"
-    return status
 
 
 _LUTRIS_APP_ID = "net.lutris.Lutris"
@@ -1728,23 +1658,6 @@ def _dizer_o_par(alvo: Path, par: int) -> None:
         get_logger(__name__).info("camada_do_lutris_xalia", par=par, jogo=alvo.stem)
 
 
-def jogos_do_lutris_pela_janela(classe: str, lar: Path | None = None) -> list[Path]:
-    """Os `.yml` dos jogos do Lutris FLATPAK que anunciam esta janela."""
-    alvo = classe.strip()
-    pasta = _pasta_do_lutris_flatpak(lar)
-    if not alvo or pasta is None:
-        return []
-    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
-
-    vistos: list[Path] = []
-    for jogo in censo._lutris(pasta, lar).jogos:
-        yml = jogo.configuracao
-        if (jogo.classe_de_janela == alvo and yml is not None and yml.is_file()
-                and not yml.is_symlink() and yml not in vistos):
-            vistos.append(yml)
-    return vistos
-
-
 def _com_o_nosso_no_yml(
     texto: str, pares: dict[str, str], moldura: tuple[str, ...] = (),
     ja_nossos: tuple[tuple[str, str], ...] = (),
@@ -1783,46 +1696,6 @@ def _com_o_nosso_no_yml(
     raiz["system"] = sistema
     return (str(yaml.safe_dump(raiz, default_flow_style=False)), postos,
             tuple(dict.fromkeys(nova)))
-
-
-def _cobrir_no_yml(alvo: Path, pares: dict[str, str]) -> YmlDoJogo | None:
-    """Escreve os pares no `.yml` e devolve o registro da volta. ``None`` = erro."""
-    try:
-        texto = alvo.read_text(encoding="utf-8")
-    except OSError:
-        return None
-    feito = _com_o_nosso_no_yml(texto, pares)
-    if feito is None:
-        return None
-    novo, postos, moldura = feito
-    if novo != texto:
-        try:
-            _escrever_atomico(alvo, novo)
-        except OSError:
-            return None
-    if _PAR_DO_XALIA & {k for k, _ in postos}:
-        _dizer_o_par(alvo, 1)
-    return YmlDoJogo(str(alvo), texto, _sha(novo), postos, moldura)
-
-
-def tirar_o_nosso_do_jogo_do_lutris(
-    classe: str, *, lar: Path | None = None, pasta_do_ambiente: Path | None = None,
-) -> tuple[tuple[YmlDoJogo, ...], str]:
-    """O jogo do Lutris Flatpak com esta janela passa a cobrir a caixa."""
-    ymls = jogos_do_lutris_pela_janela(classe, lar)
-    if not ymls:
-        return (), "nada"
-    base, por_jogo = _a_camada_da_caixa(lar, pasta_do_ambiente)
-    proton = _pelo_proton_por_yml(lar)
-    feitos: list[YmlDoJogo] = []
-    for alvo in ymls:
-        pares = _com_o_padrao_do_jogo(base, por_jogo, pelo_proton=proton.get(str(alvo), False))
-        yml = _cobrir_no_yml(alvo, pares)
-        if yml is None:
-            devolver_ao_jogo_do_lutris(feitos)
-            return (), "erro"
-        feitos.append(yml)
-    return tuple(feitos), "feito" if any(y.pares for y in feitos) else "nada"
 
 
 @dataclass(frozen=True)

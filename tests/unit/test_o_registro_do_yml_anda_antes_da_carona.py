@@ -28,6 +28,7 @@ from tests.unit.test_a_exclusao_mora_na_camada_do_jogo import (
     _lutris_flatpak,
     _o_xalia_do,
 )
+from tests.unit import a_exclusao_de_antes as antiga
 
 RAIZ = Path(__file__).resolve().parents[2]
 _EVENTO = "carona_nao_anotou_o_yml"
@@ -59,8 +60,8 @@ def _excluido_sem_o_xalia(lar: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[P
     _carona(lar)
     with monkeypatch.context() as m:
         m.setattr(cpe, "_pelo_proton_por_yml", lambda _lar: {})
-        assert lx.adicionar(_JANELA, lancador="lutris", nome="Recettear",
-                            lar=lar) == "adicionado"
+        assert antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear",
+                                lar=lar) == "adicionado"
     assert _o_xalia_do(yml) == {}, yml.read_text()
     return yml, antes
 
@@ -116,8 +117,8 @@ def test_a_gravacao_que_falha_depois_da_anotacao_nao_perde_o_antes(
     _carona(_lar)
     with monkeypatch.context() as m:
         m.setattr(cpe, "_pelo_proton_por_yml", lambda _lar: {})
-        assert lx.adicionar(_JANELA, lancador="lutris", nome="Recettear",
-                            lar=_lar) == "adicionado"
+        assert antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear",
+                                lar=_lar) == "adicionado"
     sem_o_xalia = yml.read_text()
     registro_antes = _o_registro()
     escrever = cpe._escrever_atomico

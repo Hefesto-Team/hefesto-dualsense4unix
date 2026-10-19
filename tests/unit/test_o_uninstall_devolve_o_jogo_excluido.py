@@ -25,6 +25,7 @@ from tests.unit.test_o_uninstall_nao_deixa_rastro import (
     _instalar_flatpak,
     _instalar_pelos_donos,
 )
+from tests.unit import a_exclusao_de_antes as antiga
 
 RAIZ = Path(__file__).resolve().parents[2]
 CURA = RAIZ / "src/hefesto_dualsense4unix/integrations/cura_por_estrada.py"
@@ -114,7 +115,7 @@ def test_a_volta_segue_a_global(lar: Path, copia: dict[str, object] | None) -> N
     casa = _heroic(lar, {"A": copia, "B": {"enviromentOptions": [
         {"key": "MANGOHUD", "value": "1"}]}})
     _carona(lar)
-    assert lx.adicionar("steam_app_100", lancador="heroic", nome="A", lar=lar) == "adicionado"
+    assert antiga.adicionar("steam_app_100", lancador="heroic", nome="A", lar=lar) == "adicionado"
     assert _lista_propria(casa, "A") is not None, "a exclusão não deu a A a lista própria"
 
     feitos, completo = _desfazer(lar)
@@ -135,7 +136,7 @@ def test_ela_mexeu_a_chave_dela_fica(lar: Path) -> None:
     """MORDIDA: a volta exata sem conferir o «depois» (a chave dela sumiria)."""
     casa = _heroic(lar, {"A": {}})
     _carona(lar)
-    lx.adicionar("steam_app_100", lancador="heroic", nome="A", lar=lar)
+    antiga.adicionar("steam_app_100", lancador="heroic", nome="A", lar=lar)
     arquivo = casa / "GamesConfig" / "A.json"
     dado = json.loads(arquivo.read_text())
     dado["A"]["enviromentOptions"].append({"key": "DXVK_HUD", "value": "fps"})
@@ -192,8 +193,8 @@ def test_sem_pyyaml_o_yml_volta_exato_ou_fica(lar: Path, tmp_path: Path) -> None
     _carona(lar)
     originais = {s: _md5(y) for s, y in ymls.items()}
     for i in (0, 1):
-        assert lx.adicionar(f"steam_app_{70000 + i}", lancador="lutris", nome=str(i),
-                            lar=lar) == "adicionado"
+        assert antiga.adicionar(f"steam_app_{70000 + i}", lancador="lutris", nome=str(i),
+                                lar=lar) == "adicionado"
     assert all(_md5(y) != originais[s] for s, y in ymls.items()), "a exclusão não escreveu"
     dado = yaml.safe_load(ymls["mexido"].read_text())
     dado["game"]["args"] = "-windowed"
@@ -233,11 +234,12 @@ def _excluir_um_de_cada(r: m.Raizes, monkeypatch: pytest.MonkeyPatch,
     cpe.curar_todas_as_estradas(lar=r.lar, pasta_do_ambiente=pasta,
                                 raiz_sistema=r.lar.parent / "flatpak-do-sistema")
     yml_original = yml.read_text()
-    assert lx.adicionar("steam_app_100", lancador="heroic", nome="A", lar=r.lar) == "adicionado"
-    assert lx.adicionar("steam_app_70000", lancador="lutris", nome="Q", lar=r.lar) == "adicionado"
-    assert lx.adicionar("emulador:mgba", lancador="mgba", nome="mGBA — todos os jogos",
-                        janelas=("io.mgba.mGBA",), lar=r.lar) == "adicionado"
-    assert lx.adicionar("steam_app_200", lancador="steam", nome="S", lar=r.lar) == "adicionado"
+    assert antiga.adicionar("steam_app_100", lancador="heroic", nome="A", lar=r.lar) == "adicionado"
+    assert antiga.adicionar(
+        "steam_app_70000", lancador="lutris", nome="Q", lar=r.lar) == "adicionado"
+    assert antiga.adicionar("emulador:mgba", lancador="mgba", nome="mGBA — todos os jogos",
+                            janelas=("io.mgba.mGBA",), lar=r.lar) == "adicionado"
+    assert antiga.adicionar("steam_app_200", lancador="steam", nome="S", lar=r.lar) == "adicionado"
     assert _lista_propria(casa, "A") is not None
     assert yml.read_text() != yml_original, "a exclusão não cobriu a caixa no `.yml`"
     return ({"casa": casa, "yml": yml,
@@ -355,8 +357,8 @@ def test_o_install_de_depois_exclui_de_novo(lar: Path) -> None:
     original = "# o jogo dela\n" + ymls["q"].read_text()
     ymls["q"].write_text(original)
     _carona(lar)
-    assert lx.adicionar("steam_app_100", lancador="heroic", nome="A", lar=lar) == "adicionado"
-    assert lx.adicionar("steam_app_70000", lancador="lutris", nome="Q", lar=lar) == "adicionado"
+    assert antiga.adicionar("steam_app_100", lancador="heroic", nome="A", lar=lar) == "adicionado"
+    assert antiga.adicionar("steam_app_70000", lancador="lutris", nome="Q", lar=lar) == "adicionado"
     feitos, completo = _desfazer(lar)
     assert completo, [cpe.frase_do_desfeito(f) for f in feitos]
     assert [e.chave for e in lx.ler()] == ["steam_app_100", "steam_app_70000"]

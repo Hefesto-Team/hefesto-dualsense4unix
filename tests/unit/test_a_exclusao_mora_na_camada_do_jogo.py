@@ -23,6 +23,7 @@ from tests.unit.test_a_cura_do_engasgo_alcanca_todos_os_prefixos import (
     _registro as _registro_com_camadas,
 )
 from tests.unit.test_o_censo_responde_como_o_lancador_responde import plantar_o_registro
+from tests.unit import a_exclusao_de_antes as antiga
 
 RAIZ = Path(__file__).resolve().parents[2]
 
@@ -166,7 +167,7 @@ def test_o_jogo_do_lutris_sai_pela_camada_dele(_lar: Path) -> None:
     yml = _lutris_flatpak(_lar)
     assert "lutris" in _carona(_lar)
     assert len(_nossas_na_caixa(_lar)) == 9
-    assert lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar) == "adicionado"
+    assert antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar) == "adicionado"
     env = _env_do_yml(yml)
     for chave in ("SDL_GAMECONTROLLER_IGNORE_DEVICES", "PROTON_DISABLE_HIDRAW"):
         assert chave in env, (
@@ -180,7 +181,7 @@ def test_a_carona_mantem_o_yml_do_excluido(_lar: Path) -> None:
     """A exclusão veio antes de a caixa ter o nosso: a carona seguinte cobre."""
     yml = _lutris_flatpak(_lar)
     antes = yml.read_text()
-    assert lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar) == "adicionado"
+    assert antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar) == "adicionado"
     assert yml.read_text() == antes, "sem o nosso na caixa, não há o que cobrir"
     _carona(_lar)
     assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" in _env_do_yml(yml)
@@ -192,7 +193,7 @@ def test_o_valor_de_cada_chave_e_o_nao_veio_do_leitor(_lar: Path) -> None:
     """MORDIDA: `None` no lugar do valor (o Lutris pula a chave nula,"""
     yml = _lutris_flatpak(_lar)
     _carona(_lar)
-    lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
+    antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
     env = _env_do_yml(yml)
     nossas = {k: v for k, v in env.items() if k in _PONTE}
     assert set(nossas) == set(_NAO_VEIO_DO_LEITOR), (
@@ -212,7 +213,7 @@ def test_com_um_antes_dela_na_caixa_o_yml_leva_o_dela(_lar: Path) -> None:
     caixa.write_text("[Environment]\n__GL_SHADER_DISK_CACHE=0\n")
     _carona(_lar)
     assert _nossas_na_caixa(_lar)["__GL_SHADER_DISK_CACHE"] == "1"
-    lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
+    antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
     env = _env_do_yml(yml)
     assert env.get("__GL_SHADER_DISK_CACHE") == "0", env
     assert "__GL_SHADER_DISK_CACHE_SKIP_CLEANUP" not in env, env
@@ -223,7 +224,7 @@ def test_tirar_devolve_o_yml_byte_a_byte(_lar: Path) -> None:
     yml = _lutris_flatpak(_lar)
     _carona(_lar)
     md5 = _md5(yml)
-    lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
+    antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
     assert _md5(yml) != md5
     assert lx.tirar(_JANELA, lar=_lar) == "removido"
     assert _md5(yml) == md5, yml.read_text()
@@ -232,7 +233,7 @@ def test_tirar_devolve_o_yml_byte_a_byte(_lar: Path) -> None:
 def test_com_uma_linha_dela_no_meio_so_os_nossos_saem(_lar: Path) -> None:
     yml = _lutris_flatpak(_lar)
     _carona(_lar)
-    lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
+    antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
     dado = yaml.safe_load(yml.read_text())
     dado["system"]["env"]["DXVK_HUD"] = "fps"
     dado["game"]["args"] = "-windowed"
@@ -288,13 +289,13 @@ def test_o_prefixo_dividido_fica_com_o_device_ks(
             moradores={dividido: ["A", "B"]} if como != "pela-copia" else None)
     monkeypatch.setattr(ks, "controles_do_registro",
                         lambda *x, **k: [ks.Controle(pid=0x0CE6, bus=1, dev=7, usec=42)])
-    assert lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar) == "adicionado"
+    assert antiga.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar) == "adicionado"
     assert lx.prefixos_excluidos() == frozenset(), (
         "A e B moram no mesmo prefixo e só A foi excluído: B perderia a háptica")
     assert launch_env._device_ks_nos_lancadores()["prefixos"] == 1
     assert "HEFESTOKS" in (dividido / "pfx" / "system.reg").read_text(), (
         "a carona do KS pulou o prefixo de B, que não foi excluído")
-    assert lx.adicionar(_janela(1), lancador="heroic", nome="B", lar=_lar) == "adicionado"
+    assert antiga.adicionar(_janela(1), lancador="heroic", nome="B", lar=_lar) == "adicionado"
     assert lx.prefixos_excluidos() == frozenset({dividido.resolve()}), (
         "com A e B excluídos, o prefixo sai")
     assert launch_env._device_ks_nos_lancadores()["prefixos"] == 0
@@ -304,7 +305,7 @@ def test_o_prefixo_de_um_jogo_so_continua_saindo(_lar: Path) -> None:
     """O controle: o caso que já funcionava (o padrão do Heroic) não muda."""
     so_dele = _prefixo(_lar / "Games/Heroic/Prefixes/A")
     _heroic(_lar, {"A": {"winePrefix": str(so_dele)}}, moradores={so_dele: ["A"]})
-    lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar)
+    antiga.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar)
     assert lx.prefixos_excluidos() == frozenset({so_dele.resolve()})
 
 
@@ -315,7 +316,7 @@ def test_o_prefixo_global_tem_por_morador_quem_nao_tem_o_seu(_lar: Path) -> None
     dado = json.loads((casa / "config.json").read_text())
     dado["defaultSettings"]["winePrefix"] = str(global_)
     (casa / "config.json").write_text(json.dumps(dado))
-    lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar)
+    antiga.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar)
     assert lx.prefixos_excluidos() == frozenset(), "C mora no prefixo global e não foi excluído"
 
 
@@ -351,7 +352,7 @@ def test_o_morador_que_saiu_do_disco_nao_divide_o_prefixo(
         _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """B saiu do disco e A foi excluído: o prefixo sai do KS e das camadas."""
     dividido, _ = _dividido_com_b_fora_do_disco(_lar)
-    assert lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar) == "adicionado"
+    assert antiga.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar) == "adicionado"
     assert lx.prefixos_excluidos() == frozenset({dividido.resolve()}), (
         "B saiu do disco e o prefixo seguiu dividido: A, excluído, fica com o KS")
     assert not _o_ks_no(dividido, monkeypatch), "a carona do KS escreveu no prefixo de A"
@@ -361,7 +362,7 @@ def test_o_desinstalado_que_volta_divide_de_novo(
         _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """B volta ao disco (o registro da loja o diz instalado, e a biblioteca"""
     dividido, casa = _dividido_com_b_fora_do_disco(_lar)
-    lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar)
+    antiga.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar)
     assert lx.prefixos_excluidos() == frozenset({dividido.resolve()})
     plantar_o_registro(casa, ["B"])
     assert lx.prefixos_excluidos() == frozenset(), "B voltou ao disco e o prefixo seguiu fora"
@@ -371,7 +372,7 @@ def test_o_desinstalado_que_volta_divide_de_novo(
 def test_quem_o_censo_nao_conhece_continua_morando(_lar: Path) -> None:
     """Um jogo «adicionado» à mão (o censo não o lista) segue morando."""
     dividido, _ = _dividido_com_b_fora_do_disco(_lar, extra=("sideload-a-mao",))
-    lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar)
+    antiga.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar)
     assert lx.prefixos_excluidos() == frozenset(), (
         "o jogo que o censo não conhece deixou de morar no prefixo")
     assert lx._moradores(dividido.resolve(), _lar / ".var/app/com.heroicgameslauncher.hgl"
@@ -383,7 +384,7 @@ def test_sem_o_censo_nada_sai_e_o_diario_diz(_lar: Path) -> None:
     _, casa = _dividido_com_b_fora_do_disco(_lar)
     (casa / "store_cache" / "gog_library.json").write_text(json.dumps({"games": "torto"}))
     lx._DIVIDIDOS_DITOS.clear()
-    lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar)
+    antiga.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar)
     with structlog.testing.capture_logs() as diario:
         assert lx.prefixos_excluidos() == frozenset()
     linhas = [x for x in diario if x.get("event") == "exclusao_prefixo_dividido"]
@@ -396,7 +397,7 @@ def test_a_loja_sem_conta_nao_desliga_o_censo(
     dividido, casa = _dividido_com_b_fora_do_disco(_lar)
     (casa / "store_cache" / "nile_library.json").write_text("{}")
     assert censo._heroic(casa).erros == [], "a loja sem conta virou erro do censo"
-    assert lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar) == "adicionado"
+    assert antiga.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar) == "adicionado"
     assert lx.prefixos_excluidos() == frozenset({dividido.resolve()}), (
         "com a Amazon sem conta, B (fora do disco) seguiu morando no prefixo de A")
     assert not _o_ks_no(dividido, monkeypatch), "a carona do KS escreveu no prefixo de A"
@@ -412,7 +413,7 @@ def test_com_o_censo_torto_o_prefixo_global_segue_somando_quem_esta_instalado(
     (casa / "config.json").write_text(json.dumps(dado))
     (casa / "store_cache" / "gog_library.json").write_text(json.dumps({"games": "torto"}))
     assert censo._heroic(casa).erros, "a régua precisa do censo com erro"
-    assert lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar) == "adicionado"
+    assert antiga.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar) == "adicionado"
     assert lx.prefixos_excluidos() == frozenset(), (
         "C, instalado e sem cópia, deixou de morar no prefixo global")
     assert _o_ks_no(global_, monkeypatch), "C, que ela não excluiu, perdeu o device KS"
@@ -438,7 +439,7 @@ def test_a_cura_dos_prefixos_compara_o_prefixo_pelo_caminho(
     _heroic(_lar, {"A": {"winePrefix": str(um)}}, moradores={um: ["A"]})
     _heroic(_lar, {"C": {"winePrefix": str(outro)}}, rel=".config/heroic",
             moradores={outro: ["C"]}, base=200)
-    lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar)
+    antiga.adicionar(_janela(0), lancador="heroic", nome="A", lar=_lar)
     assert _epic_ligada(um) and _epic_ligada(outro)
     cv.curar_todos(_lar, excluir=sorted(str(p) for p in lx.prefixos_excluidos()))
     assert _epic_ligada(um), "a cura desligou a camada do jogo excluído"
@@ -520,7 +521,7 @@ def test_o_lutris_nativo_fica_como_esta(_lar: Path) -> None:
     yml = _lutris_nativo(_lar)
     assert censo.biblioteca_de("Lutris", _lar).jogos[0].classe_de_janela == _JANELA
     md5 = _md5(yml)
-    assert lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar) == "adicionado"
+    assert antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar) == "adicionado"
     assert _md5(yml) == md5, yml.read_text()
 
 
@@ -552,7 +553,7 @@ def test_com_a_configuracao_a_parte_o_lutris_le_o_banco_dos_dados(
     if casa == "nativo":
         return
     _carona(_lar)
-    assert lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar) == "adicionado"
+    assert antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar) == "adicionado"
     assert _env_do_yml(yml).get("SDL_GAMECONTROLLER_IGNORE_DEVICES") == "", (
         f"o jogo excluído herda da caixa o IGNORE: {yml.read_text()}")
 
@@ -611,8 +612,8 @@ def test_o_jogo_pelo_proton_ganha_o_par(_lar: Path) -> None:
     yml = _lutris_flatpak(_lar)
     _carona(_lar)
     with structlog.testing.capture_logs() as diario:
-        assert lx.adicionar(_JANELA, lancador="lutris", nome="Recettear",
-                            lar=_lar) == "adicionado"
+        assert antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear",
+                                lar=_lar) == "adicionado"
     assert _o_xalia_do(yml) == {_XALIA: "1", _SO_SUPORTADAS: "1"}, yml.read_text()
     linhas = [x for x in diario if x.get("event") == "camada_do_lutris_xalia"]
     assert linhas and linhas[0]["par"] == 1 and linhas[0]["jogo"] == yml.stem, diario
@@ -625,7 +626,7 @@ def test_o_par_e_o_padrao_do_script_do_proton(_lar: Path) -> None:
     assert _padrao_do_script(frozenset({"noxalia"})) == {_XALIA: "0"}
     yml = _lutris_flatpak(_lar)
     _carona(_lar)
-    lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
+    antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
     assert _o_xalia_do(yml) == padrao
 
 
@@ -634,7 +635,7 @@ def test_o_jogo_pelo_wine_fica_com_o_da_caixa(_lar: Path) -> None:
     yml = _lutris_flatpak_pelo_wine(_lar)
     assert not censo.biblioteca_de("Lutris", _lar).jogos[0].pelo_proton
     _carona(_lar)
-    lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
+    antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
     env = _env_do_yml(yml)
     assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" in env, "a exclusão não cobriu a caixa"
     assert _o_xalia_do(yml) == {}, yml.read_text()
@@ -644,7 +645,7 @@ def test_o_par_segue_o_wine_do_jogo(_lar: Path) -> None:
     """Ela troca o Wine do jogo excluído (Proton → Wine) e a carona passa: o"""
     yml = _lutris_flatpak(_lar)
     _carona(_lar)
-    lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
+    antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
     assert _o_xalia_do(yml) == {_XALIA: "1", _SO_SUPORTADAS: "1"}
 
     def trocar(versao: str) -> None:
@@ -667,7 +668,7 @@ def test_tirar_da_lista_tira_as_duas(_lar: Path) -> None:
     """Ela mexe no `.yml` depois da exclusão (a volta passa a ser pelos pares):"""
     yml = _lutris_flatpak(_lar)
     _carona(_lar)
-    lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
+    antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
     dado = yaml.safe_load(yml.read_text())
     dado["system"]["env"]["DXVK_HUD"] = "fps"
     yml.write_text(yaml.safe_dump(dado, default_flow_style=False))
@@ -686,7 +687,7 @@ def test_o_xalia_que_ela_pos_manda(_lar: Path, onde: str) -> None:
         _caixa(_lar).parent.mkdir(parents=True, exist_ok=True)
         _caixa(_lar).write_text(f"[Environment]\n{_XALIA}=1\n")
     _carona(_lar)
-    lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
+    antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
     _carona(_lar)
     esperado = {_XALIA: "1"} if onde == "no-yml" else {}
     assert _o_xalia_do(yml) == esperado, yml.read_text()

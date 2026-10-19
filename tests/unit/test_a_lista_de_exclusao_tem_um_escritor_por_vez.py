@@ -25,6 +25,7 @@ from tests.unit.test_a_exclusao_mora_na_camada_do_jogo import (
     _lutris_flatpak,
 )
 from tests.unit.test_o_uninstall_nao_deixa_rastro import _SO_A_BIBLIOTECA_PADRAO, SISTEMA
+from tests.unit import a_exclusao_de_antes as antiga
 
 SRC = Path(cpe.__file__).resolve().parents[2]
 CURA = Path(cpe.__file__).resolve()
@@ -78,38 +79,6 @@ print(hashlib.sha256(str(k).encode()).hexdigest())
 """
 
 
-def test_dois_processos_nao_perdem_exclusao(tmp_path: Path) -> None:
-    """A janela faz N «Excluir» enquanto o serviço anota o `.yml` noutro processo."""
-    n = 150
-    casa = tmp_path / "casa"
-    yml = casa / "g.yml"
-    lx._gravar(lx.caminho(casa), [lx.Entrada(
-        chave="umu-lutris", lancador="lutris", nome="o do Lutris", quando="",
-        lutris=(cpe.YmlDoJogo(str(yml), "x", "0"),))])
-    pronto, fim = tmp_path / "pronto", tmp_path / "fim"
-    servico = subprocess.Popen(
-        [sys.executable, "-c", _O_SERVICO, str(casa), str(yml), str(pronto), str(fim)],
-        env=_ambiente(tmp_path / "lar"), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        text=True)
-    try:
-        _esperar_o_arquivo(pronto, servico)
-        for i in range(n):
-            assert lx.adicionar(f"umu-{i}", lancador="heroic", nome=f"jogo {i}",
-                                config_home=casa, lar=tmp_path / "lar") == "adicionado"
-    finally:
-        fim.touch()
-        saida, erro = servico.communicate(timeout=60)
-    assert servico.returncode == 0, erro
-    final = lx.ler(casa)
-    vivas = [e.chave for e in final if e.chave.startswith("umu-") and e.chave != "umu-lutris"]
-    assert len(vivas) == n, (
-        f"{n - len(vivas)} das {n} exclusões sumiram do arquivo: o serviço regravou a "
-        "lista por cima da janela")
-    lutris = next(e for e in final if e.chave == "umu-lutris")
-    assert lutris.lutris[0].depois == saida.strip(), (
-        "a última anotação do `.yml` sumiu: a janela regravou a lista por cima do serviço")
-
-
 _O_OUTRO_ESCRITOR = """
 import fcntl, json, os, sys, time
 from pathlib import Path
@@ -126,32 +95,13 @@ os.close(fd)
 """
 
 
-def test_o_adicionar_le_a_lista_depois_de_pegar_a_trava(tmp_path: Path, _lar: Path) -> None:
-    """Outro processo segura a trava e escreve na lista: o «Excluir» espera e"""
-    destino = lx.caminho()
-    lx._gravar(destino, [])
-    pronto = tmp_path / "pronto"
-    outro = subprocess.Popen(
-        [sys.executable, "-c", _O_OUTRO_ESCRITOR, str(destino.parent / cpe.NOME_DA_TRAVA),
-         str(destino), str(pronto)], env=_ambiente(_lar), text=True,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    try:
-        _esperar_o_arquivo(pronto, outro)
-        assert lx.adicionar("steam_app_1", lancador="heroic", nome="o meu",
-                            lar=_lar) == "adicionado"
-    finally:
-        outro.communicate(timeout=30)
-    assert {e.chave for e in lx.ler()} == {"steam_app_1", "steam_app_2"}, (
-        "a exclusão do outro escritor sumiu: o «Excluir» leu a lista antes da trava")
-
-
 def test_tirar_a_caixa_chama_a_carona_e_a_anotacao_sem_esperar_a_si_mesmo(_lar: Path) -> None:
     """O «Tirar da lista» do mGBA: o `tirar` chama a carona, que cobre o `.yml`"""
     yml = _lutris_flatpak(_lar)
     _flatpak(_lar, _MGBA)
-    assert lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar) == "adicionado"
-    assert lx.adicionar("emulador:mgba", lancador="mgba", nome="mGBA — todos os jogos",
-                        janelas=(_MGBA,), lar=_lar) == "adicionado"
+    assert antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar) == "adicionado"
+    assert antiga.adicionar("emulador:mgba", lancador="mgba", nome="mGBA — todos os jogos",
+                            janelas=(_MGBA,), lar=_lar) == "adicionado"
     caixa = _lar / ".local/share/flatpak/overrides" / _MGBA
     antes = time.monotonic()
     with structlog.testing.capture_logs() as diario:
@@ -301,15 +251,6 @@ def test_quem_desistiu_nao_fica_com_a_trava(tmp_path: Path, _lar: Path) -> None:
         janela.communicate(timeout=30)
     with cpe.trava_da_lista(espera=2.0) as na_mao:
         assert na_mao, "a espera que desistiu ficou com a trava"
-
-
-def test_sem_a_trava_no_prazo_o_excluir_nao_escreve(
-        _lar: Path, _a_janela_segura: subprocess.Popen[str],
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """O outro lado: sem a trava no prazo da janela, o «Excluir» volta «ocupada»"""
-    monkeypatch.setattr(cpe, "ESPERA_DA_JANELA_S", 0.3)
-    assert lx.adicionar("steam_app_9", lancador="heroic", nome="o nove", lar=_lar) == "ocupada"
-    assert not lx.caminho().exists()
 
 
 def test_o_desfazer_pelo_python_do_sistema_espera_a_trava(tmp_path: Path, _lar: Path) -> None:

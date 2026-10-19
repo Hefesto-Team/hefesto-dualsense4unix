@@ -48,6 +48,7 @@ from tests.unit.test_o_censo_responde_como_o_lancador_responde import plantar_o_
 from tests.unit.test_sentinela_do_wrapper_01_a_steam_comeu_o_hefesto_launch import (
     _vdf as _localconfig,
 )
+from tests.unit import a_exclusao_de_antes as antiga
 
 _CHAVE = "steam_app_1088850"
 _APPID = "1088850"
@@ -83,31 +84,24 @@ def test_a_regua_nao_escreve_na_config_dela(_config_de_mentira: Path) -> None:
         assert _config_de_mentira in caminho.parents, caminho
 
 
-def test_excluir_escreve_nas_duas_listas() -> None:
-    """ARRANQUE o laço de `LISTAS` e este teste reprova: o jogo excluído"""
-    assert lx.adicionar(_CHAVE, lancador="steam", nome="Guardiões") == "adicionado"
-    assert _nas_listas(_APPID) == {"entrada": False, "pino": True, "atalho": True}
-    assert lx.contem(_CHAVE)
-
-
 def test_a_exclusao_nunca_toca_na_lista_do_steam_input() -> None:
     """A CORREÇÃO DE 21/09, e ela tem dois lados."""
     slo.add_appid_to_steam_input_allowlist("3357650", nota="dela")
     assert not hasattr(lx, "migrar_a_lista_velha"), (
         "a migração da lista do Steam Input voltou — ela desligaria a vibração "
         "do PRAGMATA")
-    lx.adicionar("steam_app_3357650", lancador="steam", nome="PRAGMATA")
+    antiga.adicionar("steam_app_3357650", lancador="steam", nome="PRAGMATA")
     assert _nas_listas("3357650")["entrada"] is True
     lx.tirar("steam_app_3357650")
     assert _nas_listas("3357650")["entrada"] is True, (
         "tirar da exclusão apagou a marca que ELA pôs no Steam Input")
-    lx.adicionar(_CHAVE, lancador="steam", nome="Guardiões")
+    antiga.adicionar(_CHAVE, lancador="steam", nome="Guardiões")
     assert _nas_listas(_APPID)["entrada"] is False
 
 
 def test_tirar_sai_das_duas() -> None:
     """ARRANQUE o laço do `tirar` e este teste reprova: a exclusão viraria mão"""
-    lx.adicionar(_CHAVE, lancador="steam", nome="Guardiões")
+    antiga.adicionar(_CHAVE, lancador="steam", nome="Guardiões")
     assert lx.tirar(_CHAVE) == "removido"
     assert _nas_listas(_APPID) == {"entrada": False, "pino": False, "atalho": False}
     assert not lx.contem(_CHAVE)
@@ -116,55 +110,13 @@ def test_tirar_sai_das_duas() -> None:
 def test_tirar_nao_apaga_a_escolha_anterior_dela() -> None:
     """ARRANQUE o `if status == "adicionado"` (registre toda lista) e este"""
     assert slo.marcar_jogo_sem_wrapper(_APPID, nota="dela") == "adicionado"
-    lx.adicionar(_CHAVE, lancador="steam", nome="Guardiões")
+    antiga.adicionar(_CHAVE, lancador="steam", nome="Guardiões")
     (entrada,) = lx.ler()
     assert "atalho" not in entrada.escritas
     lx.tirar(_CHAVE)
     assert _nas_listas(_APPID)["atalho"] is True, (
         "o «Tirar» apagou uma escolha que ela tinha feito antes da exclusão")
     assert _nas_listas(_APPID)["pino"] is False
-
-
-def test_o_emulador_entra_sem_tocar_nas_listas() -> None:
-    """As listas falam appid da Steam; o emulador é um processo para todas as"""
-    assert lx.adicionar("processo:retroarch", lancador="retroarch",
-                        nome="RetroArch — todos os jogos") == "adicionado"
-    (entrada,) = lx.ler()
-    assert entrada.escritas == ()
-    for caminho in (slo.steam_input_allowlist_path(), proton_pin.fora_do_pino_path(),
-                    slo.sem_wrapper_path()):
-        assert not caminho.exists()
-
-
-def test_chave_vazia_nao_escreve_nada() -> None:
-    assert lx.adicionar("  ", lancador="steam", nome="x") == "chave_invalida"
-    assert not lx.caminho().exists()
-
-
-def test_excluir_duas_vezes_nao_duplica() -> None:
-    lx.adicionar(_CHAVE, lancador="steam", nome="Guardiões")
-    assert lx.adicionar(_CHAVE, lancador="steam", nome="Guardiões") == "ja_estava"
-    assert len(lx.ler()) == 1
-
-
-def test_arquivo_torto_e_recusado_e_nunca_sobrescrito() -> None:
-    """ARRANQUE a recusa do `_ArquivoTortoError` no `adicionar` e este teste"""
-    destino = lx.caminho()
-    destino.parent.mkdir(parents=True, exist_ok=True)
-    destino.write_text('{"formato": 1, "jogos": [ ESTRAGADO', encoding="utf-8")
-    assert lx.adicionar(_CHAVE, lancador="steam", nome="Guardiões") == "ilegivel"
-    assert destino.read_text(encoding="utf-8").endswith("ESTRAGADO")
-    assert _nas_listas(_APPID)["entrada"] is False, (
-        "o arquivo foi recusado e mesmo assim as listas ganharam a linha")
-    assert lx.ler() == []
-
-
-def test_uma_lista_que_falha_desfaz_as_outras(monkeypatch: pytest.MonkeyPatch) -> None:
-    """ARRANQUE o desfazer do ramo de erro e este teste reprova: o jogo ficaria"""
-    monkeypatch.setitem(lx._POR, "atalho", lambda a: "erro")
-    assert lx.adicionar(_CHAVE, lancador="steam", nome="Guardiões") == "erro"
-    assert _nas_listas(_APPID) == {"entrada": False, "pino": False, "atalho": False}
-    assert lx.ler() == []
 
 
 def test_a_linha_de_comando_do_pino_passa_pelo_dono() -> None:
@@ -318,33 +270,6 @@ def _steam_do_teste(
     return config_vdf, estado, biblioteca
 
 
-def test_excluir_com_a_steam_fechada_tira_pino_e_atalho_na_hora(
-        _steam_do_teste: tuple[Path, Path, Path]) -> None:
-    """ARRANQUE uma das duas chamadas do `tirar_do_disco` e este teste reprova:"""
-    config_vdf, _, biblioteca = _steam_do_teste
-    assert lx.tirar_do_disco("steam_app_1599660") == "feito"
-    mapa = proton_pin.extract_compat_tool_mapping(config_vdf.read_text(encoding="utf-8"))
-    assert "1599660" not in mapa and mapa.get("1971870") == PIN_NAME
-    apps = slo.read_apps_by_appid(biblioteca.read_text(encoding="utf-8"))
-    assert apps["1599660"] == _DELA
-    assert slo.WRAPPER_PREFIX in (apps["1971870"] or "")
-    assert lx.tirar_do_disco("steam_app_1599660") == "nada_a_tirar"
-
-
-def test_excluir_com_a_steam_aberta_espera_e_nao_escreve(
-        _steam_do_teste: tuple[Path, Path, Path], monkeypatch: pytest.MonkeyPatch) -> None:
-    config_vdf, estado, biblioteca = _steam_do_teste
-    antes = [p.read_text(encoding="utf-8") for p in (config_vdf, estado, biblioteca)]
-    for modulo in (proton_pin, slo):
-        monkeypatch.setattr(modulo, "steam_running", lambda: True)
-    assert lx.tirar_do_disco("steam_app_1599660") == "espera_a_steam"
-    assert [p.read_text(encoding="utf-8") for p in (config_vdf, estado, biblioteca)] == antes
-
-
-def test_o_emulador_nao_tem_o_que_tirar_do_disco() -> None:
-    assert lx.tirar_do_disco("retroarch") == "sem_appid"
-
-
 _O_WRAPPER = Path(__file__).resolve().parents[2] / "assets" / "hefesto-launch.sh"
 
 
@@ -381,7 +306,7 @@ def _lancar(runtime: Path, casa: Path, appid: str, *, com_config: bool = True
 def test_o_jogo_excluido_abre_sem_nada_do_hefesto(
         tmp_path: Path, _runtime_com_daemon: Path) -> None:
     """ARRANQUE o `if jogo_excluido` do wrapper e este teste reprova: com a"""
-    assert lx.adicionar("steam_app_1599660", lancador="steam", nome="Wo Long") == "adicionado"
+    assert antiga.adicionar("steam_app_1599660", lancador="steam", nome="Wo Long") == "adicionado"
     fora, marca_fora = _lancar(_runtime_com_daemon, tmp_path, "1599660")
     assert fora.returncode == 0, fora.stderr
     assert "HIDAPI=|" in fora.stdout, fora.stdout
@@ -395,7 +320,7 @@ def test_o_jogo_excluido_abre_sem_nada_do_hefesto(
 def test_steam_app_1_nao_casa_steam_app_15(
         tmp_path: Path, _runtime_com_daemon: Path) -> None:
     """As aspas dos dois lados do número: excluir um jogo não exclui o de"""
-    lx.adicionar("steam_app_1599660", lancador="steam", nome="Wo Long")
+    antiga.adicionar("steam_app_1599660", lancador="steam", nome="Wo Long")
     r, _ = _lancar(_runtime_com_daemon, tmp_path, "159966")
     assert "HIDAPI=0|" in r.stdout, r.stdout
 
@@ -436,43 +361,19 @@ def _epic_ligada(raiz: Path) -> bool:
     return next(c for c in camadas if c.caminho_windows == EPIC).ligada
 
 
-def test_excluir_tira_o_ks_e_devolve_a_camada(_prefixo_curado: Path) -> None:
-    """ARRANQUE o `_devolver_o_prefixo` do `tirar_do_disco` e este teste"""
-    assert lx.tirar_do_disco("steam_app_1599660") == "feito"
-    assert not _nossos_blocos_ks(_prefixo_curado), "o device KS do Hefesto ficou"
-    assert _epic_ligada(_prefixo_curado), "a camada que o Hefesto desligou não voltou"
-
-
-def test_tirar_da_lista_a_cura_do_lancamento_volta(_prefixo_curado: Path) -> None:
-    """ARRANQUE o `pela_exclusao` (religue como o «devolver», com `manter`) e"""
-    lx.tirar_do_disco("steam_app_1599660")
-    memoria = cv.ler_estado()["1599660"]
-    assert all("escolha" not in m for m in memoria.values()), memoria
-    assert cv.curar_um_prefixo(_prefixo_curado, appid="1599660").desligadas
-    assert not _epic_ligada(_prefixo_curado)
-
-
 def test_o_botao_vulkan_pula_o_jogo_excluido(_prefixo_curado: Path) -> None:
     """ARRANQUE o `excluir` do `curar_todos` e este teste reprova: o botão da"""
-    lx.tirar_do_disco("steam_app_1599660")
+    cv.aplicar_no_prefixo(cv.prefixo_de_jogo(_prefixo_curado, appid="1599660"), religar=True,
+                          pela_exclusao=True)
     cv.curar_todos(excluir=["1599660"])
     assert _epic_ligada(_prefixo_curado)
     cv.curar_todos()
     assert not _epic_ligada(_prefixo_curado), "o controle: sem o excluir, o botão cura"
 
 
-def test_com_o_jogo_aberto_o_prefixo_espera(
-        _prefixo_curado: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """O `wineserver` vivo regravaria o registro ao sair: nada se escreve."""
-    antes = (_prefixo_curado / "pfx" / "system.reg").read_text(encoding="utf-8")
-    monkeypatch.setattr(ks, "wineserver_do_prefixo_vivo", lambda *a, **k: True)
-    assert lx.tirar_do_disco("steam_app_1599660") == "espera_a_steam"
-    assert (_prefixo_curado / "pfx" / "system.reg").read_text(encoding="utf-8") == antes
-
-
 def test_os_appids_da_lista_sao_so_os_de_steam() -> None:
-    lx.adicionar("steam_app_1599660", lancador="steam", nome="Wo Long")
-    lx.adicionar("retroarch", lancador="emulador", nome="RetroArch")
+    antiga.adicionar("steam_app_1599660", lancador="steam", nome="Wo Long")
+    antiga.adicionar("retroarch", lancador="emulador", nome="RetroArch")
     assert lx.appids() == ["1599660"]
 
 
@@ -580,7 +481,7 @@ def test_a_janela_excluida_nao_pede_perfil_nem_modo_jogo(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """ARRANQUE o `_na_exclusao` do tique e este teste reprova: o jogo que ela"""
     monkeypatch.setattr(loader_module, "profiles_dir", lambda ensure=False: tmp_path)
-    lx.adicionar(_JANELA, lancador="steam", nome="Wo Long")
+    antiga.adicionar(_JANELA, lancador="steam", nome="Wo Long")
     espiao = _EspiaoDaExclusao()
     sw = _o_autoswitch(espiao)
     for t in (0.0, 0.6, 60.0):
@@ -710,8 +611,8 @@ def test_a_exclusao_do_emulador_casa_pela_janela_medida(_aba07) -> None:
     """A janela do RetroArch diz `com.libretro.RetroArch`, e o flatpak é `org.`"""
     _desenho, a07 = _aba07
     jogos, janelas, _ = a07._jogos_para_escolher("retroarch", "RetroArch", None)
-    lx.adicionar(jogos[0].chave, lancador="retroarch", nome=jogos[0].nome,
-                 janelas=janelas[jogos[0].chave])
+    antiga.adicionar(jogos[0].chave, lancador="retroarch", nome=jogos[0].nome,
+                     janelas=janelas[jogos[0].chave])
     assert lx.contem("com.libretro.RetroArch")
     assert lx.contem("COM.LIBRETRO.RETROARCH")
     assert not lx.contem("steam_app_1599660")
@@ -784,19 +685,10 @@ def _heroic_de_mentira(*, com_copia: bool) -> tuple[Path, Path]:
     return casa, copia
 
 
-def test_excluir_o_jogo_do_heroic_tira_o_nosso_da_copia() -> None:
-    """ARRANQUE o `tirar_o_nosso_do_jogo_do_heroic` do `adicionar` e este teste"""
-    _casa, copia = _heroic_de_mentira(com_copia=True)
-    assert lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões") == "adicionado"
-    assert _chaves_do_jogo(copia) == ["MANGOHUD"]
-    prefixo = (Path.home() / "Games/Heroic/Prefixes/Guardioes").resolve()
-    assert lx.prefixos_excluidos() == {prefixo}
-
-
 def test_o_jogo_sem_copia_ganha_a_lista_propria_e_a_volta_a_apaga() -> None:
     """Sem cópia o jogo segue a lista GLOBAL — que a carona reescreve com o"""
     _casa, copia = _heroic_de_mentira(com_copia=False)
-    assert lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões") == "adicionado"
+    assert antiga.adicionar(_CHAVE, lancador="heroic", nome="Guardiões") == "adicionado"
     assert _chaves_do_jogo(copia) == ["MANGOHUD"]
     assert lx.tirar(_CHAVE) == "removido"
     assert not copia.exists(), "a cópia que nasceu da exclusão ficou depois do «Tirar»"
@@ -806,7 +698,7 @@ def test_tirar_devolve_a_copia_byte_a_byte() -> None:
     """ARRANQUE o `devolver_ao_jogo_do_heroic` do `tirar` e este teste reprova:"""
     _casa, copia = _heroic_de_mentira(com_copia=True)
     antes = json.loads(copia.read_text(encoding="utf-8"))
-    lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
+    antiga.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
     assert lx.tirar(_CHAVE) == "removido"
     assert json.loads(copia.read_text(encoding="utf-8")) == antes
 
@@ -814,7 +706,7 @@ def test_tirar_devolve_a_copia_byte_a_byte() -> None:
 def test_a_volta_nao_passa_por_cima_do_que_ela_mudou() -> None:
     """Ela trocou o `MANGOHUD` do jogo depois da exclusão: a volta repõe o"""
     _casa, copia = _heroic_de_mentira(com_copia=True)
-    lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
+    antiga.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
     raiz = json.loads(copia.read_text(encoding="utf-8"))
     raiz[_APP_DO_HEROIC]["enviromentOptions"] = _lista((("MANGOHUD", "0"),))
     copia.write_text(json.dumps(raiz), encoding="utf-8")
@@ -827,7 +719,7 @@ def test_a_volta_nao_passa_por_cima_do_que_ela_mudou() -> None:
 def test_a_carona_mantem_a_copia_do_excluido_limpa(tmp_path: Path) -> None:
     """O Heroic aberto regrava a cópia com o que tinha na memória quando ela"""
     casa, copia = _heroic_de_mentira(com_copia=True)
-    lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
+    antiga.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
     raiz = json.loads(copia.read_text(encoding="utf-8"))
     raiz[_APP_DO_HEROIC]["enviromentOptions"] = _lista(_NOSSOS_NO_HEROIC + _DELA_NO_HEROIC)
     copia.write_text(json.dumps(raiz), encoding="utf-8")
@@ -860,20 +752,11 @@ def _caixa_do_retroarch(tmp_path: Path) -> Path:
 _JANELAS_DO_RETROARCH = ("org.libretro.RetroArch", "retroarch", "com.libretro.RetroArch")
 
 
-def test_excluir_o_emulador_tira_o_ambiente_da_caixa(tmp_path: Path) -> None:
-    """ARRANQUE o `tirar_o_nosso_da_caixa` do `adicionar` e este teste"""
-    override = _caixa_do_retroarch(tmp_path)
-    assert lx.adicionar("emulador:retroarch", lancador="retroarch",
-                        nome="RetroArch — todos os jogos",
-                        janelas=_JANELAS_DO_RETROARCH) == "adicionado"
-    assert "IGNORE" not in (override.read_text() if override.exists() else "")
-
-
 def test_a_carona_nao_repoe_o_ambiente_na_caixa_excluida(tmp_path: Path) -> None:
     """ARRANQUE o filtro das caixas do `curar_todas_as_estradas` e este teste"""
     override = _caixa_do_retroarch(tmp_path)
-    lx.adicionar("emulador:retroarch", lancador="retroarch",
-                 nome="RetroArch — todos os jogos", janelas=_JANELAS_DO_RETROARCH)
+    antiga.adicionar("emulador:retroarch", lancador="retroarch",
+                     nome="RetroArch — todos os jogos", janelas=_JANELAS_DO_RETROARCH)
     escritos = cpe.curar_todas_as_estradas(lar=Path.home(), raiz_sistema=tmp_path / "sistema")
     assert "retroarch" not in escritos
     assert "IGNORE" not in (override.read_text() if override.exists() else "")
@@ -894,7 +777,7 @@ def test_o_device_ks_nao_volta_ao_prefixo_do_jogo_excluido(
     monkeypatch.setattr(cv, "prefixos_dos_lancadores", lambda *a, **k: [prefixo])
     monkeypatch.setattr(ks, "controles_do_registro",
                         lambda *a, **k: [ks.Controle(pid=0x0CE6, bus=1, dev=7, usec=42)])
-    lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
+    antiga.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
     assert launch_env._device_ks_nos_lancadores()["prefixos"] == 0
     assert "HEFESTOKS" not in (prefixo / "pfx" / "system.reg").read_text(encoding="utf-8")
     lx.tirar(_CHAVE)
@@ -902,17 +785,3 @@ def test_o_device_ks_nao_volta_ao_prefixo_do_jogo_excluido(
         "o controle: fora da lista, o prefixo volta a receber o device")
 
 
-def test_tirar_do_disco_tira_o_ks_do_prefixo_do_heroic(
-        monkeypatch: pytest.MonkeyPatch, _steam_do_teste: tuple[Path, Path, Path]) -> None:
-    """ARRANQUE os prefixos do Heroic do `tirar_do_disco` e este teste"""
-    _heroic_de_mentira(com_copia=True)
-    raiz = Path.home() / "Games/Heroic/Prefixes/Guardioes"
-    (raiz / "pfx").mkdir(parents=True)
-    texto = ks.texto_novo("WINE REGISTRY Version 2\n\n",
-                          [ks.Controle(pid=0x0CE6, bus=3, dev=28, usec=None)], 1)
-    (raiz / "pfx" / "system.reg").write_text(texto, encoding="utf-8")
-    monkeypatch.setattr(cv, "pastas_compatdata", lambda home=None: [])
-    assert _nossos_blocos_ks(raiz)
-    lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
-    assert lx.tirar_do_disco(_CHAVE) == "feito"
-    assert not _nossos_blocos_ks(raiz)

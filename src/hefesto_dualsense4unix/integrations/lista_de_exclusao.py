@@ -26,8 +26,9 @@ virtuais de pé** — *"a allowlist do Steam Input NÃO tira o Hefesto da frente
 FRENTE do jogo que ela excluiu. Esta lista não toca na do Steam Input, em
 nenhum sentido.
 
-Excluir é ESCREVER nas duas; tirar é sair delas. Nenhum leitor muda — cada um
-continua lendo o mesmo arquivo de antes.
+Desde 19/10/2026 ninguém escreve nela: o «Excluir» saiu com a aba antiga
+(O-QUE-A-07-ANTIGA-FAZIA-SEM-TELA-VOLTA-OU-SAI-01). Os leitores seguem lendo a
+lista do disco, e o ``tirar`` sai das listas em que a entrada escreveu.
 
 FORA DA STEAM, O AMBIENTE (01/10/2026). O jogo do Heroic com a mesma janela
 ganha a lista própria de ambiente sem o que é nosso (o Heroic monta
@@ -62,9 +63,8 @@ pino são features só da Steam, e um jogo sem ``N`` não tem o que tirar ali. O
 emuladores entram com a chave do PROCESSO — um processo para todas as ROMs, e a
 exclusão vale para o emulador inteiro (§4.3 da sprint).
 
-NUNCA LEVANTA: quem chama é um clique de botão. Um arquivo torto não é
-sobrescrito — é recusado com ``"erro"``, porque sobrescrevê-lo apagaria a lista
-dela inteira para gravar uma linha.
+NUNCA LEVANTA. Um arquivo torto não é sobrescrito: é recusado com ``"erro"``,
+porque sobrescrevê-lo apagaria a lista inteira.
 """
 
 from __future__ import annotations
@@ -74,7 +74,6 @@ import json
 import os
 import re
 import tempfile
-import time
 from collections.abc import Callable, Iterable
 from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
@@ -93,8 +92,6 @@ RELPATH = "hefesto-dualsense4unix/lista_de_exclusao.json"
 FORMATO = 1
 
 LISTAS: tuple[str, ...] = ("pino", "atalho")
-
-NOTA_DAS_LISTAS = "posto pela lista de exclusão do Hefesto"
 
 _STEAM_APP = re.compile(r"^steam_app_(\d+)$")
 
@@ -127,10 +124,6 @@ class Entrada:
     lutris: tuple[cpe.YmlDoJogo, ...] = field(default_factory=tuple)
 
 
-_POR: dict[str, Callable[[str], str]] = {
-    "pino": lambda a: proton_pin.nomear_fora_do_pino(a, nota=NOTA_DAS_LISTAS),
-    "atalho": lambda a: slo.marcar_jogo_sem_wrapper(a, nota=NOTA_DAS_LISTAS),
-}
 _TIRAR: dict[str, Callable[[str], str]] = {
     "pino": proton_pin.devolver_ao_pino,
     "atalho": slo.desmarcar_jogo_sem_wrapper,
@@ -395,105 +388,6 @@ def contem(chave: str, config_home: Path | None = None) -> bool:
     )
 
 
-def adicionar(
-    chave: str,
-    *,
-    lancador: str,
-    nome: str,
-    nota: str = "",
-    config_home: Path | None = None,
-    escritas_herdadas: tuple[str, ...] = (),
-    janelas: tuple[str, ...] = (),
-    lar: Path | None = None,
-) -> str:
-    """Exclui o jogo.
-
-    Status: ``"adicionado"`` | ``"ja_estava"`` | ``"chave_invalida"`` |
-    ``"ocupada"`` (a trava não veio no prazo da janela) | ``"ilegivel"`` (a lista
-    existe e não se lê) | ``"erro"`` (o resto). ``"ocupada"`` e ``"ilegivel"`` voltam
-    antes de qualquer escrita; no ``"erro"`` a Steam, o Heroic ou o Lutris já podem
-    ter recebido a escrita.
-    """
-    alvo = chave.strip()
-    if not alvo:
-        return "chave_invalida"
-    destino = caminho(config_home)
-    with cpe.trava_da_lista(destino) as na_mao:
-        if not na_mao:
-            return "ocupada"
-        return _adicionar_na_trava(
-            alvo, destino, lancador=lancador, nome=nome, nota=nota,
-            escritas_herdadas=escritas_herdadas, janelas=janelas, lar=lar)
-
-
-def _adicionar_na_trava(
-    alvo: str, destino: Path, *, lancador: str, nome: str, nota: str,
-    escritas_herdadas: tuple[str, ...], janelas: tuple[str, ...], lar: Path | None,
-) -> str:
-    """O corpo de :func:`adicionar`, com a trava na mão."""
-    try:
-        atuais = _ler_cru(destino)
-    except _ArquivoTortoError:
-        return "ilegivel"
-    except OSError:
-        return "erro"
-    if any(e.chave == alvo for e in atuais):
-        return "ja_estava"
-
-    escritas = list(escritas_herdadas)
-    appid = appid_da_chave(alvo)
-
-    def desfazer_as_listas() -> None:
-        if appid is not None:
-            for feita in escritas:
-                if feita not in escritas_herdadas:
-                    _TIRAR[feita](appid)
-
-    if appid is not None:
-        for lista in LISTAS:
-            if lista in escritas:
-                continue
-            status = _POR[lista](appid)
-            if status == "adicionado":
-                escritas.append(lista)
-            elif status != "ja_estava":
-                desfazer_as_listas()
-                return "erro"
-
-    janelas_limpas = tuple(j.strip() for j in janelas if j.strip())
-    copias: tuple[cpe.CopiaDoJogo, ...] = ()
-    ymls: tuple[cpe.YmlDoJogo, ...] = ()
-    if appid is not None:
-        copias, status = cpe.tirar_o_nosso_do_jogo_do_heroic(alvo, lar=lar)
-        if status == "erro":
-            desfazer_as_listas()
-            return "erro"
-        ymls, status = cpe.tirar_o_nosso_do_jogo_do_lutris(alvo, lar=lar)
-        if status == "erro":
-            cpe.devolver_ao_jogo_do_heroic(copias)
-            desfazer_as_listas()
-            return "erro"
-    elif e_caixa(alvo) and cpe.tirar_o_nosso_da_caixa(janelas_limpas, lar=lar) == "erro":
-        return "erro"
-
-    nova = Entrada(
-        chave=alvo, lancador=lancador, nome=nome,
-        quando=time.strftime("%Y-%m-%dT%H:%M:%S"), nota=nota,
-        escritas=tuple(x for x in LISTAS if x in escritas),
-        janelas=janelas_limpas,
-        heroic=copias,
-        lutris=ymls,
-    )
-    try:
-        _gravar(destino, [*atuais, nova])
-    except OSError:
-        desfazer_as_listas()
-        cpe.devolver_ao_jogo_do_heroic(copias)
-        cpe.devolver_ao_jogo_do_lutris(ymls)
-        return "erro"
-    return "adicionado"
-
-
 def tirar(chave: str, *, config_home: Path | None = None, lar: Path | None = None) -> str:
     """Devolve o jogo ao Hefesto.
 
@@ -536,66 +430,10 @@ def _tirar_na_trava(alvo: str, destino: Path, lar: Path | None) -> str:
     return "removido"
 
 
-_ESPERA_A_STEAM = frozenset({"steam_aberta", "jogo_da_steam_aberto"})
-
-
-def tirar_do_disco(chave: str) -> str:
-    """Tira do jogo o pino, o atalho e o que o Hefesto pôs no prefixo dele."""
-    appid = appid_da_chave(chave)
-    if appid is None:
-        return "sem_appid"
-    pino = proton_pin.destravar_um_jogo(appid)
-    atalho = slo.tirar_o_atalho_dos_jogos([appid])
-    inteiros = prefixos_excluidos()
-    do_heroic = [Path(c.prefixo) for e in ler() if e.chave == chave.strip()
-                 for c in e.heroic if c.prefixo.strip()
-                 and _resolvido(c.prefixo.strip()) in inteiros]
-    prefixo = _devolver_o_prefixo(appid, do_heroic)
-    razoes = {str(e.get("reason", "")) for e in atalho["errors"]}
-    if pino.get("status") == "recusado" or razoes & _ESPERA_A_STEAM or prefixo == "ocupado":
-        return "espera_a_steam"
-    if pino.get("status") == "erro" or atalho["errors"] or prefixo == "erro":
-        return "erro"
-    if pino.get("status") == "destravado" or atalho["removed"] or prefixo == "feito":
-        return "feito"
-    return "nada_a_tirar"
-
-
-def _devolver_o_prefixo(appid: str, do_heroic: list[Path] | None = None) -> str:
-    """O prefixo Wine do jogo volta ao que era sem o Hefesto."""
-    from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
-    from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
-
-    status = "nada"
-    raizes = [(pasta / appid, appid) for pasta in cv.pastas_compatdata()]
-    raizes += [(raiz, raiz.name) for raiz in (do_heroic or [])]
-    for raiz, nome in raizes:
-        if not (raiz / "pfx" / "system.reg").is_file():
-            continue
-        if ks.wineserver_do_prefixo_vivo(raiz / "pfx"):
-            return "ocupado"
-        try:
-            tirado = ks.aplicar(raiz, controles=[])
-            camadas = cv.aplicar_no_prefixo(
-                cv.prefixo_de_jogo(raiz, appid=nome), religar=True, pela_exclusao=True
-            )
-        except OSError:
-            return "erro"
-        if tirado.motivo == "ocupado":
-            return "ocupado"
-        if camadas.erro:
-            return "erro"
-        if tirado.escreveu or camadas.mexeu:
-            status = "feito"
-    return status
-
-
 __all__ = [
     "LISTAS",
-    "NOTA_DAS_LISTAS",
     "PREFIXO_DO_EMULADOR",
     "Entrada",
-    "adicionar",
     "appid_da_chave",
     "appids",
     "caminho",
@@ -605,5 +443,4 @@ __all__ = [
     "o_que_a_carona_pula",
     "prefixos_excluidos",
     "tirar",
-    "tirar_do_disco",
 ]

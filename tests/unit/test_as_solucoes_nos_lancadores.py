@@ -9,8 +9,8 @@ from pathlib import Path
 import pytest
 
 from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
-from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
 from tests.unit.test_o_censo_responde_como_o_lancador_responde import plantar_o_registro
+from tests.unit import a_exclusao_de_antes as antiga
 
 _APP = "63a665088eb1480298f1e57943b225d8"
 _CHAVE = "steam_app_1088850"
@@ -120,7 +120,7 @@ def test_a_copia_do_excluido_nem_e_reescrita(tmp_path: Path) -> None:
     """O jogo excluído não recebe nada — e a cópia dele nem é regravada."""
     copia = _heroic()
     amb = _ponte(tmp_path)
-    assert lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões") == "adicionado"
+    assert antiga.adicionar(_CHAVE, lancador="heroic", nome="Guardiões") == "adicionado"
     antes = copia.stat().st_mtime_ns
     texto = copia.read_text()
     os.utime(copia, ns=(antes - 10**9, antes - 10**9))
@@ -151,7 +151,7 @@ def test_o_excluido_nao_conta_como_falta(tmp_path: Path) -> None:
     _heroic()
     amb = _ponte(tmp_path)
     _carona(tmp_path, amb)
-    lx.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
+    antiga.adicionar(_CHAVE, lancador="heroic", nome="Guardiões")
     assert cpe.onde_falta_o_ambiente("heroic", ("com.heroicgameslauncher.hgl",),
                                      pasta_do_ambiente=amb,
                                      raiz_sistema=tmp_path / "sistema") == ()
@@ -176,8 +176,8 @@ def test_onde_falta_mede_a_caixa_do_emulador(tmp_path: Path) -> None:
     _carona(tmp_path, amb)
     assert falta() == ()
     override.write_text("[Environment]\n")
-    lx.adicionar("emulador:retroarch", lancador="retroarch", nome="RetroArch — todos os jogos",
-                 janelas=("org.libretro.RetroArch", "retroarch", "com.libretro.RetroArch"))
+    antiga.adicionar("emulador:retroarch", lancador="retroarch", nome="RetroArch — todos os jogos",
+                     janelas=("org.libretro.RetroArch", "retroarch", "com.libretro.RetroArch"))
     assert falta() == (), "a caixa excluída contou como falta"
 
 

@@ -21,6 +21,7 @@ from tests.unit.test_a_exclusao_mora_na_camada_do_jogo import (
     _lutris_flatpak,
     _lutris_flatpak_pelo_wine,
 )
+from tests.unit import a_exclusao_de_antes as antiga
 
 RAIZ = Path(__file__).resolve().parents[2]
 LANCADOR = RAIZ / "assets" / "hefesto-launch.sh"
@@ -82,7 +83,7 @@ def test_a_launch_option_dela_manda(lar: Path) -> None:
 
 def test_o_jogo_da_lista_de_exclusao_abre_como_sem_o_hefesto(lar: Path) -> None:
     """A lista de exclusão vale antes de tudo: nenhuma env do Hefesto."""
-    status = lista_de_exclusao.adicionar(
+    status = antiga.adicionar(
         "steam_app_3621330", lancador="steam", nome="Pro Jank Footy",
         config_home=lar / "casa" / ".config")
     assert status == "adicionado", status
@@ -245,10 +246,9 @@ def test_o_desfazer_tira_so_o_nosso(casa: Path) -> None:
 
 def test_o_jogo_excluido_do_heroic_nao_recebe(casa: Path) -> None:
     """A cópia do jogo excluído fica sem o nosso; o vizinho segue a global, com ele."""
-    lx = lista_de_exclusao
     heroic = _heroic(casa, {"A": {}, "B": {}})
     _carona(casa)
-    assert lx.adicionar(_janela(0), lancador="heroic", nome="A", lar=casa) == "adicionado"
+    assert antiga.adicionar(_janela(0), lancador="heroic", nome="A", lar=casa) == "adicionado"
     for _ in range(2):
         copia = _lista_do_jogo(heroic, "A")
         assert copia is not None, "a exclusão não deu a A uma lista própria"
@@ -263,7 +263,7 @@ def test_o_jogo_excluido_do_lutris_pelo_wine_herda_a_caixa(casa: Path) -> None:
     lx = lista_de_exclusao
     yml = _lutris_flatpak_pelo_wine(casa)
     _carona(casa)
-    assert lx.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=casa) == "adicionado"
+    assert antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=casa) == "adicionado"
     env = _env_do_yml(yml)
     assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" in env, "a exclusão do Lutris não cobriu a caixa"
     assert _XALIA not in env, f"o `.yml` do excluído levou {_XALIA}={env[_XALIA]!r}"
@@ -337,7 +337,7 @@ def test_o_jogo_excluido_com_a_global_dela_sai_sem_o_nosso(casa: Path) -> None:
                             "B": {}})
     _global_dela(heroic, "1")
     _carona(casa)
-    assert lista_de_exclusao.adicionar(
+    assert antiga.adicionar(
         _janela(0), lancador="heroic", nome="A", lar=casa) == "adicionado"
     copia = _lista_do_jogo(heroic, "A") or {}
     assert _XALIA not in copia, f"o jogo excluído A recebeu {_XALIA}={copia.get(_XALIA)}"
@@ -397,7 +397,7 @@ def test_o_excluido_que_segue_a_global_dela_fica_com_o_zero_dela(casa: Path) -> 
     heroic = _heroic(casa, {"A": {}, "B": {}})
     _global_dela(heroic, "0")
     _carona(casa)
-    assert lista_de_exclusao.adicionar(
+    assert antiga.adicionar(
         _janela(0), lancador="heroic", nome="A", lar=casa) == "adicionado"
     for _ in range(2):
         copia = _lista_do_jogo(heroic, "A")

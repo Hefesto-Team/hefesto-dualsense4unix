@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from hefesto_dualsense4unix.integrations import camadas_vulkan as cv
+from tests.unit import a_exclusao_de_antes as antiga
 
 RAIZ = Path(__file__).resolve().parents[2]
 LANCADOR = RAIZ / "assets" / "hefesto-launch.sh"
@@ -150,11 +151,9 @@ def test_a_pilula_e_o_lancador_leem_o_mesmo_arquivo_do_mesmo_jeito(
 def test_o_jogo_da_lista_de_exclusao_abre_sem_nada(
         lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """O jogo que o usuário tirou do Hefesto abre como se ele não estivesse instalado."""
-    from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
-
     monkeypatch.setenv("XDG_CONFIG_HOME", str(_config(lar)))
     cv.gravar_camadas_da_steam_fora(True, config_home=_config(lar))
-    assert lx.adicionar("steam_app_1599660", lancador="steam", nome="Wo Long") == "adicionado"
+    assert antiga.adicionar("steam_app_1599660", lancador="steam", nome="Wo Long") == "adicionado"
     assert _as_da_steam(_lancar(lar, SteamAppId="1599660")) == set()
     assert _as_da_steam(_lancar(lar, SteamAppId="1971870")) == set(
         cv.AMBIENTE_SEM_AS_CAMADAS_DA_STEAM)
