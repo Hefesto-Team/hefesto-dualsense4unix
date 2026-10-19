@@ -70,7 +70,7 @@ PRIMEIRA = "01-jogar.html"
 #:
 #: FATO ERRADO, SUBSTITUÍDO EM 04/09/2026: esta linha dizia `500` e o comentário
 #: justificava o número afirmando que «500 ms é o mesmo do `controles_vivos`».
-#: Não era: o `controles_vivos.py:119` sempre teve `TIQUE_MS = 100`. O número
+#: Não era: o `controles_vivos.py:120` sempre teve `TIQUE_MS = 100`. O número
 #: errado tinha consequência medida — um «delay absurdo em controles»
 #: visto na aba 02, onde meio segundo de atraso separa o dedo do desenho.
 #:
@@ -2249,6 +2249,9 @@ CLIQUE_COM_ALVO = r"""
 })(%s, %s)
 """
 
+#: O gesto do rodapé que o Start da Navegação Interna dispara: grava e aplica o perfil.
+GESTO_DO_START = "salvar-e-aplicar"
+
 #: A Navegação Interna na página (A-NAVEGACAO-INTERNA-…-01). Instala uma vez por
 #: carga o `window.__hefNav`: ele MEDE o que se seleciona e EXECUTA o que o
 #: Python decidiu (`navegacao_interna.Selecoes`). A geometria mora no Python, que
@@ -2326,10 +2329,7 @@ NAV_INSTALAR = r"""
     },
     aplicar: function(ops, molduras){
       for(const op of ops){
-        if(op.op === 'salvar'){
-          const b = document.querySelector('.r-salvar');
-          if(b) b.click();
-        } else if(op.op === 'fechar'){
+        if(op.op === 'fechar'){
           const d = aberta();
           const f = d && d.querySelector('.fechar');
           if(f) f.click();
@@ -4295,7 +4295,8 @@ class Piloto:
             lambda uniq: navegacao_interna.caixas_do_leiaute(leiaute, pref_de.get(uniq, "")),
             pref_de=pref_de, popup=popup)
         if any(a.tipo == "salvar" for a in atos):
-            ops.append({"op": "salvar"})
+            # O Start grava e aplica o perfil (pedido de 19/10/2026), pela porta dos cliques.
+            self._gesto({"gesto": GESTO_DO_START, "pagina": self.pagina, "texto": "Start"})  # (noqa-acento: chave do clique)
         for op in ops:
             if op.get("op") == "clicar" and op.get("pref") and \
                     _a_fita_desta_pagina_escolhe(self.pagina):

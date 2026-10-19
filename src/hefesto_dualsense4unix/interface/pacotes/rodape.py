@@ -163,6 +163,21 @@ def salvar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     return None
 
 
+@gesto("*", "salvar-e-aplicar", grava="gravar_e_reaplicar")
+def salvar_e_aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O Start na Navegação Interna: o «Salvar» e, na mesma fila, o «Aplicar».
+
+    Pedido de 19/10/2026: o Start do controle grava o perfil e o manda aos controles, como a troca
+    de jogo faz sozinha. Os dois num gesto só, porque dois gestos soltos se cruzariam: o «Aplicar»
+    não grava e não espera a fila de quem grava.
+    """
+    from .a04_iluminacao import sem_resposta_do_daemon
+
+    salvar(ctx, o, p)
+    if p.profile_reaplicar(perfil_do_rodape(ctx.state), prender=True) is None:
+        raise RuntimeError(sem_resposta_do_daemon())
+
+
 def perfil_do_rodape(state: Any) -> str:
     """O perfil dos três gestos do rodapé: o ativo, ou a escolha do usuário.
 
