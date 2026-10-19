@@ -274,8 +274,9 @@ def _clonar(endereco: str, ref: str | None, destino: Path) -> str:
 def commit_remoto(endereco: str, ref: str | None) -> str | None:
     """O commit que o ``ref`` aponta no endereço (``HEAD`` sem ``ref``), sem baixar nada.
 
-    ``None`` quando o git não responde (sem rede, endereço que sumiu, prazo): quem pergunta
-    tenta de novo depois, e a extensão instalada fica como está.
+    ``None`` quando o endereço não responde (sem rede, endereço que sumiu); o git que não
+    roda ou passa do prazo é recusa. Nos dois, quem pergunta tenta de novo depois, e a
+    extensão instalada fica como está.
     """
     padroes = (
         [f"refs/tags/{ref}", f"refs/tags/{ref}^{{}}", f"refs/heads/{ref}"] if ref else ["HEAD"]
@@ -290,8 +291,8 @@ def commit_remoto(endereco: str, ref: str | None) -> str | None:
             timeout=_PRAZO_DO_LS_REMOTE_S,
             check=False,
         )
-    except (OSError, subprocess.SubprocessError):
-        return None
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise InstalacaoRecusadaError(f"O git não respondeu: {exc}") from exc
     if feito.returncode != 0:
         return None
     achados: dict[str, str] = {}

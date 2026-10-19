@@ -324,6 +324,8 @@ class Supervisor:
         self.espera_depois_da_falha_s = ESPERA_DEPOIS_DA_FALHA_S
         #: A hora (``time.monotonic``) em que cada extensão pode perguntar ao git de novo.
         self._proxima_conferencia: dict[str, float] = {}
+        #: O registro da última volta do ``reconciliar``; o ilegível fica vazio.
+        self._registro_lido: dict[str, Entrada] = {}
         self._atualizando: asyncio.Task[bool] | None = None
 
     # -- o estado ----------------------------------------------------------
@@ -445,10 +447,7 @@ class Supervisor:
         """
         if self._atualizando is not None and not self._atualizando.done():
             return
-        try:
-            registro = ler_registro(self.lugares.registro)
-        except InstalacaoRecusadaError:
-            return
+        registro = self._registro_lido
         agora = time.monotonic()
         for mod_id in [m for m in self._proxima_conferencia if m not in registro]:
             self._proxima_conferencia.pop(mod_id, None)
@@ -515,7 +514,9 @@ class Supervisor:
             registro = ler_registro(self.lugares.registro)
         except InstalacaoRecusadaError as exc:
             logger.warning("mods_registro_ilegivel", err=exc.frase)
+            self._registro_lido = {}
             return
+        self._registro_lido = registro
         ligadas = {k: v for k, v in registro.items() if v.ligada}
         for mod_id in [m for m in self._vigiadas if m not in ligadas]:
             await self._parar_uma(mod_id)

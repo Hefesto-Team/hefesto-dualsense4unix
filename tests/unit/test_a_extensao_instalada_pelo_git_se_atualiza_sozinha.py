@@ -271,3 +271,34 @@ def test_a_linha_da_extensao_diz_a_versao_que_espera_o_atualizar() -> None:
     entrada.versao_esperando = ""
     assert a07._extensao_de(a07._Instalada(entrada=entrada, manifesto=None)).versao == "0.1.0"
 
+
+
+def test_o_git_que_nao_roda_e_recusa_com_o_motivo(
+    lar: Lugares, remoto: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _instalar_ligada(lar, remoto)
+
+    def sem_git(*_a: Any, **_k: Any) -> None:
+        raise FileNotFoundError("git")
+
+    monkeypatch.setattr(instalador.subprocess, "run", sem_git)
+    with pytest.raises(InstalacaoRecusadaError, match="não respondeu: git"):
+        commit_remoto(f"file://{remoto}", None)
+    with pytest.raises(InstalacaoRecusadaError, match="não respondeu"):
+        commit_novo(ler_registro(lar.registro)["exemplo"])
+
+
+def test_o_registro_ilegivel_nao_abre_conferencia(lar: Lugares, remoto: Path) -> None:
+    _instalar_ligada(lar, remoto, intervalo_da_atualizacao_s=0.0)
+    sup = _supervisor_rapido(lar)
+
+    async def uma_volta() -> None:
+        await sup.reconciliar()
+        lar.registro.write_text("{ torto", encoding="utf-8")
+        await sup.reconciliar()
+        sup._talvez_atualizar()
+        aberta = sup._atualizando is not None
+        await sup.parar()
+        assert not aberta, "o registro torto abriu uma conferência"
+
+    asyncio.run(uma_volta())

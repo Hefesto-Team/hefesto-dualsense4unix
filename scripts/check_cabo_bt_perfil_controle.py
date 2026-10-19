@@ -100,6 +100,12 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "configurar-modificacao": "abre a janela de uma extensão — é da tela",
     "guardar-opcao-da-modificacao": "guarda uma opção da extensão no `opcoes.json` dela — é da máquina",
     "mais-da-modificacao": "o ⋮ da extensão (atualizar, ver as permissões, remover) — é da máquina",
+    "guardar-modificacao": "o Guardar da janela da extensão grava o rascunho no `opcoes.json` "
+                           "dela — é da máquina",
+    "parar-tudo-da-modificacao": "o «Parar tudo» da janela pede à extensão que zere os aparelhos "
+                                 "dela — é do serviço, não de um controle",
+    "escolher-o-lancador": "abre o seletor do sistema para apontar o atalho do lançador — é da máquina",
+    "guardar-lancador": "guarda o atalho e o perfil por jogo do lançador — é da máquina",
     "instalar-modificacao": "instala uma extensão de um endereço git ou de uma pasta — é da máquina",
     "escolher-arquivo-da-modificacao": "abre o seletor do sistema para apontar o "
                                        "`hefesto-mod.json` — é da máquina",
