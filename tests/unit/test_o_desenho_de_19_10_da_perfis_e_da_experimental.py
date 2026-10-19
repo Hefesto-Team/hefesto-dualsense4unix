@@ -475,7 +475,7 @@ def test_o_configurar_do_lancador_traz_a_pasta_o_perfil_por_jogo_e_guardar() -> 
     """O `#lanc-conf` do desenho aprovado: o que o produto de 18/10 perdeu e o desenho tem."""
     janela = _janela(_ler(SETE), "lanc-conf")
     assert "Escolher a pasta…" in janela and "Cada jogo ganha o seu perfil" in janela
-    assert "<span>Pastas dos jogos</span>" in janela and "<code>steamapps</code>" in janela, (
+    assert "<span>Pastas dos jogos</span>" in janela and "<code>~/Jogos/" in janela, (
         "o desenho de 18/10 diz «Pastas dos jogos» com a pasta, não «Jogos»")
     rodape = janela.split('class="tn-rod"')[1]
     assert "Cancelar" in rodape and "Guardar" in rodape and ">Fechar</a>" not in rodape

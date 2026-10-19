@@ -609,7 +609,7 @@ def _numero(n: int) -> str:
     return {2: "dois", 3: "três", 4: "quatro", 5: "cinco"}.get(n, str(n))
 
 
-CONF_DE_EXEMPLO = Conf("steam", "Steam", "Do sistema", "~/.steam/steam", "48 jogos", 2, "steamapps")
+CONF_DE_EXEMPLO = Conf("steam", "Steam", "Do sistema", "~/.steam/steam", "48 jogos", 2, "~/Jogos/SteamLibrary")
 IMPEDIMENTOS_DE_EXEMPLO = (
     LinhaDeImpedimento("entrada:1", "Sackboy: A Big Adventure",
                        "O Steam Input está ligado: o jogo vê um controle de Xbox", "Desligar o Steam Input"),
