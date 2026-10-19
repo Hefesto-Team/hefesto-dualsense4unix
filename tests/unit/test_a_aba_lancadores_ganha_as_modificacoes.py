@@ -915,7 +915,8 @@ def test_o_mais_do_configurar_da_extensao_fica_ao_lado_do_x_aberto_ou_fechado(na
     """Fechado, o ⋮ da extensão vem sem o menu ao lado: ele não pode boiar no meio do topo.
 
     MORDIDA: sem a regra ``.ext-mais + .tn-x`` o ⋮ fechado fica a 200 px do «Fechar», e pula
-    para o lado dele quando o menu abre.
+    para o lado dele quando o menu abre; com o menu a 44 px da borda, ele cobre o próprio ⋮, e o
+    segundo clique que o fecha não o alcança.
     """
     from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
 
@@ -924,17 +925,22 @@ def test_o_mais_do_configurar_da_extensao_fica_ao_lado_do_x_aberto_ou_fechado(na
     menu = exp.menu_html("kyty", ["Acrescentar um lançador de jogos."], fecha=True)
     pg = navegador.new_page(viewport={"width": 1212, "height": 800})
     try:
+        pg.goto(f"{MOCKUP.as_uri()}#lanc-conf")
         caixas = []
         for conf in (base, base._replace(menu=menu)):
-            pg.set_content(f"<style>{exp.CSS}</style><div class=\"tela-nova\" id=\"lanc-conf\" "
-                           f"style=\"display:flex\"><div class=\"tn-cx\" id=\"lanc-janela\">"
-                           f"{exp.lanc_conf_miolo_html(conf)}</div></div>")
-            caixas.append(pg.evaluate("""() => {
-              const topo = document.querySelector('#lanc-janela .tn-topo');
+            caixas.append(pg.evaluate("""(miolo) => {
+              const cx = document.getElementById('lanc-janela');
+              cx.innerHTML = miolo;
+              const topo = cx.querySelector('.tn-topo');
               const r = s => topo.querySelector(s).getBoundingClientRect();
-              return {mais: r('.ext-mais').right, x: r('.tn-x').left}; }"""))
+              const pop = topo.querySelector('.ext-pop');
+              return {mais: r('.ext-mais').right, mais_esq: r('.ext-mais').left, x: r('.tn-x').left,
+                      pop: pop ? pop.getBoundingClientRect().right : null}; }""",
+                exp.lanc_conf_miolo_html(conf)))
         fechado, aberto = caixas
-        assert fechado["x"] - fechado["mais"] <= 8, ("o ⋮ fechado boia longe do «Fechar»", fechado)
+        assert aberto["pop"] is not None and aberto["pop"] <= aberto["mais_esq"], (
+            "o menu aberto cobre o próprio ⋮", aberto)
+        assert fechado["x"] - fechado["mais"] <= 16, ("o ⋮ fechado boia longe do «Fechar»", fechado)
         assert abs(fechado["mais"] - aberto["mais"]) <= 1, ("o ⋮ pula quando abre", caixas)
     finally:
         pg.close()
