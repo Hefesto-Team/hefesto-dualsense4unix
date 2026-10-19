@@ -252,14 +252,14 @@
       "data": "2026-10-19",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1147368,
+      "piso": 1147378,
       "por_item": {
-        "docs": 119662,
-        "scripts": 114949,
-        "src": 310100,
-        "tests": 602657
+        "docs": 119665,
+        "scripts": 114950,
+        "src": 310111,
+        "tests": 602652
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +10 linhas (1147368 -> 1147378), pagas por Origem: D-1910-A-PRIMEIRA-CASA-DA-COR-E-O-BRANCO; registrado no fecho, topo 05c5fbf0e3a8",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -662,6 +662,12 @@
           "de": 1149100,
           "para": 1149104,
           "razao": "tamanho: +4 linhas (1149100 -> 1149104), pagas por Origem: D-1710-O-DOCTOR-MOSTRA-O-PROTON-FIXADO-E-O-DE-CADA-JOGO; registrado no fecho, topo bc091dd86968"
+        },
+        {
+          "data": "2026-10-19",
+          "de": 1147368,
+          "para": 1147378,
+          "razao": "tamanho: +10 linhas (1147368 -> 1147378), pagas por Origem: D-1910-A-PRIMEIRA-CASA-DA-COR-E-O-BRANCO; registrado no fecho, topo 05c5fbf0e3a8"
         }
       ],
       "unidade": "linhas",
