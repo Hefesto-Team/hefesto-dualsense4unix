@@ -397,9 +397,13 @@ CANAIS_DA_REGUA = 79
 #: Canais novos espalhados, sem sequência de :data:`CANAIS_MINIMOS_DA_BANDA`, a partir dos quais
 #: o receptor SALTA de canal (uma faixa espalhada é resposta). Abaixo disso é o AFH mexendo sozinho.
 CANAIS_QUE_PROVAM_O_SALTO = 6
-#: até quando a medida «com ele» continua lendo o mapa se nada mudou ainda (o AFH lento). Igual a
-#: :data:`ESPERA_DA_MEDIDA_S` = uma leitura só, como antes; a bancada diz se 120 s acham mais.
-ESPERA_ATE_O_MAPA_MUDAR_S = ESPERA_DA_MEDIDA_S
+#: até quando a medida «com ele» continua lendo o mapa se nada mudou ainda (o AFH lento, e o
+#: receptor que só fala quando a pessoa usa o teclado e o mouse). Medido em 19/10/2026 no
+#: 25a7:fa07: com uma leitura só, aos 25 s, o mapa ficou igual (18 canais antes e depois).
+ESPERA_ATE_O_MAPA_MUDAR_S = 120.0
+#: até quando a medida «sem ele» relê o mapa, ficando com o MENOR (o que todas as leituras
+#: evitaram): o AFH demora a soltar os canais que o receptor ocupava antes de sair da porta.
+ESPERA_ATE_O_MAPA_SOLTAR_S = 60.0
 #: a causa do «não achei», na ordem em que se pergunta.
 CAUSA_SEM_MAPA = "sem-mapa"
 CAUSA_SALTA = "salta"
@@ -541,7 +545,10 @@ class Descoberta:
             if presente is not None and presente == esperado:
                 self.passo = PASSO_MEDINDO_COM if esperado else PASSO_MEDINDO_SEM
                 self.desde = self._com_desde = agora
-                self.com = {}
+                if esperado:
+                    self.com = {}
+                else:
+                    self.sem = {}
             elif agora - self.desde >= ESPERA_DO_GESTO_S:
                 self.cancelar()
             return
@@ -556,8 +563,14 @@ class Descoberta:
             return
         lido = {a: (None if v is None else tuple(sorted(v))) for a, v in evitados().items()}
         if self.passo == PASSO_MEDINDO_SEM:
-            self.sem = lido
-            self.passo, self.desde = PASSO_PONHA, agora
+            # o «sem» fica com o que TODAS as leituras evitaram: o canal que o AFH ainda segura do
+            # receptor de antes se solta numa delas e não entra como «já evitado sem ele».
+            for adaptador, canais in lido.items():
+                antes = self.sem.get(adaptador, canais)
+                self.sem[adaptador] = (None if antes is None or canais is None else tuple(sorted(
+                    set(antes) & set(canais))))
+            if agora - self.desde >= ESPERA_ATE_O_MAPA_SOLTAR_S:
+                self.passo, self.desde = PASSO_PONHA, agora
             return
         # o «com» soma as leituras da espera: quem salta deixa canais diferentes em cada uma.
         for adaptador, canais in lido.items():
@@ -585,7 +598,7 @@ FRASE_DO_PASSO = {
     PASSO_TIRE: "Tire o receptor da porta",
     PASSO_MEDINDO_SEM: "Medindo sem ele…",
     PASSO_PONHA: "Ponha o receptor de volta",
-    PASSO_MEDINDO_COM: "Medindo com ele…",
+    PASSO_MEDINDO_COM: "Use o teclado e o mouse: medindo com ele…",
     PASSO_NADA: "Não achei a faixa dele",
 }
 BOTAO_DE_COMECAR = "Descobrir"
@@ -613,6 +626,7 @@ __all__ = [
     "CAUSA_SEM_MUDANCA",
     "ESPECIE",
     "ESPERA_ATE_O_MAPA_MUDAR_S",
+    "ESPERA_ATE_O_MAPA_SOLTAR_S",
     "FRASE_DA_CAUSA",
     "FRASE_DO_PASSO",
     "JANELA_S",

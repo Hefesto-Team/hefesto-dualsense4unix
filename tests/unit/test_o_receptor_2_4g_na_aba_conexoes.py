@@ -30,6 +30,14 @@ ADAPTADOR = "AA:BB:CC:00:00:0A"
 _RELER_DE_VERDADE = a08._reler_a_declaracao
 
 
+@pytest.fixture(autouse=True)
+def _uma_leitura_por_medida(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Estas réguas medem os passos do gesto, uma leitura por medida; as esperas longas de cada
+    medida (19/10/2026) mordem em ``test_a_faixa_do_teclado_se_acha.py``."""
+    monkeypatch.setattr(rx, "ESPERA_ATE_O_MAPA_SOLTAR_S", rx.ESPERA_DA_MEDIDA_S)
+    monkeypatch.setattr(rx, "ESPERA_ATE_O_MAPA_MUDAR_S", rx.ESPERA_DA_MEDIDA_S)
+
+
 def _cena(vizinhos: list[dict[str, Any]]) -> dict[str, Any]:
     lug = {"id": "L1", "lugar": "L1", "nome": "Esquerda", "entrada": "Entrada 15",
            "sabido": True, "face": "", "hub": False, "varrendo": False, "junto": "",

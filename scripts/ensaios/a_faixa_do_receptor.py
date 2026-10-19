@@ -23,12 +23,13 @@ USO
 ---
     a_faixa_do_receptor.py gravar --momento sem --saida mapas.jsonl --medir   # o receptor fora
     a_faixa_do_receptor.py gravar --momento com --saida mapas.jsonl --medir   # o receptor dentro
-    a_faixa_do_receptor.py classificar mapas.jsonl [--espera 25 --ate 120 --minimos 3 --salto 6]
+    a_faixa_do_receptor.py classificar mapas.jsonl [--espera 25 --ate 120 --solta 60 --salto 6]
 
 OS INTERRUPTORES (trocar X por Y na bancada sem editar código)
 --------------------------------------------------------------
 ``--espera`` / ``HEFESTO_FAIXA_ESPERA_S`` (25: a leitura que fecha cada medida),
-``--ate`` / ``HEFESTO_FAIXA_ATE_S`` (25: até quando a medida «com ele» relê se nada mudou),
+``--ate`` / ``HEFESTO_FAIXA_ATE_S`` (120: até quando a medida «com ele» relê se nada mudou),
+``--solta`` / ``HEFESTO_FAIXA_SOLTA_S`` (60: até quando a medida «sem ele» relê e fica com o menor),
 ``--minimos`` / ``HEFESTO_FAIXA_MINIMOS`` (3: canais seguidos que fazem uma faixa),
 ``--salto`` / ``HEFESTO_FAIXA_SALTO`` (6: canais espalhados que provam o salto),
 ``--segundos`` / ``HEFESTO_FAIXA_SEGUNDOS`` (120) e ``--cada`` / ``HEFESTO_FAIXA_CADA_S`` (5) na gravação.
@@ -153,6 +154,7 @@ def constantes(**trocas: float | None) -> Iterator[None]:
 def reproduzir(
     leituras: Sequence[Mapping[str, object]], *, espera: float | None = None,
     ate: float | None = None, minimos: int | None = None, salto: int | None = None,
+    solta: float | None = None,
 ) -> Fim:
     """O gesto inteiro sobre as leituras guardadas: tira, mede sem, põe, mede com.
 
@@ -160,6 +162,7 @@ def reproduzir(
     ``CADA_S`` em ``CADA_S``, como o tique da Conexões.
     """
     with constantes(ESPERA_DA_MEDIDA_S=espera, ESPERA_ATE_O_MAPA_MUDAR_S=ate,
+                    ESPERA_ATE_O_MAPA_SOLTAR_S=solta,
                     CANAIS_MINIMOS_DA_BANDA=minimos, CANAIS_QUE_PROVAM_O_SALTO=salto):
         d = rx.Descoberta()
         d.iniciar(CHAVE_DO_ENSAIO, 0.0)
@@ -171,7 +174,9 @@ def reproduzir(
                 break
             inicio = relogio + CADA_S
             d.andar(inicio, lambda: {}, presente=presente)
-            fim = float(str(dele[-1]["t"]))
+            # depois da última leitura guardada o mapa fica como estava, até a medida fechar
+            fim = max(float(str(dele[-1]["t"])), rx.ESPERA_ATE_O_MAPA_SOLTAR_S if momento == "sem"
+                      else rx.ESPERA_ATE_O_MAPA_MUDAR_S)
             t = 0.0
             while d.passo in (rx.PASSO_MEDINDO_SEM, rx.PASSO_MEDINDO_COM) and t <= fim + CADA_S:
                 t += CADA_S
@@ -215,6 +220,8 @@ def main(argv: Sequence[str] | None = None, ler: Callable[[], Mapas] | None = No
         "HEFESTO_FAIXA_ESPERA_S", str(rx.ESPERA_DA_MEDIDA_S))))
     c.add_argument("--ate", type=float, default=float(_do_ambiente(
         "HEFESTO_FAIXA_ATE_S", str(rx.ESPERA_ATE_O_MAPA_MUDAR_S))))
+    c.add_argument("--solta", type=float, default=float(_do_ambiente(
+        "HEFESTO_FAIXA_SOLTA_S", str(rx.ESPERA_ATE_O_MAPA_SOLTAR_S))))
     c.add_argument("--minimos", type=int, default=int(_do_ambiente(
         "HEFESTO_FAIXA_MINIMOS", str(rx.CANAIS_MINIMOS_DA_BANDA))))
     c.add_argument("--salto", type=int, default=int(_do_ambiente(
@@ -223,7 +230,7 @@ def main(argv: Sequence[str] | None = None, ler: Callable[[], Mapas] | None = No
 
     if args.comando == "classificar":
         fim = reproduzir(ler_sessao(args.arquivo), espera=args.espera, ate=args.ate,
-                         minimos=args.minimos, salto=args.salto)
+                         minimos=args.minimos, salto=args.salto, solta=args.solta)
         print(linha_curta(fim))
         return 0
     if not args.medir:

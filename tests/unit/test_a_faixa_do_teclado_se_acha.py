@@ -18,6 +18,14 @@ MORDIDAS (arrancar, ver reprovar, devolver):
    par ``salta`` fecha sem causa, e a frase é o «Não achei a faixa dele» de antes (test_1).
 6. A volta à medida «com ele» sem zerar o ``com``: a soma de antes do receptor sair vira um
    salto falso (test_8b).
+7. A medida «sem ele» de volta a uma leitura só (sem o ``&`` das leituras até
+   ``ESPERA_ATE_O_MAPA_SOLTAR_S``): o par ``solta-devagar`` fica no «mapa parado» (test_11).
+8. A volta à medida «sem ele» sem zerar o ``sem``: a leitura de antes do receptor voltar segura a
+   faixa e ela some do «com» (test_12).
+
+A medida de 19/10/2026 no receptor 25a7:fa07 (a do diário, ``sem=[18] com=[18]``): com uma leitura
+só, aos 25 s, o mapa ficou igual. A espera do «com» sobe para 120 s, o «sem» fica com o menor mapa
+de 60 s, e a tela pede o teclado e o mouse enquanto mede com ele.
 """
 from __future__ import annotations
 
@@ -86,10 +94,10 @@ def test_4_a_faixa_fixa_continua_achada_e_guardada_como_antes() -> None:
     assert rx.banda_por_eliminacao({"L1": ()}, {"L1": (5, 40)}) is None, "a régua velha vale"
 
 
-def test_5_o_afh_lento_acha_com_a_espera_e_a_espera_nasce_desligada() -> None:
-    assert rx.ESPERA_ATE_O_MAPA_MUDAR_S == rx.ESPERA_DA_MEDIDA_S, "até a bancada, uma leitura só"
-    assert _fim("devagar").causa == rx.CAUSA_SEM_MUDANCA
-    fim = _fim("devagar", ate=120)
+def test_5_o_afh_lento_acha_com_a_espera_e_a_espera_nasce_ligada() -> None:
+    assert rx.ESPERA_ATE_O_MAPA_MUDAR_S == 120.0, "a leitura só de 25 s não achou em 19/10"
+    assert _fim("devagar", ate=25).causa == rx.CAUSA_SEM_MUDANCA
+    fim = _fim("devagar")
     assert (fim.passo, fim.banda) == (rx.PASSO_ACHOU, (40, 53))
 
 
@@ -117,6 +125,7 @@ def test_8_o_gesto_que_recomeca_esquece_a_causa_velha() -> None:
 def test_8b_o_receptor_que_sai_no_meio_zera_a_soma_do_com(monkeypatch: pytest.MonkeyPatch) -> None:
     """Tirado no meio da medida «com ele», as leituras de antes não entram na soma da volta."""
     monkeypatch.setattr(rx, "ESPERA_ATE_O_MAPA_MUDAR_S", 120.0)
+    monkeypatch.setattr(rx, "ESPERA_ATE_O_MAPA_SOLTAR_S", rx.ESPERA_DA_MEDIDA_S)
     d = rx.Descoberta()
     d.iniciar("1234:5678", 0.0)
     d.andar(1.0, dict, presente=False)
@@ -170,3 +179,30 @@ def test_9_o_ensaio_recusa_sem_medir_e_grava_sem_endereco(
 def test_10_o_ensaio_classifica_numa_linha_curta(capsys: pytest.CaptureFixture[str]) -> None:
     assert ensaio.main(["classificar", str(FIXTURES / "salta.json")]) == 0
     assert capsys.readouterr().out.strip().startswith(f"nada: {rx.FRASE_DA_CAUSA[rx.CAUSA_SALTA]}")
+
+
+# --------------------------------------------------------------- 19/10: o mapa que demora a soltar
+
+
+def test_11_o_sem_fica_com_o_menor_mapa_e_acha_a_faixa_que_o_afh_segurava() -> None:
+    """A decisão: D-1910-A-FAIXA-ESPERA-O-MAPA-SOLTAR-E-MUDAR."""
+    assert _fim("solta-devagar", solta=25).causa == rx.CAUSA_SEM_MUDANCA, "uma leitura só não acha"
+    fim = _fim("solta-devagar")
+    assert (fim.passo, fim.banda) == (rx.PASSO_ACHOU, (20, 35))
+
+
+def test_12_o_receptor_que_volta_no_meio_do_sem_zera_o_menor_mapa() -> None:
+    d = rx.Descoberta()
+    d.iniciar("1234:5678", 0.0)
+    d.andar(1.0, dict, presente=False)
+    d.andar(26.0, lambda: {"hci0": (20, 21, 22, 23)}, presente=False)
+    d.andar(27.0, dict, presente=True)
+    assert d.passo == rx.PASSO_TIRE
+    d.andar(28.0, dict, presente=False)
+    d.andar(28.0 + rx.ESPERA_ATE_O_MAPA_SOLTAR_S, lambda: {"hci0": (60,)}, presente=False)
+    assert d.sem == {"hci0": (60,)}, "a leitura de antes da volta segurou a faixa no «sem»"
+    assert d.passo == rx.PASSO_PONHA
+
+
+def test_13_enquanto_mede_com_ele_a_tela_pede_o_teclado_e_o_mouse() -> None:
+    assert "teclado e o mouse" in rx.FRASE_DO_PASSO[rx.PASSO_MEDINDO_COM]
