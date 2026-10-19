@@ -2,7 +2,7 @@
   "id": "flatpak",
   "nome": "Flatpak",
   "versao": "1",
-  "api": ">=1,<2",
+  "api": ">=1,<3",
   "licenca": "MIT",
   "descricao": "O Flatpak, que é pacote e não tem atalho próprio: só o comando.",
   "tipos": [

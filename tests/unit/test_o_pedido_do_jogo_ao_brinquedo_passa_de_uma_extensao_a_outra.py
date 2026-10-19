@@ -161,7 +161,7 @@ def test_o_topico_e_as_duas_permissoes_existem_e_a_lista_de_publicaveis_e_fechad
 def test_o_manifesto_aceita_publicar_e_ler_o_jogo_brinquedo_e_recusa_publicar_o_que_nao_existe(
 ) -> None:
     base: dict[str, Any] = {
-        "id": "ponte", "nome": "Ponte", "versao": "0.1", "api": ">=1,<2", "licenca": "MIT",  # noqa-acento: chave do contrato
+        "id": "ponte", "nome": "Ponte", "versao": "0.1", "api": ">=1,<3", "licenca": "MIT",  # noqa-acento: chave do contrato
         "tipos": ["tema"], "tema": {},  # noqa-acento: chave do contrato
     }
     m = Manifesto(**base, permissoes=[LER, PUBLICAR])  # noqa-acento: chave do contrato

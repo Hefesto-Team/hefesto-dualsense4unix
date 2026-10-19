@@ -169,7 +169,7 @@ def _janela_da_extensao(tmp_path) -> str:
     if not pasta.exists():
         pasta.mkdir(parents=True)
         (pasta / "hefesto-mod.json").write_text(json.dumps({
-            "id": "acess", "nome": "Acess", "versao": "0.1", "api": ">=1,<2",  # noqa-acento: chave do contrato
+            "id": "acess", "nome": "Acess", "versao": "0.1", "api": ">=1,<3",  # noqa-acento: chave do contrato
             "licenca": "MIT", "tipos": ["tema"], "tema": {},  # noqa-acento: chave do contrato
             "opcoes": [{"id": "jogos", "rotulo": "Jogos que seguem", "tipo": "jogos"}],  # noqa-acento: chave do contrato
         }), encoding="utf-8")

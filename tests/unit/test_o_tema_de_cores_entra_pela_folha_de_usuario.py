@@ -99,7 +99,7 @@ def _instalada(lg: instalador.Lugares, mod_id: str, tema: dict[str, Any], *,
     pasta.mkdir(parents=True)
     (pasta / "hefesto-mod.json").write_text(json.dumps({
         "id": mod_id, "nome": f"Tema {mod_id}", "versao": "1.0",  # (noqa-acento): chave ASCII
-        "api": ">=1,<2",
+        "api": ">=1,<3",
         "licenca": "MIT", "tipos": ["tema"],
         "permissoes": ["tema"], "tema": tema}),  # (noqa-acento): chave ASCII
         encoding="utf-8")

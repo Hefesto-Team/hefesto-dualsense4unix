@@ -227,7 +227,7 @@ def _fonte(tmp_path: pathlib.Path, mod_id: str = "toque", *, nome: str = "Toque"
     """A pasta de uma extensão de tema (só declaração: nenhum processo)."""
     pasta = tmp_path / "fonte" / mod_id
     pasta.mkdir(parents=True, exist_ok=True)
-    manifesto = {"id": mod_id, "nome": nome, "versao": "0.1", "api": ">=1,<2",  # noqa-acento: chave
+    manifesto = {"id": mod_id, "nome": nome, "versao": "0.1", "api": ">=1,<3",  # noqa-acento: chave
                  "licenca": "MIT", "tipos": ["tema"], "tema": {},  # noqa-acento: chave
                  "permissoes": list(permissoes),  # noqa-acento: chave do manifesto
                  "descricao": "Muda um detalhe.",  # noqa-acento: chave
@@ -312,6 +312,37 @@ def test_ligar_com_permissao_nova_mostra_antes_e_liga_no_segundo(lar, ctx, tmp_p
     assert "data-menu=" not in segundo["blocos"][".ext-lista"]
     terceiro = a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
     assert "desligada" in terceiro["recado"] and _entrada(lar, "toque").ligada is False
+
+
+_AVISO = "Não é afiliada à marca. Jogue só o que você comprou."
+
+
+def test_o_aviso_do_manifesto_aparece_no_primeiro_instalar_e_o_segundo_instala(
+        lar, ctx, tmp_path) -> None:
+    a07 = _a07()
+    pasta = _fonte(tmp_path, extra={"aviso": _AVISO})
+    primeiro = _instalar(a07, ctx, pasta)
+    assert _AVISO in primeiro["recado"] and "Instale de novo" in primeiro["recado"]
+    assert _entrada(lar, "toque") is None, "instalou antes de mostrar o aviso"
+    segundo = _instalar(a07, ctx, pasta)
+    assert "Toque instalada" in segundo["recado"]
+    assert _entrada(lar, "toque").aviso_aceito == _AVISO
+    a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    assert _entrada(lar, "toque").ligada is True, "o aviso visto no instalar pediu de novo"
+
+
+def test_o_aviso_nao_aceito_vem_primeiro_no_sim_do_ligar(lar, ctx, tmp_path) -> None:
+    from hefesto_dualsense4unix.mods.instalador import instalar
+
+    a07 = _a07()
+    instalar(str(_fonte(tmp_path, permissoes=("rede:local",), extra={"aviso": _AVISO})))
+    primeiro = a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    lista = primeiro["blocos"][".ext-lista"]
+    assert primeiro.get("armou") is True and _AVISO in lista
+    assert lista.index(_AVISO) < lista.index("Usar a rede desta casa")
+    a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    entrada = _entrada(lar, "toque")
+    assert entrada.ligada is True and entrada.aviso_aceito == _AVISO
 
 
 def test_ligar_sem_permissao_nova_liga_no_primeiro_clique(lar, ctx, tmp_path) -> None:
@@ -792,7 +823,7 @@ _EM_GRUPOS = [
 def _manifesto_de(**campos) -> object:
     from hefesto_dualsense4unix.mods.manifesto import Manifesto
 
-    base = {"id": "toque", "nome": "Toque", "versao": "0.1", "api": ">=1,<2",  # noqa-acento: chave
+    base = {"id": "toque", "nome": "Toque", "versao": "0.1", "api": ">=1,<3",  # noqa-acento: chave
             "licenca": "MIT", "tipos": ["tema"], "tema": {}}  # noqa-acento: chave
     return Manifesto.model_validate({**base, **campos})
 

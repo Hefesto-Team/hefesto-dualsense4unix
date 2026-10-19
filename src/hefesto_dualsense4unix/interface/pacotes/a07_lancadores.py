@@ -1176,8 +1176,10 @@ class _Mexida:
     imp: str = ""
     mod: str = ""
     impedimentos: tuple[Any, ...] = ()
-    #: As permissões que a pessoa viu antes do «sim» de ligar, por extensão.
+    #: As permissões (e o aviso, por último) que a pessoa viu antes do «sim» de ligar.
     vistas: dict[str, tuple[str, ...]] = dataclasses.field(default_factory=dict)
+    #: O aviso do manifesto que o primeiro «Instalar» mostrou, por endereço.
+    avisos: dict[str, str] = dataclasses.field(default_factory=dict)
     html_conf: str = ""
     html_imp: str = ""
     html_mod: str = ""
@@ -1194,6 +1196,7 @@ class _Mexida:
         self.menu = self.permissoes = self.remover = self.conf = self.imp = self.mod = ""
         self.impedimentos = ()
         self.vistas = {}
+        self.avisos = {}
         self.html_conf = self.html_imp = self.html_mod = ""
         self.agora = ()
         self.rascunho = {}
@@ -1316,14 +1319,16 @@ def _dizendo_a_recusa() -> Any:
 
 def _extensao_de(item: _Instalada) -> Any:
     """A linha do quadro «Extensões» de uma modificação instalada."""
+    from hefesto_dualsense4unix.mods.instalador import aviso_por_ver
     from hefesto_dualsense4unix.mods.manifesto import o_que_a_permissao_deixa
 
     e = item.entrada
     menu = ""
     if _MEXIDA.menu == e.id:
         pedidas = item.manifesto.permissoes if item.manifesto is not None else e.permissoes_aceitas
+        aviso = aviso_por_ver(e, item.manifesto) if item.manifesto is not None else ""
         menu = exp.menu_html(
-            e.id, [o_que_a_permissao_deixa(x) for x in pedidas]
+            e.id, [x for x in (aviso,) if x] + [o_que_a_permissao_deixa(x) for x in pedidas]
             if _MEXIDA.permissoes == e.id else None, remover=_MEXIDA.remover == e.id)
     dica = item.manifesto.descricao if item.manifesto is not None else ""
     versao = e.versao
@@ -1490,6 +1495,7 @@ def _ligar_ou_desligar_a_modificacao(mod_id: str) -> str | None:
     clique que só armou.
     """
     from hefesto_dualsense4unix.mods.instalador import (
+        aviso_por_ver,
         desligar,
         ler_registro,
         ligar,
@@ -1506,14 +1512,16 @@ def _ligar_ou_desligar_a_modificacao(mod_id: str) -> str | None:
             desligar(mod_id, lugares=lg)
             REGISTRO.esquecer()
             return f"{entrada.nome} desligada."
-        pedidas = tuple(sorted(manifesto_instalado(mod_id, lugares=lg).permissoes))
-        if permissoes_novas(entrada.permissoes_aceitas, list(pedidas)) and (
-                _MEXIDA.vistas.get(mod_id) != pedidas):
-            _MEXIDA.vistas[mod_id] = pedidas
+        manifesto = manifesto_instalado(mod_id, lugares=lg)
+        pedidas = tuple(sorted(manifesto.permissoes))
+        aviso = aviso_por_ver(entrada, manifesto)
+        if (permissoes_novas(entrada.permissoes_aceitas, list(pedidas)) or aviso) and (
+                _MEXIDA.vistas.get(mod_id) != (*pedidas, aviso)):
+            _MEXIDA.vistas[mod_id] = (*pedidas, aviso)
             _MEXIDA.menu = _MEXIDA.permissoes = mod_id
             _MEXIDA.remover = ""
             return None
-        ligar(mod_id, permissoes_vistas=pedidas, lugares=lg)
+        ligar(mod_id, permissoes_vistas=pedidas, aviso_visto=aviso, lugares=lg)
         _MEXIDA.vistas.pop(mod_id, None)
         if _MEXIDA.menu == mod_id:
             _MEXIDA.menu = _MEXIDA.permissoes = ""
@@ -1704,11 +1712,21 @@ def _mexer_na_modificacao(mod_id: str, acao: str) -> str | None:
 
 
 def _instalar_a_modificacao(origem: str) -> str:
-    """Instala de um endereço git ou de uma pasta local. Não liga: ligar é a chave."""
-    from hefesto_dualsense4unix.mods.instalador import instalar
+    """Instala de um endereço git ou de uma pasta local. Não liga: ligar é a chave.
 
-    with _dizendo_a_recusa():
-        feito = instalar(origem)
+    O manifesto com ``aviso``: o primeiro gesto só o mostra, e o segundo instala.
+    """
+    from hefesto_dualsense4unix.mods.instalador import AvisoParaVerError, instalar
+
+    try:
+        with _dizendo_a_recusa():
+            feito = instalar(origem, aviso_visto=_MEXIDA.avisos.get(origem, ""))
+    except RuntimeError as exc:
+        if not isinstance(exc.__cause__, AvisoParaVerError):
+            raise
+        _MEXIDA.avisos[origem] = exc.__cause__.aviso
+        return f"{exc} Instale de novo para confirmar."
+    _MEXIDA.avisos.pop(origem, None)
     REGISTRO.esquecer()
     return f"{feito.entrada.nome} instalada. Ligue-a na chave quando quiser."
 

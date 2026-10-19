@@ -40,7 +40,7 @@ _O_FILHO = "import time\nwhile True:\n    time.sleep(1)\n"
 def _manifesto(versao: str = "0.1.0", permissoes: tuple[str, ...] = ("ler:estado",)) -> str:
     return json.dumps({
         "id": "exemplo", "nome": "Exemplo", "versao": versao,  # (noqa-acento): contrato ASCII
-        "api": ">=1,<2", "licenca": "MIT", "tipos": ["processo"],
+        "api": ">=1,<3", "licenca": "MIT", "tipos": ["processo"],
         "processo": {"executar": ["python3", "mod.py"]},
         "permissoes": list(permissoes),  # (noqa-acento): contrato ASCII
     })

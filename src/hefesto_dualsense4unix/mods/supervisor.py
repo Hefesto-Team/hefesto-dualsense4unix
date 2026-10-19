@@ -43,6 +43,7 @@ from hefesto_dualsense4unix.mods.instalador import (
     InstalacaoRecusadaError,
     Lugares,
     atualizar,
+    aviso_por_ver,
     commit_novo,
     ler_registro,
 )
@@ -115,6 +116,16 @@ def _prctl() -> Callable[..., int] | None:
     """O ``prctl`` da libc já carregada no processo (a do próprio Python)."""
     funcao: Callable[..., int] | None = getattr(ctypes.CDLL(None, use_errno=True), "prctl", None)
     return funcao
+
+
+def _comandos_do_lancador(manifesto: Manifesto) -> tuple[str, ...]:
+    """Os ``lancador.comandos`` do manifesto: os únicos que um jogo de ``lancador.jogos`` abre."""
+    if "lancador" not in manifesto.tipos or not isinstance(manifesto.lancador, dict):
+        return ()
+    comandos = manifesto.lancador.get("comandos")
+    if not isinstance(comandos, list):
+        return ()
+    return tuple(c for c in comandos if isinstance(c, str) and c.strip())
 
 
 def _morre_com_o_pai(prctl: Callable[..., int] | None) -> Callable[[], None]:
@@ -537,6 +548,8 @@ class Supervisor:
                 f"«{manifesto.nome}» pede {', '.join(novas)}, que ainda não teve o «sim».",
                 None,
             )
+        if aviso_por_ver(entrada, manifesto):
+            return f"«{manifesto.nome}» traz um aviso que ainda não teve o «sim».", None
         return "", manifesto
 
     async def _comecar(self, entrada: Entrada) -> None:
@@ -654,7 +667,8 @@ class Supervisor:
                 preexec_fn=_morre_com_o_pai(self._prctl),
             )
         vigiada.processo = processo
-        self.porta.registrar(vigiada.ficha, manifesto.id, processo.pid, manifesto.permissoes)
+        self.porta.registrar(vigiada.ficha, manifesto.id, processo.pid, manifesto.permissoes,
+                             comandos=_comandos_do_lancador(manifesto))
         logger.info("mods_aberta", mod=manifesto.id, pid=processo.pid, caixa=bool(self.bwrap))
         return processo
 

@@ -98,7 +98,7 @@ def _manifesto(mod_id: str = "exemplo", **mais: Any) -> dict[str, Any]:
         "id": mod_id,
         "nome": "Exemplo",
         "versao": "0.1.0",  # (noqa-acento): contrato ASCII
-        "api": ">=1,<2",
+        "api": ">=1,<3",
         "licenca": "MIT",
         "tipos": ["processo"],
         "processo": {"executar": ["python3", "mod.py"]},
@@ -201,13 +201,13 @@ def _supervisor(
 
 def test_o_manifesto_fora_da_faixa_da_api_e_recusado_com_a_frase(tmp_path: Path) -> None:
     (tmp_path / "hefesto-mod.json").write_text(
-        json.dumps(_manifesto(api=">=2,<3")), encoding="utf-8")
+        json.dumps(_manifesto(api=">=3,<4")), encoding="utf-8")
     with pytest.raises(ManifestoRecusadoError) as recusa:
         ler_manifesto(tmp_path)
     assert recusa.value.frase == (
-        f"«Exemplo» pede a porta >=2,<3, e este Hefesto fala a {API_DAS_MODIFICACOES}."
+        f"«Exemplo» pede a porta >=3,<4, e este Hefesto fala a {API_DAS_MODIFICACOES}."
     )
-    assert aceita_a_api(">=1,<2") and not aceita_a_api("<1") and aceita_a_api("1")
+    assert aceita_a_api(">=1,<3") and not aceita_a_api("<1") and aceita_a_api("2")
 
 
 def test_o_manifesto_recusa_campo_desconhecido_e_permissao_inventada(tmp_path: Path) -> None:
@@ -236,7 +236,7 @@ def test_a_modificacao_fora_da_api_nao_sobe_e_o_estado_diz_por_que(
         try:
             estado = supervisor.estado_de("exemplo")
             assert estado is not None and estado.estado == "recusada"
-            assert estado.motivo == "«Exemplo» pede a porta >=7, e este Hefesto fala a 1."
+            assert estado.motivo == "«Exemplo» pede a porta >=7, e este Hefesto fala a 2."
             assert ler_estado(lar.estado)["exemplo"]["motivo"] == estado.motivo
             assert not supervisor.porta.aberta
         finally:

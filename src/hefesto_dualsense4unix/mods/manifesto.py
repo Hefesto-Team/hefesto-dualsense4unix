@@ -114,7 +114,7 @@ _O_QUE_DEIXA: dict[str, str] = {
     "rede:local": "Usar a rede desta casa.",
     "rede:internet": "Usar a internet.",
     "bluetooth": "Falar com aparelhos por Bluetooth.",
-    "lancador": "Acrescentar um lançador de jogos.",
+    "lancador": "Acrescentar um lançador de jogos e abrir os jogos que ele lista.",
     "tema": "Trocar as cores da interface.",
     "aparelhos": "Abrir aparelhos ligados ao computador.",
 }
@@ -138,7 +138,7 @@ class ManifestoRecusadoError(ValueError):
 
 
 def _clausulas(faixa: str) -> list[tuple[str, int]]:
-    """``">=1,<2"`` vira ``[(">=", 1), ("<", 2)]``; número solto vale ``==``."""
+    """``">=1,<3"`` vira ``[(">=", 1), ("<", 2)]``; número solto vale ``==``."""
     saida: list[tuple[str, int]] = []
     for pedaco in faixa.split(","):
         casou = _CLAUSULA_DA_FAIXA.match(pedaco.strip())
@@ -265,6 +265,9 @@ class Manifesto(BaseModel):
     api: str
     licenca: str
     descricao: str = Field(default="", max_length=400)
+    # O aviso de uso (marca, jogo comprado, idade): a tela o mostra antes de instalar e
+    # antes do «sim» que liga; o aviso que muda volta a pedir os dois.
+    aviso: str = Field(default="", max_length=400)
     tipos: list[Literal["processo", "lancador", "tema", "perfil"]] = Field(min_length=1)
     processo: Processo | None = None
     permissoes: list[str] = Field(default_factory=list)

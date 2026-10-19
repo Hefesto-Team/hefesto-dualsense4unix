@@ -5099,6 +5099,16 @@ class IpcHandlersMixin:
             raise ValueError(f"«{manifesto.nome}» não declara o «Parar tudo».")
         return {"parado": bool(supervisor.porta.parar_tudo(mod))}
 
+    async def _handle_mods_jogos(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Os jogos da extensão de lançador ``{mod}``: o último ``lancador.jogos`` dela.
+
+        ``{mod, jogos: [{chave, nome, abrir, janela}]}``; sem conexão viva, a lista vazia.
+        """
+        mod = self._mod_do_pedido(params)
+        supervisor = getattr(self.daemon, "_mods_supervisor", None) if self.daemon else None
+        jogos = supervisor.porta.jogos_de(mod) if supervisor is not None else []
+        return {"mod": mod, "jogos": jogos}
+
     @staticmethod
     def _mod_do_pedido(params: dict[str, Any]) -> str:
         """O ``mod`` dos pedidos da janela da extensão: o ``id`` do manifesto, nunca vazio."""

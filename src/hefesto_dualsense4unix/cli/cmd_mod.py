@@ -12,10 +12,12 @@ from rich.console import Console
 from rich.table import Table
 
 from hefesto_dualsense4unix.mods.instalador import (
+    AvisoParaVerError,
     InstalacaoRecusadaError,
     Lugares,
     Resultado,
     atualizar,
+    aviso_por_ver,
     desligar,
     instalar,
     ler_estado,
@@ -71,10 +73,18 @@ def _dizer_o_resultado(resultado: Resultado, verbo: str) -> None:
 def cmd_instalar(
     origem: str = typer.Argument(..., help="Endereço git ou pasta com o hefesto-mod.json."),
     ref: str | None = typer.Option(None, "--ref", help="A tag (ou o ramo) a instalar."),
+    sim: bool = typer.Option(False, "--sim", help="Aceita o aviso da extensão sem perguntar."),
 ) -> None:
     """Instala sem ligar. «Oficial» só com tag assinada pelo time; o resto é «comunidade»."""
     try:
-        resultado = instalar(origem, ref=ref)
+        try:
+            resultado = instalar(origem, ref=ref, aviso_visto="")
+        except AvisoParaVerError as aviso:
+            console.print(aviso.frase, markup=False)
+            if not sim and not typer.confirm("Instalar mesmo assim?", default=False):
+                console.print("Não instalei.")
+                raise typer.Exit(code=1) from aviso
+            resultado = instalar(origem, ref=ref, aviso_visto=aviso.aviso)
     except InstalacaoRecusadaError as exc:
         raise _recusar(exc) from exc
     _dizer_o_resultado(resultado, "instalada")
@@ -140,8 +150,12 @@ def cmd_ligar(
     """Mostra as permissões, pede o «sim» e liga."""
     try:
         manifesto = manifesto_instalado(mod_id)
+        entrada = ler_registro(Lugares.do_xdg().registro).get(mod_id)
     except InstalacaoRecusadaError as exc:
         raise _recusar(exc) from exc
+    aviso = aviso_por_ver(entrada, manifesto) if entrada is not None else ""
+    if aviso:
+        console.print(f"«{manifesto.nome}» avisa: {aviso}", markup=False)
     console.print(f"«{manifesto.nome}» pede:")
     _mostrar_permissoes(manifesto.permissoes)
     if manifesto.processo is not None and shutil.which("bwrap") is None:
@@ -150,7 +164,7 @@ def cmd_ligar(
         console.print("Não liguei.")
         raise typer.Exit(code=1)
     try:
-        ligar(mod_id, permissoes_vistas=manifesto.permissoes)
+        ligar(mod_id, permissoes_vistas=manifesto.permissoes, aviso_visto=aviso)
     except InstalacaoRecusadaError as exc:
         raise _recusar(exc) from exc
     console.print(f"«{manifesto.nome}» ligada; o serviço abre em um segundo.")

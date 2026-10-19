@@ -46,7 +46,7 @@ def _manifesto(lancador: dict[str, object] | None) -> str:
         "id": "novo",
         "nome": "Novo",
         "versao": "1",  # (noqa-acento): contrato ASCII
-        "api": ">=1,<2",
+        "api": ">=1,<3",
         "tipos": ["lancador"],
         "permissoes": ["lancador"],  # (noqa-acento): contrato ASCII
     }

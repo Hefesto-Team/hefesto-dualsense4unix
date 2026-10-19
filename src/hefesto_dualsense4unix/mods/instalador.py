@@ -86,6 +86,22 @@ class InstalacaoRecusadaError(Exception):
         self.frase = frase
 
 
+class AvisoParaVerError(InstalacaoRecusadaError):
+    """O manifesto traz um ``aviso`` que quem instala ainda não viu: nada se gravou.
+
+    Quem chama mostra ``aviso`` e repete o gesto com ``aviso_visto=aviso``.
+    """
+
+    def __init__(self, nome: str, aviso: str) -> None:
+        super().__init__(f"«{nome}» avisa: {aviso}")
+        self.aviso = aviso
+
+
+def aviso_por_ver(entrada: Entrada, manifesto: Manifesto) -> str:
+    """O ``aviso`` do manifesto que esta instalação ainda não aceitou; vazio quando não há."""
+    return manifesto.aviso if manifesto.aviso and manifesto.aviso != entrada.aviso_aceito else ""
+
+
 @dataclass(frozen=True)
 class Lugares:
     """Os três lugares de toda modificação, e o estado vivo que o serviço escreve."""
@@ -130,6 +146,8 @@ class Entrada(BaseModel):
     versao_esperando: str = ""
     commit_esperando: str = ""
     motivo_da_espera: str = ""
+    #: O ``aviso`` do manifesto que teve o «sim» (no instalar ou no ligar).
+    aviso_aceito: str = ""
 
 
 @dataclass(frozen=True)
@@ -334,16 +352,16 @@ def instalar(
     lugares: Lugares | None = None,
     chaves: Sequence[str] = CHAVES_OFICIAIS,
     sozinha: bool = False,
+    aviso_visto: str | None = None,
 ) -> Resultado:
-    """Instala de um endereço git (``--ref`` para a tag) ou de uma pasta.
+    """Instala de um endereço git (``--ref`` para a tag) ou de uma pasta, sem ligar.
 
-    Instalar não liga: a modificação nova nasce desligada, e ligar é o gesto
-    que mostra as permissões. Reinstalar a mesma modificação é atualizar: ela
-    segue ligada, a não ser que peça permissão nova, que volta a pedir o «sim».
-
-    ``sozinha`` é a atualização que ninguém pediu: a versão que pede permissão
-    nova, ou cuja tag deixou de conferir com a chave oficial, não troca o código;
-    a linha do registro a guarda em ``versao_esperando`` até o «Atualizar».
+    Reinstalar é atualizar: segue ligada, a não ser que peça permissão nova ou traga
+    outro aviso. ``sozinha`` é a atualização que ninguém pediu: a versão com permissão
+    nova, aviso novo ou tag que não confere com a chave oficial fica em
+    ``versao_esperando`` até o «Atualizar». ``aviso_visto`` é o da tela: outro ``aviso``
+    no manifesto recusa com :class:`AvisoParaVerError` antes de gravar; ``None`` deixa
+    o aviso para o «sim» do ligar.
     """
     lg = lugares or Lugares.do_xdg()
     pasta_local = Path(origem).expanduser()
@@ -378,6 +396,11 @@ def instalar(
             )
         aceitas = anterior.permissoes_aceitas if anterior is not None else []
         novas = permissoes_novas(aceitas, manifesto.permissoes)
+        aviso_aceito = anterior.aviso_aceito if anterior is not None else ""
+        if aviso_visto is not None and manifesto.aviso:
+            if aviso_visto != manifesto.aviso:
+                raise AvisoParaVerError(manifesto.nome, manifesto.aviso)
+            aviso_aceito = manifesto.aviso
         if sozinha and anterior is not None:
             motivo = _o_que_segura_a_atualizacao(lg, anterior, tipo, manifesto)
             if motivo:
@@ -405,7 +428,8 @@ def instalar(
             ref=ref,
             commit=commit,
             permissoes_aceitas=list(aceitas),
-            ligada=seguia_ligada and not novas,
+            ligada=seguia_ligada and not novas and manifesto.aviso in ("", aviso_aceito),
+            aviso_aceito=aviso_aceito,
             instalada_em=datetime.now(timezone.utc).isoformat(timespec="microseconds"),
         )
         if anterior is not None:
@@ -433,6 +457,8 @@ def _o_que_segura_a_atualizacao(
     novas = permissoes_novas(ja_pedidas, manifesto.permissoes)
     if novas:
         return f"A versão {manifesto.versao} pede {', '.join(novas)}."
+    if aviso_por_ver(anterior, manifesto):
+        return f"A versão {manifesto.versao} traz outro aviso."
     if anterior.origem == "oficial" and tipo != "oficial":
         return f"A tag da versão {manifesto.versao} não confere com a chave oficial."
     return ""
@@ -529,6 +555,7 @@ def ligar(
     mod_id: str,
     *,
     permissoes_vistas: Sequence[str],
+    aviso_visto: str = "",
     lugares: Lugares | None = None,
 ) -> Entrada:
     """Liga, aceitando as permissões que quem chama mostrou e ouviu o «sim».
@@ -536,6 +563,7 @@ def ligar(
     ``permissoes_vistas`` é a lista que a linha de comando (ou a tela) mostrou.
     Se o manifesto do disco, relido agora, pede outra lista, recusa: o «sim» foi
     a um manifesto, e o código trocado entre o mostrar e o ligar não herda o «sim».
+    O ``aviso`` que esta instalação ainda não aceitou vale igual: ``aviso_visto``.
     """
     lg = lugares or Lugares.do_xdg()
     registro = ler_registro(lg.registro)
@@ -551,7 +579,10 @@ def ligar(
             f"«{manifesto.nome}» pede outras permissões do que as que você viu; "
             "veja de novo antes de ligar."
         )
+    if aviso_por_ver(entrada, manifesto) and aviso_visto != manifesto.aviso:
+        raise AvisoParaVerError(manifesto.nome, manifesto.aviso)
     entrada.permissoes_aceitas = list(manifesto.permissoes)
+    entrada.aviso_aceito = manifesto.aviso
     entrada.ligada = True
     entrada.ligada_em = datetime.now(timezone.utc).isoformat(timespec="microseconds")
     gravar_registro(lg.registro, registro)
@@ -673,11 +704,13 @@ __all__ = [
     "CHAVES_OFICIAIS",
     "INTERVALO_DA_ATUALIZACAO_S",
     "PRAZO_PARA_PARAR_S",
+    "AvisoParaVerError",
     "Entrada",
     "InstalacaoRecusadaError",
     "Lugares",
     "Resultado",
     "atualizar",
+    "aviso_por_ver",
     "commit_novo",
     "commit_remoto",
     "conferir_remocao",

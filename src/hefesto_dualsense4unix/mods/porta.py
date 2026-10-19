@@ -1,21 +1,12 @@
 """A porta das modificações: ``$XDG_RUNTIME_DIR/hefesto-dualsense4unix/mods.sock``.
 
-Nunca o socket principal. O enquadramento é o mesmo do IPC (um objeto
-JSON-RPC 2.0 por linha), e a tabela de métodos é pequena e fechada:
-
-* ``mod.ola`` — a primeira palavra, com a ficha que o supervisor passou ao
-  filho (``HEFESTO_MOD_FICHA``). O ``SO_PEERCRED`` da conexão tem de ser o PID
-  que o supervisor criou ou um descendente dele, do mesmo usuário;
-* ``eventos.assinar`` e ``acessorios.estado`` — cada tópico pede ``ler:<tópico>``;
-* ``eventos.publicar`` — pede ``publicar:<tópico>`` e nunca volta a quem publicou;
-* ``luz.set``, ``vibracao.set``, ``gatilho.set`` — cada um pede
-  ``escrever:<canal>``, sempre com o ``uniq`` do controle (escrever em todos é
-  proibido, a mesma regra do BROADCAST-PROIBIDO-01) e nunca num canal que o
-  jogo está escrevendo naquele controle («o jogo manda, o controle obedece»).
-
-Cada assinatura é uma fila do barramento (``core/events.py``) que descarta o
-evento mais antigo quando enche: o tique do serviço nunca espera por ela. O
-contrato está em ``docs/protocol/porta-das-modificacoes.md``.
+Nunca o socket principal: o enquadramento é o do IPC (um JSON-RPC 2.0 por linha), e a
+tabela de métodos é pequena e fechada. ``mod.ola`` confere a ficha e o ``SO_PEERCRED``;
+cada leitura pede ``ler:<tópico>``, cada publicação ``publicar:<tópico>``, cada escrita
+``escrever:<canal>`` com o ``uniq`` de um controle e nunca num canal que o jogo escreve;
+``lancador.jogos`` pede ``lancador``. Cada assinatura é uma fila do barramento que
+descarta o mais antigo quando enche. O contrato inteiro, com a vibração que se solta na
+queda, está em ``docs/protocol/porta-das-modificacoes.md``.
 """
 from __future__ import annotations
 
@@ -70,6 +61,9 @@ PUBLICACOES_POR_SEGUNDO = 20
 #: Ao parar, quanto a porta espera as conexões abertas fecharem.
 PRAZO_PARA_FECHAR_S = 2.0
 
+#: Quantos jogos um ``lancador.jogos`` entrega, no máximo.
+JOGOS_POR_LANCADOR = 5000
+
 Escritor = Callable[[str, dict[str, Any]], Awaitable[Any]]
 OJogoEscreve = Callable[[str, str], bool]
 UniqDoPosto = Callable[[], str | None]
@@ -93,6 +87,8 @@ class _Credencial:
     mod_id: str
     pid: int
     permissoes: frozenset[str]
+    #: Os ``lancador.comandos`` do manifesto: o primeiro termo de todo ``abrir``.
+    comandos: frozenset[str] = frozenset()
 
 
 @dataclass(eq=False)
@@ -103,6 +99,8 @@ class _Conexao:
     #: O último valor de cada função que esta conexão publicou em ``jogo.brinquedo``. Uma
     #: publicação pode trazer só parte das nove, e a que ela não traz segue com o valor de antes.
     funcoes_do_brinquedo: dict[str, float] = field(default_factory=dict)
+    #: Os controles em que o último ``vibracao.set`` desta conexão deixou motor ligado.
+    vibrando: set[str] = field(default_factory=set)
     assinaturas: list[tuple[str, asyncio.Queue[Any]]] = field(default_factory=list)
     tarefas: list[asyncio.Task[None]] = field(default_factory=list)
     trava: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -263,6 +261,57 @@ def _pedido_do_pulso(params: dict[str, Any]) -> dict[str, Any]:
     return pedido
 
 
+def _anotar_a_vibracao(con: _Conexao, params: dict[str, Any]) -> None:
+    """Guarda o controle que ficou vibrando por esta conexão; o zero o tira da lista."""
+    uniq = str(params.get("uniq") or "").strip()
+    forca: list[Any] = [params.get("fraco"), params.get("forte")]
+    if any(_numero(v) and v > 0 for v in forca):
+        con.vibrando.add(uniq)
+    else:
+        con.vibrando.discard(uniq)
+
+
+def _texto(valor: Any, onde: str, maximo: int, *, vazio: bool = False) -> str:
+    if not isinstance(valor, str) or len(valor) > maximo or (not vazio and not valor.strip()):
+        raise RecusaError(CODE_INVALID_PARAMS, f"lancador.jogos pede {onde} em texto curto.")
+    return valor
+
+
+def jogos_do_lancador(params: dict[str, Any], comandos: frozenset[str]) -> list[dict[str, Any]]:
+    """A lista de ``lancador.jogos`` validada: ``[{chave, nome, abrir, janela}]``.
+
+    ``abrir`` é o argv do jogo, e o primeiro termo é um dos ``comandos`` do manifesto;
+    ``janela`` é o app-id da janela do jogo (vazio quando a extensão não sabe).
+    """
+    jogos = params.get("jogos")
+    if not isinstance(jogos, list) or len(jogos) > JOGOS_POR_LANCADOR:
+        raise RecusaError(CODE_INVALID_PARAMS,
+                          f"lancador.jogos pede a lista jogos, até {JOGOS_POR_LANCADOR}.")
+    saida: list[dict[str, Any]] = []
+    vistas: set[str] = set()
+    for jogo in jogos:
+        if not isinstance(jogo, dict):
+            raise RecusaError(CODE_INVALID_PARAMS, "lancador.jogos pede cada jogo em objeto.")
+        chave = _texto(jogo.get("chave"), "a chave", 120)
+        if chave in vistas:
+            raise RecusaError(CODE_INVALID_PARAMS, f"chave repetida em lancador.jogos: {chave}")
+        vistas.add(chave)
+        abrir = jogo.get("abrir")
+        if not isinstance(abrir, list) or not 1 <= len(abrir) <= 64:
+            raise RecusaError(CODE_INVALID_PARAMS, "lancador.jogos pede abrir com o comando.")
+        argv = [_texto(a, "cada termo de abrir", 4096, vazio=True) for a in abrir]
+        if argv[0] not in comandos:
+            raise RecusaError(
+                CODE_SEM_PERMISSAO, f"o comando {argv[0]!r} não está em lancador.comandos")
+        saida.append({
+            "chave": chave,
+            "nome": _texto(jogo.get("nome"), "o nome", 120),
+            "abrir": argv,
+            "janela": _texto(jogo.get("janela", ""), "a janela", 200, vazio=True),
+        })
+    return saida
+
+
 #: método da porta → (canal, método do serviço que aplica, tradutor do pedido)
 _ESCRITAS: dict[str, tuple[str, str, Callable[[dict[str, Any], str], dict[str, Any]]]] = {
     "luz.set": ("luz", "led.set", _pedido_da_luz),
@@ -348,12 +397,16 @@ class Porta:
         self._publicacoes: dict[str, deque[float]] = {}
         #: O último ``acessorios.estado`` de cada extensão: a coluna «Agora» da janela dela.
         self._estados_dos_acessorios: dict[str, dict[str, Any]] = {}
+        #: O último ``lancador.jogos`` de cada extensão de lançador.
+        self._jogos_dos_lancadores: dict[str, list[dict[str, Any]]] = {}
 
     # -- quem pode entrar -------------------------------------------------
 
-    def registrar(self, ficha: str, mod_id: str, pid: int, permissoes: list[str]) -> None:
+    def registrar(self, ficha: str, mod_id: str, pid: int, permissoes: list[str],
+                  *, comandos: tuple[str, ...] = ()) -> None:
         """O supervisor diz: esta ficha é da modificação ``mod_id``, no PID ``pid``."""
-        self._fichas[ficha] = _Credencial(mod_id, pid, frozenset(permissoes))
+        self._fichas[ficha] = _Credencial(
+            mod_id, pid, frozenset(permissoes), frozenset(comandos))
 
     def esquecer(self, ficha: str) -> None:
         self._fichas.pop(ficha, None)
@@ -442,6 +495,8 @@ class Porta:
                 self.bus.publish(EventTopic.ACESSORIOS_ESTADO, vazio)
             if con.brinquedo_preso() and con.sessao is not None:
                 self._soltar_o_brinquedo(con.sessao.mod_id)
+            if con.vibrando and con.sessao is not None:
+                await self._soltar_a_vibracao(con.sessao, con.vibrando)
             self._conexoes.discard(con)
             with contextlib.suppress(Exception):
                 writer.close()
@@ -488,14 +543,19 @@ class Porta:
                 return _resposta(req_id, self._estado_dos_acessorios(con, params))
             if metodo == "luz.pulso":
                 return _resposta(req_id, self._pulsar(con.sessao, params))
+            if metodo == "lancador.jogos":
+                return _resposta(req_id, self._jogos_do_lancador(con.sessao, params))
             if metodo in _ESCRITAS:
                 # Como o IPC (``ipc:<método>``): quem grava no meio da escrita sabe de
                 # onde ela veio, e a modificação deixa de escrever como «ninguém».
                 marca_do_gesto = gesto_de_agora.set(f"mod:{con.sessao.mod_id}:{metodo}")
                 try:
-                    return _resposta(req_id, await self._escrever(con.sessao, metodo, params))
+                    feito = await self._escrever(con.sessao, metodo, params)
                 finally:
                     gesto_de_agora.reset(marca_do_gesto)
+                if metodo == "vibracao.set":
+                    _anotar_a_vibracao(con, params)
+                return _resposta(req_id, feito)
             raise RecusaError(CODE_METHOD_NOT_FOUND, f"método desconhecido: {metodo}")
         except RecusaError as recusa:
             return _erro(req_id, recusa.codigo, recusa.frase)
@@ -586,7 +646,36 @@ class Porta:
         self.bus.publish(EventTopic.ACESSORIOS_ESTADO, estado)
         return {"recebido": True}
 
+    def _jogos_do_lancador(self, sessao: _Credencial, params: dict[str, Any]) -> dict[str, Any]:
+        """O ``lancador.jogos``: a lista inteira substitui a anterior desta extensão."""
+        if "lancador" not in sessao.permissoes:
+            raise RecusaError(CODE_SEM_PERMISSAO, "falta a permissão lancador")
+        if not sessao.comandos:
+            raise RecusaError(
+                CODE_INVALID_PARAMS, "o manifesto não declara lancador.comandos")
+        jogos = jogos_do_lancador(params, sessao.comandos)
+        self._jogos_dos_lancadores[sessao.mod_id] = jogos
+        return {"recebidos": len(jogos)}
+
+    async def _soltar_a_vibracao(self, sessao: _Credencial, uniqs: set[str]) -> None:
+        """Quem vibrou saiu: os motores que ele deixou ligados param, se o jogo não os tem."""
+        for uniq in sorted(uniqs):
+            if self._o_jogo_escreve(uniq, "vibracao"):
+                continue
+            try:
+                await self._escritor("rumble.set", {"uniq": uniq, "weak": 0, "strong": 0})
+            except Exception as exc:
+                logger.warning("mods_porta_vibracao_nao_soltou", mod=sessao.mod_id,
+                               err=type(exc).__name__)
+
     # -- a janela da extensão, pelo IPC principal ---------------------------
+
+    def jogos_de(self, mod_id: str) -> list[dict[str, Any]]:
+        """O último ``lancador.jogos`` de ``mod_id``; sem conexão viva, a lista vazia."""
+        viva = any(
+            con.sessao is not None and con.sessao.mod_id == mod_id for con in self._conexoes
+        )
+        return [dict(j) for j in self._jogos_dos_lancadores.get(mod_id, [])] if viva else []
 
     def agora_de(self, mod_id: str) -> dict[str, Any]:
         """O último ``acessorios.estado`` de ``mod_id``; sem conexão viva, o estado vazio.

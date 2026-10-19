@@ -2,7 +2,7 @@
   "id": "emuladores",
   "nome": "Dolphin · mGBA",
   "versao": "1",
-  "api": ">=1,<2",
+  "api": ">=1,<3",
   "licenca": "MIT",
   "descricao": "O Dolphin e o mGBA, com os jogos recentes que o Hefesto lê.",
   "tipos": [

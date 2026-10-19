@@ -71,7 +71,7 @@ def _plantar(tmp_path: Path, *, mod_id: str = "kytyps5", ligada: bool = True,
     pasta.mkdir(parents=True, exist_ok=True)
     (pasta / "ler.py").write_text(leitor, encoding="utf-8")
     manifesto = {
-        "id": mod_id, "nome": "KytyPS5", "versao": "0.1", "api": ">=1,<2",  # noqa-acento: chave do manifesto
+        "id": mod_id, "nome": "KytyPS5", "versao": "0.1", "api": ">=1,<3",  # noqa-acento: chave do manifesto
         "licenca": "GPL-2.0-only", "tipos": ["lancador"],
         "permissoes": ["lancador"],  # noqa-acento: chave do manifesto
         "lancador": _bloco() if bloco is None else bloco,

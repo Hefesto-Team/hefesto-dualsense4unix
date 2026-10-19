@@ -1,7 +1,9 @@
 # A porta das modificações
 
 O contrato entre uma modificação ([ADR-021](../adr/021-modificacoes-por-processo.md)) e o serviço.
-Versão da porta: **1** (`API_DAS_MODIFICACOES`, em `src/hefesto_dualsense4unix/mods/__init__.py`).
+Versão da porta: **2** (`API_DAS_MODIFICACOES`, em `src/hefesto_dualsense4unix/mods/__init__.py`). A 2
+(19/10/2026) acrescentou o `aviso` do manifesto e o `lancador.jogos`; o resto é o da 1, e a faixa
+`">=1,<3"` aceita as duas.
 
 ## O que o filho recebe
 
@@ -36,6 +38,7 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `eventos.publicar` | `{topico, dados}` | `publicar:<tópico>` | `{publicado}` |
 | `acessorios.estado` | `{ligado, nivel (0 a 10), perfil?, aparelhos: [...], ajustes?}` | `ler:acessorios.gesto` | `{recebido}` |
 | `luz.pulso` | `{uniq, cor: [r, g, b], cor_quente?, fundo (0 a 1), periodo_s}` ou `{uniq, parar: true}` | `pedir:luz.pulso` | `{aplicado, motivo, periodo_s?}` |
+| `lancador.jogos` | `{jogos: [{chave, nome, abrir: [...], janela?}]}` | `lancador` | `{recebidos}` |
 
 Os tópicos de leitura são estes. Os quatro primeiros são do controle do posto:
 
@@ -128,6 +131,38 @@ mesma fila de 256 por assinatura. Só vale para a lista fechada de tópicos publ
   de 0 a 1: `-32003`, com a frase;
 - mais de 20 publicações aceitas por segundo da mesma extensão: `-32003`; a janela é de 1 s, e a recusada não
   conta.
+
+## A vibração de um controle
+
+A extensão que acompanha o jogo lê `jogo.vibracao` (a vibração de cada controle, acima) e a que faz um controle
+vibrar pede `vibracao.set {uniq, fraco, forte}`: o serviço aplica pelo `rumble.set`, com o teto e a força de
+cada controle, e o jogo tem a vez. Os dois nomes não dizem que aparelho está do outro lado. Quando a conexão
+cai (parada, morta ou desligada), cada controle que o último `vibracao.set` dela deixou acima de zero recebe
+`fraco: 0, forte: 0`, menos aquele em que o jogo está vibrando: nenhum motor fica preso.
+
+## A extensão de lançador
+
+A extensão de tipo `lancador` e `processo`, com a permissão `lancador`, entrega os jogos que conhece
+por `lancador.jogos`. A lista inteira substitui a anterior, até 5000 jogos:
+
+- `chave`: a identidade do jogo na extensão (até 120 letras, sem repetir na lista);
+- `nome`: o que a tela mostra (até 120 letras);
+- `abrir`: o comando que abre o jogo, de 1 a 64 termos. O primeiro é um dos `lancador.comandos` do manifesto;
+  outro qualquer é recusado com `-32010`, e o manifesto sem `lancador.comandos` não entrega jogo;
+- `janela`: o app-id da janela do jogo, quando a extensão sabe (vazio, se não).
+
+A forma errada volta `-32003`, com a frase. A interface lê a lista pelo IPC dela (o `ipc.sock`):
+`mods.jogos {mod}` devolve `{mod, jogos}`, a última lista que aquela extensão entregou, e a lista vazia sem
+conexão viva dela. O leitor da biblioteca do lançador mora na extensão, nunca no serviço.
+
+## O aviso do manifesto
+
+O campo `aviso` (até 400 letras, opcional) é o aviso de uso da extensão: a marca que não a endossa, o jogo
+comprado, a idade. A tela o mostra antes de instalar: o primeiro «Instalar» (ou o «Escolher a pasta…») baixa,
+lê o manifesto e só mostra o aviso, sem gravar nada; o segundo instala. A linha de comando o imprime e
+pergunta (`--sim` aceita). O aviso aceito fica no registro (`aviso_aceito`); a versão nova com outro aviso
+volta a pedir o «sim» do ligar, com o aviso no topo da lista, e a atualização sozinha a deixa esperando o
+«Atualizar». O serviço não abre a extensão cujo aviso ainda não teve o «sim».
 
 ## A volta dos acessórios no controle
 

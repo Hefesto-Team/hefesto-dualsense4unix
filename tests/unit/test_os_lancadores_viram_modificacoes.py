@@ -139,7 +139,7 @@ def _fabrica_com(tmp_path: Path, **bloco: object) -> Path:
     corpo: dict[str, object] = {"rotulo": "X", "ordem": 0, "comandos": ["x"]}
     corpo.update(bloco)
     (pasta / "hefesto-mod.json").write_text(json.dumps({
-        "id": "x", "nome": "X", "versao": "1", "api": ">=1,<2",  # (noqa-acento): chave do manifesto
+        "id": "x", "nome": "X", "versao": "1", "api": ">=1,<3",  # (noqa-acento): chave do manifesto
         "licenca": "MIT", "tipos": ["lancador"],  # (noqa-acento): chave do manifesto
         "permissoes": ["lancador"], "lancador": corpo}),  # (noqa-acento): chave do manifesto
         encoding="utf-8")

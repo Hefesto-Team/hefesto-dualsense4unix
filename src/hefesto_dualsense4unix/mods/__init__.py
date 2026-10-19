@@ -9,8 +9,9 @@ pela porta própria, com as permissões que a pessoa aceitou (:mod:`.porta`).
 from __future__ import annotations
 
 #: A versão da porta das modificações que este Hefesto fala. O manifesto
-#: declara a faixa que aceita (``"api": ">=1,<2"``); fora dela, a modificação
-#: não sobe, e a frase de :func:`.manifesto.frase_da_api` diz por quê.
-API_DAS_MODIFICACOES = 1
+#: declara a faixa que aceita (``"api": ">=1,<3"``); fora dela, a modificação
+#: não sobe, e a frase de :func:`.manifesto.frase_da_api` diz por quê. A 2
+#: acrescentou o ``aviso`` do manifesto e o ``lancador.jogos`` da porta.
+API_DAS_MODIFICACOES = 2
 
 __all__ = ["API_DAS_MODIFICACOES"]

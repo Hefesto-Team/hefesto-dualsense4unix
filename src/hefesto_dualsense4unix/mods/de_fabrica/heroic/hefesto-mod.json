@@ -2,7 +2,7 @@
   "id": "heroic",
   "nome": "Heroic (Epic · GOG)",
   "versao": "1",
-  "api": ">=1,<2",
+  "api": ">=1,<3",
   "licenca": "MIT",
   "descricao": "O Heroic, com a biblioteca da Epic e da GOG que o Hefesto lê.",
   "tipos": [

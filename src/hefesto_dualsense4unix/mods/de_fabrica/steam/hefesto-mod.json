@@ -2,7 +2,7 @@
   "id": "steam",
   "nome": "Steam",
   "versao": "1",
-  "api": ">=1,<2",
+  "api": ">=1,<3",
   "licenca": "MIT",
   "descricao": "O lançador da Steam, que o Hefesto procura e lê por dentro.",
   "tipos": [

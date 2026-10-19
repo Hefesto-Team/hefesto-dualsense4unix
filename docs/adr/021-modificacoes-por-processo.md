@@ -25,10 +25,11 @@ permissões que a pessoa aceitou.
 
 1. **O manifesto** (`mods/manifesto.py`) é JSON lido por pydantic com `extra="forbid"`. É JSON porque o
    projeto aceita Python 3.10, que não tem `tomllib`.
-   - Campos: `id`, `nome`, `versao`, `api` (faixa como `">=1,<2"`), `licenca` (SPDX), `descricao`,
-     `tipos`, `processo.executar`, `permissoes`, `opcoes`, `lancador`, `tema`, `aparelhos`.
-   - Fora da faixa de `API_DAS_MODIFICACOES = 1`, a modificação não sobe. A recusa é uma frase:
-     ««Nome» pede a porta >=2, e este Hefesto fala a 1.»
+   - Campos: `id`, `nome`, `versao`, `api` (faixa como `">=1,<3"`), `licenca` (SPDX), `descricao`,
+     `aviso`, `tipos`, `processo.executar`, `permissoes`, `opcoes`, `lancador`, `tema`, `aparelhos`.
+   - Fora da faixa de `API_DAS_MODIFICACOES = 2`, a modificação não sobe. A recusa é uma frase:
+     ««Nome» pede a porta >=3, e este Hefesto fala a 2.» A 2 (19/10/2026) acrescentou o `aviso` e o
+     `lancador.jogos`.
    - `opcoes` é o bloco das escolhas que a tela mostra no ajuste de cada modificação: `escolha`,
      `ligado` ou `numero`.
 2. **As permissões**, uma palavra cada, aparecem antes de ligar:

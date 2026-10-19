@@ -226,6 +226,7 @@ class IpcServer(IpcHandlersMixin):
             "plugin.reload": self._handle_plugin_reload,
             "mods.agora": self._handle_mods_agora,
             "mods.parar_tudo": self._handle_mods_parar_tudo,
+            "mods.jogos": self._handle_mods_jogos,
             "radio.ponte.ligar_aqui": self._handle_radio_ponte_ligar_aqui,
             "radio.mover": self._handle_radio_mover,
             "mira.set": self._handle_mira_set,

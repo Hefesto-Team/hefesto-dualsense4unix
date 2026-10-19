@@ -2,7 +2,7 @@
   "id": "retroarch",
   "nome": "RetroArch",
   "versao": "1",
-  "api": ">=1,<2",
+  "api": ">=1,<3",
   "licenca": "MIT",
   "descricao": "O RetroArch, com as listas de jogos que o Hefesto lê.",
   "tipos": [

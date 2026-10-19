@@ -294,14 +294,14 @@ def test_o_manifesto_inteiro_lido_do_arquivo_traz_o_deslizante(tmp_path) -> None
     pasta = tmp_path / "ext"
     pasta.mkdir()
     (pasta / "hefesto-mod.json").write_text(json.dumps({
-        "id": "ext", "nome": "Ext", "versao": "0.1", "api": ">=1,<2", "licenca": "MIT",  # noqa-acento: chave do contrato
+        "id": "ext", "nome": "Ext", "versao": "0.1", "api": ">=1,<3", "licenca": "MIT",  # noqa-acento: chave do contrato
         "tipos": ["tema"], "tema": {}, "opcoes": [_opcao(), {"id": "j", "rotulo": "Jogos",  # noqa-acento: chave do contrato
                                                              "tipo": "jogos"}],
     }), encoding="utf-8")
     manifesto = ler_manifesto(pasta)
     assert [o.tipo for o in manifesto.opcoes] == ["deslizante", "jogos"]
     (pasta / "hefesto-mod.json").write_text(json.dumps({
-        "id": "ext", "nome": "Ext", "versao": "0.1", "api": ">=1,<2", "licenca": "MIT",  # noqa-acento: chave do contrato
+        "id": "ext", "nome": "Ext", "versao": "0.1", "api": ">=1,<3", "licenca": "MIT",  # noqa-acento: chave do contrato
         "tipos": ["tema"], "tema": {}, "opcoes": [{**_opcao(), "padrao": None}],  # noqa-acento: chave do contrato
     }), encoding="utf-8")
     with pytest.raises(ManifestoRecusadoError):
@@ -369,7 +369,7 @@ def _instalada(a07, ctx, tmp_path) -> None:
     pasta = tmp_path / "fonte" / "acess"
     pasta.mkdir(parents=True)
     (pasta / "hefesto-mod.json").write_text(json.dumps({
-        "id": "acess", "nome": "Acess", "versao": "0.1", "api": ">=1,<2", "licenca": "MIT",  # noqa-acento: chave do contrato
+        "id": "acess", "nome": "Acess", "versao": "0.1", "api": ">=1,<3", "licenca": "MIT",  # noqa-acento: chave do contrato
         "tipos": ["tema"], "tema": {}, "opcoes": [  # noqa-acento: chave do contrato
             _opcao(id="vibracao", rotulo="Vibração", maximo=20, passo=1, padrao=10),
             {"id": "jogos", "rotulo": "Jogos que seguem", "tipo": "jogos"},
@@ -410,6 +410,9 @@ def test_guardar_o_deslizante_e_marcar_o_jogo_gravam_e_a_janela_repinta(lar, ctx
     carga = a07.guardar_opcao_da_modificacao(
         ctx, {"v": "acess:jogos:steam_app_1245620", "valor": "on", "evento": "change"}, _Ponte())
     assert "checked" in carga["blocos"]["#mod-janela"]
+    # D-1910-A-JANELA-DA-EXTENSAO-GUARDA-NO-GUARDAR: a mudança fica no rascunho até o Guardar.
+    assert not (lar.dados / "acess" / "opcoes.json").exists()
+    a07.guardar_modificacao(ctx, {"v": "acess"}, _Ponte())
     guardado = json.loads((lar.dados / "acess" / "opcoes.json").read_text(encoding="utf-8"))
     assert guardado == {"vibracao": 17.0, "jogos": ["steam_app_1245620"]}
 
@@ -418,6 +421,7 @@ def test_guardar_o_deslizante_e_marcar_o_jogo_gravam_e_a_janela_repinta(lar, ctx
         ctx, {"v": "acess:jogos:steam_app_1245620", "evento": "click"}, _Ponte()) is None
     a07.guardar_opcao_da_modificacao(
         ctx, {"v": "acess:jogos:steam_app_1245620", "valor": "on", "evento": "change"}, _Ponte())
+    a07.guardar_modificacao(ctx, {"v": "acess"}, _Ponte())
     assert ler(_manifesto_de(lar), lar)["jogos"] == []
 
 
