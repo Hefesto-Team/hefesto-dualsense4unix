@@ -163,7 +163,7 @@ def test_o_renomear_diz_de_onde_para_onde(monkeypatch: pytest.MonkeyPatch) -> No
     ctx, ponte = _ctx(), PonteDeMentira()
     a10_perfis.selecionar(ctx, {"texto": "Pragmata"}, ponte)
 
-    fora = a10_perfis.editor_nome(
+    fora = a10_perfis.perfis_renomear(
         ctx, {"valor": "Pragmata BR", "evento": "change"}, ponte)
 
     assert _frase(fora) == mensagem_do_salvar("Pragmata BR",
@@ -183,9 +183,9 @@ def test_o_renomear_que_nao_mudou_nada_continua_mudo(
     _o_marcador_diz(monkeypatch, "Pragmata")
     ctx, ponte = _ctx(), PonteDeMentira()
 
-    assert a10_perfis.editor_nome(
+    assert a10_perfis.perfis_renomear(
         ctx, {"valor": "Pragmata", "evento": "click"}, ponte) is None
-    assert a10_perfis.editor_nome(
+    assert a10_perfis.perfis_renomear(
         ctx, {"valor": "Pragmata", "evento": "change"}, ponte) is None, (
         "o mesmo nome de novo não é um renomear, e não pode virar notícia")
 
@@ -351,7 +351,7 @@ def test_o_remover_pinta_no_ato_e_nao_no_tique_seguinte(
     assert ("launch_env.refresh", ()) in ponte.chamadas
 
 
-ESCRITORES = ("editor.nome", "editor.jogo", "editor.prioridade",
+ESCRITORES = ("perfis.renomear", "editor.jogo", "editor.prioridade",
               "editor.estilo", "detectar", "voltar-a-de-ontem",
               "novo", "duplicar", "remover", "ativar", "recarregar")
 

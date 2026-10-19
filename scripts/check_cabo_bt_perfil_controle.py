@@ -28,7 +28,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "escolher-na-fita": "escolhe qual controle a aba edita — não muda o aparelho",
     "padrao-da-aba": "devolve a aba ao desenho — é da tela",
     "vizinho-o-que-e": "abre a explicação de um vizinho de porta — é texto",
-    "detectar": "detecta o jogo aberto — é leitura da máquina",
     "procurar": "filtra a lista dos perfis pelo que ela digitou — é da tela",
     "adicionar-lancador": "registra onde um lançador está — é da máquina",
     "procurar-o-arquivo": "abre o seletor do sistema para ela apontar o "
@@ -213,9 +212,7 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "exportar": "escreve o perfil ativo num `.json` da pasta pessoal — é do disco",
     "importar": "carrega um perfil de um `.json` escolhido — é do perfil",
     "voltar-a-de-ontem": "desfaz a última gravação do perfil aberto — é do perfil",
-    "editor.nome": "renomeia o perfil — é do perfil",
-    "editor.prioridade": "a prioridade entre dois perfis que servem — é do perfil",
-    "editor.ambiente": "a regra que faz o perfil entrar — é do perfil",
+    "perfis.renomear": "renomeia o perfil — é do perfil",
     "editor.estilo": "aplica a receita de um Estilo de Jogo no perfil — é do perfil; o ATO "
                      "no aparelho é o de cada feature da receita",
     "editor.jogo": "o jogo que faz o perfil entrar — é do perfil",

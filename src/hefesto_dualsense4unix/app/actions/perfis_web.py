@@ -8,7 +8,6 @@ from hefesto_dualsense4unix.core import formas_do_endereco as _formas
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.profiles import estilos_de_jogo, marcas_do_jogo
 from hefesto_dualsense4unix.profiles.schema import (
-    PRIORIDADE_MAXIMA,
     ControllerOverrides,
     MatchAny,
     MatchCriteria,
@@ -35,9 +34,9 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     "ativar": "profiles_actions.on_profile_activate:3202 — grava fato em disco "
     "(session.json e active_profile.txt), os dois manual-only desde o PERFIL-03.",
     "editor.alvo": "SÓ NO HTML: o «Aplicar em» (jogos, navegação, programas, eventos) é "
-    "`profiles/schema.Profile.alvo`. SÓ GRAVA: nenhum motor o lê ainda.",
+    "`profiles/schema.Profile.alvo`; a escolha por janela deixa de fora o perfil de evento.",
     "editor.quando": "SÓ NO HTML: o «Quando» do alvo Eventos é `Profile.evento` e "
-    "`Profile.evento_comando`. SÓ GRAVAM: nenhum motor os lê ainda.",
+    "`Profile.evento_comando`; o `daemon/subsystems/eventos_do_perfil` chama três dos sete.",
     "editor.ordem": "SÓ NO HTML: arrastar na lista «Qual vale primeiro» regrava a `priority` dos "
     "perfis do mesmo jogo, reaproveitando os valores que eles já têm; o desempate do manager é "
     "`manager._chave_de_selecao`.",
@@ -48,15 +47,9 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     "duplicar": "profiles_actions.on_profile_duplicate:3144.",
     "recarregar": "profiles_actions.on_profile_reload:3319 → "
     "_reload_profiles_store:3772 (o disco em thread, a pintura pela idle_add).",
-    "editor.nome": "o campo Nome do editor; quem o lê no Salvar é "
-    "profiles_actions.on_profile_save:3323.",
-    "editor.prioridade": "profiles_actions._on_prioridade_tocada:4081 arma a "
-    "guarda SALVAR-NAO-REBAIXA-02 sobre a `Gtk.Scale` profile_priority_scale. "
-    "Do lado HTML quem grava é `a10_perfis.editor_prioridade`, sobre o "
-    "`<input type=range>` do `interface/aba10.py` — a faixa sai de "
-    "`profiles/schema.PRIORIDADE_MINIMA/MAXIMA`, nunca digitada.",
-    "editor.ambiente": "profiles_actions._select_radio:3749 e "
-    "_selected_simple_choice:3733, sobre profiles/simple_match.SIMPLE_MATCH_PRESETS:157.",
+    "perfis.renomear": "o campo Nome do editor; quem o lê no Salvar é "
+    "profiles_actions.on_profile_save:3323. No HTML, o duplo clique na célula "
+    "do nome da lista.",
     "editor.jogo": "o campo livre do editor simples; o texto sai de "
     "profiles/simple_match.simple_extra:305 e volta por from_simple_choice.",
     "salvar": "footer_actions.on_save_profile:838 — O ÚNICO Salvar, por ordem "
@@ -65,12 +58,6 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     "grava footer_actions._perfil_que_as_abas_editam:884; o do editor gravava o "
     "alvo memorizado), e fundir sem fechar a divergência é o caminho mais curto "
     "para gravar por cima do perfil errado. Quem fecha é a ONDA-PERFIS-08.",
-    # MEDIDO contra o daemon `dev` desta árvore, por `daemon.state_full`: das 49
-    # `profiles_actions._aplicar_nascimento_com_jogo:3097` usa
-    "detectar": "TEM DONO, e ele é a CLASSE da janela: o `state_full` publica "
-    "`window_detect_last_class` e `window_detect_current_class` "
-    "(daemon/state_store.py:328). O TÍTULO é que não é publicado. Quem quiser o "
-    "título espera a ONDA-PERFIS-03.",
     "voltar-a-de-ontem": "O MOTOR EXISTE E NUNCA TEVE TELA: "
     "profiles/loader.restaurar_do_historico:3090 e listar_historico:2809, com "
     "HISTORICO_MAX_VERSOES = 10 (loader.py:2776). Os únicos chamadores estão na "
@@ -169,7 +156,7 @@ def _id_visivel(uniq: str) -> str:
 
     A chave do dado continua sendo o ``uniq`` cru — é ela que vai no
     ``data-hef-uniq``, porque é a chave de ``Profile.controllers``
-    (``profiles/schema.py:1469``, canonizada em ``:1639``). Endereço que não é a
+    (``profiles/schema.py:1469``, canonizada em ``:1640``). Endereço que não é a
     chave do dado obriga a inventar uma tradução, e a tradução é onde nasce a
     segunda verdade.
 
@@ -266,20 +253,9 @@ def _pacote_do_editor(
 ) -> dict[str, Any]:
     """Os campos do editor, do ``Profile`` — e nenhum deles inventado."""
     ambiente, recado = _ambiente_do_perfil(profile)
-    prioridade = int(getattr(profile, "priority", 0) or 0)
     match = getattr(profile, "match", None)
-    if PRIORIDADE_MAXIMA <= 0:  # pragma: no cover — defesa contra teto zerado
-        pct = 0.0
-    else:
-        pct = max(0.0, min(100.0, prioridade * 100.0 / PRIORIDADE_MAXIMA))
     return {
         "nome": str(getattr(profile, "name", "") or ""),
-        "prioridade": f"{pct:.0f}%",
-        "prioridade_n": str(prioridade),
-        # A FRASE É DO USUÁRIO, aprovada em 02/09/2026 — antes disso ela estava
-        "prioridade_dica": (
-            "Quando dois perfis servem ao mesmo tempo, entra o de número maior."
-        ),
         "ambiente": ambiente,
         "ambiente_travado": ambiente is None,
         "ambiente_recado": recado,

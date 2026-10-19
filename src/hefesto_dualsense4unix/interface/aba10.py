@@ -426,36 +426,6 @@ CSS = CSS_GLIFO + """
   }
   .campo select{cursor:pointer}
   .campo select.destaque{border-color:var(--purple);background:var(--sel-bg);font-weight:600}
-  /* A PRIORIDADE É SLIDER — pedido em 27/08 (*"prioridade é slicer"*, em
-     CORRECOES.md) e reconfirmado em 03/09/2026: *"Slider, como você
-     pediu"*. Até aqui o desenho tinha uma BARRA, que não se arrasta: era o
-     único campo do editor sem nenhum caminho de escrita na interface nova.
-
-     O TRILHO E O CHEIO FICAM, e continuam sendo quem MOSTRA — o produto escreve
-     a largura do cheio a cada tique. O que nasce é o `<input type=range>` por
-     cima: transparente, do tamanho do trilho, e é ele quem ACEITA o arrasto.
-
-     O PUNHO MUDOU DE DONO, e essa é a única coisa que se perde do desenho
-     antigo: ele era o `::after` do cheio — pintado pelo produto, logo com meio
-     segundo de atraso — e passou a ser o `::-webkit-slider-thumb` do range, que
-     segue o dedo do usuário no mesmo quadro. Enquanto ela arrasta, o cheio fica para
-     trás (ele só sabe o que o disco diz); no `change` o gesto grava e a resposta
-     do próprio gesto repinta os dois na hora, sem esperar o tique.
-
-     `-webkit-` E NÃO `-moz-`: a janela é um `WebKit2.WebView`, e o Chrome que a
-     bancada usa para fotografar é a mesma família. Um `::-moz-range-thumb` aqui
-     seria regra que nenhum dos dois lê. */
-  .campo .trilho{flex:1;height:5px;border-radius:3px;background:var(--border-forte);position:relative}
-  .campo .cheio{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--purple)}
-  .campo .desliza{position:absolute;left:0;top:50%;transform:translateY(-50%);
-    width:100%;height:14px;margin:0;padding:0;background:transparent;border:0;
-    -webkit-appearance:none;appearance:none;cursor:pointer}
-  .campo .desliza:focus{outline:none}
-  .campo .desliza::-webkit-slider-runnable-track{height:14px;background:transparent;border:0}
-  .campo .desliza::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
-    width:12px;height:12px;border-radius:50%;background:var(--purple);
-    border:2px solid var(--app-bg);margin-top:1px}
-  .campo .n{flex:0 0 40px;text-align:right;font-family:'JetBrains Mono',monospace;color:var(--fg)}
   .campo .btn{flex:0 0 auto;white-space:nowrap}
   /* ---------- O QUADRO "MODO" NÃO MORA MAIS AQUI ----------
      11/09/2026, ordem de produto: *"em perfis ainda aparece modo. Isso deve aparecer
@@ -560,88 +530,22 @@ CSS = CSS_GLIFO + """
             visibility:hidden}
   .desfecho.on{visibility:visible;margin-top:7px;height:30px}
 
-  /* ---------- O CADEADO E O PONTO DE ALERTA — decisão [01] do PO ----------
-     *"Cadeado no campo, frase no hover."* Sete dos nove perfis de fábrica casam
-     por uma regra que o "Funciona em" não sabe descrever (cinco por título de
-     janela, dois por lista de classes), e até aqui o seletor ficava IDÊNTICO a
-     um destravado: só reclamava DEPOIS do clique. O irmão é o campo do jogo —
-     o Pragmata exigia também `PRAGMATA.exe` e a tela mostrava só o número.
-
-     A DICA É A `.dica` QUE A PÁGINA JÁ TEM, aberta pelo hover do marcador:
-     inventar um segundo mecanismo de dica seria a segunda gramática que esta
-     casa persegue. O marcador mede 13px, para caber ao lado de um campo de 30px
-     sem empurrar nada, na cor do alerta.
-
-     O CADEADO É SVG INLINE, e não um caractere: nenhuma das dez páginas usa
-     emoji (medido: zero fora do latim acentuado, do travessão e do `·`), e um
-     glifo que depende da fonte do sistema é um glifo que some na máquina
-     seguinte. São dois traços — o arco e o corpo —, em `currentColor`, como
-     todo glifo de `assets/glyphs/`.
-
-     O PONTO DE ALERTA É UM PONTO, literalmente: `border-radius:50%` de 7px na
-     cor laranja. A decisão diz *"ponto de alerta"*, e um ponto é o que ele é.
-
-     OS DOIS NASCEM ESCONDIDOS e o PRODUTO os acende, pelo alvo `classe` — o
-     desenho não sabe se a regra deste perfil é travada, e cravar visível faria
-     a tela afirmar um cadeado sobre um perfil que não tem nenhum. */
-  .campo .trava,.campo .exige{
+  /* ---------- O PONTO DE ALERTA do campo do jogo ----------
+     O ponto laranja acende quando o produto recusa o que se digitou (o
+     Freestyle, desenho de 19/10/2026), com a frase na `.dica` que a página já
+     tem. Nasce escondido e o PRODUTO o acende, pelo alvo `classe`. */
+  .campo .exige{
     display:none;flex:0 0 13px;width:13px;height:13px;position:relative;
     cursor:help;color:var(--orange);align-items:center;justify-content:center}
-  .campo .trava.on,.campo .exige.on{display:inline-flex}
-  .campo .trava:hover .dica,.campo .exige:hover .dica{display:block}
+  .campo .exige.on{display:inline-flex}
+  .campo .exige:hover .dica{display:block}
   .campo .exige::after{content:"";width:7px;height:7px;border-radius:50%;
                        background:currentColor}
-  /* A DICA ABRE PARA A ESQUERDA: os dois marcadores moram no fim de um campo
+  /* A DICA ABRE PARA A ESQUERDA: o ponto mora no fim de um campo
      que já encosta na borda direita do quadro, e uma caixa de 330px a 22px
      para a direita sairia da janela. É a mesma cura que o `.tn-cx .dica` do
      `monta` já faz na aba Conexões. */
-  .campo .trava .dica,.campo .exige .dica{left:auto;right:20px;width:300px}
-
-  /* ---------- O RÓTULO DO JOGO, ao lado do campo — decisão 10-Q4 dela --------
-     *"Rótulo ao lado, ao vivo: à direita do campo aparece o nome do jogo
-     enquanto você digita, ou «não está nesta máquina», ou «não reconheci este
-     endereço»."* Ela recusou a opção que o produto tinha construído em 04/09
-     (a resposta só na tira, depois do `change`) — e a escolha ACRESCENTA: o
-     campo continua se corrigindo sozinho, o que nasce é o rótulo.
-
-     ELE SE ESCONDE QUANDO NÃO HÁ O QUE DIZER, e essa é a razão de o endereço
-     `editor.jogo.rotulo` aparecer DUAS vezes. `escrever()` troca vazio por
-     `'—'` ANTES de escolher o ramo (`hefesto_vivo.py`), então um rótulo vazio
-     não fica vazio: fica um travessão solto entre o campo e o "Detectar". A
-     forma é a MESMA da tira do desfecho, nesta página, quatro blocos acima —
-     o `classe` acende, o `<span>` de dentro escreve.
-
-     A TINTA É O TERCEIRO `<span>`, e ele existe porque `data-hef-alvo` é UM por
-     elemento: a visibilidade é um fato ("há rótulo?"), o alerta é outro ("é
-     erro ou é rotina?"), e os dois têm de ser escritos ao mesmo tempo. É a
-     mesma razão pela qual `marca_com_dica` tem dois endereços em vez de um.
-
-     LARANJA SÓ NO ERRO: *"não instalado aqui (o número vale)"* é o jogo que ela
-     ainda vai comprar, e pintá-lo de alerta seria a tela chamando de problema o
-     que o dono da frase chama de normal (`jogos_locais.frase_do_campo_do_jogo`).
-
-     ELE TEM TETO, e o `<input>` encolhe para caber — que é o que a opção dela
-     diz. Nome de jogo é dado DO USUÁRIO e pode ser longo ("ORPHEUS: TO HELL AND
-     BACK"): sem `flex:0 1 auto` e sem reticência, o rótulo empurraria o
-     "Detectar" para fora do quadro. `text-overflow` e não `-webkit-line-clamp`
-     porque aqui é UMA linha de propósito — a fileira do campo tem 30px, e a
-     tira de baixo é quem tem duas.
-
-     O `max-width:45%` É MEDIDO, e nasceu de um defeito que a régua achou depois
-     de a primeira cura já estar escrita. Com `minmax(0,1fr)` na grade e sem
-     teto, a fileira parou de crescer — e o rótulo passou a comer o CAMPO: com
-     um nome de 60 caracteres o `<input>` ficava com **24px**, e ela não veria o
-     que digitou. Com 45%, o rótulo para em 185px, o campo fica com ~112px (uns
-     dez caracteres, mais que um appid) e a reticência entra a partir de ~38
-     caracteres de nome — que é onde o nome deixa de caber de qualquer jeito.
-     Duas guardas, dois defeitos: a grade impede a fileira de estourar, o teto
-     impede o rótulo de tomar o campo. */
-  .campo .rot{display:none;flex:0 1 auto;min-width:0;max-width:45%;
-              font-size:11.5px;
-              color:var(--fg);white-space:nowrap;overflow:hidden;
-              text-overflow:ellipsis}
-  .campo .rot.on{display:block}
-  .campo .rot .al.alerta{color:var(--orange)}
+  .campo .exige .dica{left:auto;right:20px;width:300px}
 
   /* ---------- as QUATRO configurações que cabem dentro deste perfil ----------
      O editor mostrava CINCO campos e gravava vinte, e a única frase que dizia
@@ -915,6 +819,9 @@ CSS = CSS_GLIFO + """
   .rolo .tab thead th[data-coluna]{cursor:pointer;user-select:none}
   .quadro-titulo[data-dica],.cab[data-dica]{cursor:help}
   .tab col[data-coluna="criado"],.tab col[data-coluna="modificado"]{width:104px}
+  /* O campo do renomear ocupa a célula do nome, na altura da linha. */
+  .tab td .renome{width:100%;box-sizing:border-box;height:22px;font:inherit;padding:0 6px;
+                  border:1px solid var(--purple);border-radius:5px;background:var(--app-bg);color:var(--fg)}
   .tab td.data{font-family:'JetBrains Mono',monospace;color:var(--fg);font-weight:400;
                white-space:nowrap}
   .tab th.data{white-space:nowrap}
@@ -1046,21 +953,6 @@ def marca_com_dica(classe: str, campo_estado: str, campo_frase: str,
             f'<span class="dica" data-hef="{campo_frase}"'
             f' data-hef-alvo="html"></span></span>')
 
-
-def rotulo_do_jogo() -> str:
-    """O nome do jogo à direita do campo — decisão 10-Q4 dela, 06/09/2026."""
-    return ('<span class="rot" data-hef="editor.jogo.rotulo"'
-            ' data-hef-alvo="classe">'
-            '<span class="al" data-hef="editor.jogo.alerta"'
-            ' data-hef-alvo="classe" data-hef-classe="alerta">'
-            '<span data-hef="editor.jogo.rotulo"></span></span></span>')
-
-
-FRASE_DA_PRIORIDADE_DELA = (
-    "Quando dois perfis servem ao mesmo tempo, entra o de número maior.")
-FRASE_DO_UNIVERSAL = (
-    "O Universal fica em zero: ele só entra quando nenhum outro serve.")
-DICA_DA_PRIORIDADE = f"{FRASE_DA_PRIORIDADE_DELA} {FRASE_DO_UNIVERSAL}"
 
 ESTILOS = [e.rotulo for e in ESTILOS_DO_MOTOR]
 #: (foto 9): aparece o nome e o código, não só o código, e não aparece o nome do programa.
@@ -1212,7 +1104,7 @@ def linha_do_perfil(nome, criado, modificado, ativo, dica="", escolhido=False):
             f'class="{"ativo" if ativo else ""}" '
             f'data-hef-perfil="{nome}" data-hef-gesto="selecionar" '
             f'aria-selected="{"true" if escolhido else "false"}">'
-            f'<td data-hef="perfis.linha.nome">{nome}</td>'
+            f'<td data-hef="perfis.linha.nome" data-dica="Clique abre no editor; duplo clique renomeia">{nome}</td>'
             f'<td class="data" data-hef="perfis.linha.criado">{criado}</td>'
             f'<td class="data" data-hef="perfis.linha.modificado">{modificado}</td></tr>')
 
@@ -1275,11 +1167,49 @@ ROTEIRO = """
     // único caminho até ela — um clique simples no cabeçalho não chega lá, que
     // é exatamente o que o usuário pediu ao dizer DUPLO clique.
     document.addEventListener('dblclick', function(ev){
+      var nome = ev.target.closest ? ev.target.closest('td[data-hef="perfis.linha.nome"]') : null;
+      if(nome){ renomear(nome); return; }
       var th = ev.target.closest ? ev.target.closest('th[data-coluna]') : null;
       if(!th) return;
       var seta = th.querySelector('.ordena[data-hef-gesto]');
       if(seta) seta.click();
     }, false);
+
+    // ---- o duplo clique no nome renomeia (19/10/2026) -------------------------
+    // A célula vira campo; Enter ou sair dele grava (o `change` leva o gesto
+    // `perfis.renomear` com o nome velho no `data-hef-perfil`), Esc desiste. O
+    // nome velho fica num `<span hidden>` ao lado: o `textContent` da célula
+    // segue igual ao que o Python pinta, e o tique não apaga o campo no meio da
+    // digitação. Renomeado, o `<tbody>` novo chega e leva o campo junto.
+    function renomear(td){
+      if(td.querySelector('input')) return;
+      var tr = td.closest('tr[data-hef-perfil]');
+      if(!tr) return;
+      var era = tr.dataset.hefPerfil;
+      var guarda = document.createElement('span');
+      guarda.hidden = true;
+      guarda.textContent = td.textContent;
+      var campo = document.createElement('input');
+      campo.type = 'text';
+      campo.className = 'renome';
+      campo.value = era;
+      campo.setAttribute('aria-label', 'Novo nome do perfil');
+      campo.dataset.hefGesto = 'perfis.renomear';
+      campo.dataset.hefPerfil = era;
+      td.textContent = '';
+      td.appendChild(guarda);
+      td.appendChild(campo);
+      campo.focus();
+      campo.select();
+      campo.addEventListener('keydown', function(e){
+        e.stopPropagation();
+        if(e.key === 'Enter'){ e.preventDefault(); campo.blur(); }
+        else if(e.key === 'Escape'){ e.preventDefault(); campo.value = era; campo.blur(); }
+      });
+      campo.addEventListener('blur', function(){
+        setTimeout(function(){ if(td.contains(campo)) td.textContent = guarda.textContent; }, 0);
+      });
+    }
 
     // ---- a divisa arrastada -----------------------------------------------
     // O CURSOR MUDA PORQUE A ALÇA EXISTE (`cursor:col-resize` no `.puxador`), e
@@ -2150,92 +2080,6 @@ def _conferir(html: str) -> None:
                          + "\n  ".join(f"- {f}" for f in falhas))
 
 
-# ---------------------------------------------------------------------------------------------
-# AS VARIANTES DO DESENHO DE 19/10/2026 (a escolher por ela). Só o desenho: nenhuma delas entra
-# na página publicada nem no produto. Cada uma sai de `mockup/10-perfis.html` com trocas
-# EXATAS, e a troca que não casa derruba o gerador: a variante nunca vira cópia velha calada.
-# ---------------------------------------------------------------------------------------------
-FRASE_DO_FREESTYLE = "Freestyle é o botão do controle, não um jogo"
-
-_NOME_DO_JOGO = 'value="Mortal Kombat 1"><span class="exige" data-hef="editor.jogo.exige"'
-_DICA_DA_EXIGENCIA = 'data-hef="editor.jogo.exigencia" data-hef-alvo="html"></span></span>'
-
-
-def _trocar(html, trocas):
-    """Aplica as trocas na ordem; a que não casa derruba o gerador com o nome dela."""
-    for velho, novo in trocas:
-        if velho not in html:
-            raise SystemExit(f"ERRO nas variantes de 10-perfis: a troca não casa: {velho[:70]!r}")
-        html = html.replace(velho, novo, 1)
-    return html
-
-
-def _juntar_ativacao_e_analogicos(html):
-    """B da coluna de ajuste próprio: as células da ativação e dos analógicos viram UMA, com um glifo."""
-    padrao = re.compile(
-        r'(<span class="gc"[^>]*>)((?:(?!<span class="gc").)*?)data-hef-secao="ativacao"(.*?)'
-        r'<span class="gp( on)?"[^>]*></span></span>'
-        r'<span class="gc"[^>]*>(?:(?!<span class="gc").)*?data-hef-secao="analogicos".*?'
-        r'<span class="gp( on)?"([^>]*)></span></span>', re.S)
-
-    def junta(m):
-        aceso = " on" if (m.group(4) or m.group(5)) else ""
-        return (f'{m.group(1)}{m.group(2)}data-hef-secao="acessibilidade"{m.group(3)}'
-                f'<span class="gp{aceso}"{m.group(6)}></span></span>')
-
-    novo, quantas = padrao.subn(junta, html)
-    if quantas < 2:
-        raise SystemExit(f"variante 10-acessibilidade-B: só {quantas} linha(s) juntaram")
-    return _trocar(novo, [(".gd-pecas .gls{gap:5px}", ".gd-pecas .gls{gap:6px}")])
-
-
-def variantes(html):
-    """Nome do arquivo (sem `.html`) -> página da variante, a partir do desenho recém-gerado."""
-    saidas = {}
-    # Perfis 1 (O-EDITOR-DE-PERFIS-MOSTRA-O-ESTILO-RECUSA-O-FREESTYLE-...): o nome «Freestyle»
-    # no «Nome do jogo». A: o ponto laranja que o campo já tem, com a frase na dica.
-    saidas["10-freestyle-A-ponto-com-dica"] = _trocar(html, [
-        (_NOME_DO_JOGO, _NOME_DO_JOGO.replace("Mortal Kombat 1", "Freestyle")
-         .replace('class="exige"', 'class="exige on"')),
-        (_DICA_DA_EXIGENCIA, _DICA_DA_EXIGENCIA.replace("></span></span>", f">{FRASE_DO_FREESTYLE}</span></span>")),
-    ])
-    # B: duas palavras ao lado do campo, no rótulo ao vivo que a 10-Q4 dela tinha (a frase inteira
-    # fica na dica: a 940 px a frase não cabe ao lado do campo).
-    saidas["10-freestyle-B-frase-ao-lado"] = _trocar(html, [
-        (_NOME_DO_JOGO, _NOME_DO_JOGO.replace("Mortal Kombat 1", "Freestyle")),
-        (_DICA_DA_EXIGENCIA, _DICA_DA_EXIGENCIA
-         + f'<span class="rot on" data-dica="{FRASE_DO_FREESTYLE}"><span class="al alerta">Nome reservado</span></span>'),
-    ])
-    # B do renomear: um quinto botão na barra do rodapé (A é o que o desenho do todo tem: não há).
-    saidas["10-renomear-B-botao-na-barra"] = _trocar(html, [
-        ('<button class="btn vermelho" data-hef-gesto="remover"',
-         '<button class="btn" data-hef-gesto="renomear" data-dica="Muda o nome do perfil, não o do jogo">'
-         'Renomear</button>\n          <button class="btn vermelho" data-hef-gesto="remover"'),
-        ("grid-template-columns:repeat(4,1fr);gap:14px;padding:14px 0 2px",
-         "grid-template-columns:repeat(5,1fr);gap:10px;padding:14px 0 2px"),
-    ])
-    # Perfis 2 (OS-EVENTOS-DO-PERFIL-...): o comando do «Meu comando». A é a linha do desenho do todo,
-    # com o comando ao lado do momento e só com o «Meu comando»; B (o desenho de agora, recomendado) o
-    # põe numa linha própria, porque a 940 px o campo ao lado fica com o texto cortado.
-    bloco = re.search(r'\n *<div class="campo so-comando">.*?</div>', html, re.S)
-    entrada = re.search(r'<input[^>]*class="ev-cmd"[^>]*>', bloco.group(0), re.S).group(0)
-    sem_linha = html.replace(bloco.group(0), "", 1)
-    ancora = sem_linha.index('aria-label="Quando o perfil entra"')
-    fim = sem_linha.index("</select></span>", ancora)
-    na_mesma = sem_linha[:fim] + "</select>" + entrada + sem_linha[fim + len("</select>"):]
-    saidas["10-eventos-A-comando-na-mesma-linha"] = _trocar(na_mesma, [
-        ('.campo.so-comando{display:none}',
-         '.campo.so-comando{display:none}\n  .campo .ev-val select.estreito{flex:0 0 170px;width:170px}'
-         '\n  .ev-val .ev-cmd{flex:1;min-width:0;display:none}'
-         '\n  .so-eventos:has(option[value="meu_comando"]:checked) .ev-cmd{display:block}')])
-    # Perfis 3 (AS-TRES-SECOES-DA-ACESSIBILIDADE-...): a coluna do ajuste próprio. A é o desenho de
-    # 16/10 (dez células, vão de 5 px: a cruz da ativação e o analógico da curva, cada um com o seu
-    # ponto); B junta os dois numa célula «Acessibilidade» (nove células, vão de volta aos 6 px, um
-    # ponto só, aceso se qualquer das duas seções guarda) e UM glifo só, o da cruz.
-    saidas["10-acessibilidade-B-uma-celula"] = _juntar_ativacao_e_analogicos(html)
-    return saidas
-
-
 if __name__ == "__main__":
     import os
     import pathlib
@@ -2249,12 +2093,8 @@ if __name__ == "__main__":
     os.environ[onde._DESVIO] = str(_prova)
     n = monta("10-perfis", "Perfis", MIOLO, CSS)
     _conferir(onde.pagina("10-perfis.html").read_text(encoding="utf-8"))
-    _variantes = variantes(onde.pagina("10-perfis.html").read_text(encoding="utf-8"))
     shutil.copyfile(_prova / "10-perfis.html", _real / "10-perfis.html")
     shutil.rmtree(_prova)
-    (_real / "variantes").mkdir(exist_ok=True)
-    for _nome, _doc in _variantes.items():
-        (_real / "variantes" / f"{_nome}.html").write_text(_doc, encoding="utf-8")
     ROT_P = re.search(r"--rot-p:(\d+)px", CSS).group(1)
     FORA = sum(1 for c in MESA if not c.get("conectado", True))
     print(f"10-perfis: OK, {n} divs · rótulo à esquerda com dois pontos, coluna de {ROT_P}px, "

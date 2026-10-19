@@ -169,10 +169,12 @@ def test_o_mesmo_numero_nao_regrava(disco: dict[str, Any]) -> None:
 def test_so_os_campos_de_texto_ficam_fora_do_tique() -> None:
     """O que ela DIGITA não se repinta a cada 500 ms (apagaria a frase no meio da escrita).
 
-    Com o trilho da Prioridade fora da página só restam os dois campos de texto.
+    Com o trilho da Prioridade fora da página restam os dois campos de texto e o select do estilo,
+    que se pinta só quando outro perfil abre (pintar a cada tique reaplicaria a receita).
     MORDIDA: tire ``editor.jogo`` de ``CAMPOS_QUE_ELA_DIGITA`` e isto reprova.
     """
-    assert set(a10_perfis.CAMPOS_QUE_ELA_DIGITA) == {"editor.jogo", "editor.evento.comando"}
+    assert set(a10_perfis.CAMPOS_QUE_ELA_DIGITA) == {
+        "editor.jogo", "editor.evento.comando", "editor.estilo"}
 
 
 def test_o_select_oferece_o_que_o_motor_sabe_aplicar() -> None:

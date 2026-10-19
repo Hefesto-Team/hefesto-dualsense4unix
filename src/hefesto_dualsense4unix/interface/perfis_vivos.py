@@ -116,7 +116,6 @@ window.HEF = (function(){
   // pintura que não pinta nada.
   function txt(el,v){ if(!el) return 0; if(el.textContent !== v) el.textContent = v; return 1; }
   function val(el,v){ if(!el) return 0; if(el.value !== v) el.value = v; return 1; }
-  function est(el,o){ if(!el) return 0; for(const k in o){ if(el.style[k]!==o[k]) el.style[k]=o[k]; } return 1; }
   function cls(el,c,on){ if(!el) return 0; el.classList.toggle(c, !!on); return 1; }
   function dica(el,v){ if(!el) return 0; if(el.getAttribute('title')!==v) el.setAttribute('title', v); return 1; }
   // TRAVAR É ESCRITA, e por isso conta. Um botão que a tela oferece e o produto
@@ -206,22 +205,6 @@ window.HEF = (function(){
   function pintaEditor(e){
     if(!e) return 0;
     let n = 0;
-    n += val(q('[data-hef="editor.nome"]'), e.nome);
-    n += est(q('[data-hef="editor.prioridade"]'), {width:e.prioridade});
-    n += txt(q('[data-hef="editor.prioridade.n"]'), e.prioridade_n);
-    n += dica(q('[data-hef="editor.prioridade.dica"]'), e.prioridade_dica);
-    const amb = q('[data-hef="editor.ambiente"]');
-    // O TERCEIRO ESTADO DO SELETOR. Perfil que a tela não sabe mostrar não abre
-    // dizendo «Qualquer jogo»: o seletor vai TRAVADO com a frase. Abrir
-    // mentindo é o defeito R-12 pelo avesso, e o estrago dele já aconteceu
-    // nesta casa.
-    // O TRAVESSÃO QUANDO A TELA NÃO SABE MOSTRAR, e não o silêncio: sem
-    // escrita nenhuma o `<select>` fica na PRIMEIRA opção da lista, e o campo
-    // passa a AFIRMAR uma procedência que o perfil não tem. É a mesma escolha
-    // do `escrever()` do piloto, que troca vazio por `—` antes de escrever.
-    n += val(amb, e.ambiente !== null ? e.ambiente : '\u2014');
-    n += trava(amb, e.ambiente_travado);
-    n += dica(amb, e.ambiente_recado);
     n += val(q('[data-hef="editor.jogo"]'), e.jogo);
     const est_ = q('[data-hef="editor.estilo"]');
     n += trava(est_, e.estilo_travado);
@@ -446,16 +429,6 @@ class Janela:
 
         pacote["lista"] = a10_perfis._com_a_procedencia(
             list(pacote.get("lista") or []), self.perfis)
-
-        editor = dict(pacote.get("editor") or {})
-        if editor:
-            procedencia, recado = a10_perfis._procedencia_e_recado(
-                getattr(self._perfil_do_editor(editor), "match", None),
-                editor.get("ambiente_recado"))
-            editor["ambiente"] = procedencia or None
-            editor["ambiente_travado"] = not procedencia
-            editor["ambiente_recado"] = recado
-            pacote["editor"] = editor
 
         t1 = time.perf_counter()
         chaves = tuple(linha["perfil"] for linha in pacote["lista"])

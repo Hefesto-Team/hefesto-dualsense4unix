@@ -329,15 +329,15 @@ def test_voltar_a_de_ontem_acha_o_perfil_e_manda_reaplicar(
     assert ("launch_env.refresh", ()) in ponte.chamadas
 
 
-def test_o_pacote_nao_escreve_no_estilo_de_jogo(
+def test_o_perfil_sem_estilo_mostra_o_travessao(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O perfil não tem campo de Estilo, então a tela não afirma nenhum."""
+    """Perfil sem estilo guardado: a tela não afirma nenhum (o travessão), e não o do anterior."""
     _o_disco_tem(monkeypatch, "Pragmata")
     _o_marcador_diz(monkeypatch, "Pragmata")
     fora = a10_perfis.pacote(_ctx())
-    assert "editor.estilo" not in fora
-    assert "editor.estilo" in a10_perfis.NAO_PINTAVEIS
+    assert fora.get("editor.estilo") in (None, "", "—")
+    assert "editor.estilo" not in a10_perfis.NAO_PINTAVEIS
 
 
 def test_a_bancada_abre_o_estilo_de_jogo_no_travessao() -> None:

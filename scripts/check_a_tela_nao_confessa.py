@@ -387,11 +387,6 @@ def _recados() -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
 
 
 SEM_LETRA: dict[str, str] = {
-    "a10_perfis.py:editor_ambiente ← MSG_ESCOLHA_O_JOGO.format(procedencia=rotulo)":
-        "a frase de `profiles/simple_match`, com o nome do lançador no buraco",
-    "a10_perfis.py:editor_ambiente ← recado":
-        "o `ambiente_recado` que `app/actions/perfis_web` monta, repassado "
-        "inteiro",
     "a10_perfis.py:editor_jogo ← recado":
         "idem, no campo do jogo",
     "a01_jogar.py:mascara_do_controle ← motivo":

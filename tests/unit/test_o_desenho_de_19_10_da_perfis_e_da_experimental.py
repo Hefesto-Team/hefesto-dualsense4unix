@@ -113,63 +113,13 @@ def test_o_desenho_nao_tem_campo_de_nome_do_perfil() -> None:
     assert len(re.findall(r"<button\b", barra.group(1))) == 4
 
 
-def test_a_variante_a_do_freestyle_usa_o_ponto_que_o_campo_ja_tem() -> None:
-    """A (recomendada): nenhum elemento novo; o ponto acende e a dica diz a frase."""
-    doc = _ler(VARIANTES / "10-freestyle-A-ponto-com-dica.html")
-    assert 'value="Freestyle"' in doc
-    assert '<span class="exige on"' in doc
-    dica = re.search(r'data-hef="editor.jogo.exigencia"[^>]*>([^<]*)</span>', doc)
-    assert dica is not None and dica.group(1) == "Freestyle é o botão do controle, não um jogo"
-    assert 'class="rot on"' not in doc, "a variante A não desenha o rótulo ao lado"
-    pagina = _ler(DEZ)
-    assert "Freestyle" not in _sem_estilo_nem_script(pagina), "a página não afirma o recado"
-    assert 'class="exige on"' not in pagina
+def test_a_10_nao_tem_mais_variante() -> None:
+    """O desenho de 19/10 foi escolhido (todas na recomendada): as variantes da 10 saíram.
 
-
-def test_a_variante_b_do_freestyle_acende_o_rotulo_ao_lado() -> None:
-    doc = _ler(VARIANTES / "10-freestyle-B-frase-ao-lado.html")
-    rot = re.search(r'<span class="rot on" data-dica="([^"]*)"><span class="al alerta">'
-                    r"([^<]*)</span>", doc)
-    assert rot is not None
-    assert rot.group(1) == "Freestyle é o botão do controle, não um jogo"
-    assert rot.group(2) == "Nome reservado"
-    assert 'class="exige on"' not in doc, "na B só o rótulo diz; o ponto fica apagado"
-
-
-@sem_chrome
-@pytest.mark.parametrize("vista", VISTAS, ids=lambda v: str(v[0]))
-def test_a_variante_b_do_freestyle_cabe_a_940(vista: tuple[int, int]) -> None:
-    """O rótulo da B aparece inteiro, sem reticências, em toda largura (a frase longa não cabia)."""
-    medida = _no_chrome(VARIANTES / "10-freestyle-B-frase-ao-lado.html", vista, """() => {
-      const r = document.querySelector('.campo .rot.on .al');
-      const d = document.documentElement, p = r.parentElement;
-      return {cortado: r.scrollWidth > r.clientWidth + 1 || p.scrollWidth > p.clientWidth + 1,
-              rolagem: d.scrollHeight > d.clientHeight, largo: d.scrollWidth > d.clientWidth + 1};
-    }""")
-    assert not medida["cortado"], medida
-    assert not medida["rolagem"] and not medida["largo"], medida
-
-
-def test_a_variante_b_do_renomear_poe_o_quinto_botao_na_barra() -> None:
-    doc = _sem_estilo_nem_script(_ler(VARIANTES / "10-renomear-B-botao-na-barra.html"))
-    barra = re.search(r'<div class="barra-quatro">(.*?)</div></div>', doc, re.S)
-    assert barra is not None
-    botoes = re.findall(r"<button\b[^>]*>([^<]*)</button>", barra.group(1))
-    assert botoes == ["Duplicar", "Novo", "Renomear", "Remover", "Ativar"], botoes
-
-
-def test_as_variantes_de_10_estao_em_dia() -> None:
-    """Cada `mockup/variantes/10-*` é o que o gerador produz agora, a partir do desenho."""
-    import aba10
-
-    esperadas = aba10.variantes(_ler(DEZ))
-    for nome, doc in esperadas.items():
-        assert (VARIANTES / f"{nome}.html").read_text(encoding="utf-8") == doc, (
-            f"{nome} ficou velha: rode `aba10.py`")
-    # as `10-efeitos-*` são desenho de 20/10 e nascem fora do `aba10`
-    sobra = {p.stem for p in VARIANTES.glob("10-*.html")
-             if not p.stem.startswith("10-efeitos-")} - set(esperadas)
-    assert not sobra, f"variante que o gerador não produz mais ficou no disco: {sorted(sobra)}"
+    As `10-efeitos-*` são o desenho de 20/10 e ficam como histórico.
+    """
+    sobra = [p.name for p in VARIANTES.glob("10-*.html") if not p.stem.startswith("10-efeitos-")]
+    assert not sobra, sobra
 
 
 def test_a_variante_nunca_entra_na_pagina_publicada() -> None:
@@ -235,28 +185,10 @@ def test_a_aba_jogos_continua_com_a_ordem_do_que_vale() -> None:
     assert m["ordem_visivel"] and not m["visivel"], m
 
 
-def test_a_variante_a_dos_eventos_poe_o_comando_ao_lado_do_momento() -> None:
-    doc = _ler(VARIANTES / "10-eventos-A-comando-na-mesma-linha.html")
-    corpo = _sem_estilo_nem_script(doc)
-    quando = re.search(r'<div class="campo so-eventos.*?</div>', corpo, re.S)
-    assert quando is not None and 'class="ev-cmd"' in quando.group(0)
-    assert 'class="campo so-comando"' not in corpo
-
-
-@sem_chrome
-def test_a_variante_a_dos_eventos_corta_o_comando_a_940() -> None:
-    """Por que a recomendada é a linha própria: a 940 o campo ao lado fica estreito demais."""
-    m = _no_chrome(VARIANTES / "10-eventos-A-comando-na-mesma-linha.html", (940, 809), """() => {
-      const c = document.querySelector('.ev-cmd'); return c.getBoundingClientRect().width;
-    }""", antes=_ESCOLHE_EVENTO % "meu_comando")
-    assert m < 110, m
-
-
 # ---------------------------------------------------------------------------------------------
 # Perfis 3 · AS-TRES-SECOES-DA-ACESSIBILIDADE-GANHAM-IPC-E-O-TOQUE-SEGUE-A-MAO-01
 # ---------------------------------------------------------------------------------------------
 
-VARIANTE_ACESSIBILIDADE_B = VARIANTES / "10-acessibilidade-B-uma-celula.html"
 _SECOES_DE_UMA_LINHA = ("leds", "triggers", "rumble", "speaker", "mic", "sensores", "mascara",
                         "movimento", "ativacao", "analogicos")  # (noqa-acento) identificador ASCII
 _MEDE_A_FILEIRA = """() => {
@@ -284,46 +216,12 @@ def test_a_coluna_de_ajuste_proprio_tem_a_ativacao_e_os_analogicos_depois_do_mov
     assert ".gd-pecas{width:271px}" in html and ".gd-pecas .gls{gap:5px}" in html
 
 
-def test_a_variante_b_junta_a_ativacao_e_os_analogicos_numa_celula() -> None:
-    doc = _ler(VARIANTE_ACESSIBILIDADE_B)
-    secoes = _secoes_da_primeira_linha(doc)
-    assert secoes == [*_SECOES_DE_UMA_LINHA[:8], "acessibilidade"], secoes
-    assert "analogicos" not in re.search(r'<td class="gd-pecas">.*?</td>', doc, re.S).group(0)
-    assert ".gd-pecas .gls{gap:6px}" in doc
-
-
-def _celula(secao: str, ponto: str) -> str:
-    return (f'<span class="gc"><span class="gr" data-hef-secao="{secao}"><svg></svg></span>'
-            f'<span class="gp{ponto}" data-hef="guarda.proprio"></span></span>')
-
-
-def test_o_ponto_da_celula_juntada_acende_se_qualquer_das_duas_guarda() -> None:
-    """A junção da B: o ponto é a soma dos dois, e a célula velha dos analógicos some."""
-    import aba10
-
-    def linha(a: str, b: str) -> str:
-        ativa = _celula("ativacao", a)  # (noqa-acento) identificador ASCII
-        analoga = _celula("analogicos", b)
-        return f'<td class="gd-pecas">{ativa}{analoga}</td>'
-
-    pagina = ".gd-pecas .gls{gap:5px}" + "".join(linha(a, b) for a, b in
-                                                 [("", ""), (" on", ""), ("", " on")])
-    saida = aba10._juntar_ativacao_e_analogicos(pagina)
-    pontos = re.findall(r'<span class="gp( on)?"', saida)
-    assert pontos == ["", " on", " on"], pontos
-    assert "analogicos" not in saida and saida.count('data-hef-secao="acessibilidade"') == 3
-
-
-
 @sem_chrome
 @pytest.mark.parametrize("vista", VISTAS, ids=lambda v: str(v[0]))
-@pytest.mark.parametrize("arquivo,celulas", [(DEZ, 10), (VARIANTE_ACESSIBILIDADE_B, 9)],
-                         ids=["A-recomendada", "B-uma-celula"])
-def test_a_fileira_das_secoes_cabe_na_celula_em_toda_vista(
-        vista: tuple[int, int], arquivo: pathlib.Path, celulas: int) -> None:
+def test_a_fileira_das_secoes_cabe_na_celula_em_toda_vista(vista: tuple[int, int]) -> None:
     """A fileira inteira fica dentro da célula do Status (a 940 px a de dez passava 16 px)."""
-    linhas = _no_chrome(arquivo, vista, _MEDE_A_FILEIRA)
-    assert linhas and all(ln["celulas"] == celulas for ln in linhas), linhas
+    linhas = _no_chrome(DEZ, vista, _MEDE_A_FILEIRA)
+    assert linhas and all(ln["celulas"] == 10 for ln in linhas), linhas
     assert all(ln["sobra"] >= 0 for ln in linhas), linhas
 
 

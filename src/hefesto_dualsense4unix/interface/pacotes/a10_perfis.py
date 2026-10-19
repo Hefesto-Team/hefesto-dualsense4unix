@@ -6,19 +6,17 @@ nome do atributo não é o contrato, o contrato é este despachante. Tem dono: o
 (`active_profile`) e o Modo Freestyle (`freestyle_ligado`, que diz se o Freestyle manda em todo
 jogo).
 
-TREZE gestos com dono (01 a 03/09/2026):
+Os gestos com dono (de 01/09/2026; o desenho de 12/10 tirou a Preferência, o «Funciona em» e o
+Detectar):
 
     selecionar          a célula do nome, na lista. Abre o perfil no editor.
     ativar              `profile.switch`
     voltar-a-de-ontem   `restaurar_do_historico` + reaplicar + `launch_env.refresh`
-    editor.nome         renomeia: `save_profile` do nome novo + `delete_profile`
-    editor.ambiente     troca a REGRA: `from_simple_choice` + `save_profile`
+    perfis.renomear     renomeia: `save_profile` do nome novo + `delete_profile`
     editor.jogo         o programa (ou o appid) dentro da regra
-    detectar            o jogo da Steam em foco, de `window_detect_last_class`
     novo                um perfil em branco, com a regra do jogo em foco
     duplicar            `model_copy` com "(cópia)" no nome, e o editor abre nela
     remover             `delete_profile`, com a pergunta NO RÓTULO do botão
-    editor.prioridade   o `<input type=range>` ("Slider, como você pediu")
     editor.estilo       escolher um estilo APLICA a receita: gatilho, degrau de vibração e a
                         cor de cada controle ("Construir o motor"), de `profiles/estilos_de_jogo.py`
 
@@ -46,12 +44,9 @@ daemon quem está valendo (`_valendo`): com `active_profile: null` três guardas
 
 ONDA2-10, decisões do PO (04/09/2026):
 
-    [01] o CADEADO e o PONTO DE ALERTA: `editor.ambiente.travado` e `editor.ambiente.recado` caíam
-    no vazio (sem endereço na página), e o `<select>` travado ficava com o **"Jogo" do mockup**,
-    pois `escrever()` não pousa um `—` num `<select>` que não o oferece
-    (`aba10.opts(travessao=True)`). [02] o FIM da frase da exigência escondida, reescrito para ESTA
+    [02] o FIM da frase da exigência escondida, reescrito para ESTA
     tela (`FIM_DA_EXIGENCIA_AQUI`): a do produto está certa na janela GTK e errada aqui. [04] o
-    CAMPO DO JOGO SE CORRIGE: `editor_jogo` e `detectar` devolvem `editor.jogo` na forma canônica
+    CAMPO DO JOGO SE CORRIGE: `editor_jogo` devolve `editor.jogo` na forma canônica
     com o desfecho. É o único instante em que a tela pode fazê-lo: o campo está em
     `CAMPOS_QUE_ELA_DIGITA` e o tique não o repinta.
 
@@ -134,6 +129,19 @@ def _escolhido(todos: list[dict[str, Any]], ativo: str) -> str:
 # configs, e ordena por duplo clique no nome das colunas.
 
 _PROCURA: str = ""
+
+#: O «Nome do jogo» recusou o nome do botão: (perfil, frase). O nome recusado não grava, então o
+#: tique, que lê a exigência do disco, apagaria o ponto laranja no décimo de segundo seguinte; a
+#: recusa vale até o campo mudar de novo ou outro perfil abrir no editor.
+_RECUSA_DO_JOGO: tuple[str, str] = ("", "")
+
+FRASE_DO_FREESTYLE = "Freestyle é o botão do controle, não um jogo"
+
+
+def _esquecer_a_recusa_do_jogo() -> None:
+    """Outro perfil abriu no editor: a recusa era do campo do anterior."""
+    global _RECUSA_DO_JOGO
+    _RECUSA_DO_JOGO = ("", "")
 
 TABELA_DA_LISTA = "10-perfis.lista"
 
@@ -291,20 +299,19 @@ def _desfecho_para_a_tela() -> str:
 #: `data-hef-alvo="largura"` estaria.
 #:                       desta frente; está no relatório.
 #: `data-hef-alvo="classe"`, e o produto passou a acender e apagar cada uma.
-NAO_PINTAVEIS = ("guarda.linhas", "editor.estilo")
+NAO_PINTAVEIS = ("guarda.linhas",)
 
 #: Os escalares do editor que a página tem onde pôr (15/10/2026: a página perdeu o Nome, a
 #: Preferência, o Funciona em e o rótulo do jogo; o produto deixou de emiti-los).
-CAMPOS_DO_EDITOR_NA_PAGINA = ("jogo", "evento", "evento_comando")
+CAMPOS_DO_EDITOR_NA_PAGINA = ("jogo", "estilo", "evento", "evento_comando")
 
 #: os valores que a página NÃO TEM — eles caem no vazio, sem estrago e sem
 SEM_ENDERECO = {
-    # a `classe` acendendo em `editor.ambiente.travado` e a frase no hover, por
     "quantos": "a tela nova não desenha contagem de perfis",
     "travado": "a trava da troca automática não é desenhada nesta aba",
 }
 
-#: baixa. As datas: `perfis.desfecho` (03/09) · `editor.prioridade.escolha`
+#: baixa. As datas: `perfis.desfecho` (03/09)
 ESPERANDO_A_PUBLICACAO: dict[str, str] = {
 }
 
@@ -339,7 +346,7 @@ _ARMADO: tuple[str, float] | None = None
 _PINTADO_PARA: str = ""
 _ULTIMO_TIQUE: float = 0.0
 
-CAMPOS_QUE_ELA_DIGITA = ("editor.jogo", "editor.evento.comando")
+CAMPOS_QUE_ELA_DIGITA = ("editor.jogo", "editor.evento.comando", "editor.estilo")
 
 
 def _uma_vez_so(alvo: str) -> tuple[str, ...]:
@@ -445,9 +452,6 @@ SELETOR_DOS_JOGOS = 'datalist[data-hef="editor.jogo.lista"]'
 #: (`… ol`) não acha nada, e a página ficava com os dois perfis do desenho.
 SELETOR_DA_ORDEM = 'ol[data-hef="editor.ordem"]'
 
-#: Ele virou `blocos` pela MESMA razão que a lista dos jogos: as opções são os
-SELETOR_DO_AMBIENTE = 'select[data-hef="editor.ambiente"]'
-
 #: QUANTOS JOGOS A LISTA OFERECE, no máximo. **É teto de SEGURANÇA, não de
 TETO_DA_LISTA_DE_JOGOS = 500
 
@@ -505,7 +509,8 @@ def _linha_da_lista(nome: str, criado: str, modificado: str,
             f'class="{"ativo" if ativo else ""}" '
             f'data-hef-perfil="{_atr(nome)}" data-hef-gesto="selecionar" '
             f'aria-selected="{"true" if escolhido else "false"}">'
-            f'<td data-hef="perfis.linha.nome">{_texto(nome)}</td>'
+            f'<td data-hef="perfis.linha.nome" '
+            f'data-dica="Clique abre no editor; duplo clique renomeia">{_texto(nome)}</td>'
             f'<td class="data" data-hef="perfis.linha.criado">{_texto(criado)}</td>'
             f'<td class="data" data-hef="perfis.linha.modificado">{_texto(modificado)}</td></tr>')
 
@@ -812,7 +817,7 @@ def _procedencia_e_recado(match: Any, recado_do_produto: Any = "",
     Procedência vazia = o que o `ambiente_travado` do produto sempre quis dizer: **esta tela não
     sabe descrever esta regra**, o campo vai travado com a frase do que ela é e o `match` do disco
     fica intacto (a MESMA válvula do R-12). É o único dono da pergunta, e pintura e gestos
-    (`editor_ambiente`, `editor_jogo`) a chamam em vez de ler `editor["ambiente_travado"]`: o
+    (`editor_jogo`) a chama em vez de ler `editor["ambiente_travado"]`: o
     booleano do produto travaria a «Navegação» (`browser` está em `perfis_web.FORA_DO_DESENHO`,
     *"não sei mostrar"*, enquanto a tela nova SABE) e ganharia opção que o gesto ao lado recusaria.
     """
@@ -997,6 +1002,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     fora["editor.ordem.ha"] = "sim" if len(editor.get("ordem") or []) >= 2 else ""
 
     exigencia = _exigencia_para_esta_tela(getattr(alvo, "match", None))
+    if _RECUSA_DO_JOGO[0] == escolhido:
+        exigencia = _RECUSA_DO_JOGO[1] or exigencia
+    else:
+        _esquecer_a_recusa_do_jogo()
     fora["editor.jogo.exigencia"] = exigencia
     fora["editor.jogo.exige"] = "sim" if exigencia else ""
 
@@ -1223,7 +1232,7 @@ def _o_perfil_no_disco(nome: str) -> Any:
     aparelho (`D-2709-O-SALVAR-LE-O-PERFIL`): as outras abas gravam as escolhas no clique e o estado
     vivo não é escolha do usuário (até 27/09 esta base punha o vivo por cima, e mudar a PRIORIDADE
     ligava o microfone de um controle no PRAGMATA dela). A volta é pelo nome que o perfil TEM: quem
-    renomeia (`editor_nome`) o faz DEPOIS, por `model_copy`, porque `DraftConfig.to_profile` com
+    renomeia (`perfis_renomear`) o faz DEPOIS, por `model_copy`, porque `DraftConfig.to_profile` com
     nome novo zera `match`, `mode` e `suppress_desktop_emulation` de propósito (R-11); por isso
     nenhum gesto do editor passa pelo rascunho.
     """
@@ -1249,13 +1258,14 @@ def _gravar(prof: Any, ctx: Contexto, p: Any, *, era: str = "") -> None:
 
     **A carona entra AQUI e não em `perfil.gravar_e_reaplicar`** (06/09/2026, ONDA5-07-02): o censo
     por árvore de sintaxe achou NOVE gestos que gravam o perfil INTEIRO sem repor o atalho de
-    inicialização que a Steam come, os OITO que passam por este funil (`editor.nome`,
-    `editor.prioridade`, `editor.ambiente`, `editor.estilo`, `editor.jogo`, `detectar`, `novo`,
-    `duplicar`) mais o `voltar-a-de-ontem`, que tem funil próprio (eram nove com o `editor.modo`,
-    que saiu com o quadro «Modo» em 11/09/2026). Aquela função tem SEIS chamadores em CINCO abas e a
-    interface é de ação imediata (clicar num tom ou degrau já grava): pendurar a carona lá seria
-    varrer o `localconfig.vdf` **por clique**, opção que o dono da carona pesou e RECUSOU. Este
-    funil é o único cujos gestos são o perfil INTEIRO e não um campo.
+    inicialização que a Steam come, os que passam por este funil (`perfis.renomear`,
+    `editor.estilo`, `editor.jogo`, `novo`, `duplicar`; eram oito com a Preferência, o «Funciona em»
+    e o Detectar, que saíram com o desenho de 12/10) mais o `voltar-a-de-ontem`, que tem funil
+    próprio (eram nove com o `editor.modo`, que saiu com o quadro «Modo» em 11/09/2026). Aquela
+    função tem SEIS chamadores em CINCO abas e a interface é de ação imediata (clicar num tom ou
+    degrau já grava): pendurar a carona lá seria varrer o `localconfig.vdf` **por clique**, opção
+    que o dono da carona pesou e RECUSOU. Este funil é o único cujos gestos são o perfil INTEIRO e
+    não um campo.
 
     A notícia não se perde: `_com_a_carona("")` devolve só a notícia (vazia sem nada a repor), ela
     fica em `_CARONA_PENDENTE` e o `_dizer` do gesto a junta ao desfecho. Sem isso o reparo
@@ -1376,9 +1386,13 @@ def _so_mudou(o: dict[str, Any]) -> bool:
     return str(o.get("evento") or "") in ("", "change")
 
 
-@gesto("10-perfis.html", "editor.nome", grava="_gravar")
-def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """Renomear o perfil aberto no editor. `save_profile` + `delete_profile`.
+@gesto("10-perfis.html", "perfis.renomear", grava="_gravar")
+def perfis_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """Renomear o perfil da linha pelo duplo clique no nome: `save_profile` e `delete_profile`.
+
+    O perfil é o da linha (`data-hef-perfil` → `hefPerfil`), não o do editor: o campo nasce na
+    célula do nome (19/10/2026, o desenho escolhido; o campo «Nome» do editor saiu com o desenho do
+    todo). Sem `hefPerfil`, vale o do editor.
 
     O valor vem de `valor` e não de `texto`: o ouvinte manda `texto: alvo.textContent`, vazio num
     `<input>`; desde 01/09 o clique traz o `value` (`hefesto_vivo.py`) e o piloto escuta `change`, o
@@ -1416,10 +1430,15 @@ def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
 
     if not _so_mudou(o):
         return None
+    from hefesto_dualsense4unix.profiles.manager import e_o_freestyle
+
     novo = str(o.get("valor") or "").strip()
-    era = _perfil_do_editor(ctx)
+    do_editor = _perfil_do_editor(ctx)
+    era = str(o.get("hefPerfil") or "").strip() or do_editor
     if not novo:
         raise RuntimeError("o perfil precisa de um nome — o campo ficou vazio.")
+    if e_o_freestyle(novo):
+        raise RuntimeError(FRASE_DO_FREESTYLE)
     prof = _o_perfil_no_disco(era)
     if prof.name == novo:
         return None
@@ -1433,115 +1452,9 @@ def editor_nome(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     _gravar(prof.model_copy(update={"name": novo}), ctx, p, era=era)
     if troca_de_arquivo:
         delete_profile(era)
-    _ESCOLHIDO = novo
+    if era == do_editor:
+        _ESCOLHIDO = novo
     return _dizer(mensagem_do_salvar(novo, renomeado_de=prof.name))
-
-
-@gesto("10-perfis.html", "editor.prioridade", grava="_gravar")
-def editor_prioridade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """"Prioridade": o número que decide quem vence quando dois perfis servem."""
-    from hefesto_dualsense4unix.app.actions.profiles_actions import (
-        mensagem_do_salvar,
-    )
-    from hefesto_dualsense4unix.profiles.schema import (
-        PRIORIDADE_MAXIMA,
-        PRIORIDADE_MINIMA,
-    )
-
-    if not _so_mudou(o):
-        return None
-    cru = str(o.get("valor") or "").strip()
-    nome = _perfil_do_editor(ctx)
-    try:
-        novo = int(float(cru))
-    except ValueError:
-        raise RuntimeError(
-            f"a preferência tem de ser um número, e o campo mandou “{cru}”. "
-            f"Nada foi salvo.") from None
-    if not PRIORIDADE_MINIMA <= novo <= PRIORIDADE_MAXIMA:
-        raise RuntimeError(
-            f"a preferência {novo} está fora da faixa que o perfil aceita "
-            f"({PRIORIDADE_MINIMA} a {PRIORIDADE_MAXIMA}). Nada foi salvo.")
-    prof = _o_perfil_no_disco(nome)
-    if int(prof.priority or 0) == novo:
-        return None
-    _gravar(prof.model_copy(update={"priority": novo}), ctx, p)
-    resposta = _dizer(f"{mensagem_do_salvar(prof.name)} · preferência {novo}")
-    pct = round(novo * 100 / PRIORIDADE_MAXIMA) if PRIORIDADE_MAXIMA else 0
-    resposta["mesa"]["editor.prioridade"] = str(pct)
-    resposta["mesa"]["editor.prioridade.n"] = str(novo)
-    return resposta
-
-
-@gesto("10-perfis.html", "editor.ambiente", grava="_gravar")
-def editor_ambiente(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """"Funciona em": trocar a REGRA que faz o perfil entrar. `from_simple_choice`.
-
-    Quem monta a regra é o produto: `profiles/simple_match.from_simple_choice` é a mesma função do
-    Salvar da estável (`profiles_actions._build_profile_from_editor`), com as recusas já em
-    português ("Diga o número do jogo na Steam (ex.: 1599660)"); montar um `MatchCriteria` aqui
-    seria a segunda verdade sobre o que cada opção significa. O `regra_do_disco` não é enfeite: em
-    "Jogo da Steam" preserva o `process_name` do MESMO jogo, que ela nunca viu e portanto nunca
-    pediu para tirar (ESCONDER-EM-VEZ-DE-SAIR-01).
-
-    **O campo diz de onde o jogo vem (C4-FUNCIONA-EM, 11/09/2026, desenho DO USUÁRIO).** Chega uma
-    PROCEDÊNCIA («Navegação», «Steam», «Heroic»…) e quem a traduz é
-    `simple_match.forma_da_procedencia`, com o que o lançador entrega. O "Estilo de Jogo" saiu deste
-    campo (tem o seu, uma linha abaixo), o que dispensou a recusa dele.
-
-    As recusas existem para não REBAIXAR a regra de produto:
-
-    * **seletor travado**: perfil que casa por regra que a tela não sabe mostrar
-    (`window_title_regex`, lista de classes) abre o campo travado com a frase do que fazer; aceitar
-    a troca ali seria o R-12 (regra fina trocada por "Todos"). Medido: sete dos nove perfis de
-    fábrica caem aí.
-    * **a guarda da forma preservada**: se a procedência escolhida é a MESMA que o campo já
-      mostrava, não grava. Sem ela, perfil em «Instalado aqui» cuja regra é por `process_name`
-      (``guard``, medido no disco) seria reescrito como `window_class` por um gesto que não mudou
-      nada na tela (trocar um dado por outro que *"casa por acaso"* é o R-12 já pago). Quem quer
-      mudar muda a opção, e a reescrita é o pedido.
-    """
-    from hefesto_dualsense4unix.profiles.simple_match import (
-        MSG_ESCOLHA_O_JOGO,
-        forma_da_procedencia,
-        from_simple_choice,
-    )
-
-    if not _so_mudou(o):
-        return None
-    rotulo = str(o.get("valor") or o.get("rotulo") or "").strip()
-    nome = _perfil_do_editor(ctx)
-    prof = _o_perfil_no_disco(nome)
-    editor = _editor_de(prof)
-    agora, recado = _procedencia_e_recado(
-        getattr(prof, "match", None), editor.get("ambiente_recado"))
-    if not agora:
-        raise RuntimeError(recado)
-    if rotulo == agora:
-        return None
-    if rotulo == PROCEDENCIA_DE_QUALQUER_JOGO:
-        # a página de antes do `--publicar 10` ainda oferece a opção: o `any`
-        # gravaria um «Só quando eu escolher» no lugar da regra do jogo
-        raise RuntimeError(
-            f"“{rotulo}” não é mais uma procedência. Escolha de onde o jogo vem.")
-    if rotulo in (TRAVESSAO, ""):
-        raise RuntimeError(
-            f"“{TRAVESSAO}” não é uma procedência — ele é o que a tela mostra "
-            f"quando não sabe descrever a regra do perfil. Escolha de onde o "
-            f"jogo vem.")
-    # baixo junto não muda nada — `from_simple_choice` não lê `custom_name`
-    jogo = "" if rotulo in _PROCEDENCIAS_SEM_JOGO else str(editor.get("jogo") or "")
-    achado = _jogo_da_procedencia(rotulo, jogo) if jogo else None
-    if achado is not None:
-        jogo = achado.valor
-    elif rotulo not in _PROCEDENCIAS_SEM_JOGO and rotulo != PROCEDENCIA_DA_STEAM:
-        raise RuntimeError(MSG_ESCOLHA_O_JOGO.format(procedencia=rotulo))
-    chave = forma_da_procedencia(
-        rotulo, jogo,
-        forma_do_catalogo=str(getattr(achado, "forma", "") or ""))
-    prof.match = from_simple_choice(chave, jogo, regra_do_disco=prof.match)
-    _gravar(prof, ctx, p)
-    return _dizer(f"“{prof.name}” agora vale em: {rotulo}")
 
 
 def _sem_o_ajuste_do_estilo(controllers: Any, *, gatilho: bool,
@@ -1818,8 +1731,10 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     **grava**.
 
     O estilo é um **VERBO**: resolve gatilho, vibração e luz de uma vez e dali quem manda são esses
-    três, que ela reajusta nas abas sem nada "voltar atrás". Por isso `editor.estilo` segue em
-    `NAO_PINTAVEIS` e o `<select>` abre no travessão. O perfil guarda também a CHAVE
+    três, que ela reajusta nas abas sem nada "voltar atrás". O `<select>` mostra o estilo GUARDADO
+    no perfil aberto (19/10/2026; antes ficava fora da pintura e mostrava o do perfil anterior), e
+    só quando outro perfil abre: `editor.estilo` está em `CAMPOS_QUE_ELA_DIGITA`, então pintar
+    nunca dispara este gesto nem reaplica a receita. O perfil guarda também a CHAVE
     (`Profile.estilo`, desde 09/10/2026, O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01), por onde o
     motor do tato acha a receita invisível que nenhuma aba mostra; o pacote de `perfis_web` já traz
     o rótulo e as marcas, e pintá-los é da tela
@@ -1929,14 +1844,23 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
         simple_extra,
     )
 
+    global _RECUSA_DO_JOGO
+    from hefesto_dualsense4unix.profiles.manager import e_o_freestyle
+
     if not _so_mudou(o):
         return None
+    nome = _perfil_do_editor(ctx)
+    cru = str(o.get("valor") or "").strip()
+    if e_o_freestyle(cru):
+        _RECUSA_DO_JOGO = (nome, FRASE_DO_FREESTYLE)
+        return _dizer(FRASE_DO_FREESTYLE, **{"editor.jogo.exige": "sim",
+                                             "editor.jogo.exigencia": FRASE_DO_FREESTYLE})
+    _RECUSA_DO_JOGO = ("", "")
     try:
         nomes = _nomes_dos_jogos()
     except Exception:
         nomes = {}
-    texto = _appid_do_nome(str(o.get("valor") or "").strip(), nomes)
-    nome = _perfil_do_editor(ctx)
+    texto = _appid_do_nome(cru, nomes)
     prof = _o_perfil_no_disco(nome)
     editor = _editor_de(prof)
     _procedencia, recado = _procedencia_e_recado(
@@ -1953,79 +1877,6 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
                   **{"editor.jogo": _nome_no_campo(simple_extra(prof.match) or texto, nomes)})
 
 
-def _classe_de_outro_app(ctx: Contexto) -> str:
-    """A `wm_class` da última janela que NÃO é a nossa — `""` quando não há."""
-    from hefesto_dualsense4unix.profiles.autoswitch import OWN_GUI_WM_CLASSES
-
-    for chave in ("window_detect_last_class", "window_detect_current_class"):
-        classe = str(ctx.state.get(chave) or "").strip()
-        if not classe or classe == "unknown":
-            continue
-        if classe.casefold() in OWN_GUI_WM_CLASSES:
-            continue
-        return classe
-    return ""
-
-
-@gesto("10-perfis.html", "detectar", grava="_gravar")
-def detectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """"Detectar": pegar o jogo em foco e montar a regra com ele.
-
-    `perfis_web.DONOS_DOS_GESTOS["detectar"]` dizia *"o IPC NÃO PUBLICA o título nem a classe"*,
-    certo só pela metade e o que deixou o botão sem dono. Medido em 01/09/2026 contra o daemon `dev`
-    com `ipc_bridge.daemon_state_full()`: das 49 chaves do `state_full`, SETE são de detecção de
-    janela e duas são a classe (`window_detect_last_class`, `window_detect_current_class`); o TÍTULO
-    é que não é publicado. A estável já lia essa chave (PERFIL-NASCE-CERTO-01,
-    `profiles_actions._aplicar_nascimento_com_jogo`).
-
-    * **jogo da Steam**: a classe vem `steam_app_<id>` e o appid sai pela fonte única
-    `profiles/steam_app.steam_appid_from_wm_class` (UNIFICA-PREDICADO-01); a regra vira "Jogo da
-    Steam" com o número.
-    * **jogo de fora da Steam**: GRAVA A CLASSE (06/09/2026, ONDA5-10-01), regra "Jogo (pela
-      janela)" com a `wm_class`. Havia uma recusa aqui ("o produto só guarda como
-      `MatchCriteria(window_class=…)`, regra que o editor não sabe MOSTRAR; o perfil abriria
-      travado"), certa na premissa e errada na conclusão: se gravar a regra empurra o perfil para
-      fora da tela, **a tela aprende a regra**, e `simple_match` ganhou o preset `"janela"` e os
-      TRÊS seletores o rótulo antes de o botão gravar um byte. Vale daquele bloco que o preset NÃO é
-      `process_name`: é outro dado (basename de `/proc/PID/exe`) e casaria por acaso.
-    * **nenhuma janela em foco**: RECUSA, a única honesta que sobrou (`classe` vazia ou
-      `"unknown"`); nomeia o que viu.
-
-    `last_class` ANTES de `current_class`: a primeira é a última classe ÚTIL
-    (`launch_wrapper_dialog.py`) e sobrevive ao foco ir para a janela do Hefesto, o que acontece ao
-    clicar neste botão. Diz o que achou (03/09/2026): o sucesso gravava um appid que ela não
-    digitou, vindo de janela que não olha mais; o desfecho devolve o NOME do jogo
-    (`_jogo_reconhecido`), a forma de conferir que não pegou o launcher que estava por cima.
-    """
-    from hefesto_dualsense4unix.profiles.simple_match import (
-        from_simple_choice,
-        simple_extra,
-    )
-    from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
-
-    nome = _perfil_do_editor(ctx)
-    classe = _classe_de_outro_app(ctx)
-    if not classe:
-        crua = str(ctx.state.get("window_detect_current_class") or "").strip()
-        vendo = f" (estou vendo «{crua}»)" if crua and crua != "unknown" else ""
-        raise RuntimeError(
-            "não achei janela de jogo em foco — o detector não está vendo "
-            f"nenhuma{vendo}. Abra o jogo, deixe-o em foco por um instante e "
-            "clique de novo.")
-    prof = _o_perfil_no_disco(nome)
-    appid = steam_appid_from_wm_class(classe)
-    if appid is not None:
-        prof.match = from_simple_choice("steam_game", str(appid),
-                                        regra_do_disco=prof.match)
-        _gravar(prof, ctx, p)
-        return _dizer(_agora_vale_em(prof, str(appid)),
-                      **{"editor.jogo": simple_extra(prof.match) or str(appid)})
-    prof.match = from_simple_choice("janela", classe)
-    _gravar(prof, ctx, p)
-    return _dizer(_agora_vale_em(prof, classe),
-                  **{"editor.jogo": simple_extra(prof.match) or classe})
-
-
 ALVOS_DO_PERFIL = ("jogos", "navegacao", "programas", "eventos")
 EVENTOS_DO_PERFIL = ("cena", "menu", "pausa", "controle_conectado", "programa_aberto",
                      "hora_marcada", "meu_comando")
@@ -2040,10 +1891,10 @@ ROTULO_DO_MOMENTO = {"cena": "Cena", "menu": "Menu", "pausa": "Pausa",
 
 @gesto("10-perfis.html", "editor.alvo", grava="_gravar")
 def editor_alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """«Aplicar em»: onde o perfil vale (jogos, navegação, programas, eventos). SÓ GRAVA.
+    """«Aplicar em»: onde o perfil vale (jogos, navegação, programas, eventos).
 
-    Grava `Profile.alvo`; nenhum motor o lê ainda (o `match` segue mandando). Sair de «Eventos»
-    leva junto o momento e o comando, que só fazem sentido lá.
+    Grava `Profile.alvo`. O de «Eventos» só entra pelo momento (`eventos_do_perfil`), nunca pela
+    janela, salvo o «Programa aberto». Sair de «Eventos» leva junto o momento e o comando.
     """
     from hefesto_dualsense4unix.app.actions.profiles_actions import mensagem_do_salvar
 
@@ -2062,7 +1913,10 @@ def editor_alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
 
 @gesto("10-perfis.html", "editor.quando", grava="_gravar")
 def editor_quando(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """«Quando», do alvo Eventos: o momento (`evento`) e o comando (`evento_comando`). SÓ GRAVA.
+    """«Quando», do alvo Eventos: o momento (`evento`) e o comando (`evento_comando`).
+
+    Quem chama: o `eventos_do_perfil` do daemon (Controle conectado, Meu comando) e o autoswitch
+    (Programa aberto); Cena, Menu, Pausa e Hora marcada gravam sem motor, por falta de fonte.
 
     Os dois campos mandam o gesto; `data-que="comando"` marca o do comando, o outro é o momento.
     """
@@ -2135,6 +1989,20 @@ def editor_ordem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | N
     if not mexeu:
         return None
     return _dizer(f"Ordem salva · {nomes[0]} vale primeiro")
+
+
+def _classe_de_outro_app(ctx: Contexto) -> str:
+    """A `wm_class` da última janela que NÃO é a nossa — `""` quando não há."""
+    from hefesto_dualsense4unix.profiles.autoswitch import OWN_GUI_WM_CLASSES
+
+    for chave in ("window_detect_last_class", "window_detect_current_class"):
+        classe = str(ctx.state.get(chave) or "").strip()
+        if not classe or classe == "unknown":
+            continue
+        if classe.casefold() in OWN_GUI_WM_CLASSES:
+            continue
+        return classe
+    return ""
 
 
 @gesto("10-perfis.html", "novo", grava="_gravar")
@@ -2421,12 +2289,10 @@ PROVAS: list[dict[str, Any]] = [
      "chama": [("resultado", ["profile.switch"], {"name": "Bancada"})]},
 ]
 
-#: O QUE NÃO ECOA NO `state_full`, e são DOZE dos treze. A razão é uma só e está
-SEM_ECO = ("editor.nome", "editor.ambiente", "editor.jogo",
-           "editor.prioridade", "editor.estilo",
-           "editor.alvo", "editor.quando", "editor.ordem",
-           "detectar", "novo", "duplicar", "remover", "voltar-a-de-ontem",
-           "recarregar",
+#: O QUE NÃO ECOA NO `state_full`. A razão é uma só e está
+SEM_ECO = ("perfis.renomear", "editor.jogo", "editor.estilo",
+           "editor.alvo", "editor.quando", "editor.ordem", "novo", "duplicar", "remover",
+           "voltar-a-de-ontem", "recarregar",
            # `state_full` muda quando o usuário arrasta uma divisa.
            "procurar", "ordenar", "largura-da-coluna")
 

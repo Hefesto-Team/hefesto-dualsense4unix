@@ -416,9 +416,15 @@ BOOTSTRAP = r"""
       // não em cada aba lembrar-se dela — é o mesmo cuidado que
       // `interface.conexoes.teto_que_vale` já tomava do lado Python.
       if(el.tagName === 'SELECT'){
-        const tem = Array.prototype.some.call(el.options,
-                                              function(o){ return o.value === t || o.text === t; });
-        if(!tem) return 0;
+        // PELO ÍNDICE, e não pelo `value` (19/10/2026): a opção do travessão
+        // tem `value=""` e texto «—», e `el.value = '—'` não casa valor nenhum
+        // e deixa o campo em branco. Quem casa pelo texto escolhe pela posição.
+        const op = Array.prototype.find.call(el.options,
+                                             function(o){ return o.value === t; })
+          || Array.prototype.find.call(el.options, function(o){ return o.text === t; });
+        if(!op) return 0;
+        if(el.selectedIndex !== op.index){ el.selectedIndex = op.index; return 1; }
+        return 0;
       }
       // E UM <input type=range> SÓ ACEITA NÚMERO, com um desfecho PIOR que o do
       // `<select>` acima: ele não devolve vazio, ele SANEIA. Escrever o

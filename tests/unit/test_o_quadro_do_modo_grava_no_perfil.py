@@ -163,7 +163,7 @@ def test_o_modo_nao_chega_a_pagina() -> None:
 
 
 def _renomear(ctx: Contexto, ponte: Any) -> None:
-    a10_perfis.editor_nome(ctx, {"valor": "Sackboy", "evento": "change"}, ponte)
+    a10_perfis.perfis_renomear(ctx, {"valor": "Sackboy", "evento": "change"}, ponte)
 
 
 def _prioridade(ctx: Contexto, ponte: Any) -> None:
@@ -180,7 +180,7 @@ def _jogo(ctx: Contexto, ponte: Any) -> None:
 
 
 @pytest.mark.parametrize("gesto,nome_do_gesto", [
-    (_renomear, "editor.nome"),
+    (_renomear, "perfis.renomear"),
     (_prioridade, "editor.prioridade"),
     (_ambiente, "editor.ambiente"),
     (_jogo, "editor.jogo"),

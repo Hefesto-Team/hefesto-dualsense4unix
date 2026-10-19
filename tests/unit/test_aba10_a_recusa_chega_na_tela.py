@@ -174,7 +174,7 @@ def test_renomear_por_cima_de_outro_perfil_recusa_na_tela(
     _o_disco_tem(monkeypatch, "Pragmata", "Sackboy")
     a10_perfis._ESCOLHIDO = "Pragmata"
     with pytest.raises(RuntimeError, match="apagaria o dele"):
-        a10_perfis.editor_nome(_ctx("Pragmata"), {"valor": "Sackboy"},
+        a10_perfis.perfis_renomear(_ctx("Pragmata"), {"valor": "Sackboy"},
                                PonteDeMentira())
 
 

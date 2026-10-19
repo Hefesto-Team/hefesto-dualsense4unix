@@ -104,7 +104,7 @@ A_ABA_AINDA_TRAZ = {
 SEM_BOTAO_NA_PAGINA = {
     ("10-perfis.html", "detectar"),
     ("10-perfis.html", "editor.ambiente"),
-    ("10-perfis.html", "editor.nome"),
+    ("10-perfis.html", "perfis.renomear"),
     ("10-perfis.html", "editor.prioridade"),
     # O «Parar tudo» só existe na janela da extensão que o declara no manifesto; a do desenho não
     # declara (a dos acessórios, que o trazia, saiu em 19/10/2026).

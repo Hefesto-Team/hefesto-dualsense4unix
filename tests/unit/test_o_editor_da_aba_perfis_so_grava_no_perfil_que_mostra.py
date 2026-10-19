@@ -5,7 +5,7 @@ de escolher (decisão de 02/10: a tela dele é o botão). Quem PINTA o editor li
 de escolher e abria no primeiro dela; quem GRAVA lia a lista inteira e mirava o
 Freestyle. Medido antes da cura, com «Freestyle» e «Corrida» no disco:
 
-    pacote(ctx)["editor.nome"]        -> "Corrida"
+    pacote(ctx)["perfis.renomear"]        -> "Corrida"
     editor_nome(valor="Corrida 2")    -> "Perfil renomeado: Freestyle → Corrida 2",
                                          e o freestyle.json some do disco
 
@@ -113,7 +113,7 @@ def _aberto_no_editor() -> str:
 #: Os gestos do editor e o que cada um recebe da tela. O `remover` fica fora: a
 #: guarda do perfil que vale o recusaria antes de gravar, e ele tem régua própria.
 GESTOS: dict[str, tuple[Any, dict[str, Any]]] = {
-    "editor.nome": (a10_perfis.editor_nome, {"valor": "Corrida 2"}),
+    "perfis.renomear": (a10_perfis.perfis_renomear, {"valor": "Corrida 2"}),
     "editor.prioridade": (a10_perfis.editor_prioridade, {"valor": "77"}),
     "editor.ambiente": (a10_perfis.editor_ambiente, {"valor": "Instalado aqui"}),
     "editor.estilo": (a10_perfis.editor_estilo, {"valor": _estilo_que_grava()}),
@@ -169,7 +169,7 @@ def test_renomear_renomeia_a_corrida_e_o_freestyle_fica() -> None:
     arquivo = _o_disco()
     antes = arquivo.read_bytes()
 
-    resposta = a10_perfis.editor_nome(_ctx(), {"valor": "Corrida 2"}, PonteDeMentira())
+    resposta = a10_perfis.perfis_renomear(_ctx(), {"valor": "Corrida 2"}, PonteDeMentira())
 
     nomes = {p.name for p in loader.load_all_profiles()}
     assert nomes == {FREESTYLE, "Corrida 2"}, f"o disco ficou com {sorted(nomes)}"
@@ -198,7 +198,7 @@ def test_so_o_freestyle_no_disco_e_recusa(alvos: list[str]) -> None:
     antes = arquivo.read_bytes()
 
     with pytest.raises(RuntimeError, match="escolha um perfil"):
-        a10_perfis.editor_nome(_ctx(), {"valor": "Outro"}, PonteDeMentira())
+        a10_perfis.perfis_renomear(_ctx(), {"valor": "Outro"}, PonteDeMentira())
     with pytest.raises(RuntimeError, match="escolha um perfil"):
         a10_perfis.voltar_a_de_ontem(_ctx(), {}, PonteDeMentira())
 
