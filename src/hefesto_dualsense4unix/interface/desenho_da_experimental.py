@@ -514,6 +514,8 @@ class Conf(NamedTuple):
     jogos: str
     #: Quantos jogos têm impedimento; `None` quando o lançador não tem essa leitura.
     impedimentos: int | None = None
+    #: A pasta dos jogos, que o desenho aprovado mostra na linha «Pastas dos jogos».
+    pasta: str = ""
 
 
 def _linha_conf(rotulo: str, valor: str) -> str:
@@ -531,13 +533,16 @@ def lanc_conf_miolo_html(c: Conf, *, desenho: bool = False) -> str:
     """O conteúdo da janela «Configurar · <lançador>»: só o que o produto sabe dizer.
 
     ``desenho`` acende o que o desenho aprovado tem e o produto ainda não atende: a escolha da pasta,
-    o perfil por jogo e o Cancelar/Guardar.
+    as pastas dos jogos, o perfil por jogo e o Cancelar/Guardar.
     """
     linhas = [_linha_conf("Como entrou", _e(c.entrou))]
     if c.onde:
         extra = _ESCOLHER_A_PASTA if desenho else ""
         linhas.append(_linha_conf("Onde ele está", f"<code>{_e(c.onde)}</code>{extra}"))
-    if c.jogos:
+    if c.jogos and desenho and c.pasta:
+        linhas.append(_linha_conf("Pastas dos jogos",
+                                  f"<code>{_e(c.pasta)}</code><small>{_e(c.jogos)}</small>"))
+    elif c.jogos:
         linhas.append(_linha_conf("Jogos", f"<small>{_e(c.jogos)}</small>"))
     if c.impedimentos is not None:
         if c.impedimentos:
@@ -604,7 +609,7 @@ def _numero(n: int) -> str:
     return {2: "dois", 3: "três", 4: "quatro", 5: "cinco"}.get(n, str(n))
 
 
-CONF_DE_EXEMPLO = Conf("steam", "Steam", "Do sistema", "~/.steam/steam", "48 jogos", 2)
+CONF_DE_EXEMPLO = Conf("steam", "Steam", "Do sistema", "~/.steam/steam", "48 jogos", 2, "steamapps")
 IMPEDIMENTOS_DE_EXEMPLO = (
     LinhaDeImpedimento("entrada:1", "Sackboy: A Big Adventure",
                        "O Steam Input está ligado: o jogo vê um controle de Xbox", "Desligar o Steam Input"),

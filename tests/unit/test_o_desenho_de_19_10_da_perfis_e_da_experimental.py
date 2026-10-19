@@ -20,7 +20,9 @@ MORDIDAS (cada uma foi feita e viu reprovar; a lista está no relato do tema des
 * devolver a linha única do controle -> `test_a_janela_do_servidor_cabe_e_a_variante_a_...`;
 * devolver as abas à janela genérica -> `test_a_janela_generica_da_extensao_...`;
 * tirar o `position:absolute` do menu do ⋮ -> `test_o_menu_do_mais_flutua_...`;
-* devolver o «Fechar» único ao «Configurar» do lançador -> `test_o_configurar_do_lancador_...`.
+* devolver o «Fechar» único ao «Configurar» do lançador -> `test_o_configurar_do_lancador_...`;
+* devolver «Jogos» no lugar de «Pastas dos jogos» no «Configurar» -> o mesmo;
+* deixar no disco uma variante que o gerador não produz mais -> `test_as_variantes_de_*`.
 """
 from __future__ import annotations
 
@@ -473,6 +475,8 @@ def test_o_configurar_do_lancador_traz_a_pasta_o_perfil_por_jogo_e_guardar() -> 
     """O `#lanc-conf` do desenho aprovado: o que o produto de 18/10 perdeu e o desenho tem."""
     janela = _janela(_ler(SETE), "lanc-conf")
     assert "Escolher a pasta…" in janela and "Cada jogo ganha o seu perfil" in janela
+    assert "<span>Pastas dos jogos</span>" in janela and "<code>steamapps</code>" in janela, (
+        "o desenho de 18/10 diz «Pastas dos jogos» com a pasta, não «Jogos»")
     rodape = janela.split('class="tn-rod"')[1]
     assert "Cancelar" in rodape and "Guardar" in rodape and ">Fechar</a>" not in rodape
 
