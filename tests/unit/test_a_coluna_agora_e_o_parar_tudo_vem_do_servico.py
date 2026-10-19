@@ -11,7 +11,9 @@ MORDIDAS (19/10/2026, executadas sobre a cura e devolvidas):
 - a coluna desenhada com os três pedaços, sem olhar o `agora`, reprova
   `test_a_coluna_desenha_so_os_pedacos_que_o_manifesto_declara`;
 - o filtro do `mod` tirado do `_encaminhar` da porta reprova
-  `test_o_parar_tudo_chega_so_a_extensao_da_janela` (a outra extensão recebe o `para`).
+  `test_o_parar_tudo_chega_so_a_extensao_da_janela` (a outra extensão recebe o `para`);
+- o `doServico` tirado do `comportamento.js` reprova
+  `test_o_clique_no_parar_tudo_nao_poe_numero_na_coluna_do_servico` (o «—» vira «0»).
 """
 
 from __future__ import annotations
@@ -354,3 +356,42 @@ def test_o_metodo_e_o_gesto_estao_declarados() -> None:
     from hefesto_dualsense4unix.interface.pacotes import camada
 
     assert camada.CAMADA[("07-lancadores.html", "parar-tudo-da-modificacao")] == camada.ATO
+
+
+CHROME = pathlib.Path("/usr/bin/google-chrome")
+
+
+def test_o_clique_no_parar_tudo_nao_poe_numero_na_coluna_do_servico(janela) -> None:
+    """O nível de mentira do desenho fica na janela do desenho: a coluna do serviço segue «—».
+
+    O ``comportamento.js`` zerava o nível de toda a página no clique de qualquer ``.ja-parar``:
+    a janela da extensão parada passava a dizer «Nível 0», um número que a extensão não deu.
+    """
+    if not CHROME.exists():
+        pytest.skip("sem o Chrome do sistema")
+    from playwright.sync_api import sync_playwright
+
+    from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
+
+    _, abrir = janela
+    vazio = {k: v for k, v in estado_vazio_dos_acessorios("toque").items() if k != "mod"}
+    miolo = abrir(_Ponte(vazio), agora=["nivel"], parar_tudo=True)["blocos"]["#mod-janela"]
+    desenho = (pathlib.Path(exp.__file__).parent / "experimental" / "acessorios.html").read_text(
+        encoding="utf-8")
+    pagina = (f'<div class="tn-cx" id="mod-janela">{miolo}</div>{desenho}'
+              f"<script>{exp.SCRIPT}</script>")
+    with sync_playwright() as pw:
+        nav = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
+        try:
+            pg = nav.new_page()
+            pg.set_content(pagina)
+            desenho_antes = pg.inner_text("#acessorios .ja-nivel b")
+            pg.click("#mod-janela .ja-parar")
+            assert pg.inner_text("#mod-janela .ja-nivel b") == "—", "o clique pôs um número"
+            assert pg.locator("#mod-janela .ja-degraus i.on").count() == 0
+            assert pg.inner_text("#acessorios .ja-nivel b") == desenho_antes
+            pg.click("#acessorios .ja-parar")
+            assert pg.inner_text("#acessorios .ja-nivel b") == "0", "o desenho perdeu o nível"
+            assert pg.inner_text("#mod-janela .ja-nivel b") == "—"
+        finally:
+            nav.close()
