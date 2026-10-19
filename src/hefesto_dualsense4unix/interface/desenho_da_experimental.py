@@ -305,6 +305,23 @@ OPCOES_DE_EXEMPLO = (
 )
 
 
+# O manifesto de exemplo do DESENHO de 19/10/2026: uma extensão que não é a Kyty nem a Lovense (essas
+# duas têm janela própria, aprovada) e declara três grupos (Geral, Luz e vibração, Avançado). O produto
+# desenha o que o manifesto da pessoa trouxer; o exemplo só mostra a janela com mais de um grupo.
+OPCOES_DO_DESENHO = (
+    OpcaoDaJanela("exemplo", "quando", "Quando", "escolha", "Os jogos que eu escolher",
+                  ("Os jogos que eu escolher", "Qualquer jogo", "Só quando eu ligar"), "Geral"),
+    OpcaoDaJanela("exemplo", "avisar", "Avisar quando sair versão nova", "ligado", False, (), "Geral"),
+    OpcaoDaJanela("exemplo", "brilho", "Brilho da luz", "deslizante", "70", (), "Luz e vibração",
+                  0, 100, 5),
+    OpcaoDaJanela("exemplo", "vibracao", "Vibração dos jogos", "escolha", "Como o jogo pede",
+                  ("Como o jogo pede", "Mais fraca", "Mais forte"), "Luz e vibração"),
+    OpcaoDaJanela("exemplo", "espera", "Espera, em segundos", "numero", "3", (), "Avançado"),
+    OpcaoDaJanela("exemplo", "avisar-por", "Avisar por", "escolha", "A barra de luz",
+                  ("A barra de luz", "O som", "Os dois"), "Avançado"),
+)
+
+
 def _controle_da_opcao(o: OpcaoDaJanela) -> str:
     alvo = f'data-gesto="guardar-opcao-da-modificacao" data-v="{_a(o.mod)}:{_a(o.id)}"'
     if o.tipo == "escolha":
@@ -388,12 +405,47 @@ def opcoes_em_abas_html(opcoes: Sequence[OpcaoDaJanela], aba: str = "") -> str:
     return f'<div class="mg-abas">{"".join(partes)}</div>'
 
 
+def _cartoes_das_opcoes(opcoes: Sequence[OpcaoDaJanela]) -> str:
+    """O arranjo aprovado das janelas da 07: um cartão por grupo, uma linha por opção.
+
+    Rótulo à esquerda e controle à direita, como nas janelas da Lovense e do servidor; a opção de
+    jogos põe o rótulo em cima e a lista de caixas embaixo, na largura do cartão.
+    """
+    cartoes = []
+    for nome, itens in _grupos_das_opcoes(opcoes).items():
+        linhas = "".join(
+            f'<div class="ky-rot"><span>{_e(o.rotulo)}</span></div>{_jogos_da_opcao(o)}'
+            if o.tipo == "jogos" else
+            f'<div class="ky-linha"><div class="ky-rot"><span>{_e(o.rotulo)}</span></div>'
+            f'<div class="ky-ctrl">{_controle_da_opcao(o)}</div></div>' for o in itens)
+        cartoes.append(f'<div class="ac-card"><div class="ac-topo">'
+                       f'<span class="ac-tit">{_e(nome or "Opções")}</span></div>{linhas}</div>')
+    return f'<div class="ky-grade">{"".join(cartoes)}</div>'
+
+
 def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], descricao: str = "",
-                           aba: str = "") -> str:
+                           aba: str = "", *, desenho: bool = False) -> str:
     """O conteúdo da janela de uma extensão: o que o manifesto declara, uma linha por opção.
 
     Com mais de um grupo nas opções, uma aba interna por grupo (``aba`` é a aberta).
+    ``desenho`` traz o arranjo de 19/10 (cartões por grupo, Cancelar e Guardar), que o produto ainda
+    não atende: o mesmo precedente do «Criar para todos» de ``escolha_miolo_html``.
     """
+    if desenho:
+        corpo = (_cartoes_das_opcoes(opcoes) if opcoes else
+                 '<div class="ext-vazia">Esta extensão não tem opções para ajustar.</div>')
+        return f'''    <div class="tn-topo">
+      <span class="tn-tit">Configurar · {_e(nome)}</span>
+      <span class="pc-para"><span class="ext-rot">Para</span>Todos</span>
+      <a class="tn-x" href="#" data-dica="Fechar">\u00d7</a>
+    </div>
+    <div class="tn-corpo">
+      {corpo}
+    </div>
+    <div class="tn-rod">
+      <a class="btn" href="#">Cancelar</a>
+      <a class="btn roxo" href="#">Guardar</a>
+    </div>'''
     linhas = opcoes_em_abas_html(opcoes, aba)
     corpo = linhas or '<div class="ext-vazia">Esta extensão não tem opções para ajustar.</div>'
     sub = f'<div class="lanc-novo-para">{_e(descricao)}</div>' if descricao else ""
@@ -616,6 +668,6 @@ def telas() -> str:
         texto = texto.replace("{{JOGOS}}", jogos_html())
         texto = texto.replace("{{FORCA}}", forca_html())
         texto = texto.replace("{{MODIFICACAO}}", modificacao_miolo_html(
-            "Kyty", OPCOES_DE_EXEMPLO, "Opções que o Kyty declara no manifesto."))
+            "Minha extensão", OPCOES_DO_DESENHO, desenho=True))
         partes.append(texto.strip())
     return "\n".join(partes) + f"\n<script data-aba=\"experimental\">\n{SCRIPT}</script>\n"

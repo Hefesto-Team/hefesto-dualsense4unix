@@ -448,3 +448,18 @@
 .mg-abas > input:checked + label + .mg-painel { display:block }
 .ext-cor-in { width:44px;height:26px;padding:2px;border-radius:6px;border:1px solid var(--border-forte);
   background:var(--panel);cursor:pointer }
+/* A janela genérica de uma extensão no desenho de 19/10: um cartão por grupo, numa coluna só. */
+#mod-janela .ky-grade { grid-template-columns:minmax(0,1fr) }
+#mod-janela .ky-linha { grid-template-columns:200px minmax(0,1fr) }
+#mod-janela .ky-ctrl { justify-content:flex-end }
+#mod-janela .ky-ctrl .ext-sel { width:220px }
+#mod-janela .ac-card .jg-lista { max-height:150px }
+/* O menu do ⋮ no desenho de 19/10: A flutua à esquerda do ⋮, na própria linha (ext-pop), e a dica do ⋮
+   não o cobre; B abre dentro da linha (ext-dentro);
+   os dois só aparecem com o foco na linha, que é o que o clique no ⋮ dá. */
+.ext { position:relative }
+.ext-pop,.ext-dentro { display:none }
+.ext:focus-within .ext-dentro { display:flex }
+.ext:focus-within .ext-pop { display:flex;position:absolute;right:38px;top:50%;transform:translateY(-50%);z-index:6;
+  flex-wrap:nowrap;padding:8px;gap:6px;background:var(--panel);border:1px solid var(--border-forte);
+  border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,.5) }

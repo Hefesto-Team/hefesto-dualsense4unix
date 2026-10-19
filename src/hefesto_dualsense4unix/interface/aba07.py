@@ -157,9 +157,41 @@ def _buttplug_em_uma_linha(html):
     return _trocar(novo, [("A força e o teto de cada um", "O teto e a força de cada um")])
 
 
+_O_MAIS = re.compile(r'(<button class="ext-mais"[^>]*data-v="([^"]+)"[^>]*>\u22ee</button>)')
+
+
+def _menu_do_mais(html, classe):
+    """O menu do ⋮ de cada extensão, já desenhado (o produto o monta ao clique): `classe` o põe."""
+    novo, quantas = _O_MAIS.subn(
+        lambda m: (f'{m.group(1)}\n            <div class="ext-menu {classe}" '
+                   f'data-menu="{m.group(2)}">{exp.menu_html(m.group(2))}</div>'), html)
+    if quantas != len(exp.EXTENSOES):
+        raise SystemExit(f"ERRO: achei {quantas} «⋮» e são {len(exp.EXTENSOES)} extensões")
+    return novo
+
+
+def _menu_dentro_da_linha(html):
+    """B do ⋮: o menu abre dentro da linha, como no produto de hoje, e empurra o que está abaixo."""
+    if html.count("ext-menu ext-pop") != len(exp.EXTENSOES):
+        raise SystemExit("ERRO: a variante B do ⋮ não achou os menus da página gerada")
+    return html.replace("ext-menu ext-pop", "ext-menu ext-dentro")
+
+
+def _modificacao_em_abas(html):
+    """B da janela genérica: o arranjo de antes (abas por grupo, um «Fechar»), com as mesmas opções."""
+    cartoes = exp.modificacao_miolo_html("Minha extensão", exp.OPCOES_DO_DESENHO, desenho=True)
+    abas = exp.modificacao_miolo_html("Minha extensão", exp.OPCOES_DO_DESENHO)
+    return _trocar(html, [(cartoes, abas)])
+
+
 def variantes(html):
     """Nome do arquivo (sem `.html`) -> página da variante, a partir do desenho recém-gerado."""
     return {
+        # Perfis 5 (AS-JANELAS-DA-07-ALCANCAM-O-DESENHO-APROVADO-01): A (o desenho) é a janela genérica
+        # no padrão da Lovense e do Kyty (cartões por grupo, Cancelar e Guardar); B é a de antes.
+        "07-modificacao-B-abas-por-grupo": _modificacao_em_abas(html),
+        # O ⋮ (mesma sprint): A é um menu que flutua sobre a linha; B abre dentro da linha.
+        "07-mais-B-dentro-da-linha": _menu_dentro_da_linha(html),
         # Perfis 4 (O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01): B é o desenho de agora
         # (duas linhas por controle, «Força» e «Teto» com nome); A é a linha única de 17/10.
         "07-buttplug-A-forca-e-teto-numa-linha": _buttplug_em_uma_linha(html),
@@ -192,6 +224,7 @@ if __name__ == "__main__":
             "recém-gerada. Ou `monta.fita()` mudou de forma, ou a fita saiu vazia, "
             "e esta troca ficaria verde sem fazer nada.")
     _DOC = _CHIP_DE_CONTROLE.sub("", _DOC)
+    _DOC = _menu_do_mais(_DOC, "ext-pop")
     onde.gravar("07-lancadores.html", _DOC)
 
     _CRAVADAS = identidade_congelada(_DOC)

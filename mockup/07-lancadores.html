@@ -1458,6 +1458,21 @@
 .mg-abas > input:checked + label + .mg-painel { display:block }
 .ext-cor-in { width:44px;height:26px;padding:2px;border-radius:6px;border:1px solid var(--border-forte);
   background:var(--panel);cursor:pointer }
+/* A janela genérica de uma extensão no desenho de 19/10: um cartão por grupo, numa coluna só. */
+#mod-janela .ky-grade { grid-template-columns:minmax(0,1fr) }
+#mod-janela .ky-linha { grid-template-columns:200px minmax(0,1fr) }
+#mod-janela .ky-ctrl { justify-content:flex-end }
+#mod-janela .ky-ctrl .ext-sel { width:220px }
+#mod-janela .ac-card .jg-lista { max-height:150px }
+/* O menu do ⋮ no desenho de 19/10: A flutua à esquerda do ⋮, na própria linha (ext-pop), e a dica do ⋮
+   não o cobre; B abre dentro da linha (ext-dentro);
+   os dois só aparecem com o foco na linha, que é o que o clique no ⋮ dá. */
+.ext { position:relative }
+.ext-pop,.ext-dentro { display:none }
+.ext:focus-within .ext-dentro { display:flex }
+.ext:focus-within .ext-pop { display:flex;position:absolute;right:38px;top:50%;transform:translateY(-50%);z-index:6;
+  flex-wrap:nowrap;padding:8px;gap:6px;background:var(--panel);border:1px solid var(--border-forte);
+  border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,.5) }
 
 </style>
 <style id="base-comum">
@@ -1687,6 +1702,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <span class="nj-tog ligado" data-gesto="ligar-modificacao" data-v="kyty" data-dica="Liga ou desliga"><span class="pino"></span><span class="txt">Ligada</span></span>
             <a class="ext-conf" href="#kyty" data-gesto="configurar-modificacao" data-v="kyty" data-dica="Configurações: Kyty"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
             <button class="ext-mais" data-gesto="mais-da-modificacao" data-v="kyty" data-dica="Atualizar, ver as permissões ou remover">⋮</button>
+            <div class="ext-menu ext-pop" data-menu="kyty"><button class="btn mini" data-gesto="mais-da-modificacao" data-v="kyty:atualizar">Atualizar</button><button class="btn mini" data-gesto="mais-da-modificacao" data-v="kyty:permissoes">Ver permissões</button><button class="btn mini" data-gesto="mais-da-modificacao" data-v="kyty:remover">Remover</button></div>
           </div>
           <div class="ext" data-modificacao="lovense">
             <span class="ext-ico" style="color:var(--pink)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12c2-5 4-5 6 0s4 5 6 0 4-5 6 0 2 3 2 3"/></svg></span>
@@ -1698,6 +1714,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <span class="nj-tog ligado" data-gesto="ligar-modificacao" data-v="lovense" data-dica="Liga ou desliga"><span class="pino"></span><span class="txt">Ligada</span></span>
             <a class="ext-conf" href="#lovense" data-gesto="configurar-modificacao" data-v="lovense" data-dica="Configurações: Lovense"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
             <button class="ext-mais" data-gesto="mais-da-modificacao" data-v="lovense" data-dica="Atualizar, ver as permissões ou remover">⋮</button>
+            <div class="ext-menu ext-pop" data-menu="lovense"><button class="btn mini" data-gesto="mais-da-modificacao" data-v="lovense:atualizar">Atualizar</button><button class="btn mini" data-gesto="mais-da-modificacao" data-v="lovense:permissoes">Ver permissões</button><button class="btn mini" data-gesto="mais-da-modificacao" data-v="lovense:remover">Remover</button></div>
           </div>
         </div>
         <div class="ext-instalar ext-instalar-pe" id="ext-instalar">
@@ -1943,14 +1960,16 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 <div class="tela-nova" id="modificacao">
   <div class="tn-cx" id="mod-janela" role="dialog" aria-modal="true" aria-label="Configurar a extensão">
     <div class="tn-topo">
-      <span class="tn-tit">Configurar · Kyty</span>
+      <span class="tn-tit">Configurar · Minha extensão</span>
+      <span class="pc-para"><span class="ext-rot">Para</span>Todos</span>
       <a class="tn-x" href="#" data-dica="Fechar">×</a>
     </div>
     <div class="tn-corpo">
-      <div class="lanc-novo-para">Opções que o Kyty declara no manifesto.</div><div class="lc-linha"><span>Quando</span><span class="lc-val"><select class="ext-sel" data-gesto="guardar-opcao-da-modificacao" data-v="kyty:quando" aria-label="Quando"><option selected>Os jogos que eu escolher</option><option>Qualquer jogo</option><option>Só quando eu ligar</option></select></span></div><div class="lc-linha"><span>Avisar quando sair versão nova</span><span class="lc-val"><span class="nj-tog" data-gesto="guardar-opcao-da-modificacao" data-v="kyty:avisar"><span class="pino"></span><span class="txt">Desligado</span></span></span></div>
+      <div class="ky-grade"><div class="ac-card"><div class="ac-topo"><span class="ac-tit">Geral</span></div><div class="ky-linha"><div class="ky-rot"><span>Quando</span></div><div class="ky-ctrl"><select class="ext-sel" data-gesto="guardar-opcao-da-modificacao" data-v="exemplo:quando" aria-label="Quando"><option selected>Os jogos que eu escolher</option><option>Qualquer jogo</option><option>Só quando eu ligar</option></select></div></div><div class="ky-linha"><div class="ky-rot"><span>Avisar quando sair versão nova</span></div><div class="ky-ctrl"><span class="nj-tog" data-gesto="guardar-opcao-da-modificacao" data-v="exemplo:avisar"><span class="pino"></span><span class="txt">Desligado</span></span></div></div></div><div class="ac-card"><div class="ac-topo"><span class="ac-tit">Luz e vibração</span></div><div class="ky-linha"><div class="ky-rot"><span>Brilho da luz</span></div><div class="ky-ctrl"><span class="ext-desl"><input type="range" min="0" max="100" step="5" value="70" data-gesto="guardar-opcao-da-modificacao" data-v="exemplo:brilho" aria-label="Brilho da luz" oninput="this.nextElementSibling.textContent=this.value"><b>70</b></span></div></div><div class="ky-linha"><div class="ky-rot"><span>Vibração dos jogos</span></div><div class="ky-ctrl"><select class="ext-sel" data-gesto="guardar-opcao-da-modificacao" data-v="exemplo:vibracao" aria-label="Vibração dos jogos"><option selected>Como o jogo pede</option><option>Mais fraca</option><option>Mais forte</option></select></div></div></div><div class="ac-card"><div class="ac-topo"><span class="ac-tit">Avançado</span></div><div class="ky-linha"><div class="ky-rot"><span>Espera, em segundos</span></div><div class="ky-ctrl"><input class="ext-num" type="text" inputmode="decimal" data-gesto="guardar-opcao-da-modificacao" data-v="exemplo:espera" value="3" aria-label="Espera, em segundos"></div></div><div class="ky-linha"><div class="ky-rot"><span>Avisar por</span></div><div class="ky-ctrl"><select class="ext-sel" data-gesto="guardar-opcao-da-modificacao" data-v="exemplo:avisar-por" aria-label="Avisar por"><option selected>A barra de luz</option><option>O som</option><option>Os dois</option></select></div></div></div></div>
     </div>
     <div class="tn-rod">
-      <a class="btn" href="#">Fechar</a>
+      <a class="btn" href="#">Cancelar</a>
+      <a class="btn roxo" href="#">Guardar</a>
     </div>
   </div>
 </div>

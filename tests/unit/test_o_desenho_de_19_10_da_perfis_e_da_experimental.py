@@ -17,7 +17,10 @@ MORDIDAS (cada uma foi feita e viu reprovar; a lista está no relato do tema des
 * tirar o `:has` ou o gesto do `.ordem-vale` -> `test_o_comando_aparece_so_com_o_meu_comando_...`;
 * devolver a coluna do Status aos 255 px -> `test_a_fileira_das_secoes_cabe_na_celula_...`;
 * tirar o nome «Força» ou «Teto» do controle -> `test_cada_controle_do_servidor_...`;
-* devolver a linha única do controle -> `test_a_janela_do_servidor_cabe_e_a_variante_a_...`.
+* devolver a linha única do controle -> `test_a_janela_do_servidor_cabe_e_a_variante_a_...`;
+* devolver as abas à janela genérica -> `test_a_janela_generica_da_extensao_...`;
+* tirar o `position:absolute` do menu do ⋮ -> `test_o_menu_do_mais_flutua_...`;
+* devolver o «Fechar» único ao «Configurar» do lançador -> `test_o_configurar_do_lancador_...`.
 """
 from __future__ import annotations
 
@@ -387,3 +390,97 @@ def test_as_variantes_de_07_estao_em_dia() -> None:
     for nome, doc in aba07.variantes(_ler(SETE)).items():
         assert (VARIANTES / f"{nome}.html").read_text(encoding="utf-8") == doc, (
             f"{nome} ficou velha: rode `aba07.py`")
+
+
+# ---------------------------------------------------------------------------------------------
+# Perfis 5 · AS-JANELAS-DA-07-ALCANCAM-O-DESENHO-APROVADO-01
+# ---------------------------------------------------------------------------------------------
+
+VARIANTE_ABAS = VARIANTES / "07-modificacao-B-abas-por-grupo.html"
+VARIANTE_MAIS_B = VARIANTES / "07-mais-B-dentro-da-linha.html"
+_ID = "modificacao"  # (noqa-acento) identificador ASCII da janela
+_ABRE_A_GENERICA = f"(function(){{location.hash='#{_ID}';}})()"
+_CLICA_O_MAIS = ("(function(){const b = document.querySelector('.ext-mais');"
+                 " b.focus(); b.click();})()")
+
+
+def _janela(html: str, ident: str) -> str:
+    sem = _sem_estilo_nem_script(html)
+    inicio = sem.index(f'id="{ident}"')
+    return sem[inicio:sem.index('<div class="tela-nova"', inicio + 1)]
+
+
+def test_a_janela_generica_da_extensao_tem_um_cartao_por_grupo_e_cancelar_guardar() -> None:
+    """A (recomendada): o arranjo da Lovense e do Kyty, e não as abas de antes."""
+    janela = _janela(_ler(SETE), _ID)
+    titulos = re.findall(r'<span class="ac-tit">([^<]*)</span>', janela)
+    assert titulos == ["Geral", "Luz e vibração", "Avançado"], titulos
+    assert "mg-abas" not in janela and 'type="radio"' not in janela
+    assert janela.count('<div class="ky-linha">') == 6
+    assert '<a class="btn" href="#">Cancelar</a>' in janela
+    assert '<a class="btn roxo" href="#">Guardar</a>' in janela
+    assert ">Fechar</a>" not in janela.split('class="tn-rod"')[1]
+
+
+def test_a_variante_b_da_janela_generica_e_a_de_antes_com_as_mesmas_opcoes() -> None:
+    janela = _janela(_ler(VARIANTE_ABAS), _ID)
+    assert janela.count("<label for=\"mg-aba") == 3 and "ac-card" not in janela
+    assert ">Fechar</a>" in janela.split('class="tn-rod"')[1] and "Guardar" not in janela
+
+
+@sem_chrome
+@pytest.mark.parametrize("vista", VISTAS, ids=lambda v: str(v[0]))
+def test_a_janela_generica_da_extensao_cabe_sem_rolagem_nem_corte(vista: tuple[int, int]) -> None:
+    medida = """() => {
+      const cx = document.querySelector('@ .tn-cx'), r = cx.getBoundingClientRect();
+      const corpo = document.querySelector('@ .tn-corpo');
+      const d = document.documentElement;
+      const corte = [...document.querySelectorAll('@ .ky-ctrl, @ .ky-linha')]
+        .filter(c => c.scrollWidth > c.clientWidth + 1).length;
+      return {cabe: r.top >= 0 && r.bottom <= window.innerHeight, corte,
+              rola: corpo.scrollHeight > corpo.clientHeight + 1,
+              largo: d.scrollWidth > d.clientWidth + 1};
+    }""".replace("@", "#" + _ID)
+    m = _no_chrome(SETE, vista, medida, antes=_ABRE_A_GENERICA)
+    assert m["cabe"] and not m["corte"] and not m["rola"] and not m["largo"], m
+
+
+@sem_chrome
+def test_o_menu_do_mais_flutua_e_a_variante_b_empurra_os_lancadores() -> None:
+    """A: o menu aparece sem mexer em nada abaixo; B: abre dentro da linha e empurra a fila."""
+    vista = (1272, 860)
+    medida = """() => {
+      const fila = document.querySelector('.lanc-fila').getBoundingClientRect();
+      const m = document.querySelector('.ext-menu'), r = m.getBoundingClientRect();
+      const visivel = getComputedStyle(m).display !== 'none' && r.width > 0;
+      const botoes = m.querySelectorAll('button[data-gesto="mais-da-modificacao"]').length;
+      return {topo: Math.round(fila.top), visivel, botoes,
+              dentro: r.left >= 0 && r.right <= window.innerWidth
+                      && r.bottom <= window.innerHeight};
+    }"""
+    antes = _no_chrome(SETE, vista, medida)
+    assert not antes["visivel"], "o menu só abre com o clique no ⋮"
+    a = _no_chrome(SETE, vista, medida, antes=_CLICA_O_MAIS)
+    assert a["visivel"] and a["botoes"] == 3 and a["dentro"], a
+    assert a["topo"] == antes["topo"], (a, antes)
+    b = _no_chrome(VARIANTE_MAIS_B, vista, medida, antes=_CLICA_O_MAIS)
+    assert b["visivel"] and b["topo"] >= antes["topo"] + 20, (b, antes)
+
+
+def test_o_configurar_do_lancador_traz_a_pasta_o_perfil_por_jogo_e_guardar() -> None:
+    """O `#lanc-conf` do desenho aprovado: o que o produto de 18/10 perdeu e o desenho tem."""
+    janela = _janela(_ler(SETE), "lanc-conf")
+    assert "Escolher a pasta…" in janela and "Cada jogo ganha o seu perfil" in janela
+    rodape = janela.split('class="tn-rod"')[1]
+    assert "Cancelar" in rodape and "Guardar" in rodape and ">Fechar</a>" not in rodape
+
+
+def test_a_opcao_de_jogos_da_janela_generica_leva_o_rotulo_e_as_caixas() -> None:
+    """O exemplo da página não tem a opção de jogos; o desenho dela não pode perder o rótulo."""
+    import desenho_da_experimental as exp
+
+    opcao = exp.OpcaoDaJanela("x", "jg", "Os jogos dela", "jogos", ["a"], (), "Jogos",
+                              jogos=(("a", "Jogo A"), ("b", "Jogo B")))
+    html = exp.modificacao_miolo_html("X", [opcao], desenho=True)
+    assert "Os jogos dela" in html and html.count('type="checkbox"') == 2
+    assert html.count(" checked") == 1
