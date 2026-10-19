@@ -164,9 +164,8 @@ def test_as_variantes_de_10_estao_em_dia() -> None:
     for nome, doc in esperadas.items():
         assert (VARIANTES / f"{nome}.html").read_text(encoding="utf-8") == doc, (
             f"{nome} ficou velha: rode `aba10.py`")
-    em_disco = {p.stem for p in VARIANTES.glob("10-*.html")}
-    sobra = em_disco - set(esperadas)
-    assert not sobra or all(s.startswith("10-") for s in sobra)
+    sobra = {p.stem for p in VARIANTES.glob("10-*.html")} - set(esperadas)
+    assert not sobra, f"variante que o gerador não produz mais ficou no disco: {sorted(sobra)}"
 
 
 def test_a_variante_nunca_entra_na_pagina_publicada() -> None:
@@ -387,9 +386,12 @@ def test_as_variantes_de_07_estao_em_dia() -> None:
     """Cada `mockup/variantes/07-*` é o que o gerador produz agora, a partir do desenho."""
     import aba07
 
-    for nome, doc in aba07.variantes(_ler(SETE)).items():
+    esperadas = aba07.variantes(_ler(SETE))
+    for nome, doc in esperadas.items():
         assert (VARIANTES / f"{nome}.html").read_text(encoding="utf-8") == doc, (
             f"{nome} ficou velha: rode `aba07.py`")
+    sobra = {p.stem for p in VARIANTES.glob("07-*.html")} - set(esperadas)
+    assert not sobra, f"variante que o gerador não produz mais ficou no disco: {sorted(sobra)}"
 
 
 # ---------------------------------------------------------------------------------------------
