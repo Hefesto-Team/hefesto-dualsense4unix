@@ -3971,6 +3971,115 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 ---
 
+## mapa-luz.lightbar.efeito-cabo — Lightbar — efeito animado (arco-íris, respirar, piscar e Maré) · cabo
+
+*Célula:* `luz.lightbar.efeito @ cabo`
+
+**O que isto prova.** Prova que o efeito escolhido na lista «Efeito» da coluna de um controle do cabo anima de verdade a barra de luz dele, e só a dele, e que cada efeito da lista se move como a frase dele promete.
+
+**Onde olhar.** Na aba Iluminação, cada controle tem uma coluna, e o nome dele na linha «Modelo» termina em USB ou BT. No alto da aba fica o botão «Modo automático»: aceso, a coluna fica parada e a lista não escolhe nada. Na linha «Efeito» de cada coluna há uma lista em três grupos: «Parado» («Sem efeito», que apaga a barra, e «Luz fixa», a cor de sempre), «Que respira» («Respirar», «Batida do coração», «Chama» e «Maré») e «Que se move» («Piscar» e «Arco-íris»); um efeito que você montou aparece em «Seus efeitos». Parando o mouse na lista, sai a frase do efeito escolhido. A PROVA é a barra no aparelho, as duas tiras dos lados do touchpad: a lista diz o que foi pedido, não o que acendeu.
+
+**Os passos.**
+
+1. Abra a aba Iluminação.
+2. Confira na linha «Modelo» que as colunas do P1 e do P2 terminam em USB, e anote a cor do plástico que a fita do topo mostra no chip de cada um.
+3. Confira que o «Modo automático» está apagado; se estiver aceso, anote e clique nele para apagar.
+4. Ponha os quatro controles virados para cima, onde você veja as quatro barras de uma vez.
+5. Anote a escolha da lista «Efeito» das quatro colunas.
+6. Na coluna do P1, escolha «Respirar» na lista «Efeito».
+7. Confira que a barra do P1 sobe e desce devagar, sem apagar de todo, e que as outras três não mudaram.
+8. Escolha «Batida do coração» no P1.
+9. Confira duas subidas seguidas e uma pausa, mais ou menos uma vez por segundo.
+10. Escolha «Chama» no P1.
+11. Confira que o brilho oscila sem padrão e que a barra nunca apaga.
+12. Escolha «Maré» no P1.
+13. Confira que a cor vai devagar até uma cor vizinha e volta.
+14. Escolha «Piscar» no P1.
+15. Confira lampejos de borda suave, nunca mais de três por segundo, e que entre um e outro a barra abaixa sem apagar de todo.
+16. Escolha «Arco-íris» no P1.
+17. Confira que as cores giram e que uma volta leva uns doze segundos.
+18. Escolha «Arco-íris» também no P2.
+19. Confira que as duas barras giram juntas, com cores diferentes: a do P2 vai um quarto de volta à frente da do P1, e assim continua.
+20. Escolha «Sem efeito» no P1.
+21. Confira que a barra do P1 apagou e que a do P2 continua girando.
+22. Escolha «Luz fixa» no P1.
+23. Confira que a barra do P1 acende na cor de sempre, parada.
+24. Escolha «Respirar» no P1 e espere um minuto sem mexer em nada.
+25. Confira que ela continua respirando.
+26. Desencaixe o cabo do P1, espere cinco segundos e encaixe de volta.
+27. Confira que, em poucos segundos, a barra do P1 volta respirando.
+28. Na aba Jogar, anote o cartão aceso do quadro «Modo» e clique em «Desligado», na linha «Status».
+29. Confira que, em poucos segundos, a barra do P1 para de respirar e fica parada.
+30. Na aba Jogar, clique em «Ligado» e no cartão que você anotou.
+31. Confira que a barra do P1 volta a respirar.
+32. Volte à aba Iluminação e devolva a lista «Efeito» de cada coluna, e o «Modo automático», ao que você anotou.
+
+**Passa quando.** Nos dois controles do cabo, cada escolha da lista muda a barra no instante do clique e ela se move como a frase do efeito diz; o efeito de um nunca muda a barra do outro, e as dos dois do rádio ficam exatamente como estavam. O piscar nunca passa de três lampejos por segundo e nenhum efeito apaga a barra de todo, só o «Sem efeito». O arco-íris dos dois gira junto, um quarto de volta de distância. O efeito continua um minuto depois, volta com o controle reencaixado, para com o Hefesto desligado e volta quando ele religa.
+
+**Por controle.**
+
+* **P1** — No CABO, o de plástico que a fita mostra no chip do P1, e é o alvo: as oito escolhas, o minuto, o cabo que sai e volta e o Desligado são nele.
+* **P2** — No CABO, a segunda prova, e é ele que mostra se o arco-íris de dois controles anda junto. Enquanto você muda o P1, ele não pode mudar.
+* **P3** — No RÁDIO, testemunha. Não toque na coluna dele. Se a barra dele mudar quando você escolhe um efeito no P1, a escolha pegou mais do que o controle da coluna.
+* **P4** — No RÁDIO, segunda testemunha. A barra antes e depois tem de ser a mesma.
+
+**A armadilha.** Cinco. (1) A TELA NÃO É A PROVA: a lista mostra o efeito pedido; quem responde é o plástico. (2) O efeito cala quando outro manda na barra, e isso não é defeito: um jogo que pinta a barra ganha dela, o Hefesto desligado deixa a barra parada na cor de sempre, e a «Bateria longa» deixa a barra fixa. Faça esta rodada com nenhum jogo aberto. (3) A escolha grava no perfil no clique, sem esperar o Salvar perfil: é por isso que a lista de antes se anota e se devolve. (4) A barra apagada pelo «Sem efeito» volta só com outra escolha da lista: um efeito qualquer, ou «Luz fixa». (5) O «Piscar» é suave de propósito: a borda leva um instante para subir e descer, o teto de três lampejos por segundo vale para todos, e o vermelho saturado nunca alterna com o apagado. Um piscar seco, ou mais rápido que isso, é o achado; e a prova desta célula parou em «montou»: o produto manda o quadro, e ninguém viu cada efeito na barra do aparelho até esta rodada.
+
+---
+
+## mapa-luz.lightbar.efeito-radio — Lightbar — efeito animado (arco-íris, respirar, piscar e Maré) · rádio
+
+*Célula:* `luz.lightbar.efeito @ rádio`
+
+**O que isto prova.** O mesmo que a linha do cabo, pelo rádio: o efeito escolhido na lista «Efeito» da coluna de um controle do rádio anima a barra dele, e só a dele. É um teste próprio porque pelo rádio cada quadro do efeito viaja num relatório do Hefesto, e é ele que muda a barra mesmo com a Steam aberta.
+
+**Onde olhar.** Na aba Iluminação, a coluna de cada controle; o nome na linha «Modelo» termina em BT para quem está no rádio. No alto da aba, o botão «Modo automático»: aceso, a coluna fica parada. A linha «Efeito» tem a lista em três grupos: «Parado» («Sem efeito» e «Luz fixa»), «Que respira» («Respirar», «Batida do coração», «Chama» e «Maré») e «Que se move» («Piscar» e «Arco-íris»), e os que você montou em «Seus efeitos». Parando o mouse na lista, sai a frase do efeito escolhido. A prova é a barra no aparelho.
+
+**Os passos.**
+
+1. Abra a aba Iluminação.
+2. Confira na linha «Modelo» que as colunas do P3 e do P4 terminam em BT, e anote a cor do plástico que a fita do topo mostra no chip de cada um.
+3. Confira que o «Modo automático» está apagado; se estiver aceso, anote e clique nele para apagar.
+4. Ponha os quatro controles virados para cima, onde você veja as quatro barras de uma vez.
+5. Anote a escolha da lista «Efeito» das quatro colunas.
+6. Na coluna do P3, escolha «Respirar» na lista «Efeito».
+7. Confira que a barra do P3 sobe e desce devagar, sem apagar de todo, e que as outras três não mudaram.
+8. Escolha «Batida do coração» no P3.
+9. Confira duas subidas seguidas e uma pausa, mais ou menos uma vez por segundo.
+10. Escolha «Chama» no P3.
+11. Confira que o brilho oscila sem padrão e que a barra nunca apaga.
+12. Escolha «Maré» no P3.
+13. Confira que a cor vai devagar até uma cor vizinha e volta.
+14. Escolha «Piscar» no P3.
+15. Confira lampejos de borda suave, nunca mais de três por segundo, e que entre um e outro a barra abaixa sem apagar de todo.
+16. Escolha «Arco-íris» no P3.
+17. Confira que as cores giram, sem engasgar, e que uma volta leva uns doze segundos.
+18. Escolha «Arco-íris» também no P4.
+19. Confira que as duas barras giram juntas, com cores diferentes, um quarto de volta uma da outra.
+20. Escolha «Sem efeito» no P3.
+21. Confira que a barra do P3 apagou e que a do P4 continua girando.
+22. Escolha «Respirar» no P3 e espere um minuto sem mexer em nada.
+23. Confira que ela continua respirando.
+24. Abra a Steam e espere ela terminar de abrir.
+25. Confira que a barra do P3 continua respirando e a do P4 girando.
+26. Segure o PS do P3 até todas as luzes dele apagarem, espere cinco segundos e dê um toque curto no PS.
+27. Confira que, em poucos segundos, a barra do P3 volta respirando.
+28. Feche a Steam de novo, por inteiro.
+29. Devolva a lista «Efeito» de cada coluna, e o «Modo automático», ao que você anotou.
+
+**Passa quando.** Nos dois controles do rádio, cada escolha da lista muda a barra no instante do clique e ela se move como a frase do efeito diz, sem engasgo; o efeito de um nunca muda a barra do outro, e as dos dois do cabo ficam exatamente como estavam. O piscar nunca passa de três lampejos por segundo, e o arco-íris dos dois gira junto. Com a Steam aberta, o efeito continua, e o P3 que volta pelo rádio volta respirando.
+
+**Por controle.**
+
+* **P1** — No CABO, testemunha. Não toque. Se a barra dele mudar quando você escolhe um efeito no P3, a escolha pegou mais do que o controle da coluna.
+* **P2** — No CABO, testemunha e comparação. Se NADA se mover no rádio, escolha «Respirar» no P2: se ele respirar, o defeito é do rádio; se nem ele, não é do transporte. Devolva a escolha dele no fim.
+* **P3** — No RÁDIO, o de plástico que a fita mostra no chip do P3, e é o alvo: as escolhas, o minuto, a Steam e a volta pelo PS são nele.
+* **P4** — No RÁDIO, a segunda prova, e é ele que mostra se o arco-íris de dois controles do rádio anda junto.
+
+**A armadilha.** Quatro. (1) A TELA NÃO É A PROVA: quem responde é o plástico. (2) Pelo rádio o efeito sai em até trinta quadros por segundo, e um engasgo curto pode ser a disputa do rádio: se a barra travar num quadro, anote a hora e se havia som ou vibração saindo naquele controle. Não toque som nem vibração no P3 ou no P4 durante esta rodada. (3) O efeito cala quando outro manda na barra: um jogo que pinta a barra ganha dela, e a «Bateria longa» deixa a barra fixa. A Steam aberta NÃO é um desses casos: o controle de verdade nasce escondido dela, e o efeito tem de continuar — barra parada com a Steam aberta é o achado. (4) A escolha grava no perfil no clique: anote e devolva. E a prova desta célula parou em «montou»: o produto manda o quadro pelo rádio, e ninguém viu o efeito na barra até esta rodada.
+
+---
+
 ## mapa-luz.lightbar.fade-cabo — Lightbar — fade in/out · cabo
 
 *Célula:* `luz.lightbar.fade @ cabo`
@@ -6662,6 +6771,93 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P4** — Rádio, e tem de mostrar igual ao P3.
 
 **A armadilha.** O touchpad do DualSense tem DOIS pontos de toque no aparelho, e não mais: o nó do kernel declara `ABS_MT_SLOT` de 0 a 1, e o terceiro dedo não chega nem ao sistema. O zoom de três dedos parece funcionar porque a pinça do sistema só precisa de dois — por isso três dedos viram duas bolinhas. A segunda armadilha é o sistema: rolar com dois dedos e dar zoom com a pinça são gestos do SISTEMA, que usa o mesmo touchpad ao mesmo tempo — e continua usando com o touchpad escondido dos jogos; eles podem mover a página que estiver sob a seta enquanto você testa, e isso não é o Hefesto. A terceira é o tempo da tela: ela lê o controle dez vezes por segundo, e pelo rádio chegam menos leituras que pelo cabo, então um toque rápido demais pode não aparecer — os passos pedem dedo parado de propósito.
+
+---
+
+## mapa-vibracao.haptics_vcm-cabo — Haptics VCM / PCM (motores voice-coil com forma de onda) · cabo
+
+*Célula:* `vibracao.haptics_vcm @ cabo`
+
+**O que isto prova.** Prova que a háptica, a vibração fina que viaja como som até os motores do DualSense, chega a cada controle do cabo com a força do «Sensor háptico» da coluna dele, e só a ele. No cabo ela sai pela placa de som do próprio controle, nos dois canais de trás, que são os motores.
+
+**Onde olhar.** Na aba Vibração, cada controle tem uma coluna, e o nome dele na linha «Modelo» termina em USB ou BT. Na linha «Força da vibração», os três degraus «Economia», «Padrão» e «Máximo». Na linha «Sensor háptico», o botão que liga e desliga a háptica daquele controle, o trilho de 0 a 200 e o número; o «%» ao lado do número ACENDE quando há háptica chegando àquele controle agora. Na linha «Efeito háptico», a lista da forma do toque: «Do estilo», «Sem efeito», «Toque», «Impacto», «Estalo», «Guarda», «Aparo» e «Som no corpo». Na linha «Testar agora», três botões: «Vibração» treme os motores, «Háptica» toca a forma escolhida pela háptica, uma vez por segundo, e «Parar» cala os dois daquele controle. A PROVA é a mão: a tela diz o que foi pedido.
+
+**Os passos.**
+
+1. Clique na aba Vibração.
+2. Confira na linha «Modelo» que as colunas do P1 e do P2 terminam em USB, e anote a cor do plástico que a fita do topo mostra no chip de cada um.
+3. Clique em «Parar» nas quatro colunas.
+4. Anote, nas colunas do P1 e do P2, o degrau aceso na «Força da vibração», o número do «Sensor háptico» e a escolha do «Efeito háptico».
+5. Na coluna do P1, clique em «Máximo» e escolha «Impacto» no «Efeito háptico».
+6. Arraste o «Sensor háptico» do P1 até 200 e solte.
+7. Segure o P1 nas duas mãos e clique em «Háptica», na linha «Testar agora» da coluna dele.
+8. Confira que ele dá uma pancada funda a cada segundo, que o «%» do «Sensor háptico» dele acende, e que o P2, o P3 e o P4 ficam quietos.
+9. Com o teste correndo, arraste o «Sensor háptico» do P1 até 50 e solte.
+10. Confira que a pancada continua, mais fraca.
+11. Clique em «Parar» na coluna do P1.
+12. Confira que a pancada parou e que, em poucos segundos, o «%» apagou.
+13. Clique em «Vibração» na coluna do P1 e sinta o tremor contínuo dos motores.
+14. Clique em «Parar» na coluna do P1.
+15. Faça no P2 a mesma volta, do «Máximo» ao último «Parar», com o P1 na outra mão de testemunha.
+16. Devolva, no P1 e no P2, o degrau, o «Sensor háptico» e o «Efeito háptico» ao que você anotou.
+17. Abra um jogo com háptica do DualSense e jogue um trecho com o P1 e o P2.
+18. Confira que a vibração fina do jogo chega aos dois, e que o «%» do «Sensor háptico» de cada um acende enquanto ela chega.
+19. Feche o jogo.
+
+**Passa quando.** Nos dois controles do cabo, o «Háptica» toca a pancada a cada segundo, só no controle da coluna, e o «%» dela acende; a pancada é forte em 200 e fraca em 50, sem parar no meio; o «Parar» a cala; e ela se distingue do tremor contínuo da «Vibração». Os dois do rádio ficam quietos o tempo todo. E com o jogo aberto, a vibração fina dele chega aos dois do cabo.
+
+**Por controle.**
+
+* **P1** — No CABO, o de plástico que a fita mostra no chip do P1, e é o alvo: a pancada, o trilho que a encolhe e o «Parar» são nele.
+* **P2** — No CABO, a segunda prova. Enquanto o P1 testa, ele fica quieto na outra mão; depois, a mesma volta nele. Se um tocar e o outro não, o defeito é daquele controle — anote qual.
+* **P3** — No RÁDIO, testemunha. Não toque na coluna dele. Se ele bater junto com o P1, o teste pegou mais do que o controle da coluna.
+* **P4** — No RÁDIO, segunda testemunha, com a mesma conferência.
+
+**A armadilha.** Cinco. (1) A háptica e a vibração saem nos MESMOS motores, e o que as separa é a forma: a «Vibração» é um tremor contínuo, a «Háptica» é a pancada que vem e para. Se a «Háptica» tremer igual à «Vibração», anote: a forma não chegou. (2) No «Padrão» o «Sensor háptico» fica travado em 100%, o jogo como ele mandou, e o trilho não muda nada; a «Economia» e o perfil de bateria cortam a háptica. Por isso a rodada é no «Máximo». (3) Com «Sem efeito» no «Efeito háptico» o «Háptica» recusa: escolha uma forma. E o «Háptica» e o «Vibração» do mesmo controle se desligam um ao outro; o de cada controle é dele. (4) Não troque de aba com o teste correndo: trocar cala todos os testes. (5) Se o «Sensor háptico» estiver cinza, o Hefesto não alcança a háptica daquele controle: anote o cartão aceso do quadro «Modo», na aba Jogar, e não reprove o caminho. A célula já obedeceu na mão com um controle no cabo; o que esta rodada mede é o trilho e o segundo controle do cabo.
+
+---
+
+## mapa-vibracao.haptics_vcm-radio — Haptics VCM / PCM (motores voice-coil com forma de onda) · rádio
+
+*Célula:* `vibracao.haptics_vcm @ rádio`
+
+**O que isto prova.** O mesmo que a linha do cabo, pelo rádio: a háptica chega a cada controle do rádio com a força do «Sensor háptico» da coluna dele, e só a ele. Pelo rádio não existe placa de som no controle: o Hefesto leva a háptica no mesmo relatório que leva o som do alto-falante, e é esse caminho que se mede aqui, com os dois controles do rádio ao mesmo tempo.
+
+**Onde olhar.** Na aba Vibração, a coluna de cada controle; o nome na linha «Modelo» termina em BT para quem está no rádio. Na linha «Força da vibração», os degraus «Economia», «Padrão» e «Máximo». Na linha «Sensor háptico», o botão que liga e desliga, o trilho de 0 a 200 e o número, com o «%» que ACENDE quando há háptica chegando àquele controle. Na linha «Efeito háptico», a lista da forma do toque. Na linha «Testar agora», «Vibração», «Háptica» e «Parar». A prova é a mão.
+
+**Os passos.**
+
+1. Clique na aba Vibração.
+2. Confira na linha «Modelo» que as colunas do P3 e do P4 terminam em BT, e anote a cor do plástico que a fita do topo mostra no chip de cada um.
+3. Clique em «Parar» nas quatro colunas.
+4. Anote, nas colunas do P3 e do P4, o degrau aceso na «Força da vibração», o número do «Sensor háptico» e a escolha do «Efeito háptico».
+5. Nas colunas do P3 e do P4, clique em «Máximo» e escolha «Impacto» no «Efeito háptico».
+6. Arraste o «Sensor háptico» do P3 até 200 e solte.
+7. Segure o P3 nas duas mãos e clique em «Háptica», na linha «Testar agora» da coluna dele.
+8. Confira que ele dá uma pancada funda a cada segundo, que o «%» do «Sensor háptico» dele acende, e que o P1, o P2 e o P4 ficam quietos.
+9. Com o teste correndo, arraste o «Sensor háptico» do P3 até 50 e solte.
+10. Confira que a pancada continua, mais fraca.
+11. Ponha o P4 na outra mão e clique em «Háptica» na coluna dele.
+12. Confira que os dois do rádio batem ao mesmo tempo, o P3 fraco e o P4 forte, e que nenhum dos dois engasga por meio minuto.
+13. Clique em «Parar» na coluna do P3.
+14. Confira que o P3 parou e que o P4 continua batendo.
+15. Clique em «Parar» na coluna do P4.
+16. Clique em «Vibração» na coluna do P3, sinta o tremor contínuo dos motores e clique em «Parar».
+17. Devolva, no P3 e no P4, o degrau, o «Sensor háptico» e o «Efeito háptico» ao que você anotou.
+18. Abra um jogo com háptica do DualSense e jogue um trecho com o P3 e o P4.
+19. Confira que a vibração fina do jogo chega aos dois, e que o «%» do «Sensor háptico» de cada um acende enquanto ela chega.
+20. Feche o jogo.
+
+**Passa quando.** Nos dois controles do rádio, o «Háptica» toca a pancada a cada segundo, só no controle da coluna, com o «%» aceso; ela encolhe com o trilho; os dois tocam juntos sem engasgo, cada um na força dele; o «Parar» de um não cala o outro; e ela se distingue do tremor contínuo da «Vibração». Os dois do cabo ficam quietos o tempo todo. E com o jogo aberto, a vibração fina dele chega aos dois do rádio.
+
+**Por controle.**
+
+* **P3** — No RÁDIO, o de plástico que a fita mostra no chip do P3, e é o alvo: a pancada, o trilho que a encolhe e o «Parar» que cala só ele.
+* **P4** — No RÁDIO, a segunda prova, e é ele que mostra se dois controles do rádio levam a háptica ao mesmo tempo. Se um tocar e o outro não, anote qual.
+* **P1** — No CABO, testemunha. Não toque na coluna dele. Se ele bater junto com o P3, o teste pegou mais do que o controle da coluna.
+* **P2** — No CABO, segunda testemunha, com a mesma conferência.
+
+**A armadilha.** Cinco. (1) Pelo rádio a háptica e o som do alto-falante dividem o mesmo fio: não toque som no P3 ou no P4 durante a rodada, ou um engasgo deixa de dizer de onde veio. (2) O «Impacto» é curto de propósito: «Guarda», «Aparo» e «Som no corpo» são formas longas, e pelo rádio só tocam quando sobra lugar no fio; sem lugar, o teste cai nos motores, e o que se sente é um tremor e não a pancada. (3) No «Padrão» o «Sensor háptico» fica travado em 100% e o trilho não muda nada; a «Economia» e o perfil de bateria cortam a háptica. Por isso a rodada é no «Máximo». (4) Se o «Sensor háptico» estiver cinza, o jogo está falando direto com aquele controle, sem passar pelo Hefesto, como no modo nativo: anote o cartão aceso do quadro «Modo», na aba Jogar, e não reprove o caminho. (5) No rádio a queda e a volta são rotina: se o P3 ou o P4 cair no meio, anote a hora e refaça a volta dele. A célula já obedeceu na mão, com o lado certo, com um controle no rádio; o que esta rodada mede é o trilho e os dois do rádio juntos.
 
 ---
 

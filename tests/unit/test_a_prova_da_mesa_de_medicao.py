@@ -1010,15 +1010,6 @@ def test_o_gesto_e_o_corpo_do_teste_e_nao_uma_gaveta(pw, lar, mentira) -> None:
         pg.close()
 
 
-#: As duas linhas que nasceram no mapa depois do documento do gesto (17/10/2026). Saem com
-#: O-ACERVO-DO-MAPA-GANHA-O-GESTO-DO-EFEITO-DA-LUZ-E-DA-HAPTICA-01, que espera a linha do efeito
-#: perder o «Sem piscar».
-_SEM_GESTO_ATE_A_SPRINT = frozenset({
-    "mapa-luz.lightbar.efeito-cabo", "mapa-luz.lightbar.efeito-radio",
-    "mapa-vibracao.haptics_vcm-cabo", "mapa-vibracao.haptics_vcm-radio",
-})
-
-
 def test_o_acervo_do_mapa_tambem_tem_gesto() -> None:
     """*"depois de melhorar os 21. quero que aí sim vc use o novo modelo pra"""
     do_arquivo = med.como_do_mapa()
@@ -1029,10 +1020,6 @@ def test_o_acervo_do_mapa_tambem_tem_gesto() -> None:
                if not x.id.startswith("roteiro-")]
     sem = [x.id for x in do_mapa
            if not any(r == "os passos" for r, _ in x.como)]
-    assert not set(_SEM_GESTO_ATE_A_SPRINT) - set(sem), (
-        f"{sorted(set(_SEM_GESTO_ATE_A_SPRINT) - set(sem))} já têm gesto: saem do "
-        f"_SEM_GESTO_ATE_A_SPRINT")
-    sem = [i for i in sem if i not in _SEM_GESTO_ATE_A_SPRINT]
     assert not sem, (
         f"{len(sem)} células do mapa chegaram sem gesto: {sem[:5]} — e sem ele "
         f"o COMO volta a ser a procedência repetida, que é o defeito que ela "
