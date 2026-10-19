@@ -179,19 +179,29 @@ ACOES_DO_MENU = (("atualizar", "Atualizar"), ("permissoes", "Ver permissões"), 
 ROTULO_DA_CONFIRMACAO = "Confirmar remoção"
 
 
-def menu_html(chave: str, permissoes: Sequence[str] | None = None, *, remover: bool = False) -> str:
+def menu_html(chave: str, permissoes: Sequence[str] | None = None, *, remover: bool = False,
+              fecha: bool = False, apagado: bool = False) -> str:
     """O conteúdo do ⋮ de uma extensão: três botões e, se pedido, o que ela pode fazer.
 
     ``remover`` é o primeiro clique em Remover: o botão passa a dizer «Confirmar remoção».
+    ``fecha`` é o ⋮ da janela «Configurar»: a confirmação fecha a janela do lançador que sai.
+    ``apagado`` é o lançador que vem com o Hefesto: os três ficam à vista, sem gesto.
     """
-    botoes = "".join(
-        f'<button class="btn mini" data-gesto="mais-da-modificacao" data-v="{_a(chave)}:{acao}">'
-        f"{ROTULO_DA_CONFIRMACAO if remover and acao == 'remover' else rotulo}</button>"
-        for acao, rotulo in ACOES_DO_MENU)
+    if apagado:
+        return "".join(f'<span class="btn mini apagado" aria-disabled="true">{rotulo}</span>'
+                       for _acao, rotulo in ACOES_DO_MENU)
+    botoes = []
+    for acao, rotulo in ACOES_DO_MENU:
+        alvo = f'data-gesto="mais-da-modificacao" data-v="{_a(chave)}:{acao}"'
+        if remover and acao == "remover":
+            botoes.append(f'<a class="btn mini" href="#" {alvo}>{ROTULO_DA_CONFIRMACAO}</a>' if fecha
+                          else f'<button class="btn mini" {alvo}>{ROTULO_DA_CONFIRMACAO}</button>')
+        else:
+            botoes.append(f'<button class="btn mini" {alvo}>{rotulo}</button>')
     if permissoes is None:
-        return botoes
+        return "".join(botoes)
     itens = "".join(f"<span>{_e(x)}</span>" for x in permissoes) or "<span>Nenhuma permissão.</span>"
-    return f'{botoes}<span class="ext-perm">{itens}</span>'
+    return f'{"".join(botoes)}<span class="ext-perm">{itens}</span>'
 
 
 def _selo_da_extensao(ext: Extensao) -> str:
@@ -201,7 +211,8 @@ def _selo_da_extensao(ext: Extensao) -> str:
 
 def extensao_html(ext: Extensao) -> str:
     """Uma linha do quadro «Extensões». Nome, versão e dica vêm do manifesto de terceiros: escapados."""
-    menu = f'\n            <div class="ext-menu" data-menu="{_a(ext.chave)}">{ext.menu}</div>' if ext.menu else ""
+    menu = (f'\n            <div class="ext-menu ext-pop aberto" data-menu="{_a(ext.chave)}">{ext.menu}</div>'
+            if ext.menu else "")
     para = ext.para or '<div class="ext-para"></div>'
     return f'''          <div class="ext" data-modificacao="{_a(ext.chave)}">
             <span class="ext-ico" style="color:var(--{ext.cor})">{_icone(ext.chave)}</span>
@@ -370,12 +381,6 @@ def _jogos_da_opcao(o: OpcaoDaJanela) -> str:
     return f'<div class="jg-lista ext-jogos" aria-label="{_a(o.rotulo)}">{caixas}</div>'
 
 
-def _linhas_das_opcoes(opcoes: Sequence[OpcaoDaJanela]) -> str:
-    return "".join(
-        f'<div class="lc-linha{" lc-larga" if o.tipo == "jogos" else ""}"><span>{_e(o.rotulo)}</span>'
-        f'<span class="lc-val">{_controle_da_opcao(o)}</span></div>' for o in opcoes)
-
-
 def _grupos_das_opcoes(opcoes: Sequence[OpcaoDaJanela]) -> dict[str, list[OpcaoDaJanela]]:
     """Os grupos na ordem em que aparecem; a opção sem grupo vai ao primeiro."""
     nomes = [o.grupo for o in opcoes if o.grupo]
@@ -384,25 +389,6 @@ def _grupos_das_opcoes(opcoes: Sequence[OpcaoDaJanela]) -> dict[str, list[OpcaoD
     for o in opcoes:
         grupos.setdefault(o.grupo or primeiro, []).append(o)
     return grupos
-
-
-def opcoes_em_abas_html(opcoes: Sequence[OpcaoDaJanela], aba: str = "") -> str:
-    """As opções em abas internas, uma por grupo; com um grupo só, as linhas soltas.
-
-    ``aba`` é o grupo aberto (o da opção que acabou de mudar); fora da lista, abre o primeiro.
-    """
-    grupos = _grupos_das_opcoes(opcoes)
-    if len(grupos) < 2:
-        return _linhas_das_opcoes(opcoes)
-    aberto = aba if aba in grupos else next(iter(grupos))
-    partes = []
-    for i, (nome, itens) in enumerate(grupos.items()):
-        marca = " checked" if nome == aberto else ""
-        partes.append(
-            f'<input type="radio" name="mg-aba" id="mg-aba{i}"{marca}>'
-            f'<label for="mg-aba{i}">{_e(nome)}</label>'
-            f'<div class="mg-painel">{_linhas_das_opcoes(itens)}</div>')
-    return f'<div class="mg-abas">{"".join(partes)}</div>'
 
 
 def _cartoes_das_opcoes(opcoes: Sequence[OpcaoDaJanela]) -> str:
@@ -491,24 +477,24 @@ def _com_a_coluna(corpo: str, agora: Sequence[str], estado: Mapping[str, Any] | 
     </div>'''
 
 
-def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], descricao: str = "",
-                           aba: str = "", *, desenho: bool = False, mod: str = "",
+GESTO_DO_GUARDAR = "guardar-modificacao"
+
+
+def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: str = "",
                            agora: Sequence[str] = (), estado: Mapping[str, Any] | None = None,
                            parar_tudo: bool = False) -> str:
-    """O conteúdo da janela de uma extensão: o que o manifesto declara, uma linha por opção.
+    """O conteúdo da janela de uma extensão: um cartão por grupo, «Para» no topo, Cancelar e Guardar.
 
-    Com mais de um grupo nas opções, uma aba interna por grupo (``aba`` é a aberta).
-    ``desenho`` traz o arranjo de 19/10 (cartões por grupo, Cancelar e Guardar), que o produto ainda
-    não atende: o mesmo precedente do «Criar para todos» de ``escolha_miolo_html``.
+    É o arranjo aprovado em 19/10 (o da Lovense): cada opção que o manifesto declara vira uma linha
+    do cartão do grupo dela. Mudar uma opção só a põe no rascunho da janela; o Guardar grava todas.
     ``agora`` são os pedaços da coluna «Agora» que o manifesto declara (``estado`` é o último
     ``acessorios.estado`` dela) e ``parar_tudo`` põe o botão no topo; os dois só com ``mod``.
     """
     parar = parar_tudo_html(mod) if parar_tudo and mod else ""
     agora = agora if mod else ()
-    if desenho:
-        corpo = (_cartoes_das_opcoes(opcoes) if opcoes else
-                 '<div class="ext-vazia">Esta extensão não tem opções para ajustar.</div>')
-        return f'''    <div class="tn-topo">
+    corpo = (_cartoes_das_opcoes(opcoes) if opcoes else
+             '<div class="ext-vazia">Esta extensão não tem opções para ajustar.</div>')
+    return f'''    <div class="tn-topo">
       <span class="tn-tit">Configurar · {_e(nome)}</span>
       <span class="pc-para"><span class="ext-rot">Para</span>Todos</span>{parar}
       <a class="tn-x" href="#" data-dica="Fechar">\u00d7</a>
@@ -516,18 +502,7 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], descricao
 {_com_a_coluna(corpo, agora, estado)}
     <div class="tn-rod">
       <a class="btn" href="#">Cancelar</a>
-      <a class="btn roxo" href="#">Guardar</a>
-    </div>'''
-    linhas = opcoes_em_abas_html(opcoes, aba)
-    corpo = linhas or '<div class="ext-vazia">Esta extensão não tem opções para ajustar.</div>'
-    sub = f'<div class="lanc-novo-para">{_e(descricao)}</div>' if descricao else ""
-    return f'''    <div class="tn-topo">
-      <span class="tn-tit">Configurar · {_e(nome)}</span>{parar}
-      <a class="tn-x" href="#" data-dica="Fechar">\u00d7</a>
-    </div>
-{_com_a_coluna(sub + corpo, agora, estado)}
-    <div class="tn-rod">
-      <a class="btn" href="#">Fechar</a>
+      <a class="btn roxo" href="#" data-gesto="{GESTO_DO_GUARDAR}" data-v="{_a(mod)}">Guardar</a>
     </div>'''
 
 
@@ -584,34 +559,66 @@ class Conf(NamedTuple):
     jogos: str
     #: Quantos jogos têm impedimento; `None` quando o lançador não tem essa leitura.
     impedimentos: int | None = None
-    #: A pasta dos jogos, que o desenho aprovado mostra na linha «Pastas dos jogos».
-    pasta: str = ""
+    #: As pastas em que os jogos dele moram; sem elas, a linha diz só quantos jogos.
+    pastas: tuple[str, ...] = ()
+    #: A chave «Cada jogo ganha o seu perfil»; `None` no lançador que não entrega jogos.
+    perfil_por_jogo: bool | None = None
+    #: O lançador que vem de uma extensão: o ⋮ age nela, e onde ele está é ela quem diz.
+    modificacao: str = ""
+    #: O ⋮ aberto pelo produto: o miolo de `menu_html` na extensão, qualquer texto no que vem com o
+    #: Hefesto (o menu dele é sempre o apagado); vazio, ele abre só com o foco.
+    menu: str = ""
+
+
+GESTO_DE_ESCOLHER = "escolher-o-lancador"
+GESTO_DO_GUARDAR_LANCADOR = "guardar-lancador"
+CAMPO_DO_PERFIL = "perfil-por-jogo"
+ROTULO_DE_ESCOLHER = "Escolher o arquivo…"
 
 
 def _linha_conf(rotulo: str, valor: str) -> str:
     return f'<div class="lc-linha"><span>{_e(rotulo)}</span><span class="lc-val">{valor}</span></div>'
 
 
-_ESCOLHER_A_PASTA = '<a class="btn mini" href="#lanc-conf">Escolher a pasta…</a>'
-_PERFIL_POR_JOGO = (
-    '<div class="lc-linha"><span data-dica="O perfil entra sozinho quando o jogo abre">Cada jogo ganha o seu perfil</span>'
-    '<span class="lc-val"><span class="nj-tog ligado" data-on="Ligado" data-off="Desligado">'
-    '<span class="pino"></span><span class="txt">Ligado</span></span></span></div>')
+def _perfil_por_jogo(ligado: bool) -> str:
+    classe, texto = ("nj-tog ligado", "Ligado") if ligado else ("nj-tog", "Desligado")
+    return ('<div class="lc-linha"><span data-dica="O perfil entra sozinho quando o jogo abre">'
+            'Cada jogo ganha o seu perfil</span><span class="lc-val">'
+            f'<span class="{classe}" data-on="Ligado" data-off="Desligado" data-linha="{CAMPO_DO_PERFIL}">'
+            f'<span class="pino"></span><span class="txt">{texto}</span></span></span></div>')
 
 
-def lanc_conf_miolo_html(c: Conf, *, desenho: bool = False) -> str:
-    """O conteúdo da janela «Configurar · <lançador>»: só o que o produto sabe dizer.
+def _mais_da_conf(c: Conf) -> str:
+    """O ⋮ do topo da janela: o mesmo menu da linha da extensão; no que vem com o Hefesto, apagado."""
+    if c.modificacao:
+        botao = (f'<button class="ext-mais" data-gesto="mais-da-modificacao" data-v="{_a(c.modificacao)}" '
+                 'data-dica="Atualizar, ver as permissões ou remover">⋮</button>')
+        if not c.menu:
+            return botao
+        return f'{botao}<div class="ext-menu ext-pop aberto" data-menu="{_a(c.modificacao)}">{c.menu}</div>'
+    classe = "ext-menu ext-pop aberto" if c.menu else "ext-menu ext-pop"
+    return (f'<button class="ext-mais" data-gesto="mais-da-modificacao" data-v="{_a(c.chave)}" '
+            'data-dica="Vem com o Hefesto: não se atualiza nem se remove">⋮</button>'
+            f'<div class="{classe}">{menu_html(c.chave, apagado=True)}</div>')
 
-    ``desenho`` acende o que o desenho aprovado tem e o produto ainda não atende: a escolha da pasta,
-    as pastas dos jogos, o perfil por jogo e o Cancelar/Guardar.
+
+def lanc_conf_miolo_html(c: Conf) -> str:
+    """O conteúdo da janela «Configurar · <lançador>», no arranjo aprovado em 19/10.
+
+    Onde ele está (com o «Escolher o arquivo…», menos no lançador de extensão), as pastas dos jogos,
+    os impedimentos, a chave do perfil por jogo e o Cancelar/Guardar; o ⋮ fica no topo.
     """
     linhas = [_linha_conf("Como entrou", _e(c.entrou))]
-    if c.onde:
-        extra = _ESCOLHER_A_PASTA if desenho else ""
-        linhas.append(_linha_conf("Onde ele está", f"<code>{_e(c.onde)}</code>{extra}"))
-    if c.jogos and desenho and c.pasta:
-        linhas.append(_linha_conf("Pastas dos jogos",
-                                  f"<code>{_e(c.pasta)}</code><small>{_e(c.jogos)}</small>"))
+    escolher = ("" if c.modificacao else
+                f'<button class="btn mini" data-gesto="{GESTO_DE_ESCOLHER}" data-v="{_a(c.chave)}">'
+                f"{ROTULO_DE_ESCOLHER}</button>")
+    if c.onde or escolher:
+        onde = f"<code data-dica=\"{_a(c.onde)}\">{_e(c.onde)}</code>" if c.onde else ""
+        linhas.append(_linha_conf("Onde ele está", onde + escolher))
+    if c.pastas:
+        pastas = "".join(f"<code>{_e(x)}</code>" for x in c.pastas)
+        contagem = f"<small>{_e(c.jogos)}</small>" if c.jogos else ""
+        linhas.append(_linha_conf("Pastas dos jogos", pastas + contagem))
     elif c.jogos:
         linhas.append(_linha_conf("Jogos", f"<small>{_e(c.jogos)}</small>"))
     if c.impedimentos is not None:
@@ -624,20 +631,20 @@ def lanc_conf_miolo_html(c: Conf, *, desenho: bool = False) -> str:
             valor = ('<small>Nenhum jogo com impedimento</small><a class="btn mini" href="#impedimentos" '
                      f'data-gesto="ver-impedimentos" data-v="{_a(c.chave)}">Conferir de novo</a>')
         linhas.append(_linha_conf("Impedimentos", valor))
-    if desenho:
-        linhas.append(_PERFIL_POR_JOGO)
+    if c.perfil_por_jogo is not None:
+        linhas.append(_perfil_por_jogo(c.perfil_por_jogo))
     corpo = "\n      ".join(linhas)
-    rodape = ('<a class="btn" href="#">Cancelar</a>\n      <a class="btn roxo" href="#">Guardar</a>'
-              if desenho else '<a class="btn" href="#">Fechar</a>')
     return f'''    <div class="tn-topo">
       <span class="tn-tit">Configurar · {_e(c.nome)}</span>
+      {_mais_da_conf(c)}
       <a class="tn-x" href="#" data-dica="Fechar">\u00d7</a>
     </div>
     <div class="tn-corpo">
       {corpo}
     </div>
     <div class="tn-rod">
-      {rodape}
+      <a class="btn" href="#">Cancelar</a>
+      <a class="btn roxo" href="#" data-gesto="{GESTO_DO_GUARDAR_LANCADOR}" data-hef-forma="lanc-janela" data-v="{_a(c.chave)}">Guardar</a>
     </div>'''
 
 
@@ -679,7 +686,8 @@ def _numero(n: int) -> str:
     return {2: "dois", 3: "três", 4: "quatro", 5: "cinco"}.get(n, str(n))
 
 
-CONF_DE_EXEMPLO = Conf("steam", "Steam", "Do sistema", "~/.steam/steam", "48 jogos", 2, "~/Jogos/SteamLibrary")
+CONF_DE_EXEMPLO = Conf("steam", "Steam", "Do sistema", "~/.steam/steam", "48 jogos", 2,
+                       ("~/Jogos/SteamLibrary",), True)
 IMPEDIMENTOS_DE_EXEMPLO = (
     LinhaDeImpedimento("entrada:1", "Sackboy: A Big Adventure",
                        "O Steam Input está ligado: o jogo vê um controle de Xbox", "Desligar o Steam Input"),
@@ -738,11 +746,11 @@ def telas() -> str:
     for nome in JANELAS:
         texto = _fragmento(nome)
         texto = texto.replace("{{ESCOLHA}}", escolha_miolo_html("Steam", JOGOS_DA_STEAM, desenho=True))
-        texto = texto.replace("{{CONF}}", lanc_conf_miolo_html(CONF_DE_EXEMPLO, desenho=True))
+        texto = texto.replace("{{CONF}}", lanc_conf_miolo_html(CONF_DE_EXEMPLO))
         texto = texto.replace("{{IMPEDIMENTOS}}", impedimentos_miolo_html("Steam", IMPEDIMENTOS_DE_EXEMPLO))
         texto = texto.replace("{{JOGOS}}", jogos_html())
         texto = texto.replace("{{FORCA}}", forca_html())
         texto = texto.replace("{{MODIFICACAO}}", modificacao_miolo_html(
-            "Minha extensão", OPCOES_DO_DESENHO, desenho=True))
+            "Minha extensão", OPCOES_DO_DESENHO, mod="exemplo"))
         partes.append(texto.strip())
     return "\n".join(partes) + f"\n<script data-aba=\"experimental\">\n{SCRIPT}</script>\n"

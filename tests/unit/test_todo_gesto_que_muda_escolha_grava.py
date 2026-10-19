@@ -99,8 +99,14 @@ ATOS: dict[Chave, str] = {
         "tela: abre a janela «Configurar» do lançador (onde está, como entrou e, na Steam, os "
         "impedimentos lidos agora); quem muda algo é o gesto de lá, que declara `grava=`",
     ("07-lancadores.html", "configurar-modificacao"):
-        "tela: abre a janela de opções da extensão com o valor de agora; mudar uma opção é o "
-        "`guardar-opcao-da-modificacao`, que declara `grava=`",
+        "tela: abre a janela de opções da extensão com o valor de agora; quem grava as opções "
+        "é o Guardar dela (`guardar-modificacao`), que declara `grava=`",
+    ("07-lancadores.html", "guardar-opcao-da-modificacao"):
+        "rascunho da janela da extensão: a opção mudada espera o Guardar "
+        "(`guardar-modificacao`), que declara `grava=`; gravar a cada clique salvaria meia escolha",
+    ("07-lancadores.html", "escolher-o-lancador"):
+        "rascunho da janela «Configurar»: o atalho apontado espera o Guardar "
+        "(`guardar-lancador`), que declara `grava=`",
     ("07-lancadores.html", "identificar-lancador"):
         "leitura: esquece o cache, procura o lançador no disco de novo e diz onde ele está",
     ("07-lancadores.html", "parar-tudo-da-modificacao"):

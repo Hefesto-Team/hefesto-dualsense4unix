@@ -309,7 +309,7 @@ def test_ligar_com_permissao_nova_mostra_antes_e_liga_no_segundo(lar, ctx, tmp_p
     assert _entrada(lar, "toque").ligada is False, "ligou sem o «sim»"
     segundo = a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
     assert "ligada" in segundo["recado"] and _entrada(lar, "toque").ligada is True
-    assert 'class="ext-menu"' not in segundo["blocos"][".ext-lista"]
+    assert "data-menu=" not in segundo["blocos"][".ext-lista"]
     terceiro = a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
     assert "desligada" in terceiro["recado"] and _entrada(lar, "toque").ligada is False
 
@@ -345,27 +345,55 @@ def test_a_janela_da_extensao_traz_o_valor_de_agora_de_cada_opcao(lar, ctx, tmp_
     assert 'value="50"' in janela and "Nunca" in janela
 
 
-def test_guardar_a_opcao_grava_no_arquivo_e_repinta(lar, ctx, tmp_path) -> None:
+def _guardado(lar) -> dict:
+    arquivo = lar.dados / "toque" / "opcoes.json"
+    return json.loads(arquivo.read_text(encoding="utf-8")) if arquivo.exists() else {}
+
+
+def test_a_opcao_mudada_espera_o_guardar_e_o_guardar_grava(lar, ctx, tmp_path) -> None:
+    """D-1910-A-JANELA-DA-EXTENSAO-GUARDA-NO-GUARDAR: a mudança é rascunho até o Guardar."""
     a07 = _a07()
     _instalar(a07, ctx, _fonte(tmp_path, opcoes=_OPCOES))
     a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())
     carga = a07.guardar_opcao_da_modificacao(
         ctx, {"v": "toque:quando", "valor": "Nunca", "evento": "change"}, _Ponte())
-    guardado = json.loads((lar.dados / "toque" / "opcoes.json").read_text(encoding="utf-8"))
-    assert guardado == {"quando": "Nunca", "avisar": False, "teto": 50.0}
-    assert "<option selected>Nunca" in carga["blocos"]["#mod-janela"]
-    # o clique do select (o mesmo gesto dispara click e change) não grava nada
+    assert "<option selected>Nunca" in carga["blocos"]["#mod-janela"], "sem o rascunho na janela"
+    assert _guardado(lar) == {}, "a opção gravou antes do Guardar"
+    # o clique do select (o mesmo gesto dispara click e change) não muda nada
     assert a07.guardar_opcao_da_modificacao(
         ctx, {"v": "toque:quando", "valor": "Sempre", "evento": "click"}, _Ponte()) is None
-    assert json.loads((lar.dados / "toque" / "opcoes.json").read_text())["quando"] == "Nunca"
+    feito = a07.guardar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    assert feito["recado"] == "Guardado."
+    assert _guardado(lar) == {"quando": "Nunca", "avisar": False, "teto": 50.0}
+    assert "<option selected>Nunca" in feito["blocos"]["#mod-janela"]
+    assert "recado" not in a07.guardar_modificacao(ctx, {"v": "toque"}, _Ponte()), (
+        "o Guardar sem mudança disse que guardou")
 
 
-def test_a_chave_de_ligado_age_no_clique_e_o_numero_valida(lar, ctx, tmp_path) -> None:
+def test_o_cancelar_joga_fora_o_rascunho(lar, ctx, tmp_path) -> None:
     a07 = _a07()
     _instalar(a07, ctx, _fonte(tmp_path, opcoes=_OPCOES))
+    a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())
     a07.guardar_opcao_da_modificacao(
-        ctx, {"v": "toque:avisar", "evento": "click"}, _Ponte())
-    assert json.loads((lar.dados / "toque" / "opcoes.json").read_text())["avisar"] is True
+        ctx, {"v": "toque:quando", "valor": "Nunca", "evento": "change"}, _Ponte())
+    # o Cancelar é `href="#"`: fecha sem gesto, e a janela reaberta nasce do guardado
+    janela = a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())["blocos"]["#mod-janela"]
+    assert "<option selected>Sempre" in janela
+    a07.guardar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    assert _guardado(lar) == {}
+
+
+def test_a_chave_de_ligado_vira_no_clique_e_o_numero_valida(lar, ctx, tmp_path) -> None:
+    a07 = _a07()
+    _instalar(a07, ctx, _fonte(tmp_path, opcoes=_OPCOES))
+    a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    a07.guardar_opcao_da_modificacao(ctx, {"v": "toque:avisar", "evento": "click"}, _Ponte())
+    assert a07._MEXIDA.rascunho == {"avisar": True}
+    a07.guardar_opcao_da_modificacao(ctx, {"v": "toque:avisar", "evento": "click"}, _Ponte())
+    assert a07._MEXIDA.rascunho == {"avisar": False}, "o segundo clique não virou o rascunho"
+    a07.guardar_opcao_da_modificacao(ctx, {"v": "toque:avisar", "evento": "click"}, _Ponte())
+    a07.guardar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    assert _guardado(lar)["avisar"] is True
     with pytest.raises(RuntimeError, match="pede um número"):
         a07.guardar_opcao_da_modificacao(
             ctx, {"v": "toque:teto", "valor": "muito", "evento": "change"}, _Ponte())
@@ -375,6 +403,7 @@ def test_a_chave_de_ligado_age_no_clique_e_o_numero_valida(lar, ctx, tmp_path) -
     with pytest.raises(RuntimeError, match="não tem essa opção"):
         a07.guardar_opcao_da_modificacao(
             ctx, {"v": "toque:inventada", "valor": "x", "evento": "change"}, _Ponte())
+    assert a07._MEXIDA.rascunho == {}, "a recusa entrou no rascunho"
 
 
 def test_o_menu_abre_mostra_as_permissoes_e_fecha(lar, ctx, tmp_path) -> None:
@@ -386,15 +415,17 @@ def test_o_menu_abre_mostra_as_permissoes_e_fecha(lar, ctx, tmp_path) -> None:
     com_permissoes = a07.mais_da_modificacao(ctx, pedido, _Ponte())
     assert "Usar a rede desta casa" in com_permissoes["blocos"][".ext-lista"]
     fechado = a07.mais_da_modificacao(ctx, {"v": "toque"}, _Ponte())
-    assert 'class="ext-menu"' not in fechado["blocos"][".ext-lista"]
+    assert "data-menu=" not in fechado["blocos"][".ext-lista"]
 
 
 def test_remover_pede_o_segundo_clique_e_apaga_o_codigo_e_os_dados(lar, ctx, tmp_path) -> None:
     # D-1810-O-SIM-DAS-PERMISSOES-E-O-REMOVER-SE-CONFIRMAM-NO-MENU-DA-LINHA
     a07 = _a07()
     _instalar(a07, ctx, _fonte(tmp_path, opcoes=_OPCOES))
+    a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())
     a07.guardar_opcao_da_modificacao(
         ctx, {"v": "toque:avisar", "evento": "click"}, _Ponte())
+    a07.guardar_modificacao(ctx, {"v": "toque"}, _Ponte())
     primeiro = a07.mais_da_modificacao(ctx, {"v": "toque:remover"}, _Ponte())
     assert primeiro.get("armou") is True and "recado" not in primeiro
     assert "Confirmar remoção" in primeiro["blocos"][".ext-lista"]
@@ -526,17 +557,181 @@ def test_a_sondagem_nunca_levanta_e_nomeia_o_jogo(monkeypatch) -> None:
 # -- A janela de cada lançador e a escolha ---------------------------------------------------------
 
 
-def test_configurar_o_lancador_abre_a_janela_igual_para_todos(lar, ctx, monkeypatch) -> None:
+class _Seletor(_Ponte):
+    """A ponte do «Configurar»: o seletor devolve o que o teste mandar e o declare anota."""
+
+    def __init__(self, escolha: str | None = None) -> None:
+        super().__init__(escolha)
+        self.chamadas: list[dict] = []
+
+    def machine_declare(self, maquina: dict) -> tuple[bool, None]:
+        self.chamadas.append(maquina)
+        return True, None
+
+
+@pytest.fixture
+def casa(tmp_path, monkeypatch) -> pathlib.Path:
+    """``HOME`` e as pastas XDG no ``tmp``: a pasta de atalhos, a Steam e o ``maquina.json``."""
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / ".config"))
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / ".local/share"))
+    monkeypatch.setenv("XDG_DATA_DIRS", str(tmp_path / "usr/share"))
+    monkeypatch.setattr(pathlib.Path, "home", lambda: tmp_path)
+    (tmp_path / ".local/share/applications").mkdir(parents=True)
+    (tmp_path / "usr/share/applications").mkdir(parents=True)
+    return tmp_path
+
+
+def test_configurar_o_lancador_abre_a_janela_igual_para_todos(lar, ctx, casa, monkeypatch) -> None:
+    """O arranjo de 19/10: «Escolher o arquivo…», as pastas, a chave, Cancelar e Guardar."""
+    from hefesto_dualsense4unix.integrations import steam_launch_options
+
     a07 = _a07()
     monkeypatch.setattr(a07, "_sondar_a_steam", _dois_impedimentos)
+    monkeypatch.setattr(steam_launch_options, "pastas_steamapps",
+                        lambda home=None: [casa / "Jogos/SteamLibrary/steamapps"])
     steam = a07.configurar_lancador(ctx, {"v": "steam"}, _Ponte())
     janela = steam["blocos"]["#lanc-janela"]
     assert "Configurar · Steam" in janela and "Como entrou" in janela
     assert "2 jogos não recebem" in janela and 'data-gesto="ver-impedimentos"' in janela
-    flatpak = a07.configurar_lancador(ctx, {"v": "flatpak"}, _Ponte())
-    assert "ver-impedimentos" not in flatpak["blocos"]["#lanc-janela"]
+    assert "<span>Pastas dos jogos</span>" in janela
+    assert "<code>~/Jogos/SteamLibrary</code>" in janela
+    assert 'data-gesto="escolher-o-lancador" data-v="steam">Escolher o arquivo…' in janela
+    assert 'class="nj-tog ligado"' in janela and 'data-linha="perfil-por-jogo"' in janela
+    rodape = janela.split('class="tn-rod"')[1]
+    assert '<a class="btn" href="#">Cancelar</a>' in rodape
+    assert 'data-gesto="guardar-lancador" data-hef-forma="lanc-janela" data-v="steam"' in rodape
+    topo = janela.split('class="tn-corpo"')[0]
+    assert 'class="ext-mais"' in topo and 'class="btn mini apagado"' in topo
+    assert topo.count("data-gesto=") == 1, "o ⋮ de fábrica atualiza ou remove a Steam"
+    assert 'class="ext-menu ext-pop"' in topo
+    aberto = a07.mais_da_modificacao(ctx, {"v": "steam"}, _Ponte())["blocos"]["#lanc-janela"]
+    assert 'class="ext-menu ext-pop aberto"' in aberto.split('class="tn-corpo"')[0]
+    flatpak = a07.configurar_lancador(ctx, {"v": "flatpak"}, _Ponte())["blocos"]["#lanc-janela"]
+    assert "ver-impedimentos" not in flatpak and "Pastas dos jogos" not in flatpak
+    assert "perfil-por-jogo" not in flatpak, "o Flatpak não entrega jogo: a chave não liga nada"
+    retroarch = a07.configurar_lancador(ctx, {"v": "retroarch"}, _Ponte())["blocos"]["#lanc-janela"]
+    assert "perfil-por-jogo" in retroarch
     with pytest.raises(RuntimeError, match="Não conheço"):
         a07.configurar_lancador(ctx, {"v": "inventado"}, _Ponte())
+
+
+def test_o_escolher_espera_o_guardar_e_o_guardar_grava_o_atalho_e_a_chave(
+        lar, ctx, casa) -> None:
+    """D-1910-O-ESCOLHER-DO-CONFIGURAR-APONTA-O-ATALHO e D-1910-CADA-JOGO-GANHA-O-PERFIL-..."""
+    a07 = _a07()
+    atalho = casa / ".local/share/applications/org.libretro.RetroArch.desktop"
+    atalho.write_text("[Desktop Entry]\nName=RetroArch\n", encoding="utf-8")
+    p = _Seletor(str(atalho))
+    a07.configurar_lancador(ctx, {"v": "retroarch"}, p)
+    carga = a07.escolher_o_lancador(ctx, {"v": "retroarch"}, p)
+    assert ">~/.local/share/applications/org.libretro.RetroArch.desktop</code>" in (
+        carga["blocos"]["#lanc-janela"])
+    assert p.chamadas == [], "o «Escolher o arquivo…» gravou antes do Guardar"
+    feito = a07.guardar_lancador(
+        ctx, {"v": "retroarch", "forma": {"perfil-por-jogo": "Desligado"}}, p)
+    assert p.chamadas[0] == {"lancadores": {"retroarch": {
+        "rotulo": "RetroArch", "atalhos": ["org.libretro.RetroArch"]}}}, p.chamadas
+    assert p.chamadas[1] == {"perfil_por_jogo": {"retroarch": False}}
+    assert len(p.chamadas) == 2 and "recado" in feito
+    assert a07._PARA_QUEM == "" and a07._MEXIDA.onde_escolhido == ""
+    # a chave igual à guardada não escreve nada
+    p.chamadas.clear()
+    a07.guardar_lancador(ctx, {"v": "retroarch", "forma": {"perfil-por-jogo": "Ligado"}}, p)
+    assert p.chamadas == []
+
+
+def test_o_escolher_fora_das_pastas_recusa_e_o_cancelar_esquece(lar, ctx, casa) -> None:
+    a07 = _a07()
+    fora = casa / "Downloads/RetroArch.desktop"
+    fora.parent.mkdir()
+    fora.write_text("[Desktop Entry]\nName=RetroArch\n", encoding="utf-8")
+    p = _Seletor(str(fora))
+    a07.configurar_lancador(ctx, {"v": "retroarch"}, p)
+    with pytest.raises(RuntimeError, match="fora das pastas"):
+        a07.escolher_o_lancador(ctx, {"v": "retroarch"}, p)
+    assert a07._MEXIDA.onde_escolhido == ""
+    with pytest.raises(RuntimeError, match="Abra o «Configurar»"):
+        a07.escolher_o_lancador(ctx, {"v": "lutris"}, p)
+    dentro = casa / ".local/share/applications/RetroArch.desktop"
+    dentro.write_text("[Desktop Entry]\nName=RetroArch\n", encoding="utf-8")
+    p.escolha = str(dentro)
+    a07.escolher_o_lancador(ctx, {"v": "retroarch"}, p)
+    assert a07._MEXIDA.onde_escolhido == str(dentro)
+    # o Cancelar é `href="#"`; a janela reaberta não traz o rascunho
+    a07.configurar_lancador(ctx, {"v": "retroarch"}, p)
+    assert a07._MEXIDA.onde_escolhido == ""
+    a07.guardar_lancador(ctx, {"v": "retroarch", "forma": {}}, p)
+    assert p.chamadas == []
+    assert a07.escolher_o_lancador(ctx, {"v": "retroarch"}, _Seletor(None)) is None
+
+
+def test_o_mais_do_configurar_e_o_da_extensao_e_some_com_ela(lar, ctx, monkeypatch) -> None:
+    """D-1910-O-MAIS-DO-CONFIGURAR-ACENDE-SO-NA-EXTENSAO: o mesmo menu, nos dois lugares."""
+    from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
+
+    html = exp.lanc_conf_miolo_html(exp.Conf(
+        "kytyps5", "KytyPS5", "Como extensão", "", "", modificacao="kytyps5",
+        menu=exp.menu_html("kytyps5", remover=True, fecha=True)))
+    topo = html.split('class="tn-corpo"')[0]
+    assert 'data-gesto="mais-da-modificacao" data-v="kytyps5"' in topo
+    assert 'class="ext-menu ext-pop aberto"' in topo
+    assert ('<a class="btn mini" href="#" data-gesto="mais-da-modificacao" '
+            'data-v="kytyps5:remover">Confirmar remoção</a>') in topo, "a confirmação não fecha"
+    assert "escolher-o-lancador" not in html, "onde ele está é a extensão quem diz"
+
+    a07 = _a07()
+    montadas: list[str] = []
+
+    def montar(chave, state=None):
+        montadas.append(chave)
+        if len(montadas) > 1:
+            raise RuntimeError("Não conheço esse lançador. Nada foi alterado.")
+
+    monkeypatch.setattr(a07, "_montar_a_conf", montar)
+    monkeypatch.setattr(a07, "_mexer_na_modificacao", lambda mod_id, acao: "Toque removida.")
+    a07._MEXIDA.conf, a07._MEXIDA.conf_da_modificacao = "kytyps5", "toque"
+    a07.mais_da_modificacao(ctx, {"v": "toque"}, _Ponte())
+    assert montadas == ["kytyps5"], "a janela aberta não acompanhou o ⋮"
+    a07.mais_da_modificacao(ctx, {"v": "toque:remover"}, _Ponte())
+    assert a07._MEXIDA.conf == "" and a07._MEXIDA.html_conf == ""
+    a07._MEXIDA.conf, a07._MEXIDA.conf_da_modificacao = "steam", ""
+    a07.mais_da_modificacao(ctx, {"v": "toque"}, _Ponte())
+    assert len(montadas) == 2, "o ⋮ de uma extensão repintou a janela da Steam"
+
+
+def test_a_chave_desligada_tira_os_jogos_daquele_lancador_da_semeadura(
+        casa, tmp_path, monkeypatch) -> None:
+    """O jogo do lançador desligado não ganha perfil nem entra na marca: religar o semeia."""
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+    from hefesto_dualsense4unix.integrations import jogos_locais
+    from hefesto_dualsense4unix.profiles import loader
+    from hefesto_dualsense4unix.utils.maquina import carregar_maquina, gravar_maquina
+
+    assert censo.lancador_do_jogo("steam") == "steam"
+    assert censo.lancador_do_jogo("desktop", "620") == "steam"
+    assert censo.lancador_do_jogo("desktop", "") == ""
+    assert censo.lancador_do_jogo("lutris") == "lutris"
+    assert censo.lancador_do_jogo("mgba") == "emuladores"
+    assert {"steam", "heroic", "lutris", "retroarch", "emuladores"} <= censo.LANCADORES_COM_JOGOS
+    assert "flatpak" not in censo.LANCADORES_COM_JOGOS
+
+    with pytest.raises(ValueError):
+        gravar_maquina({"perfil_por_jogo": {"A Steam": False}})
+    gravar_maquina({"perfil_por_jogo": {"lutris": False}})
+    assert carregar_maquina().perfil_por_jogo == {"lutris": False}
+    assert loader.lancadores_sem_perfil_por_jogo() == frozenset({"lutris"})
+
+    jogos = [jogos_locais.JogoLocal("620", "Portal Dois", "steam"),
+             jogos_locais.JogoLocal("", "Celeste", "lutris", lancador="Lutris", chave="celeste")]
+    monkeypatch.setattr(jogos_locais, "jogos_da_biblioteca_steam", lambda home=None: jogos[:1])
+    monkeypatch.setattr(jogos_locais, "jogos_com_janela", lambda home=None, pastas=None: jogos[1:])
+    destino = tmp_path / "perfis"
+    feito = loader.semear_perfis_dos_jogos(dest_dir=destino, home=casa)
+    assert len(feito.criados) == 1 and len(feito.linhas) == 1, feito
+    gravar_maquina({"perfil_por_jogo": {"lutris": True}})
+    assert len(loader.semear_perfis_dos_jogos(dest_dir=destino, home=casa).criados) == 1, (
+        "religar a chave não semeou o jogo que ficou de fora")
 
 
 def test_identificar_diz_o_que_achou_ou_como_ensinar(lar, ctx, monkeypatch) -> None:
@@ -629,35 +824,38 @@ def test_a_opcao_de_cor_recusa_o_padrao_que_nao_e_hexa() -> None:
         _manifesto_de(opcoes=[{"id": "luz", "rotulo": "Luz", "tipo": "cor", "padrao": "azul"}])  # noqa-acento: chave
 
 
-def test_a_janela_com_dois_grupos_desenha_uma_aba_por_grupo_e_a_cor(lar, ctx, tmp_path) -> None:
+def test_a_janela_com_tres_grupos_desenha_um_cartao_por_grupo_e_a_cor(lar, ctx, tmp_path) -> None:
     a07 = _a07()
     _instalar(a07, ctx, _fonte(tmp_path, opcoes=_EM_GRUPOS))
     janela = a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())["blocos"]["#mod-janela"]
-    assert janela.count('type="radio" name="mg-aba"') == 3
-    for nome in ("Segurança", "Gestos", "Luz"):  # noqa-acento: chave
-        assert f">{nome}</label>" in janela
-    assert janela.count(" checked>") == 1 and 'id="mg-aba0" checked' in janela
+    titulos = re.findall(r'<span class="ac-tit">([^<]*)</span>', janela)
+    assert titulos == ["Segurança", "Gestos", "Luz"], titulos  # noqa-acento: chave
+    assert "mg-aba" not in janela and 'type="radio"' not in janela
     assert 'type="color"' in janela and 'value="#00aaff"' in janela  # o padrão, em minúsculas
+    assert '<span class="ext-rot">Para</span>Todos' in janela.split('class="tn-corpo"')[0]
+    rodape = janela.split('class="tn-rod"')[1]
+    assert '<a class="btn" href="#">Cancelar</a>' in rodape
+    assert 'data-gesto="guardar-modificacao" data-v="toque">Guardar</a>' in rodape
 
 
-def test_um_grupo_so_nao_desenha_aba(lar, ctx, tmp_path) -> None:
+def test_um_grupo_so_desenha_um_cartao(lar, ctx, tmp_path) -> None:
     a07 = _a07()
     unico = [{**o, "grupo": "Tudo"} for o in _OPCOES]
     _instalar(a07, ctx, _fonte(tmp_path, opcoes=unico))
     janela = a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())["blocos"]["#mod-janela"]
+    assert re.findall(r'<span class="ac-tit">([^<]*)</span>', janela) == ["Tudo"]
     assert "mg-aba" not in janela and "<select" in janela
 
 
-def test_guardar_a_cor_valida_normaliza_e_mantem_a_aba_aberta(lar, ctx, tmp_path) -> None:
+def test_guardar_a_cor_valida_e_normaliza(lar, ctx, tmp_path) -> None:
     a07 = _a07()
     _instalar(a07, ctx, _fonte(tmp_path, opcoes=_EM_GRUPOS))
     a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())
     carga = a07.guardar_opcao_da_modificacao(
         ctx, {"v": "toque:luz", "valor": "#FF8800", "evento": "change"}, _Ponte())
-    guardado = json.loads((lar.dados / "toque" / "opcoes.json").read_text(encoding="utf-8"))
-    assert guardado["luz"] == "#ff8800"
-    janela = carga["blocos"]["#mod-janela"]
-    assert 'id="mg-aba2" checked' in janela and 'value="#ff8800"' in janela
+    assert 'value="#ff8800"' in carga["blocos"]["#mod-janela"]
+    a07.guardar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    assert _guardado(lar)["luz"] == "#ff8800"
     with pytest.raises(RuntimeError, match="#rrggbb"):
         a07.guardar_opcao_da_modificacao(
             ctx, {"v": "toque:luz", "valor": "vermelho", "evento": "change"}, _Ponte())

@@ -131,33 +131,9 @@ def _confere_a_forma() -> None:
 _confere_a_forma()
 
 
-def _trocar(html, trocas):
-    """Aplica cada troca uma vez; uma troca que não casa derruba a geração (variante velha)."""
-    for velho, novo in trocas:
-        if html.count(velho) != 1:
-            raise SystemExit(f"ERRO: a variante não achou {velho[:60]!r} na página gerada")
-        html = html.replace(velho, novo, 1)
-    return html
-
-
-_CONTROLE_EM_DUAS_LINHAS = re.compile(
-    r'<div class="ky-linha bp-cab">(<div class="ky-rot">.*?</div>)'
-    r'<div class="ky-ctrl">(<span class="nj-tog.*?</span></span>)</div></div>\s*'
-    r'<div class="ky-linha bp-ajuste">.*?<div class="ky-ctrl">(<div class="seg mini">.*?</div>)'
-    r'<span class="bp-rot"[^>]*>Teto</span>'
-    r'(<div class="campo-num mini">.*?<span class="un">%</span></span></div>)</div></div>', re.S)
-
-
-def _buttplug_em_uma_linha(html):
-    """A da janela do servidor: o aparece, a força e o teto de cada controle na mesma linha."""
-    novo, quantas = _CONTROLE_EM_DUAS_LINHAS.subn(
-        r'<div class="ky-linha">\1<div class="ky-ctrl">\2\3\4</div></div>', html)
-    if quantas != 2:
-        raise SystemExit(f"ERRO: a variante A do Buttplug achou {quantas} controle(s), e são dois")
-    return _trocar(novo, [("A força e o teto de cada um", "O teto e a força de cada um")])
-
-
-_O_MAIS = re.compile(r'(<button class="ext-mais"[^>]*data-v="([^"]+)"[^>]*>\u22ee</button>)')
+#: O ⋮ de cada linha de extensão; o do «Configurar» já traz o menu dele ao lado e fica de fora.
+_O_MAIS = re.compile(
+    r'(<button class="ext-mais"[^>]*data-v="([^"]+)"[^>]*>\u22ee</button>)(?!<div class="ext-menu)')
 
 
 def _menu_do_mais(html, classe):
@@ -168,34 +144,6 @@ def _menu_do_mais(html, classe):
     if quantas != len(exp.EXTENSOES):
         raise SystemExit(f"ERRO: achei {quantas} «⋮» e são {len(exp.EXTENSOES)} extensões")
     return novo
-
-
-def _menu_dentro_da_linha(html):
-    """B do ⋮: o menu abre dentro da linha, como no produto de hoje, e empurra o que está abaixo."""
-    if html.count("ext-menu ext-pop") != len(exp.EXTENSOES):
-        raise SystemExit("ERRO: a variante B do ⋮ não achou os menus da página gerada")
-    return html.replace("ext-menu ext-pop", "ext-menu ext-dentro")
-
-
-def _modificacao_em_abas(html):
-    """B da janela genérica: o arranjo de antes (abas por grupo, um «Fechar»), com as mesmas opções."""
-    cartoes = exp.modificacao_miolo_html("Minha extensão", exp.OPCOES_DO_DESENHO, desenho=True)
-    abas = exp.modificacao_miolo_html("Minha extensão", exp.OPCOES_DO_DESENHO)
-    return _trocar(html, [(cartoes, abas)])
-
-
-def variantes(html):
-    """Nome do arquivo (sem `.html`) -> página da variante, a partir do desenho recém-gerado."""
-    return {
-        # Perfis 5 (AS-JANELAS-DA-07-ALCANCAM-O-DESENHO-APROVADO-01): A (o desenho) é a janela genérica
-        # no padrão da Lovense e do Kyty (cartões por grupo, Cancelar e Guardar); B é a de antes.
-        "07-modificacao-B-abas-por-grupo": _modificacao_em_abas(html),
-        # O ⋮ (mesma sprint): A é um menu que flutua sobre a linha; B abre dentro da linha.
-        "07-mais-B-dentro-da-linha": _menu_dentro_da_linha(html),
-        # Perfis 4 (O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01): B é o desenho de agora
-        # (duas linhas por controle, «Força» e «Teto» com nome); A é a linha única de 17/10.
-        "07-buttplug-A-forca-e-teto-numa-linha": _buttplug_em_uma_linha(html),
-    }
 
 
 if __name__ == "__main__":
@@ -236,9 +184,5 @@ if __name__ == "__main__":
           f"{len(exp.LANCADORES)} lançadores, {len(exp.EXTENSOES)} extensões, "
           f"{len(exp.JANELAS)} janelas · {len(_CONGELADOS)} chip(s) do desenho fora da fita, "
           f"0 dos {len(_MODELOS)} modelos do mapa cravados na página")
-    _variantes = variantes(onde.pagina("07-lancadores.html").read_text(encoding="utf-8"))
     shutil.copyfile(_prova / "07-lancadores.html", _real / "07-lancadores.html")
-    (_real / "variantes").mkdir(exist_ok=True)
-    for _nome, _pagina in _variantes.items():
-        (_real / "variantes" / f"{_nome}.html").write_text(_pagina, encoding="utf-8")
     shutil.rmtree(_prova)

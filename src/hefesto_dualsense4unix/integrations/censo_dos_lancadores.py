@@ -1519,6 +1519,24 @@ _CONFIG_CAI_NOS_DADOS = frozenset(p.nome for p in _PROGRAMAS if p.config_nos_dad
 
 _LEITORES = {p.nome: _FUNCOES_DE_LEITURA[p.leitor] for p in _PROGRAMAS}
 
+#: ``{programa em minúsculas (o ``fonte`` do ``JogoLocal``): cartão da aba 07}``.
+_CARTAO_DO_PROGRAMA: dict[str, str] = {
+    p.nome.casefold(): f.bloco.chave for f in DE_FABRICA for p in f.programas}
+
+#: Os cartões que entregam jogos: a Steam, que lê a própria biblioteca, e os que têm programa.
+LANCADORES_COM_JOGOS: frozenset[str] = frozenset({_SERVICO_DA_STEAM, *_CARTAO_DO_PROGRAMA.values()})
+
+
+def lancador_do_jogo(fonte: str, appid: str = "") -> str:
+    """O cartão de quem entregou o jogo, ou ``""`` no atalho direto (que não é de lançador).
+
+    O atalho ``.desktop`` com o número da Steam é da Steam; os outros vêm pelo programa.
+    """
+    if fonte == _SERVICO_DA_STEAM or (fonte == "desktop" and appid.isdigit()):
+        return _SERVICO_DA_STEAM
+    return _CARTAO_DO_PROGRAMA.get(fonte, "")
+
+
 #: ``{cartão da aba 07: os programas que ele junta}``. A Steam não entra: o interior dela o
 #: produto lê por outro caminho.
 _DO_CARTAO: dict[str, tuple[str, ...]] = {

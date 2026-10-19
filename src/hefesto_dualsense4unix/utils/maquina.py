@@ -871,6 +871,20 @@ class MaquinaConfig(BaseModel):
     # ninguém declarou, e vale ``acoes_do_gesto.PADRAO``; ``{"gestos": {g:
     gestos: dict[str, GestoDeclarado] = Field(default_factory=dict)
     computador: ComputadorDeclarado = Field(default_factory=ComputadorDeclarado)
+    #: «Cada jogo ganha o seu perfil», por cartão de lançador da aba 07. Quem não está nela
+    #: vale ligado; ``False`` deixa os jogos novos daquele lançador sem perfil semeado.
+    perfil_por_jogo: dict[str, bool] = Field(default_factory=dict)
+
+    @field_validator("perfil_por_jogo")
+    @classmethod
+    def _chave_do_perfil_por_jogo(cls, valor: dict[str, bool]) -> dict[str, bool]:
+        if len(valor) > _MAXIMO_DE_LANCADORES:
+            raise ValueError(f"{len(valor)} lançadores na chave do perfil, e o teto é "
+                             f"{_MAXIMO_DE_LANCADORES}")
+        for chave in valor:
+            if not _CHAVE_DE_LANCADOR.match(chave):
+                raise ValueError(f"chave de lançador {chave!r} não é a de um cartão da aba 07")
+        return valor
 
     @field_validator("controles")
     @classmethod

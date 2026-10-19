@@ -1183,6 +1183,12 @@ class _Mexida:
     html_mod: str = ""
     #: Os pedaços da coluna «Agora» que o manifesto da janela aberta declara.
     agora: tuple[str, ...] = ()
+    #: O rascunho da janela da extensão: as opções mudadas, já validadas, à espera do Guardar.
+    rascunho: dict[str, Any] = dataclasses.field(default_factory=dict)
+    #: O atalho que a pessoa escolheu na janela «Configurar», à espera do Guardar.
+    onde_escolhido: str = ""
+    #: A extensão que trouxe o lançador da janela «Configurar» aberta; vazio no que é de fábrica.
+    conf_da_modificacao: str = ""
 
     def limpar(self) -> None:
         self.menu = self.permissoes = self.remover = self.conf = self.imp = self.mod = ""
@@ -1190,6 +1196,8 @@ class _Mexida:
         self.vistas = {}
         self.html_conf = self.html_imp = self.html_mod = ""
         self.agora = ()
+        self.rascunho = {}
+        self.onde_escolhido = self.conf_da_modificacao = ""
 
 
 _MEXIDA = _Mexida()
@@ -1437,18 +1445,16 @@ def _kits_dos_jogos(
     return tuple(achados)
 
 
-def _montar_a_janela_da_extensao(mod_id: str, aba: str = "") -> None:
-    """O miolo da janela de opções, com o valor de agora de cada opção que o manifesto declara.
-
-    ``aba`` é o grupo que fica aberto (o da opção que acabou de mudar).
-    """
+def _montar_a_janela_da_extensao(mod_id: str) -> None:
+    """O miolo da janela de opções: o valor guardado de cada opção, com o rascunho por cima."""
     from hefesto_dualsense4unix.mods import opcoes
 
     item = _a_instalada(mod_id)
     manifesto = item.manifesto
     if manifesto is None:
         raise RuntimeError("O manifesto desta extensão não pôde ser lido. Nada foi alterado.")
-    valores = opcoes.ler(manifesto, _lugares())
+    valores = {**opcoes.ler(manifesto, _lugares()),
+               **(_MEXIDA.rascunho if _MEXIDA.mod == mod_id else {})}
     jogos = _jogos_com_perfil() if any(x.tipo == "jogos" for x in manifesto.opcoes) else ()
     kit_de = _kits_dos_jogos([chave for chave, _nome in jogos]) if jogos else ()
     linhas = [exp.OpcaoDaJanela(
@@ -1460,7 +1466,7 @@ def _montar_a_janela_da_extensao(mod_id: str, aba: str = "") -> None:
     _MEXIDA.mod = mod_id
     _MEXIDA.agora = tuple(manifesto.agora)
     _MEXIDA.html_mod = exp.modificacao_miolo_html(
-        manifesto.nome, linhas, manifesto.descricao, aba, mod=mod_id, agora=_MEXIDA.agora,
+        manifesto.nome, linhas, mod=mod_id, agora=_MEXIDA.agora,
         estado=_AGORA.agora() if _MEXIDA.agora else None, parar_tudo=manifesto.parar_tudo)
 
 
@@ -1523,6 +1529,8 @@ def configurar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str
     """
     _MEXIDA.menu = _MEXIDA.permissoes = ""
     mod_id = _id_do_clique(o, "configurar-modificacao")
+    _MEXIDA.rascunho = {}
+    _MEXIDA.mod = mod_id
     _AGORA.abrir(mod_id, p)
     _AGORA.ler(mod_id, p)
     _montar_a_janela_da_extensao(mod_id)
@@ -1540,10 +1548,14 @@ def parar_tudo_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[
     return {**_a_pintura_agora(ctx), "recado": "Parar tudo enviado."}
 
 
-@gesto("07-lancadores.html", "guardar-opcao-da-modificacao",
-       grava="_guardar_a_opcao_da_modificacao")
+@gesto("07-lancadores.html", "guardar-opcao-da-modificacao")
 def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """Uma opção da janela. A caixa e o número agem no ``change``; a chave de ligado, no clique."""
+    """Uma opção da janela vai ao rascunho, validada; quem grava é o Guardar.
+
+    A caixa e o número agem no ``change``; a chave de ligado, no clique.
+    """
+    from hefesto_dualsense4unix.mods import opcoes
+
     mod_id, _, resto = _id_do_clique(o, "guardar-opcao-da-modificacao").partition(":")
     opcao_id, _, jogo = resto.partition(":")
     item = _a_instalada(mod_id)
@@ -1555,18 +1567,47 @@ def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
     if opcao.tipo == "ligado":
         if evento == "change":
             return None
-        valor: Any = not bool(_valor_guardado(item, opcao))
+        valor: Any = not bool(_valor_na_janela(item, opcao))
     elif opcao.tipo == "jogos":
         if evento == "click":
             return None
-        valor = _jogos_com_a_caixa(_valor_guardado(item, opcao), jogo)
+        valor = _jogos_com_a_caixa(_valor_na_janela(item, opcao), jogo)
     else:
         if evento == "click":
             return None
         valor = o.get("valor")
-    _guardar_a_opcao_da_modificacao(item, opcao_id, valor)
-    _montar_a_janela_da_extensao(mod_id, opcao.grupo or "")
+    with _dizendo_a_recusa():
+        certo = opcoes.validar(opcao, valor)
+    if _MEXIDA.mod != mod_id:
+        _MEXIDA.mod, _MEXIDA.rascunho = mod_id, {}
+    _MEXIDA.rascunho[opcao_id] = certo
+    _montar_a_janela_da_extensao(mod_id)
     return _a_pintura_agora(ctx)
+
+
+@gesto("07-lancadores.html", exp.GESTO_DO_GUARDAR, grava="_guardar_a_opcao_da_modificacao")
+def guardar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O Guardar da janela da extensão: grava o rascunho inteiro em ``opcoes.json``."""
+    mod_id = _id_do_clique(o, exp.GESTO_DO_GUARDAR)
+    recado = _guardar_a_opcao_da_modificacao(mod_id)
+    _montar_a_janela_da_extensao(mod_id)
+    carga = _a_pintura_agora(ctx)
+    return {**carga, "recado": recado} if recado else carga
+
+
+def _guardar_a_opcao_da_modificacao(mod_id: str) -> str:
+    """Grava cada opção do rascunho, validada de novo contra o manifesto, e esvazia o rascunho."""
+    from hefesto_dualsense4unix.mods import opcoes
+
+    item = _a_instalada(mod_id)
+    rascunho = _MEXIDA.rascunho if _MEXIDA.mod == mod_id else {}
+    if not rascunho:
+        return ""
+    with _dizendo_a_recusa():
+        for opcao_id, valor in rascunho.items():
+            opcoes.guardar(item.manifesto, opcao_id, valor, _lugares())
+    _MEXIDA.rascunho = {}
+    return "Guardado."
 
 
 def _jogos_com_a_caixa(marcados: list[str], jogo: str) -> list[str]:
@@ -1580,18 +1621,13 @@ def _jogos_com_a_caixa(marcados: list[str], jogo: str) -> list[str]:
     return [*marcados, jogo]
 
 
-def _valor_guardado(item: _Instalada, opcao: Any) -> Any:
+def _valor_na_janela(item: _Instalada, opcao: Any) -> Any:
+    """O que a janela mostra agora: o rascunho, ou o guardado."""
     from hefesto_dualsense4unix.mods import opcoes
 
+    if _MEXIDA.mod == item.entrada.id and opcao.id in _MEXIDA.rascunho:
+        return _MEXIDA.rascunho[opcao.id]
     return opcoes.ler(item.manifesto, _lugares())[opcao.id]
-
-
-def _guardar_a_opcao_da_modificacao(item: _Instalada, opcao_id: str, valor: Any) -> None:
-    """Grava UMA opção em ``<dados>/<id>/opcoes.json``, validada contra o manifesto."""
-    from hefesto_dualsense4unix.mods import opcoes
-
-    with _dizendo_a_recusa():
-        opcoes.guardar(item.manifesto, opcao_id, valor, _lugares())
 
 
 @gesto("07-lancadores.html", "mais-da-modificacao", grava="_mexer_na_modificacao")
@@ -1601,16 +1637,37 @@ def mais_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
     if not acao:
         _MEXIDA.menu = "" if _MEXIDA.menu == mod_id else mod_id
         _MEXIDA.permissoes = _MEXIDA.remover = ""
+        _repintar_a_conf_da(mod_id)
         return _a_pintura_agora(ctx)
     _MEXIDA.menu = mod_id
     if acao == "permissoes":  # (noqa-acento): contrato ASCII
         _a_instalada(mod_id)
         _MEXIDA.permissoes, _MEXIDA.remover = mod_id, ""
+        _repintar_a_conf_da(mod_id)
         return _a_pintura_agora(ctx)
     recado = _mexer_na_modificacao(mod_id, acao)
+    _repintar_a_conf_da(mod_id)
     if recado is None:
         return {**_a_pintura_agora(ctx), "armou": True}
     return {**_a_pintura_agora(ctx), "recado": recado}
+
+
+def _repintar_a_conf_da(mod_id: str) -> None:
+    """A janela «Configurar» aberta acompanha o ⋮: o da extensão dela, ou o do próprio lançador.
+
+    O lançador que vem com o Hefesto manda a chave dele no ⋮ (o menu é o apagado). Removida a
+    extensão, o lançador sai junto: a confirmação da janela já a fechou (``href="#"``).
+    """
+    if not _MEXIDA.conf:
+        return
+    if _MEXIDA.conf_da_modificacao != mod_id and (
+            _MEXIDA.conf_da_modificacao or _MEXIDA.conf != mod_id):
+        return
+    VIGIA.esquecer()
+    try:
+        _montar_a_conf(_MEXIDA.conf)
+    except RuntimeError:
+        _MEXIDA.conf = _MEXIDA.html_conf = _MEXIDA.conf_da_modificacao = ""
 
 
 def _mexer_na_modificacao(mod_id: str, acao: str) -> str | None:
@@ -1639,6 +1696,7 @@ def _mexer_na_modificacao(mod_id: str, acao: str) -> str | None:
     _MEXIDA.menu = _MEXIDA.permissoes = _MEXIDA.remover = ""
     if _MEXIDA.mod == mod_id:
         _MEXIDA.mod = _MEXIDA.html_mod = ""
+        _MEXIDA.rascunho = {}
     REGISTRO.esquecer()
     if restos:
         raise RuntimeError(f"Não consegui remover {nome} por inteiro: {'; '.join(restos)}.")
@@ -1753,18 +1811,65 @@ def resolver_todos_os_impedimentos(ctx: Contexto, o: dict[str, Any], p: Any) -> 
 
 
 def _montar_a_conf(chave: str, state: dict[str, Any] | None = None) -> None:
-    """O miolo da janela «Configurar», com o que o produto sabe do lançador."""
+    """O miolo da janela «Configurar», com o que o produto sabe do lançador e o rascunho dela."""
+    from hefesto_dualsense4unix.integrations.censo_dos_lancadores import LANCADORES_COM_JOGOS
+    from hefesto_dualsense4unix.mods.manifesto import o_que_a_permissao_deixa
+
     lida = VIGIA.agora()
     cartao = next((x for x in desenho.cartoes(lida) if x.chave == chave), None)
     if cartao is None:
         raise RuntimeError("Não conheço esse lançador. Nada foi alterado.")
-    da_extensao = any(x.chave == chave and x.modificacao for x in _declarados())
+    mod_id = next((x.modificacao for x in _declarados() if x.chave == chave and x.modificacao), "")
     onde = dict(lida.onde_estao).get(chave, "") if lida is not None else ""
     impedimentos = len(_MEXIDA.impedimentos) if chave == desenho.STEAM else None
-    _MEXIDA.conf = chave
+    menu = ""
+    if mod_id and _MEXIDA.menu == mod_id:
+        item = _a_instalada(mod_id)
+        pedidas = item.manifesto.permissoes if item.manifesto is not None else (
+            item.entrada.permissoes_aceitas)
+        menu = exp.menu_html(
+            mod_id, [o_que_a_permissao_deixa(x) for x in pedidas]
+            if _MEXIDA.permissoes == mod_id else None, remover=_MEXIDA.remover == mod_id,
+            fecha=True)
+    elif not mod_id and _MEXIDA.menu == chave:
+        menu = "aberto"
+    _MEXIDA.conf, _MEXIDA.conf_da_modificacao = chave, mod_id
     _MEXIDA.html_conf = exp.lanc_conf_miolo_html(exp.Conf(
-        chave=chave, nome=cartao.nome, entrou="Como extensão" if da_extensao else "Do sistema",
-        onde=onde, jogos=_jogos_da_fila(cartao), impedimentos=impedimentos))
+        chave=chave, nome=cartao.nome, entrou="Como extensão" if mod_id else "Do sistema",
+        onde=_abreviado(_MEXIDA.onde_escolhido or onde), jogos=_jogos_da_fila(cartao),
+        impedimentos=impedimentos, pastas=_pastas_dos_jogos(chave),
+        perfil_por_jogo=_perfil_por_jogo(chave) if chave in LANCADORES_COM_JOGOS else None,
+        modificacao=mod_id, menu=menu))
+
+
+def _abreviado(caminho: str) -> str:
+    """O caminho com a pasta da casa trocada por ``~``, como o desenho mostra."""
+    casa = str(pathlib.Path.home())
+    if caminho == casa or caminho.startswith(casa + "/"):
+        return "~" + caminho[len(casa):]
+    return caminho
+
+
+def _pastas_dos_jogos(chave: str) -> tuple[str, ...]:
+    """As bibliotecas da Steam (a raiz e as do ``libraryfolders.vdf``); os outros não têm."""
+    if chave != desenho.STEAM:
+        return ()
+    from hefesto_dualsense4unix.integrations.steam_launch_options import pastas_steamapps
+
+    try:
+        return tuple(dict.fromkeys(_abreviado(str(x.parent)) for x in pastas_steamapps()))
+    except Exception:  # pragma: no cover - o disco do usuário não derruba a janela
+        return ()
+
+
+def _perfil_por_jogo(chave: str) -> bool:
+    """A chave «Cada jogo ganha o seu perfil» deste lançador, no ``maquina.json``; nasce ligada."""
+    from hefesto_dualsense4unix.utils.maquina import carregar_maquina
+
+    try:
+        return carregar_maquina().perfil_por_jogo.get(chave, True)
+    except Exception:  # pragma: no cover - o disco do usuário não derruba a janela
+        return True
 
 
 @gesto("07-lancadores.html", "configurar-lancador")
@@ -1772,10 +1877,68 @@ def configurar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
     """«Configurar»: a janela igual para todos. A Steam sonda os impedimentos ao abrir."""
     chave = _id_do_clique(o, "configurar-lancador")
     _MEXIDA.conf = chave
+    _MEXIDA.onde_escolhido = ""
+    _MEXIDA.menu = _MEXIDA.permissoes = _MEXIDA.remover = ""
     _MEXIDA.imp = _MEXIDA.html_imp = ""
     _MEXIDA.impedimentos = _sondar_a_steam() if chave == desenho.STEAM else ()
     _montar_a_conf(chave, ctx.state)
     return _a_pintura_agora(ctx)
+
+
+@gesto("07-lancadores.html", exp.GESTO_DE_ESCOLHER)
+def escolher_o_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
+    """«Escolher o arquivo…» da janela «Configurar»: o atalho apontado vai ao rascunho dela.
+
+    A busca é a mesma do «Adicionar um lançador» (um atalho fora das pastas de aplicativos
+    recusa); quem grava é o Guardar. Cancelar o seletor não é erro: a tela não fala.
+    """
+    chave = _id_do_clique(o, exp.GESTO_DE_ESCOLHER)
+    if chave != _MEXIDA.conf:
+        raise RuntimeError("Abra o «Configurar» deste lançador de novo. Nada foi alterado.")
+    caminho = p.escolher_arquivo(TITULO_DO_SELETOR, padrao="*.desktop",
+                                 sugestao=_pasta_de_partida())
+    if not caminho:
+        return None
+    _achar_o_que_ela_apontou(str(caminho))
+    _MEXIDA.onde_escolhido = str(caminho)
+    _montar_a_conf(chave, ctx.state)
+    return _a_pintura_agora(ctx)
+
+
+@gesto("07-lancadores.html", exp.GESTO_DO_GUARDAR_LANCADOR, grava="machine_declare")
+def guardar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O Guardar da janela «Configurar»: o atalho escolhido e a chave do perfil por jogo.
+
+    As duas escritas vão pelo ``machine.declare``; o atalho, pelo mesmo dono do «Adicionar».
+    """
+    global _PARA_QUEM
+
+    chave = _id_do_clique(o, exp.GESTO_DO_GUARDAR_LANCADOR)
+    if chave != _MEXIDA.conf:
+        raise RuntimeError("Abra o «Configurar» deste lançador de novo. Nada foi guardado.")
+    bruta = o.get("forma")
+    forma: dict[str, Any] = bruta if isinstance(bruta, dict) else {}
+    recados: list[str] = []
+    if _MEXIDA.onde_escolhido:
+        _PARA_QUEM = chave
+        try:
+            recados.append(_guardar_onde_ele_esta(p, "", _MEXIDA.onde_escolhido,
+                                                  _achar_o_que_ela_apontou))
+        finally:
+            _PARA_QUEM = ""
+        _MEXIDA.onde_escolhido = ""
+    dito = str(forma.get(exp.CAMPO_DO_PERFIL) or "").strip()
+    if dito:
+        ligado = dito == "Ligado"
+        if ligado != _perfil_por_jogo(chave):
+            ok, motivo = _ok_e_motivo(p.machine_declare({"perfil_por_jogo": {chave: ligado}}))
+            if not ok:
+                raise RuntimeError(motivo or "Não consegui guardar isso agora. Nada foi alterado.")
+            recados = recados or ["Guardado."]
+    VIGIA.esquecer()
+    _montar_a_conf(chave, ctx.state)
+    carga = _resposta(VIGIA.ler(), ctx.state)
+    return {**carga, "recado": " ".join(recados)} if recados else carga
 
 
 @gesto("07-lancadores.html", "identificar-lancador")
@@ -1875,7 +2038,8 @@ SEM_ECO = (# `maquina.json`: o `state_full` não tem UMA chave sobre lançador.
            # que o daemon devolve não tem chave sobre o registro das modificações nem sobre a Steam.
            "ligar-modificacao", "configurar-modificacao", "guardar-opcao-da-modificacao",
            "mais-da-modificacao", "instalar-modificacao", "escolher-arquivo-da-modificacao",
-           exp.GESTO_DO_PARAR,
+           exp.GESTO_DO_PARAR, exp.GESTO_DO_GUARDAR, exp.GESTO_DE_ESCOLHER,
+           exp.GESTO_DO_GUARDAR_LANCADOR,
            "ver-impedimentos", "resolver-impedimento", "resolver-todos-os-impedimentos",
            "identificar-lancador", "configurar-lancador", "criar-perfil-do-jogo")
 

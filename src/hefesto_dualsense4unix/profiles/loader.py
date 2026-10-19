@@ -1384,6 +1384,28 @@ def _gravar_sem_pisar(alvo: Path, payload: object) -> bool:
         tmp.unlink(missing_ok=True)
 
 
+def lancadores_sem_perfil_por_jogo() -> frozenset[str]:
+    """Os cartões da aba 07 com «Cada jogo ganha o seu perfil» desligado no ``maquina.json``."""
+    from hefesto_dualsense4unix.utils.maquina import carregar_maquina
+
+    try:
+        escolha = carregar_maquina().perfil_por_jogo
+    except Exception as exc:
+        logger.warning("perfil_por_jogo_ilegivel", err=str(exc))
+        return frozenset()
+    return frozenset(chave for chave, ligado in escolha.items() if not ligado)
+
+
+def _so_os_de_lancador_com_perfil(jogos: Sequence[JogoLocal]) -> list[JogoLocal]:
+    """Tira os jogos do lançador desligado; eles não entram na marca, e religar os semeia."""
+    desligados = lancadores_sem_perfil_por_jogo()
+    if not desligados:
+        return list(jogos)
+    from hefesto_dualsense4unix.integrations.censo_dos_lancadores import lancador_do_jogo
+
+    return [j for j in jogos if lancador_do_jogo(j.fonte, j.appid) not in desligados]
+
+
 def semear_perfis_dos_jogos(
     dest_dir: Path | None = None,
     home: Path | None = None,
@@ -1403,6 +1425,7 @@ def semear_perfis_dos_jogos(
         # os DELE, nunca os desta máquina.
         pastas = None if home is None else [Path(home) / ".local/share/applications"]
         jogos = [*jogos_da_biblioteca_steam(home), *jogos_com_janela(home, pastas)]
+        jogos = _so_os_de_lancador_com_perfil(jogos)
 
     marca = _caminho_da_marca(directory)
     linhas: list[PerfilSemeado] = []
@@ -1561,6 +1584,7 @@ def _talvez_semear_jogos() -> None:
             assinatura_da_biblioteca(),
             assinatura_das_bibliotecas(),
             assinatura_das_janelas(),
+            lancadores_sem_perfil_por_jogo(),
         )
         if assinatura == _assinatura_da_biblioteca_vista:
             return

@@ -356,7 +356,8 @@
 .lv-quando .ext-sel { width:196px }
 .lv-cx .ext-rot { font-size:12px }
 .tela-nova .nj-tog .txt,.tela-nova .btn.mini,.tela-nova small,.tela-nova code,.tela-nova .lc-val { font-size:12px }
-#lanc-conf .lc-val .btn.mini { width:132px;box-sizing:border-box;justify-content:center;text-align:center }
+#lanc-conf .lc-val .btn.mini { flex:none;min-width:132px;box-sizing:border-box;justify-content:center;text-align:center;white-space:nowrap }
+#lanc-conf .lc-val code { min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap }
 .janela .conta,.janela .lanc-selo,.janela .ext-ver,.janela .ext-faz,.janela .ext-para,.janela .ext-rot,.janela .ext-cor,.janela .ext-inst-rot,.janela .lf-n,.janela .lf-imped,.janela .btn.mini,.janela .nj-tog .txt { font-size:12px }
 .ja-tela.t2 { grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto 1fr;gap:12px;align-content:stretch;height:100% }
 .ja-tela.t2 > .moldura { padding:10px 16px 12px;display:flex;flex-direction:column;gap:8px }
@@ -432,20 +433,8 @@
 .ext-desl { display:flex;align-items:center;gap:8px;width:100% }
 .ext-desl input[type=range] { flex:1;min-width:0;height:24px;accent-color:var(--pink);margin:0 }
 .ext-desl b { font:600 12px 'JetBrains Mono',ui-monospace,monospace;color:var(--fg);min-width:28px;text-align:right }
-.lc-linha.lc-larga { grid-template-columns:minmax(0,1fr);row-gap:4px;padding:6px 0 }
-.lc-larga .lc-val { display:block }
 .ext-jogos { max-height:190px }
 .ext-num { width:84px;height:24px;border-radius:6px;padding:0 8px;border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg);font-family:inherit;font-size:11px }
-.mg-abas { display:flex;flex-wrap:wrap;position:relative }
-.mg-abas > input { position:absolute;width:0;height:0;opacity:0;pointer-events:none }
-.mg-abas > label { order:1;padding:6px 11px 8px;font-size:12.5px;color:var(--fg);cursor:pointer;
-  border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap }
-.mg-abas > label:hover { color:var(--texto-suave) }
-.mg-abas > input:checked + label { color:var(--cyan);border-bottom-color:var(--cyan) }
-.mg-abas > input:focus-visible + label { outline:1px solid var(--cyan) }
-.mg-abas::after { content:"";order:1;flex:1;border-bottom:1px solid var(--border-forte);margin-bottom:-1px }
-.mg-painel { order:2;display:none;width:100%;margin-top:6px }
-.mg-abas > input:checked + label + .mg-painel { display:block }
 .ext-cor-in { width:44px;height:26px;padding:2px;border-radius:6px;border:1px solid var(--border-forte);
   background:var(--panel);cursor:pointer }
 /* A janela genérica de uma extensão no desenho de 19/10: um cartão por grupo, numa coluna só. */
@@ -461,12 +450,17 @@
 #mod-janela .ja-opcoes { min-width:0;min-height:0;overflow:auto }
 #mod-janela .ja-degraus i, #mod-janela .ja-degraus i:hover { cursor:default;border-color:var(--border-forte) }
 #mod-janela .ja-degraus i.on { border-color:#ff8fd0 }
-/* O menu do ⋮ no desenho de 19/10: A flutua à esquerda do ⋮, na própria linha (ext-pop), e a dica do ⋮
-   não o cobre; B abre dentro da linha (ext-dentro);
-   os dois só aparecem com o foco na linha, que é o que o clique no ⋮ dá. */
-.ext { position:relative }
-.ext-pop,.ext-dentro { display:none }
-.ext:focus-within .ext-dentro { display:flex }
-.ext:focus-within .ext-pop { display:flex;position:absolute;right:38px;top:50%;transform:translateY(-50%);z-index:6;
+/* O menu do ⋮ (desenho de 19/10): flutua à esquerda do ⋮, por cima da linha, e não empurra as linhas de
+   baixo. No desenho ele aparece com o foco na linha; no produto, o clique no ⋮ o abre (`aberto`) e ele
+   fica até o segundo clique. Com as permissões, ele quebra em duas linhas de largura fixa. */
+.ext, #lanc-janela .tn-topo { position:relative }
+.ext-pop { display:none }
+.ext:focus-within .ext-pop, .tn-topo:focus-within .ext-pop, .ext-pop.aberto { display:flex;position:absolute;
+  right:38px;top:50%;transform:translateY(-50%);z-index:6;
   flex-wrap:nowrap;padding:8px;gap:6px;background:var(--panel);border:1px solid var(--border-forte);
   border-radius:8px;box-shadow:0 12px 30px rgba(0,0,0,.5) }
+.ext-pop.aberto:has(.ext-perm) { flex-wrap:wrap;width:360px;top:4px;transform:none }
+.ext-pop .btn.mini.apagado { opacity:.45;cursor:default }
+#lanc-janela .tn-topo .ext-mais { margin-left:auto }
+#lanc-janela .tn-topo .ext-mais + .ext-pop { right:44px;top:6px;transform:none }
+#lanc-janela .tn-topo .ext-pop + .tn-x { margin-left:4px }

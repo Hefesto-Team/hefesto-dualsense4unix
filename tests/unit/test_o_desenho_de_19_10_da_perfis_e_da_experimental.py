@@ -17,12 +17,13 @@ MORDIDAS (cada uma foi feita e viu reprovar; a lista está no relato do tema des
 * tirar o `:has` ou o gesto do `.ordem-vale` -> `test_o_comando_aparece_so_com_o_meu_comando_...`;
 * devolver a coluna do Status aos 255 px -> `test_a_fileira_das_secoes_cabe_na_celula_...`;
 * tirar o nome «Força» ou «Teto» do controle -> `test_cada_controle_do_servidor_...`;
-* devolver a linha única do controle -> `test_a_janela_do_servidor_cabe_e_a_variante_a_...`;
+* devolver a linha única do controle -> `test_a_janela_do_servidor_cabe_em_toda_vista`;
 * devolver as abas à janela genérica -> `test_a_janela_generica_da_extensao_...`;
 * tirar o `position:absolute` do menu do ⋮ -> `test_o_menu_do_mais_flutua_...`;
 * devolver o «Fechar» único ao «Configurar» do lançador -> `test_o_configurar_do_lancador_...`;
 * devolver «Jogos» no lugar de «Pastas dos jogos» no «Configurar» -> o mesmo;
-* deixar no disco uma variante que o gerador não produz mais -> `test_as_variantes_de_*`.
+* deixar no disco uma variante que o gerador não produz mais -> `test_as_variantes_de_10_...`;
+* devolver uma variante da 07, que o usuário escolheu em 19/10 -> `test_a_07_nao_guarda_variante_...`.
 """
 from __future__ import annotations
 
@@ -329,7 +330,6 @@ def test_a_fileira_das_secoes_cabe_na_celula_em_toda_vista(
 # Experimental 4 · O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01
 # ---------------------------------------------------------------------------------------------
 
-VARIANTE_BUTTPLUG_A = VARIANTES / "07-buttplug-A-forca-e-teto-numa-linha.html"
 _ABRE_O_SERVIDOR = "(function(){location.hash='#buttplug';})()"
 
 
@@ -353,19 +353,10 @@ def test_cada_controle_do_servidor_tem_forca_e_teto_com_nome() -> None:
     assert "controle-1" in janela and "controle-2" in janela, "o endereço do controle é o de antes"
 
 
-def test_a_variante_a_do_servidor_poe_tudo_na_linha_do_controle() -> None:
-    janela = _janela_do_servidor(_ler(VARIANTE_BUTTPLUG_A))
-    assert "bp-cab" not in janela and "bp-ajuste" not in janela and ">Teto<" not in janela
-    linha = re.search(r'<div class="ky-linha"><div class="ky-rot"><span data-dica="O que o app vê',
-                      janela)
-    assert linha is not None
-    assert "O teto e a força de cada um" in janela
-
-
 @sem_chrome
 @pytest.mark.parametrize("vista", VISTAS, ids=lambda v: str(v[0]))
-def test_a_janela_do_servidor_cabe_e_a_variante_a_quebra_a_940(vista: tuple[int, int]) -> None:
-    """B cabe em toda vista, sem corte; a linha única da A quebra o teto para baixo a 940 px."""
+def test_a_janela_do_servidor_cabe_em_toda_vista(vista: tuple[int, int]) -> None:
+    """As duas linhas por controle cabem em toda vista, sem corte."""
     medida = """() => {
       const cx = document.querySelector('#buttplug .tn-cx'), r = cx.getBoundingClientRect();
       const d = document.documentElement;
@@ -379,29 +370,20 @@ def test_a_janela_do_servidor_cabe_e_a_variante_a_quebra_a_940(vista: tuple[int,
     b = _no_chrome(SETE, vista, medida, antes=_ABRE_O_SERVIDOR)
     assert b["cabe"] and not b["corte"] and not b["largo"], b
     assert all(a <= 46 for a in b["alturas"]), b
-    if vista[0] == 940:
-        a = _no_chrome(VARIANTE_BUTTPLUG_A, vista, medida, antes=_ABRE_O_SERVIDOR)
-        assert any(h > 60 for h in a["alturas"]), a
 
 
-def test_as_variantes_de_07_estao_em_dia() -> None:
-    """Cada `mockup/variantes/07-*` é o que o gerador produz agora, a partir do desenho."""
+def test_a_07_nao_guarda_variante_nem_gerador_de_variante() -> None:
+    """O usuário escolheu as três da 07 em 19/10: as não escolhidas saem do disco e do gerador."""
     import aba07
 
-    esperadas = aba07.variantes(_ler(SETE))
-    for nome, doc in esperadas.items():
-        assert (VARIANTES / f"{nome}.html").read_text(encoding="utf-8") == doc, (
-            f"{nome} ficou velha: rode `aba07.py`")
-    sobra = {p.stem for p in VARIANTES.glob("07-*.html")} - set(esperadas)
-    assert not sobra, f"variante que o gerador não produz mais ficou no disco: {sorted(sobra)}"
+    assert not sorted(p.name for p in VARIANTES.glob("07-*.html"))
+    assert not hasattr(aba07, "variantes")
 
 
 # ---------------------------------------------------------------------------------------------
 # Perfis 5 · AS-JANELAS-DA-07-ALCANCAM-O-DESENHO-APROVADO-01
 # ---------------------------------------------------------------------------------------------
 
-VARIANTE_ABAS = VARIANTES / "07-modificacao-B-abas-por-grupo.html"
-VARIANTE_MAIS_B = VARIANTES / "07-mais-B-dentro-da-linha.html"
 _ID = "modificacao"  # (noqa-acento) identificador ASCII da janela
 _ABRE_A_GENERICA = f"(function(){{location.hash='#{_ID}';}})()"
 _CLICA_O_MAIS = ("(function(){const b = document.querySelector('.ext-mais');"
@@ -422,14 +404,8 @@ def test_a_janela_generica_da_extensao_tem_um_cartao_por_grupo_e_cancelar_guarda
     assert "mg-abas" not in janela and 'type="radio"' not in janela
     assert janela.count('<div class="ky-linha">') == 6
     assert '<a class="btn" href="#">Cancelar</a>' in janela
-    assert '<a class="btn roxo" href="#">Guardar</a>' in janela
+    assert '<a class="btn roxo" href="#" data-gesto="guardar-modificacao"' in janela
     assert ">Fechar</a>" not in janela.split('class="tn-rod"')[1]
-
-
-def test_a_variante_b_da_janela_generica_e_a_de_antes_com_as_mesmas_opcoes() -> None:
-    janela = _janela(_ler(VARIANTE_ABAS), _ID)
-    assert janela.count("<label for=\"mg-aba") == 3 and "ac-card" not in janela
-    assert ">Fechar</a>" in janela.split('class="tn-rod"')[1] and "Guardar" not in janela
 
 
 @sem_chrome
@@ -450,8 +426,8 @@ def test_a_janela_generica_da_extensao_cabe_sem_rolagem_nem_corte(vista: tuple[i
 
 
 @sem_chrome
-def test_o_menu_do_mais_flutua_e_a_variante_b_empurra_os_lancadores() -> None:
-    """A: o menu aparece sem mexer em nada abaixo; B: abre dentro da linha e empurra a fila."""
+def test_o_menu_do_mais_flutua_sem_empurrar_os_lancadores() -> None:
+    """O menu aparece sobre a linha, sem mexer em nada abaixo."""
     vista = (1272, 860)
     medida = """() => {
       const fila = document.querySelector('.lanc-fila').getBoundingClientRect();
@@ -467,14 +443,12 @@ def test_o_menu_do_mais_flutua_e_a_variante_b_empurra_os_lancadores() -> None:
     a = _no_chrome(SETE, vista, medida, antes=_CLICA_O_MAIS)
     assert a["visivel"] and a["botoes"] == 3 and a["dentro"], a
     assert a["topo"] == antes["topo"], (a, antes)
-    b = _no_chrome(VARIANTE_MAIS_B, vista, medida, antes=_CLICA_O_MAIS)
-    assert b["visivel"] and b["topo"] >= antes["topo"] + 20, (b, antes)
 
 
 def test_o_configurar_do_lancador_traz_a_pasta_o_perfil_por_jogo_e_guardar() -> None:
     """O `#lanc-conf` do desenho aprovado: o que o produto de 18/10 perdeu e o desenho tem."""
     janela = _janela(_ler(SETE), "lanc-conf")
-    assert "Escolher a pasta…" in janela and "Cada jogo ganha o seu perfil" in janela
+    assert "Escolher o arquivo…" in janela and "Cada jogo ganha o seu perfil" in janela
     assert "<span>Pastas dos jogos</span>" in janela and "<code>~/Jogos/" in janela, (
         "o desenho de 18/10 diz «Pastas dos jogos» com a pasta, não «Jogos»")
     rodape = janela.split('class="tn-rod"')[1]
@@ -487,6 +461,6 @@ def test_a_opcao_de_jogos_da_janela_generica_leva_o_rotulo_e_as_caixas() -> None
 
     opcao = exp.OpcaoDaJanela("x", "jg", "Os jogos dela", "jogos", ["a"], (), "Jogos",
                               jogos=(("a", "Jogo A"), ("b", "Jogo B")))
-    html = exp.modificacao_miolo_html("X", [opcao], desenho=True)
+    html = exp.modificacao_miolo_html("X", [opcao])
     assert "Os jogos dela" in html and html.count('type="checkbox"') == 2
     assert html.count(" checked") == 1
