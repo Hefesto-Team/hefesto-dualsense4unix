@@ -2279,7 +2279,7 @@ METODOS = {"launch_env.refresh", "profile.switch"}
 
 
 PAGINA = "10-perfis.html"
-PISO_DA_ABA = 19
+PISO_DA_ABA = 16
 #: mentira que o `conftest.py` monta", `load_all_profiles()` devolve **9
 PROVAS: list[dict[str, Any]] = [
     # O clique na linha ATIVA o perfil e o abre; o botão «Ativar» lê o editor e tem teste próprio
