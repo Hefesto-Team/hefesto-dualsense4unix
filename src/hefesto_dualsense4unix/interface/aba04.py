@@ -286,6 +286,8 @@ CSS = """
   .luz-grade > div:last-child > *::before{right:0}
   .luz-grade > .rotulos > *::before{left:0;right:calc(var(--gap-col) * -1)}
   .luz-grade > div > *:first-child::before{display:none}
+  /* a linha abaixo do «Modelo» sai (19/10/2026): o nome fica junto do desenho do controle */
+  .luz-grade > div > *:nth-child(3)::before{display:none}
 
   /* a coluna dos rótulos: todo título começa no mesmo x, e cada um ocupa a
      ALTURA INTEIRA da sua linha — é assim que a coluna acaba junto das outras */

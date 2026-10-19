@@ -223,7 +223,7 @@ def test_o_multiplicador_e_o_numero_e_nao_o_degrau(emitidos):
     pacote, _ = emitidos
     col = next(iter(pacote["colunas"].values()))
     pedido = round(_tela._escada()["balanceado"] * 100)
-    assert col["mult"] == f"{pedido}%", f"o multiplicador saiu {col['mult']!r}"
+    assert col["mult"] == f"{pedido}", f"o multiplicador saiu {col['mult']!r}"
     assert col["mult-pos"] == f"{pedido}", (
         f"o cursor da barra saiu {col['mult-pos']!r}, e o número ao lado diz "
         f"{col['mult']!r} — a mesma linha contando duas histórias")
@@ -311,7 +311,7 @@ def test_o_que_falta_esta_declarado(emitidos):
     for chave, razao in pacote["sem_dono"].items():
         assert len(razao) > 80, f"{chave} declara sem dizer por quê"
     col = next(iter(pacote["colunas"].values()))
-    assert "mult-teto" in col, "o `Máx` voltou a ser texto cravado no desenho"
+    assert "mult-teto" not in col, "o `Máx` saiu da tela em 19/10/2026, e o pacote ainda o pinta"
     assert pacote["mesa"].get("degrau-mesa") is None, (
         "a linha de mesa não pinta o degrau geral — e era ela que a "
         "`forca:auto-da-mesa` esperava")

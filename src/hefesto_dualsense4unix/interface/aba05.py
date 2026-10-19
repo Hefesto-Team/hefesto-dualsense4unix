@@ -6,6 +6,7 @@ import re
 import sys
 sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent))
 import onde  # noqa: E402
+import mapa as _mapa  # noqa: E402  a silhueta do DualSense
 import monta as monta_  # noqa: E402
 from monta import CONECTADOS, DADOS_DO_REPO  # noqa: E402
 
@@ -141,18 +142,9 @@ ESTADO = {
 GOVERNA = ".vib .ctrl > :is(.forca,.motor)"
 DICA_DO_AUTOMATICO = "O jogo decide a força; o estilo do perfil ajusta"
 
-#: o glifo da linha da Força: o controle inteiro, porque ela vale para tudo o que vibra.
-GLIFO_DO_CONTROLE = (
-    '<svg class="gl gl-ctrl" width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" '
-    'aria-hidden="true"><title>DualSense</title><path d="M8.5 7H23.5C26.6 7 28.4 8.9 29.1 12.2L30.6 22.6C31.1 '
-    '26.6 27.9 28.6 25.6 26.6L21.4 21.9Q16 19.6 10.6 21.9L6.4 26.6C4.1 28.6 0.9 26.6 1.4 22.6L2.9 12.2C3.6 8.9 '
-    '5.4 7 8.5 7Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/>'
-    '<rect x="10.2" y="7" width="11.6" height="6.4" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/>'
-    '<circle cx="12.4" cy="17" r="1.7" fill="none" stroke="currentColor" stroke-width="1.5"/>'
-    '<circle cx="19.6" cy="17" r="1.7" fill="none" stroke="currentColor" stroke-width="1.5"/>'
-    '<path d="M6.6 11.4V15.4M4.6 13.4H8.6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>'
-    '<circle cx="25.4" cy="11.9" r="0.9" fill="currentColor"/><circle cx="25.4" cy="14.9" r="0.9" fill="currentColor"/>'
-    '<circle cx="23.9" cy="13.4" r="0.9" fill="currentColor"/><circle cx="26.9" cy="13.4" r="0.9" fill="currentColor"/></svg>')
+#: o glifo da linha da Força: o DualSense do mapa (19/10/2026, o pedido: «usa o svg do dualsense»),
+#: o controle inteiro, porque ela vale para tudo o que vibra.
+GLIFO_DO_CONTROLE = _mapa.silhueta_do_dualsense(22, traco=1.4).replace("<svg ", '<svg class="gl gl-ctrl" ', 1)
 DICA_DA_FORCA = ("Abaixo de 100% a vibração fica mais fraca; acima, a fraca é reforçada, "
                "até o máximo do motor")
 BOTAO_DA_FORCA = ('<span class="lado glifo-forca on" role="img" aria-label="O controle inteiro" '
@@ -507,6 +499,8 @@ CSS = """
   .vib > div:last-child > *::before{right:0}
   .vib > .rotulos > *::before{left:0;right:calc(var(--gap-col) * -1)}
   .vib > div > *:first-child::before{display:none}
+  /* a linha abaixo do «Modelo» sai (19/10/2026): o nome fica junto do desenho do controle */
+  .vib > div > *:nth-child(3)::before{display:none}
   /* NÃO HÁ COLUNA DESTACADA, e é decisão de 28/08: os quatro ficam lado a
      lado, sempre visíveis, e a fita do topo fica ESMAECIDA (fora de `monta.ABAS_QUE_ESCOLHEM`).
      Aqui havia um `.ctrl.escolhido` — fundo `--sel-bg` e rótulo em negrito na

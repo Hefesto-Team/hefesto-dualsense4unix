@@ -116,16 +116,6 @@ def teto_da_barra() -> int:
     return round(RUMBLE_CUSTOM_MULT_MAX * 100)
 
 
-def _no_teto(pct: dict[str, Any]) -> str:
-    """`"1"` quando o multiplicador desta coluna bateu no teto da barra; `""` não."""
-    if not pct.get("sabe"):
-        return ""
-    try:
-        valor = int(str(pct.get("n") or "").rstrip("%"))
-    except ValueError:
-        return ""
-    return "1" if valor >= teto_da_barra() else ""
-
 
 def _escolha_da_lista(overrides: dict[str, Any], uniq: str, campo: str,
                       lista: tuple[str, ...]) -> str:
@@ -609,13 +599,13 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             # variável em vez de inventar um tom.
             "plastico": str(col.get("plastico") or ""),
             "colorway": modelo_por_uniq.get(uniq, ""),
-            "mult": pct.get("n", "—"),
+            # o número sem o «%»: o sinal mora na casa ao lado (19/10/2026)
+            "mult": str(pct.get("n", "—")).rstrip("%"),
             "mult-pos": (str(pct.get("n", "")).rstrip("%")
                          if pct.get("sabe") else ""),
             "forca-pct": str(pct.get("w", "")).rstrip("%"),
             "degrau": degrau_da_faixa(politica, custom),
             "degrau-herdado": "1" if politica and not propria else "",
-            "mult-teto": _no_teto(pct),
             "em-teste": "1" if uniq and uniq in em_teste() else "",
             "padrao": "1" if padrao else "",  # (noqa-acento) campo
         }

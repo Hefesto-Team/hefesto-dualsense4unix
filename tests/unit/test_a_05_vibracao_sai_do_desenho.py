@@ -47,6 +47,7 @@ aposenta este arquivo com eles.
 from __future__ import annotations
 
 import pathlib
+import re
 import sys
 
 import pytest
@@ -264,44 +265,23 @@ def test_a_marca_de_rotulo_nao_alcanca_dado(regua, cravados):
         "das duas afirmações está errada")
 
 
-def test_o_max_e_estado_e_o_espaco_fica_reservado(regua, cravados):
-    """*"esconder RESERVANDO o espaço (`visibility:hidden`)"* — decisão de produto."""
+def test_a_forca_nao_diz_max_e_o_sinal_fica_na_casa_do_lado() -> None:
+    """A linha da Força sem o «Máx», e o «%» na casa dele, alinhado com as de baixo (19/10/2026).
+
+    MORDIDA: devolver o ``%`` ao campo ``mult`` do pacote, ou o ``Máx`` ao desenho.
+    """
+    # A decisão: D-1910-A-FORCA-DA-VIBRACAO-PERDE-O-MAX.
     import onde
 
     from hefesto_dualsense4unix.interface import aba05
     doc = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
-    tetos = [c for c in cravados if c.chave == "mult-teto"]
-    assert len(tetos) == len(aba05.MESA), (
-        f"o `Máx` é um por lugar da mesa ({len(aba05.MESA)}), e a régua achou "
-        f"{len(tetos)}")
-    assert all(c.alvo == "classe" for c in tetos), (
-        "o `Máx` voltou a ser texto — o pintor poria `—` onde o desenho não põe "
-        "nada, afirmando 'não sei' onde a resposta é 'não está no teto'")
-    assert doc.count('data-campo="mult-teto" data-hef-alvo="classe">Máx<') == len(aba05.MESA), (
-        "a palavra `Máx` deixou de estar sempre no HTML")
-    assert ".motor .teto.mx{visibility:hidden}" in doc, (
-        "o `Máx` deixou de esconder RESERVANDO o espaço")
-    assert "display:none" not in doc.split(".teto.mx")[1][:80], (
-        "o `Máx` passou a sumir do fluxo, e o número ao lado desloca")
+    assert "mult-teto" not in doc.split("<body", 1)[1], "o `Máx` voltou ao desenho"
+    assert doc.count('data-campo="mult">') == len(aba05.MESA)
+    valores = re.findall(r'data-campo="mult">([^<]*)</span><span class="teto">%</span>', doc)
+    assert len(valores) == len(aba05.MESA), "a Força perdeu o «%» na casa ao lado"
+    for valor in valores:
+        assert "%" not in valor, f"a Força diz {valor!r}, colado no sinal"
 
-
-def test_o_teto_do_multiplicador_sai_do_produto():
-    """`_no_teto` pergunta o teto a quem é dono dele, e não sabe o que é `—`.
-
-    O DONO TROCOU EM 03/09/2026, decisão de produto: *"0 a 200%"*. A barra deixou de
-    parar no degrau `Máximo` (`app/telas/vibracao.teto_da_barra`, 150) e vai até
-    onde ela pode ARRASTAR — `a05_vibracao.teto_da_barra`, que sai do
-    `RUMBLE_CUSTOM_MULT_MAX` do esquema. A régua continua PERGUNTANDO; o que
-    mudou é a quem.
-    """
-    from pacotes.a05_vibracao import _no_teto, teto_da_barra
-
-    teto = teto_da_barra()
-    assert _no_teto({"n": f"{teto}%", "sabe": "1"}) == "1"
-    assert _no_teto({"n": f"{teto - 1}%", "sabe": "1"}) == ""
-    assert _no_teto({"n": "—", "sabe": ""}) == "", (
-        "campo sem informação acendeu o `Máx` — a tela afirmaria um teto que "
-        "ninguém mediu")
 
 
 def test_as_quatro_molduras_continuam_cobradas(regua, vereditos):
