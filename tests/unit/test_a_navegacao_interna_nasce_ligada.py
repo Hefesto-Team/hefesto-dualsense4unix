@@ -87,6 +87,7 @@ def _passo(pg: Any, passo: int) -> int:
 
 
 def test_a_lista_da_a_volta_nos_dois_sentidos(pagina: Any) -> None:
+    """D-1910-A-NAVEGACAO-INTERNA-NASCE-LIGADA: do último ao primeiro, e do primeiro ao último."""
     pagina.evaluate("document.querySelector('select').selectedIndex = 2")
     assert _passo(pagina, 1) == 0, "do último, o passo seguinte não voltou ao primeiro"
     assert _passo(pagina, -1) == 2, "do primeiro, o anterior não foi ao último"
