@@ -58,7 +58,7 @@ def test_nenhum_estilo_guarda_chave_que_saiu_da_lista() -> None:
 
 
 def test_o_fps_e_a_metralhadora_a_40_hz() -> None:
-    """MORDIDA: o FPS de volta à Arma automática a 60 Hz reprova aqui."""
+    """D-1910-O-ESTILO-ESCOLHE-O-GATILHO-DE-HOJE. MORDIDA: o FPS a 60 Hz reprova aqui."""
     fps = ej.POR_CHAVE["fps"]
     assert fps.gatilho == "Machine"
     assert fps.receita_invisivel is not None
@@ -81,7 +81,7 @@ def test_o_ritmo_nao_segue_o_lado_do_som() -> None:
 
 
 def test_a_duracao_do_estilo_chega_ao_toque() -> None:
-    """MORDIDA: sem a duração na ponte, o Terror toca os 40 ms de todos."""
+    """D-1910-A-DURACAO-DO-TOQUE-SEGUE-O-ESTILO. MORDIDA: sem a ponte, o Terror toca 40 ms."""
     assert tv.receita_do_estilo(ej.POR_CHAVE["terror"]).duracao_do_toque_ms == 60
     for estilo in ej.ESTILOS:
         if estilo.receita_invisivel is None or estilo.chave == "terror":
@@ -108,6 +108,7 @@ FORMA_DO_ESTILO = {
 
 @pytest.mark.parametrize(("chave", "forma"), sorted(FORMA_DO_ESTILO.items()))
 def test_o_estilo_escolhe_a_forma_do_toque(chave: str, forma: str) -> None:
+    """D-1910-O-POINT-AND-CLICK-E-A-MARATONA-TOCAM-O-TOQUE: a forma de cada estilo."""
     assert fh.forma_que_vale(None, chave) == forma
 
 
@@ -181,7 +182,7 @@ def test_o_ritmo_sobe_o_ouvido_do_jogo() -> None:
 
 
 def test_a_batida_chega_aos_quatro_controles() -> None:
-    """MORDIDA: a batida só no controle que atirou deixa os outros três apagados."""
+    """D-1910-O-RITMO-SOBE-A-LUZ-NA-BATIDA-NOS-QUATRO. MORDIDA: só no P1, os outros apagam."""
     anotados: list[tv.Evento] = []
     estalo = SimpleNamespace(instante=10.0, lado=tv.LADO_CENTRO, energia=0.7, recorte=None)
     ouvido = SimpleNamespace(comecar=lambda: None, tirar=lambda: [estalo])
