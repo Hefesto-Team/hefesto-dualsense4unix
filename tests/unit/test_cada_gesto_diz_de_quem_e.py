@@ -97,15 +97,9 @@ A_ABA_AINDA_TRAZ = {
 }
 
 
-#: Os quatro que a Perfis do todo tirou de propósito (A-ABA-PERFIS-DO-TODO-01, `5faca7e8a`; o
-#: `aba10.py` exige que não voltem): «Nome do jogo» e «Aplicar em» substituem o Nome, o Funciona em
-#: e o Detectar, e a ordem se arrasta em «Qual vale primeiro». Saem com
-#: OS-GESTOS-QUE-A-PERFIS-DO-TODO-DEIXOU-SEM-BOTAO-SAEM-01.
+#: O gesto que a Perfis do todo atende sem botão na página (o duplo clique na linha renomeia).
 SEM_BOTAO_NA_PAGINA = {
-    ("10-perfis.html", "detectar"),
-    ("10-perfis.html", "editor.ambiente"),
     ("10-perfis.html", "perfis.renomear"),
-    ("10-perfis.html", "editor.prioridade"),
     # O «Parar tudo» só existe na janela da extensão que o declara no manifesto; a do desenho não
     # declara (a dos acessórios, que o trazia, saiu em 19/10/2026).
     ("07-lancadores.html", "parar-tudo-da-modificacao"),

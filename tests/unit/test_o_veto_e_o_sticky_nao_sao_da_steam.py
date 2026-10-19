@@ -21,8 +21,8 @@ class TestOStickyNaoGuardaANossaJanela:
         store.record_window_detect_read("xlib", "steam_app_1088850")
         store.record_window_detect_read("xlib", NOSSA)
         assert store.window_detect_last_class == "steam_app_1088850", (
-            "a nossa própria janela virou o sticky — é ela que o «Detectar» "
-            "grava quando ela clica no botão")
+            "a nossa própria janela virou o sticky — é ela que o «Novo» "
+            "lê quando ela clica no botão")
 
     def test_a_leitura_crua_continua_dizendo_a_verdade(self):
         """O sticky filtra; a leitura CRUA não pode filtrar."""
@@ -56,8 +56,8 @@ class TestOStickyNaoGuardaANossaJanela:
         assert NOSSA.casefold() in OWN_GUI_WM_CLASSES
 
 
-class TestODetectarNaoGravaANossaPropriaJanela:
-    """**A OUTRA METADE, no gesto — e sem ela a primeira não fecha.**"""
+class TestONovoNaoGravaANossaPropriaJanela:
+    """**A OUTRA METADE, no «Novo» — e sem ela a primeira não fecha.**"""
 
     def _ctx(self, **estado):
         from types import SimpleNamespace
@@ -72,7 +72,7 @@ class TestODetectarNaoGravaANossaPropriaJanela:
         ctx = self._ctx(window_detect_last_class=None,
                         window_detect_current_class=NOSSA)
         assert _classe_de_outro_app(ctx) == "", (
-            "o «Detectar» gravaria a regra da janela do próprio Hefesto")
+            "o «Novo» gravaria a regra da janela do próprio Hefesto")
 
     def test_o_sticky_de_outro_app_vence_a_nossa_crua(self):
         """É o caso do clique do usuário: o foco está aqui, o jogo está atrás."""
@@ -92,16 +92,6 @@ class TestODetectarNaoGravaANossaPropriaJanela:
         ctx = self._ctx(window_detect_last_class=None,
                         window_detect_current_class="firefox")
         assert _classe_de_outro_app(ctx) == "firefox"
-
-    def test_a_recusa_diz_o_que_esta_vendo(self):
-        """*"Não achei janela"* sobre uma tela cheia de janelas se lê como"""
-        fonte = Path(
-            "src/hefesto_dualsense4unix/interface/pacotes/a10_perfis.py"
-        ).read_text(encoding="utf-8")
-        i = fonte.index("def detectar(")
-        corpo = fonte[i : fonte.index("\n@gesto", i)]
-        assert "estou vendo" in corpo, (
-            "a recusa não nomeia a classe que o detector está vendo")
 
 
 class TestOVetoDaR21AlcancaQualquerLancador:

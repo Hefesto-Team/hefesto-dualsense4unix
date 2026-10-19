@@ -57,9 +57,6 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
     ProfileModeConfig,
 )
-from hefesto_dualsense4unix.profiles.simple_match import (
-    PROCEDENCIA_DA_NAVEGACAO,
-)
 
 PAGINA = "10-perfis.html"  # (noqa-acento) nome de arquivo
 
@@ -166,13 +163,8 @@ def _renomear(ctx: Contexto, ponte: Any) -> None:
     a10_perfis.perfis_renomear(ctx, {"valor": "Sackboy", "evento": "change"}, ponte)
 
 
-def _prioridade(ctx: Contexto, ponte: Any) -> None:
-    a10_perfis.editor_prioridade(ctx, {"valor": "137", "evento": "change"}, ponte)
-
-
-def _ambiente(ctx: Contexto, ponte: Any) -> None:
-    a10_perfis.editor_ambiente(
-        ctx, {"valor": PROCEDENCIA_DA_NAVEGACAO, "evento": "change"}, ponte)
+def _estilo(ctx: Contexto, ponte: Any) -> None:
+    a10_perfis.editor_estilo(ctx, {"valor": "FPS", "evento": "change"}, ponte)
 
 
 def _jogo(ctx: Contexto, ponte: Any) -> None:
@@ -181,8 +173,7 @@ def _jogo(ctx: Contexto, ponte: Any) -> None:
 
 @pytest.mark.parametrize("gesto,nome_do_gesto", [
     (_renomear, "perfis.renomear"),
-    (_prioridade, "editor.prioridade"),
-    (_ambiente, "editor.ambiente"),
+    (_estilo, "editor.estilo"),
     (_jogo, "editor.jogo"),
 ])
 def test_o_modo_do_disco_sobrevive_aos_gestos_que_ficaram(

@@ -10,8 +10,8 @@ três primeiras:
    `profile_salvo arquivo=meu_perfil.json`;
 2. `08-conexoes.ignorar` — o ⊘ dispensava uma ORDEM DE SERVIÇO dela a cada
    volta, e o Check-up dela perdia uma das duas linhas que acusam nesta máquina;
-3. `editor.prioridade` e `editor.estilo` — ensinados a gravar na leva das nove
-   pendências, e não acrescentados aqui no mesmo commit;
+3. `editor.estilo` — ensinado a gravar na leva das nove
+   pendências, e não acrescentado aqui no mesmo commit;
 4. **a ABA 07 INTEIRA** — achado pela `STEAM-INPUT-01` em 06/09/2026. Não era
    uma porta esquecida: eram OITO, e nenhuma estava em `ESCREVEM`. A régua deu
    verde sobre `tirar-daqui`, `voltar-a-usar`, `nao-perguntar`,
@@ -21,7 +21,7 @@ três primeiras:
 
 **O ESTRAGO É REAL E É NA MÁQUINA DO USUÁRIO.** A régua de clique roda com o daemon
 vivo e o perfil do usuário em disco: um gesto que grava e não está protegido faz o
-produto escolher o estilo de jogo do usuário, mudar a prioridade de um perfil, marcar
+produto escolher o estilo de jogo do usuário, trocar a regra de um perfil, marcar
 um jogo do usuário ou dispensar um achado do Check-up — para provar que sabe clicar.
 
 O QUE MUDOU EM 06/09/2026 (`ONDA3-GESTO-DECLARA-01`)
@@ -420,9 +420,9 @@ def test_a_lista_nao_protege_gesto_que_nao_existe() -> None:
         "voltou a digitar a lista, e a digitada é a que chega atrasada")
 
 
-@pytest.mark.parametrize("nome", ["editor.prioridade", "editor.estilo"])
-def test_os_dois_da_leva_das_nove_estao_protegidos(nome: str) -> None:
-    """Os dois que o conferente pegou, nomeados — para a regressão ter nome."""
+@pytest.mark.parametrize("nome", ["editor.estilo"])
+def test_o_da_leva_das_nove_esta_protegido(nome: str) -> None:
+    """O que o conferente pegou, nomeado — para a regressão ter nome."""
     from hefesto_dualsense4unix.interface.hefesto_vivo import PERIGOSOS
 
     assert ("10-perfis.html", nome) in set(PERIGOSOS), (

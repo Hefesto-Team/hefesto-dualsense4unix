@@ -1,4 +1,4 @@
-"""«Funciona em:» diz DE ONDE O JOGO VEM, e o produto casa sozinho."""
+"""A coluna e a lista de jogos dizem DE ONDE O JOGO VEM, e o produto casa sozinho."""
 from __future__ import annotations
 
 import json
@@ -28,7 +28,6 @@ from hefesto_dualsense4unix.interface.pacotes import (
 from hefesto_dualsense4unix.profiles import loader
 from tests.unit.test_o_censo_responde_como_o_lancador_responde import plantar_o_registro
 from hefesto_dualsense4unix.profiles import simple_match as sm
-from hefesto_dualsense4unix.profiles.slug import slugify
 from hefesto_dualsense4unix.profiles.schema import (
     MatchAny,
     MatchCriteria,
@@ -146,12 +145,6 @@ def _aberto_no_editor(monkeypatch: pytest.MonkeyPatch, prof: Any) -> None:
     monkeypatch.setattr(a10, "_ESCOLHIDO", prof.name, raising=False)
 
 
-def _do_disco(prof: Any) -> dict[str, Any]:
-    """O ARQUIVO, lido de volta — e é o de verdade, no lar de mentira da suíte."""
-    caminho = loader.profiles_dir() / f"{slugify(prof.name)}.json"
-    return json.loads(caminho.read_text(encoding="utf-8"))
-
-
 def _escolher(rotulo: str) -> dict[str, Any]:
     """O clique que o piloto manda: o `value` do `<select>` e o evento."""
     return {"valor": rotulo, "rotulo": rotulo, "evento": "change",
@@ -166,7 +159,7 @@ def test_a_pagina_nova_nao_pinta_o_funciona_em(
                  Profile(name="GOTG", priority=80,
                          match=MatchCriteria(window_class=[CHAVE_DO_GOTG])))
 
-    assert a10.SELETOR_DO_AMBIENTE not in a10.pacote(_ctx())["blocos"]
+    assert 'select[data-hef="editor.ambiente"]' not in a10.pacote(_ctx())["blocos"]
 
 
 def test_a_maquina_sem_lancador_nenhum_nao_oferece_jogo(
@@ -240,105 +233,6 @@ def test_a_linha_da_lista_diz_nome_e_codigo_e_nunca_o_executavel(
     assert 'label="Marvel&#x27;s Guardians of the Galaxy"' in do_heroic or (
         "label=\"Marvel's Guardians of the Galaxy\"" in do_heroic)
     assert f'value="{CHAVE_DO_GOTG}"' in do_heroic
-
-
-def test_escolher_o_lancador_grava_a_forma_que_ele_entrega(
-    maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """O gesto que o dedo do usuário aciona, e o arquivo LIDO DE VOLTA."""
-    prof = Profile(name="Guardioes", priority=80,
-                   match=MatchCriteria(window_class=[CHAVE_DO_GOTG]))
-    _o_disco_tem(monkeypatch, prof)
-    _aberto_no_editor(monkeypatch, prof)
-    prof.match = MatchAny()
-    monkeypatch.setattr(a10, "_editor_de",
-                        lambda _p: {"jogo": CHAVE_DO_GOTG, "ambiente_recado": ""})
-
-    resposta = a10.editor_ambiente(_ctx(), _escolher("Heroic"), PonteDeMentira())
-
-    assert resposta is not None
-    assert "Heroic" in resposta["relato"]
-    do_disco = _do_disco(prof)
-    assert do_disco["match"] == {"type": "criteria",
-                                 "window_class": [CHAVE_DO_GOTG],
-                                 "window_title_regex": None,
-                                 "process_name": []}
-
-
-def test_escolher_a_steam_com_o_numero_no_campo_grava_o_steam_app(
-    maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """«Steam» + «ELDEN RING · 1245620» → ``steam_app_1245620``. É o §4, literal."""
-    prof = Profile(name="Elden Ring", priority=85, match=MatchAny())
-    _o_disco_tem(monkeypatch, prof)
-    _aberto_no_editor(monkeypatch, prof)
-    monkeypatch.setattr(a10, "_editor_de",
-                        lambda _p: {"jogo": "1245620", "ambiente_recado": ""})
-
-    a10.editor_ambiente(_ctx(), _escolher("Steam"), PonteDeMentira())
-
-    do_disco = _do_disco(prof)
-    assert do_disco["match"]["window_class"] == ["steam_app_1245620"]
-
-
-def test_a_mesma_procedencia_nao_reescreve_a_forma_do_perfil(
-    maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Clicar na opção que JÁ está lá não pode trocar `process_name` por `wm_class`."""
-    gravados: list[Any] = []
-    monkeypatch.setattr(loader, "save_profile",
-                        lambda prof, **kw: gravados.append(prof))
-    prof = Profile(name="Guard", priority=50,
-                   match=MatchCriteria(process_name=["guard"]))
-    _o_disco_tem(monkeypatch, prof)
-    _aberto_no_editor(monkeypatch, prof)
-    monkeypatch.setattr(a10, "_editor_de",
-                        lambda _p: {"jogo": "guard", "ambiente_recado": ""})
-
-    assert a10.editor_ambiente(
-        _ctx(), _escolher(jl.LANCADOR_DIRETO), PonteDeMentira()) is None
-    assert gravados == []
-    assert prof.match.process_name == ["guard"]
-
-
-def test_trocar_para_um_lancador_sem_o_jogo_manda_ela_para_a_lista(
-    maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Uma frase pela metade não vira regra — e a recusa diz onde terminar."""
-    gravados: list[Any] = []
-    monkeypatch.setattr(loader, "save_profile",
-                        lambda prof, **kw: gravados.append(prof))
-    prof = Profile(name="Elden Ring", priority=85,
-                   match=MatchCriteria(window_class=["steam_app_1245620"]))
-    _o_disco_tem(monkeypatch, prof)
-    _aberto_no_editor(monkeypatch, prof)
-    monkeypatch.setattr(a10, "_editor_de",
-                        lambda _p: {"jogo": "1245620", "ambiente_recado": ""})
-
-    with pytest.raises(RuntimeError) as erro:
-        a10.editor_ambiente(_ctx(), _escolher("Heroic"), PonteDeMentira())
-
-    assert "Escolha o jogo na lista de baixo" in str(erro.value)
-    assert "Heroic" in str(erro.value)
-    assert gravados == []
-
-
-def test_a_navegacao_grava_o_preset_dos_navegadores(
-    maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """«Navegação» é o perfil do desktop, sem jogo — e ele já existia no produto."""
-    prof = Profile(name="Navegar", priority=40, match=MatchAny())
-    _o_disco_tem(monkeypatch, prof)
-    _aberto_no_editor(monkeypatch, prof)
-    monkeypatch.setattr(a10, "_editor_de",
-                        lambda _p: {"jogo": "1245620", "ambiente_recado": ""})
-
-    a10.editor_ambiente(_ctx(), _escolher("Navegação"), PonteDeMentira())
-
-    do_disco = _do_disco(prof)
-    assert "1245620" not in json.dumps(do_disco)
-    assert do_disco["match"]["window_class"] == list(
-        sm.SIMPLE_MATCH_PRESETS["browser"].window_class)
 
 
 @pytest.mark.parametrize("caminho", ["mockup/10-perfis.html",
@@ -432,17 +326,14 @@ def test_a_lupa_acha_o_jogo_pelo_nome_que_a_coluna_passou_a_mostrar(
 def test_o_clique_no_campo_arrasta_a_coluna_junto(
     maquina_dela: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """**O CLIQUE, e é ele que fecha a queixa:** trocar o lançador no campo e a"""
+    """**O CLIQUE:** escolher o jogo do Heroic no campo e a coluna muda junto, sem recarregar."""
     prof = Profile(name="Guardioes", priority=80, match=MatchAny())
     _o_disco_tem(monkeypatch, prof)
     _aberto_no_editor(monkeypatch, prof)
-    monkeypatch.setattr(a10, "_editor_de",
-                        lambda _p: {"jogo": CHAVE_DO_GOTG, "ambiente_recado": ""})
-
     monkeypatch.setattr(a10, "_PROCURA", "heroic", raising=False)
 
     antes = a10.pacote(_ctx())["perfis.linha.nome"]
-    a10.editor_ambiente(_ctx(), _escolher("Heroic"), PonteDeMentira())
+    a10.editor_jogo(_ctx(), _escolher(CHAVE_DO_GOTG), PonteDeMentira())
     depois = a10.pacote(_ctx())["perfis.linha.nome"]
 
     assert antes == []

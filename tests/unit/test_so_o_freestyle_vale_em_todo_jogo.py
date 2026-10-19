@@ -23,21 +23,16 @@ from hefesto_dualsense4unix.app.actions.profiles_actions import (
     rotulo_quando_usar,
 )
 from hefesto_dualsense4unix.interface import onde, pacotes
-from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
+from hefesto_dualsense4unix.interface.pacotes import Contexto
 from hefesto_dualsense4unix.interface.pacotes import perfil as _perfil
 from hefesto_dualsense4unix.profiles import loader
 from hefesto_dualsense4unix.profiles import simple_match as sm
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
-from hefesto_dualsense4unix.profiles.schema import MatchAny, MatchCriteria, Profile
+from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 from hefesto_dualsense4unix.testing import FakeController
 
 RAIZ = Path(__file__).resolve().parents[2]
 CAUDA_DO_MANUAL = "vale quando você escolher este perfil."
-MESA = [
-    {"pref": "p1", "uniq": "aabbcc000001", "jogador": 1, "cor": "cosmic-red",
-     "nome": "Cosmic Red", "via": "USB", "transporte": "usb", "alvo": True,
-     "mascara": "DualSense"},
-]
 
 
 def _o_disco_cru(monkeypatch: pytest.MonkeyPatch, **por_nome: dict[str, Any]) -> None:
@@ -132,71 +127,6 @@ def test_o_balao_do_aplicar_tem_onde_cair_nas_paginas() -> None:
         assert endereco in fim, f"`{chave}` sai do `topo` e o `fim.html` não tem onde pô-la"
         sem = [p.name for p in paginas if endereco not in p.read_text(encoding="utf-8")]
         assert not sem, f"`{chave}` sem endereço nas páginas publicadas: {sem}"
-
-
-class _PonteDeMentira:
-    def __init__(self) -> None:
-        self.chamadas: list[tuple[str, tuple[Any, ...]]] = []
-
-    def profile_switch(self, nome: str) -> bool:
-        self.chamadas.append(("profile_switch", (nome,)))
-        return True
-
-    def chamar(self, metodo: str, *a: Any, **kw: Any) -> Any:
-        self.chamadas.append((metodo, a))
-        return True
-
-    def resultado(self, metodo: str, *a: Any, **kw: Any) -> Any:
-        self.chamadas.append((metodo, tuple(kw.values())))
-        return {}
-
-
-@pytest.fixture
-def editor(monkeypatch: pytest.MonkeyPatch) -> list[Any]:
-    """O disco de mentira do editor da aba 10, e o que o gesto gravaria."""
-    gravados: list[Any] = []
-    todos = [Profile(name="Elden Ring", priority=80,
-                     match=MatchCriteria(process_name=["eldenring.exe"])),
-             Profile(name="Novo perfil", priority=1, match=MatchAny())]
-    monkeypatch.setattr(loader, "save_profile", lambda prof, **kw: gravados.append(prof))
-    monkeypatch.setattr(loader, "load_all_profiles", lambda *a, **k: todos)
-    monkeypatch.setattr(loader, "load_profile",
-                        lambda nome, *a, **k: next(p for p in todos if p.name == nome))
-    monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "", raising=False)
-    monkeypatch.setattr(a10_perfis, "_DESFECHO", None, raising=False)
-    return gravados
-
-
-def _ctx() -> Contexto:
-    return Contexto(state={"active_profile": None}, mesa=list(MESA),
-                    conectados=list(MESA), estados={})
-
-
-def _escolher(rotulo: str) -> dict[str, Any]:
-    return {"valor": rotulo, "rotulo": rotulo, "evento": "change", "tipo": "select"}
-
-
-@pytest.mark.parametrize("clique", [1, 2], ids=["um-clique", "dois-cliques"])
-def test_a_pagina_velha_que_manda_qualquer_jogo_e_recusada(editor, clique) -> None:
-    """A página de antes do `--publicar 10` ainda oferece a opção: nada se grava."""
-    a10_perfis._ESCOLHIDO = "Elden Ring"
-    for _ in range(clique):
-        with pytest.raises(RuntimeError, match="não é mais uma procedência"):
-            a10_perfis.editor_ambiente(
-                _ctx(), _escolher(sm.PROCEDENCIA_DE_QUALQUER_JOGO), _PonteDeMentira())
-    assert editor == []
-
-
-def test_o_perfil_novo_escolhe_de_onde_o_jogo_vem(editor) -> None:
-    """O perfil novo nasce `any`: o campo vem no travessão, destravado, e aceita a escolha."""
-    a10_perfis._ESCOLHIDO = "Novo perfil"
-    # a página nova não manda mais `editor.ambiente`: o campo mora no editor do produto
-    pintado = a10_perfis._editor_de(Profile(name="Novo perfil", match=MatchAny()))
-    assert pintado["ambiente_travado"] is False
-
-    a10_perfis.editor_ambiente(
-        _ctx(), _escolher(sm.PROCEDENCIA_DA_NAVEGACAO), _PonteDeMentira())
-    assert len(editor) == 1 and not isinstance(editor[0].match, MatchAny)
 
 
 FRASES_DA_DISPUTA = (

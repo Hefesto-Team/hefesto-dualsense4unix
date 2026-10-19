@@ -254,10 +254,10 @@ def test_o_aplicar_e_o_salvar_miram_o_mesmo_perfil() -> None:
 
 
 def test_o_editor_da_10_grava_so_o_campo_dele_com_o_aparelho_divergindo() -> None:
-    """Mudar a prioridade grava a prioridade, e o microfone e a cor ficam."""
+    """Mudar o jogo grava a regra do jogo, e o microfone e a cor ficam."""
     antes = _o_perfil()
-    a10_perfis.editor_prioridade(_ctx(), {"valor": "81", "evento": "change"},
-                                 PonteDoRodape())
+    a10_perfis.editor_jogo(_ctx(), {"valor": "1245620", "evento": "change"},
+                           PonteDoRodape())
     mudou = _o_que_mudou(antes, _o_perfil())
-    assert mudou == ["priority: 80 -> 81"], (
-        "o editor da aba Perfis gravou mais que a prioridade:\n  " + "\n  ".join(mudou))
+    assert mudou and all(m.startswith("match.") for m in mudou), (
+        "o editor da aba Perfis gravou mais que a regra do jogo:\n  " + "\n  ".join(mudou))

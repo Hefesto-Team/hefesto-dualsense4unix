@@ -1,7 +1,7 @@
-"""Os CINCO gestos da aba Perfis que gravavam no disco do usuário e não diziam nada.
+"""Os QUATRO gestos da aba Perfis que gravavam no disco do usuário e não diziam nada.
 
 03/09/2026. O ``test_aba10_os_gestos_dizem_o_que_fizeram`` curou os três
-primeiros — ``ativar``, ``recarregar``, ``remover``. **Sobravam cinco**, e a
+primeiros — ``ativar``, ``recarregar``, ``remover``. **Sobravam quatro**, e a
 conta é a do próprio CSV de paridade (``docs/data/paridade-gtk-html.csv``, aba
 ``10-perfis``, "O desfecho na tela: o que aconteceu depois do clique"):
 
@@ -16,7 +16,6 @@ disco — o que a tela recebia depois do clique:
 
     editor.nome        → None      renomeia o `.json` e cria outro:  MUDO
     editor.jogo        → None      reescreve a regra INTEIRA:        MUDO
-    detectar           → None      grava um appid que ela não digitou: MUDO
     voltar-a-de-ontem  → None      substitui o arquivo inteiro:      MUDO
     remover            → None      apaga o `.json`: falava, mas só no tique
                                    seguinte (`_anotar`, até 500 ms)
@@ -32,10 +31,10 @@ segundo clique acerta a linha seguinte.
 Que o endereço ``perfis.desfecho`` EXISTE na página e que a tira acende com ele
 é trabalho do ``aba10.py`` (que o exige no gerador) e do
 ``test_aba10_os_gestos_dizem_o_que_fizeram`` (que confere o embrulho ``mesa``).
-Aqui se mede uma coisa só: **os cinco gestos devolvem a notícia, no vocabulário
+Aqui se mede uma coisa só: **os quatro gestos devolvem a notícia, no vocabulário
 do produto.**
 
-A MORDIDA, e ela é por gesto: troque qualquer um dos cinco ``return _dizer(…)``
+A MORDIDA, e ela é por gesto: troque qualquer um dos quatro ``return _dizer(…)``
 por um ``return None`` (que é como eles eram) e o teste daquele gesto reprova
 dizendo qual ficou mudo. Trocar o ``_dizer`` do ``remover`` de volta por
 ``_anotar`` reprova em ``test_o_remover_pinta_no_ato_e_nao_no_tique_seguinte``.
@@ -130,11 +129,10 @@ def _o_disco_tem(monkeypatch: pytest.MonkeyPatch, *nomes: str) -> list[Any]:
     return todos
 
 
-def _ctx(ativo: str | None = None, classe: str = "") -> Contexto:
+def _ctx(ativo: str | None = None) -> Contexto:
     return Contexto(
         # `freestyle_ligado`: o clique na linha só ABRE o perfil, sem ativá-lo (o gesto agora ativa)
-        state={"active_profile": ativo, "window_detect_last_class": classe,
-               "freestyle_ligado": True},
+        state={"active_profile": ativo, "freestyle_ligado": True},
         mesa=list(MESA), conectados=list(MESA), estados={})
 
 
@@ -259,55 +257,6 @@ def test_a_biblioteca_ilegivel_nao_vira_recusa(
     assert _frase(fora), "a leitura da biblioteca derrubou o desfecho inteiro"
 
 
-def test_o_detectar_diz_o_jogo_que_achou(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O botão grava a regra a partir de uma janela que ela não está olhando."""
-    _o_disco_tem(monkeypatch, "Pragmata")
-    _o_marcador_diz(monkeypatch, "Pragmata")
-    ctx, ponte = _ctx(classe="steam_app_1599660"), PonteDeMentira()
-
-    fora = a10_perfis.detectar(ctx, {}, ponte)
-
-    assert _frase(fora), "o Detectar gravou o appid e ficou mudo"
-    assert "Pragmata" in _frase(fora), (
-        "o desfecho não nomeia o perfil que mudou — com a lista ao lado, uma "
-        "frase sem nome não diz em qual linha o trabalho caiu")
-
-
-def test_o_detectar_que_recusa_continua_recusando_dizendo(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A metade que já falava não pode ter sido trocada pela nova."""
-    _o_disco_tem(monkeypatch, "Pragmata")
-    _o_marcador_diz(monkeypatch, "Pragmata")
-
-    for classe in ("", "unknown"):
-        ctx, ponte = _ctx(classe=classe), PonteDeMentira()
-        with pytest.raises(RuntimeError, match="não achei janela de jogo"):
-            a10_perfis.detectar(ctx, {}, ponte)
-
-
-def test_o_detectar_grava_a_janela_do_jogo_de_fora_da_steam(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A outra metade do ``title`` do botão, e ela nasceu em 06/09/2026."""
-    from hefesto_dualsense4unix.profiles.simple_match import detect_simple_preset
-
-    todos = _o_disco_tem(monkeypatch, "Grim")
-    _o_marcador_diz(monkeypatch, "Grim")
-    ctx, ponte = _ctx(classe="GrimFandango"), PonteDeMentira()
-
-    fora = a10_perfis.detectar(ctx, {}, ponte)
-
-    assert list(todos[0].match.window_class) == ["GrimFandango"], (
-        f"o Detectar não gravou a classe da janela: {todos[0].match!r}")
-    assert detect_simple_preset(todos[0].match) == "janela", (
-        "a regra gravada não volta como a forma que a tela sabe mostrar — o "
-        "perfil abriria travado, que é o estrago que a recusa antiga previa")
-    assert _frase(fora), "o Detectar gravou a classe e ficou mudo"
-    assert "Grim" in _frase(fora), (
-        "o desfecho não nomeia o perfil que mudou")
-
-
 def test_o_voltar_a_de_ontem_diz_qual_versao_voltou(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -351,8 +300,8 @@ def test_o_remover_pinta_no_ato_e_nao_no_tique_seguinte(
     assert ("launch_env.refresh", ()) in ponte.chamadas
 
 
-ESCRITORES = ("perfis.renomear", "editor.jogo", "editor.prioridade",
-              "editor.estilo", "detectar", "voltar-a-de-ontem",
+ESCRITORES = ("perfis.renomear", "editor.jogo", "editor.estilo",
+              "voltar-a-de-ontem",
               "novo", "duplicar", "remover", "ativar", "recarregar")
 
 

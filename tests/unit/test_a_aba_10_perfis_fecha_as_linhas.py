@@ -367,33 +367,23 @@ def test_nenhuma_pagina_desta_interface_oferece_o_modo_avancado() -> None:
         f"decisão [02] do PO antes de manter a substituição do fim da frase")
 
 
-def test_a_frase_da_prioridade_do_desenho_e_a_que_ela_aprovou(
-    gerador: Any,
-) -> None:
-    """O desenho recita a frase de produto, e a régua a lê do PRODUTO."""
+def test_o_produto_continua_sem_tentar_pintar_a_dica_da_prioridade() -> None:
+    """A Preferência saiu do desenho e do pacote: a ordem é arrastada em `editor.ordem`."""
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
-    do_produto = perfis_web._pacote_do_editor(
-        Profile(name="régua", match=MatchAny()))["prioridade_dica"]
-    assert do_produto == gerador.FRASE_DA_PRIORIDADE_DELA, (
-        "o desenho e o produto discordam sobre a frase da Prioridade:\n"
-        f"    desenho {gerador.FRASE_DA_PRIORIDADE_DELA!r}\n"
-        f"    produto {do_produto!r}")
-
     html = _pagina(publicado=False)
+    assert 'data-hef-gesto="detectar"' not in html, (
+        "o botão Detectar voltou ao desenho; a aba nova escolhe pelo «Nome do jogo»")
     assert "editor.prioridade" not in html, (
         "a Preferência (o trilho e a dica) voltou ao desenho; a ordem entre perfis do mesmo "
         "jogo agora é arrastar, e quem a grava é `editor.ordem`")
-
-
-def test_o_produto_continua_sem_tentar_pintar_a_dica_da_prioridade() -> None:
-    """A frase mora no desenho; emiti-la apagaria o trilho e o número."""
-    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
-
-    fora = _emitido(Profile(name="régua", match=MatchAny()))
+    perfil = Profile(name="régua", match=MatchAny())
+    voltou = {"prioridade", "prioridade_n", "prioridade_dica"} & set(
+        perfis_web._pacote_do_editor(perfil))
+    assert not voltou, f"o pacote do editor voltou a levar a Preferência: {sorted(voltou)}"
+    fora = _emitido(perfil)
     assert "editor.prioridade.dica" not in fora, (
-        "o produto voltou a mandar a dica da Prioridade — ela apagaria o "
-        "trilho e o número que moram dentro do mesmo `<span>`")
+        "o produto voltou a mandar a dica da Prioridade, que a página não desenha")
 
 
 def test_o_endereco_colado_vira_o_numero_na_frente_dela(
@@ -522,53 +512,8 @@ def test_a_classe_de_uma_janela_fecha_o_round_trip() -> None:
         "trocaria pelo genérico “Revise os campos do perfil”")
 
 
-def test_o_detectar_cumpre_o_que_o_title_promete(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """O botão promete "qualquer lugar" no ``title``, e agora entrega."""
-    from hefesto_dualsense4unix.profiles import loader
-    from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
-    from hefesto_dualsense4unix.profiles.simple_match import detect_simple_preset
-
-    assert 'data-hef-gesto="detectar"' not in _pagina(publicado=False), (
-        "o botão Detectar voltou ao desenho; o gesto segue no pacote, mas a aba nova não o pede")
-
-    prof = Profile(name="Grim", match=MatchAny())
-    monkeypatch.setattr(loader, "load_all_profiles", lambda *a, **k: [prof])
-    monkeypatch.setattr(loader, "load_profile", lambda *a, **k: prof)
-    monkeypatch.setattr(loader, "save_profile", lambda *a, **k: None)
-    monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "Grim", raising=False)
-
-    class _PonteMuda:
-        def profile_switch(self, nome: str) -> bool:
-            return True
-
-        def chamar(self, metodo: str, *a: Any, **kw: Any) -> bool:
-            return True
-
-    ctx = Contexto(state={"active_profile": None,
-                          "window_detect_last_class": "GrimFandango"},
-                   mesa=list(MESA), conectados=list(MESA), estados={})
-    fora = a10_perfis.detectar(ctx, {}, _PonteMuda())
-
-    assert list(prof.match.window_class) == ["GrimFandango"], (
-        f"o Detectar não gravou a classe que o detector viu: {prof.match!r}")
-    assert detect_simple_preset(prof.match) == "janela", (
-        "a regra que o botão gravou não volta como forma que a tela mostra")
-    assert isinstance(fora, dict) and fora.get("mesa"), (
-        "o Detectar gravou a regra e não devolveu notícia nenhuma")
-    assert fora["mesa"].get("editor.jogo") == "GrimFandango", (
-        f"o campo “Nome do Jogo” não recebeu a classe que passou a valer: "
-        f"{fora['mesa'].get('editor.jogo')!r} — ele continuaria mostrando o "
-        f"que havia antes do clique, sobre uma regra que já é outra")
-
-
 def test_a_tela_nao_manda_ela_para_fora_do_produto() -> None:
     """Nenhum texto desta aba manda a pessoa para o terminal. Decisão 10-Q2."""
-    import ast
-    import inspect
-    import textwrap
-
     proibidos = ("linha de comando", "hefesto-dualsense4unix profile",
                  "Modo avançado")
     textos: dict[str, str] = {
@@ -582,15 +527,6 @@ def test_a_tela_nao_manda_ela_para_fora_do_produto() -> None:
     }
     textos.update({f"perfis_web.GESTOS_SEM_MOTOR[{k!r}]": v
                    for k, v in perfis_web.GESTOS_SEM_MOTOR.items()})
-    fn = ast.parse(textwrap.dedent(inspect.getsource(a10_perfis.detectar))).body[0]
-    assert isinstance(fn, ast.FunctionDef)
-    sem_doc = fn.body[1:] if (fn.body and isinstance(fn.body[0], ast.Expr)
-                              and isinstance(getattr(fn.body[0], "value", None),
-                                             ast.Constant)) else fn.body
-    textos["a10_perfis.detectar (as frases)"] = " ".join(
-        n.value for corpo in sem_doc for n in ast.walk(corpo)
-        if isinstance(n, ast.Constant) and isinstance(n.value, str))
-
     achados = [f"{onde_}: “{p}”" for onde_, t in textos.items()
                for p in proibidos if p in t]
     assert not achados, (

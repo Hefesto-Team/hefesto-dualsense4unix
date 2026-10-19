@@ -114,11 +114,8 @@ def _aberto_no_editor() -> str:
 #: guarda do perfil que vale o recusaria antes de gravar, e ele tem régua própria.
 GESTOS: dict[str, tuple[Any, dict[str, Any]]] = {
     "perfis.renomear": (a10_perfis.perfis_renomear, {"valor": "Corrida 2"}),
-    "editor.prioridade": (a10_perfis.editor_prioridade, {"valor": "77"}),
-    "editor.ambiente": (a10_perfis.editor_ambiente, {"valor": "Instalado aqui"}),
     "editor.estilo": (a10_perfis.editor_estilo, {"valor": _estilo_que_grava()}),
     "editor.jogo": (a10_perfis.editor_jogo, {"valor": "corrida.exe"}),
-    "detectar": (a10_perfis.detectar, {}),
     "duplicar": (a10_perfis.duplicar, {}),
     "voltar-a-de-ontem": (a10_perfis.voltar_a_de_ontem, {}),
 }
@@ -187,9 +184,9 @@ def test_a_linha_clicada_continua_sendo_o_alvo(alvos: list[str]) -> None:
 
     assert _aberto_no_editor() == AVATAR
     alvos.clear()
-    a10_perfis.editor_prioridade(_ctx(), {"valor": "91"}, PonteDeMentira())
+    a10_perfis.editor_estilo(_ctx(), {"valor": _estilo_que_grava()}, PonteDeMentira())
     assert alvos == [AVATAR]
-    assert loader.load_profile(AVATAR).priority == 91
+    assert loader.load_profile(AVATAR).estilo is not None
 
 
 def test_so_o_freestyle_no_disco_e_recusa(alvos: list[str]) -> None:

@@ -126,24 +126,14 @@ def test_o_pacote_da_aba_nao_diz_a_palavra_velha(disco: None) -> None:
     assert not vistos, f"o pacote da aba Perfis ainda diz a palavra velha: {vistos}"
 
 
-def test_os_desfechos_dizem_preferencia(
+def test_os_desfechos_nao_dizem_a_palavra_velha(
     disco: None, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O Salvar do número, a recusa dele, o «Novo» e o «ordenar» da coluna."""
+    """O «Novo» e o «ordenar» da coluna."""
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "Pragmata", raising=False)
     monkeypatch.setattr(a10_perfis, "_com_a_carona", lambda frase="": frase,
                         raising=False)
     frases: list[str] = []
-    bom = a10_perfis.editor_prioridade(
-        _ctx(), {"valor": "55", "evento": "change", "tipo": "range"}, PonteDoRodape())
-    assert bom is not None
-    frases.append(str(bom.get("relato") or ""))
-    for cru in ("999", "abc"):
-        with pytest.raises(RuntimeError) as erro:
-            a10_perfis.editor_prioridade(
-                _ctx(), {"valor": cru, "evento": "change", "tipo": "range"},
-                PonteDoRodape())
-        frases.append(str(erro.value))
     frases.append(str(a10_perfis.novo(_ctx(), {}, PonteDoRodape())))
     anotadas: list[str] = []
     monkeypatch.setattr(a10_perfis, "_anotar", anotadas.append)
@@ -152,7 +142,6 @@ def test_os_desfechos_dizem_preferencia(
     assert all(frases), frases
     velhas = [f for f in frases if VELHA.search(f)]
     assert not velhas, f"os desfechos ainda dizem a palavra velha: {velhas}"
-    assert any("Preferência" in f or "preferência" in f for f in frases), frases
 
 
 def test_o_relatorio_da_sanidade_diz_preferencia(tmp_path: Path) -> None:

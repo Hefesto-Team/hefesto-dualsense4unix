@@ -61,11 +61,7 @@ DELA = ("já é o perfil que está valendo",
         "escolha um perfil na lista primeiro",
         "o perfil precisa de um nome",
         "gravar este por cima apagaria o dele",
-        "não é uma procedência",
-        "MSG_ESCOLHA_O_JOGO",
-        "escolha um estilo de jogo na lista",
-        "está fora da faixa que o perfil aceita",
-        "a preferência tem de ser um número")
+        "escolha um estilo de jogo na lista")
 
 
 class PonteDeMentira:
@@ -146,13 +142,11 @@ def test_o_estilo_entrou_em_sem_eco_quando_ganhou_motor() -> None:
     ``—``. Com o motor, ele grava três coisas no ``.json`` dela — deixá-lo de
     fora faria a régua acusar de mudo um gesto que trabalhou.
 
-    MORDIDA: tire ``editor.estilo`` (ou ``editor.prioridade``) de ``SEM_ECO`` e
-    isto reprova.
+    MORDIDA: tire ``editor.estilo`` de ``SEM_ECO`` e isto reprova.
     """
-    for nome in ("editor.estilo", "editor.prioridade"):
-        assert nome in a10_perfis.SEM_ECO, (
-            f"{nome} grava no disco e saiu de `SEM_ECO`: a prova no aparelho "
-            f"vai contá-lo como 'disse aplicado e nada mudou'")
+    assert "editor.estilo" in a10_perfis.SEM_ECO, (
+        "editor.estilo grava no disco e saiu de `SEM_ECO`: a prova no aparelho "
+        "vai contá-lo como 'disse aplicado e nada mudou'")
 
 
 def test_o_ativar_recusa_com_a_classe_que_a_tarja_pinta(
@@ -181,13 +175,13 @@ def test_renomear_por_cima_de_outro_perfil_recusa_na_tela(
 def test_nenhuma_frase_dela_sai_como_valueerror() -> None:
     """A régua de FORMA sobre o arquivo inteiro, e ela é a que segura a regra.
 
-    As seis frases de :data:`DO USUÁRIO` são as que ela lê. A régua exige que cada
+    As frases de :data:`DO USUÁRIO` são as que ela lê. A régua exige que cada
     uma esteja num ``raise RuntimeError`` — e não num ``ValueError``, que
     ``_recusou_dizendo`` descarta antes de tocar o DOM.
 
     POR QUE LER O FONTE, e é a exceção que esta casa aceita: as frases moram em
     guardas que dependem de estado de disco, de daemon e de relógio (o Remover
-    ARMA por oito segundos), e exercitá-las todas custaria seis dublês para
+    ARMA por oito segundos), e exercitá-las todas custaria um dublê por frase para
     medir uma coisa só — a palavra ``RuntimeError`` antes da frase. Os testes
     acima cobrem o ATO nos dois casos que ela clica mais.
 

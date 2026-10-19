@@ -266,14 +266,14 @@ def test_o_salvar_da_02_guarda_o_ganho_e_o_volume_do_microfone() -> None:
 
 
 def test_o_editor_da_10_so_muda_o_campo_dele() -> None:
-    """Mudar a prioridade grava a prioridade, e o microfone fica."""
+    """Mudar o jogo grava a regra do jogo, e o microfone fica."""
     antes = _o_disco()
-    a10_perfis.editor_prioridade(_ctx(VIVO_QUE_DIVERGE, MESA_QUE_DIVERGE),
-                                 {"valor": "81", "evento": "change"},
-                                 PonteDeMentira())
+    a10_perfis.editor_jogo(_ctx(VIVO_QUE_DIVERGE, MESA_QUE_DIVERGE),
+                           {"valor": "1245620", "evento": "change"},
+                           PonteDeMentira())
     mudou = _o_que_mudou(antes, _o_disco())
-    assert mudou == {"priority": (80, 81)}, (
-        f"o editor da aba Perfis mexeu fora da prioridade: {mudou}")
+    assert mudou and all(k.startswith("match") for k in mudou), (
+        f"o editor da aba Perfis mexeu fora da regra do jogo: {mudou}")
 
 
 def test_a_forca_da_05_so_muda_a_vibracao() -> None:

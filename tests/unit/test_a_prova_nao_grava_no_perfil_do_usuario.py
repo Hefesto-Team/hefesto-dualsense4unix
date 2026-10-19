@@ -52,14 +52,14 @@ def test_o_coringa_nao_isenta_o_que_nao_pediu() -> None:
 def test_a_isencao_por_pagina_continua_valendo() -> None:
     """O casamento novo não pode ter apagado o velho."""
     _, pulados_perfis = regua_do_mockup._alvos_a_clicar(
-        [_Gesto("detectar")], {"detectar"}, "10-perfis.html",
+        [_Gesto("editor.estilo")], {"editor.estilo"}, "10-perfis.html",
         hefesto_vivo.PERIGOSOS)
     vistos_lanc, _ = regua_do_mockup._alvos_a_clicar(
-        [_Gesto("detectar")], {"detectar"}, "01-jogar.html",
+        [_Gesto("editor.estilo")], {"editor.estilo"}, "01-jogar.html",
         hefesto_vivo.PERIGOSOS)
-    assert pulados_perfis == ["detectar"], (
-        "o `detectar` dos Perfis deixou de ser isento — ele grava no perfil dela")
-    assert vistos_lanc == ["detectar"], (
+    assert pulados_perfis == ["editor.estilo"], (
+        "o `editor.estilo` dos Perfis deixou de ser isento — ele grava no perfil dela")
+    assert vistos_lanc == ["editor.estilo"], (
         "o mesmo nome noutra aba deixou de ser provado: a qualificação por "
         "página parou de valer e o coringa passou a tratar os dois igual")
 

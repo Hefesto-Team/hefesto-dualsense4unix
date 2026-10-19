@@ -94,13 +94,6 @@ def _bancada() -> str:
     return onde.pagina(PAGINA, publicado=False).read_text(encoding="utf-8")
 
 
-def test_a_prioridade_tem_gesto() -> None:
-    """MORDIDA: tire o ``@gesto`` de ``editor_prioridade`` e isto reprova."""
-    from hefesto_dualsense4unix.interface import pacotes
-
-    assert pacotes.gesto_da_pagina(PAGINA, "editor.prioridade") is not None
-
-
 def test_a_prioridade_saiu_da_pagina_e_a_faixa_segue_do_esquema() -> None:
     """A página não tem mais o trilho da Prioridade (a ordem é a da lista), e o teto é do esquema.
 
@@ -110,60 +103,6 @@ def test_a_prioridade_saiu_da_pagina_e_a_faixa_segue_do_esquema() -> None:
     assert 'type="range"' not in html and "editor.prioridade" not in html, (
         "a Prioridade voltou à página: quem manda é a ordem arrastada (`editor.ordem`)")
     assert (PRIORIDADE_MINIMA, PRIORIDADE_MAXIMA) == (0, 200)
-
-
-def test_arrastar_grava_a_prioridade(disco: dict[str, Any]) -> None:
-    """O caminho principal: o ``change`` do punho vira ``priority`` no perfil."""
-    ponte = PonteDeMentira()
-    resposta = a10_perfis.editor_prioridade(_ctx(), {"valor": "137"}, ponte)
-
-    assert disco["perfil"].priority == 137, (
-        f"o arrasto não chegou ao perfil: {disco['perfil'].priority}")
-    assert len(disco["salvos"]) == 1
-    assert resposta is not None
-    mesa = resposta["mesa"]
-    assert mesa["editor.prioridade.n"] == "137"
-    esperada = str(round(137 * 100 / PRIORIDADE_MAXIMA))
-    assert mesa["editor.prioridade"] == esperada, (
-        f"a largura saiu {mesa['editor.prioridade']!r} e devia ser {esperada!r}, "
-        f"sem `%` e sem travessão")
-
-
-@pytest.mark.parametrize("valor", ["-1", str(PRIORIDADE_MAXIMA + 1), "9999"])
-def test_fora_da_faixa_recusa_dizendo(disco: dict[str, Any], valor: str) -> None:
-    """Um número fora da faixa iria direto para o ``.json`` dela.
-
-    O ``<input>`` já traz ``min``/``max``, mas o clique pode chegar de qualquer
-    lugar — inclusive de uma régua. ``RuntimeError`` porque é a única classe que
-    ``_recusou_dizendo`` leva ao DOM.
-
-    MORDIDA: tire a guarda de faixa do gesto e isto reprova.
-    """
-    with pytest.raises(RuntimeError, match="fora da faixa"):
-        a10_perfis.editor_prioridade(_ctx(), {"valor": valor}, PonteDeMentira())
-    assert not disco["salvos"], "gravou um número fora da faixa do esquema"
-
-
-def test_o_que_nao_e_numero_recusa(disco: dict[str, Any]) -> None:
-    """MORDIDA: tire o ``try/except ValueError`` e isto vira ``ValueError`` cru —"""
-    with pytest.raises(RuntimeError, match="tem de ser um número"):
-        a10_perfis.editor_prioridade(_ctx(), {"valor": "meio"}, PonteDeMentira())
-    assert not disco["salvos"]
-
-
-def test_o_clique_solto_nao_grava(disco: dict[str, Any]) -> None:
-    """Um ``<input type=range>`` dispara ``click`` E ``change`` no mesmo toque."""
-    assert a10_perfis.editor_prioridade(
-        _ctx(), {"valor": "137", "evento": "click"}, PonteDeMentira()) is None
-    assert not disco["salvos"], "um clique que não mudou nada gravou no disco"
-
-
-def test_o_mesmo_numero_nao_regrava(disco: dict[str, Any]) -> None:
-    """Regravar um perfil idêntico troca a data do arquivo e faz o daemon
-    reaplicar — um ``profile.switch`` no meio de uma partida não é de graça."""
-    assert a10_perfis.editor_prioridade(
-        _ctx(), {"valor": "40"}, PonteDeMentira()) is None
-    assert not disco["salvos"]
 
 
 def test_so_os_campos_de_texto_ficam_fora_do_tique() -> None:
@@ -317,7 +256,7 @@ def test_o_estilo_saiu_da_lista_de_travados() -> None:
         editado=Profile(name="Pragmata", match=MatchAny()))["editor"]
     assert editor["estilo_travado"] is False
     assert editor["estilo"] is None
-    assert "editor.estilo" in a10_perfis.NAO_PINTAVEIS
+    assert "editor.estilo" not in a10_perfis.NAO_PINTAVEIS
 
 
 def test_o_pacote_nao_manda_mais_a_prioridade_para_a_pagina(
