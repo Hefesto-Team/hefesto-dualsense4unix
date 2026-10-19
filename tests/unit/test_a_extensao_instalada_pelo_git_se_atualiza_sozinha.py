@@ -3,6 +3,14 @@
 A sprint é a A-EXTENSAO-INSTALADA-PELO-GIT-SE-ATUALIZA-SOZINHA-01.
 Os repositórios são ``git init`` locais, abertos por ``file://``, num lar de mentira: nenhuma
 prova fala com a rede de fora, com o GitHub nem com o serviço dela.
+
+MORDIDAS (19/10/2026, executadas sobre a cura e devolvidas):
+
+- a permissão nova tirada do ``_o_que_segura_a_atualizacao`` reprova
+  ``test_a_versao_que_pede_permissao_nova_fica_esperando_o_atualizar``;
+- a origem local e a chave desligada tiradas do ``_talvez_atualizar`` reprovam
+  ``test_a_chave_desligada_no_registro_nao_pergunta_ao_git`` e
+  ``test_a_origem_local_nunca_se_atualiza_sozinha``.
 """
 from __future__ import annotations
 
@@ -226,10 +234,15 @@ def test_a_origem_local_nunca_se_atualiza_sozinha(
     sup = _supervisor_rapido(lar)
 
     async def uma_volta() -> None:
+        # Sem o reconciliar, o registro lido está vazio e a volta não veria a extensão.
+        await sup.reconciliar()
+        assert "exemplo" in sup._registro_lido
         sup._talvez_atualizar()
+        aberta = sup._atualizando is not None
+        await sup.parar()
+        assert not aberta, "a origem local abriu uma conferência"
 
     asyncio.run(uma_volta())
-    assert sup._atualizando is None
 
 
 def test_sem_rede_a_extensao_viva_fica_e_o_supervisor_segue(
