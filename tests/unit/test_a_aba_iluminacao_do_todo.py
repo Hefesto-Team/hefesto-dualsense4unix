@@ -582,14 +582,15 @@ def test_criar_sem_o_que_falta_recusa_dizendo_e_nao_guarda(forma: dict[str, Any]
 # ---------------------------------------------------------------- a guia: oito casas, as de jogador
 
 
-def test_a_guia_tem_as_oito_cores_de_jogador_e_nenhuma_das_seis_de_fora() -> None:
-    """MORDIDA: devolver uma cor ao `FORA_DA_GUIA`."""
+def test_a_guia_tem_o_branco_e_as_cores_de_jogador_e_nenhuma_das_de_fora() -> None:
+    """MORDIDA: devolver uma cor ao `FORA_DA_GUIA`, ou o ciano do Player 6 à fileira."""
+    # A decisão: D-1910-A-PRIMEIRA-CASA-DA-COR-E-O-BRANCO.
     from hefesto_dualsense4unix.core.led_control import player_slot_color
     from pacotes import a04_iluminacao as a04
 
-    jogadores = tuple(tuple(player_slot_color(n)) for n in range(1, 9))
+    jogadores = ((255, 255, 255), *(tuple(player_slot_color(n)) for n in (1, 2, 3, 4, 5, 7, 8)))
     assert a04.tons_da_guia() == jogadores
-    assert len(a04.FORA_DA_GUIA) == 6
+    assert len(a04.FORA_DA_GUIA) == 5
     hexes = {"#{:02X}{:02X}{:02X}".format(*t) for t in a04.tons_da_guia()}
     assert not hexes & {h.upper() for h in a04.FORA_DA_GUIA}
 

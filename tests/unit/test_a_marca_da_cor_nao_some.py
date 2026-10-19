@@ -9,7 +9,7 @@ incomoda."*   # noqa-acento: citação literal
 (`on`) é a mesma marca vista da coluna do próprio controle.
 
 **O QUE O PILOTO MEDIU, COM O CLIQUE** (a 04 publicada, P1 e P2 no USB, P3 e P4
-no BT, o P2 laranja e o P3 ciano escolhidos, o P1 e o P4 na cor do número, o
+no BT, o P2 laranja e o P3 branco escolhidos, o P1 e o P4 na cor do número, o
 perfil a 82%), e cada linha é uma régua abaixo::
 
     soltou o P2 em 50%   por ~meio segundo o X laranja some das outras três
@@ -68,8 +68,8 @@ NOME = "regua-marca"
 GLOBAL = (40, 80, 180)
 BRILHO_GLOBAL = 0.82
 LARANJA = (255, 128, 0)
-CIANO = (0, 255, 255)
-COR_DELE = {1: player_slot_color(1), 2: LARANJA, 3: CIANO, 4: player_slot_color(4)}
+BRANCO = (255, 255, 255)
+COR_DELE = {1: player_slot_color(1), 2: LARANJA, 3: BRANCO, 4: player_slot_color(4)}
 IDS = ["P1-USB", "P2-USB", "P3-BT", "P4-BT"]
 
 
@@ -193,7 +193,7 @@ class Mesa:
         self.rodar(self.server._handle_controller_target_set(
             {"index": None} if alvo == "todos" else {"uniq": UNIQS[1]}))
         self.clicar_no_tom(2, LARANJA)
-        self.clicar_no_tom(3, CIANO)
+        self.clicar_no_tom(3, BRANCO)
 
     def rodar(self, corotina: Any) -> Any:
         return self.loop.run_until_complete(corotina)
@@ -418,12 +418,12 @@ def test_a_zero_a_marca_fica_onde_estava(mesa_de, n):
     """A 0% os catorze tons acendem preto, e a luz não diz mais tom nenhum.
 
     Brilho não é cor: o controle apagado pelo trilho continua sendo o laranja,
-    o ciano, o do número. A leitura velha devolvia o PRIMEIRO tom que casava,
-    o `#0000FF` — a borda pulava para o azul e o P1 ganhava um X na própria cor.
+    o branco, o do número. A leitura velha devolvia o PRIMEIRO tom que casava,
+    o da primeira casa — a borda pulava para ela e o dono dela ganhava um X na própria cor.
 
     **A MORDIDA:** arranque as DUAS guardas de `_o_tom_que_acende` — o
     `if alvo == (0, 0, 0)` e o `len(casados) == 1` — e esta reprova do P2 ao
-    P4 com a borda no azul (o P1 passa por coincidência: o azul é a cor dele).
+    P4 com a borda na primeira casa (o P3 passa por coincidência: o branco é a cor dele).
     Uma só não basta, porque cada uma cobre o 0% sozinha.
     """
     mesa = mesa_de()

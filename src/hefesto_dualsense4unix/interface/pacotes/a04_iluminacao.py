@@ -330,14 +330,20 @@ def _com_o_brilho(rgb: tuple[int, int, int], brilho: float) -> tuple[int, int, i
     return LedSettings(lightbar=rgb).apply_brightness(brilho).lightbar
 
 
-#: Fora da guia: os três de 11/09 (um azul, um rosa e o preto) e, desde 14/10/2026, mais três (verde
-#: limão, verde água e branco): a fileira do desenho do todo é só das oito cores de jogador,
-#: `player_slot_color(1..8)`.
-FORA_DA_GUIA = ("#0080FF", "#FF00FF", "#000000", "#80FF00", "#00FF80", "#FFFFFF")
+#: Fora da guia: os três de 11/09 (um azul, um rosa e o preto) e, desde 14/10/2026, mais dois (verde
+#: limão e verde água): a fileira do desenho do todo é a das cores de jogador,
+#: `player_slot_color(1..8)`, com o branco na frente e sem :data:`SAI_DA_GUIA`.
+FORA_DA_GUIA = ("#0080FF", "#FF00FF", "#000000", "#80FF00", "#00FF80")
+
+#: A primeira casa da guia é o branco (19/10/2026), e o ciano do Player 6 sai: eram dois azuis na
+#: fileira. O Player 6 nunca acende sozinho (a mesa é de quatro); a cor automática dele segue no
+#: daemon. Os Players 1 a 4 continuam com casa, e por isso o azul que fica é o do Player 1.
+PRIMEIRA_CASA = (255, 255, 255)
+SAI_DA_GUIA = 6
 
 
 def tons_da_guia() -> tuple[tuple[int, int, int], ...]:
-    """Os tons que a guia desta aba oferece, na ordem do desenho: as oito cores de jogador.
+    """Os tons que a guia desta aba oferece, na ordem do desenho: o branco e as cores de jogador.
 
     Nenhum se digita: os OITO são `core/led_control.player_slot_color(1..8)` (a paleta das cinco
     lâmpadas e a cor automática de cada número, o atalho para a cor do jogador); sobram as chaves de
@@ -361,7 +367,8 @@ def tons_da_guia() -> tuple[tuple[int, int, int], ...]:
     from hefesto_dualsense4unix.core.led_control import player_slot_color
 
     automaticos = tuple(player_slot_color(n) for n in range(1, 9))
-    ja_tem = {"#{:02X}{:02X}{:02X}".format(*rgb) for rgb in automaticos}
+    guia = (PRIMEIRA_CASA, *(t for n, t in enumerate(automaticos, start=1) if n != SAI_DA_GUIA))
+    ja_tem = {"#{:02X}{:02X}{:02X}".format(*rgb) for rgb in (*automaticos, PRIMEIRA_CASA)}
     fora = {h.upper() for h in FORA_DA_GUIA}
     desconhecidos = sorted(fora - {h.upper() for h in monta.TOM_DA_CASA})
     if desconhecidos:
@@ -379,12 +386,17 @@ def tons_da_guia() -> tuple[tuple[int, int, int], ...]:
         for h in monta.TOM_DA_CASA
         if h not in ja_tem and h.upper() not in fora
     )
-    return automaticos + extras
+    return guia + extras
 
 
 def titulo_da_casa(i: int) -> str:
-    """A frase de cada casa da guia. As oito primeiras são cor de número."""
-    quem = f"Cor do Player {i}. " if i <= 8 else ""
+    """A frase de cada casa da guia: o branco, e depois a cor de cada número, pelo tom da casa."""
+    from hefesto_dualsense4unix.core.led_control import player_slot_color
+
+    tons = tons_da_guia()
+    tom = tons[i - 1] if 0 < i <= len(tons) else None
+    numero = next((n for n in range(1, 9) if tuple(player_slot_color(n)) == tom), None)
+    quem = "Branco. " if tom == PRIMEIRA_CASA else f"Cor do Player {numero}. " if numero else ""
     return f"{quem}Pinta a barra, não muda o número."
 
 

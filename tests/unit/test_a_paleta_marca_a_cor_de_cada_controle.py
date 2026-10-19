@@ -15,7 +15,7 @@ PAGINA = "04-iluminacao.html"
 UNIQS = tuple(f"aa:bb:cc:00:00:0{n}" for n in (1, 2, 3, 4))
 
 AZUL, VERMELHO, VERDE = "#0000FF", "#FF0000", "#00FF00"
-AMARELO, CIANO, VIOLETA = "#FFFF00", "#00FFFF", "#8000FF"
+AMARELO, BRANCO, VIOLETA = "#FFFF00", "#FFFFFF", "#8000FF"
 
 
 def _hexa(rgb: Any) -> str:
@@ -137,7 +137,7 @@ def _a_cena_da_fala() -> tuple[list[dict[str, Any]], dict[str, Any]]:
 CENAS = {
     "a foto": _a_cena_da_foto,
     "o Todos": _a_cena_do_todos,
-    "o global num tom": lambda: _a_cena_do_global((0, 255, 255)),
+    "o global num tom": lambda: _a_cena_do_global((255, 255, 255)),
     "o global fora da guia": lambda: _a_cena_do_global((0x28, 0x50, 0xB4)),
 }
 
@@ -340,11 +340,11 @@ class TestDuasPecasNoMesmoTom:
         _ctx, colunas = _pintar(monkeypatch, "o global num tom")
         marcas = _marcas(colunas)
         for n in (1, 2):
-            assert marcas[n]["on"] == {CIANO}
+            assert marcas[n]["on"] == {BRANCO}
             assert marcas[n]["x"] == {VERMELHO, AMARELO}
-            assert CIANO in marcas[n]["sem_gesto"]
-        assert marcas[3]["x"] == {CIANO, AMARELO}
-        assert marcas[4]["x"] == {CIANO, VERMELHO}
+            assert BRANCO in marcas[n]["sem_gesto"]
+        assert marcas[3]["x"] == {BRANCO, AMARELO}
+        assert marcas[4]["x"] == {BRANCO, VERMELHO}
 
     def test_o_global_fora_da_guia_nao_marca_casa(
         self, monkeypatch: pytest.MonkeyPatch
@@ -378,10 +378,10 @@ class TestDuasPecasNoMesmoTom:
             assert all(p >= 0 for p in posicoes) and posicoes == sorted(posicoes), (
                 f"P{n}: {verde['titulo']}")
 
-        pecas, perfil = _a_cena_do_global((0, 255, 255))
+        pecas, perfil = _a_cena_do_global((255, 255, 255))
         ctx, _colunas = _pintar_as_pecas(monkeypatch, pecas[::-1], perfil)
         with pytest.raises(RuntimeError) as erro:
-            a04._sem_repetir_a_cor_do_vizinho(ctx, UNIQS[3], (0, 255, 255))
+            a04._sem_repetir_a_cor_do_vizinho(ctx, UNIQS[3], (255, 255, 255))
         assert "P1 (Cosmic Red)" in str(erro.value), str(erro.value)
 
 

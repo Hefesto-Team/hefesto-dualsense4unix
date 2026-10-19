@@ -1590,13 +1590,15 @@ def _conferir(doc):
                f"({sobram}) — o conjunto tem de ser IGUAL, não maior")
 
     # 15. A PODA DA FILEIRA — 11/09/2026, ordem de produto: sai o botão que abre outras cores, e saem
-    #     um tom de azul, um de rosa e o preto das cores dos 4 controles.
-    fora = ("#0080FF", "#FF00FF", "#000000", "#80FF00", "#00FF80", "#FFFFFF")
-    exigir(tuple(_pacote04.FORA_DA_GUIA) == fora,
+    #     um tom de azul, um de rosa e o preto das cores dos 4 controles. Desde 19/10/2026 a primeira
+    #     casa é o branco, e o ciano do Player 6 sai.
+    fora = ("#0080FF", "#FF00FF", "#000000", "#80FF00", "#00FF80", "#00FFFF")
+    exigir((*_pacote04.FORA_DA_GUIA, "#00FFFF") == fora,
            f"a poda da guia mudou sem esta régua saber: o pacote tira "
            f"{tuple(_pacote04.FORA_DA_GUIA)} e o desenho dela de 14/10/2026 tira {fora} — a guia "
            f"é UMA fileira com as oito cores de jogador")
     exigir(len(CRUS_DA_GUIA) == 8, f"a guia tem {len(CRUS_DA_GUIA)} cores, e o desenho tem oito")
+    exigir(CRUS_DA_GUIA[0] == "#FFFFFF", f"a primeira casa é {CRUS_DA_GUIA[0]}, e o desenho pede o branco")
     for h in fora:
         exigir(f'data-hex="{h}"' not in corpo,
                f"o tom {h} voltou à fileira — a guia é só das oito cores de jogador")

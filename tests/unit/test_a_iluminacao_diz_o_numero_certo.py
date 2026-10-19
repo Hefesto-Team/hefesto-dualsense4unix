@@ -795,7 +795,7 @@ def test_os_tres_tons_sairam_dos_quatro_controles():
     crus = ["#{:02X}{:02X}{:02X}".format(*rgb) for rgb in pac.tons_da_guia()]
 
     bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
-    for h in ("#0080FF", "#FF00FF", "#000000", "#80FF00", "#00FF80", "#FFFFFF"):
+    for h in ("#0080FF", "#FF00FF", "#000000", "#80FF00", "#00FF80", "#00FFFF"):
         assert h not in crus, f"{h} continua na guia"
         assert f'data-hex="{h}"' not in bancada, (
             f"{h} voltou à fileira da página — a guia é só das oito cores de jogador")
@@ -803,10 +803,13 @@ def test_os_tres_tons_sairam_dos_quatro_controles():
     assert len(crus) == 8, crus
     assert bancada.count('class="tom') == 4 * len(crus)
 
-    for n in range(1, 9):
-        assert "#{:02X}{:02X}{:02X}".format(*player_slot_color(n)) == crus[n - 1], (
-            "a guia deixou de começar pelas oito cores automáticas, e "
-            "`titulo_da_casa` numera as oito primeiras casas pela POSIÇÃO")
+    assert crus[0] == "#FFFFFF", "a primeira casa é o branco desde 19/10/2026"
+    assert pac.titulo_da_casa(1).startswith("Branco.")
+    for casa, n in enumerate((1, 2, 3, 4, 5, 7, 8), start=2):
+        assert "#{:02X}{:02X}{:02X}".format(*player_slot_color(n)) == crus[casa - 1], (
+            "a guia deixou de seguir as cores automáticas depois do branco")
+        assert pac.titulo_da_casa(casa).startswith(f"Cor do Player {n}."), (
+            "`titulo_da_casa` diz o número pelo tom da casa, não pela posição")
 
 
 def test_a_poda_da_guia_recusa_dizendo_o_que_nao_pode_podar():
