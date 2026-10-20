@@ -188,7 +188,7 @@ def _casos() -> list[tuple[str, tuple[int, int], str]]:
 def test_o_piso_vale_em_toda_vista_e_estado(navegador: Browser, nome: str,
                                             vista: tuple[int, int], estado: str) -> None:
     """Zero alvo abaixo de 24 px (a dica inclusive), zero letra abaixo de 12 px e nenhuma rolagem
-    nova."""
+    nova (D-2010-O-PISO-DE-24-PX-E-12-PX-VALE-NAS-ABAS-02-E-09)."""
     assert _problemas(navegador, nome, VARIANTES / f"{nome}.html", vista, estado) == [], (
         nome, vista, estado)
 
