@@ -61,7 +61,7 @@ FORMAS_LONGAS = frozenset({GUARDA, APARO, SOM_NO_CORPO})
 
 #: O que cada estilo pede da háptica (a tabela `S` da página de 19/10/2026): toda forma, inclusive
 #: o «Sem efeito» (o Retrô só soma o zumbido do jogo) e o Som no corpo, contínuo (Corrida e
-#: Simulação). O Adulto não está aqui: ele toca o Toque, e a extensão Lovense é quem o muda.
+#: Simulação). O estilo que não está aqui toca o Toque.
 POR_ESTILO: dict[str, str] = {
     "fps": TOQUE,
     "acao": IMPACTO,  # (noqa-acento): chave

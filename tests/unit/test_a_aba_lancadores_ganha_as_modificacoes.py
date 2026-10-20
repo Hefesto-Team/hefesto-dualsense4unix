@@ -144,6 +144,27 @@ def test_a_aba_e_as_janelas_cabem_sem_rolagem_vertical(navegador, larg, alt) -> 
         pg.close()
 
 
+
+@pytest.mark.parametrize(("larg", "alt"), LARGURAS)
+def test_a_janela_da_extensao_com_tres_grupos_vai_em_duas_colunas(navegador, larg, alt) -> None:
+    """D-2010-A-JANELA-DA-EXTENSAO-COM-TRES-GRUPOS-VAI-EM-DUAS-COLUNAS: numa coluna só, o manifesto
+    de quatro grupos passava por baixo do Cancelar e do Guardar. MORDIDA: tire a regra
+    ``.ky-grade:has(> .ac-card:nth-child(3))`` do mockup e a grade volta a uma coluna."""
+    pg = navegador.new_page(viewport={"width": larg, "height": alt})
+    try:
+        pg.goto(f"{MOCKUP.as_uri()}#modificacao")  # (noqa-acento: âncora do HTML)
+        m = pg.evaluate("""() => { const j = document.getElementById('mod-janela');
+          const g = j.querySelector('.ky-grade');
+          const c = j.querySelector('.tn-corpo').getBoundingClientRect();
+          return {cartoes: g.querySelectorAll(':scope > .ac-card').length,
+                  colunas: getComputedStyle(g).gridTemplateColumns.split(' ').length,
+                  fundo: Math.max(...[...g.children].map(e => e.getBoundingClientRect().bottom)),
+                  corpo: c.bottom}; }""")
+        assert m["cartoes"] >= 3, m
+        assert m["colunas"] == 2 and m["fundo"] <= m["corpo"] + 1, m
+    finally:
+        pg.close()
+
 # -- O produto: o pacote liga a aba ao registro das modificações ---------------------------------
 #
 # Tudo em ``tmp_path``: o registro, o código, os dados e a pasta de origem são de mentira, e a Steam
@@ -727,7 +748,8 @@ def test_o_mais_da_janela_nao_abre_o_menu_da_linha_atras_dela(lar, ctx, monkeypa
 
 def test_a_chave_desligada_tira_os_jogos_daquele_lancador_da_semeadura(
         casa, tmp_path, monkeypatch) -> None:
-    """O jogo do lançador desligado não ganha perfil nem entra na marca: religar o semeia."""
+    """D-1910-CADA-JOGO-GANHA-O-PERFIL-POR-LANCADOR: o jogo do lançador desligado não ganha perfil
+    nem entra na marca: religar o semeia."""
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
     from hefesto_dualsense4unix.integrations import jogos_locais
     from hefesto_dualsense4unix.profiles import loader
