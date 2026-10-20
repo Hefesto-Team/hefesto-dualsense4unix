@@ -122,6 +122,15 @@
   .op3.gravar{grid-column:1 / -1;justify-content:center;border-color:var(--red);color:var(--red);font-weight:600}
   .op3.gravar .ponto{width:9px;height:9px;border-radius:50%;background:var(--red)}
   .op3.gravar.ouvindo{background:rgba(255,85,85,.12)}
+  .op3.gravar[data-gravando="sim"]{background:rgba(255,85,85,.12)}
+  .seq-grade{grid-template-columns:repeat(2,1fr)}
+  .seq-passos{grid-column:1 / -1;display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-height:42px;padding:6px 10px;border-radius:8px;
+    border:1px dashed var(--border-forte);background:var(--app-bg)}
+  .seq-p{padding:4px 10px;border-radius:6px;border:1px solid var(--purple);color:var(--fg);font-size:12px}
+  .seq-t{font-size:11px;color:var(--texto-mudo);font-family:'JetBrains Mono',monospace}
+  .seq-campo{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--texto-suave)}
+  .seq-campo select{flex:1;min-width:0;height:34px;border-radius:7px;border:1px solid var(--border-forte);background:var(--app-bg);color:var(--fg);font:12px var(--f)}
+  .seq-tocar{grid-column:1 / -1;justify-content:center}
   .sel2-rod{display:flex;justify-content:flex-end}
   .sel2-rod .op3{height:32px}
   .mc-cursor{display:flex;align-items:center;gap:12px;padding:10px 20px;border-top:1px solid var(--border-sutil);flex:none}
@@ -1075,7 +1084,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       </div>
       <div class="sel2" hidden role="dialog" aria-label="O que o botão faz">
         <div class="sel2-topo"><span class="sel2-tit"><span class="sel2-b">Cruz</span> vira</span>
-          <div class="seg2" role="tablist"><button class="on" data-aba="controle">Controle</button><button data-aba="mouse">Mouse</button><button data-aba="teclado">Teclado</button></div>
+          <div class="seg2" role="tablist"><button class="on" data-aba="controle">Controle</button><button data-aba="mouse">Mouse</button><button data-aba="teclado">Teclado</button><button data-aba="sequencia">Sequência</button></div>
           <button class="sel2-x" aria-label="Fechar">×</button></div>
         <div class="sel2-grade" data-aba="controle"><button class="op3" data-v="troca:cross" data-gesto="mapa-escolher"><svg width="18" height="18" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
 
@@ -1143,6 +1152,13 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 </svg><span>Share</span></button></div>
         <div class="sel2-grade" data-aba="mouse" hidden><button class="op3 txt" data-v="acao:BTN_LEFT" data-gesto="mapa-escolher"><span>Botão esquerdo</span></button><button class="op3 txt" data-v="acao:BTN_RIGHT" data-gesto="mapa-escolher"><span>Botão direito</span></button><button class="op3 txt" data-v="acao:BTN_MIDDLE" data-gesto="mapa-escolher"><span>Botão do meio</span></button><button class="op3 txt" data-v="acao:__CURSOR__" data-gesto="mapa-escolher"><span>Movimento do cursor</span></button><button class="op3 txt" data-v="acao:__ROLAGEM__" data-gesto="mapa-escolher"><span>Rolagem</span></button></div>
         <div class="sel2-grade" data-aba="teclado" hidden><button class="op3 gravar"><span class="ponto"></span><span>Gravar tecla</span></button><button class="op3 txt" data-v="acao:KEY_ENTER" data-gesto="mapa-escolher"><span>Enter</span></button><button class="op3 txt" data-v="acao:KEY_ESC" data-gesto="mapa-escolher"><span>Esc</span></button><button class="op3 txt" data-v="acao:KEY_SPACE" data-gesto="mapa-escolher"><span>Espaço</span></button><button class="op3 txt" data-v="acao:KEY_BACKSPACE" data-gesto="mapa-escolher"><span>Backspace</span></button><button class="op3 txt" data-v="acao:KEY_DELETE" data-gesto="mapa-escolher"><span>Delete</span></button><button class="op3 txt" data-v="acao:KEY_TAB" data-gesto="mapa-escolher"><span>Tab</span></button><button class="op3 txt" data-v="acao:KEY_LEFTCTRL" data-gesto="mapa-escolher"><span>Ctrl</span></button><button class="op3 txt" data-v="acao:KEY_LEFTSHIFT" data-gesto="mapa-escolher"><span>Shift</span></button><button class="op3 txt" data-v="acao:KEY_LEFTALT+KEY_TAB" data-gesto="mapa-escolher"><span>Alt + Tab</span></button><button class="op3 txt" data-v="acao:KEY_LEFTMETA" data-gesto="mapa-escolher"><span>Super</span></button><button class="op3 txt" data-v="acao:KEY_SYSRQ" data-gesto="mapa-escolher"><span>PrintScreen</span></button><button class="op3 txt" data-v="acao:KEY_F11" data-gesto="mapa-escolher"><span>F11</span></button></div>
+        <div class="sel2-grade seq-grade" data-aba="sequencia" hidden>
+          <button class="op3 gravar seq-grava" data-gesto="mapa-sequencia-gravar" data-gravando="" data-campo="seq-gravando" data-hef-alvo="atributo" data-hef-atributo="data-gravando"><span class="ponto"></span><span data-campo="seq-rotulo" data-hef-alvo="texto">Gravar a sequência</span></button>
+          <div class="seq-passos" aria-label="A sequência gravada" data-campo="seq-passos" data-hef-alvo="html"><span class="seq-p">Cruz</span><span class="seq-t">80 ms</span><span class="seq-p">Círculo</span><span class="seq-t">120 ms</span><span class="seq-p">R1</span><span class="seq-t">60 ms</span><span class="seq-p">Cima</span></div>
+          <label class="seq-campo">Ao apertar<select data-gesto="mapa-sequencia-jeito" data-campo="seq-jeito" data-hef-alvo="valor"><option value="uma_vez" selected>Toca uma vez</option><option value="repete">Repete enquanto eu segurar</option><option value="alterna">Liga e desliga</option></select></label>
+          <label class="seq-campo">Ritmo<select data-gesto="mapa-sequencia-ritmo" data-campo="seq-ritmo" data-hef-alvo="valor"><option value="gravado" selected>O gravado</option><option value="rapido">Mais rápido</option><option value="devagar">Mais devagar</option></select></label>
+          <button class="op3 txt seq-tocar" data-gesto="mapa-sequencia-tocar"><span>Tocar para ouvir</span></button>
+        </div>
         <div class="sel2-rod"><button class="op3 txt limpar" data-v="sem" data-gesto="mapa-escolher"><span>Sem mudança</span></button></div>
       </div>
     </div>
@@ -1211,7 +1227,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 (() => {
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const mc = $('.mc'), pop = $('.sel2'), ds = $('svg.ds'), nome = $('#nome');
-  const captura = $('#mapa-captura'), gravar = $('.op3.gravar', pop);
+  const captura = $('#mapa-captura'), gravar = $('.op3.gravar:not(.seq-grava)', pop), grava_seq = $('.seq-grava', pop);
   const PADRAO = {"1": [3], "2": [2, 4], "3": [1, 3, 5], "4": [1, 2, 4, 5]};
   const ROTULO = gravar.querySelector('span:last-child').textContent;
   let linha = null, ouvindo = false, soModificador = null;
@@ -1229,8 +1245,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     $$('.op3', pop).forEach(o => o.classList.toggle('on', !!atual && o.dataset.v === atual));
     const troca = b.dataset.troca === 'sim';
     $('.seg2 [data-aba="controle"]', pop).hidden = !troca;
+    $('.seg2 [data-aba="sequencia"]', pop).hidden = !troca;
     const em = aba => !!$(`.sel2-grade[data-aba="${aba}"] .op3[data-v="${atual}"]`, pop);
-    mostra(atual.startsWith('troca:') && troca ? 'controle' : em('mouse') ? 'mouse' : atual && !em('controle') ? 'teclado' : troca ? 'controle' : 'mouse');
+    mostra(atual.startsWith('sequencia:') && troca ? 'sequencia' : atual.startsWith('troca:') && troca ? 'controle' : em('mouse') ? 'mouse' : atual && !em('controle') ? 'teclado' : troca ? 'controle' : 'mouse');
     pop.hidden = false;
   };
   /* A linha escolhida só fica acesa enquanto o seletor dela está aberto: fechar manda `mapa-botao` sem
@@ -1305,9 +1322,16 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   $('.seg2', pop).addEventListener('click', e => { const t = e.target.closest('button'); if (t) mostra(t.dataset.aba); });
   $('.sel2-x', pop).addEventListener('click', fecha);
   gravar.addEventListener('click', () => escuta(!ouvindo));
+  /* a gravação da sequência é do controle: o botão só vira «Parar» até a página repintar */
+  const ROTULO_SEQ = grava_seq.querySelector('span:last-child').textContent;
+  grava_seq.addEventListener('click', () => {
+    const on = grava_seq.dataset.gravando !== 'sim';
+    grava_seq.dataset.gravando = on ? 'sim' : '';
+    grava_seq.querySelector('span:last-child').textContent = on ? 'Parar de gravar' : ROTULO_SEQ;
+  });
   pop.addEventListener('click', e => {
     const o = e.target.closest('.op3');
-    if (o && o !== gravar) fecha();
+    if (o && o !== gravar && !o.closest('.seq-grade')) fecha();
   });
 
   /* o controle escolhido pinta o casco, os cinco pontos do jogador e a barra de luz do desenho */
