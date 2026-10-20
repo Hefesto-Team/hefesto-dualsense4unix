@@ -64,6 +64,7 @@ from hefesto_dualsense4unix.core import formas_do_endereco as _formas
 from hefesto_dualsense4unix.daemon.subsystems.rumble import sem_dono_do_rumble
 from hefesto_dualsense4unix.integrations import storm_doctor as _exame
 from hefesto_dualsense4unix.integrations import vigia_do_jogo_novo as _vigia
+from hefesto_dualsense4unix.interface import folha_da_casa as _folha
 from hefesto_dualsense4unix.interface import onde as _onde
 from hefesto_dualsense4unix.interface import sistema as _tela
 from hefesto_dualsense4unix.utils import maquina as _maquina
@@ -127,33 +128,13 @@ TAMANHOS_DA_INTERFACE = (
     (150, "Espaçoso", "Letras e botões maiores ainda"),
 )
 CAMPO_DO_TAMANHO = "tamanho-da-interface"
+if tuple(v for v, _, _ in TAMANHOS_DA_INTERFACE) != _folha.PERCENTUAIS_DO_TAMANHO:
+    raise RuntimeError("os tamanhos da 09 divergem dos que a folha da casa aceita")
 #: O arquivo do tamanho, ao lado do interruptor das correções, na pasta de configuração.
-ARQUIVO_DO_TAMANHO = "interface_escala"
-
-
-def _arquivo_do_tamanho() -> Path:
-    """`interface_escala`, na mesma pasta de configuração do interruptor das correções."""
-    return _vigia.caminho_do_interruptor().parent / ARQUIVO_DO_TAMANHO
-
-
-def caminho_do_tamanho() -> Path:
-    """Onde a janela vigia o tamanho: o mesmo `interface_escala` que o gesto grava."""
-    return _arquivo_do_tamanho()
-
-
-def tamanho_da_interface() -> int:
-    """O percentual guardado (100, 125 ou 150). Sem arquivo, ou com outro valor: 100."""
-    padrao = TAMANHOS_DA_INTERFACE[0][0]
-    validos = {v for v, _, _ in TAMANHOS_DA_INTERFACE}
-    try:
-        texto = _arquivo_do_tamanho().read_text(encoding="utf-8")
-    except (OSError, ValueError):
-        return padrao
-    for linha in texto.splitlines():
-        palavra = linha.split("#", 1)[0].strip().rstrip("%").strip()
-        if palavra:
-            return int(palavra) if palavra.isdigit() and int(palavra) in validos else padrao
-    return padrao
+ARQUIVO_DO_TAMANHO = _folha.ARQUIVO_DO_TAMANHO
+_arquivo_do_tamanho = _folha.caminho_do_tamanho
+caminho_do_tamanho = _folha.caminho_do_tamanho
+tamanho_da_interface = _folha.tamanho_guardado
 
 
 def guardar_o_tamanho(valor: int) -> None:

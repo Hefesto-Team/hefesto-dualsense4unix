@@ -4,6 +4,34 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
+
+from hefesto_dualsense4unix.integrations import vigia_do_jogo_novo as _vigia
+
+#: Os percentuais que a 09 oferece, e o arquivo onde ela os guarda. Moram aqui, e não na 09, porque a
+#: janela precisa ler o tamanho ANTES de pedir a página, e importar o pacote da 09 traz as dez abas.
+PERCENTUAIS_DO_TAMANHO = (100, 125, 150)
+ARQUIVO_DO_TAMANHO = "interface_escala"
+
+
+def caminho_do_tamanho() -> Path:
+    """O `interface_escala`, na mesma pasta de configuração do interruptor das correções."""
+    return _vigia.caminho_do_interruptor().parent / ARQUIVO_DO_TAMANHO
+
+
+def tamanho_guardado() -> int:
+    """O percentual guardado (100, 125 ou 150). Sem arquivo, ou com outro valor: 100."""
+    padrao = PERCENTUAIS_DO_TAMANHO[0]
+    try:
+        texto = caminho_do_tamanho().read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        return padrao
+    for linha in texto.splitlines():
+        palavra = linha.split("#", 1)[0].strip().rstrip("%").strip()
+        if palavra:
+            ok = palavra.isdigit() and int(palavra) in PERCENTUAIS_DO_TAMANHO
+            return int(palavra) if ok else padrao
+    return padrao
 
 #: (``daemon.reload``, medido em 01/09) e nenhuma das dez abas tinha estado "em
 #: ``.hef-sem-item`` É O BLOCO DO DESENHO QUE HOJE NÃO TEM ITEM — 19/09/2026,

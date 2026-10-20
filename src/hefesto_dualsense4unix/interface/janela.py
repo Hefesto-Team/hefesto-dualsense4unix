@@ -22,6 +22,8 @@ from hefesto_dualsense4unix.app import theme as tema  # noqa: E402
 from hefesto_dualsense4unix.interface.folha_da_casa import (  # noqa: E402
     CLASSE_DA_ESPERA,
     FOLHA_DA_CASA,
+    caminho_do_tamanho,
+    tamanho_guardado,
 )
 from hefesto_dualsense4unix.mods import tema as _tema_das_mods  # noqa: E402
 from hefesto_dualsense4unix.utils import identidade as _identidade  # noqa: E402
@@ -231,14 +233,12 @@ TAMANHO_PADRAO = 100
 def tamanho_da_interface() -> int:
     """O percentual guardado em `interface_escala` (100, 125 ou 150), lido de quem o grava.
 
-    A aba Sistema é a dona do arquivo e do valor (`a09_sistema.tamanho_da_interface`): aqui só se
-    pergunta, sem segundo campo e sem segundo botão. Se a pergunta falhar, a janela abre no
+    A aba Sistema grava o arquivo; quem o lê é a folha da casa (`folha_da_casa.tamanho_guardado`),
+    que não traz as dez abas para dentro da abertura. Se a pergunta falhar, a janela abre no
     tamanho de hoje e o diário diz por quê; zoom que não aplicou nunca derruba a tela.
     """
     try:
-        from hefesto_dualsense4unix.interface.pacotes import a09_sistema
-
-        return int(a09_sistema.tamanho_da_interface())
+        return int(tamanho_guardado())
     except Exception as erro:  # a janela segue aberta no tamanho de hoje, e o diário conta
         print(
             f"[janela] tamanho da interface: não li o arquivo ({erro!r}); fico em "
@@ -251,9 +251,7 @@ def tamanho_da_interface() -> int:
 def arquivo_do_tamanho() -> pathlib.Path | None:
     """O caminho do `interface_escala`, ou `None` se quem o conhece não respondeu."""
     try:
-        from hefesto_dualsense4unix.interface.pacotes import a09_sistema
-
-        return pathlib.Path(a09_sistema.caminho_do_tamanho())
+        return pathlib.Path(caminho_do_tamanho())
     except Exception as erro:
         print(f"[janela] tamanho da interface: sem arquivo para vigiar ({erro!r})", file=sys.stderr)
         return None
