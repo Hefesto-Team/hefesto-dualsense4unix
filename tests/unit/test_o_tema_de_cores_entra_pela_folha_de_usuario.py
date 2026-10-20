@@ -72,7 +72,12 @@ def test_a_casa_de_hoje_passa_na_propria_regua_e_o_tema_valido_sai_importante() 
     casa = tm.tokens_da_casa(TOPO)
     assert casa == {k: v for k, v in tm.tokens_da_casa().items() if k in casa}, (
         "a página publicada e o topo da casa dizem cores diferentes")
-    assert min(tm.contraste(casa[t], casa[f]) for t in tm.TEXTOS for f in tm.FUNDOS) >= 4.5
+    pintados = tm.valores_pintados(casa, {}, tm.apelidos_da_casa())
+    assert pintados["--rot-campo"] == casa["--green"], "o rótulo da casa é o verde"
+    assert min(tm.contraste(pintados[t], pintados[f])
+               for t in tm.TEXTOS for f in tm.FUNDOS) >= tm.LIMIAR_DO_CONTRASTE
+    assert min(tm.contraste(pintados[t], pintados[f])
+               for t in tm.ACENTOS for f in tm.FUNDOS) >= tm.LIMIAR_DO_ACENTO
     aceito = tm.validar(TEMA_VALIDO, casa=casa)
     assert aceito.tokens == {"--c-teclado": "#00e5ff", "--sala-fone": "#00c853",
                              "--panel": "#1e1f29"}
@@ -80,6 +85,40 @@ def test_a_casa_de_hoje_passa_na_propria_regua_e_o_tema_valido_sai_importante() 
                             "!important;--panel:#1e1f29 !important;}")
     assert not tm.PLASTICOS & tm.TOKENS_DA_CASA
     assert set(tm.tokens_da_casa(TOPO)) >= tm.PLASTICOS, "o plástico da casa mudou de nome"
+
+
+# --- o rótulo e os acentos: O-ROTULO-E-OS-ACENTOS-ENTRAM-NA-REGUA-DO-TEMA-01 ---------------
+
+#: O tema claro de fundos e textos, sem dizer os acentos: na casa de 20/10 ele passava, com o
+#: rótulo verde #50fa7b a 1,20:1 sobre o fundo claro.
+CLARO_SEM_ACENTOS = (":root{--app-bg:#eef0f5;--panel:#ffffff;--elevated:#f5f6fa;--fg:#1c1e29;"
+                     "--texto-suave:#383c4c;--texto-mudo:#545a70;--comment:#4a5486")
+#: Os acentos escuros do tema claro, sem o rótulo: ele segue o verde pelo apelido da casa.
+ACENTOS_ESCUROS = (";--green:#1d7a3c;--cyan:#006d85;--purple:#6a3dc2;--orange:#a35200;"
+                   "--pink:#ad2f6c;--red:#c01f2e;--yellow:#7a6400")
+
+
+def test_o_tema_claro_sem_os_acentos_e_recusado_pelo_rotulo() -> None:
+    with pytest.raises(tm.TemaRecusadoError) as recusa:
+        tm.validar(CLARO_SEM_ACENTOS + "}")
+    assert "«--rot-campo» sobre «--app-bg» dá 1,20:1" in recusa.value.frase, recusa.value.frase
+
+
+def test_o_acento_claro_sobre_o_fundo_claro_e_recusado_com_o_piso_do_acento() -> None:
+    # o rótulo e o verde escuros passam; o amarelo da casa fica, e é ele o pior par
+    with pytest.raises(tm.TemaRecusadoError) as recusa:
+        tm.validar(CLARO_SEM_ACENTOS + ";--green:#1d7a3c}")
+    frase = recusa.value.frase
+    assert "«--yellow» sobre «--app-bg»" in frase and "3,00:1" in frase, frase
+
+
+def test_o_tema_claro_com_os_acentos_escuros_liga_e_o_rotulo_segue_o_verde() -> None:
+    aceito = tm.validar(CLARO_SEM_ACENTOS + ACENTOS_ESCUROS + "}")
+    assert "--rot-campo" not in aceito.tokens, "o tema não disse o rótulo"
+    pintados = tm.valores_pintados(tm.tokens_da_casa(), aceito.tokens, tm.apelidos_da_casa())
+    assert pintados["--rot-campo"] == "#1d7a3c", "o rótulo pinta com o verde do tema"
+    assert tm.apelidos_do_root(":root{--a:var(--b);--c:#fff;--d:var( --e )}") == {
+        "--a": "--b", "--d": "--e"}
 
 
 # --- do manifesto ao tema ligado ----------------------------------------------------------

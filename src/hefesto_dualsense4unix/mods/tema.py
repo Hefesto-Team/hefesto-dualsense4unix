@@ -1,19 +1,10 @@
 """O tema de cores de uma modificação: troca tokens do ``:root``, e só se o texto continua legível.
 
-O produto põe por cima das páginas publicadas uma folha de usuário (``interface/janela.py``); o
-tema é uma segunda folha, depois dela, que só redefine cores. Nada além disso passa:
-
-* a folha é UM bloco ``:root{…}``, sem seletor, sem ``url()``, sem ``@import``: o tema não
-  esconde botão nem busca nada fora;
-* só os tokens de :data:`TOKENS_DA_CASA` e os das categorias da aba Conexões (``--c-<tipo>`` na
-  régua, ``--sala-<tipo>`` na sala); os plásticos (``--cosmic-red``…) ficam fora, porque a
-  identidade de cada controle vem do aparelho;
-* o valor é uma cor escrita por extenso (``#rrggbb``, ``rgb()``, ``rgba()``), nunca ``var()``;
-* cada texto de :data:`TEXTOS` contra cada fundo de :data:`FUNDOS` passa de 4,5:1, o limiar
-  medido em 30/08/2026 para texto pequeno. O reprovado não liga, e a frase diz o par e o número.
-
-Os valores da casa são lidos do ``:root`` da página publicada (:data:`PAGINA_DOS_TOKENS`): o tema
-que troca só o fundo é medido contra os textos de verdade.
+A folha é UM bloco ``:root{…}`` só com cores por extenso, dos tokens de :data:`TOKENS_DA_CASA` e das
+categorias da aba Conexões; os plásticos ficam fora. Cada texto de :data:`TEXTOS` passa de 4,5:1 e
+cada acento de :data:`ACENTOS` de 3:1 contra cada fundo de :data:`FUNDOS`, medidos com os valores da
+página publicada e os apelidos dela (``--rot-campo`` segue o ``--green``). O porquê está em
+``docs/research/o-porque-dos-modulos.md``, seção «O tema de cores».
 """
 from __future__ import annotations
 
@@ -31,13 +22,17 @@ LIMIAR_DO_CONTRASTE = 4.5
 #: O tema maior que isto não é um tema de cores.
 TAMANHO_MAXIMO = 16 * 1024
 
-TEXTOS = ("--fg", "--texto-suave", "--texto-mudo", "--comment")
+TEXTOS = ("--fg", "--texto-suave", "--texto-mudo", "--comment", "--rot-campo")
 FUNDOS = ("--app-bg", "--panel", "--elevated")
+#: As cores de destaque, que as páginas também usam como cor de texto (título, estado, botão).
+ACENTOS = ("--green", "--cyan", "--purple", "--orange", "--pink", "--red", "--yellow")
+#: O piso do acento: o da WCAG para componente e texto em negrito. A palavra ao lado do acento
+#: diz o mesmo que a cor, e na casa o pior acento (``--red`` sobre ``--elevated``) dá 4,34:1.
+LIMIAR_DO_ACENTO = 3.0
 
 #: Os tokens de cor do ``:root`` da casa que um tema pode trocar.
 TOKENS_DA_CASA = frozenset({
-    *TEXTOS, *FUNDOS, "--border-sutil", "--border-forte", "--cyan", "--green", "--orange",
-    "--pink", "--purple", "--red", "--yellow", "--sel-bg", "--rot-campo", "--linha",
+    *TEXTOS, *FUNDOS, *ACENTOS, "--border-sutil", "--border-forte", "--sel-bg", "--linha",
     "--rot-linha",
 })
 #: As categorias da aba Conexões: a cor de cada tipo na régua, na sala e na faixa do mapa.
@@ -49,6 +44,7 @@ PLASTICOS = frozenset({"--cosmic-red", "--nova-pink", "--starlight-blue", "--gal
 _COMENTARIO = re.compile(r"/\*.*?\*/", re.S)
 _BLOCO = re.compile(r"\s*:root\s*\{([^{}]*)\}\s*")
 _NOME = re.compile(r"--[a-z][a-z0-9_-]*")
+_APELIDO = re.compile(r"var\(\s*(--[a-z][a-z0-9_-]*)\s*\)")
 _HEX = re.compile(r"#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})")
 _RGB = re.compile(r"rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*"
                   r"(?:,\s*(0|1|0?\.\d+|1\.0+)\s*)?\)")
@@ -133,20 +129,51 @@ def tokens_da_casa(pagina: Path = PAGINA_DOS_TOKENS) -> dict[str, str]:
     return saida
 
 
-def tokens_do_root(texto: str) -> dict[str, str]:
-    """Os tokens de cor do primeiro ``:root`` de um texto com CSS (vazio, se não houver)."""
+def _declaracoes_do_root(texto: str) -> list[tuple[str, str]]:
     m = re.search(r":root\s*\{([^{}]*)\}", _COMENTARIO.sub("", texto))
     if m is None:
-        return {}
+        return []
+    pares = (declaracao.partition(":") for declaracao in m.group(1).split(";"))
+    return [(nome.strip(), valor.strip()) for nome, _, valor in pares
+            if _NOME.fullmatch(nome.strip())]
+
+
+def tokens_do_root(texto: str) -> dict[str, str]:
+    """Os tokens de cor do primeiro ``:root`` de um texto com CSS (vazio, se não houver)."""
+    return {nome: valor.lower() for nome, valor in _declaracoes_do_root(texto)
+            if cor(valor) is not None}
+
+
+def apelidos_do_root(texto: str) -> dict[str, str]:
+    """Os tokens do primeiro ``:root`` que são só ``var(--outro)``, com o token que seguem."""
     saida = {}
-    for declaracao in m.group(1).split(";"):
-        nome, _, valor = declaracao.partition(":")
-        if _NOME.fullmatch(nome.strip()) and cor(valor) is not None:
-            saida[nome.strip()] = valor.strip().lower()
+    for nome, valor in _declaracoes_do_root(texto):
+        m = _APELIDO.fullmatch(valor.lower())
+        if m:
+            saida[nome] = m.group(1)
     return saida
 
 
-def validar(folha: str, *, casa: dict[str, str] | None = None) -> TemaAceito:
+def apelidos_da_casa(pagina: Path = PAGINA_DOS_TOKENS) -> dict[str, str]:
+    """Os apelidos do ``:root`` da página publicada (o ``--rot-campo`` segue o ``--green``)."""
+    return apelidos_do_root(pagina.read_text(encoding="utf-8"))
+
+
+def valores_pintados(casa: dict[str, str], tokens: dict[str, str],
+                     apelidos: dict[str, str]) -> dict[str, str]:
+    """A cor que cada token pinta com o tema por cima: o apelido que o tema não diz segue o alvo."""
+    valores = {**casa, **tokens}
+    for _ in range(len(apelidos)):
+        soltos = {nome: valores[alvo] for nome, alvo in apelidos.items()
+                  if nome not in tokens and alvo in valores and valores.get(nome) != valores[alvo]}
+        if not soltos:
+            break
+        valores.update(soltos)
+    return valores
+
+
+def validar(folha: str, *, casa: dict[str, str] | None = None,
+            apelidos: dict[str, str] | None = None) -> TemaAceito:
     """Aceita o tema ou o recusa com :class:`TemaRecusadoError` (uma frase para a tela)."""
     if len(folha.encode("utf-8")) > TAMANHO_MAXIMO:
         raise TemaRecusadoError("O tema passa de 16 KB: um tema só troca cores.")
@@ -179,14 +206,16 @@ def validar(folha: str, *, casa: dict[str, str] | None = None) -> TemaAceito:
         tokens[nome] = valor.lower()
     if not tokens:
         raise TemaRecusadoError("O tema não troca cor nenhuma.")
-    _conferir_o_contraste(tokens, tokens_da_casa() if casa is None else casa)
+    _conferir_o_contraste(tokens, tokens_da_casa() if casa is None else casa,
+                          apelidos_da_casa() if apelidos is None else apelidos)
     folha_final = ":root{" + "".join(f"{k}:{v} !important;" for k, v in tokens.items()) + "}"
     return TemaAceito(tokens=tokens, folha=folha_final)
 
 
-def _conferir_o_contraste(tokens: dict[str, str], casa: dict[str, str]) -> None:
-    valores = {**casa, **tokens}
-    for nome in (*TEXTOS, *FUNDOS):
+def _conferir_o_contraste(tokens: dict[str, str], casa: dict[str, str],
+                          apelidos: dict[str, str]) -> None:
+    valores = valores_pintados(casa, tokens, apelidos)
+    for nome in (*TEXTOS, *FUNDOS, *ACENTOS):
         c = cor(valores.get(nome, ""))
         if c is None:
             raise TemaRecusadoError(f"Não sei a cor de «{nome}» na casa: o tema não liga.")
@@ -194,12 +223,13 @@ def _conferir_o_contraste(tokens: dict[str, str], casa: dict[str, str]) -> None:
             raise TemaRecusadoError(f"«{nome}» precisa ser uma cor opaca: o contraste do texto "
                                     "se mede sobre ela.")
     # a frase diz o PIOR par: é ele que a pessoa precisa consertar primeiro
-    razao, texto, fundo = min((contraste(valores[t], valores[f]), t, f)
-                              for t in TEXTOS for f in FUNDOS)
-    if razao < LIMIAR_DO_CONTRASTE:
-        raise TemaRecusadoError(
-            f"O texto ficaria ilegível: «{texto}» sobre «{fundo}» dá {_numero(razao)}, "
-            f"e o mínimo é {_numero(LIMIAR_DO_CONTRASTE)}.")
+    for nomes, limiar in ((TEXTOS, LIMIAR_DO_CONTRASTE), (ACENTOS, LIMIAR_DO_ACENTO)):
+        razao, texto, fundo = min((contraste(valores[t], valores[f]), t, f)
+                                  for t in nomes for f in FUNDOS)
+        if razao < limiar:
+            raise TemaRecusadoError(
+                f"O texto ficaria ilegível: «{texto}» sobre «{fundo}» dá {_numero(razao)}, "
+                f"e o mínimo é {_numero(limiar)}.")
 
 
 def folha_do_manifesto(bloco: dict[str, Any] | None, pasta: Path) -> str:
@@ -270,7 +300,9 @@ def tema_da_casa(lugares: Any = None) -> TemaDaCasa:
 
 
 __all__ = [
+    "ACENTOS",
     "FUNDOS",
+    "LIMIAR_DO_ACENTO",
     "LIMIAR_DO_CONTRASTE",
     "PLASTICOS",
     "TEXTOS",
@@ -278,6 +310,8 @@ __all__ = [
     "TemaAceito",
     "TemaDaCasa",
     "TemaRecusadoError",
+    "apelidos_da_casa",
+    "apelidos_do_root",
     "contraste",
     "cor",
     "folha_do_manifesto",
@@ -286,4 +320,5 @@ __all__ = [
     "tokens_da_casa",
     "tokens_do_root",
     "validar",
+    "valores_pintados",
 ]

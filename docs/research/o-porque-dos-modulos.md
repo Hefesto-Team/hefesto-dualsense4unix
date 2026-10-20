@@ -1584,3 +1584,28 @@ jogo (`marcas`) e passou a dizer QUAL jogo é, porque a extensão segue uma list
 recalculado só quando o arquivo do perfil muda. O jogo por controle ainda não existe (perfil e `appid_em_cena`
 são um por sessão), por isso o resolvedor padrão devolve o jogo da sessão e o `jogo_de` espera quem o souber.
 
+## O tema de cores (`mods/tema.py`), 20/10/2026
+
+`src/hefesto_dualsense4unix/mods/tema.py (docstring do módulo)`. A docstring de antes, com o rótulo e os acentos que entraram na régua (O-ROTULO-E-OS-ACENTOS-ENTRAM-NA-REGUA-DO-TEMA-01).
+
+~~~~text
+O tema de cores de uma modificação: troca tokens do ``:root``, e só se o texto continua legível.
+
+O produto põe por cima das páginas publicadas uma folha de usuário (``interface/janela.py``); o
+tema é uma segunda folha, depois dela, que só redefine cores. Nada além disso passa:
+
+* a folha é UM bloco ``:root{…}``, sem seletor, sem ``url()``, sem ``@import``: o tema não
+  esconde botão nem busca nada fora;
+* só os tokens de :data:`TOKENS_DA_CASA` e os das categorias da aba Conexões (``--c-<tipo>`` na
+  régua, ``--sala-<tipo>`` na sala); os plásticos (``--cosmic-red``…) ficam fora, porque a
+  identidade de cada controle vem do aparelho;
+* o valor é uma cor escrita por extenso (``#rrggbb``, ``rgb()``, ``rgba()``), nunca ``var()``;
+* cada texto de :data:`TEXTOS` (o rótulo de campo entre eles) contra cada fundo de :data:`FUNDOS`
+  passa de 4,5:1, o limiar medido em 30/08/2026 para texto pequeno; cada acento de
+  :data:`ACENTOS` passa de 3:1 (:data:`LIMIAR_DO_ACENTO`). O reprovado não liga, e a frase diz o
+  par e o número.
+
+Os valores da casa são lidos do ``:root`` da página publicada (:data:`PAGINA_DOS_TOKENS`): o tema
+que troca só o fundo é medido contra os textos de verdade. O apelido da casa (``--rot-campo``
+é ``var(--green)``) segue o token que ele nomeia, como o navegador pinta.
+~~~~
