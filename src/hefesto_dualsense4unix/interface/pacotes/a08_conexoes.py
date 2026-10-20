@@ -2095,7 +2095,7 @@ def acionador_guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     forma: dict[str, Any] = bruta if isinstance(bruta, dict) else {}
     controle = str(forma.get("acionador-quem") or r.controle)
     if not _CHAVE_DE_CONTROLE.match(controle):
-        raise ValueError(f"acionador-guardar: {controle!r} não é um controle da mesa")
+        raise ValueError(f"acionador-guardar: {controle!r} não é a chave de um controle")
     if not r.chave:
         raise ValueError("acionador-guardar: o aparelho não tem a chave do kernel")
     teclas: dict[str, str | None] = {str(c): b for c, _, b in r.teclas if b}
