@@ -1011,7 +1011,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "l2-pct": round((l2 or 0) / 255 * 100),
             "r2-pct": round((r2 or 0) / 255 * 100),
             CAMPO_DA_FORCA["l2"]: nivel_da_forca(l2),
-            CAMPO_DA_FORCA["r2"]: nivel_da_forca(r2),
+            CAMPO_DA_FORCA["r2"]: nivel_da_forca(r2), **_intensidade_da_coluna(p, uniq),
         }
         for sig, d in deste.items():
             col[f"modo-{sig}"] = d["modo"]
@@ -2027,7 +2027,7 @@ def _com_os_gatilhos(prof: Any, uniq: str, dos_lados: dict[str, Any]) -> Any:
             lados[lado] = TriggerConfig(**dos_lados[lado])
         elif lado in ja_escritos:
             lados[lado] = getattr(antes, lado)
-    novos = TriggersConfig(**lados)
+    novos = TriggersConfig(**lados, **_a_intensidade_que_fica(antes))
     if (antes is not None and antes == novos
             and antes.model_fields_set == novos.model_fields_set):
         return None
@@ -2035,14 +2035,111 @@ def _com_os_gatilhos(prof: Any, uniq: str, dos_lados: dict[str, Any]) -> Any:
     return prof.model_copy(update={"controllers": atuais})
 
 
+#: A «Intensidade do gatilho» (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-
+#: 01): o trilho de 0 a 200%, de 5 em 5, por controle (`aba03.GESTO_DA_INTENSIDADE`).
+GESTO_DA_INTENSIDADE = "intensidade-do-gatilho"
+CAMPO_DA_INTENSIDADE = "intensidade-do-gatilho"
+TETO_DA_INTENSIDADE = 200
+
+
+def _intensidade_no_perfil(p: dict[str, Any] | None, uniq: str) -> int:
+    """A intensidade daquele controle em porcento, lida do perfil; sem escolha, 100."""
+    alvo = _chave_no_perfil(uniq)
+    controles = (p or {}).get("controllers")
+    for chave, dele in (controles.items() if isinstance(controles, dict) else ()):
+        if not alvo or _chave_no_perfil(str(chave)) != alvo or not isinstance(dele, dict):
+            continue
+        seus = dele.get("triggers")
+        escala = seus.get("intensidade") if isinstance(seus, dict) else None
+        if isinstance(escala, (int, float)):
+            return round(float(escala) * 100)
+    return 100
+
+
+def _intensidade_da_coluna(p: dict[str, Any] | None, uniq: str) -> dict[str, Any]:
+    """Os dois campos do trilho de uma coluna viva: o cursor e o número ao lado.
+
+    O lugar vazio fica como o gerador o desenha (cursor no zero, travessão no número): a coluna
+    vazia só recebe `<select>` e a força (`test_o_lugar_vazio_recebe_desligado_e_nenhum`).
+    """
+    pct = _intensidade_no_perfil(p, uniq)
+    return {CAMPO_DA_INTENSIDADE: pct, f"{CAMPO_DA_INTENSIDADE}-pct": pct}
+
+
+def _a_intensidade_que_fica(antes: Any) -> dict[str, Any]:
+    """A intensidade já escrita, para o efeito novo não a apagar ao trocar o `TriggersConfig`."""
+    escala = getattr(antes, "intensidade", None)
+    return {} if escala is None else {"intensidade": escala}
+
+
+def _com_a_intensidade(prof: Any, uniq: str, pontos: int) -> Any:
+    """O perfil com a intensidade DESTE controle trocada, ou `None` se nada mudou.
+
+    100% não vira opinião (`None`): é o que o firmware faz sem o byte, e o dump do controle fica o
+    de antes. O efeito dos dois lados não muda: o trilho multiplica o que o estilo e o jogo
+    escolheram, e a chave é o `uniq` normalizado, como em :func:`_com_os_gatilhos`.
+    """
+    from hefesto_dualsense4unix.profiles.schema import ControllerOverrides, TriggersConfig
+
+    chave = uniq.replace(":", "").lower()
+    atuais = dict(prof.controllers or {})
+    dele = atuais.get(chave) or ControllerOverrides()
+    antes = dele.triggers
+    escala = None if pontos == 100 else pontos / 100
+    if (antes.intensidade if antes is not None else None) == escala:
+        return None
+    if antes is None:
+        novos = TriggersConfig.model_validate({"intensidade": escala})
+    else:
+        novos = antes.model_copy(update={"intensidade": escala})
+    atuais[chave] = dele.model_copy(update={"triggers": novos})
+    return prof.model_copy(update={"controllers": atuais})
+
+
+@gesto("03-gatilhos.html", GESTO_DA_INTENSIDADE, grava="_gravar_so_o_gatilho")
+def intensidade_do_gatilho(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """O trilho «Intensidade do gatilho» de UM controle: 0 a 200%, e grava na hora.
+
+    Ele não mexe no efeito: grava `controllers[uniq].triggers.intensidade` (a escala, 0 a 2) e
+    manda reaplicar, e o `ProfileManager` a publica no backend (`set_trigger_scales`). Até 100% ela
+    sai pelo byte de atenuação do firmware; acima, pelas forças do bloco, até o máximo do gatilho.
+    Vale também no Modo automático: o trilho multiplica o efeito do jogo, e não o veta.
+
+    O CLIQUE CHEGA DUAS VEZES (`change` e `click`, o mesmo valor), e a segunda é inócua: o perfil
+    já tem o número e :func:`_com_a_intensidade` devolve `None` sem gravar, como na 05.
+    """
+    uniq = _exigir_controle(o, "intensidade do gatilho")
+    bruto = str(o.get("valor") or "").strip()
+    if not bruto:
+        raise RuntimeError("Arraste o cursor da barra, em vez de clicar no número ao lado.")
+    try:
+        pontos = round(float(bruto))
+    except ValueError as erro:
+        raise RuntimeError(
+            f"a barra mandou {bruto!r}, que não é um número de porcentagem") from erro
+    if not 0 <= pontos <= TETO_DA_INTENSIDADE:
+        raise RuntimeError(
+            f"a intensidade vai de 0 a {TETO_DA_INTENSIDADE}%, e a barra mandou {pontos}%.")
+    nome = perfil.nome_do_ativo(ctx.state).strip()
+    if not nome:
+        raise RuntimeError(
+            "sem perfil ativo não há onde guardar a intensidade. Escolha um perfil na aba Perfis.")
+    loader = perfil._com_o_src()
+    novo = _com_a_intensidade(loader.load_profile(nome), uniq, pontos)
+    if novo is None:
+        return
+    _gravar_so_o_gatilho(novo, p)
+    perfil.reaplicar(nome, ctx, p)
+
+
 PONTE = {"trigger_set_detalhado", "trigger_reset_detalhado"}
 #: Vazio: os dois métodos que esta aba usa (`trigger.set` e `trigger.reset`) têm
 METODOS: set[str] = set()
 
 
-#: Os cinco gestos da aba do todo: `modo`, `imersao`, `criar-efeito`, `sentir` e o par
-#: «Modo automático | Modo personalizado» (`GESTO_DO_MODO`).
-PISO_DA_ABA = 5
+#: Os seis gestos da aba do todo: `modo`, `imersao`, `criar-efeito`, `sentir`, o par
+#: «Modo automático | Modo personalizado» (`GESTO_DO_MODO`) e o trilho da intensidade.
+PISO_DA_ABA = 6
 _UNIQ = "aa:bb:cc:00:00:01"
 _GUARDOU: tuple[str, list[str], dict[str, Any]] = (
     "chamar", ["launch_env.refresh"], {})

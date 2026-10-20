@@ -5584,7 +5584,8 @@ class PyDualSenseController(IController):
                 continue
             novo[alvo] = max(0.0, float(fator))
         with self._io_lock:
-            self._trocar_o_mapa_das_intensidades("_trigger_scale_by_uniq", novo)
+            self._trigger_scale_by_uniq: dict[str, float] = novo
+            self._empurrar_as_intensidades()
 
     def escala_do_gatilho_de(self, uniq: str) -> float | None:
         """A «Intensidade do gatilho» da peça ``uniq``, ou ``None`` (100%)."""

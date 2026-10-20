@@ -15,9 +15,10 @@ limpar o bit), troque os nibbles em `byte_de_reducao`, tire a divisão do motor 
 firmware, tire o `escalar_o_bloco_do_gatilho` do bloco cru do jogo, ou tire a chamada a
 `_empurrar_as_intensidades` de `set_trigger_scales` — cada uma reprova uma asserção.
 
-MORDIDAS DO DESENHO: volte o `TETO_DA_FORCA` da 05 a 100, ponha botões de degrau na «Força», tire
-a linha da 03 do desenho, troque o `data-papel` do trilho da 03 por `data-hef` (o trilho volta a só
-pintar), ponha uma palavra de firmware na dica, ou aumente o respiro da grade da 03.
+MORDIDAS DO DESENHO: volte o `TETO_DA_FORCA` da 05 a 100, ponha botões de degrau na «Força», tire a
+linha da 03 do desenho, troque o `data-papel` do trilho da 03 por `data-hef` (o trilho volta a só
+pintar), tire a linha da 03 da `camada.py`, tire o `_a_intensidade_que_fica` do `_com_os_gatilhos`,
+ponha uma palavra de firmware na dica, ou aumente o respiro da grade da 03.
 """
 from __future__ import annotations
 
@@ -115,14 +116,124 @@ def test_a_linha_da_03_fica_antes_do_l2_e_o_estilo_continua_escolhendo_o_efeito(
     assert d03.count('data-gesto="modo"') == 2 * n and d03.count('data-gesto="imersao"') == 2 * n
 
 
-def test_o_trilho_novo_nao_cria_gesto_sem_dono(d03: str) -> None:
-    """Gesto sem dono reprova `test_os_sem_dono_so_diminuem`: o trilho só pinta (`data-hef`)."""
-    from hefesto_dualsense4unix.interface import aba03
+def test_o_trilho_da_03_manda_o_gesto_e_tem_dono_e_camada(d03: str) -> None:
+    """O trilho da 03 manda `data-papel` (o gesto), e o gesto tem atendente e camada.
 
-    g = aba03.GESTO_DA_INTENSIDADE_QUE_ESPERA_O_PRODUTO
-    assert f'data-hef="{g}"' in d03
-    assert f'data-papel="{g}"' not in d03 and f'data-gesto="{g}"' not in d03, (
-        "o gesto novo ganhou endereço antes de ter atendente e camada")
+    Gesto sem dono reprova `test_os_sem_dono_so_diminuem`; gesto sem camada fica de fora do Nativo
+    sem ninguém decidir. A camada é a do jogo (`_J`), como o `modo` e a `imersao` da mesma aba.
+    """
+    from hefesto_dualsense4unix.interface import aba03
+    from hefesto_dualsense4unix.interface.pacotes import camada
+
+    g = aba03.GESTO_DA_INTENSIDADE
+    trilhos = _trilhos(d03, aba03.CAMPO_DA_INTENSIDADE)
+    assert trilhos and all(f'data-papel="{g}"' in t and "data-hef=" not in t for t in trilhos), (
+        "o trilho da intensidade voltou a só pintar: o arrasto não chega ao produto")
+    assert camada.CAMADA.get(("03-gatilhos.html", g)) == camada.CAMADA[("03-gatilhos.html", "modo")]
+
+
+@pytest.fixture
+def a03(monkeypatch):
+    """O pacote da 03 (carrega o GTK real), com o disco do perfil em memória."""
+    from tests.conftest import exigir_gi_real
+
+    exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
+    import pacotes  # noqa: F401  (registra os dez)
+    from pacotes import a03_gatilhos, perfil
+
+    from hefesto_dualsense4unix.profiles import loader
+    from hefesto_dualsense4unix.profiles.schema import Profile
+
+    disco: dict[str, object] = {"perfil": Profile(name="régua", match={"type": "any"})}
+    gravados: list[object] = []
+    reaplicados: list[str] = []
+
+    def _gravar(prof, **_):
+        gravados.append(prof)
+        disco["perfil"] = prof
+
+    monkeypatch.setattr(loader, "load_profile", lambda _nome: disco["perfil"], raising=False)
+    monkeypatch.setattr(loader, "save_profile", _gravar, raising=False)
+    monkeypatch.setattr(perfil, "reaplicar", lambda nome, *_a, **_k: reaplicados.append(nome))
+    a03_gatilhos.esquecer_o_rascunho()
+    yield a03_gatilhos, disco, gravados, reaplicados
+    a03_gatilhos.esquecer_o_rascunho()
+
+
+class _Ponte:
+    def __init__(self) -> None:
+        self.avulsas: list[str] = []
+
+    def chamar(self, metodo: str, **_) -> bool:
+        self.avulsas.append(metodo)
+        return True
+
+
+def test_o_arrasto_da_03_grava_a_intensidade_daquele_controle_e_reaplica(a03) -> None:
+    from pacotes import Contexto, gesto_da_pagina
+
+    from hefesto_dualsense4unix.profiles.schema import TriggersConfig
+
+    mod, disco, gravados, reaplicados = a03
+    fn = gesto_da_pagina("03-gatilhos.html", mod.GESTO_DA_INTENSIDADE)
+    assert fn is not None, "o trilho da 03 não tem dono"
+    ctx = Contexto(state={"active_profile": "régua"}, mesa=[], conectados=[], estados={})
+    ponte = _Ponte()
+
+    fn(ctx, {"uniq": "aa:bb:cc:00:00:01", "valor": "50"}, ponte)
+    dele = disco["perfil"].controllers["aabbcc000001"]  # type: ignore[attr-defined]
+    padrao = TriggersConfig()
+    assert dele.triggers.intensidade == 0.5 and dele.triggers.left == padrao.left, (
+        "o trilho grava só a escala, e o efeito do lado fica o que era")
+    assert reaplicados == ["régua"] and ponte.avulsas == ["launch_env.refresh"]
+
+    fn(ctx, {"uniq": "aa:bb:cc:00:00:01", "valor": "50"}, ponte)
+    assert len(gravados) == 1, "o segundo evento do mesmo arrasto (change e click) não regrava"
+
+    fn(ctx, {"uniq": "aa:bb:cc:00:00:01", "valor": "100"}, ponte)
+    volta = disco["perfil"].controllers["aabbcc000001"].triggers  # type: ignore[attr-defined]
+    assert volta.intensidade is None and "intensidade" not in volta.model_dump(), (
+        "100% é o firmware sem o byte: não vira opinião no perfil")
+
+    for ruim in ("205", "abc", ""):
+        with pytest.raises(RuntimeError):
+            fn(ctx, {"uniq": "aa:bb:cc:00:00:01", "valor": ruim}, ponte)
+    with pytest.raises((RuntimeError, ValueError)):
+        fn(ctx, {"valor": "50"}, ponte)
+
+
+def test_trocar_o_efeito_na_03_nao_apaga_a_intensidade(a03) -> None:
+    from hefesto_dualsense4unix.profiles.schema import Profile
+
+    mod, *_ = a03
+    prof = Profile.model_validate({"name": "régua", "match": {"type": "any"}, "controllers": {
+        "aabbcc000001": {"triggers": {"intensidade": 1.5}}}})
+    novo = mod._com_os_gatilhos(prof, "aa:bb:cc:00:00:01",
+                                {"left": {"mode": "Rigid", "params": [0, 180]}})
+    assert novo.controllers["aabbcc000001"].triggers.intensidade == 1.5
+
+
+def test_a_coluna_pinta_a_intensidade_lida_do_perfil(a03) -> None:
+    from pacotes import Contexto, perfil
+
+    mod, *_ = a03
+    uniq = "aa:bb:cc:00:00:01"
+    mesa = [{"pref": "p1", "jogador": 1, "uniq": uniq, "nome": "Régua", "via": "USB",
+             "cor": "starlight-blue", "mascara": "DualSense"}]
+    falso = {"uniq": uniq, "player": 1, "transport": "usb", "is_primary": True,
+             "inputs": {"l2_raw": 0, "r2_raw": 0}}
+    guardado = perfil.ativo
+    perfil.ativo = lambda _n: {  # type: ignore[assignment]
+        "triggers": {}, "controllers": {"aabbcc000001": {"triggers": {"intensidade": 1.5}}}}
+    try:
+        r = mod.pacote(Contexto(state={"active_profile": "régua"}, mesa=mesa,
+                                conectados=[falso], estados={}))
+    finally:
+        perfil.ativo = guardado  # type: ignore[assignment]
+    c = mod.CAMPO_DA_INTENSIDADE
+    assert r["colunas"][uniq][c] == 150 and r["colunas"][uniq][f"{c}-pct"] == 150
+    # o lugar vazio fica como o gerador o desenha: cursor no zero e travessão no número
+    assert not [k for pref, col in r["colunas"].items() if pref != uniq for k in col if c in k]
 
 
 def test_a_dica_de_cada_trilho_e_uma_frase_curta_sem_jargao() -> None:

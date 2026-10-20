@@ -109,11 +109,9 @@ DICA_DA_INTENSIDADE = ("Abaixo de 100% o efeito do gatilho fica mais fraco; acim
 CAMPO_DA_INTENSIDADE = "intensidade-do-gatilho"
 #: A intensidade do desenho, por controle, em porcento. É a mesma cena da «Força da vibração».
 INTENSIDADE_DA_CENA = {"p1": 120, "p2": 70}
-#: O gesto do trilho. Ainda NÃO tem atendente no produto (o pacote a03 e a camada são da segunda
-#: passagem, depois do OK do desenho): o trilho nasce com `data-hef`, que só pinta e não dispara
-#: clique, e vira `data-papel` no dia em que o pacote o atender. Enquanto isso o trilho desenha,
-#: mas não grava, e nenhuma régua da casa o conta como botão sem dono.
-GESTO_DA_INTENSIDADE_QUE_ESPERA_O_PRODUTO = "intensidade-do-gatilho"
+#: O gesto do trilho (`data-papel`): o pacote a03 o atende e grava a escala em
+#: `controllers[uniq].triggers.intensidade` (segunda passagem, 20/10/2026).
+GESTO_DA_INTENSIDADE = "intensidade-do-gatilho"
 #: Onde a linha entra na grade: `acima` (sob o chip de cada controle, antes do L2 e do R2; a
 #: recomendada, como a «Força da vibração» logo sob o «Modelo» da 05) ou `abaixo` (depois do R2).
 ONDE_ENTRA_A_INTENSIDADE = "acima"
@@ -425,9 +423,8 @@ def _forcas():
 def _celula_da_intensidade(c):
     """A linha de UM controle: o ícone, o trilho de 0 a 200, o número e o `%`.
 
-    O trilho é um `<input type=range>` como o da 05, e o `value` dele é o que o piloto lerá no
-    `change`. Sem atendente no produto ainda, ele leva `data-hef` (só pinta) e não `data-papel`
-    (ver :data:`GESTO_DA_INTENSIDADE_QUE_ESPERA_O_PRODUTO`). O lugar vazio tem a mesma estrutura e
+    O trilho é um `<input type=range>` como o da 05, e o `value` dele é o que o piloto lê no
+    `change` e manda ao gesto :data:`GESTO_DA_INTENSIDADE`. O lugar vazio tem a mesma estrutura e
     o travessão no número: o que ele não pode ter é um número afirmado.
     """
     vivo = c.get("conectado", True)
@@ -437,7 +434,7 @@ def _celula_da_intensidade(c):
             f'data-dica="O L2 e o R2 deste controle">{GLIFO_DA_INTENSIDADE}</span>'
             f'<input class="trilho arrasta" type="range" min="0" max="{TETO_DA_INTENSIDADE}" '
             f'step="{PASSO_DA_INTENSIDADE}" value="{pct}" '
-            f'data-hef="{GESTO_DA_INTENSIDADE_QUE_ESPERA_O_PRODUTO}" data-campo="{CAMPO_DA_INTENSIDADE}" '
+            f'data-papel="{GESTO_DA_INTENSIDADE}" data-campo="{CAMPO_DA_INTENSIDADE}" '
             f'data-hef-alvo="valor" title="{DICA_DA_INTENSIDADE}">'
             f'<span class="num" data-campo="{CAMPO_DA_INTENSIDADE}-pct">{TRAVESSAO if not vivo else pct}</span>'
             f'<span class="teto">%</span></div>')
@@ -704,9 +701,8 @@ def _conferir(doc):
                f"o trilho da intensidade não vai de 0 a {TETO_DA_INTENSIDADE}, de {PASSO_DA_INTENSIDADE} em "
                f"{PASSO_DA_INTENSIDADE}: {t}")
         exigir(f'title="{DICA_DA_INTENSIDADE}"' in t, "o trilho da intensidade perdeu a dica de uma frase")
-    exigir(f'data-papel="{GESTO_DA_INTENSIDADE_QUE_ESPERA_O_PRODUTO}"' not in corpo
-           and f'data-gesto="{GESTO_DA_INTENSIDADE_QUE_ESPERA_O_PRODUTO}"' not in corpo,
-           "o trilho da intensidade virou gesto no desenho: ele ainda não tem atendente nem camada")
+    exigir(all(f'data-papel="{GESTO_DA_INTENSIDADE}"' in t and "data-hef=" not in t for t in trilhos),
+           "o trilho da intensidade não manda o gesto: sem `data-papel` ele só pinta e não grava")
     exigir(corpo.count(f">{ROTULO_DA_INTENSIDADE}<") == 1, "o rótulo da intensidade não aparece uma vez só")
     exigir(len(re.findall(r'class="g2-int(?: off)?"', corpo)) == n, "a linha da intensidade perdeu um lugar")
     exigir(corpo.count(f'data-campo="{CAMPO_DA_INTENSIDADE}-pct">{TRAVESSAO}<') == len(vazios),
