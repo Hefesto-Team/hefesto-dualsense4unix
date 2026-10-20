@@ -12,7 +12,8 @@ AS MORDIDAS (rodadas em 07/10/2026 e devolvidas):
 
 * tirar o `data-campo="quem-joga"` do `identidade()` da `aba02.py` → a régua 1 reprova;
 * tirar o `.so-aberto{display:none}` do CSS → o nome aparece no cartão fechado (régua 2);
-* tirar o `max-width` do `.card-nome` aberto → o nome longo derruba a bateria para a 2ª linha (3);
+* tirar o `max-width` do `.card-nome` aberto deixou de reprovar com o piso (20/10/2026): o pior
+  caso cabe sem ele (régua 3, veja a docstring dela);
 * o pacote da 02 deixar de emitir `jogador` → o número vivo some (4);
 * a 08 voltar a ter uma `dono_na_linha` só dela → a identidade da função reprova (6);
 * a Calibrar voltar ao «Player {jogador}» → a régua 7 reprova;
@@ -197,8 +198,10 @@ def test_o_lugar_vazio_nao_mostra_o_nome(medido: dict[str, Any]) -> None:
 def test_o_nome_de_24_letras_nao_quebra_a_faixa(medido: dict[str, Any]) -> None:
     """O preço do nome: a faixa não ganha segunda linha, e a bateria fica onde estava.
 
-    MORDIDA: tirar o `max-width` do `.card-nome` aberto — com o nome de 24 letras e o plástico
-    mais longo da tabela a soma passa da largura, o `flex-wrap` derruba a bateria.
+    Sem mordida pelo CSS desde o piso (medido em 20/10/2026): o pior caso, 24 letras e o plástico
+    mais longo da tabela, mede 421 px e cabe na faixa a 1212 px mesmo sem o `max-width` do
+    `.card-nome` aberto, e sem o `overflow`/`nowrap` dele. O teto de 340 px virou folga; a régua
+    segue de comportamento, e reprova se um item da faixa crescer até a bateria cair de linha.
     """
     normal, pior = medido["normal"], medido["pior"]
     assert pior["alt"] == normal["alt"], f"a faixa cresceu: {normal['alt']} -> {pior['alt']}"
