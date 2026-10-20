@@ -339,6 +339,13 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
     "evento_comando": SecaoDireta(
         razao="Ver `evento`: o comando do «Meu comando», rodado pelo `eventos_do_perfil`."
     ),
+    "nome_do_jogo": SecaoDireta(
+        razao=(
+            "O-PERFIL-QUE-NASCE-NA-LANCADORES-DIZ-O-JOGO-E-LEVA-A-MASCARA-01: o nome que a aba "
+            "Lançadores passou na criação, lido só pelo campo «Nome do jogo» do editor. Nada "
+            "chega ao controle."
+        )
+    ),
     "match": SecaoDireta(
         razao="Critério de SELEÇÃO do perfil, não estado do controle."
     ),

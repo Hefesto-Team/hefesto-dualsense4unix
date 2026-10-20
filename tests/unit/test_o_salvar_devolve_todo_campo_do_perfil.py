@@ -1,7 +1,8 @@
 """O Salvar devolve todo campo do perfil que o rascunho não edita.
 
 Medido em 17/10/2026 (item 66 das pendências de 16/10): `DraftConfig.to_profile` não emitia
-`meus_toques`, `estilo`, `receita_do_tato`, `alvo`, `evento` nem `evento_comando`, e
+`meus_toques`, `estilo`, `receita_do_tato`, `alvo`, `evento` nem `evento_comando` (e, desde
+20/10/2026, o `nome_do_jogo` que a aba Lançadores grava), e
 os três Salvar que passam por ele (o do rodapé, o da Vibração e o da Controles) os apagavam do
 disco: um perfil com «Meus toques» ligado, ou com o estilo de jogo escolhido, saía do Salvar sem
 eles. O draft agora os leva da origem (`CAMPOS_QUE_O_RASCUNHO_SO_DEVOLVE`) e os devolve.
@@ -34,6 +35,7 @@ PERFIL = {
     "alvo": "eventos",
     "evento": "meu_comando",
     "evento_comando": "true",
+    "nome_do_jogo": "Jogo de emulador",
 }
 
 

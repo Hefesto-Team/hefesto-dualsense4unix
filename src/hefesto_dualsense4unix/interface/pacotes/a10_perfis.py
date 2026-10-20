@@ -76,6 +76,7 @@ from hefesto_dualsense4unix.profiles.simple_match import (
     PROCEDENCIA_DA_STEAM,
     PROCEDENCIA_DE_QUALQUER_JOGO,
     SEPARADOR_DA_PROCEDENCIA,
+    jogo_do_perfil,
 )
 
 from . import (
@@ -993,7 +994,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         if chave in editor:
             fora[f"editor.{chave.replace('_', '.')}"] = editor[chave]
     if "jogo" in editor:
-        fora["editor.jogo"] = _nome_no_campo(str(editor["jogo"] or ""), foto.nomes)
+        # a regra de várias janelas (o emulador) não diz o jogo: vale o nome que o perfil nasceu
+        # dizendo (`Profile.nome_do_jogo`), a mesma conta do editor e do que o gesto devolve.
+        dito = jogo_do_perfil(getattr(alvo, "match", None), getattr(alvo, "nome_do_jogo", None))
+        fora["editor.jogo"] = _nome_no_campo(dito or str(editor["jogo"] or ""), foto.nomes)
 
     alvo_do_editor = str(editor.get("alvo") or "")
     for valor in ALVOS_DO_PERFIL:
@@ -1872,6 +1876,8 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     if chave not in ("game", "steam_game", "janela"):
         chave = _forma_do_que_ela_escolheu(texto)
     prof.match = from_simple_choice(chave, texto, regra_do_disco=prof.match)
+    # a regra foi reescrita por ela: o nome de quando o perfil nasceu já não diz esta regra
+    prof.nome_do_jogo = None
     _gravar(prof, ctx, p)
     return _dizer(_agora_vale_em(prof, texto),
                   **{"editor.jogo": _nome_no_campo(simple_extra(prof.match) or texto, nomes)})
@@ -2046,8 +2052,48 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return _dizer(_nascer(ctx, p, regra, "Novo perfil"))
 
 
-def _nascer(ctx: Contexto, p: Any, regra: Any, base: str) -> str:
-    """O perfil novo no disco, já aberto no editor — o gravador dos dois caminhos."""
+def _o_modo_que_o_jogo_pede(regra: Any) -> Any:
+    """A seção `mode` com a máscara que o prontuário confirmou para o jogo da regra, ou `None`.
+
+    O produto só SABE a máscara de um jogo quando uma ponte foi confirmada nele
+    (`prontuario_dos_jogos.pontes_confirmadas`, por appid da Steam): é a tupla que o carimbo
+    guarda, e a máscara do carimbo vale para os quatro controles (`mode.gamepad_flavor` é do
+    perfil, cabo e rádio; a de uma peça só mora em `controllers`). Sem ponte de gamepad com
+    máscara, devolve `None` e o perfil segue sem opinião, o padrão que o daemon aplica.
+    """
+    from hefesto_dualsense4unix.integrations.prontuario_dos_jogos import pontes_confirmadas
+    from hefesto_dualsense4unix.profiles.schema import (
+        MatchCriteria,
+        ProfileModeConfig,
+        normalizar_gamepad_flavor,
+    )
+    from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
+
+    if not isinstance(regra, MatchCriteria):
+        return None
+    appids = [str(a) for a in map(steam_appid_from_wm_class, regra.window_class) if a is not None]
+    if not appids:
+        return None
+    pontes = pontes_confirmadas()
+    for appid in appids:
+        ponte = pontes.get(appid)
+        mascara = normalizar_gamepad_flavor(ponte.gamepad_flavor) if ponte is not None else None
+        if ponte is not None and ponte.kind == "gamepad" and mascara is not None:
+            return ProfileModeConfig(kind="gamepad", gamepad_flavor=mascara)
+    return None
+
+
+NOME_DO_PERFIL_NOVO = "Novo perfil"
+
+
+def _nascer(ctx: Contexto, p: Any, regra: Any, base: str, *, jogo: str | None = None) -> str:
+    """O perfil novo no disco, já aberto no editor — o gravador dos dois caminhos.
+
+    **Nasce dizendo o jogo e levando a máscara dele** (O-PERFIL-QUE-NASCE-NA-LANCADORES-DIZ-O-JOGO-
+    E-LEVA-A-MASCARA-01): `jogo` (ou, sem ele, o `base` que não é o nome de fábrica) vai para
+    `Profile.nome_do_jogo`, e o «Nome do jogo» do editor o mostra mesmo quando a regra tem várias
+    janelas; a máscara vem de :func:`_o_modo_que_o_jogo_pede` quando o prontuário a sabe.
+    """
     global _ESCOLHIDO
     from types import SimpleNamespace
 
@@ -2061,7 +2107,9 @@ def _nascer(ctx: Contexto, p: Any, regra: Any, base: str) -> str:
     nome = _nome_livre(base, todos)
     so_o_cache: Any = SimpleNamespace(_profiles_cache=todos)
     prioridade = ProfilesActionsMixin._prioridade_acima_dos_catch_all(so_o_cache)
-    _gravar(Profile(name=nome, match=regra, priority=prioridade), ctx, p)
+    dito = jogo if jogo is not None else (base if base != NOME_DO_PERFIL_NOVO else "")
+    _gravar(Profile(name=nome, match=regra, priority=prioridade, nome_do_jogo=dito or None,
+                    mode=_o_modo_que_o_jogo_pede(regra)), ctx, p)
     _ESCOLHIDO = nome
     return f"Perfil criado: {nome}"
 
@@ -2079,10 +2127,11 @@ def criar_para_o_jogo(ctx: Contexto, p: Any, *, classes: tuple[str, ...],
         regra: Any = from_simple_choice("steam_game", str(appid))
     else:
         regra = MatchCriteria(window_class=list(limpas))
+    jogo = nome_do_jogo.strip()
     try:
-        return _nascer(ctx, p, regra, nome_do_jogo.strip() or "Novo perfil")
+        return _nascer(ctx, p, regra, jogo or NOME_DO_PERFIL_NOVO, jogo=jogo)
     except ValueError:
-        return _nascer(ctx, p, regra, "Novo perfil")
+        return _nascer(ctx, p, regra, NOME_DO_PERFIL_NOVO, jogo=jogo)
 
 
 @gesto("10-perfis.html", "duplicar", grava="_gravar")

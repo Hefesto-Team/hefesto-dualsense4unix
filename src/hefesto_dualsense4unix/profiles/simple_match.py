@@ -298,6 +298,17 @@ def simple_extra(match: Match) -> str:
     return ""
 
 
+def jogo_do_perfil(match: Match | None, nome_do_jogo: str | None) -> str:
+    """O texto do «Nome do jogo» do editor: o que a regra diz sozinha, e senão o nome gravado.
+
+    `simple_extra` só devolve texto para a regra de UMA classe, UM processo ou um appid; a regra de
+    um emulador (várias janelas) ou de um título fica vazia. O nome que a aba Lançadores passou na
+    criação (`Profile.nome_do_jogo`) cobre esse vazio, sem inventar jogo onde a regra já diz um.
+    """
+    dito = simple_extra(match) if match is not None else ""
+    return dito or (nome_do_jogo or "").strip()
+
+
 def _detect_steam_appid(match: Match) -> str | None:
     """Appid quando o match é "um jogo da Steam", senão None.
 

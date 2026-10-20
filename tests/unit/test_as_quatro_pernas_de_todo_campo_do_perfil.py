@@ -376,7 +376,8 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
     },
     **{
         campo: {p: NaoSeAplica(_NAO_CHEGA) for p in PERNAS}
-        for campo in ("criado_em", "modificado_em", "alvo", "evento", "evento_comando")
+        for campo in ("criado_em", "modificado_em", "alvo", "evento", "evento_comando",
+                      "nome_do_jogo")
     },
     "controles_modo": {
         p: NaoSeAplica(

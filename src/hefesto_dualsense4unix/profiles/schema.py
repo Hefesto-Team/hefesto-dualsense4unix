@@ -1548,6 +1548,9 @@ class Profile(BaseModel):
     alvo: AlvoDoPerfil | None = None
     evento: EventoDoPerfil | None = None
     evento_comando: str | None = None
+    # O jogo com que o perfil nasceu (a Lançadores o passa); o editor o mostra quando a regra de
+    # janela não diz um jogo sozinha. None = o campo mostra o que a regra diz.
+    nome_do_jogo: str | None = None
 
     @model_serializer(mode="wrap")
     def _sem_ponte_a_chave_nem_aparece(
@@ -1562,7 +1565,7 @@ class Profile(BaseModel):
                 "analogicos",  # (noqa-acento) identificador ASCII
                 "cursor", "meus_toques",
                 "controles_modo", "criado_em", "modificado_em",
-                "alvo", "evento", "evento_comando",
+                "alvo", "evento", "evento_comando", "nome_do_jogo",
             ):
                 if dados.get(opcional) is None:
                     dados.pop(opcional, None)
@@ -1607,6 +1610,14 @@ class Profile(BaseModel):
         except ValueError as exc:
             raise ValueError(f"name não produz slug válido: {value!r}") from exc
         return value
+
+    @field_validator("nome_do_jogo", mode="before")
+    @classmethod
+    def _nome_do_jogo_limpo(cls, value: object) -> str | None:
+        """Texto aparado; vazio ou de outro tipo vira «sem nome», e o perfil carrega."""
+        if not isinstance(value, str):
+            return None
+        return value.strip() or None
 
     @field_validator("criado_em", "modificado_em", mode="before")
     @classmethod
@@ -2905,6 +2916,12 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         E_CONTRATO,
         "`None` = nenhum comando. É o texto que ela digita para o «Meu comando»; semear um "
         "comando seria mandar rodar algo que ela não escreveu.",
+    ),
+    "Profile.nome_do_jogo": Nascimento(
+        E_CONTRATO,
+        "`None` = o campo «Nome do jogo» mostra o que a regra de janela já diz. É o nome que a "
+        "aba Lançadores passou na criação; semear um nome no perfil antigo inventaria um jogo "
+        "que ela não escolheu.",
     ),
     "Profile.movimento": Nascimento(
         E_CONTRATO,
