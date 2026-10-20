@@ -556,3 +556,32 @@ def test_os_quatro_gestos_novos_tem_linha_na_camada(a08: Any) -> None:
     for nome in ("usar-como-botoes", "acionador-nova-tecla", "acionador-botao",
                  "acionador-guardar"):
         assert ("08-conexoes.html", nome) in camada.CAMADA, nome
+
+
+def test_o_tique_da_pagina_escreve_a_janela_do_acionador(a08: Any) -> None:
+    """Os quatro campos da janela saem com os da seção do rádio (o tique de 100 ms os escreve)."""
+    from hefesto_dualsense4unix.interface import aba08
+
+    campos = a08.campos_da_secao(aba08.CENA_DO_RADIO)
+    assert campos["acionador-titulo"] == "Acionador USB · usar como botões de"
+    assert ">Pedal<" in campos["acionador-teclas"] and ">L2<" in campos["acionador-teclas"]
+    assert 'selected>Cosmic Red' in campos["acionador-quem"]
+    assert campos["acionador-brilho"] == (
+        "#acionador #ac-cross,#acionador #ac-circle,#acionador #ac-l2"
+        "{filter:drop-shadow(0 0 1.2px #bd93f9) drop-shadow(0 0 2.4px #bd93f9)}")
+
+
+def test_a_tecla_que_perdeu_o_botao_sai_do_maquina_json(
+        a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    from hefesto_dualsense4unix.utils import maquina
+
+    maquina.gravar_maquina_com_descartes(_declarado().model_dump(exclude_none=True))
+    _cena(a08, monkeypatch, _declarado())
+    monkeypatch.setattr(a08, "_reler_a_declaracao", lambda: None)
+    ponte = _Ponte()
+    a08.usar_como_botoes(None, {"alvo": CHAVE}, ponte)
+    next(t for t in a08._RASCUNHO.teclas if t[0] == PEDAL)[2] = None
+    a08.acionador_guardar(None, {"forma": {}}, ponte)
+    assert ponte.chamadas[-1]["acionadores"][CHAVE]["teclas"] == {str(TECLA_1): "cross",
+                                                                  str(PEDAL): None}
+    assert maquina.carregar_maquina().acionadores[CHAVE].teclas == {str(TECLA_1): "cross"}
