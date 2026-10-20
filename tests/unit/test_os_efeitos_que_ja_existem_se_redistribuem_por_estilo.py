@@ -123,6 +123,7 @@ def test_a_receita_de_cada_estilo_e_a_da_tabela_da_pagina() -> None:
 
 
 def test_os_dois_lados_chegam_ao_perfil_e_a_imersao_dos_numeros_os_reconhece() -> None:
+    # D-2010-O-R2-E-O-L2-DO-ESTILO-SAO-RECEITAS-SEPARADAS
     """Régua 2: o R2 e o L2 são gravados cada um com a imersão do `Lado` dele.
 
     MORDIDA: `TriggersConfig(left=lado, right=lado)` de volta no `_com_o_estilo` reprova aqui.
@@ -167,6 +168,7 @@ def test_o_arco_carrega_como_acao_e_nao_esta_no_catalogo() -> None:
 
 
 def test_as_cores_seguem_distintas_com_souls_e_furtivo_e_a_luz_base_nao_as_iguala() -> None:
+    # D-2010-NASCEM-O-SOULS-RPG-E-O-FURTIVO
     """Régua 5: nenhuma unidade repete a cor de outra, e a base da luz leva a cor DE CADA UMA.
 
     MORDIDA: tire a linha do `souls` de `ESTILOS` (ou tire a cor do `escrever_o_efeito_da_luz`)
@@ -199,6 +201,7 @@ def test_as_cores_seguem_distintas_com_souls_e_furtivo_e_a_luz_base_nao_as_igual
 
 
 def test_o_terror_troca_o_piscar_pela_batida_e_nada_passa_do_teto() -> None:
+    # D-2010-O-TERROR-TROCA-O-PISCAR-PELA-BATIDA
     """Régua 6: o Terror não pisca (batimento na luz, Batida nos motores); nada passa de 3/s."""
     terror = ej.POR_CHAVE["terror"]
     assert terror.receita_invisivel is not None

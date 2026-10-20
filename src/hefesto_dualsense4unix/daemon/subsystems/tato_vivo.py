@@ -37,7 +37,6 @@ from hefesto_dualsense4unix.profiles.efeitos_de_imersao import (
     QUANDO_PRONTO,
     Imersao,
     Momento,
-    a_da_frente_com_tempo,
     ajustes_da_imersao,
     imersao_dos_numeros,
     momentos_no_modo,
@@ -1251,8 +1250,8 @@ def _plano_do_automatico(estilo: str, lado: str = LADO_DIREITO) -> PlanoDoGatilh
     """No Modo automático: a imersão com momentos que o estilo do jogo põe num dos lados.
 
     O ``Lado`` do estilo diz a imersão do gatilho (``R2`` e ``L2`` são receitas separadas); sem ela
-    vale a primeira da frente que tem momento no acionamento. O estilo que saiu do catálogo (o Arco)
-    vale pelo que o recebeu.
+    o lado fica no acionamento seco (o R2 do FPS é a Metralhadora, não a rajada que sobe). O estilo
+    que saiu do catálogo (o Arco) vale pelo que o recebeu.
     """
     from hefesto_dualsense4unix.profiles.estilos_de_jogo import chave_do_catalogo
 
@@ -1262,8 +1261,7 @@ def _plano_do_automatico(estilo: str, lado: str = LADO_DIREITO) -> PlanoDoGatilh
         return None
     dele = _lado_do_estilo(estilo, lado)
     chave = getattr(dele, "imersao", None)
-    imersao = (
-        POR_CHAVE_DE_IMERSAO.get(chave) if chave else a_da_frente_com_tempo(modo, estilo))
+    imersao = POR_CHAVE_DE_IMERSAO.get(chave) if chave else None
     if imersao is None or modo not in imersao.ajustes or not momentos_no_modo(imersao, modo):
         return None
     return PlanoDoGatilho(imersao, modo, estilo, ajustes_da_imersao(imersao, modo, estilo) or {},

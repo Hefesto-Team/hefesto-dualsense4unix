@@ -599,7 +599,6 @@ def test_o_perfil_de_chave_velha_por_controle_toca_em_cada_um_dos_quatro(numero:
 
 
 @pytest.mark.parametrize(("estilo", "lado", "chave", "modo"), [
-    ("fps", "direito", "rajada-que-sobe-sozinha", "Machine"),
     ("corrida", "esquerdo", "freio-abs-que-pulsa", "Resistance"),
     ("aventura", "direito", "corda-que-estica", "Bow"),
     ("esportes", "esquerdo", "pique-que-cansa", "Resistance"),
@@ -623,9 +622,14 @@ def test_o_automatico_toca_a_da_frente_do_estilo_no_acionamento_de_hoje(
 @pytest.mark.parametrize(("estilo", "lado"), [
     ("acao", "direito"), ("acao", "esquerdo"), ("arco", "direito"),  # (noqa-acento): chave
     ("corrida", "direito"), ("aventura", "esquerdo"), ("retro", "direito"),
+    ("fps", "direito"), ("simulacao", "direito"),
 ])
 def test_o_lado_sem_momento_no_estilo_nao_tem_plano(estilo: str, lado: str) -> None:
-    """Sem tempo na imersão do lado (ou sem imersão), o automático só escreve os números."""
+    """Sem tempo na imersão do lado (ou sem imersão), o automático só escreve os números.
+
+    MORDIDA: devolva o ``a_da_frente_com_tempo`` ao lado sem imersão e o R2 do FPS volta a tocar a
+    rajada que sobe sozinha, contra a página de 19/10/2026 (o R2 do FPS é a Metralhadora seca).
+    """
     assert tv._plano_do_automatico(estilo, lado) is None
 
 
