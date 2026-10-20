@@ -381,6 +381,16 @@ def test_o_maquina_json_guarda_o_acionador_pela_chave_sem_endereco() -> None:
     assert json.loads(doc.model_dump_json())["acionadores"][CHAVE]["controle"] == UNIQS[2]
 
 
+def test_dois_acionadores_iguais_em_portas_diferentes_sao_dois() -> None:
+    """Dois pedais do mesmo modelo (vendor, product e nome iguais) se separam pelo caminho físico.
+
+    MORDIDA: tire o caminho físico do resumo em ``chave_do_acionador``.
+    """
+    outro = chave_do_acionador(VENDOR, PRODUCT, NOME, "usb-0000:00:14.0-4/input0")
+    assert outro != CHAVE and outro.split(":")[:2] == CHAVE.split(":")[:2]
+    assert chave_do_acionador(VENDOR, PRODUCT, NOME, FISICO) == CHAVE
+
+
 # --- a tela: a linha, a janela e os gestos (desenho r3-08-14) ----------------------------------
 
 RAIZ = Path(__file__).resolve().parents[2]
