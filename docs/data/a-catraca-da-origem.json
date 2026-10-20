@@ -252,14 +252,14 @@
       "data": "2026-10-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1153637,
+      "piso": 1153650,
       "por_item": {
-        "docs": 119998,
+        "docs": 120002,
         "scripts": 114340,
         "src": 311447,
-        "tests": 607852
+        "tests": 607861
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +13 linhas (1153637 -> 1153650), pagas por Origem: D-2010-A-ACESSIBILIDADE-NAO-TIRA-NADA-DO-PAD-DO-JOGO; registrado no fecho, topo 69f1d0dfa7af",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -686,6 +686,12 @@
           "de": 1153379,
           "para": 1153710,
           "razao": "tamanho: +331 linhas (1153379 -> 1153710), pagas por Origem: D-2010-O-PISO-DE-24-PX-E-12-PX-VALE-NAS-ABAS-02-E-09; registrado no fecho, topo a65ebae85d04"
+        },
+        {
+          "data": "2026-10-20",
+          "de": 1153637,
+          "para": 1153650,
+          "razao": "tamanho: +13 linhas (1153637 -> 1153650), pagas por Origem: D-2010-A-ACESSIBILIDADE-NAO-TIRA-NADA-DO-PAD-DO-JOGO; registrado no fecho, topo 69f1d0dfa7af"
         }
       ],
       "unidade": "linhas",
