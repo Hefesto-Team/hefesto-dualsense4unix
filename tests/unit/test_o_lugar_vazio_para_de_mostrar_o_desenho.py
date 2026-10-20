@@ -203,7 +203,7 @@ def test_o_molde_nao_toca_o_desenho_da_vibracao(pacotes_mod):
     from hefesto_dualsense4unix.interface import onde
 
     doc = onde.pagina("05-vibracao.html", publicado=True).read_text(encoding="utf-8")
-    for endereco in ("testar", "parar", "forca", "desenho"):
+    for endereco in ("testar", "parar", "desenho"):
         assert (f'data-papel="{endereco}"' in doc
                 or f'data-hef="{endereco}"' in doc), (
             f"a página publicada não tem mais `{endereco}` — este teste virou "

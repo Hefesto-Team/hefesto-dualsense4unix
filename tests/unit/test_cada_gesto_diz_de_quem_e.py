@@ -103,6 +103,9 @@ SEM_BOTAO_NA_PAGINA = {
     # O «Parar tudo» só existe na janela da extensão que o declara no manifesto; a do desenho não
     # declara (a dos acessórios, que o trazia, saiu em 19/10/2026).
     ("07-lancadores.html", "parar-tudo-da-modificacao"),
+    # A «Força» da 05 virou só o trilho (20/10/2026); o gesto dos degraus sai pela
+    # O-GESTO-FORCA-DOS-DEGRAUS-DA-VIBRACAO-SAI-01.
+    ("05-vibracao.html", "forca"),
 }
 
 

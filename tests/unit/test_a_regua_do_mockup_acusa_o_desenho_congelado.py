@@ -213,7 +213,7 @@ def test_a_vibracao_publicada_nao_tem_data_gesto_e_a_regua_sabe():
         f"Se isso é intencional, esta régua fica mais fácil — mas o teste tem "
         f"de saber, porque a união com os registrados existe por causa disto.")
     papeis = {g.nome for g in regua._papeis_cravados(texto)}
-    assert {"forca", "testar", "parar"} <= papeis
+    assert {"testar", "parar"} <= papeis
 
 
 def test_a_regua_le_os_mesmos_enderecos_do_bootstrap():
