@@ -195,7 +195,10 @@ def _casos_do_piso() -> list[tuple[str, tuple[int, int], str]]:
 def test_a_02_e_a_09_estao_no_piso_em_toda_vista(
     navegador: Browser, geradas: pathlib.Path, aba: str, vista: tuple[int, int], estado: str
 ) -> None:
-    """Zero alvo abaixo de 24 px (a dica inclusive) e zero letra abaixo de 12 px."""
+    """Zero alvo abaixo de 24 px (a dica inclusive) e zero letra abaixo de 12 px.
+
+    A prova da D-2010-O-PISO-DE-24-PX-E-12-PX-VALE-NAS-ABAS-02-E-09.
+    """
     medida = _medir(navegador, geradas / f"{aba}.html", vista, estado)
     assert _problemas(medida) == [], (aba, vista, estado)
 
