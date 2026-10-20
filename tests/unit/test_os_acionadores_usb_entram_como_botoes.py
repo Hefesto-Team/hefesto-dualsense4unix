@@ -558,6 +558,36 @@ def test_o_aparelho_desligado_recusa_esperar_a_tecla(
         a08.acionador_nova_tecla(None, {}, None)
 
 
+def test_o_aparelho_que_o_sistema_nao_deixa_ler_falha_o_clique_e_nao_fica_esperando(
+        a08: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Sem permissão no ``/dev/input`` o «Esperar a próxima tecla» falha no clique, e não numa
+    thread calada que deixava o botão parecer morto.
+
+    MORDIDA: devolva a abertura do nó para dentro da ``_esperar_a_tecla``.
+    """
+    _cena(a08, monkeypatch, _declarado())
+    monkeypatch.setattr(a08, "_RAIZ_DAS_ENTRADAS", str(_sys_de_mentira(tmp_path / "input")))
+
+    def recusar(evento: str) -> Any:
+        raise PermissionError(13, "Permission denied", f"/dev/input/{evento}")
+
+    monkeypatch.setattr(a08, "_ABRIR_O_EVENTO", recusar)
+    a08.usar_como_botoes(None, {"alvo": CHAVE}, None)
+    with pytest.raises(RuntimeError, match="não deixa o Hefesto ler"):
+        a08.acionador_nova_tecla(None, {}, None)
+    assert not a08._RASCUNHO.esperando
+
+
+def test_sem_a_cor_lida_os_controles_se_separam_pela_via(a08: Any) -> None:
+    """Dois DualSense sem cor lida nem declarada não viram duas opções «DualSense» iguais."""
+    ctx = SimpleNamespace(mesa=[
+        {"uniq": MACS[0], "nome": "DualSense", "cor": "", "via": "USB"},
+        {"uniq": MACS[1], "nome": "DualSense", "cor": "", "via": "BT"},
+        {"uniq": MACS[2], "nome": "White", "cor": "white", "via": "BT"}])
+    assert a08._quem_recebe_da_mesa(ctx, MaquinaConfig()) == [
+        (UNIQS[0], "DualSense · USB"), (UNIQS[1], "DualSense · BT"), (UNIQS[2], "White")]
+
+
 def test_tirar_todas_as_teclas_esquece_o_acionador(
         a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     _cena(a08, monkeypatch, _declarado())

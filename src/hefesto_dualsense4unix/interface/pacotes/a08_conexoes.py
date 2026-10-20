@@ -2092,10 +2092,18 @@ def acionador_nova_tecla(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
     evento = _evento_do_acionador(r.chave)
     if evento is None:
         raise RuntimeError("o aparelho não está ligado nesta máquina")
+    from hefesto_dualsense4unix.utils.maquina import abrir_o_aparelho_de_entrada
+
+    # O nó se abre aqui, não na thread: o que o sistema não deixa ler falha o clique, em vez de
+    # a espera morrer calada e o botão parecer morto.
+    try:
+        dispositivo = (_ABRIR_O_EVENTO or abrir_o_aparelho_de_entrada)(evento)
+    except OSError as exc:
+        raise RuntimeError("o sistema não deixa o Hefesto ler este aparelho") from exc
     with _TRAVA_DO_RASCUNHO:
         _RASCUNHO = r
         r.esperando = True
-    threading.Thread(target=_esperar_a_tecla, args=(r, evento), name="acionador-tecla",
+    threading.Thread(target=_esperar_a_tecla, args=(r, dispositivo), name="acionador-tecla",
                      daemon=True).start()
     return {"armou": True}
 
@@ -2913,14 +2921,23 @@ def _quem_recebe_da_mesa(ctx: Contexto, declaracao: Any) -> list[tuple[str, str]
     quem: list[tuple[str, str]] = []
     for m in ctx.mesa:
         chave = _so_hex(str(m.get("uniq") or "")).lower()
-        nome = str(m.get("nome") or "")
         if _CHAVE_DE_CONTROLE.match(chave) and all(k != chave for k, _ in quem):
-            quem.append((chave, nome if nome and nome != _cor_desconhecida() else "DualSense"))
+            quem.append((chave, _nome_de_quem_recebe(m)))
     for a in (getattr(declaracao, "acionadores", None) or {}).values():
         chave = str(getattr(a, "controle", None) or "")
         if chave and all(k != chave for k, _ in quem):
             quem.append((chave, _cor_declarada_de(chave) or "DualSense"))
     return quem
+
+
+def _nome_de_quem_recebe(m: dict[str, Any]) -> str:
+    """O plástico do controle; sem cor lida nem declarada, o modelo e a via (USB ou BT), para dois
+    controles sem cor não virarem duas opções iguais no seletor."""
+    nome = str(m.get("nome") or "")
+    if not nome or nome == _cor_desconhecida():
+        nome = "DualSense"
+    via = str(m.get("via") or "")
+    return nome if m.get("cor") or not via else f"{nome} · {via}"
 
 
 def _colorways_da_mesa(ctx: Contexto) -> dict[str, str]:
@@ -2942,13 +2959,10 @@ def _evento_do_acionador(chave: str) -> str | None:
                 None)
 
 
-def _esperar_a_tecla(r: _Rascunho, evento: str, prazo_s: float = ESPERA_DA_TECLA_S) -> None:
-    """Abre o aparelho só para ler (sem prender) e guarda a primeira tecla apertada."""
-    from hefesto_dualsense4unix.utils.maquina import abrir_o_aparelho_de_entrada
-
-    dispositivo = None
+def _esperar_a_tecla(r: _Rascunho, dispositivo: Any, prazo_s: float = ESPERA_DA_TECLA_S
+                     ) -> None:
+    """Lê o aparelho já aberto (sem prender) e guarda a primeira tecla apertada; fecha no fim."""
     try:
-        dispositivo = (_ABRIR_O_EVENTO or abrir_o_aparelho_de_entrada)(evento)
         fim = time.monotonic() + prazo_s
         # O `select` dorme no nó até ele ter evento ou o prazo vencer: nenhuma volta em vão.
         while (restante := fim - time.monotonic()) > 0:
@@ -2969,9 +2983,8 @@ def _esperar_a_tecla(r: _Rascunho, evento: str, prazo_s: float = ESPERA_DA_TECLA
         print(f"[08] a espera da tecla do acionador caiu: {exc}", file=sys.stderr, flush=True)
     finally:
         r.esperando = False
-        if dispositivo is not None:
-            with contextlib.suppress(OSError):
-                dispositivo.close()
+        with contextlib.suppress(OSError):
+            dispositivo.close()
 
 
 def _o_rascunho() -> _Rascunho:

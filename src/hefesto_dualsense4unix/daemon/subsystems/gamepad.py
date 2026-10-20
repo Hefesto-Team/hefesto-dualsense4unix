@@ -2829,7 +2829,7 @@ class PonteDosAcionadores:
             (aberto.dispositivo.grab if prender else aberto.dispositivo.ungrab)()
             aberto.preso = prender
         except Exception as exc:
-            logger.debug("acionador_grab_falhou", evento=aberto.evento, err=str(exc))
+            logger.info("acionador_grab_falhou", evento=aberto.evento, err=str(exc))
             aberto.preso = prender
 
     def _fechar(self, chave: str) -> None:
