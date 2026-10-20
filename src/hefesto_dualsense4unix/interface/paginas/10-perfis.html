@@ -266,7 +266,7 @@
   .fita-linha:has(i[data-servico="parado"]) .conectado{display:none}
   .fita{
     display:flex;align-items:center;gap:8px;
-    font-size:12px;color:var(--fg);
+    font-size:12px;color:var(--texto-mudo);
   }
   .marca-nome{font-size:14px;line-height:1.15;font-weight:700;letter-spacing:-.01em;
               white-space:nowrap;color:var(--fg);margin-right:6px}
@@ -281,14 +281,10 @@
   .perfil-ativo{
     display:flex;align-items:center;gap:7px;
     padding:5px 11px;border-radius:7px;
-    border:1px solid var(--linha);background:var(--panel);min-width:0;
+    border:1px solid var(--linha);background:var(--panel);
   }
-  /* UMA LINHA SÓ (16/10/2026): no tamanho do nome, o «Perfil ativo» quebrava em duas assim que um
-     perfil tinha nome, e o nome longo de um jogo esticava o topo; o rótulo não quebra, e o nome
-     cede com reticência (a base comum dá a dica com ele inteiro). */
-  .pa-rot{font-size:12.5px;color:var(--fg);white-space:nowrap}
-  .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600;white-space:nowrap;
-           overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .pa-rot{font-size:10.5px;color:var(--comment);}
+  .pa-nome{font-size:12.5px;color:var(--pink);font-weight:600}
   /* A FITA QUE NÃO ESCOLHE TEM OS CHIPS ACESOS COMO QUALQUER OUTRA — 09/10/2026
      (O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01, pedido de 29/09: *"a cor de
      todos os botões do Selecionar deveriam estar acesas e com as bordas
@@ -297,7 +293,7 @@
      o chip (FITA-01, 08/09, e o cinza de 30/08) saíram. Só o rótulo
      `Selecionar:` segue na cor de comentário: não é botão. O `opacity` não
      volta: escondia o texto do contraste (2,18:1) sem a régua ver. */
-  .fita.inerte{color:var(--fg)}
+  .fita.inerte{color:var(--comment)}
   /* ---------- O MODO NATIVO: A FITA FICA CINZA E MUDA — 09/10/2026 ----------
      DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01, opção a. Com o Hefesto
      desligado quem manda é o jogo, e a fita só mostra quem está conectado: a
@@ -308,24 +304,24 @@
   .fita{position:relative}
   .so-no-nativo{display:none}
   body.nativo .fita .so-no-nativo{display:block;position:absolute;inset:0;z-index:2;cursor:default}
-  body.nativo .fita{color:var(--fg)}
+  body.nativo .fita{color:var(--comment)}
   body.nativo .fita .chip,body.nativo .fita .chip.on,body.nativo .fita .chip.plastico{
-    border-color:var(--border-sutil);background:transparent;color:var(--fg);
+    border-color:var(--border-sutil);background:transparent;color:var(--comment);
     font-weight:400;--borda-do-chip:1px}
   /* a peça fixa do cartão e a trava do quadro nascem escondidas */
   .visto-fixo,.visto-legenda,.trava-nativo{display:none}
   body.nativo .visto-fixo{grid-column:1/-1;display:flex;align-items:center;justify-content:center;
     gap:7px;height:28px;border:1px solid var(--border-sutil);border-radius:7px;
     background:transparent;color:var(--texto-suave);font-size:12px;font-weight:600;cursor:default}
-  body.nativo .visto-fixo .cad{color:var(--fg)}
+  body.nativo .visto-fixo .cad{color:var(--comment)}
   body.nativo .visto-legenda{grid-column:1/-1;height:28px;display:flex;align-items:center;
-    justify-content:center;color:var(--fg);font-size:11.5px}
+    justify-content:center;color:var(--comment);font-size:11.5px}
   body.nativo .cartao.off .visto-fixo,body.nativo .cartao.off .visto-legenda{display:none}
   body.nativo .mascara .chip{display:none}
   body.nativo .cartao.alvo{background:var(--app-bg)}
   body.nativo .trava-nativo{display:inline-flex;align-items:center;gap:6px;margin-left:auto;
-    margin-right:10px;color:var(--fg);font-size:12px;cursor:default}
-  body.nativo .trava-nativo .cad{color:var(--fg)}
+    margin-right:10px;color:var(--comment);font-size:12px;cursor:default}
+  body.nativo .trava-nativo .cad{color:var(--comment)}
   /* AQUI MORAVA A CAIXA ALTA DA VIA, e ela SAIU — ESQUELETO-C2, 11/09/2026.
      Era a TELA-TRES-01 §3, pedido de 08/09: "cabo e rádio coloca
      maiúsculo." O que ela leu três dias depois, na MESMA tela:
@@ -354,7 +350,7 @@
   .chip{
     --borda-do-chip:1px;
     padding:5px 12px;border-radius:6px;font-size:12px;
-    border:var(--borda-do-chip) solid var(--linha);background:var(--app-bg);color:var(--fg);
+    border:var(--borda-do-chip) solid var(--linha);background:var(--app-bg);color:var(--texto-mudo);
     cursor:default;
   }
   .chip.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
@@ -403,7 +399,7 @@
   /* ---------- a tira de abas ---------- */
   .tira{display:flex;gap:2px;padding:0 12px;border-bottom:1px solid var(--linha)}
   .aba{
-    padding:11px 13px;font-size:13px;color:var(--fg);
+    padding:11px 13px;font-size:13px;color:var(--texto-mudo);
     border-bottom:2px solid transparent;white-space:nowrap;cursor:default;
   }
   a.aba{text-decoration:none;cursor:pointer}
@@ -412,13 +408,12 @@
   .aba.ativa{color:var(--fg);border-bottom-color:var(--pink);font-weight:600}
 
   /* ---------- o miolo ---------- */
-  /* O RESPIRO É 18 DOS DOIS LADOS — 16/10/2026 (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, T1).
-     A conta velha (3 de padding + 15 do `scrollbar-gutter:stable`) supunha uma barra que
-     ocupa lugar; no WebKitGTK a barra é de sobrepor (`offsetWidth-clientWidth` = 0) e o
-     quadro ficava a 3 px da borda direita em nove abas. Sem rolagem vertical em tela
-     nenhuma, não há barra a reservar. */
-  .miolo{padding:16px 18px 18px 18px;display:flex;flex-direction:column;gap:14px;
-         flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:auto}
+  /* padding-right 3 e não 18: o `scrollbar-gutter:stable` reserva 15px à
+     direita SEMPRE — com 18 de padding a margem direita ficava 33 contra 18 da
+     esquerda, visível em toda aba. 3 + 15 = os mesmos 18, e a caixa de
+     conteúdo tem a mesma largura de antes da barra existir. */
+  .miolo{padding:16px 3px 18px 18px;display:flex;flex-direction:column;gap:14px;
+         flex:1;min-height:0;overflow-y:auto;scrollbar-gutter:stable}
   /* O QUADRO NÃO ESTICA POR PADRÃO. Ele já esticou: com a altura da janela fixa,
      o último quadro de toda aba encostava no rodapé, e nas abas curtas isso virou
      um quadro cinza gigante e vazio. Ela, 27/08: "nessa aba encurtar verticalmente
@@ -467,7 +462,7 @@
      nascem no mesmo x. */
   .quadro > input.abre{position:absolute;width:0;height:0;opacity:0;pointer-events:none}
   label.quadro-titulo{cursor:pointer;display:inline-flex;align-items:center;gap:6px}
-  label.quadro-titulo::before{content:"▾";font-size:10px;color:var(--fg);width:9px}
+  label.quadro-titulo::before{content:"▾";font-size:10px;color:var(--texto-mudo);width:9px}
   .quadro:has(> input.abre:not(:checked)) label.quadro-titulo::before{content:"▸"}
   .quadro:has(> input.abre:not(:checked)) > .quadro-corpo{display:none}
   /* fechada, ela não estica: senão o quadro fechado tomaria a altura toda */
@@ -487,7 +482,7 @@
   .seg button{
     flex:1;min-width:150px;padding:9px 10px;border-radius:7px;font-size:12.5px;
     font-family:inherit;border:1px solid var(--linha);
-    background:var(--app-bg);color:var(--fg);cursor:pointer;
+    background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;
   }
   .seg button.on{border-color:var(--purple);background:var(--sel-bg);color:var(--fg);font-weight:600}
   .seg button:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
@@ -495,13 +490,13 @@
      `disabled` de verdade (medido: zero gestos ao clicar), e nada na tela
      dizia isso. Sem `opacity`, que é a lição medida da `.fita.inerte`: a
      opacidade mora no ancestral e cega toda régua que lê `color`. */
-  .seg button:disabled{border-color:var(--border-sutil);color:var(--fg);cursor:not-allowed}
-  .seg button:disabled:hover{border-color:var(--border-sutil);color:var(--fg)}
+  .seg button:disabled{border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
+  .seg button:disabled:hover{border-color:var(--border-sutil);color:var(--texto-mudo)}
 
   /* a linha de estado: o que VALE agora */
   .estado{
     display:flex;align-items:center;gap:7px;margin-top:9px;
-    font-size:12px;color:var(--fg);
+    font-size:12px;color:var(--texto-mudo);
   }
   .estado .valor{color:var(--fg);font-weight:600}
   .estado .verde{color:var(--green)}
@@ -519,12 +514,12 @@
     flex:1;display:flex;align-items:center;justify-content:center;gap:7px;
     padding:9px 10px;border-radius:7px;
     font-size:12.5px;border:1px solid var(--linha);
-    background:var(--app-bg);color:var(--fg);cursor:pointer;white-space:nowrap;
+    background:var(--app-bg);color:var(--texto-mudo);cursor:pointer;white-space:nowrap;
   }
   .degrau i{
     font-style:normal;font-family:'JetBrains Mono',monospace;font-size:10px;
     width:15px;height:15px;line-height:14px;text-align:center;border-radius:50%;
-    border:1px solid var(--linha);color:var(--fg);
+    border:1px solid var(--linha);color:var(--comment);
   }
   .degrau:hover:not(.on){border-color:var(--comment);color:var(--texto-suave)}
   .degrau.on{
@@ -534,7 +529,7 @@
   /* O SEPARADOR TEM COR DE TEXTO, NÃO DE BORDA (30/08). `--border-forte` é
      #44475a: 1,73:1 sobre o fundo — um traço que existe no DOM e não na tela.
      `--texto-mudo` o põe em 4,96:1 e ele continua recuando diante do texto. */
-  .seta{color:var(--fg);font-size:13px}
+  .seta{color:var(--texto-mudo);font-size:13px}
 
   /* a prova de que o Aplicar ainda deve (D-APLICAR-NAO-SALVA) */
   .pendente{
@@ -549,13 +544,13 @@
     background:var(--panel);padding:9px 14px;display:flex;align-items:center;gap:9px;
     font-size:12px;
   }
-  .avisos.vazio{color:var(--fg);border-style:dashed}
+  .avisos.vazio{color:var(--comment);border-style:dashed}
   .selo{
     font-size:10.5px;padding:2px 7px;border-radius:4px;font-weight:600;
     font-family:'JetBrains Mono',monospace;
   }
   .selo.alerta{background:var(--orange);color:var(--app-bg)}
-  .conta{margin-left:auto;font-size:11px;color:var(--fg)}
+  .conta{margin-left:auto;font-size:11px;color:var(--texto-mudo)}
   .link{color:var(--cyan);text-decoration:none;border-bottom:1px dotted var(--cyan);cursor:pointer}
 
   /* ---------- controles: SÓ a contagem e a ponte (decisão de produto) ---------- */
@@ -574,7 +569,7 @@
      vinte e seis. A cor vem de `--plastico`, escrita pelo gerador a partir do
      desenho — o mesmo mecanismo do chip da fita. Zero usos nos dez HTML. */
   .cartao .pl{font-family:'JetBrains Mono',monospace;color:var(--fg);font-weight:500}
-  .cartao .via{color:var(--fg);font-size:11px}
+  .cartao .via{color:var(--texto-mudo);font-size:11px}
   .cartao .bat{color:var(--green);font-family:'JetBrains Mono',monospace;font-size:11px}
 
   .acoes{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
@@ -601,18 +596,13 @@
   .btn.verde:hover{border-color:var(--green);color:var(--green)}
   .btn.vermelho:hover{border-color:var(--red);color:var(--red)}
   .btn.roxo:hover{border-color:var(--purple);color:var(--purple)}
-  /* O AMARELO DO «Voltar ao padrão» — borda e letra, nas duas abas que voltam ao de fábrica: a
-     Navegação e o «Restaurar de fábrica» da Sistema (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, S2). */
-  .btn.amarelo-padrao{border-color:var(--yellow);color:var(--yellow)}
-  .btn.amarelo-padrao:hover{border-color:var(--yellow);color:var(--yellow);
-                            background:rgba(241,250,140,.08)}
 
   /* ---------- Conectado agora + Atenção, lado a lado ---------- */
   .dupla{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
-  .conta-avisos{margin-left:auto;font-size:11px;color:var(--fg)}
+  .conta-avisos{margin-left:auto;font-size:11px;color:var(--texto-mudo)}
   .aviso-item{display:flex;align-items:center;gap:9px;font-size:12px;color:var(--texto-suave)}
   .sub-secao{margin-top:14px;padding-top:12px;border-top:1px solid var(--linha)}
-  .sep{color:var(--fg);margin:0 3px}   /* idem — ver `.seta` acima */
+  .sep{color:var(--texto-mudo);margin:0 3px}   /* idem — ver `.seta` acima */
 
   .faixa-final{display:flex;align-items:center;gap:12px;margin-top:12px}
   .faixa-final .pendente{flex:1;margin-top:0}
@@ -647,7 +637,7 @@
   .r-aplicar{background:var(--green);color:var(--app-bg)}
   .r-salvar{border-color:var(--purple)!important;color:var(--purple);background:transparent}
   .r-importar{border-color:var(--orange)!important;color:var(--orange);background:transparent}
-  .r-exportar{border-color:var(--comment)!important;color:var(--fg);background:transparent}
+  .r-exportar{border-color:var(--comment)!important;color:var(--texto-mudo);background:transparent}
 
   .marca{color:var(--orange)}
 
@@ -827,7 +817,7 @@
      "P1  Cosmic Red  USB" enquanto o P2 lia "P2 · Starlight Blue · BT".
      `var(--comment)` põe os dois casos acima de 3:1 — o piso de traço — sem
      competir com o texto. Medido em 27/08/2026. */
-  .pt{color:var(--fg);margin:0 1px;font-size:10px;vertical-align:1px}
+  .pt{color:var(--comment);margin:0 1px;font-size:10px;vertical-align:1px}
 
   /* ======== A FOLHA DA D-02 E DA D-03 — as duas peças das dez abas ======== */
 
@@ -900,9 +890,9 @@
      PO decidiu para a aba 09, e é a única forma de dizer o porquê a quem não
      tem rato na mão. */
   .btn.apagado,.seg button.apagado{
-    border-color:var(--border-sutil);color:var(--fg);cursor:not-allowed}
+    border-color:var(--border-sutil);color:var(--texto-mudo);cursor:not-allowed}
   .btn.apagado:hover,.seg button.apagado:hover{
-    border-color:var(--border-sutil);color:var(--fg)}
+    border-color:var(--border-sutil);color:var(--texto-mudo)}
 
   /* ---- S-02 · A RESSALVA É LINHA FIXA, E SÓ QUANDO EXISTE (D-02) ----
      No repouso ela não ocupa NADA: sem `display:none` a linha vazia continua
@@ -915,7 +905,7 @@
      cobre a linha que nasce vazia e nunca é pintada; `.nada` cobre a que o
      piloto pinta a cada tique com "não há o que dizer". Faltando uma das
      duas, a linha volta a aparecer num dos dois caminhos, calada. */
-  .ressalva{font-size:11.5px;line-height:1.5;color:var(--fg);margin-top:5px}
+  .ressalva{font-size:11.5px;line-height:1.5;color:var(--texto-mudo);margin-top:5px}
   .ressalva:empty{display:none}
   .ressalva:has(.nada){display:none}
 
@@ -939,7 +929,7 @@
      `currentColor` faz cada um herdar a cor da linha em que está. */
   .gl{display:inline-block;vertical-align:-6px;flex:0 0 auto}
   .gls{display:inline-flex;align-items:center;gap:5px}
-  .gls .mais{color:var(--fg);font-size:11px;margin:0 1px}
+  .gls .mais{color:var(--comment);font-size:11px;margin:0 1px}
 
   /* ---------- Perfis ---------- */
   /* UM FUNDO SÓ, com os dois blocos dentro. Eles continuam sendo dois — mesma
@@ -1144,10 +1134,10 @@
            font-size:11px;border-radius:5px;min-width:0;
            transition:width .12s ease,padding .12s ease}
   .procura.on{width:150px;padding:3px 7px;border:1px solid var(--border-forte)}
-  .procura::placeholder{color:var(--fg)}
+  .procura::placeholder{color:var(--comment)}
   /* QUANTOS A LUPA ESCONDEU. Ela nasce vazia e o `ligado()` do piloto lê o
      vazio como apagado — sem filtro, nada aparece. */
-  .fora-da-busca{font-size:10.5px;color:var(--fg);font-weight:400;
+  .fora-da-busca{font-size:10.5px;color:var(--comment);font-weight:400;
                  letter-spacing:0;text-transform:none;display:none}
   .fora-da-busca.on{display:inline}
   /* A SETA DA COLUNA ORDENADA — do tamanho do ícone, e sem texto novo.
@@ -1219,7 +1209,7 @@
      arrastar ganha um `style` inline no mesmo `<col>`, e inline vence folha. */
   .tab td,.tab th{overflow:hidden;text-overflow:ellipsis}
   .tab tbody td{white-space:nowrap}
-  .conta-perfis{font-size:10.5px;color:var(--fg);margin-left:auto;text-transform:none;
+  .conta-perfis{font-size:10.5px;color:var(--comment);margin-left:auto;text-transform:none;
                 letter-spacing:0}
   /* os campos do editor, todos na mesma grade */
   /* os campos ficam sobre o MESMO fundo da tabela ao lado, e assim os três botões
@@ -1269,7 +1259,7 @@
      alcança isto — ele deixa o FLEX apertar, e aqui quem não apertava era a
      GRADE. */
   .campo{display:grid;grid-template-columns:var(--rot-p) minmax(0,1fr);align-items:center;gap:12px;
-         height:var(--h-escolha);font-size:12px;color:var(--fg);margin-bottom:4px}
+         height:var(--h-escolha);font-size:12px;color:var(--texto-mudo);margin-bottom:4px}
 
   /* AS DIVISÓRIAS SAÍRAM DESTE TRECHO — 31/08/2026, pedido olhando a aba:
      *"remove as linhas horizontais desse trecho"*.
@@ -1500,7 +1490,7 @@
      impede o rótulo de tomar o campo. */
   .campo .rot{display:none;flex:0 1 auto;min-width:0;max-width:45%;
               font-size:11.5px;
-              color:var(--fg);white-space:nowrap;overflow:hidden;
+              color:var(--texto-mudo);white-space:nowrap;overflow:hidden;
               text-overflow:ellipsis}
   .campo .rot.on{display:block}
   .campo .rot .al.alerta{color:var(--orange)}
@@ -1683,13 +1673,8 @@
      ignorava. Com `fixed` a sugestão virou ordem: mantido o 150, a fileira de
      glifos era CORTADA — fotografado. O valor agora é o que a tela
      media.  (noqa-acento: verbo medir, imperfeito) */
-  .gd-pecas{width:271px}
-  /* 16/10/2026: com a ativação dos botões e a curva dos analógicos são DEZ seções, e com 6px a
-     última passava 3px da célula. O vão entre seções desceu a 5px (o de dentro segue 2px).
-     19/10/2026: a fileira pede 271px (catorze glifos de 15px, quatro vãos de 2px e nove de 5px), e a
-     coluna de 255px só a continha a 1272 px porque a folga da tabela a alargava: a 940 px a última
-     seção passava 16px da célula. A coluna passa a 271px; a tabela já rola na horizontal ali. */
-  .gd-pecas .gls{gap:5px}
+  .gd-pecas{width:255px}
+  .gd-pecas .gls{gap:6px}
   /* O GLIFO DIZ O CONTROLE AGORA, E O PONTO EMBAIXO DIZ O DISCO — 02/10/2026,
      decidido pelo usuário em 29/09 («Ponto embaixo»): aceso = ligado agora neste
      controle · apagado = desligado · tracejado = o controle não diz · o ponto
@@ -1708,13 +1693,13 @@
      ausência. #8896c4 dá 4,89:1 e continua nitidamente mais fosco que o
      aceso (roxo #bd93f9 com o halo do `drop-shadow`), que é o que separa os
      dois. Ela: *"sobe também"*. */
-  .gr{display:inline-flex;align-items:center;gap:2px;color:var(--fg)}
+  .gr{display:inline-flex;align-items:center;gap:2px;color:var(--comment)}
   .gr.on{color:var(--purple);filter:drop-shadow(0 0 4px rgba(189,147,249,.45))}
   .gr .gl{vertical-align:-3px}
   /* MESMA CURA, MESMO DIA: o endereço de rádio mede 118px em JetBrains Mono de
      10px mais a folga, e o `112` cortava o último octeto com reticências. */
   .gd-id{width:118px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:10px;
-         color:var(--fg)}
+         color:var(--comment)}
   /* A COR DO PLÁSTICO NA BORDA DA LINHA, pela mesma razão do chip da fita: num
      desenho de 32px o modelo mal se distingue, e é a cor que identifica a peça.
      A cor vem de `cor_da_zona()` — do `<style>` que o gerador escreveu no SVG —,
@@ -1753,7 +1738,7 @@
      régua: aqui o fundo é `--panel`, não o `--app-bg` da Jogar, e foi por olhar
      só o token — e não o CONTRASTE contra o fundo de CADA aba — que o lugar
      vazio da Jogar saiu mais aceso que o controle na mesa, em 31/08. */
-  .tab.miuda tr.fora .gd-nome{color:var(--fg)}
+  .tab.miuda tr.fora .gd-nome{color:var(--comment)}
   /* O GLIFO SOME NO LUGAR SEM CONTROLE — 05/09/2026, palavra de produto.
      `visibility` e não `display`: a fileira guarda a altura da linha, e um
      `display:none` faria as quatro linhas da tabela mudarem de altura conforme
@@ -1770,14 +1755,12 @@
   .perfis > div{padding:12px 16px}
   .perfis > div:first-child{padding-right:8px}
   .perfis > div:last-child{padding-left:8px}
-  /* A LISTA ROLA DENTRO DO `.rolo`, com a barra de verdade lá de cima: na janela baixa as linhas de
-     baixo descem para fora do quadro, e um corte as sumia sem barra nenhuma
-     (D-1710-A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO). No tamanho do desenho a lista cabe e a barra não nasce. */
+  .rolo{overflow:hidden}
   .rolo .tab tbody td{height:26px;padding-top:0;padding-bottom:0}
   .rolo .tab thead th[data-coluna]{cursor:pointer;user-select:none}
   .quadro-titulo[data-dica],.cab[data-dica]{cursor:help}
   .tab col[data-coluna="criado"],.tab col[data-coluna="modificado"]{width:104px}
-  .tab td.data{font-family:'JetBrains Mono',monospace;color:var(--fg);font-weight:400;
+  .tab td.data{font-family:'JetBrains Mono',monospace;color:var(--texto-mudo);font-weight:400;
                white-space:nowrap}
   .tab th.data{white-space:nowrap}
   .campos{gap:4px}
@@ -1788,11 +1771,9 @@
   .campo.so-eventos{display:none}
   .campo.so-eventos.on{display:grid}
   .ev-val{display:flex;gap:10px;align-items:center;min-width:0}
-  /* O comando é do «Meu comando» e só dele (19/10/2026): a linha abaixo do «Quando» aparece quando o
-     momento escolhido é esse, e some em qualquer outro. O `:has` lê o `<option>` marcado, então o
-     desenho responde sozinho e a pintura do produto (que só escolhe o `<option>`) faz o mesmo. */
-  .campo.so-comando{display:none}
-  .campo.so-eventos.on:has(option[value="meu_comando"]:checked) + .campo.so-comando{display:grid}
+  /* o `.estreito` de baixo estica o select a 100%; aqui ele divide a linha com o comando */
+  .campo .ev-val select.estreito{flex:0 0 170px;width:170px}
+  .ev-val .ev-cmd{flex:1;min-width:0}
   .campo select.estreito{flex:1 1 auto;width:100%}
   /* «Qual vale primeiro»: só aparece com dois perfis do mesmo jogo */
   .ordem-vale{margin:4px 0 8px;display:none}
@@ -1805,9 +1786,9 @@
                  color:var(--fg);cursor:grab}
   .ordem-vale li.ativo{border-color:var(--purple)}
   .ordem-vale li.arrastando-este{opacity:.45}
-  .ordem-vale .pos{flex:0 0 18px;font-family:'JetBrains Mono',monospace;color:var(--fg);
+  .ordem-vale .pos{flex:0 0 18px;font-family:'JetBrains Mono',monospace;color:var(--texto-mudo);
                    text-align:right}
-  .ordem-vale .pega{color:var(--fg);letter-spacing:-2px}
+  .ordem-vale .pega{color:var(--comment);letter-spacing:-2px}
   /* a tabela por controle: três colunas fixas, o endereço em fonte miúda */
   .guarda table{table-layout:fixed;width:100%;min-width:0 !important}
   .guarda col[data-coluna="controle"]{width:136px}
@@ -1846,8 +1827,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none;
   opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s}
 #hef-dica.da-base.visivel{opacity:1;transform:none}
-/* O foco num título, rótulo ou frase com dica (o `tabindex` vem da base) aparece com o mesmo contorno do Modo automático. */
-[data-dica][tabindex]:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
 
 /* 2. O Modo automático: pílula com bolinha. Os dois estados têm de se distinguir num relance.
       Desligado: contorno neutro, bolinha vazia, letra suave (vale o que está na aba).
@@ -1869,7 +1848,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto button{display:flex;width:100%;align-items:center;gap:10px;height:34px;padding:0 12px;border:0;
   border-radius:8px;background:transparent;color:var(--fg,#f8f8f2);font:500 13.5px/1 'Space Grotesk',system-ui,sans-serif;text-align:left;cursor:pointer}
 .menu-hefesto button:hover{background:rgba(189,147,249,.14)}
-.menu-hefesto button[disabled]{color:var(--fg,#f8f8f2);opacity:.55;cursor:default;background:transparent}
+.menu-hefesto button[disabled]{color:var(--texto-mudo,#9a9eb8);opacity:.55;cursor:default;background:transparent}
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
 </head>
@@ -2119,11 +2098,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                   <optgroup label="No jogo"><option value="cena">Cena</option><option value="menu">Menu</option><option value="pausa">Pausa</option></optgroup>
                   <optgroup label="No sistema"><option value="controle_conectado">Controle conectado</option><option value="programa_aberto">Programa aberto</option><option value="hora_marcada">Hora marcada</option></optgroup>
                   <optgroup label="Meu"><option value="meu_comando">Meu comando</option></optgroup>
-                </select></span>
-              </div>
-              <div class="campo so-comando">
-                <span data-dica="O perfil entra quando o comando termina sem erro">Comando:</span>
-                <span class="val"><input type="text" class="ev-cmd" data-hef="editor.evento.comando" data-hef-gesto="editor.quando" data-que="comando" data-hef-alvo="valor" aria-label="Comando ou arquivo .sh" placeholder="Comando ou arquivo .sh"
+                </select><input type="text" class="ev-cmd" data-hef="editor.evento.comando" data-hef-gesto="editor.quando" data-que="comando" data-hef-alvo="valor" aria-label="Comando ou arquivo .sh" placeholder="Comando ou arquivo .sh"
                   data-dica="Um comando de terminal ou um arquivo .sh" value=""></span>
               </div>
               <div class="campo">
@@ -2242,16 +2217,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">R</text>
-</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="ativacao"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
-
-  <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="analogicos"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico esquerdo</title>
-
-  <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
-  <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
-  <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span></span></td>
+</svg></span></span><span class="gp on" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span></span></td>
                     <td class="gd-id" data-hef="guarda.id">AA:BB:CC:00:00:01</td>
                   </tr>
                   <tr data-hef-uniq="p2" data-hef="guarda.vazio" data-hef-alvo="classe" data-hef-classe="fora">
@@ -2327,15 +2293,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">R</text>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="ativacao"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
-
-  <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="analogicos"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico esquerdo</title>
-
-  <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
-  <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
-  <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
 </svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span></span></td>
                     <td class="gd-id" data-hef="guarda.id">AA:BB:CC:00:00:02</td>
                   </tr>
@@ -2413,15 +2370,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">R</text>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="ativacao"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
-
-  <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="analogicos"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico esquerdo</title>
-
-  <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
-  <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
-  <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
 </svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span></span></td>
                     <td class="gd-id" data-hef="guarda.id">AA:BB:CC:00:00:03</td>
                   </tr>
@@ -2499,15 +2447,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
   <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
   <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">R</text>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="ativacao"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Cruz</title>
-
-  <line x1="8" y1="8" x2="24" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-  <line x1="24" y1="8" x2="8" y2="24" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-</svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span><span class="gc" data-hef="guarda.dica" data-hef-alvo="atributo" data-hef-atributo="data-dica"><span class="gr on" data-hef="guarda.secao" data-hef-alvo="classe" data-hef-secao="analogicos"><span class="gq" data-hef="guarda.incerto" data-hef-alvo="classe" data-hef-classe="nd"><svg class="gl" width="15" height="15" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><title>Analógico esquerdo</title>
-
-  <circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2"/>
-  <circle cx="16" cy="16" r="6" fill="none" stroke="currentColor" stroke-width="1.5"/>
-  <text x="13" y="19" font-family="monospace" font-size="7" font-weight="bold" fill="currentColor">L</text>
 </svg></span></span><span class="gp" data-hef="guarda.proprio" data-hef-alvo="classe"></span></span></span></td>
                     <td class="gd-id" data-hef="guarda.id">AA:BB:CC:00:00:04</td>
                   </tr>
@@ -2633,22 +2572,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       document.body.classList.remove('arrastando');
       pux.click();
     }, false);
-    // O TECLADO ANDA A DIVISA (A-INTERFACE-INTEIRA-SE-ALCANCA-…-01): a alça tem parada no Tab
-    // (a base comum põe o `tabindex` em todo `data-hef-gesto`), e ← e → mudam a largura 8 px por
-    // vez, com o mesmo piso e teto do arraste. O gesto vai ao Python pelo mesmo `.click()`.
-    document.addEventListener('keydown', function(ev){
-      if(ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight') return;
-      var pux = ev.target.closest ? ev.target.closest('.puxador') : null;
-      if(!pux) return;
-      var alvo = colDe(pux);
-      var th = pux.closest('th');
-      if(!alvo.col || !th) return;
-      var px = Math.round(th.getBoundingClientRect().width) + (ev.key === 'ArrowRight' ? 8 : -8);
-      px = caber(th, alvo.col, Math.max(PISO, Math.min(TETO, px)));
-      pux.dataset.px = String(px);
-      ev.preventDefault();
-      pux.click();
-    }, false);
 
     // ---- as larguras que voltam do disco ----------------------------------
     // O FORMATO É `coluna:px` separado por `·`, e o travessão é o VAZIO — o
@@ -2712,10 +2635,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       });
       var quando = document.querySelector('.so-eventos');
       if(quando) quando.classList.toggle('on', b.dataset.v === 'eventos');
-      // Perfil de evento não tem jogo, então não tem «Qual vale primeiro»: o produto apaga o bloco
-      // pelo `editor.ordem.ha`, e o desenho faz o mesmo para a tela não ganhar uma linha de rolagem.
-      var ordem = document.querySelector('.ordem-vale');
-      if(ordem) ordem.classList.toggle('on', b.dataset.v !== 'eventos');
     }, false);
 
     // ---- «Qual vale primeiro»: arrastar um perfil acima ou abaixo do outro -----
@@ -2831,18 +2750,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
      do `#hef-dica` no produto. Os dois nunca rodam juntos: o teste vem a cada evento, porque a
      camada da janela chega depois da carga da página. */
   let dica = null, alvo = null;
-  /* A dica aberta é a descrição de quem a abriu, para o leitor de tela: o `id` entra no
-     `aria-describedby` enquanto ela está aberta e sai com ela, sem apagar o que já havia. */
-  const descrever = (el, liga) => {
-    const lista = (el.getAttribute('aria-describedby') || '').split(/\s+/).filter(t => t && t !== 'hef-dica');
-    if (liga) lista.push('hef-dica');
-    if (lista.length) el.setAttribute('aria-describedby', lista.join(' ')); else el.removeAttribute('aria-describedby');
-  };
   const mostrar = el => {
-    if (alvo && alvo !== el) descrever(alvo, false);
     if (!dica) { dica = document.createElement('div'); dica.id = 'hef-dica'; dica.className = 'da-base'; dica.setAttribute('role', 'tooltip'); }
     alvo = el; dica.textContent = el.dataset.dica;
-    descrever(el, true);
     if (!dica.isConnected) document.body.append(dica);
     const r = el.getBoundingClientRect(), d = dica.getBoundingClientRect();
     let x = r.left + r.width / 2 - d.width / 2, y = r.bottom + 8;
@@ -2850,27 +2760,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     dica.style.left = Math.max(6, Math.min(x, innerWidth - d.width - 6)) + 'px'; dica.style.top = y + 'px';
     dica.classList.add('visivel');
   };
-  const esconder = () => { if (alvo) descrever(alvo, false); alvo = null; if (dica) dica.classList.remove('visivel'); };
-  /* O TEXTO CORTADO PELA RETICÊNCIA GANHA A DICA COM ELE INTEIRO (16/10/2026): sem ela, o fim da
-     frase não se lê em lugar nenhum. Na passagem do ponteiro, em captura e antes de qualquer camada
-     de dica (a desta base e a da janela, que lê o `data-dica` primeiro), o elemento com
-     `text-overflow:ellipsis` mais perto do ponteiro ganha o texto todo, se corta, e perde a dica
-     que esta regra lhe deu, se deixou de cortar. A dica própria de um elemento nunca é trocada. */
-  document.addEventListener('mousemove', e => {
-    let el = e.target && e.target.nodeType === 1 ? e.target : null;
-    for (let n = 0; el && n < 4; el = el.parentElement, n++) {
-      if (getComputedStyle(el).textOverflow !== 'ellipsis') continue;
-      const daRegra = el.hasAttribute('data-dica-do-corte');
-      if (el.hasAttribute('data-dica') && !daRegra) return;
-      const texto = (el.textContent || '').replace(/\s+/g, ' ').trim();
-      if (texto && el.scrollWidth > el.clientWidth + 1) {
-        el.setAttribute('data-dica', texto); el.setAttribute('data-dica-do-corte', '');
-      } else if (daRegra) {
-        el.removeAttribute('data-dica'); el.removeAttribute('data-dica-do-corte');
-      }
-      return;
-    }
-  }, true);
+  const esconder = () => { alvo = null; if (dica) dica.classList.remove('visivel'); };
   for (const [ev, f] of [['mouseover', 'in'], ['focusin', 'in'], ['mouseout', 'out'], ['focusout', 'out']])
     document.addEventListener(ev, e => {
       if (window.__hefDica) return;
@@ -2897,8 +2787,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     const b = e.target.closest && e.target.closest('.modo-auto');
     if (b) setTimeout(() => b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'), 0);
   });
-  /* O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar ou Ligar, Reiniciar,
-     Reconectar controles (o mesmo «Reconectar» da aba Jogar, desde 19/10/2026), Fechar.
+  /* O menu do botão direito: Copiar (cinza sem seleção), Atualizar, Desligar ou Ligar, Reiniciar, Fechar.
      Cada item é um `data-gesto` comum: no produto a janela o despacha como qualquer botão. O serviço
      parado ou pausado vira «Ligar», de um clique só; o estado vem do `data-servico` do cabeçalho. */
   const fechar = () => document.querySelectorAll('.menu-hefesto.vivo').forEach(m => m.remove());
@@ -2932,100 +2821,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       if (b.textContent.trim() !== 'Confirma?') { setTimeout(() => { b.textContent = 'Confirma?'; }, 0); return; }
     }
     setTimeout(fechar, 0);
-  });
-})();
-/* O alcance pelo teclado e pelo controle (A-INTERFACE-INTEIRA-SE-ALCANCA-PELO-CONTROLE-E-PELO-TECLADO-01).
-   Dois contratos, para toda página e para as telas que vierem depois:
-   1. o que o mouse aciona (`data-gesto`, `data-hef-gesto`) tem parada no Tab e responde a Enter e Espaço;
-   2. a tela que abre por cima (`.tela-nova`, por `:target`) é um diálogo: o foco entra nela, o Tab fica
-      nela, Esc a fecha e o foco volta a quem a abriu. */
-(() => {
-  const NATIVO = 'a[href],button,input:not([type=hidden]),select,textarea,summary,[contenteditable=""],[contenteditable="true"]';
-  const GESTO = '[data-gesto],[data-hef-gesto]';
-  const SEM_PARADA = 'option,optgroup,html,body';
-  const aparece = el => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
-  const jaTemParada = el => el.hasAttribute('tabindex') || el.matches(NATIVO)
-    || Array.from(el.querySelectorAll(NATIVO)).some(d => !d.disabled && aparece(d));
-  /* A dica de um título, de um rótulo ou de uma frase também tem parada: `[data-dica]` que não é
-     focável por natureza ganha o `tabindex`, e o `focusin` que a dica já escuta a abre. O papel
-     fica como está (um `h4` continua título). Quem tem um campo ou botão dentro não ganha parada
-     própria: o foco dele já abre a dica do que o contém. */
-  const PEDE_PARADA = GESTO + ',[data-dica]';
-  const marcar = raiz => {
-    const todos = raiz.matches && raiz.matches(PEDE_PARADA) ? [raiz] : [];
-    raiz.querySelectorAll && todos.push(...raiz.querySelectorAll(PEDE_PARADA));
-    for (const el of todos) if (!el.matches(SEM_PARADA) && !jaTemParada(el)) el.setAttribute('tabindex', '0');
-  };
-  marcar(document.body);
-  new MutationObserver(ms => {
-    for (const m of ms) {
-      if (m.type === 'attributes') marcar(m.target);
-      else for (const n of m.addedNodes) if (n.nodeType === 1) marcar(n);
-    }
-  }).observe(document.body, {subtree: true, childList: true, attributes: true, attributeFilter: ['data-dica']});
-  /* Enter e Espaço fazem o que o clique faz, em quem não é botão por natureza. */
-  document.addEventListener('keydown', e => {
-    if ((e.key !== 'Enter' && e.key !== ' ') || e.defaultPrevented || e.repeat) return;
-    if (e.altKey || e.ctrlKey || e.metaKey) return;
-    const el = e.target;
-    if (!el || !el.matches || !el.matches(GESTO) || el.matches(NATIVO)) return;
-    e.preventDefault();
-    el.click();
-  });
-  /* A tela por cima. A caixa dela é o diálogo; o nome vem do título quando a página não deu um. */
-  const caixaDe = tela => tela.querySelector('.tn-cx') || tela.firstElementChild;
-  const prepararTelas = () => document.querySelectorAll('.tela-nova').forEach(tela => {
-    const caixa = caixaDe(tela);
-    if (!caixa) return;
-    if (!caixa.hasAttribute('role')) caixa.setAttribute('role', 'dialog');
-    if (!caixa.hasAttribute('aria-modal')) caixa.setAttribute('aria-modal', 'true');
-    const tit = tela.querySelector('.tn-tit');
-    if (tit && !caixa.hasAttribute('aria-label') && !caixa.hasAttribute('aria-labelledby'))
-      caixa.setAttribute('aria-label', tit.textContent.replace(/\s+/g, ' ').trim());
-  });
-  prepararTelas();
-  const PARADAS = 'a[href],button:not([disabled]),input:not([type=hidden]):not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
-  const paradasDe = caixa => Array.from(caixa.querySelectorAll(PARADAS)).filter(aparece);
-  const aberta = () => document.querySelector('.tela-nova:target');
-  let quemAbriu = null, ultimo = null, estavaAberta = false;
-  document.addEventListener('focusin', e => { if (!e.target.closest || !e.target.closest('.tela-nova')) ultimo = e.target; });
-  /* O X do controle clica sem dar foco: o link do clique é quem abriu, e o O devolve o foco a ele. */
-  document.addEventListener('click', e => {
-    const a = e.target.closest && e.target.closest('a[href^="#"]');
-    if (a && !a.closest('.tela-nova')) ultimo = a;
-  }, true);
-  const aoMudar = () => {
-    const tela = aberta();
-    if (tela && !estavaAberta) {
-      quemAbriu = ultimo;
-      const caixa = caixaDe(tela);
-      const alvo = caixa && (caixa.querySelector('[autofocus]') || paradasDe(caixa)[0]);
-      if (alvo) alvo.focus();
-      else if (caixa) { caixa.setAttribute('tabindex', '-1'); caixa.focus(); }
-    } else if (!tela && estavaAberta && quemAbriu && quemAbriu.isConnected) {
-      quemAbriu.focus(); quemAbriu = null;
-    }
-    estavaAberta = !!tela;
-  };
-  /* A âncora do endereço só vira `:target` com a página já lida: o foco entra na volta também. */
-  addEventListener('hashchange', aoMudar);
-  addEventListener('DOMContentLoaded', aoMudar);
-  addEventListener('load', aoMudar);
-  aoMudar();
-  document.addEventListener('keydown', e => {
-    const tela = aberta();
-    if (!tela || e.defaultPrevented) return;
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      const x = tela.querySelector('a.tn-x,.fechar,[data-fechar]');
-      if (x) x.click(); else location.hash = '';
-    } else if (e.key === 'Tab') {
-      const caixa = caixaDe(tela), lista = caixa ? paradasDe(caixa) : [];
-      if (!lista.length) { e.preventDefault(); return; }
-      const dentro = caixa.contains(document.activeElement);
-      const fim = e.shiftKey ? lista[0] : lista[lista.length - 1];
-      if (!dentro || document.activeElement === fim) { e.preventDefault(); (e.shiftKey ? lista[lista.length - 1] : lista[0]).focus(); }
-    }
   });
 })();
 </script>
