@@ -301,6 +301,7 @@ def test_a_tecla_sem_botao_escolhido_nao_vira_botao(
 def test_fora_do_jogo_o_aparelho_e_do_sistema_e_no_jogo_fica_preso(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, mesas: list[_Mesa],
 ) -> None:
+    """A prova da D-2010-O-ACIONADOR-SO-SE-PRENDE-COM-O-JOGO-EM-FOCO."""
     mesa = _Mesa(monkeypatch, tmp_path, "dualsense", UNIQS[0])
     mesas.append(mesa)
     mesa.tique()
@@ -589,7 +590,10 @@ def test_o_aparelho_que_o_sistema_nao_deixa_ler_falha_o_clique_e_nao_fica_espera
 
 
 def test_sem_a_cor_lida_os_controles_se_separam_pela_via(a08: Any) -> None:
-    """Dois DualSense sem cor lida nem declarada não viram duas opções «DualSense» iguais."""
+    """Dois DualSense sem cor lida nem declarada não viram duas opções «DualSense» iguais.
+
+    (D-2010-O-SELETOR-DO-ACIONADOR-DIZ-A-VIA-SEM-A-COR)
+    """
     ctx = SimpleNamespace(mesa=[
         {"uniq": MACS[0], "nome": "DualSense", "cor": "", "via": "USB"},
         {"uniq": MACS[1], "nome": "DualSense", "cor": "", "via": "BT"},
