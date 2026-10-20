@@ -67,7 +67,12 @@ import onde  # noqa: E402
 import monta  # noqa: E402
 import caixa_da_janela  # noqa: E402
 
-SEGUNDOS = 5
+from hefesto_dualsense4unix.core.roteador_de_movimento import (  # noqa: E402
+    SEGUNDOS_DO_ZERO,
+)
+
+#: O tempo que o «Medindo» diz é o que o daemon mede (`motion.calibrate`), e não uma cópia.
+SEGUNDOS = f"{SEGUNDOS_DO_ZERO:g}"
 
 #: O ZERO DE CADA CONTROLE (08/10/2026): o `zero.estado` do `state_full`, que o selo do
 #: cartão mostra (`data-zero`) e a fita dos três passos resume (`passo-<estado>`).
