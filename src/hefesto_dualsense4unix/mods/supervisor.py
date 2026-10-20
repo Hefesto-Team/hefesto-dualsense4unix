@@ -73,8 +73,11 @@ logger = get_logger(__name__)
 #: O diário de cada modificação (saída e erro do processo), na pasta de dados.
 DIARIO_DA_MODIFICACAO = "diario.log"
 
-#: O diário cresce até isto; ao abrir de novo, a metade velha sai.
+#: O diário cresce até isto; a escrita que passaria dele tira antes a metade velha.
 TETO_DO_DIARIO_BYTES = 1 << 20
+
+#: Quanto a cópia do diário espera o cano esvaziar depois que o processo termina.
+ESPERA_DO_DIARIO_S = 1.0
 
 #: As esperas antes de reabrir, uma por queda; a queda seguinte é «parou».
 ESPERAS_PARA_VOLTAR: tuple[float, ...] = (1.0, 2.0, 4.0)
@@ -159,6 +162,8 @@ class _Vigiada:
     mod_id: str
     tarefa: asyncio.Task[None] | None = None
     processo: asyncio.subprocess.Process | None = None
+    #: A tarefa que copia a saída do processo para o diário (o único escritor dele).
+    copia: asyncio.Task[None] | None = None
     ficha: str = ""
     #: O que esta vigia abriu: o commit, a hora da instalação e a do «ligar».
     instalacao: tuple[str, str, str] = ("", "", "")
@@ -181,17 +186,56 @@ def ultima_linha_do_diario(caminho: Path, *, teto: int = 200) -> str:
     return ""
 
 
-def _aparar_o_diario(caminho: Path) -> None:
-    """Passou do teto: fica só a metade nova (o diário é do supervisor, ninguém mais o abre)."""
+def _aparar_o_diario(caminho: Path, chegando: int = 0) -> None:
+    """Com ``chegando`` bytes a mais passaria do teto: fica só a metade nova, de linha inteira.
+
+    O diário é do supervisor: ninguém mais o abre, e só a cópia dele escreve.
+    """
     if not caminho.is_file():
         return
     tamanho = caminho.stat().st_size
-    if tamanho <= TETO_DO_DIARIO_BYTES:
+    if tamanho + chegando <= TETO_DO_DIARIO_BYTES:
         return
+    corte = tamanho - TETO_DO_DIARIO_BYTES // 2
+    if corte <= 0:
+        return  # já é só a metade nova: o que chega é que é grande
     with caminho.open("rb") as arquivo:
-        arquivo.seek(tamanho - TETO_DO_DIARIO_BYTES // 2)
+        arquivo.seek(corte)
         resto = arquivo.read()
-    caminho.write_bytes(resto)
+    quebra = resto.find(b"\n")
+    caminho.write_bytes(resto[quebra + 1:] if quebra >= 0 else b"")
+
+
+async def _copiar_para_o_diario(leitor: asyncio.StreamReader, caminho: Path) -> None:
+    """A saída e o erro do processo vão para o diário sem passar do teto, até o fim do cano.
+
+    O cano é lido até o fim mesmo quando o disco recusa a escrita: um cano parado trava o
+    processo no ``print`` seguinte. A recusa vai ao log uma vez.
+    """
+    pedaco_max = max(1, TETO_DO_DIARIO_BYTES // 4)
+    recusou = False
+    while pedaco := await leitor.read(pedaco_max):
+        try:
+            _aparar_o_diario(caminho, len(pedaco))
+            with caminho.open("ab") as diario:
+                diario.write(pedaco)
+        except OSError as exc:
+            if not recusou:
+                logger.warning("mods_diario_recusado", diario=str(caminho), err=str(exc))
+            recusou = True
+
+
+async def _esvaziar_a_copia(copia: asyncio.Task[None] | None, prazo: float) -> None:
+    """Espera a cópia ler o que sobrou no cano; quem segura o cano além do prazo perde a cópia."""
+    if copia is None:
+        return
+    await asyncio.wait({copia}, timeout=prazo)
+    if not copia.done():
+        copia.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await copia
+    elif not copia.cancelled() and (erro := copia.exception()) is not None:
+        logger.warning("mods_diario_falhou", err=str(erro))
 
 
 def comando_na_caixa(
@@ -594,6 +638,8 @@ class Supervisor:
                 "rodando", pid=processo.pid, caixa=caixa, motivo=sem_caixa, quedas=quedas))
             aberto_em = time.monotonic()
             codigo = await processo.wait()
+            copia, vigiada.copia = vigiada.copia, None
+            await _esvaziar_a_copia(copia, ESPERA_DO_DIARIO_S)
             self.porta.esquecer(vigiada.ficha)
             if vigiada.quer_parar.is_set():
                 return
@@ -659,18 +705,21 @@ class Supervisor:
         else:
             argv = comando
         _aparar_o_diario(diario)
-        with diario.open("ab") as saida:
-            processo = await asyncio.create_subprocess_exec(
-                *argv,
-                cwd=str(codigo),
-                env=ambiente,
-                stdin=asyncio.subprocess.DEVNULL,
-                stdout=saida,
-                stderr=saida,
-                start_new_session=True,
-                preexec_fn=_morre_com_o_pai(self._prctl),
-            )
+        processo = await asyncio.create_subprocess_exec(
+            *argv,
+            cwd=str(codigo),
+            env=ambiente,
+            stdin=asyncio.subprocess.DEVNULL,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT,
+            start_new_session=True,
+            preexec_fn=_morre_com_o_pai(self._prctl),
+        )
         vigiada.processo = processo
+        assert processo.stdout is not None
+        vigiada.copia = asyncio.create_task(
+            _copiar_para_o_diario(processo.stdout, diario), name=f"mods-diario-{manifesto.id}"
+        )
         self.porta.registrar(vigiada.ficha, manifesto.id, processo.pid, manifesto.permissoes,
                              comandos=_comandos_do_lancador(manifesto))
         logger.info("mods_aberta", mod=manifesto.id, pid=processo.pid, caixa=bool(self.bwrap))
@@ -686,6 +735,8 @@ class Supervisor:
             await parar_o_grupo(processo, self.prazo_para_parar_s)
         if vigiada.tarefa is not None:
             await asyncio.wait({vigiada.tarefa}, timeout=ESPERA_DA_VIGIA_S)
+        copia, vigiada.copia = vigiada.copia, None
+        await _esvaziar_a_copia(copia, 0)
         self.porta.esquecer(vigiada.ficha)
         self._marcar(mod_id, EstadoDaModificacao("desligada"))
 
@@ -742,6 +793,7 @@ __all__ = [
     "ESPERAS_PARA_VOLTAR",
     "ESPERA_DA_VIGIA_S",
     "ESPERA_DEPOIS_DO_SIGKILL_S",
+    "ESPERA_DO_DIARIO_S",
     "ESTAVEL_DEPOIS_DE_S",
     "PRAZO_DO_PARAR_CURTO_S",
     "PRAZO_PARA_PARAR_S",

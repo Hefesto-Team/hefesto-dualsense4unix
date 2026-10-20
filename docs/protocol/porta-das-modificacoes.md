@@ -18,7 +18,8 @@ O supervisor abre o processo com este ambiente, e com mais nada da sessão:
 | `HEFESTO_MOD_API` | a versão da porta que este Hefesto fala |
 
 O diretório de trabalho é a pasta do código, que dentro da caixa é só de leitura. A saída e o erro do
-processo vão para `diario.log`, na pasta de dados.
+processo vão para `diario.log`, na pasta de dados, que fica em até 1 MiB: a escrita que passaria
+disso tira antes a metade velha.
 
 ## O enquadramento
 
