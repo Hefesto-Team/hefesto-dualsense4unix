@@ -2,13 +2,10 @@
 
 Cobre o bloco wlroots: Sway, Hyprland, niri, river.
 
-**NÃO cobre o COSMIC, e a linha que dizia o contrário caiu em 02/09/2026.**
-Este cabeçalho listava *"COSMIC (cosmic-comp, smithay)"* como coberto. Medido
-com `wayland-info` na sessão do usuário: dos 58 globais que o cosmic-comp 0.1
-publica, o `zwlr_foreign_toplevel_manager_v1` **não está lá** — e é por isso
-que o `wlrctl`, instalado nesta máquina, responde *"Foreign Toplevel Management
-interface not found"*. Quem cobre o COSMIC é o `cosmic_toplevel.py`, falando
-`zcosmic_toplevel_info_v1` (esse sim publicado, na versão 3).
+**Não cobre o COSMIC** (medido com `wayland-info` em 02/09/2026): o cosmic-comp
+0.1 não publica o `zwlr_foreign_toplevel_manager_v1`, e o `wlrctl` responde
+*"Foreign Toplevel Management interface not found"*. Quem cobre o COSMIC é o
+`cosmic_toplevel.py`, pelo `zcosmic_toplevel_info_v1`.
 
 O protocolo `wlr-foreign-toplevel-management-unstable-v1` é suportado pelos
 compositors wlroots. `wlrctl` é um CLI pequeno que conversa com o compositor via esse protocolo e
@@ -22,13 +19,6 @@ Disponibilidade do `wlrctl`:
 
 Se o binário não está no PATH ou não responde, `get_active_window_info`
 retorna `None` e o caller (autoswitch via cascade) degrada silenciosamente.
-
-BUG-COSMIC-WLR-BACKEND-REGRESSION-01 (v3.1.0) — re-portado do v2.4.1 após o
-rebrand Hefesto → Hefesto - DualSense4Unix ter removido o arquivo no commit
-de massa-rename. A justificativa de então dizia que sem este backend o
-autoswitch ficava inoperante em COSMIC puro; a medição de 02/09/2026 mostra
-que ele já estava inoperante ali — o compositor nunca respondeu a este
-protocolo. O backend segue de pé pelos compositors que respondem.
 """
 from __future__ import annotations
 

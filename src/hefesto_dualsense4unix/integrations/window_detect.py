@@ -17,14 +17,10 @@ O `CosmicToplevelBackend` cobre o COSMIC por `zcosmic_toplevel_info_v1`; o
 `wlr-foreign-toplevel-management-unstable-v1`. O xdg-desktop-portal não tem
 pergunta de janela ativa, e a cascata não pergunta a ele.
 
-FATO SUBSTITUÍDO — 02/09/2026, e ele estava escrito aqui e no `wlr_toplevel.py`:
-este cabeçalho dizia que o `wlrctl` *"funciona em COSMIC"*, e mais abaixo que a
-cascata Wayland *"funciona no COSMIC via wlrctl"*. **É falso, e a medição é
-direta:** dos 58 globais que o cosmic-comp 0.1 desta máquina publica, o
-`zwlr_foreign_toplevel_manager_v1` **não está entre eles** — por isso o wlrctl
-instalado responde *"Foreign Toplevel Management interface not found"*. O que
-está entre eles é o `zcosmic_toplevel_info_v1` (versão 3), e é dele que fala o
-`CosmicToplevelBackend`, primeiro da cascata.
+O `wlrctl` não cobre o COSMIC (medido com `wayland-info` em 02/09/2026): dos 58
+globais que o cosmic-comp 0.1 publica, o `zwlr_foreign_toplevel_manager_v1` não
+é um, e o que fala de janela é o `zcosmic_toplevel_info_v1` (versão 3). Por isso
+o `CosmicToplevelBackend` vem primeiro na cascata.
 
 JANELA-WAYLAND-CEGA-01 (02/09/2026): em XWayland, o backend deixa de ser só o
 `xlib`. Ele continua PREFERIDO — é o único que resolve `exe_basename` —, mas
