@@ -185,14 +185,17 @@ def test_as_cores_seguem_distintas_com_souls_e_furtivo_e_a_luz_base_nao_as_igual
         prof = _aplicado(chave)
         cores = [_luz(prof, u["uniq"]).lightbar for u in MESA]
         assert len(set(cores)) == 4, f"{chave}: duas unidades com a mesma cor"
+        base = TABELA[chave][4]
         for u in MESA:
             leds = _luz(prof, u["uniq"])
-            if leds.efeito:
-                partes = leds.efeito.split(";")
-                if len(partes) > 2:
-                    r, g, b = leds.lightbar
-                    assert partes[1] == f"{r:02X}{g:02X}{b:02X}", (
-                        f"{chave}: a base da luz não leva a cor da unidade")
+            if base is None:
+                assert not leds.efeito, f"{chave}: a luz fixa ganhou uma base"
+                continue
+            partes = (leds.efeito or "").split(";")
+            assert len(partes) == 3 and partes[0] == base, f"{chave}: a base não chegou ao perfil"
+            r, g, b = leds.lightbar
+            assert partes[1] == f"{r:02X}{g:02X}{b:02X}", (
+                f"{chave}: a base da luz não leva a cor da unidade")
 
 
 def test_o_terror_troca_o_piscar_pela_batida_e_nada_passa_do_teto() -> None:
@@ -214,3 +217,25 @@ def test_o_terror_troca_o_piscar_pela_batida_e_nada_passa_do_teto() -> None:
 def test_toda_chave_da_tabela_existe(chave: str) -> None:
     """A tabela e o catálogo falam das mesmas chaves (o Arco fica de fora de propósito)."""
     assert chave in ej.POR_CHAVE
+
+
+@pytest.mark.parametrize("chave", sorted(TABELA))
+def test_o_motor_do_tato_liga_o_que_a_receita_do_estilo_pede(chave: str) -> None:
+    """Régua 7: o estilo sozinho, sem escolha nenhuma por controle, liga o contínuo e os motores.
+
+    A tabela diz o que o estilo pede; aqui é o motor do tato que tem de acender: o Som no corpo
+    da Corrida e da Simulação, o padrão dos motores e a Pancada do lado da Luta.
+
+    MORDIDA: tire `som_no_corpo_escolhido`, `padroes_escolhidos` ou `pancada_escolhida` do
+    `receita_do_estilo` e isto reprova (a tabela da régua 1 seguiria verde).
+    """
+    _r2, _l2, forma, motores, _base, _brilho = TABELA[chave]
+    from types import SimpleNamespace
+
+    receita = tv.receita_do_perfil(SimpleNamespace(estilo=chave))
+    assert receita.som_no_corpo_escolhido == (forma == fh.SOM_NO_CORPO), chave
+    assert receita.padroes_escolhidos == (motores is not None), chave
+    assert receita.pancada_escolhida == (motores == "pancada_do_lado"), chave
+    vale = fh.forma_que_vale(None, chave)
+    assert vale == (None if forma == fh.SEM_EFEITO else forma), chave
+    assert pv.padrao_que_vale(pv.DO_ESTILO, chave) == motores, chave

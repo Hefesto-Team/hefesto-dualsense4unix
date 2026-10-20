@@ -298,9 +298,13 @@ def test_a_receita_vem_do_campo_do_perfil_com_os_limites() -> None:
 
 def test_a_receita_vem_do_estilo_que_o_perfil_guarda() -> None:
     # O estilo guardado no perfil é traduzido (O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01):
-    # a luz que pisca no Terror pulsa a cada tiro.
-    receita = tv.receita_do_perfil(SimpleNamespace(estilo="terror"))
+    # a luz que respira na Luta pulsa a cada golpe; o Terror, desde 19/10/2026, tem o coração na
+    # base da luz e não reage ao tiro.
+    receita = tv.receita_do_perfil(SimpleNamespace(estilo="luta"))
     assert receita.reacao_ao_tiro == "pulsa"
+    terror = tv.receita_do_perfil(SimpleNamespace(estilo="terror"))
+    assert terror.reacao_ao_tiro == "parada"
+    assert terror.duracao_do_toque_ms > receita.duracao_do_toque_ms
 
 
 class Pad:
