@@ -53,7 +53,6 @@ POR_CARTAO: tuple[str, ...] = ("plastico", "desenho", "jogador", "jogador-espera
 #: (`a08_conexoes._exame`). Uma lista que tentasse ranqueá-los aqui seria a
 #: cheia de esconder um atrás do ``+N`` enquanto mostra o outro.
 ORDEM_DA_GRAVIDADE: tuple[str, ...] = (
-    "SERVIÇO",
     "PAUSA", "ERRO", "GAMEPAD", "MODO", "PONTE", "JOGO", "CONTROLE", "RÁDIO",
     "PERFIL",
 )
@@ -62,17 +61,6 @@ SELO_DA_PONTE = "PONTE"
 
 #: (o mixer UAC do DualSense martelando o EP0, `storm_doctor._SND_QUIRK_RE`), e
 SELO_DA_CURA = "CONTROLE"
-
-SELO_DO_SERVICO = "SERVIÇO"
-
-#: Hefesto está desligado.")`` no ramo `offline`, e o `validar-palavra-de-tela`
-#: DIVERGÊNCIA MORRE PELA RÉGUA:** `test_a_aba_01_jogar_fecha_as_linhas` lê o
-SERVICO_DESLIGADO = "O Hefesto está desligado."
-
-SERVICO_CALADO = (
-    f"{SERVICO_DESLIGADO} Esta tela parou de ler o serviço. Ela volta sozinha "
-    "quando ele responder."
-)
 
 #: A posição do interruptor Status com o serviço parado (estado vazio): a que o gerador chama
 #: ``desligado``. Quem lê é :func:`_estado_da_tela`.
@@ -299,13 +287,13 @@ def _do_exame() -> list[dict[str, Any]]:
 
 
 def _avisos(ctx: Contexto) -> list[dict[str, str]]:
-    """As onze fontes de aviso do produto: ``[{"selo", "texto", "fonte"}, …]``.
+    """As dez fontes de aviso do produto: ``[{"selo", "texto", "fonte"}, …]``.
 
     **Perdeu a tela em 07/09/2026, não as fontes.** Ordem de produto: a seção Atenção sai da aba
     Jogar e fica só o Reconectar controles. Os quatro endereços (`atencao-conta`, `aviso-selo`,
     `aviso-texto`, `aviso-vivo`) saíram de :data:`DA_PAGINA` (endereço sem elemento é órfão). Das
-    onze fontes **só a 5** (o exame, `a08_conexoes._exame`) tem segunda casa publicada, a aba
-    Conexões; as outras dez chegavam à tela SÓ por aqui (na medição, a coluna tinha UMA linha viva,
+    dez fontes **só a 5** (o exame, `a08_conexoes._exame`) tem segunda casa publicada, a aba
+    Conexões; as outras nove chegavam à tela SÓ por aqui (na medição, a coluna tinha UMA linha viva,
     `home_actions.texto_do_cadeado_cego`). **Foram para a aba 09, Sistema (28/09/2026,
     A-TELA-PERGUNTA-AO-DONO-01)**, cujo trabalho é a máquina se explicar: `a09_sistema.pacote`
     pergunta a :func:`coluna_de_atencao` e acrescenta as linhas ao exame, com o selo de aviso do
@@ -318,10 +306,6 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
 
     O que entra, em ordem:
 
-    0. **o serviço calado** (:func:`_aviso_do_servico_calado`): a única que responde sobre a
-    AUSÊNCIA de estado e fala quando as outras calam; primeira na lista e na escada
-    (:data:`ORDEM_DA_GRAVIDADE`), pois com o serviço calado toda outra linha descreveria estado que
-    a tela não leu;
     1. **as seis de `painel.AVISOS_DA_TELA`**: pausa, vpad degradado, rádio frágil, jogo sem
       wrapper, cadeado da troca automática e detector cego; funções puras de `home_actions`, e
       `painel.avisos_do_estado` trata a que levanta (selo ``ERRO``);
@@ -343,9 +327,7 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
     ``GAMEPAD``, o mesmo que `AVISOS_DA_TELA` dá ao vpad degradado (mesmo assunto, o gamepad virtual
     que o jogo vê); selo novo poria palavra de tela num arquivo que não é dono de nenhuma.
     """
-    calado = _aviso_do_servico_calado(ctx)
-    fora: list[dict[str, str]] = [calado] if calado else []
-    fora += _avisos_sem_outra_casa(ctx)
+    fora: list[dict[str, str]] = _avisos_sem_outra_casa(ctx)
     fora += _avisos_com_outra_casa(ctx)
     return fora
 
@@ -438,34 +420,6 @@ def _avisos_com_outra_casa(ctx: Contexto) -> list[dict[str, str]]:
                      "texto": f"o exame dos controles não respondeu ({type(erro).__name__}).",
                      "fonte": "a08_conexoes._exame"})
     return fora
-
-
-def _aviso_do_servico_calado(ctx: Contexto) -> dict[str, str] | None:
-    """A linha *"O Hefesto está desligado"* — e ``None`` quando o serviço falou.
-
-    JOGAR-O-QUE-FALTA-01, Passo 5 (06/09/2026), linha 38 do CSV da paridade: *"o tique imprime
-    `[daemon mudo] …` no stderr do processo e retorna sem pintar nada — a tela fica com os últimos
-    valores"*; *"quem clica não lê terminal"*. **A omissão era a mentira**: com o pacote recebendo
-    estado vazio, a coluna emitia ``atencao-conta = "nenhum aviso"`` e seis linhas em branco, e
-    *"Nenhum aviso"* é AFIRMAÇÃO ("perguntei e não há nada") quando não havia ninguém para perguntar
-    (mesma forma do defeito que `_estado_da_tela` fecha do outro lado). As duas metades são uma só
-    (*"só dizer, deixando os números velhos na tela, ainda é mentira; só apagar, sem dizer, parece
-    defeito"*): a de APAGAR é de `pacotes.pacote_da_pagina` + `pacotes.apagar_os_lugares_sem_dono`
-    (escrevem nos quatro lugares o que o desenho diz do vazio), e esta função é a de DIZER.
-
-    O estado vazio é o sinal, o mesmo que a aba usa: `_estado_da_tela`, `_frase_da_mesa`,
-    `_ressalva_da_mascara` e `_pendencia` abrem com ``if not state`` (`mode_of_state({})` devolve
-    **desktop**, e quem não guardar a porta afirma modo sobre tique sem resposta); aqui a porta é
-    lida ao contrário. A volta é sozinha: o tique do piloto segue (`hefesto_vivo.TIQUE_MS`, 100 ms)
-    e o primeiro estado que voltar apaga a linha.
-
-    **Alcança:** depois da folga o piloto entrega `{}` ao pacote
-    (`hefesto_vivo.FolgaDoServicoMudo.mudo`), e com ele a linha acende; a mesa, o interruptor e o
-    topo dizem o mesmo.
-    """
-    return (None if getattr(ctx, "state", None)
-            else {"selo": SELO_DO_SERVICO, "texto": SERVICO_CALADO,
-                  "fonte": "home_actions._render_home (ramo offline)"})
 
 
 def _aviso_da_ponte(state: dict[str, Any]) -> dict[str, str] | None:
@@ -592,12 +546,13 @@ def coluna_de_atencao(ctx: Contexto) -> list[dict[str, str]]:
 def _frase_da_mesa(ctx: Contexto) -> str:
     """A linha por cima dos lugares apagados — ``""`` quando a mesa cabe na tela.
 
-    Com o serviço parado (estado vazio) a linha diz que ninguém respondeu (:data:`SERVICO_CALADO`).
-    Com a mesa vazia ela não diz nada: os quatro lugares «Desconectado» já dizem (ordem,
-    19/10/2026, que tirou a frase «Nenhum controle ligado…»).
+    Com o serviço parado (estado vazio) ela não diz nada: o Status marcado em Desligado é o único
+    sinal (D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE). Com a mesa vazia também não: os quatro
+    lugares «Desconectado» já dizem (ordem, 19/10/2026, que tirou a frase «Nenhum controle
+    ligado…»).
     """
     if not ctx.state:
-        return SERVICO_CALADO
+        return ""
     quantos = len(ctx.conectados)
     lugares = lugares_da_mesa()
     if quantos > lugares:

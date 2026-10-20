@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
-"""Com o serviço parado, a aba Jogar e o topo dizem que o Hefesto está desligado.
+"""Com o serviço parado, a aba Jogar marca Desligado e não escreve frase nenhuma.
 
 A queixa de 15/10/2026: «Sair» pela bandeja, a interface aberta com o serviço fora mostrou o Status
 em Ligado, o topo com «Nenhum controle» ao lado do ponto verde e a mesa vazia sem dizer por quê,
 com o Galactic Purple e o Cosmic Red ligados pelo rádio. O piloto entrega o estado vazio (`{}`)
 depois da folga; o pacote é quem lia esse vazio como Ligado.
+
+A ordem de 20/10/2026 (D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE, que revoga a
+D-1610-A-JOGAR-DIZ-DESLIGADO-COM-O-SERVICO-PARADO), com a foto da aba: o Status em Desligado fica
+como único sinal; o topo («O Hefesto está desligado») e a mesa («Esta tela parou de ler o serviço…»)
+saem, e o topo some inteiro, sem texto e sem ponto.
 """
 from __future__ import annotations
 
@@ -62,7 +67,7 @@ def _de_pe_sem_controle() -> Contexto:
 
 
 def test_o_status_marca_desligado_com_o_servico_parado() -> None:
-    # D-1610-A-JOGAR-DIZ-DESLIGADO-COM-O-SERVICO-PARADO
+    # D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE
     """Posição vazia caía no rádio que o gerador marcou (Ligado): o interruptor mentia."""
     fora = aba.pacote(_parado())
     assert fora["hef-posicao"] == aba.POSICAO_COM_O_SERVICO_PARADO == "desligado", (
@@ -71,20 +76,52 @@ def test_o_status_marca_desligado_com_o_servico_parado() -> None:
     assert fora["steam-input-aceso"] == ""
 
 
-def test_a_mesa_diz_por_que_esta_vazia() -> None:
-    """A frase do serviço desligado, e nunca a da mesa vazia (haveria controle ligado)."""
-    frase = aba.pacote(_parado())["mesa-frase"]
-    assert frase == aba.SERVICO_CALADO, f"a mesa disse {frase!r}"
-    assert frase.startswith(aba.SERVICO_DESLIGADO)
+def _textos(valor: Any) -> list[str]:
+    """Todo texto de uma carga, em qualquer fundura."""
+    if isinstance(valor, str):
+        return [valor]
+    if isinstance(valor, dict):
+        return [t for v in valor.values() for t in _textos(v)]
+    if isinstance(valor, (list, tuple)):
+        return [t for v in valor for t in _textos(v)]
+    return []
 
 
-def test_o_topo_diz_desligado_e_nao_nenhum_controle() -> None:
-    """«Nenhum controle» ao lado do ponto verde lia-se como tela vazia com controle ligado."""
-    topo = pacotes.topo(_parado())
-    assert topo["conta-b"] == aba.SERVICO_DESLIGADO.rstrip(".")
-    assert topo["conta-b"] != pacotes.SEM_CONTROLE_NA_MESA
-    # é este campo que apaga o ponto verde no desenho
+FRASES_QUE_SAIRAM = ("O Hefesto está desligado", "Esta tela parou de ler o serviço",
+                     "Ela volta sozinha quando ele responder")
+
+
+def test_com_o_servico_parado_nenhuma_frase_e_escrita() -> None:
+    # D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE
+    """A mesa, o topo e a coluna de avisos calam; só o Status diz Desligado.
+
+    A MORDIDA: devolva `return "SERVICO_CALADO"` no `if not ctx.state` de `_frase_da_mesa`, o
+    `"conta-b"` de `_o_que_o_topo_diz_da_mesa_vazia` ou a linha do selo SERVIÇO em `_avisos`, e
+    este teste reprova.
+    """
+    ctx = _parado()
+    pacote = aba.pacote(ctx)
+    assert pacote["mesa-frase"] == "", f"a mesa disse {pacote['mesa-frase']!r}"
+    topo = pacotes.topo(ctx)
+    assert topo["conta-b"] == "", f"o topo disse {topo['conta-b']!r}"
     assert topo["servico"] == "parado"  # (noqa-acento) chave da página
+    textos = _textos(pacote) + _textos(topo) + _textos(aba.coluna_de_atencao(ctx))
+    for frase in FRASES_QUE_SAIRAM:
+        achou = [t for t in textos if frase in t]
+        assert not achou, f"a frase {frase!r} voltou: {achou}"
+
+
+def test_o_simbolo_das_duas_frases_saiu_do_gerador() -> None:
+    # D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE
+    """Sem leitor, a constante sai: o nome que sobrasse chamaria o próximo a usá-la."""
+    assert not hasattr(aba, "SERVICO_CALADO") and not hasattr(aba, "SERVICO_DESLIGADO")
+    for caminho in (INTERFACE / "aba01.py", RAIZ / "mockup" / "01-jogar.html",
+                    INTERFACE / "pacotes" / "a01_jogar.py", INTERFACE / "pacotes" / "__init__.py"):
+        corpo = caminho.read_text(encoding="utf-8")
+        # «O Hefesto está desligado: a trava…» é a recusa do cadeado (gesto da pessoa), e fica
+        for frase in ("O Hefesto está desligado.\"", "Esta tela parou de ler o serviço",
+                      "Ela volta sozinha quando ele responder"):
+            assert frase not in corpo, f"{caminho.name} ainda escreve {frase!r}"
 
 
 def test_com_dois_controles_no_radio_volta_ao_ligado_e_aos_cartoes() -> None:
@@ -100,6 +137,7 @@ def test_com_dois_controles_no_radio_volta_ao_ligado_e_aos_cartoes() -> None:
 
 
 def test_servico_de_pe_sem_controle_continua_dizendo_que_nao_ha_controle() -> None:
+    # D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE
     """O serviço respondeu e a mesa está vazia: aí «Nenhum controle» é verdade, e só o topo diz."""
     ctx = _de_pe_sem_controle()
     assert aba.pacote(ctx)["mesa-frase"] == ""
@@ -283,9 +321,9 @@ LER_A_TELA = r"""
       desligado: document.querySelector('.hef-pos.desligado').classList.contains('on'),
       secao_ligado: vis(document.querySelector('.hef-modo.so-ligado')),
       secao_desligado: vis(document.querySelector('.hef-modo.so-desligado')),
-      topo: (con.innerText || '').replace(/\s+/g, ' ').trim(),
-      cor_do_topo: getComputedStyle(con).color,
-      bolinha: vis(con.querySelector('.bolinha')),
+      topo_visivel: vis(con),
+      topo: vis(con) ? (con.innerText || '').replace(/\s+/g, ' ').trim() : '',
+      bolinha: vis(con) && vis(con.querySelector('.bolinha')),
       frase_acesa: nota.classList.contains('ha'),
       frase: (nota.innerText || '').replace(/\s+/g, ' ').trim(),
     };
@@ -370,22 +408,23 @@ def na_tela() -> dict[str, Any]:
     return _no_webkit(LER_A_TELA.replace("CARGAS", json.dumps(cargas)))
 
 
-def test_no_webkit_o_servico_parado_marca_desligado_e_apaga_o_ponto_verde(
+def test_no_webkit_o_servico_parado_marca_desligado_e_nao_escreve_nada(
         na_tela: dict[str, Any]) -> None:
-    """O que a pessoa vê: Desligado aceso, o topo sem a bolinha e noutra cor, a frase na mesa."""
-    no_radio = na_tela["no_radio"]
+    # D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE
+    """O que a pessoa vê: Desligado aceso, o topo sem texto e sem ponto, e a mesa sem frase.
+
+    A MORDIDA: tire o `display:none` da regra `.fita-linha:has(i[data-servico="parado"]) .conectado`
+    (`aba01.py` e `mockup/01-jogar.html`) e `topo_visivel` volta a ser verdadeiro.
+    """
     for nome in ("parado", "parado_de_novo"):
         fora = na_tela[nome]
         assert fora["desligado"] and not fora["ligado"], f"{nome}: o Status não marcou Desligado"
         assert fora["secao_desligado"] and not fora["secao_ligado"], (
             f"{nome}: a seção do Desligado não apareceu: {fora}")
-        assert fora["topo"] == aba.SERVICO_DESLIGADO.rstrip("."), (
-            f"{nome}: o topo disse {fora['topo']!r}")
-        assert not fora["bolinha"], f"{nome}: o ponto verde ficou ao lado do desligado"
-        assert fora["cor_do_topo"] != no_radio["cor_do_topo"], (
-            f"{nome}: o topo do serviço parado tem a mesma cor ({fora['cor_do_topo']}) do de pé")
-        assert fora["frase_acesa"] and fora["frase"] == aba.SERVICO_CALADO, (
-            f"{nome}: a mesa não disse por que está vazia: {fora['frase']!r}")
+        assert not fora["topo_visivel"], f"{nome}: o topo ficou na tela: {fora['topo']!r}"
+        assert fora["topo"] == "" and not fora["bolinha"], f"{nome}: sobrou texto ou ponto"
+        assert not fora["frase_acesa"] and fora["frase"] in ("", "—"), (
+            f"{nome}: a mesa escreveu {fora['frase']!r}")
 
 
 def test_no_webkit_com_dois_no_radio_volta_ao_ligado_e_ao_verde(na_tela: dict[str, Any]) -> None:

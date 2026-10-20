@@ -190,8 +190,13 @@ def _frases_de_tela(caminho: Path) -> list[str]:
 
 
 def test_a_janela_continua_dona_da_frase_do_desligado() -> None:
-    """Se a frase-dona mudar, a regra abaixo precisa de manutenção — não de fé."""
+    """Se a frase-dona mudar, a regra abaixo precisa de manutenção — não de fé.
+
+    Desde 20/10/2026 (D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE) a tela não escreve que o serviço
+    parou; a frase sobrevive na recusa do cadeado (`CADEADO_RECUSA`), que é gesto da pessoa.
+    """
     jogar = _TELA_JOGAR.read_text(encoding="utf-8")
+    assert "CADEADO_RECUSA = " in jogar
 
     assert _FRASE_DONA_DO_DESLIGADO in jogar, (
         f"a janela deixou de dizer {_FRASE_DONA_DO_DESLIGADO!r}. Se foi renomeação "

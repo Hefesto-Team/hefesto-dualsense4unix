@@ -900,16 +900,14 @@ def topo(ctx: Contexto) -> dict[str, Any]:
 
 
 def _o_que_o_topo_diz_da_mesa_vazia(state: dict[str, Any] | None) -> str:
-    """O topo com a mesa vazia: «Nenhum controle» se o serviço respondeu, senão «desligado».
+    """O topo com a mesa vazia: «Nenhum controle» se o serviço respondeu, senão nada.
 
     Estado vazio é serviço que não respondeu (o piloto entrega `{}` depois da folga), e «Nenhum
-    controle» ao lado do ponto verde lia-se como controle ligado e tela vazia (15/10/2026).
+    controle» ao lado do ponto verde lia-se como controle ligado e tela vazia (15/10/2026). Com o
+    serviço parado o topo não escreve nada (D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE): o Status
+    marcado em Desligado é o único sinal, e a página esconde o ponto (`data-servico="parado"`).
     """
-    if state:
-        return SEM_CONTROLE_NA_MESA
-    from hefesto_dualsense4unix.interface.pacotes.a01_jogar import SERVICO_DESLIGADO
-
-    return SERVICO_DESLIGADO.rstrip(".")
+    return SEM_CONTROLE_NA_MESA if state else ""
 
 
 def servico_do_menu(state: dict[str, Any] | None) -> str:

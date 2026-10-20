@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""A coluna Atenção saiu da Jogar — e as onze fontes NÃO saíram com ela."""
+"""A coluna Atenção saiu da Jogar — e as dez fontes NÃO saíram com ela."""
 from __future__ import annotations
 
 import pathlib
@@ -109,17 +109,10 @@ def test_as_onze_fontes_continuam_de_pe_e_com_porta_propria() -> None:
             f"a porta do canal mudou de vocabulário: {sorted(aviso)}")
 
 
-def test_o_servico_calado_ainda_encontra_o_canal() -> None:
-    """A fonte que fala quando TODAS as outras calam continua no canal."""
-    selos = [a["selo"] for a in aba._avisos(_ctx({}))]
-    assert aba.SELO_DO_SERVICO in selos, (
-        "o canal perdeu a fonte do serviço calado quando a tela saiu")
-
-
 def test_a_unica_fonte_com_segunda_casa_e_o_exame() -> None:
     """A porta do canal é UMA: quem chama as fontes é só o `a01_jogar`.
 
-    Das onze fontes, só o exame da mesa (`a08_conexoes._exame`) é publicado
+    Das dez fontes, só o exame da mesa (`a08_conexoes._exame`) é publicado
     noutra aba — a Conexões, de onde ele vem. As outras perderam a tela em
     07/09 e voltaram a ela em 28/09 pela aba Sistema, que as recebe por
     `coluna_de_atencao` (`a09_sistema._avisos_do_produto`) e não as chama uma a
@@ -136,7 +129,6 @@ def test_a_unica_fonte_com_segunda_casa_e_o_exame() -> None:
         "aviso_de_opt_out_antigo": "o opt-out antigo",
         "cura_do_travamento": "a cura do travamento do USB",
         "divergencia_de_mascara": "a divergência de máscara",
-        "servico_calado": "o serviço calado",
         "AVISOS_DA_TELA": "as seis de `painel`",
     }
     for fonte, oque in fontes.items():

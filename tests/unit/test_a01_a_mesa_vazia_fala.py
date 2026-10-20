@@ -53,18 +53,21 @@ def test_com_a_mesa_cheia_a_linha_nao_existe() -> None:
 
 
 def test_sem_daemon_a_aba_nao_afirma_que_a_mesa_esta_vazia() -> None:
+    # D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE
     """`conectados` vazio pode ser "não há" ou "ninguém respondeu".
 
     É a mesma guarda do `_estado_da_tela`, e ela é a armadilha desta aba:
     escrever "nenhum controle na mesa" sobre um tique sem resposta é a tela
-    afirmando o que não leu.
+    afirmando o que não leu. Com o serviço parado a mesa também não escreve que ele parou
+    (20/10/2026): o Status em Desligado é o único sinal.
 
-    Com o serviço parado a linha diz que o Hefesto está desligado (15/10/2026).
-    A MORDIDA: troque o `return SERVICO_CALADO` do `if not ctx.state` por
-    `return ""` e a aba cala num engasgo de IPC.
+    A MORDIDA: faça o `if not ctx.state` de `_frase_da_mesa` devolver uma frase e a aba escreve
+    sobre o engasgo de IPC; tire o `if not ctx.state` e a mesa vazia lê como "há 0 controles".
     """
     vazio = Contexto(state={}, mesa=[], conectados=[], estados={})
-    assert aba.pacote(vazio)["mesa-frase"] == aba.SERVICO_CALADO
+    fora = aba.pacote(vazio)
+    assert fora["mesa-frase"] == ""
+    assert fora["hef-posicao"] == aba.POSICAO_COM_O_SERVICO_PARADO
 
 
 def test_com_cinco_controles_a_tela_conta_os_que_nao_cabem() -> None:

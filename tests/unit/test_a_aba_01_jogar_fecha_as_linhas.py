@@ -412,46 +412,33 @@ def test_so_o_true_literal_acende_o_marcador() -> None:
     assert aba._e_o_primario({"is_primary": "sim"}) == ""
 
 
-def test_o_servico_calado_diz_e_para_de_afirmar() -> None:
-    """Passo 5 — com o estado vazio a coluna DIZ, e nada mais é afirmado."""
+def test_o_servico_calado_para_de_afirmar_e_nao_escreve() -> None:
+    # D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE
+    """Passo 5 — com o estado vazio nada é afirmado, e (20/10/2026) nada é escrito: só o Status."""
     ctx = Contexto(state={}, mesa=[], conectados=[], estados={})
-    canal = aba._avisos(ctx)
     fora = aba.pacote(ctx)
 
-    selos = [a["selo"] for a in canal]
-    assert aba.SELO_DO_SERVICO in selos, (
-        "o canal ficou calado com o serviço calado — a tela afirmando sobre um "
-        "estado que ninguém leu")
-    assert canal[selos.index(aba.SELO_DO_SERVICO)]["texto"] == aba.SERVICO_CALADO
-
+    assert aba._avisos(ctx) == [] or all(
+        a["selo"] != "SERVIÇO" for a in aba._avisos(ctx)), (
+        "a coluna de avisos escreveu que o serviço parou")
     assert fora["hef-posicao"] == "desligado", (
         "o interruptor não disse Desligado com o serviço calado")
     assert fora["modo-aceso"] == "", "um chip da fileira acendeu sem estado"
     assert fora["cadeado"] == TRAVESSAO, "o cadeado afirmou uma escolha dela"
-    assert fora["mesa-frase"] == aba.SERVICO_CALADO, (
-        "a mesa vazia deveria dizer que o serviço está desligado, e não "
-        "'nenhum controle na mesa' sobre um tique sem resposta")
+    assert fora["mesa-frase"] == "", (
+        "a mesa não escreve que o serviço parou, nem 'nenhum controle na mesa' sobre um tique "
+        "sem resposta")
     assert not fora["cartoes"], "um cartão foi afirmado sem estado"
 
 
-def test_com_o_servico_vivo_a_linha_do_servico_nao_existe() -> None:
-    """E ela SOME sozinha quando o serviço volta — sem clique nenhum."""
+def test_com_o_servico_vivo_a_coluna_nao_traz_o_selo_do_servico() -> None:
+    """O selo SERVIÇO saiu da escada junto com a frase."""
     c1 = {"uniq": P1, "connected": True, "player_slot": 1, "player": 1,
           "is_primary": True, "transport": "usb"}
     fora = aba._avisos(_ctx([c1]))
-    assert aba.SELO_DO_SERVICO not in [a["selo"] for a in fora], (
-        "a linha do serviço calado continuou na coluna com o daemon vivo")
-
-
-def test_o_selo_do_servico_abre_a_escada_da_gravidade() -> None:
-    """Com o serviço calado, TODA outra linha descreveria o que ninguém leu."""
-    assert aba.ORDEM_DA_GRAVIDADE[0] == aba.SELO_DO_SERVICO, (
-        "o selo do serviço saiu da frente da escada")
-    selos = [a["selo"] for a in aba._em_ordem([
-        {"selo": "PERFIL", "texto": "a"}, {"selo": "PAUSA", "texto": "b"},
-        {"selo": aba.SELO_DO_SERVICO, "texto": "c"},
-    ])]
-    assert selos[0] == aba.SELO_DO_SERVICO, f"o canal ordenou {selos!r}"
+    assert "SERVIÇO" not in [a["selo"] for a in fora]
+    assert "SERVIÇO" not in aba.ORDEM_DA_GRAVIDADE
+    assert not hasattr(aba, "SELO_DO_SERVICO")
 
 
 def test_nenhuma_das_frases_novas_fala_de_maquina() -> None:
@@ -459,7 +446,7 @@ def test_nenhuma_das_frases_novas_fala_de_maquina() -> None:
     from hefesto_dualsense4unix.app.actions import home_actions
 
     de_maquina = ("uinput", "hidraw", "vpad", "evdev", "uniq")
-    minhas = [aba.SERVICO_CALADO, aba.SERVICO_DESLIGADO, aba.PRIMARIO_DICA,
+    minhas = [aba.PRIMARIO_DICA,
               aba.MARCA_DO_PRIMARIO]
     #: O MARKUP FICA, e não é descuido: quem o tira é `interface.sistema.sem_markup`,
     da_ponte = [

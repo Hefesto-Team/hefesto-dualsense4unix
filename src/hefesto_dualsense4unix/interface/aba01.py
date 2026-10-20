@@ -31,7 +31,6 @@ from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (  # noqa: E402
 BATERIA = {"p1": 100, "p2": 64, "p3": 41, "p4": 87}
 
 
-#: ``SERVICO_DESLIGADO`` já fizeram, e pelo mesmo motivo.
 NATIVO_E_OS_JOGADORES = "quem conta os jogadores passa a ser o jogo."
 
 #:   Hefesto se Ligado Abre as seções de Modo, Steam Input, Xbox, Sony DualSense,
@@ -211,10 +210,10 @@ CSS = """
   .hef-topo:not(:has(.hef-pos.on)):has(#hef-desligado:checked) ~ .quadro .so-desligado{display:block}
   .hef-topo:has(.hef-pos.ligado.on) ~ .quadro .so-ligado{display:block}
   .hef-topo:has(.hef-pos.desligado.on) ~ .quadro .so-desligado{display:block}
-  /* O TOPO COM O SERVIÇO PARADO (15/10/2026): o ponto verde some e a frase toma a cor de atenção.
-     Quem diz «parado» é o campo da fita que o menu do botão direito também lê. */
-  .fita-linha:has(i[data-servico="parado"]) .conectado{color:var(--orange)}
-  .fita-linha:has(i[data-servico="parado"]) .conectado .bolinha{display:none}
+  /* O TOPO COM O SERVIÇO PARADO (20/10/2026): sem texto e sem ponto; o Status em Desligado é o único
+     sinal (D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE). Quem diz «parado» é o campo da fita que o menu
+     do botão direito também lê; o piloto escreve «—» no `<b>` vazio, e o `display:none` o leva junto. */
+  .fita-linha:has(i[data-servico="parado"]) .conectado{display:none}
   /* E ELAS ABREM NO MESMO y E FECHAM NO MESMO y — 180 contra 176 foi o que se
      mediu quando divergiram, e "muda tudo ao clicar" é a queixa de uso que fixou a
      altura única das dez abas; ela vale dentro de uma aba também.
