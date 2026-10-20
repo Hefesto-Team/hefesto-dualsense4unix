@@ -34,15 +34,14 @@ mesmo tratamento — dar a mesma marca às três seria maquiar:
   buraco de régua, não dívida desta aba, e marcá-las de rótulo esconderia a
   única coisa que ainda falta medir aqui.
 
-A MORDIDA: tire o ``data-campo="degrau"`` dos quatro botões em ``aba05._coluna``,
-rode ``python3 aba05.py``, e ``test_os_oito_degraus_saem_do_produto`` reprova
-nomeando os oito. Tire o ``data-hef-rotulo`` do «Parar» e
+A MORDIDA: troque o ``mult-pos`` do plano do ``a05_vibracao.pacote`` por um número fixo, e
+``test_o_cursor_da_forca_sai_do_produto`` reprova. Tire o ``data-hef-rotulo`` do «Parar» e
 ``test_os_oito_rotulos_estao_declarados`` reprova nomeando os quatro que ficam.
 
-ONDE ELA MEDE: na página PUBLICADA, desde 18/10/2026. A bancada tirou os degraus e o
-`Máx` da Força (r3b-05-12: a Força é só o trilho), e o produto os mantém até a segunda
-passagem de A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01, que
-aposenta este arquivo com eles.
+DESDE 20/10/2026 a «Força» é o trilho de 0 a 200%, sem os botões de degrau
+(A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01): a família dos 8 x
+``forca`` acima é história, e as réguas dela saíram. A régua mede a página PUBLICADA, que perde
+os botões no ``--publicar 05`` da costura.
 """
 from __future__ import annotations
 
@@ -166,64 +165,20 @@ def _por_chave(vereditos, chave):
     return [v for v in vereditos if v.campo.chave == chave]
 
 
-def test_os_oito_degraus_saem_do_produto(regua, vereditos):
-    """Os botões de TODOS os lugares deixaram de mostrar o desenho.
+def test_o_cursor_da_forca_sai_do_produto(regua, vereditos, declarados):
+    """O trilho da «Força» das colunas vivas deixou de mostrar o desenho.
 
-    Antes desta cura eles eram `MOCKUP` — o pacote não emitia nada e a classe
-    `on` saía da cena do mockup. Hoje o pacote emite `degrau` e o alvo `classe`
-    acende quem casa, o que faz todos virarem `PRODUTO`.
-
-    A CONTA PASSOU DE "DUAS COLUNAS VIVAS" PARA A MESA INTEIRA — 07/09/2026.
-    Até aqui o lugar VAZIO era um cartão à parte, sem um único `data-campo`
-    dentro, e por isso os degraus dele não existiam. Medido com os quatro
-    DualSense do usuário na mesa: o daemon publicava os quatro, o pacote mandava as
-    quatro colunas e o P3 e o P4 continuavam no travessão — **o dado chegava e
-    não tinha onde pousar**. Os quatro lugares saem do mesmo molde agora
-    (`aba05._coluna`), e uma régua que continuasse contando `* 2` daria verde
-    sobre a metade da mesa que não recebe nada.
+    Até 20/10/2026 esta régua mediu os oito degraus (os botões Economia, Padrão e Máximo das
+    duas colunas) e o degrau aceso da cena do mockup. A «Força» virou o trilho de 0 a 200% sem
+    botões (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01), e as duas
+    réguas saíram com eles; o que fica é o cursor do trilho, que o pacote pinta pelo `mult-pos`.
     """
-    degraus = _por_chave(vereditos, "degrau")
-    from hefesto_dualsense4unix.interface import aba05
-    assert len(degraus) == len(aba05.FORCA) * len(aba05.MESA), (
-        f"são {len(aba05.FORCA)} degraus em {len(aba05.MESA)} lugares, e a "
-        f"régua achou {len(degraus)} — o endereço `degrau` sumiu do desenho")
-    vivos = {u for u in UNIQS}
-    presos = [(v.campo.dono, v.campo.quando, v.classe) for v in degraus
-              if v.campo.dono in vivos and v.classe != regua.PRODUTO]
-    assert not presos, (
-        f"degrau ainda mostrando o desenho: {presos}. O pacote emite "
-        f"`degrau={POLITICA!r}` e a tela tem de mover a classe `on`.")
-
-
-def test_o_degrau_aceso_e_o_da_mesa_e_nao_o_do_mockup(regua, cravados,
-                                                      declarados):
-    """A cena do mockup acende `max` no P1; o daemon diz que ele HERDA."""
-    cena = {(c.dono, c.quando) for c in cravados
-            if c.chave == "degrau" and c.valor}
-    assert ("p1", "max") in cena, (
-        "a cena do mockup deixou de acender `max` no P1 — a razão desta régua "
-        "mudou, e ela virou vácuo")
-    assert declarados[("p1", "degrau")] == POLITICA, (
-        f"a coluna do P1 declarou {declarados[('p1', 'degrau')]!r} e o daemon "
-        f"de mentira responde {POLITICA!r} — sem ajuste próprio a coluna HERDA "
-        f"esse degrau, e herdar não é motivo para apagar os três botões")
-    assert declarados[("p1", "degrau-herdado")] == "1", (
-        "a coluna do P1 acendeu sem dizer que o degrau é HERDADO — aceso igual "
-        "ao escolhido é o que a decisão [05] dela nasceu para impedir")
-
-    vivos, _ = _a_tela_depois_da_pintura(regua, cravados, declarados)
-    acesos = {(c.dono, c.quando) for c, v in zip(cravados, vivos, strict=True)
-              if c.chave == "degrau" and v}
-    assert acesos == {("p1", POLITICA), ("p2", POLITICA)}, (
-        f"depois do tique os acesos das colunas são {sorted(acesos)} — as duas "
-        f"herdam {POLITICA!r} do daemon, e é esse degrau que tem de acender. O "
-        f"`max` do P1 é o que o MOCKUP cravou, e ele tinha de sair")
-    assert ("p1", "max") not in acesos, (
-        "o P1 continuou aceso no `max` que o mockup cravou — a tela não saiu "
-        "do desenho")
-    assert not [c for c in cravados if c.chave == "degrau-mesa"], (
-        "o `degrau-mesa` voltou ao desenho — a linha que ele pintava saiu em "
-        "05/09/2026 por decisão dela")
+    assert not [k for k in declarados if k[1] in ("degrau", "degrau-herdado")], (
+        "o pacote voltou a declarar o degrau, e a Força não tem mais botões")
+    cursores = [v for v in _por_chave(vereditos, "mult-pos") if v.campo.dono in UNIQS]
+    assert cursores, "a régua não achou o cursor da Força nas colunas vivas"
+    presos = [(v.campo.dono, v.classe) for v in cursores if v.classe != regua.PRODUTO]
+    assert not presos, f"o cursor da Força ainda mostra o desenho: {presos}"
 
 
 ROTULOS = {

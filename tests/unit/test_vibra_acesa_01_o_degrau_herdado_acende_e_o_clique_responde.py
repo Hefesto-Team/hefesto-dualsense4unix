@@ -55,12 +55,11 @@ impede essa forma de voltar.
 
 ## AS MORDIDAS, uma por defeito
 
-* **defeito 1** — em ``a05_vibracao.pacote``, faça o campo ``degrau`` sair
-  vazio quando a coluna herda;
-  :func:`test_a_coluna_que_herda_acende_o_degrau_em_vigor` reprova com
-  ``degrau=''``. Tire só o ``degrau-herdado`` e
-  :func:`test_o_degrau_herdado_nao_tem_a_cara_do_escolhido` reprova sozinha — é
-  o que impede a cura de virar mentira nova;
+* **defeito 1** — desde 20/10/2026 a «Força» é o trilho de 0 a 200%, sem degraus
+  (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01), e a força herdada
+  aparece no cursor: em ``a05_vibracao.pacote``, faça o ``mult-pos`` sair vazio quando a coluna
+  herda e :func:`test_a_coluna_que_herda_poe_o_cursor_na_forca_em_vigor` reprova. A marca
+  ``degrau-herdado`` e a régua dela saíram com os botões;
 * **defeito 2** — em ``_aplicar_a_forca``, apague o ramo ``if not mudou``;
   :func:`test_o_clique_no_degrau_que_ja_vale_responde` reprova com
   ``recado=None``. As duas metades do silêncio são medidas juntas em
@@ -180,73 +179,38 @@ def _coluna(pac) -> dict[str, Any]:
     return fora[UNIQ]
 
 
-def test_a_coluna_que_herda_acende_o_degrau_em_vigor(pac, disco_dela) -> None:
-    """Sem override, a coluna acende o degrau da força geral."""
+#: o número que o trilho mostra com a força geral em `max`, e com o override `economia`
+NO_TRILHO_DO_GLOBAL = "150"
+NO_TRILHO_DO_OVERRIDE = "30"
+
+
+def test_a_coluna_que_herda_poe_o_cursor_na_forca_em_vigor(pac, disco_dela) -> None:
+    """Sem override, o trilho da coluna mostra a força geral: nada de «0» nem de vazio."""
     col = _coluna(pac)
-    assert col["degrau"] == GLOBAL, (
-        f"a coluna emitiu {col['degrau']!r} com a força geral em {GLOBAL!r} e "
-        f"sem override — os três botões apagam, que é exatamente o que ela "
-        f"fotografou em 17/09: 'o botão não tá ativo'")
+    assert col["mult-pos"] == col["mult"] == NO_TRILHO_DO_GLOBAL, (
+        f"a coluna pôs o cursor em {col['mult-pos']!r} com a força geral em {GLOBAL!r} e "
+        f"sem override — é a tela negando a força que a mão sente, a queixa de 17/09")
+    assert "degrau" not in col and "degrau-herdado" not in col, (
+        "a Força é o trilho de 0 a 200% desde 20/10/2026, e o degrau voltou à pintura")
 
 
-def test_o_degrau_herdado_nao_tem_a_cara_do_escolhido(pac, disco_dela) -> None:
-    """Aceso, sim — igual ao escolhido, não. A decisão [05] dela continua de pé."""
-    col = _coluna(pac)
-    assert col["degrau-herdado"] == "1", (
-        "a coluna herdou o degrau e não marcou a procedência — aceso igual ao "
-        "escolhido é a mentira que a decisão [05] dela nasceu para matar")
-
-
-def test_a_coluna_com_override_proprio_nao_se_diz_herdada(
-        pac, disco_dela) -> None:
-    """O par da régua acima: com ajuste próprio, a marca NÃO sai."""
+def test_a_coluna_com_override_proprio_mostra_o_dela(pac, disco_dela) -> None:
+    """O par da régua acima: com ajuste próprio, o override vence o global."""
     vivo, _ = disco_dela
     vivo["cru"] = _o_perfil_dela(com_override="economia")
 
     col = _coluna(pac)
-    assert col["degrau"] == "economia", (
-        f"a coluna com override próprio emitiu {col['degrau']!r} — a "
+    assert col["mult-pos"] == NO_TRILHO_DO_OVERRIDE, (
+        f"a coluna com override próprio pôs o cursor em {col['mult-pos']!r} — a "
         f"precedência do produto é o override vencendo o global")
-    assert col["degrau-herdado"] == "", (
-        "a coluna tem ajuste próprio e a tela disse que ele é herdado")
 
 
-def test_sem_politica_nenhuma_a_marca_nao_afirma_procedencia(
-        pac, disco_dela) -> None:
+def test_sem_politica_nenhuma_o_trilho_nao_afirma_numero(pac, disco_dela) -> None:
     """Campo sem informação NÃO MOSTRA NADA — a regra, 02/09/2026."""
     ctx = _ctx(pac)
     ctx.state["rumble_policy"] = ""
     col = pac.pacote_da_pagina(PAGINA, ctx)["colunas"][UNIQ]
-    assert col["degrau"] == "", f"acendeu {col['degrau']!r} sem política"
-    assert col["degrau-herdado"] == "", (
-        "sem degrau aceso a tela marcou 'herdado' — procedência de quê?")
-
-
-def test_a_marca_tem_onde_pousar_nos_quatro_lugares() -> None:
-    """O endereço existe no desenho, e nos QUATRO lugares.
-
-    Um campo que o pacote emite e o desenho não endereça é dado que chega e cai
-    no chão, calado — o defeito que ela mediu com os quatro DualSense na mesa e
-    que o `check_os_quatro_lugares` guarda. A marca é da CAIXA dos três botões,
-    não de cada botão: a mesma verdade em três elementos divergiria no primeiro
-    degrau novo.
-    """
-    import onde
-
-    # o PUBLICADO: a bancada tirou os degraus em 18/10/2026 (r3b-05-12); a segunda passagem os
-    # tira do produto e daqui
-    html = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
-    quantos = html.count('data-campo="degrau-herdado"')
-    assert quantos == 4, (
-        f"a marca do herdado aparece {quantos} vez(es) no publicado, e a mesa "
-        f"tem quatro lugares — sem ela o degrau do controle que chegar naquela "
-        f"coluna acende sem dizer de onde veio")
-    assert 'data-hef-classe="herdado"' in html, (
-        "a marca perdeu a classe própria e voltaria a acender com a cara do "
-        "escolhido")
-    assert ".vib .seg.herdado button.on{" in html, (
-        "a folha não desenha mais o degrau herdado — o endereço existe e não "
-        "muda um pixel, que é verde sobre nada")
+    assert col["mult-pos"] == "", f"pôs o cursor em {col['mult-pos']!r} sem política"
 
 
 def test_o_clique_no_degrau_que_ja_vale_responde(pac, disco_dela) -> None:
@@ -371,9 +335,9 @@ def test_o_silencio_medido_na_tela_dela_nao_volta(pac, disco_dela) -> None:
     _, gravados = disco_dela
 
     antes = _coluna(pac)
-    assert antes["degrau"] == GLOBAL and antes["degrau-herdado"] == "1", (
-        f"ao ABRIR a aba a coluna dela mostra {antes['degrau']!r} / "
-        f"herdado={antes['degrau-herdado']!r} — era '' / '' em 17/09")
+    assert antes["mult-pos"] == NO_TRILHO_DO_GLOBAL, (
+        f"ao ABRIR a aba a coluna dela mostra {antes['mult-pos']!r} — em 17/09 a tela não "
+        f"mostrava a força que vale")
 
     fora = pac.gesto_da_pagina(PAGINA, "forca")(
         _ctx(pac), {"uniq": UNIQ, "forca": GLOBAL}, PonteDeMentira())

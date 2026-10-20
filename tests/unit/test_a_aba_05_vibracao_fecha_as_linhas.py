@@ -402,26 +402,6 @@ def test_o_desenho_nao_tem_linha_de_mesa_nem_o_auto(bancada: str) -> None:
         "outra; um botão a menos é uma mentira a menos.")
 
 
-def test_a_coluna_oferece_os_tres_modos() -> None:
-    """TRÊS botões por coluna no PRODUTO, e os três são os de `RUMBLE_POLICY_MULT`.
-
-    A bancada de 18/10/2026 os tirou (r3b-05-12); o publicado os mantém até a segunda passagem
-    de A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01.
-    """
-    import onde
-
-    from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
-    from hefesto_dualsense4unix.interface import aba05
-
-    bancada = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
-    assert {c for _, c in aba05.FORCA} == set(RUMBLE_POLICY_MULT), (
-        f"os degraus da aba são {sorted(c for _, c in aba05.FORCA)} e o produto "
-        f"tem {sorted(RUMBLE_POLICY_MULT)}")
-    for chave in RUMBLE_POLICY_MULT:
-        assert f'data-forca="{chave}"' in bancada, (
-            f"o degrau {chave!r} não está no desenho")
-
-
 def test_a_forca_da_bancada_e_so_o_trilho(bancada: str) -> None:
     """O desenho de 18/10/2026 (r3b-05-12 e o pedido do dia): sem botões, um trilho de 0 a 200%.
 
@@ -449,18 +429,25 @@ def test_a_forca_da_bancada_e_so_o_trilho(bancada: str) -> None:
     assert bancada.count('class="teto">%</span>') >= len(aba05.MESA)
 
 
-def test_a_coluna_sem_ajuste_proprio_acende_e_diz_que_herdou() -> None:
-    """"Herdado" fica óbvio — e agora sem apagar a tela. Decisão [05] dela, 17/09."""
+def test_a_coluna_sem_ajuste_proprio_mostra_a_forca_que_herdou() -> None:
+    """A coluna que herda mostra no trilho a força geral — sem apagar a tela. 17/09, e 20/10.
+
+    Até 20/10/2026 ela acendia o degrau herdado com a marca `degrau-herdado`. A «Força» virou o
+    trilho de 0 a 200% sem botões (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-
+    PS5-01): o que fica é o número da força em vigor no cursor, e nenhum degrau na pintura.
+    """
     import pacotes
+
+    from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
 
     carga = pacotes.pacote_da_pagina(PAGINA, _ctx())
     col = next(iter(carga["colunas"].values()))
-    assert col["degrau"] == "balanceado", (
-        f"a coluna emitiu {col['degrau']!r} — sem ajuste próprio ela HERDA o "
-        f"degrau da força geral, e herdar não é motivo para apagar os três")
-    assert col["degrau-herdado"] == "1", (
-        "a coluna acendeu sem dizer que o degrau é herdado — a tela volta a "
-        "ter a mesma cara para 'escolha dela' e para 'o que o Hefesto usa'")
+    geral = str(round(RUMBLE_POLICY_MULT["balanceado"] * 100))
+    assert col["mult-pos"] == col["mult"] == geral, (
+        f"a coluna pôs o cursor em {col['mult-pos']!r} — sem ajuste próprio ela HERDA a "
+        f"força geral, e herdar não é motivo para apagar o trilho")
+    assert "degrau" not in col and "degrau-herdado" not in col, (
+        "o degrau voltou à pintura, e a Força não tem mais botões")
     assert carga["mesa"] == {}, (
         f"a mesa desta aba voltou a emitir {sorted(carga['mesa'])} — a linha "
         f"que esses campos pintavam saiu em 05/09/2026")

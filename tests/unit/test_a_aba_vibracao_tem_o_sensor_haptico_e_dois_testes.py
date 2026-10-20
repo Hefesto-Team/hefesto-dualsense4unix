@@ -152,35 +152,25 @@ def _coluna(state: dict[str, Any]) -> dict[str, Any]:
     return coluna
 
 
-def _esperado(valor: int) -> str:
-    """O MAIOR degrau que o valor alcança, pela escada do produto — nada digitado.
+@pytest.mark.parametrize("valor", [200, 180, 130, 120, 70, 50, 10, 0])
+def test_o_trilho_mostra_o_valor_do_personalizado_sem_acender_degrau(valor: int) -> None:
+    """Régua 2: com o personalizado, o cursor e o número são o valor; degrau não há mais.
 
-    O «Padrão» (``balanceado``) fica de fora: desde 04/10/2026 ele trava as barras, e o trilho
-    personalizado entre 100 e 149 multiplica e destrava; acendê-lo ali mentiria.
+    Até 20/10/2026 ela cobrava o MAIOR degrau que o valor alcançava. A «Força» virou o trilho de
+    0 a 200% sem botões (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01), e
+    a régua da escada saiu com eles. Os dois extremos (0 e 200) entram porque o trilho vai até eles.
     """
-    alcancados = [k for k, m in RUMBLE_POLICY_MULT.items() if valor >= round(m * 100)]
-    maior = max(alcancados, key=lambda k: RUMBLE_POLICY_MULT[k]) if alcancados else ""
-    return "" if maior == "balanceado" else maior
-
-
-@pytest.mark.parametrize("valor", [180, 130, 120, 70, 50, 10])
-def test_o_degrau_aceso_e_o_maior_que_o_trilho_alcanca(valor: int) -> None:
-    """Régua 2: com o personalizado no trilho, acende o maior degrau alcançado."""
     coluna = _coluna({"rumble_policy": "custom", "rumble_mult_applied": valor / 100})
-    assert coluna["mult-pos"] == str(valor)
-    assert coluna["degrau"] == _esperado(valor), (valor, coluna["degrau"])
+    assert coluna["mult-pos"] == coluna["mult"] == str(valor), (valor, coluna["mult-pos"])
+    assert "degrau" not in coluna and "degrau-herdado" not in coluna
 
 
-def test_a_escada_da_regua_e_a_da_sprint() -> None:
-    """A régua 2 com os números da sprint: 180 Máximo, 70 Economia, 10 nada; e 130, que era
-    Balanceado, não acende o Padrão (ele trava as barras desde 04/10/2026, e o trilho não)."""
-    assert [_esperado(v) for v in (180, 130, 70, 10)] == ["max", "", "economia", ""]
-
-
-@pytest.mark.parametrize("degrau", sorted(RUMBLE_POLICY_MULT))
-def test_o_degrau_clicado_continua_aceso(degrau: str) -> None:
-    """Cada degrau, escolhido pelo nome, acende ele mesmo: o valor dele cai na faixa dele."""
-    assert _coluna({"rumble_policy": degrau})["degrau"] == degrau
+@pytest.mark.parametrize("nome", sorted(RUMBLE_POLICY_MULT))
+def test_a_politica_pelo_nome_poe_o_cursor_no_numero_dela(nome: str) -> None:
+    """Cada política do produto, escolhida pelo nome, põe o cursor no porcento dela."""
+    coluna = _coluna({"rumble_policy": nome})
+    assert coluna["mult-pos"] == str(round(RUMBLE_POLICY_MULT[nome] * 100))
+    assert "degrau" not in coluna
 
 
 def test_a_sensor_haptico_grava_o_ganho_no_perfil(perfis: pathlib.Path) -> None:  # noqa: F811

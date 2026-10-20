@@ -588,7 +588,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     bloco_dos_controles = perfil_ativo.get("controllers")
     overrides = bloco_dos_controles if isinstance(bloco_dos_controles, dict) else {}
     for uniq, col in (bruto.get("colunas") or {}).items():
-        politica, custom, propria = _forca_em_vigor(overrides, uniq, ctx.state)
+        politica, custom, _propria = _forca_em_vigor(overrides, uniq, ctx.state)
         pct = _pct_da_coluna(politica, custom)
         barras = _barras_dos_motores(ctx.state, uniq)
         padrao = vale_o_padrao(politica)
@@ -606,8 +606,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "mult-pos": (str(pct.get("n", "")).rstrip("%")
                          if pct.get("sabe") else ""),
             "forca-pct": str(pct.get("w", "")).rstrip("%"),
-            "degrau": degrau_da_faixa(politica, custom),
-            "degrau-herdado": "1" if politica and not propria else "",
+            # a «Força» é o trilho de 0 a 200%, sem degraus (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-
+            # SAI-DO-FIRMWARE-COMO-NO-PS5-01): o `degrau` e o `degrau-herdado` saíram da pintura
             "em-teste": "1" if uniq and uniq in em_teste() else "",
             "padrao": "1" if padrao else "",  # (noqa-acento) campo
         }

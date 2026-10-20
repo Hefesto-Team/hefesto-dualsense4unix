@@ -60,8 +60,8 @@ def _todos(no: dict):
 def arvore():
     import onde
 
-    # o PUBLICADO: os quatro botões de degrau ainda são do produto (a bancada os tirou em
-    # 18/10/2026, r3b-05-12); a segunda passagem os tira do pacote e daqui
+    # o PUBLICADO: é a página que o produto renderiza; os botões de degrau saem dela no
+    # `--publicar 05` da costura, e o pacote já não os pinta (20/10/2026)
     arq = onde.pagina(PAGINA, publicado=True)
     assert arq.exists(), f"o publicado não tem {PAGINA}"
     p = _Arvore()
@@ -125,25 +125,27 @@ def test_nenhuma_chave_do_pacote_escreve_num_botao(arvore, emitidos):
         f"{culpados}. O pintor escreve `textContent`, então o rótulo some.")
 
 
-def test_o_degrau_cai_nos_quatro_botoes_pelo_alvo_classe(arvore, emitidos):
-    """E o contrário: `degrau` TEM de alcançar os quatro botões — pela classe.
+def test_o_cursor_da_forca_cai_nos_quatro_trilhos_pelo_alvo_valor(arvore, emitidos):
+    """E o contrário: `mult-pos` TEM de alcançar o trilho da «Força» dos quatro lugares.
 
-    Sem isto o teste acima passaria por vacuidade no dia em que alguém tirasse
-    o `data-campo="degrau"` do desenho: nenhuma chave cairia em botão nenhum, e
-    a régua daria verde sobre a tela que voltou a mostrar o degrau do mockup.
+    Sem isto o teste acima passaria por vacuidade no dia em que alguém tirasse o
+    `data-campo="mult-pos"` do desenho: nenhuma chave cairia em botão nenhum, e a régua daria
+    verde sobre a tela que voltou a mostrar o número do mockup. Até 20/10/2026 esta régua mediu
+    o `degrau` nos quatro botões; a «Força» virou o trilho de 0 a 200%, e os botões saíram
+    (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01).
     """
     _, chaves = emitidos
-    assert "degrau" in chaves, "o pacote parou de emitir `degrau`"
-    botoes = [n for n in _achar(arvore, "degrau") if n["tag"] == "button"]
+    assert "mult-pos" in chaves, "o pacote parou de emitir o cursor da Força"
+    assert "degrau" not in chaves and "degrau-herdado" not in chaves, (
+        "o pacote voltou a pintar o degrau, e a Força não tem mais botões")
+    trilhos = [n for n in _achar(arvore, "mult-pos") if n["tag"] == "input"]
     from hefesto_dualsense4unix.interface import aba05
-    assert len(botoes) == len(aba05.FORCA) * len(aba05.MESA), (
-        f"são {len(aba05.FORCA)} degraus em {len(aba05.MESA)} lugares, e achei "
-        f"{len(botoes)}")
-    for n in botoes:
-        assert n["attrs"].get("data-hef-alvo") == "classe", n["attrs"]
-        assert n["attrs"].get("data-hef-quando"), (
-            "um degrau sem `data-hef-quando` acenderia por 'não vazio' — os "
-            "quatro ficariam acesos ao mesmo tempo")
+    assert len(trilhos) == len(aba05.MESA), (
+        f"são {len(aba05.MESA)} lugares, e achei {len(trilhos)} trilhos da Força")
+    for n in trilhos:
+        assert n["attrs"].get("data-hef-alvo") == "valor", n["attrs"]
+        assert n["attrs"].get("type") == "range" and n["attrs"].get("max") == "200", (
+            "o trilho da Força vai de 0 a 200%", n["attrs"])
 
 
 #: O CASO QUE A OBRIGOU: a moldura de cada coluna é `data-campo="plastico"` com

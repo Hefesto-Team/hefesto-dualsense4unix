@@ -3,7 +3,9 @@
 
 Pedido de 06/10/2026: os três degraus da Força na mesma linha e com a mesma
 largura, o mesmo para os três do «Testar agora», e o «Parar» com fundo vermelho
-e letra branca.
+e letra branca. Os três degraus da Força saíram em 20/10/2026: a «Força» virou o trilho de 0
+a 200% (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01), e a régua deles
+saiu com eles; ficam o «Testar agora» e o «Parar».
 
 A régua mede no WebKit, na janela do tamanho do produto (`TAMANHO_OCULTA`,
 importado), a página da BANCADA (`mockup/05-vibracao.html`) pintada pelo pacote
@@ -12,8 +14,6 @@ medida vale antes e depois dele.
 
 AS MORDIDAS (rodadas em 07/10/2026 e devolvidas):
 
-* `repeat(3,1fr)` → `repeat(2,1fr)` no `.vib .seg` (e o `span 2` de volta no
-  terceiro) → os degraus saem em duas linhas e a régua reprova;
 * o `.acoes-col` de volta a `1fr 1fr auto` → as larguras ficam diferentes;
 * o `.acoes-col .btn.vermelho` sem fundo → o «Parar» perde o vermelho.
 """
@@ -61,7 +61,6 @@ MEDIDA = r"""
     var cs = parar ? getComputedStyle(parar) : null;
     var ctrl = c.getBoundingClientRect();
     colunas[c.getAttribute('data-controle')] = {
-      degraus: Array.prototype.map.call(c.querySelectorAll('.seg button'), caixa),
       testes: Array.prototype.map.call(c.querySelectorAll('.acoes-col .btn'), caixa),
       parar_fundo: cs ? cs.backgroundColor : null,
       parar_letra: cs ? cs.color : null,
@@ -158,9 +157,8 @@ def medido() -> dict[str, Any]:
             v.evaluate_javascript(hefesto_vivo.BOOTSTRAP, -1, None, None, None, instalou)
 
     view.connect("load-changed", carregou)
-    # o PUBLICADO, desde 18/10/2026: a bancada tirou os três degraus (r3b-05-12) e o produto os
-    # mantém até a segunda passagem de A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-
-    # COMO-NO-PS5-01, que aposenta este arquivo com eles
+    # o PUBLICADO: é a página que o produto renderiza, e o «Testar agora» e o «Parar» estão nela
+    # antes e depois do `--publicar 05` que tira os degraus da Força (20/10/2026)
     view.load_uri(onde.pagina(PAGINA, publicado=True).as_uri())
     guarda = GLib.timeout_add(20000, Gtk.main_quit)
     try:
@@ -188,12 +186,6 @@ def _lado_a_lado(botoes: list[dict[str, Any]], quem: str) -> None:
         assert a["dir"] <= b["esq"] + 0.5, f"{quem}: sobrepostos: {botoes}"
     estourados = [b["txt"] for b in botoes if b["estoura"]]
     assert not estourados, f"{quem}: o texto passa do botão: {estourados} · {botoes}"
-
-
-@pytest.mark.parametrize("pref", ["p1", "p2"])
-def test_os_tres_degraus_da_forca_lado_a_lado(medido: dict[str, Any], pref: str) -> None:
-    """MORDIDA: `repeat(2,1fr)` no `.vib .seg` — o terceiro desce para a segunda linha."""
-    _lado_a_lado(medido["colunas"][pref]["degraus"], f"{pref}: os degraus da Força")
 
 
 @pytest.mark.parametrize("pref", ["p1", "p2"])
