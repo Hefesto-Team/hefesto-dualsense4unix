@@ -1550,6 +1550,10 @@ BOOTSTRAP = r"""
                  ? alvo.selectedOptions[0].textContent.trim() : ''),
         tipo: (alvo.tagName || '').toLowerCase(),
         evento: ev.type,
+        // A HORA DO CLIQUE, em ms desde a época, carimbada pelo próprio evento. O gesto roda
+        // depois, numa fila e numa thread, e a hora em que ele roda carrega o atraso do laço:
+        // quem conta o duplo clique compara estes carimbos, nunca o relógio do Python.
+        carimbo: (performance.timeOrigin || 0) + ev.timeStamp,
         // A FORMA INTEIRA, e ela nasceu em 01/09/2026 para os três "Guardar"
         // das telas de pop-up. O ouvinte manda o valor do elemento CLICADO — e
         // o Guardar é OUTRO elemento, a três telas de distância dos 21

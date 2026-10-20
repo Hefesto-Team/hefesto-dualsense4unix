@@ -43,6 +43,7 @@ from __future__ import annotations
 
 import contextlib
 import html
+import math
 import re
 import sys
 import textwrap
@@ -2499,18 +2500,30 @@ def _o_pino() -> tuple[Any, Any]:
     return pin, getattr(pin, "lock_proton_for_all_games", None)
 
 
-#: O segundo clique que chega antes disto é o duplo clique do interruptor das correções.
+#: O segundo clique carimbado antes disto é o duplo clique do interruptor das correções.
 SEGUNDOS_DO_DUPLO_CLIQUE = 0.5
 _ULTIMO_CLIQUE_DAS_CORRECOES: dict[str, float] = {}
 
 #: A fila do guarda do jogo novo, fora da de quem grava: o `garantir` recarrega o systemd, e o
-#: segundo clique do duplo esperaria esse recarregar na fila de quem grava antes de medir o
-#: relógio, virando dois cliques simples.
+#: segundo clique esperaria esse recarregar na fila de quem grava antes de voltar.
 FILA_DO_VIGIA = "vigia do jogo novo"
 
 
-def _relogio() -> float:
-    return time.monotonic()
+def _hora_do_clique(o: dict[str, Any]) -> float | None:
+    """A hora do clique em segundos, pelo ``carimbo`` que a página pôs no evento (em ms).
+
+    O gesto roda numa fila e numa thread, e a hora em que ele roda carrega o atraso do laço:
+    sob carga, dois cliques a 0,2 s um do outro chegavam ao gesto a 0,6 s. ``None`` quando o
+    pedido não traz carimbo, e esse clique nunca forma par.
+    """
+    carimbo = o.get("carimbo")
+    if carimbo is None:
+        return None
+    try:
+        ms = float(carimbo)
+    except (TypeError, ValueError):
+        return None
+    return ms / 1000.0 if math.isfinite(ms) else None
 
 
 def _guardar_o_interruptor(ligado: bool) -> None:
@@ -2573,14 +2586,17 @@ def correcoes_automaticas(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     Quem diz se está ligado é o arquivo do guarda do jogo novo (`vigia_do_jogo_novo`), o mesmo
     que a tela lê a cada tique. Um clique só o inverte e deixa o guarda em dia com ele. O
-    segundo clique em menos de meio segundo é o duplo clique: liga (se o primeiro desligou) e
-    reaplica agora. Desligar não desfaz o que já foi aplicado: o caminho de volta é «Restaurar de
-    fábrica», e o interruptor só para o automático.
+    segundo clique carimbado (`_hora_do_clique`) a menos de meio segundo do primeiro é o duplo
+    clique: liga (se o primeiro desligou) e reaplica agora. Desligar não desfaz o que já foi
+    aplicado: o caminho de volta é «Restaurar de fábrica», e o interruptor só para o automático.
     """
     _ARMADO.clear()
-    agora = _relogio()
-    duplo = agora - _ULTIMO_CLIQUE_DAS_CORRECOES.get("t", -1e9) < SEGUNDOS_DO_DUPLO_CLIQUE
-    _ULTIMO_CLIQUE_DAS_CORRECOES["t"] = -1e9 if duplo else agora
+    quando = _hora_do_clique(o)
+    antes = _ULTIMO_CLIQUE_DAS_CORRECOES.pop("t", None)
+    duplo = (quando is not None and antes is not None
+             and 0.0 <= quando - antes < SEGUNDOS_DO_DUPLO_CLIQUE)
+    if quando is not None and not duplo:
+        _ULTIMO_CLIQUE_DAS_CORRECOES["t"] = quando
     _guardar_o_interruptor(True if duplo else not _vigia.interruptor_ligado())
     na_fila([FILA_DO_VIGIA], _vigia.garantir, nome=FILA_DO_VIGIA)
     _LENTO.clear()

@@ -335,33 +335,32 @@ def test_o_pacote_pinta_duas_linhas_de_status_quatro_de_exame_e_os_dois_campos_n
 def test_o_interruptor_alterna_e_o_duplo_clique_reaplica(
         monkeypatch: pytest.MonkeyPatch, casa: pathlib.Path) -> None:
     # D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES
-    relogio = [100.0]
-    monkeypatch.setattr(a09, "_relogio", lambda: relogio[0])
+    clique = [100_000.0]
     reaplicou: list[str] = []
     monkeypatch.setattr(a09, "_reaplicar_as_correcoes",
                         lambda: reaplicou.append("sim") or "Reaplicado.")
     arquivo = a09._vigia.caminho_do_interruptor()
     assert a09._vigia.interruptor_ligado() is True
 
-    a09.correcoes_automaticas(_ctx(), {}, None)
+    a09.correcoes_automaticas(_ctx(), {"carimbo": clique[0]}, None)
     assert arquivo.read_text(encoding="utf-8") == "desligado\n"
     assert a09._vigia.interruptor_ligado() is False
     assert reaplicou == []
 
-    relogio[0] += 2.0
-    a09.correcoes_automaticas(_ctx(), {}, None)
+    clique[0] += 2000.0
+    a09.correcoes_automaticas(_ctx(), {"carimbo": clique[0]}, None)
     assert arquivo.read_text(encoding="utf-8") == "ligado\n"
     assert reaplicou == [], "um clique só liga e deixa o guarda cuidar do resto"
 
-    relogio[0] += 2.0
-    a09.correcoes_automaticas(_ctx(), {}, None)
-    relogio[0] += 0.2
-    a09.correcoes_automaticas(_ctx(), {}, None)
+    clique[0] += 2000.0
+    a09.correcoes_automaticas(_ctx(), {"carimbo": clique[0]}, None)
+    clique[0] += 200.0
+    a09.correcoes_automaticas(_ctx(), {"carimbo": clique[0]}, None)
     assert a09._vigia.interruptor_ligado() is True, "o duplo clique termina ligado"
     assert reaplicou == ["sim"], "o duplo clique reaplica uma vez"
 
-    relogio[0] += 0.2
-    a09.correcoes_automaticas(_ctx(), {}, None)
+    clique[0] += 200.0
+    a09.correcoes_automaticas(_ctx(), {"carimbo": clique[0]}, None)
     assert a09._vigia.interruptor_ligado() is False, "o terceiro clique seguido volta a alternar"
     assert reaplicou == ["sim"]
 
@@ -370,12 +369,10 @@ def test_o_duplo_clique_nao_espera_o_systemd_do_primeiro(
         monkeypatch: pytest.MonkeyPatch, casa: pathlib.Path) -> None:
     """O gesto grava o interruptor e volta; o guarda se põe em dia na fila dele.
 
-    A fila de quem grava só solta o segundo clique quando o primeiro termina, e é ali que o
-    relógio do duplo clique é lido. Com o recarregar do systemd no fio do gesto, um primeiro
-    clique que leva mais de meio segundo fazia do duplo dois cliques simples.
+    A fila de quem grava só solta o segundo clique quando o primeiro termina. Com o recarregar
+    do systemd no fio do gesto, o segundo clique esperava esse recarregar antes de voltar.
     """
-    relogio = [100.0]
-    monkeypatch.setattr(a09, "_relogio", lambda: relogio[0])
+    clique = [100_000.0]
     reaplicou: list[str] = []
     monkeypatch.setattr(a09, "_reaplicar_as_correcoes",
                         lambda: reaplicou.append("sim") or "Reaplicado.")
@@ -388,13 +385,14 @@ def test_o_duplo_clique_nao_espera_o_systemd_do_primeiro(
         return "escrito"
 
     monkeypatch.setattr(a09._vigia, "garantir", garantir_lento)
-    primeiro = threading.Thread(target=a09.correcoes_automaticas, args=(_ctx(), {}, None))
+    primeiro = threading.Thread(target=a09.correcoes_automaticas,
+                                args=(_ctx(), {"carimbo": clique[0]}, None))
     primeiro.start()
     primeiro.join(1.0)
     voltou = not primeiro.is_alive()
-    relogio[0] += 0.2
+    clique[0] += 200.0
     if voltou:
-        a09.correcoes_automaticas(_ctx(), {}, None)
+        a09.correcoes_automaticas(_ctx(), {"carimbo": clique[0]}, None)
     solta.set()
     primeiro.join(5)
     for _ in range(50):
