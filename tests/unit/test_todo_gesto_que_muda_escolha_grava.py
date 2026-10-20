@@ -134,9 +134,6 @@ ATOS: dict[Chave, str] = {
     ("08-conexoes.html", "alvo"):
         "sessão: para qual controle as ações de saída miram agora "
         "(`controller.target.set`)",
-    ("08-conexoes.html", "todos"):
-        "sessão: as ações de saída voltam a valer para todos "
-        "(`controller.target.set` sem índice)",
     ("08-conexoes.html", "cancelar-mudanca"):
         "ato: cancela a pergunta do rádio, e nada muda no pareamento",
     ("08-conexoes.html", "entrada-comecar"): _LACO_DO_MAPEAR,
