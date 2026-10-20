@@ -13,6 +13,8 @@ OS-TRES-VERMELHOS-DE-TEMPO-DO-LINT-TEST-NO-CI-01 (20/10/2026). O `lint-test` do 
 Mordidas:
 
 * tirar o `hub.stop_all` do `IpcServer.stop`: o primeiro caso reprova com a thread viva;
+* soltar o hub parado (`self._sensor_hub = None` no `stop`): o primeiro caso reprova com o hub
+  novo que o pedido seguinte do tique criou;
 * tirar a fixture `_nenhum_hub_de_sensores_atravessa` do conftest: o terceiro caso acha a
   manutenção que o segundo deixou;
 * tirar o `gc.freeze` de `_congelar_o_que_o_arquivo_deixou`: o quarto caso reprova.
@@ -27,12 +29,28 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import pytest
+
 from hefesto_dualsense4unix.daemon.ipc_server import IpcServer
+from hefesto_dualsense4unix.daemon.sensor_hub import SensorHub
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.testing import FakeController
 
 _NOME = "hefesto-sensor-hub"
+
+
+@pytest.fixture
+def hub_cego(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O hub destes casos não procura nem abre nó nenhum do `/dev/input` da máquina.
+
+    O daemon `MagicMock` diz que há jogo, e com a descoberta de verdade a manutenção abriria o
+    touchpad do controle que estiver plugado em quem roda a suíte.
+    """
+    for nome in ("_descobrir_motion_real", "_descobrir_touch_real", "_descobrir_gamepad_real"):
+        monkeypatch.setattr(SensorHub, nome, staticmethod(dict))
+    for nome in ("_motion_reader_real", "_touch_reader_real", "_gamepad_reader_real"):
+        monkeypatch.setattr(SensorHub, nome, staticmethod(lambda uniq, node: MagicMock()))
 
 
 def _servidor(tmp_path: Path) -> IpcServer:
@@ -51,6 +69,7 @@ def _manutencoes_vivas() -> list[threading.Thread]:
     return [t for t in threading.enumerate() if t.name == _NOME and t.is_alive()]
 
 
+@pytest.mark.usefixtures("hub_cego")
 def test_o_servidor_que_para_leva_o_hub_dele(tmp_path: Path) -> None:
     servidor = _servidor(tmp_path)
     antes = set(_manutencoes_vivas())
@@ -60,9 +79,17 @@ def test_o_servidor_que_para_leva_o_hub_dele(tmp_path: Path) -> None:
     asyncio.run(servidor.stop())
 
     assert not nova.is_alive(), "o servidor parou e a manutenção do hub dele seguiu viva"
-    assert servidor._sensor_hub is None
+
+    # As tarefas do tique param DEPOIS do IPC (`parar_em` 180 contra 150) e seguem pedindo o
+    # hub: o servidor parado não pode nascer outro, que reabriria os nós do controle na descida.
+    antes = set(_manutencoes_vivas())
+    servidor._garantir_sensor_hub().vigiar()
+    servidor._garantir_sensor_hub().entradas("aa:bb:cc:00:00:01")
+    assert set(_manutencoes_vivas()) == antes, (
+        "o servidor parado criou um hub novo e religou a manutenção dele")
 
 
+@pytest.mark.usefixtures("hub_cego")
 def test_o_caso_que_esquece_o_hub_ligado(tmp_path: Path) -> None:
     """O handler chamado direto, sem servidor de pé: ninguém chama o `stop`."""
     servidor = _servidor(tmp_path)

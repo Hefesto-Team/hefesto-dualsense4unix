@@ -309,7 +309,10 @@ class IpcServer(IpcHandlersMixin):
         # O hub de sensores nasce do `_garantir_sensor_hub` deste servidor e desce com ele: a
         # thread de manutenção e os leitores abertos não sobrevivem à sessão que os criou. O
         # `stop_all` já engole a falha de cada leitor, e não há o que engolir em volta dele.
-        hub, self._sensor_hub = self._sensor_hub, None
+        # O hub parado FICA no servidor: as tarefas do tique param depois do IPC e ainda pedem
+        # o hub, e um `None` aqui faria o `_garantir_sensor_hub` criar outro, que reabriria os
+        # nós do controle na descida. O parado nunca religa a manutenção.
+        hub = self._sensor_hub
         if hub is not None:
             await asyncio.to_thread(hub.stop_all)
 
