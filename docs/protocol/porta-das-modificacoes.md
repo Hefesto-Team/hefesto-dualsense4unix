@@ -283,6 +283,26 @@ sem a permissão o manifesto é recusado. A janela os pede ao serviço por dois 
   está conectada. Recusa (`-32003`, com a frase) a extensão que não está instalada ou cujo manifesto não declara
   `parar_tudo`.
 
+## A extensão de tema
+
+A extensão de tipo `tema`, com a permissão `tema`, troca as cores da interface sem processo nenhum. O bloco
+`tema` do manifesto traz a folha (`{"folha": ":root{…}"}`) ou o caminho dela dentro da pasta
+(`{"arquivo": "tema.css"}`), até 16 KB. A régua é `src/hefesto_dualsense4unix/mods/tema.py`:
+
+- um bloco `:root{…}` só, sem seletor, sem `url()`, sem `@import`, sem barra invertida;
+- só os tokens de cor da casa (`TOKENS_DA_CASA`) e os das categorias da aba Conexões (`--c-<tipo>`,
+  `--sala-<tipo>`, `--mapa-<tipo>`); os plásticos (`--cosmic-red`, `--starlight-blue`…) ficam fora;
+- cor por extenso (`#rrggbb`, `rgb()`, `rgba()`), nunca `var()`; os textos e os fundos, opacos;
+- cada texto (`--fg`, `--texto-suave`, `--texto-mudo`, `--comment`, `--rot-campo`) passa de 4,5:1 e cada acento
+  (`--green`, `--cyan`, `--purple`, `--orange`, `--pink`, `--red`, `--yellow`) de 3:1 contra cada fundo
+  (`--app-bg`, `--panel`, `--elevated`). O token que o tema não diz fica com o valor da casa, e o `--rot-campo`
+  que ele não diz segue o `--green` dele.
+
+O tema reprovado não liga: o `mod ligar` e a chave da aba Experimental recusam com a frase do pior par
+(«O tema de «X» não liga. O texto ficaria ilegível: «--rot-campo» sobre «--app-bg» dá 1,20:1, e o mínimo é
+4,50:1.»). Com mais de um tema ligado, vale o ligado por último. A janela lê o tema ao abrir.
+`src/hefesto_dualsense4unix/interface/olhar.py --tema <arquivo>` fotografa as abas com ele, pela mesma régua.
+
 ## Os erros
 
 Além dos códigos do IPC principal (`-32700`, `-32600`, `-32601`, e `-32003` para parâmetro inválido), a porta tem quatro próprios:
