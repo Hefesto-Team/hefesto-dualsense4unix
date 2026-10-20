@@ -90,7 +90,7 @@ def test_toda_variavel_da_receita_tem_destino() -> None:
 
 
 def test_o_arco_saiu_do_catalogo_e_carrega_como_acao() -> None:
-    # D-1910-O-ARCO-VIRA-ESCOLHA-DA-ACAO: o perfil salvo com a chave velha segue funcionando
+    # D-2010-O-ARCO-VIRA-ESCOLHA-DA-ACAO: o perfil salvo com a chave velha segue funcionando
     assert "arco" not in {e.chave for e in ej.ESTILOS}
     assert ej.POR_CHAVE["arco"] is ej.POR_CHAVE["acao"]  # noqa-acento: chave
     assert "Arco" not in ej.POR_ROTULO

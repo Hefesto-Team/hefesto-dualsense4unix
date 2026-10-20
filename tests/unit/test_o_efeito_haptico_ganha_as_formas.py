@@ -155,7 +155,7 @@ def test_sem_escolha_vale_o_estilo_e_o_toque_quando_ele_nao_pede(
 
 
 def test_o_continuo_so_e_forma_do_estilo_onde_o_corpo_e_o_motor() -> None:
-    # D-1910-O-CONTINUO-VOLTA-A-CORRIDA-E-A-SIMULACAO: revoga a de 16/10 (CATALOGO, 3)
+    # D-2010-O-CONTINUO-VOLTA-A-CORRIDA-E-A-SIMULACAO: revoga a de 16/10 (CATALOGO, 3)
     donos = {e for e, f in fh.POR_ESTILO.items() if f == fh.SOM_NO_CORPO}
     assert donos == {"corrida", "simulacao"}
     assert fh.SOM_NO_CORPO not in fh.FORMAS

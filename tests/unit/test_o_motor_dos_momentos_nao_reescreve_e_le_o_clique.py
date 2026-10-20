@@ -606,11 +606,14 @@ def test_o_perfil_de_chave_velha_por_controle_toca_em_cada_um_dos_quatro(numero:
     ("esportes", "direito", "golpe-carregado", "Resistance"),
     ("terror", "direito", "pino-que-falha", "Weapon"),
 ])
-def test_o_automatico_toca_a_imersao_de_cada_lado_do_estilo(
+def test_o_automatico_toca_a_da_frente_do_estilo_no_acionamento_de_hoje(
     estilo: str, lado: str, chave: str, modo: str,
 ) -> None:
-    # D-1910-O-R2-E-O-L2-DO-ESTILO-SAO-RECEITAS-SEPARADAS (antes D-1510, uma imersão para os dois)
-    """O R2 e o L2 do estilo tocam, cada um, a imersão do `Lado` dele (tabela S de 19/10/2026)."""
+    # D-2010-O-R2-E-O-L2-DO-ESTILO-SAO-RECEITAS-SEPARADAS (antes D-1510, uma imersão para os dois)
+    """O R2 e o L2 do estilo tocam, cada um, a imersão do `Lado` dele (tabela S de 19/10/2026).
+
+    O nome é o da prova da D-1510-CADA-ESTILO-TEM-A-SUA-IMERSAO-NO-AUTOMATICO, que segue de pé.
+    """
     plano = tv._plano_do_automatico(estilo, lado)
     assert plano is not None, (estilo, lado)
     assert (plano.imersao.chave, plano.modo) == (chave, modo)
