@@ -345,6 +345,9 @@ NAO_SAO_DIVIDA: dict[str, str] = {
         "a nota datada que registra a morte da frase"),
     "tests/unit/test_todo_gesto_que_grava_esta_protegido.py::ISENTOS": (
         "gestos idempotentes, medidos por nome em 03/09/2026"),
+    "tests/unit/test_todo_gesto_que_grava_esta_protegido.py::DE_FORA_DO_PRODUTO": (
+        "os nomes de `ESCREVEM` que são método de biblioteca (a GTK), sem `def` no `src/`: "
+        "a régua dos nomes mortos os conhece pelo dono, não os perdoa"),
 }
 
 PENDENTES: dict[str, tuple[str, str]] = {
