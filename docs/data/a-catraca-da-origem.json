@@ -252,14 +252,14 @@
       "data": "2026-10-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1158412,
+      "piso": 1159052,
       "por_item": {
-        "docs": 120026,
-        "scripts": 114361,
-        "src": 313723,
-        "tests": 610302
+        "docs": 120036,
+        "scripts": 114366,
+        "src": 314165,
+        "tests": 610485
       },
-      "razao": "tamanho: +1960 linhas (1156452 -> 1158412), pagas por Origem: D-2010-O-ACIONADOR-SO-SE-PRENDE-COM-O-JOGO-EM-FOCO; registrado no fecho, topo 72dfbe1b7d3b",
+      "razao": "tamanho: +640 linhas (1158412 -> 1159052), pagas por Origem: D-1810-O-GATILHO-E-A-VIBRACAO-TEM-O-TRILHO-DE-0-A-200, D-2010-A-VIBRACAO-NO-NIBBLE-BAIXO-E-O-GATILHO-NO-ALTO; registrado no fecho, topo f9404293f2e0",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -710,6 +710,12 @@
           "de": 1156452,
           "para": 1158412,
           "razao": "tamanho: +1960 linhas (1156452 -> 1158412), pagas por Origem: D-2010-O-ACIONADOR-SO-SE-PRENDE-COM-O-JOGO-EM-FOCO; registrado no fecho, topo 72dfbe1b7d3b"
+        },
+        {
+          "data": "2026-10-20",
+          "de": 1158412,
+          "para": 1159052,
+          "razao": "tamanho: +640 linhas (1158412 -> 1159052), pagas por Origem: D-1810-O-GATILHO-E-A-VIBRACAO-TEM-O-TRILHO-DE-0-A-200, D-2010-A-VIBRACAO-NO-NIBBLE-BAIXO-E-O-GATILHO-NO-ALTO; registrado no fecho, topo f9404293f2e0"
         }
       ],
       "unidade": "linhas",

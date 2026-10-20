@@ -5,7 +5,7 @@
       "data": "2026-10-20",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 53483,
+      "piso": 53603,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -41,9 +41,9 @@
         "core/acoes_de_botao.py": 194,
         "core/acoes_do_gesto.py": 72,
         "core/ativacao_de_botao.py": 69,
-        "core/backend_pydualsense.py": 1005,
+        "core/backend_pydualsense.py": 1045,
         "core/controller.py": 48,
-        "core/ds_output_report.py": 76,
+        "core/ds_output_report.py": 115,
         "core/escritor_cru.py": 237,
         "core/evdev_reader.py": 839,
         "core/external_leds.py": 195,
@@ -181,7 +181,7 @@
         "integrations/window_detect.py": 94,
         "interface/aba01.py": 216,
         "interface/aba02.py": 269,
-        "interface/aba03.py": 83,
+        "interface/aba03.py": 80,
         "interface/aba04.py": 142,
         "interface/aba05.py": 238,
         "interface/aba06.py": 47,
@@ -208,9 +208,9 @@
         "interface/pacotes/__init__.py": 291,
         "interface/pacotes/a01_jogar.py": 886,
         "interface/pacotes/a02_controles.py": 1057,
-        "interface/pacotes/a03_gatilhos.py": 826,
+        "interface/pacotes/a03_gatilhos.py": 851,
         "interface/pacotes/a04_iluminacao.py": 1170,
-        "interface/pacotes/a05_vibracao.py": 892,
+        "interface/pacotes/a05_vibracao.py": 894,
         "interface/pacotes/a06_navegacao.py": 380,
         "interface/pacotes/a07_lancadores.py": 571,
         "interface/pacotes/a08_conexoes.py": 1186,
@@ -239,10 +239,10 @@
         "profiles/estilos_de_jogo.py": 177,
         "profiles/formas_de_haptica.py": 89,
         "profiles/loader.py": 294,
-        "profiles/manager.py": 655,
+        "profiles/manager.py": 665,
         "profiles/o_padrao_do_computador.py": 106,
         "profiles/sanidade.py": 44,
-        "profiles/schema.py": 747,
+        "profiles/schema.py": 754,
         "profiles/simple_match.py": 179,
         "utils/maquina.py": 352,
         "utils/memoria_dos_controles.py": 85,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +101 linhas (53382 -> 53483), pagas por Origem: D-2010-O-ACIONADOR-SO-SE-PRENDE-COM-O-JOGO-EM-FOCO; registrado no fecho, topo 72dfbe1b7d3b",
+      "razao": "texto-em-src: +120 linhas (53483 -> 53603), pagas por Origem: D-1810-O-GATILHO-E-A-VIBRACAO-TEM-O-TRILHO-DE-0-A-200, D-2010-A-VIBRACAO-NO-NIBBLE-BAIXO-E-O-GATILHO-NO-ALTO; registrado no fecho, topo f9404293f2e0",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -348,6 +348,12 @@
           "de": 53382,
           "para": 53483,
           "razao": "texto-em-src: +101 linhas (53382 -> 53483), pagas por Origem: D-2010-O-ACIONADOR-SO-SE-PRENDE-COM-O-JOGO-EM-FOCO; registrado no fecho, topo 72dfbe1b7d3b"
+        },
+        {
+          "data": "2026-10-20",
+          "de": 53483,
+          "para": 53603,
+          "razao": "texto-em-src: +120 linhas (53483 -> 53603), pagas por Origem: D-1810-O-GATILHO-E-A-VIBRACAO-TEM-O-TRILHO-DE-0-A-200, D-2010-A-VIBRACAO-NO-NIBBLE-BAIXO-E-O-GATILHO-NO-ALTO; registrado no fecho, topo f9404293f2e0"
         }
       ],
       "unidade": "linhas",
