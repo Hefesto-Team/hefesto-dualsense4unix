@@ -264,22 +264,23 @@ def test_a_lista_irma_nao_acende_nada() -> None:
 def test_o_nativo_ligado_pelo_perfil_se_declara() -> None:
     state = _mesa(native_mode=True, native_mode_origin="profile",
                   gamepad_emulation={"enabled": False, "flavor": "dualsense"})
-    frase = next(t for t in _textos(state) if t.startswith("Quem ligou"))
-    assert painel._ROTULO_DO_MODO["native"] in frase, (
+    frase = next(t for t in _textos(state) if t.startswith("Quem pôs"))
+    assert f"«{painel.ROTULO_DO_NATIVO_NA_ORIGEM}»" in frase, (
         "a linha de origem usou a palavra da casa em vez do rótulo da tela")
 
 
 def test_o_gamepad_ligado_pelo_perfil_se_declara() -> None:
-    state = _mesa(mode_from_profile="gamepad")
-    frase = next(t for t in _textos(state) if t.startswith("Quem ligou"))
-    assert painel._ROTULO_DO_MODO["gamepad"] in frase
+    state = _mesa(mode_from_profile="gamepad",
+                  gamepad_emulation={"enabled": True, "flavor": "xbox", "caminho": "xbox"})
+    frase = next(t for t in _textos(state) if t.startswith("Quem pôs"))
+    assert "«Xbox»" in frase
 
 
 def test_as_duas_origens_cabem_na_mesma_linha() -> None:
     """O ``" · "`` é o da janela antiga: dois fatos, não uma frase composta."""
     state = _mesa(native_mode=True, native_mode_origin="profile",
                   mode_from_profile="gamepad")
-    frase = next(t for t in _textos(state) if t.startswith("Quem ligou"))
+    frase = next(t for t in _textos(state) if t.startswith("Quem pôs"))
     assert painel.SEPARADOR_DA_ORIGEM in frase
 
 
@@ -298,7 +299,7 @@ def test_as_duas_origens_cabem_na_mesma_linha() -> None:
 def test_a_origem_cala_quando_o_perfil_nao_ligou(extra: dict[str, Any], porque: str) -> None:
     """A MORDIDA: só os literais ``"profile"`` e ``"gamepad"`` acendem."""
     state = _mesa(**extra)
-    assert not any(t.startswith("Quem ligou") for t in _textos(state)), porque
+    assert not any(t.startswith("Quem pôs") for t in _textos(state)), porque
 
 
 class _PonteQueResponde:

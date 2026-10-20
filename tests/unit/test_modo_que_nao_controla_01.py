@@ -112,8 +112,8 @@ class TestAFraseCerta:
             TEXTO_DESKTOP_SEM_TECLADO,
             TEXTO_DESKTOP_SEM_MOUSE_NEM_TECLADO,
         ):
-            assert "aba Navegação" in frase
-            assert "Controlar o PC" in frase
+            assert "aba Jogar" in frase or "aba Navegação" in frase
+            assert "no «Point and click» e na «Navegação»" in frase
 
 
 class TestSemAlarmeFalso:

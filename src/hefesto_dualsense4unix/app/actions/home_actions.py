@@ -447,20 +447,26 @@ def _reconciliar_gate_text(state: dict[str, Any] | None) -> str | None:
 
 
 # O daemon fez o certo, e continua fazendo: `mouse.emulation.restore` RESTAURA a
+#: Os nomes são os da fileira da aba Jogar (`interface/aba01.MODOS` e `DO_DESLIGADO`): o modo
+#: `desktop` aparece como «Point and click» no Ligado e como «Navegação» no Desligado, e esta função
+#: pura não sabe de qual lado a tela o pôs. O fato vem primeiro porque a coluna da aba Sistema corta
+#: a linha e põe o resto na dica. O mouse volta escolhendo o modo de novo (o
+#: `desktop.arranjo.apply` liga o mouse); o teclado, pela «Função do teclado» da aba Navegação.
+_NO_DESKTOP: Final[str] = "no «Point and click» e na «Navegação» o controle"
+
 TEXTO_DESKTOP_SEM_MOUSE: Final[str] = (
-    "Você está em \"Controlar o PC\", mas o mouse emulado está desligado — o "
-    "controle não move o cursor. Ligue \"Emular mouse\" na aba Navegação."
+    f"Mouse emulado desligado: {_NO_DESKTOP} não move o cursor. "
+    "Escolha o modo de novo na aba Jogar."
 )
 
 TEXTO_DESKTOP_SEM_TECLADO: Final[str] = (
-    "Você está em \"Controlar o PC\", mas o teclado emulado está desligado — o "
-    "controle não digita. Ligue \"Emular teclado\" na aba Navegação."
+    f"Teclado emulado desligado: {_NO_DESKTOP} não digita. "
+    "Mude a «Função do teclado» na aba Navegação."
 )
 
 TEXTO_DESKTOP_SEM_MOUSE_NEM_TECLADO: Final[str] = (
-    "Você está em \"Controlar o PC\", mas o mouse e o teclado emulados estão "
-    "desligados — o controle não move o cursor nem digita. Ligue os dois na "
-    "aba Navegação."
+    f"Mouse e teclado emulados desligados: {_NO_DESKTOP} não move o cursor nem digita. "
+    "Escolha o modo de novo na aba Jogar e mude a «Função do teclado» na aba Navegação."
 )
 
 

@@ -438,20 +438,37 @@ def aviso_do_grab_dobrado(state: dict[str, Any] | None) -> str | None:
     return f"{linha}. {porque}"
 
 
-FRASE_DA_ORIGEM_DO_MODO = "Quem ligou {modo} foi o perfil ativo, e não um gesto seu."
+FRASE_DA_ORIGEM_DO_MODO = "Quem pôs o Hefesto em «{modo}» foi o perfil ativo, e não um gesto seu."
 
 SEPARADOR_DA_ORIGEM = " · "
 
+#: O nativo é o lado «Desligado» do interruptor da Jogar (`interface/aba01.INTERRUPTOR`): o chip
+#: aceso ali pode ser o Nativo ou o Steam Input, conforme o jogo da vez, e o perfil liga os dois
+#: pelo mesmo `native_mode`.
+ROTULO_DO_NATIVO_NA_ORIGEM = "Desligado"
+
+
+def _rotulo_do_gamepad(state: dict[str, Any]) -> str:
+    """O chip da fileira do caminho de pé («Sony DualSense» ou «Xbox»), ou «Ligado»."""
+    bloco = state.get("gamepad_emulation")
+    caminho = bloco.get("caminho") if isinstance(bloco, dict) else None
+    return next((c.rotulo for c in CHIPS_DA_ESCADA if c.caminho and c.caminho == caminho),
+                "Ligado")
+
 
 def aviso_da_origem_do_modo(state: dict[str, Any] | None) -> str | None:
-    """O modo em vigor foi ligado pelo PERFIL, e não por ela; ``None`` se não."""
+    """O modo em vigor foi ligado pelo PERFIL, e não por ela; ``None`` se não.
+
+    Diz o nome que a fileira da aba Jogar mostra, e não o rótulo da janela antiga
+    («Conexão Nativa (Sony)», «Jogar pelo Hefesto»), que nenhuma tela de hoje tem.
+    """
     if not isinstance(state, dict):
         return None
     partes: list[str] = []
     if state.get("native_mode") and state.get("native_mode_origin") == "profile":
-        partes.append(FRASE_DA_ORIGEM_DO_MODO.format(modo=_ROTULO_DO_MODO[MODE_NATIVE]))
+        partes.append(FRASE_DA_ORIGEM_DO_MODO.format(modo=ROTULO_DO_NATIVO_NA_ORIGEM))
     if state.get("mode_from_profile") == "gamepad":
-        partes.append(FRASE_DA_ORIGEM_DO_MODO.format(modo=_ROTULO_DO_MODO[MODE_GAMEPAD]))
+        partes.append(FRASE_DA_ORIGEM_DO_MODO.format(modo=_rotulo_do_gamepad(state)))
     return SEPARADOR_DA_ORIGEM.join(partes) if partes else None
 
 
