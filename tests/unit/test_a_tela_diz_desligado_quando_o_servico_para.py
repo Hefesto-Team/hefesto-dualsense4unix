@@ -345,8 +345,11 @@ def _carga(ctx: Contexto) -> dict[str, Any]:
     return dict(pacotes.apagar_os_lugares_sem_dono(carga, com_dono, pagina="01-jogar.html"))
 
 
-def _no_webkit(roteiro: str) -> dict[str, Any]:
-    """Abre o desenho da Jogar num WebKit offscreen, com o BOOTSTRAP do piloto, e roda o roteiro."""
+def _no_webkit(roteiro: str, arquivo: str = "01-jogar.html") -> dict[str, Any]:
+    """Abre o desenho de uma aba num WebKit offscreen, com o BOOTSTRAP do piloto, e roda o roteiro.
+
+    `arquivo` é o nome do arquivo em `mockup/` (a Jogar, se nada se diz).
+    """
     import json
 
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
@@ -386,7 +389,7 @@ def _no_webkit(roteiro: str) -> dict[str, Any]:
             v.evaluate_javascript(hefesto_vivo.BOOTSTRAP, -1, None, None, None, bootou)
 
     view.connect("load-changed", carregou)
-    view.load_uri((RAIZ / "mockup" / "01-jogar.html").as_uri())
+    view.load_uri((RAIZ / "mockup" / arquivo).as_uri())
     guarda = GLib.timeout_add(30000, Gtk.main_quit)
     try:
         Gtk.main()
@@ -414,7 +417,7 @@ def test_no_webkit_o_servico_parado_marca_desligado_e_nao_escreve_nada(
     """O que a pessoa vê: Desligado aceso, o topo sem texto e sem ponto, e a mesa sem frase.
 
     A MORDIDA: tire o `display:none` da regra `.fita-linha:has(i[data-servico="parado"]) .conectado`
-    (`aba01.py` e `mockup/01-jogar.html`) e `topo_visivel` volta a ser verdadeiro.
+    (`topo.html`, e o `regerar.py` a leva às dez) e `topo_visivel` volta a ser verdadeiro.
     """
     for nome in ("parado", "parado_de_novo"):
         fora = na_tela[nome]
@@ -434,3 +437,55 @@ def test_no_webkit_com_dois_no_radio_volta_ao_ligado_e_ao_verde(na_tela: dict[st
     assert fora["secao_ligado"] and not fora["secao_desligado"]
     assert fora["topo"] == "● 2 BT" and fora["bolinha"], f"o topo não voltou: {fora['topo']!r}"
     assert not fora["frase_acesa"], f"a frase ficou acesa com o serviço de pé: {fora['frase']!r}"
+
+
+AS_DEZ = ("01-jogar.html", "02-controles.html", "03-gatilhos.html", "04-iluminacao.html",
+          "05-vibracao.html", "06-navegacao.html", "07-lancadores.html", "08-conexoes.html",
+          "09-sistema.html", "10-perfis.html")
+
+LER_O_TOPO = r"""
+(function(){
+  const vis = el => !!el && getComputedStyle(el).display !== 'none';
+  const fora = {};
+  for (const [nome, carga] of CARGAS) {
+    window.__hef.pintar(carga);
+    const con = document.querySelector('.conectado');
+    fora[nome] = {achou: !!con, visivel: vis(con),
+                  texto: vis(con) ? (con.innerText || '').replace(/\s+/g, ' ').trim() : ''};
+  }
+  return JSON.stringify(fora);
+})()
+"""
+
+
+@pytest.fixture(scope="module")
+def o_topo_das_dez() -> dict[str, dict[str, Any]]:
+    """O topo de cada aba no motor dela: parado, de pé com dois no rádio, e parado de novo."""
+    import json
+
+    def so_o_topo(ctx: Contexto) -> dict[str, Any]:
+        return {"mesa": dict(pacotes.topo(ctx))}
+
+    cargas = json.dumps([["parado", so_o_topo(_parado())], ["no_radio", so_o_topo(_no_radio())],
+                         ["parado_de_novo", so_o_topo(_parado())]])
+    return {aba_html: _no_webkit(LER_O_TOPO.replace("CARGAS", cargas), aba_html)
+            for aba_html in AS_DEZ}
+
+
+@pytest.mark.parametrize("aba_html", AS_DEZ)
+def test_no_webkit_o_topo_das_dez_some_com_o_servico_parado(
+        o_topo_das_dez: dict[str, dict[str, Any]], aba_html: str) -> None:
+    # D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE
+    """O topo é o mesmo nas dez abas: com o serviço parado ele some em todas, não só na Jogar.
+
+    A regra morou só na `aba01.py` e as outras nove mostravam «● —» em verde com o serviço fora.
+    A MORDIDA: devolva a regra à `aba01.py` (fora do `topo.html`), rode o `regerar.py`, e as
+    nove reprovam aqui; a volta ao verde com dois no rádio prova que a régua acha o topo.
+    """
+    fora = o_topo_das_dez[aba_html]
+    for nome in ("parado", "parado_de_novo"):
+        assert fora[nome]["achou"], f"{aba_html}: a régua não achou o topo"
+        assert not fora[nome]["visivel"], (
+            f"{aba_html} {nome}: o topo ficou: {fora[nome]['texto']!r}")
+    assert fora["no_radio"]["texto"] == "● 2 BT", (
+        f"{aba_html}: o topo não voltou: {fora['no_radio']}")
