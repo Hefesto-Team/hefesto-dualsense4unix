@@ -107,6 +107,7 @@ def test_a_sequencia_sai_na_ordem_e_no_tempo() -> None:
 
 
 def test_o_botao_que_dispara_nao_chega_ao_jogo() -> None:
+    """A prova da D-2010-A-SEQUENCIA-TOCA-NO-LUGAR-DO-BOTAO."""
     store = _loja(_cfg())
     saida = _tocar(store, P1, {i: {"l1"} for i in range(8)}, 40)
     assert all("l1" not in b for _, b in saida), "o L1 vazou para o jogo junto da sequência"
@@ -192,6 +193,7 @@ def test_a_sequencia_da_peca_vale_so_nela() -> None:
 
 
 def test_a_sequencia_da_peca_troca_a_do_perfil_em_vez_de_somar() -> None:
+    """A prova da D-2010-A-SEQUENCIA-DO-CONTROLE-SUBSTITUI-A-DO-PERFIL."""
     perfil = _cfg(botao="l1", passos=[{"botao": "cross", "ms": 0}])
     peca = _cfg(botao="r1", passos=[{"botao": "square", "ms": 0}])
     store = SimpleNamespace()
@@ -349,6 +351,7 @@ def test_a_gravacao_ouve_so_o_controle_pedido() -> None:
 
 
 def test_a_gravacao_para_nos_32_passos_e_nos_30_segundos() -> None:
+    """A prova da D-2010-A-GRAVACAO-DA-SEQUENCIA-MORA-NO-SERVICO."""
     store = SimpleNamespace()
     ab.gravar_iniciar(store, P2, 10.0)
     for i in range(40):

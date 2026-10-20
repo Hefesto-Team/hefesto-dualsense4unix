@@ -63,6 +63,7 @@ def test_a_identidade_do_controle_casa_por_hex_e_maiuscula() -> None:
 
 
 def test_a_peca_sobrepoe_o_perfil_botao_a_botao() -> None:
+    """A prova da D-2010-A-TROCA-DO-CONTROLE-VENCE-A-DO-PERFIL-BOTAO-A-BOTAO."""
     do_perfil = {"cross": "circle", "l1": "r1"}
     assert remap.juntar(do_perfil, {"square": "triangle"}) == {
         "cross": "circle", "l1": "r1", "square": "triangle"}
