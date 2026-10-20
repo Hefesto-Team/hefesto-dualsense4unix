@@ -21,6 +21,7 @@ import contextlib
 import dataclasses as _dataclasses
 import html
 import re
+import select
 import sys
 import time
 from typing import Any
@@ -2924,13 +2925,7 @@ def _quem_recebe_da_mesa(ctx: Contexto, declaracao: Any) -> list[tuple[str, str]
 _RAIZ_DAS_ENTRADAS: Any = None
 
 
-def _abrir_o_evento(evento: str) -> Any:
-    import evdev
-
-    return evdev.InputDevice(f"/dev/input/{evento}")
-
-
-_ABRIR_O_EVENTO: Callable[[str], Any] = _abrir_o_evento
+_ABRIR_O_EVENTO: Callable[[str], Any] | None = None
 
 
 def _evento_do_acionador(chave: str) -> str | None:
@@ -2942,14 +2937,18 @@ def _evento_do_acionador(chave: str) -> str | None:
 
 def _esperar_a_tecla(r: _Rascunho, evento: str, prazo_s: float = ESPERA_DA_TECLA_S) -> None:
     """Abre o aparelho só para ler (sem prender) e guarda a primeira tecla apertada."""
+    from hefesto_dualsense4unix.utils.maquina import abrir_o_aparelho_de_entrada
+
     dispositivo = None
     try:
-        dispositivo = _ABRIR_O_EVENTO(evento)
+        dispositivo = (_ABRIR_O_EVENTO or abrir_o_aparelho_de_entrada)(evento)
         fim = time.monotonic() + prazo_s
-        while time.monotonic() < fim:
+        # O `select` dorme no nó até ele ter evento ou o prazo vencer: nenhuma volta em vão.
+        while (restante := fim - time.monotonic()) > 0:
+            if not select.select([dispositivo.fd], [], [], restante)[0]:
+                return
             ev = dispositivo.read_one()
             if ev is None:
-                time.sleep(0.02)
                 continue
             if getattr(ev, "type", None) == 1 and getattr(ev, "value", None) == 1:
                 codigo = int(ev.code)
@@ -2964,7 +2963,7 @@ def _esperar_a_tecla(r: _Rascunho, evento: str, prazo_s: float = ESPERA_DA_TECLA
     finally:
         r.esperando = False
         if dispositivo is not None:
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(OSError):
                 dispositivo.close()
 
 

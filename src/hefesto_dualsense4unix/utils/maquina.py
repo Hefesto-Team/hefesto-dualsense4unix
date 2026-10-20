@@ -587,6 +587,13 @@ def _ler_do_sys(caminho: Any) -> str:
         return ""
 
 
+def abrir_o_aparelho_de_entrada(evento: str) -> Any:
+    """O ``/dev/input/<evento>`` aberto pelo evdev, sem prender (quem prende é a ponte, no jogo)."""
+    import evdev
+
+    return evdev.InputDevice(f"/dev/input/{evento}")
+
+
 def aparelhos_de_entrada(raiz: Any = None) -> list[AparelhoDeEntrada]:
     """Os nós de evento que o kernel lista, sem abrir nenhum (só ``/sys``)."""
     base = Path(RAIZ_DAS_ENTRADAS if raiz is None else raiz)

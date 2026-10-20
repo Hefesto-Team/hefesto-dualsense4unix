@@ -2716,12 +2716,6 @@ OLHAR_O_FOCO_A_CADA_S = 1.0
 _EV_KEY = 1
 
 
-def _abrir_o_evento(evento: str) -> Any:
-    import evdev
-
-    return evdev.InputDevice(f"/dev/input/{evento}")
-
-
 @dataclass
 class _AcionadorAberto:
     evento: str
@@ -2735,8 +2729,10 @@ class PonteDosAcionadores:
 
     def __init__(self, *, raiz: Any = None, abrir: Callable[[str], Any] | None = None,
                  relogio: Callable[[], float] | None = None) -> None:
+        from hefesto_dualsense4unix.utils.maquina import abrir_o_aparelho_de_entrada
+
         self._raiz = raiz
-        self._abrir = abrir or _abrir_o_evento
+        self._abrir = abrir or abrir_o_aparelho_de_entrada
         self._relogio = relogio or time.monotonic
         self._abertos: dict[str, _AcionadorAberto] = {}
         self._declarados: dict[str, Any] = {}
@@ -2813,15 +2809,14 @@ class PonteDosAcionadores:
     def _ler(self, chave: str) -> None:
         aberto = self._abertos[chave]
         try:
-            for ev in aberto.dispositivo.read():
+            # `read_one` devolve None quando a fila do nó está vazia (o nó não bloqueia).
+            while (ev := aberto.dispositivo.read_one()) is not None:
                 if getattr(ev, "type", None) != _EV_KEY:
                     continue
                 if ev.value == 0:
                     aberto.apertadas.discard(int(ev.code))
                 else:
                     aberto.apertadas.add(int(ev.code))
-        except BlockingIOError:
-            return
         except OSError as exc:
             # O aparelho saiu da porta: a tecla que ele segurava solta com ele.
             logger.info("acionador_saiu", evento=aberto.evento, err=str(exc))
@@ -2841,10 +2836,11 @@ class PonteDosAcionadores:
         aberto = self._abertos.pop(chave, None)
         if aberto is None:
             return
+        # O nó que já saiu da porta recusa o `ungrab` e o `close` com OSError: nada a soltar.
         if aberto.preso:
-            with contextlib.suppress(Exception):
+            with contextlib.suppress(OSError):
                 aberto.dispositivo.ungrab()
-        with contextlib.suppress(Exception):
+        with contextlib.suppress(OSError):
             aberto.dispositivo.close()
 
 

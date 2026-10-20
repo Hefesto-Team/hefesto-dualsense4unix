@@ -15,7 +15,9 @@ de mentira e o aparelho, um evdev de mentira; a ponte para no fim de cada caso.
 """
 from __future__ import annotations
 
+import contextlib
 import json
+import os
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
@@ -112,27 +114,27 @@ class _Leitor:
 
 
 class _Acionador:
-    """O evdev de mentira do acionador: a fila de eventos, o grab e o fechar."""
+    """O evdev de mentira do acionador: a fila de eventos, o ``fd`` que o ``select`` vigia (um
+    pipe, legível enquanto a fila tem evento), o grab e o fechar."""
 
     def __init__(self) -> None:
         self.fila: list[Any] = []
         self.preso = False
         self.fechado = False
         self.saiu = False
+        self.fd, self._escreve = os.pipe()
 
     def apertar(self, codigo: int, valor: int = 1) -> None:
         self.fila.append(SimpleNamespace(type=ecodes.EV_KEY, code=codigo, value=valor))
+        os.write(self._escreve, b"!")
 
-    def read(self) -> list[Any]:
+    def read_one(self) -> Any:
         if self.saiu:
             raise OSError(19, "No such device")
         if not self.fila:
-            raise BlockingIOError
-        lidos, self.fila = self.fila, []
-        return lidos
-
-    def read_one(self) -> Any:
-        return self.fila.pop(0) if self.fila else None
+            return None
+        os.read(self.fd, 1)
+        return self.fila.pop(0)
 
     def grab(self) -> None:
         self.preso = True
@@ -142,6 +144,9 @@ class _Acionador:
 
     def close(self) -> None:
         self.fechado = True
+        for fd in (self.fd, self._escreve):
+            with contextlib.suppress(OSError):
+                os.close(fd)
 
 
 def _sys_de_mentira(raiz: Path) -> Path:

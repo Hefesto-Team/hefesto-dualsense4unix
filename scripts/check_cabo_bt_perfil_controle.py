@@ -247,6 +247,16 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "voltar-ao-automatico": "tira o que o usuário declarou do aparelho e da entrada — é da "
                             "máquina",
     "reexaminar": "relê as portas da máquina — é leitura do barramento",
+    # OS-ACIONADORES-USB-ENTRAM-COMO-BOTOES-DO-CONTROLE-01: o acionador é um aparelho da
+    # máquina; a tecla dele sai no pad virtual do controle escolhido, igual no cabo e no rádio
+    # (a régua do daemon prova os quatro jogadores), e não entra no perfil.
+    "usar-como-botoes": "abre a janela do acionador na linha do aparelho de entrada — é da tela",
+    "acionador-nova-tecla": "espera a próxima tecla do acionador, sem prendê-lo — é leitura "
+                            "do aparelho da máquina",
+    "acionador-botao": "escolhe, no desenho, o botão do controle onde a tecla cai — é da tela "
+                       "até o «Guardar»",
+    "acionador-guardar": "declara o controle e as teclas do acionador no `maquina.json` — é "
+                         "da máquina",
 }
 
 DO_APARELHO: dict[str, tuple[str, ...]] = {
