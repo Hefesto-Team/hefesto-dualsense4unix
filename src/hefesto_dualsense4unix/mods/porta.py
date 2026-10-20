@@ -67,6 +67,8 @@ JOGOS_POR_LANCADOR = 5000
 Escritor = Callable[[str, dict[str, Any]], Awaitable[Any]]
 OJogoEscreve = Callable[[str, str], bool]
 UniqDoPosto = Callable[[], str | None]
+#: ``controles()``: os controles ligados agora, cada um ``{uniq, jogador}``.
+Controles = Callable[[], list[dict[str, Any]]]
 #: ``pulsador(uniq, pedido)``: o motor da luz começa, retoca ou solta o pulso da barra do controle.
 Pulsador = Callable[[str, dict[str, Any]], dict[str, Any]]
 
@@ -380,9 +382,11 @@ class Porta:
         o_jogo_escreve: OJogoEscreve,
         uniq_do_posto: UniqDoPosto,
         pulsador: Pulsador | None = None,
+        controles: Controles | None = None,
         relogio: Callable[[], float] = time.monotonic,
     ) -> None:
         self.caminho = caminho
+        self._controles = controles
         self.bus = bus
         self._pulsador = pulsador
         self._escritor = escritor
@@ -545,6 +549,10 @@ class Porta:
                 return _resposta(req_id, self._pulsar(con.sessao, params))
             if metodo == "lancador.jogos":
                 return _resposta(req_id, self._jogos_do_lancador(con.sessao, params))
+            if metodo == "controles.lista":
+                # Fora do laço: a descrição dos controles toma a trava de E/S do backend.
+                return _resposta(req_id, await asyncio.to_thread(
+                    self._lista_dos_controles, con.sessao))
             if metodo in _ESCRITAS:
                 # Como o IPC (``ipc:<método>``): quem grava no meio da escrita sabe de
                 # onde ela veio, e a modificação deixa de escrever como «ninguém».
@@ -601,6 +609,32 @@ class Porta:
                     name=f"mods-{con.sessao.mod_id}-{topico}",
                 ))
         return {"assinados": list(topicos)}
+
+    def _lista_dos_controles(self, sessao: _Credencial) -> dict[str, Any]:
+        """Os controles ligados agora, ``{controles: [{uniq, jogador}]}``, a quem lê a conexão.
+
+        Sem a lista do serviço, vale o controle do posto. Nunca levanta: a lista que falha é vazia.
+        """
+        if "ler:conexao" not in sessao.permissoes:  # (noqa-acento): contrato ASCII
+            raise RecusaError(CODE_SEM_PERMISSAO, "falta a permissão ler:conexao")  # noqa-acento: contrato
+        try:
+            if self._controles is not None:
+                brutos = self._controles()
+            else:
+                posto = self._uniq_do_posto()
+                brutos = [{"uniq": posto, "jogador": None}] if posto else []
+        except Exception as exc:
+            logger.debug("mods_porta_lista_dos_controles_falhou", err=str(exc))
+            brutos = []
+        controles: list[dict[str, Any]] = []
+        for bruto in brutos:
+            uniq = bruto.get("uniq") if isinstance(bruto, dict) else None
+            if not isinstance(uniq, str) or not uniq or any(c["uniq"] == uniq for c in controles):
+                continue
+            jogador = bruto.get("jogador")
+            ok = isinstance(jogador, int) and not isinstance(jogador, bool) and jogador >= 1
+            controles.append({"uniq": uniq, "jogador": jogador if ok else None})
+        return {"controles": controles}
 
     def _publicar(self, con: _Conexao, params: dict[str, Any]) -> dict[str, Any]:
         """O ``eventos.publicar``: confere a permissão e os dados, e põe ``origem`` e ``t``."""
@@ -891,6 +925,26 @@ def _vibrou_ha_pouco(vpad: Any) -> bool:
     return isinstance(ha, (int, float)) and ha < JANELA_DA_VIBRACAO_DO_JOGO_S
 
 
+def controles_no_servico(daemon: Any) -> Controles:
+    """Os controles que o backend adotou e estão ligados, com o número que cada um acende."""
+
+    def controles() -> list[dict[str, Any]]:
+        from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import _jogador_de
+
+        descrever = getattr(getattr(daemon, "controller", None), "describe_controllers", None)
+        if not callable(descrever):
+            posto = _primario(getattr(daemon, "controller", None))
+            return [{"uniq": posto, "jogador": _jogador_de(daemon, posto)}] if posto else []
+        saida: list[dict[str, Any]] = []
+        for item in descrever():
+            uniq = item.get("uniq") if isinstance(item, dict) else None
+            if isinstance(uniq, str) and uniq and item.get("connected"):
+                saida.append({"uniq": uniq, "jogador": _jogador_de(daemon, uniq)})
+        return saida
+
+    return controles
+
+
 def uniq_do_posto_no_servico(daemon: Any) -> UniqDoPosto:
     """O ``uniq`` do controle do posto: o dono do estado que o tique publica."""
 
@@ -915,8 +969,10 @@ __all__ = [
     "CODE_SEM_PERMISSAO",
     "JANELA_DA_VIBRACAO_DO_JOGO_S",
     "PUBLICACOES_POR_SEGUNDO",
+    "Controles",
     "Porta",
     "RecusaError",
+    "controles_no_servico",
     "credencial_do_par",
     "descende_de",
     "escritor_do_servico",

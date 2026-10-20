@@ -39,6 +39,7 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `acessorios.estado` | `{ligado, nivel (0 a 10), perfil?, aparelhos: [...], ajustes?}` | `ler:acessorios.gesto` | `{recebido}` |
 | `luz.pulso` | `{uniq, cor: [r, g, b], cor_quente?, fundo (0 a 1), periodo_s}` ou `{uniq, parar: true}` | `pedir:luz.pulso` | `{aplicado, motivo, periodo_s?}` |
 | `lancador.jogos` | `{jogos: [{chave, nome, abrir: [...], janela?}]}` | `lancador` | `{recebidos}` |
+| `controles.lista` | `{}` | `ler:conexao` | `{controles: [{uniq, jogador}]}` |
 
 Os tópicos de leitura são estes. Os quatro primeiros são do controle do posto:
 
@@ -139,6 +140,12 @@ vibrar pede `vibracao.set {uniq, fraco, forte}`: o serviço aplica pelo `rumble.
 cada controle, e o jogo tem a vez. Os dois nomes não dizem que aparelho está do outro lado. Quando a conexão
 cai (parada, morta ou desligada), cada controle que o último `vibracao.set` dela deixou acima de zero recebe
 `fraco: 0, forte: 0`, menos aquele em que o jogo está vibrando: nenhum motor fica preso.
+
+Quem faz CADA controle vibrar (não só o do posto) pede `controles.lista`: os controles ligados agora, cada um
+uma vez, com o `jogador` que ele acende (ou `null`). Sem a lista do serviço, vale o controle do posto; a lista
+que falha volta vazia. O método entrou na versão 2 da porta sem mudar a faixa: quem pede `>=2,<3` e não o usa
+não muda nada. O servidor Buttplug do próprio DualSense mora na extensão `intiface`
+(`https://github.com/Hefesto-Team/hefesto-mod-intiface`), que usa este método e o `vibracao.set`.
 
 ## A extensão de lançador
 

@@ -54,6 +54,7 @@ from hefesto_dualsense4unix.mods.manifesto import (
     permissoes_novas,
 )
 from hefesto_dualsense4unix.mods.porta import (
+    Controles,
     Escritor,
     OJogoEscreve,
     Porta,
@@ -285,6 +286,7 @@ class Supervisor:
         o_jogo_escreve: OJogoEscreve,
         uniq_do_posto: UniqDoPosto,
         pulsador: Pulsador | None = None,
+        controles: Controles | None = None,
         lugares: Lugares | None = None,
         porta: Path | None = None,
         bwrap: str | None = None,
@@ -303,6 +305,7 @@ class Supervisor:
             o_jogo_escreve=o_jogo_escreve,
             uniq_do_posto=uniq_do_posto,
             pulsador=pulsador,
+            controles=controles,
         )
         self.bwrap = bwrap or (shutil.which("bwrap") if procurar_bwrap else None)
         self.esperas = esperas
@@ -716,6 +719,7 @@ def supervisor_do_servico(daemon: Any) -> Supervisor | None:
         logger.info("mods_fora_da_instancia_isolada", socket=ipc_socket_name())
         return None
     from hefesto_dualsense4unix.mods.porta import (
+        controles_no_servico,
         escritor_do_servico,
         o_jogo_escreve_no_servico,
         pulsar_no_servico,
@@ -728,6 +732,7 @@ def supervisor_do_servico(daemon: Any) -> Supervisor | None:
         o_jogo_escreve=o_jogo_escreve_no_servico(daemon),
         uniq_do_posto=uniq_do_posto_no_servico(daemon),
         pulsador=pulsar_no_servico(daemon),
+        controles=controles_no_servico(daemon),
     )
 
 
