@@ -130,6 +130,7 @@ def _texto(diario: Path) -> str:
 def test_a_modificacao_que_fala_muito_nao_passa_do_teto_enquanto_roda(
     lar: Lugares, curto: Path
 ) -> None:
+    """D-2010-O-DIARIO-DA-EXTENSAO-TEM-TETO-ENQUANTO-ELA-RODA."""
     diario = _instalar_e_ligar(lar, curto, "fica")
 
     async def corrida() -> None:
