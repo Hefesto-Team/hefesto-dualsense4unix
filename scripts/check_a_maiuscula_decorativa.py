@@ -169,6 +169,8 @@ SIGLA = frozenset({
     # a aba Experimental (18/10): o endereço do menu Lovense do jogo, o console da pasta do Kyty e o
     # numeral romano do nome do jogo («Hades II»)
     "HTTP", "IP", "PS5", "II",
+    # o estilo «Souls/RPG» da aba Perfis (20/10): RPG é a sigla de «role-playing game»
+    "RPG",
 })
 
 #: sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01
