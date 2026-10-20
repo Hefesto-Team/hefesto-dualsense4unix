@@ -424,7 +424,11 @@ def test_ligado_a_barra_do_alto_falante_fica_verde_travada_e_sem_teclado() -> No
     lidas, _m = _na_pagina([LER, LIGAR, LER])
     antes, _o, depois = lidas
     assert antes["chip"] and antes["barra_visivel"] and not antes["ligado"], antes
-    assert antes["chip_h"] == 16, "o botão custa uma linha a mais no cartão"
+    # O «Padrão» é alvo: desde 20/10 a folha do piso o põe em 24 px (`ALVO_MINIMO_PX`); que
+    # ele não custe linha a mais no cartão, mede-o `test_os_alvos_e_a_letra_crescem`.
+    from hefesto_dualsense4unix.interface.folha_da_casa import ALVO_MINIMO_PX
+
+    assert antes["chip_h"] == ALVO_MINIMO_PX, "o «Padrão» do volume ficou fora do piso de 24 px"
     assert not depois["barra_visivel"] and not depois["focou"], (
         f"a barra ainda aceita arrasto ou teclado: {depois}")
     assert depois["cor"] != antes["cor"] and depois["largura"] != "", depois
