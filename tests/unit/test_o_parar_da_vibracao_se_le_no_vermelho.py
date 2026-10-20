@@ -1,4 +1,4 @@
-"""O «Parar» da Vibração se lê no vermelho: a variante de 20/10/2026, que espera a escolha do usuário.
+"""O «Parar» da Vibração se lê no vermelho: a variante de 20/10/2026, à espera da escolha.
 
 A sprint O-PARAR-DA-VIBRACAO-SE-LE-NO-VERMELHO-01 mediu a letra branca sobre o `--red` (#ff5555)
 com 3,14 para 1, abaixo dos 4,5 que a letra de 11,5 px pede. A variante troca só o fundo do
