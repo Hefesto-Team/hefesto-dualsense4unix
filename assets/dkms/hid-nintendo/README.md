@@ -194,7 +194,7 @@ e come bond). Faça isto com jogo fechado, e de preferência com os controles BT
 desconectados:
 
 ```bash
-cd ~/Desenvolvimento/hefesto-dualsense4unix
+cd hefesto-dualsense4unix   # a pasta onde você clonou o projeto
 
 # 1) prova de build (não instala nada, seguro a qualquer hora).
 #    Fora do repo, para não sujar o working tree com .o/.ko/.mod:
