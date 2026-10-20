@@ -446,7 +446,6 @@ def _reconciliar_gate_text(state: dict[str, Any] | None) -> str | None:
     return RECONCILIAR_JOGO_ABERTO_TEXT if jogo_com_autoridade(state) else None
 
 
-# O daemon fez o certo, e continua fazendo: `mouse.emulation.restore` RESTAURA a
 #: Os nomes são os da fileira da aba Jogar (`interface/aba01.MODOS` e `DO_DESLIGADO`): o modo
 #: `desktop` aparece como «Point and click» no Ligado e como «Navegação» no Desligado, e esta função
 #: pura não sabe de qual lado a tela o pôs. O fato vem primeiro porque a coluna da aba Sistema corta
@@ -491,7 +490,7 @@ def texto_do_desktop_sem_emulacao(
        desktop, avisar sobre o modo que ela está deixando responderia a pergunta
        errada (a caixa mostra a escolha do usuário, não o vigente: AGORA-E-DEPOIS-01);
     3. **o modo não mudou NESTE tique** — a transição para desktop dispara três
-       IPCs e o `mouse.emulation.restore` é o ÚLTIMO deles. Julgar a emulação no
+       IPCs e o `desktop.arranjo.apply`, que liga o mouse, é o ÚLTIMO deles. Julgar a emulação no
        mesmo tique em que o modo mudou acenderia o aviso enquanto a cura ainda
        está em voo, e ele sumiria sozinho 2 s depois. Um aviso que pisca é
        ruído; este espera um tique e só fala do que ficou de pé.

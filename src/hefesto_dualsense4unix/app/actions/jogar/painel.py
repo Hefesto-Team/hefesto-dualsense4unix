@@ -184,7 +184,7 @@ def caminho_vivo(state: dict[str, Any] | None) -> str | None:
 ESCRITOR_DOS_MODOS: dict[str, str] = {
     MODE_DESKTOP: "`mode_transition.apply_mode('desktop')` — três IPCs em ordem "
     "(`native.mode.set` off, `gamepad.emulation.set` off, "
-    "`mouse.emulation.restore`), todos com `origin='manual'`. O desligar do "
+    "`desktop.arranjo.apply`), todos com `origin='manual'`. O desligar do "
     "gamepad com origem manual é o que GRAVA o `gamepad_disabled.flag` "
     "(`utils/session.save_gamepad_emulation`), e é por isso que a escolha dela "
     "sobrevive a reiniciar o daemon e a máquina.",
@@ -538,7 +538,7 @@ AVISOS_DA_TELA: tuple[Aviso, ...] = (
     Aviso("PERFIL", home_actions.autoswitch_lock_text, "home_actions.autoswitch_lock_text"),
     Aviso("PERFIL", home_actions.texto_do_cadeado_cego, "home_actions.texto_do_cadeado_cego"),
     Aviso(SELO_DO_MODO, aviso_do_modo_nativo, "painel.aviso_do_modo_nativo"),
-    # `mouse.emulation.restore` é o ÚLTIMO dos três IPCs). Uma fonte desta
+    # `desktop.arranjo.apply` é o ÚLTIMO dos três IPCs). Uma fonte desta
     Aviso("MODO", home_actions.texto_do_desktop_sem_emulacao,
           "home_actions.texto_do_desktop_sem_emulacao"),
     Aviso("GAMEPAD", aviso_do_grab_dobrado, "painel.aviso_do_grab_dobrado"),

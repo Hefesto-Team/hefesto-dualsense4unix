@@ -159,7 +159,7 @@ class TestSemAlarmeFalso:
         assert texto_do_desktop_sem_emulacao(estado) is None
 
     def test_no_tique_da_transicao_o_aviso_espera(self) -> None:
-        """O `mouse.emulation.restore` é o ÚLTIMO dos três IPCs do plano: no
+        """O `desktop.arranjo.apply` é o ÚLTIMO dos três IPCs do plano: no
         mesmo tique em que o modo virou desktop ele ainda pode estar em voo, e
         um aviso que pisca por 2 s é ruído, não informação."""
         assert (

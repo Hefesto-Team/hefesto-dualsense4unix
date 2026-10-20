@@ -62,8 +62,8 @@ def plan_mode_transition(
     no teste (*"quem declara manual continua sendo tratado como gesto do usuário"*) e
     faltava esta metade: **a janela precisa DECLARAR**.
 
-    O ``mouse.emulation.restore`` não leva ``origin``: ele restaura a
-    preferência persistida, que é reconciliação por definição.
+    O ``desktop.arranjo.apply`` também leva ``origin="manual"``: entrar no modo é
+    gesto do usuário, e é o carimbo que fura o lock de 30 s de ``apply_profile_mouse``.
 
     O PASSO GAMEPAD CARREGA O CAMINHO — MODO-DE-CONEXAO-01, 13/09/2026. O chip
     de modo da aba Jogar mandava ``flavor``, que no daemon é só o padrão da
