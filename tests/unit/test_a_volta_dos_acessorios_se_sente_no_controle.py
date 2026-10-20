@@ -58,7 +58,7 @@ class Mesa:
     pode: bool = True
     pinta: bool = False
     numero: tuple[bool, ...] = ORIGINAL  # o número que o controle mostra AGORA
-    marcas: frozenset[str] = frozenset({"adulto"})
+    estilo: str | None = "adulto"
 
     def ligacoes(self) -> Ligacoes:
         return Ligacoes(
@@ -70,7 +70,7 @@ class Mesa:
             soltar_barra=self.soltas.append,
             pode_falar=lambda uniq: self.pode,
             o_jogo_pinta=lambda uniq: self.pinta,
-            marcas=lambda: self.marcas,
+            estilo=lambda: self.estilo,
         )
 
 
@@ -422,11 +422,11 @@ def test_o_quadro_igual_ao_anterior_nao_sai() -> None:
     assert len(mesa.barra) == 1, "o brilho está no teto: um quadro só"
 
 
-def test_sem_a_marca_adulto_nada_se_escreve() -> None:
+def test_sem_o_estilo_adulto_nada_se_escreve() -> None:
     volta, mesa = _com_o_pulso()
-    mesa.marcas = frozenset({"visual_novel"})
+    mesa.estilo = "visual_novel"
     resposta = volta.pulsar(P1, {"cor": VERMELHO, "periodo_s": 2}, mesa.agora)
-    assert resposta == {"aplicado": False, "motivo": "sem_a_marca_adulto"}
+    assert resposta == {"aplicado": False, "motivo": "sem_o_estilo_adulto"}
     _andar(volta, mesa, mesa.agora + 1.0)
     assert mesa.barra == []
 
@@ -454,10 +454,10 @@ def test_o_jogo_que_pinta_a_barra_vence_e_o_pulso_em_curso_solta() -> None:
     assert volta.segurando_a_barra() == frozenset() and mesa.soltas == [P1]
 
 
-def test_a_marca_que_cai_com_o_perfil_solta_o_pulso() -> None:
+def test_o_estilo_que_cai_com_o_perfil_solta_o_pulso() -> None:
     volta, mesa = _com_o_pulso()
     volta.pulsar(P1, {"cor": VERMELHO, "periodo_s": 2}, mesa.agora)
-    mesa.marcas = frozenset()
+    mesa.estilo = None
     _andar(volta, mesa, mesa.agora + 0.05)
     assert volta.segurando_a_barra() == frozenset() and mesa.soltas == [P1]
 

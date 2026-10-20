@@ -23,8 +23,8 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: A marca do perfil que libera o pulso da barra (``marcas_do_jogo.ADULTO.chave``).
-MARCA_DO_PULSO = "adulto"
+#: O estilo do perfil que libera o pulso da barra (a chave «adulto» de ``estilos_de_jogo``).
+ESTILO_DO_PULSO = "adulto"
 
 JANELA_DO_MEDIDOR_S = 2.0
 DEGRAU_DO_MEDIDOR = 0  # o brilho forte das luzinhas (0 forte, 2 fraco)
@@ -66,7 +66,7 @@ class Ligacoes:
     soltar_barra: Callable[[str], object]
     pode_falar: Callable[[str], bool]
     o_jogo_pinta: Callable[[str], bool]
-    marcas: Callable[[], frozenset[str]]
+    estilo: Callable[[], str | None]
 
 
 @dataclass
@@ -281,8 +281,8 @@ class VoltaDosAcessorios:
             return "modo_nativo"
         if self._l.o_jogo_pinta(uniq):
             return "o_jogo_pinta_a_barra"
-        if MARCA_DO_PULSO not in self._l.marcas():
-            return "sem_a_marca_adulto"
+        if self._l.estilo() != ESTILO_DO_PULSO:
+            return "sem_o_estilo_adulto"
         if self._ajustes.get("pulso_da_barra") is not True:
             return "pulso_desligado"
         return None
@@ -456,18 +456,18 @@ def volta_de_producao(daemon: Any) -> VoltaDosAcessorios:
                 return o_hefesto_fala_no_modo(estado_do_controle(controle, True).modo)
         return False
 
-    def marcas() -> frozenset[str]:
+    def estilo() -> str | None:
         bus = getattr(daemon, "bus", None)
         ultimo = getattr(bus, "ultimo", None)  # (noqa-acento): o nome do método do barramento
         carga = ultimo(EventTopic.PERFIL_TROCOU) if callable(ultimo) else None
         nome = carga.get("perfil") if isinstance(carga, dict) else None
         if not isinstance(nome, str):
-            return frozenset()
-        # O evento não leva marca (diz o jogo e o estilo): a marca é do arquivo do perfil.
+            return None
+        # O evento não leva o estilo (diz o jogo): o estilo é do arquivo do perfil.
         from hefesto_dualsense4unix.profiles.loader import perfil_em_disco
 
-        lista = getattr(perfil_em_disco(nome), "marcas", None)
-        return frozenset(str(m) for m in lista) if isinstance(lista, (list, tuple)) else frozenset()
+        guardado = getattr(perfil_em_disco(nome), "estilo", None)
+        return guardado if isinstance(guardado, str) else None
 
     return VoltaDosAcessorios(Ligacoes(
         motores=motores,
@@ -477,14 +477,14 @@ def volta_de_producao(daemon: Any) -> VoltaDosAcessorios:
         soltar_barra=soltar,
         pode_falar=pode_falar,
         o_jogo_pinta=lambda uniq: o_jogo_escreve(uniq, "luz"),
-        marcas=marcas,
+        estilo=estilo,
     ))
 
 
 __all__ = [
     "DEGRAU_DO_MEDIDOR",
+    "ESTILO_DO_PULSO",
     "JANELA_DO_MEDIDOR_S",
-    "MARCA_DO_PULSO",
     "PERIODO_MAXIMO_S",
     "PERIODO_MINIMO_S",
     "TOQUE_DESCE",

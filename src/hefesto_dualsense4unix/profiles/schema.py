@@ -1419,6 +1419,10 @@ PRIORIDADE_MINIMA = 0
 PRIORIDADE_MAXIMA = 200
 
 
+#: As marcas de antes de 12/10/2026 que hoje são estilos de jogo (a mesma chave nos dois).
+_MARCAS_QUE_VIRARAM_ESTILO: frozenset[str] = frozenset({"visual_novel", "adulto"})
+
+
 class Profile(BaseModel):
     """Perfil v1 (ADR-005)."""
 
@@ -1482,12 +1486,6 @@ class Profile(BaseModel):
     # sobrepõem, um a um, a receita do estilo. None = a receita do estilo inteira.
     # O motor ignora o campo que não conhece e limita cada valor (`Receita.de`).
     receita_do_tato: dict[str, Any] | None = None
-    # As marcas do jogo, por cima do estilo: chaves de
-    # `profiles/marcas_do_jogo.POR_CHAVE` («Visual novel», «Adulto»). Sem recusa de
-    # chave desconhecida, como o `estilo`. None = nenhuma marca; não é `[]` porque
-    # um campo que nasce denso vai a todo save, e um hefesto anterior a ele recusaria
-    # os perfis inteiros (QUEM-E-QUEM-02).
-    marcas: list[str] | None = None
     # Quando o arquivo do perfil nasceu e quando ela o mudou pela última vez, em hora local
     # ISO 8601. None = perfil de antes das datas: a lista mostra «—», nunca uma data inventada.
     criado_em: str | None = None
@@ -1511,12 +1509,38 @@ class Profile(BaseModel):
                 "ativacao",  # (noqa-acento) identificador ASCII
                 "analogicos",  # (noqa-acento) identificador ASCII
                 "cursor", "meus_toques",
-                "marcas", "controles_modo", "criado_em", "modificado_em",
+                "controles_modo", "criado_em", "modificado_em",
                 "alvo", "evento", "evento_comando",
             ):
                 if dados.get(opcional) is None:
                     dados.pop(opcional, None)
         return dados
+
+    @model_validator(mode="before")
+    @classmethod
+    def _a_marca_de_antes_vira_o_estilo(cls, data: Any) -> Any:
+        """O perfil de fora que ainda traz ``marcas`` carrega: a marca vira o estilo.
+
+        «Visual novel» e «Adulto» eram marcas por cima do estilo; hoje são estilos da lista.
+        Sem estilo escrito, a primeira marca conhecida passa a ser o estilo; com estilo, o
+        estilo vence e a marca cai (uma linha de log). O campo não volta ao arquivo.
+        """
+        if not isinstance(data, dict) or "marcas" not in data:
+            return data
+        sem_marcas = {k: v for k, v in data.items() if k != "marcas"}
+        marcas = data["marcas"] if isinstance(data["marcas"], (list, tuple)) else []
+        do_estilo = next(
+            (m for m in marcas if isinstance(m, str) and m in _MARCAS_QUE_VIRARAM_ESTILO), None
+        )
+        if do_estilo is None:
+            return sem_marcas
+        if sem_marcas.get("estilo"):
+            get_logger(__name__).info(
+                "marca_do_perfil_cai_o_estilo_vence",
+                perfil=str(data.get("name", "")), marca=do_estilo, estilo=sem_marcas["estilo"],
+            )
+            return sem_marcas
+        return {**sem_marcas, "estilo": do_estilo}
 
     @field_validator("name")
     @classmethod
@@ -2809,13 +2833,6 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         E_CONTRATO,
         "`None` = nenhum comando. É o texto que ela digita para o «Meu comando»; semear um "
         "comando seria mandar rodar algo que ela não escreveu.",
-    ),
-    "Profile.marcas": Nascimento(
-        E_CONTRATO,
-        "`None` = nenhuma marca. A marca é só da pessoa, posta à mão "
-        "(AS-MARCAS-VISUAL-NOVEL-E-ADULTO-SE-SOMAM-AO-ESTILO-01, escolha dela de "
-        "09/10/2026): semear «Adulto» ou «Visual novel» seria afirmar do jogo o "
-        "que ela não disse.",
     ),
     "Profile.movimento": Nascimento(
         E_CONTRATO,

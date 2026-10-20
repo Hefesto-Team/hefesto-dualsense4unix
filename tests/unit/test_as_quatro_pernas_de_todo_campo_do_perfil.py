@@ -374,16 +374,6 @@ _PERNAS: dict[str, dict[str, Resposta]] = {
             "nenhum lançador no caminho",
         ),
     },
-    "marcas": {
-        p: NaoSeAplica(
-            "não chega ao controle: a «Adulto» não muda nada no aparelho, e o molde de "
-            "botões da «Visual novel» (`profiles/marcas_do_jogo.py::molde_dos_botoes`) não "
-            "tem caminho até a tabela; o molde passa ao estilo `visual_novel` "
-            "(O-POINT-AND-CLICK-SERVE-A-VISUAL-NOVEL-01, nota de 12/10) e o campo sai com a "
-            "AS-MARCAS-VIRAM-OS-ESTILOS-VISUAL-NOVEL-E-ADULTO-01."
-        )
-        for p in PERNAS
-    },
     **{
         campo: {p: NaoSeAplica(_NAO_CHEGA) for p in PERNAS}
         for campo in ("criado_em", "modificado_em", "alvo", "evento", "evento_comando")

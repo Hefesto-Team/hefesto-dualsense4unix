@@ -143,14 +143,14 @@ def test_nenhum_evento_do_src_publica_marcas() -> None:
     assert achados == [], f"um evento leva a marca do perfil: {achados}"
 
 
-def test_o_pulso_da_barra_le_a_marca_do_arquivo_e_nao_do_evento() -> None:
+def test_o_pulso_da_barra_le_o_estilo_do_arquivo_e_nao_do_evento() -> None:
     from hefesto_dualsense4unix.daemon.subsystems.volta_dos_acessorios import volta_de_producao
 
-    save_profile(Profile(name="noite", match=MatchAny(), priority=5, marcas=["adulto"]))
+    save_profile(Profile(name="noite", match=MatchAny(), priority=5, estilo="adulto"))
     bus = EventBus()
     AnunciadorDoJogo(bus, _store("noite"), _daemon(None, bus)).ver()
     volta = volta_de_producao(SimpleNamespace(bus=bus, controller=None))
-    assert volta._l.marcas() == frozenset({"adulto"})
+    assert volta._l.estilo() == "adulto"
 
 
 # O manifesto.

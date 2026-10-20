@@ -77,7 +77,7 @@ def test_o_editor_nao_pergunta_mais_o_que_ele_ja_sabe() -> None:
 def test_o_automatico_vence_o_empate_mesmo_com_o_editado_ativo(disco: Path) -> None:
     """MORDIDA: a chave de dois termos devolve o empate à ordem de arquivo (ou ao incumbente)."""
     loader.save_profile(_do_jogo("Elden Ring"))
-    editado = _do_jogo("Elden Ring 2", marcas=["minha"])
+    editado = _do_jogo("Elden Ring 2", estilo="fps")
     loader.save_profile(editado)
     assert not loader.e_perfil_de_jogo_automatico(editado)
     assert loader.e_perfil_de_jogo_automatico(_do_jogo("Elden Ring"))
@@ -91,7 +91,7 @@ def test_o_automatico_vence_o_empate_mesmo_com_o_editado_ativo(disco: Path) -> N
 def test_a_prioridade_maior_vence_o_automatico(disco: Path) -> None:
     """O desempate só vale no EMPATE: quem a pessoa subiu na ordem vence o automático."""
     loader.save_profile(_do_jogo("Elden Ring"))
-    loader.save_profile(_do_jogo("Elden Ring 2", marcas=["minha"])
+    loader.save_profile(_do_jogo("Elden Ring 2", estilo="fps")
                         .model_copy(update={"priority": loader.PRIORIDADE_DO_PERFIL_DE_JOGO + 1}))
     escolhido = _manager().select_for_window({"wm_class": JOGO})
     assert escolhido is not None and escolhido.name == "Elden Ring 2"
@@ -100,7 +100,7 @@ def test_a_prioridade_maior_vence_o_automatico(disco: Path) -> None:
 def test_entre_dois_do_usuario_o_empate_segue_o_incumbente(disco: Path) -> None:
     """Dois editados e empatados: quem a pessoa deixou valendo continua (EMPATE-01 não regride)."""
     for nome in ("Elden Ring A", "Elden Ring B"):
-        loader.save_profile(_do_jogo(nome, marcas=["minha"]))
+        loader.save_profile(_do_jogo(nome, estilo="fps"))
     for ativo in ("Elden Ring A", "Elden Ring B"):
         escolhido = _manager(ativo).select_for_window({"wm_class": JOGO})
         assert escolhido is not None and escolhido.name == ativo

@@ -25,10 +25,10 @@ _SUFIXOS = {".py", ".json", ".html", ".css", ".js", ".sh", ".csv", ".svg"}
 #: O que é da extensão e nunca mora no produto, em lugar nenhum.
 DA_EXTENSAO = re.compile(r"lovense|buttplug|intiface|brinquedo", re.I)
 ADULTO = re.compile(r"adulto", re.I)
-#: Onde «Adulto» é o estilo e a marca do perfil (a aba Perfis e quem a lê). O ``manifesto.py``
-#: nomeia a marca no texto da permissão ``luz.pulso``, que só vale nos perfis com ela.
+#: Onde «Adulto» é o estilo do perfil (a aba Perfis e quem a lê). O ``manifesto.py``
+#: nomeia o estilo no texto da permissão ``luz.pulso``, que só vale nos perfis com ele.
 DO_ESTILO = frozenset({
-    "profiles/estilos_de_jogo.py", "profiles/loader.py", "profiles/marcas_do_jogo.py",
+    "profiles/estilos_de_jogo.py", "profiles/loader.py",
     "profiles/schema.py", "interface/aba10.py", "mods/manifesto.py",
     "daemon/subsystems/volta_dos_acessorios.py",
 })
@@ -82,7 +82,7 @@ def test_a_regua_morde_o_adulto_fora_da_lista_do_estilo(tmp_path: Path) -> None:
     (tmp_path / "interface" / "aba07.py").write_text('ROTULO = "Só para adultos"\n',
                                                     encoding="utf-8")
     (tmp_path / "profiles").mkdir()
-    (tmp_path / "profiles" / "marcas_do_jogo.py").write_text('ADULTO = "adulto"\n',
+    (tmp_path / "profiles" / "estilos_de_jogo.py").write_text('ADULTO = "adulto"\n',
                                                             encoding="utf-8")
     assert _adulto_fora_do_estilo(_arquivos(tmp_path)) == ["interface/aba07.py:1"]
 

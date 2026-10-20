@@ -1737,7 +1737,7 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     nunca dispara este gesto nem reaplica a receita. O perfil guarda também a CHAVE
     (`Profile.estilo`, desde 09/10/2026, O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01), por onde o
     motor do tato acha a receita invisível que nenhuma aba mostra; o pacote de `perfis_web` já traz
-    o rótulo e as marcas, e pintá-los é da tela
+    o rótulo do estilo, e pintá-lo é da tela
     (O-POINT-AND-CLICK-E-A-ACESSIBILIDADE-SE-DEFINEM-NA-NAVEGACAO-01).
 
     "Personalizado" não mexe nas abas e DESLIGA a receita: é o *"eu ajusto na mão"* (`as_quatro()`

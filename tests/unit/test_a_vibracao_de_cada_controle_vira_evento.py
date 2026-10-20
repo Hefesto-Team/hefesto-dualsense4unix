@@ -412,8 +412,7 @@ def test_dois_controles_que_comecam_juntos_ficam_os_dois_na_tabela(mesa: _Mesa) 
 
 
 def test_o_perfil_publica_o_estilo_e_nenhuma_marca(mesa: _Mesa) -> None:
-    save_profile(Profile(name="noite", match=MatchAny(), priority=5, estilo="terror",
-                         marcas=["adulto"]))
+    save_profile(Profile(name="noite", match=MatchAny(), priority=5, estilo="terror"))
     save_profile(Profile(name="dia", match=MatchAny(), priority=5))
     mesa.store.set_active_profile("noite")
     escuta = _Escuta(mesa.daemon.bus, EventTopic.PERFIL_TROCOU)

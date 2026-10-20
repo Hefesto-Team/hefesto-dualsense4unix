@@ -6,7 +6,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.core import formas_do_endereco as _formas
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
-from hefesto_dualsense4unix.profiles import estilos_de_jogo, marcas_do_jogo
+from hefesto_dualsense4unix.profiles import estilos_de_jogo
 from hefesto_dualsense4unix.profiles.schema import (
     ControllerOverrides,
     MatchAny,
@@ -261,7 +261,6 @@ def _pacote_do_editor(
         "ambiente_recado": recado,
         "jogo": simple_extra(match) if match is not None else "",
         "estilo": _rotulo_do_estilo(getattr(profile, "estilo", None)),
-        "marcas": marcas_do_jogo.rotulos(getattr(profile, "marcas", None)),
         "estilo_travado": False,
         "estilo_recado": ESTILO_APLICA_E_SAI,
         "alvo": _alvo_do_perfil(profile),

@@ -358,13 +358,13 @@ def _triggers_draft_to_config(triggers: TriggersDraft) -> Any:
     )
 
 
-#: Os campos do perfil que nenhuma aba edita pelo rascunho (o estilo e as marcas do jogo, os meus
+#: Os campos do perfil que nenhuma aba edita pelo rascunho (o estilo do jogo, os meus
 #: toques, a receita do tato, o alvo e o evento da aba Perfis): o draft só os devolve, e sem isto
 #: todo Salvar do rodapé, da Vibração e da Controles os apagava do disco. A régua
 #: `test_o_salvar_devolve_todo_campo_do_perfil` exige que todo campo novo do `Profile` caia aqui
 #: ou num argumento do `to_profile`.
 CAMPOS_QUE_O_RASCUNHO_SO_DEVOLVE = (
-    "meus_toques", "estilo", "marcas", "receita_do_tato", "alvo", "evento", "evento_comando",
+    "meus_toques", "estilo", "receita_do_tato", "alvo", "evento", "evento_comando",
 )
 
 

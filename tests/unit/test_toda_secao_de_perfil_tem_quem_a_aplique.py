@@ -310,13 +310,6 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
             "e lida pela tela. Nada é escrito no controle."
         )
     ),
-    "marcas": SecaoDireta(
-        razao=(
-            "AS-MARCAS-VISUAL-NOVEL-E-ADULTO-SE-SOMAM-AO-ESTILO-01 (09/10/2026). "
-            "Etiquetas da pessoa (`profiles/marcas_do_jogo.py`), lidas pela tela "
-            "e pelas modificações. Nada é escrito no controle."
-        )
-    ),
     "criado_em": SecaoDireta(
         razao=(
             "O-PERFIL-GUARDA-A-DATA-EM-QUE-NASCEU-E-A-DA-ULTIMA-MUDANCA-01 (15/10/2026). "
