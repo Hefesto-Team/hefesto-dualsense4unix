@@ -191,8 +191,12 @@ def analogicos(
 
 
 def chave(uniq: object) -> str:
-    """O controle por um nome só: o endereço em minúsculas."""
-    return str(uniq or "").strip().lower()
+    """A identidade do controle: só os hex, em minúsculas (a mesma do modo do botão).
+
+    O perfil guarda a peça pelos 12 hex e o laço pergunta pelo endereço com dois-pontos: sem
+    esta normalização a curva POR PEÇA nunca era achada e só valia a do perfil inteiro.
+    """
+    return "".join(c for c in str(uniq or "").lower() if c in "0123456789abcdef")
 
 
 def definir_ativo(

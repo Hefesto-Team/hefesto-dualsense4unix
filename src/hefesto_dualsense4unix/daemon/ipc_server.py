@@ -234,6 +234,9 @@ class IpcServer(IpcHandlersMixin):
             "radio.busca.set": self._handle_radio_busca_set,
             "radio.dispensar": self._handle_radio_dispensar,
             "motion.calibrate": self._handle_motion_calibrate,
+            "perfil.ativacao.set": self._handle_perfil_ativacao_set,  # (noqa-acento) método
+            "perfil.analogicos.set": self._handle_perfil_analogicos_set,  # (noqa-acento) método
+            "perfil.cursor.set": self._handle_perfil_cursor_set,
         }
 
     async def start(self) -> None:

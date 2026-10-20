@@ -181,6 +181,17 @@ def ajuste_ativo(dono: Any) -> tuple[AjusteDoCursor | None, int]:
     return None, 0
 
 
+def botoes_do_cursor(dono: Any) -> frozenset[str]:
+    """Os botões que o ajuste ativo prende ao cursor (a precisão e o clique travado).
+
+    São do cursor: não clicam, não viram seta e, com o mouse virtual de pé, não viram tecla.
+    """
+    ajuste, _ = ajuste_ativo(dono)
+    if ajuste is None:
+        return frozenset()
+    return frozenset(b for b in (ajuste.precisao_botao, ajuste.clique_travado) if b)
+
+
 def _build_capabilities() -> list[tuple[Any, ...]]:
     """Lista de eventos que o uinput device expõe. Import lazy.
 
@@ -729,20 +740,14 @@ CLIQUE_SEM_NOTICIA_S = 0.5
 
 @dataclass
 class CursorDoToque:
-    """O ponteiro que o touchpad move pelo Hefesto com o controle virtual de pé.
+    """O ponteiro que o touchpad move com o controle virtual de pé (nó próprio, com o esquerdo).
 
-    A resposta de 28/09 (~16h50) pôs «o touchpad move o cursor» entre os
-    arranjos por perfil de jogo. Na Navegação o cursor é o do mouse emulado;
-    no modo DualSense e no Xbox não há mouse emulado (a exclusão mútua), e o
-    arranjo precisa de um nó próprio, mínimo: movimento relativo e o botão
-    esquerdo, que é o clique do touchpad. Quem o cria é o daemon
-    (`Daemon._garantir_cursor_do_toque`); quem o move é o tique
-    (`gamepad.aplicar_o_toque`), já em pixels float — o carry sub-pixel é
-    daqui, como no `emit_gyro_move`.
-
-    O CLIQUE É DA MESA: duas peças no cursor dividem o mesmo botão, e ele fica
-    apertado enquanto qualquer uma o segurar — e der notícia
-    (:data:`CLIQUE_SEM_NOTICIA_S`, :meth:`conferir`).
+    Quem o cria é o daemon (`Daemon._garantir_cursor_do_toque`); quem o move é o tique
+    (`gamepad.aplicar_o_toque`), em pixels float, com o carry sub-pixel daqui. O clique é
+    dividido entre as peças: fica apertado enquanto uma o segurar e der notícia
+    (:data:`CLIQUE_SEM_NOTICIA_S`, :meth:`conferir`). O ajuste é o do cursor dos analógicos
+    (:class:`AjusteDoCursor`): precisão por peça, clique travado e permanência
+    (:meth:`definir_ajuste`, :meth:`ajudar`).
     """
 
     name: str = NOME_DO_CURSOR_DO_TOQUE
@@ -752,6 +757,14 @@ class CursorDoToque:
     _carry_y: float = 0.0
     _clicando: dict[str, float] = field(default_factory=dict)
     _botao: bool = False
+    _ajuste: AjusteDoCursor | None = None
+    _epoca: int = 0
+    _fatores: dict[str, float] = field(default_factory=dict)
+    _travador_antes: dict[str, bool] = field(default_factory=dict)
+    _preso: bool = False
+    _ultimo_ajudar: float = 0.0
+    _andou: bool = False
+    _ultimo_movimento: float = 0.0
 
     def start(self) -> bool:
         """Cria o nó. False sem `/dev/uinput` ou sem o módulo — o tique segue."""
@@ -788,13 +801,72 @@ class CursorDoToque:
         self._carry_y = 0.0
         self._clicando = {}
         self._botao = False
+        self._preso = False
+        self._andou = False
+        self._fatores = {}
+        self._travador_antes = {}
 
-    def mover(self, px_x: float, px_y: float) -> None:
-        """Anda o cursor em pixels float, guardando o resto sub-pixel."""
+    def definir_ajuste(self, ajuste: AjusteDoCursor | None, epoca: int = 0) -> None:
+        """Troca o ajuste do cursor. Cada ativação de perfil (época nova) solta o clique travado."""
+        if ajuste == self._ajuste and epoca == self._epoca:
+            return
+        self._ajuste = ajuste
+        self._epoca = epoca
+        self._fatores = {}
+        self._travador_antes = {}
+        self._andou = False
+        self._preso = False
+        self.conferir()
+
+    def ajudar(
+        self, peca: str, botoes: frozenset[str], l2: int, r2: int, agora: float | None = None
+    ) -> None:
+        """A precisão e o clique travado deste tique, de quem aperta o botão (a `peca`).
+
+        O botão da precisão e o do travador são lidos como o cursor dos analógicos os lê: o
+        gatilho vale a partir da metade do curso. Não tira o botão do jogo: quem manda é o jogo.
+        """
+        ajuste = self._ajuste
+        if ajuste is None:
+            self._fatores.pop(peca, None)
+            return
+        agora = time.monotonic() if agora is None else agora
+        if self._preso and (agora - self._ultimo_ajudar) > TRAVA_SEM_NOTICIA_S:
+            self._preso = False
+        self._ultimo_ajudar = agora
+        bruto = {"l2": l2, "r2": r2}
+        precisao = ajuste.precisao_botao
+        if precisao is None:
+            self._fatores.pop(peca, None)
+        else:
+            apertado = (
+                bruto[precisao] >= PRECISAO_DO_GATILHO if precisao in bruto
+                else precisao in botoes)
+            self._fatores[peca] = ajuste.precisao if apertado else 1.0
+        travador = ajuste.clique_travado
+        if travador is not None:
+            apertado = (
+                gatilho_apertado(bruto[travador]) if travador in bruto else travador in botoes)
+            if apertado and not self._travador_antes.get(peca, False):
+                self._preso = not self._preso
+            self._travador_antes[peca] = apertado
+        self.conferir(agora)
+
+    def mover(
+        self, px_x: float, px_y: float, peca: str | None = None, agora: float | None = None
+    ) -> None:
+        """Anda o cursor em pixels float, guardando o resto sub-pixel.
+
+        A precisão da `peca` (o botão dela apertado) reduz o passo; a permanência conta daqui.
+        """
         if self._device is None or self._uinput_mod is None:
             return
-        self._carry_x += px_x
-        self._carry_y += px_y
+        fator = self._fatores.get(peca, 1.0) if peca is not None else 1.0
+        if px_x or px_y:
+            self._andou = True
+            self._ultimo_movimento = time.monotonic() if agora is None else agora
+        self._carry_x += px_x * fator
+        self._carry_y += px_y * fator
         ix = int(self._carry_x)
         iy = int(self._carry_y)
         self._carry_x -= ix
@@ -824,12 +896,26 @@ class CursorDoToque:
             self._clicando = {
                 p: t for p, t in self._clicando.items() if agora - t <= CLIQUE_SEM_NOTICIA_S
             }
-        querido = bool(self._clicando)
-        if querido == self._botao:
+        if self._preso and (agora - self._ultimo_ajudar) > TRAVA_SEM_NOTICIA_S:
+            self._preso = False
+        querido = bool(self._clicando) or self._preso
+        if querido != self._botao:
+            if self._device is not None and self._uinput_mod is not None:
+                self._device.emit(self._uinput_mod.BTN_LEFT, 1 if querido else 0)
+            self._botao = querido
+        ajuste = self._ajuste
+        if ajuste is not None and ajuste.permanencia_s > 0:
+            self._conferir_a_permanencia(ajuste, agora)
+
+    def _conferir_a_permanencia(self, ajuste: AjusteDoCursor, agora: float) -> None:
+        """Parado por `permanencia_s` depois de andar: um clique; outro só andando de novo."""
+        if not self._andou or (agora - self._ultimo_movimento) < ajuste.permanencia_s:
             return
-        if self._device is not None and self._uinput_mod is not None:
-            self._device.emit(self._uinput_mod.BTN_LEFT, 1 if querido else 0)
-        self._botao = querido
+        self._andou = False
+        if self._botao or self._device is None or self._uinput_mod is None:
+            return
+        self._device.emit(self._uinput_mod.BTN_LEFT, 1)
+        self._device.emit(self._uinput_mod.BTN_LEFT, 0)
 
 
 __all__ = [
@@ -862,6 +948,7 @@ __all__ = [
     "_compute_move_px_per_sec",
     "_compute_scroll_step",
     "ajuste_ativo",
+    "botoes_do_cursor",
     "definir_ajuste_ativo",
     "gatilho_apertado",
     "montar_o_ajuste",

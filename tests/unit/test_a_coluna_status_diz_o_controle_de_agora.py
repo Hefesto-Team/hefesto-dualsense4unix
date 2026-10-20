@@ -24,7 +24,7 @@ AS RÉGUAS (a numeração é a da sprint):
 3. o «não sei» não acende nem apaga;
 4. o ponto é o disco inteiro (`ControllerOverrides.model_fields`);
 5. na tela (WebKit), o ponto e o glifo aceso são geometrias diferentes;
-6. na tela, os oito grupos cabem na célula.
+6. na tela, os dez grupos cabem na célula.
 
 AS MORDIDAS estão no relato da entrega: `guarda.secao` de volta ao disco (1 e
 2 reprovam nomeando a seção), o `None` do alto-falante virando apagado (3), o
@@ -91,6 +91,7 @@ def _entrada(uniq: str, jogador: int, **troca: Any) -> dict[str, Any]:
         "sensores": {"giroscopio_ligado": True, "acelerometro_ligado": True},
         "mira": {"ligada": False, "toque": rot.DESTINO_NENHUM,
                  "inclinacao": rot.DESTINO_NENHUM},
+        "acessibilidade": {"ativacao": True, "analogicos": True},  # (noqa-acento) chaves ASCII
     }
     for chave, valor in troca.items():
         if valor is None:
@@ -117,8 +118,10 @@ def _estado(*entradas: dict[str, Any]) -> dict[str, Any]:
 def _o_cenario() -> dict[str, Any]:
     """P1 com o microfone mudo, P2 com a barra apagada, P3 com a máscara Xbox,"""
     return _estado(
-        _entrada(UNIQS[0], 1, audio={"mic_mudo": True}),
-        _entrada(UNIQS[1], 2, lightbar_on=False, lightbar_rgb=[0, 0, 0]),
+        _entrada(UNIQS[0], 1, audio={"mic_mudo": True},
+                 acessibilidade={"ativacao": False}),  # (noqa-acento) chave ASCII
+        _entrada(UNIQS[1], 2, lightbar_on=False, lightbar_rgb=[0, 0, 0],
+                 acessibilidade={"analogicos": False}),  # (noqa-acento) chave ASCII
         _entrada(UNIQS[2], 3),
         _entrada(UNIQS[3], 4, mira={"ligada": True,
                                     "toque": rot.DESTINO_NENHUM,
@@ -185,6 +188,9 @@ def _o_dono_diz(secao: str, entrada: dict[str, Any], state: dict[str, Any],
         destinos = {a02_controles._destino_da_mira(entrada, c) for c in ("toque", "inclinacao")}
         return bool(a02_controles._mira_ligada(entrada)) or bool(
             destinos - {None, rot.DESTINO_NENHUM})
+    if secao in ("ativacao", "analogicos"):  # (noqa-acento) chaves ASCII
+        valor = (entrada.get("acessibilidade") or {}).get(secao)
+        return valor if isinstance(valor, bool) else None
     raise AssertionError(f"a seção `{secao}` não tem dono nesta régua")
 
 
@@ -211,6 +217,7 @@ def test_o_glifo_diz_o_que_o_dono_diz_de_cada_controle(
     assert linhas[1]["leds"] == ""
     assert linhas[2]["mascara"] == ""
     assert linhas[3]["movimento"] == "sim"
+    assert linhas[0]["ativacao"] == "" and linhas[1]["analogicos"] == ""  # (noqa-acento) chaves
     assert [linha["triggers"] for linha in linhas] == [TRAVESSAO] * 4
 
 
@@ -459,3 +466,28 @@ def test_as_oito_secoes_cabem_na_celula(tela: Any, monkeypatch: pytest.MonkeyPat
                                       f"{g['r']:.0f}, a célula vai de {td['l']:.0f} a "
                                       f"{td['r']:.0f}")
     assert not fora_da_celula, "\n".join(fora_da_celula)
+
+
+def test_o_daemon_diz_a_ativacao_e_a_curva_de_cada_controle() -> None:
+    """`_merge_acessibilidade` lê o `store` que o `apply_acessibilidade` encheu, por controle."""
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.core import ativacao_de_botao, curva_do_analogico
+    from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
+    from hefesto_dualsense4unix.profiles.schema import (
+        ProfileAnalogicosConfig,
+        ProfileAtivacaoConfig,
+    )
+
+    store = SimpleNamespace()
+    ativacao_de_botao.definir_ativo(store, None, {
+        UNIQS[0]: ativacao_de_botao.montar(ProfileAtivacaoConfig(alternar=["cross"]))})
+    curva_do_analogico.definir_ativo(store, None, {
+        UNIQS[1]: curva_do_analogico.montar(ProfileAnalogicosConfig(zona_morta=10))})
+    entradas = [{"uniq": u} for u in UNIQS[:3]]
+    IpcHandlersMixin._merge_acessibilidade(SimpleNamespace(store=store), entradas)  # type: ignore[arg-type]
+    assert [e["acessibilidade"] for e in entradas] == [
+        {"ativacao": True, "analogicos": False},  # (noqa-acento) chaves ASCII
+        {"ativacao": False, "analogicos": True},  # (noqa-acento) chaves ASCII
+        {"ativacao": False, "analogicos": False},  # (noqa-acento) chaves ASCII
+    ]

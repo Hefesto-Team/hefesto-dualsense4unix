@@ -1914,6 +1914,7 @@ class CoopManager:
                         uniq=player.identity,
                         botoes=botoes,
                         l2=l2,
+                        r2=r2,
                     )
                 if com_filtro:
                     # O tremor, o aperto mínimo e a trava deste jogador, pelo mesmo dono do P1.

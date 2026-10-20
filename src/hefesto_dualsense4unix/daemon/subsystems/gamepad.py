@@ -2245,7 +2245,8 @@ def dispatch_gamepad(
         arranjo = roteador_ativo(store)
         uniq = primary_identity(daemon) if arranjo is not None else None
         if arranjo is not None:
-            botoes, l2 = aplicar_o_toque(daemon, arranjo, uniq=uniq, botoes=botoes, l2=l2)
+            botoes, l2 = aplicar_o_toque(
+                daemon, arranjo, uniq=uniq, botoes=botoes, l2=l2, r2=r2)
         if getattr(daemon, "_cursor_do_toque", None):
             _conferir_o_cursor_do_toque(daemon, store)
         if filtro_de_botao.alguma(store):
@@ -2328,7 +2329,9 @@ def _a_inclinacao(
     dh, dv = roteador.deflexao_da_inclinacao(acel, neutro, arranjo, parada=parada)
     if dh == 0 and dv == 0:
         return lx, ly, rx, ry
-    if arranjo.acelerometro == roteador.DESTINO_ANALOGICO_DIREITO:
+    # A mão manda a inclinação ao mesmo lado que manda o giro: o analógico virtual é um só.
+    destino = curva_do_analogico.lado_do_giro(store, uniq, arranjo.acelerometro)
+    if destino == roteador.DESTINO_ANALOGICO_DIREITO:
         rx, ry = roteador.misturar(rx, ry, dh, dv)
     else:
         lx, ly = roteador.misturar(lx, ly, dh, dv)
@@ -2352,8 +2355,12 @@ def aplicar_o_toque(
     uniq: str | None,
     botoes: frozenset[str],
     l2: int,
+    r2: int = 0,
 ) -> tuple[frozenset[str], int]:
-    """O touchpad da peça `uniq` vira botões (zonas) ou cursor. Nunca levanta."""
+    """O touchpad da peça `uniq` vira botões (zonas) ou cursor. Nunca levanta.
+
+    O cursor segue o ajuste do cursor dos analógicos (precisão, permanência, clique travado).
+    """
     try:
         if not uniq:
             return botoes, l2
@@ -2392,8 +2399,13 @@ def aplicar_o_toque(
         garantir_o_cursor = getattr(daemon, "_garantir_cursor_do_toque", None)
         cursor = garantir_o_cursor() if callable(garantir_o_cursor) else None
         if cursor is not None:
+            from hefesto_dualsense4unix.integrations.uinput_mouse import ajuste_ativo
+
+            ajuste, epoca = ajuste_ativo(store)
+            cursor.definir_ajuste(ajuste, epoca)
+            cursor.ajudar(uniq, botoes, l2, r2)
             if dx or dy:
-                cursor.mover(*roteador.pixels_do_toque(dx, dy, peca))
+                cursor.mover(*roteador.pixels_do_toque(dx, dy, peca), peca=uniq)
             cursor.clicar(uniq, bool(clicado))
         return botoes, l2
     except Exception as exc:

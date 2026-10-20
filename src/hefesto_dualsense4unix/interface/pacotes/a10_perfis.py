@@ -2415,6 +2415,25 @@ def _comandos_virtuais_agora(entrada: dict[str, Any], _state: dict[str, Any],
     return ligada or any(d not in (None, rot.DESTINO_NENHUM) for d in destinos)
 
 
+def _da_acessibilidade(entrada: dict[str, Any], secao: str) -> bool | None:
+    """O bloco `acessibilidade` do daemon (`_merge_acessibilidade`); `None` = não disse."""
+    bloco = entrada.get("acessibilidade")
+    valor = bloco.get(secao) if isinstance(bloco, dict) else None
+    return valor if isinstance(valor, bool) else None
+
+
+def _ativacao_agora(entrada: dict[str, Any], _state: dict[str, Any],
+                    _linha: dict[str, Any]) -> bool | None:
+    """Um modo de botão ou um filtro vale neste controle agora."""
+    return _da_acessibilidade(entrada, "ativacao")  # (noqa-acento) chave ASCII
+
+
+def _analogicos_agora(entrada: dict[str, Any], _state: dict[str, Any],
+                      _linha: dict[str, Any]) -> bool | None:
+    """Uma curva, zona morta ou mão vale nos analógicos deste controle agora."""
+    return _da_acessibilidade(entrada, "analogicos")  # (noqa-acento) chave ASCII
+
+
 QUEM_DIZ_O_AGORA: dict[str, Callable[[dict[str, Any], dict[str, Any], dict[str, Any]],
                                      bool | None]] = {
     "leds": _luz_agora,
@@ -2425,6 +2444,8 @@ QUEM_DIZ_O_AGORA: dict[str, Callable[[dict[str, Any], dict[str, Any], dict[str, 
     "sensores": _sensores_agora,
     "mascara": _mascara_agora,
     "movimento": _comandos_virtuais_agora,
+    "ativacao": _ativacao_agora,  # (noqa-acento) chave ASCII
+    "analogicos": _analogicos_agora,  # (noqa-acento) chave ASCII
 }
 
 

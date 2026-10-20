@@ -533,7 +533,13 @@ class _CursorDeMentira:
         self.cliques: list[tuple[str, bool]] = []
         self.parado = False
 
-    def mover(self, px: float, py: float) -> None:
+    def definir_ajuste(self, ajuste: Any, epoca: int = 0) -> None:
+        pass
+
+    def ajudar(self, peca: str, botoes: Any, l2: int, r2: int) -> None:
+        pass
+
+    def mover(self, px: float, py: float, peca: str | None = None) -> None:
         self.movimentos.append((px, py))
 
     def clicar(self, peca: str, apertado: bool) -> None:

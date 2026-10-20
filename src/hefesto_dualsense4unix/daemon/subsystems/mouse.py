@@ -323,7 +323,10 @@ class TabelaNoJogo:
                 r2=r2,
                 buttons=conjunto,
             )
-            self._teclado.dispatch(conjunto | self._teclas_apertadas(daemon, state, outros))
+            from hefesto_dualsense4unix.integrations.uinput_mouse import botoes_do_cursor
+
+            do_teclado = conjunto - botoes_do_cursor(store)
+            self._teclado.dispatch(do_teclado | self._teclas_apertadas(daemon, state, outros))
         except Exception as exc:
             logger.warning("tabela_no_jogo_dispatch_falhou", err=str(exc))
 

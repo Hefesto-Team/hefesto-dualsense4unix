@@ -282,7 +282,8 @@ def test_a_frase_da_linha_sem_ajuste_conta_os_ajustes_certos() -> None:
     """*"herda os cinco ajustes do perfil"* — e a palavra sai da lista."""
     from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
-    esperado = {4: "quatro", 5: "cinco", 6: "seis", 7: "sete", 8: "oito"}[
+    esperado = {4: "quatro", 5: "cinco", 6: "seis", 7: "sete", 8: "oito", 9: "nove",
+                10: "dez"}[
         len(perfis_web.SECOES_NA_TELA)]
     sem_nada = Profile(name="sem nada", match=MatchAny(), controllers={})
     linhas = perfis_web._linhas_da_guarda([dict(MESA[0])], sem_nada)

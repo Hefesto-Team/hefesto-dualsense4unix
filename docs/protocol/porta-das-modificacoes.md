@@ -277,3 +277,7 @@ Além dos códigos do IPC principal (`-32700`, `-32600`, `-32601`, e `-32003` pa
 Toda escrita sem `uniq` é recusada com `-32003`, porque escrever em todos é proibido. Em toda escrita,
 o jogo tem a vez: se ele está escrevendo a luz, o gatilho ou a vibração daquele controle, a modificação
 espera.
+
+## Nota de verificação (20/10/2026)
+
+`perfil.jogo` é uma permissão de leitura da porta (`ler:perfil.jogo`), não um método do IPC: o espaço de nomes `perfil.` ganhou métodos de IPC (`perfil.ativacao.set` e os dois irmãos), e o nome da permissão continua certo.

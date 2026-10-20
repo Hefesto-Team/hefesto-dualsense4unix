@@ -540,7 +540,15 @@ def stop_keyboard_emulation(daemon: DaemonProtocol) -> None:
 def _combine_with_touchpad(
     daemon: DaemonProtocol, buttons_pressed: frozenset[str]
 ) -> frozenset[str]:
-    """Mescla as regiões do TouchpadReader ao frozenset de botões."""
+    """Mescla as regiões do TouchpadReader ao frozenset de botões.
+
+    Com o mouse virtual de pé, o botão da precisão e o do clique travado são do cursor e não
+    viram tecla (a mesma regra que o mouse já cumpre para o clique e a seta).
+    """
+    if getattr(daemon, "_mouse_device", None) is not None:
+        from hefesto_dualsense4unix.integrations.uinput_mouse import botoes_do_cursor
+
+        buttons_pressed = buttons_pressed - botoes_do_cursor(getattr(daemon, "store", None))
     reader = getattr(daemon, "_touchpad_reader", None)
     if reader is None:
         return buttons_pressed

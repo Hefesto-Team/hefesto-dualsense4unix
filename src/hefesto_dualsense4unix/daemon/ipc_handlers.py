@@ -5154,6 +5154,7 @@ class IpcHandlersMixin:
             result["radio_central"] = self._a_central_publica(entries)
         with contextlib.suppress(Exception):
             self._merge_mira(entries)
+        self._merge_acessibilidade(entries)  # total: só lê o `store`, sem I/O
         with contextlib.suppress(Exception):
             self._merge_no_jogo(entries)
         with contextlib.suppress(Exception):
@@ -5475,6 +5476,27 @@ class IpcHandlersMixin:
     _CAMPOS_DA_MIRA = ("ligada", "sensibilidade", "zona_morta_graus_s",
                        "gatilho", "inverter_horizontal", "inverter_vertical",
                        "inclinacao", "toque", "mesmo_parado", "lado")
+
+    def _merge_acessibilidade(self, entries: list[dict[str, Any]]) -> None:
+        """``entry["acessibilidade"]``: a ativação e a curva que valem AGORA neste controle."""
+        from hefesto_dualsense4unix.core import (
+            ativacao_de_botao,
+            curva_do_analogico,
+            filtro_de_botao,
+        )
+
+        store = getattr(self, "store", None)
+        for entry in entries:
+            uniq = entry.get("uniq")
+            if not isinstance(uniq, str) or not uniq:
+                continue
+            tem_modo = (ativacao_de_botao.da_peca(store, uniq) is not None
+                        or filtro_de_botao.da_peca(store, uniq) is not None)
+            tem_curva = curva_do_analogico.da_peca(store, uniq) is not None
+            entry["acessibilidade"] = {
+                "ativacao": tem_modo,  # (noqa-acento) chave ASCII
+                "analogicos": tem_curva,  # (noqa-acento) chave ASCII
+            }
 
     def _merge_mira(self, entries: list[dict[str, Any]]) -> None:
         """``entry["mira"]`` de cada controle: o chip e o bloco da Calibrar."""
@@ -5945,6 +5967,105 @@ class IpcHandlersMixin:
             if estado is None:
                 estado = self._ZERO_PRONTO if guardado else self._ZERO_PARADO
             entry["zero"] = {"estado": estado, "guardado": guardado}
+
+    async def _grava_a_acessibilidade(
+        self, metodo: str, secao: str, params: dict[str, Any], *, por_peca: bool
+    ) -> dict[str, Any]:
+        """O miolo de `perfil.ativacao.set`, `perfil.analogicos.set` e `perfil.cursor.set`.
+
+        Grava a seção no perfil que vale (campo omitido NÃO mexe no que já está), valida pelo
+        mesmo modelo do arquivo e deposita o resultado no `store` ao vivo, sem reativar o perfil.
+        Com `uniq` (só ativação e analógicos), a escrita é a da peça; sem, a do perfil.
+        """
+        from hefesto_dualsense4unix.profiles import schema
+
+        modelo: Any = {
+            "ativacao": schema.ProfileAtivacaoConfig,  # (noqa-acento) chave ASCII
+            "analogicos": schema.ProfileAnalogicosConfig,  # (noqa-acento) chave ASCII
+            "cursor": schema.ProfileCursorConfig,
+        }[secao]
+        campos_do_modelo = set(modelo.model_fields)
+        desconhecidos = sorted(set(params) - {"uniq", *campos_do_modelo})
+        if desconhecidos:
+            raise ValueError(
+                f"{metodo} não conhece {desconhecidos}: os campos são "
+                f"{', '.join(sorted(campos_do_modelo))}"
+            )
+        pedidos = {k: v for k, v in params.items() if k != "uniq"}
+        if not pedidos:
+            raise ValueError(
+                f"{metodo} exige ao menos um de {', '.join(sorted(campos_do_modelo))} "
+                "— campo omitido NÃO mexe na seção"
+            )
+        uniq = params.get("uniq")
+        if uniq is not None and not isinstance(uniq, str):
+            raise ValueError(f"{metodo}: 'uniq' precisa ser string ou omitido")
+        if uniq is not None and not por_peca:
+            raise ValueError(f"{metodo}: o cursor é do perfil, não de uma peça")
+
+        nome = self._perfil_que_grava()
+        if not nome:
+            return {"status": "sem_perfil", "uniq": uniq,
+                    "motivo": "não há perfil valendo onde gravar a seção"}
+        chave: str | None = None
+        if uniq is not None:
+            chave = self._chave_de_peca_que_grava(uniq)
+            if not chave:
+                return {"status": "sem_endereco", "uniq": uniq,
+                        "motivo": f"{uniq!r} não é o endereço de rádio de uma peça de plástico"}
+
+        from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+
+        perfil = load_profile(nome)
+        dele = (perfil.controllers or {}).get(chave) if chave else None
+        antes = getattr(dele, secao, None) if chave else getattr(perfil, secao, None)
+        escritos = dict(antes.model_dump(exclude_unset=True)) if antes is not None else {}
+        campos = {**escritos, **pedidos}
+        try:
+            nova = modelo.model_validate(campos)
+        except ValueError as exc:
+            raise ValueError(f"{metodo} recusado: {exc}") from exc
+
+        gravado = escritos != campos
+        if gravado:
+            if chave:
+                atuais = dict(perfil.controllers or {})
+                da_peca = atuais.get(chave) or schema.ControllerOverrides()
+                atuais[chave] = da_peca.model_copy(update={secao: nova})
+                perfil = perfil.model_copy(update={"controllers": atuais})
+            else:
+                perfil = perfil.model_copy(update={secao: nova})
+            save_profile(perfil)
+
+        relatorio: dict[str, str] = {}
+        aplicar = getattr(self.profile_manager, "apply_acessibilidade", None)
+        if callable(aplicar):
+            aplicar(perfil, relatorio=relatorio)
+        logger.info("perfil_acessibilidade_set", metodo=metodo, perfil=nome, uniq=chave,
+                    gravado=gravado)
+        return {
+            "status": "ok",
+            "uniq": uniq,
+            "perfil": nome,
+            "gravado": gravado,
+            secao: nova.model_dump(),
+            "alcance": {"tique": relatorio.get("acessibilidade", "aplicado")},
+        }
+
+    async def _handle_perfil_ativacao_set(self, params: dict[str, Any]) -> dict[str, Any]:
+        """`perfil.ativacao.set` — o modo e o filtro do botão, no perfil ou numa peça."""
+        return await self._grava_a_acessibilidade(
+            "perfil.ativacao.set", "ativacao", params, por_peca=True)  # (noqa-acento) chave
+
+    async def _handle_perfil_analogicos_set(self, params: dict[str, Any]) -> dict[str, Any]:
+        """`perfil.analogicos.set` — a zona morta, a curva e a mão, no perfil ou numa peça."""
+        return await self._grava_a_acessibilidade(
+            "perfil.analogicos.set", "analogicos", params, por_peca=True)  # (noqa-acento) chave
+
+    async def _handle_perfil_cursor_set(self, params: dict[str, Any]) -> dict[str, Any]:
+        """`perfil.cursor.set` — a precisão, a permanência e o clique travado do cursor."""
+        return await self._grava_a_acessibilidade(
+            "perfil.cursor.set", "cursor", params, por_peca=False)
 
 
 def _uniq_do_rumble(params: dict[str, Any], metodo: str) -> str | None:
