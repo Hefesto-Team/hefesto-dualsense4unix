@@ -5620,11 +5620,10 @@ class PyDualSenseController(IController):
             uniq = self._key_to_uniq(key)
             escala_vib = vibracao.get(uniq, 1.0) if uniq is not None else 1.0
             escala_gat = gatilho.get(uniq, 1.0) if uniq is not None else 1.0
-            with contextlib.suppress(Exception):
-                if getattr(handle, "_escala_da_vibracao", 1.0) != escala_vib:
-                    handle._escala_da_vibracao = escala_vib
-                if getattr(handle, "_escala_do_gatilho", 1.0) != escala_gat:
-                    handle._escala_do_gatilho = escala_gat
+            if getattr(handle, "_escala_da_vibracao", 1.0) != escala_vib:
+                handle._escala_da_vibracao = escala_vib
+            if getattr(handle, "_escala_do_gatilho", 1.0) != escala_gat:
+                handle._escala_do_gatilho = escala_gat
 
 
 #: (`battery_pct=..., battery_state=...`) e o `**self._carga(...)` no
