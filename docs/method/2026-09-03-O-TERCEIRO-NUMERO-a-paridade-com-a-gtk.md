@@ -90,8 +90,8 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 07-lancadores | 24 | 8 | 11 | 2 | 3 | 0 | 33% |
 | 08-conexoes | 44 | 13 | 25 | 6 | 0 | 0 | 30% |
 | 09-sistema | 38 | 13 | 18 | 4 | 3 | 0 | 34% |
-| 10-perfis | 48 | 14 | 19 | 8 | 7 | 0 | 29% |
-| TODAS | 381 | 110 | 170 | 53 | 45 | 3 | 29% |<!-- /TABELA-DA-PARIDADE -->
+| 10-perfis | 48 | 15 | 20 | 7 | 6 | 0 | 31% |
+| TODAS | 381 | 111 | 171 | 52 | 44 | 3 | 29% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -724,3 +724,11 @@ As cinco linhas da luz saíram do CSV, porque o botão, a espera pelo PS e a fra
 em lado nenhum; as duas pontes dessas linhas com o mapa saíram junto, e o piso das pontes desceu de 26 para 24. A tabela
 acima foi recontada do CSV: `08-conexoes` vai de `49 · 17 IGUAL · 26 DIFER · 35%` para `44 · 13 · 25 · 30%`, e
 `TODAS` de `386 · 114 · 171 · 30%` para `381 · 110 · 170 · 29%`.
+
+**20/10/2026 — o editor da Perfis perde o que o desenho do todo tirou**
+(`O-EDITOR-DE-PERFIS-MOSTRA-O-ESTILO-RECUSA-O-FREESTYLE-E-PERDE-O-QUE-O-DESENHO-TIROU-01`). O renomear voltou pelo
+duplo clique no nome da lista (**«O campo Nome / renomear o perfil»** passa de `FALTA_NO_HTML` a `DIFERENTE`); o
+**«Detectar»** saiu, e o que fica é o «Novo» nascendo com o jogo da Steam em foco, como na GTK (passa de `SO_NO_HTML` a
+`IGUAL`); a **válvula do R-12** e **as cinco perguntas do Salvar** seguem `DIFERENTE`, sem o «Funciona em». A tabela acima
+foi recontada do CSV: `10-perfis` vai de `14 IGUAL · 19 DIFER · 8 FALTA · 7 SO_HTML · 29%` para `15 · 20 · 7 · 6 · 31%`,
+e `TODAS` de `110 · 170 · 53 · 45 · 29%` para `111 · 171 · 52 · 44 · 29%`.
