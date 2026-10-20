@@ -249,17 +249,17 @@
       "universo": 411
     },
     "tamanho": {
-      "data": "2026-10-19",
+      "data": "2026-10-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1147378,
+      "piso": 1152676,
       "por_item": {
-        "docs": 119665,
-        "scripts": 114950,
-        "src": 310111,
-        "tests": 602652
+        "docs": 119974,
+        "scripts": 114973,
+        "src": 310994,
+        "tests": 606735
       },
-      "razao": "tamanho: +10 linhas (1147368 -> 1147378), pagas por Origem: D-1910-A-PRIMEIRA-CASA-DA-COR-E-O-BRANCO; registrado no fecho, topo 05c5fbf0e3a8",
+      "razao": "tamanho: +5298 linhas (1147378 -> 1152676), pagas por Origem: D-2010-A-CHEGADA-ESPERA-A-RAJADA-DA-STEAM, D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE; registrado no fecho, topo 1184a242ffcf",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -668,10 +668,16 @@
           "de": 1147368,
           "para": 1147378,
           "razao": "tamanho: +10 linhas (1147368 -> 1147378), pagas por Origem: D-1910-A-PRIMEIRA-CASA-DA-COR-E-O-BRANCO; registrado no fecho, topo 05c5fbf0e3a8"
+        },
+        {
+          "data": "2026-10-20",
+          "de": 1147378,
+          "para": 1152676,
+          "razao": "tamanho: +5298 linhas (1147378 -> 1152676), pagas por Origem: D-2010-A-CHEGADA-ESPERA-A-RAJADA-DA-STEAM, D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE; registrado no fecho, topo 1184a242ffcf"
         }
       ],
       "unidade": "linhas",
-      "universo": 3002
+      "universo": 3010
     }
   }
 }
