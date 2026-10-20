@@ -119,6 +119,8 @@ def test_a_linha_da_03_fica_antes_do_l2_e_o_estilo_continua_escolhendo_o_efeito(
 def test_o_trilho_da_03_manda_o_gesto_e_tem_dono_e_camada(d03: str) -> None:
     """O trilho da 03 manda `data-papel` (o gesto), e o gesto tem atendente e camada.
 
+    A prova da D-2010-A-INTENSIDADE-DO-GATILHO-MORA-NO-PERFIL-DO-JOGO.
+
     Gesto sem dono reprova `test_os_sem_dono_so_diminuem`; gesto sem camada fica de fora do Nativo
     sem ninguém decidir. A camada é a do jogo (`_J`), como o `modo` e a `imersao` da mesma aba.
     """
@@ -393,6 +395,7 @@ def test_abaixo_de_100_cada_report_leva_o_bit_e_os_nibbles(radio: bool, vibrando
 
 
 def test_os_nibbles_tem_dono_e_o_firmware_atenua_sem_calar() -> None:
+    """A prova da D-2010-A-VIBRACAO-NO-NIBBLE-BAIXO-E-O-GATILHO-NO-ALTO."""
     from hefesto_dualsense4unix.core import ds_output_report as rep
 
     assert rep.byte_de_reducao(0.5, 1.0) == 0x04, "a vibração saiu do nibble baixo"
@@ -459,6 +462,7 @@ def test_acima_de_100_o_gatilho_reforca_ate_a_forca_maxima(radio: bool) -> None:
 
 
 def test_a_zero_o_gatilho_do_hefesto_solta_e_o_firmware_fica_no_passo_mais_fraco() -> None:
+    """A prova da D-2010-A-INTENSIDADE-A-ZERO-ATENUA-E-NAO-CALA."""
     h = _handle(gat=0.0)
     h._raw_trigger_right = list(_bloco_rigido(128))
     c = _common(h.prepareReport())

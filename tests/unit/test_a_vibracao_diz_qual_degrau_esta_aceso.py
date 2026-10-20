@@ -84,7 +84,10 @@ NO_TRILHO = {"economia": "30", "balanceado": "100", "max": "150", "custom": "70"
 
 @pytest.mark.parametrize(("policy", "numero"), sorted(NO_TRILHO.items()))
 def test_o_pacote_pinta_o_trilho_e_nao_o_degrau(policy: str, numero: str) -> None:
-    """O cursor e o número do trilho vêm da política do daemon; degrau não se pinta mais."""
+    """O cursor e o número do trilho vêm da política do daemon; degrau não se pinta mais.
+
+    A prova da D-2010-O-HERDADO-SAI-COM-OS-DEGRAUS.
+    """
     import pacotes
 
     from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
