@@ -8,8 +8,8 @@ impedimentos só se alcança por «Configurar» da Steam, e a tira chama a aba d
 Só o desenho (`mockup/07-lancadores.html`); a segunda passagem liga o produto.
 
 MORDIDAS (executadas aqui): devolver o «Abrir» a uma fila, acender os três de um não achado, tirar
-um botão ou devolver o `span.ajuda` reprova a régua; o clique que não abre a janela reprova no
-Chrome.
+um botão, devolver o gesto a um apagado ou devolver o `span.ajuda` reprova a régua; o clique que não
+abre a janela reprova no Chrome.
 """
 
 from __future__ import annotations
@@ -50,18 +50,21 @@ def _problemas(doc: str) -> list[str]:
         falta.append(f"filas {sorted(filas)}, e o desenho tem {sorted(ACHADOS | NAO_ACHADOS)}")
     for chave, bloco in filas.items():
         ausente, botoes = bloco.split("|", 1)
-        pecas = re.findall(
-            r'<(?:button|a) class="btn mini( apagado)?"([^>]*)data-gesto="([a-z-]+)"[^>]*>'
-            r'([^<]+)</', botoes)
-        if [g for _, _, g, _ in pecas] != GESTOS or [r for _, _, _, r in pecas] != ROTULOS:
+        pecas = re.findall(r'<(?:button|a|span) class="btn mini( apagado)?"([^>]*)>([^<]+)', botoes)
+        if [r for _, _, r in pecas] != ROTULOS:
             falta.append(f"{chave}: os botões não são {ROTULOS}")
             continue
-        for apagado, resto, gesto, _ in pecas:
+        for (apagado, resto, _), gesto in zip(pecas, GESTOS, strict=True):
             deve_apagar = (gesto == "identificar-lancador") == (chave in ACHADOS)
             if bool(apagado) != deve_apagar:
                 falta.append(f"{chave}: {gesto} {'apagado' if apagado else 'aceso'} fora do estado")
             if bool(apagado) != ('aria-disabled="true"' in resto):
                 falta.append(f"{chave}: {gesto} apagado sem aria-disabled (ou o inverso)")
+            # O apagado não leva gesto, destino nem chave: o Enter e o `click()` o disparavam.
+            if apagado and re.search(r'data-gesto=|href=|data-v=', resto):
+                falta.append(f"{chave}: {gesto} apagado ainda dispara o gesto")
+            if not apagado and f'data-gesto="{gesto}"' not in resto:
+                falta.append(f"{chave}: {gesto} aceso sem o gesto")
         if bool(ausente.strip()) == (chave in ACHADOS):
             falta.append(f"{chave}: a fila não diz se foi achada")
     if "abrir-lancador" in doc or re.search(r">Abrir<", doc):
@@ -88,10 +91,17 @@ def test_a_regua_morde_o_abrir_o_acender_o_botao_errado_e_o_ponto_de_interrogaca
     abrir = '<button class="btn mini" data-gesto="abrir-lancador">Abrir</button>'
     com_abrir = doc.replace('<span class="lf-botoes">', f'<span class="lf-botoes">{abrir}', 1)
     assert any("Abrir" in p for p in _problemas(com_abrir))
-    resto = 'href="#lanc-conf" data-gesto="configurar-lancador" data-v="heroic"'
-    aceso = doc.replace(f'class="btn mini apagado" aria-disabled="true" {resto}',
-                        f'class="btn mini" {resto}')
+    heroic = doc.index('data-lancador="heroic"')
+    apagado = '<span class="btn mini apagado" aria-disabled="true">Configurar</span>'
+    pos = doc.index(apagado, heroic)
+    aceso = (doc[:pos] + '<a class="btn mini" href="#lanc-conf" data-gesto="configurar-lancador"'
+             ' data-v="heroic">Configurar</a>' + doc[pos + len(apagado):])
     assert any("heroic: configurar-lancador aceso" in p for p in _problemas(aceso))
+    com_gesto = (doc[:pos] + '<a class="btn mini apagado" aria-disabled="true" href="#lanc-conf" '
+                 'data-gesto="configurar-lancador" data-v="heroic">Configurar</a>'
+                 + doc[pos + len(apagado):])
+    assert any("heroic: configurar-lancador apagado ainda dispara" in p
+               for p in _problemas(com_gesto))
     sem_botao = doc.replace('<a class="btn mini" href="#lanc-conf" data-gesto="configurar-lancador"'
                             ' data-v="lutris">Configurar</a>', "")
     assert any(p.startswith("lutris: os botões") for p in _problemas(sem_botao))
@@ -153,8 +163,12 @@ def test_configurar_e_criar_perfis_abrem_a_janela_e_o_impedimento_vem_depois(pag
 
 
 def test_o_botao_apagado_de_um_nao_achado_nao_abre_nada(pagina) -> None:
+    """Nem o mouse nem o ``click()`` da ponte: o apagado não abre a janela nem acha gesto."""
     pagina.goto(MOCKUP.as_uri() + "#")
-    ev = pagina.evaluate("""() => { const a = document.querySelector(
-      '.lf[data-lancador="heroic"] [data-gesto="configurar-lancador"]');
-      return getComputedStyle(a).pointerEvents; }""")
+    ev, gesto = pagina.evaluate("""() => { const a = document.querySelectorAll(
+      '.lf[data-lancador="heroic"] .lf-botoes .btn')[2];
+      a.click();
+      return [getComputedStyle(a).pointerEvents, a.closest('[data-gesto],[data-v],a[href]')]; }""")
     assert ev == "none", "o botão apagado ainda recebe o clique"
+    assert gesto is None, "o botão apagado ainda leva um gesto que o clique dispara"
+    assert not _visivel(pagina, "lanc-conf"), "o «Configurar» apagado abriu a janela"

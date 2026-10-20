@@ -116,6 +116,13 @@ _CHIP_DE_CONTROLE = re.compile(r'^[ \t]*<label class="chip plastico(?: on)?"[^\n
 _MARCA = "<!-- ===== fim da aba ===== -->"
 
 
+def _sem_os_tres(fila: str) -> bool:
+    """Os três botões à vista, e cada aceso com o seu gesto (o apagado não leva nenhum)."""
+    botoes = re.findall(r'<(?:a|button|span) class="btn mini( apagado)?"([^>]*)>', fila)
+    return len(botoes) != len(exp.BOTOES) or any(
+        not apagado and 'data-gesto="' not in resto for apagado, resto in botoes)
+
+
 def _confere_a_forma() -> None:
     """Trava de geração: o que a régua do mockup também afirma, dita antes de gravar."""
     # 19/10/2026: Steam, Heroic e Flatpak de fábrica, o Lutris como extensão instalada e uma
@@ -123,8 +130,7 @@ def _confere_a_forma() -> None:
     if len(exp.LANCADORES) != 5 or sum(1 for f in exp.LANCADORES if f.virou) != 1:
         raise SystemExit(f"ERRO: {len(exp.LANCADORES)} lançadores, e o desenho tem cinco, "
                          "um deles a linha do que virou extensão.")
-    sem_trio = [f.chave for f in exp.LANCADORES if not f.virou
-                and exp.fila_html(f).count('data-gesto="') != len(exp.BOTOES)]
+    sem_trio = [f.chave for f in exp.LANCADORES if not f.virou and _sem_os_tres(exp.fila_html(f))]
     if sem_trio:
         raise SystemExit(f"ERRO: lançador sem os {len(exp.BOTOES)} botões: {sem_trio}")
     if "class=\"ajuda" in MIOLO + exp.telas():

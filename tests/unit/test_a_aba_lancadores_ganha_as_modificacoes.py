@@ -676,7 +676,9 @@ def test_o_mais_do_configurar_e_o_da_extensao_e_some_com_ela(lar, ctx, monkeypat
     assert 'data-gesto="mais-da-modificacao" data-v="kytyps5"' in topo
     assert 'class="ext-menu ext-pop aberto"' in topo
     assert ('<a class="btn mini" href="#" data-gesto="mais-da-modificacao" '
-            'data-v="kytyps5:remover">Confirmar remoção</a>') in topo, "a confirmação não fecha"
+            'data-v="kytyps5:remover" data-onde="conf">Confirmar remoção</a>') in topo, (
+        "a confirmação não fecha")
+    assert topo.count(f'data-onde="{exp.ONDE_DA_CONF}"') == 4, "o ⋮ da janela não diz de onde veio"
     assert "escolher-o-lancador" not in html, "onde ele está é a extensão quem diz"
 
     a07 = _a07()
@@ -697,6 +699,30 @@ def test_o_mais_do_configurar_e_o_da_extensao_e_some_com_ela(lar, ctx, monkeypat
     a07._MEXIDA.conf, a07._MEXIDA.conf_da_modificacao = "steam", ""
     a07.mais_da_modificacao(ctx, {"v": "toque"}, _Ponte())
     assert len(montadas) == 2, "o ⋮ de uma extensão repintou a janela da Steam"
+
+
+def test_o_mais_da_janela_nao_abre_o_menu_da_linha_atras_dela(lar, ctx, monkeypatch) -> None:
+    """O ⋮ do «Configurar» e o da linha da extensão são dois lugares: cada um abre só o seu menu."""
+    from types import SimpleNamespace
+
+    from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
+
+    a07 = _a07()
+    monkeypatch.setattr(a07, "_montar_a_conf", lambda chave, state=None: None)
+    a07._MEXIDA.conf, a07._MEXIDA.conf_da_modificacao = "kytyps5", "toque"
+    item = SimpleNamespace(manifesto=None, entrada=SimpleNamespace(
+        id="toque", nome="Toque", versao="1.0", origem="oficial", ligada=True,
+        permissoes_aceitas=[]))
+    monkeypatch.setattr(a07, "_a_instalada", lambda mod_id: item)
+    a07.mais_da_modificacao(ctx, {"v": "toque", "onde": exp.ONDE_DA_CONF}, _Ponte())
+    assert a07._MEXIDA.menu == "toque" and a07._MEXIDA.menu_na_conf
+    assert a07._extensao_de(item).menu == "", "o ⋮ da janela abriu também o da linha, atrás dela"
+    ver = "toque:" + exp.ACOES_DO_MENU[1][0]
+    a07.mais_da_modificacao(ctx, {"v": ver, "onde": exp.ONDE_DA_CONF}, _Ponte())
+    assert a07._extensao_de(item).menu == "", "o «Ver permissões» da janela abriu o da linha"
+    a07.mais_da_modificacao(ctx, {"v": "toque"}, _Ponte())
+    assert a07._extensao_de(item).menu, "o ⋮ da linha não abre mais o menu dela"
+    assert not a07._MEXIDA.menu_na_conf
 
 
 def test_a_chave_desligada_tira_os_jogos_daquele_lancador_da_semeadura(

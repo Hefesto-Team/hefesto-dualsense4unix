@@ -96,13 +96,16 @@ def _engrenagem() -> str:
 
 
 def _botao(gesto: str, rotulo: str, destino: str, chave: str, ativo: bool) -> str:
-    apagado = "" if ativo else " apagado"
-    desligado = "" if ativo else ' aria-disabled="true"'
+    """Um dos três botões da fila. O apagado fica à vista sem gesto, sem destino e sem chave.
+
+    O ``pointer-events:none`` só barra o mouse: o Enter num botão focado e o ``click()`` da ponte
+    ainda o disparavam. O que não tem gesto não tem o que disparar (o mesmo do ⋮ apagado).
+    """
+    if not ativo:
+        return f'<span class="btn mini apagado" aria-disabled="true">{rotulo}</span>'
     if gesto == "identificar-lancador":
-        return (f'<button class="btn mini{apagado}"{desligado} data-gesto="{gesto}" '
-                f'data-v="{_a(chave)}">{rotulo}</button>')
-    return (f'<a class="btn mini{apagado}"{desligado} href="{destino}" data-gesto="{gesto}" '
-            f'data-v="{_a(chave)}">{rotulo}</a>')
+        return f'<button class="btn mini" data-gesto="{gesto}" data-v="{_a(chave)}">{rotulo}</button>'
+    return f'<a class="btn mini" href="{destino}" data-gesto="{gesto}" data-v="{_a(chave)}">{rotulo}</a>'
 
 
 def _fila_que_virou_html(fila: Fila) -> str:
@@ -145,6 +148,8 @@ ACOES_DO_MENU = (("atualizar", "Atualizar"), ("permissoes", "Ver permissões"), 
 
 #: O Remover depois do primeiro clique: apagar o código e os dados pede o segundo.
 ROTULO_DA_CONFIRMACAO = "Confirmar remoção"
+#: O ⋮ da janela «Configurar» diz de onde veio: o menu dele não se desenha também na linha atrás.
+ONDE_DA_CONF = "conf"
 
 
 def menu_html(chave: str, permissoes: Sequence[str] | None = None, *, remover: bool = False,
@@ -161,6 +166,8 @@ def menu_html(chave: str, permissoes: Sequence[str] | None = None, *, remover: b
     botoes = []
     for acao, rotulo in ACOES_DO_MENU:
         alvo = f'data-gesto="mais-da-modificacao" data-v="{_a(chave)}:{acao}"'
+        if fecha:
+            alvo += f' data-onde="{ONDE_DA_CONF}"'
         if remover and acao == "remover":
             botoes.append(f'<a class="btn mini" href="#" {alvo}>{ROTULO_DA_CONFIRMACAO}</a>' if fecha
                           else f'<button class="btn mini" {alvo}>{ROTULO_DA_CONFIRMACAO}</button>')
@@ -540,7 +547,7 @@ def _mais_da_conf(c: Conf) -> str:
     """O ⋮ do topo da janela: o mesmo menu da linha da extensão; no que vem com o Hefesto, apagado."""
     if c.modificacao:
         botao = (f'<button class="ext-mais" data-gesto="mais-da-modificacao" data-v="{_a(c.modificacao)}" '
-                 'data-dica="Atualizar, ver as permissões ou remover">⋮</button>')
+                 f'data-onde="{ONDE_DA_CONF}" data-dica="Atualizar, ver as permissões ou remover">⋮</button>')
         if not c.menu:
             return botao
         return f'{botao}<div class="ext-menu ext-pop aberto" data-menu="{_a(c.modificacao)}">{c.menu}</div>'

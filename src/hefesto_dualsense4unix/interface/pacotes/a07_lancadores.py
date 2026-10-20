@@ -1223,6 +1223,8 @@ class _Mexida:
     """O que a pessoa abriu: o ⋮ de uma extensão e as janelas, com o miolo já montado no clique."""
 
     menu: str = ""
+    #: O ⋮ aberto é o da janela «Configurar», não o da linha: cada um se desenha só no seu lugar.
+    menu_na_conf: bool = False
     permissoes: str = ""
     remover: str = ""
     conf: str = ""
@@ -1245,6 +1247,7 @@ class _Mexida:
 
     def limpar(self) -> None:
         self.menu = self.permissoes = self.remover = self.conf = self.imp = self.mod = ""
+        self.menu_na_conf = False
         self.impedimentos = ()
         self.vistas = {}
         self.html_conf = self.html_imp = self.html_mod = ""
@@ -1374,7 +1377,7 @@ def _extensao_de(item: _Instalada) -> Any:
 
     e = item.entrada
     menu = ""
-    if _MEXIDA.menu == e.id:
+    if _MEXIDA.menu == e.id and not _MEXIDA.menu_na_conf:
         pedidas = item.manifesto.permissoes if item.manifesto is not None else e.permissoes_aceitas
         aviso = aviso_por_ver(e, item.manifesto) if item.manifesto is not None else ""
         menu = exp.menu_html(
@@ -1555,7 +1558,7 @@ def _ligar_ou_desligar_a_modificacao(mod_id: str) -> str | None:
                 _MEXIDA.vistas.get(mod_id) != (*pedidas, aviso)):
             _MEXIDA.vistas[mod_id] = (*pedidas, aviso)
             _MEXIDA.menu = _MEXIDA.permissoes = mod_id
-            _MEXIDA.remover = ""
+            _MEXIDA.remover, _MEXIDA.menu_na_conf = "", False
             return None
         ligar(mod_id, permissoes_vistas=pedidas, aviso_visto=aviso, lugares=lg)
         _MEXIDA.vistas.pop(mod_id, None)
@@ -1678,12 +1681,15 @@ def _valor_na_janela(item: _Instalada, opcao: Any) -> Any:
 def mais_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O ⋮ da extensão: abre o menu; o ``data-v`` é ``id:<ação>``, um dos três botões dele."""
     mod_id, _, acao = _id_do_clique(o, "mais-da-modificacao").partition(":")
+    na_conf = o.get("onde") == exp.ONDE_DA_CONF
     if not acao:
-        _MEXIDA.menu = "" if _MEXIDA.menu == mod_id else mod_id
+        mesmo = _MEXIDA.menu == mod_id and _MEXIDA.menu_na_conf == na_conf
+        _MEXIDA.menu = "" if mesmo else mod_id
+        _MEXIDA.menu_na_conf = na_conf
         _MEXIDA.permissoes = _MEXIDA.remover = ""
         _repintar_a_conf_da(mod_id)
         return _a_pintura_agora(ctx)
-    _MEXIDA.menu = mod_id
+    _MEXIDA.menu, _MEXIDA.menu_na_conf = mod_id, na_conf
     if acao == "permissoes":  # (noqa-acento): contrato ASCII
         _a_instalada(mod_id)
         _MEXIDA.permissoes, _MEXIDA.remover = mod_id, ""
@@ -1871,7 +1877,7 @@ def _montar_a_conf(chave: str, state: dict[str, Any] | None = None) -> None:
     onde = dict(lida.onde_estao).get(chave, "") if lida is not None else ""
     impedimentos = len(_MEXIDA.impedimentos) if chave == desenho.STEAM else None
     menu = ""
-    if mod_id and _MEXIDA.menu == mod_id:
+    if mod_id and _MEXIDA.menu == mod_id and _MEXIDA.menu_na_conf:
         item = _a_instalada(mod_id)
         pedidas = item.manifesto.permissoes if item.manifesto is not None else (
             item.entrada.permissoes_aceitas)
@@ -1927,6 +1933,7 @@ def configurar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
     _MEXIDA.conf = chave
     _MEXIDA.onde_escolhido = ""
     _MEXIDA.menu = _MEXIDA.permissoes = _MEXIDA.remover = ""
+    _MEXIDA.menu_na_conf = False
     _MEXIDA.imp = _MEXIDA.html_imp = ""
     _MEXIDA.impedimentos = _sondar_a_steam() if chave == desenho.STEAM else ()
     _montar_a_conf(chave, ctx.state)

@@ -106,6 +106,9 @@ SEM_BOTAO_NA_PAGINA = {
     ("10-perfis.html", "editor.ambiente"),
     ("10-perfis.html", "editor.nome"),
     ("10-perfis.html", "editor.prioridade"),
+    # O «Parar tudo» só existe na janela da extensão que o declara no manifesto; a do desenho não
+    # declara (a dos acessórios, que o trazia, saiu em 19/10/2026).
+    ("07-lancadores.html", "parar-tudo-da-modificacao"),
 }
 
 
