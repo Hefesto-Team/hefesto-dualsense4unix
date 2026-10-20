@@ -252,14 +252,14 @@
       "data": "2026-10-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1159052,
+      "piso": 1158928,
       "por_item": {
-        "docs": 120036,
-        "scripts": 114366,
-        "src": 314165,
-        "tests": 610485
+        "docs": 120049,
+        "scripts": 114261,
+        "src": 314145,
+        "tests": 610473
       },
-      "razao": "tamanho: +640 linhas (1158412 -> 1159052), pagas por Origem: D-1810-O-GATILHO-E-A-VIBRACAO-TEM-O-TRILHO-DE-0-A-200, D-2010-A-VIBRACAO-NO-NIBBLE-BAIXO-E-O-GATILHO-NO-ALTO; registrado no fecho, topo f9404293f2e0",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -719,7 +719,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 3019
+      "universo": 3018
     }
   }
 }
