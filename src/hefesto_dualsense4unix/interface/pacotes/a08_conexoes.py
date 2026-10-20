@@ -2108,7 +2108,8 @@ def acionador_botao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if botao is None:
         raise ValueError(f"acionador-botao: {o.get('entrada')!r} não é um botão que a troca "
                          "conhece")
-    forma = o.get("forma") if isinstance(o.get("forma"), dict) else {}
+    bruta = o.get("forma")
+    forma: dict[str, Any] = bruta if isinstance(bruta, dict) else {}
     escolhida = str(forma.get("tecla") or (r.sel if r.sel is not None else ""))
     if not _CODIGO_DE_TECLA.match(escolhida):
         raise ValueError("acionador-botao: nenhuma tecla da lista está escolhida")
@@ -2130,7 +2131,8 @@ def acionador_guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """«Guardar»: o controle e as teclas vão ao `maquina.json`, pela chave do kernel."""
     global _RASCUNHO
     r = _o_rascunho()
-    forma = o.get("forma") if isinstance(o.get("forma"), dict) else {}
+    bruta = o.get("forma")
+    forma: dict[str, Any] = bruta if isinstance(bruta, dict) else {}
     controle = str(forma.get("acionador-quem") or r.controle)
     if not _CHAVE_DE_CONTROLE.match(controle):
         raise ValueError(f"acionador-guardar: {controle!r} não é um controle da mesa")

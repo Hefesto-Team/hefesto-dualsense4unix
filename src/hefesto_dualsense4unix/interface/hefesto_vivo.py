@@ -1402,7 +1402,10 @@ BOOTSTRAP = r"""
       // `topo.html`, o esqueleto das dez, e um `data-gesto` ali mudaria as dez
       // páginas de uma vez. A classe `r-<nome>` já era o endereço dele no
       // `jogar_vivo.py` — este é o quarto vocabulário, e é o último.
-      const doRodape = (alvo.className.match(/\br-([a-z]+)\b/) || [])[1];
+      // A classe se lê pelo ATRIBUTO: num elemento do SVG o `className` não é
+      // texto, e o `match` levantava antes de o gesto sair (o botão do desenho
+      // da janela do acionador, 20/10/2026, nascia mudo).
+      const doRodape = ((alvo.getAttribute('class') || '').match(/\br-([a-z]+)\b/) || [])[1];
       // O CARIMBO DO VOO, e ele é aplicado ANTES de a mensagem sair: a resposta
       // tem de ser do CLIQUE, não da volta do Python. O gesto atravessa uma
       // thread e o IPC; esperar por ele para dizer "estou trabalhando" seria

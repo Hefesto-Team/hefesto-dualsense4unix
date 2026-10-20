@@ -92,7 +92,7 @@ class _No:
 
 def _botao_do_pad(pad: UinputGamepad, nome: str) -> str:
     """O nome evdev do botão ``nome`` no pad, pela tabela da máscara que o jogo vê."""
-    return BOTOES_POR_FLAVOR.get(pad.mascara_no_jogo, BUTTON_TO_UINPUT)[nome]
+    return str(BOTOES_POR_FLAVOR.get(pad.mascara_no_jogo, BUTTON_TO_UINPUT)[nome])
 
 
 def _pad(mascara: str) -> tuple[UinputGamepad, _No]:
@@ -367,8 +367,10 @@ def test_o_maquina_json_guarda_o_acionador_pela_chave_sem_endereco() -> None:
     assert doc.acionadores[CHAVE].teclas == {"28": "cross", "57": "l2"}
     junto = fundir_declaracao(doc.model_dump(), {"acionadores": {CHAVE: {"teclas": {"57": None}}}})
     assert MaquinaConfig.model_validate(junto).acionadores[CHAVE].teclas == {"28": "cross"}
-    for ruim in ({"x": {}}, {CHAVE: {"teclas": {"28": "ps"}}},
-                 {CHAVE: {"teclas": {"tecla": "cross"}}}, {CHAVE: {"controle": "02bbcc0000ff"}}):
+    ruins: tuple[dict[str, Any], ...] = (
+        {"x": {}}, {CHAVE: {"teclas": {"28": "ps"}}},
+        {CHAVE: {"teclas": {"tecla": "cross"}}}, {CHAVE: {"controle": "02bbcc0000ff"}})
+    for ruim in ruins:
         with pytest.raises(ValueError):
             MaquinaConfig.model_validate({"acionadores": ruim})
     assert json.loads(doc.model_dump_json())["acionadores"][CHAVE]["controle"] == UNIQS[2]
@@ -585,3 +587,80 @@ def test_a_tecla_que_perdeu_o_botao_sai_do_maquina_json(
     assert ponte.chamadas[-1]["acionadores"][CHAVE]["teclas"] == {str(TECLA_1): "cross",
                                                                   str(PEDAL): None}
     assert maquina.carregar_maquina().acionadores[CHAVE].teclas == {str(TECLA_1): "cross"}
+
+
+_CLICAR_O_CIRCULO = r"""
+(function(){
+  const radio = document.querySelectorAll('#acionador .ac-tecla input')[1];
+  const g = document.querySelector('#acionador g[data-entrada="circle"]');
+  if (!radio || !g) { return 'sem a tecla 2 ou o círculo'; }
+  radio.checked = true;
+  g.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}));
+  return 'clicou';
+})()
+"""
+
+
+def test_o_clique_no_botao_do_desenho_sai_do_ouvinte_do_piloto_com_a_tecla() -> None:
+    """O botão do desenho é um ``<g>`` do SVG: o ouvinte único do piloto lê a classe dele pelo
+    atributo (o ``className`` de um elemento SVG não é texto), e o gesto sai com a peça e a tecla
+    escolhida. Num WebKit fora da tela, sobre o desenho da 08, com o BOOTSTRAP do piloto."""
+    from tests.conftest import exigir_gi_real
+
+    exigir_gi_real("abre a página num WebKit")
+    import gi
+
+    gi.require_version("Gtk", "3.0")
+    gi.require_version("WebKit2", "4.1")
+    from gi.repository import GLib, Gtk, WebKit2
+
+    from hefesto_dualsense4unix.interface import hefesto_vivo, onde
+
+    if not Gtk.init_check(None)[0]:
+        pytest.skip("sem sessão gráfica — o WebKit não abre")
+    mensagens: list[dict[str, Any]] = []
+    respostas: list[str] = []
+    ucm = WebKit2.UserContentManager()
+    ucm.register_script_message_handler("hefesto")
+    ucm.connect("script-message-received::hefesto",
+                lambda _u, r: mensagens.append(json.loads(r.get_js_value().to_string())))
+    view = WebKit2.WebView.new_with_user_content_manager(ucm)
+    janela = Gtk.OffscreenWindow()
+    janela.set_default_size(1212, 809)
+    janela.add(view)
+    janela.show_all()
+    fila = [hefesto_vivo.BOOTSTRAP, _CLICAR_O_CIRCULO]
+
+    def seguinte() -> bool:
+        if not fila:
+            GLib.timeout_add(300, lambda: (Gtk.main_quit(), False)[1])
+            return False
+        js = fila.pop(0)
+
+        def respondeu(v: Any, res: Any, _u: Any = None) -> None:
+            try:
+                respostas.append(v.evaluate_javascript_finish(res).to_string())
+            except Exception as erro:
+                respostas.append(f"ERRO {erro}")
+            GLib.idle_add(seguinte)
+
+        view.evaluate_javascript(js, -1, None, None, None, respondeu, None)
+        return False
+
+    def carregou(_v: Any, evento: Any) -> None:
+        if evento == WebKit2.LoadEvent.FINISHED:
+            seguinte()
+
+    view.connect("load-changed", carregou)
+    view.load_uri(onde.pagina("08-conexoes.html", publicado=False).as_uri())
+    guarda = GLib.timeout_add(30000, Gtk.main_quit)
+    try:
+        Gtk.main()
+    finally:
+        GLib.source_remove(guarda)
+        janela.destroy()
+    assert respostas == ["ok", "clicou"], respostas
+    gestos = [m for m in mensagens if m.get("gesto") == "acionador-botao"]
+    assert len(gestos) == 1, f"o clique no Círculo não saiu do ouvinte: {mensagens}"
+    assert gestos[0]["entrada"] == "circle"
+    assert gestos[0]["forma"]["tecla"] == "257"
