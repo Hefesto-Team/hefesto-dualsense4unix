@@ -252,14 +252,14 @@
       "data": "2026-10-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1153650,
+      "piso": 1155833,
       "por_item": {
-        "docs": 120002,
-        "scripts": 114340,
-        "src": 311447,
-        "tests": 607861
+        "docs": 120008,
+        "scripts": 114351,
+        "src": 312428,
+        "tests": 609046
       },
-      "razao": "tamanho: +13 linhas (1153637 -> 1153650), pagas por Origem: D-2010-A-ACESSIBILIDADE-NAO-TIRA-NADA-DO-PAD-DO-JOGO; registrado no fecho, topo 69f1d0dfa7af",
+      "razao": "tamanho: +2183 linhas (1153650 -> 1155833), pagas por Origem: D-2010-A-SEQUENCIA-TOCA-NO-LUGAR-DO-BOTAO; registrado no fecho, topo f5643f41b3e6",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -692,10 +692,16 @@
           "de": 1153637,
           "para": 1153650,
           "razao": "tamanho: +13 linhas (1153637 -> 1153650), pagas por Origem: D-2010-A-ACESSIBILIDADE-NAO-TIRA-NADA-DO-PAD-DO-JOGO; registrado no fecho, topo 69f1d0dfa7af"
+        },
+        {
+          "data": "2026-10-20",
+          "de": 1153650,
+          "para": 1155833,
+          "razao": "tamanho: +2183 linhas (1153650 -> 1155833), pagas por Origem: D-2010-A-SEQUENCIA-TOCA-NO-LUGAR-DO-BOTAO; registrado no fecho, topo f5643f41b3e6"
         }
       ],
       "unidade": "linhas",
-      "universo": 3013
+      "universo": 3015
     }
   }
 }
