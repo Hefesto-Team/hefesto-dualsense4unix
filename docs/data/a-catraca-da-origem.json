@@ -252,14 +252,14 @@
       "data": "2026-10-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1153379,
+      "piso": 1153710,
       "por_item": {
-        "docs": 119974,
+        "docs": 119981,
         "scripts": 114973,
         "src": 311209,
-        "tests": 607223
+        "tests": 607547
       },
-      "razao": "tamanho: +720 linhas (1152659 -> 1153379), pagas por Origem: D-2010-O-EFEITO-DO-GATILHO-SE-AGRUPA-POR-FAMILIA, D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE; registrado no fecho, topo 1773c7368932",
+      "razao": "tamanho: +331 linhas (1153379 -> 1153710), pagas por Origem: D-2010-O-PISO-DE-24-PX-E-12-PX-VALE-NAS-ABAS-02-E-09; registrado no fecho, topo a65ebae85d04",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -680,10 +680,16 @@
           "de": 1152659,
           "para": 1153379,
           "razao": "tamanho: +720 linhas (1152659 -> 1153379), pagas por Origem: D-2010-O-EFEITO-DO-GATILHO-SE-AGRUPA-POR-FAMILIA, D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE; registrado no fecho, topo 1773c7368932"
+        },
+        {
+          "data": "2026-10-20",
+          "de": 1153379,
+          "para": 1153710,
+          "razao": "tamanho: +331 linhas (1153379 -> 1153710), pagas por Origem: D-2010-O-PISO-DE-24-PX-E-12-PX-VALE-NAS-ABAS-02-E-09; registrado no fecho, topo a65ebae85d04"
         }
       ],
       "unidade": "linhas",
-      "universo": 3011
+      "universo": 3012
     }
   }
 }
