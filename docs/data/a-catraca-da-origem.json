@@ -252,14 +252,14 @@
       "data": "2026-10-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1155833,
+      "piso": 1156452,
       "por_item": {
-        "docs": 120008,
+        "docs": 120015,
         "scripts": 114351,
-        "src": 312428,
-        "tests": 609046
+        "src": 312533,
+        "tests": 609553
       },
-      "razao": "tamanho: +2183 linhas (1153650 -> 1155833), pagas por Origem: D-2010-A-SEQUENCIA-TOCA-NO-LUGAR-DO-BOTAO; registrado no fecho, topo f5643f41b3e6",
+      "razao": "tamanho: +619 linhas (1155833 -> 1156452), pagas por Origem: D-1510-A-CADEIA-USB-SE-RECONHECE-PELO-TIPO-E-CADA-MUDANCA-VAI-AO-DIARIO, D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES, D-2010-O-PERFIL-NASCE-COM-O-JOGO-E-A-MASCARA-QUE-O-PRONTUARIO-CONFIRMOU; registrado no fecho, topo 4b75f93b4061",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -698,10 +698,16 @@
           "de": 1153650,
           "para": 1155833,
           "razao": "tamanho: +2183 linhas (1153650 -> 1155833), pagas por Origem: D-2010-A-SEQUENCIA-TOCA-NO-LUGAR-DO-BOTAO; registrado no fecho, topo f5643f41b3e6"
+        },
+        {
+          "data": "2026-10-20",
+          "de": 1155833,
+          "para": 1156452,
+          "razao": "tamanho: +619 linhas (1155833 -> 1156452), pagas por Origem: D-1510-A-CADEIA-USB-SE-RECONHECE-PELO-TIPO-E-CADA-MUDANCA-VAI-AO-DIARIO, D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES, D-2010-O-PERFIL-NASCE-COM-O-JOGO-E-A-MASCARA-QUE-O-PRONTUARIO-CONFIRMOU; registrado no fecho, topo 4b75f93b4061"
         }
       ],
       "unidade": "linhas",
-      "universo": 3015
+      "universo": 3018
     }
   }
 }

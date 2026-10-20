@@ -5,7 +5,7 @@
       "data": "2026-10-20",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 53342,
+      "piso": 53382,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -66,7 +66,7 @@
         "daemon/battery_journal.py": 105,
         "daemon/connection.py": 214,
         "daemon/ipc_handlers.py": 1239,
-        "daemon/ipc_server.py": 120,
+        "daemon/ipc_server.py": 126,
         "daemon/launch_env.py": 547,
         "daemon/lifecycle.py": 1274,
         "daemon/protocols.py": 61,
@@ -214,8 +214,8 @@
         "interface/pacotes/a06_navegacao.py": 380,
         "interface/pacotes/a07_lancadores.py": 571,
         "interface/pacotes/a08_conexoes.py": 1144,
-        "interface/pacotes/a09_sistema.py": 1063,
-        "interface/pacotes/a10_perfis.py": 889,
+        "interface/pacotes/a09_sistema.py": 1068,
+        "interface/pacotes/a10_perfis.py": 904,
         "interface/pacotes/a11_calibrar_sensores.py": 116,
         "interface/pacotes/a12_mapa_das_portas.py": 64,
         "interface/pacotes/a13_mapa_do_controle.py": 168,
@@ -242,8 +242,8 @@
         "profiles/manager.py": 655,
         "profiles/o_padrao_do_computador.py": 106,
         "profiles/sanidade.py": 44,
-        "profiles/schema.py": 744,
-        "profiles/simple_match.py": 173,
+        "profiles/schema.py": 747,
+        "profiles/simple_match.py": 179,
         "utils/maquina.py": 334,
         "utils/memoria_dos_controles.py": 85,
         "utils/repo_files.py": 46,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +85 linhas (53257 -> 53342), pagas por Origem: D-2010-A-SEQUENCIA-TOCA-NO-LUGAR-DO-BOTAO; registrado no fecho, topo f5643f41b3e6",
+      "razao": "texto-em-src: +40 linhas (53342 -> 53382), pagas por Origem: D-1510-A-CADEIA-USB-SE-RECONHECE-PELO-TIPO-E-CADA-MUDANCA-VAI-AO-DIARIO, D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES, D-2010-O-PERFIL-NASCE-COM-O-JOGO-E-A-MASCARA-QUE-O-PRONTUARIO-CONFIRMOU; registrado no fecho, topo 4b75f93b4061",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -336,6 +336,12 @@
           "de": 53257,
           "para": 53342,
           "razao": "texto-em-src: +85 linhas (53257 -> 53342), pagas por Origem: D-2010-A-SEQUENCIA-TOCA-NO-LUGAR-DO-BOTAO; registrado no fecho, topo f5643f41b3e6"
+        },
+        {
+          "data": "2026-10-20",
+          "de": 53342,
+          "para": 53382,
+          "razao": "texto-em-src: +40 linhas (53342 -> 53382), pagas por Origem: D-1510-A-CADEIA-USB-SE-RECONHECE-PELO-TIPO-E-CADA-MUDANCA-VAI-AO-DIARIO, D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES, D-2010-O-PERFIL-NASCE-COM-O-JOGO-E-A-MASCARA-QUE-O-PRONTUARIO-CONFIRMOU; registrado no fecho, topo 4b75f93b4061"
         }
       ],
       "unidade": "linhas",
