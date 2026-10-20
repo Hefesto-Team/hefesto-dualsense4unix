@@ -154,10 +154,15 @@ class Ouvido:
 
 
 async def _esperar_evento(sock: socket.socket, prazo: float) -> bool:
+    """O aviso do kernel dentro do prazo; ``False`` quando nada chegou.
+
+    No Python 3.10 o ``asyncio.wait_for`` levanta ``asyncio.TimeoutError``, que só vira o
+    ``TimeoutError`` da linguagem no 3.11: o prazo vencido sem evento matava o ouvido.
+    """
     loop = asyncio.get_running_loop()
     try:
         dado = await asyncio.wait_for(loop.sock_recv(sock, _TAMANHO_DA_MENSAGEM), prazo)
-    except TimeoutError:
+    except (TimeoutError, asyncio.TimeoutError):
         return False
     return interessa(dado)
 
