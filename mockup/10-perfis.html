@@ -1721,6 +1721,13 @@
   .guarda col[data-coluna="id"]{width:114px}
   .guarda td.gd-id,.guarda th.gd-id{font-size:10px;letter-spacing:-.2px;padding-left:6px;
                                     padding-right:6px}
+  /* o ID da peça cede a partir daqui — 20/10/2026. A 1212px o Status de 271px e o respiro não
+     deixam lugar para os 114px do ID, e a guarda rolava 14px de lado cortando a coluna. A escolha de
+     20/10 foi esconder o ID nessa largura, em vez de encolher o respiro ou quebrar as seções. O dado
+     segue no pacote (`guarda.id`); só a coluna some, o `<col>` junto, e a tabela divide o que sobra. */
+  @media (max-width:1212px){
+    .guarda col[data-coluna="id"],.guarda th.gd-id,.guarda td.gd-id{display:none}
+  }
   @media (max-height:860px){
     .campo{height:32px}
     .campo input,.campo select,.campo .seg button{height:32px !important;min-height:0}
