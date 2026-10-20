@@ -11,8 +11,11 @@ MORDIDAS (executadas aqui, sobre uma cópia do HTML, e cada uma reprova a régua
 * o Copiar da 09 A a 22 px -> `test_a_regua_do_piso_morde_o_alvo_pequeno`;
 * a letra do registro da 09 A a 11 px -> `test_a_regua_do_piso_morde_a_letra_pequena`;
 * a dica da 02 B de volta a 16 px -> `test_a_regua_do_piso_morde_a_dica_pequena`;
-* devolver o texto antigo da vaga -> `test_a_vaga_diz_so_player_n_desconectado`;
+* a linha do Status da 09 B sem os 24 px -> `test_a_regua_do_piso_morde_a_dica_pequena_da_09`;
+* devolver o texto antigo da vaga, ou a máscara escondida nela ->
+  `test_a_vaga_diz_so_player_n_desconectado`;
 * uma altura que estoura a tela da 02 B -> `test_a_regua_do_piso_morde_a_rolagem_nova`;
+* uma largura que estoura a tela da 09 A -> `test_a_regua_do_piso_morde_a_rolagem_lateral`;
 * pôr a folha da variante no corpo -> `test_a_folha_da_variante_mora_na_cabeca`.
 """
 
@@ -66,7 +69,7 @@ _VAGA = re.compile(r'<label class="faixa" for="c-p([34])" title="Lugar vazio[^"]
 
 
 def _vagas(doc: str) -> list[str]:
-    return _VAGA.findall(doc) and [m.group(0) for m in _VAGA.finditer(doc)]
+    return [m.group(0) for m in _VAGA.finditer(doc)]
 
 
 @pytest.fixture(scope="module")
@@ -232,6 +235,10 @@ def test_a_vaga_diz_so_player_n_desconectado(nome: str) -> None:
     assert len(antigo) == 2
     mordido = _ler(nome).replace(_vagas(_ler(nome))[0], antigo[0], 1)
     assert ruins(mordido) != []
+    # o texto certo com o dado escondido dentro também reprova: a vaga não carrega a máscara
+    vaga = _vagas(_ler(nome))[0]
+    escondido = vaga.replace("</label>", '<b data-campo="mascara" hidden></b></label>', 1)
+    assert ruins(_ler(nome).replace(vaga, escondido, 1)) != []
 
 
 # ---------------------------------------------------------------------------------------------
@@ -288,3 +295,23 @@ def test_a_regua_do_piso_morde_a_rolagem_nova(navegador: Browser, tmp_path: path
     assert mordido != doc
     falta = _problemas(navegador, nome, _escreve(tmp_path, "rola", mordido), VISTAS[2], "c-p1")
     assert any("rolagem nova" in f or "documento" in f for f in falta), falta
+
+
+def test_a_regua_do_piso_morde_a_dica_pequena_da_09(navegador: Browser,
+                                                    tmp_path: pathlib.Path) -> None:
+    nome = NOMES[3]
+    doc = _ler(nome)
+    mordido = doc.replace("body .saude .txt{min-height:24px !important}\n", "", 1)
+    assert mordido != doc
+    falta = _problemas(navegador, nome, _escreve(tmp_path, "dica-09", mordido), VISTAS[0])
+    assert any("dica focável" in f for f in falta), falta
+
+
+def test_a_regua_do_piso_morde_a_rolagem_lateral(navegador: Browser,
+                                                 tmp_path: pathlib.Path) -> None:
+    nome = NOMES[2]
+    doc = _ler(nome)
+    mordido = doc.replace("</style>\n</head>", "body{min-width:2400px}</style>\n</head>", 1)
+    assert mordido != doc
+    falta = _problemas(navegador, nome, _escreve(tmp_path, "lateral", mordido), VISTAS[0])
+    assert any("lateral=True" in f for f in falta), falta
