@@ -249,14 +249,16 @@ def test_a_tecla_do_acionador_sai_como_o_botao_escolhido_no_pad_daquele_controle
 
 
 @pytest.mark.parametrize("mascara", MASCARAS)
+@pytest.mark.parametrize("jogador", range(4))
 def test_o_pedal_no_l2_aperta_o_gatilho_inteiro(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, mesas: list[_Mesa], mascara: str,
+    jogador: int,
 ) -> None:
-    mesa = _Mesa(monkeypatch, tmp_path, mascara, UNIQS[1])
+    mesa = _Mesa(monkeypatch, tmp_path, mascara, UNIQS[jogador])
     mesas.append(mesa)
     mesa.acionador.apertar(PEDAL)
     mesa.tique()
-    assert [no.l2 for no in mesa.nos] == [0, 255, 0, 0]
+    assert [no.l2 for no in mesa.nos] == [255 if n == jogador else 0 for n in range(4)]
     mesa.acionador.apertar(PEDAL, 0)
     mesa.tique()
     assert [no.l2 for no in mesa.nos] == [0, 0, 0, 0]
