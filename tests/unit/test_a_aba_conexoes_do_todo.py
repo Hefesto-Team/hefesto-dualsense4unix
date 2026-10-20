@@ -65,8 +65,12 @@ def test_os_titulos_levam_a_dica_no_hover(arquivo: pathlib.Path) -> None:
         "«Dispositivos conectados» perdeu a dica do título")
     janelas = re.findall(r'<span class="tn-tit"( data-dica="[^"]+")?[^>]*>', doc)
     # as cinco janelas de mapear levam a dica; a sexta é a grade «O que é este aparelho?», cujo
-    # título já é a pergunta inteira (O-APARELHO-DO-BLUETOOTH-SEM-TIPO-SE-NOMEIA-PELA-PESSOA-01).
-    assert len(janelas) == 6, f"as cinco janelas de mapear e a grade de tipos: {len(janelas)}"
+    # título já é a pergunta inteira (O-APARELHO-DO-BLUETOOTH-SEM-TIPO-SE-NOMEIA-PELA-PESSOA-01);
+    # a sétima é a do acionador, cuja frase mora no corpo, no `ac-dica`
+    # (OS-ACIONADORES-USB-ENTRAM-COMO-BOTOES-DO-CONTROLE-01).
+    esperadas = 7 if 'id="acionador"' in doc else 6
+    assert len(janelas) == esperadas, (
+        f"as cinco janelas de mapear, a grade de tipos e a do acionador: {len(janelas)}")
     assert sum(1 for j in janelas if j) == 5, "uma janela de mapear ficou sem a dica no título"
 
 

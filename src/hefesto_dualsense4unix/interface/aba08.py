@@ -1965,6 +1965,9 @@ QUEDAS_DO_DESENHO_5 = {"n": 12, "min": 24}
 #: é da faixa forjada da casa, nunca um endereço de verdade.
 QUEM_RECEBE_NO_DESENHO = (("aabbcc0000c1", "Cosmic Red"), ("aabbcc0000c2", "Starlight Blue"),
                           ("aabbcc0000c3", "White"), ("aabbcc0000c4", "Galactic Purple"))
+COLORWAY_NO_DESENHO = dict(zip((k for k, _ in QUEM_RECEBE_NO_DESENHO),
+                               ("cosmic-red", "starlight-blue", "white", "galactic-purple"),
+                               strict=True))
 
 
 def _desenho_do_acionador() -> str:
@@ -1973,9 +1976,21 @@ def _desenho_do_acionador() -> str:
     Os `id` ganham o prefixo ``ac-`` (o mesmo desenho vive em outras páginas, e um `id` repetido
     quebra o `url(#…)` dos padrões), o `<svg>` perde o tamanho fixo e ganha `ac-svg`, e cada
     botão que a troca conhece vira o gesto ``acionador-botao``, que leva a forma da janela.
+    A tabela e a folha das cores saem: a página tem UMA (`TABELA_DAS_CORES`), e o
+    `data-colorway` ganha endereço (`acionador-desenho`) para seguir o controle escolhido.
     """
     cru = (R / "assets" / "control-svg" / "dualsense.svg").read_text(encoding="utf-8")
     cru = cru[cru.index("<svg"):]
+    cru, tabelas = _CORES_NO_DESENHO.subn("", cru)
+    if tabelas != 1 or "cores-do-dualsense" in cru:
+        raise SystemExit(
+            f"ERRO em 08-conexoes: o `dualsense.svg` trouxe {tabelas} tabela(s) de cor (com a "
+            "folha dentro) onde a janela do acionador espera uma — a segunda ficaria na página "
+            "vencendo a dela.")
+    cor = _pacote08.campos_do_acionador(CENA_DO_RADIO)["acionador-desenho"]
+    cru = re.sub(r'<svg data-colorway="[^"]*"',
+                 '<svg data-campo="acionador-desenho" data-hef-alvo="atributo" '
+                 f'data-hef-atributo="data-colorway" data-colorway="{cor}"', cru, count=1)
     ids = set(re.findall(r'\sid="([^"]+)"', cru))
     cru = re.sub(r'(\sid=")([^"]+)"', r'\1ac-\2"', cru)
     cru = re.sub(r"url\(#([^)]+)\)",
@@ -2137,6 +2152,7 @@ def _cena_do_desenho() -> dict:
         "destino_do_conectar": vazio["id"],
         "pedindo": [dict(PEDIDO_DO_DESENHO)],
         "quem_recebe": list(QUEM_RECEBE_NO_DESENHO),
+        "colorway_de": dict(COLORWAY_NO_DESENHO),
     }
     cena["procurando"] = (_pacote08.PROCURAR_LIGADO
                           if any(lg.get("conectando") for lg in lugares)

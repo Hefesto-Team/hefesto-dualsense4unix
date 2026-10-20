@@ -2856,6 +2856,8 @@ def campos_do_acionador(cena: dict[str, Any]) -> dict[str, Any]:
         "acionador-quem": html_de_quem_recebe(r, _quem_recebe(cena)),
         "acionador-teclas": html_das_teclas(r),
         "acionador-brilho": css_do_brilho(r),
+        # O desenho veste o plástico do controle escolhido (`data-colorway`, a folha da página).
+        "acionador-desenho": (cena.get("colorway_de") or {}).get(r.controle, "") if r else "",
     }
 
 
@@ -2919,6 +2921,11 @@ def _quem_recebe_da_mesa(ctx: Contexto, declaracao: Any) -> list[tuple[str, str]
         if chave and all(k != chave for k, _ in quem):
             quem.append((chave, _cor_declarada_de(chave) or "DualSense"))
     return quem
+
+
+def _colorways_da_mesa(ctx: Contexto) -> dict[str, str]:
+    """O modelo do mapa dela de cada controle na mesa (`""` quando ninguém leu)."""
+    return {_so_hex(str(m.get("uniq") or "")).lower(): colorway_do_controle(m) for m in ctx.mesa}
 
 
 #: Onde a espera da tecla acha e abre o aparelho; a régua troca os dois por dublês.
@@ -4593,7 +4600,6 @@ def campos_da_secao(cena: dict[str, Any], *, segurar: bool = False) -> dict[str,
                      for a in controles if a.get("ponte") in ("som", "haptica")],
         "espectro-canais": html_dos_canais(cena),
         "radio-ocupado": "sim" if _ocupado(cena) else "",
-        **campos_do_acionador(cena),
     }
 
 
@@ -5016,6 +5022,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
         "aberto": _o_aberto(lugares, aparelhos, proposta),
         "perto": _perto(aparelhos_bz, adaptadores_bz, aparelhos, buscas),
         "quem_recebe": _quem_recebe_da_mesa(ctx, declaracao_viva),
+        "colorway_de": _colorways_da_mesa(ctx),
     }
     cena["destino_da_central"] = _destino_da_central(cena, st)
     cena["destino_do_conectar"] = _destino_do_conectar(cena)
@@ -5599,6 +5606,8 @@ def campos_do_radio(ctx: Contexto) -> dict[str, Any]:
     campos = campos_da_secao(cena, segurar=True)
     with contextlib.suppress(Exception):
         campos.update(_campos_da_cerimonia())
+    # A janela do acionador mora fora da `#rd-secao`, mas pinta da mesma cena.
+    campos.update(campos_do_acionador(cena))
     return campos
 
 

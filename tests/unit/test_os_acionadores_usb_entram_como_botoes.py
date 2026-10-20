@@ -388,6 +388,7 @@ BANCADA = RAIZ / "mockup" / "08-conexoes.html"
 DESENHO = RAIZ / "docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/08-conexoes.html"
 LUGAR = "AA:BB:CC:00:00:F0"
 PLASTICOS = ("Cosmic Red", "Starlight Blue", "White", "Galactic Purple")
+COLORWAYS = ("cosmic-red", "starlight-blue", "white", "galactic-purple")
 
 
 @pytest.fixture
@@ -423,10 +424,12 @@ def _declarado(teclas: dict[str, str] | None = None) -> MaquinaConfig:
 
 def _cena(a08: Any, monkeypatch: pytest.MonkeyPatch, declaracao: MaquinaConfig) -> dict[str, Any]:
     """A cena viva do acionador declarado, com os quatro controles da mesa pelo plástico."""
-    ctx = SimpleNamespace(mesa=[{"uniq": MACS[i], "nome": PLASTICOS[i]} for i in range(4)])
+    ctx = SimpleNamespace(mesa=[{"uniq": MACS[i], "nome": PLASTICOS[i], "cor": COLORWAYS[i]}
+                                for i in range(4)])
     cena = {"aparelhos": a08._os_acionadores_declarados(declaracao, [{"id": LUGAR}]),
             "lugares": [{"id": LUGAR}],
-            "quem_recebe": a08._quem_recebe_da_mesa(ctx, declaracao)}
+            "quem_recebe": a08._quem_recebe_da_mesa(ctx, declaracao),
+            "colorway_de": a08._colorways_da_mesa(ctx)}
     monkeypatch.setattr(a08, "_CENA_NA_TELA", cena)
     monkeypatch.setattr(a08, "_declaracao", lambda: declaracao)
     return cena
@@ -459,6 +462,8 @@ def test_a_janela_diz_as_teclas_o_plastico_e_acende_os_botoes_escolhidos(
     assert ">Tecla 1<" in campos["acionador-teclas"] and ">Cruz<" in campos["acionador-teclas"]
     assert ">Tecla 2<" in campos["acionador-teclas"] and ">L2<" in campos["acionador-teclas"]
     assert campos["acionador-brilho"].startswith("#acionador #ac-cross,#acionador #ac-l2{")
+    # o desenho veste o plástico do controle escolhido (o Starlight Blue), pelo endereço da cor
+    assert campos["acionador-desenho"] == "starlight-blue"
     janela = BANCADA.read_text().split('id="acionador">', 1)[1].split('<div class="tela-nova"')[0]
     for campo in campos:
         assert f'data-campo="{campo}"' in janela
@@ -476,10 +481,18 @@ def test_o_desenho_da_janela_e_o_dualsense_real_e_cada_botao_que_troca_e_um_gest
     assert {"ps", "mic", "touchpad"}.isdisjoint(pecas)
     desenho = re.search(r'<svg class="ac-svg".*?</svg>', DESENHO.read_text(), re.S)
     assert desenho is not None
+    # A janela usa a tabela e a folha das cores da página (uma só) e endereça o `data-colorway`.
+    endereco = (' data-campo="acionador-desenho" data-hef-alvo="atributo" '
+                'data-hef-atributo="data-colorway"')
+    assert endereco in svg.group(0) and "cores-do-dualsense" not in svg.group(0)
+    do_desenho = re.sub(r'<defs id="ac-cores-do-dualsense">.*?</defs>', "", desenho.group(0),
+                        flags=re.S)
+    do_desenho = re.sub(r"#ac-(hachura-sem-hex|casca-[a-z0-9-]+)\b", r"#\1", do_desenho)
     sem_estilo = [re.sub(r"\s+", "", re.sub(r"<style.*?</style>", "", s, flags=re.S))
                   for s in (svg.group(0).replace(' data-gesto="acionador-botao" '
-                                                  'data-hef-forma="acionador"', ""),
-                            desenho.group(0))]
+                                                  'data-hef-forma="acionador"', "")
+                            .replace(endereco, ""),
+                            do_desenho)]
     assert sem_estilo[0] == sem_estilo[1]
 
 
@@ -565,11 +578,19 @@ def test_os_quatro_gestos_novos_tem_linha_na_camada(a08: Any) -> None:
         assert ("08-conexoes.html", nome) in camada.CAMADA, nome
 
 
-def test_o_tique_da_pagina_escreve_a_janela_do_acionador(a08: Any) -> None:
-    """Os quatro campos da janela saem com os da seção do rádio (o tique de 100 ms os escreve)."""
+def test_o_tique_da_pagina_escreve_a_janela_do_acionador(
+        a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Os campos da janela saem no tique (100 ms), ao lado dos da seção, e fora da `#rd-secao`.
+
+    MORDIDA: tire o `campos.update(campos_do_acionador(cena))` do `campos_do_radio`.
+    """
     from hefesto_dualsense4unix.interface import aba08
 
-    campos = a08.campos_da_secao(aba08.CENA_DO_RADIO)
+    monkeypatch.setattr(a08, "cena_do_radio", lambda _ctx: aba08.CENA_DO_RADIO)
+    campos = a08.campos_do_radio(None)
+    assert not set(campos) & {c for c in a08.campos_da_secao(aba08.CENA_DO_RADIO)
+                              if c.startswith("acionador-")}
+    assert campos["acionador-desenho"] == "cosmic-red"
     assert campos["acionador-titulo"] == "Acionador USB · usar como botões de"
     assert ">Pedal<" in campos["acionador-teclas"] and ">L2<" in campos["acionador-teclas"]
     assert 'selected>Cosmic Red' in campos["acionador-quem"]
