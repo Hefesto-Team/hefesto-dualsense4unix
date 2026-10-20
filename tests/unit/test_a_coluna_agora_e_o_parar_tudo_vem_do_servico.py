@@ -12,8 +12,9 @@ MORDIDAS (19/10/2026, executadas sobre a cura e devolvidas):
   `test_a_coluna_desenha_so_os_pedacos_que_o_manifesto_declara`;
 - o filtro do `mod` tirado do `_encaminhar` da porta reprova
   `test_o_parar_tudo_chega_so_a_extensao_da_janela` (a outra extensão recebe o `para`);
-- o `doServico` tirado do `comportamento.js` reprova
-  `test_o_clique_no_parar_tudo_nao_poe_numero_na_coluna_do_servico` (o «—» vira «0»).
+- um nível de mentira de volta ao `comportamento.js`, sem olhar a coluna do serviço, reprova
+  `test_o_clique_no_parar_tudo_nao_poe_numero_na_coluna_do_servico` (o «—» vira «0»; a mordida
+  roda dentro do próprio teste).
 """
 
 from __future__ import annotations
@@ -45,7 +46,7 @@ from tests.unit.test_a_aba_lancadores_ganha_as_modificacoes import (  # noqa: F4
 
 P1 = "aa:bb:cc:00:00:01"
 GESTO = "ler:acessorios.gesto"
-VIVO = {"ligado": True, "nivel": 4, "perfil": "Ondas", "aparelhos": ["Nora <b>", "Domi"]}
+VIVO = {"ligado": True, "nivel": 4, "perfil": "Ondas", "aparelhos": ["Motor <b>", "Outro"]}
 
 
 @pytest.fixture
@@ -102,7 +103,7 @@ async def _porta(curto: pathlib.Path, bus: EventBus) -> Porta:
     porta = Porta(curto / "mods.sock", bus, escritor=escritor,
                   o_jogo_escreve=lambda uniq, canal: False, uniq_do_posto=lambda: P1)
     await porta.iniciar()
-    porta.registrar("ficha-a", "brinquedos", os.getpid(), [GESTO])
+    porta.registrar("ficha-a", "acessorios", os.getpid(), [GESTO])
     porta.registrar("ficha-b", "outra", os.getpid(), [GESTO])
     return porta
 
@@ -127,16 +128,16 @@ def test_o_agora_e_de_cada_extensao_e_volta_vazio_quando_a_conexao_cai(curto) ->
         a = await _entrar(curto, "ficha-a", VIVO)
         b = await _entrar(curto, "ficha-b", {**VIVO, "nivel": 7, "perfil": "Calmo"})
         try:
-            assert porta.agora_de("brinquedos")["nivel"] == 4, "o último global era o da outra"
+            assert porta.agora_de("acessorios")["nivel"] == 4, "o último global era o da outra"
             assert porta.agora_de("outra")["perfil"] == "Calmo"
             assert porta.agora_de("ninguem") == estado_vazio_dos_acessorios("ninguem")
         finally:
             a.fechar()
         for _ in range(100):
-            if porta.agora_de("brinquedos")["ligado"] is False:
+            if porta.agora_de("acessorios")["ligado"] is False:
                 break
             await asyncio.sleep(0.02)
-        assert porta.agora_de("brinquedos") == estado_vazio_dos_acessorios("brinquedos")
+        assert porta.agora_de("acessorios") == estado_vazio_dos_acessorios("acessorios")
         assert porta.agora_de("outra")["nivel"] == 7
         b.fechar()
         await porta.parar()
@@ -150,12 +151,12 @@ def test_o_parar_tudo_chega_so_a_extensao_da_janela(curto) -> None:
         a = await _entrar(curto, "ficha-a", VIVO)
         b = await _entrar(curto, "ficha-b", VIVO)
         try:
-            assert porta.parar_tudo("brinquedos") is True
+            assert porta.parar_tudo("acessorios") is True
             chegou = await asyncio.to_thread(a.esperar_evento, 2.0)
             assert chegou is not None, "a extensão da janela não recebeu o para"
             dados = chegou["params"]["dados"]
             assert chegou["params"]["nome"] == "acessorios.gesto"
-            assert dados["gesto"] == "para" and dados["mod"] == "brinquedos"
+            assert dados["gesto"] == "para" and dados["mod"] == "acessorios"
             assert dados["uniq"] is None, "o «Parar tudo» não é de controle nenhum"
             vazou = await asyncio.to_thread(b.esperar_evento, 0.4)
             assert vazou is None, f"a outra extensão recebeu o para da janela: {vazou}"
@@ -175,7 +176,7 @@ def test_o_parar_tudo_sem_a_extensao_conectada_nao_publica(curto) -> None:
             from hefesto_dualsense4unix.core.events import EventTopic
 
             fila = bus.subscribe(EventTopic.ACESSORIOS_GESTO)
-            assert porta.parar_tudo("brinquedos") is False
+            assert porta.parar_tudo("acessorios") is False
             assert fila.empty()
         finally:
             await porta.parar()
@@ -194,11 +195,11 @@ def test_o_parar_curto_da_janela_confere_o_estado_da_propria_extensao(curto) -> 
         bus = EventBus()
         sup = _supervisor(bus, curto)
         processo, marca = await _filho(curto)
-        sup._vigiadas["brinquedos"] = _Vigiada("brinquedos", processo=processo)
-        guardado = {**VIVO, "mod": "brinquedos"}
-        sup.porta.ultimo_estado_de = lambda mod: guardado if mod == "brinquedos" else None  # type: ignore[method-assign]
+        sup._vigiadas["acessorios"] = _Vigiada("acessorios", processo=processo)
+        guardado = {**VIVO, "mod": "acessorios"}
+        sup.porta.ultimo_estado_de = lambda mod: guardado if mod == "acessorios" else None  # type: ignore[method-assign]
         bus.publish(EventTopic.ACESSORIOS_ESTADO, {**VIVO, "mod": "outra", "ligado": False})
-        encerrou = await sup.conferir_o_parar("brinquedos")
+        encerrou = await sup.conferir_o_parar("acessorios")
         for _ in range(100):
             if marca.exists():
                 break
@@ -220,17 +221,17 @@ def _servico(supervisor: Any) -> Any:
 
 
 def _instalada(lugares: Any, **extra: Any) -> None:
-    pasta = lugares.codigo / "brinquedos"
+    pasta = lugares.codigo / "acessorios"
     pasta.mkdir(parents=True)
-    manifesto = {"id": "brinquedos", "nome": "Brinquedos", "versao": "0.1", "api": ">=1,<3",  # noqa-acento: chave
+    manifesto = {"id": "acessorios", "nome": "Acessórios", "versao": "0.1", "api": ">=1,<3",  # noqa-acento: chave
                  "licenca": "MIT", "tipos": ["tema"], "tema": {},  # noqa-acento: chave
                  "permissoes": [GESTO], **extra}  # noqa-acento: chave do manifesto
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
 
 
 def test_o_ipc_do_agora_sem_servico_de_modificacoes_e_o_estado_vazio() -> None:
-    corpo = asyncio.run(IpcHandlersMixin._handle_mods_agora(_servico(None), {"mod": "brinquedos"}))
-    assert corpo == estado_vazio_dos_acessorios("brinquedos")
+    corpo = asyncio.run(IpcHandlersMixin._handle_mods_agora(_servico(None), {"mod": "acessorios"}))
+    assert corpo == estado_vazio_dos_acessorios("acessorios")
     with pytest.raises(ValueError, match="mod"):
         asyncio.run(IpcHandlersMixin._handle_mods_agora(_servico(None), {}))
 
@@ -240,7 +241,7 @@ def test_o_ipc_do_parar_recusa_quem_nao_declara_parar_tudo(lar) -> None:  # noqa
     publicados: list[str] = []
     sup = SimpleNamespace(lugares=lar, porta=SimpleNamespace(parar_tudo=publicados.append))
     with pytest.raises(ValueError, match="não declara o «Parar tudo»"):
-        asyncio.run(IpcHandlersMixin._handle_mods_parar_tudo(_servico(sup), {"mod": "brinquedos"}))
+        asyncio.run(IpcHandlersMixin._handle_mods_parar_tudo(_servico(sup), {"mod": "acessorios"}))
     assert publicados == []
     with pytest.raises(ValueError, match=r"não está instalada|não"):
         asyncio.run(IpcHandlersMixin._handle_mods_parar_tudo(_servico(sup), {"mod": "nenhuma"}))
@@ -293,7 +294,7 @@ def test_a_coluna_desenha_so_os_pedacos_que_o_manifesto_declara(janela) -> None:
         "a coluna trouxe um pedaço que o manifesto não declara")
     coluna = carga["blocos"]["#mod-agora"]
     assert "<b>4</b>" in coluna and coluna.count('class="on"') == 4
-    assert "Nora &lt;b&gt;" in coluna and "2 conectados" in coluna, "nome de terceiro escapado"
+    assert "Motor &lt;b&gt;" in coluna and "2 conectados" in coluna, "nome de terceiro escapado"
 
 
 def test_sem_agora_no_manifesto_a_janela_fica_como_era(janela) -> None:
@@ -361,37 +362,43 @@ def test_o_metodo_e_o_gesto_estao_declarados() -> None:
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
 
-def test_o_clique_no_parar_tudo_nao_poe_numero_na_coluna_do_servico(janela) -> None:
-    """O nível de mentira do desenho fica na janela do desenho: a coluna do serviço segue «—».
+def _o_nivel_depois_dos_cliques(miolo: str, script: str) -> tuple[str, int]:
+    from playwright.sync_api import sync_playwright
 
-    O ``comportamento.js`` zerava o nível de toda a página no clique de qualquer ``.ja-parar``:
-    a janela da extensão parada passava a dizer «Nível 0», um número que a extensão não deu.
+    with sync_playwright() as pw:
+        nav = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
+        try:
+            pg = nav.new_page()
+            pg.set_content(f'<div class="tn-cx" id="mod-janela">{miolo}</div>'
+                           f'<script>{script}</script>')
+            pg.click("#mod-janela .ja-degraus i:nth-child(3)")
+            pg.click("#mod-janela .ja-parar")
+            return (pg.inner_text("#mod-janela .ja-nivel b"),
+                    pg.locator("#mod-janela .ja-degraus i.on").count())
+        finally:
+            nav.close()
+
+
+def test_o_clique_no_parar_tudo_nao_poe_numero_na_coluna_do_servico(janela) -> None:
+    """A coluna do serviço mostra o que a extensão deu: o clique nunca põe ali um número.
+
+    O ``comportamento.js`` zerava o nível de toda a página no clique de qualquer ``.ja-parar``
+    (era o nível de mentira da janela dos acessórios do desenho, que saiu em 19/10/2026): a janela
+    da extensão parada passava a dizer «Nível 0», um número que a extensão não deu. A mordida põe
+    de volta um nível de mentira que não olha a coluna do serviço.
     """
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema")
-    from playwright.sync_api import sync_playwright
-
     from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
 
     _, abrir = janela
     vazio = {k: v for k, v in estado_vazio_dos_acessorios("toque").items() if k != "mod"}
     miolo = abrir(_Ponte(vazio), agora=["nivel"], parar_tudo=True)["blocos"]["#mod-janela"]
-    desenho = (pathlib.Path(exp.__file__).parent / "experimental" / "acessorios.html").read_text(
-        encoding="utf-8")
-    pagina = (f'<div class="tn-cx" id="mod-janela">{miolo}</div>{desenho}'
-              f"<script>{exp.SCRIPT}</script>")
-    with sync_playwright() as pw:
-        nav = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
-        try:
-            pg = nav.new_page()
-            pg.set_content(pagina)
-            desenho_antes = pg.inner_text("#acessorios .ja-nivel b")
-            pg.click("#mod-janela .ja-parar")
-            assert pg.inner_text("#mod-janela .ja-nivel b") == "—", "o clique pôs um número"
-            assert pg.locator("#mod-janela .ja-degraus i.on").count() == 0
-            assert pg.inner_text("#acessorios .ja-nivel b") == desenho_antes
-            pg.click("#acessorios .ja-parar")
-            assert pg.inner_text("#acessorios .ja-nivel b") == "0", "o desenho perdeu o nível"
-            assert pg.inner_text("#mod-janela .ja-nivel b") == "—"
-        finally:
-            nav.close()
+    assert _o_nivel_depois_dos_cliques(miolo, exp.SCRIPT) == ("—", 0), "o clique pôs um número"
+    de_mentira = exp.SCRIPT + """
+document.addEventListener('click', function(e){
+  var g = e.target.closest('.ja-degraus i');
+  if (g) g.classList.add('on');
+  if (e.target.closest('.ja-parar')) document.querySelector('.ja-nivel b').textContent = '0';
+});"""
+    assert _o_nivel_depois_dos_cliques(miolo, de_mentira) != ("—", 0), "a régua não morde"

@@ -41,9 +41,9 @@ class EventTopic:
     #: `{perfil, jogo, estilo, controles: [{jogador, perfil, jogo, estilo}], t}`: `jogo` é
     #: `steam_app_<N>` ou `None` fora de jogo, e nenhuma marca sai aqui.
     PERFIL_TROCOU = "perfil.trocou"
-    #: `{funcoes: {<função>: 0..1}, origem, t}`: o que o jogo pede a um brinquedo, passado de uma
+    #: `{funcoes: {<função>: 0..1}, origem, t}`: o que o jogo pede a um acessório, passado de uma
     #: extensão a outra (`eventos.publicar`); `origem` é o `id` de quem publicou.
-    JOGO_BRINQUEDO = "jogo.brinquedo"
+    JOGO_ACESSORIO = "jogo.acessorio"  # noqa-acento: contrato ASCII do tópico
     ACESSORIOS_GESTO = "acessorios.gesto"
     ACESSORIOS_ESTADO = "acessorios.estado"
 

@@ -1,15 +1,18 @@
-"""O pedido do jogo ao brinquedo passa de uma extensão a outra pela porta.
+"""O pedido do jogo ao acessório passa de uma extensão a outra pela porta.
 
 O ``eventos.publicar`` ``{topico, dados}`` entrega um evento a quem tem ``ler:<tópico>``. O primeiro
-tópico publicável é ``jogo.brinquedo`` (``{funcoes: {<função>: 0..1}, origem, t}``): pede
-``publicar:jogo.brinquedo``, o serviço põe ``origem`` e ``t``, quem publicou nunca recebe o próprio
-evento, e quando ele sai o serviço publica o zero que faltou.
+tópico publicável é ``jogo.acessorio`` (``{funcoes: {<função>: 0..1}, origem, t}``): pede
+``publicar:jogo.acessorio``, o serviço põe ``origem`` e ``t``, quem publicou nunca recebe o próprio
+evento, e quando ele sai o serviço publica o zero de cada função que ele usou. O nome
+de cada função é das extensões: o Hefesto só confere a forma (minúsculas, até 32 letras, até
+16 por extensão).
 
 Porta de verdade, em socket, com mods de mentira (a ficha e o PID são os do próprio teste).
 
 MORDIDAS (executadas aqui): tirar o zero da desconexão reprova o caso de quem sai; aceitar sem a
 permissão reprova o ``-32010``; deixar o publicador receber o próprio evento, aceitar valor acima de
-1 e tirar o teto de 20 por segundo reprovam cada um o seu caso.
+1, aceitar o nome fora da regra ou a 17ª função e tirar o teto de 20 por segundo reprovam cada um
+o seu caso.
 """
 from __future__ import annotations
 
@@ -28,7 +31,8 @@ import pytest
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.daemon.protocolo_do_ipc import CODE_INVALID_PARAMS
 from hefesto_dualsense4unix.mods.manifesto import (
-    FUNCOES_DO_BRINQUEDO,
+    FUNCOES_POR_PEDIDO,
+    NOME_DA_FUNCAO,
     TOPICOS_DE_LEITURA,
     TOPICOS_DE_PUBLICACAO,
     Manifesto,
@@ -38,8 +42,8 @@ from hefesto_dualsense4unix.mods.porta import CODE_SEM_PERMISSAO, Porta
 
 RAIZ = Path(__file__).resolve().parents[2]
 DOC = RAIZ / "docs" / "protocol" / "porta-das-modificacoes.md"
-LER = "ler:jogo.brinquedo"
-PUBLICAR = "publicar:jogo.brinquedo"
+LER = "ler:jogo.acessorio"
+PUBLICAR = "publicar:jogo.acessorio"
 F = "funcoes"  # noqa-acento: chave do contrato
 INVALIDO = CODE_INVALID_PARAMS
 
@@ -87,11 +91,11 @@ class _Mod:
 
     async def dados(self) -> dict[str, Any]:
         e = await self.evento()
-        assert e["params"]["topico"] == "jogo.brinquedo", e
+        assert e["params"]["topico"] == "jogo.acessorio", e
         d: dict[str, Any] = e["params"]["dados"]
         return d
 
-    async def publicar(self, funcoes: Any, topico: str = "jogo.brinquedo") -> dict[str, Any]:
+    async def publicar(self, funcoes: Any, topico: str = "jogo.acessorio") -> dict[str, Any]:
         dados = {F: funcoes}
         return await self.pedir("eventos.publicar", {"topico": topico, "dados": dados})
 
@@ -131,8 +135,8 @@ def _correr(mods: dict[str, tuple[list[str], bool]], corpo: Corpo,
                     ola = await cliente.pedir("mod.ola", {"ficha": f"ficha-{mod_id}"})
                     assert ola["result"]["id"] == mod_id
                     if assina:
-                        ok = await cliente.pedir("eventos.assinar", {"topicos": ["jogo.brinquedo"]})
-                        assert ok["result"] == {"assinados": ["jogo.brinquedo"]}
+                        ok = await cliente.pedir("eventos.assinar", {"topicos": ["jogo.acessorio"]})
+                        assert ok["result"] == {"assinados": ["jogo.acessorio"]}
                 await corpo(porta, bus, clientes)
             finally:
                 for cliente in clientes.values():
@@ -150,15 +154,14 @@ def _quem_publica_e_quem_le() -> dict[str, tuple[list[str], bool]]:
 
 def test_o_topico_e_as_duas_permissoes_existem_e_a_lista_de_publicaveis_e_fechada() -> None:
     assert permissao_valida(LER) and permissao_valida(PUBLICAR)
-    assert TOPICOS_DE_LEITURA["jogo.brinquedo"] == (EventTopic.JOGO_BRINQUEDO,)
-    assert TOPICOS_DE_PUBLICACAO == {"jogo.brinquedo": EventTopic.JOGO_BRINQUEDO}
+    assert TOPICOS_DE_LEITURA["jogo.acessorio"] == (EventTopic.JOGO_ACESSORIO,)
+    assert TOPICOS_DE_PUBLICACAO == {"jogo.acessorio": EventTopic.JOGO_ACESSORIO}
     assert not permissao_valida("publicar:estado"), "só os tópicos da lista fechada se publicam"
-    assert FUNCOES_DO_BRINQUEDO == (
-        "vibrar", "girar", "bombear", "empurrar", "sugar", "oscilar", "profundidade", "curso",
-        "dedilhar")
+    assert FUNCOES_POR_PEDIDO == 16
+    assert NOME_DA_FUNCAO.fullmatch("vibrar") and NOME_DA_FUNCAO.fullmatch("motor_2")
 
 
-def test_o_manifesto_aceita_publicar_e_ler_o_jogo_brinquedo_e_recusa_publicar_o_que_nao_existe(
+def test_o_manifesto_aceita_publicar_e_ler_o_jogo_acessorio_e_recusa_publicar_o_que_nao_existe(
 ) -> None:
     base: dict[str, Any] = {
         "id": "ponte", "nome": "Ponte", "versao": "0.1", "api": ">=1,<3", "licenca": "MIT",  # noqa-acento: chave do contrato
@@ -177,8 +180,8 @@ def test_quem_le_recebe_com_a_origem_de_quem_publicou_e_o_t_do_servico() -> None
         ok = await c["b"].publicar({"vibrar": 0.8, "girar": 0.25})
         assert ok["result"] == {"publicado": True}
         evento = await c["a"].evento()
-        assert evento["params"]["topico"] == "jogo.brinquedo"
-        assert evento["params"]["nome"] == EventTopic.JOGO_BRINQUEDO
+        assert evento["params"]["topico"] == "jogo.acessorio"
+        assert evento["params"]["nome"] == EventTopic.JOGO_ACESSORIO
         assert evento["params"]["dados"] == {
             F: {"vibrar": 0.8, "girar": 0.25}, "origem": "b", "t": 100.0}
 
@@ -187,7 +190,7 @@ def test_quem_le_recebe_com_a_origem_de_quem_publicou_e_o_t_do_servico() -> None
 
 def test_a_origem_e_o_t_que_a_extensao_mandar_caem_e_vale_o_do_servico() -> None:
     async def corpo(_p: Porta, _b: EventBus, c: dict[str, _Mod]) -> None:
-        await c["b"].pedir("eventos.publicar", {"topico": "jogo.brinquedo", "dados": {
+        await c["b"].pedir("eventos.publicar", {"topico": "jogo.acessorio", "dados": {
             F: {"vibrar": 0.5}, "origem": "a", "t": -1}})
         dados = await c["a"].dados()
         assert dados["origem"] == "b" and dados["t"] != -1, "a origem não pode ser forjada"
@@ -195,7 +198,7 @@ def test_a_origem_e_o_t_que_a_extensao_mandar_caem_e_vale_o_do_servico() -> None
     _correr(_quem_publica_e_quem_le(), corpo)
 
 
-def test_a_assinatura_do_jogo_brinquedo_usa_a_fila_de_256() -> None:
+def test_a_assinatura_do_jogo_acessorio_usa_a_fila_de_256() -> None:
     async def corpo(porta: Porta, _b: EventBus, _c: dict[str, _Mod]) -> None:
         filas = porta.assinaturas_de("a")
         assert [f.maxsize for f in filas] == [256]
@@ -209,7 +212,7 @@ def test_sem_a_permissao_a_porta_recusa_com_32010_e_ninguem_recebe() -> None:
     async def corpo(_p: Porta, _b: EventBus, c: dict[str, _Mod]) -> None:
         recusa = await c["so_le"].publicar({"vibrar": 0.5})
         assert recusa["error"]["code"] == CODE_SEM_PERMISSAO
-        assert recusa["error"]["message"] == "falta a permissão publicar:jogo.brinquedo"
+        assert recusa["error"]["message"] == "falta a permissão publicar:jogo.acessorio"
         await c["b"].publicar({"vibrar": 0.1})
         assert (await c["a"].dados())["origem"] == "b", (
             "o pedido recusado chegou a quem assina")
@@ -229,7 +232,7 @@ def test_topico_fora_da_lista_de_publicaveis_e_recusado(topico: Any) -> None:
 @pytest.mark.parametrize("pedido", [
     {"vibrar": 1.5}, {"vibrar": -0.1}, {"vibrar": True}, {"vibrar": "0.5"}, {"vibrar": None},
     {"vibrar": float("nan")}, {"vibrar": float("inf")},
-    {"cocegar": 0.5}, {"vibrar": 0.5, "cocegar": 0.5},
+    {"Vibrar": 0.5}, {"vibrar": 0.5, "2motor": 0.5}, {"a" * 33: 0.5}, {"vi-brar": 0.5},
     {}, [], "vibrar", None,
 ])
 def test_valor_ou_funcao_invalidos_sao_recusados_e_nada_chega(pedido: Any) -> None:
@@ -246,9 +249,9 @@ def test_valor_ou_funcao_invalidos_sao_recusados_e_nada_chega(pedido: Any) -> No
 def test_dados_ausentes_ou_que_nao_sao_objeto_sao_recusados() -> None:
     async def corpo(_p: Porta, _b: EventBus, c: dict[str, _Mod]) -> None:
         for dados in (None, 3, "x", [], {"vibrar": 0.5}):
-            r = await c["b"].pedir("eventos.publicar", {"topico": "jogo.brinquedo", "dados": dados})
+            r = await c["b"].pedir("eventos.publicar", {"topico": "jogo.acessorio", "dados": dados})
             assert r["error"]["code"] == INVALIDO, (dados, r)
-        r = await c["b"].pedir("eventos.publicar", {"topico": "jogo.brinquedo"})
+        r = await c["b"].pedir("eventos.publicar", {"topico": "jogo.acessorio"})
         assert r["error"]["code"] == INVALIDO
 
     _correr(_quem_publica_e_quem_le(), corpo)
@@ -278,8 +281,7 @@ def test_a_extensao_que_publicou_e_sai_deixa_o_zero_para_quem_assina() -> None:
         c["b"].fechar()
         zero = await c["a"].dados()
         assert zero["origem"] == "b"
-        assert zero[F] == dict.fromkeys(FUNCOES_DO_BRINQUEDO, 0.0), (
-            "o último pedido ficou preso: faltou o zero")
+        assert zero[F] == {"vibrar": 0.0}, "o último pedido ficou preso: faltou o zero"
 
     _correr(_quem_publica_e_quem_le(), corpo)
 
@@ -303,6 +305,7 @@ def test_quem_ja_tinha_zerado_ou_nunca_publicou_nao_deixa_zero_nenhum() -> None:
 def test_a_publicacao_parcial_nao_esconde_a_funcao_que_ficou_acima_de_zero() -> None:
     """Quem manda só a função que mudou (vibrar, depois girar em 0) deixa o vibrar preso."""
     # D-1810-UMA-EXTENSAO-PUBLICA-O-PEDIDO-DO-JOGO-AO-BRINQUEDO-PELA-PORTA
+    # D-1910-O-PEDIDO-DO-JOGO-SE-CHAMA-JOGO-ACESSORIO-E-AS-FUNCOES-SAO-DAS-EXTENSOES
 
     async def corpo(_p: Porta, _b: EventBus, c: dict[str, _Mod]) -> None:
         await c["b"].publicar({"vibrar": 0.8})
@@ -311,8 +314,21 @@ def test_a_publicacao_parcial_nao_esconde_a_funcao_que_ficou_acima_de_zero() -> 
         assert (await c["a"].dados())[F] == {"girar": 0.0}
         c["b"].fechar()
         zero = await c["a"].dados()
-        assert zero[F] == dict.fromkeys(FUNCOES_DO_BRINQUEDO, 0.0), (
+        assert zero[F] == {"vibrar": 0.0, "girar": 0.0}, (
             "o vibrar ficou preso: a última publicação só zerou o girar")
+
+    _correr(_quem_publica_e_quem_le(), corpo)
+
+
+def test_a_17a_funcao_da_mesma_extensao_e_recusada_e_a_que_ja_usou_segue() -> None:
+    async def corpo(_p: Porta, _b: EventBus, c: dict[str, _Mod]) -> None:
+        dezesseis = {f"f{i}": 0.1 for i in range(FUNCOES_POR_PEDIDO)}
+        assert (await c["b"].publicar(dezesseis))["result"] == {"publicado": True}
+        recusa = await c["b"].publicar({"outra": 0.5})
+        assert recusa["error"]["code"] == INVALIDO and "16 funções" in recusa["error"]["message"]
+        assert (await c["b"].publicar({"f3": 0.9}))["result"] == {"publicado": True}
+        assert (await c["a"].dados())[F] == dezesseis
+        assert (await c["a"].dados())[F] == {"f3": 0.9}, "a função recusada chegou a quem assina"
 
     _correr(_quem_publica_e_quem_le(), corpo)
 
@@ -354,9 +370,7 @@ def test_a_publicacao_recusada_nao_conta_no_teto() -> None:
 
 def test_a_doc_da_porta_descreve_o_metodo_o_topico_o_zero_e_o_teto() -> None:
     texto = DOC.read_text(encoding="utf-8")
-    for pedaco in ("eventos.publicar", "publicar:jogo.brinquedo", "ler:jogo.brinquedo",
-                   "jogo.brinquedo", "-32010", "20 publicações", "as nove funções em 0",
-                   "nunca recebe o próprio evento"):
+    for pedaco in ("eventos.publicar", "publicar:jogo.acessorio", "ler:jogo.acessorio",
+                   "jogo.acessorio", "-32010", "20 publicações", "cada função que ela usou em 0",
+                   "até 16 por extensão", "nunca recebe o próprio evento"):
         assert pedaco in texto, f"a doc da porta não diz «{pedaco}»"
-    for funcao in FUNCOES_DO_BRINQUEDO:
-        assert f"`{funcao}`" in texto, funcao

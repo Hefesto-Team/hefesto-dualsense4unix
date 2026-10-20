@@ -72,7 +72,6 @@ from pathlib import Path
 try:
     from .api_de_entrada import Evidencia, Veredito, examinar_pasta
     from .ficha_declarada import FichaDeclarada, explicar_a_capa, fichas_dos_jogos
-    from .kits_de_brinquedo import KitDoJogo, kit_do_jogo
     from .receitas_de_ambiente import jogo_gdk_sem_ajudante, pecas_que_faltam
     from .steam_input_ponte import (
         PONTE_LIGADA,
@@ -101,7 +100,6 @@ except ImportError:  # pragma: no cover - executado como script avulso
         explicar_a_capa,
         fichas_dos_jogos,
     )
-    from kits_de_brinquedo import KitDoJogo, kit_do_jogo  # type: ignore[no-redef]
     from receitas_de_ambiente import (  # type: ignore[no-redef]
         jogo_gdk_sem_ajudante,
         pecas_que_faltam,
@@ -407,9 +405,6 @@ class Prontuario:
     sem_conta: bool = False
     #: O que a Steam e o binário dizem sobre controle. Informa; nunca entra no veredito.
     declarado: FichaDeclarada | None = None
-    #: O kit de brinquedo que a pasta traz e o veredito da configuração salva. Informa; não é
-    #: estorvo e nunca entra no veredito do controle. O endereço do jogo não chega aqui.
-    kit: KitDoJogo | None = None
 
     @property
     def capa_da_steam(self) -> str | None:
@@ -543,7 +538,6 @@ class Prontuario:
             "sem_conta": self.sem_conta,
             "declarado": self.declarado.como_dicionario() if self.declarado else None,
             "capa_da_steam": self.capa_da_steam,
-            "kit": self.kit.como_dicionario() if self.kit else None,
             "estorvos": [
                 {"chave": e.chave, "o_que": e.o_que, "cura": e.a_cura,
                  "automatica": e.automatica, "impede": e.impede}  # (noqa-acento): chave de JSON
@@ -786,7 +780,6 @@ def levantar_censo(
                 pecas_que_faltam=pecas_que_faltam(raiz) if examinar else (),
                 sem_conta=jogo_gdk_sem_ajudante(raiz) if examinar else False,
                 declarado=declaradas.get(appid),
-                kit=kit_do_jogo(raiz, appid),
             )
         )
     return Censo(jogos=fichas, erros=erros)

@@ -94,8 +94,8 @@ def _pagina_publicada() -> str:
     return _pagina(publicado=True)
 
 
-# Os dois endereços da janela do servidor do Hefesto: quem os pinta é a sprint
-# O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01, que não é desta leva.
+# Os dois endereços da janela do servidor que saiu do desenho em 19/10/2026 (o servidor é da
+# extensão, que desenha a janela dela pelo manifesto): ficam só no publicado, até o `--publicar 07`.
 SEM_PINTOR_AINDA = frozenset({"controle-1", "controle-2"})
 
 

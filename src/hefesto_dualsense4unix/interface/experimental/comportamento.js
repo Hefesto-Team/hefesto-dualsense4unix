@@ -18,51 +18,5 @@
     if (o){ o.parentElement.querySelectorAll('.ja-op').forEach(function(x){ x.classList.toggle('on', x === o); }); }
     var c = e.target.closest('.ja-chips .chip, .ac-chips .chip');
     if (c){ c.classList.toggle('on'); }
-    var m = e.target.closest('.ja-marcar');
-    if (m){ var l = m.closest('.ja-roda-l'); l.classList.toggle('fora'); m.textContent = l.classList.contains('fora') ? '' : '✓'; }
-    var tom = e.target.closest('.ja-tons .tom');
-    if (tom){ tom.parentElement.querySelectorAll('.tom').forEach(function(x){ x.classList.toggle('on', x === tom); });
-              if (tom.parentElement.dataset.luz && tom.dataset.cor) document.documentElement.style.setProperty('--cor-luz', tom.dataset.cor); }
-    // O nível de mentira é só da janela do desenho: a que tem a coluna «Agora» do serviço
-    // ([data-agora]) mostra o que a extensão deu, e o clique nunca põe ali um número.
-    var cx = e.target.closest('.tn-cx');
-    var doServico = !!(cx && cx.querySelector('[data-agora]'));
-    var g = e.target.closest('.ja-degraus i');
-    if (g && !doServico){ var n = Array.prototype.indexOf.call(g.parentElement.children, g) + 1; nivel(n, cx); }
-    var np = e.target.closest('.ja-passos .passo');
-    if (np && !doServico){ var atual = (cx || document).querySelectorAll('.ja-degraus i.on').length; nivel(atual + (np.textContent.trim() === '+' ? 1 : -1), cx); }
-    if (e.target.closest('.ja-parar') && !doServico) nivel(0, cx);
   });
-  function nivel(n, raiz){
-    raiz = raiz || document;
-    n = Math.max(0, Math.min(10, n));
-    raiz.querySelectorAll('.ja-degraus i').forEach(function(x, i){ x.classList.toggle('on', i < n); });
-    var b = raiz.querySelector('.ja-nivel b'); if (b) b.textContent = n;
-    var lz = raiz.querySelector('.ja-barra-luz');
-    if (lz) lz.style.setProperty('--periodo', n ? (4 - (n - 1) / 3) + 's' : '0s');
-  }
 })();
-(function(){
-  var c = document.querySelector('[data-lv-conta]'); if (!c) return;
-  var chave = document.querySelector('.ext[data-modificacao=lovense] > .nj-tog');
-  function por(t, on){ t.classList.toggle('ligado', on); t.querySelector('.txt').textContent = on ? 'Ligada' : 'Desligada'; }
-  function contar(){ var t = document.querySelectorAll('#lovense .lv-linha .nj-tog');
-    var n = document.querySelectorAll('#lovense .lv-linha .nj-tog.ligado').length;
-    c.textContent = n + ' de ' + t.length + (n === 1 ? ' ligada' : ' ligadas'); return n; }
-  document.addEventListener('click', function(e){
-    var f = e.target.closest('#lovense .lv-linha .nj-tog');
-    if (f){ por(f, !f.classList.contains('ligado')); por(chave, contar() > 0); return; }
-    if (chave && e.target.closest('.ext[data-modificacao=lovense] > .nj-tog')){
-      var ligar = !chave.classList.contains('ligado');
-      if (ligar && contar() === 0){ location.hash = '#lovense'; return; }
-      por(chave, ligar);
-    }
-    setTimeout(contar, 0);
-  });
-  contar();
-})();
-document.addEventListener('DOMContentLoaded', () => {
-  const q = new URLSearchParams(location.search);
-  if (q.get('aba')) { const r = document.getElementById(q.get('aba')); if (r) r.click(); }
-  if (q.get('marcados')) document.querySelectorAll('.jg-l input').forEach((c, i) => { c.checked = i === 0 || i === 2; });
-});

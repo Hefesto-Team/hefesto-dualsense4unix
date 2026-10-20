@@ -2,9 +2,10 @@
 
 Cinco sprints, só o desenho: o editor de Perfis (o estilo guardado, o nome Freestyle, o renomear),
 os eventos do perfil («Meu comando»), a coluna do ajuste próprio com a ativação e os analógicos,
-a janela do servidor Buttplug (o teto e a força de cada controle) e a janela genérica das
-extensões. As variantes não escolhidas moram em `mockup/variantes/` e nunca entram na página
-publicada nem no produto; a que a recomendação escolhe é o próprio `mockup/`.
+e a janela genérica das extensões (a janela do servidor do acessório saiu da 07 em 19/10/2026,
+com o adulto, para a extensão que o serve). As variantes não escolhidas moram em
+`mockup/variantes/` e nunca entram na página publicada nem no produto; a que a recomendação
+escolhe é o próprio `mockup/`.
 
 MORDIDAS (cada uma foi feita e viu reprovar; a lista está no relato do tema desenho-perfis-07):
 
@@ -16,8 +17,6 @@ MORDIDAS (cada uma foi feita e viu reprovar; a lista está no relato do tema des
 * pôr o comando de volta na linha do «Quando» -> `test_o_comando_do_evento_tem_linha_propria_...`;
 * tirar o `:has` ou o gesto do `.ordem-vale` -> `test_o_comando_aparece_so_com_o_meu_comando_...`;
 * devolver a coluna do Status aos 255 px -> `test_a_fileira_das_secoes_cabe_na_celula_...`;
-* tirar o nome «Força» ou «Teto» do controle -> `test_cada_controle_do_servidor_...`;
-* devolver a linha única do controle -> `test_a_janela_do_servidor_cabe_em_toda_vista`;
 * devolver as abas à janela genérica -> `test_a_janela_generica_da_extensao_...`;
 * tirar o `position:absolute` do menu do ⋮ -> `test_o_menu_do_mais_flutua_...`;
 * devolver o «Fechar» único ao «Configurar» do lançador -> `test_o_configurar_do_lancador_...`;
@@ -326,52 +325,6 @@ def test_a_fileira_das_secoes_cabe_na_celula_em_toda_vista(
     assert all(ln["sobra"] >= 0 for ln in linhas), linhas
 
 
-# ---------------------------------------------------------------------------------------------
-# Experimental 4 · O-HEFESTO-E-SERVIDOR-BUTTPLUG-DO-PROPRIO-DUALSENSE-01
-# ---------------------------------------------------------------------------------------------
-
-_ABRE_O_SERVIDOR = "(function(){location.hash='#buttplug';})()"
-
-
-def _janela_do_servidor(html: str) -> str:
-    sem = _sem_estilo_nem_script(html)
-    inicio = sem.index('id="buttplug"')
-    return sem[inicio:sem.index('<div class="tela-nova"', inicio + 1)]
-
-
-def test_cada_controle_do_servidor_tem_forca_e_teto_com_nome() -> None:
-    """B (recomendada): duas linhas por controle, o aparece em cima e «Força» e «Teto» embaixo."""
-    janela = _janela_do_servidor(_ler(SETE))
-    cabecas = re.findall(r'<div class="ky-linha bp-cab">', janela)
-    ajustes = re.findall(r'<div class="ky-linha bp-ajuste">(.*?)</div></div></div>', janela, re.S)
-    assert len(cabecas) == 2 and len(ajustes) == 2, (len(cabecas), len(ajustes))
-    for ajuste in ajustes:
-        assert ">Força</span>" in ajuste and ">Teto</span>" in ajuste
-        assert ajuste.index(">Força<") < ajuste.index('class="seg mini"') < ajuste.index(">Teto<")
-        assert ajuste.index(">Teto<") < ajuste.index('class="bignum"')
-    assert "A força e o teto de cada um" in janela
-    assert "controle-1" in janela and "controle-2" in janela, "o endereço do controle é o de antes"
-
-
-@sem_chrome
-@pytest.mark.parametrize("vista", VISTAS, ids=lambda v: str(v[0]))
-def test_a_janela_do_servidor_cabe_em_toda_vista(vista: tuple[int, int]) -> None:
-    """As duas linhas por controle cabem em toda vista, sem corte."""
-    medida = """() => {
-      const cx = document.querySelector('#buttplug .tn-cx'), r = cx.getBoundingClientRect();
-      const d = document.documentElement;
-      const corte = [...document.querySelectorAll('#buttplug .ky-ctrl')].filter(
-        c => c.scrollWidth > c.clientWidth + 1).length;
-      const alturas = [...document.querySelectorAll('#buttplug .ky-linha')].filter(
-        l => l.querySelector('.seg')).map(l => Math.round(l.getBoundingClientRect().height));
-      return {cabe: r.top >= 0 && r.bottom <= window.innerHeight, corte, alturas,
-              largo: d.scrollWidth > d.clientWidth + 1};
-    }"""
-    b = _no_chrome(SETE, vista, medida, antes=_ABRE_O_SERVIDOR)
-    assert b["cabe"] and not b["corte"] and not b["largo"], b
-    assert all(a <= 46 for a in b["alturas"]), b
-
-
 def test_a_07_nao_guarda_variante_nem_gerador_de_variante() -> None:
     """O usuário escolheu as três da 07 em 19/10: as não escolhidas saem do disco e do gerador."""
     import aba07
@@ -397,7 +350,7 @@ def _janela(html: str, ident: str) -> str:
 
 
 def test_a_janela_generica_da_extensao_tem_um_cartao_por_grupo_e_cancelar_guardar() -> None:
-    """A (recomendada): o arranjo da Lovense e do Kyty, e não as abas de antes."""
+    """A (recomendada): um cartão por grupo, e não as abas de antes."""
     janela = _janela(_ler(SETE), _ID)
     titulos = re.findall(r'<span class="ac-tit">([^<]*)</span>', janela)
     assert titulos == ["Geral", "Luz e vibração", "Avançado"], titulos

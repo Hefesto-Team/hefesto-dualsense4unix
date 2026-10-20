@@ -36,7 +36,8 @@ from hefesto_dualsense4unix.daemon.protocolo_do_ipc import (
 )
 from hefesto_dualsense4unix.mods import API_DAS_MODIFICACOES
 from hefesto_dualsense4unix.mods.manifesto import (
-    FUNCOES_DO_BRINQUEDO,
+    FUNCOES_POR_PEDIDO,
+    NOME_DA_FUNCAO,
     TOPICOS_DE_LEITURA,
     TOPICOS_DE_PUBLICACAO,
 )
@@ -98,18 +99,18 @@ class _Conexao:
     sessao: _Credencial | None = None
     #: A modificação desta conexão devolveu o estado dos acessórios: ao cair, o estado se apaga.
     deu_o_estado: bool = False
-    #: O último valor de cada função que esta conexão publicou em ``jogo.brinquedo``. Uma
-    #: publicação pode trazer só parte das nove, e a que ela não traz segue com o valor de antes.
-    funcoes_do_brinquedo: dict[str, float] = field(default_factory=dict)
+    #: O último valor de cada função que esta conexão publicou em ``jogo.acessorio``. Uma
+    #: publicação pode trazer só parte delas, e a que ela não traz segue com o valor de antes.
+    funcoes_do_acessorio: dict[str, float] = field(default_factory=dict)
     #: Os controles em que o último ``vibracao.set`` desta conexão deixou motor ligado.
     vibrando: set[str] = field(default_factory=set)
     assinaturas: list[tuple[str, asyncio.Queue[Any]]] = field(default_factory=list)
     tarefas: list[asyncio.Task[None]] = field(default_factory=list)
     trava: asyncio.Lock = field(default_factory=asyncio.Lock)
 
-    def brinquedo_preso(self) -> bool:
+    def acessorio_preso(self) -> bool:
         """Alguma função ficou acima de zero: se a conexão cair, o serviço publica o zero."""
-        return any(v > 0 for v in self.funcoes_do_brinquedo.values())
+        return any(v > 0 for v in self.funcoes_do_acessorio.values())
 
 
 def credencial_do_par(sock: socket.socket | None) -> tuple[int, int, int] | None:
@@ -219,8 +220,8 @@ def _numero(valor: Any) -> bool:
     return isinstance(valor, (int, float)) and not isinstance(valor, bool) and math.isfinite(valor)
 
 
-def _funcoes_do_brinquedo(dados: Any) -> dict[str, float]:
-    """O campo de funções do ``jogo.brinquedo`` validado: função da lista, valor de 0 a 1."""
+def _funcoes_do_acessorio(dados: Any) -> dict[str, float]:
+    """O campo de funções do ``jogo.acessorio`` validado: nome curto, minúsculo, valor de 0 a 1."""
     corpo = dados if isinstance(dados, dict) else {}
     pedidas = corpo.get("funcoes")  # noqa-acento: chave do contrato
     if not isinstance(pedidas, dict) or not pedidas:
@@ -229,8 +230,8 @@ def _funcoes_do_brinquedo(dados: Any) -> dict[str, float]:
         )
     saida: dict[str, float] = {}
     for nome, valor in pedidas.items():
-        if nome not in FUNCOES_DO_BRINQUEDO:
-            raise RecusaError(CODE_INVALID_PARAMS, f"função desconhecida: {nome}")
+        if not isinstance(nome, str) or not NOME_DA_FUNCAO.fullmatch(nome):
+            raise RecusaError(CODE_INVALID_PARAMS, f"nome de função fora da regra: {nome}")
         if not _numero(valor) or not 0 <= valor <= 1:
             raise RecusaError(CODE_INVALID_PARAMS, f"{nome} pede um valor de 0 a 1.")
         saida[nome] = float(valor)
@@ -497,8 +498,8 @@ class Porta:
                 vazio = estado_vazio_dos_acessorios(con.sessao.mod_id)
                 self._estados_dos_acessorios[con.sessao.mod_id] = vazio
                 self.bus.publish(EventTopic.ACESSORIOS_ESTADO, vazio)
-            if con.brinquedo_preso() and con.sessao is not None:
-                self._soltar_o_brinquedo(con.sessao.mod_id)
+            if con.acessorio_preso() and con.sessao is not None:
+                self._soltar_o_acessorio(con.sessao.mod_id, con.funcoes_do_acessorio)
             if con.vibrando and con.sessao is not None:
                 await self._soltar_a_vibracao(con.sessao, con.vibrando)
             self._conexoes.discard(con)
@@ -644,7 +645,12 @@ class Porta:
             raise RecusaError(CODE_INVALID_PARAMS, f"tópico que não se publica: {topico}")
         if f"publicar:{topico}" not in con.sessao.permissoes:
             raise RecusaError(CODE_SEM_PERMISSAO, f"falta a permissão publicar:{topico}")
-        pedidas = _funcoes_do_brinquedo(params.get("dados"))
+        pedidas = _funcoes_do_acessorio(params.get("dados"))
+        if len(set(con.funcoes_do_acessorio) | set(pedidas)) > FUNCOES_POR_PEDIDO:
+            raise RecusaError(
+                CODE_INVALID_PARAMS,
+                f"eventos.publicar aceita até {FUNCOES_POR_PEDIDO} funções por extensão.",
+            )
         mod_id = con.sessao.mod_id
         agora = self._relogio()
         janela = self._publicacoes.setdefault(mod_id, deque())
@@ -658,13 +664,13 @@ class Porta:
         janela.append(agora)
         evento = {"funcoes": pedidas, "origem": mod_id, "t": agora}  # noqa-acento: chave do contrato
         self.bus.publish(TOPICOS_DE_PUBLICACAO[topico], evento)
-        con.funcoes_do_brinquedo.update(pedidas)
+        con.funcoes_do_acessorio.update(pedidas)
         return {"publicado": True}
 
-    def _soltar_o_brinquedo(self, mod_id: str) -> None:
-        """Quem publicou saiu: o serviço publica, em nome dele, o zero que faltou."""
-        self.bus.publish(EventTopic.JOGO_BRINQUEDO, {
-            "funcoes": dict.fromkeys(FUNCOES_DO_BRINQUEDO, 0.0),  # noqa-acento: chave do contrato
+    def _soltar_o_acessorio(self, mod_id: str, funcoes: dict[str, float]) -> None:
+        """Quem publicou saiu: o serviço publica, em nome dele, o zero de cada função usada."""
+        self.bus.publish(EventTopic.JOGO_ACESSORIO, {
+            "funcoes": dict.fromkeys(funcoes, 0.0),  # noqa-acento: chave do contrato
             "origem": mod_id,
             "t": self._relogio(),
         })

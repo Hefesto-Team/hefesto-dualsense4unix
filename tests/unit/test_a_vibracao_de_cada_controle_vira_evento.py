@@ -1,4 +1,6 @@
-"""A-VIBRACAO-DO-CONTROLE-CHEGA-AOS-ACESSORIOS-PELO-BUTTPLUG-01 — o lado do Hefesto.
+"""A vibração de cada controle vira evento, pela porta: o lado do Hefesto.
+
+Nasceu com a A-VIBRACAO-DO-CONTROLE-CHEGA-AOS-ACESSORIOS-PELO-BUTTPLUG-01 (13/10/2026).
 
 O que o jogo pede de vibração a cada controle sai no barramento (``jogo.vibracao``),
 com o ``uniq`` e o número do jogador de CADA um, e uma modificação com a permissão

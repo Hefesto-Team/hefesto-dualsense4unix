@@ -63,10 +63,10 @@ def _leitores_de_fora_no_src(arquivos: dict[str, str]) -> list[str]:
             for n, linha in enumerate(texto.splitlines(), 1) if _MARCA.search(linha)]
 
 
-#: O publicado segue o mockup pelo ``--publicar`` do fecho, e não se edita à mão. A janela do Kyty
-#: sai com a experimental adulta (O-HEFESTO-E-PARA-TODA-IDADE-E-O-ADULTO-MORA-NA-EXTENSAO-01), e
-#: a régua passa a ler o mockup nela.
-_FORA_DA_REGUA = ("interface/paginas/", "interface/experimental/kyty.html")
+#: O publicado segue o mockup pelo ``--publicar`` do fecho, e não se edita à mão: a régua lê o
+#: mockup da 07 no lugar dele.
+_FORA_DA_REGUA = ("interface/paginas/",)
+MOCKUP_07 = RAIZ / "mockup" / "07-lancadores.html"
 
 
 def _o_src() -> dict[str, str]:
@@ -74,7 +74,7 @@ def _o_src() -> dict[str, str]:
                 and p.suffix in {".py", ".json", ".html", ".css", ".js", ".sh"}
                 and not any(f in p.as_posix() for f in _FORA_DA_REGUA)]
     return {str(p.relative_to(RAIZ)): p.read_text(encoding="utf-8", errors="replace")
-            for p in arquivos}
+            for p in [*arquivos, MOCKUP_07]}
 
 
 # -- o que fica de fábrica ---------------------------------------------------------------

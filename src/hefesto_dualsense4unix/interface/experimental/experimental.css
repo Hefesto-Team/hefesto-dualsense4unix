@@ -109,7 +109,6 @@
 .ext-conf { width:30px;height:26px;border-radius:6px;border:1px solid var(--border-forte);background:transparent; color:var(--texto-suave);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;text-decoration:none }
 .ext-conf:hover,.ext-conf.aberta { border-color:var(--purple);color:var(--purple);background:var(--sel-bg) }
 .tn-cx.ja-cx { width:1130px;height:min(716px,calc(100vh - 34px));max-height:none }
-.tn-cx.ky-cx { width:1000px }
 .ja-cx .tn-topo { gap:10px;padding:13px 18px 0 }
 .ja-cx .tn-topo .pc-molde { margin:0 0 0 14px }
 .ja-cx .tn-topo .pc-para { margin-left:auto }
@@ -347,16 +346,6 @@
 .ext-lista .ext:last-child { border-bottom:0 }
 @media (max-height:860px) {.ext{padding:10px 0}}
 @media (max-height:780px) {.ext{padding:6px 0}}
-.lv-cx { width:min(1000px,94vw) }
-.lv-cx .tn-corpo { padding:8px 18px 16px }
-.lv-linha { display:grid;grid-template-columns:minmax(0,1fr) 192px 276px 104px 30px;column-gap:14px;align-items:center;min-height:60px; border-bottom:1px solid var(--border-sutil) }
-.lv-linha:last-child { border-bottom:0 }
-.lv-linha .ext-nome { font-size:13px }
-.lv-linha .ext-faz { font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
-.lv-para,.lv-quando { display:flex;align-items:center;gap:8px;white-space:nowrap }
-.lv-para .ext-sel { width:136px }
-.lv-quando .ext-sel { width:196px }
-.lv-cx .ext-rot { font-size:12px }
 .tela-nova .nj-tog .txt,.tela-nova .btn.mini,.tela-nova small,.tela-nova code,.tela-nova .lc-val { font-size:12px }
 #lanc-conf .lc-val .btn.mini { flex:none;min-width:132px;box-sizing:border-box;justify-content:center;text-align:center;white-space:nowrap }
 #lanc-conf .lc-val code { min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap }
@@ -375,19 +364,9 @@
 .jg-l { display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--border-sutil);font-size:12.5px;color:var(--fg);cursor:pointer }
 .jg-l:last-child { border-bottom:0 }
 .jg-l input { width:16px;height:16px;accent-color:var(--pink);margin:0 }
-.fz-tit { display:flex;align-items:baseline;justify-content:space-between }
-.fz-escala { font-weight:400;color:var(--fg) }
-.fz-grade { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));column-gap:18px;align-items:center }
-.fz-cab { font-size:12px;color:var(--fg);padding-bottom:4px }
-.fz-ap { grid-column:1/-1;font-size:12.5px;color:var(--fg);white-space:nowrap;padding:8px 0 2px;border-top:1px solid var(--border-sutil) }
-.fz-c { display:flex;align-items:center;gap:8px;min-height:28px;padding-bottom:4px }
-.fz-c input[type=range] { flex:1;min-width:0;height:24px;accent-color:var(--pink);margin:0 }
-.fz-c b { font:600 12px 'JetBrains Mono',ui-monospace,monospace;color:var(--fg);min-width:18px;text-align:right }
 .jg-lista { grid-auto-rows:auto;max-height:230px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border-forte) transparent }
 .jg-l { flex-wrap:wrap;align-content:center;row-gap:0;padding:3px 0 }
 .jg-n { flex:0 1 auto }
-.jg-kit { font-size:10.5px;font-weight:600;color:var(--cyan);border:1px solid rgba(139,233,253,.45);border-radius:4px;padding:1px 7px }
-.jg-porta { flex:1 0 100%;padding-left:28px;font-size:11.5px;color:var(--fg) }
 
 /* A vista estreita (940 px): a janela dos acessórios, a fila dos lançadores e a régua da luz cabem sem nada cruzar */
 .bp-cx .ky-linha { gap:8px }

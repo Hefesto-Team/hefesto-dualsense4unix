@@ -1,6 +1,6 @@
 """A vibração que o jogo pede a cada controle, dita no barramento (``jogo.vibracao``).
 
-A-VIBRACAO-DO-CONTROLE-CHEGA-AOS-ACESSORIOS-PELO-BUTTPLUG-01. Uma modificação com a
+Desde 13/10/2026 (`test_a_vibracao_de_cada_controle_vira_evento.py`). Uma modificação com a
 permissão ``ler:jogo.vibracao`` acompanha o que o jogo manda a CADA controle: o
 ``uniq`` dele, o número do jogador, o par pedido e o par que chegou aos motores.
 

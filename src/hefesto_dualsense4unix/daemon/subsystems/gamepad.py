@@ -629,7 +629,7 @@ def apply_game_rumble(
         (:func:`_mults_por_motor`). Sem ``target_uniq`` e sem ``vpad``, numa
         mesa que se escreve por controle, o pedido vai a cada um que o
         ``set_rumble`` alcançaria, com a força dele.
-      - A-VIBRACAO-DO-CONTROLE-CHEGA-AOS-ACESSORIOS-PELO-BUTTPLUG-01 (13/10/2026): cada
+      - A vibração de cada controle vira evento (13/10/2026): cada
         pedido, inclusive o que o par fixado vence, vira o evento ``jogo.vibracao`` com
         o par pedido e o efetivo (`vibracao_do_jogo`); a batida de 250 ms sai do tique.
     """

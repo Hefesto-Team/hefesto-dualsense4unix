@@ -12,7 +12,6 @@ import pathlib
 from collections.abc import Mapping, Sequence
 from typing import Any, NamedTuple
 
-from hefesto_dualsense4unix.integrations import kits_de_brinquedo as kits
 from hefesto_dualsense4unix.interface.desenho_dos_lancadores import _a, _e
 
 _PASTA = pathlib.Path(__file__).with_name("experimental")
@@ -63,7 +62,7 @@ class Extensao(NamedTuple):
     dica: str
     para: str
     janela: str
-    cor: str
+    cor: str = "purple"
     #: O que o produto pinta por cima do exemplo: a versão e a origem do registro, a chave e o «⋮» aberto.
     versao: str = "0.1.0"
     selo: str = "Oficial"
@@ -71,65 +70,16 @@ class Extensao(NamedTuple):
     menu: str = ""
 
 
+#: As extensões de exemplo do desenho: uma de lançador e uma que só tem opções. As cores são do
+#: desenho; no produto, toda extensão ganha o roxo.
 EXTENSOES = (
-    Extensao("kyty", "Kyty", "Jogos do Kyty com gatilhos, luz e vibração do controle",
+    Extensao("kytyps5", "KytyPS5", "Os jogos do KytyPS5 na fila dos lançadores, com o perfil de cada um",
              '<div class="ext-para"><span class="ext-rot">Para</span>Todos</div>',
-             "#kyty", "cyan"),
-    Extensao("lovense", "Lovense",
-             "Brinquedos da Lovense com o controle, em três jeitos de ligar",
-             '<div class="ext-para" data-dica="Quantas das três formas estão ligadas. '
-             'Quem vai para quem fica na engrenagem"><span data-lv-conta>2 de 3 ligadas</span></div>',
-             "#lovense", "pink"),
+             "#modificacao", "cyan"),  # (noqa-acento: âncora do HTML)
+    Extensao("exemplo", "Minha extensão", "Uma extensão com opções em três grupos",
+             '<div class="ext-para"><span class="ext-rot">Para</span>Todos</div>',
+             "#modificacao"),  # (noqa-acento: âncora do HTML)
 )
-
-#: Os aparelhos de exemplo da janela da Lovense (nome e quantos motores).
-APARELHOS = ("Lovense Nora", "Lovense Domi", "Lovense Ferri")
-
-#: Os canais de força, com a dica que o cabeçalho traz.
-CANAIS = (
-    ("Vibração", "A vibração que o jogo pede ao controle"),
-    ("Gatilho", "Os eventos do gatilho"),
-    ("Háptica", "O som que vibra"),
-)
-
-#: 50% de fábrica, na escala de 0 a 20 da Lovense.
-FORCA_DE_FABRICA = 10
-
-
-class Jogo(NamedTuple):
-    nome: str
-    kit: kits.KitDoJogo | None = None
-
-
-#: Um jogo em cada veredito; o IP de mentira nunca chega à tela.
-JOGOS_DE_EXEMPLO = (
-    Jogo("Mortal Kombat"),
-    Jogo("Elden Ring"),
-    Jogo("Neon Nights", kits.KitDoJogo("lovense-unity", kits.PORTA_QUE_NADA_ATENDE, 20100, "http")),
-    Jogo("Planet Lust", kits.KitDoJogo("lovense-jj", kits.NAO_LIDO)),
-    Jogo("MonGirl Conquest", kits.KitDoJogo("lovense-rpgmaker", kits.DESLIGADO)),
-    Jogo("Third Crisis", kits.KitDoJogo("lovense-unity", kits.ALCANCA_A_PONTE, 20010, "http")),
-    Jogo("Orpheus", kits.KitDoJogo("lovense-unity", kits.APONTA_PARA_OUTRA_MAQUINA, 20010, "http")),
-)
-
-MARCA_DO_KIT = "Fala com a Lovense"
-_NO_MENU = "No menu Lovense do jogo: IP 127.0.0.1, porta 20010"
-_EXTRA_DO_KIT = {
-    "lovense-unity": "«Use HTTP» desligado",
-    "lovense-jj": "«Conexão HTTP (20010)»",
-    "lovense-rpgmaker": "«Mobile»",
-}
-_OUTRA_MAQUINA = "O jogo fala direto com o app do celular"
-
-
-def linha_do_kit(kit: kits.KitDoJogo | None) -> str:
-    """A única linha que a janela diz sob o jogo; vazia quando não há o que dizer."""
-    if kit is None or kit.veredito == kits.ALCANCA_A_PONTE:
-        return ""
-    if kit.veredito == kits.APONTA_PARA_OUTRA_MAQUINA:
-        return _OUTRA_MAQUINA
-    extra = _EXTRA_DO_KIT.get(kit.kit)
-    return f"{_NO_MENU}, {extra}" if extra else _NO_MENU
 
 
 def _icone(chave: str, tamanho: int = 16) -> str:
@@ -322,21 +272,11 @@ class OpcaoDaJanela(NamedTuple):
     maximo: float = 0
     passo: float = 1
     jogos: tuple[tuple[str, str], ...] = ()
-    # O kit de brinquedo que a pasta de cada jogo traz, como (chave, ``KitDoJogo``); jogo sem kit
-    # não aparece aqui.
-    kit_de: tuple[tuple[str, kits.KitDoJogo], ...] = ()
 
 
-OPCOES_DE_EXEMPLO = (
-    OpcaoDaJanela("kyty", "quando", "Quando", "escolha", "Os jogos que eu escolher",
-                  ("Os jogos que eu escolher", "Qualquer jogo", "Só quando eu ligar")),
-    OpcaoDaJanela("kyty", "avisar", "Avisar quando sair versão nova", "ligado", False),
-)
-
-
-# O manifesto de exemplo do DESENHO de 19/10/2026: uma extensão que não é a Kyty nem a Lovense (essas
-# duas têm janela própria, aprovada) e declara três grupos (Geral, Luz e vibração, Avançado). O produto
-# desenha o que o manifesto da pessoa trouxer; o exemplo só mostra a janela com mais de um grupo.
+# O manifesto de exemplo do DESENHO de 19/10/2026: uma extensão que declara três grupos (Geral, Luz
+# e vibração, Avançado). O produto desenha o que o manifesto da pessoa trouxer; o exemplo só mostra a
+# janela com mais de um grupo.
 OPCOES_DO_DESENHO = (
     OpcaoDaJanela("exemplo", "quando", "Quando", "escolha", "Os jogos que eu escolher",
                   ("Os jogos que eu escolher", "Qualquer jogo", "Só quando eu ligar"), "Geral"),
@@ -376,25 +316,15 @@ def _controle_da_opcao(o: OpcaoDaJanela) -> str:
             f'value="{_a(o.valor)}" aria-label="{_a(o.rotulo)}">')
 
 
-def _o_kit_do_jogo(kit: kits.KitDoJogo | None) -> str:
-    """A marca do jogo que fala com a Lovense e, sob ela, a linha do que mudar no menu do jogo."""
-    if kit is None:
-        return ""
-    diz = linha_do_kit(kit)
-    sob = f'<span class="jg-porta">{diz}</span>' if diz else ""
-    return f'<span class="jg-kit">{MARCA_DO_KIT}</span>{sob}'
-
-
 def _jogos_da_opcao(o: OpcaoDaJanela) -> str:
     """Uma caixa por jogo que tem perfil; a lista nasce vazia e a caixa age no ``change``."""
     if not o.jogos:
         return '<span class="ext-vazia">Nenhum jogo tem perfil ainda.</span>'
     marcados = set(o.valor) if isinstance(o.valor, (list, tuple)) else set()
-    kit_de = dict(o.kit_de)
     caixas = "".join(
         f'<label class="jg-l"><input type="checkbox"{" checked" if chave in marcados else ""} '
         f'data-gesto="guardar-opcao-da-modificacao" data-v="{_a(o.mod)}:{_a(o.id)}:{_a(chave)}">'
-        f'<span class="jg-n">{_e(nome)}</span>{_o_kit_do_jogo(kit_de.get(chave))}</label>'
+        f'<span class="jg-n">{_e(nome)}</span></label>'
         for chave, nome in o.jogos)
     return f'<div class="jg-lista ext-jogos" aria-label="{_a(o.rotulo)}">{caixas}</div>'
 
@@ -412,8 +342,8 @@ def _grupos_das_opcoes(opcoes: Sequence[OpcaoDaJanela]) -> dict[str, list[OpcaoD
 def _cartoes_das_opcoes(opcoes: Sequence[OpcaoDaJanela]) -> str:
     """O arranjo aprovado das janelas da 07: um cartão por grupo, uma linha por opção.
 
-    Rótulo à esquerda e controle à direita, como nas janelas da Lovense e do servidor; a opção de
-    jogos põe o rótulo em cima e a lista de caixas embaixo, na largura do cartão.
+    Rótulo à esquerda e controle à direita; a opção de jogos põe o rótulo em cima e a lista de
+    caixas embaixo, na largura do cartão.
     """
     cartoes = []
     for nome, itens in _grupos_das_opcoes(opcoes).items():
@@ -503,7 +433,7 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
                            parar_tudo: bool = False) -> str:
     """O conteúdo da janela de uma extensão: um cartão por grupo, «Para» no topo, Cancelar e Guardar.
 
-    É o arranjo aprovado em 19/10 (o da Lovense): cada opção que o manifesto declara vira uma linha
+    É o arranjo aprovado em 19/10: cada opção que o manifesto declara vira uma linha
     do cartão do grupo dela. Mudar uma opção só a põe no rascunho da janela; o Guardar grava todas.
     ``agora`` são os pedaços da coluna «Agora» que o manifesto declara (``estado`` é o último
     ``acessorios.estado`` dela) e ``parar_tudo`` põe o botão no topo; os dois só com ``mod``.
@@ -723,39 +653,12 @@ JOGOS_DA_STEAM = (
 )
 
 
-def jogos_html(jogos: tuple[Jogo, ...] = JOGOS_DE_EXEMPLO) -> str:
-    """As caixas dos jogos; nasce tudo desmarcado, e o kit diz a porta sob o jogo."""
-    linhas = []
-    for jogo in jogos:
-        marca = f'<span class="jg-kit">{MARCA_DO_KIT}</span>' if jogo.kit else ""
-        diz = linha_do_kit(jogo.kit)
-        sob = f'<span class="jg-porta">{diz}</span>' if diz else ""
-        linhas.append(
-            f'<label class="jg-l"><input type="checkbox" data-jogo="{jogo.nome}">'
-            f'<span class="jg-n">{jogo.nome}</span>{marca}{sob}</label>')
-    return '<div class="jg-lista">' + "".join(linhas) + "</div>"
-
-
-def forca_html(aparelhos: tuple[str, ...] = APARELHOS) -> str:
-    """Um deslizante de 0 a 20 por canal e por aparelho; o aparelho recebe o maior dos canais."""
-    cab = "".join(f'<span class="fz-cab" data-dica="{dica}">{nome}</span>' for nome, dica in CANAIS)
-    corpo = []
-    for ap in aparelhos:
-        celulas = "".join(
-            f'<span class="fz-c"><input type="range" min="0" max="20" step="1" '
-            f'value="{FORCA_DE_FABRICA}" aria-label="{nome} de {ap}" '
-            f'oninput="this.nextElementSibling.textContent=this.value">'
-            f'<b>{FORCA_DE_FABRICA}</b></span>' for nome, _ in CANAIS)
-        corpo.append(f'<span class="fz-ap">{ap}</span>{celulas}')
-    return '<div class="fz-grade">' + cab + "".join(corpo) + "</div>"
-
-
 def _fragmento(nome: str) -> str:
     return (_PASTA / f"{nome}.html").read_text(encoding="utf-8")
 
 
-JANELAS = ("novo-lancador", "escolher-jogo", "lovense", "impedimentos", "lanc-conf",
-           "modificacao", "kyty", "buttplug", "acessorios")  # (noqa-acento): contrato ASCII
+JANELAS = ("novo-lancador", "escolher-jogo", "impedimentos", "lanc-conf",
+           "modificacao")  # (noqa-acento): contrato ASCII
 
 
 def telas() -> str:
@@ -766,8 +669,6 @@ def telas() -> str:
         texto = texto.replace("{{ESCOLHA}}", escolha_miolo_html("Steam", JOGOS_DA_STEAM, desenho=True))
         texto = texto.replace("{{CONF}}", lanc_conf_miolo_html(CONF_DE_EXEMPLO))
         texto = texto.replace("{{IMPEDIMENTOS}}", impedimentos_miolo_html("Steam", IMPEDIMENTOS_DE_EXEMPLO))
-        texto = texto.replace("{{JOGOS}}", jogos_html())
-        texto = texto.replace("{{FORCA}}", forca_html())
         texto = texto.replace("{{MODIFICACAO}}", modificacao_miolo_html(
             "Minha extensão", OPCOES_DO_DESENHO, mod="exemplo"))
         partes.append(texto.strip())

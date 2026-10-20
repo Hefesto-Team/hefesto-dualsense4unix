@@ -212,10 +212,9 @@ def test_a_08_com_a_tela_aberta_por_ancora_abre_toda_linha_com_maiuscula(ancora:
 ANCORAS_DAS_OUTRAS = (
     ("06-navegacao", "acessibilidade"),
     ("07-lancadores", "novo-lancador"), ("07-lancadores", "escolher-jogo"),
-    # 17/10/2026, acessorios-07-depois: as janelas que a aba Experimental do todo ganhou
-    ("07-lancadores", "lovense"), ("07-lancadores", "impedimentos"),
-    ("07-lancadores", "lanc-conf"), ("07-lancadores", "kyty"),
-    ("07-lancadores", "buttplug"), ("07-lancadores", "acessorios"),
+    # 17/10/2026, acessorios-07-depois: as janelas que a aba Experimental do todo ganhou (as dos
+    # acessórios e a do Kyty saíram em 19/10/2026, com o adulto, para as extensões)
+    ("07-lancadores", "impedimentos"), ("07-lancadores", "lanc-conf"),
     # 18/10/2026, acessorios-07-depois-2: a janela genérica das opções de uma extensão
     ("07-lancadores", "modificacao"))  # (noqa-acento): contrato ASCII
 

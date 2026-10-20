@@ -181,8 +181,8 @@ def arquivos_do_sinal(raiz: Path, sinal: str) -> tuple[Path, ...]:
 def achar_sinal(raiz: Path, sinal: str) -> Path | None:
     """O arquivo da pasta do jogo que o sinal nomeia, ou ``None``; o caminho aceita ``*``.
 
-    O leitor único do curinga da casa (a receita e o reconhecimento do kit de brinquedo usam
-    este): nunca sai de ``raiz`` (o sinal sem ``..`` nem barra inicial), nunca levanta.
+    O leitor único do curinga da casa (a receita usa este): nunca sai de ``raiz`` (o sinal sem
+    ``..`` nem barra inicial), nunca levanta.
     """
     if not _sinal_valido(sinal):
         return None
