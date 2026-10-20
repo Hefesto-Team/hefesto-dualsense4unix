@@ -252,14 +252,14 @@
       "data": "2026-10-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1156452,
+      "piso": 1158412,
       "por_item": {
-        "docs": 120015,
-        "scripts": 114351,
-        "src": 312533,
-        "tests": 609553
+        "docs": 120026,
+        "scripts": 114361,
+        "src": 313723,
+        "tests": 610302
       },
-      "razao": "tamanho: +619 linhas (1155833 -> 1156452), pagas por Origem: D-1510-A-CADEIA-USB-SE-RECONHECE-PELO-TIPO-E-CADA-MUDANCA-VAI-AO-DIARIO, D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES, D-2010-O-PERFIL-NASCE-COM-O-JOGO-E-A-MASCARA-QUE-O-PRONTUARIO-CONFIRMOU; registrado no fecho, topo 4b75f93b4061",
+      "razao": "tamanho: +1960 linhas (1156452 -> 1158412), pagas por Origem: D-2010-O-ACIONADOR-SO-SE-PRENDE-COM-O-JOGO-EM-FOCO; registrado no fecho, topo 72dfbe1b7d3b",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -704,10 +704,16 @@
           "de": 1155833,
           "para": 1156452,
           "razao": "tamanho: +619 linhas (1155833 -> 1156452), pagas por Origem: D-1510-A-CADEIA-USB-SE-RECONHECE-PELO-TIPO-E-CADA-MUDANCA-VAI-AO-DIARIO, D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES, D-2010-O-PERFIL-NASCE-COM-O-JOGO-E-A-MASCARA-QUE-O-PRONTUARIO-CONFIRMOU; registrado no fecho, topo 4b75f93b4061"
+        },
+        {
+          "data": "2026-10-20",
+          "de": 1156452,
+          "para": 1158412,
+          "razao": "tamanho: +1960 linhas (1156452 -> 1158412), pagas por Origem: D-2010-O-ACIONADOR-SO-SE-PRENDE-COM-O-JOGO-EM-FOCO; registrado no fecho, topo 72dfbe1b7d3b"
         }
       ],
       "unidade": "linhas",
-      "universo": 3018
+      "universo": 3019
     }
   }
 }

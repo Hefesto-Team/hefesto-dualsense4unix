@@ -5,7 +5,7 @@
       "data": "2026-10-20",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 53382,
+      "piso": 53483,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -78,11 +78,11 @@
         "daemon/subsystems/base.py": 78,
         "daemon/subsystems/big_picture.py": 41,
         "daemon/subsystems/bt_mic.py": 233,
-        "daemon/subsystems/coop.py": 719,
+        "daemon/subsystems/coop.py": 720,
         "daemon/subsystems/external_identity.py": 621,
         "daemon/subsystems/external_mask.py": 157,
         "daemon/subsystems/game_signal.py": 73,
-        "daemon/subsystems/gamepad.py": 699,
+        "daemon/subsystems/gamepad.py": 727,
         "daemon/subsystems/gatilho_do_jogo.py": 40,
         "daemon/subsystems/governador_do_radio.py": 278,
         "daemon/subsystems/hotkey.py": 670,
@@ -185,7 +185,7 @@
         "interface/aba04.py": 142,
         "interface/aba05.py": 238,
         "interface/aba06.py": 47,
-        "interface/aba08.py": 215,
+        "interface/aba08.py": 227,
         "interface/aba09.py": 45,
         "interface/aba10.py": 55,
         "interface/abrir.py": 74,
@@ -213,7 +213,7 @@
         "interface/pacotes/a05_vibracao.py": 892,
         "interface/pacotes/a06_navegacao.py": 380,
         "interface/pacotes/a07_lancadores.py": 571,
-        "interface/pacotes/a08_conexoes.py": 1144,
+        "interface/pacotes/a08_conexoes.py": 1186,
         "interface/pacotes/a09_sistema.py": 1068,
         "interface/pacotes/a10_perfis.py": 904,
         "interface/pacotes/a11_calibrar_sensores.py": 116,
@@ -244,14 +244,14 @@
         "profiles/sanidade.py": 44,
         "profiles/schema.py": 747,
         "profiles/simple_match.py": 179,
-        "utils/maquina.py": 334,
+        "utils/maquina.py": 352,
         "utils/memoria_dos_controles.py": 85,
         "utils/repo_files.py": 46,
         "utils/session.py": 138,
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +40 linhas (53342 -> 53382), pagas por Origem: D-1510-A-CADEIA-USB-SE-RECONHECE-PELO-TIPO-E-CADA-MUDANCA-VAI-AO-DIARIO, D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES, D-2010-O-PERFIL-NASCE-COM-O-JOGO-E-A-MASCARA-QUE-O-PRONTUARIO-CONFIRMOU; registrado no fecho, topo 4b75f93b4061",
+      "razao": "texto-em-src: +101 linhas (53382 -> 53483), pagas por Origem: D-2010-O-ACIONADOR-SO-SE-PRENDE-COM-O-JOGO-EM-FOCO; registrado no fecho, topo 72dfbe1b7d3b",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -342,6 +342,12 @@
           "de": 53342,
           "para": 53382,
           "razao": "texto-em-src: +40 linhas (53342 -> 53382), pagas por Origem: D-1510-A-CADEIA-USB-SE-RECONHECE-PELO-TIPO-E-CADA-MUDANCA-VAI-AO-DIARIO, D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES, D-2010-O-PERFIL-NASCE-COM-O-JOGO-E-A-MASCARA-QUE-O-PRONTUARIO-CONFIRMOU; registrado no fecho, topo 4b75f93b4061"
+        },
+        {
+          "data": "2026-10-20",
+          "de": 53382,
+          "para": 53483,
+          "razao": "texto-em-src: +101 linhas (53382 -> 53483), pagas por Origem: D-2010-O-ACIONADOR-SO-SE-PRENDE-COM-O-JOGO-EM-FOCO; registrado no fecho, topo 72dfbe1b7d3b"
         }
       ],
       "unidade": "linhas",
