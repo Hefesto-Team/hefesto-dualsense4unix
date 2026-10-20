@@ -20,7 +20,11 @@ MORDIDAS (executadas sobre uma cópia, e cada uma reprova a régua que a guarda)
 * tirar a guarda do «Avançado» (`.g2-av{display:none !important}`) ->
   `test_o_avancado_guarda_os_acionamentos_e_lembra_na_sessao`;
 * trocar a chave de um efeito (`golpe-leve` por `golpe-fraco`) ->
-  `test_as_chaves_dos_efeitos_nao_mudam`.
+  `test_as_chaves_dos_efeitos_nao_mudam`;
+* trocar a chave de um acionamento no desenho (`Weapon` por `Arma`) com a publicada igual a ele
+  (o estado depois do `--publicar`) -> `test_o_avancado_nasce_desligado_e_tem_as_mesmas_chaves`;
+* um `min-height` que estoure a altura da 03 com o Avançado ligado, mesmo com a publicada
+  igual ao desenho -> `test_nenhuma_das_tres_abas_rola_na_vertical`.
 """
 
 from __future__ import annotations
@@ -68,6 +72,13 @@ CHAVES_DAS_IMERSOES = (
 HAPTICA_ANTIGA = ("do_estilo", "sem_efeito", "toque", "impacto", "estalo", "guarda", "aparo",
                   "som_no_corpo")
 LUZ_ANTIGA = ("respirar", "piscar", "arco-iris", "batimento", "chama", "mare")
+#: As chaves dos acionamentos que o perfil guarda (`trigger_specs`), cravadas: depois do
+#: `--publicar` a página publicada É o desenho, e comparar com ela deixaria de morder.
+CHAVES_DOS_ACIONAMENTOS = ("Off", "Resistance", "Weapon", "Bow", "Galloping", "Machine",
+                           "Vibration", "SlopeFeedback", "MultiPositionFeedback",
+                           "MultiPositionVibration")
+#: As abas que já não rolavam na vertical em 20/10/2026: nelas o teto é zero, não a publicada.
+SEM_SOBRA = ("03-gatilhos", "05-vibracao")
 
 
 def _doc(nome: str) -> str:
@@ -221,6 +232,8 @@ def test_o_avancado_nasce_desligado_e_tem_as_mesmas_chaves() -> None:
     for s, velho in zip(acions, _selects(publicado, "g2-acion"), strict=True):
         assert 'data-gesto="modo"' in s
         assert _valores(s) == _valores(velho), "as chaves dos acionamentos mudaram"
+        cravadas = [v for v in _valores(s) if v != "—" and not v.startswith(PREFIXO_DO_MEU)]
+        assert tuple(cravadas) == CHAVES_DOS_ACIONAMENTOS, cravadas
     assert doc.count('class="g2-cel g2-av') == 8 and doc.count('class="g2-rot g2-av"') == 2
 
 
@@ -369,9 +382,12 @@ def test_nenhuma_das_tres_abas_rola_na_vertical(navegador: Browser, nome: str, l
     novos = [r for r in cena["rol"] if r not in base["rol"]]
     assert not novos and not cena["lateral"], (nome, larg, alt, novos)
     assert cena["sobra"] <= base["sobra"], (nome, larg, alt, cena["sobra"], base["sobra"])
+    if nome in SEM_SOBRA:  # a publicada vira o desenho no fecho: o zero não depende dela
+        assert cena["sobra"] == 0 and not cena["rol"], (nome, larg, alt, cena)
     if nome.startswith("03-"):
         aberto = _medir(navegador, MOCKUP / f"{nome}.html", larg, alt,
                         'document.querySelector(".g2-avtog input").click()')
         novos = [r for r in aberto["rol"] if r not in base["rol"]]
         assert not novos and not aberto["lateral"], (nome, "avançado ligado", larg, alt, novos)
         assert aberto["sobra"] <= base["sobra"], (nome, "avançado ligado", larg, alt)
+        assert aberto["sobra"] == 0, (nome, "avançado ligado", larg, alt, aberto["sobra"])
