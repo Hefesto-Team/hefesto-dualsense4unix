@@ -285,6 +285,19 @@ def test_a_linha_da_extensao_diz_a_versao_que_espera_o_atualizar() -> None:
     assert a07._extensao_de(a07._Instalada(entrada=entrada, manifesto=None)).versao == "0.1.0"
 
 
+def test_o_intervalo_de_fabrica_e_de_seis_horas_e_o_piso_de_um_minuto() -> None:
+    """A extensão nova guarda as seis horas; o registro não desce abaixo do piso."""
+    # D-1910-A-EXTENSAO-DO-GIT-CONFERE-A-CADA-SEIS-HORAS
+    from hefesto_dualsense4unix.mods import supervisor
+    from hefesto_dualsense4unix.mods.instalador import Entrada
+
+    entrada = Entrada(id="exemplo", nome="Exemplo", versao="0.1.0", origem="comunidade",
+                      endereco="file:///nada")
+    assert entrada.intervalo_da_atualizacao_s == 6 * 3600.0
+    assert supervisor.PISO_DA_ATUALIZACAO_S == 60.0
+    assert supervisor.ESPERA_DEPOIS_DA_FALHA_S == 600.0
+
+
 
 def test_o_git_que_nao_roda_e_recusa_com_o_motivo(
     lar: Lugares, remoto: Path, monkeypatch: pytest.MonkeyPatch
