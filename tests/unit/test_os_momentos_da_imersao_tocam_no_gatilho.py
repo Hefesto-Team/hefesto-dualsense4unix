@@ -404,9 +404,9 @@ def test_o_automatico_da_corrida_vibra_o_freio_depois_de_800_ms(
 ) -> None:
     corrida = _mesa(monkeypatch, _perfil(estilo="corrida", triggers=AUTOMATICO))
     apertou = corrida.t
-    corrida.apertar(P1)
+    corrida.apertar(P1, "esquerdo")  # o freio é o L2 da Corrida (tabela S de 19/10/2026)
     corrida.rodar(1.0)
-    [(t, bloco)] = corrida.backend.de(P1, "right")
+    [(t, bloco)] = corrida.backend.de(P1, "left")
     assert bloco == _bloco("Vibration", position=2, amplitude=3, frequency=15)
     assert 0.8 <= t - apertou <= 0.8 + FOLGA
 

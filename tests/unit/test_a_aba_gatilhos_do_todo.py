@@ -115,7 +115,8 @@ def test_a_ordem_com_estilo_poe_as_dele_na_frente() -> None:
     sem = [i.chave for i in imersao.imersoes_do_acionamento("Weapon")]
     com = [i.chave for i in imersao.imersoes_do_acionamento("Weapon", "terror")]
     assert sem[:3] == ["ferrolho-que-volta", "trava-seca", "pino-que-falha"]
-    assert com[:4] == ["pino-que-falha", "batida-do-coracao", "arma-pesada", "aperto-que-trava"]
+    # a frente do Terror (tabela S de 19/10/2026): Trava seca, Batida, Golpe pesado
+    assert com[:3] == ["trava-seca", "batida-do-coracao", "golpe-pesado"]
     assert sorted(com) == sorted(sem)
     assert imersao.imersoes_do_acionamento("Off") == ()
 

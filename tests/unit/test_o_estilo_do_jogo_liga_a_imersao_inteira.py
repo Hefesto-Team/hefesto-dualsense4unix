@@ -89,10 +89,11 @@ def test_toda_variavel_da_receita_tem_destino() -> None:
     assert not set(ej.APLICADAS) & set(ej.SO_DADO)
 
 
-def test_o_arco_e_estilo_proprio() -> None:
-    arco = ej.POR_CHAVE["arco"]
-    assert arco.rotulo == "Arco" and arco.gatilho == "Bow"
-    assert ej.as_quatro("arco") != ej.as_quatro("acao")  # noqa-acento: chave
+def test_o_arco_saiu_do_catalogo_e_carrega_como_acao() -> None:
+    # D-1910-O-ARCO-VIRA-ESCOLHA-DA-ACAO: o perfil salvo com a chave velha segue funcionando
+    assert "arco" not in {e.chave for e in ej.ESTILOS}
+    assert ej.POR_CHAVE["arco"] is ej.POR_CHAVE["acao"]  # noqa-acento: chave
+    assert "Arco" not in ej.POR_ROTULO
 
 
 def test_os_ajustes_estao_na_faixa_do_dono() -> None:
@@ -111,23 +112,24 @@ def test_os_ajustes_estao_na_faixa_do_dono() -> None:
 def test_os_ajustes_da_receita_chegam_ao_gatilho(
     disco: dict[str, Any], monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Um Arco com tensão 3 grava tensão 3 nos dois gatilhos.
+    """Um FPS com a Metralhadora a 30 Hz grava os 30 Hz no gatilho do R2 (o do acionamento).
 
-    A MORDIDA: passe `{}` ao `preset_to_positional_params` no `_com_o_estilo` e os
-    dois gatilhos voltam ao padrão do dono (6).
+    A MORDIDA: passe `{}` ao `preset_to_positional_params` no `_com_o_estilo` e o R2
+    volta ao padrão do dono (40 Hz).
     """
-    arco = ej.POR_CHAVE["arco"]
-    tenso = dataclasses.replace(arco, receita_invisivel=dataclasses.replace(
-        arco.receita_invisivel, ajustes_do_gatilho=(("force", 3), ("snap", 2))))
-    monkeypatch.setitem(ej.POR_ROTULO, "Arco", tenso)
-    monkeypatch.setitem(ej.POR_CHAVE, "arco", tenso)
-    _aplicar("Arco")
-    spec = trigger_specs.get_spec("Bow")
+    fps = ej.POR_CHAVE["fps"]
+    rapido = dataclasses.replace(fps, receita_invisivel=dataclasses.replace(
+        fps.receita_invisivel, ajustes_do_gatilho=(("frequency", 30), ("strength", 3))))
+    monkeypatch.setitem(ej.POR_ROTULO, "FPS", rapido)
+    monkeypatch.setitem(ej.POR_CHAVE, "fps", rapido)
+    _aplicar("FPS")
+    spec = trigger_specs.get_spec("Machine")
     assert spec is not None
-    esperado = trigger_specs.preset_to_positional_params(spec, {"force": 3, "snap": 2})
+    esperado = trigger_specs.preset_to_positional_params(spec, {"frequency": 30, "strength": 3})
     prof = disco["perfil"]
-    assert prof.triggers.left.mode == prof.triggers.right.mode == "Bow"
-    assert list(prof.triggers.left.params) == list(prof.triggers.right.params) == esperado
+    assert prof.triggers.right.mode == "Machine"
+    assert list(prof.triggers.right.params) == esperado
+    assert prof.triggers.left.mode == "Resistance", "o L2 do FPS é o peso da mira, outra receita"
 
 
 @pytest.mark.parametrize("modo", [None, "gamepad", "native"])

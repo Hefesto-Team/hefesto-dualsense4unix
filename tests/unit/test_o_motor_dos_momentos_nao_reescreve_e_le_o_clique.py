@@ -598,20 +598,38 @@ def test_o_perfil_de_chave_velha_por_controle_toca_em_cada_um_dos_quatro(numero:
     assert mapa.do(outro, "direito") is None
 
 
-@pytest.mark.parametrize(("estilo", "chave", "modo"), [
-    ("fps", "rajada-que-sobe-sozinha", "Machine"),
-    ("corrida", "freio-abs-que-pulsa", "Resistance"),
-    ("acao", "clique-no-meio", "Weapon"),  # (noqa-acento): chave
-    ("arco", "corda-que-estica", "Bow"),
-    ("esportes", "pique-que-cansa", "Resistance"),
-    ("terror", "pino-que-falha", "Weapon"),
+@pytest.mark.parametrize(("estilo", "lado", "chave", "modo"), [
+    ("fps", "direito", "rajada-que-sobe-sozinha", "Machine"),
+    ("corrida", "esquerdo", "freio-abs-que-pulsa", "Resistance"),
+    ("aventura", "direito", "corda-que-estica", "Bow"),
+    ("esportes", "esquerdo", "pique-que-cansa", "Resistance"),
+    ("esportes", "direito", "golpe-carregado", "Resistance"),
+    ("terror", "direito", "pino-que-falha", "Weapon"),
 ])
-def test_o_automatico_toca_a_da_frente_do_estilo_no_acionamento_de_hoje(
-    estilo: str, chave: str, modo: str,
+def test_o_automatico_toca_a_imersao_de_cada_lado_do_estilo(
+    estilo: str, lado: str, chave: str, modo: str,
 ) -> None:
-    # D-1510-CADA-ESTILO-TEM-A-SUA-IMERSAO-NO-AUTOMATICO
-    """O estilo com a chave velha (FPS, Esportes, Terror) acha a da frente do CATALOGO §2.4."""
-    plano = tv._plano_do_automatico(estilo)
-    assert plano is not None, estilo
+    # D-1910-O-R2-E-O-L2-DO-ESTILO-SAO-RECEITAS-SEPARADAS (antes D-1510, uma imersão para os dois)
+    """O R2 e o L2 do estilo tocam, cada um, a imersão do `Lado` dele (tabela S de 19/10/2026)."""
+    plano = tv._plano_do_automatico(estilo, lado)
+    assert plano is not None, (estilo, lado)
     assert (plano.imersao.chave, plano.modo) == (chave, modo)
     assert plano.automatico and plano.bloco_da_volta() == tv._bloco_cru("Off", {})
+
+
+@pytest.mark.parametrize(("estilo", "lado"), [
+    ("acao", "direito"), ("acao", "esquerdo"), ("arco", "direito"),  # (noqa-acento): chave
+    ("corrida", "direito"), ("aventura", "esquerdo"), ("retro", "direito"),
+])
+def test_o_lado_sem_momento_no_estilo_nao_tem_plano(estilo: str, lado: str) -> None:
+    """Sem tempo na imersão do lado (ou sem imersão), o automático só escreve os números."""
+    assert tv._plano_do_automatico(estilo, lado) is None
+
+
+def test_os_dois_lados_do_automatico_tocam_receitas_diferentes() -> None:
+    """MORDIDA: devolver o mesmo plano aos dois lados (o código de 15/10) reprova aqui."""
+    esquerdo = tv._plano_do_automatico("esportes", "esquerdo")
+    direito = tv._plano_do_automatico("esportes", "direito")
+    assert esquerdo is not None and direito is not None
+    assert esquerdo.imersao.chave == "pique-que-cansa"
+    assert direito.imersao.chave == "golpe-carregado"

@@ -7,8 +7,8 @@ da luz. Estas réguas leem a fábrica (`profiles/estilos_de_jogo`), a ponte para
 cabo e o rádio: o motor escreve pelo controle, e nenhum destes caminhos pergunta a conexão.
 
 As mordidas: a Metralhadora do FPS de volta à Arma automática a 60 Hz; a duração do toque fora da
-ponte; o Som no corpo como forma de um estilo; o pulso da luz com a Bateria longa ligada; a batida
-só no controle que atirou.
+ponte; o Som no corpo como forma de um terceiro estilo; o pulso da luz com a Bateria longa ligada;
+a batida só no controle que atirou.
 """
 from __future__ import annotations
 
@@ -24,12 +24,14 @@ from hefesto_dualsense4unix.profiles import formas_de_haptica as fh
 
 QUATRO = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03", "aa:bb:cc:00:00:04")
 
-#: CATALOGO §2.4, a coluna «acionamento», já na chave da lista de onze
+#: O acionamento do R2 de cada estilo (tabela S da página de 19/10/2026), já na chave da lista de
+#: onze. O Arco saiu do catálogo e carrega como a Ação.
 ACIONAMENTO = {
-    "fps": "Machine", "corrida": "Resistance", "acao": "Weapon",  # noqa-acento: chave
-    "arco": "Bow", "aventura": "Resistance", "esportes": "Resistance",
-    "point_and_click": "Off", "terror": "Weapon", "luta": "Weapon", "maratona": "Off",
-    "plataforma": "Off", "retro": "Off", "ritmo": "Off", "simulacao": "SlopeFeedback",
+    "fps": "Machine", "corrida": "MultiPositionVibration", "acao": "Weapon",  # noqa-acento: chave
+    "arco": "Weapon", "aventura": "Bow", "esportes": "Resistance",
+    "point_and_click": "Weapon", "terror": "Weapon", "luta": "Weapon", "maratona": "Off",
+    "plataforma": "SlopeFeedback", "retro": "Off", "ritmo": "Weapon",
+    "simulacao": "SlopeFeedback", "souls": "Weapon", "furtivo": "Weapon",
 }
 
 
@@ -97,9 +99,11 @@ def test_a_duracao_do_toque_e_40_vezes_d_sobre_200_de_25_a_60(duracao: int, toqu
 
 FORMA_DO_ESTILO = {
     "luta": fh.IMPACTO, "esportes": fh.IMPACTO, "ritmo": fh.ESTALO,
-    "fps": fh.TOQUE, "acao": fh.TOQUE, "arco": fh.TOQUE,  # noqa-acento: chave
-    "aventura": fh.TOQUE, "plataforma": fh.TOQUE, "retro": fh.TOQUE,
-    "terror": fh.TOQUE, "corrida": fh.TOQUE, "simulacao": fh.TOQUE,
+    "fps": fh.TOQUE, "acao": fh.IMPACTO, "arco": fh.IMPACTO,  # noqa-acento: chave
+    "aventura": fh.TOQUE, "plataforma": fh.ESTALO, "terror": fh.TOQUE,
+    "souls": fh.IMPACTO, "furtivo": fh.ESTALO,  # bloco C: o Eco da Souls
+    "corrida": fh.SOM_NO_CORPO, "simulacao": fh.SOM_NO_CORPO,  # o motor e o chão no corpo
+    "retro": None,  # o console original não tinha háptica; o Motor de época é do bloco C
     # A resposta de 08/10 («Toque por tiro e lado do som, como nos outros») vence o «Sem efeito»
     # que a tabela do catálogo de 15/10 dá ao Point and click e à Maratona.
     "point_and_click": fh.TOQUE, "maratona": fh.TOQUE,
@@ -107,7 +111,7 @@ FORMA_DO_ESTILO = {
 
 
 @pytest.mark.parametrize(("chave", "forma"), sorted(FORMA_DO_ESTILO.items()))
-def test_o_estilo_escolhe_a_forma_do_toque(chave: str, forma: str) -> None:
+def test_o_estilo_escolhe_a_forma_do_toque(chave: str, forma: str | None) -> None:
     """D-1910-O-POINT-AND-CLICK-E-A-MARATONA-TOCAM-O-TOQUE: a forma de cada estilo."""
     assert fh.forma_que_vale(None, chave) == forma
 
@@ -122,10 +126,13 @@ def test_todo_estilo_de_fabrica_tem_a_forma_na_tabela() -> None:
     assert not fora, fora
 
 
-def test_nenhuma_forma_longa_e_padrao_de_estilo() -> None:
-    """MORDIDA: o Som no corpo (ou a Guarda) como forma de um estilo reprova aqui."""
+def test_so_a_corrida_e_a_simulacao_tem_forma_longa_de_estilo() -> None:
+    """MORDIDA: a Guarda, o Aparo ou o Som no corpo num terceiro estilo reprova aqui.
+
+    D-1910-O-CONTINUO-VOLTA-A-CORRIDA-E-A-SIMULACAO: o motor e o chão passam pelo corpo.
+    """
     longas = {e: f for e, f in fh.POR_ESTILO.items() if f in fh.FORMAS_LONGAS}
-    assert not longas, longas
+    assert longas == {"corrida": fh.SOM_NO_CORPO, "simulacao": fh.SOM_NO_CORPO}
     assert set(fh.POR_ESTILO) <= set(ej.POR_CHAVE)
 
 
@@ -178,7 +185,9 @@ def test_a_batida_nao_passa_de_tres_por_segundo() -> None:
 def test_o_ritmo_sobe_o_ouvido_do_jogo() -> None:
     """Sem o ouvido, a batida nunca chega: o Ritmo não segue o lado do som nem toca o estalo."""
     assert tv.pede_o_ouvido(tv.receita_do_estilo(ej.POR_CHAVE["ritmo"]))
-    assert not tv.pede_o_ouvido(tv.receita_do_estilo(ej.POR_CHAVE["corrida"]))
+    assert not tv.pede_o_ouvido(tv.DESLIGADA)
+    # o Som no corpo da Corrida também é o grave do jogo: pede o ouvido sem escolha nenhuma
+    assert tv.pede_o_ouvido(tv.receita_do_estilo(ej.POR_CHAVE["corrida"]))
 
 
 def test_a_batida_chega_aos_quatro_controles() -> None:

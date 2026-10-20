@@ -12,7 +12,7 @@ exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 from hefesto_dualsense4unix.app.actions import trigger_specs
 from hefesto_dualsense4unix.interface import onde
 from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
-from hefesto_dualsense4unix.profiles import estilos_de_jogo, loader
+from hefesto_dualsense4unix.profiles import efeitos_de_imersao, estilos_de_jogo, loader
 from hefesto_dualsense4unix.profiles.schema import (
     PRIORIDADE_MAXIMA,
     PRIORIDADE_MINIMA,
@@ -192,8 +192,8 @@ def test_o_estilo_grava_gatilho_vibracao_e_uma_cor_por_unidade(
 
     prof = disco["perfil"]
     receita = estilos_de_jogo.POR_ROTULO["FPS"]
-    assert prof.triggers.left.mode == receita.gatilho
-    assert prof.triggers.right.mode == receita.gatilho
+    assert prof.triggers.left.mode == receita.l2.modo  # o L2 e o R2 são receitas separadas
+    assert prof.triggers.right.mode == receita.r2.modo == receita.gatilho
     assert prof.rumble.policy == receita.vibracao
     assert set(prof.controllers or {}) == {c["uniq"] for c in MESA}
     assert prof.leds.lightbar == (0, 0, 0), (
@@ -224,15 +224,20 @@ def test_o_gatilho_sai_do_dono_dos_parametros(disco: dict[str, Any]) -> None:
         disco["perfil"] = Profile(name="Pragmata", match=MatchAny(), priority=40)
         a10_perfis.editor_estilo(_ctx(), {"valor": estilo.rotulo},
                                  PonteDeMentira())
-        spec = trigger_specs.get_spec(estilo.gatilho or "")
-        assert spec is not None, f"{estilo.rotulo}: gatilho fora do produto"
-        esperado = list(trigger_specs.preset_to_positional_params(spec, {}))
-        for lado in ("left", "right"):
-            tem = list(getattr(disco["perfil"].triggers, lado).params)
+        for disco_do_lado, dele in (("left", estilo.l2), ("right", estilo.r2)):
+            spec = trigger_specs.get_spec(dele.modo)
+            assert spec is not None, f"{estilo.rotulo}: gatilho fora do produto"
+            # os números do dono: a imersão do lado, ou os de partida do acionamento
+            numeros = (
+                efeitos_de_imersao.ajustes_da_imersao(
+                    efeitos_de_imersao.POR_CHAVE[dele.imersao], dele.modo, estilo.chave)
+                if dele.imersao else {})
+            esperado = list(trigger_specs.preset_to_positional_params(spec, numeros or {}))
+            tem = list(getattr(disco["perfil"].triggers, disco_do_lado).params)
             assert tem == esperado, (
-                f"{estilo.rotulo}/{lado}: params {tem} != {esperado} do dono")
-        if spec.params and not esperado:  # pragma: no cover — defesa da régua
-            sem_params.append(estilo.rotulo)
+                f"{estilo.rotulo}/{disco_do_lado}: params {tem} != {esperado} do dono")
+            if spec.params and not esperado:  # pragma: no cover — defesa da régua
+                sem_params.append(estilo.rotulo)
     assert not sem_params
 
 
@@ -292,7 +297,8 @@ def test_mesa_vazia_ainda_ajusta_gatilho_e_vibracao(disco: dict[str, Any]) -> No
     resposta = a10_perfis.editor_estilo(_ctx([]), {"valor": "Corrida"},
                                         PonteDeMentira())
     prof = disco["perfil"]
-    assert prof.triggers.left.mode == estilos_de_jogo.POR_ROTULO["Corrida"].gatilho
+    assert prof.triggers.right.mode == estilos_de_jogo.POR_ROTULO["Corrida"].gatilho
+    assert prof.triggers.left.mode == estilos_de_jogo.POR_ROTULO["Corrida"].l2.modo
     assert prof.rumble.policy == estilos_de_jogo.POR_ROTULO["Corrida"].vibracao
     assert not (prof.controllers or {})
     assert resposta is not None

@@ -92,7 +92,9 @@ def test_o_visual_novel_e_estilo_com_a_receita_do_point_and_click() -> None:
     vn = ej.POR_CHAVE["visual_novel"]
     pc = ej.POR_CHAVE["point_and_click"]
     assert vn.rotulo == "Visual novel"
-    assert (vn.gatilho, vn.vibracao, vn.familia) == (pc.gatilho, pc.vibracao, pc.familia)
+    # o gatilho do Point and click é o clique do mouse (Golpe · fraco); o da Visual novel é livre
+    assert (vn.vibracao, vn.familia) == (pc.vibracao, pc.familia)
+    assert (pc.gatilho, vn.gatilho) == ("Weapon", "Off")
     assert vn.brilho == 0.5
     receita = vn.receita_invisivel
     assert receita is not None

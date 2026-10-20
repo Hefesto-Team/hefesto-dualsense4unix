@@ -74,18 +74,20 @@ def test_a_pancada_respeita_o_motor_escolhido(motores: str, esperado: tuple[int,
     assert pv.sequencia("pancada_do_lado", motores)[-1][1:] == (0, 0)
 
 
-def test_padrao_que_vale_segue_a_escolha_e_o_estilo_nao_pede_nenhum(
+def test_padrao_que_vale_segue_a_escolha_e_o_estilo_que_nao_pede_nenhum_fica_mudo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    assert pv.padrao_que_vale(None, "fps") is None
-    assert pv.padrao_que_vale(pv.DO_ESTILO, "fps") is None
+    # desde 19/10/2026 o FPS pede o Coice; o Retrô, o Ritmo e a Corrida deixam os motores ao jogo
+    assert pv.padrao_que_vale(None, "fps") == "coice"
+    assert pv.padrao_que_vale(pv.DO_ESTILO, "retro") is None
+    assert pv.padrao_que_vale(None, "corrida") is None
     assert pv.padrao_que_vale(pv.SEM_EFEITO, "fps") is None
-    assert pv.padrao_que_vale("onda", "fps") == "onda"
-    assert pv.padrao_que_vale("trovao", "fps") is None
-    monkeypatch.setitem(pv.POR_ESTILO, "fps", "tranco")
-    assert pv.padrao_que_vale(None, "fps") == "tranco"
     assert pv.padrao_que_vale("onda", "fps") == "onda"  # a escolha vence o estilo
-    assert pv.padrao_que_vale(pv.SEM_EFEITO, "fps") is None
+    assert pv.padrao_que_vale("trovao", "retro") is None
+    monkeypatch.setitem(pv.POR_ESTILO, "retro", "tranco")
+    assert pv.padrao_que_vale(None, "retro") == "tranco"
+    assert pv.padrao_que_vale("onda", "retro") == "onda"
+    assert pv.padrao_que_vale(pv.SEM_EFEITO, "retro") is None
 
 
 # --- O motor em cena --------------------------------------------------------------------------
