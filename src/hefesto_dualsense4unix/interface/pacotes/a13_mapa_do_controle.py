@@ -32,9 +32,9 @@ alternativa seria a segunda verdade de cada uma, que esta casa persegue.
 """
 from __future__ import annotations
 
-import contextlib
 import html
 import itertools
+import sys
 import threading
 import time
 from typing import Any, NamedTuple
@@ -847,8 +847,9 @@ def _guarda_o_rascunho(estado: dict[str, Any], b: str) -> None:
 ESCUTA_EM_FUNDO = "a13-sequencia-gravar"
 #: Cada gravação ganha a sua vez; a resposta de uma vez anterior não vale para a de agora.
 _VEZES = itertools.count(1)
-#: O fio que pede a parada quando o tique larga a gravação; o «Gravar» seguinte espera por ele.
-_PARANDO: list[threading.Thread | None] = [None]
+#: A parada que o tique manda num fio e o «Gravar» seguinte passam por aqui, um de cada vez:
+#: o iniciar nunca chega ao daemon antes da parada da gravação anterior.
+_UMA_ESCUTA_POR_VEZ = threading.Lock()
 
 
 def _ouvido_agora(vez: int) -> tuple[int, Any]:
@@ -890,20 +891,13 @@ def _soltar_em_fundo(estado: dict[str, Any]) -> None:
     def parar() -> None:
         from . import ponte
 
-        with contextlib.suppress(Exception):  # sem o serviço, não há quem ouça
-            ponte.resultado("sequencia.gravar", acao="parar")
+        with _UMA_ESCUTA_POR_VEZ:
+            try:
+                ponte.resultado("sequencia.gravar", acao="parar")
+            except Exception as erro:
+                print(f"[sequência] a parada não chegou ao serviço: {erro}", file=sys.stderr)
 
-    fio = threading.Thread(target=parar, name="a13-parar-de-ouvir", daemon=True)
-    _PARANDO[0] = fio
-    fio.start()
-
-
-def _esperar_a_parada() -> None:
-    """A parada que o tique mandou chega ao daemon antes do «Gravar» seguinte."""
-    fio = _PARANDO[0]
-    if fio is not None:
-        fio.join(timeout=1.0)
-        _PARANDO[0] = None
+    threading.Thread(target=parar, name="a13-parar-de-ouvir", daemon=True).start()
 
 
 def _parar_de_ouvir(estado: dict[str, Any], *, ja_parou: bool = False) -> None:
@@ -975,8 +969,8 @@ def mapa_sequencia_gravar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str,
         _parar_de_ouvir(estado)
         return _repinta(ctx)
     estado, b = _botao_da_sequencia(ctx, "mapa-sequencia-gravar")
-    _esperar_a_parada()
-    r = p.resultado("sequencia.gravar", acao="iniciar", **_quem_ouve(ctx))
+    with _UMA_ESCUTA_POR_VEZ:
+        r = p.resultado("sequencia.gravar", acao="iniciar", **_quem_ouve(ctx))
     if not isinstance(r, dict) or r.get("status") != "ok":
         raise RuntimeError("o Hefesto não confirmou a gravação: o serviço precisa estar ligado.")
     _rascunho(ctx, estado, b)["passos"] = []

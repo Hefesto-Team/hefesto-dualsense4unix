@@ -659,6 +659,40 @@ def test_a_resposta_de_uma_gravacao_antiga_nao_fecha_a_nova(
         em_fundo._FUNDO.pop(mapa.ESCUTA_EM_FUNDO, None)
 
 
+def test_trocar_de_controle_no_meio_para_antes_de_o_outro_gravar(
+        mapa: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """O tique larga a gravação num fio; o «Gravar» do outro controle chega depois da parada."""
+    import threading
+
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo, ponte
+
+    _perfil_no_disco()
+    chamadas: list[tuple[str, dict[str, Any]]] = []
+    p = _ponte(chamadas)
+    entrou = threading.Event()
+
+    def parada_lenta(metodo: str, **params: Any) -> dict[str, Any]:
+        if params.get(ACAO) == "parar":
+            entrou.set()
+            time.sleep(0.2)
+        return p.resultado(metodo, **params)
+
+    monkeypatch.setattr(ponte, "resultado", parada_lenta)
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", True)
+    pp = SimpleNamespace(resultado=parada_lenta)
+    mapa.mapa_botao(_ctx("p2"), {"b": "cross"}, None)
+    mapa.mapa_sequencia_gravar(_ctx("p2"), {}, pp)
+    t0 = time.monotonic()
+    mapa.pacote(_ctx("p1"))
+    assert time.monotonic() - t0 < 0.15, "o tique esperou a parada"
+    assert entrou.wait(1.0), "a parada não saiu"
+    mapa.mapa_botao(_ctx("p1"), {"b": "cross"}, None)
+    mapa.mapa_sequencia_gravar(_ctx("p1"), {}, pp)
+    acoes = [c[1].get(ACAO) for c in chamadas if c[0] == "sequencia.gravar"]
+    assert acoes.index("parar") < len(acoes) - 1 and acoes[-1] == "iniciar", acoes
+    assert chamadas[-1][1].get("uniq") == "aabbcc000001", "o Cosmic Red não passou a ouvir"
+
+
 def test_a_tela_recusa_tocar_sem_ter_gravado(mapa: Any) -> None:
     _perfil_no_disco()
     ctx = _ctx("p2")
