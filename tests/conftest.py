@@ -1744,6 +1744,36 @@ def _nenhuma_supervisora_do_mic_atravessa() -> Iterator[None]:
                 monitor.stop()
 
 
+def _hubs_de_sensores_vivos() -> dict[int, Any]:
+    """``{ident da thread: hub}`` de toda ``hefesto-sensor-hub`` rodando."""
+    vivos: dict[int, Any] = {}
+    for fio in threading.enumerate():
+        if fio.name != "hefesto-sensor-hub" or fio.ident is None:
+            continue
+        dono = getattr(getattr(fio, "_target", None), "__self__", None)
+        if type(dono).__name__ == "SensorHub":
+            vivos[fio.ident] = dono
+    return vivos
+
+
+@pytest.fixture(autouse=True)
+def _nenhum_hub_de_sensores_atravessa() -> Iterator[None]:
+    """O `SensorHub` que um caso ligou, o próprio caso desliga.
+
+    OS-TRES-VERMELHOS-DE-TEMPO-DO-LINT-TEST-NO-CI-01 (20/10/2026): o caso que pede o
+    `_garantir_sensor_hub` a um servidor que nunca sobe (o handler chamado direto) não passa
+    pelo `IpcServer.stop`. A manutenção dele seguia viva no processo, com o jogo do daemon de
+    mentira ligado, e no segundo ciclo dela (1 s cada) dentro de um caso SEGUINTE abria o
+    touchpad da mesa de mentira dele.
+    """
+    antes = set(_hubs_de_sensores_vivos())
+    yield
+    for ident, hub in _hubs_de_sensores_vivos().items():
+        if ident not in antes:
+            with contextlib.suppress(Exception):
+                hub.stop_all()
+
+
 @pytest.fixture(autouse=True)
 def _nenhuma_ordem_do_mic_atravessa() -> Iterator[None]:
     """A ordem da pessoa e a luz do jogo no microfone, que um caso gravou, o caso seguinte não lê.
@@ -2764,6 +2794,32 @@ def pytest_collection_finish(session: Any) -> None:
 
     gc.collect()
     gc.freeze()
+
+
+def _congelar_o_que_o_arquivo_deixou(item: Any, nextitem: Any) -> bool:
+    """No fim de cada arquivo de teste, o que sobreviveu a ele sai da varredura do coletor.
+
+    Medido em 20/10/2026: depois da coleta, os ``functools.cache`` dos portões guardam árvores
+    de sintaxe do produto inteiro (1,28 milhão de nós do `portao_a_casa_sabe_e_o_produto_nao_faz`)
+    e o processo chega a 2 milhões de objetos vivos. A passada cheia custava 0,63 s aqui e 4,2 s
+    sob carga, dentro do prazo de 1 s do `daemon.state_full`. O que um arquivo deixou vivo
+    depois da desmontagem das fixtures dele vive o processo inteiro, como o que a coleta deixou.
+    """
+    if nextitem is not None and getattr(nextitem, "path", None) == getattr(item, "path", None):
+        return False
+    import gc
+
+    gc.collect()
+    gc.freeze()
+    return True
+
+
+@pytest.hookimpl(wrapper=True, specname="pytest_runtest_teardown")
+def pytest_runtest_teardown_congela_o_arquivo(item: Any, nextitem: Any) -> Iterator[None]:
+    try:
+        return (yield)
+    finally:
+        _congelar_o_que_o_arquivo_deixou(item, nextitem)
 
 
 os.environ.setdefault("PYTHONFAULTHANDLER", "1")
