@@ -66,13 +66,13 @@ def _slug(profile: Profile) -> str:
 
 
 def _e_catch_all(profile: Profile) -> bool:
-    """Catch-all pelo predicado do próprio schema (`MatchAny` ou criteria vazio)."""
-    return bool(profile.e_catch_all)
+    """Catch-all pelo schema (`MatchAny` ou criteria vazio), salvo o perfil só de evento."""
+    return bool(profile.e_catch_all) and not profile.so_entra_por_evento
 
 
 def _e_manual(profile: Profile) -> bool:
-    """Perfil só-manual: nunca é candidato do autoswitch, nunca disputa."""
-    return isinstance(profile.match, MatchManual)
+    """Perfil só-manual ou só de evento: nunca é candidato do autoswitch, nunca disputa."""
+    return isinstance(profile.match, MatchManual) or profile.so_entra_por_evento
 
 
 def _tem_dispensa(profile: Profile) -> bool:

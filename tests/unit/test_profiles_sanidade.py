@@ -414,3 +414,29 @@ def test_relatorio_marca_erro_e_aviso_com_tags_diferentes(
 def test_relatorio_de_disco_saudavel_diz_ok() -> None:
     linhas = sanidade.linhas_de_relatorio([], total_perfis=7)
     assert linhas == [("[ OK ]", "perfis coerentes entre si (7 no disco)")]
+
+
+def test_o_perfil_de_evento_nao_disputa_janela() -> None:
+    """O perfil de «Aplicar em: Eventos» nasce `MatchAny` (o «Novo» sem jogo), mas a janela não o
+    ativa (`Profile.so_entra_por_evento`): não é catch-all nem disputa preferência. O «Programa
+    aberto» entra pela janela e continua disputando.
+
+    MORDIDA: sem o `so_entra_por_evento` em `_e_catch_all` e `_e_manual`, o doutor e a Sistema
+    acusam «vale para QUALQUER janela» num perfil que janela nenhuma ativa.
+    """
+    def _evento(nome: str, momento: str, prioridade: int) -> Profile:
+        return _perfil(nome, match=MatchAny(), priority=prioridade).model_copy(
+            update={"alvo": "eventos", "evento": momento})
+
+    perfis = [
+        _perfil("fallback", match=MatchAny(), priority=0),
+        _perfil("pragmata", priority=11),
+        _evento("ao_conectar", "controle_conectado", 11),
+        _evento("meu_teste", "meu_comando", 40),
+    ]
+    regras = _regras(verificar_perfis(perfis))
+    assert not regras & {"catch_all_vence_especifico", "catch_all_com_cara_de_jogo",
+                         "catch_all_demais", "prioridades_empatadas"}, regras
+
+    aberto = _evento("ao_abrir", "programa_aberto", 11)
+    assert "catch_all_vence_especifico" in _regras(verificar_perfis([*perfis, aberto]))
