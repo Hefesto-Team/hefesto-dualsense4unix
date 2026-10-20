@@ -22,7 +22,7 @@ from hefesto_dualsense4unix.app.actions.profiles_actions import (  # isort:skip
 from hefesto_dualsense4unix.profiles.loader import e_perfil_de_jogo_automatico  # isort:skip
 from hefesto_dualsense4unix.profiles.simple_match import (  # isort:skip
     detect_simple_preset,
-    simple_extra,
+    jogo_do_perfil,
 )
 
 DONOS_DOS_GESTOS: dict[str, str] = {
@@ -51,7 +51,7 @@ DONOS_DOS_GESTOS: dict[str, str] = {
     "profiles_actions.on_profile_save:3323. No HTML, o duplo clique na célula "
     "do nome da lista.",
     "editor.jogo": "o campo livre do editor simples; o texto sai de "
-    "profiles/simple_match.simple_extra:305 e volta por from_simple_choice.",
+    "profiles/simple_match.jogo_do_perfil:301 e volta por from_simple_choice.",
     "salvar": "footer_actions.on_save_profile:838 — O ÚNICO Salvar, por ordem "
     "dela (\"Salvar este perfil\" saiu da tela, CORRECOES.md). E ele NÃO "
     "está ligado aqui: os dois Salvar miram alvos diferentes hoje (o do rodapé "
@@ -259,7 +259,7 @@ def _pacote_do_editor(
         "ambiente": ambiente,
         "ambiente_travado": ambiente is None,
         "ambiente_recado": recado,
-        "jogo": simple_extra(match) if match is not None else "",
+        "jogo": jogo_do_perfil(match, getattr(profile, "nome_do_jogo", None)),
         "estilo": _rotulo_do_estilo(getattr(profile, "estilo", None)),
         "estilo_travado": False,
         "estilo_recado": ESTILO_APLICA_E_SAI,

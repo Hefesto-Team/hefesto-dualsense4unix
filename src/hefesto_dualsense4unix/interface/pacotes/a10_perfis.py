@@ -76,7 +76,6 @@ from hefesto_dualsense4unix.profiles.simple_match import (
     PROCEDENCIA_DA_STEAM,
     PROCEDENCIA_DE_QUALQUER_JOGO,
     SEPARADOR_DA_PROCEDENCIA,
-    jogo_do_perfil,
 )
 
 from . import (
@@ -994,10 +993,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         if chave in editor:
             fora[f"editor.{chave.replace('_', '.')}"] = editor[chave]
     if "jogo" in editor:
-        # a regra de várias janelas (o emulador) não diz o jogo: vale o nome que o perfil nasceu
-        # dizendo (`Profile.nome_do_jogo`), a mesma conta do editor e do que o gesto devolve.
-        dito = jogo_do_perfil(getattr(alvo, "match", None), getattr(alvo, "nome_do_jogo", None))
-        fora["editor.jogo"] = _nome_no_campo(dito or str(editor["jogo"] or ""), foto.nomes)
+        fora["editor.jogo"] = _nome_no_campo(str(editor["jogo"] or ""), foto.nomes)
 
     alvo_do_editor = str(editor.get("alvo") or "")
     for valor in ALVOS_DO_PERFIL:
@@ -1839,13 +1835,13 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     `https://store.steampowered.com/app/1599660/…` sobre regra que já guardava `1599660`. A correção
     só cabe aqui: `editor.jogo` está em `CAMPOS_QUE_ELA_DIGITA`, o tique NÃO o repinta no mesmo
     perfil (senão apagaria a segunda tecla) e a resposta deste gesto é o único instante em que a
-    tela devolve a forma canônica, pintada na hora. O valor sai de `simple_extra(prof.match)`, a
-    mesma função com que `perfis_web._pacote_do_editor` enche o campo a cada tique; um `if` local
+    tela devolve a forma canônica, pintada na hora. O valor sai de `jogo_do_perfil`, a mesma
+    função com que `perfis_web._pacote_do_editor` enche o campo a cada tique; um `if` local
     seria a segunda verdade.
     """
     from hefesto_dualsense4unix.profiles.simple_match import (
         from_simple_choice,
-        simple_extra,
+        jogo_do_perfil,
     )
 
     global _RECUSA_DO_JOGO
@@ -1880,7 +1876,8 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     prof.nome_do_jogo = None
     _gravar(prof, ctx, p)
     return _dizer(_agora_vale_em(prof, texto),
-                  **{"editor.jogo": _nome_no_campo(simple_extra(prof.match) or texto, nomes)})
+                  **{"editor.jogo": _nome_no_campo(
+                      jogo_do_perfil(prof.match, prof.nome_do_jogo) or texto, nomes)})
 
 
 ALVOS_DO_PERFIL = ("jogos", "navegacao", "programas", "eventos")
@@ -2034,12 +2031,12 @@ def novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     (`Profile.e_catch_all`) ficariam com dois donos. Não é ativado: nascer não é passar a valer.
 
     **Nasce SEM a seção `mode` (11/09/2026).** Com o quadro «Modo» fora do editor ninguém respondia
-    *"que modo tem um perfil criado aqui?"*; é `None`, o que `Profile` já faz, e o valor tem nome na
-    tela: **«Não mexer no modo»**, o perfil sem opinião. É o único que preserva o comportamento de
-    antes de 06/09 (todo perfil nascia assim); outro padrão faria o novo MEXER no modo da máquina
-    sem pedido, a cicatriz do `or "xbox"` do Salvar da estável (ESCOLHA-DELA-VENCE-01/E1). Quem muda
-    depois é a aba Jogar, e nada aqui zera o campo de perfil que já o tem: o gesto cria arquivo
-    novo, não reescreve os dela.
+    *"que modo tem um perfil criado aqui?"*; é `None`, **«Não mexer no modo»**, o perfil sem
+    opinião, como todo perfil nascia antes de 06/09; outro padrão faria o novo MEXER no modo da
+    máquina sem pedido, a cicatriz do `or "xbox"` do Salvar da estável (ESCOLHA-DELA-VENCE-01/E1).
+    **A exceção (20/10/2026):** o jogo da Steam cuja ponte o prontuário confirmou nasce com essa
+    máscara (`_o_modo_que_o_jogo_pede`). Quem muda depois é a aba Jogar, e nada aqui zera o campo
+    de perfil que já o tem: o gesto cria arquivo novo, não reescreve os dela.
     """
     from hefesto_dualsense4unix.profiles.schema import MatchAny
     from hefesto_dualsense4unix.profiles.simple_match import from_simple_choice

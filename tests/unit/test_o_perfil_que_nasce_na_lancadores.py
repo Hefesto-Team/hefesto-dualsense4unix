@@ -157,3 +157,42 @@ def test_o_arquivo_do_perfil_novo_leva_o_nome_no_disco() -> None:
     achados = [p for p in loader.profiles_dir().iterdir()
                if '"nome_do_jogo": "Metal Slug Anthology"' in p.read_text(encoding="utf-8")]
     assert len(achados) == 1, sorted(p.name for p in loader.profiles_dir().iterdir())
+
+
+def test_o_editor_do_produto_diz_o_jogo_para_todo_chamador() -> None:
+    """MORDIDA: `perfis_web._pacote_do_editor` de volta ao `simple_extra` deixa o campo vazio.
+
+    O dono do campo é a camada do produto, que enche o editor da aba e o do piloto de uma aba
+    (`perfis_vivos`); a aba só traduz o appid em nome.
+    """
+    from hefesto_dualsense4unix.app.actions import perfis_web
+
+    a10_perfis.criar_para_o_jogo(
+        _ctx(), Ponte(), classes=EMULADOR, nome_do_jogo="Metal Slug Anthology")
+    perfil = _o_que_nasceu("Metal Slug Anthology")
+    editor = perfis_web.pacote_da_aba([perfil], ativo=None, editado=perfil)["editor"]
+    assert editor["jogo"] == "Metal Slug Anthology"
+
+
+def test_o_criar_da_aba_lancadores_chega_ao_editor(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O gesto da 07 (`_criar_o_perfil_de`), com as janelas do emulador, até o campo da 10."""
+    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
+    from hefesto_dualsense4unix.interface.pacotes import a07_lancadores
+
+    monkeypatch.setattr(a07_lancadores._ESCOLHA, "janelas", {"emulador:pcsx2": EMULADOR})
+    monkeypatch.setattr(a07_lancadores._ESCOLHA, "titulos", {})
+    jogo = desenho.JogoParaEscolher("emulador:pcsx2", "PCSX2 — emulador")
+    assert a07_lancadores._criar_o_perfil_de(_ctx(), Ponte(), jogo) == "Perfil criado: PCSX2"
+    assert a10_perfis.pacote(_ctx())["editor.jogo"] == "PCSX2"
+
+
+def test_o_novo_com_o_jogo_em_foco_leva_a_mascara_e_nao_o_nome() -> None:
+    """O «Novo» passa pelo mesmo `_nascer`: com o jogo confirmado em foco, a máscara vem junto."""
+    _um_jogo_da_steam_com_ponte("nintendo")
+    contexto = Contexto(state={"window_detect_last_class": "steam_app_1245620"}, mesa=[],
+                        conectados=[], estados={})
+    a10_perfis.novo(contexto, {}, Ponte())
+    perfil = _o_que_nasceu("Novo perfil")
+    assert perfil.mode is not None
+    assert (perfil.mode.kind, perfil.mode.gamepad_flavor) == ("gamepad", "nintendo")
+    assert perfil.nome_do_jogo is None
