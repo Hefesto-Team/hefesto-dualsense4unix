@@ -371,8 +371,9 @@ def _o_nivel_depois_dos_cliques(miolo: str, script: str) -> tuple[str, int]:
             pg = nav.new_page()
             pg.set_content(f'<div class="tn-cx" id="mod-janela">{miolo}</div>'
                            f'<script>{script}</script>')
-            pg.click("#mod-janela .ja-degraus i:nth-child(3)")
-            pg.click("#mod-janela .ja-parar")
+            # Sem a folha da página o degrau não tem tamanho: o clique vai pelo evento do DOM.
+            pg.dispatch_event("#mod-janela .ja-degraus i:nth-child(3)", "click")
+            pg.dispatch_event("#mod-janela .ja-parar", "click")
             return (pg.inner_text("#mod-janela .ja-nivel b"),
                     pg.locator("#mod-janela .ja-degraus i.on").count())
         finally:

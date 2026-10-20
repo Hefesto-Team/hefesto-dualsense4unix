@@ -134,7 +134,10 @@ def test_todo_gesto_do_html_tem_dono_ou_esta_declarado_sem_dono(a07):
                                   "copiar-a-linha",
                                   "desligar-steam-input",
                                   "deixar-tudo-pronto",
-                                  "consertar-lancador"}, (
+                                  "consertar-lancador",
+                                  # Só com uma extensão que declara o «Parar tudo» no manifesto;
+                                  # a do desenho não declara (a dos acessórios saiu em 19/10).
+                                  "parar-tudo-da-modificacao"}, (
         f"estes gestos têm dono e não aparecem em estado nenhum da página: "
         f"{sorted(com_dono - no_html)}")
 

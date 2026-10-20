@@ -346,7 +346,9 @@ _CLICA_O_MAIS = ("(function(){const b = document.querySelector('.ext-mais');"
 def _janela(html: str, ident: str) -> str:
     sem = _sem_estilo_nem_script(html)
     inicio = sem.index(f'id="{ident}"')
-    return sem[inicio:sem.index('<div class="tela-nova"', inicio + 1)]
+    # A janela vai até a seguinte; a última da página, até o fim dela.
+    fim = sem.find('<div class="tela-nova"', inicio + 1)
+    return sem[inicio:fim if fim > 0 else len(sem)]
 
 
 def test_a_janela_generica_da_extensao_tem_um_cartao_por_grupo_e_cancelar_guardar() -> None:
