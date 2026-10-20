@@ -191,7 +191,7 @@ ACENDER_A_FRASE = ("document.querySelector('.mesa-notas[data-campo=\"mesa-frase\
 CENAS_DO_ESTADO: tuple[tuple[str, str], ...] = (
     ("o serviço não respondeu: os quatro lugares apagam",
      "(a) => { " + APAGAR_OS_QUATRO + " return 0; }"),
-    ("o serviço calou: os lugares apagam e a frase da mesa acende",
+    ("os lugares apagam e a frase da mesa acende por cima",
      "(a) => { " + APAGAR_OS_QUATRO + " " + ACENDER_A_FRASE + " return 0; }"),
 )
 
@@ -615,20 +615,25 @@ def test_no_webkit_depois_da_folga_a_tela_diz_que_o_servico_calou(
 
 def test_no_webkit_o_botao_nao_anda_com_os_lugares_apagados(
         tique_mudo: dict[str, Any]) -> None:
-    """O y do botão no repouso, com os lugares apagados e com a frase acesa."""
+    """O y do botão no repouso, com os lugares apagados e com a lista vazia.
+
+    Com o serviço calado a frase da mesa não acende (D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE): só
+    o Status diz Desligado. A frase acesa por cima dos lugares se mede no geométrico, acima.
+    MORDIDA: devolva a frase do serviço calado ao `_frase_da_mesa` e os apagados acendem.
+    """
     amostras = tique_mudo["amostras"]
     repouso = [a["y"] for a in amostras if a["fase"] == "bom" and a["p1"] == "sim"]
-    # Com o serviço parado (a fase «mudo» depois da folga) a frase também acende, com a do serviço
-    # desligado (15/10/2026): os lugares apagados se medem pela fase, não pela falta da frase.
     apagados = [a for a in amostras if a["p1"] == LUGAR_VAZIO and a["fase"] == "mudo"]
-    acesa = [a for a in amostras if a["frase"]]
     vazia = [a for a in amostras if _vazia_pintada(a)]
-    assert repouso and apagados and acesa and vazia, (
-        "a régua não viu o repouso, os lugares apagados, a frase acesa ou a lista vazia — "
+    assert repouso and apagados and vazia, (
+        "a régua não viu o repouso, os lugares apagados ou a lista vazia — "
         "ficaria verde sobre nada")
+    # o primeiro apagado ainda pode chegar com a frase pintada pela fase anterior
+    acesos = [a for a in apagados[1:] if a["frase"]]
+    assert not acesos, (
+        f"o serviço calou e a frase da mesa acendeu em {len(acesos)} de {len(apagados)} amostras")
     base = repouso[-1]
     for rotulo, grupo in (("com os lugares apagados", apagados),
-                          ("com o serviço calado e a frase acesa", acesa),
                           ("com a lista vazia", vazia)):
         pior = max(grupo, key=lambda a: abs(a["y"] - base))
         dy = pior["y"] - base

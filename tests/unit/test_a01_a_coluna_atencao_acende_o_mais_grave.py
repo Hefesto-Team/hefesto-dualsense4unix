@@ -126,7 +126,11 @@ def test_a_lista_leva_todos_os_avisos(monkeypatch: Any) -> None:
 
 
 def test_as_fontes_com_outra_casa_nao_vao_a_09(monkeypatch: Any) -> None:
-    """O serviço calado, a ponte, a cura do travamento e o exame dos controles"""
+    """A ponte, a cura e o exame dos controles: no canal, e fora da lista da 09.
+
+    O serviço calado saiu do canal (D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE): com o serviço
+    parado, só o Status da Jogar diz Desligado, e aviso nenhum o repete.
+    """
     monkeypatch.setattr(painel, "avisos_do_estado", lambda _s: [])
     monkeypatch.setattr(aba, "_aviso_da_ponte", lambda _s: {
         "selo": aba.SELO_DA_PONTE, "texto": "nenhuma — nenhum jogo",
@@ -141,9 +145,10 @@ def test_as_fontes_com_outra_casa_nao_vao_a_09(monkeypatch: Any) -> None:
 
     no_canal = {a["fonte"] for a in aba._avisos(vazio)}
     assert {"storm_doctor.check_snd_quirk", "a08_conexoes._exame",
-            "home_actions._render_home (ramo offline)",
             "home_actions.texto_da_ponte"} <= no_canal, (
         f"o canal perdeu uma fonte: {sorted(no_canal)}")
+    assert "home_actions._render_home (ramo offline)" not in no_canal, (
+        "o aviso do serviço calado voltou ao canal")
     assert aba.coluna_de_atencao(vazio) == [], (
         "uma fonte que já tem casa na tela foi levada à lista da 09: "
         f"{aba.coluna_de_atencao(vazio)!r}")

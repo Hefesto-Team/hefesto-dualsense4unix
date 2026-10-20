@@ -2075,10 +2075,10 @@ PROVAS = [
                 ["left", "Machine", _params_da_imersao(_IMERSAO_DE_PROVA, "Machine", "")],
                 {"uniq": _UNIQ}), _GUARDOU]},
     {"pagina": PAGINA,  # (noqa-acento) chave do contrato
+     # «Sem efeito» solta o gatilho, qualquer que seja o acionamento da coluna (20/10/2026)
      "gesto": "imersao", "clique": {"lado": "d", "valor": SEM_IMERSAO,
                                     "forma": _forma_de_prova("d", "Machine")},
-     "chama": [("trigger_set_detalhado", ["right", "Machine", _padroes("Machine")],
-                {"uniq": _UNIQ}), _GUARDOU]},
+     "chama": [("trigger_reset_detalhado", ["right"], {"uniq": _UNIQ}), _GUARDOU]},
 ]
 
 #: OS GESTOS QUE O DAEMON ACEITA E NÃO PUBLICA. O `state_full` não traz
