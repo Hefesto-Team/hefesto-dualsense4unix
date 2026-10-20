@@ -173,30 +173,7 @@ SIGLA = frozenset({
     "RPG",
 })
 
-#: sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01
-DIVIDA: dict[str, tuple[str, str]] = {
-    "MULTIPLICA": ("ênfase na dica da força", "aba05 · a05_vibracao"),
-    "ESTE": ("ênfase na dica de ignorar", "aba08 · a08_conexoes"),
-    "DERIVADO": ("ênfase na dica da cor do jogador", "aba02 · a02_controles"),
-    "FONTE": ("ênfase na dica do volume", "aba02 · a02_controles"),
-    "MÁQUINA": ("ênfase na dica do mudo do sistema", "aba08 · a08_conexoes"),
-    "TAMBÉM": ("ênfase na dica do «Ouvir junto»", "aba02 · a02_controles"),
-    "TROCA": ("ênfase na dica da curva pronta", "aba03 · a03_gatilhos"),
-    "GABINETE": ("ênfase na dica das entradas", "aba08 · a08_conexoes"),
-    "JOGADOR": ("ênfase na dica do código da cor", "aba02 · a02_controles"),
-    "UM": ("ênfase na dica do motor", "aba05 · a05_vibracao"),
-    "LIGADO": ("ênfase no bilhete de estado", "aba01 · a01_jogar"),
-    "DESLIGADO": ("ênfase no bilhete de estado", "aba01 · a01_jogar"),
-    "FICA": ("ênfase na dica do hub de bancada", "aba08 · a08_conexoes"),
-    "TEM": ("ênfase na dica de tirar daqui", "aba08 · a08_conexoes"),
-    "TODOS": ("ênfase na dica de pôr em todos os jogos", "aba09 · a09_sistema"),
-    "TOTAL": ("ênfase na dica do contador", "aba08 · a08_conexoes"),
-    "OCUPAÇÃO": ("ênfase na dica do rádio cheio", "aba08 · a08_conexoes"),
-    "LINHAS_DO_TETO": ("nome de constante do produto na dica",
-                       "aba09 — assunto do `check_a_tela_nao_confessa`"),
-    "RUMBLE_POLICY_MULT": ("nome de constante do produto na dica",
-                           "aba09 — assunto do `check_a_tela_nao_confessa`"),
-}
+DIVIDA: dict[str, tuple[str, str]] = {}
 
 
 def _palavras(pagina: str) -> dict[str, list[tuple[int, str]]]:

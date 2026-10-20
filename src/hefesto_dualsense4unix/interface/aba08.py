@@ -1472,7 +1472,7 @@ TELA_MAPEAR = f'''
       {CONFISSAO_NA_TELA}
 
       <div class="acoes mm-acoes">
-        <button class="btn apagado" data-gesto="tirar-daqui" title="Acende quando você clica numa entrada que TEM aparelho. Ele escreve “sem aparelho” nessa entrada — a entrada continua no desenho, só fica vazia.">{MAPA["ROTULO_TIRAR"]}</button>
+        <button class="btn apagado" data-gesto="tirar-daqui" title="Acende quando você clica numa entrada que tem aparelho. Ele escreve “sem aparelho” nessa entrada — a entrada continua no desenho, só fica vazia.">{MAPA["ROTULO_TIRAR"]}</button>
         <button class="btn apagado" data-gesto="nova-extensao" title="Acende quando você clica numa entrada cujo número é só dígito. Cria a filha dela — a 10 vira 10a, depois 10b. Não há neta.">{MAPA["ROTULO_EXTENSAO"]}</button>
         <span class="mm-nova"><input class="mm-campo" placeholder="{MAPA["NOME_DA_FACE_EM_BRANCO"]}" maxlength="16">
           <button class="btn" data-gesto="nova-face" title="Cria uma face com o nome que você escreveu, sem entrada nenhuma. Sem nome, não cria.">{MAPA["ROTULO_NOVA_FACE"]}</button></span>
@@ -3050,7 +3050,7 @@ TELA_EM_PE = cerimonia(
     CALIB["PROCURANDO"],
     f'<button class="btn foco" data-gesto="entrada-nao-alcanco" title="Tira esta entrada da '
     f'conta de vez: não vira dívida, não vira aviso, e o Hefesto não volta a perguntar. Ela '
-    f'diminui o TOTAL do contador, não o feito.">{CALIB["ROTULO_NAO_ALCANCO"]}</button>',
+    f'diminui o total do contador, não o feito.">{CALIB["ROTULO_NAO_ALCANCO"]}</button>',
     "Encaixe o DualSense com o cabo numa entrada vazia",
     JA_CHEGA)
 

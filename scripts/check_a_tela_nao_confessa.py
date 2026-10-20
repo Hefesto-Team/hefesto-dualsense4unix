@@ -96,13 +96,7 @@ FATOS: dict[str, str] = {
         "11/09/2026",}
 
 
-#: sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01
-A_DIVIDA: dict[str, str] = {
-    "está desenhado na tela e o Hefesto não sabe montar essa máscara":
-        "`interface/pacotes/a01_jogar.py` — a tela OFERECE uma máscara que o "
-        "produto não constrói. O que falta é o construtor, e a frase é o "
-        "recibo disso no cartão dela — medida em 11/09/2026",
-}
+A_DIVIDA: dict[str, str] = {}
 
 
 def _limpo(html: str) -> str:

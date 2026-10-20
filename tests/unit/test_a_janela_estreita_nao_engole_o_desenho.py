@@ -368,9 +368,7 @@ ESPERADO_VERMELHO: dict[tuple[str, str], str] = {
     ),
 }
 
-#: sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01
-CORTE_CONHECIDO_NO_DESENHO: dict[tuple[str, str], str] = {
-}
+CORTE_CONHECIDO_NO_DESENHO: dict[tuple[str, str], str] = {}
 
 ESPERADO_VERMELHO_SELECT: dict[tuple[str, str], str] = {
     ("03-gatilhos.html", "estreita"): (

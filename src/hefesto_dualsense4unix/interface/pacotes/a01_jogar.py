@@ -1898,8 +1898,7 @@ def mascara_do_controle(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
         tem = ", ".join(NOME_DA_MASCARA[f] for f in sorted(mascaras_validas())
                         if f in NOME_DA_MASCARA)
         raise RuntimeError(
-            f"“{rotulo}” está desenhado na tela e o Hefesto não sabe montar "
-            f"essa máscara. As que existem: {tem}.")
+            f"“{rotulo}” não é uma máscara que exista. As que existem: {tem}.")
 
     # Ela estava escrita `p.chamar("gamepad.mask.set", {"uniq": …, "flavor": …})`,
     # `ponte.chamar(metodo, timeout=None, **params)`: o 2º posicional é o  # (parâmetro) noqa-acento

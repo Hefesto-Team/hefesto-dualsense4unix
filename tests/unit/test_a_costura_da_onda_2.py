@@ -341,11 +341,7 @@ _OS_QUE_PODEM = {
     # fica: é o dono da palavra, e as duas entradas dele são a regra
     (_O_DONO, "define a palavra"): "é o dono (D-2609-O-NOME-E-DA-POSICAO)",
     (_O_DONO, "compõe com a palavra"): "é o dono (D-2609-O-NOME-E-DA-POSICAO)",
-    # sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01 (a cópia da palavra é um segundo dono)
-    ("interface/calibracao_das_entradas.py", "define a palavra"): (
-        "a cópia que o gerador da aba 08 lê por AST — não importa do dono sem "
-        "quebrar o gerador; travada junto por test_entrada_a_entrada_grava.py"
-    ),
+    # sai com: O-MOTOR-DO-ARRANJO-E-O-DESENHO-DIZEM-A-ENTRADA-PELO-DONO-01 (o ouro do motor)
     ("integrations/arranjo_da_mesa.py", "compõe uma f-string"): (
         "o porte do motor medido contra o ouro (`tests/fixtures/motor_do_arranjo_"
         "do_mockup.js`); a página do mapa tem o motor dela, que já pergunta ao "

@@ -345,7 +345,6 @@ def conferir_html(raiz: Path = PAGINAS) -> list[str]:
     return achados
 
 
-#: sai com: A-TELA-SEM-O-QUE-A-REGUA-ACEITA-01
 DIVIDA_DA_PALAVRA_01_PY: dict[str, str] = {}
 
 ESCOADOUROS: dict[str, int] = {

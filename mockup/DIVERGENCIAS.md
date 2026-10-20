@@ -26,3 +26,6 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ## 09-sistema.html
 - **20/10/2026** — o piso de 24 px nos alvos e de 12 px na letra, com a folha do piso na cabeça da página (escolha «Sistema: A» dela, 20/10); espera só o `--publicar 09`. Enquanto isso, a página publicada segue com os alvos e as letras de antes, e o pacote pinta os mesmos campos nela sem quebrar nada.
+
+## 08-conexoes.html
+- **20/10/2026** — duas palavras de dica em minúscula («tem», «total»: a regra da primeira letra); espera só o `--publicar 08`. Enquanto isso, a página publicada segue com as duas em caixa alta, e o portão `maiuscula-decorativa` fica vermelho nela até a publicação.

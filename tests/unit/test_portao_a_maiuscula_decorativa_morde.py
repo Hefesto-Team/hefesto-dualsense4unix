@@ -141,8 +141,7 @@ def test_a_cor_e_o_endereco_saem_pela_forma_inteira():
 
 
 def test_a_divida_esta_declarada_e_nao_reprova():
-    """A dívida sai IMPRESSA com o dono, e não some."""
-    assert regua.DIVIDA, "a dívida sumiu sem ninguém curá-la"
+    """A dívida, quando existe, sai IMPRESSA com o dono (hoje está curada: a lista é vazia)."""
     for palavra, (oque, dono) in regua.DIVIDA.items():
         assert palavra == palavra.upper(), palavra
         assert oque and dono, f"{palavra} sem o que é ou sem dono"

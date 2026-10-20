@@ -96,6 +96,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
+    PALAVRA_DA_ENTRADA as PALAVRA_DA_ENTRADA,
+)
 
 logger = get_logger(__name__)
 
@@ -169,9 +172,6 @@ O_QUE_EU_NAO_MECO = (
     "interferência eu não meço, e não vou fingir que meço.",
     "Quanto de bateria cada ajuste custa. Ninguém mediu ainda nesta casa.",
 )
-
-PALAVRA_DA_ENTRADA = "Entrada"
-
 
 POSSE_DA_CALIBRACAO = "calibrar_entradas"
 
