@@ -1139,13 +1139,19 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
 </style>
 <style id="variante-alvos">
-/* A (09): o piso no arranjo de hoje — Copiar e Salvar em 24 px, nenhuma letra abaixo de 12 px; o resto fica onde está */
+/* A (09): o piso no arranjo de hoje — Copiar, Salvar e o que abre dica em 24 px, nenhuma letra abaixo de 12 px; o respiro entre os grupos aperta */
 body .selo,body .selo .sg{font-size:12px !important}
 body .saude .selo{flex:0 0 84px !important}
 body .pt{font-size:12px !important}
 body .sec-rot .btn.copiar{height:24px !important;font-size:12px !important}
 body .sec-rot.sr-log{height:35px !important}
 body .log{font-size:12px !important}
+/* a dica também é alvo: as linhas do Status e os títulos que só abrem dica chegam a 24 px; paga a margem embaixo do título e entre os grupos */
+body .saude .txt{min-height:24px !important}
+body .sec-rot{height:24px !important;margin-bottom:2px !important}
+body .sec-rot>span{min-height:24px !important}
+body .quadro-titulo{min-height:24px !important;display:inline-flex !important;align-items:center !important}
+body .sec-grupo,body .sec-alta{margin-top:10px !important;padding-top:8px !important}
 </style>
 </head>
 <body data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">

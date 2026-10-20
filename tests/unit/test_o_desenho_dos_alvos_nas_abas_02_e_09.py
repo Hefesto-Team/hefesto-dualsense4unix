@@ -2,16 +2,18 @@
 
 Só desenho: as quatro variantes moram em `mockup/variantes/` e nunca entram na página publicada nem
 no produto. O piso é dela (13/10/2026: alvo de 24 px e nenhuma letra abaixo de 12 px, sem rolagem
-vertical nova). A régua mede o que o olho veria: todo elemento que age, todo texto visível,
-em quatro vistas e em todos os estados do acordeão da 02.
+vertical nova). A régua mede o que o olho veria: todo elemento que age, todo título ou rótulo
+que abre dica (o `?` de antes, que a OS-ALVOS mede como alvo), todo texto visível, em quatro
+vistas e em todos os estados do acordeão da 02.
 
 MORDIDAS (executadas aqui, sobre uma cópia do HTML, e cada uma reprova a régua que a guarda):
 
 * tirar a folha da variante da 02 A -> `test_a_regua_do_piso_morde_a_folha_arrancada`;
 * o Copiar da 09 A a 22 px -> `test_a_regua_do_piso_morde_o_alvo_pequeno`;
 * a letra do registro da 09 A a 11 px -> `test_a_regua_do_piso_morde_a_letra_pequena`;
-* a dica da 02 B de volta a 16 px -> `test_a_regua_do_piso_morde_a_dica_pequena`;
-* a linha do Status da 09 B sem os 24 px -> `test_a_regua_do_piso_morde_a_dica_pequena_da_09`;
+* a dica da 02 B de volta a 16 px, e a da 02 A -> `test_a_regua_do_piso_morde_a_dica_pequena`;
+* a linha do Status da 09 B e a da 09 A sem os 24 px ->
+  `test_a_regua_do_piso_morde_a_dica_pequena_da_09`;
 * devolver o texto antigo da vaga, ou a máscara escondida nela ->
   `test_a_vaga_diz_so_player_n_desconectado`;
 * uma altura que estoura a tela da 02 B -> `test_a_regua_do_piso_morde_a_rolagem_nova`;
@@ -155,7 +157,7 @@ def _medida_da_base(navegador: Browser, nome: str, vista: tuple[int, int],
 
 def _problemas(navegador: Browser, nome: str, arquivo: pathlib.Path, vista: tuple[int, int],
                estado: str = "") -> list[str]:
-    """O que reprova o piso nesta vista e neste estado. A B também zera a dica focável."""
+    """O que reprova o piso nesta vista e neste estado, nas duas opções: a dica focável é alvo."""
     m = _medir(navegador, arquivo, vista, estado)
     base = _medida_da_base(navegador, nome, vista, estado)
     falta: list[str] = []
@@ -163,8 +165,8 @@ def _problemas(navegador: Browser, nome: str, arquivo: pathlib.Path, vista: tupl
         falta.append(f"alvos abaixo de 24 px: {m['alvos'][:3]}")
     if m["letras"]:
         falta.append(f"letra abaixo de 12 px: {m['letras'][:3]}")
-    if "-B-" in nome and m["dicas"]:
-        falta.append(f"a dica focável da B abaixo de 24 px: {m['dicas'][:3]}")
+    if m["dicas"]:
+        falta.append(f"a dica focável abaixo de 24 px: {m['dicas'][:3]}")
     novos = [r for r in m["rol"] if r not in base["rol"]]
     if novos or m["lateral"]:
         falta.append(f"rolagem nova: {novos} lateral={m['lateral']}")
@@ -185,7 +187,8 @@ def _casos() -> list[tuple[str, tuple[int, int], str]]:
 @pytest.mark.parametrize(("nome", "vista", "estado"), _casos())
 def test_o_piso_vale_em_toda_vista_e_estado(navegador: Browser, nome: str,
                                             vista: tuple[int, int], estado: str) -> None:
-    """Zero alvo de ação abaixo de 24 px, zero letra abaixo de 12 px e nenhuma rolagem nova."""
+    """Zero alvo abaixo de 24 px (a dica inclusive), zero letra abaixo de 12 px e nenhuma rolagem
+    nova."""
     assert _problemas(navegador, nome, VARIANTES / f"{nome}.html", vista, estado) == [], (
         nome, vista, estado)
 
@@ -278,10 +281,14 @@ def test_a_regua_do_piso_morde_a_letra_pequena(navegador: Browser, tmp_path: pat
     assert any("letra abaixo" in f for f in falta), falta
 
 
-def test_a_regua_do_piso_morde_a_dica_pequena(navegador: Browser, tmp_path: pathlib.Path) -> None:
-    nome = NOMES[1]
+@pytest.mark.parametrize(("nome", "regra"), (
+    (NOMES[0], "body.por-controle .rot[data-dica]{"),
+    (NOMES[1], "body.por-controle .rot[data-dica],"),
+))
+def test_a_regua_do_piso_morde_a_dica_pequena(navegador: Browser, tmp_path: pathlib.Path,
+                                              nome: str, regra: str) -> None:
     doc = _ler(nome)
-    mordido = doc.replace("body.por-controle .rot[data-dica],", "body.por-controle .nada,", 1)
+    mordido = doc.replace(regra, "body.por-controle .nada" + regra[-1], 1)
     assert mordido != doc
     falta = _problemas(navegador, nome, _escreve(tmp_path, "dica", mordido), VISTAS[0], "c-p1")
     assert any("dica focável" in f for f in falta), falta
@@ -297,9 +304,9 @@ def test_a_regua_do_piso_morde_a_rolagem_nova(navegador: Browser, tmp_path: path
     assert any("rolagem nova" in f or "documento" in f for f in falta), falta
 
 
-def test_a_regua_do_piso_morde_a_dica_pequena_da_09(navegador: Browser,
-                                                    tmp_path: pathlib.Path) -> None:
-    nome = NOMES[3]
+@pytest.mark.parametrize("nome", NOMES[2:])
+def test_a_regua_do_piso_morde_a_dica_pequena_da_09(navegador: Browser, tmp_path: pathlib.Path,
+                                                    nome: str) -> None:
     doc = _ler(nome)
     mordido = doc.replace("body .saude .txt{min-height:24px !important}\n", "", 1)
     assert mordido != doc

@@ -2561,6 +2561,8 @@ body.por-controle .gat-linha .n{top:-15px !important;line-height:14px !important
 /* a vaga (r4-02-18): «Player 3 • Desconectado», sem cor, máscara, microfone, sensores nem bateria */
 body.por-controle .ctl.off,body.por-controle .ctl.off:has(> input:checked),body.por-controle:has(#c-todos:checked) .ctl.off{height:26px !important;padding-bottom:0 !important}
 body.por-controle .ctl.off > .faixa{height:24px !important;display:flex !important;align-items:center !important;font-size:12px !important}
+/* a dica também é alvo: o rótulo que só abre dica chega a 24 px, pago pela margem de baixo dele */
+body.por-controle .rot[data-dica]{min-height:24px !important;display:flex !important;align-items:center !important;margin-bottom:0 !important}
 </style>
 </head>
 <body class="por-controle" data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
