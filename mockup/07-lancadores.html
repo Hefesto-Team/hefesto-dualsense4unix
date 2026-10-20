@@ -1434,6 +1434,14 @@
 #mod-janela .ky-ctrl { justify-content:flex-end }
 #mod-janela .ky-ctrl .ext-sel { width:220px }
 #mod-janela .ac-card .jg-lista { max-height:150px }
+/* Com três grupos ou mais, os cartões vão em duas colunas (o arranjo da janela dos acessórios): numa
+   coluna só, um manifesto de quatro grupos passava por baixo do Cancelar e do Guardar e saía da janela. O
+   corpo nunca vaza: o que ainda não couber rola dentro dele. */
+#mod-janela .ky-grade:has(> .ac-card:nth-child(3)) { grid-template-columns:repeat(2,minmax(0,1fr)) }
+#mod-janela .ky-grade:has(> .ac-card:nth-child(3)) .ky-linha { grid-template-columns:minmax(0,1fr) auto }
+#mod-janela .ky-grade:has(> .ac-card:nth-child(3)) .ky-ctrl .ext-sel { width:170px }
+#mod-janela > .tn-corpo { overflow-y:auto;scrollbar-width:thin }
+#mod-janela > .tn-corpo:has(> .ky-grade > .ac-card:nth-child(3)) { padding-bottom:8px }
 /* A coluna «Agora» e o «Parar tudo» da janela genérica: a extensão que os declara ganha a largura da
    janela dos acessórios; os degraus só mostram o nível, não são botão. */
 #mod-janela:has(.ja-corpo) { width:1130px }
