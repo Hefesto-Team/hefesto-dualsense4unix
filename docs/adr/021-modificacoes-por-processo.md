@@ -26,16 +26,21 @@ permissões que a pessoa aceitou.
 1. **O manifesto** (`mods/manifesto.py`) é JSON lido por pydantic com `extra="forbid"`. É JSON porque o
    projeto aceita Python 3.10, que não tem `tomllib`.
    - Campos: `id`, `nome`, `versao`, `api` (faixa como `">=1,<3"`), `licenca` (SPDX), `descricao`,
-     `aviso`, `tipos`, `processo.executar`, `permissoes`, `opcoes`, `lancador`, `tema`, `aparelhos`.
+     `aviso`, `tipos`, `processo.executar`, `permissoes`, `opcoes`, `agora`, `parar_tudo`, `lancador`,
+     `tema`, `aparelhos`.
+   - `tipos` é um ou mais de `processo`, `lancador`, `tema` e `perfil`. O tipo `processo` anda com o bloco
+     `processo`, e o `lancador` com o bloco e a permissão `lancador` (os campos do bloco estão na
+     [porta](../protocol/porta-das-modificacoes.md)).
    - Fora da faixa de `API_DAS_MODIFICACOES = 2`, a modificação não sobe. A recusa é uma frase:
      ««Nome» pede a porta >=3, e este Hefesto fala a 2.» A 2 (19/10/2026) acrescentou o `aviso` e o
      `lancador.jogos`.
-   - `opcoes` é o bloco das escolhas que a tela mostra no ajuste de cada modificação: `escolha`,
-     `ligado` ou `numero`.
+   - `opcoes` é o bloco das escolhas que a tela mostra no ajuste de cada modificação, com os tipos
+     `escolha`, `ligado`, `numero`, `cor`, `deslizante` e `jogos`.
 2. **As permissões**, uma palavra cada, aparecem antes de ligar:
    - `ler:<tópico>`;
    - `escrever:luz|vibracao|gatilho`;
    - `rede:nenhuma|local|internet`;
+   - `publicar:jogo.acessorio` e `pedir:luz.pulso`;
    - `bluetooth`, `lancador`, `tema` e `aparelhos`.
 
    Toda escrita leva o `uniq`, porque escrever em todos é proibido (BROADCAST-PROIBIDO-01). Ela também

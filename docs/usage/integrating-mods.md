@@ -1,5 +1,9 @@
 # Integrando mods DSX
 
+Este guia é o dos mods do DSX, pelo UDP. A extensão do Hefesto (o `hefesto-mod.json`, o processo na caixa,
+o lançador) é outro contrato: [ADR-021](../adr/021-modificacoes-por-processo.md) e
+[a porta das modificações](../protocol/porta-das-modificacoes.md).
+
 O daemon escuta UDP em `127.0.0.1:6969` — a mesma porta do DSX no Windows — e traduz as instruções para HID.
 
 **O formato canônico do DSX é aceito.** O pacote que o SDK da Paliverse emite (sem campo `version`, `type` como ordinal do enum, `parameters[0]` = `controllerIndex`) chega e é executado. O dialeto textual do Hefesto continua valendo em paralelo, na mesma porta.

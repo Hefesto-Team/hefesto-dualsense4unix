@@ -169,6 +169,21 @@ A aba 07 pede o `mods.jogos` de cada extensão de lançador ligada e sem leitor,
 da lista, ao lado da Steam e do Heroic, com a contagem dos instalados («2 jogos»). Desligada ou
 desinstalada, a linha some.
 
+### O bloco `lancador` do manifesto
+
+O tipo `lancador`, o bloco `lancador` e a permissão `lancador` andam juntos, e a instalação recusa, com a
+frase, o manifesto em que falta um deles ou cujo bloco não serve. O bloco aceita só estes campos:
+
+- `rotulo` (exigido): o nome do lançador na aba Experimental, de 1 a 60 letras;
+- `atalhos` e `comandos` (pelo menos um dos dois): os nomes do `.desktop` (`net.lutris.Lutris`) e os
+  comandos do `PATH` (`lutris`) que dizem que o lançador está instalado; o primeiro termo de cada `abrir`
+  tem de ser um dos `comandos`;
+- `janelas`: os app-ids das janelas que o lançador abre, para o perfil «todos os jogos»;
+- `titulo_do_jogo`: a expressão (`re.search`) que o `titulo_do_jogo` de cada jogo tem de casar;
+- `leitor`: o leitor da biblioteca, abaixo.
+
+As listas vão até 16 itens.
+
 ### O leitor no manifesto
 
 A extensão só de `lancador` (sem `processo`) declara o leitor no `lancador.leitor`, e a interface o roda
@@ -176,8 +191,11 @@ numa caixa só de leitura, sem rede (`bwrap`), quando a biblioteca muda:
 
 - `executar`: o comando, a partir da pasta da extensão (`["python3", "-I", "leitor.py"]`);
 - `prazo_s`: o prazo da leitura, em segundos;
-- `fontes`: os arquivos que o leitor lê, relativos à `HOME` (o `*` vale no último pedaço). A mudança de
-  um deles é o que faz a leitura sair de novo.
+- `fontes`: os arquivos que o leitor lê, relativos à `HOME`, até 16. A mudança de um deles é o que faz a
+  leitura sair de novo. A fonte sem `*` conta só pela própria data, e a data de uma pasta muda quando um
+  arquivo entra ou sai dela, não quando um arquivo de dentro muda no lugar: para a pasta que o leitor
+  percorre, declare o padrão (`.config/retroarch/playlists/*.lpl`; o `*` vale só no último pedaço), que
+  conta a pasta e cada arquivo que casa.
 
 O leitor imprime uma lista JSON, um objeto por jogo: `chave` e `nome` são exigidos; `caminho`,
 `titulo_do_jogo` (que casa o `lancador.titulo_do_jogo` do manifesto), `janela` (o app-id da janela do
