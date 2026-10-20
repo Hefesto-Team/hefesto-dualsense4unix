@@ -62,6 +62,8 @@ PACOTE = Path("src") / "hefesto_dualsense4unix"
 CENSO = Path("docs/data/contratos-de-fora.csv")
 CADERNO = Path("docs/data/os-contratos-de-fora.json")
 SPRINTS = Path("docs/process/sprints")
+#: A feita desce para cá (`mover-sprints-fechadas.py`) e continua sendo a filha da linha.
+ARQUIVADAS = SPRINTS / "arquivados"
 MODULO_DO_DOCTOR = Path("src/hefesto_dualsense4unix/integrations/contratos_de_fora.py")
 
 COLUNAS = (
@@ -471,6 +473,11 @@ def contratos_do_doctor(raiz: Path) -> dict[str, set[str]]:
     return contratos
 
 
+def _a_filha_existe(raiz: Path, filha: str) -> bool:
+    """A sprint da linha está na pasta viva ou na gaveta das feitas."""
+    return any(any((raiz / pasta).glob(f"*{filha}*.md")) for pasta in (SPRINTS, ARQUIVADAS))
+
+
 def julgar(raiz: Path, contatos: Iterable[Contato] | None = None) -> list[str]:
     """As queixas, nomeadas. Lista vazia = o censo diz o que o código faz."""
     contatos = list(varrer(raiz) if contatos is None else contatos)
@@ -525,8 +532,8 @@ def _julgar_a_linha(raiz: Path, linha: dict[str, str]) -> list[str]:
         # `docs/process/` é ignorado pelo git: num clone limpo (o CI) a pasta não existe, e a
         # filha só se confere onde ela mora. A coluna vazia reprova em toda parte.
         tem_sprints = any((raiz / SPRINTS).glob("*.md")) if (raiz / SPRINTS).is_dir() else False
-        if not filha or (tem_sprints and not list((raiz / SPRINTS).glob(f"*{filha}*.md"))):
-            q.append(f"{rotulo}: linha frágil sem `sprint_filha` que exista em {SPRINTS} ({filha!r})")
+        if not filha or (tem_sprints and not _a_filha_existe(raiz, filha)):
+            q.append(f"{rotulo}: linha frágil sem `sprint_filha` que exista em {SPRINTS} nem em {ARQUIVADAS} ({filha!r})")
     doctor = linha["como_o_doctor_ve"]
     if doctor.startswith("contrato:"):
         contratos = contratos_do_doctor(raiz)

@@ -111,6 +111,34 @@ def test_linha_fragil_sem_motivo_ou_sem_filha_reprova(tmp_path):
     assert any("sem `sprint_filha`" in q for q in queixas)
 
 
+
+def _fragil_com_filha(arq: str, filha: str) -> dict[str, str]:
+    return _linha(arq, "path:/var/lib/bluetooth", porta="interna", forma="comando",
+                  motivo="m", sprint_filha=filha, como_o_doctor_ve="-")
+
+
+def _pasta_das_sprints(raiz: Path) -> Path:
+    sprints = raiz / regua.SPRINTS
+    (sprints / "arquivados").mkdir(parents=True)
+    (sprints / "2026-10-20-OUTRA-ABERTA-01.md").write_text("---\n", encoding="utf-8")
+    return sprints
+
+
+def test_a_filha_arquivada_continua_sendo_a_filha(tmp_path):
+    """MORDIDA: tire o `ARQUIVADAS` do `_a_filha_existe` e a feita que desceu reprova a linha."""
+    arq = f"{PACOTE}/novo.py"
+    raiz = _arvore(tmp_path, {arq: LE_O_BOND}, [_fragil_com_filha(arq, "A-FEITA-01")])
+    sprints = _pasta_das_sprints(raiz)
+    (sprints / "arquivados" / "2026-10-01-A-FEITA-01.md").write_text("---\n", encoding="utf-8")
+    assert regua.julgar(raiz) == []
+
+
+def test_a_filha_que_nao_esta_em_pasta_nenhuma_reprova(tmp_path):
+    arq = f"{PACOTE}/novo.py"
+    raiz = _arvore(tmp_path, {arq: LE_O_BOND}, [_fragil_com_filha(arq, "SUMIDA-01")])
+    _pasta_das_sprints(raiz)
+    assert any("sem `sprint_filha`" in q and "SUMIDA-01" in q for q in regua.julgar(raiz))
+
 def test_contrato_que_o_doctor_nao_declara_reprova(tmp_path):
     arq = f"{PACOTE}/novo.py"
     raiz = _arvore(
