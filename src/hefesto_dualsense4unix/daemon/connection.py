@@ -171,6 +171,7 @@ async def anunciar_bordas_por_alvo(
             {"reason": "alvo_sumiu", "uniq": uniq},
         )
         logger.info("controller_disconnected", reason="alvo_sumiu", uniq=uniq)
+    anunciar_a_chegada(daemon, antes, agora)
     for key in [k for k in agora if k not in antes]:
         with contextlib.suppress(Exception):
             await reapply_speaker_after_connect(daemon, uniq=agora[key])
@@ -585,6 +586,7 @@ async def reconnect_loop(
         with contextlib.suppress(Exception):
             setattr(daemon, "_watch_dos_hidraw", nos)  # noqa: B010 — fora do protocolo
         registrar_gatilho_da_lightbar(daemon)
+        registrar_a_chegada(daemon)
         watch.poll()
         if nos is not None:
             nos.poll()
@@ -635,6 +637,7 @@ async def reconnect_loop(
                         await _restore_last_profile(daemon)
                     restored = True
                 await reaplicar_som_em_todos_os_alvos(daemon)
+                anunciar_a_chegada(daemon, alvos_antes, alvos_agora or {})
                 was_connected = True
             elif not is_connected and was_connected and trocando:
                 await anunciar_bordas_por_alvo(daemon, alvos_antes, alvos_agora or {})
@@ -753,6 +756,38 @@ def registrar_gatilho_da_lightbar(daemon: DaemonProtocol) -> None:
         _reafirmar,
         atraso_s=ATRASO_APOS_A_ULTIMA_CONEXAO_S,
     )
+
+
+def registrar_a_chegada(daemon: DaemonProtocol) -> None:
+    """Fia a Chegada no mecanismo genérico: ela toca quando a rajada da Steam passa."""
+    from hefesto_dualsense4unix.daemon.subsystems.chegada import (
+        ESPERA_S,
+        NOME_DO_GATILHO,
+        chegada_de,
+    )
+
+    registrar_gatilho(
+        daemon, NOME_DO_GATILHO, lambda: chegada_de(daemon).tocar(), atraso_s=ESPERA_S
+    )
+
+
+def anunciar_a_chegada(
+    daemon: DaemonProtocol,
+    antes: dict[str, str | None],
+    agora: dict[str, str | None],
+) -> int:
+    """Os controles que entraram na mesa ganham a Chegada, depois da rajada. Devolve quantos."""
+    from hefesto_dualsense4unix.daemon.subsystems.chegada import NOME_DO_GATILHO, chegada_de
+
+    novos = [uniq for key, uniq in agora.items() if key not in antes and uniq]
+    if not novos:
+        return 0
+    chegada = chegada_de(daemon)
+    for uniq in novos:
+        chegada.chegou(uniq)
+    registrar_a_chegada(daemon)
+    armar_gatilho(daemon, NOME_DO_GATILHO, evento="controle_novo", quantos=len(novos))
+    return len(novos)
 
 
 def _preparar_a_lightbar(daemon: DaemonProtocol) -> None:

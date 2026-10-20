@@ -122,6 +122,20 @@ FORMAS: dict[str, Forma] = {
     ECO: Forma(((60, 0.6), (160, 0.4)), 2, 380, 50, 300),
 }
 
+#: A Assinatura (20/10/2026): o Toque na nota de cada unidade, de 150 a 195 Hz de 15 em 15. A
+#: nota é da cor do plástico (``daemon/subsystems/chegada``), e a forma é só do estilo: fora de
+#: ``FORMAS`` e de ``ESCOLHAS``.
+NOTAS_DA_ASSINATURA: tuple[int, ...] = (150, 165, 180, 195)
+ASSINATURAS: dict[str, Forma] = {
+    f"toque-{hz}": Forma(((hz, 1.0),), 3, None) for hz in NOTAS_DA_ASSINATURA
+}
+
+
+def forma_da_nota(hz: int | None) -> str:
+    """A forma do Toque na nota ``hz``; o Toque de 160 Hz quando a unidade não tem nota."""
+    chave = f"toque-{hz}"
+    return chave if chave in ASSINATURAS else TOQUE
+
 
 def amostras(
     chave: str, energia: float, duracao_ms: int | None = None, taxa: int = TAXA
@@ -129,7 +143,7 @@ def amostras(
     """As amostras de UMA forma: sobe no ataque, cai até zero no fim, nunca passa de ``energia``."""
     if chave in (GRAO, MOTOR_DE_EPOCA):
         return _volta_da_continua(chave, energia, duracao_ms, taxa)
-    forma = FORMAS.get(chave)
+    forma = FORMAS.get(chave) or ASSINATURAS.get(chave)
     if forma is None:
         raise ValueError(
             f"forma de háptica desconhecida: {chave!r}. As que existem: "
@@ -149,7 +163,7 @@ def _molde(chave: str, n: int, taxa: int) -> tuple[array[float], array[float]]:
     O toque sai no laço do tato, no fio do daemon: a Guarda (850 ms, dois senos) custa uns 20 ms
     de conta, e refazê-la a cada tiro seguraria a entrada dos quatro controles.
     """
-    forma = FORMAS[chave]
+    forma = FORMAS.get(chave) or ASSINATURAS[chave]
     cauda = round(taxa * forma.cauda_ms / 1000) if forma.cauda_hz else 0
     corpo = max(2, n - cauda)
     ataque = max(1, min(corpo - 1, round(taxa * forma.ataque_ms / 1000)))
@@ -409,6 +423,7 @@ def _volta_da_continua(
 
 __all__ = [
     "APARO",
+    "ASSINATURAS",
     "CONTINUAS",
     "CORTE_ALTO_HZ",
     "CORTE_BAIXO_HZ",
@@ -425,6 +440,7 @@ __all__ = [
     "GUARDA",
     "IMPACTO",
     "MOTOR_DE_EPOCA",
+    "NOTAS_DA_ASSINATURA",
     "POR_ESTILO",
     "ROTULOS",
     "ROTULOS_DO_ESTILO",
@@ -439,6 +455,7 @@ __all__ = [
     "GeradorDoMotorDeEpoca",
     "amostras",
     "escolha_valida",
+    "forma_da_nota",
     "forma_do_estilo",
     "forma_que_vale",
 ]

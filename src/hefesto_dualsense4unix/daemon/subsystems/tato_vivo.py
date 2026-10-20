@@ -995,6 +995,13 @@ def bloco_do_gatilho(modo: str, receita: Receita) -> bytes:
     return _bloco_cru(_PRESET_DO_GATILHO[modo], valores)
 
 
+def bloco_do_clique() -> bytes:
+    """O bloco cru do Clique · mouse (o clique raso do começo do curso): o da Chegada."""
+    from hefesto_dualsense4unix.profiles.efeitos_de_imersao import POR_CHAVE, ajustes_da_imersao
+
+    return _bloco_cru("Weapon", ajustes_da_imersao(POR_CHAVE["clique-mouse"], "Weapon") or {})
+
+
 class AtuadorDoGatilho:
     """Arma ou rajada, por lado e por controle, conforme o intervalo entre tiros."""
 
