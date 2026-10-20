@@ -71,7 +71,8 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   controle cujo `jogo` está na lista que a pessoa escolheu. Sai a cada troca de perfil, de jogo ou de estilo
   (no arquivo do perfil), e quando um controle entra ou sai; quando o jogo fecha, sai depois do `jogo.fechou`.
   É estado, não evento: o serviço guarda o último, e quem assina depois recebe o de agora logo na assinatura.
-  Nenhuma marca do perfil sai neste evento, nem em outro, e o envelope leva o `uniq` do posto;
+  O `estilo` é a chave da lista de estilos de jogo, `visual_novel` e `adulto` inclusive, e o envelope leva o
+  `uniq` do posto;
 - `jogo.gatilho` (`ler:jogo.gatilho`) entrega `nome: "jogo.gatilho"`: o efeito que o jogo escreveu no gatilho de
   UM controle, de P1 a P4, `{uniq, jogador, lado, modo, forca, posicao, t}`. `lado` é `esquerdo` ou `direito`;
   `modo` é `desligado`, `resistencia`, `arco`, `galope`, `arma`, `vibracao`, `metralhadora` ou `outro`; `forca`
@@ -215,12 +216,12 @@ escrever nada:
 - as luzinhas medidor, por 2 s depois de cada gesto: `ceil(nível / 2)` lâmpadas, no brilho forte e sem o
   esmaecer (`0x20` do byte 43), e depois o número do jogador. Na camada de uma mão ficam no medidor enquanto
   ela vale; `para` as apaga;
-- o pulso da barra, só com o perfil marcado «Adulto», `ajustes.pulso_da_barra` ligado e a permissão
+- o pulso da barra, só com o perfil no estilo «Adulto», `ajustes.pulso_da_barra` ligado e a permissão
   `pedir:luz.pulso`. O `luz.pulso` leva a cor, a `cor_quente` (a cor esquenta com o nível), o `fundo` (a fração
   do brilho no vale, de 0 a 0,5) e o `periodo_s`, que o serviço limita a 1 a 4 s: nunca mais de um ciclo por
   segundo, sempre em curva, no máximo 15 escritas por segundo. Com `ajustes.sem_pisca`, o brilho só acompanha
   o nível (10 % no 1, o brilho do perfil no 10), devagar. A recusa do motor volta como `aplicado: false` e um
-  `motivo` (`sem_a_marca_adulto`, `pulso_desligado`, `modo_nativo`, `o_jogo_pinta_a_barra`); a porta recusa
+  `motivo` (`sem_o_estilo_adulto`, `pulso_desligado`, `modo_nativo`, `o_jogo_pinta_a_barra`); a porta recusa
   com o código de «o jogo escreve» quando o jogo pinta a barra e com o de «sem permissão» sem a palavra.
   `{parar: true}` solta. Cada controle tem a sua barra. O pulso e o medidor soltam quando a modificação manda
   `ligado: false` ou a conexão cai.
