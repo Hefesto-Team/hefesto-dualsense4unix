@@ -180,7 +180,8 @@ async def anunciar_bordas_por_alvo(
             {"reason": "alvo_sumiu", "uniq": uniq},
         )
         logger.info("controller_disconnected", reason="alvo_sumiu", uniq=uniq)
-    anunciar_a_chegada(daemon, antes, agora)
+    if not troca_de_transporte:
+        anunciar_a_chegada(daemon, antes, agora)
     for key in [k for k in agora if k not in antes]:
         with contextlib.suppress(Exception):
             await reapply_speaker_after_connect(daemon, uniq=agora[key])
@@ -190,17 +191,17 @@ async def anunciar_bordas_por_alvo(
             nascer_o_microfone_ao_conectar(daemon, uniq=agora[key])
 
 
-def _publicar_quem_entrou(
+def _quem_entrou(
     daemon: DaemonProtocol, antes: dict[str, str | None], agora: dict[str, str | None]
-) -> None:
-    """Um `controller.connected` por controle que entrou na mesa (`uniq` que não estava nela).
+) -> list[tuple[str, str]]:
+    """Os `(key, uniq)` que entraram na mesa: chave nova com um `uniq` que não estava nela.
 
     O que volta de uma troca de transporte (`em_troca_de_transporte`) não é conexão nova: a
-    queda dele também não foi anunciada.
+    queda dele também não foi anunciada. É a pergunta do evento e a da Chegada.
     """
     ja_estavam = {u for u in antes.values() if u}
-    transportes = transportes_dos_alvos_de(daemon) or {}
     em_troca = getattr(getattr(daemon, "controller", None), "em_troca_de_transporte", None)
+    entraram: list[tuple[str, str]] = []
     for key, uniq in agora.items():
         if key in antes or not uniq or uniq in ja_estavam:
             continue
@@ -209,8 +210,17 @@ def _publicar_quem_entrou(
         except Exception as exc:
             logger.debug("em_troca_de_transporte_falhou", err=str(exc))
             trocando = False
-        if trocando:
-            continue
+        if not trocando:
+            entraram.append((key, uniq))
+    return entraram
+
+
+def _publicar_quem_entrou(
+    daemon: DaemonProtocol, antes: dict[str, str | None], agora: dict[str, str | None]
+) -> None:
+    """Um `controller.connected` por controle que entrou na mesa (`_quem_entrou`)."""
+    transportes = transportes_dos_alvos_de(daemon) or {}
+    for key, uniq in _quem_entrou(daemon, antes, agora):
         transport = transportes.get(key, "unknown")
         daemon.bus.publish(EventTopic.CONTROLLER_CONNECTED, {"transport": transport, "uniq": uniq})
         logger.info("controller_connected", transport=transport, uniq=_endereco_mascarado(uniq))
@@ -811,10 +821,13 @@ def anunciar_a_chegada(
     antes: dict[str, str | None],
     agora: dict[str, str | None],
 ) -> int:
-    """Os controles que entraram na mesa ganham a Chegada, depois da rajada. Devolve quantos."""
+    """Os controles que entraram na mesa ganham a Chegada, depois da rajada. Devolve quantos.
+
+    A troca de transporte não é Chegada (A-TROCA-DE-CABO-PARA-RADIO-NAO-E-CHEGADA-01).
+    """
     from hefesto_dualsense4unix.daemon.subsystems.chegada import NOME_DO_GATILHO, chegada_de
 
-    novos = [uniq for key, uniq in agora.items() if key not in antes and uniq]
+    novos = [uniq for _key, uniq in _quem_entrou(daemon, antes, agora)]
     if not novos:
         return 0
     chegada = chegada_de(daemon)
