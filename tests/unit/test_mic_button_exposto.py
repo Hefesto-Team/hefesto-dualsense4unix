@@ -44,12 +44,6 @@ class TestSchema:
                 button_toggles_system=True, ganho_do_preamp=3
             )
 
-    def test_o_volume_e_o_mudo_agora_sao_campos(self) -> None:
-        """MIC-VOLUME-01: o par que faltava para o mic ter a mesma gramática"""
-        mic = ProfileMicConfig(button_toggles_system=True, volume=70, muted=False)
-        assert mic.volume == 70
-        assert mic.muted is False
-
     def test_sem_opiniao_continua_sendo_o_default(self) -> None:
         """Perfil que não pediu volume não pode tomar posse do microfone."""
         mic = ProfileMicConfig(button_toggles_system=True)

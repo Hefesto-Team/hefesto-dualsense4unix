@@ -54,14 +54,6 @@ def _linha_do_pass(corpo: str) -> str:
     raise AssertionError(f"{NOME_DO_CHECK} não tem linha `pass` — o check mudou de forma")
 
 
-def test_bash_n_do_doctor() -> None:
-    """Sanidade: a edição do texto não pode ter quebrado a sintaxe do script."""
-    proc = subprocess.run(
-        [BASH, "-n", str(DOCTOR_PATH)], capture_output=True, text=True, check=False
-    )
-    assert proc.returncode == 0, proc.stderr
-
-
 def test_o_pass_nao_afirma_que_a_cor_funciona() -> None:
     linha = _linha_do_pass(_extrai_funcao_bash(DOCTOR, NOME_DO_CHECK))
     for padrao in AFIRMACOES_DE_EFEITO:

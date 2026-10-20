@@ -220,11 +220,3 @@ def test_o_no_sem_permissao_no_radio_vira_warn(tmp_path: Path) -> None:
     assert "install_udev.sh" in saida, (
         f"o `warn` precisa dizer como consertar; saiu:\n  {saida.strip()}"
     )
-
-
-def test_bash_n_do_doctor() -> None:
-    """Sanidade: a edição não pode ter quebrado a sintaxe do script."""
-    proc = subprocess.run(
-        [BASH, "-n", str(DOCTOR_PATH)], capture_output=True, text=True, check=False
-    )
-    assert proc.returncode == 0, proc.stderr

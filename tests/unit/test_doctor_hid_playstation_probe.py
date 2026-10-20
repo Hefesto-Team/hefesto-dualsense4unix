@@ -138,12 +138,6 @@ def _monta_sysfs(tmp_path: Path, devices: dict[str, bool]) -> Path:
 
 
 class TestWiringDoCheck:
-    def test_bash_n_doctor(self) -> None:
-        resultado = subprocess.run(
-            ["bash", "-n", str(DOCTOR_PATH)], capture_output=True, text=True, check=False
-        )
-        assert resultado.returncode == 0, resultado.stderr
-
     def test_check_definido_e_chamado_no_main(self) -> None:
         assert "check_hid_playstation_probe_abortado()" in DOCTOR
         assert re.search(

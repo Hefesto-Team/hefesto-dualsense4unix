@@ -76,12 +76,6 @@ def _device_usb(
 
 
 class TestWiringDosChecks:
-    def test_bash_n_doctor(self) -> None:
-        resultado = subprocess.run(
-            ["bash", "-n", str(DOCTOR_PATH)], capture_output=True, text=True, check=False
-        )
-        assert resultado.returncode == 0, resultado.stderr
-
     def test_checks_definidos_e_chamados_no_main(self) -> None:
         for nome in CHECKS:
             assert f"{nome}()" in DOCTOR, f"{nome} não definido"

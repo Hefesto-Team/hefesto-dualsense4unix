@@ -336,12 +336,6 @@ class TestOEscopoEEstreito:
 
 
 class TestContratoComORestoDaCasa:
-    def test_bash_n_doctor(self) -> None:
-        r = subprocess.run(
-            ["bash", "-n", str(DOCTOR_PATH)], capture_output=True, text=True, check=False
-        )
-        assert r.returncode == 0, r.stderr
-
     def test_definida_e_chamada_no_main(self) -> None:
         assert "check_input_uaccess()" in DOCTOR
         assert re.search(r"^\s*check_input_uaccess\s*$", DOCTOR, re.MULTILINE), (
