@@ -77,6 +77,12 @@ VEREDITOS: dict[str, tuple[str, int, str]] = {
         "o leitor da biblioteca que uma modificação declara, na caixa do `bwrap`: "
         "grupo próprio, prazo da modificação, e o `_parar` mata o grupo no `finally`",
     ),
+    "daemon/subsystems/eventos_do_perfil.py::rodar_o_comando": (
+        "ajudante", 1,
+        "a pergunta do «Meu comando» de um perfil de evento: sem shell, grupo próprio, "
+        "esperada com o prazo de 5 s e morta pelo grupo quando passa dele; não é "
+        "programa que fica de pé",
+    ),
     "integrations/fora_do_servico.py::abrir": (
         "o dono", 1,
         "o `Popen` de reserva: quem chama já é da pessoa, ou não há systemd de "
