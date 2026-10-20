@@ -106,6 +106,8 @@ PISO_POR_PAGINA: dict[str, str] = {
     "02-controles": f"""
 /* o piso: alvo de {_A} px e letra de {_L} px; só os tamanhos sobem e o respiro aperta onde precisa */
 body.por-controle .pt{{font-size:{_L}px !important}}
+/* o ponto da fita sobe a 12 px sem crescer a linha: o chip mede 30 nas dez abas */
+body.por-controle .fita .pt{{line-height:1 !important}}
 body.por-controle .faixa,body.por-controle .faixa .div,body.por-controle .faixa .leia,body.por-controle .bat,body.por-controle .bat .n{{font-size:{_L}px !important}}
 body.por-controle .faixa>span{{line-height:16px !important}}
 body.por-controle .sensores-peca .sw,body.por-controle .moldura.touchp .todo-sw-toque{{height:{_A}px !important;font-size:{_L}px !important}}
@@ -135,6 +137,7 @@ body.por-controle .rot[data-dica]{{min-height:{_A}px !important;display:flex !im
 body .selo,body .selo .sg{{font-size:{_L}px !important}}
 body .saude .selo{{flex:0 0 84px !important}}
 body .pt{{font-size:{_L}px !important}}
+body .fita .pt{{line-height:1 !important}}
 body .sec-rot .btn.copiar{{height:{_A}px !important;font-size:{_L}px !important}}
 body .sec-rot.sr-log{{height:35px !important}}
 body .log{{font-size:{_L}px !important}}
