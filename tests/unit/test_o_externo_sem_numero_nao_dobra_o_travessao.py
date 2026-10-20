@@ -15,6 +15,7 @@ NINTENDO = {"vid": "057e", "pid": "2009", "bus": "bluetooth", "name": "Pro Contr
 
 @pytest.mark.parametrize("bus", ["usb", "bluetooth"])
 def test_sem_numero_o_titulo_tem_um_travessao_so(bus: str) -> None:
+    """A prova da D-2010-O-EXTERNO-SEM-NUMERO-TEM-UM-TRAVESSAO, no cabo e no rádio."""
     titulo = _format_external_title({**NINTENDO, "bus": bus, "player_slot": None})
     assert "— —" not in titulo
     assert titulo.count("—") == 1
