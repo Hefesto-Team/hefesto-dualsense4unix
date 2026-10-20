@@ -2516,14 +2516,10 @@ def _hora_do_clique(o: dict[str, Any]) -> float | None:
     sob carga, dois cliques a 0,2 s um do outro chegavam ao gesto a 0,6 s. ``None`` quando o
     pedido não traz carimbo, e esse clique nunca forma par.
     """
-    carimbo = o.get("carimbo")
-    if carimbo is None:
+    ms = o.get("carimbo")
+    if isinstance(ms, bool) or not isinstance(ms, (int, float)) or not math.isfinite(ms):
         return None
-    try:
-        ms = float(carimbo)
-    except (TypeError, ValueError):
-        return None
-    return ms / 1000.0 if math.isfinite(ms) else None
+    return ms / 1000.0
 
 
 def _guardar_o_interruptor(ligado: bool) -> None:

@@ -307,11 +307,11 @@ class IpcServer(IpcHandlersMixin):
             with contextlib.suppress(Exception):
                 await asyncio.to_thread(launch_env.desarmar_o_escrevente, escrevente)
         # O hub de sensores nasce do `_garantir_sensor_hub` deste servidor e desce com ele: a
-        # thread de manutenção e os leitores abertos não sobrevivem à sessão que os criou.
+        # thread de manutenção e os leitores abertos não sobrevivem à sessão que os criou. O
+        # `stop_all` já engole a falha de cada leitor, e não há o que engolir em volta dele.
         hub, self._sensor_hub = self._sensor_hub, None
         if hub is not None:
-            with contextlib.suppress(Exception):
-                await asyncio.to_thread(hub.stop_all)
+            await asyncio.to_thread(hub.stop_all)
 
     def _tirar_o_socket(self) -> None:
         """Remove o socket do disco só se ainda formos o owner (o inode do `start`)."""
