@@ -37,17 +37,24 @@ class Fila(NamedTuple):
     jogos: str
     achado: bool
     configurar: str
+    #: O endereço da extensão em que o lançador virou (``mods/viraram_extensao.json``): a linha
+    #: deixa de ter os três botões e diz onde instalar. Nada se instala sozinho.
+    virou: str = ""
 
 
+#: A fila do desenho: os três de fábrica (Steam, Heroic, Flatpak), um lançador de extensão
+#: instalada e a linha da migração de um que virou extensão (19/10/2026).
 LANCADORES = (
     Fila("steam", "Steam", "48 jogos", True, "#lanc-conf"),
-    Fila("kyty", "Kyty", "2 jogos", True, "#kyty"),
+    Fila("lutris", "Lutris", "12 jogos", True, "#lanc-conf"),
     Fila("heroic", "Heroic (Epic · GOG)", "", False, "#lanc-conf"),
-    Fila("lutris", "Lutris", "", False, "#lanc-conf"),
     Fila("flatpak", "Flatpak", "", False, "#lanc-conf"),
-    Fila("retroarch", "RetroArch", "", False, "#lanc-conf"),
-    Fila("emuladores", "Dolphin · mGBA", "", False, "#lanc-conf"),
+    Fila("retroarch", "RetroArch", "", False, "#lanc-conf",
+         virou="https://github.com/Hefesto-Team/hefesto-mod-retroarch"),
 )
+
+#: A frase da linha da migração, antes do endereço.
+FRASE_DO_QUE_VIROU = "Virou extensão. Para seguir com ele, instale de"
 
 
 class Extensao(NamedTuple):
@@ -148,8 +155,19 @@ def _botao(gesto: str, rotulo: str, destino: str, chave: str, ativo: bool) -> st
             f'data-v="{_a(chave)}">{rotulo}</a>')
 
 
+def _fila_que_virou_html(fila: Fila) -> str:
+    """A linha da migração: o nome, a frase e o endereço que se copia para o «Instalar»."""
+    return f'''          <div class="lf ausente lf-virou" data-lancador="{_a(fila.chave)}">
+            <span class="ext-ico lf-ico">{_icone(fila.chave)}</span>
+            <span class="lf-nome"><span class="lanc-nome">{_e(fila.nome)}</span></span>
+            <span class="lanc-jogos" title="{_a(fila.virou)}">{_e(FRASE_DO_QUE_VIROU)} <code>{_e(fila.virou)}</code></span>
+          </div>'''
+
+
 def fila_html(fila: Fila) -> str:
     """Uma linha de lançador: os mesmos três botões, acesos pelo que o lançador é."""
+    if fila.virou:
+        return _fila_que_virou_html(fila)
     botoes = []
     for gesto, rotulo, destino in BOTOES:
         destino = fila.configurar if gesto == "configurar-lancador" else destino

@@ -114,7 +114,7 @@ def test_fecha_todos_antes_de_reabrir_qualquer_um(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """Fechar-e-reabrir um a um faria o segundo subir disputando o físico."""
     ordem: list[str] = []
-    dois = [rl.LANCADORES[1], rl.LANCADORES[2]]
+    dois = [rl.LANCADORES[0], rl.LANCADORES[1]]
     monkeypatch.setattr(rl, "abertos", lambda: dois)
     monkeypatch.setattr(rl, "fechar",
                         lambda x: ordem.append(f"fechou:{x.chave}") or True)
@@ -123,22 +123,22 @@ def test_fecha_todos_antes_de_reabrir_qualquer_um(
 
     rl.repor()
 
-    assert ordem == ["fechou:heroic", "fechou:lutris",
-                     "abriu:heroic", "abriu:lutris"]
+    assert ordem == ["fechou:steam", "fechou:heroic",
+                     "abriu:steam", "abriu:heroic"]
 
 
 def test_quem_nao_fecha_nao_e_reaberto(monkeypatch: pytest.MonkeyPatch) -> None:
     """Abrir um lançador que continua aberto criaria a segunda instância."""
     monkeypatch.setattr(rl, "abertos", lambda: list(rl.LANCADORES))
-    monkeypatch.setattr(rl, "fechar", lambda x: x.chave != "lutris")
+    monkeypatch.setattr(rl, "fechar", lambda x: x.chave != "heroic")
     abertos_de_novo: list[str] = []
     monkeypatch.setattr(rl, "abrir",
                         lambda x: abertos_de_novo.append(x.chave) or True)
 
     recibo = rl.repor()
 
-    assert "lutris" not in abertos_de_novo
-    assert recibo.nao_fecharam == ("Lutris",)
+    assert "heroic" not in abertos_de_novo
+    assert recibo.nao_fecharam == ("Heroic",)
 
 
 def test_sem_lancador_aberto_nao_se_faz_nada(

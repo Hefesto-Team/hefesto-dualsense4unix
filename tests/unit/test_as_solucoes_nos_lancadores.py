@@ -157,8 +157,12 @@ def test_o_excluido_nao_conta_como_falta(tmp_path: Path) -> None:
                                      raiz_sistema=tmp_path / "sistema") == ()
 
 
-def test_onde_falta_mede_a_caixa_do_emulador(tmp_path: Path) -> None:
+def test_onde_falta_mede_a_caixa_do_emulador(tmp_path: Path,
+                                            monkeypatch: pytest.MonkeyPatch) -> None:
     """A caixa do Flatpak sem uma variável da ponte acusa falta; a carona a"""
+    from tests.unit.as_caixas_das_extensoes import ligar
+
+    ligar(monkeypatch)  # o RetroArch virou extensão (19/10/2026): aqui ela está ligada
     ativo = Path.home() / ".local/share/flatpak/app/org.libretro.RetroArch/current/active"
     ativo.mkdir(parents=True)
     (ativo / "metadata").write_text("[Application]\nname=org.libretro.RetroArch\n")
@@ -195,7 +199,8 @@ def test_o_cartao_diz_onde_o_ambiente_falta() -> None:
     from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 
     heroic = next(x for x in desenho.SEM_FONTE if x.chave == "heroic")
-    retroarch = next(x for x in desenho.SEM_FONTE if x.chave == "retroarch")
+    retroarch = desenho.SemCenso("retroarch", "RetroArch", ("org.libretro.RetroArch",),
+                                 modificacao="retroarch")
     disco = desenho.DoDisco(sem_ambiente=(("heroic", ("Guardiões",)),
                                           ("retroarch", ("org.libretro.RetroArch",))))
     cartao = desenho.cartao_sem_censo(heroic, "/opt/heroic", disco)

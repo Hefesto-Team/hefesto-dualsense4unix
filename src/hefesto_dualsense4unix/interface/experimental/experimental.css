@@ -44,6 +44,8 @@
 .lf > *:not(.lanc-jogos) { flex:none }
 .lf .btn.mini { height:26px;font-size:11px;padding:0 10px;text-decoration:none;white-space:nowrap }
 .lf-nome { display:flex;align-items:center;gap:8px;min-width:0 }
+.lf-virou .lanc-jogos { font-family:inherit;color:var(--texto-suave) }
+.lf-virou code { font-family:'JetBrains Mono',monospace;color:var(--fg);user-select:all }
 .quadro:has(> input.abre) .quadro-topo { padding-bottom:11px }
 .quadro:has(> input.abre:checked) .quadro-topo { padding-bottom:5px }
 .quadro:has(> input.abre:checked) > .quadro-corpo { padding-top:4px }

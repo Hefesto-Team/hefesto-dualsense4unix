@@ -57,8 +57,13 @@ def test_o_cartao_que_nao_achou_nao_conta():
 def test_o_numero_de_cada_cartao_e_o_do_disco_dele():
     """Cada cartão mostra o SEU número — e a Steam, o da `Leitura`."""
     do_disco = desenho.DoDisco(pontes=(("heroic", 2), ("lutris", 1)))
-    cartoes = {c.chave: c for c in desenho.cartoes(
-        _todos_localizados(pontes=3, do_disco=do_disco))}
+    # o Lutris virou extensão (19/10/2026): o cartão dele é o da extensão declarada
+    extensao = (desenho.SemCenso("lutris", "Lutris", ("net.lutris.Lutris",),
+                                 modificacao="lutris"),)
+    leitura = _todos_localizados(pontes=3, do_disco=do_disco, declarados=extensao)
+    onde = (*leitura.onde_estao, ("lutris", "/usr/bin/lutris"))
+    leitura = desenho.Leitura(**{**leitura.__dict__, "onde_estao": onde})
+    cartoes = {c.chave: c for c in desenho.cartoes(leitura)}
     assert _numero(cartoes["heroic"].diz) == 2
     assert _numero(cartoes["lutris"].diz) == 1
     assert _numero(cartoes[desenho.STEAM].diz) == 3
@@ -109,7 +114,7 @@ def test_a_vigia_leva_as_pontes_do_disco_ate_a_conta(monkeypatch, tmp_path):
     recebido: list[frozenset[str]] = []
 
     def _medir(onde, declarados=(), lar=None, raiz_sistema=None,
-               com_ponte=frozenset()):
+               com_ponte=frozenset(), da_porta=None):
         recebido.append(com_ponte)
         return desenho.SEM_DISCO
 

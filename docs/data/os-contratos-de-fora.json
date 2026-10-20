@@ -2,19 +2,19 @@
   "_LEIA": "O PISO DAS CATRACAS. Não se edita à mão: `--aceitar` desce, `--forcar-piso «razão»` sobe com razão e data.",
   "medidas": {
     "linhas-frageis": {
-      "data": "2026-10-15",
+      "data": "2026-10-19",
       "o_que_conta": "linhas do censo de contratos de fora com porta interna, pergunta por versão ou forma por comando",
-      "piso": 41,
+      "piso": 40,
       "por_item": {
         "bluez": 11,
         "kernel": 1,
-        "lancadores": 5,
+        "lancadores": 4,
         "proton": 2,
         "sdl": 1,
         "sistema": 2,
         "steam": 19
       },
-      "razao": "a ficha declarada do jogo lê as categorias de controle do cache binário da Steam (O-JOGO-SE-DECLARA-NO-PRONTUARIO-PELO-QUE-A-STEAM-E-O-BINARIO-DIZEM-01); o leitor binário é o do proton_pin, importado, e o contato novo nasce porque o caminho do cache mora no módulo novo",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-07",
@@ -42,7 +42,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 307
+      "universo": 304
     }
   }
 }

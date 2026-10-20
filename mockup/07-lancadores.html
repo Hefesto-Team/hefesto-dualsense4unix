@@ -1054,6 +1054,8 @@
 .lf > *:not(.lanc-jogos) { flex:none }
 .lf .btn.mini { height:26px;font-size:11px;padding:0 10px;text-decoration:none;white-space:nowrap }
 .lf-nome { display:flex;align-items:center;gap:8px;min-width:0 }
+.lf-virou .lanc-jogos { font-family:inherit;color:var(--texto-suave) }
+.lf-virou code { font-family:'JetBrains Mono',monospace;color:var(--fg);user-select:all }
 .quadro:has(> input.abre) .quadro-topo { padding-bottom:11px }
 .quadro:has(> input.abre:checked) .quadro-topo { padding-bottom:5px }
 .quadro:has(> input.abre:checked) > .quadro-corpo { padding-top:4px }
@@ -1695,7 +1697,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <div class="quadro-corpo">
         <div class="ext-lista">
           <div class="ext" data-modificacao="kyty">
-            <span class="ext-ico" style="color:var(--cyan)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12a4 4 0 0 1 4 4v1a3 3 0 0 1-5.4 1.8L15 13H9l-1.6 1.8A3 3 0 0 1 2 13v-1a4 4 0 0 1 4-4z"/><path d="M7 10.5v3M5.5 12h3"/><circle cx="16" cy="11" r=".6" fill="currentColor"/><circle cx="18" cy="13" r=".6" fill="currentColor"/></svg></span>
+            <span class="ext-ico" style="color:var(--cyan)"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v4M15 3v4M7 7h10v5a5 5 0 0 1-10 0zM12 17v4"/></svg></span>
             <div class="ext-quem">
               <span class="ext-sub"><span class="ext-nome">Kyty</span><span class="lanc-selo oficial">Oficial</span><span class="ext-ver">0.1.0</span></span>
               <span class="ext-faz" data-dica="Jogos do Kyty com gatilhos, luz e vibração do controle">Jogos do Kyty com gatilhos, luz e vibração do controle</span>
@@ -1740,10 +1742,10 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <span class="lf-nome lf-nome-2"><span class="lanc-nome">Steam</span><span class="lf-n">48 jogos</span></span>
             <span class="lf-botoes"><button class="btn mini apagado" aria-disabled="true" data-gesto="identificar-lancador" data-v="steam">Identificar</button><a class="btn mini" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="steam">Criar perfis</a><a class="btn mini" href="#lanc-conf" data-gesto="configurar-lancador" data-v="steam">Configurar</a></span>
           </div>
-          <div class="lf" data-lancador="kyty">
-            <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12a4 4 0 0 1 4 4v1a3 3 0 0 1-5.4 1.8L15 13H9l-1.6 1.8A3 3 0 0 1 2 13v-1a4 4 0 0 1 4-4z"/><path d="M7 10.5v3M5.5 12h3"/><circle cx="16" cy="11" r=".6" fill="currentColor"/><circle cx="18" cy="13" r=".6" fill="currentColor"/></svg></span>
-            <span class="lf-nome lf-nome-2"><span class="lanc-nome">Kyty</span><span class="lf-n">2 jogos</span></span>
-            <span class="lf-botoes"><button class="btn mini apagado" aria-disabled="true" data-gesto="identificar-lancador" data-v="kyty">Identificar</button><a class="btn mini" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="kyty">Criar perfis</a><a class="btn mini" href="#kyty" data-gesto="configurar-lancador" data-v="kyty">Configurar</a></span>
+          <div class="lf" data-lancador="lutris">
+            <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v4M15 3v4M7 7h10v5a5 5 0 0 1-10 0zM12 17v4"/></svg></span>
+            <span class="lf-nome lf-nome-2"><span class="lanc-nome">Lutris</span><span class="lf-n">12 jogos</span></span>
+            <span class="lf-botoes"><button class="btn mini apagado" aria-disabled="true" data-gesto="identificar-lancador" data-v="lutris">Identificar</button><a class="btn mini" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="lutris">Criar perfis</a><a class="btn mini" href="#lanc-conf" data-gesto="configurar-lancador" data-v="lutris">Configurar</a></span>
           </div>
           <div class="lf ausente" data-lancador="heroic">
             <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><path d="M14.5 13.8v5.4l4.6-2.7z"/></svg></span>
@@ -1751,29 +1753,16 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
             <span class="lanc-jogos"></span>
             <span class="lf-botoes"><button class="btn mini" data-gesto="identificar-lancador" data-v="heroic">Identificar</button><a class="btn mini apagado" aria-disabled="true" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="heroic">Criar perfis</a><a class="btn mini apagado" aria-disabled="true" href="#lanc-conf" data-gesto="configurar-lancador" data-v="heroic">Configurar</a></span>
           </div>
-          <div class="lf ausente" data-lancador="lutris">
-            <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><path d="M14.5 13.8v5.4l4.6-2.7z"/></svg></span>
-            <span class="lf-nome"><span class="lanc-nome">Lutris</span></span>
-            <span class="lanc-jogos"></span>
-            <span class="lf-botoes"><button class="btn mini" data-gesto="identificar-lancador" data-v="lutris">Identificar</button><a class="btn mini apagado" aria-disabled="true" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="lutris">Criar perfis</a><a class="btn mini apagado" aria-disabled="true" href="#lanc-conf" data-gesto="configurar-lancador" data-v="lutris">Configurar</a></span>
-          </div>
           <div class="lf ausente" data-lancador="flatpak">
             <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2l7.8 4.4v8.8L12 20.8l-7.8-4.4V7.6z"/><path d="M4.2 7.6L12 12l7.8-4.4M12 12v8.8"/></svg></span>
             <span class="lf-nome"><span class="lanc-nome">Flatpak</span></span>
             <span class="lanc-jogos"></span>
             <span class="lf-botoes"><button class="btn mini" data-gesto="identificar-lancador" data-v="flatpak">Identificar</button><a class="btn mini apagado" aria-disabled="true" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="flatpak">Criar perfis</a><a class="btn mini apagado" aria-disabled="true" href="#lanc-conf" data-gesto="configurar-lancador" data-v="flatpak">Configurar</a></span>
           </div>
-          <div class="lf ausente" data-lancador="retroarch">
-            <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.8" width="12" height="18.4" rx="2.4"/><rect x="8.4" y="5.2" width="7.2" height="5.6" rx="1"/><path d="M9.6 14v3.2M8 15.6h3.2"/><circle cx="15" cy="14.6" r=".7" fill="currentColor"/><circle cx="14" cy="16.9" r=".7" fill="currentColor"/></svg></span>
+          <div class="lf ausente lf-virou" data-lancador="retroarch">
+            <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3v4M15 3v4M7 7h10v5a5 5 0 0 1-10 0zM12 17v4"/></svg></span>
             <span class="lf-nome"><span class="lanc-nome">RetroArch</span></span>
-            <span class="lanc-jogos"></span>
-            <span class="lf-botoes"><button class="btn mini" data-gesto="identificar-lancador" data-v="retroarch">Identificar</button><a class="btn mini apagado" aria-disabled="true" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="retroarch">Criar perfis</a><a class="btn mini apagado" aria-disabled="true" href="#lanc-conf" data-gesto="configurar-lancador" data-v="retroarch">Configurar</a></span>
-          </div>
-          <div class="lf ausente" data-lancador="emuladores">
-            <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2.8" width="12" height="18.4" rx="2.4"/><rect x="8.4" y="5.2" width="7.2" height="5.6" rx="1"/><path d="M9.6 14v3.2M8 15.6h3.2"/><circle cx="15" cy="14.6" r=".7" fill="currentColor"/><circle cx="14" cy="16.9" r=".7" fill="currentColor"/></svg></span>
-            <span class="lf-nome"><span class="lanc-nome">Dolphin · mGBA</span></span>
-            <span class="lanc-jogos"></span>
-            <span class="lf-botoes"><button class="btn mini" data-gesto="identificar-lancador" data-v="emuladores">Identificar</button><a class="btn mini apagado" aria-disabled="true" href="#escolher-jogo" data-gesto="criar-perfil-para-um-jogo" data-v="emuladores">Criar perfis</a><a class="btn mini apagado" aria-disabled="true" href="#lanc-conf" data-gesto="configurar-lancador" data-v="emuladores">Configurar</a></span>
+            <span class="lanc-jogos" title="https://github.com/Hefesto-Team/hefesto-mod-retroarch">Virou extensão. Para seguir com ele, instale de <code>https://github.com/Hefesto-Team/hefesto-mod-retroarch</code></span>
           </div>
           <a class="lf lf-novo" href="#novo-lancador" data-gesto="adicionar-lancador" data-dica="Um programa desta máquina ou um pacote de extensão">
             <span class="ext-ico lf-ico"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5v13M5.5 12h13"/></svg></span>
@@ -1852,13 +1841,13 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       <div class="lanc-novo-campo"><span>Como ele entra</span><div class="seg mini"><button class="on" data-dica="Um programa já instalado nesta máquina">Do sistema</button><button data-dica="Um pacote de extensão, como o Kyty">Como extensão</button></div></div>
       <label class="lanc-novo-campo">
         <span>Como ele se chama</span>
-        <input type="text" data-linha="lanc-novo-rotulo" placeholder="Ryujinx">
+        <input type="text" data-linha="lanc-novo-rotulo" placeholder="Meu emulador">
       </label>
       <label class="lanc-novo-campo">
         <span>Onde ele está</span>
         <div class="lanc-novo-linha">
           <input type="text" data-linha="lanc-novo-alvo"
-                 placeholder="Ryujinx  ·  /opt/Ryujinx/Ryujinx  ·  org.ryujinx.Ryujinx">
+                 placeholder="Emulador  ·  /opt/emulador/emulador  ·  org.exemplo.emulador">
           <a class="btn" href="#novo-lancador"
              data-gesto="procurar-o-arquivo"
              data-hef-forma="novo-lancador"

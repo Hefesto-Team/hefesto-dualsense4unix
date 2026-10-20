@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import sqlite3
 from pathlib import Path
 
 import pytest
@@ -133,75 +132,3 @@ class TestOVetoDaR21AlcancaQualquerLancador:
             assert e_endereco_de_jogo("steam_app_1088850") is True
         finally:
             registrar_classes_de_jogo([])
-
-
-class TestOLutrisGanhaODegrauDoAppid:
-    """**O `pga.db` DO USUÁRIO TEM ZERO JOGOS** — e é por isso que o que entra aqui"""
-
-    def _banco(self, tmp_path: Path, linhas):
-        banco = tmp_path / "pga.db"
-        con = sqlite3.connect(banco)
-        con.execute(
-            "CREATE TABLE games (name TEXT, sortname TEXT, slug TEXT, "
-            "installer_slug TEXT, parent_slug TEXT, platform TEXT, "
-            "runner TEXT, executable TEXT, directory TEXT, installed INTEGER, "
-            "service TEXT, service_id TEXT)")
-        for linha in linhas:
-            con.execute(
-                "INSERT INTO games (name, slug, runner, executable, directory,"
-                " installed, service, service_id) VALUES (?,?,?,?,?,?,?,?)",
-                linha)
-        con.commit()
-        con.close()
-        return banco
-
-    def test_o_servico_da_steam_vira_a_classe_da_janela(self, tmp_path):
-        from hefesto_dualsense4unix.integrations.censo_dos_lancadores import (
-            _lutris,
-        )
-
-        self._banco(tmp_path, [
-            ("Stray", "stray", "wine", "stray.exe", "/jogos/stray", 1,
-             "steam", "1332010"),
-        ])
-        jogo = _lutris(tmp_path).jogos[0]
-        assert jogo.appid_da_steam == "1332010"
-        assert jogo.classe_de_janela == "steam_app_1332010"
-
-    def test_o_id_da_gog_nao_vira_chave_de_janela(self, tmp_path):
-        """**O CASO QUE IMPEDE A CURA DE PASSAR DO PONTO.**"""
-        from hefesto_dualsense4unix.integrations.censo_dos_lancadores import (
-            _lutris,
-        )
-
-        self._banco(tmp_path, [
-            ("Bloodlines", "bloodlines", "wine", "vamp.exe", "/j/v", 1,
-             "gog", "1207659240"),
-        ])
-        jogo = _lutris(tmp_path).jogos[0]
-        assert jogo.appid_da_steam == ""
-        assert jogo.classe_de_janela == "", (
-            "um id da GOG virou chave de janela — ela nunca vai casar")
-
-    def test_o_exe_sem_servico_continua_dizendo_nao_sei(self, tmp_path):
-        """O «não sei» é entrega: quem não tem chave tem o «Detectar»."""
-        from hefesto_dualsense4unix.integrations.censo_dos_lancadores import (
-            _lutris,
-        )
-
-        self._banco(tmp_path, [
-            ("Um jogo", "um-jogo", "wine", "jogo.exe", "/j", 1, "", ""),
-        ])
-        assert _lutris(tmp_path).jogos[0].classe_de_janela == ""
-
-    def test_o_nativo_linux_continua_caindo_no_basename(self, tmp_path):
-        """O degrau 3 não foi tocado por esta cura."""
-        from hefesto_dualsense4unix.integrations.censo_dos_lancadores import (
-            _lutris,
-        )
-
-        self._banco(tmp_path, [
-            ("Nativo", "nativo", "linux", "/opt/nativo/nativo", "/opt", 1,
-             "", ""),
-        ])
-        assert _lutris(tmp_path).jogos[0].classe_de_janela == "nativo"

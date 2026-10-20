@@ -178,8 +178,7 @@ def test_os_cinco_lancadores_ganharam_leitor_de_biblioteca():
     """**ESTA RÉGUA VIROU DO AVESSO em 09/09/2026, e era o que ela pedia.**"""
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
-    sem_leitor = [n for n in ("Heroic", "Lutris", "RetroArch", "Dolphin", "mGBA")
-                  if not censo.sabe_ler(n)]
+    sem_leitor = [n for n in ("Heroic",) if not censo.sabe_ler(n)]
 
     assert sem_leitor == [], (
         f"estes lançadores perderam o leitor de biblioteca: {sem_leitor}. Sem "
@@ -319,28 +318,21 @@ def test_o_produto_procura_os_cinco_pelas_pastas_do_motor(a07, desenho, monkeypa
     lados — o achado deixa de ser achado E o ausente deixa de dizer que
     procurou.
     """
-    pasta = _pastas_falsas(monkeypatch, tmp_path, "net.lutris.Lutris")
+    pasta = _pastas_falsas(monkeypatch, tmp_path, "com.heroicgameslauncher.hgl")
     onde = dict(a07._onde_estao_os_lancadores())
-    assert onde["lutris"] == str(pasta / "net.lutris.Lutris.desktop"), (
+    assert onde["heroic"] == str(pasta / "com.heroicgameslauncher.hgl.desktop"), (
         f"o produto não achou o atalho que está em disco, ou jogou fora o "
         f"caminho que torna a resposta conferível: {onde}")
-    assert onde["heroic"] == "", (
+    assert onde["steam"] == "", (
         "o produto disse ter achado um lançador que não está na pasta")
     assert set(onde) == {x.chave for x in desenho.EMBUTIDOS}, (
         "a busca pulou um lançador — o cartão dele voltaria ao `NÃO SEI` de "
         "constante sem ninguém ver")
 
-    assert dict(a07._ler_do_disco().onde_estao)["lutris"] == str(
-        pasta / "net.lutris.Lutris.desktop"), (
+    assert dict(a07._ler_do_disco().onde_estao)["heroic"] == str(
+        pasta / "com.heroicgameslauncher.hgl.desktop"), (
         "a busca funciona e a LEITURA não a carrega — a tela volta ao `NÃO "
         "SEI` de constante com este teste verde")
-
-
-def test_o_atalho_do_kde_nao_e_o_emulador(a07, monkeypatch, tmp_path):
-    """`dolphin.desktop` é o gerenciador de arquivos do KDE, não o emulador."""
-    _pastas_falsas(monkeypatch, tmp_path, "dolphin")
-    assert dict(a07._onde_estao_os_lancadores())["emuladores"] == "", (
-        "o `dolphin.desktop` do KDE passou por emulador")
 
 
 def test_o_cartao_achado_e_o_nao_achado_dizem_coisas_diferentes(desenho):
@@ -685,7 +677,7 @@ def test_a_steam_quebrada_nao_apaga_a_resposta_sobre_os_outros(a07, monkeypatch,
     """Duas perguntas independentes não podem cair juntas."""
     from hefesto_dualsense4unix.integrations import sentinela_do_wrapper as sw
 
-    pasta = _pastas_falsas(monkeypatch, tmp_path, "net.lutris.Lutris")
+    pasta = _pastas_falsas(monkeypatch, tmp_path, "com.heroicgameslauncher.hgl")
 
     def explode(*a, **kw):
         raise OSError("o vdf sumiu")
@@ -693,8 +685,8 @@ def test_a_steam_quebrada_nao_apaga_a_resposta_sobre_os_outros(a07, monkeypatch,
     monkeypatch.setattr(sw, "censo_do_wrapper", explode)
     lida = a07._ler_do_disco()
     assert lida.erros, "o censo quebrou e a leitura não registrou o erro"
-    assert dict(lida.onde_estao)["lutris"] == str(
-        pasta / "net.lutris.Lutris.desktop"), (
+    assert dict(lida.onde_estao)["heroic"] == str(
+        pasta / "com.heroicgameslauncher.hgl.desktop"), (
         "a Steam quebrada apagou a resposta sobre os outros lançadores")
 
 
@@ -884,20 +876,20 @@ def test_o_lancador_declarado_entra_no_cartao(desenho, a07, monkeypatch,
 
 def test_o_declarado_com_a_chave_de_um_de_fabrica_ensina_o_cartao(desenho):
     """CHAVE REPETIDA NÃO VIRA SEGUNDO CARTÃO — ela soma à busca do primeiro."""
-    ensino = desenho.SemCenso("retroarch", "O Meu RetroArch",
-                              ("meu-retroarch",), ("/opt/retro",),
+    ensino = desenho.SemCenso("heroic", "O Meu Heroic",
+                              ("meu-heroic",), ("/opt/heroic",),
                               declarado=True)
     lista = desenho.procurados((ensino,))
     chaves = [x.chave for x in lista]
-    assert chaves.count("retroarch") == 1, (
+    assert chaves.count("heroic") == 1, (
         f"a chave repetida virou um segundo cartão: {chaves}. Os dois teriam o "
         f"MESMO `data-campo`, e o piloto pintaria o valor de um nos dois.")
-    ra = next(x for x in lista if x.chave == "retroarch")
-    assert "meu-retroarch" in ra.atalhos and "/opt/retro" in ra.comandos, (
+    ra = next(x for x in lista if x.chave == "heroic")
+    assert "meu-heroic" in ra.atalhos and "/opt/heroic" in ra.comandos, (
         "o que ela ensinou não entrou na busca do cartão de fábrica")
-    assert "org.libretro.RetroArch" in ra.atalhos, (
+    assert "com.heroicgameslauncher.hgl" in ra.atalhos, (
         "o ensino dela APAGOU a busca de fábrica — quem ensina soma, não troca")
-    assert ra.nome == "RetroArch", (
+    assert ra.nome == "Heroic (Epic · GOG)", (
         "o rótulo de fábrica foi trocado pelo dela: aquele nome é desenho que "
         "ela aprovou, e o que este botão acrescenta é ONDE procurar")
     assert ra.declarado, (

@@ -25,6 +25,14 @@ from tests.unit.test_a_cura_do_engasgo_alcanca_todos_os_prefixos import (
 from tests.unit.test_o_censo_responde_como_o_lancador_responde import plantar_o_registro
 from tests.unit import a_exclusao_de_antes as antiga
 
+
+@pytest.fixture(autouse=True)
+def _as_extensoes_de_caixa_ligadas(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O Lutris, o RetroArch, o Dolphin e o mGBA viraram extensão: aqui elas estão ligadas."""
+    from tests.unit.as_caixas_das_extensoes import ligar
+
+    ligar(monkeypatch)
+
 RAIZ = Path(__file__).resolve().parents[2]
 
 _PONTE = {
@@ -447,26 +455,6 @@ def test_a_cura_dos_prefixos_compara_o_prefixo_pelo_caminho(
         "a cura pulou o prefixo de C, de outra casa, só porque a pasta tem o mesmo nome")
 
 
-def test_o_lutris_le_o_umu_id_do_jogo(_lar: Path) -> None:
-    """MORDIDA: sem a leitura do umu no censo, volta o «não sei»."""
-    _lutris_flatpak(_lar)
-    jogos = censo.biblioteca_de("Lutris", _lar).jogos
-    assert [(j.nome, j.classe_de_janela) for j in jogos] == [("Recettear", _JANELA)]
-    assert ("Lutris", jogos[0]) in censo.jogos_com_chave_de_janela(_lar), (
-        "o cartão do Lutris não oferece o jogo da GOG")
-
-
-def test_o_umu_id_posto_por_ela_no_yml_manda(_lar: Path) -> None:
-    _lutris_flatpak(_lar, yml=_YML_DO_JOGO.replace("    MANGOHUD: '1'\n",
-                                                   "    UMU_ID: umu-999\n"))
-    assert censo.biblioteca_de("Lutris", _lar).jogos[0].classe_de_janela == "steam_app_999"
-
-
-def test_o_lutris_sem_proton_nao_vira_steam_app(_lar: Path) -> None:
-    """Uma versão do Wine que não é Proton não passa pelo umu: «não sei»."""
-    _lutris_flatpak(_lar, yml=_YML_DO_JOGO.replace("version: ge-proton",
-                                                   "version: wine-ge-8-26-x86_64"))
-    assert censo.biblioteca_de("Lutris", _lar).jogos[0].classe_de_janela == ""
 
 
 _FORMATOS = {
@@ -519,7 +507,6 @@ def test_o_lutris_nativo_fica_como_esta(_lar: Path) -> None:
     _carona(_lar)
     assert len(_nossas_na_caixa(_lar)) == 9
     yml = _lutris_nativo(_lar)
-    assert censo.biblioteca_de("Lutris", _lar).jogos[0].classe_de_janela == _JANELA
     md5 = _md5(yml)
     assert antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar) == "adicionado"
     assert _md5(yml) == md5, yml.read_text()
@@ -536,40 +523,17 @@ def _lutris_com_a_configuracao_a_parte(casa_config: Path, casa_dados: Path) -> P
     return movido
 
 
-@pytest.mark.parametrize("casa", ["flatpak", "nativo"])
-def test_com_a_configuracao_a_parte_o_lutris_le_o_banco_dos_dados(
-        _lar: Path, casa: str) -> None:
+def test_com_a_configuracao_a_parte_a_exclusao_acha_o_yml_pelo_banco_dos_dados(
+        _lar: Path) -> None:
     """Medido na conferência de 02/10/2026: com a configuração em pasta própria,"""
-    if casa == "flatpak":
-        _flatpak(_lar, _LUTRIS)
-        raiz = _lar / ".var/app" / _LUTRIS
-        yml = _lutris_com_a_configuracao_a_parte(raiz / "config/lutris", raiz / "data/lutris")
-    else:
-        yml = _lutris_com_a_configuracao_a_parte(_lar / ".config/lutris",
-                                                 _lar / ".local/share/lutris")
-    jogos = censo.biblioteca_de("Lutris", _lar).jogos
-    assert [(j.nome, j.classe_de_janela) for j in jogos] == [("Recettear", _JANELA)], jogos
-    assert jogos[0].configuracao == yml
-    if casa == "nativo":
-        return
+    _flatpak(_lar, _LUTRIS)
+    raiz = _lar / ".var/app" / _LUTRIS
+    yml = _lutris_com_a_configuracao_a_parte(raiz / "config/lutris", raiz / "data/lutris")
     _carona(_lar)
     assert antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar) == "adicionado"
     assert _env_do_yml(yml).get("SDL_GAMECONTROLLER_IGNORE_DEVICES") == "", (
         f"o jogo excluído herda da caixa o IGNORE: {yml.read_text()}")
 
-
-def test_a_assinatura_ve_o_banco_dos_dados(_lar: Path) -> None:
-    """Um jogo novo no `pga.db` dos dados muda a assinatura, mesmo com a"""
-    _flatpak(_lar, _LUTRIS)
-    raiz = _lar / ".var/app" / _LUTRIS
-    _lutris_com_a_configuracao_a_parte(raiz / "config/lutris", raiz / "data/lutris")
-    antes = censo.assinatura_das_bibliotecas(_lar)
-    con = sqlite3.connect(raiz / "data/lutris/pga.db")
-    with con:
-        con.execute("INSERT INTO games (name, slug, runner, installed) "
-                    "VALUES ('Outro', 'outro', 'linux', 1)")
-    con.close()
-    assert censo.assinatura_das_bibliotecas(_lar) != antes
 
 
 _XALIA = "PROTON_USE_XALIA"
@@ -632,8 +596,9 @@ def test_o_par_e_o_padrao_do_script_do_proton(_lar: Path) -> None:
 
 def test_o_jogo_pelo_wine_fica_com_o_da_caixa(_lar: Path) -> None:
     """Uma versão do Wine que não é Proton não passa pelo script: sem a"""
+    # D-1910-A-CAMADA-DO-YML-LE-O-PROTON-NO-PROPRIO-YML
     yml = _lutris_flatpak_pelo_wine(_lar)
-    assert not censo.biblioteca_de("Lutris", _lar).jogos[0].pelo_proton
+    assert not cpe._pelo_proton_do_yml(yml, _lar)
     _carona(_lar)
     antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear", lar=_lar)
     env = _env_do_yml(yml)

@@ -27,6 +27,14 @@ from tests.unit.test_o_uninstall_nao_deixa_rastro import (
 )
 from tests.unit import a_exclusao_de_antes as antiga
 
+
+@pytest.fixture(autouse=True)
+def _as_extensoes_de_caixa_ligadas(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O Lutris, o RetroArch, o Dolphin e o mGBA viraram extensão: aqui elas estão ligadas."""
+    from tests.unit.as_caixas_das_extensoes import ligar
+
+    ligar(monkeypatch)
+
 RAIZ = Path(__file__).resolve().parents[2]
 CURA = RAIZ / "src/hefesto_dualsense4unix/integrations/cura_por_estrada.py"
 

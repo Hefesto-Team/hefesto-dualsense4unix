@@ -570,7 +570,7 @@ def test_os_cartoes_localizados_tem_a_mesma_fileira(_aba07, dia: str) -> None:
     desenho, _a07 = _aba07
     lida = _o_dia_bom(desenho) if dia == "bom" else _o_dia_do_reparo(desenho)
     cartoes = desenho.cartoes(lida)
-    assert len(cartoes) >= 6, [c.chave for c in cartoes]
+    assert len(cartoes) >= 3, [c.chave for c in cartoes]
     for lanc in cartoes:
         esperado = [a.rotulo for a in desenho.fileira_comum(lanc.chave)]
         rotulos = [a.rotulo for a in lanc.acoes]
@@ -585,18 +585,28 @@ def test_nenhum_botao_do_cartao_nasce_sem_gesto(_aba07) -> None:
         assert not mortos, (lanc.chave, mortos)
 
 
-def test_o_emulador_nao_promete_exclusao_por_rom(_aba07) -> None:
+def _retroarch_da_extensao(monkeypatch: pytest.MonkeyPatch, a07) -> None:
+    """O RetroArch virou extensão (19/10/2026): o cartão dele vem da extensão, sem leitor."""
+    item = a07.desenho.SemCenso("retroarch", "RetroArch", ("org.libretro.RetroArch",),
+                                ("retroarch",), janelas=("com.libretro.RetroArch",),
+                                modificacao="retroarch")
+    monkeypatch.setattr(a07, "_declarados", lambda: (item,))
+
+
+def test_o_emulador_nao_promete_exclusao_por_rom(_aba07, monkeypatch) -> None:
     """Um processo para todas as ROMs (§4.3): a lista oferece UMA linha."""
     _desenho, a07 = _aba07
+    _retroarch_da_extensao(monkeypatch, a07)
     jogos, janelas, emulador = a07._jogos_para_escolher("retroarch", "RetroArch", None)
     assert emulador and len(jogos) == 1
     assert jogos[0].chave == "emulador:retroarch"
     assert "com.libretro.RetroArch" in janelas[jogos[0].chave]
 
 
-def test_a_linha_do_emulador_nao_diz_que_foi_a_ultima_aberta(_aba07) -> None:
+def test_a_linha_do_emulador_nao_diz_que_foi_a_ultima_aberta(_aba07, monkeypatch) -> None:
     """A linha única do emulador nasce marcada, sem o «o último que você abriu»."""
     desenho, a07 = _aba07
+    _retroarch_da_extensao(monkeypatch, a07)
     for modo in (desenho.CRIAR_PERFIL, desenho.EXCLUIR):
         jogos, _janelas, emulador = a07._jogos_para_escolher("retroarch", "RetroArch", None)
         miolo = desenho.miolo_da_escolha_html(modo, "RetroArch", jogos, emulador=emulador)
@@ -607,9 +617,10 @@ def test_a_linha_do_emulador_nao_diz_que_foi_a_ultima_aberta(_aba07) -> None:
         desenho.EXCLUIR, "Steam", steam)
 
 
-def test_a_exclusao_do_emulador_casa_pela_janela_medida(_aba07) -> None:
+def test_a_exclusao_do_emulador_casa_pela_janela_medida(_aba07, monkeypatch) -> None:
     """A janela do RetroArch diz `com.libretro.RetroArch`, e o flatpak é `org.`"""
     _desenho, a07 = _aba07
+    _retroarch_da_extensao(monkeypatch, a07)
     jogos, janelas, _ = a07._jogos_para_escolher("retroarch", "RetroArch", None)
     antiga.adicionar(jogos[0].chave, lancador="retroarch", nome=jogos[0].nome,
                      janelas=janelas[jogos[0].chave])
@@ -752,8 +763,12 @@ def _caixa_do_retroarch(tmp_path: Path) -> Path:
 _JANELAS_DO_RETROARCH = ("org.libretro.RetroArch", "retroarch", "com.libretro.RetroArch")
 
 
-def test_a_carona_nao_repoe_o_ambiente_na_caixa_excluida(tmp_path: Path) -> None:
+def test_a_carona_nao_repoe_o_ambiente_na_caixa_excluida(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """ARRANQUE o filtro das caixas do `curar_todas_as_estradas` e este teste"""
+    from tests.unit.as_caixas_das_extensoes import ligar
+
+    ligar(monkeypatch)  # a extensão do RetroArch ligada: só ela põe a caixa na carona
     override = _caixa_do_retroarch(tmp_path)
     antiga.adicionar("emulador:retroarch", lancador="retroarch",
                      nome="RetroArch — todos os jogos", janelas=_JANELAS_DO_RETROARCH)

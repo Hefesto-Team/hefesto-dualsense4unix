@@ -484,8 +484,8 @@ def forma_da_procedencia(
       CATÁLOGO daquele jogo declarar (`jogos_locais.JogoLocal.forma`), e
       ``janela`` quando ele não está no catálogo. **Nunca ``game``**: o que
       esses lançadores entregam é a `wm_class` (o basename do
-      ``install.executable`` do Heroic, do ``executable`` do `pga.db` do
-      Lutris), e gravá-la como ``process_name`` é o defeito que
+      ``install.executable`` do Heroic, da ``janela`` que a extensão do
+      lançador entrega), e gravá-la como ``process_name`` é o defeito que
       `_forma_do_que_ela_escolheu` mediu na tela viva em 10/09/2026 — outro
       dado, que casa por acaso.
 

@@ -30,6 +30,14 @@ from tests.unit.test_a_exclusao_mora_na_camada_do_jogo import (
 )
 from tests.unit import a_exclusao_de_antes as antiga
 
+
+@pytest.fixture(autouse=True)
+def _as_extensoes_de_caixa_ligadas(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O Lutris, o RetroArch, o Dolphin e o mGBA viraram extensão: aqui elas estão ligadas."""
+    from tests.unit.as_caixas_das_extensoes import ligar
+
+    ligar(monkeypatch)
+
 RAIZ = Path(__file__).resolve().parents[2]
 _EVENTO = "carona_nao_anotou_o_yml"
 
@@ -59,7 +67,7 @@ def _excluido_sem_o_xalia(lar: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[P
     antes = yml.read_text()
     _carona(lar)
     with monkeypatch.context() as m:
-        m.setattr(cpe, "_pelo_proton_por_yml", lambda _lar: {})
+        m.setattr(cpe, "_pelo_proton_do_yml", lambda _alvo, _lar=None: False)
         assert antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear",
                                 lar=lar) == "adicionado"
     assert _o_xalia_do(yml) == {}, yml.read_text()
@@ -116,7 +124,7 @@ def test_a_gravacao_que_falha_depois_da_anotacao_nao_perde_o_antes(
     antes = yml.read_text()
     _carona(_lar)
     with monkeypatch.context() as m:
-        m.setattr(cpe, "_pelo_proton_por_yml", lambda _lar: {})
+        m.setattr(cpe, "_pelo_proton_do_yml", lambda _alvo, _lar=None: False)
         assert antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear",
                                 lar=_lar) == "adicionado"
     sem_o_xalia = yml.read_text()

@@ -24,6 +24,14 @@ from tests.unit.test_a_exclusao_mora_na_camada_do_jogo import (
 )
 from tests.unit import a_exclusao_de_antes as antiga
 
+
+@pytest.fixture(autouse=True)
+def _as_extensoes_de_caixa_ligadas(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O Lutris, o RetroArch, o Dolphin e o mGBA viraram extensão: aqui elas estão ligadas."""
+    from tests.unit.as_caixas_das_extensoes import ligar
+
+    ligar(monkeypatch)
+
 _EVENTO = "carona_nao_gravou_o_yml"
 
 
@@ -47,7 +55,7 @@ def _excluido_com_a_carona_por_fazer(lar: Path, monkeypatch: pytest.MonkeyPatch)
     yml = _lutris_flatpak(lar)
     _carona(lar)
     with monkeypatch.context() as m:
-        m.setattr(cpe, "_pelo_proton_por_yml", lambda _lar: {})
+        m.setattr(cpe, "_pelo_proton_do_yml", lambda _alvo, _lar=None: False)
         assert antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear",
                                 lar=lar) == "adicionado"
     return yml
@@ -193,7 +201,7 @@ def test_so_o_yml_que_falhou_conta_e_volta(
     grava = _segunda_copia(falha)
     _carona(_lar)
     with monkeypatch.context() as m:
-        m.setattr(cpe, "_pelo_proton_por_yml", lambda _lar: {})
+        m.setattr(cpe, "_pelo_proton_do_yml", lambda _alvo, _lar=None: False)
         assert antiga.adicionar(_JANELA, lancador="lutris", nome="Recettear",
                                 lar=_lar) == "adicionado"
     antes = {Path(y.arquivo).name: y for y in lx.ler()[0].lutris}

@@ -135,23 +135,6 @@ def test_quem_nao_tem_chave_nao_e_oferecido_mesmo_instalado(
     assert len(censo.biblioteca_de("Heroic", lar=tmp_path).jogos) == 3
 
 
-def test_o_emulador_nao_finge_ter_uma_janela_por_rom(
-    tmp_path: pathlib.Path,
-) -> None:
-    """As 7 ROMs do RetroArch dela são UM processo — não sete janelas."""
-    pasta = tmp_path / ".var/app/org.libretro.RetroArch/config/retroarch"
-    (pasta / "playlists").mkdir(parents=True, exist_ok=True)
-    (pasta / "playlists/Nintendo - SNES.lpl").write_text(json.dumps({"items": [
-        {"path": "/casa/roms/240pSuite.sfc", "label": "240pSuite"}]}),
-        encoding="utf-8")
-
-    b = censo.biblioteca_de("RetroArch", lar=tmp_path)
-
-    assert len(b.instalados) == 1
-    assert b.instalados[0].classe_de_janela == ""
-    assert censo.jogos_com_chave_de_janela(lar=tmp_path) == []
-
-
 def test_o_jogo_do_lancador_vira_oferta_com_a_wm_class_no_value(
     tmp_path: pathlib.Path,
 ) -> None:
@@ -224,72 +207,26 @@ def test_nenhum_lancador_instalado_e_lista_so_da_steam(
 
 
 # (noqa-acento: citação literal, com a digitação original)
-LUTRIS_ID = "net.lutris.Lutris"
+def _extensao(monkeypatch: pytest.MonkeyPatch, *jogos: censo.JogoDoLancador,
+              fontes: tuple[str, ...] = ()) -> None:
+    """A extensão `lutris` ligada (o Lutris virou extensão em 19/10/2026), com estes jogos."""
+    leitor = censo.LeitorPorProcesso("lutris", "Lutris", ("python3", "leitor.py"),
+                                     pathlib.Path("/x"), fontes=fontes)
+    bloco = censo.LancadorDaModificacao(chave="lutris", rotulo="Lutris", leitor=leitor)
+    monkeypatch.setattr(censo, "lancadores_das_extensoes",
+                        lambda lugares=None: (censo.LancadorDaExtensao(bloco),))
+    monkeypatch.setattr(censo, "ler_por_processo",
+                        lambda _leitor, **_k: censo.BibliotecaDoLancador(
+                            "Lutris", censo.LIDO, None, list(jogos)))
 
-_ESQUEMA_LUTRIS = (
-    "CREATE TABLE games (id INTEGER PRIMARY KEY, name TEXT, sortname TEXT, "
-    "slug TEXT, installer_slug TEXT, parent_slug TEXT, platform TEXT, "
-    "runner TEXT, executable TEXT, directory TEXT, updated TEXT, "
-    "lastplayed INTEGER, installed INTEGER, installed_at INTEGER, "
-    "year INTEGER, configpath TEXT, has_custom_banner INTEGER, "
-    "has_custom_icon INTEGER, has_custom_coverart_big INTEGER, "
-    "playtime REAL, service TEXT, service_id TEXT, discord_id TEXT)"
-)
 
-
-def _lutris(lar: pathlib.Path, linhas: list[tuple[str, str, str, int]]) -> None:
-    """Um `pga.db` de mentira na árvore de flatpak que é a dela."""
-    import sqlite3
-
-    pasta = lar / ".var/app" / LUTRIS_ID / "config/lutris"
-    pasta.mkdir(parents=True, exist_ok=True)
-    con = sqlite3.connect(pasta / "pga.db")
-    with con:
-        con.execute(_ESQUEMA_LUTRIS)
-        con.executemany(
-            "INSERT INTO games (name, slug, executable, installed) "
-            "VALUES (?, ?, ?, ?)", linhas)
-    con.close()
+CELESTE = censo.JogoDoLancador("celeste", "Celeste", instalado=True,
+                               janela="Celeste.x86_64")
 
 
 def _atalho(pasta: pathlib.Path, arquivo: str, corpo: str) -> None:
     pasta.mkdir(parents=True, exist_ok=True)
     (pasta / arquivo).write_text(corpo, encoding="utf-8")
-
-
-def test_a_biblioteca_do_lutris_sai_do_banco_e_nao_da_pasta_vazia(
-    tmp_path: pathlib.Path,
-) -> None:
-    """O LEITOR OLHAVA O ARQUIVO ERRADO, e o sintoma era a AUSÊNCIA de dado."""
-    _lutris(tmp_path, [
-        ("Celeste", "celeste", "/casa/Games/celeste/Celeste.bin.x86_64", 1),
-        ("Hollow Knight", "hollow-knight", "/casa/Games/hk/hollow_knight.x86_64", 1),
-        ("Só na conta", "so-na-conta", "", 0),
-    ])
-
-    b = censo.biblioteca_de("Lutris", lar=tmp_path)
-
-    assert [j.nome for j in b.jogos] == ["Celeste", "Hollow Knight", "Só na conta"]
-    assert b.resumo == "3 jogos na biblioteca · 2 instalados"
-    assert [(lanc, j.classe_de_janela)
-            for lanc, j in censo.jogos_com_chave_de_janela(lar=tmp_path)] == [
-        ("Lutris", "Celeste.bin.x86_64"),
-        ("Lutris", "hollow_knight.x86_64")]
-
-
-def test_o_yml_de_configuracao_propria_nao_some_com_a_leitura_nova(
-    tmp_path: pathlib.Path,
-) -> None:
-    """A leitura nova não pode ENCOLHER o que já funcionava."""
-    _lutris(tmp_path, [("Celeste", "celeste", "/casa/celeste/Celeste", 1)])
-    games = tmp_path / ".var/app" / LUTRIS_ID / "config/lutris/games"
-    games.mkdir(parents=True, exist_ok=True)
-    (games / "celeste.yml").write_text("game: {}\n", encoding="utf-8")
-    (games / "so-no-yml.yml").write_text("game: {}\n", encoding="utf-8")
-
-    b = censo.biblioteca_de("Lutris", lar=tmp_path)
-
-    assert [j.chave for j in b.jogos] == ["celeste", "so-no-yml"]
 
 
 def test_o_jogo_direto_traz_a_etiqueta_do_proprio_atalho(
@@ -329,11 +266,14 @@ def test_o_jogo_direto_traz_a_etiqueta_do_proprio_atalho(
 
 
 def test_o_detectar_acha_o_jogo_do_heroic_do_lutris_e_o_direto(
-    tmp_path: pathlib.Path,
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """**A FALTA QUE O USUÁRIO NOMEOU, medida nas três origens de uma vez.**"""
+    """**A FALTA QUE O USUÁRIO NOMEOU, medida nas três origens de uma vez.**
+
+    O Lutris chega pela extensão dele: o jogo que o leitor dela entrega é do cartão «Lutris».
+    """
     _heroic(tmp_path, [BAIXADO])
-    _lutris(tmp_path, [("Celeste", "celeste", "/casa/celeste/Celeste.x86_64", 1)])
+    _extensao(monkeypatch, CELESTE)
     _atalho(tmp_path, "super-zsnes.desktop",
             "[Desktop Entry]\nType=Application\nName=Super ZSNES\n"
             "Exec=/casa/zsnes/rodar.sh\nCategories=Game;Emulator;\n"
@@ -410,33 +350,6 @@ def test_o_caderno_releu_o_disco_quando_ela_instalou_o_segundo_jogo(
                       "1145350": "Hades II"}
     assert jl.frase_do_campo_do_jogo("steam_app_1145350", {}, depois) == (
         "Hades II", False)
-
-
-def test_o_caderno_releu_quando_o_lutris_ganhou_uma_linha_no_banco(
-    tmp_path: pathlib.Path,
-) -> None:
-    """O `pga.db` é um ARQUIVO dentro da pasta — a pasta não muda de `mtime`."""
-    jl._NOMES_DAS_JANELAS = None
-    _lutris(tmp_path, [("Celeste", "celeste", "/casa/celeste/Celeste.x86_64", 1)])
-
-    antes = jl.nomes_das_janelas(lar=tmp_path, pastas=[tmp_path])
-    assert antes == {"celeste.x86_64": "Celeste"}
-
-    import sqlite3
-    pasta = tmp_path / ".var/app" / LUTRIS_ID / "config/lutris"
-    antes_da_pasta = pasta.stat().st_mtime_ns
-    con = sqlite3.connect(pasta / "pga.db")
-    con.execute("PRAGMA journal_mode=MEMORY")
-    with con:
-        con.execute("INSERT INTO games (name, slug, executable, installed) "
-                    "VALUES (?, ?, ?, ?)",
-                    ("Hollow Knight", "hk", "/casa/hk/hollow_knight.x86_64", 1))
-    con.close()
-    assert pasta.stat().st_mtime_ns == antes_da_pasta
-
-    assert jl.nomes_das_janelas(lar=tmp_path, pastas=[tmp_path]) == {
-        "celeste.x86_64": "Celeste",
-        "hollow_knight.x86_64": "Hollow Knight"}
 
 
 def test_o_cliente_de_loja_nao_entra_na_lista_de_jogos_e_o_emulador_entra(
@@ -550,3 +463,28 @@ def test_o_botao_detectar_nomeia_o_jogo_do_heroic_que_acabou_de_gravar(
     assert fora["mesa"]["editor.jogo"] == "1088850"
     frase = str(fora.get("relato") or "")
     assert frase.endswith("· Marvel's Guardians of the Galaxy"), frase
+
+
+def test_o_caderno_rele_quando_a_fonte_da_extensao_muda(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O banco do lançador é um ARQUIVO dentro da pasta: a pasta não muda de `mtime`.
+
+    A extensão declara o arquivo que o leitor dela lê (``leitor.fontes``), e a impressão das
+    bibliotecas o mede. MORDIDA: tirar as ``fontes`` do laço de `assinatura_das_bibliotecas`
+    deixa a impressão igual com o banco mudado.
+    """
+    import os
+
+    _extensao(monkeypatch, CELESTE, fontes=("dados/lutris/pga.db",))
+    banco = tmp_path / "dados/lutris/pga.db"
+    banco.parent.mkdir(parents=True)
+    banco.write_bytes(b"um")
+    os.utime(banco, ns=(1_000_000_000, 1_000_000_000))
+    pasta = banco.parent.stat().st_mtime_ns
+    antes = censo.assinatura_das_bibliotecas(tmp_path)
+    with banco.open("ab") as escrita:
+        escrita.write(b" jogo a mais")
+    assert banco.parent.stat().st_mtime_ns == pasta
+    assert censo.assinatura_das_bibliotecas(tmp_path) != antes, (
+        "o banco da extensão mudou e a impressão das bibliotecas não viu")

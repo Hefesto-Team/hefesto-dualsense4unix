@@ -45,6 +45,14 @@ from hefesto_dualsense4unix.integrations import proton_pin
 from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 from hefesto_dualsense4unix.utils import memoria_dos_controles as m
 
+
+@pytest.fixture(autouse=True)
+def _as_extensoes_de_caixa_ligadas(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O Lutris, o RetroArch, o Dolphin e o mGBA viraram extensão: aqui elas estão ligadas."""
+    from tests.unit.as_caixas_das_extensoes import ligar
+
+    ligar(monkeypatch)
+
 RAIZ = Path(__file__).resolve().parents[2]
 UNINSTALL = RAIZ / "uninstall.sh"
 SISTEMA = "/usr/local/bin:/usr/bin:/bin"

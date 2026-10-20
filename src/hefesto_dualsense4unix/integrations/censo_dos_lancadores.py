@@ -1,7 +1,6 @@
 """O censo dos lançadores que NÃO são a Steam — LANCADORES-ZERO-01, 09/09/2026."""
 from __future__ import annotations
 
-import configparser
 import contextlib
 import json
 import os
@@ -9,12 +8,11 @@ import re
 import selectors
 import shutil
 import signal
-import sqlite3
 import subprocess
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 from hefesto_dualsense4unix.integrations.identidade_de_janela import (
     umu_por_chave_do_heroic,
@@ -50,6 +48,12 @@ class JogoDoLancador:
     #: modificação. É por ele que o perfil casa quando a janela é a do emulador
     #: para todos os jogos e o resto do título muda a cada segundo.
     titulo_do_jogo: str = ""
+    #: A classe de janela que a EXTENSÃO dá ao jogo (``steam_app_1088850`` de um jogo pelo
+    #: ``umu``). Quem sabe derivá-la é o leitor dela, que lê o lançador; vazia, a regra de
+    #: `identidade_de_janela` responde.
+    janela: str = ""
+    #: A versão do Proton (ou do Wine) que o lançador grava para este jogo, como ele grava.
+    proton: str = ""
 
     @property
     def classe_de_janela(self) -> str:
@@ -80,16 +84,17 @@ class JogoDoLancador:
         perfil ativava, nenhuma feature chegava ao jogo, e a queixa de uso foi a
         leitura certa: *"o Hefesto não é identificado e não funciona lá"*.
 
-        O QUE CONTINUA VALENDO da nota antiga: os três emuladores (RetroArch,
-        Dolphin, mGBA) são **UM processo para todas as ROMs**, então a janela é
-        a do emulador e não a do jogo. Eles não têm `umu_id` nem appid, caem no
-        «não sei», e quem chama não oferece a linha — que é a mesma conclusão,
-        agora pelo caminho certo.
+        O QUE CONTINUA VALENDO da nota antiga: o emulador é **UM processo para
+        todas as ROMs**, então a janela é a do emulador e não a do jogo. Sem
+        `umu_id`, appid nem a ``janela`` da extensão, o jogo cai no «não sei», e
+        quem chama não oferece a linha.
         """
         from hefesto_dualsense4unix.integrations.identidade_de_janela import (
             classe_de_janela,
         )
 
+        if self.janela:
+            return self.janela
         return classe_de_janela(
             umu_id=self.umu_id, appid_da_steam=self.appid_da_steam,
             executavel=self.executavel)
@@ -421,282 +426,7 @@ def _e_dlc_na_biblioteca(item: dict[str, object]) -> bool:
     return isinstance(instalacao, dict) and bool(instalacao.get("is_dlc"))
 
 
-_COLUNAS_DO_LUTRIS = ("name", "slug", "executable", "directory", "installed",
-                      "runner", "service", "service_id", "configpath")
-
-_COLUNAS_EXIGIDAS_DO_LUTRIS = ("name", "slug")
-
-_RUNNER_DO_UMU = "wine"
-
-_VERSAO_PADRAO_DO_LUTRIS = "ge-proton"
-
 _SERVICO_DA_STEAM = "steam"
-
-
-def _lutris(pasta: Path, lar: Path | None = None, *,
-            onde: _Onde | None = None) -> BibliotecaDoLancador:
-    """A biblioteca do Lutris — do `pga.db`, que é onde ela mora.
-
-    **O LEITOR ANTIGO OLHAVA O ARQUIVO ERRADO, e o sintoma era a AUSÊNCIA de
-    dado.** Ele lia `games/*.yml` e devolvia o `stem` como nome. Medido no
-    disco do usuário em 11/09/2026:
-
-        ~/.var/app/net.lutris.Lutris/config/lutris  ->  data/lutris (symlink)
-        data/lutris/games/   0 arquivos
-        data/lutris/pga.db   tabela `games`, 23 colunas
-
-    O `games/*.yml` só nasce para jogo com configuração PRÓPRIA; a biblioteca
-    é a tabela. Com a pasta vazia o cartão dizia `LIDO · 0 jogos` — que se lê
-    como *"o Lutris está vazio"* e não como *"eu olhei no lugar errado"*.
-
-    **E O `.yml` NÃO DAVA A ETIQUETA.** Um `stem` (`sea-of-stars`) não é a
-    `wm_class` que a janela anuncia, e é a etiqueta que esta sprint precisa —
-    a mesma coisa que o `steam_app_<id>` é para a Steam. O `pga.db` traz
-    `executable`, e o basename dele é a classe (ver
-    `JogoDoLancador.classe_de_janela`), do mesmo jeito que o
-    `install.executable` do Heroic.
-
-    **`sqlite3` É BIBLIOTECA PADRÃO** — nenhuma dependência nova, ao contrário
-    do `pyyaml` que o leitor antigo recusou (e recusou com razão: uma
-    dependência para ler um nome de arquivo era o custo errado).
-
-    ABERTO EM MODO SOMENTE-LEITURA (`mode=ro`), e é requisito e não zelo: o
-    Lutris dela pode estar aberto com o banco na mão, e este módulo é chamado
-    da PINTURA de uma aba. `immutable=` seria mais rápido e mentiria sobre um
-    arquivo que muda.
-
-    O `.yml` continua entrando, e só ACRESCENTA o que a tabela não tiver: um
-    jogo configurado à mão que nunca entrou no banco continua aparecendo, e a
-    leitura nova não pode ENCOLHER o que já funcionava.
-
-    **O QUE NÃO FOI MEDIDO, E FICA DECLARADO — 21/09/2026.** O `pga.db` dela
-    tem ZERO jogos: o Lutris está instalado e vazio. Então a janela de um jogo
-    do Lutris **não foi lida em aparelho nenhum** desta casa, e esta sprint
-    aprendeu em 21/09 o preço de derivar no lugar de medir.
-
-    Por isso o que entra aqui é só o degrau que JÁ ESTÁ MEDIDO em outro leitor:
-    `service == "steam"` ⇒ `service_id` é o appid da Steam, e um appid da Steam
-    vira `steam_app_<N>` — o mesmo fato que a biblioteca da Steam usa há meses.
-    Nenhum degrau novo se inventava aqui: jogo do Lutris sem serviço da Steam
-    respondia «não sei» e mandava ao «Detectar».
-
-    **02/10/2026 — O DEGRAU 1 ENTROU, LIDO NO FONTE DO LUTRIS
-    (A-EXCLUSAO-MORA-NA-CAMADA-DO-JOGO-01).** O jogo da GOG, da Epic, da Humble
-    ou da Amazon no Lutris abre pelo umu com o `GAMEID` que o próprio Lutris
-    acha (`util/wine/proton.get_game_id`, lido no 0.5.22 instalado nela): o
-    `UMU_ID` do ambiente do jogo, ou a loja e o id do jogo no `umu-games.json`
-    da casa dele. O umu põe a janela em `steam_app_<N>` — medido no Guardiões
-    pelo Heroic em 21/09 (`identidade_de_janela`), que é o mesmo umu. A regra
-    está em :class:`_UmuDoLutris`, com as condições do Lutris (o runner `wine`
-    e uma versão que seja Proton). A janela de um jogo do Lutris continua sem
-    leitura em aparelho nenhum desta casa (o Lutris dela segue vazio).
-
-    :param lar: o lar de quem chama (o padrão é o de verdade, com o XDG do
-        ambiente): é nele que se procura o Proton e a pasta de dados do nativo.
-        O lar não se deduz do caminho da pasta (02/10/2026): com o XDG
-        desviado para `/dados`, a dedução dava `/`.
-    """
-    onde = _onde(lar) if onde is None else onde
-    jogos: list[JogoDoLancador] = []
-    erros: list[str] = []
-    vistos: set[str] = set()
-    ymls_vistos: set[str] = set()
-    umu = _UmuDoLutris(pasta, onde)
-    banco = Path(umu._conf.get("pga_path") or umu._dados / "pga.db")
-    if banco.is_file():
-        try:
-            conexao = sqlite3.connect(f"file:{banco}?mode=ro", uri=True)
-        except sqlite3.Error as erro:  # pragma: no cover - banco ilegível
-            erros.append(f"pga.db não abriu: {erro}")
-        else:
-            with contextlib.closing(conexao):
-                try:
-                    tem = {str(c[1]) for c in conexao.execute("PRAGMA table_info(games)")}
-                    faltam = [c for c in _COLUNAS_EXIGIDAS_DO_LUTRIS if c not in tem]
-                    if faltam:
-                        raise sqlite3.OperationalError(
-                            "sem a coluna " + ", ".join(faltam) if tem else "sem a tabela")
-                    colunas = ", ".join(c if c in tem else f"NULL AS {c}"
-                                        for c in _COLUNAS_DO_LUTRIS)
-                    linhas = list(
-                        conexao.execute(f"SELECT {colunas} FROM games"))
-                except sqlite3.Error as erro:
-                    erros.append(f"pga.db não traz `games`: {erro}")
-                    linhas = []
-                for linha in linhas:
-                    (nome, slug, executavel, pasta_do_jogo, instalado, runner,
-                     servico, id_do_servico, configpath) = linha
-                    chave = str(slug or nome or "")
-                    if not chave or chave in vistos:
-                        continue
-                    vistos.add(chave)
-                    # O DEGRAU 2 SAI DAQUI. `identidade_de_janela` é quem o
-                    numero = str(id_do_servico or "").strip()
-                    da_steam = (
-                        numero
-                        if str(servico or "").strip().casefold()
-                        == _SERVICO_DA_STEAM and numero.isdigit()
-                        else ""
-                    )
-                    yml = (pasta / "games" / f"{configpath}.yml"
-                           if str(configpath or "").strip() else None)
-                    if yml is not None:
-                        ymls_vistos.add(yml.name)
-                    jogos.append(JogoDoLancador(
-                        chave=chave,
-                        nome=str(nome or chave),
-                        loja="Lutris",
-                        instalado=bool(instalado),
-                        caminho=(Path(str(pasta_do_jogo))
-                                 if pasta_do_jogo else None),
-                        executavel=str(executavel or ""),
-                        umu_id=(umu.do_jogo(str(runner or ""), str(servico or ""),
-                                            str(id_do_servico or ""), yml)
-                                if instalado else ""),
-                        appid_da_steam=da_steam,
-                        configuracao=yml,
-                        pelo_proton=bool(instalado) and umu.pelo_proton(
-                            str(runner or ""), yml)))
-    games = pasta / "games"
-    if games.is_dir():
-        for p in sorted(games.glob("*.yml")):
-            if p.stem in vistos or p.name in ymls_vistos:
-                continue
-            vistos.add(p.stem)
-            jogos.append(JogoDoLancador(
-                chave=p.stem, nome=p.stem.replace("-", " "),
-                loja="Lutris", instalado=True, caminho=p, configuracao=p))
-    jogos.sort(key=lambda j: (j.nome.casefold(), j.chave))
-    return BibliotecaDoLancador("Lutris", LIDO, pasta, jogos, erros)
-
-
-def _ler_yml(alvo: Path) -> dict[str, object] | None:
-    """Um `.yml` do Lutris como dicionário; ausente, torto ou sem PyYAML = ``None``."""
-    try:
-        import yaml
-    except ImportError:  # pragma: no cover - o produto declara o PyYAML
-        return None
-    try:
-        texto = alvo.read_text(encoding="utf-8")
-    except OSError:
-        return None
-    try:
-        dado = yaml.safe_load(texto)
-    except yaml.YAMLError:
-        return None
-    return dado if isinstance(dado, dict) else None
-
-
-def _secao(dado: dict[str, object] | None, *caminho: str) -> object:
-    """``dado[a][b]…`` — ``None`` no primeiro degrau que não é dicionário."""
-    atual: object = dado
-    for passo in caminho:
-        if not isinstance(atual, dict):
-            return None
-        atual = atual.get(passo)
-    return atual
-
-
-class _UmuDoLutris:
-    """O `GAMEID` que o Lutris daria a cada jogo — a regra dele, lida no fonte."""
-
-    def __init__(self, pasta: Path, onde: _Onde) -> None:
-        self.pasta = pasta
-        self._lar = onde.lar
-        self._dados = _pasta_de_dados_do_lutris(pasta, onde)
-        self._conf = _conf_do_lutris(pasta)
-        self._tabela: dict[tuple[str, str], str] | None = None
-        self._versao_do_runner: str | None = None
-        self._leu_o_runner = False
-        self._ymls: dict[Path, dict[str, object] | None] = {}
-
-    def _yml(self, yml: Path | None) -> dict[str, object] | None:
-        """O `.yml` do jogo, lido uma vez por biblioteca."""
-        if yml is None:
-            return None
-        if yml not in self._ymls:
-            self._ymls[yml] = _ler_yml(yml)
-        return self._ymls[yml]
-
-    def _umu_games(self) -> dict[tuple[str, str], str]:
-        if self._tabela is not None:
-            return self._tabela
-        runtime = Path(self._conf.get("runtime_dir") or self._dados / "runtime")
-        dado = _json(runtime / "umu-games" / "umu-games.json")
-        tabela: dict[tuple[str, str], str] = {}
-        for linha in dado if isinstance(dado, list) else ():
-            if not isinstance(linha, dict):
-                continue
-            loja, appid, umu_id = linha.get("store"), linha.get("appid"), linha.get("umu_id")
-            if not loja or not isinstance(umu_id, str) or appid is None:
-                continue
-            tabela.setdefault((str(loja), str(appid)), umu_id)
-        self._tabela = tabela
-        return tabela
-
-    def _do_runner(self) -> str | None:
-        if not self._leu_o_runner:
-            self._leu_o_runner = True
-            versao = _secao(_ler_yml(self.pasta / "runners" / "wine.yml"), "wine", "version")
-            self._versao_do_runner = str(versao) if versao else None
-        return self._versao_do_runner
-
-    def _e_proton(self, versao: str) -> bool:
-        """`proton.is_proton_version`: uma pasta com o script `proton` dentro."""
-        runners = Path(self._conf.get("runner_dir") or self._dados / "runners")
-        lar = self._lar
-        locais = [runners / "wine"]
-        for steam in (".steam/steam", ".local/share/Steam",
-                      ".var/app/com.valvesoftware.Steam/.local/share/Steam"):
-            locais += [lar / steam / "compatibilitytools.d", lar / steam / "steamapps/common"]
-        return any((onde / versao / "proton").is_file() for onde in locais)
-
-    def pelo_proton(self, runner: str, yml: Path | None) -> bool:
-        """O jogo abre pelo umu, e com ele pelo script do Proton?"""
-        if runner.strip() != _RUNNER_DO_UMU:
-            return False
-        versao: str | None = None
-        for nivel in (_secao(self._yml(yml), "wine", "version"), self._do_runner()):
-            if nivel and str(nivel) != _VERSAO_PADRAO_DO_LUTRIS:
-                versao = str(nivel)
-                break
-        return versao is None or self._e_proton(versao)
-
-    def do_jogo(self, runner: str, servico: str, appid: str, yml: Path | None) -> str:
-        """O `umu-<N>` deste jogo, ou ``""``."""
-        if not self.pelo_proton(runner, yml):
-            return ""
-        dado = self._yml(yml)
-        proprio = _secao(dado, "system", "env", "UMU_ID")
-        if isinstance(proprio, str) and proprio.strip():
-            return proprio.strip()
-        loja = servico.strip()
-        if not loja:
-            return ""
-        tabela = self._umu_games()
-        achado = tabela.get((loja, appid.strip()))
-        if achado is None and loja == "humblebundle":
-            achado = tabela.get(("humble", appid.strip()))
-        return achado or ""
-
-
-def _pasta_de_dados_do_lutris(pasta: Path, onde: _Onde) -> Path:
-    """A pasta de dados do Lutris (o `pga.db`, o `runtime/`), pela regra dele."""
-    dados = next((d for c, d in _casas("Lutris", onde) if pasta in (c, d)), pasta)
-    for tentativa in (dados, pasta):
-        if (tentativa / "pga.db").is_file() or (tentativa / "runtime").is_dir():
-            return tentativa
-    return pasta
-
-
-def _conf_do_lutris(pasta: Path) -> dict[str, str]:
-    """A seção `[lutris]` do `lutris.conf` — onde o `runtime_dir` pode mudar de lugar."""
-    cfg = configparser.ConfigParser(strict=False, interpolation=None)
-    try:
-        cfg.read_string((pasta / "lutris.conf").read_text(encoding="utf-8", errors="replace"))
-    except (OSError, configparser.Error):
-        return {}
-    return dict(cfg.items("lutris")) if cfg.has_section("lutris") else {}
 
 
 @dataclass(frozen=True)
@@ -711,48 +441,6 @@ class ProtonEmUso:
 
     versoes: frozenset[str] = frozenset()
     duvida: tuple[str, ...] = ()
-
-
-def _yml_do_lutris(alvo: Path, duvida: list[str]) -> dict[str, object]:
-    """Um ``.yml`` do Lutris que EXISTE; torto, ilegível ou sem PyYAML conta como dúvida."""
-    try:
-        import yaml
-
-        dado = yaml.safe_load(alvo.read_text(encoding="utf-8"))
-    except Exception:
-        duvida.append(str(alvo))
-        return {}
-    if dado is None:
-        return {}
-    if not isinstance(dado, dict):
-        duvida.append(str(alvo))
-        return {}
-    return dado
-
-
-def _versao_do_wine(dado: dict[str, object]) -> list[str]:
-    """``wine.version`` de um ``.yml`` do Lutris, quando há."""
-    versao = _secao(dado, "wine", "version")
-    return [versao.strip()] if isinstance(versao, str) and versao.strip() else []
-
-
-def _proton_do_lutris(pasta: Path) -> tuple[list[str], list[str]]:
-    """``(versões, dúvidas)`` do Lutris desta pasta: ``runners/wine.yml`` e cada ``games/*.yml``."""
-    versoes: list[str] = []
-    duvida: list[str] = []
-    padrao = pasta / "runners" / "wine.yml"
-    if padrao.is_file():
-        versoes += _versao_do_wine(_yml_do_lutris(padrao, duvida))
-    games = pasta / "games"
-    if not os.path.lexists(games):
-        return versoes, duvida
-    try:
-        ymls = sorted(games.glob("*.yml"))
-    except OSError:
-        return versoes, [*duvida, str(games)]
-    for yml in ymls:
-        versoes += _versao_do_wine(_yml_do_lutris(yml, duvida))
-    return versoes, duvida
 
 
 def _json_do_heroic(alvo: Path, duvida: list[str]) -> object:
@@ -819,15 +507,18 @@ def _proton_do_heroic(pasta: Path) -> tuple[list[str], list[str]]:
 
 def proton_em_uso(lar: Path | None = None, *, xdg_config: Path | None = None,
                   xdg_data: Path | None = None) -> ProtonEmUso:
-    """Que versões de Proton o Lutris e o Heroic usam, em toda instalação (nativa e Flatpak).
+    """Que versões de Proton os lançadores de fora da Steam usam, em toda instalação.
 
-    O dono do saber de onde cada lançador guarda isso. Olha toda pasta de configuração que EXISTE,
-    instalado ou não: um lançador que sobrou no disco ainda aponta para o Proton. Nunca levanta; o
-    que existe e não se lê entra em ``duvida``.
+    O dono do saber de onde cada lançador guarda isso. O Heroic é de fábrica: olha toda pasta de
+    configuração que EXISTE, instalado ou não (um lançador que sobrou no disco ainda aponta para o
+    Proton). O lançador de extensão responde pelo leitor dela (o ``proton`` de cada jogo); o que
+    virou extensão e está no disco SEM a extensão ligada é dúvida, porque ninguém o lê
+    (:func:`lancadores_que_viraram_extensao`). Nunca levanta; o que existe e não se lê entra em
+    ``duvida``.
     """
     versoes: set[str] = set()
     duvida: list[str] = []
-    for lancador, leitor in (("Lutris", _proton_do_lutris), ("Heroic", _proton_do_heroic)):
+    for lancador, leitor in (("Heroic", _proton_do_heroic),):
         try:
             pastas = pastas_que_existem(lancador, lar, xdg_config=xdg_config, xdg_data=xdg_data)
         except Exception:
@@ -840,73 +531,31 @@ def proton_em_uso(lar: Path | None = None, *, xdg_config: Path | None = None,
                 achadas, duvidas = [], [str(pasta)]
             versoes.update(achadas)
             duvida.extend(duvidas)
-    return ProtonEmUso(frozenset(versoes), tuple(duvida))
-
-
-def _retroarch(pasta: Path) -> BibliotecaDoLancador:
-    """As playlists `.lpl` — uma por console, com as ROMs dentro."""
-    listas = pasta / "playlists"
-    if not listas.is_dir():
-        return BibliotecaDoLancador("RetroArch", LIDO, pasta, [], [])
-    jogos: list[JogoDoLancador] = []
-    erros: list[str] = []
-    for lpl in sorted(listas.glob("*.lpl")):
-        dado = _json(lpl)
-        itens = dado.get("items") if isinstance(dado, dict) else None
-        if not isinstance(itens, list):
-            erros.append(f"{lpl.name} não traz `items` como lista")
+    try:
+        extensoes = lancadores_das_extensoes()
+    except Exception:
+        extensoes = ()
+        duvida.append("extensões")
+    lidas: set[str] = set()
+    for ext in extensoes:
+        if ext.bloco.leitor is None:
             continue
-        for it in itens:
-            if not isinstance(it, dict):
-                continue
-            caminho = str(it.get("path") or "")
-            jogos.append(JogoDoLancador(
-                chave=caminho, nome=str(it.get("label") or Path(caminho).stem),
-                loja=lpl.stem, instalado=bool(caminho),
-                caminho=Path(caminho) if caminho else None))
-    return BibliotecaDoLancador("RetroArch", LIDO, pasta, jogos, erros)
-
-
-def _dolphin(pasta: Path) -> BibliotecaDoLancador:
-    """As PASTAS de ISO do `Dolphin.ini` (`ISOPath0..N`) — não os jogos."""
-    ini = pasta / "Dolphin.ini"
-    if not ini.is_file():
-        return BibliotecaDoLancador("Dolphin", LIDO, pasta, [], [])
-    cfg = configparser.ConfigParser(strict=False)
-    try:
-        cfg.read_string(ini.read_text(encoding="utf-8", errors="replace"))
-    except (OSError, configparser.Error) as erro:
-        return BibliotecaDoLancador("Dolphin", ILEGIVEL, pasta, [], [str(erro)])
-    jogos = [JogoDoLancador(chave=v, nome=Path(v).name or v, loja="Pasta de ISOs",
-                            caminho=Path(v))
-             for sec in cfg.sections()
-             for k, v in cfg.items(sec)
-             if k.startswith("isopath") and k[7:].isdigit() and v]
-    return BibliotecaDoLancador("Dolphin", LIDO, pasta, jogos, [])
-
-
-def _mgba(pasta: Path) -> BibliotecaDoLancador:
-    """O mGBA guarda os recentes no `config.ini`, seção `[ports.qt]`."""
-    ini = pasta / "config.ini"
-    if not ini.is_file():
-        return BibliotecaDoLancador("mGBA", LIDO, pasta, [], [])
-    cfg = configparser.ConfigParser(strict=False)
-    try:
-        cfg.read_string(ini.read_text(encoding="utf-8", errors="replace"))
-    except (OSError, configparser.Error) as erro:
-        return BibliotecaDoLancador("mGBA", ILEGIVEL, pasta, [], [str(erro)])
-    jogos = [JogoDoLancador(chave=v, nome=Path(v).name or v, loja="Recentes",
-                            instalado=True, caminho=Path(v))
-             for sec in cfg.sections()
-             for k, v in cfg.items(sec) if k.startswith("recent.") and v]
-    return BibliotecaDoLancador("mGBA", LIDO, pasta, jogos, [])
+        lidas.add(ext.bloco.chave)
+        biblioteca = ler_por_processo(ext.bloco.leitor)
+        if biblioteca.estado != LIDO:
+            duvida.append(ext.bloco.chave)
+        versoes.update(j.proton for j in biblioteca.jogos if j.proton)
+    for antigo in lancadores_que_viraram_extensao(lar, xdg_config=xdg_config,
+                                                  xdg_data=xdg_data):
+        if antigo.chave not in lidas and antigo.proton:
+            duvida.append(antigo.chave)
+    return ProtonEmUso(frozenset(versoes), tuple(duvida))
 
 
 def _ler(lancador: str, pasta: Path, onde: _Onde) -> BibliotecaDoLancador:
     """O leitor deste lançador sobre UMA pasta — e nunca levanta por disco."""
+    del onde
     try:
-        if lancador == "Lutris":
-            return _lutris(pasta, onde=onde)
         return _LEITORES[lancador](pasta)
     except OSError as erro:
         return BibliotecaDoLancador(lancador, ILEGIVEL, pasta, [], [str(erro)])
@@ -948,8 +597,6 @@ def biblioteca_de(lancador: str, lar: Path | None = None, *,
     jogos = [j for b in lidas for j in b.jogos]
     if lancador == "Heroic":
         jogos = _uma_vez_por_jogo(jogos)
-    if lancador == "Lutris":
-        jogos.sort(key=lambda j: (j.nome.casefold(), j.chave))
     return BibliotecaDoLancador(
         lancador, LIDO if lidas else partes[0].estado,
         (lidas or partes)[0].onde, jogos, [e for b in partes for e in b.erros])
@@ -1006,6 +653,9 @@ JOGOS_MAXIMOS_DO_LEITOR = 5000
 
 _MAXIMO_DE_AGULHAS = 16
 _CHAVE_DO_JOGO = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+#: A chave de um jogo que chegou pela porta: a régua é a da porta (``mods/porta._texto``, até 120
+#: caracteres, como ``lutris:12``), sem caractere de controle.
+_CHAVE_DA_PORTA = re.compile(r"^(?=.*\S)[^\x00-\x1f\x7f]{1,120}$")
 
 
 @dataclass(frozen=True)
@@ -1025,6 +675,10 @@ class LeitorPorProcesso:
     #: A forma que o ``titulo_do_jogo`` de cada jogo tem de ter (``re.search``).
     #: Vazia, qualquer texto curto serve.
     molde_do_titulo: str = ""
+    #: Os arquivos que o leitor lê, relativos à ``HOME`` (``.config/Emulador/emulador.ini``; o ``*``
+    #: vale no último pedaço). É por eles que a vigia sabe que a biblioteca mudou
+    #: (:func:`assinatura_das_bibliotecas`) sem abrir o leitor a cada volta.
+    fontes: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -1052,10 +706,25 @@ def _agulhas(bloco: dict[str, object], campo: str) -> tuple[str, ...]:
     return limpas
 
 
+def _fontes_do_leitor(bruto: object) -> tuple[str, ...]:
+    """As ``fontes`` do leitor: caminhos relativos à ``HOME``, sem ``..``, até 16."""
+    if not isinstance(bruto, list) or not all(isinstance(x, str) for x in bruto):
+        raise ValueError("«leitor.fontes» precisa ser uma lista de textos")
+    limpas = tuple(dict.fromkeys(x.strip() for x in bruto if x.strip()))
+    if len(limpas) > _MAXIMO_DE_AGULHAS:
+        raise ValueError(f"«leitor.fontes» passa de {_MAXIMO_DE_AGULHAS} itens")
+    for fonte in limpas:
+        partes = Path(fonte).parts
+        if (fonte.startswith(("/", "~")) or ".." in partes or len(fonte) > 200
+                or any("*" in parte for parte in partes[:-1])):
+            raise ValueError(f"«leitor.fontes» tem {fonte!r}, que não é um caminho da HOME")
+    return limpas
+
+
 def _leitor_do_bloco(mod_id: str, rotulo: str, bruto: object, pasta: Path,
                      molde: str) -> LeitorPorProcesso:
-    if not isinstance(bruto, dict) or set(bruto) - {"executar", "prazo_s"}:
-        raise ValueError("«leitor» aceita só «executar» e «prazo_s»")
+    if not isinstance(bruto, dict) or set(bruto) - {"executar", "prazo_s", "fontes"}:
+        raise ValueError("«leitor» aceita só «executar», «prazo_s» e «fontes»")
     executar = bruto.get("executar")
     if (not isinstance(executar, list) or not executar
             or not all(isinstance(x, str) for x in executar) or not executar[0].strip()):
@@ -1068,7 +737,8 @@ def _leitor_do_bloco(mod_id: str, rotulo: str, bruto: object, pasta: Path,
             or not 0 < prazo <= PRAZO_MAXIMO_DO_LEITOR_S):
         raise ValueError(
             f"«leitor.prazo_s» precisa estar entre 0 e {PRAZO_MAXIMO_DO_LEITOR_S:g} s")
-    return LeitorPorProcesso(mod_id, rotulo, tuple(executar), pasta, float(prazo), molde)
+    return LeitorPorProcesso(mod_id, rotulo, tuple(executar), pasta, float(prazo), molde,
+                             _fontes_do_leitor(bruto.get("fontes", [])))
 
 
 def lancador_da_modificacao(mod_id: str, bloco: object, pasta: Path
@@ -1077,7 +747,7 @@ def lancador_da_modificacao(mod_id: str, bloco: object, pasta: Path
 
     A chave do cartão é o ``id`` da modificação (o manifesto já o conferiu na
     forma de chave). Uma modificação cujo ``id`` é o de um cartão de fábrica
-    (``retroarch``) ensina aquele cartão, como o lançador que a pessoa declara.
+    (``heroic``) ensina aquele cartão, como o lançador que a pessoa declara.
     """
     if not isinstance(bloco, dict):
         raise ValueError("«lancador» precisa ser um objeto")
@@ -1119,7 +789,7 @@ def linha_do_leitor(leitor: LeitorPorProcesso, comando: list[str],
     A caixa do leitor NÃO é a do processo da modificação
     (``mods/supervisor.comando_na_caixa``), e a diferença é o trabalho dele: a
     do processo esconde a ``HOME``, e o leitor existe para ler a configuração
-    do emulador que mora nela (``~/.config/Kyty/Kyty.ini``). Esta deixa a raiz
+    do emulador que mora nela (``~/.config/Emulador/emulador.ini``). Esta deixa a raiz
     inteira visível e SÓ DE LEITURA, sem rede, sem o barramento do sistema,
     sem a execução da sessão (o socket do serviço, o do som, o do Wayland) e
     num espaço de PID próprio, que morre com quem o abriu. Sem ``bwrap``, roda
@@ -1202,13 +872,31 @@ def _saida_do_leitor(processo: subprocess.Popen[bytes], prazo_s: float
     return bytes(lido), ""
 
 
-def _jogo_do_leitor(linha: object, molde: str) -> JogoDoLancador | None:
-    """Uma linha da saída do leitor, conferida; ``None`` quando ela não serve."""
+#: A forma da ``janela`` que o leitor (ou a porta) dá a um jogo: a de uma classe de janela.
+_JANELA_DO_JOGO = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
+
+
+def _texto_curto(valor: object, teto: int) -> str:
+    """O texto opcional de uma linha do leitor: curto e imprimível, ou ``""``."""
+    if not isinstance(valor, str):
+        return ""
+    valor = valor.strip()
+    return valor if len(valor) <= teto and valor.isprintable() else ""
+
+
+def _jogo_do_leitor(linha: object, molde: str,
+                    forma_da_chave: re.Pattern[str] = _CHAVE_DO_JOGO) -> JogoDoLancador | None:
+    """Uma linha da saída do leitor, conferida; ``None`` quando ela não serve.
+
+    ``chave`` e ``nome`` são exigidos; ``caminho``, ``titulo_do_jogo``, ``janela``, ``proton`` e
+    ``instalado`` (verdadeiro quando falta) são opcionais, e o opcional torto fica vazio sem
+    derrubar a linha.
+    """
     if not isinstance(linha, dict):
         return None
     chave, nome = linha.get("chave"), linha.get("nome")
     caminho, titulo = linha.get("caminho", ""), linha.get("titulo_do_jogo", "")
-    if not isinstance(chave, str) or not _CHAVE_DO_JOGO.match(chave):
+    if not isinstance(chave, str) or not forma_da_chave.match(chave):
         return None
     if not isinstance(nome, str) or not nome.strip() or len(nome) > 200:
         return None
@@ -1218,9 +906,35 @@ def _jogo_do_leitor(linha: object, molde: str) -> JogoDoLancador | None:
     if (len(titulo) > 64 or not titulo.isprintable()
             or (titulo and molde and not re.search(molde, titulo))):
         titulo = ""
-    return JogoDoLancador(chave=chave, nome=nome.strip(), instalado=True,
+    janela = _texto_curto(linha.get("janela"), 128)
+    instalado = linha.get("instalado", True)
+    return JogoDoLancador(chave=chave, nome=nome.strip(),
+                          instalado=instalado if isinstance(instalado, bool) else True,
                           caminho=Path(caminho) if caminho else None,
-                          titulo_do_jogo=titulo)
+                          titulo_do_jogo=titulo,
+                          janela=janela if _JANELA_DO_JOGO.match(janela) else "",
+                          proton=_texto_curto(linha.get("proton"), 120))
+
+
+def biblioteca_da_porta(rotulo: str, jogos: object) -> BibliotecaDoLancador:
+    """A biblioteca que uma extensão de lançador entregou pela porta (``lancador.jogos``).
+
+    Os jogos chegam ao serviço já conferidos (``mods/porta.jogos_do_lancador``) e voltam à
+    interface pelo ``mods.jogos``; aqui passam pela mesma régua da linha do leitor, com a chave na
+    forma da porta (:data:`_CHAVE_DA_PORTA`): a do leitor recusava o ``lutris:12`` que a porta
+    aceita, e a fila ficava sem os jogos. Lista vazia é biblioteca lida e vazia; o que não é lista
+    é «não pôde ser lida».
+    """
+    if not isinstance(jogos, list):
+        return BibliotecaDoLancador(rotulo, ILEGIVEL, None, [],
+                                    ["a extensão não entregou uma lista de jogos"])
+    achados: dict[str, JogoDoLancador] = {}
+    for linha in jogos[:JOGOS_MAXIMOS_DO_LEITOR]:
+        jogo = _jogo_do_leitor(linha, "", _CHAVE_DA_PORTA)
+        if jogo is not None and jogo.chave not in achados:
+            achados[jogo.chave] = jogo
+    fora = sorted(achados.values(), key=lambda j: (j.nome.casefold(), j.chave))
+    return BibliotecaDoLancador(rotulo, LIDO, None, fora, [])
 
 
 def ler_por_processo(leitor: LeitorPorProcesso, *,
@@ -1285,20 +999,23 @@ def jogos_com_chave_de_janela(
         for jogo in biblioteca_de(nome, lar).jogos:
             if jogo.instalado and jogo.classe_de_janela:
                 achados.append((nome, jogo))
+    try:
+        extensoes = lancadores_das_extensoes()
+    except Exception:
+        extensoes = ()
+    for ext in extensoes:
+        if ext.bloco.leitor is None:
+            continue
+        for jogo in ler_por_processo(ext.bloco.leitor).jogos:
+            if jogo.instalado and jogo.classe_de_janela:
+                achados.append((ext.bloco.rotulo, jogo))
     return achados
 
 
 _FONTES: dict[str, tuple[str, ...]] = {
     "Heroic": ("store_cache/*_library.json", "store_cache/umu.json",
                *(rel for rels in _REGISTROS_DO_HEROIC.values() for rel in rels)),
-    "Lutris": ("pga.db", "pga.db-wal", "games/*.yml", "runners/wine.yml",
-               "runtime/umu-games/umu-games.json"),
-    "RetroArch": ("playlists/*.lpl",),
-    "Dolphin": ("Dolphin.ini",),
-    "mGBA": ("config.ini",),
 }
-
-_FONTES_DOS_DADOS_DO_LUTRIS = ("pga.db", "pga.db-wal", "runtime/umu-games/umu-games.json")
 
 
 def _impressao(caminho: Path) -> tuple[str, int, int]:
@@ -1314,7 +1031,12 @@ def assinatura_das_bibliotecas(
     lar: Path | None = None, *,
     xdg_config: Path | None = None, xdg_data: Path | None = None,
 ) -> tuple[tuple[str, int, int], ...]:
-    """Impressão BARATA das cinco bibliotecas — **do que se LÊ**, não da pasta."""
+    """Impressão BARATA das bibliotecas — **do que se LÊ**, não da pasta.
+
+    As de fábrica pelas pastas e pelo :data:`_FONTES`; as das extensões ligadas pelas ``fontes``
+    que o leitor de cada uma declara, relativas ao lar. O registro das extensões entra também:
+    ligar ou desligar uma muda a lista de bibliotecas.
+    """
     linhas: list[tuple[str, int, int]] = []
     onde = _onde(lar, xdg_config, xdg_data)
     for nome in _LEITORES:
@@ -1322,29 +1044,42 @@ def assinatura_das_bibliotecas(
         if not pastas:
             linhas.append((nome, -1, -1))
         for pasta in pastas:
-            linhas.extend(_impressoes_da_pasta(nome, pasta, onde))
+            linhas.extend(_impressoes_da_pasta(nome, pasta))
+    try:
+        from hefesto_dualsense4unix.mods.instalador import Lugares
+
+        linhas.append(_impressao(Lugares.do_xdg().registro))
+        extensoes = lancadores_das_extensoes()
+    except Exception:
+        extensoes = ()
+    for ext in extensoes:
+        leitor = ext.bloco.leitor
+        if leitor is None:
+            continue
+        linhas.append((ext.bloco.chave, len(leitor.fontes), 0))
+        for fonte in leitor.fontes:
+            linhas.extend(_impressoes_do_padrao(onde.lar, fonte))
     return tuple(linhas)
 
 
-def _impressoes_da_pasta(nome: str, pasta: Path, onde: _Onde) -> list[tuple[str, int, int]]:
+def _impressoes_do_padrao(base: Path, padrao: str) -> list[tuple[str, int, int]]:
+    """A impressão de um padrão de :data:`_FONTES` (ou da ``fonte`` de um leitor) sobre ``base``."""
+    if "*" not in padrao:
+        return [_impressao(base / padrao)]
+    sub, _, molde = padrao.rpartition("/")
+    alvo = base / sub if sub else base
+    try:
+        achados = sorted(alvo.glob(molde))
+    except OSError:  # pragma: no cover - pasta ilegível
+        achados = []
+    return [_impressao(alvo), *(_impressao(a) for a in achados)]
+
+
+def _impressoes_da_pasta(nome: str, pasta: Path) -> list[tuple[str, int, int]]:
     """A impressão de UMA pasta que o censo lê: ela e o que :data:`_FONTES` diz."""
     linhas = [_impressao(pasta)]
     for padrao in _FONTES.get(nome, ()):
-        if "*" not in padrao:
-            linhas.append(_impressao(pasta / padrao))
-            continue
-        sub, _, molde = padrao.rpartition("/")
-        alvo = pasta / sub if sub else pasta
-        linhas.append(_impressao(alvo))
-        try:
-            achados = sorted(alvo.glob(molde))
-        except OSError:  # pragma: no cover - pasta ilegível
-            achados = []
-        linhas.extend(_impressao(a) for a in achados)
-    if nome == "Lutris":
-        dados = _pasta_de_dados_do_lutris(pasta, onde)
-        if dados.resolve() != pasta.resolve():
-            linhas.extend(_impressao(dados / rel) for rel in _FONTES_DOS_DADOS_DO_LUTRIS)
+        linhas.extend(_impressoes_do_padrao(pasta, padrao))
     return linhas
 
 
@@ -1377,8 +1112,7 @@ CAMPOS_SO_DE_FABRICA = frozenset({"ordem", "interior_lido", "programas", "reposi
 
 #: Os leitores de biblioteca que o censo sabe (código, não lista de lançadores): o manifesto
 #: escolhe um pelo nome.
-_FUNCOES_DE_LEITURA = {"heroic": _heroic, "lutris": _lutris, "retroarch": _retroarch,
-                       "dolphin": _dolphin, "mgba": _mgba}
+_FUNCOES_DE_LEITURA = {"heroic": _heroic}
 
 
 @dataclass(frozen=True)
@@ -1389,7 +1123,7 @@ class ProgramaDeFabrica:
     flatpak: str
     pasta: str
     leitor: str
-    #: A configuração dele cai nos dados do XDG quando não há pasta de configuração (o Lutris).
+    #: A configuração dele cai nos dados do XDG quando não há pasta de configuração.
     config_nos_dados: bool = False
 
 
@@ -1530,14 +1264,139 @@ LANCADORES_COM_JOGOS: frozenset[str] = frozenset({_SERVICO_DA_STEAM, *_CARTAO_DO
 def lancador_do_jogo(fonte: str, appid: str = "") -> str:
     """O cartão de quem entregou o jogo, ou ``""`` no atalho direto (que não é de lançador).
 
-    O atalho ``.desktop`` com o número da Steam é da Steam; os outros vêm pelo programa.
+    O atalho ``.desktop`` com o número da Steam é da Steam; os outros vêm pelo programa de
+    fábrica ou pela extensão ligada que o leu (a ``fonte`` é o rótulo dela, em minúsculas, como
+    `jogos_locais.jogos_dos_lancadores` o grava).
     """
     if fonte == _SERVICO_DA_STEAM or (fonte == "desktop" and appid.isdigit()):
         return _SERVICO_DA_STEAM
-    return _CARTAO_DO_PROGRAMA.get(fonte, "")
+    if fonte in _CARTAO_DO_PROGRAMA:
+        return _CARTAO_DO_PROGRAMA[fonte]
+    return _cartoes_das_extensoes().get(fonte, "")
+
+
+def _cartoes_das_extensoes() -> dict[str, str]:
+    """``{rótulo em minúsculas e id: id}`` das extensões de lançador ligadas. Nunca levanta."""
+    try:
+        extensoes = lancadores_das_extensoes()
+    except Exception:
+        return {}
+    fora: dict[str, str] = {}
+    for ext in extensoes:
+        fora.setdefault(ext.bloco.rotulo.casefold(), ext.bloco.chave)
+        fora.setdefault(ext.bloco.chave, ext.bloco.chave)
+    return fora
+
+
+def lancadores_com_jogos() -> frozenset[str]:
+    """Os cartões que entregam jogos agora: os de fábrica e os das extensões ligadas."""
+    return LANCADORES_COM_JOGOS | frozenset(_cartoes_das_extensoes().values())
 
 
 #: ``{cartão da aba 07: os programas que ele junta}``. A Steam não entra: o interior dela o
 #: produto lê por outro caminho.
 _DO_CARTAO: dict[str, tuple[str, ...]] = {
     f.bloco.chave: tuple(p.nome for p in f.programas) for f in DE_FABRICA if not f.interior_lido}
+
+
+# -- os lançadores das extensões ------------------------------------------------
+#
+# Desde OS-LANCADORES-ALEM-DA-STEAM-E-DO-HEROIC-VIRAM-EXTENSOES-01 (19/10/2026) só a Steam, o Heroic
+# e o Flatpak são de fábrica; o Lutris, o RetroArch, o Dolphin, o mGBA, o Azahar e o KytyPS5 são
+# extensões, cada uma no seu repositório, com o leitor da biblioteca DENTRO dela. O censo as acha
+# pelo registro das extensões, com o mesmo conferidor do bloco ``lancador`` de qualquer extensão.
+
+
+@dataclass(frozen=True)
+class LancadorDaExtensao:
+    """Um lançador que uma extensão LIGADA traz."""
+
+    bloco: LancadorDaModificacao
+    #: A extensão tem o tipo ``processo``: os jogos chegam pela porta (``lancador.jogos``), e a
+    #: interface os pede ao serviço (``mods.jogos``).
+    pela_porta: bool = False
+
+
+def lancadores_das_extensoes(lugares: Any = None) -> tuple[LancadorDaExtensao, ...]:
+    """Os lançadores das extensões LIGADAS, na ordem do ``id``. Nunca levanta.
+
+    Entra a extensão ligada cujo manifesto, conferido de novo aqui, tem o tipo ``lancador``, o
+    bloco ``lancador`` e a permissão ``lancador`` que a pessoa aceitou. Desligou, sai na leitura
+    seguinte. Um registro ilegível ou um bloco torto deixa só aquela de fora.
+
+    :param lugares: o ``mods.instalador.Lugares`` a ler (padrão: o do XDG).
+    """
+    from hefesto_dualsense4unix.mods.instalador import (
+        InstalacaoRecusadaError,
+        Lugares,
+        ler_registro,
+    )
+    from hefesto_dualsense4unix.mods.manifesto import ManifestoRecusadoError, ler_manifesto
+
+    try:
+        lg = lugares or Lugares.do_xdg()
+        registro = ler_registro(lg.registro)
+    except (InstalacaoRecusadaError, OSError):
+        return ()
+    fora: list[LancadorDaExtensao] = []
+    for mod_id, entrada in sorted(registro.items()):
+        if not entrada.ligada or "lancador" not in entrada.permissoes_aceitas:
+            continue
+        pasta = lg.codigo / mod_id
+        try:
+            manifesto = ler_manifesto(pasta)
+            if ("lancador" not in manifesto.tipos or manifesto.lancador is None
+                    or "lancador" not in manifesto.permissoes or manifesto.id != mod_id):
+                continue
+            bloco = lancador_da_modificacao(mod_id, manifesto.lancador, pasta)
+        except (ManifestoRecusadoError, ValueError, OSError):
+            continue
+        fora.append(LancadorDaExtensao(bloco, pela_porta="processo" in manifesto.tipos))
+    return tuple(fora)
+
+
+#: Os lançadores que eram de fábrica e viraram extensão, com o endereço de cada uma.
+ARQUIVO_DOS_QUE_VIRARAM_EXTENSAO = (
+    Path(__file__).resolve().parent.parent / "mods" / "viraram_extensao.json")
+
+
+@dataclass(frozen=True)
+class ViradoExtensao:
+    """Um lançador que era de fábrica e virou extensão, achado no disco."""
+
+    chave: str
+    nome: str
+    endereco: str
+    #: O lançador grava a versão do Proton de cada jogo (o Lutris): sem a extensão, ninguém a lê.
+    proton: bool = False
+
+
+def _os_que_viraram_extensao() -> list[dict[str, object]]:
+    bruto = _json(ARQUIVO_DOS_QUE_VIRARAM_EXTENSAO)
+    linhas = bruto.get("lancadores") if isinstance(bruto, dict) else None
+    return [x for x in linhas if isinstance(x, dict)] if isinstance(linhas, list) else []
+
+
+def lancadores_que_viraram_extensao(lar: Path | None = None, *,
+                                    xdg_config: Path | None = None,
+                                    xdg_data: Path | None = None) -> tuple[ViradoExtensao, ...]:
+    """Os lançadores que viraram extensão e têm pasta neste disco (quem já os usava).
+
+    As casas são as de sempre: a caixa do Flatpak (``~/.var/app/<app id>``) e as pastas do XDG
+    (``<config>/<pasta>``, ``<dados>/<pasta>``). Instalar a extensão é de quem chama decidir: a
+    linha só diz que o lançador virou extensão e o endereço. Nunca levanta.
+    """
+    onde = _onde(lar, xdg_config, xdg_data)
+    achados: list[ViradoExtensao] = []
+    for linha in _os_que_viraram_extensao():
+        chave, nome = linha.get("id"), linha.get("nome")
+        endereco, app_id, sub = linha.get("endereco"), linha.get("flatpak"), linha.get("pasta")
+        if not all(isinstance(x, str) and x for x in (chave, nome, endereco, app_id, sub)):
+            continue
+        casas = (onde.lar / ".var/app" / str(app_id), onde.config / str(sub),
+                 onde.dados / str(sub))
+        with contextlib.suppress(OSError):
+            if any(casa.is_dir() for casa in casas):
+                achados.append(ViradoExtensao(str(chave), str(nome), str(endereco),
+                                              linha.get("proton") is True))
+    return tuple(achados)

@@ -26,7 +26,6 @@ exigir_gi_real("importa `interface.pacotes.a07_lancadores`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
-from hefesto_dualsense4unix.profiles.schema import MatchCriteria
 
 
 @pytest.fixture
@@ -47,39 +46,6 @@ def _achados(monkeypatch: pytest.MonkeyPatch,
         "hefesto_dualsense4unix.integrations.jogos_locais.lancadores_por_conteudo",
         lambda *a, **k: achados)
     return a07._achados_por_conteudo()
-
-
-def _janelas_da_linha(cartao: desenho.SemCenso) -> list[str]:
-    _jogos, janelas, _emu = a07._jogos_para_escolher(cartao.chave, cartao.nome, None)
-    return [j for classes in janelas.values() for j in classes]
-
-
-def test_o_vita3k_achado_pelo_desktop_leva_a_classe_da_janela(
-        lar: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    # D-1610-O-EMULADOR-ACHADO-PELO-DESKTOP-LEVA-A-JANELA-DA-TABELA
-    """A linha «todos os jogos» do Vita3K casa a janela dele, no AppImage e no AUR."""
-    (cartao,) = _achados(monkeypatch, {"org.vita3k.vita3k": "Vita3K"})
-    assert cartao.atalhos == ("org.vita3k.vita3k",)
-    assert cartao.comandos == ()
-    criterio = MatchCriteria(window_class=_janelas_da_linha(cartao))
-    assert criterio.matches({"wm_class": "Vita3K"})
-    assert criterio.matches({"wm_class": "vita3k"})
-
-
-def test_a_linha_arrancada_deixa_o_perfil_sem_janela(
-        lar: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """MORDIDA: sem a tabela, só o nome do arquivo sobra e a janela real não casa."""
-    monkeypatch.setattr(a07, "_JANELAS_DO_EMULADOR_ACHADO", {})
-    (cartao,) = _achados(monkeypatch, {"org.vita3k.vita3k": "Vita3K"})
-    criterio = MatchCriteria(window_class=_janelas_da_linha(cartao))
-    assert not criterio.matches({"wm_class": "Vita3K"})
-
-
-def test_a_chave_e_a_do_cartao_e_nao_o_nome_do_arquivo() -> None:
-    """MORDIDA: a tabela errada pelo `stem` (com ponto) nunca seria achada."""
-    assert "org-vita3k-vita3k" in a07._JANELAS_DO_EMULADOR_ACHADO
-    assert all("." not in chave and chave == chave.lower()
-               for chave in a07._JANELAS_DO_EMULADOR_ACHADO)
 
 
 def test_lancador_desconhecido_nao_ganha_janela_inventada(

@@ -137,6 +137,7 @@ import contextlib
 import copy
 import json
 import os
+import re
 import stat
 import sys
 import tempfile
@@ -656,13 +657,81 @@ def escrever_a_estrada(plano: Plano) -> str:
     return frase_do_feito(plano)
 
 
+def _extensoes_com_caixa() -> tuple[tuple[str, str, tuple[str, ...]], ...]:
+    """``[(chave, rótulo, app ids)]`` dos lançadores das extensões ligadas que têm Flatpak.
+
+    O app id é o atalho com ponto (``net.lutris.Lutris``): é o nome da caixa, e o override dela
+    é a estrada. A extensão declara; a carona escreve, como no lançador de fábrica. Nunca levanta.
+    """
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+    try:
+        extensoes = censo.lancadores_das_extensoes()
+    except Exception:
+        return ()
+    fora: list[tuple[str, str, tuple[str, ...]]] = []
+    for ext in extensoes:
+        caixas = tuple(a for a in ext.bloco.atalhos if "." in a)
+        if caixas:
+            fora.append((ext.bloco.chave.casefold(), ext.bloco.rotulo, caixas))
+    return tuple(fora)
+
+
 def cartoes_com_estrada() -> tuple[tuple[str, tuple[str, ...]], ...]:
-    """`[(chave, atalhos)]` dos lançadores que podem receber a cura."""
+    """`[(chave, atalhos)]` dos lançadores que podem receber a cura: os de fábrica e os das
+    extensões ligadas com caixa do Flatpak (:func:`_extensoes_com_caixa`)."""
     from hefesto_dualsense4unix.integrations.censo_dos_lancadores import _ONDE
 
-    return tuple(
+    de_fabrica = tuple(
         (lancador.casefold(), (app_id, subpasta))
         for lancador, (app_id, subpasta) in _ONDE.items())
+    ja = {chave for chave, _ in de_fabrica}
+    return de_fabrica + tuple((chave, caixas) for chave, _rotulo, caixas in _extensoes_com_caixa()
+                              if chave not in ja)
+
+
+def caixas_que_viraram_extensao() -> frozenset[str]:
+    """Os app ids (em minúsculas) das caixas dos lançadores que eram de fábrica e viraram
+    extensão (``mods/viraram_extensao.json``): a carona de antes escreveu nelas."""
+    return frozenset(a.casefold() for a in _app_ids_que_viraram_extensao())
+
+
+def _app_ids_que_viraram_extensao() -> tuple[str, ...]:
+    """Os mesmos app ids, na grafia do Flatpak: é o nome do arquivo do override no disco."""
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+    return tuple(str(x["flatpak"]) for x in censo._os_que_viraram_extensao()
+                 if isinstance(x.get("flatpak"), str) and x["flatpak"])
+
+
+def _soltar_as_caixas_que_sairam(pasta_do_ambiente: Path | None,
+                                 da_carona: frozenset[str]) -> list[str]:
+    """Desfaz o override da caixa de um lançador que virou extensão e não está na carona.
+
+    A carona de antes escreveu no override do Lutris (e do RetroArch, do Dolphin, do mGBA). Sem
+    a extensão ligada, ninguém o mantém: o ambiente velho ficaria lá, parado. O registro diz o
+    que é nosso; o desfazer devolve o que estava antes e a linha sai do registro. Os app ids que
+    soltou; nunca levanta.
+    """
+    saidas = caixas_que_viraram_extensao() - da_carona
+    if not saidas:
+        return []
+    try:
+        registro = ler_registro(pasta_do_ambiente)
+    except Exception:
+        return []
+    soltas: list[str] = []
+    for caminho, entrada in list(registro.items()):
+        if entrada.tipo != FLATPAK_OVERRIDE or Path(caminho).name.casefold() not in saidas:
+            continue
+        with contextlib.suppress(Exception):
+            if not _desfazer_no_arquivo(Path(caminho), entrada).erro:
+                del registro[caminho]
+                soltas.append(Path(caminho).name)
+    if soltas:
+        with contextlib.suppress(OSError):
+            gravar_registro(registro, pasta_do_ambiente)
+    return soltas
 
 
 #: Quem desistiu da trava, como o diário diz (`quem=` na linha `carona_esperou_a_janela`).
@@ -722,7 +791,10 @@ def _curar_na_trava(
     """O corpo de :func:`curar_todas_as_estradas`, com a trava na mão."""
     fora = _a_exclusao() if exclusao is None else exclusao
     escritos: list[str] = []
-    for chave, atalhos in cartoes_com_estrada():
+    cartoes = cartoes_com_estrada()
+    _soltar_as_caixas_que_sairam(
+        pasta_do_ambiente, frozenset(a.casefold() for _, ats in cartoes for a in ats))
+    for chave, atalhos in cartoes:
         try:
             plano = planejar(chave, atalhos, lar, pasta_do_ambiente,
                              raiz_sistema)
@@ -814,6 +886,8 @@ def frase_das_estradas(escritos: Iterable[str]) -> str:
         return FRASE_DA_TRAVA_QUE_NAO_VEIO
 
     nomes = {k.casefold(): k for k in _ONDE}
+    nomes.update({chave: rotulo for chave, rotulo, _caixas in _extensoes_com_caixa()
+                  if chave not in nomes})
     quem = [nomes.get(c, c) for c in escritos]
     if not quem:
         return "Nenhum outro lançador recebeu o ambiente do Hefesto agora."
@@ -910,13 +984,19 @@ def estradas_possiveis(lar: Path) -> list[tuple[Path, str]]:
         if alvo.is_file():
             achados.append((alvo, HEROIC_CONFIG))
     raiz = lar / _PASTA_DOS_OVERRIDES
-    for chave, atalhos in cartoes_com_estrada():
-        if chave == "heroic":
+    app_ids = [a for chave, atalhos in cartoes_com_estrada() if chave != "heroic"
+               for a in atalhos if "." in a]
+    # A caixa do lançador que virou extensão: a carona de antes escreveu nela.
+    # Na grafia do Flatpak: em minúsculas, `net.lutris.lutris` não é o arquivo do disco.
+    app_ids += sorted(_app_ids_que_viraram_extensao())
+    vistos: set[str] = set()
+    for app_id in app_ids:
+        alvo = raiz / app_id
+        if app_id.casefold() in vistos:
             continue
-        for app_id in atalhos:
-            alvo = raiz / app_id
-            if "." in app_id and alvo.is_file():
-                achados.append((alvo, FLATPAK_OVERRIDE))
+        vistos.add(app_id.casefold())
+        if alvo.is_file():
+            achados.append((alvo, FLATPAK_OVERRIDE))
     return achados
 
 
@@ -1595,6 +1675,67 @@ def _yaml() -> ModuleType | None:
     return yaml
 
 
+_SECAO_DO_WINE = re.compile(r"^wine:[ \t]*$", re.MULTILINE)
+_VERSAO_NA_SECAO = re.compile(r"^[ \t]+version:[ \t]*['\"]?([^'\"\n#]*?)['\"]?[ \t]*$")
+_VERSAO_PADRAO_DO_LUTRIS = "ge-proton"
+_STEAMS_DO_PROTON = (".steam/steam", ".local/share/Steam",
+                     ".var/app/com.valvesoftware.Steam/.local/share/Steam")
+
+
+def _versao_do_wine_no_yml(texto: str) -> str | None:
+    """`wine.version` de um `.yml` do Lutris, ou ``None`` (também a seção `wine:` sem versão)."""
+    achado = _SECAO_DO_WINE.search(texto)
+    if achado is None:
+        return None
+    for linha in texto[achado.end():].splitlines()[1:]:
+        if linha.strip() and not linha[:1].isspace():
+            break
+        versao = _VERSAO_NA_SECAO.match(linha)
+        if versao is not None:
+            return versao.group(1).strip() or None
+    return None
+
+
+def _ler_o_texto(alvo: Path) -> str | None:
+    try:
+        return alvo.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
+def _pelo_proton_do_yml(alvo: Path, lar: Path | None = None) -> bool:
+    """O jogo deste `.yml` abre pelo Proton? A resposta sai do `.yml` e da pasta dele, sem o censo.
+
+    O leitor do Lutris saiu do Hefesto (virou a extensão `hefesto-mod-lutris`, 19/10/2026). O
+    `.yml` que a carona mantém é o que a lista de exclusão anotou, achado pela janela
+    `steam_app_<N>` do umu, que só o jogo do runner `wine` anuncia. A regra é a do Lutris: o
+    jogo sem a seção `wine:` não passa pelo Wine; a versão é a do jogo, senão a do
+    `runners/wine.yml`; sem versão, ou a padrão (`ge-proton`), é o umu com o Proton; outra
+    versão só é Proton se a pasta da versão traz o script `proton`. Ilegível é «não». Nunca levanta.
+    """
+    texto = _ler_o_texto(alvo)
+    if texto is None or _SECAO_DO_WINE.search(texto) is None:
+        return False
+    pasta = alvo.parent.parent
+    versao = _versao_do_wine_no_yml(texto)
+    if versao is None:
+        do_runner = _ler_o_texto(pasta / "runners" / "wine.yml")
+        versao = _versao_do_wine_no_yml(do_runner) if do_runner is not None else None
+    if versao is None or versao == _VERSAO_PADRAO_DO_LUTRIS:
+        return True
+    casas = [pasta, pasta.parent.parent / "data" / pasta.name]
+    if lar is not None:
+        casas.append(lar / ".local/share/lutris")
+    locais = [c / "runners" / "wine" for c in casas]
+    if lar is not None:
+        for steam in _STEAMS_DO_PROTON:
+            locais += [lar / steam / "compatibilitytools.d", lar / steam / "steamapps/common"]
+    try:
+        return any((onde / versao / "proton").is_file() for onde in locais)
+    except OSError:
+        return False
+
+
 def _com_o_padrao_do_jogo(base: dict[str, str], por_jogo: frozenset[str], *,
                           pelo_proton: bool) -> dict[str, str]:
     """A camada da caixa com o «não veio» das chaves que dependem do jogo."""
@@ -1630,24 +1771,6 @@ def _a_camada_da_caixa(
         if valor is not None:
             fora[chave] = valor
     return fora, frozenset(por_jogo)
-
-
-def _pasta_do_lutris_flatpak(lar: Path | None) -> Path | None:
-    """A casa do Lutris Flatpak, que o censo acha pela regra do Lutris."""
-    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
-
-    return censo.pasta_do_flatpak("Lutris", lar)
-
-
-def _pelo_proton_por_yml(lar: Path | None) -> dict[str, bool]:
-    """``{.yml do jogo: abre pelo Proton}`` no Lutris Flatpak, pelo censo."""
-    pasta = _pasta_do_lutris_flatpak(lar)
-    if pasta is None:
-        return {}
-    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
-
-    return {str(j.configuracao): j.pelo_proton for j in censo._lutris(pasta, lar).jogos
-            if j.configuracao is not None}
 
 
 def _dizer_o_par(alvo: Path, par: int) -> None:
@@ -1880,12 +2003,11 @@ def _manter_os_ymls(ymls: Iterable[YmlDoJogo], lar: Path | None,
     if not lista:
         return []
     base, por_jogo = _a_camada_da_caixa(lar, pasta_do_ambiente)
-    proton = _pelo_proton_por_yml(lar) if por_jogo else {}
     planos: list[_PlanoDoYml] = []
     for yml in lista:
         with contextlib.suppress(Exception):
-            pares = _com_o_padrao_do_jogo(
-                base, por_jogo, pelo_proton=proton.get(yml.arquivo, False))
+            pares = _com_o_padrao_do_jogo(base, por_jogo,
+                                          pelo_proton=_pelo_proton_do_yml(Path(yml.arquivo), lar))
             plano = _planejar_o_yml(yml, pares)
             if plano is not None:
                 planos.append(plano)

@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import dataclasses
 import html
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -448,8 +449,8 @@ def tela_do_registro_html(para_quem: str = NOVO_SEM_ALVO) -> str:
     um faria metade das aberturas contradizer a linha abaixo.
 
     **O «?» encurtou em 11/09/2026 — A2-033, aprovada pelo usuário: 403 → 165.** O parágrafo do meio
-    era a dica do campo em prosa (o `placeholder` já mostra `ryujinx · /opt/Ryujinx/Ryujinx ·
-    org.ryujinx.Ryujinx`) e o de cima descrevia como o produto PROCURA, mecânica dita de novo pela
+    era a dica do campo em prosa (o `placeholder` já mostra `emulador · /opt/Emulador/emulador ·
+    org.exemplo.Emulador`) e o de cima descrevia como o produto PROCURA, mecânica dita de novo pela
     recusa de `_achar_o_que_ela_digitou` quando serve. Sobrou o que ela precisa antes de digitar: o
     que vale, e que o produto confere antes de guardar.
     """
@@ -463,13 +464,13 @@ def tela_do_registro_html(para_quem: str = NOVO_SEM_ALVO) -> str:
       <div class="lanc-novo-para" data-campo="{NOVO_PARA_QUEM}">{_e(para_quem)}</div>
       <label class="lanc-novo-campo">
         <span>Como ele se chama</span>
-        <input type="text" data-linha="{NOVO_ROTULO}" placeholder="Ryujinx">
+        <input type="text" data-linha="{NOVO_ROTULO}" placeholder="Meu emulador">
       </label>
       <label class="lanc-novo-campo">
         <span>Onde ele está</span>
         <div class="lanc-novo-linha">
           <input type="text" data-linha="{NOVO_ALVO}"
-                 placeholder="Ryujinx  ·  /opt/Ryujinx/Ryujinx  ·  org.ryujinx.Ryujinx">
+                 placeholder="Emulador  ·  /opt/emulador/emulador  ·  org.exemplo.emulador">
           <a class="btn" href="#{TELA_DO_NOVO}"
              data-gesto="{_a(PROCURAR_O_ARQUIVO)}"
              data-hef-forma="{_a(TELA_DO_NOVO)}"
@@ -614,6 +615,9 @@ class SemCenso:
     #: declarou. Sem marca no cartão (escolha do usuário de 09/10/2026, ~16h15): sair é desligar a
     #: modificação, não o «Tirar daqui».
     modificacao: str = ""
+    #: A extensão tem o tipo ``processo``: a lista de jogos chega pela porta (``lancador.jogos``) e
+    #: a interface a pede ao serviço (``mods.jogos``), o que a vigia faz antes de medir.
+    pela_porta: bool = False
 
 
 def _de_fabrica(item: _censo.LancadorDeFabrica) -> SemCenso:
@@ -858,7 +862,7 @@ DIZ_NAO_LI = "<b>Biblioteca da Steam ilegível</b>"
 #: onde» (dois botões com a mesma frase fazem quem lê procurar a diferença que a tela não mostra). A
 #: palavra «novo» era do usuário e distinguia (o que entra por aqui não tem cartão), e caducou em
 #: 11/09/2026; «emulador» saiu do rótulo sem perder o público, pois a dica da tela de registro
-#: nomeia os dois casos e o exemplo (`Ryujinx`) é um emulador.
+#: nomeia os dois casos e o exemplo («Meu emulador») é um emulador.
 #:
 #: **Os dois passaram a dizer o mesmo — 11/09/2026, aprovado pelo usuário**: o botão dizia
 #: «Adicionar novo Lançador» e a tela que ele abre «Localizar um lançador» (dois nomes para a mesma
@@ -1022,19 +1026,16 @@ def medir_no_disco(onde_estao: tuple[tuple[str, str], ...],
                    declarados: tuple[SemCenso, ...] = (),
                    lar: Path | None = None,
                    raiz_sistema: Path | None = None,
-                   com_ponte: frozenset[str] = frozenset()) -> DoDisco:
+                   com_ponte: frozenset[str] = frozenset(),
+                   da_porta: Mapping[str, object] | None = None) -> DoDisco:
     """BLOQUEIA — abre os arquivos dos lançadores e responde o que o cartão mostra.
 
-    Quem chama é a VIGIA e só ela (`a07_lancadores._Vigia.ler`, thread de fundo); da pintura é o
-    defeito medido em :class:`DoDisco`. Só o que foi ACHADO entra: cartão sem caminho em
-    `onde_estao` é lançador que a busca não achou (ou não procurou), e perguntar pela biblioteca de
-    programa ausente é abrir pastas para ouvir "não existe".
-
-    :param lar: o `HOME` a inspecionar (padrão: o de verdade). A régua passa um lar de mentira,
-    junto com `raiz_sistema`, para a medição ficar inteira dentro do `tmp`. :param com_ponte: as
-    classes de janela (em `casefold`) com ponte confirmada num perfil
-    (`prontuario_dos_jogos.classes_com_ponte`), o que o contador de cada cartão conta
-    (:func:`contador_html`).
+    Quem chama é só a vigia (`a07_lancadores._Vigia.ler`, thread de fundo; ver :class:`DoDisco`).
+    Só entra o cartão com caminho em `onde_estao`. `lar` e `raiz_sistema` desviam a medição para o
+    `tmp`; `com_ponte` são as classes de janela (em `casefold`) com ponte num perfil, o que
+    :func:`contador_html` conta; `da_porta` são os jogos que cada extensão de lançador entregou pela
+    porta (o ``mods.jogos``), por chave de cartão, lidos por
+    :func:`censo_dos_lancadores.biblioteca_da_porta` quando o cartão não tem leitor.
     """
     onde = dict(onde_estao)
     itens = [x for x in procurados(declarados) if x.chave != STEAM]
@@ -1065,10 +1066,13 @@ def medir_no_disco(onde_estao: tuple[tuple[str, str], ...],
     for item in itens:
         if not onde.get(item.chave):
             continue
-        #: A leitura e o resumo são do dono (`integrations/censo_dos_lancadores`): montar a frase
-        #: aqui seria a segunda verdade sobre a mesma contagem ("37 jogos" contra "37 na biblioteca"
-        #: na mesma tela).
-        biblioteca = _censo.biblioteca_do_cartao(item.chave, lar, leitor=item.leitor)
+        # A leitura e o resumo são do dono (`integrations/censo_dos_lancadores`): montar a frase
+        # aqui seria a segunda verdade sobre a mesma contagem ("37 jogos" contra "37 na biblioteca"
+        # na mesma tela).
+        if item.leitor is None and da_porta is not None and item.chave in da_porta:
+            biblioteca = _censo.biblioteca_da_porta(item.nome, da_porta[item.chave])
+        else:
+            biblioteca = _censo.biblioteca_do_cartao(item.chave, lar, leitor=item.leitor)
         linha = biblioteca.resumo
         #: **A linha do «Flatpak» é outra pergunta — §5.4, 09/09/2026**: ele não tem biblioteca (o
         #: censo diz `SEM_BIBLIOTECA`, resumo vazio) e a linha dele ficava com travessão.
@@ -1134,6 +1138,9 @@ class Leitura:
     #: Vazio é resposta e é a primeira meia volta: cartão sem linha fica com o travessão e sem o
     #: «Consertar», o que leitura que não aconteceu autoriza a tela a dizer.
     do_disco: DoDisco = SEM_DISCO
+    #: Os lançadores que eram de fábrica, viraram extensão e têm pasta neste disco sem a extensão
+    #: instalada: ``(chave, nome, endereço)``, a linha da migração na fila (19/10/2026).
+    viraram_extensao: tuple[tuple[str, str, str], ...] = ()
 
     @property
     def onde_esta_a_steam(self) -> str | None:

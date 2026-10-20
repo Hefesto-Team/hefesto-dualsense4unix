@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-import sqlite3
 from collections.abc import Iterable, Mapping
 from pathlib import Path
 
@@ -16,7 +15,6 @@ from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
 from tests.unit import a_exclusao_de_antes as antiga
 
 HEROIC = ".var/app/com.heroicgameslauncher.hgl/config/heroic"
-LUTRIS_ID = "net.lutris.Lutris"
 
 
 def plantar_o_registro(casa: Path, jogos: Iterable[str] | Mapping[str, Mapping[str, object]],
@@ -255,85 +253,6 @@ def test_a_assinatura_ve_o_registro(tmp_path: Path) -> None:
     assert censo.biblioteca_de("Heroic", lar=tmp_path).instalados
 
 
-def _banco(dados: Path, jogos: Iterable[str], *, sem: tuple[str, ...] = ()) -> None:
-    """O `pga.db` com as 23 colunas do 0.5.22 (menos as de ``sem``), e um jogo"""
-    from tests.unit.test_a_exclusao_mora_na_camada_do_jogo import _ESQUEMA
-
-    dados.mkdir(parents=True, exist_ok=True)
-    colunas = _ESQUEMA[_ESQUEMA.index("(") + 1:_ESQUEMA.rindex(")")].split(", ")
-    colunas = [c for c in colunas if c.split()[0] not in sem]
-    con = sqlite3.connect(dados / "pga.db")
-    with con:
-        con.execute(f"CREATE TABLE games ({', '.join(colunas)})")
-        for slug in jogos:
-            con.execute("INSERT INTO games (name, slug, runner, installed, configpath) "
-                        "VALUES (?,?,?,?,?)", (slug.title(), slug, "linux", 1, f"{slug}-1"))
-            (dados / "games").mkdir(exist_ok=True)
-            (dados / "games" / f"{slug}-1.yml").write_text("game: {}\n", encoding="utf-8")
-    con.close()
-
-
-def _misto(lar: Path, na_caixa: Iterable[str] = ()) -> tuple[Path, Path]:
-    """O Lutris nativo com dois jogos e a pasta do Flatpak com o banco vazio"""
-    nativo = lar / ".local/share/lutris"
-    flatpak = lar / ".var/app" / LUTRIS_ID / "data/lutris"
-    _banco(nativo, ["jogo-um", "jogo-dois"])
-    _banco(flatpak, na_caixa)
-    return nativo, flatpak
-
-
-@pytest.mark.parametrize("como", ["pelo-path", "pelo-atalho-do-sistema"])
-def test_o_lutris_nativo_instalado_vence_a_sobra_do_flatpak(
-        maquina: dict[str, Path], como: str) -> None:
-    """O nativo instalado (o `lutris` no `PATH`, ou só o"""
-    lar = maquina["lar"]
-    nativo, _ = _misto(lar)
-    if como == "pelo-path":
-        _comando(maquina, "lutris")
-    else:
-        (maquina["sistema"] / f"{LUTRIS_ID}.desktop").write_text("[Desktop Entry]\n")
-
-    b = censo.biblioteca_de("Lutris", lar=lar, raiz_sistema=maquina["raiz"])
-
-    assert b.resumo == "2 jogos na biblioteca · 2 instalados", b
-    assert b.onde == nativo
-
-
-def test_o_atalho_so_nos_exports_e_o_flatpak(maquina: dict[str, Path]) -> None:
-    """O `net.lutris.Lutris.desktop` só na pasta de exports do Flatpak, e o"""
-    lar = maquina["lar"]
-    _, flatpak = _misto(lar)
-    (maquina["exports"] / f"{LUTRIS_ID}.desktop").write_text("[Desktop Entry]\n")
-    _flatpak_instalado(lar, LUTRIS_ID)
-
-    b = censo.biblioteca_de("Lutris", lar=lar, raiz_sistema=maquina["raiz"])
-
-    assert (b.onde, b.resumo) == (flatpak, "A biblioteca está vazia.")
-
-
-def test_com_os_dois_instalados_as_casas_se_somam(maquina: dict[str, Path]) -> None:
-    """Os dois Lutris instalados: o cartão soma as duas bibliotecas, e cada jogo"""
-    lar = maquina["lar"]
-    nativo, flatpak = _misto(lar, ["jogo-da-caixa"])
-    _comando(maquina, "lutris")
-    _flatpak_instalado(lar, LUTRIS_ID)
-
-    b = censo.biblioteca_de("Lutris", lar=lar, raiz_sistema=maquina["raiz"])
-
-    assert {j.chave: j.configuracao for j in b.jogos} == {
-        "jogo-um": nativo / "games/jogo-um-1.yml",
-        "jogo-dois": nativo / "games/jogo-dois-1.yml",
-        "jogo-da-caixa": flatpak / "games/jogo-da-caixa-1.yml"}
-
-
-def test_sem_programa_instalado_vale_o_flatpak_primeiro(maquina: dict[str, Path]) -> None:
-    """Nenhum dos dois instalado e as duas pastas no disco: a regra de antes."""
-    lar = maquina["lar"]
-    _, flatpak = _misto(lar)
-
-    assert censo.biblioteca_de("Lutris", lar=lar, raiz_sistema=maquina["raiz"]).onde == flatpak
-
-
 def test_o_heroic_nativo_instalado_vence_a_sobra_do_flatpak(maquina: dict[str, Path]) -> None:
     """O mesmo cenário misto no Heroic: o nativo instalado e a casa do Flatpak"""
     lar = maquina["lar"]
@@ -350,57 +269,6 @@ def test_o_heroic_nativo_instalado_vence_a_sobra_do_flatpak(maquina: dict[str, P
     assert censo.pastas_lidas("Heroic", lar, raiz_sistema=maquina["raiz"]) == (nativo,)
 
 
-def test_o_banco_sem_as_colunas_novas_da_os_jogos(tmp_path: Path) -> None:
-    """Um banco sem `service`, `service_id` e `discord_id` (que nenhum Lutris"""
-    _banco(tmp_path / ".local/share/lutris", ["jogo-um", "jogo-dois"],
-           sem=("service", "service_id", "discord_id"))
-
-    b = censo.biblioteca_de("Lutris", lar=tmp_path)
-
-    assert b.erros == []
-    assert b.resumo == "2 jogos na biblioteca · 2 instalados"
-    assert {j.appid_da_steam for j in b.jogos} == {""}
-
-
-def test_o_banco_sem_slug_e_erro_e_nao_vazio(tmp_path: Path) -> None:
-    """Sem o `name` ou o `slug` não há jogo: o censo diz o erro."""
-    dados = tmp_path / ".local/share/lutris"
-    dados.mkdir(parents=True)
-    con = sqlite3.connect(dados / "pga.db")
-    with con:
-        con.execute("CREATE TABLE games (id INTEGER PRIMARY KEY, name TEXT)")
-    con.close()
-
-    assert censo.biblioteca_de("Lutris", lar=tmp_path).erros
-
-
-def test_as_casas_nativas_seguem_o_xdg(tmp_path: Path) -> None:
-    """Com o `XDG_CONFIG_HOME` e o `XDG_DATA_HOME` fora do padrão (e fora do"""
-    lar, config, dados = tmp_path / "lar", tmp_path / "fora/cfg", tmp_path / "fora/dados"
-    lutris = dados / "lutris"
-    from tests.unit.test_o_censo_dos_lancadores_le_a_biblioteca import _banco_do_lutris
-
-    _banco_do_lutris(lutris)
-    (config / "lutris/games").mkdir(parents=True)
-    (config / "lutris/games/jogo-x-1.yml").write_text(
-        "wine:\n  version: GE-Proton9-1\n", encoding="utf-8")
-    proton = lar / ".steam/steam/compatibilitytools.d/GE-Proton9-1/proton"
-    proton.parent.mkdir(parents=True)
-    proton.write_text("#!/usr/bin/env python3\n", encoding="utf-8")
-    _escrever(config / "heroic/store_cache/legendary_library.json", {"library": [
-        {"app_name": "a1", "title": "Jogo A", "is_installed": True}]})
-    plantar_o_registro(config / "heroic", ["a1"])
-
-    lt = censo.biblioteca_de("Lutris", lar=lar, xdg_config=config, xdg_data=dados)
-    hr = censo.biblioteca_de("Heroic", lar=lar, xdg_config=config, xdg_data=dados)
-
-    assert (lt.onde, [j.classe_de_janela for j in lt.jogos]) == (
-        config / "lutris", ["steam_app_70400"]), lt
-    assert (hr.onde, hr.resumo) == (config / "heroic", "1 jogo na biblioteca · 1 instalado")
-    assert censo.biblioteca_de("Lutris", lar=lar).estado == censo.NUNCA_ABERTO, (
-        "o lar de mentira sem XDG leu o XDG de outro lugar")
-
-
 def test_o_lar_de_mentira_sem_xdg_le_o_dele(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """O lar dado sem XDG fica com o `<lar>/.config`, mesmo com o ambiente"""
@@ -409,34 +277,6 @@ def test_o_lar_de_mentira_sem_xdg_le_o_dele(
               {"library": [{"app_name": "a1", "title": "Nativo"}]})
 
     assert censo.biblioteca_de("Heroic", lar=tmp_path).onde == tmp_path / ".config/heroic"
-
-
-def test_o_censo_a_carona_e_a_copia_avulsa_acham_a_mesma_casa(
-        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """Com o XDG desviado no ambiente (o lar de verdade, ``lar=None``), a carona"""
-    lar, config, dados = tmp_path / "lar", tmp_path / "cfg", tmp_path / "dados"
-    lar.mkdir()
-    monkeypatch.setenv("HOME", str(lar))
-    monkeypatch.setenv("XDG_CONFIG_HOME", str(config))
-    monkeypatch.setenv("XDG_DATA_HOME", str(dados))
-    casa = config / "heroic"
-    do_heroic = tmp_path / "prefixos/do-heroic"
-    (do_heroic / "pfx").mkdir(parents=True)
-    (do_heroic / "pfx/system.reg").write_text("WINE REGISTRY Version 2\n")
-    _escrever(casa / "config.json", {"defaultSettings": {}})
-    _escrever(casa / "GamesConfig/a1.json", {"a1": {"winePrefix": str(do_heroic)}})
-    do_lutris = dados / "lutris/jogo-x"
-    (do_lutris / "pfx").mkdir(parents=True)
-    (do_lutris / "pfx/system.reg").write_text("WINE REGISTRY Version 2\n")
-    _banco(dados / "lutris", [])
-
-    assert censo.pastas_lidas("Heroic") == (casa,)
-    assert cpe._pasta_do_heroic(None) == casa
-    assert cpe.estradas_possiveis(lar) == [(casa / "config.json", cpe.HEROIC_CONFIG)]
-    assert censo.pastas_lidas("Lutris") == (dados / "lutris",)
-    assert set(cv.prefixos_dos_lancadores()) == {do_heroic, do_lutris}, (
-        "a cópia avulsa das camadas não achou as casas do XDG")
-    assert not hasattr(cpe, "_PASTAS_DO_HEROIC"), "a cópia das casas do Heroic voltou à carona"
 
 
 def test_a_copia_avulsa_com_lar_dado_fica_no_lar(
@@ -525,33 +365,3 @@ def test_com_os_dois_heroic_a_carona_e_a_janela_seguem_a_casa_do_jogo(
         caixa / "GamesConfig/cccc.json"]
     assert cpe.onde_falta_o_ambiente("heroic", atalhos, lar=lar, pasta_do_ambiente=ponte,
                                      raiz_sistema=maquina["raiz"]) == ()
-
-
-def test_o_atalho_no_xdg_do_lar_acha_o_nativo(maquina: dict[str, Path]) -> None:
-    """O `net.lutris.Lutris.desktop` só em `$XDG_DATA_HOME/applications` do lar"""
-    lar = maquina["lar"]
-    nativo, _ = _misto(lar)
-    proprio = lar / ".local/share/applications"
-    proprio.mkdir(parents=True)
-    (proprio / f"{LUTRIS_ID}.desktop").write_text("[Desktop Entry]\n")
-
-    b = censo.biblioteca_de("Lutris", lar=lar, raiz_sistema=maquina["raiz"])
-
-    assert (b.onde, b.resumo) == (nativo, "2 jogos na biblioteca · 2 instalados")
-
-
-def test_a_carona_do_lutris_acha_o_proton_no_lar_de_quem_chama(tmp_path: Path) -> None:
-    """O jogo do Lutris Flatpak com uma versão de Proton que mora no lar dado:"""
-    from tests.unit.test_o_censo_dos_lancadores_le_a_biblioteca import _banco_do_lutris
-
-    versao = "GE-Proton-da-regua-0210"
-    dados = tmp_path / ".var/app" / LUTRIS_ID / "data/lutris"
-    _banco_do_lutris(dados)
-    yml = dados / "games/jogo-x-1.yml"
-    yml.parent.mkdir(parents=True)
-    yml.write_text(f"wine:\n  version: {versao}\n", encoding="utf-8")
-    proton = tmp_path / ".steam/steam/compatibilitytools.d" / versao / "proton"
-    proton.parent.mkdir(parents=True)
-    proton.write_text("#!/usr/bin/env python3\n", encoding="utf-8")
-
-    assert cpe._pelo_proton_por_yml(tmp_path) == {str(yml): True}

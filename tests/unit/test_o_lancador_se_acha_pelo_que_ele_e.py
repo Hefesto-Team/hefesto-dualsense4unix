@@ -136,8 +136,8 @@ def test_o_que_ja_e_de_fabrica_nao_vira_segundo_cartao(monkeypatch) -> None:
 
     monkeypatch.setattr(
         "hefesto_dualsense4unix.integrations.jogos_locais.lancadores_por_conteudo",
-        lambda *a, **k: {"net.lutris.Lutris": "Lutris",
-                         "org.libretro.RetroArch": "RetroArch"})
+        lambda *a, **k: {"com.heroicgameslauncher.hgl": "Heroic",
+                         "heroic": "Heroic Games Launcher"})
 
     assert a07._achados_por_conteudo() == ()
 

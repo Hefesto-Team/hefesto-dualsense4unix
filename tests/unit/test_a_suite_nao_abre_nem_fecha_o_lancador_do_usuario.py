@@ -610,7 +610,7 @@ def test_o_censo_acha_os_lancadores_que_ja_se_sabe_que_existem() -> None:
     """A régua do censo não pode virar um SIM para tudo: `src/` chama `steam`,"""
     no_codigo = _nomes_no_codigo()
     assert {"steam", "xdg-open", "pkill", "pgrep", "flatpak"} <= set(no_codigo)
-    assert {"steamwebhelper", "com.heroicgameslauncher.hgl", "net.lutris.Lutris",
+    assert {"steamwebhelper", "com.heroicgameslauncher.hgl",
             "com.valvesoftware.Steam", "steam-native"} <= set(_nomes_dos_donos())
 
 

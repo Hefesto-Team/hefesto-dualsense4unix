@@ -22,6 +22,14 @@ MGBA = "io.mgba.mGBA"
 
 ATALHOS_EMULADORES = (DOLPHIN, "dolphin-emu", MGBA, "mgba-qt", "mgba")
 
+
+def _o_cartao_da_extensao():
+    """O «Dolphin · mGBA» como cartão de extensão: os dois viraram extensões em 19/10/2026."""
+    from hefesto_dualsense4unix.interface import desenho_dos_lancadores as d
+
+    return (d.SemCenso("emuladores", "Dolphin · mGBA", ATALHOS_EMULADORES,
+                       modificacao="emuladores"),)
+
 DEFAULT_ENV = """\
 # Materializado pelo daemon do Hefesto (DEDUP-04). Não edite:
 # é regravado a cada transição de estado do gamepad virtual.
@@ -378,9 +386,10 @@ def test_o_cartao_localizado_nao_oferece_conserto_e_o_flatpak_muda_de_pergunta(
             ("emuladores", str(exports / f"{DOLPHIN}.desktop")),
             ("flatpak", "/usr/bin/flatpak"))
 
-    do_disco = d.medir_no_disco(onde, **_lar_de_mentira(tmp_path))
+    declarados = _o_cartao_da_extensao()
+    do_disco = d.medir_no_disco(onde, declarados, **_lar_de_mentira(tmp_path))
     cartoes = {c.chave: c
-               for c in d.cartoes(d.Leitura(onde_estao=onde,
+               for c in d.cartoes(d.Leitura(declarados=declarados, onde_estao=onde,
                                             do_disco=do_disco))}
 
     emuladores = cartoes["emuladores"]
@@ -430,8 +439,9 @@ def test_a_pintura_do_tique_nao_abre_arquivo(tmp_path, monkeypatch) -> None:
     onde = (("heroic", str(exports / f"{HEROIC}.desktop")),
             ("emuladores", str(exports / f"{DOLPHIN}.desktop")),
             ("flatpak", "/usr/bin/flatpak"))
-    lida = d.Leitura(onde_estao=onde,
-                     do_disco=d.medir_no_disco(onde,
+    declarados = _o_cartao_da_extensao()
+    lida = d.Leitura(declarados=declarados, onde_estao=onde,
+                     do_disco=d.medir_no_disco(onde, declarados,
                                                **_lar_de_mentira(tmp_path)))
 
     tocados = _espiar_o_disco(monkeypatch)

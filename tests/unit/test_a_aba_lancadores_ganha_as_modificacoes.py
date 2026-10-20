@@ -642,8 +642,8 @@ def test_configurar_o_lancador_abre_a_janela_igual_para_todos(lar, ctx, casa, mo
     flatpak = a07.configurar_lancador(ctx, {"v": "flatpak"}, _Ponte())["blocos"]["#lanc-janela"]
     assert "ver-impedimentos" not in flatpak and "Pastas dos jogos" not in flatpak
     assert "perfil-por-jogo" not in flatpak, "o Flatpak não entrega jogo: a chave não liga nada"
-    retroarch = a07.configurar_lancador(ctx, {"v": "retroarch"}, _Ponte())["blocos"]["#lanc-janela"]
-    assert "perfil-por-jogo" in retroarch
+    heroic = a07.configurar_lancador(ctx, {"v": "heroic"}, _Ponte())["blocos"]["#lanc-janela"]
+    assert "perfil-por-jogo" in heroic
     with pytest.raises(RuntimeError, match="Não conheço"):
         a07.configurar_lancador(ctx, {"v": "inventado"}, _Ponte())
 
@@ -652,50 +652,50 @@ def test_o_escolher_espera_o_guardar_e_o_guardar_grava_o_atalho_e_a_chave(
         lar, ctx, casa) -> None:
     """D-1910-O-ESCOLHER-DO-CONFIGURAR-APONTA-O-ATALHO e D-1910-CADA-JOGO-GANHA-O-PERFIL-..."""
     a07 = _a07()
-    atalho = casa / ".local/share/applications/org.libretro.RetroArch.desktop"
-    atalho.write_text("[Desktop Entry]\nName=RetroArch\n", encoding="utf-8")
+    atalho = casa / ".local/share/applications/com.heroicgameslauncher.hgl.desktop"
+    atalho.write_text("[Desktop Entry]\nName=Heroic\n", encoding="utf-8")
     p = _Seletor(str(atalho))
-    a07.configurar_lancador(ctx, {"v": "retroarch"}, p)
-    carga = a07.escolher_o_lancador(ctx, {"v": "retroarch"}, p)
-    assert ">~/.local/share/applications/org.libretro.RetroArch.desktop</code>" in (
+    a07.configurar_lancador(ctx, {"v": "heroic"}, p)
+    carga = a07.escolher_o_lancador(ctx, {"v": "heroic"}, p)
+    assert ">~/.local/share/applications/com.heroicgameslauncher.hgl.desktop</code>" in (
         carga["blocos"]["#lanc-janela"])
     assert p.chamadas == [], "o «Escolher o arquivo…» gravou antes do Guardar"
     feito = a07.guardar_lancador(
-        ctx, {"v": "retroarch", "forma": {"perfil-por-jogo": "Desligado"}}, p)
-    assert p.chamadas[0] == {"lancadores": {"retroarch": {
-        "rotulo": "RetroArch", "atalhos": ["org.libretro.RetroArch"]}}}, p.chamadas
-    assert p.chamadas[1] == {"perfil_por_jogo": {"retroarch": False}}
+        ctx, {"v": "heroic", "forma": {"perfil-por-jogo": "Desligado"}}, p)
+    assert p.chamadas[0] == {"lancadores": {"heroic": {
+        "rotulo": "Heroic (Epic · GOG)", "atalhos": ["com.heroicgameslauncher.hgl"]}}}, p.chamadas
+    assert p.chamadas[1] == {"perfil_por_jogo": {"heroic": False}}
     assert len(p.chamadas) == 2 and "recado" in feito
     assert a07._PARA_QUEM == "" and a07._MEXIDA.onde_escolhido == ""
     # a chave igual à guardada não escreve nada
     p.chamadas.clear()
-    a07.guardar_lancador(ctx, {"v": "retroarch", "forma": {"perfil-por-jogo": "Ligado"}}, p)
+    a07.guardar_lancador(ctx, {"v": "heroic", "forma": {"perfil-por-jogo": "Ligado"}}, p)
     assert p.chamadas == []
 
 
 def test_o_escolher_fora_das_pastas_recusa_e_o_cancelar_esquece(lar, ctx, casa) -> None:
     a07 = _a07()
-    fora = casa / "Downloads/RetroArch.desktop"
+    fora = casa / "Downloads/Heroic.desktop"
     fora.parent.mkdir()
-    fora.write_text("[Desktop Entry]\nName=RetroArch\n", encoding="utf-8")
+    fora.write_text("[Desktop Entry]\nName=Heroic\n", encoding="utf-8")
     p = _Seletor(str(fora))
-    a07.configurar_lancador(ctx, {"v": "retroarch"}, p)
+    a07.configurar_lancador(ctx, {"v": "heroic"}, p)
     with pytest.raises(RuntimeError, match="fora das pastas"):
-        a07.escolher_o_lancador(ctx, {"v": "retroarch"}, p)
+        a07.escolher_o_lancador(ctx, {"v": "heroic"}, p)
     assert a07._MEXIDA.onde_escolhido == ""
     with pytest.raises(RuntimeError, match="Abra o «Configurar»"):
-        a07.escolher_o_lancador(ctx, {"v": "lutris"}, p)
-    dentro = casa / ".local/share/applications/RetroArch.desktop"
-    dentro.write_text("[Desktop Entry]\nName=RetroArch\n", encoding="utf-8")
+        a07.escolher_o_lancador(ctx, {"v": "steam"}, p)
+    dentro = casa / ".local/share/applications/Heroic.desktop"
+    dentro.write_text("[Desktop Entry]\nName=Heroic\n", encoding="utf-8")
     p.escolha = str(dentro)
-    a07.escolher_o_lancador(ctx, {"v": "retroarch"}, p)
+    a07.escolher_o_lancador(ctx, {"v": "heroic"}, p)
     assert a07._MEXIDA.onde_escolhido == str(dentro)
     # o Cancelar é `href="#"`; a janela reaberta não traz o rascunho
-    a07.configurar_lancador(ctx, {"v": "retroarch"}, p)
+    a07.configurar_lancador(ctx, {"v": "heroic"}, p)
     assert a07._MEXIDA.onde_escolhido == ""
-    a07.guardar_lancador(ctx, {"v": "retroarch", "forma": {}}, p)
+    a07.guardar_lancador(ctx, {"v": "heroic", "forma": {}}, p)
     assert p.chamadas == []
-    assert a07.escolher_o_lancador(ctx, {"v": "retroarch"}, _Seletor(None)) is None
+    assert a07.escolher_o_lancador(ctx, {"v": "heroic"}, _Seletor(None)) is None
 
 
 def test_o_mais_do_configurar_e_o_da_extensao_e_some_com_ela(lar, ctx, monkeypatch) -> None:
@@ -743,9 +743,15 @@ def test_a_chave_desligada_tira_os_jogos_daquele_lancador_da_semeadura(
     assert censo.lancador_do_jogo("steam") == "steam"
     assert censo.lancador_do_jogo("desktop", "620") == "steam"
     assert censo.lancador_do_jogo("desktop", "") == ""
+    assert censo.lancador_do_jogo("heroic") == "heroic"
+    assert censo.lancador_do_jogo("lutris") == "", "o Lutris sem a extensão ganhou cartão"
+    assert {"steam", "heroic"} <= censo.LANCADORES_COM_JOGOS
+    # o Lutris virou extensão (19/10/2026): com a extensão ligada, o jogo é do cartão da extensão
+    bloco = censo.LancadorDaModificacao(chave="lutris", rotulo="Lutris")
+    monkeypatch.setattr(censo, "lancadores_das_extensoes",
+                        lambda lugares=None: (censo.LancadorDaExtensao(bloco),))
     assert censo.lancador_do_jogo("lutris") == "lutris"
-    assert censo.lancador_do_jogo("mgba") == "emuladores"
-    assert {"steam", "heroic", "lutris", "retroarch", "emuladores"} <= censo.LANCADORES_COM_JOGOS
+    assert "lutris" in censo.lancadores_com_jogos()
     assert "flatpak" not in censo.LANCADORES_COM_JOGOS
 
     with pytest.raises(ValueError):
@@ -771,15 +777,15 @@ def test_identificar_diz_o_que_achou_ou_como_ensinar(lar, ctx, monkeypatch) -> N
     from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 
     a07 = _a07()
-    achou = desenho.Leitura(onde_estao=(("flatpak", "/usr/bin/flatpak"), ("lutris", "")))
+    achou = desenho.Leitura(onde_estao=(("flatpak", "/usr/bin/flatpak"), ("heroic", "")))
     monkeypatch.setattr(a07.VIGIA, "ler", lambda: achou)
     monkeypatch.setattr(a07.VIGIA, "esquecer", lambda: None)
     dito = a07.identificar_lancador(ctx, {"v": "flatpak"}, _Ponte())["recado"]
     assert dito.startswith("Achei Flatpak") and "/usr/bin/flatpak" in dito
     # O não achado sobe como recusa (o botão pisca a recusa); pelo recado, piscaria «deu certo».
     # MORDIDA: devolver a frase em `recado` deixa este `raises` sem exceção.
-    with pytest.raises(RuntimeError, match=r"^Não achei Lutris.*Adicionar um lançador"):
-        a07.identificar_lancador(ctx, {"v": "lutris"}, _Ponte())
+    with pytest.raises(RuntimeError, match=r"^Não achei Heroic.*Adicionar um lançador"):
+        a07.identificar_lancador(ctx, {"v": "heroic"}, _Ponte())
     with pytest.raises(RuntimeError, match="Não conheço"):
         a07.identificar_lancador(ctx, {"v": "inventado"}, _Ponte())
 
@@ -909,6 +915,8 @@ def test_a_linha_da_fila_so_leva_a_contagem_e_a_frase_do_cartao_velho_fica_fora(
     assert a07._jogos_da_fila(lanc("1 jogo instalado")) == "1 jogo"
     assert a07._jogos_da_fila(lanc(FRASE_NUNCA_ABERTO.format(nome="Heroic"))) == ""
     assert a07._jogos_da_fila(lanc("22 jogos instalados", presente=False)) == ""
+    assert a07._jogos_da_fila(lanc("12 jogos na biblioteca · 2 instalados")) == "2 jogos"
+    assert a07._jogos_da_fila(lanc("3 jogos na biblioteca · 1 instalado")) == "1 jogo"
 
 
 def test_o_mais_do_configurar_da_extensao_fica_ao_lado_do_x_aberto_ou_fechado(navegador) -> None:

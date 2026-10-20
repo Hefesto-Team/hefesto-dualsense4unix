@@ -165,29 +165,27 @@ def test_bloco_torto_deixa_so_aquela_de_fora(
 
 
 def test_a_modificacao_com_a_chave_de_fabrica_ensina_sem_dar_o_tirar() -> None:
-    leitor = censo.LeitorPorProcesso("retroarch", "RetroArch", ("ler.py",), Path("/x"))
-    ensino = desenho.SemCenso("retroarch", "Outro nome", ("meu-retro",), (),
+    leitor = censo.LeitorPorProcesso("heroic", "Heroic", ("ler.py",), Path("/x"))
+    ensino = desenho.SemCenso("heroic", "Outro nome", ("meu-heroic",), (),
                               janelas=("outra.janela",), leitor=leitor,
-                              modificacao="retroarch")
+                              modificacao="heroic")
     lista = desenho.procurados((ensino,))
-    assert [x.chave for x in lista].count("retroarch") == 1
-    ra = next(x for x in lista if x.chave == "retroarch")
-    assert ra.nome == "RetroArch" and not ra.declarado
-    assert "meu-retro" in ra.atalhos and "org.libretro.RetroArch" in ra.atalhos
-    assert ra.janelas == ("com.libretro.RetroArch", "outra.janela")
+    assert [x.chave for x in lista].count("heroic") == 1
+    he = next(x for x in lista if x.chave == "heroic")
+    assert he.nome == "Heroic (Epic · GOG)" and not he.declarado
+    assert "meu-heroic" in he.atalhos and "com.heroicgameslauncher.hgl" in he.atalhos
+    assert he.janelas == ("outra.janela",)
 
 
 def test_as_janelas_medidas_sao_a_fabrica_mais_as_da_modificacao(
     a07: ModuleType, monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
 ) -> None:
-    """O RetroArch segue com a janela de fábrica; o KytyPS5 traz a dele."""
+    """O KytyPS5 traz a janela dele: nenhum emulador tem janela de fábrica (19/10/2026)."""
     lg = _plantar(tmp_path, leitor="print('[]')\n")
     _no_xdg(monkeypatch, lg)
     _so_as_modificacoes(a07, monkeypatch)
     a07._ESCOLHA.limpar()
     a07._ESCOLHA.modo = desenho.CRIAR_PERFIL
-    jogos, janelas, emulador = a07._jogos_para_escolher("retroarch", "RetroArch", None)
-    assert emulador and "com.libretro.RetroArch" in janelas[jogos[0].chave]
     jogos, janelas, emulador = a07._jogos_para_escolher("kytyps5", "KytyPS5", None)
     assert emulador and jogos[0].chave == "emulador:kytyps5", (
         "sem jogo com o ID no título, o KytyPS5 fica na linha «todos os jogos», "

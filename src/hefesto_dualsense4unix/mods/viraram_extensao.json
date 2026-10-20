@@ -1,0 +1,37 @@
+{
+  "formato": 1,
+  "lancadores": [
+    {
+      "id": "lutris",
+      "nome": "Lutris",
+      "endereco": "https://github.com/Hefesto-Team/hefesto-mod-lutris",
+      "flatpak": "net.lutris.Lutris",
+      "pasta": "lutris",
+      "proton": true
+    },
+    {
+      "id": "retroarch",
+      "nome": "RetroArch",
+      "endereco": "https://github.com/Hefesto-Team/hefesto-mod-retroarch",
+      "flatpak": "org.libretro.RetroArch",
+      "pasta": "retroarch",
+      "proton": false
+    },
+    {
+      "id": "dolphin",
+      "nome": "Dolphin",
+      "endereco": "https://github.com/Hefesto-Team/hefesto-mod-dolphin",
+      "flatpak": "org.DolphinEmu.dolphin-emu",
+      "pasta": "dolphin-emu",
+      "proton": false
+    },
+    {
+      "id": "mgba",
+      "nome": "mGBA",
+      "endereco": "https://github.com/Hefesto-Team/hefesto-mod-mgba",
+      "flatpak": "io.mgba.mGBA",
+      "pasta": "mgba",
+      "proton": false
+    }
+  ]
+}

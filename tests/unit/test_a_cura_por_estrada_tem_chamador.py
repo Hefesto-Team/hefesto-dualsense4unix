@@ -48,11 +48,17 @@ class TestOModuloDeixouDeSerOrfao:
 
 
 class TestACuraPercorreTodosOsCartoes:
-    def test_os_cinco_cartoes_estao_na_lista(self):
+    def test_os_cinco_cartoes_estao_na_lista(self, monkeypatch):
         """A Steam NÃO entra — ela tem o atalho de inicialização, que é a"""
         chaves = [c for c, _ in cpe.cartoes_com_estrada()]
         assert "steam" not in chaves
-        assert set(chaves) == {"heroic", "lutris", "retroarch", "dolphin", "mgba"}
+        assert set(chaves) == {"heroic"}, "de fábrica, só o Heroic tem caixa (19/10/2026)"
+        from tests.unit.as_caixas_das_extensoes import ligar
+
+        ligar(monkeypatch)
+        chaves = [c for c, _ in cpe.cartoes_com_estrada()]
+        assert set(chaves) == {"heroic", "lutris", "retroarch", "dolphin", "mgba"}, (
+            "a extensão ligada com caixa não entrou na carona")
 
     def test_a_lista_e_lida_do_censo_e_nao_digitada(self):
         """**UMA SEGUNDA CÓPIA DIVERGIRIA**, e o sintoma seria o pior desta"""

@@ -4,7 +4,9 @@ O censo, a reposição e a aba Lançadores deixam de ter a lista fixa dos seis e
 manifestos de ``mods/de_fabrica/<chave>/hefesto-mod.json``. A régua tem duas pernas:
 
 * os manifestos dão EXATAMENTE as tabelas que o código tinha antes (a lista de antes está
-  copiada aqui, de 17/10/2026, e é o oráculo);
+  copiada aqui, de 17/10/2026, e é o oráculo; desde 19/10/2026 a fábrica é só a Steam, o Heroic e
+  o Flatpak, e os outros viraram extensões em repositório próprio, pela
+  OS-LANCADORES-ALEM-DA-STEAM-E-DO-HEROIC-VIRAM-EXTENSOES-01);
 * tirar um manifesto tira o lançador do censo, da reposição e do desenho (a mordida: o processo
   de prova lê outra pasta, sem o Heroic).
 """
@@ -24,41 +26,27 @@ from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as repo
 from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 from hefesto_dualsense4unix.mods.manifesto import ler_manifesto
 
-# --- a lista de antes, copiada do código de 16/10/2026 ----------------------------------------
+# --- a lista de antes, copiada do código de 16/10/2026, com a fábrica de 19/10/2026 -------------
 
 _ONDE_DE_ANTES = {
     "Heroic": ("com.heroicgameslauncher.hgl", "heroic"),
-    "Lutris": ("net.lutris.Lutris", "lutris"),
-    "RetroArch": ("org.libretro.RetroArch", "retroarch"),
-    "Dolphin": ("org.DolphinEmu.dolphin-emu", "dolphin-emu"),
-    "mGBA": ("io.mgba.mGBA", "mgba"),
 }
 _CARTAO_DE_ANTES = {
     "heroic": ("Heroic",),
-    "lutris": ("Lutris",),
-    "retroarch": ("RetroArch",),
-    "emuladores": ("Dolphin", "mGBA"),
     "flatpak": (),
 }
 _REPOSICAO_DE_ANTES = (
     ("steam", "Steam", ("steamwebhelper",), None, None),
     ("heroic", "Heroic", ("heroic",), "com.heroicgameslauncher.hgl", "heroic"),
-    ("lutris", "Lutris", ("lutris",), "net.lutris.Lutris", "lutris"),
 )
 #: ``(chave, nome, atalhos, comandos, janelas)`` na ordem dos cartões; a Steam vai na frente.
 _EMBUTIDOS_DE_ANTES = (
     ("steam", "Steam", ("steam", "com.valvesoftware.Steam", "steam-native"),
      ("steam", "steam-native"), ()),
     ("heroic", "Heroic (Epic · GOG)", ("com.heroicgameslauncher.hgl", "heroic"), ("heroic",), ()),
-    ("lutris", "Lutris", ("net.lutris.Lutris", "lutris"), ("lutris",), ()),
     ("flatpak", "Flatpak", (), ("flatpak",), ()),
-    ("retroarch", "RetroArch", ("org.libretro.RetroArch", "retroarch"), ("retroarch",),
-     ("com.libretro.RetroArch",)),
-    ("emuladores", "Dolphin · mGBA",
-     ("org.DolphinEmu.dolphin-emu", "dolphin-emu", "io.mgba.mGBA", "mgba-qt", "mgba"),
-     ("dolphin-emu", "mgba-qt", "mgba"), ()),
 )
-_SEIS = [chave for chave, *_ in _EMBUTIDOS_DE_ANTES]
+_DE_FABRICA = [chave for chave, *_ in _EMBUTIDOS_DE_ANTES]
 
 
 def _como_tupla(item: desenho.SemCenso) -> tuple[object, ...]:
@@ -71,10 +59,9 @@ def _como_tupla(item: desenho.SemCenso) -> tuple[object, ...]:
 def test_os_manifestos_dao_as_tabelas_do_censo_de_antes() -> None:
     assert censo._ONDE == _ONDE_DE_ANTES
     assert censo._DO_CARTAO == _CARTAO_DE_ANTES
-    assert frozenset({"Lutris"}) == censo._CONFIG_CAI_NOS_DADOS
+    assert frozenset() == censo._CONFIG_CAI_NOS_DADOS
     assert list(censo._LEITORES) == list(_ONDE_DE_ANTES)
     assert censo._LEITORES["Heroic"] is censo._heroic
-    assert censo._LEITORES["mGBA"] is censo._mgba
 
 
 def test_os_manifestos_dao_a_reposicao_de_antes() -> None:
@@ -91,10 +78,6 @@ def test_os_manifestos_dao_os_cartoes_de_antes_na_mesma_ordem() -> None:
 
 
 def test_o_censo_acha_o_nativo_pelo_manifesto() -> None:
-    assert censo._agulhas_do_nativo("Dolphin") == (
-        ("org.DolphinEmu.dolphin-emu", "dolphin-emu"), ("dolphin-emu",))
-    assert censo._agulhas_do_nativo("mGBA") == (("io.mgba.mGBA", "mgba-qt", "mgba"),
-                                               ("mgba-qt", "mgba"))
     assert censo._agulhas_do_nativo("Heroic") == (
         ("com.heroicgameslauncher.hgl", "heroic"), ("heroic",))
 
@@ -102,7 +85,7 @@ def test_o_censo_acha_o_nativo_pelo_manifesto() -> None:
 # --- cada um é uma modificação de verdade ------------------------------------------------------
 
 
-@pytest.mark.parametrize("chave", _SEIS)
+@pytest.mark.parametrize("chave", _DE_FABRICA)
 def test_cada_lancador_de_fabrica_e_um_manifesto_que_o_conferidor_aceita(chave: str) -> None:
     manifesto = ler_manifesto(censo.PASTA_DE_FABRICA / chave)
     assert manifesto.id == chave
@@ -114,7 +97,8 @@ def test_cada_lancador_de_fabrica_e_um_manifesto_que_o_conferidor_aceita(chave: 
 def test_a_pasta_de_fabrica_viaja_dentro_do_pacote() -> None:
     pacote = Path(censo.__file__).resolve().parent.parent
     assert pacote / "mods" / "de_fabrica" == censo.PASTA_DE_FABRICA
-    assert sorted(p.name for p in censo.PASTA_DE_FABRICA.iterdir() if p.is_dir()) == sorted(_SEIS)
+    pastas = sorted(p.name for p in censo.PASTA_DE_FABRICA.iterdir() if p.is_dir())
+    assert pastas == sorted(_DE_FABRICA)
 
 
 def test_a_modificacao_de_fora_nao_pede_o_que_e_so_de_fabrica() -> None:
@@ -206,13 +190,13 @@ def _ver_com(raiz: Path, tmp_path: Path) -> dict[str, list[str]]:
     return visto
 
 
-def test_com_os_seis_manifestos_o_processo_de_prova_ve_os_seis(tmp_path: Path) -> None:
+def test_com_os_manifestos_de_fabrica_o_processo_de_prova_ve_os_tres(tmp_path: Path) -> None:
     copia = tmp_path / "fabrica"
     shutil.copytree(censo.PASTA_DE_FABRICA, copia)
     visto = _ver_com(copia, tmp_path)
-    assert visto["embutidos"] == _SEIS
-    assert visto["reposicao"] == ["steam", "heroic", "lutris"]
-    assert visto["sabe_ler"] == ["Heroic", "Lutris"]
+    assert visto["embutidos"] == _DE_FABRICA
+    assert visto["reposicao"] == ["steam", "heroic"]
+    assert visto["sabe_ler"] == ["Heroic"]
 
 
 def test_tirar_o_manifesto_do_heroic_o_tira_do_censo_da_reposicao_e_do_desenho(
@@ -223,16 +207,7 @@ def test_tirar_o_manifesto_do_heroic_o_tira_do_censo_da_reposicao_e_do_desenho(
     visto = _ver_com(copia, tmp_path)
     assert "Heroic" not in visto["onde"] and "Heroic" not in visto["leitores"]
     assert "heroic" not in visto["cartoes"]
-    assert "heroic" not in visto["reposicao"] and visto["reposicao"] == ["steam", "lutris"]
+    assert "heroic" not in visto["reposicao"] and visto["reposicao"] == ["steam"]
     assert "heroic" not in visto["embutidos"] and "heroic" not in visto["sem_fonte"]
-    assert visto["sabe_ler"] == ["Lutris"]
+    assert visto["sabe_ler"] == []
     assert [c for c in visto["embutidos"] if c != "heroic"] == visto["embutidos"]
-
-
-def test_tirar_o_manifesto_dos_emuladores_tira_os_dois_programas(tmp_path: Path) -> None:
-    copia = tmp_path / "fabrica"
-    shutil.copytree(censo.PASTA_DE_FABRICA, copia)
-    shutil.rmtree(copia / "emuladores")
-    visto = _ver_com(copia, tmp_path)
-    assert "Dolphin" not in visto["onde"] and "mGBA" not in visto["onde"]
-    assert "emuladores" not in visto["embutidos"]

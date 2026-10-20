@@ -59,7 +59,7 @@ delas de graça:**
 `jogos_locais.pastas_de_atalhos()` já resolve (a spec XDG, não dois caminhos
 cravados). Medido nesta máquina em 02/09/2026, com 4 pastas de atalhos:
 
-    heroic · lutris · retroarch · emuladores    NÃO ACHEI
+    heroic                                      NÃO ACHEI
     flatpak                                     achado em `/usr/bin/flatpak`
     steam                     achada em `/usr/local/share/applications/steam.desktop`
 
@@ -274,69 +274,22 @@ def _declarados() -> tuple[desenho.SemCenso, ...]:
 
 
 def _das_modificacoes(lugares: Any = None) -> tuple[desenho.SemCenso, ...]:
-    """Os lançadores que as modificações LIGADAS trazem, no molde do procurador.
+    """Os lançadores que as extensões LIGADAS trazem, no molde do procurador.
 
-    Entra a modificação ligada cujo manifesto, conferido de novo aqui, tem o
-    tipo ``lancador``, o bloco ``lancador`` e a permissão ``lancador`` que a
-    pessoa aceitou. Desligou, o cartão sai na volta seguinte da vigia. Nunca
-    levanta: um registro ilegível ou um bloco torto deixa só aquela de fora.
+    Quem lê o registro e confere o manifesto é o censo
+    (:func:`censo_dos_lancadores.lancadores_das_extensoes`), o mesmo que o serviço consulta para
+    a chave de janela e o Proton em uso: uma lista só. Desligou, o cartão sai na volta seguinte da
+    vigia. Nunca levanta.
     """
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
-    from hefesto_dualsense4unix.mods.instalador import (
-        InstalacaoRecusadaError,
-        Lugares,
-        ler_registro,
-    )
-    from hefesto_dualsense4unix.mods.manifesto import ManifestoRecusadoError, ler_manifesto
 
-    try:
-        lg = lugares or Lugares.do_xdg()
-        registro = ler_registro(lg.registro)
-    except (InstalacaoRecusadaError, OSError):
-        _LOG.debug("registro_das_modificacoes_ilegivel", exc_info=True)
-        return ()
-    fora: list[desenho.SemCenso] = []
-    for mod_id, entrada in sorted(registro.items()):
-        if not entrada.ligada or "lancador" not in entrada.permissoes_aceitas:
-            continue
-        pasta = lg.codigo / mod_id
-        try:
-            manifesto = ler_manifesto(pasta)
-            if ("lancador" not in manifesto.tipos or manifesto.lancador is None
-                    or "lancador" not in manifesto.permissoes or manifesto.id != mod_id):
-                continue
-            bloco = censo.lancador_da_modificacao(mod_id, manifesto.lancador, pasta)
-        except (ManifestoRecusadoError, ValueError):
-            _LOG.debug("lancador_da_modificacao_recusado", exc_info=True)
-            continue
-        fora.append(desenho.SemCenso(
-            chave=bloco.chave, nome=bloco.rotulo, atalhos=bloco.atalhos,
-            comandos=bloco.comandos, janelas=bloco.janelas,
-            titulo_do_jogo=bloco.titulo_do_jogo, leitor=bloco.leitor,
-            modificacao=mod_id))
-    return tuple(fora)
-
-
-#: A classe de janela que o emulador anuncia, por CHAVE DE CARTÃO achado pelo `.desktop`.
-#:
-#: O cartão que o produto acha sozinho só sabe o nome do arquivo (`org.vita3k.vita3k`), e a janela
-#: do Vita3K se anuncia pelo nome do executável (`Vita3K` no AppImage, `vita3k` no AUR): sem esta
-#: linha a «todos os jogos» do emulador não casa janela nenhuma e o perfil nunca entra. A chave é a
-#: do cartão (o `stem` em minúsculas, o ponto trocado por hífen), nunca o `stem`; a comparação do
-#: perfil ignora a caixa, então uma grafia cobre as duas. **Derivado do fonte, ainda NÃO MEDIDO na
-#: janela viva** (o `app_id` do Wayland, degrau 3b da O-VITA3K-RECEBE-O-DUALSENSE-INTEIRO-01): a
-#: bancada confirma ou troca a linha.
-#:
-#: O shadPS4 vale o mesmo para as duas chaves (O-SHADPS4-QUE-JA-MORA-AQUI-01). O do projeto dela
-#: sobe com `SDL_APP_ID=net.shadps4.shadPS4` (`run.sh` do shadps4-cosmic); o AppImage oficial aberto
-#: direto cai no `SDL_GetExeName`, `shadps4`, que também é o `StartupWMClass` do `.desktop` dele
-#: (derivado do fonte, NÃO MEDIDO). A janela do launcher Qt (`shadPS4QtLauncher`) fica FORA de
-#: propósito: viva e escondida durante outro jogo, ela puxaria o perfil errado (FOCO-ERRANTE-01).
-_JANELAS_DO_EMULADOR_ACHADO: dict[str, tuple[str, ...]] = {
-    "org-vita3k-vita3k": ("Vita3K",),
-    "net-shadps4-shadps4": ("shadps4",),
-    "io-github-vitoriamaria-shadps4-cosmic": ("net.shadps4.shadPS4", "shadps4"),
-}
+    return tuple(
+        desenho.SemCenso(
+            chave=ext.bloco.chave, nome=ext.bloco.rotulo, atalhos=ext.bloco.atalhos,
+            comandos=ext.bloco.comandos, janelas=ext.bloco.janelas,
+            titulo_do_jogo=ext.bloco.titulo_do_jogo, leitor=ext.bloco.leitor,
+            modificacao=ext.bloco.chave, pela_porta=ext.pela_porta)
+        for ext in censo.lancadores_das_extensoes(lugares))
 
 
 def _achados_por_conteudo() -> tuple[desenho.SemCenso, ...]:
@@ -350,14 +303,29 @@ def _achados_por_conteudo() -> tuple[desenho.SemCenso, ...]:
     de_fabrica = {atalho for item in desenho.SEM_FONTE for atalho in item.atalhos}
     if desenho.A_STEAM is not None:
         de_fabrica |= set(desenho.A_STEAM.atalhos)
+    tem_linha = {a.casefold() for a in de_fabrica | _atalhos_que_tem_linha_propria()}
     return tuple(
         desenho.SemCenso(chave=stem.lower().replace(".", "-"), nome=nome,
-                         atalhos=(stem,), comandos=(),
-                         janelas=_JANELAS_DO_EMULADOR_ACHADO.get(
-                             stem.lower().replace(".", "-"), ()))
+                         atalhos=(stem,), comandos=())
         for stem, nome in sorted(achados.items())
-        if stem not in de_fabrica
+        if stem.casefold() not in tem_linha
     )
+
+
+def _atalhos_que_tem_linha_propria() -> set[str]:
+    """Os atalhos que já têm linha na fila: o da extensão ligada e o do que virou extensão.
+
+    Medido na bancada de 19/10/2026: com o Lutris no Flatpak da máquina, o achado por conteúdo
+    punha uma linha «Lutris» genérica ao lado da linha da migração (e, com a extensão ligada, ao
+    lado da linha dela). O lançador que virou extensão fala por uma linha só.
+    """
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+    fora = {str(x["flatpak"]) for x in censo._os_que_viraram_extensao()
+            if isinstance(x.get("flatpak"), str)}
+    for ext in censo.lancadores_das_extensoes():
+        fora |= set(ext.bloco.atalhos)
+    return fora
 
 
 def _onde_estao_os_lancadores(
@@ -521,15 +489,20 @@ def _ler_do_disco() -> desenho.Leitura:
         com_ponte = frozenset(pdj.classes_com_ponte())
     except Exception:
         com_ponte = frozenset()
-    do_disco = desenho.medir_no_disco(onde_estao, declarados, com_ponte=com_ponte)
+    da_porta = _jogos_pela_porta(declarados)
+    onde_estao = _com_os_da_porta(onde_estao, declarados, da_porta)
+    do_disco = desenho.medir_no_disco(onde_estao, declarados, com_ponte=com_ponte,
+                                      da_porta=da_porta)
     do_disco = dataclasses.replace(
         do_disco, sem_ambiente=_onde_falta_o_ambiente(onde_estao, declarados))
 
+    viraram = _os_que_viraram_extensao()
     try:
         censo = sw.censo_do_wrapper(anotar=False)
     except Exception as erro:
         return desenho.Leitura(erros=(str(erro),), onde_estao=onde_estao,
-                               declarados=declarados, do_disco=do_disco)
+                               declarados=declarados, do_disco=do_disco,
+                               viraram_extensao=viraram)
 
     try:
         instalados = len(pdj.jogos_instalados())
@@ -558,7 +531,70 @@ def _ler_do_disco() -> desenho.Leitura:
         linha=slo.WRAPPER_LAUNCH,
         erros=tuple(censo.erros),
         do_disco=do_disco,
+        viraram_extensao=viraram,
     )
+
+
+#: O prazo de cada ``mods.jogos``: a vigia pergunta numa thread de fundo, uma vez por extensão.
+PRAZO_DOS_JOGOS_DA_PORTA_S = 1.5
+
+
+def _jogos_pela_porta(declarados: Sequence[desenho.SemCenso]) -> dict[str, object]:
+    """``{chave do cartão: jogos}`` das extensões de lançador que entregam pela porta.
+
+    BLOQUEIA (um RPC por extensão): só da vigia. A pergunta é o ``mods.jogos`` ao serviço, que
+    guarda o que a extensão entregou pelo ``lancador.jogos``; o serviço fora do ar, a extensão sem
+    conexão ou a resposta torta deixam a chave de fora, e o cartão fica sem contagem, que é a
+    resposta honesta de «não sei». Nunca levanta.
+    """
+    from hefesto_dualsense4unix.app import ipc_bridge
+
+    fora: dict[str, object] = {}
+    for item in declarados:
+        if not item.pela_porta or item.leitor is not None or not item.modificacao:
+            continue
+        try:
+            corpo = ipc_bridge._corpo_do_daemon(
+                "mods.jogos", {"mod": item.modificacao}, timeout=PRAZO_DOS_JOGOS_DA_PORTA_S)
+        except Exception:
+            _LOG.debug("jogos_da_porta_sem_resposta", exc_info=True)
+            continue
+        jogos = corpo.get("jogos") if isinstance(corpo, dict) else None
+        if isinstance(jogos, list):
+            fora[item.chave] = jogos
+    return fora
+
+
+def _com_os_da_porta(onde_estao: tuple[tuple[str, str], ...],
+                     declarados: Sequence[desenho.SemCenso],
+                     da_porta: dict[str, object]) -> tuple[tuple[str, str], ...]:
+    """O cartão de extensão que entregou jogos pela porta conta como achado.
+
+    A extensão é o lançador: o programa dela pode não ter atalho nem comando nesta máquina (um
+    lançador que mora na rede, um script), e a lista que ela entregou é a prova de que ele está
+    aqui. O ``onde`` diz de onde veio, em palavra de tela.
+    """
+    nomes = {x.chave: x.nome for x in declarados if x.pela_porta}
+    return tuple((chave, onde or (f"pela extensão {nomes[chave]}"
+                                  if chave in da_porta and chave in nomes else ""))
+                 for chave, onde in onde_estao)
+
+
+def _os_que_viraram_extensao() -> tuple[tuple[str, str, str], ...]:
+    """``(chave, nome, endereço)`` de quem virou extensão, tem pasta aqui e não está instalado.
+
+    É a linha da migração: quem usava o Lutris (ou o RetroArch, o Dolphin, o mGBA) lê na fila que
+    o lançador virou extensão e o endereço. Nada se instala sozinho. Nunca levanta.
+    """
+    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
+
+    try:
+        achados = censo.lancadores_que_viraram_extensao()
+        instaladas = {e.entrada.id for e in REGISTRO.ler()}
+    except Exception:
+        _LOG.debug("os_que_viraram_extensao_falhou", exc_info=True)
+        return ()
+    return tuple((x.chave, x.nome, x.endereco) for x in achados if x.chave not in instaladas)
 
 
 def _o_jogo_em_foco(state: dict[str, Any] | None) -> str:
@@ -593,7 +629,7 @@ class _Escolha:
 
 _ESCOLHA = _Escolha()
 
-_COM_BIBLIOTECA = ("heroic", "lutris")
+_COM_BIBLIOTECA = ("heroic",)
 _SEM_JOGOS = ("flatpak",)
 
 
@@ -606,21 +642,42 @@ def _titulo_que_casa(titulo: str) -> str:
     return rf"(?<!\w){re.escape(titulo)}(?!\w)"
 
 
-def _jogos_pelo_titulo(
-    item: desenho.SemCenso, ja: set[str],
-) -> tuple[list[desenho.JogoParaEscolher], dict[str, str]]:
-    """Os jogos do leitor da modificação que têm o ID no título, e o título de cada um."""
+def _biblioteca_da_extensao(item: desenho.SemCenso) -> Any:
+    """A biblioteca do lançador da extensão: a do leitor dela ou a que ela entregou pela porta."""
     from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
 
+    if item.leitor is None and item.pela_porta:
+        return censo.biblioteca_da_porta(item.nome, _jogos_pela_porta((item,)).get(item.chave))
+    return censo.biblioteca_do_cartao(item.chave, leitor=item.leitor)
+
+
+def _jogos_da_extensao(
+    item: desenho.SemCenso, ja: set[str], marcado: str,
+) -> tuple[list[desenho.JogoParaEscolher], dict[str, str]]:
+    """Os jogos da extensão que casam uma janela, e o título de cada um que casa pelo título.
+
+    O jogo com a janela própria (o ``janela`` que a extensão entrega, como o ``steam_app_N`` do
+    jogo do Lutris que vai pelo Proton) entra pela chave da janela, como o do Heroic; o que só tem
+    o ID no título entra pela chave dele, e o perfil casa pelo título (``_ESCOLHA.titulos``).
+    """
     jogos: list[desenho.JogoParaEscolher] = []
     titulos: dict[str, str] = {}
-    biblioteca = censo.biblioteca_do_cartao(item.chave, leitor=item.leitor)
-    for jogo in biblioteca.jogos:
-        if jogo.titulo_do_jogo and jogo.chave not in ja and jogo.chave not in titulos:
-            jogos.append(desenho.JogoParaEscolher(
-                chave=jogo.chave, nome=jogo.nome, instalado=jogo.instalado))
-            titulos[jogo.chave] = _titulo_que_casa(jogo.titulo_do_jogo)
-    jogos.sort(key=lambda j: j.nome.casefold())
+    vistos: set[str] = set()
+    for jogo in _biblioteca_da_extensao(item).jogos:
+        if jogo.janela:
+            chave = jogo.janela
+        elif jogo.titulo_do_jogo:
+            chave = jogo.chave
+        else:
+            continue
+        if chave in ja or chave in vistos:
+            continue
+        vistos.add(chave)
+        jogos.append(desenho.JogoParaEscolher(
+            chave=chave, nome=jogo.nome, instalado=jogo.instalado, marcado=chave == marcado))
+        if not jogo.janela:
+            titulos[chave] = _titulo_que_casa(jogo.titulo_do_jogo)
+    jogos.sort(key=lambda j: (not j.marcado, not j.instalado, j.nome.casefold()))
     return jogos, titulos
 
 
@@ -629,14 +686,10 @@ def _jogos_para_escolher(
 ) -> tuple[list[desenho.JogoParaEscolher], dict[str, tuple[str, ...]], bool]:
     """``(jogos, janelas por chave, é emulador)`` — a lista DAQUELE lançador.
 
-    Só entra jogo com CHAVE DE JANELA: uma linha que nunca casa com janela
-    nenhuma é pior que nenhuma (a regra da LANCADOR-AGNOSTICO-01). O jogo da
-    escada (o aberto, ou o último) nasce marcado (D-2109-O-JOGO-SE-ESCOLHE-NA-
-    LISTA). Nunca levanta: é chamado de dentro de um clique.
-
-    O LANÇADOR DE MODIFICAÇÃO COM LEITOR lista os jogos que o leitor devolve com
-    o ID do título: a janela é a do emulador para todos, e o perfil de UM jogo
-    casa pelo título (os títulos ficam em ``_ESCOLHA.titulos``).
+    Só entra jogo com chave de janela (a regra da LANCADOR-AGNOSTICO-01); o jogo da escada nasce
+    marcado (D-2109-O-JOGO-SE-ESCOLHE-NA-LISTA). O lançador de extensão lista os jogos do leitor
+    ou da porta com a janela própria ou o ID do título (os títulos ficam em ``_ESCOLHA.titulos``);
+    sem nenhum, sobra a linha «todos os jogos». Nunca levanta: é chamado de dentro de um clique.
     """
     _ESCOLHA.titulos = {}
     appid, _quando = a_escada_do_jogo(state)
@@ -666,11 +719,11 @@ def _jogos_para_escolher(
             chave = _chave_do_emulador(lancador)
             item = next((x for x in desenho.procurados(_declarados())
                          if x.chave == lancador), None)
-            if item is not None and item.leitor is not None:
-                pelo_titulo, titulos = _jogos_pelo_titulo(item, ja)
-                if pelo_titulo:
+            if item is not None and (item.leitor is not None or item.pela_porta):
+                da_extensao, titulos = _jogos_da_extensao(item, ja, marcado)
+                if da_extensao:
                     _ESCOLHA.titulos = titulos
-                    return pelo_titulo, {}, False
+                    return da_extensao, {}, False
             janelas = tuple(dict.fromkeys(
                 (*(item.atalhos if item else ()), *(item.comandos if item else ()),
                  *(item.janelas if item else ()))))
@@ -705,7 +758,8 @@ def _relatar(gesto_: str, frase: str) -> None:
 def _resposta(lida: desenho.Leitura | None,
               state: dict[str, Any] | None = None) -> dict[str, Any]:
     """A carga da aba, a mesma no tique e no gesto: a conta, a fila e as janelas abertas."""
-    return _com_as_extensoes({"mesa": {}, "blocos": {}}, desenho.cartoes(lida))
+    return _com_as_extensoes({"mesa": {}, "blocos": {}}, desenho.cartoes(lida),
+                             lida.viraram_extensao if lida is not None else ())
 
 
 @registrar("07-lancadores.html")
@@ -820,7 +874,7 @@ _MAXIMO_DA_AGULHA = 240
 
 
 def _sem_acento(texto: str) -> str:
-    """`Ryujinx à Solta` → `ryujinx a solta`. Só para fabricar a CHAVE."""
+    """`Meu Emulador à Solta` → `meu emulador a solta`. Só para fabricar a CHAVE."""
     import unicodedata
 
     cru = unicodedata.normalize("NFKD", texto)
@@ -1345,29 +1399,41 @@ def _jogos_da_fila(lanc: desenho.Lancador) -> str:
     """A contagem da fila: «48 jogos», sem o «instalados» do cartão velho.
 
     A linha da fila só tem lugar para a contagem: a frase do cartão velho («Abra o Heroic uma
-    vez…») passava por baixo dos três botões, e fica fora.
+    vez…») passava por baixo dos três botões, e fica fora. A biblioteca lida (o Heroic, a
+    extensão de lançador) conta os instalados: «12 jogos na biblioteca · 2 instalados» vira
+    «2 jogos», o mesmo número que a Steam conta.
     """
     if not lanc.presente:
         return ""
-    conta = lanc.jogos.replace("jogos instalados", "jogos").replace("jogo instalado", "jogo")
+    lida = _BIBLIOTECA_DA_FILA.fullmatch(lanc.jogos)
+    conta = f"{lida[1]} {'jogo' if lida[1] == '1' else 'jogos'}" if lida else (
+        lanc.jogos.replace("jogos instalados", "jogos").replace("jogo instalado", "jogo"))
     return conta if _CONTAGEM_DA_FILA.fullmatch(conta) else ""
 
 
 _CONTAGEM_DA_FILA = re.compile(r"\d+ jogos?")
+_BIBLIOTECA_DA_FILA = re.compile(r"\d+ jogos? na biblioteca · (\d+) instalados?")
 
 
-def _fila_de(lancadores: list[desenho.Lancador]) -> list[Any]:
+def _fila_de(lancadores: list[desenho.Lancador],
+             viraram: Sequence[tuple[str, str, str]] = ()) -> list[Any]:
+    """A fila: um por cartão e, no fim, a linha da migração de cada um que virou extensão."""
+    cartoes = {x.chave for x in lancadores}
     return [exp.Fila(chave=x.chave, nome=x.nome, jogos=_jogos_da_fila(x), achado=x.presente,
-                     configurar=JANELA_DO_LANCADOR) for x in lancadores]
+                     configurar=JANELA_DO_LANCADOR) for x in lancadores] + [
+        exp.Fila(chave=chave, nome=nome, jogos="", achado=False,
+                 configurar=JANELA_DO_LANCADOR, virou=endereco)
+        for chave, nome, endereco in viraram if chave not in cartoes]
 
 
-def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador]) -> dict[str, Any]:
+def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador],
+                      viraram: Sequence[tuple[str, str, str]] = ()) -> dict[str, Any]:
     """Acrescenta à carga da aba o quadro das extensões, a fila e as janelas abertas."""
     instaladas = REGISTRO.ler()
     carga["mesa"][CAMPO_DA_CONTA] = exp.conta_das_extensoes(len(instaladas))
     blocos = carga["blocos"]
     blocos[".ext-lista"] = exp.extensoes_html([_extensao_de(i) for i in instaladas])
-    blocos[".lanc-fila"] = exp.fila_com_novo_html(_fila_de(lancadores))
+    blocos[".lanc-fila"] = exp.fila_com_novo_html(_fila_de(lancadores, viraram))
     janelas = (("#lanc-janela", _MEXIDA.html_conf), ("#imp-janela", _MEXIDA.html_imp),
                ("#mod-janela", _MEXIDA.html_mod), ("#lanc-escolha", _ESCOLHA.miolo_novo))
     for seletor, miolo in janelas:
@@ -1821,7 +1887,7 @@ def resolver_todos_os_impedimentos(ctx: Contexto, o: dict[str, Any], p: Any) -> 
 
 def _montar_a_conf(chave: str, state: dict[str, Any] | None = None) -> None:
     """O miolo da janela «Configurar», com o que o produto sabe do lançador e o rascunho dela."""
-    from hefesto_dualsense4unix.integrations.censo_dos_lancadores import LANCADORES_COM_JOGOS
+    from hefesto_dualsense4unix.integrations.censo_dos_lancadores import lancadores_com_jogos
     from hefesto_dualsense4unix.mods.manifesto import o_que_a_permissao_deixa
 
     lida = VIGIA.agora()
@@ -1847,7 +1913,7 @@ def _montar_a_conf(chave: str, state: dict[str, Any] | None = None) -> None:
         chave=chave, nome=cartao.nome, entrou="Como extensão" if mod_id else "Do sistema",
         onde=_abreviado(_MEXIDA.onde_escolhido or onde), jogos=_jogos_da_fila(cartao),
         impedimentos=impedimentos, pastas=_pastas_dos_jogos(chave),
-        perfil_por_jogo=_perfil_por_jogo(chave) if chave in LANCADORES_COM_JOGOS else None,
+        perfil_por_jogo=_perfil_por_jogo(chave) if chave in lancadores_com_jogos() else None,
         modificacao=mod_id, menu=menu))
 
 

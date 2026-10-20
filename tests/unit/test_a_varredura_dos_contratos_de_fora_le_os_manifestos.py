@@ -183,13 +183,13 @@ def _comandos_declarados() -> dict[str, set[str]]:
 
 
 def test_os_comandos_dos_manifestos_de_fabrica_entram_na_varredura() -> None:
-    """Os seis lançadores de fábrica declaram comandos; a varredura os acha, um a um.
+    """Os três lançadores de fábrica declaram comandos; a varredura os acha, um a um.
 
     MORDIDA: tirar o ``elif`` do manifesto em ``varrer`` — nenhum aparece.
     """
     declarados = _comandos_declarados()
-    assert len(declarados) >= 6, sorted(declarados)
-    assert sum(len(v) for v in declarados.values()) >= 8
+    assert len(declarados) >= 3, sorted(declarados)
+    assert sum(len(v) for v in declarados.values()) >= 4
     vistos: dict[str, set[str]] = {}
     for c in regua.varrer(RAIZ):
         if c.arquivo in declarados:

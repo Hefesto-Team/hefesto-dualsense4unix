@@ -12,6 +12,9 @@ Nenhum código de ``src/`` importa este módulo.
 
 from __future__ import annotations
 
+import json
+import re
+import sqlite3
 import time
 from collections.abc import Callable, Iterable
 from pathlib import Path
@@ -204,19 +207,55 @@ def tirar_o_nosso_da_caixa(
 
 
 
+_LUTRIS_FLATPAK = ".var/app/net.lutris.Lutris"
+
+
+def _janela_do_jogo_do_lutris(dados: Path, runner: str, servico: str, numero: str,
+                              yml: Path) -> str:
+    """A janela que a aba antiga via no jogo do Lutris: o número da Steam ou o do umu.
+
+    O leitor do Lutris saiu do produto (virou a extensão ``hefesto-mod-lutris``, 19/10/2026); a
+    aba antiga perguntava a ele. Aqui fica só o pedaço que semeia o disco: o serviço ``steam``
+    dá o número direto; o runner ``wine`` (que abre pelo Proton) dá o do ``umu-games.json``.
+    """
+    if servico == "steam" and numero.isdigit():
+        return f"steam_app_{numero}"
+    if runner != "wine" or not yml.is_file():
+        return ""
+    try:
+        tabela = json.loads((dados / "runtime/umu-games/umu-games.json").read_text())
+    except (OSError, ValueError):
+        return ""
+    for linha in tabela if isinstance(tabela, list) else ():
+        if (isinstance(linha, dict) and linha.get("store") == servico
+                and str(linha.get("appid")) == numero):
+            achado = re.fullmatch(r"umu-(\d+)", str(linha.get("umu_id") or ""))
+            return f"steam_app_{achado.group(1)}" if achado else ""
+    return ""
+
+
 def jogos_do_lutris_pela_janela(classe: str, lar: Path | None = None) -> list[Path]:
     """Os `.yml` dos jogos do Lutris FLATPAK que anunciam esta janela."""
     alvo = classe.strip()
-    pasta = cpe._pasta_do_lutris_flatpak(lar)
-    if not alvo or pasta is None:
+    raiz = (Path.home() if lar is None else lar) / _LUTRIS_FLATPAK
+    dados, config = raiz / "data/lutris", raiz / "config/lutris"
+    if not alvo or not (dados / "pga.db").is_file():
         return []
-    from hefesto_dualsense4unix.integrations import censo_dos_lancadores as censo
-
+    con = sqlite3.connect(f"file:{dados / 'pga.db'}?mode=ro", uri=True)
+    try:
+        linhas = list(con.execute(
+            "SELECT runner, service, service_id, configpath FROM games WHERE installed"))
+    finally:
+        con.close()
     vistos: list[Path] = []
-    for jogo in censo._lutris(pasta, lar).jogos:
-        yml = jogo.configuracao
-        if (jogo.classe_de_janela == alvo and yml is not None and yml.is_file()
-                and not yml.is_symlink() and yml not in vistos):
+    for runner, servico, numero, configpath in linhas:
+        if not configpath:
+            continue
+        yml = (config if config.is_dir() else dados) / "games" / f"{configpath}.yml"
+        janela = _janela_do_jogo_do_lutris(dados, str(runner or ""), str(servico or ""),
+                                           str(numero or ""), yml)
+        if (janela == alvo and yml.is_file() and not yml.is_symlink()
+                and yml not in vistos):
             vistos.append(yml)
     return vistos
 
@@ -251,10 +290,10 @@ def tirar_o_nosso_do_jogo_do_lutris(
     if not ymls:
         return (), "nada"
     base, por_jogo = cpe._a_camada_da_caixa(lar, pasta_do_ambiente)
-    proton = cpe._pelo_proton_por_yml(lar)
     feitos: list[cpe.YmlDoJogo] = []
     for alvo in ymls:
-        pares = cpe._com_o_padrao_do_jogo(base, por_jogo, pelo_proton=proton.get(str(alvo), False))
+        pares = cpe._com_o_padrao_do_jogo(base, por_jogo,
+                                          pelo_proton=cpe._pelo_proton_do_yml(alvo, lar))
         yml = _cobrir_no_yml(alvo, pares)
         if yml is None:
             cpe.devolver_ao_jogo_do_lutris(feitos)

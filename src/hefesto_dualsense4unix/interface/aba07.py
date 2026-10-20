@@ -118,10 +118,13 @@ _MARCA = "<!-- ===== fim da aba ===== -->"
 
 def _confere_a_forma() -> None:
     """Trava de geração: o que a régua do mockup também afirma, dita antes de gravar."""
-    if len(exp.LANCADORES) != 7:
-        raise SystemExit(f"ERRO: {len(exp.LANCADORES)} lançadores, e o desenho tem sete.")
-    sem_trio = [f.chave for f in exp.LANCADORES
-                if exp.fila_html(f).count('data-gesto="') != len(exp.BOTOES)]
+    # 19/10/2026: Steam, Heroic e Flatpak de fábrica, o Lutris como extensão instalada e uma
+    # linha de migração (o lançador que virou extensão, sem os botões, com o endereço).
+    if len(exp.LANCADORES) != 5 or sum(1 for f in exp.LANCADORES if f.virou) != 1:
+        raise SystemExit(f"ERRO: {len(exp.LANCADORES)} lançadores, e o desenho tem cinco, "
+                         "um deles a linha do que virou extensão.")
+    sem_trio = [f.chave for f in exp.LANCADORES if not f.virou
+                and exp.fila_html(f).count('data-gesto="') != len(exp.BOTOES)]
     if sem_trio:
         raise SystemExit(f"ERRO: lançador sem os {len(exp.BOTOES)} botões: {sem_trio}")
     if "class=\"ajuda" in MIOLO + exp.telas():

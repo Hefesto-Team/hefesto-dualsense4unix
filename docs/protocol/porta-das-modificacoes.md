@@ -155,6 +155,31 @@ A forma errada volta `-32003`, com a frase. A interface lê a lista pelo IPC del
 `mods.jogos {mod}` devolve `{mod, jogos}`, a última lista que aquela extensão entregou, e a lista vazia sem
 conexão viva dela. O leitor da biblioteca do lançador mora na extensão, nunca no serviço.
 
+A aba 07 pede o `mods.jogos` de cada extensão de lançador ligada e sem leitor, e a extensão vira uma linha
+da lista, ao lado da Steam e do Heroic, com a contagem dos instalados («2 jogos»). Desligada ou
+desinstalada, a linha some.
+
+### O leitor no manifesto
+
+A extensão só de `lancador` (sem `processo`) declara o leitor no `lancador.leitor`, e a interface o roda
+numa caixa só de leitura, sem rede (`bwrap`), quando a biblioteca muda:
+
+- `executar`: o comando, a partir da pasta da extensão (`["python3", "-I", "leitor.py"]`);
+- `prazo_s`: o prazo da leitura, em segundos;
+- `fontes`: os arquivos que o leitor lê, relativos à `HOME` (o `*` vale no último pedaço). A mudança de
+  um deles é o que faz a leitura sair de novo.
+
+O leitor imprime uma lista JSON, um objeto por jogo: `chave` e `nome` são exigidos; `caminho`,
+`titulo_do_jogo` (que casa o `lancador.titulo_do_jogo` do manifesto), `janela` (o app-id da janela do
+jogo), `proton` (a versão do Proton do jogo, que conta no «Proton que sobra») e `instalado` (verdadeiro
+quando falta) são opcionais. A linha torta sai sozinha, e as outras ficam.
+
+Os lançadores que eram de fábrica e saíram em 19/10/2026 (o Lutris, o RetroArch, o Dolphin e o mGBA)
+estão em `mods/viraram_extensao.json`, com o endereço do repositório de cada um; o Azahar e o KytyPS5
+nascem como extensão. Quem tem a
+pasta de um deles no disco e não tem a extensão lê na 07 uma linha que diz que ele virou extensão, com o
+endereço; nada se instala sozinho.
+
 ## O aviso do manifesto
 
 O campo `aviso` (até 400 letras, opcional) é o aviso de uso da extensão: a marca que não a endossa, o jogo

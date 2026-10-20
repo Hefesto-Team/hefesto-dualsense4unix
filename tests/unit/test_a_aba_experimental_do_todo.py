@@ -1,4 +1,4 @@
-"""A aba Experimental do todo (a 07, antes «Lançadores»): fila de sete lançadores, três botões cada.
+"""A aba Experimental do todo (a 07, antes «Lançadores»): fila dos lançadores, três botões cada.
 
 O cartão por lançador saiu. Cada lançador é uma fila com o nome, os jogos achados e exatamente três
 botões: «Identificar», «Criar perfis» e «Configurar». Achado, só o «Identificar» fica apagado; não
@@ -22,8 +22,10 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 MOCKUP = RAIZ / "mockup" / "07-lancadores.html"
 CHROME = pathlib.Path("/usr/bin/google-chrome")
-ACHADOS = {"steam", "kyty"}
-NAO_ACHADOS = {"heroic", "lutris", "flatpak", "retroarch", "emuladores"}
+# 19/10/2026: Steam, Heroic e Flatpak de fábrica e o Lutris como extensão instalada; o RetroArch é a
+# linha da migração (sem botões), medida em `test_os_lancadores_de_fora_viram_extensoes.py`.
+ACHADOS = {"steam", "lutris"}
+NAO_ACHADOS = {"heroic", "flatpak"}
 GESTOS = ["identificar-lancador", "criar-perfil-para-um-jogo", "configurar-lancador"]
 ROTULOS = ["Identificar", "Criar perfis", "Configurar"]
 
@@ -69,7 +71,7 @@ def _problemas(doc: str) -> list[str]:
     return falta
 
 
-def test_sete_filas_com_os_tres_botoes_e_o_estado_certo() -> None:
+def test_as_filas_tem_os_tres_botoes_e_o_estado_certo() -> None:
     assert _problemas(_doc()) == []
 
 
@@ -90,9 +92,9 @@ def test_a_regua_morde_o_abrir_o_acender_o_botao_errado_e_o_ponto_de_interrogaca
     aceso = doc.replace(f'class="btn mini apagado" aria-disabled="true" {resto}',
                         f'class="btn mini" {resto}')
     assert any("heroic: configurar-lancador aceso" in p for p in _problemas(aceso))
-    sem_botao = doc.replace('<a class="btn mini" href="#kyty" data-gesto="configurar-lancador"'
-                            ' data-v="kyty">Configurar</a>', "")
-    assert any(p.startswith("kyty: os botões") for p in _problemas(sem_botao))
+    sem_botao = doc.replace('<a class="btn mini" href="#lanc-conf" data-gesto="configurar-lancador"'
+                            ' data-v="lutris">Configurar</a>', "")
+    assert any(p.startswith("lutris: os botões") for p in _problemas(sem_botao))
     com_span = doc.replace('<div class="miolo">', '<div class="miolo"><span class="ajuda">?</span>')
     assert any("«?»" in p for p in _problemas(com_span))
 
