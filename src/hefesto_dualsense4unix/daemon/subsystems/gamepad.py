@@ -1870,6 +1870,7 @@ def stop_gamepad_emulation(
     _largar_o_p1_que_nasce(daemon)
     stop_motion_reader(daemon)
     soltar_a_ativacao(daemon)
+    parar_os_acionadores(daemon)
     tinha_device = daemon._gamepad_device is not None
     if tinha_device:
         with contextlib.suppress(Exception):
@@ -2227,6 +2228,9 @@ def dispatch_gamepad(
     if device is None:
         return
     buttons_pressed, soltos = _apertos_do_primario(daemon, device, buttons_pressed)
+    # As teclas dos acionadores do P1 entram como a mão: o resto da cadeia as trata como botão.
+    andar_os_acionadores(daemon)
+    buttons_pressed = com_os_acionadores(daemon, primary_identity(daemon), buttons_pressed)
     # O gesto do PS fica com o Hefesto: o R3 do PS + R3 não chega ao jogo.
     com_o_ps = buttons_pressed
     buttons_pressed = sem_o_gesto_do_ps(daemon, primary_identity(daemon), buttons_pressed)
@@ -2241,6 +2245,7 @@ def dispatch_gamepad(
         l2, r2 = sem_o_eixo_do_gesto(
             daemon, primary_identity(daemon), com_o_ps, (state.l2_raw, state.r2_raw), l2, r2
         )
+        l2, r2 = gatilhos_dos_acionadores(buttons_pressed, l2, r2)
         botoes = buttons_pressed
         arranjo = roteador_ativo(store)
         uniq = primary_identity(daemon) if arranjo is not None else None
@@ -2693,6 +2698,251 @@ def _selo_do_que_vale(nome: str | None) -> Any:
     return (maquina, selo)
 
 
+# --- Os acionadores: um aparelho de entrada qualquer vira botões de um controle -----------------
+#
+# OS-ACIONADORES-USB-ENTRAM-COMO-BOTOES-DO-CONTROLE-01. A pessoa escolhe, na linha do aparelho da
+# aba Conexões, de qual controle as teclas dele viram botões (``maquina.json``, ``acionadores``).
+# A ponte acha o aparelho pelo que o kernel diz dele em ``/sys/class/input`` (vendor, product,
+# nome e caminho físico, pela ``utils/maquina.chave_do_acionador``), lê as teclas sem bloquear a
+# cada tique e as soma aos botões que a mão aperta naquele controle, no P1 e no co-op, antes de
+# todo o resto da cadeia (o filtro, a troca e a ativação tratam a tecla como tratam o botão).
+# Fora do jogo o aparelho continua sendo o que é para o resto do sistema; com um jogo em foco ele
+# fica preso (EVIOCGRAB), para a tecla não chegar duas vezes ao jogo (a tecla e o botão).
+
+_RAIZ_DAS_ENTRADAS = "/sys/class/input"
+#: De quanto em quanto tempo a ponte procura o aparelho declarado que ainda não está aberto.
+PROCURAR_O_ACIONADOR_A_CADA_S = 3.0
+#: De quanto em quanto tempo a ponte pergunta se há jogo em foco (prende ou solta o aparelho).
+OLHAR_O_FOCO_A_CADA_S = 1.0
+_EV_KEY = 1
+
+
+@dataclass(frozen=True)
+class AparelhoDeEntrada:
+    """Um nó ``eventN`` de ``/sys/class/input``, pelo que o kernel diz dele."""
+
+    evento: str
+    nome: str
+    fisico: str
+    vendor: str
+    product: str
+
+    @property
+    def chave(self) -> str:
+        from hefesto_dualsense4unix.utils.maquina import chave_do_acionador
+
+        return chave_do_acionador(self.vendor, self.product, self.nome, self.fisico)
+
+
+def _ler_o_texto(caminho: Any) -> str:
+    try:
+        return str(caminho.read_text(encoding="utf-8", errors="replace")).strip()
+    except OSError:
+        return ""
+
+
+def aparelhos_de_entrada(raiz: Any = None) -> list[AparelhoDeEntrada]:
+    """Os nós de evento que o kernel lista, sem abrir nenhum (só ``/sys``)."""
+    from pathlib import Path
+
+    base = Path(_RAIZ_DAS_ENTRADAS if raiz is None else raiz)
+    try:
+        nos = sorted(base.glob("event*"), key=lambda n: (len(n.name), n.name))
+    except OSError:
+        return []
+    achados = []
+    for no in nos:
+        dentro = no / "device"
+        achados.append(AparelhoDeEntrada(
+            evento=no.name, nome=_ler_o_texto(dentro / "name"),
+            fisico=_ler_o_texto(dentro / "phys"),
+            vendor=_ler_o_texto(dentro / "id" / "vendor"),
+            product=_ler_o_texto(dentro / "id" / "product")))
+    return achados
+
+
+def _abrir_o_evento(evento: str) -> Any:
+    import evdev
+
+    return evdev.InputDevice(f"/dev/input/{evento}")
+
+
+@dataclass
+class _AcionadorAberto:
+    evento: str
+    dispositivo: Any
+    preso: bool = False
+    apertadas: set[int] = field(default_factory=set)
+
+
+class PonteDosAcionadores:
+    """Lê os acionadores declarados e diz, por controle, os botões que as teclas deles seguram."""
+
+    def __init__(self, *, raiz: Any = None, abrir: Callable[[str], Any] | None = None,
+                 relogio: Callable[[], float] | None = None) -> None:
+        self._raiz = raiz
+        self._abrir = abrir or _abrir_o_evento
+        self._relogio = relogio or time.monotonic
+        self._abertos: dict[str, _AcionadorAberto] = {}
+        self._declarados: dict[str, Any] = {}
+        self._procurou_em: float | None = None
+        self._olhou_o_foco_em: float | None = None
+        self._em_jogo = False
+
+    def andar(self, declarados: Any, jogo_em_foco: Callable[[], bool]) -> None:
+        """Um tique: larga o que saiu da declaração, procura o que falta, lê e prende/solta."""
+        vivos = {k: v for k, v in declarados.items()
+                 if isinstance(k, str) and getattr(v, "teclas", None)} if isinstance(
+                     declarados, dict) else {}
+        self._declarados = vivos
+        for chave in [c for c in self._abertos if c not in vivos]:
+            self._fechar(chave)
+        if not vivos:
+            return
+        agora = self._relogio()
+        faltam = [c for c in vivos if c not in self._abertos]
+        if faltam and (self._procurou_em is None
+                       or agora - self._procurou_em >= PROCURAR_O_ACIONADOR_A_CADA_S):
+            self._procurou_em = agora
+            self._procurar(faltam)
+        if self._olhou_o_foco_em is None or agora - self._olhou_o_foco_em >= OLHAR_O_FOCO_A_CADA_S:
+            self._olhou_o_foco_em = agora
+            try:
+                self._em_jogo = bool(jogo_em_foco())
+            except Exception:
+                self._em_jogo = False
+        for chave in list(self._abertos):
+            self._ler(chave)
+        for aberto in self._abertos.values():
+            self._prender(aberto, self._em_jogo)
+
+    def apertados(self, controle: object) -> frozenset[str]:
+        """Os botões que as teclas dos acionadores deste controle seguram agora."""
+        from hefesto_dualsense4unix.core.remapeamento_de_botao import GATILHOS, chave
+
+        alvo = chave(controle)
+        if not alvo or not self._abertos:
+            return frozenset()
+        botoes: set[str] = set()
+        for chave_do_aparelho, aberto in self._abertos.items():
+            declarado = self._declarados.get(chave_do_aparelho)
+            if declarado is None or getattr(declarado, "controle", None) != alvo:
+                continue
+            teclas = getattr(declarado, "teclas", None) or {}
+            for codigo in aberto.apertadas:
+                botao = teclas.get(str(codigo))
+                if botao:
+                    botoes.add(GATILHOS.get(botao, botao))
+        return frozenset(botoes)
+
+    def parar(self) -> None:
+        """Solta e fecha todo aparelho aberto. Idempotente."""
+        for chave in list(self._abertos):
+            self._fechar(chave)
+
+    def _procurar(self, faltam: list[str]) -> None:
+        for aparelho in aparelhos_de_entrada(self._raiz):
+            chave = aparelho.chave
+            if chave not in faltam or chave in self._abertos:
+                continue
+            try:
+                dispositivo = self._abrir(aparelho.evento)
+            except Exception as exc:
+                logger.info("acionador_nao_abriu", evento=aparelho.evento, err=str(exc))
+                continue
+            self._abertos[chave] = _AcionadorAberto(aparelho.evento, dispositivo)
+            logger.info("acionador_aberto", evento=aparelho.evento, nome=aparelho.nome)
+
+    def _ler(self, chave: str) -> None:
+        aberto = self._abertos[chave]
+        try:
+            for ev in aberto.dispositivo.read():
+                if getattr(ev, "type", None) != _EV_KEY:
+                    continue
+                if ev.value == 0:
+                    aberto.apertadas.discard(int(ev.code))
+                else:
+                    aberto.apertadas.add(int(ev.code))
+        except BlockingIOError:
+            return
+        except OSError as exc:
+            # O aparelho saiu da porta: a tecla que ele segurava solta com ele.
+            logger.info("acionador_saiu", evento=aberto.evento, err=str(exc))
+            self._fechar(chave)
+
+    def _prender(self, aberto: _AcionadorAberto, prender: bool) -> None:
+        if aberto.preso == prender:
+            return
+        try:
+            (aberto.dispositivo.grab if prender else aberto.dispositivo.ungrab)()
+            aberto.preso = prender
+        except Exception as exc:
+            logger.debug("acionador_grab_falhou", evento=aberto.evento, err=str(exc))
+            aberto.preso = prender
+
+    def _fechar(self, chave: str) -> None:
+        aberto = self._abertos.pop(chave, None)
+        if aberto is None:
+            return
+        if aberto.preso:
+            with contextlib.suppress(Exception):
+                aberto.dispositivo.ungrab()
+        with contextlib.suppress(Exception):
+            aberto.dispositivo.close()
+
+
+_ATRIBUTO_DA_PONTE = "_ponte_dos_acionadores"
+
+
+def ponte_dos_acionadores(daemon: Any) -> PonteDosAcionadores | None:
+    """A ponte do daemon, criada só quando há acionador declarado (sem declaração, custo zero)."""
+    ponte = getattr(daemon, _ATRIBUTO_DA_PONTE, None)
+    if isinstance(ponte, PonteDosAcionadores):
+        return ponte
+    declarados = getattr(getattr(daemon, "_maquina", None), "acionadores", None)
+    if not isinstance(declarados, dict) or not declarados:
+        return None
+    ponte = PonteDosAcionadores()
+    setattr(daemon, _ATRIBUTO_DA_PONTE, ponte)
+    return ponte
+
+
+def andar_os_acionadores(daemon: Any) -> None:
+    """Um tique da ponte, pela declaração viva do daemon (o ``machine.declare`` a troca)."""
+    ponte = ponte_dos_acionadores(daemon)
+    if ponte is None:
+        return
+    try:
+        ponte.andar(getattr(getattr(daemon, "_maquina", None), "acionadores", None),
+                    lambda: _ha_jogo_em_foco(daemon))
+    except Exception as exc:
+        logger.debug("acionadores_tique_falhou", err=str(exc))
+
+
+def com_os_acionadores(daemon: Any, uniq: object, botoes: frozenset[str]) -> frozenset[str]:
+    """Os botões do controle ``uniq`` somados aos que os acionadores dele seguram."""
+    ponte = getattr(daemon, _ATRIBUTO_DA_PONTE, None)
+    if not isinstance(ponte, PonteDosAcionadores):
+        return botoes
+    extra = ponte.apertados(uniq)
+    return botoes | extra if extra else botoes
+
+
+def gatilhos_dos_acionadores(botoes: frozenset[str], l2: int, r2: int) -> tuple[int, int]:
+    """O L2 e o R2 que uma tecla segura vão inteiros (o gatilho do pad é eixo)."""
+    from hefesto_dualsense4unix.core.remapeamento_de_botao import FORCA_CHEIA, GATILHOS
+
+    return (FORCA_CHEIA if GATILHOS["l2"] in botoes else l2,
+            FORCA_CHEIA if GATILHOS["r2"] in botoes else r2)
+
+
+def parar_os_acionadores(daemon: Any) -> None:
+    """Solta e fecha os acionadores (o modo saiu do pad virtual ou o daemon está parando)."""
+    ponte = getattr(daemon, _ATRIBUTO_DA_PONTE, None)
+    if isinstance(ponte, PonteDosAcionadores):
+        ponte.parar()
+
+
 __all__ = [
     "DESFECHOS_EMULACAO_ATIVA",
     "EMU_APLICADO",
@@ -2705,22 +2955,30 @@ __all__ = [
     "ORIGENS_GESTO_DELA",
     "ORIGENS_QUE_PASSAM_COM_O_JOGO",
     "REBACKEND_COOLDOWN_SEC",
+    "AparelhoDeEntrada",
+    "PonteDosAcionadores",
+    "andar_os_acionadores",
     "anotar_rumble_no_vpad",
+    "aparelhos_de_entrada",
     "aplicar_o_toque",
     "apply_game_lightbar",
     "apply_game_mic",
     "apply_game_player_leds",
     "apply_game_rumble",
     "apply_game_trigger",
+    "com_os_acionadores",
     "cortar_pelo_limiar",
     "dedup_status",
     "dispatch_gamepad",
     "end_game_output_session",
     "esconder_o_fisico_para_o_jogo",
     "esquecer_motores_do_perfil",
+    "gatilhos_dos_acionadores",
     "make_primary_replica_sinks",
     "make_primary_rumble_sink",
     "notify_vpad_degradado",
+    "parar_os_acionadores",
+    "ponte_dos_acionadores",
     "ralos_do_mic",
     "read_primary_calibration",
     "rehide_physical_hidraw",

@@ -1878,7 +1878,9 @@ class CoopManager:
                 continue
             try:
                 snap = player.reader.snapshot()
-                botoes = snap.buttons_pressed
+                # As teclas dos acionadores deste jogador entram como a mão (o mesmo dono do P1).
+                andar_os_acionadores(self._daemon)
+                botoes = com_os_acionadores(self._daemon, player.identity, snap.buttons_pressed)
                 # O `TriggerThreshold` do DSX deste jogador, pelo mesmo dono do P1.
                 l2, r2 = cortar_pelo_limiar(store, player.identity, snap.l2_raw, snap.r2_raw)
                 lx, ly, rx, ry = snap.lx, snap.ly, snap.rx, snap.ry
@@ -1896,6 +1898,7 @@ class CoopManager:
                 l2, r2 = sem_o_eixo_do_gesto(
                     self._daemon, player.identity, com_o_ps, (snap.l2_raw, snap.r2_raw), l2, r2
                 )
+                l2, r2 = gatilhos_dos_acionadores(botoes, l2, r2)
                 # A Navegação Interna com a janela na frente: o que navega não vai ao jogo (D-22).
                 botoes, soltos = roubar_o_que_navega(self._daemon, botoes, soltos)
                 # O Modo Big Picture com a Steam na frente: o que navega vira tecla (P2 a P4).
@@ -2465,11 +2468,14 @@ from hefesto_dualsense4unix.daemon.subsystems.big_picture import (  # noqa: E402
 )
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import (  # noqa: E402
     ApertosVistos,
+    andar_os_acionadores,
     aplicar_o_movimento,
     aplicar_o_toque,
     ativar_o_botao,
+    com_os_acionadores,
     cortar_pelo_limiar,
     filtrar_o_botao,
+    gatilhos_dos_acionadores,
     moldar_os_analogicos,
     ralos_do_mic,
     sem_o_eixo_do_gesto,
