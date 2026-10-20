@@ -1629,13 +1629,51 @@ def _estilo_do_perfil(prof: Any) -> Any:
     return POR_CHAVE.get(str(getattr(prof, "estilo", "") or ""))
 
 
+def _gatilho_do_lado(specs: Any, estilo: Any, lado: Any, ajustes: dict[str, int]) -> Any:
+    """O ``TriggerConfig`` de UM lado: o L2 e o R2 do estilo são receitas separadas.
+
+    Com imersão no ``Lado``, os números são os dela (a variante do estilo sobreposta); sem ela, o
+    lado do acionamento do estilo leva os ``ajustes`` da receita e o outro, os números de partida.
+    """
+    from hefesto_dualsense4unix.profiles import efeitos_de_imersao
+    from hefesto_dualsense4unix.profiles.schema import TriggerConfig
+
+    spec = specs.get_spec(lado.modo)
+    if spec is None:  # pragma: no cover — o motor só nomeia modo do produto
+        raise RuntimeError(
+            f"o estilo “{estilo.rotulo}” pede o gatilho {lado.modo!r}, "
+            f"que não é um dos modos do produto. Nada foi salvo.")
+    numeros = ajustes if lado.modo == estilo.gatilho else {}
+    if lado.imersao:
+        imersao = efeitos_de_imersao.POR_CHAVE[lado.imersao]
+        numeros = efeitos_de_imersao.ajustes_da_imersao(
+            imersao, lado.modo, estilo.chave) or numeros
+    return TriggerConfig(
+        mode=lado.modo, params=list(specs.preset_to_positional_params(spec, numeros)))
+
+
+def _efeito_da_luz_do_estilo(invisivel: Any, cor: tuple[int, int, int]) -> dict[str, str]:
+    """A base da luz do estilo (``Receita.luz_base``) na cor da unidade, ou nada (luz fixa).
+
+    O efeito viaja no ``LedsConfig`` de CADA controle, com a cor DELE: a base não iguala as
+    unidades que ``as_quatro`` separou. A maré e a chama usam a primeira cor; o arco-íris, nenhuma.
+    """
+    from hefesto_dualsense4unix.profiles.schema import escrever_o_efeito_da_luz
+
+    base = getattr(invisivel, "luz_base", None)
+    if not base:
+        return {}
+    cores = [] if base == "arco-iris" else [f"{cor[0]:02X}{cor[1]:02X}{cor[2]:02X}"]
+    return {"efeito": escrever_o_efeito_da_luz(base, cores, int(invisivel.luz_ritmo))}
+
+
 def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[Any, int]:
     """O perfil com a receita do estilo dentro, e QUANTOS controles ganharam cor.
 
     O estilo escreve o que o usuário aprovou em 03/09/2026 ao mandar construir o motor, **gatilho +
-    vibração + luz**, cada um onde já era dele: `estilo.gatilho` → `triggers.left/right.mode` nos
-    DOIS lados; `estilo.vibracao` → `rumble.policy` (o degrau, não multiplicador); a cor →
-    `controllers[uniq].leds`, **uma por unidade**.
+    vibração + luz**: `estilo.l2`/`r2` → `triggers.left/right`; `estilo.vibracao` → `rumble.policy`
+    (o degrau, não multiplicador); a cor e a base da luz → `controllers[uniq].leds`, **uma por
+    unidade**.
 
     Os parâmetros do gatilho não são digitados: `Estilo.gatilho` guarda só a CHAVE do modo
     (`AutoGun`, `PulseB`…) e as factories exigem posicionais sem default; `params=[]` passaria pelo
@@ -1668,7 +1706,6 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
         ControllerOverrides,
         LedsConfig,
         RumbleConfig,
-        TriggerConfig,
         TriggersConfig,
         com_o_brilho_das_luzes_de,
     )
@@ -1677,15 +1714,9 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
     invisivel = estilo.receita_invisivel
     ajustes = dict(invisivel.ajustes_do_gatilho) if invisivel else {}
     if estilo.gatilho:
-        spec = specs.get_spec(estilo.gatilho)
-        if spec is None:  # pragma: no cover — o motor só nomeia modo do produto
-            raise RuntimeError(
-                f"o estilo “{estilo.rotulo}” pede o gatilho {estilo.gatilho!r}, "
-                f"que não é um dos modos do produto. Nada foi salvo.")
-        lado = TriggerConfig(
-            mode=estilo.gatilho,
-            params=list(specs.preset_to_positional_params(spec, ajustes)))
-        mudanca["triggers"] = TriggersConfig(left=lado, right=lado)
+        direito = _gatilho_do_lado(specs, estilo, estilo.r2, ajustes)
+        esquerdo = _gatilho_do_lado(specs, estilo, estilo.l2, ajustes)
+        mudanca["triggers"] = TriggersConfig(left=esquerdo, right=direito)
     if estilo.vibracao:
         # CONSTRUÍDO, e não `model_copy`: o `custom_mult` do perfil antigo é
         mudanca["rumble"] = RumbleConfig(
@@ -1715,10 +1746,12 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
                 f"repete a cor de outro. Nada foi salvo.")
         lugares[jogador] = uniq
         dele = atuais.get(uniq) or ControllerOverrides()
+        cor = cor_da_unidade(estilo, jogador)
         novos = LedsConfig(
-            lightbar=cor_da_unidade(estilo, jogador),
+            lightbar=cor,
             lightbar_brightness=estilo.brilho,
-            lightbar_para_o_numero=jogador)
+            lightbar_para_o_numero=jogador,
+            **_efeito_da_luz_do_estilo(invisivel, cor))
         atuais[uniq] = dele.model_copy(
             update={"leds": com_o_brilho_das_luzes_de(dele.leds, novos)})
         pintados += 1

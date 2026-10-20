@@ -5,7 +5,8 @@ somada aos canais dos atuadores: senos com um ataque e uma queda até zero. O di
 do estilo; a forma é a escolha da pessoa, uma por controle (``efeito_haptico`` do perfil). O ganho
 de toda forma é o Sensor háptico, que age adiante, no caminho do áudio: nada aqui lê barra nem
 perfil. O Som no corpo é o único contínuo (o grave do som do jogo, de 40 a 220 Hz, com ganho fixo
-e teto) e só toca por escolha manual, nunca como padrão de estilo.
+e teto); toca por escolha manual e, desde 19/10/2026, como forma da Corrida e da Simulação
+(decisão de produto: o motor e o chão passam pelo corpo do controle).
 """
 from __future__ import annotations
 
@@ -58,12 +59,26 @@ DICAS: dict[str, str] = {
 #: As formas longas: a Bateria longa as troca pelo Toque, e o rádio só as toca com fatia livre.
 FORMAS_LONGAS = frozenset({GUARDA, APARO, SOM_NO_CORPO})
 
-#: O que cada estilo pede, quando pede uma forma (CATALOGO §4); o estilo fora daqui toca o Toque.
-#: Nenhuma forma longa entra: o Som no corpo, contínuo, só toca por escolha na aba Vibração.
+#: O que cada estilo pede da háptica (a tabela `S` da página de 19/10/2026): toda forma, inclusive
+#: o «Sem efeito» (o Retrô só soma o zumbido do jogo) e o Som no corpo, contínuo (Corrida e
+#: Simulação). O Adulto não está aqui: ele toca o Toque, e a extensão Lovense é quem o muda.
 POR_ESTILO: dict[str, str] = {
+    "fps": TOQUE,
+    "acao": IMPACTO,  # noqa-acento: chave
     "luta": IMPACTO,
+    "souls": IMPACTO,  # bloco C: Eco (o Impacto com cauda grave de 300 ms)
+    "furtivo": ESTALO,
+    "aventura": TOQUE,
+    "terror": TOQUE,  # 80 ms: `duracao_da_vibracao_ms` do Terror
+    "corrida": SOM_NO_CORPO,
+    "simulacao": SOM_NO_CORPO,  # bloco C: Grão (grãos finos e rápidos)
     "esportes": IMPACTO,
+    "plataforma": ESTALO,
     "ritmo": ESTALO,
+    "retro": SEM_EFEITO,  # bloco C: Motor de época (o zumbido grosso do motor de peso)
+    "maratona": TOQUE,
+    "point_and_click": TOQUE,
+    "visual_novel": TOQUE,
 }
 
 
@@ -131,8 +146,15 @@ def escolha_valida(valor: object) -> str | None:
 
 
 def forma_do_estilo(estilo: object) -> str:
-    """A forma que o estilo pede; o Toque de hoje quando ele não pede nenhuma."""
-    return POR_ESTILO.get(estilo, TOQUE) if isinstance(estilo, str) else TOQUE
+    """A forma que o estilo pede; o Toque de hoje quando ele não pede nenhuma.
+
+    A chave que saiu do catálogo (o Arco) vale pela do estilo que a recebeu.
+    """
+    if not isinstance(estilo, str):
+        return TOQUE
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import chave_do_catalogo
+
+    return POR_ESTILO.get(str(chave_do_catalogo(estilo)), TOQUE)
 
 
 def forma_que_vale(escolha: object, estilo: object, economia: bool = False) -> str | None:
@@ -145,6 +167,8 @@ def forma_que_vale(escolha: object, estilo: object, economia: bool = False) -> s
         return None
     if chave is None:
         chave = forma_do_estilo(estilo)
+        if chave == SEM_EFEITO:  # o estilo que não toca nada (o Retrô)
+            return None
     if economia and chave in FORMAS_LONGAS:
         return None if chave == SOM_NO_CORPO else TOQUE
     return chave

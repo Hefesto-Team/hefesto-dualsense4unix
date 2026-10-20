@@ -40,7 +40,7 @@ ROTULOS: dict[str, str] = {
 }
 
 #: O que o efeito imersão de um controle guarda (``rumble.efeito_imersao``): «Do estilo» é o
-#: automático (nenhum padrão até a sprint dos estilos), «Sem efeito» cala o controle.
+#: automático (o padrão do estilo, `POR_ESTILO`), «Sem efeito» cala o controle.
 DO_ESTILO = "do_estilo"
 SEM_EFEITO = "sem_efeito"
 #: Os padrões na ordem da lista da tela, depois das duas escolhas de sempre.
@@ -72,9 +72,18 @@ def escolha_valida(valor: object) -> str | None:
     return None
 
 
-#: O padrão que cada estilo pede. Vazio de propósito: nenhum estilo toca padrão sozinho até a
-#: sprint dos estilos (E1), e o Ronco, contínuo, nunca entra aqui.
-POR_ESTILO: dict[str, str] = {}
+#: O padrão que cada estilo pede (a tabela `S` da página de 19/10/2026). O estilo fora daqui deixa
+#: os motores «só ao jogo»; o Ronco, contínuo, nunca entra aqui.
+POR_ESTILO: dict[str, str] = {
+    "fps": "coice",
+    "acao": "tranco",  # noqa-acento: chave
+    "luta": "pancada_do_lado",
+    "souls": "tranco",
+    "furtivo": "onda",
+    "aventura": "onda",
+    "terror": "batida",
+    "esportes": "tranco",
+}
 
 
 def padrao_que_vale(escolha: object, estilo: object) -> str | None:
@@ -88,7 +97,11 @@ def padrao_que_vale(escolha: object, estilo: object) -> str | None:
     dela = escolha_valida(escolha)
     if dela is not None:
         return dela
-    return POR_ESTILO.get(estilo) if isinstance(estilo, str) else None
+    if not isinstance(estilo, str):
+        return None
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import chave_do_catalogo
+
+    return POR_ESTILO.get(str(chave_do_catalogo(estilo)))
 
 
 def duracao_ms(padrao: str) -> int:

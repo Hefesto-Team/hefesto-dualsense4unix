@@ -42,6 +42,9 @@ from hefesto_dualsense4unix.profiles.efeitos_de_imersao import (
     imersao_dos_numeros,
     momentos_no_modo,
 )
+from hefesto_dualsense4unix.profiles.efeitos_de_imersao import (
+    POR_CHAVE as POR_CHAVE_DE_IMERSAO,
+)
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 if TYPE_CHECKING:
@@ -306,6 +309,7 @@ def receita_do_estilo(estilo: Any) -> Receita:
     invisivel = getattr(estilo, "receita_invisivel", None)
     if invisivel is None:
         return DESLIGADA
+    padrao = padroes_de_vibracao.POR_ESTILO.get(estilo.chave)
     return Receita(
         vibracao_por_tiro=bool(invisivel.toque_por_tiro),
         forca_do_toque=FORCA_DO_DEGRAU.get(estilo.vibracao, DESLIGADA.forca_do_toque),
@@ -314,6 +318,12 @@ def receita_do_estilo(estilo: Any) -> Receita:
         reacao_ao_tiro=REACAO_DA_LUZ_DO_ESTILO.get(invisivel.luz, DESLIGADA.reacao_ao_tiro),
         lado_do_som=bool(invisivel.lado_do_som),
         som_no_controle=SOM_NO_CONTROLE_DO_ESTILO,
+        # o que o estilo pede (19/10/2026): o Som no corpo da Corrida e da Simulação e o padrão dos
+        # motores de cada estilo ligam o motor sem escolha nenhuma do usuário
+        som_no_corpo_escolhido=(
+            formas_de_haptica.POR_ESTILO.get(estilo.chave) == formas_de_haptica.SOM_NO_CORPO),
+        padroes_escolhidos=padrao is not None,
+        pancada_escolhida=padrao == "pancada_do_lado",
     )
 
 
@@ -370,17 +380,19 @@ def receita_do_perfil(perfil: Any) -> Receita:
     if escolhas:
         base = replace(
             base,
-            efeitos_escolhidos=any(
+            efeitos_escolhidos=base.efeitos_escolhidos or any(
                 v in formas_de_haptica.FORMAS for v in escolhas.values()),
-            som_no_corpo_escolhido=formas_de_haptica.SOM_NO_CORPO in escolhas.values(),
+            som_no_corpo_escolhido=(
+                base.som_no_corpo_escolhido
+                or formas_de_haptica.SOM_NO_CORPO in escolhas.values()),
         )
     padroes = padroes_do_perfil(perfil)
     if padroes:
         base = replace(
             base,
-            padroes_escolhidos=any(
+            padroes_escolhidos=base.padroes_escolhidos or any(
                 v != padroes_de_vibracao.SEM_EFEITO for v in padroes.values()),
-            pancada_escolhida="pancada_do_lado" in padroes.values(),
+            pancada_escolhida=base.pancada_escolhida or "pancada_do_lado" in padroes.values(),
         )
     desvio = _ler(perfil, CAMPO_DA_RECEITA)
     if not isinstance(desvio, Mapping):
@@ -856,6 +868,10 @@ class AtuadorDaHaptica:
         escolha = formas_de_haptica.escolha_valida(self._escolha_de(evento.uniq))
         if escolha in (formas_de_haptica.SEM_EFEITO, formas_de_haptica.SOM_NO_CORPO):
             return False
+        # o estilo que não toca (o Retrô) ou que toca o corpo inteiro (a Corrida): sem toque de tiro
+        if escolha is None and formas_de_haptica.forma_do_estilo(self._estilo_de()) in (
+                formas_de_haptica.SEM_EFEITO, formas_de_haptica.SOM_NO_CORPO):
+            return False
         if evento.tipo == TIPO_SOM:
             return receita.lado_do_som
         quer = receita.vibracao_por_tiro or escolha is not None
@@ -1198,17 +1214,22 @@ def _plano_do_lado(cfg: Any) -> PlanoDoGatilho | None:
     return PlanoDoGatilho(imersao, modo, estilo, ajustes, momentos)
 
 
-def _modo_de_hoje_do_estilo(estilo: str) -> str | None:
-    """O acionamento que o estilo põe no gatilho, já na chave de hoje (``None``: nenhum).
+def _lado_do_estilo(estilo: str, lado: str) -> Any:
+    """O ``Lado`` do estilo (``l2`` no esquerdo, ``r2`` no direito), ou ``None``."""
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
+
+    return getattr(POR_CHAVE.get(estilo), "l2" if lado == LADO_ESQUERDO else "r2", None)
+
+
+def _modo_de_hoje(modo: object) -> str | None:
+    """O acionamento já na chave de hoje, ou ``None`` (nenhum).
 
     A chave que saiu da lista de onze (`AutoGun`, `PulseB`…) vale pelo acionamento de hoje,
     como a fábrica o leva ao aparelho.
     """
     from hefesto_dualsense4unix.app.actions.trigger_specs import get_spec
     from hefesto_dualsense4unix.core.trigger_effects import traduzir_chave_velha
-    from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
 
-    modo = getattr(POR_CHAVE.get(estilo), "gatilho", None)
     if not isinstance(modo, str) or not modo:
         return None
     spec = get_spec(modo)
@@ -1217,13 +1238,33 @@ def _modo_de_hoje_do_estilo(estilo: str) -> str | None:
     return traduzida[0] if traduzida is not None else modo
 
 
-def _plano_do_automatico(estilo: str) -> PlanoDoGatilho | None:
-    """No Modo automático: a imersão com momentos que o estilo do jogo põe na frente."""
-    modo = _modo_de_hoje_do_estilo(estilo)
+def _modo_de_hoje_do_estilo(estilo: str, lado: str = LADO_DIREITO) -> str | None:
+    """O acionamento que o estilo põe no gatilho de um lado, já na chave de hoje (``None``: nenhum).
+
+    O direito é o ``gatilho`` do estilo (o modo do R2); o esquerdo é o do L2 (``Estilo.l2``).
+    """
+    dele = _lado_do_estilo(estilo, lado)
+    return _modo_de_hoje(getattr(dele, "modo", None))
+
+
+def _plano_do_automatico(estilo: str, lado: str = LADO_DIREITO) -> PlanoDoGatilho | None:
+    """No Modo automático: a imersão com momentos que o estilo do jogo põe num dos lados.
+
+    O ``Lado`` do estilo diz a imersão do gatilho (``R2`` e ``L2`` são receitas separadas); sem ela
+    vale a primeira da frente que tem momento no acionamento. O estilo que saiu do catálogo (o Arco)
+    vale pelo que o recebeu.
+    """
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import chave_do_catalogo
+
+    estilo = str(chave_do_catalogo(estilo))
+    modo = _modo_de_hoje_do_estilo(estilo, lado)
     if modo is None:
         return None
-    imersao = a_da_frente_com_tempo(modo, estilo)
-    if imersao is None:
+    dele = _lado_do_estilo(estilo, lado)
+    chave = getattr(dele, "imersao", None)
+    imersao = (
+        POR_CHAVE_DE_IMERSAO.get(chave) if chave else a_da_frente_com_tempo(modo, estilo))
+    if imersao is None or modo not in imersao.ajustes or not momentos_no_modo(imersao, modo):
         return None
     return PlanoDoGatilho(imersao, modo, estilo, ajustes_da_imersao(imersao, modo, estilo) or {},
                           momentos_no_modo(imersao, modo), automatico=True)
@@ -1283,10 +1324,10 @@ def planos_do_perfil(perfil: Any) -> MapaDosMomentos:
 
     if modo == MODO_AUTOMATICO:
         estilo = _ler(perfil, "estilo")
-        plano = _plano_do_automatico(estilo) if isinstance(estilo, str) else None
-        if plano is None:
+        if not isinstance(estilo, str):
             return SEM_MOMENTOS
-        return MapaDosMomentos({lado: plano for lado in _LADO_DO_BACKEND})
+        planos = {lado: _plano_do_automatico(estilo, lado) for lado in _LADO_DO_BACKEND}
+        return MapaDosMomentos({lado: p for lado, p in planos.items() if p is not None})
     geral = {lado: plano for lado, disco in _LADO_DO_BACKEND.items()
              if (plano := _plano_do_lado(_ler(gatilhos, disco))) is not None}
     por_controle: dict[str, dict[str, PlanoDoGatilho | None]] = {}
@@ -1344,8 +1385,10 @@ def vibracao_do_gatilho_do_perfil(perfil: Any) -> VibracaoDoGatilho:
 
     if modo == MODO_AUTOMATICO:
         estilo = _ler(perfil, "estilo")
-        de_hoje = _modo_de_hoje_do_estilo(estilo) if isinstance(estilo, str) else None
-        return VibracaoDoGatilho(geral=de_hoje is not None and de_hoje in MODOS_QUE_VIBRAM)
+        de_hoje = (
+            [_modo_de_hoje_do_estilo(estilo, lado) for lado in _LADO_DO_BACKEND]
+            if isinstance(estilo, str) else [])
+        return VibracaoDoGatilho(geral=any(m in MODOS_QUE_VIBRAM for m in de_hoje if m))
     geral = {disco: _o_gatilho_vibra(_ler(gatilhos, disco)) for disco in _LADO_DO_BACKEND.values()}
     por_controle: dict[str, bool] = {}
     for chave, seus, lados in escritos:
@@ -2432,7 +2475,9 @@ class Passo:
         donos = []
         for uniq in uniqs:
             estado = estado_de(uniq)
-            if (self.motor.escolhas.get(norm_mac(uniq) or "") == formas_de_haptica.SOM_NO_CORPO
+            forma = formas_de_haptica.forma_que_vale(
+                self.motor.escolhas.get(norm_mac(uniq) or ""), estilo_ativo(self.daemon))
+            if (forma == formas_de_haptica.SOM_NO_CORPO
                     and estado is not None and decidir(CANAL_HAPTICA, estado)
                     and not _controle_na_economia(uniq)):
                 donos.append(uniq)

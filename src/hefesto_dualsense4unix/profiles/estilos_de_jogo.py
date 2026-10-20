@@ -129,6 +129,11 @@ class Receita:
     modo: Literal["desktop"] | None = None
     #: a tabela de botões que o estilo grava no perfil (`MOLDES`); `None` não toca na tabela
     molde: Literal["visual_novel", "so_mouse", "teclado_e_mouse"] | None = None
+    #: a base da luz que anda sozinha (`schema.BASES_DA_LUZ`), escrita no `leds.efeito` de cada
+    #: controle com a cor da unidade; `None` é a luz fixa. O pulso no tiro é a `luz` de cima.
+    luz_base: str | None = None
+    #: o ritmo da base, de 1 a 10 (`schema.RITMO_MINIMO_DA_LUZ`..`RITMO_MAXIMO_DA_LUZ`)
+    luz_ritmo: int = 0
 
 
 #: Os MOLDES da tabela de botões, para jogo de clicar: `{botão: ação}` do `Profile.button_actions`,
@@ -164,20 +169,42 @@ MOLDES: dict[str, dict[str, str]] = {
 
 
 #: as variáveis que o gesto do estilo aplica no perfil, por motor que já existe
-APLICADAS = ("ajustes_do_gatilho", "modo", "molde")
+APLICADAS = ("ajustes_do_gatilho", "modo", "molde", "luz_base", "luz_ritmo")
 #: as que ficam aqui, como dado: o motor do tato lê pelo estilo guardado no perfil
 SO_DADO = ("luz", "luz_por_segundo", "duracao_da_vibracao_ms", "toque_por_tiro",
            "lado_do_som")
 
 
 def _respira(ajustes: tuple[tuple[str, int], ...] = ()) -> Receita:
-    """A luz que respira no tiro [RESPIRO]; o resto, o de sempre."""
-    return Receita(ajustes, luz="respira", luz_por_segundo=RESPIRA_POR_SEGUNDO)
+    """A luz que respira [RESPIRO] e pulsa no tiro; o resto, o de sempre.
+
+    A base «respirar» a ritmo 3 dura 3,3 s (`efeitos_de_luz.periodo_do_respirar_s`): é o mais
+    perto dos 3 a 4 s da página que o ritmo inteiro alcança (escolha).
+    """
+    return Receita(ajustes, luz="respira", luz_por_segundo=RESPIRA_POR_SEGUNDO,
+                   luz_base="respirar", luz_ritmo=3)
+
+
+@dataclass(frozen=True)
+class Lado:
+    """O que um gatilho faz no estilo: o acionamento e a imersão dele (ou `None`).
+
+    A imersão é uma chave de `efeitos_de_imersao.IMERSOES`; sem ela valem os padrões do acionamento
+    mais os `ajustes_do_gatilho` da receita. Os números que o perfil guarda são os de
+    `ajustes_da_imersao(imersao, modo, estilo)`, os mesmos que a aba Gatilhos reconhece.
+    """
+
+    modo: str
+    imersao: str | None = None
 
 
 @dataclass(frozen=True)
 class Estilo:
-    """Uma receita: o que o estilo faz no gatilho, na vibração e na luz."""
+    """Uma receita: o que o estilo faz nos gatilhos, na vibração e na luz.
+
+    `gatilho` é o acionamento do R2. `r2` e `l2` são os dois lados; omitidos, o lado direito é o
+    acionamento sozinho e o esquerdo repete o direito (o estilo que não separa os gatilhos).
+    """
 
     chave: str
     rotulo: str
@@ -187,6 +214,18 @@ class Estilo:
     brilho: float
     porque: str
     receita_invisivel: Receita | None = None
+    r2: Lado | None = None
+    l2: Lado | None = None
+
+    def __post_init__(self) -> None:
+        if self.r2 is not None and self.r2.modo != self.gatilho:
+            raise ValueError(
+                f"o estilo {self.rotulo!r}: o R2 é {self.r2.modo!r} e o gatilho {self.gatilho!r}; "
+                "`gatilho` é o acionamento do R2")
+        if self.gatilho and self.r2 is None:
+            object.__setattr__(self, "r2", Lado(self.gatilho))
+        if self.l2 is None and self.r2 is not None:
+            object.__setattr__(self, "l2", self.r2)
 
 
 ESTILOS: tuple[Estilo, ...] = (
@@ -194,76 +233,124 @@ ESTILOS: tuple[Estilo, ...] = (
     # (receita invisível ausente = o motor do tato não age). Não é o Modo Nativo, que é outro eixo.
     Estilo("nativo", "Nativo", None, "", (0, 0, 0), 0.0,
            "o jogo decide o gatilho, a vibração, a luz e o toque; o Hefesto não escolhe nada"),
+    # O R2 bate a cada tiro (Metralhadora); o L2 tem o peso da mira (Peso · leve). O Coice dos
+    # motores fecha a rajada na soltura.
     Estilo("fps", "FPS", "Machine", "max", (255, 40, 40), 1.0,
-           "o gatilho estala em rajada, que é o gesto do gênero",
+           "o R2 estala em rajada, que é o gesto do gênero, e o L2 tem o peso da mira",
            # a Metralhadora a 40 Hz e força 4, do curso 2 ao 9 (CATALOGO §2.4: era a Arma
            # automática a 60 Hz), na faixa de 0 a 255 Hz [SONY]
-           _respira((("start", 2), ("end", 9), ("strength", 4), ("frequency", 40)))),
-    # o corpo da Corrida e da Simulação é o motor e a pista, não o tiro (CATALOGO §4)
-    Estilo("corrida", "Corrida", "Resistance", "balanceado", (255, 140, 0), 1.0,
-           "o acelerador tem peso constante; o freio também",
-           Receita(toque_por_tiro=False, lado_do_som=False)),
-    Estilo("acao", "Ação", "Weapon", "max", (170, 60, 255), 1.0,  # noqa-acento: chave
-           "trava, solta no estalo e fica leve — o golpe",
-           _respira()),
-    # o «Arco» era um jeito da Ação no desenho e virou estilo (ESCOLHAS de 08/10)
-    Estilo("arco", "Arco", "Bow", "balanceado", (200, 160, 80), 1.0,
-           "a corda tensiona com o curso e solta no disparo",
-           # tensão e disparo: o padrão do produto, nas faixas de 0 a 8 [NIELK1]
-           _respira((("force", 6), ("snap", 7)))),
+           _respira((("start", 2), ("end", 9), ("strength", 4), ("frequency", 40))),
+           Lado("Machine"), Lado("Resistance", "mira-firme")),
+    # o corpo da Corrida e da Simulação é o motor e a pista, não o tiro (CATALOGO §4). O ronco do
+    # motor está no acelerador e no corpo (o Som no corpo): decisão de 19/10/2026, que revoga
+    # a regra «nenhum contínuo como padrão de estilo».
+    # bloco C: Acende no gatilho (por ora a luz fixa, sem base)
+    Estilo("corrida", "Corrida", "MultiPositionVibration", "balanceado", (255, 140, 0), 1.0,
+           "o acelerador ronca e o freio pulsa como o ABS; o corpo do controle sente o motor",
+           Receita(toque_por_tiro=False, lado_do_som=False),
+           Lado("MultiPositionVibration", "motor-no-acelerador"),
+           Lado("Resistance", "freio-abs-que-pulsa")),
+    # A Ação: golpe pesado no R2, peso de mira no L2. O arco, que era um estilo, é uma escolha
+    # daqui (Carga · estica e Carga · solta seca vêm na frente da lista).
+    Estilo("acao", "Ação", "Weapon", "max", (170, 60, 255), 1.0,  # (noqa-acento): chave
+           "o golpe pesa no R2 e chega ao braço; o arco é uma escolha daqui",
+           _respira(),
+           Lado("Weapon", "golpe-pesado"), Lado("Resistance", "mira-firme")),
     # A Aventura, os Esportes, o Terror e a Luta guardam a chave de hoje (CATALOGO §2.4), com os
     # números do dono dela (`trigger_specs.PRESETS`), como todo estilo.
-    Estilo("aventura", "Aventura", "Resistance", "balanceado", (40, 200, 90), 1.0,
-           "um ponto de resistência que marca a ação, sem cansar",
-           Receita()),
+    Estilo("aventura", "Aventura", "Bow", "balanceado", (40, 200, 90), 1.0,
+           "o arco é o gesto da aventura e a chama é a tocha; escalar e a porta ficam a um clique",
+           Receita(luz_base="chama", luz_ritmo=5),
+           Lado("Bow", "corda-que-estica"), Lado("Resistance", "mira-firme")),
     Estilo("esportes", "Esportes", "Resistance", "balanceado", (40, 120, 255), 1.0,
-           "curso curto e previsível; o gatilho não conta história",
-           Receita()),
+           "o chute carrega e correr muito pesa no dedo",
+           Receita(),
+           Lado("Resistance", "golpe-carregado"), Lado("Resistance", "pique-que-cansa")),
     # a luz fixa a 0,4 não disputa a leitura (CATALOGO §3)
-    Estilo("point_and_click", "Point and click", "Off", "economia", (0, 200, 210), 0.4,
-           "o gatilho não é usado; vibração baixa não distrai a leitura",
+    # bloco C: Clique · mouse (por ora o Golpe · fraco, `golpe-leve`, nos dois lados)
+    Estilo("point_and_click", "Point and click", "Weapon", "economia", (0, 200, 210), 0.4,
+           "os gatilhos são os botões do mouse e respondem como um; vibração baixa não distrai",
            # a Navegação é escolha do usuário (ESCOLHAS de 08/10); o toque e o lado também
-           Receita(modo="desktop", molde="so_mouse")),
+           Receita(modo="desktop", molde="so_mouse"),
+           Lado("Weapon", "golpe-leve"), Lado("Weapon", "golpe-leve")),
     Estilo("visual_novel", "Visual novel", "Off", "economia", (0, 200, 210), 0.5,
            "o texto é longo e a luz não disputa a leitura; os ombros voltam, pulam e abrem o menu",
-           # a família do Point and click, parada e a meia luz; o gatilho é clique, sem efeito
-           Receita(modo="desktop", molde="visual_novel")),
+           # a família do Point and click, a meia luz e a maré lenta; o gatilho é clique, sem efeito
+           Receita(modo="desktop", molde="visual_novel", luz_base="mare", luz_ritmo=1)),
     # O Adulto não mexe no gatilho (o jogo decide) e sobe a vibração; a luz fica parada e sem reação
     # a tiro. A família é o rosa-salmão que o usuário aprovou em 13/10/2026, longe das outras.
     Estilo("adulto", "Adulto", "Off", "max", (250, 128, 114), 1.0,
            "o gatilho é do jogo; a vibração sobe e a luz fica parada, sem reação a tiro",
            Receita()),
+    # O coração bate na luz (a base «batimento») e nos motores (a Batida), no lugar do piscar
+    # 2/s, que é alarme e não medo; a vibração dura o dobro [MDN] (escolha).
     Estilo("terror", "Terror", "Weapon", "max", (215, 30, 55), 0.7,
-           "o pulso irregular é o susto no dedo; a luz baixa não denuncia",
-           # pisca abaixo do teto [WCAG]; a vibração dura o dobro [MDN] (escolha)
-           Receita(luz="pisca", luz_por_segundo=2.0,
-                   duracao_da_vibracao_ms=2 * DURACAO_DE_SEMPRE_MS)),
+           "a arma não é confiável e o coração bate na luz e nos motores; a luz baixa não denuncia",
+           Receita(duracao_da_vibracao_ms=2 * DURACAO_DE_SEMPRE_MS,
+                   luz_base="batimento", luz_ritmo=10),
+           Lado("Weapon", "pino-que-falha"), Lado("Resistance", "mira-firme")),
+    # A Luta separa o golpe forte (R2) do fraco (L2); a pancada vem do lado de onde veio o golpe.
     Estilo("luta", "Luta", "Weapon", "max", (255, 40, 180), 1.0,
-           "um estalo por golpe, com volta rápida",
-           _respira()),
+           "forte num gatilho, fraco no outro, e a pancada vem do lado do golpe",
+           _respira(),
+           Lado("Weapon", "golpe-pesado"), Lado("Weapon", "golpe-leve")),
+    # O combate de estamina dos soulslike: golpe pesado que custa e ecoa, escudo que cansa o dedo.
+    # bloco C: Eco (por ora o Impacto, na háptica)
+    Estilo("souls", "Souls/RPG", "Weapon", "max", (200, 120, 30), 0.6,
+           "cada golpe pesado custa e ecoa, e segurar o escudo cansa o dedo",
+           Receita(luz="respira", luz_por_segundo=RESPIRA_POR_SEGUNDO,
+                   luz_base="chama", luz_ritmo=5),
+           Lado("Weapon", "golpe-pesado"), Lado("MultiPositionFeedback", "escudo-que-aguenta")),
+    # Tudo é baixo e preciso: o clique é discreto e prender a mira tem respiração.
+    # bloco C: Carga · fôlego (por ora o Peso · leve, `mira-firme`, no L2)
+    Estilo("furtivo", "Furtivo", "Weapon", "economia", (70, 90, 160), 0.3,
+           "tudo é baixo e preciso; o clique é discreto e prender a mira tem respiração",
+           Receita(),
+           Lado("Weapon", "golpe-leve"), Lado("Resistance", "mira-firme")),
+    # bloco C: Bateria (por ora a luz fixa a 25%, sem base)
     Estilo("maratona", "Maratona", "Off", "economia", (120, 120, 140), 0.25,
            "a sessão é longa: tudo que gasta bateria cai ao mínimo — mas a luz "
            "NÃO apaga, porque apagada os quatro ficariam iguais",
            Receita()),
-    Estilo("plataforma", "Plataforma", "Off", "balanceado", (255, 210, 40), 1.0,
-           "o pulo é botão, não gatilho; a vibração marca o impacto",
-           Receita()),
+    # a luz que gira é a alegria do gênero (a base «arco-íris»)
+    Estilo("plataforma", "Plataforma", "SlopeFeedback", "balanceado", (255, 210, 40), 1.0,
+           "agarrar e carregar ganham corpo no gatilho; a vibração marca o impacto",
+           Receita(luz_base="arco-iris", luz_ritmo=7),
+           Lado("SlopeFeedback", "agarrar"), Lado("MultiPositionVibration", "energia-que-cresce")),
     Estilo("retro", "Retrô/Emulador", "Off", "economia", (60, 230, 90), 1.0,
            "o console original não tinha nada disso; o verde é o do tubo",
            Receita()),
-    Estilo("ritmo", "Ritmo/Música", "Off", "max", (255, 0, 220), 1.0,
-           "a vibração É o instrumento; o gatilho atrapalha o tempo",
+    # Um clique que volta livre em cada nota, nos dois lados, sem atrasar o tempo.
+    Estilo("ritmo", "Ritmo/Música", "Weapon", "max", (255, 0, 220), 1.0,
+           "a vibração É o instrumento; cada nota tem um clique que volta livre",
            # a luz na batida da música, até o teto [WCAG]; o lado do estouro não serve à música
-           Receita(luz="batida", luz_por_segundo=TETO_DO_PISCAR, lado_do_som=False)),
+           Receita(luz="batida", luz_por_segundo=TETO_DO_PISCAR, lado_do_som=False),
+           Lado("Weapon", "golpe-leve"), Lado("Weapon", "golpe-leve")),
+    # O manche endurece com o curso (a Rampa de força) e o chão passa pelo L2 e pelo corpo
+    # (decisão de 19/10/2026).
+    # bloco C: Grão (por ora o Som no corpo, na háptica)
     Estilo("simulacao", "Simulação/Voo", "SlopeFeedback", "economia", (90, 180, 255), 0.6,
-           "o manche endurece com o curso, e o voo é longo",
-           Receita(toque_por_tiro=False, lado_do_som=False)),
+           "o manche endurece com o curso e a pista ou a turbulência passam pelo L2 e pelo corpo",
+           Receita(toque_por_tiro=False, lado_do_som=False, luz_base="mare", luz_ritmo=10),
+           Lado("SlopeFeedback"), Lado("Galloping", "terreno-que-muda")),
     Estilo("personalizado", "Personalizado", None, "", (0, 0, 0), 0.0,
            "é o estilo que diz 'eu ajusto na mão' — não mexe em nada"),
 )
 
-POR_CHAVE = {e.chave: e for e in ESTILOS}
+#: As chaves que saíram do catálogo e carregam como outro estilo: um perfil salvo com a velha
+#: segue funcionando (o `schema` não recusa chave de estilo de propósito). O Arco era um estilo
+#: de gatilho só (`Bow`) e virou uma escolha dentro da Ação e da Aventura (19/10/2026).
+SAIU_DO_CATALOGO: dict[str, str] = {"arco": "acao"}  # (noqa-acento): chave
+
 POR_ROTULO = {e.rotulo: e for e in ESTILOS}
+POR_CHAVE = {e.chave: e for e in ESTILOS}
+POR_CHAVE.update({velha: POR_CHAVE[nova] for velha, nova in SAIU_DO_CATALOGO.items()})
+
+
+def chave_do_catalogo(chave: object) -> object:
+    """A chave de hoje do estilo: a que saiu do catálogo vira a do estilo que a recebeu."""
+    return SAIU_DO_CATALOGO.get(chave, chave) if isinstance(chave, str) else chave
+
 
 #: Os estilos que não pintam o controle: o Personalizado (a mão do usuário) e o Nativo (o jogo).
 SEM_COR = frozenset({"personalizado", "nativo"})
