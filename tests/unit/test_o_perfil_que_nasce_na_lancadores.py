@@ -110,7 +110,10 @@ def _um_jogo_da_steam_com_ponte(mascara: str | None, kind: str = "gamepad") -> N
 
 
 def test_o_jogo_com_ponte_de_gamepad_nasce_com_a_mascara() -> None:
-    """MORDIDA: tirar o `mode=` do `_nascer` deixa o perfil sem a máscara que o jogo pede."""
+    """MORDIDA: tirar o `mode=` do `_nascer` deixa o perfil sem a máscara que o jogo pede.
+
+    (D-2010-O-PERFIL-NASCE-COM-O-JOGO-E-A-MASCARA-QUE-O-PRONTUARIO-CONFIRMOU)
+    """
     _um_jogo_da_steam_com_ponte("xbox")
     a10_perfis.criar_para_o_jogo(
         _ctx(), Ponte(), classes=("steam_app_1245620",), nome_do_jogo="Elden Ring")
