@@ -814,7 +814,11 @@ def aviso_de_grab(
 
 
 def _format_external_title(entry: dict[str, Any]) -> str:
-    """Título do card de um externo — "Controle 3 — 8BitDo" (I5, 25/08/2026)."""
+    """Título do card de um externo — "Controle 3 — 8BitDo" (I5, 25/08/2026).
+
+    Sem número (o `player_slot` nulo, como o do quinto controle), "Controle — 8BitDo": o "—"
+    do `slot_label` encostava no travessão da marca (O-EXTERNO-SEM-NUMERO-NAO-DOBRA-O-TRAVESSAO-01).
+    """
     from hefesto_dualsense4unix.app.actions.external_controllers import (
         brand_of,
         slot_label,
@@ -823,6 +827,8 @@ def _format_external_title(entry: dict[str, Any]) -> str:
 
     slot = slot_of(entry, 0, 0)
     marca = brand_of(entry)
+    if slot is None:
+        return f"Controle — {marca}"
     return f"Controle {slot_label(slot)} — {marca}"
 
 
