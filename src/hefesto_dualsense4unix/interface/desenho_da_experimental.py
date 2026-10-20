@@ -52,8 +52,10 @@ LANCADORES = (
          virou="https://github.com/Hefesto-Team/hefesto-mod-retroarch"),
 )
 
-#: A frase da linha da migração, antes do endereço.
-FRASE_DO_QUE_VIROU = "Virou extensão. Para seguir com ele, instale de"
+#: A linha da migração mostra a frase e o nome do repositório; o endereço inteiro, que se copia
+#: para o «Instalar», vai na dica (no tamanho do desenho, a frase longa com o endereço cortava).
+FRASE_DO_QUE_VIROU = "Virou extensão:"
+DICA_DO_QUE_VIROU = "Para seguir com ele, instale de"
 
 
 class Extensao(NamedTuple):
@@ -109,11 +111,13 @@ def _botao(gesto: str, rotulo: str, destino: str, chave: str, ativo: bool) -> st
 
 
 def _fila_que_virou_html(fila: Fila) -> str:
-    """A linha da migração: o nome, a frase e o endereço que se copia para o «Instalar»."""
+    """A linha da migração: o nome, a frase e o repositório; a dica traz o endereço do «Instalar»."""
+    repositorio = fila.virou.rstrip("/").rsplit("/", 1)[-1]
+    dica = f"{FRASE_DO_QUE_VIROU} {repositorio}. {DICA_DO_QUE_VIROU} {fila.virou}"
     return f'''          <div class="lf ausente lf-virou" data-lancador="{_a(fila.chave)}">
             <span class="ext-ico lf-ico">{_icone(fila.chave)}</span>
-            <span class="lf-nome"><span class="lanc-nome">{_e(fila.nome)}</span></span>
-            <span class="lanc-jogos" title="{_a(fila.virou)}">{_e(FRASE_DO_QUE_VIROU)} <code>{_e(fila.virou)}</code></span>
+            <span class="lf-nome"><span class="lanc-nome" title="{_a(fila.nome)}">{_e(fila.nome)}</span></span>
+            <span class="lanc-jogos" title="{_a(dica)}">{_e(FRASE_DO_QUE_VIROU)} <code>{_e(repositorio)}</code></span>
           </div>'''
 
 
