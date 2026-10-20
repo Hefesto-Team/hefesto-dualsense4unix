@@ -6067,6 +6067,51 @@ class IpcHandlersMixin:
         return await self._grava_a_acessibilidade(
             "perfil.cursor.set", "cursor", params, por_peca=False)
 
+    async def _handle_sequencia_gravar(self, params: dict[str, Any]) -> dict[str, Any]:
+        """`sequencia.gravar` — ouve os botões de um controle e devolve os passos e os tempos."""
+        import time
+
+        from hefesto_dualsense4unix.core import ativacao_de_botao
+
+        acao = str(params.get("acao") or "estado")  # (noqa-acento)
+        if acao not in ("iniciar", "parar", "estado"):
+            raise ValueError(
+                "sequencia.gravar: 'acao' é iniciar, parar ou estado")  # (noqa-acento)
+        uniq = params.get("uniq")
+        if uniq is not None and not isinstance(uniq, str):
+            raise ValueError("sequencia.gravar: 'uniq' precisa ser string ou omitido")
+        if acao == "iniciar":
+            ativacao_de_botao.gravar_iniciar(self.store, uniq, time.monotonic())
+        if acao == "parar":
+            passos = ativacao_de_botao.gravar_parar(self.store)
+            return {"status": "ok", "gravando": False, "passos": passos}
+        gravando, passos = ativacao_de_botao.gravar_estado(self.store)
+        return {"status": "ok", "gravando": gravando, "passos": passos}
+
+    async def _handle_sequencia_tocar(self, params: dict[str, Any]) -> dict[str, Any]:
+        """`sequencia.tocar` — toca uma vez, no pad virtual, a sequência que a tela mostra."""
+        import time
+
+        from hefesto_dualsense4unix.core import ativacao_de_botao
+        from hefesto_dualsense4unix.profiles import schema
+
+        uniq = params.get("uniq")
+        if uniq is not None and not isinstance(uniq, str):
+            raise ValueError("sequencia.tocar: 'uniq' precisa ser string ou omitido")
+        desconhecidos = sorted(set(params) - {"uniq", "passos", "jeito", "ritmo"})
+        if desconhecidos:
+            raise ValueError(f"sequencia.tocar não conhece {desconhecidos}")
+        try:
+            seq = schema.SequenciaDeBotao.model_validate(
+                {k: v for k, v in params.items() if k != "uniq"})
+        except ValueError as exc:
+            raise ValueError(f"sequencia.tocar recusado: {exc}") from exc
+        motivo = ativacao_de_botao.recusar((), (), {}, {}, (), {seq.passos[0].botao: seq})
+        if motivo:
+            raise ValueError(f"sequencia.tocar recusado: {motivo}")
+        ativacao_de_botao.tocar_agora(self.store, uniq, seq, time.monotonic())
+        return {"status": "ok", "passos": len(seq.passos)}
+
 
 def _uniq_do_rumble(params: dict[str, Any], metodo: str) -> str | None:
     """O ``uniq`` opcional do pedido de vibração: ausente é «o alvo de agora»."""

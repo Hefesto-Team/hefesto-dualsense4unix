@@ -135,6 +135,14 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "mapa-padrao": "devolve o mapa ao padrão — é da tela, vale no Guardar",
     "mapa-cancelar": "larga o que o mapa não guardou — é da tela",
     "mapa-guardar": "grava o perfil em edição no mapa — é do perfil",
+    "mapa-sequencia-gravar": "grava a sequência do botão no controle (o laço do serviço carimba "
+                             "o tempo) — vale no Guardar, por controle, nos dois transportes",
+    "mapa-sequencia-jeito": "escolhe como a sequência corre (uma vez, repete, alterna) — é do "
+                            "perfil, vale no Guardar",
+    "mapa-sequencia-ritmo": "escolhe o ritmo da sequência (rápido, normal, devagar) — é do "
+                            "perfil, vale no Guardar",
+    "mapa-sequencia-tocar": "toca a sequência uma vez no pad virtual, sem guardar nada — é do "
+                            "serviço, igual no cabo e no rádio",
     "acao-do-gesto": "escolhe a ação de um gesto — é do perfil",
     "novo-gesto": "acrescenta um gesto do PS — é da máquina (`maquina.json`), nunca do perfil",
     "remover-gesto": "tira um gesto do PS — é da máquina (`maquina.json`), nunca do perfil",

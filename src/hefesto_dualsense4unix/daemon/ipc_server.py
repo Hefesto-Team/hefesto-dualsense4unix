@@ -237,6 +237,8 @@ class IpcServer(IpcHandlersMixin):
             "perfil.ativacao.set": self._handle_perfil_ativacao_set,  # (noqa-acento) método
             "perfil.analogicos.set": self._handle_perfil_analogicos_set,  # (noqa-acento) método
             "perfil.cursor.set": self._handle_perfil_cursor_set,
+            "sequencia.gravar": self._handle_sequencia_gravar,
+            "sequencia.tocar": self._handle_sequencia_tocar,
         }
 
     async def start(self) -> None:

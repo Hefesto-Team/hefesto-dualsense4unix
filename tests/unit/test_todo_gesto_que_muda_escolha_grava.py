@@ -92,6 +92,14 @@ ATOS: dict[Chave, str] = {
     ("mapa-do-controle.html", "mapa-padrao"): _RASCUNHO_DO_MAPA,
     ("mapa-do-controle.html", "mapa-perfil"): _RASCUNHO_DO_MAPA,
     ("mapa-do-controle.html", "mapa-usar-em"): _RASCUNHO_DO_MAPA,
+    ("mapa-do-controle.html", "mapa-sequencia-gravar"):
+        "sessão: o daemon ouve o controle até o segundo clique e a faixa de passos é rascunho "
+        "da tela; quem grava no perfil é o «Guardar» do mapa, que declara `grava=`",
+    ("mapa-do-controle.html", "mapa-sequencia-jeito"): _RASCUNHO_DO_MAPA,
+    ("mapa-do-controle.html", "mapa-sequencia-ritmo"): _RASCUNHO_DO_MAPA,
+    ("mapa-do-controle.html", "mapa-sequencia-tocar"):
+        "sessão: o «Tocar para ouvir» toca a sequência de agora uma vez no pad virtual, sem "
+        "guardar nada; quem grava é o «Guardar» do mapa",
     ("07-lancadores.html", "criar-perfil-para-um-jogo"):
         "abre a escolha do jogo; quem grava é o «Criar» de cada linha "
         "(`criar-perfil-do-jogo`), que declara `grava=`",

@@ -37,6 +37,7 @@ import time
 from typing import Any, NamedTuple
 
 from hefesto_dualsense4unix.core import acoes_de_botao as acoes
+from hefesto_dualsense4unix.core import ativacao_de_botao
 from hefesto_dualsense4unix.core import remapeamento_de_botao as remap
 from hefesto_dualsense4unix.integrations.uinput_mouse import EIXO_DIREITO, EIXO_ESQUERDO
 from hefesto_dualsense4unix.interface.cartao_do_controle import (
@@ -153,6 +154,17 @@ OPCOES_DE_TECLADO: tuple[tuple[str, str], ...] = (
 
 ROTULO_DA_ACAO: dict[str, str] = dict(OPCOES_DE_MOUSE + OPCOES_DE_TECLADO)
 
+#: o quarto tipo do «vira»: a ficha `sequencia` e o texto da edição (`sequencia_em_texto`)
+SEQUENCIA = "sequencia"  # (noqa-acento): a ficha do desenho, não é texto da tela
+ATIVACAO = "ativacao"  # (noqa-acento): a chave da seção do perfil, não é texto da tela
+
+JEITOS_DA_SEQUENCIA: tuple[tuple[str, str], ...] = (
+    ("uma_vez", "Toca uma vez"), ("repete", "Repete enquanto eu segurar"),
+    ("alterna", "Liga e desliga"))
+
+RITMOS_DA_SEQUENCIA: tuple[tuple[str, str], ...] = (
+    ("gravado", "O gravado"), ("rapido", "Mais rápido"), ("devagar", "Mais devagar"))
+
 #: o que é do mouse, para o tipo «Point and click» de um perfil do disco.
 FICHAS_DO_MOUSE: frozenset[str] = frozenset(t for t, _ in OPCOES_DE_MOUSE)
 
@@ -178,7 +190,8 @@ def _estado() -> dict[str, Any]:
         _EDITANDO.clear()
     if not _EDITANDO:
         _EDITANDO.update({"chave": NAV, "edicoes": {}, "nome": None,
-                          "usar_em": None, "botao": None, "peca": None})
+                          "usar_em": None, "botao": None, "peca": None,
+                          "seq": {}, "gravando": None})
     return _EDITANDO
 
 
@@ -206,7 +219,7 @@ def _perfis_do_disco(ctx: Contexto) -> list[dict[str, Any]]:
         if not cru:
             continue
         if (cru.get("remapeamento") or cru.get("button_actions")
-                or _estilo_de_clicar(cru)
+                or _sequencias_do_cru(cru, None) or _estilo_de_clicar(cru)
                 or (cru.get("mouse") or {}).get("enabled")):
             meus.append(cru)
     return meus
@@ -242,6 +255,15 @@ def _troca_da_peca(cru: dict[str, Any], mac: str | None) -> dict[str, str]:
     return dict(cfg.get("remapeamento") or {})
 
 
+def _sequencias_do_cru(cru: dict[str, Any], mac: str | None) -> dict[str, Any]:
+    """As sequências do perfil cru, ou as do controle `mac` quando ele tem as dele."""
+    if mac:
+        dela = ((cru.get("controllers") or {}).get(mac) or {}).get(ATIVACAO) or {}
+        if "sequencia" in dela:
+            return dict(dela["sequencia"] or {})
+    return dict((cru.get(ATIVACAO) or {}).get("sequencia") or {})
+
+
 def _cru_da_chave(ctx: Contexto, chave: str) -> dict[str, Any]:
     """O perfil cru que a chave nomeia: o ativo, ou o do disco. `{}` para molde e novo."""
     if chave == NAV:
@@ -275,6 +297,8 @@ def _base(ctx: Contexto, chave: str) -> dict[str, tuple[str, str]]:
     juntas = remap.juntar(cru.get("remapeamento") or {}, _troca_da_peca(cru, mac))
     for motor, destino in juntas.items():
         por_motor[motor] = ("troca", str(destino))
+    for motor, seq in _sequencias_do_cru(cru, mac).items():
+        por_motor[motor] = (SEQUENCIA, ativacao_de_botao.sequencia_em_texto(seq))
     return _por_botao(por_motor)
 
 
@@ -315,6 +339,8 @@ def _texto_do_valor(par: tuple[str, str] | None, b: str) -> str:
     if par is None:
         return "—"
     tipo, valor = par
+    if tipo == SEQUENCIA:
+        return "Sequência"
     if tipo == "troca":
         return ROTULO_DO_DESTINO.get(valor, a06._rotulo_do_destino(valor))
     if b == "ps" and valor == acoes.TOKEN_SEM_TECLA:
@@ -336,7 +362,7 @@ def _tipo_de(ctx: Contexto, estado: dict[str, Any], valores: dict[str, tuple[str
     fichas = {v for t, v in valores.values() if t == ACAO}
     if fichas & FICHAS_DO_MOUSE or _estilo_de_clicar(_cru_da_chave(ctx, chave)):
         return "pac"
-    return "troca" if "troca" in tipos else "nav"
+    return "troca" if tipos & {"troca", SEQUENCIA} else "nav"
 
 
 # ---------------------------------------------------------------------------
@@ -554,8 +580,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     ativo, itens = _escolhidos(ctx)
     _largar_se_outro_controle(ctx)
     acesas = _acesos(ctx, itens)
+    _acompanha_a_gravacao()
     mesa: dict[str, Any] = {**_mesa_da_edicao(ctx), **_linhas(ctx, acesas),
-                            LUZ: _luz(ctx, ativo, itens)}
+                            **_campos_da_sequencia(ctx), LUZ: _luz(ctx, ativo, itens)}
     return {
         "mesa": mesa,
         "blocos": {BLOCO_DOS_CONTROLES: chips_do_controle(ctx.mesa, ativo),
@@ -570,8 +597,10 @@ def _largar_se_outro_controle(ctx: Contexto) -> None:
     estado = _estado()
     peca = _peca_do_vale_para(ctx)
     if estado.get("peca") != peca:
+        _parar_de_ouvir(estado)
         estado["peca"] = peca
         estado["edicoes"] = {}
+        estado["seq"] = {}
 
 
 def _repinta(ctx: Contexto) -> dict[str, Any]:
@@ -579,7 +608,8 @@ def _repinta(ctx: Contexto) -> dict[str, Any]:
     _VISTO[0] = time.monotonic()
     _largar_se_outro_controle(ctx)
     _, itens = _escolhidos(ctx)
-    return {"mesa": {**_mesa_da_edicao(ctx), **_linhas(ctx, _acesos(ctx, itens))}}
+    return {"mesa": {**_mesa_da_edicao(ctx), **_linhas(ctx, _acesos(ctx, itens)),
+                     **_campos_da_sequencia(ctx)}}
 
 
 # ---------------------------------------------------------------------------
@@ -644,6 +674,7 @@ def mapa_botao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """
     b = str(o.get("b") or "").strip()
     if not b:
+        _parar_de_ouvir(_estado())
         _estado()["botao"] = None
         return _repinta(ctx)
     if b not in POR_BOTAO:
@@ -687,6 +718,7 @@ def _grava_na_edicao(ctx: Contexto, tipo: str, valor: str) -> None:
     elif tipo != "sem":
         raise ValueError(f"mapa-escolher: tipo {tipo!r} desconhecido.")
     estado["edicoes"][b] = (tipo, valor)
+    estado["seq"].pop(b, None)
 
 
 def _e_combinacao(valor: str) -> bool:
@@ -748,6 +780,8 @@ def mapa_padrao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     Só vale no «Guardar»."""
     _largar_se_outro_controle(ctx)
     estado = _estado()
+    _parar_de_ouvir(estado)
+    estado["seq"] = {}
     if str(estado["chave"]).startswith(MOLDE):
         estado["edicoes"] = {}
         return _repinta(ctx)
@@ -763,6 +797,174 @@ def mapa_cancelar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 # ---------------------------------------------------------------------------
+# A sequência: gravar, ajustar e tocar
+# ---------------------------------------------------------------------------
+
+def passos_em_html(passos: Any) -> str:
+    """Os botões da sequência e o intervalo entre eles, como a faixa do desenho os mostra."""
+    lista = list(passos)
+    partes = []
+    for i, (botao, ms) in enumerate(lista):
+        nome = html.escape(ROTULO_DO_DESTINO.get(botao, botao))
+        partes.append(f'<span class="seq-p">{nome}</span>')
+        if i + 1 < len(lista):
+            partes.append(f'<span class="seq-t">{int(ms)} ms</span>')
+    return "".join(partes)
+
+
+def _rascunho(ctx: Contexto, estado: dict[str, Any], b: str) -> dict[str, Any]:
+    """A sequência do botão `b` em edição: a já escolhida na tela, ou uma sem passo ainda."""
+    seq: dict[str, Any] | None = estado["seq"].get(b)
+    if seq is None:
+        par = _valores(ctx, estado).get(b)
+        seq = (ativacao_de_botao.sequencia_do_texto(par[1])
+               if par and par[0] == SEQUENCIA
+               else {"passos": [], "jeito": "uma_vez", "ritmo": "gravado"})
+        estado["seq"][b] = seq
+    return seq
+
+
+def _guarda_o_rascunho(estado: dict[str, Any], b: str) -> None:
+    """Sequência com ao menos um botão vira a edição da linha; sem botão, a linha segue igual."""
+    seq = estado["seq"][b]
+    if seq["passos"]:
+        estado["edicoes"][b] = (SEQUENCIA, ativacao_de_botao.sequencia_em_texto(seq))
+    elif estado["edicoes"].get(b, ("", ""))[0] == SEQUENCIA:
+        del estado["edicoes"][b]
+
+
+def _acompanha_a_gravacao() -> None:
+    """Enquanto o daemon ouve, o que ele ouviu entra na faixa; se parou sozinho, fecha."""
+    estado = _estado()
+    b = estado.get("gravando")
+    if b is None:
+        return
+    from . import ponte
+
+    try:
+        r = ponte.resultado("sequencia.gravar", acao="estado")
+    except Exception:
+        estado["gravando"] = None
+        return
+    if not isinstance(r, dict):
+        return
+    estado["seq"].setdefault(b, {"passos": [], "jeito": "uma_vez", "ritmo": "gravado"})
+    estado["seq"][b]["passos"] = list(r.get("passos") or [])
+    if not r.get("gravando"):
+        _parar_de_ouvir(estado)
+
+
+def _parar_de_ouvir(estado: dict[str, Any]) -> None:
+    """Para a gravação, se há uma, e guarda o que o daemon ouviu."""
+    b = estado.get("gravando")
+    if b is None:
+        return
+    estado["gravando"] = None
+    from . import ponte
+
+    try:
+        r = ponte.resultado("sequencia.gravar", acao="parar")
+    except Exception:
+        r = None  # sem o serviço, fica o que o último tique mostrou
+    seq = estado["seq"].setdefault(b, {"passos": [], "jeito": "uma_vez", "ritmo": "gravado"})
+    if isinstance(r, dict):
+        seq["passos"] = list(r.get("passos") or [])
+    _guarda_o_rascunho(estado, b)
+
+
+def _campos_da_sequencia(ctx: Contexto) -> dict[str, Any]:
+    """O que a aba Sequência escreve: os passos do botão escolhido, o jeito, o ritmo e o gravar."""
+    estado = _estado()
+    b = estado["botao"]
+    seq = None
+    if b in PODE_TROCAR:
+        par = _valores(ctx, estado).get(b)
+        seq = estado["seq"].get(b) or (
+            ativacao_de_botao.sequencia_do_texto(par[1]) if par and par[0] == SEQUENCIA else None)
+    gravando = estado.get("gravando") is not None
+    return {
+        "seq-passos": passos_em_html(
+            (p["botao"], p["ms"]) for p in (seq["passos"] if seq else ())),
+        "seq-jeito": seq["jeito"] if seq else JEITOS_DA_SEQUENCIA[0][0],
+        "seq-ritmo": seq["ritmo"] if seq else RITMOS_DA_SEQUENCIA[0][0],
+        "seq-gravando": "sim" if gravando else "",
+        "seq-rotulo": "Parar de gravar" if gravando else "Gravar a sequência",
+    }
+
+
+def _botao_da_sequencia(ctx: Contexto, gesto_: str) -> tuple[dict[str, Any], str]:
+    _largar_se_outro_controle(ctx)
+    estado = _estado()
+    b = estado["botao"]
+    if b is None:
+        raise RuntimeError("escolha antes, na lista, o botão que vai tocar a sequência.")
+    if b not in PODE_TROCAR:
+        raise RuntimeError(
+            f"{POR_BOTAO[b].nome} não toca sequência: ele não se troca por outro botão.")
+    return estado, str(b)
+
+
+def _quem_ouve(ctx: Contexto) -> dict[str, str]:
+    mac = _peca_do_vale_para(ctx)
+    return {"uniq": mac} if mac else {}
+
+
+@gesto(PAGINA, "mapa-sequencia-gravar")
+def mapa_sequencia_gravar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Gravar a sequência»: o controle passa a ouvir; de novo, para e guarda o que ouviu."""
+    estado = _estado()
+    if estado.get("gravando") is not None:
+        _parar_de_ouvir(estado)
+        return _repinta(ctx)
+    estado, b = _botao_da_sequencia(ctx, "mapa-sequencia-gravar")
+    r = p.resultado("sequencia.gravar", acao="iniciar", **_quem_ouve(ctx))
+    if not isinstance(r, dict) or r.get("status") != "ok":
+        raise RuntimeError("o Hefesto não confirmou a gravação: o serviço precisa estar ligado.")
+    _rascunho(ctx, estado, b)["passos"] = []
+    estado["gravando"] = b
+    _guarda_o_rascunho(estado, b)
+    return _repinta(ctx)
+
+
+def _muda_da_sequencia(ctx: Contexto, o: dict[str, Any], campo: str,
+                       validos: tuple[tuple[str, str], ...]) -> dict[str, Any]:
+    estado, b = _botao_da_sequencia(ctx, campo)
+    valor = str(o.get("valor") or o.get("v") or "").strip()
+    if valor not in {v for v, _ in validos}:
+        raise ValueError(f"mapa-sequencia: {valor!r} não é um {campo} que o motor conhece.")
+    _rascunho(ctx, estado, b)[campo] = valor
+    _guarda_o_rascunho(estado, b)
+    return _repinta(ctx)
+
+
+@gesto(PAGINA, "mapa-sequencia-jeito")
+def mapa_sequencia_jeito(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Ao apertar»: toca uma vez, repete enquanto segura, ou liga e desliga."""
+    return _muda_da_sequencia(ctx, o, "jeito", JEITOS_DA_SEQUENCIA)
+
+
+@gesto(PAGINA, "mapa-sequencia-ritmo")
+def mapa_sequencia_ritmo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Ritmo»: o gravado, mais rápido ou mais devagar."""
+    return _muda_da_sequencia(ctx, o, "ritmo", RITMOS_DA_SEQUENCIA)
+
+
+@gesto(PAGINA, "mapa-sequencia-tocar")
+def mapa_sequencia_tocar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Tocar para ouvir»: o controle toca a sequência de agora uma vez, sem guardar nada."""
+    estado, b = _botao_da_sequencia(ctx, "mapa-sequencia-tocar")
+    _parar_de_ouvir(estado)
+    seq = _rascunho(ctx, estado, b)
+    if not seq["passos"]:
+        raise RuntimeError("grave antes a sequência: nenhum botão foi apertado.")
+    r = p.resultado("sequencia.tocar", passos=seq["passos"], ritmo=seq["ritmo"],
+                    **_quem_ouve(ctx))
+    if not isinstance(r, dict) or r.get("status") != "ok":
+        raise RuntimeError("a sequência não tocou: o serviço precisa estar ligado.")
+    return _repinta(ctx)
+
+
+# ---------------------------------------------------------------------------
 # Guardar
 # ---------------------------------------------------------------------------
 
@@ -775,6 +977,8 @@ def _aplicar_as_edicoes(prof: Any, edicoes: dict[str, tuple[str, str]],
     de mouse e de teclado segue do perfil, que é o único dono dela.
     """
     acoes_do_perfil = dict(prof.button_actions or {})
+    sequencias = _sequencias_do_perfil(prof, mac)
+    antes_das_sequencias = dict(sequencias)
     do_perfil = dict(prof.remapeamento or {})
     dela = (prof.controllers or {}).get(mac) if mac else None
     trocas = dict(dela.remapeamento or {}) if dela else {}
@@ -791,7 +995,14 @@ def _aplicar_as_edicoes(prof: Any, edicoes: dict[str, tuple[str, str]],
         motor = POR_BOTAO[b].motor
         if motor is None:
             continue
-        if tipo == "troca":
+        if tipo != SEQUENCIA:
+            sequencias.pop(motor, None)
+        if tipo == SEQUENCIA:
+            solta(motor)
+            sequencias[motor] = ativacao_de_botao.sequencia_do_texto(valor)
+            if not mac:
+                acoes_do_perfil.pop(motor, None)
+        elif tipo == "troca":
             trocas[motor] = valor
             if not mac:
                 acoes_do_perfil.pop(motor, None)
@@ -808,12 +1019,61 @@ def _aplicar_as_edicoes(prof: Any, edicoes: dict[str, tuple[str, str]],
         if mac:
             propria = remap.resolver_da_peca(trocas) or None
             remap.resolver(remap.juntar(do_perfil, propria))
-            return _com_a_troca_da_peca(prof, mac, propria, acoes_do_perfil)
-        remapeamento = remap.resolver(trocas) or None
+            novo = _com_a_troca_da_peca(prof, mac, propria, acoes_do_perfil)
+        else:
+            remapeamento = remap.resolver(trocas) or None
+            novo = prof.model_copy(update={"button_actions": acoes_do_perfil or None,
+                                           "remapeamento": remapeamento})
     except remap.RemapeamentoRecusadoError as exc:
         raise RuntimeError(a06._frase_da_troca(exc)) from None
-    return prof.model_copy(update={"button_actions": acoes_do_perfil or None,
-                                   "remapeamento": remapeamento})
+    if sequencias == antes_das_sequencias:
+        return novo
+    return _com_as_sequencias(novo, mac, sequencias)
+
+
+def _sequencias_do_perfil(prof: Any, mac: str | None) -> dict[str, Any]:
+    """As sequências do perfil, ou as do controle `mac` quando ele tem as dele (campo a campo)."""
+    dela = (prof.controllers or {}).get(mac) if mac else None
+    secao = getattr(dela, ATIVACAO, None)
+    propria = getattr(secao, "sequencia", None)
+    if propria is not None and secao is not None and "sequencia" in secao.model_fields_set:
+        return {b: v.model_dump() for b, v in propria.items()}
+    return {b: v.model_dump() for b, v in ((prof.ativacao.sequencia if prof.ativacao else {})
+                                           or {}).items()}
+
+
+def _com_as_sequencias(prof: Any, mac: str | None, sequencias: dict[str, Any]) -> Any:
+    """O perfil com as sequências no lugar: as do perfil, ou as do controle `mac` por cima.
+
+    O controle que acaba com as mesmas do perfil deixa de ter as dele; a seção que fica sem
+    nenhum campo sai. O que o motor recusa (um botão com dois modos) volta como frase.
+    """
+    from hefesto_dualsense4unix.profiles.schema import ProfileAtivacaoConfig
+
+    def refeita(secao: Any, seqs: dict[str, Any] | None) -> Any:
+        campos = dict(secao.model_dump(exclude_unset=True)) if secao is not None else {}
+        campos.pop("sequencia", None)
+        if seqs is not None:
+            campos["sequencia"] = seqs
+        return ProfileAtivacaoConfig.model_validate(campos) if campos else None
+
+    try:
+        if not mac:
+            return prof.model_copy(update={ATIVACAO: refeita(prof.ativacao, sequencias or None)})
+        do_perfil = _sequencias_do_perfil(prof.model_copy(update={"controllers": None}), None)
+        todos = dict(prof.controllers or {})
+        dela = todos.get(mac) or ControllerOverrides()
+        propria = None if sequencias == do_perfil else sequencias
+        # o controle sem sequência própria diante de um perfil que tem: `{}` diz «nenhuma aqui»
+        dela = dela.model_copy(update={ATIVACAO: refeita(dela.ativacao, propria)})
+        if all(getattr(dela, campo) is None for campo in ControllerOverrides.model_fields):
+            todos.pop(mac, None)
+        else:
+            todos[mac] = dela
+        return prof.model_copy(update={"controllers": todos or None})
+    except ValueError as exc:
+        frase = str(exc).split("Value error, ")[-1].split(" [type=")[0]
+        raise RuntimeError(frase) from None
 
 
 def _com_a_troca_da_peca(prof: Any, mac: str, propria: dict[str, str] | None,
@@ -862,7 +1122,11 @@ def _o_que_se_guarda(prof: Any) -> tuple[Any, ...]:
     """O que esta tela escreve num perfil: ações, troca do perfil e troca de cada controle."""
     por_peca = {mac: dict(cfg.remapeamento or {})
                 for mac, cfg in (prof.controllers or {}).items() if cfg.remapeamento}
-    return prof.button_actions, prof.remapeamento, por_peca
+    sequencias = {mac: _sequencias_do_perfil(prof, mac)
+                  for mac in (prof.controllers or {})
+                  if _sequencias_do_perfil(prof, mac) != _sequencias_do_perfil(prof, None)}
+    return (prof.button_actions, prof.remapeamento, por_peca, _sequencias_do_perfil(prof, None),
+            sequencias)
 
 
 @gesto(PAGINA, "mapa-guardar", grava="gravar_e_reaplicar")

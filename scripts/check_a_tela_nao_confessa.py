@@ -418,6 +418,9 @@ SEM_LETRA: dict[str, str] = {
     "__init__.py:dentro ← recusa": "idem, no gesto de dentro do cartão",
     "__init__.py:na_pagina ← frase": "idem, no gesto do rodapé que toda página despacha",
     "__init__.py:gesto_da_pagina ← frase": "idem, no coringa do rodapé",
+    "a13_mapa_do_controle.py:_com_as_sequencias ← frase":
+        "a recusa do schema (`core/ativacao_de_botao.py:recusar`), palavra por palavra: "
+        "um modo por botão, no máximo 32 passos",
     "a02_controles.py:mudo ← acao.dica":
         "a dica da ação de microfone, que mora no dono da ação",
 

@@ -28,3 +28,6 @@ seção daqui**: a aba deixou de estar em trabalho.
 ## 05-vibracao.html
 - **18/10/2026** — a «Força da vibração» perde os três botões (Economia, Padrão, Máximo) e fica só o trilho de 0 a 200%, de 5 em 5, com o ícone do DualSense; a linha desce de 79 px para 36 px e o desenho do controle ganha o espaço (r3b-05-12). O controle não tem nível de 150%: de 0 a 100% o trilho vai virar o byte do firmware e acima de 100% o multiplicador do motor, tudo na segunda passagem (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01). Espera o olho dela na sessão dos desenhos. Enquanto isso, o produto continua com os três degraus, o Máximo em 150% (`degraus_da_forca`), e o trilho até 200%.
 - **20/10/2026** — «Padrão dos motores», a háptica com Eco, Grão e Motor de época, e o topo que some com o serviço parado chegaram ao publicado à mão; a Força sem os três degraus segue só no desenho.
+
+## mapa-do-controle.html
+- **20/10/2026** — o seletor «<botão> vira» ganha a quarta aba, «Sequência» (O-BOTAO-GRAVA-E-TOCA-UMA-SEQUENCIA-01): o botão de gravar, a faixa dos passos com o tempo entre eles, «Ao apertar» (toca uma vez, repete enquanto eu segurar, liga e desliga), «Ritmo» e «Tocar para ouvir». O código já a alimenta (gestos `mapa-sequencia-*`). Espera o `--publicar` na costura. Enquanto isso, o produto mostra só as três abas (Controle, Mouse, Teclado).

@@ -496,6 +496,29 @@ class ProfileMovimentoConfig(BaseModel):
         return value
 
 
+class PassoDeSequencia(BaseModel):
+    """Um botão da sequência e quanto esperar até o seguinte (zero = o seguinte sai junto)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    botao: str
+    ms: int = Field(default=0, ge=0, le=5000)
+
+
+class SequenciaDeBotao(BaseModel):
+    """O que um botão toca no pad virtual (O-BOTAO-GRAVA-E-TOCA-UMA-SEQUENCIA-01).
+
+    ``jeito`` diz como o aperto a toca (uma vez, repetida enquanto segura, ou ligada e desligada)
+    e ``ritmo`` a pressa dela em cima dos tempos gravados (``core/ativacao_de_botao``).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    passos: list[PassoDeSequencia] = Field(min_length=1, max_length=32)
+    jeito: Literal["uma_vez", "repete", "alterna"] = "uma_vez"
+    ritmo: Literal["gravado", "rapido", "devagar"] = "gravado"
+
+
 class ProfileAtivacaoConfig(BaseModel):
     """Como o botão ativa, por perfil (O-BOTAO-ALTERNA-REPETE-E-ENTENDE-TOQUE-LONGO-E-DUPLO-01).
 
@@ -521,13 +544,15 @@ class ProfileAtivacaoConfig(BaseModel):
     aperto_minimo_ms: int = Field(default=0, ge=0, le=500)
     travar: list[str] = Field(default_factory=list)
     ps_travado_ms: int = Field(default=0, ge=0, le=3000)
+    sequencia: dict[str, SequenciaDeBotao] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def _um_botao_um_modo(self) -> ProfileAtivacaoConfig:
         """Botão que o jogo não conhece, dois modos num botão, gesto que dispara o próprio botão."""
         from hefesto_dualsense4unix.core.ativacao_de_botao import recusar
 
-        motivo = recusar(self.alternar, self.repetir, self.longo, self.duplo, self.travar)
+        motivo = recusar(self.alternar, self.repetir, self.longo, self.duplo, self.travar,
+                         self.sequencia)
         if motivo:
             raise ValueError(f"ativacao: {motivo}")  # (noqa-acento) identificador ASCII
         return self
@@ -2644,6 +2669,20 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         E_CONTRATO,
         "Zero = o gesto do PS pede os dois botões juntos, como sempre. 600 ms é a proposta de "
         "fábrica ao ligar, e o PS sozinho passa a esperar esse tempo para abrir a Steam.",
+    ),
+    "ProfileAtivacaoConfig.sequencia": Nascimento(
+        E_CONTRATO, "Mapa vazio = nenhum botão toca sequência; só existe por gesto de quem joga."
+    ),
+    "PassoDeSequencia.botao": Nascimento(E_OBRIGATORIO, "Qual botão o passo aperta."),
+    "PassoDeSequencia.ms": Nascimento(
+        E_CONTRATO, "Zero = o passo seguinte sai junto; o último passo ignora o tempo."
+    ),
+    "SequenciaDeBotao.passos": Nascimento(E_OBRIGATORIO, "Sequência sem passo não existe."),
+    "SequenciaDeBotao.jeito": Nascimento(
+        E_CONTRATO, "Toca uma vez por aperto: o jeito que não repete nem prende nada."
+    ),
+    "SequenciaDeBotao.ritmo": Nascimento(
+        E_CONTRATO, "O gravado: os tempos de quem gravou, sem pressa nem demora."
     ),
     "Profile.analogicos": Nascimento(
         NASCE_NO_LEITOR,

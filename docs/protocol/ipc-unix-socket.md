@@ -41,7 +41,7 @@ aparece contada.
 
 <!-- BLOCO GERADO por scripts/gerar-contrato-ipc.py — não edite à mão -->
 
-**64 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **23** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
+**66 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **25** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
 
 Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e é por isso que ele está aqui: escrito à mão, ele já saiu 15, 17, 18 e 14 em levantamentos do mesmo dia.
 
@@ -111,6 +111,8 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `perfil.ativacao.set` | `daemon/ipc_handlers.py:6055` (`_handle_perfil_ativacao_set`) | `perfil.ativacao.set` — o modo e o filtro do botão, no perfil ou numa peça. | **não** |
 | `perfil.analogicos.set` | `daemon/ipc_handlers.py:6060` (`_handle_perfil_analogicos_set`) | `perfil.analogicos.set` — a zona morta, a curva e a mão, no perfil ou numa peça. | **não** |
 | `perfil.cursor.set` | `daemon/ipc_handlers.py:6065` (`_handle_perfil_cursor_set`) | `perfil.cursor.set` — a precisão, a permanência e o clique travado do cursor. | **não** |
+| `sequencia.gravar` | `daemon/ipc_handlers.py:6070` (`_handle_sequencia_gravar`) | `sequencia.gravar` — ouve os botões de um controle e devolve os passos e os tempos. | **não** |
+| `sequencia.tocar` | `daemon/ipc_handlers.py:6091` (`_handle_sequencia_tocar`) | `sequencia.tocar` — toca uma vez, no pad virtual, a sequência que a tela mostra. | **não** |
 
 <!-- FIM DO BLOCO GERADO -->
 
