@@ -187,7 +187,8 @@ def test_a_08_pintada_pelo_pacote_abre_toda_linha_com_maiuscula(qual: str) -> No
 #: das portas. A régua as ABRE uma a uma (A-08-MOSTRA-O-DESENHO…-01, 08/10/2026:
 #: «maiúscula em tudo»).
 ANCORAS_DA_08 = ("mapear-entradas", "mapear-entrada-a-entrada", "mapear-entrada-a-entrada-em-pe",
-                 "mapear-entrada-a-entrada-fim", "mapear-portas", "tipo-do-aparelho")
+                 "mapear-entrada-a-entrada-fim", "mapear-portas", "tipo-do-aparelho",
+                 "acionador")
 
 
 def _abrir_a_ancora(ancora: str) -> str:

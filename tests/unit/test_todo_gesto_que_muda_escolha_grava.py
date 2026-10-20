@@ -158,6 +158,14 @@ ATOS: dict[Chave, str] = {
     ("08-conexoes.html", "mapear-parar"): _LACO_DO_MAPEAR,
     ("08-conexoes.html", "sugerir-alocacao"):
         "leitura: a proposta da central do rádio para este adaptador",
+    ("08-conexoes.html", "usar-como-botoes"):
+        "tela: abre a janela do acionador com o rascunho da linha; quem grava é o «Guardar» "
+        "(`acionador-guardar`), que declara `grava=`",
+    ("08-conexoes.html", "acionador-nova-tecla"):
+        "leitura: espera a próxima tecla do acionador, sem prendê-lo, e a põe no rascunho; "
+        "quem grava é o «Guardar»",
+    ("08-conexoes.html", "acionador-botao"):
+        "tela: escolhe no desenho o botão da tecla, no rascunho; quem grava é o «Guardar»",
     ("09-sistema.html", "atualizar"):
         "ato: o serviço relê a configuração (`daemon.reload`) e confere",
     ("10-perfis.html", "ativar"):

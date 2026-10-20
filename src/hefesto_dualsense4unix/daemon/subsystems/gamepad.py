@@ -2245,7 +2245,7 @@ def dispatch_gamepad(
         l2, r2 = sem_o_eixo_do_gesto(
             daemon, primary_identity(daemon), com_o_ps, (state.l2_raw, state.r2_raw), l2, r2
         )
-        l2, r2 = gatilhos_dos_acionadores(buttons_pressed, l2, r2)
+        l2, r2 = gatilhos_dos_acionadores(daemon, primary_identity(daemon), l2, r2)
         botoes = buttons_pressed
         arranjo = roteador_ativo(store)
         uniq = primary_identity(daemon) if arranjo is not None else None
@@ -2881,12 +2881,17 @@ def com_os_acionadores(daemon: Any, uniq: object, botoes: frozenset[str]) -> fro
     return botoes | extra if extra else botoes
 
 
-def gatilhos_dos_acionadores(botoes: frozenset[str], l2: int, r2: int) -> tuple[int, int]:
-    """O L2 e o R2 que uma tecla segura vão inteiros (o gatilho do pad é eixo)."""
+def gatilhos_dos_acionadores(daemon: Any, uniq: object, l2: int, r2: int) -> tuple[int, int]:
+    """O L2 e o R2 que uma tecla do acionador segura vão inteiros (o gatilho do pad é eixo).
+
+    Só a tecla: o gatilho apertado pela mão segue com a força dela, e a troca dele vem depois.
+    """
     from hefesto_dualsense4unix.core.remapeamento_de_botao import FORCA_CHEIA, GATILHOS
 
-    return (FORCA_CHEIA if GATILHOS["l2"] in botoes else l2,
-            FORCA_CHEIA if GATILHOS["r2"] in botoes else r2)
+    ponte = getattr(daemon, _ATRIBUTO_DA_PONTE, None)
+    teclas = ponte.apertados(uniq) if isinstance(ponte, PonteDosAcionadores) else frozenset()
+    return (FORCA_CHEIA if GATILHOS["l2"] in teclas else l2,
+            FORCA_CHEIA if GATILHOS["r2"] in teclas else r2)
 
 
 def parar_os_acionadores(daemon: Any) -> None:

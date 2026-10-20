@@ -2994,8 +2994,9 @@ COR_DO_TIPO = {
                  "gamepad")
 }
 COR_DO_TIPO[TIPO_ACESSORIO] = CATEGORIA_ACESSORIO["cor"]
-#: o aparelho de entrada (o acionador) leva a cor da webcam, como no desenho aprovado (r3-08-14)
-COR_DO_TIPO["entrada"] = COR_DO_TIPO["webcam"]
+#: o aparelho de entrada (o acionador) pinta com o token da webcam, como no desenho aprovado
+#: (r3-08-14): ele não é tipo com cor própria, e nenhum `--sala-entrada` nasce no tema
+COR_EMPRESTADA = {"entrada": "webcam"}
 ARTIGO_DO_TIPO = {"caixa": "a", "webcam": "a"}
 PASSAGEIROS = (("giro", "Giroscópio e acelerômetro"), ("touch", "Touchpad"),
                ("botoes", "Botões, sticks e gatilhos"))
@@ -3051,7 +3052,9 @@ def _maiuscula(frase: str) -> str:
 
 
 def _cor_de(ap: dict[str, Any]) -> str:
-    return str(ap.get("cor") or COR_DO_TIPO.get(str(ap.get("tipo")), "var(--texto-mudo)"))
+    tipo = str(ap.get("tipo"))
+    return str(ap.get("cor")
+               or COR_DO_TIPO.get(COR_EMPRESTADA.get(tipo, tipo), "var(--texto-mudo)"))
 
 
 def _veu(cor: str, alfa: float) -> str:
