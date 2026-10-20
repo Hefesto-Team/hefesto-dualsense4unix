@@ -64,7 +64,7 @@ FORMAS_LONGAS = frozenset({GUARDA, APARO, SOM_NO_CORPO})
 #: Simulação). O Adulto não está aqui: ele toca o Toque, e a extensão Lovense é quem o muda.
 POR_ESTILO: dict[str, str] = {
     "fps": TOQUE,
-    "acao": IMPACTO,  # noqa-acento: chave
+    "acao": IMPACTO,  # (noqa-acento): chave
     "luta": IMPACTO,
     "souls": IMPACTO,  # bloco C: Eco (o Impacto com cauda grave de 300 ms)
     "furtivo": ESTALO,

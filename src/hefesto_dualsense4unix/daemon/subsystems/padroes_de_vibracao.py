@@ -76,7 +76,7 @@ def escolha_valida(valor: object) -> str | None:
 #: os motores «só ao jogo»; o Ronco, contínuo, nunca entra aqui.
 POR_ESTILO: dict[str, str] = {
     "fps": "coice",
-    "acao": "tranco",  # noqa-acento: chave
+    "acao": "tranco",  # (noqa-acento): chave
     "luta": "pancada_do_lado",
     "souls": "tranco",
     "furtivo": "onda",

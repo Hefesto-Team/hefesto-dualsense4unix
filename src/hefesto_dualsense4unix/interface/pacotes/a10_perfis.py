@@ -1652,7 +1652,7 @@ def _gatilho_do_lado(specs: Any, estilo: Any, lado: Any, ajustes: dict[str, int]
         mode=lado.modo, params=list(specs.preset_to_positional_params(spec, numeros)))
 
 
-def _efeito_da_luz_do_estilo(invisivel: Any, cor: tuple[int, int, int]) -> dict[str, str]:
+def _efeito_da_luz_do_estilo(invisivel: Any, cor: tuple[int, int, int]) -> dict[str, Any]:
     """A base da luz do estilo (``Receita.luz_base``) na cor da unidade, ou nada (luz fixa).
 
     O efeito viaja no ``LedsConfig`` de CADA controle, com a cor DELE: a base não iguala as
