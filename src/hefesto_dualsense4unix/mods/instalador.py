@@ -608,12 +608,26 @@ def ligar(
         )
     if aviso_por_ver(entrada, manifesto) and aviso_visto != manifesto.aviso:
         raise AvisoParaVerError(manifesto.nome, manifesto.aviso)
+    _conferir_o_tema(manifesto, lg.codigo / mod_id)
     entrada.permissoes_aceitas = list(manifesto.permissoes)
     entrada.aviso_aceito = manifesto.aviso
     entrada.ligada = True
     entrada.ligada_em = datetime.now(timezone.utc).isoformat(timespec="microseconds")
     gravar_registro(lg.registro, registro)
     return entrada
+
+
+def _conferir_o_tema(manifesto: Manifesto, pasta: Path) -> None:
+    """O tema que a régua da janela recusaria não liga: a frase de produto vai a quem ligou."""
+    if "tema" not in manifesto.tipos or not manifesto.tema:
+        return
+    from hefesto_dualsense4unix.mods import tema
+
+    try:
+        tema.validar(tema.folha_do_manifesto(manifesto.tema, pasta))
+    except tema.TemaRecusadoError as exc:
+        raise InstalacaoRecusadaError(
+            f"O tema de «{manifesto.nome}» não liga. {exc.frase}") from exc
 
 
 def desligar(mod_id: str, *, lugares: Lugares | None = None) -> Entrada:

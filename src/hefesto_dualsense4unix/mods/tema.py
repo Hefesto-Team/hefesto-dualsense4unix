@@ -283,7 +283,7 @@ def tema_da_casa(lugares: Any = None) -> TemaDaCasa:
             # o manifesto que não abre não liga tema nenhum, e a frase dele vai aos avisos
             sem_manifesto.append(f"O manifesto de «{entrada.nome}» não abriu: {exc.frase}")
             continue
-        if "tema" in manifesto.tipos and manifesto.tema is not None:
+        if "tema" in manifesto.tipos and manifesto.tema:
             candidatos.append((entrada.ligada_em, entrada.id, manifesto, pasta))
     if not candidatos:
         return TemaDaCasa(avisos=tuple(sem_manifesto))

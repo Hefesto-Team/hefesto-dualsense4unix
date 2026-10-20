@@ -185,6 +185,21 @@ def test_o_tema_reprovado_nao_liga_e_diz_o_par(tmp_path: Path) -> None:
     assert agora.avisos == ("«Tema antigo» também tem tema, e vale o da «Tema apagado».",)
 
 
+def test_o_tema_reprovado_nao_liga_na_chave_e_a_frase_diz_o_par(tmp_path: Path) -> None:
+    """O-TEMA-QUE-A-REGUA-RECUSA-NAO-LIGA-NA-CHAVE-01: o «ligar» passa o tema pela régua."""
+    lg = _lugares(tmp_path)
+    _instalada(lg, "apagado", {"folha": ":root{--texto-mudo:#3c3e4c}"}, ligada=False,
+               permissoes=())
+    with pytest.raises(instalador.InstalacaoRecusadaError) as recusa:
+        instalador.ligar("apagado", permissoes_vistas=["tema"], lugares=lg)
+    frase = recusa.value.frase
+    assert frase.startswith("O tema de «Tema apagado» não liga. O texto ficaria ilegível:"), frase
+    assert "«--texto-mudo» sobre «--elevated»" in frase, frase
+    assert instalador.ler_registro(lg.registro)["apagado"].ligada is False
+    _instalada(lg, "azul", {"folha": TEMA_VALIDO}, ligada=False, permissoes=())
+    assert instalador.ligar("azul", permissoes_vistas=["tema"], lugares=lg).ligada is True
+
+
 def test_o_manifesto_que_nao_abre_vai_aos_avisos_e_o_outro_tema_liga(tmp_path: Path) -> None:
     """A modificação ligada cujo manifesto não abre não liga tema, e a frase de produto não some."""
     lg = _lugares(tmp_path)
