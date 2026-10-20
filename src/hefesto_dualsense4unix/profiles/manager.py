@@ -502,6 +502,9 @@ class ProfileManager:
         escalar_rumble = getattr(self.controller, "set_rumble_scales", None)
         if callable(escalar_rumble):
             escalar_rumble(escalas_rumble or None)
+        escalar_gatilho = getattr(self.controller, "set_trigger_scales", None)
+        if callable(escalar_gatilho):
+            escalar_gatilho(_controllers_to_trigger_scales(profile.controllers) or None)
         publicar = getattr(self.controller, "reset_profile_overrides", None)
         if callable(publicar):
             _publicar_camada(publicar, overrides, procedencias)
@@ -2459,6 +2462,23 @@ def _controllers_to_rumble_scales(
         if fator is None or fator == 1.0:
             continue
         out[uniq] = fator
+    return out
+
+
+def _controllers_to_trigger_scales(
+    controllers: dict[str, ControllerOverrides] | None,
+) -> dict[str, float]:
+    """A «Intensidade do gatilho» de cada controle do perfil (1,0 = 100%, que não entra).
+
+    A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01: a escala é a do trilho,
+    absoluta (o perfil global não tem a sua), e o backend a põe no byte do firmware e no bloco.
+    """
+    out: dict[str, float] = {}
+    for uniq, cfg in (controllers or {}).items():
+        intensidade = cfg.triggers.intensidade if cfg.triggers is not None else None
+        if intensidade is None or intensidade == 1.0:
+            continue
+        out[uniq] = float(intensidade)
     return out
 
 

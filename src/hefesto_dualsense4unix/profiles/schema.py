@@ -244,6 +244,21 @@ class TriggersConfig(BaseModel):
     right: TriggerConfig = Field(default_factory=_gatilho_de_nascimento)
     #: ``None`` = ninguém escolheu o modo: vale a leitura de :func:`decidir_o_modo_dos_gatilhos`.
     modo: ModoDaAba | None = None
+    #: A «Intensidade do gatilho» de UM controle (`controllers[uniq].triggers`), de 0 a 2 (0 a
+    #: 200%); ``None`` = 100%. Multiplica o efeito do jogo e o do Hefesto: até 100% pelo byte de
+    #: atenuação do firmware, acima pelas forças do bloco. No perfil global não vale (o trilho é
+    #: por controle). A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01.
+    intensidade: float | None = Field(default=None, ge=0.0, le=RUMBLE_CUSTOM_MULT_MAX)
+
+    @model_serializer(mode="wrap")
+    def _sem_intensidade_a_chave_nem_aparece(
+        self, handler: SerializerFunctionWrapHandler
+    ) -> Any:
+        """Gatilho sem intensidade própria sai do dump IDÊNTICO ao que era."""
+        dados = handler(self)
+        if isinstance(dados, dict) and dados.get("intensidade") is None:
+            dados.pop("intensidade", None)
+        return dados
 
 
 #: As bases do efeito de luz que a pessoa cria na aba Iluminação (A-ABA-ILUMINACAO-DO-TODO-01).
@@ -2052,6 +2067,8 @@ def gatilhos_na_economia(
         lados[lado] = gatilho_na_economia(fonte)
     if not lados:
         return dele
+    if dele is not None and dele.intensidade is not None:
+        lados["intensidade"] = dele.intensidade
     return TriggersConfig(**lados)
 
 
@@ -2159,8 +2176,10 @@ def perfil_no_modo(profile: Profile) -> Profile:
         for chave, dele in controles.items():
             if dele.triggers is None:
                 continue
-            lados = {lado: _sem_efeito() for lado in ("left", "right")
-                     if lado in dele.triggers.model_fields_set}
+            lados: dict[str, Any] = {lado: _sem_efeito() for lado in ("left", "right")
+                                     if lado in dele.triggers.model_fields_set}
+            if dele.triggers.intensidade is not None:
+                lados["intensidade"] = dele.triggers.intensidade
             controles[chave] = dele.model_copy(
                 update={"triggers": TriggersConfig.model_validate(lados) if lados else None})
             mexeu = True

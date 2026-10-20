@@ -402,3 +402,76 @@ def test_o_controlador_poe_a_escala_de_cada_um_nos_quatro_handles() -> None:
     assert bytes36 == [0x06, 0x40, 0x00, 0x00], [hex(b) for b in bytes36]
     ctl.set_trigger_scales(None)
     assert all(ctl._handles[k]._escala_do_gatilho == 1.0 for k in _MAC), "o mapa vazio não limpou"
+
+
+# --- O PERFIL: onde a intensidade do gatilho mora e quem a lê ------------------------------------
+
+
+def _perfil(**campos: object):
+    from hefesto_dualsense4unix.profiles.schema import Profile
+
+    return Profile.model_validate({"name": "Bancada", "match": {"type": "any"}, **campos})
+
+
+def test_a_intensidade_do_gatilho_mora_no_controle_e_o_dump_sem_ela_e_o_de_antes() -> None:
+    import json
+
+    sem = _perfil()
+    assert "intensidade" not in json.dumps(sem.model_dump(mode="json")), (
+        "o perfil sem intensidade ganhou uma chave nova no disco")
+    com = _perfil(controllers={_MAC[1]: {"triggers": {"intensidade": 0.45}}})
+    dump = com.model_dump(mode="json")
+    assert dump["controllers"][_MAC[1]]["triggers"]["intensidade"] == 0.45
+    assert _perfil(**{k: v for k, v in dump.items() if k != "name"}).controllers[
+        _MAC[1]].triggers.intensidade == 0.45, "a intensidade não volta do disco"
+    with pytest.raises(ValueError):
+        _perfil(controllers={_MAC[1]: {"triggers": {"intensidade": 2.5}}})
+
+
+def test_a_economia_e_o_automatico_nao_perdem_a_intensidade() -> None:
+    from hefesto_dualsense4unix.profiles.schema import (
+        TriggersConfig,
+        gatilhos_na_economia,
+        perfil_no_modo,
+    )
+
+    dele = TriggersConfig.model_validate({"right": {"mode": "Rigid", "params": [2, 200]},
+                                          "intensidade": 1.5})
+    assert gatilhos_na_economia(dele, TriggersConfig()).intensidade == 1.5
+    auto = _perfil(triggers={"modo": "automatico"},  # noqa-acento: chave ASCII
+                   controllers={_MAC[2]: {"triggers": {"right": {"mode": "Rigid"},
+                                                       "intensidade": 0.3}}})
+    vista = perfil_no_modo(auto)
+    assert vista.controllers[_MAC[2]].triggers.intensidade == 0.3, (
+        "no Automático o efeito sai, mas o trilho multiplica o do jogo e tem de ficar")
+
+
+def test_o_gerente_publica_a_intensidade_de_cada_controle() -> None:
+    from hefesto_dualsense4unix.profiles.manager import (
+        ProfileManager,
+        _controllers_to_specs,
+        _controllers_to_trigger_scales,
+    )
+    from hefesto_dualsense4unix.testing.fake_controller import FakeController
+
+    perfil = _perfil(controllers={
+        _MAC[0]: {"triggers": {"intensidade": 0.5}},
+        _MAC[1]: {"triggers": {"intensidade": 1.0}},
+        _MAC[3]: {"triggers": {"intensidade": 2.0}},
+    })
+    assert _controllers_to_trigger_scales(perfil.controllers) == {_MAC[0]: 0.5, _MAC[3]: 2.0}
+    assert not _controllers_to_specs(perfil.controllers, perfil.leds), (
+        "o controle que só tem intensidade ganhou um efeito de gatilho próprio")
+
+    class Espiao(FakeController):
+        def __init__(self, **kw: object) -> None:
+            super().__init__(**kw)
+            self.publicadas: list[object] = []
+
+        def set_trigger_scales(self, scales: object = None) -> None:
+            self.publicadas.append(None if scales is None else dict(scales))  # type: ignore[call-overload]
+
+    fc = Espiao(transport="usb")
+    fc.connect()
+    ProfileManager(controller=fc).apply(perfil)
+    assert fc.publicadas == [{_MAC[0]: 0.5, _MAC[3]: 2.0}], fc.publicadas
