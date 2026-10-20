@@ -7,6 +7,8 @@ MORDIDAS:
   * troque `create_subprocess_exec` por `create_subprocess_shell(texto)`: a injeção cria o arquivo;
   * tire o `not p.so_entra_por_evento` da escolha por janela: o perfil de evento entra pela janela.
   * tire o `try` de `_entrar` ou de `_perfis_do`: a falha de ativar ou de ler derruba o laço.
+  * tire o `_publicar_quem_entrou` de `connection.anunciar_bordas_por_alvo`: o segundo controle
+    conecta calado, e o «Controle conectado» só vale para o primeiro.
 """
 from __future__ import annotations
 
@@ -19,6 +21,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+import hefesto_dualsense4unix.daemon.connection as conn_mod
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
 from hefesto_dualsense4unix.daemon.subsystems.eventos_do_perfil import (
     EventosDoPerfil,
@@ -189,3 +192,87 @@ def test_as_aspas_abertas_dizem_o_porque() -> None:
     certo, porque = asyncio.run(rodar_o_comando("echo 'aberto"))
     assert not certo and porque.startswith("aspas abertas")
     assert asyncio.run(rodar_o_comando("  ")) == (False, "comando vazio")
+
+
+P1 = "aabbcc0000f1"
+P2 = "aabbcc0000f2"
+P3 = "aabbcc0000f3"
+
+
+class _MesaDeQuatro:
+    """O backend enxuto: quem está na mesa, por qual fio, e quem está trocando de fio."""
+
+    def __init__(self, transportes: dict[str, str], trocando: frozenset[str] = frozenset()
+                 ) -> None:
+        self.transportes = dict(transportes)
+        self.trocando = trocando
+
+    def transportes_dos_alvos(self) -> dict[str, str]:
+        return dict(self.transportes)
+
+    def em_troca_de_transporte(self, uniq: str | None) -> bool:
+        return uniq in self.trocando
+
+
+async def _bordas(daemon: Any, antes: dict[str, str | None], agora: dict[str, str | None],
+                  **kw: Any) -> list[dict[str, Any]]:
+    fila = daemon.bus.subscribe(EventTopic.CONTROLLER_CONNECTED)
+    await conn_mod.anunciar_bordas_por_alvo(daemon, antes, agora, **kw)
+    vistos = []
+    while not fila.empty():
+        vistos.append(fila.get_nowait())
+    return vistos
+
+
+@pytest.fixture
+def sem_som(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def _nada(*_a: Any, **_k: Any) -> None:
+        return None
+
+    monkeypatch.setattr(conn_mod, "reapply_speaker_after_connect", _nada)
+    monkeypatch.setattr(conn_mod, "reapply_mic_after_connect", _nada)
+    monkeypatch.setattr(conn_mod, "nascer_o_microfone_ao_conectar", lambda *_a, **_k: None)
+    monkeypatch.setattr(conn_mod, "anunciar_a_chegada", lambda *_a, **_k: 0)
+
+
+def test_o_segundo_ao_quarto_controle_tambem_e_controle_conectado(sem_som: None) -> None:
+    """Com um controle de pé, o que entra ganha o `controller.connected` dele, cabo ou rádio."""
+    daemon = SimpleNamespace(bus=EventBus(),
+                             controller=_MesaDeQuatro({P1: "usb", P2: "bt", P3: "usb"}))
+    vistos = asyncio.run(_bordas(daemon, {P1: P1}, {P1: P1, P2: P2, P3: P3}))
+    assert vistos == [{"transport": "bt", "uniq": P2}, {"transport": "usb", "uniq": P3}], (
+        "o segundo e o terceiro controle entraram calados: o «Controle conectado» só vale "
+        "para o primeiro")
+    assert asyncio.run(_bordas(daemon, {P1: P1, P2: P2}, {P1: P1, P2: P2})) == []
+
+
+def test_a_troca_de_transporte_nao_e_controle_conectado(sem_som: None) -> None:
+    """O mesmo controle em outro fio não conecta de novo: a queda dele também foi calada."""
+    daemon = SimpleNamespace(bus=EventBus(), controller=_MesaDeQuatro({P2: "usb"}))
+    assert asyncio.run(_bordas(daemon, {}, {P2: P2}, troca_de_transporte=True)) == []
+    assert asyncio.run(_bordas(daemon, {"/dev/hidraw7": P2}, {P2: P2})) == []
+    daemon.controller.trocando = frozenset({P2})
+    assert asyncio.run(_bordas(daemon, {}, {P2: P2})) == []
+
+
+def test_o_segundo_controle_ativa_o_perfil_de_evento(sem_som: None) -> None:
+    """De ponta a ponta: a borda do segundo controle chega ao motor e o perfil entra."""
+    daemon = Daemon()
+    daemon.controller = _MesaDeQuatro({P1: "usb", P2: "bt"})
+    motor, ativados = _motor(daemon, [_perfil("Ao conectar", "controle_conectado")])
+
+    async def roteiro() -> None:
+        tarefa = asyncio.create_task(motor.ouvir_as_conexoes())
+        for _ in range(50):
+            if daemon.bus.subscriber_count(EventTopic.CONTROLLER_CONNECTED):
+                break
+            await asyncio.sleep(0.01)
+        await conn_mod.anunciar_bordas_por_alvo(daemon, {P1: P1}, {P1: P1, P2: P2})
+        for _ in range(50):
+            await asyncio.sleep(0.01)
+        tarefa.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await tarefa
+
+    asyncio.run(roteiro())
+    assert ativados == ["Ao conectar"]

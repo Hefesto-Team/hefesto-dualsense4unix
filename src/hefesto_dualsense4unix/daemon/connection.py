@@ -156,9 +156,18 @@ async def anunciar_bordas_por_alvo(
     daemon: DaemonProtocol,
     antes: dict[str, str | None],
     agora: dict[str, str | None],
+    *,
+    troca_de_transporte: bool = False,
 ) -> None:
-    """As bordas que o agregado esconde: quem saiu da mesa e quem voltou a ela."""
+    """As bordas que o agregado esconde: quem saiu da mesa e quem voltou a ela.
+
+    O controle que entra com outro já de pé ganha o `controller.connected` dele, com o `uniq`:
+    o agregado só vê o primeiro, e o segundo ao quarto ficavam sem o evento. A troca de
+    transporte não é conexão nova (o mesmo `uniq` em outra chave, ou `troca_de_transporte`).
+    """
     trocando = trocas_de_transporte_pendentes(daemon)
+    if not troca_de_transporte:
+        _publicar_quem_entrou(daemon, antes, agora)
     for key in [k for k in antes if k not in agora]:
         uniq = antes[key]
         if uniq in trocando:
@@ -179,6 +188,32 @@ async def anunciar_bordas_por_alvo(
             await reapply_mic_after_connect(daemon, uniq=agora[key])
         with contextlib.suppress(Exception):
             nascer_o_microfone_ao_conectar(daemon, uniq=agora[key])
+
+
+def _publicar_quem_entrou(
+    daemon: DaemonProtocol, antes: dict[str, str | None], agora: dict[str, str | None]
+) -> None:
+    """Um `controller.connected` por controle que entrou na mesa (`uniq` que não estava nela).
+
+    O que volta de uma troca de transporte (`em_troca_de_transporte`) não é conexão nova: a
+    queda dele também não foi anunciada.
+    """
+    ja_estavam = {u for u in antes.values() if u}
+    transportes = transportes_dos_alvos_de(daemon) or {}
+    em_troca = getattr(getattr(daemon, "controller", None), "em_troca_de_transporte", None)
+    for key, uniq in agora.items():
+        if key in antes or not uniq or uniq in ja_estavam:
+            continue
+        try:
+            trocando = bool(em_troca(uniq)) if callable(em_troca) else False
+        except Exception as exc:
+            logger.debug("em_troca_de_transporte_falhou", err=str(exc))
+            trocando = False
+        if trocando:
+            continue
+        transport = transportes.get(key, "unknown")
+        daemon.bus.publish(EventTopic.CONTROLLER_CONNECTED, {"transport": transport, "uniq": uniq})
+        logger.info("controller_connected", transport=transport, uniq=_endereco_mascarado(uniq))
 
 
 def trocas_de_transporte_pendentes(daemon: DaemonProtocol) -> frozenset[str]:
@@ -230,7 +265,7 @@ async def reaplicar_som_de_quem_trocou_de_transporte(
             agora=transportes_agora[key],
         )
     if trocaram:
-        await anunciar_bordas_por_alvo(daemon, {}, trocaram)
+        await anunciar_bordas_por_alvo(daemon, {}, trocaram, troca_de_transporte=True)
     return len(trocaram)
 
 
