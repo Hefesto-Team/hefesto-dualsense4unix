@@ -55,7 +55,7 @@
       "data": "2026-10-19",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 990,
+      "piso": 988,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -128,7 +128,7 @@
         "integrations/canal_do_microfone.py": 1,
         "integrations/censo_do_barramento.py": 2,
         "integrations/censo_do_gabinete.py": 2,
-        "integrations/censo_dos_lancadores.py": 4,
+        "integrations/censo_dos_lancadores.py": 2,
         "integrations/central_do_radio.py": 6,
         "integrations/conexao_zumbi.py": 5,
         "integrations/cor_do_plastico.py": 3,
