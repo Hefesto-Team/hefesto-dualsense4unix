@@ -166,7 +166,9 @@ def test_as_variantes_de_10_estao_em_dia() -> None:
     for nome, doc in esperadas.items():
         assert (VARIANTES / f"{nome}.html").read_text(encoding="utf-8") == doc, (
             f"{nome} ficou velha: rode `aba10.py`")
-    sobra = {p.stem for p in VARIANTES.glob("10-*.html")} - set(esperadas)
+    # as `10-efeitos-*` são desenho de 20/10 e nascem fora do `aba10`
+    sobra = {p.stem for p in VARIANTES.glob("10-*.html")
+             if not p.stem.startswith("10-efeitos-")} - set(esperadas)
     assert not sobra, f"variante que o gerador não produz mais ficou no disco: {sorted(sobra)}"
 
 
