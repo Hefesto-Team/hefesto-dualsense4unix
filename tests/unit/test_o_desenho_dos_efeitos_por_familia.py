@@ -15,15 +15,24 @@ MORDIDAS (executadas aqui, sobre uma cópia do HTML, e cada uma reprova a régua
 * devolver o «Efeito imersão» ao 05 -> `test_o_05_chama_de_padrao_dos_motores`;
 * tirar o «Eco» da háptica -> `test_o_05_traz_os_tres_padroes_novos_da_haptica`;
 * tirar um item da receita do 10 -> `test_o_10_mostra_o_que_o_estilo_liga`;
-* pôr uma altura que estoura a tela -> `test_nenhuma_variante_rola_na_vertical`.
+* pôr uma altura que estoura a tela -> `test_nenhuma_variante_rola_na_vertical`;
+* o documento maior que o da base -> `test_a_regua_de_rolagem_morde_o_documento_que_cresce`;
+* pôr a regra da 04 A no `#plastico-vivo` -> `test_a_folha_da_variante_mora_na_cabeca`;
+* tirar a dica (`title`) de uma opção do 03 -> `test_o_03_morde_a_opcao_sem_dica`;
+* tirar o fluxo em colunas da 10 A -> `test_o_10_a_le_os_gatilhos_juntos_de_cima_para_baixo`.
 """
 
 from __future__ import annotations
 
 import pathlib
 import re
+from collections.abc import Iterator
+from typing import TYPE_CHECKING, Any
 
 import pytest
+
+if TYPE_CHECKING:
+    from playwright.sync_api import Browser
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 MOCKUP = RAIZ / "mockup"
@@ -337,7 +346,7 @@ def test_a_folha_da_variante_mora_na_cabeca() -> None:
 
 
 @pytest.fixture(scope="module")
-def navegador():
+def navegador() -> Iterator[Browser]:
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema")
     from playwright.sync_api import sync_playwright
@@ -357,7 +366,8 @@ _ROLADORES = """() => { const d = document.documentElement;
           sobra: d.scrollHeight - d.clientHeight}; }"""
 
 
-def _medir(navegador, arquivo: pathlib.Path, larg: int, alt: int, antes: str = "") -> dict:
+def _medir(navegador: Browser, arquivo: pathlib.Path, larg: int, alt: int,
+           antes: str = "") -> dict[str, Any]:
     pg = navegador.new_page(viewport={"width": larg, "height": alt})
     try:
         pg.goto(arquivo.as_uri())
@@ -365,14 +375,16 @@ def _medir(navegador, arquivo: pathlib.Path, larg: int, alt: int, antes: str = "
         if antes:
             pg.evaluate(antes)
             pg.wait_for_timeout(150)
-        return pg.evaluate(_ROLADORES)
+        medida: dict[str, Any] = pg.evaluate(_ROLADORES)
+        return medida
     finally:
         pg.close()
 
 
 @pytest.mark.parametrize(("larg", "alt"), LARGURAS)
 @pytest.mark.parametrize("nome", NOMES)
-def test_nenhuma_variante_rola_na_vertical(navegador, nome: str, larg: int, alt: int) -> None:
+def test_nenhuma_variante_rola_na_vertical(navegador: Browser, nome: str, larg: int,
+                                           alt: int) -> None:
     """Nada rola além do que o mockup de hoje já rolava (a lista de perfis a 740 de altura)."""
     principal = PRINCIPAL[nome[:2]]
     base = _medir(navegador, MOCKUP / f"{principal}.html", larg, alt)
@@ -390,7 +402,8 @@ def test_nenhuma_variante_rola_na_vertical(navegador, nome: str, larg: int, alt:
         assert aberto["sobra"] <= base["sobra"], (nome, "avançado aberto", larg, alt)
 
 
-def test_a_regua_de_rolagem_morde_o_documento_que_cresce(navegador, tmp_path) -> None:
+def test_a_regua_de_rolagem_morde_o_documento_que_cresce(navegador: Browser,
+                                                         tmp_path: pathlib.Path) -> None:
     """A régua de elementos não vê o documento (o `html` não tem `overflow:auto`); esta vê."""
     doc = _ler("04-efeitos-A-nome-e-frase").replace(
         "</body>", '<div style="height:400px"></div></body>', 1)
@@ -406,12 +419,12 @@ _ORDEM_DA_RECEITA = """() => [...document.querySelectorAll('.estilo-liga .lin')]
 
 
 @pytest.mark.parametrize(("larg", "alt"), LARGURAS[:2])
-def test_o_10_a_le_os_gatilhos_juntos_de_cima_para_baixo(navegador, tmp_path, larg: int,
-                                                         alt: int) -> None:
+def test_o_10_a_le_os_gatilhos_juntos_de_cima_para_baixo(navegador: Browser, tmp_path: pathlib.Path,
+                                                         larg: int, alt: int) -> None:
     """Na grade de duas colunas (altura até 830 px), o R2 e o L2 ficam na mesma coluna, nessa ordem,
     e o título não empurra o R2 para o lado. MORDIDA: sem o `grid-auto-flow:column` o R2 vai para a
     direita do título e o L2 para baixo dele, na outra coluna."""
-    def ordem(arquivo: pathlib.Path) -> dict:
+    def ordem(arquivo: pathlib.Path) -> dict[str, tuple[float, float]]:
         pg = navegador.new_page(viewport={"width": larg, "height": alt})
         try:
             pg.goto(arquivo.as_uri())
@@ -420,8 +433,8 @@ def test_o_10_a_le_os_gatilhos_juntos_de_cima_para_baixo(navegador, tmp_path, la
         finally:
             pg.close()
 
-    def junto(o: dict) -> bool:
-        return o["R2"][0] == o["L2"][0] and o["R2"][1] < o["L2"][1]
+    def junto(o: dict[str, tuple[float, float]]) -> bool:
+        return bool(o["R2"][0] == o["L2"][0] and o["R2"][1] < o["L2"][1])
 
     assert junto(ordem(VARIANTES / "10-efeitos-A-receita-em-linhas.html")), (larg, alt)
     if alt <= 830:
@@ -432,7 +445,8 @@ def test_o_10_a_le_os_gatilhos_juntos_de_cima_para_baixo(navegador, tmp_path, la
         assert not junto(ordem(arquivo))
 
 
-def test_a_regua_de_rolagem_morde_uma_altura_que_estoura(navegador, tmp_path) -> None:
+def test_a_regua_de_rolagem_morde_uma_altura_que_estoura(navegador: Browser,
+                                                         tmp_path: pathlib.Path) -> None:
     doc = _ler("10-efeitos-B-receita-em-chips")
     doc = doc.replace("</style>", ".estilo-liga{height:260px !important}</style>", 1)
     arquivo = tmp_path / "estoura.html"
