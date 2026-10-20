@@ -6,6 +6,7 @@ MORDIDAS:
   * tire o `bus.subscribe` de `ouvir_as_conexoes`: o «Controle conectado» não entra;
   * troque `create_subprocess_exec` por `create_subprocess_shell(texto)`: a injeção cria o arquivo;
   * tire o `not p.so_entra_por_evento` da escolha por janela: o perfil de evento entra pela janela.
+  * tire o `try` de `_entrar` ou de `_perfis_do`: a falha de ativar ou de ler derruba o laço.
 """
 from __future__ import annotations
 
@@ -139,8 +140,9 @@ def test_o_comando_nao_passa_por_shell(tmp_path: Path) -> None:
     alvo = tmp_path / "x"
     certo, _ = asyncio.run(rodar_o_comando(f"a; touch {alvo}"))
     assert not certo and not alvo.exists(), "o «;» foi lido por um shell"
-    assert argv_do_comando("echo 'aberto") is None
-    assert argv_do_comando("   ") is None
+    with pytest.raises(ValueError):
+        argv_do_comando("echo 'aberto")
+    assert argv_do_comando("   ") == []
 
 
 def test_o_sh_de_caminho_absoluto_roda_por_bash(tmp_path: Path) -> None:
@@ -153,3 +155,37 @@ def test_o_sh_de_caminho_absoluto_roda_por_bash(tmp_path: Path) -> None:
 def test_o_comando_ausente_nao_entra() -> None:
     certo, porque = asyncio.run(rodar_o_comando("comando-que-nao-existe-na-maquina"))
     assert not certo and "não abriu" in porque
+
+
+def test_a_falha_de_ler_ou_de_ativar_nao_derruba_o_laco() -> None:
+    """O laço do «Meu comando» não tem `try`: a leitura e a ativação dizem a própria falha."""
+    daemon = Daemon()
+
+    async def ativar_que_falha(_nome: str) -> None:
+        raise RuntimeError("o perfil não carregou")
+
+    def ler_que_falha() -> list[Profile]:
+        raise OSError("disco fora")
+
+    certo = [_perfil("Deu certo", "meu_comando", comando="true")]
+    sem_disco = EventosDoPerfil(daemon, ativar_que_falha, ler_que_falha)
+    assert asyncio.run(sem_disco.ver_os_comandos()) == []
+    assert asyncio.run(sem_disco.ao_conectar()) is False
+    sem_ativar = EventosDoPerfil(daemon, ativar_que_falha, lambda: certo)
+    assert asyncio.run(sem_ativar.ver_os_comandos()) == []
+
+    async def duas_voltas() -> None:
+        tarefa = asyncio.create_task(sem_ativar.perguntar_os_comandos(intervalo=0.01))
+        await asyncio.sleep(0.2)
+        assert not tarefa.done(), "o laço do comando morreu na falha"
+        tarefa.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await tarefa
+
+    asyncio.run(duas_voltas())
+
+
+def test_as_aspas_abertas_dizem_o_porque() -> None:
+    certo, porque = asyncio.run(rodar_o_comando("echo 'aberto"))
+    assert not certo and porque.startswith("aspas abertas")
+    assert asyncio.run(rodar_o_comando("  ")) == (False, "comando vazio")

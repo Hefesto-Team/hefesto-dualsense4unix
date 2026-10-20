@@ -37,24 +37,25 @@ def perfis_do_momento(momento: str, perfis: Iterable[Any]) -> list[Any]:
     return sorted(achados, key=lambda p: (-int(getattr(p, "priority", 0) or 0), p.name))
 
 
-def argv_do_comando(texto: str) -> list[str] | None:
-    """O comando dela em argumentos, sem shell; `None` quando vazio ou com aspas abertas."""
-    try:
-        partes = shlex.split(texto or "")
-    except ValueError:
-        return None
-    if not partes:
-        return None
-    if os.path.isabs(partes[0]) and partes[0].endswith(".sh"):
+def argv_do_comando(texto: str) -> list[str]:
+    """O comando dela em argumentos, sem shell; lista vazia quando ela não escreveu nada.
+
+    Aspas abertas levantam o `ValueError` do `shlex`, e quem roda diz o porquê.
+    """
+    partes = shlex.split(texto or "")
+    if partes and os.path.isabs(partes[0]) and partes[0].endswith(".sh"):
         return ["bash", *partes]
     return partes
 
 
 async def rodar_o_comando(texto: str, prazo: float = PRAZO_DO_COMANDO_S) -> tuple[bool, str]:
     """Roda o comando uma vez: `(saiu com 0, o porquê)`. Nunca levanta."""
-    argv = argv_do_comando(texto)
-    if argv is None:
-        return False, "comando vazio ou com aspas abertas"
+    try:
+        argv = argv_do_comando(texto)
+    except ValueError as exc:
+        return False, f"aspas abertas: {exc}"
+    if not argv:
+        return False, "comando vazio"
     try:
         proc = await asyncio.create_subprocess_exec(
             *argv,
@@ -117,18 +118,34 @@ class EventosDoPerfil:
             logger.info("perfil_de_evento_recusado", perfil=perfil.name, momento=momento,
                         porque=recusa)
             return False
-        await self._ativar(perfil.name)
+        try:
+            await self._ativar(perfil.name)
+        except Exception as exc:
+            logger.warning("perfil_de_evento_falhou", perfil=perfil.name, momento=momento,
+                           err=str(exc))
+            return False
         logger.info("perfil_de_evento_entrou", perfil=perfil.name, momento=momento)
         return True
 
+    def _perfis_do(self, momento: str) -> list[Any]:
+        """Os perfis deste momento; a leitura do disco que falha vale como nenhum, e diz por quê."""
+        try:
+            return perfis_do_momento(momento, self._ler_perfis())
+        except Exception as exc:
+            logger.warning("perfil_de_evento_sem_perfis", momento=momento, err=str(exc))
+            return []
+
     async def ao_conectar(self) -> bool:
         """Um controle conectou: entra o primeiro perfil de «Controle conectado»."""
-        perfis = perfis_do_momento(CONTROLE_CONECTADO, self._ler_perfis())
+        perfis = self._perfis_do(CONTROLE_CONECTADO)
         return bool(perfis) and await self._entrar(perfis[0], CONTROLE_CONECTADO)
 
     async def ver_os_comandos(self) -> list[str]:
-        """Pergunta cada «Meu comando»; entra o primeiro que PASSOU a sair com 0 (devolve quem)."""
-        perfis = perfis_do_momento(MEU_COMANDO, self._ler_perfis())
+        """Pergunta cada «Meu comando»; entra o primeiro que PASSOU a sair com 0 (devolve quem).
+
+        Nunca levanta: a leitura e a ativação dizem a própria falha, e o laço segue no tempo dele.
+        """
+        perfis = self._perfis_do(MEU_COMANDO)
         vistos: set[tuple[str, str]] = set()
         entraram: list[str] = []
         for perfil in perfis:
@@ -153,20 +170,13 @@ class EventosDoPerfil:
         try:
             while True:
                 await fila.get()
-                try:
-                    await self.ao_conectar()
-                except Exception as exc:
-                    logger.warning("perfil_de_evento_falhou", momento=CONTROLE_CONECTADO,
-                                   err=str(exc))
+                await self.ao_conectar()
         finally:
             bus.unsubscribe(EventTopic.CONTROLLER_CONNECTED, fila)
 
     async def perguntar_os_comandos(self, intervalo: float = INTERVALO_DO_COMANDO_S) -> None:
         while True:
-            try:
-                await self.ver_os_comandos()
-            except Exception as exc:
-                logger.warning("perfil_de_evento_falhou", momento=MEU_COMANDO, err=str(exc))
+            await self.ver_os_comandos()
             await asyncio.sleep(intervalo)
 
 
