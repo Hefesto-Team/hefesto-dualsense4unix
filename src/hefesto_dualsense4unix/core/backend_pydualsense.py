@@ -5587,6 +5587,18 @@ class PyDualSenseController(IController):
             self._trigger_scale_by_uniq: dict[str, float] = novo
             self._empurrar_as_intensidades()
 
+    def set_rumble_base(self, base: float | None = None) -> None:
+        """A força do perfil global (1,0 = 100%), por baixo do fator RELATIVO de cada peça.
+
+        O mapa de :meth:`set_rumble_scales` guarda ``peça / global`` (`fator_da_unidade`), e o funil
+        multiplica a política global por ele; o firmware precisa da força ABSOLUTA, a que a 05
+        mostra. ``None`` (o ``auto``, que muda com a bateria) = 100%: o software segue sozinho.
+        """
+        valor = 1.0 if base is None else max(0.0, float(base))
+        with self._io_lock:
+            self._rumble_base: float = valor
+            self._empurrar_as_intensidades()
+
     def escala_do_gatilho_de(self, uniq: str) -> float | None:
         """A «Intensidade do gatilho» da peça ``uniq``, ou ``None`` (100%)."""
         alvo = self._key_to_uniq(uniq)
@@ -5607,18 +5619,22 @@ class PyDualSenseController(IController):
     def _empurrar_as_intensidades(self, so: str | None = None) -> None:
         """Põe em cada handle (ou só no ``so``) a escala da vibração e a do gatilho dele.
 
-        A da vibração é o fator do mapa de :meth:`set_rumble_scales`, o MESMO que o funil já pôs no
-        byte do motor: o firmware só tira o que o software já tirou, e o resto nunca satura. A
-        volta lê as duas no `_build_common`, nos dois transportes e nos quatro controles.
+        A da vibração é a força ABSOLUTA da peça: o fator do mapa de :meth:`set_rumble_scales`
+        vezes a base do global (:meth:`set_rumble_base`), a MESMA conta do funil que já pôs a força
+        no byte do motor. Com ela o firmware só tira o que o software já tirou, e o resto nunca
+        satura; com o fator relativo sozinho, um global acima de 100% fazia o firmware tirar mais
+        que o funil. A volta lê as duas no `_build_common`, nos dois transportes e nos quatro
+        controles.
         """
         with self._io_lock:
             handles = getattr(self, "_handles", None) or {}
             alvos = [(k, h) for k, h in handles.items() if so is None or k == so]
             vibracao = dict(getattr(self, "_rumble_scale_by_uniq", None) or {})
             gatilho = dict(getattr(self, "_trigger_scale_by_uniq", None) or {})
+            base = float(getattr(self, "_rumble_base", 1.0))
         for key, handle in alvos:
             uniq = self._key_to_uniq(key)
-            escala_vib = vibracao.get(uniq, 1.0) if uniq is not None else 1.0
+            escala_vib = (vibracao.get(uniq, 1.0) if uniq is not None else 1.0) * base
             escala_gat = gatilho.get(uniq, 1.0) if uniq is not None else 1.0
             if getattr(handle, "_escala_da_vibracao", 1.0) != escala_vib:
                 handle._escala_da_vibracao = escala_vib

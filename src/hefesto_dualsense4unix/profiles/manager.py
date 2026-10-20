@@ -502,6 +502,9 @@ class ProfileManager:
         escalar_rumble = getattr(self.controller, "set_rumble_scales", None)
         if callable(escalar_rumble):
             escalar_rumble(escalas_rumble or None)
+        base_da_vibracao = getattr(self.controller, "set_rumble_base", None)
+        if callable(base_da_vibracao):
+            base_da_vibracao(_base_da_vibracao(getattr(profile, "rumble", None)))
         escalar_gatilho = getattr(self.controller, "set_trigger_scales", None)
         if callable(escalar_gatilho):
             escalar_gatilho(_controllers_to_trigger_scales(profile.controllers) or None)
@@ -2463,6 +2466,16 @@ def _controllers_to_rumble_scales(
             continue
         out[uniq] = fator
     return out
+
+
+def _base_da_vibracao(global_rumble: Any | None) -> float | None:
+    """A força do global do perfil, o denominador de :func:`_controllers_to_rumble_scales`.
+
+    O backend a multiplica pelo fator de cada peça para o firmware receber a força absoluta
+    (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01); ``None`` no ``auto``.
+    """
+    policy_global = getattr(global_rumble, "policy", None) or _RUMBLE_POLICY_PADRAO
+    return _mult_da_vibracao(policy_global, getattr(global_rumble, "custom_mult", None))
 
 
 def _controllers_to_trigger_scales(

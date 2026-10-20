@@ -515,6 +515,32 @@ def test_o_controlador_poe_a_escala_de_cada_um_nos_quatro_handles() -> None:
     assert all(ctl._handles[k]._escala_do_gatilho == 1.0 for k in _MAC), "o mapa vazio não limpou"
 
 
+def test_o_firmware_recebe_a_forca_absoluta_e_nao_o_fator_relativo_da_peca() -> None:
+    """O global a 200% e a peça a 40%: o mapa guarda 0,2 (peça / global) e o funil dá 0,4 ao motor.
+
+    O firmware tem de tirar os passos de 40% (4, metade), não os de 20% (6): com o fator relativo o
+    byte do motor (102 = 255 · 0,4) dividido por 0,25 satura em 255, e a soma cai a 25%. O controle
+    sem peça própria herda o global: a economia (30%) chega ao firmware também para ele.
+    """
+    from hefesto_dualsense4unix.core import ds_output_report as rep
+
+    ctl = _controlador(_MAC[:2])
+    ctl.set_rumble_base(2.0)
+    ctl.set_rumble_scales({_MAC[0]: 0.2})
+    assert ctl._handles[_MAC[0]]._escala_da_vibracao == pytest.approx(0.4)
+    h = ctl._handles[_MAC[0]]
+    h.setRightMotor(102)
+    c = _common(h.prepareReport())
+    assert c[rep.COMMON_REDUCE_MOTOR_POWER] & 0x07 == 4, hex(c[rep.COMMON_REDUCE_MOTOR_POWER])
+    assert c[2] == 204, "o motor saturou: o firmware tirou mais que o funil"
+    ctl.set_rumble_base(0.3)
+    ctl.set_rumble_scales(None)
+    assert [ctl._handles[k]._escala_da_vibracao for k in _MAC[:2]] == [0.3, 0.3]
+    ctl.set_rumble_base(None)
+    assert [ctl._handles[k]._escala_da_vibracao for k in _MAC[:2]] == [1.0, 1.0], (
+        "o automático muda com a bateria: o firmware fica cheio e o software segue")
+
+
 # --- O PERFIL: onde a intensidade do gatilho mora e quem a lê ------------------------------------
 
 
@@ -586,3 +612,24 @@ def test_o_gerente_publica_a_intensidade_de_cada_controle() -> None:
     fc.connect()
     ProfileManager(controller=fc).apply(perfil)
     assert fc.publicadas == [{_MAC[0]: 0.5, _MAC[3]: 2.0}], fc.publicadas
+
+
+def test_o_gerente_publica_a_base_do_global_para_o_firmware() -> None:
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+    from hefesto_dualsense4unix.testing.fake_controller import FakeController
+
+    class Espiao(FakeController):
+        def __init__(self, **kw: object) -> None:
+            super().__init__(**kw)
+            self.bases: list[float | None] = []
+
+        def set_rumble_base(self, base: float | None = None) -> None:
+            self.bases.append(base)
+
+    for rumble, esperado in (({"policy": "custom", "custom_mult": 2.0}, 2.0),
+                             ({"policy": "economia"}, 0.3), (None, 1.0),
+                             ({"policy": "auto"}, None)):
+        fc = Espiao(transport="usb")
+        fc.connect()
+        ProfileManager(controller=fc).apply(_perfil(**({"rumble": rumble} if rumble else {})))
+        assert fc.bases == [esperado], (rumble, fc.bases)
