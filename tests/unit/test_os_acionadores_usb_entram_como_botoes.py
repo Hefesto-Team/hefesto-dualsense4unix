@@ -374,7 +374,7 @@ def test_o_maquina_json_guarda_o_acionador_pela_chave_sem_endereco() -> None:
     assert MaquinaConfig.model_validate(junto).acionadores[CHAVE].teclas == {"28": "cross"}
     ruins: tuple[dict[str, Any], ...] = (
         {"x": {}}, {CHAVE: {"teclas": {"28": "ps"}}},
-        {CHAVE: {"teclas": {"tecla": "cross"}}}, {CHAVE: {"controle": "02bbcc0000ff"}})
+        {CHAVE: {"teclas": {"tecla": "cross"}}}, {CHAVE: {"controle": "02fe000000ff"}})
     for ruim in ruins:
         with pytest.raises(ValueError):
             MaquinaConfig.model_validate({"acionadores": ruim})
