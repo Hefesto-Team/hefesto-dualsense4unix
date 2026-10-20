@@ -2343,8 +2343,20 @@ NAV_INSTALAR = r"""
           } else if(op.op === 'escolha'){
             // A LISTA DÁ A VOLTA (pedido de 19/10/2026): do último efeito o passo
             // seguinte volta ao primeiro, e do primeiro o anterior vai ao último.
+            // O passo PULA a opção que ninguém escolhe: o «—» desabilitado e
+            // escondido que marca o lugar vazio é a primeira das listas da 03, e
+            // cair nele fazia a página devolver a escolha velha (a lista parava).
             const n = el.options.length;
-            const i = n ? ((el.selectedIndex + op.passo) % n + n) % n : el.selectedIndex;
+            const escolhivel = function(o){
+              return !o.disabled && !o.hidden &&
+                !(o.parentElement && o.parentElement.tagName === 'OPTGROUP' && o.parentElement.disabled);
+            };
+            let i = el.selectedIndex;
+            for(let k = 0; k < n; k++){
+              i = ((i + op.passo) % n + n) % n;
+              if(escolhivel(el.options[i])) break;
+            }
+            if(n && !escolhivel(el.options[i])) i = el.selectedIndex;
             if(i !== el.selectedIndex){
               el.selectedIndex = i;
               el.dispatchEvent(new Event('change', {bubbles: true}));

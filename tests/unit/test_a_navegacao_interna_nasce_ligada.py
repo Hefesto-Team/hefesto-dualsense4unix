@@ -7,6 +7,8 @@ na cor oposta à do plástico.
 MORDIDAS:
   * devolva o `False` ao `load_navegacao_interna` sem arquivo: o primeiro teste reprova;
   * devolva o `Math.max(0, Math.min(...))` ao passo da `escolha`: a lista para no último;
+  * tire o `escolhivel` do passo da `escolha`: nas listas reais da 03 a volta cai no «—»
+    escondido, e a página devolve a escolha velha (a lista parava no último, 19/10, 23h43);
   * tire o `box-shadow` da moldura `dentro`: o anel some.
 """
 from __future__ import annotations
@@ -14,6 +16,7 @@ from __future__ import annotations
 import json
 import pathlib
 from collections.abc import Iterator
+import re
 from typing import Any
 
 import pytest
@@ -57,22 +60,31 @@ def test_o_dono_no_daemon_nasce_ligado() -> None:
 
 
 @pytest.fixture(scope="module")
-def pagina() -> Iterator[Any]:
+def navegador() -> Iterator[Any]:
     exigir_gi_real("importa `interface.hefesto_vivo`, que carrega o GTK")
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
     playwright = pytest.importorskip("playwright.sync_api")
-    from hefesto_dualsense4unix.interface import hefesto_vivo
-
     with playwright.sync_playwright() as pw:
         nav = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"])
         try:
-            pg = nav.new_page()
-            pg.set_content(PAGINA)
-            pg.evaluate(hefesto_vivo.NAV_INSTALAR)
-            yield pg
+            yield nav
         finally:
             nav.close()
+
+
+def _com_a_navegacao(nav: Any, html: str) -> Any:
+    from hefesto_dualsense4unix.interface import hefesto_vivo
+
+    pg = nav.new_page()
+    pg.set_content(html)
+    pg.evaluate(hefesto_vivo.NAV_INSTALAR)
+    return pg
+
+
+@pytest.fixture(scope="module")
+def pagina(navegador: Any) -> Any:
+    return _com_a_navegacao(navegador, PAGINA)
 
 
 def _endereco(pg: Any) -> str:
@@ -108,3 +120,40 @@ def test_dentro_da_lista_o_anel_e_da_cor_oposta(pagina: Any) -> None:
         "no plástico White o anel tem de ser escuro, não branco")
     assert _sombra(pagina, dentro=False, cor="#ff0000") == "none", (
         "o controle que só anda ganhou o anel de quem escolhe")
+
+
+def _as_listas_reais() -> str:
+    """O acionamento e a imersão do P1, como a 03 publicada os traz: o «—» escondido primeiro."""
+    from hefesto_dualsense4unix.interface import onde
+
+    texto = (onde.PUBLICADO / "03-gatilhos.html").read_text(encoding="utf-8")
+    listas = [re.search(rf'<select class="{c}".*?</select>', texto, re.S) for c in
+              ("g2-acion", "g2-imersao")]
+    assert all(listas), "a 03 publicada perdeu uma das listas de efeito"
+    return "".join(f'<div style="margin:40px">{m.group(0)}</div>' for m in listas if m)
+
+
+@pytest.fixture(scope="module")
+def reais(navegador: Any) -> Any:
+    return _com_a_navegacao(
+        navegador, f"<!doctype html><html><body>{_as_listas_reais()}</body></html>")
+
+
+@pytest.mark.parametrize("classe", ["g2-acion", "g2-imersao"])
+def test_nas_listas_reais_da_03_a_volta_pula_o_lugar_vazio(reais: Any, classe: str) -> None:
+    """D-1910-A-NAVEGACAO-INTERNA-NASCE-LIGADA: a volta cai no primeiro efeito, nunca no «—»."""
+    sel = f"document.querySelector('select.{classe}')"
+    caixas = json.loads(reais.evaluate("window.__hefNav.ler()"))["caixas"]
+    listas = [c["endereco"] for c in caixas if c.get("tipo") == "lista"]
+    endereco = listas[0 if classe == "g2-acion" else 1]
+
+    def passo(p: int) -> str:
+        reais.evaluate("([e, p]) => window.__hefNav.aplicar("
+                       "[{op: 'escolha', endereco: e, passo: p}], [])", [endereco, p])
+        return str(reais.evaluate(f"{sel}.value"))
+
+    ultimo = str(reais.evaluate(f"{sel}.options[{sel}.options.length - 1].value"))
+    primeiro = str(reais.evaluate(f"{sel}.options[1].value"))
+    reais.evaluate(f"{sel}.selectedIndex = {sel}.options.length - 1")
+    assert passo(1) == primeiro, "do último, a volta caiu no «—» escondido"
+    assert passo(-1) == ultimo, "do primeiro, o anterior caiu no «—» escondido"
