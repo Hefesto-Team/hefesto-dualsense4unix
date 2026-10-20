@@ -2709,56 +2709,11 @@ def _selo_do_que_vale(nome: str | None) -> Any:
 # Fora do jogo o aparelho continua sendo o que é para o resto do sistema; com um jogo em foco ele
 # fica preso (EVIOCGRAB), para a tecla não chegar duas vezes ao jogo (a tecla e o botão).
 
-_RAIZ_DAS_ENTRADAS = "/sys/class/input"
 #: De quanto em quanto tempo a ponte procura o aparelho declarado que ainda não está aberto.
 PROCURAR_O_ACIONADOR_A_CADA_S = 3.0
 #: De quanto em quanto tempo a ponte pergunta se há jogo em foco (prende ou solta o aparelho).
 OLHAR_O_FOCO_A_CADA_S = 1.0
 _EV_KEY = 1
-
-
-@dataclass(frozen=True)
-class AparelhoDeEntrada:
-    """Um nó ``eventN`` de ``/sys/class/input``, pelo que o kernel diz dele."""
-
-    evento: str
-    nome: str
-    fisico: str
-    vendor: str
-    product: str
-
-    @property
-    def chave(self) -> str:
-        from hefesto_dualsense4unix.utils.maquina import chave_do_acionador
-
-        return chave_do_acionador(self.vendor, self.product, self.nome, self.fisico)
-
-
-def _ler_o_texto(caminho: Any) -> str:
-    try:
-        return str(caminho.read_text(encoding="utf-8", errors="replace")).strip()
-    except OSError:
-        return ""
-
-
-def aparelhos_de_entrada(raiz: Any = None) -> list[AparelhoDeEntrada]:
-    """Os nós de evento que o kernel lista, sem abrir nenhum (só ``/sys``)."""
-    from pathlib import Path
-
-    base = Path(_RAIZ_DAS_ENTRADAS if raiz is None else raiz)
-    try:
-        nos = sorted(base.glob("event*"), key=lambda n: (len(n.name), n.name))
-    except OSError:
-        return []
-    achados = []
-    for no in nos:
-        dentro = no / "device"
-        achados.append(AparelhoDeEntrada(
-            evento=no.name, nome=_ler_o_texto(dentro / "name"),
-            fisico=_ler_o_texto(dentro / "phys"),
-            vendor=_ler_o_texto(dentro / "id" / "vendor"),
-            product=_ler_o_texto(dentro / "id" / "product")))
-    return achados
 
 
 def _abrir_o_evento(evento: str) -> Any:
@@ -2841,6 +2796,8 @@ class PonteDosAcionadores:
             self._fechar(chave)
 
     def _procurar(self, faltam: list[str]) -> None:
+        from hefesto_dualsense4unix.utils.maquina import aparelhos_de_entrada
+
         for aparelho in aparelhos_de_entrada(self._raiz):
             chave = aparelho.chave
             if chave not in faltam or chave in self._abertos:
@@ -2955,11 +2912,9 @@ __all__ = [
     "ORIGENS_GESTO_DELA",
     "ORIGENS_QUE_PASSAM_COM_O_JOGO",
     "REBACKEND_COOLDOWN_SEC",
-    "AparelhoDeEntrada",
     "PonteDosAcionadores",
     "andar_os_acionadores",
     "anotar_rumble_no_vpad",
-    "aparelhos_de_entrada",
     "aplicar_o_toque",
     "apply_game_lightbar",
     "apply_game_mic",

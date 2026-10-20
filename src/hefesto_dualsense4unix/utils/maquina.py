@@ -562,6 +562,49 @@ def chave_do_acionador(vendor: object, product: object, nome: object, fisico: ob
     return f"{_hex4(vendor)}:{_hex4(product)}:{resumo}"
 
 
+#: Onde o kernel lista os nós de evento; o teste e a bancada trocam por uma pasta de mentira.
+RAIZ_DAS_ENTRADAS = "/sys/class/input"
+
+
+class AparelhoDeEntrada(NamedTuple):
+    """Um nó ``eventN`` de ``/sys/class/input``, pelo que o kernel diz dele."""
+
+    evento: str
+    nome: str
+    fisico: str
+    vendor: str
+    product: str
+
+    @property
+    def chave(self) -> str:
+        return chave_do_acionador(self.vendor, self.product, self.nome, self.fisico)
+
+
+def _ler_do_sys(caminho: Any) -> str:
+    try:
+        return str(caminho.read_text(encoding="utf-8", errors="replace")).strip()
+    except OSError:
+        return ""
+
+
+def aparelhos_de_entrada(raiz: Any = None) -> list[AparelhoDeEntrada]:
+    """Os nós de evento que o kernel lista, sem abrir nenhum (só ``/sys``)."""
+    base = Path(RAIZ_DAS_ENTRADAS if raiz is None else raiz)
+    try:
+        nos = sorted(base.glob("event*"), key=lambda n: (len(n.name), n.name))
+    except OSError:
+        return []
+    achados = []
+    for no in nos:
+        dentro = no / "device"
+        achados.append(AparelhoDeEntrada(
+            evento=no.name, nome=_ler_do_sys(dentro / "name"),
+            fisico=_ler_do_sys(dentro / "phys"),
+            vendor=_ler_do_sys(dentro / "id" / "vendor"),
+            product=_ler_do_sys(dentro / "id" / "product")))
+    return achados
+
+
 class AcionadorDeclarado(BaseModel):
     """Um aparelho de entrada que vira fonte de botões de um controle (a linha dele na Conexões).
 
