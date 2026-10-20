@@ -707,6 +707,12 @@ _RODADA_DO_PROTON = (
 )
 
 _NAO_E_PROMESSA: dict[str, str] = {
+    "interface/folha_da_casa.py::com_o_piso": (
+        "20/10/2026, OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01 — é do gerador do "
+        "desenho, não do produto: os geradores da 02 e da 09 (`interface/aba02.py`, `aba09.py`, "
+        "a chamada `com_o_piso`) põem o piso de alvo e de letra na cabeça da página; o produto "
+        "lê a página já gerada e a folha do usuário (`FOLHA_DA_CASA`), nunca esta função."
+    ),
     "integrations/pad_usb.py::quem_ficou_no_uhid": (
         "16/10/2026 — FERRAMENTA DE DIAGNÓSTICO. Quem chama é o `scripts/doctor.sh`, num "
         "heredoc Python, para dizer que pad ficou no uhid desde o último `daemon_starting`; "
