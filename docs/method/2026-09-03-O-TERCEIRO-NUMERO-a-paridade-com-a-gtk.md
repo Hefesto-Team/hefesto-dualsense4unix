@@ -85,13 +85,13 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 02-controles | 48 | 15 | 24 | 5 | 4 | 0 | 31% |
 | 03-gatilhos | 31 | 8 | 10 | 7 | 5 | 1 | 26% |
 | 04-iluminacao | 35 | 8 | 13 | 6 | 7 | 1 | 23% |
-| 05-vibracao | 31 | 13 | 11 | 4 | 3 | 0 | 42% |
+| 05-vibracao | 31 | 12 | 11 | 5 | 3 | 0 | 39% |
 | 06-navegacao | 40 | 7 | 15 | 9 | 9 | 0 | 18% |
 | 07-lancadores | 24 | 8 | 11 | 2 | 3 | 0 | 33% |
 | 08-conexoes | 44 | 13 | 25 | 6 | 0 | 0 | 30% |
 | 09-sistema | 38 | 13 | 18 | 4 | 3 | 0 | 34% |
 | 10-perfis | 48 | 15 | 20 | 7 | 6 | 0 | 31% |
-| TODAS | 381 | 111 | 171 | 52 | 44 | 3 | 29% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 381 | 110 | 171 | 53 | 44 | 3 | 29% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -732,3 +732,9 @@ duplo clique no nome da lista (**«O campo Nome / renomear o perfil»** passa de
 `IGUAL`); a **válvula do R-12** e **as cinco perguntas do Salvar** seguem `DIFERENTE`, sem o «Funciona em». A tabela acima
 foi recontada do CSV: `10-perfis` vai de `14 IGUAL · 19 DIFER · 8 FALTA · 7 SO_HTML · 29%` para `15 · 20 · 7 · 6 · 31%`,
 e `TODAS` de `110 · 170 · 53 · 45 · 29%` para `111 · 171 · 52 · 44 · 29%`.
+
+**20/10/2026 — a «Força» da Vibração vira só o trilho**
+(`A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01`). Os três degraus saíram da aba 05 pelo desenho
+validado pelo usuário em 18/10; o que fica é o trilho de 0 a 200% por controle. **«QUAL degrau está aceso»** passa de `IGUAL` a
+`FALTA_NO_HTML`. A tabela acima foi recontada do CSV: `05-vibracao` vai de `13 IGUAL · 4 FALTA · 42%` para `12 · 5 · 39%`,
+e `TODAS` de `111 · 52` para `110 · 53`.
