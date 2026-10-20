@@ -5,7 +5,7 @@
       "data": "2026-10-20",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 53247,
+      "piso": 53257,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -99,7 +99,7 @@
         "daemon/subsystems/quem_mexe.py": 82,
         "daemon/subsystems/recado_do_microfone.py": 137,
         "daemon/subsystems/rumble.py": 200,
-        "daemon/subsystems/tato_vivo.py": 400,
+        "daemon/subsystems/tato_vivo.py": 402,
         "daemon/subsystems/vibracao_do_jogo.py": 59,
         "daemon/subsystems/volta_dos_acessorios.py": 41,
         "daemon/udp_server.py": 66,
@@ -179,9 +179,9 @@
         "integrations/vestido_de_dualsense.py": 48,
         "integrations/virtual_pad.py": 256,
         "integrations/window_detect.py": 94,
-        "interface/aba01.py": 217,
+        "interface/aba01.py": 216,
         "interface/aba02.py": 269,
-        "interface/aba03.py": 72,
+        "interface/aba03.py": 83,
         "interface/aba04.py": 142,
         "interface/aba05.py": 238,
         "interface/aba06.py": 47,
@@ -205,10 +205,10 @@
         "interface/mesa_viva.py": 256,
         "interface/monta.py": 279,
         "interface/navegacao_interna.py": 64,
-        "interface/pacotes/__init__.py": 289,
-        "interface/pacotes/a01_jogar.py": 913,
+        "interface/pacotes/__init__.py": 291,
+        "interface/pacotes/a01_jogar.py": 886,
         "interface/pacotes/a02_controles.py": 1057,
-        "interface/pacotes/a03_gatilhos.py": 810,
+        "interface/pacotes/a03_gatilhos.py": 826,
         "interface/pacotes/a04_iluminacao.py": 1170,
         "interface/pacotes/a05_vibracao.py": 892,
         "interface/pacotes/a06_navegacao.py": 380,
@@ -234,7 +234,7 @@
         "mods/tema.py": 40,
         "profiles/autoswitch.py": 135,
         "profiles/curva_propria.py": 49,
-        "profiles/efeitos_de_imersao.py": 81,
+        "profiles/efeitos_de_imersao.py": 88,
         "profiles/efeitos_de_luz.py": 78,
         "profiles/estilos_de_jogo.py": 177,
         "profiles/formas_de_haptica.py": 89,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +15 linhas (53232 -> 53247), pagas por Origem: D-2010-A-CHEGADA-ESPERA-A-RAJADA-DA-STEAM, D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE; registrado no fecho, topo 1184a242ffcf",
+      "razao": "texto-em-src: +10 linhas (53247 -> 53257), pagas por Origem: D-2010-O-EFEITO-DO-GATILHO-SE-AGRUPA-POR-FAMILIA, D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE; registrado no fecho, topo 1773c7368932",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -324,6 +324,12 @@
           "de": 53232,
           "para": 53247,
           "razao": "texto-em-src: +15 linhas (53232 -> 53247), pagas por Origem: D-2010-A-CHEGADA-ESPERA-A-RAJADA-DA-STEAM, D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE; registrado no fecho, topo 1184a242ffcf"
+        },
+        {
+          "data": "2026-10-20",
+          "de": 53247,
+          "para": 53257,
+          "razao": "texto-em-src: +10 linhas (53247 -> 53257), pagas por Origem: D-2010-O-EFEITO-DO-GATILHO-SE-AGRUPA-POR-FAMILIA, D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE; registrado no fecho, topo 1773c7368932"
         }
       ],
       "unidade": "linhas",

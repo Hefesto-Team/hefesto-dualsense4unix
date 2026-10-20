@@ -252,14 +252,14 @@
       "data": "2026-10-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1152659,
+      "piso": 1153379,
       "por_item": {
-        "docs": 119979,
+        "docs": 119974,
         "scripts": 114973,
-        "src": 310946,
-        "tests": 606761
+        "src": 311209,
+        "tests": 607223
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +720 linhas (1152659 -> 1153379), pagas por Origem: D-2010-O-EFEITO-DO-GATILHO-SE-AGRUPA-POR-FAMILIA, D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE; registrado no fecho, topo 1773c7368932",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -674,10 +674,16 @@
           "de": 1147378,
           "para": 1152676,
           "razao": "tamanho: +5298 linhas (1147378 -> 1152676), pagas por Origem: D-2010-A-CHEGADA-ESPERA-A-RAJADA-DA-STEAM, D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE; registrado no fecho, topo 1184a242ffcf"
+        },
+        {
+          "data": "2026-10-20",
+          "de": 1152659,
+          "para": 1153379,
+          "razao": "tamanho: +720 linhas (1152659 -> 1153379), pagas por Origem: D-2010-O-EFEITO-DO-GATILHO-SE-AGRUPA-POR-FAMILIA, D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE; registrado no fecho, topo 1773c7368932"
         }
       ],
       "unidade": "linhas",
-      "universo": 3010
+      "universo": 3011
     }
   }
 }
