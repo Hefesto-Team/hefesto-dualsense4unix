@@ -24,13 +24,17 @@ from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import (
     controles_do_daemon,
     decidir,
     estado_do_controle,
+    estilo_ativo,
     ha_jogo,
     motor_do,
 )
 from hefesto_dualsense4unix.profiles.efeitos_de_luz import (
     BASES_DO_RELOGIO_COMUM,
+    RITMO_DA_BATERIA,
     TETO_DO_PISCAR_HZ,
+    BrilhoDoAcende,
     amplitude_da_mare,
+    bateria_acabando,
     cor_no_instante,
     frequencia_do_piscar_hz,
     periodo_do_arco_iris_s,
@@ -58,6 +62,11 @@ INTERVALO_MINIMO = 1.0 / QUADROS_POR_SEGUNDO_MAXIMO
 INTERVALO_DO_LACO_S = INTERVALO_MINIMO
 #: De quanto em quanto tempo o laço relê o perfil ativo (só o arquivo, sem semear).
 RELEITURA_DO_PLANO_S = 0.5
+#: De quanto em quanto tempo o laço relê a carga dos controles (a Bateria da Maratona).
+RELEITURA_DA_CARGA_S = 2.0
+#: As duas luzes que o estilo pede e o perfil não guarda (``leds.efeito`` só tem as seis bases).
+REACAO_ACENDE = "acende"
+REACAO_BATERIA = "bateria"
 
 
 @dataclass(frozen=True)
@@ -271,6 +280,17 @@ def escritor_de_producao(
     return escrever, soltar
 
 
+def reacao_da_luz_do_estilo(estilo: str | None) -> str | None:
+    """``acende`` ou ``bateria`` quando o estilo pede uma dessas luzes; senão ``None``."""
+    if not estilo:
+        return None
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
+
+    receita = getattr(POR_CHAVE.get(estilo), "receita_invisivel", None)
+    luz = getattr(receita, "luz", None)
+    return luz if luz in (REACAO_ACENDE, REACAO_BATERIA) else None
+
+
 def perfil_ativo(daemon: Any) -> Profile | None:
     """O perfil ativo como vale neste computador, lido do arquivo (sem semear nem varrer).
 
@@ -308,6 +328,14 @@ class Passo:
         self._plano: dict[str, PlanoDoControle] = {}
         self._lido_em = float("-inf")
         self._repinturas: int | None = None
+        # As luzes do estilo (Acende, Bateria): o perfil e a reação lidos com o plano, a cor base
+        # de cada controle, o brilho do Acende e a carga (relida a cada 2 s).
+        self._perfil: Profile | None = None
+        self._reacao: str | None = None
+        self._cores: dict[str, RGB] = {}
+        self._brilho_do_acende: dict[str, BrilhoDoAcende] = {}
+        self._cargas: dict[str, tuple[object, object]] = {}
+        self._carga_lida_em = float("-inf")
 
     def _houve_repintura_de_fora(self) -> bool:
         """O backend repintou a luz resolvida desde o último tique? (o contador dele subiu)."""
@@ -325,13 +353,20 @@ class Passo:
         if agora - self._lido_em >= RELEITURA_DO_PLANO_S:
             self._lido_em = agora
             perfil = perfil_ativo(self.daemon)
+            self._perfil = perfil
             self._plano = (
                 {} if perfil is None else plano_do_perfil(perfil, [c.uniq for c in controles])
             )
-        if not self._plano:
+            self._reacao = reacao_da_luz_do_estilo(estilo_ativo(self.daemon))
+            self._cores = self._cores_base(controles) if self._reacao else {}
+        # a luz explícita do perfil vence a do estilo; quem quer a luz fixa usa o Personalizado
+        plano = {
+            **self._planos_do_estilo(controles, agora),
+            **{c.uniq: self._plano[c.uniq] for c in controles if c.uniq in self._plano},
+        }
+        if not plano:
             self.luz.parar_tudo()
             return 0
-        plano = {c.uniq: self._plano[c.uniq] for c in controles if c.uniq in self._plano}
         jogo = ha_jogo(self.daemon)
         calados = frozenset(
             c.uniq
@@ -339,6 +374,81 @@ class Passo:
             if c.uniq in plano and not self._o_hefesto_pode_pintar(c, jogo)
         )
         return self.luz.tique(agora, plano, calados, self._o_pulso_do_tiro_segura())
+
+    def _cores_base(self, controles: list[Any]) -> dict[str, RGB]:
+        """A cor que a barra tem agora em cada controle (já no brilho do perfil)."""
+        resolver = getattr(getattr(self.daemon, "controller", None), "resolved_led_for", None)
+        if not callable(resolver):
+            return {}
+        cores: dict[str, RGB] = {}
+        for c in controles:
+            cor = resolver(c.uniq)
+            if isinstance(cor, tuple) and len(cor) == 3:
+                cores[c.uniq] = (int(cor[0]), int(cor[1]), int(cor[2]))
+        return cores
+
+    def _cargas_de_agora(self, agora: float) -> dict[str, tuple[object, object]]:
+        """``{uniq: (battery_pct, battery_state)}`` dos controles, relida a cada 2 s."""
+        if agora - self._carga_lida_em < RELEITURA_DA_CARGA_S:
+            return self._cargas
+        self._carga_lida_em = agora
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        cargas: dict[str, tuple[object, object]] = {}
+        descrever = getattr(getattr(self.daemon, "controller", None), "describe_controllers", None)
+        try:
+            lidos = descrever() if callable(descrever) else []
+        except Exception:
+            logger.debug("luz_carga_ilegivel", exc_info=True)
+            lidos = []
+        for item in lidos:
+            if isinstance(item, dict) and isinstance(item.get("uniq"), str):
+                cargas[norm_mac(item["uniq"]) or item["uniq"]] = (
+                    item.get("battery_pct"), item.get("battery_state"))
+        self._cargas = cargas
+        return cargas
+
+    def _planos_do_estilo(self, controles: list[Any], agora: float) -> dict[str, PlanoDoControle]:
+        """O Acende (o curso do gatilho) e a Bateria (a carga) como plano, onde o perfil não tem
+        efeito: fora da economia, fora do Automático e com o brilho do perfil acima de zero."""
+        perfil, reacao = self._perfil, self._reacao
+        if reacao not in (REACAO_ACENDE, REACAO_BATERIA) or perfil is None:
+            self._brilho_do_acende.clear()
+            return {}
+        if perfil.leds.modo == "automatico":  # (noqa-acento) chave do contrato
+            return {}
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        mesa, ligados = economia_da_mesa(), controles_em_economia()
+        cargas = self._cargas_de_agora(agora) if reacao == REACAO_BATERIA else {}
+        fora: dict[str, PlanoDoControle] = {}
+        for posicao, c in enumerate(controles):
+            cor = self._cores.get(c.uniq)
+            if cor is None or _em_economia(c.uniq, mesa, ligados):
+                self._brilho_do_acende.pop(c.uniq, None)
+                continue
+            leds, campos = _leds_do_controle(perfil, c.uniq)
+            brilho = (
+                leds.lightbar_brightness
+                if leds is not None and "lightbar_brightness" in campos
+                else perfil.leds.lightbar_brightness
+            )
+            if float(brilho) <= 0.0:
+                continue
+            semente = _semente_do_controle(c.uniq)
+            if reacao == REACAO_ACENDE:
+                curso = max(int(c.l2), int(c.r2)) / 255.0
+                dele = self._brilho_do_acende.get(c.uniq)
+                if dele is None:
+                    dele = self._brilho_do_acende[c.uniq] = BrilhoDoAcende(curso)
+                fora[c.uniq] = PlanoDoControle(
+                    EfeitoDaLuz("fixa", (cor,), 1), dele.andar(curso, agora), posicao % 4, semente)
+                continue
+            pct, estado = cargas.get(norm_mac(c.uniq) or c.uniq, (None, None))
+            if bateria_acabando(pct, estado):
+                fora[c.uniq] = PlanoDoControle(
+                    EfeitoDaLuz("respirar", (cor,), RITMO_DA_BATERIA), 1.0, posicao % 4, semente)
+        return fora
 
     def _o_pulso_do_tiro_segura(self) -> frozenset[str]:
         """Os controles em que o pulso do tiro do tato vivo ainda está na barra."""
@@ -395,5 +505,6 @@ __all__ = [
     "periodo_do_arco_iris_s",
     "periodo_do_respirar_s",
     "plano_do_perfil",
+    "reacao_da_luz_do_estilo",
     "start_luz_animada",
 ]

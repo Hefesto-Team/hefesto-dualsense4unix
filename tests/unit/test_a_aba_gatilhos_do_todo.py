@@ -31,9 +31,9 @@ CHROME = pathlib.Path("/usr/bin/google-chrome")
 FAIXAS = {s.name: {p.name: (p.min_value, p.max_value) for p in s.params} for s in PRESETS}
 PADROES = {s.name: {p.name: p.default for p in s.params} for s in PRESETS}
 
-#: quantas imersões cada acionamento oferece (as 18 de ontem e as 12 novas, 30 ao todo; a
-#: Metralhadora e a Vibração dividem as mesmas três)
-QUANTAS = {"Weapon": 9, "Machine": 3, "Vibration": 3, "Bow": 3, "Resistance": 5,
+#: quantas imersões cada acionamento oferece (as 30 de 19/10 e as 5 do bloco C de 20/10, 35 ao
+#: todo; a Metralhadora e a Vibração dividem as mesmas três)
+QUANTAS = {"Weapon": 12, "Machine": 3, "Vibration": 3, "Bow": 3, "Resistance": 7,
            "MultiPositionFeedback": 3, "Galloping": 3, "SlopeFeedback": 2,
            "MultiPositionVibration": 2}
 
@@ -57,7 +57,7 @@ def test_cada_familia_tem_imersoes_e_cada_modo_dela_as_que_lhe_cabem() -> None:
         for modo in modos:
             assert modo in {s.name for s in PRESETS}, f"{modo} não é da lista de onze"
             assert len(imersao.imersoes_do_acionamento(modo)) == QUANTAS[modo], (familia, modo)
-    assert len(imersao.IMERSOES) == 30
+    assert len(imersao.IMERSOES) == 35
 
 
 def test_todo_numero_esta_dentro_da_faixa_do_presets() -> None:

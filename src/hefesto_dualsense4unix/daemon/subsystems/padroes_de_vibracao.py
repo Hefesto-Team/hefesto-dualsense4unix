@@ -8,6 +8,7 @@ régua o toca sem aparelho e sem relógio.
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import NamedTuple
 
 #: `(ms, esquerdo, direito)`.
 Passo = tuple[int, int, int]
@@ -58,6 +59,28 @@ DICAS: dict[str, str] = {
 }
 #: O Coice é o recuo: toca quando o dedo solta o gatilho, não quando aperta.
 NA_SOLTURA = frozenset({"coice"})
+
+
+class NaSoltura(NamedTuple):
+    """Onde um padrão do estilo toca ao soltar o gatilho, e depois de quanto tempo de aperto."""
+
+    segurado_s: float
+    #: o gatilho que vale (``"esquerdo"``/``"direito"``); ``None``: os dois
+    lado: str | None
+
+
+#: A Onda do Furtivo (20/10/2026) toca ao soltar a mira (L2) segurada por 2 s ou mais, e não ao
+#: apertar: o atirador de elite solta o fôlego (a Carga · fôlego preso é a imersão do L2).
+NA_SOLTURA_DO_ESTILO: dict[tuple[str, str], NaSoltura] = {
+    ("furtivo", "onda"): NaSoltura(2.0, "esquerdo"),
+}
+
+
+def na_soltura_do_estilo(padrao: str, estilo: object) -> NaSoltura | None:
+    """A regra de soltura que o estilo dá a este padrão; ``None`` quando ele toca no aperto."""
+    return NA_SOLTURA_DO_ESTILO.get((estilo, padrao)) if isinstance(estilo, str) else None
+
+
 #: A Pancada do lado olha de onde veio o som do jogo.
 DO_LADO_DO_SOM = frozenset({"pancada_do_lado"})
 

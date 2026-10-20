@@ -100,8 +100,8 @@ def _curva(*forcas: int) -> dict[str, int]:
 
 
 #: O `na_frente` de cada uma é a `frente` de cada estilo na tabela `S` da página de 19/10/2026
-#: (de 1 a 5 por estilo). O que a página põe na frente e ainda não existe (Golpe · falha, Golpe ·
-#: aparo, Travar · esgotado) fica para o bloco C; o `sem-efeito` da frente é o «Nenhum» da tela.
+#: (de 1 a 5 por estilo); o `sem-efeito` da frente é o «Nenhum» da tela. As cinco
+#: de 20/10/2026 levam o nome na forma «Família · variante» da página.
 IMERSOES: tuple[Imersao, ...] = (
     # --- Arma: Disparo ----------------------------------------------------------------------
     Imersao("ferrolho-que-volta", "Ferrolho que volta", "arma",
@@ -150,6 +150,23 @@ IMERSOES: tuple[Imersao, ...] = (
             momentos=(Momento(QUANDO_PASSOU_DO_CLIQUE, 300, "Resistance",
                               {"start": 7, "force": 6}),),
             na_frente=("fps", "furtivo", "retro")),
+    # O botão do mouse: raso e seco no começo do curso, sem o meio macio do Golpe leve. O Point and
+    # click o usa nos dois lados e ele não vai à frente da lista (a frente dele é o Golpe leve).
+    Imersao("clique-mouse", "Clique · mouse", "arma",
+            "Um clique raso e seco logo no começo do curso, que volta na hora.",
+            {"Weapon": {"start": 2, "end": 3, "force": 96}},
+            na_frente=()),
+    # Afunda mole e cede no vazio: a parede larga e leve, e uma queda de 250 ms a 200 ms do aperto
+    # (o gatilho solta e volta). Onde o jogo escreve o gatilho, o momento cala e a parede mole fica.
+    Imersao("golpe-falha", "Golpe · falha", "arma",
+            "Afunda mole e cede no vazio por um instante.",
+            {"Weapon": {"start": 2, "end": 8, "force": 24}},
+            momentos=(Momento("ao_apertar", 200, "Off", {}, dura_ms=250),),
+            na_frente=("luta",)),
+    Imersao("golpe-aparo", "Golpe · aparo", "arma",
+            "Um clique duro logo no começo do curso.",
+            {"Weapon": {"start": 2, "end": 4, "force": 224}},
+            na_frente=("souls",)),
     # --- Metralhadora: Metralhadora e Vibração -------------------------------------------------
     Imersao("rajada-que-sobe-sozinha", "Rajada que sobe sozinha", "metralhadora",
             "As batidas começam médias e ficam mais fortes a cada meio segundo segurando.",
@@ -237,6 +254,21 @@ IMERSOES: tuple[Imersao, ...] = (
             "Peso leve e constante no gatilho da mira.",
             {"Resistance": {"start": 2, "force": 3}},
             na_frente=("furtivo", "simulacao", "esportes", "plataforma", "retro", "maratona")),
+    # O atirador de elite prende a respiração: o peso leve endurece de leve a partir de 2 s
+    # segurando. A Onda dos motores, ao soltar, é do estilo (`padroes_de_vibracao`).
+    Imersao("carga-folego", "Carga · fôlego preso", "resistência",
+            "Segurar a mira por mais de 2 s endurece de leve, como prender a respiração.",
+            {"Resistance": {"start": 2, "force": 2}},
+            momentos=(Momento("segurando", 2000, "Resistance", {"force": 3}),),
+            na_frente=()),
+    # Sem estamina o golpe não sai: sobe até a parede em 800 ms e cede aos 1,2 s.
+    Imersao("travar-esgotado", "Travar · esgotado", "resistência",
+            "Sobe até a parede e cede depois de 1,2 s segurando.",
+            {"Resistance": {"start": 3, "force": 4}},
+            momentos=(Momento("segurando", 400, "Resistance", {"force": 6}),
+                      Momento("segurando", 800, "Resistance", {"force": 8}),
+                      Momento("segurando", 1200, "Off", {})),
+            na_frente=("souls",)),
     Imersao("porta-emperrada", "Porta emperrada", "curva",
             "O gatilho range em degraus, como porta enferrujada.",
             {"MultiPositionFeedback": _curva(0, 0, 0, 6, 0, 6, 0, 6, 0, 6)},

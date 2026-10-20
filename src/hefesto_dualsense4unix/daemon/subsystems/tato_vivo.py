@@ -168,6 +168,8 @@ class Evento:
     energia: float = 1.0
     #: o recorte do estalo (O-SOM-DO-TIRO-SAI-TAMBEM-NO-CONTROLE-01), que se completa depois.
     recorte: Any = field(default=None, compare=False)
+    #: quanto o dedo ficou apertado, na largada (``TIPO_SOLTA``); zero nos demais eventos
+    duracao_s: float = 0.0
 
 
 def _limitar(valor: Any, baixo: float, alto: float, padrao: float) -> float:
@@ -200,6 +202,10 @@ class Receita:
     efeitos_escolhidos: bool = False
     #: algum controle do perfil escolheu o Som no corpo (o grave do jogo, contínuo)
     som_no_corpo_escolhido: bool = False
+    #: o estilo pede o Grão (os grãos finos da Simulação) e o Motor de época (o zumbido do Retrô):
+    #: contínuos do laço, como o Som no corpo, mas sem som do jogo para ouvir
+    grao_escolhido: bool = False
+    motor_de_epoca_escolhido: bool = False
     #: algum controle do perfil escolheu um padrão para os motores (Tranco, Coice…)
     padroes_escolhidos: bool = False
     #: algum controle escolheu a Pancada do lado: o ouvido do som do jogo precisa subir
@@ -216,6 +222,8 @@ class Receita:
             or self.momentos_da_imersao
             or self.efeitos_escolhidos
             or self.som_no_corpo_escolhido
+            or self.grao_escolhido
+            or self.motor_de_epoca_escolhido
             or self.padroes_escolhidos
         )
 
@@ -260,6 +268,8 @@ class Receita:
             momentos_da_imersao=bool(campo("momentos_da_imersao", False)),
             efeitos_escolhidos=bool(campo("efeitos_escolhidos", False)),
             som_no_corpo_escolhido=bool(campo("som_no_corpo_escolhido", False)),
+            grao_escolhido=bool(campo("grao_escolhido", False)),
+            motor_de_epoca_escolhido=bool(campo("motor_de_epoca_escolhido", False)),
             padroes_escolhidos=bool(campo("padroes_escolhidos", False)),
             pancada_escolhida=bool(campo("pancada_escolhida", False)),
         )
@@ -321,6 +331,9 @@ def receita_do_estilo(estilo: Any) -> Receita:
         # motores de cada estilo ligam o motor sem escolha nenhuma do usuário
         som_no_corpo_escolhido=(
             formas_de_haptica.POR_ESTILO.get(estilo.chave) == formas_de_haptica.SOM_NO_CORPO),
+        grao_escolhido=formas_de_haptica.POR_ESTILO.get(estilo.chave) == formas_de_haptica.GRAO,
+        motor_de_epoca_escolhido=(
+            formas_de_haptica.POR_ESTILO.get(estilo.chave) == formas_de_haptica.MOTOR_DE_EPOCA),
         padroes_escolhidos=padrao is not None,
         pancada_escolhida=padrao == "pancada_do_lado",
     )
@@ -662,6 +675,8 @@ class BordaDoDedo:
         self._apertou_em: dict[str, float] = {}
         #: o quanto o dedo apertou, por gatilho, até largar
         self._pico: dict[tuple[str, str], int] = {}
+        #: quando cada gatilho foi apertado (a duração do aperto vai no evento da largada)
+        self._inicio: dict[tuple[str, str], float] = {}
         #: as largadas ainda não levadas ao motor (``tirar_as_soltas``); ``ver`` não as devolve
         self._soltas: list[Evento] = []
 
@@ -674,14 +689,16 @@ class BordaDoDedo:
                 self._apertado[chave] = True
                 self._apertou_em[uniq] = agora
                 self._pico[chave] = valor
+                self._inicio[chave] = agora
                 eventos.append(
                     Evento(agora, uniq, TIPO_DEDO, lado, min(1.0, valor / 255.0))
                 )
             elif apertado and valor <= self.solta:
                 self._apertado[chave] = False
                 pico = self._pico.pop(chave, valor)
+                segurou = max(0.0, agora - self._inicio.pop(chave, agora))
                 self._soltas.append(
-                    Evento(agora, uniq, TIPO_SOLTA, lado, min(1.0, pico / 255.0)))
+                    Evento(agora, uniq, TIPO_SOLTA, lado, min(1.0, pico / 255.0), None, segurou))
             elif apertado:
                 self._pico[chave] = max(self._pico.get(chave, valor), valor)
         return eventos
@@ -835,6 +852,10 @@ def destinos_do_som(
     return [c.uniq for c in controles if dedo.atirando(c.uniq, instante)]
 
 
+#: O Eco só reverbera o golpe forte; o fraco toca o Impacto, sem a cauda grave.
+ECO_A_PARTIR_DE = 0.7
+
+
 class AtuadorDaHaptica:
     """O toque do tiro, na forma que o controle escolheu, no tocador do rumble dele.
 
@@ -865,11 +886,13 @@ class AtuadorDaHaptica:
 
     def responde_a(self, evento: Evento, receita: Receita) -> bool:
         escolha = formas_de_haptica.escolha_valida(self._escolha_de(evento.uniq))
-        if escolha in (formas_de_haptica.SEM_EFEITO, formas_de_haptica.SOM_NO_CORPO):
+        if escolha == formas_de_haptica.SEM_EFEITO or escolha in formas_de_haptica.CONTINUAS:
             return False
-        # o estilo que não toca (o Retrô) ou que toca o corpo inteiro (a Corrida): sem toque de tiro
-        if escolha is None and formas_de_haptica.forma_do_estilo(self._estilo_de()) in (
-                formas_de_haptica.SEM_EFEITO, formas_de_haptica.SOM_NO_CORPO):
+        # o estilo que não toca ou que toca o corpo inteiro, de forma contínua (a Corrida, a
+        # Simulação, o Retrô): sem toque de tiro
+        forma_do_estilo = formas_de_haptica.forma_do_estilo(self._estilo_de())
+        if escolha is None and (forma_do_estilo == formas_de_haptica.SEM_EFEITO
+                                or forma_do_estilo in formas_de_haptica.CONTINUAS):
             return False
         if evento.tipo == TIPO_SOM:
             return receita.lado_do_som
@@ -889,6 +912,8 @@ class AtuadorDaHaptica:
             evento.lado,
             receita.duracao_do_toque_ms,
         )
+        if forma == formas_de_haptica.ECO and evento.energia < ECO_A_PARTIR_DE:
+            forma = formas_de_haptica.IMPACTO  # só o golpe forte reverbera
         if forma == formas_de_haptica.TOQUE:
             self._tocar(*pedido)
         else:
@@ -1709,9 +1734,11 @@ class AtuadorDosMotores:
         padrao_de: Callable[[str], str | None],
         gatilho_vibra: Callable[[str], bool],
         forca_de: Callable[[str], float],
+        estilo_de: Callable[[], Any] | None = None,
     ) -> None:
         #: ``escrever(uniq, fraco, forte)``: o motor direito é o fraco, o esquerdo o forte
         self._escrever = escrever
+        self._estilo_de = estilo_de or (lambda: None)
         self._padrao_de = padrao_de
         self._gatilho_vibra = gatilho_vibra
         self._forca_de = forca_de
@@ -1731,9 +1758,14 @@ class AtuadorDosMotores:
         if padrao is None:
             return False
         vibra = receita.gatilho_no_ritmo or self._gatilho_vibra(evento.uniq)
-        if vibra or padrao in padroes_de_vibracao.NA_SOLTURA:
+        regra = padroes_de_vibracao.na_soltura_do_estilo(padrao, self._estilo_de())
+        if vibra or padrao in padroes_de_vibracao.NA_SOLTURA or regra is not None:
             if evento.tipo != TIPO_SOLTA:
                 return False
+            if regra is not None and (
+                    evento.duracao_s < regra.segurado_s
+                    or (regra.lado is not None and evento.lado != regra.lado)):
+                return False  # a Onda do Furtivo só sai de quem segurou a mira
             return padrao not in padroes_de_vibracao.NA_SOLTURA or self._cabe_o_coice(
                 evento.uniq, evento.instante)
         if padrao in padroes_de_vibracao.DO_LADO_DO_SOM:
@@ -2064,6 +2096,18 @@ def estado_do_controle(
         ha_jogo=jogo,
         sessao_ha_s=sessao_ha_s,
     )
+
+
+def nivel_do_rumble(vpad: Any) -> float:
+    """O quanto o jogo pede de rumble a este pad agora, de 0 a 1 (o maior dos dois motores).
+
+    ``ff_last_sent`` é o último par (fraco, forte) entregue ao aparelho, nos dois pads (``uhid`` e
+    ``uinput``), e volta a zero quando o jogo para; sem pad ou sem o campo, é zero.
+    """
+    par = getattr(vpad, "ff_last_sent", None)
+    if isinstance(par, tuple) and len(par) == 2 and all(isinstance(x, int) for x in par):
+        return float(max(0.0, min(1.0, max(par) / 255.0)))
+    return 0.0
 
 
 def com_o_rumble_anotado(
@@ -2413,7 +2457,8 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
             lambda uniq: sessao.largar(uniq, CANAL_LUZ),
             na_economia,
         ),
-        AtuadorDosMotores(motores, padrao_de, gatilho_vibra, forca_do_padrao),
+        AtuadorDosMotores(
+            motores, padrao_de, gatilho_vibra, forca_do_padrao, lambda: estilo_ativo(daemon)),
     ]
 
 
@@ -2437,6 +2482,12 @@ class Passo:
         # O Som no corpo: o grave do jogo, filtrado na thread do ouvido e levado a cada tique.
         self._filtro_do_corpo = formas_de_haptica.FiltroDoCorpo()
         self._corpo: deque[Any] = deque(maxlen=CORPO_MAX_PEDACOS)
+        # O Grão e o Motor de época: um gerador por controle (a semente e a fase são dele) e o
+        # instante do último pedaço levado, por forma; quem deixa de ter dono recomeça do zero.
+        self._graos: dict[str, formas_de_haptica.GeradorDoGrao] = {}
+        self._motores_de_epoca: dict[str, formas_de_haptica.GeradorDoMotorDeEpoca] = {}
+        self._continua_em: dict[str, float] = {}
+        self._agora_da_continua = 0.0
 
     def receita_de_agora(self, agora: float) -> Receita:
         if agora - self._lida_em >= RELEITURA_DA_RECEITA_S:
@@ -2491,6 +2542,77 @@ class Passo:
         for uniq in donos:
             levar(uniq, amostras)
 
+    def _donos_da_continua(
+        self, chave: str, uniqs: Sequence[str],
+        estado_de: Callable[[str], EstadoDoCanal | None],
+    ) -> list[str]:
+        """Os controles onde esta forma contínua toca agora: o jogo cala o canal, sem economia."""
+        donos = []
+        for uniq in uniqs:
+            estado = estado_de(uniq)
+            forma = formas_de_haptica.forma_que_vale(
+                self.motor.escolhas.get(norm_mac(uniq) or ""), estilo_ativo(self.daemon))
+            if (forma == chave and estado is not None and decidir(CANAL_HAPTICA, estado)
+                    and not _controle_na_economia(uniq)):
+                donos.append(uniq)
+        return donos
+
+    def _amostras_devidas(self, chave: str, agora: float) -> int:
+        """Quantas amostras cabem desde o último pedaço desta forma (no máximo um décimo de s)."""
+        antes = self._continua_em.get(chave)
+        self._continua_em[chave] = agora
+        decorrido = INTERVALO_S if antes is None else max(0.0, min(0.1, agora - antes))
+        return round(formas_de_haptica.TAXA * decorrido)
+
+    def _levar_a_continua(self, uniq: str, amostras: Any) -> None:
+        alto_falante = getattr(self.daemon, "_alto_falante_subsystem", None)
+        levar = getattr(alto_falante, "tocar_o_corpo", None)
+        if callable(levar) and len(amostras):
+            levar(uniq, amostras)
+
+    def _levar_o_grao(
+        self, receita: Receita, uniqs: Sequence[str],
+        estado_de: Callable[[str], EstadoDoCanal | None],
+    ) -> None:
+        """Os grãos finos e rápidos, sem parar, onde o controle tem o Grão e o jogo cala o canal."""
+        donos = (self._donos_da_continua(formas_de_haptica.GRAO, uniqs, estado_de)
+                 if receita.grao_escolhido else [])
+        for uniq in [u for u in self._graos if u not in donos]:
+            del self._graos[uniq]
+        if not donos:
+            self._continua_em.pop(formas_de_haptica.GRAO, None)
+            return
+        n = self._amostras_devidas(formas_de_haptica.GRAO, self._agora_da_continua)
+        for uniq in donos:
+            gerador = self._graos.setdefault(uniq, formas_de_haptica.GeradorDoGrao())
+            self._levar_a_continua(uniq, gerador.gerar(n))
+
+    def _levar_o_motor_de_epoca(
+        self, receita: Receita, uniqs: Sequence[str],
+        estado_de: Callable[[str], EstadoDoCanal | None],
+        vpad_de: Callable[[str], Any],
+    ) -> None:
+        """O zumbido que sobe e arrasta com o rumble do jogo; sem rumble, mudo."""
+        donos = (self._donos_da_continua(formas_de_haptica.MOTOR_DE_EPOCA, uniqs, estado_de)
+                 if receita.motor_de_epoca_escolhido else [])
+        for uniq in [u for u in self._motores_de_epoca if u not in donos]:
+            del self._motores_de_epoca[uniq]
+        if not donos:
+            self._continua_em.pop(formas_de_haptica.MOTOR_DE_EPOCA, None)
+            return
+        n = self._amostras_devidas(formas_de_haptica.MOTOR_DE_EPOCA, self._agora_da_continua)
+        for uniq in donos:
+            gerador = self._motores_de_epoca.get(uniq)
+            nivel = nivel_do_rumble(vpad_de(uniq))
+            if gerador is None:
+                if nivel <= 0.0:
+                    continue  # sem rumble do jogo não há zumbido a começar
+                gerador = self._motores_de_epoca[uniq] = formas_de_haptica.GeradorDoMotorDeEpoca()
+            elif nivel <= 0.0 and gerador.calado:
+                del self._motores_de_epoca[uniq]  # o zumbido arrastou até o fim: acabou
+                continue
+            self._levar_a_continua(uniq, gerador.gerar(n, nivel))
+
     def __call__(self, agora: float) -> int:
         """A volta dos acessórios e os meus toques andam a cada tique; o resto é da receita."""
         volta = self.motor.volta
@@ -2536,6 +2658,10 @@ class Passo:
         }
         escritas = self.motor.tique(agora, por_uniq.get, receita, uniqs=tuple(por_uniq))
         self._levar_o_corpo(receita, tuple(por_uniq), por_uniq.get)
+        self._agora_da_continua = agora
+        vpads = {c.uniq: c.vpad for c in controles}
+        self._levar_o_grao(receita, tuple(por_uniq), por_uniq.get)
+        self._levar_o_motor_de_epoca(receita, tuple(por_uniq), por_uniq.get, vpads.get)
         return escritas
 
     def _anotar_o_disparo(self, controle: Controle) -> None:

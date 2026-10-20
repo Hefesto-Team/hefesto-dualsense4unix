@@ -3,10 +3,9 @@
 A háptica viaja como áudio de quatro canais a 48 kHz; o toque do tiro é uma forma de onda curta
 somada aos canais dos atuadores: senos com um ataque e uma queda até zero. O disparo é da receita
 do estilo; a forma é a escolha da pessoa, uma por controle (``efeito_haptico`` do perfil). O ganho
-de toda forma é o Sensor háptico, que age adiante, no caminho do áudio: nada aqui lê barra nem
-perfil. O Som no corpo é o único contínuo (o grave do som do jogo, de 40 a 220 Hz, com ganho fixo
-e teto); toca por escolha manual e, desde 19/10/2026, como forma da Corrida e da Simulação
-(decisão de produto: o motor e o chão passam pelo corpo do controle).
+é o Sensor háptico, que age adiante: nada aqui lê barra nem perfil. O Som no corpo, o Grão e o
+Motor de época são contínuos (o laço do tato os gera por tique); o Eco, o Grão e o Motor de época
+só o estilo pede e ficam fora de ``ESCOLHAS``, que a tela e o perfil validam.
 """
 from __future__ import annotations
 
@@ -28,6 +27,10 @@ ESTALO = "estalo"
 GUARDA = "guarda"
 APARO = "aparo"
 SOM_NO_CORPO = "som_no_corpo"
+#: As três que só o estilo pede (20/10/2026): fora de ``ESCOLHAS``, o perfil não as guarda.
+ECO = "eco"
+GRAO = "grao"  # (noqa-acento): chave
+MOTOR_DE_EPOCA = "motor_de_epoca"
 
 #: As escolhas, na ordem em que a tela as mostra. A chave é a que o perfil guarda.
 ESCOLHAS: tuple[str, ...] = (
@@ -56,26 +59,38 @@ DICAS: dict[str, str] = {
     SOM_NO_CORPO: "O grave do jogo vira tremor",
 }
 
-#: As formas longas: a Bateria longa as troca pelo Toque, e o rádio só as toca com fatia livre.
-FORMAS_LONGAS = frozenset({GUARDA, APARO, SOM_NO_CORPO})
+#: O nome e a dica das três do estilo, na forma das de cima (a lista da tela não as mostra).
+ROTULOS_DO_ESTILO: dict[str, str] = {ECO: "Eco", GRAO: "Grão", MOTOR_DE_EPOCA: "Motor de época"}
+DICAS_DO_ESTILO: dict[str, str] = {
+    ECO: "Um Impacto com cauda grave",
+    GRAO: "Grãos finos e rápidos, sem parar",
+    MOTOR_DE_EPOCA: "O zumbido grosso do rumble antigo",
+}
+
+#: As contínuas: o laço do tato as leva por tique, e nenhum toque de tiro as toca.
+CONTINUAS = frozenset({SOM_NO_CORPO, GRAO, MOTOR_DE_EPOCA})
+
+#: As formas longas: a Bateria longa as troca pelo Toque (as contínuas, por nada), e o rádio só as
+#: toca com fatia livre.
+FORMAS_LONGAS = frozenset({GUARDA, APARO, ECO} | CONTINUAS)
 
 #: O que cada estilo pede da háptica (a tabela `S` da página de 19/10/2026): toda forma, inclusive
-#: o «Sem efeito» (o Retrô só soma o zumbido do jogo) e o Som no corpo, contínuo (Corrida e
-#: Simulação). O estilo que não está aqui toca o Toque.
+#: as contínuas (o Som no corpo da Corrida, o Grão da Simulação, o Motor de época do Retrô). O
+#: estilo que não está aqui toca o Toque.
 POR_ESTILO: dict[str, str] = {
     "fps": TOQUE,
     "acao": IMPACTO,  # (noqa-acento): chave
     "luta": IMPACTO,
-    "souls": IMPACTO,  # bloco C: Eco (o Impacto com cauda grave de 300 ms)
+    "souls": ECO,  # o Impacto com cauda grave de 300 ms: só o golpe forte reverbera
     "furtivo": ESTALO,
     "aventura": TOQUE,
     "terror": TOQUE,  # 80 ms: `duracao_da_vibracao_ms` do Terror
     "corrida": SOM_NO_CORPO,
-    "simulacao": SOM_NO_CORPO,  # bloco C: Grão (grãos finos e rápidos)
+    "simulacao": GRAO,  # grãos finos e rápidos: o chão, a pista ou a turbulência
     "esportes": IMPACTO,
     "plataforma": ESTALO,
     "ritmo": ESTALO,
-    "retro": SEM_EFEITO,  # bloco C: Motor de época (o zumbido grosso do motor de peso)
+    "retro": MOTOR_DE_EPOCA,  # soma o zumbido grosso quando o jogo vibra; sem rumble, mudo
     "maratona": TOQUE,
     "point_and_click": TOQUE,
     "visual_novel": TOQUE,
@@ -90,6 +105,11 @@ class Forma:
     ataque_ms: int
     #: ``None``: a duração vem do pedido (o Toque do estilo, de 25 a 60 ms).
     duracao_ms: int | None
+    #: A cauda grave (o Eco): um seno de ``cauda_hz`` que nasce no fim do golpe e cai até zero em
+    #: ``cauda_ms``, no ``cauda_peso`` da energia. Sem ``cauda_hz`` a forma não tem cauda.
+    cauda_hz: int = 0
+    cauda_ms: int = 0
+    cauda_peso: float = 0.55
 
 
 FORMAS: dict[str, Forma] = {
@@ -98,6 +118,8 @@ FORMAS: dict[str, Forma] = {
     ESTALO: Forma(((250, 1.0),), 1, 15),
     GUARDA: Forma(((115, 0.6), (220, 0.4)), 3, 850),
     APARO: Forma(((170, 0.5), (270, 0.5)), 3, 600),
+    # o Impacto de 80 ms e uma cauda de 50 Hz de 300 ms, como o eco de um golpe pesado
+    ECO: Forma(((60, 0.6), (160, 0.4)), 2, 380, 50, 300),
 }
 
 
@@ -105,10 +127,13 @@ def amostras(
     chave: str, energia: float, duracao_ms: int | None = None, taxa: int = TAXA
 ) -> array[float]:
     """As amostras de UMA forma: sobe no ataque, cai até zero no fim, nunca passa de ``energia``."""
+    if chave in (GRAO, MOTOR_DE_EPOCA):
+        return _volta_da_continua(chave, energia, duracao_ms, taxa)
     forma = FORMAS.get(chave)
     if forma is None:
         raise ValueError(
-            f"forma de háptica desconhecida: {chave!r}. As que existem: {', '.join(FORMAS)}")
+            f"forma de háptica desconhecida: {chave!r}. As que existem: "
+            f"{', '.join((*FORMAS, GRAO, MOTOR_DE_EPOCA))}")
     duracao = forma.duracao_ms if forma.duracao_ms is not None else (duracao_ms or 40)
     n = max(2, round(taxa * max(1, int(duracao)) / 1000))
     forca = max(0.0, min(1.0, float(energia)))
@@ -125,16 +150,34 @@ def _molde(chave: str, n: int, taxa: int) -> tuple[array[float], array[float]]:
     de conta, e refazê-la a cada tiro seguraria a entrada dos quatro controles.
     """
     forma = FORMAS[chave]
-    ataque = max(1, min(n - 1, round(taxa * forma.ataque_ms / 1000)))
+    cauda = round(taxa * forma.cauda_ms / 1000) if forma.cauda_hz else 0
+    corpo = max(2, n - cauda)
+    ataque = max(1, min(corpo - 1, round(taxa * forma.ataque_ms / 1000)))
     passos = [(2.0 * math.pi * hz / taxa, peso) for hz, peso in forma.componentes]
     envelopes, ondas = array("d", bytes(8 * n)), array("d", bytes(8 * n))
-    for i in range(n):
+    for i in range(min(n, corpo)):
         if i < ataque:
             envelopes[i] = i / ataque
         else:
-            envelopes[i] = ((n - 1 - i) / (n - 1 - ataque)) ** 2 if n - 1 > ataque else 0.0
+            queda = corpo - 1 - ataque
+            envelopes[i] = ((corpo - 1 - i) / queda) ** 2 if queda > 0 else 0.0
         ondas[i] = sum(peso * math.sin(passo * i) for passo, peso in passos)
+    if cauda and n > corpo:
+        # a cauda sobe em 20 ms e cai ao quadrado até zero; o fim do corpo já é zero, sem estalo
+        sobe = max(1, min(cauda - 1, round(taxa * CAUDA_SOBE_MS / 1000)))
+        passo_da_cauda = 2.0 * math.pi * forma.cauda_hz / taxa
+        for j in range(n - corpo):
+            i = corpo + j
+            if j < sobe:
+                envelopes[i] = forma.cauda_peso * j / sobe
+            else:
+                envelopes[i] = forma.cauda_peso * ((n - 1 - i) / (n - 1 - corpo - sobe)) ** 2
+            ondas[i] = math.sin(passo_da_cauda * j)
     return envelopes, ondas
+
+
+#: A cauda do Eco sobe em tantos ms (a pancada e o eco se separam).
+CAUDA_SOBE_MS = 20
 
 
 def escolha_valida(valor: object) -> str | None:
@@ -160,7 +203,7 @@ def forma_do_estilo(estilo: object) -> str:
 def forma_que_vale(escolha: object, estilo: object, economia: bool = False) -> str | None:
     """A forma que toca de verdade, ou ``None`` quando este controle não toca.
 
-    ``economia`` é a Bateria longa: Guarda e Aparo viram o Toque, e o Som no corpo cala.
+    ``economia`` é a Bateria longa: Guarda, Aparo e Eco viram o Toque, e as contínuas calam.
     """
     chave = escolha_valida(escolha)
     if chave == SEM_EFEITO:
@@ -170,7 +213,7 @@ def forma_que_vale(escolha: object, estilo: object, economia: bool = False) -> s
         if chave == SEM_EFEITO:  # o estilo que não toca nada (o Retrô)
             return None
     if economia and chave in FORMAS_LONGAS:
-        return None if chave == SOM_NO_CORPO else TOQUE
+        return None if chave in CONTINUAS else TOQUE
     return chave
 
 
@@ -232,21 +275,159 @@ class FiltroDoCorpo:
         return saida
 
 
+# --- O Grão e o Motor de época: as contínuas que o estilo pede -----------------------------
+
+#: O Grão: rajadas de 6 ms de um seno de 180 a 260 Hz, com 12 a 38 ms de silêncio entre uma e
+#: outra (uns 32 grãos por segundo), na amplitude de 0,35 a 0,6 (abaixo do teto do corpo).
+GRAO_MS = 6
+GRAO_FOLGA_MIN_MS = 12
+GRAO_FOLGA_VARIA_MS = 26
+GRAO_HZ = (180, 200, 220, 240, 260)
+GRAO_AMPLITUDES = (0.35, 0.48, 0.6)
+_SEMENTE_DO_GRAO = 20_101_920
+
+#: O Motor de época: um zumbido grosso de 30 a 50 Hz que SOBE devagar (arranque de 120 ms) e
+#: ARRASTA ao parar (250 ms), no teto do corpo. A frequência segue a força do rumble do jogo.
+EPOCA_HZ_MIN = 30.0
+EPOCA_HZ_MAX = 50.0
+EPOCA_ARRANQUE_S = 0.120
+EPOCA_PARADA_S = 0.250
+_EPOCA_HARMONICA = 0.18
+
+
+@functools.lru_cache(maxsize=4)
+def _graos_prontos(taxa: int) -> tuple[array[float], ...]:
+    """Os grãos feitos: cada um é um seno com janela de Hann; a conta se faz uma vez por taxa."""
+    n = max(4, round(taxa * GRAO_MS / 1000))
+    prontos = []
+    for hz in GRAO_HZ:
+        for pico in GRAO_AMPLITUDES:
+            passo = 2.0 * math.pi * hz / taxa
+            prontos.append(array("f", [
+                pico * (0.5 - 0.5 * math.cos(2.0 * math.pi * i / (n - 1))) * math.sin(passo * i)
+                for i in range(n)]))
+    return tuple(prontos)
+
+
+class GeradorDoGrao:
+    """Os grãos finos e rápidos, sem parar: sempre os mesmos para a mesma semente.
+
+    O sorteio é um congruencial (sem ``random``): o que se ouve é função da semente e de quantas
+    amostras já saíram, e nenhum grão passa do teto do corpo.
+    """
+
+    def __init__(self, taxa: int = TAXA, semente: int = _SEMENTE_DO_GRAO) -> None:
+        self.taxa = taxa
+        self._estado = (semente % 2_147_483_646) + 1
+        self._graos = _graos_prontos(taxa)
+        self._resto: array[float] = array("f")
+
+    def _sortear(self) -> int:
+        self._estado = (self._estado * 48_271) % 2_147_483_647
+        return self._estado
+
+    def gerar(self, n: int) -> array[float]:
+        """As próximas ``n`` amostras (mono)."""
+        while len(self._resto) < n:
+            sorteio = self._sortear()
+            self._resto.extend(self._graos[sorteio % len(self._graos)])
+            folga_ms = GRAO_FOLGA_MIN_MS + (sorteio >> 8) % GRAO_FOLGA_VARIA_MS
+            self._resto.extend(array("f", bytes(4 * round(self.taxa * folga_ms / 1000))))
+        saida = self._resto[:n]
+        self._resto = self._resto[n:]
+        return saida
+
+
+class GeradorDoMotorDeEpoca:
+    """O zumbido do motor de peso: segue o nível do rumble do jogo, subindo e arrastando.
+
+    ``gerar(n, nivel)`` dá ``n`` amostras com o alvo ``nivel`` (0 a 1, a força do rumble do jogo).
+    A amplitude anda até o alvo num polo só, mais devagar na subida que no corpo do toque e mais
+    devagar ainda na descida; a fase não reinicia entre um pedaço e outro. Com ``nivel`` zero e a
+    amplitude já no fundo, o pedaço sai todo em silêncio.
+    """
+
+    def __init__(self, taxa: int = TAXA) -> None:
+        self.taxa = taxa
+        self._amplitude = 0.0
+        self._fase = 0.0
+
+    @property
+    def amplitude(self) -> float:
+        return self._amplitude
+
+    @property
+    def calado(self) -> bool:
+        """A amplitude já arrastou até o silêncio."""
+        return self._amplitude < 0.005
+
+    def gerar(self, n: int, nivel: float) -> array[float]:
+        if n <= 0:
+            return array("f")
+        alvo = max(0.0, min(1.0, float(nivel)))
+        de = self._amplitude
+        tau = EPOCA_ARRANQUE_S if alvo > de else EPOCA_PARADA_S
+        ate = alvo + (de - alvo) * math.exp(-(n / self.taxa) / tau)
+        if ate < 0.005 and alvo == 0.0:
+            ate = 0.0
+        hz = EPOCA_HZ_MIN + (EPOCA_HZ_MAX - EPOCA_HZ_MIN) * max(de, ate)
+        passo = 2.0 * math.pi * hz / self.taxa
+        fase, degrau = self._fase, (ate - de) / n
+        saida = array("f", [
+            TETO_DO_CORPO * (de + degrau * i)
+            * ((1.0 - _EPOCA_HARMONICA) * math.sin(fase + passo * i)
+               + _EPOCA_HARMONICA * math.sin(2.0 * (fase + passo * i)))
+            for i in range(n)])
+        self._fase = (fase + passo * n) % (2.0 * math.pi)
+        self._amplitude = ate
+        return saida
+
+
+def _volta_da_continua(
+    chave: str, energia: float, duracao_ms: int | None, taxa: int
+) -> array[float]:
+    """Um trecho finito de uma contínua, para o teste: sempre o mesmo, e em zero no fim.
+
+    O Motor de época sobe com a ``energia`` como nível do rumble por 70 % do trecho e arrasta no
+    resto; o Grão é a sequência dos grãos. O fim tem 3 ms de descida até zero.
+    """
+    n = max(2, round(taxa * max(1, int(duracao_ms or 200)) / 1000))
+    forca = max(0.0, min(1.0, float(energia)))
+    if chave == GRAO:
+        brutas = GeradorDoGrao(taxa).gerar(n)
+        saida = array("f", [forca * x for x in brutas])
+    else:
+        gerador = GeradorDoMotorDeEpoca(taxa)
+        corte = max(1, round(n * 0.7))
+        saida = gerador.gerar(corte, forca)
+        saida.extend(gerador.gerar(n - corte, 0.0))
+    descida = min(n, max(2, round(taxa * 0.003)))
+    for i in range(descida):
+        saida[n - 1 - i] *= i / descida
+    return saida
+
+
 __all__ = [
     "APARO",
+    "CONTINUAS",
     "CORTE_ALTO_HZ",
     "CORTE_BAIXO_HZ",
     "DICAS",
+    "DICAS_DO_ESTILO",
     "DO_ESTILO",
+    "ECO",
     "ESCOLHAS",
     "ESTALO",
     "FORMAS",
     "FORMAS_LONGAS",
     "GANHO_DO_CORPO",
+    "GRAO",
     "GUARDA",
     "IMPACTO",
+    "MOTOR_DE_EPOCA",
     "POR_ESTILO",
     "ROTULOS",
+    "ROTULOS_DO_ESTILO",
     "SEM_EFEITO",
     "SOM_NO_CORPO",
     "TAXA",
@@ -254,6 +435,8 @@ __all__ = [
     "TOQUE",
     "FiltroDoCorpo",
     "Forma",
+    "GeradorDoGrao",
+    "GeradorDoMotorDeEpoca",
     "amostras",
     "escolha_valida",
     "forma_do_estilo",

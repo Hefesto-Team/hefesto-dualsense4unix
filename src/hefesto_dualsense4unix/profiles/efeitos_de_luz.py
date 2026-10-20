@@ -40,6 +40,18 @@ VOLTA_MINIMA_DO_ARCO_IRIS_S = 8.0
 DEFASAGEM_DO_ARCO_IRIS = 0.25
 #: Os efeitos cujo desenho é ENTRE os controles (a defasagem do arco-íris, o mesmo ângulo da
 #: Maré): o laço os conta num relógio só, o da mesa, e não do instante em que cada um entrou.
+#: O Acende da Corrida (20/10/2026): a barra segue o curso do gatilho, do piso à cor cheia, e o
+#: brilho nunca anda mais depressa que três vaivéns (subir e descer) por segundo.
+PISO_DO_ACENDE = 0.25
+VAIVENS_DO_ACENDE_POR_S = 3.0
+TETO_DO_ACENDE_POR_S = 2.0 * (1.0 - PISO_DO_ACENDE) * VAIVENS_DO_ACENDE_POR_S
+MEIO_VAIVEM_DO_ACENDE_S = 1.0 / (2.0 * VAIVENS_DO_ACENDE_POR_S)
+#: A Bateria da Maratona: abaixo disto, fora da carga, a barra respira (5 s por respiração, o
+#: ritmo 2) e nunca pisca; acima, segue fixa.
+LIMIAR_DE_BATERIA_PCT = 30
+RITMO_DA_BATERIA = 2
+ESTADOS_DE_CARGA_EM_DIA = frozenset({"carregando", "cheio"})
+
 BASES_DO_RELOGIO_COMUM = frozenset({"arco-iris", "mare"})  # (noqa-acento) chave ASCII
 
 _RITMO_MAXIMO = 10
@@ -201,6 +213,50 @@ def amplitude_da_mare(cores: Sequence[RGB]) -> float:
     return 1.0
 
 
+def brilho_do_acende(curso: float) -> float:
+    """O brilho da barra para um curso do gatilho de 0 a 1: do piso à cor cheia."""
+    return PISO_DO_ACENDE + (1.0 - PISO_DO_ACENDE) * max(0.0, min(1.0, curso))
+
+
+class BrilhoDoAcende:
+    """O brilho do Acende de UM controle, com o teto de três vaivéns por segundo.
+
+    Dois freios, e os dois são precisos: o brilho anda no máximo ``TETO_DO_ACENDE_POR_S`` por
+    segundo, e só VIRA de sentido (de subir para descer, ou o contrário) depois de meio vaivém.
+    Sem o segundo, um dedo que bate o gatilho a cada tique faria o brilho tremer pequeno e
+    rápido, dezenas de vezes por segundo, e o teto de brilho por segundo não o seguraria.
+    """
+
+    def __init__(self, curso: float = 0.0) -> None:
+        self.brilho = brilho_do_acende(curso)
+        self._sentido = 0
+        self._virou_em = float("-inf")
+        self._visto_em: float | None = None
+
+    def andar(self, curso: float, agora: float) -> float:
+        """O brilho de agora, a caminho do alvo do curso (0 a 1)."""
+        decorrido = 0.0 if self._visto_em is None else max(0.0, agora - self._visto_em)
+        self._visto_em = agora
+        alvo = brilho_do_acende(curso)
+        sentido = (alvo > self.brilho) - (alvo < self.brilho)
+        if sentido == 0:
+            return self.brilho
+        if sentido != self._sentido:
+            if self._sentido and agora - self._virou_em < MEIO_VAIVEM_DO_ACENDE_S:
+                return self.brilho  # virar agora seria passar do teto: segura o brilho
+            self._sentido, self._virou_em = sentido, agora
+        passo = TETO_DO_ACENDE_POR_S * decorrido
+        self.brilho = min(alvo, self.brilho + passo) if sentido > 0 else max(
+            alvo, self.brilho - passo)
+        return self.brilho
+
+
+def bateria_acabando(pct: object, estado: object) -> bool:
+    """A carga está abaixo do limiar e o controle não está no cabo?"""
+    return (isinstance(pct, int) and 0 < pct < LIMIAR_DE_BATERIA_PCT
+            and estado not in ESTADOS_DE_CARGA_EM_DIA)
+
+
 def matiz_do_arco_iris(t: float, ritmo: int, posicao: int = 0) -> float:
     """O matiz do arco-íris em ``t``, com um quarto de volta de defasagem por controle."""
     return (t / periodo_do_arco_iris_s(ritmo) + DEFASAGEM_DO_ARCO_IRIS * posicao) % 1.0
@@ -225,6 +281,8 @@ def cor_no_instante(
         r, g, b = colorsys.hsv_to_rgb(matiz_do_arco_iris(t, efeito.ritmo, posicao), 1.0, 1.0)
         return (_inteiro(r * 255), _inteiro(g * 255), _inteiro(b * 255))
     cores = efeito.cores or ((255, 255, 255),)
+    if efeito.base == "fixa":  # a cor parada: o Acende varia o brilho, não a cor
+        return cores[0]
     if efeito.base == "chama":
         brilho = brilho_da_chama(t, troca_da_chama_s(efeito.ritmo), semente)
         return _escalar(cores[0], brilho)
@@ -253,13 +311,23 @@ __all__ = [
     "BASES_DO_RELOGIO_COMUM",
     "BORDA_DO_PISCAR_S",
     "DEFASAGEM_DO_ARCO_IRIS",
+    "ESTADOS_DE_CARGA_EM_DIA",
+    "LIMIAR_DE_BATERIA_PCT",
+    "MEIO_VAIVEM_DO_ACENDE_S",
     "PISO_DA_BATIDA",
+    "PISO_DO_ACENDE",
     "PISO_DO_PISCAR",
     "PISO_DO_RESPIRAR",
+    "RITMO_DA_BATERIA",
+    "TETO_DO_ACENDE_POR_S",
     "TETO_DO_PISCAR_HZ",
+    "VAIVENS_DO_ACENDE_POR_S",
+    "BrilhoDoAcende",
     "amplitude_da_mare",
+    "bateria_acabando",
     "brilho_da_batida",
     "brilho_da_chama",
+    "brilho_do_acende",
     "brilho_do_piscar",
     "brilho_do_respirar",
     "cor_no_instante",

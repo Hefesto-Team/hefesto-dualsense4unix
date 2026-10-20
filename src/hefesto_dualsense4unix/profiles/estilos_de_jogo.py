@@ -105,8 +105,10 @@ RESPIRA_POR_SEGUNDO = 0.2  # [RESPIRO] 12 por minuto
 TETO_DO_PISCAR = 3.0  # [WCAG] 2.3.1
 DURACAO_DE_SEMPRE_MS = 200  # [MDN]
 
-#: «batida»: a luz sobe na borda do som do jogo, não no tiro (o Ritmo, CATALOGO §3 «Na batida»)
-LuzQueReage = Literal["parada", "respira", "pisca", "batida"]
+#: «batida»: a luz sobe na borda do som do jogo, não no tiro (o Ritmo, CATALOGO §3 «Na batida»);
+#: «acende»: o brilho segue o curso do gatilho (a Corrida); «bateria»: respira bem devagar quando a
+#: carga acaba e nunca pisca (a Maratona). As duas últimas são do laço da luz (`luz_animada`).
+LuzQueReage = Literal["parada", "respira", "pisca", "batida", "acende", "bateria"]
 
 
 @dataclass(frozen=True)
@@ -244,10 +246,10 @@ ESTILOS: tuple[Estilo, ...] = (
     # o corpo da Corrida e da Simulação é o motor e a pista, não o tiro (CATALOGO §4). O ronco do
     # motor está no acelerador e no corpo (o Som no corpo): decisão de 19/10/2026, que revoga
     # a regra «nenhum contínuo como padrão de estilo».
-    # bloco C: Acende no gatilho (por ora a luz fixa, sem base)
+    # A luz acende com o curso do gatilho (o acelerador e o freio aparecem na barra).
     Estilo("corrida", "Corrida", "MultiPositionVibration", "balanceado", (255, 140, 0), 1.0,
            "o acelerador ronca e o freio pulsa como o ABS; o corpo do controle sente o motor",
-           Receita(toque_por_tiro=False, lado_do_som=False),
+           Receita(toque_por_tiro=False, lado_do_som=False, luz="acende"),
            Lado("MultiPositionVibration", "motor-no-acelerador"),
            Lado("Resistance", "freio-abs-que-pulsa")),
     # A Ação: golpe pesado no R2, peso de mira no L2. O arco, que era um estilo, é uma escolha
@@ -267,12 +269,12 @@ ESTILOS: tuple[Estilo, ...] = (
            Receita(),
            Lado("Resistance", "golpe-carregado"), Lado("Resistance", "pique-que-cansa")),
     # a luz fixa a 0,4 não disputa a leitura (CATALOGO §3)
-    # bloco C: Clique · mouse (por ora o Golpe · fraco, `golpe-leve`, nos dois lados)
+    # Os dois gatilhos são o botão do mouse: o Clique · mouse, raso e seco, nos dois lados.
     Estilo("point_and_click", "Point and click", "Weapon", "economia", (0, 200, 210), 0.4,
            "os gatilhos são os botões do mouse e respondem como um; vibração baixa não distrai",
            # a Navegação é escolha do usuário (ESCOLHAS de 08/10); o toque e o lado também
            Receita(modo="desktop", molde="so_mouse"),
-           Lado("Weapon", "golpe-leve"), Lado("Weapon", "golpe-leve")),
+           Lado("Weapon", "clique-mouse"), Lado("Weapon", "clique-mouse")),
     Estilo("visual_novel", "Visual novel", "Off", "economia", (0, 200, 210), 0.5,
            "o texto é longo e a luz não disputa a leitura; os ombros voltam, pulam e abrem o menu",
            # a família do Point and click, a meia luz e a maré lenta; o gatilho é clique, sem efeito
@@ -295,23 +297,23 @@ ESTILOS: tuple[Estilo, ...] = (
            _respira(),
            Lado("Weapon", "golpe-pesado"), Lado("Weapon", "golpe-leve")),
     # O combate de estamina dos soulslike: golpe pesado que custa e ecoa, escudo que cansa o dedo.
-    # bloco C: Eco (por ora o Impacto, na háptica)
+    # O Eco (o Impacto com cauda grave) está na háptica do estilo (`formas_de_haptica.POR_ESTILO`).
     Estilo("souls", "Souls/RPG", "Weapon", "max", (200, 120, 30), 0.6,
            "cada golpe pesado custa e ecoa, e segurar o escudo cansa o dedo",
            Receita(luz="respira", luz_por_segundo=RESPIRA_POR_SEGUNDO,
                    luz_base="chama", luz_ritmo=5),
            Lado("Weapon", "golpe-pesado"), Lado("MultiPositionFeedback", "escudo-que-aguenta")),
     # Tudo é baixo e preciso: o clique é discreto e prender a mira tem respiração.
-    # bloco C: Carga · fôlego (por ora o Peso · leve, `mira-firme`, no L2)
+    # O L2 prende a respiração (Carga · fôlego preso) e, ao soltar, os motores dão a Onda.
     Estilo("furtivo", "Furtivo", "Weapon", "economia", (70, 90, 160), 0.3,
            "tudo é baixo e preciso; o clique é discreto e prender a mira tem respiração",
            Receita(),
-           Lado("Weapon", "golpe-leve"), Lado("Resistance", "mira-firme")),
-    # bloco C: Bateria (por ora a luz fixa a 25%, sem base)
+           Lado("Weapon", "golpe-leve"), Lado("Resistance", "carga-folego")),
+    # A luz fica fixa a 25% e, quando a carga acaba, respira bem devagar (nunca pisca).
     Estilo("maratona", "Maratona", "Off", "economia", (120, 120, 140), 0.25,
            "a sessão é longa: tudo que gasta bateria cai ao mínimo — mas a luz "
            "NÃO apaga, porque apagada os quatro ficariam iguais",
-           Receita()),
+           Receita(luz="bateria", luz_por_segundo=RESPIRA_POR_SEGUNDO)),
     # a luz que gira é a alegria do gênero (a base «arco-íris»)
     Estilo("plataforma", "Plataforma", "SlopeFeedback", "balanceado", (255, 210, 40), 1.0,
            "agarrar e carregar ganham corpo no gatilho; a vibração marca o impacto",
@@ -328,7 +330,7 @@ ESTILOS: tuple[Estilo, ...] = (
            Lado("Weapon", "golpe-leve"), Lado("Weapon", "golpe-leve")),
     # O manche endurece com o curso (a Rampa de força) e o chão passa pelo L2 e pelo corpo
     # (decisão de 19/10/2026).
-    # bloco C: Grão (por ora o Som no corpo, na háptica)
+    # O Grão (grãos finos) está na háptica do estilo (`formas_de_haptica.POR_ESTILO`).
     Estilo("simulacao", "Simulação/Voo", "SlopeFeedback", "economia", (90, 180, 255), 0.6,
            "o manche endurece com o curso e a pista ou a turbulência passam pelo L2 e pelo corpo",
            Receita(toque_por_tiro=False, lado_do_som=False, luz_base="mare", luz_ritmo=10),

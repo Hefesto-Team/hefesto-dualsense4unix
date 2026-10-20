@@ -32,7 +32,7 @@ OFF = ("Off", None)
 
 #: A tabela S da página, na língua do código: (R2, L2, háptica, motores, base da luz, brilho).
 #: `None` na imersão é o acionamento de partida do modo (o FPS tem a Metralhadora, a Simulação a
-#: Rampa). Onde a página pede efeito novo (bloco C), vale o mais próximo que já existe.
+#: Rampa). Os efeitos novos do bloco C (20/10/2026) estão na tabela com o nome deles.
 TABELA: dict[str, tuple[Any, Any, str, str | None, str | None, float]] = {
     "fps": (("Machine", None), ("Resistance", "mira-firme"), "toque", "coice", "respirar", 1.0),
     "acao": (("Weapon", "golpe-pesado"), ("Resistance", "mira-firme"),  # noqa-acento: chave
@@ -40,8 +40,8 @@ TABELA: dict[str, tuple[Any, Any, str, str | None, str | None, float]] = {
     "luta": (("Weapon", "golpe-pesado"), ("Weapon", "golpe-leve"),
              "impacto", "pancada_do_lado", "respirar", 1.0),
     "souls": (("Weapon", "golpe-pesado"), ("MultiPositionFeedback", "escudo-que-aguenta"),
-              "impacto", "tranco", "chama", 0.6),
-    "furtivo": (("Weapon", "golpe-leve"), ("Resistance", "mira-firme"),
+              "eco", "tranco", "chama", 0.6),
+    "furtivo": (("Weapon", "golpe-leve"), ("Resistance", "carga-folego"),
                 "estalo", "onda", None, 0.3),
     "aventura": (("Bow", "corda-que-estica"), ("Resistance", "mira-firme"),
                  "toque", "onda", "chama", 1.0),
@@ -50,28 +50,28 @@ TABELA: dict[str, tuple[Any, Any, str, str | None, str | None, float]] = {
     "corrida": (("MultiPositionVibration", "motor-no-acelerador"),
                 ("Resistance", "freio-abs-que-pulsa"), "som_no_corpo", None, None, 1.0),
     "simulacao": (("SlopeFeedback", None), ("Galloping", "terreno-que-muda"),
-                  "som_no_corpo", None, "mare", 0.6),
+                  "grao", None, "mare", 0.6),
     "esportes": (("Resistance", "golpe-carregado"), ("Resistance", "pique-que-cansa"),
                  "impacto", "tranco", None, 1.0),
     "plataforma": (("SlopeFeedback", "agarrar"), ("MultiPositionVibration", "energia-que-cresce"),
                    "estalo", None, "arco-iris", 1.0),
     "ritmo": (("Weapon", "golpe-leve"), ("Weapon", "golpe-leve"), "estalo", None, None, 1.0),
-    "retro": (OFF, OFF, "sem_efeito", None, None, 1.0),
+    "retro": (OFF, OFF, "motor_de_epoca", None, None, 1.0),
     "maratona": (OFF, OFF, "toque", None, None, 0.25),
-    "point_and_click": (("Weapon", "golpe-leve"), ("Weapon", "golpe-leve"),
+    "point_and_click": (("Weapon", "clique-mouse"), ("Weapon", "clique-mouse"),
                         "toque", None, None, 0.4),
     "visual_novel": (OFF, OFF, "toque", None, "mare", 0.5),
 }
 
-#: A «frente» da página, em imersões que existem (as três de efeito novo — Golpe · falha,
-#: Golpe · aparo e Travar · esgotado — ficam para o bloco C).
+#: A «frente» da página, em imersões que existem (com as três do bloco C de 20/10/2026: Golpe ·
+#: falha, Golpe · aparo e Travar · esgotado).
 FRENTE: dict[str, set[str]] = {
     "fps": {"ferrolho-que-volta", "rajada-que-sobe-sozinha", "recuo-pesado", "clique-no-meio",
             "trava-seca"},
     "acao": {"golpe-leve", "golpe-carregado", "corda-que-estica", "energia-que-cresce",  # noqa-acento: chave
              "escudo-que-aguenta"},
-    "luta": {"golpe-carregado", "ferrolho-que-volta"},
-    "souls": {"golpe-carregado", "pique-que-cansa"},
+    "luta": {"golpe-carregado", "golpe-falha", "ferrolho-que-volta"},
+    "souls": {"golpe-aparo", "golpe-carregado", "pique-que-cansa", "travar-esgotado"},
     "furtivo": {"flecha-que-escapa", "clique-no-meio", "mira-firme"},
     "aventura": {"agarrar", "flecha-que-escapa", "besta", "porta-emperrada", "galope-no-chao"},
     "terror": {"trava-seca", "porta-emperrada", "golpe-pesado", "batida-do-coracao"},
@@ -227,16 +227,20 @@ def test_o_motor_do_tato_liga_o_que_a_receita_do_estilo_pede(chave: str) -> None
     """Régua 7: o estilo sozinho, sem escolha nenhuma por controle, liga o contínuo e os motores.
 
     A tabela diz o que o estilo pede; aqui é o motor do tato que tem de acender: o Som no corpo
-    da Corrida e da Simulação, o padrão dos motores e a Pancada do lado da Luta.
+    da Corrida, o Grão da Simulação, o Motor de época do Retrô, o padrão dos motores e a Pancada
+    do lado da Luta.
 
-    MORDIDA: tire `som_no_corpo_escolhido`, `padroes_escolhidos` ou `pancada_escolhida` do
-    `receita_do_estilo` e isto reprova (a tabela da régua 1 seguiria verde).
+    MORDIDA: tire `som_no_corpo_escolhido`, `grao_escolhido`, `motor_de_epoca_escolhido`,
+    `padroes_escolhidos` ou `pancada_escolhida` do `receita_do_estilo` e isto reprova (a tabela da
+    régua 1 seguiria verde).
     """
     _r2, _l2, forma, motores, _base, _brilho = TABELA[chave]
     from types import SimpleNamespace
 
     receita = tv.receita_do_perfil(SimpleNamespace(estilo=chave))
     assert receita.som_no_corpo_escolhido == (forma == fh.SOM_NO_CORPO), chave
+    assert receita.grao_escolhido == (forma == fh.GRAO), chave
+    assert receita.motor_de_epoca_escolhido == (forma == fh.MOTOR_DE_EPOCA), chave
     assert receita.padroes_escolhidos == (motores is not None), chave
     assert receita.pancada_escolhida == (motores == "pancada_do_lado"), chave
     vale = fh.forma_que_vale(None, chave)

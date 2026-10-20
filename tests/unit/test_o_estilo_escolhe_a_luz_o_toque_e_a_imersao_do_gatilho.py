@@ -101,9 +101,9 @@ FORMA_DO_ESTILO = {
     "luta": fh.IMPACTO, "esportes": fh.IMPACTO, "ritmo": fh.ESTALO,
     "fps": fh.TOQUE, "acao": fh.IMPACTO, "arco": fh.IMPACTO,  # noqa-acento: chave
     "aventura": fh.TOQUE, "plataforma": fh.ESTALO, "terror": fh.TOQUE,
-    "souls": fh.IMPACTO, "furtivo": fh.ESTALO,  # bloco C: o Eco da Souls
-    "corrida": fh.SOM_NO_CORPO, "simulacao": fh.SOM_NO_CORPO,  # o motor e o chão no corpo
-    "retro": None,  # o console original não tinha háptica; o Motor de época é do bloco C
+    "souls": fh.ECO, "furtivo": fh.ESTALO,  # o Eco da Souls (bloco C, 20/10/2026)
+    "corrida": fh.SOM_NO_CORPO, "simulacao": fh.GRAO,  # o motor no corpo; o chão em grãos
+    "retro": fh.MOTOR_DE_EPOCA,  # o zumbido do motor de peso, só quando o jogo vibra
     # A resposta de 08/10 («Toque por tiro e lado do som, como nos outros») vence o «Sem efeito»
     # que a tabela do catálogo de 15/10 dá ao Point and click e à Maratona.
     "point_and_click": fh.TOQUE, "maratona": fh.TOQUE,
@@ -126,13 +126,15 @@ def test_todo_estilo_de_fabrica_tem_a_forma_na_tabela() -> None:
     assert not fora, fora
 
 
-def test_so_a_corrida_e_a_simulacao_tem_forma_longa_de_estilo() -> None:
-    """MORDIDA: a Guarda, o Aparo ou o Som no corpo num terceiro estilo reprova aqui.
+def test_so_cinco_estilos_tem_forma_longa_de_estilo() -> None:
+    """MORDIDA: a Guarda, o Aparo ou o Som no corpo num sexto estilo reprova aqui.
 
-    D-1910-O-CONTINUO-VOLTA-A-CORRIDA-E-A-SIMULACAO: o motor e o chão passam pelo corpo.
+    D-1910-O-CONTINUO-VOLTA-A-CORRIDA-E-A-SIMULACAO (o motor e o chão passam pelo corpo) e o
+    bloco C de 20/10/2026: o Eco da Souls, o Grão da Simulação e o Motor de época do Retrô.
     """
     longas = {e: f for e, f in fh.POR_ESTILO.items() if f in fh.FORMAS_LONGAS}
-    assert longas == {"corrida": fh.SOM_NO_CORPO, "simulacao": fh.SOM_NO_CORPO}
+    assert longas == {"corrida": fh.SOM_NO_CORPO, "simulacao": fh.GRAO, "souls": fh.ECO,
+                      "retro": fh.MOTOR_DE_EPOCA}
     assert set(fh.POR_ESTILO) <= set(ej.POR_CHAVE)
 
 
