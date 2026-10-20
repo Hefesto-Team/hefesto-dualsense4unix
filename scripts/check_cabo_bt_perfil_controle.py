@@ -296,6 +296,9 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     "mira-inverter": ("movimento.giroscopio",),
     "calibrar-comecar": ("movimento.giroscopio",),
     "mic-existe": ("audio.microfone",),
+    # A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01: o trilho da 03 escala o
+    # efeito dos dois gatilhos, pelo byte do firmware até 100% e pelas forças do bloco acima
+    "intensidade-do-gatilho": ("gatilho.esquerdo.adaptativo", "gatilho.direito.adaptativo"),
 }
 
 #: aplica na troca de perfil é `ProfileManager._aplicar_ganho_do_mic`. O campo
@@ -333,6 +336,8 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     "mira-tremor": ("movimento", "movimento"),
     "mira-segurar": ("movimento", "movimento"),
     "mira-inverter": ("movimento", "movimento"),
+    # só por controle: `controllers[uniq].triggers.intensidade` (o global não tem trilho)
+    "intensidade-do-gatilho": (None, "triggers"),
 }
 
 
