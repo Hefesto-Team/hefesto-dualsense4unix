@@ -72,6 +72,14 @@ CAMPOS_DA_TRIAGEM = ("titulo", "a_pergunta", "escolha", "onde_mora",
                      "recomendacao", "caminhos")
 
 COLISOES_DECLARADAS = {
+    "D-1910-A-EXTENSAO-DO-GIT-CONFERE-A-CADA-SEIS-HORAS": (
+        "É de PRODUTO: a decisão diz de quanto em quanto tempo o serviço confere se a "
+        "extensão instalada pelo git tem versão nova, e `test_a_extensao_instalada_pelo_git_"
+        "se_atualiza_sozinha.py::test_o_intervalo_de_fabrica_e_de_seis_horas_e_o_piso_de_um_"
+        "minuto` mede o intervalo no supervisor. A triagem a chama de processo porque «commit» "
+        "e «versão» são o assunto da própria decisão (o que a extensão baixa), e «extensão» e "
+        "«serviço» não estão no vocabulário de produto (20/10/2026)."
+    ),
     "D-0609-GTK-LEVA-INTEIRA": (
         "É de PRODUTO: a decisão tira a janela GTK inteira do disco, e quinze "
         "funções de teste medem o que sobrou — entre elas "

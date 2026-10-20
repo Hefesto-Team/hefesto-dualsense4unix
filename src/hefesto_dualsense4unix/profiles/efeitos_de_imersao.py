@@ -422,12 +422,3 @@ def _numeros_de_ontem() -> dict[tuple[str, tuple[int, ...]], Imersao]:
         if modo in imersao.ajustes:
             mapa.setdefault((modo, tuple(params)), imersao)
     return mapa
-
-
-def a_da_frente_com_tempo(modo: str, estilo: str) -> Imersao | None:
-    """No automático: a primeira imersão que o estilo põe na frente e que tem momento no modo."""
-    estilo = _estilo_de_hoje(estilo)
-    for imersao in imersoes_do_acionamento(modo, estilo):
-        if estilo in imersao.na_frente and momentos_no_modo(imersao, modo):
-            return imersao
-    return None

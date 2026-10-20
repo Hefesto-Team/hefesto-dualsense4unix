@@ -291,12 +291,6 @@ def pastas_que_existem(lancador: str, lar: Path | None = None, *,
                  if (pasta := _pasta_da_casa(lancador, config, dados)) is not None)
 
 
-def pasta_do_flatpak(lancador: str, lar: Path | None = None) -> Path | None:
-    """A pasta de configuração da casa FLATPAK deste lançador, pela mesma regra."""
-    casas = _casas(lancador, _onde(lar))
-    return _pasta_da_casa(lancador, *casas[0]) if casas else None
-
-
 def _json(caminho: Path) -> object | None:
     """O JSON deste arquivo, ou `None` — e NUNCA levanta."""
     try:
