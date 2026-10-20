@@ -571,12 +571,13 @@ def test_a_tela_grava_ajusta_toca_e_guarda_so_no_controle(
 
 def test_o_servico_que_cai_ao_parar_nao_leva_embora_o_que_a_tela_mostrava(
         mapa: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    from hefesto_dualsense4unix.interface.pacotes import ponte
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo, ponte
 
     _perfil_no_disco()
     chamadas: list[tuple[str, dict[str, Any]]] = []
     p = _ponte(chamadas)
     monkeypatch.setattr(ponte, "resultado", p.resultado)
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", True)
     ctx = _ctx("p2")
     mapa.mapa_botao(ctx, {"b": "cross"}, None)
     mapa.mapa_sequencia_gravar(ctx, {}, p)
@@ -591,6 +592,71 @@ def test_o_servico_que_cai_ao_parar_nao_leva_embora_o_que_a_tela_mostrava(
     assert [q["botao"] for q in seq["passos"]] == ["cross", "circle", "r1"]
     assert mapa._estado().get("gravando") is None
     assert mapa._estado()["edicoes"]["cross"][0] == "sequencia", "a linha não guardou o rascunho"
+
+
+def test_o_tique_nao_espera_o_servico_enquanto_grava(
+        mapa: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """O tique da janela corre no laço do GTK: a pergunta «o que você ouviu?» vai a um fio."""
+    import threading
+
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo, ponte
+
+    _perfil_no_disco()
+    chamadas: list[tuple[str, dict[str, Any]]] = []
+    p = _ponte(chamadas)
+    solta = threading.Event()
+    fios: list[str] = []
+
+    def lento(metodo: str, **params: Any) -> dict[str, Any]:
+        if params.get(ACAO) == "estado":
+            fios.append(threading.current_thread().name)
+            solta.wait(2.0)
+        return p.resultado(metodo, **params)
+
+    monkeypatch.setattr(ponte, "resultado", lento)
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", False)
+    ctx = _ctx("p2")
+    mapa.mapa_botao(ctx, {"b": "cross"}, None)
+    mapa.mapa_sequencia_gravar(ctx, {}, p)
+    try:
+        t0 = time.monotonic()
+        mapa.pacote(ctx)
+        assert time.monotonic() - t0 < 0.5, "o tique esperou o serviço responder"
+        assert threading.current_thread().name not in fios, "o tique perguntou ao serviço"
+    finally:
+        solta.set()
+    prazo = time.monotonic() + 2.0
+    while time.monotonic() < prazo:
+        mapa.pacote(ctx)
+        if mapa._estado()["seq"].get("cross", {}).get("passos"):
+            break
+        time.sleep(0.02)
+    assert [q["botao"] for q in mapa._estado()["seq"]["cross"]["passos"]] == [
+        "cross", "circle", "r1"], "a faixa não recebeu o que o fio trouxe"
+
+
+def test_a_resposta_de_uma_gravacao_antiga_nao_fecha_a_nova(
+        mapa: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    """O fundo guarda a última resposta: a da gravação que acabou («parou») não vale na nova."""
+    from hefesto_dualsense4unix.interface.pacotes import em_fundo, ponte
+
+    _perfil_no_disco()
+    p = _ponte([])
+    monkeypatch.setattr(ponte, "resultado", p.resultado)
+    monkeypatch.setattr(em_fundo, "LER_NA_HORA", False)
+    ctx = _ctx("p2")
+    mapa.mapa_botao(ctx, {"b": "cross"}, None)
+    mapa.mapa_sequencia_gravar(ctx, {}, p)
+    vez_velha = mapa._estado()["vez"]
+    em_fundo._FUNDO[mapa.ESCUTA_EM_FUNDO] = (
+        float("inf"), (vez_velha - 1, {"status": "ok", "gravando": False, "passos": []}))
+    em_fundo._FUNDO_EM_VOO.add(mapa.ESCUTA_EM_FUNDO)
+    try:
+        mapa.pacote(ctx)
+        assert mapa._estado().get("gravando") == "cross", "a resposta antiga fechou a nova"
+    finally:
+        em_fundo._FUNDO_EM_VOO.discard(mapa.ESCUTA_EM_FUNDO)
+        em_fundo._FUNDO.pop(mapa.ESCUTA_EM_FUNDO, None)
 
 
 def test_a_tela_recusa_tocar_sem_ter_gravado(mapa: Any) -> None:

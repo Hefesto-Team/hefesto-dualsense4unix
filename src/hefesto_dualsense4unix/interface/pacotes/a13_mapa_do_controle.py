@@ -32,7 +32,10 @@ alternativa seria a segunda verdade de cada uma, que esta casa persegue.
 """
 from __future__ import annotations
 
+import contextlib
 import html
+import itertools
+import threading
 import time
 from typing import Any, NamedTuple
 
@@ -50,6 +53,7 @@ from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
 from . import Contexto, gesto, perfil, registrar
 from . import a02_controles as a02
 from . import a06_navegacao as a06
+from . import em_fundo as fundo
 
 PAGINA = "mapa-do-controle.html"
 
@@ -578,7 +582,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     """O que o tique escreve na tela: a edição, o botão sob o dedo, a luz e os chips."""
     _VISTO[0] = time.monotonic()
     ativo, itens = _escolhidos(ctx)
-    _largar_se_outro_controle(ctx)
+    _largar_se_outro_controle(ctx, no_tique=True)
     acesas = _acesos(ctx, itens)
     _acompanha_a_gravacao()
     mesa: dict[str, Any] = {**_mesa_da_edicao(ctx), **_linhas(ctx, acesas),
@@ -592,12 +596,18 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     }
 
 
-def _largar_se_outro_controle(ctx: Contexto) -> None:
-    """O «Vale para» mudou de controle: o que não se guardou era do anterior e fica para trás."""
+def _largar_se_outro_controle(ctx: Contexto, *, no_tique: bool = False) -> None:
+    """O «Vale para» mudou de controle: o que não se guardou era do anterior e fica para trás.
+
+    No tique a parada vai a um fio: o tique não espera o serviço.
+    """
     estado = _estado()
     peca = _peca_do_vale_para(ctx)
     if estado.get("peca") != peca:
-        _parar_de_ouvir(estado)
+        if no_tique:
+            _soltar_em_fundo(estado)
+        else:
+            _parar_de_ouvir(estado)
         estado["peca"] = peca
         estado["edicoes"] = {}
         estado["seq"] = {}
@@ -833,39 +843,87 @@ def _guarda_o_rascunho(estado: dict[str, Any], b: str) -> None:
         del estado["edicoes"][b]
 
 
+#: A pergunta do tique ao serviço («o que você ouviu?») corre em fundo, com esta chave.
+ESCUTA_EM_FUNDO = "a13-sequencia-gravar"
+#: Cada gravação ganha a sua vez; a resposta de uma vez anterior não vale para a de agora.
+_VEZES = itertools.count(1)
+#: O fio que pede a parada quando o tique larga a gravação; o «Gravar» seguinte espera por ele.
+_PARANDO: list[threading.Thread | None] = [None]
+
+
+def _ouvido_agora(vez: int) -> tuple[int, Any]:
+    """BLOQUEIA: pergunta ao serviço. Só do fio do ``em_fundo``, nunca do tique."""
+    from . import ponte
+
+    return vez, ponte.resultado("sequencia.gravar", acao="estado")
+
+
 def _acompanha_a_gravacao() -> None:
-    """Enquanto o daemon ouve, o que ele ouviu entra na faixa; se parou sozinho, fecha."""
+    """Enquanto o daemon ouve, o que ele ouviu entra na faixa; se parou sozinho, fecha.
+
+    O tique lê a última resposta que chegou e pede a próxima num fio. Sem resposta desta
+    gravação (o serviço lento ou fora), a faixa fica como estava e o «Parar de gravar» fecha.
+    """
     estado = _estado()
     b = estado.get("gravando")
     if b is None:
         return
-    from . import ponte
-
-    try:
-        r = ponte.resultado("sequencia.gravar", acao="estado")
-    except Exception:
-        estado["gravando"] = None
+    vez = int(estado.get("vez") or 0)
+    lida = fundo.em_fundo(ESCUTA_EM_FUNDO, lambda: _ouvido_agora(vez), 0.0)
+    if not (isinstance(lida, tuple) and lida[0] == vez and isinstance(lida[1], dict)):
         return
-    if not isinstance(r, dict):
+    if estado.get("gravando") != b or int(estado.get("vez") or 0) != vez:
         return
+    r = lida[1]
     estado["seq"].setdefault(b, {"passos": [], "jeito": "uma_vez", "ritmo": "gravado"})
     estado["seq"][b]["passos"] = list(r.get("passos") or [])
     if not r.get("gravando"):
-        _parar_de_ouvir(estado)
+        _parar_de_ouvir(estado, ja_parou=True)
 
 
-def _parar_de_ouvir(estado: dict[str, Any]) -> None:
-    """Para a gravação, se há uma, e guarda o que o daemon ouviu."""
+def _soltar_em_fundo(estado: dict[str, Any]) -> None:
+    """Larga a gravação sem esperar: o daemon para num fio, e o que ele ouviu fica para trás."""
+    if estado.get("gravando") is None:
+        return
+    estado["gravando"] = None
+
+    def parar() -> None:
+        from . import ponte
+
+        with contextlib.suppress(Exception):  # sem o serviço, não há quem ouça
+            ponte.resultado("sequencia.gravar", acao="parar")
+
+    fio = threading.Thread(target=parar, name="a13-parar-de-ouvir", daemon=True)
+    _PARANDO[0] = fio
+    fio.start()
+
+
+def _esperar_a_parada() -> None:
+    """A parada que o tique mandou chega ao daemon antes do «Gravar» seguinte."""
+    fio = _PARANDO[0]
+    if fio is not None:
+        fio.join(timeout=1.0)
+        _PARANDO[0] = None
+
+
+def _parar_de_ouvir(estado: dict[str, Any], *, ja_parou: bool = False) -> None:
+    """Para a gravação, se há uma, e guarda o que o daemon ouviu.
+
+    BLOQUEIA quando pergunta: só de gesto. Com ``ja_parou`` (o daemon parou sozinho e o tique
+    já trouxe os passos) não pergunta nada.
+    """
     b = estado.get("gravando")
     if b is None:
         return
     estado["gravando"] = None
-    from . import ponte
+    r: Any = None
+    if not ja_parou:
+        from . import ponte
 
-    try:
-        r = ponte.resultado("sequencia.gravar", acao="parar")
-    except Exception:
-        r = None  # sem o serviço, fica o que o último tique mostrou
+        try:
+            r = ponte.resultado("sequencia.gravar", acao="parar")
+        except Exception:
+            r = None  # sem o serviço, fica o que o último tique mostrou
     seq = estado["seq"].setdefault(b, {"passos": [], "jeito": "uma_vez", "ritmo": "gravado"})
     if isinstance(r, dict):
         seq["passos"] = list(r.get("passos") or [])
@@ -917,10 +975,12 @@ def mapa_sequencia_gravar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str,
         _parar_de_ouvir(estado)
         return _repinta(ctx)
     estado, b = _botao_da_sequencia(ctx, "mapa-sequencia-gravar")
+    _esperar_a_parada()
     r = p.resultado("sequencia.gravar", acao="iniciar", **_quem_ouve(ctx))
     if not isinstance(r, dict) or r.get("status") != "ok":
         raise RuntimeError("o Hefesto não confirmou a gravação: o serviço precisa estar ligado.")
     _rascunho(ctx, estado, b)["passos"] = []
+    estado["vez"] = next(_VEZES)
     estado["gravando"] = b
     _guarda_o_rascunho(estado, b)
     return _repinta(ctx)
