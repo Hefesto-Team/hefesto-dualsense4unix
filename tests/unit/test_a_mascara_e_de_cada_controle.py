@@ -183,7 +183,9 @@ def test_o_chip_sem_controle_recusa_dizendo() -> None:
 
 def test_o_rotulo_sem_motor_recusa_dizendo_o_que_existe() -> None:
     """TRÊS CHIPS DESENHADOS, TRÊS MÁSCARAS DE VERDADE (desde 07/09/2026)."""
-    with pytest.raises(RuntimeError, match=r"Wiimote.*não sabe montar"):
+    with pytest.raises(
+            RuntimeError,
+            match=r"Wiimote.*não é uma máscara que exista.*DualSense, Nintendo Pro, Xbox 360"):
         _clicar(uniq=UNIQ_A, mascara="Wiimote")
 
 
