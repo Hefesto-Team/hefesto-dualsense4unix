@@ -139,7 +139,7 @@ mesma fila de 256 por assinatura. Só vale para a lista fechada de tópicos publ
 A extensão que acompanha o jogo lê `jogo.vibracao` (a vibração de cada controle, acima) e a que faz um controle
 vibrar pede `vibracao.set {uniq, fraco, forte}`: o serviço aplica pelo `rumble.set`, com o teto e a força de
 cada controle, e o jogo tem a vez. Os dois nomes não dizem que aparelho está do outro lado. Quando a conexão
-cai (parada, morta ou desligada), cada controle que o último `vibracao.set` dela deixou acima de zero recebe
+cai (parada, morta ou desligada), cada controle que o último `vibracao.set` da extensão deixou acima de zero recebe
 `fraco: 0, forte: 0`, menos aquele em que o jogo está vibrando: nenhum motor fica preso.
 
 Quem faz CADA controle vibrar (não só o do posto) pede `controles.lista`: os controles ligados agora, cada um
@@ -159,9 +159,9 @@ por `lancador.jogos`. A lista inteira substitui a anterior, até 5000 jogos:
   outro qualquer é recusado com `-32010`, e o manifesto sem `lancador.comandos` não entrega jogo;
 - `janela`: o app-id da janela do jogo, quando a extensão sabe (vazio, se não).
 
-A forma errada volta `-32003`, com a frase. A interface lê a lista pelo IPC dela (o `ipc.sock`):
+A forma errada volta `-32003`, com a frase. A interface lê a lista pelo IPC do serviço (o `ipc.sock`):
 `mods.jogos {mod}` devolve `{mod, jogos}`, a última lista que aquela extensão entregou, e a lista vazia sem
-conexão viva dela. O leitor da biblioteca do lançador mora na extensão, nunca no serviço.
+conexão viva da extensão. O leitor da biblioteca do lançador mora na extensão, nunca no serviço.
 
 A aba 07 pede o `mods.jogos` de cada extensão de lançador ligada e sem leitor, e a extensão vira uma linha
 da lista, ao lado da Steam e do Heroic, com a contagem dos instalados («2 jogos»). Desligada ou
@@ -197,6 +197,11 @@ permissões; o segundo liga. O aviso aceito fica no registro (`aviso_aceito`); a
 volta a pedir o «sim» do ligar, e a atualização sozinha a deixa esperando o «Atualizar». O serviço não abre a
 extensão cujo aviso ainda não teve o «sim». A função `instalar(…, aviso_visto=…)` recusa com
 `AvisoParaVerError` antes de gravar quando o aviso visto é outro.
+
+Cada extensão da casa mora no seu repositório, `Hefesto-Team/hefesto-mod-<nome>`, com o
+`hefesto-mod.json` (o `aviso` dentro), o código, os testes (`python3 -m pytest testes`, só a biblioteca
+padrão e o `pytest`), o `README.md` com o mesmo aviso, a `LICENSE` MIT de Vitória Maria e André Farias e
+o `CHANGELOG.md`. A lista, com o endereço de cada uma, está no [README](../../README.md#extensões).
 
 ## A volta dos acessórios no controle
 
@@ -249,12 +254,12 @@ sem a permissão o manifesto é recusado. A janela os pede ao serviço por dois 
 `ipc.sock`, não esta porta):
 
 - `mods.agora {mod}` devolve o último `acessorios.estado` daquela extensão, `{mod, ligado, nivel, perfil,
-  aparelhos, ajustes}`. Sem conexão viva dela, ou quando a conexão cai, volta o estado vazio (`ligado: false`), e a
+  aparelhos, ajustes}`. Sem conexão viva da extensão, ou quando a conexão cai, volta o estado vazio (`ligado: false`), e a
   coluna mostra cada pedaço vazio, sem número. A janela pergunta no máximo duas vezes por segundo, fora do tique,
   e desenha só os pedaços do `agora`;
 - `mods.parar_tudo {mod}` publica `acessorios.gesto` com `gesto: "para"`, `uniq` e `jogador` nulos e
   `mod: <id>`: só aquela extensão o recebe (as outras com `ler:acessorios.gesto` não), nenhum controle dá o
-  toque de confirmação, e o serviço confere o «parar curto» só dela. Volta `{parado}`, falso quando ela não
+  toque de confirmação, e o serviço confere o «parar curto» só da extensão. Volta `{parado}`, falso quando ela não
   está conectada. Recusa (`-32003`, com a frase) a extensão que não está instalada ou cujo manifesto não declara
   `parar_tudo`.
 

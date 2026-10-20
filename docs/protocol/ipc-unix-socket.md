@@ -98,9 +98,9 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `machine.declare` | `daemon/ipc_handlers.py:4972` (`_handle_machine_declare`) | Grava no `maquina.json` o que o usuário declarou sobre a máquina. | sim |
 | `plugin.list` | `daemon/ipc_handlers.py:5036` (`_handle_plugin_list`) | Lista plugins carregados no daemon. | **não** |
 | `plugin.reload` | `daemon/ipc_handlers.py:5044` (`_handle_plugin_reload`) | Recarrega plugins do disco. | **não** |
-| `mods.agora` | `daemon/ipc_handlers.py:5062` (`_handle_mods_agora`) | A coluna «Agora» da janela de uma extensão: o último ``acessorios.estado`` dela. | **não** |
+| `mods.agora` | `daemon/ipc_handlers.py:5062` (`_handle_mods_agora`) | A coluna «Agora» da janela de uma extensão: o último ``acessorios.estado`` publicado. | **não** |
 | `mods.parar_tudo` | `daemon/ipc_handlers.py:5077` (`_handle_mods_parar_tudo`) | O «Parar tudo» da janela: o gesto ``para`` vai só à extensão ``{mod}``. | **não** |
-| `mods.jogos` | `daemon/ipc_handlers.py:5102` (`_handle_mods_jogos`) | Os jogos da extensão de lançador ``{mod}``: o último ``lancador.jogos`` dela. | **não** |
+| `mods.jogos` | `daemon/ipc_handlers.py:5102` (`_handle_mods_jogos`) | Os jogos da extensão de lançador ``{mod}``: o último ``lancador.jogos`` publicado. | **não** |
 | `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:5410` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |
 | `radio.mover` | `daemon/ipc_handlers.py:5440` (`_handle_radio_mover`) | «Mover» um aparelho para um adaptador, ou o «Conectar» (D8). | sim |
 | `mira.set` | `daemon/ipc_handlers.py:5515` (`_handle_mira_set`) | `mira.set` — o chip «Analógico Virtual» e os ajustes da Calibrar, POR CONTROLE. | sim |

@@ -42,7 +42,7 @@ Para quem joga no Linux com um DualSense, e em especial para quem precisa adapta
 - Microfone e alto-falante de cada controle como dispositivos de áudio do sistema.
 - Co-op local, com um controle virtual por jogador.
 - O jogo pode enxergar um DualSense, um Xbox 360 ou um Nintendo Pro, ou falar direto com o controle físico.
-- Perfis por jogo para Steam, Heroic, Lutris, RetroArch e outros lançadores.
+- Perfis por jogo para Steam, Heroic (Epic · GOG) e Flatpak; os outros lançadores chegam por [extensão](#extensões).
 - Compatibilidade parcial com mods do DualSenseX, por UDP em `127.0.0.1:6969` ([udp-schema.md](docs/protocol/udp-schema.md)).
 - Automação: um socket JSON-RPC local ([ipc-unix-socket.md](docs/protocol/ipc-unix-socket.md)) e plugins em Python, que se ligam com `hefesto-dualsense4unix plugin ligar` ([exemplos](examples/)).
 
@@ -151,6 +151,33 @@ journalctl --user -u hefesto-dualsense4unix -f
 ```
 
 Referência completa em [cli.md](docs/usage/cli.md).
+
+## Extensões
+
+Uma extensão acrescenta ao Hefesto o que nem todo mundo usa. Cada uma mora no seu repositório, com o
+aviso de uso e os testes, e se instala na aba Experimental (**Instalar de um endereço**) ou pela linha
+de comando:
+
+```bash
+hefesto-dualsense4unix mod instalar https://github.com/Hefesto-Team/hefesto-mod-lutris
+hefesto-dualsense4unix mod ligar lutris
+```
+
+| extensão | o que traz |
+| --- | --- |
+| [hefesto-mod-lutris](https://github.com/Hefesto-Team/hefesto-mod-lutris) | o Lutris e os jogos da biblioteca dele |
+| [hefesto-mod-retroarch](https://github.com/Hefesto-Team/hefesto-mod-retroarch) | o RetroArch e os jogos das listas dele |
+| [hefesto-mod-dolphin](https://github.com/Hefesto-Team/hefesto-mod-dolphin) | o Dolphin (GameCube e Wii) |
+| [hefesto-mod-mgba](https://github.com/Hefesto-Team/hefesto-mod-mgba) | o mGBA (Game Boy e Game Boy Advance) |
+| [hefesto-mod-azahar](https://github.com/Hefesto-Team/hefesto-mod-azahar) | o Azahar (Nintendo 3DS) |
+| [hefesto-mod-kytyps5](https://github.com/Hefesto-Team/hefesto-mod-kytyps5) | o KytyPS5 (PlayStation 5) |
+| [hefesto-mod-intiface](https://github.com/Hefesto-Team/hefesto-mod-intiface) | o DualSense como aparelho do protocolo Buttplug (conteúdo para maiores de 18 anos) |
+
+Nenhuma é afiliada às donas das marcas. Emulador é para o jogo que você comprou e copiou do seu
+próprio console: não baixe jogo pirata, compre na loja oficial (PlayStation Store, Nintendo eShop,
+GOG, Steam). O Hefesto mostra o aviso de cada extensão antes de instalar. A instalada pelo git se
+atualiza sozinha; a de uma pasta local, nunca. O contrato está em
+[porta-das-modificacoes.md](docs/protocol/porta-das-modificacoes.md).
 
 ## Limitações
 

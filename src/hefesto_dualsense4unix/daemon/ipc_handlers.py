@@ -5060,7 +5060,7 @@ class IpcHandlersMixin:
         return {"status": "ok", "total": total}
 
     async def _handle_mods_agora(self, params: dict[str, Any]) -> dict[str, Any]:
-        """A coluna «Agora» da janela de uma extensão: o último ``acessorios.estado`` dela.
+        """A coluna «Agora» da janela de uma extensão: o último ``acessorios.estado`` publicado.
 
         ``{mod}`` → ``{mod, ligado, nivel, perfil, aparelhos, ajustes}``; sem conexão viva, o
         estado vazio (``ligado: false``, nível 0, sem aparelho), e a tela mostra a coluna vazia.
@@ -5100,7 +5100,7 @@ class IpcHandlersMixin:
         return {"parado": bool(supervisor.porta.parar_tudo(mod))}
 
     async def _handle_mods_jogos(self, params: dict[str, Any]) -> dict[str, Any]:
-        """Os jogos da extensão de lançador ``{mod}``: o último ``lancador.jogos`` dela.
+        """Os jogos da extensão de lançador ``{mod}``: o último ``lancador.jogos`` publicado.
 
         ``{mod, jogos: [{chave, nome, abrir, janela}]}``; sem conexão viva, a lista vazia.
         """
