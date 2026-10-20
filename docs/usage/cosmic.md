@@ -5,7 +5,7 @@ O COSMIC (Pop!_OS 24.04) é onde o Hefesto é testado com controles.
 | Recurso | Estado |
 |---|---|
 | controles pelo cabo e pelo Bluetooth, atalhos, mouse e teclado do controle | funcionam, sem depender da sessão gráfica |
-| a janela | abre pelo XWayland |
+| a janela | abre em Wayland nativo; `./install.sh --force-xwayland` a abre pelo XWayland |
 | o ícone da bandeja | aparece na área de status do painel |
 | a troca automática de perfil | funciona em XWayland (a Steam e o Proton) e nas janelas Wayland nativas |
 

@@ -31,14 +31,11 @@ command: hefesto-dualsense4unix-gui
 finish-args:
   # Compartilhamento IPC entre processos (necessário para GTK X11)
   - --share=ipc
-  # X11 SEMPRE disponível (não fallback). No COSMIC a GUI força
-  # GDK_BACKEND=x11 (XWayland) para contornar o bug de grab/posicionamento
-  # dos popups de GtkComboBox/GtkMenu no cosmic-comp Wayland nativo. Com
-  # `fallback-x11`, o socket X11 NÃO é montado quando Wayland está presente,
-  # e o XWayland forçado quebraria dentro do sandbox. `--socket=x11` garante
-  # o socket sem afetar GNOME (lá GDK_BACKEND fica livre → Wayland nativo).
+  # X11 SEMPRE disponível (não fallback): a troca automática de perfil lê a
+  # janela dos jogos (a Steam, o Proton) pelo X11, e com `fallback-x11` o
+  # socket X11 NÃO é montado quando o Wayland está presente.
   - --socket=x11
-  # Suporte a Wayland nativo (GNOME e demais; no COSMIC cai em XWayland)
+  # A janela abre em Wayland nativo.
   - --socket=wayland
   # Acesso ao D-Bus de sessão (portals, notificações)
   - --socket=session-bus

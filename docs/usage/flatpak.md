@@ -80,7 +80,7 @@ cp ~/.config/hefesto-dualsense4unix/profiles/*.json \
 | Permissão | Para quê |
 |---|---|
 | `--device=all` | o controle (`/dev/hidraw*`) e os dispositivos virtuais (`/dev/uinput`, `/dev/uhid`) |
-| `--socket=x11`, `--socket=wayland` | a janela. É `x11`, e não `fallback-x11`, porque a janela abre pelo XWayland mesmo com Wayland presente |
+| `--socket=x11`, `--socket=wayland` | a janela e a troca automática de perfil. É `x11`, e não `fallback-x11`, porque a troca automática lê a janela dos jogos (a Steam, o Proton) pelo X11 mesmo com Wayland presente |
 | `--socket=session-bus`, `--talk-name=org.freedesktop.portal.*` | portais e notificações |
 | `--filesystem=xdg-run/hefesto-dualsense4unix:create` | a conversa entre a janela e o serviço |
 | `--filesystem=xdg-config/hefesto-dualsense4unix:create` | os perfis |

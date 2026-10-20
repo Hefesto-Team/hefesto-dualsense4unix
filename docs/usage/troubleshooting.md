@@ -84,8 +84,9 @@ O perfil existe e o jogo abre com outro.
    Perfis, com o jogo aberto ([creating-profiles.md](creating-profiles.md)).
 2. **O Modo Freestyle está ligado** na aba Jogar: com ele, o perfil ativo vale
    em qualquer jogo.
-3. **Uma janela Wayland nativa**: a troca automática só enxerga janelas X11 e
-   XWayland ([cosmic.md](cosmic.md)).
+3. **Uma janela Wayland nativa fora do COSMIC e dos compositores wlroots**: no
+   GNOME e no KDE, a troca automática só enxerga janelas X11 e XWayland
+   ([cosmic.md](cosmic.md)).
 4. **Você acabou de trocar de perfil à mão**: a troca automática espera 30
    segundos para não desfazer a sua escolha, e volta sozinha depois disso.
    Trocar de novo reinicia a espera.

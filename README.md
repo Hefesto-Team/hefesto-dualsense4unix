@@ -183,7 +183,7 @@ atualiza sozinha; a de uma pasta local, nunca. O contrato está em
 
 - É uma versão alfa. Os testes com controle de verdade são feitos em Pop!_OS 24.04 com COSMIC. O Ubuntu passa pelo CI, sem controle. Fedora, Arch, Debian e Mint têm pacote, mas ainda não foram testados com um controle ligado. As versões conferidas estão em [versoes-validadas.md](docs/usage/versoes-validadas.md).
 - Distribuições sem `systemd-logind` (Alpine com OpenRC, Void, Artix) não são suportadas.
-- A troca automática de perfil reconhece jogos que rodam em X11 ou XWayland, o que inclui a Steam e o Proton. Janelas Wayland nativas ainda não são reconhecidas.
+- A troca automática de perfil reconhece os jogos em X11 e XWayland, o que inclui a Steam e o Proton. A janela Wayland nativa é reconhecida no COSMIC e, com o `wlrctl` instalado, no Sway, no Hyprland e nos outros compositores wlroots; no GNOME e no KDE, não.
 - Pelo Bluetooth, o microfone de cada controle já vem ligado, e enquanto algum programa o escuta ele divide o rádio com os comandos do controle. No cabo não há esse custo.
 - Os pareamentos Bluetooth podem sumir por dois motivos: um defeito conhecido do BlueZ, que derruba o `bluetoothd`, ou o controle pareado por Bluetooth e ligado no cabo ao mesmo tempo. O instalador oferece um BlueZ corrigido, e o Hefesto guarda cópia dos pareamentos. Detalhes em [bluetooth.md](docs/usage/bluetooth.md).
 - O 8BitDo por Bluetooth funciona no modo DirectInput/PS4, e não no modo Switch. Detalhes em [troubleshooting-8bitdo.md](docs/usage/troubleshooting-8bitdo.md).
