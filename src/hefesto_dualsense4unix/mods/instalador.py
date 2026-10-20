@@ -346,6 +346,31 @@ def _commit_da_pasta(pasta: Path) -> str:
 # -- instalar e atualizar ----------------------------------------------------
 
 
+def _conferir_o_lancador(manifesto: Manifesto, pasta: Path) -> None:
+    """O tipo, o bloco e a permissão ``lancador`` andam juntos, e o bloco passa no conferidor.
+
+    É o mesmo conferidor do censo da aba: o que ele recusaria calado recusa aqui, com a frase.
+    """
+    tem_tipo, tem_bloco = "lancador" in manifesto.tipos, manifesto.lancador is not None
+    if tem_tipo and not tem_bloco:
+        raise InstalacaoRecusadaError(
+            "O hefesto-mod.json tem o tipo «lancador» sem o bloco «lancador».")
+    if tem_bloco and not tem_tipo:
+        raise InstalacaoRecusadaError(
+            "O hefesto-mod.json tem o bloco «lancador» sem o tipo «lancador».")
+    if not tem_bloco:
+        return
+    if "lancador" not in manifesto.permissoes:
+        raise InstalacaoRecusadaError(
+            "O hefesto-mod.json tem o bloco «lancador» sem a permissão «lancador».")
+    from hefesto_dualsense4unix.integrations.censo_dos_lancadores import lancador_da_modificacao
+
+    try:
+        lancador_da_modificacao(manifesto.id, manifesto.lancador, pasta)
+    except ValueError as exc:
+        raise InstalacaoRecusadaError(f"O hefesto-mod.json tem {exc}.") from exc
+
+
 def instalar(
     origem: str,
     *,
@@ -389,6 +414,7 @@ def instalar(
             manifesto = ler_manifesto(baixada)
         except ManifestoRecusadoError as exc:
             raise InstalacaoRecusadaError(exc.frase) from exc
+        _conferir_o_lancador(manifesto, baixada)
         registro = ler_registro(lg.registro)
         anterior = registro.get(manifesto.id)
         if anterior is not None and anterior.endereco != endereco:

@@ -167,7 +167,12 @@ def cmd_ligar(
         ligar(mod_id, permissoes_vistas=manifesto.permissoes, aviso_visto=aviso)
     except InstalacaoRecusadaError as exc:
         raise _recusar(exc) from exc
-    console.print(f"«{manifesto.nome}» ligada; o serviço abre em um segundo.")
+    if manifesto.processo is not None:
+        console.print(f"«{manifesto.nome}» ligada; o serviço abre em um segundo.")
+    elif manifesto.lancador is not None:
+        console.print(f"«{manifesto.nome}» ligada; os jogos dela aparecem na aba Experimental.")
+    else:
+        console.print(f"«{manifesto.nome}» ligada.")
 
 
 @app.command("desligar")
