@@ -7,7 +7,7 @@ escritor em potencial e código morto sustentado por régua. Esta régua impede 
 novo sem `data-gesto` na página (publicada e desenho) reprova, a menos que entre em
 `SEM_ELEMENTO_ESTATICO` com o motivo escrito. O silêncio não é motivo.
 
-MORDIDA: recoloque `@gesto("09-sistema.html", "fixar-proton")` (ou `teto-da-vibracao` na 08) em
+MORDIDA: recoloque `@gesto("09-sistema.html", "fixar-proton")` (ou `todos` ou `mic-existe` na 08) em
 qualquer pacote e `test_o_registro_real_nao_tem_gesto_sem_elemento` reprova com o nome dele;
 `test_a_regua_acusa_o_gesto_sem_elemento` morde sozinho, sem tocar no produto.
 Escopo: as duas abas. As outras oito ficam para quem as tocar.
@@ -24,20 +24,14 @@ from hefesto_dualsense4unix.interface import onde
 
 PAGINAS = ("08-conexoes.html", "09-sistema.html")
 
-#: Gestos registrados que a página estática não traz, cada um com o motivo. Os dois primeiros
-#: são pintados pelo pacote em tempo de execução, para o controle externo conectado
-#: (`_lista_do_externo`): sem externo na mesa não há elemento, e com ele há. Os dois últimos são
-#: ACHADOS desta sprint, não perdão: o registro os tem e a página (publicada e desenho) não
-#: traz elemento; viram sprint própria e saem daqui quando o elemento voltar ou o gesto sair.
+#: Gestos registrados que a página estática não traz, cada um com o motivo. Os dois são
+#: pintados pelo pacote em tempo de execução, para o controle externo conectado
+#: (`_lista_do_externo`): sem externo na mesa não há elemento, e com ele há.
 SEM_ELEMENTO_ESTATICO: dict[tuple[str, str], str] = {
     ("08-conexoes.html", "externo-modo"):
         "pintado em execução pela lista do controle externo (`_lista_do_externo`)",
     ("08-conexoes.html", "externo-botoes"):
         "pintado em execução pela lista do controle externo (`_lista_do_externo`)",
-    ("08-conexoes.html", "mic-existe"):
-        "ACHADO: gesto sem elemento na página; o estado dele ainda é empurrado, o botão não",
-    ("08-conexoes.html", "todos"):
-        "ACHADO: gesto «▴» sem elemento; o chip «Todos» usa `escolher-na-fita`",
 }
 
 

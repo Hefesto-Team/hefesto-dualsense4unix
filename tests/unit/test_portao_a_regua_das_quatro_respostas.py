@@ -211,12 +211,12 @@ def test_morde_gesto_so_no_registro_sem_classe(regua, monkeypatch, capsys):
     assert "sem classificação" in saida
 
 
-@pytest.mark.parametrize("gesto", ["mira-sensibilidade", "mic-existe"])
+@pytest.mark.parametrize("gesto", ["mira-sensibilidade"])
 def test_morde_gesto_de_aparelho_que_so_o_registro_mostra(regua, monkeypatch, capsys, gesto):
     """Os de aparelho que a régua de antes não via: sem a classe, reprovam nomeando.
 
     `mira-sensibilidade` tem a página por constante (`@gesto(PAGINA, …)`, a Calibrar, fora das
-    dez); `mic-existe` a 08 gera em JS.
+    dez).
     """
     assert gesto not in regua.gestos_das_paginas()
     assert gesto in regua.gestos_da_tela()

@@ -210,7 +210,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "externo-botoes": _DO_EXTERNO,
     # Os gestos que só o registro dos pacotes mostra (a página os gera em JS, ou não é
     # uma das dez): AS-REGUAS-DO-RAMO-INTEIRO-E-DAS-QUATRO-RESPOSTAS-MORDEM-01.
-    "todos": "volta as ações da 08 para a mesa inteira (o «▴») — é da tela",
     "selecionar": "abre um perfil no editor — é da tela",
     "ativar": "troca o perfil ativo (`profile.switch`) — é do perfil; o ATO no aparelho é o "
               "de cada feature do perfil, que responde as quatro por conta própria",
@@ -295,7 +294,6 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     "mira-segurar": ("movimento.giroscopio",),
     "mira-inverter": ("movimento.giroscopio",),
     "calibrar-comecar": ("movimento.giroscopio",),
-    "mic-existe": ("audio.microfone",),
     # A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01: o trilho da 03 escala o
     # efeito dos dois gatilhos, pelo byte do firmware até 100% e pelas forças do bloco acima
     "intensidade-do-gatilho": ("gatilho.esquerdo.adaptativo", "gatilho.direito.adaptativo"),
@@ -344,7 +342,6 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
 NO_CONTROLE: dict[str, str] = {
     "mudo": "microfone_mudo",
     "custo-mic": "microfone_mudo",
-    "mic-existe": "microfone",
 }
 
 #: Gestos cujo valor é de cada controle, pelo `uniq`, num arquivo próprio e fora do perfil por

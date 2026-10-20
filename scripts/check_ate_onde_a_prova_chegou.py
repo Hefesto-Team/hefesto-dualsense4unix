@@ -166,14 +166,6 @@ A_PROVA_QUE_FALTA: dict[str, tuple[str, str, str]] = {
         "andar sozinha com o P1 no cabo e o P2 no rádio parados na mesa. É da "
         "O-COMECAR-DA-CALIBRAR-GUARDA-O-ZERO-DE-CADA-CONTROLE-01",
     ),
-    "mic-existe": (
-        "médio",
-        "2026-09-06-MESA-DE-QUATRO-01-quatro-dualsense-por-cabo-e-por-radio-com-ela.md",
-        "o «Microfone: Ligado / Desligado» da 08 sobe ou desce a ponte do microfone "
-        "daquele controle, e `audio.microfone@dualsense` está em SAIU NO FIO nos dois "
-        "transportes; falta a linha 9 do roteiro da mesa, o canal daquele controle "
-        "aparecendo no sistema com a voz dela. É da MESA-DE-QUATRO-01",
-    ),
     "rota": (
         "grande",
         "2026-08-31-A-BANCADA-QUE-O-RADIO-PEDE-INDICE.md",

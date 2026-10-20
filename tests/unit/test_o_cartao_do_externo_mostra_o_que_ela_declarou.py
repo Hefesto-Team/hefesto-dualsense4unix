@@ -200,7 +200,7 @@ def test_o_cartao_nao_chama_o_externo_de_assento(monkeypatch: pytest.MonkeyPatch
 
 
 # O ITEM 2: a Conexões tem as três listas (modo, botões, cor) e elas gravam pelo
-# `machine.declare`, o mesmo caminho do `mic-existe`. O cartão da Jogar só mostra.
+# `machine.declare`, o mesmo caminho do `sala-altura`. O cartão da Jogar só mostra.
 
 GESTOS = ("externo-modo", "externo-botoes", "externo-cor")
 

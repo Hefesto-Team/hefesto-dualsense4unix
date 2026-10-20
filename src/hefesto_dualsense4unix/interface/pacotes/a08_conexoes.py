@@ -1657,7 +1657,6 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
             "desenho": colorway_do_controle(eu),
             "ponte": bool(c.get("uniq") in (st.get("pontes_confirmadas") or {})),
             "fragil": bool(c.get("uniq") in (st.get("native_bt_fragil_controles") or [])),
-            "mic-existe": "Ligado" if _mic_declarado(declaracao, uniq) else "Desligado",
             # DESLIGADA no `maquina.json` do usuário (medido em 03/09), a tela
             "mic-caminho": caminho_do_microfone(str(c.get("transport") or "")),
             # O `title` DA LINHA DO MICROFONE — ver :func:`dica_do_microfone`. O
@@ -1699,7 +1698,7 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
     }
 
 
-#      a trava de `mic-existe` e `vizinho-o-que-e`, e os dois estão ligados.
+#      a trava de `vizinho-o-que-e`, que está ligado.
 #      (`Disconnect` do BlueZ por D-Bus, `integrations/gesto_de_reconexao.py`).
 #      **Foi exatamente essa a cura de `vizinho-o-que-e`**: em vez de ligar o
 from . import gesto  # noqa: E402
@@ -1821,19 +1820,6 @@ def alvo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     p.chamar("controller.target.set", index=indice)
 
 
-@gesto("08-conexoes.html", "todos")
-def todos(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """"▴": volta ao broadcast — as ações voltam a valer para a mesa inteira.
-
-    O `title` é o contrato (*"Fecha. A fita volta para «Todos» e todos abrem juntos."*). No daemon
-    "Todos" é `index: null` (`ipc_handlers.py:3262-3263`), o `None` da linha 0 do seletor da GUI
-    estável (`status_actions._controller_target_rows:1586`). Não precisa do `uniq`, único desta aba
-    assim ("todos" não tem sujeito); exigir um prenderia a saída no último controle escolhido quando
-    ela fechasse a linha pela seta.
-    """
-    p.chamar("controller.target.set", index=None)
-
-
 @gesto("08-conexoes.html", "sala-altura")
 def sala_altura(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """"O dongle fica acima da cabeça de quem joga sentado?" — grava a resposta.
@@ -1916,44 +1902,9 @@ def _slot(o: dict[str, Any], quantos: int, quem: str) -> int:
     return posicao
 
 
-@gesto("08-conexoes.html", "mic-existe")
-def mic_existe(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """"Microfone: Ligado / Desligado" — a ponte de mic DESTE controle.
-
-    Não é o `mic.set`, que é o MUDO no firmware (`ipc_handlers._handle_mic_set`: acende a luz
-    vermelha e o PipeWire segue publicando a fonte). Aqui a promessa é *"Desligado, nenhum programa
-    o enxerga"*, a PONTE: `ControleDeclarado.microfone` no `maquina.json` (`utils/maquina.py:589`),
-    decisão de 22/08/2026 (*"por controle"*). O clique vale AGORA: `_handle_machine_declare` relê o
-    disco, rebinda `daemon._maquina` e sobe ou desce o subsystem `bt_mic` no mesmo pedido
-    (`ipc_handlers.py:4972`, QUATRO-MICROFONES-01: *"o 'Aplicar' tem de VALER agora"*).
-
-    **Desligar grava `False`** (18/09/2026, a inversão): gravava `None` enquanto o default era
-    silêncio, mas com a ordem *"todos os controles tem que nascer com tudo mic, giroscopio e afins"*
-    a ausência LIGA e `None` seria o botão que não desliga. O `false` no disco é o único registro de
-    que o usuário disse não e impede o produto de religar sozinho no próximo boot
-    (`bt_mic.uniqs_recusados`).
-
-    Não entrega: pelo CABO o microfone não passa por esta ponte (`secao_controles.DICA_MIC_NO_CABO`:
-    *"Só vale no rádio. Pelo cabo o microfone deste controle é uma placa de som USB e não passa por
-    esta ponte — ele já funciona sem ela."*). A GUI estável apaga o interruptor no cabo
-    (`pode_ligar_o_mic`); aqui grava, porque a declaração é sobre o CONTROLE e vale quando ele
-    voltar ao rádio. O aviso na tela é da aba.
-    """
-    uniq = _uniq(o)
-    if not uniq:
-        raise ValueError("mic-existe: o clique não disse em qual controle")
-    chave = _chave_de_maquina(ctx, uniq)
-    if not chave:
-        raise RuntimeError(_sem_endereco())
-    escolha = str(o.get("valor") or o.get("rotulo") or "").strip()
-    if escolha not in ("Ligado", "Desligado"):
-        raise ValueError(f"mic-existe: {escolha!r} não é resposta desta lista")
-    ligado = escolha == "Ligado"
-    ok, motivo = _resposta(
-        p.machine_declare({"controles": {chave: {"microfone": bool(ligado)}}}))
-    if not ok:
-        raise RuntimeError(motivo or "não consegui gravar o que você declarou")
-    _reler_a_declaracao()
+# A ponte do microfone POR CONTROLE (`ControleDeclarado.microfone` no `maquina.json`, decisão de
+# 22/08/2026) saiu da aba em 20/10/2026 (o gesto não tinha botão): vale só pela configuração da
+# máquina (`machine.declare`). Só o `False` desliga (a inversão de 18/09, `bt_mic.uniqs_recusados`).
 
 
 def _declarar_do_externo(ctx: Contexto, o: dict[str, Any], p: Any, campo: str,
@@ -1961,7 +1912,7 @@ def _declarar_do_externo(ctx: Contexto, o: dict[str, Any], p: Any, campo: str,
     """Grava ``controles[chave].<campo>`` de um controle externo, pelo `machine.declare`.
 
     O-CARTAO-DO-EXTERNO-MOSTRA-O-QUE-ELA-DECLAROU-01, item 2 (08/10/2026). O caminho é o do
-    `mic-existe` (o daemon funde contra o disco sob lock, relê e responde). A chave NÃO vem do
+    `machine.declare` (o daemon funde contra o disco sob lock, relê e responde). A chave NÃO vem do
     clique: sai do controle que a tela tem agora (`data-externo`: o `identity` ou o `uniq`), e
     controle que não está mais aqui recusa, em vez de gravar sob endereço que ninguém escolheu.
     Lista em branco = «não sei» e grava ``None``, que apaga o campo.
@@ -6153,18 +6104,10 @@ PROVAS = [
     # e o `_indice` cai na posição quando o daemon não publicou `index`.
     {"pagina": PAGINA, "gesto": "alvo", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["controller.target.set"], {"index": 0})]},
-    {"pagina": PAGINA, "gesto": "todos", "clique": {"uniq": "", "controle": ""},  # (noqa-acento) id
-     "chama": [("chamar", ["controller.target.set"], {"index": None})]},
     {"pagina": PAGINA, "gesto": "sala-altura", "clique": {"modo": "acima"},  # (noqa-acento) id
      "chama": [("machine_declare", [{"mesa": {"altura_da_antena": "acima"}}], {})]},
     {"pagina": PAGINA, "gesto": "sala-visada", "clique": {"modo": ""},  # (noqa-acento) id
      "chama": [("machine_declare", [{"mesa": {"linha_de_visada": None}}], {})]},
-    {"pagina": PAGINA, "gesto": "mic-existe", "clique": {"valor": "Ligado"},  # (noqa-acento) id
-     "chama": [("machine_declare",
-                [{"controles": {"aabbcc000001": {"microfone": True}}}], {})]},
-    {"pagina": PAGINA, "gesto": "mic-existe", "clique": {"valor": "Desligado"},  # (noqa-acento) id
-     "chama": [("machine_declare",
-                [{"controles": {"aabbcc000001": {"microfone": False}}}], {})]},
     {"pagina": PAGINA, "gesto": "externo-modo",  # (noqa-acento) id
      "clique": {"externo": "aa:bb:cc:00:00:01", "valor": "switch"},
      "chama": [("machine_declare",
@@ -6187,8 +6130,6 @@ _O_MAPA = "grava o desenho do gabinete (`_gravar_o_mapa`); o `state_full` não p
 RAZAO_DO_SEM_ECO: dict[str, str] = {
     "sala-altura": _NO_MAQUINA,
     "sala-visada": _NO_MAQUINA,
-    "mic-existe": "grava no `maquina.json` e sobe ou desce o `bt_mic` no mesmo pedido: "
-                  "tem efeito vivo, não tem eco",
     "vizinho-o-que-e": _NO_MAQUINA,
     "externo-modo": _NO_MAQUINA,
     "externo-botoes": _NO_MAQUINA,
