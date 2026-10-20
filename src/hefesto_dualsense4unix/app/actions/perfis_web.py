@@ -304,7 +304,15 @@ def _linhas_da_lista(
     ]
 
 
-SECOES_ESPERANDO_A_SESSAO_DELA: frozenset[str] = frozenset()
+#: O ajuste guardado por controle que a tela mostra no MAPA DO CONTROLE e não numa célula desta
+#: coluna: a troca de botões (O-REMAPEAMENTO-VALE-POR-JOGADOR-01, 20/10/2026). O «Vale para» do
+#: mapa escolhe o controle pela cor do plástico e ali ele aparece; uma 11ª célula nesta fileira é
+#: desenho (a de dez já pede 271 px e a tabela rola na horizontal a 1212), e a decisão é de produto.
+SECOES_QUE_MORAM_NO_MAPA: frozenset[str] = frozenset({"remapeamento"})
+
+#: Sem célula na página publicada hoje: o que mora no mapa e o que o desenho já tem e o produto
+#: ainda espera. A lista vazia de antes era a do desenho inteiro publicado.
+SECOES_ESPERANDO_A_SESSAO_DELA: frozenset[str] = SECOES_QUE_MORAM_NO_MAPA
 
 SECOES_NA_TELA: tuple[str, ...] = tuple(
     s for s in SECOES_POR_CONTROLE if s not in SECOES_ESPERANDO_A_SESSAO_DELA

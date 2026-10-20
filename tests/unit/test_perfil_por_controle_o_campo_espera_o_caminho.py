@@ -89,6 +89,14 @@ _CONSUMIDOR: dict[str, ConsumidorPorUnidade] = {
             "perguntado pelo tique com o uniq de cada jogador (da_peca)"
         ),
     ),
+    "remapeamento": ConsumidorPorUnidade(
+        funcao="apply_remapeamento",
+        chega_em=(
+            "{uniq: troca}, a do perfil somada à da peça (juntar), depositada no store por "
+            "definir_ativo e perguntada pelos dois caminhos do pad com o uniq de cada jogador "
+            "(da_peca)"
+        ),
+    ),
     "ativacao": ConsumidorPorUnidade(  # (noqa-acento) identificador ASCII
         funcao="apply_acessibilidade",
         chega_em=(
@@ -146,6 +154,7 @@ def test_a_regua_sabe_recusar() -> None:
         "mascara",
         "mic",
         "movimento",
+        "remapeamento",
         "rumble",
         "sensores",
         "speaker",
@@ -329,6 +338,27 @@ def _prova_movimento(uniq: str) -> object:
         REGISTRO.limpar()
 
 
+def _prova_remapeamento(uniq: str) -> object:
+    """A troca escrita para UMA peça vale só nela (O-REMAPEAMENTO-VALE-POR-JOGADOR-01)."""
+    from hefesto_dualsense4unix.core import remapeamento_de_botao as remap
+
+    store = _StoreSemTrava()
+    gerente = ProfileManager(
+        controller=object(),  # type: ignore[arg-type]
+        store=store,  # type: ignore[arg-type]
+    )
+    perfil = Profile(
+        name="uma_peca_so",
+        match=MatchAny(),
+        controllers={uniq: ControllerOverrides(remapeamento={"cross": "circle"})},
+    )
+    gerente.apply_remapeamento(perfil)
+    return (
+        remap.da_peca(store, uniq) == {"cross": "circle"}
+        and remap.da_peca(store, "aa:bb:cc:00:00:ff") is None
+    ) or None
+
+
 def _prova_ativacao(uniq: str) -> object:
     """O modo escrito para UMA peça vale só nela (O-BOTAO-ALTERNA-REPETE-...-01)."""
     from hefesto_dualsense4unix.core import ativacao_de_botao as ativacao
@@ -383,6 +413,7 @@ _PROVAS = {
     "sensores": _prova_sensores,
     "mascara": _prova_mascara,
     "movimento": _prova_movimento,
+    "remapeamento": _prova_remapeamento,
     "ativacao": _prova_ativacao,  # (noqa-acento) identificador ASCII
     "analogicos": _prova_analogicos,  # (noqa-acento) identificador ASCII
 }

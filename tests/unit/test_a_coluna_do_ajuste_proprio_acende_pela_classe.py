@@ -182,7 +182,9 @@ def test_o_produtor_e_o_desenho_dizem_as_secoes_na_mesma_ordem() -> None:
     """O piloto distribui a lista pelos elementos na ordem do DOM."""
     aba10 = _gerador()
     do_desenho = tuple(campo for campo, _pecas in aba10.SECOES)
-    assert do_desenho == perfis_web.SECOES_POR_CONTROLE, (
+    na_coluna = tuple(s for s in perfis_web.SECOES_POR_CONTROLE
+                      if s not in perfis_web.SECOES_QUE_MORAM_NO_MAPA)
+    assert do_desenho == na_coluna, (
         "o desenho e o produto discordam na ordem das seções:\n"
         f"  desenho (aba10.SECOES)         {do_desenho}\n"
         f"  produto (SECOES_POR_CONTROLE)  {perfis_web.SECOES_POR_CONTROLE}")
@@ -228,6 +230,7 @@ def test_cada_secao_guardada_acende_a_sua_celula_e_so_a_dela(
         "movimento": {},
         "ativacao": {"alternar": ["l1"]},  # (noqa-acento) identificador ASCII
     "analogicos": {"zona_morta": 20},  # (noqa-acento) identificador ASCII
+        "remapeamento": {"cross": "circle"},
     }
     faltando = set(perfis_web.SECOES_POR_CONTROLE) - set(menor_corpo)
     assert not faltando, (

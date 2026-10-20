@@ -154,7 +154,8 @@ def test_cada_celula_da_guarda_diz_o_que_o_disco_guarda(
         monkeypatch.setattr(a10_perfis, "SECOES_DA_COLUNA", tuple(
             a10_perfis.SECOES_DA_COLUNA) + tuple(
             s for s in perfis_web.SECOES_POR_CONTROLE
-            if s in perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA))
+            if s in perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA
+            and s not in perfis_web.SECOES_QUE_MORAM_NO_MAPA))
     fora = _emitido(_perfil(guardado))
     html = _pagina(publicado)
     if 'data-hef="guarda.proprio"' not in html:

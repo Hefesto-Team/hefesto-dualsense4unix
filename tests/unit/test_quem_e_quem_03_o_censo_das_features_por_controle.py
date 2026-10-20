@@ -21,7 +21,7 @@ NIVEIS = ("por-controle", "global", "ausente")
 
 @dataclass(frozen=True)
 class LinhaDoCenso:
-    """Uma das doze features que a tela oferece por controle."""
+    """Uma das treze features que a tela oferece por controle."""
 
     feature: str
     nivel: str
@@ -190,6 +190,22 @@ CENSO: tuple[LinhaDoCenso, ...] = (
         mora_em="",
     ),
     LinhaDoCenso(
+        feature="a troca de botões",
+        nivel="por-controle",
+        campo="remapeamento",
+        subcampo=None,
+        sem_opiniao="esta peça segue a troca de botões do perfil, que por padrão não existe",
+        quem_responde=(
+            "a seção global `Profile.remapeamento`, somada botão a botão à da peça "
+            "(`remapeamento_de_botao.juntar`: a peça vence, e `botão: botão` cancela a do perfil "
+            "só nela); sem ela o botão passa como o controle o aperta — a disposição de quem "
+            "joga é arranjo, e arranjo nasce desligado"
+        ),
+        dono="O-REMAPEAMENTO-VALE-POR-JOGADOR-01",
+        chave_do_mapa="plataforma.vpad",
+        mora_em="",
+    ),
+    LinhaDoCenso(
         feature="touchpad",
         nivel="ausente",
         campo=None,
@@ -210,7 +226,7 @@ CENSO: tuple[LinhaDoCenso, ...] = (
 
 FEATURE_SEM_DONO = "touchpad"
 
-FEATURES_NA_TELA = 12
+FEATURES_NA_TELA = 13
 
 
 def campos_declarados_por_controle(censo: tuple[LinhaDoCenso, ...]) -> set[str]:
@@ -280,7 +296,7 @@ def test_o_censo_cobre_o_esquema_nos_dois_sentidos() -> None:
 
 
 def test_o_censo_tem_uma_linha_por_feature_e_nenhuma_repetida() -> None:
-    """A tela oferece doze, e o censo conta doze."""
+    """A tela oferece treze, e o censo conta treze."""
     assert len(CENSO) == FEATURES_NA_TELA, (
         f"o censo tem {len(CENSO)} linhas e a tela oferece {FEATURES_NA_TELA}. "
         "Se a tela passou a oferecer outro número, mude FEATURES_NA_TELA e o "
@@ -332,6 +348,7 @@ _NUMERAIS = {
     "DEZ": 10,
     "ONZE": 11,
     "DOZE": 12,
+    "TREZE": 13,
 }
 
 _FORMA_DA_CONTA = re.compile(

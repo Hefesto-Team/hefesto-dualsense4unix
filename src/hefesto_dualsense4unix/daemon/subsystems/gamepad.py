@@ -1940,7 +1940,7 @@ from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
     GATILHOS as GATILHOS_DO_JOGO,
 )
 from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
-    ativo as remapeamento_ativo,
+    da_peca as remapeamento_da_peca,
 )
 from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
     traduzir as traduzir_remapeamento,
@@ -2253,7 +2253,7 @@ def dispatch_gamepad(
             botoes, l2, r2, soltos = filtrar_o_botao(
                 store, primary_identity(daemon), botoes, l2, r2, soltos)
         da_mao = botoes
-        troca = remapeamento_ativo(store)
+        troca = remapeamento_da_peca(store, primary_identity(daemon))
         if troca:
             botoes, l2, r2 = traduzir_remapeamento(botoes, l2, r2, troca)
         com_modo = ativacao_de_botao.alguma(store)

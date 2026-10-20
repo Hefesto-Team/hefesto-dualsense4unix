@@ -44,6 +44,7 @@ from hefesto_dualsense4unix.interface.cartao_do_controle import (
     rotulo_lightbar,
 )
 from hefesto_dualsense4unix.profiles import estilos_de_jogo
+from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
 
 from . import Contexto, gesto, perfil, registrar
 from . import a02_controles as a02
@@ -177,7 +178,7 @@ def _estado() -> dict[str, Any]:
         _EDITANDO.clear()
     if not _EDITANDO:
         _EDITANDO.update({"chave": NAV, "edicoes": {}, "nome": None,
-                          "usar_em": None, "botao": None})
+                          "usar_em": None, "botao": None, "peca": None})
     return _EDITANDO
 
 
@@ -215,6 +216,32 @@ def _nome_do_ativo(ctx: Contexto) -> str:
     return perfil.nome_do_ativo(ctx.state).strip()
 
 
+def _peca_do_vale_para(ctx: Contexto) -> str | None:
+    """O controle (MAC de 12 hex) que o «Vale para» escolheu, ou `None` quando o perfil é o dono.
+
+    Com um controle só ninguém escolhe: a troca é do perfil. Com dois ou mais, o chip aceso é o
+    dono. O molde e o perfil novo ainda não têm controle: o chamador só pergunta nos outros.
+    """
+    chave = str(_estado()["chave"])
+    if len(ctx.mesa or ()) < 2 or not (chave == NAV or chave.startswith(PERFIL)):
+        return None  # o molde e o perfil novo ainda não têm controle: a troca é do perfil
+    _, itens = _escolhidos(ctx)
+    if len(itens) != 1:
+        return None
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    mac = norm_mac(str(itens[0].get("uniq") or ""))
+    return mac if mac and len(mac) == 12 else None
+
+
+def _troca_da_peca(cru: dict[str, Any], mac: str | None) -> dict[str, str]:
+    """A troca própria do controle `mac` no perfil cru, ou `{}`."""
+    if not mac:
+        return {}
+    cfg = (cru.get("controllers") or {}).get(mac) or {}
+    return dict(cfg.get("remapeamento") or {})
+
+
 def _cru_da_chave(ctx: Contexto, chave: str) -> dict[str, Any]:
     """O perfil cru que a chave nomeia: o ativo, ou o do disco. `{}` para molde e novo."""
     if chave == NAV:
@@ -244,7 +271,9 @@ def _base(ctx: Contexto, chave: str) -> dict[str, tuple[str, str]]:
     else:
         tabela = dict(cru.get("button_actions") or {})
     por_motor = {m: (ACAO, str(t)) for m, t in tabela.items() if t}
-    for motor, destino in (cru.get("remapeamento") or {}).items():
+    mac = _peca_do_vale_para(ctx)
+    juntas = remap.juntar(cru.get("remapeamento") or {}, _troca_da_peca(cru, mac))
+    for motor, destino in juntas.items():
         por_motor[motor] = ("troca", str(destino))
     return _por_botao(por_motor)
 
@@ -523,6 +552,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     """O que o tique escreve na tela: a edição, o botão sob o dedo, a luz e os chips."""
     _VISTO[0] = time.monotonic()
     ativo, itens = _escolhidos(ctx)
+    _largar_se_outro_controle(ctx)
     acesas = _acesos(ctx, itens)
     mesa: dict[str, Any] = {**_mesa_da_edicao(ctx), **_linhas(ctx, acesas),
                             LUZ: _luz(ctx, ativo, itens)}
@@ -535,9 +565,19 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     }
 
 
+def _largar_se_outro_controle(ctx: Contexto) -> None:
+    """O «Vale para» mudou de controle: o que não se guardou era do anterior e fica para trás."""
+    estado = _estado()
+    peca = _peca_do_vale_para(ctx)
+    if estado.get("peca") != peca:
+        estado["peca"] = peca
+        estado["edicoes"] = {}
+
+
 def _repinta(ctx: Contexto) -> dict[str, Any]:
     """A resposta de um gesto: a tela inteira de agora, sem esperar o próximo tique."""
     _VISTO[0] = time.monotonic()
+    _largar_se_outro_controle(ctx)
     _, itens = _escolhidos(ctx)
     return {"mesa": {**_mesa_da_edicao(ctx), **_linhas(ctx, _acesos(ctx, itens))}}
 
@@ -625,6 +665,7 @@ def _tentativa_de_troca(ctx: Contexto, estado: dict[str, Any], b: str, destino: 
 
 
 def _grava_na_edicao(ctx: Contexto, tipo: str, valor: str) -> None:
+    _largar_se_outro_controle(ctx)
     estado = _estado()
     b = estado["botao"]
     if b is None:
@@ -694,6 +735,7 @@ def mapa_mover_com(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
         raise ValueError(f"mapa-mover-com: lado {lado!r} desconhecido.")
     cursor, rolagem = (("l3_direcao", "r3_direcao") if lado == "esq"
                        else ("r3_direcao", "l3_direcao"))
+    _largar_se_outro_controle(ctx)
     edicoes = _estado()["edicoes"]
     edicoes[cursor] = (ACAO, "__CURSOR__")
     edicoes[rolagem] = (ACAO, "__ROLAGEM__")
@@ -704,6 +746,7 @@ def mapa_mover_com(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
 def mapa_padrao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """«Voltar ao padrão»: cada botão volta ao de fábrica (o molde, ao que o molde traz).
     Só vale no «Guardar»."""
+    _largar_se_outro_controle(ctx)
     estado = _estado()
     if str(estado["chave"]).startswith(MOLDE):
         estado["edicoes"] = {}
@@ -724,32 +767,69 @@ def mapa_cancelar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 # ---------------------------------------------------------------------------
 
 def _aplicar_as_edicoes(prof: Any, edicoes: dict[str, tuple[str, str]],
-                        padrao_de_base: dict[str, str]) -> Any:
-    """O perfil com as edições: troca limpa a ação do botão e a ação limpa a troca."""
+                        padrao_de_base: dict[str, str], mac: str | None = None) -> Any:
+    """O perfil com as edições: troca limpa a ação do botão e a ação limpa a troca.
+
+    Com `mac`, a troca é a DESSE controle (`ControllerOverrides.remapeamento`): o botão que o
+    perfil já troca e que a pessoa solta aqui fica `botão: botão` (cancela só nesta peça), e a ação
+    de mouse e de teclado segue do perfil, que é o único dono dela.
+    """
     acoes_do_perfil = dict(prof.button_actions or {})
-    trocas = dict(prof.remapeamento or {})
+    do_perfil = dict(prof.remapeamento or {})
+    dela = (prof.controllers or {}).get(mac) if mac else None
+    trocas = dict(dela.remapeamento or {}) if dela else {}
+    if not mac:
+        trocas = do_perfil
+
+    def solta(motor: str) -> None:
+        if mac and motor in do_perfil:
+            trocas[motor] = motor
+        else:
+            trocas.pop(motor, None)
+
     for b, (tipo, valor) in edicoes.items():
         motor = POR_BOTAO[b].motor
         if motor is None:
             continue
         if tipo == "troca":
             trocas[motor] = valor
-            acoes_do_perfil.pop(motor, None)
+            if not mac:
+                acoes_do_perfil.pop(motor, None)
         elif tipo == ACAO:
-            trocas.pop(motor, None)
+            solta(motor)
             if padrao_de_base.get(motor) == valor:
                 acoes_do_perfil.pop(motor, None)
             else:
                 acoes_do_perfil[motor] = valor
         else:
-            trocas.pop(motor, None)
+            solta(motor)
             acoes_do_perfil.pop(motor, None)
     try:
+        if mac:
+            propria = remap.resolver_da_peca(trocas) or None
+            remap.resolver(remap.juntar(do_perfil, propria))
+            return _com_a_troca_da_peca(prof, mac, propria, acoes_do_perfil)
         remapeamento = remap.resolver(trocas) or None
     except remap.RemapeamentoRecusadoError as exc:
         raise RuntimeError(a06._frase_da_troca(exc)) from None
     return prof.model_copy(update={"button_actions": acoes_do_perfil or None,
                                    "remapeamento": remapeamento})
+
+
+def _com_a_troca_da_peca(prof: Any, mac: str, propria: dict[str, str] | None,
+                         acoes_do_perfil: dict[str, str]) -> Any:
+    """O perfil com a troca do controle `mac` no lugar; a peça que fica sem nada sai do mapa."""
+    todos = dict(prof.controllers or {})
+    dela = todos.get(mac)
+    if dela is None and propria is None:
+        return prof.model_copy(update={"button_actions": acoes_do_perfil or None})
+    dela = (dela or ControllerOverrides()).model_copy(update={"remapeamento": propria})
+    if all(getattr(dela, campo) is None for campo in ControllerOverrides.model_fields):
+        todos.pop(mac, None)
+    else:
+        todos[mac] = dela
+    return prof.model_copy(update={"button_actions": acoes_do_perfil or None,
+                                   "controllers": todos or None})
 
 
 def _perfil_novo(ctx: Contexto, estado: dict[str, Any]) -> Any:
@@ -778,6 +858,13 @@ def _perfil_novo(ctx: Contexto, estado: dict[str, Any]) -> Any:
     return prof
 
 
+def _o_que_se_guarda(prof: Any) -> tuple[Any, ...]:
+    """O que esta tela escreve num perfil: ações, troca do perfil e troca de cada controle."""
+    por_peca = {mac: dict(cfg.remapeamento or {})
+                for mac, cfg in (prof.controllers or {}).items() if cfg.remapeamento}
+    return prof.button_actions, prof.remapeamento, por_peca
+
+
 @gesto(PAGINA, "mapa-guardar", grava="gravar_e_reaplicar")
 def mapa_guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """«Guardar»: grava o perfil em edição. O molde e o novo viram perfil em «Meus perfis»."""
@@ -794,8 +881,10 @@ def mapa_guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
         prof = loader.load_profile(nome)
         fabrica = acoes.tabela_efetiva(None, getattr(prof, "key_bindings", None) or None) \
             if chave == NAV else {}
-        novo = _aplicar_as_edicoes(prof, edicoes, fabrica)
-        if (novo.button_actions, novo.remapeamento) == (prof.button_actions, prof.remapeamento):
+        _largar_se_outro_controle(ctx)
+        edicoes = dict(_estado()["edicoes"])
+        novo = _aplicar_as_edicoes(prof, edicoes, fabrica, _peca_do_vale_para(ctx))
+        if _o_que_se_guarda(novo) == _o_que_se_guarda(prof):
             raise RuntimeError(f"não havia o que guardar: o perfil “{nome}” já faz isto.")
         perfil.gravar_e_reaplicar(novo, ctx, p)
         estado["edicoes"] = {}

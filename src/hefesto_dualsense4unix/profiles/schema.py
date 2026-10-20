@@ -1351,7 +1351,7 @@ class ControllerOverrides(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    # SÃO DEZ, e a tela oferece doze. O que falta, e o CAMINHO que cada um
+    # SÃO ONZE, e a tela oferece treze. O que falta, e o CAMINHO que cada um
     # espera antes de poder entrar, está na seção «ControllerOverrides» de
     # docs/research/o-porque-dos-modulos.md, ordenada
     # por custo. O `mic` entrou em 03/09/2026 pelo `muted`, que é o campo dele
@@ -1361,7 +1361,8 @@ class ControllerOverrides(BaseModel):
     # é uma SEÇÃO, e sim um valor só; o `movimento` entrou em 24/09/2026, com o
     # chip «Mira Virtual» que o usuário pediu no cartão de cada controle; o modo de
     # ativação e os analógicos, em 16/10/2026, com o consumidor por peça já em
-    # `apply_acessibilidade`.
+    # `apply_acessibilidade`; a troca de botões, em 20/10/2026, com o consumidor em
+    # `apply_remapeamento` e o «Vale para» do mapa do controle.
     leds: LedsConfig | None = None
     triggers: TriggersConfig | None = None
     rumble: ControllerRumbleOverride | None = None
@@ -1384,6 +1385,32 @@ class ControllerOverrides(BaseModel):
     ativacao: ProfileAtivacaoConfig | None = None
     #: A zona morta, a curva e a mão dos analógicos NESTA peça, campo a campo sobre o perfil.
     analogicos: ProfileAnalogicosConfig | None = None  # (noqa-acento) identificador ASCII
+    #: A troca de botões SÓ desta peça (O-REMAPEAMENTO-VALE-POR-JOGADOR-01), por cima da do
+    #: perfil, botão a botão: ``{origem: destino}``; ``botão: botão`` cancela, nesta peça, a troca
+    #: que o perfil faz naquele botão. ``None`` = esta peça segue a troca do perfil.
+    remapeamento: dict[str, str] | None = None
+
+    @field_validator("remapeamento")
+    @classmethod
+    def _validate_remapeamento(
+        cls, value: dict[str, str] | None
+    ) -> dict[str, str] | None:
+        """A troca que o produto sabe fazer nesta peça, limpa — ou a recusa nomeando."""
+        if value is None:
+            return None
+        from hefesto_dualsense4unix.core.remapeamento_de_botao import resolver_da_peca
+
+        return resolver_da_peca(value) or None
+
+    @model_serializer(mode="wrap")
+    def _sem_remapeamento_a_chave_nem_aparece(
+        self, handler: SerializerFunctionWrapHandler
+    ) -> Any:
+        """Peça sem troca própria sai do dump IDÊNTICO ao que era."""
+        dados = handler(self)
+        if isinstance(dados, dict) and dados.get("remapeamento") is None:
+            dados.pop("remapeamento", None)
+        return dados
 
 
 _KEY_BINDING_TOKEN_RE = re.compile(r"^(KEY_[A-Z0-9_]+|__[A-Z_]+__)$")
@@ -2565,6 +2592,12 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         "`None` = esta peça segue a ativação do perfil, e a do perfil não existe por padrão. "
         "Ver `Profile.ativacao`.",
         dono="hefesto_dualsense4unix.core.ativacao_de_botao:montar",
+    ),
+    "ControllerOverrides.remapeamento": Nascimento(
+        NASCE_NO_LEITOR,
+        "`None` = esta peça segue a troca do perfil, e a do perfil não existe por padrão. "
+        "Ver `Profile.remapeamento`.",
+        dono="hefesto_dualsense4unix.core.remapeamento_de_botao:juntar",
     ),
     "ProfileAtivacaoConfig.alternar": Nascimento(
         E_CONTRATO, "Lista vazia = nenhum botão alterna; só existe por gesto de quem joga."

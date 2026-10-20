@@ -76,6 +76,7 @@ MENOR_CORPO: dict[str, Any] = {
     "mic": {}, "sensores": {}, "mascara": "xbox", "movimento": {},
     "ativacao": {"alternar": ["l1"]},  # (noqa-acento) identificador ASCII
     "analogicos": {"zona_morta": 20},  # (noqa-acento) identificador ASCII
+    "remapeamento": {"cross": "circle"},
 }
 
 

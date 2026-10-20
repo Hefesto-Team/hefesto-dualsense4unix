@@ -1865,7 +1865,6 @@ class CoopManager:
         self._andar_a_fila()
         self._promote_pending()
         store = getattr(self._daemon, "store", None)
-        troca = remapeamento_ativo(store)
         com_modo = alguma_ativacao(store)
         com_filtro = alguma_filtro(store)
         com_curva = alguma_curva(store)
@@ -1932,6 +1931,7 @@ class CoopManager:
                         botoes=botoes,
                     )
                 da_mao = botoes
+                troca = remapeamento_da_peca(store, player.identity)
                 if troca:
                     botoes, l2, r2 = traduzir_remapeamento(botoes, l2, r2, troca)
                 if com_modo:
@@ -2452,7 +2452,7 @@ from hefesto_dualsense4unix.core.filtro_de_botao import (  # noqa: E402
     alguma as alguma_filtro,
 )
 from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
-    ativo as remapeamento_ativo,
+    da_peca as remapeamento_da_peca,
 )
 from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
     traduzir as traduzir_remapeamento,

@@ -212,7 +212,8 @@ def test_a_ordem_das_celulas_e_a_do_desenho() -> None:
               for c in _celulas(publicado=False)]
     do_desenho = list(a10_perfis.SECOES_DA_COLUNA) + [
         s for s in perfis_web.SECOES_POR_CONTROLE
-        if s in perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA]
+        if s in perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA
+        and s not in perfis_web.SECOES_QUE_MORAM_NO_MAPA]
     largura = len(do_desenho)
     assert secoes[:largura] == do_desenho, (
         f"a primeira linha do desenho traz {secoes[:largura]} e o pacote "
@@ -298,7 +299,8 @@ def test_a_secao_que_espera_a_sessao_dela_ainda_nao_esta_publicada() -> None:
                   for c in _celulas(publicado=True)}
     desenhadas = {re.search(r'data-hef-secao="([^"]+)"', c).group(1)
                   for c in _celulas(publicado=False)}
-    for secao in perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA:
+    for secao in (perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA
+                  - perfis_web.SECOES_QUE_MORAM_NO_MAPA):
         assert secao in desenhadas, (
             f"`{secao}` espera a sessão dela e o DESENHO não tem a célula — não "
             f"há o que ela aprovar; regere `interface/aba10.py`")

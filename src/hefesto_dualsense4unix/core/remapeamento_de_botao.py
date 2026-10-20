@@ -43,6 +43,7 @@ MOTIVO_COLISAO: Final = "colisao"  # (noqa-acento) código de motivo, não é pr
 FORCA_CHEIA: Final = 255
 
 _ATRIBUTO_DO_ATIVO: Final = "_remapeamento_de_botao_ativo"
+_ATRIBUTO_POR_PECA: Final = "_remapeamento_de_botao_por_peca"
 
 
 class RemapeamentoRecusadoError(ValueError):
@@ -93,6 +94,46 @@ def resolver(declarado: Mapping[str, str] | None) -> dict[str, str]:
     return limpo
 
 
+def resolver_da_peca(declarado: Mapping[str, str] | None) -> dict[str, str]:
+    """A troca de UM controle, limpa. ``botão: botão`` não troca nada: cancela, só nesta peça,
+    a troca que o perfil faz naquele botão (``juntar`` lê isso).
+    """
+    if not declarado:
+        return {}
+    from hefesto_dualsense4unix.core.acoes_de_botao import BOTOES
+
+    conhecidos = set(BOTOES)
+    cancela = {str(o): str(d) for o, d in declarado.items() if o == d}
+    desconhecidos = sorted(o for o in cancela if o not in conhecidos)
+    if desconhecidos:
+        raise RemapeamentoRecusadoError(MOTIVO_DESCONHECIDO, tuple(desconhecidos))
+    if BOTAO_PS in cancela:
+        raise RemapeamentoRecusadoError(MOTIVO_PS, (BOTAO_PS,))
+    troca = resolver({o: d for o, d in declarado.items() if o != d})
+    return {**troca, **cancela}
+
+
+def juntar(
+    do_perfil: Mapping[str, str] | None, da_peca: Mapping[str, str] | None
+) -> dict[str, str]:
+    """A troca que vale para o controle: a do perfil, com a da peça por cima, botão a botão.
+
+    O botão que a peça troca vale o que ela diz; o que a peça deixa igual (``botão: botão``)
+    volta a passar intacto. Se a soma recusa (dois botões no mesmo destino, por exemplo), vale só
+    a da peça: o que o usuário escolheu nunca depende do que o perfil já tinha.
+    """
+    peca = dict(da_peca or {})
+    if not peca:
+        return dict(do_perfil or {})
+    so_a_dela = {o: d for o, d in peca.items() if o != d}
+    soma = {**(do_perfil or {}), **peca}
+    soma = {o: d for o, d in soma.items() if o != d}
+    try:
+        return resolver(soma)
+    except RemapeamentoRecusadoError:
+        return so_a_dela
+
+
 def traduzir(
     apertados: frozenset[str], l2: int, r2: int, mapa: Mapping[str, str]
 ) -> tuple[frozenset[str], int, int]:
@@ -114,12 +155,28 @@ def traduzir(
     return frozenset(saida), forca["l2"], forca["r2"]
 
 
-def definir_ativo(dono: object, mapa: Mapping[str, str] | None) -> None:
-    """Guarda o mapa ATIVO no dono (o `StateStore` do daemon). Vazio = sem troca."""
+def chave(uniq: object) -> str:
+    """A identidade do controle: só os hex, em minúsculas (a mesma da ativação do botão)."""
+    return "".join(c for c in str(uniq or "").lower() if c in "0123456789abcdef")
+
+
+def definir_ativo(
+    dono: object,
+    mapa: Mapping[str, str] | None,
+    por_peca: Mapping[str, Mapping[str, str] | None] | None = None,
+) -> None:
+    """Guarda o mapa ATIVO no dono (o `StateStore` do daemon). Vazio = sem troca.
+
+    ``por_peca`` é a troca JÁ JUNTADA de cada controle que tem a sua (``{uniq: mapa}``); um
+    mapa vazio quer dizer «este controle não troca nada», mesmo com o perfil trocando.
+    """
     if dono is None:
         return
     setattr(dono, _ATRIBUTO_DO_ATIVO,
             MappingProxyType(dict(mapa)) if mapa else None)
+    limpo = {chave(u): MappingProxyType(dict(m or {}))
+             for u, m in (por_peca or {}).items() if chave(u)}
+    setattr(dono, _ATRIBUTO_POR_PECA, MappingProxyType(limpo))
 
 
 def ativo(dono: object) -> Mapping[str, str] | None:
@@ -128,6 +185,24 @@ def ativo(dono: object) -> Mapping[str, str] | None:
     if type(valor) is not MappingProxyType:
         return None
     return cast("Mapping[str, str]", valor)
+
+
+def da_peca(dono: object, uniq: object) -> Mapping[str, str] | None:
+    """A troca do controle ``uniq`` AGORA: a dele, ou a do perfil; ``None`` = nenhuma."""
+    por_peca = getattr(dono, _ATRIBUTO_POR_PECA, None)
+    if isinstance(por_peca, Mapping) and uniq:
+        k = chave(uniq)
+        if k in por_peca:
+            return por_peca[k] or None
+    return ativo(dono)
+
+
+def alguma(dono: object) -> bool:
+    """Algum controle troca botão neste perfil? Custo de dois ``getattr``."""
+    if ativo(dono):
+        return True
+    por_peca = getattr(dono, _ATRIBUTO_POR_PECA, None)
+    return isinstance(por_peca, Mapping) and any(por_peca.values())
 
 
 __all__ = [
@@ -142,8 +217,13 @@ __all__ = [
     "MOTIVO_PS",
     "REMAPEAVEIS",
     "RemapeamentoRecusadoError",
+    "alguma",
     "ativo",
+    "chave",
+    "da_peca",
     "definir_ativo",
+    "juntar",
     "resolver",
+    "resolver_da_peca",
     "traduzir",
 ]

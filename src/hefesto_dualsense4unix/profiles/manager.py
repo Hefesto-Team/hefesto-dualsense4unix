@@ -714,9 +714,14 @@ class ProfileManager:
     def apply_remapeamento(
         self, profile: Profile, *, relatorio: dict[str, str] | None = None
     ) -> None:
-        """Deposita a troca botão a botão do perfil no `store` (F1-REMAPEAR)."""
+        """Deposita a troca botão a botão do perfil no `store` (F1-REMAPEAR), e a de cada peça.
+
+        A troca de um controle é a do perfil com a dele por cima (``juntar``); o controle sem
+        troca própria segue a do perfil.
+        """
         from hefesto_dualsense4unix.core.remapeamento_de_botao import (
             definir_ativo,
+            juntar,
             resolver,
         )
 
@@ -728,9 +733,15 @@ class ProfileManager:
             mapa = {}
             if relatorio is not None:
                 relatorio["remapeamento"] = "falhou"
-        definir_ativo(self.store, mapa or None)
+        por_peca = {
+            str(uniq): juntar(mapa, cfg.remapeamento)
+            for uniq, cfg in (profile.controllers or {}).items()
+            if getattr(cfg, "remapeamento", None)
+        }
+        definir_ativo(self.store, mapa or None, por_peca)
+        ligado = bool(mapa) or any(por_peca.values())
         if relatorio is not None and "remapeamento" not in relatorio:
-            relatorio["remapeamento"] = "aplicado" if mapa else "de_fabrica"
+            relatorio["remapeamento"] = "aplicado" if ligado else "de_fabrica"
 
     def apply_movimento(
         self, profile: Profile, *, relatorio: dict[str, str] | None = None
