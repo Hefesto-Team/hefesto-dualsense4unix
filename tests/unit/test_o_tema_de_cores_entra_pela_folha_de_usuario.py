@@ -105,6 +105,7 @@ def test_o_tema_claro_sem_os_acentos_e_recusado_pelo_rotulo() -> None:
 
 
 def test_o_acento_claro_sobre_o_fundo_claro_e_recusado_com_o_piso_do_acento() -> None:
+    """A prova da D-2010-O-DESTAQUE-DO-TEMA-PASSA-DE-3-PARA-1."""
     # o rótulo e o verde escuros passam; o amarelo da casa fica, e é ele o pior par
     with pytest.raises(tm.TemaRecusadoError) as recusa:
         tm.validar(CLARO_SEM_ACENTOS + ";--green:#1d7a3c}")
