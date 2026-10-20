@@ -3143,3 +3143,13 @@ def rumble_com_a_forca(
     return ControllerRumbleOverride.model_validate(campos) if campos else None
 
 
+
+
+# A linha do campo novo mora no fim do arquivo, e não no meio da tabela, para as citações
+# `schema.py:<linha>` dos documentos continuarem abrindo no que prometem.
+NASCIMENTO_DOS_CAMPOS["TriggersConfig.intensidade"] = Nascimento(
+    E_CONTRATO,
+    "`None` = 100%: o firmware sem o byte de atenuação e o efeito sem reforço. Só o trilho "
+    "da 03 escreve, por controle (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-"
+    "COMO-NO-PS5-01); não é feature que nasce muda.",
+)
