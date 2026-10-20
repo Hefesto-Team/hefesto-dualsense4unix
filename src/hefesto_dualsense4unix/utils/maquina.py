@@ -535,6 +535,83 @@ class AparelhoDeclarado(BaseModel):
     ] | None = None
 
 
+#: A chave de um acionador no ``maquina.json``: ``vvvv:pppp:hhhhhhhh``, o vendor e o product que o
+#: kernel diz dele e oito hex do resumo do nome e do caminho físico (:func:`chave_do_acionador`).
+#: O caminho físico entra só pelo resumo: no rádio ele carrega o endereço do adaptador.
+_CHAVE_DO_ACIONADOR = re.compile(r"^[0-9a-f]{4}:[0-9a-f]{4}:[0-9a-f]{8}$")
+_MAXIMO_DE_ACIONADORES = 16
+_MAXIMO_DE_TECLAS = 64
+#: O código da tecla no evdev (``KEY_MAX`` é 0x2ff), em decimal.
+_CODIGO_DA_TECLA = re.compile(r"^[0-9]{1,3}$")
+_MAXIMO_DO_NOME_DO_ACIONADOR = 128
+
+
+def chave_do_acionador(vendor: object, product: object, nome: object, fisico: object) -> str:
+    """A identidade de um aparelho de entrada, pelo que o kernel diz dele, sem endereço nenhum."""
+    import hashlib
+
+    def _hex4(valor: object) -> str:
+        texto = str(valor or "").strip().lower().removeprefix("0x")
+        try:
+            return f"{int(texto, 16) & 0xFFFF:04x}" if texto else "0000"
+        except ValueError:
+            return "0000"
+
+    resumo = hashlib.sha1(f"{nome or ''}\0{fisico or ''}".encode(),
+                          usedforsecurity=False).hexdigest()[:8]
+    return f"{_hex4(vendor)}:{_hex4(product)}:{resumo}"
+
+
+class AcionadorDeclarado(BaseModel):
+    """Um aparelho de entrada que vira fonte de botões de um controle (a linha dele na Conexões).
+
+    ``controle`` é a chave do controle que recebe as teclas (doze hex, a mesma de ``controles``);
+    ``teclas`` vai do código da tecla no evdev ao botão do pad virtual daquele controle, um dos
+    ``core/remapeamento_de_botao.REMAPEAVEIS``. ``nome`` é o que o kernel diz do aparelho, para a
+    tela; quem o acha de novo é a chave. ``{"teclas": {c: None}}`` esquece uma tecla.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    nome: str | None = None
+    controle: str | None = None
+    teclas: dict[str, str] = Field(default_factory=dict)
+
+    @field_validator("nome")
+    @classmethod
+    def _nome_curto(cls, valor: str | None) -> str | None:
+        if valor is None:
+            return None
+        limpo = valor.strip()[:_MAXIMO_DO_NOME_DO_ACIONADOR]
+        return limpo or None
+
+    @field_validator("controle")
+    @classmethod
+    def _controle_e_a_chave_de_um_controle(cls, valor: str | None) -> str | None:
+        if valor is None:
+            return None
+        if not _CHAVE_DE_CONTROLE.match(valor) or valor.startswith(_OCTETO_SINTETIZADO):
+            raise ValueError(f"controle {valor!r} não é a chave de um controle")
+        return valor
+
+    @field_validator("teclas", mode="before")
+    @classmethod
+    def _tecla_e_codigo_e_o_botao_e_do_pad(cls, valor: Any) -> Any:
+        if not isinstance(valor, Mapping):
+            return valor
+        from hefesto_dualsense4unix.core.remapeamento_de_botao import REMAPEAVEIS
+
+        vivas = {str(k): v for k, v in valor.items() if v is not None}
+        if len(vivas) > _MAXIMO_DE_TECLAS:
+            raise ValueError(f"{len(vivas)} teclas num acionador, e o teto é {_MAXIMO_DE_TECLAS}")
+        for codigo, botao in vivas.items():
+            if not _CODIGO_DA_TECLA.match(codigo) or int(codigo) > 0x2FF:
+                raise ValueError(f"tecla {codigo!r} não é um código do evdev")
+            if botao not in REMAPEAVEIS:
+                raise ValueError(f"{botao!r} não é um botão do pad ({', '.join(REMAPEAVEIS)})")
+        return vivas
+
+
 class ControleDeclarado(BaseModel):
     """O que um controle não anuncia sobre si.
 
@@ -867,6 +944,8 @@ class MaquinaConfig(BaseModel):
     lancadores: dict[str, LancadorDeclarado] = Field(default_factory=dict)
     adaptadores: dict[str, AdaptadorDeclarado] = Field(default_factory=dict)
     aparelhos: dict[str, AparelhoDeclarado] = Field(default_factory=dict)
+    #: Os aparelhos de entrada que viram botões de um controle, pela :func:`chave_do_acionador`.
+    acionadores: dict[str, AcionadorDeclarado] = Field(default_factory=dict)
     # seis gestos do controle faz, pela chave de ``core/acoes_do_gesto.GESTOS``.
     # ninguém declarou, e vale ``acoes_do_gesto.PADRAO``; ``{"gestos": {g:
     gestos: dict[str, GestoDeclarado] = Field(default_factory=dict)
@@ -962,6 +1041,21 @@ class MaquinaConfig(BaseModel):
                     f"chave de aparelho {chave!r} não é endereço "
                     "(doze hex minúsculos, sem separador)"
                 )
+        return vivos
+
+    @field_validator("acionadores", mode="before")
+    @classmethod
+    def _chave_do_acionador_e_none_esquece(cls, valor: Any) -> Any:
+        """A chave é a :func:`chave_do_acionador`; ``{"acionadores": {c: None}}`` esquece."""
+        if not isinstance(valor, Mapping):
+            return valor
+        vivos = {k: v for k, v in valor.items() if v is not None}
+        if len(vivos) > _MAXIMO_DE_ACIONADORES:
+            raise ValueError(
+                f"{len(vivos)} acionadores declarados, e o teto é {_MAXIMO_DE_ACIONADORES}")
+        for chave in vivos:
+            if not isinstance(chave, str) or not _CHAVE_DO_ACIONADOR.match(chave):
+                raise ValueError(f"chave de acionador {chave!r} não é vvvv:pppp:hhhhhhhh")
         return vivos
 
     @field_validator("gestos", mode="before")
