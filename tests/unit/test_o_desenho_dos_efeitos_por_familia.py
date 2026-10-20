@@ -115,6 +115,11 @@ def _problemas_03(nome: str, doc: str) -> list[str]:
     frases = re.findall(r'<span class="g2-frase">([^<]*)</span>', doc)
     if len([f for f in frases if f]) != 4:
         falta.append("a frase do efeito falta nas quatro células conectadas")
+    # o mockup de hoje põe a frase de cada imersão na dica da opção; a variante não a perde
+    sem_dica = re.findall(r'<option value="(?!—|meu:)[^"]*"(?![^>]*title=)[^>]*>([^<]*)<',
+                          efeitos[0])
+    if sem_dica:
+        falta.append(f"opções sem a frase na dica: {sem_dica[:3]}")
     return falta
 
 
@@ -146,6 +151,13 @@ def test_o_03_nao_mistura_o_acionamento_morde() -> None:
     mordida = primeira.replace("</select>", "<option>Resistência</option></select>")
     assert any("Resistência" in p for p in _problemas_03("03-efeitos-B-familia-no-nome",
                                                          doc.replace(primeira, mordida, 1)))
+
+
+def test_o_03_morde_a_opcao_sem_dica() -> None:
+    doc = _ler("03-efeitos-A-familia-em-grupos")
+    mordido = re.sub(r'(<option value="golpe-leve"[^>]*?) title="[^"]*"', r"\1", doc)
+    assert mordido != doc
+    assert any("dica" in p for p in _problemas_03("03-efeitos-A-familia-em-grupos", mordido))
 
 
 def test_o_03_guarda_a_fiacao_dos_selects() -> None:
@@ -304,6 +316,26 @@ def test_nenhuma_variante_traz_selo_nem_recado_novo() -> None:
         assert len(re.findall(recado, doc)) <= len(re.findall(recado, base)), nome
 
 
+def _folhas_do_corpo(doc: str) -> list[str]:
+    corpo = doc[doc.index("</head>"):]
+    return re.findall(r"<style\b[^>]*>.*?</style>", corpo, flags=re.S)
+
+
+def test_a_folha_da_variante_mora_na_cabeca() -> None:
+    """O `<style>` do corpo é do produto: o `#plastico-vivo` da 04 é trocado a cada tique vivo, e a
+    regra que entrasse ali sumiria no primeiro tique. MORDIDA: a regra da frase da 04 A dentro do
+    `#plastico-vivo` (onde a primeira versão a pôs) reprova."""
+    for nome in NOMES:
+        base = (MOCKUP / f"{PRINCIPAL[nome[:2]]}.html").read_text(encoding="utf-8")
+        assert _folhas_do_corpo(_ler(nome)) == _folhas_do_corpo(base), nome
+    doc = _ler("04-efeitos-A-nome-e-frase")
+    mordido = doc.replace('<style id="plastico-vivo"></style>',
+                          '<style id="plastico-vivo">.g4-frase{display:block}</style>', 1)
+    assert mordido != doc
+    base = (MOCKUP / "04-iluminacao.html").read_text(encoding="utf-8")
+    assert _folhas_do_corpo(mordido) != _folhas_do_corpo(base)
+
+
 @pytest.fixture(scope="module")
 def navegador():
     if not CHROME.exists():
@@ -321,7 +353,8 @@ _ROLADORES = """() => { const d = document.documentElement;
     && e.scrollHeight > e.clientHeight + 1
     && ['auto', 'scroll'].includes(getComputedStyle(e).overflowY))
     .map(e => e.tagName + '.' + e.className);
-  return {lateral: d.scrollWidth > d.clientWidth + 1, rol}; }"""
+  return {lateral: d.scrollWidth > d.clientWidth + 1, rol,
+          sobra: d.scrollHeight - d.clientHeight}; }"""
 
 
 def _medir(navegador, arquivo: pathlib.Path, larg: int, alt: int, antes: str = "") -> dict:
@@ -346,11 +379,57 @@ def test_nenhuma_variante_rola_na_vertical(navegador, nome: str, larg: int, alt:
     cena = _medir(navegador, VARIANTES / f"{nome}.html", larg, alt)
     novos = [r for r in cena["rol"] if r not in base["rol"]]
     assert not novos and not cena["lateral"], (nome, larg, alt, novos)
+    # o documento também: a 04 de hoje já passa da vista, e a variante não passa mais que ela
+    assert cena["sobra"] <= base["sobra"], (nome, larg, alt, "documento", cena["sobra"],
+                                            base["sobra"])
     if nome.startswith("03-"):
         aberto = _medir(navegador, VARIANTES / f"{nome}.html", larg, alt,
                         'document.querySelector(".g2-avtog input").click()')
         novos = [r for r in aberto["rol"] if r not in base["rol"]]
         assert not novos and not aberto["lateral"], (nome, "avançado aberto", larg, alt, novos)
+        assert aberto["sobra"] <= base["sobra"], (nome, "avançado aberto", larg, alt)
+
+
+def test_a_regua_de_rolagem_morde_o_documento_que_cresce(navegador, tmp_path) -> None:
+    """A régua de elementos não vê o documento (o `html` não tem `overflow:auto`); esta vê."""
+    doc = _ler("04-efeitos-A-nome-e-frase").replace(
+        "</body>", '<div style="height:400px"></div></body>', 1)
+    arquivo = tmp_path / "cresce.html"
+    arquivo.write_text(doc, encoding="utf-8")
+    base = _medir(navegador, MOCKUP / "04-iluminacao.html", 1212, 809)
+    assert _medir(navegador, arquivo, 1212, 809)["sobra"] > base["sobra"]
+
+
+_ORDEM_DA_RECEITA = """() => [...document.querySelectorAll('.estilo-liga .lin')].map(l => {
+  const r = l.getBoundingClientRect();
+  return [l.querySelector('.rot').textContent, r.left, r.top]; })"""
+
+
+@pytest.mark.parametrize(("larg", "alt"), LARGURAS[:2])
+def test_o_10_a_le_os_gatilhos_juntos_de_cima_para_baixo(navegador, tmp_path, larg: int,
+                                                         alt: int) -> None:
+    """Na grade de duas colunas (altura até 830 px), o R2 e o L2 ficam na mesma coluna, nessa ordem,
+    e o título não empurra o R2 para o lado. MORDIDA: sem o `grid-auto-flow:column` o R2 vai para a
+    direita do título e o L2 para baixo dele, na outra coluna."""
+    def ordem(arquivo: pathlib.Path) -> dict:
+        pg = navegador.new_page(viewport={"width": larg, "height": alt})
+        try:
+            pg.goto(arquivo.as_uri())
+            pg.wait_for_load_state("networkidle")
+            return {rot: (x, y) for rot, x, y in pg.evaluate(_ORDEM_DA_RECEITA)}
+        finally:
+            pg.close()
+
+    def junto(o: dict) -> bool:
+        return o["R2"][0] == o["L2"][0] and o["R2"][1] < o["L2"][1]
+
+    assert junto(ordem(VARIANTES / "10-efeitos-A-receita-em-linhas.html")), (larg, alt)
+    if alt <= 830:
+        doc = _ler("10-efeitos-A-receita-em-linhas").replace(
+            "grid-template-rows:repeat(3,auto);grid-auto-flow:column", "", 1)
+        arquivo = tmp_path / "ordem.html"
+        arquivo.write_text(doc, encoding="utf-8")
+        assert not junto(ordem(arquivo))
 
 
 def test_a_regua_de_rolagem_morde_uma_altura_que_estoura(navegador, tmp_path) -> None:

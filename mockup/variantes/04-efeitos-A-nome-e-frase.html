@@ -1829,6 +1829,11 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 .menu-hefesto button:hover{background:rgba(189,147,249,.14)}
 .menu-hefesto button[disabled]{color:var(--fg,#f8f8f2);opacity:.55;cursor:default;background:transparent}
 .menu-hefesto hr{border:0;border-top:1px solid var(--border-sutil,#343746);margin:5px 4px}
+  /* ---------- A FRASE DO EFEITO NA TELA (variante A de desenho, 20/10/2026) ----------
+     O nome vem com a frase do que se vê, uma linha embaixo da lista. */
+  .g4-frase{display:block;flex:0 0 14px;margin-top:0;font:400 11px/14px 'Space Grotesk',system-ui,sans-serif;
+    color:var(--texto-suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .luz-grade .ctrl[data-conectado="nao"] .g4-frase{display:none}
 </style>
 </head>
 <body class="por-controle" data-campo="nativo" data-hef-alvo="classe" data-hef-classe="nativo" data-hef-quando="sim">
@@ -3881,12 +3886,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
                colunas. Um `<style>` é `display:none` pela folha do navegador e
                não vira item de grade, mas pôr um elemento que não é coluna
                DENTRO da grade é convidar a próxima regra `> *` a contá-lo. -->
-        <style id="plastico-vivo">  /* ---------- A FRASE DO EFEITO NA TELA (variante A de desenho, 20/10/2026) ----------
-     O nome vem com a frase do que se vê, uma linha embaixo da lista. */
-  .g4-frase{display:block;flex:0 0 14px;margin-top:0;font:400 11px/14px 'Space Grotesk',system-ui,sans-serif;
-    color:var(--texto-suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .luz-grade .ctrl[data-conectado="nao"] .g4-frase{display:none}
-</style>
+        <style id="plastico-vivo"></style>
 
       </div>
     </div>
