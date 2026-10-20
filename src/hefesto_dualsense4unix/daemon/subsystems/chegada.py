@@ -42,8 +42,6 @@ DURACAO_DO_TOQUE_MS = 120
 #: A subida da barra: de um quinto à cor cheia em cinco quadros (uma subida, nunca um lampejo).
 BRILHOS_DA_SUBIDA: tuple[float, ...] = (0.2, 0.4, 0.6, 0.8, 1.0)
 PASSO_DA_SUBIDA_S = 0.12
-#: O clique do gatilho dura o primeiro passo da subida e sai.
-QUADROS_DO_CLIQUE = 1
 
 
 @dataclass
@@ -92,10 +90,16 @@ class Chegada:
     def __init__(self, pontas: PontasDaChegada) -> None:
         self._pontas = pontas
         self._pendentes: dict[str, None] = {}
+        self._subindo: frozenset[str] = frozenset()
 
     @property
     def pendentes(self) -> tuple[str, ...]:
         return tuple(self._pendentes)
+
+    @property
+    def subindo(self) -> frozenset[str]:
+        """Os controles cuja barra a subida está pintando agora: o laço da luz não os pinta."""
+        return self._subindo
 
     def chegou(self, uniq: str) -> None:
         """Um controle novo na mesa: a Chegada dele fica devida (uma por conexão)."""
@@ -127,6 +131,7 @@ class Chegada:
             if livre_gatilho:
                 self._pontas.clicar(uniq)
         self._subir_a_luz(luz)
+        # o clique fica armado durante a subida da barra e sai no fim dela
         for uniq, canais in feito.items():
             if canais["gatilho"]:
                 self._pontas.soltar_o_clique(uniq)
@@ -137,11 +142,17 @@ class Chegada:
         """A barra sobe até a cor cheia em todos de uma vez, e o backend a devolve ao desejado."""
         if not luz:
             return
-        for brilho in BRILHOS_DA_SUBIDA:
-            for uniq, (r, g, b) in luz.items():
-                self._pontas.pintar(uniq, (int(r * brilho), int(g * brilho), int(b * brilho)))
-            self._pontas.dormir(PASSO_DA_SUBIDA_S)
-        self._pontas.devolver_a_luz()
+        # O laço da luz animada pinta a mesma barra a até 30 quadros/s: sem a pausa, os dois se
+        # alternam e a subida vira um pisca de 8 Hz entre a rampa e o efeito do estilo.
+        self._subindo = frozenset(luz)
+        try:
+            for brilho in BRILHOS_DA_SUBIDA:
+                for uniq, (r, g, b) in luz.items():
+                    self._pontas.pintar(uniq, (int(r * brilho), int(g * brilho), int(b * brilho)))
+                self._pontas.dormir(PASSO_DA_SUBIDA_S)
+            self._pontas.devolver_a_luz()
+        finally:
+            self._subindo = frozenset()
 
 
 def pontas_de_producao(daemon: Any) -> PontasDaChegada:
@@ -194,6 +205,12 @@ def pontas_de_producao(daemon: Any) -> PontasDaChegada:
         escrever_a_luz, lambda: devolver(""), tocar, clicar, soltar_o_clique)
 
 
+def segurando_a_luz(daemon: Any) -> frozenset[str]:
+    """Os controles cuja barra a Chegada está subindo agora (sem criar a Chegada)."""
+    achada = getattr(daemon, "_chegada", None)
+    return achada.subindo if isinstance(achada, Chegada) else frozenset()
+
+
 def chegada_de(daemon: Any) -> Chegada:
     """A :class:`Chegada` DESTE daemon, criada na primeira consulta."""
     achada = getattr(daemon, "_chegada", None)
@@ -218,4 +235,5 @@ __all__ = [
     "chegada_de",
     "nota_da_unidade",
     "pontas_de_producao",
+    "segurando_a_luz",
 ]

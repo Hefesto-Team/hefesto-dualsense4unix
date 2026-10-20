@@ -38,8 +38,6 @@ DESLOCAMENTO_DA_MARE = 30.0 / 360.0
 VOLTA_MINIMA_DO_ARCO_IRIS_S = 8.0
 #: Defasagem do arco-íris entre dois controles vizinhos: um quarto de volta.
 DEFASAGEM_DO_ARCO_IRIS = 0.25
-#: Os efeitos cujo desenho é ENTRE os controles (a defasagem do arco-íris, o mesmo ângulo da
-#: Maré): o laço os conta num relógio só, o da mesa, e não do instante em que cada um entrou.
 #: O Acende da Corrida (20/10/2026): a barra segue o curso do gatilho, do piso à cor cheia, e o
 #: brilho nunca anda mais depressa que três vaivéns (subir e descer) por segundo.
 PISO_DO_ACENDE = 0.25
@@ -51,7 +49,8 @@ MEIO_VAIVEM_DO_ACENDE_S = 1.0 / (2.0 * VAIVENS_DO_ACENDE_POR_S)
 LIMIAR_DE_BATERIA_PCT = 30
 RITMO_DA_BATERIA = 2
 ESTADOS_DE_CARGA_EM_DIA = frozenset({"carregando", "cheio"})
-
+#: Os efeitos cujo desenho é ENTRE os controles (a defasagem do arco-íris, o mesmo ângulo da
+#: Maré): o laço os conta num relógio só, o da mesa, e não do instante em que cada um entrou.
 BASES_DO_RELOGIO_COMUM = frozenset({"arco-iris", "mare"})  # (noqa-acento) chave ASCII
 
 _RITMO_MAXIMO = 10

@@ -19,6 +19,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from typing import Any
 
+from hefesto_dualsense4unix.daemon.subsystems.chegada import segurando_a_luz
 from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import (
     CANAL_LUZ,
     controles_do_daemon,
@@ -373,7 +374,7 @@ class Passo:
             for c in controles
             if c.uniq in plano and not self._o_hefesto_pode_pintar(c, jogo)
         )
-        return self.luz.tique(agora, plano, calados, self._o_pulso_do_tiro_segura())
+        return self.luz.tique(agora, plano, calados, self._quem_tem_outro_dono())
 
     def _cores_base(self, controles: list[Any]) -> dict[str, RGB]:
         """A cor que a barra tem agora em cada controle (já no brilho do perfil)."""
@@ -449,6 +450,10 @@ class Passo:
                 fora[c.uniq] = PlanoDoControle(
                     EfeitoDaLuz("respirar", (cor,), RITMO_DA_BATERIA), 1.0, posicao % 4, semente)
         return fora
+
+    def _quem_tem_outro_dono(self) -> frozenset[str]:
+        """As barras que outro dono pinta agora: o pulso do tiro e a subida da Chegada."""
+        return self._o_pulso_do_tiro_segura() | segurando_a_luz(self.daemon)
 
     def _o_pulso_do_tiro_segura(self) -> frozenset[str]:
         """Os controles em que o pulso do tiro do tato vivo ainda está na barra."""

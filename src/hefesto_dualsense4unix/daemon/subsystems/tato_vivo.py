@@ -861,6 +861,7 @@ class AtuadorDaHaptica:
 
     Sem escolha (ou em «Do estilo») o toque é o de hoje. A escolha explícita dispara nos mesmos
     eventos da receita; «Sem efeito» e o Som no corpo (contínuo, do laço) não respondem a evento.
+    O Toque toca na nota da unidade (a Assinatura, ``nota_de``) onde a Chegada vale.
     """
 
     canal = CANAL_HAPTICA
@@ -872,12 +873,24 @@ class AtuadorDaHaptica:
         escolha_de: Callable[[str], str | None] | None = None,
         estilo_de: Callable[[], Any] | None = None,
         na_economia: Callable[[str], bool] | None = None,
+        nota_de: Callable[[str], int | None] | None = None,
     ) -> None:
         self._tocar = tocar
         self._ouvindo = ouvindo or (lambda: False)
         self._escolha_de = escolha_de or (lambda uniq: None)
         self._estilo_de = estilo_de or (lambda: None)
         self._na_economia = na_economia or (lambda uniq: False)
+        self._nota_de = nota_de or (lambda uniq: None)
+
+    def _toque_da_unidade(self, uniq: str) -> str:
+        """O Toque na nota da cor do plástico (a Assinatura), na mesma regra da Chegada: todo
+        estilo menos o Nativo e o Personalizado; o Toque de 160 Hz fora dela ou sem nota."""
+        from hefesto_dualsense4unix.daemon.subsystems.chegada import a_chegada_vale
+
+        estilo = self._estilo_de()
+        if not a_chegada_vale(estilo if isinstance(estilo, str) else None, False):
+            return formas_de_haptica.TOQUE
+        return formas_de_haptica.forma_da_nota(self._nota_de(uniq))
 
     def _forma(self, uniq: str) -> str | None:
         """A forma que toca neste controle agora; ``None`` quando ele não toca."""
@@ -914,6 +927,8 @@ class AtuadorDaHaptica:
         )
         if forma == formas_de_haptica.ECO and evento.energia < ECO_A_PARTIR_DE:
             forma = formas_de_haptica.IMPACTO  # só o golpe forte reverbera
+        if forma == formas_de_haptica.TOQUE:
+            forma = self._toque_da_unidade(evento.uniq)
         if forma == formas_de_haptica.TOQUE:
             self._tocar(*pedido)
         else:
@@ -2332,6 +2347,7 @@ def _na_barra(valor: int, pontos: int) -> int:
 
 def atuadores_de_producao(daemon: Any) -> list[Atuador]:
     """Os canais que o motor sabe escrever hoje."""
+    from hefesto_dualsense4unix.daemon.subsystems.chegada import nota_da_unidade
 
     def ouvindo() -> bool:
         motor = motor_do(daemon)
@@ -2439,7 +2455,8 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
 
     return [
         AtuadorDaHaptica(
-            tocar, ouvindo, escolha_de, lambda: estilo_ativo(daemon), na_economia),
+            tocar, ouvindo, escolha_de, lambda: estilo_ativo(daemon), na_economia,
+            lambda uniq: nota_da_unidade(daemon, uniq)),
         AtuadorDoSom(estalo),
         AtuadorDoGatilho(
             gatilho,

@@ -361,3 +361,211 @@ async def test_o_laco_anuncia_o_primeiro_controle_e_os_que_chegam_depois(
     finally:
         daemon._stop_event.set()
         await laco
+
+
+# --- 6. A subida da barra tem um dono só (o laço da luz animada espera) --------------------
+
+
+def test_durante_a_subida_o_laco_da_luz_animada_nao_pinta_a_barra() -> None:
+    """O laço da luz pinta a barra a até 30 quadros/s; a subida dura 0,6 s. Sem a pausa, os dois
+    se alternam e a subida vira um pisca entre a rampa e o efeito do estilo.
+
+    MORDIDA: tire o `segurando_a_luz` da pausa do `Passo` (ou o `_subindo` da subida) e o laço
+    escreve no meio da subida: isto reprova.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import luz_animada as la
+    from hefesto_dualsense4unix.profiles.schema import EfeitoDaLuz
+
+    mesa = _Mesa(na_mesa=(AZUL,))
+    daemon = _daemon(mesa)
+    do_laco: list[tuple[str, Any]] = []
+    animada = la.LuzAnimada(lambda u, c: do_laco.append((u, c)), lambda _u: None)
+    passo = la.Passo(daemon, animada)
+    plano = {AZUL: la.PlanoDoControle(EfeitoDaLuz("respirar", (LUZ_DE[AZUL],), 5), 1.0)}
+    relogio = [0.0]
+    segurados: list[frozenset[str]] = []
+
+    def um_quadro_do_laco(_s: float) -> None:
+        relogio[0] += 0.12
+        segurados.append(ch.segurando_a_luz(daemon))
+        animada.tique(relogio[0], plano, frozenset(), passo._quem_tem_outro_dono())
+
+    daemon._chegada._pontas.dormir = um_quadro_do_laco
+    assert animada.tique(0.0, plano) == 1  # antes da Chegada, o laço é o dono da barra
+    do_laco.clear()
+    _chegar(daemon, AZUL)
+    _disparar(daemon)
+    assert len(segurados) == len(ch.BRILHOS_DA_SUBIDA)
+    assert all(s == frozenset({AZUL}) for s in segurados), segurados
+    assert do_laco == [], "o laço pintou a barra no meio da subida"
+    assert ch.segurando_a_luz(daemon) == frozenset()  # a subida acabou: a barra volta ao laço
+    assert animada.tique(relogio[0] + 0.2, plano) == 1  # e o primeiro quadro sai, mesmo igual
+
+
+def test_a_subida_que_falha_no_meio_devolve_a_barra_ao_laco() -> None:
+    mesa = _Mesa(na_mesa=(AZUL,))
+    daemon = _daemon(mesa)
+
+    def cai(_s: float) -> None:
+        raise RuntimeError("o rádio caiu")
+
+    daemon._chegada._pontas.dormir = cai
+    _chegar(daemon, AZUL)
+    with pytest.raises(RuntimeError):
+        _disparar(daemon)
+    assert ch.segurando_a_luz(daemon) == frozenset()
+
+
+def test_sem_chegada_montada_ninguem_segura_a_luz() -> None:
+    assert ch.segurando_a_luz(SimpleNamespace()) == frozenset()
+
+
+# --- 7. A Assinatura vale no Toque de todo tiro, não só no da Chegada ---------------------
+
+
+def _toque_do_tiro(estilo: str | None, escolha: str | None = None,
+                   uniqs: tuple[str, ...] = (AZUL, BRANCO, VERMELHO, ROXO)) -> dict[str, str]:
+    """A forma que o Toque do tiro leva a cada controle (pelo tocador de lista)."""
+    from hefesto_dualsense4unix.daemon.subsystems import tato_vivo as tv
+
+    mesa = _Mesa()
+    feitos: list[tuple[Any, ...]] = []
+    atuador = tv.AtuadorDaHaptica(
+        lambda *a: feitos.append(a) or True, None, lambda _u: escolha, lambda: estilo, None,
+        lambda uniq: ch.nota_da_unidade(mesa.daemon, uniq))
+    receita = tv.Receita(vibracao_por_tiro=True)
+    for uniq in uniqs:
+        atuador.escrever(tv.Evento(0.0, uniq, tv.TIPO_RUMBLE, tv.LADO_ESQUERDO, 1.0), receita, 0.0)
+    return {a[0]: (a[4] if len(a) > 4 else fh.TOQUE) for a in feitos}
+
+
+def test_o_toque_do_tiro_toca_na_nota_de_cada_controle() -> None:
+    """MORDIDA: tire o `_toque_da_unidade` do `AtuadorDaHaptica.escrever` e os quatro tocam o
+    mesmo Toque de 160 Hz: isto reprova (a régua 3 da Chegada seguiria verde)."""
+    formas = _toque_do_tiro("fps")
+    assert formas == {u: fh.forma_da_nota(NOTA_DE[u]) for u in (AZUL, BRANCO, VERMELHO, ROXO)}
+    assert len(set(formas.values())) == 4
+
+
+@pytest.mark.parametrize("estilo", ["personalizado", "nativo", None])
+def test_no_personalizado_no_nativo_e_sem_estilo_o_toque_e_o_de_sempre(estilo: str | None) -> None:
+    assert set(_toque_do_tiro(estilo).values()) == {fh.TOQUE}
+
+
+def test_a_forma_que_nao_e_o_toque_nao_ganha_nota() -> None:
+    assert set(_toque_do_tiro("fps", fh.IMPACTO).values()) == {fh.IMPACTO}
+    assert set(_toque_do_tiro("luta").values()) == {fh.IMPACTO}  # a forma do estilo manda
+
+
+def test_a_producao_liga_a_nota_da_unidade_ao_toque_do_tiro(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    from hefesto_dualsense4unix.daemon.subsystems import tato_vivo as tv
+
+    mesa = _Mesa()
+    tocados: list[tuple[Any, ...]] = []
+    alto = SimpleNamespace(tocar_o_toque=lambda *a: tocados.append(a) or True)
+    daemon = SimpleNamespace(
+        _alto_falante_subsystem=alto, identity_registry=mesa.daemon.identity_registry,
+        controller=None)
+    monkeypatch.setattr(tv, "estilo_ativo", lambda _d: "fps")
+    monkeypatch.setattr(tv, "_controle_na_economia", lambda _u: False)
+    atuador = next(a for a in tv.atuadores_de_producao(daemon)
+                   if isinstance(a, tv.AtuadorDaHaptica))
+    atuador.escrever(tv.Evento(0.0, ROXO, tv.TIPO_RUMBLE, tv.LADO_ESQUERDO, 1.0),
+                     tv.Receita(vibracao_por_tiro=True), 0.0)
+    assert [(a[0], a[4]) for a in tocados] == [(ROXO, "toque-195")]
+
+
+# --- 8. As pontas de produção falam a língua do backend -------------------------------------
+
+
+class _Backend:
+    """Os nomes e as assinaturas do backend de verdade, com o que cada um recebeu."""
+
+    def __init__(self) -> None:
+        self.feito: list[tuple[str, tuple[Any, ...]]] = []
+        self._game_output_by_uniq: dict[str, Any] = {}
+        self._game_triggers_by_uniq: dict[str, Any] = {}
+
+    def alvos_conectados(self) -> dict[str, str | None]:
+        return {"k1": AZUL, "k2": None}
+
+    def resolved_led_for(self, uniq: str) -> tuple[int, int, int] | None:
+        return LUZ_DE.get(uniq)
+
+    def pintar_a_barra_sem_lembrar(self, uniq: str, rgb: tuple[int, int, int]) -> bool:
+        self.feito.append(("pintar", (uniq, rgb)))
+        return True
+
+    def reassert_resolved_outputs(self, *, verify: bool = False) -> None:
+        self.feito.append(("devolver", ()))
+
+    def set_game_trigger_for(self, uniq: str, side: str, block: bytes) -> bool:
+        self.feito.append(("clicar", (uniq, side, block)))
+        return True
+
+    def soltar_o_gatilho_do_jogo_for(self, uniq: str, side: str, bloco: bytes) -> bool:
+        self.feito.append(("soltar", (uniq, side, bloco)))
+        return True
+
+
+def test_as_pontas_de_producao_chegam_ao_backend_e_ao_tocador(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    from hefesto_dualsense4unix.daemon.subsystems import tato_vivo as tv
+
+    backend = _Backend()
+    tocados: list[tuple[Any, ...]] = []
+    mesa = _Mesa()
+    daemon = SimpleNamespace(
+        controller=backend, identity_registry=mesa.daemon.identity_registry,
+        _alto_falante_subsystem=SimpleNamespace(tocar_o_toque=lambda *a: tocados.append(a) or True),
+        is_native_mode=lambda: False)
+    monkeypatch.setattr(tv, "estilo_ativo", lambda _d: "fps")
+    chegada = ch.Chegada(ch.pontas_de_producao(daemon))
+    chegada._pontas.dormir = lambda _s: None
+    chegada.chegou(AZUL)
+    feito = chegada.tocar()
+    assert feito == {AZUL: {"luz": True, "toque": True, "gatilho": True}}
+    assert tocados == [(AZUL, ch.ENERGIA_DO_TOQUE, "centro", ch.DURACAO_DO_TOQUE_MS, "toque-150")]
+    nomes = [n for n, _ in backend.feito]
+    assert nomes == ["clicar", *["pintar"] * len(ch.BRILHOS_DA_SUBIDA), "devolver", "soltar"]
+    bloco = tv.bloco_do_clique()
+    assert backend.feito[0][1] == (AZUL, "right", bloco)
+    assert backend.feito[-1][1] == (AZUL, "right", bloco)
+    assert backend.feito[-3][1] == (AZUL, LUZ_DE[AZUL])  # o último degrau é a cor cheia
+
+
+def test_as_pontas_de_producao_cedem_ao_que_o_jogo_escreveu(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    from hefesto_dualsense4unix.daemon.subsystems import tato_vivo as tv
+
+    backend = _Backend()
+    chave = AZUL.replace(":", "")  # a camada do jogo mora pelo `norm_mac`, como no backend
+    backend._game_output_by_uniq[chave] = SimpleNamespace(
+        led=(1, 2, 3), trigger_left=None, trigger_right=None)
+    backend._game_triggers_by_uniq[chave] = {"right": b"\x21"}
+    mesa = _Mesa()
+    daemon = SimpleNamespace(
+        controller=backend, identity_registry=mesa.daemon.identity_registry,
+        _alto_falante_subsystem=SimpleNamespace(tocar_o_toque=lambda *a: True),
+        is_native_mode=lambda: False)
+    monkeypatch.setattr(tv, "estilo_ativo", lambda _d: "fps")
+    chegada = ch.Chegada(ch.pontas_de_producao(daemon))
+    chegada._pontas.dormir = lambda _s: None
+    chegada.chegou(AZUL)
+    assert chegada.tocar() == {AZUL: {"luz": False, "toque": True, "gatilho": False}}
+    assert backend.feito == []
+
+
+def test_as_pontas_de_producao_nao_tocam_no_modo_nativo(monkeypatch: pytest.MonkeyPatch) -> None:
+    from hefesto_dualsense4unix.daemon.subsystems import tato_vivo as tv
+
+    backend = _Backend()
+    daemon = SimpleNamespace(
+        controller=backend, identity_registry=_Mesa().daemon.identity_registry,
+        _alto_falante_subsystem=None, is_native_mode=lambda: True)
+    monkeypatch.setattr(tv, "estilo_ativo", lambda _d: "fps")
+    chegada = ch.Chegada(ch.pontas_de_producao(daemon))
+    chegada.chegou(AZUL)
+    assert chegada.tocar() == {}
+    assert backend.feito == []

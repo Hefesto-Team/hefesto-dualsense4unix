@@ -32,7 +32,7 @@ from hefesto_dualsense4unix.profiles import efeitos_de_imersao as ei
 from hefesto_dualsense4unix.profiles import efeitos_de_luz as el
 from hefesto_dualsense4unix.profiles import estilos_de_jogo as ej
 from hefesto_dualsense4unix.profiles import formas_de_haptica as fh
-from hefesto_dualsense4unix.profiles.schema import LedsConfig, MatchAny, Profile
+from hefesto_dualsense4unix.profiles.schema import EfeitoDaLuz, LedsConfig, MatchAny, Profile
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
@@ -175,7 +175,7 @@ def test_o_motor_de_epoca_e_mudo_sem_rumble_e_toca_com_rumble_nos_quatro(
 
 
 def test_o_motor_de_epoca_so_toca_no_estilo_que_o_pede(monkeypatch: pytest.MonkeyPatch) -> None:
-    passo, alto = _passo(monkeypatch, "acao")  # noqa-acento: chave
+    passo, alto = _passo(monkeypatch, "acao")  # (noqa-acento) chave
     _rodar_o_motor_de_epoca(passo, (0, 255), 0.5)
     assert alto.corpo == []
 
@@ -506,6 +506,12 @@ def test_a_bateria_so_respira_com_a_carga_baixa_e_fora_do_cabo(
     assert max(brilhos) - min(brilhos) > 0.3, "respira de verdade"
     assert _lampejos_por_segundo(brilhos, t - t0) <= el.TETO_DO_PISCAR_HZ
     assert _lampejos_por_segundo(brilhos, t - t0) < 1.0, "devagar: nunca pisca"
+    # a curva é a do Respirar quadro a quadro: o Piscar no mesmo ritmo também fica abaixo de um
+    # lampejo por segundo (0,6 Hz no ritmo 2), e só a forma o separa
+    inicio = quadros[0][0]
+    respirar = EfeitoDaLuz("respirar", (COR_DE[VERMELHO],), el.RITMO_DA_BATERIA)
+    assert all(c == _quadro(el.cor_no_instante(respirar, t_ - inicio), 1.0)
+               for t_, c in quadros), "a Bateria respira, nunca pisca"
 
     # o cabo entrou: a barra volta ao perfil
     mesa.carga[VERMELHO] = (20, "carregando")
