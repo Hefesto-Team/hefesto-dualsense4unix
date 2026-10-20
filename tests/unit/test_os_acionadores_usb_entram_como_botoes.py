@@ -6,6 +6,10 @@ aperta naquele controle. A mesa tem quatro controles no backend do produto (dois
 rádio), o P1 no ``dispatch_gamepad`` e o P2 a P4 no ``forward_all`` do co-op, nas máscaras DualSense
 e Xbox; o que se lê é o ``EV_KEY`` e o ``ABS_Z`` que o jogo veria em cada pad virtual.
 
+A tela (a linha do aparelho de entrada e a janela «Usar como botões de», desenho r3-08-14): a linha
+leva o botão, a janela diz as teclas e o controle pelo plástico, a tecla nova chega numa thread, o
+clique no desenho escolhe o botão e o «Guardar» declara pelo ``machine.declare`` que já existe.
+
 A régua nunca abre o ``/dev/input`` nem o ``/sys`` da máquina: o ``/sys/class/input`` é uma pasta
 de mentira e o aparelho, um evdev de mentira; a ponte para no fim de cada caso.
 """
@@ -126,6 +130,9 @@ class _Acionador:
             raise BlockingIOError
         lidos, self.fila = self.fila, []
         return lidos
+
+    def read_one(self) -> Any:
+        return self.fila.pop(0) if self.fila else None
 
     def grab(self) -> None:
         self.preso = True
@@ -365,3 +372,187 @@ def test_o_maquina_json_guarda_o_acionador_pela_chave_sem_endereco() -> None:
         with pytest.raises(ValueError):
             MaquinaConfig.model_validate({"acionadores": ruim})
     assert json.loads(doc.model_dump_json())["acionadores"][CHAVE]["controle"] == UNIQS[2]
+
+
+# --- a tela: a linha, a janela e os gestos (desenho r3-08-14) ----------------------------------
+
+RAIZ = Path(__file__).resolve().parents[2]
+BANCADA = RAIZ / "mockup" / "08-conexoes.html"
+DESENHO = RAIZ / "docs/research/2026-10-12-a-volta/paginas/todo-das-abas/todo/08-conexoes.html"
+LUGAR = "AA:BB:CC:00:00:F0"
+PLASTICOS = ("Cosmic Red", "Starlight Blue", "White", "Galactic Purple")
+
+
+@pytest.fixture
+def a08() -> Any:
+    from tests.conftest import exigir_gi_real
+
+    exigir_gi_real("importa `interface.pacotes.a08_conexoes`, que carrega o GTK")
+    from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
+
+    a08_conexoes._RASCUNHO = None
+    yield a08_conexoes
+    a08_conexoes._RASCUNHO = None
+
+
+class _Ponte:
+    """A ponte do produto, com o ``machine_declare`` gravando no ``maquina.json`` do teste."""
+
+    def __init__(self) -> None:
+        self.chamadas: list[dict[str, Any]] = []
+
+    def machine_declare(self, declaracao: dict[str, Any]) -> tuple[bool, str | None]:
+        from hefesto_dualsense4unix.utils import maquina
+
+        self.chamadas.append(declaracao)
+        maquina.gravar_maquina_com_descartes(declaracao)
+        return True, None
+
+
+def _declarado(teclas: dict[str, str] | None = None) -> MaquinaConfig:
+    return MaquinaConfig.model_validate({"acionadores": {CHAVE: {
+        "controle": UNIQS[1], "teclas": teclas or {str(TECLA_1): "cross", str(PEDAL): "l2"}}}})
+
+
+def _cena(a08: Any, monkeypatch: pytest.MonkeyPatch, declaracao: MaquinaConfig) -> dict[str, Any]:
+    """A cena viva do acionador declarado, com os quatro controles da mesa pelo plástico."""
+    ctx = SimpleNamespace(mesa=[{"uniq": MACS[i], "nome": PLASTICOS[i]} for i in range(4)])
+    cena = {"aparelhos": a08._os_acionadores_declarados(declaracao, [{"id": LUGAR}]),
+            "lugares": [{"id": LUGAR}],
+            "quem_recebe": a08._quem_recebe_da_mesa(ctx, declaracao)}
+    monkeypatch.setattr(a08, "_CENA_NA_TELA", cena)
+    monkeypatch.setattr(a08, "_declaracao", lambda: declaracao)
+    return cena
+
+
+def test_a_linha_do_aparelho_de_entrada_leva_o_usar_como_botoes_do_desenho(a08: Any) -> None:
+    """A linha A1 que o gerador pinta é a do desenho aprovado, byte a byte; o «⋮» e o arrastar
+    ficam de fora (o aparelho só ocupa a porta), como na webcam."""
+    def linha(texto: str) -> str:
+        i = texto.index('data-id="A1"')
+        return texto[texto.rfind("<div", 0, i):texto.index('</div><div class="linha', i) + 6]
+
+    assert linha(BANCADA.read_text()) == linha(DESENHO.read_text())
+    ap = {"id": CHAVE, "chave": CHAVE, "tipo": "entrada", "lugar": LUGAR, "nome": "",
+          "rotulo": "Acionador USB", "fixo": True, "esperando": False}
+    html = a08.html_da_linha(ap, {"aparelhos": [ap], "lugares": [{"id": LUGAR}]})
+    assert 'data-r3="14"' in html and 'data-gesto="usar-como-botoes"' in html
+    assert 'href="#acionador"' in html and "Usar como botões de…" in html
+    assert "menu-da-linha" not in html and 'class="linha" draggable' not in html
+
+
+def test_a_janela_diz_as_teclas_o_plastico_e_acende_os_botoes_escolhidos(
+        a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    cena = _cena(a08, monkeypatch, _declarado())
+    campos = a08.campos_do_acionador(cena)
+    assert campos["acionador-titulo"] == "Acionador USB · usar como botões de"
+    assert [o for o in PLASTICOS if f">{o}</option>" in campos["acionador-quem"]] == list(PLASTICOS)
+    assert f'value="{UNIQS[1]}" selected>Starlight Blue' in campos["acionador-quem"]
+    assert "P1" not in campos["acionador-quem"] and "P2" not in campos["acionador-quem"]
+    assert ">Tecla 1<" in campos["acionador-teclas"] and ">Cruz<" in campos["acionador-teclas"]
+    assert ">Tecla 2<" in campos["acionador-teclas"] and ">L2<" in campos["acionador-teclas"]
+    assert campos["acionador-brilho"].startswith("#acionador #ac-cross,#acionador #ac-l2{")
+    janela = BANCADA.read_text().split('id="acionador">', 1)[1].split('<div class="tela-nova"')[0]
+    for campo in campos:
+        assert f'data-campo="{campo}"' in janela
+
+
+def test_o_desenho_da_janela_e_o_dualsense_real_e_cada_botao_que_troca_e_um_gesto(a08: Any) -> None:
+    import re
+
+    janela = BANCADA.read_text().split('id="acionador">', 1)[1].split('<div class="tela-nova"')[0]
+    svg = re.search(r'<svg class="ac-svg".*?</svg>', janela, re.S)
+    assert svg is not None
+    pecas = set(re.findall(r'data-entrada="([^"]+)" data-gesto="acionador-botao" '
+                           r'data-hef-forma="acionador"', svg.group(0)))
+    assert pecas == {p for p, _, _ in a08._botoes_do_desenho()}
+    assert {"ps", "mic", "touchpad"}.isdisjoint(pecas)
+    desenho = re.search(r'<svg class="ac-svg".*?</svg>', DESENHO.read_text(), re.S)
+    assert desenho is not None
+    sem_estilo = [re.sub(r"\s+", "", re.sub(r"<style.*?</style>", "", s, flags=re.S))
+                  for s in (svg.group(0).replace(' data-gesto="acionador-botao" '
+                                                  'data-hef-forma="acionador"', ""),
+                            desenho.group(0))]
+    assert sem_estilo[0] == sem_estilo[1]
+
+
+def test_o_clique_no_desenho_escolhe_o_botao_e_o_guardar_declara_pela_chave(
+        a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    from hefesto_dualsense4unix.utils import maquina
+
+    _cena(a08, monkeypatch, _declarado())
+    monkeypatch.setattr(a08, "_reler_a_declaracao", lambda: None)
+    ponte = _Ponte()
+    assert a08.usar_como_botoes(None, {"alvo": CHAVE}, ponte) == {"armou": True}
+    a08.acionador_botao(None, {"entrada": "circle", "forma": {"tecla": str(TECLA_1),
+                                                               "acionador-quem": UNIQS[3]}}, ponte)
+    a08.acionador_botao(None, {"entrada": "stick_r", "forma": {"tecla": str(PEDAL)}}, ponte)
+    with pytest.raises(ValueError):
+        a08.acionador_botao(None, {"entrada": "ps", "forma": {"tecla": str(PEDAL)}}, ponte)
+    assert ponte.chamadas == []
+    a08.acionador_guardar(None, {"forma": {"acionador-quem": UNIQS[3]}}, ponte)
+    assert ponte.chamadas == [{"acionadores": {CHAVE: {
+        "nome": None, "controle": UNIQS[3],
+        "teclas": {str(TECLA_1): "circle", str(PEDAL): "r3"}}}}]
+    gravado = maquina.carregar_maquina().acionadores[CHAVE]
+    assert (gravado.controle, gravado.teclas) == (UNIQS[3], {str(TECLA_1): "circle",
+                                                               str(PEDAL): "r3"})
+    assert a08._RASCUNHO is None
+
+
+def test_a_tecla_nova_chega_numa_thread_e_o_aparelho_nunca_fica_preso(
+        a08: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    import time
+
+    _cena(a08, monkeypatch, _declarado({str(TECLA_1): "cross"}))
+    monkeypatch.setattr(a08, "_RAIZ_DAS_ENTRADAS", str(_sys_de_mentira(tmp_path / "input")))
+    acionador = _Acionador()
+    abertos: list[str] = []
+
+    def abrir(evento: str) -> _Acionador:
+        abertos.append(evento)
+        acionador.apertar(PEDAL, 0)
+        acionador.apertar(PEDAL, 1)
+        return acionador
+
+    monkeypatch.setattr(a08, "_ABRIR_O_EVENTO", abrir)
+    a08.usar_como_botoes(None, {"alvo": CHAVE}, None)
+    assert a08.acionador_nova_tecla(None, {}, None) == {"armou": True}
+    fim = time.monotonic() + 5
+    while a08._RASCUNHO.esperando and time.monotonic() < fim:
+        time.sleep(0.01)
+    assert abertos == ["event7"] and acionador.fechado and not acionador.preso
+    assert a08._RASCUNHO.teclas[-1] == [PEDAL, "Tecla 2", None]
+    assert a08._RASCUNHO.sel == PEDAL
+    teclas = a08.campos_do_acionador(a08._CENA_NA_TELA)["acionador-teclas"]
+    assert f'value="{PEDAL}" data-linha="tecla" checked' in teclas
+
+
+def test_o_aparelho_desligado_recusa_esperar_a_tecla(
+        a08: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    _cena(a08, monkeypatch, _declarado())
+    (tmp_path / "vazio").mkdir()
+    monkeypatch.setattr(a08, "_RAIZ_DAS_ENTRADAS", str(tmp_path / "vazio"))
+    monkeypatch.setattr(a08, "_ABRIR_O_EVENTO", lambda e: pytest.fail("abriu sem aparelho"))
+    with pytest.raises(RuntimeError, match="não está ligado"):
+        a08.acionador_nova_tecla(None, {}, None)
+
+
+def test_tirar_todas_as_teclas_esquece_o_acionador(
+        a08: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    _cena(a08, monkeypatch, _declarado())
+    monkeypatch.setattr(a08, "_reler_a_declaracao", lambda: None)
+    ponte = _Ponte()
+    a08.usar_como_botoes(None, {"alvo": CHAVE}, ponte)
+    for linha in a08._RASCUNHO.teclas:
+        linha[2] = None
+    a08.acionador_guardar(None, {"forma": {}}, ponte)
+    assert ponte.chamadas == [{"acionadores": {CHAVE: None}}]
+
+
+def test_os_quatro_gestos_novos_tem_linha_na_camada(a08: Any) -> None:
+    from hefesto_dualsense4unix.interface.pacotes import camada
+
+    for nome in ("usar-como-botoes", "acionador-nova-tecla", "acionador-botao",
+                 "acionador-guardar"):
+        assert ("08-conexoes.html", nome) in camada.CAMADA, nome

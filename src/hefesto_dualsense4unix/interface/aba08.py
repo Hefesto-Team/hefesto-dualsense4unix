@@ -1876,6 +1876,35 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
     stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
   .tipo-op .i.ds{width:58px;height:40px;color:var(--cyan)}
   .tipo-op:hover{border-color:var(--purple);color:var(--fg)}
+  /* O ACIONADOR (desenho r3-08-14, com o ajuste da rodada 3 de 14/10): «Usar como botões de…»
+     a 150 x 24 na coluna da ação, e a janela das teclas ao lado do desenho real do controle. */
+  .radio .linha .btn.usar-como{text-decoration:none;white-space:nowrap}
+  .radio .linha[data-r3="14"] .features{display:grid;grid-template-columns:204px 150px;
+    align-items:center;column-gap:0}
+  .radio .linha[data-r3="14"] .sem-radio{margin-right:0}
+  .radio .linha[data-r3="14"] .btn.usar-como{width:150px;height:24px;min-height:24px;margin-left:0;
+    padding:0;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;
+    font-size:12px}
+  .ac-cx{width:min(960px,94vw)}
+  .ac-corpo{flex-direction:row !important;gap:22px;align-items:stretch}
+  .ac-lista{flex:0 0 300px;display:flex;flex-direction:column;gap:10px}
+  .ac-teclas{display:flex;flex-direction:column;gap:10px}
+  .ac-dica{font-size:12.5px;color:var(--texto-suave);line-height:1.5;margin-bottom:6px}
+  .ac-tecla{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 14px;
+    box-sizing:border-box;border:1px solid var(--border-sutil);border-radius:8px;cursor:pointer;
+    font-size:13px}
+  .ac-tecla input{display:none}
+  .ac-tecla.sel,.ac-tecla:has(input:checked){border-color:var(--purple);background:var(--sel-bg)}
+  .ac-de{color:var(--fg)}
+  .ac-seta{color:var(--texto-mudo)}
+  .ac-para{margin-left:auto;color:var(--cyan);font-weight:600}
+  .ac-mais{margin-top:auto;height:34px;font-size:12.5px}
+  .ac-quem{margin-left:10px;height:28px;padding:0 8px;border-radius:6px;border:1px solid var(--linha);
+    background:var(--app-bg);color:var(--fg);font-family:inherit;font-size:12.5px}
+  .ac-desenho{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;
+    background:var(--app-bg);border-radius:9px;padding:8px}
+  .ac-svg{width:100%;height:auto;max-height:52vh}
+  #acionador .tn-rod .btn{height:34px}
 """ + f"  :root{{{_RAIZ_DAS_CORES_DOS_TIPOS}}}\n"
 
 
@@ -1932,6 +1961,39 @@ _FACES_DO_DESENHO = ("Frente do gabinete", "Traseira", "Num hub ou extensão", "
 QUEDAS_DO_DESENHO_5 = {"n": 12, "min": 24}
 
 
+#: os controles que o «Usar como botões de» do desenho oferece, pelo plástico (r3-08-14); a chave
+#: é da faixa forjada da casa, nunca um endereço de verdade.
+QUEM_RECEBE_NO_DESENHO = (("aabbcc0000c1", "Cosmic Red"), ("aabbcc0000c2", "Starlight Blue"),
+                          ("aabbcc0000c3", "White"), ("aabbcc0000c4", "Galactic Purple"))
+
+
+def _desenho_do_acionador() -> str:
+    """O DualSense real (`assets/control-svg/dualsense.svg`) dentro da janela do acionador.
+
+    Os `id` ganham o prefixo ``ac-`` (o mesmo desenho vive em outras páginas, e um `id` repetido
+    quebra o `url(#…)` dos padrões), o `<svg>` perde o tamanho fixo e ganha `ac-svg`, e cada
+    botão que a troca conhece vira o gesto ``acionador-botao``, que leva a forma da janela.
+    """
+    cru = (R / "assets" / "control-svg" / "dualsense.svg").read_text(encoding="utf-8")
+    cru = cru[cru.index("<svg"):]
+    ids = set(re.findall(r'\sid="([^"]+)"', cru))
+    cru = re.sub(r'(\sid=")([^"]+)"', r'\1ac-\2"', cru)
+    cru = re.sub(r"url\(#([^)]+)\)",
+                 lambda m: f"url(#ac-{m.group(1)})" if m.group(1) in ids else m.group(0), cru)
+    cru = re.sub(r'href="#([^"]+)"',
+                 lambda m: f'href="#ac-{m.group(1)}"' if m.group(1) in ids else m.group(0), cru)
+    cru = re.sub(r"#([A-Za-z_][\w-]*)(?=[\s,{.:>\[)])",
+                 lambda m: f"#ac-{m.group(1)}" if m.group(1) in ids else m.group(0), cru)
+    cru = re.sub(r'<svg\s', '<svg class="ac-svg" ', cru, count=1)
+    cru = re.sub(r'(<svg[^>]*?)\swidth="[^"]*"\sheight="[^"]*"', r"\1", cru, count=1)
+    trocam = {peca for peca, _, _ in _pacote08._botoes_do_desenho()}
+    return re.sub(
+        r'<g ([^>]*)data-entrada="([^"]+)"',
+        lambda m: (f'<g {m.group(1)}data-entrada="{m.group(2)}" data-gesto="acionador-botao" '
+                   'data-hef-forma="acionador"') if m.group(2) in trocam else m.group(0),
+        cru).strip()
+
+
 def _cena_do_desenho() -> dict:
     """A cena do desenho aprovado, na forma que o pacote pinta.
 
@@ -1961,6 +2023,15 @@ def _cena_do_desenho() -> dict:
             "ponte": ("haptica" if "vib" in ligado else "som" if "ponte" in ligado else None),
             "som": float(linha["d"] or 0), "esperando": False, "alem": False,
         })
+    # O acionador do desenho r3-08-14, logo abaixo da webcam: Tecla 1 na Cruz, Tecla 2 no
+    # Círculo e o pedal no L2 do Cosmic Red (`pacotes.a08_conexoes`, o bloco dos acionadores).
+    webcam = next(i for i, a in enumerate(aparelhos) if a["tipo"] == "webcam")
+    aparelhos.insert(webcam + 1, {
+        "id": "A1", "chave": "1234:abcd:00000000", "tipo": _pacote08.TIPO_ENTRADA,
+        "lugar": aparelhos[webcam]["lugar"], "nome": "Acionador USB", "rotulo": "Acionador USB",
+        "controle": QUEM_RECEBE_NO_DESENHO[0][0], "fixo": True, "esperando": False,
+        "mic": False, "luz": False, "ponte": None, "som": 0.0, "alem": False,
+        "teclas": [(256, "Tecla 1", "cross"), (257, "Tecla 2", "circle"), (258, "Pedal", "l2")]})
     for lug in lugares:
         dentro = [a for a in aparelhos if a["lugar"] == lug["id"]]
         controles = [a for a in dentro if a["tipo"] == "controle"]
@@ -2065,6 +2136,7 @@ def _cena_do_desenho() -> dict:
         "ocupado": False, "aberto": None, "perto": perto,
         "destino_do_conectar": vazio["id"],
         "pedindo": [dict(PEDIDO_DO_DESENHO)],
+        "quem_recebe": list(QUEM_RECEBE_NO_DESENHO),
     }
     cena["procurando"] = (_pacote08.PROCURAR_LIGADO
                           if any(lg.get("conectando") for lg in lugares)
@@ -3313,8 +3385,11 @@ if __name__ == "__main__":
     MARCA = "<!-- ===== fim da aba ===== -->"
     if MARCA not in x:
         raise SystemExit("ERRO: a marca da legenda mudou no fim.html")
-    TELAS = "\n".join(t.strip() for t in (TELA_MAPEAR, _pacote08.html_da_grade_de_tipos(), TELA_SENTADA, TELA_FIM, TELA_EM_PE,
-                                             TELA_MAPEAR_PORTAS))
+    TELAS = "\n".join(t.strip() for t in (TELA_MAPEAR,
+                                             _pacote08.html_do_acionador(CENA_DO_RADIO,
+                                                                         _desenho_do_acionador()),
+                                             _pacote08.html_da_grade_de_tipos(), TELA_SENTADA,
+                                             TELA_FIM, TELA_EM_PE, TELA_MAPEAR_PORTAS))
     x = x.replace(MARCA, TELAS + "\n\n" + MARCA, 1)
 
     _CHIP = '<label class="chip plastico'

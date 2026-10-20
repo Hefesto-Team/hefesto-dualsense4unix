@@ -2069,6 +2069,100 @@ def aparelho_tipo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     return None
 
 
+@gesto("08-conexoes.html", "usar-como-botoes")
+def usar_como_botoes(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Usar como botões de…»: arma a janela do acionador com o que o `maquina.json` já diz dele."""
+    global _RASCUNHO
+    ap = _aparelho_na_tela(str(o.get("alvo") or ""))
+    if ap.get("tipo") != TIPO_ENTRADA:
+        raise ValueError(f"usar-como-botoes: {ap.get('id')!r} não é um aparelho de entrada")
+    with _TRAVA_DO_RASCUNHO:
+        _RASCUNHO = _rascunho_da_linha(ap, _quem_recebe(_CENA_NA_TELA))
+    return {"armou": True}
+
+
+@gesto("08-conexoes.html", "acionador-nova-tecla")
+def acionador_nova_tecla(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Esperar a próxima tecla»: a tecla chega numa thread e entra na lista, já escolhida."""
+    global _RASCUNHO
+    r = _o_rascunho()
+    if r.esperando:
+        return {"armou": True}
+    evento = _evento_do_acionador(r.chave)
+    if evento is None:
+        raise RuntimeError("o aparelho não está ligado nesta máquina")
+    with _TRAVA_DO_RASCUNHO:
+        _RASCUNHO = r
+        r.esperando = True
+    threading.Thread(target=_esperar_a_tecla, args=(r, evento), name="acionador-tecla",
+                     daemon=True).start()
+    return {"armou": True}
+
+
+@gesto("08-conexoes.html", "acionador-botao")
+def acionador_botao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """Um botão do desenho: a tecla escolhida na lista passa a cair nele."""
+    global _RASCUNHO
+    r = _o_rascunho()
+    botao = botao_da_peca(str(o.get("entrada") or ""))
+    if botao is None:
+        raise ValueError(f"acionador-botao: {o.get('entrada')!r} não é um botão que a troca "
+                         "conhece")
+    forma = o.get("forma") if isinstance(o.get("forma"), dict) else {}
+    escolhida = str(forma.get("tecla") or (r.sel if r.sel is not None else ""))
+    if not _CODIGO_DE_TECLA.match(escolhida):
+        raise ValueError("acionador-botao: nenhuma tecla da lista está escolhida")
+    with _TRAVA_DO_RASCUNHO:
+        linha = next((t for t in r.teclas if t[0] == int(escolhida)), None)
+        if linha is None:
+            raise ValueError(f"acionador-botao: a tecla {escolhida} não está na lista")
+        linha[2] = botao
+        r.sel = int(escolhida)
+        quem = str(forma.get("acionador-quem") or "")
+        if _CHAVE_DE_CONTROLE.match(quem):
+            r.controle = quem
+        _RASCUNHO = r
+    return None
+
+
+@gesto("08-conexoes.html", "acionador-guardar", grava="machine_declare")
+def acionador_guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
+    """«Guardar»: o controle e as teclas vão ao `maquina.json`, pela chave do kernel."""
+    global _RASCUNHO
+    r = _o_rascunho()
+    forma = o.get("forma") if isinstance(o.get("forma"), dict) else {}
+    controle = str(forma.get("acionador-quem") or r.controle)
+    if not _CHAVE_DE_CONTROLE.match(controle):
+        raise ValueError(f"acionador-guardar: {controle!r} não é um controle da mesa")
+    if not r.chave:
+        raise ValueError("acionador-guardar: o aparelho não tem a chave do kernel")
+    teclas: dict[str, str | None] = {str(c): b for c, _, b in r.teclas if b}
+    antes = getattr((getattr(_declaracao(), "acionadores", None) or {}).get(r.chave),
+                    "teclas", None) or {}
+    teclas.update({c: None for c in antes if c not in teclas})
+    nome = r.nome if r.nome != ACIONADOR_SEM_NOME else None
+    declaracao = {"acionadores": {r.chave: (
+        {"nome": nome, "controle": controle, "teclas": teclas}
+        if any(teclas.values()) else None)}}
+    _declarar_o_acionador(p, declaracao)
+    with _TRAVA_DO_RASCUNHO:
+        _RASCUNHO = None
+    return None
+
+
+def _declarar_o_acionador(p: Any, declaracao: dict[str, Any]) -> None:
+    """O `machine.declare` do acionador; com o Hefesto desligado, desce ao disco (`_declarar`)."""
+    ok, motivo = _resposta(p.machine_declare(declaracao))
+    if not ok and not motivo:
+        perfil._com_o_src()
+        from hefesto_dualsense4unix.integrations.lugar_declarado import declarar_a_maquina
+
+        ok = declarar_a_maquina(declaracao).gravou
+    if not ok:
+        raise RuntimeError(motivo or "não consegui gravar o que você declarou")
+    _reler_a_declaracao()
+
+
 @gesto("08-conexoes.html", "receptor-descobrir")
 def receptor_descobrir(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """«Descobrir» a faixa de um receptor 2.4G: o único clique é o que COMEÇA.
@@ -2570,7 +2664,7 @@ GLIFO_DO_TIPO = {
     "teclado": "teclado", "mouse": "mouse", "caixa": "caixa", "caixa_de_som": "caixa",
     "fone": "fone", "webcam": "webcam", "wifi": "wifi", "celular": "celular",
     "relogio": "relogio", TIPO_ACESSORIO: CATEGORIA_ACESSORIO["glifo"],
-    "gamepad": "ds",
+    "gamepad": "ds", "entrada": "botoes",
 }
 
 
@@ -2587,7 +2681,8 @@ TIPO_PELO_ICONE = {
 PALAVRA_DO_TIPO = {"teclado": "teclado", "mouse": "mouse", "fone": "fone",
                    "caixa": "caixa de som", "webcam": "webcam", "outro": "aparelho",
                    "celular": "celular", "relogio": "relógio",
-                   TIPO_ACESSORIO: CATEGORIA_ACESSORIO["palavra"], "gamepad": "controle"}
+                   TIPO_ACESSORIO: CATEGORIA_ACESSORIO["palavra"], "gamepad": "controle",
+                   "entrada": "aparelho de entrada"}
 
 #: A grade «O que é este aparelho?» (desenho do todo, 13/10/2026): `(rótulo, guardado, glifo)`.
 #: O que se guarda é o ``AparelhoDeclarado.tipo`` do ``maquina.json``; «Controle» desenha-se na
@@ -2620,6 +2715,264 @@ def html_da_grade_de_tipos() -> str:
         '<a class="tn-x" href="#" data-dica="Fechar">\u00d7</a></div>'
         f'<div class="tn-corpo"><div class="tipo-grade">{opcoes}</div></div>'
         '</div></div>')
+# --- Os acionadores: um aparelho de entrada vira botões de um controle -----------------------
+#
+# OS-ACIONADORES-USB-ENTRAM-COMO-BOTOES-DO-CONTROLE-01 (desenho r3-08-14). A linha do aparelho de
+# entrada leva «Usar como botões de…», que abre a janela `#acionador`: a lista das teclas, o
+# controle que as recebe (pelo plástico) e o desenho real do DualSense, onde cada tecla escolhe o
+# botão em que cai. O «Guardar» grava no `maquina.json` pelo `machine.declare` que já existe
+# (`acionadores`, `utils/maquina.AcionadorDeclarado`); o daemon acha o aparelho pelo `/sys` e
+# soma a tecla ao pad virtual (`daemon/subsystems/gamepad.PonteDosAcionadores`).
+
+TIPO_ENTRADA = "entrada"
+#: o que não fala pelo ar e só ocupa a porta: sem «⋮», sem mover e fora da régua do ar.
+SO_OCUPA_A_PORTA = frozenset({"webcam", TIPO_ENTRADA})
+USAR_COMO_BOTOES = "Usar como botões de…"
+DICA_DO_USAR_COMO = "As teclas dele viram botões de um controle"
+ACIONADOR_SEM_NOME = "Acionador USB"
+TITULO_DO_ACIONADOR = "{nome} · usar como botões de"
+DICA_DO_ACIONADOR = "Aperte uma tecla do acionador e clique no botão do controle onde ela cai"
+ESPERAR_A_TECLA = "Esperar a próxima tecla"
+ROTULO_DA_TECLA = "Tecla {n}"
+#: quanto tempo o «Esperar a próxima tecla» espera, em segundos, numa thread (nunca no tique).
+ESPERA_DA_TECLA_S = 10.0
+_BRILHO_DO_DESTINO = "{{filter:drop-shadow(0 0 1.2px #bd93f9) drop-shadow(0 0 2.4px #bd93f9)}}"
+_CODIGO_DE_TECLA = re.compile(r"^[0-9]{1,3}$")
+_CHAVE_DE_CONTROLE = re.compile(r"^[0-9a-f]{12}$")
+
+
+def _botoes_do_desenho() -> tuple[tuple[str, str, str], ...]:
+    """``(peça do desenho, botão do pad, nome na tela)`` dos botões que a troca conhece.
+
+    O dono é a aba Mapa do controle (`a13_mapa_do_controle.BOTOES_DA_PAGINA`): a mesma peça do
+    mesmo desenho, com o mesmo nome. O PS, o microfone e o touchpad ficam de fora, como lá.
+    """
+    from hefesto_dualsense4unix.core.remapeamento_de_botao import REMAPEAVEIS
+
+    from . import a13_mapa_do_controle as a13
+
+    vistos: dict[str, tuple[str, str, str]] = {}
+    for b in a13.BOTOES_DA_PAGINA:
+        if b.motor in REMAPEAVEIS and b.peca not in vistos:
+            vistos[b.peca] = (b.peca, b.motor, b.nome.removesuffix(" clique"))
+    return tuple(vistos.values())
+
+
+def peca_do_botao(botao: str) -> str:
+    return next((peca for peca, motor, _ in _botoes_do_desenho() if motor == botao), botao)
+
+
+def botao_da_peca(peca: str) -> str | None:
+    return next((motor for p, motor, _ in _botoes_do_desenho() if p == peca), None)
+
+
+def nome_do_botao(botao: str | None) -> str:
+    return next((nome for _, motor, nome in _botoes_do_desenho() if motor == botao),
+                TRACO_CURTO)
+
+
+@_dataclasses.dataclass
+class _Rascunho:
+    """O que a janela do acionador mostra: o aparelho, o controle e as teclas, até o «Guardar»."""
+
+    alvo: str
+    chave: str
+    nome: str
+    controle: str
+    #: ``[código evdev, rótulo, botão do pad ou None]``, na ordem em que a tecla chegou
+    teclas: list[list[Any]] = _dataclasses.field(default_factory=list)
+    sel: int | None = None
+    esperando: bool = False
+
+
+_RASCUNHO: _Rascunho | None = None
+_TRAVA_DO_RASCUNHO = threading.Lock()
+
+
+def _rascunho_da_linha(ap: dict[str, Any], quem: list[tuple[str, str]]) -> _Rascunho:
+    teclas = [[int(c), str(r), b] for c, r, b in ap.get("teclas") or ()]
+    controle = str(ap.get("controle") or "") or (quem[0][0] if quem else "")
+    return _Rascunho(alvo=str(ap["id"]), chave=str(ap.get("chave") or ""),
+                     nome=str(ap.get("nome") or ap.get("rotulo") or ACIONADOR_SEM_NOME),
+                     controle=controle, teclas=teclas,
+                     sel=teclas[0][0] if teclas else None)
+
+
+def _acionadores_da_cena(cena: dict[str, Any]) -> list[dict[str, Any]]:
+    return [a for a in cena.get("aparelhos", ()) if a.get("tipo") == TIPO_ENTRADA]
+
+
+def _rascunho_na_tela(cena: dict[str, Any]) -> _Rascunho | None:
+    """O rascunho armado, se o aparelho dele está na tela; senão, o primeiro acionador dela."""
+    linhas = _acionadores_da_cena(cena)
+    r = _RASCUNHO
+    if r is not None and any(str(a["id"]) == r.alvo for a in linhas):
+        return r
+    return _rascunho_da_linha(linhas[0], _quem_recebe(cena)) if linhas else None
+
+
+def _quem_recebe(cena: dict[str, Any]) -> list[tuple[str, str]]:
+    """``(chave do controle, nome do plástico)`` de quem pode receber as teclas."""
+    return [(str(k), str(n)) for k, n in cena.get("quem_recebe") or ()]
+
+
+def html_das_teclas(r: _Rascunho | None) -> str:
+    if r is None:
+        return ""
+    return "".join(
+        f'<label class="ac-tecla{" sel" if codigo == r.sel else ""}">'
+        f'<input type="radio" name="ac-t" value="{codigo}" data-linha="tecla"'
+        f'{" checked" if codigo == r.sel else ""}>'
+        f'<span class="ac-de">{_x(rotulo)}</span><span class="ac-seta">→</span>'
+        f'<span class="ac-para">{_x(nome_do_botao(botao))}</span></label>'
+        for codigo, rotulo, botao in r.teclas)
+
+
+def html_de_quem_recebe(r: _Rascunho | None, quem: list[tuple[str, str]]) -> str:
+    escolhido = r.controle if r is not None else ""
+    return "".join(
+        f'<option value="{_x(chave)}"{" selected" if chave == escolhido else ""}>{_x(nome)}'
+        '</option>' for chave, nome in quem)
+
+
+def css_do_brilho(r: _Rascunho | None) -> str:
+    """Os botões do desenho que já recebem uma tecla acendem (o roxo do desenho aprovado)."""
+    pecas = [] if r is None else list(dict.fromkeys(
+        peca_do_botao(str(b)) for _, _, b in r.teclas if b))
+    if not pecas:
+        return ""
+    return (",".join(f"#acionador #ac-{p}" for p in pecas)
+            + _BRILHO_DO_DESTINO.format())
+
+
+def campos_do_acionador(cena: dict[str, Any]) -> dict[str, Any]:
+    r = _rascunho_na_tela(cena)
+    return {
+        "acionador-titulo": TITULO_DO_ACIONADOR.format(
+            nome=r.nome if r is not None else ACIONADOR_SEM_NOME),
+        "acionador-quem": html_de_quem_recebe(r, _quem_recebe(cena)),
+        "acionador-teclas": html_das_teclas(r),
+        "acionador-brilho": css_do_brilho(r),
+    }
+
+
+def html_do_acionador(cena: dict[str, Any], desenho: str) -> str:
+    """A janela «Usar como botões de»; o miolo vivo são os quatro campos do acionador."""
+    c = campos_do_acionador(cena)
+    alvo = _x(next((str(a["id"]) for a in _acionadores_da_cena(cena)), ""))
+    return (
+        '<div class="tela-nova" id="acionador">'
+        '<div class="tn-cx ac-cx" role="dialog" aria-modal="true" '
+        'aria-label="Usar o acionador como botões">'
+        f'<div class="tn-topo"><span class="tn-tit" data-campo="acionador-titulo">'
+        f'{_x(c["acionador-titulo"])}</span>'
+        '<select class="ac-quem" aria-label="De qual controle" data-campo="acionador-quem" '
+        f'data-hef-alvo="html">{c["acionador-quem"]}</select>'
+        '<a class="tn-x" href="#" data-dica="Fechar">\u00d7</a></div>'
+        '<div class="tn-corpo ac-corpo">'
+        f'<div class="ac-lista"><div class="ac-dica">{DICA_DO_ACIONADOR}</div>'
+        '<div class="ac-teclas" data-campo="acionador-teclas" data-hef-alvo="html">'
+        f'{c["acionador-teclas"]}</div>'
+        f'<button class="btn ac-mais" data-gesto="acionador-nova-tecla" data-alvo="{alvo}">'
+        f'{ESPERAR_A_TECLA}</button></div>'
+        f'<div class="ac-desenho">{desenho}</div></div>'
+        '<div class="tn-rod"><a class="btn" href="#">Cancelar</a>'
+        f'<a class="btn roxo" href="#" data-gesto="acionador-guardar" data-hef-forma="acionador" '
+        f'data-alvo="{alvo}">Guardar</a></div>'
+        '<style data-campo="acionador-brilho" data-hef-alvo="html">'
+        f'{c["acionador-brilho"]}</style>'
+        '</div></div>')
+
+
+def _os_acionadores_declarados(declaracao: Any, lugares: list[dict[str, Any]]
+                               ) -> list[dict[str, Any]]:
+    """A linha de cada acionador do `maquina.json`, no primeiro adaptador (como no desenho)."""
+    declarados = getattr(declaracao, "acionadores", None)
+    if not lugares or not isinstance(declarados, dict):
+        return []
+    linhas = []
+    for chave, a in declarados.items():
+        teclas = getattr(a, "teclas", None) or {}
+        linhas.append({
+            "id": chave, "chave": chave, "tipo": TIPO_ENTRADA, "lugar": lugares[0]["id"],
+            "nome": str(getattr(a, "nome", None) or ""), "rotulo": ACIONADOR_SEM_NOME,
+            "controle": str(getattr(a, "controle", None) or ""), "fixo": True,
+            "esperando": False,
+            "teclas": [(int(c), ROTULO_DA_TECLA.format(n=n), b)
+                       for n, (c, b) in enumerate(teclas.items(), 1)]})
+    return linhas
+
+
+def _quem_recebe_da_mesa(ctx: Contexto, declaracao: Any) -> list[tuple[str, str]]:
+    """Os controles na mesa, pelo plástico; o que o acionador já declarou entra mesmo fora dela."""
+    quem: list[tuple[str, str]] = []
+    for m in ctx.mesa:
+        chave = _so_hex(str(m.get("uniq") or "")).lower()
+        nome = str(m.get("nome") or "")
+        if _CHAVE_DE_CONTROLE.match(chave) and all(k != chave for k, _ in quem):
+            quem.append((chave, nome if nome and nome != _cor_desconhecida() else "DualSense"))
+    for a in (getattr(declaracao, "acionadores", None) or {}).values():
+        chave = str(getattr(a, "controle", None) or "")
+        if chave and all(k != chave for k, _ in quem):
+            quem.append((chave, _cor_declarada_de(chave) or "DualSense"))
+    return quem
+
+
+#: Onde a espera da tecla acha e abre o aparelho; a régua troca os dois por dublês.
+_RAIZ_DAS_ENTRADAS: Any = None
+
+
+def _abrir_o_evento(evento: str) -> Any:
+    import evdev
+
+    return evdev.InputDevice(f"/dev/input/{evento}")
+
+
+_ABRIR_O_EVENTO: Callable[[str], Any] = _abrir_o_evento
+
+
+def _evento_do_acionador(chave: str) -> str | None:
+    from hefesto_dualsense4unix.utils.maquina import aparelhos_de_entrada
+
+    return next((a.evento for a in aparelhos_de_entrada(_RAIZ_DAS_ENTRADAS) if a.chave == chave),
+                None)
+
+
+def _esperar_a_tecla(r: _Rascunho, evento: str, prazo_s: float = ESPERA_DA_TECLA_S) -> None:
+    """Abre o aparelho só para ler (sem prender) e guarda a primeira tecla apertada."""
+    dispositivo = None
+    try:
+        dispositivo = _ABRIR_O_EVENTO(evento)
+        fim = time.monotonic() + prazo_s
+        while time.monotonic() < fim:
+            ev = dispositivo.read_one()
+            if ev is None:
+                time.sleep(0.02)
+                continue
+            if getattr(ev, "type", None) == 1 and getattr(ev, "value", None) == 1:
+                codigo = int(ev.code)
+                with _TRAVA_DO_RASCUNHO:
+                    if all(t[0] != codigo for t in r.teclas):
+                        r.teclas.append([codigo, ROTULO_DA_TECLA.format(n=len(r.teclas) + 1),
+                                         None])
+                    r.sel = codigo
+                return
+    except Exception as exc:
+        print(f"[08] a espera da tecla do acionador caiu: {exc}", file=sys.stderr, flush=True)
+    finally:
+        r.esperando = False
+        if dispositivo is not None:
+            with contextlib.suppress(Exception):
+                dispositivo.close()
+
+
+def _o_rascunho() -> _Rascunho:
+    r = _rascunho_na_tela(_CENA_NA_TELA)
+    if r is None:
+        raise ValueError("acionador: nenhum aparelho de entrada está na tela")
+    return r
+
+
 #: ``054C``): o DualSense e o Edge seguram PS + Create; o DualShock 4, PS +
 BOTOES_DE_PAREAR = {"0ce6": "PS + Create", "0df2": "PS + Create",
                     "05c4": "PS + Share", "09cc": "PS + Share"}
@@ -2633,6 +2986,8 @@ COR_DO_TIPO = {
                  "gamepad")
 }
 COR_DO_TIPO[TIPO_ACESSORIO] = CATEGORIA_ACESSORIO["cor"]
+#: o aparelho de entrada (o acionador) leva a cor da webcam, como no desenho aprovado (r3-08-14)
+COR_DO_TIPO["entrada"] = COR_DO_TIPO["webcam"]
 ARTIGO_DO_TIPO = {"caixa": "a", "webcam": "a"}
 PASSAGEIROS = (("giro", "Giroscópio e acelerômetro"), ("touch", "Touchpad"),
                ("botoes", "Botões, sticks e gatilhos"))
@@ -2929,7 +3284,7 @@ def _vaga_de(ap: dict[str, Any], cena: dict[str, Any]) -> int:
 
 def _tem_menu(ap: dict[str, Any]) -> bool:
     """Toda linha tem o «⋮» (desenho aprovado de 05/10/2026), menos a que espera o gesto."""
-    return not ap.get("esperando") and ap.get("tipo") != "webcam"
+    return not ap.get("esperando") and ap.get("tipo") not in SO_OCUPA_A_PORTA
 
 
 def _pode_esquecer(ap: dict[str, Any]) -> bool:
@@ -2959,7 +3314,7 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False
     """Uma linha da sala: desenho, nome, o que manda e recebe, qual vaga de ponte."""
     aid = _x(ap["id"])
     esperando = bool(ap.get("esperando"))
-    arrasta = not ap.get("fixo") and not esperando
+    arrasta = not ap.get("fixo") and not esperando and ap.get("tipo") not in SO_OCUPA_A_PORTA
     nome = str(ap.get("nome") or "")
     rotulo = str(ap.get("rotulo") or "")
     tipo = str(ap.get("tipo"))
@@ -2971,8 +3326,9 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False
     else:
         estado = (" esperando" if esperando else " nao-conectou" if ap.get("nao_conectou")
                   else " desligado" if ap.get("desligado") else "")
+        r3 = ' data-r3="14"' if tipo == TIPO_ENTRADA else ""
         abre = (f'<div class="linha{estado}" data-id="{aid}" '
-                f'data-alvo="{aid}" aria-label="{le}">')
+                f'data-alvo="{aid}"{r3} aria-label="{le}">')
     desenho = _desenho_de(ap)
     campo = (f'<input class="nome" value="{_x(nome)}" placeholder="{_x(rotulo)}" '
              'aria-label="Nome deste aparelho" title="Clique para renomear; arraste para mover" '
@@ -3015,9 +3371,12 @@ def html_da_linha(ap: dict[str, Any], cena: dict[str, Any], com_hz: bool = False
                 + vazia + _o_menu(ap) + '</div>')
     if ap.get("tipo") == "controle":
         faixa = _linha_do_controle(ap, cena, com_hz)
-    elif ap.get("tipo") == "webcam":
+    elif ap.get("tipo") in SO_OCUPA_A_PORTA:
+        usar = (f'<a class="btn usar-como" href="#acionador" data-gesto="usar-como-botoes" '
+                f'data-alvo="{aid}" title="{DICA_DO_USAR_COMO}">{USAR_COMO_BOTOES}</a>'
+                if ap.get("tipo") == TIPO_ENTRADA else "")
         return (abre + desenho + campo + f'<div class="features"><span class="sem-radio" '
-                f'title="Não usa rádio; só ocupa porta">{SEM_RADIO}</span></div>'
+                f'title="Não usa rádio; só ocupa porta">{SEM_RADIO}</span>{usar}</div>'
                 '<span class="conta-da-vaga zero" title="Não usa rádio">'
                 + TRACO_CURTO + '</span></div>')
     elif ap.get("tipo") == "outro" and not ap.get("tipo_dela"):
@@ -3257,7 +3616,7 @@ def _moldes_de_pergunta(cena: dict[str, Any]) -> str:
     lugares = {lid: lug for lid, lug in todos.items() if lug.get("sabido", True)}
     moldes = []
     for ap in cena.get("aparelhos", ()):
-        if ap.get("fixo") or ap.get("esperando") or ap.get("tipo") == "webcam":
+        if ap.get("fixo") or ap.get("esperando") or ap.get("tipo") in SO_OCUPA_A_PORTA:
             continue
         for lid, destino in lugares.items():
             if lid == ap.get("lugar"):
@@ -3359,7 +3718,8 @@ def _moldes_de_painel(cena: dict[str, Any]) -> str:
     lugares = list(cena.get("lugares", ()))
     moldes = []
     movidos = [a for a in cena.get("aparelhos", ())
-               if not a.get("fixo") and not a.get("esperando") and a.get("tipo") != "webcam"]
+               if not a.get("fixo") and not a.get("esperando")
+               and a.get("tipo") not in SO_OCUPA_A_PORTA]
     for lug in lugares:
         lid = str(lug["id"])
         if lug.get("quedas"):
@@ -3582,7 +3942,7 @@ def _a_regua_dos_adaptadores(cena: dict[str, Any]) -> list[Any]:
     for lug in cena.get("lugares") or ():
         lid = str(lug["id"])
         aparelhos = tuple(_a_faixa_do_aparelho(cena, lid, a) for a in _moradores(cena, lid)
-                          if a.get("tipo") != "webcam" and _no_ar(a))
+                          if a.get("tipo") not in SO_OCUPA_A_PORTA and _no_ar(a))
         adaptadores.append(faixas_do_ar.Adaptador(
             id=lid, nome=_titulo_do_lugar(lug) or ADAPTADOR_SEM_NOME,
             cor=cor_do_adaptador(cena, lid),
@@ -4232,6 +4592,7 @@ def campos_da_secao(cena: dict[str, Any], *, segurar: bool = False) -> dict[str,
                      for a in controles if a.get("ponte") in ("som", "haptica")],
         "espectro-canais": html_dos_canais(cena),
         "radio-ocupado": "sim" if _ocupado(cena) else "",
+        **campos_do_acionador(cena),
     }
 
 
@@ -4633,6 +4994,8 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
     pedindo = _quem_pede_para_parear(central, lugares, aparelhos_bz)
     proposta = _a_proposta_da_cena(central.get("proposta"), aparelhos)
     lugares = _na_ordem_dela(lugares)
+    # O acionador declarado no `maquina.json` mora no primeiro adaptador, como no desenho r3-08-14.
+    aparelhos += _os_acionadores_declarados(declaracao_viva, lugares)
     buscas: dict[str, object] = {
         nome_do_jogador.mac(m.get("destino")): (
             str(m.get("aparelho") or ""), float(m.get("quando") or 0.0))
@@ -4651,6 +5014,7 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
                        else PROCURAR_LIGADO if busca_em else PROCURAR_DESLIGADO),
         "aberto": _o_aberto(lugares, aparelhos, proposta),
         "perto": _perto(aparelhos_bz, adaptadores_bz, aparelhos, buscas),
+        "quem_recebe": _quem_recebe_da_mesa(ctx, declaracao_viva),
     }
     cena["destino_da_central"] = _destino_da_central(cena, st)
     cena["destino_do_conectar"] = _destino_do_conectar(cena)
@@ -5354,6 +5718,11 @@ def aparelho_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
         return {"armou": True}
     ap = _aparelho_na_tela(str(o.get("alvo") or ""))
     novo = str(o.get("valor") or "").strip()
+    if ap.get("tipo") == TIPO_ENTRADA:
+        # O acionador não é do Bluetooth: o nome mora na declaração dele (a chave do kernel).
+        if novo != str(ap.get("nome") or ""):
+            _declarar_o_acionador(p, {"acionadores": {str(ap["chave"]): {"nome": novo or None}}})
+        return None
     if ap.get("tipo") == "controle":
         novo = nome_do_jogador.nome_dado(novo)
     if novo == str(ap.get("nome") or ""):
