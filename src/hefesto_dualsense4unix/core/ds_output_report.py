@@ -234,3 +234,179 @@ __all__ = [
     "build_usb_report",
     "stamp_bt_seq",
 ]
+
+
+#: O BYTE DA ATENUAÇÃO DO FIRMWARE (`reduce_motor_power`, `common[36]`, autorizado pelo flag1
+#: `0x40`): é o que o PS5 usa para Forte, Média, Fraca e Desligada, e vale sobre o que o jogo
+#: manda por qualquer caminho. Cada nibble tira passos de 12,5% (0 = força cheia, 7 = 12,5%: o
+#: firmware atenua e não cala). O GRAU, conferido no driver e na canônica em 20/10/2026: a POSIÇÃO
+#: é ALTA (o `hid-playstation` nomeia o campo no offset 36 da struct de 47 bytes, canônica §2); o
+#: bit `0x40` do flag1 é MÉDIA (de comunidade: o driver não o define, `driver-hid-playstation.md`);
+#: QUEM É QUEM nos nibbles é BAIXA, contestada (`dualsense-energia-e-vibracao.md` §4.2: SpecialK e
+#: dualsense-go põem a vibração no alto; a família DS5Dongle e o `dualsensectl`, no baixo). A
+#: escolha desta casa é a do `dualsensectl`, decidida em 18/10/2026, e se prova na bancada.
+COMMON_REDUCE_MOTOR_POWER = 36
+REDUCAO_DA_VIBRACAO_MASK = 0x07
+REDUCAO_DO_GATILHO_SHIFT = 4
+REDUCAO_DO_GATILHO_MASK = 0x70
+PASSOS_DO_FIRMWARE = 8
+REDUCAO_MAXIMA = 7
+
+#: Os modos do bloco de gatilho cuja força este arquivo sabe ler (os oficiais da Sony e os dois
+#: vivos no firmware). O de layout próprio de 01/08 que reaproveita o `0x26` não passa na
+#: conferência de forma e fica intacto: o que não se lê com certeza não se reescreve, e o nibble
+#: do firmware o atenua do mesmo jeito.
+_MODO_FEEDBACK = 0x21
+_MODO_ARCO = 0x22
+_MODO_ARMA = 0x25
+_MODO_VIBRACAO = 0x26
+_MODO_METRALHADORA = 0x27
+_MODO_DESLIGADO = 0x05
+_ZONAS = 10
+_FORCA_MAXIMA = 8
+
+
+def _escala_limpa(escala: float) -> float:
+    """A escala como número que se usa: negativa vira zero, e o que não é número vira 1."""
+    try:
+        valor = float(escala)
+    except (TypeError, ValueError):
+        return 1.0
+    if valor != valor or valor in (float("inf"), float("-inf")):
+        return 1.0
+    return max(0.0, valor)
+
+
+def passos_de_reducao(escala: float) -> int:
+    """Quantos passos de 12,5% o firmware tira para a ``escala`` (1,0 = 100% do trilho).
+
+    O passo é o de BAIXO (``floor``): a fração que o firmware deixa nunca fica abaixo da escala, e o
+    resto que o software põe (:func:`resto_do_software`) só abaixa, nunca satura. De 100% para
+    cima não há passo: o reforço é do software.
+    """
+    valor = _escala_limpa(escala)
+    if valor >= 1.0:
+        return 0
+    return max(0, min(REDUCAO_MAXIMA, int(round((1.0 - valor) * PASSOS_DO_FIRMWARE, 9))))
+
+
+def fracao_do_firmware(passos: int) -> float:
+    """A fração da força que o firmware deixa passar com ``passos`` de redução."""
+    return 1.0 - max(0, min(REDUCAO_MAXIMA, int(passos))) / PASSOS_DO_FIRMWARE
+
+
+def resto_do_software(escala: float) -> float:
+    """O que o software multiplica por cima do firmware para a soma dar a ``escala``.
+
+    Abaixo de 100% é a sobra entre a escala e o degrau de 12,5% (entre 0,875 e 1); de 100% para
+    cima é a própria escala, com o teto de cada motor posto por quem a aplica.
+    """
+    valor = _escala_limpa(escala)
+    return valor / fracao_do_firmware(passos_de_reducao(valor))
+
+
+def byte_de_reducao(escala_da_vibracao: float, escala_do_gatilho: float) -> int:
+    """O ``common[36]``: a vibração no nibble baixo e o gatilho no alto."""
+    return (passos_de_reducao(escala_da_vibracao) & REDUCAO_DA_VIBRACAO_MASK) | (
+        (passos_de_reducao(escala_do_gatilho) << REDUCAO_DO_GATILHO_SHIFT)
+        & REDUCAO_DO_GATILHO_MASK
+    )
+
+
+def _escalar_forca(forca: int, fator: float) -> int:
+    """Uma força de 1 a 8 multiplicada, com o teto do efeito; zero tira a zona."""
+    return min(_FORCA_MAXIMA, int(forca * fator + 0.5))
+
+
+def _desligado() -> bytes:
+    bloco = bytearray(11)
+    bloco[0] = _MODO_DESLIGADO
+    return bytes(bloco)
+
+
+def _zonas_com_forca(bloco: bytes, fator: float) -> bytes | None:
+    """FEEDBACK e VIBRACAO: a máscara de zonas e a força menos um, 3 bits por zona, em [3..6]."""
+    mascara = bloco[1] | (bloco[2] << 8)
+    empacotado = int.from_bytes(bloco[3:7], "little")
+    dentro = 0
+    for zona in range(_ZONAS):
+        if mascara & (1 << zona):
+            dentro |= 0x07 << (3 * zona)
+    if not mascara or mascara >> _ZONAS or empacotado & ~dentro:
+        return None
+    nova_mascara = 0
+    novo = 0
+    for zona in range(_ZONAS):
+        if not mascara & (1 << zona):
+            continue
+        forca = _escalar_forca(((empacotado >> (3 * zona)) & 0x07) + 1, fator)
+        if forca > 0:
+            nova_mascara |= 1 << zona
+            novo |= (forca - 1) << (3 * zona)
+    if not nova_mascara:
+        return _desligado()
+    fora = bytearray(bloco)
+    fora[1], fora[2] = nova_mascara & 0xFF, (nova_mascara >> 8) & 0xFF
+    fora[3:7] = novo.to_bytes(4, "little")
+    return bytes(fora)
+
+
+def _duas_pontas(bloco: bytes) -> bool:
+    """A máscara de início e fim dos modos de arma, arco e metralhadora: dois bits, dez zonas."""
+    mascara = bloco[1] | (bloco[2] << 8)
+    return not mascara >> _ZONAS and bin(mascara).count("1") == 2
+
+
+def _forcas_de_tres_bits(bloco: bytes, fator: float, *, quantas: int, bits: int,
+                        resto_zerado: bool) -> bytes | None:
+    """ARMA (uma força em [3]), ARCO (a força; o estalo, nos 3 bits de cima, não é força) e
+    METRALHADORA (as duas amplitudes em [3]; a frequência e o período seguem em [4] e [5])."""
+    if not _duas_pontas(bloco) or bloco[3] >> bits or (resto_zerado and any(bloco[4:7])):
+        return None
+    novas = [_escalar_forca(((bloco[3] >> (3 * i)) & 0x07) + 1, fator) for i in range(quantas)]
+    if all(f <= 0 for f in novas):
+        return _desligado()
+    fora = bytearray(bloco)
+    for indice, forca in enumerate(novas):
+        fora[3] = (fora[3] & ~(0x07 << (3 * indice)) & 0xFF) | ((max(1, forca) - 1) << (3 * indice))
+    return bytes(fora)
+
+
+def escalar_o_bloco_do_gatilho(bloco: bytes | bytearray, fator: float) -> bytes:
+    """O bloco de 11 bytes de um gatilho com a força multiplicada por ``fator``.
+
+    É o software da «Intensidade do gatilho»: a sobra abaixo de 100% e o reforço acima, com o teto
+    na força máxima de cada efeito (8). Vale para o efeito do Hefesto e para o bloco cru do jogo.
+    Modo que não tem força (galope, desligado) ou bloco que não passa na conferência da forma sai
+    como veio.
+    """
+    cru = bytes(bloco)
+    valor = _escala_limpa(fator)
+    if len(cru) != 11 or abs(valor - 1.0) < 1e-9:
+        return cru
+    modo = cru[0]
+    novo: bytes | None = None
+    if modo in (_MODO_FEEDBACK, _MODO_VIBRACAO):
+        novo = _zonas_com_forca(cru, valor)
+    elif modo == _MODO_ARMA:
+        novo = _forcas_de_tres_bits(cru, valor, quantas=1, bits=3, resto_zerado=True)
+    elif modo == _MODO_ARCO:
+        novo = _forcas_de_tres_bits(cru, valor, quantas=1, bits=6, resto_zerado=True)
+    elif modo == _MODO_METRALHADORA:
+        novo = _forcas_de_tres_bits(cru, valor, quantas=2, bits=6, resto_zerado=False)
+    return cru if novo is None else novo
+
+
+__all__ += [
+    "COMMON_REDUCE_MOTOR_POWER",
+    "PASSOS_DO_FIRMWARE",
+    "REDUCAO_DA_VIBRACAO_MASK",
+    "REDUCAO_DO_GATILHO_MASK",
+    "REDUCAO_DO_GATILHO_SHIFT",
+    "REDUCAO_MAXIMA",
+    "byte_de_reducao",
+    "escalar_o_bloco_do_gatilho",
+    "fracao_do_firmware",
+    "passos_de_reducao",
+    "resto_do_software",
+]

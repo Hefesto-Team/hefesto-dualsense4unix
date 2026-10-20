@@ -563,7 +563,7 @@ _CAMPOS_QUE_MEXEM_NA_SAIDA: frozenset[str] = frozenset(
         "_raw_trigger_right",
         "_raw_trigger_left",
         "_haptica_de_audio",
-        "_vibracao_v2",
+        "_vibracao_v2", "_escala_da_vibracao", "_escala_do_gatilho",
         "_mic_mute_desejado",
         "_mic_led_desejado",
         "_volumes_audio",
@@ -1293,7 +1293,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             flag0 &= ~(
                 rep.VALID_FLAG0_COMPATIBLE_VIBRATION | rep.VALID_FLAG0_HAPTICS_SELECT
             )
-            flag1 &= ~rep.VALID_FLAG1_MOTOR_POWER
+            flag1 &= ~(0 if _a_reducao_pede_o_bit(self) else rep.VALID_FLAG1_MOTOR_POWER)
             flag2 &= ~rep.VALID_FLAG2_COMPATIBLE_VIBRATION2
         else:
             # O-CONTROLE-VIBRA-NO-MODO-DO-FIRMWARE-DELE-01: na v2 o bit é o
@@ -1315,8 +1315,8 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                 rep.VALID_FLAG2_LIGHTBAR_SETUP_CONTROL_ENABLE
                 | rep.VALID_FLAG2_LED_BRIGHTNESS_CONTROL_ENABLE
             )
-        common[2] = int(self.rightMotor) & 0xFF
-        common[3] = int(self.leftMotor) & 0xFF
+        common[2] = _motor_com_a_reducao(self, self.rightMotor)
+        common[3] = _motor_com_a_reducao(self, self.leftMotor)
         for offset, valor in zip(_AUDIO_COMMON_OFFSETS, volumes, strict=False):
             if valor is not None:
                 common[offset] = int(valor) & 0xFF
@@ -1327,7 +1327,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             flag1 |= rep.VALID_FLAG1_AUDIO_CONTROL2_ENABLE
             common[rep.COMMON_AUDIO_CONTROL2] = int(preamp) & rep.SP_PREAMP_GAIN_MASK
         common[0] = flag0
-        common[1] = flag1
+        common[1] = _carimbar_a_reducao(self, common, flag1)
         if mic_led is not None:
             common[8] = int(mic_led) & 0xFF
         if mic_mute is not None:
@@ -1335,18 +1335,18 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
             common[9] = rep.POWER_SAVE_MIC_MUTE if mic_mute else 0x00
         raw_r = getattr(self, "_raw_trigger_right", None)
         if raw_r is not None and len(raw_r) == GAME_TRIGGER_BLOCK_LEN:
-            common[10 : 10 + GAME_TRIGGER_BLOCK_LEN] = raw_r
+            common[10 : 10 + GAME_TRIGGER_BLOCK_LEN] = _forca_do_gatilho(self, raw_r)
         else:
-            common[10 : 10 + GAME_TRIGGER_BLOCK_LEN] = bloco_do_gatilho(
+            common[10 : 10 + GAME_TRIGGER_BLOCK_LEN] = _forca_do_gatilho(self, bloco_do_gatilho(
                 int(self.triggerR.mode.value), self.triggerR.forces
-            )
+            ))
         raw_l = getattr(self, "_raw_trigger_left", None)
         if raw_l is not None and len(raw_l) == GAME_TRIGGER_BLOCK_LEN:
-            common[21 : 21 + GAME_TRIGGER_BLOCK_LEN] = raw_l
+            common[21 : 21 + GAME_TRIGGER_BLOCK_LEN] = _forca_do_gatilho(self, raw_l)
         else:
-            common[21 : 21 + GAME_TRIGGER_BLOCK_LEN] = bloco_do_gatilho(
+            common[21 : 21 + GAME_TRIGGER_BLOCK_LEN] = _forca_do_gatilho(self, bloco_do_gatilho(
                 int(self.triggerL.mode.value), self.triggerL.forces
-            )
+            ))
         common[rep.COMMON_VALID_FLAG2] = flag2
         if not suppress_leds:
             common[41] = int(self.light.pulseOptions.value) & 0xFF
@@ -2352,7 +2352,7 @@ class PyDualSenseController(IController):
             # O PS segurado sozinho por 10 s desliga este controle (`_vigiar_o_ps_segurado`).
             _vigiar_o_ps_segurado(self, key, handle)
             self._conhecer_o_firmware(key, handle)
-            self._reapply_desired(key, handle)
+            self._reaplicar_com_as_intensidades(key, handle)
         # acabaram de surgir. Sintoma provado ao vivo: boot com os DualSense
         self.reassert_resolved_outputs()
 
@@ -3598,7 +3598,7 @@ class PyDualSenseController(IController):
                 continue
             novo[alvo] = float(fator)
         with self._io_lock:
-            self._rumble_scale_by_uniq = novo
+            self._trocar_o_mapa_das_intensidades("_rumble_scale_by_uniq", novo)
 
     def force_rumble_stop(self, uniq: str | None = None) -> None:
         """Para os motores com um report de stop (HARM-16) — todos, ou UM (`uniq`,
@@ -5566,6 +5566,65 @@ class PyDualSenseController(IController):
         logger.info("controle_desligado", uniq=mascarado, escritos=escritos)
         return escritos == len(pedido)
 
+    # --- A intensidade (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01) ---
+    # Os métodos moram no fim da classe de propósito: as citações `arquivo:linha` do meio do
+    # arquivo continuam abrindo no que prometem.
+
+    def set_trigger_scales(self, scales: Mapping[str, float] | None = None) -> None:
+        """SUBSTITUI o mapa da «Intensidade do gatilho» por-uniq (1,0 = 100% do trilho).
+
+        Abaixo de 100% vira o nibble alto do `common[36]`; acima, o reforço das forças do bloco
+        (`_forca_do_gatilho`). Irmão de :meth:`set_rumble_scales`; ausente = 100%.
+        """
+        novo: dict[str, float] = {}
+        for uniq, fator in (scales or {}).items():
+            alvo = self._key_to_uniq(uniq)
+            if alvo is None:
+                logger.warning("escala_do_gatilho_sem_mac_ignorada", uniq=uniq)
+                continue
+            novo[alvo] = max(0.0, float(fator))
+        with self._io_lock:
+            self._trocar_o_mapa_das_intensidades("_trigger_scale_by_uniq", novo)
+
+    def escala_do_gatilho_de(self, uniq: str) -> float | None:
+        """A «Intensidade do gatilho» da peça ``uniq``, ou ``None`` (100%)."""
+        alvo = self._key_to_uniq(uniq)
+        mapa = getattr(self, "_trigger_scale_by_uniq", None) or {}
+        return mapa.get(alvo) if alvo is not None else None
+
+    def _trocar_o_mapa_das_intensidades(self, nome: str, novo: dict[str, float]) -> None:
+        """Troca o mapa ``nome`` (vibração ou gatilho) e põe a escala nova em cada handle."""
+        with self._io_lock:
+            setattr(self, nome, novo)
+            self._empurrar_as_intensidades()
+
+    def _reaplicar_com_as_intensidades(self, key: str, handle: Any) -> None:
+        """O handle novo nasce com a intensidade do controle dele, antes do `_reapply_desired`."""
+        self._empurrar_as_intensidades(so=key)
+        self._reapply_desired(key, handle)
+
+    def _empurrar_as_intensidades(self, so: str | None = None) -> None:
+        """Põe em cada handle (ou só no ``so``) a escala da vibração e a do gatilho dele.
+
+        A da vibração é o fator do mapa de :meth:`set_rumble_scales`, o MESMO que o funil já pôs no
+        byte do motor: o firmware só tira o que o software já tirou, e o resto nunca satura. A
+        volta lê as duas no `_build_common`, nos dois transportes e nos quatro controles.
+        """
+        with self._io_lock:
+            handles = getattr(self, "_handles", None) or {}
+            alvos = [(k, h) for k, h in handles.items() if so is None or k == so]
+            vibracao = dict(getattr(self, "_rumble_scale_by_uniq", None) or {})
+            gatilho = dict(getattr(self, "_trigger_scale_by_uniq", None) or {})
+        for key, handle in alvos:
+            uniq = self._key_to_uniq(key)
+            escala_vib = vibracao.get(uniq, 1.0) if uniq is not None else 1.0
+            escala_gat = gatilho.get(uniq, 1.0) if uniq is not None else 1.0
+            with contextlib.suppress(Exception):
+                if getattr(handle, "_escala_da_vibracao", 1.0) != escala_vib:
+                    handle._escala_da_vibracao = escala_vib
+                if getattr(handle, "_escala_do_gatilho", 1.0) != escala_gat:
+                    handle._escala_do_gatilho = escala_gat
+
 
 #: (`battery_pct=..., battery_state=...`) e o `**self._carga(...)` no
 ESTADO_DE_CARGA: dict[int, str] = {
@@ -5798,3 +5857,51 @@ def microfone_chega_sem_ponte(transporte: object) -> bool:
     rádio: na dúvida, não se abre nada.
     """
     return transporte == "usb"
+
+
+# --- A intensidade no report (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-...-01)
+# Funções do handle chamadas pelo `_build_common`, no fim do arquivo pelo mesmo motivo dos métodos
+# do controlador. A «Força da vibração» e a «Intensidade do gatilho» do controle chegam ao handle
+# como `_escala_da_vibracao` e `_escala_do_gatilho` (1,0 = 100%, ausente = 100%). Abaixo de 100% o
+# `common[36]` leva os passos de 12,5% do firmware, com o flag1 `0x40` em todo report enquanto
+# houver redução e no primeiro depois que ela some (`_reducao_escrita`); o motor e o gatilho levam
+# só o resto (`rep.resto_do_software`). Com a força cheia o report é o de antes, byte a byte.
+
+
+def _reducao_do_handle(handle: Any) -> int:
+    """O `common[36]` que a escala de agora do ``handle`` pede."""
+    return rep.byte_de_reducao(
+        getattr(handle, "_escala_da_vibracao", 1.0), getattr(handle, "_escala_do_gatilho", 1.0)
+    )
+
+
+def _a_reducao_pede_o_bit(handle: Any) -> bool:
+    """Sem vibração nossa, o `0x40` só sai se há redução ou se a última escrita ainda a carrega."""
+    return bool(_reducao_do_handle(handle) or getattr(handle, "_reducao_escrita", 0))
+
+
+def _carimbar_a_reducao(handle: Any, common: bytearray, flag1: int) -> int:
+    """Escreve o `common[36]` quando o flag1 leva o `0x40`, e lembra o que saiu; devolve o flag1."""
+    if flag1 & rep.VALID_FLAG1_MOTOR_POWER:
+        reducao = _reducao_do_handle(handle)
+        common[rep.COMMON_REDUCE_MOTOR_POWER] = reducao
+        if getattr(handle, "_reducao_escrita", 0) != reducao:
+            handle._reducao_escrita = reducao
+    return flag1
+
+
+def _motor_com_a_reducao(handle: Any, motor: Any) -> int:
+    """O byte do motor já chega com a força do controle (o funil `forca_do_controle`); o firmware
+    tira os passos dele, e o byte leva o que falta, com o teto de 255."""
+    passos = _reducao_do_handle(handle) & rep.REDUCAO_DA_VIBRACAO_MASK
+    valor: int = int(motor) & 0xFF
+    if not passos:
+        return valor
+    return min(255, round(valor / rep.fracao_do_firmware(passos)))
+
+
+def _forca_do_gatilho(handle: Any, bloco: bytes | bytearray | list[int]) -> bytes:
+    """O bloco do gatilho (do jogo ou do Hefesto) com o resto da intensidade que o firmware não
+    cobre: a sobra abaixo de 100% e o reforço acima, até a força 8 do efeito."""
+    escala = getattr(handle, "_escala_do_gatilho", 1.0)
+    return rep.escalar_o_bloco_do_gatilho(bytes(bloco), rep.resto_do_software(escala))
