@@ -9,8 +9,8 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import re
-import shutil
 from pathlib import Path
 from typing import Any
 
@@ -36,9 +36,20 @@ class SysDeMentira:
         self.raiz = raiz
         self.dados = carregar() if dados is None else dados
         self.barramento = raiz / "bus" / "usb" / "devices"
-        self.aparelhos = raiz / "devices" / "pci0000:00" / "0000:aa:00.0"
-        self.drivers = raiz / "drivers"
+        self._geracao = 0
         self.montar()
+
+    @property
+    def _base(self) -> Path:
+        return self.raiz / f"geracao-{self._geracao}"
+
+    @property
+    def aparelhos(self) -> Path:
+        return self._base / "devices" / "pci0000:00" / "0000:aa:00.0"
+
+    @property
+    def drivers(self) -> Path:
+        return self._base / "drivers"
 
     @property
     def nos(self) -> dict[str, Any]:
@@ -73,9 +84,16 @@ class SysDeMentira:
         return self.dados["base"].get(Path(syspath).name, {}).get(propriedade)  # type: ignore[no-any-return]
 
     def montar(self) -> None:
-        for pasta in (self.barramento, self.raiz / "devices", self.drivers):
-            shutil.rmtree(pasta, ignore_errors=True)
-        self.barramento.mkdir(parents=True)
+        """Monta a forma numa geração nova e troca o barramento para ela de uma vez.
+
+        O ouvido relê numa thread enquanto o caso muda o ``/sys``. Apagar e refazer no lugar
+        abria uma janela sem aparelho nenhum, e a releitura que caía nela registrava todos como
+        «saiu»; no ``/sys`` de verdade cada aparelho sai sozinho. A troca é o ``rename`` de um
+        link, e a geração velha fica no disco para quem ainda a lê.
+        """
+        self._geracao += 1
+        barramento = self._base / "bus" / "usb" / "devices"
+        barramento.mkdir(parents=True)
         portas: dict[str, Path] = {}
         pares: dict[str, str] = {}
         for nome in sorted(self.nos, key=lambda n: len(self.caminho(n).parts)):
@@ -88,7 +106,7 @@ class SysDeMentira:
                 (pasta / "bos_descriptors").write_bytes(bytes.fromhex(no["bos"]))
             if no.get("serial_forjado"):
                 _escrever(pasta / "serial", SERIAL_FORJADO + "\n")
-            (self.barramento / nome).symlink_to(pasta)
+            (barramento / nome).symlink_to(pasta)
             for interface, dados in no.get("interfaces", {}).items():
                 dentro = pasta / interface
                 dentro.mkdir()
@@ -105,11 +123,15 @@ class SysDeMentira:
                     (dentro / porta).mkdir()
                     portas[porta] = dentro / porta
                     pares[porta] = par
-                (self.barramento / interface).symlink_to(dentro)
+                (barramento / interface).symlink_to(dentro)
         for porta, par in pares.items():
             dono = _PORTA.match(par)
             if par in portas and dono is not None and dono.group(1) in self.nos:
                 (portas[porta] / "peer").symlink_to(portas[par])
+        self.barramento.parent.mkdir(parents=True, exist_ok=True)
+        ponteiro = self.barramento.with_name(f".devices-{self._geracao}")
+        ponteiro.symlink_to(barramento)
+        os.replace(ponteiro, self.barramento)
 
     def fontes(self) -> dict[str, Any]:
         """Os argumentos de ``ler_o_barramento`` para este ``/sys``."""
