@@ -371,7 +371,10 @@ def _inclina(mao: str | None, destino: str) -> tuple[int, int, int, int]:
 
 def test_a_mao_manda_a_inclinacao_para_o_mesmo_lado_do_giro(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sem mão a inclinação fica onde foi posta; com a mão, vai ao lado que sobra do olhar."""
+    """Sem mão a inclinação fica onde foi posta; com a mão, vai ao lado que sobra do olhar.
+
+    (D-2010-A-ACESSIBILIDADE-NAO-TIRA-NADA-DO-PAD-DO-JOGO)
+    """
     chamadas: list[str] = []
     monkeypatch.setattr(
         rot, "misturar",

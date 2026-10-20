@@ -423,6 +423,7 @@ def test_o_perfil_de_evento_nao_disputa_janela() -> None:
 
     MORDIDA: sem o `so_entra_por_evento` em `_e_catch_all` e `_e_manual`, o doutor e a Sistema
     acusam «vale para QUALQUER janela» num perfil que janela nenhuma ativa.
+    (D-2010-O-PERFIL-DE-EVENTO-NAO-DISPUTA-JANELA)
     """
     def _evento(nome: str, momento: str, prioridade: int) -> Profile:
         return _perfil(nome, match=MatchAny(), priority=prioridade).model_copy(

@@ -56,6 +56,7 @@ def test_o_perfil_nao_tem_o_campo_nem_o_modulo_das_marcas() -> None:
 
 @pytest.mark.parametrize("marca", ["adulto", "visual_novel"])
 def test_a_marca_de_antes_vira_o_estilo_quando_o_perfil_nao_tem_um(marca: str) -> None:
+    """A prova da D-2010-A-MARCA-DE-ANTES-VIRA-O-ESTILO."""
     perfil = Profile.model_validate(_de_fora(marcas=[marca]))
     assert perfil.estilo == marca
     assert estilos_de_jogo.POR_CHAVE[marca].rotulo

@@ -140,6 +140,7 @@ def test_o_comando_que_dorme_estoura_o_prazo_sem_travar() -> None:
 
 
 def test_o_comando_nao_passa_por_shell(tmp_path: Path) -> None:
+    """A prova da D-2010-O-COMANDO-DO-EVENTO-RODA-COMO-AJUDANTE."""
     alvo = tmp_path / "x"
     certo, _ = asyncio.run(rodar_o_comando(f"a; touch {alvo}"))
     assert not certo and not alvo.exists(), "o «;» foi lido por um shell"
@@ -236,7 +237,10 @@ def sem_som(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_o_segundo_ao_quarto_controle_tambem_e_controle_conectado(sem_som: None) -> None:
-    """Com um controle de pé, o que entra ganha o `controller.connected` dele, cabo ou rádio."""
+    """Com um controle de pé, o que entra ganha o `controller.connected` dele, cabo ou rádio.
+
+    (D-2010-CADA-CONTROLE-QUE-ENTRA-E-CONTROLE-CONECTADO)
+    """
     daemon = SimpleNamespace(bus=EventBus(),
                              controller=_MesaDeQuatro({P1: "usb", P2: "bt", P3: "usb"}))
     vistos = asyncio.run(_bordas(daemon, {P1: P1}, {P1: P1, P2: P2, P3: P3}))
