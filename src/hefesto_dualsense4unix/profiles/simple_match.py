@@ -460,48 +460,6 @@ _FORMA_FIXA: dict[str, str] = {
 _FIXA_DO_PRESET: dict[str, str] = {v: k for k, v in _FORMA_FIXA.items()}
 
 
-def forma_da_procedencia(
-    procedencia: str,
-    jogo: str = "",
-    *,
-    forma_do_catalogo: str = "",
-) -> str:
-    """A chave de `from_simple_choice` que ESTA procedência pede. É o §4.
-
-    As quatro respostas, e cada uma tem razão medida:
-
-    * **«Navegação»** → ``browser``. O preset dos navegadores, que já existia.
-    * **«Qualquer jogo»** → ``any``.
-    * **«Steam»** → ``steam_game`` com jogo, ``steam`` sem. **As duas formas
-      continuam alcançáveis, e isso não é esperteza — é a única saída que não
-      perde uma.** A Steam é o único nome deste campo com DOIS significados no
-      disco: o CLIENTE aberto (``process_name=["steam"]``) e UM JOGO do usuário
-      (``steam_app_<id>``). Mapear «Steam» só para o jogo faria todo perfil do
-      cliente abrir travado; só para o cliente faria o campo de baixo não
-      valer nada. Quem separa os dois é o campo de baixo estar cheio, que é
-      exatamente a pergunta *"é um jogo da Steam ou é a Steam?"*.
-    * **um lançador** (Heroic, Lutris, RetroArch, «Instalado aqui»…) → o que o
-      CATÁLOGO daquele jogo declarar (`jogos_locais.JogoLocal.forma`), e
-      ``janela`` quando ele não está no catálogo. **Nunca ``game``**: o que
-      esses lançadores entregam é a `wm_class` (o basename do
-      ``install.executable`` do Heroic, da ``janela`` que a extensão do
-      lançador entrega), e gravá-la como ``process_name`` é o defeito que
-      `_forma_do_que_ela_escolheu` mediu na tela viva em 10/09/2026 — outro
-      dado, que casa por acaso.
-
-    **ELA NÃO LEVANTA, e a recusa continua sendo de `from_simple_choice`.** As
-    frases de gente já estão escritas lá (`MSG_STEAM_SEM_APPID`,
-    `MSG_JANELA_SEM_CLASSE`), e duplicá-las aqui seria a segunda verdade sobre
-    o que falta no campo.
-    """
-    fixa = _FORMA_FIXA.get(procedencia)
-    if fixa is not None:
-        return fixa
-    if procedencia == PROCEDENCIA_DA_STEAM:
-        return "steam_game" if jogo.strip() else "steam"
-    return forma_do_catalogo or "janela"
-
-
 def procedencia_do_match(
     match: Match | None,
     lancador_da_chave: Callable[[str], str] | None = None,
