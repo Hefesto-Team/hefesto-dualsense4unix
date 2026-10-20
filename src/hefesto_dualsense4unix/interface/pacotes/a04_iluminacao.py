@@ -1321,7 +1321,7 @@ PREFIXO_DA_BASE = "base:"
 SELETOR_DOS_EFEITOS = "#seus-efeitos"
 ROTULO_DA_BASE = {"respirar": "Respirar", "piscar": "Piscar",
                   "arco-iris": "Arco-íris",  # (noqa-acento) chave ASCII
-                  "batimento": "Batida do coração", "chama": "Chama", "mare": "Maré"}
+                  "batimento": "Batida", "chama": "Chama", "mare": "Maré"}
 #: O ritmo com que cada base nasce na lista (o do desenho A): respirar 5 s, piscar 0,9 Hz, uma volta
 #: do arco-íris em 12 s, batida de 1 s, a chama troca de alvo a cada ~2 s, a Maré vai e volta em
 #: 8 s.

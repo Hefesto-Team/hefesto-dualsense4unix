@@ -122,8 +122,8 @@ def test_cada_imersao_sai_com_o_bloco_da_tabela() -> None:
 def test_as_dicas_dizem_o_que_se_sente_e_os_dois_nomes_novos_estao() -> None:
     for chave, dica in DICAS.items():
         assert ei.POR_CHAVE[chave].dica == dica, chave
-    assert ei.POR_CHAVE["corda-que-estica"].rotulo == "Corda que estica"
-    assert ei.POR_CHAVE["pedal-duro"].rotulo == "Pedal duro"
+    assert ei.POR_CHAVE["corda-que-estica"].rotulo == "Carga · estica"
+    assert ei.POR_CHAVE["pedal-duro"].rotulo == "Peso · pedal"
     assert "corda-que-treme-no-fim" not in ei.POR_CHAVE
     assert "pedal-no-fundo" not in ei.POR_CHAVE
 

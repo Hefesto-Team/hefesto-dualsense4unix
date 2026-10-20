@@ -794,7 +794,7 @@ def parar_o_teste(uniq: str | None = None) -> None:
     _O_GESTO_MANDOU_O_PAR_EM.pop(uniq, None)
 
 
-#: O «Testar» com um Efeito imersão escolhido REPETE o padrão até o «Parar» (pedido de 19/10/2026:
+#: O «Testar» com um Padrão dos motores escolhido REPETE o padrão até o «Parar» (19/10/2026:
 #: ajustar ao vivo). O fio de cada controle roda FORA da fila dele, para o «Parar» cortar na hora,
 #: e cada passo lê as barras de `_PONTOS_AO_VIVO`, que o arraste atualiza.
 _REPIQUE_DO_PADRAO: dict[str, tuple[threading.Event, threading.Thread]] = {}
@@ -1731,7 +1731,7 @@ def efeito_haptico(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 @gesto("05-vibracao.html", GESTO_DO_EFEITO_IMERSAO, grava="rumble_motores_set")
 def efeito_imersao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """A lista «Efeito imersão» da coluna: o padrão dos motores deste controle (ou Do estilo)."""
+    """A lista «Padrão dos motores» da coluna: o padrão deste controle (ou Do estilo)."""
     _gravar_a_escolha(o, p, "efeito_imersao", _padroes.ESCOLHAS)
 
 
@@ -1752,8 +1752,8 @@ def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
     O pedido leva o `uniq` dele; a aba não mira o seletor global (`controller.target.set`).
     Com um padrão de `padroes_de_vibracao.PADROES` (o do chip, a `forma` do quadro de criar ou o
-    Efeito imersão da coluna), o chip e a área de criar tocam a forma uma vez e devolvem a mão ao
-    jogo; o Efeito imersão da coluna repete o padrão até o «Parar», com as barras ao vivo. O
+    Padrão da coluna), o chip e a área de criar tocam a forma uma vez e devolvem a mão ao
+    jogo; o Padrão dos motores da coluna repete o padrão até o «Parar», com as barras ao vivo. O
     porquê está em docs/research/o-porque-dos-modulos.md, «o Testar da aba Vibração».
     """
     # a área de criar manda a `forma`; sem ela escolhida recusa, em vez de ligar o Testar

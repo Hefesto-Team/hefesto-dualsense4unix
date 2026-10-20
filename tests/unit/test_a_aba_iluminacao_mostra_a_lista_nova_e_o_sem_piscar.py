@@ -30,7 +30,7 @@ MOCKUP = RAIZ / "mockup" / "04-iluminacao.html"
 JOGADORES = [f"aa:bb:cc:00:00:0{n}" for n in range(1, 5)]
 
 #: O que a lista mostra, na ordem do desenho A: do mais calmo ao mais vivo, agrupado pelo que se vê.
-ROTULOS_NA_ORDEM = ["Sem efeito", "Luz fixa", "Respirar", "Batida do coração", "Chama", "Maré",
+ROTULOS_NA_ORDEM = ["Sem efeito", "Luz fixa", "Respirar", "Batida", "Chama", "Maré",
                     "Piscar", "Arco-íris"]
 VALORES_NA_ORDEM = ["sem-efeito", "luz-fixa", "base:respirar", "base:batimento", "base:chama",
                     "base:mare", "base:piscar", "base:arco-iris"]

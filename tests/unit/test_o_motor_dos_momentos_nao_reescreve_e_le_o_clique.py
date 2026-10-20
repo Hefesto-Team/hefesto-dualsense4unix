@@ -536,7 +536,8 @@ def test_o_perfil_de_chave_velha_toca_a_imersao_que_a_tela_mostra(
 
     lado = aba._do_lado({"mode": velha, "params": posicionais}, trigger_specs)
     na_tela = aba._imersao_que_casa(lado["modo-chave"], lado["params"], lado["cru"])
-    assert na_tela == chave, (velha, posicionais, na_tela)
+    # a lista junta «Arma pesada» e «Golpe pesado» no «Golpe · forte» (D-2010, a página aprovada)
+    assert na_tela == ei.IGUAL_A.get(chave, chave), (velha, posicionais, na_tela)
     imersao = ei.POR_CHAVE[chave]
     plano = tv._plano_do_lado(SimpleNamespace(mode=velha, params=posicionais))
     if not ei.momentos_no_modo(imersao, lado["modo-chave"]):

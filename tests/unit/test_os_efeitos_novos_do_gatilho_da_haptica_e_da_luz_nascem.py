@@ -588,7 +588,7 @@ def test_o_golpe_falha_e_so_um_momento_que_o_jogo_apaga() -> None:
     assert ei.ajustes_da_imersao(falha, "Weapon") is not None
 
 
-def test_as_tres_formas_novas_ficam_fora_da_lista_da_tela() -> None:
-    """A tela é do bloco B: o Eco, o Grão e o Motor de época não entram em `ESCOLHAS`."""
-    assert {fh.ECO, fh.GRAO, fh.MOTOR_DE_EPOCA} & set(fh.ESCOLHAS) == set()
+def test_as_tres_formas_novas_entram_na_lista_da_tela_no_bloco_b() -> None:
+    """A tela é do bloco B (20/10/2026): o Eco, o Grão e o Motor de época entram em `ESCOLHAS`."""
+    assert {fh.ECO, fh.GRAO, fh.MOTOR_DE_EPOCA} <= set(fh.ESCOLHAS)
     assert set(fh.CONTINUAS) == {fh.SOM_NO_CORPO, fh.GRAO, fh.MOTOR_DE_EPOCA}

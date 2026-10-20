@@ -252,14 +252,14 @@
       "data": "2026-10-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1152676,
+      "piso": 1152659,
       "por_item": {
-        "docs": 119974,
+        "docs": 119979,
         "scripts": 114973,
-        "src": 310994,
-        "tests": 606735
+        "src": 310946,
+        "tests": 606761
       },
-      "razao": "tamanho: +5298 linhas (1147378 -> 1152676), pagas por Origem: D-2010-A-CHEGADA-ESPERA-A-RAJADA-DA-STEAM, D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE; registrado no fecho, topo 1184a242ffcf",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",

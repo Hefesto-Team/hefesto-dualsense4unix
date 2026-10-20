@@ -1237,7 +1237,7 @@ def _coluna(c, e=None, conectado=None):
             {linhas[0]}
             {linhas[1]}
             {_lista_do_efeito(GESTO_DO_EFEITO_IMERSAO, CAMPO_DO_EFEITO_IMERSAO,
-                              CAMPO_DA_DICA_DA_IMERSAO, "Efeito imersão", padroes.ESCOLHAS,
+                              CAMPO_DA_DICA_DA_IMERSAO, "Padrão dos motores", padroes.ESCOLHAS,
                               _ROTULOS_DA_IMERSAO, padroes.DICAS)}
             <div class="acoes-col">
               <!-- "Testar", não "Testar por 500 ms" — decisão, 30/08:
@@ -1307,7 +1307,7 @@ MIOLO = f'''
             <div><span class="sec-rot" data-dica="A forma do toque háptico deste controle. Do estilo segue o estilo e Sem efeito cala o toque; a força é a do Sensor háptico">Efeito háptico</span></div>
             <div><span class="sec-rot" data-dica="Motor do punho esquerdo: contrapeso maior, som grosso. Desligue um lado e aquele punho para de tremer">{ESQ["rot"]}</span></div>
             <div><span class="sec-rot" data-dica="Motor do punho direito: contrapeso menor, som fino">{DIR["rot"]}</span></div>
-            <div><span class="sec-rot" data-dica="O padrão dos motores deste controle. Do estilo segue o estilo e Sem efeito cala os motores; o Testar toca o padrão escolhido">Efeito imersão</span></div>
+            <div><span class="sec-rot" data-dica="O padrão dos motores deste controle. Do estilo segue o estilo e Sem efeito cala os motores; o Testar toca o padrão escolhido">Padrão dos motores</span></div>
             <div><span class="sec-rot" data-dica="Vibração treme os motores deste controle até o Parar, seguindo ao vivo as barras da coluna. Háptica toca a vibração fina pelo som, com a força do Sensor háptico. No mesmo controle ligar um desliga o outro, e cada controle tem o seu teste. Parar corta os dois deste controle e devolve a vibração dele ao jogo. {DICA_DOS_VALORES_QUE_PASSAM}">Testar agora</span></div>
           </div>
 {"".join(_coluna(c) for c in MESA)}
@@ -1603,7 +1603,7 @@ def _conferir(doc):
     _ordem = _re.findall(r'<span class="sec-rot"[^>]*>([^<]+)</span>',
                          corpo.split('<div class="rotulos">', 1)[-1].split('<div class="ctrl', 1)[0])
     exigir(_ordem == ["Controle", "Modelo", "Força da vibração", "Sensor háptico", "Efeito háptico",
-                      ESQ["rot"], DIR["rot"], "Efeito imersão", "Testar agora"],
+                      ESQ["rot"], DIR["rot"], "Padrão dos motores", "Testar agora"],
            f"as faixas da aba 05 saíram da ordem do desenho A: {_ordem}")
     for gesto, rotulos, escolhas in (
             (GESTO_DO_EFEITO_HAPTICO, formas.ROTULOS, formas.ESCOLHAS),

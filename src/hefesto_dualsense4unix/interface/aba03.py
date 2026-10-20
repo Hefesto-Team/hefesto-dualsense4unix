@@ -22,6 +22,7 @@ from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E40
     DICA_DO_MODO,
     PREFIXO_DA_DICA_DA_IMERSAO,
     PREFIXO_DA_DICA_DO_MODO,
+    PREFIXO_DA_FAMILIA_DA_IMERSAO,
     ROTULO_DO_JOGO_DECIDE,
     SEM_APARELHO_AQUI,
     SEM_IMERSAO,
@@ -30,11 +31,13 @@ from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E40
     _cabeca_do_controle,
     _escapar,
     dica_da_imersao,
+    familia_da_imersao,
     descricao_do_modo,
     html_das_opcoes_de_imersao,
     nivel_da_forca,
     sem_comentarios_de_css,
 )
+from hefesto_dualsense4unix.profiles.efeitos_de_imersao import FAMILIAS_DA_PAGINA  # noqa: E402
 from aba05 import GLIFO_DO_CONTROLE  # noqa: E402  o ícone da linha de força da 05
 from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX  # noqa: E402
 from hefesto_dualsense4unix.interface.pacotes.meus_efeitos import (  # noqa: E402
@@ -79,7 +82,7 @@ CENA = {
     "p1": {"e": ("Machine", "rajada-que-sobe-sozinha"),
            "d": ("Bow", "corda-que-estica")},
     "p2": {"e": ("Weapon", "ferrolho-que-volta"),
-           "d": ("Resistance", SEM_IMERSAO)},
+           "d": ("Off", SEM_IMERSAO)},
     "p3": {"e": None, "d": None},
     "p4": {"e": None, "d": None},
 }
@@ -243,10 +246,48 @@ CSS = CSS_GLIFO + """
     cursor:pointer;flex:0 0 auto}
   .g2-sentir:hover{background:rgba(255,121,198,.2)}
   .quadro-topo .modo-auto{margin-left:auto}
+  /* OS EFEITOS POR FAMÍLIA (20/10/2026): a lista do «Efeito do gatilho» abre em grupos por família,
+     e a família é a etiqueta à esquerda da caixa; a frase de cada efeito mora SÓ na dica. «Como o
+     gatilho faz» vai para o avançado, atrás da chave no título do quadro. */
+  .g2-env{position:relative}
+  .g2-fam{position:absolute;left:11px;top:0;height:36px;display:flex;align-items:center;
+    font:600 11px/1 'Space Grotesk',system-ui,sans-serif;color:var(--purple);pointer-events:none}
+  .g2-fam:not([data-fam]){display:none}
+  .g2-fam::before{content:attr(data-fam)}
+  .g2-fam::after{content:"";width:1px;height:14px;background:var(--border-sutil);margin-left:7px}
+  .g2-av{display:none !important}
+  .quadro:has(.g2-avtog input:checked) .g2-av{display:flex !important}
+  .quadro:not(:has(.g2-avtog input:checked)) .g2-grade > .g2-gl:not(.g2-ds){grid-row:span 1}
+  /* A chave NÃO leva a classe `modo-auto`: o script do Modo automático a trataria como ele
+     (`data-modo`, `aria-pressed`) e o piloto a leria como gesto sem dono. Ela é local à janela. */
+  .g2-avtog{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
+    border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
+    font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;position:relative;
+    transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
+  .g2-avtog .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8);
+    background:transparent;transition:all .15s}
+  .g2-avtog:hover{border-color:#5fd3e6;color:#fff}
+  .quadro-topo .g2-avtog{margin-left:auto}
+  body.nativo.por-controle .g2-avtog{visibility:hidden}
+  .g2-avtog input{position:absolute;opacity:0;width:0;height:0}
+  .quadro-topo .g2-avtog ~ .modo-auto{margin-left:10px}
+  .g2-avtog:has(input:checked){background:#0e7c8c;border-color:#5fd3e6;color:#fff;
+    box-shadow:0 0 0 3px rgba(95,211,230,.18)}
+  .g2-avtog:has(input:checked) .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}
+  .g2-avtog:has(input:focus-visible){outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
+  .quadro:has(.g2-avtog input:checked) .g2-grade{row-gap:9px}
+  @media (max-height:830px){
+    .quadro:has(.g2-avtog input:checked) .g2-grade{row-gap:6px}
+    .quadro:has(.g2-avtog input:checked) .g2-av .g2-acion{height:30px}
+    .quadro:has(.g2-avtog input:checked) .g2-av.g2-rot,.quadro:has(.g2-avtog input:checked) .g2-av.g2-cel{min-height:30px}
+    .quadro:has(.g2-avtog input:checked) .g2-sep{margin:0}}
   /* depois das regras da área de criar, para ganhar delas */
   @media (max-height:830px){.criar .criar-linha{padding:8px 16px;row-gap:6px}.g2-barras{padding-bottom:8px}}
 """
 CSS = CSS.replace("repeat(N_COLS,", f"repeat({len(MESA)},")
+CSS += "".join(
+    f'\n  .g2-fam[data-fam="{f}"] + .g2-imersao{{padding-left:{29 + round(len(f) * 6.6)}px}}'
+    for f in FAMILIAS_DA_PAGINA)
 CSS += "".join(
     f"\n  .g2-forca .degraus i:nth-child({n}){{height:{round(36 * n / DEGRAUS_DA_FORCA)}px}}"
     for n in range(1, DEGRAUS_DA_FORCA + 1))
@@ -282,12 +323,12 @@ def opcoes_modo(escolhido):
     return _op_vazio(escolhido) + modos + _grupo_dos_seus(MEU_ACIONAMENTO, escolhido)
 
 
-def opcoes_imersao(modo, escolhida):
-    """As opções da imersão: as mesmas que o pacote monta, com a escolhida marcada.
+def opcoes_imersao(escolhida):
+    """As opções do efeito do gatilho: as mesmas que o pacote monta, com a escolhida marcada.
 
     O `—` e «Seus efeitos» são os do desenho, não os do disco de quem gera a página.
     """
-    cru = html_das_opcoes_de_imersao(modo)
+    cru = html_das_opcoes_de_imersao()
     cru = re.sub(r"^<option value=\"" + TRAVESSAO + r"\"[^>]*>[^<]*</option>", "", cru)
     cru = re.sub(r'<optgroup label="' + SEUS_EFEITOS + r'">.*?</optgroup>', "", cru)
     alvo = f'<option value="{_escapar(escolhida)}"'
@@ -297,27 +338,38 @@ def opcoes_imersao(modo, escolhida):
 
 
 def _celula_do_acionamento(pref, sig, vazio):
-    """A célula do acionamento de um gatilho num controle: o campo com a dica que muda com ele."""
+    """A célula do acionamento de um gatilho num controle: o campo com a dica que muda com ele.
+
+    Mora no avançado (`g2-av`): nasce escondida, atrás da chave no título do quadro.
+    """
     modo = CENA[pref][sig][0] if not vazio else TRAVESSAO
     dica = SEM_APARELHO_AQUI if vazio else descricao_do_modo(modo)
-    return (f'<div class="g2-cel{_off(vazio)}" id="acion-{pref}-{sig}" data-controle="{pref}"{_marca(vazio)}>'
+    return (f'<div class="g2-cel g2-av{_off(vazio)}" id="acion-{pref}-{sig}" data-controle="{pref}"{_marca(vazio)}>'
             f'<span class="g2-env" data-campo="{PREFIXO_DA_DICA_DO_MODO}{sig}" data-hef-alvo="atributo" '
             f'data-hef-atributo="data-dica" data-dica="{_escapar(dica)}">'
             f'<select class="g2-acion" data-gesto="modo" data-campo="modo-chave-{sig}" '
-            f'data-hef-alvo="valor" data-lado="{sig}" aria-label="Efeito de acionamento">'
+            f'data-hef-alvo="valor" data-lado="{sig}" aria-label="Como o gatilho faz">'
             f'{opcoes_modo(modo)}</select></span></div>')
 
 
 def _celula_da_imersao(pref, sig, vazio):
-    """A célula da imersão: a escolha é do acionamento da coluna, que o clique leva junto."""
-    modo, imersao = CENA[pref][sig] if not vazio else (TRAVESSAO, TRAVESSAO)
+    """A célula do efeito do gatilho: a escolha leva junto o acionamento da coluna.
+
+    A família é a etiqueta à esquerda da caixa (`data-fam`, que o piloto pinta e apaga); a frase
+    do efeito mora SÓ na dica da caixa e no `title` de cada opção.
+    """
+    imersao = CENA[pref][sig][1] if not vazio else TRAVESSAO
     dica = SEM_APARELHO_AQUI if vazio else dica_da_imersao(imersao)
+    fam = "" if vazio else familia_da_imersao(imersao)
+    atr_fam = f' data-fam="{_escapar(fam)}"' if fam else ""
     return (f'<div class="g2-cel{_off(vazio)}" data-controle="{pref}"{_marca(vazio)}>'
             f'<span class="g2-env" data-campo="{PREFIXO_DA_DICA_DA_IMERSAO}{sig}" data-hef-alvo="atributo" '
             f'data-hef-atributo="data-dica" data-dica="{_escapar(dica)}">'
+            f'<i class="g2-fam" aria-hidden="true" data-campo="{PREFIXO_DA_FAMILIA_DA_IMERSAO}{sig}" '
+            f'data-hef-alvo="atributo" data-hef-atributo="data-fam"{atr_fam}></i>'
             f'<select class="g2-imersao" data-gesto="imersao" data-campo="imersao-{sig}" '
             f'data-hef-alvo="valor" data-lado="{sig}" data-hef-forma="acion-{pref}-{sig}" '
-            f'aria-label="Efeito de imersão">{opcoes_imersao(modo, imersao)}</select></span></div>')
+            f'aria-label="Efeito do gatilho">{opcoes_imersao(imersao)}</select></span></div>')
 
 
 def _marca(vazio):
@@ -399,9 +451,9 @@ def _intensidades():
             f'{ROTULO_DA_INTENSIDADE}</span></div>\n' + celulas)
 
 
-def _linha(glifo_html, classe, rotulo, dica, fabrica, lado):
-    """Um rótulo e uma célula por controle da `MESA`."""
-    rot = (f'          <div class="g2-rot"><span class="sec-rot" data-dica="{dica}">{rotulo}</span></div>')
+def _linha(glifo_html, classe, rotulo, dica, fabrica, lado, extra=""):
+    """Um rótulo e uma célula por controle da `MESA`; `extra` é a classe do rótulo (`g2-av`)."""
+    rot = (f'          <div class="g2-rot{extra}"><span class="sec-rot" data-dica="{dica}">{rotulo}</span></div>')
     celulas = "\n".join(
         "          " + fabrica(c["pref"], lado, not c.get("conectado", True)) for c in MESA)
     return (glifo_html, rot, celulas)
@@ -413,17 +465,17 @@ def _glifo_do_gatilho(nome, classe):
 
 
 def _bloco_do_gatilho(nome, classe, sig):
-    acion = _linha("", classe, "Efeito de acionamento", "Como o gatilho resiste ao dedo",
-                   _celula_do_acionamento, sig)
-    imer = _linha("", classe, "Efeito de imersão", "O realismo que o acionamento ganha",
+    imer = _linha("", classe, "Efeito do gatilho", "O que o gatilho faz no jogo, pelo nome do que acontece",
                   _celula_da_imersao, sig)
-    return "\n".join([_glifo_do_gatilho(nome, classe), acion[1], acion[2], imer[1], imer[2]])
+    acion = _linha("", classe, "Como o gatilho faz", "Como o gatilho resiste ao dedo",
+                   _celula_do_acionamento, sig, " g2-av")
+    return "\n".join([_glifo_do_gatilho(nome, classe), imer[1], imer[2], acion[1], acion[2]])
 
 
 def _meus():
-    return (f'<span class="meu" data-dica="Efeito de acionamento"><i style="--cor:var(--purple)"></i>'
+    return (f'<span class="meu" data-dica="Como o gatilho faz"><i style="--cor:var(--purple)"></i>'
             f'{_escapar(MEU_ACIONAMENTO)}</span>'
-            f'<span class="meu" data-dica="Efeito de imersão"><i style="--cor:var(--pink)"></i>'
+            f'<span class="meu" data-dica="Efeito do gatilho"><i style="--cor:var(--pink)"></i>'
             f'{_escapar(MEU_IMERSAO)}</span>')
 
 
@@ -444,6 +496,16 @@ def _partir():
             f'data-dica="O ponto de partida">{ops}</select>')
 
 
+#: A chave «Avançado» (20/10/2026): nasce desligada e mostra a linha «Como o gatilho faz». É da
+#: janela, não do perfil: o estado fica na sessão (`sessionStorage`), então sobrevive a trocar de
+#: aba e some quando a janela fecha. As mesmas chaves e os mesmos `data-gesto` seguem valendo.
+CHAVE_AVANCADO = ('<label class="g2-avtog" data-dica="Mostra como o gatilho faz o efeito">'
+                  '<input type="checkbox" aria-label="Avançado"><span class="p"></span>Avançado</label>')
+ROTEIRO_DO_AVANCADO = (
+    "<script>(function(){var c=document.querySelector('.g2-avtog input');if(!c)return;"
+    "try{c.checked=sessionStorage.getItem('hef-gatilhos-avancado')==='1';}catch(e){}"
+    "c.addEventListener('change',function(){try{sessionStorage.setItem('hef-gatilhos-avancado',"
+    "c.checked?'1':'0');}catch(e){}});})();</script>")
 ROTEIRO_DAS_BARRAS = (
     "<script>document.addEventListener('input',function(ev){var r=ev.target;"
     "if(!r||r.type!=='range'||!r.closest||!r.closest('.g2-barra'))return;var b=r.nextElementSibling;"
@@ -461,6 +523,7 @@ def _miolo(entra=ONDE_ENTRA_A_INTENSIDADE):
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Uma coluna por controle; vale na hora">Gatilhos</span>
         {trava_do_nativo("nos gatilhos")}
+        {CHAVE_AVANCADO}
         {monta_.modo_auto(GESTO_DO_MODO, governa=GOVERNA, dica=DICA_DO_AUTOMATICO)}
       </div>
       <div class="quadro-corpo">
@@ -492,6 +555,7 @@ def _miolo(entra=ONDE_ENTRA_A_INTENSIDADE):
       </div>
     </div>
     {ROTEIRO_DAS_BARRAS}
+    {ROTEIRO_DO_AVANCADO}
 '''
 
 MIOLO = _miolo()
@@ -606,13 +670,25 @@ def _conferir(doc):
                    f"o modo {_spec.name} perdeu o `value` — o clique iria sem contrato")
     exigir('value="Custom"' not in corpo, "o «Montar do zero» voltou à lista do acionamento")
     exigir(f'data-campo="{CAMPO_DO_ESTILO}"' in corpo, "o estilo do perfil perdeu o endereço")
+    for _sig in ("e", "d"):
+        exigir(corpo.count(f'data-campo="{PREFIXO_DA_FAMILIA_DA_IMERSAO}{_sig}"') == n,
+               f"a etiqueta de família do gatilho {_sig} não está em todos os lugares")
+    exigir("g2-frase" not in corpo and "g2-frase" not in doc,
+           "a frase do efeito voltou a ser texto embaixo da caixa: ela mora só na dica")
+    exigir(corpo.count('<optgroup label="Golpe">') == 2 * n,
+           "a lista do efeito do gatilho não abre em grupos por família")
+    exigir(corpo.count('class="g2-avtog"') == 1
+           and corpo.index('g2-avtog') < corpo.index('data-gesto="modo-dos-gatilhos"'),
+           "a chave «Avançado» saiu do título do quadro, ou não vem antes do Modo automático")
+    exigir(corpo.count('class="g2-cel g2-av') == 2 * n and corpo.count('class="g2-rot g2-av"') == 2,
+           "«Como o gatilho faz» deixou de morar atrás da chave «Avançado»")
     for _campo in CAMPO_DA_FORCA.values():
         exigir(corpo.count(f'data-campo="{_campo}"') == n,
                f"a escada {_campo!r} não está em todos os {n} lugares")
     exigir(len(re.findall(r'class="g2-forca(?: off)?"', corpo)) == n,
            "a linha da força do aperto perdeu um lugar")
     for classe in ("g2-cab", "g2-cel", "g2-forca", "g2-int"):
-        marcas = re.findall(rf'class="{classe}( off)?"[^>]*?(data-conectado="nao")?>', corpo)  # (noqa-acento) identificador ASCII
+        marcas = re.findall(rf'class="{classe}(?: g2-av)?( off)?"[^>]*?(data-conectado="nao")?>', corpo)  # (noqa-acento) identificador ASCII
         exigir(bool(vazios) and all(bool(off) == bool(vazio) for off, vazio in marcas),
                f"o `{classe}` vazio não tem a classe `off` que o piloto escreve, ou o cheio tem")
     exigir(corpo.index('class="g2-forca') < corpo.index('class="g2-cab'),

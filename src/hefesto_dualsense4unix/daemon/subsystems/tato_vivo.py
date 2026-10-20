@@ -56,7 +56,7 @@ CANAL_LUZ = "luz"
 CANAL_HAPTICA = "haptica"
 CANAL_SOM = "som"
 CANAIS = (CANAL_GATILHO, CANAL_LUZ, CANAL_HAPTICA, CANAL_SOM)
-#: Os motores do rumble (o padrão da lista «Efeito imersão»). Fora de ``CANAIS`` de propósito:
+#: Os motores do rumble (o padrão da lista «Padrão dos motores»). Fora de ``CANAIS`` de propósito:
 #: o jogo é dono deles quando vibra, e a regra é a de ``decidir`` com o carimbo do rumble.
 CANAL_MOTORES = "motores"
 
@@ -397,6 +397,12 @@ def receita_do_perfil(perfil: Any) -> Receita:
             som_no_corpo_escolhido=(
                 base.som_no_corpo_escolhido
                 or formas_de_haptica.SOM_NO_CORPO in escolhas.values()),
+            # o Grão e o Motor de época que a pessoa escolhe na lista (20/10/2026) ligam o laço
+            # contínuo como os do estilo
+            grao_escolhido=base.grao_escolhido or formas_de_haptica.GRAO in escolhas.values(),
+            motor_de_epoca_escolhido=(
+                base.motor_de_epoca_escolhido
+                or formas_de_haptica.MOTOR_DE_EPOCA in escolhas.values()),
         )
     padroes = padroes_do_perfil(perfil)
     if padroes:

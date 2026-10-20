@@ -305,14 +305,16 @@ def test_o_10_morde_item_faltando() -> None:
 # o que vale para as oito
 # ---------------------------------------------------------------------------------------------
 
-def test_as_oito_variantes_existem_e_os_mockups_principais_ficam_como_estao() -> None:
+def test_as_oito_variantes_existem_e_so_o_mockup_da_10_fica_como_estava() -> None:
+    """As variantes ficam como histórico. O 03, o 04 e o 05 receberam a escolha de 20/10/2026
+    (a prova é `test_os_efeitos_aparecem_por_familia_nas_abas.py`); a 10 não ganha a receita."""
     for nome in NOMES:
         assert (VARIANTES / f"{nome}.html").is_file(), nome
-    for principal in ("03-gatilhos", "04-iluminacao", "05-vibracao", "10-perfis"):
+    assert "estilo-liga" not in (MOCKUP / "10-perfis.html").read_text(encoding="utf-8")
+    for principal, marca in (("03-gatilhos", "g2-frase"), ("04-iluminacao", "g4-frase"),
+                             ("05-vibracao", "vib-frase")):
         doc = (MOCKUP / f"{principal}.html").read_text(encoding="utf-8")
-        marcas = ("g2-avtog", "estilo-liga", "g4-frase")
-        assert not any(m in doc for m in marcas), principal
-        assert "vib-frase" not in doc, principal
+        assert marca not in doc, f"{principal}: a frase é só dica, nunca texto embaixo"
 
 
 def test_nenhuma_variante_traz_selo_nem_recado_novo() -> None:

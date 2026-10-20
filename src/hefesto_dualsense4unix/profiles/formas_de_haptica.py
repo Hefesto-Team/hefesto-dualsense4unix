@@ -4,8 +4,9 @@ A háptica viaja como áudio de quatro canais a 48 kHz; o toque do tiro é uma f
 somada aos canais dos atuadores: senos com um ataque e uma queda até zero. O disparo é da receita
 do estilo; a forma é a escolha da pessoa, uma por controle (``efeito_haptico`` do perfil). O ganho
 é o Sensor háptico, que age adiante: nada aqui lê barra nem perfil. O Som no corpo, o Grão e o
-Motor de época são contínuos (o laço do tato os gera por tique); o Eco, o Grão e o Motor de época
-só o estilo pede e ficam fora de ``ESCOLHAS``, que a tela e o perfil validam.
+Motor de época são contínuos (o laço do tato os gera por tique). O Eco, o Grão e o Motor de época
+o estilo pede e a lista da aba Vibração também mostra (20/10/2026): estão em ``ESCOLHAS``, que a
+tela e o perfil validam.
 """
 from __future__ import annotations
 
@@ -27,14 +28,15 @@ ESTALO = "estalo"
 GUARDA = "guarda"
 APARO = "aparo"
 SOM_NO_CORPO = "som_no_corpo"
-#: As três que só o estilo pede (20/10/2026): fora de ``ESCOLHAS``, o perfil não as guarda.
+#: As três que o estilo pede e a lista mostra (20/10/2026), ao fim das escolhas.
 ECO = "eco"
 GRAO = "grao"  # (noqa-acento): chave
 MOTOR_DE_EPOCA = "motor_de_epoca"
 
 #: As escolhas, na ordem em que a tela as mostra. A chave é a que o perfil guarda.
 ESCOLHAS: tuple[str, ...] = (
-    DO_ESTILO, SEM_EFEITO, TOQUE, IMPACTO, ESTALO, GUARDA, APARO, SOM_NO_CORPO)
+    DO_ESTILO, SEM_EFEITO, TOQUE, IMPACTO, ESTALO, GUARDA, APARO, SOM_NO_CORPO,
+    ECO, GRAO, MOTOR_DE_EPOCA)
 
 ROTULOS: dict[str, str] = {
     DO_ESTILO: "Do estilo",
@@ -45,6 +47,9 @@ ROTULOS: dict[str, str] = {
     GUARDA: "Guarda",
     APARO: "Aparo",
     SOM_NO_CORPO: "Som no corpo",
+    ECO: "Eco",
+    GRAO: "Grão",
+    MOTOR_DE_EPOCA: "Motor de época",
 }
 
 #: O que se sente, em uma linha (até 36 letras, para caber na coluna da lista).
@@ -57,11 +62,6 @@ DICAS: dict[str, str] = {
     GUARDA: "Metal contra metal, médio",
     APARO: "Metal agudo, mais longo",
     SOM_NO_CORPO: "O grave do jogo vira tremor",
-}
-
-#: O nome e a dica das três do estilo, na forma das de cima (a lista da tela não as mostra).
-ROTULOS_DO_ESTILO: dict[str, str] = {ECO: "Eco", GRAO: "Grão", MOTOR_DE_EPOCA: "Motor de época"}
-DICAS_DO_ESTILO: dict[str, str] = {
     ECO: "Um Impacto com cauda grave",
     GRAO: "Grãos finos e rápidos, sem parar",
     MOTOR_DE_EPOCA: "O zumbido grosso do rumble antigo",
@@ -428,7 +428,6 @@ __all__ = [
     "CORTE_ALTO_HZ",
     "CORTE_BAIXO_HZ",
     "DICAS",
-    "DICAS_DO_ESTILO",
     "DO_ESTILO",
     "ECO",
     "ESCOLHAS",
@@ -443,7 +442,6 @@ __all__ = [
     "NOTAS_DA_ASSINATURA",
     "POR_ESTILO",
     "ROTULOS",
-    "ROTULOS_DO_ESTILO",
     "SEM_EFEITO",
     "SOM_NO_CORPO",
     "TAXA",

@@ -157,12 +157,13 @@ def test_sem_escolha_vale_o_estilo_e_o_toque_quando_ele_nao_pede(
 def test_o_continuo_so_e_forma_do_estilo_onde_o_corpo_e_o_motor() -> None:
     # D-2010-O-CONTINUO-VOLTA-A-CORRIDA-E-A-SIMULACAO: revoga a de 16/10 (CATALOGO, 3)
     # o bloco C (20/10/2026) deu o Grão à Simulação e o Motor de época ao Retrô: o Som no corpo
-    # ficou só na Corrida, e as três formas novas do estilo não entram na lista da tela
+    # ficou só na Corrida; as formas novas do estilo não entram nas `FORMAS` do estilo, mas a aba
+    # Vibração as mostra na lista (Eco, Grão e Motor de época: a página «Os efeitos na tela»)
     donos = {e for e, f in fh.POR_ESTILO.items() if f == fh.SOM_NO_CORPO}
     assert donos == {"corrida"}
     assert fh.SOM_NO_CORPO not in fh.FORMAS
     assert {fh.GRAO, fh.MOTOR_DE_EPOCA} & set(fh.FORMAS) == set()
-    assert {fh.ECO, fh.GRAO, fh.MOTOR_DE_EPOCA} & set(fh.ESCOLHAS) == set()
+    assert {fh.ECO, fh.GRAO, fh.MOTOR_DE_EPOCA} <= set(fh.ESCOLHAS)
 
 
 # --- O atuador: a escolha por controle ---------------------------------------------------

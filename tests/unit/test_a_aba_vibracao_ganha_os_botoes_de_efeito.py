@@ -1,6 +1,6 @@
 """A aba Vibração ganha as duas listas por controle (sprint dos botões de efeito, V3).
 
-Cada controle tem o seu «Efeito háptico» e o seu «Efeito imersão», listas suspensas (15/10/2026,
+Cada controle tem o seu «Efeito háptico» e o seu «Padrão dos motores», listas suspensas (15/10/2026,
 «quero uma lista suspensa em cada escolha»). A primeira é «Do estilo» e a segunda «Sem efeito».
 A escolha vai ao perfil pelo ``rumble.motores.set``, na peça do clique, e «Do estilo» apaga a chave.
 """
@@ -106,7 +106,7 @@ def _rumble_do_disco() -> ControllerRumbleOverride | None:
 class TestAsLinhas:
     def test_as_nove_faixas_na_ordem_do_desenho_a(self) -> None:
         # D-1610-AS-LISTAS-DE-EFEITO-POR-CONTROLE-NA-ABA-VIBRACAO
-        """Controle, Modelo, Força, Sensor háptico, Efeito háptico, motores, Efeito imersão, Testar.
+        """Controle, Modelo, Força, Sensor háptico, Efeito háptico, motores, Padrão, Testar.
 
         MORDIDA: trocar a ordem das duas linhas no gerador reprova.
         """
@@ -116,10 +116,10 @@ class TestAsLinhas:
                              .split('<div class="ctrl', 1)[0])
         assert rotulos == ["Controle", "Modelo", "Força da vibração", "Sensor háptico",
                            "Efeito háptico", aba05.ESQ["rot"], aba05.DIR["rot"],
-                           "Efeito imersão", "Testar agora"]
+                           "Padrão dos motores", "Testar agora"]
 
     def test_em_cada_coluna_as_listas_ficam_ao_lado_de_quem_governam(self) -> None:
-        """Na coluna: Sensor háptico, Efeito háptico, os dois motores, Efeito imersão, Testar."""
+        """Na coluna: Sensor háptico, Efeito háptico, os dois motores, Padrão, Testar."""
         html = "".join(aba05._coluna(c) for c in aba05.MESA)
         for c in aba05.MESA:
             bloco = _bloco(html, c["pref"])

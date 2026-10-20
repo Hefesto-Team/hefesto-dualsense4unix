@@ -146,8 +146,8 @@ def a03():
 
 def test_o_desenho_traz_as_palavras_da_decisao_e_nenhuma_das_que_sairam() -> None:
     doc = _o_que_se_le()
-    for dito in ("Efeito de acionamento", "Efeito de imersão", "Criar efeitos novos", "Sentir",
-                 "Estilo de jogo", "Controle"):
+    for dito in ("Como o gatilho faz", "Efeito do gatilho", "Avançado", "Criar efeitos novos",
+                 "Sentir", "Estilo de jogo", "Controle"):
         assert dito in doc, f"o desenho perdeu «{dito}»"
     for fora in ("Guardar", "Em todos", "Efeito pronto", "Reenviar",
                  'class="ajuda', 'class="ajustes'):
@@ -170,7 +170,7 @@ def test_o_criar_e_o_sentir_apontam_para_o_quadro_que_eles_leem() -> None:
 
 def test_cada_celula_conectada_tem_o_acionamento_e_a_imersao_e_a_vazia_nao() -> None:
     doc = _desenho()
-    celulas = re.split(r'<div class="g2-cel(?: off)?"', doc)[1:]
+    celulas = re.split(r'<div class="g2-cel(?: g2-av)?(?: off)?"', doc)[1:]
     assert len(celulas) == 16, f"são 4 lugares x 2 gatilhos x 2 campos: {len(celulas)} células"
     for c in celulas:
         vazia = 'data-conectado="nao"' in c.split(">", 1)[0]
@@ -184,17 +184,14 @@ def test_cada_celula_conectada_tem_o_acionamento_e_a_imersao_e_a_vazia_nao() -> 
     assert doc.count('data-gesto="imersao"') == 8 and doc.count('data-gesto="modo"') == 8
 
 
-def test_cada_acionamento_com_imersao_oferece_as_suas_e_o_off_nenhuma(a03) -> None:
-    for familia, modos in imersao.FAMILIAS.items():
-        for modo in modos:
-            html = a03.html_das_opcoes_de_imersao(modo)
-            chaves = re.findall(r'value="([^"]+)"', html)
-            delas = [c for c in chaves if c in imersao.POR_CHAVE]
-            assert len(delas) == QUANTAS[modo], (familia, modo, delas)
-            assert all(imersao.POR_CHAVE[c].familia == familia for c in delas)
-    sem = a03.html_das_opcoes_de_imersao("Off")
-    assert "<optgroup label=\"Desligado" not in sem
-    assert not [c for c in re.findall(r'value="([^"]+)"', sem) if c in imersao.POR_CHAVE]
+def test_a_lista_do_efeito_oferece_todas_em_grupos_por_familia_e_o_sem_efeito(a03) -> None:
+    """20/10/2026: a lista é uma só, não depende do acionamento; o acionamento fica no Avançado."""
+    html = a03.html_das_opcoes_de_imersao()
+    chaves = re.findall(r'<option value="([^"]+)"', html)
+    delas = {c for c in chaves if c in imersao.POR_CHAVE}
+    assert delas == {i.chave for i in imersao.IMERSOES} - set(imersao.IGUAL_A)
+    assert "nenhum" in chaves
+    assert re.findall(r'<optgroup label="([^"]+)"', html)[:7] == list(imersao.FAMILIAS_DA_PAGINA)
 
 
 def test_a_imersao_se_reconhece_pelos_numeros_e_o_que_ninguem_conhece_fica_em_branco(a03) -> None:
@@ -216,10 +213,10 @@ def test_o_efeito_criado_entra_na_lista_certa_e_so_nela(a03) -> None:
              "inicio": "3", "fim": "9", "forca": "5", "freq": "40"}
     a03.criar_efeito_dos_gatilhos(None, {"forma": forma}, None)
     assert "meu:Freio da régua" in a03.html_das_opcoes_de_modo("left")
-    assert "Freio da régua" not in a03.html_das_opcoes_de_imersao("Rigid")
+    assert "Freio da régua" not in a03.html_das_opcoes_de_imersao()
     forma = {**forma, "tipo": "imersao", "nome": "Recuo da régua"}
     a03.criar_efeito_dos_gatilhos(None, {"forma": forma}, None)
-    assert "meu:Recuo da régua" in a03.html_das_opcoes_de_imersao("Rigid")
+    assert "meu:Recuo da régua" in a03.html_das_opcoes_de_imersao()
     assert "Recuo da régua" not in a03.html_das_opcoes_de_modo("left")
     assert "Recuo da régua" in a03.html_dos_seus_efeitos()
     assert "Freio da régua" in a03.html_dos_seus_efeitos()
@@ -271,11 +268,13 @@ def test_escolher_a_imersao_manda_ao_controle_os_numeros_dela(a03, monkeypatch) 
     assert list(args[2]) == a03._params_da_imersao(uma, "Machine", "")
     ponte2 = _Ponte()
     a03.imersao_escolhida(_ctx(), {**o, "valor": "nenhum"}, ponte2)
-    assert list(ponte2.chamadas[0][1][2]) == a03._padroes("Machine")
+    assert ponte2.chamadas[0][0] == "reset", "«Sem efeito» solta o gatilho, como o Off do avançado"
     with pytest.raises(ValueError, match="não é uma imersão"):
         a03.imersao_escolhida(_ctx(), {**o, "valor": "inventada"}, _Ponte())
-    with pytest.raises(RuntimeError, match="não vale para"):
-        a03.imersao_escolhida(_ctx(), {**o, "forma": {"modo-chave-d": "Bow"}}, _Ponte())
+    # um efeito de outra família leva o gatilho ao acionamento de nascença dele (20/10/2026)
+    ponte3 = _Ponte()
+    a03.imersao_escolhida(_ctx(), {**o, "forma": {"modo-chave-d": "Bow"}}, ponte3)
+    assert ponte3.chamadas[0][0] == "set" and "Machine" in ponte3.chamadas[0][1]
 
 
 def test_sentir_toca_nos_dois_gatilhos_e_devolve_o_que_o_controle_recebia(a03, monkeypatch) -> None:
