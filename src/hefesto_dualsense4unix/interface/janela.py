@@ -16,7 +16,7 @@ gi.require_version("Gdk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("WebKit2", "4.1")
 
-from gi.repository import Gdk, GLib, Gtk, WebKit2  # noqa: E402
+from gi.repository import Gdk, Gio, GLib, Gtk, WebKit2  # noqa: E402
 
 from hefesto_dualsense4unix.app import theme as tema  # noqa: E402
 from hefesto_dualsense4unix.interface.folha_da_casa import (  # noqa: E402
@@ -222,6 +222,41 @@ def vestir_o_nome_acessivel(botao: Any, dica: str) -> None:
     acessivel = botao.get_accessible()
     if acessivel is not None:
         acessivel.set_name(dica)
+
+
+#: O tamanho da interface que a 09 grava (100, 125 ou 150) vale por padrão quando o arquivo não diz.
+TAMANHO_PADRAO = 100
+
+
+def tamanho_da_interface() -> int:
+    """O percentual guardado em `interface_escala` (100, 125 ou 150), lido de quem o grava.
+
+    A aba Sistema é a dona do arquivo e do valor (`a09_sistema.tamanho_da_interface`): aqui só se
+    pergunta, sem segundo campo e sem segundo botão. Se a pergunta falhar, a janela abre no
+    tamanho de hoje e o diário diz por quê; zoom que não aplicou nunca derruba a tela.
+    """
+    try:
+        from hefesto_dualsense4unix.interface.pacotes import a09_sistema
+
+        return int(a09_sistema.tamanho_da_interface())
+    except Exception as erro:  # a janela segue aberta no tamanho de hoje, e o diário conta
+        print(
+            f"[janela] tamanho da interface: não li o arquivo ({erro!r}); fico em "
+            f"{TAMANHO_PADRAO} %",
+            file=sys.stderr,
+        )
+        return TAMANHO_PADRAO
+
+
+def arquivo_do_tamanho() -> pathlib.Path | None:
+    """O caminho do `interface_escala`, ou `None` se quem o conhece não respondeu."""
+    try:
+        from hefesto_dualsense4unix.interface.pacotes import a09_sistema
+
+        return pathlib.Path(a09_sistema.caminho_do_tamanho())
+    except Exception as erro:
+        print(f"[janela] tamanho da interface: sem arquivo para vigiar ({erro!r})", file=sys.stderr)
+        return None
 
 
 def montar_a_barra(
@@ -438,6 +473,10 @@ class JanelaDaAba:
             esperar_a_pintura=esperar_a_pintura, tema_de_cores=tema_de_cores,
         )
         self.view = self.ponte.view
+        #: O percentual de zoom que a página está usando AGORA (`None` até o primeiro aplicar).
+        self.tamanho_aplicado: int | None = None
+        self.aplicar_o_tamanho_guardado()
+        self._vigia_do_tamanho = self._vigiar_o_tamanho()
         self.view.connect("load-changed", self._carregou)
         self.view.connect("web-process-terminated", self._morreu_a_pagina)
 
@@ -474,6 +513,41 @@ class JanelaDaAba:
         self.janela.add(self.view)
         self.janela.show_all()
         self.view.load_uri(arquivo.as_uri())
+
+    def aplicar_o_tamanho_guardado(self) -> bool:
+        """Põe no WebView o zoom que a aba Sistema guardou. Devolve se mudou o zoom."""
+        percentual = tamanho_da_interface()
+        if percentual == self.tamanho_aplicado:
+            return False
+        self.view.set_zoom_level(percentual / 100)
+        antes, self.tamanho_aplicado = self.tamanho_aplicado, percentual
+        if antes is not None:
+            print(f"[janela] tamanho da interface: {antes} % -> {percentual} %", file=sys.stderr)
+        return True
+
+    def _vigiar_o_tamanho(self) -> Any:
+        """Vigia o `interface_escala`: quando a 09 grava, o zoom muda na hora, sem reabrir.
+
+        O gesto da 09 só guarda a escolha (`tamanho_da_interface_gesto`), e a janela é outro
+        processo que não recebe aviso dele. O monitor do GIO acorda no `rename` do arquivo
+        novo (a gravação é atômica), sem laço e sem tique: não custa nada ao tique de 100 ms.
+        """
+        arquivo = arquivo_do_tamanho()
+        if arquivo is None:
+            return None
+        try:
+            monitor = Gio.File.new_for_path(str(arquivo)).monitor_file(
+                Gio.FileMonitorFlags.WATCH_MOVES, None
+            )
+        except GLib.Error as erro:
+            print(f"[janela] tamanho da interface: não consegui vigiar {arquivo} ({erro})",
+                  file=sys.stderr)
+            return None
+        monitor.connect("changed", self._o_arquivo_do_tamanho_mudou)
+        return monitor
+
+    def _o_arquivo_do_tamanho_mudou(self, *_args: Any) -> None:
+        self.aplicar_o_tamanho_guardado()
 
     ATRASOS_DO_REDESENHO_MS = (60, 300)
 

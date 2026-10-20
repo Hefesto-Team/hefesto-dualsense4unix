@@ -136,6 +136,11 @@ def _arquivo_do_tamanho() -> Path:
     return _vigia.caminho_do_interruptor().parent / ARQUIVO_DO_TAMANHO
 
 
+def caminho_do_tamanho() -> Path:
+    """Onde a janela vigia o tamanho: o mesmo `interface_escala` que o gesto grava."""
+    return _arquivo_do_tamanho()
+
+
 def tamanho_da_interface() -> int:
     """O percentual guardado (100, 125 ou 150). Sem arquivo, ou com outro valor: 100."""
     padrao = TAMANHOS_DA_INTERFACE[0][0]
@@ -2621,8 +2626,8 @@ def bandeja(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 def tamanho_da_interface_gesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """Os três botões do tamanho: grava 100, 125 ou 150 em `interface_escala`.
 
-    Quem aplica o zoom nas abas é a janela, ao abrir (a sprint dos alvos e da letra); aqui só se
-    guarda a escolha, e a tela a lê de volta para acender o botão.
+    Quem aplica o zoom nas abas é a janela (`janela.JanelaDaAba`), ao abrir e quando este arquivo
+    muda; aqui só se guarda a escolha, e a tela a lê de volta para acender o botão.
     """
     escolha = str(o.get("v") or "")
     validos = [v for v, _, _ in TAMANHOS_DA_INTERFACE]

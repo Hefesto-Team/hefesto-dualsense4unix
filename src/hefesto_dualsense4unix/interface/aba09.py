@@ -17,6 +17,7 @@ import onde  # noqa: E402
 from onde import RAIZ as R  # noqa: E402
 
 from hefesto_dualsense4unix.interface import janela as _ponte  # noqa: E402
+from hefesto_dualsense4unix.interface.folha_da_casa import com_o_piso  # noqa: E402
 
 N = len(CONECTADOS)
 LUGARES = len(MESA)
@@ -771,7 +772,7 @@ def escrever_a_bancada():
                          f"{len(CONECTADOS)} conectados — a forma da fita mudou. "
                          f"O dono do `data-campo=\"{CAMPO_DO_CHIP}\"` é "
                          "`interface/monta.fita()`; esta aba só confere.")
-    onde.gravar("09-sistema.html", s[:abre.start()] + novo + s[fim:])
+    onde.gravar("09-sistema.html", com_o_piso("09-sistema", s[:abre.start()] + novo + s[fim:]))
 
     print(f"09-sistema: OK, {n} divs · a faixa do serviço: "
           + " · ".join(f"{t.strip()!r}" for t in _ROTULOS.values()))

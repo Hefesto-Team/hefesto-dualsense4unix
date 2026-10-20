@@ -96,7 +96,8 @@ def _pior_caso() -> str:
     return (
         "(function(){var f=document.querySelector('.ctl[data-controle=\"p1\"] > .faixa');"
         "var cs=Array.prototype.map.call(f.children,function(e){var r=e.getBoundingClientRect();"
-        "return {c:e.className,top:Math.round(r.top),larg:Math.round(r.width),"
+        "return {c:e.className,top:Math.round(r.top),alt:Math.round(r.height),"
+        "larg:Math.round(r.width),"
         "d:getComputedStyle(e).display}});"
         "return {alt:Math.round(f.getBoundingClientRect().height),itens:cs}})()"
     )
@@ -183,7 +184,10 @@ def test_em_todos_os_conectados_dizem_quem_joga_e_os_vazios_nao(medido: dict[str
     """No «Todos» os conectados estão abertos (nome ou «Pn»); os lugares vazios ficam no «Pn •»."""
     p1, p2, p3, p4 = (t.split(" ")[0] for t in medido["todos"])
     assert (p1, p2) == ("P1", "Vitória"), medido["todos"]
-    assert (p3, p4) == ("P3", "P4"), medido["todos"]
+    assert (p3, p4) == ("Player", "Player"), medido["todos"]
+    # r4-02-18, aprovado em 20/10: o lugar vazio diz só o número e «Desconectado»
+    assert [t.strip() for t in medido["todos"][2:]] == [
+        "Player 3 • Desconectado", "Player 4 • Desconectado"], medido["todos"]
 
 
 def test_o_lugar_vazio_nao_mostra_o_nome(medido: dict[str, Any]) -> None:
@@ -199,8 +203,10 @@ def test_o_nome_de_24_letras_nao_quebra_a_faixa(medido: dict[str, Any]) -> None:
     normal, pior = medido["normal"], medido["pior"]
     assert pior["alt"] == normal["alt"], f"a faixa cresceu: {normal['alt']} -> {pior['alt']}"
     visiveis = [i for i in pior["itens"] if i["d"] != "none"]
-    tops = [i["top"] for i in visiveis]
-    assert max(tops) - min(tops) <= 2, f"itens em linhas diferentes: {visiveis}"
+    # o piso de 24 px deixa os itens com alturas diferentes na MESMA linha: o que separa uma linha
+    # da outra é o centro, não o topo
+    centros = [i["top"] + i["alt"] / 2 for i in visiveis]
+    assert max(centros) - min(centros) <= 2, f"itens em linhas diferentes: {visiveis}"
 
 
 def test_o_nome_cortado_leva_a_linha_inteira_no_title(medido: dict[str, Any]) -> None:

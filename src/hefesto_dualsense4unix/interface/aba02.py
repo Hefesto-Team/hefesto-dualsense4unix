@@ -11,7 +11,9 @@ from monta import (monta, trava_do_nativo, glifo, rotulo, cabe_o_todos, CSS_GLIF
 # A DIREÇÃO É OBRIGATÓRIA, e não gosto: o `portao_a_casa_sabe_e_o_produto_nao_faz`
 # `texto_motion` monta a LINHA DO GIROSCÓPIO (o desenho pergunta com uma cena,
 from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
+from hefesto_dualsense4unix.interface.folha_da_casa import com_o_piso
 from hefesto_dualsense4unix.interface.cartao_do_controle import texto_motion
+from pacotes import SEM_NINGUEM_AQUI
 from pacotes.a02_controles import ROTULO_DO_CLIQUE, carga_na_tela
 from pacotes.a02_controles import campo_da_onda_calada
 from pacotes.a02_controles import meias_da_barra as _meias_da_barra
@@ -1555,7 +1557,7 @@ def identidade(c, *, bat, carga=None, meio=""):
         "via": f'<span data-campo="via">{via_na_tela}</span>',
         "quem": f'<span data-campo="quem-joga" data-hef-alvo="html">P{n_com_endereco}</span>',
     }
-    return f'''          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P{n_com_endereco}{SEPARADOR}</span>{rotulo(com_endereco, "peca")}</span>
+    return f'''          <span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo" data-hef-atributo="title"><span class="so-fechado">P{n_com_endereco}{SEPARADOR}</span>{rotulo(com_endereco, "peca")}<span class="so-vaga">Player {n_com_endereco} <span class="pt">•</span> {SEM_NINGUEM_AQUI}</span></span>
           <span class="div">·</span>
           <!-- SAI O TEXTO "vê como"; O NOME DA MÁSCARA FICA — decisão,
                31/08/2026, em duas frases: *"remover o vê como de todos os
@@ -2562,6 +2564,14 @@ CSS += f"""
     visibility:hidden;display:block}}
   {_fechado_de_vez(" .so-fechado")}{{display:inline}}
   {_fechado_de_vez(" .so-aberto")}{{display:none}}
+  /* A VAGA DIZ «Player N • Desconectado» E MAIS NADA (r4-02-18, aprovada em 20/10/2026). A face mora
+     DENTRO do `.card-nome`, nos quatro lugares com a mesma estrutura, e só o `.off` a mostra: o
+     controle que chega reabre o lugar (passo `1c` do piloto) sem recarregar a página, e os campos
+     de plástico, máscara, microfone, sensores e bateria seguem onde a pintura os acha. */
+  .so-vaga{{display:none}}
+  .ctl.off > .faixa > :not(.card-nome){{display:none !important}}
+  .ctl.off .card-nome > :not(.so-vaga){{display:none !important}}
+  .ctl.off .card-nome > .so-vaga{{display:inline !important}}
   {CHIP_ACESO}{{background:var(--sel-bg);color:var(--fg);font-weight:600}}
   .fita label.chip{{cursor:pointer}}
   /* A LÁPIDE DA LEGENDA. Um item que fala do que SAIU não pode ter a mesma cara
@@ -3235,7 +3245,7 @@ def _conferir(doc):
 
     exigir(corpo.count('data-campo="quem-joga"') == len(MESA),
            "o «quem joga» do título aberto perdeu o endereço — o nome dela não chega ao cartão")
-    exigir(corpo.count('data-campo="jogador" data-hef-alvo="html"') == 2 * len(MESA),
+    exigir(corpo.count('data-campo="jogador" data-hef-alvo="html"') == 3 * len(MESA),
            "o número do jogador do cabeçalho perdeu o endereço: ele voltou a ser o assento "
            "cravado pelo gerador, e discorda do daemon quando a mesa conta por posição")
     for campo in ("peca", "via"):
@@ -3333,7 +3343,8 @@ if __name__ == "__main__":
     os.environ[onde._DESVIO] = str(_prova)
     n = monta("02-controles", "Controles", MIOLO, CSS)
     SAIDA = onde.pagina("02-controles.html")
-    SAIDA.write_text(cor_do_plastico_por_regra(fita_clicavel(SAIDA.read_text())))
+    SAIDA.write_text(com_o_piso("02-controles",
+                                cor_do_plastico_por_regra(fita_clicavel(SAIDA.read_text()))))
     _conferir(SAIDA.read_text())
     shutil.copyfile(SAIDA, _real / "02-controles.html")
     shutil.rmtree(_prova)
