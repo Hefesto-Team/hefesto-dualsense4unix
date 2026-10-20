@@ -673,6 +673,12 @@ def test_a_leitura_carrega_os_dispensados_e_as_pontes_da_fonte_certa(
         "as pontes chegaram à leitura e não chegaram ao carimbo do cartão")
     assert "Jogo 4242" in valores["steam-fora"], (
         "o jogo dispensado chegou à leitura e não chegou à lista do cartão")
+    # O «Voltar a perguntar» saiu com o lembrete em 19/10/2026: a linha informa, e botão sem quem
+    # o atenda some no clique. MORDIDA (executada): o gesto de volta na linha reprova aqui.
+    linhas = valores["steam-fora"].split('<div class="lanc-jogo">')
+    linha = next((x for x in linhas if "Jogo 4242" in x), "")
+    assert linha and "data-gesto" not in linha, (
+        "a linha do jogo dispensado traz um botão que ninguém atende")
 
 
 def test_a_steam_quebrada_nao_apaga_a_resposta_sobre_os_outros(a07, monkeypatch,

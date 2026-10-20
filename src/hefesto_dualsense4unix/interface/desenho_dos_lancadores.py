@@ -823,8 +823,8 @@ ADICIONAR_ROTULO = "Localizar este lançador"
 #:
 #: O selo dizia `LOCALIZADO` e o botão logo abaixo mandava **localizar**: lidos de cima para baixo,
 #: se contradiziam. Mesmo gesto, mesma gravação, **só o rótulo segue o estado** (como «Não usar
-#: neste jogo»/«Voltar a usar» e «Voltar a perguntar»/«Não perguntar para este jogo»); o ato aqui é
-#: CORRETIVO (o que o produto achou não é o que o usuário quer) e o rótulo o diz.
+#: neste jogo»/«Voltar a usar»); o ato aqui é CORRETIVO (o que o produto achou não é o que o
+#: usuário quer) e o rótulo o diz.
 #:
 #: **Encolheu em 21/09/2026**, palavra de produto: os 4 botões em uma linha só (a fileira tem 531 px
 #: no WebKit e os quatro somavam ~680); a frase inteira foi para o `title` (:data:`APONTAR_DICA`).
@@ -1176,13 +1176,11 @@ def lista_de_jogos(lida: Leitura) -> str:
     mais.
 
     Os intocáveis aparecem SEM botão: o produto não os repõe (`apply_wrapper_vdf_text` os pula) e
-    "tirar daqui" um jogo já fora do reparo não mudaria nada (botão que finge). Os dispensados TÊM
-    botão (02/09/2026, decisão de produto): são o `launch_dialog_dismissed.json`, escrito pelo *"Não
-    perguntar para este jogo"* do lembrete da GTK, que nenhuma tela mostrava. Mostrar curou o
-    silêncio pela metade, pois a dispensa seguia SEM VOLTA pela tela (o motor só tinha
-    `add_dismissed_appid`); agora há o par `remove_dismissed_appid` e a linha ganha *"Voltar a
-    perguntar"*, como o "Voltar a usar" ao lado do "Não usar neste jogo" (*gesto que só vai numa
-    direção deixa a pessoa presa no estado em que clicou*).
+    "tirar daqui" um jogo já fora do reparo não mudaria nada (botão que finge). Os dispensados
+    são o `launch_dialog_dismissed.json`, escrito pelo *"Não perguntar para este jogo"* do lembrete
+    da GTK: aparecem SEM botão desde 19/10/2026, quando o «Voltar a perguntar» saiu do produto com o
+    lembrete (`O-QUE-A-07-ANTIGA-FAZIA-SEM-TELA-VOLTA-OU-SAI-01`). A dispensa de antes continua
+    valendo, e a linha diz qual é.
 
     A lista é outra, não a dos recusados: `jogos_sem_wrapper.txt` diz *"não ponha o atalho neste
     jogo"* e o dispensado *"não me lembre deste jogo"*; um jogo pode estar num, no outro ou nos
@@ -1204,9 +1202,7 @@ def lista_de_jogos(lida: Leitura) -> str:
     ]
     itens += [
         # Idem — A2-029/A2-030: o nome do jogo está na mesma linha. 44 → 30.
-        JogoNaLista(appid=a, rotulo=r,
-                    porque="você mandou não perguntar mais",
-                    gesto="voltar-a-perguntar", botao="Voltar a perguntar")
+        JogoNaLista(appid=a, rotulo=r, porque="você mandou não perguntar mais")
         for a, r in lida.dispensados
     ]
     return linhas_de_jogos(itens) or LISTA_VAZIA

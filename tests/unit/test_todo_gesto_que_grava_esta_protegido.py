@@ -86,7 +86,6 @@ ESCREVEM = {
     "gravar_pelo_gesto",
     "voltar_ao_do_computador",
     "voltar_o_computador_ao_de_fabrica",
-    "salvar_perfil",
     "guardar_meus_efeitos",         # a biblioteca de efeitos dela, no `gui_preferences.json`
     "machine_declare",
     "set_mask",
@@ -115,8 +114,6 @@ ESCREVEM = {
     "set_text",
     "marcar_jogo_sem_wrapper",     # escreve o `jogos_sem_wrapper.txt` dela
     "desmarcar_jogo_sem_wrapper",
-    "add_dismissed_appid",
-    "remove_dismissed_appid",
     "reparar_ou_adiar",
     "add_appid_to_steam_input_allowlist",
     "remove_appid_from_steam_input_allowlist",
@@ -132,9 +129,7 @@ ESCREVEM = {
     "escolher_a_bandeja",          # o autostart da bandeja e a bandeja viva (16/10/2026)
     # por feature (`jogos_sem_wrapper.txt` e a de fora do pino). O
     # já declara `machine_declare` e continua protegido do mesmo jeito.
-    "adicionar",
     "tirar",
-    "tirar_do_disco",
     "criar_para_o_jogo",
     "_ligar_ou_desligar_a_modificacao",   # liga e desliga uma extensão no registro dela
     "_instalar_a_modificacao",            # instala (git ou pasta) no código e no registro
@@ -376,6 +371,35 @@ def test_a_regua_acha_alguma_escrita() -> None:
     assert len(achados) >= 3, (
         f"a régua só achou {len(achados)} gesto(s) que escrevem — os nomes de "
         f"`ESCREVEM` provavelmente mudaram no produto: {achados}")
+
+
+#: Os nomes de `ESCREVEM` que não são função do produto: a chamada é de biblioteca.
+DE_FORA_DO_PRODUTO = {"set_text": "`Gtk.TextBuffer.set_text`/`Gtk.Label.set_text`, da GTK"}
+
+
+def test_todo_nome_que_escreve_existe_no_produto() -> None:
+    """Nome que saiu do produto e ficou aqui casa uma chamada nova de mesmo nome e não protege nada.
+
+    19/10/2026: `remove_dismissed_appid`, `add_dismissed_appid`, `adicionar` e `tirar_do_disco`
+    saíram com a 07 antiga e ficaram na lista. MORDIDA (executada): um nome que não existe de
+    volta a `ESCREVEM` reprova aqui.
+    """
+    assert _sem_funcao_no_produto(ESCREVEM) == []
+
+
+def _sem_funcao_no_produto(nomes: set[str]) -> list[str]:
+    import pathlib
+
+    raiz = pathlib.Path(__file__).resolve().parents[2] / "src"
+    definidas = {no.name for arq in raiz.rglob("*.py")
+                 for no in ast.walk(ast.parse(arq.read_text(encoding="utf-8")))
+                 if isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef))}
+    return sorted(n for n in nomes if n not in definidas and n not in DE_FORA_DO_PRODUTO)
+
+
+def test_a_regua_dos_nomes_morde() -> None:
+    assert _sem_funcao_no_produto(ESCREVEM | {"remove_dismissed_appid"}) == [
+        "remove_dismissed_appid"]
 
 
 def test_a_lista_nao_protege_gesto_que_nao_existe() -> None:
