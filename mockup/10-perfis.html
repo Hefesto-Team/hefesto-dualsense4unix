@@ -1724,8 +1724,10 @@
   /* o ID da peça cede a partir daqui — 20/10/2026. A 1212px o Status de 271px e o respiro não
      deixam lugar para os 114px do ID, e a guarda rolava 14px de lado cortando a coluna. A escolha de
      20/10 foi esconder o ID nessa largura, em vez de encolher o respiro ou quebrar as seções. O dado
-     segue no pacote (`guarda.id`); só a coluna some, o `<col>` junto, e a tabela divide o que sobra. */
-  @media (max-width:1212px){
+     segue no pacote (`guarda.id`); só a coluna some, o `<col>` junto, e a tabela divide o que sobra.
+     O corte não é 1212: medido no Chrome, a guarda com o ID ainda rola 13px a 1213 e só cabe a partir de
+     1240 (1px a cada 2px de largura). A regra vale até 1259, com folga para a letra do WebKit. */
+  @media (max-width:1259px){
     .guarda col[data-coluna="id"],.guarda th.gd-id,.guarda td.gd-id{display:none}
   }
   @media (max-height:860px){

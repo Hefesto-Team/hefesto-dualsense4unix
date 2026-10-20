@@ -31,4 +31,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 - **20/10/2026** — duas palavras de dica em minúscula («tem», «total»: a regra da primeira letra); espera só o `--publicar 08`. Enquanto isso, a página publicada segue com as duas em caixa alta, e o portão `maiuscula-decorativa` fica vermelho nela até a publicação.
 
 ## 10-perfis.html
-- **20/10/2026** — a coluna do ID da peça da guarda some a 1212 px e abaixo, e a tabela deixa de rolar de lado (escolha dela, 20/10); espera só o `--publicar 10`. Enquanto isso, a página publicada segue com a coluna e com a rolagem lateral a 1212 px.
+- **20/10/2026** — a coluna do ID da peça da guarda some a 1259 px e abaixo (com o ID, a tabela só cabe a partir de 1240 px), e a tabela deixa de rolar de lado (escolha dela, 20/10); espera só o `--publicar 10`. Enquanto isso, a página publicada segue com a coluna e com a rolagem lateral a 1212 px.

@@ -79,8 +79,13 @@ def test_a_1918_o_id_da_peca_segue_visivel_e_nada_rola() -> None:
     assert m["documento_vertical"] <= 0, m
 
 
-@pytest.mark.parametrize("largura", [1100, 1212])
-def test_nas_larguras_logo_abaixo_de_1212_a_guarda_nao_rola_de_lado(largura: int) -> None:
+@pytest.mark.parametrize("largura", [1100, 1212, 1213, 1226, 1239, 1240, 1259, 1260, 1280, 1366])
+def test_em_nenhuma_largura_em_volta_do_corte_a_guarda_rola_de_lado(largura: int) -> None:
+    """O corte não pode cair onde a tabela ainda não cabe.
+
+    Medido em 20/10/2026 pelo conferente: com o corte a 1212, a guarda rolava 13 px a 1213 e só
+    cabia a 1240. A lista pega os dois lados do corte e o meio do trecho que rolava.
+    """
     m = _mede(largura, 809)
     assert m["lateral"] <= 0, f"a guarda rola de lado a {largura} px: {m}"
 
@@ -89,8 +94,7 @@ def test_a_mordida_sem_a_regra_de_largura_a_1212_reprova(tmp_path: pathlib.Path)
     """Tira a regra da folha da página e a mesma medição reprova: a régua morde."""
     texto = onde.pagina("10-perfis.html").read_text(encoding="utf-8")
     marca = "/* o ID da peça cede a partir daqui"
-    if marca not in texto:
-        pytest.skip("a regra ainda não existe: a mordida só vale depois da cura")
+    assert marca in texto, "a regra do corte sumiu da aba 10: a guarda volta a rolar de lado"
     ini = texto.index(marca)
     fim = texto.index("*/", ini) + 2
     # remove o bloco @media seguinte ao comentário
@@ -106,5 +110,5 @@ def test_a_mordida_sem_a_regra_de_largura_a_1212_reprova(tmp_path: pathlib.Path)
     arq = tmp_path / "10-perfis.html"
     arq.write_text(sem, encoding="utf-8")
     m = _mede(*ESTREITA, html=arq)
-    assert m["lateral"] > 0 or m["id_celula"], (
+    assert m["lateral"] > 0, (
         f"sem a regra a guarda continua cabendo a 1212 px: a régua não mede nada ({m})")
