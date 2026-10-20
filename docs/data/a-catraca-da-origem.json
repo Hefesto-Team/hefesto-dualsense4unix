@@ -252,14 +252,14 @@
       "data": "2026-10-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1153710,
+      "piso": 1153637,
       "por_item": {
-        "docs": 119981,
-        "scripts": 114973,
-        "src": 311209,
-        "tests": 607547
+        "docs": 119998,
+        "scripts": 114340,
+        "src": 311447,
+        "tests": 607852
       },
-      "razao": "tamanho: +331 linhas (1153379 -> 1153710), pagas por Origem: D-2010-O-PISO-DE-24-PX-E-12-PX-VALE-NAS-ABAS-02-E-09; registrado no fecho, topo a65ebae85d04",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -689,7 +689,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 3012
+      "universo": 3013
     }
   }
 }
