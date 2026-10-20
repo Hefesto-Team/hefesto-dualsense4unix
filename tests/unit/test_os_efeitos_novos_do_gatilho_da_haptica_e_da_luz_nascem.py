@@ -439,7 +439,9 @@ def _vaivens(brilhos: list[float]) -> int:
 
 
 def test_o_acende_nunca_passa_de_tres_vaivens_por_segundo_por_mais_que_o_dedo_bata() -> None:
-    """O dedo bate o gatilho a cada tique de 60 Hz, por 10 s: no máximo 3 picos por segundo.
+    """D-2010-O-GOLPE-FALHA-E-O-ACENDE-TEM-TETO.
+
+    O dedo bate o gatilho a cada tique de 60 Hz, por 10 s: no máximo 3 picos por segundo.
 
     MORDIDA: `MEIO_VAIVEM_DO_ACENDE_S = 0.0` (o brilho virando a cada tique) e isto reprova.
     """

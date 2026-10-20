@@ -103,6 +103,7 @@ def _disparar(daemon: Any) -> None:
 
 
 def test_uma_chegada_por_conexao_e_reconectar_toca_de_novo() -> None:
+    """D-2010-A-CHEGADA-NAO-TOCA-QUEM-JA-ESTAVA."""
     mesa = _Mesa()
     daemon = _daemon(mesa)
     assert _chegar(daemon, AZUL, BRANCO, VERMELHO, ROXO) == 4
@@ -147,6 +148,7 @@ def test_o_controle_que_saiu_antes_da_hora_nao_ganha_chegada() -> None:
 
 
 def test_a_chegada_espera_a_rajada_da_steam_e_depois_toca_os_tres_canais() -> None:
+    """D-2010-A-CHEGADA-ESPERA-A-RAJADA-DA-STEAM."""
     mesa = _Mesa(na_mesa=(AZUL,))
     daemon = _daemon(mesa)
     _chegar(daemon, AZUL)
@@ -210,6 +212,7 @@ def test_a_nota_e_da_cor_do_plastico_e_as_quatro_sao_distintas() -> None:
 
 @pytest.mark.parametrize("ordem", [(AZUL, BRANCO, VERMELHO, ROXO), (ROXO, VERMELHO, BRANCO, AZUL)])
 def test_trocar_o_jogador_de_lugar_nao_muda_a_nota(ordem: tuple[str, ...]) -> None:
+    """D-2010-A-ASSINATURA-E-A-NOTA-DA-COR-DO-PLASTICO."""
     mesa = _Mesa()
     daemon = _daemon(mesa)
     _chegar(daemon, *ordem)  # a ordem de chegada é a do número de jogador
@@ -440,7 +443,9 @@ def _toque_do_tiro(estilo: str | None, escolha: str | None = None,
 
 
 def test_o_toque_do_tiro_toca_na_nota_de_cada_controle() -> None:
-    """MORDIDA: tire o `_toque_da_unidade` do `AtuadorDaHaptica.escrever` e os quatro tocam o
+    """D-2010-O-TOQUE-DO-TIRO-LEVA-A-NOTA-DO-CONTROLE.
+
+    MORDIDA: tire o `_toque_da_unidade` do `AtuadorDaHaptica.escrever` e os quatro tocam o
     mesmo Toque de 160 Hz: isto reprova (a régua 3 da Chegada seguiria verde)."""
     formas = _toque_do_tiro("fps")
     assert formas == {u: fh.forma_da_nota(NOTA_DE[u]) for u in (AZUL, BRANCO, VERMELHO, ROXO)}
