@@ -325,11 +325,9 @@ class Escrita:
     avisos: tuple[str, ...] = field(default_factory=tuple)
 
 
-def _tokens_do_kernelstub(conf: Path) -> list[str] | None:
-    try:
-        data = json.loads(conf.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
+def _tokens_do_kernelstub(conf: Path) -> list[str]:
+    """Os ``kernel_options``. JSON quebrado levanta: cair no grub escreveria no lugar errado."""
+    data = json.loads(conf.read_text(encoding="utf-8"))
     user = data.get("user") if isinstance(data, dict) else None
     opcoes = (user or {}).get("kernel_options") if isinstance(user or {}, dict) else None
     return [str(t) for t in (opcoes or [])]
@@ -346,22 +344,19 @@ def _valor_do_grub(texto: str) -> str:
 
 
 def _ler_texto(caminho: Path) -> str | None:
-    try:
-        return caminho.read_text(encoding="utf-8") if caminho.is_file() else None
-    except OSError:
-        return None
+    """O arquivo, ou ``None`` sem ele. Ilegível levanta, pela mesma razão do kernelstub."""
+    return caminho.read_text(encoding="utf-8") if caminho.is_file() else None
 
 
 def carregadores_presentes(
     lugares: Lugares | None = None, which: Which = shutil.which
 ) -> list[Carregador]:
-    """Todo carregador com o arquivo legível nesta máquina, na ordem de :func:`ler_o_carregador`."""
+    """Todo carregador com arquivo aqui, na ordem de :func:`ler_o_carregador`; ilegível levanta."""
     lugares = lugares or Lugares.da_raiz()
     achados: list[Carregador] = []
     if which("kernelstub") and lugares.kernelstub.is_file():
         tokens = _tokens_do_kernelstub(lugares.kernelstub)
-        if tokens is not None:
-            achados.append(Carregador(BACKEND_KERNELSTUB, tuple(tokens), str(lugares.kernelstub)))
+        achados.append(Carregador(BACKEND_KERNELSTUB, tuple(tokens), str(lugares.kernelstub)))
     texto = _ler_texto(lugares.grub)
     if texto is not None:
         achados.append(Carregador(BACKEND_GRUB, tuple(_valor_do_grub(texto).split()),

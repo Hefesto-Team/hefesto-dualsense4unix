@@ -291,3 +291,15 @@ def test_o_install_escreve_pelo_dono_em_qualquer_carregador() -> None:
     assert '_register_cmdline_owner "cmdline.backend"' in bloco
     assert "carregador de boot desconhecido" in bloco and "${_token}" in bloco
     assert shutil.which("bash")
+
+
+def test_o_kernelstub_quebrado_nao_cai_no_grub(tmp_path: Path) -> None:
+    """Com o kernelstub presente e o JSON dele quebrado, a leitura levanta: o grub não é o alvo."""
+    maquina = _Maquina(tmp_path, ("kernelstub", "update-grub"))
+    _escrito(maquina.lugares.kernelstub, "{ quebrado")
+    grub = _escrito(maquina.lugares.grub, GRUB_UBUNTU)
+    with pytest.raises(ValueError):
+        maquina.ler()
+    with pytest.raises(ValueError):
+        kc.carregadores_presentes(maquina.lugares, maquina.which)
+    assert grub.read_text(encoding="utf-8") == GRUB_UBUNTU
