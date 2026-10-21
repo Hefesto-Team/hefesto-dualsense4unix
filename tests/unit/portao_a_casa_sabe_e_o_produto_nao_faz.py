@@ -1303,16 +1303,16 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "a grade `minmax(0,1fr)` antes de gravar o desenho; o produto só renderiza a página "
         "publicada. O commit 6b5e2e917 tirou o outro chamador, a régua da página antiga."
     ),
-    "core/ativacao_de_botao.py::preso": (
-        "16/10/2026 — INSTRUMENTO DE TESTE. Pergunta se um controle ficou com botão alternado, "
-        "repetindo ou esperando; quem chama são os testes do toque longo, que provam que o "
-        "perfil seguinte e a tabela que sai soltam o botão. O produto solta pelo "
-        "`soltar_a_ativacao`, sem precisar perguntar antes."
+    "interface/pacotes/a05_vibracao.py::degrau_da_faixa": (
+        "20/10/2026, D-2010-O-HERDADO-SAI-COM-OS-DEGRAUS — resto com dono: o plano do "
+        "`a05_vibracao.pacote` deixou de pintar o degrau, e a mordida de "
+        "`test_a_vibracao_diz_qual_degrau_esta_aceso.py` a cita. Ela sai com o gesto `forca` "
+        "na O-GESTO-FORCA-DOS-DEGRAUS-DA-VIBRACAO-SAI-01, que tem a posse do arquivo."
     ),
-    "core/filtro_de_botao.py::preso": (
-        "16/10/2026 — INSTRUMENTO DE TESTE, o par do `ativacao_de_botao.preso`: pergunta se um "
-        "controle tem aperto esperando o mínimo. O produto não precisa da pergunta, porque o "
-        "filtro solta o que segura no próprio tique."
+    "interface/pacotes/a08_conexoes.py::html_do_acionador": (
+        "20/10/2026 — é do gerador do desenho, não do produto, como o `html_da_grade_de_tipos`: "
+        "o `interface/aba08.py` (a chamada `_pacote08.html_do_acionador`) escreve com ela a "
+        "janela do acionador no mockup, e o produto a mostra pela página publicada."
     ),
 }
 
