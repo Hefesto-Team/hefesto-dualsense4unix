@@ -131,6 +131,10 @@ APARENCIA_DO_MAXIMIZAR: dict[bool, tuple[str, str]] = {
     True: ("window-restore-symbolic", "Restaurar"),
 }
 
+#: Na ORDEM DA TELA, da esquerda para a direita, e à esquerda do título (20/10/2026,
+#: OS-BOTOES-DA-JANELA-VAO-PARA-A-ESQUERDA-01: fechar, maximizar, minimizar). O
+#: `montar_a_barra` os põe com `pack_start`; os botões são desta casa, e o
+#: `gtk-decoration-layout` da sessão não os alcança.
 BOTOES_DA_BARRA = (
     ("window-close-symbolic", "fechar", "Fechar"),
     (APARENCIA_DO_MAXIMIZAR[False][0], "maximizar", APARENCIA_DO_MAXIMIZAR[False][1]),
@@ -279,7 +283,7 @@ def montar_a_barra(
         botao.get_style_context().add_class("titlebutton")
         vestir_o_nome_acessivel(botao, dica)
         botao.connect("clicked", ao_gesto, gesto)
-        barra.pack_end(botao)
+        barra.pack_start(botao)
         botoes[gesto] = botao
     barra.set_title(titulo)
     if subtitulo:
