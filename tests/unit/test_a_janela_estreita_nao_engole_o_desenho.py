@@ -369,6 +369,7 @@ ESPERADO_VERMELHO: dict[tuple[str, str], str] = {
 }
 
 CORTE_CONHECIDO_NO_DESENHO: dict[tuple[str, str], str] = {
+    # fica: é o desenho decidido (a frase longa corta e a dica guarda a inteira), não um defeito
     ("07-lancadores.html", "Os jogos do KytyPS5"): (
         "D-2110-A-FRASE-DA-EXTENSAO-CORTA-COM-A-DICA — nas duas colunas do desenho de 21/10 a "
         "frase da extensão corta com reticências e a dica guarda a inteira, como a do efeito"
