@@ -10,4 +10,3 @@ tests/unit/test_o_branco_da_troca_de_perfil_pisca_sem_gravar.py
 tests/unit/test_o_lancador_vem_da_modificacao.py
 tests/unit/porta_de_mentira.py
 tests/unit/test_todo_pad_tem_porta_propria.py
-tests/unit/test_o_desenho_dos_efeitos_por_familia.py
