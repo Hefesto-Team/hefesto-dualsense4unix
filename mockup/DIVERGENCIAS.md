@@ -21,4 +21,5 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 05-vibracao.html
+- **21/10/2026** — espera só o `--publicar 05`: o «Parar» do «Testar agora» com fundo e borda `#c62828` e a letra branca (5,62 para 1), a variante A aprovada em 20/10 (O-PARAR-DA-VIBRACAO-SE-LE-NO-VERMELHO-01). Enquanto isso, o produto continua com o «Parar» no `--red`.

@@ -43,7 +43,9 @@ except (ImportError, ValueError) as _erro:  # pragma: no cover — ambiente sem 
 
 PAGINA = "05-vibracao.html"
 UNIQS = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02")
-VERMELHO = "rgb(255, 85, 85)"
+# o #c62828, mais fundo que o --red, para a letra branca se ler
+# (O-PARAR-DA-VIBRACAO-SE-LE-NO-VERMELHO-01)
+VERMELHO = "rgb(198, 40, 40)"
 BRANCO = "rgb(255, 255, 255)"
 
 MEDIDA = r"""

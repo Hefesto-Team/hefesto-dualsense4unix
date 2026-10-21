@@ -1437,11 +1437,13 @@
   /* os três do «Testar agora» lado a lado e com a MESMA largura, e o «Parar» em
      fundo vermelho com letra branca (pedido de 06/10/2026: *«Mesma coisa
      pros três botões da Testar Agora. E aqui o botão Parar tem que ter a cor
-     vermelha e a fonte branca.»*) */
+     vermelha e a fonte branca.»*). O vermelho é o #c62828, mais fundo que o --red: a letra
+     branca de 11,5 px sobre o --red dava 3,14 para 1, e a régua de leitura pede 4,5
+     (O-PARAR-DA-VIBRACAO-SE-LE-NO-VERMELHO-01, variante A, escolhida em 20/10/2026) */
   .acoes-col{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
   .acoes-col .btn{width:100%;min-width:0;justify-content:center;padding:0 4px;font-size:11.5px}
   .acoes-col .btn.vermelho,.acoes-col .btn.vermelho:hover{
-    background:var(--red);border-color:var(--red);color:#fff;font-weight:600}
+    background:#c62828;border-color:#c62828;color:#fff;font-weight:600}
   /* o Testar aceso é o teste ligado naquela coluna: a mesma cor do lado que treme */
   .acoes-col .btn.on{border-color:var(--orange);background:rgba(255,184,108,.1);color:var(--orange)}
 
