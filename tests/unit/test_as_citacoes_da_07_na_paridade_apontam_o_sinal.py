@@ -52,9 +52,12 @@ def test_o_numero_velho_reprova(tmp_path: Path) -> None:
 
 
 def test_o_codigo_que_anda_reprova_a_citacao_parada(tmp_path: Path) -> None:
-    """Dez linhas a mais no topo do arquivo e nenhuma citação se mexe: o desvio é pego."""
+    """Quatro linhas a mais no topo e nenhuma citação se mexe: o desvio é pego.
+
+    Quatro é a janela de três mais uma: uma janela mais larga deixaria este desvio passar.
+    """
     andou = tmp_path / "a07_lancadores.py"
-    andou.write_text("\n" * 10 + A07.read_text(encoding="utf-8"), encoding="utf-8")
+    andou.write_text("\n" * 4 + A07.read_text(encoding="utf-8"), encoding="utf-8")
     feito = _roda(arquivo=andou)
     assert feito.returncode == 1, feito.stdout + feito.stderr
     assert "longe-do-sinal" in feito.stdout
