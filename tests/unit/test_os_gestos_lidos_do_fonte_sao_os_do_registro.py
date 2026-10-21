@@ -17,9 +17,6 @@ import importlib.util
 import sys
 from pathlib import Path
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import pacotes
 

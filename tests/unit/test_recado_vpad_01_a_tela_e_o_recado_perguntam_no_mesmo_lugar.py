@@ -29,9 +29,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `app.actions.rumble_actions`, que carrega o GTK")
 
 from hefesto_dualsense4unix.app.actions import rumble_actions
 from hefesto_dualsense4unix.app.actions.jogar import painel

@@ -18,7 +18,6 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import exigir_gi_real
 from tests.unit import test_o_aparelho_se_corrige_onde_se_clica as base
 from tests.unit.test_o_aparelho_se_corrige_onde_se_clica import (  # noqa: F401  (a fixture)
     _clicar,
@@ -29,7 +28,6 @@ from tests.unit.test_o_aparelho_se_corrige_onde_se_clica import (  # noqa: F401 
     disco,
 )
 
-exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 from hefesto_dualsense4unix.interface.pacotes import em_fundo

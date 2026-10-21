@@ -20,9 +20,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 if str(RAIZ / "src") not in sys.path:
     sys.path.insert(0, str(RAIZ / "src"))
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `interface.pacotes.a07_lancadores`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07

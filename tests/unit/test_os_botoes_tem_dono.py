@@ -19,10 +19,6 @@ MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
          "via": "USB", "cor": "starlight-blue", "mascara": "DualSense"}]
 
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
-
 def _pacotes():
     """Os módulos de pacote, com o que cada um declara sobre os seus botões."""
     import importlib

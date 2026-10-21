@@ -16,9 +16,6 @@ import time
 
 import pytest
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import pacotes
 from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
@@ -83,7 +80,6 @@ def test_nenhum_par_sai_depois_do_stop(coice: None) -> None:
     nomes = ponte.nomes()
     ultimo_par = max(i for i, n in enumerate(nomes) if n == "rumble_set_checked")
     assert ultimo_par < nomes.index("rumble_stop_checked"), "um par saiu depois do stop"
-
 
 
 class _PonteDeSetLento(_Ponte):

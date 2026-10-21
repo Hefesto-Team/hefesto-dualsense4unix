@@ -16,9 +16,6 @@ import sys
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 import pacotes
 from pacotes import a02_controles as a02

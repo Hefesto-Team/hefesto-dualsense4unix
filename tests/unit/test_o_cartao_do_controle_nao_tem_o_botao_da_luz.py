@@ -11,9 +11,6 @@ from __future__ import annotations
 
 import pytest
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `interface.pacotes.a08_conexoes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import onde
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes, camada

@@ -80,9 +80,6 @@ from pathlib import Path
 
 import pytest
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `app.actions.rumble_actions`, que carrega o GTK")
 
 from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
 

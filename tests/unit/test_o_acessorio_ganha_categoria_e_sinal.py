@@ -26,7 +26,6 @@ from hefesto_dualsense4unix.integrations import ar_do_adaptador as ar
 from hefesto_dualsense4unix.integrations import bluez_dbus as bd
 from hefesto_dualsense4unix.integrations import faixas_do_ar as fx
 from hefesto_dualsense4unix.integrations import radio_da_mesa
-from tests.conftest import exigir_gi_real
 from tests.unit import radio_de_mentira as rm  # noqa: F401  (a guarda do BlueZ da suíte)
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -149,7 +148,6 @@ def test_o_enlace_le_tem_os_40_canais_nao_medidos_e_nunca_o_mapa_do_adaptador() 
 
 # --- a tela: a categoria e a linha ------------------------------------------------------
 
-exigir_gi_real("importa `interface.pacotes.a08_conexoes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import pacotes
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08

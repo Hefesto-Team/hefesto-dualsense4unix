@@ -16,9 +16,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa o pacote da aba do mapa do controle, que carrega o GTK")
 
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient
 from hefesto_dualsense4unix.daemon.ipc_server import IpcServer

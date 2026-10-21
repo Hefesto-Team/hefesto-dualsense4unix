@@ -21,7 +21,6 @@ import pytest
 
 from hefesto_dualsense4unix.mods import instalador
 from hefesto_dualsense4unix.mods import tema as tm
-from tests.conftest import exigir_gi_real
 
 RAIZ = Path(__file__).resolve().parents[2]
 MOCKUP = RAIZ / "mockup/08-conexoes.html"
@@ -221,7 +220,6 @@ def test_o_manifesto_que_nao_abre_vai_aos_avisos_e_o_outro_tema_liga(tmp_path: P
 
 # --- a régua do token: o Python diz o nome, a folha diz a cor -----------------------------
 
-exigir_gi_real("importa `interface.pacotes.a08_conexoes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import aba08
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08

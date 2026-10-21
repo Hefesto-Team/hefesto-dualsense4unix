@@ -29,9 +29,6 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 from hefesto_dualsense4unix.daemon.ipc_server import IpcServer

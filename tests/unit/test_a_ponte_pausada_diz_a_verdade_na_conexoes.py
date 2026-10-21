@@ -24,9 +24,6 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `interface.pacotes.a08_conexoes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.daemon.subsystems import governador_do_radio as gov
 from hefesto_dualsense4unix.integrations import radio_da_mesa as rm

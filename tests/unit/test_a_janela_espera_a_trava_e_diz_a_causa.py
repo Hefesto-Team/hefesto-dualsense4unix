@@ -20,7 +20,6 @@ import structlog
 
 from hefesto_dualsense4unix.integrations import cura_por_estrada as cpe
 from hefesto_dualsense4unix.integrations import lista_de_exclusao as lx
-from tests.conftest import exigir_gi_real
 from tests.unit.test_a_exclusao_mora_na_camada_do_jogo import _PONTE
 from tests.unit.test_a_lista_de_exclusao_tem_um_escritor_por_vez import (
     _SEGURA_A_TRAVA,
@@ -28,7 +27,6 @@ from tests.unit.test_a_lista_de_exclusao_tem_um_escritor_por_vez import (
     _esperar_o_arquivo,
 )
 
-exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface.pacotes import a07_lancadores as a07
 from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09

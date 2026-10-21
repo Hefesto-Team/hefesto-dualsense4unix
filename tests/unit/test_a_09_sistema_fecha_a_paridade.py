@@ -67,10 +67,6 @@ ESTADO = {
 }
 
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `interface.sistema`, que carrega o GTK")
-
 class JanelaDeMentira:
     """O dublê de `DaemonActionsMixin` — e ele NÃO fala com o systemd."""
 

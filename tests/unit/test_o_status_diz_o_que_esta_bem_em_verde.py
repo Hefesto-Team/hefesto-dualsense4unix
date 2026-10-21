@@ -29,9 +29,6 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.app.actions import daemon_actions
 from hefesto_dualsense4unix.app.actions.jogar import painel

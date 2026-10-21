@@ -1,9 +1,6 @@
 """A frase *"na frente agora"* não pode nomear um jogo que já fechou."""
 from __future__ import annotations
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `app.actions.daemon_actions`, que carrega o GTK")
 
 from hefesto_dualsense4unix.app.actions.daemon_actions import (
     descrever_deteccao_de_janela,

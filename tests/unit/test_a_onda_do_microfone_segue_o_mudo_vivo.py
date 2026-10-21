@@ -16,9 +16,6 @@ INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 MOCKUP = RAIZ / "mockup"
 PUBLICADO = INTERFACE / "paginas"  # noqa-acento: nome da pasta
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
     if _caminho not in sys.path:

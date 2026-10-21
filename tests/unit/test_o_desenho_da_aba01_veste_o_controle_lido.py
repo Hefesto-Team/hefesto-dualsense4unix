@@ -11,9 +11,6 @@ import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 for _p in (str(RAIZ / "src"),):
     if _p not in sys.path:

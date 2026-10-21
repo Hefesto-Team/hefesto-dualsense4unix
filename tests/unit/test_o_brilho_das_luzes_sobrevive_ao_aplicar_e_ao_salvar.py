@@ -49,10 +49,8 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import exigir_gi_real
 from tests.unit.ponte_do_rodape import PonteDoRodape
 
-exigir_gi_real("importa as réguas e os pacotes da aba 04, que carregam o GTK")
 
 from tests.unit import test_a_04_pergunta_ao_daemon_vivo as viva
 from tests.unit import test_a_barra_nao_escurece_ao_reaplicar as barra

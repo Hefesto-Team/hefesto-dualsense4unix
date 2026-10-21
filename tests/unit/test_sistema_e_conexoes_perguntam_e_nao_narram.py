@@ -13,15 +13,10 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import onde as _onde
 from hefesto_dualsense4unix.interface.pacotes import Contexto, normalizar
 from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
-
-
 
 
 def _ctx() -> Contexto:

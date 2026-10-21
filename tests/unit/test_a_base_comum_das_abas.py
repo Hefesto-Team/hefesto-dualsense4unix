@@ -29,9 +29,6 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import hefesto_vivo, monta, pacotes
 from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile

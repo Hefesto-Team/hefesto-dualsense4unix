@@ -50,9 +50,6 @@ import os
 from collections.abc import Callable
 from typing import Any
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `app.actions.config`, que carrega o GTK")
 
 from hefesto_dualsense4unix.integrations.mesa_de_radio import (
     RadioUsb,

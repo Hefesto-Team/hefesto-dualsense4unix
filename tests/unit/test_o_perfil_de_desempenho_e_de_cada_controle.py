@@ -34,9 +34,6 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa as réguas da aba 04, que carregam o GTK")
 
 from tests.unit.test_a_marca_da_cor_nao_some import NOME, UNIQS
 

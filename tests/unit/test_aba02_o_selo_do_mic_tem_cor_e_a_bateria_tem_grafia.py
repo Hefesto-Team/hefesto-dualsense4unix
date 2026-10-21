@@ -44,9 +44,6 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 import pytest
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `interface.mesa_viva`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import mesa_viva, onde
 

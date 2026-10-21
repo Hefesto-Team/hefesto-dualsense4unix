@@ -19,9 +19,6 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("carrega o `calibrar`, que carrega o GTK")
 
 from hefesto_dualsense4unix.core import roteador_de_movimento as rot
 

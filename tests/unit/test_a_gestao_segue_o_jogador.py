@@ -68,7 +68,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
 from tests.conftest import exigir_gi_real
 
-exigir_gi_real("importa `app.actions.home_actions`, que carrega o GTK")
 
 for _pasta in (RAIZ / "src", RAIZ / "src/hefesto_dualsense4unix/interface"):
     if str(_pasta) not in sys.path:
@@ -215,7 +214,6 @@ def _confere(cena: dict[str, Any], lida: dict[str, Any]) -> str | None:
 @pytest.fixture(scope="module")
 def medido() -> dict[str, Any]:
     """Abre a bancada num WebKit offscreen, instala o pintor e roda as cenas."""
-    from tests.conftest import exigir_gi_real
 
     exigir_gi_real("a Gestão da 08 no WebKit")
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
@@ -412,7 +410,6 @@ def test_a_linha_do_radio_diz_a_palavra_do_dono() -> None:
 
 @pytest.fixture(scope="module")
 def a08() -> Any:
-    from tests.conftest import exigir_gi_real
 
     exigir_gi_real("os donos das dicas da 08 (`secao_controles`)")
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes

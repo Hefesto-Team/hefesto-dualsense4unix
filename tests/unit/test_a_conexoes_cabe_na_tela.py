@@ -30,7 +30,6 @@ import pytest
 
 from tests.conftest import exigir_gi_real
 
-exigir_gi_real("importa `interface.pacotes.a08_conexoes`, que carrega o GTK")
 
 from hefesto_dualsense4unix.integrations import dicas_da_conexao as dicas
 from hefesto_dualsense4unix.integrations import faixas_do_ar
@@ -307,7 +306,6 @@ def _no_webkit_sem_recolher(pagina: Path, tamanho: tuple[int, int],
                             passos: list[str]) -> list[Any]:
     import time
 
-    from tests.conftest import exigir_gi_real
 
     exigir_gi_real("abre a página num WebKit")
     import gi

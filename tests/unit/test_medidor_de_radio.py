@@ -30,9 +30,6 @@ from collections.abc import Callable, Mapping
 
 import pytest
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `app.actions.config`, que carrega o GTK")
 
 from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     CORTE_APERTADA,

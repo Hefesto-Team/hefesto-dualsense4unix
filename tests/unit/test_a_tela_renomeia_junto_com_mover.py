@@ -34,9 +34,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from tests.conftest import exigir_gi_real
-
-exigir_gi_real("importa `interface.mesa_viva`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import mesa_viva
 
