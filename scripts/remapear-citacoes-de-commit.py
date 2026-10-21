@@ -39,6 +39,7 @@ from __future__ import annotations
 
 import argparse
 import bisect
+import os
 import re
 import subprocess
 import sys
@@ -51,7 +52,7 @@ MINIMO = 7
 de 15/09 ainda devolve, nenhuma tem 9 dígitos ou mais (todas têm 7 ou 8); a ambiguidade é que
 segura o resto, contra os ~14 mil SHAs conhecidos."""
 
-DESENVOLVIMENTO = Path("/mnt/Apate/Desenvolvimento")
+DESENVOLVIMENTO = Path(os.environ.get("HEFESTO_DESENVOLVIMENTO", Path.home() / "Desenvolvimento"))
 PONTE_DA_CASA = Path.home() / ".local/state/hefesto-casa/mapas-de-commit/ponte-15-09-para-dev.txt"
 MAPAS_DA_CASA: tuple[Path, ...] = (
     DESENVOLVIMENTO / "_backup-hefesto-antes-da-reescrita/2026-10-05/mapa-agosto.txt",
