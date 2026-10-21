@@ -221,14 +221,11 @@ def _estado_do_daemon() -> dict[str, object] | None:
 
     Sem resposta, quem diz o que vale é o marcador em disco (`perfil_que_esta_valendo`).
     """
-    from hefesto_dualsense4unix.app.ipc_bridge import _run_call, teto_da_linha_de_comando
+    from hefesto_dualsense4unix.app.ipc_bridge import _safe_call, teto_da_linha_de_comando
 
     metodo = "daemon.state_full"
-    try:
-        estado = _run_call(metodo, None, timeout=teto_da_linha_de_comando(metodo))
-    except (IpcError, FileNotFoundError, ConnectionError, OSError):
-        return None
-    return estado if isinstance(estado, dict) else None
+    ok, estado = _safe_call(metodo, None, timeout=teto_da_linha_de_comando(metodo))
+    return estado if ok and isinstance(estado, dict) else None
 
 
 @app.command("historico")  # (noqa-acento): nome de subcomando e ASCII
