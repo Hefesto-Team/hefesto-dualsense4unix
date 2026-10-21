@@ -33,8 +33,12 @@ LIMIAR_DO_ACENTO = 3.0
 #: Os tokens de cor do ``:root`` da casa que um tema pode trocar.
 TOKENS_DA_CASA = frozenset({
     *TEXTOS, *FUNDOS, *ACENTOS, "--border-sutil", "--border-forte", "--sel-bg", "--linha",
-    "--rot-linha",
+    "--rot-linha", "--logo-aro",
 })
+#: O fundo da logo (``none`` na casa): o tema claro diz o disco escuro, para a logo de sempre
+#: pintar sobre ele (20/10/2026, O-TEMA-CLARO-NASCE-COMO-EXTENSAO-01). Aceita ``none``, uma cor ou
+#: um ``radial-gradient`` só de cores; o aro (``--logo-aro``) é uma cor como as outras.
+FUNDO_DA_LOGO = "--logo-fundo"
 #: As categorias da aba Conexões: a cor de cada tipo na régua, na sala e na faixa do mapa.
 _TOKEN_DE_CATEGORIA = re.compile(r"--(?:c|sala|mapa)-[a-z][a-z_]{0,23}")
 #: Os plásticos: a cor de cada controle é a do aparelho, e tema nenhum a troca.
@@ -49,6 +53,10 @@ _HEX = re.compile(r"#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})")
 _RGB = re.compile(r"rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*"
                   r"(?:,\s*(0|1|0?\.\d+|1\.0+)\s*)?\)")
 _PROIBIDO = re.compile(r"url\s*\(|@import|\\|<|expression\s*\(", re.I)
+_GRADIENTE = re.compile(r"radial-gradient\((.*)\)", re.S)
+_FORMA = re.compile(r"(?:circle|ellipse)?\s*(?:at\s+\d{1,3}%\s+\d{1,3}%)?")
+_PARADA = re.compile(r"(.+?)(?:\s+\d{1,3}%)?")
+_VIRGULA_DE_FORA = re.compile(r",(?![^()]*\))")
 
 
 class TemaRecusadoError(ValueError):
@@ -78,7 +86,28 @@ class TemaDaCasa:
 
 
 def token_permitido(nome: str) -> bool:
-    return nome in TOKENS_DA_CASA or bool(_TOKEN_DE_CATEGORIA.fullmatch(nome))
+    return (nome in TOKENS_DA_CASA or nome == FUNDO_DA_LOGO
+            or bool(_TOKEN_DE_CATEGORIA.fullmatch(nome)))
+
+
+def fundo_da_logo(valor: str) -> bool:
+    """``none``, uma cor, ou ``radial-gradient(<forma>, <cor> [N%], <cor> [N%]…)`` só de cores."""
+    texto = valor.strip().lower()
+    if texto == "none" or cor(texto) is not None:
+        return True
+    m = _GRADIENTE.fullmatch(texto)
+    if m is None:
+        return False
+    partes = [p.strip() for p in _VIRGULA_DE_FORA.split(m.group(1))]
+    primeira = _PARADA.fullmatch(partes[0])
+    if primeira is None or cor(primeira.group(1)) is None:
+        # a primeira parte não é cor: é a forma («circle at 35% 30%»), ou o valor não serve
+        if not partes[0] or not _FORMA.fullmatch(partes[0]):
+            return False
+        partes = partes[1:]
+    paradas = [_PARADA.fullmatch(p) for p in partes]
+    return len(paradas) >= 2 and all(p is not None and cor(p.group(1)) is not None
+                                     for p in paradas)
 
 
 def cor(valor: str) -> tuple[float, float, float, float] | None:
@@ -201,7 +230,11 @@ def validar(folha: str, *, casa: dict[str, str] | None = None,
         if not token_permitido(nome):
             raise TemaRecusadoError(f"O tema não pode trocar «{nome}»: só as cores da "
                                     "interface.")
-        if cor(valor) is None:
+        if nome == FUNDO_DA_LOGO:
+            if not fundo_da_logo(valor):
+                raise TemaRecusadoError(f"O valor de «{nome}» precisa ser none, uma cor ou um "
+                                        "radial-gradient só de cores.")
+        elif cor(valor) is None:
             raise TemaRecusadoError(f"O valor de «{nome}» não é uma cor (#rrggbb, rgb ou rgba).")
         tokens[nome] = valor.lower()
     if not tokens:
@@ -302,6 +335,7 @@ def tema_da_casa(lugares: Any = None) -> TemaDaCasa:
 __all__ = [
     "ACENTOS",
     "FUNDOS",
+    "FUNDO_DA_LOGO",
     "LIMIAR_DO_ACENTO",
     "LIMIAR_DO_CONTRASTE",
     "PLASTICOS",
@@ -315,6 +349,7 @@ __all__ = [
     "contraste",
     "cor",
     "folha_do_manifesto",
+    "fundo_da_logo",
     "tema_da_casa",
     "token_permitido",
     "tokens_da_casa",

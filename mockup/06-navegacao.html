@@ -34,6 +34,10 @@
     --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
     --pink:#ff79c6; --purple:#bd93f9; --red:#ff5555; --yellow:#f1fa8c;
     --sel-bg:rgba(189,147,249,0.16);
+    /* O FUNDO E O ARO DA LOGO SÃO DO TEMA — 20/10/2026, O-TEMA-CLARO-NASCE-COMO-EXTENSAO-01.
+       Na casa, nada atrás da logo (o SVG já é o disco); o tema claro diz o disco escuro, para
+       a logo, intacta, pintar sobre o escuro de sempre. A régua é `mods.tema.validar`. */
+    --logo-fundo:none; --logo-aro:transparent;
     /* O RÓTULO DE CAMPO TEM COR DE RÓTULO, NÃO DE COMENTÁRIO.
        `.sec-rot` nascia `var(--comment)` (#6272a4) nas SEIS abas que a usam, e
        ela leu o resultado pelo que ele é: *"os campos de importância tipo cor,
@@ -684,7 +688,7 @@
      O controle traz as peças nomeadas do `docs/data/pecas-do-dualsense.csv` e a
      folha das cores por `data-colorway`, gerada de `docs/data/cores-do-dualsense.csv`
      — a mesma fonte que o specs.html usa. */
-  .logo{background:none;border:none;overflow:hidden}
+  .logo{background:var(--logo-fundo);border-color:var(--logo-aro);overflow:hidden}
   .logo svg{width:44px;height:44px;display:block}
   .ds-svg{width:100%;height:auto;display:block}
   .cartao .ds-svg{width:72px;flex:0 0 72px}
