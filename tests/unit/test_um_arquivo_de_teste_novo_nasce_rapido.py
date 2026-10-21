@@ -10,6 +10,11 @@ dos tetos:
 - uma espera sozinha acima de ``TETO_DE_UMA_ESPERA`` (2 s): espere pelo evento, não pelo relógio;
 - a soma das esperas acima de ``TETO_DAS_ESPERAS`` (5 s): metade do p95 do arquivo da suíte (9,5 s).
 
+O que ela NÃO vê: a espera que não é ``sleep`` de número literal (subprocesso, Xvfb, Chrome, conta
+de CPU, ``sleep`` de variável ou repetido num laço). Nenhum dos seis mais lentos de 21/10 tinha
+``sleep`` literal no arquivo de teste: a espera morava no script que ele roda, no navegador ou no
+Xvfb. Esse tempo só o CSV mede, na corrida do fecho.
+
 O arquivo com linha no CSV não entra aqui: o tempo dele já é medido, e o fecho o reescreve. A régua
 que precisa do tempo de verdade (a regressão dos 181 s da janela, por exemplo) entra em
 ``EXCECOES`` com o porquê, e a exceção que já não passa do teto reprova (a lista só encolhe).
