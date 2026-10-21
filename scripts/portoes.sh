@@ -74,7 +74,7 @@ RAIZ="$(git rev-parse --show-toplevel 2>/dev/null || dirname "$(dirname "$(readl
 # contando o `.pyc` aberto como o `.py` dele: o `tests/conftest.py` importa `scripts/check_faixa_sintetica.py`
 # em todo `pytest`, e o gerador das páginas lê `assets/glyphs/`; a régua é a do `test_o_rapido_so_repete_o_que_mudou`.
 #
-# Tempos medidos nesta árvore em 25/08/2026, `dev` em f475b2a, e é por eles que
+# Tempos medidos nesta árvore em 25/08/2026, `dev` em fb39f47, e é por eles que
 # a camada rápida existe: `validar-acentuacao.py --all` sozinho custa 38 s e o
 # `shellcheck` sobre o `install.sh` de 219 KB custa 11,4 s -- os dois juntos são
 # oito vezes a camada rápida inteira, que fechava em 5,3 s com QUINZE portões.

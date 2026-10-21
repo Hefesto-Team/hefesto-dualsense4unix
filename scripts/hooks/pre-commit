@@ -132,7 +132,7 @@ fi
 #    declarados no `.pre-commit-config.yaml`, mas o `core.hooksPath` global dela
 #    desvia o git para o gancho global, que encadeia ESTE arquivo — e a
 #    ferramenta `pre-commit` não está instalada nesta máquina. Resultado: os dois
-#    só rodavam no CI. O commit 913f422 (ONDA0-Z5) mexeu +32/-2 linhas no
+#    só rodavam no CI. O commit e0793df (ONDA0-Z5) mexeu +32/-2 linhas no
 #    `ipc_handlers.py`, deslocando 38 dos 39 endereços do bloco gerado de 3 a 50
 #    linhas de uma vez, e a podridão viajou por SETE merges até a integração.
 #    Custam 0,11 s somados.

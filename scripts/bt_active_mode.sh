@@ -414,7 +414,7 @@ if command -v busctl >/dev/null 2>&1; then
     # O nome é dela e mora no `maquina.json` (`adaptadores[<endereço>].nome`,
     # gravado pelo renomear da aba); o `Alias` é a projeção dele, e tem UM
     # escritor: este script, dentro da trava (a `D-COSTURA-BLUEZ` dela — dois
-    # escritores do mesmo alias é a duplicidade que o `e5376a0` desfez).
+    # escritores do mesmo alias é a duplicidade que o `a75a514` desfez).
     #
     # PELO ENDEREÇO DO ADAPTADOR desde 26/09/2026
     # (D-2609-O-ADAPTADOR-TEM-NOME-PROPRIO): até ali ele herdava o nome da
