@@ -17,6 +17,8 @@ from pathlib import Path
 
 import pytest
 
+from tests.conftest import skip_sem_gi_real
+
 RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ / "scripts/check_o_gtk_fica_na_moldura.py"
 PACOTE = "src/hefesto_dualsense4unix"
@@ -193,3 +195,38 @@ def test_a_area_de_transferencia_sem_gtk_diz_que_nao_deu() -> None:
     )
     assert saida.returncode == 0, saida.stderr
     assert saida.stdout.strip() == "False"
+
+
+_COPIAR_PELA_MOLDURA = r"""
+import sys
+from hefesto_dualsense4unix.utils.tela_de_mentira import garantir_tela_de_mentira
+garantir_tela_de_mentira(anunciar=False)
+from hefesto_dualsense4unix.interface import janela
+from gi.repository import Gdk, GLib, Gtk
+if not Gtk.init_check(None)[0]:
+    print("SEM-TELA")
+    sys.exit(0)
+print(janela.por_na_area_de_transferencia("o registro de teste"))
+contexto = GLib.MainContext.default()
+while contexto.pending():
+    contexto.iteration(False)
+print(Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD).wait_for_text())
+"""
+
+
+@skip_sem_gi_real
+def test_a_moldura_poe_o_texto_na_area_de_transferencia(tmp_path: Path) -> None:
+    """Com o GTK real, numa tela de mentira: o «Copiar» da aba Sistema chega à área de verdade."""
+    lar = tmp_path / "lar"
+    env = {**os.environ, "PYTHONPATH": str(RAIZ / "src"), "HOME": str(lar),
+           "XDG_CONFIG_HOME": str(lar / ".config"), "XDG_DATA_HOME": str(lar / ".local/share"),
+           "XDG_STATE_HOME": str(lar / ".local/state"), "XDG_CACHE_HOME": str(lar / ".cache")}
+    saida = subprocess.run(
+        [sys.executable, "-c", _COPIAR_PELA_MOLDURA], capture_output=True, text=True,
+        timeout=120, env=env, check=False,
+    )
+    assert saida.returncode == 0, saida.stderr[-2000:]
+    linhas = saida.stdout.splitlines()
+    if linhas == ["SEM-TELA"]:
+        pytest.skip("sem tela para o GTK (rode sob xvfb-run)")
+    assert linhas[-2:] == ["True", "o registro de teste"], saida.stdout
