@@ -5,7 +5,7 @@ Uma reescrita troca o SHA de cada commit, e a prosa, o comentário e o id de tes
 velho passam a apontar para o nada. O mapa de cada reescrita (`filter-repo/commit-map`, ou o
 `mapa-agosto.txt`) diz «velho novo»; este script segue a CADEIA de mapas, na ordem (agosto, 15/09,
 a reescrita seguinte), e troca o SHA citado pelo último elo. Sem `--escrever`, só mostra a lista
-seca (`velho -> novo`), que quem coordena revê antes de gravar.
+seca (`velho -> novo`), que se revê antes de gravar.
 
 Só troca o que resolve sem ambiguidade:
 

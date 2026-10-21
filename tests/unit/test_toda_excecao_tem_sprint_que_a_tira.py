@@ -234,6 +234,18 @@ _DADO_DE_TESTE = "dado do teste (o que o desenho não tem, a resposta de mentira
 _PASTAS_DE_MAQUINA = "pastas e binários de máquina (.git, venv, caches), que nenhuma régua lê"
 
 NAO_SAO_DIVIDA: dict[str, str] = {
+    "tests/unit/test_a_saida_agendada_destroi_a_janela.py::PODEM_ENCERRAR_O_LACO": (
+        "os dois donos da saída da interface (o `fechar` e o `_ao_destruir` que ele dispara): é o "
+        "contrato que a régua cobra, não um caso isento"),
+    "tests/unit/test_a_saida_agendada_destroi_a_janela.py::PODEM_ENCERRAR_UM_LACO_FORA_DA_JANELA": (
+        "o laço aninhado que espera o WebKit começar e devolve o controle ao `main`: não é saída "
+        "da interface, e a régua o nomeia para barrar qualquer outro"),
+    "tests/unit/test_nenhuma_pasta_vazia_no_repositorio.py::EXCECOES": (
+        "a casca de pasta que precisa existir vazia, com o motivo; nasce vazia e fica vazia "
+        "enquanto nenhuma precisar"),
+    "tests/unit/test_um_arquivo_de_teste_novo_nasce_rapido.py::EXCECOES": (
+        "o arquivo de teste novo que precisa de espera acima do teto, com o porquê; nasce vazia e "
+        "fica vazia enquanto nenhum precisar"),
     "scripts/reapontar-citacoes.py::DIVIDA": (
         "o acumulador da classificação das citações «à mão» (nova ou de antes, pelo merge-base), "
         "que a varredura limpa e preenche a cada corrida para o rc dizer o que falta; "
