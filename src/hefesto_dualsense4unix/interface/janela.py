@@ -1,7 +1,6 @@
 """janela — a janela, as duas pontes e a guarda de carga. UMA VEZ, para as dez abas."""
 from __future__ import annotations
 
-import contextlib
 import json
 import pathlib
 import signal
@@ -269,10 +268,9 @@ def por_na_area_de_transferencia(texto: str) -> bool:
     """O texto na área de transferência, pelo laço do GTK desta moldura. `False` = não deu."""
 
     def _agora() -> bool:
-        with contextlib.suppress(Exception):
-            area = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
-            area.set_text(texto, -1)
-            area.store()
+        area = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+        area.set_text(texto, -1)
+        area.store()
         return False
 
     GLib.idle_add(_agora)
