@@ -466,7 +466,7 @@ Contando controles por adaptador na mesma leitura de `HID_PHYS`:
 Os dois adaptadores viram um, e um deles desaparece com os controles dele
 junto. Um `grep` de conveniência sobre o prefixo produz uma distribuição
 **convincente e errada** — e a casa já pagou por isso noutro lugar (*"uma faixa
-de MAC não é um fabricante"*, `e5376a0`).
+de MAC não é um fabricante"*, `a75a514`).
 
 **A régua é sempre o endereço inteiro.** E na hora de ESCREVER o número em
 arquivo versionado, a máscara da casa é zerar os octetos 4 e 5
