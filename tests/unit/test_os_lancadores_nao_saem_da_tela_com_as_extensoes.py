@@ -4,8 +4,8 @@ Sprint OS-LANCADORES-NAO-SAEM-DA-TELA-COM-AS-EXTENSOES-01.
 
 Medido em 21/10/2026, no desenho da 07 com doze extensões, a 809 px de altura (o piso da
 janela): uma fileira de 63 px por extensão, o conteúdo da aba com 1050 px para 618 à vista, e o
-cartão «Lançadores» começando em 1017 px, abaixo da barra do Aplicar. A cura é a variante A
-escolhida (`mockup/variantes/2110-extensoes-A-duas-colunas.html`): duas colunas de cartões de meia
+cartão «Lançadores» começando em 1017 px, abaixo da barra do Aplicar. A cura é a opção A
+escolhida em 21/10/2026: duas colunas de cartões de meia
 largura, teto de cinco fileiras e rolagem só dentro da lista; a coluna do «Para» saiu da linha.
 
 A sonda abre o desenho num WebKit de verdade, sob a tela de mentira, em 1272, 1512 e 1900 px, clona

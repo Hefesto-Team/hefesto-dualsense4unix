@@ -3,9 +3,8 @@
 Cinco sprints, só o desenho: o editor de Perfis (o estilo guardado, o nome Freestyle, o renomear),
 os eventos do perfil («Meu comando»), a coluna do ajuste próprio com a ativação e os analógicos,
 e a janela genérica das extensões (a janela do servidor do acessório saiu da 07 em 19/10/2026,
-com o adulto, para a extensão que o serve). As variantes não escolhidas moram em
-`mockup/variantes/` e nunca entram na página publicada nem no produto; a que a recomendação
-escolhe é o próprio `mockup/`.
+com o adulto, para a extensão que o serve). As variantes não escolhidas saíram do repositório
+(`mockup/variantes/` não existe mais); a que a recomendação escolhe é o próprio `mockup/`.
 
 MORDIDAS (cada uma foi feita e viu reprovar; a lista está no relato do tema desenho-perfis-07):
 
@@ -114,11 +113,8 @@ def test_o_desenho_nao_tem_campo_de_nome_do_perfil() -> None:
 
 
 def test_a_10_nao_tem_mais_variante() -> None:
-    """O desenho de 19/10 foi escolhido (todas na recomendada): as variantes da 10 saíram.
-
-    As `10-efeitos-*` são o desenho de 20/10 e ficam como histórico.
-    """
-    sobra = [p.name for p in VARIANTES.glob("10-*.html") if not p.stem.startswith("10-efeitos-")]
+    """O desenho de 19/10 foi escolhido (todas na recomendada), e as de 20/10 também."""
+    sobra = [p.name for p in VARIANTES.glob("10-*.html")]
     assert not sobra, sobra
 
 

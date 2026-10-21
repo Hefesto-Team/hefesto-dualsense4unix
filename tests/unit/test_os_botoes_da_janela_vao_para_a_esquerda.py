@@ -1,9 +1,8 @@
 """Os botões da janela vão para a esquerda (OS-BOTOES-DA-JANELA-VAO-PARA-A-ESQUERDA-01).
 
 Medido em 20/10/2026: o `montar_a_barra` punha os três botões desta casa com `pack_end`, e eles
-saíam à direita do título (minimizar, maximizar, fechar). O desenho aprovado em 20/10
-(`mockup/variantes/2010-botoes-a-esquerda-fechar-maximizar-minimizar.html`) os quer à esquerda,
-na ordem fechar, maximizar, minimizar. A barra montada aqui é a do produto, num
+saíam à direita do título (minimizar, maximizar, fechar). O desenho aprovado em 20/10 os quer
+à esquerda, na ordem fechar, maximizar, minimizar. A barra montada aqui é a do produto, num
 `Gtk.OffscreenWindow` sob a tela de mentira, e a posição é a alocação que o GTK dá.
 
 MORDIDA (executada em 21/10/2026): com o `pack_end` de volta no `montar_a_barra`,

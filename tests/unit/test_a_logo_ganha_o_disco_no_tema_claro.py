@@ -1,7 +1,6 @@
 """A logo ganha o disco escuro no tema claro (O-TEMA-CLARO-NASCE-COMO-EXTENSAO-01).
 
-A escolha de 20/10/2026, ~23h, é a opção A
-(`mockup/variantes/2010-logo-no-tema-claro-A-disco-escuro.html`): a logo fica a de hoje, e o tema
+A escolha de 20/10/2026, ~23h, é a opção A (o disco escuro): a logo fica a de hoje, e o tema
 claro religa o disco `radial-gradient(circle at 35% 30%,#3b2d5c,#1a1b24 70%)` com o aro, que o
 `.logo{background:none;border:none}` da folha desligava. O fundo e o aro viram tokens
 (`--logo-fundo`, `none` na casa; `--logo-aro`, transparente), e `mods.tema.validar` aceita os dois.
@@ -25,7 +24,6 @@ from hefesto_dualsense4unix.mods import tema
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 DEZ = sorted((RAIZ / "mockup").glob("[01][0-9]-*.html"))
 DISCO = "radial-gradient(circle at 35% 30%,#3b2d5c,#1a1b24 70%)"
-VARIANTE = RAIZ / "mockup" / "variantes" / "2010-logo-no-tema-claro-A-disco-escuro.html"
 REGRA_DA_LOGO = re.compile(r"(?m)^\s*\.logo\{([^{}]*)\}")
 FOLHA_CLARA = (":root{--app-bg:#eef0f5;--panel:#ffffff;--elevated:#f5f6fa;--fg:#1c1e29;"
                "--texto-suave:#383c4c;--texto-mudo:#545a70;--comment:#4a5486;--rot-campo:#1d7a3c;"
@@ -54,10 +52,6 @@ def test_sem_tema_a_logo_nao_tem_fundo(desenho: pathlib.Path) -> None:
 def test_com_o_tema_a_logo_pinta_o_disco(desenho: pathlib.Path) -> None:
     aceito = tema.validar(FOLHA_CLARA)
     assert _fundo_da_logo(desenho.read_text(encoding="utf-8"), aceito.tokens) == DISCO
-
-
-def test_o_disco_e_o_da_variante_escolhida() -> None:
-    assert DISCO in VARIANTE.read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize("valor", [
