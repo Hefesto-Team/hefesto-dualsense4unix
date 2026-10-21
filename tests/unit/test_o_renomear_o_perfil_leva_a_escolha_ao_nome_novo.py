@@ -148,6 +148,24 @@ def test_trocar_so_a_caixa_do_nome_tambem_leva_as_lembrancas() -> None:
     assert _do_computador() == "perfil:SackBoy" and _do_perfil("Pragmata") == "perfil:SackBoy"
 
 
+def test_a_lembranca_escrita_pelo_slug_tambem_segue_o_nome_novo() -> None:
+    """A lembrança que diz «sackboy» aponta o mesmo arquivo que «Sackboy» (`load_profile` acha
+    pelo slug), então ela também vai ao nome novo: o dono casa pelo slug, como o apagado."""
+    from hefesto_dualsense4unix.utils import maquina
+
+    _no_disco("Pragmata", "Sackboy")
+    assert maquina.gravar_o_computador(
+        {"global": {"mouse": {"point_and_click": "perfil:sackboy"}}})
+    session.save_last_profile("sackboy")
+    session.lembrar_o_ultimo_jogo("sackboy")
+
+    _renomear("Sackboy", "Sackboy 2")
+
+    assert session.load_last_profile() == "Sackboy 2"
+    assert session._ultimo_jogo_cru() == "Sackboy 2"
+    assert _do_computador() == "perfil:Sackboy 2"
+
+
 def test_a_aba_renomeia_pelo_dono_ao_lado_do_que_esquece_o_apagado() -> None:
     """Um dono só para levar as lembranças: o mesmo módulo do `esquecer_o_perfil_apagado`."""
     import inspect
