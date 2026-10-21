@@ -463,6 +463,22 @@ def test_desligar_o_pad_e_sair_do_nativo_nao_gravam(bancada: _Bancada) -> None:
     assert _modo_no_disco(JOGO) is None
 
 
+#: O perfil que NASCE leva a máscara que o prontuário confirmou para o jogo dele
+#: (D-2010-O-PERFIL-NASCE-COM-O-JOGO-E-A-MASCARA-QUE-O-PRONTUARIO-CONFIRMOU): é o perfil novo
+#: que se escreve, não o modo de um perfil que já existe trocando depois do aparelho. A isenção
+#: é por função, e a função isenta tem de existir (ela não fica valendo para o vazio).
+NASCER_COM_A_MASCARA = ("interface/pacotes/a10_perfis.py", "_o_modo_que_o_jogo_pede")
+
+
+def _isentas(onde: str, arvore: ast.AST) -> set[int]:
+    """As linhas das funções isentas em `onde` (as de `NASCER_COM_A_MASCARA`)."""
+    if onde != NASCER_COM_A_MASCARA[0]:
+        return set()
+    return {linha for no in ast.walk(arvore)
+            if isinstance(no, ast.FunctionDef) and no.name == NASCER_COM_A_MASCARA[1]
+            for linha in range(no.lineno, (no.end_lineno or no.lineno) + 1)}
+
+
 def _chamadas(arvore: ast.AST, nome: str) -> list[int]:
     linhas = []
     for no in ast.walk(arvore):
@@ -493,10 +509,14 @@ def test_o_escritor_do_modo_e_um_so() -> None:
         f"o modo escolhido tem mais de um escritor, ou nenhum: {chamadores}")
 
     escritores: list[str] = []
+    isencao_achada = False
     for py, arvore in _arvores(SRC / "interface"):
         onde = py.relative_to(SRC)
+        isentas = _isentas(onde.as_posix(), arvore)
+        isencao_achada = isencao_achada or bool(isentas)
         for nome in ("secao_do_modo_com_o_caminho", "ProfileModeConfig"):
-            escritores += [f"{onde}:{linha} chama {nome}" for linha in _chamadas(arvore, nome)]
+            escritores += [f"{onde}:{linha} chama {nome}" for linha in _chamadas(arvore, nome)
+                           if linha not in isentas]
         for no in ast.walk(arvore):
             if isinstance(no, ast.Assign | ast.AnnAssign | ast.AugAssign):
                 alvos = no.targets if isinstance(no, ast.Assign) else [no.target]
@@ -506,6 +526,8 @@ def test_o_escritor_do_modo_e_um_so() -> None:
     assert not escritores, (
         "a janela voltou a escrever a seção `mode` do perfil — quem grava o modo "
         "é o daemon, depois do aparelho:\n  " + "\n  ".join(escritores))
+    assert isencao_achada, (
+        f"a isenção {NASCER_COM_A_MASCARA} aponta para função que não existe: tire-a daqui")
 
 
 def _gravacoes(registros: list[dict[str, Any]]) -> list[tuple[str, str]]:
