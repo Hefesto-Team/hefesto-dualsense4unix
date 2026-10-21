@@ -299,3 +299,15 @@ def test_mapa_pedido_que_falta_encerra_com_erro(
     repo = _repositorio(tmp_path / "repo")
     assert R.main(["--raiz", str(repo), "--mapa", str(tmp_path / "falta.txt"), "x.md"]) == 2
     assert "mapa que não existe" in capsys.readouterr().err
+
+
+def test_caminho_que_nao_casa_arquivo_versionado_encerra_com_erro(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Varrer zero arquivo e dizer «0 trocas» seria verde sobre nada (`$PASTAS` no zsh)."""
+    repo = _repositorio(tmp_path / "repo")
+    _commit(repo, "x\n", "feat: x", "2026-08-01T10:00:00-03:00")
+    mapa = _gravar_mapa(tmp_path / "m.txt", {sha(1): sha(2)})
+    base = ["--raiz", str(repo), "--mapa", str(mapa)]
+    assert R.main([*base, "docs/method scripts"]) == 2
+    assert "nenhum arquivo versionado casa" in capsys.readouterr().err

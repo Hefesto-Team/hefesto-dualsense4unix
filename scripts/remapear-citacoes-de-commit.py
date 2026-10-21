@@ -182,12 +182,20 @@ def remapear_texto(texto: str, cadeia: Cadeia, minimo: int = MINIMO) -> Resultad
 
 
 def _arquivos_do_git(raiz: Path, caminhos: Sequence[str]) -> list[Path]:
-    saida = subprocess.run(
-        ["git", "-C", str(raiz), "ls-files", "-z", "--", *caminhos],
-        capture_output=True,
-        check=True,
-    ).stdout
-    return [raiz / p.decode() for p in saida.split(b"\0") if p]
+    """Os arquivos versionados sob cada caminho. Caminho que não casa nada é erro, não silêncio:
+    um `$PASTAS` sem aspas no zsh chega como UM caminho com espaços e varreria zero arquivo."""
+    achados: list[Path] = []
+    for caminho in caminhos:
+        saida = subprocess.run(
+            ["git", "-C", str(raiz), "ls-files", "-z", "--", caminho],
+            capture_output=True,
+            check=True,
+        ).stdout
+        do_caminho = [raiz / p.decode() for p in saida.split(b"\0") if p]
+        if not do_caminho:
+            raise FileNotFoundError(f"nenhum arquivo versionado casa com «{caminho}»")
+        achados.extend(do_caminho)
+    return achados
 
 
 def _commits_do_repositorio(raiz: Path) -> list[str]:
