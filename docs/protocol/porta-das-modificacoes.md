@@ -202,6 +202,12 @@ O leitor imprime uma lista JSON, um objeto por jogo: `chave` e `nome` são exigi
 jogo), `proton` (a versão do Proton do jogo, que conta no «Proton que sobra») e `instalado` (verdadeiro
 quando falta) são opcionais. A linha torta sai sozinha, e as outras ficam.
 
+O leitor que percorre uma pasta escolhida no emulador (a pasta de jogos que o `.ini` aponta, em qualquer
+disco) imprime o objeto `{"jogos": [...], "pastas": [...]}`: `jogos` é a mesma lista, e `pastas` são os
+caminhos absolutos que ele percorreu, até 64. A data de cada pasta da última leitura entra na assinatura
+das bibliotecas, e o jogo que entra nela faz a leitura sair de novo. A pasta torta (relativa, vazia, com
+byte nulo) sai sozinha; a lista sem o objeto continua valendo.
+
 Os lançadores que eram de fábrica e saíram em 19/10/2026 (o Lutris, o RetroArch, o Dolphin e o mGBA)
 estão em `mods/viraram_extensao.json`, com o endereço do repositório de cada um; o Azahar e o KytyPS5
 nascem como extensão. Quem tem a

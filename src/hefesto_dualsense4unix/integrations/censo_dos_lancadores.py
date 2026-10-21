@@ -644,6 +644,11 @@ PRAZO_MAXIMO_DO_LEITOR_S = 10.0
 #: e a biblioteca fica «não pôde ser lida»: a memória da janela não é da modificação.
 SAIDA_MAXIMA_DO_LEITOR = 1 << 20
 JOGOS_MAXIMOS_DO_LEITOR = 5000
+#: As pastas de jogos que um leitor declara por leitura (as que a pessoa escolheu no emulador).
+PASTAS_MAXIMAS_DO_LEITOR = 64
+_TAMANHO_MAXIMO_DA_PASTA = 4096
+#: As pastas que a última leitura de cada extensão percorreu, pela chave da modificação.
+_PASTAS_DA_ULTIMA_LEITURA: dict[str, tuple[str, ...]] = {}
 
 _MAXIMO_DE_AGULHAS = 16
 _CHAVE_DO_JOGO = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
@@ -657,8 +662,9 @@ class LeitorPorProcesso:
     """O comando que devolve a biblioteca de um lançador de modificação, em JSON.
 
     A saída é uma lista de objetos com ``chave``, ``nome``, ``caminho`` e
-    ``titulo_do_jogo``. O comando é relativo à pasta da modificação (ou um nome
-    do ``PATH``, como ``python3``), e roda nela.
+    ``titulo_do_jogo``, ou o objeto ``{"jogos": [...], "pastas": [...]}``, com as pastas
+    que o leitor percorreu (:func:`pastas_da_ultima_leitura`). O comando é relativo à
+    pasta da modificação (ou um nome do ``PATH``, como ``python3``), e roda nela.
     """
 
     modificacao: str
@@ -970,9 +976,14 @@ def ler_por_processo(leitor: LeitorPorProcesso, *,
     except (UnicodeDecodeError, json.JSONDecodeError):
         return BibliotecaDoLancador(nome, ILEGIVEL, leitor.pasta, [],
                                     ["o leitor não devolveu JSON válido"])
+    pastas: object = ()
+    if isinstance(bruto, dict):
+        pastas = bruto.get("pastas", ())
+        bruto = bruto.get("jogos")
     if not isinstance(bruto, list) or len(bruto) > JOGOS_MAXIMOS_DO_LEITOR:
         return BibliotecaDoLancador(nome, ILEGIVEL, leitor.pasta, [],
                                     ["o leitor não devolveu uma lista de jogos"])
+    _PASTAS_DA_ULTIMA_LEITURA[leitor.modificacao] = _pastas_do_leitor(pastas)
     jogos: dict[str, JogoDoLancador] = {}
     for linha in bruto:
         jogo = _jogo_do_leitor(linha, leitor.molde_do_titulo)
@@ -982,6 +993,26 @@ def ler_por_processo(leitor: LeitorPorProcesso, *,
     ignoradas = len(bruto) - len(fora)
     erros = [f"{ignoradas} linhas do leitor não serviam"] if ignoradas else []
     return BibliotecaDoLancador(nome, LIDO, leitor.pasta, fora, erros)
+
+
+def _pastas_do_leitor(bruto: object) -> tuple[str, ...]:
+    """As pastas absolutas que o leitor declarou, até :data:`PASTAS_MAXIMAS_DO_LEITOR`.
+
+    A torta sai.
+    """
+    if not isinstance(bruto, list):
+        return ()
+    fora: list[str] = []
+    for pasta in bruto:
+        if (isinstance(pasta, str) and pasta.startswith("/") and "\x00" not in pasta
+                and len(pasta) <= _TAMANHO_MAXIMO_DA_PASTA and pasta not in fora):
+            fora.append(pasta)
+    return tuple(fora[:PASTAS_MAXIMAS_DO_LEITOR])
+
+
+def pastas_da_ultima_leitura(modificacao: str) -> tuple[str, ...]:
+    """As pastas que a última leitura da extensão percorreu; ``()`` antes da primeira."""
+    return _PASTAS_DA_ULTIMA_LEITURA.get(modificacao, ())
 
 
 def jogos_com_chave_de_janela(
@@ -1028,8 +1059,11 @@ def assinatura_das_bibliotecas(
     """Impressão BARATA das bibliotecas — **do que se LÊ**, não da pasta.
 
     As de fábrica pelas pastas e pelo :data:`_FONTES`; as das extensões ligadas pelas ``fontes``
-    que o leitor de cada uma declara, relativas ao lar. O registro das extensões entra também:
-    ligar ou desligar uma muda a lista de bibliotecas.
+    que o leitor de cada uma declara, relativas ao lar, e pelas pastas de jogos que a última
+    leitura dela percorreu (:func:`pastas_da_ultima_leitura`): a pasta que a pessoa escolheu no
+    emulador mora em qualquer disco, e o ``.ini`` que a aponta não muda quando um jogo entra nela
+    (O-JOGO-NOVO-NA-PASTA-DO-EMULADOR-MUDA-A-ASSINATURA-01). O registro das extensões entra
+    também: ligar ou desligar uma muda a lista de bibliotecas.
     """
     linhas: list[tuple[str, int, int]] = []
     onde = _onde(lar, xdg_config, xdg_data)
@@ -1053,6 +1087,8 @@ def assinatura_das_bibliotecas(
         linhas.append((ext.bloco.chave, len(leitor.fontes), 0))
         for fonte in leitor.fontes:
             linhas.extend(_impressoes_do_padrao(onde.lar, fonte))
+        for declarada in pastas_da_ultima_leitura(leitor.modificacao):
+            linhas.append(_impressao(Path(declarada)))
     return tuple(linhas)
 
 
