@@ -30,7 +30,8 @@ REGRA_DA_LOGO = re.compile(r"(?m)^\s*\.logo\{([^{}]*)\}")
 FOLHA_CLARA = (":root{--app-bg:#eef0f5;--panel:#ffffff;--elevated:#f5f6fa;--fg:#1c1e29;"
                "--texto-suave:#383c4c;--texto-mudo:#545a70;--comment:#4a5486;--rot-campo:#1d7a3c;"
                "--green:#1d7a3c;--cyan:#006d85;--purple:#6a3dc2;--orange:#a35200;--pink:#ad2f6c;"
-               f"--red:#c01f2e;--yellow:#7a6400;--logo-fundo:{DISCO};--logo-aro:#c9cdd9}}")
+               f"--red:#c01f2e;--yellow:#7a6400;--logo-fundo:{DISCO};--logo-aro:#c9cdd9;"
+               "--fundo-da-pagina:#dde1ea}")
 
 
 def _fundo_da_logo(html: str, por_cima: dict[str, str]) -> str:

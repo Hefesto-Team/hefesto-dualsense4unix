@@ -327,6 +327,7 @@ def cores_do_csv():
 CSS_BASE = """
   :root{
     --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
+    --fundo-da-pagina:#11121a;  /* o fundo em volta da caixa, o do `topo.html` */
     --border-sutil:#343746; --border-forte:#44475a;
     --branco:#ffffff; --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#8b8fa8; --comment:#6272a4;
     --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
@@ -337,7 +338,7 @@ CSS_BASE = """
     --m:ui-monospace,"JetBrains Mono","Fira Mono","DejaVu Sans Mono",monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:#11121a;color:var(--fg);font-family:var(--f);
+  body{background:var(--fundo-da-pagina);color:var(--fg);font-family:var(--f);
        display:flex;flex-direction:column;align-items:center;gap:16px}
   .cx{background:var(--app-bg);border-radius:11px;border:1px solid var(--border-sutil);
       overflow:hidden;display:flex;flex-direction:column}

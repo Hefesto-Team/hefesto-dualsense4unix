@@ -13,6 +13,9 @@
   :root{
     --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
     --border-sutil:#343746; --border-forte:#44475a;
+    /* O FUNDO EM VOLTA DA JANELA É UM TOKEN — 21/10/2026, A-MOLDURA-DA-PAGINA-SEGUE-O-TEMA-01:
+       o `#11121a` era cor por extenso no `body`, e tema nenhum o alcançava. */
+    --fundo-da-pagina:#11121a;
     /* DUAS CORES SUBIRAM EM 30/08/2026, e o número é a razão.
        O usuário apontou o sintoma três vezes, em três abas: *"os campos de importância
        tipo cor, brilho, selecione player tão invisíveis"*, *"essas cores de nomes
@@ -121,7 +124,7 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{
-    background:#11121a; color:var(--fg);
+    background:var(--fundo-da-pagina); color:var(--fg);
     font-family:'Space Grotesk',system-ui,sans-serif;
     /* O RECUO TEM DONO — `--recuo-do-corpo`, no `:root` de baixo. Ele entra
        DUAS vezes na conta da altura da `.janela` (em cima e embaixo), e era
@@ -134,7 +137,7 @@
 
      ELA ERA `width:1180px` FIXO. Ela, com o produto instalado e os quatro
      DualSense na mesa: *"o background fica completamente preto"*. Medido: não
-     era falta de fundo — o `body` já pinta `#11121a` logo acima, e o que ela
+     era falta de fundo — o `body` já pinta `--fundo-da-pagina` logo acima, e o que ela
      via era a cor da casa, só que MUITA: a janela maximizada tem ~1900px e o
      desenho parava em 1180, deixando ~360px de casa de cada lado.
 

@@ -43,8 +43,9 @@
   /* A CAIXA DA JANELA — 24/09/2026, decisão de produto: «vira caixa da janela,
      rolando por dentro». O recuo e o tamanho são os das abas (as três
      linhas no fim deste bloco); o cabeçalho fica e o `.corpo` rola. */
+  :root { --fundo-da-pagina: #11121a; }  /* o fundo em volta, o do `topo.html` */
   body {
-    margin: 0; background: #11121a; color: var(--color-ink);
+    margin: 0; background: var(--fundo-da-pagina); color: var(--color-ink);
     font-family: var(--font-corpo); font-size: var(--text-base); line-height: 1.55;
     -webkit-font-smoothing: antialiased;
     display: flex; flex-direction: column; align-items: center;

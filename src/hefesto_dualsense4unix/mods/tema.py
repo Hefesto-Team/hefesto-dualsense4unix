@@ -24,6 +24,10 @@ TAMANHO_MAXIMO = 16 * 1024
 
 TEXTOS = ("--fg", "--texto-suave", "--texto-mudo", "--comment", "--rot-campo")
 FUNDOS = ("--app-bg", "--panel", "--elevated")
+#: O fundo em volta da janela (o ``body``), um tom abaixo do ``--app-bg`` (21/10/2026,
+#: A-MOLDURA-DA-PAGINA-SEGUE-O-TEMA-01). Sobre ele só cai o texto do ``body``, o ``--fg``: é esse
+#: par que a régua mede, e não os cinco textos de dentro da janela, que nunca pintam ali.
+FUNDO_DA_PAGINA = "--fundo-da-pagina"
 #: As cores de destaque, que as páginas também usam como cor de texto (título, estado, botão).
 ACENTOS = ("--green", "--cyan", "--purple", "--orange", "--pink", "--red", "--yellow")
 #: O piso do acento: o da WCAG para componente e texto em negrito. A palavra ao lado do acento
@@ -33,7 +37,7 @@ LIMIAR_DO_ACENTO = 3.0
 #: Os tokens de cor do ``:root`` da casa que um tema pode trocar.
 TOKENS_DA_CASA = frozenset({
     *TEXTOS, *FUNDOS, *ACENTOS, "--border-sutil", "--border-forte", "--sel-bg", "--linha",
-    "--rot-linha", "--logo-aro",
+    "--rot-linha", "--logo-aro", FUNDO_DA_PAGINA,
 })
 #: O fundo da logo (``none`` na casa): o tema claro diz o disco escuro, para a logo de sempre
 #: pintar sobre ele (20/10/2026, O-TEMA-CLARO-NASCE-COMO-EXTENSAO-01). Aceita ``none``, uma cor ou
@@ -248,7 +252,10 @@ def validar(folha: str, *, casa: dict[str, str] | None = None,
 def _conferir_o_contraste(tokens: dict[str, str], casa: dict[str, str],
                           apelidos: dict[str, str]) -> None:
     valores = valores_pintados(casa, tokens, apelidos)
-    for nome in (*TEXTOS, *FUNDOS, *ACENTOS):
+    # a página publicada antes do token não o tem: lá o fundo é cor por extenso, e tema nenhum o
+    # troca
+    moldura = (FUNDO_DA_PAGINA,) if FUNDO_DA_PAGINA in valores else ()
+    for nome in (*TEXTOS, *FUNDOS, *ACENTOS, *moldura):
         c = cor(valores.get(nome, ""))
         if c is None:
             raise TemaRecusadoError(f"Não sei a cor de «{nome}» na casa: o tema não liga.")
@@ -263,6 +270,12 @@ def _conferir_o_contraste(tokens: dict[str, str], casa: dict[str, str],
             raise TemaRecusadoError(
                 f"O texto ficaria ilegível: «{texto}» sobre «{fundo}» dá {_numero(razao)}, "
                 f"e o mínimo é {_numero(limiar)}.")
+    for fundo in moldura:
+        razao = contraste(valores["--fg"], valores[fundo])
+        if razao < LIMIAR_DO_CONTRASTE:
+            raise TemaRecusadoError(
+                f"O texto ficaria ilegível: «--fg» sobre «{fundo}» dá {_numero(razao)}, "
+                f"e o mínimo é {_numero(LIMIAR_DO_CONTRASTE)}.")
 
 
 def folha_do_manifesto(bloco: dict[str, Any] | None, pasta: Path) -> str:
@@ -336,6 +349,7 @@ __all__ = [
     "ACENTOS",
     "FUNDOS",
     "FUNDO_DA_LOGO",
+    "FUNDO_DA_PAGINA",
     "LIMIAR_DO_ACENTO",
     "LIMIAR_DO_CONTRASTE",
     "PLASTICOS",

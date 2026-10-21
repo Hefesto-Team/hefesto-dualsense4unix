@@ -92,7 +92,10 @@ def test_a_casa_de_hoje_passa_na_propria_regua_e_o_tema_valido_sai_importante() 
 #: O tema claro de fundos e textos, sem dizer os acentos: na casa de 20/10 ele passava, com o
 #: rótulo verde #50fa7b a 1,20:1 sobre o fundo claro.
 CLARO_SEM_ACENTOS = (":root{--app-bg:#eef0f5;--panel:#ffffff;--elevated:#f5f6fa;--fg:#1c1e29;"
-                     "--texto-suave:#383c4c;--texto-mudo:#545a70;--comment:#4a5486")
+                     "--texto-suave:#383c4c;--texto-mudo:#545a70;--comment:#4a5486"
+                     # a moldura clara (A-MOLDURA-DA-PAGINA-SEGUE-O-TEMA-01): o texto escuro do
+                     # `body` sumiria no `#11121a` da casa
+                     ";--fundo-da-pagina:#dde1ea")
 #: Os acentos escuros do tema claro, sem o rótulo: ele segue o verde pelo apelido da casa.
 ACENTOS_ESCUROS = (";--green:#1d7a3c;--cyan:#006d85;--purple:#6a3dc2;--orange:#a35200;"
                    "--pink:#ad2f6c;--red:#c01f2e;--yellow:#7a6400")
