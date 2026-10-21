@@ -83,9 +83,11 @@ def _declaracao(recarregar: bool = False) -> Any:
 
 
 def _mesa_do_radio(recarregar: bool = False) -> Any:
-    """Adaptadores e rádios vizinhos, lidos do `/sys` — uma vez, e no botão."""
+    """Adaptadores e rádios vizinhos do `/sys`: uma vez (no fundo; `None` até chegar) e no botão."""
     global _MESA_DO_RADIO
-    if _MESA_DO_RADIO is None or recarregar:
+    if _MESA_DO_RADIO is None and not recarregar:
+        return em_fundo.em_fundo("mesa-do-radio", lambda: _mesa_do_radio(recarregar=True), 0.0)
+    if recarregar:
         try:
             perfil._com_o_src()
             from hefesto_dualsense4unix.integrations import mesa_de_radio
@@ -357,7 +359,12 @@ def _reler_a_declaracao() -> Any:
 
 
 def _conferencias() -> list[Any]:
-    """As conferências que cabem NO TIQUE — as três que não forkam processo."""
+    """As três conferências que não forkam processo: o tique leva a última, lida no fundo."""
+    return list(em_fundo.em_fundo("conferencias", _ler_as_conferencias, CONFERENCIAS_S) or [])
+
+
+def _ler_as_conferencias() -> list[Any]:
+    """As três, no `/sys` e no `/proc` — num fio de `em_fundo`, nunca no da janela."""
     try:
         perfil._com_o_src()
         from hefesto_dualsense4unix.integrations import exame_da_mesa
@@ -3991,6 +3998,8 @@ def _a_saude_do_wifi(rede: dict[str, Any], usb3: bool) -> tuple[Any, str, str]:
 _DESCOBERTA = receptor_sem_fio.Descoberta()
 #: de quanto em quanto a porta se relê enquanto o «Descobrir a faixa» anda (só então).
 RELER_A_PORTA_NO_GESTO_S = 2.0
+#: De quanto em quanto as três conferências do tique se releem no fundo.
+CONFERENCIAS_S = 1.0
 #: o último vizinho que o gesto viu na porta: com o receptor TIRADO a linha dele some do censo, e
 #: é nela que o passo («Medindo sem ele…», «Ponha o receptor de volta») se diz.
 _VISTO_NO_GESTO: dict[str, dict[str, Any]] = {}
