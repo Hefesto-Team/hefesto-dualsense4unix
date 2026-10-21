@@ -704,6 +704,7 @@ async def test_o_ipc_ocupado_e_a_recusa_e_o_parametro_torto_levanta(
 _DEPOIS_DO_RADIO_MOVER = (
     "mira.set", "haptica.testar", "radio.busca.set", "radio.dispensar", "motion.calibrate",
     "perfil.ativacao.set", "perfil.analogicos.set", "perfil.cursor.set",  # (noqa-acento) métodos
+    "sequencia.gravar", "sequencia.tocar",
 )
 
 
