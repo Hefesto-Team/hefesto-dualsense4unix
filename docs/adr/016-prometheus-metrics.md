@@ -189,7 +189,7 @@ código e cobra o mesmo número aqui
 
 **O veredito de 25/07, repetido na nota de 01/08, caducou no mesmo dia em que
 aquela nota foi escrita.** As métricas ganharam chave de usuário em 01/08/2026
-(commit `9799593`, PROMESSA-NÃO-CUMPRIDA-01/C1), e são duas variáveis de
+(commit `f344a8e`, PROMESSA-NÃO-CUMPRIDA-01/C1), e são duas variáveis de
 ambiente, não uma:
 
 - `HEFESTO_DUALSENSE4UNIX_METRICS_ENABLED=1` liga o endpoint. Só o valor `"1"`
