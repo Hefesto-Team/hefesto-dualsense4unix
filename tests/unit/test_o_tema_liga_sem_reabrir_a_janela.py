@@ -142,3 +142,64 @@ def test_o_registro_que_muda_troca_o_tema_so_quando_a_folha_muda(
     monkeypatch.setattr(janela, "folha_do_tema", lambda: CLARO)
     janela.JanelaDaAba._o_registro_das_extensoes_mudou(quem)  # type: ignore[arg-type]
     assert trocadas == [CLARO]
+
+
+_SONDA_DO_PAR = r"""
+import json, pathlib, sys
+from hefesto_dualsense4unix.utils.tela_de_mentira import garantir_tela_de_mentira
+garantir_tela_de_mentira(anunciar=False)
+import gi
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk
+from hefesto_dualsense4unix.interface.janela import pedir_a_variante
+
+CLARO = sys.argv[1]
+ajustes = Gtk.Settings.get_default()
+ajustes.set_property("gtk-theme-name", "casa-de-mentira-dark")
+
+def fundo_da_lista():
+    janela = Gtk.OffscreenWindow()
+    janela.add(Gtk.TreeView())
+    janela.set_default_size(40, 40)
+    janela.show_all()
+    while Gtk.events_pending():
+        Gtk.main_iteration()
+    foto = janela.get_pixbuf()
+    i = 20 * foto.get_rowstride() + 20 * foto.get_n_channels()
+    cor = "#%02x%02x%02x" % tuple(foto.get_pixels()[i:i + 3])
+    janela.destroy()
+    return cor
+
+saida = []
+for folha in (CLARO, "", CLARO):
+    pedir_a_variante(folha)
+    saida.append([ajustes.get_property("gtk-theme-name"), fundo_da_lista()])
+print(json.dumps(saida))
+"""
+
+
+def test_o_tema_claro_troca_o_tema_da_sessao_que_so_existe_escuro(tmp_path: pathlib.Path) -> None:
+    """O COSMIC grava na sessão o nome do tema escuro (`adw-gtk3-dark`), e nele o pedido da
+    variante clara não muda nada: a lista do popup do `<select>` saía escura no meio da tela clara.
+    O tema claro troca o tema pelo par claro dele, e a casa escura volta ao da sessão.
+
+    MORDIDA (executada em 21/10/2026): com `o_par_claro` devolvendo vazio, a lista do tema claro
+    sai `#1e1e1e` e reprova."""
+    for nome, fundo in (("casa-de-mentira", "#ffffff"), ("casa-de-mentira-dark", "#1e1e1e")):
+        pasta = tmp_path / "themes" / nome / "gtk-3.0"
+        pasta.mkdir(parents=True)
+        (pasta / "gtk.css").write_text(f"treeview.view {{ background-color: {fundo}; }}\n",
+                                       encoding="utf-8")
+    ambiente = dict(os.environ, PYTHONDONTWRITEBYTECODE="1", XDG_DATA_HOME=str(tmp_path))
+    filho = subprocess.run([sys.executable, "-c", _SONDA_DO_PAR, CLARO], env=ambiente,
+                           capture_output=True, text=True, timeout=120)
+    assert filho.returncode == 0, filho.stderr[-600:]
+    lido = json.loads(filho.stdout.strip().splitlines()[-1])
+    assert lido == [["casa-de-mentira", "#ffffff"], ["casa-de-mentira-dark", "#1e1e1e"],
+                    ["casa-de-mentira", "#ffffff"]], lido
+
+
+@pytest.mark.parametrize(("nome", "par"), [
+    ("adw-gtk3", ""), ("Adwaita-dark", "Adwaita"), ("um-tema-que-nao-existe-dark", "")])
+def test_o_par_claro_so_existe_quando_o_claro_existe(nome: str, par: str) -> None:
+    assert janela.o_par_claro(nome) == par

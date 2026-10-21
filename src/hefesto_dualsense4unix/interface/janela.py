@@ -155,19 +155,50 @@ def _tokens_da_casa_ou_nada() -> dict[str, str]:
         return {}
 
 
+#: O par (escuro, claro) que o tema claro trocou, para a casa escura voltar ao escuro da sessão.
+_O_ESCURO_TROCADO: list[tuple[str, str]] = []
+
+
+def o_par_claro(nome: str) -> str:
+    """O par claro de um tema GTK que só existe escuro (`adw-gtk3-dark` → `adw-gtk3`), ou vazio.
+
+    O COSMIC grava na sessão o nome do tema escuro, e nele o pedido da variante clara não muda
+    nada: medido em 21/10/2026, a lista do ``adw-gtk3-dark`` sai ``#1e1e1e`` com
+    ``gtk-application-prefer-dark-theme`` em falso, e a do ``adw-gtk3`` sai ``#ffffff``.
+    """
+    if not nome.endswith("-dark"):
+        return ""
+    base = nome.removesuffix("-dark")
+    pastas = [pathlib.Path(GLib.get_user_data_dir()) / "themes", pathlib.Path.home() / ".themes",
+              *(pathlib.Path(d) / "themes" for d in GLib.get_system_data_dirs())]
+    if base == "Adwaita" or any((p / base / "gtk-3.0" / "gtk.css").is_file() for p in pastas):
+        return base
+    return ""
+
+
 def pedir_a_variante(folha_do_tema: str) -> bool:
     """Pede ao GTK a variante do tema do sistema que combina com o tema de cores.
 
     O popup do ``<select>`` e o resto que o CSS da página não alcança seguem a variante: escura
-    com a casa (BUG-GUI-COSMIC-WIDGET-CONTRAST-01), clara com um tema claro. Devolve se é escura.
+    com a casa (BUG-GUI-COSMIC-WIDGET-CONTRAST-01), clara com um tema claro, trocando o tema da
+    sessão que só existe escuro pelo par claro dele. Devolve se é escura.
     """
     escura = _tema_das_mods.e_escuro(_tema_das_mods.tokens_da_folha(folha_do_tema),
                                      _tokens_da_casa_ou_nada())
+    ajustes = Gtk.Settings.get_default()
     if escura:
+        if _O_ESCURO_TROCADO and ajustes is not None:
+            escuro, claro = _O_ESCURO_TROCADO.pop()
+            if ajustes.get_property("gtk-theme-name") == claro:
+                ajustes.set_property("gtk-theme-name", escuro)
         tema.pedir_a_variante_escura()
         return True
-    ajustes = Gtk.Settings.get_default()
     if ajustes is not None:
+        nome = str(ajustes.get_property("gtk-theme-name") or "")
+        claro = o_par_claro(nome)
+        if claro:
+            _O_ESCURO_TROCADO[:] = [(nome, claro)]
+            ajustes.set_property("gtk-theme-name", claro)
         ajustes.set_property("gtk-application-prefer-dark-theme", False)
     return False
 
