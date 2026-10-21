@@ -2,7 +2,8 @@
 
 O git não guarda pasta vazia; guarda a casca que sobra dela: um `__init__.py` de 0 bytes, um
 `.gitkeep` ou um README de uma linha sozinhos numa pasta sem mais nada. Foi assim que
-`tui/screens/` ficou, sem que ninguém o importasse (a janela antiga saiu e o pacote ficou). A
+`tui/screens/` ficou, sem que ninguém o importasse (nasceu esboço em 20/04/2026 e nunca
+ganhou um módulo). A
 régua mede os arquivos VERSIONADOS (`git ls-files`) e reprova a pasta cujo único conteúdo é
 casca. Pasta com subpasta que tem arquivo não é casca (um pacote-pai com `__init__.py` vazio e
 subpacotes é legítimo). Exceção, se houver, entra em `EXCECOES` com o motivo.
