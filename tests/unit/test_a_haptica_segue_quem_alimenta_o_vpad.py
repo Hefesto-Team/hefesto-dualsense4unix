@@ -124,8 +124,41 @@ JOGOS = ("um-jogador", "todos")
 @pytest.fixture
 def kernel(monkeypatch: pytest.MonkeyPatch) -> Iterator[KernelDoHidPlaystation]:
     """O kernel de mentira da O-VPAD, com a recusa do ``hid_playstation``."""
+    _o_bind_conta_o_tempo_sem_esperar(monkeypatch)
     with kernel_de_mentira(monkeypatch) as k:
         yield k
+
+
+def _o_bind_conta_o_tempo_sem_esperar(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O ``wait_for_bind`` do vpad real corre num relógio que só anda quando ele dorme.
+
+    A-SUITE-INTEIRA-CABE-EM-VINTE-MINUTOS-01 (21/10/2026): medido com ``cProfile``, 836 vpads
+    reais nascem neste arquivo e cada um dormia os 50 ms de assentamento do ``wait_for_bind``
+    (``_BIND_SETTLE_S``) em relógio de parede: 42 s dos 53 s. O kernel de mentira responde
+    NA HORA (o ``START`` está na fila quando o ``CREATE2`` volta), então o relógio de parede não
+    prova nada que o virtual não prove: o laço de bind roda inteiro, com o mesmo número de
+    voltas e a mesma conferência de «o probe recusou» a cada uma. Só o ``time_fn``/``sleep_fn``
+    DESTA espera são trocados e voltam ao real ao sair, para a graça e o rumble do vpad não
+    verem o relógio emprestado.
+    """
+    from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
+
+    original = UhidDualSense.wait_for_bind
+
+    def _sem_dormir(self: UhidDualSense, timeout_s: float = 2.0) -> bool:
+        tempo_real, sono_real = self.time_fn, self.sleep_fn
+        agora = [tempo_real()]
+
+        def _dorme(segundos: float) -> None:
+            agora[0] += segundos
+
+        self.time_fn, self.sleep_fn = (lambda: agora[0]), _dorme
+        try:
+            return original(self, timeout_s)
+        finally:
+            self.time_fn, self.sleep_fn = tempo_real, sono_real
+
+    monkeypatch.setattr(UhidDualSense, "wait_for_bind", _sem_dormir)
 
 
 def com_dois_pontos(uniq: str) -> str:
