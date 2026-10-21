@@ -16,7 +16,7 @@ import threading
 import time
 from typing import Any, NamedTuple
 
-from . import TRAVESSAO, Contexto, confirmacao, jogador_de, registrar
+from . import TRAVESSAO, Contexto, confirmacao, fios, jogador_de, registrar
 
 CADEADO_CEGO = "cadeado-cego"
 
@@ -793,9 +793,9 @@ class _VigiaDoSteamInput:
             if self._em_curso:
                 return
             self._em_curso = True
-        threading.Thread(
-            target=self._corpo, name="hefesto-steam-input", daemon=True
-        ).start()
+        fios.soltar(
+            "hefesto-steam-input", self._corpo
+        )
 
     def _corpo(self) -> None:
         try:

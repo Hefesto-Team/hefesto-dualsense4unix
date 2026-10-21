@@ -50,7 +50,7 @@ from hefesto_dualsense4unix.interface.cartao_do_controle import (
 from hefesto_dualsense4unix.profiles import estilos_de_jogo
 from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
 
-from . import Contexto, gesto, perfil, registrar
+from . import Contexto, fios, gesto, perfil, registrar
 from . import a02_controles as a02
 from . import a06_navegacao as a06
 from . import em_fundo as fundo
@@ -897,7 +897,7 @@ def _soltar_em_fundo(estado: dict[str, Any]) -> None:
             except Exception as erro:
                 print(f"[sequência] a parada não chegou ao serviço: {erro}", file=sys.stderr)
 
-    threading.Thread(target=parar, name="a13-parar-de-ouvir", daemon=True).start()
+    fios.soltar("a13-parar-de-ouvir", parar)
 
 
 def _parar_de_ouvir(estado: dict[str, Any], *, ja_parou: bool = False) -> None:

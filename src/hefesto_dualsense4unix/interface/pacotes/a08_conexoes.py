@@ -30,7 +30,7 @@ from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.interface.monta import dono_na_linha
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 
-from . import TODOS_OS_LUGARES, Contexto, em_fundo, nome_do_jogador, perfil, registrar
+from . import TODOS_OS_LUGARES, Contexto, em_fundo, fios, nome_do_jogador, perfil, registrar
 
 #: `state_full` (`radio_ar`, `radio_governador`), que o daemon publica.
 SEM_DONO: dict[str, str] = {}
@@ -385,14 +385,12 @@ def _pedir_o_exame_de_entrada() -> None:
     if _EXAME_PEDIDO:
         return
     _EXAME_PEDIDO = True
-    import threading
 
     def correr() -> None:
         with contextlib.suppress(Exception):
             _correr_o_exame_completo()
 
-    threading.Thread(target=correr, name="hefesto-exame-de-entrada",
-                     daemon=True).start()
+    fios.soltar("hefesto-exame-de-entrada", correr)
 
 
 def _calada(item: Any) -> bool:
@@ -2058,8 +2056,7 @@ def acionador_nova_tecla(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
     with _TRAVA_DO_RASCUNHO:
         _RASCUNHO = r
         r.esperando = True
-    threading.Thread(target=_esperar_a_tecla, args=(r, dispositivo), name="acionador-tecla",
-                     daemon=True).start()
+    fios.soltar("acionador-tecla", _esperar_a_tecla, r, dispositivo)
     return {"armou": True}
 
 

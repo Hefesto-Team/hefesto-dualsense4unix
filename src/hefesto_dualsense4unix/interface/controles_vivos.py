@@ -92,7 +92,6 @@ import inspect
 import json
 import pathlib
 import sys
-import threading
 import time
 from collections import deque
 from typing import Any
@@ -110,6 +109,8 @@ RAIZ = AQUI.parents[2]
 
 import mesa_viva  # noqa: E402
 import monta  # noqa: E402  (o gerador do mockup, usado como BIBLIOTECA)
+
+from hefesto_dualsense4unix.interface.pacotes import fios  # noqa: E402
 
 
 import aba02  # noqa: E402  isort:skip
@@ -1165,7 +1166,7 @@ class Janela:
         alvos = list(self.uniqs)
         if not alvos:
             return True
-        threading.Thread(target=self._ler_pactl, args=(alvos,), daemon=True).start()
+        fios.soltar("hefesto-pactl-dos-controles", self._ler_pactl, alvos)
         return True
 
     def _ler_pactl(self, alvos: list[str]) -> None:

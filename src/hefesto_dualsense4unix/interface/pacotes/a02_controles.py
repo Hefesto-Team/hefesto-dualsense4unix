@@ -132,6 +132,7 @@ from . import (
     NOME_SEM_LEITURA,
     TRAVESSAO,
     Contexto,
+    fios,
     identidade_de,
     poda,
     registrar,
@@ -719,7 +720,6 @@ def sono_do_canal(uniq: str) -> str:
 def _camada_1(entradas: tuple[tuple[str, int | None], ...],
               na_mesa: tuple[str, ...]) -> dict[str, Any]:
     """O cache da camada 1, renovado em THREAD a cada :data:`CAMADA_1_S`."""
-    import threading
     import time
 
     if not na_mesa or _CAMADA_1_EM_VOO[0]:
@@ -754,8 +754,7 @@ def _camada_1(entradas: tuple[tuple[str, int | None], ...],
             regra = None
         return novo, sono, regra
 
-    threading.Thread(target=renovar, name="hefesto-rota-camada-1",
-                     daemon=True).start()
+    fios.soltar("hefesto-rota-camada-1", renovar)
     return _CAMADA_1
 
 
@@ -1774,12 +1773,9 @@ def _fora_do_voo(fn: Callable[[], None]) -> None:
     — perguntar a ele se a janela está de pé receberia sempre "sim", que é o
     instrumento respondendo por si mesmo.
     """
-    import threading
-
     if not _ponte.dentro_da_janela():
         return
-    threading.Thread(target=fn, name="hefesto-som-de-confirmacao",
-                     daemon=True).start()
+    fios.soltar("hefesto-som-de-confirmacao", fn)
 
 
 def _confirmar_com_som(ctx: Contexto, uniq: str) -> None:

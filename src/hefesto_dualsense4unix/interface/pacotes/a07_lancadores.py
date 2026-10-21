@@ -166,7 +166,7 @@ from hefesto_dualsense4unix.integrations import lista_de_exclusao
 from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
 from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 
-from . import Contexto, perfil, registrar
+from . import Contexto, fios, perfil, registrar
 
 #: `RuntimeError`/`ValueError` (`hefesto_vivo`), não a um terminal.
 _LOG = logging.getLogger(__name__)
@@ -216,9 +216,7 @@ class _Vigia:
             if self._em_curso:
                 return
             self._em_curso = True
-        threading.Thread(
-            target=self._corpo, name="hefesto-lancadores", daemon=True
-        ).start()
+        fios.soltar("hefesto-lancadores", self._corpo)
 
     def _corpo(self) -> None:
         try:
@@ -1299,8 +1297,7 @@ class _Agora:
                 self._em_curso = True
             mod, ponte, estado = self._mod, self._ponte, self._estado
         if precisa:
-            threading.Thread(target=self._corpo, args=(mod, ponte), name="hefesto-agora",
-                             daemon=True).start()
+            fios.soltar("hefesto-agora", self._corpo, mod, ponte)
         return estado
 
     def _corpo(self, mod: str, ponte: Any) -> None:

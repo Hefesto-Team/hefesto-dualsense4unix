@@ -2860,9 +2860,7 @@ class LeitorDoEstado:
         if self._fio is not None:
             return
         self._uma_leitura()
-        self._fio = threading.Thread(
-            target=self._laco, name="hefesto-estado", daemon=True)
-        self._fio.start()
+        self._fio = pacotes.fios.soltar("hefesto-estado", self._laco)
 
     def parar(self) -> None:
         """Pede o fim do fio. Ele é `daemon`, então o processo não o espera."""
@@ -3131,7 +3129,7 @@ class Piloto:
                     lambda r=resposta: self._vivo_voltou(pagina, nome, chave,
                                                          serial, r))
 
-        threading.Thread(target=trabalhar, daemon=True).start()
+        pacotes.fios.soltar(f"hefesto-vivo-{nome}", trabalhar)
 
     def _vivo_voltou(self, pagina: str, nome: str, chave: str, serial: str,
                      resposta: object) -> bool:
@@ -3447,7 +3445,7 @@ class Piloto:
             if dado is not None:
                 GLib.idle_add(lambda: self._entregar(pagina, dado, reexame=False))
 
-        threading.Thread(target=ler, name="arranjo-desta-maquina", daemon=True).start()
+        pacotes.fios.soltar("arranjo-desta-maquina", ler)
 
     def _as_faixas_do_mapa(self) -> dict[str, Any]:
         """A faixa de cada rádio, pela MESMA conta da aba Conexões, com o estado do último tique."""
@@ -3572,7 +3570,7 @@ class Piloto:
             self._externos = externos_na_mesa(
                 None, bruto if isinstance(bruto, list) else ())
 
-        threading.Thread(target=perguntar, daemon=True).start()
+        pacotes.fios.soltar("hefesto-externos", perguntar)
 
     def _da_resposta(
         self, st: dict[str, Any] | None, erro: BaseException | None

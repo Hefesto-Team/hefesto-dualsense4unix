@@ -15,7 +15,7 @@ import time
 from collections.abc import Callable
 from typing import Any
 
-from . import perfil
+from . import fios, perfil
 
 _FUNDO: dict[str, tuple[float, Any]] = {}
 _FUNDO_EM_VOO: set[str] = set()
@@ -48,7 +48,7 @@ def em_fundo(chave: str, ler: Callable[[], Any], validade_s: float) -> Any:
     if LER_NA_HORA:
         trabalhar()
         return _FUNDO[chave][1]
-    threading.Thread(target=trabalhar, name=f"radio-{chave}", daemon=True).start()
+    fios.soltar(f"radio-{chave}", trabalhar)
     return None if visto is None else visto[1]
 
 

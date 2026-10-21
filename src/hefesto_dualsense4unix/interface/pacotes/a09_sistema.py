@@ -47,7 +47,6 @@ import math
 import re
 import sys
 import textwrap
-import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -72,6 +71,7 @@ from hefesto_dualsense4unix.utils import maquina as _maquina
 from . import (
     TRAVESSAO,
     Contexto,
+    fios,
     identidade_de,
     jogador_de,
     na_fila,
@@ -498,7 +498,7 @@ def _prontuario(pode_perguntar: bool = True) -> tuple[str, str] | None:
               or agora - float(_PRONTUARIO.get("quando") or 0.0) > PRONTUARIO_S)
     if venceu and pode_perguntar and not _PRONTUARIO_EM_VOO[0]:
         _PRONTUARIO_EM_VOO[0] = True
-        threading.Thread(target=_perguntar_o_prontuario, daemon=True).start()
+        fios.soltar("hefesto-prontuario", _perguntar_o_prontuario)
     achado = _PRONTUARIO.get("achado")
     return achado if isinstance(achado, tuple) else None
 
@@ -877,9 +877,7 @@ def _faixa_lenta(state: dict[str, Any] | None,
         return _LENTO["valor"]  # type: ignore[no-any-return]
     if agora - float(_LENTO["quando"]) >= LENTO_S and not _LENTO_EM_VOO[0]:
         _LENTO_EM_VOO[0] = True
-        threading.Thread(target=_guardar_a_faixa_lenta,
-                         args=(state, mesa, _LENTO_SELO[0]),
-                         daemon=True).start()
+        fios.soltar("hefesto-faixa-lenta", _guardar_a_faixa_lenta, state, mesa, _LENTO_SELO[0])
     return _LENTO["valor"]  # type: ignore[no-any-return]
 
 

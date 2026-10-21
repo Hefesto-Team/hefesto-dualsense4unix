@@ -45,6 +45,7 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
+from . import fios
 from .camada import ABAS_POR_CONTROLE, no_nativo, recusa_no_nativo
 
 Pintura = Callable[["Contexto"], "dict[str, Any]"]
@@ -376,9 +377,7 @@ def na_fila(filas: Iterable[str], trabalho: Callable[[], Any], *,
                     if _O_ULTIMO_DA_FILA.get(f) is meu:
                         del _O_ULTIMO_DA_FILA[f]
 
-    fio = threading.Thread(target=correr, name=nome or "na-fila", daemon=True)
-    fio.start()
-    return fio
+    return fios.soltar(nome or "na-fila", correr)
 
 
 def filas_do_gesto(pagina: str, nome: str, o: dict[str, Any]) -> tuple[str, ...]:
