@@ -294,7 +294,8 @@ def test_a_linha_de_comando_liga_com_o_que_mostrou_e_nao_com_o_disco_de_depois(
         _trocar_o_pedido_no_disco(lar, [*mostrado.permissoes, "rede:internet"])
         return mostrado
 
-    monkeypatch.setattr(cmd_mod, "manifesto_instalado", mostra_e_troca)
+    # o cmd_mod importa dentro da função: o nome que ele lê mora no instalador
+    monkeypatch.setattr(instalador, "manifesto_instalado", mostra_e_troca)
     saiu = CliRunner().invoke(cmd_mod.app, ["ligar", "exemplo", "--sim"])
 
     assert saiu.exit_code == 1, saiu.output

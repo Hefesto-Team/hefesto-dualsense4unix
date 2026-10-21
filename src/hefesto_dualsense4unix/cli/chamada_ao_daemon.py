@@ -13,8 +13,6 @@ from typing import Any
 import typer
 from rich.console import Console
 
-from hefesto_dualsense4unix.cli.ipc_client import IpcError
-
 
 def chamar_o_daemon(
     console: Console, method: str, params: dict[str, Any] | None = None
@@ -26,6 +24,7 @@ def chamar_o_daemon(
         prazo_vencido,
         teto_da_linha_de_comando,
     )
+    from hefesto_dualsense4unix.cli.ipc_client import IpcError
 
     try:
         return _run_call(method, params, timeout=teto_da_linha_de_comando(method))

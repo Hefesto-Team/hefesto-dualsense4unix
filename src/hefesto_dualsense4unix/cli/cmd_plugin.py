@@ -1,7 +1,6 @@
 """Subcomando `hefesto-dualsense4unix plugin ...`."""
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 
 import typer
@@ -28,6 +27,8 @@ async def _ipc_call(method: str, params: dict[str, Any]) -> Any:
 @app.command("list")
 def cmd_list() -> None:
     """Lista plugins carregados no daemon."""
+    import asyncio
+
     from hefesto_dualsense4unix.cli.ipc_client import IpcError
 
     try:
@@ -87,6 +88,8 @@ def cmd_desligar() -> None:
 @app.command("reload")
 def cmd_reload() -> None:
     """Recarrega plugins do disco no daemon em execução."""
+    import asyncio
+
     from hefesto_dualsense4unix.cli.ipc_client import IpcError
 
     try:

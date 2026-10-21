@@ -3,14 +3,14 @@ from __future__ import annotations
 
 import contextlib
 from collections.abc import Callable
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 import typer
 from rich.console import Console
 
-from hefesto_dualsense4unix.core.controller import IController
-from hefesto_dualsense4unix.core.led_control import hex_to_rgb
-from hefesto_dualsense4unix.core.trigger_effects import build_from_name
+if TYPE_CHECKING:
+    from hefesto_dualsense4unix.core.controller import IController
+
 
 app = typer.Typer(name="test", help="Exercita efeitos direto no hardware.", no_args_is_help=True)
 console = Console()
@@ -70,6 +70,8 @@ def cmd_trigger(
         False, "--raw", help="mode e valor inteiro (0-255); params sao 7 bytes HID."
     ),
 ) -> None:
+    from hefesto_dualsense4unix.core.trigger_effects import build_from_name
+
     if side not in ("left", "right"):
         raise typer.BadParameter("side deve ser left ou right")
     side_literal: Literal["left", "right"] = "left" if side == "left" else "right"
@@ -193,6 +195,8 @@ _FORMATO_DA_COR = "cor: #RRGGBB ou R,G,B"
 
 def _parse_cor(value: str) -> tuple[int, int, int]:
     """``#RRGGBB``/``RRGGBB`` ou ``R,G,B``; o que não for isso é erro de uso (rc 2)."""
+    from hefesto_dualsense4unix.core.led_control import hex_to_rgb
+
     if value.startswith("#") or len(value) == 6:
         try:
             return hex_to_rgb(value)

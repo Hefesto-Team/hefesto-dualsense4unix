@@ -1,11 +1,21 @@
 """Hefesto - DualSense4Unix — gerenciador DualSense para Linux."""
 
-from importlib.metadata import PackageNotFoundError, version
 
-try:
-    __version__ = version("hefesto-dualsense4unix")
-except PackageNotFoundError:
-    __version__ = "0.9.5"
+def __getattr__(nome: str) -> str:
+    """A versão só se lê quando alguém pede (o `importlib.metadata` custa 27 ms no import).
+
+    O fallback literal é o que `check_version_consistency.py` e o CI conferem contra o pyproject.
+    """
+    if nome != "__version__":
+        raise AttributeError(f"module {__name__!r} has no attribute {nome!r}")
+    from importlib.metadata import PackageNotFoundError, version
+
+    try:
+        __version__ = version("hefesto-dualsense4unix")
+    except PackageNotFoundError:
+        __version__ = "0.9.5"
+    globals()["__version__"] = __version__
+    return __version__
 
 
 def _check_pydantic_v2() -> None:

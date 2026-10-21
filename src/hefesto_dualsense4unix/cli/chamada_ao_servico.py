@@ -16,8 +16,6 @@ from typing import Any
 import typer
 from rich.console import Console
 
-from hefesto_dualsense4unix.cli.ipc_client import IpcError
-
 console = Console()
 
 
@@ -29,6 +27,7 @@ def chamar(metodo: str, params: dict[str, Any] | None = None) -> Any:
         prazo_vencido,
         teto_da_linha_de_comando,
     )
+    from hefesto_dualsense4unix.cli.ipc_client import IpcError
 
     try:
         return _run_call(metodo, params, timeout=teto_da_linha_de_comando(metodo))

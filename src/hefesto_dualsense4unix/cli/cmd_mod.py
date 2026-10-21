@@ -6,27 +6,14 @@ Nenhum comando daqui fala com o serviço pelo IPC: todos escrevem o registro
 from __future__ import annotations
 
 import shutil
+from typing import TYPE_CHECKING
 
 import typer
 from rich.console import Console
 from rich.table import Table
 
-from hefesto_dualsense4unix.mods.instalador import (
-    AvisoParaVerError,
-    InstalacaoRecusadaError,
-    Lugares,
-    Resultado,
-    atualizar,
-    aviso_por_ver,
-    desligar,
-    instalar,
-    ler_estado,
-    ler_registro,
-    ligar,
-    manifesto_instalado,
-    remover,
-)
-from hefesto_dualsense4unix.mods.manifesto import o_que_a_permissao_deixa
+if TYPE_CHECKING:
+    from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError, Resultado
 
 app = typer.Typer(
     name="mod",
@@ -49,6 +36,8 @@ def _recusar(exc: InstalacaoRecusadaError) -> typer.Exit:
 
 
 def _mostrar_permissoes(permissoes: list[str]) -> None:
+    from hefesto_dualsense4unix.mods.manifesto import o_que_a_permissao_deixa
+
     if not permissoes:
         console.print("  [dim]nenhuma permissão[/dim]")
     for palavra in permissoes:
@@ -76,6 +65,12 @@ def cmd_instalar(
     sim: bool = typer.Option(False, "--sim", help="Aceita o aviso da extensão sem perguntar."),
 ) -> None:
     """Instala sem ligar. «Oficial» só com tag assinada pelo time; o resto é «comunidade»."""
+    from hefesto_dualsense4unix.mods.instalador import (
+        AvisoParaVerError,
+        InstalacaoRecusadaError,
+        instalar,
+    )
+
     try:
         try:
             resultado = instalar(origem, ref=ref, aviso_visto="")
@@ -96,6 +91,8 @@ def cmd_atualizar(
     ref: str | None = typer.Option(None, "--ref", help="A tag nova."),
 ) -> None:
     """Baixa de novo; se a versão nova pede permissão nova, ela desliga até o «sim»."""
+    from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError, atualizar
+
     try:
         resultado = atualizar(mod_id, ref=ref)
     except InstalacaoRecusadaError as exc:
@@ -106,6 +103,13 @@ def cmd_atualizar(
 @app.command("listar")
 def cmd_listar() -> None:
     """As modificações instaladas e o estado de cada uma."""
+    from hefesto_dualsense4unix.mods.instalador import (
+        InstalacaoRecusadaError,
+        Lugares,
+        ler_estado,
+        ler_registro,
+    )
+
     try:
         lugares = Lugares.do_xdg()
         registro = ler_registro(lugares.registro)
@@ -134,6 +138,8 @@ def cmd_listar() -> None:
 @app.command("permissoes")  # (noqa-acento): contrato ASCII
 def cmd_permissoes(mod_id: str = typer.Argument(..., help="O id da modificação.")) -> None:
     """O que a modificação instalada pede, uma linha por permissão."""
+    from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError, manifesto_instalado
+
     try:
         manifesto = manifesto_instalado(mod_id)
     except InstalacaoRecusadaError as exc:
@@ -148,6 +154,15 @@ def cmd_ligar(
     sim: bool = typer.Option(False, "--sim", help="Aceita as permissões sem perguntar."),
 ) -> None:
     """Mostra as permissões, pede o «sim» e liga."""
+    from hefesto_dualsense4unix.mods.instalador import (
+        InstalacaoRecusadaError,
+        Lugares,
+        aviso_por_ver,
+        ler_registro,
+        ligar,
+        manifesto_instalado,
+    )
+
     try:
         manifesto = manifesto_instalado(mod_id)
         entrada = ler_registro(Lugares.do_xdg().registro).get(mod_id)
@@ -178,6 +193,8 @@ def cmd_ligar(
 @app.command("desligar")
 def cmd_desligar(mod_id: str = typer.Argument(..., help="O id da modificação.")) -> None:
     """Desliga; o serviço para o processo dela."""
+    from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError, desligar
+
     try:
         entrada = desligar(mod_id)
     except InstalacaoRecusadaError as exc:
@@ -188,6 +205,8 @@ def cmd_desligar(mod_id: str = typer.Argument(..., help="O id da modificação."
 @app.command("remover")
 def cmd_remover(mod_id: str = typer.Argument(..., help="O id da modificação.")) -> None:
     """Para, apaga o código, os dados e a linha do registro, e confere os três."""
+    from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError, remover
+
     try:
         restos = remover(mod_id)
     except InstalacaoRecusadaError as exc:

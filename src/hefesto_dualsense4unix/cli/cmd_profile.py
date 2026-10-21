@@ -15,30 +15,16 @@ from __future__ import annotations
 import json as _json
 from datetime import datetime as _datetime
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
-from pydantic import ValidationError
 from rich.console import Console
 from rich.table import Table
 
-from hefesto_dualsense4unix.cli.ipc_client import IpcError
-from hefesto_dualsense4unix.profiles.loader import (
-    delete_profile,
-    listar_historico,
-    load_all_profiles,
-    load_profile,
-    restaurar_do_historico,
-    save_profile,
-)
-from hefesto_dualsense4unix.profiles.schema import (
-    Match,
-    MatchAny,
-    MatchCriteria,
-    MatchManual,
-    Profile,
-)
-from hefesto_dualsense4unix.profiles.slug import find_by_slug, slugify
 from hefesto_dualsense4unix.utils import identidade
+
+if TYPE_CHECKING:
+    from hefesto_dualsense4unix.profiles.schema import Match, Profile
 
 app = typer.Typer(name="profile", help="Gerencia perfis Hefesto - DualSense4Unix.", no_args_is_help=True)  # noqa: E501
 console = Console()
@@ -46,6 +32,9 @@ console = Console()
 
 def _guarda_slug(name: str, *, force: bool) -> None:
     """Recusa gravar por cima de OUTRO perfil que já ocupa o mesmo arquivo."""
+    from hefesto_dualsense4unix.profiles.loader import load_all_profiles
+    from hefesto_dualsense4unix.profiles.slug import find_by_slug, slugify
+
     if force:
         return
     ocupante = find_by_slug(name, load_all_profiles())
@@ -68,6 +57,7 @@ def _guarda_slug(name: str, *, force: bool) -> None:
 @app.command("list")
 def cmd_list() -> None:
     """Lista os perfis a escolher no diretório XDG — o Freestyle é o botão, não linha."""
+    from hefesto_dualsense4unix.profiles.loader import load_all_profiles
     from hefesto_dualsense4unix.profiles.manager import os_perfis_de_escolher
 
     profiles = os_perfis_de_escolher(load_all_profiles())
@@ -92,6 +82,8 @@ def cmd_list() -> None:
 @app.command("show")
 def cmd_show(name: str) -> None:
     """Mostra o JSON bruto de um perfil."""
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+
     try:
         profile = load_profile(name)
     except FileNotFoundError:
@@ -111,6 +103,8 @@ def cmd_activate(name: str) -> None:
     Só caímos no fallback (controller local + a escolha gravada pelo dono)
     quando o daemon está offline.
     """
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+
     try:
         profile = load_profile(name)
     except FileNotFoundError:
@@ -164,6 +158,14 @@ def cmd_create(
     ),
 ) -> None:
     """Cria um perfil enxuto: só nome, alvo e prioridade; o resto herda o computador."""
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+    from hefesto_dualsense4unix.profiles.schema import (
+        MatchAny,
+        MatchCriteria,
+        MatchManual,
+        Profile,
+    )
+
     _guarda_slug(name, force=force)
     match: Match
     if fallback:
@@ -199,6 +201,7 @@ def cmd_delete(
         frase_da_remocao_do_perfil_ativo,
         perfil_que_esta_valendo,
     )
+    from hefesto_dualsense4unix.profiles.loader import delete_profile
     from hefesto_dualsense4unix.profiles.manager import esquecer_o_perfil_apagado
 
     aviso = frase_da_remocao_do_perfil_ativo(name, perfil_que_esta_valendo(_estado_do_daemon()))
@@ -233,6 +236,8 @@ def cmd_historico(
     name: str = typer.Argument(..., help="Nome ou slug do perfil."),
 ) -> None:
     """Lista as versões guardadas de um perfil (a mais recente por último)."""
+    from hefesto_dualsense4unix.profiles.loader import listar_historico
+
     versoes = listar_historico(name)
     if not versoes:
         console.print(f"[dim]sem histórico guardado para {name!r}[/dim]")
@@ -267,6 +272,8 @@ def cmd_restore(
     ),
 ) -> None:
     """Devolve ao perfil uma versão guardada (byte a byte)."""
+    from hefesto_dualsense4unix.profiles.loader import restaurar_do_historico
+
     try:
         alvo, versao = restaurar_do_historico(name, em)
     except FileNotFoundError as exc:
@@ -326,6 +333,11 @@ def cmd_apply(
     ),
 ) -> None:
     """Valida um JSON de perfil, salva no disco e ativa via daemon (se online)."""
+    from pydantic import ValidationError
+
+    from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+    from hefesto_dualsense4unix.profiles.schema import Profile
+
     try:
         raw = _json.loads(file.read_text(encoding="utf-8"))
     except (OSError, _json.JSONDecodeError) as exc:
@@ -368,6 +380,11 @@ def cmd_save(
     ),
 ) -> None:
     """Cria um perfil clonando o ativo (snapshot do que está em uso)."""
+    from pydantic import ValidationError
+
+    from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
+    from hefesto_dualsense4unix.profiles.schema import Profile
+
     if not from_active:
         console.print(
             "[red]profile save requer --from-active[/red] "
@@ -421,6 +438,7 @@ def _activate_via_ipc_or_fallback(name: str) -> None:
         prazo_vencido,
         teto_da_linha_de_comando,
     )
+    from hefesto_dualsense4unix.cli.ipc_client import IpcError
 
     try:
         _run_call(
@@ -451,6 +469,8 @@ def _activate_via_ipc_or_fallback(name: str) -> None:
 
 
 def _describe_match(profile: Profile) -> str:
+    from hefesto_dualsense4unix.profiles.schema import MatchAny, MatchManual
+
     m = profile.match
     if isinstance(m, MatchAny):
         return "[dim]any[/dim]"
