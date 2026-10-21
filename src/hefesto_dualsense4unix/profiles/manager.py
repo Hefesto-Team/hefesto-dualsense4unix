@@ -111,6 +111,51 @@ def esquecer_o_perfil_apagado(nome: str) -> None:
     logger.info("profile_deleted", name=nome)
 
 
+def levar_o_perfil_renomeado(era: str, novo: str) -> None:
+    """As lembranças de ``era`` passam a dizer ``novo``: o renomear, irmão do apagado.
+
+    Quem renomeia chama depois de gravar o novo e apagar o velho. Vão ao nome novo a escolha
+    do boot (e o espelho), o último jogo e o Point and click (``perfil:<nome>``), o do
+    computador e o de cada perfil do disco. Casa pelo slug, como o apagado.
+    """
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
+    from hefesto_dualsense4unix.profiles.slug import mesmo_slug
+    from hefesto_dualsense4unix.utils.maquina import gravar_o_computador
+    from hefesto_dualsense4unix.utils.session import (
+        _ultimo_jogo_cru,
+        espelhar_a_escolha,
+        lembrar_o_ultimo_jogo,
+        load_last_profile,
+        save_last_profile,
+    )
+
+    def _era(nome: object) -> bool:
+        return isinstance(nome, str) and (nome == era or mesmo_slug(nome, era))
+
+    if _era(load_last_profile()):
+        save_last_profile(novo)
+        espelhar_a_escolha()
+    if _era(_ultimo_jogo_cru()):
+        lembrar_o_ultimo_jogo(novo)
+    prefixo = "perfil:"
+
+    def _aponta_era(escolha: object) -> bool:
+        return (isinstance(escolha, str) and escolha.startswith(prefixo)
+                and _era(escolha[len(prefixo):].strip()))
+
+    documento = o_computador().model_dump(mode="json")
+    mouse = (documento.get("global") or {}).get("mouse") or {}
+    if _aponta_era(mouse.get("point_and_click")):
+        mouse["point_and_click"] = prefixo + novo
+        if not gravar_o_computador(documento):
+            logger.warning("point_and_click_do_computador_nao_renomeado", era=era, novo=novo)
+    for perfil in load_all_profiles():
+        if perfil.mouse is not None and _aponta_era(perfil.mouse.point_and_click):
+            secao = perfil.mouse.model_copy(update={"point_and_click": prefixo + novo})
+            save_profile(perfil.model_copy(update={"mouse": secao}), origem="renomear")
+    logger.info("profile_renamed", era=era, novo=novo)
+
+
 def os_perfis_de_escolher(perfis: Iterable[Any]) -> list[Any]:
     """A lista que se oferece para ESCOLHER: todos os perfis, menos o Freestyle."""
     return [p for p in perfis if not e_o_freestyle(getattr(p, "name", None))]

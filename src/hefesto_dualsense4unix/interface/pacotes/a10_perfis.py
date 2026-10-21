@@ -1430,7 +1430,10 @@ def perfis_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
 
     if not _so_mudou(o):
         return None
-    from hefesto_dualsense4unix.profiles.manager import e_o_freestyle
+    from hefesto_dualsense4unix.profiles.manager import (
+        e_o_freestyle,
+        levar_o_perfil_renomeado,
+    )
 
     novo = str(o.get("valor") or "").strip()
     do_editor = _perfil_do_editor(ctx)
@@ -1452,6 +1455,7 @@ def perfis_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     _gravar(prof.model_copy(update={"name": novo}), ctx, p, era=era)
     if troca_de_arquivo:
         delete_profile(era)
+    levar_o_perfil_renomeado(prof.name, novo)  # a escolha, o último jogo e o Point and click
     if era == do_editor:
         _ESCOLHIDO = novo
     return _dizer(mensagem_do_salvar(novo, renomeado_de=prof.name))
