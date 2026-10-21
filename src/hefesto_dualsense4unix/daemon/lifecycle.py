@@ -4720,9 +4720,9 @@ class Daemon:
         )
 
         escolha = getattr(getattr(base, "mouse", None), "point_and_click", None)
-        if not escolha:
-            with contextlib.suppress(Exception):
-                escolha = o_computador().global_.mouse.point_and_click
+        if not escolha:  # o `carregar_maquina` nunca levanta; a seção `mouse` pode faltar
+            mouse_do_computador = getattr(o_computador().global_, "mouse", None)
+            escolha = getattr(mouse_do_computador, "point_and_click", None)
         quem, _, resto = str(escolha or "molde:point_and_click").partition(":")
         try:
             if quem == "perfil":
