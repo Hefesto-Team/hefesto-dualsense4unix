@@ -126,6 +126,52 @@ button:active {
 }
 """
 
+
+
+def css_da_cor_da_barra(folha_do_tema: str) -> str:
+    """A barra da janela nas cores do tema ligado: o fundo é o ``--panel`` e a letra o ``--fg``.
+
+    Sem tema, vazio: a barra fica com a cor da sessão (no COSMIC, o ``gtk.css`` que ela gera).
+    Decisão de 20/10/2026, a validar pelo usuário
+    (O-TEMA-LIGA-SEM-REABRIR-A-JANELA-E-O-GTK-SEGUE-O-TEMA-01).
+    """
+    if not folha_do_tema:
+        return ""
+    tokens = _tema_das_mods.tokens_da_folha(folha_do_tema)
+    casa = _tokens_da_casa_ou_nada()
+    fundo = tokens.get("--panel") or casa.get("--panel")
+    letra = tokens.get("--fg") or casa.get("--fg")
+    if not (fundo and letra):
+        return ""
+    return (f"headerbar {{ background: {fundo}; color: {letra}; }}\n"
+            f"button {{ color: {letra}; }}\n")
+
+
+def _tokens_da_casa_ou_nada() -> dict[str, str]:
+    try:
+        return _tema_das_mods.tokens_da_casa()
+    except (OSError, _tema_das_mods.TemaRecusadoError) as erro:
+        print(f"[tema] as cores da casa não abriram: {erro}", file=sys.stderr)
+        return {}
+
+
+def pedir_a_variante(folha_do_tema: str) -> bool:
+    """Pede ao GTK a variante do tema do sistema que combina com o tema de cores.
+
+    O popup do ``<select>`` e o resto que o CSS da página não alcança seguem a variante: escura
+    com a casa (BUG-GUI-COSMIC-WIDGET-CONTRAST-01), clara com um tema claro. Devolve se é escura.
+    """
+    escura = _tema_das_mods.e_escuro(_tema_das_mods.tokens_da_folha(folha_do_tema),
+                                     _tokens_da_casa_ou_nada())
+    if escura:
+        tema.pedir_a_variante_escura()
+        return True
+    ajustes = Gtk.Settings.get_default()
+    if ajustes is not None:
+        ajustes.set_property("gtk-application-prefer-dark-theme", False)
+    return False
+
+
 APARENCIA_DO_MAXIMIZAR: dict[bool, tuple[str, str]] = {
     False: ("window-maximize-symbolic", "Maximizar"),
     True: ("window-restore-symbolic", "Restaurar"),
@@ -265,17 +311,27 @@ def montar_a_barra(
     titulo: str,
     subtitulo: str,
     ao_gesto: Callable[..., None],
+    cor: Any = None,
 ) -> tuple[Any, dict[str, Any]]:
-    """A ``Gtk.HeaderBar`` da janela, com os três botões DESTA CASA."""
+    """A ``Gtk.HeaderBar`` da janela, com os três botões DESTA CASA.
+
+    ``cor`` é o ``Gtk.CssProvider`` das cores do tema (:func:`css_da_cor_da_barra`): quem o passa
+    troca o texto dele, e a barra e os botões repintam.
+    """
     barra = Gtk.HeaderBar()
     barra.set_show_close_button(False)
     estilo = Gtk.CssProvider()
     estilo.load_from_data(CSS_DA_BARRA.encode("utf-8"))
-    barra.get_style_context().add_provider(estilo, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+    provedores = [(estilo, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)]
+    if cor is not None:
+        provedores.append((cor, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION + 1))
+    for provedor, prioridade in provedores:
+        barra.get_style_context().add_provider(provedor, prioridade)
     botoes: dict[str, Any] = {}
     for nome_do_icone, gesto, dica in BOTOES_DA_BARRA:
         botao = Gtk.Button()
-        botao.get_style_context().add_provider(estilo, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+        for provedor, prioridade in provedores:
+            botao.get_style_context().add_provider(provedor, prioridade)
         botao.set_valign(Gtk.Align.CENTER)
         botao.set_image(Gtk.Image.new_from_icon_name(nome_do_icone, Gtk.IconSize.MENU))
         botao.set_relief(Gtk.ReliefStyle.NONE)
@@ -331,19 +387,10 @@ class PonteDaTela:
         # O tema de cores (O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01) é a SEGUNDA folha de
         # usuário, depois da da casa: só redefine tokens do `:root`, com `!important`, que no nível
         # USER vence o `:root` da página sem mudar um byte dela.
+        self.folha_da_casa = folha or ""
         self.tema_de_cores = _a_folha_do_tema(tema_de_cores)
-        for estilo in (folha, self.tema_de_cores):
-            if not estilo:
-                continue
-            ucm.add_style_sheet(
-                WebKit2.UserStyleSheet(
-                    estilo,
-                    WebKit2.UserContentInjectedFrames.TOP_FRAME,
-                    WebKit2.UserStyleLevel.USER,
-                    None,
-                    None,
-                )
-            )
+        self.ucm = ucm
+        self._por_as_folhas()
         if esperar_a_pintura:
             ucm.add_script(
                 WebKit2.UserScript(
@@ -354,11 +401,31 @@ class PonteDaTela:
                     None,
                 )
             )
-        self.ucm = ucm
         self.view = WebKit2.WebView.new_with_user_content_manager(ucm)
         # O botão direito é da casa: o menu do WebKit não abre, e quem responde é o
         # menu HTML da base comum, que aciona gestos.
         self.view.connect("context-menu", self._calar_o_menu_do_webkit)
+
+    def _por_as_folhas(self) -> None:
+        for estilo in (self.folha_da_casa, self.tema_de_cores):
+            if not estilo:
+                continue
+            self.ucm.add_style_sheet(
+                WebKit2.UserStyleSheet(
+                    estilo,
+                    WebKit2.UserContentInjectedFrames.TOP_FRAME,
+                    WebKit2.UserStyleLevel.USER,
+                    None,
+                    None,
+                )
+            )
+
+    def trocar_o_tema(self, folha_do_tema: str) -> None:
+        """Troca o tema de cores sem recarregar a página: tira as folhas de usuário e põe de novo
+        a da casa e a do tema (vazio desliga). O WebKit repinta na hora."""
+        self.ucm.remove_all_style_sheets()
+        self.tema_de_cores = folha_do_tema
+        self._por_as_folhas()
 
     @staticmethod
     def _calar_o_menu_do_webkit(_view: Any, _menu: Any, _evento: Any, _resultado: Any) -> bool:
@@ -475,6 +542,13 @@ class JanelaDaAba:
             esperar_a_pintura=esperar_a_pintura, tema_de_cores=tema_de_cores,
         )
         self.view = self.ponte.view
+        #: O tema ligado se relê quando o registro das extensões muda (só no padrão: a folha
+        #: passada por quem abre a janela fica como veio).
+        self._vigia_do_tema = (self._vigiar_o_tema()
+                               if isinstance(tema_de_cores, _TemaLigado) else None)
+        self._cor_da_barra = Gtk.CssProvider()
+        self._cor_da_barra.load_from_data(
+            css_da_cor_da_barra(self.ponte.tema_de_cores).encode("utf-8"))
         #: O percentual de zoom que a página está usando AGORA (`None` até o primeiro aplicar).
         self.tamanho_aplicado: int | None = None
         self.aplicar_o_tamanho_guardado()
@@ -492,7 +566,7 @@ class JanelaDaAba:
             self.oculta = True
 
         tema.adotar_o_tema_da_sessao()
-        tema.pedir_a_variante_escura()
+        pedir_a_variante(self.ponte.tema_de_cores)
         tema.adotar_a_barra_da_sessao()
 
         self._botoes_da_barra: dict[str, Any] = {}
@@ -505,7 +579,7 @@ class JanelaDaAba:
             self.janela.set_default_size(*(tamanho or TAMANHO_NA_TELA))
             self.janela.set_size_request(LARGURA_DO_DESENHO, PISO_DA_VISTA + ALTURA_DA_BARRA)
             barra, self._botoes_da_barra = montar_a_barra(
-                titulo, subtitulo or "", self._gesto_da_barra
+                titulo, subtitulo or "", self._gesto_da_barra, cor=self._cor_da_barra
             )
             self.janela.set_titlebar(barra)
             self.janela.connect("window-state-event", self._a_barra_se_refaz)
@@ -550,6 +624,35 @@ class JanelaDaAba:
 
     def _o_arquivo_do_tamanho_mudou(self, *_args: Any) -> None:
         self.aplicar_o_tamanho_guardado()
+
+    def _vigiar_o_tema(self) -> Any:
+        """Vigia o registro das extensões: a chave da Experimental (ou o terminal) grava, e o tema
+        troca na hora. A gravação é atômica, e o monitor acorda no `rename`, como no tamanho."""
+        from hefesto_dualsense4unix.mods.instalador import Lugares
+
+        registro = Lugares.do_xdg().registro
+        try:
+            monitor = Gio.File.new_for_path(str(registro)).monitor_file(
+                Gio.FileMonitorFlags.WATCH_MOVES, None
+            )
+        except GLib.Error as erro:
+            print(f"[janela] tema: não consegui vigiar {registro} ({erro})", file=sys.stderr)
+            return None
+        monitor.connect("changed", self._o_registro_das_extensoes_mudou)
+        return monitor
+
+    def _o_registro_das_extensoes_mudou(self, *_args: Any) -> None:
+        folha = folha_do_tema()
+        if folha != self.ponte.tema_de_cores:
+            self.trocar_o_tema(folha)
+
+    def trocar_o_tema(self, folha_do_tema: str) -> None:
+        """O tema novo na página, na barra e na variante do GTK, sem reabrir a janela."""
+        self.ponte.trocar_o_tema(folha_do_tema)
+        self._cor_da_barra.load_from_data(css_da_cor_da_barra(folha_do_tema).encode("utf-8"))
+        escura = pedir_a_variante(folha_do_tema)
+        print(f"[janela] tema: {'ligado' if folha_do_tema else 'desligado'}, variante "
+              f"{'escura' if escura else 'clara'}", file=sys.stderr)
 
     ATRASOS_DO_REDESENHO_MS = (60, 300)
 

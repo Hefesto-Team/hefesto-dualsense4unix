@@ -162,6 +162,25 @@ def tokens_da_casa(pagina: Path = PAGINA_DOS_TOKENS) -> dict[str, str]:
     return saida
 
 
+def tokens_da_folha(folha: str) -> dict[str, str]:
+    """Os tokens de cor de uma folha de tema já aceita (os ``!important`` saem)."""
+    return tokens_do_root(re.sub(r"\s*!\s*important", "", folha, flags=re.I))
+
+
+def e_escuro(tokens: dict[str, str], casa: dict[str, str] | None = None) -> bool:
+    """Se o fundo que vale (o ``--app-bg`` do tema, senão o da casa) é escuro.
+
+    Escuro é o fundo em que o branco tem mais contraste que o preto: a mesma conta da régua.
+    Sem cor legível, vale o da casa, que é escura.
+    """
+    fundo = cor(tokens.get("--app-bg", "")) or cor(
+        (tokens_da_casa() if casa is None else casa).get("--app-bg", ""))
+    if fundo is None:
+        return True
+    luz = _luminancia(fundo)
+    return (1.05 / (luz + 0.05)) > ((luz + 0.05) / 0.05)
+
+
 def _declaracoes_do_root(texto: str) -> list[tuple[str, str]]:
     m = re.search(r":root\s*\{([^{}]*)\}", _COMENTARIO.sub("", texto))
     if m is None:
@@ -362,11 +381,13 @@ __all__ = [
     "apelidos_do_root",
     "contraste",
     "cor",
+    "e_escuro",
     "folha_do_manifesto",
     "fundo_da_logo",
     "tema_da_casa",
     "token_permitido",
     "tokens_da_casa",
+    "tokens_da_folha",
     "tokens_do_root",
     "validar",
     "valores_pintados",

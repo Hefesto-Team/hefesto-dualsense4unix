@@ -300,7 +300,8 @@ A extensão de tipo `tema`, com a permissão `tema`, troca as cores da interface
 
 O tema reprovado não liga: o `mod ligar` e a chave da aba Experimental recusam com a frase do pior par
 («O tema de «X» não liga. O texto ficaria ilegível: «--rot-campo» sobre «--app-bg» dá 1,20:1, e o mínimo é
-4,50:1.»). Com mais de um tema ligado, vale o ligado por último. A janela lê o tema ao abrir.
+4,50:1.»). Com mais de um tema ligado, vale o ligado por último. A janela aberta vigia o registro e
+troca o tema na hora, sem recarregar a página; a barra de cima e a variante do GTK seguem o fundo do tema.
 `src/hefesto_dualsense4unix/interface/olhar.py --tema <arquivo>` fotografa as abas com ele, pela mesma conferência.
 
 ## Os erros
