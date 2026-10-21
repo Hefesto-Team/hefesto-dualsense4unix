@@ -256,6 +256,7 @@ def _commit(raiz: Path, conteudo: str, assunto: str, data: str, arquivo: str = "
 
 
 def test_a_ponte_liga_pela_data_e_pelo_assunto_e_so_quando_o_par_e_unico(tmp_path: Path) -> None:
+    # D-2110-AS-CITACOES-SEGUEM-A-PONTE-ATE-O-DEV
     origem = _repositorio(tmp_path / "origem")
     destino = _repositorio(tmp_path / "destino")
     o1 = _commit(origem, "um\n", "feat: um", "2026-08-01T10:00:00-03:00")
