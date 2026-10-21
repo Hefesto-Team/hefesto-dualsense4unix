@@ -33,7 +33,8 @@ PULA-NO-RAPIDO|lint-test|Pytest unit
 PULA-NO-RAPIDO|lint-test|Pytest core
 ROLA|gtk-real|rapido
 PULA-NO-RAPIDO|gtk-real|A suíte inteira sob Xvfb, com o GTK real
-PULA-NO-RAPIDO|gtk-real|A cobertura da suíte inteira
+PULA-NO-RAPIDO|gtk-real|Os dados de cobertura desta faixa
+FORA-DE-CASA|cobertura|o job soma os dados de cobertura que as quatro faixas do `gtk-real` sobem como artefato, e o `needs: gtk-real` dele faria o act rodar as quatro faixas (a suíte inteira, perto de 110 minutos) antes da soma; é o mesmo motivo das linhas SEM-NEEDS abaixo, só que sem job desta tabela que valha a soma sozinho. O piso de 70 da suíte inteira só é cobrado no GitHub: em casa as faixas rodam e medem, e a soma não.
 ROLA|runtime-smoke|completo
 SEM-NEEDS|runtime-smoke|lint-test|o needs: lint-test mandaria o act rodar a suíte inteira antes dele; o lint-test é job desta tabela
 ROLA|build-wheel|completo

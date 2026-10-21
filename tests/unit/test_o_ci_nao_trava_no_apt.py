@@ -126,7 +126,10 @@ def test_tirar_o_timeout_do_job_reprova_aquele_job(job: str) -> None:
 
 def test_o_prazo_do_job_cobre_o_passo_mais_longo() -> None:
     jobs = copy.deepcopy(_carregar())
-    jobs["gtk-real"]["timeout-minutes"] = 90
+    maior = max(
+        s["timeout-minutes"] for s in jobs["gtk-real"]["steps"] if "timeout-minutes" in s
+    )
+    jobs["gtk-real"]["timeout-minutes"] = maior
     assert any("não cabe no job" in a and a.startswith("gtk-real:") for a in lacunas(jobs))
 
 

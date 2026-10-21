@@ -553,22 +553,80 @@ jobs:
       # saía «cancelled», que não se lê como defeito: quatro corridas do `dev`
       # no 3.10, de 25 a 27/09, pararam assim num `Daemon.run()` cujo
       # `shutdown` não voltava. O teto mora no PASSO, e não no job, porque o do
-      # job CANCELA e o do passo REPROVA. Medido nas onze pernas das corridas
-      # do `dev` de 25 a 27/09 que chegaram ao fim: este passo levou de 27,6 a
-      # 56,9 minutos. O teto é 80.
+      # job CANCELA e o do passo REPROVA.
+      #
+      # A SUÍTE EM PARTES, NÃO NUM PROCESSO SÓ (O-CI-TERMINA-E-DIZ-O-VERMELHO-01,
+      # 21/10/2026). O passo era um `pytest` sobre `tests/unit` num processo só, e no
+      # run 39619656976 os três `lint-test` pararam calados no mesmo teste, aos 36%:
+      # a última linha de cada perna é `test_install_headless.py::TestAskYnHeadless::
+      # test_ask_yn_tem_guarda_de_tty PASSED`, e o passo só terminou 33 a 41
+      # minutos DEPOIS dela (3.12: 15:04 e 15:37; 3.11: 15:06 e 15:43; 3.10: 15:09
+      # e 15:50), sem sumário e sem «Process completed with exit code». Era a
+      # primeira das três mortes que o `scripts/rodar-a-suite.sh` já cura em casa:
+      # um processo só morre no meio e o vermelho que sobra não diz qual foi. Agora
+      # o dono do comando roda as 24 partes, cada uma num processo, trata o silêncio
+      # de pytest como erro duro e diz a parte que morreu; o log de cada parte sobe
+      # como artefato quando algo reprova. Os 31155 testes de uma perna levaram 46 a
+      # 60 minutos num processo (a extrapolação dos 36%); o teto de 85 cobre isso
+      # com os 24 inícios de processo. A `--continue-on-collection-errors` segue: um
+      # módulo quebrado não esconde o resto da parte dele.
       - name: Pytest unit
-        timeout-minutes: 80
+        timeout-minutes: 85
+        env:
+          SAIDA: /tmp/suite-ci
+          SUITE_PYTEST_ARGS: --continue-on-collection-errors
         run: |
-          pytest tests/unit -v --continue-on-collection-errors
+          bash scripts/rodar-a-suite.sh
       # CI-TESTS-CORE-ORFAO-01: `tests/core` (12 testes) não era rodado por
       # NENHUM job — existia no repo e nunca reprovava nada.
       - name: Pytest core
         run: pytest tests/core -v
+      # O vermelho traz a pilha, igual ao `gtk-real` (O-CI-TERMINA-E-DIZ-O-VERMELHO-01).
+      - name: A pilha de quem reprovou na suíte
+        if: failure()
+        env:
+          PERNA: ${{ matrix.python }}
+        run: |
+          for log in /tmp/suite-ci/parte-*.log; do
+            [ -f "$log" ] || continue
+            if grep -qE '^(FAILED|ERROR) ' "$log"; then
+              echo "::group::$log"
+              sed -n '/^=* \(FAILURES\|ERRORS\) =*$/,/^=* short test summary info =*$/p' "$log" | head -n 400
+              echo "::endgroup::"
+            fi
+            if ! grep -qE '(passed|failed|errors?|skipped|deselected|no tests ran).* in [0-9.]+s' "$log" \
+                || grep -qE '^(pilha nativa: sinal|Fatal Python error)' "$log"; then
+              echo "::group::$log (o processo morreu)"
+              tail -n 200 "$log"
+              echo "::endgroup::"
+            fi
+          done
+          {
+            echo "### Testes vermelhos (py${PERNA})"
+            grep -ho "^FAILED [^ ]*\|^ERROR [^ ]*" /tmp/suite-ci/parte-*.log 2> /dev/null | sort -u || true
+          } >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+      - name: Os logs da suíte
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: suite-lint-test-${{ matrix.python }}
+          path: /tmp/suite-ci/*.log
+          retention-days: 14
 
   gtk-real:
-    name: Interface com GTK REAL (python3-gi + Xvfb)
+    name: Interface com GTK REAL (python3-gi + Xvfb), partes ${{ matrix.faixa }}
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    # O JOB É UMA FAIXA DE SEIS PARTES (O-CI-TERMINA-E-DIZ-O-VERMELHO-01, 21/10/2026). As 24 partes em
+    # série estouraram o prazo de 95 minutos na parte 19 (run 39619656976): cada parte leva de 2 a 6
+    # minutos (a média das vinte primeiras é 4,4) e a suíte inteira, perto de 110. Quatro faixas de
+    # seis partes levam uns 25 minutos cada, em paralelo; a régua `test_o_ci_roda_a_suite_em_partes`
+    # confere que as faixas juntas cobrem as 24 partes, sem furo e sem repetição.
+    timeout-minutes: 70
+    strategy:
+      # Como no `lint-test`: cada faixa responde sempre, e uma que reprova não cancela as outras.
+      fail-fast: false
+      matrix:
+        faixa: ["00-05", "06-11", "12-17", "18-23"]
     # GUARDA-GI-REAL-01. Este job é a razão de a guarda existir: sem ele, os
     # testes de interface ou PULAM (e o pulo passa despercebido) ou rodam
     # contra um `Gtk` de mentira plantado em sys.modules por outro arquivo de
@@ -582,9 +640,9 @@ jobs:
     # `exigir_gi_real` e rodam também no `lint-test`, que não tem `gi`. A suíte abaixo segue inteira
     # aqui, e o que nela é só lógica passa nos dois lugares.
     #
-    # Ele NÃO é `needs:` de ninguém e ninguém é `needs:` dele, de propósito: a
-    # falha deste job não pode cancelar nem mascarar o `lint-test`, o `mypy` ou
-    # o `runtime-smoke`, que respondem perguntas diferentes.
+    # Ele NÃO é `needs:` do `lint-test`, do `mypy` nem do `runtime-smoke`, de propósito: a
+    # falha deste job não pode cancelar nem mascarar os que respondem perguntas diferentes.
+    # Só o `cobertura` depende dele, e só para somar os dados das quatro faixas.
     steps:
       - uses: actions/checkout@v7
       - name: Prazo do apt (três tentativas, 30 s por conexão)
@@ -716,25 +774,35 @@ jobs:
       # só os arquivos marcados com `exigir_gi_real`, sete de cento e cinquenta;
       # o resto da interface pulava no `lint-test` e não rodava em lugar nenhum.
       # Em 24 partes, pelo `scripts/rodar-a-suite.sh` (um processo só morre no
-      # meio), e a cobertura se mede sobre a suíte inteira.
-      # O TETO, pela mesma razão do `Pytest unit` do lint-test. Este passo roda
-      # a suíte inteira desde 27/09, e só duas corridas do `dev` o levaram ao
-      # fim: 52,5 e 66,7 minutos. O teto é 95. Com duas medidas só, um estouro
-      # sem teste preso no log se mede de novo antes de subir o teto.
+      # meio), repartidas em quatro faixas de seis partes, uma por perna da matriz
+      # (O-CI-TERMINA-E-DIZ-O-VERMELHO-01, 21/10/2026). A faixa roda as suas partes
+      # uma a uma e NÃO para na primeira vermelha: o relato diz todas.
+      # O TETO, pela mesma razão do `Pytest unit` do lint-test. Medido no run
+      # 39619656976 (partes 00 a 19, uma a uma): de 2,8 a 5,8 minutos cada, 4,4 de média; a pior
+      # faixa de seis, a 12-17, levou 24 minutos mais os arquivos do WebKit em processo próprio.
+      # O teto é 50, o dobro, e o job (70) cobre o teto mais a montagem do GTK.
+      # A cobertura de cada faixa vai a um arquivo próprio, que o job `cobertura` soma.
       - name: A suíte inteira sob Xvfb, com o GTK real
-        timeout-minutes: 95
+        timeout-minutes: 50
         env:
           HEFESTO_EXIGE_GTK_REAL: "1"
           GDK_BACKEND: x11
           NO_AT_BRIDGE: "1"
           SUITE_PYTEST_ARGS: --cov=hefesto_dualsense4unix --cov-append --cov-report=
+          COVERAGE_FILE: /tmp/cobertura/dados-${{ matrix.faixa }}
+          FAIXA: ${{ matrix.faixa }}
           # O `rodar-a-suite.sh` grava cada parte em `$SAIDA/parte-NN.log` e só
           # imprime o NOME de quem reprovou. O runner morre com o `/tmp`: sem
           # fixar a pasta, a pilha de um vermelho intermitente se perdia.
           SAIDA: /tmp/suite-ci
         run: |
-          xvfb-run -a --server-args="-screen 0 1280x1024x24" \
-            bash scripts/rodar-a-suite.sh
+          mkdir -p /tmp/cobertura
+          xvfb-run -a --server-args="-screen 0 1280x1024x24" bash -c '
+            rc=0
+            for ((k = 10#${FAIXA%-*}; k <= 10#${FAIXA#*-}; k++)); do
+              bash scripts/rodar-a-suite.sh "$(printf "%02d" "$k")" || rc=1
+            done
+            exit "$rc"'
       # O vermelho traz a pilha (07/10/2026): a seção FAILURES de cada parte
       # que reprovou vai ao log, e os logs inteiros sobem como artefato. A parte
       # que MORREU (sem sumário, ou por sinal depois dele) não tem FAILURES: a
@@ -760,12 +828,45 @@ jobs:
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: suite-gtk-real
+          name: suite-gtk-real-${{ matrix.faixa }}
           path: /tmp/suite-ci/*.log
           retention-days: 14
+      - name: Os dados de cobertura desta faixa
+        uses: actions/upload-artifact@v7
+        with:
+          name: cobertura-${{ matrix.faixa }}
+          path: /tmp/cobertura/dados-${{ matrix.faixa }}
+          retention-days: 3
+          if-no-files-found: error
+
+  # A COBERTURA DA SUÍTE INTEIRA, somada das quatro faixas (O-CI-TERMINA-E-DIZ-O-VERMELHO-01).
+  # Cada faixa do `gtk-real` mede só as suas seis partes, e o piso de 70 é da suíte inteira: o
+  # `coverage combine` junta os quatro arquivos antes de o `report` cobrar o piso. Só roda quando as
+  # quatro faixas passaram (o padrão do `needs:`): a cobertura de uma suíte que reprova não diz nada.
+  cobertura:
+    name: A cobertura da suíte inteira (as quatro faixas somadas)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: gtk-real
+    steps:
+      # O `coverage report` lê as linhas dos arquivos que os dados citam, no mesmo caminho do runner.
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Os dados das quatro faixas
+        uses: actions/download-artifact@v7
+        with:
+          pattern: cobertura-*
+          path: /tmp/cobertura
+          merge-multiple: true
       - name: A cobertura da suíte inteira
-        if: always()
-        run: .venv/bin/python -m coverage report --fail-under=70
+        run: |
+          pip install -c constraints.txt coverage
+          cd "$GITHUB_WORKSPACE"
+          ls -l /tmp/cobertura
+          python -m coverage combine --keep /tmp/cobertura/dados-*
+          python -m coverage report --fail-under=70
 
   pre-commit:
     name: pre-commit run --all-files
