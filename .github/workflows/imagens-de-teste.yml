@@ -1,9 +1,10 @@
 name: Imagens de teste
 
 # As distribuições do `smoke-multi-distro` (ci.yml) com as dependências já instaladas, publicadas em
-# `ghcr.io/hefesto-team/hefesto-teste-<distro>`. O CI e o `ci-local.sh` puxam a mesma imagem, e a
-# primeira corrida deixa de gastar minutos instalando pacote. A pasta `scripts/github/imagens/` tem
-# um Dockerfile por distribuição, e os testes exigem que cada um instale o mesmo que a matriz do ci.yml.
+# `ghcr.io/hefesto-team/hefesto-teste-<distro>`. O `smoke-multi-distro` do ci.yml ainda puxa as imagens
+# nuas (`fedora:42`, `archlinux:latest`…) e instala o pacote na própria corrida; é a troca por estas que
+# tira os minutos da primeira corrida. A pasta `scripts/github/imagens/` tem um Dockerfile por
+# distribuição, e os testes exigem que cada um instale o mesmo que a matriz do ci.yml.
 on:
   push:
     branches: [dev]

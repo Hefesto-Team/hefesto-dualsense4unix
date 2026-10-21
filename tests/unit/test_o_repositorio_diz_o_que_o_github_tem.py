@@ -1645,6 +1645,17 @@ def test_as_imagens_de_teste_instalam_o_que_o_smoke_do_ci_instala() -> None:
     assert wf["jobs"]["imagem"]["permissions"]["packages"] == "write"
 
 
+def test_o_fluxo_das_imagens_so_diz_que_o_ci_as_puxa_quando_o_ci_as_puxa() -> None:
+    """O comentário do fluxo e o `ci.yml` dizem a mesma coisa sobre as imagens do `ghcr.io`."""
+    wf = (GH_DIR / "workflows" / "imagens-de-teste.yml").read_text(encoding="utf-8")
+    ci = (GH_DIR / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    afirma = "puxam a mesma imagem" in wf
+    puxa = "ghcr.io/hefesto-team/hefesto-teste" in ci
+    assert afirma == puxa, (
+        f"o comentário {'afirma' if afirma else 'nega'} que o CI puxa as imagens e o ci.yml "
+        f"{'puxa' if puxa else 'não puxa'}: uma das duas coisas está velha")
+
+
 def test_mordida_imagem_que_instala_outra_coisa_reprova(tmp_path: Path) -> None:
     copia = tmp_path / "imagens"
     shutil.copytree(RAIZ / "scripts" / "github" / "imagens", copia)
