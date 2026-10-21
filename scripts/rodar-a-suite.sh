@@ -48,17 +48,20 @@
 # igual, e a partição cai no número de arquivos). O fecho reescreve o CSV
 # (`docs/process/ferramentas-da-leva/tempos-da-suite.py`).
 #
-# PARTES_EM_PARALELO=N (21/10/2026: LIGADA por padrão na suíte inteira, com N=3, quando a
-# árvore tem o semáforo da casa `docs/process/ferramentas-da-leva/vez-do-pytest.sh` e a máquina
-# tem 8 núcleos ou mais; `PARTES_EM_PARALELO=0` desliga). As partes rodam em filhos, N a N, cada
+# PARTES_EM_PARALELO=N (desligada por padrão até uma corrida inteira provar, na máquina livre, a
+# mesma contagem de testes da série e nenhuma parte morta: D-0810-AS-PARTES-EM-PARALELO-ESPERAM-A-PROVA).
+# `PARTES_EM_PARALELO=auto` (21/10/2026) dá N=3 quando a árvore tem o semáforo da casa
+# `docs/process/ferramentas-da-leva/vez-do-pytest.sh` e a máquina tem 8 núcleos ou mais, e 0 no
+# clone, no runner do CI, no lote e com `SUITE_PYTEST_ARGS`; com a prova feita, o padrão passa a
+# ser `auto`. As partes rodam em filhos, N a N, cada
 # um numa vaga do semáforo `VEZ_DO_PYTEST=<vez-do-pytest.sh>` (`nenhum` roda sem semáforo). Cada
 # filho de parte LEVE nasce com lar (HOME e XDG_*), TMPDIR, D-Bus e Xvfb próprios, como o
 # `portoes.sh` faz com cada pytest: dois filhos nunca dividem pasta, bus nem display. Quem TOCA a
 # máquina (o arquivo que cita um serviço do sistema ou do usuário, `PADRAO_QUE_TOCA`) vai nas
 # últimas partes e corre UMA por vez, ao lado das leves: o tempo da suíte é o da maior das duas
-# frentes, e não a soma. A partição muda com a chave (as que tocam ficam juntas), e só a corrida
-# da suíte inteira a liga: `rodar-a-suite.sh NN`, o lote e o CI continuam com a divisão e o
-# ambiente de sempre.
+# frentes, e não a soma. A partição muda com a chave (as que tocam ficam juntas): para triar a
+# parte NN de uma corrida com a chave, `PARTES_EM_PARALELO=auto rodar-a-suite.sh NN` repete a
+# MESMA divisão e roda só aquela parte, em série.
 #
 # O QUE NÃO TOCA MAIS A MÁQUINA (21/10/2026): `uinput`, `uhid`, `hidraw`, `/dev/input` e `evdev`
 # saíram do padrão. O `conftest.py` recusa a abertura de `/dev/uinput` e `/dev/uhid` (e as
@@ -141,14 +144,16 @@ total=$(wc -l < "$SAIDA/todos.txt")
 # que mexe no aparelho, no som, no BlueZ ou no systemd. Errar para mais custa
 # paralelismo; errar para menos põe um teste que toca o aparelho ao lado de outro.
 PADRAO_QUE_TOCA="${PADRAO_QUE_TOCA:-usbip|vudc|configfs|udevadm|systemctl|bluetoothctl|pactl|wpctl|pw-cli}"
-# A chave liga sozinha na suíte inteira (nem parte, nem lote, nem argumento a mais) da árvore que
-# tem o semáforo da casa: é a máquina onde o `vez-do-pytest.sh` divide as vagas entre os agentes.
-# Numa árvore sem ele (um clone, o runner do CI) ela fica desligada e a corrida é a de sempre.
-if [ -z "${PARTES_EM_PARALELO:-}" ]; then
+# `auto` liga a chave na árvore que tem o semáforo da casa (a máquina onde o `vez-do-pytest.sh`
+# divide as vagas entre os agentes), fora do lote e sem argumento a mais. Com uma parte (`NN`) ela
+# liga também, para a divisão ser a da corrida inteira; o agendador só corre sem `NN`. Numa árvore
+# sem o semáforo (um clone, o runner do CI) fica desligada e a corrida é a de sempre.
+PARTES_EM_PARALELO="${PARTES_EM_PARALELO:-0}"
+if [ "$PARTES_EM_PARALELO" = auto ]; then
   PARTES_EM_PARALELO=0
   _vez_da_casa="$RAIZ/docs/process/ferramentas-da-leva/vez-do-pytest.sh"
   _nucleos=$(nproc 2> /dev/null || echo 1)
-  if [ -z "${1:-}" ] && [ -z "$LOTE" ] && [ -z "${SUITE_PYTEST_ARGS:-}" ] && [ -z "${PARTIDO:-}" ] \
+  if [ -z "$LOTE" ] && [ -z "${SUITE_PYTEST_ARGS:-}" ] && [ -z "${PARTIDO:-}" ] \
       && [ "$_nucleos" -ge 8 ] 2> /dev/null && { [ -n "${VEZ_DO_PYTEST:-}" ] || [ -f "$_vez_da_casa" ]; }; then
     PARTES_EM_PARALELO=3
     VEZ_DO_PYTEST="${VEZ_DO_PYTEST:-$_vez_da_casa}"
@@ -440,14 +445,20 @@ if [ "$PARTES_EM_PARALELO" -gt 0 ] 2> /dev/null && [ -z "$so_esta" ]; then
       fi
     done
     [ "$em_voo" -gt 0 ] || break
-    fim=""
-    wait -n -p fim || true
+    # Quem acabou se confere pelo PID de cada filho, e não pelo que o `wait -n` diz: o filho que
+    # acaba enquanto o pai espera outro processo some da conta do `wait -n` (medido no bash 5.2:
+    # ele volta 127 com um filho a menos), e o `-p` só existe do bash 5.1 em diante. Sem a
+    # conferência, o laço gira para sempre com uma vaga que nunca volta.
+    wait -n 2> /dev/null || true
+    acabou=0
     for n in "${!pid_de[@]}"; do
-      [ "${pid_de[$n]}" = "$fim" ] || continue
+      ! kill -0 "${pid_de[$n]}" 2> /dev/null || continue
       [ "${toca_de[$n]}" = 0 ] || toca_voando=0
       unset "pid_de[$n]"
       em_voo=$((em_voo - 1))
+      acabou=1
     done
+    [ "$acabou" = 1 ] || sleep 0.2
   done
   for n in $feitas; do
     # os logs que o filho escreveu agora: o que não é mais novo que a marca é de corrida
