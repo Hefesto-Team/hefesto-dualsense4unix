@@ -47,6 +47,8 @@ import sys
 
 import pytest
 
+from tests.conftest import skip_sem_gi_real
+
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
@@ -479,6 +481,7 @@ def test_o_tique_escreve_o_status_e_os_tres_ligaveis(a09, ctx):
         assert campo not in mesa, f"{campo!r} voltou ao pacote sem botão na página"
 
 
+@skip_sem_gi_real
 def test_o_apelido_da_tela_tem_um_dono_so(a09):
     """O gerador LÊ o apelido daqui — não o digita."""
     import aba09

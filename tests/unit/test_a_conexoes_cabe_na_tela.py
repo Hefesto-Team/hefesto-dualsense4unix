@@ -28,7 +28,7 @@ from typing import Any
 
 import pytest
 
-from tests.conftest import exigir_gi_real
+from tests.conftest import exigir_gi_real, skip_sem_gi_real
 
 
 from hefesto_dualsense4unix.integrations import dicas_da_conexao as dicas
@@ -262,6 +262,8 @@ def um_webview_por_modulo() -> Any:
 def _fechar_os_webviews() -> None:
     abertos = list(_ABERTOS.values())
     _ABERTOS.clear()
+    if not abertos:  # sem o gi nenhum caso abriu o WebView, e não há o que recolher
+        return
     for _view, janela in abertos:
         janela.destroy()
     _recolher()
@@ -591,6 +593,7 @@ def test_com_externos_a_conexoes_nao_rola_e_a_linha_nao_passa_de_30_px(largura: 
             f"a {largura} px a linha vaza pela direita: {vista['sobra']}")
 
 
+@skip_sem_gi_real
 @pytest.mark.parametrize("largura", sorted(LARGURAS))
 def test_so_o_externo_com_o_aviso_do_nintendo_pede_a_fileira_inteira(largura: int) -> None:
     """A frase longa do `hid-nintendo` (Nintendo pelo rádio) atravessa as quatro colunas; os outros

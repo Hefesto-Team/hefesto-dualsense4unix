@@ -17,6 +17,8 @@ from hefesto_dualsense4unix.interface import mesa_viva, onde
 from hefesto_dualsense4unix.interface import pacotes as pacotes_da_tela
 from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 
+from tests.conftest import skip_sem_gi_real
+
 ADAPTADOR_A = "aa:bb:cc:00:00:a1"
 CONTROLE_2 = "aa:bb:cc:00:00:02"
 CONTROLE_3 = "aa:bb:cc:00:00:03"
@@ -131,6 +133,7 @@ def test_o_dono_do_selo_nao_pergunta_pelo_sono() -> None:
         "mudo", "sabemos"]
 
 
+@skip_sem_gi_real
 def test_a_bancada_viva_nao_carrega_a_palavra_do_sono() -> None:
     """O «Dormindo» do `controles_vivos.py` saiu, e o kwarg que o carregava."""
     import inspect

@@ -52,6 +52,8 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 from hefesto_dualsense4unix.interface import pacotes
 from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
 
+from tests.conftest import skip_sem_gi_real
+
 UNIQ = "aa:bb:cc:00:00:05"
 
 
@@ -218,6 +220,7 @@ def test_o_despachante_nunca_levanta_por_causa_de_um_coracao() -> None:
         pacotes.CORACOES.remove(bate_mal)
 
 
+@skip_sem_gi_real
 def test_o_piloto_larga_ao_trocar_de_pagina_e_ao_sair() -> None:
     import inspect
 
@@ -234,6 +237,7 @@ def test_o_piloto_larga_ao_trocar_de_pagina_e_ao_sair() -> None:
         "passaria a soltar o teste dela em 3 s, com a janela aberta")
 
 
+@skip_sem_gi_real
 def test_o_piloto_nao_sabe_que_o_assunto_e_vibracao() -> None:
     """A régua contra o desvio por nome de página no dono das dez abas."""
     import inspect

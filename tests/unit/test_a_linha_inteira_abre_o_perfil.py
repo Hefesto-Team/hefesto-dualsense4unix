@@ -20,6 +20,8 @@ from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
 from hefesto_dualsense4unix.profiles import loader, sanidade
 from hefesto_dualsense4unix.profiles.schema import Profile
 
+from tests.conftest import skip_sem_gi_real
+
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
 VELHA = re.compile(r"prioridade", re.IGNORECASE)
@@ -235,6 +237,7 @@ def _quebradas(celulas: list[dict[str, Any]]) -> list[str]:
             if c["gesto"] != "selecionar" or c["perfil"] != c["nome"]]
 
 
+@skip_sem_gi_real
 def test_toda_celula_do_desenho_leva_ao_perfil_da_linha(tela: Any) -> None:
     """A página do gerador, como ela abre: cada célula sobe até a linha."""
     celulas = _celulas(tela)
@@ -242,6 +245,7 @@ def test_toda_celula_do_desenho_leva_ao_perfil_da_linha(tela: Any) -> None:
     assert not _quebradas(celulas), "\n".join(_quebradas(celulas))
 
 
+@skip_sem_gi_real
 def test_toda_celula_do_pacote_leva_ao_perfil_da_linha(tela: Any) -> None:
     """O `<tbody>` que o pacote pinta a cada tique, posto como o `blocos` o põe."""
     lista = [{"nome": n, "prioridade": str(p), "quando": f"Steam · {n}",
@@ -255,6 +259,7 @@ def test_toda_celula_do_pacote_leva_ao_perfil_da_linha(tela: Any) -> None:
     assert not _quebradas(celulas), "\n".join(_quebradas(celulas))
 
 
+@skip_sem_gi_real
 def test_o_rotulo_cabe_na_largura_que_ela_gravou(tela: Any) -> None:
     """`criado:48`, a forma que o pacote escreve: o cabeçalho sai inteiro."""
     tela.executar(
@@ -282,6 +287,7 @@ ARRASTAR_ATE_O_PISO = r"""
 """
 
 
+@skip_sem_gi_real
 def test_o_rotulo_cabe_no_arraste_ate_o_piso(tela: Any) -> None:
     """O piso por rótulo vale no ARRASTE também (o item 4 da cura)."""
     tela.executar(
@@ -300,6 +306,7 @@ def test_o_rotulo_cabe_no_arraste_ate_o_piso(tela: Any) -> None:
         f"({medida['scroll']}): é esse número que o soltar grava")
 
 
+@skip_sem_gi_real
 def test_o_rotulo_cabe_com_a_seta_da_ordem(tela: Any) -> None:
     """A seta da ordem alarga o rótulo, e a coluna estreita cabe de novo."""
     tela.executar(
@@ -319,6 +326,7 @@ def test_o_rotulo_cabe_com_a_seta_da_ordem(tela: Any) -> None:
         f"coluna de {medida['client']}")
 
 
+@skip_sem_gi_real
 def test_a_pagina_nao_diz_a_palavra_velha(tela: Any) -> None:
     """O texto visível e as dicas do miolo da página do gerador."""
     vistos = [s for s in json.loads(tela.executar(LER_O_QUE_SE_VE)) if VELHA.search(s)]

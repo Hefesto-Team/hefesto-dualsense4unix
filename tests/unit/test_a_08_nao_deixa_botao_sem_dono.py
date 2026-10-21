@@ -30,6 +30,8 @@ from tests.unit.test_a_secao_do_radio_transplantada import (  # noqa: F401
     mesa,
 )
 
+from tests.conftest import skip_sem_gi_real
+
 RAIZ = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 
@@ -159,6 +161,7 @@ def test_a_pagina_da_bancada_nao_tem_os_tres_que_sairam() -> None:
     assert set(VOLTARAM) <= _gestos(pagina), "o desenho perdeu o botão do hub ou a pergunta"
 
 
+@skip_sem_gi_real
 def test_a_marca_acesa_se_distingue_da_apagada_e_nao_parece_botao(
     request: pytest.FixtureRequest,
 ) -> None:

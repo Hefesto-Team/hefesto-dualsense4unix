@@ -51,6 +51,8 @@ from tests.unit.test_a_conexoes_cabe_na_tela import (  # noqa: F401 -- a fixture
 )
 from hefesto_dualsense4unix.interface.pacotes import em_fundo, nome_do_jogador
 
+from tests.conftest import skip_sem_gi_real
+
 TAMANHO = (1512, 860)
 ABAS = ("01-jogar", "02-controles", "03-gatilhos", "04-iluminacao", "05-vibracao",
         "06-navegacao", "07-lancadores", "08-conexoes", "09-sistema", "10-perfis",
@@ -309,6 +311,7 @@ def test_renomear_o_adaptador_grava_com_a_primeira_maiuscula(
     assert gravados == [("AABBCC000009", "Esquerda")]
 
 
+@skip_sem_gi_real
 def test_o_nome_gravado_em_minuscula_se_le_com_a_primeira_maiuscula(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """O que já estava no BlueZ como «azul» aparece «Azul»; o celular fica como o usuário

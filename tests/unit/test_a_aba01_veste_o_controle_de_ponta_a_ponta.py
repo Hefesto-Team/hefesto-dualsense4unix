@@ -12,6 +12,9 @@ import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa o `hefesto_vivo`, o piloto, que é moldura e carrega o GTK")
 
 for _p in (str(RAIZ / "src"),):
     if _p not in sys.path:

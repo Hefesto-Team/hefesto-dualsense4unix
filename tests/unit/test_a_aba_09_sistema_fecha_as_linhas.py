@@ -86,6 +86,8 @@ from hefesto_dualsense4unix.interface.pacotes import (
 )
 from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 
+from tests.conftest import skip_sem_gi_real
+
 PAGINA = "09-sistema.html"
 
 BANCADA = _onde.pagina(PAGINA)
@@ -237,6 +239,7 @@ class TestODesenhoCarregaAPeca:
             f"desenho tem e a publicada não tem é {sorted(esperados)}. Se a aba "
             "foi publicada, TIRE a declaração — ela já não descreve nada.")
 
+    @skip_sem_gi_real
     def test_o_par_de_sufixos_nao_diverge(self) -> None:
         """O gerador escreve o `data-campo`; o pacote escreve NELE."""
         import aba09
@@ -281,6 +284,7 @@ class TestODesenhoCarregaAPeca:
             solto = re.search(r'(?<![-\w])disabled(?=[\s=>])', achado.group(0))
             assert not solto, achado.group(0)
 
+    @skip_sem_gi_real
     def test_o_botao_do_reload_manteve_o_nome_e_diz_a_espera(self) -> None:
         import re
 

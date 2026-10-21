@@ -22,6 +22,8 @@ from hefesto_dualsense4unix.interface import onde
 from pacotes import Contexto
 from pacotes import a01_jogar as aba
 
+from tests.conftest import skip_sem_gi_real
+
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
 LARGURAS = (1228, 1300)
@@ -420,6 +422,7 @@ def _mudo_por(causa: BaseException) -> Exception:
         return mudo
 
 
+@skip_sem_gi_real
 def test_a_folga_repinta_o_ultimo_estado_bom_e_depois_diz_a_verdade() -> None:
     """Os mudos da folga devolvem o último bom; o seguinte, `{}`, e ele não volta."""
     import hefesto_vivo as hv
@@ -439,6 +442,7 @@ def test_a_folga_repinta_o_ultimo_estado_bom_e_depois_diz_a_verdade() -> None:
         "o `TimeoutError` direto, que é como um dublê o levanta, ficou sem folga")
 
 
+@skip_sem_gi_real
 @pytest.mark.parametrize("causa", [
     FileNotFoundError(2, "Arquivo ou diretório inexistente"),
     ConnectionResetError(104, "Conexão fechada pela outra ponta"),
@@ -455,6 +459,7 @@ def test_o_servico_fora_do_ar_nao_tem_folga(causa: OSError) -> None:
         f"escondido atrás dos controles de antes")
 
 
+@skip_sem_gi_real
 def test_sem_resposta_boa_nao_ha_o_que_repintar() -> None:
     """A janela que abre com o serviço mudo pinta a verdade desde o começo."""
     import hefesto_vivo as hv

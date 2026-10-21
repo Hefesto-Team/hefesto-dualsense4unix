@@ -64,6 +64,8 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
 )
 
+from tests.conftest import skip_sem_gi_real
+
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
 UNIQS = ["aabbcc000011", "aabbcc000012", "aabbcc000013", "aabbcc000014"]
@@ -406,6 +408,7 @@ def _pintar(tela: Any, fora: dict[str, Any]) -> list[dict[str, Any]]:
     return list(json.loads(tela.executar(LER_A_COLUNA)))
 
 
+@skip_sem_gi_real
 def test_o_ponto_e_o_glifo_aceso_sao_coisas_diferentes_na_tela(
         tela: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """O ponto só onde o disco diz, embaixo do glifo e dentro da célula; a cor"""
@@ -445,6 +448,7 @@ def test_o_ponto_e_o_glifo_aceso_sao_coisas_diferentes_na_tela(
         f"a cor do aceso muda com o ponto: {cores_do_aceso}")
 
 
+@skip_sem_gi_real
 def test_as_oito_secoes_cabem_na_celula(tela: Any, monkeypatch: pytest.MonkeyPatch) -> None:
     """A foto dela tinha o oitavo grupo inteiro fora da célula, nas quatro linhas."""
     aba10 = _gerador()

@@ -19,6 +19,8 @@ from hefesto_dualsense4unix.interface import onde
 from pacotes import Contexto
 from pacotes import a01_jogar as jogar
 
+from tests.conftest import skip_sem_gi_real
+
 UM_8BITDO: dict[str, Any] = {
     "name": "8BitDo Pro 2", "vid": "2dc8", "pid": "6003",
     "bus": "bluetooth", "uniq": "e4:17:d8:00:00:2f",
@@ -119,6 +121,7 @@ def test_o_externo_nao_ganha_nenhuma_marca_de_assento() -> None:
             assert not gestos
 
 
+@skip_sem_gi_real
 def test_o_seletor_do_dono_do_piloto_nao_alcanca_o_externo() -> None:
     """`SELETOR_DO_DONO` lista os quatro lugares e o `data-uniq`, e mais nada."""
     from hefesto_dualsense4unix.interface import hefesto_vivo

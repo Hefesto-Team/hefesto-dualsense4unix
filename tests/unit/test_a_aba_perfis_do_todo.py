@@ -51,6 +51,8 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
 )
 
+from tests.conftest import skip_sem_gi_real
+
 RAIZ = Path(__file__).resolve().parents[2]
 
 
@@ -439,6 +441,7 @@ def tela() -> Any:
     t.fechar()
 
 
+@skip_sem_gi_real
 def test_os_quatro_botoes_tem_a_mesma_largura(tela: Any) -> None:
     """MORDIDA: trocar a grade da barra por `auto` deixa cada botão com a largura do texto."""
     medida = json.loads(tela.executar(MEDIR))
@@ -448,6 +451,7 @@ def test_os_quatro_botoes_tem_a_mesma_largura(tela: Any) -> None:
     assert len(larguras) == 1 and min(larguras) > 150, medida["botoes"]
 
 
+@skip_sem_gi_real
 def test_a_aba_cabe_sem_rolagem_a_1212_por_809(tela: Any) -> None:
     medida = json.loads(tela.executar(MEDIR))
     assert medida["miolo"][0] <= medida["miolo"][1], f"o miolo rola: {medida['miolo']}"
@@ -455,6 +459,7 @@ def test_a_aba_cabe_sem_rolagem_a_1212_por_809(tela: Any) -> None:
     assert folha[0] <= folha[1] and folha[2] <= folha[3], f"a página rola: {folha}"
 
 
+@skip_sem_gi_real
 def test_as_datas_medem_o_que_o_desenho_manda(tela: Any) -> None:
     """MORDIDA: o `<col>` de 185 px do Nome estica as datas de 104 para 151 (medido)."""
     larguras = dict(json.loads(tela.executar(MEDIR))["colunas"])
@@ -470,6 +475,7 @@ MEDIR_O_ROTULO = r"""
 """
 
 
+@skip_sem_gi_real
 def test_o_rotulo_cabe_com_todas_as_colunas_gravadas(tela: Any) -> None:
     """Soma de colunas menor que a tela estica TODAS em proporção; o rótulo ainda cabe.
 
@@ -486,6 +492,7 @@ def test_o_rotulo_cabe_com_todas_as_colunas_gravadas(tela: Any) -> None:
     assert scroll <= client, f"o rótulo pede {scroll} px numa coluna de {client}"
 
 
+@skip_sem_gi_real
 def test_todo_bloco_do_pacote_acha_um_lugar_na_pagina(tela: Any) -> None:
     """Cada seletor de `blocos` casa UM elemento da página: sem casar, a pintura cai no vazio.
 
@@ -500,6 +507,7 @@ def test_todo_bloco_do_pacote_acha_um_lugar_na_pagina(tela: Any) -> None:
     assert contas == [1, 1, 1], dict(zip(seletores, contas, strict=True))
 
 
+@skip_sem_gi_real
 def test_o_comando_tem_linha_propria_so_no_meu_comando(tela: Any) -> None:
     """Com «Eventos», o comando só aparece no momento «Meu comando», numa linha própria e larga.
 

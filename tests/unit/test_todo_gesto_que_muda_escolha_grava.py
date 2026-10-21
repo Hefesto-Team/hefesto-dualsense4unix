@@ -7,6 +7,9 @@ import pathlib
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa o `hefesto_vivo`, o piloto, que é moldura e carrega o GTK")
 
 from hefesto_dualsense4unix.interface import pacotes
 from hefesto_dualsense4unix.interface import hefesto_vivo  # noqa: F401

@@ -32,6 +32,8 @@ from tests.unit.test_o_aparelho_se_corrige_onde_se_clica import (  # noqa: F401 
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
+from tests.conftest import skip_sem_gi_real
+
 LER_A_FAIXA = r"""
 (function(){
   const ed = document.getElementById('edita');
@@ -84,6 +86,7 @@ def test_o_dado_do_aparelho_leva_a_faixa_pelo_vid_pid(disco: Any) -> None:  # no
     assert all("faixa" not in a for a in dado["aparelhos"])
 
 
+@skip_sem_gi_real
 def test_o_painel_unico_nao_repete_a_faixa_que_a_aba_08_desenha(disco: Any) -> None:  # noqa: F811
     """Desenho aprovado de 05/10/2026 (conjunto «Conexões 3»): o painel único do Mapa traz Nome,
     Tipo e uma linha de estado do aparelho; a faixa dele mora na aba Conexões, que a desenha com

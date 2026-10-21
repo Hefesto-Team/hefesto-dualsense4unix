@@ -224,6 +224,8 @@ def test_o_manifesto_que_nao_abre_vai_aos_avisos_e_o_outro_tema_liga(tmp_path: P
 from hefesto_dualsense4unix.interface import aba08
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 
+from tests.conftest import skip_sem_gi_real
+
 _HEXA = re.compile(r"#[0-9a-fA-F]{3,8}\b")
 
 
@@ -355,6 +357,7 @@ def test_no_webkit_o_tema_troca_a_regua_a_sala_e_o_painel_e_a_folha_da_casa_cont
     assert sem["esconde_a_nota"] is True and com["esconde_a_nota"] is True
 
 
+@skip_sem_gi_real
 def test_a_janela_pede_o_tema_ligado_quando_ninguem_diz_qual(
         monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
     from hefesto_dualsense4unix.interface import janela

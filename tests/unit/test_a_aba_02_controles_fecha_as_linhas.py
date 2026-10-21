@@ -28,6 +28,8 @@ from hefesto_dualsense4unix.interface import onde
 from pacotes import Contexto
 from pacotes import a02_controles as a02
 
+from tests.conftest import skip_sem_gi_real
+
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
 UNIQ = "aa:bb:cc:00:00:01"
@@ -670,6 +672,7 @@ def som() -> dict[str, Any]:
     return dict(saida)
 
 
+@skip_sem_gi_real
 def test_o_som_do_alto_falante_pinta_os_dois_estados_e_o_neutro(
         som: dict[str, Any]) -> None:
     """02-Q9 — *"borda VERDE se ligado, ÂMBAR se desligado"*, e o cinza de "não sei"."""
@@ -699,6 +702,7 @@ def test_o_som_do_alto_falante_pinta_os_dois_estados_e_o_neutro(
         "que ninguém mais escreve é promessa esperando alguém tropeçar nela")
 
 
+@skip_sem_gi_real
 def test_o_cinza_da_razao_vence_o_verde_do_ativo(som: dict[str, Any]) -> None:
     """Um botão que o produto VAI RECUSAR não pode aparecer verde."""
     assert som["cinza_com_ativo"] != som["verde"], (
@@ -709,6 +713,7 @@ def test_o_cinza_da_razao_vence_o_verde_do_ativo(som: dict[str, Any]) -> None:
         "botão deixou de dizer que voltou a funcionar")
 
 
+@skip_sem_gi_real
 def test_o_clique_no_som_sai_com_dono_e_a_cor_segue_o_tique(
         som: dict[str, Any]) -> None:
     """O CLIQUE e a RESPOSTA, e a resposta é a do tique seguinte."""
@@ -733,6 +738,7 @@ def test_o_clique_no_som_sai_com_dono_e_a_cor_segue_o_tique(
     assert som["atributo_do_som"] == a02_gerador.ATRIBUTO_DO_SOM
 
 
+@skip_sem_gi_real
 def test_o_microfone_nao_tem_mais_cor_congelada(som: dict[str, Any]) -> None:
     """A mentira vermelha do 🎙 saiu — e o que a substituiu é um sinal VIVO."""
     assert som["mics"], "a régua não achou 🎙 nenhum — ela mediria o vazio"

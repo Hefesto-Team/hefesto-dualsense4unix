@@ -72,6 +72,8 @@ from hefesto_dualsense4unix.interface import onde as _onde
 from hefesto_dualsense4unix.interface.pacotes import Contexto, normalizar
 from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 
+from tests.conftest import skip_sem_gi_real
+
 PAGINA = "09-sistema.html"
 
 BANCADA = _onde.pagina(PAGINA)
@@ -354,6 +356,7 @@ def test_o_botao_do_modo_improvisado_nasce_escondido() -> None:
         assert exigido in botao.group(0), (exigido, botao.group(0))
 
 
+@skip_sem_gi_real
 def test_o_endereco_do_botao_escondido_tem_um_dono_so() -> None:
     """O gerador LÊ o nome do pacote por AST. Escrito duas vezes, os dois se"""
     import aba09

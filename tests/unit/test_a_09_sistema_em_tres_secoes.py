@@ -11,6 +11,8 @@ import pytest
 
 from hefesto_dualsense4unix.interface import sistema as tela
 
+from tests.conftest import skip_sem_gi_real
+
 pytest_plugins = ["tests.unit.test_a_09_sistema_fecha_a_paridade"]
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -303,6 +305,7 @@ def test_o_ambiente_diz_o_nome_de_tela_em_qualquer_computador(a09, variaveis,
     assert a09._sessao(variaveis) == esperado
 
 
+@skip_sem_gi_real
 def test_a_dica_da_bateria_nao_conta_os_controles_da_cena() -> None:
     """A dica é estática na página publicada: ela não pode contar controles."""
     pagina = PUBLICADA.read_text(encoding="utf-8")
