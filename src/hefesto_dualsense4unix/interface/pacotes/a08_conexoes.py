@@ -2915,8 +2915,7 @@ def _esperar_a_tecla(r: _Rascunho, dispositivo: Any, prazo_s: float = ESPERA_DA_
     """Lê o aparelho já aberto (sem prender) e guarda a primeira tecla apertada; fecha no fim."""
     try:
         fim = time.monotonic() + prazo_s
-        # A espera dorme no nó até ele ter evento ou o prazo vencer: nenhuma volta em vão, e o
-        # `poll` dela não tem o teto do descritor 1023 que o `select` tem.
+        # A espera dorme no nó até ter evento ou o prazo vencer, sem o teto 1023 do `select`.
         while (restante := fim - time.monotonic()) > 0:
             if not prontos_para_ler([dispositivo.fd], restante):
                 return
