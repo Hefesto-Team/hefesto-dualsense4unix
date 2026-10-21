@@ -1234,6 +1234,7 @@ def _html_dos_externos(ctx: Contexto) -> str:
     from hefesto_dualsense4unix.app.actions.home_actions import (
         _format_external_subtitle,
         _format_external_title,
+        externos_na_mesa,
     )
     def _e(x: object) -> str:
         """Escapa para HTML pelo `html.escape` da biblioteca, não pelo `_e` da janela GTK.
@@ -1246,7 +1247,8 @@ def _html_dos_externos(ctx: Contexto) -> str:
         return html.escape(str(x), quote=True)
 
     fora = []
-    for entrada in ctx.externos:
+    # O teto de quatro (A-TELA-MOSTRA-NO-MAXIMO-QUATRO-CONTROLES-01): sem número, sem cartão.
+    for entrada in externos_na_mesa(None, ctx.externos):
         aviso = nintendo_bt_warning(entrada)
         linha_do_aviso = (f'<span class="ext-aviso">{_e(aviso)}</span>'
                           if aviso else "")

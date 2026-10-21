@@ -610,6 +610,7 @@ def _html_dos_externos(ctx: Contexto) -> str:
     from hefesto_dualsense4unix.app.actions.home_actions import (
         _format_external_subtitle,
         _format_external_title,
+        externos_na_mesa,
     )
     def _e(x: object) -> str:
         """Escapa para HTML — pelo `html.escape` da biblioteca, e não pelo `_e`"""
@@ -618,7 +619,8 @@ def _html_dos_externos(ctx: Contexto) -> str:
     from . import a08_conexoes
 
     fora = []
-    for entrada in ctx.externos:
+    # O teto de quatro (A-TELA-MOSTRA-NO-MAXIMO-QUATRO-CONTROLES-01): sem número, sem cartão.
+    for entrada in externos_na_mesa(None, ctx.externos):
         aviso = nintendo_bt_warning(entrada)
         linha_do_aviso = (f'<div class="ext-aviso">{_e(aviso)}</div>'
                           if aviso else "")
@@ -628,7 +630,7 @@ def _html_dos_externos(ctx: Contexto) -> str:
             f'<div class="ext-nome">{_e(_format_external_title(entrada))}</div>'
             f'<div class="ext-via">{_e(_format_external_subtitle(entrada))}</div>'
             f'{botoes}{linha_do_aviso}</div>')
-    return "".join(fora)
+    return "".join(fora) or str(_monta().NADA_A_DIZER)
 
 
 def _cadeado_cego(state: dict[str, Any]) -> str:

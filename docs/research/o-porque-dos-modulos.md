@@ -1609,3 +1609,36 @@ Os valores da casa são lidos do ``:root`` da página publicada (:data:`PAGINA_D
 que troca só o fundo é medido contra os textos de verdade. O apelido da casa (``--rot-campo``
 é ``var(--green)``) segue o token que ele nomeia, como o navegador pinta.
 ~~~~
+
+## Os externos na mesa (`app/actions/home_actions.py`, `externos_na_mesa`), 21/10/2026
+
+`src/hefesto_dualsense4unix/app/actions/home_actions.py (docstring de externos_na_mesa)`. A docstring de antes, com o teto de quatro que entrou em A-TELA-MOSTRA-NO-MAXIMO-QUATRO-CONTROLES-01.
+
+~~~~text
+Os controles que o Hefesto VÊ e não adota — I5 (25/08/2026).
+
+Duas fontes, nesta ordem, e a primeira é a que a foto usa:
+
+1. ``state_full["external"]``, quando o payload o trouxer. **Medido por
+   leitura de código em 25/08/2026: o `daemon.state_full` de HOJE não
+   publica essa chave** — ela existe só na resposta de ``controller.list
+   {"external": true}``. Isto resolve a hipótese 3 do §2.5 da sprint ("o
+   daemon publica `external` quando há um externo na mesa?"): **não
+   publica**, e o `external=null` medido na bancada não distinguia as duas
+   coisas porque a chave nunca existiu ali. O ramo fica porque é por ele
+   que o dublê da foto alimenta a aba, e porque um daemon mais novo que
+   passe a publicá-la é atendido sem uma linha a mais;
+2. o inventário que a própria aba pediu ao daemon no tique lento
+   (``_maybe_fetch_externos``), que é como a aba Configurações e a aba
+   Status já fazem — a enumeração de evdev mais a sonda de holders custa
+   10-40 ms e um subprocess, e não pode entrar no caminho quente.
+
+Lista vazia é "não há" **ou** "ainda não perguntei", e quem chama trata as
+duas do mesmo jeito: não desenha card nenhum. A diferença só importaria
+para acusar ausência, e esta aba não acusa.
+
+**SÓ QUEM TEM NÚMERO DE JOGADOR** (A-TELA-MOSTRA-NO-MAXIMO-QUATRO-CONTROLES-01, 20/10/2026,
+*«4 controles no Max.»*): com os quatro DualSense ligados o externo fica sem lugar de co-op
+(`player_slot: null`) e não ganha cartão; a tela mostra no máximo quatro, os DualSense
+primeiro. O número é o de :func:`external_controllers.slot_of`, o mesmo do LED.
+~~~~

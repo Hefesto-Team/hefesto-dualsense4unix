@@ -816,8 +816,8 @@ def aviso_de_grab(
 def _format_external_title(entry: dict[str, Any]) -> str:
     """Título do card de um externo — "Controle 3 — 8BitDo" (I5, 25/08/2026).
 
-    Sem número (o `player_slot` nulo, como o do quinto controle), "Controle — 8BitDo": o "—"
-    do `slot_label` encostava no travessão da marca (O-EXTERNO-SEM-NUMERO-NAO-DOBRA-O-TRAVESSAO-01).
+    Só o externo com número de jogador ganha cartão (:func:`externos_na_mesa`, a
+    A-TELA-MOSTRA-NO-MAXIMO-QUATRO-CONTROLES-01): o título não tem ramo sem número.
     """
     from hefesto_dualsense4unix.app.actions.external_controllers import (
         brand_of,
@@ -825,11 +825,7 @@ def _format_external_title(entry: dict[str, Any]) -> str:
         slot_of,
     )
 
-    slot = slot_of(entry, 0, 0)
-    marca = brand_of(entry)
-    if slot is None:
-        return f"Controle — {marca}"
-    return f"Controle {slot_label(slot)} — {marca}"
+    return f"Controle {slot_label(slot_of(entry, 0, 0))} — {brand_of(entry)}"
 
 
 def _format_external_subtitle(entry: dict[str, Any]) -> str:
@@ -849,33 +845,20 @@ def _format_external_subtitle(entry: dict[str, Any]) -> str:
 def externos_na_mesa(
     state: dict[str, Any] | None, cache: Sequence[dict[str, Any]] = ()
 ) -> list[dict[str, Any]]:
-    """Os controles que o Hefesto VÊ e não adota — I5 (25/08/2026).
+    """Os externos com número de jogador que a tela desenha (no máximo quatro com os DualSense).
 
-    Duas fontes, nesta ordem, e a primeira é a que a foto usa:
-
-    1. ``state_full["external"]``, quando o payload o trouxer. **Medido por
-       leitura de código em 25/08/2026: o `daemon.state_full` de HOJE não
-       publica essa chave** — ela existe só na resposta de ``controller.list
-       {"external": true}``. Isto resolve a hipótese 3 do §2.5 da sprint ("o
-       daemon publica `external` quando há um externo na mesa?"): **não
-       publica**, e o `external=null` medido na bancada não distinguia as duas
-       coisas porque a chave nunca existiu ali. O ramo fica porque é por ele
-       que o dublê da foto alimenta a aba, e porque um daemon mais novo que
-       passe a publicá-la é atendido sem uma linha a mais;
-    2. o inventário que a própria aba pediu ao daemon no tique lento
-       (``_maybe_fetch_externos``), que é como a aba Configurações e a aba
-       Status já fazem — a enumeração de evdev mais a sonda de holders custa
-       10-40 ms e um subprocess, e não pode entrar no caminho quente.
-
-    Lista vazia é "não há" **ou** "ainda não perguntei", e quem chama trata as
-    duas do mesmo jeito: não desenha card nenhum. A diferença só importaria
-    para acusar ausência, e esta aba não acusa.
+    A fonte é ``state_full["external"]`` quando o payload o traz, senão o inventário que a aba
+    pediu no tique lento (``cache``). O externo sem número (``player_slot: null``, com os quatro
+    DualSense ligados) não ganha cartão (A-TELA-MOSTRA-NO-MAXIMO-QUATRO-CONTROLES-01); o número é
+    o de :func:`external_controllers.slot_of`. Lista vazia é «não há» ou «ainda não perguntei», e
+    as duas não desenham nada. A história: ``docs/research/o-porque-dos-modulos.md``.
     """
-    if isinstance(state, dict):
-        do_payload = state.get("external")
-        if isinstance(do_payload, list):
-            return [e for e in do_payload if isinstance(e, dict)]
-    return [e for e in (cache or ()) if isinstance(e, dict)]
+    from hefesto_dualsense4unix.app.actions.external_controllers import slot_of
+
+    lista = cache or ()
+    if isinstance(state, dict) and isinstance(state.get("external"), list):
+        lista = state["external"]
+    return [e for e in lista if isinstance(e, dict) and slot_of(e, 0, 0) is not None]
 
 
 # acima, e a contagem vem do `daemon.state_full` (campo `player` por controle,
