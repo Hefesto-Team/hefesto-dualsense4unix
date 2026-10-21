@@ -6073,10 +6073,10 @@ class IpcHandlersMixin:
 
         from hefesto_dualsense4unix.core import ativacao_de_botao
 
-        acao = str(params.get("acao") or "estado")  # (noqa-acento)
+        acao = str(params.get("acao") or "estado")  # chave do IPC (noqa-acento)
         if acao not in ("iniciar", "parar", "estado"):
             raise ValueError(
-                "sequencia.gravar: 'acao' é iniciar, parar ou estado")  # (noqa-acento)
+                "sequencia.gravar: 'acao' é iniciar, parar ou estado")  # a chave (noqa-acento)
         uniq = params.get("uniq")
         if uniq is not None and not isinstance(uniq, str):
             raise ValueError("sequencia.gravar: 'uniq' precisa ser string ou omitido")

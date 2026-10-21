@@ -533,7 +533,7 @@ def gravar_estado(dono: object) -> tuple[bool, list[dict[str, Any]]]:
 class Teste:
     """Uma sequência tocada uma vez, sem estar no perfil (o «Tocar para ouvir»)."""
 
-    __slots__ = ("alvo", "desde", "proximo", "segurando", "seq")  # (noqa-acento)
+    __slots__ = ("alvo", "desde", "proximo", "segurando", "seq")  # nomes de atributo (noqa-acento)
 
     def __init__(self, alvo: str, seq: Sequencia, agora: float) -> None:
         self.alvo, self.seq, self.desde = alvo, seq, agora
@@ -688,7 +688,7 @@ __all__ = [
     "REPETE_APOS_S",
     "REPETE_POR_SEGUNDO",
     "RITMOS",
-    "Ativacao",  # (noqa-acento)
+    "Ativacao",  # nome da classe (noqa-acento)
     "AtivacaoDoControle",
     "Gravacao",
     "Sequencia",
