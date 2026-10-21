@@ -1381,7 +1381,7 @@
 @media (max-height:860px) {.ext{padding:5px 0}.ext-forma{padding:3px 0}.ext-grupo{padding-bottom:2px}}
 @media (max-height:830px) and (min-height:781px) {.ext{padding:3px 0}.miolo{gap:10px}.lanc-fila{gap:4px 12px}}
 @media (max-height:780px) {.ext{min-height:0;padding:4px 0}.ext-forma{padding:2px 0}.ext-ramo{margin-top:-4px;height:calc(50% + 4px)} .ext-forma .ext-faz,.ext-grupo .ext-faz{display:none}.ext-forma{min-height:32px}.miolo{gap:10px}.lanc-fila{gap:4px 12px}}
-@media (max-height:860px) {.lanc-fila{grid-auto-rows:minmax(38px,1fr)}}
+@media (max-height:860px) {.lanc-fila{grid-auto-rows:minmax(32px,1fr);gap:4px 12px}}
 @media (max-height:780px) {.lanc-fila{grid-auto-rows:minmax(32px,1fr)}}
 .ext { padding:12px 0 }
 .ext + .ext { border-top:1px solid var(--border-sutil) }
@@ -1520,6 +1520,19 @@
    (medido em 21/10/2026: com uma extensão, a lista de 52 px escondia o menu inteiro). Na lista, ele ocupa a
    largura do cartão logo abaixo da linha, e a chave do «sim» fica no lugar. */
 .ext-lista .ext-pop.aberto:has(.ext-perm) { position:static;grid-column:1/-1;width:auto;transform:none;box-shadow:none }
+/* A FILA DOS LANÇADORES ROLA POR DENTRO — 21/10/2026, A-EXPERIMENTAL-MAXIMIZADA-NAO-QUEBRA-COM-AS-EXTENSOES-DE-VERDADE-01.
+   Medido no WebKit do piloto, com as sete extensões dela e os atalhos da máquina dela: a fila tinha onze
+   linhas (seis fileiras), a grade com o piso de cada fileira passava do quadro, e o miolo rolava 13 px na
+   janela maximizada (662 > 649) e 20 px no piso (638 > 618), com «Adicionar um lançador» atrás da barra do
+   Aplicar. O quadro é `estica` (`topo.html`: quem encolhe é a lista lá dentro, que rola); a fila agora rola
+   por dentro, com a mesma barra fina da lista das extensões. Na janela de até 860 px de altura, o piso
+   da fileira desce de 38 para 32 px (o botão tem 26) e o vão de 8 para 4 (a regra `max-height:860px`
+   acima): as seis fileiras dela cabem inteiras na maximizada (212 px para 222); no piso da janela, e com
+   mais lançadores, a fila rola. Quando cabe, as fileiras esticam (`1fr`) como antes. */
+.lanc-fila { overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border-forte) var(--app-bg) }
+.lanc-fila::-webkit-scrollbar { width:9px }
+.lanc-fila::-webkit-scrollbar-track { background:var(--app-bg);border-radius:5px }
+.lanc-fila::-webkit-scrollbar-thumb { background:var(--border-forte);border-radius:5px }
 
 </style>
 <style id="base-comum">
@@ -1992,6 +2005,20 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     if (o){ o.parentElement.querySelectorAll('.ja-op').forEach(function(x){ x.classList.toggle('on', x === o); }); }
     var c = e.target.closest('.ja-chips .chip, .ac-chips .chip');
     if (c){ c.classList.toggle('on'); }
+  });
+  // O ⋮ ABERTO FICA À VISTA DENTRO DA LISTA QUE ROLA — 21/10/2026. O menu com as permissões desce para
+  // baixo da linha; na última fileira ele nascia abaixo do fim da lista (8 px com sete extensões, a
+  // fileira inteira com doze). O produto troca a lista inteira a cada clique, e a lista rola só o que
+  // falta para o menu aparecer.
+  function oMenuAVista(lista){
+    var m = lista.querySelector('.ext-pop.aberto');
+    if (!m) return;
+    var a = m.getBoundingClientRect(), b = lista.getBoundingClientRect();
+    if (a.bottom > b.bottom) lista.scrollTop += Math.ceil(a.bottom - b.bottom);
+    else if (a.top < b.top) lista.scrollTop -= Math.ceil(b.top - a.top);
+  }
+  document.querySelectorAll('.ext-lista').forEach(function(lista){
+    new MutationObserver(function(){ oMenuAVista(lista); }).observe(lista, {childList:true});
   });
 })();
 </script>
