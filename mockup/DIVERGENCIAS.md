@@ -21,5 +21,8 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
+## 04-iluminacao.html
+- **21/10/2026** — espera só o `--publicar 04`: a regra `.criar .meu.conta` do chip «Seus efeitos: N», a variante A aprovada em 20/10 (O-ILUMINACAO-NAO-ROLA-COM-OS-EFEITOS-CRIADOS-01). O pacote já pinta o chip único com os nomes na dica, então enquanto isso o produto mostra o chip sem a regra (o `cursor:help` e o `nowrap`), e a aba não rola.
+
 ## 05-vibracao.html
 - **21/10/2026** — espera só o `--publicar 05`: o «Parar» do «Testar agora» com fundo e borda `#c62828` e a letra branca (5,62 para 1), a variante A aprovada em 20/10 (O-PARAR-DA-VIBRACAO-SE-LE-NO-VERMELHO-01). Enquanto isso, o produto continua com o «Parar» no `--red`.

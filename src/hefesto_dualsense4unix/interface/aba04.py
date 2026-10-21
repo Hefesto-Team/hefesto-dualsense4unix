@@ -881,6 +881,10 @@ CSS = """
   .criar .meus{display:flex;gap:6px;margin-left:auto;align-items:center;min-width:0;flex-wrap:wrap;
     justify-content:flex-end}
   .criar .meu{color:var(--texto-suave);cursor:default}
+  /* UM CHIP SÓ, com a contagem (O-ILUMINACAO-NAO-ROLA-COM-OS-EFEITOS-CRIADOS-01, variante A de
+     20/10/2026): os nomes vão na dica, e cada efeito já está na lista do Efeito, em «Seus efeitos».
+     A linha não quebra em largura nenhuma por causa dos efeitos criados. */
+  .criar .meu.conta{cursor:help;white-space:nowrap}
   .criar .meu i{width:7px;height:7px;border-radius:50%;background:var(--cor,var(--purple));flex:0 0 auto}
   .g4-cores{display:inline-flex;gap:6px;align-items:center;flex:0 0 auto}
   .g4-cor{width:24px;height:24px;border-radius:6px;display:block;border:0;padding:0;cursor:pointer}

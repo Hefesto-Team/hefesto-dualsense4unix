@@ -1476,28 +1476,25 @@ def opcoes_do_efeito(biblioteca: dict[str, Any] | None = None,
 
 
 def html_dos_efeitos(biblioteca: dict[str, Any] | None = None) -> str:
-    """Um chip por efeito criado, com a bolinha na primeira cor (ou no arco-íris)."""
+    """Um chip só, «Seus efeitos: N», com os nomes na dica; sem efeito criado, nada.
+
+    Um chip por efeito quebrava a linha da barra «Criar efeitos novos» a partir do terceiro, e a
+    aba rolava a 1212 px (O-ILUMINACAO-NAO-ROLA-COM-OS-EFEITOS-CRIADOS-01, variante A). Cada
+    efeito já está na lista do «Efeito» de cada controle, no grupo «Seus efeitos».
+    """
     import html as _html
 
     guardados = meus_efeitos("luz") if biblioteca is None else biblioteca
-    chips = []
-    for nome, item in sorted(guardados.items()):
-        valor = efeito_do_item(item)
-        if valor is None:
-            continue
-        base = str(item.get("base") or "")
-        cores = str((item.get("parametros") or {}).get("cores") or "").split(",")
-        if base == "arco-iris":  # (noqa-acento) chave do contrato
-            cor = "conic-gradient(#ff5555,#f1fa8c,#50fa7b,#8be9fd,#bd93f9,#ff5555)"
-        else:
-            import monta
-
-            cor = str(monta.tom_da_casa(cores[0].strip().upper())) if cores[0].strip() \
-                else "var(--purple)"
-        chips.append(
-            f'<span class="meu" data-dica="{ROTULO_DA_BASE[base]}">'
-            f'<i style="--cor:{_html.escape(cor, quote=True)}"></i>{_html.escape(nome)}</span>')
-    return "".join(chips)
+    nomes = [nome for nome, item in sorted(guardados.items()) if efeito_do_item(item) is not None]
+    if not nomes:
+        return ""
+    if len(nomes) == 1:
+        dica = f"{nomes[0]}. Está na lista do Efeito, em Seus efeitos"
+    else:
+        dica = (f"{', '.join(nomes[:-1])} e {nomes[-1]}. "
+                "Cada um está na lista do Efeito, em Seus efeitos")
+    return (f'<span class="meu conta" tabindex="0" data-dica="{_html.escape(dica, quote=True)}">'
+            f'<i style="--cor:var(--purple)"></i>Seus efeitos: {len(nomes)}</span>')
 
 
 def efeito_do_controle(p: dict[str, Any] | None, uniq: str) -> str | None:
