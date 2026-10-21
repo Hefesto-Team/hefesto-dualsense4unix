@@ -53,11 +53,24 @@ def test_o_nome_que_so_repete_o_numero_nao_e_nome() -> None:
         assert dito.startswith("Ligado na Entrada 15"), repetido
 
 
+def test_o_negrito_e_o_da_entrada_e_o_artigo_fica_fora_como_no_motor() -> None:
+    """A forma do motor do arranjo (`arranjo_da_mesa`): «na <b>Entrada 3</b>», o artigo fora."""
+    assert "Ligado na <b>Entrada 15</b> " in _o_mapa({"15": "15a"})
+    assert "Ligado na <b>entrada Meio</b> " in _o_mapa({"15": "15a"}, {"15": "Meio"})
+
+
 def test_a_pergunta_do_hub_diz_cada_entrada_pelo_dono() -> None:
     html = _o_mapa({}, {"15": "Meio"}, aberta=True)
     opcoes = re.findall(r'<option value="(\d+)">([^<]*)</option>', html)
-    assert opcoes == [("14", "na Entrada 14"), ("15", "na entrada Meio")]
+    assert opcoes == [("14", "Entrada 14"), ("15", "Meio")]
     assert re.search(r'<label class="hub-rot">Ligado\s', html)
+
+
+def test_cada_opcao_da_pergunta_abre_com_maiuscula() -> None:
+    """Cada opção da lista é uma linha: abre com maiúscula, inclusive o nome dado em minúscula."""
+    html = _o_mapa({}, {"14": "meio"}, aberta=True)
+    opcoes = re.findall(r'<option value="\d+">([^<]*)</option>', html)
+    assert opcoes and all(o[:1].isupper() for o in opcoes), opcoes
 
 
 def test_a_constante_da_frase_velha_saiu() -> None:
@@ -74,8 +87,12 @@ def test_a_regua_do_dono_ve_a_composicao_por_constante(tmp_path: Path) -> None:
     (tmp_path / "novo.py").write_text(
         'from x import com_artigo, na_frase\n'
         'def f(n):\n    return f"Ligado {com_artigo(na_frase(n), em=True)}"\n', encoding="utf-8")
+    (tmp_path / "anotado.py").write_text(
+        'ROTULO: str = "Ligado na entrada"\n'
+        'def f(n):\n    return f"{ROTULO} {n}"\n', encoding="utf-8")
     achados = _composicoes_da_palavra(tmp_path)
     assert ("velho.py", "compõe por constante") in achados
+    assert ("anotado.py", "compõe por constante") in achados
     assert not [a for a in achados if a[0] == "novo.py"]
 
 

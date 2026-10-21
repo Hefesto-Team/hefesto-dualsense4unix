@@ -243,7 +243,7 @@ def test_o_acrescentar_grava_o_gabinete_inteiro_com_o_hub_dentro(logica) -> None
     assert logica.perguntando_o_hub is False
     html = _o_mapa_vivo()
     assert "hub-pergunta" not in html and "Hub da mesa" in html
-    assert "Ligado <b>na Entrada 2</b>" in html
+    assert "Ligado na <b>Entrada 2</b>" in html
 
 
 def test_o_hub_diz_a_entrada_com_o_nome_que_ela_deu(logica) -> None:
@@ -251,7 +251,7 @@ def test_o_hub_diz_a_entrada_com_o_nome_que_ela_deu(logica) -> None:
     logica.portas["2"]["nome"] = "Meio"
     logica.acrescentar_hub("2", "Hub da mesa")
     html = _o_mapa_vivo()
-    assert "Ligado <b>na entrada Meio</b>" in html and "na Entrada 2" not in html
+    assert "Ligado na <b>entrada Meio</b>" in html and "<b>Entrada 2</b>" not in html
 
 
 def test_o_acrescentar_recusa_dizendo_e_nao_grava(logica) -> None:
@@ -307,7 +307,7 @@ def test_o_quadrado_do_mapa_abre_cada_frase_com_maiuscula() -> None:
         nomes={}, pergunta=None)
     assert ">Vale evitar<" in html and ">Vazia<" in html and ">Por extensão<" in html
     assert "Colada no Mouse, na entrada 1" in html
-    assert "Ligado <b>na Entrada 2</b>" in html
+    assert "Ligado na <b>Entrada 2</b>" in html
     for minuscula in (">vale evitar<", ">vazia<", ">por extensão<", ">ligado"):
         assert minuscula not in html
 

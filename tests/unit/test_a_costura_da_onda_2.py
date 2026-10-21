@@ -375,11 +375,11 @@ def _composicoes_da_palavra(raiz: Path) -> set[tuple[str, str]]:
         for arquivo, arvore in arvores.items()
         if str(arquivo.relative_to(raiz)) != _O_DONO
         for no in arvore.body
-        if isinstance(no, ast.Assign)
+        if isinstance(no, (ast.Assign, ast.AnnAssign))
         and isinstance(no.value, ast.Constant)
         and isinstance(no.value.value, str)
         and na_entrada_no_fim.search(no.value.value)
-        for alvo in no.targets
+        for alvo in (no.targets if isinstance(no, ast.Assign) else [no.target])
         if isinstance(alvo, ast.Name)
     }
     for arquivo, arvore in arvores.items():

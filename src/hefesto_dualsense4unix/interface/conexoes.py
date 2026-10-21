@@ -348,7 +348,12 @@ def html_do_mapa(
             </div>''')
 
     from hefesto_dualsense4unix.interface import logica_do_mapa as _mm
-    from hefesto_dualsense4unix.utils.rotulo_da_entrada import MAXIMO_DO_NOME_DA_ENTRADA
+    from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
+        MAXIMO_DO_NOME_DA_ENTRADA,
+        com_artigo,
+        na_frase,
+        rotulo,
+    )
 
     nomes = nomes or {}
     nomes_das_entradas = nomes_das_entradas or {}
@@ -357,15 +362,16 @@ def html_do_mapa(
         f'<div class="mm-cel">{quadrado(filha, esticada=True)}'
         + (f'<span class="mm-hub-nome">{_e(nomes[filha])}</span>' if nomes.get(filha) else "")
         + f'<span class="mm-ligado">{_e(_mm.ROTULO_LIGADO)} '
-        f'<b>{_e(_mm.na_entrada(mae, nomes_das_entradas.get(mae)))}</b>'
-        f' <span class="mudo">· {_e(face_da_entrada.get(mae, ""))}</span></span></div>'
+        + com_artigo(f'<b>{_e(na_frase(mae, nomes_das_entradas.get(mae)))}</b>', em=True)
+        + f' <span class="mudo">· {_e(face_da_entrada.get(mae, ""))}</span></span></div>'
         for mae, filha in extensoes.items())
     pergunta_html = ""
     if aberta:
         gravar = 'data-gesto="novo-hub-gravar" data-hef-forma="hub-pergunta"'
         cancelar = 'data-gesto="novo-hub-cancelar"'
         opcoes = "".join(
-            f'<option value="{_e(n)}">{_e(_mm.na_entrada(n, nomes_das_entradas.get(n)))}</option>'
+            f'<option value="{_e(n)}">'
+            f'{_e(_primeira_maiuscula(rotulo(n, nomes_das_entradas.get(n))))}</option>'
             for n in (pergunta or {}).get("entradas", ()))
         pergunta_html = (
             f'''
