@@ -46,7 +46,7 @@ tela e "Personalizado (avançado)" já quebrava a linha no piso da janela.
    - **medir um lado só mente.** Com um `SegmentedSelector` só na aba, o botão
      ganha 212px e NADA quebra — inclusive os 24 caracteres do rótulo antigo;
    - **`apply_theme` compounda.** Ele lê o `gtk-font-name` atual e soma o delta
-     (`app/theme.py:108`): duas configurações medidas no mesmo processo não são
+     (no tema da janela GTK antiga, que saiu): duas configurações medidas no mesmo processo não são
      comparáveis, porque a segunda mede uma fonte maior. Uma medição por
      processo. (E o seletor injetado depois do `show_all()` só é alocado depois
      de um `janela.check_resize()`: sem ele mede 1x1, e drenar o laço não
