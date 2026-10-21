@@ -252,14 +252,14 @@
       "data": "2026-10-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1158928,
+      "piso": 1160376,
       "por_item": {
-        "docs": 120049,
-        "scripts": 114261,
-        "src": 314145,
-        "tests": 610473
+        "docs": 120132,
+        "scripts": 114220,
+        "src": 314511,
+        "tests": 611513
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +1448 linhas (1158928 -> 1160376), pagas por Origem: D-0609-GTK-LEVA-INTEIRA, D-0810-O-ZERO-DE-CADA-CONTROLE, D-1910-A-EXTENSAO-DE-LANCADOR-VIRA-LINHA-DA-07, D-1910-OS-LANCADORES-DE-FORA-VIRAM-EXTENSOES, D-2010-A-CHEGADA-NAO-TOCA-QUEM-JA-ESTAVA, D-2010-O-DESTAQUE-DO-TEMA-PASSA-DE-3-PARA-1, D-2010-O-DIARIO-DA-EXTENSAO-TEM-TETO-ENQUANTO-ELA-RODA, D-2010-O-EXTERNO-SEM-NUMERO-TEM-UM-TRAVESSAO, D-2909-A-NAVEGACAO-LIGA-O-MOUSE, D-A-REGUA-E-QUALQUER-MESA-NAO-A-DELA, luz.lightbar.cor; registrado no fecho, topo 0bc8e1908fcc",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -716,10 +716,16 @@
           "de": 1158412,
           "para": 1159052,
           "razao": "tamanho: +640 linhas (1158412 -> 1159052), pagas por Origem: D-1810-O-GATILHO-E-A-VIBRACAO-TEM-O-TRILHO-DE-0-A-200, D-2010-A-VIBRACAO-NO-NIBBLE-BAIXO-E-O-GATILHO-NO-ALTO; registrado no fecho, topo f9404293f2e0"
+        },
+        {
+          "data": "2026-10-20",
+          "de": 1158928,
+          "para": 1160376,
+          "razao": "tamanho: +1448 linhas (1158928 -> 1160376), pagas por Origem: D-0609-GTK-LEVA-INTEIRA, D-0810-O-ZERO-DE-CADA-CONTROLE, D-1910-A-EXTENSAO-DE-LANCADOR-VIRA-LINHA-DA-07, D-1910-OS-LANCADORES-DE-FORA-VIRAM-EXTENSOES, D-2010-A-CHEGADA-NAO-TOCA-QUEM-JA-ESTAVA, D-2010-O-DESTAQUE-DO-TEMA-PASSA-DE-3-PARA-1, D-2010-O-DIARIO-DA-EXTENSAO-TEM-TETO-ENQUANTO-ELA-RODA, D-2010-O-EXTERNO-SEM-NUMERO-TEM-UM-TRAVESSAO, D-2909-A-NAVEGACAO-LIGA-O-MOUSE, D-A-REGUA-E-QUALQUER-MESA-NAO-A-DELA, luz.lightbar.cor; registrado no fecho, topo 0bc8e1908fcc"
         }
       ],
       "unidade": "linhas",
-      "universo": 3018
+      "universo": 3029
     }
   }
 }
