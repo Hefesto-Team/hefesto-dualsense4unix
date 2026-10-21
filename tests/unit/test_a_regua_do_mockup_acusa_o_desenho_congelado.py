@@ -38,7 +38,9 @@ def test_as_dez_paginas_publicadas_tem_endereco_de_campo():
 
 
 #: o desenho do P1 e do P2 em cada mundo: o antigo mostra os números das barras, o do todo
-#: mostra o modo e a imersão (os números moram no `profiles/efeitos_de_imersao.py`)
+#: mostra o modo e a imersão (os números moram no `profiles/efeitos_de_imersao.py`). O R2 do P2
+#: sem imersão nasce «Sem efeito» desde a cena dos efeitos por família (7fc26162a,
+#: D-2010-O-EFEITO-DO-GATILHO-SE-AGRUPA-POR-FAMILIA).
 CASO_ANTIGO = {"p1·aj-nome-e-0": "Início do curso", "p1·aj-val-e-0": "2",
                "p1·aj-nome-e-1": "Fim do curso", "p1·aj-val-e-1": "9",
                "p1·aj-nome-e-2": "Força", "p1·aj-val-e-2": "4",
@@ -46,7 +48,7 @@ CASO_ANTIGO = {"p1·aj-nome-e-0": "Início do curso", "p1·aj-val-e-0": "2",
 CASO_DO_TODO = {"p1·modo-chave-e": "Machine", "p1·imersao-e": "rajada-que-sobe-sozinha",
                 "p1·modo-chave-d": "Bow", "p1·imersao-d": "corda-que-estica",
                 "p2·modo-chave-e": "Weapon", "p2·imersao-e": "ferrolho-que-volta",
-                "p2·modo-chave-d": "Resistance", "p2·imersao-d": "nenhum"}
+                "p2·modo-chave-d": "Off", "p2·imersao-d": "nenhum"}
 
 
 def _caso(campos: dict[str, str]) -> dict[str, str]:
