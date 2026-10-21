@@ -556,20 +556,22 @@ jobs:
       # job CANCELA e o do passo REPROVA.
       #
       # A SUÍTE EM PARTES, NÃO NUM PROCESSO SÓ (O-CI-TERMINA-E-DIZ-O-VERMELHO-01,
-      # 21/10/2026). O passo era um `pytest` sobre `tests/unit` num processo só, e no
-      # run 39619656976 os três `lint-test` pararam calados no mesmo teste, aos 36%:
-      # a última linha de cada perna é `test_install_headless.py::TestAskYnHeadless::
-      # test_ask_yn_tem_guarda_de_tty PASSED`, e o passo só terminou 33 a 41
-      # minutos DEPOIS dela (3.12: 15:04 e 15:37; 3.11: 15:06 e 15:43; 3.10: 15:09
-      # e 15:50), sem sumário e sem «Process completed with exit code». Era a
-      # primeira das três mortes que o `scripts/rodar-a-suite.sh` já cura em casa:
-      # um processo só morre no meio e o vermelho que sobra não diz qual foi. Agora
-      # o dono do comando roda as 24 partes, cada uma num processo, trata o silêncio
-      # de pytest como erro duro e diz a parte que morreu; o log de cada parte sobe
-      # como artefato quando algo reprova. Os 31155 testes de uma perna levaram 46 a
-      # 60 minutos num processo (a extrapolação dos 36%); o teto de 85 cobre isso
-      # com os 24 inícios de processo. A `--continue-on-collection-errors` segue: um
-      # módulo quebrado não esconde o resto da parte dele.
+      # 21/10/2026). O passo era um `pytest -v` sobre `tests/unit` num processo só, e no
+      # run 39619656976 o log dos três `lint-test` parou no mesmo teste, aos 36%: a
+      # última linha de cada perna é `test_install_headless.py::TestAskYnHeadless::
+      # test_ask_yn_tem_guarda_de_tty PASSED`, sem sumário e sem «Process completed with
+      # exit code». O PROCESSO NÃO MORREU: cada perna acabou quando a conta dos 36% dizia
+      # (3.12: 15:04 e 15:37; 3.11: 15:06 e 15:43; 3.10: 15:09 e 15:50, três minutos
+      # depois da conta nas três). O que se perdeu foi o LOG, na linha seguinte: o id do
+      # teste parametrizado com o `install.sh` inteiro, 346 KB numa linha só (o id ganhou
+      # nome, e a régua `test_o_ci_roda_a_suite_em_partes` reprova o próximo). Agora o
+      # dono do comando roda as 24 partes, cada uma num processo, com a saída do pytest
+      # num arquivo por parte: no log do passo só entra o sumário de cada parte, o
+      # silêncio de pytest é erro duro, e o log da parte sobe como artefato quando algo
+      # reprova. Os 31155 testes de uma perna levaram 49 a 62 minutos num processo; o
+      # teto de 85 cobre isso com os 24 inícios de processo. A
+      # `--continue-on-collection-errors` segue: um módulo quebrado não esconde o resto
+      # da parte dele.
       - name: Pytest unit
         timeout-minutes: 85
         env:

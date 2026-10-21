@@ -1,9 +1,11 @@
 """O CI roda a suíte em partes, e as pernas juntas cobrem as 24 sem furo e sem repetição.
 
-O run 39619656976 (21/10/2026) fechou `failure` nos dois jobs que rodam a suíte, pelo mesmo
-defeito de forma: um processo só para trabalho demais. Os três `lint-test` rodavam
-`pytest tests/unit` num processo e morreram calados aos 36%, sem sumário; o `gtk-real` rodava as
-24 partes em série e estourou o prazo de 95 minutos na parte 19.
+O run 39619656976 (21/10/2026) fechou `failure` nos dois jobs que rodam a suíte. Os três
+`lint-test` rodavam `pytest tests/unit -v` num processo, e o log deles parou aos 36%, sem
+sumário: o processo seguiu até o fim (cada perna acabou quando a conta dos 36% dizia, com 3
+minutos de diferença), e o que se perdeu foi o LOG, na linha seguinte, que era o id de 346 KB de
+um teste parametrizado com o `install.sh` inteiro. O `gtk-real` rodava as 24 partes em série e
+estourou o prazo de 95 minutos na parte 19.
 
 A cura é do desenho do YAML, e esta régua o confere:
 1. o passo da suíte do `lint-test` é o `scripts/rodar-a-suite.sh` (nenhum job roda `tests/unit`
@@ -11,10 +13,13 @@ A cura é do desenho do YAML, e esta régua o confere:
 2. as faixas do `gtk-real` cobrem as partes de 00 à última, sem furo e sem repetição;
 3. cada perna escreve a cobertura e os logs num nome que só ela tem (dois nomes iguais num
    `upload-artifact` reprovam a segunda perna);
-4. a cobertura de cada faixa é SOMADA antes de o piso cobrar (o piso de 70 é da suíte inteira).
+4. a cobertura de cada faixa é SOMADA antes de o piso cobrar (o piso de 70 é da suíte inteira);
+5. nenhum `parametrize` de `tests/` usa o texto de um arquivo como valor sem `ids=`: o id do teste
+   vira o arquivo inteiro numa linha, e o log do CI perde tudo dali em diante.
 """
 from __future__ import annotations
 
+import ast
 import copy
 import re
 from pathlib import Path
@@ -288,3 +293,64 @@ def test_mordida_lint_test_de_volta_ao_processo_unico() -> None:
     achados = todas_as_faltas(jobs, 24)
     assert any("num processo só" in f for f in achados)
     assert any("nenhum passo roda scripts/rodar-a-suite.sh" in f for f in achados)
+
+
+# --- 5. o id do teste cabe numa linha ---------------------------------------------------------
+
+TESTES = RAIZ / "tests"
+LEITURAS_DE_ARQUIVO = {"read_text", "read_bytes"}
+
+
+def _nomes_de_arquivo_lido(arvore: ast.Module) -> set[str]:
+    """Os nomes do módulo e das classes que guardam o texto de um arquivo (`X = p.read_text()`)."""
+    nomes: set[str] = set()
+    corpos = [arvore.body] + [n.body for n in ast.walk(arvore) if isinstance(n, ast.ClassDef)]
+    for corpo in corpos:
+        for no in corpo:
+            if not isinstance(no, ast.Assign) or not isinstance(no.value, ast.Call):
+                continue
+            funcao = no.value.func
+            if isinstance(funcao, ast.Attribute) and funcao.attr in LEITURAS_DE_ARQUIVO:
+                nomes.update(alvo.id for alvo in no.targets if isinstance(alvo, ast.Name))
+    return nomes
+
+
+def ids_que_viram_o_arquivo(fonte: str, nome: str = "<fonte>") -> list[str]:
+    """Os `parametrize` sem `ids=` cujos valores trazem o texto de um arquivo. Função pura."""
+    arvore = ast.parse(fonte)
+    lidos = _nomes_de_arquivo_lido(arvore)
+    faltas: list[str] = []
+    for no in ast.walk(arvore):
+        if not (
+            isinstance(no, ast.Call)
+            and isinstance(no.func, ast.Attribute)
+            and no.func.attr == "parametrize"
+            and len(no.args) >= 2
+            and not any(k.arg == "ids" for k in no.keywords)
+        ):
+            continue
+        usados = {n.id for n in ast.walk(no.args[1]) if isinstance(n, ast.Name)} & lidos
+        if usados:
+            faltas.append(
+                f"{nome}:{no.lineno}: o `parametrize` usa o texto de {sorted(usados)} sem `ids=`"
+            )
+    return faltas
+
+
+def test_nenhum_id_de_teste_e_um_arquivo_inteiro() -> None:
+    faltas = [
+        falta
+        for arquivo in sorted(TESTES.rglob("test_*.py"))
+        for falta in ids_que_viram_o_arquivo(
+            arquivo.read_text(encoding="utf-8"), str(arquivo.relative_to(RAIZ))
+        )
+    ]
+    assert faltas == [], "\n".join(faltas)
+
+
+def test_mordida_o_id_sem_nome_volta_a_ser_o_install_inteiro() -> None:
+    fonte = (TESTES / "unit" / "test_install_headless.py").read_text(encoding="utf-8")
+    mordida = re.sub(r', ids=\[[^\]]*\]', "", fonte)
+    assert mordida != fonte, "a mordida não achou o `ids=` do test_install_headless"
+    assert ids_que_viram_o_arquivo(fonte) == []
+    assert any("INSTALL" in f for f in ids_que_viram_o_arquivo(mordida))

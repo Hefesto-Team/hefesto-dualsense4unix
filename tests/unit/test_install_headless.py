@@ -61,7 +61,7 @@ class TestAskYnHeadless:
 
 
 class TestAcquireSudoAskpass:
-    @pytest.mark.parametrize("script_text", [INSTALL, UNINSTALL])
+    @pytest.mark.parametrize("script_text", [INSTALL, UNINSTALL], ids=["install", "uninstall"])
     def test_acquire_sudo_suporta_askpass(self, script_text: str) -> None:
         fn = _extract_bash_function(script_text, "acquire_sudo")
         assert "SUDO_ASKPASS" in fn, (

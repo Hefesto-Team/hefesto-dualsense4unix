@@ -133,7 +133,9 @@ class TestBtMaximoWiring:
         assert "hefesto (bluetooth|FastConnectable|JustWorksRepairing) >>>" in BLUEZ_CONFIG
         assert "hefesto (bluetooth|FastConnectable|JustWorksRepairing) <<<" in BLUEZ_CONFIG
 
-    @pytest.mark.parametrize("texto", [INSTALL, UNINSTALL, BLUEZ_CONFIG])
+    @pytest.mark.parametrize(
+        "texto", [INSTALL, UNINSTALL, BLUEZ_CONFIG], ids=["install", "uninstall", "bluez_config"]
+    )
     def test_nunca_reinicia_o_bluetoothd(self, texto: str) -> None:
         assert "systemctl restart bluetooth" not in texto
         assert "systemctl restart bluetoothd" not in texto
