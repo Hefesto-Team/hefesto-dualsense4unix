@@ -22,16 +22,16 @@ MORDIDA (executada em 21/10/2026): sem o `overflow-y:auto` da `.lanc-fila`,
 `test_a_fila_que_nao_cabe_rola_por_dentro` reprova nos três casos e o ⋮ aberto também (o miolo
 rola); com o piso de volta em 38 px e o vão em 8, `test_a_fila_dela_cabe_inteira_na_maximizada`
 reprova; sem o vigia do ⋮ no `comportamento.js`,
-`test_o_menu_com_as_permissoes_da_ultima_fileira_fica_a_vista` reprova nas duas vistas.; sem a
+`test_o_menu_com_as_permissoes_da_ultima_fileira_fica_a_vista` reprova nas duas vistas; sem a
 dica na frase da extensão (`ext-faz`), seis dos sete reprovam pelo texto cortado.
 """
 
 from __future__ import annotations
 
 import json
-import re
 import os
 import pathlib
+import re
 import subprocess
 import sys
 
