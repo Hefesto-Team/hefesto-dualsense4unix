@@ -1695,13 +1695,13 @@
      escrito pelo alvo `atributo`, como o `data-apagado` das molduras de som
      da aba 02. A régua é
      `tests/unit/test_a_marca_que_nunca_acende_e_o_gerador_que_confere.py`. */
-  /* A FAIXA SEM PENDÊNCIA SOME, E O ESPAÇO FICA. `visibility` e não `display`:
-     "muda tudo ao clicar" é queixa de uso, e a legenda desta aba promete que o
-     espaço é reservado para a tela não pular. Sem esta regra a caixa tracejada
-     ficava com um travessão solto — o piloto escreve `—` no lugar de um valor
-     vazio, e um traço laranja dentro de uma moldura de alerta lê-se como
-     "faltou alguma coisa", não como "nada pendente". */
-  .faixa-final:not(.ha) .pendente{visibility:hidden}
+  /* A FAIXA SEM PENDÊNCIA SAI INTEIRA, COM A LINHA — 21/10/2026,
+     A-JOGAR-SEM-EXTERNO-NAO-DEIXA-FAIXA-VAZIA-01. Era `visibility` na frase, para
+     o espaço ficar e o «Reconectar», que morava nesta fileira, não pular; desde
+     15/10 o botão mora no canto do quadro e nada vem depois da faixa. Medido no
+     piloto (P1 a P4, sem externo): sobravam a divisória e 37 px vazios sob os
+     cartões. O travessão que o piloto escreve no vazio sai junto. */
+  .faixa-final:not(.ha){display:none}
 
 
   body.nativo.por-controle :is([data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v]):not(:is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=modo-navegacao],[data-gesto=reconectar],.menu-hefesto *)){

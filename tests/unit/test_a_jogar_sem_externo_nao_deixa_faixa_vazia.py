@@ -84,6 +84,7 @@ def _medir(tamanho: tuple[int, int], frase: str, externos: str) -> dict[str, Any
 
 @pytest.mark.parametrize("tamanho", TAMANHOS, ids=lambda t: f"{t[0]}x{t[1]}")
 def test_sem_externo_e_sem_pendencia_nada_fica_sob_os_cartoes(tamanho: tuple[int, int]) -> None:
+    """A prova da D-2110-A-FAIXA-SEM-PENDENCIA-SAI-INTEIRA."""
     lido = _medir(tamanho, "", _externos())
     assert lido["cartoes"] >= 1, lido
     assert not lido["faixa_visivel"] and lido["abaixo"] == [], (

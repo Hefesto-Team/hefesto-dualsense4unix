@@ -172,6 +172,7 @@ def _trocar_a_escolha(d: _DaemonQueAnota, valor: str) -> _PonteDoDaemon:
 
 
 def test_trocar_a_escolha_com_o_point_and_click_de_pe_muda_o_quadrado_na_hora() -> None:
+    """A prova da D-2110-O-POINT-AND-CLICK-SE-REPOE-PELO-SERVICO."""
     d = _pelo_gravador(_daemon())
     d.aplicar_o_arranjo_do_desktop(origin="manual", arranjo=ARRANJO_POINT_AND_CLICK)
     assert d.quadrado() == ("KEY_LEFTCTRL",)

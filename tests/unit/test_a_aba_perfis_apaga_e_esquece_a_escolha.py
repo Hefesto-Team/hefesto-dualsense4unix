@@ -59,6 +59,7 @@ def _remover_duas_vezes(monkeypatch: pytest.MonkeyPatch, nome: str, valendo: str
 
 
 def test_apagar_pela_aba_esquece_a_escolha_e_o_ultimo_jogo(monkeypatch) -> None:
+    """A prova da D-2110-A-ABA-PERFIS-APAGA-PELO-DONO-DA-LINHA-DE-COMANDO."""
     _no_disco("Pragmata", "Sackboy")
     session.gravar_a_escolha("Sackboy")
     session.lembrar_o_ultimo_jogo("Sackboy")
