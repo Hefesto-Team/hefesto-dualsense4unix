@@ -34,6 +34,7 @@ from typing import Any
 
 # `portao_a_casa_sabe_e_o_produto_nao_faz` segue o fecho de IMPORT a partir do
 from hefesto_dualsense4unix.app.telas import vibracao as _tela
+from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
 from hefesto_dualsense4unix.core.rumble import POLITICA_PADRAO, vale_o_padrao
 from hefesto_dualsense4unix.daemon.subsystems import padroes_de_vibracao as _padroes
 from hefesto_dualsense4unix.interface.monta import MODO_AUTOMATICO, partes_do_modelo
@@ -842,7 +843,7 @@ def _repetir_o_padrao(ctx: Contexto, p: Any, uniq: str, padrao: str, motores: st
         except Exception as erro:
             print(f"[vibração] o padrão em teste parou: {erro}", file=sys.stderr)
 
-    fio = threading.Thread(target=voltas, name=f"padrao-em-teste-{uniq}", daemon=True)
+    fio = threading.Thread(target=voltas, name=mascarar(f"padrao-em-teste-{uniq}"), daemon=True)
     _REPIQUE_DO_PADRAO[uniq] = (fim, fio)
     _EM_TESTE.add(uniq)
     fio.start()
