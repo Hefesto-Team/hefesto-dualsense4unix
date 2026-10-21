@@ -855,7 +855,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Os dados das quatro faixas
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: cobertura-*
           path: /tmp/cobertura
