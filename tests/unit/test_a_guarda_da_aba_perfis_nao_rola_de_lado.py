@@ -85,6 +85,8 @@ def test_em_nenhuma_largura_em_volta_do_corte_a_guarda_rola_de_lado(largura: int
 
     Medido em 20/10/2026 pelo conferente: com o corte a 1212, a guarda rolava 13 px a 1213 e só
     cabia a 1240. A lista pega os dois lados do corte e o meio do trecho que rolava.
+
+    A prova da D-2010-A-GUARDA-DA-PERFIS-ESCONDE-O-ID-NA-JANELA-ESTREITA.
     """
     m = _mede(largura, 809)
     assert m["lateral"] <= 0, f"a guarda rola de lado a {largura} px: {m}"

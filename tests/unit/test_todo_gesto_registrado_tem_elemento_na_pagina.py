@@ -74,7 +74,10 @@ def test_a_regua_acusa_o_gesto_sem_elemento() -> None:
 
 
 def test_o_registro_real_nao_tem_gesto_sem_elemento() -> None:
-    """Nas duas abas, todo gesto registrado tem `data-gesto` na publicada e no desenho."""
+    """Nas duas abas, todo gesto registrado tem `data-gesto` na publicada e no desenho.
+
+    A prova da D-2010-A-PONTE-DO-MICROFONE-FICA-SEM-BOTAO.
+    """
     pac = _pacotes()
     for publicado in (True, False):
         faltam = [chave for chave in sem_elemento(pac.GESTOS, _textos(publicado=publicado))
