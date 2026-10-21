@@ -273,9 +273,13 @@ def test_a_linha_do_gamepad_virtual(estado: Any, cls: str, texto: str) -> None:
     assert (linha["cls"], linha["txt"]) == (cls, texto), linha
 
 
-def test_sem_controle_a_linha_do_gamepad_nao_aparece() -> None:
-    """Sem controle ligado não há gamepad a esperar: a linha só ocupava o lugar (21/10/2026)."""
-    assert a09.linha_do_gamepad_por_jogador(_estado(0, 0)) is None
+@pytest.mark.parametrize("estado", [
+    _estado(0, 0), _estado(0, 0, native=True), _estado(0, 0, emulacao=False)])
+def test_sem_controle_a_linha_do_gamepad_nao_aparece(estado: Any) -> None:
+    """Sem controle ligado não há gamepad a esperar, em nenhum modo: a linha só ocupava o lugar
+    (21/10/2026). MORDIDA (executada em 21/10/2026): com a conta dos controles depois do nativo e
+    da emulação, como nasceu, o nativo e a emulação desligada reprovam."""
+    assert a09.linha_do_gamepad_por_jogador(estado) is None
 
 
 def test_linha_do_status_e_do_exame_falam_pela_dica_curta() -> None:

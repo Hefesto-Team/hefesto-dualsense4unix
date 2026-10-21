@@ -1321,6 +1321,11 @@ def linha_do_gamepad_por_jogador(state: Any) -> dict[str, Any] | None:
             or not isinstance(bloco, dict) or "enabled" not in bloco):
         return linha(nota, "Gamepads virtuais: sem leitura do serviço",
                      "O serviço não respondeu quantos gamepads virtuais existem.")
+    conectados = _tela.quantos_controles(state)
+    if not conectados:
+        # Sem controle ligado a linha só ocupava o lugar, em qualquer modo: não há gamepad a
+        # esperar nem jogo a quem dizer como ele fala com o controle (21/10/2026).
+        return None
     native = bool(state.get("native_mode"))
     emulacao = bool(bloco["enabled"])
     if native:
@@ -1329,10 +1334,6 @@ def linha_do_gamepad_por_jogador(state: Any) -> dict[str, Any] | None:
     if not emulacao:
         return linha(nota, "Gamepad virtual: emulação desligada",
                      "Com a emulação desligada nenhum jogo recebe gamepad virtual.")
-    conectados = _tela.quantos_controles(state)
-    if not conectados:
-        # Sem controle ligado a linha só ocupava o lugar: não há gamepad a esperar (21/10/2026).
-        return None
     if sem_dono_do_rumble(native=native, backends=("vpad",) * max(0, vpads), emulacao=emulacao):
         return linha(falha, "Nenhum gamepad virtual subiu",
                      "A emulação está ligada e nenhum gamepad virtual subiu: o jogo ainda vê "
