@@ -276,3 +276,65 @@ def test_nenhuma_traducao_muda_mais_do_que_a_palavra() -> None:
             "a tradução mudou mais do que a palavra — o oráculo é o juiz do "
             f"resto da frase:\n  antes:  {antes!r}\n  depois: {depois!r}"
         )
+
+
+#: Duas entradas com nome, como o mapa dela guarda (o ``nome`` da porta declarada).
+_NOMES = {"9": "Atrás", "15a": "Ponta"}
+
+
+def _com_os_nomes(v: Any) -> Any:
+    """O ouro com cada «Entrada N» nomeada trocada pelo sintagma do dono («entrada Atrás»)."""
+    import re
+
+    if isinstance(v, str):
+        for numero, nome in _NOMES.items():
+            v = re.sub(rf"\bEntrada {re.escape(numero)}(?![0-9a-z])", f"entrada {nome}", v)
+        return v
+    if isinstance(v, list):
+        return [_com_os_nomes(x) for x in v]
+    if isinstance(v, dict):
+        return {k: _com_os_nomes(x) for k, x in v.items()}
+    return v
+
+
+def _mesa_com_nomes(**kw: Any) -> motor.Mesa:
+    from dataclasses import replace
+
+    return replace(mock.mesa(**kw), nomes=_NOMES)
+
+
+@pytest.mark.parametrize("variante", ["melhor", "poucos", "sem-ext", "so-pc"])
+def test_o_nome_que_ela_deu_entra_em_toda_frase_da_receita(variante: str) -> None:
+    """A frase do motor diz a entrada pelo dono: com nome, «na entrada Atrás»; sem, «na Entrada 9».
+
+    MORDIDA: uma frase da receita que volte a montar «entrada » + número à mão reprova aqui
+    (e na régua do dono único, `test_a_costura_da_onda_2::test_o_nome_da_porta_tem_um_dono_so`)."""
+    movs = motor.receita(_mesa_com_nomes(), OPCOES[variante])
+    esperado = _com_os_nomes(_receita_do_ouro(f"receita/{variante}"))
+    assert como_o_mockup_receita(movs) == esperado
+
+
+@pytest.mark.parametrize("n", ["1", "2", "10", "15a"])
+@pytest.mark.parametrize("na_mao", ["bt", "teclado", "mouse"])
+def test_o_nome_que_ela_deu_entra_no_porque_do_julgamento(n: str, na_mao: str) -> None:
+    mesa = _mesa_com_nomes()
+    entrada = motor.por_num(mesa.faces, n)
+    assert entrada is not None
+    esperado = _com_os_nomes(ouro(f"julgar/{n}/{na_mao}"))
+    assert _veredito(motor.julgar(entrada, na_mao, mesa)) == esperado
+
+
+def test_o_nome_que_ela_deu_entra_no_rotulo_do_adaptador() -> None:
+    plano = _controles(motor.plano_dos_controles(
+        mock.CONTROLES[:4], motor.adaptadores_da_mesa(_mesa_com_nomes())))
+    assert plano == _com_os_nomes(ouro("controles/padrao"))
+    assert {a["rotulo"] for a in plano["ads"]} >= {"entrada Atrás", "entrada Ponta"}
+
+
+def test_a_prova_dos_nomes_nao_e_vazia() -> None:
+    """Os cenários acima passam por frases com a Entrada 9 e a 15a: a troca muda o ouro."""
+    receitas = [f"receita/{v}" for v in ("melhor", "poucos", "sem-ext", "so-pc")]
+    julgados = [f"julgar/{n}/{m}" for n in ("1", "2", "10", "15a")
+                for m in ("bt", "teclado", "mouse")]
+    assert sum(_com_os_nomes(ouro(k)) != ouro(k) for k in receitas) >= 2
+    assert sum(_com_os_nomes(ouro(k)) != ouro(k) for k in julgados) >= 2

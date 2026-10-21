@@ -341,28 +341,11 @@ _OS_QUE_PODEM = {
     # fica: é o dono da palavra, e as duas entradas dele são a regra
     (_O_DONO, "define a palavra"): "é o dono (D-2609-O-NOME-E-DA-POSICAO)",
     (_O_DONO, "compõe com a palavra"): "é o dono (D-2609-O-NOME-E-DA-POSICAO)",
-    # sai com: O-MOTOR-DO-ARRANJO-E-O-DESENHO-DIZEM-A-ENTRADA-PELO-DONO-01 (o ouro do motor)
-    ("integrations/arranjo_da_mesa.py", "compõe uma f-string"): (
-        "o porte do motor medido contra o ouro (`tests/fixtures/motor_do_arranjo_"
-        "do_mockup.js`); a página do mapa tem o motor dela, que já pergunta ao "
-        "dono (`naFraseDe`). CHEGA À TELA por um caminho só, o desenho do "
-        "gabinete da tela «Mapear Entradas» da aba 08 (`a08_conexoes."
-        "_html_do_mapa` → `mapa_da_mesa.veredito_do_quadrado` → `julgar`, o "
-        "«colada no …, na entrada N»): o arquivo e o `app/widgets/` são "
-        "`nao_toca` da O-MAPA-QUE-ELA-CORRIGE-01 — dívida declarada na conferência"
-    ),
-    ("integrations/arranjo_da_mesa.py", "tem um modelo de .format"): (
-        "o mesmo porte do motor, pela mesma razão"
-    ),
-    ("interface/aba08.py", "tem um modelo de .format"): (
-        "o gerador do desenho aprovado da aba 08, fora da posse da "
-        "O-MAPA-QUE-ELA-CORRIGE-01 (a sprint manda parar e avisar): o contador "
-        "da calibração e as frases do desenho — dívida declarada no relatório"
-    ),
     # fica: o contador conta passos, e a mensagem do esquema cita o valor recusado
     ("interface/pacotes/a08_conexoes.py", "compõe uma f-string"): (
-        "o contador da calibração («entrada 3 de 7») conta PASSOS, não nomeia uma "
-        "entrada; as recusas da aba perguntam ao dono (`_a_entrada_na_frase`)"
+        "o contador da calibração («Entrada 3 de 7», `contador_da_cerimonia`, que o "
+        "desenho da aba 08 lê) conta PASSOS, não nomeia uma entrada; as recusas da "
+        "aba perguntam ao dono (`_a_entrada_na_frase`)"
     ),
     ("utils/maquina.py", "compõe uma f-string"): (
         "as mensagens de validação do schema citam o VALOR recusado («número de "

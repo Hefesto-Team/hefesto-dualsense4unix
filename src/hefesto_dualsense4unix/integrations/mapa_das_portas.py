@@ -285,6 +285,7 @@ def mesa_do_motor(
             faces=tuple(faces),
             mapa=declarado,
             leitura=leitura,
+            nomes={numero: porta.nome for numero, porta in mapa.portas.items() if porta.nome},
         ),
         lacunas=tuple(sorted(lacunas)),
         usb_de=origens,

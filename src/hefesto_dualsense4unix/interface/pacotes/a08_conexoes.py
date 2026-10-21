@@ -5543,6 +5543,11 @@ def _laco() -> Any:
     return entrada_a_entrada.o_laco()
 
 
+def contador_da_cerimonia(passo: object, total: object) -> str:
+    """«Entrada 3 de 7»: conta passos da cerimônia, e o desenho da aba o lê daqui."""
+    return f"Entrada {passo} de {total}"
+
+
 def _campos_da_cerimonia() -> dict[str, Any]:
     """As três telas do «Mapear entrada a entrada», pelo laço (ENTRADA-A-ENTRADA-02)."""
     perfil._com_o_src()
@@ -5553,13 +5558,13 @@ def _campos_da_cerimonia() -> dict[str, Any]:
     foto = _laco().foto_sem_esperar()
     contador, quem = "", ""
     if foto.get("estado") == ee.SENTADA:
-        contador = (f'Entrada {foto.get("passo")} de {foto.get("total")} '
+        contador = (f'{contador_da_cerimonia(foto.get("passo"), foto.get("total"))} '
                     f'<span class="pt">·</span> {calib.SEM_SAIR_DA_CADEIRA}')
         pergunta = foto.get("pergunta") or {}
         quem = (f'{_x(pergunta.get("especie") or "")} <span class="pt">·</span> '
                 f'<code>{_x(pergunta.get("caminho") or "")}</code>') if pergunta else ""
     elif foto.get("estado") == ee.EM_PE:
-        contador = f'Entrada {foto.get("passo")} de {foto.get("total")}'
+        contador = contador_da_cerimonia(foto.get("passo"), foto.get("total"))
         quem = calib.PROCURANDO
     # No fim, o convite mora no «?» da tela: o corpo fica sem frase explicativa.
     nada = _monta().NADA_A_DIZER

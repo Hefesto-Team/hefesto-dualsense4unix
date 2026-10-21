@@ -80,6 +80,7 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     SLOTS_POR_RELATORIO,
     SLOTS_POR_SEGUNDO,
 )
+from hefesto_dualsense4unix.utils.rotulo_da_entrada import com_artigo, na_frase
 
 Mapa = Mapping[str, str]
 Leitura = Mapping[str, str]
@@ -135,6 +136,12 @@ class Mesa:
     faces: tuple[Face, ...]
     mapa: Mapa
     leitura: Leitura
+    #: O nome que o usuário deu a cada entrada (o ``nome`` do mapa dele), para as frases.
+    nomes: Mapping[str, str] = field(default_factory=dict)
+
+    def na_frase(self, numero: str | None) -> str:
+        """A entrada no meio da frase, pelo dono: «Entrada 3», ou «entrada Meio» com nome."""
+        return na_frase(numero, self.nomes.get(numero) if numero else None)
 
 
 @dataclass(frozen=True)
@@ -620,7 +627,8 @@ def _o_que_o_plano_nao_sabe_arrumar_fica(
             razoes=(), peso="melhora", ganho=0.0, forcado=False, essencial=False)
 
 
-_PORQUE_A_VARIANTE_TIROU = "esta opção não usa a entrada {de}, onde ele está hoje"
+def _porque_a_variante_tirou(entrada: str) -> str:
+    return f"esta opção não usa {com_artigo(entrada)}, onde ele está hoje"
 
 
 def _o_mapa_so_move_o_que_a_receita_manda(
@@ -657,7 +665,7 @@ def _o_mapa_so_move_o_que_a_receita_manda(
         novo = _motivo_de(mesa, aparelho, de, plano, (), aloc, nota)
         if not volta and not novo.forcado:
             novo = Motivo(
-                razoes=(Razao(SELO_DERIVADO, _PORQUE_A_VARIANTE_TIROU.format(de=de)),
+                razoes=(Razao(SELO_DERIVADO, _porque_a_variante_tirou(mesa.na_frase(de))),
                         *novo.razoes),
                 peso=novo.peso, ganho=math.inf, forcado=True, essencial=True,
             )
@@ -686,7 +694,7 @@ def _motivo_de(
         outro = _acha(mesa, plano.get(atual))
         razoes.insert(0, Razao(
             SELO_DERIVADO,
-            f"a entrada {atual} passou a ser do {outro.tipo if outro else ''},"
+            f"{com_artigo(mesa.na_frase(atual))} passou a ser do {outro.tipo if outro else ''},"
             " entao este precisa de outro lugar",
         ))
     ganho = math.inf if tomada else (nota.n - nota_atual)
@@ -797,9 +805,10 @@ def receita(mesa: Mesa, op: Opcoes | None = None) -> list[Movimento]:
 
         genero, nome = _rotulo(aparelho)
         titulo = (
-            f"Mova {genero} {nome} da entrada {de} para a {para}"
+            f"Mova {genero} {nome} {com_artigo(mesa.na_frase(de), de=True)}"
+            f" para {com_artigo(mesa.na_frase(para))}"
             if de
-            else f"Ponha {genero} {nome} na entrada {para}"
+            else f"Ponha {genero} {nome} {com_artigo(mesa.na_frase(para), em=True)}"
         )
         if not motivo.essencial:
             titulo += "  ·  melhora, não é urgente"
@@ -827,7 +836,13 @@ def _linha_de_hoje(mesa: Mesa, aparelho: Aparelho, de: str | None) -> Linha:
                      " treinado, e é o <b>tráfego</b> dele que irradia.")
     if no_hub and aparelho.classe == "teclado":
         return Linha(SELO_MEDIDO, f"Hoje ele está pendurado no hub (<code>{caminho}</code>).")
-    return Linha(SELO_MEDIDO, f"Hoje ele está na entrada <b>{de}</b> (<code>{caminho}</code>).")
+    onde = com_artigo(f"<b>{mesa.na_frase(de)}</b>", em=True)
+    return Linha(SELO_MEDIDO, f"Hoje ele está {onde} (<code>{caminho}</code>).")
+
+
+def frase_da_colada(tipo: str, entrada: str) -> str:
+    """O porquê do «vale evitar»: «colada no Mouse, na Entrada 7» (``entrada`` já pelo dono)."""
+    return f"colada no {tipo}, {com_artigo(entrada, em=True)}"
 
 
 def julgar(
@@ -864,7 +879,8 @@ def julgar(
     vizinho = _acha(mesa, aloc.get(entrada.par)) if entrada.par else None
     vz_radio = vizinho is not None and eh_radio(vizinho.classe)
     colada = (
-        f"colada no {vizinho.tipo}, na entrada {entrada.par}" if vizinho else ""
+        frase_da_colada(vizinho.tipo, mesa.na_frase(entrada.par))
+        if vizinho and entrada.par else ""
     )
     superspeed = _superspeed_no_hub(mesa, {}, aloc)
 
@@ -1035,7 +1051,7 @@ def adaptadores_da_mesa(mesa: Mesa) -> tuple[Adaptador, ...]:
         entrada = entrada_de_em(aloc, aparelho.id)
         fora.append(Adaptador(
             id=aparelho.id, entrada=entrada,
-            rotulo=f"entrada {entrada}" if entrada else "entrada por confirmar",
+            rotulo=mesa.na_frase(entrada) if entrada else "entrada por confirmar",
         ))
     return tuple(fora)
 

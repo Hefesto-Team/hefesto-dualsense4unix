@@ -211,7 +211,7 @@ DIVIDAS: dict[str, int] = {
     "tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py::_SEM_CAMINHO_HOJE": 3,
     "tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py::_SEM_MAO_HOJE": 0,
     "tests/unit/test_a_base_comum_das_abas.py::ISENTOS": 0,
-    "tests/unit/test_a_costura_da_onda_2.py::_OS_QUE_PODEM": 7,
+    "tests/unit/test_a_costura_da_onda_2.py::_OS_QUE_PODEM": 4,
     "tests/unit/test_a_janela_estreita_nao_engole_o_desenho.py::CORTE_CONHECIDO_NO_DESENHO": 0,
     "tests/unit/test_guarda_gi_falso_precisa_de_exigir_gi_real.py::DIVIDA_GI_FALSO": 0,
     "tests/unit/test_mic_volume_01_o_slider_que_faltava.py::_SEM_MIC_HOJE": 0,

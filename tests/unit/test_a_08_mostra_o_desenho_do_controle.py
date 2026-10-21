@@ -322,7 +322,7 @@ def test_o_mapa_sem_face_diz_uma_frase_curta_e_a_explicacao_vai_na_dica() -> Non
 def test_o_contador_da_cerimonia_abre_com_maiuscula_no_desenho_e_no_pacote() -> None:
     from hefesto_dualsense4unix.interface import aba08
 
-    assert aba08.PROGRESSO.startswith("Entrada ")
+    assert aba08._pacote08.contador_da_cerimonia(3, 7) == "Entrada 3 de 7"
     pagina = _a_pagina()
     assert re.search(r'class="ce-cont"[^>]*>Entrada \d+ de \d+', pagina)
     assert not re.search(r'class="ce-cont"[^>]*>entrada ', pagina)

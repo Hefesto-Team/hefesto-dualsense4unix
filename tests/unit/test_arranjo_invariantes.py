@@ -68,8 +68,9 @@ def test_arrancada_a_regra_do_irmao_a_receita_salta_de_cinco_para_sete() -> None
     mesa = mock.mesa(leitura=mock.LEITURA_ANTES)
     saltou = movimentos(mesa)
     assert len(saltou) == 7, saltou
-    assert "Mova o dongle Bluetooth da entrada 15a para a 9" in saltou
-    assert any(t.startswith("Mova o dongle Bluetooth da entrada 9 para a 15a") for t in saltou)
+    assert "Mova o dongle Bluetooth da Entrada 15a para a Entrada 9" in saltou
+    assert any(t.startswith("Mova o dongle Bluetooth da Entrada 9 para a Entrada 15a")
+               for t in saltou)
 
 
 def test_o_bonus_de_ficar_parado_so_desempata() -> None:
@@ -88,10 +89,10 @@ def test_arrancado_o_bonus_mexendo_o_minimo_manda_mexer_em_mais() -> None:
     sem = movimentos(mesa, motor.Opcoes(bonus_parado=0, proibir=POUCOS.proibir))
     assert len(com) == 4, com
     assert len(sem) == 6, sem
-    webcam = "Mova a webcam da entrada 6 para a 2  ·  melhora, não é urgente"
+    webcam = "Mova a webcam da Entrada 6 para a Entrada 2  ·  melhora, não é urgente"
     assert webcam in sem
     assert webcam not in com
-    assert "Mova o cabo do hub da entrada 4 para a 3" in sem
+    assert "Mova o cabo do hub da Entrada 4 para a Entrada 3" in sem
 
 
 def test_ganho_negativo_nao_vira_ordem_de_servico() -> None:
@@ -140,7 +141,7 @@ def test_arrancado_o_filtro_a_receita_manda_mexer_a_toa(
     )
     assert dict(motor.planejar(mesa, op).plano) == {"1": "cam"}
     assert movimentos(mesa, op) == [
-        "Mova a webcam da entrada 2 para a 1  ·  melhora, não é urgente"]
+        "Mova a webcam da Entrada 2 para a Entrada 1  ·  melhora, não é urgente"]
 
 
 def test_arrancado_o_filtro_a_mesa_dela_perde_a_urgencia_dos_forcados(
@@ -162,8 +163,8 @@ def test_arrancado_o_filtro_a_mesa_dela_perde_a_urgencia_dos_forcados(
 
 
 DOIS_ADAPTADORES = (
-    motor.Adaptador("bt-a", "9", "entrada 9"),
-    motor.Adaptador("bt-b", "15a", "entrada 15a"),
+    motor.Adaptador("bt-a", "9", "Entrada 9"),
+    motor.Adaptador("bt-b", "15a", "Entrada 15a"),
 )
 
 
@@ -220,7 +221,7 @@ def test_todo_aparelho_que_o_mapa_move_a_receita_manda_mover(
         para = motor.entrada_de_em(plano.plano, aparelho.id)
         if not para or motor.entrada_de_em(aloc, aparelho.id) == para:
             continue
-        assert f"a {para}" in titulos or f"entrada {para}" in titulos, (nome, aparelho.id)
+        assert f"a Entrada {para}" in titulos, (nome, aparelho.id)
 
 
 @pytest.mark.usefixtures("sem_a_cura_do_mapa")
@@ -237,7 +238,7 @@ def test_arrancada_a_cura_o_mapa_move_tres_aparelhos_que_a_receita_nao_manda() -
             de = motor.entrada_de_em(aloc, aparelho.id)
             if not para or de is None or de == para:
                 continue
-            if f"a {para}" not in titulos and f"entrada {para}" not in titulos:
+            if f"a Entrada {para}" not in titulos:
                 orfaos.setdefault(nome, []).append(f"{aparelho.id}: {de}->{para}")
     assert orfaos == {
         "sem-ext": ["bt-b: 15a->15"],
@@ -255,7 +256,7 @@ def test_a_variante_que_tira_a_entrada_de_hoje_diz_por_que_esta_tirando() -> Non
             if not movimento.titulo.startswith("Mova"):
                 continue
             porques = [ln.texto for ln in movimento.linhas]
-            if any(t.startswith("Esta opção não usa a entrada") for t in porques):
+            if any(t.startswith("Esta opção não usa a Entrada") for t in porques):
                 achou += 1
                 assert movimento.essencial, (nome, movimento.titulo)
                 assert movimento.ganho == math.inf, (nome, movimento.titulo)

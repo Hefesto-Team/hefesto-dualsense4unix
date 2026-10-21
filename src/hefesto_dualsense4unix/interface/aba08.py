@@ -19,6 +19,7 @@ from onde import RAIZ as R  # noqa: E402
 from hefesto_dualsense4unix.interface import conexoes as _aba_conexoes  # noqa: E402
 from hefesto_dualsense4unix.integrations import entrada_a_entrada as _entrada_a_entrada  # noqa: E402,E501
 
+from hefesto_dualsense4unix.integrations import arranjo_da_mesa as _motor  # noqa: E402
 from hefesto_dualsense4unix.integrations import dicas_da_conexao as _dicas  # noqa: E402
 from hefesto_dualsense4unix.integrations import ordens_da_mesa as _ordens  # noqa: E402
 from pacotes import a08_conexoes as _pacote08  # noqa: E402
@@ -1228,12 +1229,10 @@ P_TIRAR = "clique para tirar"
 P_EXTENSOR = "o extensor está nela"
 P_SERVE = "entrada direta, mas na altura da escrivaninha"
 P_MELHOR = "na ponta do extensor: a antena mais longe das outras"
-P_COLADA = "colada no {tipo}, na entrada {n}"
 _confere_no_produto(_JULGAR, [
     f'"{V_OCUPADA}", f"{{tipo}} — {P_TIRAR}"', f'"{V_INDISPONIVEL}"',
     f'"{P_EXTENSOR}"', f'Veredito("serve", "{V_SERVE}", "{P_SERVE}")',
     f'"{V_EVITAR}", colada', f'"{V_MELHOR}"', f'"{P_MELHOR}"',
-    'f"colada no {vizinho.tipo}, na entrada {entrada.par}"',
 ])
 
 #: O que o título de cada janela de mapear diz ao passar o mouse (o «?» saiu, 13/10/2026).
@@ -1287,7 +1286,7 @@ def veredito(n, esticada=False):
         return "cheia", V_INDISPONIVEL, P_EXTENSOR
     vizinho = QUEM_ESTA.get(PARES.get(n, ""))
     if vizinho and vizinho[0] in ("Bluetooth", "Teclado", "Mouse"):
-        return "evite", V_EVITAR, P_COLADA.format(tipo=vizinho[0], n=PARES[n])
+        return "evite", V_EVITAR, _motor.frase_da_colada(vizinho[0], na_frase(PARES[n]))
     if esticada:
         return "melhor", V_MELHOR, P_MELHOR
     return "serve", V_SERVE, P_SERVE
@@ -2966,7 +2965,6 @@ TELA_MAPEAR_PORTAS = f'''
   }})();
 </script>
 '''
-PROGRESSO = "Entrada {feitos} de {total}"
 
 SEM_LUGAR = [(esp, no) for esp, no, em, _q in CENSO if not em]
 
@@ -3018,7 +3016,7 @@ JA_CHEGA = (f'<a class="btn" href="#" data-gesto="entrada-parar" title="Fecha a 
 TELA_SENTADA = cerimonia(
     "mapear-entrada-a-entrada",
     CALIB["PERGUNTA_SENTADA"],
-    PROGRESSO.format(feitos=1, total=len(SEM_LUGAR))
+    _pacote08.contador_da_cerimonia(1, len(SEM_LUGAR))
     + f' <span class="pt">·</span> {CALIB["SEM_SAIR_DA_CADEIRA"]}',
     f'{SEM_LUGAR[0][0]} <span class="pt">·</span> <code>{SEM_LUGAR[0][1]}</code>',
     "".join(
@@ -3046,7 +3044,7 @@ TELA_FIM = cerimonia(
 TELA_EM_PE = cerimonia(
     "mapear-entrada-a-entrada-em-pe",
     ENCAIXE_CURTO,
-    PROGRESSO.format(feitos=1, total=EM_PE_TOTAL),
+    _pacote08.contador_da_cerimonia(1, EM_PE_TOTAL),
     CALIB["PROCURANDO"],
     f'<button class="btn foco" data-gesto="entrada-nao-alcanco" title="Tira esta entrada da '
     f'conta de vez: não vira dívida, não vira aviso, e o Hefesto não volta a perguntar. Ela '
