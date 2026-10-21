@@ -820,13 +820,13 @@ CSS = """
      escrito pelo alvo `atributo`, como o `data-apagado` das molduras de som
      da aba 02. A régua é
      `tests/unit/test_a_marca_que_nunca_acende_e_o_gerador_que_confere.py`. */
-  /* A FAIXA SEM PENDÊNCIA SOME, E O ESPAÇO FICA. `visibility` e não `display`:
-     "muda tudo ao clicar" é queixa de uso, e a legenda desta aba promete que o
-     espaço é reservado para a tela não pular. Sem esta regra a caixa tracejada
-     ficava com um travessão solto — o piloto escreve `—` no lugar de um valor
-     vazio, e um traço laranja dentro de uma moldura de alerta lê-se como
-     "faltou alguma coisa", não como "nada pendente". */
-  .faixa-final:not(.ha) .pendente{visibility:hidden}
+  /* A FAIXA SEM PENDÊNCIA SAI INTEIRA, COM A LINHA — 21/10/2026,
+     A-JOGAR-SEM-EXTERNO-NAO-DEIXA-FAIXA-VAZIA-01. Era `visibility` na frase, para
+     o espaço ficar e o «Reconectar», que morava nesta fileira, não pular; desde
+     15/10 o botão mora no canto do quadro e nada vem depois da faixa. Medido no
+     piloto (P1 a P4, sem externo): sobravam a divisória e 37 px vazios sob os
+     cartões. O travessão que o piloto escreve no vazio sai junto. */
+  .faixa-final:not(.ha){display:none}
 """
 
 
@@ -1577,7 +1577,7 @@ LEGENDA = f'''<div class="nota">
       teria custado um erro na régua da aba que <b>é a referência das outras nove</b>. O que
       está lá é <code>:has()</code>, que não é mecanismo novo aqui: o esqueleto já abre e fecha
       as seções da <b>Conexões</b> com ele.</li>
-    <li><b>A linha laranja tracejada não acende mais na tela</b> (13/09): o clique troca o modo na hora. O espaço dela continua reservado, e o <b>Reconectar controles</b> fica encostado à direita, em uma linha, qualquer que seja a largura.</li>
+    <li><b>A linha laranja tracejada não acende mais na tela</b> (13/09): o clique troca o modo na hora. Sem nada a aplicar, a faixa sai inteira, com a linha de cima (21/10), e o <b>Reconectar controles</b> fica no canto do quadro.</li>
     <li><b>A carga de cada bateria é o único dado inventado desta aba</b> — 100, 64, 41 e 87%. Bateria é estado do momento, e o mockup mostra um momento; todo o resto (cor, nome, transporte, jogador, desenho) sai de arquivo.</li>
     <li><b>O recibo do rodapé nomeia o perfil</b> — é onde a mudança vai cair, que era a informação que faltava e te custou semanas.</li>
   </ul>

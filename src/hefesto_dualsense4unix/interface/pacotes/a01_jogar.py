@@ -1211,9 +1211,9 @@ def _faixa_do_pendente(state: dict[str, Any]) -> tuple[str, str]:
 
     O vazio é `""` de propósito: o piloto escreve `—` no lugar de vazio (`hefesto_vivo.BOOTSTRAP`,
     `escrever`, a palavra da casa para *"não há"*, como `painel.SEM_LEITOR`), e faixa tracejada com
-    travessão solto diz que algo faltou (fotografado em 02/09). Desde 03/09 quem some é a CAIXA
-    inteira, por `pendente-ha` (alvo `classe`, na `.faixa-final`), por `visibility` e não `display`:
-    o espaço é reservado para a tela não pular (queixa de uso, promessa da legenda).
+    travessão solto diz que algo faltou (fotografado em 02/09). Quem some é a CAIXA inteira, por
+    `pendente-ha` (alvo `classe`, na `.faixa-final`); desde 21/10 por `display`, com a linha de cima
+    (A-JOGAR-SEM-EXTERNO-NAO-DEIXA-FAIXA-VAZIA-01): o «Reconectar» saiu da fileira em 15/10.
 
     **O `pendente-alvo` morre na primeira pintura** (medido): o `<b>` dele está DENTRO do `<div
     data-campo="pendente">` e o alvo padrão do piloto é `textContent`, então escrever a frase apaga
