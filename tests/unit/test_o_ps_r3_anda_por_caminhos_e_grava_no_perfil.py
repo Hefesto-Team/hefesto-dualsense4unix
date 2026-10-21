@@ -115,6 +115,7 @@ class _Daemon:
         self.set_gamepad_emulation_desfecho = functools.partial(
             lifecycle.Daemon.set_gamepad_emulation_desfecho, self
         )
+        self._devolver_as_tabelas_do_perfil = lambda: None  # o teclado não é deste teste
         self.gravar_o_modo_escolhido = functools.partial(
             lifecycle.Daemon.gravar_o_modo_escolhido, self
         )
@@ -124,6 +125,9 @@ class _Daemon:
         self._perfil_do_arranjo = functools.partial(
             lifecycle.Daemon._perfil_do_arranjo, self
         )
+        for nome in ("_tabelas_do_arranjo", "_aplicar_as_tabelas"):
+            setattr(self, nome, functools.partial(getattr(lifecycle.Daemon, nome), self))
+        self._guardar_o_arranjo = lambda _arranjo: "navegacao"  # as tabelas do próprio perfil
 
     def set_native_mode(self, enabled: bool, **_kw: Any) -> bool:
         self._native_mode = bool(enabled)

@@ -273,6 +273,7 @@ def armar_o_ato_do_daemon(
     d.set_gamepad_emulation_desfecho = functools.partial(
         Daemon.set_gamepad_emulation_desfecho, d
     )
+    d._devolver_as_tabelas_do_perfil = lambda: None  # o teclado não é deste teste
     d.vestir_a_mascara_do_aparelho = Daemon.vestir_a_mascara_do_aparelho.__get__(d)
     d.config.gamepad_emulation_enabled = True
     dubles: dict[str, Any] = {

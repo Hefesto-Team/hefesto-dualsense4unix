@@ -134,6 +134,7 @@ class _Daemon:
         self._emu_manual_ts = 0.0
         self._mode_from_profile = None
         self.display_authority = "unknown"
+        self._devolver_as_tabelas_do_perfil = lambda: None  # o teclado não é deste teste
         for nome in (
             "set_gamepad_emulation",
             "set_gamepad_emulation_desfecho",

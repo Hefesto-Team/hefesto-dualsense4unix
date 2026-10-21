@@ -2,20 +2,20 @@
 «Navegação» é o terceiro chip do Desligado.
 
 Os dois são o MESMO modo `desktop` do daemon (o controle vira mouse e teclado e o Hefesto segue
-lendo; sem gamepad virtual). O que os separa é o lado em que a TELA os põe, e esse lado é uma
-lembrança da interface (`jogar_navegacao_no_desligado` na preferência da janela): o daemon e o
-`lifecycle.py` não mudam.
+lendo; sem gamepad virtual), com tabelas de botões diferentes. Desde 21/10/2026
+(O-POINT-AND-CLICK-APLICA-O-PERFIL-QUE-A-NAVEGACAO-ESCOLHE-01) o lado é o ARRANJO que o serviço
+guarda e publica no `state_full` (``desktop_arranjo``), e cada chip o leva no plano.
 
 Esta régua mede cinco coisas, cada uma com a sua mordida:
 
 1. os rótulos de cada fileira, nos dois lados, no gerador e na página;
 2. o modo de cada chip (`o_que_o_chip_faz`) e o `data-modo` que a página emite;
-3. o lado da tela por `_estado_da_tela` com o daemon em `desktop`, nas duas lembranças;
+3. o lado da tela por `_estado_da_tela` com o daemon em `desktop`, nos dois arranjos;
 4. as cores do Desligado, que são as da barra de luz (`hotkey.CORES_DO_MODO`), e o alvo de 24 px;
 5. a aba sem «?» e sem `title`: toda frase é `data-dica` curta.
 
 A MORDIDA: ponha «Navegação» de volta no Ligado em `aba01.MODOS` (no lugar do Point and click)
-e os casos 1 e 2 reprovam; apague a lembrança em `_estado_da_tela` e o caso 3 reprova.
+e os casos 1 e 2 reprovam; ignore o `desktop_arranjo` em `_estado_da_tela` e o caso 3 reprova.
 """
 from __future__ import annotations
 
@@ -57,9 +57,8 @@ VIVO_DESKTOP: dict[str, Any] = {
 
 @pytest.fixture()
 def lar_novo(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> pathlib.Path:
-    """Um `config_dir()` só deste teste, com a lembrança zerada."""
+    """Um `config_dir()` só deste teste."""
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
-    aba._LEMBRANCA_DA_NAVEGACAO.update(onde="", quando=0.0, valor=False)
     return tmp_path
 
 
@@ -108,11 +107,15 @@ def test_o_modo_de_cada_chip(chip: str, modo: str, steam: bool) -> None:
     assert (linha.modo, linha.steam_input) == (modo, steam)
 
 
-def test_os_dois_do_desktop_fazem_a_mesma_coisa_no_daemon() -> None:
+def test_os_dois_do_desktop_so_diferem_no_arranjo() -> None:
     assert aba.o_que_o_chip_faz(aba.CHIP_DO_POINT_AND_CLICK) == aba.o_que_o_chip_faz(
         aba.CHIP_DA_NAVEGACAO)
-    assert aba._plano_do_chip(aba.CHIP_DO_POINT_AND_CLICK) == aba._plano_do_chip(
-        aba.CHIP_DA_NAVEGACAO)
+    ponto = aba._plano_do_chip(aba.CHIP_DO_POINT_AND_CLICK)
+    nav = aba._plano_do_chip(aba.CHIP_DA_NAVEGACAO)
+    assert ponto[:-1] == nav[:-1]
+    metodo = "desktop.arranjo.apply"
+    assert ponto[-1] == (metodo, {"origin": "manual", "arranjo": "point_and_click"})
+    assert nav[-1] == ("desktop.arranjo.apply", {"origin": "manual", "arranjo": "navegacao"})
 
 
 def test_a_pagina_emite_o_gesto_e_o_modo_de_cada_chip() -> None:
@@ -137,52 +140,30 @@ def _tela(state: dict[str, Any]) -> dict[str, str]:
     return aba._estado_da_tela(state)
 
 
-def test_sem_lembranca_o_desktop_acende_o_point_and_click_no_ligado(lar_novo) -> None:
+def test_sem_o_arranjo_o_desktop_acende_o_point_and_click_no_ligado() -> None:
     tela = _tela(VIVO_DESKTOP)
     assert (tela["hef-posicao"], tela["modo-aceso"]) == ("ligado", "pointclick")
 
 
-def test_com_a_lembranca_o_desktop_acende_a_navegacao_no_desligado(lar_novo) -> None:
-    aba._guardar_a_navegacao_no_desligado(True)
-    tela = _tela(VIVO_DESKTOP)
+def test_no_arranjo_point_and_click_o_desktop_acende_o_point_and_click() -> None:
+    tela = _tela({**VIVO_DESKTOP, "desktop_arranjo": "point_and_click"})
+    assert (tela["hef-posicao"], tela["modo-aceso"]) == ("ligado", "pointclick")
+
+
+def test_no_arranjo_da_navegacao_o_desktop_acende_a_navegacao_no_desligado() -> None:
+    tela = _tela({**VIVO_DESKTOP, "desktop_arranjo": "navegacao"})
     assert (tela["hef-posicao"], tela["modo-aceso"]) == ("desligado", "navegacao")
     assert tela["steam-input-aceso"] == ""
 
 
-def test_a_lembranca_sobrevive_a_um_processo_novo(lar_novo) -> None:
-    aba._guardar_a_navegacao_no_desligado(True)
-    aba._LEMBRANCA_DA_NAVEGACAO.update(onde="", quando=0.0, valor=False)
-    assert aba._navegacao_no_desligado() is True
-
-
-def test_o_clique_no_point_and_click_desfaz_a_navegacao(lar_novo, monkeypatch) -> None:
-    monkeypatch.setattr(aba, "_aplicar", lambda p, plano: True)
+def test_o_clique_em_cada_chip_leva_o_arranjo_dele(monkeypatch) -> None:
+    planos: list[Any] = []
+    monkeypatch.setattr(aba, "_aplicar", lambda p, plano: planos.append(plano) or True)
     monkeypatch.setattr(aba, "_lembrar_do_chip", lambda *a, **k: None)
     ctx = Contexto(state=VIVO_DESKTOP, mesa=[], conectados=[], estados={})
     aba.modo_navegacao(ctx, {}, object())
-    assert _tela(VIVO_DESKTOP)["modo-aceso"] == "navegacao"
     aba.modo_point_and_click(ctx, {}, object())
-    assert _tela(VIVO_DESKTOP)["modo-aceso"] == "pointclick"
-
-
-def test_o_clique_que_falha_devolve_a_lembranca(lar_novo, monkeypatch) -> None:
-    def _cai(p, plano):
-        raise RuntimeError("daemon fora")
-
-    monkeypatch.setattr(aba, "_aplicar", _cai)
-    ctx = Contexto(state=VIVO_DESKTOP, mesa=[], conectados=[], estados={})
-    with pytest.raises(RuntimeError):
-        aba.modo_navegacao(ctx, {}, object())
-    assert aba._navegacao_no_desligado() is False
-
-
-def test_trocar_de_posicao_do_interruptor_desfaz_a_navegacao(lar_novo, monkeypatch) -> None:
-    aba._guardar_a_navegacao_no_desligado(True)
-    monkeypatch.setattr(aba, "_aplicar", lambda p, plano: True)
-    monkeypatch.setattr(aba, "_lembrar", lambda *a, **k: None)
-    ctx = Contexto(state=VIVO_DESKTOP, mesa=[], conectados=[], estados={})
-    aba._hefesto_o_modo(ctx, {"modo": "native", "texto": "Desligado"}, object())
-    assert aba._navegacao_no_desligado() is False
+    assert [plano[-1][1].get("arranjo") for plano in planos] == ["navegacao", "point_and_click"]
 
 
 # 3b. A NAVEGAÇÃO SE ESCOLHE COM O HEFESTO DESLIGADO ---------------------------------------------
@@ -206,7 +187,7 @@ def test_com_o_hefesto_desligado_o_clique_na_navegacao_chega_ao_daemon(lar_novo,
     assert camada.recusa_no_nativo("01-jogar.html", "modo-navegacao", VIVO_NATIVO) is None
     pacotes.GESTOS[("01-jogar.html", "modo-navegacao")](ctx, {}, object())
     assert planos == [aba._plano_do_chip(aba.CHIP_DA_NAVEGACAO)]
-    assert aba._navegacao_no_desligado() is True
+    assert planos[0][-1][1]["arranjo"] == "navegacao"
 
 
 def test_a_folha_do_nativo_deixa_a_navegacao_clicavel() -> None:

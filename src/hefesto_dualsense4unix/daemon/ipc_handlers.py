@@ -1833,9 +1833,9 @@ class IpcHandlersMixin:
             ),
             "mode_from_profile": _as_str_or_none(
                 getattr(self.daemon, "_mode_from_profile", None)
-                if self.daemon is not None
-                else None
             ),
+            # O-POINT-AND-CLICK-APLICA-O-PERFIL-QUE-A-NAVEGACAO-ESCOLHE-01: o lado do interruptor
+            "desktop_arranjo": _as_str_or_none(getattr(self.daemon, "arranjo_do_desktop", None)),
             "primary_grab_state": _as_str_or_none(
                 getattr(
                     getattr(self.controller, "_evdev", None), "grab_state", None
@@ -4555,16 +4555,16 @@ class IpcHandlersMixin:
     async def _handle_desktop_arranjo_apply(
         self, params: dict[str, Any]
     ) -> dict[str, Any]:
-        """Carrega no aparelho o que a aba Navegação gravou no perfil ATIVO.
+        """Carrega no aparelho o arranjo do `desktop`: a Navegação ou o Point and click.
 
         POINT-AND-CLICK-01 (17/09/2026): TERCEIRO passo da transição para o `MODE_DESKTOP`, no lugar
         do `mouse.emulation.restore`, que descartava as cinco coisas da aba. A política mora em
         `Daemon.aplicar_o_arranjo_do_desktop`.
 
         Params: ``origin``: "manual"|"profile", a origem da ATIVAÇÃO (fura o lock de 30 s do gesto
-        manual); **o silêncio é "profile"** (ORIGEM-QUE-MENTE-01). Resposta: ``{"status": "ok",
-        "arranjo": {seção: estado}}``, o relatório inteiro (distingue "não havia o que aplicar" de
-        "não deu").
+        manual); **o silêncio é "profile"** (ORIGEM-QUE-MENTE-01). ``arranjo``: "navegacao" ou
+        "point_and_click"; sem ele (ou outro valor), o último guardado. Resposta: ``{"status":
+        "ok", "arranjo": {seção: estado}}``, o relatório inteiro.
 
         A ENTRADA LIGA O MOUSE (O-MOUSE-SEGUE-A-NAVEGACAO-01, `D-2909-A-NAVEGACAO-LIGA-O-MOUSE`): o
         `forcar_mouse` do PS + R3 saiu e cliente antigo que o mande é ignorado. Daemon dublado sem o
@@ -4579,7 +4579,7 @@ class IpcHandlersMixin:
         modo: dict[str, Any] = (
             {"grava_o_modo": _porta_que_grava(origem)} if origem == "manual" else {}
         )
-        arranjo = aplicar(origin=origem, **modo)
+        arranjo = aplicar(origin=origem, **modo, **_o_arranjo_pedido(params))
         return {"status": "ok", "arranjo": dict(arranjo or {})}
 
     async def _handle_desktop_status_set(
@@ -6229,6 +6229,14 @@ def _sem_os_campos_aposentados(overrides: Any) -> Any:
 # cliente ou um script antigo) não leva erro; a chave sai do `overrides`, com um aviso no diário.
 CAMPOS_APOSENTADOS = frozenset({"auto_reconnect", "reconnect_backoff_sec"})
 _APOSENTADOS_AVISADOS: set[str] = set()
+
+
+def _o_arranjo_pedido(params: dict[str, Any]) -> dict[str, str]:
+    """O ``arranjo`` do `desktop.arranjo.apply`, quando é um dos dois; ``{}`` deixa o guardado."""
+    from hefesto_dualsense4unix.utils.session import ARRANJOS_DO_DESKTOP
+
+    pedido = params.get("arranjo")
+    return {"arranjo": pedido} if pedido in ARRANJOS_DO_DESKTOP else {}
 
 
 __all__ = ["IpcHandlersMixin"]

@@ -530,9 +530,7 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
         mouse_applier=None,
         suppression_applier=getattr(daemon, "apply_profile_suppression", None),
         mode_applier=None,
-        rumble_policy_applier=getattr(
-            daemon, "apply_profile_rumble_policy", None
-        ),
+        rumble_policy_applier=getattr(daemon, "apply_profile_rumble_policy", None),
         rumble_passthrough_applier=getattr(
             daemon, "apply_profile_rumble_passthrough", None
         ),
@@ -548,6 +546,8 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
         logger.warning("last_profile_restore_failed", name=name, err=str(exc))
         return
     logger.info("last_profile_restored", name=name)
+    if (repor := getattr(daemon, "_repor_o_point_and_click", None)) is not None:
+        repor()  # o boot e a reconexão ativam sem o `mode_applier`
 
 
 def _broker_restore_for_recovery(daemon: DaemonProtocol) -> list[str]:

@@ -314,8 +314,8 @@ def test_as_teclas_do_perfil_chegam_ao_device_virtual() -> None:
     """Os `key_bindings` que o usuário escreveu na aba Navegação sobem no device."""
     _gravar_flag_do_mouse(FLAG_DA_SESSAO)
     d = _daemon_com(PERFIL_DA_NAVEGACAO)
-
-    d.aplicar_o_arranjo_do_desktop(origin="manual")
+    # A Navegação lê as linhas do perfil; o Point and click, as do «Perfil jogo - navegação».
+    d.aplicar_o_arranjo_do_desktop(origin="manual", arranjo="navegacao")
 
     teclado = d._keyboard_device
     assert isinstance(teclado, _TecladoDeMentira)
@@ -356,7 +356,7 @@ def test_o_relatorio_distingue_nao_havia_o_que_aplicar_de_nao_deu() -> None:
 
     sem_perfil = _daemon_com(None)
     sem_perfil.store.set_active_profile(None)
-    relatorio_vazio = sem_perfil.aplicar_o_arranjo_do_desktop(origin="manual")
+    relatorio_vazio = sem_perfil.aplicar_o_arranjo_do_desktop(origin="manual", arranjo="navegacao")
     assert relatorio_vazio.get("keyboard") == "ignorado_sem_perfil", (
         f"sem perfil o relatório tem de DIZER isso: {relatorio_vazio}"
     )

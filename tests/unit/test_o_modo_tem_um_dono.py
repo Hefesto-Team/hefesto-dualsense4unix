@@ -114,6 +114,7 @@ class _Daemon:
         self._gamepad_multi_log = ""
         self._last_rebackend_ts = float("-inf")
         self.display_authority = "unknown"
+        self._devolver_as_tabelas_do_perfil = lambda: None  # o teclado não é deste teste
         for nome in (
             "set_gamepad_emulation",
             "set_gamepad_emulation_desfecho",

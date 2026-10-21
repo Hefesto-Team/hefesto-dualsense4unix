@@ -163,21 +163,21 @@ class DaemonProtocol(Protocol):
         *,
         origin: str = "manual",
         grava_o_modo: GravaOModo = False,
+        arranjo: str | None = None,
     ) -> dict[str, str]:
-        """O modo Navegação carregando o PERFIL ATIVO (POINT-AND-CLICK-01).
+        """O arranjo do `desktop` (a Navegação ou o Point and click) sobre o PERFIL ATIVO.
 
-        Mouse, `key_bindings`, `button_actions`, `teclado_emulado` e a queda da
-        supressão — as cinco coisas que a aba Navegação grava e que o
-        `mouse.emulation.restore` descartava, porque ele lê a flag de sessão da
-        máquina e não abre perfil nenhum.
+        Mouse, `key_bindings`, `button_actions`, `teclado_emulado` e a queda da supressão — as
+        cinco coisas que a aba Navegação grava e que o `mouse.emulation.restore` descartava,
+        porque ele lê a flag de sessão da máquina e não abre perfil nenhum.
 
         Entrar na Navegação LIGA o mouse, pelas duas portas (o chip e o PS +
         R3), com as velocidades do perfil (D-2909-A-NAVEGACAO-LIGA-O-MOUSE,
         O-MOUSE-SEGUE-A-NAVEGACAO-01); o socorro `forcar_mouse` saiu com ela.
 
-        `grava_o_modo`: a porta da escolha do usuário; o modo `desktop` vai ao
-        perfil ativo depois do arranjo, e o `mouse.enabled` que a entrada
-        ligou vai na mesma gravação (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01).
+        `grava_o_modo`: a porta da escolha do usuário; o modo `desktop` vai ao perfil ativo depois
+        do arranjo, com o `mouse.enabled` que a entrada ligou (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01).
+        `arranjo`: ``navegacao`` ou ``point_and_click``; sem ele, o último guardado na sessão.
 
         Devolve `seção → estado` no vocabulário de `apply_profile_suppression`.
         Declarado aqui porque o GESTO o chama — o `hotkey.py` fala com o daemon

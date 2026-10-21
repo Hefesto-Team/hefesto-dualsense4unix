@@ -16,7 +16,8 @@ MODE_NATIVE = "native"
 
 
 def plan_mode_transition(
-    mode_id: str, flavor: str | None = None, caminho: str | None = None
+    mode_id: str, flavor: str | None = None, caminho: str | None = None,
+    arranjo: str | None = None,
 ) -> list[tuple[str, dict[str, Any]]]:
     """Sequência de chamadas IPC que leva o sistema ao modo ``mode_id``.
 
@@ -90,9 +91,24 @@ def plan_mode_transition(
         return [
             ("native.mode.set", {"enabled": False, "origin": "manual"}),
             ("gamepad.emulation.set", {"enabled": False, "origin": "manual"}),
-            ("desktop.arranjo.apply", {"origin": "manual"}),
+            ("desktop.arranjo.apply", {"origin": "manual", **_o_arranjo(arranjo)}),
         ]
     raise ValueError(f"modo desconhecido: {mode_id!r}")
+
+
+def _o_arranjo(arranjo: str | None) -> dict[str, str]:
+    """O arranjo do `desktop` que o chip escolheu; sem ele o serviço usa o último guardado.
+
+    O-POINT-AND-CLICK-APLICA-O-PERFIL-QUE-A-NAVEGACAO-ESCOLHE-01: o «Point and click» e a
+    «Navegação» são o mesmo modo com tabelas de botões diferentes, e quem diz qual é o clique.
+    """
+    if arranjo is None:
+        return {}
+    from hefesto_dualsense4unix.utils.session import ARRANJOS_DO_DESKTOP
+
+    if arranjo not in ARRANJOS_DO_DESKTOP:
+        raise ValueError(f"arranjo do desktop desconhecido: {arranjo!r}")
+    return {"arranjo": arranjo}
 
 
 def _ignore_ok(_result: Any) -> bool:

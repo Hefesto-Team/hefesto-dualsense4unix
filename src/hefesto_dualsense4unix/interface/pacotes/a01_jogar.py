@@ -711,8 +711,8 @@ CHIPS_DO_DESLIGADO: tuple[str, ...] = (CHIP_DO_NATIVO, CHIP_DO_STEAM_INPUT, "nav
 #: teclado e o Hefesto segue lendo; sem gamepad virtual); o que os separa é o lado do interruptor
 #: em que a TELA os põe. `painel.CHIPS_DA_ESCADA` só conhece o chip «Navegação» (a chave dele é
 #: :data:`CHIP_DA_NAVEGACAO`), e `painel.hefesto_ligado` chama `desktop` de Ligado; por isso o
-#: lado é uma lembrança da INTERFACE (:func:`_navegacao_no_desligado`), e não um quarto valor do
-#: modo vivo, que `mode_of_state` mantém em três.
+#: lado é o ARRANJO do `desktop` que o serviço publica (:func:`_navegacao_no_desligado`), e não um
+#: quarto valor do modo vivo, que `mode_of_state` mantém em três.
 CHIP_DO_POINT_AND_CLICK = "pointclick"
 ROTULO_DO_POINT_AND_CLICK = "Point and click"
 CHIP_DA_NAVEGACAO = "navegacao"
@@ -971,46 +971,21 @@ def _a_fileira_com_a_mesa(tela: dict[str, str], mesa: list[dict[str, Any]]) -> d
     return {**tela, "modo-aceso": "", "steam-input-aceso": ""}
 
 
-#: A LEMBRANÇA DO LADO EM QUE O `desktop` FICA, na preferência da janela (`gui_preferences.json`):
-#: ``True`` o último clique foi na Navegação (Desligado), ``False`` em qualquer outro botão. É da
-#: interface de propósito: o daemon só tem o modo `desktop`, e `lifecycle.py` não muda (BRIEF-T2).
-PREF_NAVEGACAO_NO_DESLIGADO = "jogar_navegacao_no_desligado"
-
-#: A pintura pergunta a cada tique (100 ms), então a leitura do disco é reaproveitada por este
-#: prazo; o clique reescreve a lembrança na hora.
-PRAZO_DA_LEMBRANCA_S = 0.5
-_LEMBRANCA_DA_NAVEGACAO: dict[str, Any] = {"onde": "", "quando": 0.0, "valor": False}
-
-
-def _onde_mora_a_lembranca() -> str:
-    from hefesto_dualsense4unix.utils import xdg_paths
-
-    return str(xdg_paths.config_dir())
+#: O LADO EM QUE O `desktop` FICA é o ARRANJO que o serviço guarda na sessão e publica no
+#: `state_full` (``desktop_arranjo``): «Navegação» no Desligado, «Point and click» no Ligado
+#: (O-POINT-AND-CLICK-APLICA-O-PERFIL-QUE-A-NAVEGACAO-ESCOLHE-01, 21/10/2026). Os dois aplicam
+#: tabelas de botões diferentes, e por isso a escolha mora no serviço, e não na janela: o PS + R3,
+#: o boot e a reconexão a acham lá. A lembrança velha da janela (`jogar_navegacao_no_desligado`,
+#: em `gui_preferences.json`) só dá o valor inicial (`utils.session.load_arranjo_do_desktop`).
+ARRANJO_DO_CHIP: dict[str, str] = {
+    CHIP_DA_NAVEGACAO: "navegacao",
+    CHIP_DO_POINT_AND_CLICK: "point_and_click",
+}
 
 
-def _navegacao_no_desligado() -> bool:
-    """O último clique pôs o `desktop` na Navegação (Desligado)? ``False`` na dúvida."""
-    onde = _onde_mora_a_lembranca()
-    agora = time.monotonic()
-    memo = _LEMBRANCA_DA_NAVEGACAO
-    if memo["onde"] == onde and agora - float(memo["quando"]) < PRAZO_DA_LEMBRANCA_S:
-        return bool(memo["valor"])
-    from hefesto_dualsense4unix.app.gui_prefs import load_gui_prefs
-
-    valor = load_gui_prefs().get(PREF_NAVEGACAO_NO_DESLIGADO) is True
-    memo.update(onde=onde, quando=agora, valor=valor)
-    return valor
-
-
-def _guardar_a_navegacao_no_desligado(valor: bool) -> None:
-    """Grava a lembrança (só quando muda) e já a deixa valendo para o próximo tique."""
-    if _navegacao_no_desligado() == valor:
-        return
-    from hefesto_dualsense4unix.app.gui_prefs import set_pref
-
-    set_pref(PREF_NAVEGACAO_NO_DESLIGADO, valor)
-    _LEMBRANCA_DA_NAVEGACAO.update(
-        onde=_onde_mora_a_lembranca(), quando=time.monotonic(), valor=valor)
+def _navegacao_no_desligado(state: dict[str, Any]) -> bool:
+    """O `desktop` vivo está no arranjo da Navegação (Desligado)? ``False`` na dúvida."""
+    return state.get("desktop_arranjo") == ARRANJO_DO_CHIP[CHIP_DA_NAVEGACAO]
 
 
 def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
@@ -1063,7 +1038,7 @@ def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
         # O MESMO MODO `desktop` TEM DOIS LUGARES NA TELA (:data:`CHIP_DO_POINT_AND_CLICK`): o
         # que o último clique escolheu diz qual. «Navegação» vive do lado Desligado, e o
         # «Point and click» do Ligado.
-        if _navegacao_no_desligado():
+        if _navegacao_no_desligado(state):
             ligado = False
         else:
             aceso = CHIP_DO_POINT_AND_CLICK
@@ -1396,8 +1371,6 @@ def _hefesto_o_modo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise ValueError(
             "hefesto: o clique não disse qual posição do interruptor — o "
             "`data-modo` do rótulo não chegou")
-    # Qualquer posição do interruptor desfaz a Navegação do Desligado.
-    _guardar_a_navegacao_no_desligado(False)
     confirmou = _aplicar(p, _plano(chave))
     _lembrar("modo", chave, str(o.get("texto") or ""))
     _dizer_se_nao_confirmou(confirmou)
@@ -1417,9 +1390,16 @@ def _plano_do_chip(chave: str) -> list[tuple[str, dict[str, Any]]]:
     (`flavor`, só o padrão da máscara no daemon), e com máscara no cartão do P1 o daemon respondia
     `ja_estava` e o piloto escrevia «aplicado» sobre nada. A máscara não sai mais daqui.
     """
-    from hefesto_dualsense4unix.app.actions.mode_transition import MODE_GAMEPAD
+    from hefesto_dualsense4unix.app.actions.mode_transition import (
+        MODE_DESKTOP,
+        MODE_GAMEPAD,
+        plan_mode_transition,
+    )
 
     linha = o_que_o_chip_faz(chave)
+    if linha.modo == MODE_DESKTOP and chave in ARRANJO_DO_CHIP:
+        # Os dois chips do `desktop` levam o arranjo deles ao serviço (:data:`ARRANJO_DO_CHIP`).
+        return plan_mode_transition(MODE_DESKTOP, arranjo=ARRANJO_DO_CHIP[chave])
     if linha.modo != MODE_GAMEPAD:
         return _plano(linha.modo)
     if not linha.caminho:
@@ -1468,15 +1448,7 @@ def _o_clique_da_fileira(ctx: Contexto, o: dict[str, Any], p: Any,
     if linha.steam_input and appid is None:
         raise RuntimeError(str(format_game_broken_result(status="sem_jogo")))
 
-    # A lembrança vai ANTES do plano, para a pintura do tique seguinte já achar o botão no lado
-    # certo; se o plano levanta, ela volta ao que era.
-    antes = _navegacao_no_desligado()
-    _guardar_a_navegacao_no_desligado(chave == CHIP_DA_NAVEGACAO)
-    try:
-        confirmou = _aplicar(p, _plano_do_chip(chave))
-    except BaseException:
-        _guardar_a_navegacao_no_desligado(antes)
-        raise
+    confirmou = _aplicar(p, _plano_do_chip(chave))
     _lembrar_do_chip(chave, o)
 
     recado = ""
@@ -1923,9 +1895,9 @@ def mascara_do_controle(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
 def modo_point_and_click(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """"Point and click" (Ligado): apontar e clicar, pelo perfil da aba Navegação.
 
-    O mesmo modo `desktop` da Navegação do Desligado (:data:`CHIP_DO_POINT_AND_CLICK`), com o
-    mesmo plano: sai do gamepad virtual, liga o mouse e aplica o arranjo do perfil ativo
-    (`desktop.arranjo.apply`). O que muda é onde a tela o mostra: aceso no Ligado.
+    O mesmo modo `desktop` da Navegação do Desligado (:data:`CHIP_DO_POINT_AND_CLICK`): sai do
+    gamepad virtual, liga o mouse e aplica (`desktop.arranjo.apply`, arranjo ``point_and_click``) a
+    tabela de botões do «Perfil jogo - navegação» que a aba Navegação escolheu.
     """
     return _o_clique_da_fileira(ctx, o, p, CHIP_DO_POINT_AND_CLICK)
 
@@ -2143,12 +2115,14 @@ PROVAS = [
     {"pagina": PAGINA, "gesto": "modo-navegacao", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
                ("chamar", ["gamepad.emulation.set"], _MANUAL_OFF),
-               ("chamar", ["desktop.arranjo.apply"], {"origin": "manual"})]},
+               ("chamar", ["desktop.arranjo.apply"],
+                {"origin": "manual", "arranjo": "navegacao"})]},
     {"pagina": PAGINA, "gesto": "modo-point-and-click",  # (noqa-acento) chave do contrato
      "clique": {},
      "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
                ("chamar", ["gamepad.emulation.set"], _MANUAL_OFF),
-               ("chamar", ["desktop.arranjo.apply"], {"origin": "manual"})]},
+               ("chamar", ["desktop.arranjo.apply"],
+                {"origin": "manual", "arranjo": "point_and_click"})]},
     {"pagina": PAGINA, "gesto": "reconectar", "clique": {},  # (noqa-acento) chave do contrato
      "chama": [("resultado", ["coop.sync"], {}),
                ("resultado", ["identity.renumber"], {})]},

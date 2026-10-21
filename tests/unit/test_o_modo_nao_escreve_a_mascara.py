@@ -110,6 +110,7 @@ class _Daemon:
         self.set_gamepad_emulation_desfecho = functools.partial(
             lifecycle.Daemon.set_gamepad_emulation_desfecho, self
         )
+        self._devolver_as_tabelas_do_perfil = lambda: None  # o teclado não é deste teste
         self.gravar_o_modo_escolhido = functools.partial(
             lifecycle.Daemon.gravar_o_modo_escolhido, self
         )
@@ -353,6 +354,8 @@ def _daemon_do_perfil(vpad: Any) -> tuple[Any, list[dict[str, Any]]]:
     d._pedir_mascara_do_perfil = lambda flavor, **k: bool(pedidos.append({"flavor": flavor, **k}))
     d._reavaliar_mascara_adiada = lambda f: None
     d.set_native_mode = lambda *a, **k: None
+    d._o_modo_do_perfil = functools.partial(lifecycle.Daemon._o_modo_do_perfil, d)
+    d._repor_o_point_and_click = lambda: False  # o teclado não é deste teste
     return d, pedidos
 
 

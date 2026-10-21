@@ -111,6 +111,8 @@ class DaemonDeMentira:
             return True
         if metodo == "gamepad.emulation.set":
             return self._emulacao(params)
+        if metodo == "desktop.arranjo.apply" and params.get("arranjo"):
+            self.state["desktop_arranjo"] = params["arranjo"]
         return True
 
     def _emulacao(self, params: dict[str, Any]) -> bool:
@@ -332,12 +334,13 @@ def test_a_origem_que_a_primeira_cura_deixava(vdf, monkeypatch, origem, para) ->
     """O «Xbox», a «Navegação» ou o «Point and click» COM o jogo na lista e a ponte de pé.
 
     A «Navegação» e o «Point and click» são o mesmo modo `desktop` do daemon desde o todo de
-    15/10/2026 (A-ABA-JOGAR-DO-TODO-01); quem acende um ou outro é a lembrança da tela."""
-    aba._guardar_a_navegacao_no_desligado(origem == "navegacao")
+    15/10/2026 (A-ABA-JOGAR-DO-TODO-01); quem acende um ou outro é o arranjo que o serviço publica
+    (O-POINT-AND-CLICK-APLICA-O-PERFIL-QUE-A-NAVEGACAO-ESCOLHE-01)."""
     _ponte_de_pe()
     _a_maquina(monkeypatch, jogo_aberto=True, steam_aberta=True)
     ctx = _ctx(aberto=True, caminho="xbox",
                modo="gamepad" if origem == "xbox" else "desktop")
+    ctx.state["desktop_arranjo"] = aba.ARRANJO_DO_CHIP.get(origem, "point_and_click")
     daemon = DaemonDeMentira(ctx.state, jogo_aberto=True)
     _parar_a_vigia(monkeypatch)
     assert _aceso(ctx) == origem

@@ -902,8 +902,8 @@ def point_and_click_perfil(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str
     """O «Perfil jogo - navegação»: um molde ou um dos meus perfis, do computador.
 
     O valor é `molde:<chave>` (um dos moldes de `profiles.loader`) ou `perfil:<nome>`; guarda
-    em `mouse.point_and_click`, onde moram as velocidades. O mapa dos botões mostra o que o perfil
-    escolhido faz.
+    em `mouse.point_and_click`, onde moram as velocidades. O modo Point and click aplica a tabela
+    de botões dele (`Daemon._tabelas_do_arranjo`); o mapa dos botões mostra o perfil ativo.
     """
     from hefesto_dualsense4unix.profiles import loader
 

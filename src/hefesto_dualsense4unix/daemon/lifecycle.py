@@ -1336,8 +1336,9 @@ class Daemon:
         *,
         origin: str = "manual",
         grava_o_modo: GravaOModo = False,
+        arranjo: str | None = None,
     ) -> dict[str, str]:
-        """Carrega no aparelho o que a aba Navegação gravou no perfil ATIVO.
+        """Carrega no aparelho o arranjo do `desktop`: a Navegação ou o Point and click.
 
         POINT-AND-CLICK-01 (17/09/2026), pela ordem de produto olhando a aba
         principal: *"o modo point and click é o modo navegação (…) Ele ativa o
@@ -1427,6 +1428,8 @@ class Daemon:
         """
         relatorio: dict[str, str] = {}
         profile = self._perfil_do_arranjo()
+        arranjo = self._guardar_o_arranjo(arranjo)
+        tabelas = self._tabelas_do_arranjo(arranjo, profile)
         secao_mouse = getattr(profile, "mouse", None) if profile is not None else None
 
         speed, scroll = _velocidades_ou_as_da_sessao(
@@ -1449,23 +1452,8 @@ class Daemon:
             and getattr(self, "_mouse_device", None) is not None
         )
 
-        if profile is not None:
-            try:
-                from hefesto_dualsense4unix.profiles.manager import ProfileManager
-
-                gerente = ProfileManager(
-                    controller=self.controller,
-                    store=self.store,
-                    keyboard_device_provider=lambda: getattr(
-                        self, "_keyboard_device", None
-                    ),
-                    mouse_device_provider=lambda: getattr(self, "_mouse_device", None),
-                )
-                gerente.apply_keyboard(profile, relatorio=relatorio)
-                gerente.apply_button_actions(profile, relatorio=relatorio)
-            except Exception as exc:
-                relatorio["keyboard"] = "falhou"
-                logger.warning("arranjo_do_desktop_teclas_falharam", err=str(exc))
+        if tabelas is not None:
+            self._aplicar_as_tabelas(tabelas, relatorio)
         else:
             relatorio["keyboard"] = "ignorado_sem_perfil"
 
@@ -1497,6 +1485,7 @@ class Daemon:
         logger.info(
             "arranjo_do_desktop_aplicado",
             profile=getattr(profile, "name", None),
+            arranjo=arranjo,
             origin=origin,
             mouse_vivo="ligado" if mouse_vivo else "desligado",
             **relatorio,
@@ -1508,6 +1497,17 @@ class Daemon:
                 mouse_ligado=True if mouse_vivo else None,
             )
         return relatorio
+
+    def _devolver_as_tabelas_do_perfil(self) -> None:
+        """Saindo do `desktop` para o gamepad, o teclado volta à tabela do perfil ativo.
+
+        O teclado do desktop digita com o jogo aberto, e a tabela do Point and click não entra nele.
+        """
+        from hefesto_dualsense4unix.utils.session import ARRANJO_POINT_AND_CLICK
+
+        profile = self._perfil_do_arranjo()
+        if profile is not None and self.arranjo_do_desktop == ARRANJO_POINT_AND_CLICK:
+            self._aplicar_as_tabelas(profile, None)
 
     def definir_o_status_da_navegacao(
         self,
@@ -1780,25 +1780,23 @@ class Daemon:
         `caminho_e_escolha=False`: o `caminho` é o do dono da sessão, e não uma
         escolha do usuário (ver `gamepad.start_gamepad_emulation_desfecho`).
 
-        `grava_o_modo` (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026): a porta
-        da escolha do usuário. Ligando, com o desfecho `aplicado` ou `ja_estava`, o
-        modo `gamepad` vai ao perfil ativo por :meth:`gravar_o_modo_escolhido`,
-        FORA do `_emu_lock` — o disco não segura a próxima troca. O caminho vai
-        quando é escolha (`caminho_e_escolha`); sem ele, o do perfil fica.
-        `falhou` não grava, porque o aparelho não mudou; e o `ja_estava` grava,
-        porque o clique no chip aceso conserta um perfil que divergiu.
+        `grava_o_modo` (O-MODO-SE-GRAVA-ONDE-ELE-MUDA-01, 29/09/2026): a porta da escolha do
+        usuário. Ligando, com o desfecho `aplicado` ou `ja_estava`, o modo `gamepad` vai ao perfil
+        ativo por :meth:`gravar_o_modo_escolhido`, FORA do `_emu_lock` — o disco não segura a
+        próxima troca. O caminho vai quando é escolha (`caminho_e_escolha`); sem ele, o do perfil
+        fica. `falhou` não grava, porque o aparelho não mudou; e o `ja_estava` grava, porque o
+        clique no chip aceso conserta um perfil que divergiu.
 
         VERDADE-01 (18/08). Devolve o vocabulário `EMU_*` de
         `daemon.subsystems.gamepad`: `"aplicado"`, `"ja_estava"`,
         `"bloqueado_por_jogo"`, `"recusado_steam_input"`, `"falhou"` (pedido de
         ligar) e `"desligado"`/`"ja_estava"` (pedido de desligar).
 
-        A distinção que faltava é `"bloqueado_por_jogo"`: o gate R-04 recusa
-        recriar o vpad com jogo aberto e a emulação segue ATIVA com a máscara
-        anterior — indistinguível de "aplicou" para quem só lia o bool. Sem ela,
-        `apply_profile_mode` dizia `mode=aplicado` sobre uma troca recusada e
-        pedia de novo na volta seguinte, num laço que destruía e recriava o vpad
-        assim que a autoridade do jogo piscava (journal de 19/08 03:0x).
+        A distinção que faltava é `"bloqueado_por_jogo"`: o gate R-04 recusa recriar o vpad com jogo
+        aberto e a emulação segue ATIVA com a máscara anterior — indistinguível de "aplicou" para
+        quem só lia o bool. Sem ela, `apply_profile_mode` dizia `mode=aplicado` sobre uma troca
+        recusada e pedia de novo na volta seguinte, num laço que destruía e recriava o vpad assim
+        que a autoridade do jogo piscava (journal de 19/08 03:0x).
         """
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
             EMU_APLICADO,
@@ -1840,6 +1838,8 @@ class Daemon:
                 tinha_device = self._gamepad_device is not None
                 stop_gamepad_emulation(self, persist=(origin == "manual"))
                 return EMU_DESLIGADO if tinha_device else EMU_JA_ESTAVA
+        if ok:
+            self._devolver_as_tabelas_do_perfil()
         if grava_o_modo and ok:
             self.gravar_o_modo_escolhido(
                 "gamepad",
@@ -2426,7 +2426,7 @@ class Daemon:
             logger.debug("catalogo_de_janelas_indisponivel", err=str(exc))
             return False
 
-    def apply_profile_mode(
+    def _o_modo_do_perfil(
         self,
         mode: Any | None,
         *,
@@ -4671,6 +4671,133 @@ class Daemon:
         from hefesto_dualsense4unix.daemon.subsystems.ouvido_do_usb import start_ouvido_do_usb
 
         start_ouvido_do_usb(self)
+
+    # -- os dois arranjos do `desktop`: O-POINT-AND-CLICK-APLICA-O-PERFIL-QUE-A-NAVEGACAO-ESCOLHE-01
+
+    @property
+    def arranjo_do_desktop(self) -> str:
+        """O arranjo do modo `desktop`: ``navegacao`` ou ``point_and_click``, guardado na sessão.
+
+        O «Point and click» (Ligado) e a «Navegação» (Desligado) são o mesmo modo do serviço com
+        tabelas de botões diferentes; o `state_full` o publica como ``desktop_arranjo``, e a aba
+        Jogar lê dali o lado do interruptor.
+        """
+        guardado: str | None = getattr(self, "_arranjo_do_desktop", None)
+        if guardado is None:
+            from hefesto_dualsense4unix.utils.session import load_arranjo_do_desktop
+
+            guardado = load_arranjo_do_desktop()
+            self._arranjo_do_desktop = guardado
+        return guardado
+
+    def _guardar_o_arranjo(self, arranjo: str | None) -> str:
+        """Grava o arranjo pedido (um valor fora da lista é ignorado) e devolve o que vale."""
+        from hefesto_dualsense4unix.utils.session import (
+            ARRANJOS_DO_DESKTOP,
+            save_arranjo_do_desktop,
+        )
+
+        if arranjo in ARRANJOS_DO_DESKTOP and arranjo != self.arranjo_do_desktop:
+            save_arranjo_do_desktop(str(arranjo))
+            self._arranjo_do_desktop = str(arranjo)
+        return self.arranjo_do_desktop
+
+    def _tabelas_do_arranjo(self, arranjo: str, base: Any | None) -> Any | None:
+        """O perfil cujas tabelas de botões o arranjo aplica, ou ``None`` sem o que aplicar.
+
+        Na ``navegacao``, o perfil ativo (as linhas da aba Navegação). No ``point_and_click``, o
+        «Perfil jogo - navegação» (`mouse.point_and_click`): o molde dá os `button_actions` dele,
+        e um perfil salvo dá os `button_actions` e os `key_bindings`. O resto segue o perfil ativo.
+        """
+        from hefesto_dualsense4unix.utils.session import ARRANJO_POINT_AND_CLICK
+
+        if arranjo != ARRANJO_POINT_AND_CLICK:
+            return base
+        from hefesto_dualsense4unix.profiles import loader
+        from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
+            o_computador,
+            o_que_vale,
+        )
+
+        escolha = getattr(getattr(base, "mouse", None), "point_and_click", None)
+        if not escolha:
+            with contextlib.suppress(Exception):
+                escolha = o_computador().global_.mouse.point_and_click
+        quem, _, resto = str(escolha or "molde:point_and_click").partition(":")
+        try:
+            if quem == "perfil":
+                fonte = o_que_vale(loader.load_profile(resto.strip()))
+            else:
+                chave = resto if resto in loader.MOLDE_POR_CHAVE else "point_and_click"
+                fonte = loader.perfil_do_molde(chave, loader.MOLDE_POR_CHAVE[chave].nome)
+        except Exception as exc:
+            logger.warning("point_and_click_sem_tabela", escolha=escolha, err=str(exc))
+            return base
+        tabelas = {"button_actions": fonte.button_actions, "key_bindings": fonte.key_bindings}
+        return base.model_copy(update=tabelas) if base is not None else fonte
+
+    def _aplicar_as_tabelas(self, profile: Any, relatorio: dict[str, str] | None) -> None:
+        """`key_bindings` e `button_actions` de ``profile`` nos dois devices, pelos appliers."""
+        try:
+            from hefesto_dualsense4unix.profiles.manager import ProfileManager
+
+            gerente = ProfileManager(
+                controller=self.controller,
+                store=self.store,
+                keyboard_device_provider=lambda: getattr(self, "_keyboard_device", None),
+                mouse_device_provider=lambda: getattr(self, "_mouse_device", None),
+            )
+            gerente.apply_keyboard(profile, relatorio=relatorio)
+            gerente.apply_button_actions(profile, relatorio=relatorio)
+        except Exception as exc:
+            if relatorio is not None:
+                relatorio["keyboard"] = "falhou"
+            logger.warning("arranjo_do_desktop_teclas_falharam", err=str(exc))
+
+    def _no_desktop(self) -> bool:
+        """O serviço está no modo `desktop`: sem Modo Nativo e sem o gamepad virtual de pé."""
+        gamepad_on = self.config.gamepad_emulation_enabled and self._gamepad_device is not None
+        return not self._native_mode and not gamepad_on
+
+    def _repor_o_point_and_click(self) -> bool:
+        """Depois de uma ativação, o `desktop` no Point and click volta à tabela dele.
+
+        A ativação (o autoswitch, o boot, a troca de perfil) escreve nos devices as tabelas do
+        perfil, que são as da Navegação; com o Point and click de pé, a tabela dele volta por cima.
+        Nunca levanta.
+        """
+        from hefesto_dualsense4unix.utils.session import ARRANJO_POINT_AND_CLICK
+
+        try:
+            if not self._no_desktop() or self.arranjo_do_desktop != ARRANJO_POINT_AND_CLICK:
+                return False
+            tabelas = self._tabelas_do_arranjo(
+                ARRANJO_POINT_AND_CLICK, self._perfil_do_arranjo())
+            if tabelas is None:
+                return False
+            self._aplicar_as_tabelas(tabelas, None)
+            logger.info("point_and_click_reposto", perfil=getattr(tabelas, "name", None))
+            return True
+        except Exception as exc:
+            logger.warning("point_and_click_nao_reposto", err=str(exc))
+            return False
+
+    def apply_profile_mode(
+        self,
+        mode: Any | None,
+        *,
+        profile: Any | None = None,
+        origin: str = "autoswitch",
+    ) -> str:
+        """A seção `mode` do perfil (:meth:`_o_modo_do_perfil`), e o Point and click por cima.
+
+        É o último applier da ativação, depois das tabelas do perfil: no `desktop` com o arranjo
+        ``point_and_click``, a tabela do «Perfil jogo - navegação» volta (o perfil que diz
+        `desktop` entra no último arranjo guardado).
+        """
+        resultado = self._o_modo_do_perfil(mode, profile=profile, origin=origin)
+        self._repor_o_point_and_click()
+        return resultado
 
 
 CAMPOS_DO_TETO_DA_ECONOMIA: Final[tuple[str, ...]] = (

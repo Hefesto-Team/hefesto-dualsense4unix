@@ -24,8 +24,8 @@ NDJSON UTF-8, uma mensagem por linha. Métodos v1 + extensões:
     launch_env.refresh   {}          -> {status}
     mouse.emulation.set  {enabled, speed?, scroll_speed?} -> {status, enabled}
     mouse.emulation.restore {}                            -> {status, enabled}
-    desktop.arranjo.apply {origin?}                       -> {status, arranjo}
-                         O modo Navegação carregando o que a aba Navegação
+    desktop.arranjo.apply {origin?, arranjo?}             -> {status, arranjo}
+                         O `desktop` (arranjo navegacao|point_and_click) com o que a aba Navegação
                          gravou no perfil ATIVO — teclas, botões,
                          `teclado_emulado` e a queda da supressão —, e o mouse
                          LIGADO com as velocidades do perfil: entrar na

@@ -870,13 +870,57 @@ def gravar_os_zeros(dados: dict[str, Any]) -> bool:
         return False
 
 
+# O-POINT-AND-CLICK-APLICA-O-PERFIL-QUE-A-NAVEGACAO-ESCOLHE-01 (21/10/2026): o modo `desktop`
+# tem dois arranjos, e o serviço guarda qual está de pé. A «Navegação» usa as linhas da aba
+# Navegação do perfil ativo; o «Point and click», a tabela do «Perfil jogo - navegação».
+ARRANJO_NAVEGACAO = "navegacao"
+ARRANJO_POINT_AND_CLICK = "point_and_click"
+ARRANJOS_DO_DESKTOP = (ARRANJO_NAVEGACAO, ARRANJO_POINT_AND_CLICK)
+_ARRANJO_DO_DESKTOP_FILE = "arranjo_do_desktop.json"
+# A lembrança que a janela guardava até 21/10 (`gui_preferences.json`): é o último clique do usuário
+# enquanto o serviço ainda não gravou o seu, e só se lê.
+_PREF_ANTIGA_DA_NAVEGACAO = "jogar_navegacao_no_desligado"
+
+
+def save_arranjo_do_desktop(arranjo: str) -> None:
+    """Guarda o arranjo do `desktop` (``{"arranjo": ...}``); valor fora da lista não grava."""
+    if arranjo not in ARRANJOS_DO_DESKTOP:
+        return
+    try:
+        flag = config_dir(ensure=True) / _ARRANJO_DO_DESKTOP_FILE
+        flag.write_text(json.dumps({"arranjo": arranjo}) + "\n", encoding="utf-8")
+    except Exception as exc:
+        logger.debug("arranjo_do_desktop_nao_salvou", err=str(exc))
+
+
+def load_arranjo_do_desktop() -> str:
+    """O arranjo guardado; sem ele, o último clique da janela; sem os dois, o Point and click."""
+    try:
+        flag = config_dir() / _ARRANJO_DO_DESKTOP_FILE
+        if flag.exists():
+            data = json.loads(flag.read_text(encoding="utf-8").strip() or "{}")
+            if isinstance(data, dict) and data.get("arranjo") in ARRANJOS_DO_DESKTOP:
+                return str(data["arranjo"])
+        from hefesto_dualsense4unix.app.gui_prefs import load_gui_prefs
+
+        if load_gui_prefs().get(_PREF_ANTIGA_DA_NAVEGACAO) is True:
+            return ARRANJO_NAVEGACAO
+    except Exception as exc:
+        logger.debug("arranjo_do_desktop_nao_leu", err=str(exc))
+    return ARRANJO_POINT_AND_CLICK
+
+
 __all__ = [
+    "ARRANJOS_DO_DESKTOP",
+    "ARRANJO_NAVEGACAO",
+    "ARRANJO_POINT_AND_CLICK",
     "a_escolha_dela",
     "espelhar_a_escolha",
     "esquecer_a_escolha",
     "gravar_a_escolha",
     "gravar_os_zeros",
     "ler_os_zeros",
+    "load_arranjo_do_desktop",
     "load_freestyle_ligado",
     "load_gamepad_caminho_com_origem",
     "load_gamepad_emulation",
@@ -892,6 +936,7 @@ __all__ = [
     "read_active_marker",
     "resolve_boot_profile",
     "save_active_marker",
+    "save_arranjo_do_desktop",
     "save_coop_enabled",
     "save_freestyle_ligado",
     "save_gamepad_caminho",
