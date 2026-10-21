@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+import time
 from pathlib import Path
 from typing import Any
 
@@ -309,20 +310,36 @@ class TestOTestar:
         a05.parar_o_teste()
 
     def test_com_um_padrao_escolhido_o_testar_toca_o_padrao(self, perfis: Path) -> None:
-        # D-1610-O-TESTAR-TOCA-O-PADRAO-ESCOLHIDO
-        """MORDIDA: tirar o desvio do `testar` volta ao sustentado e reprova."""
+        # D-1610-O-TESTAR-TOCA-O-PADRAO-ESCOLHIDO, com a volta contínua da
+        # D-1910-O-TESTE-DA-VIBRACAO-E-CONTINUO (o padrão repete até o «Parar»)
+        """MORDIDA: tirar o desvio do `testar` volta ao sustentado e reprova.
+
+        O padrão vem do perfil no disco (o `efeito_imersao` do controle), sem dublê no
+        `_padrao_escolhido`: a repetição e o «Parar» têm a régua deles em
+        `test_o_testar_do_efeito_imersao_repete_ate_o_parar`.
+        """
         save_profile(Profile(
             name="Bancada", match=MatchAny(),
             controllers={BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(
                 efeito_imersao="onda"))}))
         ponte = _PonteQueGrava(_Handlers(ativo="Bancada", primario=BRANCO))
         gesto = pacotes.gesto_da_pagina("05-vibracao.html", "testar")
-        assert gesto is not None
+        parar = pacotes.gesto_da_pagina("05-vibracao.html", "parar")
+        assert gesto is not None and parar is not None
+        onda = padroes.PADROES["onda"]
         gesto(_ctx("Bancada"), {"uniq": UNIQ}, ponte)
-        sets = [c for c in ponte.chamadas if c[0] == "rumble_set_checked"]
-        assert len(sets) == len(padroes.PADROES["onda"])
-        assert [c[0] for c in ponte.chamadas[-2:]] == ["rumble_stop", "rumble_passthrough"]
-        assert a05.em_teste() == frozenset(), "o padrão não deixa o Testar ligado"
+
+        def sets() -> list[tuple[Any, ...]]:
+            return [c[1] for c in list(ponte.chamadas) if c[0] == "rumble_set_checked"]
+
+        prazo = time.monotonic() + 5.0
+        while len(sets()) < len(onda) and time.monotonic() < prazo:
+            time.sleep(0.05)
+        assert sets()[:len(onda)] == [(d, e) for _ms, e, d in onda], (
+            f"o Testar não tocou a Onda do perfil: {sets()}")
+        assert UNIQ in a05.em_teste(), "o padrão fica no ar até o «Parar»"
+        parar(_ctx("Bancada"), {"uniq": UNIQ}, ponte)
+        assert UNIQ not in a05.em_teste()
 
     @pytest.mark.parametrize("escolha", ["do_estilo", "sem_efeito", None])
     def test_sem_padrao_escolhido_o_testar_segue_sustentado(
