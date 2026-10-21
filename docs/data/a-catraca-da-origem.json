@@ -252,14 +252,14 @@
       "data": "2026-10-20",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1160376,
+      "piso": 1160386,
       "por_item": {
         "docs": 120132,
-        "scripts": 114220,
+        "scripts": 114222,
         "src": 314511,
-        "tests": 611513
+        "tests": 611521
       },
-      "razao": "tamanho: +1448 linhas (1158928 -> 1160376), pagas por Origem: D-0609-GTK-LEVA-INTEIRA, D-0810-O-ZERO-DE-CADA-CONTROLE, D-1910-A-EXTENSAO-DE-LANCADOR-VIRA-LINHA-DA-07, D-1910-OS-LANCADORES-DE-FORA-VIRAM-EXTENSOES, D-2010-A-CHEGADA-NAO-TOCA-QUEM-JA-ESTAVA, D-2010-O-DESTAQUE-DO-TEMA-PASSA-DE-3-PARA-1, D-2010-O-DIARIO-DA-EXTENSAO-TEM-TETO-ENQUANTO-ELA-RODA, D-2010-O-EXTERNO-SEM-NUMERO-TEM-UM-TRAVESSAO, D-2909-A-NAVEGACAO-LIGA-O-MOUSE, D-A-REGUA-E-QUALQUER-MESA-NAO-A-DELA, luz.lightbar.cor; registrado no fecho, topo 0bc8e1908fcc",
+      "razao": "tamanho: +10 linhas (1160376 -> 1160386), pagas por Origem: D-2010-O-HERDADO-SAI-COM-OS-DEGRAUS; registrado no fecho, topo 44f7e5cb83a0",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -722,6 +722,12 @@
           "de": 1158928,
           "para": 1160376,
           "razao": "tamanho: +1448 linhas (1158928 -> 1160376), pagas por Origem: D-0609-GTK-LEVA-INTEIRA, D-0810-O-ZERO-DE-CADA-CONTROLE, D-1910-A-EXTENSAO-DE-LANCADOR-VIRA-LINHA-DA-07, D-1910-OS-LANCADORES-DE-FORA-VIRAM-EXTENSOES, D-2010-A-CHEGADA-NAO-TOCA-QUEM-JA-ESTAVA, D-2010-O-DESTAQUE-DO-TEMA-PASSA-DE-3-PARA-1, D-2010-O-DIARIO-DA-EXTENSAO-TEM-TETO-ENQUANTO-ELA-RODA, D-2010-O-EXTERNO-SEM-NUMERO-TEM-UM-TRAVESSAO, D-2909-A-NAVEGACAO-LIGA-O-MOUSE, D-A-REGUA-E-QUALQUER-MESA-NAO-A-DELA, luz.lightbar.cor; registrado no fecho, topo 0bc8e1908fcc"
+        },
+        {
+          "data": "2026-10-20",
+          "de": 1160376,
+          "para": 1160386,
+          "razao": "tamanho: +10 linhas (1160376 -> 1160386), pagas por Origem: D-2010-O-HERDADO-SAI-COM-OS-DEGRAUS; registrado no fecho, topo 44f7e5cb83a0"
         }
       ],
       "unidade": "linhas",
