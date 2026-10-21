@@ -114,3 +114,27 @@ def test_o_atributo_que_nao_existe_continua_sendo_erro() -> None:
         assert "nada_disso_existe" in str(exc)
     else:  # pragma: no cover
         raise AssertionError("o __getattr__ do pacote engoliu um atributo inexistente")
+
+
+def test_o_mypy_nao_ve_o_getattr_do_pacote() -> None:
+    """O `__getattr__` visível ao mypy faria todo atributo do pacote valer `str`.
+
+    Medido em 21/10/2026: com ele no topo, `from hefesto_dualsense4unix import nao_existe` passa no
+    mypy calado. Ele mora no `else` do `if TYPE_CHECKING`, e o mypy lê só `__version__: str`.
+    MORDIDA (21/10/2026): o `__getattr__` de volta ao topo do `__init__.py` reprova este teste.
+    """
+    import ast
+
+    arvore = ast.parse((RAIZ / "src" / "hefesto_dualsense4unix" / "__init__.py").read_text("utf-8"))
+    no_topo = [n.name for n in arvore.body if isinstance(n, ast.FunctionDef)]
+    assert "__getattr__" not in no_topo, "o __getattr__ no topo: o mypy aceita qualquer atributo"
+    guardas = [
+        n for n in arvore.body
+        if isinstance(n, ast.If) and ast.unparse(n.test) == "TYPE_CHECKING"
+    ]
+    assert any(
+        any(isinstance(f, ast.FunctionDef) and f.name == "__getattr__" for f in g.orelse)
+        and any(isinstance(a, ast.AnnAssign) and ast.unparse(a.target) == "__version__"
+                for a in g.body)
+        for g in guardas
+    ), "o __getattr__ vai no else do `if TYPE_CHECKING`, e o corpo declara `__version__: str`"
