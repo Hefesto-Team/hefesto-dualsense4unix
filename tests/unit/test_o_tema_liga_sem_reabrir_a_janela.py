@@ -28,6 +28,10 @@ from types import SimpleNamespace
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa a `interface.janela`, que carrega o GTK")
+
 from hefesto_dualsense4unix.interface import janela
 from hefesto_dualsense4unix.mods import tema
 

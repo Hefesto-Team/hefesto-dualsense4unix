@@ -1303,11 +1303,11 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "a grade `minmax(0,1fr)` antes de gravar o desenho; o produto só renderiza a página "
         "publicada. O commit 6b5e2e917 tirou o outro chamador, a régua da página antiga."
     ),
-    "interface/pacotes/a05_vibracao.py::degrau_da_faixa": (
-        "20/10/2026, D-2010-O-HERDADO-SAI-COM-OS-DEGRAUS — resto com dono: o plano do "
-        "`a05_vibracao.pacote` deixou de pintar o degrau, e a mordida de "
-        "`test_a_vibracao_diz_qual_degrau_esta_aceso.py` a cita. Ela sai com o gesto `forca` "
-        "na O-GESTO-FORCA-DOS-DEGRAUS-DA-VIBRACAO-SAI-01, que tem a posse do arquivo."
+    "app/telas/vibracao.py::degraus_da_forca": (
+        "21/10/2026 — é do gerador do desenho, não do produto: o `interface/aba05.py` (o import "
+        "de :47 e a conferência de :88) confere com ela que os degraus do desenho são os do "
+        "produto antes de gravar o mockup. O 80d0008c5 tirou o chamador do produto com o gesto "
+        "`forca`, e a entrada do `a05_vibracao.py::degrau_da_faixa`, que saiu da árvore, sai junto."
     ),
     "interface/pacotes/a08_conexoes.py::html_do_acionador": (
         "20/10/2026 — é do gerador do desenho, não do produto, como o `html_da_grade_de_tipos`: "
@@ -2955,34 +2955,38 @@ class TestOPortaoMorde:
             "a árvore de verdade foi contaminada pela mordida"
         )
 
-    def test_comentar_a_chamada_do_desinstalar_devolve_a_acusacao(
+    def test_comentar_a_chamada_do_heredoc_devolve_a_acusacao(
         self, tmp_path: Path
     ) -> None:
-        """A mordida do heredoc, sobre a árvore de verdade."""
+        """A mordida do heredoc, sobre a árvore de verdade.
+
+        O alvo é o `forbidden_reintroductions`, que só o heredoc do `install.sh` chama. Era o
+        `strip_quirks_token` do `uninstall.sh` até 21/10/2026, quando o 86aff7e28 deu a ele um
+        chamador no próprio módulo e a mordida deixou de morder.
+        """
         copia = _copia_de_src(tmp_path)
-        chave = "integrations/kernel_cmdline.py::strip_quirks_token"
+        chave = "integrations/kernel_cmdline.py::forbidden_reintroductions"
         assert chave not in promessas_sem_caminho(copia), (
-            "com o `uninstall.sh` inteiro o portão AINDA acusa "
+            "com o `install.sh` inteiro o portão AINDA acusa "
             f"{chave!r} — a varredura continua cega ao Python embutido em "
             "heredoc, e a lista de dívida segue cobrando de quem está certo"
         )
 
-        roteiro = tmp_path / "uninstall.sh"
+        roteiro = tmp_path / "install.sh"
         texto = roteiro.read_text(encoding="utf-8")
-        chamada = "rest, changed = kc.strip_quirks_token(tok)"
+        chamada = "violations = kc.forbidden_reintroductions(actions)"
         assert chamada in texto, (
-            "a chamada mudou de forma no `uninstall.sh` — esta mordida precisa "
+            "a chamada mudou de forma no `install.sh` — esta mordida precisa "
             "de outro alvo, senão ela deixa de morder em silêncio"
         )
         roteiro.write_text(
-            texto.replace(chamada, "rest, changed = None, False"), encoding="utf-8"
+            texto.replace(chamada, "violations = []"), encoding="utf-8"
         )
 
         assert chave in promessas_sem_caminho(copia), (
             "arrancada a chamada do heredoc, o portão NÃO voltou a acusar "
-            f"{chave!r}. Ou ele está lendo o roteiro como texto solto (e o "
-            "COMENTÁRIO de uninstall.sh:1663 o satisfaz), ou ele parou de "
-            "olhar o roteiro da CÓPIA e está medindo a árvore viva"
+            f"{chave!r}. Ou ele está lendo o roteiro como texto solto, ou ele "
+            "parou de olhar o roteiro da CÓPIA e está medindo a árvore viva"
         )
         assert chave not in promessas_sem_caminho(), (
             "a árvore de verdade foi contaminada pela mordida"

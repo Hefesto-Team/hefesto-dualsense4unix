@@ -15,6 +15,10 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa a linha de comando e o `app.actions`, e um deles carrega o GTK")
+
 from hefesto_dualsense4unix.app.actions.profiles_actions import _AVISO_DA_REMOCAO_DO_ATIVO
 from hefesto_dualsense4unix.cli import cmd_profile
 from hefesto_dualsense4unix.cli.app import app

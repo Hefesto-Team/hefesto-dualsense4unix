@@ -16,6 +16,10 @@ import re
 
 import pytest
 
+from tests.conftest import exigir_gi_real
+
+exigir_gi_real("importa o `interface.pacotes.a04_iluminacao`, que carrega o GTK")
+
 from hefesto_dualsense4unix.interface.pacotes import a04_iluminacao as a04
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
