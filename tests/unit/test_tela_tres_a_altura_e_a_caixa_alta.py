@@ -42,7 +42,11 @@ def test_as_colunas_da_sistema_fecham_na_mesma_linha_e_o_registro_cresce():
       const log = document.querySelector('.registro .log');
       const corpo = document.querySelector('.quadro.estica');
       return {colunas: bases('.avancadas > .coluna'),
-              status: bases('.status3 .col-lista'),
+              // a linha que pede ação (`.longa`) cresce com a frase, de propósito (desenho de
+              // 21/10): o fundo da coluna desconta o que ela cresceu além dos 25,5 px das outras
+              status: [...document.querySelectorAll('.status3 .col-lista')].map(c => Math.round(
+                c.getBoundingClientRect().bottom - [...c.querySelectorAll('.saude.longa')].reduce(
+                  (s, l) => s + Math.max(0, l.getBoundingClientRect().height - 25.5), 0))),
               log: log ? Math.round(log.getBoundingClientRect().height) : null,
               fundo_log: log ? Math.round(log.getBoundingClientRect().bottom) : null,
               fundo_quadro: corpo ? Math.round(corpo.getBoundingClientRect().bottom) : null};
@@ -51,7 +55,7 @@ def test_as_colunas_da_sistema_fecham_na_mesma_linha_e_o_registro_cresce():
     assert len(r["colunas"]) == 4, r
     assert len(set(r["colunas"])) == 1, (
         f"as quatro colunas não fecham na mesma linha: {r['colunas']}")
-    assert len(r["status"]) == 3 and len(set(r["status"])) == 1, (
+    assert len(r["status"]) == 3 and max(r["status"]) - min(r["status"]) <= 1, (
         f"as três colunas do Status não fecham na mesma linha: {r['status']}")
     assert r["log"] and r["log"] >= 120, f"o registro encolheu: {r['log']}px"
     assert r["fundo_quadro"] - r["fundo_log"] <= 20, (

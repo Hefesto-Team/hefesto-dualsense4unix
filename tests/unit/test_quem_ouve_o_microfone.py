@@ -148,6 +148,21 @@ def _proc_falso(tmp_path: Path, arvore: dict[int, tuple[int, str]]) -> Path:
     return raiz
 
 
+@pytest.fixture(autouse=True)
+def _proc_real_fica_de_fora(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """Os PIDs dos blocos (999001, 700…) são forjados: lidos no `/proc` real, eles casam com o
+    processo que a máquina tiver com esse número. Em 21/10/2026 o 999001 era a interface do
+    Hefesto, e o Chrome de mentira virou stream nosso. Quem não passa `raiz_proc` lê um vazio."""
+    vazio = tmp_path / "proc-vazio"
+    vazio.mkdir()
+    original = qom.descende_do_hefesto
+
+    def sem_o_proc_real(pid: int | None, raiz_proc: Path | str = "/proc") -> bool:
+        return original(pid, vazio if str(raiz_proc) == "/proc" else raiz_proc)
+
+    monkeypatch.setattr(qom, "descende_do_hefesto", sem_o_proc_real)
+
+
 def _falar_pactl(monkeypatch: pytest.MonkeyPatch, respostas: dict[str, tuple[int, str]]) -> None:
     """Faz o `pactl` do módulo responder o que o teste mandar."""
 

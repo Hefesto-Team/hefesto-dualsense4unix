@@ -453,11 +453,15 @@ def sprint(
     return arq
 
 
-def test_o_bloco_publico_e_lido_e_o_resto_da_sprint_fica_em_casa() -> None:
+def test_o_bloco_publico_e_lido_e_o_resto_da_sprint_fica_em_casa(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     spec = importlib.util.spec_from_file_location("publico_do_teste", PUBLICO)
     assert spec and spec.loader
     modulo = importlib.util.module_from_spec(spec)
-    sys.path.insert(0, str(RELEASE))
+    # o `scripts/release` tem um `pacotes.py`: deixado no sys.path, ele toma o lugar do
+    # `interface/pacotes` nos testes que vêm depois na mesma parte da suíte
+    monkeypatch.syspath_prepend(str(RELEASE))
     spec.loader.exec_module(modulo)
     texto = (
         "# Sprint\n\nblá «mesa»\n\n```publico\ntitulo: Um\ntipo: mudado\n"
@@ -486,9 +490,9 @@ def test_o_bloco_publico_e_lido_e_o_resto_da_sprint_fica_em_casa() -> None:
     ],
 )
 def test_a_regua_do_publico_reprova_palavra_da_casa_e_campo_torto(
-    brinquedo: Path, campo: str, valor: str, trecho: str
+    brinquedo: Path, campo: str, valor: str, trecho: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    sys.path.insert(0, str(RELEASE))
+    monkeypatch.syspath_prepend(str(RELEASE))
     import publico as modulo
 
     bloco = {
@@ -504,9 +508,11 @@ def test_a_regua_do_publico_reprova_palavra_da_casa_e_campo_torto(
     assert any(trecho in e for e in erros), erros
 
 
-def test_o_publico_passa_pela_regua_de_autoria_quando_ela_existe(brinquedo: Path) -> None:
+def test_o_publico_passa_pela_regua_de_autoria_quando_ela_existe(
+    brinquedo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """A régua é o `check_autoria.py texto` da árvore: se ela recusa, o bloco não vai a quem usa."""
-    sys.path.insert(0, str(RELEASE))
+    monkeypatch.syspath_prepend(str(RELEASE))
     import publico as modulo
 
     (brinquedo / "scripts" / "check_autoria.py").write_text(

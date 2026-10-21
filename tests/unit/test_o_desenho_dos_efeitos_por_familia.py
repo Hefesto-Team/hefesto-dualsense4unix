@@ -328,7 +328,8 @@ def test_nenhuma_variante_traz_selo_nem_recado_novo() -> None:
 
 
 def _folhas_do_corpo(doc: str) -> list[str]:
-    corpo = doc[doc.index("</head>"):]
+    # sem os comentários: um «<style>» citado na prosa abria a busca ali e engolia a fita inteira
+    corpo = re.sub(r"<!--.*?-->", "", doc[doc.index("</head>"):], flags=re.S)
     return re.findall(r"<style\b[^>]*>.*?</style>", corpo, flags=re.S)
 
 

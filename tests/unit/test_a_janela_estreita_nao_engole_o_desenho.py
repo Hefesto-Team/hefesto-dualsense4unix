@@ -368,7 +368,12 @@ ESPERADO_VERMELHO: dict[tuple[str, str], str] = {
     ),
 }
 
-CORTE_CONHECIDO_NO_DESENHO: dict[tuple[str, str], str] = {}
+CORTE_CONHECIDO_NO_DESENHO: dict[tuple[str, str], str] = {
+    ("07-lancadores.html", "Os jogos do KytyPS5"): (
+        "D-2110-A-FRASE-DA-EXTENSAO-CORTA-COM-A-DICA — nas duas colunas do desenho de 21/10 a "
+        "frase da extensão corta com reticências e a dica guarda a inteira, como a do efeito"
+    ),
+}
 
 ESPERADO_VERMELHO_SELECT: dict[tuple[str, str], str] = {
     ("03-gatilhos.html", "estreita"): (
@@ -437,7 +442,10 @@ def test_os_campos_de_escolha_existem_para_serem_medidos(medido):
 
 @pytest.mark.parametrize("aba", ABAS)
 def test_no_tamanho_do_desenho_nada_e_cortado(medido, aba):
-    """A LINHA DE BASE, e ela é mais dura que o artigo 2: nem reticência."""
+    """A LINHA DE BASE, e ela é mais dura que o artigo 2: nem reticência.
+
+    A prova da D-2110-A-FRASE-DA-EXTENSAO-CORTA-COM-A-DICA.
+    """
     lido = medido[(aba, "desenho")]
     cortados = list(lido["cortados"])
     for (pagina, comeco), razao in CORTE_CONHECIDO_NO_DESENHO.items():
@@ -518,7 +526,9 @@ def test_o_que_fica_fora_da_tela_se_alcanca_rolando(medido, aba, rotulo):
     assert not queixas, f"{aba} em janela {rotulo}: " + " · ".join(queixas)
 
 
-ABA_DA_MORDIDA = "09-sistema.html"
+# a 09 saiu em 21/10/2026: a linha que pede ação cresce em vez de cortar, e ela ficou sem corte com
+# afordância a 940 px; a 07 tem os dois (o nome e a frase da extensão, com a dica)
+ABA_DA_MORDIDA = "07-lancadores.html"
 
 
 def test_a_mordida_da_afordancia_sem_o_title_o_corte_vira_sumico(tmp_path):

@@ -26,6 +26,7 @@ from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
 from hefesto_dualsense4unix.daemon.subsystems import navegacao_interna as dono
 from hefesto_dualsense4unix.integrations.uinput_keyboard import UinputKeyboardDevice
 from hefesto_dualsense4unix.testing import FakeController
+from hefesto_dualsense4unix.utils.session import ARRANJO_NAVEGACAO
 
 #: Um botão da Interna que o perfil ligou a uma tecla (``key_bindings``).
 BOTAO_LIGADO_A_TECLA = "cross"
@@ -133,6 +134,9 @@ async def _teclas_do_laco(
         ),
     )
     daemon._navegacao_interna = _interna(agindo=agindo)
+    # A tecla do perfil é a tabela da Navegação; no Point and click (o padrão sem nada guardado)
+    # o boot repõe a do molde por cima (O-POINT-AND-CLICK-SE-REPOE-EM-TODO-CAMINHO-01).
+    daemon._arranjo_do_desktop = ARRANJO_NAVEGACAO
     uinput, emitidas = _uinput_de_mentira()
     teclado = UinputKeyboardDevice(
         bindings={**DEFAULT_BUTTON_BINDINGS, BOTAO_LIGADO_A_TECLA: TECLA_DO_PERFIL}
