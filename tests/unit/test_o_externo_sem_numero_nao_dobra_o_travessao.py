@@ -50,6 +50,7 @@ def _cartoes(pacote: Any, externos: list[dict[str, Any]]) -> int:
 @pytest.mark.parametrize("pacote", [a01_jogar, a08_conexoes], ids=["01", "08"])
 @pytest.mark.parametrize("bus", ["usb", "bluetooth"])
 def test_quatro_dualsense_e_um_externo_sem_numero_dao_quatro_cartoes(pacote: Any, bus: str) -> None:
+    """A prova da D-2010-A-TELA-MOSTRA-NO-MAXIMO-QUATRO-CONTROLES."""
     externo = {**NINTENDO, "bus": bus, "player_slot": None}
     assert 4 + _cartoes(pacote, [externo]) == 4
 

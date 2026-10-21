@@ -372,6 +372,8 @@ async def test_a_subida_do_daemon_toca_todos_que_ja_estavam(
 ) -> None:
     """A-CHEGADA-TOCA-TODOS-QUANDO-O-HEFESTO-REINICIA-01: reiniciar o daemon toca os quatro.
 
+    A prova da D-2010-A-CHEGADA-TOCA-TODOS-NA-SUBIDA-DO-DAEMON.
+
     O laço nasce com a mesa cheia (é o `install.sh` reiniciando o serviço): cada controle ganha
     a Chegada, depois da espera da rajada. A troca de fio de um deles, depois, não toca de novo.
     MORDIDA: tire o `anunciar_a_chegada(daemon, {}, alvos_antes)` da subida do laço e reprova.

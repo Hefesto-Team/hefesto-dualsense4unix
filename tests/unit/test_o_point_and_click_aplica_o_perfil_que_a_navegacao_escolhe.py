@@ -135,6 +135,7 @@ def _pelo_ipc(d: Daemon, params: dict[str, Any]) -> dict[str, Any]:
 # 1. O CHIP LEVA O ARRANJO, E O SERVIÇO APLICA A TABELA DELE ------------------------------------
 
 def test_o_point_and_click_aplica_o_molde_que_a_navegacao_escolheu() -> None:
+    """A prova da D-2010-O-POINT-AND-CLICK-APLICA-O-PERFIL-ESCOLHIDO."""
     d = _daemon()
     _pelo_ipc(d, _arranjo_do_chip(ARRANJO_POINT_AND_CLICK))
     assert d.quadrado() == ("KEY_LEFTCTRL",), (
