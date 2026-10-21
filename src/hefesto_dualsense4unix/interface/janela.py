@@ -815,7 +815,13 @@ class JanelaDaAba:
         )
 
     def fechar(self, motivo: str = "Fechar da barra ou do menu do botão direito") -> None:
-        """Fecha a janela e encerra o laço. É o «Fechar» do menu do botão direito e o da barra."""
+        """Fecha a janela e encerra o laço. É o «Fechar» do menu do botão direito e o da barra.
+
+        É o ÚNICO caminho de saída: o «Fechar», o sinal, o prazo do `agendar_saida` e a carga que
+        morre (`_morrer`) passam por aqui. A janela com tela é destruída DENTRO do laço (o WebView
+        e o contexto de GL dele); o `Gtk.main_quit` solto deixava a janela viva até o fim do
+        intérprete, onde a placa NVIDIA estoura o prazo do sinal.
+        """
         if self.oculta:
             self.anotar_o_fim(motivo)
             Gtk.main_quit()
@@ -925,19 +931,17 @@ class JanelaDaAba:
             self._ao_falhar(motivo)
             return
         print(f"ERRO DE CARGA: {motivo}", file=sys.stderr)
-        self.anotar_o_fim(f"a carga falhou ({motivo})")
-        Gtk.main_quit()
+        self.fechar(f"a carga falhou ({motivo})")
 
     def agendar_saida(self, segundos: float, antes: Callable[[], None] | None = None) -> None:
-        """Fecha a janela daqui a N segundos. ``0`` (ou menos) não agenda nada."""
+        """Fecha a janela daqui a N segundos, pelo `fechar`. ``0`` (ou menos) não agenda nada."""
         if segundos <= 0:
             return
 
         def sair() -> bool:
             if antes is not None:
                 antes()
-            self.anotar_o_fim(f"o prazo de {segundos:g} s acabou")
-            Gtk.main_quit()
+            self.fechar(f"o prazo de {segundos:g} s acabou")
             return False
 
         GLib.timeout_add(int(segundos * 1000), sair)
