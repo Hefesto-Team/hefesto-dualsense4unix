@@ -41,7 +41,7 @@ aparece contada.
 
 <!-- BLOCO GERADO por scripts/gerar-contrato-ipc.py — não edite à mão -->
 
-**66 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **25** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
+**67 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **26** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
 
 Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e é por isso que ele está aqui: escrito à mão, ele já saiu 15, 17, 18 e 14 em levantamentos do mesmo dia.
 
@@ -81,6 +81,7 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `mouse.emulation.set` | `daemon/ipc_handlers.py:4479` (`_handle_mouse_emulation_set`) | Liga/desliga emulação de mouse+teclado. | sim |
 | `mouse.emulation.restore` | `daemon/ipc_handlers.py:4538` (`_handle_mouse_emulation_restore`) | Restaura a emulação de mouse conforme a preferência persistida. | **não** |
 | `desktop.arranjo.apply` | `daemon/ipc_handlers.py:4555` (`_handle_desktop_arranjo_apply`) | Carrega no aparelho o arranjo do `desktop`: a Navegação ou o Point and click. | sim |
+| `desktop.arranjo.repor` | `daemon/ipc_handlers.py:6115` (`_handle_desktop_arranjo_repor`) | Repõe a tabela do Point and click, se é o arranjo de agora: o serviço decide. | **não** |
 | `keyboard.emulation.set` | `daemon/ipc_handlers.py:4760` (`_handle_keyboard_emulation_set`) | Liga/desliga a emulação de TECLADO. | **não** |
 | `desktop.status.set` | `daemon/ipc_handlers.py:4585` (`_handle_desktop_status_set`) | O «Status do Modo» da aba Navegação: mouse e teclado, e o perfil. | sim |
 | `navegacao.interna.set` | `daemon/ipc_handlers.py:4633` (`_handle_navegacao_interna_set`) | Liga a Navegação Interna, ou troca o tipo («Interna» ou «Uso geral» da aba 06). | sim |

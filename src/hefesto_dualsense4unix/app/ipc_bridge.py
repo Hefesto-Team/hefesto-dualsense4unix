@@ -47,7 +47,7 @@ TETOS: dict[str, float] = {
     "mouse.emulation.restore": 2.0, "daemon.emulation.suppress": 2.0,
     # O arranjo da área de trabalho regrava os atalhos do perfil e pode criar o
     # teclado virtual: a família do `profile.switch`.
-    "desktop.arranjo.apply": 3.0,
+    "desktop.arranjo.apply": 3.0, "desktop.arranjo.repor": 3.0,
     "profile.switch": PROFILE_SWITCH_TIMEOUT_S,
     # Ligar o Freestyle roda o `profile.switch` do perfil dele; desligar devolve
     # o jogo ou a escolha pelo mesmo caminho.

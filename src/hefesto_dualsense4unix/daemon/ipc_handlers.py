@@ -6112,6 +6112,20 @@ class IpcHandlersMixin:
         ativacao_de_botao.tocar_agora(self.store, uniq, seq, time.monotonic())
         return {"status": "ok", "passos": len(seq.passos)}
 
+    async def _handle_desktop_arranjo_repor(
+        self, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Repõe a tabela do Point and click, se é o arranjo de agora: o serviço decide.
+
+        A aba Navegação pede depois de trocar o «Perfil jogo - navegação»
+        (O-POINT-AND-CLICK-SE-REPOE-EM-TODO-CAMINHO-01). Resposta: ``{"status", "reposto"}``;
+        ``reposto`` falso fora do `desktop` ou na Navegação. Daemon sem o método: ``failed``.
+        """
+        repor = getattr(self.daemon, "_repor_o_point_and_click", None)
+        if not callable(repor):
+            return {"status": "failed", "reposto": False}
+        return {"status": "ok", "reposto": bool(repor())}
+
 
 def _uniq_do_rumble(params: dict[str, Any], metodo: str) -> str | None:
     """O ``uniq`` opcional do pedido de vibração: ausente é «o alvo de agora»."""

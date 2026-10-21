@@ -46,6 +46,7 @@ ISENTOS: dict[str, str] = {
     "navegacao.foco": _GESTO_DA_TELA + " (o pulso de foco de cada tique da janela)",
     "navegacao.big_picture.set": _GESTO_DA_TELA + " (a Navegação da Big Picture)",
     "desktop.arranjo.apply": _GESTO_DA_TELA + " (a área de trabalho se arranja na tela)",
+    "desktop.arranjo.repor": _GESTO_DA_TELA + " (a troca do «Perfil jogo - navegação» na aba 06)",
     "desktop.status.set": _GESTO_DA_TELA + " (o aviso da área de trabalho)",
     "keyboard.emulation.set": _GESTO_DA_TELA + " (o teclado virtual da área de trabalho)",
     "daemon.emulation.suppress": "a janela suspende a emulação enquanto está em foco",

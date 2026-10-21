@@ -904,6 +904,8 @@ def point_and_click_perfil(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str
     O valor é `molde:<chave>` (um dos moldes de `profiles.loader`) ou `perfil:<nome>`; guarda
     em `mouse.point_and_click`, onde moram as velocidades. O modo Point and click aplica a tabela
     de botões dele (`Daemon._tabelas_do_arranjo`); o mapa dos botões mostra o perfil ativo.
+    Depois de gravar, pede ao serviço que a reponha na hora se o Point and click está de pé
+    (`desktop.arranjo.repor`: quem decide é o serviço).
     """
     from hefesto_dualsense4unix.profiles import loader
 
@@ -916,6 +918,12 @@ def point_and_click_perfil(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str
             f"point-and-click-perfil: {valor!r} não é um molde nem um perfil "
             f"(`{PREFIXO_DO_MOLDE}<chave>` ou `{PREFIXO_DO_PERFIL}<nome>`).")
     recado = _guardar_no_perfil(ctx, point_and_click=valor)
+    if not recado:
+        try:
+            p.resultado(REPOR_O_POINT_AND_CLICK)
+        except RuntimeError:
+            recado = ("guardei a escolha, mas o Hefesto não respondeu: ela vale na próxima "
+                      "entrada no Point and click.")
     return {"recado": recado} if recado else None
 
 
@@ -1180,8 +1188,9 @@ SEM_ECO = ("linha-de-botao", "point-and-click-perfil")
 SEM_GESTO: dict[str, str] = {}
 
 PONTE = {"chamar", "machine_declare", "escolher_arquivo", "profile_reaplicar"}
+REPOR_O_POINT_AND_CLICK = "desktop.arranjo.repor"
 METODOS = {"mouse.emulation.set", "keyboard.emulation.set", "machine.declare",
-           "navegacao.interna.set", "navegacao.big_picture.set"}
+           "navegacao.interna.set", "navegacao.big_picture.set", REPOR_O_POINT_AND_CLICK}
 
 
 PAGINA = "06-navegacao.html"
@@ -1226,6 +1235,8 @@ PROVAS = [
             ("chamar", ["launch_env.refresh"], {})]),
     _prova("teclado", {"valor": TECLADO_DESATIVADO},
            [("resultado", ["keyboard.emulation.set"], {"enabled": False})]),
+    _prova("point-and-click-perfil", {"valor": "molde:visual_novel"},
+           [("resultado", [REPOR_O_POINT_AND_CLICK], {})]),
     _prova("acao-do-gesto", {"linha": "ps_l3", "rotulo": "— Nada —", "valor": "— Nada —"},
            [("machine_declare", [{"gestos": {"ps_l3": {"faz": "nada"}}}], {})]),
     _prova("novo-gesto", {"b": "triangle"},

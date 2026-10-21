@@ -487,67 +487,67 @@ def perfil_que_o_boot_restaura(
 
 
 async def restore_last_profile(daemon: DaemonProtocol) -> None:
-    """Reativa a escolha do usuário no boot e na reconexão (FEAT-PERSIST-SESSION-01)."""
-    from functools import partial
-
-    from hefesto_dualsense4unix.profiles.loader import o_perfil_de_fora_do_jogo
-    from hefesto_dualsense4unix.profiles.manager import (
-        ProfileManager,
-        _canal_do_ps,
-        ligar_o_freestyle,
-        o_freestyle_manda,
-    )
-    from hefesto_dualsense4unix.profiles.slug import mesmo_slug
-
-    store = getattr(daemon, "store", None)
-    if o_freestyle_manda(store) and not o_perfil_de_fora_do_jogo():
-        logger.warning("freestyle_ligado_sem_o_perfil", acao="desligado")
-        ligar_o_freestyle(store, False)
-    appid_em_cena = getattr(daemon, "appid_em_cena", None)
-    if not isinstance(appid_em_cena, int) or isinstance(appid_em_cena, bool):
-        appid_em_cena = None
-    name = _o_nome_que_o_boot_restaura(store, appid_em_cena=appid_em_cena)
-    if not name:
-        logger.info("boot_sem_escolha")
-        return
-    if appid_em_cena is not None:
-        logger.info("boot_com_o_jogo_em_cena", appid=appid_em_cena, perfil=name)
-    if getattr(daemon, "_native_mode", False):
-        logger.info("last_profile_restore_skipped_native_mode", name=name)
-        return
-    ja_vale = getattr(store, "active_profile", None)
-    if isinstance(ja_vale, str) and ja_vale and not mesmo_slug(ja_vale, name):
-        logger.info("a_escolha_nao_entra_por_cima", name=name, ja_vale=ja_vale)
-        return
-    manager = ProfileManager(
-        controller=daemon.controller,
-        store=daemon.store,
-        keyboard_device_provider=lambda: getattr(
-            daemon, "_keyboard_device", None
-        ),
-        # `button_actions` não tem flag persistido próprio, então o perfil é a
-        mouse_device_provider=lambda: getattr(daemon, "_mouse_device", None),
-        mouse_applier=None,
-        suppression_applier=getattr(daemon, "apply_profile_suppression", None),
-        mode_applier=None,
-        rumble_policy_applier=getattr(daemon, "apply_profile_rumble_policy", None),
-        rumble_passthrough_applier=getattr(
-            daemon, "apply_profile_rumble_passthrough", None
-        ),
-        # flag persistido próprio — o DualSense não devolve o valor que o
-        speaker_applier=getattr(daemon, "apply_profile_speaker", None),
-        mic_applier=getattr(daemon, "apply_profile_mic", None),
-        ps_action_sink=_canal_do_ps(daemon),
-    )
-
+    """Reativa a escolha no boot e na reconexão; toda saída repõe o Point and click."""
     try:
-        await daemon._run_blocking(partial(manager.activate, name, origin="system"))
-    except Exception as exc:
-        logger.warning("last_profile_restore_failed", name=name, err=str(exc))
-        return
-    logger.info("last_profile_restored", name=name)
-    if (repor := getattr(daemon, "_repor_o_point_and_click", None)) is not None:
-        repor()  # o boot e a reconexão ativam sem o `mode_applier`
+        from functools import partial
+
+        from hefesto_dualsense4unix.profiles.loader import o_perfil_de_fora_do_jogo
+        from hefesto_dualsense4unix.profiles.manager import (
+            ProfileManager,
+            _canal_do_ps,
+            ligar_o_freestyle,
+            o_freestyle_manda,
+        )
+        from hefesto_dualsense4unix.profiles.slug import mesmo_slug
+
+        store = getattr(daemon, "store", None)
+        if o_freestyle_manda(store) and not o_perfil_de_fora_do_jogo():
+            logger.warning("freestyle_ligado_sem_o_perfil", acao="desligado")
+            ligar_o_freestyle(store, False)
+        appid_em_cena = getattr(daemon, "appid_em_cena", None)
+        if not isinstance(appid_em_cena, int) or isinstance(appid_em_cena, bool):
+            appid_em_cena = None
+        name = _o_nome_que_o_boot_restaura(store, appid_em_cena=appid_em_cena)
+        if not name:
+            logger.info("boot_sem_escolha")
+            return
+        if appid_em_cena is not None:
+            logger.info("boot_com_o_jogo_em_cena", appid=appid_em_cena, perfil=name)
+        if getattr(daemon, "_native_mode", False):
+            logger.info("last_profile_restore_skipped_native_mode", name=name)
+            return
+        ja_vale = getattr(store, "active_profile", None)
+        if isinstance(ja_vale, str) and ja_vale and not mesmo_slug(ja_vale, name):
+            logger.info("a_escolha_nao_entra_por_cima", name=name, ja_vale=ja_vale)
+            return
+        manager = ProfileManager(
+            controller=daemon.controller,
+            store=daemon.store,
+            keyboard_device_provider=lambda: getattr(daemon, "_keyboard_device", None),
+            # `button_actions` não tem flag persistido próprio, então o perfil é a
+            mouse_device_provider=lambda: getattr(daemon, "_mouse_device", None),
+            mouse_applier=None,
+            suppression_applier=getattr(daemon, "apply_profile_suppression", None),
+            mode_applier=None,
+            rumble_policy_applier=getattr(daemon, "apply_profile_rumble_policy", None),
+            rumble_passthrough_applier=getattr(
+                daemon, "apply_profile_rumble_passthrough", None
+            ),
+            # flag persistido próprio — o DualSense não devolve o valor que o
+            speaker_applier=getattr(daemon, "apply_profile_speaker", None),
+            mic_applier=getattr(daemon, "apply_profile_mic", None),
+            ps_action_sink=_canal_do_ps(daemon),
+        )
+
+        try:
+            await daemon._run_blocking(partial(manager.activate, name, origin="system"))
+        except Exception as exc:
+            logger.warning("last_profile_restore_failed", name=name, err=str(exc))
+            return
+        logger.info("last_profile_restored", name=name)
+    finally:
+        if (repor := getattr(daemon, "_repor_o_point_and_click", None)) is not None:
+            repor()  # os retornos cedo inclusive (O-POINT-AND-CLICK-SE-REPOE-EM-TODO-CAMINHO-01)
 
 
 def _broker_restore_for_recovery(daemon: DaemonProtocol) -> list[str]:

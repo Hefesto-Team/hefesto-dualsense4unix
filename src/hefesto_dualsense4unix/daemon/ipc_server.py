@@ -206,6 +206,7 @@ class IpcServer(IpcHandlersMixin):
             "mouse.emulation.restore": self._handle_mouse_emulation_restore,
             # modo Navegação. Ele SUBSTITUI o `mouse.emulation.restore` no
             "desktop.arranjo.apply": self._handle_desktop_arranjo_apply,
+            "desktop.arranjo.repor": self._handle_desktop_arranjo_repor,
             "keyboard.emulation.set": self._handle_keyboard_emulation_set,
             "desktop.status.set": self._handle_desktop_status_set,
             "navegacao.interna.set": self._handle_navegacao_interna_set,
