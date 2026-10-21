@@ -154,7 +154,7 @@ def _o_bind_conta_o_tempo_sem_esperar(monkeypatch: pytest.MonkeyPatch) -> None:
 
         self.time_fn, self.sleep_fn = (lambda: agora[0]), _dorme
         try:
-            return original(self, timeout_s)
+            return bool(original(self, timeout_s))
         finally:
             self.time_fn, self.sleep_fn = tempo_real, sono_real
 

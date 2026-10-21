@@ -176,9 +176,12 @@ _CENARIOS = (("parado", ""), ("mudo", ""), ("rajada", ""), ("rajada", "barra-sol
 _ESCALONA_S = 0.6
 
 
+_Cenarios = dict[tuple[str, str], Future[tuple[dict[str, Any], str]]]
+
+
 @pytest.fixture(scope="module")
-def _cenarios() -> dict[tuple[str, str], Future[tuple[dict[str, Any], str]]]:
-    futuros: dict[tuple[str, str], Future[tuple[dict[str, Any], str]]] = {}
+def _cenarios() -> _Cenarios:
+    futuros: _Cenarios = {}
     with ThreadPoolExecutor(max_workers=len(_CENARIOS)) as pool:
         for nome, mordida in _CENARIOS:
             futuros[(nome, mordida)] = pool.submit(_rodar, nome, mordida)
@@ -187,22 +190,22 @@ def _cenarios() -> dict[tuple[str, str], Future[tuple[dict[str, Any], str]]]:
 
 
 @pytest.fixture(scope="module")
-def parado(_cenarios) -> tuple[dict[str, Any], str]:
+def parado(_cenarios: _Cenarios) -> tuple[dict[str, Any], str]:
     return _cenarios[("parado", "")].result()
 
 
 @pytest.fixture(scope="module")
-def mudo(_cenarios) -> tuple[dict[str, Any], str]:
+def mudo(_cenarios: _Cenarios) -> tuple[dict[str, Any], str]:
     return _cenarios[("mudo", "")].result()
 
 
 @pytest.fixture(scope="module")
-def rajada(_cenarios) -> tuple[dict[str, Any], str]:
+def rajada(_cenarios: _Cenarios) -> tuple[dict[str, Any], str]:
     return _cenarios[("rajada", "")].result()
 
 
 @pytest.fixture(scope="module")
-def rajada_com_a_barra_solta(_cenarios) -> tuple[dict[str, Any], str]:
+def rajada_com_a_barra_solta(_cenarios: _Cenarios) -> tuple[dict[str, Any], str]:
     return _cenarios[("rajada", "barra-solta-a-altura")].result()
 
 
