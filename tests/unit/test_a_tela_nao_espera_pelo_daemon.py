@@ -24,23 +24,42 @@ from hefesto_dualsense4unix.interface import hefesto_vivo as hv
 PIOR_MEDIDO_S = 0.30
 
 
-def test_a_primeira_leitura_e_sincrona() -> None:
-    """`comecar()` semeia ANTES de soltar o fio — senão a tela nasce mentindo."""
-    leitor = hv.LeitorDoEstado(lambda: {"controllers": [{"uniq": "aa"}]},
-                               intervalo=10.0)
-    st, erro, geracao = leitor.ultimo()
-    assert (st, erro, geracao) == (None, None, 0), (
+def test_a_primeira_leitura_sai_do_fio_de_quem_chama() -> None:
+    """`comecar()` não lê no fio de quem chama, e o fio avisa quando a primeira chega.
+
+    O contrato mudou em 21/10/2026 (O-FIO-DA-JANELA-NUNCA-ESPERA-01): a semeadura
+    síncrona era um IPC no fio do GTK, dentro do `_instalado`.
+    """
+    quem_leu: list[int] = []
+    chegou = threading.Event()
+
+    def ler() -> dict[str, Any]:
+        quem_leu.append(threading.get_ident())
+        return {"controllers": [{"uniq": "aa"}]}
+
+    leitor = hv.LeitorDoEstado(ler, intervalo=10.0, avisar=chegou.set)
+    assert leitor.ultimo() == (None, None, 0), (
         "o leitor já tinha resposta antes de `comecar()` — então ele leu no "
         "`__init__`, e um Piloto construído por uma régua abriria socket")
     try:
         leitor.comecar()
+        assert chegou.wait(5.0), "a primeira leitura não avisou a janela"
         st, erro, geracao = leitor.ultimo()
     finally:
         leitor.parar()
-    assert erro is None and st == {"controllers": [{"uniq": "aa"}]}, (
-        "a semeadura de `comecar()` não deixou o estado no escaninho — o "
-        "primeiro tique pintaria `{}`, e a tela diria que a mesa está vazia")
-    assert geracao == 1
+    assert threading.get_ident() not in quem_leu, (
+        "`comecar()` leu no fio de quem chama — na janela, é o fio do GTK esperando o IPC")
+    assert erro is None and st == {"controllers": [{"uniq": "aa"}]} and geracao == 1
+
+
+def test_o_tique_sem_resposta_nao_pinta_a_mesa_vazia() -> None:
+    """Antes da primeira resposta o tique não pinta — senão `{}` diria que a mesa está vazia."""
+    leitor = hv.LeitorDoEstado(lambda: {}, intervalo=10.0)
+    contou: list[str] = []
+    piloto = SimpleNamespace(pronto=True, _estado_vivo=leitor)
+    piloto._estado_do_tique = lambda: contou.append("pintou") or {}
+    assert hv.Piloto._tique(piloto) is True
+    assert contou == [], "o tique pintou sem resposta do serviço"
 
 
 def test_quem_pergunta_nao_espera_pela_leitura_lenta() -> None:

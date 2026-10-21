@@ -2806,8 +2806,11 @@ class LeitorDoEstado:
         *,
         intervalo: float = TIQUE_MS / 1000.0,
         declarar_foco: Callable[[bool], Any] | None = None,
+        avisar: Callable[[], Any] | None = None,
     ) -> None:
         self._ler = ler if ler is not None else mesa_viva.estado_do_daemon
+        #: Chamado UMA vez, no fio do leitor, depois da primeira resposta.
+        self._avisar = avisar
         #: A Navegação Interna (A-NAVEGACAO-INTERNA-…-01): com ela ligada, cada
         #: leitura declara ao daemon se a janela está na frente (a renovação do
         #: prazo dele) e guarda os toques que ele devolve.
@@ -2856,10 +2859,14 @@ class LeitorDoEstado:
             return {u: dict(t) for u, t in self._toques.items()}
 
     def comecar(self) -> None:
-        """Semeia UMA leitura e sobe o fio. Chamar duas vezes não sobe dois."""
+        """Sobe o fio, que lê JÁ e chama o `avisar`. Chamar duas vezes não sobe dois.
+
+        Nota de 21/10/2026 (O-FIO-DA-JANELA-NUNCA-ESPERA-01): a primeira leitura era
+        semeada aqui, no fio de quem chama, que é o do GTK — um IPC no `_instalado`. Ela
+        passou ao fio; o tique sem resposta não pinta, e o aviso traz a primeira pintura.
+        """
         if self._fio is not None:
             return
-        self._uma_leitura()
         self._fio = pacotes.fios.soltar("hefesto-estado", self._laco)
 
     def parar(self) -> None:
@@ -2913,6 +2920,12 @@ class LeitorDoEstado:
                                 for u, t in toques.items() if isinstance(t, dict)}
 
     def _laco(self) -> None:
+        self._uma_leitura()
+        if self._avisar is not None:
+            try:
+                self._avisar()
+            except Exception as erro:  # noqa: BLE001 — o aviso não derruba o leitor
+                print(f"[estado] o aviso da primeira leitura falhou: {erro}", file=sys.stderr)
         while not self._parar.is_set():
             if self._a_vista.is_set():
                 self._pulso.wait(self._intervalo)
@@ -3021,7 +3034,7 @@ class Piloto:
         _importar_as_abas(self.tela)
         self._ctx_de_agora = pacotes.Contexto(state={})
         #: O `state_full` lido FORA do laço do GTK — A-TELA-QUE-TRAVA-01. O fio
-        self._estado_vivo = LeitorDoEstado()
+        self._estado_vivo = LeitorDoEstado(avisar=self._a_primeira_resposta_chegou)
         if getattr(args, "cenario", "parado") == "mudo":
             self._tornar_o_servico_mudavel()
         self.leitor = mesa_viva.LeitorDeCor(ligado=not args.sem_cor)
@@ -3583,6 +3596,10 @@ class Piloto:
         self._folga.respondeu(bom)
         return bom
 
+    def _a_primeira_resposta_chegou(self) -> None:
+        """No fio do leitor: a primeira pintura vai ao laço do GTK, sem esperar o tique."""
+        GLib.idle_add(lambda: self._tique() and False)
+
     def _estado_do_tique(self) -> dict[str, Any]:
         """O estado que ESTE tique pinta — e ele não espera por ninguém."""
         st_lido, erro_lido, geracao = self._estado_vivo.ultimo()
@@ -3629,6 +3646,8 @@ class Piloto:
     def _tique(self) -> bool:
         if not self.pronto:
             return True
+        if self._estado_vivo.ultimo()[2] == 0:
+            return True  # a primeira resposta do serviço ainda não chegou: nada a pintar
         if self._escondida or self._esperando_o_estado_novo():
             self._o_contexto_anda_escondido()
             pacotes.bater_os_coracoes(self._ctx_de_agora, ponte)
