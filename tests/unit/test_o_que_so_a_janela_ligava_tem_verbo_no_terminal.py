@@ -58,13 +58,13 @@ ISENTOS: dict[str, str] = {
     "machine.declare": _GESTO_DA_TELA + " (a declaração da máquina é um formulário)",
     "daemon.reload": "decidido: não existe `daemon reload` na linha de comando (cli.md)",
     "mods.agora": _GESTO_DA_TELA + " (a coluna «Agora» da janela da extensão); no terminal, "
-                  "`mod listar` diz o estado de cada uma",
+                  "`mod listar` diz se cada uma está ligada",
     "mods.parar_tudo": _GESTO_DA_TELA + " (o «Parar tudo» da janela da extensão); no terminal, "
                        "`mod desligar <id>` para o processo dela",
     "mods.jogos": _GESTO_DA_TELA + " (os jogos da extensão na aba Lançadores)",
     "sequencia.gravar": _GESTO_DA_TELA + " (a gravação segue os toques com a aba Sequência "
                         "aberta, e o controle fica com ela enquanto grava)",
-    "sequencia.tocar": _GESTO_DA_TELA + " (o «Tocar» do editor da sequência)",
+    "sequencia.tocar": _GESTO_DA_TELA + " (o «Tocar para ouvir» do editor da sequência)",
 }
 
 _METODO = re.compile(r"[a-z_]+(\.[a-z_]+)+")
