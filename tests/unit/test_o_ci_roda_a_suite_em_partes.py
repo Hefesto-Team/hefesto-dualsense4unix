@@ -181,6 +181,7 @@ def todas_as_faltas(jobs: dict[str, Any], partes: int) -> list[str]:
 
 
 def test_o_ci_roda_a_suite_em_partes_e_as_pernas_cobrem_as_24() -> None:
+    # D-2110-O-CI-RODA-A-SUITE-EM-PARTES-E-A-SAIDA-PASSA-PELO-FECHAR
     assert todas_as_faltas(_jobs(), _partes_do_script()) == []
 
 
