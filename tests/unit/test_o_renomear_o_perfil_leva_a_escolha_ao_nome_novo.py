@@ -95,7 +95,10 @@ def _renomear(era: str, novo: str, ponte: _Ponte | None = None) -> None:
 
 
 def test_renomear_pela_aba_leva_as_lembrancas_ao_nome_novo() -> None:
-    """A escolha do boot, o último jogo e as duas escolhas do Point and click seguem o nome."""
+    """A escolha do boot, o último jogo e as duas escolhas do Point and click seguem o nome.
+
+    A prova da D-2110-O-RENOMEAR-LEVA-AS-LEMBRANCAS-AO-NOME-NOVO.
+    """
     _no_disco("Pragmata", "Sackboy", "Lure")
     _lembrar_tudo("Sackboy")
 
