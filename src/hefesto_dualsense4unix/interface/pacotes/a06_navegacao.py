@@ -567,12 +567,12 @@ def _quem_navega(ctx: Contexto) -> list[dict[str, Any]]:
             for m in ctx.mesa]
 
 
-def _o_point_and_click_de_hoje() -> str:
-    """A escolha do «Perfil de point and click», que é do computador (`maquina.json`)."""
-    maquina = _a_maquina()
-    computador = getattr(maquina, "computador", None)
+def _o_point_and_click_de_hoje(ativo: str | None = None) -> str:
+    """A escolha que vale: a do perfil ativo, com a do computador por baixo (a do serviço)."""
+    vale = (perfil.ativo_que_vale(ativo).get("mouse") or {}).get("point_and_click")
+    computador = getattr(_a_maquina(), "computador", None)
     mouse = getattr(getattr(computador, "global_", None), "mouse", None)
-    escolha = getattr(mouse, "point_and_click", None)
+    escolha = vale or getattr(mouse, "point_and_click", None)
     return str(escolha) if escolha else PADRAO_DO_POINT_AND_CLICK
 
 
@@ -604,7 +604,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "na-steam": NA_STEAM_BIG_PICTURE,
         "vel-cursor": rato.get("speed"),
         "vel-rolagem": rato.get("scroll_speed"),
-        "point-and-click-perfil": _o_point_and_click_de_hoje(),
+        "point-and-click-perfil": _o_point_and_click_de_hoje(st.get("active_profile")),
     }
     if "keyboard_emulation" in st:
         mesa["teclado-estado"] = _o_teclado_em_palavras(

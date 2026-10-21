@@ -145,3 +145,20 @@ def test_com_escolha_propria_no_perfil_a_velocidade_vai_para_o_perfil() -> None:
     gravado = loader.load_profile("regua")
     assert gravado.mouse is not None
     assert (gravado.mouse.speed, gravado.mouse.scroll_speed) == (9, 3)
+
+
+def test_com_jogo_ativo_a_escolha_vai_ao_perfil_e_a_lista_mostra_a_que_o_servico_aplica() -> None:
+    # Com um perfil de jogo ativo, a escolha grava no perfil (`onde_grava`), e o serviço aplica a
+    # do perfil com o computador por baixo (`Daemon._tabelas_do_arranjo`). A lista mostra a mesma.
+    # MORDIDA: `_o_point_and_click_de_hoje` lendo só o `maquina.json` mostra o Point and click.
+    pacotes, a06 = _pacote()
+    loader.save_profile(Profile.model_validate({
+        "name": "regua", "match": {"type": "manual"},
+        "mouse": {"enabled": True, "speed": 5, "scroll_speed": 2}}), origem="regua")
+    ctx = pacotes.Contexto(state={"active_profile": "regua"}, mesa=[], conectados=[], estados={})
+    fn = pacotes.gesto_da_pagina("06-navegacao.html", "point-and-click-perfil")
+    fn(ctx, {"valor": "molde:visual_novel"}, _Ponte())
+    gravado = loader.load_profile("regua")
+    assert gravado.mouse is not None and gravado.mouse.point_and_click == "molde:visual_novel"
+    a06._A_MAQUINA = None
+    assert a06.pacote(ctx)["mesa"]["point-and-click-perfil"] == "molde:visual_novel"
