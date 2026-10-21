@@ -216,6 +216,8 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "aplicar": "manda o perfil ativo inteiro aos controles, sem gravar — é do perfil; o ATO "
                "no aparelho é o de cada feature do perfil",
     "salvar": "regrava o perfil ativo — é do perfil",
+    "salvar-e-aplicar": "regrava o perfil ativo e o manda aos controles (o Start da Interna) — é "
+                        "do perfil; o ATO no aparelho é o de cada feature do perfil",
     "exportar": "escreve o perfil ativo num `.json` da pasta pessoal — é do disco",
     "importar": "carrega um perfil de um `.json` escolhido — é do perfil",
     "voltar-a-de-ontem": "desfaz a última gravação do perfil aberto — é do perfil",
