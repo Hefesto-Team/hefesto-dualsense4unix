@@ -101,7 +101,7 @@ if [[ "$MODE" == "gui" ]]; then
     # compositor — a de 04/09 está fotografada por ela.
     #
     # E ELE COBRAVA UM PREÇO: sob XWayland o GTK3 **não lê o tema do portal**
-    # (`app/theme.py:198`). O tema dela se perdia por causa desta linha, e isso
+    # (`interface/tema_da_sessao.py:93`). O tema dela se perdia por causa desta linha, e isso
     # está nas quinze queixas de 04/09 — *fugíamos de um popup claro e
     # perdíamos o tema inteiro*.
     #

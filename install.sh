@@ -3799,7 +3799,7 @@ if [[ "${DESKTOP_IS_COSMIC}" -eq 1 ]]; then
     # compositor.
     #
     # E O XWAYLAND COBRA: sob ele o GTK3 **não lê o tema do portal**
-    # (`app/theme.py:198`), e foi assim que o tema dela se perdeu — o defeito
+    # (`interface/tema_da_sessao.py:93`), e foi assim que o tema dela se perdeu — o defeito
     # ficou registrado nas quinze queixas de 04/09.
     #
     # MEDIDO EM WAYLAND NATIVO NA MÁQUINA DELA, 19/09, com a interface real:
