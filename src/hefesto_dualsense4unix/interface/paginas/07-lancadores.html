@@ -13,6 +13,9 @@
   :root{
     --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
     --border-sutil:#343746; --border-forte:#44475a;
+    /* O FUNDO EM VOLTA DA JANELA É UM TOKEN — 21/10/2026, A-MOLDURA-DA-PAGINA-SEGUE-O-TEMA-01:
+       o `#11121a` era cor por extenso no `body`, e tema nenhum o alcançava. */
+    --fundo-da-pagina:#11121a;
     /* DUAS CORES SUBIRAM EM 30/08/2026, e o número é a razão.
        O usuário apontou o sintoma três vezes, em três abas: *"os campos de importância
        tipo cor, brilho, selecione player tão invisíveis"*, *"essas cores de nomes
@@ -34,6 +37,10 @@
     --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
     --pink:#ff79c6; --purple:#bd93f9; --red:#ff5555; --yellow:#f1fa8c;
     --sel-bg:rgba(189,147,249,0.16);
+    /* O FUNDO E O ARO DA LOGO SÃO DO TEMA — 20/10/2026, O-TEMA-CLARO-NASCE-COMO-EXTENSAO-01.
+       Na casa, nada atrás da logo (o SVG já é o disco); o tema claro diz o disco escuro, para
+       a logo, intacta, pintar sobre o escuro de sempre. A régua é `mods.tema.validar`. */
+    --logo-fundo:none; --logo-aro:transparent;
     /* O RÓTULO DE CAMPO TEM COR DE RÓTULO, NÃO DE COMENTÁRIO.
        `.sec-rot` nascia `var(--comment)` (#6272a4) nas SEIS abas que a usam, e
        ela leu o resultado pelo que ele é: *"os campos de importância tipo cor,
@@ -117,7 +124,7 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{
-    background:#11121a; color:var(--fg);
+    background:var(--fundo-da-pagina); color:var(--fg);
     font-family:'Space Grotesk',system-ui,sans-serif;
     /* O RECUO TEM DONO — `--recuo-do-corpo`, no `:root` de baixo. Ele entra
        DUAS vezes na conta da altura da `.janela` (em cima e embaixo), e era
@@ -130,7 +137,7 @@
 
      ELA ERA `width:1180px` FIXO. Ela, com o produto instalado e os quatro
      DualSense na mesa: *"o background fica completamente preto"*. Medido: não
-     era falta de fundo — o `body` já pinta `#11121a` logo acima, e o que ela
+     era falta de fundo — o `body` já pinta `--fundo-da-pagina` logo acima, e o que ela
      via era a cor da casa, só que MUITA: a janela maximizada tem ~1900px e o
      desenho parava em 1180, deixando ~360px de casa de cada lado.
 
@@ -390,6 +397,16 @@
      viram quatro, e com os 28 do CSV, vinte e oito. `monta.fita()` escreve a
      cor no `style` do chip, lida do desenho. */
   .chip.plastico{border-color:var(--plastico, var(--border-forte))}
+  /* O CHIP DA FITA RESPONDE AO MOUSE — 20/10/2026, A-BARRA-DE-BAIXO-E-A-FITA-RESPONDEM-AO-MOUSE-01.
+     Só na fita que se clica (a 01, a 02 e a 08; a `.inerte` não escolhe nada, e no modo nativo a
+     camada `.so-no-nativo` fica por cima). O chip fora do aceso ganha o tom da cor do plástico, e a
+     borda do plástico fica; o «Todos», sem plástico, um fundo claro e a borda `--texto-suave`, como
+     o `.seg button:hover:not(.on)`. */
+  .fita:not(.inerte) .chip:hover:not(.on){background:rgba(255,255,255,.1);
+    background:color-mix(in srgb,var(--fg) 10%,transparent)}
+  .fita:not(.inerte) .chip.plastico:hover:not(.on){
+    background:color-mix(in srgb,var(--plastico,var(--border-forte)) 24%,var(--app-bg))}
+  .fita:not(.inerte) .chip:not(.plastico):hover:not(.on){border-color:var(--texto-suave)}
 
   /* A LISTA ABERTA DE UM <select> — o usuário viu, 28/08: as opções somem quando o
      dropdown abre. O popup do <select> é do SISTEMA, não da página: ele nasce com
@@ -648,6 +665,17 @@
   .r-salvar{border-color:var(--purple)!important;color:var(--purple);background:transparent}
   .r-importar{border-color:var(--orange)!important;color:var(--orange);background:transparent}
   .r-exportar{border-color:var(--comment)!important;color:var(--fg);background:transparent}
+  /* A BARRA DE BAIXO RESPONDE AO MOUSE — 20/10/2026, A-BARRA-DE-BAIXO-E-A-FITA-RESPONDEM-AO-MOUSE-01,
+     o desenho aprovado em 20/10. Os três de contorno ganham o fundo leve da cor deles e o Aplicar
+     (cheio) clareia; nada muda de lugar nem de tamanho. A cor sai do token (`color-mix`), para o
+     tema que troca o token levar o tom junto; o `rgba` antes é o da casa, para o motor sem `color-mix`. */
+  .rodape .r-aplicar:hover{background:#7dfb9b;background:color-mix(in srgb,var(--green) 75%,#fff)}
+  .rodape .r-salvar:hover{background:rgba(189,147,249,.18);
+    background:color-mix(in srgb,var(--purple) 18%,transparent)}
+  .rodape .r-importar:hover{background:rgba(255,184,108,.18);
+    background:color-mix(in srgb,var(--orange) 18%,transparent)}
+  .rodape .r-exportar:hover{background:rgba(136,150,196,.2);
+    background:color-mix(in srgb,var(--comment) 20%,transparent)}
 
   .marca{color:var(--orange)}
 
@@ -663,7 +691,7 @@
      O controle traz as peças nomeadas do `docs/data/pecas-do-dualsense.csv` e a
      folha das cores por `data-colorway`, gerada de `docs/data/cores-do-dualsense.csv`
      — a mesma fonte que o specs.html usa. */
-  .logo{background:none;border:none;overflow:hidden}
+  .logo{background:var(--logo-fundo);border-color:var(--logo-aro);overflow:hidden}
   .logo svg{width:44px;height:44px;display:block}
   .ds-svg{width:100%;height:auto;display:block}
   .cartao .ds-svg{width:72px;flex:0 0 72px}
@@ -1036,7 +1064,7 @@
 .ext-sub { display:flex;align-items:center;gap:7px }
 .ext-ver { font-size:10.5px;color:var(--fg);font-family:'JetBrains Mono',monospace }
 .ext-faz { font-size:11.5px;color:var(--texto-suave);line-height:1.45 }
-.ext-para,.ext-estado { font-size:11.5px;color:var(--texto-suave);display:flex;align-items:center;gap:6px;white-space:nowrap }
+.ext-estado { font-size:11.5px;color:var(--texto-suave);display:flex;align-items:center;gap:6px;white-space:nowrap }
 .ext-rot { font-size:10.5px;color:var(--rot-campo) }
 .bol-ok { color:var(--green);font-size:9px }
 .ext-mais { width:26px;height:26px;border-radius:6px;border:1px solid transparent;background:transparent; color:var(--fg);cursor:pointer;font-size:14px }
@@ -1220,7 +1248,7 @@
 .ja-tons .tom.on { outline:2px solid var(--fg);outline-offset:2px }
 .ja-tons .tom.nenhuma { background:repeating-linear-gradient(135deg,var(--panel) 0 4px,var(--border-forte) 4px 6px) }
 .ja-luz-prev { display:flex;flex-direction:column;gap:8px;padding:6px 0 4px }
-.ja-barra-luz { height:46px;border-radius:9px;background:#11121a;border:1px solid var(--border-forte);position:relative;overflow:hidden }
+.ja-barra-luz { height:46px;border-radius:9px;background:var(--fundo-da-pagina);border:1px solid var(--border-forte);position:relative;overflow:hidden }
 .ja-barra-luz::before,.ja-barra-luz::after { content:"";position:absolute;top:9px;bottom:9px;width:38%;border-radius:6px; background:var(--cor-luz);box-shadow:0 0 18px 4px var(--cor-luz);animation:respira var(--periodo,2.6s) ease-in-out infinite }
 .ja-barra-luz::before { left:4% }
 .ja-barra-luz::after { right:4% }
@@ -1335,7 +1363,6 @@
 @media (max-height:780px) {.ext{min-height:42px;padding:2px 0} .ext-faz{font-size:11.5px} .lanc-fila{grid-auto-rows:minmax(34px,1fr);gap:6px 12px} .quadro-corpo{padding-bottom:8px} .ext-instalar-pe{padding-top:6px} .ext-instalar .btn,.ext-instalar input{height:30px}}
 .ext-lista { max-height:none;overflow:visible }
 .ext { grid-template-columns:28px minmax(220px,1fr) 180px 104px 30px 26px;column-gap:12px;align-items:center;min-height:0;padding:7px 0 }
-.ext-para { display:flex;align-items:center;gap:8px;white-space:nowrap }
 .ext-sel { width:172px;max-width:none;height:26px }
 .nj-tog { width:104px;height:26px;padding:0;justify-content:center;box-sizing:border-box }
 .ext-conf { width:30px;height:26px }
@@ -1364,7 +1391,7 @@
 .tela-nova .nj-tog .txt,.tela-nova .btn.mini,.tela-nova small,.tela-nova code,.tela-nova .lc-val { font-size:12px }
 #lanc-conf .lc-val .btn.mini { flex:none;min-width:132px;box-sizing:border-box;justify-content:center;text-align:center;white-space:nowrap }
 #lanc-conf .lc-val code { min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap }
-.janela .conta,.janela .lanc-selo,.janela .ext-ver,.janela .ext-faz,.janela .ext-para,.janela .ext-rot,.janela .ext-cor,.janela .ext-inst-rot,.janela .lf-n,.janela .lf-imped,.janela .btn.mini,.janela .nj-tog .txt { font-size:12px }
+.janela .conta,.janela .lanc-selo,.janela .ext-ver,.janela .ext-faz,.janela .ext-rot,.janela .ext-cor,.janela .ext-inst-rot,.janela .lf-n,.janela .lf-imped,.janela .btn.mini,.janela .nj-tog .txt { font-size:12px }
 .ja-tela.t2 { grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto 1fr;gap:12px;align-content:stretch;height:100% }
 .ja-tela.t2 > .moldura { padding:10px 16px 12px;display:flex;flex-direction:column;gap:8px }
 .ja-tela.t2 .pc-sub { font-size:12px;padding:0 }
@@ -1469,6 +1496,30 @@
 #lanc-janela .tn-topo .ext-mais { margin-left:auto }
 #lanc-janela .tn-topo .ext-mais + .ext-pop { right:90px;top:6px;transform:none }
 #lanc-janela .tn-topo .ext-pop + .tn-x, #lanc-janela .tn-topo .ext-mais + .tn-x { margin-left:4px }
+/* AS EXTENSÕES EM DUAS COLUNAS, COM TETO — 21/10/2026, OS-LANCADORES-NAO-SAEM-DA-TELA-COM-AS-EXTENSOES-01,
+   a variante A escolhida (`mockup/variantes/2110-extensoes-A-duas-colunas.html`). Uma fileira por extensão
+   empurrava o «Lançadores» para fora da tela a partir da sétima. Agora cada extensão é um cartão de meia
+   largura (os da mesma fileira com a mesma altura), a frase numa linha cortada, inteira na dica; cinco
+   fileiras (dez extensões) cabem inteiras, e da décima primeira em diante a lista rola só por dentro,
+   com a barra fina da casa. A coluna do «Para» saiu da linha. */
+.ext-lista { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 12px;align-items:stretch;
+  max-height:289px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border-forte) var(--app-bg) }
+.ext-lista::-webkit-scrollbar { width:9px }
+.ext-lista::-webkit-scrollbar-track { background:var(--app-bg);border-radius:5px }
+.ext-lista::-webkit-scrollbar-thumb { background:var(--border-forte);border-radius:5px }
+.ext-lista .ext { grid-template-columns:28px minmax(0,1fr) 104px 30px 26px;column-gap:10px;min-height:0;height:100%;
+  padding:4px 10px;box-sizing:border-box;border:1px solid var(--border-sutil);border-radius:8px;background:var(--app-bg) }
+.ext-lista .ext + .ext, .ext-lista .ext:last-child { border:1px solid var(--border-sutil) }
+.ext-lista .ext-sub { flex-wrap:nowrap }
+.ext-lista .ext-nome { overflow:hidden;text-overflow:ellipsis }
+.ext-lista .ext-quem { min-width:0 }
+.ext-lista .ext-faz { display:block }
+.ext-lista .ext-vazia { grid-column:1/-1 }
+.ext-instalar-pe { padding-top:6px;margin-top:6px }
+/* O ⋮ com as permissões desce para baixo da linha; dentro da lista que rola, flutuando, ele seria cortado
+   (medido em 21/10/2026: com uma extensão, a lista de 52 px escondia o menu inteiro). Na lista, ele ocupa a
+   largura do cartão logo abaixo da linha, e a chave do «sim» fica no lugar. */
+.ext-lista .ext-pop.aberto:has(.ext-perm) { position:static;grid-column:1/-1;width:auto;transform:none;box-shadow:none }
 
 </style>
 <style id="base-comum">
@@ -1694,7 +1745,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
               <span class="ext-sub"><span class="ext-nome">KytyPS5</span><span class="lanc-selo oficial">Oficial</span><span class="ext-ver">0.1.0</span></span>
               <span class="ext-faz" data-dica="Os jogos do KytyPS5 na fila dos lançadores, com o perfil de cada um">Os jogos do KytyPS5 na fila dos lançadores, com o perfil de cada um</span>
             </div>
-            <div class="ext-para"><span class="ext-rot">Para</span>Todos</div>
             <span class="nj-tog ligado" data-gesto="ligar-modificacao" data-v="kytyps5" data-dica="Liga ou desliga"><span class="pino"></span><span class="txt">Ligada</span></span>
             <a class="ext-conf" href="#modificacao" data-gesto="configurar-modificacao" data-v="kytyps5" data-dica="Configurações: KytyPS5"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
             <button class="ext-mais" data-gesto="mais-da-modificacao" data-v="kytyps5" data-dica="Atualizar, ver as permissões ou remover">⋮</button>
@@ -1706,7 +1756,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
               <span class="ext-sub"><span class="ext-nome">Minha extensão</span><span class="lanc-selo oficial">Oficial</span><span class="ext-ver">0.1.0</span></span>
               <span class="ext-faz" data-dica="Uma extensão com opções em três grupos">Uma extensão com opções em três grupos</span>
             </div>
-            <div class="ext-para"><span class="ext-rot">Para</span>Todos</div>
             <span class="nj-tog ligado" data-gesto="ligar-modificacao" data-v="exemplo" data-dica="Liga ou desliga"><span class="pino"></span><span class="txt">Ligada</span></span>
             <a class="ext-conf" href="#modificacao" data-gesto="configurar-modificacao" data-v="exemplo" data-dica="Configurações: Minha extensão"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></a>
             <button class="ext-mais" data-gesto="mais-da-modificacao" data-v="exemplo" data-dica="Atualizar, ver as permissões ou remover">⋮</button>

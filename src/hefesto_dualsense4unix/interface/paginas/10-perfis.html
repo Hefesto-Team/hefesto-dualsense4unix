@@ -13,6 +13,9 @@
   :root{
     --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a;
     --border-sutil:#343746; --border-forte:#44475a;
+    /* O FUNDO EM VOLTA DA JANELA É UM TOKEN — 21/10/2026, A-MOLDURA-DA-PAGINA-SEGUE-O-TEMA-01:
+       o `#11121a` era cor por extenso no `body`, e tema nenhum o alcançava. */
+    --fundo-da-pagina:#11121a;
     /* DUAS CORES SUBIRAM EM 30/08/2026, e o número é a razão.
        O usuário apontou o sintoma três vezes, em três abas: *"os campos de importância
        tipo cor, brilho, selecione player tão invisíveis"*, *"essas cores de nomes
@@ -34,6 +37,10 @@
     --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c;
     --pink:#ff79c6; --purple:#bd93f9; --red:#ff5555; --yellow:#f1fa8c;
     --sel-bg:rgba(189,147,249,0.16);
+    /* O FUNDO E O ARO DA LOGO SÃO DO TEMA — 20/10/2026, O-TEMA-CLARO-NASCE-COMO-EXTENSAO-01.
+       Na casa, nada atrás da logo (o SVG já é o disco); o tema claro diz o disco escuro, para
+       a logo, intacta, pintar sobre o escuro de sempre. A régua é `mods.tema.validar`. */
+    --logo-fundo:none; --logo-aro:transparent;
     /* O RÓTULO DE CAMPO TEM COR DE RÓTULO, NÃO DE COMENTÁRIO.
        `.sec-rot` nascia `var(--comment)` (#6272a4) nas SEIS abas que a usam, e
        ela leu o resultado pelo que ele é: *"os campos de importância tipo cor,
@@ -117,7 +124,7 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{
-    background:#11121a; color:var(--fg);
+    background:var(--fundo-da-pagina); color:var(--fg);
     font-family:'Space Grotesk',system-ui,sans-serif;
     /* O RECUO TEM DONO — `--recuo-do-corpo`, no `:root` de baixo. Ele entra
        DUAS vezes na conta da altura da `.janela` (em cima e embaixo), e era
@@ -130,7 +137,7 @@
 
      ELA ERA `width:1180px` FIXO. Ela, com o produto instalado e os quatro
      DualSense na mesa: *"o background fica completamente preto"*. Medido: não
-     era falta de fundo — o `body` já pinta `#11121a` logo acima, e o que ela
+     era falta de fundo — o `body` já pinta `--fundo-da-pagina` logo acima, e o que ela
      via era a cor da casa, só que MUITA: a janela maximizada tem ~1900px e o
      desenho parava em 1180, deixando ~360px de casa de cada lado.
 
@@ -390,6 +397,16 @@
      viram quatro, e com os 28 do CSV, vinte e oito. `monta.fita()` escreve a
      cor no `style` do chip, lida do desenho. */
   .chip.plastico{border-color:var(--plastico, var(--border-forte))}
+  /* O CHIP DA FITA RESPONDE AO MOUSE — 20/10/2026, A-BARRA-DE-BAIXO-E-A-FITA-RESPONDEM-AO-MOUSE-01.
+     Só na fita que se clica (a 01, a 02 e a 08; a `.inerte` não escolhe nada, e no modo nativo a
+     camada `.so-no-nativo` fica por cima). O chip fora do aceso ganha o tom da cor do plástico, e a
+     borda do plástico fica; o «Todos», sem plástico, um fundo claro e a borda `--texto-suave`, como
+     o `.seg button:hover:not(.on)`. */
+  .fita:not(.inerte) .chip:hover:not(.on){background:rgba(255,255,255,.1);
+    background:color-mix(in srgb,var(--fg) 10%,transparent)}
+  .fita:not(.inerte) .chip.plastico:hover:not(.on){
+    background:color-mix(in srgb,var(--plastico,var(--border-forte)) 24%,var(--app-bg))}
+  .fita:not(.inerte) .chip:not(.plastico):hover:not(.on){border-color:var(--texto-suave)}
 
   /* A LISTA ABERTA DE UM <select> — o usuário viu, 28/08: as opções somem quando o
      dropdown abre. O popup do <select> é do SISTEMA, não da página: ele nasce com
@@ -648,6 +665,17 @@
   .r-salvar{border-color:var(--purple)!important;color:var(--purple);background:transparent}
   .r-importar{border-color:var(--orange)!important;color:var(--orange);background:transparent}
   .r-exportar{border-color:var(--comment)!important;color:var(--fg);background:transparent}
+  /* A BARRA DE BAIXO RESPONDE AO MOUSE — 20/10/2026, A-BARRA-DE-BAIXO-E-A-FITA-RESPONDEM-AO-MOUSE-01,
+     o desenho aprovado em 20/10. Os três de contorno ganham o fundo leve da cor deles e o Aplicar
+     (cheio) clareia; nada muda de lugar nem de tamanho. A cor sai do token (`color-mix`), para o
+     tema que troca o token levar o tom junto; o `rgba` antes é o da casa, para o motor sem `color-mix`. */
+  .rodape .r-aplicar:hover{background:#7dfb9b;background:color-mix(in srgb,var(--green) 75%,#fff)}
+  .rodape .r-salvar:hover{background:rgba(189,147,249,.18);
+    background:color-mix(in srgb,var(--purple) 18%,transparent)}
+  .rodape .r-importar:hover{background:rgba(255,184,108,.18);
+    background:color-mix(in srgb,var(--orange) 18%,transparent)}
+  .rodape .r-exportar:hover{background:rgba(136,150,196,.2);
+    background:color-mix(in srgb,var(--comment) 20%,transparent)}
 
   .marca{color:var(--orange)}
 
@@ -663,7 +691,7 @@
      O controle traz as peças nomeadas do `docs/data/pecas-do-dualsense.csv` e a
      folha das cores por `data-colorway`, gerada de `docs/data/cores-do-dualsense.csv`
      — a mesma fonte que o specs.html usa. */
-  .logo{background:none;border:none;overflow:hidden}
+  .logo{background:var(--logo-fundo);border-color:var(--logo-aro);overflow:hidden}
   .logo svg{width:44px;height:44px;display:block}
   .ds-svg{width:100%;height:auto;display:block}
   .cartao .ds-svg{width:72px;flex:0 0 72px}
