@@ -96,7 +96,7 @@ UNIDADES = frozenset({"MHz", "GHz", "Hz", "kHz", "dB", "dBm", "mA", "ms"})
 #: (`monta.MESA`, `aba08`), os jogos da lista de perfis (`aba10.PERFIS`), os
 #: aparelhos do rádio (o `Alias` do BlueZ, que nasce da classe: «Caixa de som»)
 #: e as entradas que o usuário nomeou na mesa de exemplo (Esquerda, Meio, Direita), os
-#: jogos e os brinquedos da 07 (`desenho_da_experimental`) e os nomes que a Lovense dá ao
+#: jogos e os brinquedos da 07 (`desenho_da_experimental`), o jogo do aviso da 09 e os nomes que a Lovense dá ao
 #: servidor e ao modo do app («Intiface Engine», «Game Mode»). O produto troca cada um pelo nome que a pessoa deu ou que o jogo tem; nome de
 #: gente, de jogo, de aparelho e de entrada é próprio.
 NOMES_DO_DESENHO = (
@@ -108,7 +108,7 @@ NOMES_DO_DESENHO = (
     "Esquerda", "Meio", "Direita",
     "Sackboy: A Big Adventure", "Resident Evil Village", "Hollow Knight: Silksong",
     "Neon Nights", "Planet Lust", "MonGirl Conquest", "Third Crisis",
-    "Nora", "Domi", "Ferri", "Intiface Engine", "Game Mode",
+    "Nora", "Domi", "Ferri", "Intiface Engine", "Game Mode", "Lure of Passion",
 )
 
 #: A palavra que, seguida do número, é o nome de um lugar: «Entrada 4».
