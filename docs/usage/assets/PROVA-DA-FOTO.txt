@@ -5,7 +5,7 @@
 # idênticas, e sem este recibo o portão das fotos ficaria vermelho
 # para sempre.
 
-ensaio:  2026-10-19 16:59
+ensaio:  2026-10-20 21:13
 abas:    10
 modo:    --todas --publicado --doc
 origem:  src/hefesto_dualsense4unix/interface/paginas
@@ -17,13 +17,13 @@ vista:   recorte da .janela
 # tests/unit/test_retrato_das_abas_nao_vaza_dado_real.py).
 
 # soma sha256 de cada foto, em ordem alfabética
-89fd77d2024d00b1519f55f3c9a089617c193196eef5d3cce7cd71adddae5099  aba-01-jogar.png
-044b507943f800e6f1774db38264b54d688d21ae214afb81cbdaf2154ab4cc18  aba-02-controles.png
-f8ed3c9d7a0702937bd5bbf1e37ce2a1edee608623c8bc8e3ba1d6583cd95882  aba-03-gatilhos.png
-406c21d22ed97c514ece89eef43fd64b3eba5be298374076b82d1a347d8d005a  aba-04-iluminacao.png
-66db3a5ab3a80c009f5fc8a344a79acc579b558fc2dd48d31de9852c39a8999a  aba-05-vibracao.png
+8e9e96b20401ec49f276db7b6a72f201c0fe6376fe74f2016a1308bb091ff85a  aba-01-jogar.png
+41e208db09b5f1e430b1c6ec661f7ff03e909d64c16b150af1aeac58e2ab7a30  aba-02-controles.png
+4d608ff3ad8552cc6ce2db1af99a6db9219058c9ae4730df6f8da22aa3bd4a1c  aba-03-gatilhos.png
+5f6a4acbdcdcf55e521d222b08a6433fa21756358add4b27e8fb1be62cb76c47  aba-04-iluminacao.png
+f68f4bbcf317c78e6c79fb25ee2b23bff285f34224b27a49b69b962e04f3321d  aba-05-vibracao.png
 ee395da60f6c8bc9ded0648cd84accc80e4a5b093ccd1975f7e2f33c5f1168e6  aba-06-navegacao.png
-c6d09dd004de89ceebf4203f7c38eceaad17012bab3f12d2e8aa5f56c1298019  aba-07-lancadores.png
-d6a39ad9b702f2ed9ec0986622945d18001794b371f77c2d3da8f6e31017dba0  aba-08-conexoes.png
-bfe16be541133c8b056681839b0ba18b7fa9328581cc09911fb7a7d6d1a1de5d  aba-09-sistema.png
-8032785dc30d995eaee6998a3b20bbf624126c13a5737fca12bca5a835867348  aba-10-perfis.png
+0db703db5915db3c70884ba18fa6dab0efbbf762a9321e90a123b7d68a284c59  aba-07-lancadores.png
+e8020129192ef9d6d4f4a29883566b3f514097b6f9892d318fc369e2066d22a2  aba-08-conexoes.png
+108cb992fca77aca2cdffc748fff1ac30a1ac73e693d33c0468a7d38bd250379  aba-09-sistema.png
+f09253b3fad784af69efb4a74bb3da521a6046643b25fc57149083e9d7541a5f  aba-10-perfis.png
