@@ -74,9 +74,11 @@ def test_a_casa_e_o_tom_mais_perto() -> None:
     assert not erradas, erradas
 
 
+# O ciano saiu da fileira (D-1910-A-PRIMEIRA-CASA-DA-COR-E-O-BRANCO): a casa do Starlight Blue
+# é o azul do Player 1, o tom mais perto que ficou.
 @pytest.mark.parametrize(("plastico", "casa"), [
     ("Cosmic Red", "#FF0080"),
-    ("Starlight Blue", "#00FFFF"),
+    ("Starlight Blue", "#0000FF"),
     ("Galactic Purple", "#8000FF"),
 ])
 def test_a_tabela_do_pedido(plastico: str, casa: str) -> None:
@@ -145,8 +147,8 @@ def test_p1_cosmic_red_e_p2_starlight_blue_tem_um_x_em_cada_fileira(
 ) -> None:
     """A tabela do pedido: 1 X na fileira de cada um, na casa do OUTRO."""
     m = _marcas(monkeypatch, ("Cosmic Red", "Starlight Blue"))
-    assert m[1]["on"] == {"#FF0080"} and m[1]["x"] == {"#00FFFF"}
-    assert m[2]["on"] == {"#00FFFF"} and m[2]["x"] == {"#FF0080"}
+    assert m[1]["on"] == {"#FF0080"} and m[1]["x"] == {"#0000FF"}
+    assert m[2]["on"] == {"#0000FF"} and m[2]["x"] == {"#FF0080"}
 
 
 def test_dois_plasticos_no_mesmo_tom_dividem_a_casa_sem_x(
