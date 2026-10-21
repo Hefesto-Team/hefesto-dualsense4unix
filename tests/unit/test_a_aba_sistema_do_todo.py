@@ -4,8 +4,8 @@ A-ABA-SISTEMA-DO-TODO-01. O desenho anda até o mockup e para ali (o ``--publica
 régua lê ``mockup/09-sistema.html`` e as peças do pacote (``pacotes/a09_sistema.py``), nunca a cópia
 publicada. O que o desenho promete e o produto tem de cumprir:
 
-* seis linhas de status, em três colunas (duas do Status, duas colunas de duas do exame), e a que
-  falha fica vermelha;
+* seis linhas de status, em três colunas (duas do Status, duas colunas de duas do exame), a que
+  pede atenção em laranja e a que falha em vermelho;
 * quatro colunas de configurações, na ordem de produto, e nenhum «?»;
 * UM interruptor (``correcoes-automaticas``) no lugar dos quatro botões das correções;
 * o tamanho da interface em três botões (100, 125 e 150 %), gravado em ``interface_escala``;
@@ -15,8 +15,9 @@ Mordidas (cada uma arrancada, vista reprovar e devolvida; as vistas estão no re
 
 * devolver o ``min-height:120px`` do ``.registro``:
   :func:`test_o_registro_cabe_em_1212x700`;
-* tirar a mudança de ``aviso`` para ``falha`` do exame:
-  :func:`test_o_exame_so_mostra_os_quatro_temas`;
+* a mudança de ``aviso`` para ``falha`` do exame SAIU em 21/10/2026
+  (O-STATUS-DO-SISTEMA-DIZ-O-QUE-ESTA-BEM-EM-VERDE-E-SO-AVISA-O-QUE-PEDE-ACAO-01): o aviso fica
+  laranja; a régua dela é `test_o_status_diz_o_que_esta_bem_em_verde.py`;
 * trocar a posição do Steam Input ou do Áudio no exame:
   :func:`test_as_posicoes_do_exame_sao_as_do_dono`;
 * tirar o predicado ``sem_dono_do_rumble`` da linha do gamepad:
@@ -69,7 +70,7 @@ def test_o_status_tem_seis_linhas_em_tres_colunas() -> None:
     status3 = _entre(_desenho(), '<div class="status3">', "<!-- ---------- 2.")
     colunas = status3.split('<div class="col-lista"')[1:]
     assert len(colunas) == 3, f"o Status tem {len(colunas)} colunas, e o desenho tem três"
-    por_coluna = [len(re.findall(r'class="saude(?: vai)?"', c)) for c in colunas]
+    por_coluna = [len(re.findall(r'class="saude(?: vai)?(?: longa)?"', c)) for c in colunas]
     assert por_coluna == [2, 2, 2], f"linhas por coluna: {por_coluna}"
     ids = re.findall(r'data-id="([^"]+)"', status3)
     assert "hefesto-estado" in ids
@@ -128,7 +129,7 @@ def test_o_registro_e_a_unica_faixa_que_encolhe_e_ganha_o_salvar() -> None:
     assert 'data-gesto="salvar-registro"' in cabeca
 
 
-def test_o_que_falha_e_vermelho_e_o_que_esta_bem_e_neutro() -> None:
+def test_o_que_falha_e_vermelho_e_o_que_esta_bem_e_de_contorno() -> None:
     doc = _desenho()
     assert re.search(r"\.selo\.falha\{background:var\(--red\)", doc)
     assert re.search(r"\.selo\.ok\{background:transparent", doc)
@@ -200,20 +201,20 @@ def test_o_exame_so_mostra_os_quatro_temas() -> None:
     assert "Steam Input desligado" in html_
 
 
-def test_a_linha_que_falha_fica_vermelha_e_a_que_so_avisa_de_outro_tema_tambem() -> None:
+def test_o_aviso_fica_laranja_no_tema_e_fora_dele() -> None:
     estado = _estado()
     exame = _exame_completo(p3=("aviso", "Steam Input ligado para 2 jogos"),
                             p4=("aviso", "o ajuste de áudio do hefesto não está instalado"),
                             p2=("nt", "quirk não aplicável"))
     saida = a09._so_o_que_a_tela_mostra(exame, _status(estado), estado)
     cls = [a["cls"] for a in saida["linhas"]]
-    assert cls == ["ok", "falha", "ok", "ok", "falha"], cls
+    assert cls == ["ok", "aviso", "ok", "ok", "aviso"], cls
     textos = [a.get("curta") or a["txt"] for a in saida["linhas"]]
     assert "o ajuste de áudio do hefesto não está instalado" in textos[-1]
     assert not any("quirk não aplicável" in t for t in textos), "linha de nota fora dos temas"
     html_ = a09._html_do_exame(saida)
-    assert html_.count('class="selo falha"') == 2
-    assert 'class="selo aviso"' not in html_
+    assert html_.count('class="selo aviso"') == 2
+    assert 'class="selo falha"' not in html_
 
 
 def test_o_audio_que_nao_esta_bem_diz_a_frase_e_nao_o_rotulo_do_ok() -> None:
@@ -221,7 +222,7 @@ def test_o_audio_que_nao_esta_bem_diz_a_frase_e_nao_o_rotulo_do_ok() -> None:
     exame = _exame_completo(p1=("aviso", "áudio ausente em 1 dos 2 controles no cabo"))
     saida = a09._so_o_que_a_tela_mostra(exame, _status(estado), estado)
     audio = saida["linhas"][2]
-    assert audio["cls"] == "falha"
+    assert audio["cls"] == "aviso"
     assert "Áudio roteado" not in json.dumps(saida, ensure_ascii=False)
 
 
@@ -231,7 +232,7 @@ def test_exame_incompleto_mostra_o_que_nao_esta_bem_sem_adivinhar_a_posicao() ->
                         _linha("nt", "uma nota")], "vazio": ""}
     saida = a09._so_o_que_a_tela_mostra(exame, _status(estado), estado)
     assert _textos(saida)[1:] == [("ok", "Um gamepad virtual por jogador"),
-                                  ("falha", "algo falhou"), ("nt", "uma nota")]
+                                  ("aviso", "algo falhou"), ("nt", "uma nota")]
 
 
 def test_exame_que_nao_respondeu_diz_isso_numa_linha_de_nota() -> None:
@@ -263,7 +264,6 @@ def test_as_posicoes_do_exame_sao_as_do_dono(tmp_path: pathlib.Path) -> None:
     (_estado(2, 1), "nt", "1 de 2 controles com gamepad virtual"),
     (_estado(2, 0, native=True), "nt", "Conexão nativa: o jogo fala direto com o controle"),
     (_estado(2, 0, emulacao=False), "nt", "Gamepad virtual: emulação desligada"),
-    (_estado(0, 0), "nt", "Um gamepad virtual por jogador, quando houver controle"),
     ({"controllers": []}, "nt", "Gamepads virtuais: sem leitura do serviço"),
     (None, "nt", "Gamepads virtuais: sem leitura do serviço"),
 ])
@@ -271,6 +271,11 @@ def test_a_linha_do_gamepad_virtual(estado: Any, cls: str, texto: str) -> None:
     """Vermelho só no defeito real: emulação ligada, fora do nativo, e NENHUM gamepad subiu."""
     linha = a09.linha_do_gamepad_por_jogador(estado)
     assert (linha["cls"], linha["txt"]) == (cls, texto), linha
+
+
+def test_sem_controle_a_linha_do_gamepad_nao_aparece() -> None:
+    """Sem controle ligado não há gamepad a esperar: a linha só ocupava o lugar (21/10/2026)."""
+    assert a09.linha_do_gamepad_por_jogador(_estado(0, 0)) is None
 
 
 def test_linha_do_status_e_do_exame_falam_pela_dica_curta() -> None:

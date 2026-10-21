@@ -221,14 +221,23 @@ CSS = """
      pílula de tamanho diferente na mesma faixa seria duas peças. */
   .saude .selo{flex:0 0 76px;text-align:center}
   .selo .sg{margin-right:4px;font-weight:700}
-  /* SEM AVISO VERDE (conferência de 14/10/2026): o que está bem fica numa pílula neutra, na cor
-     do texto; o laranja pede atenção e o vermelho é a linha que FALHA, até se curar. */
-  .selo.ok{background:transparent;color:var(--texto-suave);box-shadow:inset 0 0 0 1px var(--border-forte)}
+  /* O QUE ESTÁ BEM É VERDE DE CONTORNO — 21/10/2026, O-STATUS-DO-SISTEMA-DIZ-O-QUE-ESTA-BEM-EM-
+     VERDE-E-SO-AVISA-O-QUE-PEDE-ACAO-01, a variante A escolhida. A pílula neutra da conferência de
+     14/10 (que tirou o verde CHEIO) lia-se como desligada; agora é a peça do «Ligada» da
+     Experimental: contorno e texto no verde do tema, fundo transparente. O laranja pede atenção e
+     o vermelho é a linha que FALHA, sem troca de um pelo outro. */
+  .selo.ok{background:transparent;color:var(--green);box-shadow:inset 0 0 0 1px var(--green)}
   .selo.aviso{background:var(--orange);color:var(--app-bg)}
   .selo.nt{background:var(--comment);color:var(--app-bg)}
   .selo.falha{background:var(--red);color:var(--app-bg)}
   .saude .txt{flex:1;display:flex;align-items:center;gap:7px;min-width:0}
   .saude .txt span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* A frase do aviso é a inteira, em duas linhas se preciso: cortar com reticências esconderia o
+     gesto. O produto põe o `.longa` na linha que pede ação (`a09_sistema.PEDEM_ACAO`). A linha
+     cresce com a frase: na altura fixa de 25,5px a segunda linha invadia a de cima (medido na
+     bancada de 21/10, a frase de três linhas com 45px numa linha de 26px). */
+  .saude.longa{height:auto;min-height:25.5px}
+  .saude.longa .txt span:last-child{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25}
   /* A LINHA QUE LEVA A OUTRO LUGAR (a do Bluetooth, para a seção do rádio da
      aba Conexões) é um `<a>` inteiro: a mão vira e a linha acende no hover. */
   a.saude.vai{cursor:pointer}
@@ -350,7 +359,7 @@ def ligavel(rotulo, gesto, campo, ligado, dica):
 def linha(selo, cls, g, txt, ident="", href="", dica=""):
     """Uma linha do Status ou do exame — a MESMA peça, na marcação do produto."""
     tag = "a" if href else "div"
-    vai = " vai" if href else ""
+    vai = (" vai" if href else "") + (" longa" if cls in ("aviso", "falha") else "")
     i = f' data-id="{ident}"' if ident else ""
     h = f' href="{href}"' if href else ""
     t = f' data-dica="{dica}"' if dica else ""
@@ -422,7 +431,9 @@ STATUS = [
 ]
 
 #: As quatro linhas do exame que ficam à vista (o desenho do todo): o Bluetooth leva à aba
-#: Conexões. Qualquer outra linha do exame só aparece se FALHAR, e então em vermelho.
+#: Conexões. Qualquer outra linha do exame só aparece se pedir ação: laranja no aviso, vermelho na
+#: falha. As duas últimas são as da variante A escolhida em 21/10/2026 (a cena da foto: nenhum
+#: controle no cabo e um jogo cujo Steam Input mudou), para o desenho mostrar a NOTA e o AVISO.
 ACHADOS = [
     linha("OK", "ok", "✓",
           f"Bluetooth: 1 adaptador · {_NO_RADIO} "
@@ -431,9 +442,12 @@ ACHADOS = [
           dica="Clique para ver os adaptadores na aba Conexões."),
     linha("OK", "ok", "✓", "Steam Input desligado",
           dica="Steam Input desligado para o DualSense"),
-    linha("OK", "ok", "✓", "Áudio roteado", dica=f"Áudio dos {N} controles roteado"),
-    linha("OK", "ok", "✓", "Um gamepad virtual por jogador",
-          dica="Um gamepad virtual por jogador"),
+    linha("NOTA", "nt", "◆", "Nenhum controle no cabo",
+          dica="Sem controle no cabo, não há som nem vibração para rotear"),
+    linha("AVISO", "aviso", "!",
+          "O Steam Input de Lure of Passion mudou: confira o perfil dele na aba Perfis",
+          dica="O Steam Input de Lure of Passion não bate com o que o Hefesto confirmou: "
+               "abra o perfil dele na aba Perfis e confira"),
 ]
 #: AS NOTAS EM TERÇOS (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, S1): o Status e o exame são UMA lista,
 #: na ordem, por igual, com a sobra nas primeiras: 8 viram 3, 3 e 2, e 7 viram 3, 2 e 2. O

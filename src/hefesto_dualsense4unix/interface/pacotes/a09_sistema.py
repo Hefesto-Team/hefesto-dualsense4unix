@@ -1254,9 +1254,17 @@ def _avisos_do_produto(ctx: Contexto) -> list[dict[str, Any]]:
         avisos = [{"texto": f"os avisos do produto não responderam "
                             f"({type(erro).__name__})."}]
     achados = [(VEREDITO_DO_AVISO, str(a.get("texto") or "")) for a in avisos
-               if a.get("texto")]
+               if a.get("texto") and a.get("fonte") not in FONTES_QUE_NAO_PEDEM_ACAO]
     linhas: list[dict[str, Any]] = _tela.exame(achados)["linhas"]
     return linhas
+
+
+#: As fontes do canal que explicam e não pedem nada, e por isso não entram no Status
+#: (O-STATUS-DO-SISTEMA-DIZ-O-QUE-ESTA-BEM-EM-VERDE-E-SO-AVISA-O-QUE-PEDE-ACAO-01, 21/10/2026):
+#: «Quem pôs o Hefesto em «Sony DualSense» foi o perfil ativo» chegava como AVISO, sem gesto.
+FONTES_QUE_NAO_PEDEM_ACAO: dict[str, str] = {
+    "painel.aviso_da_origem_do_modo": "diz quem ligou o modo; não há o que fazer",
+}
 
 
 def _com_os_avisos(exame: dict[str, Any], ctx: Contexto) -> dict[str, Any]:
@@ -1272,7 +1280,8 @@ def _com_os_avisos(exame: dict[str, Any], ctx: Contexto) -> dict[str, Any]:
 
 
 #: As seis linhas à vista (A-ABA-SISTEMA-DO-TODO-01): o Status leva as duas primeiras, e o exame as
-#: quatro seguintes. Qualquer outra linha do exame só aparece se FALHAR, e então em vermelho.
+#: quatro seguintes. Qualquer outra linha do exame só aparece se pedir ação: laranja no aviso,
+#: vermelho na falha.
 LINHAS_DO_STATUS = ("hefesto-estado", "hefesto-troca-de-perfil")
 ID_DO_BLUETOOTH = "status-bluetooth"
 ID_DO_GAMEPAD = "gamepad-por-jogador"
@@ -1283,9 +1292,13 @@ LINHAS_DO_EXAME_COMPLETO = 6
 POSICAO_NO_EXAME = {"steam-input": 3, "audio": 1}
 ROTULO_DO_AUDIO_BEM = "Áudio roteado"
 
+#: As classes do selo que pedem ação: a linha fica à vista e a frase inteira quebra em duas linhas
+#: (`.saude.longa`), para o gesto no fim não sair cortado.
+PEDEM_ACAO = ("aviso", "falha")
 
-def linha_do_gamepad_por_jogador(state: Any) -> dict[str, Any]:
-    """A sexta linha: cada controle ligado tem o seu gamepad virtual?
+
+def linha_do_gamepad_por_jogador(state: Any) -> dict[str, Any] | None:
+    """A sexta linha: cada controle ligado tem o seu gamepad virtual? ``None`` sem controle.
 
     A fonte é a que o produto já lê para a vibração: os gamepads virtuais que o serviço publicou
     (`rumble_ff.vpads`), os controles conectados, a Conexão Nativa e a emulação. Vermelho só no
@@ -1318,7 +1331,8 @@ def linha_do_gamepad_por_jogador(state: Any) -> dict[str, Any]:
                      "Com a emulação desligada nenhum jogo recebe gamepad virtual.")
     conectados = _tela.quantos_controles(state)
     if not conectados:
-        return linha(nota, "Um gamepad virtual por jogador, quando houver controle")
+        # Sem controle ligado a linha só ocupava o lugar: não há gamepad a esperar (21/10/2026).
+        return None
     if sem_dono_do_rumble(native=native, backends=("vpad",) * max(0, vpads), emulacao=emulacao):
         return linha(falha, "Nenhum gamepad virtual subiu",
                      "A emulação está ligada e nenhum gamepad virtual subiu: o jogo ainda vê "
@@ -1337,7 +1351,8 @@ def _so_o_que_a_tela_mostra(exame: dict[str, Any], status: list[dict[str, Any]],
     """As quatro linhas do exame à vista: Bluetooth, Steam Input, Áudio e o gamepad virtual.
 
     O exame inteiro do `doctor` continua na camada do produto; aqui só ficam os quatro temas e,
-    depois deles, qualquer outra linha que FALHE (veredito de aviso), em vermelho até se curar.
+    depois deles, qualquer outra linha que peça ação. A cor é a do veredito, sem troca: o aviso
+    fica laranja e só a falha é vermelha (21/10/2026; antes todo aviso virava falha).
     Exame que não veio completo (menos de seis linhas) mostra o que não está bem, sem adivinhar
     qual posição é qual.
     """
@@ -1355,14 +1370,14 @@ def _so_o_que_a_tela_mostra(exame: dict[str, Any], status: list[dict[str, Any]],
             usadas.add(posicao)
             if achado.get("cls") == "ok" and tema == "audio":
                 achado["curta"] = ROTULO_DO_AUDIO_BEM
-            if achado.get("cls") == "aviso":
-                achado["cls"] = "falha"
             saida.append(achado)
-    saida.append(linha_do_gamepad_por_jogador(state))
+    gamepad = linha_do_gamepad_por_jogador(state)
+    if gamepad is not None:
+        saida.append(gamepad)
     for i, achado in enumerate(linhas):
-        if i in usadas or achado.get("cls") != "aviso":
+        if i in usadas or achado.get("cls") not in PEDEM_ACAO:
             continue
-        saida.append({**achado, "cls": "falha"})
+        saida.append(dict(achado))
     if len(linhas) < LINHAS_DO_EXAME_COMPLETO:
         # Exame curto: as linhas de nota (o «exame não respondeu», por exemplo) também aparecem.
         saida.extend(a for i, a in enumerate(linhas)
@@ -1376,6 +1391,11 @@ def _so_o_que_a_tela_mostra(exame: dict[str, Any], status: list[dict[str, Any]],
 def _pausado(ctx: Contexto) -> bool:
     """A pausa está ativa AGORA? O dado é `state_full["paused"]`, e só ele."""
     return bool(isinstance(ctx.state, dict) and ctx.state.get("paused"))
+
+
+def _classes_da_linha(linha: dict[str, Any], href: str) -> str:
+    """` vai` na linha que leva a outro lugar; ` longa` na que pede ação (a frase quebra)."""
+    return (" vai" if href else "") + (" longa" if linha.get("cls") in PEDEM_ACAO else "")
 
 
 def _html_do_status(linhas: list[dict[str, Any]]) -> str:
@@ -1392,7 +1412,7 @@ def linha_do_status(linha: dict[str, Any]) -> str:
     href = str(linha.get("href") or "")
     tag, fim = ("a", "a") if href else ("div", "div")
     destino = f' href="{html.escape(href)}"' if href else ""
-    return (f'<{tag} class="saude{" vai" if href else ""}" data-id="{ident}"{destino}>'
+    return (f'<{tag} class="saude{_classes_da_linha(linha, href)}" data-id="{ident}"{destino}>'
             f'<span class="selo {cls}"><span class="sg">'
             f'{html.escape(str(linha.get("g") or ""))}</span>'
             f'{html.escape(str(linha.get("selo") or ""))}</span>'
@@ -1444,7 +1464,8 @@ def _linha_do_exame(achado: dict[str, Any]) -> str:
     o que sobra na tela ao lado de um selo NOTA podia se ler como problema quando as metades
     escondidas eram justamente a resposta («estão liberados», «O que fazer: nada»). O «O que
     fazer» do `doctor` é instrução de terminal e não chega à tela: `PREFIXO_DA_CURA`, lido do
-    dono (`storm_doctor`), o corta do texto e da dica. Quebrar a linha mudaria a altura do quadro.
+    dono (`storm_doctor`), o corta do texto e da dica. A linha que pede ação (aviso ou falha)
+    quebra em duas em vez de cortar, porque o gesto mora no fim da frase (21/10/2026).
     """
     cls = html.escape(str(achado.get("cls") or "nt"))
     txt = _sem_o_prefixo_da_cura(str(achado.get("txt") or ""))
@@ -1454,7 +1475,7 @@ def _linha_do_exame(achado: dict[str, Any]) -> str:
     href = str(achado.get("href") or "")
     tag = "a" if href else "div"
     destino = f' href="{html.escape(href)}"' if href else ""
-    return (f'<{tag} class="saude{" vai" if href else ""}"{ident}{destino}>'
+    return (f'<{tag} class="saude{_classes_da_linha(achado, href)}"{ident}{destino}>'
             f'<span class="selo {cls}">'
             f'<span class="sg">{html.escape(str(achado.get("g") or ""))}</span>'
             f'{html.escape(str(achado.get("selo") or ""))}</span>'

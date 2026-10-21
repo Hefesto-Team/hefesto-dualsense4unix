@@ -116,10 +116,11 @@ def _catch_all_vence_especifico(perfis: Sequence[Profile]) -> list[Achado]:
 
 
 def _catch_all_com_cara_de_jogo(perfis: Sequence[Profile]) -> list[Achado]:
-    """Perfil com nome de jogo (ou modo de jogo) e ``match.type == "any"``."""
+    """Perfil com cara de jogo e ``match.type == "any"``, menos o Freestyle (é de toda janela)."""
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import e_o_freestyle
     achados: list[Achado] = []
     for p in perfis:
-        if not _e_catch_all(p) or _tem_dispensa(p):
+        if not _e_catch_all(p) or _tem_dispensa(p) or e_o_freestyle(p.name):
             continue
         modo = getattr(p, "mode", None)
         declarado = bool(p.suppress_desktop_emulation) or bool(
@@ -131,28 +132,27 @@ def _catch_all_com_cara_de_jogo(perfis: Sequence[Profile]) -> list[Achado]:
         if not (declarado or nome_proprio):
             continue
         if declarado:
-            motivo = "ele pede modo de jogo (gamepad/supressão de desktop)"
-            cura = (
-                f"abra a aba Perfis com o jogo aberto e dê o alvo de volta a "
-                f"'{p.name}'; se ele é mesmo só para ativar na mão, declare "
-                '`"match": {"type": "manual"}` e o aviso some'
+            mensagem = (
+                f"O perfil {p.name} perdeu o jogo dele: abra-o na aba Perfis com o jogo aberto e "
+                "escolha a janela de novo. Hoje ele vale para qualquer janela e pede o modo de jogo"
             )
+            cura = (f"abra a aba Perfis com o jogo aberto e dê o alvo de volta a '{p.name}'; "
+                    "se ele é mesmo só para ativar na mão, declare "
+                    '`"match": {"type": "manual"}` e o aviso some')
         else:
-            motivo = "o nome dele é de um programa, não de um perfil genérico"
-            cura = (
-                f"se '{p.name}' é o perfil de um programa, abra a aba Perfis "
-                "com ele aberto e dê o alvo de volta; se é o seu perfil de "
-                f"desktop, o lugar dele é a preferência 0 (hoje está em "
-                f"{p.priority}), e ali o aviso some"
+            mensagem = (
+                f"O perfil {p.name} vale para qualquer janela: abra-o na aba Perfis com o programa "
+                "dele aberto e escolha a janela. Se ele é o seu perfil de desktop, o lugar dele é "
+                f"a preferência 0 (hoje está em {p.priority})"
             )
+            cura = (f"se '{p.name}' é o perfil de um programa, abra a aba Perfis com ele aberto e "
+                    "dê o alvo de volta; se é o seu perfil de desktop, o lugar dele é a "
+                    f"preferência 0 (hoje está em {p.priority}), e ali o aviso some")
         achados.append(
             Achado(
                 regra="catch_all_com_cara_de_jogo",
                 gravidade="aviso",
-                mensagem=(
-                    f"'{p.name}' casa com QUALQUER janela, mas {motivo} — "
-                    "é o retrato de um perfil que PERDEU a regra dele"
-                ),
+                mensagem=mensagem,
                 cura=cura,
                 perfis=(p.name,),
             )

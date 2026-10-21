@@ -498,19 +498,22 @@ def linhas_do_status(leitura: Leitura) -> list[dict[str, str]]:
     ]
 
 
+#: Um glifo por selo, e a cor pelo veredito (O-STATUS-DO-SISTEMA-DIZ-O-QUE-ESTA-BEM-EM-VERDE-E-SO-
+#: AVISA-O-QUE-PEDE-ACAO-01, 21/10/2026): o ``WARN`` pede atenção e fica laranja, o ``FAIL`` é a
+#: falha e fica vermelho. A NOTA saía com «i» aqui e com «◆» na linha do gamepad.
 _SELO_DO_VEREDITO: dict[str, tuple[str, str, str]] = {
-    "OK": ("OK", "ok", "✓"),
-    "WARN": ("AVISO", "aviso", "!"),
-    "FAIL": ("AVISO", "aviso", "!"),
-    "INFO": ("NOTA", "nt", "i"),
-    "NOTE": ("NOTA", "nt", "i"),
+    "OK": ("OK", PILULA_OK, GLIFO_OK),
+    "WARN": ("AVISO", PILULA_AVISO, GLIFO_AVISO),
+    "FAIL": ("AVISO", "falha", GLIFO_AVISO),
+    "INFO": ("NOTA", PILULA_NOTA, GLIFO_INFO),
+    "NOTE": ("NOTA", PILULA_NOTA, GLIFO_INFO),
 }
 
 
 def _selo(veredito: object) -> tuple[str, str, str]:
     """O selo de um veredito do ``storm_doctor``, com os colchetes tirados."""
     chave = str(veredito).strip().strip("[]").strip().upper()
-    return _SELO_DO_VEREDITO.get(chave, ("NOTA", "nt", "i"))
+    return _SELO_DO_VEREDITO.get(chave, _SELO_DO_VEREDITO["INFO"])
 
 
 def exame(achados: list[tuple[str, str]] | None) -> dict[str, Any]:

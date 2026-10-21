@@ -417,11 +417,16 @@ def interpretar_prontuario_dos_jogos(censo: object) -> tuple[str, str] | None:
         return None
     nomes = ", ".join(str(getattr(j, "nome", "?")) for j in divergentes[:3])
     resto = f" e mais {len(divergentes) - 3}" if len(divergentes) > 3 else ""
+    # A cabeça da frase (até o primeiro ponto) é o que a aba Sistema escreve, e o gesto mora
+    # nela; o resto vai na dica. Era «Ponte confirmada que não bate com a lista de hoje», sem
+    # gesto e cortado no nome do jogo (21/10/2026).
+    dele = "dele" if len(divergentes) == 1 else "de cada um"
     return (
         "[WARN]",
-        f"Ponte confirmada que não bate com a lista de hoje: {nomes}{resto} — "
-        "o jogo foi marcado (ou desmarcado) depois que a ponte pegou. "
-        f"{PREFIXO_DA_CURA}abra o perfil dele na aba Perfis e "
+        f"O Steam Input de {nomes}{resto} mudou: confira o perfil {dele} na aba Perfis. "
+        "A caixinha do Steam Input foi marcada ou desmarcada depois que o Hefesto "
+        "confirmou que o jogo funcionava. "
+        f"{PREFIXO_DA_CURA}abra o perfil {dele} na aba Perfis e "
         "confira a caixinha do Steam Input.",
     )
 

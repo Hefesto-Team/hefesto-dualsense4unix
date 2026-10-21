@@ -1016,14 +1016,23 @@
      pílula de tamanho diferente na mesma faixa seria duas peças. */
   .saude .selo{flex:0 0 76px;text-align:center}
   .selo .sg{margin-right:4px;font-weight:700}
-  /* SEM AVISO VERDE (conferência de 14/10/2026): o que está bem fica numa pílula neutra, na cor
-     do texto; o laranja pede atenção e o vermelho é a linha que FALHA, até se curar. */
-  .selo.ok{background:transparent;color:var(--texto-suave);box-shadow:inset 0 0 0 1px var(--border-forte)}
+  /* O QUE ESTÁ BEM É VERDE DE CONTORNO — 21/10/2026, O-STATUS-DO-SISTEMA-DIZ-O-QUE-ESTA-BEM-EM-
+     VERDE-E-SO-AVISA-O-QUE-PEDE-ACAO-01, a variante A escolhida. A pílula neutra da conferência de
+     14/10 (que tirou o verde CHEIO) lia-se como desligada; agora é a peça do «Ligada» da
+     Experimental: contorno e texto no verde do tema, fundo transparente. O laranja pede atenção e
+     o vermelho é a linha que FALHA, sem troca de um pelo outro. */
+  .selo.ok{background:transparent;color:var(--green);box-shadow:inset 0 0 0 1px var(--green)}
   .selo.aviso{background:var(--orange);color:var(--app-bg)}
   .selo.nt{background:var(--comment);color:var(--app-bg)}
   .selo.falha{background:var(--red);color:var(--app-bg)}
   .saude .txt{flex:1;display:flex;align-items:center;gap:7px;min-width:0}
   .saude .txt span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* A frase do aviso é a inteira, em duas linhas se preciso: cortar com reticências esconderia o
+     gesto. O produto põe o `.longa` na linha que pede ação (`a09_sistema.PEDEM_ACAO`). A linha
+     cresce com a frase: na altura fixa de 25,5px a segunda linha invadia a de cima (medido na
+     bancada de 21/10, a frase de três linhas com 45px numa linha de 26px). */
+  .saude.longa{height:auto;min-height:25.5px}
+  .saude.longa .txt span:last-child{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.25}
   /* A LINHA QUE LEVA A OUTRO LUGAR (a do Bluetooth, para a seção do rádio da
      aba Conexões) é um `<a>` inteiro: a mão vira e a linha acende no hover. */
   a.saude.vai{cursor:pointer}
@@ -1378,8 +1387,8 @@ body .sec-grupo,body .sec-alta{margin-top:10px !important;padding-top:8px !impor
             </div>
             <div class="risco"></div>
             <div class="col-lista">
-            <div class="saude"><span class="selo ok"><span class="sg">✓</span>OK</span><span class="txt" data-dica="Áudio dos 2 controles roteado"><span>Áudio roteado</span></span></div>
-            <div class="saude"><span class="selo ok"><span class="sg">✓</span>OK</span><span class="txt" data-dica="Um gamepad virtual por jogador"><span>Um gamepad virtual por jogador</span></span></div>
+            <div class="saude"><span class="selo nt"><span class="sg">◆</span>NOTA</span><span class="txt" data-dica="Sem controle no cabo, não há som nem vibração para rotear"><span>Nenhum controle no cabo</span></span></div>
+            <div class="saude longa"><span class="selo aviso"><span class="sg">!</span>AVISO</span><span class="txt" data-dica="O Steam Input de Lure of Passion não bate com o que o Hefesto confirmou: abra o perfil dele na aba Perfis e confira"><span>O Steam Input de Lure of Passion mudou: confira o perfil dele na aba Perfis</span></span></div>
             </div>
           </div>
         </div>
