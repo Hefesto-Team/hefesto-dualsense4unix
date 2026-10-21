@@ -26,10 +26,10 @@ ABAS = [
     ("Iluminação", "04-iluminacao.html"),
     ("Vibração", "05-vibracao.html"),
     ("Navegação", "06-navegacao.html"),
-    ("Experimental", "07-lancadores.html"),
     ("Conexões", "08-conexoes.html"),
     ("Sistema", "09-sistema.html"),
     ("Perfis", "10-perfis.html"),
+    ("Experimental", "07-lancadores.html"),
 ]
 
 LARGURA, ALTURA = 1180, 757

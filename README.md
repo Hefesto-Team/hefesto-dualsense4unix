@@ -58,10 +58,10 @@ Controles Nintendo Pro e 8BitDo também são reconhecidos, mas chegam ao jogo co
 | ![Gatilhos](docs/usage/assets/aba-03-gatilhos.png) | ![Iluminação](docs/usage/assets/aba-04-iluminacao.png) |
 | Vibração | Navegação |
 | ![Vibração](docs/usage/assets/aba-05-vibracao.png) | ![Navegação](docs/usage/assets/aba-06-navegacao.png) |
-| Experimental | Conexões |
-| ![Experimental](docs/usage/assets/aba-07-lancadores.png) | ![Conexões](docs/usage/assets/aba-08-conexoes.png) |
-| Sistema | Perfis |
-| ![Sistema](docs/usage/assets/aba-09-sistema.png) | ![Perfis](docs/usage/assets/aba-10-perfis.png) |
+| Conexões | Sistema |
+| ![Conexões](docs/usage/assets/aba-08-conexoes.png) | ![Sistema](docs/usage/assets/aba-09-sistema.png) |
+| Perfis | Experimental |
+| ![Perfis](docs/usage/assets/aba-10-perfis.png) | ![Experimental](docs/usage/assets/aba-07-lancadores.png) |
 
 O que cada aba faz: [docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md](docs/usage/AS-DEZ-ABAS-o-que-cada-uma-faz.md).
 

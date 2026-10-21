@@ -1,7 +1,7 @@
 # As dez abas
 
 A janela do Hefesto tem dez abas, nesta ordem: **Jogar · Controles · Gatilhos ·
-Iluminação · Vibração · Navegação · Experimental · Conexões · Sistema · Perfis**.
+Iluminação · Vibração · Navegação · Conexões · Sistema · Perfis · Experimental**.
 
 ## O que vale em todas
 
@@ -123,26 +123,7 @@ Uma coluna por controle. O lado que treme acende em laranja.
 - **O que cada botão faz**: clique de mouse, tecla, teclado na tela, abrir a
   Steam, um programa ou nada. O PS fica de fora: é a saída de emergência.
 
-## 7. Experimental
-
-![Aba Experimental](assets/aba-07-lancadores.png)
-
-Dois quadros: as extensões e os lançadores.
-
-- **Extensões**: cada extensão instalada (como o **Lutris** e o **KytyPS5**) tem
-  uma chave para ligar e desligar, o ⋮ (Atualizar, Ver permissões, Remover) e a
-  janela das opções que ela declara. **Instalar de um endereço** ou **Escolher a
-  pasta…** traz uma extensão nova; os endereços das que existem estão no
-  [README](../../README.md#extensões).
-- **Lançadores**: uma linha por lançador (**Steam**, **Heroic (Epic · GOG)** e
-  **Flatpak**, e os que uma extensão traz), com a contagem de jogos achados. **Identificar** reconhece o jogo aberto, **Criar
-  perfis** cria o perfil de cada jogo da lista e **Configurar** mostra a pasta, os
-  jogos e os impedimentos (o Steam Input ligado, o jogo fora do Proton fixado),
-  com o botão que resolve cada um.
-- **Adicionar um lançador**: um programa do sistema ou uma extensão, com o nome e
-  o lugar dele.
-
-## 8. Conexões
+## 7. Conexões
 
 ![Aba Conexões](assets/aba-08-conexoes.png)
 
@@ -166,7 +147,7 @@ do rádio está em uso. **Conectar** pareia um controle no adaptador escolhido
 **Esquecer** tira só aquele pareamento ([bluetooth.md](bluetooth.md),
 [bluetooth-varios-adaptadores.md](bluetooth-varios-adaptadores.md)).
 
-## 9. Sistema
+## 8. Sistema
 
 ![Aba Sistema](assets/aba-09-sistema.png)
 
@@ -186,7 +167,7 @@ Esta aba é do computador, não de um controle, e a fita fica esmaecida.
 - **Detalhes técnicos**: o registro do serviço, para copiar ao relatar um
   problema.
 
-## 10. Perfis
+## 9. Perfis
 
 ![Aba Perfis](assets/aba-10-perfis.png)
 
@@ -203,3 +184,22 @@ Um perfil guarda o que você ajustou nas outras abas e o traz quando o jogo abre
   naquele controle, e o ponto embaixo dele diz o que o perfil aberto guarda só
   para aquele controle. Para escrever um perfil à mão, ver
   [creating-profiles.md](creating-profiles.md).
+
+## 10. Experimental
+
+![Aba Experimental](assets/aba-07-lancadores.png)
+
+Dois quadros: as extensões e os lançadores.
+
+- **Extensões**: cada extensão instalada (como o **Lutris** e o **KytyPS5**) tem
+  uma chave para ligar e desligar, o ⋮ (Atualizar, Ver permissões, Remover) e a
+  janela das opções que ela declara. **Instalar de um endereço** ou **Escolher a
+  pasta…** traz uma extensão nova; os endereços das que existem estão no
+  [README](../../README.md#extensões).
+- **Lançadores**: uma linha por lançador (**Steam**, **Heroic (Epic · GOG)** e
+  **Flatpak**, e os que uma extensão traz), com a contagem de jogos achados. **Identificar** reconhece o jogo aberto, **Criar
+  perfis** cria o perfil de cada jogo da lista e **Configurar** mostra a pasta, os
+  jogos e os impedimentos (o Steam Input ligado, o jogo fora do Proton fixado),
+  com o botão que resolve cada um.
+- **Adicionar um lançador**: um programa do sistema ou uma extensão, com o nome e
+  o lugar dele.
