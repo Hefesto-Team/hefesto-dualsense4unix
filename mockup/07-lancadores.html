@@ -1503,9 +1503,9 @@
    fileiras (dez extensões) cabem inteiras, e da décima primeira em diante a lista rola só por dentro,
    com a barra fina da casa. A coluna do «Para» saiu da linha. */
 .ext-lista { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 12px;align-items:stretch;
-  max-height:289px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border-forte) var(--panel-2,#21222c) }
+  max-height:289px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border-forte) var(--app-bg) }
 .ext-lista::-webkit-scrollbar { width:9px }
-.ext-lista::-webkit-scrollbar-track { background:var(--panel-2,#21222c);border-radius:5px }
+.ext-lista::-webkit-scrollbar-track { background:var(--app-bg);border-radius:5px }
 .ext-lista::-webkit-scrollbar-thumb { background:var(--border-forte);border-radius:5px }
 .ext-lista .ext { grid-template-columns:28px minmax(0,1fr) 104px 30px 26px;column-gap:10px;min-height:0;height:100%;
   padding:4px 10px;box-sizing:border-box;border:1px solid var(--border-sutil);border-radius:8px;background:var(--app-bg) }

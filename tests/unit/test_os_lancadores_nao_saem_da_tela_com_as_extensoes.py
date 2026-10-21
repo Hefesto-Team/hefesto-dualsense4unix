@@ -142,3 +142,18 @@ def test_a_linha_nao_tem_mais_a_coluna_do_para() -> None:
     linha = exp.extensao_html(exp.EXTENSOES[0])
     assert "ext-para" not in linha
     assert not re.search(r'class="ext-para"', DESENHO.read_text(encoding="utf-8"))
+
+
+def test_a_barra_de_rolagem_da_lista_so_usa_cor_que_o_tema_troca() -> None:
+    """A barra fina da lista pinta só com as fichas do `:root` da casa: uma ficha que o `topo.html`
+    não define cai na cor crua do recuo, e o trilho fica escuro com o tema claro ligado.
+
+    MORDIDA (executada em 21/10/2026): com o trilho em `var(--panel-2,#21222c)`, como nasceu,
+    reprova."""
+    raiz = (RAIZ / "src/hefesto_dualsense4unix/interface/topo.html").read_text(encoding="utf-8")
+    definidas = set(re.findall(r"(--[\w-]+)\s*:", raiz.split(":root", 1)[1].split("}", 1)[0]))
+    regras = re.findall(r"\.ext-lista(?:::-webkit-scrollbar[\w-]*)?\s*\{([^}]*)\}", exp.CSS)
+    usadas = {f for r in regras for f in re.findall(r"var\((--[\w-]+)", r)}
+    assert usadas, "a regra da lista que rola sumiu do CSS da Experimental"
+    assert usadas <= definidas, f"ficha fora do :root da casa: {sorted(usadas - definidas)}"
+    assert not any(re.search(r"#[0-9a-fA-F]{3,8}", r) for r in regras), regras
