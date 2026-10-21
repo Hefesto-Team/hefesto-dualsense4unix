@@ -126,8 +126,8 @@ def test_a_linha_da_03_fica_antes_do_l2_e_o_estilo_continua_escolhendo_o_efeito(
 def test_o_trilho_da_03_manda_o_gesto_e_tem_dono_e_camada(d03: str) -> None:
     """O trilho da 03 manda `data-papel` (o gesto), e o gesto tem atendente e camada.
 
-    A prova da D-2110-A-INTENSIDADE-DO-GATILHO-VALE-NO-PADRAO-DO-COMPUTADOR (a D-2010, que a punha
-    no perfil do jogo, caducou em 21/10/2026).
+    A prova da D-2110-A-INTENSIDADE-DO-GATILHO-VALE-NO-PADRAO-DO-COMPUTADOR, que substitui a
+    D-2010-A-INTENSIDADE-DO-GATILHO-MORA-NO-PERFIL-DO-JOGO (caduca em 21/10/2026).
 
     Gesto sem dono reprova `test_os_sem_dono_so_diminuem`; gesto sem camada fica de fora do Nativo
     sem ninguém decidir. A camada é a do computador (`_C`), como a «Força da vibração» da 05.
