@@ -21,14 +21,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 02-controles.html
-- **20/10/2026** — o piso de 24 px nos alvos e de 12 px na letra, o lugar sem controle que diz só «Player N • Desconectado» e a folha do piso na cabeça da página (escolha «Controles: A» dela, 20/10); espera só o `--publicar 02`. Enquanto isso, a página publicada segue com os alvos e as letras de antes e com o texto antigo no lugar sem controle, e o pacote pinta os mesmos campos nela sem quebrar nada.
-
-## 09-sistema.html
-- **20/10/2026** — o piso de 24 px nos alvos e de 12 px na letra, com a folha do piso na cabeça da página (escolha «Sistema: A» dela, 20/10); espera só o `--publicar 09`. Enquanto isso, a página publicada segue com os alvos e as letras de antes, e o pacote pinta os mesmos campos nela sem quebrar nada.
-
-## 08-conexoes.html
-- **20/10/2026** — duas palavras de dica em minúscula («tem», «total»: a regra da primeira letra); espera só o `--publicar 08`. Enquanto isso, a página publicada segue com as duas em caixa alta, e o portão `maiuscula-decorativa` fica vermelho nela até a publicação.
-
-## 10-perfis.html
-- **20/10/2026** — a coluna do ID da peça da guarda some a 1259 px e abaixo (com o ID, a tabela só cabe a partir de 1240 px), e a tabela deixa de rolar de lado (escolha dela, 20/10); espera só o `--publicar 10`. Enquanto isso, a página publicada segue com a coluna e com a rolagem lateral a 1212 px.
+<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
