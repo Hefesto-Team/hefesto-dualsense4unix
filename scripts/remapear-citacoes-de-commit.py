@@ -9,12 +9,17 @@ seca (`velho -> novo`), que quem coordena revê antes de gravar.
 
 Só troca o que resolve sem ambiguidade:
 
-* o token tem de ter 7 a 40 dígitos hexadecimais (o comprimento que o `git log --abbrev` dá),
-  letras e números juntos, e ser prefixo de UM só SHA conhecido (os dos mapas e os commits do
-  repositório); prefixo de dois é ambíguo e fica;
+* o token tem de ter 7 a 40 dígitos hexadecimais (o comprimento que o `git log --abbrev` dá) e
+  ser prefixo de UM só SHA conhecido (os dos mapas e os commits do repositório); prefixo de dois
+  é ambíguo e fica;
+* o token só de algarismos (ou só de letras) que resolve pode ser um número (ou uma palavra), e
+  não um commit: fica, e vai para a lista dos «a conferir à mão», com o novo ao lado; quem
+  coordena confere e grava com `--com-os-a-conferir` (medido em 21/10/2026: as doze citações só de
+  algarismos que a árvore tinha eram todas de commit, e calá-las deixava a citação morta sem aviso);
 * o último elo tem de ser outro SHA (commit podado vira zero no mapa: fica, e vai para a conta
   dos «podados») e, havendo repositório, tem de existir nele; o texto novo mantém o comprimento
-  do citado, então nenhuma citação `arquivo:linha` anda;
+  do citado, então nenhuma citação `arquivo:linha` anda, e tem de ser prefixo de UM só SHA
+  conhecido (o curto que nasce ambíguo fica, e vai para a lista);
 * hash do kernel ou do BlueZ não é prefixo de nenhum SHA nosso: não resolve, não se toca.
 
 Cada mapa vem de `--mapa`; sem nenhum, vale a cadeia da casa. O mapa PADRÃO que não existe ainda
@@ -83,11 +88,12 @@ class Cadeia:
     """Os mapas na ordem, os SHAs do repositório e o que a prova de ambiguidade consulta."""
 
     mapas: list[dict[str, str]]
-    no_repositorio: Collection[str] = ()
-    """Os commits que o repositório tem. Vazio = sem repositório: o último elo não é conferido."""
+    no_repositorio: Collection[str] | None = None
+    """Os commits que o repositório tem. `None` = sem repositório: o último elo não é conferido.
+    Um repositório que respondeu VAZIO não é «sem repositório»: nada nele existe."""
     _universo: list[str] = field(init=False, default_factory=list)
     _velhos: set[str] = field(init=False, default_factory=set)
-    _existem: frozenset[str] = field(init=False, default_factory=frozenset)
+    _existem: frozenset[str] | None = field(init=False, default=None)
 
     def __post_init__(self) -> None:
         for m in self.mapas:
@@ -95,10 +101,11 @@ class Cadeia:
         todos = set(self._velhos)
         for m in self.mapas:
             todos.update(m.values())
-        todos.update(self.no_repositorio)
+        todos.update(self.no_repositorio or ())
         todos.discard(_ZERO)
         self._universo = sorted(todos)
-        self._existem = frozenset(self.no_repositorio)
+        if self.no_repositorio is not None:
+            self._existem = frozenset(self.no_repositorio)
 
     def _prefixados(self, token: str) -> list[str]:
         i = bisect.bisect_left(self._universo, token)
@@ -127,7 +134,11 @@ class Cadeia:
         return sha
 
     def existe(self, sha: str) -> bool:
-        return not self._existem or sha in self._existem
+        return self._existem is None or sha in self._existem
+
+    def unico(self, curto: str, sha: str) -> bool:
+        """O curto nomeia `sha` e só ele, entre os SHAs conhecidos."""
+        return self._prefixados(curto) == [sha]
 
 
 @dataclass
@@ -145,21 +156,23 @@ class Resultado:
     """Citações de commit que o mapa diz podado (o novo é zero): ficam."""
     ausentes: list[Troca] = field(default_factory=list)
     """Citações cujo último elo não existe no repositório: ficam até ele existir."""
+    a_conferir: list[Troca] = field(default_factory=list)
+    """Só algarismos ou só letras, ou o curto novo ambíguo: ficam (salvo `com_os_a_conferir`)."""
 
 
 def _tem_letra_e_numero(token: str) -> bool:
     return bool(re.search(r"[a-f]", token) and re.search(r"[0-9]", token))
 
 
-def remapear_texto(texto: str, cadeia: Cadeia, minimo: int = MINIMO) -> Resultado:
+def remapear_texto(
+    texto: str, cadeia: Cadeia, minimo: int = MINIMO, com_os_a_conferir: bool = False
+) -> Resultado:
     """Troca cada citação que a cadeia resolve; devolve o texto novo e a lista seca."""
     res = Resultado(texto)
     achar = re.compile(r"\b[0-9a-f]{%d,40}\b" % minimo)
 
     def troca(m: re.Match[str]) -> str:
         token = m.group(0)
-        if not _tem_letra_e_numero(token):
-            return token
         velho = cadeia.resolve(token)
         if velho is None:
             return token
@@ -173,6 +186,12 @@ def remapear_texto(texto: str, cadeia: Cadeia, minimo: int = MINIMO) -> Resultad
         curto = novo[: len(token)]
         if not cadeia.existe(novo):
             res.ausentes.append(Troca(linha, token, curto))
+            return token
+        if not cadeia.unico(curto, novo):
+            res.a_conferir.append(Troca(linha, token, curto))
+            return token
+        if not _tem_letra_e_numero(token) and not com_os_a_conferir:
+            res.a_conferir.append(Troca(linha, token, curto))
             return token
         res.trocas.append(Troca(linha, token, curto))
         return curto
@@ -199,13 +218,14 @@ def _arquivos_do_git(raiz: Path, caminhos: Sequence[str]) -> list[Path]:
 
 
 def _commits_do_repositorio(raiz: Path) -> list[str]:
+    """Os commits do repositório. Falha do git é erro: lista vazia desligaria a guarda de existência."""
     proc = subprocess.run(
         ["git", "-C", str(raiz), "--no-replace-objects", "rev-list", "--all"],
         capture_output=True,
         text=True,
-        check=False,
+        check=True,
     )
-    return proc.stdout.split() if proc.returncode == 0 else []
+    return proc.stdout.split()
 
 
 def _identidades(
@@ -282,6 +302,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     ap.add_argument("--minimo", type=int, default=MINIMO, help=f"dígitos mínimos (padrão {MINIMO})")
     ap.add_argument("--escrever", action="store_true", help="grava; sem isto só mostra")
     ap.add_argument(
+        "--com-os-a-conferir",
+        action="store_true",
+        help="troca também o token só de algarismos ou só de letras, depois de conferido à mão",
+    )
+    ap.add_argument(
         "--gerar-ponte",
         nargs=3,
         metavar=("MAPA", "REPO_DOS_ALVOS", "SAIDA"),
@@ -316,7 +341,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     for p in ausentes:
         print(f"mapa ainda ausente (as citações dele ficam): {p}")
 
-    total = podados = ausentes_do_repo = com_troca = 0
+    total = podados = ausentes_do_repo = a_conferir = com_troca = 0
     for arq in arquivos:
         if arq.is_symlink() or not arq.is_file():
             continue
@@ -324,9 +349,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             texto = arq.read_bytes().decode("utf-8")
         except UnicodeDecodeError:
             continue
-        res = remapear_texto(texto, cadeia, args.minimo)
+        res = remapear_texto(texto, cadeia, args.minimo, args.com_os_a_conferir)
         podados += len(res.podados)
         ausentes_do_repo += len(res.ausentes)
+        a_conferir += len(res.a_conferir)
         rel = arq.relative_to(raiz)
         for t in res.podados:
             print(f"   fica, podado no mapa: {rel}:{t.linha} {t.velho}")
@@ -334,6 +360,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(
                 f"   fica, o novo não existe no repositório: {rel}:{t.linha} {t.velho} -> {t.novo}"
             )
+        for t in res.a_conferir:
+            print(f"   fica, a conferir à mão: {rel}:{t.linha} {t.velho} -> {t.novo}")
         if not res.trocas:
             continue
         com_troca += 1
@@ -346,7 +374,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     verbo = "escritas" if args.escrever else "a escrever (sem --escrever)"
     print(
         f"total: {total} trocas em {com_troca} arquivos, {verbo}; "
-        f"podados (ficam): {podados}; sem o commit novo no repositório (ficam): {ausentes_do_repo}"
+        f"podados (ficam): {podados}; sem o commit novo no repositório (ficam): {ausentes_do_repo}; "
+        f"a conferir à mão (ficam): {a_conferir}"
     )
     return 0
 

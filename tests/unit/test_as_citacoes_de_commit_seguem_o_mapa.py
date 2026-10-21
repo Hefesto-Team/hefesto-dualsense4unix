@@ -106,14 +106,28 @@ def test_hash_de_terceiros_nao_resolve_e_nao_se_toca() -> None:
     )
 
 
-def test_so_letras_ou_so_numeros_nao_e_commit() -> None:
+def test_so_letras_ou_so_numeros_fica_e_vai_para_a_lista_a_conferir() -> None:
+    """Pode ser número ou palavra: não se troca sozinho, mas também não some calado da lista."""
     letras = "abcdefa" + "1" * 33
     numeros = "1234567" + "a" * 33
     cadeia = R.Cadeia([{letras: B, numeros: C}])
-    assert (
-        R.remapear_texto(f"{letras[:7]} {numeros[:7]}", cadeia).texto
-        == f"{letras[:7]} {numeros[:7]}"
-    )
+    res = R.remapear_texto(f"{letras[:7]} {numeros[:7]}", cadeia)
+    assert res.texto == f"{letras[:7]} {numeros[:7]}" and not res.trocas
+    assert [(t.velho, t.novo) for t in res.a_conferir] == [
+        (letras[:7], B[:7]),
+        (numeros[:7], C[:7]),
+    ]
+    conferido = R.remapear_texto(f"{numeros[:7]}", cadeia, com_os_a_conferir=True)
+    assert conferido.texto == C[:7] and not conferido.a_conferir
+
+
+def test_o_curto_novo_que_nasce_ambiguo_fica() -> None:
+    outra = "e" if B[7] != "e" else "d"
+    vizinho = B[:7] + outra * 33
+    cadeia = R.Cadeia([{A: B}], [B, vizinho])
+    res = R.remapear_texto(f"{A[:7]} e {A[:10]}", cadeia)
+    assert res.texto == f"{A[:7]} e {B[:10]}"
+    assert [(t.velho, t.novo) for t in res.a_conferir] == [(A[:7], B[:7])]
 
 
 def test_sequencia_mais_longa_que_um_sha_nao_e_cortada() -> None:
@@ -146,6 +160,21 @@ def test_o_ultimo_elo_tem_de_existir_no_repositorio() -> None:
     assert res.texto == A[:9] and [t.velho for t in res.ausentes] == [A[:9]]
     com_o_novo = R.Cadeia([{A: B}], [C, B])
     assert R.remapear_texto(f"{A[:9]}", com_o_novo).texto == B[:9]
+
+
+def test_repositorio_que_respondeu_vazio_nao_desliga_a_guarda() -> None:
+    """Vazio é «nada existe», não «sem repositório»: o novo que ninguém tem não entra."""
+    res = R.remapear_texto(f"{A[:9]}", R.Cadeia([{A: B}], []))
+    assert res.texto == A[:9] and [t.velho for t in res.ausentes] == [A[:9]]
+
+
+def test_git_que_falha_ao_listar_os_commits_e_erro(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Engolir a falha devolveria lista vazia, e a guarda de existência sumiria calada."""
+    monkeypatch.setenv("GIT_DIR", str(tmp_path / "nao-e-repositorio"))
+    with pytest.raises(subprocess.CalledProcessError):
+        R._commits_do_repositorio(tmp_path)
 
 
 # --- os mapas ----------
