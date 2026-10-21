@@ -637,10 +637,10 @@ async def reconnect_loop(
             nos.poll()
 
         initial_connected = bool(daemon.controller.is_connected())
-        restored = initial_connected
-        was_connected = initial_connected
+        restored = was_connected = initial_connected
         alvos_antes = alvos_conectados_de(daemon) or {}
         transportes_antes = transportes_dos_alvos_de(daemon) or {}
+        anunciar_a_chegada(daemon, {}, alvos_antes)  # a subida do daemon: quem já estava toca
         while not daemon._is_stopping():
             try:
                 await daemon._run_blocking(daemon.controller.connect)

@@ -1,6 +1,7 @@
 """A-TROCA-DE-CABO-PARA-RADIO-NAO-E-CHEGADA-01: o mesmo controle em outro fio não ganha a Chegada.
 
-A Chegada é da conexão (`D-2010-A-CHEGADA-NAO-TOCA-QUEM-JA-ESTAVA`). O cabo que assume do
+A Chegada é da conexão e da subida do daemon (A-CHEGADA-TOCA-TODOS-QUANDO-O-HEFESTO-REINICIA-01,
+`test_a_chegada_e_a_assinatura_de_cada_controle.py`). O cabo que assume do
 rádio, ou o controle que volta pelo outro fio, não conectou: a barra não sobe de novo, a háptica
 não toca e o gatilho não clica no meio do jogo. A queda de verdade continua tocando ao voltar.
 

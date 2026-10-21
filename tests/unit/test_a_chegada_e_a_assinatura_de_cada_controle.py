@@ -103,7 +103,7 @@ def _disparar(daemon: Any) -> None:
 
 
 def test_uma_chegada_por_conexao_e_reconectar_toca_de_novo() -> None:
-    """D-2010-A-CHEGADA-NAO-TOCA-QUEM-JA-ESTAVA."""
+    """A Chegada é da conexão: uma por controle que entra, e reconectar toca de novo."""
     mesa = _Mesa()
     daemon = _daemon(mesa)
     assert _chegar(daemon, AZUL, BRANCO, VERMELHO, ROXO) == 4
@@ -361,6 +361,47 @@ async def test_o_laco_anuncia_o_primeiro_controle_e_os_que_chegam_depois(
         vigia.acordar()
         await _ate(lambda: mesa.canais(BRANCO) == {"luz", "toque", "gatilho"})
         assert sum(1 for c, u, _ in mesa.registro if c == "toque" and u == AZUL) == 1
+    finally:
+        daemon._stop_event.set()
+        await laco
+
+
+@pytest.mark.asyncio
+async def test_a_subida_do_daemon_toca_todos_que_ja_estavam(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A-CHEGADA-TOCA-TODOS-QUANDO-O-HEFESTO-REINICIA-01: reiniciar o daemon toca os quatro.
+
+    O laço nasce com a mesa cheia (é o `install.sh` reiniciando o serviço): cada controle ganha
+    a Chegada, depois da espera da rajada. A troca de fio de um deles, depois, não toca de novo.
+    MORDIDA: tire o `anunciar_a_chegada(daemon, {}, alvos_antes)` da subida do laço e reprova.
+    """
+    monkeypatch.setattr(conn, "RECONNECT_PROBE_INTERVAL_SEC", 0.01)
+    monkeypatch.setattr(conn, "RECONNECT_HOTPLUG_POLL_INTERVAL_SEC", 0.01)
+    monkeypatch.setattr(conn, "RECONNECT_ONLINE_CHECK_INTERVAL_SEC", 30.0)
+    monkeypatch.setattr(conn, "PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC", 0.01)
+    monkeypatch.setattr(ch, "ESPERA_S", 0.05)
+    quatro = (AZUL, BRANCO, VERMELHO, ROXO)
+    mesa = _Mesa(na_mesa=quatro)
+    controle = _Controlador()
+    controle.online, controle.alvos = True, {f"k{n}": u for n, u in enumerate(quatro)}
+    daemon: Any = _DaemonDoLaco(mesa, controle)
+    vigia = _Vigia()
+    laco = asyncio.create_task(conn.reconnect_loop(daemon, input_watch=vigia))
+    try:
+        registro = conn.registro_de_gatilhos_de(daemon)
+        await _ate(lambda: registro.obter(ch.NOME_DO_GATILHO) is not None)
+        gatilho = registro.obter(ch.NOME_DO_GATILHO)
+        assert gatilho is not None and gatilho.atraso_s == ch.ESPERA_S, "sem a espera da rajada"
+        await _ate(lambda: all(mesa.canais(u) == {"luz", "toque", "gatilho"} for u in quatro))
+        assert sorted(u for c, u, _ in mesa.registro if c == "toque") == sorted(quatro)
+        mesa.registro.clear()
+        # o AZUL troca de fio: o mesmo controle numa chave nova
+        controle.alvos = {**{f"k{n}": u for n, u in enumerate(quatro) if u != AZUL}, "k9": AZUL}
+        vigia.acordar()
+        await asyncio.sleep(0.3)
+        assert [u for c, u, _ in mesa.registro if c == "toque"] == [], (
+            "a troca de fio de quem já estava tocou a Chegada")
     finally:
         daemon._stop_event.set()
         await laco
