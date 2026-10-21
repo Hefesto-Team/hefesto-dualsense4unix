@@ -483,13 +483,11 @@ jobs:
           # (morte silenciosa aos ~40%, sem traceback) — trocaria um gate que
           # mente por um gate instável, que é pior.
           #
-          # Estado HONESTO de hoje: os ~210 testes de interface PULAM no CI.
-          # Isso aparece como `skipped` no relatório, em vez de ficar mascarado
-          # por um `|| echo warning` — mas continua sendo cobertura que só a
-          # máquina de desenvolvimento exerce. Fechar essa lacuna exige o
-          # `python3-gi` do SISTEMA (o setup-python isola o ambiente e não
-          # enxerga o dist-packages) ou um container dedicado a este job.
-          # Está registrado como pendência; não finja que está coberto.
+          # Aqui, sem o `gi`, PULAM os 138 arquivos de teste com `exigir_gi_real`
+          # de módulo (21/10/2026), como `skipped` no relatório, e não mascarados
+          # por um `|| echo warning`. Quem os roda é o job «Interface com GTK
+          # REAL», com o `python3-gi` do SISTEMA (o setup-python isola o
+          # ambiente e não enxerga o dist-packages).
           # `bubblewrap` e `librsvg2-common` entram por causa do
           # test_doctor_cobra_as_duas_obrigatorias (19/08/2026). Sem eles as duas
           # mordidas do doctor não RODAM aqui: a máscara precisa do `bwrap`, e a
