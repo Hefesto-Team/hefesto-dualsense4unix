@@ -11,6 +11,13 @@ repetir o gesto não tem motivo para isso.
 
 Roda o script DE VERDADE num lar de mentira, com `systemctl`, `pactl` e `wpctl` de mentira que só
 anotam a chamada: nada toca o áudio, o `~/.config` nem o WirePlumber de quem roda a suíte.
+
+O `sleep` também é de mentira (21/10/2026, A-SUITE-INTEIRA-CABE-EM-VINTE-MINUTOS-01): o script
+espera o `pactl` e o `wpctl` mostrarem uma fonte de captura (um laço de ~5 s, mais o `sleep 0.5`
+e o `sleep 1` do fim), e os dublês nunca mostram, então cada volta gastava o orçamento inteiro
+(133 s por arquivo, medido com `--durations`). A espera é só de relógio: nada neste arquivo lê a
+hora que o `sleep` faria passar (a idade dos drop-ins e a hora da subida são fixadas por
+`os.utime` e por `date +%s` do dublê), então a volta sem espera prova o mesmo.
 """
 from __future__ import annotations
 
@@ -39,6 +46,9 @@ class Lar:
         self.subiu = base / "subiu"
         binario = base / "bin"
         binario.mkdir()
+        sem_espera = binario / "sleep"
+        sem_espera.write_text("#!/bin/bash\nexit 0\n", encoding="utf-8")
+        sem_espera.chmod(0o755)
         for nome in ("systemctl", "pactl", "wpctl"):
             alvo = binario / nome
             vivo = (
@@ -217,10 +227,11 @@ def test_o_install_e_o_disable_nao_reiniciam_por_conta_propria() -> None:
         )
 
 
-def test_o_ambiente_do_teste_nao_tem_o_systemctl_real(lar: Lar) -> None:
-    """Trava do próprio teste: o `systemctl` que o script acha primeiro é o dublê."""
+@pytest.mark.parametrize("ferramenta", ["systemctl", "sleep"])
+def test_o_ambiente_do_teste_nao_tem_a_ferramenta_real(lar: Lar, ferramenta: str) -> None:
+    """Trava do próprio teste: o `systemctl` e o `sleep` que o script acha são os dublês."""
     achado = subprocess.run(
-        ["bash", "-c", "command -v systemctl"],
+        ["bash", "-c", f"command -v {ferramenta}"],
         capture_output=True, text=True, env=lar.env, check=False,
     ).stdout.strip()
     assert achado.startswith(str(lar.casa.parent)), achado
