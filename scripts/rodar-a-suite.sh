@@ -48,12 +48,24 @@
 # igual, e a partição cai no número de arquivos). O fecho reescreve o CSV
 # (`docs/process/ferramentas-da-leva/tempos-da-suite.py`).
 #
-# PARTES_EM_PARALELO=N (desligada por padrão): as partes sem arquivo que toque a
-# máquina rodam N a N, nas vagas do semáforo `VEZ_DO_PYTEST=<vez-do-pytest.sh>`
-# (`nenhum` roda sem semáforo); as que tocam continuam em série, depois. A
-# partição muda com a chave (as que tocam ficam juntas nas últimas partes). Só
-# se liga depois de uma corrida inteira, na máquina livre, sem morte do vigia de
-# memória do harness (a de 08/09).
+# PARTES_EM_PARALELO=N (21/10/2026: LIGADA por padrão na suíte inteira, com N=3, quando a
+# árvore tem o semáforo da casa `docs/process/ferramentas-da-leva/vez-do-pytest.sh` e a máquina
+# tem 8 núcleos ou mais; `PARTES_EM_PARALELO=0` desliga). As partes rodam em filhos, N a N, cada
+# um numa vaga do semáforo `VEZ_DO_PYTEST=<vez-do-pytest.sh>` (`nenhum` roda sem semáforo). Cada
+# filho de parte LEVE nasce com lar (HOME e XDG_*), TMPDIR, D-Bus e Xvfb próprios, como o
+# `portoes.sh` faz com cada pytest: dois filhos nunca dividem pasta, bus nem display. Quem TOCA a
+# máquina (o arquivo que cita um serviço do sistema ou do usuário, `PADRAO_QUE_TOCA`) vai nas
+# últimas partes e corre UMA por vez, ao lado das leves: o tempo da suíte é o da maior das duas
+# frentes, e não a soma. A partição muda com a chave (as que tocam ficam juntas), e só a corrida
+# da suíte inteira a liga: `rodar-a-suite.sh NN`, o lote e o CI continuam com a divisão e o
+# ambiente de sempre.
+#
+# O QUE NÃO TOCA MAIS A MÁQUINA (21/10/2026): `uinput`, `uhid`, `hidraw`, `/dev/input` e `evdev`
+# saíram do padrão. O `conftest.py` recusa a abertura de `/dev/uinput` e `/dev/uhid` (e as
+# fábricas `uinput.Device` e `evdev.UInput`) em TODO processo de teste (VIGIA-DE-APARELHO-01), e
+# aponta o sysfs de hidraw, o configfs e o gadget para pastas vazias; ler `/dev/input` não escreve
+# em nada. O padrão antigo punha 754 de 1921 arquivos na frente das que tocam (30 min de 64);
+# `PADRAO_QUE_TOCA=<regex>` devolve o padrão que se quiser.
 #
 # A saída de cada parte vai para ARQUIVO — nunca crua no terminal dela, que é o
 # mesmo em que a conversa acontece.
@@ -128,8 +140,21 @@ total=$(wc -l < "$SAIDA/todos.txt")
 # QUEM TOCA A MÁQUINA (só para a chave PARTES_EM_PARALELO): o arquivo que cita o
 # que mexe no aparelho, no som, no BlueZ ou no systemd. Errar para mais custa
 # paralelismo; errar para menos põe um teste que toca o aparelho ao lado de outro.
-PARTES_EM_PARALELO="${PARTES_EM_PARALELO:-0}"
-PADRAO_QUE_TOCA="uinput|UInput|hidraw|uhid|UHID|/dev/input|evdev|usbip|vudc|configfs|udevadm|systemctl|bluetoothctl|pactl|wpctl|pw-cli"
+PADRAO_QUE_TOCA="${PADRAO_QUE_TOCA:-usbip|vudc|configfs|udevadm|systemctl|bluetoothctl|pactl|wpctl|pw-cli}"
+# A chave liga sozinha na suíte inteira (nem parte, nem lote, nem argumento a mais) da árvore que
+# tem o semáforo da casa: é a máquina onde o `vez-do-pytest.sh` divide as vagas entre os agentes.
+# Numa árvore sem ele (um clone, o runner do CI) ela fica desligada e a corrida é a de sempre.
+if [ -z "${PARTES_EM_PARALELO:-}" ]; then
+  PARTES_EM_PARALELO=0
+  _vez_da_casa="$RAIZ/docs/process/ferramentas-da-leva/vez-do-pytest.sh"
+  _nucleos=$(nproc 2> /dev/null || echo 1)
+  if [ -z "${1:-}" ] && [ -z "$LOTE" ] && [ -z "${SUITE_PYTEST_ARGS:-}" ] && [ -z "${PARTIDO:-}" ] \
+      && [ "$_nucleos" -ge 8 ] 2> /dev/null && { [ -n "${VEZ_DO_PYTEST:-}" ] || [ -f "$_vez_da_casa" ]; }; then
+    PARTES_EM_PARALELO=3
+    VEZ_DO_PYTEST="${VEZ_DO_PYTEST:-$_vez_da_casa}"
+  fi
+  unset _vez_da_casa _nucleos
+fi
 CSV_DOS_TEMPOS="${CSV_DOS_TEMPOS:-$RAIZ/docs/data/tempos-da-suite.csv}"
 [ -n "${PARTIDO:-}" ] || : > "$SAIDA/toca-a-maquina.txt"
 if [ -z "${PARTIDO:-}" ] && [ "$PARTES_EM_PARALELO" -gt 0 ] 2> /dev/null; then
@@ -355,28 +380,75 @@ rodar_pytest() {  # $1 = o log; o resto, os arquivos
 
 sozinhos=0
 feitas=" "
-# A CHAVE (desligada por padrão): as partes sem arquivo que toque a máquina, N a N,
-# cada uma num filho que pega uma vaga do semáforo. O filho é este mesmo script
-# com a parte pedida (e por isso sem recibo); a saída de cada um fica em
-# `paralelo-NN.*` e sai aqui, na ordem das partes, quando todos voltam.
+# A CHAVE: as partes em filhos, N a N, cada um numa vaga do semáforo. O filho é este mesmo script com
+# a parte pedida (e por isso sem recibo); a saída de cada um fica em `paralelo-NN.*` e sai aqui, na
+# ordem das partes, quando todos voltam. DUAS FILAS, UMA FRENTE CADA: a das partes que tocam a máquina
+# corre uma de cada vez (nunca duas ao mesmo tempo), e a das leves enche as vagas que sobram. Com as
+# três vagas, a parede é a da fila das que tocam, ou a das leves dividida pelas vagas que restam,
+# a maior das duas; a soma das duas seria a corrida em série.
 if [ "$PARTES_EM_PARALELO" -gt 0 ] 2> /dev/null && [ -z "$so_esta" ]; then
-  em_voo=0
   marca=$(mktemp "$SAIDA/marca.XXXXXX")
+  fila_toca=()
+  fila_leve=()
   for n in "${partes_desta_divisao[@]}"; do
     f="$SAIDA/parte-$n"
     [ -s "$f" ] || continue
-    ! grep -qxFf "$SAIDA/toca-a-maquina.txt" "$f" || continue
     feitas="$feitas$n "
-    while [ "$em_voo" -ge "$PARTES_EM_PARALELO" ]; do wait -n || true; em_voo=$((em_voo - 1)); done
+    if grep -qxFf "$SAIDA/toca-a-maquina.txt" "$f"; then fila_toca+=("$n"); else fila_leve+=("$n"); fi
+  done
+  declare -A pid_de=() toca_de=()
+  em_voo=0
+  toca_voando=0
+  # O filho da parte LEVE nasce com lar, TMPDIR, D-Bus e Xvfb próprios (como cada pytest do
+  # `portoes.sh`); o da parte que toca a máquina nasce no ambiente de quem chama.
+  lancar_filho() {  # $1 = a parte, $2 = 1 se toca a máquina
+    local n="$1" toca="$2" lar prefixo=()
     (
       export PARTIDO=1 PARTES_EM_PARALELO=0 SAIDA PY
-      if [ "$VEZ_DO_PYTEST" = nenhum ]; then bash "$0" "$n"; else bash "$VEZ_DO_PYTEST" bash "$0" "$n"; fi \
-        > "$SAIDA/paralelo-$n.saida" 2>&1
+      comando=(bash "$0" "$n")
+      if [ "$toca" = 0 ]; then
+        lar=$(mktemp -d "${TMPDIR:-/tmp}/suite-lar-XXXXXX")
+        mkdir -p "$lar"/{config,data,cache,state,runtime,tmp}
+        chmod 700 "$lar/runtime"
+        command -v xvfb-run > /dev/null 2>&1 && prefixo=(xvfb-run -a)
+        command -v dbus-run-session > /dev/null 2>&1 && prefixo=(dbus-run-session -- ${prefixo[@]+"${prefixo[@]}"})
+        comando=(env HOME="$lar" XDG_CONFIG_HOME="$lar/config" XDG_DATA_HOME="$lar/data"
+          XDG_CACHE_HOME="$lar/cache" XDG_STATE_HOME="$lar/state" XDG_RUNTIME_DIR="$lar/runtime"
+          TMPDIR="$lar/tmp" ${prefixo[@]+"${prefixo[@]}"} "${comando[@]}")
+      fi
+      # a vaga é a mais de fora: o Xvfb e o lar só nascem com a vaga na mão
+      if [ "$VEZ_DO_PYTEST" != nenhum ]; then comando=(bash "$VEZ_DO_PYTEST" "${comando[@]}"); fi
+      "${comando[@]}" > "$SAIDA/paralelo-$n.saida" 2>&1
       echo $? > "$SAIDA/paralelo-$n.rc"
+      [ -z "${lar:-}" ] || rm -rf "$lar"
     ) &
+    pid_de[$n]=$!
+    toca_de[$n]=$toca
     em_voo=$((em_voo + 1))
+    [ "$toca" = 0 ] || toca_voando=1
+  }
+  while [ ${#fila_toca[@]} -gt 0 ] || [ ${#fila_leve[@]} -gt 0 ] || [ "$em_voo" -gt 0 ]; do
+    while [ "$em_voo" -lt "$PARTES_EM_PARALELO" ]; do
+      if [ "$toca_voando" -eq 0 ] && [ ${#fila_toca[@]} -gt 0 ]; then
+        lancar_filho "${fila_toca[0]}" 1
+        fila_toca=("${fila_toca[@]:1}")
+      elif [ ${#fila_leve[@]} -gt 0 ]; then
+        lancar_filho "${fila_leve[0]}" 0
+        fila_leve=("${fila_leve[@]:1}")
+      else
+        break
+      fi
+    done
+    [ "$em_voo" -gt 0 ] || break
+    fim=""
+    wait -n -p fim || true
+    for n in "${!pid_de[@]}"; do
+      [ "${pid_de[$n]}" = "$fim" ] || continue
+      [ "${toca_de[$n]}" = 0 ] || toca_voando=0
+      unset "pid_de[$n]"
+      em_voo=$((em_voo - 1))
+    done
   done
-  wait
   for n in $feitas; do
     # os logs que o filho escreveu agora: o que não é mais novo que a marca é de corrida
     # velha (o filho morreu antes de abrir o log), e não conta

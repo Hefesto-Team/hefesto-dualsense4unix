@@ -211,7 +211,7 @@ def test_sem_o_csv_a_particao_cai_no_numero_de_arquivos(tmp_path: Path) -> None:
 
 def test_a_chave_desligada_nao_separa_quem_toca_a_maquina(tmp_path: Path) -> None:
     raiz = tmp_path / "arvore"
-    toca = "# abre /dev/uinput\ndef test_x():\n    assert True\n"
+    toca = "# chama o systemctl\ndef test_x():\n    assert True\n"
     nomes = [f"test_{i:02d}.py" for i in range(6)]
     _arvore(raiz, None, conteudo={"test_00.py": toca}, nomes=nomes)
     saida = tmp_path / "saida"
@@ -230,7 +230,7 @@ def test_a_chave_pede_o_semaforo(tmp_path: Path) -> None:
 
 
 def _arvore_da_chave(raiz: Path) -> None:
-    toca = "# abre /dev/uinput\ndef test_x():\n    assert True\n"
+    toca = "# chama o systemctl\ndef test_x():\n    assert True\n"
     nomes = [f"test_{i:02d}.py" for i in range(8)]
     tempos = {n: 10_000 for n in nomes}
     _arvore(raiz, tempos, conteudo={"test_05.py": toca, "test_06.py": toca}, nomes=nomes)

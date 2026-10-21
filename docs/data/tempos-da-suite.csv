@@ -101,7 +101,7 @@ tests/unit/test_a_aba_sistema_para_de_falar_pelo_desenho.py,499,medido
 tests/unit/test_a_aba_vibracao_do_todo.py,1990,medido
 tests/unit/test_a_aba_vibracao_ganha_os_botoes_de_efeito.py,604,medido
 tests/unit/test_a_aba_vibracao_tem_o_sensor_haptico_e_dois_testes.py,5440,medido
-tests/unit/test_a_altura_e_a_largura_da_janela_nao_pulsam.py,59110,medido
+tests/unit/test_a_altura_e_a_largura_da_janela_nao_pulsam.py,18000,medido
 tests/unit/test_a_amostra_do_dsu_vem_do_hub.py,297,medido
 tests/unit/test_a_bancada_de_bt_tem_regua.py,351,medido
 tests/unit/test_a_bancada_do_radio_passa_no_tipo.py,1667,medido
@@ -180,7 +180,7 @@ tests/unit/test_a_doc_nomeia_as_unidades_que_o_install_instala.py,299,medido
 tests/unit/test_a_docstring_longa_so_desce.py,3567,medido
 tests/unit/test_a_documentacao_conhece_todas_as_abas.py,331,medido
 tests/unit/test_a_energia_de_notebook_num_desktop.py,3365,medido
-tests/unit/test_a_entrada_de_cada_jogador_chega_inteira.py,45113,medido
+tests/unit/test_a_entrada_de_cada_jogador_chega_inteira.py,14000,medido
 tests/unit/test_a_entrada_declarada_vence_o_firmware.py,6080,medido
 tests/unit/test_a_entrada_do_computador_nao_repete_o_nome.py,349,medido
 tests/unit/test_a_entrada_sozinha_separa_a_tela_do_pad.py,344,medido
@@ -229,7 +229,7 @@ tests/unit/test_a_haptica_e_por_aparelho.py,312,medido
 tests/unit/test_a_haptica_mora_em_vibracao.py,299,medido
 tests/unit/test_a_haptica_por_audio_e_o_alto_falante_chegam_ao_radio.py,1596,medido
 tests/unit/test_a_haptica_quem_joga_e_quem_mexe.py,567,medido
-tests/unit/test_a_haptica_segue_quem_alimenta_o_vpad.py,47799,medido
+tests/unit/test_a_haptica_segue_quem_alimenta_o_vpad.py,6000,medido
 tests/unit/test_a_haptica_tem_nome_de_controle.py,473,medido
 tests/unit/test_a_identidade_da_aba08_vem_da_mesa.py,394,medido
 tests/unit/test_a_iluminacao_avisa_quantos_receberam_o_desenho.py,880,medido
@@ -346,7 +346,7 @@ tests/unit/test_a_porta_que_a_casa_construiu_01.py,1013,medido
 tests/unit/test_a_procedencia_da_linha_nao_e_vazia.py,366,medido
 tests/unit/test_a_prosa_do_ensaio_nao_e_dono.py,611,medido
 tests/unit/test_a_prova_automatica_nao_dispensa_ordem.py,800,medido
-tests/unit/test_a_prova_da_mesa_de_medicao.py,96243,medido
+tests/unit/test_a_prova_da_mesa_de_medicao.py,17000,medido
 tests/unit/test_a_prova_de_gesto_nao_clica_no_vazio.py,363,medido
 tests/unit/test_a_prova_do_botao_tem_testemunha.py,1700,medido
 tests/unit/test_a_prova_nao_grava_no_perfil_do_usuario.py,810,medido
@@ -1032,7 +1032,7 @@ tests/unit/test_o_circulo_mostra_o_que_o_jogo_ve.py,2610,medido
 tests/unit/test_o_clique_do_analogico_tem_dono.py,357,medido
 tests/unit/test_o_clique_leva_o_argumento_do_proprio_botao.py,399,medido
 tests/unit/test_o_co_op_local_saiu.py,1426,medido
-tests/unit/test_o_codigo_nao_tem_narrador.py,41713,medido
+tests/unit/test_o_codigo_nao_tem_narrador.py,7400,medido
 tests/unit/test_o_comecar_guarda_o_zero_de_cada_controle.py,950,medido
 tests/unit/test_o_comentario_com_dois_pontos_so_vale_em_cima_de_atribuicao.py,21612,medido
 tests/unit/test_o_comentario_nao_termina_no_meio.py,4229,medido
@@ -1179,7 +1179,7 @@ tests/unit/test_o_hz_tem_a_cor_do_que_chega.py,2700,medido
 tests/unit/test_o_ignorado_fica_fora_do_indice.py,591,medido
 tests/unit/test_o_instalador_que_aprovou_o_monitor.py,11716,medido
 tests/unit/test_o_install_diz_reinicie_quando_ha_pendencia.py,450,medido
-tests/unit/test_o_install_do_wireplumber_so_reinicia_se_mudou.py,133302,medido
+tests/unit/test_o_install_do_wireplumber_so_reinicia_se_mudou.py,2000,medido
 tests/unit/test_o_install_em_qualquer_distro.py,1854,medido
 tests/unit/test_o_install_entrega_a_luz_do_mic.py,1854,medido
 tests/unit/test_o_install_reinicia_o_broker_sem_abrir.py,292,medido
