@@ -48,7 +48,7 @@ def sessao(monkeypatch):
 
 def test_a_barra_da_janela_fica_do_lado_do_sistema(gtk, sessao) -> None:
     """A queixa de uso, fechada: sob COSMIC os três botões vão para a direita."""
-    from hefesto_dualsense4unix.app import theme
+    from hefesto_dualsense4unix.interface import tema_da_sessao as theme
 
     sessao("COSMIC")
     gtk.set_property("gtk-decoration-layout", O_QUE_A_SESSAO_DELA_DIZ)
@@ -71,7 +71,7 @@ def test_a_janela_do_produto_ja_nasce_com_a_barra_certa(gtk, sessao) -> None:
 
 def test_fora_do_cosmic_o_produto_nao_mexe(gtk, sessao) -> None:
     """Em GNOME/KDE o GTK já põe os botões onde o sistema os põe."""
-    from hefesto_dualsense4unix.app import theme
+    from hefesto_dualsense4unix.interface import tema_da_sessao as theme
 
     sessao("GNOME")
     gtk.set_property("gtk-decoration-layout", O_QUE_A_SESSAO_DELA_DIZ)
@@ -84,7 +84,7 @@ def test_nada_e_escrito_na_configuracao_dela(gtk, sessao) -> None:
     """A decisão ``1-a`` em uma linha: **nenhuma** linha no disco do usuário."""
     import ast
 
-    fonte = (RAIZ / "src/hefesto_dualsense4unix/app/theme.py").read_text(
+    fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/tema_da_sessao.py").read_text(
         encoding="utf-8")
     arvore = ast.parse(fonte)
     daqui = {"sessao_e_cosmic", "lado_dos_botoes_na_sessao",
@@ -114,7 +114,7 @@ def test_nada_e_escrito_na_configuracao_dela(gtk, sessao) -> None:
 
 def test_a_segunda_chamada_nao_reescreve(gtk, sessao) -> None:
     """Já está do lado certo? Não há o que fazer — e a função diz isso."""
-    from hefesto_dualsense4unix.app import theme
+    from hefesto_dualsense4unix.interface import tema_da_sessao as theme
 
     sessao("COSMIC")
     gtk.set_property("gtk-decoration-layout", A_DIREITA)
@@ -124,7 +124,7 @@ def test_a_segunda_chamada_nao_reescreve(gtk, sessao) -> None:
 
 def test_perguntar_a_sessao_devolve_a_resposta_errada(gtk) -> None:
     """A leitura do dconf continua existindo — e continua sem servir de cura."""
-    from hefesto_dualsense4unix.app import theme
+    from hefesto_dualsense4unix.interface import tema_da_sessao as theme
 
     dito = theme.lado_dos_botoes_na_sessao()
     if not dito:

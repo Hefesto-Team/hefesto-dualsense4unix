@@ -1,15 +1,10 @@
 """Aba Emulação: status do gamepad virtual Xbox360 + config."""
-# ruff: noqa: E402
 from __future__ import annotations
 
 import contextlib
 import re
 from pathlib import Path
 from typing import ClassVar
-
-import gi
-
-gi.require_version("Gtk", "3.0")
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.actions.mode_transition import (

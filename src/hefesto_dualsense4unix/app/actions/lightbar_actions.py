@@ -1,12 +1,7 @@
 """Aba Lightbar + Player LEDs."""
-# ruff: noqa: E402
 from __future__ import annotations
 
 from typing import Any
-
-import gi
-
-gi.require_version("Gtk", "3.0")
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.app.alvo_de_edicao import AlvoDeEdicao, alvo_de_edicao

@@ -1,15 +1,10 @@
 """Aba Sistema: o Hefesto está funcionando? liga sozinho? está saudável?"""
-# ruff: noqa: E402
 from __future__ import annotations
 
 import subprocess
 from collections.abc import Sequence
 from pathlib import Path
 from typing import ClassVar, Literal
-
-import gi
-
-gi.require_version("Gtk", "3.0")
 
 from hefesto_dualsense4unix.app.actions.base import WidgetAccessMixin
 from hefesto_dualsense4unix.daemon.service_install import SERVICE_NORMAL

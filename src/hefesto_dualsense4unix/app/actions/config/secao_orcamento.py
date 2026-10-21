@@ -63,7 +63,6 @@ from dataclasses import dataclass
 from typing import Any
 
 from hefesto_dualsense4unix.core.rumble import SEM_TETO, teto_do_orcamento
-from hefesto_dualsense4unix.utils.i18n import _
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -250,17 +249,3 @@ def perfil_na_tela(host: Any = None) -> str | None:
     if not isinstance(gravado, str):
         return None
     return PERFIL_POR_TETO.get(gravado)
-
-
-def _celula(texto: str, *, cabecalho: bool = False) -> Any:
-    """Uma célula da tabela: alinhada à esquerda, sem quebra."""
-    from gi.repository import Gtk
-
-    rotulo = Gtk.Label(label=_(texto))
-    rotulo.set_xalign(0.0)
-    if cabecalho:
-        with contextlib.suppress(Exception):
-            rotulo.get_style_context().add_class("dim-label")
-    return rotulo
-
-

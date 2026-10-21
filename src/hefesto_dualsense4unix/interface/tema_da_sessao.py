@@ -112,26 +112,9 @@ def adotar_o_tema_da_sessao() -> str:
 def pedir_a_variante_escura() -> bool:
     """Pede ao GTK a variante ESCURA do tema do sistema. Devolve se conseguiu.
 
-    BUG-GUI-COSMIC-WIDGET-CONTRAST-01: em COSMIC a sessão **não** aplica a
-    variante escura do tema GTK por padrão — medido na bancada em
-    04/09/2026, com a sessão inteira em escuro:
-
-        gsettings org.gnome.desktop.interface color-scheme = 'prefer-dark'
-        Gtk.Settings gtk-application-prefer-dark-theme     = False   ← aqui
-
-    Sem este pedido, todo widget que o CSS do aplicativo **não alcança** herda o
-    claro do sistema. Na janela GTK isso dava branco-sobre-branco em containers;
-    na janela do WebKit dá o defeito que ela fotografou em 04/09: o popup de um
-    ``<select>`` aberto nasce **branco, com a linha azul do sistema**, no meio de
-    uma interface escura. O popup é desenhado pelo WebKit fora da página — CSS de
-    autor não o alcança, e ``color-scheme: dark`` também não (medido nos dois, no
-    WebKitGTK 2.52.6: as duas fotos saíram idênticas, brancas).
-
-    ESTA FUNÇÃO TEM DOIS CHAMADORES, e é por isso que ela existe separada: a
-    regra morava dentro do ``apply_theme``, que também carrega o CSS Drácula da
-    janela antiga. A janela do WebKit não quer esse CSS — ela é HTML — mas quer
-    exatamente esta linha, e nasceu sem ela. É o padrão que esta casa persegue:
-    *a casa sabe e o produto não faz*.
+    Em COSMIC a sessão não aplica a variante escura sozinha, e o popup de um ``<select>`` do
+    WebKit, desenhado fora da página, nasce branco no meio da interface escura. O porquê, com a
+    medida de 04/09/2026, está em ``docs/research/o-porque-dos-modulos.md``.
     """
     settings = Gtk.Settings.get_default()
     if settings is None:

@@ -17,11 +17,11 @@ EXTENSAO_DO_GNOME = "ubuntu-appindicators@ubuntu.com"
 
 
 def _theme() -> Any:
-    """O `app/theme.py`, importado sob demanda."""
+    """O `interface/tema_da_sessao.py`, importado sob demanda."""
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("degraus do tamanho do texto")
-    from hefesto_dualsense4unix.app import theme
+    from hefesto_dualsense4unix.interface import tema_da_sessao as theme
 
     return theme
 

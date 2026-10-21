@@ -1642,3 +1642,20 @@ para acusar ausência, e esta aba não acusa.
 (`player_slot: null`) e não ganha cartão; a tela mostra no máximo quatro, os DualSense
 primeiro. O número é o de :func:`external_controllers.slot_of`, o mesmo do LED.
 ~~~~
+
+## A variante escura do tema (`interface/tema_da_sessao.py`, `pedir_a_variante_escura`), 21/10/2026
+
+BUG-GUI-COSMIC-WIDGET-CONTRAST-01: em COSMIC a sessão **não** aplica a variante escura do tema
+GTK por padrão — medido na bancada em 04/09/2026, com a sessão inteira em escuro:
+`gsettings org.gnome.desktop.interface color-scheme` = `'prefer-dark'` e, ao mesmo tempo,
+`Gtk.Settings gtk-application-prefer-dark-theme` = `False`.
+
+Sem o pedido, todo widget que o CSS do aplicativo não alcança herda o claro do sistema. Na janela
+do WebKit isso é o defeito que ela fotografou em 04/09: o popup de um `<select>` aberto nasce
+branco, com a linha azul do sistema, no meio de uma interface escura. O popup é desenhado pelo
+WebKit fora da página — CSS de autor não o alcança, e `color-scheme: dark` também não (medido nos
+dois, no WebKitGTK 2.52.6: as duas fotos saíram idênticas, brancas).
+
+A função existe separada porque a regra morava dentro do `apply_theme`, que também carregava o CSS
+Drácula da janela antiga: a janela do WebKit não quer esse CSS, mas quer exatamente esta linha, e
+nasceu sem ela. É o padrão que a casa persegue: a casa sabe e o produto não faz.

@@ -2448,21 +2448,12 @@ def _diario() -> str:
 
 
 def _por_na_area_de_transferencia(texto: str) -> bool:
-    """O texto na área de transferência, pelo laço do GTK. `False` = não deu."""
+    """O texto na área de transferência, pela moldura (dona do GTK). `False` = não deu."""
     try:
-        from gi.repository import Gdk, GLib, Gtk
+        from hefesto_dualsense4unix.interface.janela import por_na_area_de_transferencia
     except Exception:
         return False
-
-    def _agora() -> bool:
-        with contextlib.suppress(Exception):
-            area = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
-            area.set_text(texto, -1)
-            area.store()
-        return False
-
-    GLib.idle_add(_agora)
-    return True
+    return por_na_area_de_transferencia(texto)
 
 
 def _conhecidos_do_copiar(ctx: Contexto) -> list[str]:

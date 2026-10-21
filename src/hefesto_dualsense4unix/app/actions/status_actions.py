@@ -6,15 +6,10 @@ A janela, os cards e a máquina de reconexão saíram em 02/10/2026
 :class:`StatusActionsMixin` (``_por_numero_de_identidade``,
 ``_connected_controllers``, ``_bateria_da_mesa``).
 """
-# ruff: noqa: E402
 from __future__ import annotations
 
 from collections.abc import Mapping
 from typing import Any
-
-import gi
-
-gi.require_version("Gtk", "3.0")
 
 from hefesto_dualsense4unix.app import mesa
 from hefesto_dualsense4unix.app.actions.base import (

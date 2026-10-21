@@ -11,10 +11,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import gi
-
-gi.require_version("Gtk", "3.0")
-
 
 def extract_steam_appid(wm_class: object) -> str | None:
     """Appid do jogo Steam em foco a partir do ``window_detect_last_class``.

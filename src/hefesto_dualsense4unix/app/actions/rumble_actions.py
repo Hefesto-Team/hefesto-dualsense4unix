@@ -21,14 +21,9 @@ FEAT-RUMBLE-POLICY-PROFILE-01: cada escolha de política da usuária também é
 gravada em ``self.draft.rumble`` — o "Salvar Perfil" do rodapé persiste no
 perfil exatamente o que a aba mostra (aplicada de volta na ativação).
 """
-# ruff: noqa: E402
 from __future__ import annotations
 
 from typing import Any
-
-import gi
-
-gi.require_version("Gtk", "3.0")
 
 from hefesto_dualsense4unix.app.alvo_de_edicao import (
     AlvoDeEdicao,

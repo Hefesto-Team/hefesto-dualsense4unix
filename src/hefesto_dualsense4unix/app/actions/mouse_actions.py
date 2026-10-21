@@ -1,10 +1,5 @@
 """Aba Mouse: liga/desliga emulação de mouse+teclado via DualSense (FEAT-MOUSE-01)."""
-# ruff: noqa: E402
 from __future__ import annotations
-
-import gi
-
-gi.require_version("Gtk", "3.0")
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao

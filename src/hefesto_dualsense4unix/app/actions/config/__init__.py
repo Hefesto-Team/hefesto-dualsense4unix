@@ -14,7 +14,6 @@ ao bug de popup do cosmic-comp (cosmic-epoch#2497).
 
 **O mapa deste pacote**, para quem chega:
 
-    moldura.py       o molde visual de uma seção (Gtk.Frame + título + margens)
     secoes.py        a ORDEM das cinco
     secao_exame.py       seção 0 — "Está tudo certo?"
     secao_controles.py   seção 1 — "Os controles"

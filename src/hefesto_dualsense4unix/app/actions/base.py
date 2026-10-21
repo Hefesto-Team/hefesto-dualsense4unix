@@ -1,14 +1,8 @@
 """Helpers compartilhados por todos os mixins da GUI."""
-# ruff: noqa: E402
 from __future__ import annotations
 
 import contextlib
 from typing import Any
-
-import gi
-
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -46,9 +40,9 @@ def numero_do_controle(entry: dict[str, Any]) -> int:
 
 
 class WidgetAccessMixin:
-    """Acesso comum ao `Gtk.Builder` via `self.builder`."""
+    """Acesso comum ao `builder` via `self.builder`."""
 
-    builder: Gtk.Builder
+    builder: Any
 
     _escolha_pendente: dict[str, str] | None = None
 

@@ -7,16 +7,10 @@ Dois modos de editor:
 A preferência de modo persiste em ~/.config/hefesto-dualsense4unix/gui_preferences.json via
 gui_prefs.load_gui_prefs / gui_prefs.set_pref.
 """
-# ruff: noqa: E402
 from __future__ import annotations
 
 import contextlib
 from typing import Any, NamedTuple
-
-import gi
-
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
 
 from hefesto_dualsense4unix.app.actions.carona_do_wrapper import (
     CaronaDoWrapperMixin,
@@ -369,7 +363,7 @@ def mensagem_do_salvar(
 class ProfilesActionsMixin(CaronaDoWrapperMixin):
     """Controla a aba Perfis."""
 
-    _profiles_store: Gtk.ListStore
+    _profiles_store: Any
     _mode_advanced: bool = False
     # load_all_profiles() síncrono na thread GTK a cada clique/tecla. Populado
     # on_profile_selection_changed e _build_profile_from_editor.

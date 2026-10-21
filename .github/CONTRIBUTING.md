@@ -75,8 +75,8 @@ O encanamento de tradução existe (`po/`, `scripts/i18n_extract.sh`, `scripts/i
 
 <!-- CONTAGEM-GERADA — não edite à mão: scripts/check_o_projeto_e_traduzivel.py --publicar -->
 Dos **32** arquivos `.py` de `src/hefesto_dualsense4unix/app/actions/`
-— os que escrevem o texto vivo das abas —, **19** escrevem prosa com
-acentuação portuguesa fora da função de tradução, e **4** importam essa
+— os que escrevem o texto vivo das abas —, **20** escrevem prosa com
+acentuação portuguesa fora da função de tradução, e **2** importam essa
 função. Quem traduzisse os catálogos inteiros veria o esqueleto fixo mudar
 de idioma e o recado da janela continuar em português.
 

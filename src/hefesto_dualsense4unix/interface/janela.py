@@ -1,6 +1,7 @@
 """janela — a janela, as duas pontes e a guarda de carga. UMA VEZ, para as dez abas."""
 from __future__ import annotations
 
+import contextlib
 import json
 import pathlib
 import signal
@@ -18,7 +19,7 @@ gi.require_version("WebKit2", "4.1")
 
 from gi.repository import Gdk, Gio, GLib, Gtk, WebKit2  # noqa: E402
 
-from hefesto_dualsense4unix.app import theme as tema  # noqa: E402
+from hefesto_dualsense4unix.interface import tema_da_sessao as tema  # noqa: E402
 from hefesto_dualsense4unix.interface.folha_da_casa import (  # noqa: E402
     CLASSE_DA_ESPERA,
     FOLHA_DA_CASA,
@@ -262,6 +263,20 @@ def janela_proibida_na_tela() -> bool:
 def literal_js(valor: object) -> str:
     """Um valor Python virando literal JavaScript, por JSON e só por JSON."""
     return json.dumps(valor)
+
+
+def por_na_area_de_transferencia(texto: str) -> bool:
+    """O texto na área de transferência, pelo laço do GTK desta moldura. `False` = não deu."""
+
+    def _agora() -> bool:
+        with contextlib.suppress(Exception):
+            area = Gtk.Clipboard.get(Gdk.SELECTION_CLIPBOARD)
+            area.set_text(texto, -1)
+            area.store()
+        return False
+
+    GLib.idle_add(_agora)
+    return True
 
 
 def vestir_o_nome_acessivel(botao: Any, dica: str) -> None:
