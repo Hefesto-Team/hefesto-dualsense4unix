@@ -7,8 +7,9 @@ WebKit e os pilotos que a dirigem) e a BANDEJA. Todo o resto — a lógica de
 `app/actions/`, o daemon, a linha de comando — roda sem o `gi`, e por isso se
 testa sem ele.
 
-Reprova, nomeando `arquivo:linha`, o `from gi.repository import Gtk/Gdk`, o
-`import gi.repository.Gtk/Gdk` e o `gi.require_version("Gtk"/"Gdk", ...)` em
+Reprova, nomeando `arquivo:linha`, o `from gi.repository import Gtk/Gdk/WebKit2`, o
+`import gi.repository.Gtk/Gdk/WebKit2` e o `gi.require_version("Gtk"/"Gdk"/"WebKit2", ...)`
+(também como `require_version`, puxado por `from gi import`) em
 qualquer arquivo de `src/hefesto_dualsense4unix/` que não esteja em
 `DONOS_DO_GTK` ou nos `PADROES_DOS_PILOTOS`. A lista é a fonte, com o motivo de
 cada entrada, e ela não envelhece calada: entrada cujo arquivo sumiu, ou que já
@@ -34,8 +35,11 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 PACOTE = "src/hefesto_dualsense4unix"
 
-#: Os módulos do GTK que fazem widget e janela.
-MODULOS_DE_WIDGET = frozenset({"Gtk", "Gdk"})
+#: Os módulos do GTK que fazem widget e janela. O `WebKit2` carrega o `Gtk` junto.
+MODULOS_DE_WIDGET = frozenset({"Gtk", "Gdk", "WebKit2"})
+
+#: `gi.require_version(...)` e o `require_version(...)` puxado por `from gi import`.
+_PEDIDOS_DE_VERSAO = frozenset({"gi.require_version", "require_version"})
 
 #: Os donos do GTK, relativos a `src/hefesto_dualsense4unix/`, cada um com o motivo.
 DONOS_DO_GTK: dict[str, str] = {
@@ -91,7 +95,7 @@ def importacoes_de_widget(codigo: str) -> list[tuple[int, str]]:
         elif isinstance(no, ast.Import):
             achados += [(no.lineno, f"import {a.name}")
                         for a in no.names if _widget_de_modulo(a.name)]
-        elif isinstance(no, ast.Call) and no.args and _nome_do_modulo(no.func) == "gi.require_version":
+        elif isinstance(no, ast.Call) and no.args and _nome_do_modulo(no.func) in _PEDIDOS_DE_VERSAO:
             primeiro = no.args[0]
             if isinstance(primeiro, ast.Constant) and primeiro.value in MODULOS_DE_WIDGET:
                 achados.append((no.lineno, f'gi.require_version("{primeiro.value}", …)'))

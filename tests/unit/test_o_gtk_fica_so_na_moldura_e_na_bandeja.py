@@ -74,6 +74,8 @@ def test_a_arvore_de_mentira_em_ordem_passa(tmp_path: Path) -> None:
         "from gi.repository.Gtk import Window",
         'gi.require_version("Gtk", "3.0")',
         'gi.require_version("Gdk", "3.0")',
+        "from gi.repository import WebKit2",
+        'gi.require_version("WebKit2", "4.1")',
     ],
 )
 @pytest.mark.parametrize(
@@ -89,6 +91,17 @@ def test_gtk_ou_gdk_fora_das_duas_pontas_reprova_nomeando_a_linha(
     saida = _rodar(raiz)
     assert saida.returncode == 1, saida.stdout
     assert f"{PACOTE}/{onde}:3" in saida.stdout, saida.stdout
+
+
+def test_require_version_puxado_do_gi_tambem_reprova(tmp_path: Path) -> None:
+    raiz = _arvore_em_ordem(tmp_path)
+    alvo = raiz / PACOTE / "daemon/versao.py"
+    alvo.parent.mkdir(parents=True, exist_ok=True)
+    alvo.write_text('from gi import require_version\n\nrequire_version("Gtk", "3.0")\n',
+                    encoding="utf-8")
+    saida = _rodar(raiz)
+    assert saida.returncode == 1, saida.stdout
+    assert f"{PACOTE}/daemon/versao.py:3" in saida.stdout, saida.stdout
 
 
 def test_import_dentro_de_funcao_tambem_reprova(tmp_path: Path) -> None:
