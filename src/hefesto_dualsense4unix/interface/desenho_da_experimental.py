@@ -62,7 +62,6 @@ class Extensao(NamedTuple):
     chave: str
     nome: str
     dica: str
-    para: str
     janela: str
     cor: str = "purple"
     #: O que o produto pinta por cima do exemplo: a versão e a origem do registro, a chave e o «⋮» aberto.
@@ -76,10 +75,8 @@ class Extensao(NamedTuple):
 #: desenho; no produto, toda extensão ganha o roxo.
 EXTENSOES = (
     Extensao("kytyps5", "KytyPS5", "Os jogos do KytyPS5 na fila dos lançadores, com o perfil de cada um",
-             '<div class="ext-para"><span class="ext-rot">Para</span>Todos</div>',
              "#modificacao", "cyan"),  # (noqa-acento: âncora do HTML)
     Extensao("exemplo", "Minha extensão", "Uma extensão com opções em três grupos",
-             '<div class="ext-para"><span class="ext-rot">Para</span>Todos</div>',
              "#modificacao"),  # (noqa-acento: âncora do HTML)
 )
 
@@ -192,14 +189,12 @@ def extensao_html(ext: Extensao) -> str:
     """Uma linha do quadro «Extensões». Nome, versão e dica vêm do manifesto de terceiros: escapados."""
     menu = (f'\n            <div class="ext-menu ext-pop aberto" data-menu="{_a(ext.chave)}">{ext.menu}</div>'
             if ext.menu else "")
-    para = ext.para or '<div class="ext-para"></div>'
     return f'''          <div class="ext" data-modificacao="{_a(ext.chave)}">
             <span class="ext-ico" style="color:var(--{ext.cor})">{_icone(ext.chave)}</span>
             <div class="ext-quem">
               <span class="ext-sub"><span class="ext-nome">{_e(ext.nome)}</span>{_selo_da_extensao(ext)}<span class="ext-ver">{_e(ext.versao)}</span></span>
               <span class="ext-faz" data-dica="{_a(ext.dica)}">{_e(ext.dica)}</span>
             </div>
-            {para}
             {_chave_html(ext)}
             <a class="ext-conf" href="{_a(ext.janela)}" data-gesto="configurar-modificacao" data-v="{_a(ext.chave)}" data-dica="Configurações: {_a(ext.nome)}">{_engrenagem()}</a>
             <button class="ext-mais" data-gesto="mais-da-modificacao" data-v="{_a(ext.chave)}" data-dica="Atualizar, ver as permissões ou remover">⋮</button>{menu}

@@ -1391,8 +1391,7 @@ def _extensao_de(item: _Instalada) -> Any:
         versao = f"{e.versao} · a {esperando} espera o «Atualizar»"
         dica = " ".join(x for x in (getattr(e, "motivo_da_espera", ""), dica) if x)
     return exp.Extensao(
-        chave=e.id, nome=e.nome, dica=dica,
-        para="", janela=JANELA_DA_EXTENSAO,
+        chave=e.id, nome=e.nome, dica=dica, janela=JANELA_DA_EXTENSAO,
         versao=versao, selo=exp.SELO_DA_ORIGEM.get(e.origem, "Oficial"),
         ligada=e.ligada, menu=menu)
 

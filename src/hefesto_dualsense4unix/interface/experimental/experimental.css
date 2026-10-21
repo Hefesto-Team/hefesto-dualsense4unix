@@ -21,7 +21,7 @@
 .ext-sub { display:flex;align-items:center;gap:7px }
 .ext-ver { font-size:10.5px;color:var(--fg);font-family:'JetBrains Mono',monospace }
 .ext-faz { font-size:11.5px;color:var(--texto-suave);line-height:1.45 }
-.ext-para,.ext-estado { font-size:11.5px;color:var(--texto-suave);display:flex;align-items:center;gap:6px;white-space:nowrap }
+.ext-estado { font-size:11.5px;color:var(--texto-suave);display:flex;align-items:center;gap:6px;white-space:nowrap }
 .ext-rot { font-size:10.5px;color:var(--rot-campo) }
 .bol-ok { color:var(--green);font-size:9px }
 .ext-mais { width:26px;height:26px;border-radius:6px;border:1px solid transparent;background:transparent; color:var(--fg);cursor:pointer;font-size:14px }
@@ -320,7 +320,6 @@
 @media (max-height:780px) {.ext{min-height:42px;padding:2px 0} .ext-faz{font-size:11.5px} .lanc-fila{grid-auto-rows:minmax(34px,1fr);gap:6px 12px} .quadro-corpo{padding-bottom:8px} .ext-instalar-pe{padding-top:6px} .ext-instalar .btn,.ext-instalar input{height:30px}}
 .ext-lista { max-height:none;overflow:visible }
 .ext { grid-template-columns:28px minmax(220px,1fr) 180px 104px 30px 26px;column-gap:12px;align-items:center;min-height:0;padding:7px 0 }
-.ext-para { display:flex;align-items:center;gap:8px;white-space:nowrap }
 .ext-sel { width:172px;max-width:none;height:26px }
 .nj-tog { width:104px;height:26px;padding:0;justify-content:center;box-sizing:border-box }
 .ext-conf { width:30px;height:26px }
@@ -349,7 +348,7 @@
 .tela-nova .nj-tog .txt,.tela-nova .btn.mini,.tela-nova small,.tela-nova code,.tela-nova .lc-val { font-size:12px }
 #lanc-conf .lc-val .btn.mini { flex:none;min-width:132px;box-sizing:border-box;justify-content:center;text-align:center;white-space:nowrap }
 #lanc-conf .lc-val code { min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap }
-.janela .conta,.janela .lanc-selo,.janela .ext-ver,.janela .ext-faz,.janela .ext-para,.janela .ext-rot,.janela .ext-cor,.janela .ext-inst-rot,.janela .lf-n,.janela .lf-imped,.janela .btn.mini,.janela .nj-tog .txt { font-size:12px }
+.janela .conta,.janela .lanc-selo,.janela .ext-ver,.janela .ext-faz,.janela .ext-rot,.janela .ext-cor,.janela .ext-inst-rot,.janela .lf-n,.janela .lf-imped,.janela .btn.mini,.janela .nj-tog .txt { font-size:12px }
 .ja-tela.t2 { grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:auto 1fr;gap:12px;align-content:stretch;height:100% }
 .ja-tela.t2 > .moldura { padding:10px 16px 12px;display:flex;flex-direction:column;gap:8px }
 .ja-tela.t2 .pc-sub { font-size:12px;padding:0 }
@@ -454,3 +453,27 @@
 #lanc-janela .tn-topo .ext-mais { margin-left:auto }
 #lanc-janela .tn-topo .ext-mais + .ext-pop { right:90px;top:6px;transform:none }
 #lanc-janela .tn-topo .ext-pop + .tn-x, #lanc-janela .tn-topo .ext-mais + .tn-x { margin-left:4px }
+/* AS EXTENSÕES EM DUAS COLUNAS, COM TETO — 21/10/2026, OS-LANCADORES-NAO-SAEM-DA-TELA-COM-AS-EXTENSOES-01,
+   a variante A escolhida (`mockup/variantes/2110-extensoes-A-duas-colunas.html`). Uma fileira por extensão
+   empurrava o «Lançadores» para fora da tela a partir da sétima. Agora cada extensão é um cartão de meia
+   largura (os da mesma fileira com a mesma altura), a frase numa linha cortada, inteira na dica; cinco
+   fileiras (dez extensões) cabem inteiras, e da décima primeira em diante a lista rola só por dentro,
+   com a barra fina da casa. A coluna do «Para» saiu da linha. */
+.ext-lista { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 12px;align-items:stretch;
+  max-height:289px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border-forte) var(--panel-2,#21222c) }
+.ext-lista::-webkit-scrollbar { width:9px }
+.ext-lista::-webkit-scrollbar-track { background:var(--panel-2,#21222c);border-radius:5px }
+.ext-lista::-webkit-scrollbar-thumb { background:var(--border-forte);border-radius:5px }
+.ext-lista .ext { grid-template-columns:28px minmax(0,1fr) 104px 30px 26px;column-gap:10px;min-height:0;height:100%;
+  padding:4px 10px;box-sizing:border-box;border:1px solid var(--border-sutil);border-radius:8px;background:var(--app-bg) }
+.ext-lista .ext + .ext, .ext-lista .ext:last-child { border:1px solid var(--border-sutil) }
+.ext-lista .ext-sub { flex-wrap:nowrap }
+.ext-lista .ext-nome { overflow:hidden;text-overflow:ellipsis }
+.ext-lista .ext-quem { min-width:0 }
+.ext-lista .ext-faz { display:block }
+.ext-lista .ext-vazia { grid-column:1/-1 }
+.ext-instalar-pe { padding-top:6px;margin-top:6px }
+/* O ⋮ com as permissões desce para baixo da linha; dentro da lista que rola, flutuando, ele seria cortado
+   (medido em 21/10/2026: com uma extensão, a lista de 52 px escondia o menu inteiro). Na lista, ele ocupa a
+   largura do cartão logo abaixo da linha, e a chave do «sim» fica no lugar. */
+.ext-lista .ext-pop.aberto:has(.ext-perm) { position:static;grid-column:1/-1;width:auto;transform:none;box-shadow:none }
