@@ -109,7 +109,7 @@ class TestOQueEstaFraseNaoAlcancaNoStateFullDeVerdade:
        == True`) — ela responde *"não consegui ler — o serviço pode estar
        desligado"*. Pendurá-la seria pôr uma frase FALSA na tela do usuário;
     2. **o defeito que ela existia para curar já fechou, por outro caminho.**
-       Em 25/08 (`e909b62`, N12) `mouse_actions._anotar_teclado_na_tela` passou
+       Em 25/08 (`3ecb470`, N12) `mouse_actions._anotar_teclado_na_tela` passou
        a ler a chave do lugar certo e `input_actions.frase_do_teclado_na_tela`
        a transformar na frase da legenda do L3 — no gancho exato que a lápide
        nomeia. Pendurar esta função ao lado daquela poria DUAS frases sobre o
@@ -241,7 +241,7 @@ class TestOPortaoDeCompletudeDoOskDisponivel:
         leitor de `osk_disponivel` em `app/`"*.
 
         O que mudou, e é o CONTRÁRIO de uma regressão: em 25/08 a frente da
-        Navegação (`e909b62`, TECLADO-NA-TELA-QUE-A-JANELA-NAO-LE-01/N12) deu
+        Navegação (`3ecb470`, TECLADO-NA-TELA-QUE-A-JANELA-NAO-LE-01/N12) deu
         mais dois leitores à chave — `actions/mouse_actions.py`, que a lê do
         `state_full` vivo, e `actions/input_actions.py`, que a transforma na
         frase da legenda. A chave ficou MENOS órfã, e a mordida reprovava

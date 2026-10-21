@@ -8,7 +8,7 @@ O DEFEITO, e ele é medido duas vezes:
    22/08/2026, empurrando os DualSense reais para os postos 6, 7 e 8. O portão
    existia o tempo todo. Ninguém o chamava. Curado em 25/08/2026.
 2. **`scripts/check_broadcast_proibido.py` esteve no MESMO estado**
-   (medido em 25/08/2026, AUDITORIA-DE-PERDA-01/C2): nasceu em `826ee18` e
+   (medido em 25/08/2026, AUDITORIA-DE-PERDA-01/C2): nasceu em `769d8ee` e
    ninguém o chamou por 42 dias. Nesse tempo entrou uma rota de fan-out sem
    escopo (`_handle_led_player_brightness_set`, 25/09), que ele teria pego.
    Curado em 06/10/2026 (OS-PORTOES-QUE-NINGUEM-CHAMA-01): a rota passou a

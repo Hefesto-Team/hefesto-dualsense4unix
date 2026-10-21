@@ -6,7 +6,7 @@ Decisão, 22/08/2026, literal:
     reconheça o controle conectado: se deve aparecer como Xbox ou DualSense."*
 
 Preset é sobre gatilho, vibração e luz. Quem aplica "Ação" não pode descobrir
-depois que ele também trocou o aparelho que o jogo enxerga — e desde `2b11172`
+depois que ele também trocou o aparelho que o jogo enxerga — e desde `0042ebf`
 a máscara GRUDA no disco até ela mudar, então o efeito não se desfaz sozinho.
 
 NOTA DATADA — 22/08/2026: ESTE ARQUIVO SUBSTITUI O `test_preset_flavor_migration`
@@ -129,7 +129,7 @@ def test_a_semeadura_nao_reescreve_a_mascara_de_quem_ja_tem_perfil() -> None:
         assert depois["mode"]["gamepad_flavor"] == mascara, (
             f"{arquivo}: uma migração reescreveu a máscara "
             f"({mascara!r} -> {depois['mode']['gamepad_flavor']!r}). Máscara é "
-            "escolha dela, e desde `2b11172` ela gruda"
+            "escolha dela, e desde `0042ebf` ela gruda"
         )
 
 

@@ -45,7 +45,7 @@ derivou. O conjunto de acusações é DERIVADO em runtime; o que é escrito à m
 estar SEM CLASSIFICAÇÃO, não por estar numa denylist.
 
 E a régua conta o NOME do parâmetro, nunca a tupla ``APPLIERS_DO_DAEMON``:
-``62d092a`` mostrou que a primeira versão daquele teste iterava
+``5e67a00`` mostrou que a primeira versão daquele teste iterava
 ``APPLIERS_DO_DAEMON`` para conferir ``APPLIERS_DO_DAEMON`` e passava com um par
 arrancado. Contagem que se confere sozinha não é contagem.
 
@@ -60,7 +60,7 @@ POR QUE REUSA ``modulos_alcancados`` E NÃO O RESTO DA MÁQUINA
 --------------------------------------------------------------
 O ``portao_a_casa_sabe_e_o_produto_nao_faz`` passou em 22/08/2026 a medir
 alcance por GRAFO DE IMPORT a partir dos pontos de entrada declarados
-(``61ba2ab``), e 33 acusados viraram 60. Essa máquina responde *"quem chama
+(``2b67586``), e 33 acusados viraram 60. Essa máquina responde *"quem chama
 este símbolo?"* — e aqui a pergunta é outra: *"que FORMA tem esta chamada?"*.
 Todo sítio de construção é, por definição, um chamador; o grafo não muda
 verdicto nenhum sobre a forma.
@@ -306,7 +306,7 @@ def test_toda_rota_que_constroi_o_gerente_esta_viva() -> None:
     """Dívida apontando para módulo morto é paisagem, não dívida.
 
     Reusa a régua de alcance por grafo de import do
-    `portao_a_casa_sabe_e_o_produto_nao_faz` (`61ba2ab`, 22/08/2026) — a única
+    `portao_a_casa_sabe_e_o_produto_nao_faz` (`2b67586`, 22/08/2026) — a única
     peça daquela máquina que responde a uma pergunta deste portão.
 
     Mordida: apontar uma entrada da tabela para um módulo fora do alcance.

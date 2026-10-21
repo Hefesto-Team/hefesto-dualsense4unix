@@ -18,7 +18,7 @@ O DEFEITO, E ELE ERA UMA REGRESSÃO
 
 Até 25/08/2026 a barra respondia a **todas as cinco** com a mesma frase:
 *"nenhum controle recebeu — não há controle na mesa"*. Nas quatro últimas isso
-é falso, e no caso 2 era **regressão**: o código anterior a ``41541a7`` dizia
+é falso, e no caso 2 era **regressão**: o código anterior a ``0bd1189`` dizia
 *"guardado; em Modo Nativo quem manda no controle é o jogo"*, que é a verdade.
 
 A ironia é o ponto: a frente que introduziu esta frase existia para tirar da
@@ -89,7 +89,7 @@ class TestABarraNaoInventaACausaDoNada:
             f"a barra disse {frase!r} com o Modo Nativo LIGADO e um controle "
             "conectado. As duas listas vazias vieram do ramo `is_native_mode()` "
             "(daemon/ipc_handlers.py:874), não de mesa vazia — e o código "
-            "anterior a 41541a7 acertava esta frase. É regressão."
+            "anterior a 0bd1189 acertava esta frase. É regressão."
         )
         assert frase.endswith(NADA_ACONTECEU_NATIVO), (
             f"esperava a frase terminar em {NADA_ACONTECEU_NATIVO!r}; veio {frase!r}"

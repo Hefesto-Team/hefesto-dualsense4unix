@@ -285,7 +285,7 @@ def test_o_portao_acusa_retrato_mexido_depois_da_foto(tmp_path: Path) -> None:
     assert fotos_em_dia(raiz, FOTOS, CODIGO_DA_TELA) is False, (
         "o comparador não acusou uma mudança em `interface/olhar.py` "
         "posterior à foto. É o buraco exato do F14: o instrumento que decide "
-        "o que a foto mostra mudou +645 linhas no commit `3de95ff` e nada "
+        "o que a foto mostra mudou +645 linhas no commit `775e9a3` e nada "
         "acusou, porque `CODIGO_DA_TELA` não o citava."
     )
 

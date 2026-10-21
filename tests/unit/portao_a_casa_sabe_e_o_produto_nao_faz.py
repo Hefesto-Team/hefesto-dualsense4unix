@@ -1356,7 +1356,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "MEDIDO em 22/08/2026, RECONFERIDO em 23/08 e DECIDIDO em 25/08: é "
         "promessa ao produto e o caminho está DELIBERADAMENTE fechado — a "
         "nota datada está no próprio docstring da função (`:588-602`), e ela "
-        "diz o contrário do que um chamador faria. Desde `e5376a0` (22/08, "
+        "diz o contrário do que um chamador faria. Desde `a75a514` (22/08, "
         "21h26) o `scripts/bt_active_mode.sh:349` itera TODOS os adaptadores "
         "que hospedam Nintendo (`_hci_com_nintendo`, `:281`), e o mesmo commit "
         "registra que resolveu 'a duplicidade … dois escritores do mesmo "
