@@ -783,3 +783,52 @@ def test_o_computador_guarda_so_a_intensidade_e_nunca_o_efeito() -> None:
     with pytest.raises(ValueError, match=r"triggers\.left"):
         m.MaquinaConfig.model_validate({"computador": {"controles": {
             _MAC[0]: {"triggers": {"left": {"mode": "Rigid"}, "intensidade": 0.7}}}}})
+
+
+def test_a_migracao_leva_ao_computador_so_a_intensidade_do_freestyle() -> None:
+    """A semente e o ceder da migração tiram do Freestyle só a intensidade; o efeito fica nele.
+
+    MORDIDAS: tire o `_so_a_parte_do_computador` da `semente_do_freestyle` (o `maquina.json` recusa
+    o lado e a migração não semeia), ou o `_sem_a_parte_do_computador` do `ceder_ao_computador` (o
+    efeito do gatilho do Freestyle some junto).
+    """
+    from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+
+    _jogo("Freestyle", controllers={_MAC[0]: {"triggers": {
+        "left": {"mode": "Rigid", "params": [0, 180]}, "intensidade": 0.6}}})
+
+    assert opc.migrar_uma_vez() is not None, "a migração não semeou o computador"
+    assert _escala_do_computador() == 0.6, "a intensidade do Freestyle não foi ao computador"
+    dele = load_profile("Freestyle").controllers[_MAC[0]].triggers
+    assert (dele.left.mode, dele.left.params) == ("Rigid", [0, 180]), (
+        "a migração tirou do Freestyle o efeito do gatilho, que é dele")
+    assert "intensidade" not in dele.model_fields_set, "a intensidade ficou nos dois lugares"
+
+
+def test_voltar_ao_do_computador_no_gatilho_tira_so_a_intensidade_do_jogo() -> None:
+    """O «voltar ao do computador» do cartão `gatilho` tira do jogo a escala, nunca o efeito.
+
+    MORDIDA: tire o `_sem_a_parte_do_computador` do `voltar_ao_do_computador`, e o lado do jogo
+    sai junto com a intensidade.
+    """
+    from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+
+    _jogo("Jogo X", controllers={_MAC[0]: {"triggers": {
+        "left": {"mode": "Rigid", "params": [0, 180]}, "intensidade": 1.5}}})
+
+    opc.voltar_ao_do_computador(_cartao_da_03(), _UM, "Jogo X")
+
+    dele = load_profile("Jogo X").controllers[_MAC[0]].triggers
+    assert (dele.left.mode, dele.left.params) == ("Rigid", [0, 180]), (
+        "voltar ao do computador apagou o efeito do gatilho do jogo")
+    assert "intensidade" not in dele.model_fields_set
+
+
+def _cartao_da_03() -> str:
+    """O cartão do computador em que a intensidade mora, lido do dono (sem carregar o GTK)."""
+    from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
+
+    (nome,) = [n for n, s in opc.SECOES.items() if s.pagina == "03-gatilhos.html"]
+    return nome
