@@ -483,7 +483,7 @@ jobs:
           # (morte silenciosa aos ~40%, sem traceback) — trocaria um gate que
           # mente por um gate instável, que é pior.
           #
-          # Aqui, sem o `gi`, PULAM os 138 arquivos de teste com `exigir_gi_real`
+          # Aqui, sem o `gi`, PULAM os 146 arquivos de teste com `exigir_gi_real`
           # de módulo (21/10/2026), como `skipped` no relatório, e não mascarados
           # por um `|| echo warning`. Quem os roda é o job «Interface com GTK
           # REAL», com o `python3-gi` do SISTEMA (o setup-python isola o
