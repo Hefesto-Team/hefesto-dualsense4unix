@@ -25,11 +25,14 @@ from __future__ import annotations
 import argparse
 import ast
 import io
+import multiprocessing
+import os
 import re
 import subprocess
 import sys
 import tokenize
 from pathlib import Path
+from typing import Any
 
 RAIZ = Path(__file__).resolve().parent.parent
 
@@ -162,11 +165,25 @@ def _adaptar(achado: str, troca: str) -> str:
 
 
 
+#: Toda regra de ``REGRAS`` casa com um «ela», «dela» ou «delas» que começa palavra (``tela``, ``janela`` e
+#: ``pela`` não contam). Texto sem um deles não muda, e a pergunta custa um ``search`` onde as regras custam
+#: uma varredura por regra: o arquivo inteiro sem um deles dispensa até o ``ast`` dos trechos de prosa.
+_TEM_ELA = re.compile(r"(?<![\w-])d?ela", re.I)
+_TEM_DELA = re.compile(r"(?<![\w-])dela", re.I)
+#: As regras que citam «dela» no padrão só casam em texto que o tenha; as de «ela» (``por ela``, ``a ela``,
+#: ``ela VERBO``) casam sem ele. Com a separação, o texto sem «dela» roda quatro regras e não vinte e seis.
+_PEDEM_DELA = frozenset(i for i, (padrao, _) in enumerate(REGRAS) if "dela" in padrao.pattern.lower())
+
+
 def reescrever_prosa(texto: str, contexto: str = "") -> str:
     """Aplica as regras a um pedaço de prosa; `contexto` é a prosa logo acima, só para ler."""
-    if "ela" not in texto.lower():
+    if _TEM_ELA.search(texto) is None:
         return texto
-    for padrao, troca in REGRAS:
+    tem_dela = _TEM_DELA.search(texto) is not None
+    for i, (padrao, troca) in enumerate(REGRAS):
+        if i in _PEDEM_DELA and not tem_dela:
+            continue
+
         def _sub(m: re.Match[str], troca: str = troca, padrao: re.Pattern[str] = padrao) -> str:
             if padrao in (_ELA_VERBO, _QUE_ELA_VERBO) and _pronome_de_substantivo_tecnico(m, contexto):
                 return m.group(0)
@@ -191,10 +208,29 @@ _SH = re.compile(r"(?:(?<=\s)|^)#(?!!)[^\n]*", re.M)
 
 def _linhas_para_deslocamentos(texto: str) -> list[int]:
     ini = [0]
-    for i, c in enumerate(texto):
-        if c == "\n":
-            ini.append(i + 1)
+    achado = texto.find("\n")
+    while achado != -1:
+        ini.append(achado + 1)
+        achado = texto.find("\n", achado + 1)
     return ini
+
+
+def _nos_de_instrucao(arvore: ast.Module) -> list[Any]:
+    """Os nós que podem ter docstring (módulo, classe, função), achados só entre as instruções.
+
+    Classe e função nascem em posição de instrução, nunca dentro de uma expressão: andar só pelas
+    instruções (``body``, ``orelse``, ``handlers``, ``cases``…) acha os mesmos nós que ``ast.walk``.
+    """
+    achados: list[Any] = []
+    pilha: list[Any] = [arvore]
+    while pilha:
+        no = pilha.pop()
+        achados.append(no)
+        for campo in ("body", "orelse", "finalbody", "handlers", "cases"):
+            filhos = getattr(no, campo, None)
+            if isinstance(filhos, list):
+                pilha.extend(f for f in filhos if isinstance(f, ast.AST))
+    return achados
 
 
 def _spans_py(texto: str) -> list[tuple[int, int]]:
@@ -211,7 +247,7 @@ def _spans_py(texto: str) -> list[tuple[int, int]]:
     except SyntaxError:
         arvore = None
     if arvore is not None:
-        for no in ast.walk(arvore):
+        for no in _nos_de_instrucao(arvore):
             documentavel = (ast.Module, ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef)
             if isinstance(no, documentavel) and no.body and isinstance(no.body[0], ast.Expr):
                 v = no.body[0].value
@@ -219,7 +255,8 @@ def _spans_py(texto: str) -> list[tuple[int, int]]:
                     spans.append((linhas[v.lineno - 1] + v.col_offset, linhas[v.end_lineno - 1] + v.end_col_offset))
     # comentário de HTML, CSS e JS só conta quando mora DENTRO de uma string do gerador
     strings: list[tuple[int, int]] = []
-    if arvore is not None:
+    candidatos = [m for rx in (_MARCACAO, _JS) for m in rx.finditer(texto)]
+    if arvore is not None and candidatos:  # sem candidato, a árvore inteira não tem o que dizer
         for no in ast.walk(arvore):
             # a f-string conta inteira: do 3.12 em diante cada pedaço tem a posição exata, e um comentário
             # com `{CAMPO}` no meio cruzava dois pedaços e escapava (no 3.10 e no 3.11, não)
@@ -227,10 +264,9 @@ def _spans_py(texto: str) -> list[tuple[int, int]]:
             if string and no.end_lineno:
                 strings.append((linhas[no.lineno - 1] + no.col_offset, linhas[no.end_lineno - 1] + no.end_col_offset))
     strings.sort()
-    for rx in (_MARCACAO, _JS):
-        for m in rx.finditer(texto):
-            if any(a <= m.start() and m.end() <= b for a, b in strings if a <= m.start() < b):
-                spans.append((m.start(), m.end()))
+    for m in candidatos:
+        if any(a <= m.start() and m.end() <= b for a, b in strings if a <= m.start() < b):
+            spans.append((m.start(), m.end()))
     return spans
 
 
@@ -281,6 +317,8 @@ _LINHA_SEGUINTE = re.compile(r"[ \t]*\n[ \t]*")
 
 
 def _reescrever_arquivo(texto: str, tipo: str) -> str:
+    if _TEM_ELA.search(texto) is None:
+        return texto  # nenhum trecho do arquivo tem o que trocar: nem se procuram os trechos de prosa
     partes: list[str] = []
     cursor = 0
     contexto = ""
@@ -341,6 +379,25 @@ def alvos() -> list[tuple[str, str]]:
 _SOBRA = re.compile(_E + r"d?ela" + _D, re.I)
 
 
+def _trabalho_de(entrada: tuple[tuple[str, str], bool]) -> tuple[str, str | None, list[str]]:
+    """O trabalho de um arquivo: ``(rel, texto novo ou None se nada muda, linhas que sobram em prosa)``."""
+    (rel, tipo), com_sobra = entrada
+    try:
+        antigo = (RAIZ / rel).read_text(encoding="utf-8")
+    except (UnicodeDecodeError, FileNotFoundError):
+        return rel, None, []
+    novo = reescrever_arquivo(antigo, tipo)
+    linhas: list[str] = []
+    if com_sobra:
+        for ini, fim in _fundir(_spans_de(novo, tipo)):
+            trecho = novo[ini:fim]
+            for k, linha in enumerate(trecho.split("\n")):
+                if _SOBRA.search(linha):
+                    n = novo.count("\n", 0, ini) + k + 1
+                    linhas.append(f"{rel}:{n}: {linha.strip()[:160]}")
+    return rel, (novo if novo != antigo else None), linhas
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     modo = ap.add_mutually_exclusive_group(required=True)
@@ -353,25 +410,22 @@ def main(argv: list[str] | None = None) -> int:
     mudados: list[str] = []
     sobra = 0
     linhas_da_sobra: list[str] = []
-    for rel, tipo in alvos():
-        caminho = RAIZ / rel
-        try:
-            antigo = caminho.read_text(encoding="utf-8")
-        except (UnicodeDecodeError, FileNotFoundError):
-            continue
-        novo = reescrever_arquivo(antigo, tipo)
-        if novo != antigo:
+    # Cada arquivo é independente e a conta é só de CPU: reparte entre os núcleos, na ordem da lista
+    # (``map`` devolve na ordem, e a saída é a mesma da corrida em série).
+    alvos_todos = alvos()
+    trabalhadores = min(os.cpu_count() or 1, 8, max(1, len(alvos_todos) // 200))
+    if trabalhadores > 1:
+        with multiprocessing.get_context("fork").Pool(trabalhadores) as pool:
+            resultados = pool.map(_trabalho_de, [(a, args.sobra) for a in alvos_todos], chunksize=32)
+    else:
+        resultados = [_trabalho_de((a, args.sobra)) for a in alvos_todos]
+    for rel, novo, linhas in resultados:
+        if novo is not None:
             mudados.append(rel)
             if args.aplicar:
-                caminho.write_text(novo, encoding="utf-8")
-        if args.sobra:
-            for ini, fim in _fundir(_spans_de(novo, tipo)):
-                trecho = novo[ini:fim]
-                for k, linha in enumerate(trecho.split("\n")):
-                    if _SOBRA.search(linha):
-                        sobra += 1
-                        n = novo.count("\n", 0, ini) + k + 1
-                        linhas_da_sobra.append(f"{rel}:{n}: {linha.strip()[:160]}")
+                (RAIZ / rel).write_text(novo, encoding="utf-8")
+        sobra += len(linhas)
+        linhas_da_sobra += linhas
     if args.detalhe:
         corpo = mudados if not args.sobra else linhas_da_sobra
         Path(args.detalhe).write_text("\n".join(corpo) + "\n", encoding="utf-8")

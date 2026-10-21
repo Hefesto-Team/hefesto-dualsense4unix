@@ -13,6 +13,7 @@ que a decisão nasceu. Quatro réguas, e todas mordem:
 
 from __future__ import annotations
 
+import functools
 import importlib.util
 import re
 import subprocess
@@ -42,6 +43,24 @@ NARRADOR = re.compile(
     rf"\b[Qq]{_QUEM[1:]}\b|\b[Cc]{_COORD[1:]}(?:a|es)?\b|\b[Cc]{_DUVIDA[1:]}s?\b"
     rf"|\b[Ss]{_SUB[1:]}s?\b|\b[Ww]{_WT[1:]}s?|\b{_REL}|{_EU}|\b{_ME}\b|{_LEG}"
     r"|\(mockup \d{2}/"
+)
+
+#: Uma isca por alternativa de ``NARRADOR``: o pedaço literal que o texto TEM de conter para a
+#: alternativa casar. O ``in`` de uma isca custa uma varredura de memória, e a expressão regular,
+#: sobre os 79 MB do texto versionado, custava 8 s dos 13 do arquivo: só o arquivo que traz alguma
+#: isca passa pela expressão. O ``test_cada_alternativa_do_narrador_tem_a_sua_isca`` morde: isca
+#: que falta deixa a alternativa muda.
+_ISCAS = (
+    _QUEM[1:],
+    _COORD[1:],
+    _DUVIDA[1:],
+    _SUB[1:],
+    _WT[1:],
+    "relatório",
+    "EU TINHA ",
+    _ME,
+    _LEG,
+    "(mockup ",
 )
 
 #: O que não se mede aqui, e o motivo de cada um.
@@ -76,13 +95,30 @@ _RAIZES_DA_FALA = _ENXUTO.RAIZES_DA_FALA
 falas_em_comentario = _ENXUTO.falas_em_comentario
 
 
-def _versionados() -> list[str]:
+@functools.cache
+def _versionados_em_cache() -> tuple[str, ...]:
     saida = subprocess.run(
         ["git", "ls-files"], cwd=RAIZ, capture_output=True, text=True, check=False
     )
     if saida.returncode != 0 or not saida.stdout.strip():
         pytest.skip("sem git nesta árvore: a lista de arquivos versionados não existe")
-    return [linha for linha in saida.stdout.split("\n") if linha]
+    return tuple(linha for linha in saida.stdout.split("\n") if linha)
+
+
+def _versionados() -> list[str]:
+    return list(_versionados_em_cache())
+
+
+@functools.cache
+def _texto_de_todos() -> dict[str, str]:
+    """O texto dos versionados lido como UTF-8, UMA vez para as duas réguas de texto."""
+    textos: dict[str, str] = {}
+    for caminho in _versionados():
+        try:
+            textos[caminho] = (RAIZ / caminho).read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+    return textos
 
 
 def nomes_com_dela(caminhos: list[str]) -> list[str]:
@@ -99,7 +135,7 @@ def achados_de_narrador(textos: dict[str, str]) -> list[tuple[str, str]]:
     """Cada ``(arquivo, trecho)`` com uma colocação de narrador, fora das isenções."""
     achados = []
     for caminho, texto in textos.items():
-        if caminho.startswith(FORA):
+        if caminho.startswith(FORA) or not any(isca in texto for isca in _ISCAS):
             continue
         for achado in NARRADOR.finditer(texto):
             achados.append((caminho, achado.group(0)))
@@ -111,13 +147,7 @@ def test_nenhum_nome_versionado_leva_a_palavra_dela() -> None:
 
 
 def test_o_vocabulario_de_narrador_nao_volta_ao_texto_versionado() -> None:
-    textos: dict[str, str] = {}
-    for caminho in _versionados():
-        try:
-            textos[caminho] = (RAIZ / caminho).read_text(encoding="utf-8")
-        except (UnicodeDecodeError, OSError):
-            continue
-    achados = achados_de_narrador(textos)
+    achados = achados_de_narrador(_texto_de_todos())
     assert achados == [], (
         "narrador ou vocabulário de processo em texto versionado (diga o porquê técnico, "
         f"não quem conduziu): {achados[:8]}"
@@ -125,14 +155,11 @@ def test_o_vocabulario_de_narrador_nao_volta_ao_texto_versionado() -> None:
 
 
 def test_nenhum_comentario_do_codigo_traz_fala_citada() -> None:
-    textos: dict[str, str] = {}
-    for caminho in _versionados():
-        if not caminho.startswith(_RAIZES_DA_FALA) or not caminho.endswith(".py"):
-            continue
-        try:
-            textos[caminho] = (RAIZ / caminho).read_text(encoding="utf-8")
-        except (UnicodeDecodeError, OSError):
-            continue
+    textos = {
+        caminho: texto
+        for caminho, texto in _texto_de_todos().items()
+        if caminho.startswith(_RAIZES_DA_FALA) and caminho.endswith(".py")
+    }
     achados = falas_em_comentario(textos)
     assert achados == [], (
         "fala citada em comentário de código (escreva a regra que ela contém; a citação "
@@ -173,6 +200,31 @@ class TestMorde:
         medido = _EU.replace("(?:MEDIDO|ESCRITO)", "MEDIDO")
         narrado = {"src/x.py": f"# {medido} o contrário; {_QUEM} decidiu\n"}
         assert {t for _, t in achados_de_narrador(narrado)} == {medido, _QUEM}
+
+    @pytest.mark.parametrize(
+        "frase",
+        [
+            _QUEM,
+            "Quem " + "coordena",
+            _COORD,
+            "Coorden" + "adores",
+            _DUVIDA,
+            _SUB + "s",
+            _WT,
+            "relatório" + "s dos agentes",
+            "EU TINHA " + "ESCRITO",
+            _ME,
+            _LEG,
+            "(mockup " + "12/",
+        ],
+    )
+    def test_cada_alternativa_do_narrador_tem_a_sua_isca(self, frase: str) -> None:
+        """A isca é só um atalho: toda alternativa de ``NARRADOR`` passa por ela e é achada."""
+        assert [t for _, t in achados_de_narrador({"src/x.py": f"# {frase} aqui\n"})] != []
+
+    def test_o_arquivo_sem_isca_nao_entra_na_expressao(self) -> None:
+        limpo = {"src/x.py": "# a cura vive aqui porque o rádio reinicia\n" * 50}
+        assert achados_de_narrador(limpo) == []
 
     def test_a_isencao_vale_so_para_o_arquivo_isento(self) -> None:
         texto = {"docs/process/x.md": _QUEM, "src/y.py": _QUEM}
@@ -220,6 +272,40 @@ class TestMorde:
         assert "dela" not in modulo.reescrever_prosa("# a máquina dela não tem rádio")
         gramatical = "# a função devolve o valor dela mesma"
         assert modulo.reescrever_prosa(gramatical) == gramatical
+
+
+def test_o_script_acha_o_dela_em_comentario_e_em_docstring_e_deixa_o_codigo() -> None:
+    """O atalho do script (texto sem «dela» nem se examina) não pode esconder o que ele troca."""
+    if not SCRIPT.exists():
+        pytest.skip("o script não veio para esta árvore")
+    modulo = _carregar_o_script()
+    dela = "de" + "la"
+    fonte = (
+        f'"""A decisão {dela} de 19/09 manda."""\n\n\n'
+        "def f() -> str:\n"
+        f'    """A ordem {dela} de 19/09 manda."""\n'
+        f"    # a ordem {dela} de 19/09 manda\n"
+        f'    janela = "a ordem {dela} de 19/09"\n'
+        "    return janela\n"
+    )
+    novo = modulo.reescrever_arquivo(fonte, "py")
+    assert novo.count(dela) == 1, novo  # sobra só a string de código, que não é prosa
+    assert f'janela = "a ordem {dela} de 19/09"' in novo
+    sem = "def g() -> int:\n    # a janela abre pela tela\n    return 1\n"
+    assert modulo.reescrever_arquivo(sem, "py") == sem
+
+
+def test_o_trabalho_de_um_arquivo_diz_se_ha_o_que_trocar(tmp_path: Path) -> None:
+    if not SCRIPT.exists():
+        pytest.skip("o script não veio para esta árvore")
+    modulo = _carregar_o_script()
+    modulo.RAIZ = tmp_path
+    dela = "de" + "la"
+    (tmp_path / "sujo.py").write_text(f"# a ordem {dela} de 19/09 manda\n", encoding="utf-8")
+    (tmp_path / "limpo.py").write_text("# a ordem de 19/09 manda\n", encoding="utf-8")
+    assert modulo._trabalho_de((("sujo.py", "py"), False))[1] == "# a ordem de 19/09 manda\n"
+    assert modulo._trabalho_de((("limpo.py", "py"), False))[1] is None
+    assert modulo._trabalho_de((("sumiu.py", "py"), False))[1] is None
 
 
 def test_o_comentario_de_marcacao_numa_f_string_conta_em_todo_python() -> None:
