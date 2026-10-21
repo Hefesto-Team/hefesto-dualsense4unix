@@ -188,6 +188,7 @@ def test_o_auto_liga_a_chave_na_suite_inteira_da_arvore_que_tem_o_semaforo(tmp_p
 
 
 def test_sem_pedir_a_chave_fica_desligada_ate_a_prova(tmp_path: Path) -> None:
+    # D-2110-A-SUITE-EM-FAIXAS-SO-LIGA-COM-O-AUTO
     # D-0810-AS-PARTES-EM-PARALELO-ESPERAM-A-PROVA: liga sozinha só depois de uma corrida inteira.
     raiz = tmp_path / "arvore"
     _arvore(raiz, leves=4, tocam=0, com_semaforo=True)
