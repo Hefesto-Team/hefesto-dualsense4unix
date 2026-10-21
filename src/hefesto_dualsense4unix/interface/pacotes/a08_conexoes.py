@@ -21,7 +21,6 @@ import contextlib
 import dataclasses as _dataclasses
 import html
 import re
-import select
 import sys
 import time
 from typing import Any
@@ -29,6 +28,7 @@ from typing import Any
 from hefesto_dualsense4unix.app.actions import external_controllers as _marcas
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.interface.monta import dono_na_linha
+from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 
 from . import TODOS_OS_LUGARES, Contexto, em_fundo, nome_do_jogador, perfil, registrar
 
@@ -2915,9 +2915,10 @@ def _esperar_a_tecla(r: _Rascunho, dispositivo: Any, prazo_s: float = ESPERA_DA_
     """Lê o aparelho já aberto (sem prender) e guarda a primeira tecla apertada; fecha no fim."""
     try:
         fim = time.monotonic() + prazo_s
-        # O `select` dorme no nó até ele ter evento ou o prazo vencer: nenhuma volta em vão.
+        # A espera dorme no nó até ele ter evento ou o prazo vencer: nenhuma volta em vão, e o
+        # `poll` dela não tem o teto do descritor 1023 que o `select` tem.
         while (restante := fim - time.monotonic()) > 0:
-            if not select.select([dispositivo.fd], [], [], restante)[0]:
+            if not prontos_para_ler([dispositivo.fd], restante):
                 return
             ev = dispositivo.read_one()
             if ev is None:
