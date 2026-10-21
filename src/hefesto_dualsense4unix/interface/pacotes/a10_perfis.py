@@ -2179,6 +2179,7 @@ def remover(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """"Remover": apagar o perfil do disco. PERGUNTA ANTES, no rótulo do botão."""
     global _ARMADO, _ESCOLHIDO
     from hefesto_dualsense4unix.profiles.loader import delete_profile
+    from hefesto_dualsense4unix.profiles.manager import esquecer_o_perfil_apagado
 
     nome = _perfil_do_editor(ctx)
     # E ELA DECIDE MELHOR QUE UM `mesmo_slug` LOCAL: recebe o `PerfilQueVale`
@@ -2200,6 +2201,7 @@ def remover(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
             f"confirmar — o botão espera oito segundos.")
     _ARMADO = None
     delete_profile(nome)
+    esquecer_o_perfil_apagado(nome)  # o dono do `profile delete`: a escolha e o último jogo
     _ESCOLHIDO = ""
     # SEM `profile.switch` AQUI, de propósito: o perfil apagado não é o ativo
     p.chamar("launch_env.refresh")
