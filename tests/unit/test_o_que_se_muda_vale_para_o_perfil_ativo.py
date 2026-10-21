@@ -39,6 +39,7 @@ def _campo_do_cartao(cartao: str, uniq: str) -> dict[str, Any]:
     campos: dict[str, dict[str, Any]] = {
         "luz": {"leds": {"lightbar_brightness": 0.4}},
         "vibracao": {"rumble": {"motor_forte_pct": 40}},
+        "gatilho": {"triggers": {"intensidade": 0.5}},
         "som": {"speaker": {"volume": 55}},
         "sensores": {"sensores": {"giroscopio": False}},
         "mouse": {"mouse": {"enabled": False, "speed": 9, "scroll_speed": 3}},

@@ -41,7 +41,7 @@ CAMADA: dict[tuple[str, str], str] = {
     ("02-controles.html", "volume-padrao"): _C,
     ("03-gatilhos.html", "criar-efeito"): _C,
     ("03-gatilhos.html", "imersao"): _J,
-    ("03-gatilhos.html", "intensidade-do-gatilho"): _J,
+    ("03-gatilhos.html", "intensidade-do-gatilho"): _C,
     ("03-gatilhos.html", "modo"): _J,
     ("03-gatilhos.html", "modo-dos-gatilhos"): _J,
     ("03-gatilhos.html", "sentir"): _A,

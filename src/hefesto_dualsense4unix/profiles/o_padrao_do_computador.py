@@ -19,6 +19,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     RumbleConfig,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
+from hefesto_dualsense4unix.utils.maquina import CAMPOS_DO_CONTROLE_NO_COMPUTADOR
 
 logger = get_logger(__name__)
 
@@ -50,6 +51,8 @@ SECOES: dict[str, Secao] = {
                  ("leds",), ("leds",), ("leds",)),
     "vibracao": Secao("vibracao", "05-vibracao.html", "Vibração",
                       ("rumble",), ("rumble",), ("rumble",)),
+    "gatilho": Secao("gatilho", "03-gatilhos.html", "Intensidade do gatilho",
+                     (), (), ("triggers",)),
     "mouse": Secao("mouse", "06-navegacao.html", "Mouse",
                    ("mouse", "button_actions", "tabela_no_jogo"),
                    ("mouse", "button_actions", "tabela_no_jogo"), ()),
@@ -64,7 +67,7 @@ DO_JOGO: dict[str, str] = {
     "mode": "o modo (Sony, Xbox, Navegação, Nativo) é de cada jogo",
     "mascara": "como o controle aparece no jogo",
     "movimento": "a Mira é do jogo que mira",
-    "triggers": "os gatilhos são o efeito de cada jogo",
+    "triggers": "o efeito do gatilho é de cada jogo; a intensidade é do computador",
     "remapeamento": "a troca de botões é do jogo",
     "mouse.enabled": "o Point-and-click liga com o jogo de mouse",
     "suppress_desktop_emulation": "o modo-jogo é de cada jogo",
@@ -89,7 +92,8 @@ _DENSAS: dict[str, dict[str, Any]] = {
 }
 
 _MODELOS: frozenset[str] = frozenset(
-    {"leds", "rumble", "speaker", "mic", "sensores", "mouse", *_GLOBAIS_DA_ACESSIBILIDADE}
+    {"leds", "rumble", "speaker", "mic", "sensores", "mouse", "triggers",
+     *_GLOBAIS_DA_ACESSIBILIDADE}
 )
 
 _MODELO_DA_ACESSIBILIDADE: dict[str, Any] = {
@@ -106,7 +110,23 @@ _CAMPOS_DO_CONTROLE: dict[str, tuple[str, ...]] = {
     "sensores": tuple(ControllerSensoresOverride.model_fields),
     "ativacao": tuple(ProfileAtivacaoConfig.model_fields),  # (noqa-acento) identificador ASCII
     "analogicos": tuple(ProfileAnalogicosConfig.model_fields),  # (noqa-acento) identificador ASCII
+    **CAMPOS_DO_CONTROLE_NO_COMPUTADOR,
 }
+
+
+def _so_a_parte_do_computador(secao: str, dados: Mapping[str, Any]) -> dict[str, Any]:
+    """Os campos de ``secao`` que são do computador (do gatilho, só a intensidade)."""
+    so_estes = CAMPOS_DO_CONTROLE_NO_COMPUTADOR.get(secao)
+    return dict(dados) if so_estes is None else {c: v for c, v in dados.items() if c in so_estes}
+
+
+def _sem_a_parte_do_computador(secao: str, dados: Any) -> Any:
+    """O que fica de ``secao`` no jogo quando a parte do computador sai (``None``: nada fica)."""
+    so_estes = CAMPOS_DO_CONTROLE_NO_COMPUTADOR.get(secao)
+    if so_estes is None or not isinstance(dados, Mapping):
+        return None
+    resto = {c: v for c, v in dados.items() if c not in so_estes}
+    return resto or None
 
 COMPUTADOR = "computador"
 JOGO = "jogo"
@@ -192,7 +212,7 @@ def escolhas_do_controle_do_jogo(
     valor = getattr(entrada, secao, None) if entrada is not None else None
     if valor is None:
         return {}
-    dados = valor.model_dump(mode="json", exclude_unset=True)
+    dados = _so_a_parte_do_computador(secao, valor.model_dump(mode="json", exclude_unset=True))
     escolhidos = {campo for campo, dado in dados.items() if dado is not None}
     return {campo: dados.get(campo) for campo in _expandir_pares(secao, escolhidos)}
 
@@ -307,6 +327,7 @@ def _controles_que_valem(
         for secao, campos in dados.items():
             if secao not in _CAMPOS_DO_CONTROLE or not isinstance(campos, Mapping):
                 continue
+            campos = _so_a_parte_do_computador(secao, campos)
             do_controle = dict(entrada.get(secao) or {})
             do_jogo_na_peca = dict(do_controle)
             escritos = set() if freestyle else {
@@ -431,7 +452,9 @@ def _no_computador(campos: Mapping[str, Any], uniq: object) -> dict[str, Any]:
             raise ValueError(f"o controle {uniq!r} não tem identidade para o computador")
         controles = dict(documento.get("controles") or {})
         entrada = dict(controles.get(identidade) or {})
-        _remendar(entrada, {s: v for s, v in campos.items() if s in _CAMPOS_DO_CONTROLE})
+        _remendar(entrada, {
+            s: (_so_a_parte_do_computador(s, v) if isinstance(v, Mapping) else v)
+            for s, v in campos.items() if s in _CAMPOS_DO_CONTROLE})
         if entrada:
             controles[identidade] = entrada
         else:
@@ -831,7 +854,11 @@ def ceder_ao_computador(perfil: Profile, computador: Any) -> tuple[Profile, int]
         controles = {}
         for original, entrada in dict(cru.get("controllers") or {}).items():
             resto = {s: v for s, v in dict(entrada).items() if s not in _CAMPOS_DO_CONTROLE}
-            saiu += len(dict(entrada)) - len(resto)
+            for secao in CAMPOS_DO_CONTROLE_NO_COMPUTADOR:
+                fica = _sem_a_parte_do_computador(secao, dict(entrada).get(secao))
+                if fica is not None:
+                    resto[secao] = fica
+            saiu += sum(resto.get(s) != v for s, v in dict(entrada).items())
             if resto:
                 controles[original] = resto
         cru["controllers"] = controles or None
@@ -883,8 +910,8 @@ def semente_do_freestyle(freestyle: Profile | None) -> dict[str, Any]:
             if identidade is None:
                 continue
             dados_entrada = {
-                secao: {c: v for c, v in valor.model_dump(mode="json",
-                                                           exclude_unset=True).items()
+                secao: {c: v for c, v in _so_a_parte_do_computador(
+                    secao, valor.model_dump(mode="json", exclude_unset=True)).items()
                         if v is not None}
                 for secao in _CAMPOS_DO_CONTROLE
                 if (valor := getattr(entrada, secao, None)) is not None
@@ -1047,6 +1074,10 @@ def voltar_ao_do_computador(cartao: str, uniq: object, perfil: str) -> Profile:
                 continue
             entrada = {k: v for k, v in dict(controles[original]).items()
                        if k not in secao.por_controle}
+            for nome in secao.por_controle:
+                fica = _sem_a_parte_do_computador(nome, dict(controles[original]).get(nome))
+                if fica is not None:
+                    entrada[nome] = fica
             if entrada:
                 controles[original] = entrada
             else:

@@ -19,6 +19,13 @@ MORDIDAS DO DESENHO: volte o `TETO_DA_FORCA` da 05 a 100, ponha botões de degra
 linha da 03 do desenho, troque o `data-papel` do trilho da 03 por `data-hef` (o trilho volta a só
 pintar), tire a linha da 03 da `camada.py`, tire o `_a_intensidade_que_fica` do `_com_os_gatilhos`,
 ponha uma palavra de firmware na dica, ou aumente o respiro da grade da 03.
+
+O PADRÃO DO COMPUTADOR (21/10/2026, A-INTENSIDADE-DO-GATILHO-VALE-NO-PADRAO-DO-COMPUTADOR-01): sem
+jogo, o trilho da 03 grava no `maquina.json`, e o gerente aplica a escala lida dali em todo jogo
+sem escolha própria. MORDIDAS: tire o `"triggers"` de `SECOES_DO_CONTROLE_NO_COMPUTADOR` (o
+`maquina.json` recusa o gatilho), tire o `CAMPOS_DO_CONTROLE_NO_COMPUTADOR` do
+`_CAMPOS_DO_CONTROLE` (o computador não chega ao perfil que vale), volte a camada da 03 a `_J`, ou
+tire o `cem_por_cima` (o 100% do jogo deixa a do computador valer).
 """
 from __future__ import annotations
 
@@ -119,10 +126,11 @@ def test_a_linha_da_03_fica_antes_do_l2_e_o_estilo_continua_escolhendo_o_efeito(
 def test_o_trilho_da_03_manda_o_gesto_e_tem_dono_e_camada(d03: str) -> None:
     """O trilho da 03 manda `data-papel` (o gesto), e o gesto tem atendente e camada.
 
-    A prova da D-2010-A-INTENSIDADE-DO-GATILHO-MORA-NO-PERFIL-DO-JOGO.
+    A prova da D-2110-A-INTENSIDADE-DO-GATILHO-VALE-NO-PADRAO-DO-COMPUTADOR (a D-2010, que a punha
+    no perfil do jogo, caducou em 21/10/2026).
 
     Gesto sem dono reprova `test_os_sem_dono_so_diminuem`; gesto sem camada fica de fora do Nativo
-    sem ninguém decidir. A camada é a do jogo (`_J`), como o `modo` e a `imersao` da mesma aba.
+    sem ninguém decidir. A camada é a do computador (`_C`), como a «Força da vibração» da 05.
     """
     from hefesto_dualsense4unix.interface import aba03
     from hefesto_dualsense4unix.interface.pacotes import camada
@@ -131,7 +139,8 @@ def test_o_trilho_da_03_manda_o_gesto_e_tem_dono_e_camada(d03: str) -> None:
     trilhos = _trilhos(d03, aba03.CAMPO_DA_INTENSIDADE)
     assert trilhos and all(f'data-papel="{g}"' in t and "data-hef=" not in t for t in trilhos), (
         "o trilho da intensidade voltou a só pintar: o arrasto não chega ao produto")
-    assert camada.CAMADA.get(("03-gatilhos.html", g)) == camada.CAMADA[("03-gatilhos.html", "modo")]
+    assert camada.CAMADA.get(("03-gatilhos.html", g)) == camada.COMPUTADOR == camada.CAMADA[
+        ("05-vibracao.html", "intensidade")]
 
 
 @pytest.fixture
@@ -187,15 +196,15 @@ def test_o_arrasto_da_03_grava_a_intensidade_daquele_controle_e_reaplica(a03) ->
     padrao = TriggersConfig()
     assert dele.triggers.intensidade == 0.5 and dele.triggers.left == padrao.left, (
         "o trilho grava só a escala, e o efeito do lado fica o que era")
-    assert reaplicados == ["régua"] and ponte.avulsas == ["launch_env.refresh"]
+    assert reaplicados == ["régua"]
 
     fn(ctx, {"uniq": "aa:bb:cc:00:00:01", "valor": "50"}, ponte)
     assert len(gravados) == 1, "o segundo evento do mesmo arrasto (change e click) não regrava"
 
     fn(ctx, {"uniq": "aa:bb:cc:00:00:01", "valor": "100"}, ponte)
-    volta = disco["perfil"].controllers["aabbcc000001"].triggers  # type: ignore[attr-defined]
-    assert volta.intensidade is None and "intensidade" not in volta.model_dump(), (
-        "100% é o firmware sem o byte: não vira opinião no perfil")
+    volta = (disco["perfil"].controllers or {}).get("aabbcc000001")  # type: ignore[attr-defined]
+    assert volta is None or "intensidade" not in volta.model_dump(mode="json").get(
+        "triggers", {}), "100% é o firmware sem o byte: não vira opinião no perfil"
 
     for ruim in ("205", "abc", ""):
         with pytest.raises(RuntimeError):
@@ -637,3 +646,140 @@ def test_o_gerente_publica_a_base_do_global_para_o_firmware() -> None:
         fc.connect()
         ProfileManager(controller=fc).apply(_perfil(**({"rumble": rumble} if rumble else {})))
         assert fc.bases == [esperado], (rumble, fc.bases)
+
+
+# --- O PADRÃO DO COMPUTADOR: sem jogo, a intensidade do gatilho mora no `maquina.json` ------------
+# A-INTENSIDADE-DO-GATILHO-VALE-NO-PADRAO-DO-COMPUTADOR-01 (21/10/2026). O disco é o de verdade, no
+# lar isolado da suíte: o perfil por `save_profile` e o computador pelo `maquina.json`.
+
+_UM = "aa:bb:cc:00:00:01"
+
+
+@pytest.fixture
+def a03_no_disco(monkeypatch):
+    """O pacote da 03 com o disco isolado de verdade; só o reaplicar no daemon é de papel."""
+    from tests.conftest import exigir_gi_real
+
+    exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
+    import pacotes  # noqa: F401  (registra os dez)
+    from pacotes import a03_gatilhos, perfil
+
+    reaplicados: list[str] = []
+    monkeypatch.setattr(perfil, "reaplicar", lambda nome, *_a, **_k: reaplicados.append(nome))
+    a03_gatilhos.esquecer_o_rascunho()
+    yield a03_gatilhos, reaplicados
+    a03_gatilhos.esquecer_o_rascunho()
+
+
+def _jogo(nome: str, **campos: object):
+    from hefesto_dualsense4unix.profiles.loader import save_profile
+    from hefesto_dualsense4unix.profiles.schema import Profile
+
+    return save_profile(Profile.model_validate(
+        {"name": nome, "match": {"type": "criteria", "window_class": [nome.lower()]}, **campos}))
+
+
+def _arrastar(mod, ativo: str, valor: str) -> None:
+    from pacotes import Contexto, gesto_da_pagina
+
+    fn = gesto_da_pagina("03-gatilhos.html", mod.GESTO_DA_INTENSIDADE)
+    assert fn is not None, "o trilho da 03 não tem dono"
+    fn(Contexto(state={"active_profile": ativo}, mesa=[], conectados=[], estados={}),
+       {"uniq": _UM, "valor": valor}, _Ponte())
+
+
+def _escala_do_computador() -> float | None:
+    from hefesto_dualsense4unix.utils import maquina as m
+
+    dele = m.carregar_maquina().computador.controles.get(_MAC[0])
+    return dele.triggers.intensidade if dele is not None and dele.triggers is not None else None
+
+
+def _o_gerente_publica(nome: str) -> list[object]:
+    """O que o `ProfileManager` publica ao aplicar ``nome`` com o computador por baixo."""
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import carregar_o_que_vale
+    from hefesto_dualsense4unix.testing.fake_controller import FakeController
+
+    class Espiao(FakeController):
+        def __init__(self, **kw: object) -> None:
+            super().__init__(**kw)
+            self.publicadas: list[object] = []
+
+        def set_trigger_scales(self, scales: object = None) -> None:
+            self.publicadas.append(None if scales is None else dict(scales))  # type: ignore[call-overload]
+
+    fc = Espiao(transport="usb")
+    fc.connect()
+    ProfileManager(controller=fc).apply(carregar_o_que_vale(nome))
+    return fc.publicadas
+
+
+@pytest.mark.parametrize("ativo", ["Freestyle", ""])
+def test_sem_jogo_o_trilho_grava_no_computador_e_vale_em_todo_jogo(a03_no_disco, ativo) -> None:
+    """Sem jogo (o Freestyle, ou nenhum perfil), o arrasto vai ao `maquina.json` e a perfil nenhum.
+
+    O gerente aplica a escala lida dali num jogo sem escolha própria, e a coluna da 03 a pinta.
+    Antes desta sprint o gesto recusava sem perfil, e o `maquina.json` recusava o gatilho.
+    """
+    from pacotes import Contexto
+
+    mod, reaplicados = a03_no_disco
+    caminhos = [_jogo("Freestyle"), _jogo("Jogo Y")]
+    antes = [c.read_bytes() for c in caminhos]
+
+    _arrastar(mod, ativo, "40")
+
+    assert _escala_do_computador() == 0.4, "o trilho sem jogo não chegou ao padrão do computador"
+    assert [c.read_bytes() for c in caminhos] == antes, "o trilho sem jogo mudou um perfil"
+    assert reaplicados == [ativo]
+    assert _o_gerente_publica("Jogo Y") == [{_MAC[0]: 0.4}], (
+        "o jogo sem escolha própria não recebeu a intensidade do computador")
+    mesa = [{"pref": "p1", "jogador": 1, "uniq": _UM, "nome": "Régua", "via": "USB",
+             "cor": "starlight-blue", "mascara": "DualSense"}]
+    falso = {"uniq": _UM, "player": 1, "transport": "usb", "is_primary": True,
+             "inputs": {"l2_raw": 0, "r2_raw": 0}}
+    r = mod.pacote(Contexto(state={"active_profile": ativo}, mesa=mesa, conectados=[falso],
+                            estados={}))
+    assert r["colunas"][_UM][mod.CAMPO_DA_INTENSIDADE] == 40, "a coluna não leu o computador"
+
+    _arrastar(mod, ativo, "100")
+    assert _escala_do_computador() is None, "100% no computador é tirar a escolha, não gravar 1,0"
+
+
+def test_com_jogo_o_trilho_grava_no_jogo_e_o_100_dele_vence_o_do_computador(a03_no_disco) -> None:
+    """Com um jogo ativo, o arrasto vai ao perfil dele; o computador e o outro jogo ficam.
+
+    O 100% do jogo por cima de 40% do computador grava o 1,0: sem ele, os 40% voltariam a valer.
+    """
+    from hefesto_dualsense4unix.profiles.loader import load_profile
+    from hefesto_dualsense4unix.utils import maquina as m
+
+    mod, _ = a03_no_disco
+    assert m.gravar_o_computador({"controles": {_MAC[0]: {"triggers": {"intensidade": 0.4}}}})
+    _jogo("Jogo X", controllers={_MAC[0]: {"triggers": {"left": {"mode": "Rigid",
+                                                                   "params": [0, 180]}}}})
+    outro = _jogo("Jogo Y")
+    antes = outro.read_bytes()
+
+    _arrastar(mod, "Jogo X", "150")
+    dele = load_profile("Jogo X").controllers[_MAC[0]].triggers
+    assert dele.intensidade == 1.5 and (dele.left.mode, dele.left.params) == ("Rigid", [0, 180]), (
+        "o trilho grava a escala no jogo e o efeito dele fica")
+    assert _escala_do_computador() == 0.4 and outro.read_bytes() == antes
+    assert _o_gerente_publica("Jogo X") == [{_MAC[0]: 1.5}]
+    assert _o_gerente_publica("Jogo Y") == [{_MAC[0]: 0.4}]
+
+    _arrastar(mod, "Jogo X", "100")
+    assert load_profile("Jogo X").controllers[_MAC[0]].triggers.intensidade == 1.0
+    assert _o_gerente_publica("Jogo X") == [None], "o 100% do jogo deixou a do computador valer"
+
+
+def test_o_computador_guarda_so_a_intensidade_e_nunca_o_efeito() -> None:
+    """O efeito do gatilho é de cada jogo: o `maquina.json` com um lado recusa o documento."""
+    from hefesto_dualsense4unix.utils import maquina as m
+
+    assert m.gravar_o_computador({"controles": {_MAC[0]: {"triggers": {"intensidade": 0.7}}}})
+    with pytest.raises(ValueError, match=r"triggers\.left"):
+        m.MaquinaConfig.model_validate({"computador": {"controles": {
+            _MAC[0]: {"triggers": {"left": {"mode": "Rigid"}, "intensidade": 0.7}}}}})

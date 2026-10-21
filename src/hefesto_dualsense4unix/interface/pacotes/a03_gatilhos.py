@@ -982,6 +982,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     """Endereço → valor, por controle da mesa. E as listas de acionamento e imersão, em bloco."""
     specs = _specs()
     p = perfil.ativo(ctx.state.get("active_profile"))
+    # a intensidade se lê com o computador por baixo: sem jogo, é lá que o trilho grava
+    vale = perfil.ativo_que_vale(ctx.state.get("active_profile"))
     tem_endereco = _enderecos_da_pagina()
 
     _o_rascunho_e_deste_perfil(perfil.nome_do_ativo(ctx.state))
@@ -1011,7 +1013,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "l2-pct": round((l2 or 0) / 255 * 100),
             "r2-pct": round((r2 or 0) / 255 * 100),
             CAMPO_DA_FORCA["l2"]: nivel_da_forca(l2),
-            CAMPO_DA_FORCA["r2"]: nivel_da_forca(r2), **_intensidade_da_coluna(p, uniq),
+            CAMPO_DA_FORCA["r2"]: nivel_da_forca(r2), **_intensidade_da_coluna(vale, uniq),
         }
         for sig, d in deste.items():
             col[f"modo-{sig}"] = d["modo"]
@@ -2040,6 +2042,9 @@ def _com_os_gatilhos(prof: Any, uniq: str, dos_lados: dict[str, Any]) -> Any:
 GESTO_DA_INTENSIDADE = "intensidade-do-gatilho"
 CAMPO_DA_INTENSIDADE = "intensidade-do-gatilho"
 TETO_DA_INTENSIDADE = 200
+#: O cartão do padrão do computador em que a intensidade mora, como a «Força da vibração» da 05
+#: (A-INTENSIDADE-DO-GATILHO-VALE-NO-PADRAO-DO-COMPUTADOR-01).
+CARTAO_DA_INTENSIDADE = "gatilho"
 
 
 def _intensidade_no_perfil(p: dict[str, Any] | None, uniq: str) -> int:
@@ -2072,12 +2077,14 @@ def _a_intensidade_que_fica(antes: Any) -> dict[str, Any]:
     return {} if escala is None else {"intensidade": escala}
 
 
-def _com_a_intensidade(prof: Any, uniq: str, pontos: int) -> Any:
+def _com_a_intensidade(prof: Any, uniq: str, pontos: int, *, cem_por_cima: bool = False) -> Any:
     """O perfil com a intensidade DESTE controle trocada, ou `None` se nada mudou.
 
     100% não vira opinião (`None`): é o que o firmware faz sem o byte, e o dump do controle fica o
-    de antes. O efeito dos dois lados não muda: o trilho multiplica o que o estilo e o jogo
-    escolheram, e a chave é o `uniq` normalizado, como em :func:`_com_os_gatilhos`.
+    de antes. A exceção é `cem_por_cima`: o jogo que volta a 100% por cima de outra intensidade do
+    computador grava o 1,0, porque sem ele a do computador voltaria a valer. O efeito dos dois
+    lados não muda: o trilho multiplica o que o estilo e o jogo escolheram, e a chave é o `uniq`
+    normalizado, como em :func:`_com_os_gatilhos`.
     """
     from hefesto_dualsense4unix.profiles.schema import ControllerOverrides, TriggersConfig
 
@@ -2085,7 +2092,7 @@ def _com_a_intensidade(prof: Any, uniq: str, pontos: int) -> Any:
     atuais = dict(prof.controllers or {})
     dele = atuais.get(chave) or ControllerOverrides()
     antes = dele.triggers
-    escala = None if pontos == 100 else pontos / 100
+    escala = None if pontos == 100 and not cem_por_cima else pontos / 100
     if (antes.intensidade if antes is not None else None) == escala:
         return None
     if antes is None:
@@ -2096,17 +2103,28 @@ def _com_a_intensidade(prof: Any, uniq: str, pontos: int) -> Any:
     return prof.model_copy(update={"controllers": atuais})
 
 
-@gesto("03-gatilhos.html", GESTO_DA_INTENSIDADE, grava="_gravar_so_o_gatilho")
+def _cem_por_cima(nome: str, uniq: str) -> bool:
+    """O jogo ativo grava por cima de uma intensidade do computador diferente de 100%?"""
+    from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
+
+    loader = perfil._com_o_src()
+    cru = loader.load_profile(nome) if nome else None
+    if opc.onde_grava(CARTAO_DA_INTENSIDADE, cru) != opc.JOGO:
+        return False
+    dele = opc.o_computador().controles.get(opc.chave(uniq) or "")
+    escala = dele.triggers.intensidade if dele is not None and dele.triggers is not None else None
+    return escala is not None and escala != 1.0
+
+
+@gesto("03-gatilhos.html", GESTO_DA_INTENSIDADE, grava="gravar_pelo_gesto")
 def intensidade_do_gatilho(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O trilho «Intensidade do gatilho» de UM controle: 0 a 200%, e grava na hora.
 
-    Ele não mexe no efeito: grava `controllers[uniq].triggers.intensidade` (a escala, 0 a 2) e
-    manda reaplicar, e o `ProfileManager` a publica no backend (`set_trigger_scales`). Até 100% ela
-    sai pelo byte de atenuação do firmware; acima, pelas forças do bloco, até o máximo do gatilho.
-    Vale também no Modo automático: o trilho multiplica o efeito do jogo, e não o veta.
-
-    O CLIQUE CHEGA DUAS VEZES (`change` e `click`, o mesmo valor), e a segunda é inócua: o perfil
-    já tem o número e :func:`_com_a_intensidade` devolve `None` sem gravar, como na 05.
+    Grava só `controllers[uniq].triggers.intensidade` (0 a 2) pelo `gravar_pelo_gesto`, como a
+    «Força da vibração» da 05: com um jogo, no perfil dele; sem jogo, no padrão do computador.
+    O `ProfileManager` a publica (`set_trigger_scales`) lida do perfil com o computador por baixo,
+    e ela multiplica também o efeito do Modo automático. O segundo evento do mesmo arrasto
+    (`change` e `click`) acha o número já gravado e não grava.
     """
     uniq = _exigir_controle(o, "intensidade do gatilho")
     bruto = str(o.get("valor") or "").strip()
@@ -2121,15 +2139,20 @@ def intensidade_do_gatilho(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError(
             f"a intensidade vai de 0 a {TETO_DA_INTENSIDADE}%, e a barra mandou {pontos}%.")
     nome = perfil.nome_do_ativo(ctx.state).strip()
-    if not nome:
+    perfil._com_o_src()
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
+
+    if not _chave_no_perfil(uniq):
         raise RuntimeError(
-            "sem perfil ativo não há onde guardar a intensidade. Escolha um perfil na aba Perfis.")
-    loader = perfil._com_o_src()
-    novo = _com_a_intensidade(loader.load_profile(nome), uniq, pontos)
-    if novo is None:
-        return
-    _gravar_so_o_gatilho(novo, p)
-    perfil.reaplicar(nome, ctx, p)
+            "este controle não tem um endereço fixo, e sem ele a intensidade cairia em outro "
+            "aparelho amanhã.")
+    por_cima = _cem_por_cima(nome, uniq)
+    _onde, novo = gravar_pelo_gesto(
+        CARTAO_DA_INTENSIDADE, nome,
+        lambda vista: _com_a_intensidade(vista, uniq, pontos, cem_por_cima=por_cima),
+        uniq=_chave_no_perfil(uniq), origem="interface-nova")
+    if novo is not None:
+        perfil.reaplicar(nome, ctx, p)
 
 
 PONTE = {"trigger_set_detalhado", "trigger_reset_detalhado"}

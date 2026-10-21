@@ -862,7 +862,12 @@ class GestoDeclarado(BaseModel):
 
 SECOES_DO_CONTROLE_NO_COMPUTADOR: tuple[str, ...] = (
     "leds", "speaker", "mic", "rumble", "sensores", "ativacao", "analogicos",  # noqa-acento: chave ASCII
+    "triggers",
 )
+
+#: As seções do controle de que o computador guarda só uma parte: do gatilho, só a «Intensidade do
+#: gatilho»; o efeito é de cada jogo (A-INTENSIDADE-DO-GATILHO-VALE-NO-PADRAO-DO-COMPUTADOR-01).
+CAMPOS_DO_CONTROLE_NO_COMPUTADOR: dict[str, tuple[str, ...]] = {"triggers": ("intensidade",)}
 
 
 class MouseDoComputador(BaseModel):
@@ -955,6 +960,11 @@ class ComputadorDeclarado(BaseModel):
                 if c not in SECOES_DO_CONTROLE_NO_COMPUTADOR
                 and getattr(entrada, c) is not None
             )
+            for secao, so_estes in CAMPOS_DO_CONTROLE_NO_COMPUTADOR.items():
+                parte = getattr(entrada, secao, None)
+                if parte is not None:
+                    do_jogo += sorted(f"{secao}.{c}" for c in parte.model_fields_set
+                                      if c not in so_estes)
             if do_jogo:
                 raise ValueError(
                     f"o controle {chave} traz {do_jogo}, que são do jogo e não do computador")
