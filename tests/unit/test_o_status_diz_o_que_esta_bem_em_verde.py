@@ -71,7 +71,10 @@ def _perfil(nome: str, priority: int = 0, jogo: bool = True) -> Profile:
 
 
 def test_o_ok_e_verde_de_contorno() -> None:
-    """A peça do «Ligada»: contorno e texto no verde do tema, fundo transparente."""
+    """A peça do «Ligada»: contorno e texto no verde do tema, fundo transparente.
+
+    A prova da D-2110-O-STATUS-DIZ-O-QUE-ESTA-BEM-EM-VERDE.
+    """
     desenho = DESENHO.read_text(encoding="utf-8")
     regra = re.search(r"\.selo\.ok\{([^}]*)\}", desenho)
     assert regra, "o desenho perdeu a regra do `.selo.ok`"

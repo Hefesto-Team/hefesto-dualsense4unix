@@ -117,6 +117,7 @@ def medida() -> dict[str, dict[str, list[int] | int]]:
 @pytest.mark.parametrize("largura", LARGURAS)
 def test_doze_extensoes_cabem_e_os_lancadores_ficam_a_vista(
         medida: dict[str, dict[str, list[int] | int]], largura: int) -> None:
+    """A prova da D-2110-AS-EXTENSOES-EM-DUAS-COLUNAS-COM-ROLAGEM-POR-DENTRO."""
     m = medida[f"{largura}-12"]
     miolo, caixa, lanc = m["miolo"], m["miolo_caixa"], m["lanc"]
     lista = m["lista"]

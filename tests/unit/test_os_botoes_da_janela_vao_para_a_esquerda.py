@@ -45,6 +45,7 @@ print(json.dumps({"largura": largura, "x": {g: b.get_allocation().x for g, b in 
 
 
 def test_a_tupla_esta_na_ordem_da_tela() -> None:
+    """A prova da D-2010-AS-TELAS-DO-ANTES-E-DEPOIS-DE-20-10."""
     assert [gesto for _, gesto, _ in janela.BOTOES_DA_BARRA] == ORDEM_ESCOLHIDA
 
 

@@ -182,6 +182,7 @@ def test_o_tema_claro_troca_o_tema_da_sessao_que_so_existe_escuro(tmp_path: path
     """O COSMIC grava na sessão o nome do tema escuro (`adw-gtk3-dark`), e nele o pedido da
     variante clara não muda nada: a lista do popup do `<select>` saía escura no meio da tela clara.
     O tema claro troca o tema pelo par claro dele, e a casa escura volta ao da sessão.
+    A prova da D-2110-O-TEMA-CLARO-TROCA-O-TEMA-GTK-PELO-PAR-CLARO.
 
     MORDIDA (executada em 21/10/2026): com `o_par_claro` devolvendo vazio, a lista do tema claro
     sai `#1e1e1e` e reprova."""
