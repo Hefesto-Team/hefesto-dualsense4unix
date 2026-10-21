@@ -277,12 +277,13 @@ def html_do_mapa(
     rotulos: Mapping[str, str],
     dicas: Mapping[str, str],
     nomes: Mapping[str, str] | None = None,
+    nomes_das_entradas: Mapping[str, str] | None = None,
     pergunta: Mapping[str, Any] | None = None,
 ) -> str:
     """As faces do gabinete, com um quadrado por entrada.
 
-    `nomes` é `filha -> nome` do hub, quando ela deu um; `pergunta` é a pergunta do
-    «Acrescentar hub» (`{"aberta": bool, "entradas": [numero, …]}`), que é estado de tela.
+    `nomes` é `filha -> nome` do hub, se ela deu; `nomes_das_entradas`, `entrada -> nome` dado a
+    ela; `pergunta` é a do «Acrescentar hub» (`{"aberta", "entradas"}`), estado de tela.
 
     `faces` é `[{"nome": …, "portas": [numero, …]}, …]` — a forma do
     `MapaDaMesa`, para que o chamador não precise traduzir nada.
@@ -350,23 +351,26 @@ def html_do_mapa(
     from hefesto_dualsense4unix.utils.rotulo_da_entrada import MAXIMO_DO_NOME_DA_ENTRADA
 
     nomes = nomes or {}
+    nomes_das_entradas = nomes_das_entradas or {}
     aberta = bool(pergunta and pergunta.get("aberta"))
     celulas = "".join(
         f'<div class="mm-cel">{quadrado(filha, esticada=True)}'
         + (f'<span class="mm-hub-nome">{_e(nomes[filha])}</span>' if nomes.get(filha) else "")
-        + f'<span class="mm-ligado">{_e(_mm.ROTULO_LIGADO_NA_ENTRADA)} <b>{_e(mae)}</b>'
+        + f'<span class="mm-ligado">{_e(_mm.ROTULO_LIGADO)} '
+        f'<b>{_e(_mm.na_entrada(mae, nomes_das_entradas.get(mae)))}</b>'
         f' <span class="mudo">· {_e(face_da_entrada.get(mae, ""))}</span></span></div>'
         for mae, filha in extensoes.items())
     pergunta_html = ""
     if aberta:
         gravar = 'data-gesto="novo-hub-gravar" data-hef-forma="hub-pergunta"'
         cancelar = 'data-gesto="novo-hub-cancelar"'
-        opcoes = "".join(f'<option value="{_e(n)}">{_e(n)}</option>'
-                         for n in (pergunta or {}).get("entradas", ()))
+        opcoes = "".join(
+            f'<option value="{_e(n)}">{_e(_mm.na_entrada(n, nomes_das_entradas.get(n)))}</option>'
+            for n in (pergunta or {}).get("entradas", ()))
         pergunta_html = (
             f'''
               <div class="hub-pergunta" id="hub-pergunta">
-                <label class="hub-rot">{_e(_mm.ROTULO_LIGADO_NA_ENTRADA)}
+                <label class="hub-rot">{_e(_mm.ROTULO_LIGADO)}
                   <select class="hub-sel" data-linha="hub-entrada">{opcoes}</select></label>
                 <input class="mm-campo hub-nome" type="text" data-linha="hub-nome"
                   maxlength="{MAXIMO_DO_NOME_DA_ENTRADA}"

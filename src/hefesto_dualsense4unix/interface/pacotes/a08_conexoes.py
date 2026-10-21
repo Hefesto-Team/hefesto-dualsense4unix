@@ -994,6 +994,8 @@ def _html_do_mapa() -> str:
                "nova_entrada": _tela.DICA_NOVA_ENTRADA},
         nomes={n: str(p["nome"]) for n, p in logica.portas.items()
                if p.get("filha_de") and p.get("nome")},
+        nomes_das_entradas={n: str(p["nome"]) for n, p in logica.portas.items()
+                            if not p.get("filha_de") and p.get("nome")},
         pergunta={"aberta": logica.perguntando_o_hub,
                   "entradas": logica.entradas_para_o_hub()})
 

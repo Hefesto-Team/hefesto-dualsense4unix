@@ -362,8 +362,27 @@ def _composicoes_da_palavra(raiz: Path) -> set[tuple[str, str]]:
 
     palavra_no_fim = re.compile(r"\bEntrada\s*$", re.IGNORECASE)
     achados: set[tuple[str, str]] = set()
-    for arquivo in sorted(raiz.rglob("*.py")):
-        arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
+    arvores = {
+        arquivo: ast.parse(arquivo.read_text(encoding="utf-8"))
+        for arquivo in sorted(raiz.rglob("*.py"))
+    }
+    # constante de módulo cujo texto termina em «na entrada» (fora do dono): quem a junta a um valor
+    # numa f-string compõe o nome da porta sem passar por ele (O-LIGADO-NA-ENTRADA-...-01).
+    # «Acrescentar entrada» e «Mapear entrada a entrada» não esperam número: ficam de fora.
+    na_entrada_no_fim = re.compile(r"\b(?:na|da|pela|para a|à)\s+entrada\s*$", re.IGNORECASE)
+    constantes_da_palavra = {
+        alvo.id
+        for arquivo, arvore in arvores.items()
+        if str(arquivo.relative_to(raiz)) != _O_DONO
+        for no in arvore.body
+        if isinstance(no, ast.Assign)
+        and isinstance(no.value, ast.Constant)
+        and isinstance(no.value.value, str)
+        and na_entrada_no_fim.search(no.value.value)
+        for alvo in no.targets
+        if isinstance(alvo, ast.Name)
+    }
+    for arquivo, arvore in arvores.items():
         docstrings = {
             id(no.body[0].value)
             for no in ast.walk(arvore)
@@ -391,6 +410,16 @@ def _composicoes_da_palavra(raiz: Path) -> set[tuple[str, str]]:
                     for p in partes
                 ):
                     achados.add((nome, "compõe com a palavra"))
+                if any(
+                    isinstance(p, ast.FormattedValue)
+                    and any(
+                        (isinstance(sub, ast.Name) and sub.id in constantes_da_palavra)
+                        or (isinstance(sub, ast.Attribute) and sub.attr in constantes_da_palavra)
+                        for sub in ast.walk(p.value)
+                    )
+                    for p in partes
+                ):
+                    achados.add((nome, "compõe por constante"))
             elif (
                 isinstance(no, ast.Constant)
                 and isinstance(no.value, str)

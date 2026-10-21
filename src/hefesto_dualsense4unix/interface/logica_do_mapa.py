@@ -11,6 +11,8 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.maquina import MapaDaMesa
 from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
     MAXIMO_DO_NOME_DA_ENTRADA,
+    com_artigo,
+    na_frase,
     nome_que_vale,
 )
 
@@ -37,7 +39,7 @@ ROTULO_VAZIA = "Vazia"
 ROTULO_POR_EXTENSAO = "Por extensão"
 NOME_DA_FACE_EM_BRANCO = "Nome da face"
 ROTULO_NOVO_HUB = "Acrescentar hub"
-ROTULO_LIGADO_NA_ENTRADA = "Ligado na entrada"
+ROTULO_LIGADO = "Ligado"
 NOME_DO_HUB_EM_BRANCO = "Nome do hub (opcional)"
 ROTULO_ACRESCENTAR = "Acrescentar"
 ROTULO_CANCELAR = "Cancelar"
@@ -309,6 +311,11 @@ def aparelhos_para_colocar(censo: Censo) -> tuple[Aparelho, ...]:
     return censo.conectados()
 
 
+def na_entrada(numero: str, nome: str | None = None) -> str:
+    """«na Entrada 15» sem nome, «na entrada Meio» com o nome dado: a grafia é do dono."""
+    return com_artigo(na_frase(numero, nome), em=True)
+
+
 def rotulo_do_aparelho(aparelho: Aparelho) -> str:
     """A palavra de tela de um aparelho da lista — espécie e caminho."""
     return f"{aparelho.especie} · {aparelho.nome_do_kernel}"
@@ -320,6 +327,7 @@ __all__ = [
     "bancada_do_rascunho",
     "classe_do_escolhido",
     "confissao_do_desenho",
+    "na_entrada",
     "rotulo_do_aparelho",
     "veredito_do_quadrado",
 ]
