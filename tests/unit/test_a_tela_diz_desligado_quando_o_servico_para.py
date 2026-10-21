@@ -450,8 +450,11 @@ LER_O_TOPO = r"""
   for (const [nome, carga] of CARGAS) {
     window.__hef.pintar(carga);
     const con = document.querySelector('.conectado');
+    const linha = document.querySelector('.fita-linha').getBoundingClientRect();
+    const chip = document.querySelector('.perfil-ativo').getBoundingClientRect();
     fora[nome] = {achou: !!con, visivel: vis(con),
-                  texto: vis(con) ? (con.innerText || '').replace(/\s+/g, ' ').trim() : ''};
+                  texto: vis(con) ? (con.innerText || '').replace(/\s+/g, ' ').trim() : '',
+                  folga_do_chip: Math.round(linha.right - chip.right)};
   }
   return JSON.stringify(fora);
 })()
@@ -489,3 +492,20 @@ def test_no_webkit_o_topo_das_dez_some_com_o_servico_parado(
             f"{aba_html} {nome}: o topo ficou: {fora[nome]['texto']!r}")
     assert fora["no_radio"]["texto"] == "● 2 BT", (
         f"{aba_html}: o topo não voltou: {fora['no_radio']}")
+
+
+@pytest.mark.parametrize("aba_html", AS_DEZ)
+def test_no_webkit_o_perfil_ativo_fica_a_direita_com_o_servico_parado(
+        o_topo_das_dez: dict[str, dict[str, Any]], aba_html: str) -> None:
+    """Com o topo fora, o «Perfil ativo» continua encostado na direita, onde ele mora de pé.
+
+    Quem empurrava era a `.conectado`; com ela em `display:none` o chip caía ao lado da marca.
+    A MORDIDA: tire a regra `.fita-linha:has(i[data-servico="parado"]) .perfil-ativo` do
+    `topo.html`, rode o `regerar.py`, e a folga do chip vira a largura da faixa inteira.
+    """
+    fora = o_topo_das_dez[aba_html]
+    de_pe = fora["no_radio"]["folga_do_chip"]
+    for nome in ("parado", "parado_de_novo"):
+        assert fora[nome]["folga_do_chip"] == de_pe, (
+            f"{aba_html} {nome}: o chip saiu da direita (folga {fora[nome]['folga_do_chip']} px, "
+            f"de pé {de_pe} px)")

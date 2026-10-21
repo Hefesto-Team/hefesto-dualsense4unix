@@ -271,6 +271,9 @@
      é o campo da fita que o menu do botão direito também lê; o piloto escreve «—» no `<b>` vazio, e
      o `display:none` o leva junto. Mora aqui, e não numa aba, porque o topo é o mesmo nas dez. */
   .fita-linha:has(i[data-servico="parado"]) .conectado{display:none}
+  /* E O PERFIL ATIVO FICA À DIREITA (21/10/2026): o `margin-left:auto` mora na `.conectado`, e com
+     ela fora o chip caía colado na marca. Com o serviço parado, quem empurra é o próprio chip. */
+  .fita-linha:has(i[data-servico="parado"]) .perfil-ativo{margin-left:auto}
   .fita{
     display:flex;align-items:center;gap:8px;
     font-size:12px;color:var(--fg);
