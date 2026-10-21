@@ -390,6 +390,16 @@
      viram quatro, e com os 28 do CSV, vinte e oito. `monta.fita()` escreve a
      cor no `style` do chip, lida do desenho. */
   .chip.plastico{border-color:var(--plastico, var(--border-forte))}
+  /* O CHIP DA FITA RESPONDE AO MOUSE — 20/10/2026, A-BARRA-DE-BAIXO-E-A-FITA-RESPONDEM-AO-MOUSE-01.
+     Só na fita que se clica (a 01, a 02 e a 08; a `.inerte` não escolhe nada, e no modo nativo a
+     camada `.so-no-nativo` fica por cima). O chip fora do aceso ganha o tom da cor do plástico, e a
+     borda do plástico fica; o «Todos», sem plástico, um fundo claro e a borda `--texto-suave`, como
+     o `.seg button:hover:not(.on)`. */
+  .fita:not(.inerte) .chip:hover:not(.on){background:rgba(255,255,255,.1);
+    background:color-mix(in srgb,var(--fg) 10%,transparent)}
+  .fita:not(.inerte) .chip.plastico:hover:not(.on){
+    background:color-mix(in srgb,var(--plastico,var(--border-forte)) 24%,var(--app-bg))}
+  .fita:not(.inerte) .chip:not(.plastico):hover:not(.on){border-color:var(--texto-suave)}
 
   /* A LISTA ABERTA DE UM <select> — o usuário viu, 28/08: as opções somem quando o
      dropdown abre. O popup do <select> é do SISTEMA, não da página: ele nasce com
@@ -648,6 +658,17 @@
   .r-salvar{border-color:var(--purple)!important;color:var(--purple);background:transparent}
   .r-importar{border-color:var(--orange)!important;color:var(--orange);background:transparent}
   .r-exportar{border-color:var(--comment)!important;color:var(--fg);background:transparent}
+  /* A BARRA DE BAIXO RESPONDE AO MOUSE — 20/10/2026, A-BARRA-DE-BAIXO-E-A-FITA-RESPONDEM-AO-MOUSE-01,
+     o desenho aprovado em 20/10. Os três de contorno ganham o fundo leve da cor deles e o Aplicar
+     (cheio) clareia; nada muda de lugar nem de tamanho. A cor sai do token (`color-mix`), para o
+     tema que troca o token levar o tom junto; o `rgba` antes é o da casa, para o motor sem `color-mix`. */
+  .rodape .r-aplicar:hover{background:#7dfb9b;background:color-mix(in srgb,var(--green) 75%,#fff)}
+  .rodape .r-salvar:hover{background:rgba(189,147,249,.18);
+    background:color-mix(in srgb,var(--purple) 18%,transparent)}
+  .rodape .r-importar:hover{background:rgba(255,184,108,.18);
+    background:color-mix(in srgb,var(--orange) 18%,transparent)}
+  .rodape .r-exportar:hover{background:rgba(136,150,196,.2);
+    background:color-mix(in srgb,var(--comment) 20%,transparent)}
 
   .marca{color:var(--orange)}
 
