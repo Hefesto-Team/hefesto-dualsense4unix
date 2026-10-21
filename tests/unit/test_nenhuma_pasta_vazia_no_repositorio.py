@@ -58,6 +58,7 @@ def pastas_so_casca(arquivos: list[str], raiz: Path = RAIZ) -> list[str]:
 
 
 def test_nenhuma_pasta_versionada_e_so_casca() -> None:
+    # D-2110-AS-PASTAS-VAZIAS-SAEM-DO-REPOSITORIO
     achadas = pastas_so_casca(_versionados())
     assert not achadas, (
         "pasta versionada cujo único conteúdo é casca (`__init__.py` vazio, `.gitkeep` ou "
