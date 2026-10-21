@@ -192,7 +192,7 @@ def extensao_html(ext: Extensao) -> str:
     return f'''          <div class="ext" data-modificacao="{_a(ext.chave)}">
             <span class="ext-ico" style="color:var(--{ext.cor})">{_icone(ext.chave)}</span>
             <div class="ext-quem">
-              <span class="ext-sub"><span class="ext-nome">{_e(ext.nome)}</span>{_selo_da_extensao(ext)}<span class="ext-ver">{_e(ext.versao)}</span></span>
+              <span class="ext-sub"><span class="ext-nome" data-dica="{_a(ext.nome)}">{_e(ext.nome)}</span>{_selo_da_extensao(ext)}<span class="ext-ver">{_e(ext.versao)}</span></span>
               <span class="ext-faz" data-dica="{_a(ext.dica)}">{_e(ext.dica)}</span>
             </div>
             {_chave_html(ext)}
