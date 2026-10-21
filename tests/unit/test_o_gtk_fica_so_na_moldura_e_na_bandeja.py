@@ -55,6 +55,7 @@ def _arvore_em_ordem(tmp_path: Path) -> Path:
 
 
 def test_o_portao_passa_na_arvore_de_hoje() -> None:
+    # D-2110-O-GTK-FICA-SO-NA-MOLDURA-E-NA-BANDEJA
     saida = _rodar(RAIZ)
     assert saida.returncode == 0, saida.stdout + saida.stderr
 
