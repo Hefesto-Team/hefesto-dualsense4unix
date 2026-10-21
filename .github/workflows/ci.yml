@@ -270,7 +270,7 @@ jobs:
           BASE_DA_FAIXA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: python3 scripts/check_a_origem.py ${BASE_DA_FAIXA:+--base "$BASE_DA_FAIXA"}
       - name: Os portões do job, pelo nome na tabela
-        run: bash scripts/portoes.sh --so nada-mockado quatro-respostas quatro-respostas-morde ate-onde-a-prova-chegou ate-onde-a-prova-chegou-morde mapa-de-canais fatos-de-tela fala-de-tela caducos paridade-transporte paridade-gtk-html contratos-de-fora donos-de-comportamento decisao-tem-prova broadcast-proibido nada-aponta-para-a-janela
+        run: bash scripts/portoes.sh --so nada-mockado quatro-respostas quatro-respostas-morde ate-onde-a-prova-chegou ate-onde-a-prova-chegou-morde mapa-de-canais fatos-de-tela fala-de-tela caducos paridade-transporte paridade-gtk-html contratos-de-fora donos-de-comportamento decisao-tem-prova broadcast-proibido nada-aponta-para-a-janela o-gtk-fica-na-moldura
 
   shellcheck:
     name: Shellcheck (severidade error)
@@ -575,6 +575,14 @@ jobs:
     # testes de interface ou PULAM (e o pulo passa despercebido) ou rodam
     # contra um `Gtk` de mentira plantado em sys.modules por outro arquivo de
     # teste — que foi o que se mediu em 28/07.
+    #
+    # O QUE ELE COBRE AGORA (21/10/2026, O-GTK-FICA-SO-NA-MOLDURA-E-NA-BANDEJA-01): o GTK mora só
+    # na moldura (a janela do WebKit e os pilotos) e na bandeja, e quem prova isso é o portão
+    # `o-gtk-fica-na-moldura`, no `lint-test`. Este job prova o que PRECISA do `gi` real: o
+    # WebKitGTK que ela usa, a janela, os pilotos e a bandeja. A lógica de `app/actions/` roda sem o
+    # `gi`, e os 195 arquivos de teste que só pediam o GTK por importá-la perderam o
+    # `exigir_gi_real` e rodam também no `lint-test`, que não tem `gi`. A suíte abaixo segue inteira
+    # aqui, e o que nela é só lógica passa nos dois lugares.
     #
     # Ele NÃO é `needs:` de ninguém e ninguém é `needs:` dele, de propósito: a
     # falha deste job não pode cancelar nem mascarar o `lint-test`, o `mypy` ou

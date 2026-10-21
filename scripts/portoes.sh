@@ -213,6 +213,13 @@ rapido|broadcast-proibido|py|scripts/check_broadcast_proibido.py|src/**
 # sem argumento — que é o que esta casa manda rodar antes de fechar leva — o
 # alcança; o `--rapido`, que roda a cada salvamento, não paga por ele.
 completo|nada-aponta-para-a-janela|py|scripts/check_nada_aponta_para_a_janela.py
+# O GTK FICA SÓ NA MOLDURA E NA BANDEJA — 21/10/2026, O-GTK-FICA-SO-NA-MOLDURA-E-NA-BANDEJA-01. A janela GTK
+# saiu em 06/09, mas a lógica de `app/actions/` seguiu declarando o `gi` sem usá-lo: nove módulos só tinham o
+# `gi.require_version`, e sem o `gi` doze dos 31 não importavam (o daemon e a linha de comando carregavam o GTK
+# à toa). Reprova `from gi.repository import Gtk/Gdk` e `gi.require_version("Gtk"/"Gdk")` em `src/` fora da lista
+# das duas pontas (a moldura e a bandeja), nomeando `arquivo:linha`. A lista, com o motivo de cada entrada, é o
+# próprio script. Camada rápida: lê só `src/` por AST, em décimos de segundo.
+rapido|o-gtk-fica-na-moldura|py|scripts/check_o_gtk_fica_na_moldura.py|src/** scripts/check_o_gtk_fica_na_moldura.py
 # BUG-GATE-TEST-DATA-NAO-RODAVA-01 (25/07/2026): reprovava e nenhum workflow o rodava, porque contradizia o
 # anonimato (pedia MAC neutro onde a casa manda OUI:00:00:NN). Curada a contradição, ele vale ao lado do irmão.
 rapido|test-data|bash|scripts/check_test_data.sh
