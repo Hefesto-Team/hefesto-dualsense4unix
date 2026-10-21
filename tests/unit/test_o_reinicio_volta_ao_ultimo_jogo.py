@@ -17,6 +17,7 @@ from hefesto_dualsense4unix.daemon.connection import (
     perfil_que_o_boot_restaura,
 )
 from hefesto_dualsense4unix.profiles.loader import NOME_DO_PADRAO
+from hefesto_dualsense4unix.profiles.manager import esquecer_o_perfil_apagado
 from hefesto_dualsense4unix.profiles.schema import ProfileModeConfig, perfil_e_de_jogo
 from hefesto_dualsense4unix.utils import session
 from tests.unit.test_foco_errante_01_a_janela_da_steam_nao_tira_o_perfil import (
@@ -118,8 +119,8 @@ def test_o_perfil_apagado_sai_da_memoria_e_o_freestyle_manda() -> None:
     session.save_freestyle_ligado(True)
     assert _o_nome_que_o_boot_restaura(None) == NOME_DO_PADRAO
     session.save_freestyle_ligado(False)
-    manager, _store = _bancada(_os_perfis())
-    manager.delete("sackboy")
+    _bancada(_os_perfis())
+    esquecer_o_perfil_apagado("sackboy")
     assert session._ultimo_jogo_cru() is None, "o apagado sai da memória, não só deixa de carregar"
     assert _o_nome_que_o_boot_restaura(None) == "lure"
 

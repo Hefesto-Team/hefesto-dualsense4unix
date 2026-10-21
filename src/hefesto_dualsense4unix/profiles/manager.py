@@ -19,7 +19,6 @@ from hefesto_dualsense4unix.core.speaker_scale import volume_do_percentual
 from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles.loader import (
-    delete_profile,
     e_perfil_de_jogo_automatico,
     load_all_profiles,
     load_profile,
@@ -92,6 +91,28 @@ def e_o_freestyle(nome: object) -> bool:
     from hefesto_dualsense4unix.profiles.slug import mesmo_slug
 
     return isinstance(nome, str) and mesmo_slug(nome, SLUG_DO_PADRAO)
+
+
+def esquecer_o_perfil_apagado(nome: str) -> None:
+    """O perfil apagado sai da memória do disco: a escolha e o último jogo.
+
+    Quem chama é o `profile delete` da linha de comando, depois do `delete_profile` (a
+    O-PERFIL-ATIVO-APAGADO-SOLTA-O-REMAP-E-O-ROTEADOR-01): o ativo ele recusa antes, com a frase
+    da aba Perfis, e por isso não há remap nem roteador a soltar aqui. Sem esta limpeza o boot
+    voltaria a um nome que não existe mais, e o Freestyle apagado com o modo ligado no disco
+    seguraria o boot sem perfil nenhum.
+    """
+    from hefesto_dualsense4unix.utils.session import (
+        esquecer_a_escolha,
+        esquecer_o_ultimo_jogo,
+        save_freestyle_ligado,
+    )
+
+    if e_o_freestyle(nome):
+        save_freestyle_ligado(False)
+    esquecer_a_escolha(nome)
+    esquecer_o_ultimo_jogo(nome)
+    logger.info("profile_deleted", name=nome)
 
 
 def os_perfis_de_escolher(perfis: Iterable[Any]) -> list[Any]:
@@ -184,29 +205,12 @@ class ProfileManager:
         save_profile(profile)
         logger.info("profile_created", name=profile.name)
 
-    def delete(self, name: str) -> None:
-        delete_profile(name)
-        active = self.store.active_profile
-        # slug (ex.: active="Ação", name="acao" — slugs iguais, strings não).  # (noqa-acento)
-        if active is not None and self._refers_same_profile(active, name):
-            self.store.set_active_profile(None)
-        if e_o_freestyle(name):
-            ligar_o_freestyle(self.store, False)
-        from hefesto_dualsense4unix.utils.session import (
-            esquecer_a_escolha,
-            esquecer_o_ultimo_jogo,
-        )
-
-        esquecer_a_escolha(name)
-        esquecer_o_ultimo_jogo(name)
-        logger.info("profile_deleted", name=name)
-
     @staticmethod
     def _refers_same_profile(active: str, name: str) -> bool:
         """True se `active` e `name` apontam para o mesmo perfil (compara slugs).
 
-        O arquivo já foi removido por `delete_profile`, então NÃO dependemos do
-        disco: `slugify` roda sobre as strings em memória. Tolera nomes exóticos
+        NÃO dependemos do disco (o arquivo pode já não existir): `slugify` roda
+        sobre as strings em memória. Tolera nomes exóticos
         que não produzem slug (ValueError) caindo na comparação literal — assim
         um active sem slug ainda é limpo quando o delete vem com a mesma string.
         """

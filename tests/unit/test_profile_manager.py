@@ -308,47 +308,6 @@ def test_veto_loga_uma_vez_por_jogo(
     assert len(eventos) == 2
 
 
-def test_delete_do_ativo_reseta_active_profile(isolated_profiles_dir: Path):
-    save_profile(_mk_profile("tmp"))
-    fc = FakeController()
-    fc.connect()
-    store = StateStore()
-    manager = ProfileManager(controller=fc, store=store)
-    manager.activate("tmp")
-    assert store.active_profile == "tmp"
-    manager.delete("tmp")
-    assert store.active_profile is None
-
-
-def test_delete_por_slug_limpa_active_gravado_como_display_name(
-    isolated_profiles_dir: Path,
-):
-    """BUG-PROFILE-DELETE-ACTIVE-SLUG-01: delete por slug deve limpar o active."""
-    save_profile(_mk_profile("Ação"))
-    fc = FakeController()
-    fc.connect()
-    store = StateStore()
-    manager = ProfileManager(controller=fc, store=store)
-    manager.activate("Ação")
-    assert store.active_profile == "Ação"
-    manager.delete("acao")  # (noqa-acento)
-    assert store.active_profile is None
-
-
-def test_delete_de_outro_perfil_nao_limpa_active(isolated_profiles_dir: Path):
-    """Deletar um perfil diferente do ativo NÃO deve zerar o active."""
-    save_profile(_mk_profile("ativo"))
-    save_profile(_mk_profile("outro"))
-    fc = FakeController()
-    fc.connect()
-    store = StateStore()
-    manager = ProfileManager(controller=fc, store=store)
-    manager.activate("ativo")
-    assert store.active_profile == "ativo"
-    manager.delete("outro")
-    assert store.active_profile == "ativo"
-
-
 def test_create_persiste_no_disco(isolated_profiles_dir: Path):
     fc = FakeController()
     fc.connect()

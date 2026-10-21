@@ -236,14 +236,20 @@ def test_o_gesto_dela_liga_e_desliga_e_o_disco_acompanha(semeadura_ligada: None)
 
 
 def test_apagar_o_freestyle_desliga_o_modo(semeadura_ligada: None) -> None:
-    """Sem o arquivo, o modo ligado seguraria o produto sem perfil nenhum, para sempre."""
+    """Sem o arquivo, o modo ligado seguraria o produto sem perfil nenhum, para sempre.
+
+    Quem apaga é o `profile delete` (o daemon recusa o que está valendo): o arquivo sai e o
+    modo ligado no disco sai junto (O-PERFIL-ATIVO-APAGADO-SOLTA-O-REMAP-E-O-ROTEADOR-01).
+    """
+    from hefesto_dualsense4unix.profiles.manager import esquecer_o_perfil_apagado
+
     loader.load_all_profiles()
-    store = StateStore()
-    gerente = _liga(store)
+    session.save_freestyle_ligado(True)
 
-    gerente.delete(FREESTYLE)
+    loader.delete_profile(FREESTYLE)
+    esquecer_o_perfil_apagado(FREESTYLE)
 
-    assert (store.freestyle_ligado, session.load_freestyle_ligado()) == (False, False)
+    assert session.load_freestyle_ligado() is False
 
 
 def _marker(tmp_path: Path) -> Path:

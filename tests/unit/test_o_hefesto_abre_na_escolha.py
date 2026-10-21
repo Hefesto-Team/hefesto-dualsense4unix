@@ -17,7 +17,7 @@ from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles import loader
 from hefesto_dualsense4unix.profiles.autoswitch import AutoSwitcher
-from hefesto_dualsense4unix.profiles.manager import ProfileManager
+from hefesto_dualsense4unix.profiles.manager import ProfileManager, esquecer_o_perfil_apagado
 from hefesto_dualsense4unix.profiles.schema import (
     ControllerOverrides,
     LedsConfig,
@@ -126,7 +126,8 @@ def test_o_boot_abre_na_escolha_dela(
         esperado = FREESTYLE
     elif caso == "escolha-apagada":
         session.gravar_a_escolha(AVATAR)
-        ProfileManager(controller=FakeController(), store=StateStore()).delete(AVATAR)
+        loader.delete_profile(AVATAR)
+        esquecer_o_perfil_apagado(AVATAR)
         esperado = None
     else:
         _cli_sem_daemon(AVATAR, monkeypatch)

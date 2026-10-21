@@ -194,15 +194,41 @@ def cmd_delete(
     name: str,
     yes: bool = typer.Option(False, "--yes", "-y", help="Confirma delete."),
 ) -> None:
-    """Remove um perfil."""
+    """Remove um perfil. O que está valendo agora é recusado, como na aba Perfis."""
+    from hefesto_dualsense4unix.app.actions.profiles_actions import (
+        frase_da_remocao_do_perfil_ativo,
+        perfil_que_esta_valendo,
+    )
+    from hefesto_dualsense4unix.profiles.manager import esquecer_o_perfil_apagado
+
+    aviso = frase_da_remocao_do_perfil_ativo(name, perfil_que_esta_valendo(_estado_do_daemon()))
+    if aviso:
+        console.print(f"[red]{aviso}[/red]")
+        raise typer.Exit(code=1)
     if not yes:
         typer.confirm(f"Deletar perfil {name!r}?", abort=True)
     try:
         delete_profile(name)
-        console.print(f"[green]perfil deletado: {name}[/green]")
     except FileNotFoundError:
         console.print(f"[red]perfil não encontrado: {name}[/red]")
         raise typer.Exit(code=1) from None
+    esquecer_o_perfil_apagado(name)
+    console.print(f"[green]perfil deletado: {name}[/green]")
+
+
+def _estado_do_daemon() -> dict[str, object] | None:
+    """O estado do daemon, ou ``None`` sem resposta (fora do ar ou prazo vencido).
+
+    Sem resposta, quem diz o que vale é o marcador em disco (`perfil_que_esta_valendo`).
+    """
+    from hefesto_dualsense4unix.app.ipc_bridge import _run_call, teto_da_linha_de_comando
+
+    metodo = "daemon.state_full"
+    try:
+        estado = _run_call(metodo, None, timeout=teto_da_linha_de_comando(metodo))
+    except (IpcError, FileNotFoundError, ConnectionError, OSError):
+        return None
+    return estado if isinstance(estado, dict) else None
 
 
 @app.command("historico")  # (noqa-acento): nome de subcomando e ASCII
