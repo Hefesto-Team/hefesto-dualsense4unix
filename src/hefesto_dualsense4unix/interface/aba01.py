@@ -923,7 +923,7 @@ def cartao(c, bateria=None):
     o `P2 = Xbox 360` / `P3 = DualSense` da MESA, porque a fonte única existia e
     a tela de referência ficava de fora dela.
 
-    OS ENDEREÇOS (29/08/2026, e o vocabulário é o do `aba02.py:376`)
+    OS ENDEREÇOS (29/08/2026, e o vocabulário é o do `aba02.py:379`)
     ----------------------------------------------------------------
     `data-controle` é o `uniq` do aparelho quando há um (a mesa viva) e o `pref`
     quando não há (o mockup, cuja mesa é escrita à mão) — a MESMA linha do

@@ -753,7 +753,7 @@ def dica_da_luz(nome: str, via: str, recado: str) -> str:
     por-uniq < co-op < jogo), e **este pacote não vê o override por-uniq**. O `state_full` publica
     por controle as chaves de `ipc_handlers._enrich_controllers_per_controller` (`lightbar_rgb`,
     `lightbar_on`, `lightbar_source`, `player_slot`, `inputs`…), nenhum do desejado
-    (`aba02.py:1447`: publica `player_slot`, NÃO `player_leds`); e o override é onde a GTK escreve
+    (`aba02.py:1388`: publica `player_slot`, NÃO `player_leds`); e o override é onde a GTK escreve
     ao aplicar um desenho (`lightbar_actions._enviar_player_leds` → `player_leds_set_detalhado(…,
     uniq=…)` → `_apply_por_uniq` → `apply_output_for`). Reproduzido em 02/09/2026 com o merge real e
     nenhum aparelho (dublê de `test_troca_de_player_01_a_escolha_sobrepoe.py`): com override

@@ -521,7 +521,7 @@ def _perguntar_o_prontuario() -> None:
         examinar=True      6.900 ms       22 jogos   veredito: None
 
     **O ÚNICO CAMPO QUE A LINHA DESTA TELA LÊ É `ponte_divergente`**, e ele não
-    encosta na varredura: `prontuario_dos_jogos.py:457` o define como *"há
+    encosta na varredura: `prontuario_dos_jogos.py:452` o define como *"há
     carimbo de ponte confirmada"* contra *"a lista de exceções de hoje"*, os dois
     lidos do disco em milissegundos. Quem diz isso é o docstring do
     dono, em `:559`: *"O carimbo não depende de ler executável nenhum"*. A
@@ -1650,7 +1650,7 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `_safe_call` devolve `False` para serviço desligado, socket ausente, timeout
     e erro JSON-RPC (`app/ipc_bridge.py:142-170`); o gesto não levantava, o
     piloto executava o ramo do sucesso (`_deu_certo`,
-    `interface/hefesto_vivo.py:3255`) e
+    `interface/hefesto_vivo.py:3258`) e
     a tela dizia **"Pronto."** em verde. **A cena inteira, com o serviço
     parado:** o botão trocava de palavra, esperava o teto, voltava ao rótulo e
     afirmava ter feito. Nenhum byte havia saído. E ele não fica cinza para
@@ -1771,7 +1771,7 @@ def autostart(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     ter dois estados, o clique não muda nem a aparência (não há um `<script>` na
     página que troque a classe localmente), e quem clica não tem como saber que
     não pegou. Medido em execução em 02/09: `autostart` estava entre os SETE
-    gestos desta página sem dono — o clique caía em `hefesto_vivo.py:2662`,
+    gestos desta página sem dono — o clique caía em `hefesto_vivo.py:2875`,
     imprimia `[gesto sem dono]` no stdout do processo e voltava.
 
     O QUE ELE MANDA É O CONTRÁRIO DO QUE ESTÁ LIDO, e a leitura é a mesma que
