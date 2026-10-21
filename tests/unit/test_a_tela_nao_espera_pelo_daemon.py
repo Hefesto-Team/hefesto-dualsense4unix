@@ -52,14 +52,36 @@ def test_a_primeira_leitura_sai_do_fio_de_quem_chama() -> None:
     assert erro is None and st == {"controllers": [{"uniq": "aa"}]} and geracao == 1
 
 
-def test_o_tique_sem_resposta_nao_pinta_a_mesa_vazia() -> None:
+def _o_que_o_init_da(campo: str) -> Any:
+    """O valor que o `Piloto.__init__` DE VERDADE dá a `campo` (a janela não sobe aqui)."""
+    import ast
+    import textwrap
+
+    arvore = ast.parse(textwrap.dedent(inspect.getsource(hv.Piloto.__init__)))
+    for no in ast.walk(arvore):
+        alvo = no.target if isinstance(no, ast.AnnAssign) else (
+            no.targets[0] if isinstance(no, ast.Assign) else None)
+        if isinstance(alvo, ast.Attribute) and alvo.attr == campo and no.value is not None:
+            return ast.literal_eval(no.value)
+    raise AssertionError(f"o __init__ não dá mais valor a {campo}")
+
+
+def test_o_tique_sem_resposta_nao_pinta_a_mesa_vazia(monkeypatch: pytest.MonkeyPatch) -> None:
     """Antes da primeira resposta o tique não pinta — senão `{}` diria que a mesa está vazia."""
+    monkeypatch.setattr(hv.pacotes, "bater_os_coracoes", lambda *_a, **_k: None)
     leitor = hv.LeitorDoEstado(lambda: {}, intervalo=10.0)
     contou: list[str] = []
-    piloto = SimpleNamespace(pronto=True, _estado_vivo=leitor)
+    piloto: Any = SimpleNamespace(
+        pronto=True, _estado_vivo=leitor, _escondida=False, _ctx_de_agora=None,
+        _geracao_vista=_o_que_o_init_da("_geracao_vista"),
+        _geracao_na_volta=_o_que_o_init_da("_geracao_na_volta"),
+        _pintura_no_ar=False, _pular=0)
     piloto._estado_do_tique = lambda: contou.append("pintou") or {}
+    piloto._contexto = lambda *_a, **_k: contou.append("montou") or (None, {})
+    for metodo in ("_esperando_o_estado_novo", "_o_contexto_anda_escondido"):
+        setattr(piloto, metodo, getattr(hv.Piloto, metodo).__get__(piloto))
     assert hv.Piloto._tique(piloto) is True
-    assert contou == [], "o tique pintou sem resposta do serviço"
+    assert contou == [], f"o tique trabalhou sem resposta do serviço: {contou}"
 
 
 def test_quem_pergunta_nao_espera_pela_leitura_lenta() -> None:

@@ -3000,12 +3000,12 @@ class Piloto:
         self._pular = 0
         self._folga = FolgaDoServicoMudo()
         #: repinta o estado que já tinha e NÃO mexe na folga — ver a classe.
-        self._geracao_vista = -1
+        self._geracao_vista = 0  # a geração 0 do leitor é «nenhuma resposta ainda»
         self._st_de_agora: dict[str, Any] = {}
         self.custo_do_ipc: deque[float] = deque(maxlen=self.CUSTOS_GUARDADOS)
         self._escondida = False
         self._escondida_desde = 0.0
-        self._geracao_na_volta: int | None = None
+        self._geracao_na_volta: int | None = 0  # o tique espera a primeira resposta
         self._pintada: dict[tuple[str, ...], tuple[Any, Any]] | None = None
         self._ate_a_inteira = 0
         self._moldes: dict[str, frozenset[str]] = {}
@@ -3646,8 +3646,6 @@ class Piloto:
     def _tique(self) -> bool:
         if not self.pronto:
             return True
-        if self._estado_vivo.ultimo()[2] == 0:
-            return True  # a primeira resposta do serviço ainda não chegou: nada a pintar
         if self._escondida or self._esperando_o_estado_novo():
             self._o_contexto_anda_escondido()
             pacotes.bater_os_coracoes(self._ctx_de_agora, ponte)
