@@ -34,6 +34,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
+from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -162,19 +164,46 @@ def _mudancas(tabela: dict[str, Any], alvo: str) -> int:
     raise AssertionError(f"o alvo {alvo} não está na tabela: {tabela['fichas']}")
 
 
-@pytest.fixture(scope="module")
-def parado() -> tuple[dict[str, Any], str]:
-    return _rodar("parado")
+#: Os quatro cenários (os três de medir e a mordida) são independentes: cada um tem Xvfb, lar e
+#: processo próprios, e a espera de cada um é de relógio de verdade (cem tiques de 100 ms para o
+#: `ResizeObserver` ver se a caixa mexe). Em série eram 4 x 15 s; juntos, a parede é a do mais lento
+#: (21/10/2026, A-SUITE-INTEIRA-CABE-EM-VINTE-MINUTOS-01). O teto de tiques NÃO encolheu: o tempo
+#: que o instrumento observa é o mesmo, só deixou de ser esperado quatro vezes seguidas.
+_CENARIOS = (("parado", ""), ("mudo", ""), ("rajada", ""), ("rajada", "barra-solta-a-altura"))
+
+#: O `xvfb-run -a` escolhe o número da tela olhando os travões; duas escolhas no mesmo instante
+#: dão o mesmo número e a segunda morre. A saída escalonada tira essa janela.
+_ESCALONA_S = 0.6
 
 
 @pytest.fixture(scope="module")
-def mudo() -> tuple[dict[str, Any], str]:
-    return _rodar("mudo")
+def _cenarios() -> dict[tuple[str, str], Future[tuple[dict[str, Any], str]]]:
+    futuros: dict[tuple[str, str], Future[tuple[dict[str, Any], str]]] = {}
+    with ThreadPoolExecutor(max_workers=len(_CENARIOS)) as pool:
+        for nome, mordida in _CENARIOS:
+            futuros[(nome, mordida)] = pool.submit(_rodar, nome, mordida)
+            time.sleep(_ESCALONA_S)
+    return futuros
 
 
 @pytest.fixture(scope="module")
-def rajada() -> tuple[dict[str, Any], str]:
-    return _rodar("rajada")
+def parado(_cenarios) -> tuple[dict[str, Any], str]:
+    return _cenarios[("parado", "")].result()
+
+
+@pytest.fixture(scope="module")
+def mudo(_cenarios) -> tuple[dict[str, Any], str]:
+    return _cenarios[("mudo", "")].result()
+
+
+@pytest.fixture(scope="module")
+def rajada(_cenarios) -> tuple[dict[str, Any], str]:
+    return _cenarios[("rajada", "")].result()
+
+
+@pytest.fixture(scope="module")
+def rajada_com_a_barra_solta(_cenarios) -> tuple[dict[str, Any], str]:
+    return _cenarios[("rajada", "barra-solta-a-altura")].result()
 
 
 def test_parada_a_caixa_nao_muda(parado: tuple[dict[str, Any], str]) -> None:
@@ -209,12 +238,14 @@ def test_a_rajada_de_estados_da_janela_nao_passa_de_uma_mudanca_de_altura(
     assert _mudancas(tabela, "(vista)") <= 1
 
 
-def test_o_instrumento_acusa_a_barra_que_solta_a_altura() -> None:
+def test_o_instrumento_acusa_a_barra_que_solta_a_altura(
+    rajada_com_a_barra_solta: tuple[dict[str, Any], str],
+) -> None:
     # D-1510-A-JANELA-NAO-PULSOU-E-FICA-O-INSTRUMENTO
     """MORDIDA: com um repinte que muda a altura da janela de verdade, a mesma rajada sai do zero.
 
     Sem esta prova os zeros acima valeriam também para um contador que nunca vê nada."""
-    tabela, _ = _rodar("rajada", mordida="barra-solta-a-altura")
+    tabela, _ = rajada_com_a_barra_solta
     assert tabela["estados_simulados"] == 20
     assert _mudancas(tabela, ".miolo") >= 2, (
         f"o contador não viu uma janela que muda de altura de verdade: {tabela['fichas']}")
