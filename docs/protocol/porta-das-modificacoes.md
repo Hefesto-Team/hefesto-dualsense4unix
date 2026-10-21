@@ -193,7 +193,7 @@ numa caixa só de leitura, sem rede (`bwrap`), quando a biblioteca muda:
 - `prazo_s`: o prazo da leitura, em segundos;
 - `fontes`: os arquivos que o leitor lê, relativos à `HOME`, até 16. A mudança de um deles é o que faz a
   leitura sair de novo. A fonte sem `*` conta só pela própria data, e a data de uma pasta muda quando um
-  arquivo entra ou sai dela, não quando um arquivo de dentro muda no lugar: para a pasta que o leitor
+  arquivo entra ou sai da pasta, não quando um arquivo de dentro muda no lugar: para a pasta que o leitor
   percorre, declare o padrão (`.config/retroarch/playlists/*.lpl`; o `*` vale só no último pedaço), que
   conta a pasta e cada arquivo que casa.
 
@@ -286,8 +286,8 @@ sem a permissão o manifesto é recusado. A janela os pede ao serviço por dois 
 ## A extensão de tema
 
 A extensão de tipo `tema`, com a permissão `tema`, troca as cores da interface sem processo nenhum. O bloco
-`tema` do manifesto traz a folha (`{"folha": ":root{…}"}`) ou o caminho dela dentro da pasta
-(`{"arquivo": "tema.css"}`), até 16 KB. A régua é `src/hefesto_dualsense4unix/mods/tema.py`:
+`tema` do manifesto traz a folha (`{"folha": ":root{…}"}`) ou o caminho da folha dentro da pasta
+(`{"arquivo": "tema.css"}`), até 16 KB. Quem confere é `src/hefesto_dualsense4unix/mods/tema.py`:
 
 - um bloco `:root{…}` só, sem seletor, sem `url()`, sem `@import`, sem barra invertida;
 - só os tokens de cor da casa (`TOKENS_DA_CASA`) e os das categorias da aba Conexões (`--c-<tipo>`,
@@ -301,7 +301,7 @@ A extensão de tipo `tema`, com a permissão `tema`, troca as cores da interface
 O tema reprovado não liga: o `mod ligar` e a chave da aba Experimental recusam com a frase do pior par
 («O tema de «X» não liga. O texto ficaria ilegível: «--rot-campo» sobre «--app-bg» dá 1,20:1, e o mínimo é
 4,50:1.»). Com mais de um tema ligado, vale o ligado por último. A janela lê o tema ao abrir.
-`src/hefesto_dualsense4unix/interface/olhar.py --tema <arquivo>` fotografa as abas com ele, pela mesma régua.
+`src/hefesto_dualsense4unix/interface/olhar.py --tema <arquivo>` fotografa as abas com ele, pela mesma conferência.
 
 ## Os erros
 
