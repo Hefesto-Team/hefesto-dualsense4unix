@@ -738,11 +738,7 @@ class JanelaDaAba:
         ]
 
     def _chegou_o_sinal(self, numero: int) -> bool:
-        """O sinal fecha pelo `fechar`: a janela é destruída antes de o laço acabar.
-
-        Medido em 19/10/2026: o SIGTERM escrevia a linha do fim e o processo ficava em
-        `futex_do_wait` até o `kill -9`, enquanto o «Fechar» e o Alt+F4, que destroem a
-        janela (e o WebView, com o contexto de GL dele) ainda dentro do laço, saíam."""
+        """O sinal fecha pelo `fechar`, que destrói a janela (e o GL do WebView) dentro do laço."""
         self.fechar(f"sinal {signal.Signals(numero).name}")
         return False  # GLib.SOURCE_REMOVE: a fonte sai depois do primeiro sinal
 

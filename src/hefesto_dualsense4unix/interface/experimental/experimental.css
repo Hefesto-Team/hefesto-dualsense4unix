@@ -478,7 +478,7 @@
    largura do cartão logo abaixo da linha, e a chave do «sim» fica no lugar. */
 .ext-lista .ext-pop.aberto:has(.ext-perm) { position:static;grid-column:1/-1;width:auto;transform:none;box-shadow:none }
 /* A FILA DOS LANÇADORES ROLA POR DENTRO — 21/10/2026, A-EXPERIMENTAL-MAXIMIZADA-NAO-QUEBRA-COM-AS-EXTENSOES-DE-VERDADE-01.
-   Medido no WebKit do piloto, com as sete extensões dela e os atalhos da máquina dela: a fila tinha onze
+   Medido no WebKit do piloto, com sete extensões de verdade e os atalhos de lançador de uma máquina de verdade: a fila tinha onze
    linhas (seis fileiras), a grade com o piso de cada fileira passava do quadro, e o miolo rolava 13 px na
    janela maximizada (662 > 649) e 20 px no piso (638 > 618), com «Adicionar um lançador» atrás da barra do
    Aplicar. O quadro é `estica` (`topo.html`: quem encolhe é a lista lá dentro, que rola); a fila agora rola

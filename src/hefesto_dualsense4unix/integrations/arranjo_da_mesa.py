@@ -136,7 +136,6 @@ class Mesa:
     faces: tuple[Face, ...]
     mapa: Mapa
     leitura: Leitura
-    #: O nome que o usuário deu a cada entrada (o ``nome`` do mapa dele), para as frases.
     nomes: Mapping[str, str] = field(default_factory=dict)
 
     def na_frase(self, numero: str | None) -> str:
