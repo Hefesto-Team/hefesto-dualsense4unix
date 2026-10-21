@@ -94,13 +94,9 @@ def e_o_freestyle(nome: object) -> bool:
 
 
 def esquecer_o_perfil_apagado(nome: str) -> None:
-    """O perfil apagado sai da memória do disco: a escolha e o último jogo.
+    """O apagado sai da memória do boot (O-PERFIL-ATIVO-APAGADO-SOLTA-O-REMAP-E-O-ROTEADOR-01).
 
-    Quem chama é o `profile delete` da linha de comando, depois do `delete_profile` (a
-    O-PERFIL-ATIVO-APAGADO-SOLTA-O-REMAP-E-O-ROTEADOR-01): o ativo ele recusa antes, com a frase
-    da aba Perfis, e por isso não há remap nem roteador a soltar aqui. Sem esta limpeza o boot
-    voltaria a um nome que não existe mais, e o Freestyle apagado com o modo ligado no disco
-    seguraria o boot sem perfil nenhum.
+    O `profile delete` chama depois de apagar (o ativo, recusa): sai a escolha e o último jogo.
     """
     from hefesto_dualsense4unix.utils.session import (
         esquecer_a_escolha,
