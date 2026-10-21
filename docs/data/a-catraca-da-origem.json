@@ -52,15 +52,14 @@
       "universo": 411
     },
     "remendos-de-sintoma": {
-      "data": "2026-10-19",
+      "data": "2026-10-21",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 988,
+      "piso": 985,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
-        "app/actions/config/secao_janela.py": 1,
-        "app/actions/config/secao_orcamento.py": 2,
+        "app/actions/config/secao_orcamento.py": 1,
         "app/actions/daemon_actions.py": 4,
         "app/actions/home_actions.py": 2,
         "app/actions/profiles_actions.py": 2,
@@ -190,7 +189,7 @@
         "interface/pacotes/a06_navegacao.py": 3,
         "interface/pacotes/a07_lancadores.py": 8,
         "interface/pacotes/a08_conexoes.py": 21,
-        "interface/pacotes/a09_sistema.py": 17,
+        "interface/pacotes/a09_sistema.py": 16,
         "interface/pacotes/a10_perfis.py": 2,
         "interface/pacotes/perfil.py": 4,
         "interface/pacotes/rodape.py": 1,

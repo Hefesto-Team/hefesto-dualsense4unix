@@ -146,9 +146,11 @@ def test_o_encanamento_de_i18n_nao_alcanca_o_texto_vivo_das_abas() -> None:
         "`.github/CONTRIBUTING.md`, `docs/usage/flatpak.md` e "
         "`docs/usage/troubleshooting.md` precisa mudar junto."
     )
-    assert len(fora) == 27, (
+    # 29 desde 21/10/2026: `secao_janela` e `secao_orcamento` perderam o widget morto que
+    # usava o `_`, e a docstring acentuada que sobrou passou a contar como texto cru.
+    assert len(fora) == 29, (
         f"agora são {len(fora)} módulos escrevendo português fora da função de "
-        f"tradução, não 27: {', '.join(sorted(fora))}. Se o número CAIU, é "
+        f"tradução, não 29: {', '.join(sorted(fora))}. Se o número CAIU, é "
         "trabalho bom — atualize as três páginas que o citam. Se chegou a "
         "zero, o convite a traduzir deixou de ser falso e pode voltar."
     )
