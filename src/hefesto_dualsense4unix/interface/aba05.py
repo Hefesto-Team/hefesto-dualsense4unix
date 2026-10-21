@@ -854,7 +854,7 @@ CSS = """
 
 # que já esteve digitado no mockup). Ele não é desenhado aqui; segue desenhado
 
-PAPEIS_QUE_SAO_GESTO = ("forca", "testar", "parar",
+PAPEIS_QUE_SAO_GESTO = ("testar", "parar",
                         "intensidade", "motor", "haptica", "testar-haptica")
 
 

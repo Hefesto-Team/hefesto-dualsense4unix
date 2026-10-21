@@ -519,19 +519,18 @@ def test_o_aviso_do_que_a_coluna_mostra_e_sucesso_e_nao_recusa(
     ramo por `raise RuntimeError(…)` — este caso reprova pelo `pytest.raises`,
     e o piloto volta a anotar `("recusou dizendo", …)` sobre um disco que mudou.
     """
-    # global do PERFIL já é `balanceado`, então `with_controller_rumble` APAGA
+    # o global do PERFIL já é 50%, então `with_controller_rumble` APAGA o override
     estado, gravados = disco
     estado["regua"] = _perfil_do_esquema(
-        rumble={"policy": "balanceado"},
-        controllers={_chave(UNIQ): {"rumble": {"policy": "economia"}}})
+        rumble={"policy": "custom", "custom_mult": 0.5},
+        controllers={_chave(UNIQ): {"rumble": {"policy": "custom", "custom_mult": 0.3}}})
 
-    volta = _gesto("forca")(_ctx(rumble_policy="max"),
-                            {"uniq": UNIQ, "forca": "balanceado"},
-                            PonteFiel())
+    volta = _gesto("intensidade")(_ctx(rumble_policy="max"),
+                                  {"uniq": UNIQ, "valor": "50"}, PonteFiel())
 
     assert isinstance(volta, dict) and volta.get("recado"), (
         f"o gesto não devolveu recado nenhum ({volta!r}) — sem ele a coluna "
-        f"muda de degrau sem uma palavra")
+        f"muda de número sem uma palavra")
     assert gravados, "o clique não gravou — o recibo seria sobre nada"
 
     assert not isinstance(volta, BaseException)
@@ -556,12 +555,11 @@ def test_a_frase_da_faixa_nomeia_a_coluna(a05, disco) -> None:
     """
     estado, _ = disco
     estado["regua"] = _perfil_do_esquema(
-        rumble={"policy": "balanceado"},
-        controllers={_chave(OUTRO): {"rumble": {"policy": "economia"}}})
+        rumble={"policy": "custom", "custom_mult": 0.5},
+        controllers={_chave(OUTRO): {"rumble": {"policy": "custom", "custom_mult": 0.3}}})
 
-    volta = _gesto("forca")(_ctx_dois(rumble_policy="max"),
-                            {"uniq": OUTRO, "forca": "balanceado"},
-                            PonteFiel())
+    volta = _gesto("intensidade")(_ctx_dois(rumble_policy="max"),
+                                  {"uniq": OUTRO, "valor": "50"}, PonteFiel())
     frase = str((volta or {}).get("recado") or "")
     assert frase.startswith(f"P2{a05.SEPARADOR_DA_FAIXA}"), (
         f"a linha da faixa não nomeia a coluna: {frase!r}. Ela fala das quatro "
@@ -632,8 +630,8 @@ def test_o_deu_certo_seco_nao_vira_frase(a05, disco) -> None:
     estado["regua"] = _perfil_do_esquema(
         controllers={_chave(UNIQ): {"rumble": {"policy": "economia"}}})
 
-    volta = _gesto("forca")(_ctx(rumble_policy="balanceado"),
-                            {"uniq": UNIQ, "forca": "max"}, PonteFiel())
+    volta = _gesto("intensidade")(_ctx(rumble_policy="balanceado"),
+                                  {"uniq": UNIQ, "valor": "150"}, PonteFiel())
     assert gravados, "o clique não gravou — o silêncio seria sobre nada"
     assert volta is None, (
         f"o clique que deu certo e não tem notícia falou na tela: {volta!r}. "

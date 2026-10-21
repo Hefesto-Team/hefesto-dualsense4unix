@@ -35,7 +35,7 @@ from typing import Any
 # `portao_a_casa_sabe_e_o_produto_nao_faz` segue o fecho de IMPORT a partir do
 from hefesto_dualsense4unix.app.telas import vibracao as _tela
 from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
-from hefesto_dualsense4unix.core.rumble import POLITICA_PADRAO, vale_o_padrao
+from hefesto_dualsense4unix.core.rumble import vale_o_padrao
 from hefesto_dualsense4unix.daemon.subsystems import padroes_de_vibracao as _padroes
 from hefesto_dualsense4unix.interface.monta import MODO_AUTOMATICO, partes_do_modelo
 from hefesto_dualsense4unix.profiles import formas_de_haptica as _formas
@@ -141,41 +141,6 @@ def _chave_no_perfil(uniq: str) -> str:
     from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
     return norm_mac(str(uniq or "").strip()) or ""
-
-
-def degrau_da_faixa(policy: str, custom: Any) -> str:
-    """O degrau que acende pelo valor do trilho da Força: o MAIOR que o valor alcança.
-
-    A-ABA-VIBRACAO-TEM-O-SENSOR-HAPTICO-E-DOIS-TESTES-01 (a resposta [26]
-    dela, 29/09/2026): *«qualquer valor acima disso é Máximo o botão ativo mas
-    o valor real é o do slicer»*. <!-- noqa-acento: citação literal -->
-    De 150 a 200, o Máximo; de 30 a 99, o Economia; abaixo de 30, nenhum. De
-    100 a 149, nenhum: o «Padrão» (antes «Balanceado») só acende pelo nome, porque
-    desde 04/10/2026 ele trava as barras, e o trilho não. A faixa entre os
-    degraus é decisão de produto; a citação acima fixa só a de cima.
-    Os limites são os da escada do produto (``app/telas/vibracao``), e não
-    números daqui.
-
-    O VALOR É O DO TRILHO: o mesmo pedido que o número ao lado mostra
-    (``_tela._pedido_da_politica``). Política fora da escada, ou personalizado
-    sem número lido, não acende nada.
-    """
-    pedido = _tela._pedido_da_politica(
-        {"rumble_policy": policy, "rumble_mult_applied": custom})
-    if pedido is None:
-        return ""
-    valor = round(float(pedido) * 100)
-    escada = _tela._escada()
-    aceso = ""
-    for chave in _tela.degraus_da_forca():
-        if valor >= round(escada[chave] * 100):
-            aceso = chave
-    if aceso == POLITICA_PADRAO and policy != POLITICA_PADRAO:
-        # «Padrão» é um ESTADO, não uma faixa do trilho (04/10/2026): o sinal como o jogo
-        # mandou, com as barras travadas. O trilho entre 100 e 149 multiplica e destrava as
-        # barras, e acender «Padrão» ali diria na tela o que o aparelho não faz.
-        return ""
-    return aceso
 
 
 def _haptica_do_controle(state: dict[str, Any], uniq: str) -> tuple[int, bool]:
@@ -1100,10 +1065,10 @@ def _uniq(o: dict[str, Any]) -> str:
     gesto chega com o assento e **sem** `uniq`. **O clique DISSE em qual
     controle** — a coluna existe na tela, e o usuário clicou dentro dela.
 
-    A CURA MORA AQUI, e não dentro de um gesto, porque são QUATRO os
-    chamadores: :func:`_mirar` (que serve `testar` e `parar`), :func:`forca`,
+    A CURA MORA AQUI, e não dentro de um gesto, porque são TRÊS os
+    chamadores: :func:`_mirar` (que serve `testar` e `parar`),
     :func:`intensidade` e :func:`motor`. Uma cura escrita dentro de um gesto
-    deixa a próxima pessoa remedindo o mesmo defeito nos outros três — foi o que
+    deixa a próxima pessoa remedindo o mesmo defeito nos outros — foi o que
     esta casa pagou duas vezes em 05/09.
 
     O CLIQUE SOLTO CONTINUA COM A FRASE DE SEMPRE: sem `controle` não há coluna,
@@ -1149,9 +1114,6 @@ FRASE_DO_QUE_A_COLUNA_MOSTRA = (
 
 FRASE_DO_AJUSTE_GERAL = FATO_DO_AJUSTE_GERAL + ", e esta coluna vai mostrar %s."
 
-FRASE_JA_E_A_ESCOLHA_DESTA_COLUNA = (
-    "esta coluna já está em %s — foi o que você escolheu para ela."
-)
 
 
 def _fator_no_motor(global_do_perfil: Any, policy: str | None,
@@ -1191,14 +1153,9 @@ def _aplicar_a_forca(ctx: Contexto, p: Any, uniq: str,
        `rumble_policy` da MESA (:func:`_forca_em_vigor`). Clicar "Auto" no P2
        apagava o `max` dele e acendia "Balanceado" um tique depois, calado — o
        botão que o usuário clicou não é o que fica aceso;
-    4. **o clique NÃO MUDOU NADA** — 17/09/2026, e é a queixa de que o botão não ficava ativo.
-       O degrau que o usuário clicou já era o que valia naquela coluna, o
-       perfil não recebeu um byte, e o produto não dizia uma palavra. São dois
-       estados por baixo (a coluna HERDA o degrau, ou ele já é o override dela)
-       e por isso duas frases — :data:`FRASE_DO_QUE_A_COLUNA_MOSTRA` e
-       :data:`FRASE_JA_E_A_ESCOLHA_DESTA_COLUNA`. Quem conta que nada foi
-       escrito é o terceiro item de :func:`_gravar_a_forca`, e não uma segunda
-       leitura das regras do produto.
+    4. o clique no degrau que já valia (17/09/2026) saiu com os degraus em 20/10/2026
+       (O-GESTO-FORCA-DOS-DEGRAUS-DA-VIBRACAO-SAI-01): o trilho só manda `custom`, e o
+       arraste repetido é o desfecho 1 (o perfil não muda e a tela já mostra o número).
 
     A CONFERÊNCIA É POR LEITURA DE VOLTA, e não por uma segunda cópia das regras
     do produto: depois de gravar, esta função relê o mapa RESULTANTE pela MESMA
@@ -1220,7 +1177,7 @@ def _aplicar_a_forca(ctx: Contexto, p: Any, uniq: str,
     **O RAMO DO `Auto` NÃO É ALCANÇÁVEL PELO CLIQUE DO USUÁRIO — medido em
     06/09/2026, e a data importa.** O botão `Auto` saiu da tela em 05/09
     (`aba05.FORCA` tem três, e `RUMBLE_POLICY_MULT` também), então
-    `policy == "auto"` não chega aqui pelo gesto :func:`forca`. Ele FICA, pela
+    `policy == "auto"` não chega aqui pela tela. Ele FICA, pela
     mesma razão do `raise` de :func:`_indice`: um perfil antigo, a janela
     estável ou qualquer chamador que não seja a tela ainda produzem o caso, e
     devolver a coluna ao ajuste geral calado é o silêncio que esta função
@@ -1252,23 +1209,15 @@ def _aplicar_a_forca(ctx: Contexto, p: Any, uniq: str,
     `("recusou dizendo", …)` — o desfecho que a régua lê deixa de contradizer o
     disco.
     """
-    global_do_perfil, depois, mudou = _gravar_a_forca(ctx, p, uniq, policy, custom)
+    global_do_perfil, depois, _mudou = _gravar_a_forca(ctx, p, uniq, policy, custom)
     # de `profiles/manager._controllers_to_rumble_scales` no `profile.switch`
     # que o :func:`_gravar_a_forca` acabou de fazer. Reenviar o mesmo par já
     _refrescar_o_teste(ctx, p, uniq)
     # `with_controller_rumble`, que envelheceria na quarta regra que o produto
     # acrescentasse.
-    mostra, _, propria = _forca_em_vigor(depois, uniq, ctx.state)
+    mostra, _, _ = _forca_em_vigor(depois, uniq, ctx.state)
     if mostra != policy:
         modelo = (FRASE_DO_AJUSTE_GERAL if policy == "auto"
-                  else FRASE_DO_QUE_A_COLUNA_MOSTRA)
-        return {"recado": _na_faixa(ctx, uniq,
-                                    modelo % _nome_do_degrau(mostra))}
-    # clicar "Máximo" não gravava (`with_controller_rumble` limpa o override
-    # igual ao global), não acendia (o degrau herdado saía vazio) e não dizia
-    # quebraria a COR-04 (`with_controller_rumble`).
-    if not mudou and policy != "custom":
-        modelo = (FRASE_JA_E_A_ESCOLHA_DESTA_COLUNA if propria
                   else FRASE_DO_QUE_A_COLUNA_MOSTRA)
         return {"recado": _na_faixa(ctx, uniq,
                                     modelo % _nome_do_degrau(mostra))}
@@ -1317,41 +1266,6 @@ def _nome_do_degrau(chave: str) -> str:
     if chave == "custom":
         return "o que a barra Personalizado marca"
     return ROTULOS_DO_ORCAMENTO.get(chave) or "o degrau da força geral"
-
-
-def _degraus_que_a_tela_oferece() -> str:
-    """Os botões de força que EXISTEM, escritos como ela os lê: "A, B ou C".
-
-    **ELA NASCEU DE UMA FRASE QUE MEDIA O MUNDO DE ONTEM — 05/09/2026.** A
-    recusa do :func:`forca` mandava tentar *"em cima de um dos quatro botões
-    (Economia, Balanceado, Máximo ou Auto)"*, e desde 05/09 são **três**: o
-    `Auto` saiu da tela pela palavra de produto, e `aba05.FORCA` tem os outros três. A
-    tela mandava ela procurar um botão que não está lá — a mesma família de
-    defeito que esta sprint inteira persegue.
-
-    QUANTOS SÃO NÃO SE DIGITA, e por isso a frase não conta: um numeral aqui
-    volta a envelhecer no dia seguinte, e foi exatamente assim que "quatro"
-    sobreviveu à saída do quarto botão.
-
-    QUAIS SÃO TAMBÉM NÃO SE DIGITAM, e o dono é o produto:
-    `app/telas/vibracao.degraus_da_forca()`, na ordem da tela. Até 28/09/2026
-    esta função lia `RUMBLE_POLICY_MULT` (`daemon/subsystems/rumble.py`) por
-    conta própria, ao lado de um dono que ninguém perguntava
-    (A-TELA-PERGUNTA-AO-DONO-01). O gerador do desenho reprova a si mesmo se os
-    botões da tela divergirem do mesmo dono (`aba05.py`, o `SystemExit` logo
-    abaixo de `FORCA`). Os nomes saem de :func:`_nome_do_degrau`, que os pede a
-    `rumble_actions.ROTULOS_DO_ORCAMENTO` — a mesma cópia pública que a janela
-    estável usa nos toasts desta aba.
-
-    **NÃO SE IMPORTA O `aba05` PARA ISTO**, pela razão medida em
-    :func:`_nome_do_degrau`: o gerador roda `_conferir()` no corpo do módulo, e
-    importá-lo aqui faria toda carga do pacote ler o desenho da bancada e, num
-    desenho em trabalho, levantar `SystemExit` no meio da aba.
-    """
-    nomes = [_nome_do_degrau(chave) for chave in _tela.degraus_da_forca()]
-    if len(nomes) < 2:
-        return "".join(nomes)
-    return f"{', '.join(nomes[:-1])} ou {nomes[-1]}"
 
 
 def _como_a_tela_le(mapa: Any) -> dict[str, Any]:
@@ -1473,62 +1387,12 @@ def _gravar_a_forca(ctx: Contexto, p: Any, uniq: str, policy: str | None,
     return resultado["global"], resultado["depois"], resultado["mudou"]
 
 
-@gesto("05-vibracao.html", "forca", grava="_gravar_a_forca")
-def forca(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
-    """Um dos quatro degraus, **daquele controle** — decisão, 03/09/2026.
-
-    **FATO SUBSTITUÍDO, e era o parágrafo final deste docstring:** *"a política
-    é da MESA, não da coluna … clicar 'Economia' na coluna do P2 muda os
-    quatro"*. Era verdade enquanto o gesto chamava `rumble.policy_set`, que não
-    aceita `uniq` (`daemon/ipc_handlers.py:3080`). O usuário decidiu **construir por
-    controle**, e o caminho já existia inteiro pelo PERFIL — ver
-    :func:`_gravar_a_forca`. O clique da coluna deixou de mexer nos vizinhos.
-
-    O DEGRAU VEM DO `data-forca`, nunca do rótulo: o HTML carrega a CHAVE do
-    produto (`economia`/`balanceado`/`max`/`auto`), e o gerador reprova a si
-    mesmo se os degraus divergirem do `RUMBLE_POLICY_MULT` (`aba05.py`).
-
-    O `Auto` NÃO VIRA OVERRIDE, e quem decidiu foi o produto — o esquema o
-    recusa por unidade e `with_controller_rumble` traduz o clique em *"limpa o
-    override e devolve a peça ao global"*. Na tela isso é: a coluna volta a
-    seguir o degrau da mesa. O que não existe mais é o caminho para PÔR a mesa
-    em `Auto` a partir daqui, e está declarado em
-    :data:`SEM_DONO`\\ ``["forca:auto-da-mesa"]``.
-
-    A RECUSA VIRA `RuntimeError`, e não `ValueError` — 03/09/2026. O contrato
-    do piloto é explícito: `RuntimeError` leva a frase ao CARTÃO dela e
-    `ValueError` fica no `stderr` de quem lançou a janela
-    (`hefesto_vivo._recusou_dizendo`). As duas recusas deste gesto falam com
-    quem está com o controle na mão — "clique sem degrau" e "clique sem
-    controle" —, então as duas têm de chegar aos olhos dela.
-
-    **E ELE PASSOU A DIZER O QUE ACONTECEU COM A ESCOLHA — 04/09/2026.** Até
-    ontem o gesto gravava e voltava calado, e o "Auto" era o caso que mais
-    machucava: ele APAGA o override daquela peça (regra do produto, com razão
-    escrita), a coluna cai no degrau da mesa um tique depois, e o botão que o usuário
-    clicou **não é o que fica aceso**. A janela estável conta isso desde 25/08
-    (`rumble_actions.TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL`, RUM-3); esta aba não
-    contava. Ver :func:`_aplicar_a_forca`.
-    """
-    degrau = str(o.get("forca") or "")
-    if not degrau:
-        raise RuntimeError(
-            "Clique em cima de um dos degraus: "
-            f"{_degraus_que_a_tela_oferece()}.")
-    uniq = _uniq(o)
-    if not uniq:
-        raise RuntimeError(
-            "Clique o degrau dentro da coluna do controle que você quer "
-            "mudar.")
-    return _aplicar_a_forca(ctx, p, uniq, degrau)
-
-
 @gesto("05-vibracao.html", "intensidade", grava="_gravar_a_forca")
 def intensidade(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """A barra "Personalizado", arrastada: **0 a 200%, e grava na hora.**
 
     DECISÃO, 03/09/2026, e são as palavras de produto. Até ontem esta linha era
-    LEITURA: um `<div>` sem `value`, e o gesto `forca` a recusava com um
+    LEITURA: um `<div>` sem `value`, e o gesto dos degraus a recusava com um
     `ValueError` que **não chegava à tela** — para ela, arrastar não fazia nada
     e não explicava nada.
 
@@ -2020,5 +1884,5 @@ PROVAS = [
 #: virada do avesso: ele TEM eco, e o eco é honesto.** `state_full.rumble_motores`
 #: daemon do usuário com o DualSense azul no cabo.** O interruptor de punho escreve a
 #:     daemon.state_full.rumble_motores  ->  {}
-SEM_ECO = ("testar", "parar", "forca", "intensidade", "motor", "lado",
+SEM_ECO = ("testar", "parar", "intensidade", "motor", "lado",
            "testar-haptica", GESTO_DO_EFEITO_HAPTICO, GESTO_DO_EFEITO_IMERSAO)

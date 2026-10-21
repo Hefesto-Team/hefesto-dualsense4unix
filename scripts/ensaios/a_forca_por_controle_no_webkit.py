@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""Clica um degrau de força na coluna do P1, DENTRO do WebKit dela, e mede."""
+"""Arrasta o trilho da Força na coluna do P1, DENTRO do WebKit dela, e mede.
+
+Desde 20/10/2026 a «Força» é só o trilho de 0 a 200% (O-GESTO-FORCA-DOS-DEGRAUS-DA-VIBRACAO-SAI-01).
+"""
 from __future__ import annotations
 
 import argparse
@@ -48,15 +51,9 @@ LER = r"""
   const fora = {colunas: {}, recados: []};
   for(const bloco of document.querySelectorAll('[data-controle]')){
     const pref = bloco.dataset.controle;
-    const botoes = bloco.querySelectorAll('[data-papel="forca"][data-forca]');
-    if(!botoes.length){ continue; }
-    let aceso = null;
-    const todos = [];
-    for(const b of botoes){
-      todos.push(b.dataset.forca);
-      if(b.classList.contains('on')){ aceso = b.dataset.forca; }
-    }
-    fora.colunas[pref] = {aceso: aceso, degraus: todos,
+    const barra = bloco.querySelector('input[type=range][data-papel="intensidade"]');
+    if(!barra){ continue; }
+    fora.colunas[pref] = {valor: barra.value,
                           uniq: bloco.dataset.uniq || '',
                           vazio: bloco.classList.contains('vazia')};
   }
@@ -81,19 +78,6 @@ ARRASTAR = r"""
 })()
 """
 
-CLICAR = r"""
-(function(){
-  const bloco = document.querySelector('[data-controle="__PREF__"]');
-  if(!bloco){ return JSON.stringify({erro: 'coluna __PREF__ não está na página'}); }
-  const alvo = bloco.querySelector('[data-papel="forca"][data-forca="__DEGRAU__"]');
-  if(!alvo){ return JSON.stringify({erro: 'degrau __DEGRAU__ não está na coluna'}); }
-  const antes = alvo.getBoundingClientRect();
-  alvo.click();
-  return JSON.stringify({clicou: '__DEGRAU__', rotulo: (alvo.textContent||'').trim(),
-                         area: Math.round(antes.width * antes.height)});
-})()
-"""
-
 BANDEIRAS = dict(oculta=True, foto="", segundos=0.0, passear=False, parada=900,
                  espera=1200, incluir_perigosos=False, prova_clique="",
                  prova_de_mockup=False, sem_cravado=False, sem_selo=False,
@@ -106,14 +90,13 @@ def main() -> int:
     ap.add_argument("--antes", default="")
     ap.add_argument("--depois", default="")
     ap.add_argument("--pref", default="p1")
-    ap.add_argument("--degrau", default="economia")
     ap.add_argument("--perfis-de-origem", default="",
                     help="a pasta de perfis a COPIAR (só leitura)")
     ap.add_argument("--bancada", action="store_true",
                     help="abre o desenho de `mockup/` em vez da página "
                          "publicada — é onde a barra arrastável já existe")
-    ap.add_argument("--arrasta", type=int, default=-1,
-                    help="em vez de clicar um degrau, arrasta a barra até N%%")
+    ap.add_argument("--arrasta", type=int, default=30,
+                    help="arrasta a barra da coluna até N%%")
     args_meus = ap.parse_args()
 
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
@@ -149,13 +132,9 @@ def main() -> int:
         return False
 
     def clicar() -> bool:
-        if args_meus.arrasta >= 0:
-            _pergunta(ARRASTAR.replace("__PREF__", args_meus.pref)
-                              .replace("__PONTOS__", str(args_meus.arrasta)),
-                      "clique")
-        else:
-            _pergunta(CLICAR.replace("__PREF__", args_meus.pref)
-                            .replace("__DEGRAU__", args_meus.degrau), "clique")
+        _pergunta(ARRASTAR.replace("__PREF__", args_meus.pref)
+                          .replace("__PONTOS__", str(args_meus.arrasta)),
+                  "clique")
         return False
 
     def depois() -> bool:
@@ -188,7 +167,7 @@ def main() -> int:
     for pref in sorted(set(a["colunas"]) | set(d["colunas"])):
         ca, cd = a["colunas"].get(pref, {}), d["colunas"].get(pref, {})
         print(f"{pref:8s} {cd.get('uniq') or ca.get('uniq') or '—'!s:20s} "
-              f"{ca.get('aceso')!s:12s} {cd.get('aceso')!s:12s}")
+              f"{ca.get('valor')!s:12s} {cd.get('valor')!s:12s}")
     print(f"recados na tela, depois: {d['recados']}")
 
     for arq in sorted(destino.glob("*.json")):
@@ -199,26 +178,19 @@ def main() -> int:
             print(f"  {chave}: rumble = {(ov or {}).get('rumble')}")
 
     alvo = d["colunas"].get(args_meus.pref, {})
-    if args_meus.arrasta >= 0:
-        if alvo.get("aceso") is not None:
-            print(f"\nREPROVA: depois do arraste a coluna {args_meus.pref} "
-                  f"ainda acende {alvo['aceso']!r} — a tela diria que ela "
-                  f"escolheu um degrau que não escolheu.")
-            return 1
-        print(f"\nOK: o arraste até {args_meus.arrasta}% apagou os quatro "
-              f"degraus da coluna {args_meus.pref} — a escolha dela não é "
-              f"nenhum deles.")
-        return 0
-    if alvo.get("aceso") != args_meus.degrau:
-        print(f"\nREPROVA: a coluna {args_meus.pref} devia acender "
-              f"{args_meus.degrau!r} e acendeu {alvo.get('aceso')!r}.")
+    if str(alvo.get("valor")) != str(args_meus.arrasta):
+        print(f"\nREPROVA: depois do arraste a coluna {args_meus.pref} mostra "
+              f"{alvo.get('valor')!r}, e o arraste foi até {args_meus.arrasta}.")
         return 1
-    outras = {p: c.get("aceso") for p, c in d["colunas"].items()
-              if p != args_meus.pref}
-    print(f"\nOK: o clique acendeu {args_meus.degrau!r} SÓ na coluna "
-          f"{args_meus.pref}; as outras ficaram em {outras}.")
+    mexeu = {q: (a["colunas"].get(q, {}).get("valor"), c.get("valor"))
+             for q, c in d["colunas"].items() if q != args_meus.pref
+             and a["colunas"].get(q, {}).get("valor") != c.get("valor")}
+    if mexeu:
+        print(f"\nREPROVA: o arraste na coluna {args_meus.pref} mexeu em {mexeu}.")
+        return 1
+    print(f"\nOK: o arraste até {args_meus.arrasta}% ficou SÓ na coluna "
+          f"{args_meus.pref}.")
     return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

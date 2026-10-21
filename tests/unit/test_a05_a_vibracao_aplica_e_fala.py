@@ -241,15 +241,14 @@ def test_o_controle_que_saiu_da_mesa_fala_sem_dizer_o_endereco(pac) -> None:
 CLIQUE_DE_CADA_GESTO = {
     "testar": {},
     "parar": {},
-    "forca": {"forca": "max"},
     "intensidade": {"valor": "120"},
     "motor": {"lado": "e", "valor": "80"},
 }
 
 
 @pytest.mark.parametrize("nome", sorted(CLIQUE_DE_CADA_GESTO))
-def test_os_cinco_gestos_dizem_a_causa_certa(pac, nome) -> None:
-    """Os CINCO donos desta aba, e nenhum deles acusa o clique do usuário."""
+def test_os_quatro_gestos_dizem_a_causa_certa(pac, nome) -> None:
+    """Os QUATRO donos desta aba, e nenhum deles acusa o clique do usuário."""
     clique = {"controle": "p2", **CLIQUE_DE_CADA_GESTO[nome]}
     p = PonteDeMentira()
     with pytest.raises(RuntimeError) as recusa:
@@ -325,49 +324,6 @@ def test_o_palpite_sobra_para_quando_o_daemon_nao_diz_nada(pac) -> None:
         _gesto(pac, "parar")(_ctx(pac), {"uniq": UNIQ, "controle": "p1"}, p)
 
 
-def test_a_recusa_do_degrau_nao_oferece_botao_que_nao_existe(pac) -> None:
-    """A frase do `forca` sem degrau cita os botões que EXISTEM, e só eles.
-
-    ELA MEDIA O MUNDO DE ONTEM: mandava tentar *"em cima de um dos quatro
-    botões (Economia, Balanceado, Máximo ou Auto)"*, e desde 05/09 são três — o
-    `Auto` saiu da tela pela palavra de produto. A tela mandando ela procurar o que
-    não está lá é a mesma família de defeito que esta régua inteira persegue.
-
-    OS NOMES NÃO SE DIGITAM AQUI, e é o ponto: eles são perguntados ao produto
-    (`RUMBLE_POLICY_MULT`, que o gerador do desenho confere contra os botões da
-    tela) e a `rumble_actions.ROTULOS_DO_ORCAMENTO`. Uma lista escrita neste
-    arquivo seria a quarta cópia, e a quarta é a que envelhece.
-
-    MORDIDA: devolva o `Auto` à frase de `a05_vibracao.forca` — este caso
-    reprova, porque a recusa volta a oferecer um botão que não está na tela.
-    """
-    from hefesto_dualsense4unix.app.actions.rumble_actions import (
-        ROTULOS_DO_ORCAMENTO,
-    )
-    from hefesto_dualsense4unix.daemon.subsystems.rumble import (
-        RUMBLE_POLICY_MULT,
-    )
-
-    with pytest.raises(RuntimeError) as recusa:
-        _gesto(pac, "forca")(_ctx(pac), {"uniq": UNIQ, "controle": "p1"},
-                             PonteDeMentira())
-
-    frase = str(recusa.value)
-    for chave, rotulo in ROTULOS_DO_ORCAMENTO.items():
-        if chave in RUMBLE_POLICY_MULT:
-            assert rotulo in frase, (
-                f"{rotulo!r} é um botão desta tela e a recusa não o oferece: "
-                f"{frase!r}")
-        else:
-            assert rotulo not in frase, (
-                f"a recusa manda clicar em {rotulo!r}, que não é botão desta "
-                f"tela — `RUMBLE_POLICY_MULT` tem {sorted(RUMBLE_POLICY_MULT)}: "
-                f"{frase!r}")
-    assert "quatro" not in frase, (
-        f"a frase conta os botões, e o numeral é o que envelheceu da última "
-        f"vez: {frase!r}")
-
-
 def test_a_forca_que_vira_escala_chega_ao_motor_e_nao_fala(
         pac, a05, disco) -> None:
     """O caso comum: a escolha vira fator, e o silêncio é o certo.
@@ -378,7 +334,7 @@ def test_a_forca_que_vira_escala_chega_ao_motor_e_nao_fala(
     publica com `set_rumble_scales`, e `_escalar_rumble` multiplica o que vai
     ao motor daquele handle.
 
-    A CONTA É CONFERIDA CONTRA O PRODUTO, e não digitada aqui: `max` sobre um
+    A CONTA É CONFERIDA CONTRA O PRODUTO, e não digitada aqui: 150% no trilho sobre um
     perfil sem opinião global (que o daemon lê como `balanceado`) é
     1,5 / 1,0 = 1,5 — e quem responde isso é a mesma
     `profiles/manager.fator_da_unidade` que o mapa das escalas usa.
@@ -398,13 +354,13 @@ def test_a_forca_que_vira_escala_chega_ao_motor_e_nao_fala(
     estado["Bancada"] = _perfil_de_verdade()
     p = PonteDeMentira()
 
-    _gesto(pac, "forca")(_ctx(pac), {"uniq": UNIQ, "forca": "max"}, p)
+    _gesto(pac, "intensidade")(_ctx(pac), {"uniq": UNIQ, "valor": "150"}, p)
 
     assert len(gravados) == 1, f"gravou {len(gravados)} vez(es), esperava uma"
     prof = gravados[0]
     escalas = _controllers_to_rumble_scales(prof.controllers, prof.rumble)
     assert escalas == {CHAVE: 1.5}, (
-        f"o que chega ao motor é {escalas}, e devia ser o fator 1,5 do `max` "
+        f"o que chega ao motor é {escalas}, e devia ser o fator 1,5 dos 150% "
         f"sobre o `balanceado` que o daemon assume sem opinião global. Um mapa "
         f"vazio aqui é a escolha dela guardada e ignorada — o defeito que esta "
         f"aba inteira persegue")
@@ -441,9 +397,9 @@ def test_a_mesa_em_auto_confessa_no_clique(pac, disco) -> None:
     estado, gravados = disco
     estado["Bancada"] = _perfil_de_verdade(rumble={"policy": "auto"})
 
-    volta = _gesto(pac, "forca")(_ctx(pac, policy_da_mesa="economia"),
-                                 {"uniq": UNIQ, "forca": "economia"},
-                                 PonteDeMentira())
+    volta = _gesto(pac, "intensidade")(_ctx(pac, policy_da_mesa="economia"),
+                                       {"uniq": UNIQ, "valor": "30"},
+                                       PonteDeMentira())
     assert isinstance(volta, dict) and "automático" in str(volta.get("recado") or ""), (
         f"o clique voltou a ser silencioso sobre uma escolha que o motor nunca "
         f"vê: {volta!r}")

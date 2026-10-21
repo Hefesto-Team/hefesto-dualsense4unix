@@ -179,9 +179,9 @@ def test_a_lista_de_cliques_alcanca_o_botao_que_ninguem_ligou():
 
 def test_a_lista_de_cliques_alcanca_o_gesto_que_a_pagina_enderecou_por_papel():
     """A outra metade da união, e sem ela a aba Vibração fica sem um clique."""
-    registrados = {"forca", "testar", "parar"}
+    registrados = {"intensidade", "testar", "parar"}
     alvos, pulados = regua._alvos_a_clicar([], registrados, "05-vibracao.html", set())
-    assert sorted(alvos) == ["forca", "parar", "testar"]
+    assert sorted(alvos) == ["intensidade", "parar", "testar"]
     assert regua._cobertura_dos_gestos([], registrados, alvos, pulados) == []
 
 

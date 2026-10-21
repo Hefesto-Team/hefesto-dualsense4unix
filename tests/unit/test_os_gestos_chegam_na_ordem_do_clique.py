@@ -197,8 +197,8 @@ def test_dois_gestos_que_gravam_o_mesmo_perfil_guardam_as_duas_mudancas(
     p = PonteLenta()
     ctx = _ctx("Bancada")
     erros: list[BaseException] = []
-    um = _clicar(ctx, "forca", {"uniq": P1, "forca": "economia"}, p, erros)
-    outro = _clicar(ctx, "forca", {"uniq": P2, "forca": "max"}, p, erros)
+    um = _clicar(ctx, "intensidade", {"uniq": P1, "valor": "30"}, p, erros)
+    outro = _clicar(ctx, "intensidade", {"uniq": P2, "valor": "150"}, p, erros)
     for fio in (um, outro):
         fio.join(10)
         assert not fio.is_alive(), "o gesto não terminou em 10 s"

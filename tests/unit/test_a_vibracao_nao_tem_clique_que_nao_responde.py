@@ -190,15 +190,14 @@ def test_os_dois_botoes_de_verdade_continuam_clicaveis(bancada: str) -> None:
 
     Os degraus de Força saíram da BANCADA em 18/10/2026 (r3b-05-12) e do pacote em 20/10/2026
     (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01): a «Força» é o
-    trilho de 0 a 200%. O publicado os perde no `--publicar 05` da costura; enquanto ainda os
-    tiver, o gesto `forca` tem de responder, para nenhum botão da tela ficar mudo.
+    trilho de 0 a 200%. O `--publicar 05` da costura os tirou do publicado, e o gesto `forca`
+    saiu com eles (O-GESTO-FORCA-DOS-DEGRAUS-DA-VIBRACAO-SAI-01).
     """
     import onde
 
     publicado = onde.pagina(PAGINA, publicado=True).read_text(encoding="utf-8")
-    if 'data-papel="forca"' in publicado:
-        assert "forca" in _gestos_registrados(), (
-            "o publicado ainda tem os degraus da Força e o gesto `forca` sumiu")
+    assert 'data-papel="forca"' not in publicado, (
+        "os botões da Força voltaram ao publicado, e o gesto deles saiu")
     assert 'data-papel="forca"' not in bancada, (
         "os botões da Força voltaram à bancada — o desenho de 18/10 os tirou")
     for nome in ("testar", "parar"):

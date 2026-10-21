@@ -14,7 +14,7 @@ aplicado que o tique publica), e campo sem informação não mostra nada.
 
 A MORDIDA:
 
-* devolva ``"degrau": degrau_da_faixa(...)`` ao plano do ``a05_vibracao.pacote`` e
+* devolva ``"degrau"`` ao plano do ``a05_vibracao.pacote`` e
   ``test_o_pacote_pinta_o_trilho_e_nao_o_degrau`` reprova;
 * troque o ``mult-pos`` do plano por um número fixo e a mesma régua reprova nas quatro políticas;
 * devolva o ``%`` ao ``forca-pct`` e ``test_a_largura_sai_sem_o_por_cento`` reprova.
@@ -178,17 +178,6 @@ def test_o_testar_acende_so_na_coluna_em_teste() -> None:
             "o Parar apagou a marca e a tela continuou acesa")
     finally:
         a05.parar_o_teste()
-
-
-def test_a_recusa_do_clique_sem_degrau_pergunta_ao_dono(monkeypatch) -> None:
-    """A frase que lista os degraus sai de `degraus_da_forca`, e não da escada."""
-    from hefesto_dualsense4unix.app.telas import vibracao as tela
-    from pacotes import a05_vibracao as a05
-
-    assert a05._degraus_que_a_tela_oferece() == "Economia, Padrão ou Máximo"
-    monkeypatch.setattr(tela, "degraus_da_forca", lambda: ("max",))
-    assert a05._degraus_que_a_tela_oferece() == "Máximo", (
-        "a recusa do clique sem degrau deixou de perguntar ao dono dos degraus")
 
 
 def test_os_degraus_do_dono_sao_os_botoes_da_tela() -> None:

@@ -103,9 +103,6 @@ SEM_BOTAO_NA_PAGINA = {
     # O «Parar tudo» só existe na janela da extensão que o declara no manifesto; a do desenho não
     # declara (a dos acessórios, que o trazia, saiu em 19/10/2026).
     ("07-lancadores.html", "parar-tudo-da-modificacao"),
-    # A «Força» da 05 virou só o trilho (20/10/2026); o gesto dos degraus sai pela
-    # O-GESTO-FORCA-DOS-DEGRAUS-DA-VIBRACAO-SAI-01.
-    ("05-vibracao.html", "forca"),
 }
 
 
@@ -119,6 +116,20 @@ def test_toda_linha_da_camada_tem_gesto() -> None:
                    and (p, g) not in SEM_BOTAO_NA_PAGINA)
     assert not sobra, f"linha sem gesto na página: {sobra}"
     assert set(camada.CAMADA.values()) <= camada.CAMADAS
+
+
+def test_todo_gesto_registrado_da_vibracao_tem_elemento() -> None:
+    """Cada gesto que a 05 registra tem `data-gesto`/`data-papel` na publicada ou no desenho.
+
+    O-GESTO-FORCA-DOS-DEGRAUS-DA-VIBRACAO-SAI-01 (20/10/2026): o `--publicar 05` tirou os
+    degraus da «Força» e o gesto `forca` ficou registrado sem elemento, um segundo escritor
+    sustentado por régua. MORDIDA: devolva o `@gesto("05-vibracao.html", "forca")` e reprova.
+    """
+    pac = _pacotes()
+    vistos = _vistos()
+    sobra = sorted(g for p, g in pac.GESTOS
+                   if p == "05-vibracao.html" and (p, g) not in vistos)
+    assert not sobra, f"gesto da 05 sem elemento na página: {sobra}"
 
 
 def test_quem_grava_pelo_dono_e_do_computador() -> None:
@@ -171,7 +182,7 @@ def _perfil(nome: str, **campos: Any) -> Profile:
 CLIQUES: list[tuple[str, str, dict[str, Any]]] = [
     ("02-controles.html", "volume", {"uniq": UM, "volume": "microfone", "valor": "42"}),
     ("04-iluminacao.html", "brilho-luzes", {"uniq": UM, "controle": "p1", "luzes": "forte"}),
-    ("05-vibracao.html", "forca", {"uniq": UM, "forca": "max"}),
+    ("05-vibracao.html", "intensidade", {"uniq": UM, "valor": "150"}),
     ("06-navegacao.html", "vel-cursor", {"valor": "11"}),
     ("06-navegacao.html", "vel-rolagem", {"valor": "4"}),
     ("06-navegacao.html", "teclado", {"valor": "Sempre"}),

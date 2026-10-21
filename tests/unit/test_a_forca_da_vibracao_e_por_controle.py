@@ -3,7 +3,7 @@
 
 DUAS DECISÕES DE PRODUTO, no mesmo dia, e esta régua mede as duas:
 
-1. **"Construir por controle."** O clique num degrau da coluna deixou de mandar
+1. **"Construir por controle."** O gesto da coluna deixou de mandar
    `rumble.policy_set` (que é da MESA e não aceita `uniq`) e passou a gravar
    `controllers[uniq].rumble` no PERFIL ativo — de onde
    `profiles/manager._controllers_to_rumble_scales` o transforma em fator
@@ -30,11 +30,11 @@ anonimato que reprovam o contrário.
 
 O QUE ELA COBRA, e cada item é um jeito diferente de a tela ou o disco mentir:
 
- 1. o degrau clicado vira override SÓ daquele controle;
+ 1. o trilho arrastado vira override SÓ daquele controle;
  2. a chave gravada é a NORMALIZADA — a mesma com que o backend casa o fator;
  3. `Auto` LIMPA o override, e nunca o grava (o esquema o recusa por unidade);
- 4. degrau igual ao global não vira override;
- 5. o segundo clique igual não regrava — nem dispara `profile.reaplicar`;
+ 4. o valor igual ao global não vira override;
+ 5. o segundo arraste igual não regrava — nem dispara `profile.reaplicar`;
  6. a barra arrastada grava `custom` com o multiplicador em 0-2;
  7. o teto é o do esquema, e passar dele RECUSA DIZENDO;
  8. sem perfil ativo, e sem controle, a recusa é `RuntimeError` — a única que
@@ -44,7 +44,7 @@ O QUE ELA COBRA, e cada item é um jeito diferente de a tela ou o disco mentir:
 11. o `mult-pos` é o número cru, e não a largura do trilho;
 12. o desenho publica um `<input type=range>` por coluna viva, com o teto e o
     passo derivados;
-13. os dois gestos estão em `PERIGOSOS` — a prova automática não escreve no
+13. o gesto está em `PERIGOSOS` — a prova automática não escreve no
     perfil do usuário;
 14. o fator que chega ao motor é o da conta do produto, ponta a ponta.
 
@@ -112,15 +112,6 @@ def a05():
 
 
 @pytest.fixture
-def clique_no_degrau(pac):
-    fn = pac.gesto_da_pagina("05-vibracao.html", "forca")
-    assert fn is not None, (
-        "05-vibracao.html:forca perdeu o dono — os quatro degraus de cada "
-        "coluna voltam a não fazer nada.")
-    return fn
-
-
-@pytest.fixture
 def arraste(pac):
     fn = pac.gesto_da_pagina("05-vibracao.html", "intensidade")
     assert fn is not None, (
@@ -157,22 +148,22 @@ def _ctx(pac, ativo: str = "Bancada"):
         estados={})
 
 
-def test_o_degrau_clicado_vira_override_so_daquele_controle(
-        pac, clique_no_degrau, disco) -> None:
-    """Clicar "Economia" na coluna do P1 não toca no P2 nem no global.
+def test_o_trilho_arrastado_vira_override_so_daquele_controle(
+        pac, arraste, disco) -> None:
+    """Arrastar até 30% na coluna do P1 não toca no P2 nem no global.
 
-    É A DECISÃO DE PRODUTO INTEIRA numa asserção: até 02/09 este clique chamava
+    É A DECISÃO DE PRODUTO INTEIRA numa asserção: até 02/09 o gesto da coluna chamava
     `rumble.policy_set`, que é da MESA, e mudava os quatro de uma vez.
 
-    MORDIDA: em `a05_vibracao.forca`, troque `_gravar_a_forca(ctx, p, uniq,
-    degrau)` por uma chamada a `p.rumble_policy_set_checked(degrau)` — este caso
-    reprova, porque nada é gravado no perfil e o override do P1 não existe.
+    MORDIDA: em `a05_vibracao.intensidade`, troque `_aplicar_a_forca(...)` por uma
+    chamada a `p.rumble_policy_set_checked("custom")` — este caso reprova, porque nada
+    é gravado no perfil e o override do P1 não existe.
     """
     estado, gravados = disco
     estado["Bancada"] = _perfil_de_verdade(rumble={"policy": "balanceado"})
     p = PonteDeMentira()
 
-    clique_no_degrau(_ctx(pac), {"uniq": UNIQ, "forca": "economia"}, p)
+    arraste(_ctx(pac), {"uniq": UNIQ, "valor": "30"}, p)
 
     assert len(gravados) == 1, f"gravou {len(gravados)} vez(es), esperava uma"
     prof = gravados[0]
@@ -180,7 +171,8 @@ def test_o_degrau_clicado_vira_override_so_daquele_controle(
     assert dele is not None and dele.rumble is not None, (
         f"não há override de vibração para {CHAVE!r}: as chaves gravadas são "
         f"{sorted((prof.controllers or {}).keys())}")
-    assert dele.rumble.policy == "economia", f"gravou {dele.rumble!r}"
+    assert dele.rumble.policy == "custom", f"gravou {dele.rumble!r}"
+    assert dele.rumble.custom_mult == pytest.approx(0.3), f"gravou {dele.rumble!r}"
     assert CHAVE_B not in (prof.controllers or {}), (
         "o clique numa coluna escreveu no controle da OUTRA — é exatamente o "
         "defeito que a decisão dela existe para curar")
@@ -189,21 +181,21 @@ def test_o_degrau_clicado_vira_override_so_daquele_controle(
         f"{prof.rumble.policy!r} — os quatro controles voltariam a andar juntos")
 
 
-def test_a_chave_gravada_e_a_que_o_motor_casa(pac, clique_no_degrau, disco) -> None:
+def test_a_chave_gravada_e_a_que_o_motor_casa(pac, arraste, disco) -> None:
     """Doze hexa minúsculos, sem separador — a grafia do `norm_mac`."""
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
 
     estado, gravados = disco
     estado["Bancada"] = _perfil_de_verdade()
-    clique_no_degrau(_ctx(pac), {"uniq": UNIQ, "forca": "max"}, PonteDeMentira())
+    arraste(_ctx(pac), {"uniq": UNIQ, "valor": "150"}, PonteDeMentira())
 
     chaves = sorted((gravados[0].controllers or {}).keys() if gravados
                     else o_computador().controles.keys())
     assert chaves == [CHAVE], f"gravou sob {chaves}, e o backend casa por {CHAVE!r}"
 
 
-def test_degrau_igual_ao_global_nao_vira_override(
-        pac, clique_no_degrau, disco) -> None:
+def test_o_valor_igual_ao_global_nao_vira_override(
+        pac, arraste, disco) -> None:
     """Escolher o que já vale na mesa não deixa opinião no disco.
 
     A razão é aritmética e é do produto: `_controllers_to_rumble_scales` calcula
@@ -213,20 +205,19 @@ def test_degrau_igual_ao_global_nao_vira_override(
 
     MORDIDA: em `_gravar_a_forca`, troque `draft.with_controller_rumble(...)`
     por uma escrita direta do override — este caso reprova, porque o perfil
-    passa a guardar `balanceado` sob a chave do P1.
+    passa a guardar o `custom` de 0,5 sob a chave do P1.
     """
     estado, gravados = disco
-    estado["Bancada"] = _perfil_de_verdade(rumble={"policy": "balanceado"})
+    estado["Bancada"] = _perfil_de_verdade(rumble={"policy": "custom", "custom_mult": 0.5})
 
-    clique_no_degrau(_ctx(pac), {"uniq": UNIQ, "forca": "balanceado"},
-                     PonteDeMentira())
+    arraste(_ctx(pac), {"uniq": UNIQ, "valor": "50"}, PonteDeMentira())
 
     assert not gravados, (
         f"gravou {len(gravados)} vez(es) um override igual ao global — o motor "
         f"o ignora, e o arquivo dela fica com lixo")
 
 
-def test_o_segundo_clique_igual_nao_regrava(pac, clique_no_degrau, disco) -> None:
+def test_o_segundo_arraste_igual_nao_regrava(pac, arraste, disco) -> None:
     """Regravar o mesmo perfil dispara `profile.reaplicar` no meio da partida.
 
     É a guarda que também torna inócuo o clique DOBRADO da barra arrastável: o
@@ -240,10 +231,10 @@ def test_o_segundo_clique_igual_nao_regrava(pac, clique_no_degrau, disco) -> Non
     estado, gravados = disco
     estado["Bancada"] = _perfil_de_verdade(
         rumble={"policy": "balanceado"},
-        controllers={CHAVE: {"rumble": {"policy": "economia"}}})
+        controllers={CHAVE: {"rumble": {"policy": "custom", "custom_mult": 0.3}}})
     p = PonteDeMentira()
 
-    clique_no_degrau(_ctx(pac), {"uniq": UNIQ, "forca": "economia"}, p)
+    arraste(_ctx(pac), {"uniq": UNIQ, "valor": "30"}, p)
 
     assert not gravados, "regravou um perfil que já dizia exatamente isso"
     assert not p.chamadas, (
@@ -300,16 +291,16 @@ def test_o_teto_recusa_dizendo_em_vez_de_gravar(pac, arraste, disco) -> None:
 
 
 @pytest.mark.parametrize("clique", [  # (noqa-acento) nome do argumento
-    {"uniq": UNIQ, "forca": ""},
-    {"uniq": "", "forca": "max"},
+    {"uniq": UNIQ, "valor": "muito"},
+    {"uniq": "", "valor": "150"},
 ])
-def test_a_recusa_do_degrau_e_runtime_error(pac, clique_no_degrau, clique) -> None:
+def test_a_recusa_do_trilho_e_runtime_error(pac, arraste, clique) -> None:
     """`ValueError` fica no `stderr` de quem lançou a janela; ela não o lê."""
     with pytest.raises(RuntimeError):
-        clique_no_degrau(_ctx(pac), clique, PonteDeMentira())
+        arraste(_ctx(pac), clique, PonteDeMentira())
 
 
-def test_sem_perfil_ativo_a_forca_vai_ao_computador(pac, clique_no_degrau) -> None:
+def test_sem_perfil_ativo_a_forca_vai_ao_computador(pac, arraste) -> None:
     """A força de um controle é do COMPUTADOR desde 01/10/2026.
 
     O-QUE-E-DO-COMPUTADOR-NAO-MUDA-COM-O-JOGO-01: sem perfil ativo, o clique
@@ -320,10 +311,10 @@ def test_sem_perfil_ativo_a_forca_vai_ao_computador(pac, clique_no_degrau) -> No
     """
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
 
-    clique_no_degrau(_ctx(pac, ativo=""), {"uniq": UNIQ, "forca": "max"},
-                     PonteDeMentira())
+    arraste(_ctx(pac, ativo=""), {"uniq": UNIQ, "valor": "150"}, PonteDeMentira())
     rumble = o_computador().controles[CHAVE].rumble
-    assert rumble is not None and rumble.policy == "max"
+    assert rumble is not None and rumble.policy == "custom"
+    assert rumble.custom_mult == pytest.approx(1.5)
 
 
 def test_a_recusa_do_arraste_sem_numero_e_runtime_error(pac, arraste) -> None:
@@ -394,10 +385,11 @@ def test_o_desenho_tem_a_barra_arrastavel_com_o_teto_do_esquema() -> None:
             f"(passo {passo}, teto {teto})")
 
 
-@pytest.mark.parametrize("nome", ["forca", "intensidade"])  # (noqa-acento) id
-def test_os_dois_gestos_que_gravam_ficam_de_fora_da_prova(nome: str) -> None:
+def test_o_gesto_que_grava_fica_de_fora_da_prova() -> None:
     """Quem escreve no disco do usuário não entra na prova botão a botão."""
     from hefesto_dualsense4unix.interface import hefesto_vivo, regua_do_mockup
+
+    nome = "intensidade"
 
     class _Gesto:
         def __init__(self, n: str) -> None:
@@ -411,14 +403,13 @@ def test_os_dois_gestos_que_gravam_ficam_de_fora_da_prova(nome: str) -> None:
 
 
 def test_o_fator_que_chega_ao_motor_e_o_da_conta_do_produto(
-        pac, clique_no_degrau, disco) -> None:
+        pac, arraste, disco) -> None:
     """Do clique ao `_escalar_rumble`, sem nenhuma conta escrita por esta aba."""
     from hefesto_dualsense4unix.profiles.manager import _controllers_to_rumble_scales
 
     estado, gravados = disco
     estado["Bancada"] = _perfil_de_verdade(rumble={"policy": "balanceado"})
-    clique_no_degrau(_ctx(pac), {"uniq": UNIQ, "forca": "economia"},
-                     PonteDeMentira())
+    arraste(_ctx(pac), {"uniq": UNIQ, "valor": "30"}, PonteDeMentira())
 
     prof = gravados[0]
     escalas = _controllers_to_rumble_scales(prof.controllers, prof.rumble)

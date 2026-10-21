@@ -54,7 +54,7 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 ABAS = [
-    ("05-vibracao.html", "forca"),
+    ("05-vibracao.html", "intensidade"),
     ("04-iluminacao.html", "brilho"),
     ("06-navegacao.html", "trocar"),
 ]

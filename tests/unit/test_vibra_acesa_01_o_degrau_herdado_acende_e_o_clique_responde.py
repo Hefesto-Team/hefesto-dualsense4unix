@@ -34,24 +34,10 @@ A cura devolve a procedência ao lugar que sobrou — o próprio botão: ele ace
 folha desenha com borda tracejada. **Herdado continua diferente de escolhido; o
 que deixou de existir é "herdado = nada na tela".**
 
-**2. O clique morto, e ele é pior.** Com o global em `max` e nenhum override,
-clicar "Máximo" não gravava (`draft_config.with_controller_rumble` limpa o
-override igual ao global, regra COR-04), não acendia (defeito 1) e **não dizia
-nada**. O usuário clicou três vezes achando que estava quebrado.
-
-A DECISÃO, e ela é de produto: **responder, não gravar**. Forçar o override
-escreveria no disco um valor que não muda um byte do que chega ao motor — a peça
-já vibra em Máximo — e quebraria a COR-04, que é o que faz "voltei os dois para
-Balanceado" deixar o perfil limpo. Escrever estado falso para simular resposta é
-a família de defeito que esta aba passou 04/09 arrancando: *grava e não aplica*.
-
-**E A FRASE JÁ EXISTIA, SEM NUNCA TER RODADO.** A
-``FRASE_DO_QUE_A_COLUNA_MOSTRA`` foi escrita em 04/09 dizendo exatamente *"a sua
-escolha é igual à força geral"*, e o ``if mostra != policy`` que a guardava a
-tornava inalcançável: quando a escolha é igual ao global, o override é limpo e a
-coluna passa a mostrar o próprio global — logo ``mostra == policy``, e o `if`
-nunca entrava. :func:`test_a_frase_do_caso_herdado_tem_caminho` é a régua que
-impede essa forma de voltar.
+**2. O clique morto** (clicar o degrau que já valia não gravava, não acendia e não dizia
+nada) saiu com os degraus em 20/10/2026 (O-GESTO-FORCA-DOS-DEGRAUS-DA-VIBRACAO-SAI-01): o
+trilho só manda `custom`, e o arraste repetido não regrava nem fala
+(:func:`test_o_arraste_da_barra_nao_ganhou_um_recibo_por_tique`).
 
 ## AS MORDIDAS, uma por defeito
 
@@ -59,11 +45,7 @@ impede essa forma de voltar.
   (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01), e a força herdada
   aparece no cursor: em ``a05_vibracao.pacote``, faça o ``mult-pos`` sair vazio quando a coluna
   herda e :func:`test_a_coluna_que_herda_poe_o_cursor_na_forca_em_vigor` reprova. A marca
-  ``degrau-herdado`` e a régua dela saíram com os botões;
-* **defeito 2** — em ``_aplicar_a_forca``, apague o ramo ``if not mudou``;
-  :func:`test_o_clique_no_degrau_que_ja_vale_responde` reprova com
-  ``recado=None``. As duas metades do silêncio são medidas juntas em
-  :func:`test_o_silencio_medido_na_tela_dela_nao_volta`, que é a cena inteira.
+  ``degrau-herdado`` e a régua dela saíram com os botões.
 """
 from __future__ import annotations
 
@@ -213,107 +195,6 @@ def test_sem_politica_nenhuma_o_trilho_nao_afirma_numero(pac, disco_dela) -> Non
     assert col["mult-pos"] == "", f"pôs o cursor em {col['mult-pos']!r} sem política"
 
 
-def test_o_clique_no_degrau_que_ja_vale_responde(pac, disco_dela) -> None:
-    """Clicar "Máximo" com o global em `max` devolve uma linha para a faixa."""
-    fn = pac.gesto_da_pagina(PAGINA, "forca")
-    assert fn is not None, "o gesto `forca` perdeu o dono"
-
-    fora = fn(_ctx(pac), {"uniq": UNIQ, "forca": GLOBAL}, PonteDeMentira())
-
-    assert fora is not None and fora.get("recado"), (
-        "clicar o degrau que já vale devolveu SILÊNCIO — é a queixa dela de "
-        "17/09, e o gesto não tem outro canal para a tela")
-    assert "Máximo" in fora["recado"], (
-        f"o recado não nomeia o degrau: {fora['recado']!r}")
-
-
-def test_o_recado_do_clique_que_ja_vale_diz_a_procedencia(
-        pac, disco_dela) -> None:
-    """A frase do caso HERDADO é a que fala da força geral."""
-    from pacotes import a05_vibracao as a05
-
-    fn = pac.gesto_da_pagina(PAGINA, "forca")
-    fora = fn(_ctx(pac), {"uniq": UNIQ, "forca": GLOBAL}, PonteDeMentira())
-
-    esperado = a05.FRASE_DO_QUE_A_COLUNA_MOSTRA % "Máximo"
-    assert esperado in fora["recado"], (
-        f"o recado do caso herdado é {fora['recado']!r} e a frase que fala da "
-        f"força geral é {esperado!r}")
-
-
-def test_a_frase_do_caso_herdado_tem_caminho(pac, disco_dela) -> None:
-    """A ``FRASE_DO_QUE_A_COLUNA_MOSTRA`` é ALCANÇÁVEL — e não era."""
-    from pacotes import a05_vibracao as a05
-
-    fn = pac.gesto_da_pagina(PAGINA, "forca")
-    fora = fn(_ctx(pac), {"uniq": UNIQ, "forca": GLOBAL}, PonteDeMentira())
-    assert a05.FATO_DO_AJUSTE_GERAL not in (fora or {}).get("recado", ""), (
-        "o clique que já valia respondeu com a frase do `Auto` — ela fala de "
-        "uma peça que VOLTOU ao ajuste geral, e aqui nada voltou")
-
-
-def test_o_clique_que_ja_vale_nao_escreve_no_perfil(pac, disco_dela) -> None:
-    """Responder não é gravar — a COR-04 continua de pé.
-
-    **ERA A OUTRA SAÍDA POSSÍVEL, e foi recusada com razão medida.** Gravar o
-    override do degrau que já vale faria a tela parecer viva escrevendo no disco
-    um valor que não muda um byte do que chega ao motor, e quebraria a regra de
-    `draft_config.with_controller_rumble` (*"o override guarda só o que DIVERGE
-    do global"*) — a mesma que faz "voltei os dois para Balanceado" deixar o
-    perfil limpo, e a mesma de `with_controller_leds`.
-
-    Se um dia a casa decidir o contrário, é esta régua que tem de cair primeiro,
-    com a decisão de produto escrita ao lado.
-    """
-    _, gravados = disco_dela
-    ponte = PonteDeMentira()
-
-    pac.gesto_da_pagina(PAGINA, "forca")(
-        _ctx(pac), {"uniq": UNIQ, "forca": GLOBAL}, ponte)
-
-    assert gravados == [], (
-        f"o clique gravou {len(gravados)} perfil(is) para dizer uma frase — a "
-        f"peça já vibra em {GLOBAL!r}, e escrever estado que não muda o motor é "
-        f"'grava e não aplica' pelo avesso")
-    assert not ponte.chamadas, (
-        f"o clique mandou {ponte.chamadas} ao daemon sem ter o que mudar")
-
-
-def test_o_clique_que_muda_alguma_coisa_continua_calado(
-        pac, disco_dela) -> None:
-    """O desfecho 1 não virou ruído: quem muda a tela não precisa de frase."""
-    _, gravados = disco_dela
-
-    fora = pac.gesto_da_pagina(PAGINA, "forca")(
-        _ctx(pac), {"uniq": UNIQ, "forca": "economia"}, PonteDeMentira())
-
-    assert gravados, "o clique que DIVERGE do global tinha de gravar o override"
-    assert fora is None, (
-        f"o clique que mudou a tela também falou: {fora!r} — duas respostas "
-        f"para o mesmo gesto, e a de baixo é ruído")
-
-
-def test_o_clique_no_override_que_ja_e_dela_diz_a_outra_frase(
-        pac, disco_dela) -> None:
-    """Dois estados por baixo, duas frases — e a diferença é de FATO."""
-    from pacotes import a05_vibracao as a05
-
-    vivo, gravados = disco_dela
-    vivo["cru"] = _o_perfil_dela(com_override="economia")
-
-    fora = pac.gesto_da_pagina(PAGINA, "forca")(
-        _ctx(pac), {"uniq": UNIQ, "forca": "economia"}, PonteDeMentira())
-
-    assert gravados == [], "nada mudou no disco e algo foi gravado"
-    assert fora and fora.get("recado"), (
-        "clicar o degrau que ela já escolheu para esta coluna respondeu com "
-        "silêncio — o mesmo buraco, no outro estado")
-    assert a05.FRASE_JA_E_A_ESCOLHA_DESTA_COLUNA % "Economia" in fora["recado"]
-    assert a05.FRASE_DO_QUE_A_COLUNA_MOSTRA % "Economia" not in fora["recado"], (
-        "a tela disse que a escolha dela é igual à força geral, e o override é "
-        "`economia` contra um global `max` — afirmação falsa")
-
-
 def test_o_arraste_da_barra_nao_ganhou_um_recibo_por_tique(
         pac, disco_dela) -> None:
     """O `custom` fica FORA do recado, e não é esquecimento."""
@@ -329,21 +210,3 @@ def test_o_arraste_da_barra_nao_ganhou_um_recibo_por_tique(
         f"o arraste falou na SEGUNDA passagem: {segunda!r} — o ouvinte manda o "
         f"mesmo valor duas vezes, e isto vira uma tarja por arraste")
 
-
-def test_o_silencio_medido_na_tela_dela_nao_volta(pac, disco_dela) -> None:
-    """As TRÊS ausências de 17/09 numa cena só: não grava, não acende, não fala."""
-    _, gravados = disco_dela
-
-    antes = _coluna(pac)
-    assert antes["mult-pos"] == NO_TRILHO_DO_GLOBAL, (
-        f"ao ABRIR a aba a coluna dela mostra {antes['mult-pos']!r} — em 17/09 a tela não "
-        f"mostrava a força que vale")
-
-    fora = pac.gesto_da_pagina(PAGINA, "forca")(
-        _ctx(pac), {"uniq": UNIQ, "forca": GLOBAL}, PonteDeMentira())
-    assert fora and fora.get("recado"), "o clique voltou calado"
-
-    depois = _coluna(pac)
-    assert depois == antes, (
-        "a tela mudou depois de um clique que não mudou nada no produto")
-    assert gravados == [], "o clique escreveu no perfil dela"

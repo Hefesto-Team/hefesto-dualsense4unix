@@ -485,7 +485,7 @@ CLIQUES: list[tuple[str, str, str, dict[str, Any]]] = [
      {"uniq": UM, "volume": "microfone", "valor": "42"}),
     ("luz", "04-iluminacao.html", "brilho-luzes",
      {"uniq": UM, "controle": "p1", "luzes": "forte"}),
-    ("vibracao", "05-vibracao.html", "forca", {"uniq": UM, "forca": "max"}),
+    ("vibracao", "05-vibracao.html", "intensidade", {"uniq": UM, "valor": "150"}),
     ("mouse", "06-navegacao.html", "vel-cursor", {"valor": "11"}),
     ("teclado", "06-navegacao.html", "teclado", {"valor": "Sempre"}),
 ]
