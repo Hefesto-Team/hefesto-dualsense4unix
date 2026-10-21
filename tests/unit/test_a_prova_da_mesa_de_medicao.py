@@ -100,6 +100,36 @@ class _Servidor:
         self.morrer()
 
 
+#: O que a página escreve em `#desenhos` enquanto o servidor monta os quatro desenhos.
+_MONTANDO = "montando os quatro desenhos"
+
+_DOIS_QUADROS = "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))"
+
+
+def _assentou(pg) -> None:
+    """Espera a página assentar pelo EVENTO, e não por um relógio (21/10/2026,
+    A-SUITE-INTEIRA-CABE-EM-VINTE-MINUTOS-01).
+
+    Os `wait_for_timeout(400..700)` esperavam o `fetch('/desenhos')` voltar: o `desenhar()` põe
+    «montando os quatro desenhos…» em `#desenhos` na hora e troca pelo desenho quando a resposta
+    chega. Aqui a espera acaba quando o recado sai (ou de imediato, se ele nem entrou), e mais dois
+    quadros deixam o que o `desenhar()` faz depois da troca (os campos, a pré-marca) pousar.
+    """
+    pg.wait_for_function(
+        "(m) => !document.querySelector('#desenhos').textContent.includes(m)",
+        arg=_MONTANDO, timeout=15000)
+    pg.evaluate(_DOIS_QUADROS)
+
+
+def _salvar(pg, botao: str) -> None:
+    """Clica o botão que grava e espera a resposta do `/registro` e a página repintar."""
+    with pg.expect_response(
+            lambda r: r.url.endswith("/registro") and r.request.method == "POST",
+            timeout=15000):
+        pg.click(botao)
+    _assentou(pg)
+
+
 def _abre_o_como(pg) -> None:
     """Abre a gaveta do campo do COMO, CLICANDO — nunca pelo `.open`."""
     if not pg.evaluate("() => !!document.querySelector('#caixa-do-gesto')?.open"):
@@ -154,8 +184,14 @@ def mentira(tmp_path):
     return _mentira_dos_quatro(tmp_path / "mentira.json")
 
 
-@pytest.fixture()
-def pw():
+@pytest.fixture(scope="module")
+def _navegador():
+    """Um Chrome por ARQUIVO, e não um por teste (21/10/2026).
+
+    Subir e derrubar o Chrome em cada um dos ~20 testes era a maior fatia do arquivo. O que
+    cada teste vê não muda: `new_page` abre um contexto novo (sem cookie, sem `localStorage`,
+    sem cache do teste anterior), e o `pw` abaixo fecha os contextos dele ao sair.
+    """
     sync_playwright = pytest.importorskip(
         "playwright.sync_api", reason="playwright não está no pyproject",
     ).sync_playwright
@@ -165,6 +201,15 @@ def pw():
             yield nav
         finally:
             nav.close()
+
+
+@pytest.fixture()
+def pw(_navegador):
+    try:
+        yield _navegador
+    finally:
+        for contexto in list(_navegador.contexts):
+            contexto.close()
 
 
 pytestmark = pytest.mark.skipif(
@@ -293,8 +338,7 @@ def test_a_resposta_sobrevive_ao_servidor_morrer_e_o_endereco_sai_mascarado(
         pg.fill('textarea[name="n-P3"]', "so o P3 endureceu")
         _abre_o_como(pg)
         pg.fill("#gesto", gesto)
-        pg.click("#so-salvar")
-        pg.wait_for_timeout(600)
+        _salvar(pg, "#so-salvar")
         na_tela = pg.inner_text(".quatro")
         pg.close()
     finally:
@@ -463,8 +507,7 @@ def test_cada_controle_tem_as_opcoes_e_um_campo_so_dele(pw, lar, mentira) -> Non
         pg.fill('textarea[name="n-P3"]', "nada no direito")
         _abre_o_como(pg)
         pg.fill("#gesto", "hefesto test rumble --player 1")
-        pg.click("#so-salvar")
-        pg.wait_for_timeout(600)
+        _salvar(pg, "#so-salvar")
 
         fita = [json.loads(x) for x in
                 (s.registro / f"registro-{med._agora()[:10]}.jsonl")
@@ -496,7 +539,7 @@ def test_o_verificar_diz_certo_ou_errado_por_controle(pw, lar, mentira) -> None:
         pg.check(f'input[name="r-{reage}"][value="nada"]')
         pg.check(f'input[name="r-{calado}"][value="nada"]')
         pg.click("#verificar")
-        pg.wait_for_timeout(300)
+        _assentou(pg)
 
         def classe(p: str) -> str:
             return pg.eval_on_selector(f"#laudo-{p}", "e=>e.className")
@@ -637,8 +680,7 @@ def test_o_como_vem_pronto_e_nao_e_cobrado_dela(pw, lar, mentira) -> None:
         assert primeiro[:30] in gesto, (gesto[:160], primeiro[:60])
 
         pg.check('input[name="r-P1"][value="obedeceu"]')
-        pg.click("#so-salvar")
-        pg.wait_for_timeout(700)
+        _salvar(pg, "#so-salvar")
         assert not pg.inner_text("#aviso").strip(), pg.inner_text("#aviso")
         fita = (s.registro / f"registro-{med._agora()[:10]}.jsonl")
         assert fita.exists(), "não gravou sem ela digitar o COMO"
@@ -660,7 +702,7 @@ def test_a_pagina_abre_no_que_falta_e_o_medido_vem_pre_marcado(
             "nenhum teste tem selo de medido — o filtro não teria o que mostrar")
 
         pg.click("#f-medido")
-        pg.wait_for_timeout(500)
+        _assentou(pg)
         assert pg.evaluate("() => TESTES.every(t => t.ja_medido)")
         assert pg.is_visible("#selo"), "o selo do que já foi medido não aparece"
         assert "medido" in pg.inner_text("#selo").lower()
@@ -669,7 +711,7 @@ def test_a_pagina_abre_no_que_falta_e_o_medido_vem_pre_marcado(
         assert i >= 0, "nenhum medido traz a resposta que o mapa implica"
         pg.evaluate("(i) => ir(i, 3)", i)
         pg.wait_for_selector(".ctl .resp")
-        pg.wait_for_timeout(400)
+        _assentou(pg)
         assert pg.eval_on_selector_all(
             "input[type=radio]:checked", "e=>e.length") == 4, (
             "a resposta do mapa não foi pré-marcada nos quatro")
@@ -732,7 +774,7 @@ def test_a_borda_do_cartao_e_a_cor_do_plastico(pw, lar, mentira) -> None:
                     if med.PAPEL_REAGE in t["papeis"].values())
         pg.goto(s.url + "#" + alvo["id"])
         pg.wait_for_selector(".ctl svg")
-        pg.wait_for_timeout(400)
+        _assentou(pg)
         bordas = pg.eval_on_selector_all(
             ".ctl", "es=>es.map(e=>getComputedStyle(e).borderColor)")
         assert len(set(bordas)) == 4, (
@@ -765,7 +807,7 @@ def test_a_peca_em_foco_acende_como_no_mapa_do_controle(pw, lar, mentira) -> Non
                 "(p) => TESTES.findIndex(t => t.pecas.some(x => x[0] === p))", peca)
             assert i >= 0, f"nenhum teste acende `{peca}`"
             pg.evaluate("(i) => ir(i, 1)", i)
-            pg.wait_for_timeout(700)
+            _assentou(pg)
             medido = pg.evaluate("""(p) => {
               const g = document.querySelector(`#p1-${p}`);
               if (!g) return null;
@@ -806,7 +848,7 @@ def test_o_desenho_da_mesa_pinta_o_contorno_como_o_mapa(pw, lar, mentira) -> Non
         pg = pw.new_page(viewport={"width": 1600, "height": 1100})
         pg.goto(s.url)
         pg.wait_for_selector(".ctl svg")
-        pg.wait_for_timeout(600)
+        _assentou(pg)
         medido = pg.evaluate("""() => [...document.querySelectorAll('.ctl')]
           .map(c => {
             const svg = c.querySelector('svg');
@@ -839,7 +881,7 @@ def test_o_ps_nao_acende_o_circulo_que_ela_mandou_tirar(pw, lar, mentira) -> Non
         pg = pw.new_page(viewport={"width": 1440, "height": 1000})
         pg.goto(s.url)
         pg.wait_for_selector(".ctl svg")
-        pg.wait_for_timeout(600)
+        _assentou(pg)
         medido = pg.evaluate("""() => {
           const g = document.querySelector('#p1-ps');
           if (!g) return null;
@@ -864,7 +906,7 @@ def test_as_21_da_bancada_se_escolhem_num_corte_so(pw, lar, mentira) -> None:
         pg = pw.new_page(viewport={"width": 1600, "height": 1100})
         pg.goto(s.url)
         pg.wait_for_selector(".ctl svg")
-        pg.wait_for_timeout(500)
+        _assentou(pg)
         visto = pg.evaluate("""() => {
           const sel = document.querySelector('#secao-filtro');
           return {grupos: [...sel.querySelectorAll('optgroup')].map(g => g.label),
@@ -879,7 +921,7 @@ def test_as_21_da_bancada_se_escolhem_num_corte_so(pw, lar, mentira) -> None:
             f"a linha do roteiro inteiro não diz quantas são: {visto}")
 
         pg.select_option("#secao-filtro", visto["valor_do_corte"])
-        pg.wait_for_timeout(500)
+        _assentou(pg)
         depois = pg.evaluate(
             "() => ({n: TESTES.length,"
             "        so_roteiro: TESTES.every(t => t.secao.startsWith('O roteiro'))})")
@@ -898,7 +940,7 @@ def test_a_espera_longa_nao_prende_ela_na_tela(pw, lar, mentira) -> None:
         pg = pw.new_page(viewport={"width": 1400, "height": 1050})
         pg.goto(s.url)
         pg.wait_for_selector(".ctl svg")
-        pg.wait_for_timeout(500)
+        _assentou(pg)
         limiar = pg.evaluate("() => ESPERA_LONGA")
         assert limiar > 0, "o limiar da espera longa sumiu do módulo"
 
@@ -909,9 +951,9 @@ def test_a_espera_longa_nao_prende_ela_na_tela(pw, lar, mentira) -> None:
                 qual)
             assert i >= 0, f"nenhum teste com espera {qual}"
             pg.evaluate("(i) => ir(i, 1)", i)
-            pg.wait_for_timeout(400)
+            _assentou(pg)
             pg.evaluate("() => iniciar()")
-            pg.wait_for_timeout(700)
+            _assentou(pg)
             return pg.evaluate("""() => ({
               titulo: document.querySelector('#titulo-da-espera').textContent,
               recado_escondido: document.querySelector('#recado-da-espera').hidden,
@@ -972,11 +1014,11 @@ def test_o_gesto_e_o_corpo_do_teste_e_nao_uma_gaveta(pw, lar, mentira) -> None:
         pg = pw.new_page(viewport={"width": 1500, "height": 1200})
         pg.goto(s.url)
         pg.wait_for_selector(".ctl svg")
-        pg.wait_for_timeout(700)
+        _assentou(pg)
         i = pg.evaluate("() => TESTES.findIndex(t => t.id === 'roteiro-10')")
         assert i >= 0, "a linha 10 sumiu da fatia aberta"
         pg.evaluate("(i) => ir(i, 1)", i)
-        pg.wait_for_timeout(700)
+        _assentou(pg)
         visto = pg.evaluate("""() => {
           const g = document.querySelector('#como-do-arquivo');
           if (!g) return null;
