@@ -1,8 +1,23 @@
-"""Plano de merge do cmdline de kernel para o install (PLAT-03 item 2)."""
+"""Plano de merge do cmdline de kernel para o install (PLAT-03 item 2), e o carregador de boot.
+
+O plano (``plan_tokens``) decide; :func:`ler_o_carregador` e :func:`escrever` são o dono único
+de quem lê e de quem escreve no carregador de boot
+(O-CMDLINE-DO-DUALSENSE-SO-SE-ESCREVE-NO-KERNELSTUB-01):
+o kernelstub do Pop!_OS, o grub (Debian, Ubuntu, Mint, Fedora, Arch) e o systemd-boot pelo
+``/etc/kernel/cmdline``. O módulo é 100% biblioteca padrão e roda como script
+(``python3 -I kernel_cmdline.py escrever …``), que é como o install, o uninstall e o
+``install_usb_quirk.sh`` escrevem como root.
+"""
 from __future__ import annotations
 
-from collections.abc import Iterable, Sequence
-from dataclasses import dataclass
+import argparse
+import json
+import shutil
+import subprocess
+import sys
+from collections.abc import Callable, Iterable, Sequence
+from dataclasses import dataclass, field
+from pathlib import Path
 
 AUTOSUSPEND_PARAM = "usbcore.autosuspend"
 AUTOSUSPEND_TOKEN = "usbcore.autosuspend=-1"
@@ -256,3 +271,323 @@ def forbidden_reintroductions(actions: Iterable[CmdlineAction]) -> list[str]:
             if banned in action.token:
                 violations.append(f"{action.token} contém {banned}")
     return violations
+
+
+# ---------------------------------------------------------------------------
+# O carregador de boot: quem lê e quem escreve (um dono só)
+# ---------------------------------------------------------------------------
+BACKEND_KERNELSTUB = "kernelstub"
+BACKEND_GRUB = "grub"
+BACKEND_SYSTEMD_BOOT = "systemd-boot"
+BACKEND_NENHUM = "none"
+_LINHA_DO_GRUB = "GRUB_CMDLINE_LINUX_DEFAULT="
+
+Which = Callable[[str], "str | None"]
+Rodar = Callable[[list[str]], int]
+
+
+@dataclass(frozen=True)
+class Lugares:
+    """Os arquivos do carregador de boot a partir de uma raiz (``/`` na máquina)."""
+
+    kernelstub: Path
+    grub: Path
+    kernel_cmdline: Path
+    raiz: Path
+
+    @classmethod
+    def da_raiz(cls, raiz: str | Path = "/") -> Lugares:
+        r = Path(raiz)
+        return cls(
+            kernelstub=r / "etc/kernelstub/configuration",
+            grub=r / "etc/default/grub",
+            kernel_cmdline=r / "etc/kernel/cmdline",
+            raiz=r,
+        )
+
+
+@dataclass(frozen=True)
+class Carregador:
+    """O carregador de boot desta máquina e os tokens que ele guarda para o próximo boot."""
+
+    backend: str
+    tokens: tuple[str, ...] = ()
+    arquivo: str = ""
+
+
+@dataclass(frozen=True)
+class Escrita:
+    """O que :func:`escrever` fez: os tokens novos, os comandos e o que falhou."""
+
+    tokens: tuple[str, ...]
+    comandos: tuple[tuple[str, ...], ...] = ()
+    falhas: tuple[str, ...] = ()
+    avisos: tuple[str, ...] = field(default_factory=tuple)
+
+
+def _tokens_do_kernelstub(conf: Path) -> list[str] | None:
+    try:
+        data = json.loads(conf.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    user = data.get("user") if isinstance(data, dict) else None
+    opcoes = (user or {}).get("kernel_options") if isinstance(user or {}, dict) else None
+    return [str(t) for t in (opcoes or [])]
+
+
+def _valor_do_grub(texto: str) -> str:
+    """O valor da ÚLTIMA ``GRUB_CMDLINE_LINUX_DEFAULT=`` (é a que o grub usa); ``""`` sem ela."""
+    valor = ""
+    for linha in texto.splitlines():
+        crua = linha.strip()
+        if crua.startswith(_LINHA_DO_GRUB):
+            valor = crua.split("=", 1)[1].strip().strip('"').strip("'")
+    return valor
+
+
+def _ler_texto(caminho: Path) -> str | None:
+    try:
+        return caminho.read_text(encoding="utf-8") if caminho.is_file() else None
+    except OSError:
+        return None
+
+
+def carregadores_presentes(
+    lugares: Lugares | None = None, which: Which = shutil.which
+) -> list[Carregador]:
+    """Todo carregador com o arquivo legível nesta máquina, na ordem de :func:`ler_o_carregador`."""
+    lugares = lugares or Lugares.da_raiz()
+    achados: list[Carregador] = []
+    if which("kernelstub") and lugares.kernelstub.is_file():
+        tokens = _tokens_do_kernelstub(lugares.kernelstub)
+        if tokens is not None:
+            achados.append(Carregador(BACKEND_KERNELSTUB, tuple(tokens), str(lugares.kernelstub)))
+    texto = _ler_texto(lugares.grub)
+    if texto is not None:
+        achados.append(Carregador(BACKEND_GRUB, tuple(_valor_do_grub(texto).split()),
+                                  str(lugares.grub)))
+    texto = _ler_texto(lugares.kernel_cmdline)
+    if texto is not None:
+        achados.append(Carregador(BACKEND_SYSTEMD_BOOT, tuple(texto.split()),
+                                  str(lugares.kernel_cmdline)))
+    return achados
+
+
+def ler_o_carregador(lugares: Lugares | None = None, which: Which = shutil.which) -> Carregador:
+    """O carregador de boot que manda: o kernelstub, o grub ou o ``/etc/kernel/cmdline``.
+
+    Sem nenhum deles, ``backend`` é ``none`` e quem chama diz o token e onde ele iria.
+    """
+    achados = carregadores_presentes(lugares, which)
+    return achados[0] if achados else Carregador(BACKEND_NENHUM)
+
+
+def trocar_tokens(tokens: Sequence[str], tira: Sequence[str], poe: Sequence[str]) -> list[str]:
+    """Os tokens sem ``tira`` e com ``poe``, sem duplicar.
+
+    O que entra ocupa o lugar do primeiro que saiu (a ordem da linha fica); sem saída, vai no fim.
+    """
+    saem = set(tira)
+    fora: list[str] = []
+    lugar: int | None = None
+    for token in tokens:
+        if token in saem:
+            if lugar is None:
+                lugar = len(fora)
+            continue
+        fora.append(token)
+    novos = [t for t in dict.fromkeys(poe) if t not in fora]
+    if lugar is None:
+        return fora + novos
+    return fora[:lugar] + novos + fora[lugar:]
+
+
+def _grub_com_tokens(texto: str, tokens: Sequence[str]) -> str:
+    """O ``/etc/default/grub`` com a ``GRUB_CMDLINE_LINUX_DEFAULT`` nova; as outras linhas ficam."""
+    nova = f'{_LINHA_DO_GRUB}"{" ".join(tokens)}"'
+    linhas = texto.splitlines(keepends=True)
+    for i in reversed(range(len(linhas))):
+        if linhas[i].strip().startswith(_LINHA_DO_GRUB):
+            recuo = linhas[i][: len(linhas[i]) - len(linhas[i].lstrip())]
+            linhas[i] = recuo + nova + ("\n" if linhas[i].endswith("\n") else "")
+            return "".join(linhas)
+    if linhas and not linhas[-1].endswith("\n"):
+        linhas[-1] += "\n"
+    return "".join(linhas) + nova + "\n"
+
+
+def _gravar(caminho: Path, texto: str) -> None:
+    """Grava pelo arquivo ao lado e troca de uma vez, com o modo do original."""
+    provisorio = caminho.with_name(caminho.name + ".hefesto-novo")
+    provisorio.write_text(texto, encoding="utf-8")
+    shutil.copymode(caminho, provisorio)
+    provisorio.replace(caminho)
+
+
+def _comandos_do_grub(
+    tira: Sequence[str], poe: Sequence[str], lugares: Lugares, which: Which
+) -> list[list[str]]:
+    """Quem regenera o grub nesta máquina: o ``grubby`` onde o BLS manda, senão o ``grub.cfg``."""
+    grubby = which("grubby")
+    if grubby and (lugares.raiz / "boot/loader/entries").is_dir():
+        comando = [grubby, "--update-kernel=ALL"]
+        if tira:
+            comando.append("--remove-args=" + " ".join(tira))
+        if poe:
+            comando.append("--args=" + " ".join(poe))
+        return [comando]
+    update = which("update-grub")
+    if update:
+        return [[update]]
+    gerador = which("grub2-mkconfig") or which("grub-mkconfig")
+    for cfg in (lugares.raiz / "boot/grub2/grub.cfg", lugares.raiz / "boot/grub/grub.cfg"):
+        if gerador and cfg.is_file():
+            return [[gerador, "-o", str(cfg)]]
+    return []
+
+
+def _comandos_do_systemd_boot(lugares: Lugares, which: Which) -> list[list[str]]:
+    """Um ``kernel-install add`` por kernel: ele leva o ``/etc/kernel/cmdline`` ao boot."""
+    instalar = which("kernel-install")
+    modulos = lugares.raiz / "usr/lib/modules"
+    if not instalar or not modulos.is_dir():
+        return []
+    return [
+        [instalar, "add", pasta.name, str(pasta / "vmlinuz")]
+        for pasta in sorted(modulos.iterdir())
+        if (pasta / "vmlinuz").is_file()
+    ]
+
+
+def _rodar(comando: list[str]) -> int:
+    try:
+        return subprocess.run(comando, check=False, stdout=subprocess.DEVNULL).returncode
+    except OSError:
+        return 127
+
+
+def escrever(
+    carregador: Carregador,
+    tira: Sequence[str],
+    poe: Sequence[str],
+    lugares: Lugares | None = None,
+    which: Which = shutil.which,
+    rodar: Rodar = _rodar,
+) -> Escrita:
+    """Tira e põe tokens no carregador de boot, e regenera o que o boot lê. Precisa de root.
+
+    O kernelstub escreve pelos próprios ``--delete-options``/``--add-options``; o grub e o
+    systemd-boot pelo arquivo, e depois o comando que esta máquina tem para regenerar.
+    """
+    lugares = lugares or Lugares.da_raiz()
+    novos = trocar_tokens(carregador.tokens, tira, poe)
+    if novos == list(carregador.tokens):
+        return Escrita(tuple(novos))
+    avisos: list[str] = []
+    if carregador.backend == BACKEND_KERNELSTUB:
+        ks = which("kernelstub") or "kernelstub"
+        ficam = [t for t in carregador.tokens if t not in set(tira)]
+        comandos = [[ks, "--delete-options", t] for t in tira if t in carregador.tokens]
+        comandos += [[ks, "--add-options", t] for t in dict.fromkeys(poe) if t not in ficam]
+    elif carregador.backend == BACKEND_GRUB:
+        texto = lugares.grub.read_text(encoding="utf-8")
+        _gravar(lugares.grub, _grub_com_tokens(texto, novos))
+        comandos = _comandos_do_grub(tira, poe, lugares, which)
+        if not comandos:
+            avisos.append(f"{lugares.grub} gravado; sem update-grub, grub2-mkconfig nem "
+                          "grubby nesta máquina: regenere o grub.cfg à mão")
+    elif carregador.backend == BACKEND_SYSTEMD_BOOT:
+        _gravar(lugares.kernel_cmdline, " ".join(novos) + "\n")
+        comandos = _comandos_do_systemd_boot(lugares, which)
+        if not comandos:
+            avisos.append(f"{lugares.kernel_cmdline} gravado; sem kernel-install nesta máquina: "
+                          "leve-o às entradas do systemd-boot à mão")
+    else:
+        raise ValueError(f"carregador de boot desconhecido: {carregador.backend!r}")
+    falhas = tuple(" ".join(c) for c in comandos if rodar(c) != 0)
+    return Escrita(tuple(novos), tuple(tuple(c) for c in comandos), falhas, tuple(avisos))
+
+
+def plano_do_quirk(tokens: Sequence[str], remover: bool = False) -> tuple[list[str], list[str]]:
+    """O ``(tira, poe)`` do ``install_usb_quirk.sh``: o mesmo merge do passo 3e, só o quirk."""
+    if not remover:
+        acao = _plan_quirks(tokens, HEFESTO_QUIRK_IDS)
+        if acao.op in (OP_NONE, OP_PULA):
+            return [], []
+        return list(acao.remove_tokens), [acao.token]
+    tira: list[str] = []
+    poe: list[str] = []
+    for token in tokens_for_param(tokens, QUIRKS_PARAM):
+        resto, mudou = strip_quirks_token(token)
+        if mudou:
+            tira.append(token)
+            if resto is not None:
+                poe.append(resto)
+    return tira, poe
+
+
+def _lugares_do_argv(args: argparse.Namespace) -> Lugares:
+    base = Lugares.da_raiz(args.raiz)
+    return Lugares(
+        kernelstub=Path(args.kernelstub_conf) if args.kernelstub_conf else base.kernelstub,
+        grub=Path(args.grub_conf) if args.grub_conf else base.grub,
+        kernel_cmdline=Path(args.kernel_cmdline) if args.kernel_cmdline else base.kernel_cmdline,
+        raiz=base.raiz,
+    )
+
+
+def _relatar(escrita: Escrita, carregador: Carregador) -> int:
+    for aviso in escrita.avisos:
+        print("aviso\t" + aviso)
+    for falha in escrita.falhas:
+        print("falhou\t" + falha)
+    if escrita.comandos or escrita.avisos:
+        print(f"escreveu\t{carregador.backend}\t{carregador.arquivo}")
+    return 1 if escrita.falhas else 0
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """``ler``, ``escrever`` (o passo 3e e o uninstall) e ``quirk`` (o ``install_usb_quirk.sh``)."""
+    parser = argparse.ArgumentParser(prog="kernel_cmdline.py")
+    parser.add_argument("comando", choices=("ler", "escrever", "quirk-aplicar", "quirk-remover"))
+    parser.add_argument("--raiz", default="/")
+    parser.add_argument("--kernelstub-conf", default="")
+    parser.add_argument("--grub-conf", default="")
+    parser.add_argument("--kernel-cmdline", default="")
+    parser.add_argument("--backend", default="")
+    parser.add_argument("--tira", action="append", default=[])
+    parser.add_argument("--poe", action="append", default=[])
+    args = parser.parse_args(argv)
+    lugares = _lugares_do_argv(args)
+    carregador = ler_o_carregador(lugares)
+    if args.comando == "ler":
+        print(f"backend={carregador.backend}\narquivo={carregador.arquivo}")
+        print("tokens=" + " ".join(carregador.tokens))
+        return 0
+    if args.comando == "escrever":
+        presentes = carregadores_presentes(lugares)
+        alvo = next((c for c in presentes if c.backend == args.backend), None)
+        if alvo is None:
+            print(f"falhou\tsem {args.backend} legível nesta máquina (o que manda: "
+                  f"{carregador.backend})")
+            return 2
+        return _relatar(escrever(alvo, args.tira, args.poe, lugares), alvo)
+    token = f"{QUIRKS_PARAM}=" + ",".join(HEFESTO_QUIRK_IDS)
+    if carregador.backend == BACKEND_NENHUM:
+        print("nenhum\tsem kernelstub, grub ou /etc/kernel/cmdline: ponha à mão no cmdline: "
+              + token)
+        return 0
+    rc = 0
+    remover = args.comando == "quirk-remover"
+    for presente in carregadores_presentes(lugares) if remover else [carregador]:
+        tira, poe = plano_do_quirk(presente.tokens, remover=remover)
+        if not tira and not poe:
+            print(f"no-op\t{presente.backend}\t{presente.arquivo}")
+            continue
+        print(f"troca\t{presente.backend}\t{' '.join(tira) or '-'}\t{' '.join(poe) or '-'}")
+        rc |= _relatar(escrever(presente, tira, poe, lugares), presente)
+    return rc
+
+
+if __name__ == "__main__":
+    sys.exit(main())

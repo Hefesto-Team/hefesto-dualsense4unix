@@ -23,7 +23,8 @@
 # INSTALL, ciente do bootloader, e não como assets/*.rules.
 #
 # O kernel respeita SÓ UM token usbcore.quirks= no cmdline — se já existir um
-# DIFERENTE, este script AVISA e NÃO adiciona um segundo às cegas (mescle à mão).
+# DIFERENTE, o nosso é FUNDIDO nele (o mesmo merge do passo 3e do install), e
+# nunca entra um segundo.
 #
 # O 054c:0df2 SAIU em 14/10/2026 (ADR 018, nota datada): é o PID do pad virtual
 # do Hefesto, e o n dele esperava 200 ms por pedido de controle — com quatro
@@ -33,7 +34,11 @@
 # enumerar, e o pad se refaz a cada sessão).
 #
 # Idempotente (rodar 2x = no-op na 2a; nunca duplica token). Reversível
-# (--remove). Bootloaders cobertos: kernelstub (Pop!_OS/System76) e grub.
+# (--remove). Quem lê e escreve o carregador de boot é o módulo
+# src/hefesto_dualsense4unix/integrations/kernel_cmdline.py, o mesmo do passo 3e
+# (O-CMDLINE-DO-DUALSENSE-SO-SE-ESCREVE-NO-KERNELSTUB-01): kernelstub
+# (Pop!_OS/System76), grub (Debian, Ubuntu, Fedora, Arch) e systemd-boot pelo
+# /etc/kernel/cmdline.
 #
 # Uso:
 #   scripts/install_usb_quirk.sh            aplica o quirk (default; requer root)
@@ -61,6 +66,11 @@ readonly ENTRADA_VELHA="054c:0df2:gn"
 # gancho dos testes (um /etc e um /sys de mentira); o sudo não os repassa.
 readonly KERNELSTUB_CONF="${HEFESTO_QUIRK_KERNELSTUB_CONF:-/etc/kernelstub/configuration}"
 readonly GRUB_CONF="${HEFESTO_QUIRK_GRUB_CONF:-/etc/default/grub}"
+readonly KERNEL_CMDLINE_CONF="${HEFESTO_QUIRK_KERNEL_CMDLINE:-/etc/kernel/cmdline}"
+_aqui="${BASH_SOURCE[0]%/*}"
+if [[ "$_aqui" == "${BASH_SOURCE[0]}" ]]; then _aqui="."; fi
+_raiz_do_repo="$(cd "${_aqui}/.." && pwd)"
+readonly DONO_DO_CMDLINE="${_raiz_do_repo}/src/hefesto_dualsense4unix/integrations/kernel_cmdline.py"
 readonly SYSFS_QUIRKS="${HEFESTO_QUIRK_SYSFS:-/sys/module/usbcore/parameters/quirks}"
 
 info() { printf '[usb-quirk] %s\n' "$*"; }
@@ -78,24 +88,6 @@ as_root() {
     fi
 }
 
-detect_bootloader() {
-    if command -v kernelstub >/dev/null 2>&1; then
-        echo kernelstub
-    elif [[ -f "$GRUB_CONF" ]]; then
-        echo grub
-    else
-        echo none
-    fi
-}
-
-# Avisa que há um usbcore.quirks= DIFERENTE e instrui a mesclar à mão.
-warn_other_quirk() {
-    local where="$1"
-    warn "já existe um 'usbcore.quirks=' DIFERENTE em ${where}."
-    warn "o kernel respeita só UM token usbcore.quirks= — NÃO vou adicionar um segundo às cegas."
-    warn "mescle manualmente num único token, ex.:"
-    warn "  usbcore.quirks=<o_que_já_existe>,${QUIRK_VALUE}"
-}
 
 # ---------------------------------------------------------------------------
 # A MIGRAÇÃO DO TOKEN VELHO (14/10/2026)
@@ -126,50 +118,6 @@ _tokens_com_a_entrada_velha() {
     return 0
 }
 
-# O token sem a entrada velha ("" se não sobrar nada dele).
-_token_migrado() {
-    local resto
-    resto="$(_sem_a_entrada_velha "${1#usbcore.quirks=}")"
-    [[ -n "$resto" ]] && printf 'usbcore.quirks=%s' "$resto"
-    return 0
-}
-
-migrate_kernelstub() {
-    local velho novo
-    while IFS= read -r velho; do
-        [[ -n "$velho" ]] || continue
-        novo="$(_token_migrado "$velho")"
-        info "migrando via kernelstub: ${velho} → ${novo:-(nada)} (o ${ENTRADA_VELHA} do pad virtual sai)"
-        as_root kernelstub --delete-options "$velho"
-        if [[ -n "$novo" ]]; then as_root kernelstub --add-options "$novo"; fi
-    done < <(_tokens_com_a_entrada_velha "$KERNELSTUB_CONF")
-    return 0
-}
-
-# Escapa um token para a parte de BUSCA de um sed -E (o token só tem
-# [A-Za-z0-9:.,=_-]; o ponto é o único metacaractere possível).
-_para_o_sed() { printf '%s' "${1//./\\.}"; }
-
-migrate_grub() {
-    local velho novo mudou=0
-    while IFS= read -r velho; do
-        [[ -n "$velho" ]] || continue
-        novo="$(_token_migrado "$velho")"
-        info "migrando em ${GRUB_CONF}: ${velho} → ${novo:-(nada)} (o ${ENTRADA_VELHA} do pad virtual sai)"
-        as_root sed -i -E \
-            "/^[[:space:]]*GRUB_CMDLINE_LINUX_DEFAULT=/{
-                s/(^|[\"[:space:]])$(_para_o_sed "$velho")([\"[:space:]])/\1${novo}\2/g
-                s/=\"[[:space:]]+/=\"/
-                s/[[:space:]]+\"/\"/
-                s/[[:space:]]{2,}/ /g
-            }" \
-            "$GRUB_CONF"
-        mudou=1
-    done < <(_tokens_com_a_entrada_velha "$GRUB_CONF")
-    if [[ "$mudou" -eq 1 ]]; then regen_grub; fi
-    return 0
-}
-
 # O valor do sysfs sem a entrada velha. Best-effort: vale no próximo enumerar
 # (o pad virtual se refaz a cada sessão); falhar aqui não derruba o apply.
 migrate_runtime() {
@@ -185,126 +133,46 @@ migrate_runtime() {
 }
 
 # ---------------------------------------------------------------------------
-# APLICAR
+# APLICAR E REMOVER, pelo dono do carregador de boot
 # ---------------------------------------------------------------------------
-apply_kernelstub() {
-    migrate_kernelstub
-    if [[ -f "$KERNELSTUB_CONF" ]] && grep -q "$MARKER" "$KERNELSTUB_CONF" 2>/dev/null; then
-        info "no-op: quirk já presente em ${KERNELSTUB_CONF} (kernelstub)"
-        return 0
-    fi
-    if [[ -f "$KERNELSTUB_CONF" ]] && grep -q 'usbcore\.quirks=' "$KERNELSTUB_CONF" 2>/dev/null; then
-        warn_other_quirk "$KERNELSTUB_CONF"
-        return 0
-    fi
-    info "aplicando via kernelstub: ${QUIRK}"
-    as_root kernelstub --add-options "$QUIRK"
-    info "feito — vale no PRÓXIMO boot. (--runtime aplica agora, sem reboot, no próximo replug.)"
-}
-
-apply_grub() {
-    migrate_grub
-    if grep -q "$MARKER" "$GRUB_CONF" 2>/dev/null; then
-        info "no-op: quirk já presente em ${GRUB_CONF} (grub)"
-        return 0
-    fi
-    if grep -qE 'usbcore\.quirks=' "$GRUB_CONF" 2>/dev/null; then
-        warn_other_quirk "$GRUB_CONF"
-        return 0
-    fi
-    if grep -qE '^[[:space:]]*GRUB_CMDLINE_LINUX_DEFAULT=' "$GRUB_CONF" 2>/dev/null; then
-        info "adicionando token a GRUB_CMDLINE_LINUX_DEFAULT em ${GRUB_CONF}"
-        # Insere o token logo após a aspa de abertura (idempotente: protegido
-        # pelos greps acima). Se o valor estava vazio sobra um espaço à esquerda,
-        # inofensivo para o grub.
-        as_root sed -i -E \
-            "s/^([[:space:]]*GRUB_CMDLINE_LINUX_DEFAULT=\")(.*)(\")/\1${QUIRK} \2\3/" \
-            "$GRUB_CONF"
-    else
-        info "GRUB_CMDLINE_LINUX_DEFAULT ausente — criando a linha em ${GRUB_CONF}"
-        printf 'GRUB_CMDLINE_LINUX_DEFAULT="%s"\n' "$QUIRK" | as_root tee -a "$GRUB_CONF" >/dev/null
-    fi
-    regen_grub
-    info "feito — vale no PRÓXIMO boot. (--runtime aplica agora, sem reboot, no próximo replug.)"
-}
-
-regen_grub() {
-    if command -v update-grub >/dev/null 2>&1; then
-        as_root update-grub
-    elif command -v grub-mkconfig >/dev/null 2>&1; then
-        as_root grub-mkconfig -o /boot/grub/grub.cfg
-    else
-        warn "nem update-grub nem grub-mkconfig encontrados — regenere o grub.cfg manualmente"
-    fi
-}
-
-apply_manual() {
-    info "bootloader não reconhecido (sem kernelstub e sem ${GRUB_CONF})."
-    info "adicione MANUALMENTE este token ao cmdline do seu bootloader (systemd-boot/outro):"
-    info "  ${QUIRK}"
-    info "ele PRESERVA o áudio do DualSense e mitiga o storm -71. Não é uma regra udev — é cmdline."
-    return 0
+# O módulo roda como root com os caminhos deste script (os HEFESTO_QUIRK_* são
+# o gancho dos testes) e diz, uma linha por carregador, o que fez.
+_pelo_dono() {
+    local pedido="$1" saida rc=0 tipo backend tira poe
+    [[ -f "$DONO_DO_CMDLINE" ]] || die "o dono do cmdline não está em ${DONO_DO_CMDLINE}"
+    saida="$(as_root python3 -I "$DONO_DO_CMDLINE" "$pedido" \
+        --kernelstub-conf "$KERNELSTUB_CONF" --grub-conf "$GRUB_CONF" \
+        --kernel-cmdline "$KERNEL_CMDLINE_CONF")" || rc=$?
+    while IFS=$'\t' read -r tipo backend tira poe; do
+        case "$tipo" in
+            no-op)  info "no-op: nada a mudar em ${tira} (${backend})" ;;
+            troca)
+                if [[ ",${tira//usbcore.quirks=/}," == *",${ENTRADA_VELHA},"* ]]; then
+                    info "migrando em ${backend}: ${tira} → ${poe} (o ${ENTRADA_VELHA} do pad virtual sai)"
+                else
+                    info "trocando em ${backend}: tira ${tira}, põe ${poe}"
+                fi ;;
+            escreveu) info "feito em ${backend} (${tira}) — vale no PRÓXIMO boot. (--runtime aplica agora, sem reboot, no próximo replug.)" ;;
+            aviso)  warn "${backend}" ;;
+            falhou) warn "falhou: ${backend}" ;;
+            nenhum)
+                info "bootloader não reconhecido (sem kernelstub, ${GRUB_CONF} e ${KERNEL_CMDLINE_CONF})."
+                info "adicione MANUALMENTE este token ao cmdline do seu bootloader: ${QUIRK}"
+                info "ele PRESERVA o áudio do DualSense e mitiga o storm -71. Não é uma regra udev — é cmdline." ;;
+        esac
+    done <<<"${saida}"
+    [[ "$rc" -eq 0 ]] || die "a escrita no carregador de boot falhou (rc=${rc})"
 }
 
 do_apply() {
-    case "$(detect_bootloader)" in
-        kernelstub) apply_kernelstub ;;
-        grub)       apply_grub ;;
-        none)       apply_manual ;;
-    esac
+    _pelo_dono quirk-aplicar
     migrate_runtime
 }
 
-# ---------------------------------------------------------------------------
-# REMOVER
-# ---------------------------------------------------------------------------
-remove_kernelstub() {
-    if [[ ! -f "$KERNELSTUB_CONF" ]] || ! grep -q "$MARKER" "$KERNELSTUB_CONF" 2>/dev/null; then
-        info "no-op: quirk ausente em ${KERNELSTUB_CONF} (kernelstub)"
-        return 0
-    fi
-    local token
-    for token in "usbcore.quirks=${MARKER},${ENTRADA_VELHA}" "$QUIRK"; do
-        if grep -qF "\"${token}\"" "$KERNELSTUB_CONF" 2>/dev/null; then
-            info "removendo via kernelstub: ${token}"
-            as_root kernelstub --delete-options "$token"
-        fi
-    done
-}
-
-remove_grub() {
-    if ! grep -q "$MARKER" "$GRUB_CONF" 2>/dev/null; then
-        info "no-op: quirk ausente em ${GRUB_CONF} (grub)"
-        return 0
-    fi
-    info "removendo token de ${GRUB_CONF}"
-    # Remove só o NOSSO token e normaliza os espaços DENTRO da linha
-    # GRUB_CMDLINE_LINUX_DEFAULT (sem tocar em outras linhas nem em outro
-    # usbcore.quirks=): tira o token, colapsa espaço duplo e apara as bordas
-    # internas das aspas — round-trip limpo (sem espaço órfão).
-    as_root sed -i -E \
-        "/^[[:space:]]*GRUB_CMDLINE_LINUX_DEFAULT=/{
-            s/(^|[\"[:space:]])usbcore\.quirks=054c:0ce6:gn(,054c:0df2:gn)?([\"[:space:]])/\1\3/g
-            s/=\"[[:space:]]+/=\"/
-            s/[[:space:]]+\"/\"/
-            s/[[:space:]]{2,}/ /g
-        }" \
-        "$GRUB_CONF"
-    regen_grub
-}
-
+# Limpa TODO carregador legível (não só o que manda hoje): se o bootloader mudou
+# depois do apply, não fica token órfão no antigo. No-op onde o token não está.
 do_remove() {
-    # Limpa AMBOS os backends se seus configs existirem (não confia só no
-    # detect_bootloader): se o bootloader mudou depois do apply, evita deixar um
-    # token órfão no backend antigo. Cada remove_* é no-op quando o token está
-    # ausente, então rodar os dois é seguro e idempotente.
-    local did=0
-    if [[ -f "$KERNELSTUB_CONF" ]]; then remove_kernelstub; did=1; fi
-    if [[ -f "$GRUB_CONF" ]]; then remove_grub; did=1; fi
-    if [[ "$did" -eq 0 ]]; then
-        info "bootloader não reconhecido — remova MANUALMENTE o token do cmdline:"
-        info "  ${QUIRK}"
-    fi
+    _pelo_dono quirk-remover
 }
 
 # ---------------------------------------------------------------------------
@@ -330,6 +198,10 @@ do_status() {
         info "[agendado p/ próximo boot]  sim — em ${GRUB_CONF} (grub)"
         scheduled=1
     fi
+    if [[ -r "$KERNEL_CMDLINE_CONF" ]] && grep -q "$MARKER" "$KERNEL_CMDLINE_CONF" 2>/dev/null; then
+        info "[agendado p/ próximo boot]  sim — em ${KERNEL_CMDLINE_CONF} (systemd-boot)"
+        scheduled=1
+    fi
     [[ "$scheduled" -eq 0 ]] && info "[agendado p/ próximo boot]  não — ausente no config do bootloader"
 
     # Runtime (sysfs) — vale só na próxima reenumeração/replug.
@@ -340,7 +212,7 @@ do_status() {
     fi
 
     local onde
-    for onde in /proc/cmdline "$KERNELSTUB_CONF" "$GRUB_CONF"; do
+    for onde in /proc/cmdline "$KERNELSTUB_CONF" "$GRUB_CONF" "$KERNEL_CMDLINE_CONF"; do
         if [[ -n "$(_tokens_com_a_entrada_velha "$onde")" ]]; then
             info "[DEFEITO] ${ENTRADA_VELHA} em ${onde}: o pad virtual espera 200 ms por pedido; com 4 controles o jogo perde os controles — rode este script sem argumento para migrar"
         fi
@@ -412,7 +284,7 @@ main() {
         remove)  do_remove ;;
         status)  do_status ;;
         runtime) do_runtime ;;
-        help)    sed -n '2,48p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' ;;
+        help)    sed -n '2,53p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//' ;;
     esac
 }
 

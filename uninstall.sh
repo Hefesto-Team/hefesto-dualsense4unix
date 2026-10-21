@@ -2109,68 +2109,72 @@ fi
 CMDLINE_OWNERS_FILE="${HOME}/.local/state/hefesto-dualsense4unix/cmdline-owners.conf"
 if [[ -f "${CMDLINE_OWNERS_FILE}" ]]; then
     _cmdline_reverted=0
-    if ! command -v kernelstub >/dev/null 2>&1; then
-        log "cmdline: registro presente mas sem kernelstub — reverta manualmente os"
-        log "  params marcados 'hefesto' em ${CMDLINE_OWNERS_FILE} (registro preservado)"
+    # O carregador em que o install escreveu (sem a linha, o install antigo: só o kernelstub).
+    _cmdline_backend="$(sed -n 's/^cmdline\.backend=//p' "${CMDLINE_OWNERS_FILE}" | head -1)"
+    _cmdline_backend="${_cmdline_backend:-kernelstub}"
+    _cmdline_dono="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/kernel_cmdline.py"
+    _own_autosusp="$(sed -n 's/^cmdline\.usbcore\.autosuspend=//p' "${CMDLINE_OWNERS_FILE}" | head -1)"
+    _own_quirks="$(sed -n 's/^cmdline\.usbcore\.quirks=//p' "${CMDLINE_OWNERS_FILE}" | head -1)"
+    if ! command -v python3 >/dev/null 2>&1 || [[ ! -f "${_cmdline_dono}" ]]; then
+        log "cmdline: sem python3 ou sem ${_cmdline_dono} — reverta manualmente os params"
+        log "  marcados 'hefesto' em ${CMDLINE_OWNERS_FILE} (${_cmdline_backend}; registro preservado)"
     elif ! sudo -n true 2>/dev/null; then
         log "cmdline: sudo indisponível — params NÃO revertidos (registro preservado;"
         log "  re-execute o uninstall com sudo para reverter)"
     else
-        _own_autosusp="$(sed -n 's/^cmdline\.usbcore\.autosuspend=//p' "${CMDLINE_OWNERS_FILE}" | head -1)"
-        _own_quirks="$(sed -n 's/^cmdline\.usbcore\.quirks=//p' "${CMDLINE_OWNERS_FILE}" | head -1)"
-        _cmdline_reverted=1
-        if [[ "${_own_autosusp}" == "hefesto" ]]; then
-            log "cmdline: removendo usbcore.autosuspend=-1 (registrado como nosso; vale no próximo boot)"
-            sudo kernelstub --delete-options "usbcore.autosuspend=-1" >/dev/null 2>&1 \
-                || log "  ERRO: kernelstub --delete-options falhou — rode manualmente"
-        elif [[ -n "${_own_autosusp}" ]]; then
-            log "cmdline: usbcore.autosuspend é de ${_own_autosusp} — preservado"
-        fi
-        if [[ "${_own_quirks}" == "hefesto" || "${_own_quirks}" == "compartilhado" ]]; then
-            if command -v python3 >/dev/null 2>&1; then
-                _quirks_plan="$(python3 - "${ROOT_DIR}" <<'PYEOF'
-import json
+        # Quem lê e quem escreve o carregador é o dono único, o mesmo do install
+        # (O-CMDLINE-DO-DUALSENSE-SO-SE-ESCREVE-NO-KERNELSTUB-01).
+        _cmdline_plan="$(python3 - "${ROOT_DIR}" "${_cmdline_backend}" "${_own_autosusp}" "${_own_quirks}" <<'PYEOF'
 import os
 import sys
 
-root = sys.argv[1]
+root, backend, own_autosusp, own_quirks = sys.argv[1:5]
 sys.path.insert(0, os.path.join(root, "src"))
 from hefesto_dualsense4unix.integrations import kernel_cmdline as kc
 
-try:
-    with open("/etc/kernelstub/configuration", encoding="utf-8") as fh:
-        data = json.load(fh)
-    tokens = list((data.get("user") or {}).get("kernel_options") or [])
-except (OSError, ValueError):
+presentes = {c.backend: c for c in kc.carregadores_presentes()}
+if backend not in presentes:
+    print("sem\t" + backend)
     raise SystemExit(0)
-for tok in kc.tokens_for_param(tokens, kc.QUIRKS_PARAM):
-    rest, changed = kc.strip_quirks_token(tok)
-    if not changed:
-        continue
-    print("del\t" + tok)
-    if rest is not None:
-        print("add\t" + rest)
+tokens = list(presentes[backend].tokens)
+if own_autosusp == "hefesto" and kc.AUTOSUSPEND_TOKEN in tokens:
+    print("del\t" + kc.AUTOSUSPEND_TOKEN)
+if own_quirks in ("hefesto", "compartilhado"):
+    for tok in kc.tokens_for_param(tokens, kc.QUIRKS_PARAM):
+        rest, changed = kc.strip_quirks_token(tok)
+        if not changed:
+            continue
+        print("del\t" + tok)
+        if rest is not None:
+            print("add\t" + rest)
 PYEOF
-)" || _quirks_plan=""
-                if [[ -n "${_quirks_plan}" ]]; then
-                    log "cmdline: removendo os IDs do hefesto do usbcore.quirks (dono: ${_own_quirks}; vale no próximo boot)"
-                    while IFS=$'\t' read -r _qop _qtok; do
-                        case "${_qop}" in
-                            del) sudo kernelstub --delete-options "${_qtok}" >/dev/null 2>&1 \
-                                     || log "  ERRO: delete-options '${_qtok}' falhou" ;;
-                            add) sudo kernelstub --add-options "${_qtok}" >/dev/null 2>&1 \
-                                     || log "  ERRO: add-options '${_qtok}' falhou (re-adicione o restante do token!)" ;;
-                        esac
-                    done <<<"${_quirks_plan}"
-                else
-                    log "cmdline: usbcore.quirks sem IDs nossos na configuration — nada a reverter"
-                fi
-            else
-                log "cmdline: sem python3 — usbcore.quirks compartilhado NÃO revertido (registro preservado)"
-                _cmdline_reverted=0
+)" || _cmdline_plan=$'sem\t'"${_cmdline_backend}"
+        _cmdline_args=()
+        _cmdline_sem=""
+        while IFS=$'\t' read -r _qop _qtok; do
+            case "${_qop}" in
+                del) _cmdline_args+=(--tira "${_qtok}") ;;
+                add) _cmdline_args+=(--poe "${_qtok}") ;;
+                sem) _cmdline_sem="${_qtok}" ;;
+            esac
+        done <<<"${_cmdline_plan}"
+        for _dono in "autosuspend:${_own_autosusp}" "quirks:${_own_quirks}"; do
+            if [[ -n "${_dono#*:}" && "${_dono#*:}" != "hefesto" && "${_dono#*:}" != "compartilhado" ]]; then
+                log "cmdline: usbcore.${_dono%%:*} é de ${_dono#*:} — preservado"
             fi
-        elif [[ -n "${_own_quirks}" ]]; then
-            log "cmdline: usbcore.quirks é de ${_own_quirks} — preservado"
+        done
+        if [[ -n "${_cmdline_sem}" ]]; then
+            log "cmdline: o install escreveu em ${_cmdline_sem}, e ele não está legível agora — reverta"
+            log "  manualmente os params marcados em ${CMDLINE_OWNERS_FILE} (registro preservado)"
+        elif [[ "${#_cmdline_args[@]}" -eq 0 ]]; then
+            log "cmdline: nada nosso em ${_cmdline_backend} — nada a reverter"
+            _cmdline_reverted=1
+        elif sudo python3 -I "${_cmdline_dono}" escrever --backend "${_cmdline_backend}" \
+                "${_cmdline_args[@]}" >/dev/null 2>&1; then
+            log "cmdline: tirei de ${_cmdline_backend} o que era nosso: ${_cmdline_args[*]} (vale no próximo boot)"
+            _cmdline_reverted=1
+        else
+            log "  ERRO: a escrita em ${_cmdline_backend} falhou — rode: sudo python3 -I ${_cmdline_dono} escrever --backend ${_cmdline_backend} ${_cmdline_args[*]}"
         fi
     fi
     if [[ "${_cmdline_reverted}" -eq 1 ]]; then

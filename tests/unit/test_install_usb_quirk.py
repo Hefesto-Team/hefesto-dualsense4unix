@@ -16,7 +16,10 @@ tests/unit/test_udev_rule_75_disable_usb_audio.py.
 
 A MIGRAÇÃO de 14/10/2026 (o `054c:0df2:gn` do pad virtual sai) roda contra um
 `/etc` e um `/sys` de mentira (`HEFESTO_QUIRK_*`), com `sudo`, `kernelstub` e
-`update-grub` de mentira num PATH que só tem o que o script usa.
+`update-grub` de mentira num PATH que só tem o que o script usa. Desde
+O-CMDLINE-DO-DUALSENSE-SO-SE-ESCREVE-NO-KERNELSTUB-01 quem escreve é o
+`integrations/kernel_cmdline.py`: o token de terceiro é fundido, e o `/etc/kernel/cmdline`
+do systemd-boot entra na conta.
 """
 from __future__ import annotations
 
@@ -156,6 +159,7 @@ def _bancada(tmp_path: Path, *, com_kernelstub: bool) -> tuple[Path, dict[str, s
         "HEFESTO_QUIRK_KERNELSTUB_CONF": str(kstub),
         "HEFESTO_QUIRK_GRUB_CONF": str(grub),
         "HEFESTO_QUIRK_SYSFS": str(sysfs),
+        "HEFESTO_QUIRK_KERNEL_CMDLINE": str(tmp_path / "etc" / "kernel" / "cmdline"),
     }
     return tmp_path, env
 
@@ -219,3 +223,40 @@ def test_o_status_aponta_o_defeito(tmp_path: Path) -> None:
     r = _roda(env, "--status")
     assert r.returncode == 0, r.stderr
     assert "[DEFEITO] 054c:0df2:gn" in r.stdout, r.stdout
+
+
+def test_o_token_de_terceiro_e_fundido_e_nao_duplicado(tmp_path: Path) -> None:
+    raiz, env = _bancada(tmp_path, com_kernelstub=False)
+    grub = raiz / "etc/default/grub"
+    grub.write_text('GRUB_CMDLINE_LINUX_DEFAULT="quiet usbcore.quirks=0bda:8153:k"\n',
+                    encoding="utf-8")
+    r = _roda(env)
+    assert r.returncode == 0, r.stderr
+    assert grub.read_text(encoding="utf-8") == (
+        'GRUB_CMDLINE_LINUX_DEFAULT="quiet usbcore.quirks=0bda:8153:k,054c:0ce6:gn"\n')
+
+
+def test_o_systemd_boot_ganha_o_quirk_no_etc_kernel_cmdline(tmp_path: Path) -> None:
+    raiz, env = _bancada(tmp_path, com_kernelstub=False)
+    (raiz / "etc/default/grub").unlink()
+    cmdline = raiz / "etc/kernel/cmdline"
+    cmdline.parent.mkdir(parents=True)
+    cmdline.write_text("root=UUID=0000-forjado rw quiet\n", encoding="utf-8")
+    r = _roda(env)
+    assert r.returncode == 0, r.stderr
+    assert cmdline.read_text(encoding="utf-8") == (
+        f"root=UUID=0000-forjado rw quiet {EXPECTED_QUIRK}\n")
+    assert "kernel-install" in r.stderr, "sem kernel-install, o aviso tem de dizer o que falta"
+    status = _roda(env, "--status")
+    assert "(systemd-boot)" in status.stdout, status.stdout
+    assert _roda(env, "--remove").returncode == 0
+    assert cmdline.read_text(encoding="utf-8") == "root=UUID=0000-forjado rw quiet\n"
+
+
+def test_sem_carregador_conhecido_o_token_exato_vai_para_a_tela(tmp_path: Path) -> None:
+    raiz, env = _bancada(tmp_path, com_kernelstub=False)
+    (raiz / "etc/default/grub").unlink()
+    r = _roda(env)
+    assert r.returncode == 0, r.stderr
+    assert f"adicione MANUALMENTE este token ao cmdline do seu bootloader: {EXPECTED_QUIRK}" in (
+        r.stdout)

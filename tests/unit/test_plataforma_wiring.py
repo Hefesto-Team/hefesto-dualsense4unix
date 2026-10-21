@@ -84,9 +84,9 @@ class TestCmdlineGerenciado:
         assert "plan_tokens" in INSTALL
         assert "forbidden_reintroductions" in INSTALL
 
-    def test_install_traduz_o_plano_em_kernelstub(self) -> None:
-        assert "kernelstub --delete-options" in INSTALL
-        assert "kernelstub --add-options" in INSTALL
+    def test_install_traduz_o_plano_no_carregador_pelo_dono(self) -> None:
+        assert "escrever --backend" in INSTALL and "--tira" in INSTALL and "--poe" in INSTALL
+        assert "kernelstub --add-options" not in INSTALL, "quem escreve é o kernel_cmdline.py"
 
     def test_install_registra_dono_em_estado_local(self) -> None:
         assert "cmdline-owners.conf" in INSTALL

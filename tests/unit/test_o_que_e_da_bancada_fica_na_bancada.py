@@ -239,6 +239,7 @@ def _roda_o_passo_3e(tmp_path: Path, bateria: str) -> list[list[str]]:
     codigo = _heredoc_do_passo_3e()
     codigo = codigo.replace("/etc/default/grub", str(grub))
     codigo = codigo.replace("/etc/kernelstub/configuration", str(tmp_path / "nao-ha"))
+    codigo = codigo.replace("/etc/kernel/cmdline", str(tmp_path / "nao-ha"))
     r = subprocess.run(
         [sys.executable, "-", str(RAIZ), bateria],
         input=codigo,
@@ -514,6 +515,7 @@ def _doctor_roda(tmp_path: Path, funcao: str, *, bateria: bool) -> str:
         "HEFESTO_DOCTOR_CMDLINE": str(vazio),
         "HEFESTO_DOCTOR_KERNELSTUB": str(vazio),
         "HEFESTO_DOCTOR_GRUB": str(vazio),
+        "HEFESTO_DOCTOR_KERNEL_CMDLINE": str(tmp_path / "nao-ha"),
     }
     r = subprocess.run(
         [BASH, "-c", f'source "{DOCTOR}"; QUIET=0; {funcao}'],
@@ -570,6 +572,37 @@ class TestODoctorSabeDaBateria:
     def test_sem_bateria_o_autosuspend_ausente_segue_aviso(self, tmp_path: Path) -> None:
         saida = _doctor_roda(tmp_path, "check_cmdline_platform", bateria=False)
         assert "[WARN] cmdline: usbcore.autosuspend=-1 ausente" in saida, saida
+
+    def test_sem_carregador_conhecido_o_doctor_da_o_token_e_nao_manda_reinstalar(
+        self, tmp_path: Path,
+    ) -> None:
+        """O-CMDLINE-DO-DUALSENSE-SO-SE-ESCREVE-NO-KERNELSTUB-01: sem onde escrever."""
+        sysfs = _sys_do_doctor(tmp_path, bateria=False)
+        nada = str(tmp_path / "nao-ha")
+        r = subprocess.run(
+            [BASH, "-c", f'source "{DOCTOR}"; QUIET=0; check_cmdline_platform'],
+            capture_output=True, text=True, timeout=60, check=False,
+            env={"PATH": "/usr/bin:/bin", "HOME": str(tmp_path), "HEFESTO_DOCTOR_SYS": str(sysfs),
+                 "HEFESTO_DOCTOR_CMDLINE": nada, "HEFESTO_DOCTOR_KERNELSTUB": nada,
+                 "HEFESTO_DOCTOR_GRUB": nada, "HEFESTO_DOCTOR_KERNEL_CMDLINE": nada},
+        )
+        assert "[WARN] cmdline: 054c:0ce6:gn ausente" not in r.stdout, r.stdout
+        assert "ponha à mão no cmdline do kernel usbcore.quirks=054c:0ce6:gn" in r.stdout, r.stdout
+        assert "ponha à mão no cmdline do kernel usbcore.autosuspend=-1" in r.stdout, r.stdout
+
+    def test_o_doctor_le_o_proximo_boot_no_etc_kernel_cmdline(self, tmp_path: Path) -> None:
+        sysfs = _sys_do_doctor(tmp_path, bateria=False)
+        nada = str(tmp_path / "nao-ha")
+        kcmd = tmp_path / "kernel-cmdline"
+        kcmd.write_text("rw usbcore.autosuspend=-1 usbcore.quirks=054c:0ce6:gn\n", encoding="utf-8")
+        r = subprocess.run(
+            [BASH, "-c", f'source "{DOCTOR}"; QUIET=0; check_cmdline_platform'],
+            capture_output=True, text=True, timeout=60, check=False,
+            env={"PATH": "/usr/bin:/bin", "HOME": str(tmp_path), "HEFESTO_DOCTOR_SYS": str(sysfs),
+                 "HEFESTO_DOCTOR_CMDLINE": nada, "HEFESTO_DOCTOR_KERNELSTUB": nada,
+                 "HEFESTO_DOCTOR_GRUB": nada, "HEFESTO_DOCTOR_KERNEL_CMDLINE": str(kcmd)},
+        )
+        assert "054c:0ce6:gn agendado mas NÃO ativo" in r.stdout, r.stdout
 
     def test_o_n_no_pad_virtual_e_defeito_no_doctor(self, tmp_path: Path) -> None:
         """14/10/2026: o 054c:0df2:gn espera 200 ms por pedido ao pad virtual."""

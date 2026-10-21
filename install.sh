@@ -2764,7 +2764,8 @@ fi
 #   - NUNCA reintroduz 054c:0ce6:k / processor.max_cstate / threadirqs
 #     (removidos de propósito na máquina de referência — guarda no módulo).
 # Quem DECIDE é o módulo puro integrations/kernel_cmdline.py (100% stdlib,
-# testável); aqui só traduzimos o plano em kernelstub --delete/--add-options.
+# testável), e ele também lê e escreve o carregador de boot: o kernelstub, o
+# grub ou o /etc/kernel/cmdline do systemd-boot. Aqui só traduzimos o plano.
 if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v python3 >/dev/null 2>&1; then
     step "3e" "cmdline do kernel (usbcore.autosuspend + usbcore.quirks com merge)"
     # O-QUE-E-DA-BANCADA-FICA-NA-BANCADA-01: o `usbcore.autosuspend=-1` vale para
@@ -2774,43 +2775,33 @@ if [[ "${SKIP_UDEV}" -eq 0 ]] && command -v python3 >/dev/null 2>&1; then
     _cmdline_bateria=0
     if _desempenho_tem_bateria; then _cmdline_bateria=1; fi
     _cmdline_plan="$(python3 - "${ROOT_DIR}" "${_cmdline_bateria}" <<'PYEOF'
-import json
 import os
-import shutil
 import sys
+from pathlib import Path
 
 root = sys.argv[1]
 com_bateria = sys.argv[2] == "1"
 sys.path.insert(0, os.path.join(root, "src"))
 from hefesto_dualsense4unix.integrations import kernel_cmdline as kc
 
-tokens = None
-backend = "none"
-conf = "/etc/kernelstub/configuration"
-grub = "/etc/default/grub"
-if shutil.which("kernelstub") and os.path.isfile(conf):
+# Quem lê o carregador de boot é o módulo, o mesmo que escreve
+# (O-CMDLINE-DO-DUALSENSE-SO-SE-ESCREVE-NO-KERNELSTUB-01).
+lugares = kc.Lugares(
+    kernelstub=Path("/etc/kernelstub/configuration"),
+    grub=Path("/etc/default/grub"),
+    kernel_cmdline=Path("/etc/kernel/cmdline"),
+    raiz=Path("/"),
+)
+carregador = kc.ler_o_carregador(lugares)
+tokens = list(carregador.tokens)
+backend = carregador.backend
+if backend == kc.BACKEND_NENHUM:
+    # Sem carregador conhecido, o plano parte do boot de agora para dizer o token exato.
     try:
-        with open(conf, encoding="utf-8") as fh:
-            data = json.load(fh)
-        tokens = list((data.get("user") or {}).get("kernel_options") or [])
-        backend = "kernelstub"
-    except (OSError, ValueError):
-        tokens = None
-if tokens is None and os.path.isfile(grub):
-    try:
-        line = ""
-        with open(grub, encoding="utf-8") as fh:
-            for raw in fh:
-                raw = raw.strip()
-                if raw.startswith("GRUB_CMDLINE_LINUX_DEFAULT="):
-                    line = raw.split("=", 1)[1].strip().strip('"')
-        tokens = line.split()
-        backend = "grub"
+        with open("/proc/cmdline", encoding="utf-8") as fh:
+            tokens = kc.parse_cmdline(fh.read())
     except OSError:
-        tokens = None
-if tokens is None:
-    print("backend=none")
-    raise SystemExit(0)
+        tokens = []
 actions = kc.plan_tokens(tokens, com_bateria=com_bateria)
 violations = kc.forbidden_reintroductions(actions)
 if violations:
@@ -2826,13 +2817,15 @@ for a in actions:
 PYEOF
 )" || _cmdline_plan=""
     _cmdline_backend="$(sed -n 's/^backend=//p' <<<"${_cmdline_plan}" | head -1)"
-    if [[ -z "${_cmdline_backend}" || "${_cmdline_backend}" == "none" ]]; then
-        warn "sem kernelstub e sem /etc/default/grub legíveis — passo pulado (nada registrado)"
+    if [[ -z "${_cmdline_backend}" ]]; then
+        warn "o plano do cmdline não saiu — passo pulado (nada registrado)"
     elif [[ "${_cmdline_backend}" == "guard-violation" ]]; then
         warn "guarda anti-reintrodução disparou — passo ABORTADO (nada foi escrito):"
         sed -n 's/^viol\t/        /p' <<<"${_cmdline_plan}"
     else
         _cmdline_changed=0
+        _cmdline_args=()
+        _cmdline_pendentes=()
         while IFS=$'\t' read -r _tagp _param _op _token _owner _removes; do
             [[ "${_tagp}" == "plan" ]] || continue
             case "${_op}" in
@@ -2858,47 +2851,52 @@ PYEOF
                     fi
                     ;;
                 add|replace)
-                    if [[ "${_cmdline_backend}" != "kernelstub" ]]; then
-                        warn "${_param}: bootloader é grub — aplique manualmente em GRUB_CMDLINE_LINUX_DEFAULT: ${_token}"
-                        [[ -n "${_removes}" ]] && warn "  (removendo antes o(s) token(s): ${_removes} — o kernel respeita SÓ UM usbcore.quirks=)"
+                    if [[ "${_cmdline_backend}" == "none" ]]; then
+                        warn "${_param}: carregador de boot desconhecido (sem kernelstub, /etc/default/grub ou /etc/kernel/cmdline) — ponha à mão no cmdline do kernel, no arquivo do seu carregador: ${_token}"
+                        if [[ -n "${_removes}" ]]; then
+                            warn "  (tirando antes o(s) token(s): ${_removes} — o kernel respeita SÓ UM usbcore.quirks=)"
+                        fi
                         continue
                     fi
                     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
                         # O PLANO DO CMDLINE JÁ FOI CALCULADO ACIMA, e sem
                         # escrever nada: quem decide é o módulo puro
                         # `integrations/kernel_cmdline.py`, lendo o bootloader.
-                        # Então este é o passo em que o ensaio mostra o TOKEN
-                        # EXATO que entraria na linha de comando do kernel dela.
                         # `if`, e não `[[ ]] && cmd`: com `_removes` vazio a
                         # lista devolveria 1 e o `set -e` mataria o ensaio aqui.
-                        # É a armadilha que o passo 11c já documenta neste
-                        # arquivo, e ela pega igual dentro do ensaio.
                         if [[ -n "${_removes}" ]]; then
                             _faria_root "tirar do cmdline do kernel, antes de fundir (o kernel respeita SÓ UM usbcore.quirks=): ${_removes}"
                         fi
-                        _faria_root "pôr no cmdline do kernel (kernelstub): ${_token} — vale no PRÓXIMO boot"
+                        _faria_root "pôr no cmdline do kernel (${_cmdline_backend}): ${_token} — vale no PRÓXIMO boot"
                         continue
                     fi
-                    if ! sudo -n true 2>/dev/null; then
-                        warn "${_param}: sudo indisponível — cmdline NÃO escrito (re-execute ./install.sh)"
-                        continue
-                    fi
-                    _ks_ok=1
                     for _rm_tok in ${_removes}; do
-                        sudo kernelstub --delete-options "${_rm_tok}" >/dev/null 2>&1 || _ks_ok=0
+                        _cmdline_args+=(--tira "${_rm_tok}")
                     done
-                    sudo kernelstub --add-options "${_token}" >/dev/null 2>&1 || _ks_ok=0
-                    if [[ "${_ks_ok}" -eq 1 ]]; then
-                        _register_cmdline_owner "cmdline.${_param}" "${_owner}"
-                        _cmdline_changed=1
-                        printf '      %s: %s aplicado (dono: %s) — vale no PRÓXIMO boot\n' \
-                            "${_param}" "${_token}" "${_owner}"
-                    else
-                        warn "${_param}: kernelstub falhou — rode: sudo kernelstub --add-options '${_token}'"
-                    fi
+                    _cmdline_args+=(--poe "${_token}")
+                    _cmdline_pendentes+=("${_param}"$'\t'"${_token}"$'\t'"${_owner}")
                     ;;
             esac
         done <<<"${_cmdline_plan}"
+        # Uma escrita só, pelo dono do carregador de boot (o grub regenera uma vez).
+        _cmdline_dono="${ROOT_DIR}/src/hefesto_dualsense4unix/integrations/kernel_cmdline.py"
+        if [[ "${#_cmdline_pendentes[@]}" -gt 0 ]]; then
+            if ! sudo -n true 2>/dev/null; then
+                warn "cmdline: sudo indisponível — NÃO escrito (re-execute ./install.sh)"
+            elif sudo python3 -I "${_cmdline_dono}" escrever --backend "${_cmdline_backend}" \
+                    "${_cmdline_args[@]}" >/dev/null 2>&1; then
+                _register_cmdline_owner "cmdline.backend" "${_cmdline_backend}"
+                for _pend in "${_cmdline_pendentes[@]}"; do
+                    IFS=$'\t' read -r _param _token _owner <<<"${_pend}"
+                    _register_cmdline_owner "cmdline.${_param}" "${_owner}"
+                    printf '      %s: %s aplicado em %s (dono: %s) — vale no PRÓXIMO boot\n' \
+                        "${_param}" "${_token}" "${_cmdline_backend}" "${_owner}"
+                done
+                _cmdline_changed=1
+            else
+                warn "cmdline: a escrita em ${_cmdline_backend} falhou — rode: sudo python3 -I ${_cmdline_dono} escrever --backend ${_cmdline_backend} ${_cmdline_args[*]}"
+            fi
+        fi
         [[ "${_cmdline_changed}" -eq 0 ]] && printf '      nada a mudar no cmdline (estado já garantido; donos em %s)\n' "${CMDLINE_OWNERS_FILE}"
         # B5 (O-PRODUTO-EM-QUALQUER-MAQUINA-01): o cmdline novo só vale no
         # boot, e o fecho diz «reinicie». `if`, e não `[[ ]] &&`: sob `set -e`
