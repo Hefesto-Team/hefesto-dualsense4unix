@@ -21,5 +21,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 08-conexoes.html
-- **21/10/2026** — o «Ligado na entrada» do hub diz a entrada pelo dono: «Ligado na Entrada 10», ou «Ligado na entrada Meio» com o nome dado à entrada, e a pergunta do «Acrescentar hub» é «Ligado» com a lista «Entrada 1», «Meio»… (cada opção abre com maiúscula) (O-LIGADO-NA-ENTRADA-DIZ-A-ENTRADA-PELO-DONO-01, leva fim-da-fila). Até publicar, a página publicada guarda o «Ligado na entrada 10» velho; o mapa que o produto monta na hora já sai da composição nova.
+<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
