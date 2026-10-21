@@ -114,6 +114,7 @@ def test_o_ouro_ainda_e_o_que_o_mockup_diz_hoje() -> None:
 
 
 def test_a_alocacao_derivada_e_a_mesma() -> None:
+    """A prova da D-2110-O-MOTOR-DIZ-A-ENTRADA-PELO-DONO."""
     assert motor.alocacao(mock.MAPA, mock.LEITURA_AGORA) == ouro("alocacao/agora")
     assert motor.alocacao(mock.MAPA, mock.LEITURA_ANTES) == ouro("alocacao/antes")
 

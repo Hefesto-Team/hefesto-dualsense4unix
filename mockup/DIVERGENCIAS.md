@@ -22,9 +22,3 @@ seção daqui**: a aba deixou de estar em trabalho.
 ---
 
 <!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
-
-## 07-lancadores.html
-- **21/10/2026** — a fila dos lançadores rola por dentro e o ⋮ aberto fica à vista na lista das extensões (A-EXPERIMENTAL-MAXIMIZADA-NAO-QUEBRA-COM-AS-EXTENSOES-DE-VERDADE-01, leva fim-da-fila). Até publicar, a página publicada continua com a fila sem rolagem: na janela maximizada, com sete extensões, o miolo rola 13 px e o último ⋮ aberto nasce 8 px abaixo do fim da lista.
-
-## 08-conexoes.html
-- **21/10/2026** — o «Vale evitar» da tela «Mapear entradas» diz a entrada pelo dono, «na Entrada 7» (O-MOTOR-DO-ARRANJO-E-O-DESENHO-DIZEM-A-ENTRADA-PELO-DONO-01, leva fim-da-fila). Até publicar, a página publicada guarda a frase velha só no desenho estático; a grade que o produto monta na hora vem do motor e já diz «na Entrada 7».

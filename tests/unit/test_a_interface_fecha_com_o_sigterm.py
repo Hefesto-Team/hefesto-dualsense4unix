@@ -129,6 +129,8 @@ def test_o_sinal_destroi_a_janela_dentro_do_laco_como_o_fechar(
     lar: Path, sinal: signal.Signals
 ) -> None:
     """O sinal fecha a janela de verdade (com barra) pelo `fechar`: o `destroy` chega com o laço
+
+    A prova da D-2110-O-SINAL-FECHA-PELO-FECHAR.
     ainda girando, a linha do fim diz o sinal uma vez só, e o processo sai com rc 0."""
     env = _ambiente_do_lar(lar)
     script = lar / "filho.py"

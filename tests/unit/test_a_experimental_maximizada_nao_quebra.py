@@ -196,6 +196,7 @@ def test_a_fila_que_nao_cabe_rola_por_dentro(
 @pytest.mark.parametrize("vista", [f"{w}x{h}" for w, h in VISTAS])
 def test_o_menu_com_as_permissoes_da_ultima_fileira_fica_a_vista(
         medida: dict[str, dict[str, list[int] | None]], vista: str) -> None:
+    """A prova da D-2110-A-FILA-DOS-LANCADORES-ROLA-POR-DENTRO."""
     m = medida[f"{vista}-perm"]
     _sem_rolar_o_miolo(m)
     menu, lista = _caixas(m, "menu", "lista_caixa")
