@@ -84,6 +84,7 @@ def variantes_paradas(arquivos: list[str]) -> list[str]:
 
 
 def test_nada_versionado_passa_do_teto() -> None:
+    # D-2110-O-REPOSITORIO-PESA-SO-O-QUE-SERVE
     achados = acima_do_teto(RAIZ, _versionados())
     assert not achados, (
         "arquivo versionado acima do teto: comprima sem perda (optipng), corte no que o documento "
