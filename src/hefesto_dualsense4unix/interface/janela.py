@@ -817,10 +817,10 @@ class JanelaDaAba:
     def fechar(self, motivo: str = "Fechar da barra ou do menu do botão direito") -> None:
         """Fecha a janela e encerra o laço. É o «Fechar» do menu do botão direito e o da barra.
 
-        É o ÚNICO caminho de saída: o «Fechar», o sinal, o prazo do `agendar_saida` e a carga que
-        morre (`_morrer`) passam por aqui. A janela com tela é destruída DENTRO do laço (o WebView
-        e o contexto de GL dele); o `Gtk.main_quit` solto deixava a janela viva até o fim do
-        intérprete, onde a placa NVIDIA estoura o prazo do sinal.
+        É o ÚNICO caminho de saída: o «Fechar», o sinal, o prazo do `agendar_saida`, a carga que
+        morre (`_morrer`) e o fim dos pilotos passam por aqui. A janela com tela é destruída DENTRO
+        do laço (o WebView e o contexto de GL dele); o `Gtk.main_quit` solto deixava a janela viva
+        até o fim do intérprete, onde a placa NVIDIA estoura o prazo do sinal.
         """
         if self.oculta:
             self.anotar_o_fim(motivo)

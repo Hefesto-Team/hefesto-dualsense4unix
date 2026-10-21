@@ -388,7 +388,7 @@ class Janela:
         def pronto(_valor: str | None, erro: Exception | None) -> None:
             if erro is not None:
                 print(f"ERRO DE CARGA: o bootstrap não instalou: {erro}", file=sys.stderr)
-                Gtk.main_quit()
+                self.tela.fechar(f"o bootstrap não instalou ({erro})")
                 return
             self.pronto = True
             self._tique_lento()

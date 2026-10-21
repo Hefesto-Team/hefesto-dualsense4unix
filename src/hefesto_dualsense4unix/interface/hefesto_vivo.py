@@ -3866,9 +3866,8 @@ class Piloto:
         self._sair("a contagem de tamanho acabou")
 
     def _sair(self, motivo: str) -> None:
-        """Encerra o laço dizendo o porquê: o fim da janela nunca sai calado."""
-        self.tela.anotar_o_fim(motivo)
-        Gtk.main_quit()
+        """Encerra o laço dizendo o porquê, pelo `fechar`, que destrói a janela dentro do laço."""
+        self.tela.fechar(motivo)
 
     def _leu_mutacoes(self, valor: Any, erro: Any) -> None:
         """Imprime a tabela do observador — e SAI, porque a medição acabou."""

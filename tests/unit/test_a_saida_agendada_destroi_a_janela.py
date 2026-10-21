@@ -1,23 +1,26 @@
 """Toda saída da interface passa pelo `fechar`, que destrói a janela dentro do laço.
 
 Desde a A-INTERFACE-FECHA-COM-O-SIGTERM-01 o sinal fecha pelo `fechar`. O `agendar_saida` (o
-prazo do `--segundos` do piloto) e o `_morrer` (a carga que falha) ainda chamavam `Gtk.main_quit`
-direto: a janela, o WebView e o contexto de GL dele ficavam vivos até o fim do intérprete, que é
-onde a espera do sinal mora na placa NVIDIA (medido em 19/10/2026, ver o irmão
-`test_a_interface_fecha_com_o_sigterm.py`).
+prazo do `--segundos` dos pilotos de uma aba), o `_morrer` (a carga que falha), o `_sair` do piloto
+das dez abas (o `--segundos`, o `--passear` e as contagens) e o bootstrap que falha nos pilotos de
+uma aba ainda chamavam `Gtk.main_quit` direto: a janela, o WebView e o contexto de GL dele
+ficavam vivos até o fim do intérprete, que é onde a espera do sinal mora na placa NVIDIA (medido
+em 19/10/2026, ver o irmão `test_a_interface_fecha_com_o_sigterm.py`).
 
 A cura é de lugar: `fechar` é o ÚNICO método que encerra o laço (e o `_ao_destruir`, que o
 `destroy` do `fechar` dispara). Duas réguas, de gentes diferentes:
 
-1. a ESTRUTURA, sem GTK: nenhum outro método da `JanelaDaAba` chama `Gtk.main_quit`;
+1. a ESTRUTURA, sem GTK: nenhum outro método da `JanelaDaAba` chama `Gtk.main_quit`, e nenhum
+   módulo de `interface/` o chama fora dela (o laço aninhado da espera do WebKit não é saída);
 2. o COMPORTAMENTO, num filho sob `xvfb-run` e num lar de mentira: o prazo e a carga morta
    chegam ao `destroy` com o laço girando, a linha do fim sai uma vez, o processo sai com rc 0.
 
 O sinal já tem o caso dele no irmão; aqui ficam os outros dois caminhos.
 
 MORDIDAS (a régua reprova sem a cura): (a) o `Gtk.main_quit` solto de volta no `_morrer` e no
-`sair` do `agendar_saida` reprova a régua de estrutura; (b) um `fechar` que só anota e sai (o
-comportamento antigo desses dois caminhos) reprova a régua de comportamento nos dois casos.
+`sair` do `agendar_saida`, ou no `_sair` do piloto das dez abas, reprova a régua de estrutura;
+(b) um `fechar` que só anota e sai (o comportamento antigo desses dois caminhos) reprova a régua
+de comportamento nos dois casos.
 O que a placa NVIDIA faz com o processo é a conferência dela, na máquina do usuário.
 """
 from __future__ import annotations
@@ -111,6 +114,58 @@ def test_mordida_main_quit_solto_de_volta_reprova_a_estrutura(quem: str) -> None
     mordida = "\n".join(linhas)
     assert mordida != fonte, f"a mordida não achou o `self.fechar` em `{quem}`"
     assert quem_encerra_o_laco(mordida) == PODEM_ENCERRAR_O_LACO | {quem}
+
+
+INTERFACE = JANELA.parent
+# Fora da `JanelaDaAba`, só o laço ANINHADO que espera o WebKit começar (ele devolve o controle ao
+# `main`, que roda o laço de verdade depois): não é saída da interface.
+PODEM_ENCERRAR_UM_LACO_FORA_DA_JANELA = {"hefesto_vivo.py:_esperar_o_webkit_comecar"}
+
+
+def quem_encerra_o_laco_fora_da_janela(fonte: str, arquivo: str) -> set[str]:
+    """`arquivo:dono` de cada `Gtk.main_quit()` do módulo, fora da `JanelaDaAba`. Função pura."""
+    achados: set[str] = set()
+    for topo in ast.parse(fonte).body:
+        if isinstance(topo, ast.ClassDef) and topo.name == "JanelaDaAba":
+            continue
+        donos = (
+            [(f"{topo.name}.{m.name}", m) for m in topo.body if isinstance(m, ast.FunctionDef)]
+            if isinstance(topo, ast.ClassDef)
+            else [(getattr(topo, "name", "<módulo>"), topo)]
+        )
+        for dono, no in donos:
+            if any(
+                isinstance(n, ast.Call)
+                and isinstance(n.func, ast.Attribute)
+                and n.func.attr == "main_quit"
+                and isinstance(n.func.value, ast.Name)
+                and n.func.value.id == "Gtk"
+                for n in ast.walk(no)
+            ):
+                achados.add(f"{arquivo}:{dono}")
+    return achados
+
+
+def test_nenhum_modulo_da_interface_sai_do_laco_por_fora_do_fechar() -> None:
+    donos = {
+        dono
+        for modulo in sorted(INTERFACE.rglob("*.py"))
+        for dono in quem_encerra_o_laco_fora_da_janela(
+            modulo.read_text(encoding="utf-8"), str(modulo.relative_to(INTERFACE))
+        )
+    }
+    assert donos == PODEM_ENCERRAR_UM_LACO_FORA_DA_JANELA, (
+        f"saem do laço sem o `fechar`: {sorted(donos - PODEM_ENCERRAR_UM_LACO_FORA_DA_JANELA)}"
+    )
+
+
+def test_mordida_o_sair_do_piloto_sem_o_fechar_reprova() -> None:
+    fonte = (INTERFACE / "hefesto_vivo.py").read_text(encoding="utf-8")
+    mordida = fonte.replace("        self.tela.fechar(motivo)\n", "        Gtk.main_quit()\n", 1)
+    assert mordida != fonte, "a mordida não achou o `self.tela.fechar(motivo)` do `_sair`"
+    assert "hefesto_vivo.py:Piloto._sair" in quem_encerra_o_laco_fora_da_janela(
+        mordida, "hefesto_vivo.py"
+    )
 
 
 # --- 2. o comportamento: o prazo e a carga morta destroem a janela dentro do laço -------------
