@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import pathlib
 import sys
+import threading
+import time
 from typing import Any
 
 import pytest
@@ -26,21 +28,28 @@ from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
 UNIQ = "aa:bb:cc:00:00:02"
 
 
+#: o IPC leva um tempo: a largada que ainda não terminou quando o teste olha é o que o fio mostra
+LENTIDAO_S = 0.1
+
+
 class _PonteQueAnota:
-    """A ponte de mentira: guarda o que as largadas pediram, na ordem."""
+    """A ponte de mentira: guarda o que as largadas pediram, na ordem, e demora como o IPC."""
 
     def __init__(self) -> None:
         self.chamadas: list[tuple[str, tuple[Any, ...]]] = []
 
     def haptica_testar(self, *a: Any) -> tuple[bool, dict[str, Any]]:
+        time.sleep(LENTIDAO_S)
         self.chamadas.append(("haptica_testar", a))
         return True, {"status": "ok"}
 
     def rumble_stop(self, *a: Any) -> tuple[bool, dict[str, Any]]:
+        time.sleep(LENTIDAO_S)
         self.chamadas.append(("rumble_stop", a))
         return True, {"status": "ok"}
 
     def rumble_passthrough(self, *a: Any) -> tuple[bool, dict[str, Any]]:
+        time.sleep(LENTIDAO_S)
         self.chamadas.append(("rumble_passthrough", a))
         return True, {"status": "ok"}
 
@@ -62,6 +71,8 @@ class _Piloto:
         self.pronto = pronto
         self.visitadas: list[str] = [de]
         self.instalou = 0
+        #: a mesa que a largada lê para pôr cada controle na fila dele (`hefesto_vivo._carregou`)
+        self._mesa_de_agora: list[dict[str, Any]] = [{"uniq": UNIQ}]
 
     def _antes_de_instalar(self) -> None:
         self.instalou += 1
@@ -80,15 +91,32 @@ def _mesa_limpa():
     a05.parar_o_teste_da_haptica()
 
 
+#: os fios das largadas que a troca de página soltou (O-FIO-DA-JANELA-NUNCA-ESPERA-01: ela anda
+#: na fila de cada controle da mesa e nunca no fio da janela, então o teste espera o fio)
+_LARGADAS: list[threading.Thread | None] = []
+
+
 @pytest.fixture
 def ponte(monkeypatch: pytest.MonkeyPatch) -> _PonteQueAnota:
     falsa = _PonteQueAnota()
     monkeypatch.setattr(hefesto_vivo, "ponte", falsa)
+    original = hefesto_vivo.pacotes.largar_o_que_as_abas_seguram
+
+    def espia(*a: Any, **k: Any) -> threading.Thread | None:
+        fio = original(*a, **k)
+        _LARGADAS.append(fio)
+        return fio
+
+    monkeypatch.setattr(hefesto_vivo.pacotes, "largar_o_que_as_abas_seguram", espia)
+    _LARGADAS.clear()
     return falsa
 
 
 def _carregar(piloto: _Piloto) -> None:
     hefesto_vivo.Piloto._carregou(piloto, None, WebKit2.LoadEvent.FINISHED)
+    for fio in _LARGADAS:
+        if fio is not None:
+            fio.join(5)
 
 
 def test_o_clique_na_tira_cala_o_teste_da_haptica(ponte: _PonteQueAnota) -> None:
