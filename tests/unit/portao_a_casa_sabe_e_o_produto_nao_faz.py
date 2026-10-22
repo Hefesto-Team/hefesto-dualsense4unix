@@ -707,6 +707,17 @@ _RODADA_DO_PROTON = (
 )
 
 _NAO_E_PROMESSA: dict[str, str] = {
+    "integrations/telemetria_de_corrida.py::montar_o_pacote": (
+        "22/10/2026, A-TELEMETRIA-DA-CORRIDA-CHEGA-AO-GATILHO-01 — instrumento de teste: o "
+        "docstring diz «o inverso de ``ler_o_pacote``, para os testes e o ensaio sem jogo». O "
+        "produto lê o pacote que o jogo manda (`ler_o_pacote`); nunca monta um."
+    ),
+    "integrations/temperatura_da_maquina.py::calor_da_maquina": (
+        "22/10/2026, A-LUZ-DE-AMBIENTE-E-DE-AVISO-01 — a leitura avulsa, sem guardar nada (o "
+        "docstring: «o calor de agora, sem guardar nada»), que os testes usam para comparar "
+        "máquinas. O produto lê pelo `LeitorDoCalor` (daemon/subsystems/luz_animada.py), que "
+        "guarda a leitura dois segundos e redescobre o sensor que some."
+    ),
     "interface/folha_da_casa.py::com_o_piso": (
         "20/10/2026, OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01 — é do gerador do "
         "desenho, não do produto: os geradores da 02 e da 09 (`interface/aba02.py`, `aba09.py`, "
@@ -1317,6 +1328,13 @@ _NAO_E_PROMESSA: dict[str, str] = {
 }
 
 _SEM_CAMINHO_HOJE: dict[str, str] = {
+    # sai com: A-ONDA-CORRE-PELAS-LUZINHAS-DO-JOGADOR-01
+    "profiles/efeitos_de_luz.py::brilhos_da_onda": (
+        "22/10/2026 — o brilho de cada LED do jogador na Onda (A-LUZ-GANHA-ONDA-E-RELAMPAGO-01). "
+        "O caminho se perde no daemon, que leva à barra só o quadro único da Onda e deixa as "
+        "luzinhas no número do jogador. Fecha quando a A-ONDA-CORRE-PELAS-LUZINHAS-DO-JOGADOR-01 "
+        "fizer o laço da luz escrever as cinco luzinhas por este desenho."
+    ),
     # 09/10/2026, leva 1-11, costura do pads-1-14: as duas do multi-1-14, nascidas para a B9.
     # sai com: O-DEGRAU-DO-MEIO-E-A-FRASE-DA-FAIXA-SE-LIGAM-DEPOIS-DA-B9-01
     "integrations/radio_da_mesa.py::ordem_de_ceder": (
