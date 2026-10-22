@@ -131,9 +131,7 @@ licença e o próprio aviso. Licenças lidas dos metadados instalados:
   - obrigatória, copyleft fraco: python-xlib (LGPL-2.0-or-later);
   - extra [emulation], copyleft forte: python-uinput (GPL-3.0-or-later);
   - extra [tray], copyleft fraco: PyGObject (LGPL-2.0-or-later);
-  - extra [cosmic]: jeepney (MIT);
-  - extra [metrics]: prometheus-client, cuja licença não foi conferida nos
-    metadados.
+  - extra [cosmic]: jeepney (MIT).
 
 O pacote Flatpak embute as dependências dentro de /app, inclusive
 python-uinput e python-xlib: o artefato .flatpak redistribui código LGPL e

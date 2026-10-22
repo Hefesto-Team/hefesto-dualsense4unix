@@ -59,10 +59,6 @@ emulation = [
 tray = [
     "PyGObject>=3.44",
 ]
-# Opcional: as métricas funcionam sem ele; serve a quem quiser usar o prometheus_client direto.
-metrics = [
-    "prometheus-client>=0.19",
-]
 # Detecção de janela no Wayland pelo portal D-Bus (jeepney, Python puro); sem ele, cai no wlrctl.
 cosmic = [
     "jeepney>=0.8",

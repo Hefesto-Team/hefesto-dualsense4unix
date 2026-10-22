@@ -31,8 +31,7 @@ Características principais:
 - Padrão desligado (`metrics_enabled=False`). Opt-in via config ou env.
 - Porta padrão: `9090` (`metrics_port` em `DaemonConfig`).
 - Se a porta estiver ocupada, o subsystem vira no-op (loga warning, daemon continua).
-- Não adiciona `prometheus_client` como dep obrigatória. Extra opcional
-  `[metrics]` em `pyproject.toml` para quem quiser usar a biblioteca oficial.
+- Não depende de `prometheus_client`: o texto do formato é escrito pelo próprio subsystem.
 
 ---
 
@@ -256,3 +255,10 @@ o `DaemonConfig` é construído em `daemon/main.py` com cinco parâmetros: `poll
 `metrics_enabled`. A nota de 01/08 fica como estava, porque o número era esse naquele
 dia; a régua é a mesma
 (`tests/unit/test_doc_verdade_02_contagens_derivadas.py`).
+
+## Nota de verificação — 2026-10-22
+
+**O extra opcional `[metrics]` saiu do `pyproject.toml`.** Ele trazia o
+`prometheus-client`, que nenhum arquivo de `src/` nem de `scripts/` importava: o
+endpoint sempre escreveu o formato sem a biblioteca, como esta ADR decidiu. Quem
+quiser a biblioteca oficial a instala à parte; o daemon não muda.
