@@ -120,6 +120,7 @@ def test_a_secao_sem_os_campos_segue_sem_eles() -> None:
 
 
 def test_todo_campo_de_secao_tem_quem_o_devolva() -> None:
+    """Prova da D-2210-O-SALVAR-DEVOLVE-TODO-CAMPO-DE-CADA-SECAO: campo sem dono reprova."""
     sem_dono = [
         f"{secao}.{campo}"
         for secao, modelo in SECOES.items()
