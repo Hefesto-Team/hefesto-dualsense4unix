@@ -37,8 +37,13 @@ class _Mesa:
         self.agora = 0.0
         self.agendados: list[tuple[float, int, Any, Any]] = []
         self._ordem = 0
-        self.agregado = lc.AgregadoDoDiario(relogio=lambda: self.agora)
-        self.agregado._agendar = self._agendar  # type: ignore[method-assign]
+        mesa = self
+
+        class _DeMentira(lc.AgregadoDoDiario):
+            def _agendar(self, chave: Any, janela: Any, segundos: float) -> None:
+                mesa._agendar(chave, janela, segundos)
+
+        self.agregado = _DeMentira(relogio=lambda: self.agora)
         self.diario = structlog.wrap_logger(
             structlog.PrintLogger(file=self.buf),
             processors=[lc.desce_o_estado_normal, self.agregado,
