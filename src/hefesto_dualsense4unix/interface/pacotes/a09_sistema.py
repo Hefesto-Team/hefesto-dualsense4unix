@@ -2571,8 +2571,9 @@ def _reaplicar_as_correcoes() -> str:
         if not fixado_antes or resultado.get("status") != "noop":
             partes.append(_daemon.format_proton_lock_result(resultado))
         if proton_fixado():
-            with contextlib.suppress(Exception):
-                pin.apontar_os_lancadores_para_o_pino()
+            apontar = getattr(pin, "apontar_os_lancadores_para_o_pino", None)
+            if apontar is not None:
+                apontar()
             partes.append(_levar_as_que_sobram(_versoes_que_sobram()))
     return " ".join(p for p in partes if p)
 

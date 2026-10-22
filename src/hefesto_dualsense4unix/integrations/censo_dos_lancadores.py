@@ -506,6 +506,7 @@ class ApontadoNoHeroic:
 
     reescritas: int = 0
     recusa: str = ""
+    ilegiveis: int = 0
 
 
 def heroic_aberto() -> bool:
@@ -605,6 +606,7 @@ def apontar_o_heroic_para(
     except Exception:
         return ApontadoNoHeroic(0, "não deu para achar o Heroic")
     total = 0
+    ilegiveis = 0
     for pasta in pastas:
         arquivos: list[Path] = []
         with contextlib.suppress(OSError):
@@ -615,8 +617,8 @@ def apontar_o_heroic_para(
             try:
                 total += _reapontar_o_json(arquivo, pino, compat_dir, velhas)
             except (OSError, ValueError):
-                continue
-    return ApontadoNoHeroic(total)
+                ilegiveis += 1
+    return ApontadoNoHeroic(total, ilegiveis=ilegiveis)
 
 
 def proton_em_uso(lar: Path | None = None, *, xdg_config: Path | None = None,
