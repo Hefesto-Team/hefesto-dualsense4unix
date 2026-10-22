@@ -18,6 +18,13 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 
 from hefesto_dualsense4unix.core.events import EventTopic
 from hefesto_dualsense4unix.mods import API_DAS_MODIFICACOES
+from hefesto_dualsense4unix.mods.tema import (
+    CHAVE_DA_OPCAO_DA_COR,
+    CHAVE_DA_OPCAO_DO_LADO,
+    CHAVE_DO_LADO,
+    CHAVES_DA_COR,
+    LADOS_DOS_BOTOES,
+)
 from hefesto_dualsense4unix.utils.maquina import _CHAVE_DE_LANCADOR
 
 NOME_DO_MANIFESTO = "hefesto-mod.json"
@@ -114,7 +121,7 @@ _O_QUE_DEIXA: dict[str, str] = {
     "rede:internet": "Usar a internet.",
     "bluetooth": "Falar com aparelhos por Bluetooth.",
     "lancador": "Acrescentar um lançador de jogos e abrir os jogos que ele lista.",
-    "tema": "Trocar as cores da interface.",
+    "tema": "Trocar as cores da interface e o lado dos botões da janela.",
     "aparelhos": "Abrir aparelhos ligados ao computador.",
 }
 
@@ -325,7 +332,31 @@ class Manifesto(BaseModel):
             raise ValueError("pedaço repetido em agora")
         if (self.agora or self.parar_tudo) and "ler:acessorios.gesto" not in self.permissoes:
             raise ValueError("agora e parar_tudo pedem a permissão ler:acessorios.gesto")
+        self._conferir_o_lado_e_as_opcoes_do_tema()
         return self
+
+    def _conferir_o_lado_e_as_opcoes_do_tema(self) -> None:
+        """O lado dos botões do bloco ``tema`` e a opção que liga a cor ou o lado: só a forma e o
+        vínculo. A folha em si é da régua de ``mods/tema.py``, que roda ao ligar."""
+        bloco = self.tema
+        if not bloco:
+            return
+        lado = bloco.get(CHAVE_DO_LADO)
+        if CHAVE_DO_LADO in bloco and lado not in LADOS_DOS_BOTOES:
+            raise ValueError(f"tema.botoes é {' ou '.join(LADOS_DOS_BOTOES)}")
+        ligadas = {o.id for o in self.opcoes if o.tipo == "ligado"}
+        todas = {o.id for o in self.opcoes}
+        for chave, existe in ((CHAVE_DA_OPCAO_DA_COR, any(c in bloco for c in CHAVES_DA_COR)),
+                              (CHAVE_DA_OPCAO_DO_LADO, CHAVE_DO_LADO in bloco)):
+            if chave not in bloco:
+                continue
+            if not existe:
+                raise ValueError(f"tema.{chave} liga uma escolha que o bloco tema não faz")
+            alvo = bloco[chave]
+            if not isinstance(alvo, str) or alvo not in todas:
+                raise ValueError(f"tema.{chave} aponta para a opção {alvo!r}, que não existe")
+            if alvo not in ligadas:
+                raise ValueError(f"tema.{chave}: a opção {alvo!r} precisa ser do tipo ligado")
 
     @property
     def rede(self) -> str:

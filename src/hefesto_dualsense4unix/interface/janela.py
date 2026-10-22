@@ -51,6 +51,12 @@ def folha_do_tema() -> str:
     return casa.folha
 
 
+def lado_dos_botoes() -> str:
+    """O lado dos botões da janela que vale agora: o da extensão de tema ligada, senão o do
+    sistema. Quem lê a escolha é a mesma régua da cor, e nada aqui escreve."""
+    return _tema_das_mods.tema_da_casa().botoes or tema.lado_do_sistema()
+
+
 def _a_folha_do_tema(pedido: str | None) -> str:
     if pedido is None:
         return ""
@@ -208,15 +214,42 @@ APARENCIA_DO_MAXIMIZAR: dict[bool, tuple[str, str]] = {
     True: ("window-restore-symbolic", "Restaurar"),
 }
 
-#: Na ORDEM DA TELA, da esquerda para a direita, e à esquerda do título (20/10/2026,
-#: OS-BOTOES-DA-JANELA-VAO-PARA-A-ESQUERDA-01: fechar, maximizar, minimizar). O
-#: `montar_a_barra` os põe com `pack_start`; os botões são desta casa, e o
-#: `gtk-decoration-layout` da sessão não os alcança.
+#: Os botões na ORDEM DA TELA quando vão à esquerda do título: fechar, maximizar, minimizar
+#: (20/10/2026, OS-BOTOES-DA-JANELA-VAO-PARA-A-ESQUERDA-01). À direita a ordem é a inversa, a do
+#: sistema (:data:`ORDEM_DA_DIREITA`). O lado vem do sistema, ou da extensão de tema ligada
+#: (22/10/2026, O-TEMA-DA-EXTENSAO-ESCOLHE-O-LADO-DOS-BOTOES-DA-JANELA-01); os botões são desta
+#: casa, e o `gtk-decoration-layout` da sessão não os alcança.
 BOTOES_DA_BARRA = (
     ("window-close-symbolic", "fechar", "Fechar"),
     (APARENCIA_DO_MAXIMIZAR[False][0], "maximizar", APARENCIA_DO_MAXIMIZAR[False][1]),
     ("window-minimize-symbolic", "minimizar", "Minimizar"),
 )
+
+#: Os mesmos botões na ordem da tela quando vão à direita: minimizar, maximizar, fechar.
+ORDEM_DA_DIREITA = tuple(reversed(BOTOES_DA_BARRA))
+
+
+def botoes_na_ordem(lado: str) -> tuple[tuple[str, str, str], ...]:
+    """Os botões na ordem da tela, da esquerda para a direita, do lado pedido."""
+    return BOTOES_DA_BARRA if lado == tema.ESQUERDA else ORDEM_DA_DIREITA
+
+
+def por_os_botoes_no_lado(barra: Any, botoes: dict[str, Any], lado: str) -> None:
+    """Põe os botões na barra, do lado pedido e na ordem dele; serve à barra nova e à que já está
+    na tela (a extensão de tema liga e desliga sem reabrir a janela)."""
+    ordem = [gesto for _icone, gesto, _dica in botoes_na_ordem(lado)]
+    for botao in botoes.values():
+        if botao.get_parent() is barra:
+            barra.remove(botao)
+    if lado == tema.ESQUERDA:
+        for gesto in ordem:
+            barra.pack_start(botoes[gesto])
+    else:
+        # o `pack_end` conta de fora para dentro: o primeiro empacotado fica na ponta direita
+        for gesto in reversed(ordem):
+            barra.pack_end(botoes[gesto])
+    barra.show_all()
+
 
 TAMANHO_NA_TELA = (LARGURA_DO_DESENHO, PISO_DA_VISTA + ALTURA_DA_BARRA)
 TAMANHO_OCULTA = (LARGURA_DO_DESENHO, PISO_DA_VISTA)
@@ -356,11 +389,13 @@ def montar_a_barra(
     subtitulo: str,
     ao_gesto: Callable[..., None],
     cor: Any = None,
+    lado: str | None = None,
 ) -> tuple[Any, dict[str, Any]]:
     """A ``Gtk.HeaderBar`` da janela, com os três botões DESTA CASA.
 
     ``cor`` é o ``Gtk.CssProvider`` das cores do tema (:func:`css_da_cor_da_barra`): quem o passa
-    troca o texto dele, e a barra e os botões repintam.
+    troca o texto dele, e a barra e os botões repintam. ``lado`` é ``esquerda`` ou ``direita``;
+    sem ele, o do sistema (:func:`hefesto_dualsense4unix.interface.tema_da_sessao.lado_do_sistema`).
     """
     barra = Gtk.HeaderBar()
     barra.set_show_close_button(False)
@@ -383,8 +418,8 @@ def montar_a_barra(
         botao.get_style_context().add_class("titlebutton")
         vestir_o_nome_acessivel(botao, dica)
         botao.connect("clicked", ao_gesto, gesto)
-        barra.pack_start(botao)
         botoes[gesto] = botao
+    por_os_botoes_no_lado(barra, botoes, lado or tema.lado_do_sistema())
     barra.set_title(titulo)
     if subtitulo:
         barra.set_subtitle(subtitulo)
@@ -586,10 +621,17 @@ class JanelaDaAba:
             esperar_a_pintura=esperar_a_pintura, tema_de_cores=tema_de_cores,
         )
         self.view = self.ponte.view
+        #: O lado dos botões da barra; o dos temas é relido junto com a cor (só no padrão).
+        self._lado = (lado_dos_botoes() if isinstance(tema_de_cores, _TemaLigado)
+                      else tema.lado_do_sistema())
+        self._barra: Any = None
+        self._vigias_das_opcoes: list[Any] = []
         #: O tema ligado se relê quando o registro das extensões muda (só no padrão: a folha
         #: passada por quem abre a janela fica como veio).
         self._vigia_do_tema = (self._vigiar_o_tema()
                                if isinstance(tema_de_cores, _TemaLigado) else None)
+        if self._vigia_do_tema is not None:
+            self._vigiar_as_opcoes_dos_temas()
         self._cor_da_barra = Gtk.CssProvider()
         self._cor_da_barra.load_from_data(
             css_da_cor_da_barra(self.ponte.tema_de_cores).encode("utf-8"))
@@ -623,8 +665,10 @@ class JanelaDaAba:
             self.janela.set_default_size(*(tamanho or TAMANHO_NA_TELA))
             self.janela.set_size_request(LARGURA_DO_DESENHO, PISO_DA_VISTA + ALTURA_DA_BARRA)
             barra, self._botoes_da_barra = montar_a_barra(
-                titulo, subtitulo or "", self._gesto_da_barra, cor=self._cor_da_barra
+                titulo, subtitulo or "", self._gesto_da_barra, cor=self._cor_da_barra,
+                lado=self._lado,
             )
+            self._barra = barra
             self.janela.set_titlebar(barra)
             self.janela.connect("window-state-event", self._a_barra_se_refaz)
             self.janela.connect("window-state-event", self._o_tamanho_mudou)
@@ -683,12 +727,69 @@ class JanelaDaAba:
             print(f"[janela] tema: não consegui vigiar {registro} ({erro})", file=sys.stderr)
             return None
         monitor.connect("changed", self._o_registro_das_extensoes_mudou)
+        monitor.connect("changed", self._o_lado_dos_botoes_pode_ter_mudado)
+        monitor.connect("changed", self._vigiar_as_opcoes_dos_temas)
         return monitor
+
+    def _vigiar_as_opcoes_dos_temas(self, *_args: Any) -> None:
+        """Vigia as opções das extensões de tema ligadas: «Cores claras» e «Botões à esquerda» se
+        escolhem à parte, e a escolha vale na hora, sem reabrir. A gravação é atômica (`rename`).
+
+        O GIO só vigia o arquivo se a pasta dele existe (medido em 22/10/2026: pasta ausente,
+        silêncio). A pasta nasce com a primeira escolha, então, enquanto ela não existe, vigia-se a
+        mais próxima que existe, e o nascimento do nível de baixo refaz a vigia."""
+        for antigo in self._vigias_das_opcoes:
+            antigo.cancel()
+        self._vigias_das_opcoes = []
+        for arquivo in _tema_das_mods.arquivos_de_opcoes_dos_temas():
+            pai = arquivo.parent
+            existente = pai
+            while not existente.exists() and existente != existente.parent:
+                existente = existente.parent
+            try:
+                if existente == pai:
+                    monitor = Gio.File.new_for_path(str(arquivo)).monitor_file(
+                        Gio.FileMonitorFlags.WATCH_MOVES, None)
+                    monitor.connect("changed", self._o_registro_das_extensoes_mudou)
+                    monitor.connect("changed", self._o_lado_dos_botoes_pode_ter_mudado)
+                else:
+                    monitor = Gio.File.new_for_path(str(existente)).monitor_directory(
+                        Gio.FileMonitorFlags.WATCH_MOVES, None)
+                    monitor.connect("changed", self._o_nivel_de_baixo_nasceu)
+            except GLib.Error as erro:
+                print(f"[janela] tema: não consegui vigiar {arquivo} ({erro})", file=sys.stderr)
+                continue
+            self._vigias_das_opcoes.append(monitor)
+
+    def _o_nivel_de_baixo_nasceu(self, _monitor: Any, _arquivo: Any, _outro: Any,
+                                 evento: Any) -> None:
+        """A pasta que faltava nasceu: vigia o arquivo de perto e relê, que a escolha pode ter
+        entrado junto com ela."""
+        nasceu = (Gio.FileMonitorEvent.CREATED, Gio.FileMonitorEvent.MOVED_IN,
+                  Gio.FileMonitorEvent.RENAMED)
+        if evento not in nasceu:
+            return
+        self._vigiar_as_opcoes_dos_temas()
+        self._o_registro_das_extensoes_mudou()
+        self._o_lado_dos_botoes_pode_ter_mudado()
 
     def _o_registro_das_extensoes_mudou(self, *_args: Any) -> None:
         folha = folha_do_tema()
         if folha != self.ponte.tema_de_cores:
             self.trocar_o_tema(folha)
+
+    def _o_lado_dos_botoes_pode_ter_mudado(self, *_args: Any) -> None:
+        self.trocar_o_lado(lado_dos_botoes())
+
+    def trocar_o_lado(self, lado: str) -> bool:
+        """Põe os botões do lado novo na barra que está na tela, sem reabrir. Devolve se mudou."""
+        if lado == self._lado:
+            return False
+        self._lado = lado
+        if self._barra is not None:
+            por_os_botoes_no_lado(self._barra, self._botoes_da_barra, lado)
+        print(f"[janela] botões: {lado}", file=sys.stderr)
+        return True
 
     def trocar_o_tema(self, folha_do_tema: str) -> None:
         """O tema novo na página, na barra e na variante do GTK, sem reabrir a janela."""

@@ -624,7 +624,7 @@ def _conferir_o_tema(manifesto: Manifesto, pasta: Path) -> None:
     from hefesto_dualsense4unix.mods import tema
 
     try:
-        tema.validar(tema.folha_do_manifesto(manifesto.tema, pasta))
+        tema.conferir_o_bloco(manifesto.tema, pasta)
     except tema.TemaRecusadoError as exc:
         raise InstalacaoRecusadaError(
             f"O tema de «{manifesto.nome}» não liga. {exc.frase}") from exc

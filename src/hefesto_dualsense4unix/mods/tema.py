@@ -1,14 +1,15 @@
-"""O tema de cores de uma modificação: troca tokens do ``:root``, e só se o texto continua legível.
+"""O tema de uma modificação: troca tokens do ``:root`` (só se o texto continua legível) e escolhe
+o lado dos botões da janela.
 
 A folha é UM bloco ``:root{…}`` só com cores por extenso, dos tokens de :data:`TOKENS_DA_CASA` e das
-categorias da aba Conexões; os plásticos ficam fora. Cada texto de :data:`TEXTOS` passa de 4,5:1 e
-cada acento de :data:`ACENTOS` de 3:1 contra cada fundo de :data:`FUNDOS`, medidos com os valores da
-página publicada e os apelidos dela (``--rot-campo`` segue o ``--green``). O porquê está em
-``docs/research/o-porque-dos-modulos.md``, seção «O tema de cores».
+categorias da aba Conexões; os plásticos ficam fora. Texto passa de 4,5:1 e acento de 3:1 contra
+cada fundo (``docs/research/o-porque-dos-modulos.md``, «O tema de cores»). O bloco ``tema`` traz a
+cor (``folha``/``arquivo``), o lado (``botoes``) ou os dois, cada um ligável a uma opção ``ligado``.
 """
 from __future__ import annotations
 
 import re
+from collections.abc import Collection, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,16 @@ from typing import Any
 PAGINA_DOS_TOKENS = (Path(__file__).resolve().parent.parent / "interface"
                      / "paginas"  # (noqa-acento): nome da pasta
                      / "01-jogar.html")
+
+#: Os lados em que uma extensão de tema pode pôr os botões da janela.
+LADOS_DOS_BOTOES = ("esquerda", "direita")
+#: As chaves do bloco ``tema``: a cor (uma das duas), o lado, e a opção que liga cada um.
+CHAVES_DA_COR = ("folha", "arquivo")
+CHAVE_DO_LADO = "botoes"
+CHAVE_DA_OPCAO_DA_COR = "cor_pela_opcao"
+CHAVE_DA_OPCAO_DO_LADO = "botoes_pela_opcao"
+CHAVES_DO_BLOCO = frozenset({*CHAVES_DA_COR, CHAVE_DO_LADO, CHAVE_DA_OPCAO_DA_COR,
+                             CHAVE_DA_OPCAO_DO_LADO})
 
 LIMIAR_DO_CONTRASTE = 4.5
 #: O tema maior que isto não é um tema de cores.
@@ -81,12 +92,17 @@ class TemaAceito:
 
 @dataclass(frozen=True)
 class TemaDaCasa:
-    """O tema ligado agora: ``folha`` vazia sem tema; ``recusa`` diz por que o ligado não vale."""
+    """O tema ligado agora: ``folha`` vazia sem tema; ``recusa`` diz por que o ligado não vale.
+
+    ``botoes`` é o lado que a extensão ligada escolhe (``esquerda`` ou ``direita``); vazio deixa o
+    lado do sistema.
+    """
 
     folha: str = ""
     de: str = ""
     recusa: str = ""
     avisos: tuple[str, ...] = field(default_factory=tuple)
+    botoes: str = ""
 
 
 def token_permitido(nome: str) -> bool:
@@ -299,10 +315,21 @@ def _conferir_o_contraste(tokens: dict[str, str], casa: dict[str, str],
 
 def folha_do_manifesto(bloco: dict[str, Any] | None, pasta: Path) -> str:
     """A folha que o bloco ``tema`` do manifesto declara: ``{"folha": ":root{…}"}`` ou
-    ``{"arquivo": "tema.css"}``, um arquivo DENTRO da pasta da modificação."""
-    if not isinstance(bloco, dict) or len(bloco) != 1 or not ({"folha", "arquivo"} & set(bloco)):
+    ``{"arquivo": "tema.css"}``, um arquivo DENTRO da pasta da modificação. Vazia quando o bloco só
+    escolhe o lado dos botões."""
+    if not isinstance(bloco, dict):
         raise TemaRecusadoError("O bloco «tema» do manifesto precisa de «folha» ou de «arquivo», "
                                 "um dos dois.")
+    estranha = sorted(set(bloco) - CHAVES_DO_BLOCO)
+    if estranha:
+        raise TemaRecusadoError(f"O bloco «tema» do manifesto tem «{estranha[0]}», que este "
+                                "Hefesto não conhece.")
+    fontes = [c for c in CHAVES_DA_COR if c in bloco]
+    if len(fontes) > 1 or (not fontes and CHAVE_DO_LADO not in bloco):
+        raise TemaRecusadoError("O bloco «tema» do manifesto precisa de «folha» ou de «arquivo», "
+                                "um dos dois.")
+    if not fontes:
+        return ""
     if "folha" in bloco:
         if not isinstance(bloco["folha"], str):
             raise TemaRecusadoError("A «folha» do tema precisa ser texto.")
@@ -322,11 +349,32 @@ def folha_do_manifesto(bloco: dict[str, Any] | None, pasta: Path) -> str:
         raise TemaRecusadoError(f"O arquivo do tema «{nome}» não pôde ser lido.") from exc
 
 
+def conferir_o_bloco(bloco: dict[str, Any] | None, pasta: Path) -> None:
+    """A régua do bloco ``tema`` inteiro: a folha, quando há, passa em :func:`validar`.
+
+    O bloco que só escolhe o lado dos botões não tem cor a conferir.
+    """
+    folha = folha_do_manifesto(bloco, pasta)
+    if folha or (bloco and any(c in bloco for c in CHAVES_DA_COR)):
+        validar(folha)
+
+
+def _opcao_ligada(manifesto: Any, opcao_id: object, lugares: Any) -> bool:
+    """O bloco que não liga a escolha a opção nenhuma vale sempre; ligada a uma, vale o que ela diz
+    agora (a escolha guardada, senão o padrão do manifesto)."""
+    if not isinstance(opcao_id, str):
+        return True
+    from hefesto_dualsense4unix.mods import opcoes
+
+    return opcoes.ler(manifesto, lugares).get(opcao_id) is True
+
+
 def tema_da_casa(lugares: Any = None) -> TemaDaCasa:
     """O tema da modificação ligada, com a permissão ``tema`` aceita, já conferido.
 
-    Ligada mais de uma com tema, vale a ligada por último; as outras ficam nos avisos. Nada aqui
-    escreve: o registro é lido como está.
+    A cor e o lado dos botões se escolhem à parte: cada um vale pela extensão ligada por último
+    que o traz (com a opção dele ligada, quando o bloco o liga a uma). As outras ficam nos avisos.
+    Nada aqui escreve: o registro é lido como está.
     """
     from hefesto_dualsense4unix.mods import instalador
     from hefesto_dualsense4unix.mods.manifesto import ManifestoRecusadoError, ler_manifesto
@@ -336,7 +384,8 @@ def tema_da_casa(lugares: Any = None) -> TemaDaCasa:
         registro = instalador.ler_registro(lg.registro)
     except instalador.InstalacaoRecusadaError as exc:
         return TemaDaCasa(recusa=exc.frase)
-    candidatos = []
+    com_cor: list[tuple[str, str, Any, Path]] = []
+    com_lado: list[tuple[str, str, Any, str]] = []
     sem_manifesto: list[str] = []
     for entrada in registro.values():
         if not entrada.ligada or "tema" not in entrada.permissoes_aceitas:
@@ -348,27 +397,70 @@ def tema_da_casa(lugares: Any = None) -> TemaDaCasa:
             # o manifesto que não abre não liga tema nenhum, e a frase dele vai aos avisos
             sem_manifesto.append(f"O manifesto de «{entrada.nome}» não abriu: {exc.frase}")
             continue
-        if "tema" in manifesto.tipos and manifesto.tema:
-            candidatos.append((entrada.ligada_em, entrada.id, manifesto, pasta))
-    if not candidatos:
-        return TemaDaCasa(avisos=tuple(sem_manifesto))
-    candidatos.sort(key=lambda c: (c[0], c[1]))
-    _quando, mod_id, manifesto, pasta = candidatos[-1]
+        bloco = manifesto.tema
+        if "tema" not in manifesto.tipos or not bloco:
+            continue
+        chave = (entrada.ligada_em, entrada.id)
+        # o bloco que não diz cor nem lado também entra pela cor: é a régua dela que o recusa
+        if (any(c in bloco for c in CHAVES_DA_COR) or CHAVE_DO_LADO not in bloco) and _opcao_ligada(
+                manifesto, bloco.get(CHAVE_DA_OPCAO_DA_COR), lg):
+            com_cor.append((*chave, manifesto, pasta))
+        lado = bloco.get(CHAVE_DO_LADO)
+        if lado in LADOS_DOS_BOTOES and _opcao_ligada(
+                manifesto, bloco.get(CHAVE_DA_OPCAO_DO_LADO), lg):
+            com_lado.append((*chave, manifesto, lado))
+    com_cor.sort(key=lambda c: c[:2])
+    com_lado.sort(key=lambda c: c[:2])
+    botoes = com_lado[-1][3] if com_lado else ""
+    if not com_cor:
+        return TemaDaCasa(de=com_lado[-1][1] if com_lado else "", botoes=botoes,
+                          avisos=_avisos_do_lado(sem_manifesto, com_lado, avisados=()))
+    _quando, mod_id, manifesto, pasta = com_cor[-1]
     avisos = (*sem_manifesto, *(f"«{c[2].nome}» também tem tema, e vale o da «{manifesto.nome}»."
-                                for c in candidatos[:-1]))
+                                for c in com_cor[:-1]))
+    avisos = _avisos_do_lado(avisos, com_lado, avisados={c[1] for c in com_cor[:-1]})
     try:
         aceito = validar(folha_do_manifesto(manifesto.tema, pasta))
     except TemaRecusadoError as exc:
         return TemaDaCasa(de=mod_id, recusa=f"O tema de «{manifesto.nome}» não ligou. {exc.frase}",
-                          avisos=avisos)
-    return TemaDaCasa(folha=aceito.folha, de=mod_id, avisos=avisos)
+                          avisos=avisos, botoes=botoes)
+    return TemaDaCasa(folha=aceito.folha, de=mod_id, avisos=avisos, botoes=botoes)
+
+
+def arquivos_de_opcoes_dos_temas(lugares: Any = None) -> list[Path]:
+    """Os ``opcoes.json`` das extensões de tema ligadas: a janela os vigia, porque a opção
+    «Cores claras» ou «Botões à esquerda» troca o tema sem tocar no registro."""
+    from hefesto_dualsense4unix.mods import instalador, opcoes
+
+    lg = lugares or instalador.Lugares.do_xdg()
+    try:
+        registro = instalador.ler_registro(lg.registro)
+    except instalador.InstalacaoRecusadaError:
+        return []
+    return [opcoes.caminho(e.id, lg) for e in registro.values()
+            if e.ligada and "tema" in e.permissoes_aceitas]
+
+
+def _avisos_do_lado(avisos: Sequence[str], com_lado: list[tuple[str, str, Any, str]], *,
+                    avisados: Collection[str]) -> tuple[str, ...]:
+    """Quem perdeu a escolha do lado para a ligada por último, sem repetir quem já foi avisado."""
+    if len(com_lado) < 2:
+        return tuple(avisos)
+    vencedora = com_lado[-1][2].nome
+    return (*avisos, *(f"«{c[2].nome}» também escolhe o lado dos botões, e vale o da "
+                       f"«{vencedora}»." for c in com_lado[:-1] if c[1] not in avisados))
 
 
 __all__ = [
     "ACENTOS",
+    "CHAVES_DO_BLOCO",
+    "CHAVE_DA_OPCAO_DA_COR",
+    "CHAVE_DA_OPCAO_DO_LADO",
+    "CHAVE_DO_LADO",
     "FUNDOS",
     "FUNDO_DA_LOGO",
     "FUNDO_DA_PAGINA",
+    "LADOS_DOS_BOTOES",
     "LIMIAR_DO_ACENTO",
     "LIMIAR_DO_CONTRASTE",
     "PLASTICOS",
@@ -379,6 +471,8 @@ __all__ = [
     "TemaRecusadoError",
     "apelidos_da_casa",
     "apelidos_do_root",
+    "arquivos_de_opcoes_dos_temas",
+    "conferir_o_bloco",
     "contraste",
     "cor",
     "e_escuro",

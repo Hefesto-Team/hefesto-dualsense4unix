@@ -18,6 +18,11 @@ _CHAVE_DOS_BOTOES = ("org.gnome.desktop.wm.preferences", "button-layout")
 
 LADO_DO_COSMIC = ":minimize,maximize,close"
 
+#: De que lado da barra os botões desta casa ficam. O produto segue o do sistema; uma extensão de
+#: tema pode escolher o outro (22/10/2026, O-TEMA-DA-EXTENSAO-ESCOLHE-O-LADO-DOS-BOTOES).
+ESQUERDA = "esquerda"
+DIREITA = "direita"
+
 
 def sessao_e_cosmic() -> bool:
     """Esta sessão é COSMIC? Lê o ambiente a cada chamada, nunca na importação."""
@@ -44,6 +49,22 @@ def lado_dos_botoes_na_sessao() -> str:
     except Exception as exc:
         logger.warning("botoes_da_sessao_indisponiveis", erro=str(exc))
         return ""
+
+
+def lado_do_sistema() -> str:
+    """De que lado o sistema põe os botões das janelas: ``esquerda`` ou ``direita``.
+
+    No COSMIC é a direita, e a sessão não é consultada (o ``button-layout`` dela mente, como o
+    teste de 21/10 mede). Fora dele vale o que o ``button-layout`` diz antes dos dois pontos; sem
+    resposta legível, ou sem os dois pontos, a direita.
+    """
+    if sessao_e_cosmic():
+        return DIREITA
+    layout = lado_dos_botoes_na_sessao()
+    if ":" not in layout:
+        return DIREITA
+    antes = layout.split(":", 1)[0]
+    return ESQUERDA if "close" in [p.strip() for p in antes.split(",")] else DIREITA
 
 
 def barra_que_o_sistema_usa() -> str:
