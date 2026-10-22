@@ -245,14 +245,14 @@
       "data": "2026-10-22",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1168268,
+      "piso": 1170587,
       "por_item": {
         "docs": 120220,
-        "scripts": 119454,
-        "src": 310969,
-        "tests": 617625
+        "scripts": 119684,
+        "src": 311973,
+        "tests": 618710
       },
-      "razao": "tamanho: +7882 linhas (1160386 -> 1168268), pagas por Origem: D-2210-O-CODIGO-DE-SRC-TEM-QUEM-O-CHAME; registrado no fecho, topo d03d87e21709",
+      "razao": "tamanho: +2319 linhas (1168268 -> 1170587), pagas por Origem: D-0810-O-GATILHO-TROCA-PELO-RITMO-DO-TIRO, D-0810-O-TATO-VIVO-SO-FALA-ONDE-O-JOGO-CALA, D-2909-RUMBLE-VIRA-HAPTICA; registrado no fecho, topo a729098fb97b",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -727,10 +727,16 @@
           "de": 1160386,
           "para": 1168268,
           "razao": "tamanho: +7882 linhas (1160386 -> 1168268), pagas por Origem: D-2210-O-CODIGO-DE-SRC-TEM-QUEM-O-CHAME; registrado no fecho, topo d03d87e21709"
+        },
+        {
+          "data": "2026-10-22",
+          "de": 1168268,
+          "para": 1170587,
+          "razao": "tamanho: +2319 linhas (1168268 -> 1170587), pagas por Origem: D-0810-O-GATILHO-TROCA-PELO-RITMO-DO-TIRO, D-0810-O-TATO-VIVO-SO-FALA-ONDE-O-JOGO-CALA, D-2909-RUMBLE-VIRA-HAPTICA; registrado no fecho, topo a729098fb97b"
         }
       ],
       "unidade": "linhas",
-      "universo": 3060
+      "universo": 3065
     }
   }
 }
