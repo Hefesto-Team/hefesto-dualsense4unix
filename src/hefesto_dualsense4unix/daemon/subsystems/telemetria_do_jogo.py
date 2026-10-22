@@ -572,10 +572,8 @@ async def telemetria_loop(daemon: Any, tel: TelemetriaDoJogo) -> None:
     try:
         while not daemon._is_stopping():
             await asyncio.sleep(INTERVALO_DO_LACO_S)
-            try:
-                tel.andar(time.monotonic(), _tv.estilo_ativo(daemon))
-            except Exception:
-                logger.debug("telemetria_volta_falhou", exc_info=True)
+            # a porta ocupada e a leitura que falha já se tratam no ``andar``, como erro de rede
+            tel.andar(time.monotonic(), _tv.estilo_ativo(daemon))
     finally:
         tel.fechar()
 
