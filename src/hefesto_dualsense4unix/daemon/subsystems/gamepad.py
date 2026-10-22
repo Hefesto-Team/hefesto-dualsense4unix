@@ -764,12 +764,16 @@ def _levar_a_haptica_fina(
     if not callable(levar):
         return False
     converte = getattr(vpad, "backend", None) == "uinput"
+    # O-RUMBLE-DO-JOGO-XBOX-GANHA-O-TIMBRE-DO-ESTILO-01: a onda do periódico que o jogo pediu.
+    onda = getattr(vpad, "onda_do_periodico", None) if converte else None
+    extra: dict[str, Any] = {"onda": onda} if isinstance(onda, str) else {}
     try:
         leva = levar(
             target_uniq,
             weak if converte else 0,
             strong if converte else 0,
             reaplicar=reaplicar if converte else None,
+            **extra,
         )
     except Exception as exc:
         logger.debug("haptica_fina_do_rumble_falhou", err=str(exc))

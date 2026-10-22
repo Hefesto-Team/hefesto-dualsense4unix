@@ -118,7 +118,7 @@ class _Tocador:
     def vivo(self) -> bool:
         return self._vivo
 
-    def levar(self, fraco: int, forte: int, *, sink: str, dono: str) -> None:
+    def levar(self, fraco: int, forte: int, *, sink: str, dono: str, **_timbre: Any) -> None:
         self.pedidos.append((fraco, forte, sink, dono))
         self._nivel, self._sink, self._dono = (fraco, forte), sink, dono
         if any(self._nivel) and not self._vivo and not self.parou:

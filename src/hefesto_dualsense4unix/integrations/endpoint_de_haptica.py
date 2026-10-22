@@ -129,7 +129,7 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from hefesto_dualsense4unix.integrations import pad_usb, porta_do_som
+from hefesto_dualsense4unix.integrations import classe_do_rumble, pad_usb, porta_do_som
 from hefesto_dualsense4unix.integrations.alto_falante_bt import (
     CANAIS_DA_HAPTICA,
     o_servidor_e_o_pipewire,
@@ -748,6 +748,73 @@ def bloco_da_haptica(
     return quadros.tobytes()
 
 
+def _rms(valores: Sequence[float]) -> float:
+    return math.sqrt(sum(v * v for v in valores) / len(valores)) if len(valores) else 0.0
+
+
+def _canal_que_nao_perde(timbre: list[float], seno: list[float]) -> list[float]:
+    """O canal com timbre, nunca com menos energia que o seno de hoje no mesmo bloco.
+
+    Abaixo do seno, o timbre sobe (saturando em 1, o que só o engrossa) até a energia dele; se
+    nem assim chega, o canal fica no seno. O jogo manda: o timbre só potencializa.
+    """
+    alvo, tem = _rms(seno), _rms(timbre)
+    if tem >= alvo:
+        return timbre
+    if tem <= 0.0:
+        return seno
+    ganho = alvo / tem
+    for _ in range(_SUBIDAS_DO_TIMBRE):
+        subido = [max(-1.0, min(1.0, v * ganho)) for v in timbre]
+        if _rms(subido) >= alvo:
+            return subido
+        ganho *= 1.5
+    return seno
+
+
+#: Quantas vezes o timbre sobe (x1,5 cada) antes de o canal ficar no seno.
+_SUBIDAS_DO_TIMBRE = 8
+
+
+def bloco_com_timbre(
+    fraco: int,
+    forte: int,
+    timbre: str | None,
+    *,
+    fase: int = 0,
+    antes: tuple[int, int] | None = None,
+) -> bytes:
+    """O :func:`bloco_da_haptica` no timbre pedido; ``timbre=None`` é ele, byte a byte."""
+    if timbre is None:
+        return bloco_da_haptica(fraco, forte, fase=fase, antes=antes)
+    fraco0, forte0 = antes if antes is not None else (fraco, forte)
+    a0, a1 = _amplitude(forte0), _amplitude(forte)
+    b0, b1 = _amplitude(fraco0), _amplitude(fraco)
+    if not (a0 or a1 or b0 or b1):
+        return _BLOCO_MUDO
+    n = QUADROS_POR_BLOCO
+    inicio = int(fase) % QUADROS_DO_CICLO
+    indices = [(inicio + i) % QUADROS_DO_CICLO for i in range(n)]
+    passo_a, passo_b = (a1 - a0) / n, (b1 - b0) / n
+    do_forte, do_fraco = formas.ciclos_do_timbre(timbre, QUADROS_DO_CICLO, _TAXA)
+    rampa_a = [a0 + passo_a * i for i in range(n)]
+    rampa_b = [b0 + passo_b * i for i in range(n)]
+    canal_forte = _canal_que_nao_perde(
+        [r * do_forte[k] for r, k in zip(rampa_a, indices, strict=True)],
+        [r * _SENO_DO_FORTE[k] for r, k in zip(rampa_a, indices, strict=True)],
+    )
+    canal_fraco = _canal_que_nao_perde(
+        [r * do_fraco[k] for r, k in zip(rampa_b, indices, strict=True)],
+        [r * _SENO_DO_FRACO[k] for r, k in zip(rampa_b, indices, strict=True)],
+    )
+    quadros = array("f", _BLOCO_MUDO)
+    quadros[2::4] = array("f", canal_forte)
+    quadros[3::4] = array("f", canal_fraco)
+    if sys.byteorder != "little":  # pragma: no cover — o formato é little-endian
+        quadros.byteswap()
+    return quadros.tobytes()
+
+
 # A-VIBRACAO-FINA-BATE-A-CADA-TIRO-01: o toque do tiro. O seno do rumble segue
 # o NÍVEL; o toque é a BORDA, com forma própria: ataque de 3 ms, queda curta e
 # fim em silêncio, na portadora do motor fino.
@@ -944,7 +1011,13 @@ class TocadorDoRumble:
         self._acordar = threading.Event()
         self._fim = threading.Event()
         self._fio: threading.Thread | None = None
-        self._memoria: dict[tuple[int, int, int], bytes] = {}
+        self._memoria: dict[tuple[int, int, int, str | None], bytes] = {}
+        #: a linha do tempo do rumble do dono, que diz a classe (golpe, contínuo, periódico)
+        self._linha = classe_do_rumble.LinhaDoTempo()
+        #: o estilo do perfil ativo e a forma deste controle; ``(None, None)`` é o seno de hoje
+        self._vestido: tuple[str | None, str | None] = (None, None)
+        #: a onda do ``FF_PERIODIC`` que o jogo pediu, ou ``None``
+        self._onda: str | None = None
         self._toque: tuple[array[float], tuple[int, ...]] | None = None
         self._toque_pos = 0
         #: a forma em curso é longa (Guarda, Aparo): nenhum toque novo a corta
@@ -977,10 +1050,24 @@ class TocadorDoRumble:
         return bool(self._vivo and proc is not None and proc.poll() is None)
 
 
-    def levar(self, fraco: int, forte: int, *, sink: str, dono: str) -> None:
-        """O nível de agora. Nunca espera, nunca levanta."""
+    def levar(
+        self,
+        fraco: int,
+        forte: int,
+        *,
+        sink: str,
+        dono: str,
+        estilo: str | None = None,
+        forma: str | None = None,
+        onda: str | None = None,
+    ) -> None:
+        """O nível de agora, com o estilo e a forma do timbre. Nunca espera, nunca levanta."""
         par = (max(0, min(255, int(fraco))), max(0, min(255, int(forte))))
         with self._trava:
+            if str(dono or "") != self._dono:
+                self._linha = classe_do_rumble.LinhaDoTempo()
+            self._linha.anotar(self._relogio(), par[0], par[1], onda)
+            self._vestido, self._onda = (estilo, forma), onda
             self._nivel = par
             self._sink = str(sink or "")
             self._dono = str(dono or "")
@@ -997,6 +1084,7 @@ class TocadorDoRumble:
         """Nível zero: o tocador fica a folga de pé e sai."""
         with self._trava:
             self._nivel = (0, 0)
+            self._linha.anotar(self._relogio(), 0, 0)
         self._acordar.set()
 
     def tocar_o_toque(
@@ -1223,14 +1311,24 @@ class TocadorDoRumble:
             fase = (fase + QUADROS_POR_BLOCO) % QUADROS_DO_CICLO
         return "parado"
 
+    def timbre_de_agora(self, nivel: tuple[int, int] | None = None) -> str | None:
+        """O timbre do bloco de agora: a classe viva do rumble no estilo e na forma do dono."""
+        with self._trava:
+            par = self._nivel if nivel is None else nivel
+            classe = self._linha.classe(self._relogio(), par[0], par[1], self._onda)
+            estilo, forma = self._vestido
+            onda = self._onda
+        return formas.timbre_do_rumble(estilo, forma, classe, onda)
+
     def _bloco(self, nivel: tuple[int, int], antes: tuple[int, int], fase: int) -> bytes:
+        timbre = self.timbre_de_agora(nivel)
         if nivel != antes:
             self._memoria = {}
-            return bloco_da_haptica(nivel[0], nivel[1], fase=fase, antes=antes)
-        chave = (nivel[0], nivel[1], fase)
+            return bloco_com_timbre(nivel[0], nivel[1], timbre, fase=fase, antes=antes)
+        chave = (nivel[0], nivel[1], fase, timbre)
         bloco = self._memoria.get(chave)
         if bloco is None:
-            bloco = bloco_da_haptica(nivel[0], nivel[1], fase=fase)
+            bloco = bloco_com_timbre(nivel[0], nivel[1], timbre, fase=fase)
             self._memoria[chave] = bloco
         return bloco
 
@@ -1321,6 +1419,7 @@ __all__ = [
     "ancora_da_interface",
     "ancora_do_gadget",
     "argv_do_tocador",
+    "bloco_com_timbre",
     "bloco_da_haptica",
     "conferir_o_destino_do_tocador",
     "descricao_da_haptica",

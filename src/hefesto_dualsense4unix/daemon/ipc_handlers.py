@@ -2169,6 +2169,27 @@ class IpcHandlersMixin:
                             "ff_ultimos_reports": _anel_de_vibracao(
                                 getattr(vp, "ff_ultimos_reports", None)
                             ),
+                            # O-RUMBLE-DO-JOGO-XBOX-GANHA-O-TIMBRE-DO-ESTILO-01: as classes
+                            # do rumble do pad Xbox e a forma do último FF_PERIODIC.
+                            "ff_por_classe": (
+                                {str(k): int(v) for k, v in classes.items()}
+                                if isinstance(
+                                    classes := getattr(vp, "ff_por_classe", None), dict
+                                ) else None
+                            ),
+                            "ff_forma_do_periodico": (
+                                dict(forma_p)
+                                if isinstance(
+                                    forma_p := getattr(vp, "ff_forma_do_periodico", None), dict
+                                ) else None
+                            ),
+                            "ff_ultimos_trechos": (
+                                [list(t) for t in trechos]
+                                if isinstance(
+                                    trechos := getattr(vp, "ff_ultimos_trechos", None), list
+                                ) else None
+                            ),
+                            "ff_rota": self._rota_do_rumble(uniq_do_fisico),
                             "output_count": int(getattr(vp, "output_count", 0) or 0),
                             "trigger_replicas": int(
                                 getattr(vp, "trigger_replicas", 0) or 0
@@ -2297,6 +2318,15 @@ class IpcHandlersMixin:
 
         _com_a_marca_do_f_hid(result)
         return result
+
+    def _rota_do_rumble(self, uniq: Any) -> dict[str, Any] | None:
+        """Por onde vai o rumble do pad Xbox (``alto_falante.por_onde_vai_o_rumble``)."""
+        alto_falante = getattr(self.daemon, "_alto_falante_subsystem", None)
+        rota = getattr(alto_falante, "por_onde_vai_o_rumble", None)
+        if not isinstance(uniq, str) or not uniq or not callable(rota):
+            return None
+        resposta = rota(uniq)  # nunca levanta: o ilegível volta como ``porque``
+        return dict(resposta) if isinstance(resposta, dict) else None
 
     def _enrich_controllers_per_controller(
         self, entries: list[dict[str, Any]], state: Any

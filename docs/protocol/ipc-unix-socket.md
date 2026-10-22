@@ -54,66 +54,66 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `trigger.reset` | `daemon/ipc_handlers.py:857` (`_handle_trigger_reset`) | Grava ``Off`` no gatilho: sem efeito do Hefesto, e o jogo decide (R-19). | sim |
 | `led.set` | `daemon/ipc_handlers.py:923` (`_handle_led_set`) | _(o handler não tem docstring)_ | sim |
 | `led.auto_release` | `daemon/ipc_handlers.py:1072` (`_handle_led_auto_release`) | Só registra no diário: a luz não tem trava a soltar. | sim |
-| `rumble.set` | `daemon/ipc_handlers.py:3417` (`_handle_rumble_set`) | Fixa a vibração; RECUSA no Modo Nativo. | sim |
-| `rumble.stop` | `daemon/ipc_handlers.py:3532` (`_handle_rumble_stop`) | Para o rumble e fixa (0, 0); no Modo Nativo SOLTA o par. | sim |
-| `rumble.passthrough` | `daemon/ipc_handlers.py:3584` (`_handle_rumble_passthrough`) | Libera controle de rumble para jogo/UDP. | sim |
-| `rumble.policy_set` | `daemon/ipc_handlers.py:3611` (`_handle_rumble_policy_set`) | Altera política global de intensidade de rumble. | **não** |
-| `rumble.policy_custom` | `daemon/ipc_handlers.py:3627` (`_handle_rumble_policy_custom`) | Define política "custom" com multiplicador explícito. | **não** |
-| `rumble.motores.set` | `daemon/ipc_handlers.py:3673` (`_handle_rumble_motores_set`) | `rumble.motores.set` — a barra de CADA motor, no perfil. | sim |
-| `sensor.set` | `daemon/ipc_handlers.py:3837` (`_handle_sensor_set`) | `sensor.set` — desliga giroscópio, acelerômetro e touchpad DE VERDADE, por controle. | **não** |
+| `rumble.set` | `daemon/ipc_handlers.py:3447` (`_handle_rumble_set`) | Fixa a vibração; RECUSA no Modo Nativo. | sim |
+| `rumble.stop` | `daemon/ipc_handlers.py:3562` (`_handle_rumble_stop`) | Para o rumble e fixa (0, 0); no Modo Nativo SOLTA o par. | sim |
+| `rumble.passthrough` | `daemon/ipc_handlers.py:3614` (`_handle_rumble_passthrough`) | Libera controle de rumble para jogo/UDP. | sim |
+| `rumble.policy_set` | `daemon/ipc_handlers.py:3641` (`_handle_rumble_policy_set`) | Altera política global de intensidade de rumble. | **não** |
+| `rumble.policy_custom` | `daemon/ipc_handlers.py:3657` (`_handle_rumble_policy_custom`) | Define política "custom" com multiplicador explícito. | **não** |
+| `rumble.motores.set` | `daemon/ipc_handlers.py:3703` (`_handle_rumble_motores_set`) | `rumble.motores.set` — a barra de CADA motor, no perfil. | sim |
+| `sensor.set` | `daemon/ipc_handlers.py:3867` (`_handle_sensor_set`) | `sensor.set` — desliga giroscópio, acelerômetro e touchpad DE VERDADE, por controle. | **não** |
 | `daemon.status` | `daemon/ipc_handlers.py:1506` (`_handle_daemon_status`) | _(o handler não tem docstring)_ | sim |
 | `daemon.state_full` | `daemon/ipc_handlers.py:1784` (`_handle_daemon_state_full`) | Estado completo pra GUI consumir a 20Hz. | sim |
 | `daemon.pause` | `daemon/ipc_handlers.py:1696` (`_handle_daemon_pause`) | Pausa o despacho de input sem matar o daemon. | **não** |
 | `daemon.resume` | `daemon/ipc_handlers.py:1701` (`_handle_daemon_resume`) | Retoma o despacho de input. | **não** |
 | `freestyle.set` | `daemon/ipc_handlers.py:1706` (`_handle_freestyle_set`) | Liga/desliga o Modo Freestyle — o botão «Modo Freestyle» da aba Jogar. | sim |
 | `native.mode.set` | `daemon/ipc_handlers.py:1764` (`_handle_native_mode_set`) | Liga/desliga o Modo Nativo — "release total" do controle. | sim |
-| `controller.list` | `daemon/ipc_handlers.py:3245` (`_handle_controller_list`) | Lista os controles do daemon; opt-in `external` soma o inventário 8BIT-01. | sim |
-| `controller.target.set` | `daemon/ipc_handlers.py:3360` (`_handle_controller_target_set`) | Define o ALVO das ações de output. | **não** |
-| `daemon.reload` | `daemon/ipc_handlers.py:4012` (`_handle_daemon_reload`) | Aplica overrides parciais de config em runtime. | sim |
-| `launch_env.refresh` | `daemon/ipc_handlers.py:4040` (`_handle_launch_env_refresh`) | Rematerializa as envs de launch do wrapper sob demanda. | **não** |
-| `lightbar.reset` | `daemon/ipc_handlers.py:3394` (`_handle_lightbar_reset`) | Manda o Reset LED state (0x08) sob demanda — INSTRUMENTO de medição. | sim |
-| `debug.player_leds` | `daemon/ipc_handlers.py:3405` (`_handle_debug_player_leds`) | Liga/desliga a escrita do LED de JOGADOR — INSTRUMENTO de eliminação. | **não** |
-| `speaker.set` | `daemon/ipc_handlers.py:4057` (`_handle_speaker_set`) | `speaker.set` — volume/mudo/devolução do alto-falante. | sim |
-| `mic.set` | `daemon/ipc_handlers.py:4212` (`_handle_mic_set`) | `mic.set` — mudo do microfone no FIRMWARE do controle. | sim |
-| `mic.canal.set` | `daemon/ipc_handlers.py:4265` (`_handle_mic_canal_set`) | `mic.canal.set` — O ATO INTEIRO do microfone. | **não** |
-| `mic.led.set` | `daemon/ipc_handlers.py:4342` (`_handle_mic_led_set`) | `mic.led.set` — o LED do botão de mudo, e a DEVOLUÇÃO da posse dele. | sim |
-| `mic.volume.set` | `daemon/ipc_handlers.py:4390` (`_handle_mic_volume_set`) | `mic.volume.set` — volume da CAPTURA no sistema. | sim |
-| `mouse.emulation.set` | `daemon/ipc_handlers.py:4479` (`_handle_mouse_emulation_set`) | Liga/desliga emulação de mouse+teclado. | sim |
-| `mouse.emulation.restore` | `daemon/ipc_handlers.py:4538` (`_handle_mouse_emulation_restore`) | Restaura a emulação de mouse conforme a preferência persistida. | **não** |
-| `desktop.arranjo.apply` | `daemon/ipc_handlers.py:4555` (`_handle_desktop_arranjo_apply`) | Carrega no aparelho o arranjo do `desktop`: a Navegação ou o Point and click. | sim |
-| `desktop.arranjo.repor` | `daemon/ipc_handlers.py:6115` (`_handle_desktop_arranjo_repor`) | Repõe a tabela do Point and click, se é o arranjo de agora: o serviço decide. | **não** |
-| `keyboard.emulation.set` | `daemon/ipc_handlers.py:4760` (`_handle_keyboard_emulation_set`) | Liga/desliga a emulação de TECLADO. | **não** |
-| `desktop.status.set` | `daemon/ipc_handlers.py:4585` (`_handle_desktop_status_set`) | O «Status do Modo» da aba Navegação: mouse e teclado, e o perfil. | sim |
-| `navegacao.interna.set` | `daemon/ipc_handlers.py:4633` (`_handle_navegacao_interna_set`) | Liga a Navegação Interna, ou troca o tipo («Interna» ou «Uso geral» da aba 06). | sim |
-| `navegacao.foco` | `daemon/ipc_handlers.py:4657` (`_handle_navegacao_foco`) | A janela diz se está na frente; a resposta traz os toques de cada controle. | sim |
-| `navegacao.big_picture.set` | `daemon/ipc_handlers.py:4737` (`_handle_navegacao_big_picture_set`) | Liga ou desliga o Modo Big Picture na Steam. | sim |
-| `gamepad.emulation.set` | `daemon/ipc_handlers.py:4835` (`_handle_gamepad_emulation_set`) | Liga/desliga o gamepad virtual e define a máscara. | sim |
-| `gamepad.mask.set` | `daemon/ipc_handlers.py:4788` (`_handle_gamepad_mask_set`) | A máscara de UM aparelho: `gamepad.mask.set {uniq, flavor}`. | **não** |
-| `coop.set` | `daemon/ipc_handlers.py:4914` (`_handle_coop_set`) | Liga o co-op local; RECUSA desligar. | sim |
-| `coop.sync` | `daemon/ipc_handlers.py:4944` (`_handle_coop_sync`) | Roda UM ciclo cheio de reconciliação do co-op (`sync(force=True)`). | sim |
-| `daemon.emulation.suppress` | `daemon/ipc_handlers.py:4960` (`_handle_emulation_suppress`) | Liga/desliga o modo jogo (suprime emulação mouse/teclado). | sim |
+| `controller.list` | `daemon/ipc_handlers.py:3275` (`_handle_controller_list`) | Lista os controles do daemon; opt-in `external` soma o inventário 8BIT-01. | sim |
+| `controller.target.set` | `daemon/ipc_handlers.py:3390` (`_handle_controller_target_set`) | Define o ALVO das ações de output. | **não** |
+| `daemon.reload` | `daemon/ipc_handlers.py:4042` (`_handle_daemon_reload`) | Aplica overrides parciais de config em runtime. | sim |
+| `launch_env.refresh` | `daemon/ipc_handlers.py:4070` (`_handle_launch_env_refresh`) | Rematerializa as envs de launch do wrapper sob demanda. | **não** |
+| `lightbar.reset` | `daemon/ipc_handlers.py:3424` (`_handle_lightbar_reset`) | Manda o Reset LED state (0x08) sob demanda — INSTRUMENTO de medição. | sim |
+| `debug.player_leds` | `daemon/ipc_handlers.py:3435` (`_handle_debug_player_leds`) | Liga/desliga a escrita do LED de JOGADOR — INSTRUMENTO de eliminação. | **não** |
+| `speaker.set` | `daemon/ipc_handlers.py:4087` (`_handle_speaker_set`) | `speaker.set` — volume/mudo/devolução do alto-falante. | sim |
+| `mic.set` | `daemon/ipc_handlers.py:4242` (`_handle_mic_set`) | `mic.set` — mudo do microfone no FIRMWARE do controle. | sim |
+| `mic.canal.set` | `daemon/ipc_handlers.py:4295` (`_handle_mic_canal_set`) | `mic.canal.set` — O ATO INTEIRO do microfone. | **não** |
+| `mic.led.set` | `daemon/ipc_handlers.py:4372` (`_handle_mic_led_set`) | `mic.led.set` — o LED do botão de mudo, e a DEVOLUÇÃO da posse dele. | sim |
+| `mic.volume.set` | `daemon/ipc_handlers.py:4420` (`_handle_mic_volume_set`) | `mic.volume.set` — volume da CAPTURA no sistema. | sim |
+| `mouse.emulation.set` | `daemon/ipc_handlers.py:4509` (`_handle_mouse_emulation_set`) | Liga/desliga emulação de mouse+teclado. | sim |
+| `mouse.emulation.restore` | `daemon/ipc_handlers.py:4568` (`_handle_mouse_emulation_restore`) | Restaura a emulação de mouse conforme a preferência persistida. | **não** |
+| `desktop.arranjo.apply` | `daemon/ipc_handlers.py:4585` (`_handle_desktop_arranjo_apply`) | Carrega no aparelho o arranjo do `desktop`: a Navegação ou o Point and click. | sim |
+| `desktop.arranjo.repor` | `daemon/ipc_handlers.py:6145` (`_handle_desktop_arranjo_repor`) | Repõe a tabela do Point and click, se é o arranjo de agora: o serviço decide. | **não** |
+| `keyboard.emulation.set` | `daemon/ipc_handlers.py:4790` (`_handle_keyboard_emulation_set`) | Liga/desliga a emulação de TECLADO. | **não** |
+| `desktop.status.set` | `daemon/ipc_handlers.py:4615` (`_handle_desktop_status_set`) | O «Status do Modo» da aba Navegação: mouse e teclado, e o perfil. | sim |
+| `navegacao.interna.set` | `daemon/ipc_handlers.py:4663` (`_handle_navegacao_interna_set`) | Liga a Navegação Interna, ou troca o tipo («Interna» ou «Uso geral» da aba 06). | sim |
+| `navegacao.foco` | `daemon/ipc_handlers.py:4687` (`_handle_navegacao_foco`) | A janela diz se está na frente; a resposta traz os toques de cada controle. | sim |
+| `navegacao.big_picture.set` | `daemon/ipc_handlers.py:4767` (`_handle_navegacao_big_picture_set`) | Liga ou desliga o Modo Big Picture na Steam. | sim |
+| `gamepad.emulation.set` | `daemon/ipc_handlers.py:4865` (`_handle_gamepad_emulation_set`) | Liga/desliga o gamepad virtual e define a máscara. | sim |
+| `gamepad.mask.set` | `daemon/ipc_handlers.py:4818` (`_handle_gamepad_mask_set`) | A máscara de UM aparelho: `gamepad.mask.set {uniq, flavor}`. | **não** |
+| `coop.set` | `daemon/ipc_handlers.py:4944` (`_handle_coop_set`) | Liga o co-op local; RECUSA desligar. | sim |
+| `coop.sync` | `daemon/ipc_handlers.py:4974` (`_handle_coop_sync`) | Roda UM ciclo cheio de reconciliação do co-op (`sync(force=True)`). | sim |
+| `daemon.emulation.suppress` | `daemon/ipc_handlers.py:4990` (`_handle_emulation_suppress`) | Liga/desliga o modo jogo (suprime emulação mouse/teclado). | sim |
 | `led.player_set` | `daemon/ipc_handlers.py:962` (`_handle_led_player_set`) | Aplica bitmask de 5 LEDs de player no controle. | sim |
 | `led.player_brightness_set` | `daemon/ipc_handlers.py:999` (`_handle_led_player_brightness_set`) | O brilho das cinco luzes de número: Fraco, Médio ou Forte. | sim |
 | `identity.renumber` | `daemon/ipc_handlers.py:1085` (`_handle_identity_renumber`) | Reordena a FILA de preferência (DualSense + externos). | sim |
 | `identity.number.set` | `daemon/ipc_handlers.py:1244` (`_handle_identity_number_set`) | Atribui o NÚMERO EXIBIDO de UM controle. | sim |
-| `machine.declare` | `daemon/ipc_handlers.py:4972` (`_handle_machine_declare`) | Grava no `maquina.json` o que o usuário declarou sobre a máquina. | sim |
-| `plugin.list` | `daemon/ipc_handlers.py:5036` (`_handle_plugin_list`) | Lista plugins carregados no daemon. | **não** |
-| `plugin.reload` | `daemon/ipc_handlers.py:5044` (`_handle_plugin_reload`) | Recarrega plugins do disco. | **não** |
-| `mods.agora` | `daemon/ipc_handlers.py:5062` (`_handle_mods_agora`) | A coluna «Agora» da janela de uma extensão: o último ``acessorios.estado`` publicado. | **não** |
-| `mods.parar_tudo` | `daemon/ipc_handlers.py:5077` (`_handle_mods_parar_tudo`) | O «Parar tudo» da janela: o gesto ``para`` vai só à extensão ``{mod}``. | **não** |
-| `mods.jogos` | `daemon/ipc_handlers.py:5102` (`_handle_mods_jogos`) | Os jogos da extensão de lançador ``{mod}``: o último ``lancador.jogos`` publicado. | **não** |
-| `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:5411` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |
-| `radio.mover` | `daemon/ipc_handlers.py:5441` (`_handle_radio_mover`) | «Mover» um aparelho para um adaptador, ou o «Conectar» (D8). | sim |
-| `mira.set` | `daemon/ipc_handlers.py:5537` (`_handle_mira_set`) | `mira.set` — o chip «Analógico Virtual» e os ajustes da Calibrar, POR CONTROLE. | sim |
-| `haptica.testar` | `daemon/ipc_handlers.py:5747` (`_handle_haptica_testar`) | `haptica.testar` — o botão «Háptica» da aba Vibração, num controle. | sim |
-| `radio.busca.set` | `daemon/ipc_handlers.py:5778` (`_handle_radio_busca_set`) | O «Procurar»: liga ou desliga a busca do rádio, com valor absoluto. | sim |
-| `radio.dispensar` | `daemon/ipc_handlers.py:5793` (`_handle_radio_dispensar`) | O X do «Não Conectou»: o movimento acabado do aparelho sai da publicação. | **não** |
-| `motion.calibrate` | `daemon/ipc_handlers.py:5879` (`_handle_motion_calibrate`) | `motion.calibrate {uniq}` — mede o repouso de UM controle e guarda o zero dele. | sim |
-| `perfil.ativacao.set` | `daemon/ipc_handlers.py:6055` (`_handle_perfil_ativacao_set`) | `perfil.ativacao.set` — o modo e o filtro do botão, no perfil ou numa peça. | **não** |
-| `perfil.analogicos.set` | `daemon/ipc_handlers.py:6060` (`_handle_perfil_analogicos_set`) | `perfil.analogicos.set` — a zona morta, a curva e a mão, no perfil ou numa peça. | **não** |
-| `perfil.cursor.set` | `daemon/ipc_handlers.py:6065` (`_handle_perfil_cursor_set`) | `perfil.cursor.set` — a precisão, a permanência e o clique travado do cursor. | **não** |
-| `sequencia.gravar` | `daemon/ipc_handlers.py:6070` (`_handle_sequencia_gravar`) | `sequencia.gravar` — ouve os botões de um controle e devolve os passos e os tempos. | **não** |
-| `sequencia.tocar` | `daemon/ipc_handlers.py:6091` (`_handle_sequencia_tocar`) | `sequencia.tocar` — toca uma vez, no pad virtual, a sequência que a tela mostra. | **não** |
+| `machine.declare` | `daemon/ipc_handlers.py:5002` (`_handle_machine_declare`) | Grava no `maquina.json` o que o usuário declarou sobre a máquina. | sim |
+| `plugin.list` | `daemon/ipc_handlers.py:5066` (`_handle_plugin_list`) | Lista plugins carregados no daemon. | **não** |
+| `plugin.reload` | `daemon/ipc_handlers.py:5074` (`_handle_plugin_reload`) | Recarrega plugins do disco. | **não** |
+| `mods.agora` | `daemon/ipc_handlers.py:5092` (`_handle_mods_agora`) | A coluna «Agora» da janela de uma extensão: o último ``acessorios.estado`` publicado. | **não** |
+| `mods.parar_tudo` | `daemon/ipc_handlers.py:5107` (`_handle_mods_parar_tudo`) | O «Parar tudo» da janela: o gesto ``para`` vai só à extensão ``{mod}``. | **não** |
+| `mods.jogos` | `daemon/ipc_handlers.py:5132` (`_handle_mods_jogos`) | Os jogos da extensão de lançador ``{mod}``: o último ``lancador.jogos`` publicado. | **não** |
+| `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:5441` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |
+| `radio.mover` | `daemon/ipc_handlers.py:5471` (`_handle_radio_mover`) | «Mover» um aparelho para um adaptador, ou o «Conectar» (D8). | sim |
+| `mira.set` | `daemon/ipc_handlers.py:5567` (`_handle_mira_set`) | `mira.set` — o chip «Analógico Virtual» e os ajustes da Calibrar, POR CONTROLE. | sim |
+| `haptica.testar` | `daemon/ipc_handlers.py:5777` (`_handle_haptica_testar`) | `haptica.testar` — o botão «Háptica» da aba Vibração, num controle. | sim |
+| `radio.busca.set` | `daemon/ipc_handlers.py:5808` (`_handle_radio_busca_set`) | O «Procurar»: liga ou desliga a busca do rádio, com valor absoluto. | sim |
+| `radio.dispensar` | `daemon/ipc_handlers.py:5823` (`_handle_radio_dispensar`) | O X do «Não Conectou»: o movimento acabado do aparelho sai da publicação. | **não** |
+| `motion.calibrate` | `daemon/ipc_handlers.py:5909` (`_handle_motion_calibrate`) | `motion.calibrate {uniq}` — mede o repouso de UM controle e guarda o zero dele. | sim |
+| `perfil.ativacao.set` | `daemon/ipc_handlers.py:6085` (`_handle_perfil_ativacao_set`) | `perfil.ativacao.set` — o modo e o filtro do botão, no perfil ou numa peça. | **não** |
+| `perfil.analogicos.set` | `daemon/ipc_handlers.py:6090` (`_handle_perfil_analogicos_set`) | `perfil.analogicos.set` — a zona morta, a curva e a mão, no perfil ou numa peça. | **não** |
+| `perfil.cursor.set` | `daemon/ipc_handlers.py:6095` (`_handle_perfil_cursor_set`) | `perfil.cursor.set` — a precisão, a permanência e o clique travado do cursor. | **não** |
+| `sequencia.gravar` | `daemon/ipc_handlers.py:6100` (`_handle_sequencia_gravar`) | `sequencia.gravar` — ouve os botões de um controle e devolve os passos e os tempos. | **não** |
+| `sequencia.tocar` | `daemon/ipc_handlers.py:6121` (`_handle_sequencia_tocar`) | `sequencia.tocar` — toca uma vez, no pad virtual, a sequência que a tela mostra. | **não** |
 
 <!-- FIM DO BLOCO GERADO -->
 

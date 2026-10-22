@@ -45,10 +45,11 @@ import functools
 import threading
 import time
 from collections.abc import Callable
-from dataclasses import dataclass, field
-from typing import Any, Protocol
+from dataclasses import asdict, dataclass, field
+from typing import Any, NamedTuple, Protocol
 
 from hefesto_dualsense4unix.core.rumble import pedido_mais_forte
+from hefesto_dualsense4unix.integrations import classe_do_rumble
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -393,6 +394,35 @@ def _build_capabilities(*, with_ff: bool, flavor: str = DEFAULT_FLAVOR) -> dict[
     return construtor(with_ff=with_ff)
 
 
+def _forma_do_periodico(periodico: Any, ec: Any) -> classe_do_rumble.FormaDoPeriodico:
+    """A onda, o período e o envelope de um ``ff_periodic_effect`` (níveis de 0 a 255)."""
+    envelope = getattr(periodico, "envelope", None)
+
+    def _campo(fonte: Any, nome: str) -> int:
+        try:
+            return int(getattr(fonte, nome, 0) or 0)
+        except (TypeError, ValueError):
+            return 0
+
+    return classe_do_rumble.FormaDoPeriodico(
+        onda=classe_do_rumble.onda_do_codigo(_campo(periodico, "waveform"), ec),
+        periodo_ms=_campo(periodico, "period"),
+        ataque_ms=_campo(envelope, "attack_length"),
+        nivel_do_ataque=min(255, _campo(envelope, "attack_level") >> 7),
+        queda_ms=_campo(envelope, "fade_length"),
+        nivel_da_queda=min(255, _campo(envelope, "fade_level") >> 7),
+    )
+
+
+class EfeitoDoJogo(NamedTuple):
+    """Um efeito que o jogo subiu: os motores em 16 bits, a duração e, no periódico, a forma."""
+
+    fraco: int
+    forte: int
+    duracao_ms: int
+    forma: classe_do_rumble.FormaDoPeriodico | None = None
+
+
 @dataclass
 class UinputGamepad:
     """Wrapper do device virtual. Lazy-creates no `start()`."""
@@ -413,7 +443,7 @@ class UinputGamepad:
     _last_buttons: frozenset[str] = field(default_factory=frozenset)
     _last_axes: tuple[int, int, int, int, int, int] | None = None
     _ff_supported: bool = False
-    _ff_effects: dict[int, tuple[int, int, int]] = field(default_factory=dict)
+    _ff_effects: dict[int, EfeitoDoJogo | tuple[int, int, int]] = field(default_factory=dict)
     _ff_playing: dict[int, float] = field(default_factory=dict)
     #: O instante em que cada efeito tocado começa: agora + o `replay.delay` dele.
     _ff_inicio: dict[int, float] = field(default_factory=dict)
@@ -429,6 +459,11 @@ class UinputGamepad:
     _ff_nao_nulo_count: int = 0
     _ff_maior_pedido: tuple[int, int] = (0, 0)
     _ff_descartado_count: int = 0
+    #: A onda do ``FF_PERIODIC`` que toca agora (``None`` sem periódico) e a última forma vista.
+    _ff_onda: str | None = None
+    _ff_ultima_forma: classe_do_rumble.FormaDoPeriodico | None = None
+    #: A linha do tempo do par entregue: conta os efeitos por classe (golpe, contínuo, periódico).
+    _ff_linha: classe_do_rumble.LinhaDoTempo = field(default_factory=classe_do_rumble.LinhaDoTempo)
     _ff_fio: threading.Thread | None = None
     _ff_trava: threading.Lock = field(default_factory=threading.Lock)
     _ff_pare: threading.Event = field(default_factory=threading.Event)
@@ -605,6 +640,9 @@ class UinputGamepad:
         self._ff_nao_nulo_count = 0
         self._ff_maior_pedido = (0, 0)
         self._ff_descartado_count = 0
+        self._ff_onda = None
+        self._ff_ultima_forma = None
+        self._ff_linha = classe_do_rumble.LinhaDoTempo()
 
     def is_active(self) -> bool:
         return self._device is not None
@@ -633,6 +671,27 @@ class UinputGamepad:
     def ff_descartado_count(self) -> int:
         """Nº de play de efeito que NÃO tínhamos no catálogo (perdido por nós)."""
         return self._ff_descartado_count
+
+    @property
+    def onda_do_periodico(self) -> str | None:
+        """A onda do ``FF_PERIODIC`` que soa agora (quadrada, triângulo…); ``None`` sem ele."""
+        return self._ff_onda
+
+    @property
+    def ff_forma_do_periodico(self) -> dict[str, Any] | None:
+        """A última forma de ``FF_PERIODIC`` que o jogo subiu, para o IPC; ``None`` sem nenhuma."""
+        forma = self._ff_ultima_forma
+        return None if forma is None else asdict(forma)
+
+    @property
+    def ff_por_classe(self) -> dict[str, int]:
+        """Quantos rumbles do jogo de cada classe acabaram neste pad (``classe_do_rumble``)."""
+        return dict(self._ff_linha.contagem)
+
+    @property
+    def ff_ultimos_trechos(self) -> list[tuple[str, int, int, int]]:
+        """Os últimos rumbles que acabaram: ``(classe, duração em ms, fraco, forte)``."""
+        return list(self._ff_linha.ultimos)
 
     @property
     def ff_last_sent(self) -> tuple[int, int]:
@@ -774,7 +833,10 @@ class UinputGamepad:
         if etype == ec.EV_UINPUT and code == ec.UI_FF_UPLOAD:
             upload = self._device.begin_upload(value)
             effect = upload.effect
-            self._ff_effects[int(effect.id)] = self._parse_ff_effect(effect)
+            efeito = self._parse_ff_effect(effect)
+            self._ff_effects[int(effect.id)] = efeito
+            if efeito.forma is not None:
+                self._ff_ultima_forma = efeito.forma
             self._ff_atrasos[int(effect.id)] = self._atraso_do_efeito(effect)
             upload.retval = 0
             self._device.end_upload(upload)
@@ -795,8 +857,8 @@ class UinputGamepad:
             else:
                 self._parar_o_efeito(code)
 
-    def _parse_ff_effect(self, effect: Any) -> tuple[int, int, int]:
-        """Extrai (weak16, strong16, duração_ms) de um efeito FF do kernel."""
+    def _parse_ff_effect(self, effect: Any) -> EfeitoDoJogo:
+        """Extrai (weak16, strong16, duração_ms, forma do periódico) de um efeito FF do kernel."""
         ec = self._ecodes
         duration_ms = int(effect.ff_replay.length)
         etype = int(effect.type)
@@ -804,11 +866,13 @@ class UinputGamepad:
             rumble = effect.u.ff_rumble_effect
             weak = int(rumble.weak_magnitude) & 0xFFFF
             strong = int(rumble.strong_magnitude) & 0xFFFF
-            return (weak, strong, duration_ms)
+            return EfeitoDoJogo(weak, strong, duration_ms)
         if etype == ec.FF_PERIODIC:
-            magnitude = min(0xFFFF, abs(int(effect.u.ff_periodic_effect.magnitude)) * 2)
-            return (magnitude, magnitude, duration_ms)
-        return (0, 0, duration_ms)
+            periodico = effect.u.ff_periodic_effect
+            magnitude = min(0xFFFF, abs(int(periodico.magnitude)) * 2)
+            forma = _forma_do_periodico(periodico, ec)
+            return EfeitoDoJogo(magnitude, magnitude, duration_ms, forma)
+        return EfeitoDoJogo(0, 0, duration_ms)
 
     @staticmethod
     def _atraso_do_efeito(effect: Any) -> float:
@@ -863,18 +927,25 @@ class UinputGamepad:
             self._ff_inicio.pop(effect_id, None)
         weak_total = 0
         strong_total = 0
+        onda: str | None = None
+        maior_periodico = -1
         for effect_id in contam:
             params = self._ff_effects.get(effect_id)
             if params is None:
                 continue
             weak_total += params[0]
             strong_total += params[1]
+            forma = getattr(params, "forma", None)
+            if isinstance(forma, classe_do_rumble.FormaDoPeriodico) and params[0] > maior_periodico:
+                onda, maior_periodico = forma.onda, params[0]
         gain = self._ff_gain
         weak = min(0xFFFF, int(weak_total * gain)) >> 8
         strong = min(0xFFFF, int(strong_total * gain)) >> 8
         pair = (weak, strong)
+        self._ff_onda = onda if (weak or strong) else None
         if pair == self._ff_last_sent:
             return
+        self._ff_linha.anotar(now, weak, strong, self._ff_onda)
         if weak or strong:
             self._ff_nao_nulo_count += 1
             self._ff_maior_pedido = pedido_mais_forte(self._ff_maior_pedido, pair)

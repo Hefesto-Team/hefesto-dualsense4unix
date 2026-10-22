@@ -421,10 +421,141 @@ def _volta_da_continua(
     return saida
 
 
+# --- O timbre do rumble do jogo Xbox (O-RUMBLE-DO-JOGO-XBOX-GANHA-O-TIMBRE-DO-ESTILO-01) ---------
+
+#: Os estilos que tocam o seno de hoje, byte a byte: sem pedido (Nativo, Personalizado), o que já
+#: soma o timbre dele (o Retrô, com o Motor de época) e o Adulto, que não é estilo de golpe.
+SEM_TIMBRE = frozenset({"nativo", "personalizado", "retro", "adulto"})
+#: O contínuo que cada estilo NÃO veste (valores de partida, a validar na bancada): a Luta, a
+#: Plataforma e o Ritmo vivem de golpe limpo; o Furtivo e os Esportes não pedem o corpo grave; o
+#: Souls e os Esportes não pedem o Grão.
+SEM_CORPO = frozenset({"luta", "plataforma", "ritmo", "furtivo", "esportes"})
+SEM_GRAO = frozenset({"luta", "plataforma", "ritmo", "souls", "esportes"})  # (noqa-acento): chave
+#: O corpo do contínuo grave: 40 Hz com a terceira harmônica (o peso dela), no canal do forte.
+CORPO_HZ = 40
+PESO_DA_HARMONICA = 0.33
+#: O Grão do contínuo fino: grãos de 4 ms a 40 por segundo somados ao seno do fraco.
+GRAOS_POR_SEGUNDO = 40  # (noqa-acento): constante
+GRAO_MS = 4  # (noqa-acento): constante
+GANHO_DO_GRAO = 0.6  # (noqa-acento): constante
+#: A frequência de cada canal no seno de hoje: o forte (canal 3) e o fraco (canal 4).
+HZ_DO_FORTE = 60
+HZ_DO_FRACO = 160
+
+
+def timbre_do_rumble(
+    estilo: object, forma: str | None, classe: str | None, onda: str | None = None
+) -> str | None:
+    """A chave do timbre de uma classe do rumble neste controle; ``None`` é o seno de hoje.
+
+    ``forma`` é a de :func:`forma_que_vale` do controle (a escolha dele ou a do estilo).
+    """
+    from hefesto_dualsense4unix.integrations import classe_do_rumble as classes
+    from hefesto_dualsense4unix.profiles.estilos_de_jogo import chave_do_catalogo
+
+    if not isinstance(estilo, str) or classe is None:
+        return None
+    chave = str(chave_do_catalogo(estilo))
+    if chave in SEM_TIMBRE or forma is None:
+        return None
+    if classe == classes.PERIODICO:
+        return f"periodico:{onda}" if onda not in (None, classes.SENO) else None
+    if classe == classes.GOLPE:
+        golpe = forma if forma in FORMAS or forma in ASSINATURAS else TOQUE
+        return f"golpe:{golpe}"
+    if classe == classes.CONTINUO_GRAVE:
+        return None if chave in SEM_CORPO else "corpo"
+    if classe == classes.CONTINUO_FINO:
+        return None if chave in SEM_GRAO else "grao"  # (noqa-acento): chave
+    return None
+
+
+def _no_ciclo(hz: int, ciclo: int, taxa: int) -> int:
+    """A frequência mais próxima que fecha o ciclo do tocador (20 Hz em 2400 quadros a 48 kHz)."""
+    passo = max(1, taxa // ciclo)
+    return max(passo, round(hz / passo) * passo)
+
+
+def _seno_do_ciclo(hz: int, ciclo: int, taxa: int) -> list[float]:
+    return [math.sin(2.0 * math.pi * hz * k / taxa) for k in range(ciclo)]
+
+
+def _ate_o_pico(onda: list[float]) -> list[float]:
+    pico = max((abs(v) for v in onda), default=0.0)
+    return [v / pico for v in onda] if pico > 0 else onda
+
+
+def _onda_periodica(onda: str, hz: int, ciclo: int, taxa: int) -> list[float]:
+    """A onda do jogo na frequência do canal, por cima do seno: ``|onda| >= |seno|``."""
+    from hefesto_dualsense4unix.integrations import classe_do_rumble as classes
+
+    seno = _seno_do_ciclo(hz, ciclo, taxa)
+    periodo = taxa / hz
+    saida: list[float] = []
+    for k, s in enumerate(seno):
+        sinal = 1.0 if s >= 0 else -1.0
+        fase = (k % periodo) / periodo
+        if onda == classes.QUADRADA:
+            v = sinal
+        elif onda == classes.TRIANGULO:
+            tri = 1.0 - 4.0 * abs(fase - 0.25) if fase < 0.75 else 4.0 * (fase - 1.0)
+            v = sinal * max(abs(s), min(1.0, abs(tri) * math.pi / 2.0))
+        elif onda == classes.DENTE_QUE_SOBE:
+            v = sinal * max(abs(s), (fase * 2.0) % 1.0)
+        elif onda == classes.DENTE_QUE_DESCE:
+            v = sinal * max(abs(s), 1.0 - (fase * 2.0) % 1.0)
+        else:
+            v = s
+        saida.append(v)
+    return saida
+
+
+@functools.lru_cache(maxsize=64)
+def ciclos_do_timbre(
+    chave: str, ciclo: int = 2400, taxa: int = TAXA
+) -> tuple[tuple[float, ...], tuple[float, ...]]:
+    """O ciclo ``(forte, fraco)`` do timbre, de pico 1, na ordem dos canais 3 e 4 do bloco."""
+    forte = _seno_do_ciclo(HZ_DO_FORTE, ciclo, taxa)
+    fraco = _seno_do_ciclo(HZ_DO_FRACO, ciclo, taxa)
+    tipo, _, nome = chave.partition(":")
+    if tipo == "golpe":
+        forma = FORMAS.get(nome) or ASSINATURAS.get(nome) or FORMAS[TOQUE]
+        partes = [(_no_ciclo(hz, ciclo, taxa), peso) for hz, peso in forma.componentes]
+        if forma.cauda_hz:
+            partes.append((_no_ciclo(forma.cauda_hz, ciclo, taxa), forma.cauda_peso))
+        mistura = [0.0] * ciclo
+        for hz, peso in partes:
+            for k, v in enumerate(_seno_do_ciclo(hz, ciclo, taxa)):
+                mistura[k] += peso * v
+        forte = fraco = _ate_o_pico(mistura)
+    elif tipo == "corpo":
+        base = _seno_do_ciclo(CORPO_HZ, ciclo, taxa)
+        harmonica = _seno_do_ciclo(3 * CORPO_HZ, ciclo, taxa)
+        forte = _ate_o_pico(
+            [b + PESO_DA_HARMONICA * h for b, h in zip(base, harmonica, strict=True)]
+        )
+    elif tipo == "grao":  # (noqa-acento): chave
+        a_cada = max(1, taxa // GRAOS_POR_SEGUNDO)
+        largura = max(2, taxa * GRAO_MS // 1000)
+        grao = [  # (noqa-acento): variável
+            math.sin(math.pi * (k % a_cada) / largura) if k % a_cada < largura else 0.0
+            for k in range(ciclo)
+        ]
+        fraco = [
+            max(-1.0, min(1.0, s * (1.0 + GANHO_DO_GRAO * g)))
+            for s, g in zip(fraco, grao, strict=True)
+        ]
+    elif tipo == "periodico":
+        forte = _onda_periodica(nome, HZ_DO_FORTE, ciclo, taxa)
+        fraco = _onda_periodica(nome, HZ_DO_FRACO, ciclo, taxa)
+    return tuple(forte), tuple(fraco)
+
+
 __all__ = [
     "APARO",
     "ASSINATURAS",
     "CONTINUAS",
+    "CORPO_HZ",
     "CORTE_ALTO_HZ",
     "CORTE_BAIXO_HZ",
     "DICAS",
@@ -435,14 +566,23 @@ __all__ = [
     "FORMAS",
     "FORMAS_LONGAS",
     "GANHO_DO_CORPO",
+    "GANHO_DO_GRAO",
     "GRAO",
+    "GRAOS_POR_SEGUNDO",
+    "GRAO_MS",
     "GUARDA",
+    "HZ_DO_FORTE",
+    "HZ_DO_FRACO",
     "IMPACTO",
     "MOTOR_DE_EPOCA",
     "NOTAS_DA_ASSINATURA",
+    "PESO_DA_HARMONICA",
     "POR_ESTILO",
     "ROTULOS",
+    "SEM_CORPO",
     "SEM_EFEITO",
+    "SEM_GRAO",
+    "SEM_TIMBRE",
     "SOM_NO_CORPO",
     "TAXA",
     "TETO_DO_CORPO",
@@ -452,8 +592,10 @@ __all__ = [
     "GeradorDoGrao",
     "GeradorDoMotorDeEpoca",
     "amostras",
+    "ciclos_do_timbre",
     "escolha_valida",
     "forma_da_nota",
     "forma_do_estilo",
     "forma_que_vale",
+    "timbre_do_rumble",
 ]

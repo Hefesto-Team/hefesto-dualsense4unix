@@ -1200,8 +1200,13 @@ class AltoFalanteSubsystem:
         forte: int,
         *,
         reaplicar: Callable[[], object] | None = None,
+        onda: str | None = None,
     ) -> bool:
-        """O rumble de um pad sem háptica vira háptica no endpoint do aparelho de ``uniq``."""
+        """O rumble de um pad sem háptica vira háptica no endpoint do aparelho de ``uniq``.
+
+        O tocador toca cada classe do rumble no timbre do estilo e da forma deste controle;
+        ``onda`` é a do ``FF_PERIODIC`` que o jogo pediu (O-RUMBLE-DO-JOGO-XBOX-GANHA-O-TIMBRE).
+        """
         if not self._tocadores and not (fraco or forte):
             return False
         chave = self._chave_do_rumble(uniq)
@@ -1219,7 +1224,11 @@ class AltoFalanteSubsystem:
         tocador = self._tocador_do_aparelho(marca)
         if tocador is None:
             return False
-        tocador.levar(fraco, forte, sink=str(getattr(endpoint, "nome", "") or ""), dono=chave)
+        estilo, forma = self._o_vestido_do_rumble(chave)
+        tocador.levar(
+            fraco, forte, sink=str(getattr(endpoint, "nome", "") or ""), dono=chave,
+            estilo=estilo, forma=forma, onda=onda,
+        )
         retrato = self._retrato_do_rumble(chave)
         with self._trava_do_rumble:
             vivos = {u: v for u, v in self._rumble_vivo.items() if u != chave}
@@ -1404,6 +1413,53 @@ class AltoFalanteSubsystem:
 
         escolha = tato_vivo.escolhas_ativas(self._daemon).get(norm_mac(chave) or "")
         return formas_de_haptica.forma_que_vale(escolha, tato_vivo.estilo_ativo(self._daemon))
+
+    def por_onde_vai_o_rumble(self, uniq: str) -> dict[str, Any]:
+        """Por onde o rumble do pad Xbox deste controle vai agora, e o porquê; nunca levanta.
+
+        ``rota`` é ``haptica_fina`` ou ``motores_do_hid``; ``porque`` diz qual condição de
+        :meth:`_quer_a_haptica_fina` faltou, ou se o caminho está de pé (``leva``) ou caído.
+        """
+        try:
+            chave = self._chave_do_rumble(uniq)
+            marca = self._aparelho_de.get(chave) if chave is not None else None
+            if chave is None or marca is None:
+                return {"rota": "motores_do_hid", "porque": "sem_aparelho"}
+            if marca in self._aparelhos_com_jogo:
+                return {"rota": "motores_do_hid", "porque": "o_jogo_toca_no_aparelho"}
+            endpoint = self._endpoints.get(marca)
+            if endpoint is None or getattr(endpoint, "module_id", None) is None or not getattr(
+                endpoint, "nome", ""
+            ):
+                return {"rota": "motores_do_hid", "porque": "sem_endpoint"}
+            if GANHO.pct(chave) <= 0:
+                return {"rota": "motores_do_hid", "porque": "ganho_zero"}
+            tocador = self._tocadores.get(marca)
+            timbre = (
+                tocador.timbre_de_agora()
+                if tocador is not None and getattr(tocador, "dono", "") == chave
+                and callable(getattr(tocador, "timbre_de_agora", None))
+                else None
+            )
+            leva = self._a_haptica_leva(chave)
+            return {
+                "rota": "haptica_fina",
+                "porque": "leva" if leva else "caminho_caido",
+                "timbre": timbre,
+            }
+        except Exception as exc:
+            logger.debug("haptica_fina_rota_ilegivel", err=str(exc))
+            return {"rota": None, "porque": "ilegivel"}
+
+    def _o_vestido_do_rumble(self, chave: str) -> tuple[str | None, str | None]:
+        """O estilo do perfil ativo e a forma deste controle, que dão o timbre do rumble."""
+        from hefesto_dualsense4unix.daemon.subsystems import tato_vivo
+
+        try:
+            return tato_vivo.estilo_ativo(self._daemon), self._a_forma_do_teste(chave)
+        except Exception:
+            logger.debug("haptica_fina_vestido_ilegivel", exc_info=True)
+            return None, None
 
     def _a_forma_ja_esta_em_laco(self, chave: str, forma: str) -> bool:
         """O rebate da janela só renova o prazo: a forma de agora já volta no tocador dele."""
