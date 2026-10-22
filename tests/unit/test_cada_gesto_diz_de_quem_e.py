@@ -103,6 +103,9 @@ SEM_BOTAO_NA_PAGINA = {
     # O «Parar tudo» só existe na janela da extensão que o declara no manifesto; a do desenho não
     # declara (a dos acessórios, que o trazia, saiu em 19/10/2026).
     ("07-lancadores.html", "parar-tudo-da-modificacao"),
+    # D-2210-O-GATILHO-SO-TEM-O-EFEITO (21/10/2026): a linha «Como o gatilho faz» saiu da 03, e o
+    # gesto `modo` e o perfil gravado ficam (a prova do pacote o chama pela ponte).
+    ("03-gatilhos.html", "modo"),
 }
 
 
