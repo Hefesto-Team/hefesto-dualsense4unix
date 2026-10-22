@@ -716,7 +716,26 @@ _AMBIENTE_DE_MENTIRA=(
   "XDG_CACHE_HOME=$LAR_DE_MENTIRA/cache"
   "XDG_STATE_HOME=$LAR_DE_MENTIRA/state"
   "XDG_RUNTIME_DIR=$LAR_DE_MENTIRA/runtime"
+  "XDG_CURRENT_DESKTOP="
+  "WAYLAND_DISPLAY="
+  "GIO_USE_VFS=local"
 )
+# O LAR NÃO TEM PORTAL (22/10/2026). O Chrome dos portões de tela (o 33, o 34 e o 53 do `--rapido`)
+# pede o `org.freedesktop.portal.Desktop` ao D-Bus do `dbus-run-session`, que acordava o portal da
+# máquina: com o `XDG_CURRENT_DESKTOP=COSMIC` herdado, o backend do COSMIC procurava o Wayland no
+# runtime de mentira e morria oito vezes por portão (`NoCompositor`, 24 linhas no journal a cada
+# `--rapido`), e o portal montava o `runtime/doc` e o `runtime/gvfs` do lar. O `dbus-daemon` procura
+# o serviço primeiro no `$XDG_DATA_HOME/dbus-1/services`: ali o portal é um `/bin/false`, e nada
+# acorda. As três variáveis tiram a sessão gráfica da casa do lar, que não tem uma: cada uma, sozinha,
+# já calava parte (o pânico, o pânico, o `gvfs`); o `GTK_USE_PORTAL=0` e o `GDK_DEBUG=no-portals` não
+# mudaram nada medido e ficaram de fora.
+_lar_sem_portal() {  # a pasta `data` do lar
+  local servicos="$1/dbus-1/services" nome
+  mkdir -p "$servicos"
+  for nome in org.freedesktop.portal.Desktop org.freedesktop.portal.Documents; do
+    printf '[D-BUS Service]\nName=%s\nExec=/bin/false\n' "$nome" > "$servicos/$nome.service"
+  done
+}
 
 # --- O RECIBO DA MEDIDA -----------------------------------------------------
 #
@@ -896,6 +915,7 @@ _comando_do_portao() {  # índice -> o comando (para `eval`, dentro da raiz)
   if [ "$runner" = pytest ]; then
     mkdir -p "$LAR_DE_MENTIRA/$i"/{config,data,cache,state,runtime,tmp}
     chmod 700 "$LAR_DE_MENTIRA/$i/runtime"
+    _lar_sem_portal "$LAR_DE_MENTIRA/$i/data"
   fi
   case "$runner" in
     py)   cmd="$PY $argv" ;;
@@ -911,7 +931,7 @@ _comando_do_portao() {  # índice -> o comando (para `eval`, dentro da raiz)
     # `pytest`», acima. Sem ele, este portão altera a configuração de quem está
     # usando o produto no mesmo instante. Em paralelo cada portão leva o SEU lar
     # (`$LAR_DE_MENTIRA/<índice>`): a substituição abaixo põe o índice no caminho
-    # das seis variáveis, e o TMPDIR mora lá também.
+    # das seis variáveis de pasta, e o TMPDIR mora lá também.
     pytest) cmd="env ${_AMBIENTE_DE_MENTIRA[*]//$LAR_DE_MENTIRA/$LAR_DE_MENTIRA/$i} TMPDIR=$LAR_DE_MENTIRA/$i/tmp $PREFIXO_DE_TELA $PY -m pytest -q -p no:cacheprovider $argv"
             [ -n "$SEMAFORO" ] && cmd="$SEMAFORO $cmd" ;;
   esac

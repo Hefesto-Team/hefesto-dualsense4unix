@@ -413,13 +413,19 @@ if [ "$PARTES_EM_PARALELO" -gt 0 ] 2> /dev/null && [ -z "$so_esta" ]; then
       comando=(bash "$0" "$n")
       if [ "$toca" = 0 ]; then
         lar=$(mktemp -d "${TMPDIR:-/tmp}/suite-lar-XXXXXX")
-        mkdir -p "$lar"/{config,data,cache,state,runtime,tmp}
+        mkdir -p "$lar"/{config,data,cache,state,runtime,tmp} "$lar/data/dbus-1/services"
         chmod 700 "$lar/runtime"
+        # O lar não tem portal nem sessão gráfica: a razão medida está no `_lar_sem_portal` do
+        # `portoes.sh` (o Chrome acordava o portal do COSMIC, que morria sem Wayland).
+        for portal in org.freedesktop.portal.Desktop org.freedesktop.portal.Documents; do
+          printf '[D-BUS Service]\nName=%s\nExec=/bin/false\n' "$portal" > "$lar/data/dbus-1/services/$portal.service"
+        done
         command -v xvfb-run > /dev/null 2>&1 && prefixo=(xvfb-run -a)
         command -v dbus-run-session > /dev/null 2>&1 && prefixo=(dbus-run-session -- ${prefixo[@]+"${prefixo[@]}"})
         comando=(env HOME="$lar" XDG_CONFIG_HOME="$lar/config" XDG_DATA_HOME="$lar/data"
           XDG_CACHE_HOME="$lar/cache" XDG_STATE_HOME="$lar/state" XDG_RUNTIME_DIR="$lar/runtime"
-          TMPDIR="$lar/tmp" ${prefixo[@]+"${prefixo[@]}"} "${comando[@]}")
+          TMPDIR="$lar/tmp" XDG_CURRENT_DESKTOP= WAYLAND_DISPLAY= GIO_USE_VFS=local
+          ${prefixo[@]+"${prefixo[@]}"} "${comando[@]}")
       fi
       # a vaga é a mais de fora: o Xvfb e o lar só nascem com a vaga na mão
       if [ "$VEZ_DO_PYTEST" != nenhum ]; then comando=(bash "$VEZ_DO_PYTEST" "${comando[@]}"); fi
