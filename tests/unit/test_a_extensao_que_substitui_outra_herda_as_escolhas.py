@@ -11,7 +11,9 @@ MORDIDAS (22/10/2026, executadas sobre a cura e devolvidas):
 - a remoção da antiga arrancada reprova ``test_a_antiga_sai_com_codigo_dados_e_registro``;
 - o «sim» herdado (``permissoes_aceitas`` somadas às da antiga) reprova
   ``test_a_permissao_nova_continua_pedindo_o_sim``;
-- a régua do ``substitui`` desligada reprova ``test_a_regua_recusa_o_que_nao_e_substituir``.
+- a régua do ``substitui`` desligada reprova ``test_a_regua_recusa_o_que_nao_e_substituir``;
+- o padrão que o ``guardar`` grava contado como escolha (``_escolhida`` = id no arquivo) reprova
+  ``test_o_padrao_gravado_na_nova_nao_tapa_a_escolha_da_antiga``.
 """
 from __future__ import annotations
 
@@ -137,6 +139,20 @@ def test_a_escolha_que_ela_ja_fez_na_nova_vale_mais_que_a_da_antiga(
     assert opcoes.ler(nova, lg)["porta"] == 22000
 
 
+def test_o_padrao_gravado_na_nova_nao_tapa_a_escolha_da_antiga(
+        lg: Lugares, tmp_path: Path, antiga_com_escolhas: None) -> None:
+    """O ``guardar`` grava o arquivo inteiro: escolher «modo» na nova grava também a «porta» no
+    padrão, e esse padrão não é escolha de ninguém. A da antiga passa por cima dele."""
+    _nova_que_ja_estava(lg, tmp_path, ligada=False)
+    _escolher(lg, NOVA, modo="c")
+    assert _guardado(lg, NOVA)["porta"] == 20010, "o guardar materializa o padrão"
+    instalador.instalar(str(_publicar_a_nova(tmp_path)), lugares=lg)
+    nova = instalador.manifesto_instalado(NOVA, lugares=lg)
+    valores = opcoes.ler(nova, lg)
+    assert valores["porta"] == 21000, "a escolha da antiga vence o padrão gravado"
+    assert valores["modo"] == "c", "a escolha feita na nova continua valendo mais"
+
+
 def test_a_instalacao_nova_sem_a_antiga_instalada_segue_sem_erro(lg: Lugares,
                                                                    tmp_path: Path) -> None:
     resultado = instalador.instalar(str(_publicar_a_nova(tmp_path)), lugares=lg)
@@ -167,7 +183,7 @@ def test_a_antiga_que_nao_para_segura_a_troca_inteira(
     original = instalador.esperar_parar
     monkeypatch.setattr(instalador, "esperar_parar",
                         lambda mod_id, **k: False if mod_id == ANTIGA else original(mod_id, **k))
-    with pytest.raises(InstalacaoRecusadaError, match="não parou"):
+    with pytest.raises(InstalacaoRecusadaError, match=f"«Extensão {ANTIGA}», .* não parou"):
         instalador.instalar(str(_publicar_a_nova(tmp_path)), lugares=lg)
     registro = instalador.ler_registro(lg.registro)
     assert registro[ANTIGA].ligada, "a antiga volta a seguir ligada"
@@ -224,7 +240,11 @@ def test_a_atualizacao_sozinha_nao_leva_embora_a_extensao_de_ninguem(
     resultado = instalador.instalar(str(_publicar_a_nova(tmp_path)), lugares=lg, sozinha=True)
     assert resultado.trocou is False
     assert (lg.codigo / ANTIGA).is_dir()
-    assert instalador.ler_registro(lg.registro)[NOVA].versao_esperando == "2.0.0"
+    nova = instalador.ler_registro(lg.registro)[NOVA]
+    assert nova.versao_esperando == "2.0.0"
+    # a frase vai à dica do «Atualizar»: quem usa conhece a extensão pelo nome
+    assert nova.motivo_da_espera == f"A versão 2.0.0 toma o lugar de «Extensão {ANTIGA}».", (
+        nova.motivo_da_espera)
 
 
 # --- a régua do manifesto ------------------------------------------------------------------

@@ -490,14 +490,15 @@ def _parar_as_substituidas(lg: Lugares, ids: Sequence[str]) -> list[str]:
     """
     ligadas: list[str] = []
     for mod_id in ids:
-        if ler_registro(lg.registro)[mod_id].ligada:
+        antiga = ler_registro(lg.registro)[mod_id]
+        if antiga.ligada:
             ligadas.append(mod_id)
             desligar(mod_id, lugares=lg)
         if not esperar_parar(mod_id, lugares=lg):
             for religar in ligadas:
                 _religar_a_que_seguia(lg, religar)
             raise InstalacaoRecusadaError(
-                f"«{mod_id}», que esta extensão substitui, não parou; não troquei nada."
+                f"«{antiga.nome}», que esta extensão substitui, não parou; não troquei nada."
             )
     return ligadas
 
@@ -533,8 +534,11 @@ def _o_que_segura_a_atualizacao(
     if anterior.origem == "oficial" and tipo != "oficial":
         return f"A tag da versão {manifesto.versao} não confere com a chave oficial."
     if a_substituir:
-        # Tirar uma extensão do ar é gesto de quem usa, não de quem atualiza sozinho.
-        return f"A versão {manifesto.versao} toma o lugar de {', '.join(a_substituir)}."
+        # Tirar uma extensão do ar é gesto de quem usa, não de quem atualiza sozinho. A frase vai
+        # à dica do «Atualizar», e quem usa conhece a extensão pelo nome, não pelo id.
+        registro = ler_registro(lg.registro)
+        nomes = ", ".join(f"«{registro[i].nome if i in registro else i}»" for i in a_substituir)
+        return f"A versão {manifesto.versao} toma o lugar de {nomes}."
     return ""
 
 

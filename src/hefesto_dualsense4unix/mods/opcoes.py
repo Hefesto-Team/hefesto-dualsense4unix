@@ -156,7 +156,7 @@ def herdar(manifesto: Manifesto, antigas: Sequence[str], lugares: Lugares) -> di
     feitas = _guardados(manifesto.id, lugares)
     herdadas: dict[str, Valor] = {}
     for opcao in manifesto.opcoes:
-        if opcao.id in feitas:
+        if _escolhida(opcao, feitas):
             continue
         for mod_id in antigas:
             bruto = _guardados(mod_id, lugares)
@@ -168,6 +168,17 @@ def herdar(manifesto: Manifesto, antigas: Sequence[str], lugares: Lugares) -> di
     if herdadas:
         _gravar(manifesto.id, {**feitas, **herdadas}, lugares)
     return herdadas
+
+
+def _escolhida(opcao: Opcao, guardados: dict[str, Any]) -> bool:
+    """O ``guardar`` grava o arquivo inteiro, com o padrão de cada opção que ninguém tocou: só o
+    valor válido e diferente do padrão é escolha de quem usa."""
+    if opcao.id not in guardados:
+        return False
+    try:
+        return validar(opcao, guardados[opcao.id]) != padrao_de(opcao)
+    except InstalacaoRecusadaError:
+        return False
 
 
 __all__ = ["NOME_DO_ARQUIVO", "Valor", "guardar", "herdar", "ler", "padrao_de", "validar"]
