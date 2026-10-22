@@ -68,8 +68,9 @@ DICAS: dict[str, str] = {
     "ressoar": "Um golpe e o grave que ressoa",
     "ricochete": "O golpe quica de um lado ao outro",
 }
-#: As formas de «Criar efeitos novos»: o Ressoar e o Ricochete moram nos dois motores (a cauda no
-#: grave, o quique de um lado ao outro), e o efeito criado escolhe UM motor; por isso ficam fora.
+#: As formas de «Criar efeitos novos». O Ressoar e o Ricochete ficam fora: a forma deles É o
+#: desenho entre os dois motores (a cauda no grave, o quique de um lado ao outro), e o «Esquerdo»
+#: ou o «Direito» do criar a apagaria (o Ressoar no direito é só o golpe).
 FORMAS_DE_CRIAR: tuple[str, ...] = ("batida", "onda", "tranco", "coice", "pancada_do_lado")
 #: O Coice é o recuo: toca quando o dedo solta o gatilho, não quando aperta.
 NA_SOLTURA = frozenset({"coice"})

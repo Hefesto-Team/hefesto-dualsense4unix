@@ -303,7 +303,7 @@ o motor não usa.
 
 **As duas listas da aba Vibração vão no mesmo pedido** (15/10/2026): `efeito_haptico` (a forma do
 toque háptico: toque, impacto, estalo, guarda, aparo, som_no_corpo) e `efeito_imersao` (o padrão dos
-motores: tranco, batida, onda, coice, pancada_do_lado), e as duas aceitam `sem_efeito` e `do_estilo`.
+motores: tranco, batida, onda, coice, pancada_do_lado, ressoar, ricochete), e as duas aceitam `sem_efeito` e `do_estilo`.
 `do_estilo` é o padrão e **apaga** a chave (sem escolha vale o automático, nunca o `sem_efeito`); chave
 que não existe é recusada com a lista das que existem. A leitura volta na resposta; a tela as lê do
 perfil.

@@ -4,8 +4,9 @@ Dois padrões novos no «Padrão dos motores», depois de «Pancada do lado»: o
 dois motores e a cauda só no esquerdo, o grave, caindo em degraus até zero em ~300 ms) e o
 Ricochete (o golpe num lado e a resposta mais fraca no outro, como a bola que quica). A força
 passa pelo funil de sempre (o degrau do estilo, a Bateria longa, as barras de cada motor), nos
-quatro controles, pelo cabo e pelo rádio. A tela só ganha os dois itens na lista, com a dica em
-tooltip; «Criar efeitos novos» não muda.
+quatro controles e nos dois modos em que o Hefesto fala (DualSense e Xbox). O transporte, cabo ou
+rádio, fica abaixo deste funil: a escrita dos motores do controle, a mesma dos outros padrões. A
+tela só ganha os dois itens na lista, com a dica em tooltip; «Criar efeitos novos» não muda.
 """
 from __future__ import annotations
 
@@ -37,8 +38,8 @@ MOCKUP = RAIZ / "mockup/05-vibracao.html"
 NOVOS = ("ressoar", "ricochete")
 # Os quatro controles, um por cor do plástico; a faixa é forjada.
 QUATRO = ("aa:bb:cc:00:00:21", "aa:bb:cc:00:00:22", "aa:bb:cc:00:00:23", "aa:bb:cc:00:00:24")
-_CABO = tv.EstadoDoCanal(modo=tv.MODO_DUALSENSE, ha_jogo=True, sessao_aberta=False)
-_RADIO = tv.EstadoDoCanal(modo=tv.MODO_XBOX, ha_jogo=True, sessao_aberta=False)
+_MODO_DUALSENSE = tv.EstadoDoCanal(modo=tv.MODO_DUALSENSE, ha_jogo=True, sessao_aberta=False)
+_MODO_XBOX = tv.EstadoDoCanal(modo=tv.MODO_XBOX, ha_jogo=True, sessao_aberta=False)
 
 
 # --- a forma de cada um -----------------------------------------------------------------------
@@ -51,7 +52,7 @@ def test_os_dois_entram_depois_da_pancada_do_lado_no_produto_e_no_esquema() -> N
     for chave in NOVOS:
         assert 0 < len(pv.DICAS[chave]) <= 36, chave
         assert ControllerRumbleOverride(efeito_imersao=chave).efeito_imersao == chave
-        assert chave not in pv.FORMAS_DE_CRIAR  # o efeito criado toca num motor só
+        assert chave not in pv.FORMAS_DE_CRIAR  # a forma é o desenho entre os dois motores
 
 
 @pytest.mark.parametrize("chave", NOVOS)
@@ -124,7 +125,7 @@ def _esperado(chave: str, forca: float) -> list[tuple[int, int]]:
     return [(round(d * forca), round(e * forca)) for _ms, e, d in pv.PADROES[chave]]
 
 
-@pytest.mark.parametrize("estado", [_CABO, _RADIO], ids=["cabo", "radio"])
+@pytest.mark.parametrize("estado", [_MODO_DUALSENSE, _MODO_XBOX], ids=["dualsense", "xbox"])
 @pytest.mark.parametrize("forca", [1.0, tv.FORCA_NA_ECONOMIA], ids=["cheia", "bateria-longa"])
 def test_os_quatro_controles_tocam_os_dois_pelo_funil_de_sempre(
     estado: tv.EstadoDoCanal, forca: float,
@@ -138,7 +139,7 @@ def test_os_quatro_controles_tocam_os_dois_pelo_funil_de_sempre(
 
 
 def test_a_bateria_longa_baixa_a_cauda_inteira_e_ela_continua_caindo() -> None:
-    motores = _tocar({QUATRO[0]: "ressoar"}, tv.FORCA_NA_ECONOMIA, _CABO)
+    motores = _tocar({QUATRO[0]: "ressoar"}, tv.FORCA_NA_ECONOMIA, _MODO_DUALSENSE)
     cauda = [forte for _fraco, forte in motores.de(QUATRO[0])[1:]]
     assert cauda[0] == round(200 * tv.FORCA_NA_ECONOMIA)
     assert all(a > b for a, b in pairwise(cauda)) and cauda[-1] == 0

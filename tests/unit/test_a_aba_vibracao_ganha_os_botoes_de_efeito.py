@@ -354,7 +354,7 @@ class TestOTestar:
         assert UNIQ in a05.em_teste()
 
     def test_a_area_de_criar_lista_as_formas_do_produto(self) -> None:
-        """A recusa do «Sentir» sem forma diz as formas de criar (as cinco de um motor só)."""
+        """A recusa do «Sentir» sem forma diz as formas de criar (`FORMAS_DE_CRIAR`)."""
         gesto = pacotes.gesto_da_pagina("05-vibracao.html", "criar-efeito")
         assert gesto is not None
         with pytest.raises(RuntimeError) as erro:
