@@ -338,3 +338,50 @@ def test_a_dica_de_cada_base_nova_cabe_na_coluna_e_comeca_maiuscula() -> None:
         assert frase[0].isupper() and frase.endswith(".") and len(frase) <= 36, frase
         assert "Relâmpago" not in frase or base == "relampago"
     assert set(a04.DICA_DA_BASE) == set(a04.RITMO_DA_BASE) == set(a04.ROTULO_DA_BASE)
+
+
+CHROME = pathlib.Path("/usr/bin/google-chrome")
+#: 940 fica de fora: a janela do produto não desce de 1212 (``LARGURA_DO_DESENHO``), e a 940 a
+#: linha «Criar efeitos novos» já quebrava antes das duas opções (82 px, o miolo com 35 de sobra).
+VISTAS_DA_04 = [(1212, 809), (1272, 860), (1512, 860), (1900, 1000)]
+
+
+@pytest.mark.skipif(not CHROME.exists(), reason="sem o Chrome do sistema: a régua não tem motor")
+def test_a_04_com_as_duas_opcoes_a_mais_nao_rola_na_vertical() -> None:
+    """A linha «Criar efeitos novos» fica numa linha só (com 5 jeitos no lugar de 3) e nada rola."""
+    from playwright.sync_api import sync_playwright
+
+    from hefesto_dualsense4unix.interface.folha_da_casa import seletores_escondidos
+
+    escondidos = "".join(f"{s}{{display:none}}" for s in seletores_escondidos())
+    medir = """() => {
+      const rola = [];
+      for (const e of document.querySelectorAll('*')) {
+        const s = getComputedStyle(e);
+        if ((s.overflowY === 'auto' || s.overflowY === 'scroll')
+            && e.scrollHeight > e.clientHeight + 1) {
+          rola.push((e.className || e.tagName) + ':' + (e.scrollHeight - e.clientHeight));
+        }
+      }
+      const d = document.documentElement;
+      if (d.scrollHeight - window.innerHeight > 1) rola.push('doc');
+      const linha = document.querySelector('.criar-linha').getBoundingClientRect();
+      return {rola, linha: Math.round(linha.height)};
+    }"""
+    achados = []
+    with sync_playwright() as pw:
+        # com a barra de rolagem de verdade (15 px): é ela que a linha de criar tem de aguentar
+        nav = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"],
+                                 ignore_default_args=["--hide-scrollbars"])
+        for larg, alt in VISTAS_DA_04:
+            pg = nav.new_page(viewport={"width": larg, "height": alt})
+            pg.goto(MOCKUP.as_uri())
+            pg.wait_for_load_state("networkidle")
+            pg.add_style_tag(content=escondidos)  # o que o piloto esconde, como o `olhar.py`
+            pg.wait_for_timeout(300)
+            m = pg.evaluate(medir)
+            if m["rola"] or m["linha"] > 50:
+                achados.append((larg, alt, m))
+            pg.close()
+        nav.close()
+    assert not achados, f"a 04 rola ou a linha de criar quebrou: {achados}"
