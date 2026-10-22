@@ -262,7 +262,7 @@ class TriggersConfig(BaseModel):
 
 
 #: As bases do efeito de luz que a pessoa cria na aba Iluminação (A-ABA-ILUMINACAO-DO-TODO-01).
-BASES_DA_LUZ = ("respirar", "piscar", "arco-iris", "batimento", "chama", "mare")  # noqa-acento: chave ASCII
+BASES_DA_LUZ = ("respirar", "piscar", "arco-iris", "batimento", "chama", "mare", "onda", "relampago")  # noqa: E501  # noqa-acento: chave ASCII
 RITMO_MINIMO_DA_LUZ = 1
 RITMO_MAXIMO_DA_LUZ = 10
 RITMO_PADRAO_DA_LUZ = 4

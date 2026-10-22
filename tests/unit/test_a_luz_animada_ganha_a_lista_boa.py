@@ -88,7 +88,8 @@ def _curva(base: str, ritmo: int, semente: int = 0, segundos: float = 24.0):
 
 def test_a_lista_tem_as_tres_novas_e_o_motor_sabe_desenhar_cada_uma() -> None:
     # Prova da D-1510-A-BATIDA-DO-CORACAO-SE-GRAVA-BATIMENTO.
-    assert set(BASES_DA_LUZ) == {"respirar", "piscar", "arco-iris", "batimento", "chama", "mare"}
+    assert set(BASES_DA_LUZ) == {"respirar", "piscar", "arco-iris", "batimento", "chama", "mare",
+                                 "onda", "relampago"}  # as duas últimas: 22/10/2026
     for base in BASES_DA_LUZ:
         texto = f"{base};FF0000;4" if base != "arco-iris" else f"{base};;4"
         efeito = ler_o_efeito_da_luz(texto)

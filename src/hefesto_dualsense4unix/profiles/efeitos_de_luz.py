@@ -29,6 +29,23 @@ BORDA_DO_PISCAR_S = 0.150
 #: Teto do piscar, em lampejos por segundo (WCAG 2.3.1).
 TETO_DO_PISCAR_HZ = 3.0
 PISO_DO_PISCAR_HZ = 0.3
+#: O fundo da Onda: a barra nunca apaga de todo enquanto a crista não chega.
+PISO_DA_ONDA = 0.20
+#: Os LEDs de número do jogador, de um lado ao outro: a crista da Onda corre por eles e a barra
+#: acompanha o do meio.
+LEDS_DA_ONDA = 5
+LED_DO_MEIO_DA_ONDA = LEDS_DA_ONDA // 2
+#: A meia-largura da crista, em LEDs: ela acende o LED que passa e esmaece nos vizinhos.
+MEIA_LARGURA_DA_ONDA = 1.5
+#: O fundo do Relâmpago: o clarão nunca vem do apagado (nem o vermelho alterna com o preto).
+PISO_DO_RELAMPAGO = 0.20
+#: O clarão sobe em cosseno e desce mais devagar; o eco vem logo depois, mais fraco. Duas subidas
+#: por rajada, e a rajada mais curta dura 1,4 s: nunca passa de 3 subidas por segundo (WCAG 2.3.1).
+SUBIDA_DO_RELAMPAGO_S = 0.12
+DESCIDA_DO_RELAMPAGO_S = 0.30
+ECO_DO_RELAMPAGO_S = 0.50
+FORCA_DO_ECO = 0.7
+DESCIDA_DO_ECO_S = 0.25
 #: A chama passeia entre estes dois brilhos.
 PISO_DA_CHAMA = 0.6
 TETO_DA_CHAMA = 1.0
@@ -107,6 +124,16 @@ def periodo_da_mare_s(ritmo: int) -> float:
     return _entre_ritmos(ritmo, 16.0, 8.0)
 
 
+def periodo_da_onda_s(ritmo: int) -> float:
+    """Uma passada da crista pelos cinco LEDs: de 6 s no ritmo 1 a 1,5 s no ritmo 10."""
+    return _entre_ritmos(ritmo, 6.0, 1.5)
+
+
+def periodo_do_relampago_s(ritmo: int) -> float:
+    """De um clarão ao seguinte: de 7 s no ritmo 1 a 1,4 s no ritmo 10."""
+    return _entre_ritmos(ritmo, 7.0, 1.4)
+
+
 def brilho_do_respirar(t: float, periodo_s: float) -> float:
     """Cosseno de piso 0,08: o fundo em ``t = 0`` e o topo no meio do período."""
     fase = (t / periodo_s) % 1.0
@@ -145,6 +172,46 @@ def brilho_da_batida(t: float, periodo_s: float) -> float:
     x = (t / periodo_s) % 1.0
     pico = max(_lombada(x, 0.10, 0.10), 0.8 * _lombada(x, 0.34, 0.10))
     return PISO_DA_BATIDA + (1.0 - PISO_DA_BATIDA) * pico
+
+
+def brilho_da_onda(t: float, periodo_s: float, led: int = LED_DO_MEIO_DA_ONDA) -> float:
+    """O brilho do LED ``led`` (0 a 4) quando a crista corre da ponta 0 à ponta 4 em ``periodo_s``.
+
+    A crista entra pela esquerda, atravessa os cinco LEDs e sai pela direita; o fundo é
+    ``PISO_DA_ONDA``. A barra acompanha o LED do meio (o padrão): uma subida por passada.
+    """
+    fase = (t / periodo_s) % 1.0
+    curso = LEDS_DA_ONDA - 1 + 2 * MEIA_LARGURA_DA_ONDA
+    crista = -MEIA_LARGURA_DA_ONDA + fase * curso
+    return PISO_DA_ONDA + (1.0 - PISO_DA_ONDA) * _lombada(led, crista, MEIA_LARGURA_DA_ONDA)
+
+
+def brilhos_da_onda(t: float, periodo_s: float) -> tuple[float, ...]:
+    """O brilho de cada um dos cinco LEDs do jogador no instante ``t``, da esquerda à direita."""
+    return tuple(brilho_da_onda(t, periodo_s, led) for led in range(LEDS_DA_ONDA))
+
+
+def _clarao(x: float, subida_s: float, descida_s: float) -> float:
+    """Um clarão de 0 a 1: sobe em cosseno em ``subida_s`` e desce em ``descida_s``; zero fora."""
+    if x < 0.0 or x >= subida_s + descida_s:
+        return 0.0
+    if x < subida_s:
+        return _suave(x / subida_s)
+    return 1.0 - _suave((x - subida_s) / descida_s)
+
+
+def brilho_do_relampago(t: float, periodo_s: float) -> float:
+    """O clarão e o seu eco, de borda suave, sobre o piso 0,20; depois o escuro até a próxima.
+
+    Duas subidas por rajada (o clarão e, ``ECO_DO_RELAMPAGO_S`` depois, um eco a 70%). É o estrobo
+    dentro da regra da casa: nunca vai ao preto e nunca passa de 3 subidas por segundo.
+    """
+    x = t % periodo_s
+    pico = max(
+        _clarao(x, SUBIDA_DO_RELAMPAGO_S, DESCIDA_DO_RELAMPAGO_S),
+        FORCA_DO_ECO * _clarao(x - ECO_DO_RELAMPAGO_S, SUBIDA_DO_RELAMPAGO_S, DESCIDA_DO_ECO_S),
+    )
+    return PISO_DO_RELAMPAGO + (1.0 - PISO_DO_RELAMPAGO) * pico
 
 
 _MASCARA_64 = (1 << 64) - 1
@@ -272,9 +339,10 @@ def cor_no_instante(
 
     ``posicao`` é o lugar do controle na mesa (0 a 3): só o arco-íris a usa, para defasar um
     quarto de volta por controle. ``semente`` é do controle: só a chama a usa. O respirar, o
-    piscar e a batida usam uma cor por ciclo, em ordem; a chama e a maré, a primeira cor; o
-    arco-íris ignora as cores. ``amplitude`` (0 a 1) encurta os 30 graus da
-    Maré (ver :func:`amplitude_da_mare`).
+    piscar, a batida, a onda e o relâmpago usam uma cor por ciclo, em ordem; a chama e a maré, a
+    primeira cor; o arco-íris ignora as cores. ``amplitude`` (0 a 1) encurta os 30 graus da
+    Maré (ver :func:`amplitude_da_mare`). A onda, no daemon, é só da barra (o LED do meio);
+    ``brilhos_da_onda`` desenha os cinco LEDs do jogador para quando o quadro único os levar.
     """
     if efeito.base == "arco-iris":  # (noqa-acento) chave ASCII
         r, g, b = colorsys.hsv_to_rgb(matiz_do_arco_iris(t, efeito.ritmo, posicao), 1.0, 1.0)
@@ -293,6 +361,14 @@ def cor_no_instante(
         periodo = periodo_da_batida_s(efeito.ritmo)
         cor = cores[int(t / periodo) % len(cores)]
         return _escalar(cor, brilho_da_batida(t, periodo))
+    if efeito.base == "onda":
+        periodo = periodo_da_onda_s(efeito.ritmo)
+        cor = cores[int(t / periodo) % len(cores)]
+        return _escalar(cor, brilho_da_onda(t, periodo))
+    if efeito.base == "relampago":
+        periodo = periodo_do_relampago_s(efeito.ritmo)
+        cor = cores[int(t / periodo) % len(cores)]
+        return _escalar(cor, brilho_do_relampago(t, periodo))
     if efeito.base == "piscar":
         hz = frequencia_do_piscar_hz(efeito.ritmo)
         periodo = 1.0 / hz
@@ -311,11 +387,15 @@ __all__ = [
     "BORDA_DO_PISCAR_S",
     "DEFASAGEM_DO_ARCO_IRIS",
     "ESTADOS_DE_CARGA_EM_DIA",
+    "LEDS_DA_ONDA",
+    "LED_DO_MEIO_DA_ONDA",
     "LIMIAR_DE_BATERIA_PCT",
     "MEIO_VAIVEM_DO_ACENDE_S",
     "PISO_DA_BATIDA",
+    "PISO_DA_ONDA",
     "PISO_DO_ACENDE",
     "PISO_DO_PISCAR",
+    "PISO_DO_RELAMPAGO",
     "PISO_DO_RESPIRAR",
     "RITMO_DA_BATERIA",
     "TETO_DO_ACENDE_POR_S",
@@ -326,16 +406,21 @@ __all__ = [
     "bateria_acabando",
     "brilho_da_batida",
     "brilho_da_chama",
+    "brilho_da_onda",
     "brilho_do_acende",
     "brilho_do_piscar",
+    "brilho_do_relampago",
     "brilho_do_respirar",
+    "brilhos_da_onda",
     "cor_no_instante",
     "deslocamento_da_mare",
     "frequencia_do_piscar_hz",
     "matiz_do_arco_iris",
     "periodo_da_batida_s",
     "periodo_da_mare_s",
+    "periodo_da_onda_s",
     "periodo_do_arco_iris_s",
+    "periodo_do_relampago_s",
     "periodo_do_respirar_s",
     "troca_da_chama_s",
 ]
