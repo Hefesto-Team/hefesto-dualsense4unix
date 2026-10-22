@@ -52,10 +52,10 @@
       "universo": 411
     },
     "remendos-de-sintoma": {
-      "data": "2026-10-21",
+      "data": "2026-10-22",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 985,
+      "piso": 973,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -175,11 +175,8 @@
         "interface/aba09.py": 1,
         "interface/arranjo_desta_maquina.py": 2,
         "interface/cartao_do_controle.py": 5,
-        "interface/conexoes_vivas.py": 1,
         "interface/controles_vivos.py": 2,
-        "interface/exportar.py": 1,
         "interface/hefesto_vivo.py": 4,
-        "interface/jogar_vivo.py": 1,
         "interface/pacotes/__init__.py": 2,
         "interface/pacotes/a01_jogar.py": 3,
         "interface/pacotes/a02_controles.py": 5,
@@ -193,10 +190,7 @@
         "interface/pacotes/a10_perfis.py": 2,
         "interface/pacotes/perfil.py": 4,
         "interface/pacotes/rodape.py": 1,
-        "interface/perfis_vivos.py": 1,
-        "interface/regua.py": 1,
         "interface/regua_do_mockup.py": 4,
-        "interface/sistema_viva.py": 7,
         "mods/porta.py": 2,
         "profiles/loader.py": 38,
         "profiles/manager.py": 2,
@@ -245,7 +239,7 @@
         }
       ],
       "unidade": "remendos",
-      "universo": 411
+      "universo": 395
     },
     "tamanho": {
       "data": "2026-10-20",
