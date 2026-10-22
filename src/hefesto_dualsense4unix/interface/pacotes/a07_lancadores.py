@@ -216,7 +216,9 @@ class _Vigia:
             if self._em_curso:
                 return
             self._em_curso = True
-        fios.soltar("hefesto-lancadores", self._corpo)
+        fios.soltar(
+            "hefesto-lancadores", self._corpo
+        )
 
     def _corpo(self) -> None:
         try:
@@ -1297,7 +1299,8 @@ class _Agora:
                 self._em_curso = True
             mod, ponte, estado = self._mod, self._ponte, self._estado
         if precisa:
-            fios.soltar("hefesto-agora", self._corpo, mod, ponte)
+            fios.soltar("hefesto-agora", self._corpo,
+                        mod, ponte)
         return estado
 
     def _corpo(self, mod: str, ponte: Any) -> None:
