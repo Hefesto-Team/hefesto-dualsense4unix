@@ -64,6 +64,13 @@ def _perfil_ativo_no_disco() -> None:
     # novo a cada prova: o que uma prova grava não decide o que a seguinte chama
     for nome in ("regua", "Bancada"):
         loader.save_profile(Profile(name=nome, match=MatchManual()), origem="regua")
+    # O rascunho da sessão (o que o gesto anterior aplicou ao gatilho) é do módulo e viveria até a
+    # prova seguinte: a Imersão fica no acionamento que o gatilho tem agora (D-2210-O-GATILHO-SO-
+    # TEM-O-EFEITO), e o `Vibration` que a prova do «modo» deixou mudaria o que ela chama.
+    for _, mod in _pacotes():
+        esquecer = getattr(mod, "esquecer_o_rascunho", None)
+        if callable(esquecer):
+            esquecer()
 
 
 @pytest.fixture(scope="module")
