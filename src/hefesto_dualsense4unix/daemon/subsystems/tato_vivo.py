@@ -30,6 +30,7 @@ from hefesto_dualsense4unix.daemon.lifecycle import (
     o_hefesto_fala_no_modo,
 )
 from hefesto_dualsense4unix.daemon.subsystems import padroes_de_vibracao
+from hefesto_dualsense4unix.daemon.subsystems.intensidade_da_cena import IntensidadeDaCena
 from hefesto_dualsense4unix.integrations.classe_do_rumble import calado
 from hefesto_dualsense4unix.profiles import formas_de_haptica
 from hefesto_dualsense4unix.profiles.efeitos_de_imersao import (
@@ -534,6 +535,9 @@ class TatoVivo:
         self.volta: Any = None
         #: os meus toques (a vibração a cada entrada de quem joga); anda sem receita
         self.meus_toques: Any = None
+        #: a intensidade da cena (A-INTENSIDADE-DA-CENA-REGE-O-QUE-O-HEFESTO-SOMA-01): conta as
+        #: bordas de cada tique e gradua só o que o Hefesto soma
+        self.cena = IntensidadeDaCena()
 
     def anotar(self, evento: Evento) -> None:
         """Põe um evento na fila. Chamável de qualquer thread."""
@@ -570,6 +574,7 @@ class TatoVivo:
         with self._lock:
             eventos = list(self._fila)
             self._fila.clear()
+        self.cena.contar(eventos)
         for atuador in self.atuadores:
             # O atuador que olha o tique inteiro (o ritmo do gatilho) ouve antes de
             # responder: os dois lados de um controle no mesmo tique viram uma escrita.
@@ -682,6 +687,7 @@ class TatoVivo:
             "ligado": self.ligado,
             "pendentes": len(self._pendentes),
             **self.contadores,
+            "intensidade_da_cena": self.cena.estado(),
         }
 
 
@@ -990,8 +996,11 @@ class AtuadorDaHaptica:
         na_economia: Callable[[str], bool] | None = None,
         nota_de: Callable[[str], int | None] | None = None,
         acordada: Callable[[str], bool] | None = None,
+        fator: Callable[[], float] | None = None,
     ) -> None:
         self._tocar = tocar
+        #: o fator da intensidade da cena sobre o toque que o Hefesto soma (1,0 sem graduar)
+        self._fator = fator or (lambda: 1.0)
         #: a fonte do som acordada neste controle (o jogo cala e a pessoa joga)
         self._acordada = acordada or (lambda uniq: False)
         self._ouvindo = ouvindo or (lambda: False)
@@ -1044,7 +1053,7 @@ class AtuadorDaHaptica:
             return None
         pedido = (
             evento.uniq,
-            evento.energia * receita.forca_do_toque,
+            evento.energia * receita.forca_do_toque * self._fator(),
             evento.lado,
             receita.duracao_do_toque_ms,
         )
@@ -2678,6 +2687,12 @@ def _na_barra(valor: int, pontos: int) -> int:
     return max(0, min(255, round(valor * pontos / 100.0)))
 
 
+def fator_da_cena(daemon: Any) -> float:
+    """O fator da intensidade da cena sobre o que o Hefesto soma; 1,0 sem o motor."""
+    motor = motor_do(daemon)
+    return 1.0 if motor is None else motor.cena.fator(estilo_ativo(daemon))
+
+
 def atuadores_de_producao(daemon: Any) -> list[Atuador]:
     """Os canais que o motor sabe escrever hoje."""
     from hefesto_dualsense4unix.daemon.subsystems.chegada import nota_da_unidade
@@ -2760,7 +2775,8 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
 
         chave = estilo_ativo(daemon)
         degrau = FORCA_DO_DEGRAU.get(getattr(POR_CHAVE.get(chave or ""), "vibracao", ""), 1.0)
-        return min(degrau, FORCA_NA_ECONOMIA) if na_economia(uniq) else degrau
+        forca = min(degrau, FORCA_NA_ECONOMIA) if na_economia(uniq) else degrau
+        return forca * fator_da_cena(daemon)
 
     def motores(uniq: str, fraco: int, forte: int) -> object:
         escrever = getattr(controller, "set_rumble_for", None)
@@ -2813,7 +2829,8 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
     return [
         AtuadorDaHaptica(
             tocar, ouvindo, escolha_de, lambda: estilo_ativo(daemon), na_economia,
-            lambda uniq: nota_da_unidade(daemon, uniq), acordada),
+            lambda uniq: nota_da_unidade(daemon, uniq), acordada,
+            lambda: fator_da_cena(daemon)),
         AtuadorDoSom(estalo),
         AtuadorDoGatilho(
             gatilho,
@@ -2897,7 +2914,9 @@ class Passo:
         return self.receita_vigente
 
     def alimentar_o_corpo(self, pcm: bytes) -> None:
-        """Chamado na thread do ouvido: o PCM do jogo vira o grave, se alguém o quer."""
+        """Chamado na thread do ouvido: o PCM do jogo vira o grave, se alguém o quer, e a energia
+        do som vai à intensidade da cena."""
+        self.motor.cena.ouvir_o_som(pcm)
         if self.receita_vigente.som_no_corpo_escolhido or self._corpo_discreto:
             self._corpo.append(self._filtro_do_corpo.processar(pcm))
 
@@ -2933,6 +2952,9 @@ class Passo:
         levar = getattr(alto_falante, "tocar_o_corpo", None)
         if not callable(levar):
             return
+        fator = fator_da_cena(self.daemon)
+        if fator != 1.0:  # a cena gradua o corpo que o Hefesto soma; o grave do jogo fica como é
+            amostras = array("f", [x * fator for x in amostras])
         for uniq in donos:
             levar(uniq, amostras)
         if discretos:
@@ -3062,6 +3084,7 @@ class Passo:
             self.motor.ligado = False
             self._aberta_em.clear()
             self.motor.acordados_pelo_som = self._corpo_discreto = frozenset()
+            self.motor.cena.esquecer()
             return 0
         self.motor.ligado = True
         controles = controles_do_daemon(self.daemon)
@@ -3083,6 +3106,9 @@ class Passo:
         }
         self._acordar_a_fonte_do_som(receita, controles, jogo, por_uniq.get, agora)
         escritas = self.motor.tique(agora, por_uniq.get, receita, uniqs=tuple(por_uniq))
+        self.motor.cena.andar(
+            agora, jogo=jogo, ouvido=bool(getattr(self.motor.ouvido, "ouvindo", False)),
+            uniqs=tuple(por_uniq))
         self._levar_o_corpo(receita, tuple(por_uniq), por_uniq.get)
         self._agora_da_continua = agora
         vpads = {c.uniq: c.vpad for c in controles}
@@ -3247,6 +3273,7 @@ __all__ = [
     "escolhas_de_imersao_ativas",
     "escolhas_do_perfil",
     "estilo_ativo",
+    "fator_da_cena",
     "fica_no_degrau",
     "meus_toques_ativos",
     "modo_do_pad",

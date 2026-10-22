@@ -1914,6 +1914,15 @@ class IpcHandlersMixin:
 
         result["som_do_sistema"] = som_do_sistema_payload(self.daemon)
 
+        # A-INTENSIDADE-DA-CENA-REGE-O-QUE-O-HEFESTO-SOMA-01: a bancada lê a cena ao vivo
+        result["intensidade_da_cena"] = None
+        with contextlib.suppress(Exception):
+            from hefesto_dualsense4unix.daemon.subsystems.intensidade_da_cena import (
+                estado_do_daemon,
+            )
+
+            result["intensidade_da_cena"] = estado_do_daemon(self.daemon)
+
         # `keyboard_emulation` acima, porque é o mesmo gate do poll loop.
         daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
         if daemon_cfg is not None:

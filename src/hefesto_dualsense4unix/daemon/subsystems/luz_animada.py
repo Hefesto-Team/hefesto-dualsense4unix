@@ -93,6 +93,11 @@ RELEITURA_DA_CARGA_S = 2.0
 #: As duas luzes que o estilo pede e o perfil não guarda (``leds.efeito`` só tem as seis bases).
 REACAO_ACENDE = "acende"
 REACAO_BATERIA = "bateria"
+#: As bases cujo ritmo a intensidade da cena gradua (A-INTENSIDADE-DA-CENA-REGE-O-QUE-O-HEFESTO-
+#: SOMA-01): a luz que respira vai do ritmo mais lento, na cena calma, ao do efeito, no combate.
+BASES_QUE_RESPIRAM = frozenset({"respirar"})
+#: Quanto a luz que respira anda, pelo ritmo do efeito: ``1,0`` é o relógio de sempre.
+VelocidadeDoRespirar = Callable[[int], float]
 
 
 @dataclass(frozen=True)
@@ -234,6 +239,10 @@ class LuzAnimada:
         #: O relógio da mesa: nasce com o primeiro controle que toca e morre com o último. O
         #: arco-íris e a Maré contam por ele, senão quem entrou depois desfaz a defasagem.
         self._origem: float | None = None
+        #: O relógio da luz que respira quando a cena a desacelera: ``(tempo andado, último
+        #: instante)``. Nasce só na primeira vez que a velocidade fica abaixo de 1,0 e segue até o
+        #: efeito parar, para a troca de faixa não pular a fase da respiração.
+        self._relogio_da_cena: dict[str, tuple[float, float]] = {}
 
     @property
     def tocando(self) -> frozenset[str]:
@@ -245,11 +254,13 @@ class LuzAnimada:
         plano: Mapping[str, PlanoDoControle],
         calados: frozenset[str] = frozenset(),
         pausados: frozenset[str] = frozenset(),
+        velocidade_do_respirar: VelocidadeDoRespirar | None = None,
     ) -> int:
         """Escreve o quadro de cada controle que toca; devolve quantos quadros saíram.
 
         ``calados`` param e devolvem a barra; ``pausados`` só deixam de escrever (outro dono a
         segura por um instante) e, na volta, o primeiro quadro sai mesmo igual ao último.
+        ``velocidade_do_respirar`` é a da intensidade da cena (``None``: o relógio de sempre).
         """
         for uniq in [u for u in self._inicio if u not in plano or u in calados]:
             self.parar(uniq)
@@ -275,8 +286,13 @@ class LuzAnimada:
                 desenhado = self._quadro_da_mao(uniq, dele, agora)
                 cor, luzinhas = desenhado.cor, desenhado.luzinhas
             else:
+                tempo = agora - inicio
+                if dele.efeito.base in BASES_QUE_RESPIRAM:
+                    velocidade = (1.0 if velocidade_do_respirar is None
+                                  else velocidade_do_respirar(dele.efeito.ritmo))
+                    tempo = self._tempo_da_cena(uniq, agora, inicio, velocidade)
                 cor = cor_no_instante(
-                    dele.efeito, agora - inicio, dele.posicao, dele.semente, dele.amplitude
+                    dele.efeito, tempo, dele.posicao, dele.semente, dele.amplitude
                 )
             quadro = cor_com_o_brilho(cor, dele.brilho)
             com_luzinhas = dele.efeito.base in BASES_COM_LUZINHAS
@@ -295,6 +311,18 @@ class LuzAnimada:
                 self._escrever(uniq, quadro)
             escritos += 1
         return escritos
+
+    def _tempo_da_cena(self, uniq: str, agora: float, inicio: float, velocidade: float) -> float:
+        """O tempo da luz que respira, andando à ``velocidade`` da cena (nunca acima de 1,0)."""
+        relogio = self._relogio_da_cena.get(uniq)
+        if relogio is None:
+            if velocidade >= 1.0:
+                return agora - inicio  # a cena não desacelera: o relógio de sempre, intocado
+            relogio = (agora - inicio, agora)
+        andado, antes = relogio
+        andado += max(0.0, agora - antes) * min(1.0, max(0.0, velocidade))
+        self._relogio_da_cena[uniq] = (andado, agora)
+        return andado
 
     def _quadro_da_mao(self, uniq: str, dele: PlanoDoControle, agora: float) -> Quadro:
         """O quadro dos efeitos de estado: o estado É do controle e só lê o dado dele."""
@@ -336,6 +364,7 @@ class LuzAnimada:
         self._ultimo_quadro.pop(uniq, None)
         self._escrito_em.pop(uniq, None)
         self._estados_da_mao.pop(uniq, None)
+        self._relogio_da_cena.pop(uniq, None)
         self._luzinhas_fora.discard(uniq)
         if not self._inicio:
             self._origem = None
@@ -563,7 +592,17 @@ class Passo:
             for c in controles
             if c.uniq in plano and not self._o_hefesto_pode_pintar(c, jogo)
         )
-        return self.luz.tique(agora, plano, calados, self._quem_tem_outro_dono())
+        return self.luz.tique(
+            agora, plano, calados, self._quem_tem_outro_dono(),
+            velocidade_do_respirar=self._velocidade_do_respirar())
+
+    def _velocidade_do_respirar(self) -> VelocidadeDoRespirar | None:
+        """A velocidade da luz que respira pela intensidade da cena do tato; ``None`` sem ele."""
+        motor = motor_do(self.daemon)
+        if motor is None or not motor.ligado:
+            return None
+        estilo = estilo_ativo(self.daemon)
+        return lambda ritmo: motor.cena.velocidade_da_luz(ritmo, estilo)
 
     def _cores_base(self, controles: list[Any]) -> dict[str, RGB]:
         """A cor que a barra tem agora em cada controle (já no brilho do perfil)."""
@@ -692,6 +731,7 @@ def start_luz_animada(daemon: Any) -> None:
 
 
 __all__ = [
+    "BASES_QUE_RESPIRAM",
     "INTERVALO_MINIMO",
     "TETO_DO_PISCAR_HZ",
     "EscritorDoQuadro",
