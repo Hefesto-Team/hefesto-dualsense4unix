@@ -119,6 +119,7 @@ def _publicar_a_nova(tmp_path: Path, **mais: Any) -> Path:
 
 def test_a_escolha_que_a_nova_aceita_passa_e_a_que_nao_aceita_fica_no_padrao(
         lg: Lugares, tmp_path: Path, antiga_com_escolhas: None) -> None:
+    # D-2210-A-LOVENSE-E-UMA-EXTENSAO-SO.
     _nova_que_ja_estava(lg, tmp_path, ligada=False)
     instalador.instalar(str(_publicar_a_nova(tmp_path)), lugares=lg)
     nova = instalador.manifesto_instalado(NOVA, lugares=lg)

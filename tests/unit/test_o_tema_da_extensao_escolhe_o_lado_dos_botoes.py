@@ -138,6 +138,7 @@ def test_o_lado_da_extensao_vale_com_o_tema_ligado(tmp_path: Path) -> None:
 
 
 def test_cada_escolha_se_liga_a_sua_opcao(tmp_path: Path) -> None:
+    # D-2210-O-LADO-DOS-BOTOES-E-DO-TEMA.
     lg = _lugares(tmp_path)
     _instalada(lg, "claro", BLOCO)
     _escolher(lg, "claro", "botoes_a_esquerda", False)
