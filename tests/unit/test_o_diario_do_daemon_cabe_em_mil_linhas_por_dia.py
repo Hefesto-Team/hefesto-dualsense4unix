@@ -6,9 +6,11 @@ rotina que deu certo, o estado de novo dito e o inventário da subida) e com a j
 nos laços lentos, ficam 8.498. Aqui o dia é sintético, para valer num clone limpo.
 
 MORDIDAS:
-  * tire o `desce_o_estado_normal` da `cadeia_do_diario`: o dia passa de mil linhas;
+  * tire o `desce_o_estado_normal` da `cadeia_do_diario`: a régua da cadeia reprova;
+  * esvazie a tabela do estado normal: o dia passa de mil linhas;
   * deixe a largura da janela fixa: o laço lento de 70 s volta a escrever uma linha por volta;
-  * ponha `daemon_starting` na tabela do estado normal: a régua do leitor reprova.
+  * ponha `daemon_starting` ou `uhid_motion_streaming` na tabela do estado normal: a régua do
+    leitor reprova (o segundo é lido por `docs/protocol/`).
 """
 from __future__ import annotations
 
@@ -17,6 +19,7 @@ import io
 import logging
 import re
 from collections.abc import Callable, Iterator
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
@@ -128,7 +131,8 @@ def test_o_configure_logging_grava_o_nivel_que_a_cadeia_le(monkeypatch: pytest.M
 
 
 def _fontes() -> Iterator[tuple[Path, str]]:
-    alvos = (("src/hefesto_dualsense4unix", ("*.py",)), ("scripts", ("*.py", "*.sh")))
+    alvos = (("src/hefesto_dualsense4unix", ("*.py",)), ("scripts", ("*.py", "*.sh")),
+             ("docs/protocol", ("*.md",)), ("docs/method", ("*.md",)), ("docs/usage", ("*.md",)))
     for pasta, padroes in alvos:
         for padrao in padroes:
             for arquivo in (RAIZ / pasta).rglob(padrao):
@@ -152,13 +156,16 @@ def _lidos_por_outro(nomes: set[str]) -> dict[str, list[str]]:
 
 
 def test_o_estado_normal_nao_tem_leitor_no_diario() -> None:
-    """Descer ao debug um evento que o doctor, o pad_usb ou um ensaio leem os deixa cegos."""
+    """Descer ao debug um evento que o doctor, o pad_usb, um ensaio ou uma medição do protocolo
+    leem os deixa cegos."""
     assert _lidos_por_outro(set(lc.EVENTOS_DE_ESTADO_NORMAL)) == {}
 
 
 def test_a_regua_do_leitor_morde() -> None:
-    lidos = _lidos_por_outro({"daemon_starting", "vpad_parou", "som_radio_ponte_de_pe"})
-    assert set(lidos) == {"daemon_starting", "vpad_parou", "som_radio_ponte_de_pe"}, lidos
+    nomes = {"daemon_starting", "vpad_parou", "som_radio_ponte_de_pe", "uhid_motion_streaming"}
+    lidos = _lidos_por_outro(nomes)
+    assert set(lidos) == nomes, lidos
+    assert any(f.startswith("docs/protocol/") for f in lidos["uhid_motion_streaming"]), lidos
 
 
 def test_o_estado_normal_e_a_rajada_nao_se_misturam() -> None:
@@ -199,7 +206,9 @@ def test_a_janela_dobra_ate_o_teto_e_volta_ao_normal_depois_do_silencio() -> Non
         janela = next(iter(mesa.agregado._janelas.values()))
         larguras.append(janela.largura)
     assert larguras[0] == lc.JANELA_DO_AGREGADO_S
-    assert larguras[:4] == [60.0, 120.0, 120.0, 120.0] or max(larguras) > 60.0, larguras
+    assert larguras == sorted(larguras), f"a janela encolheu sem silêncio: {larguras}"
+    assert all(b in (a, 2 * a) for a, b in pairwise(larguras)), larguras
+    assert larguras[:4] == [60.0, 120.0, 120.0, 240.0], larguras
     assert max(larguras) <= lc.JANELA_MAXIMA_DO_AGREGADO_S
     assert max(larguras) > lc.JANELA_DO_AGREGADO_S, "a janela não dobrou"
     mesa.fim()

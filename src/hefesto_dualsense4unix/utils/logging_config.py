@@ -148,7 +148,9 @@ _MARCA_DO_AGREGADO = "_agregado"
 #: e o inventário da subida. Desce ao debug (22/10/2026, D-2210-O-DIARIO-CABE-EM-MIL-LINHAS):
 #: no syslog de 18/10 a 21/10 eram 34.837 linhas do daemon, 76 subidas. O aviso e o erro
 #: do mesmo nome seguem escritos, e `HEFESTO_DUALSENSE4UNIX_LOG_LEVEL=DEBUG` devolve tudo.
-#: NUNCA entra aqui evento que outro código lê no diário (régua: só o emissor conhece o nome).
+#: NUNCA entra aqui evento que outro código, um documento de protocolo ou uma bancada lê no
+#: diário (régua: só o emissor conhece o nome): `uhid_motion_streaming` é a prova do degrau 2
+#: do giro pelo rádio, e `game_trigger_provou` é o que a bancada do gatilho conta.
 EVENTOS_DE_ESTADO_NORMAL: frozenset[str] = frozenset({
     # a janela em foco, dita a cada troca
     "autoswitch_fica_no_ultimo_jogo", "autoswitch_janela_propria_ignorada",
@@ -161,8 +163,8 @@ EVENTOS_DE_ESTADO_NORMAL: frozenset[str] = frozenset({
     "speaker_reaplicado_no_connect", "mic_reaplicado_no_connect", "volume_padrao_na_adocao",
     "som_do_sistema_mudou",
     # a conta de cada jogo e a ponte do rádio
-    "game_session_devolvida", "game_trigger_provou", "mascara_do_perfil_convergiu",
-    "haptica_do_cabo_portao", "uhid_motion_streaming", "som_gravador_alvo_nao_conferido",
+    "game_session_devolvida", "mascara_do_perfil_convergiu",
+    "haptica_do_cabo_portao", "som_gravador_alvo_nao_conferido",
     "som_radio_gravador_colhido", "haptica_radio_gravador_colhido", "som_radio_fonte_secou",
     "som_ponte_ociosa_descida", "som_sink_publicado", "som_sink_removido", "som_no_derrubado",
     "bt_mic_source_publicada", "bt_mic_source_removida",
