@@ -245,14 +245,14 @@
       "data": "2026-10-22",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1177150,
+      "piso": 1178222,
       "por_item": {
-        "docs": 120376,
+        "docs": 120384,
         "scripts": 119950,
-        "src": 314591,
-        "tests": 622233
+        "src": 314957,
+        "tests": 622931
       },
-      "razao": "tamanho: +328 linhas (1176822 -> 1177150), pagas por Origem: D-2210-O-PREFIXO-ESQUECE-O-CONTROLE-XINPUT-QUE-SE-FOI; registrado no fecho, topo ad087c0d5b30",
+      "razao": "tamanho: +1072 linhas (1177150 -> 1178222), pagas por Origem: D-2210-A-LOVENSE-E-UMA-EXTENSAO-SO, D-2210-O-LADO-DOS-BOTOES-E-DO-TEMA; registrado no fecho, topo 77d5c0675b56",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -769,10 +769,16 @@
           "de": 1176822,
           "para": 1177150,
           "razao": "tamanho: +328 linhas (1176822 -> 1177150), pagas por Origem: D-2210-O-PREFIXO-ESQUECE-O-CONTROLE-XINPUT-QUE-SE-FOI; registrado no fecho, topo ad087c0d5b30"
+        },
+        {
+          "data": "2026-10-22",
+          "de": 1177150,
+          "para": 1178222,
+          "razao": "tamanho: +1072 linhas (1177150 -> 1178222), pagas por Origem: D-2210-A-LOVENSE-E-UMA-EXTENSAO-SO, D-2210-O-LADO-DOS-BOTOES-E-DO-TEMA; registrado no fecho, topo 77d5c0675b56"
         }
       ],
       "unidade": "linhas",
-      "universo": 3080
+      "universo": 3082
     }
   }
 }

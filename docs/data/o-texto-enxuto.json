@@ -5,7 +5,7 @@
       "data": "2026-10-22",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 53883,
+      "piso": 53950,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -201,7 +201,7 @@
         "interface/desenho_dos_lancadores.py": 1030,
         "interface/frases_que_ela_baniu.py": 94,
         "interface/hefesto_vivo.py": 496,
-        "interface/janela.py": 167,
+        "interface/janela.py": 186,
         "interface/mesa_viva.py": 256,
         "interface/monta.py": 279,
         "interface/navegacao_interna.py": 66,
@@ -225,11 +225,11 @@
         "interface/pagina_do_mapa.py": 272,
         "interface/regua_do_mockup.py": 170,
         "interface/sistema.py": 113,
-        "mods/instalador.py": 115,
-        "mods/manifesto.py": 75,
+        "mods/instalador.py": 124,
+        "mods/manifesto.py": 79,
         "mods/porta.py": 114,
         "mods/supervisor.py": 117,
-        "mods/tema.py": 53,
+        "mods/tema.py": 71,
         "profiles/autoswitch.py": 135,
         "profiles/curva_propria.py": 49,
         "profiles/efeitos_de_imersao.py": 88,
@@ -249,7 +249,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +15 linhas (53868 -> 53883), pagas por Origem: D-2210-O-PREFIXO-ESQUECE-O-CONTROLE-XINPUT-QUE-SE-FOI; registrado no fecho, topo ad087c0d5b30",
+      "razao": "texto-em-src: +67 linhas (53883 -> 53950), pagas por Origem: D-2210-A-LOVENSE-E-UMA-EXTENSAO-SO, D-2210-O-LADO-DOS-BOTOES-E-DO-TEMA; registrado no fecho, topo 77d5c0675b56",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -376,6 +376,12 @@
           "de": 53868,
           "para": 53883,
           "razao": "texto-em-src: +15 linhas (53868 -> 53883), pagas por Origem: D-2210-O-PREFIXO-ESQUECE-O-CONTROLE-XINPUT-QUE-SE-FOI; registrado no fecho, topo ad087c0d5b30"
+        },
+        {
+          "data": "2026-10-22",
+          "de": 53883,
+          "para": 53950,
+          "razao": "texto-em-src: +67 linhas (53883 -> 53950), pagas por Origem: D-2210-A-LOVENSE-E-UMA-EXTENSAO-SO, D-2210-O-LADO-DOS-BOTOES-E-DO-TEMA; registrado no fecho, topo 77d5c0675b56"
         }
       ],
       "unidade": "linhas",
