@@ -171,6 +171,8 @@ SIGLA = frozenset({
     "HTTP", "IP", "PS5", "II",
     # o estilo «Souls/RPG» da aba Perfis (20/10): RPG é a sigla de «role-playing game»
     "RPG",
+    # «Usar o meu CSS» da janela Configurar do tema (22/10): CSS é a sigla de «Cascading Style Sheets»
+    "CSS",
 })
 
 DIVIDA: dict[str, tuple[str, str]] = {}
