@@ -361,6 +361,18 @@ NAO_SAO_DIVIDA: dict[str, str] = {
     "tests/unit/test_todo_gesto_que_grava_esta_protegido.py::DE_FORA_DO_PRODUTO": (
         "os nomes de `ESCREVEM` que são método de biblioteca (a GTK), sem `def` no `src/`: "
         "a régua dos nomes mortos os conhece pelo dono, não os perdoa"),
+    "scripts/tela/regua.py::DISPENSAS": (
+        "os desalinhamentos que a régua de geometria não cobra, cada um com a data, a medida e o "
+        "porquê: o acordeão fechado que mede zero, o padding da Navegação, as colunas que mudam de "
+        "altura com o modo; é escolha justificada, não defeito a curar"),
+    "tests/unit/test_o_codigo_de_src_tem_quem_o_chame.py::_FORA_DO_PRODUTO": (
+        "os módulos de `src/` sem caminho do produto, cada um com o porquê e o endereço de quem o "
+        "chama (o gerador do desenho, o retratista, o GERADO pelo portão): é o contrato que a "
+        "régua cobra, e a entrada sem porquê reprova"),
+    "tests/unit/test_o_fio_da_janela_nunca_espera.py::FIOS_FORA_DO_DONO": (
+        "o dono dos fios (`pacotes/fios.py`) e os dois fios com o endereço mascarado no nome, que "
+        "a régua 4 do registro copiado lê por `Thread(name=mascarar(…))`: contrato do nome, "
+        "não fio solto"),
 }
 
 PENDENTES: dict[str, tuple[str, str]] = {
