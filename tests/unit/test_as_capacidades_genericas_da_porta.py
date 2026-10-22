@@ -401,14 +401,18 @@ async def test_6_o_laco_do_servico_entrega_a_borda_do_posto_com_o_uniq(curto, mo
                for b in ((), (), ("square",), ("square",), (), ())]
     porta = await _porta(curto, EventBus(), ["ler:botoes"])
     ext = await _entrar(curto, ["botoes"])
-    daemon = Daemon(controller=FakeController(transport="bt", states=estados), bus=EventBus(),
-                    store=StateStore(), config=DaemonConfig(
-                        poll_hz=120, ipc_enabled=False, udp_enabled=False,
-                        autoswitch_enabled=False))
+    controle = FakeController(transport="bt", states=estados)
+    daemon = Daemon(controller=controle, bus=EventBus(), store=StateStore(), config=DaemonConfig(
+        poll_hz=120, ipc_enabled=False, udp_enabled=False, autoswitch_enabled=False))
     daemon._mods_supervisor = SimpleNamespace(porta=porta, parar=_nada)
     rodando = asyncio.create_task(daemon.run())
     try:
-        await asyncio.sleep(0.2)
+        # O laço lê os seis estados no ritmo dele: um prazo fixo reprovava com a máquina ocupada
+        # (o arranque do daemon passava dos 0,2 s antes do primeiro tique).
+        prazo = asyncio.get_running_loop().time() + 5.0
+        while controle._idx < len(estados) and asyncio.get_running_loop().time() < prazo:
+            await asyncio.sleep(0.02)
+        await asyncio.sleep(0.05)
     finally:
         daemon.stop()
         await rodando

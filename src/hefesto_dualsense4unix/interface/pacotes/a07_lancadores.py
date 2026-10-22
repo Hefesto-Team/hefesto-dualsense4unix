@@ -1248,6 +1248,8 @@ class _Mexida:
     conf_da_modificacao: str = ""
     #: A recusa do ``meu.css`` que a janela da extensão aberta mostra.
     nota_do_css: str = ""
+    #: O grupo da última opção mudada: a aba que a janela reconstruída abre.
+    aba: str = ""
 
     def limpar(self) -> None:
         self.menu = self.permissoes = self.remover = self.conf = self.imp = self.mod = ""
@@ -1257,7 +1259,7 @@ class _Mexida:
         self.html_conf = self.html_imp = self.html_mod = ""
         self.agora = ()
         self.rascunho = {}
-        self.onde_escolhido = self.conf_da_modificacao = self.nota_do_css = ""
+        self.onde_escolhido = self.conf_da_modificacao = self.nota_do_css = self.aba = ""
 
 
 _MEXIDA = _Mexida()
@@ -1525,12 +1527,15 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
         escolhas=tuple(x.escolhas), grupo=x.grupo or "", minimo=x.minimo or 0,
         maximo=x.maximo or 0, passo=x.passo or 1,
         jogos=jogos if x.tipo == "jogos" else (),
-        nota=nota if x.tipo == "css" else "") for x in manifesto.opcoes]
+        nota=nota if x.tipo == "css" else "",
+        formas=tuple((f, tuple((a, b) for a, b in passos)) for f, passos in x.formas.items()),
+        botoes=x.botoes_da_janela if x.tipo == "por_botao" else ()) for x in manifesto.opcoes]
     _MEXIDA.mod = mod_id
     _MEXIDA.agora = tuple(manifesto.agora)
     _MEXIDA.html_mod = exp.modificacao_miolo_html(
         manifesto.nome, linhas, mod=mod_id, agora=_MEXIDA.agora,
-        estado=_AGORA.agora() if _MEXIDA.agora else None, parar_tudo=manifesto.parar_tudo)
+        estado=_AGORA.agora() if _MEXIDA.agora else None, parar_tudo=manifesto.parar_tudo,
+        aba=_MEXIDA.aba)
 
 
 def _a_pintura_agora(ctx: Contexto) -> dict[str, Any]:
@@ -1596,7 +1601,7 @@ def configurar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str
     _MEXIDA.menu = _MEXIDA.permissoes = ""
     mod_id = _id_do_clique(o, "configurar-modificacao")
     _MEXIDA.rascunho = {}
-    _MEXIDA.mod = mod_id
+    _MEXIDA.mod, _MEXIDA.aba = mod_id, ""
     _AGORA.abrir(mod_id, p)
     _AGORA.ler(mod_id, p)
     _montar_a_janela_da_extensao(mod_id)
@@ -1638,6 +1643,12 @@ def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
         if evento == "click":
             return None
         valor = _jogos_com_a_caixa(_valor_na_janela(item, opcao), jogo)
+    elif opcao.tipo == "por_botao":
+        if evento == "click":
+            return None
+        if jogo not in opcao.botoes_da_janela:
+            raise RuntimeError("Qual botão? O clique não disse. Nada foi guardado.")
+        valor = {**_valor_na_janela(item, opcao), jogo: o.get("valor")}
     else:
         if evento == "click":
             return None
@@ -1647,6 +1658,7 @@ def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
     if _MEXIDA.mod != mod_id:
         _MEXIDA.mod, _MEXIDA.rascunho = mod_id, {}
     _MEXIDA.rascunho[opcao_id] = certo
+    _MEXIDA.aba = opcao.grupo or ""
     _montar_a_janela_da_extensao(mod_id)
     return _a_pintura_agora(ctx)
 
