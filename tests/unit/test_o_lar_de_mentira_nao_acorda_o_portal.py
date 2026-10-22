@@ -66,9 +66,8 @@ def test_o_lar_da_parte_leve_da_suite_nao_acorda_o_portal() -> None:
     _cobra_o_lar(filho.group(0), "rodar-a-suite.sh")
 
 
+@pytest.mark.insumo_fora_do_git("docs/process/ferramentas-da-leva/fecho-fotos.sh")
 def test_o_lar_das_fotos_nao_acorda_o_portal() -> None:
-    if not FOTOS.is_file():
-        pytest.skip("o fecho-fotos.sh mora em docs/process, fora do git")
     _cobra_o_lar(FOTOS.read_text(encoding="utf-8"), "fecho-fotos.sh")
 
 

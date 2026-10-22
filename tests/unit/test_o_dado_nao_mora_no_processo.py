@@ -30,6 +30,10 @@ LEITORES_DE_PROCESSO: dict[str, str] = {
         "o portão do censo dos contratos: confere que a `sprint_filha` de uma "
         "linha frágil existe entre as sprints, que são processo. Sem a pasta, "
         "ele deixa de cobrar a sprint e segue com o resto",
+    "tests/unit/test_o_lar_de_mentira_nao_acorda_o_portal.py":
+        "a régua do lar do `fecho-fotos.sh`, que é ferramenta de processo: o lar das fotos tem de "
+        "nascer sem portal como o dos portões, e sem o arquivo (clone limpo) só essa se pula, "
+        "com a razão, e as outras valem",
     "tests/unit/test_a_catraca_da_origem_morde.py":
         "a régua 6 da catraca roda o `fecho.sh` da leva, que é ferramenta de "
         "processo, para provar que o pagamento viaja antes do merge; sem o "
