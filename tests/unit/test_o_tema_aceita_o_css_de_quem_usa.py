@@ -109,8 +109,7 @@ def test_vazio_e_so_comentario_sao_folha_vazia_e_nao_recusa() -> None:
 
 
 def test_a_cadeia_com_chave_e_ponto_e_virgula_nao_quebra_a_regra() -> None:
-    assert meu_css.aplicar('.a::after{content:"a;b}"}') == '.a::after{content:"a;b" !important;}' \
-        or meu_css.aplicar('.a::after{content:"a;b}"}') == '.a::after{content:"a;b}" !important;}'
+    assert meu_css.aplicar('.a::after{content:"a;b}"}') == '.a::after{content:"a;b}" !important;}'
 
 
 @pytest.mark.parametrize("texto, linha, trecho", [
