@@ -461,12 +461,21 @@ def _o_css_de_quem_usa(com_css: list[tuple[str, str, Any]], lugares: Any) -> dic
     return {}
 
 
+def _aceita_o_css(pasta: Path) -> bool:
+    """A extensão da ``pasta`` declara a opção ``css`` (manifesto que não se lê: não aceita)."""
+    from hefesto_dualsense4unix.mods.manifesto import ManifestoRecusadoError, ler_manifesto
+
+    try:
+        return ler_manifesto(pasta).opcao_do_css is not None
+    except ManifestoRecusadoError:
+        return False
+
+
 def arquivos_de_opcoes_dos_temas(lugares: Any = None) -> list[Path]:
     """Os ``opcoes.json`` das extensões de tema ligadas, e o ``meu.css`` das que o aceitam: a janela
     os vigia, porque «Cores claras», «Botões à esquerda» e o CSS salvo trocam o tema sem tocar no
     registro."""
     from hefesto_dualsense4unix.mods import instalador, opcoes
-    from hefesto_dualsense4unix.mods.manifesto import ManifestoRecusadoError, ler_manifesto
 
     lg = lugares or instalador.Lugares.do_xdg()
     try:
@@ -478,11 +487,7 @@ def arquivos_de_opcoes_dos_temas(lugares: Any = None) -> list[Path]:
         if not (e.ligada and "tema" in e.permissoes_aceitas):
             continue
         arquivos.append(opcoes.caminho(e.id, lg))
-        try:
-            aceita_css = ler_manifesto(lg.codigo / e.id).opcao_do_css is not None
-        except ManifestoRecusadoError:
-            continue
-        if aceita_css:
+        if _aceita_o_css(lg.codigo / e.id):
             arquivos.append(meu_css.caminho(e.id, lg))
     return arquivos
 

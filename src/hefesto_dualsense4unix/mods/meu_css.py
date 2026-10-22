@@ -77,7 +77,7 @@ def garantir(mod_id: str, lugares: Any) -> Path:
         with alvo.open("x", encoding="utf-8") as arquivo:
             arquivo.write(EXEMPLO)
     except FileExistsError:
-        pass
+        return alvo
     return alvo
 
 
