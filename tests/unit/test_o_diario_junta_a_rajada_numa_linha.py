@@ -46,7 +46,10 @@ class _Mesa:
         self.agregado = agregado
 
     def linhas(self, evento: str) -> list[str]:
-        return [linha for linha in self.buf.getvalue().splitlines() if f" {evento} " in linha]
+        return [
+            linha for linha in self.buf.getvalue().splitlines()
+            if f" {evento} " in linha or linha.endswith(f" {evento}")
+        ]
 
     def fim_das_janelas(self) -> None:
         self.agora[0] += logging_config.JANELA_DO_AGREGADO_S
@@ -95,9 +98,9 @@ def test_a_chave_separa_as_rajadas_e_o_evento_de_fora_nao_se_junta(mesa: _Mesa) 
     for _ in range(5):
         mesa.diario.info("ipc_lento", metodo="daemon.status", ms=150)
         mesa.diario.info("ipc_lento", metodo="profile.switch", ms=300)
-        mesa.diario.info("haptica_fina_de_pe", controle="branco")
+        mesa.diario.info("perfil_trocado_pela_mao", origem="tela")
     assert len(mesa.linhas("ipc_lento")) == 2
-    assert len(mesa.linhas("haptica_fina_de_pe")) == 5
+    assert len(mesa.linhas("perfil_trocado_pela_mao")) == 5
 
 
 def test_a_ocorrencia_da_janela_vencida_fecha_a_conta(mesa: _Mesa) -> None:
