@@ -11,10 +11,12 @@ from __future__ import annotations
 
 import colorsys
 import math
-from collections.abc import Sequence
+from collections import deque
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 
 from hefesto_dualsense4unix.profiles.estilos_de_jogo import DISTANCIA_MINIMA
-from hefesto_dualsense4unix.profiles.schema import EfeitoDaLuz
+from hefesto_dualsense4unix.profiles.schema import BASES_NOVAS_DA_LUZ, EfeitoDaLuz
 
 RGB = tuple[int, int, int]
 
@@ -69,6 +71,35 @@ ESTADOS_DE_CARGA_EM_DIA = frozenset({"carregando", "cheio"})
 #: Os efeitos cujo desenho é ENTRE os controles (a defasagem do arco-íris, o mesmo ângulo da
 #: Maré): o laço os conta num relógio só, o da mesa, e não do instante em que cada um entrou.
 BASES_DO_RELOGIO_COMUM = frozenset({"arco-iris", "mare"})  # (noqa-acento) chave ASCII
+
+#: Os efeitos que leem o que a mão faz (A-LUZ-REAGE-AO-QUE-A-MAO-FAZ-01, 22/10/2026): têm estado
+#: por controle (o aperto de agora, a inclinação, o dedo) e por isso não são função só do tempo.
+BASES_DA_MAO = frozenset(BASES_NOVAS_DA_LUZ)
+#: A cor do símbolo apertado no «Reage ao botão» (△ verde, ○ vermelho, ✕ azul, □ rosa).
+COR_DO_TRIANGULO: RGB = (0, 255, 0)
+COR_DO_CIRCULO: RGB = (255, 0, 0)
+COR_DO_XIS: RGB = (0, 0, 255)
+COR_DO_QUADRADO: RGB = (255, 105, 180)
+CORES_DOS_SIMBOLOS: Mapping[str, RGB] = {
+    "triangle": COR_DO_TRIANGULO,
+    "circle": COR_DO_CIRCULO,
+    "cross": COR_DO_XIS,
+    "square": COR_DO_QUADRADO,
+}
+#: O fundo do «Reage ao botão»: sem aperto a barra fica na cor escolhida, nunca apaga.
+PISO_DO_REAGE = PISO_DO_ACENDE
+#: O clarão do aperto sobe em meio cosseno nisto e desce devagar (de 2 s no ritmo 1 a 0,5 s no 10).
+SUBIDA_DO_REAGE_S = 0.12
+#: No máximo isto de subidas em qualquer janela de 1 s (WCAG 2.3.1): aperto a mais NÃO sobe.
+SUBIDAS_DO_REAGE_POR_S = 3
+#: A roda de cores não gira mais depressa que isto, em voltas por segundo: uma volta inteira passa
+#: por duas luminâncias altas (verde e ciano/amarelo), então 1 volta/s fica abaixo dos 3 clarões.
+VOLTAS_DO_MATIZ_POR_S = 1.0
+#: A inclinação com menos que isto de gravidade (em g) é leitura solta, não direção: ignora.
+GRAVIDADE_MINIMA_G = 0.3
+#: O toque cobre o matiz de 0 a 300 graus (do vermelho ao magenta): a ponta direita não volta
+#: ao vermelho da esquerda.
+VOLTA_DO_TOQUE = 300.0 / 360.0
 
 _RITMO_MAXIMO = 10
 
@@ -317,6 +348,190 @@ class BrilhoDoAcende:
         return self.brilho
 
 
+def descida_do_reage_s(ritmo: int) -> float:
+    """O clarão do aperto desce de 2 s no ritmo 1 a 0,5 s no ritmo 10."""
+    return _entre_ritmos(ritmo, 2.0, 0.5)
+
+
+def tempo_da_inclinacao_s(ritmo: int) -> float:
+    """A constante do alisamento da inclinação: de 0,6 s no ritmo 1 a 0,05 s no ritmo 10."""
+    return _entre_ritmos(ritmo, 0.6, 0.05)
+
+
+@dataclass(frozen=True)
+class Entrada:
+    """O que a mão faz num controle, lido do aparelho dele (nada daqui escreve nele).
+
+    ``apertos`` é o contador de bordas de cada botão (``EvdevSnapshot.apertos``); ``gravidade``
+    é o acelerômetro em g; ``dedo`` é ``(x, y)`` de 0 a 1 no touchpad, ``None`` sem dedo. Cada
+    campo é ``None`` quando o dado não veio: o efeito segura o que tinha.
+    """
+
+    apertos: Mapping[str, int] | None = None
+    gravidade: tuple[float, float, float] | None = None
+    dedo: tuple[float, float] | None = None
+
+
+def _misturar(de: RGB, para: RGB, u: float) -> RGB:
+    """A cor entre ``de`` (u=0) e ``para`` (u=1), em linha reta."""
+    u = max(0.0, min(1.0, u))
+    return (_inteiro(de[0] + (para[0] - de[0]) * u), _inteiro(de[1] + (para[1] - de[1]) * u),
+            _inteiro(de[2] + (para[2] - de[2]) * u))
+
+
+def _andar_o_matiz(atual: float, alvo: float, passo: float) -> float:
+    """O matiz de ``atual`` rumo a ``alvo`` pelo caminho curto da roda, em no máximo ``passo``."""
+    falta = (alvo - atual + 0.5) % 1.0 - 0.5
+    if abs(falta) <= passo:
+        return alvo % 1.0
+    return (atual + math.copysign(passo, falta)) % 1.0
+
+
+def _matiz_na_cor(matiz: float) -> RGB:
+    r, g, b = colorsys.hsv_to_rgb(matiz % 1.0, 1.0, 1.0)
+    return (_inteiro(r * 255), _inteiro(g * 255), _inteiro(b * 255))
+
+
+class ReageAoBotao:
+    """O «Reage ao botão» de UM controle: o aperto acende a barra, e ela apaga devagar.
+
+    O símbolo apertado dá a cor (△ verde, ○ vermelho, ✕ azul, □ rosa) e qualquer outro botão
+    acende na cor escolhida do efeito. O primeiro tique só aprende os contadores (o que já foi
+    apertado antes não acende). O brilho sobe em meio cosseno e desce no ritmo; sem aperto a
+    barra fica na cor escolhida no piso, nunca apaga. Nunca mais de três subidas em 1 s:
+    aperto a mais, dentro da janela, é lido e NÃO acende (a regra dos três clarões por segundo,
+    D-2210-A-LUZ-GANHA-ONDA-E-RELAMPAGO).
+    """
+
+    def __init__(self, base: RGB, ritmo: int) -> None:
+        self._base = base
+        self._descida = descida_do_reage_s(ritmo)
+        self._vistos: dict[str, int] | None = None
+        self._subidas: deque[float] = deque()
+        self._inicio: float | None = None
+        self._de: tuple[RGB, float] = (base, PISO_DO_REAGE)
+        self._para: RGB = base
+
+    def _estado(self, agora: float) -> tuple[RGB, float]:
+        """A cor e o brilho (0 a 1) de ``agora``."""
+        if self._inicio is None:
+            return self._base, PISO_DO_REAGE
+        dt = agora - self._inicio
+        cor_de, brilho_de = self._de
+        if dt < SUBIDA_DO_REAGE_S:
+            u = _suave(dt / SUBIDA_DO_REAGE_S)
+            return _misturar(cor_de, self._para, u), brilho_de + (1.0 - brilho_de) * u
+        u = (dt - SUBIDA_DO_REAGE_S) / self._descida
+        if u >= 1.0:
+            return self._base, PISO_DO_REAGE
+        solta = _suave(u)
+        return _misturar(self._para, self._base, solta), PISO_DO_REAGE + (
+            1.0 - PISO_DO_REAGE) * (1.0 - solta)
+
+    def _apertar(self, nomes: list[str], agora: float) -> None:
+        while self._subidas and agora - self._subidas[0] >= 1.0:
+            self._subidas.popleft()
+        if len(self._subidas) >= SUBIDAS_DO_REAGE_POR_S:
+            return
+        simbolo = next((n for n in nomes if n in CORES_DOS_SIMBOLOS), None)
+        self._de = self._estado(agora)
+        self._para = CORES_DOS_SIMBOLOS[simbolo] if simbolo else self._base
+        self._inicio = agora
+        self._subidas.append(agora)
+
+    def andar(self, entrada: Entrada, agora: float) -> RGB:
+        """A cor da barra em ``agora``, com os apertos que a ``entrada`` trouxe."""
+        contagens = entrada.apertos
+        if contagens is not None:
+            if self._vistos is not None:
+                novos = sorted(n for n, c in contagens.items() if c > self._vistos.get(n, 0))
+                if novos:
+                    self._apertar(novos, agora)
+            self._vistos = dict(contagens)
+        cor, brilho = self._estado(agora)
+        return _escalar(cor, brilho)
+
+
+class Inclinacao:
+    """A «Inclinação» de UM controle: a cor gira pela roda conforme o controle inclina.
+
+    O ângulo é o da gravidade no plano x-z do acelerômetro (rolar o controle de lado), como
+    fração de volta; passar de uma volta não salta, porque o matiz é circular. A leitura é
+    alisada (``tempo_da_inclinacao_s``) e a roda não gira mais depressa que
+    ``VOLTAS_DO_MATIZ_POR_S``. Sem leitura, fica a última cor (a branca, se nunca houve).
+    """
+
+    def __init__(self, ritmo: int) -> None:
+        self._tau = tempo_da_inclinacao_s(ritmo)
+        self._vetor: tuple[float, float] | None = None
+        self._matiz: float | None = None
+        self._visto_em: float | None = None
+
+    def andar(self, entrada: Entrada, agora: float) -> RGB:
+        decorrido = 0.0 if self._visto_em is None else max(0.0, agora - self._visto_em)
+        self._visto_em = agora
+        g = entrada.gravidade
+        if g is not None and math.sqrt(sum(c * c for c in g)) >= GRAVIDADE_MINIMA_G:
+            if self._vetor is None or self._matiz is None:
+                self._vetor = (g[0], g[2])
+                self._matiz = (math.atan2(g[0], g[2]) / (2.0 * math.pi)) % 1.0
+            else:
+                fator = 1.0 - math.exp(-decorrido / self._tau)
+                self._vetor = (
+                    self._vetor[0] + fator * (g[0] - self._vetor[0]),
+                    self._vetor[1] + fator * (g[2] - self._vetor[1]),
+                )
+                alvo = (math.atan2(self._vetor[0], self._vetor[1]) / (2.0 * math.pi)) % 1.0
+                self._matiz = _andar_o_matiz(self._matiz, alvo, VOLTAS_DO_MATIZ_POR_S * decorrido)
+        if self._matiz is None:
+            return (255, 255, 255)
+        return _matiz_na_cor(self._matiz)
+
+
+class DedoNoTouchpad:
+    """O «Dedo no touchpad» de UM controle: a posição do dedo dá a cor.
+
+    Horizontal é o matiz (``VOLTA_DO_TOQUE``), vertical é o brilho (em cima é o cheio, embaixo é
+    o piso). Sem dedo fica a última cor (a branca, se nunca houve). O matiz e o brilho andam
+    com os mesmos freios dos outros efeitos: a roda não passa de ``VOLTAS_DO_MATIZ_POR_S`` e o
+    brilho tem o teto de três vaivéns por segundo do ``BrilhoDoAcende``.
+    """
+
+    def __init__(self) -> None:
+        self._matiz: float | None = None
+        self._curso = 1.0
+        self._brilho = BrilhoDoAcende(1.0)
+        self._visto_em: float | None = None
+
+    def andar(self, entrada: Entrada, agora: float) -> RGB:
+        decorrido = 0.0 if self._visto_em is None else max(0.0, agora - self._visto_em)
+        self._visto_em = agora
+        dedo = entrada.dedo
+        if dedo is not None:
+            alvo = max(0.0, min(1.0, dedo[0])) * VOLTA_DO_TOQUE
+            self._matiz = alvo if self._matiz is None else _andar_o_matiz(
+                self._matiz, alvo, VOLTAS_DO_MATIZ_POR_S * decorrido)
+            self._curso = 1.0 - max(0.0, min(1.0, dedo[1]))
+        brilho = self._brilho.andar(self._curso, agora)
+        if self._matiz is None:
+            return _escalar((255, 255, 255), brilho)
+        return _escalar(_matiz_na_cor(self._matiz), brilho)
+
+
+EstadoDaMao = ReageAoBotao | Inclinacao | DedoNoTouchpad
+
+
+def estado_da_mao(efeito: EfeitoDaLuz) -> EstadoDaMao | None:
+    """O estado novo de UM controle para o efeito, ou ``None`` se o efeito não lê a mão."""
+    if efeito.base == "reage-ao-botao":
+        return ReageAoBotao((efeito.cores or ((255, 255, 255),))[0], efeito.ritmo)
+    if efeito.base == "inclinacao":
+        return Inclinacao(efeito.ritmo)
+    if efeito.base == "dedo-no-touchpad":
+        return DedoNoTouchpad()
+    return None
+
+
 def bateria_acabando(pct: object, estado: object) -> bool:
     """A carga está abaixo do limiar e o controle não está no cabo?"""
     return (isinstance(pct, int) and 0 < pct < LIMIAR_DE_BATERIA_PCT
@@ -348,6 +563,8 @@ def cor_no_instante(
         r, g, b = colorsys.hsv_to_rgb(matiz_do_arco_iris(t, efeito.ritmo, posicao), 1.0, 1.0)
         return (_inteiro(r * 255), _inteiro(g * 255), _inteiro(b * 255))
     cores = efeito.cores or ((255, 255, 255),)
+    if efeito.base in BASES_DA_MAO:  # sem o dado vivo da mão: a cor escolhida, parada
+        return cores[0]
     if efeito.base == "fixa":  # a cor parada: o Acende varia o brilho, não a cor
         return cores[0]
     if efeito.base == "chama":
@@ -383,8 +600,10 @@ def cor_no_instante(
 
 
 __all__ = [
+    "BASES_DA_MAO",
     "BASES_DO_RELOGIO_COMUM",
     "BORDA_DO_PISCAR_S",
+    "CORES_DOS_SIMBOLOS",
     "DEFASAGEM_DO_ARCO_IRIS",
     "ESTADOS_DE_CARGA_EM_DIA",
     "LEDS_DA_ONDA",
@@ -402,6 +621,11 @@ __all__ = [
     "TETO_DO_PISCAR_HZ",
     "VAIVENS_DO_ACENDE_POR_S",
     "BrilhoDoAcende",
+    "DedoNoTouchpad",
+    "Entrada",
+    "EstadoDaMao",
+    "Inclinacao",
+    "ReageAoBotao",
     "amplitude_da_mare",
     "bateria_acabando",
     "brilho_da_batida",
@@ -413,7 +637,9 @@ __all__ = [
     "brilho_do_respirar",
     "brilhos_da_onda",
     "cor_no_instante",
+    "descida_do_reage_s",
     "deslocamento_da_mare",
+    "estado_da_mao",
     "frequencia_do_piscar_hz",
     "matiz_do_arco_iris",
     "periodo_da_batida_s",
@@ -422,5 +648,6 @@ __all__ = [
     "periodo_do_arco_iris_s",
     "periodo_do_relampago_s",
     "periodo_do_respirar_s",
+    "tempo_da_inclinacao_s",
     "troca_da_chama_s",
 ]

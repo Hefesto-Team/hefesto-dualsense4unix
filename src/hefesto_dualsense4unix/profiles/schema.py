@@ -263,6 +263,14 @@ class TriggersConfig(BaseModel):
 
 #: As bases do efeito de luz que a pessoa cria na aba Iluminação (A-ABA-ILUMINACAO-DO-TODO-01).
 BASES_DA_LUZ = ("respirar", "piscar", "arco-iris", "batimento", "chama", "mare", "onda", "relampago")  # noqa: E501  # noqa-acento: chave ASCII
+#: As bases que só a lista da aba Iluminação oferece (22/10/2026): as que reagem ao que a mão faz
+#: (A-LUZ-REAGE-AO-QUE-A-MAO-FAZ-01). As oito acima são as que a pessoa também pode CRIAR; estas
+#: dependem de um dado vivo do controle e ficam fora do «Criar efeitos novos».
+BASES_NOVAS_DA_LUZ = ("reage-ao-botao", "inclinacao", "dedo-no-touchpad")
+TODAS_AS_BASES_DA_LUZ = BASES_DA_LUZ + BASES_NOVAS_DA_LUZ
+#: As bases cujo texto pode vir sem cor: o arco-íris gira todas, e as que pintam pelo dado vivo
+#: (a inclinação, o dedo) não têm cor para escolher.
+BASES_SEM_COR_DA_LUZ = ("arco-iris", "inclinacao", "dedo-no-touchpad")
 RITMO_MINIMO_DA_LUZ = 1
 RITMO_MAXIMO_DA_LUZ = 10
 RITMO_PADRAO_DA_LUZ = 4
@@ -296,12 +304,12 @@ def ler_o_efeito_da_luz(texto: object) -> EfeitoDaLuz | None:
     if len(partes) != 3:
         return None
     base, brutas, ritmo_cru = (p.strip() for p in partes)
-    if base not in BASES_DA_LUZ:
+    if base not in TODAS_AS_BASES_DA_LUZ:
         return None
     nomes = [c for c in brutas.split(",") if c] if brutas else []
     if len(nomes) > TETO_DE_CORES_DO_EFEITO or not all(_COR_DO_EFEITO.match(c) for c in nomes):
         return None
-    if base != "arco-iris" and not nomes:  # (noqa-acento) chave ASCII
+    if base not in BASES_SEM_COR_DA_LUZ and not nomes:  # (noqa-acento) chave ASCII
         return None
     if not (ritmo_cru.isascii() and ritmo_cru.isdigit()):
         return None

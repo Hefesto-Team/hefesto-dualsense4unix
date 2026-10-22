@@ -1552,9 +1552,11 @@ def _conferir(doc):
     exigir(len(re.findall(r'<option value="sem-efeito"', corpo)) == len(MESA)
            and len(re.findall(r'<option value="luz-fixa" selected', corpo)) == len(MESA),
            "a lista Efeito não abre em «Luz fixa» com «Sem efeito» ao lado")
-    exigir(len(re.findall(r'<optgroup label="(?:Parado|Que respira|Que se move)"', corpo))
-           == 3 * len(MESA),
-           "a lista Efeito perdeu os grupos do desenho A (Parado, Que respira, Que se move)")
+    grupos = [rotulo for rotulo, _ in _pacote04.GRUPOS_DA_LISTA]
+    exigir(len(re.findall(
+        '<optgroup label="(?:' + "|".join(map(re.escape, grupos)) + ')"', corpo))
+           == len(grupos) * len(MESA),
+           f"a lista Efeito perdeu os grupos do desenho A ({', '.join(grupos)})")
     exigir(corpo.count(f'class="g4-efeito-dica" data-campo="{_pacote04.CAMPO_DA_DICA_DO_EFEITO}" '
                        'data-hef-alvo="atributo" data-hef-atributo="data-dica"') == len(MESA)
            and "g4-dica-do-efeito" not in doc,

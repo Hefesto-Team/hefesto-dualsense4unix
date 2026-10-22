@@ -1,9 +1,10 @@
 """A aba Iluminação mostra a lista nova e o «Sem piscar»
 (A-ABA-ILUMINACAO-MOSTRA-A-LISTA-NOVA-E-O-SEM-PISCAR-01, 15/10/2026).
 
-A linha «Efeito» tem dez opções (oito até 22/10/2026, quando entraram a Onda e o Relâmpago), em
-grupos pelo que se vê (o desenho A, com uma lista suspensa em cada controle), e a dica da lista
-diz o que a escolhida faz (desde 16/10/2026 a frase é dica, não texto na tela).
+A linha «Efeito» tem treze opções (dez até 22/10/2026, quando entraram as três do grupo «Que reage»;
+oito antes da Onda e do Relâmpago), em grupos pelo que se vê (o desenho A, com uma lista suspensa em
+cada controle), e a dica da lista diz o que a escolhida faz (desde 16/10/2026 a frase é dica, não
+texto na tela). O nome `..._as_dez_opcoes_...` fica: o CSV de decisões aponta para ele.
 O interruptor «Sem piscar» saiu em 16/10/2026, a pedido: a prova de que ele
 saiu e de que o `maquina.json` antigo carrega é `test_o_sem_piscar_saiu_e_o_arquivo_velho_carrega`.
 
@@ -32,11 +33,13 @@ JOGADORES = [f"aa:bb:cc:00:00:0{n}" for n in range(1, 5)]
 
 #: O que a lista mostra, na ordem do desenho A: do mais calmo ao mais vivo, agrupado pelo que se vê.
 ROTULOS_NA_ORDEM = ["Sem efeito", "Luz fixa", "Respirar", "Batida", "Chama", "Maré",
-                    "Piscar", "Arco-íris", "Onda", "Relâmpago"]
+                    "Piscar", "Arco-íris", "Onda", "Relâmpago", "Reage ao botão", "Inclinação",
+                    "Dedo no touchpad"]
 VALORES_NA_ORDEM = ["sem-efeito", "luz-fixa", "base:respirar", "base:batimento", "base:chama",
                     "base:mare", "base:piscar", "base:arco-iris", "base:onda",
-                    "base:relampago"]
-GRUPOS_NA_ORDEM = ["Parado", "Que respira", "Que se move"]
+                    "base:relampago", "base:reage-ao-botao", "base:inclinacao",
+                    "base:dedo-no-touchpad"]
+GRUPOS_NA_ORDEM = ["Parado", "Que respira", "Que se move", "Que reage"]
 
 
 def _ctx(n: int = 1) -> Any:
@@ -87,17 +90,18 @@ def test_a_lista_leva_os_efeitos_que_a_pessoa_criou_depois_das_dez() -> None:
     html = a04.opcoes_do_efeito(biblioteca)
     assert 'optgroup label="Seus efeitos"' in html
     valores = [v for v, _ in _options(html)]
-    assert valores[:10] == VALORES_NA_ORDEM and valores[10:] == ["piscar;FF0000;6"]
+    fim = len(VALORES_NA_ORDEM)
+    assert valores[:fim] == VALORES_NA_ORDEM and valores[fim:] == ["piscar;FF0000;6"]
 
 
 def test_toda_base_do_motor_esta_na_lista_e_tem_a_sua_frase() -> None:
     """Base nova no motor sem opção e sem frase na tela é a lista que mente."""
-    from hefesto_dualsense4unix.profiles.schema import BASES_DA_LUZ
+    from hefesto_dualsense4unix.profiles.schema import TODAS_AS_BASES_DA_LUZ
     from pacotes import a04_iluminacao as a04
 
     na_lista = {v.removeprefix("base:") for v in VALORES_NA_ORDEM if v.startswith("base:")}
-    assert na_lista == set(BASES_DA_LUZ)
-    assert set(a04.DICA_DA_BASE) == set(BASES_DA_LUZ) == set(a04.RITMO_DA_BASE)
+    assert na_lista == set(TODAS_AS_BASES_DA_LUZ)
+    assert set(a04.DICA_DA_BASE) == set(TODAS_AS_BASES_DA_LUZ) == set(a04.RITMO_DA_BASE)
 
 
 def test_cada_frase_e_de_uma_linha_com_a_primeira_maiuscula() -> None:
@@ -130,9 +134,10 @@ def test_o_desenho_tem_uma_lista_por_controle_com_as_dez_opcoes_e_a_frase() -> N
     listas = re.findall(r'<select class="g4-efeito".*?</select>', doc, flags=re.S)
     assert len(listas) == 4, "uma lista suspensa por controle, viva ou vazia"
     for lista in listas:
-        assert re.findall(r'<optgroup label="([^"]*)"', lista)[:3] == GRUPOS_NA_ORDEM
-        assert [v for v, _ in _options(lista)][:10] == VALORES_NA_ORDEM
-        assert [r for _, r in _options(lista)][:10] == ROTULOS_NA_ORDEM
+        grupos = re.findall(r'<optgroup label="([^"]*)"', lista)
+        assert grupos[:len(GRUPOS_NA_ORDEM)] == GRUPOS_NA_ORDEM
+        assert [v for v, _ in _options(lista)][:len(VALORES_NA_ORDEM)] == VALORES_NA_ORDEM
+        assert [r for _, r in _options(lista)][:len(ROTULOS_NA_ORDEM)] == ROTULOS_NA_ORDEM
     caixas = re.findall(r'<span class="g4-efeito-dica" data-campo="efeito-dica" '
                         r'data-hef-alvo="atributo" data-hef-atributo="data-dica"', doc)
     assert len(caixas) == 4, "a frase do efeito é a dica da lista, uma por controle"

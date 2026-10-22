@@ -58,6 +58,7 @@ from hefesto_dualsense4unix.interface.monta import (
     MODO_PERSONALIZADO,
     partes_do_modelo,
 )
+from hefesto_dualsense4unix.profiles.schema import BASES_SEM_COR_DA_LUZ
 
 from . import LUGAR_VAZIO, TRAVESSAO, Contexto, perfil, registrar
 from .meus_efeitos import TETO_DO_NOME, guardar_meus_efeitos, meus_efeitos
@@ -1322,12 +1323,14 @@ SELETOR_DOS_EFEITOS = "#seus-efeitos"
 ROTULO_DA_BASE = {"respirar": "Respirar", "piscar": "Piscar",
                   "arco-iris": "Arco-íris",  # (noqa-acento) chave ASCII
                   "batimento": "Batida", "chama": "Chama", "mare": "Maré", "onda": "Onda",
-                  "relampago": "Relâmpago"}
+                  "relampago": "Relâmpago", "reage-ao-botao": "Reage ao botão",
+                  "inclinacao": "Inclinação", "dedo-no-touchpad": "Dedo no touchpad"}
 #: O ritmo com que cada base nasce na lista (o do desenho A): respirar 5 s, piscar 0,9 Hz, uma volta
 #: do arco-íris em 12 s, batida de 1 s, a chama troca de alvo a cada ~2 s, a Maré vai e volta em
 #: 8 s.
 RITMO_DA_BASE = {"respirar": 2, "piscar": 3, "arco-iris": 7,  # (noqa-acento) chave ASCII
-                 "batimento": 10, "chama": 5, "mare": 10, "onda": 5, "relampago": 5}
+                 "batimento": 10, "chama": 5, "mare": 10, "onda": 5, "relampago": 5,
+                 "reage-ao-botao": 5, "inclinacao": 5, "dedo-no-touchpad": 5}
 DICA_SEM_EFEITO = "A barra fica apagada."
 DICA_LUZ_FIXA = "A cor do controle, parada."
 DICA_DO_EFEITO_CRIADO = "Um efeito que você montou."
@@ -1340,12 +1343,16 @@ DICA_DA_BASE = {
     "arco-iris": "As cores giram em cada controle.",  # (noqa-acento) identificador ASCII
     "onda": "Uma onda de luz passa pela barra.",
     "relampago": "Clarões curtos, de borda suave.",
+    "reage-ao-botao": "A cor do botão que você aperta.",
+    "inclinacao": "A cor muda ao inclinar o controle.",
+    "dedo-no-touchpad": "A cor segue o dedo no touchpad.",
 }
 #: Os grupos da lista, na ordem do desenho: o que a pessoa vê, não o nome técnico do efeito.
 GRUPOS_DA_LISTA = (
     ("Parado", (SEM_EFEITO, LUZ_FIXA)),
     ("Que respira", ("respirar", "batimento", "chama", "mare")),
     ("Que se move", ("piscar", "arco-iris", "onda", "relampago")),  # (noqa-acento) chave ASCII
+    ("Que reage", ("reage-ao-botao", "inclinacao", "dedo-no-touchpad")),
 )
 
 
@@ -1411,7 +1418,7 @@ def valor_da_lista_para(texto: str | None, proprios: frozenset[str] = frozenset(
     lido = ler_o_efeito_da_luz(texto)
     if lido is None or RITMO_DA_BASE.get(lido.base) != lido.ritmo:
         return texto
-    if lido.base == "arco-iris":  # (noqa-acento) chave ASCII
+    if lido.base in BASES_SEM_COR_DA_LUZ:
         return token_da_base(lido.base) if not lido.cores else texto
     if cor is not None and lido.cores == (cor_da_base(cor),):
         return token_da_base(lido.base)
@@ -1988,7 +1995,7 @@ def _a_base_na_cor_nova(ctx: Contexto, nome: str, c: dict[str, Any],
     hoje = valor_da_lista_para(efeito_do_controle(perfil_da_lista_de_efeito(cru), uniq),
                                valores_da_biblioteca(), _a_cor_de_agora(ctx, cru, c))
     base = base_do_token(hoje)
-    if base is None or base == "arco-iris":  # (noqa-acento) chave ASCII
+    if base is None or base in BASES_SEM_COR_DA_LUZ:
         return None
     r, g, b = cor_da_base(rgb)
     return escrever_o_efeito_da_luz(base, [f"{r:02X}{g:02X}{b:02X}"], RITMO_DA_BASE[base])
@@ -2643,8 +2650,7 @@ def efeito_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
             raise ValueError(f"{GESTO_DO_EFEITO}: o controle da coluna não está ligado")
         cor = _a_cor_de_agora(ctx, cru, dele)
         r, g, b = cor_da_base(cor)
-        cores = [] if base == "arco-iris" else [  # (noqa-acento) chave ASCII
-            f"{r:02X}{g:02X}{b:02X}"]
+        cores = [] if base in BASES_SEM_COR_DA_LUZ else [f"{r:02X}{g:02X}{b:02X}"]
         efeito = escrever_o_efeito_da_luz(base, cores, RITMO_DA_BASE[base])
     atual = brilho_do_controle(cru, uniq)
     apagada = atual is not None and atual <= 0.0
