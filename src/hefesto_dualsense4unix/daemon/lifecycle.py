@@ -4571,6 +4571,10 @@ class Daemon:
                 self.bus.publish(EventTopic.BUTTON_UP, {"button": name, "pressed": False})
                 self.store.bump("button.up.emitted")
             previous_buttons = current_buttons
+            # O tópico `botoes` das extensões: a borda de TODO controle, cada uma com o dele.
+            from hefesto_dualsense4unix.mods.porta import botoes_de_todo_controle_no_servico
+
+            botoes_de_todo_controle_no_servico(self, current_buttons, buttons_pressed)
 
             if battery.should_emit(state.battery_pct, tick_started):
                 self.bus.publish(EventTopic.BATTERY_CHANGE, state.battery_pct)

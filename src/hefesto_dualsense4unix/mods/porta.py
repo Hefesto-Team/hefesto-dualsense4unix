@@ -25,7 +25,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from hefesto_dualsense4unix.core.events import EventBus, EventTopic
+from hefesto_dualsense4unix.core.events import DEFAULT_QUEUE_MAXSIZE, EventBus, EventTopic
 from hefesto_dualsense4unix.daemon.protocolo_do_ipc import (
     CODE_INVALID_PARAMS,
     CODE_INVALID_REQUEST,
@@ -38,6 +38,7 @@ from hefesto_dualsense4unix.mods import API_DAS_MODIFICACOES
 from hefesto_dualsense4unix.mods.manifesto import (
     FUNCOES_POR_PEDIDO,
     NOME_DA_FUNCAO,
+    PERMISSOES_DO_ESTADO,
     TOPICOS_DE_LEITURA,
     TOPICOS_DE_PUBLICACAO,
 )
@@ -64,6 +65,17 @@ PRAZO_PARA_FECHAR_S = 2.0
 
 #: Quantos jogos um ``lancador.jogos`` entrega, no máximo.
 JOGOS_POR_LANCADOR = 5000
+
+#: O ``estado`` de uma conexão e de um aparelho em ``acessorios.estado``: a cor da janela.
+ESTADOS_DO_ACESSORIO = ("ligado", "procurando", "desligado", "falhou")
+#: Por onde uma conexão fala: o ícone da janela e da aba Conexões.
+TRANSPORTES_DA_CONEXAO = ("usb", "bluetooth", "rede", "local")
+#: Quantas conexões e quantos aparelhos um ``acessorios.estado`` leva, no máximo.
+ITENS_DO_ESTADO = 32
+#: O evento que o «Parar tudo» da janela entrega à extensão que não lê o gesto ``para``.
+EVENTO_DO_PARAR = "extensao.parar"
+#: O tópico ``botoes``: o serviço entrega o aperto de TODO controle, cada um com o dele.
+TOPICO_DOS_BOTOES = "botoes"
 
 Escritor = Callable[[str, dict[str, Any]], Awaitable[Any]]
 OJogoEscreve = Callable[[str, str], bool]
@@ -107,6 +119,11 @@ class _Conexao:
     assinaturas: list[tuple[str, asyncio.Queue[Any]]] = field(default_factory=list)
     tarefas: list[asyncio.Task[None]] = field(default_factory=list)
     trava: asyncio.Lock = field(default_factory=asyncio.Lock)
+    #: As filas do tópico ``botoes`` (``button.down``, ``button.up``): o serviço as enche com o
+    #: aperto de cada controle (:meth:`Porta.botoes_do_tique`), não pelo barramento.
+    filas_dos_botoes: list[tuple[str, asyncio.Queue[Any]]] = field(default_factory=list)
+    #: O socket desta conexão: o «Parar tudo» fala por ele sem assinatura nenhuma.
+    escritor: asyncio.StreamWriter | None = None
 
     def acessorio_preso(self) -> bool:
         """Alguma função ficou acima de zero: se a conexão cair, o serviço publica o zero."""
@@ -160,6 +177,16 @@ def _jsonavel(valor: Any) -> Any:
     if isinstance(valor, (str, int, float, bool)) or valor is None:
         return valor
     return str(valor)
+
+
+def _por_na_fila(fila: asyncio.Queue[Any], carga: Any) -> None:
+    """Como o barramento: a fila cheia descarta o mais antigo, e quem publica nunca espera."""
+    try:
+        fila.put_nowait(carga)
+    except asyncio.QueueFull:
+        with contextlib.suppress(asyncio.QueueEmpty, asyncio.QueueFull):
+            fila.get_nowait()
+            fila.put_nowait(carga)
 
 
 def _resposta(req_id: Any, resultado: Any) -> bytes:
@@ -328,21 +355,81 @@ _NOME_DO_CANAL = {"luz": "a luz", "vibracao": "a vibração", "gatilho": "o gati
 def estado_vazio_dos_acessorios(mod_id: str) -> dict[str, Any]:
     """O estado de quem não tem acessório nem conexão: os gestos do PS voltam a ser os de sempre."""
     return {
-        "mod": mod_id, "ligado": False, "nivel": 0, "perfil": None, "aparelhos": [], "ajustes": {},
+        "mod": mod_id, "ligado": False, "nivel": 0, "perfil": None, "aparelhos": [],
+        "conexoes": [], "ajustes": {},  # (noqa-acento): a chave do estado
+    }
+
+
+def _recusa_do_estado(frase: str) -> RecusaError:
+    return RecusaError(CODE_INVALID_PARAMS, f"acessorios.estado: {frase}")
+
+
+def _curto(valor: Any, onde: str, maximo: int) -> str:
+    if not isinstance(valor, str) or len(valor) > maximo or not valor.strip():
+        raise _recusa_do_estado(f"{onde} é um texto de até {maximo} letras.")
+    return valor.strip()
+
+
+def _estado_do_item(bruto: dict[str, Any], onde: str) -> str:
+    estado = bruto.get("estado", "ligado")
+    if estado not in ESTADOS_DO_ACESSORIO:
+        raise _recusa_do_estado(f"o estado de {onde} é um de {', '.join(ESTADOS_DO_ACESSORIO)}.")
+    return str(estado)
+
+
+def _aparelho(bruto: Any) -> dict[str, Any]:
+    """``{nome, tipo, estado, bateria, forca}``; o texto solto (o formato antigo) é só o nome."""
+    if isinstance(bruto, str):
+        bruto = {"nome": bruto}
+    if not isinstance(bruto, dict):
+        raise _recusa_do_estado("cada aparelho é um objeto {nome, tipo, estado, bateria, forca}.")
+    bateria, forca = bruto.get("bateria"), bruto.get("forca")
+    if bateria is not None and (isinstance(bateria, bool) or not isinstance(bateria, int)
+                                or not 0 <= bateria <= 100):
+        raise _recusa_do_estado("a bateria de um aparelho vai de 0 a 100, ou nula.")
+    if forca is not None and (not _numero(forca) or not 0.0 <= float(forca) <= 1.0):
+        raise _recusa_do_estado("a força de um aparelho vai de 0 a 1, ou nula.")
+    tipo = bruto.get("tipo")
+    return {
+        "nome": _curto(bruto.get("nome"), "o nome do aparelho", 60),
+        "tipo": None if tipo is None else _curto(tipo, "o tipo do aparelho", 30),
+        "estado": _estado_do_item(bruto, "um aparelho"),
+        "bateria": bateria,
+        "forca": None if forca is None else round(float(forca), 3),
+    }
+
+
+def _conexao_do_estado(bruto: Any) -> dict[str, Any]:
+    """``{id, tipo, transporte, estado, motivo}``: uma ponte da extensão (um adaptador, a rede)."""
+    if not isinstance(bruto, dict):
+        raise _recusa_do_estado("cada conexão é um objeto {id, tipo, transporte, estado, motivo}.")
+    transporte, motivo = bruto.get("transporte"), bruto.get("motivo")
+    if transporte not in TRANSPORTES_DA_CONEXAO:
+        raise _recusa_do_estado(
+            f"o transporte de uma conexão é um de {', '.join(TRANSPORTES_DA_CONEXAO)}.")
+    return {
+        "id": _curto(bruto.get("id"), "o id da conexão", 40),
+        "tipo": _curto(bruto.get("tipo"), "o tipo da conexão", 30),
+        "transporte": transporte,
+        "estado": _estado_do_item(bruto, "uma conexão"),
+        "motivo": None if motivo in (None, "") else _curto(motivo, "o motivo da conexão", 120),
     }
 
 
 def estado_dos_acessorios(mod_id: str, params: dict[str, Any]) -> dict[str, Any]:
-    """O ``acessorios.estado`` validado: ``{mod, ligado, nivel, perfil, aparelhos, ajustes}``.
+    """O ``acessorios.estado`` validado, com o ``mod`` de quem o mandou.
 
-    ``ajustes`` leva só o que a modificação declara e o Hefesto entende (limiar do fundo do L2,
-    acelerador, camada, lado único, gestos no Modo Nativo, toque de confirmação, pulso da barra e
-    «Sem pisca»); o resto cai.
+    Cada aparelho sai ``{nome, tipo, estado, bateria, forca}`` (o texto solto vira o nome) e cada
+    conexão ``{id, tipo, transporte, estado, motivo}``, até ``ITENS_DO_ESTADO`` de cada. ``ajustes``
+    leva só o que a modificação declara e o Hefesto entende (limiar do fundo do L2, acelerador,
+    camada, lado único, gestos no Modo Nativo, toque de confirmação, pulso da barra e «Sem pisca»);
+    o resto cai.
     """
     ligado = params.get("ligado", False)
     nivel = params.get("nivel", 0)
     perfil = params.get("perfil")
     aparelhos = params.get("aparelhos", [])
+    conexoes = params.get("conexoes", [])  # (noqa-acento): a chave do estado
     opcoes = params.get("ajustes", {})
     if not isinstance(ligado, bool):
         raise RecusaError(CODE_INVALID_PARAMS, "acessorios.estado pede ligado verdadeiro ou falso.")
@@ -350,16 +437,20 @@ def estado_dos_acessorios(mod_id: str, params: dict[str, Any]) -> dict[str, Any]
         raise RecusaError(CODE_INVALID_PARAMS, "acessorios.estado pede o nível de 0 a 10.")
     if perfil is not None and not isinstance(perfil, str):
         raise RecusaError(CODE_INVALID_PARAMS, "acessorios.estado pede o perfil como texto.")
-    if not isinstance(aparelhos, list) or not isinstance(opcoes, dict):
+    if not isinstance(aparelhos, list) or not isinstance(conexoes, list) \
+            or not isinstance(opcoes, dict):
         raise RecusaError(
-            CODE_INVALID_PARAMS, "acessorios.estado pede aparelhos em lista e ajustes em objeto."
+            CODE_INVALID_PARAMS,
+            "acessorios.estado pede aparelhos e conexões em lista e ajustes em objeto.",
         )
+    as_conexoes = [_conexao_do_estado(c) for c in conexoes[:ITENS_DO_ESTADO]]
     return {
         "mod": mod_id,
         "ligado": ligado,
         "nivel": nivel,
         "perfil": perfil,
-        "aparelhos": [str(a) for a in aparelhos][:32],
+        "aparelhos": [_aparelho(a) for a in aparelhos[:ITENS_DO_ESTADO]],
+        "conexoes": as_conexoes,  # (noqa-acento): a chave do estado
         "ajustes": {k: v for k, v in opcoes.items() if k in OPCOES_DOS_GESTOS},
     }
 
@@ -404,6 +495,9 @@ class Porta:
         self._estados_dos_acessorios: dict[str, dict[str, Any]] = {}
         #: O último ``lancador.jogos`` de cada extensão de lançador.
         self._jogos_dos_lancadores: dict[str, list[dict[str, Any]]] = {}
+        #: Os botões de cada controle no último tique entregue ao tópico ``botoes``; ``None``
+        #: enquanto ninguém o lê (o primeiro tique com leitor só guarda, sem borda inventada).
+        self._botoes_antes: dict[str | None, frozenset[str]] | None = None
 
     # -- quem pode entrar -------------------------------------------------
 
@@ -465,7 +559,7 @@ class Porta:
     # -- uma conexão ------------------------------------------------------
 
     async def _atender(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
-        con = _Conexao()
+        con = _Conexao(escritor=writer)
         self._conexoes.add(con)
         try:
             par = credencial_do_par(writer.get_extra_info("socket"))
@@ -497,7 +591,8 @@ class Porta:
             if con.deu_o_estado and con.sessao is not None:
                 vazio = estado_vazio_dos_acessorios(con.sessao.mod_id)
                 self._estados_dos_acessorios[con.sessao.mod_id] = vazio
-                self.bus.publish(EventTopic.ACESSORIOS_ESTADO, vazio)
+                if "ler:acessorios.gesto" in con.sessao.permissoes:
+                    self.bus.publish(EventTopic.ACESSORIOS_ESTADO, vazio)
             if con.acessorio_preso() and con.sessao is not None:
                 self._soltar_o_acessorio(con.sessao.mod_id, con.funcoes_do_acessorio)
             if con.vibrando and con.sessao is not None:
@@ -603,8 +698,12 @@ class Porta:
                 raise RecusaError(CODE_SEM_PERMISSAO, f"falta a permissão ler:{publico}")
         for publico in topicos:
             for topico in TOPICOS_DE_LEITURA[publico]:
-                fila = self.bus.subscribe(topico)
-                con.assinaturas.append((topico, fila))
+                if publico == TOPICO_DOS_BOTOES:
+                    fila: asyncio.Queue[Any] = asyncio.Queue(maxsize=DEFAULT_QUEUE_MAXSIZE)
+                    con.filas_dos_botoes.append((topico, fila))
+                else:
+                    fila = self.bus.subscribe(topico)
+                    con.assinaturas.append((topico, fila))
                 con.tarefas.append(asyncio.create_task(
                     self._encaminhar(con, writer, publico, topico, fila),
                     name=f"mods-{con.sessao.mod_id}-{topico}",
@@ -676,14 +775,22 @@ class Porta:
         })
 
     def _estado_dos_acessorios(self, con: _Conexao, params: dict[str, Any]) -> dict[str, Any]:
-        """O estado que a modificação de acessórios devolve; vai ao barramento e liga os gestos."""
+        """O estado que a extensão devolve: a janela dela e a aba Conexões o mostram.
+
+        Só com ``ler:acessorios.gesto`` ele vai ao barramento e liga os gestos do PS; com
+        ``publicar:acessorios.estado`` ele só se mostra, e os gestos ficam os de sempre.
+        """
         assert con.sessao is not None
-        if "ler:acessorios.gesto" not in con.sessao.permissoes:
-            raise RecusaError(CODE_SEM_PERMISSAO, "falta a permissão ler:acessorios.gesto")
+        if not con.sessao.permissoes & set(PERMISSOES_DO_ESTADO):
+            raise RecusaError(
+                CODE_SEM_PERMISSAO,
+                "falta a permissão publicar:acessorios.estado ou ler:acessorios.gesto",
+            )
         estado = estado_dos_acessorios(con.sessao.mod_id, params)
         con.deu_o_estado = True
         self._estados_dos_acessorios[con.sessao.mod_id] = estado
-        self.bus.publish(EventTopic.ACESSORIOS_ESTADO, estado)
+        if "ler:acessorios.gesto" in con.sessao.permissoes:
+            self.bus.publish(EventTopic.ACESSORIOS_ESTADO, estado)
         return {"recebido": True}
 
     def _jogos_do_lancador(self, sessao: _Credencial, params: dict[str, Any]) -> dict[str, Any]:
@@ -734,24 +841,74 @@ class Porta:
         return self._estados_dos_acessorios.get(mod_id) if viva else None
 
     def parar_tudo(self, mod_id: str) -> bool:
-        """O «Parar tudo» da janela: o gesto ``para`` só para ``mod_id``.
+        """O «Parar tudo» da janela, só para ``mod_id``.
 
-        Sai no mesmo tópico do gesto do PS (``acessorios.gesto``), com ``mod`` dizendo a quem
-        ele vai e sem controle (``uniq`` nulo): nenhum controle toca a confirmação, e a outra
-        extensão que assina o tópico não o recebe. ``False`` quando a extensão não está
-        conectada à porta (nada a parar).
+        A conexão que não lê o gesto recebe o evento ``extensao.parar`` pelo próprio socket, sem
+        assinatura. O gesto ``para`` sai sempre no tópico do gesto do PS (``acessorios.gesto``),
+        com ``mod`` dizendo a quem ele vai e sem controle (``uniq`` nulo): a extensão que o lê o
+        recebe por ali, o supervisor confere o parar dela, e a outra extensão não o recebe.
+        ``False`` quando a extensão não está conectada à porta (nada a parar).
         """
-        viva = any(
-            con.sessao is not None and con.sessao.mod_id == mod_id
-            and "ler:acessorios.gesto" in con.sessao.permissoes
-            for con in self._conexoes
-        )
-        if not viva:
+        delas = [con for con in self._conexoes
+                 if con.sessao is not None and con.sessao.mod_id == mod_id]
+        if not delas:
             return False
+        for con in delas:
+            assert con.sessao is not None
+            if "ler:acessorios.gesto" not in con.sessao.permissoes and con.escritor is not None:
+                self._avisar(con, con.escritor, EVENTO_DO_PARAR, {"mod": mod_id})
         self.bus.publish(EventTopic.ACESSORIOS_GESTO, {
             "uniq": None, "jogador": None, "gesto": "para", "valor": 0, "mod": mod_id,
         })
         return True
+
+    def _avisar(self, con: _Conexao, writer: asyncio.StreamWriter, nome: str,
+                dados: dict[str, Any]) -> None:
+        """Um ``evento`` fora de assinatura (``topico`` = ``nome``), sem esperar o socket."""
+        linha = json.dumps({
+            "jsonrpc": PROTOCOL_VERSION, "method": "evento",
+            "params": {"topico": nome, "nome": nome, "uniq": None, "dados": dados},
+        }, ensure_ascii=False).encode()
+        tarefa = asyncio.get_running_loop().create_task(self._enviar(con, writer, linha))
+        con.tarefas.append(tarefa)
+        tarefa.add_done_callback(lambda t: con.tarefas.remove(t) if t in con.tarefas else None)
+
+    # -- o tópico ``botoes``, de todo controle ------------------------------
+
+    def le_os_botoes(self) -> bool:
+        """Alguma extensão assinou o tópico ``botoes``? Sem ela, o tique não lê controle nenhum."""
+        return any(con.filas_dos_botoes for con in self._conexoes)
+
+    def botoes_do_tique(
+        self,
+        apertados: dict[str | None, frozenset[str]],
+        jogador_de: Callable[[str | None], int | None],
+    ) -> None:
+        """As bordas deste tique, de cada controle: ``button.down`` e ``button.up`` com o dele.
+
+        ``apertados`` é ``{uniq: botões}`` de todo controle lido no tique. O controle que
+        sumiu solta o que segurava. Roda no laço do serviço; nunca espera o socket (a fila que
+        enche descarta o mais antigo, como a do barramento).
+        """
+        filas = [f for con in self._conexoes for f in con.filas_dos_botoes]
+        antes, self._botoes_antes = self._botoes_antes, dict(apertados) if filas else None
+        if not filas or antes is None:
+            return
+        for uniq in dict.fromkeys([*antes, *apertados]):
+            agora, de_antes = apertados.get(uniq, frozenset()), antes.get(uniq, frozenset())
+            descidos, subidos = sorted(agora - de_antes), sorted(de_antes - agora)
+            if not descidos and not subidos:
+                continue
+            jogador = jogador_de(uniq)
+            for nome, apertado, botoes in (
+                (EventTopic.BUTTON_DOWN, True, descidos), (EventTopic.BUTTON_UP, False, subidos),
+            ):
+                for botao in botoes:
+                    carga = {"button": botao, "botao": botao, "pressed": apertado,
+                             "uniq": uniq, "jogador": jogador}
+                    for topico, fila in filas:
+                        if topico == nome:
+                            _por_na_fila(fila, carga)
 
     def _pulsar(self, sessao: _Credencial, params: dict[str, Any]) -> dict[str, Any]:
         """O pulso da barra: a porta valida e recusa, e o motor da luz decide e escreve."""
@@ -960,6 +1117,30 @@ def uniq_do_posto_no_servico(daemon: Any) -> UniqDoPosto:
     return uniq_do_posto
 
 
+def botoes_de_todo_controle_no_servico(
+    daemon: Any, botoes_do_posto: frozenset[str], botoes_do_leitor: frozenset[str]
+) -> None:
+    """O tópico ``botoes`` do tique: a borda de cada controle, cabo ou rádio, do P1 ao P4.
+
+    O dono do posto entra com ``botoes_do_posto`` (o mesmo estado do ``button.down`` do
+    barramento); os outros, com o leitor que os atalhos do PS já leem
+    (:func:`~hefesto_dualsense4unix.daemon.subsystems.poll.botoes_de_cada_controle`). Sem
+    extensão que assine ``botoes``, não lê nada. Nunca levanta: o tique segue.
+    """
+    porta = getattr(getattr(daemon, "_mods_supervisor", None), "porta", None)
+    if not isinstance(porta, Porta) or not porta.le_os_botoes():
+        return
+    try:
+        from hefesto_dualsense4unix.daemon.subsystems.poll import botoes_de_cada_controle
+        from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import _jogador_de
+
+        apertados = dict(botoes_de_cada_controle(daemon, botoes_do_leitor))
+        apertados[_primario(getattr(daemon, "controller", None))] = botoes_do_posto
+        porta.botoes_do_tique(apertados, lambda uniq: _jogador_de(daemon, uniq))
+    except Exception as exc:
+        logger.debug("mods_porta_botoes_do_tique_falhou", err=type(exc).__name__)
+
+
 def _primario(controle: Any) -> str | None:
     """O ``primary_uniq`` do backend (uma propriedade; num dublê, pode ser método)."""
     valor = getattr(controle, "primary_uniq", None)
@@ -973,11 +1154,13 @@ __all__ = [
     "CODE_O_JOGO_ESCREVE",
     "CODE_QUEM_E_VOCE",
     "CODE_SEM_PERMISSAO",
+    "EVENTO_DO_PARAR",
     "JANELA_DA_VIBRACAO_DO_JOGO_S",
     "PUBLICACOES_POR_SEGUNDO",
     "Controles",
     "Porta",
     "RecusaError",
+    "botoes_de_todo_controle_no_servico",
     "controles_no_servico",
     "credencial_do_par",
     "descende_de",

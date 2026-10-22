@@ -857,12 +857,12 @@ def test_o_manifesto_aceita_grupo_cor_agora_e_parar_tudo() -> None:
     assert m.agora == ["nivel", "perfil", "aparelhos"] and m.parar_tudo is True
 
 
-def test_o_manifesto_recusa_o_agora_e_o_parar_tudo_sem_a_permissao_do_retorno() -> None:
+def test_o_manifesto_recusa_o_agora_sem_a_permissao_do_retorno() -> None:
+    """O ``parar_tudo`` chega como ``extensao.parar`` a quem não lê o gesto: não pede permissão."""
     import pydantic
 
-    with pytest.raises(pydantic.ValidationError, match=r"ler:acessorios\.gesto"):
-        _manifesto_de(parar_tudo=True)
-    with pytest.raises(pydantic.ValidationError, match=r"ler:acessorios\.gesto"):
+    assert _manifesto_de(parar_tudo=True).parar_tudo is True
+    with pytest.raises(pydantic.ValidationError, match=r"publicar:acessorios\.estado"):
         _manifesto_de(agora=["nivel"])
     with pytest.raises(pydantic.ValidationError):
         _manifesto_de(agora=["nivel", "nivel"], permissoes=["ler:acessorios.gesto"])  # noqa-acento: chave

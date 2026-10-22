@@ -37,15 +37,31 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `vibracao.set` | `{uniq, fraco, forte}` (0 a 255) | `escrever:vibracao` | o resultado do `rumble.set` |
 | `gatilho.set` | `{uniq, lado: esquerdo\|direito, modo, params}` | `escrever:gatilho` | o resultado do `trigger.set` |
 | `eventos.publicar` | `{topico, dados}` | `publicar:<tópico>` | `{publicado}` |
-| `acessorios.estado` | `{ligado, nivel (0 a 10), perfil?, aparelhos: [...], ajustes?}` | `ler:acessorios.gesto` | `{recebido}` |
+| `acessorios.estado` | `{ligado, nivel (0 a 10), perfil?, aparelhos: [...], conexoes: [...], ajustes?}` | `ler:acessorios.gesto` ou `publicar:acessorios.estado` | `{recebido}` |
 | `luz.pulso` | `{uniq, cor: [r, g, b], cor_quente?, fundo (0 a 1), periodo_s}` ou `{uniq, parar: true}` | `pedir:luz.pulso` | `{aplicado, motivo, periodo_s?}` |
 | `lancador.jogos` | `{jogos: [{chave, nome, abrir: [...], janela?}]}` | `lancador` | `{recebidos}` |
 | `controles.lista` | `{}` | `ler:conexao` | `{controles: [{uniq, jogador}]}` |
 
-Os tópicos de leitura são estes. Os quatro primeiros são do controle do posto:
+Cada `aparelhos[]` é `{nome, tipo, estado, bateria, forca}`: `nome` (até 40 letras) é o único obrigatório, e um
+texto solto vale `{nome}`; `tipo` é livre (até 30 letras); `estado` é `ligado` (o padrão), `procurando`,
+`desligado` ou `falhou`; `bateria` vai de 0 a 100 e `forca` de 0 a 1, ou `null`. Cada `conexoes[]` é
+`{id, tipo, transporte, estado, motivo}`: `id` (até 40 letras) e `tipo` (até 30) são da extensão, `transporte` é
+`usb`, `bluetooth`, `rede` ou `local`, `estado` é o mesmo dos aparelhos e `motivo` (até 120 letras, ou `null`) diz
+por que ela não liga. Até 32 de cada. Um item torto recusa o estado inteiro (`-32602`, com a frase).
+
+Quem só mostra o estado (a coluna «Agora» e a aba Conexões) pede `publicar:acessorios.estado`: o serviço guarda o
+último para a janela e para a aba, e ele NÃO vai ao barramento, então os gestos do PS ficam os de sempre. Com
+`ler:acessorios.gesto` o estado vai também ao barramento, e é ele que liga os gestos.
+
+Os tópicos de leitura são estes. `estado`, `bateria` e `conexao` são do controle do posto; `botoes` é de todo
+controle:
 
 - `estado`: o estado do controle a cada tique;
-- `botoes`: um botão apertado ou solto;
+- `botoes`: um botão apertado (`nome: "button.down"`) ou solto (`button.up`) em QUALQUER controle, de P1 a P4,
+  cabo ou Bluetooth: `{botao, button, pressed, uniq, jogador}`. `botao` e `button` são o mesmo nome (`cross`,
+  `r1`, `dpad_up`…; `button` fica para quem lia a 2.1), `uniq` é o do controle, também no envelope, e `jogador`
+  o número que ele acende agora (ou `null`). Cada borda sai uma vez, no tique em que acontece; o controle que
+  sai solta o que segurava. No Modo Nativo o tique para, e os botões também;
 - `bateria`: a carga;
 - `conexao`: o controle que entra ou sai.
 
@@ -101,7 +117,8 @@ Os demais são do jogo e do perfil, e cada um é uma permissão à parte:
   acessórios, `{uniq, jogador, gesto, valor}`. `gesto` é `sobe`, `desce`, `para`, `perfil_seguinte`,
   `perfil_anterior`, `nivel_ao_vivo` (`valor` de 0 a 1), `surto` ou `camada` (`valor` 1 liga, 0 desliga); nunca um
   botão cru. O «Parar tudo» da janela chega como `para` com `uniq` e `jogador` nulos e `mod`, o `id` da
-  extensão a que se destina; só ela o recebe. Só existe com a modificação ligada e com aparelho: ela devolve o próprio estado por
+  extensão a que se destina; só ela o recebe. A extensão sem `ler:acessorios.gesto` o recebe como
+  `extensao.parar` (`topico` e `nome`), `{mod}`, sem assinar nada, e o prazo dos 300 ms abaixo vale igual. Só existe com a modificação ligada e com aparelho: ela devolve o próprio estado por
   `acessorios.estado`, o Hefesto guarda o último e, sem ele (ou sem aparelho, ou quando a conexão cai), PS + R2 é o
   que sempre foi. Enquanto o gesto vale, o R2, o L2, o R1, o L1 e o direcional que o comandam não chegam ao
   jogo, por controle. `ajustes` aceita `limiar_fundo` (50 a 100 %), `acelerador`, `camada`, `camada_s`,
@@ -256,31 +273,37 @@ escrever nada:
 A interface desenha a janela «Configurar» de cada extensão do que o `hefesto-mod.json` declara, sem
 código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opcionais, `escolhas`, `padrao` e `grupo`.
 
-- **`tipo`**: `escolha` (lista em `escolhas`), `ligado`, `numero`, `cor`, `deslizante`, `jogos` e `css` (só em extensão de tema; ver «O CSS de quem usa»). A `cor` é um
+- **`tipo`**: `escolha` (lista em `escolhas`), `ligado`, `numero`, `cor`, `deslizante`, `jogos`, `endereco`, `por_botao` e `css` (só em extensão de tema; ver «O CSS de quem usa»). A `cor` é um
   seletor de cor da interface; o valor é `#rrggbb` em minúsculas, e um `padrao` que não seja `#rrggbb` recusa
   o manifesto. O `deslizante` declara `minimo`, `maximo` e `passo` (`minimo` menor que `maximo`, `passo`
   maior que zero) e o `padrao`, **obrigatório** e dentro da faixa: é a posição inicial; a janela desenha um
   `input[type=range]` com a faixa dele, e o valor guardado cai no degrau do `passo` mais perto. Os `jogos` são
   uma lista de chaves `steam_app_<N>`: a janela desenha uma caixa por jogo que tem perfil no Hefesto, o
-  `padrao` é a lista vazia (nenhum jogo marcado) e o valor é a lista das chaves marcadas.
+  `padrao` é a lista vazia (nenhum jogo marcado) e o valor é a lista das chaves marcadas. O `endereco` é o IP
+  (ou o nome do computador, ou `[IPv6]`) e a porta num campo só, `192.168.0.10:8080`; o vazio é o endereço ainda
+  não escolhido. O `por_botao` dá uma forma a cada botão: `formas` declara de 1 a 16 formas,
+  `{nome: [[força, segundos], …]}` (até 16 passos, força de 0 a 1, cada passo de mais de 0 até 10 s; a lista vazia
+  é a forma que não toca); `botoes`, opcional, limita a janela a esses (sem ele, os 19 de `cross` a
+  `touchpad_right_press`; o PS e o microfone são da casa); `padrao` é `{botão: forma}`. O valor é o objeto
+  inteiro, um botão por chave: o que falta vale o `padrao`, e sem ele a primeira forma.
 - **`grupo`**: o nome (até 30 letras) da aba interna em que a opção mora. Com dois ou mais grupos a janela
   desenha uma aba por grupo, na ordem em que aparecem; a opção sem grupo vai à primeira aba; com um grupo
   só, não há aba. Ao mudar uma opção a janela reabre na aba da opção.
 - **onde ficam os valores**: a tela grava cada opção em `<dados>/<id>/opcoes.json`, um objeto `{id: valor}`, em
   `0600`, depois de validar contra o manifesto. A extensão lê o mesmo arquivo na pasta de dados
   (`HEFESTO_MOD_DADOS`). Valor ausente, ou que o manifesto não aceita mais, vale o `padrao` (sem `padrao`: a
-  primeira `escolha`, `false`, `0`, `#ffffff` ou a lista vazia).
+  primeira `escolha`, `false`, `0`, `#ffffff`, a lista vazia ou o endereço vazio).
 - **`agora`**: a lista do que a coluna «Agora» mostra, ao vivo, do `acessorios.estado` da extensão:
-  `nivel`, `perfil` e `aparelhos`, sem repetir.
-- **`parar_tudo`**: `true` pede o botão «Parar tudo», sempre à vista: ele manda a ela o gesto `para`, e o
-  nível e o perfil ficam guardados.
+  `nivel`, `perfil`, `aparelhos` e `conexoes`, sem repetir.
+- **`parar_tudo`**: `true` pede o botão «Parar tudo», sempre à vista: ele manda a ela o gesto `para` (ou o
+  `extensao.parar`, a quem não lê o gesto), e o nível e o perfil ficam guardados.
 
-`agora` e `parar_tudo` só valem com `ler:acessorios.gesto` nas permissões, que é o retorno que os dois usam;
-sem a permissão o manifesto é recusado. A janela os pede ao serviço por dois métodos do IPC da interface (o
+`agora` só vale com `ler:acessorios.gesto` ou `publicar:acessorios.estado` nas permissões, que é o retorno que
+ele mostra; sem nenhuma das duas o manifesto é recusado. O `parar_tudo` não pede permissão. A janela os pede ao serviço por dois métodos do IPC da interface (o
 `ipc.sock`, não esta porta):
 
 - `mods.agora {mod}` devolve o último `acessorios.estado` daquela extensão, `{mod, ligado, nivel, perfil,
-  aparelhos, ajustes}`. Sem conexão viva da extensão, ou quando a conexão cai, volta o estado vazio (`ligado: false`), e a
+  aparelhos, conexoes, ajustes}`. Sem conexão viva da extensão, ou quando a conexão cai, volta o estado vazio (`ligado: false`), e a <!-- noqa-acento: chave do estado -->
   coluna mostra cada pedaço vazio, sem número. A janela pergunta no máximo duas vezes por segundo, fora do tique,
   e desenha só os pedaços do `agora`;
 - `mods.parar_tudo {mod}` publica `acessorios.gesto` com `gesto: "para"`, `uniq` e `jogador` nulos e

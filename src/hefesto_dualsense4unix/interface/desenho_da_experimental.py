@@ -420,7 +420,8 @@ def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None) -> str:
                           f'Perfil</span><span class="ja-perfil-nome">{texto}</span></div>')
         else:
             bruto = estado.get("aparelhos") if vivo and estado else None
-            nomes = [str(x) for x in bruto] if isinstance(bruto, list) else []
+            nomes = [str(x.get("nome", "")) if isinstance(x, dict) else str(x)
+                     for x in bruto] if isinstance(bruto, list) else []
             conta = (f"{len(nomes)} conectado" + ("" if len(nomes) == 1 else "s")
                      if nomes else "Nenhum conectado")
             itens = "".join('<div class="ja-ap"><div class="ja-ap-cab"><span class="ja-ap-nome">'

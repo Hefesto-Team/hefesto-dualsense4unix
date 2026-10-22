@@ -120,6 +120,9 @@ _O_QUE_DEIXA: dict[str, str] = {
     "ler:acessorios.gesto": (  # (noqa-acento): contrato ASCII
         "Receber os gestos do botão PS que comandam os acessórios, sem receber botão nenhum."
     ),
+    "publicar:acessorios.estado": (  # (noqa-acento): contrato ASCII
+        "Mostrar na janela dela e na aba Conexões as conexões e os aparelhos que ela liga."
+    ),
     "pedir:luz.pulso": (  # (noqa-acento): contrato ASCII
         "Pedir que a barra de luz de um controle pulse na cor escolhida, nos perfis «Adulto»."
     ),
@@ -135,8 +138,53 @@ _O_QUE_DEIXA: dict[str, str] = {
     "aparelhos": "Abrir aparelhos ligados ao computador.",
 }
 
+#: Os botões que uma opção ``por_botao`` aceita, nos nomes do tópico ``botoes``. O PS e o
+#: microfone ficam de fora: são os gestos da casa.
+BOTOES_DO_POR_BOTAO = (
+    "cross", "circle", "square", "triangle", "l1", "r1", "l2", "r2", "l3", "r3",
+    "dpad_up", "dpad_down", "dpad_left", "dpad_right", "options", "create",
+    "touchpad_left_press", "touchpad_middle_press", "touchpad_right_press",
+)
+#: Uma forma de ``por_botao``: até 16 passos ``[força 0..1, segundos]``, cada passo até 10 s.
+PASSOS_DA_FORMA = 16
+SEGUNDOS_DO_PASSO = 10.0
+FORMAS_POR_OPCAO = 16
+
 #: A cor de uma opção ``cor``: ``#rrggbb``, minúsculas ou maiúsculas.
 COR_HEXA = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+#: As permissões que deixam a extensão devolver ``acessorios.estado``. Só a do gesto liga os
+#: gestos do PS; a do estado só mostra (a janela e a aba Conexões).
+PERMISSOES_DO_ESTADO = ("ler:acessorios.gesto", "publicar:acessorios.estado")
+
+_NOME_DE_HOST = re.compile(r"^(?=.{1,253}$)[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+                           r"(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)*$")
+
+
+def endereco_valido(texto: str) -> tuple[str, int] | None:
+    """``host:porta`` de uma opção ``endereco``: ``(host, porta)``, ou ``None`` fora da forma.
+
+    O host é um IPv4, um nome (``meu-pc.local``) ou um IPv6 entre colchetes; a porta, de 1 a 65535.
+    """
+    import ipaddress
+
+    host, separador, porta = texto.strip().rpartition(":")
+    if not separador or not porta.isdigit() or not 1 <= int(porta) <= 65535:
+        return None
+    if host.startswith("[") and host.endswith("]"):
+        try:
+            ipaddress.IPv6Address(host[1:-1])
+        except ValueError:
+            return None
+        return host, int(porta)
+    if host.replace(".", "").isdigit():
+        try:
+            ipaddress.IPv4Address(host)
+        except ValueError:
+            return None
+        return host, int(porta)
+    return (host, int(porta)) if _NOME_DE_HOST.match(host) else None
+
 
 #: A chave de um jogo numa opção ``jogos`` e no ``perfil.trocou``: a classe de janela da Steam.
 CHAVE_DE_JOGO = re.compile(r"^steam_app_[0-9]{1,12}$")
@@ -214,9 +262,15 @@ class Opcao(BaseModel):
 
     id: str
     rotulo: str = Field(min_length=1, max_length=60)
-    tipo: Literal["escolha", "ligado", "numero", "cor", "deslizante", "jogos", "css"]
+    tipo: Literal[
+        "escolha", "ligado", "numero", "cor", "deslizante", "jogos", "css", "endereco", "por_botao",
+    ]
     escolhas: list[str] = Field(default_factory=list)
-    padrao: str | bool | float | list[str] | None = None
+    padrao: str | bool | float | list[str] | dict[str, str] | None = None
+    # O ``por_botao``: as formas pelo nome (cada uma, passos ``[força, segundos]``; a lista vazia é
+    # a forma que não toca) e os botões que a janela mostra. O valor é ``{botão: forma}``.
+    formas: dict[str, list[list[float]]] = Field(default_factory=dict)
+    botoes: list[str] = Field(default_factory=list)
     # O ``deslizante`` declara a faixa inteira e a posição inicial (obrigatória e
     # dentro da faixa); os três ficam vazios nos outros tipos.
     minimo: float | None = None
@@ -249,7 +303,41 @@ class Opcao(BaseModel):
             self._conferir_os_jogos()
         elif isinstance(self.padrao, list):
             raise ValueError(f"a opção {self.id} não é de jogos e o padrão é uma lista")
+        if self.tipo == "por_botao":
+            self._conferir_o_por_botao()
+        elif self.formas or self.botoes or isinstance(self.padrao, dict):
+            raise ValueError(f"a opção {self.id} não é por_botao e declara formas ou botões")
+        if self.tipo == "endereco" and self.padrao is not None and not (
+            isinstance(self.padrao, str)
+            and (not self.padrao or endereco_valido(self.padrao) is not None)
+        ):
+            raise ValueError(f"a opção {self.id} é de endereço e o padrão não é host:porta")
         return self
+
+    def _conferir_o_por_botao(self) -> None:
+        if not self.formas or len(self.formas) > FORMAS_POR_OPCAO:
+            raise ValueError(f"o por_botao {self.id} declara de 1 a {FORMAS_POR_OPCAO} formas")
+        for nome, passos in self.formas.items():
+            if not 1 <= len(nome) <= 20 or len(passos) > PASSOS_DA_FORMA:
+                raise ValueError(f"a forma «{nome}» de {self.id} tem o nome ou os passos fora")
+            for passo in passos:
+                if (len(passo) != 2 or not 0.0 <= passo[0] <= 1.0
+                        or not 0.0 < passo[1] <= SEGUNDOS_DO_PASSO):
+                    raise ValueError(f"a forma «{nome}» de {self.id} pede [força 0..1, segundos]")
+        estranhos = [b for b in self.botoes if b not in BOTOES_DO_POR_BOTAO]
+        if estranhos or len(set(self.botoes)) != len(self.botoes):
+            raise ValueError(f"o por_botao {self.id} lista botão desconhecido ou repetido")
+        if self.padrao is None:
+            return
+        if not isinstance(self.padrao, dict) or any(
+            b not in self.botoes_da_janela or f not in self.formas for b, f in self.padrao.items()
+        ):
+            raise ValueError(f"o padrão do por_botao {self.id} é {{botão: forma declarada}}")
+
+    @property
+    def botoes_da_janela(self) -> tuple[str, ...]:
+        """Os botões do ``por_botao``, na ordem declarada; sem a lista, todos os do tópico."""
+        return tuple(self.botoes) if self.botoes else BOTOES_DO_POR_BOTAO
 
     def _conferir_o_deslizante(self) -> None:
         if self.minimo is None or self.maximo is None or self.passo is None:
@@ -289,10 +377,12 @@ class Manifesto(BaseModel):
     permissoes: list[str] = Field(default_factory=list)
     opcoes: list[Opcao] = Field(default_factory=list)
     # A coluna «Agora» da janela: o que mostrar ao vivo do que a extensão devolve em
-    # ``acessorios.estado``. Pede ``ler:acessorios.gesto``, a permissão desse retorno.
-    agora: list[Literal["nivel", "perfil", "aparelhos"]] = Field(default_factory=list)
-    # O botão «Parar tudo», sempre à vista: manda o gesto ``para`` à extensão, que o recebe por
-    # ``ler:acessorios.gesto``. O nível e o perfil ficam guardados.
+    # ``acessorios.estado``. Pede ``ler:acessorios.gesto`` ou ``publicar:acessorios.estado``.
+    agora: list[
+        Literal["nivel", "perfil", "aparelhos", "conexoes"]  # (noqa-acento): a chave do estado
+    ] = Field(default_factory=list)
+    # O botão «Parar tudo», sempre à vista: a extensão o recebe como o evento ``extensao.parar``
+    # (e, com ``ler:acessorios.gesto``, como o gesto ``para``). O nível e o perfil ficam guardados.
     parar_tudo: bool = False
     # O conteúdo destes três é das sprints que os consomem (o lançador do
     # KytyPS5, o tema da interface, a ponte dos acessórios): aqui só a forma.
@@ -357,8 +447,9 @@ class Manifesto(BaseModel):
             raise ValueError("o tipo processo e o bloco processo andam juntos")
         if len(set(self.agora)) != len(self.agora):
             raise ValueError("pedaço repetido em agora")
-        if (self.agora or self.parar_tudo) and "ler:acessorios.gesto" not in self.permissoes:
-            raise ValueError("agora e parar_tudo pedem a permissão ler:acessorios.gesto")
+        if self.agora and not set(PERMISSOES_DO_ESTADO) & set(self.permissoes):
+            raise ValueError(
+                "agora pede a permissão publicar:acessorios.estado ou ler:acessorios.gesto")
         self._conferir_o_lado_e_as_opcoes_do_tema()
         self._conferir_a_opcao_do_css()
         return self
@@ -456,11 +547,13 @@ def ler_manifesto(pasta: Path, *, exigir_api: bool = True) -> Manifesto:
 
 __all__ = [
     "ALCANCES_DE_REDE",
+    "BOTOES_DO_POR_BOTAO",
     "CANAIS_DE_ESCRITA",
     "COR_HEXA",
     "FUNCOES_POR_PEDIDO",
     "NOME_DA_FUNCAO",
     "NOME_DO_MANIFESTO",
+    "PERMISSOES_DO_ESTADO",
     "PERMISSOES_SIMPLES",
     "TIPOS",
     "TOPICOS_DE_LEITURA",
@@ -470,6 +563,7 @@ __all__ = [
     "Opcao",  # (noqa-acento): contrato ASCII
     "Processo",
     "aceita_a_api",
+    "endereco_valido",
     "frase_da_api",
     "ler_manifesto",
     "o_que_a_permissao_deixa",
