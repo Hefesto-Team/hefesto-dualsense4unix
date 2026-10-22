@@ -30,6 +30,8 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "vizinho-o-que-e": "abre a explicação de um vizinho de porta — é texto",
     "procurar": "filtra a lista dos perfis pelo que ela digitou — é da tela",
     "adicionar-lancador": "registra onde um lançador está — é da máquina",
+    "editar-o-css-da-modificacao": "abre o `meu.css` da extensão no editor — é texto da pessoa, "
+                                   "e nada aqui toca o controle",
     "procurar-o-arquivo": "abre o seletor do sistema para ela apontar o "
                           "`.desktop` — é da máquina, e nada aqui toca o "
                           "controle",
