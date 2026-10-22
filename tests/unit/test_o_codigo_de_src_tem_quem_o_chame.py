@@ -218,6 +218,7 @@ _FORA_HOJE = _sem_pacote(_Grafo(RAIZ).fora_do_produto())
 
 def test_todo_modulo_de_src_tem_caminho_do_produto_ou_razao_declarada() -> None:
     """O módulo novo que só o teste chama reprova aqui, com o nome dele."""
+    # D-2210-O-CODIGO-DE-SRC-TEM-QUEM-O-CHAME
     sem_razao = sorted(_FORA_HOJE - set(_FORA_DO_PRODUTO))
     assert not sem_razao, (
         "estes módulos de `src/` não têm caminho do produto (nem entrada do pyproject, "

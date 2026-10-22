@@ -155,11 +155,11 @@ A arquitetura de backends confere: `window_backends/` com `base`, `xlib`,
 `wayland_portal`, `wlr_toplevel` e `null`, e a factory em `window_detect.py`.
 
 **O item 3 da Camada 1 caducou.** O shim `integrations/xlib_window.py` foi
-retirado em 29/07 (CODIGO-MORTO-01) e o arquivo hoje é uma **lápide**: o módulo
-levanta `ImportError` já no import, com mensagem que aponta o substituto. Ele
-não re-exporta nada, e a frase "código legado não precisa de alteração" virou o
-oposto — código legado que importe `xlib_window` **quebra no import**, de
-propósito.
+retirado em 29/07 (CODIGO-MORTO-01), e a lápide que ficou no lugar saiu em
+22/10/2026 (O-CODIGO-QUE-SO-O-TESTE-CHAMA-01): o arquivo não existe mais. A frase
+"código legado não precisa de alteração" virou o oposto — código legado que
+importe `xlib_window` **quebra no import** (`ModuleNotFoundError`), e o
+substituto é `integrations/window_detect.py`.
 
 O motivo não foi limpeza: a `XlibClient` que morava ali lia o
 `_NET_ACTIVE_WINDOW` da raiz **sem gate de foco**, exatamente o defeito que o

@@ -1853,7 +1853,6 @@ tests/unit/test_tres_controles_no_pragmata_01.py,373,medido
 tests/unit/test_tres_rotas_concordam_apos_a_queda.py,352,medido
 tests/unit/test_trigger_canon_01.py,304,medido
 tests/unit/test_trigger_effects.py,315,medido
-tests/unit/test_trigger_presets.py,314,medido
 tests/unit/test_triggers_actions.py,311,medido
 tests/unit/test_troca_de_player_01_a_escolha_sobrepoe.py,297,medido
 tests/unit/test_trocar_duas_entradas_move_o_buraco.py,373,medido
@@ -1916,7 +1915,6 @@ tests/unit/test_wrapper_banner.py,314,medido
 tests/unit/test_wrapper_em_todos_cobertura.py,320,medido
 tests/unit/test_wrapper_used.py,430,medido
 tests/unit/test_xdg_paths.py,314,medido
-tests/unit/test_xlib_window_nao_importavel.py,389,medido
 tests/unit/test_z1_t1_frase_do_desfecho.py,311,medido
 tests/unit/test_z2_o_numero_bate_com_a_contagem.py,1939,medido
 tests/unit/test_z2_rodape_para_de_mentir_guardado.py,304,medido
