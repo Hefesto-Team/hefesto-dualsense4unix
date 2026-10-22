@@ -81,22 +81,27 @@ def test_jogador_fora_da_mesa_recusa(fora: int) -> None:
 
 
 def test_todo_gatilho_da_receita_e_um_modo_real() -> None:
-    """A chave do gatilho sai da lista que a aba Gatilhos oferece."""
-    import pathlib
-    import re
+    """A chave do gatilho da receita é um dos onze acionamentos que a aba Gatilhos sabe mostrar.
 
-    pagina = (pathlib.Path(__file__).resolve().parents[2]
-              / "src/hefesto_dualsense4unix/interface/paginas/03-gatilhos.html")
-    m = re.search(r'<select class="(?:modo|g2-acion)"[^>]*>(.*?)</select>',
-                  pagina.read_text(encoding="utf-8"), re.S)
-    assert m, "a página Gatilhos não tem lista de modo — a régua ficaria cega"
-    reais = set(re.findall(r'<option value="([^"]*)"', m.group(1)))
+    A aba já não tem a lista de acionamento (22/10/2026): o acionamento vem dentro do efeito, e um
+    perfil que só o tem abre pela opção `acionamento:<modo>` do grupo «Do perfil».
+    """
+    from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS, na_lista_de_onze
+    from hefesto_dualsense4unix.interface.pacotes import a03_gatilhos
+
+    reais = {p.name for p in PRESETS}
+    assert len(reais) >= 10, "a tabela de acionamentos do produto veio vazia — a régua ficaria cega"
 
     # A receita com a chave que saiu da lista de onze vale pelo acionamento que a tela mostra.
-    from hefesto_dualsense4unix.app.actions.trigger_specs import na_lista_de_onze
-
-    ruins = [f"{e.rotulo} -> {e.gatilho!r}" for e in estilos.ESTILOS
-             if e.gatilho is not None and na_lista_de_onze(e.gatilho, [])[0] not in reais]
+    ruins = []
+    for e in estilos.ESTILOS:
+        if e.gatilho is None:
+            continue
+        modo = na_lista_de_onze(e.gatilho, [])[0]
+        opcao = f"{a03_gatilhos.PREFIXO_DO_ACIONAMENTO}{modo}"
+        lista = a03_gatilhos.html_das_opcoes_de_imersao("", "", opcao)
+        if modo not in reais or f'value="{opcao}"' not in lista:
+            ruins.append(f"{e.rotulo} -> {e.gatilho!r}")
     assert not ruins, (
         "receita(s) apontando para modo de gatilho que não existe:\n  "
         + "\n  ".join(ruins) + f"\nos reais: {sorted(reais)}")

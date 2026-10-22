@@ -111,6 +111,12 @@ def _clicar(gesto_: str, o: dict, p) -> None:
     acao(_clicar.ctx, {"uniq": UNIQ, **o}, p)  # type: ignore[attr-defined]
 
 
+def _modo(a03, ctx) -> str:
+    """O modo do L2 depois de um tique: o `pacote()` poda o rascunho, e `_modo_de_agora` o lê."""
+    a03.pacote(ctx)
+    return str(a03._modo_de_agora(ctx, UNIQ, "left"))
+
+
 def test_o_modo_aplicado_continua_no_campo_no_tique_seguinte(a03):
     """Clicar `Rígido` e ver o campo voltar para o disco é a queixa de uso.
 
@@ -119,13 +125,13 @@ def test_o_modo_aplicado_continua_no_campo_no_tique_seguinte(a03):
     o campo volta a dizer `Off` sobre um gatilho que está em `Resistance`.
     """
     ctx = _ctx(modo_no_disco="Off")
-    antes = a03._modo_de_agora(ctx, UNIQ, "left")
+    antes = _modo(a03, ctx)
     assert antes == "Off", "o cenário partiu do lugar errado"
 
     _clicar.ctx = ctx  # type: ignore[attr-defined]
     _clicar("modo", {"lado": "e", "valor": "Resistance"}, _Ponte())
 
-    depois = a03._modo_de_agora(ctx, UNIQ, "left")
+    depois = _modo(a03, ctx)
     assert depois == "Resistance", (
         f"o campo voltou para {depois!r} meio segundo depois do clique. É a "
         f"queixa dela: a escolha não fica.")
@@ -143,10 +149,10 @@ def test_trocar_de_perfil_esquece_o_que_foi_aplicado(a03):
     ctx = _ctx(perfil_ativo="ação", modo_no_disco="Off")
     _clicar.ctx = ctx  # type: ignore[attr-defined]
     _clicar("modo", {"lado": "e", "valor": "Resistance"}, _Ponte())
-    assert a03._modo_de_agora(ctx, UNIQ, "left") == "Resistance"
+    assert _modo(a03, ctx) == "Resistance"
 
     outro = _ctx(perfil_ativo="corrida", modo_no_disco="Off")
-    assert a03._modo_de_agora(outro, UNIQ, "left") == "Off", (
+    assert _modo(a03, outro) == "Off", (
         "o rascunho do perfil anterior sobreviveu à troca — a tela afirmaria "
         "um efeito que o `profile.switch` já desfez")
 
@@ -161,7 +167,7 @@ def test_o_controle_que_sai_da_mesa_leva_o_rascunho(a03):
 
     a03.pacote(Contexto(state={"active_profile": "régua"}, mesa=MESA,
                         conectados=[], estados={}))
-    assert a03._modo_de_agora(ctx, UNIQ, "left") == "Off", (
+    assert _modo(a03, ctx) == "Off", (
         "o rascunho de um controle que saiu da mesa sobreviveu — no replug o "
         "daemon reaplica o perfil, e a tela diria o efeito de antes de ele sair")
 
@@ -173,7 +179,7 @@ def test_o_rascunho_so_recebe_o_que_o_daemon_aceitou(a03):
     guardado = {"status": "ok", "aplicado_em": [], "guardado_em": [UNIQ]}
     with pytest.raises(RuntimeError):
         _clicar("modo", {"lado": "e", "valor": "Resistance"}, _Ponte(guardado))
-    assert a03._modo_de_agora(ctx, UNIQ, "left") == "Off", (
+    assert _modo(a03, ctx) == "Off", (
         "o rascunho ficou com um efeito que o daemon GUARDOU sem mandar ao fio")
 
 

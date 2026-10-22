@@ -123,13 +123,12 @@ def test_dentro_da_lista_o_anel_e_da_cor_oposta(pagina: Any) -> None:
 
 
 def _as_listas_reais() -> str:
-    """O acionamento e a imersão do P1, como a 03 publicada os traz: o «—» escondido primeiro."""
+    """A lista do efeito do P1, como a 03 publicada a traz: o «—» escondido primeiro."""
     from hefesto_dualsense4unix.interface import onde
 
     texto = (onde.PUBLICADO / "03-gatilhos.html").read_text(encoding="utf-8")
-    listas = [re.search(rf'<select class="{c}".*?</select>', texto, re.S) for c in
-              ("g2-acion", "g2-imersao")]
-    assert all(listas), "a 03 publicada perdeu uma das listas de efeito"
+    listas = [re.search(r'<select class="g2-imersao".*?</select>', texto, re.S)]
+    assert all(listas), "a 03 publicada perdeu a lista de efeito"
     return "".join(f'<div style="margin:40px">{m.group(0)}</div>' for m in listas if m)
 
 
@@ -139,13 +138,13 @@ def reais(navegador: Any) -> Any:
         navegador, f"<!doctype html><html><body>{_as_listas_reais()}</body></html>")
 
 
-@pytest.mark.parametrize("classe", ["g2-acion", "g2-imersao"])
+@pytest.mark.parametrize("classe", ["g2-imersao"])
 def test_nas_listas_reais_da_03_a_volta_pula_o_lugar_vazio(reais: Any, classe: str) -> None:
     """D-1910-A-NAVEGACAO-INTERNA-NASCE-LIGADA: a volta cai no primeiro efeito, nunca no «—»."""
     sel = f"document.querySelector('select.{classe}')"
     caixas = json.loads(reais.evaluate("window.__hefNav.ler()"))["caixas"]
     listas = [c["endereco"] for c in caixas if c.get("tipo") == "lista"]
-    endereco = listas[0 if classe == "g2-acion" else 1]
+    endereco = listas[0]
 
     def passo(p: int) -> str:
         reais.evaluate("([e, p]) => window.__hefNav.aplicar("

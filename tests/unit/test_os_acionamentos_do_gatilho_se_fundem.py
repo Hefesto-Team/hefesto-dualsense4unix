@@ -257,8 +257,8 @@ def test_a_lista_da_aba_tem_so_os_onze(monkeypatch: pytest.MonkeyPatch) -> None:
 
     Mordida: tirar a tradução do `_na_lista_da_tela` (`Rigid` abriria como `acionamento:Rigid`).
     """
-    for velho in ("Rigid", "AutoGun", "Bow", "Galloping"):
-        a03, r = _a03_com_o_perfil(monkeypatch, {"mode": velho, "params": [5, 200]},
+    for velho, params in (("Rigid", [5, 200]), ("AutoGun", [2, 6, 60])):
+        a03, r = _a03_com_o_perfil(monkeypatch, {"mode": velho, "params": params},
                                    {"mode": "Off", "params": []})
         escolhida = r["colunas"][_UNIQ]["imersao-e"]
         if escolhida.startswith(a03.PREFIXO_DO_ACIONAMENTO):

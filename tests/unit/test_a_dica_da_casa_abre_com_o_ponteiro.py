@@ -297,7 +297,7 @@ def test_a_mordida_sem_a_camada_nao_ha_dica_da_casa(sem_a_camada: dict[str, Any]
         "sistema vive, e é ele que a colheita tira")
 
 
-CAMPO_DE_DICA = "dica-modo-e"
+CAMPO_DE_DICA = "dica-imersao-e"
 
 _FRASE_DA_REGUA = "A RÉGUA ESCREVEU ESTA DICA"
 
