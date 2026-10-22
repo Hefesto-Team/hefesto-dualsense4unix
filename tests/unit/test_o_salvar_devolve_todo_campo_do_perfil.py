@@ -11,6 +11,14 @@ A MORDIDA: tire o `**self.source_so_devolve` do `to_profile` e
 :func:`test_os_campos_que_o_rascunho_nao_edita_voltam_do_salvar` reprova; acrescente um campo ao
 `Profile` sem levá-lo ao `to_profile` nem à lista e
 :func:`test_todo_campo_do_perfil_tem_quem_o_devolva` reprova.
+
+Medido em 22/10/2026 no perfil do Sackboy: o mesmo buraco DENTRO das seções. O rascunho não
+levava `triggers.modo`, `triggers.intensidade`, `leds.modo`, `leds.efeito` nem
+`leds.lightbar_para_o_numero`, e todo Salvar devolvia o «Modo automático» dos Gatilhos e da
+Iluminação a `null` no disco. A MORDIDA: tire o laço de `source_secoes_so_devolve` do `to_profile` e
+:func:`test_os_campos_de_secao_que_o_rascunho_nao_edita_voltam_do_salvar` reprova; acrescente um
+campo a uma seção sem levá-lo ao rascunho nem à lista e
+:func:`test_todo_campo_de_secao_tem_quem_o_devolva` reprova.
 """
 from __future__ import annotations
 
@@ -18,10 +26,18 @@ import inspect
 import re
 
 from hefesto_dualsense4unix.app.draft_config import (
+    CAMPOS_DA_SECAO_QUE_O_RASCUNHO_SO_DEVOLVE,
     CAMPOS_QUE_O_RASCUNHO_SO_DEVOLVE,
     DraftConfig,
 )
-from hefesto_dualsense4unix.profiles.schema import Profile
+from hefesto_dualsense4unix.profiles.schema import (
+    TODAS_AS_BASES_DA_LUZ,
+    LedsConfig,
+    Profile,
+    RumbleConfig,
+    TriggersConfig,
+    escrever_o_efeito_da_luz,
+)
 
 #: Os campos que o carregador escreve na gravação, nunca o rascunho.
 DO_CARREGADOR = {"version", "criado_em", "modificado_em"}
@@ -62,3 +78,53 @@ def test_todo_campo_do_perfil_tem_quem_o_devolva() -> None:
         and not re.search(rf"\b{campo}=", fonte)
     ]
     assert not sem_dono, f"campos do perfil que o Salvar apagaria: {sem_dono}"
+
+
+#: Os campos de cada seção que o rascunho EDITA (e por isso devolve pelo próprio sub-draft).
+EDITADOS_PELO_RASCUNHO = {
+    "triggers": {"left", "right"},
+    "leds": {"lightbar", "player_leds", "lightbar_brightness", "auto_player_colors",
+             "player_led_brightness"},
+    "rumble": {"passthrough", "policy", "custom_mult", "modo"},
+}
+SECOES = {"triggers": TriggersConfig, "leds": LedsConfig, "rumble": RumbleConfig}
+
+
+def test_os_campos_de_secao_que_o_rascunho_nao_edita_voltam_do_salvar() -> None:
+    origem = Profile.model_validate({
+        "name": "Sackboy",
+        "match": {"type": "any"},
+        "triggers": {"modo": "automatico", "intensidade": 1.5},  # (noqa-acento) chave ASCII
+        "leds": {
+            "modo": "automatico",  # (noqa-acento) chave ASCII
+            "efeito": escrever_o_efeito_da_luz(TODAS_AS_BASES_DA_LUZ[0], ["FF0000"], 3),
+            "lightbar_para_o_numero": 2,
+        },
+        "rumble": {"modo": "automatico"},  # (noqa-acento) chave ASCII
+    })
+    assert origem.leds.efeito is not None, "o efeito de exemplo não é válido"
+    salvo = DraftConfig.from_profile(origem).to_profile(origem.name)
+    for secao, campos in CAMPOS_DA_SECAO_QUE_O_RASCUNHO_SO_DEVOLVE.items():
+        for campo in campos:
+            antes = getattr(getattr(origem, secao), campo)
+            assert getattr(getattr(salvo, secao), campo) == antes, (
+                f"o Salvar apagou `{secao}.{campo}`")
+    assert salvo.rumble.modo == "automatico"  # (noqa-acento) chave ASCII
+
+
+def test_a_secao_sem_os_campos_segue_sem_eles() -> None:
+    origem = Profile.model_validate({"name": "Simples", "match": {"type": "any"}})
+    salvo = DraftConfig.from_profile(origem).to_profile(origem.name)
+    assert salvo.model_dump(mode="json")["triggers"] == origem.model_dump(mode="json")["triggers"]
+    assert salvo.model_dump(mode="json")["leds"] == origem.model_dump(mode="json")["leds"]
+
+
+def test_todo_campo_de_secao_tem_quem_o_devolva() -> None:
+    sem_dono = [
+        f"{secao}.{campo}"
+        for secao, modelo in SECOES.items()
+        for campo in modelo.model_fields
+        if campo not in EDITADOS_PELO_RASCUNHO[secao]
+        and campo not in CAMPOS_DA_SECAO_QUE_O_RASCUNHO_SO_DEVOLVE.get(secao, ())
+    ]
+    assert not sem_dono, f"campos de seção que o Salvar apagaria: {sem_dono}"

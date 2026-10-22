@@ -368,6 +368,16 @@ CAMPOS_QUE_O_RASCUNHO_SO_DEVOLVE = (
     "nome_do_jogo",
 )
 
+#: Os campos de cada seção que o rascunho não edita (o modo das abas Gatilhos e Iluminação, a
+#: intensidade, o efeito e o número da luz): o draft só os devolve. Medido em 22/10/2026 no perfil
+#: do Sackboy: sem isto, todo Salvar regravava a seção sem eles, e o «Modo automático» das duas
+#: abas voltava a `null` no disco. A régua `test_o_salvar_devolve_todo_campo_do_perfil` exige que
+#: todo campo novo de uma seção caia aqui ou no que o rascunho edita.
+CAMPOS_DA_SECAO_QUE_O_RASCUNHO_SO_DEVOLVE: dict[str, tuple[str, ...]] = {
+    "triggers": ("modo", "intensidade"),
+    "leds": ("lightbar_para_o_numero", "modo", "efeito"),
+}
+
 
 class DraftConfig(BaseModel):
     """Estado central imutavel da GUI — snapshot de tudo que o daemon pode aplicar."""
@@ -414,6 +424,8 @@ class DraftConfig(BaseModel):
     source_cursor: Any | None = None
     #: Os de :data:`CAMPOS_QUE_O_RASCUNHO_SO_DEVOLVE` que o perfil de origem tinha.
     source_so_devolve: dict[str, Any] = Field(default_factory=dict)
+    #: Por seção, os campos de `CAMPOS_DA_SECAO_QUE_O_RASCUNHO_SO_DEVOLVE` que a origem tinha.
+    source_secoes_so_devolve: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
     source_name: str | None = None
 
@@ -499,6 +511,14 @@ class DraftConfig(BaseModel):
             source_ativacao=profile.ativacao,  # (noqa-acento) identificador ASCII
             source_analogicos=profile.analogicos,  # (noqa-acento) identificador ASCII
             source_cursor=profile.cursor,
+            source_secoes_so_devolve={
+                secao: {
+                    campo: getattr(getattr(profile, secao), campo)
+                    for campo in campos
+                    if getattr(getattr(profile, secao), campo, None) is not None
+                }
+                for secao, campos in CAMPOS_DA_SECAO_QUE_O_RASCUNHO_SO_DEVOLVE.items()
+            },
             source_so_devolve={
                 campo: getattr(profile, campo)
                 for campo in CAMPOS_QUE_O_RASCUNHO_SO_DEVOLVE
@@ -650,6 +670,8 @@ class DraftConfig(BaseModel):
             **self.source_so_devolve,
         )
         payload = profile.model_dump(mode="python")
+        for secao, campos in self.source_secoes_so_devolve.items():
+            payload[secao].update(campos)
         payload["controllers"] = profile.controllers
         return Profile.model_validate(payload)
 
