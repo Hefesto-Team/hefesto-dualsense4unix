@@ -11,6 +11,7 @@ motor é o de produção.
 """
 from __future__ import annotations
 
+import json
 import math
 import struct
 from types import SimpleNamespace
@@ -423,3 +424,49 @@ def test_o_estado_do_daemon_traz_a_cena_e_sem_motor_nada(monkeypatch: pytest.Mon
             "energia", "rumble_por_s", "dedo_por_s", "bordas_do_rumble"} <= set(estado)
     assert estado["bordas_do_rumble"] == 1
     assert mesa.motor.estado()["intensidade_da_cena"]["jogo"] is True
+
+
+# --- o gravador da bancada: a análise é pura -----------------------------------------------
+
+
+def _gravador() -> Any:
+    import importlib.util
+    import sys
+    from pathlib import Path
+
+    caminho = (Path(__file__).resolve().parents[2] / "scripts" / "ensaios"
+               / "gravar_a_intensidade_da_cena.py")
+    spec = importlib.util.spec_from_file_location("gravar_a_intensidade_da_cena", caminho)
+    assert spec is not None and spec.loader is not None
+    modulo = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = modulo
+    spec.loader.exec_module(modulo)
+    return modulo
+
+
+def _gravacao(gravador: Any, jogo: str, genero: str, calmo: float, combate: float) -> Any:
+    perguntas = [{"t": i * 0.1, "marca": marca, "cena": {"jogo": True, "intensidade": valor}}
+                 for i, (marca, valor) in enumerate(
+                     [("calmo", calmo)] * 20 + [(None, 0.5)] * 5 + [("combate", combate)] * 20)]
+    return gravador.ler_gravacao("\n".join(
+        json.dumps(x) for x in [{"jogo": jogo, "genero": genero}, *perguntas]))
+
+
+def test_o_gravador_so_da_verde_com_o_combate_acima_do_calmo_nos_tres_generos() -> None:
+    g = _gravador()
+    tres = [_gravacao(g, j, gen, 0.1, 0.8) for j, gen in
+            (("A", "tiro"), ("B", "luta"), ("C", "terror"))]
+    assert g.veredito(tres).rc == g.RC_SEPARA
+    assert g.veredito(tres[:2]).rc == g.RC_FALTA, "dois gêneros não provam"
+    invertido = [*tres[:2], _gravacao(g, "C", "terror", 0.8, 0.1)]
+    assert g.veredito(invertido).rc == g.RC_NAO_SEPARA
+    assert g.veredito([]).rc == g.RC_SEM_DADO
+
+
+def test_as_marcas_escritas_depois_trocam_as_do_teclado() -> None:
+    g = _gravador()
+    gravacao = _gravacao(g, "A", "tiro", 0.1, 0.8)
+    trocada = g.com_as_marcas(gravacao, g.ler_marcas("0 2.0 combate  # o começo\n2.5 4.5 calmo"))
+    medianas = g.medianas_por_trecho(trocada)
+    assert medianas["combate"]["intensidade"] == pytest.approx(0.1)
+    assert medianas["calmo"]["intensidade"] == pytest.approx(0.8)
