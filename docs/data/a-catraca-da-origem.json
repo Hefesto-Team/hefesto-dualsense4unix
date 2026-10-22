@@ -245,14 +245,14 @@
       "data": "2026-10-22",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1171047,
+      "piso": 1174126,
       "por_item": {
-        "docs": 120220,
+        "docs": 120222,
         "scripts": 119684,
-        "src": 311994,
-        "tests": 619149
+        "src": 313246,
+        "tests": 620974
       },
-      "razao": "tamanho: +460 linhas (1170587 -> 1171047), pagas por Origem: D-1610-AS-LISTAS-DE-EFEITO-POR-CONTROLE-NA-ABA-VIBRACAO; registrado no fecho, topo a52eb421b5ec",
+      "razao": "tamanho: +3079 linhas (1171047 -> 1174126), pagas por Origem: luz.lightbar.efeito; registrado no fecho, topo 30f9b592efba",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -739,10 +739,16 @@
           "de": 1170587,
           "para": 1171047,
           "razao": "tamanho: +460 linhas (1170587 -> 1171047), pagas por Origem: D-1610-AS-LISTAS-DE-EFEITO-POR-CONTROLE-NA-ABA-VIBRACAO; registrado no fecho, topo a52eb421b5ec"
+        },
+        {
+          "data": "2026-10-22",
+          "de": 1171047,
+          "para": 1174126,
+          "razao": "tamanho: +3079 linhas (1171047 -> 1174126), pagas por Origem: luz.lightbar.efeito; registrado no fecho, topo 30f9b592efba"
         }
       ],
       "unidade": "linhas",
-      "universo": 3067
+      "universo": 3072
     }
   }
 }
