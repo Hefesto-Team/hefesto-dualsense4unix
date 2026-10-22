@@ -3971,7 +3971,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 ---
 
-## mapa-luz.lightbar.efeito-cabo — Lightbar — efeito animado (arco-íris, respirar, piscar e Maré) · cabo
+## mapa-luz.lightbar.efeito-cabo — Lightbar — efeito animado (arco-íris, respirar, piscar, Maré, Onda e Relâmpago) · cabo
 
 *Célula:* `luz.lightbar.efeito @ cabo`
 
@@ -4027,7 +4027,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 ---
 
-## mapa-luz.lightbar.efeito-radio — Lightbar — efeito animado (arco-íris, respirar, piscar e Maré) · rádio
+## mapa-luz.lightbar.efeito-radio — Lightbar — efeito animado (arco-íris, respirar, piscar, Maré, Onda e Relâmpago) · rádio
 
 *Célula:* `luz.lightbar.efeito @ rádio`
 

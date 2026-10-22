@@ -109,6 +109,7 @@ def test_o_batimento_continua_um_so_e_nao_ganhou_irmao() -> None:
 @pytest.mark.parametrize("base", NOVAS)
 @pytest.mark.parametrize("ritmo", RITMOS)
 def test_nenhuma_das_duas_passa_de_tres_subidas_por_segundo(base: str, ritmo: int) -> None:
+    # D-2210-A-LUZ-GANHA-ONDA-E-RELAMPAGO
     subidas = _quando_sobe(_curva(base, ritmo), PISO[base])
     assert subidas, f"{base} no ritmo {ritmo}: a varredura de 10 s não viu nenhuma subida"
     assert _mais_subidas_em_um_segundo(subidas) <= 3, f"{base} no ritmo {ritmo}"
