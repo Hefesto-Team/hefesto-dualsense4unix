@@ -345,9 +345,12 @@ def test_trocar_o_efeito_do_controle_recomeca_o_estado() -> None:
         laco.tique(100.0 + i / 60, plano)
     contagem["cross"] = 1
     outro = {JOGADORES[0]: _plano("reage-ao-botao;00FFFF;5")[JOGADORES[0]]}
+    antes = len(saiu[JOGADORES[0]])
     for i in range(10, 20):
         laco.tique(100.0 + i / 60, outro)
-    assert saiu[JOGADORES[0]][-1] != (0, 0, 255), "estado novo: o contador velho não vale"
+    depois = saiu[JOGADORES[0]][antes:]
+    assert depois, "o efeito novo pintou"
+    assert all(b <= g for _, g, b in depois), "estado novo: o aperto velho não acende o azul do ✕"
 
 
 # ---------------------------------------------------------------- o leitor de produção
