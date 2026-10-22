@@ -1685,7 +1685,7 @@ def roupa_gravada(
 
     Com `lido_ate` (o `epoch` do `last_run`, gravado ANTES de o wrapper ler a env),
     o arquivo regravado depois dele não vale: o jogo leu a versão de antes, e o pad
-    `0ce6` com o `0x054C/0x0CE6` nas listas da env velha deixaria o jogo sem controle.
+    vestido do comum, com o par dele nas listas da env velha, sumiria do jogo.
     """
     caminho = (base_dir or launch_env_dir()) / f"steam_app_{int(appid)}.env"
     try:
