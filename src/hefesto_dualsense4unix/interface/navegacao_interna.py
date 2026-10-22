@@ -93,30 +93,35 @@ def vizinho(caixas: Sequence[Caixa], atual: int | None, direcao: str) -> int | N
 
     Entra quem está do lado pedido (o centro além do centro de agora); vence
     o menor passo no eixo da direção somado ao dobro do desvio no outro eixo,
-    e, no empate, o mais alinhado. Sem seleção, a primeira da leitura (de cima
-    para baixo, da esquerda para a direita).
+    e, no empate, o mais alinhado de centro a centro. O desvio é de borda a
+    borda, zero quando as caixas se cobrem no outro eixo: a caixa da frente, na
+    faixa da de agora, nunca é pulada (a lista larga sob o interruptor estreito).
+    Sem seleção, a primeira da leitura (de cima para baixo, da esquerda para a direita).
     """
     if not caixas:
         return None
     if atual is None or not 0 <= atual < len(caixas):
         return min(range(len(caixas)),
                    key=lambda i: (caixas[i].y, caixas[i].x))
-    ax, ay = caixas[atual].centro
+    a = caixas[atual]
+    ax, ay = a.centro
     melhor: tuple[float, float] | None = None
     escolhido: int | None = None
     for i, c in enumerate(caixas):
         if i == atual:
             continue
         cx, cy = c.centro
-        frente, lado = {
-            "cima": (ay - cy, abs(cx - ax)),
-            "baixo": (cy - ay, abs(cx - ax)),
-            "esquerda": (ax - cx, abs(cy - ay)),
-            "direita": (cx - ax, abs(cy - ay)),
-        }[direcao]
+        if direcao in ("cima", "baixo"):
+            frente = ay - cy if direcao == "cima" else cy - ay
+            lado = max(0.0, c.x - (a.x + a.largura), a.x - (c.x + c.largura))
+            alinhado = abs(cx - ax)
+        else:
+            frente = ax - cx if direcao == "esquerda" else cx - ax
+            lado = max(0.0, c.y - (a.y + a.altura), a.y - (c.y + c.altura))
+            alinhado = abs(cy - ay)
         if frente <= 0.5:
             continue
-        chave = (frente + 2 * lado, lado)
+        chave = (frente + 2 * lado, alinhado)
         if melhor is None or chave < melhor:
             melhor, escolhido = chave, i
     return escolhido

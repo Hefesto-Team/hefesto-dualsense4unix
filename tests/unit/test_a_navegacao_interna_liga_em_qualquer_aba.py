@@ -292,6 +292,22 @@ def test_11_a_selecao_anda_para_o_vizinho_da_direcao() -> None:
     assert caixas[nav.vizinho(caixas, meio, "esquerda") or 0].endereco == "esquerda"
 
 
+def test_11_o_baixo_da_coluna_nao_pula_a_lista_larga() -> None:
+    """A coluna da 05 medida no piloto (22/10/2026): a lista começa na borda do interruptor e é
+    larga; o centro dela fica longe do dele, e o ↓ ia ao interruptor seguinte, pulando-a."""
+    caixas = [
+        nav.Caixa("interruptor-h", 218, 402, 36, 36),
+        nav.Caixa("lista-haptico", 218, 450, 215, 26, tipo="lista"),
+        nav.Caixa("interruptor-e", 218, 489, 36, 36),
+        nav.Caixa("interruptor-d", 218, 533, 36, 36),
+        nav.Caixa("lista-motores", 218, 581, 215, 26, tipo="lista"),
+        nav.Caixa("testar", 218, 621, 68, 34),
+    ]
+    assert caixas[nav.vizinho(caixas, 0, "baixo") or 0].endereco == "lista-haptico"
+    assert caixas[nav.vizinho(caixas, 3, "baixo") or 0].endereco == "lista-motores"
+    assert caixas[nav.vizinho(caixas, 5, "cima") or 0].endereco == "lista-motores"
+
+
 def test_11_o_analogico_anda_e_repete_so_depois_da_repeticao() -> None:
     relogio = _Relogio()
     n = nav.Navegador(relogio=relogio)
