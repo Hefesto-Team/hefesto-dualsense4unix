@@ -1,4 +1,5 @@
-"""Os padrões de vibração da aba Vibração: Tranco, Batida, Onda, Coice e Pancada do lado.
+"""Os padrões de vibração da aba Vibração: Tranco, Batida, Onda, Coice, Pancada do lado, Ressoar
+e Ricochete.
 
 Um padrão é uma sequência de passos `(ms, esquerdo, direito)`, de 0 a 255 em cada motor. Quem
 toca é a fila do controle: manda o par de cada passo, espera o tempo dele e, no fim, devolve a mão
@@ -33,11 +34,19 @@ PADROES: dict[str, tuple[Passo, ...]] = {
     "coice": ((60, 200, 120), (60, 0, 0)),
     # um golpe só; no motor do lado de onde veio o som (`motores`), nos dois quando não se sabe
     "pancada_do_lado": ((90, 255, 255), (60, 0, 0)),
+    # o golpe nos dois e a cauda só no esquerdo, o grave, em degraus que caem a zero em 300 ms
+    # (o motor não é seno: a cauda são passos de força, cada um longo o bastante para se sentir)
+    "ressoar": ((90, 255, 255), (60, 200, 0), (60, 150, 0), (60, 100, 0), (60, 60, 0),
+                (60, 30, 0), (60, 0, 0)),
+    # o golpe num lado e a resposta mais fraca no outro, duas vezes, com o vão encurtando,
+    # como a bola que quica
+    "ricochete": ((90, 255, 0), (120, 0, 0), (80, 0, 180), (90, 0, 0), (70, 120, 0),
+                  (60, 0, 0)),
 }
 
 ROTULOS: dict[str, str] = {
     "batida": "Batida", "onda": "Onda", "tranco": "Tranco", "coice": "Coice",
-    "pancada_do_lado": "Pancada do lado",
+    "pancada_do_lado": "Pancada do lado", "ressoar": "Ressoar", "ricochete": "Ricochete",
 }
 
 #: O que o efeito imersão de um controle guarda (``rumble.efeito_imersao``): «Do estilo» é o
@@ -46,7 +55,7 @@ DO_ESTILO = "do_estilo"
 SEM_EFEITO = "sem_efeito"
 #: Os padrões na ordem da lista da tela, depois das duas escolhas de sempre.
 ESCOLHAS: tuple[str, ...] = (DO_ESTILO, SEM_EFEITO, "tranco", "batida", "onda", "coice",
-                             "pancada_do_lado")
+                             "pancada_do_lado", "ressoar", "ricochete")
 #: Cada padrão em uma linha, para a lista (até 36 letras).
 DICAS: dict[str, str] = {
     DO_ESTILO: "O que o estilo pede",
@@ -56,7 +65,12 @@ DICAS: dict[str, str] = {
     "onda": "Sobe e desce devagar",
     "coice": "O recuo da arma, ao soltar",
     "pancada_do_lado": "Um golpe do lado do som",
+    "ressoar": "Um golpe e o grave que ressoa",
+    "ricochete": "O golpe quica de um lado ao outro",
 }
+#: As formas de «Criar efeitos novos»: o Ressoar e o Ricochete moram nos dois motores (a cauda no
+#: grave, o quique de um lado ao outro), e o efeito criado escolhe UM motor; por isso ficam fora.
+FORMAS_DE_CRIAR: tuple[str, ...] = ("batida", "onda", "tranco", "coice", "pancada_do_lado")
 #: O Coice é o recuo: toca quando o dedo solta o gatilho, não quando aperta.
 NA_SOLTURA = frozenset({"coice"})
 

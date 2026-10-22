@@ -354,12 +354,12 @@ class TestOTestar:
         assert UNIQ in a05.em_teste()
 
     def test_a_area_de_criar_lista_as_formas_do_produto(self) -> None:
-        """A recusa do «Sentir» sem forma diz as formas que existem hoje (cinco)."""
+        """A recusa do «Sentir» sem forma diz as formas de criar (as cinco de um motor só)."""
         gesto = pacotes.gesto_da_pagina("05-vibracao.html", "criar-efeito")
         assert gesto is not None
         with pytest.raises(RuntimeError) as erro:
             pedido = {"forma": {"padrao": "", "motores": "ambos"},  # (noqa-acento) chave
                       "nome": "x"}
             gesto(_ctx(), pedido, _PonteQueGrava(_Handlers(ativo=None, primario=None)))
-        for rotulo in padroes.ROTULOS.values():
-            assert rotulo.lower() in str(erro.value)
+        for chave in padroes.FORMAS_DE_CRIAR:
+            assert padroes.ROTULOS[chave].lower() in str(erro.value)

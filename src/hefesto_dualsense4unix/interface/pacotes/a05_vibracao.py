@@ -1729,7 +1729,7 @@ def _padrao_neste_controle(
 
 @gesto("05-vibracao.html", "criar-efeito", grava="guardar_meus_efeitos")
 def criar_efeito_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Guarda um efeito novo: a forma (uma de `padroes_de_vibracao.PADROES`), o motor e o nome.
+    """Guarda um efeito novo: a forma (de `padroes_de_vibracao.FORMAS_DE_CRIAR`), o motor e o nome.
 
     Só a caixa de preferências da interface é gravada: nenhum perfil e nenhum aparelho. O
     efeito entra como chip em «Criar efeitos novos» e toca no clique (o `testar` do chip).
@@ -1738,8 +1738,8 @@ def criar_efeito_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if not isinstance(forma, dict) or not forma:
         raise RuntimeError("não consegui ler a área de criar efeitos. Nada foi guardado.")
     padrao = str(forma.get("padrao") or "").strip()  # (noqa-acento) chave do contrato
-    if padrao not in _padroes.PADROES:
-        nomes = [_padroes.ROTULOS[chave].lower() for chave in _padroes.PADROES]
+    if padrao not in _padroes.FORMAS_DE_CRIAR:
+        nomes = [_padroes.ROTULOS[chave].lower() for chave in _padroes.FORMAS_DE_CRIAR]
         raise RuntimeError(f"Escolha a forma: {', '.join(nomes[:-1])} ou {nomes[-1]}.")
     motores = str(forma.get("motores") or "").strip()
     if motores not in _padroes.MOTORES:

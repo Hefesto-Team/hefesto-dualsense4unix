@@ -1,10 +1,10 @@
 """O efeito imersão dos motores ganha a lista nova (O-EFEITO-IMERSAO-DOS-MOTORES-...-01).
 
-Cinco padrões (Tranco, Batida, Onda, Coice e Pancada do lado): nenhum passa de 2000 ms, nenhum
-passo dura menos de 60 ms e todos terminam em zero. O padrão toca no mesmo tiro da receita, no
-motor que a pessoa escolheu, só onde o jogo não vibra o motor, e com o gatilho que vibra
-(Metralhadora e vizinhas) só na soltura do tiro. Tudo com dublês: o motor do rumble é uma lista e
-o relógio é injetado.
+Sete padrões (Tranco, Batida, Onda, Coice, Pancada do lado, Ressoar e Ricochete): nenhum passa
+de 2000 ms, nenhum passo dura menos de 60 ms e todos terminam em zero. O padrão toca no mesmo
+tiro da receita, no motor que a pessoa escolheu, só onde o jogo não vibra o motor, e com o
+gatilho que vibra (Metralhadora e vizinhas) só na soltura do tiro. Tudo com dublês: o motor do
+rumble é uma lista e o relógio é injetado.
 """
 from __future__ import annotations
 
@@ -41,9 +41,11 @@ ESTILO_ACAO = "acao"  # (noqa-acento) chave de contrato do perfil
 
 
 def test_a_lista_final_e_a_da_sprint_sem_o_ronco() -> None:
-    assert tuple(pv.PADROES) == ("batida", "onda", "tranco", "coice", "pancada_do_lado")
+    # o Ressoar e o Ricochete (OS-MOTORES-GANHAM-O-GOLPE-QUE-RESSOA-01) entram depois da Pancada
+    assert tuple(pv.PADROES) == ("batida", "onda", "tranco", "coice", "pancada_do_lado",
+                                 "ressoar", "ricochete")
     assert pv.ESCOLHAS == (pv.DO_ESTILO, pv.SEM_EFEITO, "tranco", "batida", "onda", "coice",
-                           "pancada_do_lado")
+                           "pancada_do_lado", "ressoar", "ricochete")
     assert "ronco" not in pv.PADROES and "ronco" not in pv.ESCOLHAS
     assert set(pv.ROTULOS) == set(pv.PADROES)
     assert set(pv.DICAS) == set(pv.ESCOLHAS)

@@ -1352,7 +1352,7 @@ MIOLO = f'''
     <div class="quadro criar vib-criar" id="criar-vibracao">
       <div class="criar-linha">
         <span class="quadro-titulo" data-dica="O que você criar entra aqui ao lado e toca com um clique">Criar efeitos novos</span>
-        <span class="seg-criar" role="group" aria-label="Forma">{_radios(CHAVE_DO_PADRAO, [(c, padroes.ROTULOS[c]) for c in padroes.PADROES])}</span>
+        <span class="seg-criar" role="group" aria-label="Forma">{_radios(CHAVE_DO_PADRAO, [(c, padroes.ROTULOS[c]) for c in padroes.FORMAS_DE_CRIAR])}</span>
         <span class="seg-criar" role="group" aria-label="Motor">{_radios("motores", ROTULO_DOS_MOTORES)}</span>
         <input class="nome-criar" type="text" data-linha="nome" maxlength="{TETO_DO_NOME}" placeholder="Nome do efeito" aria-label="Nome do efeito">
         <button class="btn-criar" type="button" data-gesto="criar-efeito" data-hef-forma="criar-vibracao" data-dica="Guarda e põe ao lado">Criar</button>

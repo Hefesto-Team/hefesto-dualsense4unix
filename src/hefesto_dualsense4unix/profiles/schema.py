@@ -3096,7 +3096,8 @@ HAPTICA_PCT_PADRAO = 150
 #: O vocabulário do ``efeito_imersao``. É o de ``daemon.subsystems.padroes_de_vibracao.ESCOLHAS``,
 #: copiado porque o esquema não importa o daemon; um teste confere que os dois são o mesmo.
 ESCOLHAS_DE_IMERSAO = (
-    "do_estilo", "sem_efeito", "tranco", "batida", "onda", "coice", "pancada_do_lado")
+    "do_estilo", "sem_efeito", "tranco", "batida", "onda", "coice", "pancada_do_lado", "ressoar",
+    "ricochete")
 
 HAPTICA_PCT_MAX = 200
 
