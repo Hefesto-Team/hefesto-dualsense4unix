@@ -5,7 +5,7 @@
       "data": "2026-10-22",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 53868,
+      "piso": 53883,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -111,7 +111,7 @@
         "integrations/ar_do_adaptador.py": 114,
         "integrations/arranjo_da_mesa.py": 117,
         "integrations/audio_control.py": 180,
-        "integrations/audio_ks_dualsense.py": 233,
+        "integrations/audio_ks_dualsense.py": 248,
         "integrations/bluez_dbus.py": 110,
         "integrations/camadas_vulkan.py": 63,
         "integrations/canal_do_microfone.py": 93,
@@ -249,7 +249,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +188 linhas (53680 -> 53868), pagas por Origem: D-2210-A-TELEMETRIA-SO-NO-LOCALHOST-E-SO-NA-CORRIDA; registrado no fecho, topo 1ff250cc2cb3",
+      "razao": "texto-em-src: +15 linhas (53868 -> 53883), pagas por Origem: D-2210-O-PREFIXO-ESQUECE-O-CONTROLE-XINPUT-QUE-SE-FOI; registrado no fecho, topo ad087c0d5b30",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -370,6 +370,12 @@
           "de": 53680,
           "para": 53868,
           "razao": "texto-em-src: +188 linhas (53680 -> 53868), pagas por Origem: D-2210-A-TELEMETRIA-SO-NO-LOCALHOST-E-SO-NA-CORRIDA; registrado no fecho, topo 1ff250cc2cb3"
+        },
+        {
+          "data": "2026-10-22",
+          "de": 53868,
+          "para": 53883,
+          "razao": "texto-em-src: +15 linhas (53868 -> 53883), pagas por Origem: D-2210-O-PREFIXO-ESQUECE-O-CONTROLE-XINPUT-QUE-SE-FOI; registrado no fecho, topo ad087c0d5b30"
         }
       ],
       "unidade": "linhas",

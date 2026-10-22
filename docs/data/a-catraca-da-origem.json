@@ -245,14 +245,14 @@
       "data": "2026-10-22",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1176822,
+      "piso": 1177150,
       "por_item": {
-        "docs": 120375,
+        "docs": 120376,
         "scripts": 119950,
-        "src": 314510,
-        "tests": 621987
+        "src": 314591,
+        "tests": 622233
       },
-      "razao": "tamanho: +18 linhas (1176804 -> 1176822), pagas por Origem: D-2210-A-LUZ-DE-AMBIENTE-E-DE-AVISO; registrado no fecho, topo 1a6a42d4ebc1",
+      "razao": "tamanho: +328 linhas (1176822 -> 1177150), pagas por Origem: D-2210-O-PREFIXO-ESQUECE-O-CONTROLE-XINPUT-QUE-SE-FOI; registrado no fecho, topo ad087c0d5b30",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -763,10 +763,16 @@
           "de": 1176804,
           "para": 1176822,
           "razao": "tamanho: +18 linhas (1176804 -> 1176822), pagas por Origem: D-2210-A-LUZ-DE-AMBIENTE-E-DE-AVISO; registrado no fecho, topo 1a6a42d4ebc1"
+        },
+        {
+          "data": "2026-10-22",
+          "de": 1176822,
+          "para": 1177150,
+          "razao": "tamanho: +328 linhas (1176822 -> 1177150), pagas por Origem: D-2210-O-PREFIXO-ESQUECE-O-CONTROLE-XINPUT-QUE-SE-FOI; registrado no fecho, topo ad087c0d5b30"
         }
       ],
       "unidade": "linhas",
-      "universo": 3079
+      "universo": 3080
     }
   }
 }
