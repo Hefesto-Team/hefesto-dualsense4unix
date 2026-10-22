@@ -179,6 +179,7 @@ def _tres_minutos(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
 def test_tres_minutos_sem_o_fio_da_janela_esperar(
     casa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
+    # D-2210-O-FIO-DA-JANELA-NUNCA-ESPERA
     """Dez abas, três minutos: nenhum tique acima do teto e nenhuma espera no fio da janela."""
     assert sys.gettrace() is None, "a cobertura está ligada durante a medida"
     fora = _tres_minutos(monkeypatch)
