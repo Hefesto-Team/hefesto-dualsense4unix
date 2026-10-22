@@ -57,6 +57,9 @@ CONTRASTE = 2.0
 #: Sem bloco novo por tanto tempo, a leitura é «não sei» (o efeito deixa a luz descer).
 MUDEZ_S = 1.0
 ESPERA_APOS_FALHA_S = 2.0
+#: Quanto esperar o ``parec`` sair e a thread de leitura voltar, ao fechar.
+PRAZO_DO_FILHO_S = 2.0
+PRAZO_DA_THREAD_S = 3.0
 LEITURA_BYTES = 4096
 
 
@@ -106,7 +109,7 @@ class _FluxoParec:
         with contextlib.suppress(OSError):
             self._proc.terminate()
         try:
-            self._proc.wait(timeout=2.0)
+            self._proc.wait(timeout=PRAZO_DO_FILHO_S)
         except Exception:
             with contextlib.suppress(OSError):
                 self._proc.kill()
@@ -239,7 +242,7 @@ class EnergiaDoSom:
         if fluxo is not None:
             fluxo.parar()
         if thread is not None and thread is not threading.current_thread():
-            thread.join(timeout=3.0)
+            thread.join(timeout=PRAZO_DA_THREAD_S)
 
     def nivel(self) -> tuple[float, float] | None:
         with self._lock:
@@ -274,7 +277,8 @@ class EnergiaDoSom:
         while not parar.is_set():
             try:
                 dados = fluxo.ler(LEITURA_BYTES)
-            except (OSError, ValueError):
+            except (OSError, ValueError) as exc:
+                logger.debug("energia_do_som_leitura_fechou", err=str(exc))
                 return
             if not dados:
                 return

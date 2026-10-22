@@ -21,4 +21,5 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 04-iluminacao.html
+- **22/10/2026** — a lista «como a luz se move» ganhou oito efeitos (Reage ao botão, Inclinação, Dedo no touchpad, Ao som, Aurora, Estrelas, Cor da bateria, Cor da temperatura); o produto publica no fecho, depois da conferência dela.

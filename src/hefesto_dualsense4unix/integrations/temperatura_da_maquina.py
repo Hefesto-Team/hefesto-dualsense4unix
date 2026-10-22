@@ -40,12 +40,22 @@ class Sensor:
     limite_c: float
 
 
+def _ler_texto(caminho: Path) -> str | None:
+    """O texto de um arquivo do hwmon, sem as pontas; ``None`` se não existe ou não lê."""
+    texto: str | None = None
+    try:
+        texto = caminho.read_text().strip()
+    except OSError:
+        texto = None
+    return texto
+
+
 def _ler_milli(caminho: Path) -> float | None:
     """Um valor do hwmon em milésimos de grau, em °C; ``None`` se não existe ou não lê."""
-    try:
-        return int(caminho.read_text().strip()) / 1000.0
-    except (OSError, ValueError):
+    texto = _ler_texto(caminho)
+    if texto is None or not texto.lstrip("-").isdigit():
         return None
+    return int(texto) / 1000.0
 
 
 def descobrir(raiz: Path = RAIZ_DO_HWMON) -> list[Sensor]:
@@ -56,10 +66,7 @@ def descobrir(raiz: Path = RAIZ_DO_HWMON) -> list[Sensor]:
     except OSError:
         return achados
     for pasta in pastas:
-        try:
-            chip = (pasta / "name").read_text().strip()
-        except OSError:
-            continue
+        chip = _ler_texto(pasta / "name")
         if chip not in CHIPS_DE_CALOR:
             continue
         for entrada in sorted(pasta.glob("temp*_input")):
