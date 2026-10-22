@@ -245,14 +245,14 @@
       "data": "2026-10-22",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1176782,
+      "piso": 1176804,
       "por_item": {
-        "docs": 120368,
-        "scripts": 119953,
+        "docs": 120375,
+        "scripts": 119950,
         "src": 314510,
-        "tests": 621951
+        "tests": 621969
       },
-      "razao": "tamanho: +2656 linhas (1174126 -> 1176782), pagas por Origem: D-2210-A-TELEMETRIA-SO-NO-LOCALHOST-E-SO-NA-CORRIDA; registrado no fecho, topo 1ff250cc2cb3",
+      "razao": "tamanho: +22 linhas (1176782 -> 1176804), pagas por Origem: D-2210-A-LUZ-AO-SOM-LE-SO-O-MONITOR; registrado no fecho, topo 1182965ab226",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -751,6 +751,12 @@
           "de": 1174126,
           "para": 1176782,
           "razao": "tamanho: +2656 linhas (1174126 -> 1176782), pagas por Origem: D-2210-A-TELEMETRIA-SO-NO-LOCALHOST-E-SO-NA-CORRIDA; registrado no fecho, topo 1ff250cc2cb3"
+        },
+        {
+          "data": "2026-10-22",
+          "de": 1176782,
+          "para": 1176804,
+          "razao": "tamanho: +22 linhas (1176782 -> 1176804), pagas por Origem: D-2210-A-LUZ-AO-SOM-LE-SO-O-MONITOR; registrado no fecho, topo 1182965ab226"
         }
       ],
       "unidade": "linhas",
