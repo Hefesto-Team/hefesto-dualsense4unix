@@ -36,6 +36,11 @@ _DS = "VID_054C&PID_0CE6&IG_00"
 _DS_INST = "33024&FANTASMA-DS&0&0&1"
 _ENUM = "[System\\\\ControlSet001\\\\Enum\\\\"
 _CLASSES = f"[System\\\\ControlSet001\\\\Control\\\\DeviceClasses\\\\{_HID}\\\\"
+#: a chave do driver: a do aparelho esquecido sai junto, a de quem fica, fica
+_CLASSE_HID = (
+    "[System\\\\ControlSet001\\\\Control\\\\Class\\\\{745a17a0-74d3-11d0-b6fe-00a0c90f57da}\\\\"
+)
+_DRIVER = '"Driver"="{745A17A0-74D3-11D0-B6FE-00A0C90F57DA}\\\\%s"'
 
 
 def _chave(cabecalho: str, *linhas: str) -> str:
@@ -53,7 +58,8 @@ def _interface(vid_pid: str, inst: str) -> list[str]:
 
 #: o que a lembrança de controle XInput deixa, e a cura tira
 SAEM = [
-    _chave(f"{_ENUM}WINEXINPUT\\\\{_DS}\\\\{_DS_INST}", '"Class"="HIDClass"'),
+    _chave(f"{_ENUM}WINEXINPUT\\\\{_DS}\\\\{_DS_INST}", '"Class"="HIDClass"', _DRIVER % "0101"),
+    _chave(f"{_CLASSE_HID}0101", '"InfPath"="winehid.inf"'),
     _chave(f"{_ENUM}WINEXINPUT\\\\{_DS}\\\\{_DS_INST}\\\\Device Parameters"),
     _chave(
         f"{_ENUM}WINEXINPUT\\\\{_DS}\\\\{_DS_INST}\\\\Properties\\\\{_PROP}\\\\0008", "@=hex:00"
@@ -68,7 +74,12 @@ SAEM = [
 
 #: o que parece e FICA: o mesmo VID:PID sem `IG_`, o USB, o nosso, o instalador
 FICAM = [
-    _chave(f"{_ENUM}HID\\\\VID_054C&PID_0CE6\\\\0&02:FE:89:00:00:0D&0&0&0", '"Class"="HIDClass"'),
+    _chave(
+        f"{_ENUM}HID\\\\VID_054C&PID_0CE6\\\\0&02:FE:89:00:00:0D&0&0&0",
+        '"Class"="HIDClass"',
+        _DRIVER % "0102",
+    ),
+    _chave(f"{_CLASSE_HID}0102", '"InfPath"="input.inf"'),
     _chave(f"{_ENUM}HID\\\\VID_054C&PID_0CE6\\\\0&02:FE:89:00:00:0D&0&0&0\\\\Device Parameters"),
     _chave(f"{_ENUM}HID\\\\VID_054C&PID_0CE6&MI_00\\\\256&HEFESTO-PAD-01-02FE8900000D&0&0&0"),
     _chave(f"{_ENUM}USB\\\\VID_054C&PID_0CE6\\\\512&256&3&3", '"ClassGUID"="{36FC9E60}"'),
@@ -189,6 +200,17 @@ def test_o_lancador_chama_o_curador_quando_so_ha_lembranca(tmp_path: Path) -> No
     rastro = _rastro(arquivo)
     assert rastro["motivo"] == "desligado", "nenhum device KS saiu: não pode dizer removido"
     assert rastro["rc"] == "0"
+
+
+def test_o_lancador_chama_o_curador_so_com_o_winexinput(tmp_path: Path) -> None:
+    """A outra metade do gatilho: o gêmeo `XI_` sozinho, sem nenhum `&IG_` no registro."""
+    xi = _chave(f"{_ENUM}WINEXINPUT\\\\VID_054C&PID_0CE6&XI_00\\\\{_DS_INST}")
+    feito, compat, arquivo = _lancar(
+        tmp_path, env_do_daemon=_SEM_A_OPCAO, registro=_texto(*FICAM, xi)
+    )
+    assert feito.returncode == 0, feito.stderr
+    assert _ler_compat(compat) == _texto(*FICAM)
+    assert _rastro(arquivo)["motivo"] == "desligado"
 
 
 def test_com_lembranca_e_bloco_nosso_o_rastro_diz_removido(tmp_path: Path) -> None:

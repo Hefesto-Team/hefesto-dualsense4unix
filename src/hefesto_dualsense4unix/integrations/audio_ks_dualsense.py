@@ -874,6 +874,14 @@ _INTERFACE_COM_IG = re.compile(
 
 
 _VID_PID = re.compile(r"VID_[0-9A-F]{4}&PID_[0-9A-F]{4}", re.I)
+# A chave do driver de cada aparelho (`"Driver"="{classe}\\NNNN"`): o Wine numera uma nova
+# a cada aparelho que nasce, e a do aparelho esquecido ficaria órfã a cada lançamento.
+_DRIVER = re.compile(r'^"Driver"="(\{[^"]+\}\\\\\d{4})"$', re.M)
+_CLASSE = re.compile(
+    r"^\[System\\\\(?:ControlSet\d+|CurrentControlSet)\\\\Control\\\\Class\\\\"
+    r"(\{[^}\\\]]+\}\\\\\d{4})(?:\\\\[^\]]*)?\]$",
+    re.I,
+)
 
 
 def _controle_esquecido(cabecalho: str) -> str | None:
@@ -894,11 +902,13 @@ def esquecer_os_controles_que_se_foram(texto: str) -> tuple[str, int]:
     """O `system.reg` sem a lembrança de controle XInput, e quantos VID:PID saíram.
 
     Sai toda chave sob `Enum\\WINEXINPUT\\`, toda chave de `Enum` com `&IG_` no id e toda
-    interface de `DeviceClasses` com `&IG_` (com as subchaves); o resto fica byte a byte.
+    interface de `DeviceClasses` com `&IG_` (com as subchaves), e a chave de `Control\\Class`
+    do driver de cada aparelho que saiu; o resto fica byte a byte.
     Roda em toda chamada de :func:`aplicar`: com o `wineserver` fora, só sobra lembrança.
     """
     fica: list[str] = []
     ids: set[str] = set()
+    drivers_que_saem: set[str] = set()
     saiu = False
     for bloco in _blocos(texto):
         achado = _controle_esquecido(_cabecalho(bloco))
@@ -906,11 +916,18 @@ def esquecer_os_controles_que_se_foram(texto: str) -> tuple[str, int]:
             fica.append(bloco)
         else:
             saiu = True
+            drivers_que_saem.update(d.lower() for d in _DRIVER.findall(bloco))
             if achado:
                 ids.add(achado)
     if not saiu:
         return texto, 0
-    return "\n".join(fica), len(ids)
+    drivers_que_saem -= {d.lower() for b in fica for d in _DRIVER.findall(b)}
+
+    def orfa(bloco: str) -> bool:
+        m = _CLASSE.match(_cabecalho(bloco))
+        return m is not None and m.group(1).lower() in drivers_que_saem
+
+    return "\n".join(b for b in fica if not orfa(b)), len(ids)
 
 
 def _gravar_com_backup(registro: Path, texto: str) -> None:
