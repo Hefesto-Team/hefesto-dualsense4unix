@@ -116,6 +116,7 @@ def _ler(compat: Path) -> str:
 
 
 def test_a_lembranca_sai_e_o_resto_fica_byte_a_byte() -> None:
+    # D-2210-O-PREFIXO-ESQUECE-O-CONTROLE-XINPUT-QUE-SE-FOI.
     meio = len(FICAM) // 2
     esperado = _texto(*FICAM[:meio], *NOSSO, *FICAM[meio:])
     novo, contados = ks.esquecer_os_controles_que_se_foram(_misturado())
