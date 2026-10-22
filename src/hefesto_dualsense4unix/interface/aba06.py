@@ -5,20 +5,20 @@ import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-import onde  # noqa: E402
-from hefesto_dualsense4unix.core import acoes_do_gesto as _acoes_do_gesto  # noqa: E402
-from hefesto_dualsense4unix.core.acoes_de_botao import (  # noqa: E402
+import onde
+from hefesto_dualsense4unix.core import acoes_do_gesto as _acoes_do_gesto
+from hefesto_dualsense4unix.core.acoes_de_botao import (
     EIXO_DIREITO,
     EIXO_ESQUERDO,
     por_grupo,
 )
-from hefesto_dualsense4unix.core.acoes_de_botao import (  # noqa: E402
+from hefesto_dualsense4unix.core.acoes_de_botao import (
     padrao as _padrao_dos_botoes,
 )
-from hefesto_dualsense4unix.core.acoes_de_botao import (  # noqa: E402
+from hefesto_dualsense4unix.core.acoes_de_botao import (
     rotulo as rotulo_da_acao,
 )
-from hefesto_dualsense4unix.integrations.uinput_mouse import (  # noqa: E402
+from hefesto_dualsense4unix.integrations.uinput_mouse import (
     DEFAULT_MOUSE_SPEED,
     DEFAULT_SCROLL_SPEED,
     MOUSE_SPEED_MAX,
@@ -26,9 +26,9 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (  # noqa: E402
     SCROLL_SPEED_MAX,
     SCROLL_SPEED_MIN,
 )
-from hefesto_dualsense4unix.profiles.loader import MOLDES_DE_PERFIL  # noqa: E402
-from monta import CONECTADOS, CSS_GLIFO, DADOS_DO_REPO, MESA, glifo, monta  # noqa: E402
-from pacotes.a06_navegacao import (  # noqa: E402
+from hefesto_dualsense4unix.profiles.loader import MOLDES_DE_PERFIL
+from monta import CONECTADOS, CSS_GLIFO, DADOS_DO_REPO, MESA, glifo, monta
+from pacotes.a06_navegacao import (
     DO_PERMITIR,
     PERMITIR,
     PERMITIR_INTERNA,

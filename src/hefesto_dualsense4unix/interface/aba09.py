@@ -4,7 +4,7 @@ import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from monta import (  # noqa: E402
+from monta import (
     MESA,
     CONECTADOS,
     botao_cinza,
@@ -13,11 +13,11 @@ from monta import (  # noqa: E402
 )
 
 # geradores 08 e 09 pararam de RODAR por isso, calados até alguém tentar:
-import onde  # noqa: E402
-from onde import RAIZ as R  # noqa: E402
+import onde
+from onde import RAIZ as R
 
-from hefesto_dualsense4unix.interface import janela as _ponte  # noqa: E402
-from hefesto_dualsense4unix.interface.folha_da_casa import com_o_piso  # noqa: E402
+from hefesto_dualsense4unix.interface import janela as _ponte
+from hefesto_dualsense4unix.interface.folha_da_casa import com_o_piso
 
 N = len(CONECTADOS)
 LUGARES = len(MESA)

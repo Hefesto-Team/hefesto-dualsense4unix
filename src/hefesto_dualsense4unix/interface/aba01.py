@@ -6,14 +6,14 @@ import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-import onde  # noqa: E402
-import monta  # noqa: E402
-from monta import MASCARAS, MESA, glifo, monta as montar, svg  # noqa: E402
+import onde
+import monta
+from monta import MASCARAS, MESA, glifo, monta as montar, svg
 
-from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (  # noqa: E402
+from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
     FRASES_BANIDAS,
 )
-from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (  # noqa: E402
+from hefesto_dualsense4unix.interface.pacotes.a01_jogar import (
     CADEADO_CEGO,
     CADEADO_DICA,
     CADEADO_ROTULO,

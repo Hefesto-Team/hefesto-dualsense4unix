@@ -6,25 +6,25 @@ import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-import onde  # noqa: E402
-from monta import acesos_da_fita as _acesos_da_fita  # noqa: E402
-from monta import TOPO  # noqa: E402
-from monta import (DS, MESA, CONECTADOS, CSS_GLIFO, CSS_POPUP, TRAVESSAO,  # noqa: E402
+import onde
+from monta import acesos_da_fita as _acesos_da_fita
+from monta import TOPO
+from monta import (DS, MESA, CONECTADOS, CSS_GLIFO, CSS_POPUP, TRAVESSAO,
                    cor_da_zona, monta, player_slot_color,
                    ressalva as monta_ressalva, svg)
 
 # geradores 08 e 09 pararam de RODAR por isso, calados até alguém tentar:
-from onde import RAIZ as R  # noqa: E402
+from onde import RAIZ as R
 
-from hefesto_dualsense4unix.interface import conexoes as _aba_conexoes  # noqa: E402
-from hefesto_dualsense4unix.integrations import entrada_a_entrada as _entrada_a_entrada  # noqa: E402,E501
+from hefesto_dualsense4unix.interface import conexoes as _aba_conexoes
+from hefesto_dualsense4unix.integrations import entrada_a_entrada as _entrada_a_entrada
 
-from hefesto_dualsense4unix.integrations import arranjo_da_mesa as _motor  # noqa: E402
-from hefesto_dualsense4unix.integrations import dicas_da_conexao as _dicas  # noqa: E402
-from hefesto_dualsense4unix.integrations import ordens_da_mesa as _ordens  # noqa: E402
-from pacotes import a08_conexoes as _pacote08  # noqa: E402
-from hefesto_dualsense4unix.mods import tema as _tema  # noqa: E402
-import pacotes as _pacote_base  # noqa: E402
+from hefesto_dualsense4unix.integrations import arranjo_da_mesa as _motor
+from hefesto_dualsense4unix.integrations import dicas_da_conexao as _dicas
+from hefesto_dualsense4unix.integrations import ordens_da_mesa as _ordens
+from pacotes import a08_conexoes as _pacote08
+from hefesto_dualsense4unix.mods import tema as _tema
+import pacotes as _pacote_base
 
 def _valor(no, ja):
     """O valor de um nó de AST, resolvendo NOME contra o que já foi lido."""

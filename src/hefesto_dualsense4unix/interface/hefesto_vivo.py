@@ -2889,7 +2889,7 @@ class LeitorDoEstado:
         t0 = time.perf_counter()
         try:
             st = self._ler()
-        except Exception as erro:  # noqa: BLE001 — o motivo viaja para a folga
+        except Exception as erro:
             with self._trava:
                 self._estado, self._erro = None, erro
                 self._geracao += 1
@@ -2924,7 +2924,7 @@ class LeitorDoEstado:
         if self._avisar is not None:
             try:
                 self._avisar()
-            except Exception as erro:  # noqa: BLE001 — o aviso não derruba o leitor
+            except Exception as erro:
                 print(f"[estado] o aviso da primeira leitura falhou: {erro}", file=sys.stderr)
         while not self._parar.is_set():
             if self._a_vista.is_set():

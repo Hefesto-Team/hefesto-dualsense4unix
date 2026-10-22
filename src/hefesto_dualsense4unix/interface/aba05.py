@@ -5,21 +5,21 @@ import pathlib
 import re
 import sys
 sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent))
-import onde  # noqa: E402
-import mapa as _mapa  # noqa: E402  a silhueta do DualSense
-import monta as monta_  # noqa: E402
-from monta import CONECTADOS, DADOS_DO_REPO  # noqa: E402
+import onde
+import mapa as _mapa
+import monta as monta_
+from monta import CONECTADOS, DADOS_DO_REPO
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-from monta import (  # noqa: E402
+from monta import (
     MESA, cor_da_zona, glifo, monta, svg, trava_do_nativo,
 )
 
-from hefesto_dualsense4unix.daemon.subsystems import padroes_de_vibracao as padroes  # noqa: E402
-from hefesto_dualsense4unix.daemon.subsystems.rumble import (  # noqa: E402
+from hefesto_dualsense4unix.daemon.subsystems import padroes_de_vibracao as padroes
+from hefesto_dualsense4unix.daemon.subsystems.rumble import (
     RUMBLE_POLICY_MULT,
 )
-from hefesto_dualsense4unix.interface.pacotes.a05_vibracao import (  # noqa: E402
+from hefesto_dualsense4unix.interface.pacotes.a05_vibracao import (
     CAMPO_DA_DICA_DA_IMERSAO,
     CAMPO_DA_DICA_DO_HAPTICO,
     CAMPO_DO_EFEITO_HAPTICO,
@@ -29,10 +29,10 @@ from hefesto_dualsense4unix.interface.pacotes.a05_vibracao import (  # noqa: E40
     GESTO_DO_MODO,
     html_dos_toques,
 )
-from hefesto_dualsense4unix.interface.pacotes.meus_efeitos import TETO_DO_NOME  # noqa: E402
+from hefesto_dualsense4unix.interface.pacotes.meus_efeitos import TETO_DO_NOME
 
-from hefesto_dualsense4unix.profiles import formas_de_haptica as formas  # noqa: E402
-from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
+from hefesto_dualsense4unix.profiles import formas_de_haptica as formas
+from hefesto_dualsense4unix.profiles.schema import (
     HAPTICA_PCT_MAX,
     HAPTICA_PCT_PADRAO,
     MOTOR_PCT_MAX,
@@ -41,7 +41,7 @@ from hefesto_dualsense4unix.profiles.schema import (  # noqa: E402
 )
 
 # pinta a linha dela pelo seu próprio método (`app/actions/rumble_actions.py`,
-from hefesto_dualsense4unix.app.telas.vibracao import (  # noqa: E402
+from hefesto_dualsense4unix.app.telas.vibracao import (
     DICA_DO_TETO_DA_MESA,
     DICA_DOS_VALORES_QUE_PASSAM,
     degraus_da_forca,

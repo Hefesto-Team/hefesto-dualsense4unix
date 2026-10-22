@@ -2,16 +2,16 @@ import pathlib
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
-import re  # noqa: E402
-import onde  # noqa: E402
-import mapa as _mapa  # noqa: E402  a silhueta do DualSense
-import monta as monta_  # noqa: E402  o MÓDULO, para ler CONECTADOS
-from monta import CSS_GLIFO, MESA, R, cor_da_zona, glifo, monta, trava_do_nativo  # noqa: E402
+import re
+import onde
+import mapa as _mapa
+import monta as monta_
+from monta import CSS_GLIFO, MESA, R, cor_da_zona, glifo, monta, trava_do_nativo
 
 sys.path.insert(0, str(R / "src"))
-from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS  # noqa: E402
+from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS
 
-from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E402
+from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (
     ALVO_DO_PLASTICO,
     CAMPO_DA_FORCA,
     CAMPO_DO_CHIP,
@@ -35,10 +35,10 @@ from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E40
     nivel_da_forca,
     sem_comentarios_de_css,
 )
-from hefesto_dualsense4unix.profiles.efeitos_de_imersao import FAMILIAS_DA_PAGINA  # noqa: E402
-from aba05 import GLIFO_DO_CONTROLE  # noqa: E402  o ícone da linha de força da 05
-from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX  # noqa: E402
-from hefesto_dualsense4unix.interface.pacotes.meus_efeitos import (  # noqa: E402
+from hefesto_dualsense4unix.profiles.efeitos_de_imersao import FAMILIAS_DA_PAGINA
+from aba05 import GLIFO_DO_CONTROLE
+from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
+from hefesto_dualsense4unix.interface.pacotes.meus_efeitos import (
     PREFIXO_DO_MEU,
     SEPARADOR_DOS_MEUS,
     TETO_DO_NOME,

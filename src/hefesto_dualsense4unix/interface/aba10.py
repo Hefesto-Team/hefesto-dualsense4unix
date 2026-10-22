@@ -5,11 +5,11 @@ import onde
 from monta import monta, glifo, cor_da_zona, rotulo, CSS_GLIFO, MESA, SEPARADOR, R
 
 sys.path.insert(0, str(R.parents[1]))
-from hefesto_dualsense4unix.profiles.estilos_de_jogo import (  # noqa: E402
+from hefesto_dualsense4unix.profiles.estilos_de_jogo import (
     ESTILOS as ESTILOS_DO_MOTOR,
 )
-from hefesto_dualsense4unix.profiles.schema import PRIORIDADE_MAXIMA  # noqa: E402
-from hefesto_dualsense4unix.profiles.simple_match import (  # noqa: E402
+from hefesto_dualsense4unix.profiles.schema import PRIORIDADE_MAXIMA
+from hefesto_dualsense4unix.profiles.simple_match import (
     ROTULO_SO_QUANDO_ESCOLHER,
     SEPARADOR_DA_PROCEDENCIA,
 )

@@ -6,7 +6,7 @@ import mapa
 
 import sys as _sys, pathlib as _pathlib
 _sys.path.insert(0, str(_pathlib.Path(__file__).resolve().parent))
-from onde import RAIZ as R  # noqa: E402
+from onde import RAIZ as R
 
 DADOS_DO_REPO = R / "docs/data"
 FONTE = R / "src/hefesto_dualsense4unix/interface/ds_limpo.svg"

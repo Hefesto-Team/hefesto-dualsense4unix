@@ -96,9 +96,9 @@ import time
 from collections import deque
 from typing import Any
 
-from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # noqa: E402  isort:skip
+from hefesto_dualsense4unix.interface.janela import JanelaDaAba
 
-from gi.repository import GLib, Gtk, WebKit2  # noqa: E402
+from gi.repository import GLib, Gtk, WebKit2
 
 from hefesto_dualsense4unix.app.actions import mode_transition
 from hefesto_dualsense4unix.app.actions.jogar import painel

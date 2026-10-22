@@ -5,7 +5,7 @@ import csv, math, pathlib, re, sys
 
 import sys as _sys, pathlib as _pathlib
 _sys.path.insert(0, str(_pathlib.Path(__file__).resolve().parent))
-from onde import RAIZ as R  # noqa: E402
+from onde import RAIZ as R
 
 DADOS_DO_REPO = R / "docs/data"
 CSV = DADOS_DO_REPO / "pecas-do-dualsense.csv"

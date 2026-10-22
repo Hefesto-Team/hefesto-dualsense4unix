@@ -63,11 +63,11 @@ import re
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-import onde  # noqa: E402
-import monta  # noqa: E402
-import caixa_da_janela  # noqa: E402
+import onde
+import monta
+import caixa_da_janela
 
-from hefesto_dualsense4unix.core.roteador_de_movimento import (  # noqa: E402
+from hefesto_dualsense4unix.core.roteador_de_movimento import (
     SEGUNDOS_DO_ZERO,
 )
 
