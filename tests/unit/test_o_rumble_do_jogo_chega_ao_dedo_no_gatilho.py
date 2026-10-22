@@ -126,6 +126,30 @@ def test_a_rajada_de_vinte_pulsos_com_o_nivel_num_degrau_da_uma_escrita_so() -> 
     assert mesa.devolvidos == []  # o zero entre dois pulsos não devolve o lado
 
 
+@pytest.mark.parametrize(("antes", "depois", "degraus"), [
+    (255, 200, (8, 7)),  # o jogo baixa um degrau e fica: o dedo não segue no máximo
+    (200, 250, (7, 8)),  # o jogo sobe um degrau e fica: o dedo não fica um abaixo
+    (40, 90, (2, 3)),
+])
+def test_o_nivel_que_muda_um_degrau_e_fica_chega_ao_dedo(
+    antes: int, depois: int, degraus: tuple[int, int],
+) -> None:
+    mesa = _Mesa()
+    mesa.dedo[(P1, DIREITO)] = True
+    mesa.rumble(0, antes)
+    mesa.tique()
+    for _ in range(12):  # 200 ms com o nível novo parado
+        mesa.rumble(0, depois)
+        mesa.tique()
+    assert [b for _u, _d, b in mesa.escritas] == [tv.bloco_do_dedo(d) for d in degraus]
+
+
+def test_a_histerese_e_meio_degrau_em_volta_do_escrito() -> None:
+    assert tv.fica_no_degrau(150, 6) and tv.fica_no_degrau(170, 5)  # a divisa 5|6 não reescreve
+    assert not tv.fica_no_degrau(200, 8) and not tv.fica_no_degrau(250, 7)
+    assert not tv.fica_no_degrau(120, 6) and not tv.fica_no_degrau(200, 5)
+
+
 def test_o_degrau_que_sobe_espera_o_ciclo_do_gatilho() -> None:
     mesa = _Mesa()
     mesa.dedo[(P1, DIREITO)] = True

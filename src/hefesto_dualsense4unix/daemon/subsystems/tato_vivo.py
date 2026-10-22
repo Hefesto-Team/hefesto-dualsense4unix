@@ -1854,7 +1854,9 @@ CANAL_DO_DEDO = "dedo_do_rumble"
 DEGRAUS_DO_DEDO = 8
 #: sem rumble com força por este tanto, o lado volta ao efeito do estilo
 SEM_RUMBLE_NO_DEDO_S = 0.150
-#: o degrau escrito só muda quando o novo se afasta MAIS que isto (a rajada oscila dentro dele)
+#: a largura da histerese, em degraus: o escrito só muda quando o nível cru sai da faixa dele
+#: alargada em meio degrau de cada lado (a rajada que oscila na divisa não reescreve; o nível que
+#: muda e fica, ainda que um degrau só, chega ao dedo)
 HISTERESE_DO_DEDO = 1
 #: as batidas por segundo da vibração no dedo (byte de frequência do `0x26`)
 FREQUENCIA_DO_DEDO_HZ = 40
@@ -1866,6 +1868,13 @@ def degrau_do_rumble(fraco: int, forte: int) -> int:
         return 0
     nivel = max(int(fraco), int(forte))
     return max(1, min(DEGRAUS_DO_DEDO, -(-nivel * DEGRAUS_DO_DEDO // 255)))
+
+
+def fica_no_degrau(nivel: int, escrito: int) -> bool:
+    """O nível cru (0 a 255) ainda cabe no degrau escrito, com a histerese em volta dele."""
+    largura = 255 / DEGRAUS_DO_DEDO
+    folga = HISTERESE_DO_DEDO * largura / 2
+    return (escrito - 1) * largura - folga < nivel <= escrito * largura + folga
 
 
 def bloco_do_dedo(degrau: int) -> bytes:
@@ -1921,18 +1930,19 @@ class AtuadorDoDedo:
         """Os lados deste controle em que o rumble está no dedo."""
         return [lado for lado in _LADO_DO_BACKEND if (uniq, lado) in self._degrau]
 
-    def _degrau_vivo(self, motor: TatoVivo, uniq: str, agora: float) -> int:
+    def _par_vivo(self, motor: TatoVivo, uniq: str, agora: float) -> tuple[int, int]:
+        """O par cru que vale no dedo agora; ``(0, 0)`` com o jogo calado há 150 ms."""
         chave = norm_mac(uniq) or uniq
         par = motor.rumble_de_agora.get(chave)
         if par is None:
-            return 0
+            return (0, 0)
         if calado(*par):
             forca_em = motor.rumble_com_forca_em.get(chave)
             if forca_em is None or agora - forca_em >= SEM_RUMBLE_NO_DEDO_S:
-                return 0
+                return (0, 0)
             # A rajada cala entre dois pulsos: o degrau é o do último pulso.
             par = motor.par_com_forca.get(chave, par)
-        return degrau_do_rumble(*par)
+        return par
 
     def relogio(
         self,
@@ -1964,7 +1974,8 @@ class AtuadorDoDedo:
         return escritas
 
     def _tocar(self, motor: TatoVivo, uniq: str, agora: float) -> int:
-        degrau = self._degrau_vivo(motor, uniq, agora)
+        par = self._par_vivo(motor, uniq, agora)
+        degrau, nivel = degrau_do_rumble(*par), max(par)
         a_voltar: list[str] = []
         escritas = 0
         for lado, disco in _LADO_DO_BACKEND.items():
@@ -1976,7 +1987,7 @@ class AtuadorDoDedo:
                     a_voltar.append(lado)
                 continue
             escrito = self._degrau.get(chave)
-            if escrito is not None and abs(degrau - escrito) <= HISTERESE_DO_DEDO:
+            if escrito is not None and fica_no_degrau(nivel, escrito):
                 continue
             ultima = self._escreveu_em.get(uniq)
             if ultima is not None and agora - ultima < CICLO_DO_GATILHO_S:
@@ -3236,6 +3247,7 @@ __all__ = [
     "escolhas_de_imersao_ativas",
     "escolhas_do_perfil",
     "estilo_ativo",
+    "fica_no_degrau",
     "meus_toques_ativos",
     "modo_do_pad",
     "momentos_ativos",
