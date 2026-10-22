@@ -49,7 +49,8 @@ def _encher(pasta: Path, quantos: int) -> None:
         (pasta / f"f{n:05d}.txt").write_text(str(n), encoding="utf-8")
 
 
-def _deltas_das_entradas(antes: dict, depois: dict) -> list[str]:
+def _deltas_das_entradas(antes: dict[str, tuple[int, int, str]],
+                         depois: dict[str, tuple[int, int, str]]) -> list[str]:
     """Os deltas do canário sem o tamanho da PASTA que abriga a entrada que nasceu ou sumiu.
 
     O `st_size` de uma pasta é do sistema de arquivos: fixo no ext4, e no tmpfs (o `/tmp` do lar
