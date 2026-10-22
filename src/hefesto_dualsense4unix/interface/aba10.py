@@ -2,7 +2,7 @@ import sys, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import collections
 import re
 import onde
-from monta import monta, glifo, cor_da_zona, rotulo, CSS_GLIFO, MESA, SEPARADOR, R
+from monta import monta, glifo, cor_da_zona, rotulo, botao_cinza, CSS_GLIFO, MESA, SEPARADOR, R
 
 sys.path.insert(0, str(R.parents[1]))
 from hefesto_dualsense4unix.profiles.estilos_de_jogo import (
@@ -809,6 +809,11 @@ CSS = CSS_GLIFO + """
   /* O «Ativar» é a ação principal: sólido, como o «Aplicar» do rodapé. */
   .barra-quatro .btn.verde,.barra-quatro .btn.verde:hover{background:var(--green);
       color:var(--app-bg);border-color:var(--green);font-weight:700}
+  /* O ATIVAR QUE VAI RECUSAR NASCE CINZA (O-ATIVAR-DO-PERFIL-VALE-OU-A-TELA-DIZ-POR-QUE-01): com o
+     serviço parado de propósito nenhum perfil vale, e o verde cheio prometeria uma troca que não vem.
+     A cara é a do `.btn.apagado` das dez abas; a razão mora na dica do próprio botão. */
+  .barra-quatro .btn.verde.apagado,.barra-quatro .btn.verde.apagado:hover{background:transparent;
+      color:var(--fg);border-color:var(--border-sutil);font-weight:inherit;cursor:not-allowed}
   .perfis > div{padding:12px 16px}
   .perfis > div:first-child{padding-right:8px}
   .perfis > div:last-child{padding-left:8px}
@@ -1142,6 +1147,41 @@ def item_da_ordem(nome, posicao, ativo):
     return (f'                  <li class="{"ativo" if ativo else ""}" draggable="true" tabindex="0" '
             f'data-hef-gesto="editor.ordem" data-hef-perfil="{nome}">'
             f'<span class="pos">{posicao}</span><span class="pega">⋮⋮</span>{nome}</li>')
+
+
+
+#: O Ativar sabe ficar cinza: o campo que o acende escreve a razão na dica dele (`monta.botao_cinza`).
+#: No desenho ele nasce verde, que é a tela com o serviço de pé; a cena do serviço parado é
+#: `servico_parado()`, um estado do mesmo desenho, e não outra página.
+CAMPO_DA_RAZAO_DO_ATIVAR = "perfis.ativar-razao"
+DICA_DO_ATIVAR = "Passa a usar este perfil agora"
+RAZAO_DO_ATIVAR_SEM_SERVICO = "O serviço está parado. Ligue-o na aba Sistema para trocar o perfil"
+ATIVAR = botao_cinza("Ativar", CAMPO_DA_RAZAO_DO_ATIVAR, tom="verde",
+                     extra=f'data-hef-gesto="ativar" title="{DICA_DO_ATIVAR}"')
+
+
+def servico_parado(html):
+    """A cena do serviço parado de propósito, derivada do desenho normal: o que o produto escreve.
+
+    O topo leva `data-servico="parado"` (some a contagem, D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE) e
+    o nome do perfil fica no travessão, que é o «nada está valendo» do topo; nenhuma linha da lista
+    nem da ordem fica verde de VALENDO; o Ativar fica cinza, com a razão na dica. Sem frase nova na
+    tela: a explicação mora nas dicas.
+    """
+    trocas = (
+        ('data-servico="de-pe"', 'data-servico="parado"'),
+        ('<tr tabindex="0" data-dica="Clique: ativa e abre no editor" class="ativo" ',
+         '<tr tabindex="0" data-dica="Clique: ativa e abre no editor" class="" '),
+        ('<li class="ativo" draggable="true"', '<li class="" draggable="true"'),
+        (ATIVAR.strip(), botao_cinza("Ativar", CAMPO_DA_RAZAO_DO_ATIVAR, tom="verde",
+                                     razao=RAZAO_DO_ATIVAR_SEM_SERVICO,
+                                     extra='data-hef-gesto="ativar" aria-disabled="true"')),
+    )
+    for velho, novo in trocas:
+        if velho not in html:
+            raise SystemExit(f"ERRO na cena do serviço parado: {velho[:60]!r} sumiu do desenho")
+        html = html.replace(velho, novo)
+    return re.sub(r'(<span class="pa-nome"[^>]*>)[^<]*(</span>)', r"\1—\2", html)
 
 
 ROTEIRO = """
@@ -1527,7 +1567,7 @@ MIOLO = f'''
           <button class="btn" data-hef-gesto="duplicar" data-dica="Copia o perfil, com «(cópia)» no nome">Duplicar</button>
           <button class="btn" data-hef-gesto="novo" data-dica="Perfil em branco; com jogo aberto, nasce para ele">Novo</button>
           <button class="btn vermelho" data-hef-gesto="remover" data-hef="perfis.remover" data-dica="Apaga o perfil; pergunta antes">Remover</button>
-          <button class="btn verde" data-hef-gesto="ativar" data-dica="Passa a usar este perfil agora">Ativar</button>
+          {ATIVAR}
         </div></div>
       </div>
     </div>
@@ -2102,7 +2142,16 @@ if __name__ == "__main__":
     os.environ[onde._DESVIO] = str(_prova)
     n = monta("10-perfis", "Perfis", MIOLO, CSS)
     _conferir(onde.pagina("10-perfis.html").read_text(encoding="utf-8"))
-    shutil.copyfile(_prova / "10-perfis.html", _real / "10-perfis.html")
+    if len(sys.argv) == 3 and sys.argv[1] == "--servico-parado":
+        # A cena do serviço parado vai para a pasta pedida, nunca para o `mockup/`: ali ela seria
+        # lida como a aba e o `--publicar 10` a levaria ao produto.
+        _cena = pathlib.Path(sys.argv[2])
+        _cena.mkdir(parents=True, exist_ok=True)
+        (_cena / "10-perfis.html").write_text(
+            servico_parado((_prova / "10-perfis.html").read_text(encoding="utf-8")),
+            encoding="utf-8")
+    else:
+        shutil.copyfile(_prova / "10-perfis.html", _real / "10-perfis.html")
     shutil.rmtree(_prova)
     ROT_P = re.search(r"--rot-p:(\d+)px", CSS).group(1)
     FORA = sum(1 for c in MESA if not c.get("conectado", True))
