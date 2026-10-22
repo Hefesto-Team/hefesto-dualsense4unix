@@ -368,18 +368,12 @@ def test_o_lado_do_sistema_fora_do_cosmic_segue_o_button_layout(
 
 
 @skip_sem_gi_real
-def test_o_registro_que_muda_leva_os_botoes_ao_lado_novo() -> None:
+def test_o_registro_que_muda_leva_os_botoes_ao_lado_novo(monkeypatch: pytest.MonkeyPatch) -> None:
     from hefesto_dualsense4unix.interface import janela
 
-    postos: list[str] = []
     quem = SimpleNamespace(_lado="direita", _barra=None, _botoes_da_barra={})
     quem.trocar_o_lado = lambda lado: janela.JanelaDaAba.trocar_o_lado(quem, lado)  # type: ignore[attr-defined]
-    janela.lado_dos_botoes = lambda: "esquerda"  # type: ignore[assignment]
-    try:
-        janela.JanelaDaAba._o_lado_dos_botoes_pode_ter_mudado(quem)  # type: ignore[arg-type]
-    finally:
-        del janela.lado_dos_botoes
-        import importlib
-        importlib.reload(janela)
-    postos.append(quem._lado)
-    assert postos == ["esquerda"]
+    # o monkeypatch devolve a função: recarregar o módulo trocaria as classes de quem já o importou
+    monkeypatch.setattr(janela, "lado_dos_botoes", lambda: "esquerda")
+    janela.JanelaDaAba._o_lado_dos_botoes_pode_ter_mudado(quem)  # type: ignore[arg-type]
+    assert quem._lado == "esquerda"
