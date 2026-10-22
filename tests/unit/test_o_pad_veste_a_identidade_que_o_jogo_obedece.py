@@ -357,11 +357,15 @@ def arme(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return tmp_path
 
 
-def _lancar(pasta: Path, appid: int, *, roupa: int | None) -> None:
+def _lancar(pasta: Path, appid: int, *, roupa: int | None, gravada_em: float = 990.0) -> None:
+    """O `last_run` do lançamento no epoch 1000, e a env que o wrapper leu, gravada antes."""
+    import os
+
     (pasta / "last_run").write_text(f"appid={appid}\nepoch=1000\npid=1\n", encoding="utf-8")
     if roupa is not None:
-        (pasta / f"steam_app_{appid}.env").write_text(
-            le._render({"X": "1"}, "teste", (roupa, "a fonte")), encoding="utf-8")
+        env = pasta / f"steam_app_{appid}.env"
+        env.write_text(le._render({"X": "1"}, "teste", (roupa, "a fonte")), encoding="utf-8")
+        os.utime(env, (gravada_em, gravada_em))
 
 
 def test_o_arme_veste_e_o_fim_devolve(arme: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -391,11 +395,14 @@ def test_o_arme_com_perfil_veste_antes_do_modo(arme: Path, monkeypatch: pytest.M
     assert daemon._pad_travado_pelo_lancamento == (_COM_PERFIL, 1000)
 
 
-@pytest.mark.parametrize("caso", ["freestyle", "steam-input", "sem-env"])
+@pytest.mark.parametrize("caso", ["freestyle", "steam-input", "sem-env", "regravada-depois"])
 def test_o_arme_que_fica_no_edge(arme: Path, monkeypatch: pytest.MonkeyPatch, caso: str) -> None:
+    """`regravada-depois`: a env do `0ce6` nasceu (ou mudou) depois do `last_run`, e o
+    jogo leu a de antes, com o `0x054C/0x0CE6` nas listas: o pad `0ce6` sumiria dele."""
     from hefesto_dualsense4unix.profiles import manager
 
-    _lancar(arme, _SEM_PERFIL, roupa=None if caso == "sem-env" else ROUPA_COMUM)
+    _lancar(arme, _SEM_PERFIL, roupa=None if caso == "sem-env" else ROUPA_COMUM,
+            gravada_em=1001.5 if caso == "regravada-depois" else 990.0)
     if caso == "freestyle":
         monkeypatch.setattr(manager, "o_freestyle_manda", lambda store: True)
     if caso == "steam-input":

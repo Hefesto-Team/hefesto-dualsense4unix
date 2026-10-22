@@ -846,7 +846,7 @@ def arm_launch_profile(
 
     na_allowlist = appid in steam_input_appids()
     # A roupa que o `materialize` gravou (D-2210-A-ROUPA-VALE-PARA-O-JOGO-E-VOLTA-NO-FIM).
-    roupa = ROUPA_PADRAO if na_allowlist else roupa_gravada(appid, base_dir)
+    roupa = ROUPA_PADRAO if na_allowlist else roupa_gravada(appid, base_dir, lido_ate=epoch)
 
     profile = None
     for candidato_appid, candidato in _steam_profiles(daemon):
@@ -1678,10 +1678,20 @@ def _render(env: dict[str, str], estado: str, roupa: tuple[int, str] | None = No
 _LINHA_DA_ROUPA = "# roupa: "
 
 
-def roupa_gravada(appid: int, base_dir: Path | None = None) -> int:
-    """A roupa que o `materialize` gravou para o `appid`; sem a linha, o Edge."""
+def roupa_gravada(
+    appid: int, base_dir: Path | None = None, *, lido_ate: float | None = None
+) -> int:
+    """A roupa que o `materialize` gravou para o `appid`; sem a linha, o Edge.
+
+    Com `lido_ate` (o `epoch` do `last_run`, gravado ANTES de o wrapper ler a env),
+    o arquivo regravado depois dele não vale: o jogo leu a versão de antes, e o pad
+    `0ce6` com o `0x054C/0x0CE6` nas listas da env velha deixaria o jogo sem controle.
+    """
     caminho = (base_dir or launch_env_dir()) / f"steam_app_{int(appid)}.env"
     try:
+        if lido_ate is not None and caminho.stat().st_mtime > lido_ate:
+            logger.info("launch_arm_roupa_regravada_depois", appid=appid)
+            return ROUPA_PADRAO
         texto = caminho.read_text(encoding="utf-8")
     except (OSError, ValueError):
         return ROUPA_PADRAO

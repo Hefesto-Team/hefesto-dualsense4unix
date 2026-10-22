@@ -997,7 +997,7 @@ def dedup_status(daemon: DaemonProtocol) -> tuple[bool, list[str]]:
     def _sem_o_dono(vpad: Any) -> bool:
         # D-2210-O-FISICO-SE-ESCONDE-PELO-DONO: o pad vestido de DualSense comum só
         # conta como coberto com o dono escondendo o físico (`a_roupa_que_o_pad_veste`);
-        # sem isso, `roupa_sem_o_dono` (`jogador_<N>_roupa_sem_o_dono` no co-op)
+        # sem isso, o motivo é `roupa_sem_o_dono` (`jogador_<N>_roupa_sem_o_dono` no co-op).
         if not a_roupa_mudou(vpad, ROUPA_PADRAO):
             return False
         if not efetiva:
