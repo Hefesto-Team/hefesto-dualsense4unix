@@ -1662,6 +1662,7 @@ class AtuadorDosMomentos:
         largar: Callable[[str], object] | None = None,
         na_economia: Callable[[str], bool] | None = None,
         disparo: Callable[[str, str], int | None] | None = None,
+        cede: Callable[[str, str, float], bool] | None = None,
     ) -> None:
         self._escrever = escrever
         self._devolver = devolver
@@ -1669,6 +1670,8 @@ class AtuadorDosMomentos:
         self._largar = largar
         #: a Bateria longa vale neste controle? Os momentos param e fica o bloco de economia
         self._na_economia = na_economia
+        #: a telemetria da corrida pede este lado: o momento larga sem escrever e volta depois
+        self._cede = cede
         #: o status do Disparo (0, 1, 2) deste lado, ou ``None`` se o aparelho não o disse
         self._disparo = disparo
         self._aperto: dict[tuple[str, str], float] = {}
@@ -1751,8 +1754,16 @@ class AtuadorDosMomentos:
         economia = self._economia(uniq)
         escritas = 0
         a_voltar: list[str] = []
+        cedeu = False
         for lado, disco in _LADO_DO_BACKEND.items():
             chave = (uniq, lado)
+            if self._cede is not None and self._cede(uniq, lado, agora):
+                # A-TELEMETRIA-DA-CORRIDA-CHEGA-AO-GATILHO-01: o ABS e a patinação do jogo vencem a
+                # resistência do perfil; quem escreve o lado agora é a corrida.
+                if self._escrito.pop(chave, None) is not None:
+                    self._planos.pop(chave, None)
+                    cedeu = True
+                continue
             plano = None if economia else planos.do(uniq, lado)
             if plano is None:
                 self._sempre.pop(chave, None)
@@ -1794,6 +1805,8 @@ class AtuadorDosMomentos:
         elif uniq in self._entre_batidas and not self._repete(uniq):
             self._voltar(uniq, ())  # a imersão saiu entre duas batidas: a sessão volta
             motor.contadores["devolucoes"] += 1
+        if cedeu and not self._na_sessao(uniq) and self._largar is not None:
+            self._largar(uniq)  # a sessão segue com a corrida, que a devolve ao soltar
         return escritas
 
     def _voltar(self, uniq: str, lados: Sequence[str]) -> None:
@@ -2799,6 +2812,32 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
         sessao.tomar(uniq, CANAL_DO_DEDO)
         return escrever(uniq, lado, bloco)
 
+    from hefesto_dualsense4unix.daemon.subsystems.telemetria_do_jogo import (
+        CANAL_DA_TELEMETRIA,
+        AtuadorDaTelemetria,
+        telemetria_do,
+    )
+
+    def gatilho_da_corrida(uniq: str, lado: str, bloco: bytes) -> object:
+        escrever = getattr(controller, "set_game_trigger_for", None)
+        if not callable(escrever):
+            return False
+        sessao.tomar(uniq, CANAL_DA_TELEMETRIA)
+        return escrever(uniq, lado, bloco)
+
+    corrida = AtuadorDaTelemetria(
+        lambda: telemetria_do(daemon),
+        gatilho_da_corrida,
+        lambda uniq: sessao.soltar(uniq, CANAL_DA_TELEMETRIA),
+        tocar,
+        lambda uniq: sessao.largar(uniq, CANAL_DA_TELEMETRIA),
+        soltar_lado,
+        na_economia=na_economia,
+    )
+
+    def a_corrida_quer(uniq: str, lado: str, agora: float) -> bool:
+        return corrida.quer_o_lado(lado, agora)
+
     def o_lado_tem_dono(uniq: str, lado: str) -> bool:
         # O momento da imersão, o gatilho do perfil que já vibra e a Bateria longa ficam.
         return do_momento(uniq, lado) or gatilho_vibra(uniq) or na_economia(uniq)
@@ -2847,6 +2886,7 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
             lambda uniq: sessao.largar(uniq, CANAL_DO_MOMENTO),
             na_economia,
             disparo,
+            a_corrida_quer,
         ),
         AtuadorDoDedo(
             dedo,
@@ -2857,6 +2897,7 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
             soltar_lado,
             radio_cede,
         ),
+        corrida,
         AtuadorDaLuz(
             pintar,
             cor_de,

@@ -578,9 +578,11 @@ class Passo:
             )
             self._reacao = reacao_da_luz_do_estilo(estilo_ativo(self.daemon))
             self._cores = self._cores_base(controles) if self._reacao else {}
-        # a luz explícita do perfil vence a do estilo; quem quer a luz fixa usa o Personalizado
+        # a luz explícita do perfil vence a da corrida, que vence a do estilo; quem quer a luz
+        # fixa usa o Personalizado
         plano = {
             **self._planos_do_estilo(controles, agora),
+            **self._planos_da_corrida(controles, agora),
             **{c.uniq: self._plano[c.uniq] for c in controles if c.uniq in self._plano},
         }
         if not plano:
@@ -678,6 +680,33 @@ class Passo:
                 fora[c.uniq] = PlanoDoControle(
                     EfeitoDaLuz("respirar", (cor,), RITMO_DA_BATERIA), 1.0, posicao % 4, semente)
         return fora
+
+    def _planos_da_corrida(self, controles: list[Any], agora: float) -> dict[str, PlanoDoControle]:
+        """A cor da rotação da telemetria (A-TELEMETRIA-DA-CORRIDA-CHEGA-AO-GATILHO-01), nas mesmas
+        guardas da luz do estilo: fora da economia, fora do Automático, com brilho."""
+        from hefesto_dualsense4unix.daemon.subsystems.telemetria_do_jogo import telemetria_do
+
+        tel, perfil = telemetria_do(self.daemon), self._perfil
+        cor = None if tel is None else tel.cor_da_rotacao(agora)
+        if cor is None or perfil is None or perfil.leds.modo == "automatico":  # (noqa-acento) chave
+            return {}
+        mesa, ligados = economia_da_mesa(), controles_em_economia()
+        planos: dict[str, PlanoDoControle] = {}
+        for posicao, c in enumerate(controles):
+            if _em_economia(c.uniq, mesa, ligados):
+                continue
+            leds, campos = _leds_do_controle(perfil, c.uniq)
+            brilho = (
+                leds.lightbar_brightness
+                if leds is not None and "lightbar_brightness" in campos
+                else perfil.leds.lightbar_brightness
+            )
+            if float(brilho) <= 0.0:
+                continue
+            planos[c.uniq] = PlanoDoControle(
+                EfeitoDaLuz("fixa", (cor,), 1), float(brilho), posicao % 4,
+                _semente_do_controle(c.uniq))
+        return planos
 
     def _quem_tem_outro_dono(self) -> frozenset[str]:
         """As barras que outro dono pinta agora: o pulso do tiro e a subida da Chegada."""

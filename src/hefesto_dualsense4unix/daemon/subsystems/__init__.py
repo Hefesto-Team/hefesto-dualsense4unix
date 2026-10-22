@@ -121,6 +121,14 @@ def _luz_animada(daemon: Any) -> Any:
     return start_luz_animada(daemon)
 
 
+def _telemetria_do_jogo(daemon: Any) -> Any:
+    from hefesto_dualsense4unix.daemon.subsystems.telemetria_do_jogo import (
+        start_telemetria_do_jogo,
+    )
+
+    return start_telemetria_do_jogo(daemon)
+
+
 def _ouvinte_do_som(daemon: Any) -> Any:
     from hefesto_dualsense4unix.daemon.subsystems.ouvinte_do_som import (
         start_ouvinte_do_som,
@@ -369,6 +377,8 @@ SUBSYSTEM_REGISTRY: tuple[Passo, ...] = (
     # O motor do tiro, desligado pela receita (O-TATO-VIVO-SO-FALA-ONDE-O-JOGO-CALA-01).
     Passo("tato_vivo", partida=_tato_vivo),
     Passo("luz_animada", partida=_luz_animada),
+    # A porta do «Data Out» só abre no localhost e com a Corrida ou a Simulação no perfil.
+    Passo("telemetria_do_jogo", partida=_telemetria_do_jogo),
     # O ouvinte do som não é dono de nenhum nó, só observa. Sobe AQUI e não antes: cedo
     # demais, a primeira leitura pegaria o servidor de som antes de o ``bt_mic`` e o
     # ``alto_falante`` publicarem os nós, e a primeira resposta da tela seria um mundo
