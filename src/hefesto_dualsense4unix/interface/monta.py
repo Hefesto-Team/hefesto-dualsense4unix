@@ -589,7 +589,7 @@ def _degrau_do_transporte(c: dict[str, object]) -> str:
     """O último degrau de `identidade_de`: o transporte sozinho, na palavra dele.
 
     Existe para que a fita **pergunte** em vez de digitar. É a mesma leitura que
-    `pacotes/a02_controles.py:1354` faz para o cabeçalho do card.
+    `pacotes/a02_controles.py:1353` faz para o cabeçalho do card.
     """
     from hefesto_dualsense4unix.interface.pacotes import identidade_de
 

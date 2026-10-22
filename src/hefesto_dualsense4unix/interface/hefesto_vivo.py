@@ -70,7 +70,7 @@ PRIMEIRA = "01-jogar.html"
 #:
 #: FATO ERRADO, SUBSTITUÍDO EM 04/09/2026: esta linha dizia `500` e o comentário
 #: justificava o número afirmando que «500 ms é o mesmo do `controles_vivos`».
-#: Não era: o `controles_vivos.py:120` sempre teve `TIQUE_MS = 100`. O número
+#: Não era: o `controles_vivos.py:121` sempre teve `TIQUE_MS = 100`. O número
 #: errado tinha consequência medida — um «delay absurdo em controles»
 #: visto na aba 02, onde meio segundo de atraso separa o dedo do desenho.
 #:
@@ -609,7 +609,7 @@ BOOTSTRAP = r"""
     // `fundo`. O clique do analógico é COR na GTK
     // (`interface/cartao_do_controle.py`, "accent do CONTROLE quando
     // pressionados") e era cor no piloto velho desta aba
-    // (`interface/controles_vivos.py:327`,
+    // (`interface/controles_vivos.py:328`,
     // `{color: s.on ? 'var(--plastico)' : ''}`). Sem este alvo, o pacote da
     // aba Controles teve de escrever `[L3]` em TEXTO e deixou a razão escrita
     // em `a02_controles.py:63` — *"enquanto o piloto não tiver o alvo, o texto
@@ -1483,7 +1483,7 @@ BOOTSTRAP = r"""
       // tinha catorze nomes, escritos à mão, e os gestos da aba Conexões leem
       // `caminho`, `entrada` e `face` — NENHUM dos três estava nela. O botão
       // "escolher aparelho" traz `data-caminho` (o pacote o gera em
-      // `a08_conexoes.py:1021`), as entradas do gabinete trazem `data-entrada`
+      // `a08_conexoes.py:1026`), as entradas do gabinete trazem `data-entrada`
       // no HTML publicado, e o clique chegava ao Python sem eles. Resultado:
       // SEIS gestos recusavam dizendo *"o clique não disse qual aparelho"* — e
       // recusavam para ELA também, não só para a régua. O diagnóstico que

@@ -135,7 +135,7 @@ def _lugares_que_o_desenho_da_por_vazios() -> frozenset[str]:
     POR QUE O PACOTE PRECISA SABER DISSO, e é o defeito D4, medido em
     02/09/2026: os quatro `<select>` das colunas P3 e P4 são **endereço morto**.
     O piloto preenche todo lugar que a mesa não tem com `dict.fromkeys(chaves,
-    "—")` (`pacotes/__init__.py:502`), e `escrever()` **recusa** escrever um
+    "—")` (`pacotes/__init__.py:501`), e `escrever()` **recusa** escrever um
     valor que o `<select>` não oferece (`hefesto_vivo.py:170-174`) — a recusa é
     CERTA, porque escrever qualquer outra coisa deixaria o campo em branco
     somando +1 por tique para sempre. O desfecho é que o travessão nunca pousa e
