@@ -56,10 +56,16 @@ def _deltas_das_entradas(antes: dict, depois: dict) -> list[str]:
     de cada parte da suíte) e no btrfs ele anda com os nomes dentro. A régua mede a conta dos
     pesados, e a entrada que nasce já é um CRIADO; a pasta mãe com o tamanho trocado seria o
     segundo delta de uma mudança só, e só onde o disco o conta.
+
+    Só sai a MÃE de um CRIADO ou de um APAGADO desta mesma lista: a pasta pesada que encolhe
+    não é mãe de ninguém aqui, e o tamanho dela trocado continua sendo o delta que reprova.
     """
-    return [d for d in canario._deltas_do_canario(antes, depois)
-            if not (d.startswith("MUDADO") and "(tamanho " in d
-                    and Path(d[len("MUDADO   "):].rsplit(" (", 1)[0]).is_dir())]
+    deltas = canario._deltas_do_canario(antes, depois)
+    maes = {str(Path(d[len("CRIADO   "):]).parent) for d in deltas
+            if d.startswith(("CRIADO ", "APAGADO "))}
+    return [d for d in deltas
+            if not (d.startswith("MUDADO ") and d.endswith(")") and "(tamanho " in d
+                    and d[len("MUDADO   "):].rsplit(" (", 1)[0] in maes)]
 
 
 def _contar_resumos(monkeypatch: pytest.MonkeyPatch) -> list[str]:
