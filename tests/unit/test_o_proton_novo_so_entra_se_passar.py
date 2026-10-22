@@ -127,13 +127,15 @@ def test_o_pino_com_versao_sem_a_linha_passou_reprova() -> None:
     assert qp.o_pino_sem_recibo(_pino("GE-Proton11-7-x86_64", "d" * 64), recibo)
 
 
-def test_entre_duas_que_passam_fica_a_mais_antiga() -> None:
+def test_entre_duas_que_passam_fica_a_mais_recente() -> None:
+    # D-2210-O-PROTON-E-SEMPRE-O-MAIS-RECENTE-QUE-PASSA (revoga «a mínima que passa»)
     texto = RECIBO.format(a="a" * 64, b="b" * 64).replace(
         "a háptica não chegou,reprovou,háptica", "passou,passou,"
     )
     recibo = qp.ler_recibo(texto)
-    assert qp.a_minima_que_passa(recibo) == "GE-Proton11-7-x86_64"
-    assert qp.o_pino_sem_recibo(_pino("GE-Proton11-8-x86_64", "b" * 64), recibo)
+    assert qp.a_mais_recente_que_passa(recibo) == "GE-Proton11-8-x86_64"
+    assert qp.o_pino_sem_recibo(_pino("GE-Proton11-7-x86_64", "a" * 64), recibo)
+    assert qp.o_pino_sem_recibo(_pino("GE-Proton11-8-x86_64", "b" * 64), recibo) == []
 
 
 def test_o_pino_desta_casa_tem_o_recibo_passou() -> None:

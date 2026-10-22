@@ -1842,7 +1842,9 @@ def _rastros_nos_lancadores(raizes: Raizes) -> list[Rastro]:
             rastros.extend(_copias_ao_lado(cfg))
             conf_path = pp.default_pin_conf_path()
             if cfg.is_file() and conf_path is not None:
-                nome = pp.parse_pin_conf(Path(conf_path).read_text(encoding="utf-8"))["name"]
+                nome = pp.conf_que_vale(
+                    pp.parse_pin_conf(Path(conf_path).read_text(encoding="utf-8")),
+                    pp.default_compat_dir(raizes.lar))["name"]
                 mapa = pp.extract_compat_tool_mapping(cfg.read_text(encoding="utf-8"))
                 n = sum(1 for v in mapa.values() if v == nome)
                 if n:

@@ -9,8 +9,8 @@ as funções daqui (ou o CLI `--ensure/--lock/--unlock/--report`).
 
 Desenho (decisões que não relaxam):
 
-- `assets/proton-pin.conf` é a fonte da verdade (name/url/sha256). Upgrade é
-  SEMPRE deliberado: editar o conf + rodar o install — nunca automático.
+- `assets/proton-pin.conf` é a fonte do que se BAIXA (name/url/sha256), nunca sozinho; o que
+  VALE é o mais recente INSTALADO que passa na ficha (:func:`pino_que_vale`, 22/10/2026).
 - NUNCA extrair binário não verificado: o tarball (do cache offline-first em
   `~/.cache/hefesto-dualsense4unix/proton/` ou baixado na hora) só é extraído
   se o SHA256 bater com o conf. Mismatch = aborta o passo, estado honesto.
@@ -1169,7 +1169,8 @@ def lock_proton_for_all_games(
     """
     if conf is None:
         conf = _load_conf(None)
-    tool_name = conf["name"]
+    compat = compat_dir if compat_dir is not None else default_compat_dir(home)
+    tool_name = pino_que_vale(conf, compat)
     appids = list_installed_appids(home)
     result = lock_games_to_pinned_proton(
         tool_name=tool_name,
@@ -1182,7 +1183,7 @@ def lock_proton_for_all_games(
         todos=todos,
         excluir=ler_jogos_fora_do_pino(fora_do_pino_path(home)),
         sem_entrada_de=lambda faltam: jogos_sem_entrada_nova(faltam, home=home),
-        compat_dir=compat_dir if compat_dir is not None else default_compat_dir(home),
+        compat_dir=compat,
     )
     changes = result.get("changes")
     if isinstance(changes, dict):
@@ -1631,6 +1632,88 @@ def nomes_internos(pasta: Path) -> tuple[str, ...]:
     return tuple(nomes) or (pasta.name,)
 
 
+def pino_que_vale(conf: dict[str, str], compat_dir: Path | None = None) -> str:
+    """O nome do Proton que vale como pino: o MAIS RECENTE instalado que passa na ficha.
+
+    22/10/2026, escolha do usuário: «é sempre a versão mais recente do próton desde que ele tenha
+    os pré-requisitos e usaremos apenas a nova». Os pré-requisitos são a ficha de qualificação
+    (:func:`qualificar_proton.ficha`, contra a do `proton-pin.conf` quando ela está no disco). Só
+    conta versão do GE-Proton que está em ``compat_dir`` e é mais nova que a do conf; nada vem
+    da rede. Sem candidata, ou na dúvida (pasta que não se lê), vale a do conf. Nunca levanta.
+    """
+    nome = conf["name"]
+    compat = compat_dir if compat_dir is not None else default_compat_dir()
+    try:
+        from hefesto_dualsense4unix.integrations import qualificar_proton as qp
+
+        melhor, ordem_do_melhor = nome, qp.ordem_da_versao(nome)
+        if ordem_do_melhor == (-1, -1):
+            return nome
+        fixada = compat / nome if pinned_proton_installed(nome, compat) else None
+        for pasta in sorted(compat.iterdir()):
+            if pasta.is_symlink() or not pasta.is_dir():
+                continue
+            if not pinned_proton_installed(pasta.name, compat):
+                continue
+            ordem = qp.ordem_da_versao(pasta.name)
+            if ordem <= ordem_do_melhor or not qp.ficha(pasta, fixada).passou:
+                continue
+            melhor, ordem_do_melhor = pasta.name, ordem
+        return melhor
+    except Exception:  # leitura que falha vale «sem candidata»: fica o pino do conf
+        return nome
+
+
+def conf_que_vale(conf: dict[str, str], compat_dir: Path | None = None) -> dict[str, str]:
+    """O ``conf`` com o ``name`` do pino que vale (:func:`pino_que_vale`); o mesmo se for o do conf.
+
+    A versão instalada à mão não tem o ``url`` do conf: ela leva ``instalada`` e o sha256 do
+    manifesto que houver (a que o Hefesto extraiu), senão o do conf, que não vale para ela.
+    """
+    compat = compat_dir if compat_dir is not None else default_compat_dir()
+    vale = pino_que_vale(conf, compat)
+    if vale == conf["name"]:
+        return conf
+    return {**conf, "name": vale, "sha256": _read_manifest_sha256(vale, compat) or "",
+            "instalada": "1"}
+
+
+def apontar_os_lancadores_para_o_pino(
+    home: Path | None = None,
+    *,
+    conf: dict[str, str] | None = None,
+    compat_dir: Path | None = None,
+) -> int:
+    """Aponta o Heroic para o pino que vale, no lugar de toda outra versão do Proton instalada.
+
+    A Steam é do lock (:func:`lock_proton_for_all_games`); o Heroic guarda o Proton no JSON dele, e
+    quem sabe onde é o censo (:func:`censo_dos_lancadores.apontar_o_heroic_para`). Sem isto a
+    versão velha ficaria «em uso» e não sairia. O Lutris é extensão e só se lê: se ele cita a
+    velha, ela fica (:func:`versoes_que_sobram`). Devolve quantas escolhas trocou; nunca levanta.
+    """
+    try:
+        compat = compat_dir if compat_dir is not None else default_compat_dir(home)
+        pino = pino_que_vale(conf if conf is not None else _load_conf(None), compat)
+        if not pinned_proton_installed(pino, compat):
+            return 0
+        outras: set[str] = set()
+        for pasta in compat.iterdir():
+            if pasta.is_symlink() or not pasta.is_dir() or pasta.name == pino:
+                continue
+            nomes = (pasta.name, *nomes_internos(pasta))
+            if all(e_da_familia_proton(n) for n in nomes) and pino not in nomes:
+                outras.update(nomes)
+        if not outras:
+            return 0
+        from hefesto_dualsense4unix.integrations.censo_dos_lancadores import (
+            apontar_o_heroic_para,
+        )
+
+        return apontar_o_heroic_para(pino, compat, frozenset(outras), lar=home).reescritas
+    except Exception:
+        return 0
+
+
 def _tamanho_da_pasta(pasta: Path) -> int:
     total = 0
     for raiz, _dirs, arquivos in os.walk(pasta, followlinks=False):
@@ -1654,7 +1737,8 @@ def versoes_que_sobram(
     if raiz is None:
         return []
     try:
-        nome_do_pino = pino if pino is not None else _load_conf(None)["name"]
+        nome_do_pino = pino if pino is not None else pino_que_vale(
+            _load_conf(None), raiz / "compatibilitytools.d")
         mapa = extract_compat_tool_mapping(
             (raiz / "config" / "config.vdf").read_text(encoding="utf-8", errors="replace"))
     except (OSError, ValueError, KeyError):
@@ -1772,7 +1856,10 @@ def proton_pin_report(
     """Struct do doctor (puro — quem lê arquivos é a lane de wiring)."""
     name = conf["name"]
     present = pinned_proton_installed(name, compat_dir)
-    manifest_ok = _read_manifest_sha256(name, compat_dir) == conf["sha256"].lower()
+    manifesto = _read_manifest_sha256(name, compat_dir)
+    # A versão instalada à mão (``instalada``) não tem manifesto do Hefesto: passou na ficha.
+    manifest_ok = manifesto == conf["sha256"].lower() or (
+        bool(conf.get("instalada")) and manifesto is None)
     mapping = extract_compat_tool_mapping(config_vdf_text)
     global_tool = mapping.get("0", "")
     appids = [str(a) for a in installed_appids] if installed_appids is not None else [
@@ -1889,6 +1976,11 @@ def _cmd_ensure(args: argparse.Namespace) -> int:
             )
             return RC_ADIADO
         compat = raiz / "compatibilitytools.d"
+    vale = pino_que_vale(conf, compat)
+    if vale != conf["name"]:
+        print(f"[proton-pin] {conf['name']}: não baixo — {vale} já está em {compat}, "
+              "é mais recente e passa na ficha: é ele o Proton fixado")
+        return 0
     result = ensure_pinned_proton(
         conf, compat_dir=compat, cache_dir=cache, downloader=downloader
     )
@@ -1907,8 +1999,8 @@ def _cmd_manter(args: argparse.Namespace) -> int:
         _avisar_da_raiz_envenenada()
         print(f"[proton-pin] manter: nada a fazer — {motivo}")
         return 0
-    name = conf["name"]
     compat = args.compat_dir if args.compat_dir else raiz / "compatibilitytools.d"
+    name = pino_que_vale(conf, compat)
     if not pinned_proton_installed(name, compat):
         cache = args.cache_dir if args.cache_dir else default_cache_dir()
         if not (cache / f"{name}.tar.gz").is_file():
@@ -1959,8 +2051,9 @@ def _cmd_lock(args: argparse.Namespace) -> int:
     explicitos = [a.strip() for a in args.appids.split(",") if a.strip()]
     appids = explicitos or list_installed_appids()
     migrar_de = [t.strip() for t in args.migrar_de.split(",") if t.strip()]
+    compat = args.compat_dir if args.compat_dir else default_compat_dir()
     result = lock_games_to_pinned_proton(
-        tool_name=conf["name"],
+        tool_name=pino_que_vale(conf, compat),
         appids=appids,
         config_vdf=args.config_vdf,
         state_path=args.state,
@@ -1969,7 +2062,7 @@ def _cmd_lock(args: argparse.Namespace) -> int:
         todos=args.todos,
         excluir=ler_jogos_fora_do_pino(),
         sem_entrada_de=None if explicitos else jogos_sem_entrada_nova,
-        compat_dir=args.compat_dir if args.compat_dir else default_compat_dir(),
+        compat_dir=compat,
     )
     return _travar_e_contar(result, mirados=len(appids), prefixo="lock")
 
@@ -2104,8 +2197,8 @@ def _cmd_unlock(args: argparse.Namespace) -> int:
 
 
 def _cmd_report(args: argparse.Namespace) -> int:
-    conf = _load_conf(args.conf)
     compat = args.compat_dir if args.compat_dir else default_compat_dir()
+    conf = conf_que_vale(_load_conf(args.conf), compat)
     vdf = args.config_vdf if args.config_vdf else default_config_vdf()
     try:
         text = vdf.read_text(encoding="utf-8")

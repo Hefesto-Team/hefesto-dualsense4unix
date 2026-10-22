@@ -302,22 +302,30 @@ def ler_recibo(texto: str) -> list[dict[str, str]]:
     return [{k: (v or "").strip() for k, v in linha.items()} for linha in leitor]
 
 
-def _ordem_da_versao(versao: str) -> tuple[int, int]:
+def ordem_da_versao(versao: str) -> tuple[int, int]:
+    """A ordem de uma versão do GE-Proton (``GE-Proton11-7`` vale ``(11, 7)``).
+
+    O que não tem esse formato vale ``(-1, -1)``: não se sabe se é mais novo, então nunca vence
+    uma comparação por «mais recente».
+    """
     achado = _VERSAO_GE_RE.search(versao)
-    return (int(achado.group(1)), int(achado.group(2))) if achado else (10**6, 0)
+    return (int(achado.group(1)), int(achado.group(2))) if achado else (-1, -1)
 
 
-def a_minima_que_passa(recibo: Sequence[dict[str, str]]) -> str | None:
-    """Entre as versões que passaram, a mais antiga: é ela que se fixa."""
-    passaram = [linha["versão"] for linha in recibo if linha["veredito"] == VEREDITO_PASSOU]
-    return min(passaram, key=_ordem_da_versao) if passaram else None
+def a_mais_recente_que_passa(recibo: Sequence[dict[str, str]]) -> str | None:
+    """Entre as versões que passaram, a mais recente: é ela que se fixa (22/10/2026)."""
+    passaram = [
+        linha["versão"] for linha in recibo
+        if linha["veredito"] == VEREDITO_PASSOU and ordem_da_versao(linha["versão"]) > (-1, -1)
+    ]
+    return max(passaram, key=ordem_da_versao) if passaram else None
 
 
 def o_pino_sem_recibo(pino: dict[str, str], recibo: Sequence[dict[str, str]]) -> list[str]:
     """A régua do pino: o que falta para o `proton-pin.conf` valer.
 
     O pino nomeia uma versão com a linha «passou» e o MESMO sha256; e é a
-    mínima entre as que passaram.
+    mais recente entre as que passaram.
     """
     nome = pino.get("name", "")
     sha = pino.get("sha256", "").lower()
@@ -334,9 +342,9 @@ def o_pino_sem_recibo(pino: dict[str, str], recibo: Sequence[dict[str, str]]) ->
         return [f"o pino {nome} não tem a linha «passou» no recibo"]
     if not any(linha["sha256"].lower() == sha for linha in passou):
         return [f"o sha256 do pino {nome} não é o que passou no recibo"]
-    minima = a_minima_que_passa(recibo)
-    if minima != nome:
-        return [f"o pino {nome} não é a mínima que passa ({minima})"]
+    recente = a_mais_recente_que_passa(recibo)
+    if recente != nome:
+        return [f"o pino {nome} não é a mais recente que passa ({recente})"]
     return []
 
 
@@ -397,15 +405,17 @@ def linhas_do_doctor(
     mapa_dos_jogos: dict[str, str],
     nome_do_jogo: Callable[[str], str],
     sem_steam: str | None = None,
+    vale: str | None = None,
 ) -> list[tuple[str, str]]:
     """As linhas do `hefesto doctor` sobre o Proton fixado: ``(tag, texto)``.
+
 
     Pura (quem lê arquivos é `linhas_do_doctor_desta_maquina`). Diz se o Proton
     fixado tem o recibo «passou» e está no disco, o que o recibo diz de cada
     Proton instalado, e em que Proton roda cada jogo que a Steam mapeou, com o
     aviso do jogo cujo Proton de terceiros sumiu do disco. Com ``sem_steam`` (o
     motivo de não haver Steam nativa), confere só o pino contra o recibo: sem
-    Steam não há disco nem jogo a conferir, e o aviso seria falso.
+    Steam não há disco nem jogo a conferir, e o aviso seria falso. ``vale`` é o pino mais novo.
     """
     from hefesto_dualsense4unix.integrations.proton_pin import (
         nomes_internos,
@@ -422,11 +432,17 @@ def linhas_do_doctor(
         )
     else:
         nome = pino.get("name", "")
+        if sem_steam is None and vale and vale != nome:
+            linhas.append((TAG_OK, f"o Proton fixado é o {vale}: mais recente que o {nome} do "
+                                   "recibo e passa na ficha de hoje"))
+            nome = vale
         if sem_steam is not None:
             linhas.append((TAG_INFO, f"{sem_steam}: o {nome} não tem onde ser conferido no disco"))
         elif not pinned_proton_installed(nome, compat_dir):
             linhas.append((TAG_WARN, f"o Proton fixado ({nome}) não está em {compat_dir}"))
-        if recibo is None:
+        if nome != pino.get("name", ""):
+            pass  # o pino que vale passou na ficha de hoje; o recibo confere só o do conf
+        elif recibo is None:
             linhas.append(
                 (
                     TAG_INFO,
@@ -503,6 +519,7 @@ def linhas_do_doctor_desta_maquina(home: Path | None = None) -> list[tuple[str, 
         mapa_dos_jogos=mapa,
         nome_do_jogo=lambda appid: nome_do_appid(appid, home) or f"appid {appid}",
         sem_steam=pp.steam_root_ou_recusa(home).motivo,
+        vale=pp.pino_que_vale(pino, pp.default_compat_dir(home)) if pino else None,
     )
 
 

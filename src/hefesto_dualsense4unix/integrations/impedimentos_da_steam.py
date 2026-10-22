@@ -82,8 +82,8 @@ def _fora_do_proton_fixado(home: Path | None) -> list[str]:
     caminho = pp.default_pin_conf_path()
     if caminho is None:
         return []
-    conf = pp.parse_pin_conf(caminho.read_text(encoding="utf-8"))
     compat = pp.default_compat_dir(home)
+    conf = pp.conf_que_vale(pp.parse_pin_conf(caminho.read_text(encoding="utf-8")), compat)
     if not pp.pinned_proton_installed(conf["name"], compat):
         return []
     vdf = pp.default_config_vdf(home)
@@ -152,7 +152,8 @@ def _fixar_o_proton(appids: Sequence[str], home: Path | None) -> None:
         raise ImpedimentoNaoCuradoError("Não achei o Proton fixado desta versão do Hefesto.")
     conf = pp.parse_pin_conf(caminho.read_text(encoding="utf-8"))
     resultado = pp.lock_games_to_pinned_proton(
-        tool_name=conf["name"], appids=list(appids), home=home, todos=True,
+        tool_name=pp.pino_que_vale(conf, pp.default_compat_dir(home)),
+        appids=list(appids), home=home, todos=True,
         excluir=pp.ler_jogos_fora_do_pino(pp.fora_do_pino_path(home)),
         compat_dir=pp.default_compat_dir(home))
     status = str(resultado.get("status"))

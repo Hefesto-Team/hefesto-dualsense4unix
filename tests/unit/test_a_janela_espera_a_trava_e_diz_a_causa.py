@@ -115,7 +115,7 @@ def _so_as_estradas(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(a09._daemon, "format_fix_safe_result", lambda _r: "")
     monkeypatch.setattr(cv, "gravar_camadas_da_steam_fora", lambda _ligar: None)
     monkeypatch.setattr(cv, "frase_do_ato", lambda _ligar: "")
-    monkeypatch.setattr(a09, "_o_pino", lambda: (None, None))
+    monkeypatch.setattr(a09, "_o_pino", lambda: (None, lambda **_k: {"status": "noop"}))
     monkeypatch.setattr(a09, "_porque_o_proton_nao_trava", lambda *_a: None)
     monkeypatch.setattr(a09, "proton_fixado", lambda: True)
     monkeypatch.setattr(a09, "_versoes_que_sobram", lambda: [])

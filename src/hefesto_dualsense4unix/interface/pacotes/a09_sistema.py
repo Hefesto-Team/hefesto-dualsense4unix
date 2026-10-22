@@ -2564,9 +2564,15 @@ def _reaplicar_as_correcoes() -> str:
     if motivo:
         partes.append(motivo)
     else:
-        if not proton_fixado():
-            partes.append(_daemon.format_proton_lock_result(travar(todos=True)))
+        # Sempre trava: a versão nova que passa na ficha leva todo jogo, mesmo com o pino velho já
+        # fixado. O silêncio de «já estava» só vale quando já havia trava.
+        fixado_antes = proton_fixado()
+        resultado = travar(todos=True)
+        if not fixado_antes or resultado.get("status") != "noop":
+            partes.append(_daemon.format_proton_lock_result(resultado))
         if proton_fixado():
+            with contextlib.suppress(Exception):
+                pin.apontar_os_lancadores_para_o_pino()
             partes.append(_levar_as_que_sobram(_versoes_que_sobram()))
     return " ".join(p for p in partes if p)
 

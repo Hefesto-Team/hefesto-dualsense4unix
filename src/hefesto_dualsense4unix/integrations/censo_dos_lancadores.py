@@ -10,6 +10,7 @@ import shutil
 import signal
 import subprocess
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
@@ -497,6 +498,125 @@ def _proton_do_heroic(pasta: Path) -> tuple[list[str], list[str]]:
             if isinstance(valor, dict):
                 versoes += _versoes_da_ferramenta(valor.get("wineVersion"))
     return versoes, duvida
+
+
+@dataclass(frozen=True)
+class ApontadoNoHeroic:
+    """O que :func:`apontar_o_heroic_para` fez: quantas escolhas trocou, ou por que não mexeu."""
+
+    reescritas: int = 0
+    recusa: str = ""
+
+
+def heroic_aberto() -> bool:
+    """O Heroic está rodando? Ele regrava a configuração ao sair: aberto, nada se escreve."""
+    for pid in os.listdir("/proc"):
+        if not pid.isdigit():
+            continue
+        with contextlib.suppress(OSError):
+            argv0 = Path(f"/proc/{pid}/cmdline").read_bytes().split(b"\0", 1)[0]
+            if Path(argv0.decode("utf-8", "replace")).name.casefold() in (
+                "heroic", "heroic-games-launcher",
+            ):
+                return True
+    return False
+
+
+def _reapontar_a_ferramenta(
+    ferramenta: object, pino: str, compat_dir: Path, velhas: frozenset[str],
+) -> bool:
+    """Troca no lugar o ``wineVersion`` que aponta para uma das ``velhas``; ``True`` se trocou.
+
+    Só o Proton que mora em ``compat_dir`` (o que o pino governa) e só o do tipo ``proton``: o
+    Wine do próprio Heroic e as ferramentas que ele baixa em outra pasta não são do pino.
+    """
+    if not isinstance(ferramenta, dict) or str(ferramenta.get("type", "")).casefold() != "proton":
+        return False
+    binario = ferramenta.get("bin")
+    pasta_velha = (Path(binario.strip()).parent.name
+                   if isinstance(binario, str) and binario.strip() else "")
+    nome = ferramenta.get("name")
+    nome_velho = nome.strip() if isinstance(nome, str) else ""
+    em_compat = bool(pasta_velha) and (
+        Path(str(binario).strip()).parent.parent.resolve() == compat_dir.resolve())
+    acha = {v.casefold() for v in velhas}
+    if pasta_velha.casefold() == pino.casefold() or nome_velho.casefold() == pino.casefold():
+        return False
+    if pasta_velha:
+        if not em_compat or pasta_velha.casefold() not in acha:
+            return False
+    elif nome_velho.casefold() not in acha:
+        return False
+    ferramenta["bin"] = str(compat_dir / pino / "proton")
+    antigo = pasta_velha or nome_velho
+    ferramenta["name"] = (nome_velho.replace(antigo, pino) if antigo and antigo in nome_velho
+                          else pino)
+    return True
+
+
+def _reapontar_o_json(
+    arquivo: Path, pino: str, compat_dir: Path, velhas: frozenset[str],
+) -> int:
+    """Reescreve um arquivo do Heroic (config.json ou de um jogo); devolve quantas trocou."""
+    dado = json.loads(arquivo.read_text(encoding="utf-8"))
+    if not isinstance(dado, dict):
+        return 0
+    trocadas = 0
+    padroes = dado.get("defaultSettings")
+    if isinstance(padroes, dict):
+        trocadas += _reapontar_a_ferramenta(
+            padroes.get("wineVersion"), pino, compat_dir, velhas)
+    trocadas += _reapontar_a_ferramenta(dado.get("wineVersion"), pino, compat_dir, velhas)
+    for valor in dado.values():
+        if isinstance(valor, dict):
+            trocadas += _reapontar_a_ferramenta(
+                valor.get("wineVersion"), pino, compat_dir, velhas)
+    if trocadas:
+        copia = arquivo.with_name(f"{arquivo.name}.bak.hefesto-proton-{int(time.time())}")
+        shutil.copy2(arquivo, copia)
+        temporario = arquivo.with_name(arquivo.name + ".tmp")
+        temporario.write_text(json.dumps(dado, indent=2, ensure_ascii=False) + "\n",
+                              encoding="utf-8")
+        temporario.replace(arquivo)
+    return trocadas
+
+
+def apontar_o_heroic_para(
+    pino: str,
+    compat_dir: Path,
+    velhas: frozenset[str],
+    *,
+    lar: Path | None = None,
+    xdg_config: Path | None = None,
+    xdg_data: Path | None = None,
+    aberto: Callable[[], bool] | None = None,
+) -> ApontadoNoHeroic:
+    """Aponta para ``pino`` todo jogo e o padrão do Heroic que usa uma das ``velhas`` (22/10/2026).
+
+    O dono do saber de onde o Heroic guarda o Proton (a mesma leitura de :func:`proton_em_uso`),
+    agora também do caminho de volta. Com o Heroic aberto não escreve nada (ele regrava ao sair),
+    e um arquivo que não se lê fica como está: quem decide apagar a versão relê o censo e a vê
+    ainda em uso. Nunca levanta.
+    """
+    if (aberto or heroic_aberto)():
+        return ApontadoNoHeroic(0, "o Heroic está aberto")
+    try:
+        pastas = pastas_que_existem("Heroic", lar, xdg_config=xdg_config, xdg_data=xdg_data)
+    except Exception:
+        return ApontadoNoHeroic(0, "não deu para achar o Heroic")
+    total = 0
+    for pasta in pastas:
+        arquivos: list[Path] = []
+        with contextlib.suppress(OSError):
+            if (pasta / "config.json").is_file():
+                arquivos.append(pasta / "config.json")
+            arquivos += sorted((pasta / "GamesConfig").glob("*.json"))
+        for arquivo in arquivos:
+            try:
+                total += _reapontar_o_json(arquivo, pino, compat_dir, velhas)
+            except (OSError, ValueError):
+                continue
+    return ApontadoNoHeroic(total)
 
 
 def proton_em_uso(lar: Path | None = None, *, xdg_config: Path | None = None,
