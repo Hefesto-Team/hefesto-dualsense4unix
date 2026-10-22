@@ -44,7 +44,10 @@ def _interna() -> dono.NavegacaoInterna:
 def test_o_start_de_cada_jogador_vira_o_salvar_com_o_mouse_ligado(
     quem: int, estado: dict[str, Any]
 ) -> None:
-    """Do aperto no evdev ao ato da janela, no que o ``_navegar`` monta: P1 a P4."""
+    """Do aperto no evdev ao ato da janela, no que o ``_navegar`` monta: P1 a P4.
+
+    Prova da D-2210-O-START-SALVA-ATE-COM-O-MOUSE-LIGADO.
+    """
     interna = _interna()
     zero = {u: {"options": 0} for u in JOGADORES}
     interna.contar(zero)

@@ -47,6 +47,7 @@ def _dono(guardado: int | None, *uniqs: str, politica_da_peca: str | None = None
 
 
 def test_o_padrao_de_fabrica_e_150() -> None:
+    """Prova da D-2210-A-HAPTICA-NASCE-EM-150-TAMBEM-NO-PADRAO."""
     assert HAPTICA_PCT_PADRAO == 150 and HAPTICA_PCT_MAX == 200
 
 

@@ -112,6 +112,7 @@ def test_no_debug_o_estado_normal_volta(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 def test_a_cadeia_do_produto_desce_antes_de_juntar() -> None:
+    """Prova da D-2210-O-DIARIO-CABE-EM-MIL-LINHAS."""
     cadeia = lc.cadeia_do_diario("console", io.StringIO())
     assert cadeia[0] is lc.desce_o_estado_normal and cadeia[1] is lc._AGREGADO
 

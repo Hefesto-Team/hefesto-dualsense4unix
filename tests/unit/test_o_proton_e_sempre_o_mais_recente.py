@@ -92,6 +92,7 @@ def _nomes(sobras: list[pp.VersaoQueSobra]) -> set[str]:
 
 
 def test_entre_as_instaladas_que_passam_vale_a_mais_recente(casa: Path) -> None:
+    """Prova da D-2210-O-PROTON-E-SEMPRE-O-MAIS-RECENTE-QUE-PASSA."""
     _instalar(casa, NOVA)
     assert pp.pino_que_vale(CONF, _compat(casa)) == NOVA
 
