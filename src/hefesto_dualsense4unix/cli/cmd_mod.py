@@ -44,12 +44,38 @@ def _mostrar_permissoes(permissoes: list[str]) -> None:
         console.print(f"  [bold]{palavra}[/bold]: {o_que_a_permissao_deixa(palavra)}")
 
 
-def _dizer_o_resultado(resultado: Resultado, verbo: str) -> None:
+def _nomes_das_instaladas() -> dict[str, str]:
+    """O nome de cada extensão instalada, lido ANTES de instalar: a que o ``substitui`` manda
+    embora sai do registro, e a frase do fim a conhece pelo nome (sem ele, pelo id)."""
+    from hefesto_dualsense4unix.mods.instalador import (
+        InstalacaoRecusadaError,
+        Lugares,
+        ler_registro,
+    )
+
+    try:
+        return {mod_id: e.nome for mod_id, e in ler_registro(Lugares.do_xdg().registro).items()}
+    except InstalacaoRecusadaError:
+        return {}
+
+
+def frase_das_substituidas(ids: list[str], nomes: dict[str, str]) -> str:
+    """«Saiu a «X».» (ou «Saíram a «X» e a «Y».»); vazia quando nenhuma saiu."""
+    if not ids:
+        return ""
+    citadas = [f"a «{nomes.get(mod_id, mod_id)}»" for mod_id in ids]
+    lista = citadas[0] if len(citadas) == 1 else f"{', '.join(citadas[:-1])} e {citadas[-1]}"
+    return f"{'Saiu' if len(ids) == 1 else 'Saíram'} {lista}."
+
+
+def _dizer_o_resultado(resultado: Resultado, verbo: str, nomes: dict[str, str]) -> None:
     entrada = resultado.entrada
     console.print(
         f"«{entrada.nome}» {entrada.versao} {verbo} "
         f"({_ORIGENS[entrada.origem]}, commit {entrada.commit[:12] or 'sem git'})."
     )
+    if resultado.substituidas:
+        console.print(frase_das_substituidas(resultado.substituidas, nomes), markup=False)
     if resultado.permissoes_novas:
         console.print("Ela pede:")
         _mostrar_permissoes(resultado.permissoes_novas)
@@ -71,6 +97,7 @@ def cmd_instalar(
         instalar,
     )
 
+    nomes = _nomes_das_instaladas()
     try:
         try:
             resultado = instalar(origem, ref=ref, aviso_visto="")
@@ -82,7 +109,7 @@ def cmd_instalar(
             resultado = instalar(origem, ref=ref, aviso_visto=aviso.aviso)
     except InstalacaoRecusadaError as exc:
         raise _recusar(exc) from exc
-    _dizer_o_resultado(resultado, "instalada")
+    _dizer_o_resultado(resultado, "instalada", nomes)
 
 
 @app.command("atualizar")
@@ -93,11 +120,12 @@ def cmd_atualizar(
     """Baixa de novo; se a versão nova pede permissão nova, ela desliga até o «sim»."""
     from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError, atualizar
 
+    nomes = _nomes_das_instaladas()
     try:
         resultado = atualizar(mod_id, ref=ref)
     except InstalacaoRecusadaError as exc:
         raise _recusar(exc) from exc
-    _dizer_o_resultado(resultado, "atualizada")
+    _dizer_o_resultado(resultado, "atualizada", nomes)
 
 
 @app.command("listar")

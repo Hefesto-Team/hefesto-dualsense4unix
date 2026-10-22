@@ -1783,11 +1783,13 @@ def _mexer_na_modificacao(mod_id: str, acao: str) -> str | None:
     lg = _lugares()
     with _dizendo_a_recusa():
         if acao == "atualizar":
+            nomes = _nomes_das_instaladas(lg)
             feito = atualizar(mod_id, lugares=lg)
             REGISTRO.esquecer()
             extra = (" Ela pede permissão nova: ligue-a de novo para aceitar."
                      if feito.permissoes_novas else "")
-            return f"{nome} atualizada para a versão {feito.entrada.versao}.{extra}"
+            return (f"{nome} atualizada para a versão {feito.entrada.versao}."
+                    f"{_saiu(feito.substituidas, nomes)}{extra}")
         if acao != "remover":
             raise RuntimeError("Essa ação do menu não existe. Nada foi alterado.")
         if _MEXIDA.remover != mod_id:
@@ -1812,10 +1814,33 @@ def _instalar_a_modificacao(origem: str) -> str:
     """
     from hefesto_dualsense4unix.mods.instalador import instalar
 
+    lg = _lugares()
+    nomes = _nomes_das_instaladas(lg)
     with _dizendo_a_recusa():
-        feito = instalar(origem)
+        feito = instalar(origem, lugares=lg)
     REGISTRO.esquecer()
-    return f"{feito.entrada.nome} instalada. Ligue-a na chave quando quiser."
+    return (f"{feito.entrada.nome} instalada.{_saiu(feito.substituidas, nomes)} "
+            "Ligue-a na chave quando quiser.")
+
+
+def _nomes_das_instaladas(lg: Any) -> dict[str, str]:
+    """O nome de cada extensão instalada, lido ANTES de instalar: a que o ``substitui`` manda
+    embora sai do registro, e o recado a conhece pelo nome (sem ele, pelo id). Nunca levanta."""
+    from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError, ler_registro
+
+    try:
+        return {mod_id: e.nome for mod_id, e in ler_registro(lg.registro).items()}
+    except (InstalacaoRecusadaError, OSError):
+        return {}
+
+
+def _saiu(ids: Sequence[str], nomes: dict[str, str]) -> str:
+    """« Saiu a X.» (ou « Saíram a X e a Y.»), com o espaço da frase de antes; vazio sem nenhuma."""
+    if not ids:
+        return ""
+    citadas = [f"a {nomes.get(mod_id, mod_id)}" for mod_id in ids]
+    lista = citadas[0] if len(citadas) == 1 else f"{', '.join(citadas[:-1])} e {citadas[-1]}"
+    return f" {'Saiu' if len(ids) == 1 else 'Saíram'} {lista}."
 
 
 @gesto("07-lancadores.html", "instalar-modificacao", grava="_instalar_a_modificacao")

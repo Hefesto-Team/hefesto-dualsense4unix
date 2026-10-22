@@ -291,9 +291,20 @@ sem a permissão o manifesto é recusado. A janela os pede ao serviço por dois 
 
 ## A extensão de tema
 
-A extensão de tipo `tema`, com a permissão `tema`, troca as cores da interface sem processo nenhum. O bloco
-`tema` do manifesto traz a folha (`{"folha": ":root{…}"}`) ou o caminho da folha dentro da pasta
-(`{"arquivo": "tema.css"}`), até 16 KB. Quem confere é `src/hefesto_dualsense4unix/mods/tema.py`:
+A extensão de tipo `tema`, com a permissão `tema`, troca as cores da interface e o lado dos botões da janela,
+sem processo nenhum. O bloco `tema` do manifesto aceita só estas chaves:
+
+- `folha` (`":root{…}"`) ou `arquivo` (o caminho da folha dentro da pasta, `"tema.css"`), até 16 KB: as cores;
+- `botoes`: `esquerda` ou `direita`, o lado em que a janela põe os botões de fechar, minimizar e maximizar.
+  Sem extensão que o diga, vale o lado do sistema (no COSMIC, a direita);
+- `cor_pela_opcao` e `botoes_pela_opcao`: o `id` de uma opção do tipo `ligado` da própria extensão; a cor (ou o
+  lado) vale só enquanto essa opção estiver ligada (a escolha guardada, senão o `padrao`). Sem a chave, vale
+  sempre. A instalação recusa, com a frase, a chave que aponta para opção que não existe ou que não é `ligado`,
+  e a que liga uma escolha que o bloco não faz (`botoes_pela_opcao` sem `botoes`).
+
+A cor e o lado se escolhem à parte: cada um vale pela extensão ligada por último que o traz, e as outras ficam
+nos avisos (««X» também escolhe o lado dos botões, e vale o da «Y».»). Quem confere a folha é
+`src/hefesto_dualsense4unix/mods/tema.py`:
 
 - um bloco `:root{…}` só, sem seletor, sem `url()`, sem `@import`, sem barra invertida;
 - só os tokens de cor da casa (`TOKENS_DA_CASA`) e os das categorias da aba Conexões (`--c-<tipo>`,
@@ -317,9 +328,28 @@ A extensão de tema pode declarar UMA opção de `tipo` `css` (`padrao` falso de
 livre (cor e layout), e quem confere é `src/hefesto_dualsense4unix/mods/meu_css.py`: nada de `url(`, `@import`,
 funções de imagem, `expression(`, `\` nem `<`, até 16 KB, e chaves em par. O WebKit só deixa a folha de usuário
 vencer a da página com `!important`, então a leitura o põe em cada declaração (menos dentro de `@keyframes`). O que
-a régua recusa não se aplica, e a janela da extensão diz a linha («O seu CSS não foi aplicado: a linha 3 usa url()…»).
+a régua recusa não se aplica, e a janela da extensão diz a linha na forma curta, em vermelho («Linha 3: url()»); a
+frase longa fica no log.
 O botão «Editar o meu CSS» cria o arquivo com um exemplo comentado e o abre no editor do sistema; o `mod atualizar`
 não o toca; desligar a opção ou a extensão tira o CSS na hora. Com mais de uma extensão assim, vale a ligada por último.
+
+## A extensão que substitui outra
+
+O campo `substitui` do manifesto é a lista dos `id` das extensões de quem esta toma o lugar (sem repetir, na
+forma de id, nunca uma das que vêm com o Hefesto, nunca ela mesma). Ao instalar ou atualizar esta, cada uma
+delas que estiver instalada:
+
+- para (é desligada, e o instalador espera ela parar; a que não para recusa a troca inteira, e as que já tinham
+  sido desligadas voltam a seguir ligadas);
+- passa as escolhas: a opção de `id` igual cujo valor a nova aceita vai para o `opcoes.json` da nova; a escolha
+  já feita na nova vale mais; entre duas antigas, vale a primeira da lista. O «sim» às permissões não passa: a
+  permissão nova pede o dela;
+- sai pelo caminho do remover (o código, os dados e a linha do registro).
+
+A nova fica ligada quando alguma das antigas estava ligada e nada novo espera o «sim». A atualização sozinha que
+substitui outra não troca o código: espera o «Atualizar», com a frase «A versão X toma o lugar de «Y».». O
+`Resultado` da instalação traz os `id` que saíram (`substituidas`), e a linha de comando e a aba Experimental
+dizem «Saiu a «Y».» pelo nome que a substituída tinha no registro (sem ele, pelo `id`).
 
 ## Os erros
 
