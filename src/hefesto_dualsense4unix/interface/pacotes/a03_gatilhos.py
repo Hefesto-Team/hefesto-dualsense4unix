@@ -48,7 +48,6 @@ from .meus_efeitos import (
     PREFIXO_DO_MEU,
     TETO_DO_NOME,
     criar_efeito,
-    guardar_meus_efeitos,
 )
 from .meus_efeitos import meus_efeitos as _meus_efeitos_da
 
@@ -79,13 +78,11 @@ _LUGAR_VAZIO = re.compile(r'data-controle="(p\d+)"[^>]*data-conectado="nao"')
 _QUALQUER_LUGAR = re.compile(r'data-controle="(p\d+)"')
 
 _SELECT = re.compile(
-    r'<select[^>]*class="(?P<classe>g2-acion|g2-imersao)"[^>]*>'
+    r'<select[^>]*class="(?P<classe>g2-imersao)"[^>]*>'
     r'(?P<dentro>.*?)</select>', re.S)
 
-#: a classe do campo na página → o campo que ele é
-_CAMPO_DA_CLASSE = {"g2-acion": "modo", "g2-imersao": "imersao"}
-
-_COMO_O_DOM_ESCREVE = re.compile(r"\s(disabled|hidden|readonly|required)(?=[\s>])")
+#: a classe do campo na página → o campo que ele é: o gatilho só tem o efeito (22/10/2026)
+_CAMPO_DA_CLASSE = {"g2-imersao": "imersao"}
 
 _COMENTARIO_CSS = re.compile(r"/\*.*?\*/", re.S)
 
@@ -113,7 +110,7 @@ def _o_que_o_select_oferece() -> dict[str, frozenset[str]]:
     """Os `value` que cada campo de escolha da página publicada aceita."""
     global _OFERECE
     if _OFERECE is None:
-        fora: dict[str, set[str]] = {"modo": set(), "imersao": set()}
+        fora: dict[str, set[str]] = {"imersao": set()}
         for m in _SELECT.finditer(_pagina_publicada()):
             fora[_CAMPO_DA_CLASSE[m.group("classe")]].update(
                 re.findall(r'<option[^>]*value="([^"]*)"', m.group("dentro")))
@@ -212,8 +209,6 @@ DICA_DO_MODO = {
 }
 
 SEM_APARELHO_AQUI = "Nenhum controle neste lugar."
-
-PREFIXO_DA_DICA_DO_MODO = "dica-modo-"
 
 
 def descricao_do_modo(chave: str) -> str:
@@ -477,71 +472,23 @@ def _do_lado(cfg: dict[str, Any], specs: Any) -> dict[str, Any]:
             "cru": (str((cfg or {}).get("mode") or "Off"), _params_inteiros(cfg or {}))}
 
 
-#: é o rótulo, e é só ele que `html_das_opcoes_de_modo` troca. Tudo o mais da
-_OPCAO = re.compile(
-    r'(?P<cabeca><option value="(?P<valor>[^"]*)"[^>]*>)(?P<texto>[^<]*)</option>')
-
-_OPCOES_DO_MODO: str | None = None
-
-
-def _opcoes_cravadas_do_modo() -> str:
-    """As opções do campo "Modo" que a página publicada traz, como o DOM as escreve."""
-    global _OPCOES_DO_MODO
-    if _OPCOES_DO_MODO is None:
-        dentro = ""
-        for m in _SELECT.finditer(_pagina_publicada()):
-            if _CAMPO_DA_CLASSE[m.group("classe")] == "modo":
-                dentro = m.group("dentro")
-                break
-        _OPCOES_DO_MODO = _COMO_O_DOM_ESCREVE.sub(
-            r' \1=""', dentro.split("<optgroup", 1)[0].replace(" selected", "")).rstrip()
-    return _OPCOES_DO_MODO
-
-
-def html_das_opcoes_de_modo(disco: str = "") -> str:
-    """As opções do «Efeito de acionamento», com o RÓTULO perguntado ao dono.
-
-    No fim vai o grupo «Seus efeitos» daquele gatilho (`disco`): os que a pessoa guardou com
-    uma metade para ele.
-    """
-    return _rotuladas(_opcoes_cravadas_do_modo()) + _seus_do_acionamento(disco)
-
-
-def _rotuladas(cravadas: str) -> str:
-    """As opções cravadas do desenho, com a palavra de produto no lugar da digitada.
-
-    Só as onze de `trigger_specs.PRESETS` passam: o que o desenho publicado ainda traga de fora
-    da lista (as chaves que se fundiram) cai aqui, e a tela mostra a lista nova sem esperar o
-    `--publicar`.
-    """
-    specs = _specs()
-    if specs is None:
-        return cravadas
-    do_produto = {p.name: _rotulo_do_modo(p.name) for p in specs.PRESETS}
-
-    def rotular(m: re.Match[str]) -> str:
-        if m.group("valor") == TRAVESSAO:
-            # O `—` é do lugar vazio, não da lista que se abre — também numa
-            # página publicada antes de o desenho o esconder.
-            if "hidden" in m.group("cabeca"):
-                return m.group(0)
-            return m.group(0).replace(">", ' hidden="">', 1)
-        rot = do_produto.get(m.group("valor"))
-        if rot is None:
-            # Uma opção que a lista de onze não tem (a página publicada de antes da fusão
-            # ainda oferece as dezenove) não vai para a tela.
-            return ""
-        return f'{m.group("cabeca")}{_escapar(rot)}</option>'
-
-    return _OPCAO.sub(rotular, cravadas)
-
-
 #: o grupo das listas de efeito que leva o que a pessoa criou
 SEUS_EFEITOS = "Seus efeitos"
 
-#: a opção que desfaz a imersão e deixa só o efeito de acionamento
+#: a opção que desfaz a imersão e solta o gatilho
 SEM_IMERSAO = "nenhum"
 ROTULO_DO_SEM_IMERSAO = "Sem efeito"
+
+#: O GATILHO SÓ TEM O EFEITO (22/10/2026, «Sai tudo»): a lista «Efeito do gatilho» é a única do
+#: gatilho, e o acionamento vem dentro de cada efeito. Duas opções levam o acionamento que o perfil
+#: já guardava, sem a linha «Como o gatilho faz»:
+#: `acionamento:<modo>` é o acionamento SEM efeito de família (perfil antigo, ajuste à mão), que a
+#: lista mostra pelo nome dele no grupo «Do perfil» — só quando o gatilho está assim, nunca
+#: «Sem efeito», porque o gatilho resiste; `meu-acionamento:<nome>` é o acionamento que ela guardou
+#: na biblioteca dos gatilhos, e mora no grupo «Seus efeitos» ao lado dos que ela cria agora.
+PREFIXO_DO_ACIONAMENTO = "acionamento:"
+PREFIXO_DO_SEU_ACIONAMENTO = "meu-acionamento:"
+GRUPO_DO_PERFIL = "Do perfil"
 
 
 def _imersoes() -> Any:
@@ -563,22 +510,22 @@ def _rotulo_do_estilo(chave: str) -> str:
     return estilo.rotulo if estilo else ""
 
 
-def _grupo_dos_seus(nomes: list[str]) -> str:
-    """O `<optgroup>` «Seus efeitos» com um item por nome, ou nada se não há nenhum."""
-    if not nomes:
+def _grupo_dos_seus(itens: list[tuple[str, str]]) -> str:
+    """O `<optgroup>` «Seus efeitos» com um item por `(valor, nome)`, ou nada se não há nenhum."""
+    if not itens:
         return ""
-    itens = "".join(
-        f'<option value="{_escapar(PREFIXO_DO_MEU + n)}">{_escapar(n)}</option>'
-        for n in nomes)
-    return f'<optgroup label="{SEUS_EFEITOS}">{itens}</optgroup>'
+    dentro = "".join(f'<option value="{_escapar(valor)}">{_escapar(nome)}</option>'
+                     for valor, nome in itens)
+    return f'<optgroup label="{SEUS_EFEITOS}">{dentro}</optgroup>'
 
 
-def _seus_do_acionamento(disco: str) -> str:
-    """O grupo «Seus efeitos» do acionamento daquele gatilho."""
-    if not disco:
-        return ""
-    return _grupo_dos_seus([n for n, e in meus_efeitos().items()
-                            if _meia_do_efeito(e, disco) is not None])
+def _seus_efeitos_do_gatilho(disco: str) -> list[tuple[str, str]]:
+    """O que ela guardou para o gatilho `disco`: a imersão criada e o acionamento de antes."""
+    seus = [(PREFIXO_DO_MEU + n, n) for n in _meus_efeitos_da("imersao")]
+    if disco:
+        seus += [(PREFIXO_DO_SEU_ACIONAMENTO + n, n) for n, e in meus_efeitos().items()
+                 if _meia_do_efeito(e, disco) is not None]
+    return seus
 
 
 def _params_da_imersao(imersao: Any, modo: str, estilo: str) -> list[int] | None:
@@ -644,8 +591,11 @@ def dica_da_imersao(chave: str) -> str:
     feita = imer.POR_CHAVE.get(chave) if imer else None
     if feita is not None:
         return f"{feita.rotulo}. {feita.dica}"
-    if chave.startswith(PREFIXO_DO_MEU):
+    if chave.startswith((PREFIXO_DO_MEU, PREFIXO_DO_SEU_ACIONAMENTO)):
         return "Um efeito que você criou"
+    if chave.startswith(PREFIXO_DO_ACIONAMENTO):
+        modo_ = chave[len(PREFIXO_DO_ACIONAMENTO):]
+        return f"{_rotulo_do_modo(modo_)}. {descricao_do_modo(modo_)}"
     if chave == SEM_IMERSAO:
         return f"{ROTULO_DO_SEM_IMERSAO}. {DICA_DO_SEM_IMERSAO}"
     return "O que o gatilho faz no jogo"
@@ -659,14 +609,11 @@ def familia_da_imersao(chave: str) -> str:
 
 
 def html_dos_seus_efeitos() -> str:
-    """Os chips do que a pessoa criou: bolinha roxa o acionamento, rosa a imersão."""
-    def chip(nome: str, cor: str, quem: str) -> str:
-        return (f'<span class="meu" data-dica="{quem}"><i style="--cor:var({cor})"></i>'
-                f"{_escapar(nome)}</span>")
-
+    """Os chips do que a pessoa guardou, numa lista só: o acionamento de antes e as imersões."""
     return "".join(
-        [chip(n, "--purple", "Efeito de acionamento") for n in meus_efeitos()]
-        + [chip(n, "--pink", "Efeito de imersão") for n in _meus_efeitos_da("imersao")])
+        f'<span class="meu" data-dica="Efeito do gatilho"><i style="--cor:var(--pink)"></i>'
+        f"{_escapar(n)}</span>"
+        for n in [*meus_efeitos(), *_meus_efeitos_da("imersao")])
 
 
 def _imersao_que_casa(
@@ -703,29 +650,55 @@ def _imersao_que_casa(
     return ""
 
 
+def _efeito_da_lista(modo_: str, params: list[int], cru: tuple[str, list[int]] | None,
+                     disco: str, cfg: dict[str, Any]) -> str:
+    """O que a lista «Efeito do gatilho» mostra para o gatilho desse jeito.
+
+    Nunca «Sem efeito» se ele resiste.
+
+    A ordem: o efeito (do produto ou criado) cujos números são estes; o acionamento que ela guardou
+    (`meu-acionamento:<nome>`); o acionamento pelo nome dele (`acionamento:<modo>`, o perfil antigo
+    que só tinha o acionamento). `Off` segue sendo «Sem efeito»: ali o gatilho está solto.
+    """
+    feita = _imersao_que_casa(modo_, params, cru)
+    if feita not in (SEM_IMERSAO, "") or modo_ in ("Off", ""):
+        return feita
+    nome = _meu_efeito_que_casa(disco, cfg)
+    if nome:
+        return f"{PREFIXO_DO_SEU_ACIONAMENTO}{nome}"
+    return f"{PREFIXO_DO_ACIONAMENTO}{modo_}"
+
+
 def _com_maiuscula(texto: str) -> str:
     """A primeira letra maiúscula, sem mexer no resto («rajada que sobe» vira «Rajada que sobe»)."""
     return texto[:1].upper() + texto[1:]
 
 
-def html_das_opcoes_de_imersao(estilo: str = "") -> str:
+def html_das_opcoes_de_imersao(estilo: str = "", disco: str = "", do_perfil: str = "") -> str:
     """As opções do «Efeito do gatilho»: Sem efeito, um grupo por família e «Seus efeitos».
 
-    O texto da opção é a variante («Rajada que sobe») e o grupo é a família («Golpe»); o nome
-    inteiro («Golpe · rajada que sobe») está na dica da caixa. A frase de cada efeito mora SÓ
-    no `title` da opção. Com um estilo no perfil, os efeitos dele vão na frente do grupo. O `—` é
-    o do lugar sem controle, escondido da lista que se abre.
+    O texto da opção é a variante e o grupo é a família; a frase de cada efeito mora SÓ no
+    `title`. Com um estilo no perfil, os efeitos dele vão na frente. O `—` é o do lugar sem
+    controle, escondido. `disco` (`left`/`right`) põe em «Seus efeitos» o acionamento que ela
+    guardou para aquele gatilho. `do_perfil` (`acionamento:<modo>`) abre o grupo «Do perfil» com
+    o acionamento de um perfil antigo que nenhum efeito da lista descreve.
     """
     partes = [f'<option value="{TRAVESSAO}" disabled="" hidden="">{TRAVESSAO}</option>',
               f'<option value="{SEM_IMERSAO}" title="{_escapar(DICA_DO_SEM_IMERSAO)}">'
               f"{ROTULO_DO_SEM_IMERSAO}</option>"]
+    if do_perfil.startswith(PREFIXO_DO_ACIONAMENTO):
+        modo_ = do_perfil[len(PREFIXO_DO_ACIONAMENTO):]
+        partes.append(
+            f'<optgroup label="{GRUPO_DO_PERFIL}"><option value="{_escapar(do_perfil)}" '
+            f'title="{_escapar(descricao_do_modo(modo_))}">{_escapar(_rotulo_do_modo(modo_))}'
+            f"</option></optgroup>")
     imer = _imersoes()
     for familia, delas in (imer.imersoes_por_familia(estilo) if imer else ()):
         itens = "".join(
             f'<option value="{_escapar(i.chave)}" title="{_escapar(i.dica)}">'
             f"{_escapar(_com_maiuscula(imer.variante_da_pagina(i)))}</option>" for i in delas)
         partes.append(f'<optgroup label="{_escapar(familia)}">{itens}</optgroup>')
-    partes.append(_grupo_dos_seus(list(_meus_efeitos_da("imersao"))))
+    partes.append(_grupo_dos_seus(_seus_efeitos_do_gatilho(disco)))
     return "".join(partes)
 
 
@@ -1017,18 +990,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         }
         for sig, d in deste.items():
             col[f"modo-{sig}"] = d["modo"]
-            col[f"modo-chave-{sig}"] = d["modo-chave"]
-            col[f"{PREFIXO_DA_DICA_DO_MODO}{sig}"] = descricao_do_modo(
-                str(d["modo-chave"]))
-            meu_nome = _meu_efeito_que_casa(LADOS[sig], cfgs[sig])
-            if meu_nome:
-                col[f"modo-chave-{sig}"] = f"{PREFIXO_DO_MEU}{meu_nome}"
-            feita = _imersao_que_casa(
-                str(d["modo-chave"]), list(d["params"]), d["cru"])
-            if feita == SEM_IMERSAO and str(d["modo-chave"]) not in ("Off", ""):
-                # um acionamento sem efeito de família não é «Sem efeito»: o gatilho resiste, e
-                # quem o diz é a linha «Como o gatilho faz», atrás do Avançado
-                feita = ""
+            # um acionamento sem efeito de família não é «Sem efeito»: o gatilho resiste, e a
+            # lista o mostra pelo nome dele (`_efeito_da_lista`)
+            feita = _efeito_da_lista(
+                str(d["modo-chave"]), list(d["params"]), d["cru"], LADOS[sig], cfgs[sig])
+            d["feita"] = feita
             col[f"{CAMPO_DA_IMERSAO}-{sig}"] = feita
             col[f"{PREFIXO_DA_DICA_DA_IMERSAO}{sig}"] = dica_da_imersao(feita)
             col[f"{PREFIXO_DA_FAMILIA_DA_IMERSAO}{sig}"] = familia_da_imersao(feita)
@@ -1039,12 +1005,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     ocupados = {str(m.get("pref") or "") for m in ctx.mesa}
     sem_ninguem = _do_lado({}, specs)
     for pref in sorted(_lugares_que_o_desenho_da_por_vazios() - ocupados):
-        modo_vazio = str(sem_ninguem["modo-chave"])
-        vazia: dict[str, Any] = {f"modo-chave-{sig}": _sem_nada("modo", modo_vazio)
+        vazia: dict[str, Any] = {f"{PREFIXO_DA_DICA_DA_IMERSAO}{sig}": SEM_APARELHO_AQUI
                                  for sig in LADOS}
-        vazia.update({f"{pref_}{sig}": SEM_APARELHO_AQUI
-                      for pref_ in (PREFIXO_DA_DICA_DO_MODO, PREFIXO_DA_DICA_DA_IMERSAO)
-                      for sig in LADOS})
         vazia.update({f"{CAMPO_DA_IMERSAO}-{sig}": _sem_nada("imersao", SEM_IMERSAO)
                       for sig in LADOS})
         vazia.update({f"{PREFIXO_DA_FAMILIA_DA_IMERSAO}{sig}": "" for sig in LADOS})
@@ -1086,22 +1048,20 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 
 def _blocos_da_coluna(pref: str, deste: dict[str, dict[str, Any]],
                       estilo: str = "") -> dict[str, str]:
-    """As duas listas de cada lado de uma coluna: o efeito de acionamento e o de imersão.
+    """A lista «Efeito do gatilho» de cada lado de uma coluna, com o que é daquele gatilho.
 
     O seletor é CSS e tem de achar UM elemento: o piloto usa `document.querySelector`, e
-    `[data-controle="p1"] select.g2-acion[data-lado="e"]` é único na página. Os blocos são
-    pintados antes dos campos, então o `modo-chave-<lado>` reescolhe a opção depois da troca
-    da lista. A de imersão é a mesma nos dois lados: só o estilo do perfil muda a ordem.
+    `[data-controle="p1"] select.g2-imersao[data-lado="e"]` é único na página. Os blocos são
+    pintados antes dos campos, então o `imersao-<lado>` reescolhe a opção depois da troca da
+    lista. Os efeitos são os mesmos nos dois lados: o estilo do perfil muda a ordem, e o
+    acionamento guardado e o do perfil antigo (`feita`) são de cada gatilho.
     """
     fora: dict[str, str] = {}
     if not pref:
         return fora
-    for sig in deste:
-        lugar = f'[data-controle="{pref}"]'
-        fora[f'{lugar} select.g2-acion[data-lado="{sig}"]'] = (
-            html_das_opcoes_de_modo(LADOS[sig]))
-        fora[f'{lugar} select.g2-imersao[data-lado="{sig}"]'] = (
-            html_das_opcoes_de_imersao(estilo))
+    for sig, lado in deste.items():
+        fora[f'[data-controle="{pref}"] select.g2-imersao[data-lado="{sig}"]'] = (
+            html_das_opcoes_de_imersao(estilo, LADOS[sig], str(lado.get("feita") or "")))
     return fora
 
 
@@ -1703,29 +1663,17 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     return {"recado": recibo}
 
 
-def _acionamento_da_coluna(ctx: Contexto, o: dict[str, Any], uniq: str, lado: str) -> str:
-    """O efeito de acionamento em que aquele gatilho está: o da tela, senão o de agora."""
-    forma = o.get("forma")
-    sigla = str(o.get("lado") or "").strip()
-    visto = str(forma.get(f"modo-chave-{sigla}") or "").strip() if isinstance(forma, dict) else ""
-    if visto.startswith(PREFIXO_DO_MEU):
-        meia = _meia_do_efeito(meus_efeitos().get(visto[len(PREFIXO_DO_MEU):]), lado)
-        return str(meia.get("mode") or "Off") if meia else _modo_de_agora(ctx, uniq, lado)
-    if visto and visto != TRAVESSAO:
-        return visto
-    return _modo_de_agora(ctx, uniq, lado)
-
-
 @gesto("03-gatilhos.html", "imersao", grava="_gravar_so_o_gatilho")
 def imersao_escolhida(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Escolher um efeito do gatilho põe os números dele no gatilho, na hora.
 
     Ele é a receita que o `PRESETS` aceita (`profiles/efeitos_de_imersao.py`), com a variante
-    do estilo do perfil. O acionamento fica o da coluna (`data-hef-forma`, não o do disco) quando
-    o efeito vale nele; senão vai ao de nascença do efeito (20/10/2026: a lista mostra todos os
-    efeitos, e o acionamento fica atrás do Avançado). «Sem efeito» solta o gatilho
-    (`trigger.reset`, como o `Off` da linha «Como o gatilho faz»). `meu:<nome>` leva o
-    acionamento de onde a pessoa partiu.
+    do estilo do perfil. O acionamento fica o que o gatilho tem agora quando o efeito vale nele;
+    senão vai ao de nascença do efeito (22/10/2026: o gatilho só tem o efeito, e a linha «Como o
+    gatilho faz» saiu). «Sem efeito» solta o gatilho (`trigger.reset`). `meu:<nome>` leva o
+    acionamento de onde a pessoa partiu. As duas opções do acionamento que já existia aplicam o
+    que o perfil antigo guardava: `acionamento:<modo>` com os padrões do modo, e
+    `meu-acionamento:<nome>` com a metade que ela guardou para este gatilho.
     """
     _nao_no_automatico(ctx)
     uniq, lado = _exigir_controle(o, "imersão"), _lado(o)
@@ -1736,11 +1684,21 @@ def imersao_escolhida(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
         raise ValueError(
             "imersão: `—` é como esta tela diz que não há controle neste lugar, e não "
             "um efeito a aplicar. Escolha `Sem efeito` para soltar o gatilho.")
-    modo_ = _acionamento_da_coluna(ctx, o, uniq, lado)
+    modo_ = _modo_de_agora(ctx, uniq, lado)
     nome = chave
     if chave == SEM_IMERSAO:
         modo_ = "Off"
         params = _padroes(modo_)
+    elif chave.startswith(PREFIXO_DO_ACIONAMENTO):
+        modo_ = chave[len(PREFIXO_DO_ACIONAMENTO):]
+        specs = _specs()
+        if specs is None or specs.get_spec(modo_) is None:
+            raise ValueError(f"imersão: {modo_!r} não é um dos modos do produto.")
+        nome = _rotulo_do_modo(modo_)
+        params = _padroes(modo_)
+    elif chave.startswith(PREFIXO_DO_SEU_ACIONAMENTO):
+        nome = chave[len(PREFIXO_DO_SEU_ACIONAMENTO):]
+        modo_, params = _metade_do_meu(nome, lado)
     elif chave.startswith(PREFIXO_DO_MEU):
         nome = chave[len(PREFIXO_DO_MEU):]
         criada = _metade_da_imersao_criada(_meus_efeitos_da("imersao").get(nome))
@@ -1823,12 +1781,13 @@ def _da_area_de_criar(o: dict[str, Any]) -> tuple[str, dict[str, Any]]:
 
 @gesto("03-gatilhos.html", "criar-efeito", grava="guardar_meus_efeitos")
 def criar_efeito_dos_gatilhos(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Criar um efeito de acionamento ou de imersão: ele entra nas listas de cima.
+    """Criar um efeito: ele entra na lista «Efeito do gatilho», no grupo «Seus efeitos».
 
     Parte de um modo e das quatro barras (Início, Fim, Força, Frequência), postas na faixa
-    de cada parâmetro. O acionamento vai à biblioteca dos gatilhos, com o par L2 e R2 igual;
-    a imersão vai à biblioteca de imersões, com o modo de onde partiu. Só a caixa de
-    preferências da interface é gravada: nenhum perfil e nenhum aparelho.
+    de cada parâmetro. Tudo o que ela cria é um efeito da biblioteca de imersões, com o modo de
+    onde partiu (22/10/2026: o tipo Acionamento saiu do «Criar efeitos novos»; os que ela já
+    guardou nos gatilhos seguem na lista). Só a caixa de preferências da interface é gravada:
+    nenhum perfil e nenhum aparelho.
     """
     partir, forma = _da_area_de_criar(o)
     apelido = str(forma.get("nome") or "").strip()
@@ -1837,19 +1796,7 @@ def criar_efeito_dos_gatilhos(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if len(apelido) > TETO_DO_NOME:
         raise RuntimeError(f"O nome do efeito tem no máximo {TETO_DO_NOME} letras.")
     ajustes = _ajustes_da_criacao(partir, forma)
-    tipo = str(forma.get("tipo") or "").strip()
-    if tipo == "imersao":
-        criar_efeito("imersao", apelido, partir, ajustes)
-        return
-    if tipo != "acionamento":
-        raise RuntimeError("Escolha se o efeito é de acionamento ou de imersão.")
-    specs = _specs()
-    params = [int(v) for v in specs.preset_to_positional_params(
-        specs.get_spec(partir), ajustes)] if specs else []
-    todos = meus_efeitos()
-    todos[apelido] = {disco: {"mode": partir, "params": list(params)}
-                      for disco in LADOS.values()}
-    guardar_meus_efeitos(todos, "gatilhos")
+    criar_efeito("imersao", apelido, partir, ajustes)
 
 
 def _controle_do_sentir(ctx: Contexto, o: dict[str, Any]) -> str:
@@ -2170,11 +2117,6 @@ _GUARDOU: tuple[str, list[str], dict[str, Any]] = (
 _IMERSAO_DE_PROVA = _imersoes().imersoes_do_acionamento("Machine")[0]
 
 
-def _forma_de_prova(sigla: str, modo_: str) -> dict[str, str]:
-    """A coluna que o piloto recolheria, montada pelo endereço que a pintura usa."""
-    return {f"modo-chave-{sigla}": modo_}
-
-
 PROVAS = [
     # calados no dia em que ela mudasse um padrão — e a régua daria verde sobre
     {"pagina": PAGINA, "gesto": "modo", "clique": {"lado": "e",  # (noqa-acento) id
@@ -2189,15 +2131,13 @@ PROVAS = [
      "chama": [("trigger_set_detalhado", ["left", "Vibration", _padroes("Vibration")],
                 {"uniq": _UNIQ}), _GUARDOU]},
     {"pagina": PAGINA,  # (noqa-acento) chave do contrato
-     "gesto": "imersao", "clique": {"lado": "e", "valor": _IMERSAO_DE_PROVA.chave,
-                                    "forma": _forma_de_prova("e", "Machine")},
+     "gesto": "imersao", "clique": {"lado": "e", "valor": _IMERSAO_DE_PROVA.chave},
      "chama": [("trigger_set_detalhado",
                 ["left", "Machine", _params_da_imersao(_IMERSAO_DE_PROVA, "Machine", "")],
                 {"uniq": _UNIQ}), _GUARDOU]},
     {"pagina": PAGINA,  # (noqa-acento) chave do contrato
      # «Sem efeito» solta o gatilho, qualquer que seja o acionamento da coluna (20/10/2026)
-     "gesto": "imersao", "clique": {"lado": "d", "valor": SEM_IMERSAO,
-                                    "forma": _forma_de_prova("d", "Machine")},
+     "gesto": "imersao", "clique": {"lado": "d", "valor": SEM_IMERSAO},
      "chama": [("trigger_reset_detalhado", ["right"], {"uniq": _UNIQ}), _GUARDOU]},
 ]
 

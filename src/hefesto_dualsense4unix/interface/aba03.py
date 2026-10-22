@@ -21,9 +21,8 @@ from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E40
     DEGRAUS_DA_FORCA,
     DICA_DO_MODO,
     PREFIXO_DA_DICA_DA_IMERSAO,
-    PREFIXO_DA_DICA_DO_MODO,
     PREFIXO_DA_FAMILIA_DA_IMERSAO,
-    ROTULO_DO_JOGO_DECIDE,
+    PREFIXO_DO_SEU_ACIONAMENTO,
     SEM_APARELHO_AQUI,
     SEM_IMERSAO,
     SEUS_EFEITOS,
@@ -32,7 +31,6 @@ from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (  # noqa: E40
     _escapar,
     dica_da_imersao,
     familia_da_imersao,
-    descricao_do_modo,
     html_das_opcoes_de_imersao,
     nivel_da_forca,
     sem_comentarios_de_css,
@@ -60,15 +58,8 @@ if _SEM_DICA or _DICA_ORFA:
 
 ROT = {p.name: p.label for p in PRESETS}
 
-#: O «Desligado» do produto é, nesta tela, «Sem efeito» (ver `ROTULO_DO_JOGO_DECIDE`).
-_ROTULO_DA_TELA = {p.name: ROTULO_DO_JOGO_DECIDE if p.name == "Off" else p.label
-                   for p in PRESETS}
-
-#: O «Montar do zero» (`Custom`) não é efeito de acionamento nesta tela: os ajustes saíram dela.
+#: O «Montar do zero» (`Custom`) não é ponto de partida nesta tela: os ajustes saíram dela.
 SEM_NA_LISTA = ("Custom",)
-MODOS = [(_ROTULO_DA_TELA[p.name], DICA_DO_MODO[p.name]) for p in PRESETS
-         if p.name not in SEM_NA_LISTA]
-CHAVE_DO_MODO = {_ROTULO_DA_TELA[p.name]: p.name for p in PRESETS}
 
 #: o gesto do botão do Modo automático; o pintor (`data-modo-da-aba` do quadro) é do pacote
 GESTO_DO_MODO = "modo-dos-gatilhos"
@@ -150,7 +141,7 @@ CSS = CSS_GLIFO + """
   .g2-cab .chip .pt{margin:0 6px}
   /* o lugar vazio mostra «Px · Desconectado», apagado, como no desenho do todo */
   .g2-cab[data-conectado="nao"] .chip{color:var(--fg);border:1px solid var(--border-sutil)}
-  .g2-gl{grid-row:span 2;display:flex;align-items:center;justify-content:center;color:var(--fg);
+  .g2-gl{grid-row:span 1;display:flex;align-items:center;justify-content:center;color:var(--fg);
     align-self:stretch;border-right:1px solid var(--border-sutil)}
   /* o DualSense fica entre a «Força do aperto» e o «Controle» (19/10/2026): ocupa as duas linhas */
   .g2-grade > .g2-gl.g2-ds{grid-column:1;grid-row:span 2;border-right:0}
@@ -163,12 +154,11 @@ CSS = CSS_GLIFO + """
     box-sizing:border-box}
   .g2-cel[data-conectado="nao"] select{visibility:hidden;pointer-events:none}
   .g2-env{display:block;width:100%;min-width:0}
-  .g2-acion,.g2-imersao,.g2-partir{width:100%;height:36px;padding:0 11px;border-radius:7px;
+  .g2-imersao,.g2-partir{width:100%;height:36px;padding:0 11px;border-radius:7px;
     font:500 12.5px 'Space Grotesk',system-ui,sans-serif;border:1px solid var(--linha);
     background:var(--app-bg);color:var(--texto-suave);cursor:pointer}
-  .g2-acion{color:var(--fg);font-weight:600;border-color:var(--purple);background:var(--sel-bg)}
   .g2-imersao{border-color:rgba(255,121,198,.55);color:var(--fg)}
-  .g2-acion:hover,.g2-imersao:hover,.g2-partir:hover{border-color:var(--comment)}
+  .g2-imersao:hover,.g2-partir:hover{border-color:var(--comment)}
   .g2-sep{grid-column:1 / -1;height:1px;background:var(--border-sutil);margin:2px 0}
   /* a célula à esquerda dos chips: «Controle» e, abaixo, o estilo de jogo do perfil (só leitura) */
   .g2-grade > .g2-canto{grid-column:2;display:flex;flex-direction:column;align-items:flex-start;
@@ -245,40 +235,14 @@ CSS = CSS_GLIFO + """
   .g2-sentir:hover{background:rgba(255,121,198,.2)}
   .quadro-topo .modo-auto{margin-left:auto}
   /* OS EFEITOS POR FAMÍLIA (20/10/2026): a lista do «Efeito do gatilho» abre em grupos por família,
-     e a família é a etiqueta à esquerda da caixa; a frase de cada efeito mora SÓ na dica. «Como o
-     gatilho faz» vai para o avançado, atrás da chave no título do quadro. */
+     e a família é a etiqueta à esquerda da caixa; a frase de cada efeito mora SÓ na dica. O gatilho
+     só tem o efeito (22/10/2026): sem «Avançado» e sem «Como o gatilho faz». */
   .g2-env{position:relative}
   .g2-fam{position:absolute;left:11px;top:0;height:36px;display:flex;align-items:center;
     font:600 11px/1 'Space Grotesk',system-ui,sans-serif;color:var(--purple);pointer-events:none}
   .g2-fam:not([data-fam]){display:none}
   .g2-fam::before{content:attr(data-fam)}
   .g2-fam::after{content:"";width:1px;height:14px;background:var(--border-sutil);margin-left:7px}
-  .g2-av{display:none !important}
-  .quadro:has(.g2-avtog input:checked) .g2-av{display:flex !important}
-  .quadro:not(:has(.g2-avtog input:checked)) .g2-grade > .g2-gl:not(.g2-ds){grid-row:span 1}
-  /* A chave NÃO leva a classe `modo-auto`: o script do Modo automático a trataria como ele
-     (`data-modo`, `aria-pressed`) e o piloto a leria como gesto sem dono. Ela é local à janela. */
-  .g2-avtog{display:inline-flex;align-items:center;gap:9px;height:34px;padding:0 16px 0 12px;border-radius:999px;
-    border:1px solid var(--border-forte,#44475a);background:transparent;color:var(--texto-suave,#c8ccda);
-    font:600 13.5px/1 'Space Grotesk',system-ui,sans-serif;cursor:pointer;position:relative;
-    transition:background .15s,border-color .15s,color .15s,box-shadow .15s}
-  .g2-avtog .p{width:11px;height:11px;border-radius:50%;border:2px solid var(--texto-mudo,#9a9eb8);
-    background:transparent;transition:all .15s}
-  .g2-avtog:hover{border-color:#5fd3e6;color:#fff}
-  .quadro-topo .g2-avtog{margin-left:auto}
-  body.nativo.por-controle .g2-avtog{visibility:hidden}
-  .g2-avtog input{position:absolute;opacity:0;width:0;height:0}
-  .quadro-topo .g2-avtog ~ .modo-auto{margin-left:10px}
-  .g2-avtog:has(input:checked){background:#0e7c8c;border-color:#5fd3e6;color:#fff;
-    box-shadow:0 0 0 3px rgba(95,211,230,.18)}
-  .g2-avtog:has(input:checked) .p{border-color:#fff;background:#fff;box-shadow:0 0 8px #fff}
-  .g2-avtog:has(input:focus-visible){outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
-  .quadro:has(.g2-avtog input:checked) .g2-grade{row-gap:9px}
-  @media (max-height:830px){
-    .quadro:has(.g2-avtog input:checked) .g2-grade{row-gap:6px}
-    .quadro:has(.g2-avtog input:checked) .g2-av .g2-acion{height:30px}
-    .quadro:has(.g2-avtog input:checked) .g2-av.g2-rot,.quadro:has(.g2-avtog input:checked) .g2-av.g2-cel{min-height:30px}
-    .quadro:has(.g2-avtog input:checked) .g2-sep{margin:0}}
   /* depois das regras da área de criar, para ganhar delas */
   @media (max-height:830px){.criar .criar-linha{padding:8px 16px;row-gap:6px}.g2-barras{padding-bottom:8px}}
 """
@@ -305,26 +269,18 @@ def _op_vazio(escolhido):
             f'{" selected" if escolhido == TRAVESSAO else ""} disabled hidden>{TRAVESSAO}</option>')
 
 
-def _grupo_dos_seus(nome, escolhido=""):
-    valor = PREFIXO_DO_MEU + nome
-    marca = " selected" if escolhido == valor else ""
-    return (f'<optgroup label="{SEUS_EFEITOS}"><option value="{_escapar(valor)}"{marca}>'
-            f'{_escapar(nome)}</option></optgroup>')
-
-
-def opcoes_modo(escolhido):
-    """As opções do acionamento: o `—`, os modos do produto e «Seus efeitos»."""
-    modos = "".join(
-        f'<option value="{CHAVE_DO_MODO[n]}"'
-        f'{" selected" if CHAVE_DO_MODO[n] == escolhido else ""} title="{_escapar(d)}">{n}</option>'
-        for n, d in MODOS)
-    return _op_vazio(escolhido) + modos + _grupo_dos_seus(MEU_ACIONAMENTO, escolhido)
+def _grupo_dos_seus(itens):
+    """O grupo «Seus efeitos» do desenho: o que ela criou e o acionamento que ela guardou antes."""
+    dentro = "".join(f'<option value="{_escapar(valor)}">{_escapar(nome)}</option>'
+                     for valor, nome in itens)
+    return f'<optgroup label="{SEUS_EFEITOS}">{dentro}</optgroup>'
 
 
 def opcoes_imersao(escolhida):
     """As opções do efeito do gatilho: as mesmas que o pacote monta, com a escolhida marcada.
 
-    O `—` e «Seus efeitos» são os do desenho, não os do disco de quem gera a página.
+    O `—` e «Seus efeitos» são os do desenho, não os do disco de quem gera a página. O grupo leva
+    os dois que o desenho guarda: o acionamento de antes e a imersão nova, na mesma lista.
     """
     cru = html_das_opcoes_de_imersao()
     cru = re.sub(r"^<option value=\"" + TRAVESSAO + r"\"[^>]*>[^<]*</option>", "", cru)
@@ -332,26 +288,13 @@ def opcoes_imersao(escolhida):
     alvo = f'<option value="{_escapar(escolhida)}"'
     if alvo in cru:
         cru = cru.replace(alvo, alvo + " selected", 1)
-    return _op_vazio(escolhida) + cru + _grupo_dos_seus(MEU_IMERSAO)
-
-
-def _celula_do_acionamento(pref, sig, vazio):
-    """A célula do acionamento de um gatilho num controle: o campo com a dica que muda com ele.
-
-    Mora no avançado (`g2-av`): nasce escondida, atrás da chave no título do quadro.
-    """
-    modo = CENA[pref][sig][0] if not vazio else TRAVESSAO
-    dica = SEM_APARELHO_AQUI if vazio else descricao_do_modo(modo)
-    return (f'<div class="g2-cel g2-av{_off(vazio)}" id="acion-{pref}-{sig}" data-controle="{pref}"{_marca(vazio)}>'
-            f'<span class="g2-env" data-campo="{PREFIXO_DA_DICA_DO_MODO}{sig}" data-hef-alvo="atributo" '
-            f'data-hef-atributo="data-dica" data-dica="{_escapar(dica)}">'
-            f'<select class="g2-acion" data-gesto="modo" data-campo="modo-chave-{sig}" '
-            f'data-hef-alvo="valor" data-lado="{sig}" aria-label="Como o gatilho faz">'
-            f'{opcoes_modo(modo)}</select></span></div>')
+    return _op_vazio(escolhida) + cru + _grupo_dos_seus(
+        [(PREFIXO_DO_SEU_ACIONAMENTO + MEU_ACIONAMENTO, MEU_ACIONAMENTO),
+         (PREFIXO_DO_MEU + MEU_IMERSAO, MEU_IMERSAO)])
 
 
 def _celula_da_imersao(pref, sig, vazio):
-    """A célula do efeito do gatilho: a escolha leva junto o acionamento da coluna.
+    """A célula do efeito do gatilho: a única do gatilho, e o acionamento vem dentro do efeito.
 
     A família é a etiqueta à esquerda da caixa (`data-fam`, que o piloto pinta e apaga); a frase
     do efeito mora SÓ na dica da caixa e no `title` de cada opção.
@@ -366,7 +309,7 @@ def _celula_da_imersao(pref, sig, vazio):
             f'<i class="g2-fam" aria-hidden="true" data-campo="{PREFIXO_DA_FAMILIA_DA_IMERSAO}{sig}" '
             f'data-hef-alvo="atributo" data-hef-atributo="data-fam"{atr_fam}></i>'
             f'<select class="g2-imersao" data-gesto="imersao" data-campo="imersao-{sig}" '
-            f'data-hef-alvo="valor" data-lado="{sig}" data-hef-forma="acion-{pref}-{sig}" '
+            f'data-hef-alvo="valor" data-lado="{sig}" '
             f'aria-label="Efeito do gatilho">{opcoes_imersao(imersao)}</select></span></div>')
 
 
@@ -448,9 +391,9 @@ def _intensidades():
             f'{ROTULO_DA_INTENSIDADE}</span></div>\n' + celulas)
 
 
-def _linha(glifo_html, classe, rotulo, dica, fabrica, lado, extra=""):
-    """Um rótulo e uma célula por controle da `MESA`; `extra` é a classe do rótulo (`g2-av`)."""
-    rot = (f'          <div class="g2-rot{extra}"><span class="sec-rot" data-dica="{dica}">{rotulo}</span></div>')
+def _linha(glifo_html, classe, rotulo, dica, fabrica, lado):
+    """Um rótulo e uma célula por controle da `MESA`."""
+    rot = (f'          <div class="g2-rot"><span class="sec-rot" data-dica="{dica}">{rotulo}</span></div>')
     celulas = "\n".join(
         "          " + fabrica(c["pref"], lado, not c.get("conectado", True)) for c in MESA)
     return (glifo_html, rot, celulas)
@@ -464,13 +407,11 @@ def _glifo_do_gatilho(nome, classe):
 def _bloco_do_gatilho(nome, classe, sig):
     imer = _linha("", classe, "Efeito do gatilho", "O que o gatilho faz no jogo, pelo nome do que acontece",
                   _celula_da_imersao, sig)
-    acion = _linha("", classe, "Como o gatilho faz", "Como o gatilho resiste ao dedo",
-                   _celula_do_acionamento, sig, " g2-av")
-    return "\n".join([_glifo_do_gatilho(nome, classe), imer[1], imer[2], acion[1], acion[2]])
+    return "\n".join([_glifo_do_gatilho(nome, classe), imer[1], imer[2]])
 
 
 def _meus():
-    return (f'<span class="meu" data-dica="Como o gatilho faz"><i style="--cor:var(--purple)"></i>'
+    return (f'<span class="meu" data-dica="Efeito do gatilho"><i style="--cor:var(--pink)"></i>'
             f'{_escapar(MEU_ACIONAMENTO)}</span>'
             f'<span class="meu" data-dica="Efeito do gatilho"><i style="--cor:var(--pink)"></i>'
             f'{_escapar(MEU_IMERSAO)}</span>')
@@ -493,16 +434,6 @@ def _partir():
             f'data-dica="O ponto de partida">{ops}</select>')
 
 
-#: A chave «Avançado» (20/10/2026): nasce desligada e mostra a linha «Como o gatilho faz». É da
-#: janela, não do perfil: o estado fica na sessão (`sessionStorage`), então sobrevive a trocar de
-#: aba e some quando a janela fecha. As mesmas chaves e os mesmos `data-gesto` seguem valendo.
-CHAVE_AVANCADO = ('<label class="g2-avtog" data-dica="Mostra como o gatilho faz o efeito">'
-                  '<input type="checkbox" aria-label="Avançado"><span class="p"></span>Avançado</label>')
-ROTEIRO_DO_AVANCADO = (
-    "<script>(function(){var c=document.querySelector('.g2-avtog input');if(!c)return;"
-    "try{c.checked=sessionStorage.getItem('hef-gatilhos-avancado')==='1';}catch(e){}"
-    "c.addEventListener('change',function(){try{sessionStorage.setItem('hef-gatilhos-avancado',"
-    "c.checked?'1':'0');}catch(e){}});})();</script>")
 ROTEIRO_DAS_BARRAS = (
     "<script>document.addEventListener('input',function(ev){var r=ev.target;"
     "if(!r||r.type!=='range'||!r.closest||!r.closest('.g2-barra'))return;var b=r.nextElementSibling;"
@@ -520,7 +451,6 @@ def _miolo(entra=ONDE_ENTRA_A_INTENSIDADE):
       <div class="quadro-topo">
         <span class="quadro-titulo" data-dica="Uma coluna por controle; vale na hora">Gatilhos</span>
         {trava_do_nativo("nos gatilhos")}
-        {CHAVE_AVANCADO}
         {monta_.modo_auto(GESTO_DO_MODO, governa=GOVERNA, dica=DICA_DO_AUTOMATICO)}
       </div>
       <div class="quadro-corpo">
@@ -539,8 +469,7 @@ def _miolo(entra=ONDE_ENTRA_A_INTENSIDADE):
     </div>
     <div class="quadro criar g2-criar" id="criar-gatilhos">
       <div class="criar-linha">
-        <span class="quadro-titulo" data-dica="O que você criar entra nas listas de cima">Criar efeitos novos</span>
-        <span class="seg-criar" role="group" aria-label="Tipo"><label data-dica="Como o gatilho resiste"><input type="radio" name="tipo-criar" value="acionamento" data-linha="tipo" checked><span>Acionamento</span></label><label data-dica="O realismo por cima"><input type="radio" name="tipo-criar" value="imersao" data-linha="tipo"><span>Imersão</span></label></span>
+        <span class="quadro-titulo" data-dica="O que você criar entra na lista «Efeito do gatilho»">Criar efeitos novos</span>
         {_partir()}
         <input class="nome-criar" type="text" data-linha="nome" maxlength="{TETO_DO_NOME}" placeholder="Nome do efeito" aria-label="Nome do efeito">
         <button class="btn-criar" type="button" data-gesto="criar-efeito" data-hef-forma="criar-gatilhos" data-dica="Guarda e põe nas listas">Criar</button>
@@ -552,7 +481,6 @@ def _miolo(entra=ONDE_ENTRA_A_INTENSIDADE):
       </div>
     </div>
     {ROTEIRO_DAS_BARRAS}
-    {ROTEIRO_DO_AVANCADO}
 '''
 
 MIOLO = _miolo()
@@ -606,15 +534,17 @@ def _conferir(doc):
         exigir(f'data-gesto="{g}"' not in corpo, f"o gesto {g!r} voltou ao desenho do todo")
     exigir('class="ajuda' not in corpo and 'class="ajustes' not in corpo,
            "o «?» ou a caixa de ajustes voltou ao desenho do todo")
-    for g in ("modo", "imersao", "criar-efeito", "sentir", GESTO_DO_MODO):
+    for g in ("imersao", "criar-efeito", "sentir", GESTO_DO_MODO):
         exigir(f'data-gesto="{g}"' in corpo,
                f"o endereço do gesto {g!r} sumiu do desenho — o clique some calado")
-    exigir(corpo.count('data-gesto="modo"') == 2 * n and corpo.count('data-gesto="imersao"') == 2 * n,
-           f"não há dois campos de acionamento e dois de imersão por controle ({n})")
+    exigir(corpo.count('data-gesto="imersao"') == 2 * n,
+           f"não há dois campos de efeito por controle ({n}): um por gatilho")
+    exigir('data-gesto="modo"' not in corpo and "acion-" not in corpo and 'g2-acion' not in doc,
+           "o acionamento voltou ao desenho: o gatilho só tem o efeito")
     exigir(corpo.count('id="criar-gatilhos"') == 1
            and corpo.count('data-hef-forma="criar-gatilhos"') == 2,
            "o Criar e o Sentir não apontam para o quadro de criar: o gesto não leria as barras")
-    exigir(corpo.count('data-hef-alvo="valor"') == 4 * n + n,
+    exigir(corpo.count('data-hef-alvo="valor"') == 2 * n + n,
            "um campo de escolha, ou o trilho da intensidade, do desenho não pinta por valor")
 
     exigir(corpo.count(f'data-campo="{CAMPO_DO_CHIP}"') == n
@@ -638,10 +568,10 @@ def _conferir(doc):
                f"o lugar {pref.upper()} deixou de se dar por vazio")
         exigir(c["nome"] not in corpo, f"o nome do plástico {c['nome']!r} voltou a um lugar vazio")
         exigir(corpo.count(f'<option value="{TRAVESSAO}" selected disabled hidden>')
-               == 4 * len(vazios), "um campo do lugar vazio não mostra o travessão")
+               == 2 * len(vazios), "um campo do lugar vazio não mostra o travessão")
     exigir(f'<option value="{TRAVESSAO}"' in corpo
            and len(re.findall(rf'<option value="{TRAVESSAO}"[^>]*\bdisabled\b', corpo))
-           == corpo.count('<select class="g2-a') + corpo.count('<select class="g2-i'),
+           == corpo.count('<select class="g2-i'),
            "um campo de escolha não oferece `—` ao piloto")
     exigir('[data-conectado="nao"] select' in doc,  # (noqa-acento) valor
            "a trava do lugar vazio sumiu do CSS")
@@ -657,15 +587,13 @@ def _conferir(doc):
         exigir(len(_assin) == 1, f"o endereço {_campo!r} tem alvos diferentes entre os lugares")
 
     for _sig in ("e", "d"):
-        exigir(corpo.count(f'data-campo="{PREFIXO_DA_DICA_DO_MODO}{_sig}"') == n
-               and corpo.count(f'data-campo="{PREFIXO_DA_DICA_DA_IMERSAO}{_sig}"') == n,
+        exigir(corpo.count(f'data-campo="{PREFIXO_DA_DICA_DA_IMERSAO}{_sig}"') == n,
                f"os embrulhos da dica do gatilho {_sig} não estão em todos os lugares")
-        exigir(corpo.count('id="acion-') == 2 * n, "a célula do acionamento perdeu o `id` que a imersão leva")
     for _spec in PRESETS:
-        if _spec.name not in SEM_NA_LISTA:
+        if _spec.name not in (*SEM_NA_LISTA, "Off"):
             exigir(f'<option value="{_spec.name}"' in corpo,
-                   f"o modo {_spec.name} perdeu o `value` — o clique iria sem contrato")
-    exigir('value="Custom"' not in corpo, "o «Montar do zero» voltou à lista do acionamento")
+                   f"o ponto de partida {_spec.name} perdeu o `value` — o Criar iria sem contrato")
+    exigir('value="Custom"' not in corpo, "o «Montar do zero» voltou à lista de partida")
     exigir(f'data-campo="{CAMPO_DO_ESTILO}"' in corpo, "o estilo do perfil perdeu o endereço")
     for _sig in ("e", "d"):
         exigir(corpo.count(f'data-campo="{PREFIXO_DA_FAMILIA_DA_IMERSAO}{_sig}"') == n,
@@ -674,18 +602,23 @@ def _conferir(doc):
            "a frase do efeito voltou a ser texto embaixo da caixa: ela mora só na dica")
     exigir(corpo.count('<optgroup label="Golpe">') == 2 * n,
            "a lista do efeito do gatilho não abre em grupos por família")
-    exigir(corpo.count('class="g2-avtog"') == 1
-           and corpo.index('g2-avtog') < corpo.index('data-gesto="modo-dos-gatilhos"'),
-           "a chave «Avançado» saiu do título do quadro, ou não vem antes do Modo automático")
-    exigir(corpo.count('class="g2-cel g2-av') == 2 * n and corpo.count('class="g2-rot g2-av"') == 2,
-           "«Como o gatilho faz» deixou de morar atrás da chave «Avançado»")
+    exigir("g2-avtog" not in corpo and "g2-avtog" not in doc and "Avançado" not in corpo
+           and "hef-gatilhos-avancado" not in doc,
+           "a chave «Avançado» voltou ao título do quadro: o gatilho só tem o efeito")
+    exigir("Como o gatilho faz" not in corpo and "g2-av" not in corpo,
+           "a linha «Como o gatilho faz» voltou: o acionamento vem dentro do efeito")
+    exigir("tipo-criar" not in corpo and 'data-linha="tipo"' not in corpo,
+           "o tipo Acionamento voltou ao «Criar efeitos novos»: tudo o que ela cria é um efeito")
+    exigir(f'value="{PREFIXO_DO_SEU_ACIONAMENTO}{MEU_ACIONAMENTO}"' in corpo
+           and corpo.count('<optgroup label="Seus efeitos">') == 2 * n,
+           "o acionamento que ela guardou saiu do grupo «Seus efeitos» da lista do efeito")
     for _campo in CAMPO_DA_FORCA.values():
         exigir(corpo.count(f'data-campo="{_campo}"') == n,
                f"a escada {_campo!r} não está em todos os {n} lugares")
     exigir(len(re.findall(r'class="g2-forca(?: off)?"', corpo)) == n,
            "a linha da força do aperto perdeu um lugar")
     for classe in ("g2-cab", "g2-cel", "g2-forca", "g2-int"):
-        marcas = re.findall(rf'class="{classe}(?: g2-av)?( off)?"[^>]*?(data-conectado="nao")?>', corpo)  # (noqa-acento) identificador ASCII
+        marcas = re.findall(rf'class="{classe}( off)?"[^>]*?(data-conectado="nao")?>', corpo)  # (noqa-acento) identificador ASCII
         exigir(bool(vazios) and all(bool(off) == bool(vazio) for off, vazio in marcas),
                f"o `{classe}` vazio não tem a classe `off` que o piloto escreve, ou o cheio tem")
     exigir(corpo.index('class="g2-forca') < corpo.index('class="g2-cab'),
@@ -708,12 +641,12 @@ def _conferir(doc):
     exigir(corpo.count(f'data-campo="{CAMPO_DA_INTENSIDADE}-pct">{TRAVESSAO}<') == len(vazios),
            "o número da intensidade de um lugar vazio não é o travessão")
     _ordem = (corpo.index('class="g2-cab'), corpo.index('class="g2-int'),
-              corpo.index('data-gesto="modo"'))
+              corpo.index('data-gesto="imersao"'))
     exigir((_ordem[0] < _ordem[1] < _ordem[2]) if ONDE_ENTRA_A_INTENSIDADE == "acima"
            else (_ordem[0] < _ordem[2] < _ordem[1]),
            f"a intensidade não está onde `ONDE_ENTRA_A_INTENSIDADE` ({ONDE_ENTRA_A_INTENSIDADE}) manda")
 
-    for chave in ("tipo", "partir", "nome", "inicio", "fim", "forca", "freq"):
+    for chave in ("partir", "nome", "inicio", "fim", "forca", "freq"):
         exigir(f'data-linha="{chave}"' in corpo, f"a área de criar perdeu o campo {chave!r}")
     exigir('id="criar-gatilhos"' in corpo and 'data-hef-forma="criar-gatilhos"' in corpo,
            "o botão Criar deixou de apontar para a área de criar")
@@ -752,4 +685,4 @@ if __name__ == "__main__":
     shutil.copyfile(_prova / "03-gatilhos.html", _real / "03-gatilhos.html")
     shutil.rmtree(_prova)
     print(f"03-gatilhos: OK, {n} divs · {len(monta_.CONECTADOS)} conectado(s) "
-          f"+ {len(MESA) - len(monta_.CONECTADOS)} lugar(es) vazio(s) · {len(MODOS)} modos")
+          f"+ {len(MESA) - len(monta_.CONECTADOS)} lugar(es) vazio(s)")
