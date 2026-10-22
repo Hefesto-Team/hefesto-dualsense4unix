@@ -6,7 +6,7 @@ import re
 import sys
 sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent))
 import onde
-import mapa as _mapa
+import mapa as _mapa  # a silhueta do DualSense
 import monta as monta_
 from monta import CONECTADOS, DADOS_DO_REPO
 

@@ -100,7 +100,8 @@ _make_handler(collector)
 
 **Rejeitada para dep obrigatória.** A biblioteca adiciona ~800 KB e threads
 internas que duplicariam o servidor HTTP. Para o nível V1, a serialização manual
-é suficiente e evita uma dep nova no core. Disponível como extra opcional.
+é suficiente e evita uma dep nova no core. O extra opcional que a oferecia saiu em
+22/10/2026 (a nota de verificação no fim).
 
 ### Expor via socket Unix (não HTTP)
 

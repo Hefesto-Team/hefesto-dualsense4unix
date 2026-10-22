@@ -96,7 +96,7 @@ import time
 from collections import deque
 from typing import Any
 
-from hefesto_dualsense4unix.interface.janela import JanelaDaAba
+from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # isort:skip
 
 from gi.repository import GLib, Gtk, WebKit2
 
