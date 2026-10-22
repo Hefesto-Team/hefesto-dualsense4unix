@@ -491,12 +491,14 @@ def test_a_medicao_de_hoje_bate_com_o_csv_de_hoje(mi):
     # D-2010-O-EXTERNO-SEM-NUMERO-TEM-UM-TRAVESSAO e a D-2010-A-CHEGADA-NAO-TOCA-QUEM-JA-ESTAVA,
     # que ela revogou no fora-da-tela, e a D-2010-A-INTENSIDADE-DO-GATILHO-MORA-NO-PERFIL-DO-JOGO,
     # que a
-    # D-2110-A-INTENSIDADE-DO-GATILHO-VALE-NO-PADRAO-DO-COMPUTADOR revogou.
+    # D-2110-A-INTENSIDADE-DO-GATILHO-VALE-NO-PADRAO-DO-COMPUTADOR revogou. Vinte e nove desde
+    # 22/10/2026: a D-2010-OS-ACIONAMENTOS-FICAM-ATRAS-DO-AVANCADO, que a
+    # D-2210-O-GATILHO-SO-TEM-O-EFEITO revogou («Sai tudo», 21/10).
     estados = [linha["estado"] for linha in mi._linhas()]
     adiante = sum(estado in ("implementada", "feita", "no ar") for estado in estados)
-    assert estados.count("caduca") == 28, (
-        "o CSV tem vinte e oito linhas `caduca`; se isso mudou, o laudo tem de dizer")
-    assert medida["decididas"] == medida["linhas"] - 28 - adiante
+    assert estados.count("caduca") == 29, (
+        "o CSV tem vinte e nove linhas `caduca`; se isso mudou, o laudo tem de dizer")
+    assert medida["decididas"] == medida["linhas"] - 29 - adiante
     assert medida["decididas"] > 0
     assert len(medida["com_regua_dentro_de_teste"]) <= medida["decididas"]
     assert set(medida["com_regua_dentro_de_teste"]).isdisjoint(

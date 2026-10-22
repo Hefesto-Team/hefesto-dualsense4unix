@@ -147,6 +147,20 @@ COLISOES_DECLARADAS = {
         "triagem a chama de processo pela palavra «versão» na pergunta («a versão anterior»), que "
         "aqui é a da extensão instalada, não a do produto. Mais um caso do limite."
     ),
+    "D-2110-AS-CITACOES-SEGUEM-A-PONTE-ATE-O-DEV": (
+        "É de PRODUTO: a ponte por data de autor e assunto só troca a citação quando o par é "
+        "único, e `test_as_citacoes_de_commit_seguem_o_mapa.py::test_a_ponte_liga_pela_data_e_"
+        "pelo_assunto_e_so_quando_o_par_e_unico` mede a troca. A triagem a chama de processo "
+        "pelas palavras «commit» (o assunto da própria decisão é a citação de commit) e «leva» (no sentido de «carrega»), "
+        "e a decisão fala de ARQUIVO e de script, não de tela. Mais um caso do limite (22/10/2026)."
+    ),
+    "D-2110-O-REPOSITORIO-PESA-SO-O-QUE-SERVE": (
+        "É de PRODUTO: o teto de 1 MB por arquivo e 400 KB por imagem, e "
+        "`test_o_repositorio_pesa_so_o_que_serve.py::test_nada_versionado_passa_do_teto` mede o "
+        "versionado. A triagem a chama de processo pela palavra «versão» (a versão que se lê sob "
+        "demanda), e nenhuma palavra de produto aparece: a decisão fala de PESO e de import, não de tela. Mais "
+        "um caso do limite (22/10/2026)."
+    ),
     "D-1610-O-PROTON-NOVO-SO-ENTRA-COM-A-FICHA": (
         "É de PRODUTO: um Proton só vira o fixado com a linha «passou» da ficha, e "
         "`test_o_proton_novo_so_entra_se_passar.py::"
