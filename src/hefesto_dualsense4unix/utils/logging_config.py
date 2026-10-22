@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import atexit
-import contextlib
 import logging
 import os
 import re
@@ -214,10 +213,8 @@ class AgregadoDoDiario:
         campos = {k: v for k, v in janela.recente.items() if k not in ("event", "log_level")}
         campos.update(vezes=janela.contagem, janela_s=self.janela_s)
         campos[_MARCA_DO_AGREGADO] = True
-        with contextlib.suppress(Exception):
-            diario = self.diario if self.diario is not None else structlog.get_logger("agregado")
-            escrever = getattr(diario, janela.nivel)
-            escrever(janela.recente.get("event"), **campos)
+        diario = self.diario if self.diario is not None else structlog.get_logger("agregado")
+        getattr(diario, janela.nivel)(janela.recente.get("event"), **campos)
 
 
 _AGREGADO = AgregadoDoDiario()
