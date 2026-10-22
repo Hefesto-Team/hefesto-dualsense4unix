@@ -1663,6 +1663,20 @@ def modo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     return {"recado": recibo}
 
 
+def _ajustes_de_agora(ctx: Contexto, uniq: str, disco: str, modo_: str) -> list[int]:
+    """Os números do gatilho quando ele já está em `modo_`; senão, os padrões do modo.
+
+    A opção «Do perfil» é o acionamento que o perfil antigo guardava: escolhê-la de novo (pela
+    escolha «Todos» ou por uma página que ainda não repintou) não troca os números dele pelos de
+    nascença.
+    """
+    p = perfil.ativo(ctx.state.get("active_profile")) or {}
+    cfg = _o_que_o_controle_recebe(p, uniq, disco)
+    agora, params = _na_lista_da_tela(str(cfg.get("mode") or "Off"), _params_inteiros(cfg),
+                                      _specs())
+    return list(params) if agora == modo_ else _padroes(modo_)
+
+
 @gesto("03-gatilhos.html", "imersao", grava="_gravar_so_o_gatilho")
 def imersao_escolhida(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     """Escolher um efeito do gatilho põe os números dele no gatilho, na hora.
@@ -1671,9 +1685,8 @@ def imersao_escolhida(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     do estilo do perfil. O acionamento fica o que o gatilho tem agora quando o efeito vale nele;
     senão vai ao de nascença do efeito (22/10/2026: o gatilho só tem o efeito, e a linha «Como o
     gatilho faz» saiu). «Sem efeito» solta o gatilho (`trigger.reset`). `meu:<nome>` leva o
-    acionamento de onde a pessoa partiu. As duas opções do acionamento que já existia aplicam o
-    que o perfil antigo guardava: `acionamento:<modo>` com os padrões do modo, e
-    `meu-acionamento:<nome>` com a metade que ela guardou para este gatilho.
+    acionamento de onde a pessoa partiu. `acionamento:<modo>` (o perfil antigo) segue com os
+    números do gatilho (`_ajustes_de_agora`); `meu-acionamento:<nome>`, com a metade guardada.
     """
     _nao_no_automatico(ctx)
     uniq, lado = _exigir_controle(o, "imersão"), _lado(o)
@@ -1695,7 +1708,7 @@ def imersao_escolhida(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
         if specs is None or specs.get_spec(modo_) is None:
             raise ValueError(f"imersão: {modo_!r} não é um dos modos do produto.")
         nome = _rotulo_do_modo(modo_)
-        params = _padroes(modo_)
+        params = _ajustes_de_agora(ctx, uniq, lado, modo_)
     elif chave.startswith(PREFIXO_DO_SEU_ACIONAMENTO):
         nome = chave[len(PREFIXO_DO_SEU_ACIONAMENTO):]
         modo_, params = _metade_do_meu(nome, lado)

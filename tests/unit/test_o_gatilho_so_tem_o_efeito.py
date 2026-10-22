@@ -214,10 +214,11 @@ def test_escolher_o_acionamento_guardado_manda_a_metade_dele(a03, monkeypatch):
 
 
 def test_escolher_o_acionamento_do_perfil_manda_aquele_acionamento(a03, monkeypatch):
-    """A opção «Do perfil» é um acionamento do produto, e o que não é um deles é recusado.
+    """A opção «Do perfil» manda aquele acionamento com os números do perfil; o inventado cai.
 
     MORDIDA: tirar de `imersao_escolhida` o ramo do `acionamento:` (a escolha cai na lista do
-    produto e é recusada como imersão que não existe).
+    produto e é recusada como imersão que não existe), ou mandar os padrões do modo no lugar
+    dos números que o gatilho tem.
     """
     ctx = _ctx_com(monkeypatch, {"mode": "Bow", "params": [3, 7, 4, 5]},
                    {"mode": "Off", "params": []})
@@ -226,6 +227,7 @@ def test_escolher_o_acionamento_do_perfil_manda_aquele_acionamento(a03, monkeypa
         ctx, {"uniq": UNIQ, "lado": "e", "valor": f"{a03.PREFIXO_DO_ACIONAMENTO}Bow"}, ponte)
     (nome, args), = ponte.chamadas
     assert nome == "set" and args[0] == "left" and args[1] == "Bow", ponte.chamadas
+    assert list(args[2]) == [3, 7, 4, 5], "a opção «Do perfil» trocou os números dele pelos padrões"
 
     with pytest.raises(ValueError, match="não é um dos modos"):
         a03.imersao_escolhida(
