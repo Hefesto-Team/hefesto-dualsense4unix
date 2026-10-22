@@ -17,7 +17,7 @@ subidas; trocar ``VOLTAS_DO_MATIZ_POR_S`` por 100 reprova o freio da roda; troca
 inclinação por um ângulo sem volta circular reprova o salto; ``self._vistos = None`` no
 ``andar`` (o primeiro tique não aprende os contadores) reprova o aperto antigo que acendia; o
 ``leitor_da_mao`` que lê sempre o controle primário reprova a posse por controle; tirar
-``reage-ao-botao`` da tupla ``BASES_NOVAS_DA_LUZ`` reprova a lista e a leitura do perfil.
+``reage-ao-botao`` da tupla ``BASES_DA_MAO_DA_LUZ`` reprova a lista e a leitura do perfil.
 """
 from __future__ import annotations
 
@@ -34,6 +34,7 @@ import pytest
 from hefesto_dualsense4unix.daemon.subsystems import luz_animada as luz
 from hefesto_dualsense4unix.profiles import efeitos_de_luz as fx
 from hefesto_dualsense4unix.profiles.schema import (
+    BASES_DA_MAO_DA_LUZ,
     BASES_NOVAS_DA_LUZ,
     TODAS_AS_BASES_DA_LUZ,
     EfeitoDaLuz,
@@ -84,9 +85,10 @@ def _mais_em_um_segundo(tempos: list[float]) -> int:
 
 
 def test_as_tres_bases_novas_estao_fora_das_oito_que_se_criam_e_o_perfil_as_le() -> None:
-    assert BASES_NOVAS_DA_LUZ == ("reage-ao-botao", "inclinacao", "dedo-no-touchpad")
-    assert set(TODAS_AS_BASES_DA_LUZ) >= set(BASES_NOVAS_DA_LUZ)
-    assert len(set(TODAS_AS_BASES_DA_LUZ)) == len(TODAS_AS_BASES_DA_LUZ) == 11
+    assert BASES_DA_MAO_DA_LUZ == ("reage-ao-botao", "inclinacao", "dedo-no-touchpad")
+    assert set(TODAS_AS_BASES_DA_LUZ) >= set(BASES_DA_MAO_DA_LUZ)
+    assert set(BASES_NOVAS_DA_LUZ) >= set(BASES_DA_MAO_DA_LUZ)
+    assert len(set(TODAS_AS_BASES_DA_LUZ)) == len(TODAS_AS_BASES_DA_LUZ)
     assert ler_o_efeito_da_luz("reage-ao-botao;FF8000;5") == EfeitoDaLuz(
         "reage-ao-botao", ((255, 128, 0),), 5)
     assert ler_o_efeito_da_luz("inclinacao;;5") == EfeitoDaLuz("inclinacao", (), 5)
@@ -427,7 +429,7 @@ def test_o_leitor_de_producao_nunca_levanta() -> None:
             raise RuntimeError("sem hub")
 
     ler = luz.leitor_da_mao(_Quebrado())
-    for base in BASES_NOVAS_DA_LUZ:
+    for base in BASES_DA_MAO_DA_LUZ:
         assert ler(JOGADORES[0], base) == fx.Entrada()
 
 
@@ -519,7 +521,7 @@ def test_trocar_a_cor_leva_o_reage_ao_botao_junto_e_nao_mexe_nas_que_nao_levam_c
         assert o_computador().controles[chave].leds.efeito == depois, base
 
 
-@pytest.mark.parametrize("base", BASES_NOVAS_DA_LUZ)
+@pytest.mark.parametrize("base", BASES_DA_MAO_DA_LUZ)
 def test_o_criar_efeitos_novos_recusa_as_que_leem_a_mao(base: str) -> None:
     """Elas dependem de um dado vivo do controle: ficam só na lista, nunca no «Criar»."""
     import pacotes
@@ -533,7 +535,7 @@ def test_o_criar_efeitos_novos_recusa_as_que_leem_a_mao(base: str) -> None:
 def test_a_dica_de_cada_base_nova_cabe_na_coluna_e_comeca_maiuscula() -> None:
     from pacotes import a04_iluminacao as a04
 
-    for base in BASES_NOVAS_DA_LUZ:
+    for base in BASES_DA_MAO_DA_LUZ:
         frase = a04.DICA_DA_BASE[base]
         assert frase[0].isupper() and frase.endswith(".") and len(frase) <= 36, frase
         assert a04.ROTULO_DA_BASE[base] and a04.RITMO_DA_BASE[base] == 5

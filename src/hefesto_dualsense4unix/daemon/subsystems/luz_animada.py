@@ -18,7 +18,7 @@ import time
 import zlib
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol
 
 from hefesto_dualsense4unix.daemon.subsystems.chegada import segurando_a_luz
 from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import (
@@ -31,7 +31,7 @@ from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import (
     motor_do,
 )
 from hefesto_dualsense4unix.profiles.efeitos_de_luz import (
-    BASES_DA_MAO,
+    BASES_DE_DADO_VIVO,
     BASES_DO_RELOGIO_COMUM,
     RITMO_DA_BATERIA,
     TETO_DO_PISCAR_HZ,
@@ -62,6 +62,18 @@ logger = get_logger(__name__)
 RGB = tuple[int, int, int]
 #: Quem lê a mão de um controle: ``(uniq, base) -> Entrada``, só o dado que a base precisa.
 LeitorDaMao = Callable[[str, str], Entrada]
+
+
+class FonteDoSom(Protocol):
+    """O som da máquina para o «Ao som»: aberto só enquanto algum controle toca o efeito."""
+
+    def abrir(self) -> None: ...
+
+    def fechar(self) -> None: ...
+
+    def nivel(self) -> tuple[float, float] | None:
+        """``(nivel, agudos)`` de agora, ou ``None`` sem leitura."""
+
 
 #: O teto de quadros por segundo de cada controle.
 QUADROS_POR_SEGUNDO_MAXIMO = 30
@@ -194,10 +206,13 @@ class LuzAnimada:
         *,
         intervalo_minimo: float = INTERVALO_MINIMO,
         mao: LeitorDaMao | None = None,
+        som: FonteDoSom | None = None,
     ) -> None:
         self._escrever = escrever
         self._soltar = soltar
         self._mao = mao
+        self._som = som
+        self._som_aberto = False
         #: O estado de cada controle nos efeitos que leem a mão, com o efeito a que pertence: um
         #: efeito novo (outra base, cor ou ritmo) nasce com estado novo.
         self._estados_da_mao: dict[str, tuple[EfeitoDaLuz, EstadoDaMao]] = {}
@@ -227,6 +242,9 @@ class LuzAnimada:
         """
         for uniq in [u for u in self._inicio if u not in plano or u in calados]:
             self.parar(uniq)
+        self._conferir_o_som(any(
+            p.efeito.base == "ao-som" for u, p in plano.items()
+            if u not in calados and u not in pausados))
         escritos = 0
         for uniq, dele in plano.items():
             if uniq in calados:
@@ -241,7 +259,7 @@ class LuzAnimada:
                 self._origem = inicio
             if dele.efeito.base in BASES_DO_RELOGIO_COMUM:
                 inicio = self._origem
-            if dele.efeito.base in BASES_DA_MAO:
+            if dele.efeito.base in BASES_DE_DADO_VIVO:
                 cor = self._cor_da_mao(uniq, dele.efeito, agora)
             else:
                 cor = cor_no_instante(
@@ -265,7 +283,17 @@ class LuzAnimada:
                 return cor_no_instante(efeito, 0.0)
             guardado = self._estados_da_mao[uniq] = (efeito, novo)
         entrada = self._mao(uniq, efeito.base) if self._mao is not None else Entrada()
+        if efeito.base == "ao-som" and self._som is not None:
+            entrada = dataclasses.replace(entrada, som=self._som.nivel())
         return guardado[1].andar(entrada, agora)
+
+    def _conferir_o_som(self, quer: bool) -> None:
+        """Abre a leitura do som quando algum controle entra no «Ao som» e a fecha quando sai."""
+        if self._som is None or quer == self._som_aberto:
+            return
+        self._som_aberto = quer
+        with contextlib.suppress(*FALHAS_DA_LEITURA):
+            self._som.abrir() if quer else self._som.fechar()
 
     def repintar(self) -> None:
         """Esquece o último quadro de todos: o corrente sai no próximo tique, mesmo igual.
@@ -289,6 +317,7 @@ class LuzAnimada:
     def parar_tudo(self) -> None:
         for uniq in list(self._inicio):
             self.parar(uniq)
+        self._conferir_o_som(False)
 
 
 def escritor_de_producao(
@@ -569,7 +598,9 @@ async def luz_animada_loop(daemon: Any, luz: LuzAnimada) -> None:
 def start_luz_animada(daemon: Any) -> None:
     """Sobe o laço do efeito. Sem efeito no perfil, ele só relê o arquivo a cada meio segundo."""
     escrever, soltar = escritor_de_producao(daemon)
-    luz = LuzAnimada(escrever, soltar, mao=leitor_da_mao(daemon))
+    from hefesto_dualsense4unix.integrations.energia_do_som import EnergiaDoSom
+
+    luz = LuzAnimada(escrever, soltar, mao=leitor_da_mao(daemon), som=EnergiaDoSom())
     daemon._luz_animada = luz
     task = asyncio.create_task(luz_animada_loop(daemon, luz), name="luz_animada_loop")
     daemon._tasks.append(task)
@@ -579,6 +610,7 @@ def start_luz_animada(daemon: Any) -> None:
 __all__ = [
     "INTERVALO_MINIMO",
     "TETO_DO_PISCAR_HZ",
+    "FonteDoSom",
     "LeitorDaMao",
     "LuzAnimada",
     "Passo",

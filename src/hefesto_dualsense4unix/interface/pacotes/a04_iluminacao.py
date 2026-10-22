@@ -1324,13 +1324,14 @@ ROTULO_DA_BASE = {"respirar": "Respirar", "piscar": "Piscar",
                   "arco-iris": "Arco-íris",  # (noqa-acento) chave ASCII
                   "batimento": "Batida", "chama": "Chama", "mare": "Maré", "onda": "Onda",
                   "relampago": "Relâmpago", "reage-ao-botao": "Reage ao botão",
-                  "inclinacao": "Inclinação", "dedo-no-touchpad": "Dedo no touchpad"}
+                  "inclinacao": "Inclinação", "dedo-no-touchpad": "Dedo no touchpad",
+                  "ao-som": "Ao som"}
 #: O ritmo com que cada base nasce na lista (o do desenho A): respirar 5 s, piscar 0,9 Hz, uma volta
 #: do arco-íris em 12 s, batida de 1 s, a chama troca de alvo a cada ~2 s, a Maré vai e volta em
 #: 8 s.
 RITMO_DA_BASE = {"respirar": 2, "piscar": 3, "arco-iris": 7,  # (noqa-acento) chave ASCII
                  "batimento": 10, "chama": 5, "mare": 10, "onda": 5, "relampago": 5,
-                 "reage-ao-botao": 5, "inclinacao": 5, "dedo-no-touchpad": 5}
+                 "reage-ao-botao": 5, "inclinacao": 5, "dedo-no-touchpad": 5, "ao-som": 5}
 DICA_SEM_EFEITO = "A barra fica apagada."
 DICA_LUZ_FIXA = "A cor do controle, parada."
 DICA_DO_EFEITO_CRIADO = "Um efeito que você montou."
@@ -1346,13 +1347,14 @@ DICA_DA_BASE = {
     "reage-ao-botao": "A cor do botão que você aperta.",
     "inclinacao": "A cor muda ao inclinar o controle.",
     "dedo-no-touchpad": "A cor segue o dedo no touchpad.",
+    "ao-som": "A luz acompanha o som que toca.",
 }
 #: Os grupos da lista, na ordem do desenho: o que a pessoa vê, não o nome técnico do efeito.
 GRUPOS_DA_LISTA = (
     ("Parado", (SEM_EFEITO, LUZ_FIXA)),
     ("Que respira", ("respirar", "batimento", "chama", "mare")),
     ("Que se move", ("piscar", "arco-iris", "onda", "relampago")),  # (noqa-acento) chave ASCII
-    ("Que reage", ("reage-ao-botao", "inclinacao", "dedo-no-touchpad")),
+    ("Que reage", ("reage-ao-botao", "inclinacao", "dedo-no-touchpad", "ao-som")),
 )
 
 

@@ -1,10 +1,11 @@
 """A aba Iluminação mostra a lista nova e o «Sem piscar»
 (A-ABA-ILUMINACAO-MOSTRA-A-LISTA-NOVA-E-O-SEM-PISCAR-01, 15/10/2026).
 
-A linha «Efeito» tem treze opções (dez até 22/10/2026, quando entraram as três do grupo «Que reage»;
-oito antes da Onda e do Relâmpago), em grupos pelo que se vê (o desenho A, com uma lista suspensa em
-cada controle), e a dica da lista diz o que a escolhida faz (desde 16/10/2026 a frase é dica, não
-texto na tela). O nome `..._as_dez_opcoes_...` fica: o CSV de decisões aponta para ele.
+A linha «Efeito» tem quatorze opções (dez até 22/10/2026, quando entraram as quatro do grupo
+«Que reage»; oito antes da Onda e do Relâmpago), em grupos pelo que se vê (o desenho A, com uma
+lista suspensa em cada controle), e a dica da lista diz o que a escolhida faz (desde 16/10/2026 a
+frase é dica, não texto na tela). O nome `..._as_dez_opcoes_...` fica: o CSV de decisões aponta
+para ele.
 O interruptor «Sem piscar» saiu em 16/10/2026, a pedido: a prova de que ele
 saiu e de que o `maquina.json` antigo carrega é `test_o_sem_piscar_saiu_e_o_arquivo_velho_carrega`.
 
@@ -34,11 +35,11 @@ JOGADORES = [f"aa:bb:cc:00:00:0{n}" for n in range(1, 5)]
 #: O que a lista mostra, na ordem do desenho A: do mais calmo ao mais vivo, agrupado pelo que se vê.
 ROTULOS_NA_ORDEM = ["Sem efeito", "Luz fixa", "Respirar", "Batida", "Chama", "Maré",
                     "Piscar", "Arco-íris", "Onda", "Relâmpago", "Reage ao botão", "Inclinação",
-                    "Dedo no touchpad"]
+                    "Dedo no touchpad", "Ao som"]
 VALORES_NA_ORDEM = ["sem-efeito", "luz-fixa", "base:respirar", "base:batimento", "base:chama",
                     "base:mare", "base:piscar", "base:arco-iris", "base:onda",
                     "base:relampago", "base:reage-ao-botao", "base:inclinacao",
-                    "base:dedo-no-touchpad"]
+                    "base:dedo-no-touchpad", "base:ao-som"]
 GRUPOS_NA_ORDEM = ["Parado", "Que respira", "Que se move", "Que reage"]
 
 

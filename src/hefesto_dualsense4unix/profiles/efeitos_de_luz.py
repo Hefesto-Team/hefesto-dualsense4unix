@@ -16,7 +16,11 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from hefesto_dualsense4unix.profiles.estilos_de_jogo import DISTANCIA_MINIMA
-from hefesto_dualsense4unix.profiles.schema import BASES_NOVAS_DA_LUZ, EfeitoDaLuz
+from hefesto_dualsense4unix.profiles.schema import (
+    BASES_DA_MAO_DA_LUZ,
+    BASES_DO_SOM_DA_LUZ,
+    EfeitoDaLuz,
+)
 
 RGB = tuple[int, int, int]
 
@@ -72,9 +76,10 @@ ESTADOS_DE_CARGA_EM_DIA = frozenset({"carregando", "cheio"})
 #: Maré): o laço os conta num relógio só, o da mesa, e não do instante em que cada um entrou.
 BASES_DO_RELOGIO_COMUM = frozenset({"arco-iris", "mare"})  # (noqa-acento) chave ASCII
 
-#: Os efeitos que leem o que a mão faz (A-LUZ-REAGE-AO-QUE-A-MAO-FAZ-01, 22/10/2026): têm estado
-#: por controle (o aperto de agora, a inclinação, o dedo) e por isso não são função só do tempo.
-BASES_DA_MAO = frozenset(BASES_NOVAS_DA_LUZ)
+#: Os efeitos que leem um dado vivo (a mão, o som: A-LUZ-REAGE-AO-QUE-A-MAO-FAZ-01 e
+#: A-LUZ-DANCA-COM-O-SOM-01, 22/10/2026): têm estado por controle e por isso não são função só do
+#: tempo.
+BASES_DE_DADO_VIVO = frozenset(BASES_DA_MAO_DA_LUZ + BASES_DO_SOM_DA_LUZ)
 #: A cor do símbolo apertado no «Reage ao botão» (△ verde, ○ vermelho, ✕ azul, □ rosa).
 COR_DO_TRIANGULO: RGB = (0, 255, 0)
 COR_DO_CIRCULO: RGB = (255, 0, 0)
@@ -364,12 +369,15 @@ class Entrada:
 
     ``apertos`` é o contador de bordas de cada botão (``EvdevSnapshot.apertos``); ``gravidade``
     é o acelerômetro em g; ``dedo`` é ``(x, y)`` de 0 a 1 no touchpad, ``None`` sem dedo. Cada
-    campo é ``None`` quando o dado não veio: o efeito segura o que tinha.
+    campo é ``None`` quando o dado não veio: o efeito segura o que tinha. ``som`` é
+    ``(nivel, agudos)`` de 0 a 1 do monitor da saída padrão: a energia relativa e a fração dela
+    que é aguda.
     """
 
     apertos: Mapping[str, int] | None = None
     gravidade: tuple[float, float, float] | None = None
     dedo: tuple[float, float] | None = None
+    som: tuple[float, float] | None = None
 
 
 def _misturar(de: RGB, para: RGB, u: float) -> RGB:
@@ -518,7 +526,54 @@ class DedoNoTouchpad:
         return _escalar(_matiz_na_cor(self._matiz), brilho)
 
 
-EstadoDaMao = ReageAoBotao | Inclinacao | DedoNoTouchpad
+#: O «Ao som» sobe depressa e desce devagar (cauda de 1 s no ritmo 1, 0,2 s no 10).
+SUBIDA_DO_SOM_S = 0.03
+#: Os agudos mudam a cor devagar: a barra não pisca de cor a cada pancada de prato.
+TEMPO_DOS_AGUDOS_S = 0.3
+#: O máximo de branco que os agudos misturam na cor escolhida (a barra nunca vira só branca).
+BRANCO_DOS_AGUDOS = 0.8
+
+
+def descida_do_som_s(ritmo: int) -> float:
+    """A cauda do «Ao som»: de 1 s no ritmo 1 a 0,2 s no ritmo 10."""
+    return _entre_ritmos(ritmo, 1.0, 0.2)
+
+
+class AoSom:
+    """O «Ao som» de UM controle: o brilho segue a energia do som da saída padrão.
+
+    ``Entrada.som`` traz ``(nivel, agudos)``: o nível de 0 a 1 é a energia do som contra o pico
+    recente dele (o volume da máquina não muda o desenho), e ``agudos`` é a fração dela acima da
+    faixa dos graves. O nível sobe em ``SUBIDA_DO_SOM_S`` e desce na cauda do ritmo; os graves
+    deixam a cor escolhida, os agudos a puxam para o branco (até ``BRANCO_DOS_AGUDOS``). O brilho
+    sai pelo ``BrilhoDoAcende``: piso de 0,25 (nunca preto, mesmo no silêncio) e no máximo três
+    vaivéns por segundo (D-2210-A-LUZ-GANHA-ONDA-E-RELAMPAGO). Sem leitura, o nível cai a zero.
+    """
+
+    def __init__(self, base: RGB, ritmo: int) -> None:
+        self._base = base
+        self._cauda = descida_do_som_s(ritmo)
+        self._nivel = 0.0
+        self._agudos = 0.0
+        self._brilho = BrilhoDoAcende(0.0)
+        self._visto_em: float | None = None
+
+    def andar(self, entrada: Entrada, agora: float) -> RGB:
+        decorrido = 0.0 if self._visto_em is None else max(0.0, agora - self._visto_em)
+        self._visto_em = agora
+        lido = entrada.som
+        nivel, agudos = (0.0, self._agudos) if lido is None else (
+            max(0.0, min(1.0, lido[0])), max(0.0, min(1.0, lido[1])))
+        tempo = SUBIDA_DO_SOM_S if nivel > self._nivel else self._cauda
+        self._nivel += (nivel - self._nivel) * (1.0 - math.exp(-decorrido / tempo))
+        if lido is not None:
+            self._agudos += (agudos - self._agudos) * (
+                1.0 - math.exp(-decorrido / TEMPO_DOS_AGUDOS_S))
+        cor = _misturar(self._base, (255, 255, 255), self._agudos * BRANCO_DOS_AGUDOS)
+        return _escalar(cor, self._brilho.andar(self._nivel, agora))
+
+
+EstadoDaMao = ReageAoBotao | Inclinacao | DedoNoTouchpad | AoSom
 
 
 def estado_da_mao(efeito: EfeitoDaLuz) -> EstadoDaMao | None:
@@ -529,6 +584,8 @@ def estado_da_mao(efeito: EfeitoDaLuz) -> EstadoDaMao | None:
         return Inclinacao(efeito.ritmo)
     if efeito.base == "dedo-no-touchpad":
         return DedoNoTouchpad()
+    if efeito.base == "ao-som":
+        return AoSom((efeito.cores or ((255, 255, 255),))[0], efeito.ritmo)
     return None
 
 
@@ -563,7 +620,7 @@ def cor_no_instante(
         r, g, b = colorsys.hsv_to_rgb(matiz_do_arco_iris(t, efeito.ritmo, posicao), 1.0, 1.0)
         return (_inteiro(r * 255), _inteiro(g * 255), _inteiro(b * 255))
     cores = efeito.cores or ((255, 255, 255),)
-    if efeito.base in BASES_DA_MAO:  # sem o dado vivo da mão: a cor escolhida, parada
+    if efeito.base in BASES_DE_DADO_VIVO:  # sem o dado vivo: a cor escolhida, parada
         return cores[0]
     if efeito.base == "fixa":  # a cor parada: o Acende varia o brilho, não a cor
         return cores[0]
@@ -600,7 +657,7 @@ def cor_no_instante(
 
 
 __all__ = [
-    "BASES_DA_MAO",
+    "BASES_DE_DADO_VIVO",
     "BASES_DO_RELOGIO_COMUM",
     "BORDA_DO_PISCAR_S",
     "CORES_DOS_SIMBOLOS",
@@ -620,6 +677,7 @@ __all__ = [
     "TETO_DO_ACENDE_POR_S",
     "TETO_DO_PISCAR_HZ",
     "VAIVENS_DO_ACENDE_POR_S",
+    "AoSom",
     "BrilhoDoAcende",
     "DedoNoTouchpad",
     "Entrada",
@@ -638,6 +696,7 @@ __all__ = [
     "brilhos_da_onda",
     "cor_no_instante",
     "descida_do_reage_s",
+    "descida_do_som_s",
     "deslocamento_da_mare",
     "estado_da_mao",
     "frequencia_do_piscar_hz",

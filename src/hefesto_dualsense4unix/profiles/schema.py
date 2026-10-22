@@ -263,10 +263,13 @@ class TriggersConfig(BaseModel):
 
 #: As bases do efeito de luz que a pessoa cria na aba Iluminação (A-ABA-ILUMINACAO-DO-TODO-01).
 BASES_DA_LUZ = ("respirar", "piscar", "arco-iris", "batimento", "chama", "mare", "onda", "relampago")  # noqa: E501  # noqa-acento: chave ASCII
-#: As bases que só a lista da aba Iluminação oferece (22/10/2026): as que reagem ao que a mão faz
-#: (A-LUZ-REAGE-AO-QUE-A-MAO-FAZ-01). As oito acima são as que a pessoa também pode CRIAR; estas
-#: dependem de um dado vivo do controle e ficam fora do «Criar efeitos novos».
-BASES_NOVAS_DA_LUZ = ("reage-ao-botao", "inclinacao", "dedo-no-touchpad")
+#: As bases que só a lista da aba Iluminação oferece (22/10/2026): as que dependem de um dado vivo
+#: (a mão, o som) e não se criam em «Criar efeitos novos». As oito acima são as que a pessoa
+#: também pode CRIAR.
+BASES_DA_MAO_DA_LUZ = ("reage-ao-botao", "inclinacao", "dedo-no-touchpad")
+#: «Ao som» (A-LUZ-DANCA-COM-O-SOM-01): lê só o monitor da saída padrão.
+BASES_DO_SOM_DA_LUZ = ("ao-som",)
+BASES_NOVAS_DA_LUZ = BASES_DA_MAO_DA_LUZ + BASES_DO_SOM_DA_LUZ
 TODAS_AS_BASES_DA_LUZ = BASES_DA_LUZ + BASES_NOVAS_DA_LUZ
 #: As bases cujo texto pode vir sem cor: o arco-íris gira todas, e as que pintam pelo dado vivo
 #: (a inclinação, o dedo) não têm cor para escolher.
