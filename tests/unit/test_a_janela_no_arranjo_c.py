@@ -157,11 +157,14 @@ def test_a_conexoes_diz_cada_peca_via_a_extensao() -> None:
     a08 = _a08()
     falhou = {"id": "fone", "tipo": "Telefone", "transporte": "rede", "estado": "falhou",
               "motivo": "Sem resposta"}
-    vivo = {**VIVO, "conexoes": [*VIVO["conexoes"], falhou]}  # (noqa-acento): chave
+    desligada = {"id": "radio", "tipo": "Bluetooth", "transporte": "bluetooth",
+                 "estado": "desligado", "motivo": None}
+    vivo = {**VIVO, "conexoes": [*VIVO["conexoes"], falhou, desligada]}  # (noqa-acento): chave
     html = a08.html_do_agora_das_extensoes([
         ("Minha <extensão>", vivo)])
     linhas = re.findall(r'<div class="ext-linha ext-acessorio"[^>]*>.*?</div>', html)
-    assert len(linhas) == 3, "uma linha por conexão e por aparelho"
+    assert len(linhas) == 3, "uma linha por conexão viva e por aparelho"
+    assert "Bluetooth" not in html, "a conexão que ninguém escolheu fica só na janela"
     assert all("via Minha &lt;extensão&gt;" in x for x in linhas), "sem o «via», ou sem escapar"
     assert 'data-dica="Sem resposta"' in html, "o motivo fica na dica, nunca no texto"
     assert "c-laranja" in html and "vermelh" not in html and "c-red" not in html

@@ -1258,7 +1258,8 @@ def html_do_agora_das_extensoes(lidos: list[tuple[str, dict[str, Any]]]) -> str:
     O desenho de cada peça (o ícone do transporte, a pílula do estado, a pilha) é o da coluna
     «Agora» da janela da extensão (`desenho_da_experimental`), para as duas telas não discordarem.
     A linha mora na moldura dos controles, como a do externo, e não é assento: não tem rádio de
-    alvo nem corpo que abre. ``""`` sem nenhuma.
+    alvo nem corpo que abre. A conexão desligada (a que ninguém escolheu) fica só na janela da
+    extensão. ``""`` sem nenhuma.
     """
     from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
 
@@ -1267,6 +1268,8 @@ def html_do_agora_das_extensoes(lidos: list[tuple[str, dict[str, Any]]]) -> str:
         via = f'<span class="ext-via">via {html.escape(nome)}</span>'
         for c in exp.itens_do_estado(estado, "conexoes"):  # (noqa-acento): a chave do estado
             est = str(c.get("estado") or "ligado")
+            if est == "desligado":
+                continue
             motivo = c.get("motivo")
             dica = (f' data-dica="{html.escape(motivo, quote=True)}"'
                     if isinstance(motivo, str) and motivo else "")
