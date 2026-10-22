@@ -22,7 +22,7 @@ MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
 
 _OPCAO = re.compile(r'<option value="(?P<valor>[^"]*)"[^>]*>(?P<texto>[^<]*)</option>')
 _SELECT = re.compile(
-    r'<select[^>]*class="(?P<classe>modo|pronto|g2-acion)"[^>]*>(?P<dentro>.*?)</select>',
+    r'<select[^>]*class="(?P<classe>modo|pronto|g2-acion|g2-imersao)"[^>]*>(?P<dentro>.*?)</select>',
     re.S)
 
 
@@ -72,85 +72,82 @@ def _bancada() -> str:
 
 
 def _selects(doc: str, classe: str) -> list[str]:
-    """As listas da classe; o campo de acionamento do todo (`g2-acion`) é o `modo` de sempre."""
-    return [m.group("dentro") for m in _SELECT.finditer(doc)
-            if m.group("classe") == classe
-            or (classe == "modo" and m.group("classe") == "g2-acion")]
+    return [m.group("dentro") for m in _SELECT.finditer(doc) if m.group("classe") == classe]
 
 
 def _oferecidos(a03, presets):
-    """Os modos que a lista oferece: o «Montar do zero» (`Custom`) não é um."""
+    """Os modos que o perfil antigo pode trazer: o «Montar do zero» (`Custom`) não é um."""
     return [p for p in presets if p.name != "Custom"]
 
 
+def _opcao_do_perfil(a03, nome: str) -> str:
+    """A lista do efeito do gatilho para um perfil que só tem o acionamento `nome`."""
+    return a03.html_das_opcoes_de_imersao("", "", f"{a03.PREFIXO_DO_ACIONAMENTO}{nome}")
+
+
 def test_o_rotulo_de_cada_modo_no_pacote_e_o_do_produto(a03, presets):
-    """O que o produto pinta nos oito campos traz o `label` do `PRESETS`.
+    """22/10/2026: a lista de acionamento saiu; o rótulo do produto mora na opção «Do perfil».
 
-    Esta é a metade que chega à tela do usuário hoje, sem esperar publicação: o pacote
-    monta a lista a cada tique, então a página publicada pode continuar com a
-    cópia velha que a palavra na tela já é a certa.
+    Um perfil antigo só com acionamento abre com ele escolhido, e o texto da opção é o rótulo
+    do produto (`_rotulo_do_modo`), nunca o que o desenho digitou.
 
-    A MORDIDA: em `html_das_opcoes_de_modo`, devolva `_opcoes_cravadas_do_modo()`
-    sem passar pelo `rotular` — isto é, deixe a página mandar no rótulo. Medido:
-    **2 testes reprovam** (este e o do DOM abaixo), nomeando `Bow` e `Weapon`.
+    A MORDIDA: em `html_das_opcoes_de_imersao`, escreva a chave crua (`modo_`) no lugar de
+    `_rotulo_do_modo(modo_)`. Medido: este teste nomeia `Bow` e `Weapon`.
     """
-    opcoes = dict(_OPCAO.findall(a03.html_das_opcoes_de_modo()))
-    erradas = [(p.name, opcoes[p.name], _o_da_tela(p)) for p in presets
-               if p.name in opcoes and opcoes[p.name] != _o_da_tela(p)]
+    erradas = []
+    for p in _oferecidos(a03, presets):
+        opcoes = dict(_OPCAO.findall(_opcao_do_perfil(a03, p.name)))
+        valor = f"{a03.PREFIXO_DO_ACIONAMENTO}{p.name}"
+        if opcoes.get(valor) != _o_da_tela(p):
+            erradas.append((p.name, opcoes.get(valor), _o_da_tela(p)))
     assert not erradas, (
         "o pacote pinta um rótulo que não é o do produto:\n  "
         + "\n  ".join(f"{n}: tela={t!r} produto={e!r}" for n, t, e in erradas))
 
 
 def test_todo_modo_do_produto_tem_opcao_no_pacote(a03, presets):
-    """Nenhum dos 19 pode faltar — um modo sem opção é um modo inalcançável."""
-    tem = {v for v, _ in _OPCAO.findall(a03.html_das_opcoes_de_modo())}
-    faltam = sorted({p.name for p in _oferecidos(a03, presets)} - tem)
-    assert not faltam, f"modos do produto sem opção no campo: {faltam}"
+    """Nenhum acionamento do perfil antigo fica sem opção: sem ela o campo abriria vazio."""
+    sem = [p.name for p in _oferecidos(a03, presets)
+           if f'value="{a03.PREFIXO_DO_ACIONAMENTO}{p.name}"' not in _opcao_do_perfil(a03, p.name)]
+    assert not sem, f"acionamentos do produto sem opção no campo: {sem}"
 
 
-def test_o_rotulo_de_cada_modo_na_bancada_e_o_do_produto(presets):
-    """E o DESENHO também parou de digitar — senão sobrariam duas verdades."""
-    do_produto = {p.name: _o_da_tela(p) for p in presets}
-    erradas: list[str] = []
-    listas = _selects(_bancada(), "modo")
-    assert len(listas) == 8, f"a bancada tem {len(listas)} listas de modo, e são oito"
-    for i, dentro in enumerate(listas):
-        for valor, texto in _OPCAO.findall(dentro):
-            if valor in do_produto and texto != do_produto[valor]:
-                erradas.append(
-                    f"select #{i} · {valor}: desenho={texto!r} "
-                    f"produto={do_produto[valor]!r}")
-    assert not erradas, (
-        "o desenho digita um rótulo que o produto já nomeia:\n  "
-        + "\n  ".join(erradas))
+def test_o_desenho_nao_tem_mais_a_lista_de_acionamento():
+    """A bancada não digita rótulo de modo: o campo que os carregava saiu do desenho."""
+    doc = _bancada()
+    assert not _selects(doc, "modo") and not _selects(doc, "g2-acion")
+    assert "g2-acion" not in doc.split("</style>", 1)[-1]
+    assert len(_selects(doc, "g2-imersao")) == 8
+    assert "Do perfil" not in doc, "o grupo «Do perfil» é do pacote, só quando o gatilho está assim"
 
 
-def test_a_lista_de_modo_e_emitida_para_os_oito_campos(a03):
-    """Um dono, oito lugares: `blocos` leva a lista a cada `select.modo`."""
+def test_a_lista_do_efeito_e_emitida_para_os_oito_campos(a03):
+    """Um dono, oito lugares: `blocos` leva a lista a cada `select.g2-imersao`."""
     from pacotes import Contexto
 
     _PERFIL_DA_CENA.clear()
     _PERFIL_DA_CENA.update({
-        "triggers": {"left": {"mode": "Off", "params": []},
+        "triggers": {"left": {"mode": "Bow", "params": [1, 2, 3, 4]},
                      "right": {"mode": "Off", "params": []}},
         "controllers": {},
     })
     ctx = Contexto(state={"active_profile": "régua"}, mesa=MESA,
                    conectados=[FALSO], estados={})
     blocos = a03.pacote(ctx)["blocos"]
-    esperados = {f'[data-controle="p{n}"] select.g2-acion[data-lado="{s}"]'
+    esperados = {f'[data-controle="p{n}"] select.g2-imersao[data-lado="{s}"]'
                  for n in (1, 2, 3, 4) for s in ("e", "d")}
     faltam = sorted(esperados - set(blocos))
-    assert not faltam, f"campos de modo que o produto não pinta: {faltam}"
-    for sel in esperados:
-        assert 'value="Bow"' in blocos[sel], (
-            f"{sel} recebeu um bloco que não é a lista de modos")
+    assert not faltam, f"campos de efeito que o produto não pinta: {faltam}"
+    esquerdo = blocos['[data-controle="p1"] select.g2-imersao[data-lado="e"]']
+    assert f'value="{a03.PREFIXO_DO_ACIONAMENTO}Bow"' in esquerdo, (
+        "o perfil antigo só com acionamento tem de abrir com a opção certa")
+    direito = blocos['[data-controle="p1"] select.g2-imersao[data-lado="d"]']
+    assert a03.PREFIXO_DO_ACIONAMENTO not in direito, "o `Off` é «Sem efeito», não um acionamento"
 
 
-def test_a_lista_de_modo_sai_como_o_dom_a_escreve(a03):
+def test_a_lista_do_efeito_sai_como_o_dom_a_escreve(a03):
     """Nem `selected`, nem `disabled` cru — senão o piloto repinta para sempre."""
-    html = a03.html_das_opcoes_de_modo()
+    html = a03.html_das_opcoes_de_imersao()
     assert " selected" not in html, (
         "o bloco emitido carrega a escolha do desenho para a mesa dela")
     assert re.search(r"\sdisabled(?=[\s>])", html) is None, (
@@ -162,20 +159,15 @@ def test_a_lista_de_modo_sai_como_o_dom_a_escreve(a03):
 
 
 def test_o_title_de_cada_modo_continua_sendo_o_desta_tela(a03, presets):
-    """A cura do rótulo não pode levar junto a frase que o usuário aprovou.
+    """A frase aprovada do modo vive no `title` da opção «Do perfil», e não é a do motor.
 
-    A dica desta tela é mais concreta que a do motor ("Trava dura do começo ao
-    fim do curso. Serve para freio de carro e para arma travada." contra
-    "Barreira rígida numa posição fixa."), e trocá-la para fechar a dívida do
-    rótulo seria pagar uma dívida abrindo outra.
-
-    A MORDIDA: faça `html_das_opcoes_de_modo` remontar a opção inteira em vez de
-    trocar só o nó de texto. Medido: **1 teste reprova**, dizendo que os 19
-    `title` sumiram.
+    A MORDIDA: faça a opção «Do perfil» sem `title`. Medido: este teste reprova nomeando os
+    modos que perderam a dica.
     """
-    html = a03.html_das_opcoes_de_modo()
+    prefixo = a03.PREFIXO_DO_ACIONAMENTO
     sem_dica = [p.name for p in _oferecidos(a03, presets)
-                if not re.search(rf'value="{p.name}"[^>]*\stitle="[^"]+"', html)]
+                if not re.search(rf'value="{prefixo}{p.name}"[^>]*\stitle="[^"]+"',
+                                 _opcao_do_perfil(a03, p.name))]
     assert not sem_dica, f"modos que perderam a dica desta tela: {sem_dica}"
 
 

@@ -6,8 +6,8 @@ Decisões que esta prova segura (as cinco do registro de 20/10, `docs/data/decis
   como texto embaixo do campo;
 * D-2010-O-EFEITO-DO-GATILHO-SE-AGRUPA-POR-FAMILIA: a lista do 03 abre em `optgroup` por família e
   a família é a etiqueta à esquerda da caixa;
-* D-2010-OS-ACIONAMENTOS-FICAM-ATRAS-DO-AVANCADO: «Como o gatilho faz» só aparece com a chave
-  «Avançado» ligada, e a chave nasce desligada;
+* D-2010-OS-ACIONAMENTOS-FICAM-ATRAS-DO-AVANCADO: REVOGADA em 22/10/2026 (o gatilho só tem o
+  efeito): nem «Como o gatilho faz» nem a chave «Avançado» existem mais, e a régua cobra a ausência;
 * D-2010-O-EFEITO-IMERSAO-VIRA-PADRAO-DOS-MOTORES: o 05 chama de «Padrão dos motores», sem «Só o
   jogo», e a háptica ganha Eco, Grão e Motor de época;
 * D-2010-A-PERFIS-NAO-GANHA-A-RECEITA-DO-ESTILO: a aba 10 não muda (nenhuma das três abas desta
@@ -17,14 +17,14 @@ MORDIDAS (executadas sobre uma cópia, e cada uma reprova a régua que a guarda)
 
 * devolver a frase como texto embaixo do select da 03 (`<span class="g2-frase">`) ->
   `test_a_03_nao_escreve_a_frase_embaixo_da_caixa`;
-* tirar a guarda do «Avançado» (`.g2-av{display:none !important}`) ->
-  `test_o_avancado_guarda_os_acionamentos_e_lembra_na_sessao`;
+* devolver a chave «Avançado» ou a linha «Como o gatilho faz» ao desenho ->
+  `test_o_gatilho_so_tem_o_efeito_e_nao_ha_chave_avancado` (e `test_o_gatilho_so_tem_o_efeito.py`);
 * trocar a chave de um efeito (`golpe-leve` por `golpe-fraco`) ->
   `test_as_chaves_dos_efeitos_nao_mudam`;
-* trocar a chave de um acionamento no desenho (`Weapon` por `Arma`) com a publicada igual a ele
-  (o estado depois do `--publicar`) -> `test_o_avancado_nasce_desligado_e_tem_as_mesmas_chaves`;
-* um `min-height` que estoure a altura da 03 com o Avançado ligado, mesmo com a publicada
-  igual ao desenho -> `test_nenhuma_das_tres_abas_rola_na_vertical`.
+* trocar a chave de um acionamento do produto (`Weapon` por `Arma`) ->
+  `test_as_chaves_dos_acionamentos_nao_mudam`;
+* um `min-height` que estoure a altura da 03, mesmo com a publicada igual ao desenho ->
+  `test_nenhuma_das_tres_abas_rola_na_vertical`.
 """
 
 from __future__ import annotations
@@ -108,7 +108,7 @@ def _valores(select: str) -> list[str]:
 
 
 # ---------------------------------------------------------------------------------------------
-# 03 — a família, a frase na dica e o avançado
+# 03 — a família e a frase na dica
 # ---------------------------------------------------------------------------------------------
 
 def _problemas_da_lista_do_03(doc: str) -> list[str]:
@@ -128,8 +128,9 @@ def _problemas_da_lista_do_03(doc: str) -> list[str]:
                 falta.append(f"«{t}» não começa por maiúscula")
             if " · " in t:
                 falta.append(f"«{t}» repete a família, que já é o grupo")
-    sem_dica = re.findall(r'<option value="(?!—|meu:)[^"]*"(?![^>]*title=)[^>]*>([^<]*)<',
-                          efeitos[0])
+    dos_seus = r"(?!—|meu:|meu-acionamento:)"
+    sem_dica = re.findall(
+        r'<option value="' + dos_seus + r'[^"]*"(?![^>]*title=)[^>]*>([^<]*)<', efeitos[0])
     if sem_dica:
         falta.append(f"opções sem a frase na dica: {sem_dica[:3]}")
     etiquetas = re.findall(r'<i class="g2-fam"[^>]*data-campo="familia-imersao-[ed]"', doc)
@@ -185,10 +186,6 @@ def test_o_pacote_monta_a_lista_em_grupos_com_a_frase_no_title() -> None:
     assert esperadas <= chaves
 
 
-_ACIONAMENTOS_VISIVEIS = """() => [...document.querySelectorAll('.g2-av')]
-  .filter(e => getComputedStyle(e).display !== 'none' && e.clientHeight > 0).length"""
-
-
 @pytest.fixture(scope="module")
 def navegador() -> Iterator[Browser]:
     if not CHROME.exists():
@@ -201,60 +198,21 @@ def navegador() -> Iterator[Browser]:
         nav.close()
 
 
-def _o_avancado(navegador: Browser, arquivo: pathlib.Path) -> tuple[int, int, bool]:
-    """(visíveis fechado, visíveis aberto, aberto de novo após recarregar na mesma sessão)."""
-    pg = navegador.new_page(viewport={"width": 1212, "height": 809})
-    try:
-        pg.goto(arquivo.as_uri())
-        pg.wait_for_load_state("networkidle")
-        fechado = int(pg.evaluate(_ACIONAMENTOS_VISIVEIS))
-        pg.click(".g2-avtog")
-        aberto = int(pg.evaluate(_ACIONAMENTOS_VISIVEIS))
-        pg.reload()
-        pg.wait_for_load_state("networkidle")
-        lembrou = bool(pg.evaluate("document.querySelector('.g2-avtog input').checked"))
-        return fechado, aberto, lembrou
-    finally:
-        pg.close()
-
-
-def test_o_avancado_nasce_desligado_e_tem_as_mesmas_chaves() -> None:
+def test_o_gatilho_so_tem_o_efeito_e_nao_ha_chave_avancado() -> None:
+    """22/10/2026: sem «Avançado», sem «Como o gatilho faz» e sem a lista de acionamento."""
     doc = _doc("03-gatilhos")
-    topo = doc[doc.index('class="quadro-topo"'):]
-    topo = topo[:topo.index('class="quadro-corpo"')]
-    assert 'class="g2-avtog"' in topo
-    assert 'modo-auto g2-avtog' not in topo, (
-        "a chave local não leva a classe do Modo automático: o piloto a leria como gesto")
-    assert topo.index("g2-avtog") < topo.index('data-gesto="modo-dos-gatilhos"')
-    assert "checked" not in re.search(r'<input type="checkbox"[^>]*>', topo).group(0)  # type: ignore[union-attr]
-    acions = _selects(doc, "g2-acion")
-    assert len(acions) == 8
-    publicado = (PUBLICADO / "03-gatilhos.html").read_text(encoding="utf-8")
-    for s, velho in zip(acions, _selects(publicado, "g2-acion"), strict=True):
-        assert 'data-gesto="modo"' in s
-        assert _valores(s) == _valores(velho), "as chaves dos acionamentos mudaram"
-        cravadas = [v for v in _valores(s) if v != "—" and not v.startswith(PREFIXO_DO_MEU)]
-        assert tuple(cravadas) == CHAVES_DOS_ACIONAMENTOS, cravadas
-    assert doc.count('class="g2-cel g2-av') == 8 and doc.count('class="g2-rot g2-av"') == 2
+    visivel = _sem_estilo(doc)
+    assert "g2-avtog" not in doc and "g2-acion" not in doc and "g2-av" not in doc
+    assert "hef-gatilhos-avancado" not in doc and "Avançado" not in visivel
+    assert "Como o gatilho faz" not in visivel and 'data-gesto="modo"' not in visivel
+    assert len(_selects(doc, "g2-imersao")) == 8
 
 
-def test_o_avancado_guarda_os_acionamentos_e_lembra_na_sessao(navegador: Browser,
-                                                              tmp_path: pathlib.Path) -> None:
-    # D-2010-OS-ACIONAMENTOS-FICAM-ATRAS-DO-AVANCADO
-    """Fechado esconde as linhas «Como o gatilho faz»; ligado as mostra e a sessão lembra.
+def test_as_chaves_dos_acionamentos_nao_mudam() -> None:
+    """O perfil guarda a chave do acionamento; a tela já não o lista, mas o produto o conhece."""
+    from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS
 
-    MORDIDA: tirar a guarda `.g2-av{display:none !important}` deixa as linhas à mostra com a
-    chave desligada, e a régua reprova.
-    """
-    fechado, aberto, lembrou = _o_avancado(navegador, MOCKUP / "03-gatilhos.html")
-    assert fechado == 0, "com o Avançado desligado nada de «Como o gatilho faz» à mostra"
-    assert aberto >= 4 and lembrou
-    doc = _doc("03-gatilhos")
-    mordido = doc.replace(".g2-av{display:none !important}", "", 1)
-    assert mordido != doc
-    arquivo = tmp_path / "03-mordido.html"
-    arquivo.write_text(mordido, encoding="utf-8")
-    assert _o_avancado(navegador, arquivo)[0] > 0
+    assert tuple(p.name for p in PRESETS if p.name != "Custom") == CHAVES_DOS_ACIONAMENTOS
 
 
 # ---------------------------------------------------------------------------------------------
@@ -358,15 +316,11 @@ _ROLADORES = """() => { const d = document.documentElement;
           sobra: d.scrollHeight - d.clientHeight}; }"""
 
 
-def _medir(navegador: Browser, arquivo: pathlib.Path, larg: int, alt: int,
-           antes: str = "") -> dict[str, Any]:
+def _medir(navegador: Browser, arquivo: pathlib.Path, larg: int, alt: int) -> dict[str, Any]:
     pg = navegador.new_page(viewport={"width": larg, "height": alt})
     try:
         pg.goto(arquivo.as_uri())
         pg.wait_for_load_state("networkidle")
-        if antes:
-            pg.evaluate(antes)
-            pg.wait_for_timeout(150)
         medida: dict[str, Any] = pg.evaluate(_ROLADORES)
         return medida
     finally:
@@ -377,7 +331,7 @@ def _medir(navegador: Browser, arquivo: pathlib.Path, larg: int, alt: int,
 @pytest.mark.parametrize("nome", ("03-gatilhos", "04-iluminacao", "05-vibracao"))
 def test_nenhuma_das_tres_abas_rola_na_vertical(navegador: Browser, nome: str, larg: int,
                                                 alt: int) -> None:
-    """Nada rola além do que a página publicada de hoje já rolava, nem com o Avançado ligado."""
+    """Nada rola além do que a página publicada de hoje já rolava."""
     base = _medir(navegador, PUBLICADO / f"{nome}.html", larg, alt)
     cena = _medir(navegador, MOCKUP / f"{nome}.html", larg, alt)
     novos = [r for r in cena["rol"] if r not in base["rol"]]
@@ -385,10 +339,3 @@ def test_nenhuma_das_tres_abas_rola_na_vertical(navegador: Browser, nome: str, l
     assert cena["sobra"] <= base["sobra"], (nome, larg, alt, cena["sobra"], base["sobra"])
     if nome in SEM_SOBRA:  # a publicada vira o desenho no fecho: o zero não depende dela
         assert cena["sobra"] == 0 and not cena["rol"], (nome, larg, alt, cena)
-    if nome.startswith("03-"):
-        aberto = _medir(navegador, MOCKUP / f"{nome}.html", larg, alt,
-                        'document.querySelector(".g2-avtog input").click()')
-        novos = [r for r in aberto["rol"] if r not in base["rol"]]
-        assert not novos and not aberto["lateral"], (nome, "avançado ligado", larg, alt, novos)
-        assert aberto["sobra"] <= base["sobra"], (nome, "avançado ligado", larg, alt)
-        assert aberto["sobra"] == 0, (nome, "avançado ligado", larg, alt, aberto["sobra"])

@@ -146,11 +146,11 @@ def a03():
 
 def test_o_desenho_traz_as_palavras_da_decisao_e_nenhuma_das_que_sairam() -> None:
     doc = _o_que_se_le()
-    for dito in ("Como o gatilho faz", "Efeito do gatilho", "Avançado", "Criar efeitos novos",
-                 "Sentir", "Estilo de jogo", "Controle"):
+    for dito in ("Efeito do gatilho", "Criar efeitos novos", "Sentir", "Estilo de jogo",
+                 "Controle"):
         assert dito in doc, f"o desenho perdeu «{dito}»"
-    for fora in ("Guardar", "Em todos", "Efeito pronto", "Reenviar",
-                 'class="ajuda', 'class="ajustes'):
+    for fora in ("Guardar", "Em todos", "Efeito pronto", "Reenviar", "Como o gatilho faz",
+                 "Avançado", 'class="ajuda', 'class="ajustes'):
         assert fora not in doc, f"o desenho trouxe de volta «{fora}»"
     assert 'data-gesto="guardar' not in doc and 'data-gesto="em-todos' not in doc
     assert doc.count('class="g2-barra"') == 4, "são quatro barras para criar o efeito"
@@ -168,24 +168,22 @@ def test_o_criar_e_o_sentir_apontam_para_o_quadro_que_eles_leem() -> None:
         assert botao and 'data-hef-forma="criar-gatilhos"' in botao.group(0), (gesto, botao)
 
 
-def test_cada_celula_conectada_tem_o_acionamento_e_a_imersao_e_a_vazia_nao() -> None:
+def test_cada_celula_conectada_tem_o_efeito_e_a_vazia_nao() -> None:
+    """22/10/2026: o gatilho só tem o efeito, uma célula por lugar e por gatilho."""
     doc = _desenho()
-    celulas = re.split(r'<div class="g2-cel(?: g2-av)?(?: off)?"', doc)[1:]
-    assert len(celulas) == 16, f"são 4 lugares x 2 gatilhos x 2 campos: {len(celulas)} células"
+    celulas = re.split(r'<div class="g2-cel(?: off)?"', doc)[1:]
+    assert len(celulas) == 8, f"são 4 lugares x 2 gatilhos x 1 campo: {len(celulas)} células"
     for c in celulas:
         vazia = 'data-conectado="nao"' in c.split(">", 1)[0]
-        assert "g2-acion" in c or "g2-imersao" in c, c[:200]
-        if "g2-acion" in c:
-            assert 'data-gesto="modo"' in c, c[:200]
-        if "g2-imersao" in c:
-            assert 'data-gesto="imersao"' in c, c[:200]
+        assert "g2-imersao" in c and 'data-gesto="imersao"' in c, c[:200]
+        assert "g2-acion" not in c and 'data-gesto="modo"' not in c, c[:200]
         assert ('<option value="—" selected' in c) == vazia, (
             "o lugar sem controle mostra o travessão e o conectado, não: " + c[:160])
-    assert doc.count('data-gesto="imersao"') == 8 and doc.count('data-gesto="modo"') == 8
+    assert doc.count('data-gesto="imersao"') == 8 and doc.count('data-gesto="modo"') == 0
 
 
 def test_a_lista_do_efeito_oferece_todas_em_grupos_por_familia_e_o_sem_efeito(a03) -> None:
-    """20/10/2026: a lista é uma só, não depende do acionamento; o acionamento fica no Avançado."""
+    """A lista é uma só e não depende do acionamento: ele vem dentro de cada efeito (22/10/2026)."""
     html = a03.html_das_opcoes_de_imersao()
     chaves = re.findall(r'<option value="([^"]+)"', html)
     delas = {c for c in chaves if c in imersao.POR_CHAVE}
@@ -208,25 +206,34 @@ def test_a_imersao_se_reconhece_pelos_numeros_e_o_que_ninguem_conhece_fica_em_br
         "números próprios do perfil: dizer «Nenhum» seria mentir")
 
 
-def test_o_efeito_criado_entra_na_lista_certa_e_so_nela(a03) -> None:
-    forma = {"tipo": "acionamento", "partir": "Rigid", "nome": "Freio da régua",
+def test_o_efeito_criado_e_da_imersao_e_entra_na_lista_unica_em_seus_efeitos(a03) -> None:
+    """22/10/2026: sem tipo a escolher; tudo o que ela cria é um efeito do gatilho, em «Seus»."""
+    forma = {"partir": "Rigid", "nome": "Recuo da régua",
              "inicio": "3", "fim": "9", "forca": "5", "freq": "40"}
     a03.criar_efeito_dos_gatilhos(None, {"forma": forma}, None)
-    assert "meu:Freio da régua" in a03.html_das_opcoes_de_modo("left")
-    assert "Freio da régua" not in a03.html_das_opcoes_de_imersao()
-    forma = {**forma, "tipo": "imersao", "nome": "Recuo da régua"}
-    a03.criar_efeito_dos_gatilhos(None, {"forma": forma}, None)
-    assert "meu:Recuo da régua" in a03.html_das_opcoes_de_imersao()
-    assert "Recuo da régua" not in a03.html_das_opcoes_de_modo("left")
+    assert a03.meus_efeitos() == {}, "nada novo vai para a biblioteca dos gatilhos"
+    for lado in ("left", "right"):
+        html = a03.html_das_opcoes_de_imersao("", lado)
+        assert re.search(r'<optgroup label="Seus efeitos">.*meu:Recuo da régua', html), html
     assert "Recuo da régua" in a03.html_dos_seus_efeitos()
+
+
+def test_o_acionamento_que_ela_guardou_antes_continua_na_lista_em_seus_efeitos(a03) -> None:
+    """Nada some do disco: o acionamento guardado mora no grupo «Seus», do lado dele."""
+    from pacotes import meus_efeitos as _me
+
+    _me.guardar_meus_efeitos({"Freio da régua": {"left": {"mode": "Rigid", "params": [3, 200]}}},
+                             "gatilhos")
+    valor = f"{a03.PREFIXO_DO_SEU_ACIONAMENTO}Freio da régua"
+    assert valor in a03.html_das_opcoes_de_imersao("", "left")
+    assert valor not in a03.html_das_opcoes_de_imersao("", "right"), "ele só tem a metade esquerda"
     assert "Freio da régua" in a03.html_dos_seus_efeitos()
 
 
 @pytest.mark.parametrize("forma,frase", [
-    ({"tipo": "acionamento", "partir": "Rigid", "nome": ""}, "Dê um nome"),
-    ({"tipo": "acionamento", "partir": "", "nome": "x"}, "partir"),
-    ({"tipo": "", "partir": "Rigid", "nome": "x"}, "acionamento ou de imersão"),
-    ({"tipo": "imersao", "partir": "Rigid", "nome": "n" * 200}, "no máximo"),
+    ({"partir": "Rigid", "nome": ""}, "Dê um nome"),
+    ({"partir": "", "nome": "x"}, "partir"),
+    ({"partir": "Rigid", "nome": "n" * 200}, "no máximo"),
 ])
 def test_criar_sem_o_que_falta_recusa_dizendo_e_nao_guarda(a03, forma, frase) -> None:
     with pytest.raises(RuntimeError, match=frase):
@@ -260,20 +267,20 @@ def _ctx() -> Any:
 def test_escolher_a_imersao_manda_ao_controle_os_numeros_dela(a03, monkeypatch) -> None:
     uma = imersao.POR_CHAVE["rajada-que-sobe-sozinha"]
     ponte = _Ponte()
-    o = {"uniq": UNIQ, "lado": "d", "valor": uma.chave,
-         "forma": {"modo-chave-d": "Machine"}}
+    o = {"uniq": UNIQ, "lado": "d", "valor": uma.chave}
     a03.imersao_escolhida(_ctx(), o, ponte)
     (nome, args), = ponte.chamadas
     assert nome == "set" and "Machine" in args
     assert list(args[2]) == a03._params_da_imersao(uma, "Machine", "")
     ponte2 = _Ponte()
     a03.imersao_escolhida(_ctx(), {**o, "valor": "nenhum"}, ponte2)
-    assert ponte2.chamadas[0][0] == "reset", "«Sem efeito» solta o gatilho, como o Off do avançado"
+    assert ponte2.chamadas[0][0] == "reset", "«Sem efeito» solta o gatilho"
     with pytest.raises(ValueError, match="não é uma imersão"):
         a03.imersao_escolhida(_ctx(), {**o, "valor": "inventada"}, _Ponte())
-    # um efeito de outra família leva o gatilho ao acionamento de nascença dele (20/10/2026)
+    # o gatilho sem perfil está em `Off`, que não é de família nenhuma: o efeito leva o gatilho
+    # ao acionamento de nascença dele
     ponte3 = _Ponte()
-    a03.imersao_escolhida(_ctx(), {**o, "forma": {"modo-chave-d": "Bow"}}, ponte3)
+    a03.imersao_escolhida(_ctx(), o, ponte3)
     assert ponte3.chamadas[0][0] == "set" and "Machine" in ponte3.chamadas[0][1]
 
 
@@ -317,7 +324,6 @@ def test_o_nome_do_controle_tem_a_largura_da_coluna_e_a_tela_nao_rola() -> None:
 
     medir = """() => {
       const chip = [...document.querySelectorAll('.g2-cab')].map(e => e.getBoundingClientRect());
-      const sel = [...document.querySelectorAll('.g2-acion')].map(e => e.getBoundingClientRect());
       const imer = [...document.querySelectorAll('.g2-imersao')]
         .map(e => e.getBoundingClientRect());
       const vazios = [...document.querySelectorAll('.g2-cab[data-conectado="nao"] .chip')]
@@ -325,7 +331,6 @@ def test_o_nome_do_controle_tem_a_largura_da_coluna_e_a_tela_nao_rola() -> None:
                    e.getBoundingClientRect().width]);
       const d = document.documentElement;
       return {chip: chip.map(r => [r.left, r.width]), vazios,
-              acion: sel.map(r => [r.left, r.width]),
               imer: imer.map(r => [r.left, r.width]),
               rola: d.scrollHeight > d.clientHeight + 1,
               lateral: d.scrollWidth > d.clientWidth + 1};
@@ -336,14 +341,13 @@ def test_o_nome_do_controle_tem_a_largura_da_coluna_e_a_tela_nao_rola() -> None:
         pg.goto((RAIZ / "mockup" / PAGINA).as_uri())
         m = pg.evaluate(medir)
         nav.close()
-    assert len(m["chip"]) >= 2 and len(m["acion"]) >= 4
+    assert len(m["chip"]) >= 2 and len(m["imer"]) >= 4
     for i, (esq, larg) in enumerate(m["chip"]):
-        if m["acion"][i][1] == 0:
+        if m["imer"][i][1] == 0:
             continue  # o lugar sem controle não abre campo: só o nome tracejado
-        assert abs(larg - m["acion"][i][1]) < 1.5 and abs(esq - m["acion"][i][0]) < 1.5, (
+        assert abs(larg - m["imer"][i][1]) < 1.5 and abs(esq - m["imer"][i][0]) < 1.5, (
             f"o nome do controle {i} não tem a largura e o lugar da coluna: "
-            f"{(esq, larg)} contra {m['acion'][i]}")
-        assert abs(larg - m["imer"][i][1]) < 1.5, (i, larg, m["imer"][i])
+            f"{(esq, larg)} contra {m['imer'][i]}")
     assert not m["rola"] and not m["lateral"], m
     # o lugar vazio diz que ali cabe um controle, como no desenho do todo
     assert m["vazios"] and all(

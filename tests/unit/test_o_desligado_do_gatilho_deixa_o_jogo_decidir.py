@@ -12,7 +12,7 @@ lado do daemon, que não trava o campo quando ele é `Off`, é do conjunto Micro
 
 AS MORDIDAS:
 
-* devolva o rótulo «Desligado» ao `Off` (`_ROTULO_DA_TELA` do `aba03`) →
+* devolva o rótulo «Desligado» ao «Sem efeito» (`ROTULO_DO_SEM_IMERSAO` do pacote) →
   `test_ha_uma_entrada_de_o_jogo_decide_e_nenhuma_de_desligado` reprova;
 * tire o `hidden` do `—` (`_op_vazio`) → `test_o_travessao_nao_e_uma_linha_da_lista`
   reprova, nos oito campos e na lista que o pacote monta;
@@ -61,7 +61,7 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-_SELECT = re.compile(r'<select[^>]*class="(?:modo|g2-acion)"[^>]*>(?P<dentro>.*?)</select>', re.S)
+_SELECT = re.compile(r'<select[^>]*class="g2-imersao"[^>]*>(?P<dentro>.*?)</select>', re.S)
 _OPCAO = re.compile(r"<option(?P<attrs>[^>]*)>(?P<texto>[^<]*)</option>")
 
 
@@ -76,7 +76,7 @@ def _listas_do_pacote() -> list[str]:
     import pacotes  # noqa: F401  (registra os dez)
     from pacotes import a03_gatilhos
 
-    return [a03_gatilhos.html_das_opcoes_de_modo()]
+    return [a03_gatilhos.html_das_opcoes_de_imersao()]
 
 
 def _visiveis(dentro: str) -> list[str]:
@@ -92,6 +92,7 @@ def test_ha_uma_entrada_de_o_jogo_decide_e_nenhuma_de_desligado(fonte) -> None:
     for dentro in listas:
         vistas = _visiveis(dentro)
         assert vistas.count("Sem efeito") == 1, vistas
+        assert len(vistas) > 10, "a lista do efeito do gatilho veio vazia"
         assert "Desligado" not in vistas, (
             "o «Desligado» voltou à lista: o gatilho tem duas palavras para a mesma coisa")
 
