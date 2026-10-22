@@ -3684,6 +3684,8 @@ class Piloto:
         t_pacote0 = time.perf_counter()
         try:
             pacote = pacotes.pacote_da_pagina(self.pagina, ctx)
+        except pacotes.fios.AindaNaoChegou:
+            return True  # a leitura cara da aba foi ao fundo: um tique seguinte a pinta
         except Exception as e:
             print(f"[{self.pagina}] o pacote levantou: {e}", file=sys.stderr)
             return True
@@ -4647,9 +4649,11 @@ def _o_processo_da_janela() -> Iterator[None]:
     from hefesto_dualsense4unix.profiles import loader
 
     loader.ligar_a_leitura_pela_assinatura()
+    pacotes.fios.ligar_a_janela()
     try:
         yield
     finally:
+        pacotes.fios.ligar_a_janela(False)
         try:
             if _AS_ABAS_CHEGARAM:
                 pacotes.largar_o_que_as_abas_seguram(

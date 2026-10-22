@@ -25,3 +25,30 @@ def soltar(nome: str, alvo: Callable[..., Any], *args: Any) -> threading.Thread:
     fio = threading.Thread(target=alvo, args=args, name=nome, daemon=True)
     fio.start()
     return fio
+
+
+class AindaNaoChegou(BaseException):
+    """A leitura cara saiu para um fio e não voltou: este tique não pinta a aba.
+
+    Quem levanta é o pacote, no fio da janela; quem pega é o `Piloto._tique`, que devolve
+    `True` e deixa a pintura para o tique seguinte. A página fica como estava, que é o que
+    ela já mostrava enquanto a janela esperava a leitura, só que sem congelar.
+
+    Herda de `BaseException` de propósito: os pacotes embrulham a leitura num
+    `except Exception` que pinta «não deu», e a primeira leitura ainda no ar não é falha.
+    """
+
+
+#: Ligado só pelo processo da janela (`hefesto_vivo._o_processo_da_janela`). Desligado, a
+#: primeira leitura cara continua na hora, no fio de quem chama: é o contrato das réguas.
+_NA_JANELA = [False]
+
+
+def ligar_a_janela(ligada: bool = True) -> None:
+    """O processo da janela liga ao subir e desliga ao sair."""
+    _NA_JANELA[0] = ligada
+
+
+def no_fio_da_janela() -> bool:
+    """`True` se quem chama é o fio do GTK do processo da janela, que nunca espera."""
+    return _NA_JANELA[0] and threading.current_thread() is threading.main_thread()

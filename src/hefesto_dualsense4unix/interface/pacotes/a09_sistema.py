@@ -855,7 +855,7 @@ def _faixa_lenta(state: dict[str, Any] | None,
     e `_refresh_storm_diag` submetem tudo a um worker e devolvem por
     `GLib.idle_add`. O que faltava aqui era o mesmo cuidado.
 
-    A PRIMEIRA CONTINUA SÍNCRONA, e as duas razões são de comportamento:
+    A PRIMEIRA CONTINUA SÍNCRONA FORA DA JANELA (`_a_primeira_da_faixa_lenta`), e por duas razões:
 
     * **a primeira pintura tem de ser verdadeira.** Com tudo assíncrono, o
       primeiro tique escreveria travessão em cinco lugares e a tela piscaria de
@@ -872,7 +872,7 @@ def _faixa_lenta(state: dict[str, Any] | None,
     """
     agora = time.monotonic()
     if not _LENTO:
-        _LENTO["valor"] = _ler_a_faixa_lenta(state, pode_perguntar=False, mesa=mesa)
+        _LENTO["valor"] = _a_primeira_da_faixa_lenta(state, mesa)
         _LENTO["quando"] = agora
         return _LENTO["valor"]  # type: ignore[no-any-return]
     if agora - float(_LENTO["quando"]) >= LENTO_S and not _LENTO_EM_VOO[0]:
@@ -956,7 +956,7 @@ def _leituras_baratas() -> tuple[int | None, str | None, bool | None]:
     """`(adaptadores, sessão, proton fixado)`, relidos a cada :data:`LENTO_S`."""
     agora = time.monotonic()
     if not _BARATO or agora - float(_BARATO.get("quando") or 0.0) >= LENTO_S:
-        _BARATO["valor"] = (_adaptadores(), _sessao(), proton_fixado())
+        _BARATO["valor"] = _as_baratas_sem_esperar()
         _BARATO["quando"] = agora
     return _BARATO["valor"]  # type: ignore[no-any-return]
 
@@ -2676,3 +2676,41 @@ PROVAS = [
 SEM_ECO = ("atualizar", "autostart", "perfil-da-mesa", "reiniciar",
            "copiar-registro", CAMPO_DAS_CORRECOES, CAMPO_DO_TAMANHO, "salvar-registro",
            CAMPO_DA_BANDEJA)
+
+
+def _a_primeira_da_faixa_lenta(state: dict[str, Any] | None,
+                               mesa: list[dict[str, Any]] | None) -> tuple[Any, ...]:
+    """A primeira leitura das cinco: na hora fora da janela; no fio da janela, ao fundo.
+
+    Nota de 21/10/2026 (O-FIO-DA-JANELA-NUNCA-ESPERA-01): a primeira faixa lenta eram
+    quatro `systemctl`, uma leitura do diário e o `/proc` e o `/sys` do exame da
+    tempestade no fio do GTK, com a janela parada. No fio da janela ela vai a um fio e o
+    tique levanta :class:`fios.AindaNaoChegou`: nenhum travessão pintado, a primeira
+    pintura continua verdadeira (um tique depois). Fora da janela (as réguas, o
+    `olhar.py`), `_LENTO` vazio continua lendo na hora e esvaziá-lo força a leitura.
+    """
+    if not fios.no_fio_da_janela():
+        return _ler_a_faixa_lenta(state, pode_perguntar=False, mesa=mesa)
+    if not _LENTO_EM_VOO[0]:
+        _LENTO_EM_VOO[0] = True
+        fios.soltar("hefesto-faixa-lenta", _guardar_a_faixa_lenta, state, mesa, _LENTO_SELO[0])
+    raise fios.AindaNaoChegou("a faixa lenta da 09")
+
+
+def _as_baratas_sem_esperar() -> tuple[int | None, str | None, bool | None]:
+    """`(adaptadores, sessão, proton fixado)`: na hora fora da janela; no fio dela, ao fundo.
+
+    As três leem o `/sys/class/bluetooth` e um arquivo do `HOME`: pouco, mas no fio da
+    janela, e o disco disputado é o que faz o pouco virar muito (a faixa lenta, acima).
+    """
+    from . import em_fundo
+
+    def ler() -> tuple[int | None, str | None, bool | None]:
+        return (_adaptadores(), _sessao(), proton_fixado())
+
+    if not fios.no_fio_da_janela():
+        return ler()
+    valor = em_fundo.em_fundo("baratas-da-09", ler, 0.0)
+    if valor is None:
+        raise fios.AindaNaoChegou("as leituras baratas da 09")
+    return valor  # type: ignore[no-any-return]
