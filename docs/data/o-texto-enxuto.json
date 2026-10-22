@@ -5,7 +5,7 @@
       "data": "2026-10-22",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 53680,
+      "piso": 53868,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -65,7 +65,7 @@
         "core/virtual_motion.py": 104,
         "daemon/battery_journal.py": 105,
         "daemon/connection.py": 220,
-        "daemon/ipc_handlers.py": 1251,
+        "daemon/ipc_handlers.py": 1254,
         "daemon/ipc_server.py": 126,
         "daemon/launch_env.py": 550,
         "daemon/lifecycle.py": 1305,
@@ -73,7 +73,7 @@
         "daemon/sensor_hub.py": 227,
         "daemon/servidor_dsu.py": 54,
         "daemon/state_store.py": 67,
-        "daemon/subsystems/__init__.py": 77,
+        "daemon/subsystems/__init__.py": 78,
         "daemon/subsystems/alto_falante.py": 570,
         "daemon/subsystems/base.py": 78,
         "daemon/subsystems/big_picture.py": 41,
@@ -87,8 +87,9 @@
         "daemon/subsystems/governador_do_radio.py": 278,
         "daemon/subsystems/hotkey.py": 670,
         "daemon/subsystems/identity.py": 632,
+        "daemon/subsystems/intensidade_da_cena.py": 54,
         "daemon/subsystems/keyboard.py": 110,
-        "daemon/subsystems/luz_animada.py": 101,
+        "daemon/subsystems/luz_animada.py": 115,
         "daemon/subsystems/luz_do_mic.py": 289,
         "daemon/subsystems/meus_toques.py": 58,
         "daemon/subsystems/mic_da_mesa.py": 90,
@@ -99,7 +100,8 @@
         "daemon/subsystems/quem_mexe.py": 82,
         "daemon/subsystems/recado_do_microfone.py": 137,
         "daemon/subsystems/rumble.py": 200,
-        "daemon/subsystems/tato_vivo.py": 469,
+        "daemon/subsystems/tato_vivo.py": 479,
+        "daemon/subsystems/telemetria_do_jogo.py": 68,
         "daemon/subsystems/vibracao_do_jogo.py": 59,
         "daemon/subsystems/volta_dos_acessorios.py": 41,
         "daemon/udp_server.py": 66,
@@ -247,7 +249,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +58 linhas (53622 -> 53680), pagas por Origem: D-0810-O-GATILHO-TROCA-PELO-RITMO-DO-TIRO, D-0810-O-TATO-VIVO-SO-FALA-ONDE-O-JOGO-CALA, D-1610-AS-LISTAS-DE-EFEITO-POR-CONTROLE-NA-ABA-VIBRACAO, D-2909-RUMBLE-VIRA-HAPTICA, luz.lightbar.efeito; registrado no fecho, topo 98d142ba1f55",
+      "razao": "texto-em-src: +188 linhas (53680 -> 53868), pagas por Origem: D-2210-A-TELEMETRIA-SO-NO-LOCALHOST-E-SO-NA-CORRIDA; registrado no fecho, topo 1ff250cc2cb3",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -362,10 +364,16 @@
           "de": 53622,
           "para": 53680,
           "razao": "texto-em-src: +58 linhas (53622 -> 53680), pagas por Origem: D-0810-O-GATILHO-TROCA-PELO-RITMO-DO-TIRO, D-0810-O-TATO-VIVO-SO-FALA-ONDE-O-JOGO-CALA, D-1610-AS-LISTAS-DE-EFEITO-POR-CONTROLE-NA-ABA-VIBRACAO, D-2909-RUMBLE-VIRA-HAPTICA, luz.lightbar.efeito; registrado no fecho, topo 98d142ba1f55"
+        },
+        {
+          "data": "2026-10-22",
+          "de": 53680,
+          "para": 53868,
+          "razao": "texto-em-src: +188 linhas (53680 -> 53868), pagas por Origem: D-2210-A-TELEMETRIA-SO-NO-LOCALHOST-E-SO-NA-CORRIDA; registrado no fecho, topo 1ff250cc2cb3"
         }
       ],
       "unidade": "linhas",
-      "universo": 398
+      "universo": 401
     }
   }
 }

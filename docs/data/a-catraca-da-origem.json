@@ -245,14 +245,14 @@
       "data": "2026-10-22",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1174126,
+      "piso": 1176782,
       "por_item": {
-        "docs": 120222,
-        "scripts": 119684,
-        "src": 313246,
-        "tests": 620974
+        "docs": 120368,
+        "scripts": 119953,
+        "src": 314510,
+        "tests": 621951
       },
-      "razao": "tamanho: +3079 linhas (1171047 -> 1174126), pagas por Origem: luz.lightbar.efeito; registrado no fecho, topo 30f9b592efba",
+      "razao": "tamanho: +2656 linhas (1174126 -> 1176782), pagas por Origem: D-2210-A-TELEMETRIA-SO-NO-LOCALHOST-E-SO-NA-CORRIDA; registrado no fecho, topo 1ff250cc2cb3",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -745,10 +745,16 @@
           "de": 1171047,
           "para": 1174126,
           "razao": "tamanho: +3079 linhas (1171047 -> 1174126), pagas por Origem: luz.lightbar.efeito; registrado no fecho, topo 30f9b592efba"
+        },
+        {
+          "data": "2026-10-22",
+          "de": 1174126,
+          "para": 1176782,
+          "razao": "tamanho: +2656 linhas (1174126 -> 1176782), pagas por Origem: D-2210-A-TELEMETRIA-SO-NO-LOCALHOST-E-SO-NA-CORRIDA; registrado no fecho, topo 1ff250cc2cb3"
         }
       ],
       "unidade": "linhas",
-      "universo": 3072
+      "universo": 3079
     }
   }
 }

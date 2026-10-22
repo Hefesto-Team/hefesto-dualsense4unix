@@ -223,7 +223,7 @@ fuzz 16 e flat 128; gatilhos `0..255` (`0..1023` no Xbox One); direcional
 `xpad.c:1743`). Um aparelho, um nó, sete eixos.
 
 **A consequência para este projeto, e é ela que custa:** a máscara Xbox 360
-(`045e:028e`, `integrations/uinput_gamepad.py:58-60`) **não tem onde pôr**
+(`045e:028e`, `integrations/uinput_gamepad.py:59-61`) **não tem onde pôr**
 giroscópio, touchpad, lightbar RGB, gatilhos adaptativos ou bateria. Não é bug
 nosso nem falta de trabalho: é o formato do aparelho que estamos imitando.
 Quem escolhe a máscara Xbox escolhe **rumble por evdev que funciona em tudo** e
@@ -330,7 +330,7 @@ Três funções, todas em `libsdl-org/SDL` branch `main`:
 
   ATENÇÃO: **no macOS o critério é `045e:028e` com `version == 0`** — que é
   exatamente o par da máscara Xbox 360 deste projeto
-  (`integrations/uinput_gamepad.py:58-59`). No Linux isso **não** acontece, e
+  (`integrations/uinput_gamepad.py:59-60`). No Linux isso **não** acontece, e
   esta página só se responsabiliza pelo Linux; mas quem um dia portar o projeto
   precisa saber que a colisão existe. **GRAU: ALTA.**
 

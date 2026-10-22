@@ -1427,7 +1427,7 @@ def _pref_do_alvo(ctx: Contexto) -> str:
     """Qual lugar da mesa a saída está mirando — `p1`..`p4`, ou `todos`.
 
     A conversão tem duas ordens: o daemon guarda `output_target_index`, a POSIÇÃO em `controllers`
-    ("0 = primário", `ipc_handlers.py:3192`); o desenho endereça por `pref`, o NÚMERO do jogador
+    ("0 = primário", `ipc_handlers.py:3201`); o desenho endereça por `pref`, o NÚMERO do jogador
     desde 20/09/2026 (`mesa_viva._lugares_da_mesa`). Com o P1 fora, o índice 0 é o P2 e o `pref`
     dele é `p2`; divergem sempre que um lugar fica vazio ou o primário não é o de menor número (a
     armadilha de `_indice`, do lado do gesto); a ponte é o `uniq`.
@@ -1739,7 +1739,7 @@ def _indice(ctx: Contexto, uniq: str) -> int | None:
     """A posição daquele controle em `controllers` — o que o daemon numera.
 
     **Não é o número do jogador.** `controller.target.set` pede `index`, "posição em `controllers`,
-    0 = primário" (`ipc_handlers.py:3192`); `status_actions._controller_target_rows:1579` ORDENA a
+    0 = primário" (`ipc_handlers.py:3201`); `status_actions._controller_target_rows:1579` ORDENA a
     lista pelo número de identidade e CARREGA o `index` da enumeração em cada linha (*"a usuária
     clicaria no chip do 1 e editaria outro controle"*). O `index` vem publicado por entrada (o campo
     de `ipc_handlers._numero_de_exibicao:526`); sem ele, a posição na lista é a mesma conta, e
@@ -2381,7 +2381,7 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 # deduzido: as chaves de topo do `state_full` do daemon vivo são 47, e nenhuma
 # delas é `mapa` nem `maquina`. O caminho é `machine_declare` →
-# `_handle_machine_declare` (`daemon/ipc_handlers.py:4972`) → `maquina.json`, e
+# `_handle_machine_declare` (`daemon/ipc_handlers.py:5011`) → `maquina.json`, e
 
 
 def _gravar_o_mapa(p: Any) -> None:
