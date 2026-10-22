@@ -4,10 +4,9 @@ Quem precisa do VID/PID do DualSense importa daqui e não escreve o literal. Uma
 de hardware com PID novo muda UM arquivo, e `scripts/check_numeros_da_sony.py` conta
 quantas linhas ainda carregam o literal fora deste dono (a catraca só desce).
 
-O Edge físico e o nosso pad virtual compartilham o PID Edge: o `hid_playstation` registra
-o pad forjado como DualSense completo, e quem separa o físico do nosso nunca é o PID: é o
-``HID_PHYS`` do nó, e a pergunta inteira (o uhid e o gadget) tem dono em
-`integrations/pad_usb.e_pad_nosso`.
+O pad virtual veste uma ROUPA (o Edge, o padrão, ou o DualSense de linha) e divide o PID
+com um físico nas duas. Quem separa o físico do nosso nunca é o PID: é a posse (o
+``HID_PHYS`` do uhid, o serial do gadget), com dono em `integrations/pad_usb.e_pad_nosso`.
 """
 
 from __future__ import annotations
@@ -18,20 +17,39 @@ VENDOR_SONY = 0x054C
 #: O DualSense de linha.
 PID_DUALSENSE = 0x0CE6
 
-#: O DualSense Edge físico, e também o PID que o nosso pad virtual declara.
+#: O DualSense Edge físico, e também a roupa padrão do nosso pad virtual.
 PID_DUALSENSE_EDGE = 0x0DF2
 
 #: Os produtos de DualSense físico que o produto reconhece (o Edge entra).
 PIDS_DUALSENSE = frozenset({PID_DUALSENSE, PID_DUALSENSE_EDGE})
 
-#: O PID do pad virtual do Hefesto (a máscara DualSense do uhid).
+#: O PID do pad virtual do Hefesto quando ninguém pede outra roupa (a máscara DualSense do uhid).
 PID_DO_PAD_VIRTUAL = PID_DUALSENSE_EDGE
+
+#: A roupa Edge: o pad se apresenta como DualSense Edge. É a de todo jogo que não pede outra.
+ROUPA_EDGE = PID_DUALSENSE_EDGE
+
+#: A roupa comum: o pad se apresenta como DualSense de linha, para o jogo que só conhece esse.
+ROUPA_COMUM = PID_DUALSENSE
+
+#: As roupas que o pad pode vestir, no uhid e no pad USB. O uinput não veste nenhuma delas.
+ROUPAS_DO_PAD = frozenset({ROUPA_EDGE, ROUPA_COMUM})
+
+#: A roupa de quem não escolheu.
+ROUPA_PADRAO = ROUPA_EDGE
 
 #: O par (VID, PID) do DualSense de linha, como as listas de ignorar do SDL e do Proton pedem.
 PAR_DUALSENSE_FISICO = (VENDOR_SONY, PID_DUALSENSE)
 
 #: O começo do ``HID_PHYS`` que o uhid do pad declara. É a identidade do nosso pad, não o PID.
 HID_PHYS_DO_PAD = "hefesto-vpad"
+
+
+def roupa_normalizada(roupa: object) -> int:
+    """A roupa pedida, se for uma que o pad sabe vestir; qualquer outra coisa veste a padrão."""
+    if isinstance(roupa, int) and not isinstance(roupa, bool) and roupa in ROUPAS_DO_PAD:
+        return roupa
+    return ROUPA_PADRAO
 
 
 __all__ = [
@@ -41,5 +59,10 @@ __all__ = [
     "PID_DO_PAD_VIRTUAL",
     "PID_DUALSENSE",
     "PID_DUALSENSE_EDGE",
+    "ROUPAS_DO_PAD",
+    "ROUPA_COMUM",
+    "ROUPA_EDGE",
+    "ROUPA_PADRAO",
     "VENDOR_SONY",
+    "roupa_normalizada",
 ]

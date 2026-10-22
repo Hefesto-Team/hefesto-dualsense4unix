@@ -56,11 +56,9 @@ def _attach(kernel: KernelDeMentira) -> str:
 
 @pytest.mark.parametrize("produto", [EDGE, COMUM])
 def test_o_broker_escreve_o_par_que_chegou_nos_quatro(
-    kernel: KernelDeMentira, monkeypatch: pytest.MonkeyPatch, produto: int
+    kernel: KernelDeMentira, produto: int
 ) -> None:
-    lista = dict(broker.PAD_USB_VESTIDOS)
-    lista[(SONY, COMUM)] = "DualSense Wireless Controller"
-    monkeypatch.setattr(broker, "PAD_USB_VESTIDOS", lista)
+    lista = broker.PAD_USB_VESTIDOS
     estado = kernel.estado()
     for jogador in JOGADORES:
         resposta, fd = estado.handle_line(
@@ -81,7 +79,7 @@ def test_o_broker_escreve_o_par_que_chegou_nos_quatro(
 
 
 @pytest.mark.parametrize("campos", [
-    {"vendor": SONY, "product": COMUM},
+    {"vendor": SONY, "product": 0x05C4},
     {"vendor": SONY},
     {"product": EDGE},
     {},
@@ -97,9 +95,12 @@ def test_fora_da_lista_nada_nasce(kernel: KernelDeMentira, campos: dict[str, obj
     assert _attach(kernel) == ""
 
 
-def test_a_lista_de_verdade_veste_so_o_edge() -> None:
-    """Fica fora (lista fechada): o ``0ce6`` revogaria o VPAD-04 e pede a regra 73."""
-    assert broker.PAD_USB_VESTIDOS == {(SONY, EDGE): "DualSense Edge Wireless Controller"}
+def test_a_lista_de_verdade_veste_as_duas_roupas() -> None:
+    """Entra o ``0ce6`` (D-2210-O-PAD-PODE-VESTIR-O-DUALSENSE-COMUM): fechada nas duas roupas."""
+    assert broker.PAD_USB_VESTIDOS == {
+        (SONY, EDGE): "DualSense Edge Wireless Controller",
+        (SONY, COMUM): "DualSense Wireless Controller",
+    }
 
 
 # --- 3. O pad manda o PID dele, pela cadeia inteira -----------------------------
@@ -123,6 +124,7 @@ def gravador(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Gravador:
                         lambda _cliente, payload: g.responder(payload))
     monkeypatch.setattr(uhid_gamepad, "PEDIR_O_PAD_USB", uhid_gamepad._pedir_ao_broker)
     monkeypatch.setattr(uhid_gamepad, "CONTRATO_QUE_FALTA", lambda **_kw: [])
+    monkeypatch.setattr(uhid_gamepad, "QUIRK_DO_PAR", lambda _par: False)
     monkeypatch.setattr(uhid_gamepad, "_GADGETS_ESTACIONADOS",
                         uhid_gamepad._GadgetsEstacionados())
     uhid_falso = tmp_path / "uhid-de-mentira"

@@ -24,8 +24,8 @@ RAIZ_PADRAO = Path(__file__).resolve().parents[1]
 #: O dono, relativo à raiz: o único arquivo que pode carregar o literal.
 DONO = "src/hefesto_dualsense4unix/core/numeros_da_sony.py"
 
-#: As linhas com o literal fora do dono, em 13/10/2026 (eram 41 antes de o `launch_env` importar do dono).
-PISO = 40
+#: As linhas com o literal fora do dono, em 22/10/2026 (eram 40 antes de as roupas do pad irem ao dono).
+PISO = 35
 
 LITERAL = re.compile(r"0x054[cC]|0x0[cC][eE]6|0x0[dD][fF]2")
 

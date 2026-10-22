@@ -927,11 +927,14 @@ PAD_USB_DESCRITORES_SHA256 = frozenset(
 )
 #: os pares (VID, PID) que o gadget pode vestir, com o nome USB de cada um. O
 #: par vem do pad (``uhid_gamepad.UhidDualSense.product``) e o broker só confere
-#: a pertença: nunca vira fábrica de aparelho USB para quem fala com ele. Um par
-#: só: o pad nunca é ``0ce6`` (VPAD-04, e a linha do DualSense comum da regra 73
-#: não respeita a marca do pad em USB).
+#: a pertença: nunca vira fábrica de aparelho USB para quem fala com ele. As duas
+#: roupas do pad (``numeros_da_sony.ROUPAS_DO_PAD``): dividir o par com um físico
+#: não o confunde com ele, porque quem separa os dois é a posse (o serial
+#: ``hefesto-pad-`` sob o ``vhci_hcd``, :func:`_e_o_nosso_vpad`), e a regra 73
+#: abre o pad USB pela marca ``HEFESTO_PAD_USB`` nas duas.
 PAD_USB_VESTIDOS: dict[tuple[int, int], str] = {
     (PHYS_VENDOR, VPAD_PRODUCT): "DualSense Edge Wireless Controller",
+    (PHYS_VENDOR, PHYS_PRODUCT): "DualSense Wireless Controller",
 }
 #: ``hefesto-pad-<12 hex>`` ou, com o número do jogador à frente para o jogo os
 #: ver na ordem, ``hefesto-pad-<NN>-<12 hex>`` (``pad_usb.serial_do_pad``).

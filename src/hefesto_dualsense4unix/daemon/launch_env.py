@@ -69,7 +69,12 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
-from hefesto_dualsense4unix.core.numeros_da_sony import PAR_DUALSENSE_FISICO
+from hefesto_dualsense4unix.core.numeros_da_sony import (
+    PAR_DUALSENSE_FISICO,
+    ROUPA_PADRAO,
+    VENDOR_SONY,
+    roupa_normalizada,
+)
 from hefesto_dualsense4unix.integrations import ponte_escada, ponte_tentativa
 from hefesto_dualsense4unix.profiles.steam_app import steam_appid_from_wm_class
 from hefesto_dualsense4unix.utils.leitura_pela_assinatura import (
@@ -175,6 +180,20 @@ _IGNORE_VALUE = valor_ignore_devices(
 )
 
 _DISABLE_HIDRAW_VALUE = valor_disable_hidraw((PAR_DUALSENSE_FISICO,))
+
+
+def _listas_sem_a_roupa(roupa: int) -> tuple[str, str]:
+    """(IGNORE, DISABLE) sem o par que o pad veste (D-2210-O-FISICO-SE-ESCONDE-PELO-DONO).
+
+    O pad que divide o par com o físico sairia escondido junto com ele; o
+    físico, então, fica escondido só pelo broker. Com o Edge, os dois valores
+    são os de hoje, byte a byte.
+    """
+    par_da_roupa = (VENDOR_SONY, roupa_normalizada(roupa))
+    pares = (PAR_DUALSENSE_FISICO, PAR_STEAM_INPUT_VIRTUAL)
+    ignore = [p for p in pares if p != par_da_roupa]
+    disable = [p for p in (PAR_DUALSENSE_FISICO,) if p != par_da_roupa]
+    return valor_ignore_devices(ignore), valor_disable_hidraw(disable)
 
 
 WRAPPER_MARKER_WINDOW_SEC = 900.0
@@ -1030,6 +1049,7 @@ def compose_env(
     flavor: str,
     backends: Sequence[str],
     fisicos: int = 0,
+    roupa: int = ROUPA_PADRAO,
 ) -> dict[str, str]:
     """Envs de launch para UM estado do daemon. Pura e testável.
 
@@ -1053,16 +1073,15 @@ def compose_env(
       que o daemon oferece. Antes disso o `nintendo` caía FORA dos dois `if` e
       saía sem IGNORE nenhum: o jogo veria o DualSense físico E o vpad, e o
       sintoma seria "controle dobrado" com a máscara nova no meio.
-    - DualSense, em uhid ou em uinput: DISABLE do físico + IGNORE — dedup no
-      layout PS. O vpad é o Edge 0df2 no uhid, com hidraw pleno (NUNCA 0x0DF2 no DISABLE);
-      sem o uhid, o Xbox 360 (045e, `MOTIVO_SEM_CANAL_PROPRIO`). O IGNORE do 0ce6 não
-      alcança os dois. NOTA DATADA — PS-L3-MASCARA-01, 14/09/2026, com a história
-      corrigida na conferência do mesmo dia: o uinput ficava de fora por ser
-      tratado como DEGRADAÇÃO (o `all(b == "uhid")` de 03/08, escrito quando o
-      pior caso era mapeamento menos validado), e não por causa do PID. Desde o
-      caminho Xbox (13/09) o uinput é ESCOLHA do usuário, e desde a
-      TROCA-DENTRO-DO-JOGO-01 (14/09) a regra não depende mais de qual canal o
-      vpad pegou: fora do Modo Nativo o jogo vê só o virtual.
+    - DualSense, em uhid ou em uinput: DISABLE do físico + IGNORE — dedup no layout PS,
+      sem o par da `roupa` do pad (`_listas_sem_a_roupa`). Sem o uhid, o pad é o Xbox
+      360 (045e, `MOTIVO_SEM_CANAL_PROPRIO`). NOTA DATADA — PS-L3-MASCARA-01, 14/09, com a
+      história corrigida na conferência do mesmo dia: o uinput ficava de fora por ser
+      tratado como DEGRADAÇÃO (o `all(b == "uhid")` de 03/08, escrito quando o pior caso
+      era mapeamento menos validado), e não por causa do PID. Desde o caminho Xbox
+      (13/09) o uinput é ESCOLHA do usuário, e desde a TROCA-DENTRO-DO-JOGO-01 (14/09) a
+      regra não depende mais de qual canal o vpad pegou: fora do Modo Nativo o jogo vê
+      só o virtual.
     - Emulação desligada ou sem vpad vivo: SÓ o preload de shaders.
 
     O preload (`__GL_SHADER_*`) entra em toda variante: é inócuo e é a parte
@@ -1086,9 +1105,11 @@ def compose_env(
             if tem_cobertura:
                 env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = _IGNORE_VALUE
         elif flavor == "dualsense":
-            env["PROTON_DISABLE_HIDRAW"] = _DISABLE_HIDRAW_VALUE
+            ignore, disable = _listas_sem_a_roupa(roupa)
+            if disable:
+                env["PROTON_DISABLE_HIDRAW"] = disable
             if tem_cobertura:
-                env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = _IGNORE_VALUE
+                env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = ignore
         # PS-L3-MASCARA-01: o DualSense em uinput também esconde o físico.
         if not tem_cobertura:
             logger.info(

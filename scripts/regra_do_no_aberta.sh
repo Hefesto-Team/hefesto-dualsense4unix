@@ -86,8 +86,9 @@ fi
 # 2. O resultado tem as DUAS linhas 0ce6 com `uaccess`? Um asset renomeado ou
 #    um `sed` que casou zero vezes passaria pela guarda 1 calado — e o que sai
 #    seria uma regra que não dá acesso a ninguém, que é o mesmo defeito com
-#    outra roupa.
-_abertas="$(_regras "${_tmp}" | grep -ci '0ce6.*TAG+="uaccess"' || true)"
+#    outra roupa. Contam só as do FÍSICO: a do pad uhid vestido de 0ce6 (o
+#    `DEVPATH` do uhid) nasce aberta no asset e não prova que o `sed` alcançou nada.
+_abertas="$(_regras "${_tmp}" | grep -v 'DEVPATH==' | grep -ci '0ce6.*TAG+="uaccess"' || true)"
 if [[ "${_abertas}" -ne 2 ]]; then
     echo "ERRO: a variante aberta de ${ORIGEM} tem ${_abertas} linha(s) 0ce6 com uaccess; esperadas 2." >&2
     echo "      nada foi escrito em ${DESTINO}." >&2

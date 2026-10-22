@@ -36,6 +36,7 @@ import tempfile
 import threading
 from pathlib import Path
 
+from hefesto_dualsense4unix.core.numeros_da_sony import ROUPAS_DO_PAD
 from hefesto_dualsense4unix.integrations import audio_ks_dualsense as ks
 from tests.unit import pactl_json_de_mentira as pj
 from tests.unit.udev_de_mentira import usec_pela_pasta
@@ -705,15 +706,17 @@ def _toda_variante_do_compose_env() -> list[dict[str, object]]:
             for flavor in ("dualsense", "xbox", "nintendo"):
                 for backends in ([], ["uhid"], ["uinput"], ["uhid", "uinput"]):
                     for fisicos in (0, 1, 2):
-                        variantes.append(
-                            {
-                                "native_mode": native_mode,
-                                "emulation_enabled": emulation_enabled,
-                                "flavor": flavor,
-                                "backends": list(backends),
-                                "fisicos": fisicos,
-                            }
-                        )
+                        for roupa in sorted(ROUPAS_DO_PAD):
+                            variantes.append(
+                                {
+                                    "native_mode": native_mode,
+                                    "emulation_enabled": emulation_enabled,
+                                    "flavor": flavor,
+                                    "backends": list(backends),
+                                    "fisicos": fisicos,
+                                    "roupa": roupa,
+                                }
+                            )
     return variantes
 
 
@@ -722,7 +725,7 @@ def test_as_duas_opcoes_da_haptica_nascem_em_toda_variante() -> None:
     from hefesto_dualsense4unix.daemon.launch_env import compose_env
 
     variantes = _toda_variante_do_compose_env()
-    assert len(variantes) == 144, "a matriz encolheu — alguém mexeu no produto"
+    assert len(variantes) == 288, "a matriz encolheu — alguém mexeu no produto"
     for estado in variantes:
         env = compose_env(**estado)  # type: ignore[arg-type]
         for nome in _LIGADAS_SEMPRE:

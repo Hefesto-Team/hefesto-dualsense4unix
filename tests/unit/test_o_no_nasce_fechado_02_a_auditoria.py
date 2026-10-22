@@ -237,6 +237,7 @@ class TestOsPacotesNaoFechamSemPorta:
             linha
             for linha in linhas
             if "0ce6" in linha.lower() and 'TAG+="uaccess"' in linha
+            and "DEVPATH" not in linha
         ]
         assert len(abertas) == 2, abertas
         assert all('MODE="0660"' in linha for linha in abertas)

@@ -61,6 +61,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING, Any, Literal
 
+from hefesto_dualsense4unix.core.numeros_da_sony import ROUPA_PADRAO, roupa_normalizada
 from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import (
     _uniq_do_pedido,
     bater_a_vibracao,
@@ -970,7 +971,10 @@ def dedup_status(daemon: DaemonProtocol) -> tuple[bool, list[str]]:
     Só leitura de atributos — nunca propaga exceção pro `state_full` (getattr
     defensivo em tudo; daemons dublados de teste não têm coop/store).
     """
-    from hefesto_dualsense4unix.integrations.virtual_pad import motivo_da_degradacao
+    from hefesto_dualsense4unix.integrations.virtual_pad import (
+        a_roupa_mudou,
+        motivo_da_degradacao,
+    )
 
     cfg = getattr(daemon, "config", None)
     enabled = bool(getattr(cfg, "gamepad_emulation_enabled", False))
@@ -988,14 +992,31 @@ def dedup_status(daemon: DaemonProtocol) -> tuple[bool, list[str]]:
     motivo_do_p1 = motivo_da_degradacao(device)
     if motivo_do_p1 is not None:
         motivos.append(motivo_do_p1)
+    efetiva: list[int] = []
+
+    def _sem_o_dono(vpad: Any) -> bool:
+        # D-2210-O-FISICO-SE-ESCONDE-PELO-DONO: o pad vestido de DualSense comum só
+        # conta como coberto com o dono escondendo o físico (`a_roupa_que_o_pad_veste`);
+        # sem isso, `roupa_sem_o_dono` (`jogador_<N>_roupa_sem_o_dono` no co-op)
+        if not a_roupa_mudou(vpad, ROUPA_PADRAO):
+            return False
+        if not efetiva:
+            efetiva.append(a_roupa_que_o_pad_veste(daemon))
+        return a_roupa_mudou(vpad, efetiva[0])
+
+    if _sem_o_dono(device):
+        motivos.append("roupa_sem_o_dono")
     coop = getattr(daemon, "_coop_manager", None)
     players = getattr(coop, "_players", None)
     if isinstance(players, dict):
         for player in players.values():
             vpad = getattr(player, "vpad", None)
-            if vpad is None or motivo_da_degradacao(vpad) is None:
+            if vpad is None:
                 continue
-            motivos.append(f"jogador_{_rotulo_do_jogador(coop, player)}_uinput")
+            if motivo_da_degradacao(vpad) is not None:
+                motivos.append(f"jogador_{_rotulo_do_jogador(coop, player)}_uinput")
+            elif _sem_o_dono(vpad):
+                motivos.append(f"jogador_{_rotulo_do_jogador(coop, player)}_roupa_sem_o_dono")
     return not motivos, motivos
 
 
@@ -1012,6 +1033,109 @@ def controller_allows_uhid(daemon: DaemonProtocol) -> bool:
     este gate é sobre o BACKEND, não sobre o hardware do momento.
     """
     return callable(getattr(daemon.controller, "hidraw_path", None))
+
+
+#: Por quanto tempo vale a resposta do broker à pergunta da roupa: os juízes de
+#: recriação perguntam a cada ciclo, e o ``ping`` é uma ida e volta pelo socket.
+BROKER_ATENDE_VALE_S = 2.0
+
+
+def _o_broker_atende(daemon: Any) -> bool:
+    """O broker esconde o físico agora (`HidrawBrokerClient.is_available`)?"""
+    from hefesto_dualsense4unix.integrations.hidraw_broker_client import broker_client_for
+
+    agora = time.monotonic()
+    visto = getattr(daemon, "_broker_atende_visto", None)
+    if isinstance(visto, tuple) and len(visto) == 2 and agora - visto[0] < BROKER_ATENDE_VALE_S:
+        return bool(visto[1])
+    try:
+        atende = bool(broker_client_for(daemon).is_available())
+    except Exception as exc:  # o broker que não responde não esconde nada
+        logger.debug("roupa_o_broker_nao_respondeu", err=str(exc))
+        atende = False
+    try:
+        daemon._broker_atende_visto = (agora, atende)
+    except (AttributeError, TypeError):
+        logger.debug("roupa_sem_lugar_para_a_resposta_do_broker")
+    return atende
+
+
+def _o_fisico_esta_exposto(daemon: Any) -> bool:
+    """O Modo Nativo deixa o físico aberto ao jogo, e a env é quem o esconde então."""
+    if getattr(daemon, "_native_mode", False) is True:
+        return True
+    pergunta = getattr(daemon, "is_native_mode", None)
+    if not callable(pergunta):
+        return False
+    try:
+        return bool(pergunta())
+    except Exception as exc:  # na dúvida, exposto: o pad veste o Edge
+        logger.debug("roupa_o_modo_nativo_nao_respondeu", err=str(exc))
+        return True
+
+
+def a_roupa_que_o_pad_veste(daemon: Any) -> int:
+    """A roupa que o pad nasce vestindo agora (D-2210-O-FISICO-SE-ESCONDE-PELO-DONO).
+
+    A pedida (`daemon.roupa_do_pad`, padrão o Edge) só vale quando quem esconde
+    o físico é o dono: o broker atendendo e nenhum físico exposto (o Modo Nativo
+    fora). O pad que divide o par com o físico sai da lista da env, e sem o
+    broker o jogo veria os dois; o Edge é a roupa de quem não tem essa garantia
+    (duplicado é melhor que zero controles). A fábrica do P1 e a dos secundários
+    e os juízes de recriação perguntam aqui, a mesma pergunta, e por isso nenhum
+    recria em laço.
+    """
+    pedida = roupa_normalizada(getattr(daemon, "roupa_do_pad", None))
+    if pedida == ROUPA_PADRAO:
+        return pedida
+    if _o_fisico_esta_exposto(daemon) or not _o_broker_atende(daemon):
+        return ROUPA_PADRAO
+    return pedida
+
+
+def vestir_a_roupa(daemon: Any, roupa: object) -> list[str]:
+    """Grava a roupa da sessão e recria, na hora e em sequência, todo pad que veste outra.
+
+    É a porta que o arme do lançamento chama ANTES da trava dele: depois dela,
+    toda recriação que não é gesto do usuário espera o jogo (`_recriacao_bloqueada_por_jogo`),
+    e por isso, com a trava de pé, a troca é recusada sem gravar nada. O P1 se
+    recria pelo mesmo juiz do `start_gamepad_emulation_desfecho` e os secundários
+    pelo do co-op (`CoopManager.vestir_a_roupa`). Devolve quem veste a roupa
+    efetiva ao final: ``"p1"`` e a identidade de cada secundário.
+    """
+    from hefesto_dualsense4unix.integrations.virtual_pad import a_roupa_mudou
+
+    pedida = roupa_normalizada(roupa)
+    if getattr(daemon, "_pad_travado_pelo_lancamento", None) is not None:
+        logger.info("roupa_recusada_pela_trava_do_lancamento", roupa=f"{pedida:04x}")
+        return []
+    anterior = getattr(daemon, "roupa_do_pad", None)
+    daemon.roupa_do_pad = pedida
+    efetiva = a_roupa_que_o_pad_veste(daemon)
+    if anterior != pedida:
+        logger.info("roupa_do_pad", pedida=f"{pedida:04x}", veste=f"{efetiva:04x}")
+    convergiram: list[str] = []
+    cfg = getattr(daemon, "config", None)
+    if not getattr(cfg, "gamepad_emulation_enabled", False):
+        return convergiram
+    vpad = getattr(daemon, "_gamepad_device", None)
+    if vpad is not None and a_roupa_mudou(vpad, efetiva):
+        with getattr(daemon, "_emu_lock", contextlib.nullcontext()):
+            start_gamepad_emulation_desfecho(
+                daemon,
+                None,
+                origin="profile",
+                caminho=caminho_da_sessao(daemon),
+                caminho_e_escolha=False,
+            )
+        vpad = getattr(daemon, "_gamepad_device", None)
+    if vpad is not None and not a_roupa_mudou(vpad, efetiva):
+        convergiram.append("p1")
+    coop = getattr(daemon, "_coop_manager", None)
+    vestir_os_secundarios = getattr(coop, "vestir_a_roupa", None)
+    if callable(vestir_os_secundarios):
+        convergiram.extend(vestir_os_secundarios())
+    return convergiram
 
 
 def _autoridade_do_jogo(daemon: Any) -> bool:
@@ -1648,6 +1772,7 @@ def start_gamepad_emulation_desfecho(
     from hefesto_dualsense4unix.daemon.subsystems.external_mask import mascara_efetiva
     from hefesto_dualsense4unix.integrations.uinput_gamepad import normalize_flavor
     from hefesto_dualsense4unix.integrations.virtual_pad import (
+        a_roupa_mudou,
         caminho_do_vpad,
         caminho_resolvido,
         make_virtual_pad,
@@ -1665,14 +1790,18 @@ def start_gamepad_emulation_desfecho(
     mascara_do_p1 = mascara_efetiva(identity, key)
     caminho_pedido = normalizar_caminho(caminho) or _caminho_a_herdar(daemon)
     uhid_pedido = quer_uhid(caminho_pedido, mascara_do_p1)
+    roupa = a_roupa_que_o_pad_veste(daemon)
 
     existing = daemon._gamepad_device
     if existing is not None:
         # DualSense caía aqui: a máscara efetiva não muda, a função voltava
-        mesmo_canal = (
+        mesmo_aparelho = (
             quer_uhid(caminho_do_vpad(existing), mascara_do_p1) == uhid_pedido
             and not o_aparelho_mudou(existing, caminho_pedido, mascara_do_p1)
         )
+        # o terceiro termo do juiz: a roupa (D-2210-O-PAD-SE-RECONHECE-PELA-POSSE)
+        roupa_mudou = a_roupa_mudou(existing, roupa)
+        mesmo_canal = mesmo_aparelho and not roupa_mudou
         if (
             getattr(existing, "flavor", None) == mascara_do_p1
             and mesmo_canal
@@ -1695,6 +1824,8 @@ def start_gamepad_emulation_desfecho(
             motivo=(
                 f"troca_de_mascara:{getattr(existing, 'flavor', None)}->{mascara_do_p1}"
                 if getattr(existing, "flavor", None) != mascara_do_p1
+                else f"troca_de_roupa:{roupa:04x}"
+                if mesmo_aparelho and roupa_mudou
                 else "troca_de_caminho:"
                 f"{caminho_resolvido(caminho_pedido, mascara_do_p1)}"
             ),
@@ -1728,6 +1859,7 @@ def start_gamepad_emulation_desfecho(
             "allow_uhid": controller_allows_uhid(daemon),
             "calibration_0x05": read_primary_calibration(daemon),
             "caminho": caminho_pedido,
+            "roupa": roupa,
             **make_primary_replica_sinks(daemon),
         },
     )
@@ -1823,6 +1955,7 @@ def reconciliar_as_mascaras(daemon: Any) -> str | None:
         mascara_efetiva,
         vpad_ficou_para_tras,
     )
+    from hefesto_dualsense4unix.integrations.virtual_pad import a_roupa_mudou
 
     cfg = getattr(daemon, "config", None)
     if not getattr(cfg, "gamepad_emulation_enabled", False):
@@ -1837,12 +1970,15 @@ def reconciliar_as_mascaras(daemon: Any) -> str | None:
     p1_para_tras = bool(
         vpad is not None
         and vpad_vivo(vpad)
-        and vpad_ficou_para_tras(
-            getattr(vpad, "flavor", None),
-            identity,
-            flavor_do_jogo,
-            vpad=vpad,
-            caminho=caminho,
+        and (
+            vpad_ficou_para_tras(
+                getattr(vpad, "flavor", None),
+                identity,
+                flavor_do_jogo,
+                vpad=vpad,
+                caminho=caminho,
+            )
+            or a_roupa_mudou(vpad, a_roupa_que_o_pad_veste(daemon))
         )
     )
     coop = getattr(daemon, "_coop_manager", None)

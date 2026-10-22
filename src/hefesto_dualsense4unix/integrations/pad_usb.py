@@ -8,8 +8,8 @@ lados do Wine (o ``winebus`` e o ``winepulse``) calculam o contêiner do aparelh
 pela mesma fórmula, a partir do ``usb_device`` pai; sem esse pai comum, o jogo
 com a biblioteca da Sony não acha o som do pad e não desiste de procurar (o
 engasgo do Sackboy, causa provada em 07/10/2026). A cura dá ao pad um pai USB de
-verdade: um gadget ``libcomposite`` só HID (PID ``0df2``), preso ao
-``usbip-vudc`` e ligado pelo ``vhci_hcd``.
+verdade: um gadget ``libcomposite`` só HID na roupa do pad, preso ao
+``usbip-vudc`` e ligado pelo ``vhci_hcd``; quem o separa do físico é a posse.
 
 Com isso o pad passa a existir em DOIS lugares do sysfs:
 
@@ -633,6 +633,7 @@ _POR_QUE_NO_UHID = {
     "pad_usb_caiu_fica_o_uhid": "caiu",
     "pad_usb_porta_fora": "porta_fora",
     "pad_usb_features_recusadas_fica_o_uhid": "features_recusadas",
+    "pad_usb_fica_o_uhid": "quirk_do_par",  # o único motivo dele: o par tem a quirk ``n``
 }
 _LINHA_DO_DAEMON = re.compile(
     r"\[\s*(?:debug|info|warning|error|critical)\s*\]\s+(\w+)(.*)$"
@@ -705,6 +706,44 @@ def medir_a_marca_do_f_hid(caminho: str = MARCA_DO_F_HID) -> bool | None:
 def marca_do_f_hid_medida() -> bool | None:
     with _TRAVA:
         return _MARCA_DO_F_HID[0]
+
+
+# --- a quirk do usbcore, que casa pelo par -----------------------------------
+
+#: As quirks vivas do ``usbcore`` (``usbcore.quirks=`` da linha do kernel, ou
+#: escritas depois): entradas ``vvvv:pppp:flags`` separadas por vírgula.
+QUIRKS_DO_USBCORE = "/sys/module/usbcore/parameters/quirks"
+
+#: ``USB_QUIRK_DELAY_CTRL_MSG``: o kernel dorme 200 ms antes de cada pedido de
+#: controle de todo aparelho com o par, o gadget pelo ``vhci_hcd`` incluído.
+#: Com quatro pads, o ``SDL_Init`` do winebus levou ~23 s (14/10/2026).
+_QUIRK_QUE_ATRASA = "n"
+
+
+def o_par_tem_a_quirk_que_atrasa(
+    par: tuple[int, int],
+    caminho: str = QUIRKS_DO_USBCORE,
+    *,
+    ler: Callable[[str], str] = _ler_atributo,
+) -> bool:
+    """O ``usbcore`` vivo atrasa os pedidos de controle de ``par`` (a quirk ``n``)?
+
+    O gadget herda toda quirk do par que veste: um pad que divide o par com um
+    físico que tem a ``n`` paga os 200 ms por pedido dele. Sem o arquivo (o
+    ``usbcore`` não é módulo, ou o sysfs não responde), não há quirk a pagar.
+    """
+    alvo = (par[0] & 0xFFFF, par[1] & 0xFFFF)
+    for entrada in ler(caminho).split(","):
+        campos = entrada.strip().lower().split(":")
+        if len(campos) != 3:
+            continue
+        try:
+            achado = (int(campos[0], 16), int(campos[1], 16))
+        except ValueError:
+            continue
+        if achado == alvo and _QUIRK_QUE_ATRASA in campos[2]:
+            return True
+    return False
 
 
 # --- o contrato do kernel (a cura 6) ----------------------------------------

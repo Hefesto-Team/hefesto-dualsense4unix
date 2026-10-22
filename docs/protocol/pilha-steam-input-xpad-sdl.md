@@ -375,7 +375,7 @@ Leia a ordem: **para o par `28de:11ff`, a função retorna antes de consultar
 
 - com `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD` **ausente ou 0**, o SDL
   já ignora os espelhos sozinho — e o par `0x28de/0x11ff` que este projeto
-  acrescentou ao `_IGNORE_VALUE` (`daemon/launch_env.py:107`, emitido em `:173-175`) é
+  acrescentou ao `_IGNORE_VALUE` (`daemon/launch_env.py:107`, emitido em `:178-180`) é
   **redundante**, não errado;
 - com a variável **em 1**, o SDL usa os espelhos — e aquele par **não os
   esconde**, porque a lista de ignorados nunca é consultada para ele.
@@ -605,7 +605,7 @@ ambiente, não hardware.
 ### 3.5 A escolha do PID `0x0DF2` — os efeitos colaterais que EXISTEM
 
 O vpad se declara **DualSense Edge** (`VPAD_PRODUCT = 0x0DF2`,
-`integrations/uhid_gamepad.py:107`) para se distinguir do físico `0x0CE6` e
+`integrations/uhid_gamepad.py:111`) para se distinguir do físico `0x0CE6` e
 poder ser separado por VID/PID. A pergunta é: **o SDL trata o Edge diferente do
 DualSense comum?**
 
@@ -630,11 +630,11 @@ entrada, e ela é de Bluetooth**:
 
 enquanto o DualSense comum tem cinco (`030000004c050000e60c...` para USB e
 `050000004c050000e60c...` para BT). O vpad nasce `BUS_USB`
-(`integrations/uhid_gamepad.py:96`), então **não casa com entrada nenhuma do
+(`integrations/uhid_gamepad.py:97`), então **não casa com entrada nenhuma do
 banco**. Isso não é defeito enquanto o caminho for HIDAPI (o driver PS5
 sintetiza o mapeamento), mas passa a importar se algum dia o vpad DualSense for
 lido pelo caminho evdev — que é o que `SDL_JOYSTICK_HIDAPI=0` faz, e é o que
-este projeto já emite na máscara **Xbox** (`daemon/launch_env.py:1084`,
+este projeto já emite na máscara **Xbox** (`daemon/launch_env.py:1103`,
 declarado em `:1511`).
 **GRAU: MEDIDO AQUI** para o conteúdo do banco; **BAIXA** para a consequência,
 que não foi exercitada.
@@ -669,7 +669,7 @@ o degrau anterior deixou passar.
 **Quem ganha o ambiente.** O degrau 4 vem **depois** do 3: a Steam monta o
 ambiente do processo e o wrapper roda dentro dele, sobrescrevendo com `env(1)`
 as variáveis que exporta. Logo, para as **sete** variáveis da
-`ENV_ALLOWLIST` em `daemon/launch_env.py:84-92`, **o wrapper vence a Steam**. Para qualquer
+`ENV_ALLOWLIST` em `daemon/launch_env.py:89-97`, **o wrapper vence a Steam**. Para qualquer
 outra — e `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD` é uma delas, porque
 **não está na allowlist** — vale o que a Steam pôs. **GRAU: ALTA** para o
 mecanismo (`env(1)` e a allowlist por NOME de variável em
@@ -1376,7 +1376,7 @@ que ele espera (`0x01`) nunca vem?*
     )
 ```
 
-`integrations/uhid_gamepad.py:532-561` (`_fala_de_vibracao`). O report do SDL
+`integrations/uhid_gamepad.py:543-572` (`_fala_de_vibracao`). O report do SDL
 Edge liga `0x02` no `valid_flag0` — passa pelo **primeiro** teste — e ainda
 ligaria `0x04` no `valid_flag2`, que é o segundo. **Passa duas vezes.**
 

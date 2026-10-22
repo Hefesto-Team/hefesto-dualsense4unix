@@ -7,10 +7,10 @@ pelo daemon (combos sagrados removidos).
 Dois **flavors** (a "máscara" que o jogo vê):
   - ``dualsense``: VID Sony + PID do DualSense **Edge** (054c:0df2) → prompts
     PlayStation. O PID é DE PROPÓSITO distinto do físico (0ce6) — invariante
-    VPAD-04/VPAD-06: nenhum caminho de criação de vpad pode dividir VID/PID
-    com o controle real, senão a launch option persistida na Steam
-    (``IGNORE_DEVICES=0x054c/0x0ce6``) esconde físico E vpad juntos e o jogo
-    fica com ZERO controles (o bug medido em 117 corridas de estudo).
+    VPAD-04/VPAD-06, que vale para ESTE backend: o uinput nunca divide VID/PID
+    com o físico, senão o ``IGNORE_DEVICES=0x054c/0x0ce6`` da Steam esconde os
+    dois e o jogo fica com ZERO controles (117 corridas de estudo). No uhid e
+    no pad USB quem separa o pad do físico é a posse (``pad_usb.e_pad_nosso``).
   - ``xbox``: VID/PID Xbox 360 (045e:028e) → **prompts Xbox**. Fallback
     para jogos "XInput-only" (Windows-ports via Proton) que ignoram Sony.
 

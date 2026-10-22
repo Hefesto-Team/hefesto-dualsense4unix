@@ -465,6 +465,7 @@ class CoopManager:
             mascara_efetiva,
             vpad_ficou_para_tras,
         )
+        from hefesto_dualsense4unix.integrations.virtual_pad import a_roupa_mudou
 
         primary = self._primary_identity()
         # primário ainda não resolveu o MAC (`primary_uniq` None no boot/restart
@@ -483,6 +484,7 @@ class CoopManager:
         }
         desired_flavor = self._flavor()
         desired_caminho = self._caminho()
+        desired_roupa = self._roupa() if self._players else None
 
         for mac in list(self._players):
             player = self._players[mac]
@@ -520,6 +522,10 @@ class CoopManager:
                     new=mascara_efetiva(mac, desired_flavor),
                 )
                 self._teardown_player(mac)
+            elif player.vpad is not None and a_roupa_mudou(player.vpad, desired_roupa):
+                if self._a_mascara_espera_o_jogo(mac, origem if force else "coop_tique"):
+                    continue
+                self._trocar_a_roupa(mac)
 
         for mac in self._na_ordem_da_carta(want):
             if mac not in self._players:
@@ -695,24 +701,78 @@ class CoopManager:
 
 
     def algum_boneco_ficou_para_tras(self) -> bool:
-        """Algum secundário veste máscara ou canal diferente do efetivo de agora?"""
+        """Algum secundário veste máscara, canal ou roupa diferente da efetiva de agora?"""
         from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
             vpad_ficou_para_tras,
         )
+        from hefesto_dualsense4unix.integrations.virtual_pad import a_roupa_mudou
 
+        jogadores = list(self._players.items())
+        if not jogadores:
+            return False
         flavor = self._flavor()
         caminho = self._caminho()
+        roupa = self._roupa()
         return any(
             player.vpad is not None
-            and vpad_ficou_para_tras(
-                getattr(player.vpad, "flavor", None),
-                mac,
-                flavor,
-                vpad=player.vpad,
-                caminho=caminho,
+            and (
+                vpad_ficou_para_tras(
+                    getattr(player.vpad, "flavor", None),
+                    mac,
+                    flavor,
+                    vpad=player.vpad,
+                    caminho=caminho,
+                )
+                or a_roupa_mudou(player.vpad, roupa)
             )
-            for mac, player in list(self._players.items())
+            for mac, player in jogadores
         )
+
+    def _roupa(self) -> int:
+        """A roupa que o pad do secundário veste agora: a mesma pergunta do P1."""
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import a_roupa_que_o_pad_veste
+
+        return a_roupa_que_o_pad_veste(self._daemon)
+
+    def _trocar_a_roupa(self, chave: str) -> None:
+        """Derruba SÓ o pad de `chave` e o pede de novo, na roupa de agora.
+
+        O físico segue preso e escondido (`_derrubar_para_renascer`): trocar de
+        roupa não é trocar de controle, e o jogador não fica um instante sem dono.
+        """
+        jogador = self._players.get(chave)
+        if jogador is None or jogador.vpad is None:
+            return
+        logger.info(
+            "coop_player_roupa_trocada",
+            identity=chave,
+            veste=f"{self._roupa():04x}",
+            **self._numero_e_indice(jogador),
+        )
+        self._derrubar_para_renascer(chave)
+        jogador = self._players.get(chave)
+        if jogador is not None and jogador.vpad is None:
+            self._promote_player(jogador)
+
+    def vestir_a_roupa(self) -> list[str]:
+        """Todo secundário que veste outra roupa renasce nela, em sequência, na ordem da carta.
+
+        A porta do `gamepad.vestir_a_roupa`, que já perguntou a trava. Devolve
+        as identidades dos que vestem a roupa de agora ao final.
+        """
+        from hefesto_dualsense4unix.integrations.virtual_pad import a_roupa_mudou
+
+        roupa = self._roupa()
+        atrasados = [
+            chave for chave, jogador in self._players.items()
+            if jogador.vpad is not None and a_roupa_mudou(jogador.vpad, roupa)
+        ]
+        for chave in self._na_ordem_da_carta(atrasados):
+            self._trocar_a_roupa(chave)
+        return [
+            chave for chave, jogador in self._players.items()
+            if jogador.vpad is not None and not a_roupa_mudou(jogador.vpad, roupa)
+        ]
 
     def _flavor(self) -> str:
         from hefesto_dualsense4unix.integrations.uinput_gamepad import normalize_flavor
@@ -1097,6 +1157,7 @@ class CoopManager:
             "allow_uhid": controller_allows_uhid(self._daemon),
             "calibration_0x05": calib,
             "caminho": self._caminho(),
+            "roupa": self._roupa(),
             **self._make_player_replica_sinks(player.identity),
         }
 

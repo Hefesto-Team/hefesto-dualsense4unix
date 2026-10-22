@@ -65,6 +65,7 @@ from typing import Any
 
 from hefesto_dualsense4unix.core import ds_output_report as rep
 from hefesto_dualsense4unix.core import system_check
+from hefesto_dualsense4unix.core.numeros_da_sony import roupa_normalizada
 from hefesto_dualsense4unix.core.rumble import pedido_mais_forte
 from hefesto_dualsense4unix.integrations import pad_usb
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
@@ -95,15 +96,18 @@ UHID_EVENT_SIZE = 4 + _CREATE2_HEAD + HID_MAX_DESCRIPTOR_SIZE
 
 BUS_USB = 0x03
 
-#: VID/PID do DualSense FÍSICO. É o que o `_is_dualsense` exige do controle de
+#: VID/PID do DualSense FÍSICO de linha. É o que o `_is_dualsense` exige do
+#: controle de onde se copia o blueprint, além de ele não ser um pad nosso.
 DUALSENSE_VENDOR = 0x054C
 DUALSENSE_PRODUCT = 0x0CE6
 
-#: forjado, ele vira um DualSense **Edge** (0x0DF2): o `hid_playstation` o
-#: registra como DualSense COMPLETO (validado ao vivo — hidraw+lightbar+motion+
-#: touchpad+rumble; dmesg "Registered DualSense controller") e o SDL o reconhece
-#: trata 0x0DF2 como PID de FÍSICO (o Edge real existe) — quem impede o daemon de
-#: VID/PID com o vpad — só a dedup por ancestralidade na regra udev (Fase B do
+#: A roupa padrão do pad (`numeros_da_sony.ROUPA_PADRAO`, o Edge): com ela o
+#: `hid_playstation` registra o pad forjado como DualSense COMPLETO (validado ao
+#: vivo: hidraw+lightbar+motion+touchpad+rumble, "Registered DualSense
+#: controller" no log do kernel) e o SDL o reconhece como PS5. O pad também veste
+#: o DualSense de linha (`numeros_da_sony.ROUPA_COMUM`), pelo campo `product`. Nas
+#: duas roupas ele divide o par com um físico, e quem o separa do físico é a
+#: posse (`pad_usb.e_pad_nosso`: o ``HID_PHYS``, o ``HID_UNIQ``, o serial do gadget).
 VPAD_PRODUCT = 0x0DF2
 
 #: Feature reports que o probe do hid_playstation lê, com os tamanhos que o
@@ -429,15 +433,22 @@ def _hidiocgfeature(fd: int, report_id: int, size: int) -> bytes:
     return bytes(buf[:ret]) if ret > 0 else b""
 
 
+#: A classe ``hidraw`` do sysfs, de onde o `_is_dualsense` lê o par e a posse.
+RAIZ_DOS_HIDRAW = "/sys/class/hidraw"
+
+
 def _is_dualsense(node: str) -> bool:
-    """Confere VID/PID no sysfs — nem todo hidraw é um DualSense.
+    """Confere VID/PID no sysfs, e a posse antes: nem todo hidraw é um DualSense físico.
 
     Sem isto, apontar para o hidraw errado (teclado, mouse, headset) produzia um
     "blueprint" que o hid_playstation ia recusar lá na frente, com um erro que
-    não diz nada sobre a causa.
+    não diz nada sobre a causa. O pad nosso vestido de DualSense comum tem o par
+    do físico: quem o recusa é a posse (`pad_usb.e_hidraw_de_pad_nosso`).
     """
+    if pad_usb.e_hidraw_de_pad_nosso(node, raiz_class_hidraw=RAIZ_DOS_HIDRAW):
+        return False
     try:
-        with open(f"/sys/class/hidraw/{node}/device/uevent") as handle:
+        with open(f"{RAIZ_DOS_HIDRAW}/{node}/device/uevent") as handle:
             uevent = handle.read()
     except OSError:
         return False
@@ -683,6 +694,7 @@ class UhidDualSense:
         identity: str | None = None,
         mic_led_sink: Callable[[int | None], bool | None] | None = None,
         mic_mute_sink: Callable[[bool], bool | None] | None = None,
+        roupa: int | None = None,
     ) -> UhidDualSense | None:
         """Vpad uhid para o flavor pedido, ou **None** = "use o UinputGamepad".
 
@@ -720,6 +732,8 @@ class UhidDualSense:
             session_end_sink=session_end_sink,
             mic_led_sink=mic_led_sink,
             mic_mute_sink=mic_mute_sink,
+            # a roupa que o pad veste; a desconhecida e o None vestem o Edge
+            product=roupa_normalizada(roupa),
         )
 
     @property
@@ -750,9 +764,9 @@ class UhidDualSense:
     @property
     def backend(self) -> str:
         """Sempre "uhid": o daemon/GUI usa isto para saber que o vpad é o DualSense
-        HID real (Edge 0x0DF2) — e não o uinput. O botão de Launch Options decide
-        a variante por aqui: "uhid" ⇒ IGNORE_DEVICES do físico é seguro (o vpad
-        tem PID próprio); "uinput" no flavor dualsense = fallback degradado."""
+        HID real (na roupa de `product`), e não o uinput. O botão de Launch Options
+        decide a variante por aqui: "uhid" ⇒ esconder o físico é seguro (a env não
+        nomeia a roupa); "uinput" no flavor dualsense = fallback degradado."""
         return "uhid"
 
     @property
@@ -2332,6 +2346,8 @@ class _GadgetDoPad:
     leitura_falhou_desde: float = 0.0
     #: quanto o som espera a âncora deste gadget (a fila da enumeração conta).
     a_caminho_s: float = _GADGET_A_CAMINHO_S
+    #: a roupa que o gadget veste, (VID, PID): o pad que o retoma tem de vestir a mesma.
+    par: tuple[int, int] = (DUALSENSE_VENDOR, VPAD_PRODUCT)
 
     def desmontar(self) -> None:
         _sair_da_fila(self.serial)
@@ -2387,6 +2403,7 @@ def _pedir_ao_broker(
         gadget=str((resposta or {}).get("gadget", "")),
         serial=serial,
         identidade=identidade,
+        par=par,
     )
 
 
@@ -2413,6 +2430,9 @@ APARELHO_PRESENTE: Callable[[str], bool] = pad_usb.aparelho_presente
 #: a mesma pergunta do doctor (`system_check.contrato_do_pad_em_usb`): o que não
 #: se lê volta «não sei» (``["?"]``), e na dúvida o pad nasce uhid.
 CONTRATO_QUE_FALTA: Callable[[], list[str]] = system_check.contrato_do_pad_em_usb
+#: o ``usbcore`` vivo atrasa os pedidos de controle deste par (a quirk ``n``)?
+#: O gadget herda a quirk do par que veste; com ela, o pad fica no uhid.
+QUIRK_DO_PAR: Callable[[tuple[int, int]], bool] = pad_usb.o_par_tem_a_quirk_que_atrasa
 
 
 @dataclass
@@ -2452,12 +2472,26 @@ class _GadgetsEstacionados:
         if antigo is not None and antigo.gadget is not gadget:
             antigo.gadget.desmontar()
 
-    def retomar(self, identidade: str | None) -> _GadgetDoPad | None:
+    def retomar(
+        self, identidade: str | None, par: tuple[int, int] | None = None
+    ) -> _GadgetDoPad | None:
+        """O gadget estacionado do aparelho, se ele veste ``par`` (None = qualquer).
+
+        O de outra roupa desce na hora: o pad que volta vestido de outro par
+        pede o gadget dele, e o serial do aparelho tem de estar livre.
+        """
         if not identidade:
             return None
         with self._trava:
             achado = self._por_aparelho.pop(pad_usb._so_hex(identidade), None)
-        return achado.gadget if achado is not None else None
+        if achado is None:
+            return None
+        if par is not None and achado.gadget.par != par:
+            logger.info("pad_usb_estacionado_desce", gadget=achado.gadget.gadget,
+                        motivo="outra_roupa")
+            achado.gadget.desmontar()
+            return None
+        return achado.gadget
 
     def quantos(self) -> int:
         with self._trava:
@@ -2567,7 +2601,13 @@ def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
     """O pad nasce no gadget? False = segue o uhid de sempre, intacto."""
     if pad._sem_gadget or pad.blueprint is None:
         return False
-    gadget = _GADGETS_ESTACIONADOS.retomar(pad.identity)
+    par = (DUALSENSE_VENDOR, pad.product)
+    gadget = _GADGETS_ESTACIONADOS.retomar(pad.identity, par)
+    if gadget is None and QUIRK_DO_PAR(par):
+        pad_usb.anotar_sem_porta(pad.identity or "", "quirk_do_par")
+        logger.info("pad_usb_fica_o_uhid", player=pad.player, motivo="quirk_do_par",
+                    par=f"{par[0]:04x}:{par[1]:04x}")
+        return False
     if gadget is None and pad_usb.porta_fora(pad.player):
         pad_usb.anotar_sem_porta(pad.identity or "", "porta_fora")
         logger.info("pad_usb_porta_fora", player=pad.player,
@@ -2585,7 +2625,7 @@ def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
             pad_usb.anotar_sem_porta(pad.identity or "", "sem_serial")
             return False
         gadget = PEDIR_O_PAD_USB(serial, bytes(pad.blueprint["descriptor"]), pad.identity or "",
-                                 (DUALSENSE_VENDOR, pad.product))
+                                 par)
         if gadget is None:
             return False
     if pad_usb.medir_a_marca_do_f_hid() is False:

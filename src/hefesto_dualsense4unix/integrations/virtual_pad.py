@@ -248,8 +248,9 @@ class VirtualPad(Protocol):
     @property
     def backend(self) -> str:
         """"uinput" (evdev, máscara Xbox / fallback) ou "uhid" (DualSense HID real,
-        Edge 0x0DF2). O botão de Launch Options escolhe a variante por aqui: só o
-        "uhid" tem PID próprio e pode ser desduplicado por IGNORE_DEVICES."""
+        na roupa do `product`). O botão de Launch Options escolhe a variante por
+        aqui: só o "uhid" se separa do físico pela posse, e o físico pode sair da
+        lista do jogo."""
         ...
 
     @property
@@ -323,6 +324,7 @@ def make_virtual_pad(
     caminho: str | None = None,
     mic_led_sink: Callable[[int | None], bool | None] | None = None,
     mic_mute_sink: Callable[[bool], bool | None] | None = None,
+    roupa: int | None = None,
 ) -> VirtualPad | None:
     """Cria e **starta** o vpad do jogador `player`. None = nenhum backend subiu.
 
@@ -416,6 +418,9 @@ def make_virtual_pad(
             calibration_0x05=calibration_0x05,
             mic_led_sink=mic_led_sink,
             mic_mute_sink=mic_mute_sink,
+            # o PID que o pad uhid veste (D-2210-O-PAD-PODE-VESTIR-O-DUALSENSE-COMUM;
+            # None = o Edge); o uinput nunca a veste, e sem uhid o pad já é Xbox 360
+            roupa=roupa,
         )
         if uhid is not None:
             _o_pad_nasceu(uhid, resolvido, identity)
@@ -454,6 +459,7 @@ def _try_uhid(
     calibration_0x05: bytes | None = None,
     mic_led_sink: Callable[[int | None], bool | None] | None = None,
     mic_mute_sink: Callable[[bool], bool | None] | None = None,
+    roupa: int | None = None,
 ) -> tuple[VirtualPad | None, str | None]:
     """Tenta o backend uhid; ``(None, motivo)`` = "use o uinput".
 
@@ -489,6 +495,7 @@ def _try_uhid(
         calibration_0x05=calibration_0x05,
         mic_led_sink=mic_led_sink,
         mic_mute_sink=mic_mute_sink,
+        roupa=roupa,
     )
     if pad is None:  # pragma: no cover - o gate de flavor acima já garante
         return None, "uhid_indisponivel"
@@ -668,6 +675,24 @@ def o_aparelho_mudou(vpad: object, caminho: object, mascara: str) -> bool:
     return vestido != mascara_no_jogo(caminho, mascara, sem_canal=sem_canal)
 
 
+def a_roupa_mudou(vpad: object, roupa: object) -> bool:
+    """O pad uhid de pé veste outra roupa que a pedida (`numeros_da_sony.ROUPAS_DO_PAD`)?
+
+    O terceiro termo dos juízes de recriação, ao lado do caminho e da máscara
+    (D-2210-O-PAD-SE-RECONHECE-PELA-POSSE). Só o uhid veste roupa: o uinput, e
+    o dublê sem ``product`` inteiro, não têm o que comparar, e um juiz que os
+    comparasse recriaria em laço.
+    """
+    from hefesto_dualsense4unix.core.numeros_da_sony import roupa_normalizada
+
+    if getattr(vpad, "backend", None) != "uhid":
+        return False
+    vestida = getattr(vpad, "product", None)
+    if not isinstance(vestida, int) or isinstance(vestida, bool):
+        return False
+    return vestida != roupa_normalizada(roupa)
+
+
 __all__ = [
     "CAMINHOS",
     "CAMINHO_DUALSENSE",
@@ -680,6 +705,7 @@ __all__ = [
     "FioDeNascimento",
     "PedidoDePad",
     "VirtualPad",
+    "a_roupa_mudou",
     "caminho_do_vpad",
     "caminho_resolvido",
     "make_virtual_pad",

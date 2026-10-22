@@ -79,16 +79,23 @@
 #     e o reabriria depois de fechado.
 # O broker aceita o Edge físico e recusa o vpad pela mesma topologia (D1/D2 em
 # `hefesto-hidraw-broker`).
+#
+# O PAD TAMBÉM VESTE O DUALSENSE COMUM (0ce6) — D-2210-O-PAD-PODE-VESTIR-O-
+# DUALSENSE-COMUM, 22/10/2026. A separação é a mesma do Edge, pela posse: o pad
+# uhid `0ce6` abre pela linha dele (o `DEVPATH` do uhid e o bus 0003), o pad USB
+# `0ce6` pela marca `HEFESTO_PAD_USB`, que a linha do 0ce6 pelo cabo respeita, e
+# o físico `0ce6` continua fechado pelo cabo e pelo rádio.
 
 # O PAD EM USB (O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01, 07/10/2026):
 # o pad do Hefesto pode nascer como gadget só HID ligado pelo `vhci_hcd`, com
-# pai USB `054c:0df2` — a linha do Edge FÍSICO pelo cabo o fecharia, e o
-# `MODE:=` dela é final. A marca vem ANTES, pelo lugar (`vhci_hcd`) e pelo
-# serial que só o broker escreve (`hefesto-pad-<12 hex>`), e a linha do Edge a
-# respeita. Quem abre o pad em USB é a penúltima linha deste arquivo.
+# pai USB `054c:0df2` ou `054c:0ce6` (a roupa do pad) — a linha do físico pelo
+# cabo o fecharia, e o `MODE:=` dela é final. A marca vem ANTES, pelo lugar
+# (`vhci_hcd`) e pelo serial que só o broker escreve (`hefesto-pad-<12 hex>`), e
+# as duas linhas do cabo a respeitam. Quem abre o pad em USB é a penúltima linha
+# deste arquivo.
 KERNEL=="hidraw*", SUBSYSTEM=="hidraw", DEVPATH=="/devices/platform/vhci_hcd.*", ATTRS{serial}=="hefesto-pad-*", ENV{HEFESTO_PAD_USB}="1"
 # USB — DualSense standard: NASCE FECHADO (0600 root); o broker abre sob pedido.
-KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0ce6", MODE:="0600", OWNER:="root", GROUP:="root", TAG-="uaccess"
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0ce6", ENV{HEFESTO_PAD_USB}!="1", MODE:="0600", OWNER:="root", GROUP:="root", TAG-="uaccess"
 # USB — DualSense Edge FÍSICO: NASCE FECHADO também (ver cabeçalho).
 KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="054c", ATTRS{idProduct}=="0df2", ENV{HEFESTO_PAD_USB}!="1", MODE:="0600", OWNER:="root", GROUP:="root", TAG-="uaccess"
 # Bluetooth — DualSense standard: NASCE FECHADO (0600 root).
@@ -105,6 +112,10 @@ KERNEL=="hidraw*", SUBSYSTEM=="hidraw", KERNELS=="0005:054C:0DF2.*", MODE:="0600
 # O `DEVPATH` é o que o separa do Edge FÍSICO pelo cabo, que também é
 # `0003:054C:0DF2` e nasce fechado na linha USB acima (STEAM-NO-FISICO-01).
 KERNEL=="hidraw*", SUBSYSTEM=="hidraw", DEVPATH=="/devices/virtual/misc/uhid/*", KERNELS=="0003:054C:0DF2.*", MODE="0660", TAG+="uaccess"
+# Vpad UHID vestido de DualSense comum: o mesmo controle, na outra roupa. O
+# `DEVPATH` e o bus 0003 o separam do físico `0ce6` pelo cabo (pai USB) e pelo
+# rádio (bus 0005, fechado acima).
+KERNEL=="hidraw*", SUBSYSTEM=="hidraw", DEVPATH=="/devices/virtual/misc/uhid/*", KERNELS=="0003:054C:0CE6.*", MODE="0660", TAG+="uaccess"
 # Pad em USB — o MESMO controle que o Hefesto entrega ao jogo, agora com pai USB
 # (o gadget só HID pelo `vhci_hcd`). Abre como a linha do uhid acima; o
 # `DEVPATH` o separa de todo Edge FÍSICO.
