@@ -213,6 +213,9 @@ class Receita:
     pancada_escolhida: bool = False
     #: o som do jogo vira háptica onde o jogo cala o rumble, e cede no primeiro rumble dele
     som_quando_o_jogo_cala: bool = False
+    #: o rumble do jogo chega ao dedo que aperta o gatilho
+    #: (O-RUMBLE-DO-JOGO-CHEGA-AO-DEDO-NO-GATILHO-01)
+    rumble_no_dedo: bool = False
 
     @property
     def ligada(self) -> bool:
@@ -229,6 +232,7 @@ class Receita:
             or self.motor_de_epoca_escolhido
             or self.padroes_escolhidos
             or self.som_quando_o_jogo_cala
+            or self.rumble_no_dedo
         )
 
     @classmethod
@@ -277,6 +281,7 @@ class Receita:
             padroes_escolhidos=bool(campo("padroes_escolhidos", False)),
             pancada_escolhida=bool(campo("pancada_escolhida", False)),
             som_quando_o_jogo_cala=bool(campo("som_quando_o_jogo_cala", False)),
+            rumble_no_dedo=bool(campo("rumble_no_dedo", False)),
         )
 
 
@@ -342,6 +347,7 @@ def receita_do_estilo(estilo: Any) -> Receita:
         padroes_escolhidos=padrao is not None,
         pancada_escolhida=padrao == "pancada_do_lado",
         som_quando_o_jogo_cala=bool(getattr(invisivel, "som_quando_o_jogo_cala", False)),
+        rumble_no_dedo=bool(getattr(invisivel, "rumble_no_dedo", False)),
     )
 
 
@@ -515,6 +521,10 @@ class TatoVivo:
         #: quando o jogo pediu rumble COM FORÇA (por ``norm_mac``): o ``rumble_visto_em`` conta
         #: também o par zero, e a fonte do som só cede ao rumble que vibra
         self.rumble_com_forca_em: dict[str, float] = {}
+        #: o último par CRU do jogo (fraco, forte) e o último com força, por ``norm_mac``: o
+        #: degrau do rumble no dedo (O-RUMBLE-DO-JOGO-CHEGA-AO-DEDO-NO-GATILHO-01)
+        self.rumble_de_agora: dict[str, tuple[int, int]] = {}
+        self.par_com_forca: dict[str, tuple[int, int]] = {}
         #: os controles em que a fonte do som está acordada neste tique (o jogo cala, a mão joga)
         self.acordados_pelo_som: frozenset[str] = frozenset()
         #: o status do Disparo de cada gatilho (0 antes, 1 dentro, 2 passou do clique), lido do
@@ -840,10 +850,12 @@ def anotar_o_rumble(
     try:
         instante = time.monotonic() if agora is None else agora
         # Reatribuído, nunca mutado: escreve a thread do pad e lê a do tique.
-        motor.rumble_visto_em = {**motor.rumble_visto_em, norm_mac(uniq) or uniq: instante}
+        chave = norm_mac(uniq) or uniq
+        motor.rumble_visto_em = {**motor.rumble_visto_em, chave: instante}
+        motor.rumble_de_agora = {**motor.rumble_de_agora, chave: (int(fraco), int(forte))}
         if not calado(fraco, forte):
-            motor.rumble_com_forca_em = {
-                **motor.rumble_com_forca_em, norm_mac(uniq) or uniq: instante}
+            motor.rumble_com_forca_em = {**motor.rumble_com_forca_em, chave: instante}
+            motor.par_com_forca = {**motor.par_com_forca, chave: (int(fraco), int(forte))}
         for evento in motor.borda_do_rumble.ver(uniq, fraco, forte, instante, efetivo):
             motor.anotar(evento)
     except Exception:
@@ -1107,7 +1119,11 @@ def _bloco_cru(nome: str, valores: Mapping[str, int]) -> bytes:
     """O bloco cru de 11 bytes de um modo com estes números, no layout que o relatório leva."""
     from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 
-    efeito = build_from_name(nome, {**_padroes_do_modo(nome), **valores})
+    return _bloco_do_efeito(build_from_name(nome, {**_padroes_do_modo(nome), **valores}))
+
+
+def _bloco_do_efeito(efeito: Any) -> bytes:
+    """O bloco cru de 11 bytes de um efeito pronto, no layout que o relatório leva."""
     f = efeito.forces
     # O relatório leva o `forces[6]` no décimo byte do bloco (`common[19]` do backend).
     return bytes([efeito.mode, f[0], f[1], f[2], f[3], f[4], f[5], 0, 0, f[6], 0])
@@ -1825,6 +1841,201 @@ class AtuadorDosMomentos:
         """O motor parou: cada controle em que o momento segura a sessão volta ao perfil."""
         self._aperto.clear()
         for uniq in {u for u, _lado in self._escrito} | set(self._entre_batidas):
+            self.devolver(uniq, agora)
+
+
+# O-RUMBLE-DO-JOGO-CHEGA-AO-DEDO-NO-GATILHO-01 (22/10/2026): o rumble do jogo no dedo.
+# O jogo Xbox não tem canal para o gatilho (o `FF_RUMBLE` só tem os dois motores), e o xpadneo
+# faz há anos o gatilho vibrar com o rumble vezes o quanto ele está apertado. Aqui: o lado com o
+# dedo além do disparo vibra no modo `0x26` com a amplitude do par CRU do jogo, em oito degraus;
+# a barra dela não entra (ela só tira, e o jogo manda). Valores de partida, a validar na bancada.
+CANAL_DO_DEDO = "dedo_do_rumble"
+#: a vibração do gatilho tem oito degraus de amplitude (`trigger_effects.vibration`)
+DEGRAUS_DO_DEDO = 8
+#: sem rumble com força por este tanto, o lado volta ao efeito do estilo
+SEM_RUMBLE_NO_DEDO_S = 0.150
+#: o degrau escrito só muda quando o novo se afasta MAIS que isto (a rajada oscila dentro dele)
+HISTERESE_DO_DEDO = 1
+#: as batidas por segundo da vibração no dedo (byte de frequência do `0x26`)
+FREQUENCIA_DO_DEDO_HZ = 40
+
+
+def degrau_do_rumble(fraco: int, forte: int) -> int:
+    """O degrau (1 a 8) do par cru do jogo; 0 com o jogo calado."""
+    if calado(fraco, forte):
+        return 0
+    nivel = max(int(fraco), int(forte))
+    return max(1, min(DEGRAUS_DO_DEDO, -(-nivel * DEGRAUS_DO_DEDO // 255)))
+
+
+def bloco_do_dedo(degrau: int) -> bytes:
+    """O bloco cru da vibração no curso inteiro, com a amplitude do degrau."""
+    from hefesto_dualsense4unix.core.trigger_effects import vibration
+
+    amplitude = max(1, min(DEGRAUS_DO_DEDO, int(degrau)))
+    return _bloco_do_efeito(vibration(0, amplitude, FREQUENCIA_DO_DEDO_HZ))
+
+
+class AtuadorDoDedo:
+    """O rumble do jogo no dedo que aperta o gatilho, lado a lado e controle a controle.
+
+    Anda no relógio do motor: a cada tique olha a mesa. O lado vibra enquanto o dedo está além
+    do disparo e o jogo vibra (ou vibrou há menos de ``SEM_RUMBLE_NO_DEDO_S``); a soltura, o fim
+    do rumble, o jogo que escreve o gatilho, um momento da imersão, o gatilho do perfil que já
+    vibra e a Bateria longa devolvem o lado. Escreve só quando o degrau muda além da histerese,
+    no máximo uma vez por ciclo do gatilho, dentro do teto; no rádio sem fatia livre, espera.
+    """
+
+    canal = CANAL_GATILHO
+
+    def __init__(
+        self,
+        escrever: Callable[[str, str, bytes], object],
+        devolver: Callable[[str], bool],
+        apertado: Callable[[str, str], bool],
+        largar: Callable[[str], object] | None = None,
+        cede: Callable[[str, str], bool] | None = None,
+        soltar_lado: Callable[[str, str, bytes], object] | None = None,
+        radio_cede: Callable[[str], bool] | None = None,
+    ) -> None:
+        self._escrever = escrever
+        self._devolver = devolver
+        self.apertado = apertado
+        self._largar = largar
+        #: o lado já tem dono (um momento, o gatilho do perfil que vibra, a Bateria longa)
+        self._cede = cede
+        self._soltar_lado = soltar_lado
+        #: o controle está no rádio sem fatia livre: o degrau novo espera
+        self._radio_cede = radio_cede
+        self._degrau: dict[tuple[str, str], int] = {}
+        self._bloco: dict[tuple[str, str], bytes] = {}
+        self._escreveu_em: dict[str, float] = {}
+
+    def responde_a(self, evento: Evento, receita: Receita) -> bool:
+        return False
+
+    def escrever(self, evento: Evento, receita: Receita, agora: float) -> float | None:
+        return None
+
+    def segura(self, uniq: str) -> list[str]:
+        """Os lados deste controle em que o rumble está no dedo."""
+        return [lado for lado in _LADO_DO_BACKEND if (uniq, lado) in self._degrau]
+
+    def _degrau_vivo(self, motor: TatoVivo, uniq: str, agora: float) -> int:
+        chave = norm_mac(uniq) or uniq
+        par = motor.rumble_de_agora.get(chave)
+        if par is None:
+            return 0
+        if calado(*par):
+            forca_em = motor.rumble_com_forca_em.get(chave)
+            if forca_em is None or agora - forca_em >= SEM_RUMBLE_NO_DEDO_S:
+                return 0
+            # A rajada cala entre dois pulsos: o degrau é o do último pulso.
+            par = motor.par_com_forca.get(chave, par)
+        return degrau_do_rumble(*par)
+
+    def relogio(
+        self,
+        motor: TatoVivo,
+        agora: float,
+        uniqs: Sequence[str],
+        estado_de: Callable[[str], EstadoDoCanal | None],
+        receita: Receita,
+    ) -> int:
+        for saiu in {u for u, _lado in self._degrau} - set(uniqs):
+            self.soltar(saiu)  # o controle saiu da mesa: não há o que devolver nele
+        escritas = 0
+        for uniq in uniqs:
+            estado = estado_de(uniq)
+            if estado is None or not decidir(CANAL_GATILHO, estado):
+                if self.segura(uniq):
+                    if estado is not None and not _o_modo_cala_o_motor(estado):
+                        motor.contadores["soltos_ao_jogo"] += 1
+                        self.soltar(uniq)  # o jogo escreve o gatilho: o valor é dele
+                    else:
+                        self.devolver(uniq, agora)
+                continue
+            if not receita.rumble_no_dedo or receita.gatilho_no_ritmo:
+                # O estilo não pede, ou o ritmo do tiro (a Metralhadora do FPS) é o dono.
+                if self.segura(uniq):
+                    self.devolver(uniq, agora)
+                continue
+            escritas += self._tocar(motor, uniq, agora)
+        return escritas
+
+    def _tocar(self, motor: TatoVivo, uniq: str, agora: float) -> int:
+        degrau = self._degrau_vivo(motor, uniq, agora)
+        a_voltar: list[str] = []
+        escritas = 0
+        for lado, disco in _LADO_DO_BACKEND.items():
+            chave = (uniq, lado)
+            quer = (degrau > 0 and self.apertado(uniq, lado)
+                    and not (self._cede is not None and self._cede(uniq, lado)))
+            if not quer:
+                if chave in self._degrau:
+                    a_voltar.append(lado)
+                continue
+            escrito = self._degrau.get(chave)
+            if escrito is not None and abs(degrau - escrito) <= HISTERESE_DO_DEDO:
+                continue
+            ultima = self._escreveu_em.get(uniq)
+            if ultima is not None and agora - ultima < CICLO_DO_GATILHO_S:
+                continue
+            if self._radio_cede is not None and self._radio_cede(uniq):
+                motor.contadores["recusas_do_radio"] = (
+                    motor.contadores.get("recusas_do_radio", 0) + 1)
+                continue
+            if not motor.teto.cabe(uniq, agora):
+                motor.contadores["recusas_do_teto"] += 1
+                continue
+            motor.teto.gastar(uniq, agora)
+            bloco = bloco_do_dedo(degrau)
+            self._escrever(uniq, disco, bloco)
+            self._degrau[chave] = degrau
+            self._bloco[chave] = bloco
+            escritas += 1
+            motor.contadores["escritas"] += 1
+        if escritas:
+            self._escreveu_em[uniq] = agora
+        if a_voltar:
+            self._voltar(uniq, a_voltar)
+            motor.contadores["devolucoes"] += 1
+        return escritas
+
+    def _voltar(self, uniq: str, lados: Sequence[str]) -> None:
+        """O lado volta ao efeito do estilo: à mão se o outro lado segue no dedo, ou pela sessão."""
+        blocos: dict[str, bytes] = {}
+        for lado in lados:
+            self._degrau.pop((uniq, lado), None)
+            bloco = self._bloco.pop((uniq, lado), None)
+            if bloco is not None:
+                blocos[_LADO_DO_BACKEND[lado]] = bloco
+        if not self.segura(uniq):
+            self._escreveu_em.pop(uniq, None)
+            if self._devolver(uniq):
+                return
+        # O outro lado segue no dedo, ou outro canal do motor segura a sessão: só este lado volta.
+        if self._soltar_lado is not None:
+            for disco, bloco in blocos.items():
+                self._soltar_lado(uniq, disco, bloco)
+
+    def soltar(self, uniq: str) -> None:
+        """O jogo tomou o gatilho: o que o dedo escreveu deixou de valer."""
+        for lado in _LADO_DO_BACKEND:
+            self._degrau.pop((uniq, lado), None)
+            self._bloco.pop((uniq, lado), None)
+        self._escreveu_em.pop(uniq, None)
+        if self._largar is not None:
+            self._largar(uniq)
+
+    def devolver(self, uniq: str, agora: float) -> None:
+        """O controle volta ao efeito do estilo nos lados em que o rumble estava no dedo."""
+        if self.segura(uniq):
+            self._voltar(uniq, self.segura(uniq))
+
+    def devolver_tudo(self, agora: float) -> None:
+        """O motor parou: cada controle com o rumble no dedo volta ao estilo."""
+        for uniq in {u for u, _lado in self._degrau}:
             self.devolver(uniq, agora)
 
 
@@ -2554,6 +2765,26 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
         sessao.tomar(uniq, CANAL_DO_MOMENTO)
         return escrever(uniq, lado, bloco)
 
+    def dedo(uniq: str, lado: str, bloco: bytes) -> object:
+        escrever = getattr(controller, "set_game_trigger_for", None)
+        if not callable(escrever):
+            return False
+        sessao.tomar(uniq, CANAL_DO_DEDO)
+        return escrever(uniq, lado, bloco)
+
+    def o_lado_tem_dono(uniq: str, lado: str) -> bool:
+        # O momento da imersão, o gatilho do perfil que já vibra e a Bateria longa ficam.
+        return do_momento(uniq, lado) or gatilho_vibra(uniq) or na_economia(uniq)
+
+    def radio_cede(uniq: str) -> bool:
+        alto_falante = getattr(daemon, "_alto_falante_subsystem", None)
+        chave_de = getattr(alto_falante, "_chave_do_rumble", None)
+        cede = getattr(alto_falante, "_o_radio_cede", None)
+        if not callable(chave_de) or not callable(cede):
+            return False
+        chave = chave_de(uniq)
+        return chave is not None and bool(cede(chave))
+
     def pintar(uniq: str, cor: tuple[int, int, int]) -> object:
         escrever = getattr(controller, "set_game_output_for", None)
         if not callable(escrever):
@@ -2588,6 +2819,15 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
             lambda uniq: sessao.largar(uniq, CANAL_DO_MOMENTO),
             na_economia,
             disparo,
+        ),
+        AtuadorDoDedo(
+            dedo,
+            lambda uniq: sessao.soltar(uniq, CANAL_DO_DEDO),
+            apertado,
+            lambda uniq: sessao.largar(uniq, CANAL_DO_DEDO),
+            o_lado_tem_dono,
+            soltar_lado,
+            radio_cede,
         ),
         AtuadorDaLuz(
             pintar,
@@ -2948,18 +3188,24 @@ __all__ = [
     "CAMPOS_DA_RECEITA",
     "CAMPO_DA_RECEITA",
     "CANAIS",
+    "CANAL_DO_DEDO",
+    "DEGRAUS_DO_DEDO",
     "DESLIGADA",
     "ENTRADA_VIVA_S",
     "ESTILOS_DE_GOLPE",
     "ESTILOS_DO_CORPO_DISCRETO",
     "FORCA_DO_CORPO_DISCRETO",
+    "FREQUENCIA_DO_DEDO_HZ",
+    "HISTERESE_DO_DEDO",
     "MODO_DUALSENSE",
     "MODO_NATIVO",
     "MODO_XBOX",
+    "SEM_RUMBLE_NO_DEDO_S",
     "SEM_RUMBLE_S",
     "Atuador",
     "AtuadorDaHaptica",
     "AtuadorDaLuz",
+    "AtuadorDoDedo",
     "AtuadorDoGatilho",
     "AtuadorDoSom",
     "AtuadorDosMomentos",
@@ -2979,9 +3225,11 @@ __all__ = [
     "Teto",
     "VibracaoDoGatilho",
     "anotar_o_rumble",
+    "bloco_do_dedo",
     "bloco_do_gatilho",
     "controles_do_daemon",
     "decidir",
+    "degrau_do_rumble",
     "destinos_do_som",
     "duracao_do_toque_do_estilo",
     "escolhas_ativas",

@@ -131,6 +131,9 @@ class Receita:
     #: (O-JOGO-SEM-RUMBLE-SE-SENTE-PELO-SOM-DELE-01); desligado onde o silêncio é o desenho e
     #: onde o contínuo do estilo (a Corrida, a Simulação) já é o som do jogo
     som_quando_o_jogo_cala: bool = True
+    #: o rumble do jogo chega ao dedo que aperta o gatilho, em vibração (o modo `0x26`)
+    #: (O-RUMBLE-DO-JOGO-CHEGA-AO-DEDO-NO-GATILHO-01); ligado nos estilos de golpe
+    rumble_no_dedo: bool = False
     #: o modo que o estilo liga (`ProfileModeConfig.kind`); `None` tira só o `desktop`
     #: do perfil e deixa os outros modos como estão
     modo: Literal["desktop"] | None = None
@@ -179,17 +182,19 @@ MOLDES: dict[str, dict[str, str]] = {
 APLICADAS = ("ajustes_do_gatilho", "modo", "molde", "luz_base", "luz_ritmo")
 #: as que ficam aqui, como dado: o motor do tato lê pelo estilo guardado no perfil
 SO_DADO = ("luz", "luz_por_segundo", "duracao_da_vibracao_ms", "toque_por_tiro",
-           "lado_do_som", "som_quando_o_jogo_cala")
+           "lado_do_som", "som_quando_o_jogo_cala", "rumble_no_dedo")
 
 
-def _respira(ajustes: tuple[tuple[str, int], ...] = ()) -> Receita:
+def _respira(
+    ajustes: tuple[tuple[str, int], ...] = (), *, rumble_no_dedo: bool = False
+) -> Receita:
     """A luz que respira [RESPIRO] e pulsa no tiro; o resto, o de sempre.
 
     A base «respirar» a ritmo 3 dura 3,3 s (`efeitos_de_luz.periodo_do_respirar_s`): é o mais
     perto dos 3 a 4 s da página que o ritmo inteiro alcança (escolha).
     """
     return Receita(ajustes, luz="respira", luz_por_segundo=RESPIRA_POR_SEGUNDO,
-                   luz_base="respirar", luz_ritmo=3)
+                   luz_base="respirar", luz_ritmo=3, rumble_no_dedo=rumble_no_dedo)
 
 
 @dataclass(frozen=True)
@@ -262,17 +267,17 @@ ESTILOS: tuple[Estilo, ...] = (
     # daqui (Carga · estica e Carga · solta seca vêm na frente da lista).
     Estilo("acao", "Ação", "Weapon", "max", (170, 60, 255), 1.0,  # (noqa-acento): chave
            "o golpe pesa no R2 e chega ao braço; o arco é uma escolha daqui",
-           _respira(),
+           _respira(rumble_no_dedo=True),
            Lado("Weapon", "golpe-pesado"), Lado("Resistance", "mira-firme")),
     # A Aventura, os Esportes, o Terror e a Luta guardam a chave de hoje (CATALOGO §2.4), com os
     # números do dono dela (`trigger_specs.PRESETS`), como todo estilo.
     Estilo("aventura", "Aventura", "Bow", "balanceado", (40, 200, 90), 1.0,
            "o arco é o gesto da aventura e a chama é a tocha; escalar e a porta ficam a um clique",
-           Receita(luz_base="chama", luz_ritmo=5),
+           Receita(luz_base="chama", luz_ritmo=5, rumble_no_dedo=True),
            Lado("Bow", "corda-que-estica"), Lado("Resistance", "mira-firme")),
     Estilo("esportes", "Esportes", "Resistance", "balanceado", (40, 120, 255), 1.0,
            "o chute carrega e correr muito pesa no dedo",
-           Receita(),
+           Receita(rumble_no_dedo=True),
            Lado("Resistance", "golpe-carregado"), Lado("Resistance", "pique-que-cansa")),
     # a luz fixa a 0,4 não disputa a leitura (CATALOGO §3)
     # Os dois gatilhos são o botão do mouse: o Clique · mouse, raso e seco, nos dois lados.
@@ -296,19 +301,19 @@ ESTILOS: tuple[Estilo, ...] = (
     Estilo("terror", "Terror", "Weapon", "max", (215, 30, 55), 0.7,
            "a arma não é confiável e o coração bate na luz e nos motores; a luz baixa não denuncia",
            Receita(duracao_da_vibracao_ms=2 * DURACAO_DE_SEMPRE_MS,
-                   luz_base="batimento", luz_ritmo=10),
+                   luz_base="batimento", luz_ritmo=10, rumble_no_dedo=True),
            Lado("Weapon", "pino-que-falha"), Lado("Resistance", "mira-firme")),
     # A Luta separa o golpe forte (R2) do fraco (L2); a pancada vem do lado de onde veio o golpe.
     Estilo("luta", "Luta", "Weapon", "max", (255, 40, 180), 1.0,
            "forte num gatilho, fraco no outro, e a pancada vem do lado do golpe",
-           _respira(),
+           _respira(rumble_no_dedo=True),
            Lado("Weapon", "golpe-pesado"), Lado("Weapon", "golpe-leve")),
     # O combate de estamina dos soulslike: golpe pesado que custa e ecoa, escudo que cansa o dedo.
     # O Eco (o Impacto com cauda grave) está na háptica do estilo (`formas_de_haptica.POR_ESTILO`).
     Estilo("souls", "Souls/RPG", "Weapon", "max", (200, 120, 30), 0.6,
            "cada golpe pesado custa e ecoa, e segurar o escudo cansa o dedo",
            Receita(luz="respira", luz_por_segundo=RESPIRA_POR_SEGUNDO,
-                   luz_base="chama", luz_ritmo=5),
+                   luz_base="chama", luz_ritmo=5, rumble_no_dedo=True),
            Lado("Weapon", "golpe-pesado"), Lado("MultiPositionFeedback", "escudo-que-aguenta")),
     # Tudo é baixo e preciso: o clique é discreto e prender a mira tem respiração.
     # O L2 prende a respiração (Carga · fôlego preso) e, ao soltar, os motores dão a Onda.
