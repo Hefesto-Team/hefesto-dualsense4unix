@@ -49,6 +49,19 @@ def _encher(pasta: Path, quantos: int) -> None:
         (pasta / f"f{n:05d}.txt").write_text(str(n), encoding="utf-8")
 
 
+def _deltas_das_entradas(antes: dict, depois: dict) -> list[str]:
+    """Os deltas do canário sem o tamanho da PASTA que abriga a entrada que nasceu ou sumiu.
+
+    O `st_size` de uma pasta é do sistema de arquivos: fixo no ext4, e no tmpfs (o `/tmp` do lar
+    de cada parte da suíte) e no btrfs ele anda com os nomes dentro. A régua mede a conta dos
+    pesados, e a entrada que nasce já é um CRIADO; a pasta mãe com o tamanho trocado seria o
+    segundo delta de uma mudança só, e só onde o disco o conta.
+    """
+    return [d for d in canario._deltas_do_canario(antes, depois)
+            if not (d.startswith("MUDADO") and "(tamanho " in d
+                    and Path(d[len("MUDADO   "):].rsplit(" (", 1)[0]).is_dir())]
+
+
 def _contar_resumos(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     chamadas: list[str] = []
     original = canario._resumo_do_arquivo
@@ -138,9 +151,7 @@ def test_o_pesado_que_nasce_no_meio_e_uma_linha_so(
     for arquivo in sorted((_estado(lar) / "ja-era-pesado").iterdir())[1:]:
         arquivo.unlink()
 
-    deltas = canario._deltas_do_canario(
-        antes, canario._fotografar_tudo_de_aviso(antes)
-    )
+    deltas = _deltas_das_entradas(antes, canario._fotografar_tudo_de_aviso(antes))
     assert deltas == [f"CRIADO   {_estado(lar) / 'nasceu-pesado'}"], deltas
 
 
@@ -224,9 +235,7 @@ def test_o_pesado_que_some_aparece_como_apagado(
         arquivo.unlink()
     (_estado(lar) / "ja-era-pesado").rmdir()
 
-    deltas = canario._deltas_do_canario(
-        antes, canario._fotografar_tudo_de_aviso(antes)
-    )
+    deltas = _deltas_das_entradas(antes, canario._fotografar_tudo_de_aviso(antes))
     assert deltas == [f"APAGADO  {_estado(lar) / 'ja-era-pesado'}"], deltas
 
 
