@@ -278,7 +278,8 @@ class OpcaoDaJanela(NamedTuple):
     maximo: float = 0
     passo: float = 1
     jogos: tuple[tuple[str, str], ...] = ()
-    # A linha que a aba diz sob o rótulo (hoje, a do CSS de quem usa que a régua recusou).
+    # A linha que a aba diz sob o rótulo, em vermelho (hoje, a forma curta da recusa do CSS de quem
+    # usa: «Linha 2: url()»).
     nota: str = ""
 
 
@@ -300,7 +301,8 @@ OPCOES_DO_DESENHO = (
     OpcaoDaJanela("exemplo", "espera", "Espera, em segundos", "numero", "3", (), "Avançado"),
     OpcaoDaJanela("exemplo", "avisar-por", "Avisar por", "escolha", "A barra de luz",
                   ("A barra de luz", "O som", "Os dois"), "Avançado"),
-    OpcaoDaJanela("exemplo", "css", "Usar o meu CSS", "css", False, (), "Avançado"),
+    OpcaoDaJanela("exemplo", "css", "Usar o meu CSS", "css", False, (), "Avançado",
+                  nota="Linha 2: url()"),
 )
 
 
@@ -357,6 +359,11 @@ def _grupos_das_opcoes(opcoes: Sequence[OpcaoDaJanela]) -> dict[str, list[OpcaoD
     return grupos
 
 
+def _nota_da_opcao(opcao: OpcaoDaJanela) -> str:
+    """A nota da opção, em vermelho sob o rótulo; vazia sem nota."""
+    return f'<span class="ky-recusa">{_e(opcao.nota)}</span>' if opcao.nota else ""
+
+
 def _cartoes_das_opcoes(opcoes: Sequence[OpcaoDaJanela]) -> str:
     """O arranjo aprovado das janelas da 07: um cartão por grupo, uma linha por opção.
 
@@ -369,7 +376,7 @@ def _cartoes_das_opcoes(opcoes: Sequence[OpcaoDaJanela]) -> str:
             f'<div class="ky-rot"><span>{_e(o.rotulo)}</span></div>{_jogos_da_opcao(o)}'
             if o.tipo == "jogos" else
             f'<div class="ky-linha"><div class="ky-rot"><span>{_e(o.rotulo)}</span>'
-            f'{f"<span>{_e(o.nota)}</span>" if o.nota else ""}</div>'
+            f'{_nota_da_opcao(o)}</div>'
             f'<div class="ky-ctrl">{_controle_da_opcao(o)}</div></div>' for o in itens)
         cartoes.append(f'<div class="ac-card"><div class="ac-topo">'
                        f'<span class="ac-tit">{_e(nome or "Opções")}</span></div>{linhas}</div>')

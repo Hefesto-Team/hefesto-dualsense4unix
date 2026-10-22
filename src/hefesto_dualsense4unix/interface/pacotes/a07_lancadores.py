@@ -1360,7 +1360,7 @@ def _ler_as_instaladas() -> tuple[_Instalada, ...]:
             manifesto = ler_manifesto(lg.codigo / mod_id, exigir_api=False)
         except (ManifestoRecusadoError, OSError):
             manifesto = None
-        nota = tema.css_da_extensao(manifesto, lg).recusa if manifesto is not None else ""
+        nota = tema.css_da_extensao(manifesto, lg).recusa_curta if manifesto is not None else ""
         saida.append(_Instalada(entrada, manifesto, str(vivo.get(mod_id, {}).get("estado") or ""),
                                 nota))
     return tuple(saida)

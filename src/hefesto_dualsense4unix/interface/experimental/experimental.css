@@ -233,6 +233,7 @@
 .ky-linha:last-child { border-bottom:0 }
 .ky-rot { display:flex;flex-direction:column;gap:2px;min-width:0 }
 .ky-rot > span { font-size:11.5px;color:var(--texto-suave);display:flex;align-items:center;gap:6px }
+.ky-rot > span.ky-recusa { color:var(--red) }
 .ky-rot code { font:10px 'JetBrains Mono',monospace;color:var(--fg) }
 .ky-ctrl { display:flex;align-items:center;gap:8px }
 .ky-ctrl .campo-linha { height:28px;width:170px }

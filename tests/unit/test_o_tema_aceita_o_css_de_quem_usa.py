@@ -4,8 +4,9 @@ Medido em 22/10/2026: a folha do tema só aceita ``:root{...}`` de cores com con
 queria mexer no layout não tinha onde. Agora a extensão de tema declara uma opção ``css`` (desligada
 de início), a pessoa escreve o ``<dados>/<id>/meu.css`` e a janela o põe POR CIMA do tema, pelo
 mesmo vigia, sem reabrir. A régua é de segurança: nada busca arquivo nem endereço, nada escapa, o
-teto é 16 KB, e o recusado diz a linha. O WebKit só deixa a folha de usuário vencer a da página com
-``!important``, e é o ``meu_css.aplicar`` que o põe.
+teto é 16 KB, e o recusado diz a linha: a tela, só a forma curta («Linha 2: url()», em
+vermelho, escolha de 22/10/2026); a frase longa vai ao log da janela. O WebKit só deixa a
+folha de usuário vencer a da página com ``!important``, e é o ``meu_css.aplicar`` que o põe.
 
 Tudo em lugares de mentira no ``tmp_path``; a sonda do WebKit abre uma ``PonteDaTela`` de verdade.
 
@@ -16,6 +17,9 @@ MORDIDAS (22/10/2026, executadas sobre a cura e devolvidas):
 - a folha de quem usa fora do ``_por_as_folhas`` reprova a sonda;
 - o ``tema_da_casa`` sem olhar a opção ``css`` reprova ``test_a_opcao_desligada_tira_o_css...``.
 - a pintura sem seguir o ``meu.css`` (``_seguir_o_meu_css`` vazio) reprova
+  ``test_a_janela_aberta_segue_o_meu_css_salvo``.
+- a janela voltando a pintar a frase longa (``recusa`` no lugar de ``recusa_curta`` em
+  ``_ler_as_instaladas``) reprova ``test_a_janela_traz_o_botao_...`` e
   ``test_a_janela_aberta_segue_o_meu_css_salvo``.
 """
 from __future__ import annotations
@@ -112,27 +116,30 @@ def test_a_cadeia_com_chave_e_ponto_e_virgula_nao_quebra_a_regra() -> None:
     assert meu_css.aplicar('.a::after{content:"a;b}"}') == '.a::after{content:"a;b}" !important;}'
 
 
-@pytest.mark.parametrize("texto, linha, trecho", [
-    ("\n\n.a{background:url(x.png)}", 3, "url()"),
-    (".a{color:red}\n@import 'x.css';", 2, "@import"),
-    (".a{content:'\\41'}", 1, "barra invertida"),
-    (".a{content:'<'}", 1, "«<»"),
-    (".a{width:expression(1)}", 1, "expression()"),
-    (".a{background:image-set(x 1x)}", 1, "função de imagem"),
-    ('.a{content:"/*";background:url(//x)}', 1, "url()"),
-    ("\n.a{color:red", 2, "chave que nunca fecha"),
-    (".a{color:red}\n}", 2, "chave que fecha sem ter aberto"),
-    (".a{b}", 1, "não é uma declaração"),
-    ("@font-face{font-family:x}", 1, "@font-face"),
-    ("@charset 'utf-8';", 1, "fora de uma regra"),
+@pytest.mark.parametrize("texto, linha, trecho, curta", [
+    ("\n\n.a{background:url(x.png)}", 3, "url()", "Linha 3: url()"),
+    (".a{color:red}\n@import 'x.css';", 2, "@import", "Linha 2: @import"),
+    (".a{content:'\\41'}", 1, "barra invertida", "Linha 1: barra invertida"),
+    (".a{content:'<'}", 1, "«<»", "Linha 1: «<»"),
+    (".a{width:expression(1)}", 1, "expression()", "Linha 1: expression()"),
+    (".a{background:image-set(x 1x)}", 1, "função de imagem", "Linha 1: imagem"),
+    ('.a{content:"/*";background:url(//x)}', 1, "url()", "Linha 1: url()"),
+    ("\n.a{color:red", 2, "chave que nunca fecha", "Linha 2: chave sem fechar"),
+    (".a{color:red}\n}", 2, "chave que fecha sem ter aberto", "Linha 2: chave a mais"),
+    (".a{b}", 1, "não é uma declaração", "Linha 1: não é declaração"),
+    ("{color:red}", 1, "chave sem seletor", "Linha 1: sem seletor"),
+    ("@font-face{font-family:x}", 1, "@font-face", "Linha 1: @font-face"),
+    ("@charset 'utf-8';", 1, "fora de uma regra", "Linha 1: fora de regra"),
 ])
-def test_o_que_busca_ou_escapa_nao_se_aplica_e_diz_a_linha(texto: str, linha: int,
-                                                           trecho: str) -> None:
+def test_o_que_busca_ou_escapa_nao_se_aplica_e_diz_a_linha(texto: str, linha: int, trecho: str,
+                                                           curta: str) -> None:
     with pytest.raises(meu_css.CssRecusadoError) as achado:
         meu_css.aplicar(texto)
     frase = achado.value.frase
     assert frase.startswith("O seu CSS não foi aplicado: a linha "), frase
     assert f"a linha {linha} " in frase and trecho in frase, frase
+    assert achado.value.curta == curta, achado.value.curta
+    assert len(curta) < len(frase), "a curta precisa ser mais curta que a frase do log"
 
 
 def test_o_comentario_nao_esconde_nem_acusa() -> None:
@@ -144,8 +151,9 @@ def test_o_comentario_nao_esconde_nem_acusa() -> None:
 def test_passar_de_16_kb_recusa_sem_ler() -> None:
     grande = ".a{color:red}\n" * 1200
     assert len(grande.encode()) > meu_css.TAMANHO_MAXIMO
-    with pytest.raises(meu_css.CssRecusadoError, match="16 KB"):
+    with pytest.raises(meu_css.CssRecusadoError, match="16 KB") as achado:
         meu_css.aplicar(grande)
+    assert achado.value.curta == "Passa de 16 KB"
 
 
 # --- o arquivo ----------------------------------------------------------------------------
@@ -167,21 +175,25 @@ def test_ler_diz_a_folha_ou_a_recusa_e_nunca_escreve(lg: instalador.Lugares) -> 
     _escrever(lg, "\n.a{background:url(x)}")
     ruim = meu_css.ler("tema-x", lg)
     assert ruim.folha == "" and "linha 2" in ruim.recusa
+    assert ruim.recusa_curta == "Linha 2: url()"
     _escrever(lg, "x" * (meu_css.TAMANHO_MAXIMO + 1))
-    assert "16 KB" in meu_css.ler("tema-x", lg).recusa
+    grande = meu_css.ler("tema-x", lg)
+    assert "16 KB" in grande.recusa and grande.recusa_curta == "Passa de 16 KB"
 
 
 def test_ler_nao_abre_o_que_nao_e_arquivo_comum(lg: instalador.Lugares) -> None:
     alvo = meu_css.caminho("tema-x", lg)
     alvo.parent.mkdir(parents=True)
     os.mkfifo(alvo)
-    assert "arquivo comum" in meu_css.ler("tema-x", lg).recusa
+    fila = meu_css.ler("tema-x", lg)
+    assert "arquivo comum" in fila.recusa and fila.recusa_curta == "Não é arquivo comum"
 
 
 def test_ler_diz_quando_nao_e_utf8(lg: instalador.Lugares) -> None:
     alvo = _escrever(lg, "")
     alvo.write_bytes(b"\xff\xfe.a{color:red}")
-    assert "não pôde ser lido" in meu_css.ler("tema-x", lg).recusa
+    ilegivel = meu_css.ler("tema-x", lg)
+    assert "não pôde ser lido" in ilegivel.recusa and ilegivel.recusa_curta == "Não abriu"
 
 
 # --- o manifesto e a opção ----------------------------------------------------------------
@@ -247,7 +259,8 @@ def test_o_css_ruim_nao_se_aplica_e_a_aba_diz_a_linha(lg: instalador.Lugares) ->
     assert casa.css == "" and casa.folha, "a recusa derrubou o tema ou aplicou o ruim"
     assert casa.recusa_do_css.startswith("«Tema tema-x»: O seu CSS não foi aplicado: a linha 2")
     manifesto = instalador.manifesto_instalado("tema-x", lugares=lg)
-    assert "a linha 2" in tema.css_da_extensao(manifesto, lg).recusa
+    dele = tema.css_da_extensao(manifesto, lg)
+    assert "a linha 2" in dele.recusa and dele.recusa_curta == "Linha 2: url()"
 
 
 def test_a_ligada_por_ultimo_vence_o_css(lg: instalador.Lugares) -> None:
@@ -327,12 +340,29 @@ def test_a_janela_traz_o_botao_a_chave_e_a_nota_da_recusa(lar: Any, ctx: Any) ->
     janela = a07.configurar_modificacao(ctx, {"v": "tema-x"}, _Ponte())["blocos"]["#mod-janela"]
     assert "Usar o meu CSS" in janela and "Editar o meu CSS" in janela
     assert 'data-gesto="editar-o-css-da-modificacao" data-v="tema-x:meu_css"' in janela
-    assert "não foi aplicado" not in janela
+    assert "ky-recusa" not in janela
     _escrever(lar, "\n.a{background:url(x)}")
     _ligar_a_opcao(lar)
     a07.REGISTRO.esquecer()
     outra = a07.configurar_modificacao(ctx, {"v": "tema-x"}, _Ponte())["blocos"]["#mod-janela"]
-    assert "O seu CSS não foi aplicado: a linha 2" in outra
+    assert '<span class="ky-recusa">Linha 2: url()</span>' in outra
+    assert "não foi aplicado" not in outra and "nada busca" not in outra, "a frase longa voltou"
+
+
+def test_a_recusa_e_curta_e_vermelha_na_tela_e_longa_so_no_log(
+        lar: Any, ctx: Any, capsys: pytest.CaptureFixture[str]) -> None:
+    """A tela diz «Linha 2: url()» na cor de erro da casa (``--red``); a frase longa vai ao
+    stderr da janela, com o nome da extensão."""
+    from hefesto_dualsense4unix.interface import janela as janela_gtk
+
+    _instalada(lar)
+    _escrever(lar, "\n.a{background:url(x)}")
+    _ligar_a_opcao(lar)
+    assert janela_gtk.css_de_quem_usa() == ""
+    erro = capsys.readouterr().err
+    assert "[tema] «Tema tema-x»: O seu CSS não foi aplicado: a linha 2 usa url()" in erro
+    css = (INTERFACE / "experimental" / "experimental.css").read_text(encoding="utf-8")
+    assert ".ky-rot > span.ky-recusa { color:var(--red) }" in css
 
 
 def test_a_janela_aberta_segue_o_meu_css_salvo(lar: Any, ctx: Any) -> None:
@@ -343,13 +373,14 @@ def test_a_janela_aberta_segue_o_meu_css_salvo(lar: Any, ctx: Any) -> None:
     _ligar_a_opcao(lar)
     _escrever(lar, "\n.a{background:url(x)}")
     janela = a07.configurar_modificacao(ctx, {"v": "tema-x"}, _Ponte())["blocos"]["#mod-janela"]
-    assert "a linha 2" in janela
+    assert "Linha 2: url()" in janela
     _escrever(lar, ".a{color:red}")
     a07.REGISTRO.esquecer()
-    assert "não foi aplicado" not in a07._a_pintura_agora(ctx)["blocos"]["#mod-janela"]
+    assert "ky-recusa" not in a07._a_pintura_agora(ctx)["blocos"]["#mod-janela"]
     _escrever(lar, ".a{color:red}\n\n\n.b{background:url(x)}")
     a07.REGISTRO.esquecer()
-    assert "a linha 4" in a07._a_pintura_agora(ctx)["blocos"]["#mod-janela"]
+    pintada = a07._a_pintura_agora(ctx)["blocos"]["#mod-janela"]
+    assert "Linha 4: url()" in pintada and "não foi aplicado" not in pintada
 
 
 def test_o_botao_cria_o_arquivo_com_o_exemplo_e_pede_o_editor(

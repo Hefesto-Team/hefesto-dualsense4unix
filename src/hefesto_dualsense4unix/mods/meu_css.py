@@ -2,8 +2,9 @@
 
 Livre (layout e cor), lida do ``<dados>/<id>/meu.css`` da extensão de tema que declara uma opção
 ``css``. Livre não é aberta: nada busca arquivo nem endereço, nada escapa, e passar de 16 KB não
-entra. O recusado não se aplica, e a frase diz a linha. O WebKit só deixa a folha de usuário vencer
-a da página com ``!important``: cada declaração sai daqui com ele (menos em ``@keyframes``).
+entra. O recusado não se aplica: o log tem a frase longa, e a tela, a curta com a linha. O WebKit
+só deixa a folha de usuário vencer a da página com ``!important``: cada declaração sai daqui com
+ele (menos em ``@keyframes``).
 """
 from __future__ import annotations
 
@@ -21,35 +22,44 @@ TAMANHO_MAXIMO = 16 * 1024
 _AGRUPAM = frozenset({"media", "supports"})  # (noqa-acento) nomes de at-rule do CSS
 _QUADROS = frozenset({"keyframes", "-webkit-keyframes"})
 
-#: O que o CSS de quem usa nunca pode ter, com a frase de cada um (a linha vem na frente).
-_PROIBIDOS: tuple[tuple[re.Pattern[str], str], ...] = (
-    (re.compile(r"url\s*\(", re.I), "usa url(), e nada busca arquivo nem endereço"),
-    (re.compile(r"@import", re.I), "usa @import, e nada busca arquivo nem endereço"),
+#: O que o CSS de quem usa nunca pode ter, com a frase de cada um (a linha vem na frente) e a forma
+#: curta que a tela diz no lugar dela (a frase longa vai ao log).
+_PROIBIDOS: tuple[tuple[re.Pattern[str], str, str], ...] = (
+    (re.compile(r"url\s*\(", re.I), "usa url(), e nada busca arquivo nem endereço", "url()"),
+    (re.compile(r"@import", re.I), "usa @import, e nada busca arquivo nem endereço", "@import"),
     (re.compile(r"(?<![\w-])(?:-webkit-)?(?:image-set|cross-fade|image|src)\s*\(", re.I),
-     "usa uma função de imagem, e nada busca arquivo nem endereço"),
-    (re.compile(r"expression\s*\(", re.I), "usa expression(), que não roda aqui"),
-    (re.compile(r"\\"), "tem uma barra invertida, que não vale aqui"),
-    (re.compile(r"<"), "tem um «<», que não vale aqui"),
+     "usa uma função de imagem, e nada busca arquivo nem endereço", "imagem"),
+    (re.compile(r"expression\s*\(", re.I), "usa expression(), que não roda aqui",
+     "expression()"),
+    (re.compile(r"\\"), "tem uma barra invertida, que não vale aqui", "barra invertida"),
+    (re.compile(r"<"), "tem um «<», que não vale aqui", "«<»"),
 )
 _NAO_LEU = "O seu CSS não foi aplicado: o arquivo não pôde ser lido."
+_NAO_LEU_CURTA = "Não abriu"
+_MUITO_GRANDE = "Passa de 16 KB"
+_NAO_E_COMUM = "Não é arquivo comum"
 _IMPORTANTE = re.compile(r"\s*!\s*important\s*$", re.I)
 _ARROBA = re.compile(r"@([\w-]+)")
 
 
 class CssRecusadoError(ValueError):
-    """O CSS não serve; ``frase`` é a linha que a pessoa lê, com a linha do arquivo."""
+    """O CSS não serve. ``frase`` é a longa (vai ao log); ``curta`` é a que a tela diz, com a linha
+    do arquivo na frente («Linha 2: url()»)."""
 
-    def __init__(self, motivo: str) -> None:
+    def __init__(self, motivo: str, curta: str) -> None:
         self.frase = f"O seu CSS não foi aplicado: {motivo}"
+        self.curta = curta
         super().__init__(self.frase)
 
 
 @dataclass(frozen=True)
 class FolhaDeQuemUsa:
-    """O ``meu.css`` lido: a ``folha`` que se aplica, ou a ``recusa`` que a aba diz."""
+    """O ``meu.css`` lido: a ``folha`` que se aplica, ou a ``recusa`` (longa, para o log) e a
+    ``recusa_curta`` (a que a aba diz)."""
 
     folha: str = ""
     recusa: str = ""
+    recusa_curta: str = ""
 
 
 EXEMPLO = """\
@@ -117,8 +127,9 @@ class _Leitor:
     def linha(self, indice: int) -> int:
         return self.t.count("\n", 0, indice) + 1
 
-    def recusar(self, indice: int, motivo: str) -> CssRecusadoError:
-        return CssRecusadoError(f"a linha {self.linha(indice)} {motivo}.")
+    def recusar(self, indice: int, motivo: str, curta: str) -> CssRecusadoError:
+        linha = self.linha(indice)
+        return CssRecusadoError(f"a linha {linha} {motivo}.", f"Linha {linha}: {curta}")
 
     def _fecha(self, abre: int) -> int:
         """O índice do «}» que fecha o «{» em ``abre`` (cadeias e parênteses respeitados)."""
@@ -137,7 +148,7 @@ class _Leitor:
                 if fundo == 0:
                     return i
             i += 1
-        raise self.recusar(abre, "abre uma chave que nunca fecha")
+        raise self.recusar(abre, "abre uma chave que nunca fecha", "chave sem fechar")
 
     def reescrever(self, ini: int, fim: int, modo: str) -> str:
         """``modo``: ``regras`` (folha, ``@media``), ``declaracoes`` (dentro de uma regra) ou
@@ -157,7 +168,7 @@ class _Leitor:
             elif c == ")":
                 parenteses = max(0, parenteses - 1)
             elif parenteses == 0 and c == "}":
-                raise self.recusar(i, "tem uma chave que fecha sem ter aberto")
+                raise self.recusar(i, "tem uma chave que fecha sem ter aberto", "chave a mais")
             elif parenteses == 0 and c == ";":
                 saida.append(self._declaracao(inicio, i, modo))
                 inicio = i + 1
@@ -174,7 +185,7 @@ class _Leitor:
         cabeca = bruto.strip()
         onde = inicio + len(bruto) - len(bruto.lstrip())
         if not cabeca:
-            raise self.recusar(abre, "tem uma chave sem seletor antes")
+            raise self.recusar(abre, "tem uma chave sem seletor antes", "sem seletor")
         interno = "quadros-declaracoes" if modo == "quadros" else "declaracoes"
         achado = _ARROBA.match(cabeca)
         if achado is not None:
@@ -184,7 +195,7 @@ class _Leitor:
             elif nome in _AGRUPAM:
                 interno = "regras" if modo == "regras" else "declaracoes"
             else:
-                raise self.recusar(onde, f"usa @{nome}, que o Hefesto não aplica")
+                raise self.recusar(onde, f"usa @{nome}, que o Hefesto não aplica", f"@{nome}")
         return f"{cabeca}{{{self.reescrever(abre + 1, fecha, interno)}}}"
 
     def _declaracao(self, inicio: int, fim: int, modo: str) -> str:
@@ -195,10 +206,12 @@ class _Leitor:
         onde = inicio + len(bruto) - len(bruto.lstrip())
         if modo in ("regras", "quadros"):
             raise self.recusar(onde, f"tem «{texto[:30]}», e fora de uma regra só cabem regras "
-                                     "com chaves")
+                                     "com chaves", "fora de regra")
         nome, dois_pontos, valor = texto.partition(":")
         if not dois_pontos or not nome.strip() or not valor.strip():
-            raise self.recusar(onde, f"tem «{texto[:30]}», que não é uma declaração (nome: valor)")
+            raise self.recusar(
+                onde, f"tem «{texto[:30]}», que não é uma declaração (nome: valor)",
+                "não é declaração")
         valor = _IMPORTANTE.sub("", valor).strip()
         marca = "" if modo == "quadros-declaracoes" else " !important"
         return f"{nome.strip()}:{valor}{marca};"
@@ -210,13 +223,13 @@ def aplicar(texto: str) -> str:
     Vazio (ou só comentário) é uma folha vazia, não uma recusa.
     """
     if len(texto.encode("utf-8")) > TAMANHO_MAXIMO:
-        raise CssRecusadoError("passa de 16 KB.")
+        raise CssRecusadoError("passa de 16 KB.", _MUITO_GRANDE)
     limpo = _sem_comentario(texto)
-    for padrao, motivo in _PROIBIDOS:
+    for padrao, motivo, curta in _PROIBIDOS:
         achado = padrao.search(limpo)
         if achado is not None:
             linha = limpo.count("\n", 0, achado.start()) + 1
-            raise CssRecusadoError(f"a linha {linha} {motivo}.")
+            raise CssRecusadoError(f"a linha {linha} {motivo}.", f"Linha {linha}: {curta}")
     if not limpo.strip():
         return ""
     return _Leitor(limpo).reescrever(0, len(limpo), "regras")
@@ -234,19 +247,21 @@ def ler(mod_id: str, lugares: Any) -> FolhaDeQuemUsa:
     except FileNotFoundError:
         return FolhaDeQuemUsa()
     except OSError:
-        return FolhaDeQuemUsa(recusa=_NAO_LEU)
+        return FolhaDeQuemUsa(recusa=_NAO_LEU, recusa_curta=_NAO_LEU_CURTA)
     if not stat.S_ISREG(modo.st_mode):
-        return FolhaDeQuemUsa(recusa=CssRecusadoError("precisa ser um arquivo comum.").frase)
+        nao_e = CssRecusadoError("precisa ser um arquivo comum.", _NAO_E_COMUM)
+        return FolhaDeQuemUsa(recusa=nao_e.frase, recusa_curta=nao_e.curta)
     if modo.st_size > TAMANHO_MAXIMO:
-        return FolhaDeQuemUsa(recusa=CssRecusadoError("passa de 16 KB.").frase)
+        grande = CssRecusadoError("passa de 16 KB.", _MUITO_GRANDE)
+        return FolhaDeQuemUsa(recusa=grande.frase, recusa_curta=grande.curta)
     try:
         texto = alvo.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
-        return FolhaDeQuemUsa(recusa=_NAO_LEU)
+        return FolhaDeQuemUsa(recusa=_NAO_LEU, recusa_curta=_NAO_LEU_CURTA)
     try:
         return FolhaDeQuemUsa(folha=aplicar(texto))
     except CssRecusadoError as exc:
-        return FolhaDeQuemUsa(recusa=exc.frase)
+        return FolhaDeQuemUsa(recusa=exc.frase, recusa_curta=exc.curta)
 
 
 __all__ = ["EXEMPLO", "NOME_DO_ARQUIVO", "TAMANHO_MAXIMO", "CssRecusadoError", "FolhaDeQuemUsa",
