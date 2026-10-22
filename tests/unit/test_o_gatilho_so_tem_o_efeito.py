@@ -17,7 +17,10 @@ MORDIDAS (cada uma reprova a régua que a guarda):
 * trocar o prefixo `meu-acionamento:` do que ela guardou ->
   `test_o_acionamento_guardado_continua_na_lista`;
 * devolver o `tipo` ao `criar-efeito` (guardar na biblioteca dos gatilhos) ->
-  `test_criar_sempre_cria_um_efeito_da_lista_unica`.
+  `test_criar_sempre_cria_um_efeito_da_lista_unica`;
+* tirar do gesto `imersao` o ramo do `meu-acionamento:` ou o do `acionamento:` ->
+  `test_escolher_o_acionamento_guardado_manda_a_metade_dele` ou
+  `test_escolher_o_acionamento_do_perfil_manda_aquele_acionamento`.
 """
 from __future__ import annotations
 
@@ -161,3 +164,70 @@ def test_criar_sempre_cria_um_efeito_da_lista_unica(a03):
     assert "Recuo da régua" in me.meus_efeitos("imersao")
     for lado in ("left", "right"):
         assert f"{me.PREFIXO_DO_MEU}Recuo da régua" in a03.html_das_opcoes_de_imersao("", lado)
+
+
+class _Ponte:
+    """A ponte do gesto: guarda o que iria ao daemon e responde que o controle recebeu."""
+
+    def __init__(self) -> None:
+        self.chamadas: list[tuple[str, tuple]] = []
+
+    def trigger_set_detalhado(self, *a, **_k):
+        self.chamadas.append(("set", a))
+        return True, "", {"status": "ok", "aplicado_em": [UNIQ], "guardado_em": []}
+
+    def trigger_reset_detalhado(self, *a, **_k):
+        self.chamadas.append(("reset", a))
+        return True, "", {"status": "ok", "aplicado_em": [UNIQ], "guardado_em": []}
+
+
+def _ctx_com(monkeypatch, esquerdo: dict, direito: dict):
+    from pacotes import Contexto, perfil
+
+    monkeypatch.setattr(perfil, "ativo", lambda _nome: {
+        "triggers": {"left": esquerdo, "right": direito}, "controllers": {}})
+    return Contexto(state={"active_profile": "régua"}, mesa=MESA, conectados=[FALSO], estados={})
+
+
+def test_escolher_o_acionamento_guardado_manda_a_metade_dele(a03, monkeypatch):
+    """O que está em «Seus» não só aparece: escolhido, ele vai ao gatilho com os números dela.
+
+    MORDIDA: tirar de `imersao_escolhida` o ramo do `meu-acionamento:` (a escolha cai na lista
+    do produto e é recusada como imersão que não existe).
+    """
+    from pacotes import meus_efeitos as me
+
+    metade = {"mode": "Resistance", "params": [3, 6]}
+    me.guardar_meus_efeitos({"Freio da régua": {"right": metade}}, "gatilhos")
+    solto = {"mode": "Off", "params": []}
+    ctx = _ctx_com(monkeypatch, solto, solto)
+    valor = f"{a03.PREFIXO_DO_SEU_ACIONAMENTO}Freio da régua"
+
+    ponte = _Ponte()
+    a03.imersao_escolhida(ctx, {"uniq": UNIQ, "lado": "d", "valor": valor}, ponte)
+    (nome, args), = ponte.chamadas
+    assert nome == "set" and args[0] == "right" and args[1] == "Resistance", ponte.chamadas
+    assert list(args[2]) == [3, 6], "o gatilho não recebeu os números que ela guardou"
+
+    with pytest.raises(RuntimeError, match="só o outro lado"):
+        a03.imersao_escolhida(ctx, {"uniq": UNIQ, "lado": "e", "valor": valor}, _Ponte())
+
+
+def test_escolher_o_acionamento_do_perfil_manda_aquele_acionamento(a03, monkeypatch):
+    """A opção «Do perfil» é um acionamento do produto, e o que não é um deles é recusado.
+
+    MORDIDA: tirar de `imersao_escolhida` o ramo do `acionamento:` (a escolha cai na lista do
+    produto e é recusada como imersão que não existe).
+    """
+    ctx = _ctx_com(monkeypatch, {"mode": "Bow", "params": [3, 7, 4, 5]},
+                   {"mode": "Off", "params": []})
+    ponte = _Ponte()
+    a03.imersao_escolhida(
+        ctx, {"uniq": UNIQ, "lado": "e", "valor": f"{a03.PREFIXO_DO_ACIONAMENTO}Bow"}, ponte)
+    (nome, args), = ponte.chamadas
+    assert nome == "set" and args[0] == "left" and args[1] == "Bow", ponte.chamadas
+
+    with pytest.raises(ValueError, match="não é um dos modos"):
+        a03.imersao_escolhida(
+            ctx, {"uniq": UNIQ, "lado": "e", "valor": f"{a03.PREFIXO_DO_ACIONAMENTO}Inventado"},
+            _Ponte())
