@@ -208,6 +208,7 @@ def test_a_roupa_sai_em_cache_pela_assinatura(tmp_path: Path) -> None:
 
 
 def test_nao_ha_tabela_por_appid() -> None:
+    # D-2210-A-ROUPA-DO-PAD-SE-LE-NO-BINARIO.
     arvore = ast.parse(Path(rj.__file__).read_text(encoding="utf-8"))
     suspeitos = [
         no.value
@@ -399,6 +400,7 @@ def test_o_arme_com_perfil_veste_antes_do_modo(arme: Path, monkeypatch: pytest.M
 def test_o_arme_que_fica_no_edge(arme: Path, monkeypatch: pytest.MonkeyPatch, caso: str) -> None:
     """`regravada-depois`: a env do `0ce6` nasceu (ou mudou) depois do `last_run`, e o
     jogo leu a de antes, com o `0x054C/0x0CE6` nas listas: o pad `0ce6` sumiria dele."""
+    # D-2210-A-ROUPA-VALE-PARA-O-JOGO-E-VOLTA-NO-FIM.
     from hefesto_dualsense4unix.profiles import manager
 
     _lancar(arme, _SEM_PERFIL, roupa=None if caso == "sem-env" else ROUPA_COMUM,

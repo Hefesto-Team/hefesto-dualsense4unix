@@ -75,6 +75,7 @@ DS = vp.CAMINHO_DUALSENSE
 @pytest.mark.parametrize("produto", ROUPAS)
 def test_o_broker_veste_o_comum_e_recusa_o_resto(tmp_path: Path, produto: int) -> None:
     """``0ce6`` e ``0df2`` montam nos quatro; ``05c4``, ``09cc`` e o Xbox voltam recusados."""
+    # D-2210-O-PAD-PODE-VESTIR-O-DUALSENSE-COMUM.
     kernel = KernelDeMentira(tmp_path)
     estado = kernel.estado()
     for jogador in JOGADORES:
@@ -159,6 +160,7 @@ def test_o_pad_comum_nunca_passa_por_fisico(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """MORDIDA: tire a guarda de posse do `_is_dualsense`, e o pad comum vira físico."""
+    # D-2210-O-PAD-SE-RECONHECE-PELA-POSSE.
     raizes = _sysfs(tmp_path, [no for no, _nosso in _NOS])
     monkeypatch.setattr(uhid_gamepad, "RAIZ_DOS_HIDRAW", raizes["classe"])
     for indice, (no, nosso) in enumerate(_NOS):
@@ -277,6 +279,7 @@ def _nos_do_udev(produto: int) -> list[tuple[_No, bool]]:
 @pytest.mark.parametrize("produto", ROUPAS)
 def test_a_regra_73_abre_o_pad_comum_e_fecha_o_fisico(tmp_path: Path, produto: int) -> None:
     """MORDIDA: tire o ``ENV{HEFESTO_PAD_USB}!="1"`` da linha USB do ``0ce6``, e o pad USB fecha."""
+    # D-2210-O-FISICO-SE-ESCONDE-PELO-DONO.
     texto = REGRA_73.read_text(encoding="utf-8")
     for no, nosso in _nos_do_udev(produto):
         modo, dono, tags = _o_udev_aplica(texto, no)
