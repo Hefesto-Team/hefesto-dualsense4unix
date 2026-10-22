@@ -1,8 +1,9 @@
 """O calor da máquina para a «Cor da temperatura» (A-LUZ-DE-AMBIENTE-E-DE-AVISO-01).
 
 Só leitura do ``/sys/class/hwmon``. Os sensores do processador e da placa de vídeo se descobrem
-pelo nome do chip, e o limite de cada um é o ``crit`` (ou o ``max``) que o próprio sensor declara:
-nenhum número de uma máquina fica no código. O calor é a fração do caminho entre o frio (uma
+pelo nome do chip, e o limite de cada um é o ``crit`` (ou o ``max``) que o próprio sensor declara,
+ou, no chip que não declara nenhum, o documentado pelo fabricante do chip: nenhum número de uma
+máquina fica no código. O calor é a fração do caminho entre o frio (uma
 constante física, a temperatura de um quarto) e esse limite, e vale o do sensor mais perto do seu.
 """
 
@@ -26,6 +27,10 @@ CHIPS_DE_CALOR = CHIPS_DO_PROCESSADOR | CHIPS_DA_PLACA_DE_VIDEO
 FRIO_C = 30.0
 #: Um limite que não passa disto acima do frio não é limite (a escala viraria um degrau).
 FOLGA_MINIMA_C = 10.0
+#: Os chips que não exportam ``crit`` nem ``max``: os do processador AMD (o ``k10temp`` dos Ryzen
+#: e o ``zenpower``) só dão o ``Tctl``. Para eles vale o Tctl máximo que a AMD documenta para os
+#: Ryzen de mesa, que é do chip e não de uma máquina; o limite declarado, quando há, sempre vence.
+LIMITE_DOCUMENTADO_DO_CHIP_C = {"k10temp": 95.0, "zenpower": 95.0}
 #: A leitura vale por tanto tempo; a descoberta dos sensores se refaz de tempos em tempos.
 VALIDADE_S = 2.0
 REDESCOBRIR_A_CADA_S = 30.0
@@ -59,7 +64,8 @@ def _ler_milli(caminho: Path) -> float | None:
 
 
 def descobrir(raiz: Path = RAIZ_DO_HWMON) -> list[Sensor]:
-    """Os sensores do processador e da placa de vídeo que declaram um limite (``crit``/``max``)."""
+    """Os sensores do processador e da placa de vídeo com limite: o ``crit`` ou o ``max`` que o
+    sensor declara, ou o documentado do chip que não declara nenhum."""
     achados: list[Sensor] = []
     try:
         pastas = sorted(raiz.glob("hwmon*"))
@@ -75,6 +81,8 @@ def descobrir(raiz: Path = RAIZ_DO_HWMON) -> list[Sensor]:
             if limite is None or limite < FRIO_C + FOLGA_MINIMA_C:
                 limite = _ler_milli(pasta / f"{prefixo}_max")
             if limite is None or limite < FRIO_C + FOLGA_MINIMA_C:
+                limite = LIMITE_DOCUMENTADO_DO_CHIP_C.get(chip)
+            if limite is None:
                 continue
             achados.append(Sensor(chip, entrada, limite))
     return achados
@@ -115,7 +123,10 @@ class LeitorDoCalor:
         agora = self._agora()
         if agora - self._lido_em < VALIDADE_S:
             return self._calor
-        if not self._sensores and agora - self._descoberto_em >= REDESCOBRIR_A_CADA_S:
+        # Sem sensor, ou com os de antes sem leitura (o hwmon renumera quando um driver volta),
+        # descobre de novo.
+        sem_leitura = not self._sensores or self._calor is None
+        if sem_leitura and agora - self._descoberto_em >= REDESCOBRIR_A_CADA_S:
             self._sensores = descobrir(self._raiz)
             self._descoberto_em = agora
             logger.debug("calor_sensores", quantos=len(self._sensores))

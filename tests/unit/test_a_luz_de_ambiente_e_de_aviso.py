@@ -251,6 +251,34 @@ def test_sem_crit_vale_o_max_e_sem_nenhum_dos_dois_o_sensor_e_ignorado(
     assert calor.calor_da_maquina(tmp_path / "nao-existe") is None
 
 
+def test_o_ryzen_que_nao_declara_limite_usa_o_tctl_maximo_documentado_do_chip(
+        tmp_path: pathlib.Path) -> None:
+    """O ``k10temp`` dos Ryzen exporta só o ``Tctl`` e os ``Tccd``, sem ``crit`` nem ``max`` (é a
+    forma do hwmon de um Ryzen de verdade): a cor da temperatura não pode morrer branca por isso."""
+    _hwmon(tmp_path, "hwmon2", "k10temp", temp1={"input": 73625, "label": "Tctl"},
+           temp3={"input": 64500, "label": "Tccd1"})
+    achados = calor.descobrir(tmp_path)
+    assert [s.limite_c for s in achados] == [95.0, 95.0]
+    assert calor.calor_da_maquina(tmp_path) == pytest.approx(
+        (73.625 - calor.FRIO_C) / (95.0 - calor.FRIO_C))
+    _hwmon(tmp_path, "hwmon3", "zenpower", temp1={"input": 60000, "crit": 85000})
+    assert {s.limite_c for s in calor.descobrir(tmp_path) if s.chip == "zenpower"} == {85.0}, (
+        "o limite declarado vence o documentado")
+
+
+def test_o_leitor_do_calor_redescobre_quando_o_sensor_some(tmp_path: pathlib.Path) -> None:
+    """O hwmon renumera quando um driver volta: o leitor que perdeu os sensores procura de novo."""
+    _hwmon(tmp_path, "hwmon0", "amdgpu", temp1={"input": 50000, "crit": 100000})
+    relogio = [100.0]
+    leitor = calor.LeitorDoCalor(tmp_path, agora=lambda: relogio[0])
+    assert leitor.calor() is not None
+    (tmp_path / "hwmon0").rename(tmp_path / "hwmon7")
+    relogio[0] += calor.VALIDADE_S
+    assert leitor.calor() is None
+    relogio[0] += calor.REDESCOBRIR_A_CADA_S
+    assert leitor.calor() == pytest.approx((50 - calor.FRIO_C) / (100 - calor.FRIO_C))
+
+
 def test_vale_o_sensor_mais_perto_do_limite_e_o_ilegivel_nao_derruba(
         tmp_path: pathlib.Path) -> None:
     _hwmon(tmp_path, "hwmon0", "k10temp", temp1={"input": 40000, "crit": 100000})
@@ -397,6 +425,24 @@ def test_o_quadro_das_estrelas_so_sai_quando_muda() -> None:
     laco.tique(100.0, plano)
     laco.tique(100.0 + PASSO_S, plano)
     assert len(quadros) == 1, "dois tiques iguais, um quadro"
+
+
+def test_sair_das_estrelas_no_meio_da_cintilada_devolve_o_numero_do_jogador() -> None:
+    """Trocar as Estrelas por outro efeito não deixa as luzinhas presas na cintilada: o primeiro
+    quadro do efeito novo leva a barra e o número do jogador juntos, e os seguintes só a barra."""
+    laco, barra, quadros = _laco(_Mao())
+    estrelas = _plano("estrelas;FF8000;5")
+    agora = 100.0
+    while not (quadros and quadros[-1][2] is not None):  # até a cintilada estar acesa
+        agora += PASSO_S
+        laco.tique(agora, estrelas)
+        assert agora < 130.0, "as Estrelas nunca cintilaram"
+    quadros.clear()
+    aurora = _plano("aurora;FF8000;5")
+    for i in range(1, 4):
+        laco.tique(agora + i * 2.0, aurora)
+    assert [lz for _, _, lz in quadros] == [None], "o número volta uma vez, junto com a barra"
+    assert barra, "depois do número, a Aurora segue pela barra"
 
 
 def test_a_aurora_pinta_so_a_barra_pelo_escritor_de_sempre() -> None:

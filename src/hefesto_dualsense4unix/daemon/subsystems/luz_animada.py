@@ -224,6 +224,9 @@ class LuzAnimada:
         #: O estado de cada controle nos efeitos que leem a mão, com o efeito a que pertence: um
         #: efeito novo (outra base, cor ou ritmo) nasce com estado novo.
         self._estados_da_mao: dict[str, tuple[EfeitoDaLuz, EstadoDaMao]] = {}
+        #: Os controles cujas luzinhas o efeito deixou fora do número do jogador (a cintilada das
+        #: Estrelas): o primeiro quadro de outro efeito devolve o número junto com a barra.
+        self._luzinhas_fora: set[str] = set()
         self._intervalo = max(intervalo_minimo, INTERVALO_MINIMO)
         self._ultimo_quadro: dict[str, object] = {}
         self._escrito_em: dict[str, float] = {}
@@ -282,8 +285,12 @@ class LuzAnimada:
             if self._ultimo_quadro.get(uniq) == chave:
                 continue
             self._ultimo_quadro[uniq] = chave
-            if com_luzinhas and self._escrever_quadro is not None:
-                self._escrever_quadro(uniq, quadro, luzinhas)
+            if self._escrever_quadro is not None and (com_luzinhas or uniq in self._luzinhas_fora):
+                self._escrever_quadro(uniq, quadro, luzinhas if com_luzinhas else None)
+                if com_luzinhas and luzinhas is not None:
+                    self._luzinhas_fora.add(uniq)
+                else:
+                    self._luzinhas_fora.discard(uniq)
             else:
                 self._escrever(uniq, quadro)
             escritos += 1
@@ -329,6 +336,7 @@ class LuzAnimada:
         self._ultimo_quadro.pop(uniq, None)
         self._escrito_em.pop(uniq, None)
         self._estados_da_mao.pop(uniq, None)
+        self._luzinhas_fora.discard(uniq)
         if not self._inicio:
             self._origem = None
         self._soltar(uniq)
@@ -374,6 +382,12 @@ FALHAS_DA_LEITURA: tuple[type[Exception], ...] = (
     ArithmeticError, AttributeError, KeyError, OSError, RuntimeError, TypeError, ValueError)
 
 
+def _o_hub(daemon: Any) -> Any:
+    """O ``SensorHub`` da sessão, o mesmo do IPC (o daemon o pede ao servidor); ``None`` sem ele."""
+    garantir = getattr(daemon, "_garantir_sensor_hub", None)
+    return garantir() if callable(garantir) else None
+
+
 def leitor_da_mao(daemon: Any) -> LeitorDaMao:
     """O que a mão faz em cada controle, lido do aparelho DELE (só leitura, nada se escreve).
 
@@ -416,8 +430,13 @@ def leitor_da_mao(daemon: Any) -> LeitorDaMao:
             if isinstance(jogadores, dict) and uniq in jogadores:
                 leitor = getattr(jogadores.get(uniq), "reader", None)
             else:  # sem co-op: o leitor passivo do hub, a fonte do secundário
-                hub = getattr(daemon, "_sensor_hub", None)
-                contagem = hub.apertos(uniq) if hub is not None else None
+                hub = _o_hub(daemon)
+                if hub is None:
+                    return None
+                # O `entradas` registra a demanda que mantém o leitor do secundário aberto com a
+                # janela fechada; o `apertos` sozinho só lê o que outro pediu.
+                hub.entradas(uniq)
+                contagem = hub.apertos(uniq)
                 return dict(contagem) if isinstance(contagem, dict) else None
         contagem = getattr(leitor.snapshot(), "apertos", None) if leitor is not None else None
         return dict(contagem) if isinstance(contagem, dict) else None
@@ -432,18 +451,19 @@ def leitor_da_mao(daemon: Any) -> LeitorDaMao:
                 return Entrada(calor=calor.calor())
             if base == "estrelas":
                 return Entrada()
-            garantir = getattr(daemon, "_garantir_sensor_hub", None)
-            hub = garantir() if callable(garantir) else None
+            hub = _o_hub(daemon)
             if hub is None:
                 return Entrada()
             if base == "inclinacao":
                 return Entrada(gravidade=hub.aceleracao_do_movimento(uniq))
-            lido = hub.toque_da_peca(uniq)
-            if lido is not None:
-                toque = lido[0]
+            # A `leitura` só VÊ o dedo: o `toque_da_peca` é do roteador do toque e segura o nó
+            # (EVIOCGRAB), o que tiraria o touchpad do cursor do computador.
+            toque = hub.leitura(uniq).get("touchpad")
+            if isinstance(toque, dict):
                 dedo = None
-                if toque.touching:
-                    dedo = (toque.x / max(1, toque.largura), toque.y / max(1, toque.altura))
+                if toque.get("touching"):
+                    dedo = (int(toque["x"]) / max(1, int(toque["width"])),
+                            int(toque["y"]) / max(1, int(toque["height"])))
                 return Entrada(dedo=dedo)
         return Entrada()
 

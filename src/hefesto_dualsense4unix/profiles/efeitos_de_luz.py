@@ -108,6 +108,9 @@ SUBIDAS_DO_REAGE_POR_S = 3
 VOLTAS_DO_MATIZ_POR_S = 1.0
 #: A inclinação com menos que isto de gravidade (em g) é leitura solta, não direção: ignora.
 GRAVIDADE_MINIMA_G = 0.3
+#: O controle deitado (a gravidade toda no eixo y) não tem lado para baixo: com menos que isto da
+#: gravidade no plano x-z (~10 graus de inclinação), a cor fica onde está em vez de seguir o ruído.
+INCLINACAO_MINIMA_G = 0.17
 #: O toque cobre o matiz de 0 a 300 graus (do vermelho ao magenta): a ponta direita não volta
 #: ao vermelho da esquerda.
 VOLTA_DO_TOQUE = 300.0 / 360.0
@@ -472,10 +475,11 @@ class ReageAoBotao:
 class Inclinacao:
     """A «Inclinação» de UM controle: a cor gira pela roda conforme o controle inclina.
 
-    O ângulo é o da gravidade no plano x-z do acelerômetro (rolar o controle de lado), como
+    O ângulo é o da gravidade no plano x-z do acelerômetro (o lado que aponta para baixo), como
     fração de volta; passar de uma volta não salta, porque o matiz é circular. A leitura é
     alisada (``tempo_da_inclinacao_s``) e a roda não gira mais depressa que
-    ``VOLTAS_DO_MATIZ_POR_S``. Sem leitura, fica a última cor (a branca, se nunca houve).
+    ``VOLTAS_DO_MATIZ_POR_S``. Deitado (menos que ``INCLINACAO_MINIMA_G`` no plano), nenhum lado
+    aponta para baixo e a cor fica. Sem leitura, fica a última cor (a branca, se nunca houve).
     """
 
     def __init__(self, ritmo: int) -> None:
@@ -489,17 +493,18 @@ class Inclinacao:
         self._visto_em = agora
         g = entrada.gravidade
         if g is not None and math.sqrt(sum(c * c for c in g)) >= GRAVIDADE_MINIMA_G:
-            if self._vetor is None or self._matiz is None:
+            if self._vetor is None:
                 self._vetor = (g[0], g[2])
-                self._matiz = (math.atan2(g[0], g[2]) / (2.0 * math.pi)) % 1.0
             else:
                 fator = 1.0 - math.exp(-decorrido / self._tau)
                 self._vetor = (
                     self._vetor[0] + fator * (g[0] - self._vetor[0]),
                     self._vetor[1] + fator * (g[2] - self._vetor[1]),
                 )
+            if math.hypot(*self._vetor) >= INCLINACAO_MINIMA_G:
                 alvo = (math.atan2(self._vetor[0], self._vetor[1]) / (2.0 * math.pi)) % 1.0
-                self._matiz = _andar_o_matiz(self._matiz, alvo, VOLTAS_DO_MATIZ_POR_S * decorrido)
+                self._matiz = alvo if self._matiz is None else _andar_o_matiz(
+                    self._matiz, alvo, VOLTAS_DO_MATIZ_POR_S * decorrido)
         if self._matiz is None:
             return (255, 255, 255)
         return _matiz_na_cor(self._matiz)

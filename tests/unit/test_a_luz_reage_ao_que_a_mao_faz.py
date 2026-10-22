@@ -183,7 +183,8 @@ def test_a_borda_do_aperto_e_suave_e_o_brilho_nunca_pula() -> None:
 
 
 def _gravidade(angulo: float) -> tuple[float, float, float]:
-    """A gravidade (1 g) no plano x-z para um ângulo de rolagem (0 = o controle deitado)."""
+    """A gravidade (1 g) toda no plano x-z, apontando para o lado ``angulo`` (deitado numa mesa,
+    a gravidade do DualSense fica no eixo y, e nenhum lado aponta para baixo)."""
     return (math.sin(angulo), 0.0, math.cos(angulo))
 
 
@@ -244,6 +245,27 @@ def test_sem_leitura_a_inclinacao_fica_branca_e_depois_fica_a_ultima() -> None:
     assert estado.andar(fx.Entrada(), 0.2) == cor, "sem dado, a cor de antes"
     # gravidade quase nula é leitura solta, não direção
     assert estado.andar(fx.Entrada(gravidade=(0.01, 0.0, 0.02)), 0.3) == cor
+
+
+def test_o_controle_deitado_nao_tem_lado_para_baixo_e_a_cor_nao_segue_o_ruido() -> None:
+    """Deitado, a gravidade fica no y e o que sobra no plano x-z é ruído de centésimos de g: a
+    cor fica onde estava, em vez de girar pela roda atrás do ângulo do ruído."""
+    import random
+
+    estado = fx.Inclinacao(10)
+    for i in range(int(1.0 / PASSO_S)):
+        cor = estado.andar(fx.Entrada(gravidade=_gravidade(math.pi / 2)), i * PASSO_S)
+    sorteio = random.Random(7)
+    cores: list[RGB] = []
+    for i in range(int(3.0 / PASSO_S)):
+        ruido = (sorteio.uniform(-0.03, 0.03), 1.0, sorteio.uniform(-0.03, 0.03))
+        cores.append(estado.andar(fx.Entrada(gravidade=ruido), 1.0 + i * PASSO_S))
+    assert all(abs((_matiz(c) - _matiz(cor) + 0.5) % 1.0 - 0.5) < 0.05 for c in cores), (
+        "deitado, a cor é a da última inclinação")
+    assert len(set(cores[int(0.5 / PASSO_S):])) == 1, "deitado e parado, a cor não anda"
+    deitado = fx.Inclinacao(10)
+    assert deitado.andar(fx.Entrada(gravidade=(0.01, 1.0, -0.02)), 0.0) == BRANCO, (
+        "deitado desde o começo: sem lado para baixo, a cor de quem nunca inclinou")
 
 
 # ---------------------------------------------------------------- «Dedo no touchpad»
@@ -374,9 +396,21 @@ class _Hub:
         self.pediu.append(("accel", uniq))
         return (0.5, 0.0, 0.8)
 
-    def toque_da_peca(self, uniq: str) -> tuple[Any, bool]:
+    def leitura(self, uniq: str) -> dict[str, Any]:
         self.pediu.append(("toque", uniq))
+        return {"touchpad": {"touching": True, "x": 960, "y": 540, "width": 1920, "height": 1080}}
+
+    def toque_da_peca(self, uniq: str) -> tuple[Any, bool]:
+        # O do roteador do toque: segura o nó (EVIOCGRAB) e tira o touchpad do cursor.
+        self.pediu.append(("segurou o touchpad", uniq))
         return SimpleNamespace(touching=True, x=960, y=540, largura=1920, altura=1080), False
+
+    def entradas(self, uniq: str) -> dict[str, Any] | None:
+        self.pediu.append(("entradas", uniq))
+        return None
+
+    def apertos(self, uniq: str) -> dict[str, int] | None:
+        return {"circle": 2} if uniq == JOGADORES[3] else None
 
 
 def _daemon() -> Any:
@@ -396,16 +430,18 @@ def test_o_leitor_de_producao_le_os_apertos_do_proprio_controle() -> None:
     assert ler(JOGADORES[0], "reage-ao-botao").apertos == {"cross": 1}
     assert ler(JOGADORES[1], "reage-ao-botao").apertos == {"cross": 7}
     assert ler(JOGADORES[2], "reage-ao-botao").apertos == {"cross": 3}
-    assert ler(JOGADORES[3], "reage-ao-botao").apertos is None, "controle sem leitor: sem dado"
-    assert hub.pediu == [], "os apertos não pedem sensor nenhum"
+    assert hub.pediu == [], "o posto e o co-op leem o leitor deles, sem pedir sensor nenhum"
 
 
 def test_o_controle_sem_co_op_le_os_apertos_pelo_leitor_passivo_do_hub() -> None:
-    daemon, _ = _daemon()
-    daemon._sensor_hub = SimpleNamespace(
-        apertos=lambda uniq: {"circle": 2} if uniq == JOGADORES[3] else None)
+    """O daemon de verdade não tem ``_sensor_hub``: o hub é o do servidor, pelo
+    ``_garantir_sensor_hub``, e o leitor passivo só fica aberto com a demanda do ``entradas``."""
+    daemon, hub = _daemon()
+    assert not hasattr(daemon, "_sensor_hub")
     ler = luz.leitor_da_mao(daemon)
     assert ler(JOGADORES[3], "reage-ao-botao").apertos == {"circle": 2}
+    assert hub.pediu == [("entradas", JOGADORES[3])], "sem a demanda, o leitor fecha em 5 s"
+    assert ler("aa:bb:cc:00:00:09", "reage-ao-botao").apertos is None, "sem leitor: sem dado"
     assert ler(JOGADORES[1], "reage-ao-botao").apertos == {"cross": 7}, "o co-op segue o dele"
 
 
@@ -417,7 +453,8 @@ def test_o_leitor_de_producao_so_pede_o_sensor_que_a_base_usa() -> None:
     assert hub.pediu == [("accel", JOGADORES[1])]
     dedo = ler(JOGADORES[2], "dedo-no-touchpad")
     assert dedo.dedo == (0.5, 0.5) and dedo.gravidade is None
-    assert hub.pediu == [("accel", JOGADORES[1]), ("toque", JOGADORES[2])]
+    assert hub.pediu == [("accel", JOGADORES[1]), ("toque", JOGADORES[2])], (
+        "o dedo se lê sem segurar o touchpad: o cursor do computador continua dele")
 
 
 def test_o_leitor_de_producao_nunca_levanta() -> None:
