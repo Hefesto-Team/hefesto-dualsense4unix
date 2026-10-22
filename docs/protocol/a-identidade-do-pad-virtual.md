@@ -74,3 +74,7 @@ reconheceria o Edge.
 - A SDL só conta pelo `DualSense Edge`: uma SDL2 anterior ao Edge, que só conhece o comum, cai
   no Edge (nenhum jogo instalado tem uma; não se mediu).
 - O jogo de fora da Steam e o jogo sem o wrapper não têm o arme: o pad fica no Edge.
+- A roupa não faz o Minecraft Dungeons II vibrar. Ele pede a vibração só pelo GameInput (o Wwise
+  Motion, `AkMotion.dll`, exige o `IGameInput` v2 e um aparelho com motores de rumble), e o
+  `GameInputCreate` do Proton é stub: com o Edge ou com o `0ce6`, nenhum `SetRumbleState` chega
+  ao pad. A cura é uma peça da casa (O-JOGO-GDK-VIBRA-PELO-GAMEINPUT-01), não a identidade.
