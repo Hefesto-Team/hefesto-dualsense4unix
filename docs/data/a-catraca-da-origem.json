@@ -245,14 +245,14 @@
       "data": "2026-10-22",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1178222,
+      "piso": 1178227,
       "por_item": {
-        "docs": 120384,
+        "docs": 120389,
         "scripts": 119950,
         "src": 314957,
         "tests": 622931
       },
-      "razao": "tamanho: +1072 linhas (1177150 -> 1178222), pagas por Origem: D-2210-A-LOVENSE-E-UMA-EXTENSAO-SO, D-2210-O-LADO-DOS-BOTOES-E-DO-TEMA; registrado no fecho, topo 77d5c0675b56",
+      "razao": "tamanho: +5 linhas (1178222 -> 1178227), pagas por Origem: D-2909-HAPTICA-NASCE-EM-150; registrado no fecho, topo 14b4ff557794",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -775,6 +775,12 @@
           "de": 1177150,
           "para": 1178222,
           "razao": "tamanho: +1072 linhas (1177150 -> 1178222), pagas por Origem: D-2210-A-LOVENSE-E-UMA-EXTENSAO-SO, D-2210-O-LADO-DOS-BOTOES-E-DO-TEMA; registrado no fecho, topo 77d5c0675b56"
+        },
+        {
+          "data": "2026-10-22",
+          "de": 1178222,
+          "para": 1178227,
+          "razao": "tamanho: +5 linhas (1178222 -> 1178227), pagas por Origem: D-2909-HAPTICA-NASCE-EM-150; registrado no fecho, topo 14b4ff557794"
         }
       ],
       "unidade": "linhas",
