@@ -141,11 +141,30 @@ def test_sem_sinal_fica_o_edge(
     assert roupa == rj.ROUPA_DO_EDGE, fonte
 
 
-def test_o_sharedassets0_entra_mesmo_com_muitos_assets(tmp_path: Path) -> None:
+@pytest.mark.parametrize("decrescente", [False, True], ids=["crescente", "decrescente"])
+def test_o_sharedassets0_entra_mesmo_com_muitos_assets(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, decrescente: bool
+) -> None:
+    import os
+
     arquivos = {f"Jogo_Data/sharedassets{n}.assets": b"cena" for n in range(1, 30)}
     arquivos |= {_REWIRED: b"DualSenseDriver", _ASSETS: b"Sony DualSense"}
+    raiz = _jogo(tmp_path, arquivos)
+    de_verdade = os.scandir
 
-    roupa, fonte = rj.roupa_do_jogo(_jogo(tmp_path, arquivos))
+    class _NaOrdem(list[Any]):
+        def __enter__(self) -> _NaOrdem:
+            return self
+
+        def __exit__(self, *_: object) -> None:
+            return None
+
+    def na_ordem(pasta: Any) -> Any:
+        with de_verdade(pasta) as entradas:
+            return _NaOrdem(sorted(entradas, key=lambda e: e.name, reverse=decrescente))
+
+    monkeypatch.setattr(os, "scandir", na_ordem)
+    roupa, fonte = rj.roupa_do_jogo(raiz)
 
     assert roupa == "0ce6" and "sharedassets0" in fonte, (
         "o InputManager do Rewired mora no sharedassets0 (Scarlet Deer Inn, Spirit Valley)")
