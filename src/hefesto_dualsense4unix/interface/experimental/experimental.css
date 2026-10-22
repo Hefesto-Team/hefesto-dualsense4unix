@@ -491,3 +491,65 @@
 .lanc-fila::-webkit-scrollbar { width:9px }
 .lanc-fila::-webkit-scrollbar-track { background:var(--app-bg);border-radius:5px }
 .lanc-fila::-webkit-scrollbar-thumb { background:var(--border-forte);border-radius:5px }
+/* O ARRANJO C — 22/10/2026 (o arranjo «Agora e ajustes» escolhido
+   na foto dos três). A extensão que declara `agora` ganha a coluna à esquerda (as conexões, uma linha
+   fina, os aparelhos) e os grupos do manifesto em abas à direita; o «Parar tudo» fica no topo. As abas são
+   rádios: o navegador troca a tela sem gesto, e a janela redesenhada nasce na aba da última opção mudada. */
+#mod-janela .ja-topo .tn-tit + .tn-x { margin-left:auto }
+#mod-janela .ja-corpo { grid-template-columns:252px minmax(0,1fr) }
+#mod-janela .ja-agora { gap:6px }
+#mod-janela .ja-cxs, #mod-janela .ja-aps { display:flex;flex-direction:column;gap:2px }
+#mod-janela .ja-sep { border-top:1px solid var(--border-sutil);margin:2px 0 }
+#mod-janela .ic { flex:none }
+#mod-janela .c-verde { color:var(--green) }
+#mod-janela .c-amarelo { color:var(--yellow) }
+#mod-janela .c-laranja { color:var(--orange) }
+#mod-janela .c-mudo { color:var(--texto-mudo) }
+#mod-janela .c-acessorio { color:var(--pink) }
+#mod-janela .cx-linha, #mod-janela .ap { display:flex;align-items:center;gap:8px;height:28px;font-size:12px;min-width:0 }
+#mod-janela .cx-rot { flex:1;min-width:0;font-weight:500;color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
+#mod-janela .ap-nome { flex:0 1 auto;min-width:0;max-width:104px;font-weight:500;color:var(--fg);white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis }
+#mod-janela .vazia .cx-rot, #mod-janela .vazio .ap-nome { color:var(--texto-mudo) }
+#mod-janela .est { display:inline-flex;align-items:center;gap:5px;font-size:11px;white-space:nowrap;flex:none }
+#mod-janela .ap > .est { margin-left:auto }
+#mod-janela .est i { width:8px;height:8px;border-radius:50%;display:inline-block }
+#mod-janela .est-verde { color:var(--green) }
+#mod-janela .est-verde i { background:var(--green);box-shadow:0 0 6px var(--green) }
+#mod-janela .est-amarelo { color:var(--yellow) }
+#mod-janela .est-amarelo i { background:var(--yellow);animation:mj-piscar 1.2s infinite }
+#mod-janela .est-laranja { color:var(--orange) }
+#mod-janela .est-laranja i { background:var(--orange) }
+#mod-janela .est-mudo { color:var(--texto-mudo) }
+#mod-janela .est-mudo i { background:var(--border-forte) }
+@keyframes mj-piscar { 50% { opacity:.25 } }
+#mod-janela .bat { width:34px;height:10px;border:1px solid var(--texto-mudo);border-radius:2px;padding:1px;flex:none;
+  box-sizing:content-box;display:inline-block }
+#mod-janela .bat i { display:block;height:100%;background:var(--green);border-radius:1px }
+#mod-janela .vivo { flex:1;height:18px;overflow:hidden;min-width:36px }
+#mod-janela .vivo svg { width:200%;height:18px;animation:mj-correr 1.4s linear infinite }
+#mod-janela .vivo path { fill:none;stroke:var(--pink);stroke-width:2 }
+@keyframes mj-correr { to { transform:translateX(-50%) } }
+#mod-janela .ac-card.mj-abas { flex-direction:row;flex-wrap:wrap;align-content:flex-start;gap:0 2px;padding-top:4px }
+#mod-janela .mj-abas > input { display:none }
+#mod-janela .mj-abas > label { height:30px;padding:0 12px;display:inline-flex;align-items:center;font-size:12px;
+  color:var(--texto-suave);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap }
+#mod-janela .mj-abas > label:hover { color:var(--fg) }
+#mod-janela .mj-abas > input:checked + label { color:var(--purple);border-bottom-color:var(--purple) }
+#mod-janela .mj-abas > .mj-tela { order:1;flex:0 0 100%;display:none;border-top:1px solid var(--border-sutil);
+  padding-top:6px;min-width:0 }
+#mod-janela .mj-abas > input:checked + label + .mj-tela { display:block }
+#mod-janela .tq-lista { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 16px;padding-top:4px }
+#mod-janela .tql { display:flex;align-items:center;gap:10px;height:32px;border-bottom:1px solid var(--border-sutil);min-width:0 }
+#mod-janela .tq-gl { flex:none;color:var(--fg) }
+#mod-janela .onda { flex:none }
+#mod-janela .onda rect { fill:var(--purple) }
+#mod-janela .onda-zero { stroke:var(--border-forte);stroke-width:1.5;stroke-dasharray:3 3 }
+#mod-janela .tql .ext-sel { margin-left:auto;width:120px;max-width:none }
+#mod-janela .ext-end { width:220px;height:26px;border-radius:6px;padding:0 9px;border:1px solid var(--border-forte);
+  background:var(--app-bg);color:var(--fg);font:11.5px 'JetBrains Mono',ui-monospace,monospace }
+#mod-janela .ext-end::placeholder { color:var(--texto-mudo) }
+@media (max-width:1199px) {
+  #mod-janela .ja-corpo { grid-template-columns:232px minmax(0,1fr) }
+  #mod-janela .tql .ext-sel { width:104px }
+}

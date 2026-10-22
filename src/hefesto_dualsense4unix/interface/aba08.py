@@ -473,6 +473,31 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .gc .ext-declara select.pronto{height:26px;line-height:1.2;padding-top:0;padding-bottom:0;
                                  width:64px}
   .gc .ext-declara select.pronto[data-gesto="externo-cor"]{width:132px}
+  /* O APARELHO DE UMA EXTENSÃO (22/10/2026, o arranjo C da janela da extensão): a linha do
+     externo, com a borda cheia na cor do acessório, o ícone do transporte, a pílula do estado, a
+     pilha e o «via» o nome da extensão. As peças são as da coluna «Agora» da janela dela. */
+  .gc .ext-acessorio{border-left:3px solid var(--c-acessorio)}
+  .gc .ext-acessorio .ic{flex:none}
+  .gc .ext-acessorio .c-verde{color:var(--green)}
+  .gc .ext-acessorio .c-amarelo{color:var(--yellow)}
+  .gc .ext-acessorio .c-laranja{color:var(--orange)}
+  .gc .ext-acessorio .c-mudo{color:var(--texto-mudo)}
+  .gc .ext-acessorio .c-acessorio{color:var(--c-acessorio)}
+  .gc .ext-acessorio .est{display:inline-flex;align-items:center;gap:5px;font-size:11px;
+                          white-space:nowrap;flex:none}
+  .gc .ext-acessorio .est i{width:8px;height:8px;border-radius:50%;display:inline-block}
+  .gc .ext-acessorio .est-verde{color:var(--green)}
+  .gc .ext-acessorio .est-verde i{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .gc .ext-acessorio .est-amarelo{color:var(--yellow)}
+  .gc .ext-acessorio .est-amarelo i{background:var(--yellow)}
+  .gc .ext-acessorio .est-laranja{color:var(--orange)}
+  .gc .ext-acessorio .est-laranja i{background:var(--orange)}
+  .gc .ext-acessorio .est-mudo{color:var(--texto-mudo)}
+  .gc .ext-acessorio .est-mudo i{background:var(--border-forte)}
+  .gc .ext-acessorio .bat{width:34px;height:10px;border:1px solid var(--texto-mudo);border-radius:2px;
+                          padding:1px;flex:none;box-sizing:content-box;display:inline-block}
+  .gc .ext-acessorio .bat i{display:block;height:100%;background:var(--green);border-radius:1px}
+  .gc .ext-acessorio .ext-via{text-align:right;color:var(--texto-suave)}
 
   /* ---- botões: todo grupo divide a largura do bloco em partes IGUAIS ----
      A régua dela é estrita: 273/273/273/273 na Jogar, 260 nos 38 da Gatilhos,
@@ -3200,6 +3225,11 @@ MIOLO = f'''
                ELE NASCE VAZIO pela mesma razão da tabela dos adaptadores e do
                mapa do gabinete: quantos existem é o que a máquina responde. -->
           <div class="ext-vaga" data-campo="externos-lista" data-hef-alvo="html"><i class="nada"></i></div>
+          <!-- 22/10/2026, o arranjo C da janela da extensão: as conexões e os aparelhos que cada
+               extensão ligada publica (`acessorios.estado`), «via» o nome dela, na mesma moldura dos
+               externos e pela mesma razão: o Hefesto os VÊ, não os adota. Nasce vazia: quantos
+               existem é o que as extensões respondem. -->
+          <div class="ext-vaga" data-campo="extensoes-lista" data-hef-alvo="html"><i class="nada"></i></div>
         </div>
         <!-- 05/10/2026, o desenho aprovado: as quatro ferramentas descem para baixo dos cartões. -->
         <div class="ferramentas">
@@ -3495,6 +3525,12 @@ if __name__ == "__main__":
             "a vaga dos externos deixou de ser `display:contents` — as linhas "
             "voltam a empilhar dentro de um item só do acordeão")
 
+    _exigir(_HTML.count('data-campo="extensoes-lista" data-hef-alvo="html"') == 1
+            and 'data-campo="extensoes-lista"' in _dentro_do_acordeao(_HTML),
+            "os aparelhos das extensões ficaram sem endereço, ou fora da moldura dos controles")
+    _exigir("ext-acessorio" not in re.sub(r"<style\b.*?</style>", "", _HTML, flags=re.S),
+            "um aparelho de extensão nasceu no desenho — a tela estaria afirmando um aparelho "
+            "que nenhuma extensão publicou")
     _exigir('class="ext-linha"' not in _HTML,
             "uma linha de controle externo nasceu no desenho — a tela estaria "
             "afirmando um aparelho que ninguém mediu")

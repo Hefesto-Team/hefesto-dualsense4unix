@@ -294,7 +294,8 @@ def test_a_coluna_desenha_so_os_pedacos_que_o_manifesto_declara(janela) -> None:
         "a coluna trouxe um pedaço que o manifesto não declara")
     coluna = carga["blocos"]["#mod-agora"]
     assert "<b>4</b>" in coluna and coluna.count('class="on"') == 4
-    assert "Motor &lt;b&gt;" in coluna and "2 conectados" in coluna, "nome de terceiro escapado"
+    assert "Motor &lt;b&gt;" in coluna, "nome de terceiro escapado"
+    assert coluna.count('<div class="ap">') == 2, "um aparelho por linha"
 
 
 def test_sem_agora_no_manifesto_a_janela_fica_como_era(janela) -> None:
@@ -310,7 +311,8 @@ def test_extensao_parada_mostra_a_coluna_vazia_sem_numero(janela, ctx) -> None: 
     vazio = {k: v for k, v in estado_vazio_dos_acessorios("toque").items() if k != "mod"}
     coluna = abrir(_Ponte(vazio), agora=["nivel", "perfil", "aparelhos"])["blocos"]["#mod-agora"]
     assert "<b>0</b>" not in coluna and "<b>—</b>" in coluna and 'class="on"' not in coluna
-    assert "Parada" in coluna and "Nenhum conectado" in coluna
+    assert "Parada" in coluna and '<div class="ap vazio">' in coluna
+    assert '<div class="ap">' not in coluna, "a extensão parada não tem aparelho"
     sem_servico = a07.configurar_modificacao(
         ctx, {"v": "toque"}, _Ponte(falha=True))["blocos"]["#mod-agora"]
     assert "<b>—</b>" in sem_servico, "sem resposta do serviço, a coluna inventou um nível"

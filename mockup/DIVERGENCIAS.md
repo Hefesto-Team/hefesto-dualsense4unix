@@ -21,4 +21,13 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 07-lancadores.html
+- **22/10/2026** — o arranjo C da janela Configurar (a coluna «Agora», os grupos em abas, o «Parar
+  tudo» no topo e os toques por botão com o glifo), escolhido na foto dos três arranjos. Enquanto não
+  se publica, o produto continua com a folha de antes: a janela de uma extensão que declara `agora`
+  chega com as peças novas sem o estilo delas, e os glifos dos toques não aparecem.
+
+## 08-conexoes.html
+- **22/10/2026** — a vaga `extensoes-lista` na moldura dos controles: as conexões e os aparelhos de
+  cada extensão ligada, «via» o nome dela. Enquanto não se publica, o produto continua sem a vaga, e
+  a aba não mostra os aparelhos das extensões.

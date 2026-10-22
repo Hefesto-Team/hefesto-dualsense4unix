@@ -47,10 +47,7 @@ GRANDES: dict[str, str] = {
 
 # variante de desenho que ainda ESPERA a escolha do usuário (nome do arquivo -> o que ela decide).
 # Em 21/10/2026 toda variante tinha escolha gravada e saiu; a que entra aqui sai com a escolha.
-ESPERAM_A_ESCOLHA: dict[str, str] = {
-    "2210-a-janela-da-lovense.html":
-        "o arranjo da janela da extensão Lovense (A, B ou C) e as capacidades que ele pede",
-}
+ESPERAM_A_ESCOLHA: dict[str, str] = {}
 
 
 def _versionados(raiz: Path = RAIZ) -> list[str]:

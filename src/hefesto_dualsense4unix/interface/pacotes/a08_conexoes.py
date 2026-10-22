@@ -1210,6 +1210,90 @@ def desenho_do_externo(entrada: dict[str, Any]) -> str:
             f'<svg aria-hidden="true"><use href="#{simbolo_do_externo(entrada)}"/></svg></span>')
 
 
+#: O prazo de cada ``mods.agora`` da Conexões, e de quanto em quanto a lista se relê.
+PRAZO_DO_AGORA_DAS_EXTENSOES_S = 1.0
+VALIDADE_DO_AGORA_DAS_EXTENSOES_S = 2.0
+
+
+def _ler_o_agora_das_extensoes() -> list[tuple[str, dict[str, Any]]]:
+    """``(nome, estado)`` de cada extensão ligada que publica o ``acessorios.estado``.
+
+    BLOQUEIA (um ``mods.agora`` por extensão): só num fio de ``em_fundo``. A extensão desligada,
+    parada ou sem a permissão do estado fica de fora; sob a suíte, nada (a régua injeta). Nunca
+    levanta.
+    """
+    from hefesto_dualsense4unix.integrations.bluez_dbus import a_suite_esta_rodando
+
+    if a_suite_esta_rodando():
+        return []
+    from hefesto_dualsense4unix.app import ipc_bridge
+    from hefesto_dualsense4unix.mods.instalador import Lugares, ler_registro
+    from hefesto_dualsense4unix.mods.manifesto import PERMISSOES_DO_ESTADO, ler_manifesto
+
+    try:
+        lg = Lugares.do_xdg()
+        registro = ler_registro(lg.registro)
+    except Exception:
+        return []
+    saida: list[tuple[str, dict[str, Any]]] = []
+    for mod_id, entrada in sorted(registro.items()):
+        if not entrada.ligada:
+            continue
+        try:
+            manifesto = ler_manifesto(lg.codigo / mod_id, exigir_api=False)
+            if not set(PERMISSOES_DO_ESTADO) & set(manifesto.permissoes):
+                continue
+            corpo = ipc_bridge._corpo_do_daemon(
+                "mods.agora", {"mod": mod_id}, timeout=PRAZO_DO_AGORA_DAS_EXTENSOES_S)
+        except Exception:
+            continue
+        if isinstance(corpo, dict) and corpo.get("ligado") is True:
+            saida.append((manifesto.nome, corpo))
+    return saida
+
+
+def html_do_agora_das_extensoes(lidos: list[tuple[str, dict[str, Any]]]) -> str:
+    """Uma linha por conexão e por aparelho que cada extensão ligada publica, «via <nome>».
+
+    O desenho de cada peça (o ícone do transporte, a pílula do estado, a pilha) é o da coluna
+    «Agora» da janela da extensão (`desenho_da_experimental`), para as duas telas não discordarem.
+    A linha mora na moldura dos controles, como a do externo, e não é assento: não tem rádio de
+    alvo nem corpo que abre. ``""`` sem nenhuma.
+    """
+    from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
+
+    linhas: list[str] = []
+    for nome, estado in lidos:
+        via = f'<span class="ext-via">via {html.escape(nome)}</span>'
+        for c in exp.itens_do_estado(estado, "conexoes"):  # (noqa-acento): a chave do estado
+            est = str(c.get("estado") or "ligado")
+            motivo = c.get("motivo")
+            dica = (f' data-dica="{html.escape(motivo, quote=True)}"'
+                    if isinstance(motivo, str) and motivo else "")
+            desenho = exp.ICONE_DO_TRANSPORTE.get(str(c.get("transporte")),
+                                                  exp.ICONE_DO_TRANSPORTE["local"])
+            linhas.append(
+                f'<div class="ext-linha ext-acessorio"{dica}>'
+                f'{exp.icone_html(desenho, exp.COR_DO_ESTADO.get(est, "mudo"))}'
+                f'<span class="ext-nome">{html.escape(str(c.get("tipo") or c.get("id") or ""))}'
+                f"</span>{exp.estado_html(est)}{via}</div>")
+        for a in exp.itens_do_estado(estado, "aparelhos"):
+            est = str(a.get("estado") or "ligado")
+            cor = "acessorio" if est == "ligado" else exp.COR_DO_ESTADO.get(est, "mudo")
+            linhas.append(
+                f'<div class="ext-linha ext-acessorio">{exp.icone_html(exp.ICONE_DO_APARELHO, cor)}'
+                f'<span class="ext-nome">{html.escape(str(a.get("nome") or ""))}</span>'
+                f"{exp.estado_html(est)}{exp.bateria_html(a.get('bateria'))}{via}</div>")
+    return "".join(linhas)
+
+
+def _html_do_agora_das_extensoes() -> str:
+    """O que a última leitura em fundo trouxe; a pintura nunca pergunta ao serviço no tique."""
+    lidos = em_fundo.em_fundo("agora-das-extensoes", lambda: _ler_o_agora_das_extensoes(),
+                              VALIDADE_DO_AGORA_DAS_EXTENSOES_S)
+    return html_do_agora_das_extensoes(list(lidos or []))
+
+
 def _html_dos_externos(ctx: Contexto) -> str:
     """Uma linha por controle que o Hefesto VÊ e NÃO adota — ``""`` sem nenhum.
 
@@ -1691,6 +1775,7 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
         # pelo «Examinar Entradas». (noqa-acento: citação literal)
         **_sala_na_tela(declaracao),
         "externos-lista": _html_dos_externos(ctx),
+        "extensoes-lista": _html_do_agora_das_extensoes(),
         "mic-escopo": escopo_do_botao_do_mic(st),
         **radio,
         "alvo-aberto": _alvo_de_saida(ctx),
@@ -1701,7 +1786,7 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
         "sem_dono": {},
         # que o `alvo-aberto` marca — as ressalvas contam mesmo caladas, porque
         "cobertura": {"pintados": 1 + 2 + 5 + len(confissao)
-                      + 1 + 12
+                      + 1 + 13
                       + sum(len(v) for v in colunas.values()),
                       "sem_dono": len(SEM_DONO)},
     }

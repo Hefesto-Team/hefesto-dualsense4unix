@@ -248,11 +248,13 @@ def _janela(html: str, ident: str) -> str:
 
 
 def test_a_janela_generica_da_extensao_tem_um_cartao_por_grupo_e_cancelar_guardar() -> None:
-    """A (recomendada): um cartão por grupo, e não as abas de antes."""
-    janela = _janela(_ler(SETE), _ID)
+    """A (recomendada): um cartão por grupo, e não as abas de antes (a extensão sem ``agora``)."""
+    import desenho_da_experimental as exp
+
+    janela = exp.modificacao_miolo_html("Minha extensão", exp.OPCOES_DO_DESENHO, mod="exemplo")
     titulos = re.findall(r'<span class="ac-tit">([^<]*)</span>', janela)
     assert titulos == ["Geral", "Luz e vibração", "Avançado"], titulos
-    assert "mg-abas" not in janela and 'type="radio"' not in janela
+    assert "mj-abas" not in janela and 'type="radio"' not in janela
     # seis opções do exemplo e a do CSS de quem usa (22/10/2026: «Usar o meu CSS», em «Avançado»)
     assert janela.count('<div class="ky-linha">') == 7
     assert '<a class="btn" href="#">Cancelar</a>' in janela
@@ -260,14 +262,26 @@ def test_a_janela_generica_da_extensao_tem_um_cartao_por_grupo_e_cancelar_guarda
     assert ">Fechar</a>" not in janela.split('class="tn-rod"')[1]
 
 
+def test_a_janela_da_extensao_com_agora_no_desenho_e_o_arranjo_c() -> None:
+    """O arranjo C escolhido em 22/10/2026: a coluna «Agora», os grupos em abas e o «Parar tudo»."""
+    janela = _janela(_ler(SETE), _ID)
+    abas = re.findall(r'<label for="mj-aba-\d+">([^<]*)</label>', janela)
+    assert abas == ["Toques", "Ligação", "Geral", "Luz e vibração", "Avançado"], abas
+    assert janela.count(" checked>") >= 1 and 'id="mj-aba-0" checked' in janela
+    assert 'id="mod-agora"' in janela and "Para</span>Todos" not in janela
+    assert 'class="ja-parar" data-gesto="parar-tudo-da-modificacao"' in janela
+    assert '<a class="btn roxo" href="#" data-gesto="guardar-modificacao"' in janela
+
+
 @sem_chrome
 @pytest.mark.parametrize("vista", VISTAS, ids=lambda v: str(v[0]))
 def test_a_janela_generica_da_extensao_cabe_sem_rolagem_nem_corte(vista: tuple[int, int]) -> None:
     medida = """() => {
       const cx = document.querySelector('@ .tn-cx'), r = cx.getBoundingClientRect();
-      const corpo = document.querySelector('@ .tn-corpo');
+      const corpo = document.querySelector('@ .ja-opcoes');
       const d = document.documentElement;
-      const corte = [...document.querySelectorAll('@ .ky-ctrl, @ .ky-linha')]
+      const corte = [...document.querySelectorAll(
+        '@ .ky-ctrl, @ .ky-linha, @ .tql, @ .cx-linha, @ .ap')]
         .filter(c => c.scrollWidth > c.clientWidth + 1).length;
       return {cabe: r.top >= 0 && r.bottom <= window.innerHeight, corte,
               rola: corpo.scrollHeight > corpo.clientHeight + 1,

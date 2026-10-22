@@ -149,10 +149,18 @@ def test_a_aba_e_as_janelas_cabem_sem_rolagem_vertical(navegador, larg, alt) -> 
 def test_a_janela_da_extensao_com_tres_grupos_vai_em_duas_colunas(navegador, larg, alt) -> None:
     """D-2010-A-JANELA-DA-EXTENSAO-COM-TRES-GRUPOS-VAI-EM-DUAS-COLUNAS: numa coluna só, o manifesto
     de quatro grupos passava por baixo do Cancelar e do Guardar. MORDIDA: tire a regra
-    ``.ky-grade:has(> .ac-card:nth-child(3))`` do mockup e a grade volta a uma coluna."""
+    ``.ky-grade:has(> .ac-card:nth-child(3))`` do mockup e a grade volta a uma coluna.
+
+    Desde 22/10/2026 o exemplo da página é o arranjo C (a extensão declara ``agora``); a janela de
+    quem não declara entra no lugar dela, com a folha da página."""
+    sys.path.insert(0, str(INTERFACE))
+    import desenho_da_experimental as exp
+
+    sem_agora = exp.modificacao_miolo_html("Minha extensão", exp.OPCOES_DO_DESENHO, mod="exemplo")
     pg = navegador.new_page(viewport={"width": larg, "height": alt})
     try:
         pg.goto(f"{MOCKUP.as_uri()}#modificacao")  # (noqa-acento: âncora do HTML)
+        pg.evaluate("h => { document.getElementById('mod-janela').innerHTML = h; }", sem_agora)
         m = pg.evaluate("""() => { const j = document.getElementById('mod-janela');
           const g = j.querySelector('.ky-grade');
           const c = j.querySelector('.tn-corpo').getBoundingClientRect();
