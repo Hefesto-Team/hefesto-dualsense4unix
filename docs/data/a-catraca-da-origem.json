@@ -245,14 +245,14 @@
       "data": "2026-10-22",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1170587,
+      "piso": 1171047,
       "por_item": {
         "docs": 120220,
         "scripts": 119684,
-        "src": 311973,
-        "tests": 618710
+        "src": 311994,
+        "tests": 619149
       },
-      "razao": "tamanho: +2319 linhas (1168268 -> 1170587), pagas por Origem: D-0810-O-GATILHO-TROCA-PELO-RITMO-DO-TIRO, D-0810-O-TATO-VIVO-SO-FALA-ONDE-O-JOGO-CALA, D-2909-RUMBLE-VIRA-HAPTICA; registrado no fecho, topo a729098fb97b",
+      "razao": "tamanho: +460 linhas (1170587 -> 1171047), pagas por Origem: D-1610-AS-LISTAS-DE-EFEITO-POR-CONTROLE-NA-ABA-VIBRACAO; registrado no fecho, topo a52eb421b5ec",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -733,10 +733,16 @@
           "de": 1168268,
           "para": 1170587,
           "razao": "tamanho: +2319 linhas (1168268 -> 1170587), pagas por Origem: D-0810-O-GATILHO-TROCA-PELO-RITMO-DO-TIRO, D-0810-O-TATO-VIVO-SO-FALA-ONDE-O-JOGO-CALA, D-2909-RUMBLE-VIRA-HAPTICA; registrado no fecho, topo a729098fb97b"
+        },
+        {
+          "data": "2026-10-22",
+          "de": 1170587,
+          "para": 1171047,
+          "razao": "tamanho: +460 linhas (1170587 -> 1171047), pagas por Origem: D-1610-AS-LISTAS-DE-EFEITO-POR-CONTROLE-NA-ABA-VIBRACAO; registrado no fecho, topo a52eb421b5ec"
         }
       ],
       "unidade": "linhas",
-      "universo": 3065
+      "universo": 3067
     }
   }
 }
