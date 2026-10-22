@@ -23,10 +23,10 @@ O_QUE_ELE_LE = (
     "packaging/hefesto-dualsense4unix.desktop",
     "assets/hefesto-dualsense4unix.service",
     "src/hefesto_dualsense4unix/interface/controles_vivos.py",
-    "src/hefesto_dualsense4unix/interface/jogar_vivo.py",
-    "src/hefesto_dualsense4unix/interface/conexoes_vivas.py",
-    "src/hefesto_dualsense4unix/interface/sistema_viva.py",
-    "src/hefesto_dualsense4unix/interface/perfis_vivos.py",
+    "scripts/tela/jogar_vivo.py",
+    "scripts/tela/conexoes_vivas.py",
+    "scripts/tela/sistema_viva.py",
+    "scripts/tela/perfis_vivos.py",
     "src/hefesto_dualsense4unix/interface/ver.py",
 )
 
@@ -120,7 +120,7 @@ def test_a_dica_do_desktop_tambem_e_medida(arvore: pathlib.Path) -> None:
 
 def test_a_isencao_da_bancada_e_lida_e_nao_digitada(arvore: pathlib.Path) -> None:
     """O texto dos pilotos isentos sai do ARQUIVO, e a isenção não pode emudecer."""
-    alvo = arvore / "src/hefesto_dualsense4unix/interface/perfis_vivos.py"
+    alvo = arvore / "scripts/tela/perfis_vivos.py"
     texto = alvo.read_text(encoding="utf-8")
     assert 'subtitulo="Perfis — os do disco"' in texto, (
         "o piloto de bancada dos perfis mudou de subtítulo — esta régua está "

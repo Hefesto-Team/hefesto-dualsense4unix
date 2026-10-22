@@ -48,7 +48,7 @@ SO_HTML = (
     "mockup/",
 )
 
-#: pasta: ``interface/sistema_viva.py`` importa ``interface.sistema``,
+#: pasta: ``scripts/tela/sistema_viva.py`` importa ``interface.sistema``,
 COMPARTILHADOS = frozenset({
     "src/hefesto_dualsense4unix/interface/sistema.py",
     "src/hefesto_dualsense4unix/interface/conexoes.py",

@@ -31,8 +31,14 @@ import sys
 import time
 from typing import Any
 
-RAIZ_DEV = pathlib.Path(__file__).resolve().parents[3]
+RAIZ_DEV = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ_DEV / "src"))
+
+from hefesto_dualsense4unix.utils.tela_de_mentira import (  # noqa: E402
+    garantir_tela_de_mentira,
+)
+
+garantir_tela_de_mentira()
 
 import gi  # noqa: E402
 
@@ -230,7 +236,7 @@ class Janela:
             bruto = _ler_json(self.args.duble)
             return bruto if isinstance(bruto, dict) else None
         try:
-            sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+            sys.path.insert(0, str(RAIZ_DEV / "src" / "hefesto_dualsense4unix" / "interface"))
             import mesa_viva
 
             return mesa_viva.estado_do_daemon()

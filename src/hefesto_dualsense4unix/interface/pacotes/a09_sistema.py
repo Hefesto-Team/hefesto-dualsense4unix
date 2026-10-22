@@ -838,7 +838,7 @@ def _faixa_lenta(state: dict[str, Any] | None,
 
     Elas saem deste processo — subprocesso, disco — e nenhuma muda entre dois
     piscares. O tique da pintura é de 100 ms; a faixa lenta é de 2 s, que é a
-    mesma separação que `interface/sistema_viva.py` já tinha medido e escolhido.
+    mesma separação que `scripts/tela/sistema_viva.py` já tinha medido e escolhido.
 
     ERAM TRÊS E VIRARAM CINCO em 03/09/2026 — o estado do serviço (dois
     `systemctl` e um `stat`) e o repouso do painel técnico (mais um `systemctl`).

@@ -10,6 +10,7 @@ import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
+sys.path.insert(0, str(RAIZ / "scripts/tela"))
 
 PISO = {
     "01-jogar.html": 9,

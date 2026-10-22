@@ -20,12 +20,12 @@ import pytest
 
 pytest.importorskip("gi")
 
-INTERFACE = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix" / "interface"
+PILOTOS = Path(__file__).resolve().parents[2] / "scripts" / "tela"
 
 
 def _piloto() -> Any:
-    if str(INTERFACE) not in sys.path:
-        sys.path.insert(0, str(INTERFACE))
+    if str(PILOTOS) not in sys.path:
+        sys.path.insert(0, str(PILOTOS))
     import sistema_viva
 
     return sistema_viva
@@ -78,7 +78,7 @@ def test_a_conta_e_a_do_pacote_da_aba() -> None:
 
 def test_o_js_nao_conta_de_novo_e_desenha_as_tres() -> None:
     """A página só desenha o que o Python entregou: sem `Math.ceil`, com as três caixas."""
-    js = (INTERFACE / "sistema_viva.py").read_text(encoding="utf-8")
+    js = (PILOTOS / "sistema_viva.py").read_text(encoding="utf-8")
     exame = js[js.index("function exame(p)"):js.index("function pinta(p)")]
     assert "Math.ceil" not in exame and "/ 2" not in exame, "o JS voltou a dividir o exame"
     assert re.search(r"end\('status-lista'\)", exame), "a primeira coluna é o campo do Status"

@@ -22,7 +22,7 @@ NAO_E_DESENHO = (
 
 PREFIXOS_DE_REGUA = ("regua", "conferir", "olhar", "medir")
 
-PASTAS_DE_REGUA = ("src/hefesto_dualsense4unix/interface", "scripts")
+PASTAS_DE_REGUA = ("src/hefesto_dualsense4unix/interface", "scripts", "scripts/tela")
 
 A_PONTE_JS = "src/hefesto_dualsense4unix/interface/controles_vivos.py"
 

@@ -2,7 +2,7 @@
 """Régua de alinhamento — mede as caixas REAIS no Chrome contra a JOGAR aprovada."""
 import subprocess, sys, json, re, pathlib
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix" / "interface"))
 import onde  # noqa: E402
 
 PUBLICADO = "--publicado" in sys.argv

@@ -2616,7 +2616,9 @@ class TestTodaPromessaPublicaTemCaminho:
             )
 
 
-_INSTRUMENTOS_DA_BANCADA = ("regua", "regua_estados", "regua_popup", "olhar", "ver")
+#: As réguas saíram para `scripts/tela/` em 22/10/2026;
+#: o `olhar` e o visor ficaram ao lado da ponte.
+_INSTRUMENTOS_DA_BANCADA = ("olhar", "ver")
 
 
 class TestAPonteDaInterfaceNovaEProducao:

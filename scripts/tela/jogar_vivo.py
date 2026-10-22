@@ -58,14 +58,23 @@ import sys
 import time
 from typing import Any
 
+_SRC = str(pathlib.Path(__file__).resolve().parents[2] / "src")
+if _SRC not in sys.path:
+    sys.path.insert(0, _SRC)
+from hefesto_dualsense4unix.utils.tela_de_mentira import (  # noqa: E402
+    garantir_tela_de_mentira,
+)
+
+garantir_tela_de_mentira()
+
 from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # noqa: E402  isort:skip
 
 from gi.repository import GLib, Gtk  # noqa: E402
 
 from hefesto_dualsense4unix.app.actions.jogar import painel  # noqa: E402
 
-AQUI = pathlib.Path(__file__).resolve().parent
-sys.path.insert(0, str(AQUI))
+INTERFACE = pathlib.Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix" / "interface"
+sys.path.insert(0, str(INTERFACE))
 
 import mesa_viva  # noqa: E402
 
@@ -740,7 +749,6 @@ class Janela:
             "conta_b": conta_b if mesa else "—",
             "conta_cor": "var(--green)" if mesa else "var(--orange)",
             "bolinha": "●" if mesa else "○",
-            # `pacotes.topo()`. O `painel.nome_do_perfil` lia só a primeira e
             "perfil": _perfil_ativo(state),
             "modo": modo or "",
             "modos_travados": {m.chave: m.porque_nao for m in painel.MODOS_DA_TELA

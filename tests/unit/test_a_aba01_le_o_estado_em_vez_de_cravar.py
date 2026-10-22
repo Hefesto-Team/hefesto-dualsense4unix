@@ -400,10 +400,10 @@ def test_o_aviso_do_jogo_sem_atalho_acende_na_coluna(duas_listas_vazias: Any) ->
 
 def test_a_bancada_desta_aba_abre_a_pagina_que_a_aba_publica() -> None:
     """A BANCADA desta aba mediu o VAZIO — medido em 06/09/2026, ONDA5-07-03."""
+    if str(RAIZ / "scripts" / "tela") not in sys.path:
+        sys.path.insert(0, str(RAIZ / "scripts" / "tela"))
     jogar_vivo = pytest.importorskip(
-        "hefesto_dualsense4unix.interface.jogar_vivo",
-        reason="a bancada precisa do Gtk/WebKit do sistema",
-    )
+        "jogar_vivo", reason="a bancada precisa do Gtk/WebKit do sistema")
     assert jogar_vivo.PAGINA.exists(), (
         f"a bancada da aba Jogar abre {jogar_vivo.PAGINA}, que não existe — "
         "ela mede o vazio e sai verde")
@@ -415,7 +415,7 @@ def test_a_coluna_atencao_sai_das_fontes_da_gtk(monkeypatch: Any) -> None:
     """Troca `painel.avisos_do_estado` e cobra que os avisos venham de lá.
 
     As seis fontes de `painel.AVISOS_DA_TELA` já existiam em `home_actions` e
-    quem as chamava era a BANCADA (`interface/jogar_vivo.py`). O produto
+    quem as chamava era a BANCADA (`scripts/tela/jogar_vivo.py`). O produto
     mostrava, no lugar delas, o Check-up da aba Conexões — dois conjuntos
     disjuntos, e o da GTK era o que respondia pelas perguntas desta tela.
     """

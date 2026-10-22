@@ -4,7 +4,7 @@
 import csv, io, pathlib, re, subprocess, sys
 
 import sys as _sys, pathlib as _pathlib
-_sys.path.insert(0, str(_pathlib.Path(__file__).resolve().parent))
+_sys.path.insert(0, str(_pathlib.Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix" / "interface"))
 from onde import RAIZ as R  # noqa: E402
 
 DADOS_DO_REPO = R / "docs/data"

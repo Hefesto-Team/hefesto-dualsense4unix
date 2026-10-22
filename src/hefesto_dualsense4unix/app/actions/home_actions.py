@@ -320,7 +320,7 @@ def aviso_do_wrapper(state: dict[str, Any] | None) -> str | None:
     `jogar/painel.avisos_do_estado`, com a aba Jogar entregando a lista lida
     pela vigia da aba Lançadores. **O caminho que ficou é melhor por uma razão
     medida:** com a conta dentro da função dona, a BANCADA
-    (`interface/jogar_vivo.py`, que chama `avisos_do_estado` em dois pontos)
+    (`scripts/tela/jogar_vivo.py`, que chama `avisos_do_estado` em dois pontos)
     mede exatamente o que o produto mostra, sem ninguém ter de lembrar de
     passar a lista. Um dublê mais frouxo que a função real já envenenou outro
     arquivo por ordem de teste, em 04/09; um parâmetro que a bancada esquece de

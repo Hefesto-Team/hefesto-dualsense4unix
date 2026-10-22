@@ -28,12 +28,12 @@ RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 NOME = "Maid Life"
 
-#: Os arquivos do editor da aba 10: nenhum gesto dele lê, monta ou manda `marcas`.
+#: Os arquivos do editor da aba 10, relativos à raiz: nenhum deles lê, monta ou manda `marcas`.
 DO_EDITOR = (
-    "app/actions/perfis_web.py",
-    "interface/aba10.py",
-    "interface/perfis_vivos.py",
-    "interface/pacotes/a10_perfis.py",
+    "src/hefesto_dualsense4unix/app/actions/perfis_web.py",
+    "src/hefesto_dualsense4unix/interface/aba10.py",
+    "scripts/tela/perfis_vivos.py",
+    "src/hefesto_dualsense4unix/interface/pacotes/a10_perfis.py",
 )
 
 
@@ -101,7 +101,7 @@ def _nomes_e_textos(fonte: str) -> set[str]:
 
 def test_o_editor_da_aba_10_nao_manda_marcas_em_nenhum_gesto() -> None:
     for relativo in DO_EDITOR:
-        usos = [x for x in _nomes_e_textos((SRC / relativo).read_text(encoding="utf-8"))
+        usos = [x for x in _nomes_e_textos((RAIZ / relativo).read_text(encoding="utf-8"))
                 if x in {"marcas", "marcas_do_jogo", "molde_dos_botoes"}]
         assert usos == [], f"{relativo} voltou a falar de marcas: {usos}"
 

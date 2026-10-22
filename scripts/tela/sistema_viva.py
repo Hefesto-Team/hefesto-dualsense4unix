@@ -51,15 +51,23 @@ import sys
 import time
 from typing import Any
 
+_SRC = str(pathlib.Path(__file__).resolve().parents[2] / "src")
+if _SRC not in sys.path:
+    sys.path.insert(0, _SRC)
+from hefesto_dualsense4unix.utils.tela_de_mentira import (  # noqa: E402
+    garantir_tela_de_mentira,
+)
+
+garantir_tela_de_mentira()
+
 from hefesto_dualsense4unix.interface import sistema as aba_sistema  # noqa: E402  isort:skip
 from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # noqa: E402  isort:skip
 
 from gi.repository import GLib, Gtk  # noqa: E402
 
-AQUI = pathlib.Path(__file__).resolve().parent
-sys.path.insert(0, str(AQUI))
-
-RAIZ = AQUI.parents[2]
+RAIZ = pathlib.Path(__file__).resolve().parents[2]
+INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
+sys.path.insert(0, str(INTERFACE))
 PAGINA = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "09-sistema.html"  # noqa-acento (`paginas` e o nome da PASTA; caminho nao leva acento)
 TITULO_ESPERADO = "Hefesto — aba SISTEMA"
 

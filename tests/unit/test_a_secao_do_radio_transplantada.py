@@ -740,7 +740,7 @@ def test_o_piloto_da_08_ouve_o_endereco_que_a_pagina_emite() -> None:
     """Item 4 da sprint: o `conexoes_vivas.py` procurava `[data-g]`, a página"""
     import ast
 
-    fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/conexoes_vivas.py").read_text(
+    fonte = (RAIZ / "scripts/tela/conexoes_vivas.py").read_text(
         encoding="utf-8")
     textos = {alvo.id: str(no.value.value) for no in ast.parse(fonte).body
               if isinstance(no, ast.Assign) and isinstance(no.value, ast.Constant)

@@ -28,9 +28,9 @@ import pathlib
 import re
 import sys
 
-AQUI = pathlib.Path(__file__).resolve().parent
-RAIZ = AQUI.parents[2]
-for _p in (str(AQUI), str(RAIZ / "src")):
+RAIZ = pathlib.Path(__file__).resolve().parents[2]
+INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
+for _p in (str(INTERFACE), str(RAIZ / "src")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
@@ -46,12 +46,11 @@ FALSO = {
     "lightbar_rgb": [0, 0, 255], "lightbar_on": True, "lightbar_source": "perfil",
     "inputs": {"lx": 127, "ly": 128, "rx": 127, "ry": 128,
                "l2_raw": 0, "r2_raw": 0, "buttons": []},
-    # o do `state_full` SEM a chave `audio`, que é o que acontece no instante
     "audio": {"mic_mudo": False, "mic_mudo_desejado": None},
     "speaker": {"volume": 102, "muted": False, "rota": 0},
 }
 
-#: O MESMO controle, mas com a chave `audio` AUSENTE — o estado real do
+#: O MESMO controle sem a chave `audio`: o `state_full` antes de o áudio ser lido.
 FALSO_SEM_AUDIO = {k: v for k, v in FALSO.items() if k != "audio"}
 
 MESA_FALSA = [{"pref": "p1", "jogador": 1, "cor": "starlight-blue",

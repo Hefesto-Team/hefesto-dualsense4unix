@@ -130,13 +130,11 @@ select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "RUF"]
 "src/hefesto_dualsense4unix/interface/regua*.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
 "src/hefesto_dualsense4unix/interface/olhar.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
 "src/hefesto_dualsense4unix/interface/ver.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
-"src/hefesto_dualsense4unix/interface/conferir*.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
 "src/hefesto_dualsense4unix/interface/*_viv*.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
-"src/hefesto_dualsense4unix/interface/medir_subpaths.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
-"src/hefesto_dualsense4unix/interface/remapear.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
 "src/hefesto_dualsense4unix/interface/exportar.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
-"src/hefesto_dualsense4unix/interface/importar.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
 "src/hefesto_dualsense4unix/interface/regerar.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
+# Os instrumentos de tela que saíram da interface em 22/10/2026: a mesma isenção de forma.
+"scripts/tela/*.py" = ["E501", "E401", "E702", "E741", "I001", "B905", "UP031", "UP009", "RUF001", "RUF002", "RUF003", "RUF100"]
 
 # Nos testes, a guarda de GTK real roda antes do `import gi`, acima do bloco de imports.
 "tests/**" = ["E402", "I001"]
@@ -188,22 +186,11 @@ module = [
     "hefesto_dualsense4unix.interface.aba09",
     "hefesto_dualsense4unix.interface.aba10",
     "hefesto_dualsense4unix.interface.calibrar",
-    "hefesto_dualsense4unix.interface.casamento",
-    "hefesto_dualsense4unix.interface.conexoes_vivas",
     "hefesto_dualsense4unix.interface.controles_vivos",
     "hefesto_dualsense4unix.interface.exportar",
-    "hefesto_dualsense4unix.interface.importar",
-    "hefesto_dualsense4unix.interface.jogar_vivo",
     "hefesto_dualsense4unix.interface.mapa",
-    "hefesto_dualsense4unix.interface.medir_subpaths",
     "hefesto_dualsense4unix.interface.olhar",
-    "hefesto_dualsense4unix.interface.perfis_vivos",
     "hefesto_dualsense4unix.interface.regerar",
-    "hefesto_dualsense4unix.interface.regua",
-    "hefesto_dualsense4unix.interface.regua_estados",
-    "hefesto_dualsense4unix.interface.regua_popup",
-    "hefesto_dualsense4unix.interface.remapear",
-    "hefesto_dualsense4unix.interface.sistema_viva",
     "hefesto_dualsense4unix.interface.ver",
 ]
 # `ignore_errors`: relaxar só as flags de anotação deixaria queixas que não são defeito.

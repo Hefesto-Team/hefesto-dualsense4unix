@@ -36,6 +36,8 @@ versionado, e há dois portões que reprovam.
 from __future__ import annotations
 
 import re
+import sys
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -160,9 +162,11 @@ def test_o_indice_do_alvo_na_fita_conta_o_todos_so_quando_ele_existe() -> None:
 
     MORDIDA: force o `start=1` e o caso de UM reprova.
     """
+    tela = str(Path(__file__).resolve().parents[2] / "scripts" / "tela")
+    if tela not in sys.path:
+        sys.path.insert(0, tela)
     jogar_vivo = pytest.importorskip(
-        "hefesto_dualsense4unix.interface.jogar_vivo",
-        reason="a bancada da 01 pede gi/Gtk, que nem toda árvore tem")
+        "jogar_vivo", reason="a bancada da 01 pede gi/Gtk, que nem toda árvore tem")
 
     class _Falso:
         alvo: str | None = None

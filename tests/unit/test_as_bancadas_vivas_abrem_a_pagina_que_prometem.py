@@ -7,6 +7,8 @@ import re
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
+#: Os pilotos de uma aba só saíram de `src/` para `scripts/tela/` em 22/10/2026.
+PILOTOS = RAIZ / "scripts" / "tela"
 
 BANCADAS = (
     "jogar_vivo.py",
@@ -15,6 +17,11 @@ BANCADAS = (
     "sistema_viva.py",
     "perfis_vivos.py",
 )
+
+
+def _casa(nome: str) -> pathlib.Path:
+    """A pasta da bancada: a interface (a 02) ou a dos pilotos de uma aba só."""
+    return INTERFACE if (INTERFACE / nome).is_file() else PILOTOS
 
 
 def _caminho_da_pagina(fonte: str) -> pathlib.Path | None:
@@ -34,7 +41,7 @@ def _caminho_da_pagina(fonte: str) -> pathlib.Path | None:
 def test_as_cinco_bancadas_apontam_para_uma_pagina_que_existe() -> None:
     faltam = []
     for nome in BANCADAS:
-        arq = INTERFACE / nome
+        arq = _casa(nome) / nome
         assert arq.exists(), f"a bancada {nome} sumiu — a lista desta régua envelheceu"
         alvo = _caminho_da_pagina(arq.read_text(encoding="utf-8"))
         assert alvo is not None, (
@@ -77,7 +84,7 @@ def test_as_cinco_bancadas_recusam_a_pagina_ausente_e_a_volta_zero() -> None:
     """A guarda que faz o `rc` contar. Sem ela, achar o defeito acima é sorte."""
     sem_guarda_da_pagina, sem_guarda_da_volta = [], []
     for nome in BANCADAS:
-        fonte = (INTERFACE / nome).read_text(encoding="utf-8")
+        fonte = (_casa(nome) / nome).read_text(encoding="utf-8")
         if not _recusa_a_pagina_ausente(fonte):
             sem_guarda_da_pagina.append(nome)
         if "a bancada não deu uma volta" not in fonte:

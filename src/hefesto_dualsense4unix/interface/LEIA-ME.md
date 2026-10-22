@@ -1,7 +1,7 @@
 # As ferramentas do mockup — por que elas existem
 
 **27/08/2026.** Os dez arquivos `NN-*.html` desta pasta NÃO se editam à mão: eles
-são **gerados** por `aba0N.py`, e conferidos por `regua.py`.
+são **gerados** por `aba0N.py`, e conferidos por `scripts/tela/regua.py`.
 
 ## O que cada uma faz
 
@@ -10,8 +10,8 @@ são **gerados** por `aba0N.py`, e conferidos por `regua.py`.
   `svg()` (o DualSense de `assets/control-svg/`, com colorway, player e lightbar)
   e `glifo()` (os 19 de `assets/glyphs/`, os mesmos da aba Status).
 - **`abaNN.py`** — uma por aba. Só o miolo e o CSS próprio.
-- **`regua.py`** — mede as caixas REAIS no Chrome e reprova o que não bate com a
-  Jogar. Rode: `python3 regua.py 04-iluminacao.html`
+- **`scripts/tela/regua.py`** — mede as caixas REAIS no Chrome e reprova o que não bate com a
+  Jogar. Rode, da raiz: `python3 scripts/tela/regua.py 04-iluminacao.html`
 
 ## As duas cicatrizes desta pasta
 

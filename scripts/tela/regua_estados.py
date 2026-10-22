@@ -5,7 +5,7 @@ import sys
 
 from playwright.sync_api import sync_playwright
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix" / "interface"))
 import onde  # noqa: E402
 
 D = onde.BANCADA

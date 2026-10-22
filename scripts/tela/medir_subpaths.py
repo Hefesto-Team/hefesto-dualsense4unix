@@ -6,7 +6,7 @@ from playwright.sync_api import sync_playwright
 
 R = pathlib.Path(__file__).resolve().parents[2]
 SVG = R / "src/hefesto_dualsense4unix/interface/ds_limpo.svg"
-SAIDA = pathlib.Path(__file__).with_name("subpath-externo.json")
+SAIDA = R / "src" / "hefesto_dualsense4unix" / "interface" / "subpath-externo.json"
 
 s = SVG.read_text()
 alvos = []

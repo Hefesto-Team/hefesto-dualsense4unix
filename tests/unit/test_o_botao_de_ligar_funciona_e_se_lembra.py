@@ -307,7 +307,7 @@ _CLIQUE_POR_ENDERECO = re.compile(r"""querySelector\('\[data-(modo|degrau)=\\"([
 
 _DATA_DEGRAU = re.compile(r'data-degrau="([a-z-]+)"')
 
-JOGAR_VIVO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "jogar_vivo.py"
+JOGAR_VIVO = RAIZ / "scripts" / "tela" / "jogar_vivo.py"
 
 
 def test_o_roteiro_das_provas_clica_endereco_que_existe() -> None:

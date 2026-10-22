@@ -121,10 +121,10 @@ A_MOLDURA: dict[str, str] = {
 
 A_BANCADA: tuple[str, ...] = (
     "interface/controles_vivos.py",
-    "interface/jogar_vivo.py",
-    "interface/conexoes_vivas.py",
-    "interface/sistema_viva.py",
-    "interface/perfis_vivos.py",
+    "scripts/tela/jogar_vivo.py",
+    "scripts/tela/conexoes_vivas.py",
+    "scripts/tela/sistema_viva.py",
+    "scripts/tela/perfis_vivos.py",
     "interface/ver.py",
 )
 
@@ -213,8 +213,8 @@ METODOS = ("set_title", "set_subtitle")
 
 
 def _texto_de_moldura(rel: str, lista: object) -> list[tuple[str, str]]:
-    """Todo literal de moldura de UM arquivo de `src/`, por AST."""
-    p = FONTE / rel
+    """Todo literal de moldura de UM arquivo, por AST: relativo ao pacote, ou à raiz se `scripts/`."""
+    p = RAIZ / rel if rel.startswith("scripts/") else FONTE / rel
     if not p.is_file():
         _CAMINHOS_MORTOS.append((str(lista), rel))
         return []

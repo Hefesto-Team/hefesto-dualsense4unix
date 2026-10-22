@@ -3,7 +3,7 @@
 """Devolve ids e agrupamentos ao SVG que ELA editou, sem tocar na geometria."""
 import pathlib, re, sys
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix" / "interface"))
 from onde import RAIZ as R  # noqa: E402
 
 DADOS_DO_REPO = R / "docs/data"

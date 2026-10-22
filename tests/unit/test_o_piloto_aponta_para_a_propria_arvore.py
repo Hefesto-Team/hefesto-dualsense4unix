@@ -14,6 +14,12 @@ from tests.conftest import skip_sem_gi_real
 
 RAIZ = Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
+#: Os instrumentos que saíram de `src/` em 22/10/2026 moram aqui.
+TELA = RAIZ / "scripts" / "tela"
+
+
+def _arquivo(nome: str) -> Path:
+    return INTERFACE / nome if (INTERFACE / nome).is_file() else TELA / nome
 
 _COM_RAIZ = ("hefesto_vivo.py", "controles_vivos.py", "sistema_viva.py", "casamento.py")
 
@@ -21,12 +27,14 @@ _COM_RAIZ = ("hefesto_vivo.py", "controles_vivos.py", "sistema_viva.py", "casame
 @pytest.mark.parametrize("nome", _COM_RAIZ)
 def test_a_raiz_calculada_e_a_arvore_e_nao_o_src(nome: str) -> None:
     """A METADE QUE MEDE: a conta é REFEITA aqui, não lida no texto."""
-    fonte = (INTERFACE / nome).read_text(encoding="utf-8")
-    m = re.search(r"^RAIZ = AQUI\.parents\[(\d)\]", fonte, re.M)
+    arquivo = _arquivo(nome)
+    fonte = arquivo.read_text(encoding="utf-8")
+    m = re.search(r"^RAIZ = (AQUI|pathlib\.Path\(__file__\)\.resolve\(\))\.parents\[(\d)\]",
+                  fonte, re.M)
     assert m, f"{nome}: não achei o cálculo da RAIZ"
-    nivel = int(m.group(1))
+    nivel = int(m.group(2))
 
-    aqui = INTERFACE
+    aqui = INTERFACE if m.group(1) == "AQUI" else arquivo
     raiz = aqui.parents[nivel]
     assert (raiz / "src").is_dir(), (
         f"{nome}: `AQUI.parents[{nivel}] / 'src'` dá {raiz / 'src'}, que NÃO "
@@ -39,7 +47,7 @@ def test_a_raiz_calculada_e_a_arvore_e_nao_o_src(nome: str) -> None:
 @pytest.mark.parametrize("nome", ("controles_vivos.py", "sistema_viva.py"))
 def test_a_pagina_que_o_instrumento_abre_existe_no_disco(nome: str) -> None:
     """E o efeito visível do erro: um HTML que não está lá."""
-    fonte = (INTERFACE / nome).read_text(encoding="utf-8")
+    fonte = _arquivo(nome).read_text(encoding="utf-8")
     m = re.search(r'^PAGINA = RAIZ / "src" / (.+?)(?:  #|$)', fonte, re.M)
     assert m, f"{nome}: não achei o cálculo da PAGINA"
     pedacos = [p.strip().strip('"') for p in m.group(1).split(" / ")]

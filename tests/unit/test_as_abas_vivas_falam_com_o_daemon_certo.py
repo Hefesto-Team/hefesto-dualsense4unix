@@ -25,8 +25,13 @@ ABAS_VIVAS = (
 ARVORE_DELA = "/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix"
 
 
+#: Os pilotos de uma aba só saíram de `src/` para `scripts/tela/` em 22/10/2026.
+PILOTOS = RAIZ / "scripts" / "tela"
+
+
 def _fonte(nome: str) -> str:
-    return (FERRAMENTAS / nome).read_text(encoding="utf-8")
+    casa = FERRAMENTAS if (FERRAMENTAS / nome).is_file() else PILOTOS
+    return (casa / nome).read_text(encoding="utf-8")
 
 
 @pytest.mark.parametrize("nome", ABAS_VIVAS)

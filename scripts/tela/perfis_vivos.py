@@ -61,6 +61,15 @@ import sys
 import time
 from typing import Any
 
+_SRC = str(pathlib.Path(__file__).resolve().parents[2] / "src")
+if _SRC not in sys.path:
+    sys.path.insert(0, _SRC)
+from hefesto_dualsense4unix.utils.tela_de_mentira import (  # noqa: E402
+    garantir_tela_de_mentira,
+)
+
+garantir_tela_de_mentira()
+
 from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # noqa: E402  isort:skip
 
 from gi.repository import GLib, Gtk  # noqa: E402
@@ -69,8 +78,8 @@ from hefesto_dualsense4unix.app.actions import perfis_web  # noqa: E402
 
 from hefesto_dualsense4unix.interface.pacotes import a10_perfis  # noqa: E402
 
-AQUI = pathlib.Path(__file__).resolve().parent
-sys.path.insert(0, str(AQUI))
+INTERFACE = pathlib.Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix" / "interface"
+sys.path.insert(0, str(INTERFACE))
 
 import mesa_viva  # noqa: E402
 import monta  # noqa: E402  (o gerador do mockup, usado como BIBLIOTECA)
@@ -547,7 +556,7 @@ def main() -> int:
                    help="MORDIDA: apaga os data-hef e prova que a pintura desaba")
     p.add_argument("--prova-gesto", action="store_true",
                    help="dispara cliques sintéticos e prova o eco")
-    p.add_argument("--duble", default=str(AQUI / "perfis-duble.json"),
+    p.add_argument("--duble", default=str(pathlib.Path(__file__).with_name("perfis-duble.json")),
                    help="JSON com {perfis, state} — o PADRÃO, para a foto não "
                         "levar a biblioteca dela")
     p.add_argument("--do-disco", action="store_true",

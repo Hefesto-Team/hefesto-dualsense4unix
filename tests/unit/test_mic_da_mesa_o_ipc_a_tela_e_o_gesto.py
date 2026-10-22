@@ -20,9 +20,16 @@ Três réguas, três defeitos diferentes:
 from __future__ import annotations
 
 import asyncio
+import sys
+from pathlib import Path
 from typing import Any, ClassVar
 
 import pytest
+
+#: O `casamento.py` é instrumento de tela e mora em `scripts/tela/` desde 22/10/2026.
+_TELA = str(Path(__file__).resolve().parents[2] / "scripts" / "tela")
+if _TELA not in sys.path:
+    sys.path.insert(0, _TELA)
 
 
 class _ControllerFalso:
@@ -83,7 +90,7 @@ def test_mic_led_set_esta_registrado_no_dispatcher() -> None:
 
 def test_o_selo_pinta_desconhecido_quando_o_state_full_nao_traz_audio() -> None:
     """CURA A ARRANCAR: voltar `DESLIGADO if mudo else ATIVO` sem o `sabemos`."""
-    from hefesto_dualsense4unix.interface import casamento
+    import casamento
     from hefesto_dualsense4unix.interface.pacotes import a02_controles
 
     class _Ctx:
@@ -97,7 +104,7 @@ def test_o_selo_pinta_desconhecido_quando_o_state_full_nao_traz_audio() -> None:
 
 def test_o_selo_continua_dizendo_a_verdade_quando_ha_leitura() -> None:
     """A metade que prova que a cura não é "nunca mais mostra nada"."""
-    from hefesto_dualsense4unix.interface import casamento
+    import casamento
     from hefesto_dualsense4unix.interface.pacotes import a02_controles
 
     com_o_canal = {**casamento.FALSO,
@@ -114,7 +121,7 @@ def test_o_selo_continua_dizendo_a_verdade_quando_ha_leitura() -> None:
 
 def test_o_dublê_da_ausencia_realmente_nao_tem_a_chave() -> None:
     """Sem isto a régua de cima passaria por acidente."""
-    from hefesto_dualsense4unix.interface import casamento
+    import casamento
 
     assert "audio" not in casamento.FALSO_SEM_AUDIO
     assert "audio" in casamento.FALSO
@@ -122,7 +129,9 @@ def test_o_dublê_da_ausencia_realmente_nao_tem_a_chave() -> None:
 
 def test_o_estado_do_card_diz_quando_nao_leu() -> None:
     """`estado_do_card` sem a chave `audio`: `mic_sabemos` tem de ser falso."""
-    from hefesto_dualsense4unix.interface import casamento, mesa_viva
+    import casamento
+
+    from hefesto_dualsense4unix.interface import mesa_viva
 
     sem = mesa_viva.estado_do_card(casamento.FALSO_SEM_AUDIO)
     com = mesa_viva.estado_do_card(casamento.FALSO)
@@ -188,7 +197,7 @@ def _card_do_piloto(entrada: dict[str, Any]) -> dict[str, Any]:
 
 
 def _entrada(audio: dict[str, Any] | None, toques: list[dict[str, int]] | None = None) -> dict:
-    from hefesto_dualsense4unix.interface import casamento
+    import casamento
 
     entrada = {**casamento.FALSO}
     if audio is None:

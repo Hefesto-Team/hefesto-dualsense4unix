@@ -301,7 +301,7 @@ def _avisos(ctx: Contexto) -> list[dict[str, str]]:
     ficam no canal e fora da 09 (:func:`_avisos_com_outra_casa`).
 
     **Nada se escreve aqui**: as fontes existiam fora do arquivo e faltava o produto novo CHAMÁ-LAS.
-    Medido em 03/09/2026 quem consumia `painel.AVISOS_DA_TELA` era `interface/jogar_vivo.py`
+    Medido em 03/09/2026 quem consumia `painel.AVISOS_DA_TELA` era `jogar_vivo.py`
     (BANCADA), e a aba publicada mostrava no lugar o Check-up da Conexões, dois conjuntos DISJUNTOS.
 
     O que entra, em ordem:
