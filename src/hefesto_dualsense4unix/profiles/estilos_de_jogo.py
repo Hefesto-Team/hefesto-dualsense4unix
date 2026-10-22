@@ -126,6 +126,11 @@ class Receita:
     toque_por_tiro: bool = True
     #: os motores esquerdo e direito seguem o lado do estouro no som do jogo
     lado_do_som: bool = True
+    #: o som do jogo vira háptica onde o jogo não manda rumble (o estalo, o toque na forma do
+    #: estilo; o grave, um corpo discreto) e cede no primeiro rumble dele
+    #: (O-JOGO-SEM-RUMBLE-SE-SENTE-PELO-SOM-DELE-01); desligado onde o silêncio é o desenho e
+    #: onde o contínuo do estilo (a Corrida, a Simulação) já é o som do jogo
+    som_quando_o_jogo_cala: bool = True
     #: o modo que o estilo liga (`ProfileModeConfig.kind`); `None` tira só o `desktop`
     #: do perfil e deixa os outros modos como estão
     modo: Literal["desktop"] | None = None
@@ -174,7 +179,7 @@ MOLDES: dict[str, dict[str, str]] = {
 APLICADAS = ("ajustes_do_gatilho", "modo", "molde", "luz_base", "luz_ritmo")
 #: as que ficam aqui, como dado: o motor do tato lê pelo estilo guardado no perfil
 SO_DADO = ("luz", "luz_por_segundo", "duracao_da_vibracao_ms", "toque_por_tiro",
-           "lado_do_som")
+           "lado_do_som", "som_quando_o_jogo_cala")
 
 
 def _respira(ajustes: tuple[tuple[str, int], ...] = ()) -> Receita:
@@ -249,7 +254,8 @@ ESTILOS: tuple[Estilo, ...] = (
     # A luz acende com o curso do gatilho (o acelerador e o freio aparecem na barra).
     Estilo("corrida", "Corrida", "MultiPositionVibration", "balanceado", (255, 140, 0), 1.0,
            "o acelerador ronca e o freio pulsa como o ABS; o corpo do controle sente o motor",
-           Receita(toque_por_tiro=False, lado_do_som=False, luz="acende"),
+           Receita(toque_por_tiro=False, lado_do_som=False, luz="acende",
+                   som_quando_o_jogo_cala=False),
            Lado("MultiPositionVibration", "motor-no-acelerador"),
            Lado("Resistance", "freio-abs-que-pulsa")),
     # A Ação: golpe pesado no R2, peso de mira no L2. O arco, que era um estilo, é uma escolha
@@ -273,12 +279,13 @@ ESTILOS: tuple[Estilo, ...] = (
     Estilo("point_and_click", "Point and click", "Weapon", "economia", (0, 200, 210), 0.4,
            "os gatilhos são os botões do mouse e respondem como um; vibração baixa não distrai",
            # a Navegação é escolha do usuário (ESCOLHAS de 08/10); o toque e o lado também
-           Receita(modo="desktop", molde="so_mouse"),
+           Receita(modo="desktop", molde="so_mouse", som_quando_o_jogo_cala=False),
            Lado("Weapon", "clique-mouse"), Lado("Weapon", "clique-mouse")),
     Estilo("visual_novel", "Visual novel", "Off", "economia", (0, 200, 210), 0.5,
            "o texto é longo e a luz não disputa a leitura; os ombros voltam, pulam e abrem o menu",
            # a família do Point and click, a meia luz e a maré lenta; o gatilho é clique, sem efeito
-           Receita(modo="desktop", molde="visual_novel", luz_base="mare", luz_ritmo=1)),
+           Receita(modo="desktop", molde="visual_novel", luz_base="mare", luz_ritmo=1,
+                   som_quando_o_jogo_cala=False)),
     # O Adulto não mexe no gatilho (o jogo decide) e sobe a vibração; a luz fica parada e sem reação
     # a tiro. A família é o rosa-salmão que o usuário aprovou em 13/10/2026, longe das outras.
     Estilo("adulto", "Adulto", "Off", "max", (250, 128, 114), 1.0,
@@ -313,7 +320,8 @@ ESTILOS: tuple[Estilo, ...] = (
     Estilo("maratona", "Maratona", "Off", "economia", (120, 120, 140), 0.25,
            "a sessão é longa: tudo que gasta bateria cai ao mínimo — mas a luz "
            "NÃO apaga, porque apagada os quatro ficariam iguais",
-           Receita(luz="bateria", luz_por_segundo=RESPIRA_POR_SEGUNDO)),
+           Receita(luz="bateria", luz_por_segundo=RESPIRA_POR_SEGUNDO,
+                   som_quando_o_jogo_cala=False)),
     # a luz que gira é a alegria do gênero (a base «arco-íris»)
     Estilo("plataforma", "Plataforma", "SlopeFeedback", "balanceado", (255, 210, 40), 1.0,
            "agarrar e carregar ganham corpo no gatilho; a vibração marca o impacto",
@@ -321,7 +329,7 @@ ESTILOS: tuple[Estilo, ...] = (
            Lado("SlopeFeedback", "agarrar"), Lado("MultiPositionVibration", "energia-que-cresce")),
     Estilo("retro", "Retrô/Emulador", "Off", "economia", (60, 230, 90), 1.0,
            "o console original não tinha nada disso; o verde é o do tubo",
-           Receita()),
+           Receita(som_quando_o_jogo_cala=False)),
     # Um clique que volta livre em cada nota, nos dois lados, sem atrasar o tempo.
     Estilo("ritmo", "Ritmo/Música", "Weapon", "max", (255, 0, 220), 1.0,
            "a vibração É o instrumento; cada nota tem um clique que volta livre",
@@ -333,7 +341,8 @@ ESTILOS: tuple[Estilo, ...] = (
     # O Grão (grãos finos) está na háptica do estilo (`formas_de_haptica.POR_ESTILO`).
     Estilo("simulacao", "Simulação/Voo", "SlopeFeedback", "economia", (90, 180, 255), 0.6,
            "o manche endurece com o curso e a pista ou a turbulência passam pelo L2 e pelo corpo",
-           Receita(toque_por_tiro=False, lado_do_som=False, luz_base="mare", luz_ritmo=10),
+           Receita(toque_por_tiro=False, lado_do_som=False, luz_base="mare", luz_ritmo=10,
+                   som_quando_o_jogo_cala=False),
            Lado("SlopeFeedback"), Lado("Galloping", "terreno-que-muda")),
     Estilo("personalizado", "Personalizado", None, "", (0, 0, 0), 0.0,
            "é o estilo que diz 'eu ajusto na mão' — não mexe em nada"),

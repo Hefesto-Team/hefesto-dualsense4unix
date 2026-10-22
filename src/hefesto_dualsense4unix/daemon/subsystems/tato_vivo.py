@@ -30,6 +30,7 @@ from hefesto_dualsense4unix.daemon.lifecycle import (
     o_hefesto_fala_no_modo,
 )
 from hefesto_dualsense4unix.daemon.subsystems import padroes_de_vibracao
+from hefesto_dualsense4unix.integrations.classe_do_rumble import calado
 from hefesto_dualsense4unix.profiles import formas_de_haptica
 from hefesto_dualsense4unix.profiles.efeitos_de_imersao import (
     FAMILIAS,
@@ -210,6 +211,8 @@ class Receita:
     padroes_escolhidos: bool = False
     #: algum controle escolheu a Pancada do lado: o ouvido do som do jogo precisa subir
     pancada_escolhida: bool = False
+    #: o som do jogo vira háptica onde o jogo cala o rumble, e cede no primeiro rumble dele
+    som_quando_o_jogo_cala: bool = False
 
     @property
     def ligada(self) -> bool:
@@ -225,6 +228,7 @@ class Receita:
             or self.grao_escolhido
             or self.motor_de_epoca_escolhido
             or self.padroes_escolhidos
+            or self.som_quando_o_jogo_cala
         )
 
     @classmethod
@@ -272,6 +276,7 @@ class Receita:
             motor_de_epoca_escolhido=bool(campo("motor_de_epoca_escolhido", False)),
             padroes_escolhidos=bool(campo("padroes_escolhidos", False)),
             pancada_escolhida=bool(campo("pancada_escolhida", False)),
+            som_quando_o_jogo_cala=bool(campo("som_quando_o_jogo_cala", False)),
         )
 
 
@@ -336,6 +341,7 @@ def receita_do_estilo(estilo: Any) -> Receita:
             formas_de_haptica.POR_ESTILO.get(estilo.chave) == formas_de_haptica.MOTOR_DE_EPOCA),
         padroes_escolhidos=padrao is not None,
         pancada_escolhida=padrao == "pancada_do_lado",
+        som_quando_o_jogo_cala=bool(getattr(invisivel, "som_quando_o_jogo_cala", False)),
     )
 
 
@@ -506,6 +512,11 @@ class TatoVivo:
         #: quando o jogo pediu rumble pelo pad ``uinput`` (por ``norm_mac``): esse pad não tem
         #: ``visto_ha_s``, e sem isto o padrão dos motores tocaria por cima do jogo no modo Xbox.
         self.rumble_visto_em: dict[str, float] = {}
+        #: quando o jogo pediu rumble COM FORÇA (por ``norm_mac``): o ``rumble_visto_em`` conta
+        #: também o par zero, e a fonte do som só cede ao rumble que vibra
+        self.rumble_com_forca_em: dict[str, float] = {}
+        #: os controles em que a fonte do som está acordada neste tique (o jogo cala, a mão joga)
+        self.acordados_pelo_som: frozenset[str] = frozenset()
         #: o status do Disparo de cada gatilho (0 antes, 1 dentro, 2 passou do clique), lido do
         #: report de entrada; sem entrada é que o aparelho não o disse (o relógio vale).
         self.disparo: dict[tuple[str, str], int] = {}
@@ -830,6 +841,9 @@ def anotar_o_rumble(
         instante = time.monotonic() if agora is None else agora
         # Reatribuído, nunca mutado: escreve a thread do pad e lê a do tique.
         motor.rumble_visto_em = {**motor.rumble_visto_em, norm_mac(uniq) or uniq: instante}
+        if not calado(fraco, forte):
+            motor.rumble_com_forca_em = {
+                **motor.rumble_com_forca_em, norm_mac(uniq) or uniq: instante}
         for evento in motor.borda_do_rumble.ver(uniq, fraco, forte, instante, efetivo):
             motor.anotar(evento)
     except Exception:
@@ -846,7 +860,8 @@ def pede_o_ouvido(receita: Receita) -> bool:
     """A receita precisa do som do jogo: o lado, o estalo, o corpo, a pancada ou a batida."""
     return bool(
         receita.lado_do_som or receita.som_no_controle or receita.som_no_corpo_escolhido
-        or receita.pancada_escolhida or receita.reacao_ao_tiro == REACAO_BATIDA)
+        or receita.pancada_escolhida or receita.reacao_ao_tiro == REACAO_BATIDA
+        or receita.som_quando_o_jogo_cala)
 
 
 def destinos_do_som(
@@ -856,6 +871,88 @@ def destinos_do_som(
     if len(controles) == 1:
         return [controles[0].uniq]
     return [c.uniq for c in controles if dedo.atirando(c.uniq, instante)]
+
+
+# O-JOGO-SEM-RUMBLE-SE-SENTE-PELO-SOM-DELE-01 (22/10/2026): o som do jogo é a segunda fonte, a
+# que só ocupa o que o jogo cala. Valores de partida, por delegação, a validar pelo usuário.
+#: Sem um rumble com força neste controle há tanto tempo (desde o jogo na frente), o jogo cala.
+SEM_RUMBLE_S = 20.0
+#: A pessoa joga: um botão, um analógico ou um gatilho mudou há menos que isto.
+ENTRADA_VIVA_S = 5.0
+#: Quanto um analógico ou um gatilho (0 a 255) anda para contar como mão: o tremor do centro
+#: não conta.
+PASSO_DA_ENTRADA = 16
+#: Os estilos de golpe (a escolha de 22/10 para o rumble no dedo, a mesma lista aqui).
+ESTILOS_DE_GOLPE = frozenset({
+    "acao", "luta", "souls", "terror", "aventura", "esportes",  # (noqa-acento): chaves
+})
+#: O grave vira corpo discreto nos estilos de golpe que vestem o corpo (sem a Luta e os Esportes,
+#: que o timbre do rumble também deixa sem corpo: ``formas_de_haptica.SEM_CORPO``).
+ESTILOS_DO_CORPO_DISCRETO = ESTILOS_DE_GOLPE - formas_de_haptica.SEM_CORPO
+#: O corpo discreto é a metade da força do Som no corpo.
+FORCA_DO_CORPO_DISCRETO = 0.5
+
+
+def _assinatura_da_mao(entrada: Any) -> tuple[Any, ...]:
+    """O que a mão faz: os botões e os eixos crus (analógicos e gatilhos)."""
+    eixos = tuple(int(getattr(entrada, nome, 0)) for nome in ("lx", "ly", "rx", "ry", "l2", "r2"))
+    return (frozenset(getattr(entrada, "botoes", ()) or ()), *eixos)
+
+
+def _a_mao_mexeu(antes: tuple[Any, ...], agora: tuple[Any, ...]) -> bool:
+    if antes[0] != agora[0]:
+        return True
+    return any(abs(a - b) >= PASSO_DA_ENTRADA for a, b in zip(antes[1:], agora[1:], strict=True))
+
+
+class FonteDoSom:
+    """Onde o som do jogo vira háptica: o controle em que o jogo não vibra há ``SEM_RUMBLE_S``,
+    com a pessoa jogando. O primeiro rumble com força a faz ceder no mesmo tique."""
+
+    def __init__(self) -> None:
+        self._calado_desde: dict[str, float] = {}
+        self._contagem: dict[str, int] = {}
+        self._mao: dict[str, tuple[Any, ...]] = {}
+        self._mexeu_em: dict[str, float] = {}
+
+    def esquecer(self, uniq: str) -> None:
+        for mapa in (self._calado_desde, self._contagem, self._mao, self._mexeu_em):
+            mapa.pop(uniq, None)
+
+    def _vibrou(self, uniq: str, vpad: Any) -> bool:
+        """O pad conta um rumble com força desde o tique anterior, ou vibra agora."""
+        contagem = getattr(vpad, "ff_nao_nulo_count", None)
+        antes = self._contagem.get(uniq)
+        if isinstance(contagem, int):
+            self._contagem[uniq] = contagem
+        subiu = isinstance(contagem, int) and antes is not None and contagem > antes
+        par = getattr(vpad, "ff_last_sent", None)
+        agora_vibra = (isinstance(par, tuple) and len(par) == 2
+                       and all(isinstance(x, int) for x in par) and not calado(*par))
+        return subiu or agora_vibra
+
+    def ver(
+        self, uniq: str, agora: float, *, jogo: bool, vpad: Any = None,
+        rumble_em: float | None = None, entrada: Any = None,
+    ) -> bool:
+        """Um tique deste controle; ``True`` quando o jogo cala e a pessoa joga."""
+        if not jogo:
+            self.esquecer(uniq)
+            return False
+        if self._vibrou(uniq, vpad) or uniq not in self._calado_desde:
+            self._calado_desde[uniq] = agora
+        if rumble_em is not None and rumble_em > self._calado_desde[uniq]:
+            self._calado_desde[uniq] = rumble_em  # o rumble que o pad anotou entre dois tiques
+        if entrada is not None:
+            mao = _assinatura_da_mao(entrada)
+            antes = self._mao.get(uniq)
+            if antes is None or _a_mao_mexeu(antes, mao):
+                self._mao[uniq] = mao
+                if antes is not None:
+                    self._mexeu_em[uniq] = agora
+        mexeu = self._mexeu_em.get(uniq)
+        return (agora - self._calado_desde[uniq] >= SEM_RUMBLE_S
+                and mexeu is not None and agora - mexeu <= ENTRADA_VIVA_S)
 
 
 #: O Eco só reverbera o golpe forte; o fraco toca o Impacto, sem a cauda grave.
@@ -880,8 +977,11 @@ class AtuadorDaHaptica:
         estilo_de: Callable[[], Any] | None = None,
         na_economia: Callable[[str], bool] | None = None,
         nota_de: Callable[[str], int | None] | None = None,
+        acordada: Callable[[str], bool] | None = None,
     ) -> None:
         self._tocar = tocar
+        #: a fonte do som acordada neste controle (o jogo cala e a pessoa joga)
+        self._acordada = acordada or (lambda uniq: False)
         self._ouvindo = ouvindo or (lambda: False)
         self._escolha_de = escolha_de or (lambda uniq: None)
         self._estilo_de = estilo_de or (lambda: None)
@@ -914,10 +1014,15 @@ class AtuadorDaHaptica:
                                 or forma_do_estilo in formas_de_haptica.CONTINUAS):
             return False
         if evento.tipo == TIPO_SOM:
+            if receita.som_quando_o_jogo_cala:
+                # o som só toca onde o jogo cala: o rumble dele a faz ceder no mesmo tique
+                return self._acordada(evento.uniq)
             return receita.lado_do_som
         quer = receita.vibracao_por_tiro or escolha is not None
         if evento.tipo != TIPO_RUMBLE or not quer:
             return False
+        if receita.som_quando_o_jogo_cala:
+            return True  # o rumble do jogo calou a fonte do som: o toque é o dele
         # Um tiro, um toque: com o ouvido no som do jogo, o toque (e o lado) vem do estalo.
         return not (receita.lado_do_som and self._ouvindo())
 
@@ -2375,6 +2480,10 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
         motor = motor_do(daemon)
         return None if motor is None else motor.escolhas.get(norm_mac(uniq) or "")
 
+    def acordada(uniq: str) -> bool:
+        motor = motor_do(daemon)
+        return motor is not None and uniq in motor.acordados_pelo_som
+
     def estalo(uniq: str, recorte: Any) -> object:
         alto_falante = getattr(daemon, "_alto_falante_subsystem", None)
         tocar_o_estalo = getattr(alto_falante, "tocar_o_estalo", None)
@@ -2462,7 +2571,7 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
     return [
         AtuadorDaHaptica(
             tocar, ouvindo, escolha_de, lambda: estilo_ativo(daemon), na_economia,
-            lambda uniq: nota_da_unidade(daemon, uniq)),
+            lambda uniq: nota_da_unidade(daemon, uniq), acordada),
         AtuadorDoSom(estalo),
         AtuadorDoGatilho(
             gatilho,
@@ -2518,6 +2627,9 @@ class Passo:
         self._motores_de_epoca: dict[str, formas_de_haptica.GeradorDoMotorDeEpoca] = {}
         self._continua_em: dict[str, float] = {}
         self._agora_da_continua = 0.0
+        # A fonte do som onde o jogo cala, e os controles em que o grave vira o corpo discreto.
+        self.fonte_do_som = FonteDoSom()
+        self._corpo_discreto: frozenset[str] = frozenset()
 
     def receita_de_agora(self, agora: float) -> Receita:
         if agora - self._lida_em >= RELEITURA_DA_RECEITA_S:
@@ -2534,8 +2646,8 @@ class Passo:
         return self.receita_vigente
 
     def alimentar_o_corpo(self, pcm: bytes) -> None:
-        """Chamado na thread do ouvido: o PCM do jogo vira o grave, se alguém o escolheu."""
-        if self.receita_vigente.som_no_corpo_escolhido:
+        """Chamado na thread do ouvido: o PCM do jogo vira o grave, se alguém o quer."""
+        if self.receita_vigente.som_no_corpo_escolhido or self._corpo_discreto:
             self._corpo.append(self._filtro_do_corpo.processar(pcm))
 
     def _levar_o_corpo(
@@ -2549,10 +2661,10 @@ class Passo:
                 pedacos.append(self._corpo.popleft())
             except IndexError:  # a thread do ouvido esvaziou a fila entre o teste e a retirada
                 break
-        if not pedacos or not receita.som_no_corpo_escolhido:
+        if not pedacos:
             return
         donos = []
-        for uniq in uniqs:
+        for uniq in uniqs if receita.som_no_corpo_escolhido else ():
             estado = estado_de(uniq)
             forma = formas_de_haptica.forma_que_vale(
                 self.motor.escolhas.get(norm_mac(uniq) or ""), estilo_ativo(self.daemon))
@@ -2560,7 +2672,8 @@ class Passo:
                     and estado is not None and decidir(CANAL_HAPTICA, estado)
                     and not _controle_na_economia(uniq)):
                 donos.append(uniq)
-        if not donos:
+        discretos = [u for u in uniqs if u in self._corpo_discreto and u not in donos]
+        if not donos and not discretos:
             return
         amostras = array("f")
         for pedaco in pedacos:
@@ -2571,6 +2684,36 @@ class Passo:
             return
         for uniq in donos:
             levar(uniq, amostras)
+        if discretos:
+            metade = array("f", [x * FORCA_DO_CORPO_DISCRETO for x in amostras])
+            for uniq in discretos:
+                levar(uniq, metade)
+
+    def _acordar_a_fonte_do_som(
+        self, receita: Receita, controles: Sequence[Controle], jogo: bool,
+        estado_de: Callable[[str], EstadoDoCanal | None], agora: float,
+    ) -> None:
+        """Onde o jogo cala e a pessoa joga, o som do jogo acorda; o rumble o cala no tique."""
+        if not receita.som_quando_o_jogo_cala:
+            self.motor.acordados_pelo_som = self._corpo_discreto = frozenset()
+            return
+        from hefesto_dualsense4unix.daemon.subsystems.meus_toques import entradas_do_daemon
+
+        entradas = {e.uniq: e for e in entradas_do_daemon(self.daemon)}
+        acordados = set()
+        for c in controles:
+            estado = estado_de(c.uniq)
+            calado_aqui = self.fonte_do_som.ver(
+                c.uniq, agora, jogo=jogo, vpad=c.vpad,
+                rumble_em=self.motor.rumble_com_forca_em.get(norm_mac(c.uniq) or c.uniq),
+                entrada=entradas.get(c.uniq))
+            if calado_aqui and estado is not None and decidir(CANAL_HAPTICA, estado):
+                acordados.add(c.uniq)
+        estilo = estilo_ativo(self.daemon)
+        corpo = estilo in ESTILOS_DO_CORPO_DISCRETO
+        self.motor.acordados_pelo_som = frozenset(acordados)
+        self._corpo_discreto = frozenset(
+            u for u in acordados if corpo and not _controle_na_economia(u))
 
     def _donos_da_continua(
         self, chave: str, uniqs: Sequence[str],
@@ -2667,6 +2810,7 @@ class Passo:
                 self.motor.parar(agora)
             self.motor.ligado = False
             self._aberta_em.clear()
+            self.motor.acordados_pelo_som = self._corpo_discreto = frozenset()
             return 0
         self.motor.ligado = True
         controles = controles_do_daemon(self.daemon)
@@ -2686,6 +2830,7 @@ class Passo:
             )
             for c in controles
         }
+        self._acordar_a_fonte_do_som(receita, controles, jogo, por_uniq.get, agora)
         escritas = self.motor.tique(agora, por_uniq.get, receita, uniqs=tuple(por_uniq))
         self._levar_o_corpo(receita, tuple(por_uniq), por_uniq.get)
         self._agora_da_continua = agora
@@ -2804,9 +2949,14 @@ __all__ = [
     "CAMPO_DA_RECEITA",
     "CANAIS",
     "DESLIGADA",
+    "ENTRADA_VIVA_S",
+    "ESTILOS_DE_GOLPE",
+    "ESTILOS_DO_CORPO_DISCRETO",
+    "FORCA_DO_CORPO_DISCRETO",
     "MODO_DUALSENSE",
     "MODO_NATIVO",
     "MODO_XBOX",
+    "SEM_RUMBLE_S",
     "Atuador",
     "AtuadorDaHaptica",
     "AtuadorDaLuz",
@@ -2819,6 +2969,7 @@ __all__ = [
     "Controle",
     "EstadoDoCanal",
     "Evento",
+    "FonteDoSom",
     "MapaDosMomentos",
     "Passo",
     "PlanoDoGatilho",
