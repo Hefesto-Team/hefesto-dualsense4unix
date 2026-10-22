@@ -216,7 +216,7 @@ def _o_daemon_aplica(prof: Any) -> _Camadas:
 
 def _a_03_mente(pintura: dict[str, Any], ctx: Any, manda: _Camadas) -> list[str]:
     """Os lados em que a coluna da 03 diz outra coisa que o controle recebe."""
-    from pacotes.a03_gatilhos import _padroes
+    from pacotes.a03_gatilhos import _modo_de_agora, _padroes
 
     from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 
@@ -227,14 +227,14 @@ def _a_03_mente(pintura: dict[str, Any], ctx: Any, manda: _Camadas) -> list[str]
         uniq = str(c["uniq"])
         for sig, disco in LADOS.items():
             col = r["colunas"][uniq]
+            modo = _modo_de_agora(ctx, uniq, disco)
             caixa = r["blocos"].get(f'[data-controle="{pref_de[uniq]}"] .ajustes.{sig}')
             if caixa is None:
-                ajustes = _o_que_a_imersao_diz(col, sig)
+                ajustes = _o_que_a_imersao_diz(col, sig, modo)
             else:
                 ajustes = [int(v) for v in re.findall(
                     rf'data-campo="aj-val-{sig}-\d+">(-?\d+)<', caixa)]
             vai = manda.efetivo(uniq, disco)
-            modo = str(col[f"modo-chave-{sig}"])
             if ajustes is None:
                 # Campo da imersão em branco: o perfil guarda números próprios (o `Rigid` 5/200
                 # do esquema abre como Resistência 5/6). A tela não afirma número nenhum; a

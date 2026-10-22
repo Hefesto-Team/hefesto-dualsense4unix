@@ -155,26 +155,32 @@ def _o_que_o_daemon_manda(nome: str) -> _Camadas:
     return camadas
 
 
-def _o_que_a_coluna_diz(r: dict[str, Any], uniq: str,
+def _o_que_a_coluna_diz(r: dict[str, Any], ctx: Any, uniq: str,
                         sig: str) -> tuple[str, str, list[int] | None]:
-    """`(rótulo, modo, ajustes)` de um lado, lidos do que a página recebe."""
-    col = r["colunas"][uniq]
-    ajustes = _o_que_a_imersao_diz(col, sig)
-    return str(col[f"modo-{sig}"]), str(col[f"modo-chave-{sig}"]), ajustes
+    """`(rótulo, modo, ajustes)` de um lado, lidos do que a página recebe.
 
-
-def _o_que_a_imersao_diz(col: dict[str, Any], sig: str) -> list[int] | None:
-    """Na página do todo os números não aparecem: quem os diz é o modo e a imersão da coluna.
-
-    Campo da imersão em branco é perfil com números próprios: a tela não afirma número nenhum, e
-    a régua confere só o modo (`None`).
+    O modo é o de `_modo_de_agora`, a função que a tela pinta (a coluna já não o escreve em
+    campo: o gatilho só tem o efeito, e o acionamento vem dentro dele).
     """
     from pacotes import a03_gatilhos
 
-    modo, imersao = str(col[f"modo-chave-{sig}"]), str(col[f"imersao-{sig}"])
+    col = r["colunas"][uniq]
+    modo = a03_gatilhos._modo_de_agora(ctx, uniq, LADOS[sig])
+    return str(col[f"modo-{sig}"]), modo, _o_que_a_imersao_diz(col, sig, modo)
+
+
+def _o_que_a_imersao_diz(col: dict[str, Any], sig: str, modo: str) -> list[int] | None:
+    """Na página do todo os números não aparecem: quem os diz é o modo e a imersão da coluna.
+
+    Campo da imersão em branco, ou que escolhe o acionamento pelo nome (perfil antigo), é perfil
+    com números próprios: a tela não afirma número nenhum, e a régua confere só o modo (`None`).
+    """
+    from pacotes import a03_gatilhos
+
+    imersao = str(col[f"imersao-{sig}"])
     if imersao == a03_gatilhos.SEM_IMERSAO:
         return a03_gatilhos._padroes(modo)
-    if imersao == "":
+    if imersao == "" or ":" in imersao:
         return None
     achada = a03_gatilhos._imersoes().POR_CHAVE.get(imersao)
     assert achada is not None, f"a coluna diz a imersão {imersao!r}, que a lista não tem"
@@ -194,7 +200,7 @@ def _conferir(nome: str, ctx: Any) -> list[str]:
     for c in ctx.conectados:
         uniq = str(c["uniq"])
         for sig, disco in LADOS.items():
-            rotulo, modo, ajustes = _o_que_a_coluna_diz(r, uniq, sig)
+            rotulo, modo, ajustes = _o_que_a_coluna_diz(r, ctx, uniq, sig)
             vai = manda.efetivo(uniq, disco)
             if ajustes is None:
                 diz = build_from_name(modo, a03_padroes(modo))
@@ -238,8 +244,8 @@ def test_o_nascimento_e_perguntado_ao_esquema(disco: Disco,
         + "\n  ".join(mentiras))
 
 
-def test_o_efeito_pronto_le_o_mesmo_modo_da_coluna(disco: Disco) -> None:
-    """`_modo_de_agora` é quem escolhe a lista do «Efeito pronto» nos gestos."""
+def test_a_lista_do_efeito_so_diz_sem_efeito_se_o_gatilho_esta_solto(disco: Disco) -> None:
+    """`_modo_de_agora` é o modo da tela: «Sem efeito» é `Off`, e nada que resiste abre assim."""
     from pacotes import a03_gatilhos, pacote_da_pagina
 
     for caso in ("jogo-sem-secao", "so-o-l2", "um-controle-so"):
@@ -250,11 +256,11 @@ def test_o_efeito_pronto_le_o_mesmo_modo_da_coluna(disco: Disco) -> None:
         for c in ctx.conectados:
             uniq = str(c["uniq"])
             for sig, disco_ in LADOS.items():
-                coluna = r["colunas"][uniq][f"modo-chave-{sig}"]
-                gesto = a03_gatilhos._modo_de_agora(ctx, uniq, disco_)
-                assert gesto == coluna, (
-                    f"{caso}, P{c['player']} {disco_}: a coluna diz {coluna!r} e "
-                    f"o «Efeito pronto» monta a lista de {gesto!r}")
+                escolha = r["colunas"][uniq][f"imersao-{sig}"]
+                modo = a03_gatilhos._modo_de_agora(ctx, uniq, disco_)
+                assert (escolha == a03_gatilhos.SEM_IMERSAO) == (modo == "Off"), (
+                    f"{caso}, P{c['player']} {disco_}: a lista diz {escolha!r} para o modo "
+                    f"{modo!r}")
 
 
 def test_sem_perfil_nenhum_a_coluna_nao_inventa_o_nascimento() -> None:
@@ -270,7 +276,7 @@ def test_sem_perfil_nenhum_a_coluna_nao_inventa_o_nascimento() -> None:
     for c in ctx.conectados:
         uniq = str(c["uniq"])
         for sig in LADOS:
-            rotulo, modo, ajustes = _o_que_a_coluna_diz(r, uniq, sig)
+            rotulo, modo, ajustes = _o_que_a_coluna_diz(r, ctx, uniq, sig)
             assert build_from_name(modo, ajustes) == sem_efeito, (
                 f"sem perfil nenhum, a coluna do P{c['player']} diz «{rotulo}» "
                 f"{ajustes} num gatilho que perfil nenhum escreveu")

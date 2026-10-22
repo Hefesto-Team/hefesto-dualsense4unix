@@ -114,14 +114,13 @@ def test_o_gatilho_do_perfil_chega_traduzido(ctx_com):
         f"português — a tradução é `app/actions/trigger_specs.PRESETS`. "
         f"`Desligado` aqui é o pacote ignorando o perfil, que é o defeito "
         f"que esta régua existe para pegar.")
-    assert col["modo-e-chave" if "modo-e-chave" in col else "modo-chave-e"] == "Resistance"
     assert col["modo-d"] == "Vibração"
 
     if "imersao-e" in col:
-        # Números próprios do perfil: nenhuma imersão da lista é esta, e o campo fica em branco.
-        assert col["imersao-e"] == "" and col["imersao-d"] == "", (
-            f"o perfil guarda números próprios e a tela disse {col['imersao-e']!r} / "
-            f"{col['imersao-d']!r}: nenhuma imersão da lista tem os números dele")
+        # Números próprios do perfil: nenhuma imersão da lista é esta, e o campo abre com o
+        # acionamento pelo nome (grupo «Do perfil»), nunca em branco nem em «Sem efeito».
+        assert col["imersao-e"] == "acionamento:Resistance", col["imersao-e"]
+        assert col["imersao-d"] == "acionamento:Vibration", col["imersao-d"]
         return
 
     caixa_e = r["blocos"]['[data-controle="p1"] .ajustes.e']

@@ -253,15 +253,19 @@ def _a03_com_o_perfil(monkeypatch: pytest.MonkeyPatch, esquerdo: dict, direito: 
 
 
 def test_a_lista_da_aba_tem_so_os_onze(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Mordida: tirar de `_rotuladas` o descarte do que a lista de onze não tem."""
-    import re
+    """O acionamento de um perfil antigo abre sempre por um dos onze, nunca pelo nome cru.
 
-    a03, _ = _a03_com_o_perfil(monkeypatch, {"mode": "Off", "params": []},
-                               {"mode": "Off", "params": []})
-    valores = re.findall(r'<option value="([^"]*)"', a03.html_das_opcoes_de_modo())
-    assert set(valores) - {"—"} <= set(ONZE), (
-        f"a aba oferece o que a lista de onze não tem: {sorted(set(valores) - set(ONZE))}")
-    assert len(set(valores) - {"—"}) >= 10
+    Mordida: tirar a tradução do `_na_lista_da_tela` (`Rigid` abriria como `acionamento:Rigid`).
+    """
+    for velho in ("Rigid", "AutoGun", "Bow", "Galloping"):
+        a03, r = _a03_com_o_perfil(monkeypatch, {"mode": velho, "params": [5, 200]},
+                                   {"mode": "Off", "params": []})
+        escolhida = r["colunas"][_UNIQ]["imersao-e"]
+        if escolhida.startswith(a03.PREFIXO_DO_ACIONAMENTO):
+            modo = escolhida[len(a03.PREFIXO_DO_ACIONAMENTO):]
+            assert modo in ONZE, (
+                f"a aba oferece o que a lista de onze não tem: {velho!r} abriu {modo!r}")
+            assert f'value="{escolhida}"' in a03.html_das_opcoes_de_imersao("", "", escolhida)
 
 
 def test_o_perfil_antigo_abre_com_o_acionamento_certo(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -273,5 +277,6 @@ def test_o_perfil_antigo_abre_com_o_acionamento_certo(monkeypatch: pytest.Monkey
         monkeypatch, {"mode": "Rigid", "params": [5, 200]},
         {"mode": "AutoGun", "params": [2, 6, 60]})
     col = r["colunas"][_UNIQ]
-    assert (col["modo-chave-e"], col["modo-chave-d"]) == ("Resistance", "Machine")
+    assert (col["imersao-e"], col["imersao-d"]) == (
+        "acionamento:Resistance", "acionamento:Machine")
     assert (col["modo-e"], col["modo-d"]) == ("Resistência", "Metralhadora")

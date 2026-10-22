@@ -194,8 +194,7 @@ def test_o_lugar_vazio_nao_alcanca_a_ponte(a03, nome_do_gesto):
     ponte = _PonteDeMentira()
     ctx = Contexto(state={"active_profile": "régua"}, mesa=MESA,
                    conectados=[FALSO], estados={})
-    clique = {"controle": "p4", "lado": "e", "modo": "Rigid", "valor": "rajada-que-sobe-sozinha",
-              "forma": {"modo-chave-e": "Machine"}}
+    clique = {"controle": "p4", "lado": "e", "modo": "Rigid", "valor": "rajada-que-sobe-sozinha"}
     with pytest.raises(RuntimeError) as recusa:
         fn(ctx, clique, ponte)
     assert "P4" in str(recusa.value)
@@ -244,13 +243,11 @@ def test_o_lugar_vazio_recebe_desligado_e_nenhum(a03, publicada):
             f"coluna vazia do desenho não tem barra de ajuste nenhuma — ela traz "
             f"'Este modo não tem o que ajustar.' —, e emitir `aj-*` ali é se dar "
             f"nota por escrever no vazio.")
-        assert {"modo-chave-e", "modo-chave-d", "imersao-e", "imersao-d",
-                a03.CAMPO_DO_CHIP, a03.CAMPO_DO_PLASTICO} <= set(col), (
-            f"{pref} recebeu {sorted(col)} e falta um dos seis que a coluna "
-            f"vazia precisa: as quatro escolhas e os dois do cabeçalho.")
+        assert {"imersao-e", "imersao-d", a03.CAMPO_DO_CHIP, a03.CAMPO_DO_PLASTICO} <= set(col), (
+            f"{pref} recebeu {sorted(col)} e falta um dos quatro que a coluna "
+            f"vazia precisa: as duas escolhas e os dois do cabeçalho.")
         escolhas = {k: v for k, v in col.items()
                     if k not in (a03.CAMPO_DO_CHIP, a03.CAMPO_DO_PLASTICO)
-                    and not k.startswith(a03.PREFIXO_DA_DICA_DO_MODO)
                     and not k.startswith(a03.PREFIXO_DA_DICA_DA_IMERSAO)
                     and not k.startswith(a03.PREFIXO_DA_FAMILIA_DA_IMERSAO)
                     and k not in a03.CAMPO_DA_FORCA.values()}
@@ -297,14 +294,14 @@ def test_o_lugar_vazio_apaga_o_efeito_de_quem_saiu(a03):
     tres = [FALSO, FALSO_2, dict(FALSO, uniq="aa:bb:cc:00:00:03", player=3)]
 
     com_ele = _com_a_mesa(a03, mesa_de_tres, tres)["colunas"]["aa:bb:cc:00:00:03"]
-    assert com_ele["modo-chave-e"] == "Resistance"
+    assert com_ele["imersao-e"] == "acionamento:Resistance"
 
     sem_ele = _com_a_mesa(a03, MESA_DE_DOIS, [FALSO, FALSO_2])["colunas"]["p3"]
-    assert sem_ele["modo-chave-e"] != "Rigid", (
+    assert sem_ele["imersao-e"] != "acionamento:Resistance", (
         "o P3 esvaziou e o campo continuou dizendo `Rigid`. É a tela afirmando "
         "um efeito num lugar onde não há aparelho.")
-    assert sem_ele["modo-chave-e"] in ("", "—"), (
-        f"o lugar vazio devolveu {sem_ele['modo-chave-e']!r}. Ele mostra o "
+    assert sem_ele["imersao-e"] in ("", "—"), (
+        f"o lugar vazio devolveu {sem_ele['imersao-e']!r}. Ele mostra o "
         "travessão desde a decisão dela de 02/09")
 
 

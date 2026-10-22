@@ -160,34 +160,33 @@ def _clicar(a03, gesto_: str, ctx_, o: dict, p):
     return acao(ctx_, {"controle": "p1", "uniq": UNIQ, **o}, p)
 
 
-def test_a_dica_do_modo_e_a_do_modo_que_esta_escolhido(a03, ctx):
-    """A dica sai do modo DAQUELE lado, e os dois lados não dizem a mesma coisa."""
+def test_a_dica_do_efeito_e_a_do_efeito_que_esta_escolhido(a03, ctx):
+    """A dica sai do efeito DAQUELE lado, e os dois lados não dizem a mesma coisa."""
     col = a03.pacote(ctx("Rigid", "Vibration"))["colunas"][UNIQ]
 
     for sigla in ("e", "d"):
-        chave = col[f"modo-chave-{sigla}"]
-        assert col[f"dica-modo-{sigla}"] == a03.descricao_do_modo(chave), (
-            f"a dica do lado {sigla!r} não é a do modo {chave!r} que a MESMA "
-            f"carga pinta no campo — a tela explicaria um modo e mostraria "
-            f"outro")
-        assert col[f"dica-modo-{sigla}"].strip(), (
+        escolhido = col[f"imersao-{sigla}"]
+        assert col[f"dica-imersao-{sigla}"] == a03.dica_da_imersao(escolhido), (
+            f"a dica do lado {sigla!r} não é a do efeito {escolhido!r} que a MESMA "
+            f"carga pinta no campo — a tela explicaria um efeito e mostraria outro")
+        assert col[f"dica-imersao-{sigla}"].strip(), (
             f"a dica do lado {sigla!r} saiu vazia — o `escrever()` do piloto "
             f"troca vazio por travessão, e o `title` viraria um `—` solto")
 
-    assert col["dica-modo-e"] != col["dica-modo-d"], (
-        "os dois gatilhos estão em modos diferentes e a dica é a mesma — é a "
+    assert col["dica-imersao-e"] != col["dica-imersao-d"], (
+        "os dois gatilhos estão em acionamentos diferentes e a dica é a mesma — é a "
         "frase FIXA de antes, com outro endereço")
 
 
-def test_a_dica_do_modo_muda_quando_o_modo_muda(a03, ctx):
+def test_a_dica_do_efeito_muda_quando_o_acionamento_muda(a03, ctx):
     """*"reescrita a cada tique"* — e é o tique que prova, não a função pura."""
-    antes = a03.pacote(ctx("Rigid", "Rigid"))["colunas"][UNIQ]["dica-modo-e"]
-    depois = a03.pacote(ctx("Machine", "Rigid"))["colunas"][UNIQ]["dica-modo-e"]
+    antes = a03.pacote(ctx("Rigid", "Rigid"))["colunas"][UNIQ]
+    depois = a03.pacote(ctx("Machine", "Rigid"))["colunas"][UNIQ]
 
-    assert antes != depois, (
+    assert antes["dica-imersao-e"] != depois["dica-imersao-e"], (
         "o perfil trocou de `Rigid` para `Machine` e a dica do L2 não mudou — "
         "ela está congelada em algum lugar entre o perfil e a tela")
-    assert depois == a03.descricao_do_modo("Machine")
+    assert depois["dica-imersao-e"] == a03.dica_da_imersao(depois["imersao-e"])
 
 
 def test_o_lugar_vazio_nao_explica_modo_nenhum(a03, ctx):
@@ -198,7 +197,6 @@ def test_o_lugar_vazio_nao_explica_modo_nenhum(a03, ctx):
 
     for pref in vazias:
         for sigla in ("e", "d"):
-            assert fora[pref][f"dica-modo-{sigla}"] == a03.SEM_APARELHO_AQUI
             assert fora[pref][f"dica-imersao-{sigla}"] == a03.SEM_APARELHO_AQUI
 
 
@@ -274,8 +272,7 @@ def test_o_reenvio_sai_do_pacote_quando_sair_do_produto(a03):
 
 _OS_QUE_APLICAM = [
     ("modo", {"lado": "e", "valor": "Rigid"}),
-    ("imersao", {"lado": "e", "valor": "rajada-que-sobe-sozinha",
-                 "forma": {"modo-chave-e": "Machine"}}),
+    ("imersao", {"lado": "e", "valor": "rajada-que-sobe-sozinha"}),
 ]
 
 
@@ -435,13 +432,14 @@ def test_o_recibo_conta_quando_o_daemon_diz_dois_destinos(a03, ctx):
 def test_o_embrulho_de_cada_campo_e_pintavel_e_o_select_nao_tem_title():
     """As duas metades da mesma cura, e uma sem a outra é pior que nenhuma."""
     html = BANCADA.read_text(encoding="utf-8")
-    colunas = html.count('<div class="ctrl"')
+    colunas = len(set(re.findall(r'data-controle="(p\d+)"', html)))
+    assert colunas >= 4, "a bancada perdeu os lugares: o laço abaixo passaria vazio"
 
-    for prefixo in ("dica-modo-", "dica-pronto-"):
+    for prefixo in ("dica-imersao-",):
         for lado in ("e", "d"):
             achados = re.findall(
                 rf'data-campo="{prefixo}{lado}"\s+data-hef-alvo="atributo"'
-                rf' data-hef-atributo="title"', html)
+                rf' data-hef-atributo="(?:title|data-dica)"', html)
             assert len(achados) == colunas, (
                 f"{len(achados)} embrulhos pintáveis de `{prefixo}{lado}` para "
                 f"{colunas} colunas — a que ficar de fora guarda a dica da CENA")

@@ -116,11 +116,12 @@ def test_a_linha_da_03_fica_antes_do_l2_e_o_estilo_continua_escolhendo_o_efeito(
 
     assert aba03.ONDE_ENTRA_A_INTENSIDADE == "acima"
     primeiro_trilho = d03.index(f'data-campo="{aba03.CAMPO_DA_INTENSIDADE}"')
-    primeiro_modo = d03.index('data-gesto="modo"')
-    assert primeiro_trilho < primeiro_modo, "a intensidade entra sob o chip, antes do L2"
-    # o L2/R2 do estilo (r3b-03-15) fica como está: dois campos de cada por controle
+    primeiro_efeito = d03.index('data-gesto="imersao"')
+    assert primeiro_trilho < primeiro_efeito, "a intensidade entra sob o chip, antes do L2"
+    # o L2/R2 do estilo (r3b-03-15) fica como está: um campo de efeito por gatilho e por controle
+    # (o acionamento saiu da página em 22/10/2026: o gatilho só tem o efeito)
     n = len(aba03.MESA)
-    assert d03.count('data-gesto="modo"') == 2 * n and d03.count('data-gesto="imersao"') == 2 * n
+    assert d03.count('data-gesto="modo"') == 0 and d03.count('data-gesto="imersao"') == 2 * n
 
 
 def test_o_trilho_da_03_manda_o_gesto_e_tem_dono_e_camada(d03: str) -> None:
