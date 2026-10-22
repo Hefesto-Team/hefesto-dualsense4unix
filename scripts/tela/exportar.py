@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 """Exporta o controle como SVG ORGANIZADO, para ela arrumar no editor."""
 import pathlib, re, csv, sys
-sys.path.insert(0, str(pathlib.Path(__file__).parent))
+# Instrumento de `scripts/tela/` (22/10/2026): o mapa e o monta moram na interface.
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix" / "interface"))
 import mapa
 
-import sys as _sys, pathlib as _pathlib
-_sys.path.insert(0, str(_pathlib.Path(__file__).resolve().parent))
 from onde import RAIZ as R
 
 DADOS_DO_REPO = R / "docs/data"
@@ -119,8 +118,6 @@ if glifos:
     corpo.append('  <g id="grupo-glifos"><title>Glifos (o símbolo de cada peça)</title>\n'
                  + "\n".join(glifos) + "\n  </g>")
 
-import sys as _sys  # noqa: E402
-_sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from monta import cor_da_zona as _cor  # noqa: E402
 
 _CASCA = _cor("cosmic-red")

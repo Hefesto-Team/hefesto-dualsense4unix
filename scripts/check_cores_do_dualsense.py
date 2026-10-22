@@ -109,7 +109,7 @@ def so_o_codigo(texto: str) -> str:
 sujos = []
 for arq in (RAIZ / "src/hefesto_dualsense4unix/interface/mapa.py",
             RAIZ / "src/hefesto_dualsense4unix/interface/monta.py",
-            RAIZ / "src/hefesto_dualsense4unix/interface/exportar.py",
+            RAIZ / "scripts/tela/exportar.py",
             RAIZ / "src/hefesto_dualsense4unix/interface/topo.html"):
     txt = so_o_codigo(arq.read_text())
     for h in DIGITADOS:

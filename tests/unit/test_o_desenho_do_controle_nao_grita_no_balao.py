@@ -19,7 +19,7 @@ import re
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 SVGS = (INTERFACE / "ds_limpo.svg", RAIZ / "assets" / "control-svg" / "dualsense.svg")
-EXPORTAR = INTERFACE / "exportar.py"
+EXPORTAR = RAIZ / "scripts" / "tela" / "exportar.py"
 
 _TITULO = re.compile(r"<title>([^<]*)</title>")
 #: três letras ou mais, todas maiúsculas: «CHASSI», «INTEIRO». «PS», «L2», «R1» ficam.
