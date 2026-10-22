@@ -56,6 +56,8 @@ class Contagem:
     ondas: Counter[str] = field(default_factory=Counter)
     duracoes_ms: dict[str, list[int]] = field(default_factory=dict)
     rotas: Counter[str] = field(default_factory=Counter)
+    #: perguntas em que o jogo não vibrava: a rota ociosa fica fora da conta
+    parado: int = 0
     timbres: Counter[str] = field(default_factory=Counter)
 
 
@@ -114,7 +116,9 @@ def contar(perguntas: Sequence[dict[str, Any]]) -> dict[str, Contagem]:
                     c.duracoes_ms.setdefault(str(trecho[0]), []).append(_numero(trecho[1]))
             anel_de_antes[uniq] = anel
             rota = pad.get("ff_rota")
-            if isinstance(rota, dict):
+            if isinstance(rota, dict) and rota.get("porque") == "sem_rumble_agora":
+                c.parado += 1
+            elif isinstance(rota, dict):
                 c.rotas[f"{rota.get('rota')} ({rota.get('porque')})"] += 1
                 if rota.get("timbre"):
                     c.timbres[str(rota["timbre"])] += 1
@@ -144,7 +148,10 @@ def linhas_do_controle(c: Contagem) -> list[str]:
     total = sum(c.rotas.values())
     if total:
         saida.append("  rota: " + ", ".join(
-            f"{k} {100 * v // total}%" for k, v in c.rotas.most_common()))
+            f"{k} {100 * v // total}%" for k, v in c.rotas.most_common())
+            + (f" (fora {c.parado} perguntas sem rumble)" if c.parado else ""))
+    elif c.parado:
+        saida.append(f"  rota: o jogo não vibrou em nenhuma das {c.parado} perguntas")
     else:
         saida.append("  rota: o estado não disse (serviço sem ff_rota)")
     if c.timbres:

@@ -21,6 +21,14 @@ from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
 from hefesto_dualsense4unix.profiles import formas_de_haptica as formas
 from hefesto_dualsense4unix.profiles.estilos_de_jogo import ESTILOS
+from tests.unit.test_no_modo_xbox_a_haptica_fina import (  # noqa: F401
+    _P1,
+    _P2,
+    _Mundo,
+    _no_cabo_os_quatro,
+    mesa,
+    mundo,
+)
 
 _RAIZ = Path(__file__).resolve().parents[2]
 _ACAO = "acao"  # (noqa-acento): chave do estilo
@@ -312,3 +320,69 @@ def test_o_instrumento_conta_classes_ondas_duracoes_e_rota(tmp_path: Path, capsy
     assert "quadrada" in saida
     assert "continuo_grave: 1 subidas, 900 a 900 ms" in saida
     assert "motores_do_hid (ganho_zero) 100%" in saida
+
+
+def test_o_instrumento_deixa_fora_da_rota_as_perguntas_sem_rumble(
+    tmp_path: Path, capsys: Any
+) -> None:
+    """A rota ociosa (o jogo não vibra) não se lê como caminho caído nem entra na conta."""
+    sys.path.insert(0, str(_RAIZ / "scripts" / "ensaios"))
+    try:
+        import contar_o_rumble_do_jogo_xbox as instrumento
+    finally:
+        sys.path.pop(0)
+    parado = {"rota": "haptica_fina", "porque": "sem_rumble_agora", "timbre": None}
+    leva = {"rota": "haptica_fina", "porque": "leva", "timbre": "golpe:toque"}
+    linhas = [
+        {"t": 0.1 * i, "per_vpad": [{"uniq": _QUATRO[0], "player": 1,
+                                     "ff_rota": leva if i == 5 else parado}]}
+        for i in range(10)
+    ]
+    gravacao = tmp_path / "g.jsonl"
+    gravacao.write_text("".join(json.dumps(x) + "\n" for x in linhas), encoding="utf-8")
+    assert instrumento.main(["--ler", str(gravacao)]) == 0
+    saida = capsys.readouterr().out
+    assert "haptica_fina (leva) 100% (fora 9 perguntas sem rumble)" in saida
+    assert "caminho_caido" not in saida
+
+
+# --- a rota que o estado diz -------------------------------------------------------------------
+
+
+def test_a_rota_diz_leva_no_rumble_vivo_e_sem_rumble_no_ocioso(
+    mundo: _Mundo,  # noqa: F811
+) -> None:
+    """Cabo: quem vibra leva pela háptica fina; quem não vibra não é «caminho caído»."""
+    controles = _no_cabo_os_quatro(mundo)
+    mundo.mesa.volta(*controles)
+    mundo.rumble(_P1, 100, 200)
+    mundo.mesa.volta(*controles)
+    assert mundo.sub.por_onde_vai_o_rumble(_P1) == {
+        "rota": "haptica_fina", "porque": "leva", "timbre": None}
+    assert mundo.sub.por_onde_vai_o_rumble(_P2)["porque"] == "sem_rumble_agora"
+    mundo.tocador(_P1).sair()
+    assert mundo.sub.por_onde_vai_o_rumble(_P1)["porque"] == "caminho_caido"
+    mundo.rumble(_P1, 0, 0)
+    assert mundo.sub.por_onde_vai_o_rumble(_P1)["porque"] == "sem_rumble_agora"
+
+
+def test_a_rota_diz_que_o_jogo_toca_no_aparelho(mundo: _Mundo) -> None:  # noqa: F811
+    controles = _no_cabo_os_quatro(mundo)
+    mundo.mesa.servidor.jogo_em.add(eh.nome_do_endpoint(_P1))
+    mundo.mesa.volta(*controles)
+    mundo.rumble(_P1, 100, 200)
+    mundo.mesa.volta(*controles)
+    assert mundo.sub.por_onde_vai_o_rumble(_P1) == {
+        "rota": "motores_do_hid", "porque": "o_jogo_toca_no_aparelho"}
+
+
+@pytest.mark.parametrize("backend", ["uhid", None])
+def test_o_estado_so_da_a_rota_ao_pad_xbox(backend: str | None) -> None:
+    """No pad DualSense o rumble do jogo nunca vira háptica fina: a rota não se aplica."""
+    from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
+
+    sub = SimpleNamespace(por_onde_vai_o_rumble=lambda _u: {"rota": "haptica_fina"})
+    eu: Any = SimpleNamespace(daemon=SimpleNamespace(_alto_falante_subsystem=sub))
+    rota = IpcHandlersMixin._rota_do_rumble
+    assert rota(eu, _QUATRO[0], backend) is None
+    assert rota(eu, _QUATRO[0], "uinput") == {"rota": "haptica_fina"}

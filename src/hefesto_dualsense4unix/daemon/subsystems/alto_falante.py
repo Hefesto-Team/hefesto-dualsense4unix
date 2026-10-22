@@ -1417,8 +1417,8 @@ class AltoFalanteSubsystem:
     def por_onde_vai_o_rumble(self, uniq: str) -> dict[str, Any]:
         """Por onde o rumble do pad Xbox deste controle vai agora, e o porquê; nunca levanta.
 
-        ``rota`` é ``haptica_fina`` ou ``motores_do_hid``; ``porque`` diz qual condição de
-        :meth:`_quer_a_haptica_fina` faltou, ou se o caminho está de pé (``leva``) ou caído.
+        ``rota`` é ``haptica_fina`` ou ``motores_do_hid``; ``porque`` diz a condição que faltou,
+        se o jogo não vibra (``sem_rumble_agora``), ou se o caminho está de pé (``leva``) ou caído.
         """
         try:
             chave = self._chave_do_rumble(uniq)
@@ -1441,10 +1441,10 @@ class AltoFalanteSubsystem:
                 and callable(getattr(tocador, "timbre_de_agora", None))
                 else None
             )
-            leva = self._a_haptica_leva(chave)
+            vivo, leva = chave in self._rumble_vivo, self._a_haptica_leva(chave)
             return {
                 "rota": "haptica_fina",
-                "porque": "leva" if leva else "caminho_caido",
+                "porque": ("leva" if leva else "caminho_caido") if vivo else "sem_rumble_agora",
                 "timbre": timbre,
             }
         except Exception as exc:

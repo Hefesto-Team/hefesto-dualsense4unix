@@ -2189,7 +2189,7 @@ class IpcHandlersMixin:
                                     trechos := getattr(vp, "ff_ultimos_trechos", None), list
                                 ) else None
                             ),
-                            "ff_rota": self._rota_do_rumble(uniq_do_fisico),
+                            "ff_rota": self._rota_do_rumble(uniq_do_fisico, backend),
                             "output_count": int(getattr(vp, "output_count", 0) or 0),
                             "trigger_replicas": int(
                                 getattr(vp, "trigger_replicas", 0) or 0
@@ -2319,11 +2319,11 @@ class IpcHandlersMixin:
         _com_a_marca_do_f_hid(result)
         return result
 
-    def _rota_do_rumble(self, uniq: Any) -> dict[str, Any] | None:
-        """Por onde vai o rumble do pad Xbox (``alto_falante.por_onde_vai_o_rumble``)."""
+    def _rota_do_rumble(self, uniq: Any, backend: Any) -> dict[str, Any] | None:
+        """Por onde vai o rumble do pad ``uinput`` (``alto_falante.por_onde_vai_o_rumble``)."""
         alto_falante = getattr(self.daemon, "_alto_falante_subsystem", None)
         rota = getattr(alto_falante, "por_onde_vai_o_rumble", None)
-        if not isinstance(uniq, str) or not uniq or not callable(rota):
+        if backend != "uinput" or not isinstance(uniq, str) or not uniq or not callable(rota):
             return None
         resposta = rota(uniq)  # nunca levanta: o ilegível volta como ``porque``
         return dict(resposta) if isinstance(resposta, dict) else None
