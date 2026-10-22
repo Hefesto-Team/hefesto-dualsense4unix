@@ -69,6 +69,7 @@ def _daemon_com_gatilho(nome: str) -> Any:
 def test_duzentos_gatilhos_armados_dao_duas_linhas(
     mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # D-2210-O-DIARIO-JUNTA-A-RAJADA
     """O chamador de verdade (`armar_gatilho`), 200 vezes na mesma janela."""
     monkeypatch.setattr(connection, "logger", mesa.diario)
     daemon = _daemon_com_gatilho("lightbar")
@@ -118,6 +119,7 @@ def test_a_ocorrencia_da_janela_vencida_fecha_a_conta(mesa: _Mesa) -> None:
 
 
 def test_o_perfil_fechado_que_diverge_fica_no_debug(monkeypatch: pytest.MonkeyPatch) -> None:
+    # D-2210-A-MASCARA-ANTECIPADA-VAI-AO-DEBUG
     """A troca da máscara viva fazia 25 linhas `info` no mesmo segundo, uma por perfil.
 
     MORDIDA: devolver o `logger.info` ao `mascara_do_perfil_antecipada`.

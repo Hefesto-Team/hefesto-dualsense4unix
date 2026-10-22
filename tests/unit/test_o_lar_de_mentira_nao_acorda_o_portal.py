@@ -77,6 +77,7 @@ def test_o_lar_das_fotos_nao_acorda_o_portal() -> None:
     reason="sem dbus-run-session ou dbus-send",
 )
 def test_o_bus_do_lar_recusa_acordar_o_portal(tmp_path: pathlib.Path) -> None:
+    # D-2210-O-LAR-DE-MENTIRA-NAO-TEM-PORTAL
     """O `_lar_sem_portal` de verdade, num bus próprio: pedir o portal falha, e nada sobe."""
     texto = PORTOES.read_text(encoding="utf-8")
     funcao = re.search(r"^_lar_sem_portal\(\).*?^}", texto, re.S | re.M)

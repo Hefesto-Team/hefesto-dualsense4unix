@@ -261,6 +261,7 @@ class TestALeituraQueFalhaPerguntaEDorme:
     def test_a_leitura_que_falha_com_o_gadget_sumido_derruba_o_pad(
         self, mesa: Mesa, monkeypatch: pytest.MonkeyPatch, erro: int, linhas: int
     ) -> None:
+        # D-2210-O-ENOMEM-DA-QUEDA-E-O-HOST
         """Mordida: tirar a pergunta da leitura deixa o pad mudo num gadget que não existe.
 
         O ENOMEM da queda é o host que desligou a função do f_hid (medido em 22/10/2026:
