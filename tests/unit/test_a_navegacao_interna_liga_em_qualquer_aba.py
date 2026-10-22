@@ -354,20 +354,18 @@ def test_12_cada_controle_seleciona_so_o_seu_bloco() -> None:
     assert [c.endereco for c in nav.caixas_do_leiaute(leiaute, "p2")] == ["b", "c"]
 
 
-def test_13_o_start_de_quem_navega_o_pc_nao_guarda_o_perfil() -> None:
-    """Com o mouse ligado, o primário usa da Interna só o R1 e o L1.
+def test_13_o_start_de_quem_navega_o_pc_guarda_o_perfil_tambem() -> None:
+    """O Start de todo controle guarda, o de quem navega o PC com o mouse ligado também.
 
-    D-2909-O-CURSOR-DE-QUEM-NAVEGA-O-PC-E-O-DO-PC: o Start dele é a tecla do
-    teclado emulado; guardar o perfil por baixo dela faria um gesto só ter dois
-    efeitos. O Start de um secundário, na mesma leitura, guarda.
+    22/10/2026, escolha do usuário («Start sempre salva»): revoga as notas de 08/10 e 09/10
+    da D-2909-O-CURSOR-DE-QUEM-NAVEGA-O-PC-E-O-DO-PC. O R1 dele segue andando a aba.
     """
     n = nav.Navegador(relogio=_Relogio())
     base = {P1: _toques(start=0, r1=0), P2: _toques(start=0)}
     n.atos(pagina="02-controles.html", dez=DEZ, toques=base, ativa=True, sem_selecao={P1})
     atos = n.atos(pagina="02-controles.html", dez=DEZ, ativa=True, sem_selecao={P1},
                   toques={P1: _toques(start=1, r1=1), P2: _toques(start=0)})
-    assert nav.Ato("salvar") not in atos, (
-        f"o Start de quem navega o PC guardou o perfil: {atos}")
+    assert nav.Ato("salvar") in atos, f"o Start de quem navega o PC não guardou o perfil: {atos}"
     assert nav.Ato("ir", pagina="03-gatilhos.html") in atos, (
         "o R1 de quem navega o PC tem de seguir andando a aba")
     atos = n.atos(pagina="02-controles.html", dez=DEZ, ativa=True, sem_selecao={P1},

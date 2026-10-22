@@ -56,8 +56,12 @@ TOQUES: dict[str, str] = {
 BOTOES_QUE_NAVEGAM = frozenset(TOQUES)
 
 #: O R1 e o L1 são o Alt+Tab do teclado emulado (D-20): com o foco vivo, calam.
-#: Com o mouse desligado calam todos os ``BOTOES_QUE_NAVEGAM`` (o Start inclusive).
+#: Com o mouse desligado calam todos os ``BOTOES_QUE_NAVEGAM``.
 BOTOES_DO_ALT_TAB = frozenset({"r1", "l1"})
+
+#: O que a Interna guarda de quem navega o PC com o mouse ligado: o Alt+Tab e o Start
+#: (22/10/2026: o Start sempre guarda; ele não sai como Super por cima da janela).
+BOTOES_DE_QUEM_NAVEGA_O_PC = BOTOES_DO_ALT_TAB | frozenset({"options"})
 
 
 class NavegacaoInterna:
@@ -126,14 +130,14 @@ class NavegacaoInterna:
     ) -> frozenset[str]:
         """Os botões que vão ao teclado emulado, quando a Interna age.
 
-        Quem navega o PC (mouse ligado) fica com o Start como tecla e perde só
-        o R1 e o L1, que são o Alt+Tab. Quem não navega o PC (mouse desligado)
-        é quem navega a Interna: todo botão dela, o Start e os que o perfil
+        Quem navega o PC (mouse ligado) perde o R1 e o L1, que são o Alt+Tab, e o
+        Start, que guarda o perfil; o resto segue tecla. Quem não navega o PC
+        (mouse desligado) navega a Interna: todo botão dela, e os que o perfil
         ligou a uma tecla, fica com a Interna e não sai como tecla.
         """
         if not botoes or not self.age():
             return botoes
-        return botoes - (BOTOES_DO_ALT_TAB if mouse_ligado else BOTOES_QUE_NAVEGAM)
+        return botoes - (BOTOES_DE_QUEM_NAVEGA_O_PC if mouse_ligado else BOTOES_QUE_NAVEGAM)
 
     def contar(self, apertos_por_uniq: Mapping[str, Mapping[str, int] | None]) -> None:
         """Soma nos toques a diferença dos ``apertos`` de cada leitor.

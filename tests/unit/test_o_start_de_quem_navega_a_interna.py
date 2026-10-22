@@ -53,7 +53,7 @@ def _interna(*, agindo: bool) -> dono.NavegacaoInterna:
     ("agindo", "mouse_ligado", "esperado"),
     [
         (True, False, frozenset()),
-        (True, True, frozenset({"options", BOTAO_LIGADO_A_TECLA})),
+        (True, True, frozenset({BOTAO_LIGADO_A_TECLA})),
         (False, False, BOTOES),
         (False, True, BOTOES),
     ],
@@ -73,11 +73,12 @@ def test_1_a_interna_desligada_nao_cala_nada() -> None:
     assert n.calar_o_alt_tab(BOTOES, mouse_ligado=False) == BOTOES
 
 
-def test_1_o_start_de_quem_nao_navega_o_pc_fica_com_a_interna() -> None:
+def test_1_o_start_de_todo_controle_fica_com_a_interna() -> None:
     n = _interna(agindo=True)
-    assert "options" not in n.calar_o_alt_tab(frozenset({"options"}), mouse_ligado=False)
-    assert "options" in n.calar_o_alt_tab(frozenset({"options"}), mouse_ligado=True), (
-        "com o mouse ligado o Start segue tecla (D-2909, nota de 08/10)")
+    for mouse_ligado in (False, True):
+        assert "options" not in n.calar_o_alt_tab(
+            frozenset({"options"}), mouse_ligado=mouse_ligado), (
+            f"o Start saiu como tecla com a Interna agindo (mouse ligado={mouse_ligado})")
 
 
 # 2 ─ O teclado de verdade, no laço de verdade ─────────────────────────────────
@@ -178,13 +179,13 @@ async def test_2_mouse_desligado_e_interna_agindo_o_start_nao_tecla_super(
 
 @pytest.mark.asyncio
 @TRANSPORTES
-async def test_2_mouse_ligado_e_interna_agindo_o_start_segue_tecla(
+async def test_2_mouse_ligado_e_interna_agindo_o_start_nao_e_tecla(
     monkeypatch: pytest.MonkeyPatch, transporte: str
 ) -> None:
     teclas = await _teclas_do_laco(
         monkeypatch, agindo=True, mouse_ligado=True, transporte=transporte)
-    assert {"KEY_LEFTMETA", "KEY_ENTER"} <= teclas, (
-        f"quem navega o PC perdeu o Start como tecla: {teclas}")
+    assert "KEY_LEFTMETA" not in teclas, f"o Start guardou e abriu a visão geral: {teclas}"
+    assert "KEY_ENTER" in teclas, f"quem navega o PC perdeu o clique do perfil: {teclas}"
     assert "KEY_TAB" not in teclas, f"o R1 saiu como Alt+Tab com a janela na frente: {teclas}"
 
 
