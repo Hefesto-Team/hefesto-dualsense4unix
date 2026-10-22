@@ -224,7 +224,8 @@ def _opcoes_de_lancamento(home: Path | None) -> dict[str, str]:
             continue
         try:
             texto = vdf.read_text(encoding="utf-8", errors="replace")
-        except OSError:
+        except OSError as erro:
+            logger.debug("as Launch Options não se leram: %s: %s", vdf, erro)
             continue
         for appid, valor in read_launch_options_by_appid(texto).items():
             opcoes.setdefault(appid, valor)

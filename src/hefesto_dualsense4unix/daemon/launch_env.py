@@ -1729,8 +1729,7 @@ def _no_laco_do_servico() -> bool:
 
 def _a_roupa_aqueceu(daemon: Any) -> None:
     """O fio da roupa leu os jogos que faltavam: a escrita seguinte os veste."""
-    with contextlib.suppress(Exception):
-        daemon._launch_env_assinatura = None
+    daemon._launch_env_assinatura = None
     armar_rematerializacao(daemon, motivo="a roupa dos jogos aqueceu")
 
 

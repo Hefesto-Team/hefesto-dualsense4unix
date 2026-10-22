@@ -718,6 +718,7 @@ QUIRKS_DO_USBCORE = "/sys/module/usbcore/parameters/quirks"
 #: controle de todo aparelho com o par, o gadget pelo ``vhci_hcd`` incluído.
 #: Com quatro pads, o ``SDL_Init`` do winebus levou ~23 s (14/10/2026).
 _QUIRK_QUE_ATRASA = "n"
+_ENTRADA_DA_QUIRK = re.compile(r"([0-9a-f]{1,4}):([0-9a-f]{1,4}):([a-z]*)")
 
 
 def o_par_tem_a_quirk_que_atrasa(
@@ -734,14 +735,11 @@ def o_par_tem_a_quirk_que_atrasa(
     """
     alvo = (par[0] & 0xFFFF, par[1] & 0xFFFF)
     for entrada in ler(caminho).split(","):
-        campos = entrada.strip().lower().split(":")
-        if len(campos) != 3:
+        casou = _ENTRADA_DA_QUIRK.fullmatch(entrada.strip().lower())
+        if casou is None:
             continue
-        try:
-            achado = (int(campos[0], 16), int(campos[1], 16))
-        except ValueError:
-            continue
-        if achado == alvo and _QUIRK_QUE_ATRASA in campos[2]:
+        achado = (int(casou.group(1), 16), int(casou.group(2), 16))
+        if achado == alvo and _QUIRK_QUE_ATRASA in casou.group(3):
             return True
     return False
 
