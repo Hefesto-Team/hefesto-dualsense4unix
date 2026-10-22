@@ -245,14 +245,14 @@
       "data": "2026-10-22",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1176804,
+      "piso": 1176822,
       "por_item": {
         "docs": 120375,
         "scripts": 119950,
         "src": 314510,
-        "tests": 621969
+        "tests": 621987
       },
-      "razao": "tamanho: +22 linhas (1176782 -> 1176804), pagas por Origem: D-2210-A-LUZ-AO-SOM-LE-SO-O-MONITOR; registrado no fecho, topo 1182965ab226",
+      "razao": "tamanho: +18 linhas (1176804 -> 1176822), pagas por Origem: D-2210-A-LUZ-DE-AMBIENTE-E-DE-AVISO; registrado no fecho, topo 1a6a42d4ebc1",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -757,6 +757,12 @@
           "de": 1176782,
           "para": 1176804,
           "razao": "tamanho: +22 linhas (1176782 -> 1176804), pagas por Origem: D-2210-A-LUZ-AO-SOM-LE-SO-O-MONITOR; registrado no fecho, topo 1182965ab226"
+        },
+        {
+          "data": "2026-10-22",
+          "de": 1176804,
+          "para": 1176822,
+          "razao": "tamanho: +18 linhas (1176804 -> 1176822), pagas por Origem: D-2210-A-LUZ-DE-AMBIENTE-E-DE-AVISO; registrado no fecho, topo 1a6a42d4ebc1"
         }
       ],
       "unidade": "linhas",
