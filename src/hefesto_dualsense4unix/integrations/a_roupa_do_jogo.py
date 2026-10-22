@@ -1,10 +1,11 @@
-"""A roupa do pad para UM jogo: o DualSense que o binário dele declara conhecer.
+"""A roupa do pad para UM jogo, por uma regra só (docs/protocol/a-identidade-do-pad-virtual.md).
 
-`roupa_do_jogo(raiz) -> (roupa, fonte)` (D-2210-A-ROUPA-DO-PAD-SE-LE-NO-BINARIO), em ordem: o
-sinal do Edge em qualquer arquivo ganha; a biblioteca Sony (a háptica do Sackboy) pede o Edge;
-o sinal só do comum veste o `0ce6`; sem sinal, o Edge de hoje. A Launch Option que esconde o
-`0ce6`, o Steam Input e o Modo Xbox ficam no Edge. Lê o que o varredor da `ficha_declarada`
-acha, em cache pela assinatura dos arquivos, e nunca troca máscara nem perfil.
+`roupa_do_jogo(raiz) -> (roupa, fonte)`: o pad veste o `0ce6` só quando o jogo nomeia o
+DualSense comum, não nomeia o Edge e nada no caminho dele pede o que só o Edge tem (o
+contêiner USB do gadget, que a biblioteca Sony procura; o pad Sony, que o Modo Xbox e o Steam
+Input não mostram ao jogo; o PID que a Launch Option dele não esconde). Em todo outro caso,
+o Edge. O que o jogo nomeia se lê no disco (D-2210-A-ROUPA-DO-PAD-SE-LE-NO-BINARIO), em
+cache pela assinatura dos arquivos; a regra é `_a_regra`, e nunca troca máscara nem perfil.
 """
 from __future__ import annotations
 
@@ -14,6 +15,7 @@ import os
 import re
 import threading
 from collections.abc import Callable, Collection
+from dataclasses import dataclass
 from pathlib import Path
 
 try:
@@ -55,8 +57,19 @@ _DO_INCONTROL = frozenset({"global-metadata.dat", "incontrol.dll"})
 _DA_SDL = frozenset({"sdl2.dll", "sdl3.dll"})
 _DO_REWIRED = "rewired_core.dll"
 
+
+@dataclass(frozen=True)
+class _Declarado:
+    """O que o disco do jogo nomeia do controle; cada campo é a fonte, ou `None`."""
+
+    edge: str | None = None
+    comum: str | None = None
+    #: a biblioteca Sony que abre o HID direto e procura o contêiner USB do pad
+    sony: str | None = None
+
+
 _Chave = tuple[tuple[str, int, int], ...]
-_CACHE: dict[str, tuple[_Chave, tuple[str, str]]] = {}
+_CACHE: dict[str, tuple[_Chave, _Declarado]] = {}
 _TRAVA_DO_CACHE = threading.Lock()
 _AQUECENDO = threading.Event()
 
@@ -106,19 +119,20 @@ def _sinais_do_arquivo(arquivo: Path, *, rewired: bool) -> tuple[bool, bool]:
         return False, False
 
 
-def _ler_a_roupa(raiz: Path) -> tuple[tuple[str, str], list[Path]]:
-    """A roupa pela leitura do disco, e os arquivos lidos (a chave do cache)."""
+def _ler_o_disco(raiz: Path) -> tuple[_Declarado, list[Path]]:
+    """O que o jogo nomeia, pela leitura do disco, e os arquivos lidos (a chave do cache)."""
     roupa: list[Path] = []
     bibliotecas, _gdk = _bibliotecas_e_manifesto(raiz, roupa)
     executavel = escolher_executavel(raiz)
     lidos = sorted(roupa) + bibliotecas + ([executavel] if executavel is not None else [])
     rewired = any(p.name.lower() == _DO_REWIRED for p in roupa)
+    edge: str | None = None
     comum: str | None = None
     for arquivo in sorted(roupa):
-        edge, do_comum = _sinais_do_arquivo(arquivo, rewired=rewired)
+        do_edge, do_comum = _sinais_do_arquivo(arquivo, rewired=rewired)
         relativo = _relativo(arquivo, raiz)
-        if edge:
-            return (ROUPA_DO_EDGE, f"{relativo} declara o DualSense Edge"), lidos
+        if do_edge and edge is None:
+            edge = f"{relativo} declara o DualSense Edge"
         if do_comum and comum is None:
             comum = f"{relativo} declara só o DualSense comum"
     sony: set[str] = {"libScePad"} if bibliotecas else set()
@@ -127,16 +141,33 @@ def _ler_a_roupa(raiz: Path) -> tuple[tuple[str, str], list[Path]]:
         do_arquivo, dos_pids = _ler_o_arquivo(arquivo)
         sony |= do_arquivo
         pids |= dos_pids
-    if ROUPA_DO_EDGE in pids:
-        return (ROUPA_DO_EDGE, "o executável conhece o modelo 0DF2 do Edge"), lidos
-    if sony:
-        fonte = f"a biblioteca Sony ({', '.join(sorted(sony))}) pede o Edge de hoje"
-        return (ROUPA_DO_EDGE, fonte), lidos
+    if edge is None and ROUPA_DO_EDGE in pids:
+        edge = "o executável conhece o modelo 0DF2 do Edge"
     if comum is None and ROUPA_DO_COMUM in pids:
         comum = "o executável conhece só o modelo 0CE6 do DualSense comum"
-    if comum is not None:
-        return (ROUPA_DO_COMUM, comum), lidos
-    return (ROUPA_DO_EDGE, "nenhum sinal do controle: o Edge de hoje"), lidos
+    da_sony = f"a biblioteca Sony ({', '.join(sorted(sony))}) pede o Edge de hoje" if sony else None
+    return _Declarado(edge=edge, comum=comum, sony=da_sony), lidos
+
+
+def _o_caminho_pede_o_edge(
+    opcoes_de_lancamento: str, no_steam_input: bool, modo_xbox: bool
+) -> str | None:
+    """Por que o caminho do jogo até o pad não mostra o `0ce6`; `None` se ele mostra."""
+    if modo_xbox:
+        return "o Modo Xbox não veste roupa Sony"
+    if no_steam_input:
+        return "o jogo está na lista do Steam Input"
+    if opcoes_de_lancamento and has_poison(opcoes_de_lancamento):
+        return "a Launch Option do jogo esconde o 0CE6 do SDL"
+    return None
+
+
+def _a_regra(declarado: _Declarado, caminho: str | None) -> tuple[str, str]:
+    """A regra única: o `0ce6` onde ele é o único modelo que serve ao jogo; senão, o Edge."""
+    pede_o_edge = caminho or declarado.edge or declarado.sony
+    if declarado.comum is not None and pede_o_edge is None:
+        return ROUPA_DO_COMUM, declarado.comum
+    return ROUPA_DO_EDGE, pede_o_edge or "nenhum sinal do controle: o Edge de hoje"
 
 
 def _relativo(arquivo: Path, raiz: Path) -> str:
@@ -159,35 +190,37 @@ def _chave(raiz: Path, lidos: list[Path]) -> _Chave:
     return tuple(chave)
 
 
-def _do_cache(raiz: Path) -> tuple[str, str] | None:
-    """A resposta guardada, se nenhum arquivo lido mudou desde então."""
+def _do_cache(raiz: Path) -> _Declarado | None:
+    """A leitura guardada, se nenhum arquivo lido mudou desde então."""
     with _TRAVA_DO_CACHE:
         guardado = _CACHE.get(str(raiz))
     if guardado is None:
         return None
-    chave, resposta = guardado
+    chave, declarado = guardado
     if _chave(raiz, [Path(c) for c, _t, _m in chave[1:]]) != chave:
         return None
-    return resposta
+    return declarado
+
+
+def _o_que_o_jogo_declara(raiz: Path, *, so_o_cache: bool) -> _Declarado | None:
+    declarado = _do_cache(raiz)
+    if declarado is not None or so_o_cache:
+        return declarado
+    declarado, lidos = _ler_o_disco(raiz)
+    with _TRAVA_DO_CACHE:
+        _CACHE[str(raiz)] = (_chave(raiz, lidos), declarado)
+    return declarado
 
 
 def _a_roupa(
     raiz: Path, opcoes_de_lancamento: str, no_steam_input: bool, modo_xbox: bool,
     *, so_o_cache: bool,
 ) -> tuple[str, str] | None:
-    if modo_xbox:
-        return ROUPA_DO_EDGE, "o Modo Xbox não veste roupa Sony"
-    if no_steam_input:
-        return ROUPA_DO_EDGE, "o jogo está na lista do Steam Input"
-    if opcoes_de_lancamento and has_poison(opcoes_de_lancamento):
-        return ROUPA_DO_EDGE, "a Launch Option do jogo esconde o 0CE6 do SDL"
-    resposta = _do_cache(raiz)
-    if resposta is not None or so_o_cache:
-        return resposta
-    resposta, lidos = _ler_a_roupa(raiz)
-    with _TRAVA_DO_CACHE:
-        _CACHE[str(raiz)] = (_chave(raiz, lidos), resposta)
-    return resposta
+    caminho = _o_caminho_pede_o_edge(opcoes_de_lancamento, no_steam_input, modo_xbox)
+    declarado = _o_que_o_jogo_declara(raiz, so_o_cache=so_o_cache)
+    if declarado is None and caminho is None:
+        return None
+    return _a_regra(declarado or _Declarado(), caminho)
 
 
 def roupa_do_jogo(
@@ -197,11 +230,9 @@ def roupa_do_jogo(
     no_steam_input: bool = False,
     modo_xbox: bool = False,
 ) -> tuple[str, str]:
-    """`(roupa, fonte)` de UM jogo: `0ce6` só com o sinal do comum e sem o do Edge."""
-    resposta = _a_roupa(
-        raiz, opcoes_de_lancamento, no_steam_input, modo_xbox, so_o_cache=False
-    )
-    return resposta if resposta is not None else (ROUPA_DO_EDGE, "")
+    """`(roupa, fonte)` de UM jogo, pela `_a_regra`."""
+    caminho = _o_caminho_pede_o_edge(opcoes_de_lancamento, no_steam_input, modo_xbox)
+    return _a_regra(_o_que_o_jogo_declara(raiz, so_o_cache=False) or _Declarado(), caminho)
 
 
 def _aquecer(raizes: list[Path], ao_aquecer: Callable[[], None] | None) -> None:
