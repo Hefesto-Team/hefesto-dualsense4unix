@@ -122,11 +122,11 @@ def test_o_pad_do_sackboy_e_o_edge_de_hoje(jogador: int) -> None:
 
 @pytest.mark.parametrize("vpads", [1, 2, 4])
 def test_a_env_do_sackboy_e_a_de_hoje(vpads: int) -> None:
-    base = {"native_mode": False, "emulation_enabled": True, "flavor": "dualsense",
-            "backends": ["uhid"] * vpads, "fisicos": vpads}
+    base: dict[str, Any] = {"native_mode": False, "emulation_enabled": True, "flavor": "dualsense",
+                            "backends": ["uhid"] * vpads, "fisicos": vpads}
 
-    assert le.compose_env(**base) == ENV_DO_SACKBOY  # type: ignore[arg-type]
-    assert le.compose_env(**base, roupa=ROUPA_EDGE) == ENV_DO_SACKBOY  # type: ignore[arg-type]
+    assert le.compose_env(**base) == ENV_DO_SACKBOY
+    assert le.compose_env(**base, roupa=ROUPA_EDGE) == ENV_DO_SACKBOY
 
 
 def _perfil_do_sackboy() -> Profile:
