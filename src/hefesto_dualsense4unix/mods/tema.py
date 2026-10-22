@@ -14,6 +14,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from hefesto_dualsense4unix.mods import meu_css
+
 #: A página publicada de onde saem os valores da casa (todas as dez têm o mesmo ``:root``).
 PAGINA_DOS_TOKENS = (Path(__file__).resolve().parent.parent / "interface"
                      / "paginas"  # (noqa-acento): nome da pasta
@@ -95,7 +97,8 @@ class TemaDaCasa:
     """O tema ligado agora: ``folha`` vazia sem tema; ``recusa`` diz por que o ligado não vale.
 
     ``botoes`` é o lado que a extensão ligada escolhe (``esquerda`` ou ``direita``); vazio deixa o
-    lado do sistema.
+    lado do sistema. ``css`` é o CSS de quem usa (``meu_css.py``), já pronto para ir por cima da
+    ``folha``; ``css_de`` é a extensão dele e ``recusa_do_css`` diz por que não vale.
     """
 
     folha: str = ""
@@ -103,6 +106,9 @@ class TemaDaCasa:
     recusa: str = ""
     avisos: tuple[str, ...] = field(default_factory=tuple)
     botoes: str = ""
+    css: str = ""
+    css_de: str = ""
+    recusa_do_css: str = ""
 
 
 def token_permitido(nome: str) -> bool:
@@ -369,11 +375,23 @@ def _opcao_ligada(manifesto: Any, opcao_id: object, lugares: Any) -> bool:
     return opcoes.ler(manifesto, lugares).get(opcao_id) is True
 
 
+def css_da_extensao(manifesto: Any, lugares: Any) -> meu_css.FolhaDeQuemUsa:
+    """O CSS de quem usa da extensão: vazio sem a opção ``css`` ou com ela desligada; senão, o
+    ``meu.css`` dela (a folha, ou a recusa com a linha). A aba lê o mesmo que a janela aplica."""
+    from hefesto_dualsense4unix.mods import opcoes
+
+    opcao = manifesto.opcao_do_css
+    if opcao is None or opcoes.ler(manifesto, lugares).get(opcao.id) is not True:
+        return meu_css.FolhaDeQuemUsa()
+    return meu_css.ler(manifesto.id, lugares)
+
+
 def tema_da_casa(lugares: Any = None) -> TemaDaCasa:
     """O tema da modificação ligada, com a permissão ``tema`` aceita, já conferido.
 
     A cor e o lado dos botões se escolhem à parte: cada um vale pela extensão ligada por último
     que o traz (com a opção dele ligada, quando o bloco o liga a uma). As outras ficam nos avisos.
+    O CSS de quem usa vale pela ligada por último que tem a opção ``css`` ligada, à parte da cor.
     Nada aqui escreve: o registro é lido como está.
     """
     from hefesto_dualsense4unix.mods import instalador
@@ -386,6 +404,7 @@ def tema_da_casa(lugares: Any = None) -> TemaDaCasa:
         return TemaDaCasa(recusa=exc.frase)
     com_cor: list[tuple[str, str, Any, Path]] = []
     com_lado: list[tuple[str, str, Any, str]] = []
+    com_css: list[tuple[str, str, Any]] = []
     sem_manifesto: list[str] = []
     for entrada in registro.values():
         if not entrada.ligada or "tema" not in entrada.permissoes_aceitas:
@@ -398,9 +417,13 @@ def tema_da_casa(lugares: Any = None) -> TemaDaCasa:
             sem_manifesto.append(f"O manifesto de «{entrada.nome}» não abriu: {exc.frase}")
             continue
         bloco = manifesto.tema
-        if "tema" not in manifesto.tipos or not bloco:
+        if "tema" not in manifesto.tipos:
             continue
         chave = (entrada.ligada_em, entrada.id)
+        if manifesto.opcao_do_css is not None:
+            com_css.append((*chave, manifesto))
+        if not bloco:
+            continue
         # o bloco que não diz cor nem lado também entra pela cor: é a régua dela que o recusa
         if (any(c in bloco for c in CHAVES_DA_COR) or CHAVE_DO_LADO not in bloco) and _opcao_ligada(
                 manifesto, bloco.get(CHAVE_DA_OPCAO_DA_COR), lg):
@@ -412,8 +435,9 @@ def tema_da_casa(lugares: Any = None) -> TemaDaCasa:
     com_cor.sort(key=lambda c: c[:2])
     com_lado.sort(key=lambda c: c[:2])
     botoes = com_lado[-1][3] if com_lado else ""
+    dele = _o_css_de_quem_usa(com_css, lg)
     if not com_cor:
-        return TemaDaCasa(de=com_lado[-1][1] if com_lado else "", botoes=botoes,
+        return TemaDaCasa(de=com_lado[-1][1] if com_lado else "", botoes=botoes, **dele,
                           avisos=_avisos_do_lado(sem_manifesto, com_lado, avisados=()))
     _quando, mod_id, manifesto, pasta = com_cor[-1]
     avisos = (*sem_manifesto, *(f"«{c[2].nome}» também tem tema, e vale o da «{manifesto.nome}»."
@@ -423,22 +447,44 @@ def tema_da_casa(lugares: Any = None) -> TemaDaCasa:
         aceito = validar(folha_do_manifesto(manifesto.tema, pasta))
     except TemaRecusadoError as exc:
         return TemaDaCasa(de=mod_id, recusa=f"O tema de «{manifesto.nome}» não ligou. {exc.frase}",
-                          avisos=avisos, botoes=botoes)
-    return TemaDaCasa(folha=aceito.folha, de=mod_id, avisos=avisos, botoes=botoes)
+                          avisos=avisos, botoes=botoes, **dele)
+    return TemaDaCasa(folha=aceito.folha, de=mod_id, avisos=avisos, botoes=botoes, **dele)
+
+
+def _o_css_de_quem_usa(com_css: list[tuple[str, str, Any]], lugares: Any) -> dict[str, str]:
+    """O CSS da ligada por último que o tem ligado; a recusa dela, se o arquivo dela não serve."""
+    for _quando, mod_id, manifesto in sorted(com_css, key=lambda c: c[:2], reverse=True):
+        dele = css_da_extensao(manifesto, lugares)
+        if dele.folha or dele.recusa:
+            recusa = f"«{manifesto.nome}»: {dele.recusa}" if dele.recusa else ""
+            return {"css": dele.folha, "css_de": mod_id, "recusa_do_css": recusa}
+    return {}
 
 
 def arquivos_de_opcoes_dos_temas(lugares: Any = None) -> list[Path]:
-    """Os ``opcoes.json`` das extensões de tema ligadas: a janela os vigia, porque a opção
-    «Cores claras» ou «Botões à esquerda» troca o tema sem tocar no registro."""
+    """Os ``opcoes.json`` das extensões de tema ligadas, e o ``meu.css`` das que o aceitam: a janela
+    os vigia, porque «Cores claras», «Botões à esquerda» e o CSS salvo trocam o tema sem tocar no
+    registro."""
     from hefesto_dualsense4unix.mods import instalador, opcoes
+    from hefesto_dualsense4unix.mods.manifesto import ManifestoRecusadoError, ler_manifesto
 
     lg = lugares or instalador.Lugares.do_xdg()
     try:
         registro = instalador.ler_registro(lg.registro)
     except instalador.InstalacaoRecusadaError:
         return []
-    return [opcoes.caminho(e.id, lg) for e in registro.values()
-            if e.ligada and "tema" in e.permissoes_aceitas]
+    arquivos: list[Path] = []
+    for e in registro.values():
+        if not (e.ligada and "tema" in e.permissoes_aceitas):
+            continue
+        arquivos.append(opcoes.caminho(e.id, lg))
+        try:
+            aceita_css = ler_manifesto(lg.codigo / e.id).opcao_do_css is not None
+        except ManifestoRecusadoError:
+            continue
+        if aceita_css:
+            arquivos.append(meu_css.caminho(e.id, lg))
+    return arquivos
 
 
 def _avisos_do_lado(avisos: Sequence[str], com_lado: list[tuple[str, str, Any, str]], *,
@@ -475,6 +521,7 @@ __all__ = [
     "conferir_o_bloco",
     "contraste",
     "cor",
+    "css_da_extensao",
     "e_escuro",
     "folha_do_manifesto",
     "fundo_da_logo",

@@ -256,7 +256,7 @@ escrever nada:
 A interface desenha a janela «Configurar» de cada extensão do que o `hefesto-mod.json` declara, sem
 código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opcionais, `escolhas`, `padrao` e `grupo`.
 
-- **`tipo`**: `escolha` (lista em `escolhas`), `ligado`, `numero`, `cor`, `deslizante` e `jogos`. A `cor` é um
+- **`tipo`**: `escolha` (lista em `escolhas`), `ligado`, `numero`, `cor`, `deslizante`, `jogos` e `css` (só em extensão de tema; ver «O CSS de quem usa»). A `cor` é um
   seletor de cor da interface; o valor é `#rrggbb` em minúsculas, e um `padrao` que não seja `#rrggbb` recusa
   o manifesto. O `deslizante` declara `minimo`, `maximo` e `passo` (`minimo` menor que `maximo`, `passo`
   maior que zero) e o `padrao`, **obrigatório** e dentro da faixa: é a posição inicial; a janela desenha um
@@ -309,6 +309,17 @@ O tema reprovado não liga: o `mod ligar` e a chave da aba Experimental recusam 
 4,50:1.»). Com mais de um tema ligado, vale o ligado por último. A janela aberta vigia o registro e
 troca o tema na hora, sem recarregar a página; a barra de cima e a variante do GTK seguem o fundo do tema.
 `src/hefesto_dualsense4unix/interface/olhar.py --tema <arquivo>` fotografa as abas com ele, pela mesma conferência.
+
+### O CSS de quem usa
+
+A extensão de tema pode declarar UMA opção de `tipo` `css` (`padrao` falso de fábrica). Ligada, a janela põe o
+`<dados>/<id>/meu.css` por cima da folha do tema, pelo mesmo vigia: salvar o arquivo repinta sem recarregar. É
+livre (cor e layout), e quem confere é `src/hefesto_dualsense4unix/mods/meu_css.py`: nada de `url(`, `@import`,
+funções de imagem, `expression(`, `\` nem `<`, até 16 KB, e chaves em par. O WebKit só deixa a folha de usuário
+vencer a da página com `!important`, então a leitura o põe em cada declaração (menos dentro de `@keyframes`). O que
+a régua recusa não se aplica, e a janela da extensão diz a linha («O seu CSS não foi aplicado: a linha 3 usa url()…»).
+O botão «Editar o meu CSS» cria o arquivo com um exemplo comentado e o abre no editor do sistema; o `mod atualizar`
+não o toca; desligar a opção ou a extensão tira o CSS na hora. Com mais de uma extensão assim, vale a ligada por último.
 
 ## Os erros
 

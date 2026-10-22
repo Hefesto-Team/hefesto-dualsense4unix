@@ -214,7 +214,7 @@ class Opcao(BaseModel):
 
     id: str
     rotulo: str = Field(min_length=1, max_length=60)
-    tipo: Literal["escolha", "ligado", "numero", "cor", "deslizante", "jogos"]
+    tipo: Literal["escolha", "ligado", "numero", "cor", "deslizante", "jogos", "css"]
     escolhas: list[str] = Field(default_factory=list)
     padrao: str | bool | float | list[str] | None = None
     # O ``deslizante`` declara a faixa inteira e a posição inicial (obrigatória e
@@ -360,7 +360,16 @@ class Manifesto(BaseModel):
         if (self.agora or self.parar_tudo) and "ler:acessorios.gesto" not in self.permissoes:
             raise ValueError("agora e parar_tudo pedem a permissão ler:acessorios.gesto")
         self._conferir_o_lado_e_as_opcoes_do_tema()
+        self._conferir_a_opcao_do_css()
         return self
+
+    def _conferir_a_opcao_do_css(self) -> None:
+        """A opção ``css`` é a chave do CSS de quem usa: só uma, e só em extensão de tema."""
+        css = [o.id for o in self.opcoes if o.tipo == "css"]
+        if css and "tema" not in self.tipos:
+            raise ValueError(f"a opção {css[0]} é de css, e só uma extensão de tema a tem")
+        if len(css) > 1:
+            raise ValueError("mais de uma opção de css")
 
     def _conferir_o_lado_e_as_opcoes_do_tema(self) -> None:
         """O lado dos botões do bloco ``tema`` e a opção que liga a cor ou o lado: só a forma e o
@@ -384,6 +393,11 @@ class Manifesto(BaseModel):
                 raise ValueError(f"tema.{chave} aponta para a opção {alvo!r}, que não existe")
             if alvo not in ligadas:
                 raise ValueError(f"tema.{chave}: a opção {alvo!r} precisa ser do tipo ligado")
+
+    @property
+    def opcao_do_css(self) -> Opcao | None:
+        """A opção que liga o CSS de quem usa (a extensão de tema que o aceita), se declara."""
+        return next((o for o in self.opcoes if o.tipo == "css"), None)
 
     @property
     def rede(self) -> str:

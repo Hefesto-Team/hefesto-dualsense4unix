@@ -278,6 +278,12 @@ class OpcaoDaJanela(NamedTuple):
     maximo: float = 0
     passo: float = 1
     jogos: tuple[tuple[str, str], ...] = ()
+    # A linha que a aba diz sob o rótulo (hoje, a do CSS de quem usa que a régua recusou).
+    nota: str = ""
+
+
+GESTO_DO_CSS = "editar-o-css-da-modificacao"
+ROTULO_DO_CSS = "Editar o meu CSS"
 
 
 # O manifesto de exemplo do DESENHO de 19/10/2026: uma extensão que declara três grupos (Geral, Luz
@@ -294,6 +300,7 @@ OPCOES_DO_DESENHO = (
     OpcaoDaJanela("exemplo", "espera", "Espera, em segundos", "numero", "3", (), "Avançado"),
     OpcaoDaJanela("exemplo", "avisar-por", "Avisar por", "escolha", "A barra de luz",
                   ("A barra de luz", "O som", "Os dois"), "Avançado"),
+    OpcaoDaJanela("exemplo", "css", "Usar o meu CSS", "css", False, (), "Avançado"),
 )
 
 
@@ -303,10 +310,15 @@ def _controle_da_opcao(o: OpcaoDaJanela) -> str:
         itens = "".join(
             f'<option{" selected" if e == o.valor else ""}>{_e(e)}</option>' for e in o.escolhas)
         return f'<select class="ext-sel" {alvo} aria-label="{_a(o.rotulo)}">{itens}</select>'
-    if o.tipo == "ligado":
+    if o.tipo in ("ligado", "css"):
         classe, texto = ("nj-tog ligado", "Ligado") if o.valor else ("nj-tog", "Desligado")
-        return (f'<span class="{classe}" {alvo}><span class="pino"></span>'
-                f'<span class="txt">{texto}</span></span>')
+        chave = (f'<span class="{classe}" {alvo}><span class="pino"></span>'
+                 f'<span class="txt">{texto}</span></span>')
+        if o.tipo == "ligado":
+            return chave
+        editar = (f'<button class="btn mini" data-gesto="{GESTO_DO_CSS}" '
+                  f'data-v="{_a(o.mod)}:{_a(o.id)}">{ROTULO_DO_CSS}</button>')
+        return f"{editar}{chave}"
     if o.tipo == "cor":
         return (f'<input class="ext-cor-in" type="color" {alvo} '
                 f'value="{_a(o.valor)}" aria-label="{_a(o.rotulo)}">')
@@ -356,7 +368,8 @@ def _cartoes_das_opcoes(opcoes: Sequence[OpcaoDaJanela]) -> str:
         linhas = "".join(
             f'<div class="ky-rot"><span>{_e(o.rotulo)}</span></div>{_jogos_da_opcao(o)}'
             if o.tipo == "jogos" else
-            f'<div class="ky-linha"><div class="ky-rot"><span>{_e(o.rotulo)}</span></div>'
+            f'<div class="ky-linha"><div class="ky-rot"><span>{_e(o.rotulo)}</span>'
+            f'{f"<span>{_e(o.nota)}</span>" if o.nota else ""}</div>'
             f'<div class="ky-ctrl">{_controle_da_opcao(o)}</div></div>' for o in itens)
         cartoes.append(f'<div class="ac-card"><div class="ac-topo">'
                        f'<span class="ac-tit">{_e(nome or "Opções")}</span></div>{linhas}</div>')

@@ -1492,7 +1492,7 @@ def _jogos_com_perfil() -> tuple[tuple[str, str], ...]:
 
 def _montar_a_janela_da_extensao(mod_id: str) -> None:
     """O miolo da janela de opções: o valor guardado de cada opção, com o rascunho por cima."""
-    from hefesto_dualsense4unix.mods import opcoes
+    from hefesto_dualsense4unix.mods import opcoes, tema
 
     item = _a_instalada(mod_id)
     manifesto = item.manifesto
@@ -1501,11 +1501,13 @@ def _montar_a_janela_da_extensao(mod_id: str) -> None:
     valores = {**opcoes.ler(manifesto, _lugares()),
                **(_MEXIDA.rascunho if _MEXIDA.mod == mod_id else {})}
     jogos = _jogos_com_perfil() if any(x.tipo == "jogos" for x in manifesto.opcoes) else ()
+    nota = tema.css_da_extensao(manifesto, _lugares()).recusa
     linhas = [exp.OpcaoDaJanela(
         mod=mod_id, id=x.id, rotulo=x.rotulo, tipo=x.tipo, valor=_valor_na_tela(valores[x.id]),
         escolhas=tuple(x.escolhas), grupo=x.grupo or "", minimo=x.minimo or 0,
         maximo=x.maximo or 0, passo=x.passo or 1,
-        jogos=jogos if x.tipo == "jogos" else ()) for x in manifesto.opcoes]
+        jogos=jogos if x.tipo == "jogos" else (),
+        nota=nota if x.tipo == "css" else "") for x in manifesto.opcoes]
     _MEXIDA.mod = mod_id
     _MEXIDA.agora = tuple(manifesto.agora)
     _MEXIDA.html_mod = exp.modificacao_miolo_html(
@@ -1610,7 +1612,7 @@ def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
     if opcao is None:
         raise RuntimeError("Esta extensão não tem essa opção. Nada foi guardado.")
     evento = str(o.get("evento") or "")
-    if opcao.tipo == "ligado":
+    if opcao.tipo in ("ligado", "css"):
         if evento == "change":
             return None
         valor: Any = not bool(_valor_na_janela(item, opcao))
@@ -1628,6 +1630,38 @@ def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
         _MEXIDA.mod, _MEXIDA.rascunho = mod_id, {}
     _MEXIDA.rascunho[opcao_id] = certo
     _montar_a_janela_da_extensao(mod_id)
+    return _a_pintura_agora(ctx)
+
+
+def _abrir_no_editor(alvo: pathlib.Path) -> None:
+    """Pede o arquivo ao editor padrão do sistema (``xdg-open``), sem esperar por ele."""
+    import subprocess
+
+    try:
+        subprocess.Popen(["xdg-open", str(alvo)], start_new_session=True,
+                         stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL)
+    except OSError as erro:
+        raise RuntimeError(f"Não consegui abrir o editor. O arquivo está em {alvo}.") from erro
+
+
+def _criar_o_css_da_modificacao(mod_id: str) -> pathlib.Path:
+    """O ``meu.css`` da extensão, criado com o exemplo comentado se ainda não existe."""
+    from hefesto_dualsense4unix.mods import meu_css
+
+    return meu_css.garantir(mod_id, _lugares())
+
+
+@gesto("07-lancadores.html", exp.GESTO_DO_CSS, grava="_criar_o_css_da_modificacao")
+def editar_o_css_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Editar o meu CSS»: o ``meu.css`` da extensão nasce com o exemplo, se ainda não existe, e
+    abre no editor do sistema. Salvar o aplica na janela, sem reabrir (o vigia é o do tema)."""
+    mod_id, _, opcao_id = _id_do_clique(o, exp.GESTO_DO_CSS).partition(":")
+    item = _a_instalada(mod_id)
+    opcao = item.manifesto.opcao_do_css if item.manifesto else None
+    if opcao is None or opcao.id != opcao_id:
+        raise RuntimeError("Esta extensão não aceita o CSS de quem usa. Nada foi aberto.")
+    _abrir_no_editor(_criar_o_css_da_modificacao(mod_id))
     return _a_pintura_agora(ctx)
 
 

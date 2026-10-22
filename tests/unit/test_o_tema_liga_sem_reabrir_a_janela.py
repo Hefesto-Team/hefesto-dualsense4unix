@@ -138,14 +138,27 @@ def test_a_barra_pinta_as_cores_do_tema_so_com_tema() -> None:
 
 def test_o_registro_que_muda_troca_o_tema_so_quando_a_folha_muda(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    trocadas: list[str] = []
-    quem = SimpleNamespace(ponte=SimpleNamespace(tema_de_cores=""),
-                           trocar_o_tema=trocadas.append)
+    trocadas: list[tuple[str, str]] = []
+    quem = SimpleNamespace(ponte=SimpleNamespace(tema_de_cores="", meu_css=""),
+                           trocar_o_tema=lambda folha, meu: trocadas.append((folha, meu)))
     monkeypatch.setattr(janela, "folha_do_tema", lambda: "")
+    monkeypatch.setattr(janela, "css_de_quem_usa", lambda: "")
     janela.JanelaDaAba._o_registro_das_extensoes_mudou(quem)  # type: ignore[arg-type]
     monkeypatch.setattr(janela, "folha_do_tema", lambda: CLARO)
     janela.JanelaDaAba._o_registro_das_extensoes_mudou(quem)  # type: ignore[arg-type]
-    assert trocadas == [CLARO]
+    assert trocadas == [(CLARO, "")]
+
+
+def test_o_registro_que_muda_so_o_css_de_quem_usa_tambem_troca(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """Salvar o ``meu.css`` muda só a terceira folha: a janela tem de trocá-la sem o tema mudar."""
+    trocadas: list[tuple[str, str]] = []
+    quem = SimpleNamespace(ponte=SimpleNamespace(tema_de_cores=CLARO, meu_css=""),
+                           trocar_o_tema=lambda folha, meu: trocadas.append((folha, meu)))
+    monkeypatch.setattr(janela, "folha_do_tema", lambda: CLARO)
+    monkeypatch.setattr(janela, "css_de_quem_usa", lambda: ".a{color:red !important;}")
+    janela.JanelaDaAba._o_registro_das_extensoes_mudou(quem)  # type: ignore[arg-type]
+    assert trocadas == [(CLARO, ".a{color:red !important;}")]
 
 
 _SONDA_DO_PAR = r"""

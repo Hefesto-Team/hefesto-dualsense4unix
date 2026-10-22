@@ -51,6 +51,15 @@ def folha_do_tema() -> str:
     return casa.folha
 
 
+def css_de_quem_usa() -> str:
+    """O CSS de quem usa (o ``meu.css`` da extensão de tema ligada), pronto para ir por cima do
+    tema, ou vazio. O que a régua dele recusa não se aplica, e a frase com a linha vai ao diário."""
+    casa = _tema_das_mods.tema_da_casa()
+    if casa.recusa_do_css:
+        print(f"[tema] {casa.recusa_do_css}", file=sys.stderr)
+    return casa.css
+
+
 def lado_dos_botoes() -> str:
     """O lado dos botões da janela que vale agora: o da extensão de tema ligada, senão o do
     sistema. Quem lê a escolha é a mesma régua da cor, e nada aqui escreve."""
@@ -453,6 +462,7 @@ class PonteDaTela:
         folha: str | None = FOLHA_DA_CASA,
         esperar_a_pintura: bool = False,
         tema_de_cores: str | None = TEMA_LIGADO,
+        meu_css: str | None = None,
     ) -> None:
         self.canal = canal
         self._ao_receber = ao_receber
@@ -468,6 +478,10 @@ class PonteDaTela:
         # USER vence o `:root` da página sem mudar um byte dela.
         self.folha_da_casa = folha or ""
         self.tema_de_cores = _a_folha_do_tema(tema_de_cores)
+        #: A TERCEIRA folha: o CSS de quem usa, por cima do tema. Só no tema do registro; quem
+        #: passa a folha do tema passa, se quiser, o CSS junto.
+        self.meu_css = (css_de_quem_usa() if meu_css is None and isinstance(
+            tema_de_cores, _TemaLigado) else meu_css or "")
         self.ucm = ucm
         self._por_as_folhas()
         if esperar_a_pintura:
@@ -486,7 +500,7 @@ class PonteDaTela:
         self.view.connect("context-menu", self._calar_o_menu_do_webkit)
 
     def _por_as_folhas(self) -> None:
-        for estilo in (self.folha_da_casa, self.tema_de_cores):
+        for estilo in (self.folha_da_casa, self.tema_de_cores, self.meu_css):
             if not estilo:
                 continue
             self.ucm.add_style_sheet(
@@ -499,11 +513,14 @@ class PonteDaTela:
                 )
             )
 
-    def trocar_o_tema(self, folha_do_tema: str) -> None:
+    def trocar_o_tema(self, folha_do_tema: str, meu_css: str | None = None) -> None:
         """Troca o tema de cores sem recarregar a página: tira as folhas de usuário e põe de novo
-        a da casa e a do tema (vazio desliga). O WebKit repinta na hora."""
+        a da casa, a do tema e o CSS de quem usa (vazio desliga; ``None`` deixa o CSS como está).
+        O WebKit repinta na hora."""
         self.ucm.remove_all_style_sheets()
         self.tema_de_cores = folha_do_tema
+        if meu_css is not None:
+            self.meu_css = meu_css
         self._por_as_folhas()
 
     @staticmethod
@@ -774,9 +791,9 @@ class JanelaDaAba:
         self._o_lado_dos_botoes_pode_ter_mudado()
 
     def _o_registro_das_extensoes_mudou(self, *_args: Any) -> None:
-        folha = folha_do_tema()
-        if folha != self.ponte.tema_de_cores:
-            self.trocar_o_tema(folha)
+        folha, meu = folha_do_tema(), css_de_quem_usa()
+        if folha != self.ponte.tema_de_cores or meu != self.ponte.meu_css:
+            self.trocar_o_tema(folha, meu)
 
     def _o_lado_dos_botoes_pode_ter_mudado(self, *_args: Any) -> None:
         self.trocar_o_lado(lado_dos_botoes())
@@ -791,13 +808,15 @@ class JanelaDaAba:
         print(f"[janela] botões: {lado}", file=sys.stderr)
         return True
 
-    def trocar_o_tema(self, folha_do_tema: str) -> None:
-        """O tema novo na página, na barra e na variante do GTK, sem reabrir a janela."""
-        self.ponte.trocar_o_tema(folha_do_tema)
+    def trocar_o_tema(self, folha_do_tema: str, meu_css: str | None = None) -> None:
+        """O tema novo (e o CSS de quem usa) na página, na barra e na variante do GTK, sem reabrir
+        a janela."""
+        self.ponte.trocar_o_tema(folha_do_tema, meu_css)
         self._cor_da_barra.load_from_data(css_da_cor_da_barra(folha_do_tema).encode("utf-8"))
         escura = pedir_a_variante(folha_do_tema)
         print(f"[janela] tema: {'ligado' if folha_do_tema else 'desligado'}, variante "
-              f"{'escura' if escura else 'clara'}", file=sys.stderr)
+              f"{'escura' if escura else 'clara'}, css de quem usa "
+              f"{'ligado' if self.ponte.meu_css else 'desligado'}", file=sys.stderr)
 
     ATRASOS_DO_REDESENHO_MS = (60, 300)
 

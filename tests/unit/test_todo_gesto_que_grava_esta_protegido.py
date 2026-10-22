@@ -134,6 +134,7 @@ ESCREVEM = {
     "_ligar_ou_desligar_a_modificacao",   # liga e desliga uma extensão no registro dela
     "_instalar_a_modificacao",            # instala (git ou pasta) no código e no registro
     "_mexer_na_modificacao",              # atualiza ou remove, apagando o código e os dados
+    "_criar_o_css_da_modificacao",        # cria o `meu.css` (com o exemplo) na pasta de dados dela
     "_guardar_a_opcao_da_modificacao",    # `opcoes.json` na pasta de dados da extensão
     "_curar_o_impedimento",               # desliga o Steam Input ou fixa o Proton
 

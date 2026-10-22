@@ -37,12 +37,12 @@ def padrao_de(opcao: Opcao) -> Valor:
         return "#ffffff"
     if opcao.tipo == "jogos":
         return []
-    return False if opcao.tipo == "ligado" else 0.0
+    return False if opcao.tipo in ("ligado", "css") else 0.0
 
 
 def validar(opcao: Opcao, valor: Any) -> Valor:
     """O valor no tipo da opção, ou a recusa dita em uma frase."""
-    if opcao.tipo == "ligado":
+    if opcao.tipo in ("ligado", "css"):
         if isinstance(valor, bool):
             return valor
         if str(valor).strip().lower() in ("true", "1", "ligado", "sim"):
