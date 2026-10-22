@@ -63,6 +63,10 @@ VEREDITOS: dict[str, tuple[str, int, str]] = {
         "ajudante", 1,
         "o `pw-loopback` de um laço de som, com dono que o fecha",
     ),
+    "integrations/energia_do_som.py::abrir_fluxo": (
+        "ajudante", 1,
+        "o `parec` do monitor da saída padrão, da luz «Ao som», preso ao pai",
+    ),
     "integrations/nivel_do_microfone.py::abrir_fluxo": (
         "ajudante", 1,
         "o `parec` do medidor de nível, preso ao pai",

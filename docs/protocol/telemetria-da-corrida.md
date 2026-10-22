@@ -5,15 +5,14 @@ gatilhos, ao corpo e à barra de luz. Cada campo leva a fonte; os endereços com
 **Nenhum campo que as fontes não mostram é lido**, e nada se injeta no jogo: o Hefesto só escuta.
 
 O código que segue este documento é o `integrations/telemetria_de_corrida.py` (o pacote vira estado, sem I/O) e o
-`daemon/subsystems/telemetria_do_jogo.py` (a porta, a tradução e o atuador do tato). A sprint é a
-`A-TELEMETRIA-DA-CORRIDA-CHEGA-AO-GATILHO-01`.
+`daemon/subsystems/telemetria_do_jogo.py` (a porta, a tradução e o atuador do tato).
 
 ## 0 · O que NÃO foi medido
 
-**O envio pelo Proton ao localhost não foi medido.** Não há jogo de corrida com «Data Out» na biblioteca desta casa
+**O envio pelo Proton ao localhost não foi medido.** Não há jogo de corrida com «Data Out» na biblioteca de teste
 em 22/10/2026; tudo o que está aqui foi provado só com pacotes sintéticos, montados nos deslocamentos da seção 2.
 Também não foi medido qual formato (seção 1) cada edição manda de fato: o tamanho do pacote decide, e um tamanho
-desconhecido é contado como «ignorado» e não vira estado. A lista do que a bancada confere está na seção 5.
+desconhecido é contado como «ignorado» e não vira estado. A lista do que falta conferir com um jogo está na seção 5.
 
 ## 1 · Os formatos, pelo tamanho
 
@@ -42,9 +41,9 @@ Do bloco curto («Sled»), a partir do byte 0 [G1, N1]:
 | 12 | f32 | `EngineIdleRpm` | o pé da luz |
 | 16 | f32 | `CurrentEngineRpm` | a luz da rotação |
 | 20 | f32 ×3 | `Acceleration` X, Y, Z (m/s², X à direita, Y para cima, Z para a frente) | a batida |
-| 32 | f32 ×3 | `Velocity` X, Y, Z (m/s) | o portão de parado, no formato curto |
+| 32 | f32 ×3 | `Velocity` X, Y, Z (m/s) | a trava de parado, no formato curto |
 | 84 | f32 ×4 | `TireSlipRatio` FL, FR, RL, RR | a roda travada (o ABS) |
-| 100 | f32 ×4 | `WheelRotationSpeed` (rad/s) | o portão de parado |
+| 100 | f32 ×4 | `WheelRotationSpeed` (rad/s) | a trava de parado |
 | 116 | s32 ×4 | `WheelOnRumbleStrip` | a zebra |
 | 180 | f32 ×4 | `TireCombinedSlip` | a patinação |
 
@@ -53,7 +52,7 @@ Do bloco do painel («Dash»), a partir do início dele [G2, N1]:
 
 | byte | tipo | campo | uso |
 | ---: | --- | --- | --- |
-| +12 | f32 | `Speed` (m/s) | o portão de parado |
+| +12 | f32 | `Speed` (m/s) | a trava de parado |
 | +71 | u8 | `Accel` (0 a 255) | o acelerador |
 | +72 | u8 | `Brake` (0 a 255) | o freio |
 | +75 | u8 | `Gear` | a troca de marcha |
@@ -66,7 +65,7 @@ travou sob freio ou sob acelerador. Ficam a batida, a zebra e a luz.
 O mapa é o que três projetos independentes desenharam (ForzaDSX, HorizonHaptics, DualSenseXLink) [F1, F2, F3], com
 os dois defeitos que eles mostram curados na origem.
 
-- **O portão de parado** [F1]: nada toca com o carro abaixo de 0,1 m/s e nenhuma roda acima de 1 rad/s. Sem ele, a
+- **A trava de parado** [F1]: nada toca com o carro abaixo de 0,1 m/s e nenhuma roda acima de 1 rad/s. Sem ele, a
   roda travada com o carro parado vibra o gatilho para sempre.
 - **A prioridade** [F2]: colisão, troca de marcha, ABS e patinação, a resistência do perfil, a superfície. A colisão e
   a marcha são toques no corpo (um por pacote, a colisão primeiro); o ABS e a patinação vencem o momento do estilo no
@@ -81,7 +80,7 @@ os dois defeitos que eles mostram curados na origem.
   Impacto de 60 ms, energia cheia a 6 g.
 - **A luz:** cinco cores do verde ao vermelho entre metade do giro e 95%. **Sobe no máximo três vezes por segundo e
   só desce depois de segurar um terço de segundo**, para o limitador no corte não virar pisca-pisca (o HorizonHaptics
-  pisca a 10 Hz [F2], contra a regra dos três clarões desta casa). Vale no brilho do perfil; o Automático da aba, a
+  pisca a 10 Hz [F2], contra a regra dos três clarões por segundo da WCAG 2.3.1). Vale no brilho do perfil; o Automático da aba, a
   Bateria longa e o brilho zero a calam, como a luz do estilo; a luz explícita do perfil vence a da corrida.
 - **Sem pacote há meio segundo** (menu, pausa, jogo fechado), tudo volta ao perfil.
 
@@ -97,7 +96,7 @@ o mesmo pedido, cada um pelos tetos do tato (cabo e rádio iguais).
   tenta de novo na volta seguinte, sem erro.
 - O laço lê sem esperar, até 64 pacotes por volta, a 60 voltas por segundo.
 
-## 5 · O que a bancada confere
+## 5 · O que falta conferir com um jogo
 
 1. No jogo, ligar o «Data Out» com o IP `127.0.0.1` e a porta `5300`, escolher o estilo Corrida no perfil do jogo.
 2. **Chega pacote?** O diário do daemon (o `journal` da unidade `hefesto-dualsense4unix`) diz `telemetria_aberta`
@@ -122,10 +121,10 @@ o mesmo pedido, cada um pelos tetos do tato (cabo e rádio iguais).
 - [N1] nettrom/forza_motorsport, `fdp.py` — a mesma ordem e os mesmos tipos, conferidos à parte. <!-- ref-externa: arquivo de outro repositório -->
   https://raw.githubusercontent.com/nettrom/forza_motorsport/master/fdp.py
 - [O1] a documentação oficial do «Data Out» (Forza Motorsport e Forza Horizon 6), em support.forza.net — **não
-  alcançada** (403 em 22/10/2026); fica a conferir na bancada.
+  alcançada** (403 em 22/10/2026); fica a conferir com um jogo.
   https://support.forza.net/hc/en-us/articles/21742934024211-Forza-Motorsport-Data-Out-Documentation
 - [O2] o fórum oficial sobre o «Data Out» do Motorsport. https://forums.forza.net/t/data-out-feature-in-forza-motorsport/651333
-- [F1] ForzaDSX / RacingDSX (github.com/cosmii02/ForzaDSX) e o port de Linux que achou o portão de parado
+- [F1] ForzaDSX / RacingDSX (github.com/cosmii02/ForzaDSX) e o port de Linux que achou a trava de parado
   (git.sigkill.computer/titaniumtown/nixos, `hosts/yarn/forza-trigger/forza_trigger.py`). <!-- ref-externa: arquivo de outro repositório -->
 - [F2] HorizonHaptics (github.com/haritha99ch/HorizonHaptics) — a prioridade, a zebra a 25 Hz, a luz a 10 Hz.
 - [F3] DualSenseXLink (racedepartment.com, Assetto Corsa) — a resistência que sente o pneu travar.

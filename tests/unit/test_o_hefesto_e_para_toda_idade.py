@@ -26,11 +26,13 @@ _SUFIXOS = {".py", ".json", ".html", ".css", ".js", ".sh", ".csv", ".svg"}
 DA_EXTENSAO = re.compile(r"lovense|buttplug|intiface|brinquedo", re.I)
 ADULTO = re.compile(r"adulto", re.I)
 #: Onde «Adulto» é o estilo do perfil (a aba Perfis e quem a lê). O ``manifesto.py``
-#: nomeia o estilo no texto da permissão ``luz.pulso``, que só vale nos perfis com ele.
+#: nomeia o estilo no texto da permissão ``luz.pulso``, que só vale nos perfis com ele, e o
+#: ``formas_de_haptica.py`` o põe entre os estilos que tocam o rumble sem timbre.
 DO_ESTILO = frozenset({
     "profiles/estilos_de_jogo.py", "profiles/loader.py",
     "profiles/schema.py", "interface/aba10.py", "mods/manifesto.py",
     "daemon/subsystems/volta_dos_acessorios.py",
+    "profiles/formas_de_haptica.py",
 })
 
 

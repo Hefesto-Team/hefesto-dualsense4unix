@@ -34,6 +34,7 @@ _SRC = _AQUI.parent.parent / "src"
 if _SRC.is_dir() and str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
+from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
 from hefesto_dualsense4unix.integrations import classe_do_rumble as classes
 
 RC_SEM_DADO = 4
@@ -160,11 +161,7 @@ def linhas_do_controle(c: Contagem) -> list[str]:
 
 
 def _mascarar(uniq: Any) -> Any:
-    if not isinstance(uniq, str) or uniq.count(":") != 5:
-        return uniq
-    partes = uniq.split(":")
-    partes[3] = partes[4] = "00"
-    return ":".join(partes)
+    return mascarar(uniq) if isinstance(uniq, str) else uniq
 
 
 def gravar(segundos: float) -> list[dict[str, Any]]:
