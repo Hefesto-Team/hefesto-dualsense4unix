@@ -1193,6 +1193,8 @@ class _Instalada:
     entrada: Any
     manifesto: Any
     estado: str = ""
+    #: A recusa do ``meu.css`` (o CSS de quem usa) com a linha, lida junto com o registro.
+    nota_do_css: str = ""
 
 
 class _Registro:
@@ -1244,6 +1246,8 @@ class _Mexida:
     onde_escolhido: str = ""
     #: A extensão que trouxe o lançador da janela «Configurar» aberta; vazio no que é de fábrica.
     conf_da_modificacao: str = ""
+    #: A recusa do ``meu.css`` que a janela da extensão aberta mostra.
+    nota_do_css: str = ""
 
     def limpar(self) -> None:
         self.menu = self.permissoes = self.remover = self.conf = self.imp = self.mod = ""
@@ -1253,7 +1257,7 @@ class _Mexida:
         self.html_conf = self.html_imp = self.html_mod = ""
         self.agora = ()
         self.rascunho = {}
-        self.onde_escolhido = self.conf_da_modificacao = ""
+        self.onde_escolhido = self.conf_da_modificacao = self.nota_do_css = ""
 
 
 _MEXIDA = _Mexida()
@@ -1335,6 +1339,7 @@ def _lugares() -> Any:
 
 def _ler_as_instaladas() -> tuple[_Instalada, ...]:
     """O registro, o estado vivo e o manifesto de cada uma. Nunca levanta."""
+    from hefesto_dualsense4unix.mods import tema
     from hefesto_dualsense4unix.mods.instalador import (
         InstalacaoRecusadaError,
         ler_estado,
@@ -1355,7 +1360,9 @@ def _ler_as_instaladas() -> tuple[_Instalada, ...]:
             manifesto = ler_manifesto(lg.codigo / mod_id, exigir_api=False)
         except (ManifestoRecusadoError, OSError):
             manifesto = None
-        saida.append(_Instalada(entrada, manifesto, str(vivo.get(mod_id, {}).get("estado") or "")))
+        nota = tema.css_da_extensao(manifesto, lg).recusa if manifesto is not None else ""
+        saida.append(_Instalada(entrada, manifesto, str(vivo.get(mod_id, {}).get("estado") or ""),
+                                nota))
     return tuple(saida)
 
 
@@ -1435,6 +1442,7 @@ def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador],
     blocos = carga["blocos"]
     blocos[".ext-lista"] = exp.extensoes_html([_extensao_de(i) for i in instaladas])
     blocos[".lanc-fila"] = exp.fila_com_novo_html(_fila_de(lancadores, viraram))
+    _seguir_o_meu_css(instaladas)
     janelas = (("#lanc-janela", _MEXIDA.html_conf), ("#imp-janela", _MEXIDA.html_imp),
                ("#mod-janela", _MEXIDA.html_mod), ("#lanc-escolha", _ESCOLHA.miolo_novo))
     for seletor, miolo in janelas:
@@ -1490,18 +1498,28 @@ def _jogos_com_perfil() -> tuple[tuple[str, str], ...]:
     return tuple(sorted(achados.items(), key=lambda par: (par[1].casefold(), par[0])))
 
 
-def _montar_a_janela_da_extensao(mod_id: str) -> None:
-    """O miolo da janela de opções: o valor guardado de cada opção, com o rascunho por cima."""
-    from hefesto_dualsense4unix.mods import opcoes, tema
+def _seguir_o_meu_css(instaladas: Sequence[_Instalada]) -> None:
+    """A janela da extensão aberta segue o ``meu.css`` salvo, como a página segue a folha: a frase
+    da recusa entra e sai sem reabrir a janela. Usa só o que o registro já leu."""
+    if not (_MEXIDA.html_mod and _MEXIDA.mod):
+        return
+    item = next((i for i in instaladas if i.entrada.id == _MEXIDA.mod), None)
+    if item is not None and item.manifesto is not None and item.nota_do_css != _MEXIDA.nota_do_css:
+        _montar_a_janela_da_extensao(_MEXIDA.mod, item)
 
-    item = _a_instalada(mod_id)
+
+def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) -> None:
+    """O miolo da janela de opções: o valor guardado de cada opção, com o rascunho por cima."""
+    from hefesto_dualsense4unix.mods import opcoes
+
+    item = item or _a_instalada(mod_id)
     manifesto = item.manifesto
     if manifesto is None:
         raise RuntimeError("O manifesto desta extensão não pôde ser lido. Nada foi alterado.")
     valores = {**opcoes.ler(manifesto, _lugares()),
                **(_MEXIDA.rascunho if _MEXIDA.mod == mod_id else {})}
     jogos = _jogos_com_perfil() if any(x.tipo == "jogos" for x in manifesto.opcoes) else ()
-    nota = tema.css_da_extensao(manifesto, _lugares()).recusa
+    nota = _MEXIDA.nota_do_css = item.nota_do_css
     linhas = [exp.OpcaoDaJanela(
         mod=mod_id, id=x.id, rotulo=x.rotulo, tipo=x.tipo, valor=_valor_na_tela(valores[x.id]),
         escolhas=tuple(x.escolhas), grupo=x.grupo or "", minimo=x.minimo or 0,

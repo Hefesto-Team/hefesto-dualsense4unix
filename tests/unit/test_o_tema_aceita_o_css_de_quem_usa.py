@@ -15,6 +15,8 @@ MORDIDAS (22/10/2026, executadas sobre a cura e devolvidas):
 - o ``meu.css`` fora de ``arquivos_de_opcoes_dos_temas`` reprova ``test_o_vigia_olha_o_meu_css...``;
 - a folha de quem usa fora do ``_por_as_folhas`` reprova a sonda;
 - o ``tema_da_casa`` sem olhar a opção ``css`` reprova ``test_a_opcao_desligada_tira_o_css...``.
+- a pintura sem seguir o ``meu.css`` (``_seguir_o_meu_css`` vazio) reprova
+  ``test_a_janela_aberta_segue_o_meu_css_salvo``.
 """
 from __future__ import annotations
 
@@ -332,6 +334,23 @@ def test_a_janela_traz_o_botao_a_chave_e_a_nota_da_recusa(lar: Any, ctx: Any) ->
     a07.REGISTRO.esquecer()
     outra = a07.configurar_modificacao(ctx, {"v": "tema-x"}, _Ponte())["blocos"]["#mod-janela"]
     assert "O seu CSS não foi aplicado: a linha 2" in outra
+
+
+def test_a_janela_aberta_segue_o_meu_css_salvo(lar: Any, ctx: Any) -> None:
+    """Com a janela aberta, salvar o arquivo corrigido tira a frase da recusa, e salvar um ruim a
+    põe, na pintura seguinte: a página já troca a folha sem reabrir, e a frase não pode mentir."""
+    a07 = _a07()
+    _instalada(lar)
+    _ligar_a_opcao(lar)
+    _escrever(lar, "\n.a{background:url(x)}")
+    janela = a07.configurar_modificacao(ctx, {"v": "tema-x"}, _Ponte())["blocos"]["#mod-janela"]
+    assert "a linha 2" in janela
+    _escrever(lar, ".a{color:red}")
+    a07.REGISTRO.esquecer()
+    assert "não foi aplicado" not in a07._a_pintura_agora(ctx)["blocos"]["#mod-janela"]
+    _escrever(lar, ".a{color:red}\n\n\n.b{background:url(x)}")
+    a07.REGISTRO.esquecer()
+    assert "a linha 4" in a07._a_pintura_agora(ctx)["blocos"]["#mod-janela"]
 
 
 def test_o_botao_cria_o_arquivo_com_o_exemplo_e_pede_o_editor(
