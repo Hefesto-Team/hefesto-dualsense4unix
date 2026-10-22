@@ -21,6 +21,7 @@ from hefesto_dualsense4unix.core.ds_output_report import (
     SAIDA_SO_NO_ALTO_FALANTE,
 )
 from hefesto_dualsense4unix.core.events import EventBus, EventTopic
+from hefesto_dualsense4unix.core.numeros_da_sony import ROUPA_PADRAO, roupa_normalizada
 from hefesto_dualsense4unix.daemon.battery_journal import (
     INTERVALO_SONDA_S,
     diario_da_bateria,
@@ -41,6 +42,7 @@ from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
     reconciliar_as_mascaras,
     sem_o_eixo_do_gesto,
     soltar_o_que_o_controle_segurava,
+    vestir_a_roupa,
 )
 from hefesto_dualsense4unix.daemon.subsystems.poll import (
     BATTERY_DEBOUNCE_SEC,
@@ -199,6 +201,12 @@ def _soltar_o_pad_do_lancamento(daemon: Any, motivo: str) -> None:
         daemon._pad_travado_pelo_lancamento = None
     logger.info("pad_do_lancamento_destravado", motivo=motivo,
                 appid=travado[0] if isinstance(travado, tuple) and travado else None)
+    # O fim do jogo devolve o Edge (D-2210-A-ROUPA-VALE-PARA-O-JOGO-E-VOLTA-NO-FIM).
+    if roupa_normalizada(getattr(daemon, "roupa_do_pad", None)) != ROUPA_PADRAO:
+        try:
+            vestir_a_roupa(daemon, ROUPA_PADRAO)
+        except Exception as exc:
+            logger.warning("roupa_nao_voltou_ao_edge", motivo=motivo, err=str(exc))
 
 
 def _o_lancamento_da_trava_acabou(daemon: Any, inputs: dict[str, Any]) -> bool:

@@ -375,7 +375,7 @@ Leia a ordem: **para o par `28de:11ff`, a função retorna antes de consultar
 
 - com `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD` **ausente ou 0**, o SDL
   já ignora os espelhos sozinho — e o par `0x28de/0x11ff` que este projeto
-  acrescentou ao `_IGNORE_VALUE` (`daemon/launch_env.py:107`, emitido em `:178-180`) é
+  acrescentou ao `_IGNORE_VALUE` (`daemon/launch_env.py:107`, emitido em `:179-181`) é
   **redundante**, não errado;
 - com a variável **em 1**, o SDL usa os espelhos — e aquele par **não os
   esconde**, porque a lista de ignorados nunca é consultada para ele.
@@ -634,7 +634,7 @@ enquanto o DualSense comum tem cinco (`030000004c050000e60c...` para USB e
 banco**. Isso não é defeito enquanto o caminho for HIDAPI (o driver PS5
 sintetiza o mapeamento), mas passa a importar se algum dia o vpad DualSense for
 lido pelo caminho evdev — que é o que `SDL_JOYSTICK_HIDAPI=0` faz, e é o que
-este projeto já emite na máscara **Xbox** (`daemon/launch_env.py:1103`,
+este projeto já emite na máscara **Xbox** (`daemon/launch_env.py:1127`,
 declarado em `:1511`).
 **GRAU: MEDIDO AQUI** para o conteúdo do banco; **BAIXA** para a consequência,
 que não foi exercitada.
@@ -669,7 +669,7 @@ o degrau anterior deixou passar.
 **Quem ganha o ambiente.** O degrau 4 vem **depois** do 3: a Steam monta o
 ambiente do processo e o wrapper roda dentro dele, sobrescrevendo com `env(1)`
 as variáveis que exporta. Logo, para as **sete** variáveis da
-`ENV_ALLOWLIST` em `daemon/launch_env.py:89-97`, **o wrapper vence a Steam**. Para qualquer
+`ENV_ALLOWLIST` em `daemon/launch_env.py:90-98`, **o wrapper vence a Steam**. Para qualquer
 outra — e `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD` é uma delas, porque
 **não está na allowlist** — vale o que a Steam pôs. **GRAU: ALTA** para o
 mecanismo (`env(1)` e a allowlist por NOME de variável em

@@ -70,6 +70,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 try:
+    from .a_roupa_do_jogo import roupa_do_jogo
     from .api_de_entrada import Evidencia, Veredito, examinar_pasta
     from .ficha_declarada import FichaDeclarada, explicar_a_capa, fichas_dos_jogos
     from .receitas_de_ambiente import jogo_gdk_sem_ajudante, pecas_que_faltam
@@ -94,6 +95,7 @@ try:
         steam_input_allowlist_path,
     )
 except ImportError:  # pragma: no cover - executado como script avulso
+    from a_roupa_do_jogo import roupa_do_jogo  # type: ignore[no-redef]
     from api_de_entrada import Evidencia, Veredito, examinar_pasta  # type: ignore[no-redef]
     from ficha_declarada import (  # type: ignore[no-redef]
         FichaDeclarada,
@@ -405,6 +407,8 @@ class Prontuario:
     sem_conta: bool = False
     #: O que a Steam e o binário dizem sobre controle. Informa; nunca entra no veredito.
     declarado: FichaDeclarada | None = None
+    #: `(roupa, fonte)` do pad para este jogo (`a_roupa_do_jogo`); `None` = não examinado.
+    roupa: tuple[str, str] | None = None
 
     @property
     def capa_da_steam(self) -> str | None:
@@ -537,6 +541,9 @@ class Prontuario:
             "pecas_que_faltam": list(self.pecas_que_faltam),
             "sem_conta": self.sem_conta,
             "declarado": self.declarado.como_dicionario() if self.declarado else None,
+            "roupa": (
+                {"roupa": self.roupa[0], "fonte": self.roupa[1]} if self.roupa else None
+            ),
             "capa_da_steam": self.capa_da_steam,
             "estorvos": [
                 {"chave": e.chave, "o_que": e.o_que, "cura": e.a_cura,
@@ -780,6 +787,15 @@ def levantar_censo(
                 pecas_que_faltam=pecas_que_faltam(raiz) if examinar else (),
                 sem_conta=jogo_gdk_sem_ajudante(raiz) if examinar else False,
                 declarado=declaradas.get(appid),
+                roupa=(
+                    roupa_do_jogo(
+                        raiz,
+                        opcoes_de_lancamento=linhas.get(appid) or "",
+                        no_steam_input=appid in permitidos,
+                    )
+                    if examinar and raiz is not None
+                    else None
+                ),
             )
         )
     return Censo(jogos=fichas, erros=erros)
@@ -923,8 +939,8 @@ def _tabela(censo: Censo) -> str:
     largura = min(largura, 34)
     linhas = [
         f"{'jogo':{largura}} | {'veredito':26} | {'api':18} | wrapper | "
-        f"{'ponte confirmada':20} | {'Steam Input':22} | declara",
-        "-" * (largura + 124),
+        f"{'ponte confirmada':20} | {'Steam Input':22} | {'declara':18} | roupa",
+        "-" * (largura + 146),
     ]
     for jogo in censo.jogos:
         si = jogo.steam_input_ligado
@@ -935,7 +951,8 @@ def _tabela(censo: Censo) -> str:
             f"{jogo.nome[:largura]:{largura}} | {jogo.veredito:26} | "
             f"{jogo.api.value:18} | {'sim' if jogo.tem_wrapper else 'NÃO':7} | "
             f"{_texto_da_ponte(jogo.ponte):20} | {texto_si:22} | "
-            f"{jogo.declarado.veredito if jogo.declarado else '-'}"
+            f"{jogo.declarado.veredito if jogo.declarado else '-':18} | "
+            f"{jogo.roupa[0] if jogo.roupa else '-'}"
         )
     for jogo in censo.jogos:
         if not jogo.estorvos:
@@ -947,6 +964,11 @@ def _tabela(censo: Censo) -> str:
             quando = "" if estorvo.impede else "aviso, não impede o jogo: "
             linhas.append(f"    - {quando}{estorvo.o_que}")
             linhas.append(f"      cura: {estorvo.a_cura} ({marca})")
+    vestidos = [j for j in censo.jogos if j.roupa is not None]
+    if vestidos:
+        linhas.append("")
+        linhas.append("A roupa do controle virtual em cada jogo:")
+        linhas.extend(f"  {j.nome}: {j.roupa[0]} ({j.roupa[1]})" for j in vestidos if j.roupa)
     declarados = [j for j in censo.jogos if j.declarado is not None and j.declarado.fontes]
     if declarados:
         linhas.append("")

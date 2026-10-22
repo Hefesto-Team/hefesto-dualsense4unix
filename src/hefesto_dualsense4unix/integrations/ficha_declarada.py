@@ -91,6 +91,12 @@ _MANIFESTO_GDK = "MicrosoftGame.config"
 _PROFUNDIDADE_DA_PASTA = 6
 _TETO_DE_ENTRADAS = 50_000
 _TETO_DE_BIBLIOTECAS = 4
+#: O que o jogo declara do controle fora do executável: o InControl (IL2CPP e Mono), o
+#: Rewired e a SDL. Só o `a_roupa_do_jogo` lê estes; o veredito da ficha não muda.
+_ARQUIVOS_DA_ROUPA = frozenset(
+    {"global-metadata.dat", "incontrol.dll", "rewired_core.dll", "sdl2.dll", "sdl3.dll"}
+)
+_TETO_DE_ASSETS = 8
 
 
 @dataclass(frozen=True)
@@ -264,9 +270,16 @@ def declaracoes_do_cache(
 # O que o disco do jogo mostra
 
 
-def _bibliotecas_e_manifesto(raiz: Path) -> tuple[list[Path], bool]:
-    """As `libScePad*` e o `MicrosoftGame.config` da pasta, com teto de profundidade."""
+def _bibliotecas_e_manifesto(
+    raiz: Path, roupa: list[Path] | None = None
+) -> tuple[list[Path], bool]:
+    """As `libScePad*` e o `MicrosoftGame.config` da pasta, com teto de profundidade.
+
+    Com `roupa`, junta nela os arquivos da roupa (`_ARQUIVOS_DA_ROUPA` e os
+    primeiros `sharedassets<N>.assets`, com o `resources.assets`), na mesma volta.
+    """
     bibliotecas: list[Path] = []
+    assets: list[Path] = []
     gdk = False
     visitadas = 0
     pilha: list[tuple[Path, int]] = [(raiz, 0)]
@@ -277,7 +290,8 @@ def _bibliotecas_e_manifesto(raiz: Path) -> tuple[list[Path], bool]:
                 for entrada in entradas:
                     visitadas += 1
                     if visitadas > _TETO_DE_ENTRADAS:
-                        return bibliotecas, gdk
+                        pilha.clear()
+                        break
                     try:
                         e_pasta = entrada.is_dir(follow_symlinks=False)
                     except OSError:
@@ -291,9 +305,26 @@ def _bibliotecas_e_manifesto(raiz: Path) -> tuple[list[Path], bool]:
                         gdk = True
                     elif nome.startswith("libscepad") and len(bibliotecas) < _TETO_DE_BIBLIOTECAS:
                         bibliotecas.append(Path(entrada.path))
+                    elif roupa is None:
+                        continue
+                    elif nome in _ARQUIVOS_DA_ROUPA:
+                        roupa.append(Path(entrada.path))
+                    elif _ordem_do_asset(nome) is not None:
+                        assets.append(Path(entrada.path))
         except OSError as erro:
             logger.debug("pasta do jogo ilegível, fica fora da ficha: %s: %s", pasta, erro)
+    if roupa is not None:
+        assets.sort(key=lambda p: _ordem_do_asset(p.name.lower()) or 0)
+        roupa.extend(assets[:_TETO_DE_ASSETS])
     return bibliotecas, gdk
+
+
+def _ordem_do_asset(nome: str) -> int | None:
+    """`resources.assets` primeiro, depois `sharedassets<N>.assets` pelo N; o resto, `None`."""
+    if nome == "resources.assets":
+        return -1
+    casou = re.fullmatch(r"sharedassets(\d+)\.assets", nome)
+    return int(casou.group(1)) if casou else None
 
 
 def _ler_o_arquivo(arquivo: Path) -> tuple[set[str], set[str]]:

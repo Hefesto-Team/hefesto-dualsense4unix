@@ -521,7 +521,7 @@ def _perguntar_o_prontuario() -> None:
         examinar=True      6.900 ms       22 jogos   veredito: None
 
     **O ÚNICO CAMPO QUE A LINHA DESTA TELA LÊ É `ponte_divergente`**, e ele não
-    encosta na varredura: `prontuario_dos_jogos.py:452` o define como *"há
+    encosta na varredura: `prontuario_dos_jogos.py:456` o define como *"há
     carimbo de ponte confirmada"* contra *"a lista de exceções de hoje"*, os dois
     lidos do disco em milissegundos. Quem diz isso é o docstring do
     dono, em `:559`: *"O carimbo não depende de ler executável nenhum"*. A
@@ -1636,7 +1636,7 @@ def atualizar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     `daemon.reload` **sem `config_overrides`**, então `overrides` chega `{}`
     (`daemon/ipc_handlers.py:3840`) e `new_cfg = replace(self.daemon.config)` é
     uma cópia de valor igual (`:4553`). Os dois ramos que reaplicariam mouse e
-    teclado comparam `old` com `new` (`daemon/lifecycle.py:1236` e `:1243`) e
+    teclado comparam `old` com `new` (`daemon/lifecycle.py:1236` e `:1251`) e
     **nunca disparam** — o registro sai com `keys_changed=[]` (`:2094-2098`).
     Duas coisas acontecem, e são estas: `lifecycle.py:1117-1118` derruba e sobe
     o leitor dos atalhos do controle, e `ipc_handlers.py:3897` reescreve os

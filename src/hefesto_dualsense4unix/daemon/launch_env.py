@@ -64,13 +64,14 @@ import os
 import threading
 import time
 from collections.abc import Callable, Iterable, Iterator, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.core import o_dono_do_evento as _ode
 from hefesto_dualsense4unix.core.numeros_da_sony import (
     PAR_DUALSENSE_FISICO,
+    ROUPA_COMUM,
     ROUPA_PADRAO,
     VENDOR_SONY,
     roupa_normalizada,
@@ -716,6 +717,22 @@ def _travar_o_pad_que_o_jogo_vai_abrir(daemon: Any, appid: int, epoch: float) ->
     logger.info("pad_travado_pelo_lancamento", appid=appid, epoch=epoch)
 
 
+def _vestir_para_o_jogo(daemon: Any, appid: int, roupa: int) -> None:
+    """Veste a roupa do jogo (`gamepad.vestir_a_roupa`, P1 a P4); Edge sobre Edge não mexe."""
+    if roupa == ROUPA_PADRAO and (
+        roupa_normalizada(getattr(daemon, "roupa_do_pad", None)) == ROUPA_PADRAO
+    ):
+        return
+    from hefesto_dualsense4unix.daemon.subsystems.gamepad import vestir_a_roupa
+
+    try:
+        vestem = vestir_a_roupa(daemon, roupa)
+    except Exception as exc:
+        logger.warning("launch_arm_roupa_falhou", appid=appid, err=str(exc))
+        return
+    logger.info("launch_arm_roupa", appid=appid, roupa=f"{roupa:04x}", vestem=vestem)
+
+
 def arm_launch_profile(
     daemon: DaemonProtocol,
     *,
@@ -824,9 +841,12 @@ def arm_launch_profile(
 
     if o_freestyle_manda(getattr(daemon, "store", None)):
         logger.info("launch_arm_pulado_freestyle_ligado", appid=appid)
+        _vestir_para_o_jogo(daemon, appid, ROUPA_PADRAO)
         return {"appid": appid, "armado": False, "motivo": "freestyle_ligado"}
 
     na_allowlist = appid in steam_input_appids()
+    # A roupa que o `materialize` gravou (D-2210-A-ROUPA-VALE-PARA-O-JOGO-E-VOLTA-NO-FIM).
+    roupa = ROUPA_PADRAO if na_allowlist else roupa_gravada(appid, base_dir)
 
     profile = None
     for candidato_appid, candidato in _steam_profiles(daemon):
@@ -840,6 +860,7 @@ def arm_launch_profile(
             else "launch_arm_sem_perfil",
             appid=appid,
         )
+        _vestir_para_o_jogo(daemon, appid, roupa)
         _travar_o_pad_que_o_jogo_vai_abrir(daemon, appid, epoch)
         return {
             "appid": appid,
@@ -878,6 +899,7 @@ def arm_launch_profile(
             supressao=supressao,
             ativacao=ativacao,
         )
+        _vestir_para_o_jogo(daemon, appid, roupa)
         _travar_o_pad_que_o_jogo_vai_abrir(daemon, appid, epoch)
         return {
             "appid": appid,
@@ -935,6 +957,7 @@ def arm_launch_profile(
             profile=getattr(profile, "name", None),
             escada=comeco.motivo,
         )
+        _vestir_para_o_jogo(daemon, appid, roupa)
         _travar_o_pad_que_o_jogo_vai_abrir(daemon, appid, epoch)
         return {
             "appid": appid,
@@ -967,6 +990,7 @@ def arm_launch_profile(
         profile=getattr(profile, "name", None),
         kind=getattr(mode, "kind", None),
     )
+    _vestir_para_o_jogo(daemon, appid, roupa)
     resultado = applier(mode, profile=profile, origin="launch")
     native_pos, enabled_pos, flavor_pos, backends_pos, fisicos_pos = _snapshot(daemon)
     modo_antecipado = _modo_antecipado(
@@ -1409,13 +1433,27 @@ class ModoAntecipado:
     motivo: str
     fisicos: int = 0
     pronto_para_troca: bool = False
+    #: A roupa do pad para o jogo (`a_roupa_do_jogo`); o Edge é a de hoje.
+    roupa: int = ROUPA_PADRAO
 
     def como_estado(self) -> str:
         """A mesma gramática do `estado:` global, para os dois compararem."""
         pronto = " pronto_para_troca=True" if self.pronto_para_troca else ""
+        roupa = f" roupa={self.roupa:04x}" if self.roupa != ROUPA_PADRAO else ""
         return (
             f"native={self.native} emulacao={self.emulacao} "
-            f"mascara={self.mascara} backends={list(self.backends) or '[]'}{pronto}"
+            f"mascara={self.mascara} backends={list(self.backends) or '[]'}{pronto}{roupa}"
+        )
+
+    @property
+    def veste_roupa(self) -> bool:
+        """O pad deste modo é o DualSense em uhid, o único que veste roupa."""
+        return (
+            not self.native
+            and (self.emulacao or self.pronto_para_troca)
+            and self.mascara == "dualsense"
+            and bool(self.backends)
+            and all(b == "uhid" for b in self.backends)
         )
 
 
@@ -1538,6 +1576,7 @@ def env_do_modo(modo: ModoAntecipado) -> dict[str, str]:
         flavor=modo.mascara,
         backends=list(modo.backends),
         fisicos=modo.fisicos,
+        roupa=modo.roupa,
     )
 
 
@@ -1622,15 +1661,77 @@ def _publicar_divergencias(
         logger.info("mascara_do_perfil_convergiu", appid=appid, motivo=motivo)
 
 
-def _render(env: dict[str, str], estado: str) -> str:
+def _render(env: dict[str, str], estado: str, roupa: tuple[int, str] | None = None) -> str:
     ts = _dt.datetime.now().isoformat(timespec="seconds")
     lines = [
         "# Materializado pelo daemon do Hefesto (DEDUP-04). Não edite:",
         "# é regravado a cada transição de estado do gamepad virtual.",
         f"# estado: {estado} | {ts}",
     ]
+    if roupa is not None:
+        lines.append(f"{_LINHA_DA_ROUPA}{roupa[0]:04x} ({roupa[1]})")
     lines.extend(f"{key}={value}" for key, value in env.items())
     return "\n".join(lines) + "\n"
+
+
+#: A linha que leva a roupa do jogo no `steam_app_<appid>.env`, lida pelo arme.
+_LINHA_DA_ROUPA = "# roupa: "
+
+
+def roupa_gravada(appid: int, base_dir: Path | None = None) -> int:
+    """A roupa que o `materialize` gravou para o `appid`; sem a linha, o Edge."""
+    caminho = (base_dir or launch_env_dir()) / f"steam_app_{int(appid)}.env"
+    try:
+        texto = caminho.read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        return ROUPA_PADRAO
+    for linha in texto.splitlines():
+        if linha.startswith(_LINHA_DA_ROUPA):
+            valor = linha[len(_LINHA_DA_ROUPA):].split(" ", 1)[0]
+            try:
+                return roupa_normalizada(int(valor, 16))
+            except ValueError:
+                return ROUPA_PADRAO
+        if not linha.startswith("#"):
+            break
+    return ROUPA_PADRAO
+
+
+def _jogos_do_comum(foto: _FotoDoLancamento) -> dict[str, str]:
+    """`{appid: fonte}` dos jogos instalados cuja roupa é o `0ce6`; vazio sem o dono."""
+    if not foto.o_dono_esconde():
+        return {}
+    try:
+        from hefesto_dualsense4unix.integrations.a_roupa_do_jogo import (
+            ROUPA_DO_COMUM,
+            roupas_dos_jogos,
+        )
+
+        # No laço do serviço, só o cache: a leitura fria vai a um fio, que pede outra escrita.
+        roupas = roupas_dos_jogos(
+            steam_input=steam_input_appids(),
+            so_o_cache=_no_laco_do_servico(),
+            ao_aquecer=foto.a_roupa_aqueceu,
+        )
+    except Exception:
+        logger.debug("roupa_dos_jogos_falhou", exc_info=True)
+        return {}
+    return {a: fonte for a, (roupa, fonte) in roupas.items() if roupa == ROUPA_DO_COMUM}
+
+
+def _no_laco_do_servico() -> bool:
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return False
+    return True
+
+
+def _a_roupa_aqueceu(daemon: Any) -> None:
+    """O fio da roupa leu os jogos que faltavam: a escrita seguinte os veste."""
+    with contextlib.suppress(Exception):
+        daemon._launch_env_assinatura = None
+    armar_rematerializacao(daemon, motivo="a roupa dos jogos aqueceu")
 
 
 def _write_atomic(path: Path, content: str) -> None:
@@ -1791,6 +1892,17 @@ def _a_parte_de_fora(
     divergencias: list[dict[str, Any]] = []
     freestyle = _o_freestyle_que_manda(leitor)
     receitas = _receitas_dos_jogos()
+    comuns: dict[str, str] | None = None
+
+    def roupa_do(appid: int, modo: ModoAntecipado) -> tuple[int, str] | None:
+        nonlocal comuns
+        if freestyle is not None or not modo.veste_roupa:
+            return None
+        if comuns is None:
+            comuns = _jogos_do_comum(foto)
+        fonte = comuns.get(str(appid))
+        return (ROUPA_COMUM, fonte) if fonte is not None else None
+
     for appid, do_jogo in _steam_profiles(leitor):
         profile = freestyle if freestyle is not None else do_jogo
         modo = _modo_antecipado(
@@ -1804,6 +1916,9 @@ def _a_parte_de_fora(
         )
         if modo is None:
             continue
+        roupa = roupa_do(appid, modo)
+        if roupa is not None:
+            modo = replace(modo, roupa=roupa[0])
         estado_do_perfil = f"{modo.motivo} | {modo.como_estado()}"
         motivo_divergencia = divergencia_de_mascara(
             modo,
@@ -1829,6 +1944,27 @@ def _a_parte_de_fora(
             _render(
                 {**env_do_modo(modo), **receitas.get(str(appid), {})},
                 f"{estado_do_perfil} | vivo: {estado}",
+                roupa,
+            ),
+        )
+        desired.add(name)
+    # O jogo do `0ce6` sem perfil veste o modo vivo; o `default.env` nunca leva a roupa.
+    sem_perfil = (
+        _jogos_do_comum(foto) if comuns is None else comuns
+    ) if freestyle is None and modo_vivo.veste_roupa else {}
+    for appid_do_comum, fonte in sorted(sem_perfil.items()):
+        name = f"steam_app_{appid_do_comum}.env"
+        if name in desired:
+            continue
+        do_comum = env_do_modo(replace(modo_vivo, roupa=ROUPA_COMUM))
+        if "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in default_env:
+            do_comum.pop("SDL_GAMECONTROLLER_IGNORE_DEVICES", None)
+        _write_atomic(
+            target / name,
+            _render(
+                {**do_comum, **receitas.get(appid_do_comum, {})},
+                f"roupa do jogo | vivo: {estado}",
+                (ROUPA_COMUM, fonte),
             ),
         )
         desired.add(name)
@@ -1945,6 +2081,18 @@ class _FotoDoLancamento:
     publicar: Callable[[list[dict[str, Any]]], None]
     carimbar: Callable[[], None]
     foto_ms: float
+    #: O broker esconde o físico? Sem ele, nenhum jogo veste o `0ce6` (pergunta só se preciso).
+    o_dono_esconde: Callable[[], bool] = lambda: False
+    a_roupa_aqueceu: Callable[[], None] = lambda: None
+
+
+def _o_dono_esconde(daemon: Any) -> bool:
+    """O broker DESTE daemon atende (`gamepad._o_broker_atende`); sem cliente aberto, não."""
+    if getattr(daemon, "_hidraw_broker_client", None) is None:
+        return False
+    from hefesto_dualsense4unix.daemon.subsystems.gamepad import _o_broker_atende
+
+    return _o_broker_atende(daemon)
 
 
 _ORDEM_DAS_FOTOS = itertools.count(1)
@@ -2017,6 +2165,8 @@ def _foto_do_lancamento(daemon: DaemonProtocol, *, no_fio: bool) -> _FotoDoLanca
         publicar=publicar,
         carimbar=carimbar,
         foto_ms=(time.perf_counter() - t0) * 1000,
+        o_dono_esconde=lambda: _o_dono_esconde(daemon),
+        a_roupa_aqueceu=lambda: _a_roupa_aqueceu(daemon),
     )
 
 
