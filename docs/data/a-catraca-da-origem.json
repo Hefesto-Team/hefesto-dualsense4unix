@@ -242,17 +242,17 @@
       "universo": 395
     },
     "tamanho": {
-      "data": "2026-10-20",
+      "data": "2026-10-22",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1160386,
+      "piso": 1168268,
       "por_item": {
-        "docs": 120132,
-        "scripts": 114222,
-        "src": 314511,
-        "tests": 611521
+        "docs": 120220,
+        "scripts": 119454,
+        "src": 310969,
+        "tests": 617625
       },
-      "razao": "tamanho: +10 linhas (1160376 -> 1160386), pagas por Origem: D-2010-O-HERDADO-SAI-COM-OS-DEGRAUS; registrado no fecho, topo 44f7e5cb83a0",
+      "razao": "tamanho: +7882 linhas (1160386 -> 1168268), pagas por Origem: D-2210-O-CODIGO-DE-SRC-TEM-QUEM-O-CHAME; registrado no fecho, topo d03d87e21709",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -721,10 +721,16 @@
           "de": 1160376,
           "para": 1160386,
           "razao": "tamanho: +10 linhas (1160376 -> 1160386), pagas por Origem: D-2010-O-HERDADO-SAI-COM-OS-DEGRAUS; registrado no fecho, topo 44f7e5cb83a0"
+        },
+        {
+          "data": "2026-10-22",
+          "de": 1160386,
+          "para": 1168268,
+          "razao": "tamanho: +7882 linhas (1160386 -> 1168268), pagas por Origem: D-2210-O-CODIGO-DE-SRC-TEM-QUEM-O-CHAME; registrado no fecho, topo d03d87e21709"
         }
       ],
       "unidade": "linhas",
-      "universo": 3029
+      "universo": 3060
     }
   }
 }
