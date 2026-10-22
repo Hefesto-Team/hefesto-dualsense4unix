@@ -7,7 +7,6 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from hefesto_dualsense4unix.daemon.ganho_da_haptica import PCT_DO_JOGO
 from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO
 from hefesto_dualsense4unix.daemon.subsystems import rumble
 from hefesto_dualsense4unix.integrations import alto_falante_bt as af
@@ -33,7 +32,7 @@ _APARELHOS = (("3-8", 28), ("3-7", 29), ("3-6", 30), ("3-5", 31))
 
 # Os motores abertos levam o ganho em fator linear, o do degrau Padrão, que é o do
 # ``DaemonConfig`` de fábrica (OS-QUATRO-EM-HARMONIA-01).
-_ABERTO = [VOLUME_ABERTO, VOLUME_ABERTO, *[f"{PCT_DO_JOGO / 100:.4f}"] * 2]
+_ABERTO = [VOLUME_ABERTO, VOLUME_ABERTO, *[f"{HAPTICA_PCT_PADRAO / 100:.4f}"] * 2]
 _FECHADO = [VOLUME_ABERTO, VOLUME_ABERTO, VOLUME_FECHADO, VOLUME_FECHADO]
 
 

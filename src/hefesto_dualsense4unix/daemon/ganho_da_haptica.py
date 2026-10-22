@@ -15,10 +15,6 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Em Padrão a háptica chega como o jogo mandou: 100 %, sem o ganho guardado.
-PCT_DO_JOGO = 100
-
-
 def _chave(uniq: str | None) -> str | None:
     """A chave do perfil para este controle (o dono é ``norm_mac``)."""
     if not uniq:
@@ -140,13 +136,16 @@ class GanhoDaHaptica:
         return self._escritos.get(chave, HAPTICA_PCT_PADRAO)
 
     def pct(self, uniq: str | None) -> int:
-        """O ganho que VALE antes do teto, em %: o guardado, ou 100 em Padrão.
+        """O ganho que VALE antes do teto, em %: o guardado, ou o de fábrica em Padrão.
 
-        Em Padrão o ganho guardado não se aplica (04/10/2026): o sinal chega
-        como o jogo mandou, e o guardado volta com a Economia ou o Máximo.
+        Em Padrão o ganho guardado não se aplica (04/10/2026) e o de fábrica
+        vale: 150 %, como nos outros modos (22/10/2026, escolha do usuário; antes o
+        Padrão travava em 100 %). O guardado volta com a Economia ou o Máximo.
         """
         if self._vale_o_padrao(uniq):
-            return PCT_DO_JOGO
+            from hefesto_dualsense4unix.profiles.schema import HAPTICA_PCT_PADRAO
+
+            return HAPTICA_PCT_PADRAO
         return self.pct_guardado(uniq)
 
     def fator(self, uniq: str | None) -> float:
