@@ -28,7 +28,7 @@ from tests.unit.test_install_universal_01_o_device_ks_espera_e_deixa_rastro impo
     _rastro,
 )
 
-_HID = "{4D1E55B2-F16F-11CF-88CB-001111000030}"
+_HID = "{INTERFACE-HID}"
 _PROP = "{4340A6C5-93FA-4706-972C-PROPRIEDADE}"
 _XB = "VID_045E&PID_028E&IG_00"
 _XB_INST = "272&FANTASMA-XB&0&0&1"
@@ -37,10 +37,8 @@ _DS_INST = "33024&FANTASMA-DS&0&0&1"
 _ENUM = "[System\\\\ControlSet001\\\\Enum\\\\"
 _CLASSES = f"[System\\\\ControlSet001\\\\Control\\\\DeviceClasses\\\\{_HID}\\\\"
 #: a chave do driver: a do aparelho esquecido sai junto, a de quem fica, fica
-_CLASSE_HID = (
-    "[System\\\\ControlSet001\\\\Control\\\\Class\\\\{745a17a0-74d3-11d0-b6fe-00a0c90f57da}\\\\"
-)
-_DRIVER = '"Driver"="{745A17A0-74D3-11D0-B6FE-00A0C90F57DA}\\\\%s"'
+_CLASSE_HID = "[System\\\\ControlSet001\\\\Control\\\\Class\\\\{classe-hid}\\\\"
+_DRIVER = '"Driver"="{CLASSE-HID}\\\\%s"'
 
 
 def _chave(cabecalho: str, *linhas: str) -> str:
@@ -75,24 +73,24 @@ SAEM = [
 #: o que parece e FICA: o mesmo VID:PID sem `IG_`, o USB, o nosso, o instalador
 FICAM = [
     _chave(
-        f"{_ENUM}HID\\\\VID_054C&PID_0CE6\\\\0&02:FE:89:00:00:0D&0&0&0",
+        f"{_ENUM}HID\\\\VID_054C&PID_0CE6\\\\0&02:FE:00:00:00:0D&0&0&0",
         '"Class"="HIDClass"',
         _DRIVER % "0102",
     ),
     _chave(f"{_CLASSE_HID}0102", '"InfPath"="input.inf"'),
-    _chave(f"{_ENUM}HID\\\\VID_054C&PID_0CE6\\\\0&02:FE:89:00:00:0D&0&0&0\\\\Device Parameters"),
-    _chave(f"{_ENUM}HID\\\\VID_054C&PID_0CE6&MI_00\\\\256&HEFESTO-PAD-01-02FE8900000D&0&0&0"),
+    _chave(f"{_ENUM}HID\\\\VID_054C&PID_0CE6\\\\0&02:FE:00:00:00:0D&0&0&0\\\\Device Parameters"),
+    _chave(f"{_ENUM}HID\\\\VID_054C&PID_0CE6&MI_00\\\\256&HEFESTO-PAD-01-02FE0000000D&0&0&0"),
     _chave(f"{_ENUM}USB\\\\VID_054C&PID_0CE6\\\\512&256&3&3", '"ClassGUID"="{36FC9E60}"'),
     _chave(f"{_ENUM}WINEBUS\\\\VID_845E&PID_0002\\\\0&FANTASMA-BUS&0&0&0"),
     _chave(
-        "[System\\\\ControlSet001\\\\Control\\\\Class\\\\{745a17a0-74d3-11d0-b6fe-00a0c90f57da}"
+        "[System\\\\ControlSet001\\\\Control\\\\Class\\\\{classe-hid}"
         "\\\\0007",
         '"InfPath"="winexinput.inf"',
     ),
     *[
-        _chave(f"{_CLASSES}##?#HID#VID_054C&PID_0CE6#0&02:FE:89:00:00:0D&0&0&0#{_HID}{sufixo}", x)
+        _chave(f"{_CLASSES}##?#HID#VID_054C&PID_0CE6#0&02:FE:00:00:00:0D&0&0&0#{_HID}{sufixo}", x)
         for sufixo, x in (
-            ("", '"DeviceInstance"="HID\\\\VID_054C&PID_0CE6\\\\0&02:FE:89:00:00:0D&0&0&0"'),
+            ("", '"DeviceInstance"="HID\\\\VID_054C&PID_0CE6\\\\0&02:FE:00:00:00:0D&0&0&0"'),
             ("\\\\#", '"SymbolicLink"="x"'),
         )
     ],
