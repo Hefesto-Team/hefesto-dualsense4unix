@@ -75,9 +75,15 @@ def test_o_tique_sem_resposta_nao_pinta_a_mesa_vazia(monkeypatch: pytest.MonkeyP
         pronto=True, _estado_vivo=leitor, _escondida=False, _ctx_de_agora=None,
         _geracao_vista=_o_que_o_init_da("_geracao_vista"),
         _geracao_na_volta=_o_que_o_init_da("_geracao_na_volta"),
-        _pintura_no_ar=False, _pular=0)
+        _pintura_no_ar=False, _pular=0, args=SimpleNamespace(prova_de_mockup=False))
     piloto._estado_do_tique = lambda: contou.append("pintou") or {}
-    piloto._contexto = lambda *_a, **_k: contou.append("montou") or (None, {})
+
+    def montar(*_a: Any, **_k: Any) -> Any:
+        # O tique que passou da espera chega aqui; a recusa ele mesmo engole, e a régua lê `contou`.
+        contou.append("montou")
+        raise RuntimeError("a régua não monta mesa")
+
+    piloto._contexto = montar
     for metodo in ("_esperando_o_estado_novo", "_o_contexto_anda_escondido"):
         setattr(piloto, metodo, getattr(hv.Piloto, metodo).__get__(piloto))
     assert hv.Piloto._tique(piloto) is True
