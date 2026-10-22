@@ -434,6 +434,7 @@ def test_o_leitor_de_producao_le_os_apertos_do_proprio_controle() -> None:
 
 
 def test_o_controle_sem_co_op_le_os_apertos_pelo_leitor_passivo_do_hub() -> None:
+    # D-2210-OS-EFEITOS-QUE-REAGEM-A-MAO
     """O daemon de verdade não tem ``_sensor_hub``: o hub é o do servidor, pelo
     ``_garantir_sensor_hub``, e o leitor passivo só fica aberto com a demanda do ``entradas``."""
     daemon, hub = _daemon()

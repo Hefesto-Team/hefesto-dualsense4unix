@@ -255,6 +255,7 @@ def test_o_argv_le_o_monitor_da_saida_padrao() -> None:
                                    "", "alsa_output.pci-0000.analog-stereo"])
 def test_uma_fonte_que_nao_e_monitor_e_recusada(
         fonte: str, monkeypatch: pytest.MonkeyPatch) -> None:
+    # D-2210-A-LUZ-AO-SOM-LE-SO-O-MONITOR
     assert not som.e_o_monitor(fonte)
     with pytest.raises(ValueError, match="monitor"):
         som.argv_da_energia(fonte)

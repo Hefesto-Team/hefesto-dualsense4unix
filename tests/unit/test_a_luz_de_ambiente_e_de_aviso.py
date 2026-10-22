@@ -232,6 +232,7 @@ def test_descobre_o_processador_e_a_placa_de_video_pelo_nome_do_chip(
 
 def test_o_limite_vem_do_proprio_sensor_e_muda_de_maquina_para_maquina(
         tmp_path: pathlib.Path) -> None:
+    # D-2210-A-LUZ-DE-AMBIENTE-E-DE-AVISO
     uma, outra = tmp_path / "uma", tmp_path / "outra"
     _hwmon(uma, "hwmon0", "k10temp", temp1={"input": 70000, "crit": 90000})
     _hwmon(outra, "hwmon0", "k10temp", temp1={"input": 70000, "crit": 110000})
@@ -253,6 +254,7 @@ def test_sem_crit_vale_o_max_e_sem_nenhum_dos_dois_o_sensor_e_ignorado(
 
 def test_o_ryzen_que_nao_declara_limite_usa_o_tctl_maximo_documentado_do_chip(
         tmp_path: pathlib.Path) -> None:
+    # D-2210-O-RYZEN-USA-O-TCTL-MAXIMO-DOCUMENTADO
     """O ``k10temp`` dos Ryzen exporta só o ``Tctl`` e os ``Tccd``, sem ``crit`` nem ``max`` (é a
     forma do hwmon de um Ryzen de verdade): a cor da temperatura não pode morrer branca por isso."""
     _hwmon(tmp_path, "hwmon2", "k10temp", temp1={"input": 73625, "label": "Tctl"},

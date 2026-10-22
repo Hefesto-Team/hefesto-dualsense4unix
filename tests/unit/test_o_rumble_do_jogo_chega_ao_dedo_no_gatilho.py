@@ -218,6 +218,7 @@ def test_o_fps_nao_recebe_nada_o_ritmo_do_tiro_e_o_dono() -> None:
 
 
 def test_o_jogo_que_escreveu_o_gatilho_ha_menos_de_3_s_nao_recebe_nada() -> None:
+    # D-2210-O-RUMBLE-NO-DEDO-NOS-ESTILOS-DE-GOLPE
     mesa = _Mesa()
     mesa.estado[P1] = tv.EstadoDoCanal(tv.MODO_DUALSENSE, {"trigger": 1.0}, ha_jogo=True)
     mesa.dedo[(P1, DIREITO)] = True

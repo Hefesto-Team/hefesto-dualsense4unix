@@ -64,6 +64,7 @@ def test_cabem_no_teto_tem_passos_de_60_ms_e_acabam_em_zero(chave: str) -> None:
 
 
 def test_o_ressoar_bate_nos_dois_e_a_cauda_do_grave_cai_em_degraus_ate_zero() -> None:
+    # D-2210-O-RESSOAR-E-O-RICOCHETE-DOS-MOTORES
     """MORDIDA: a cauda sem decaimento (o mesmo degrau até o fim) reprova aqui."""
     golpe, *cauda = pv.PADROES["ressoar"]
     assert golpe[1:] == (255, 255)

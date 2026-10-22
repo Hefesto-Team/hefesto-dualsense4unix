@@ -131,6 +131,7 @@ def test_a_roda_travada_sob_freio_da_o_pulso_do_abs_no_l2() -> None:
 
 
 def test_o_mesmo_pacote_com_o_carro_parado_nao_da_nada() -> None:
+    # D-2210-OS-VALORES-DE-PARTIDA-DA-CORRIDA
     parado = _ler(_travando(velocidade=0.0, giro=0.0))
     assert not tj.em_movimento(parado)
     assert tj.pedido_da_corrida(parado) == tj.SEM_PEDIDO
@@ -181,6 +182,7 @@ def test_a_troca_de_marcha_da_um_toque_e_a_batida_um_impacto_que_vence_a_marcha(
 
 
 def test_a_porta_so_abre_no_localhost_e_so_com_a_corrida_ou_a_simulacao() -> None:
+    # D-2210-A-TELEMETRIA-SO-NO-LOCALHOST-E-SO-NA-CORRIDA
     tel = tj.TelemetriaDoJogo(porta=0)
     try:
         assert tel.andar(0.0, "fps") == 0 and not tel.aberta

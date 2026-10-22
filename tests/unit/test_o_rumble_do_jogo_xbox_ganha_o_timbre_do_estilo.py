@@ -190,6 +190,7 @@ def _timbres_possiveis() -> set[str]:
 
 
 def test_para_cada_timbre_e_cada_par_a_energia_nao_cai_abaixo_do_seno() -> None:
+    # D-2210-O-RUMBLE-DO-JOGO-XBOX-TEM-CLASSE-E-TIMBRE
     """MORDE: o timbre a meia amplitude, sem a guarda, fica abaixo do seno e reprova."""
     timbres = _timbres_possiveis()
     assert {"corpo", "grao", "golpe:impacto", "golpe:eco", "periodico:quadrada"} <= timbres

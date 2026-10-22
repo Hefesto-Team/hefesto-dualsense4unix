@@ -178,6 +178,7 @@ def test_com_a_mao_parada_o_estalo_nao_toca(monkeypatch: pytest.MonkeyPatch) -> 
 def test_um_rumble_no_meio_cala_a_fonte_no_mesmo_tique_e_o_toque_e_o_do_rumble(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # D-2210-O-SOM-DO-JOGO-ACORDA-ONDE-O-JOGO-CALA
     mesa = _Mesa(monkeypatch, _ACAO)
     mesa.jogar(21)
     mesa.grave()

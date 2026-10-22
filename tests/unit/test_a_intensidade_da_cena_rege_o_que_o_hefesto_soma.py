@@ -130,6 +130,7 @@ def test_o_nativo_e_o_personalizado_nao_graduam(estilo: str | None) -> None:
 
 
 def test_a_graduacao_nasce_desligada_e_a_cena_se_calcula_mesmo_assim() -> None:
+    # D-2210-A-GRADUACAO-DA-CENA-NASCE-DESLIGADA
     assert ic.GRADUACAO_LIGADA is False
     cena = ic.IntensidadeDaCena()
     cena.contar([_evento(ic.TIPO_RUMBLE)])
