@@ -66,6 +66,7 @@ def _o_que_voltou(doc: str) -> list[str]:
 
 
 def test_o_desenho_nao_traz_de_volta_o_que_saiu() -> None:
+    # D-2210-O-GATILHO-SO-TEM-O-EFEITO
     doc = MOCKUP.read_text(encoding="utf-8")
     assert _o_que_voltou(doc) == []
     assert "Avançado" not in _sem_estilo(doc)
