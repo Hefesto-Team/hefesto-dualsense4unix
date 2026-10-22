@@ -3399,7 +3399,7 @@ class Piloto:
             self._a_mesma_recarregou(nova)
             return
         if nova != self.pagina:
-            pacotes.largar_o_que_as_abas_seguram(ponte)
+            pacotes.largar_o_que_as_abas_seguram(ponte, mesa=self._mesa_de_agora)
         self.pagina = nova
         if nova not in self.visitadas:
             self.visitadas.append(nova)
@@ -4358,7 +4358,7 @@ class Piloto:
         if not alvo.exists():
             self.tela._morrer(f"não existe a página pedida: {alvo.name}")
             return False
-        pacotes.largar_o_que_as_abas_seguram(ponte)
+        pacotes.largar_o_que_as_abas_seguram(ponte, mesa=self._mesa_de_agora)
         _soltar_as_ondas()
         self.view.load_uri(alvo.as_uri())
         return False

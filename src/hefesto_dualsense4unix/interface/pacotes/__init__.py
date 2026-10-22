@@ -307,8 +307,8 @@ def _largar_agora(p: Any) -> None:
             print(f"[largada] {larga.__name__}: {erro}", file=sys.stderr)
 
 
-def largar_o_que_as_abas_seguram(p: Any, *, esperar_s: float = 0.0
-                                 ) -> threading.Thread | None:
+def largar_o_que_as_abas_seguram(p: Any, *, esperar_s: float = 0.0,
+                                 mesa: Any = None) -> threading.Thread | None:
     """Devolve ao jogo/à máquina tudo o que as abas seguravam. **Nunca levanta.**
 
     A LARGADA É UM «PARAR» DE TODOS, e anda na fila de cada controle: com um
@@ -316,16 +316,16 @@ def largar_o_que_as_abas_seguram(p: Any, *, esperar_s: float = 0.0
     eles terminam. Sem isso, um «Testar» lento deixado na troca de página
     marcava o controle em teste DEPOIS da largada, e o coração o rebatia na aba
     seguinte; e um batimento já conferido mandava o par depois do `rumble.stop`.
-    Com as filas vazias ela roda na hora, no fio de quem chamou. `esperar_s` é
+    Sem `mesa` e com as filas vazias, roda no fio de quem chamou (`_na_fila_da_mesa`). `esperar_s` é
     o quanto quem chama espera a largada na fila (o fim da janela espera; a
     troca de página, não).
     """
     with _TRAVA_DAS_FILAS:
         filas = tuple(f for f in _O_ULTIMO_DA_FILA if f.startswith(_PREFIXO_DO_CONTROLE))
-    if not filas:
+    if not filas and mesa is None:
         _largar_agora(p)
         return None
-    fio = na_fila(filas, lambda: _largar_agora(p), nome="largada")
+    fio = na_fila(_na_fila_da_mesa(filas, mesa), lambda: _largar_agora(p), nome="largada")
     if esperar_s > 0:
         fio.join(esperar_s)
     return fio
@@ -1161,3 +1161,17 @@ def _carregar_tudo() -> None:
 
 
 _carregar_tudo()
+
+
+def _na_fila_da_mesa(filas: tuple[str, ...], mesa: Any) -> tuple[str, ...]:
+    """As filas da largada: as que estão no ar e a de cada controle da `mesa`.
+
+    Nota de 21/10/2026 (O-FIO-DA-JANELA-NUNCA-ESPERA-01): com as filas vazias, a largada da
+    troca de página rodava no fio do GTK, e com um teste no ar isso eram dois IPC por
+    controle (`rumble.stop` e `rumble.passthrough`) com a janela parada. Quem passa a
+    `mesa` (a troca de página) larga sempre num fio, e na fila de cada controle do usuário: o
+    gesto que ela der na aba seguinte entra atrás da largada, como entrava quando havia
+    fila. A saída da janela não passa `mesa` e continua como era.
+    """
+    return (*filas, *(fila_do_controle(str(c.get("uniq") or "")) for c in mesa or ()
+                      if isinstance(c, dict) and c.get("uniq")))
