@@ -5527,6 +5527,37 @@ class PyDualSenseController(IController):
             what="medidor_das_luzinhas",
         )
 
+    def pintar_o_quadro_da_luz_sem_lembrar(
+        self,
+        uniq: str,
+        rgb: tuple[int, int, int],
+        luzinhas: tuple[bool, bool, bool, bool, bool] | None,
+    ) -> bool:
+        """Barra e luzinhas do controle `uniq` NUM quadro só, SEM tocar no estado desejado.
+
+        É o quadro das Estrelas (`luz_animada`): a cor da barra e as luzinhas que cintilam saem
+        juntas, então no rádio é UM report 0x31 (cada report custa duas fatias) e no cabo a cor e o
+        número vão pelo nó e o degrau pelo report USB. `luzinhas` `None` mostra o número que o
+        controle tem (o do perfil, o da troca automática e o do co-op), no degrau resolvido dele.
+        """
+        alvo = self._key_to_uniq(uniq)
+        if alvo is None:
+            return False
+        with self._io_lock:
+            key = self._key_for_uniq(alvo)
+            handle = self._handles.get(key) if key is not None else None
+            node = self._sysfs.get(key) if key is not None else None
+            if handle is None:
+                return False
+            resolvido = self._merged_desired_for_key(alvo, incluir_coop=True)
+        bits = luzinhas if luzinhas is not None else resolvido.player_leds
+        return self._write_partial_output(
+            handle, node,
+            _DesiredOutput(
+                led=rgb, player_leds=bits, player_led_brightness=resolvido.player_led_brightness),
+            what="estrelas_da_luz",
+        )
+
     #: Quantas vezes a luz RESOLVIDA foi repintada (``_repintar_a_luz_de_um``). Default de CLASSE,
     #: como os de cima: o dublê feito por ``__new__`` também conta.
     _repinturas_da_luz: int = 0

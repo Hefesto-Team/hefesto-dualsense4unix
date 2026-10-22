@@ -269,11 +269,16 @@ BASES_DA_LUZ = ("respirar", "piscar", "arco-iris", "batimento", "chama", "mare",
 BASES_DA_MAO_DA_LUZ = ("reage-ao-botao", "inclinacao", "dedo-no-touchpad")
 #: «Ao som» (A-LUZ-DANCA-COM-O-SOM-01): lê só o monitor da saída padrão.
 BASES_DO_SOM_DA_LUZ = ("ao-som",)
-BASES_NOVAS_DA_LUZ = BASES_DA_MAO_DA_LUZ + BASES_DO_SOM_DA_LUZ
+#: A luz de ambiente e de aviso (A-LUZ-DE-AMBIENTE-E-DE-AVISO-01): a Aurora (degradê lento), as
+#: Estrelas (as luzinhas cintilam), e as que mostram um número da máquina, a carga do controle e o
+#: calor da placa e do processador.
+BASES_DE_AMBIENTE_DA_LUZ = ("aurora", "estrelas", "cor-da-bateria", "cor-da-temperatura")
+BASES_NOVAS_DA_LUZ = BASES_DA_MAO_DA_LUZ + BASES_DO_SOM_DA_LUZ + BASES_DE_AMBIENTE_DA_LUZ
 TODAS_AS_BASES_DA_LUZ = BASES_DA_LUZ + BASES_NOVAS_DA_LUZ
 #: As bases cujo texto pode vir sem cor: o arco-íris gira todas, e as que pintam pelo dado vivo
-#: (a inclinação, o dedo) não têm cor para escolher.
-BASES_SEM_COR_DA_LUZ = ("arco-iris", "inclinacao", "dedo-no-touchpad")
+#: (a inclinação, o dedo, a carga, o calor) não têm cor para escolher.
+BASES_SEM_COR_DA_LUZ = (
+    "arco-iris", "inclinacao", "dedo-no-touchpad", "cor-da-bateria", "cor-da-temperatura")
 RITMO_MINIMO_DA_LUZ = 1
 RITMO_MAXIMO_DA_LUZ = 10
 RITMO_PADRAO_DA_LUZ = 4

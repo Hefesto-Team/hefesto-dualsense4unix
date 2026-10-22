@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import colorsys
 import math
+import random
 from collections import deque
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -18,6 +19,7 @@ from dataclasses import dataclass
 from hefesto_dualsense4unix.profiles.estilos_de_jogo import DISTANCIA_MINIMA
 from hefesto_dualsense4unix.profiles.schema import (
     BASES_DA_MAO_DA_LUZ,
+    BASES_DE_AMBIENTE_DA_LUZ,
     BASES_DO_SOM_DA_LUZ,
     EfeitoDaLuz,
 )
@@ -74,12 +76,16 @@ RITMO_DA_BATERIA = 2
 ESTADOS_DE_CARGA_EM_DIA = frozenset({"carregando", "cheio"})
 #: Os efeitos cujo desenho é ENTRE os controles (a defasagem do arco-íris, o mesmo ângulo da
 #: Maré): o laço os conta num relógio só, o da mesa, e não do instante em que cada um entrou.
-BASES_DO_RELOGIO_COMUM = frozenset({"arco-iris", "mare"})  # (noqa-acento) chave ASCII
+BASES_DO_RELOGIO_COMUM = frozenset({"arco-iris", "mare", "aurora"})  # (noqa-acento) chave ASCII
 
-#: Os efeitos que leem um dado vivo (a mão, o som: A-LUZ-REAGE-AO-QUE-A-MAO-FAZ-01 e
-#: A-LUZ-DANCA-COM-O-SOM-01, 22/10/2026): têm estado por controle e por isso não são função só do
-#: tempo.
-BASES_DE_DADO_VIVO = frozenset(BASES_DA_MAO_DA_LUZ + BASES_DO_SOM_DA_LUZ)
+#: Os efeitos que leem um dado vivo ou guardam estado (a mão, o som, a carga, o calor e o acaso das
+#: Estrelas: 22/10/2026): têm estado por controle e por isso não são função só do tempo. A Aurora
+#: é função só do tempo e fica de fora.
+BASES_DE_DADO_VIVO = frozenset(
+    BASES_DA_MAO_DA_LUZ + BASES_DO_SOM_DA_LUZ
+    + tuple(b for b in BASES_DE_AMBIENTE_DA_LUZ if b != "aurora"))
+#: Os efeitos que pintam também as luzinhas do jogador: o quadro leva barra e luzinhas juntas.
+BASES_COM_LUZINHAS = frozenset({"estrelas"})
 #: A cor do símbolo apertado no «Reage ao botão» (△ verde, ○ vermelho, ✕ azul, □ rosa).
 COR_DO_TRIANGULO: RGB = (0, 255, 0)
 COR_DO_CIRCULO: RGB = (255, 0, 0)
@@ -371,13 +377,16 @@ class Entrada:
     é o acelerômetro em g; ``dedo`` é ``(x, y)`` de 0 a 1 no touchpad, ``None`` sem dedo. Cada
     campo é ``None`` quando o dado não veio: o efeito segura o que tinha. ``som`` é
     ``(nivel, agudos)`` de 0 a 1 do monitor da saída padrão: a energia relativa e a fração dela
-    que é aguda.
+    que é aguda. ``carga`` é ``(porcentagem, estado)`` DESTE controle; ``calor`` é a fração de
+    0 a 1 do caminho entre o frio e o limite do sensor mais quente da máquina.
     """
 
     apertos: Mapping[str, int] | None = None
     gravidade: tuple[float, float, float] | None = None
     dedo: tuple[float, float] | None = None
     som: tuple[float, float] | None = None
+    carga: tuple[int | None, str | None] | None = None
+    calor: float | None = None
 
 
 def _misturar(de: RGB, para: RGB, u: float) -> RGB:
@@ -573,11 +582,236 @@ class AoSom:
         return _escalar(cor, self._brilho.andar(self._nivel, agora))
 
 
-EstadoDaMao = ReageAoBotao | Inclinacao | DedoNoTouchpad | AoSom
+#: A Aurora: um ciclo inteiro pelas cores dura de 60 s (ritmo 1) a 20 s (ritmo 10).
+#: Com uma cor só, ela vai até os vizinhos dessa cor na roda (40 graus para cada lado).
+VIZINHANCA_DA_AURORA = 40.0 / 360.0
+TETO_DE_CORES_DA_AURORA = 3
 
 
-def estado_da_mao(efeito: EfeitoDaLuz) -> EstadoDaMao | None:
-    """O estado novo de UM controle para o efeito, ou ``None`` se o efeito não lê a mão."""
+def periodo_da_aurora_s(ritmo: int) -> float:
+    """Um ciclo inteiro da Aurora: de 60 s no ritmo 1 a 20 s no ritmo 10."""
+    return _entre_ritmos(ritmo, 60.0, 20.0)
+
+
+def _nunca_preta(cor: RGB) -> RGB:
+    """O preto puro vira o piso de brilho da casa: a luz do controle nunca sai preta."""
+    return cor if max(cor) > 0 else _escalar((255, 255, 255), PISO_DO_ACENDE)
+
+
+def cores_da_aurora(cores: Sequence[RGB]) -> tuple[RGB, ...]:
+    """As cores por onde a Aurora passa: as escolhidas (até três) ou a escolhida e os vizinhos."""
+    if len(cores) >= 2:
+        return tuple(cores[:TETO_DE_CORES_DA_AURORA])
+    base = cores[0] if cores else (255, 255, 255)
+    return (base, _com_o_matiz_andado(base, VIZINHANCA_DA_AURORA),
+            _com_o_matiz_andado(base, -VIZINHANCA_DA_AURORA))
+
+
+#: Cada controle da mesa anda esta fração de ciclo atrás do anterior, como o arco-íris.
+DEFASAGEM_DA_AURORA = 1.0 / 8.0
+
+
+def cor_da_aurora(efeito: EfeitoDaLuz, t: float, lugar: int = 0) -> RGB:
+    """A cor da Aurora em ``t``: de uma cor à seguinte, em meio cosseno, e de volta à primeira.
+
+    ``lugar`` (0 a 3) é o posto do controle na mesa: cada um anda 1/8 de ciclo atrás do anterior.
+    """
+    cores = cores_da_aurora(efeito.cores)
+    fase = t / periodo_da_aurora_s(efeito.ritmo) - lugar * DEFASAGEM_DA_AURORA
+    posicao = fase % 1.0 * len(cores)
+    indice = int(posicao)
+    cor = _misturar(cores[indice % len(cores)], cores[(indice + 1) % len(cores)],
+                    _suave(posicao - indice))
+    return _nunca_preta(cor)
+
+
+#: A «Cor da bateria»: vermelha até 10%, amarela em 50%, verde em 100%, e entre os pontos a cor
+#: anda em linha reta pelo matiz.
+CARGA_DO_VERMELHO_PCT = 10
+CARGA_DO_AMARELO_PCT = 50
+MATIZ_DO_AMARELO = 60.0 / 360.0
+MATIZ_DO_VERDE = 120.0 / 360.0
+
+
+def matiz_da_carga(pct: float) -> float:
+    """O matiz da carga de 0 a 100: vermelho até 10, amarelo em 50, verde em 100."""
+    if pct <= CARGA_DO_VERMELHO_PCT:
+        return 0.0
+    if pct <= CARGA_DO_AMARELO_PCT:
+        return MATIZ_DO_AMARELO * (pct - CARGA_DO_VERMELHO_PCT) / (
+            CARGA_DO_AMARELO_PCT - CARGA_DO_VERMELHO_PCT)
+    return MATIZ_DO_AMARELO + (MATIZ_DO_VERDE - MATIZ_DO_AMARELO) * (
+        min(100.0, pct) - CARGA_DO_AMARELO_PCT) / (100.0 - CARGA_DO_AMARELO_PCT)
+
+
+def cor_da_carga(pct: float) -> RGB:
+    """A cor da carga ``pct`` (0 a 100), saturada."""
+    return _matiz_na_cor(matiz_da_carga(pct))
+
+
+#: Sem leitura (sem controle lido, sem sensor): o branco no piso, que não é nenhuma cor de dado.
+COR_SEM_LEITURA: RGB = _escalar((255, 255, 255), PISO_DO_ACENDE)
+
+
+class CorDaBateria:
+    """A «Cor da bateria» de UM controle: a cor segue a carga DELE.
+
+    Verde cheia, amarelo na metade, vermelho no fim (``matiz_da_carga``). Carregando, a luz respira
+    devagar (``RITMO_DA_BATERIA``), do piso à cor cheia, sem nunca apagar. Sem carga lida ainda
+    fica ``COR_SEM_LEITURA``; uma leitura que falha depois segura a última.
+    """
+
+    def __init__(self, ritmo: int = RITMO_DA_BATERIA) -> None:
+        self._periodo = periodo_do_respirar_s(ritmo)
+        self._pct: int | None = None
+        self._estado: str | None = None
+
+    @property
+    def sem_leitura(self) -> bool:
+        return self._pct is None
+
+    def andar(self, entrada: Entrada, agora: float) -> RGB:
+        carga = entrada.carga
+        if carga is not None and isinstance(carga[0], int) and 0 < carga[0] <= 100:
+            self._pct, self._estado = carga
+        if self._pct is None:
+            return COR_SEM_LEITURA
+        cor = cor_da_carga(self._pct)
+        if self._estado != "carregando":
+            return cor
+        fase = 0.5 - 0.5 * math.cos(2.0 * math.pi * agora / self._periodo)
+        return _escalar(cor, PISO_DO_ACENDE + (1.0 - PISO_DO_ACENDE) * fase)
+
+
+#: A «Cor da temperatura»: o calor anda para a leitura nova nisto, e a luz nunca salta.
+TEMPO_DO_CALOR_S = 2.0
+#: O matiz do azul frio; o quente é o vermelho, em 0.
+MATIZ_DO_FRIO = 240.0 / 360.0
+
+
+def cor_do_calor(calor: float) -> RGB:
+    """O azul do frio (0) ao vermelho do limite do sensor (1), pelo matiz."""
+    return _matiz_na_cor((1.0 - max(0.0, min(1.0, calor))) * MATIZ_DO_FRIO)
+
+
+class CorDaTemperatura:
+    """A «Cor da temperatura» de UM controle: azul frio, vermelho quente.
+
+    ``Entrada.calor`` já é a fração do caminho entre o frio e o limite do sensor mais quente, com
+    o limite descoberto do ``hwmon`` (``integrations/temperatura_da_maquina``). O calor é alisado
+    (``TEMPO_DO_CALOR_S``), então a cor nunca pisca. Sem sensor lido, ``sem_leitura`` é verdade e a
+    barra fica em ``COR_SEM_LEITURA``: ela não inventa uma temperatura.
+    """
+
+    def __init__(self) -> None:
+        self._calor: float | None = None
+        self._visto_em: float | None = None
+
+    @property
+    def sem_leitura(self) -> bool:
+        return self._calor is None
+
+    def andar(self, entrada: Entrada, agora: float) -> RGB:
+        decorrido = 0.0 if self._visto_em is None else max(0.0, agora - self._visto_em)
+        self._visto_em = agora
+        lido = entrada.calor
+        if lido is not None:
+            lido = max(0.0, min(1.0, lido))
+            if self._calor is None:
+                self._calor = lido
+            else:
+                self._calor += (lido - self._calor) * (
+                    1.0 - math.exp(-decorrido / TEMPO_DO_CALOR_S))
+        return COR_SEM_LEITURA if self._calor is None else cor_do_calor(self._calor)
+
+
+@dataclass(frozen=True)
+class Quadro:
+    """O que um efeito com luzinhas manda ao controle: a barra e as luzinhas do mesmo quadro.
+
+    ``luzinhas`` é o que acende nas cinco luzinhas do jogador; ``None`` é o número do jogador,
+    como o perfil o tem (quem escreve o quadro sabe qual é).
+    """
+
+    cor: RGB
+    luzinhas: tuple[bool, bool, bool, bool, bool] | None = None
+
+
+#: As Estrelas: cada cintilada e cada volta do número duram isto (sorteado), esticado pelo
+#: ritmo. Uma cintilada e o número que a segue somam ao menos 0,86 s, então uma luzinha acende no
+#: máximo duas vezes por segundo, abaixo do teto de três (WCAG 2.3.1).
+CINTILADA_S = (0.36, 0.8)
+NUMERO_S = (0.5, 1.4)
+#: Quantas luzinhas uma cintilada acende, no mínimo e no máximo (nunca as cinco: isso é o número).
+ESTRELAS_POR_CINTILADA = (1, 3)
+#: A barra das Estrelas fica baixa e acompanha as luzinhas por cima disto, alisada.
+NIVEL_DA_BARRA_DAS_ESTRELAS = 0.3
+SOBE_A_BARRA_POR_ESTRELA = 0.1
+TEMPO_DA_BARRA_DAS_ESTRELAS_S = 0.4
+DEGRAUS_DA_BARRA_DAS_ESTRELAS = 16
+
+
+def esticar_das_estrelas(ritmo: int) -> float:
+    """O quanto as Estrelas esticam os tempos: 2,5 vezes no ritmo 1, 1 no ritmo 10."""
+    return _entre_ritmos(ritmo, 2.5, 1.0)
+
+
+class Estrelas:
+    """As «Estrelas» de UM controle: as luzinhas cintilam ao acaso e a barra acompanha baixinho.
+
+    O acaso nasce da semente do controle (cada um cintila diferente, e o teste é repetível). A
+    luzinha cintila em ``CINTILADA_S`` e entre uma cintilada e outra o número do jogador volta
+    (``Quadro.luzinhas`` ``None``). A barra fica entre 0,3 e 0,6 da cor escolhida, alisada e em
+    degraus, para não gastar um report a cada tique: nunca preta e nunca pisca.
+    """
+
+    def __init__(self, base: RGB, ritmo: int, semente: int = 0) -> None:
+        self._base = base
+        self._rng = random.Random(semente)
+        self._estica = esticar_das_estrelas(ritmo)
+        self._acesas: tuple[bool, bool, bool, bool, bool] | None = None
+        self._ate: float | None = None
+        self._nivel = NIVEL_DA_BARRA_DAS_ESTRELAS
+        self._visto_em: float | None = None
+
+    def _proxima_fase(self, agora: float) -> None:
+        """Passa da cintilada ao número e do número à cintilada, num tempo sorteado."""
+        if self._acesas is None:  # estava no número (ou no começo): cintila
+            a = set(self._rng.sample(range(5), self._rng.randint(*ESTRELAS_POR_CINTILADA)))
+            self._acesas = (0 in a, 1 in a, 2 in a, 3 in a, 4 in a)
+            tempo = self._rng.uniform(*CINTILADA_S)
+        else:
+            self._acesas = None
+            tempo = self._rng.uniform(*NUMERO_S)
+        self._ate = agora + tempo * self._estica
+
+    def quadro(self, entrada: Entrada, agora: float) -> Quadro:
+        decorrido = 0.0 if self._visto_em is None else max(0.0, agora - self._visto_em)
+        self._visto_em = agora
+        if self._ate is None or agora >= self._ate:
+            self._proxima_fase(agora)
+        acesas = 0 if self._acesas is None else sum(self._acesas)
+        alvo = NIVEL_DA_BARRA_DAS_ESTRELAS + SOBE_A_BARRA_POR_ESTRELA * acesas
+        self._nivel += (alvo - self._nivel) * (
+            1.0 - math.exp(-decorrido / TEMPO_DA_BARRA_DAS_ESTRELAS_S))
+        em_degraus = (
+            round(self._nivel * DEGRAUS_DA_BARRA_DAS_ESTRELAS) / DEGRAUS_DA_BARRA_DAS_ESTRELAS)
+        return Quadro(_escalar(self._base, max(NIVEL_DA_BARRA_DAS_ESTRELAS, em_degraus)),
+                      self._acesas)
+
+    def andar(self, entrada: Entrada, agora: float) -> RGB:
+        return self.quadro(entrada, agora).cor
+
+
+EstadoDaMao = (ReageAoBotao | Inclinacao | DedoNoTouchpad | AoSom | CorDaBateria
+               | CorDaTemperatura | Estrelas)
+
+
+def estado_da_mao(efeito: EfeitoDaLuz, semente: int = 0) -> EstadoDaMao | None:
+    """O estado novo de UM controle para o efeito, ou ``None`` se o efeito não tem estado.
+
+    ``semente`` é a do controle: só as Estrelas a usam, para cintilar diferente em cada um.
+    """
     if efeito.base == "reage-ao-botao":
         return ReageAoBotao((efeito.cores or ((255, 255, 255),))[0], efeito.ritmo)
     if efeito.base == "inclinacao":
@@ -586,6 +820,12 @@ def estado_da_mao(efeito: EfeitoDaLuz) -> EstadoDaMao | None:
         return DedoNoTouchpad()
     if efeito.base == "ao-som":
         return AoSom((efeito.cores or ((255, 255, 255),))[0], efeito.ritmo)
+    if efeito.base == "estrelas":
+        return Estrelas((efeito.cores or ((255, 255, 255),))[0], efeito.ritmo, semente)
+    if efeito.base == "cor-da-bateria":
+        return CorDaBateria()
+    if efeito.base == "cor-da-temperatura":
+        return CorDaTemperatura()
     return None
 
 
@@ -619,6 +859,8 @@ def cor_no_instante(
     if efeito.base == "arco-iris":  # (noqa-acento) chave ASCII
         r, g, b = colorsys.hsv_to_rgb(matiz_do_arco_iris(t, efeito.ritmo, posicao), 1.0, 1.0)
         return (_inteiro(r * 255), _inteiro(g * 255), _inteiro(b * 255))
+    if efeito.base == "aurora":
+        return cor_da_aurora(efeito, t, posicao)
     cores = efeito.cores or ((255, 255, 255),)
     if efeito.base in BASES_DE_DADO_VIVO:  # sem o dado vivo: a cor escolhida, parada
         return cores[0]
@@ -657,10 +899,13 @@ def cor_no_instante(
 
 
 __all__ = [
+    "BASES_COM_LUZINHAS",
     "BASES_DE_DADO_VIVO",
     "BASES_DO_RELOGIO_COMUM",
     "BORDA_DO_PISCAR_S",
     "CORES_DOS_SIMBOLOS",
+    "COR_SEM_LEITURA",
+    "DEFASAGEM_DA_AURORA",
     "DEFASAGEM_DO_ARCO_IRIS",
     "ESTADOS_DE_CARGA_EM_DIA",
     "LEDS_DA_ONDA",
@@ -679,10 +924,14 @@ __all__ = [
     "VAIVENS_DO_ACENDE_POR_S",
     "AoSom",
     "BrilhoDoAcende",
+    "CorDaBateria",
+    "CorDaTemperatura",
     "DedoNoTouchpad",
     "Entrada",
     "EstadoDaMao",
+    "Estrelas",
     "Inclinacao",
+    "Quadro",
     "ReageAoBotao",
     "amplitude_da_mare",
     "bateria_acabando",
@@ -694,13 +943,19 @@ __all__ = [
     "brilho_do_relampago",
     "brilho_do_respirar",
     "brilhos_da_onda",
+    "cor_da_aurora",
+    "cor_da_carga",
+    "cor_do_calor",
     "cor_no_instante",
+    "cores_da_aurora",
     "descida_do_reage_s",
     "descida_do_som_s",
     "deslocamento_da_mare",
     "estado_da_mao",
     "frequencia_do_piscar_hz",
+    "matiz_da_carga",
     "matiz_do_arco_iris",
+    "periodo_da_aurora_s",
     "periodo_da_batida_s",
     "periodo_da_mare_s",
     "periodo_da_onda_s",

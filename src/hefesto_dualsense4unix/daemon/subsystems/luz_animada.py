@@ -31,6 +31,7 @@ from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import (
     motor_do,
 )
 from hefesto_dualsense4unix.profiles.efeitos_de_luz import (
+    BASES_COM_LUZINHAS,
     BASES_DE_DADO_VIVO,
     BASES_DO_RELOGIO_COMUM,
     RITMO_DA_BATERIA,
@@ -38,6 +39,8 @@ from hefesto_dualsense4unix.profiles.efeitos_de_luz import (
     BrilhoDoAcende,
     Entrada,
     EstadoDaMao,
+    Estrelas,
+    Quadro,
     amplitude_da_mare,
     bateria_acabando,
     cor_no_instante,
@@ -62,6 +65,9 @@ logger = get_logger(__name__)
 RGB = tuple[int, int, int]
 #: Quem lê a mão de um controle: ``(uniq, base) -> Entrada``, só o dado que a base precisa.
 LeitorDaMao = Callable[[str, str], Entrada]
+#: Quem escreve o quadro único: ``(uniq, cor, luzinhas) -> ok``; ``luzinhas`` ``None`` é o número
+#: do jogador, como o perfil o tem.
+EscritorDoQuadro = Callable[[str, RGB, tuple[bool, bool, bool, bool, bool] | None], object]
 
 
 class FonteDoSom(Protocol):
@@ -207,17 +213,19 @@ class LuzAnimada:
         intervalo_minimo: float = INTERVALO_MINIMO,
         mao: LeitorDaMao | None = None,
         som: FonteDoSom | None = None,
+        quadro: EscritorDoQuadro | None = None,
     ) -> None:
         self._escrever = escrever
         self._soltar = soltar
         self._mao = mao
         self._som = som
+        self._escrever_quadro = quadro
         self._som_aberto = False
         #: O estado de cada controle nos efeitos que leem a mão, com o efeito a que pertence: um
         #: efeito novo (outra base, cor ou ritmo) nasce com estado novo.
         self._estados_da_mao: dict[str, tuple[EfeitoDaLuz, EstadoDaMao]] = {}
         self._intervalo = max(intervalo_minimo, INTERVALO_MINIMO)
-        self._ultimo_quadro: dict[str, RGB] = {}
+        self._ultimo_quadro: dict[str, object] = {}
         self._escrito_em: dict[str, float] = {}
         self._inicio: dict[str, float] = {}
         #: O relógio da mesa: nasce com o primeiro controle que toca e morre com o último. O
@@ -259,33 +267,44 @@ class LuzAnimada:
                 self._origem = inicio
             if dele.efeito.base in BASES_DO_RELOGIO_COMUM:
                 inicio = self._origem
+            luzinhas = None
             if dele.efeito.base in BASES_DE_DADO_VIVO:
-                cor = self._cor_da_mao(uniq, dele.efeito, agora)
+                desenhado = self._quadro_da_mao(uniq, dele, agora)
+                cor, luzinhas = desenhado.cor, desenhado.luzinhas
             else:
                 cor = cor_no_instante(
                     dele.efeito, agora - inicio, dele.posicao, dele.semente, dele.amplitude
                 )
             quadro = cor_com_o_brilho(cor, dele.brilho)
+            com_luzinhas = dele.efeito.base in BASES_COM_LUZINHAS
+            chave: object = (quadro, luzinhas) if com_luzinhas else quadro
             self._escrito_em[uniq] = agora
-            if self._ultimo_quadro.get(uniq) == quadro:
+            if self._ultimo_quadro.get(uniq) == chave:
                 continue
-            self._ultimo_quadro[uniq] = quadro
-            self._escrever(uniq, quadro)
+            self._ultimo_quadro[uniq] = chave
+            if com_luzinhas and self._escrever_quadro is not None:
+                self._escrever_quadro(uniq, quadro, luzinhas)
+            else:
+                self._escrever(uniq, quadro)
             escritos += 1
         return escritos
 
-    def _cor_da_mao(self, uniq: str, efeito: EfeitoDaLuz, agora: float) -> RGB:
-        """A cor dos efeitos que leem a mão: o estado É do controle e só lê o dado dele."""
+    def _quadro_da_mao(self, uniq: str, dele: PlanoDoControle, agora: float) -> Quadro:
+        """O quadro dos efeitos de estado: o estado É do controle e só lê o dado dele."""
+        efeito = dele.efeito
         guardado = self._estados_da_mao.get(uniq)
         if guardado is None or guardado[0] != efeito:
-            novo = estado_da_mao(efeito)
+            novo = estado_da_mao(efeito, dele.semente)
             if novo is None:
-                return cor_no_instante(efeito, 0.0)
+                return Quadro(cor_no_instante(efeito, 0.0))
             guardado = self._estados_da_mao[uniq] = (efeito, novo)
         entrada = self._mao(uniq, efeito.base) if self._mao is not None else Entrada()
         if efeito.base == "ao-som" and self._som is not None:
             entrada = dataclasses.replace(entrada, som=self._som.nivel())
-        return guardado[1].andar(entrada, agora)
+        estado = guardado[1]
+        if isinstance(estado, Estrelas):
+            return estado.quadro(entrada, agora)
+        return Quadro(estado.andar(entrada, agora))
 
     def _conferir_o_som(self, quer: bool) -> None:
         """Abre a leitura do som quando algum controle entra no «Ao som» e a fecha quando sai."""
@@ -337,6 +356,19 @@ def escritor_de_producao(
     return escrever, soltar
 
 
+def escritor_do_quadro(daemon: Any) -> EscritorDoQuadro:
+    """A ponta do backend que leva barra, luzinhas e degrau num report só, sem lembrar o quadro."""
+    controller = getattr(daemon, "controller", None)
+
+    def escrever(
+        uniq: str, cor: RGB, luzinhas: tuple[bool, bool, bool, bool, bool] | None
+    ) -> object:
+        pintar = getattr(controller, "pintar_o_quadro_da_luz_sem_lembrar", None)
+        return pintar(uniq, cor, luzinhas) if callable(pintar) else False
+
+    return escrever
+
+
 #: O que um sensor sem dono, sem nó ou em corrida pode levantar; a luz segue sem ler a mão.
 FALHAS_DA_LEITURA: tuple[type[Exception], ...] = (
     ArithmeticError, AttributeError, KeyError, OSError, RuntimeError, TypeError, ValueError)
@@ -347,8 +379,32 @@ def leitor_da_mao(daemon: Any) -> LeitorDaMao:
 
     Os apertos vêm do leitor evdev do controle (o do posto ou o do jogador do co-op); a gravidade
     e o dedo, do ``SensorHub`` da sessão, que também mantém o nó vivo enquanto se pergunta. Cada
-    base pergunta só o que precisa: quem não usa o touchpad não pede o dedo.
+    base pergunta só o que precisa: quem não usa o touchpad não pede o dedo. A carga é a DESTE
+    controle (``describe_controllers``, relida a cada ``RELEITURA_DA_CARGA_S``) e o calor é o do
+    ``hwmon`` da máquina (``temperatura_da_maquina``), lido no máximo a cada 2 s.
     """
+    from hefesto_dualsense4unix.integrations.temperatura_da_maquina import LeitorDoCalor
+
+    calor = LeitorDoCalor()
+    cargas: dict[str, tuple[int | None, str | None]] = {}
+    lida_em = [float("-inf")]
+
+    def carga(uniq: str) -> tuple[int | None, str | None] | None:
+        from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+        agora = time.monotonic()
+        if agora - lida_em[0] >= RELEITURA_DA_CARGA_S:
+            lida_em[0] = agora
+            descrever = getattr(getattr(daemon, "controller", None), "describe_controllers", None)
+            lidos = descrever() if callable(descrever) else []
+            cargas.clear()
+            for item in lidos:
+                if isinstance(item, dict) and isinstance(item.get("uniq"), str):
+                    pct, estado = item.get("battery_pct"), item.get("battery_state")
+                    cargas[norm_mac(item["uniq"]) or item["uniq"]] = (
+                        pct if isinstance(pct, int) else None,
+                        estado if isinstance(estado, str) else None)
+        return cargas.get(norm_mac(uniq) or uniq)
 
     def apertos(uniq: str) -> dict[str, int] | None:
         controller = getattr(daemon, "controller", None)
@@ -370,6 +426,12 @@ def leitor_da_mao(daemon: Any) -> LeitorDaMao:
         with contextlib.suppress(*FALHAS_DA_LEITURA):
             if base == "reage-ao-botao":
                 return Entrada(apertos=apertos(uniq))
+            if base == "cor-da-bateria":
+                return Entrada(carga=carga(uniq))
+            if base == "cor-da-temperatura":
+                return Entrada(calor=calor.calor())
+            if base == "estrelas":
+                return Entrada()
             garantir = getattr(daemon, "_garantir_sensor_hub", None)
             hub = garantir() if callable(garantir) else None
             if hub is None:
@@ -600,7 +662,9 @@ def start_luz_animada(daemon: Any) -> None:
     escrever, soltar = escritor_de_producao(daemon)
     from hefesto_dualsense4unix.integrations.energia_do_som import EnergiaDoSom
 
-    luz = LuzAnimada(escrever, soltar, mao=leitor_da_mao(daemon), som=EnergiaDoSom())
+    luz = LuzAnimada(
+        escrever, soltar, mao=leitor_da_mao(daemon), som=EnergiaDoSom(),
+        quadro=escritor_do_quadro(daemon))
     daemon._luz_animada = luz
     task = asyncio.create_task(luz_animada_loop(daemon, luz), name="luz_animada_loop")
     daemon._tasks.append(task)
@@ -610,6 +674,7 @@ def start_luz_animada(daemon: Any) -> None:
 __all__ = [
     "INTERVALO_MINIMO",
     "TETO_DO_PISCAR_HZ",
+    "EscritorDoQuadro",
     "FonteDoSom",
     "LeitorDaMao",
     "LuzAnimada",
@@ -617,6 +682,7 @@ __all__ = [
     "PlanoDoControle",
     "cor_com_o_brilho",
     "cor_no_instante",
+    "escritor_do_quadro",
     "frequencia_do_piscar_hz",
     "leitor_da_mao",
     "periodo_do_arco_iris_s",

@@ -1325,13 +1325,15 @@ ROTULO_DA_BASE = {"respirar": "Respirar", "piscar": "Piscar",
                   "batimento": "Batida", "chama": "Chama", "mare": "Maré", "onda": "Onda",
                   "relampago": "Relâmpago", "reage-ao-botao": "Reage ao botão",
                   "inclinacao": "Inclinação", "dedo-no-touchpad": "Dedo no touchpad",
-                  "ao-som": "Ao som"}
+                  "ao-som": "Ao som", "aurora": "Aurora", "estrelas": "Estrelas",
+                  "cor-da-bateria": "Cor da bateria", "cor-da-temperatura": "Cor da temperatura"}
 #: O ritmo com que cada base nasce na lista (o do desenho A): respirar 5 s, piscar 0,9 Hz, uma volta
 #: do arco-íris em 12 s, batida de 1 s, a chama troca de alvo a cada ~2 s, a Maré vai e volta em
 #: 8 s.
 RITMO_DA_BASE = {"respirar": 2, "piscar": 3, "arco-iris": 7,  # (noqa-acento) chave ASCII
                  "batimento": 10, "chama": 5, "mare": 10, "onda": 5, "relampago": 5,
-                 "reage-ao-botao": 5, "inclinacao": 5, "dedo-no-touchpad": 5, "ao-som": 5}
+                 "reage-ao-botao": 5, "inclinacao": 5, "dedo-no-touchpad": 5, "ao-som": 5,
+                 "aurora": 5, "estrelas": 5, "cor-da-bateria": 5, "cor-da-temperatura": 5}
 DICA_SEM_EFEITO = "A barra fica apagada."
 DICA_LUZ_FIXA = "A cor do controle, parada."
 DICA_DO_EFEITO_CRIADO = "Um efeito que você montou."
@@ -1348,6 +1350,10 @@ DICA_DA_BASE = {
     "inclinacao": "A cor muda ao inclinar o controle.",
     "dedo-no-touchpad": "A cor segue o dedo no touchpad.",
     "ao-som": "A luz acompanha o som que toca.",
+    "aurora": "As cores passam devagar.",
+    "estrelas": "As luzinhas cintilam.",
+    "cor-da-bateria": "Verde cheia, vermelha no fim.",
+    "cor-da-temperatura": "Azul no frio, vermelha no calor.",
 }
 #: Os grupos da lista, na ordem do desenho: o que a pessoa vê, não o nome técnico do efeito.
 GRUPOS_DA_LISTA = (
@@ -1355,6 +1361,7 @@ GRUPOS_DA_LISTA = (
     ("Que respira", ("respirar", "batimento", "chama", "mare")),
     ("Que se move", ("piscar", "arco-iris", "onda", "relampago")),  # (noqa-acento) chave ASCII
     ("Que reage", ("reage-ao-botao", "inclinacao", "dedo-no-touchpad", "ao-som")),
+    ("De ambiente", ("aurora", "estrelas", "cor-da-bateria", "cor-da-temperatura")),
 )
 
 
