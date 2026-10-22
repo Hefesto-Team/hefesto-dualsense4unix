@@ -258,7 +258,13 @@ class TestALeituraQueFalhaPerguntaEDorme:
     def test_a_leitura_que_falha_com_o_gadget_sumido_derruba_o_pad(
         self, mesa: Mesa, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """Mordida: tirar a pergunta da leitura deixa o pad mudo num gadget que não existe."""
+        """Mordida: tirar a pergunta da leitura deixa o pad mudo num gadget que não existe.
+
+        O ENOMEM da queda é o host que desligou a função do f_hid (medido em 22/10/2026:
+        as 48 linhas de 18/10 a 21/10 caíram todas no `USB disconnect` do broker que
+        reinicia). A queda tem a linha dela; a da leitura, com `vezes=1`, repetia a mesma
+        notícia. Mordida: devolver o `_fechar_a_rajada` incondicional volta a linha.
+        """
         achado: dict[str, tuple[str, str]] = {"*": ("hidraw9", INTERFACE_DO_GADGET)}
         monkeypatch.setattr(mesa.ug, "HIDRAW_DO_GADGET", lambda _s: achado.get("*"))
         monkeypatch.setattr(mesa.ug, "_GADGET_VIGIA_S", 0.02)
@@ -281,7 +287,7 @@ class TestALeituraQueFalhaPerguntaEDorme:
             mesa.b.jogo.send(bytes([0x02]) + bytes(47))
             assert mesa.b.esperar(lambda: p1._gadget_caiu, segundos=4.0)
             assert mesa.eventos("pad_usb_caiu_fica_o_uhid") == 1
-            assert mesa.eventos("pad_usb_leitura_falhou") == 1, mesa.espiao.eventos
+            assert mesa.eventos("pad_usb_leitura_falhou") == 0, mesa.espiao.eventos
         finally:
             monkeypatch.setattr(os, "read", ler)
             p1.stop()

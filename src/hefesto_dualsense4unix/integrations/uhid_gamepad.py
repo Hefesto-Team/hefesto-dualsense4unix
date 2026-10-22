@@ -2720,7 +2720,14 @@ def _drenar_o_gadget(pad: UhidDualSense, fd: int, eventos: int) -> bool:
             if pad._started:
                 _o_gadget_caiu(pad, gadget, gadget.leituras_falhas)
             if pad._gadget_caiu:
-                _fechar_a_rajada(pad, gadget)
+                # O ENOMEM que vem com a queda é o `f_hidg_ssreport_read` do f_hid sem
+                # endpoint OUT: o host desligou a função (`hidg_disable`, a porta do vhci
+                # solta quando o broker reinicia) e não há SET_REPORT na fila. A linha
+                # `pad_usb_caiu_fica_o_uhid` já diz isso; a da rajada só sai se a função
+                # ficou desligada por mais de uma leitura antes de a porta sumir.
+                if gadget.leituras_falhas > 1:
+                    _fechar_a_rajada(pad, gadget)
+                gadget.leituras_falhas = 0
             return True
         _fechar_a_rajada(pad, gadget)
         if not report:
