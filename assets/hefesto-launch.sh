@@ -683,7 +683,9 @@ dualsense_fisico_na_mesa() {
 
 # O device KS é refeito A CADA LANÇAMENTO: o registro do prefixo só se grava com
 # o `wineserver` fora do ar. O curador só escreve quando algo mudou; sem a opção
-# ligada, só limpa o que for nosso (portão barato de 2 ms). À prova de falha,
+# ligada, só limpa o que for nosso e o controle XInput que o prefixo lembra
+# (`&IG_`/`WINEXINPUT`: o InControl pula o VID:PID marcado assim, mesmo sem o
+# controle presente), com o portão barato de 2 ms. À prova de falha,
 # como a cura das camadas. A lista que ele grava é a dos quatro LUGARES e do
 # cabo que nenhum lugar serve (`audio_ks_dualsense.controles_do_registro`).
 curar_audio_ks() {
@@ -700,15 +702,29 @@ curar_audio_ks() {
         return 0
     fi
     reg="$prefixo/pfx/system.reg"
+    ks_so_esquece=""
     case "$hefesto_envs" in
         *PROTON_ENABLE_MHWILDS_USB_AUDIO=1*) ks_modo="" ;;
         *)
-            # Sem a opção só há trabalho se houver bloco nosso a limpar.
-            if [ ! -f "$reg" ] || ! grep -qF 'HEFESTOKS' "$reg" 2>/dev/null; then
+            # Sem a opção só há trabalho se houver bloco nosso a limpar ou
+            # controle XInput que o prefixo lembra (`&IG_`, `WINEXINPUT`): o
+            # InControl pula, no DirectInput, o VID:PID que o WMI do Wine
+            # marca assim, e o Wine lista a lembrança como se fosse presente.
+            # A cura é do curador, em TODA chamada; o portão barato é o grep.
+            if [ ! -f "$reg" ]; then
+                registrar_audio_ks 0 desligado 0
+                return 0
+            elif grep -qF 'HEFESTOKS' "$reg" 2>/dev/null; then
+                ks_modo="--remover"
+            elif grep -qF '&IG_' "$reg" 2>/dev/null || grep -qF 'WINEXINPUT' "$reg" 2>/dev/null; then
+                # Só a lembrança de controle: nenhum device KS saiu, e o rastro
+                # não pode dizer `removido` (o doctor leria o contrário).
+                ks_modo="--remover"
+                ks_so_esquece=1
+            else
                 registrar_audio_ks 0 desligado 0
                 return 0
             fi
-            ks_modo="--remover"
             ;;
     esac
     # A PRIMEIRA SESSÃO DE TODO JOGO NOVO cai aqui: o proton cria o prefixo
@@ -752,7 +768,9 @@ curar_audio_ks() {
     # DualSense na mesa. Dizer `ok` ali fazia o doctor dar verde ao contrário
     # do que aconteceu.
     case "$ks_rc" in
-        0) if [ -n "$ks_modo" ]; then ks_motivo="removido"; else ks_motivo="ok"; fi ;;
+        0) if [ -n "$ks_modo" ] && [ -z "$ks_so_esquece" ]; then ks_motivo="removido"
+           elif [ -n "$ks_modo" ]; then ks_motivo="desligado"
+           else ks_motivo="ok"; fi ;;
         3) ks_motivo="ocupado" ;;
         *) ks_motivo="erro" ;;
     esac

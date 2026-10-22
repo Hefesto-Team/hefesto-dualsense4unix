@@ -853,6 +853,66 @@ def podar_o_som(sistema: str, usuario: str | None, vivos: set[str] | None) -> Po
     return Poda("\n".join(fica_sistema), usuario_novo, len(removidos))
 
 
+# O controle que o prefixo guardou (22/10/2026). O InControl pula, no DirectInput, o
+# VID:PID que o WMI do Wine marca com `&IG_`, e o `wbemprox` lista toda chave de `Enum`,
+# presente ou não: o gêmeo XInput de um controle de meses atrás esconde o DualSense de hoje.
+_ENUM_XINPUT = re.compile(
+    r"^\[System\\\\(?:ControlSet\d+|CurrentControlSet)\\\\Enum\\\\WINEXINPUT"
+    r"(?:\\\\([^\\\]]*))?(?:\\\\[^\]]*)?\]$",
+    re.I,
+)
+_ENUM_COM_IG = re.compile(
+    r"^\[System\\\\(?:ControlSet\d+|CurrentControlSet)\\\\Enum\\\\[^\\\]]+"
+    r"\\\\([^\\\]]*&IG_[^\\\]]*)(?:\\\\[^\]]*)?\]$",
+    re.I,
+)
+_INTERFACE_COM_IG = re.compile(
+    r"^\[System\\\\(?:ControlSet\d+|CurrentControlSet)\\\\Control\\\\DeviceClasses"
+    r"\\\\\{[^}\\\]]+\}\\\\([^\\\]]*&IG_[^\\\]]*)(?:\\\\[^\]]*)?\]$",
+    re.I,
+)
+
+
+_VID_PID = re.compile(r"VID_[0-9A-F]{4}&PID_[0-9A-F]{4}", re.I)
+
+
+def _controle_esquecido(cabecalho: str) -> str | None:
+    """O VID:PID da lembrança de controle XInput (vazio se não diz); ``None`` se a chave não é."""
+    m = _ENUM_XINPUT.match(cabecalho)
+    if m:
+        achado = m.group(1) or ""
+    else:
+        m = _ENUM_COM_IG.match(cabecalho) or _INTERFACE_COM_IG.match(cabecalho)
+        if m is None:
+            return None
+        achado = m.group(1)
+    vid_pid = _VID_PID.search(achado)
+    return vid_pid.group(0).upper() if vid_pid else ""
+
+
+def esquecer_os_controles_que_se_foram(texto: str) -> tuple[str, int]:
+    """O `system.reg` sem a lembrança de controle XInput, e quantos VID:PID saíram.
+
+    Sai toda chave sob `Enum\\WINEXINPUT\\`, toda chave de `Enum` com `&IG_` no id e toda
+    interface de `DeviceClasses` com `&IG_` (com as subchaves); o resto fica byte a byte.
+    Roda em toda chamada de :func:`aplicar`: com o `wineserver` fora, só sobra lembrança.
+    """
+    fica: list[str] = []
+    ids: set[str] = set()
+    saiu = False
+    for bloco in _blocos(texto):
+        achado = _controle_esquecido(_cabecalho(bloco))
+        if achado is None:
+            fica.append(bloco)
+        else:
+            saiu = True
+            if achado:
+                ids.add(achado)
+    if not saiu:
+        return texto, 0
+    return "\n".join(fica), len(ids)
+
+
 def _gravar_com_backup(registro: Path, texto: str) -> None:
     """Um backup rotativo só, e a troca atômica."""
     backup = registro.with_name(registro.name + _BACKUP)
@@ -892,6 +952,7 @@ class Resultado:
     motivo: str = ""
     podados: int = 0
     do_proton: int = 0
+    esquecidos: int = 0
 
 
 def aplicar(
@@ -906,7 +967,9 @@ def aplicar(
     """Refaz os nossos blocos no `system.reg` do prefixo, se algo mudou.
 
     Com ``podar``, o som que não existe mais sai antes (:func:`podar_o_som`),
-    sob a mesma recusa e a mesma trava, e o `user.reg` também se grava.
+    sob a mesma recusa e a mesma trava, e o `user.reg` também se grava. O
+    controle XInput que o prefixo lembra sai SEMPRE, com ou sem ``podar``
+    (:func:`esquecer_os_controles_que_se_foram`).
     """
     pfx = compatdata / "pfx"
     registro = pfx / "system.reg"
@@ -931,11 +994,12 @@ def aplicar(
                 resultado.motivo = "ocupado"
                 return resultado
         texto = registro.read_text(encoding="utf-8", errors="surrogateescape")
-        base, usuario_txt, usuario_novo = texto, None, None
+        base, resultado.esquecidos = esquecer_os_controles_que_se_foram(texto)
+        usuario_txt, usuario_novo = None, None
         if podar:
             if usuario.is_file():
                 usuario_txt = usuario.read_text(encoding="utf-8", errors="surrogateescape")
-            poda = podar_o_som(texto, usuario_txt, vivos)
+            poda = podar_o_som(base, usuario_txt, vivos)
             base, usuario_novo, resultado.podados = poda.sistema, poda.usuario, poda.podados
         novo = texto_novo(base, controles, carimbo if carimbo is not None else int(time.time()))
         resultado.do_proton = len(controles_que_o_proton_cria(base, controles))
@@ -1021,7 +1085,7 @@ def main(argv: list[str] | None = None) -> int:
         return 3
     if resultado.escreveu:
         print(f"device KS: {resultado.controles} controle(s), {resultado.variantes} instância(s), "
-              f"podados={resultado.podados}")
+              f"podados={resultado.podados}, esquecidos={resultado.esquecidos}")
     if resultado.do_proton:
         print(f"o Proton já cria o device de {resultado.do_proton} controle(s)")
     return 0
