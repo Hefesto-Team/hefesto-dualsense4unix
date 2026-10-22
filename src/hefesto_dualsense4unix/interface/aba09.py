@@ -430,24 +430,25 @@ STATUS = [
           dica="O perfil do jogo entra sozinho quando ele abre."),
 ]
 
-#: As quatro linhas do exame que ficam à vista (o desenho do todo): o Bluetooth leva à aba
-#: Conexões. Qualquer outra linha do exame só aparece se pedir ação: laranja no aviso, vermelho na
-#: falha. As duas últimas são as da variante A escolhida em 21/10/2026 (a cena da foto: nenhum
-#: controle no cabo e um jogo cujo Steam Input mudou), para o desenho mostrar a NOTA e o AVISO.
+#: As quatro linhas do exame que ficam à vista, na ordem do pacote (`a09_sistema._so_o_que_a_tela_mostra`):
+#: Bluetooth, Steam Input, Áudio e o gamepad virtual. Com o Status, são SEIS temas, sempre
+#: (O-STATUS-DO-SISTEMA-TEM-SEIS-LINHAS-SEMPRE-01): um aviso entra na linha do tema dele, que fica
+#: laranja, em vez de abrir uma sétima. A cena é a da foto de 22/10/2026: nenhum controle no cabo e
+#: um jogo cujo Steam Input mudou, que é a linha do Steam Input em AVISO, levando à aba Perfis.
 ACHADOS = [
     linha("OK", "ok", "✓",
           f"Bluetooth: 1 adaptador · {_NO_RADIO} "
           f"{'controle' if _NO_RADIO == 1 else 'controles'}",
           ident="status-bluetooth", href="08-conexoes.html#rd-secao",
           dica="Clique para ver os adaptadores na aba Conexões."),
-    linha("OK", "ok", "✓", "Steam Input desligado",
-          dica="Steam Input desligado para o DualSense"),
+    linha("AVISO", "aviso", "!", "O Steam Input de Lure of Passion mudou",
+          href="10-perfis.html",
+          dica="A caixinha do Steam Input mudou depois que o Hefesto confirmou o jogo. "
+               "Clique para conferir o perfil dele na aba Perfis."),
     linha("NOTA", "nt", "◆", "Nenhum controle no cabo",
           dica="Sem controle no cabo, não há som nem vibração para rotear"),
-    linha("AVISO", "aviso", "!",
-          "O Steam Input de Lure of Passion mudou: confira o perfil dele na aba Perfis",
-          dica="O Steam Input de Lure of Passion não bate com o que o Hefesto confirmou: "
-               "abra o perfil dele na aba Perfis e confira"),
+    linha("OK", "ok", "✓", "Um gamepad virtual por jogador",
+          dica="Cada controle ligado tem o seu gamepad virtual"),
 ]
 #: AS NOTAS EM TERÇOS (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, S1): o Status e o exame são UMA lista,
 #: na ordem, por igual, com a sobra nas primeiras: 8 viram 3, 3 e 2, e 7 viram 3, 2 e 2. O
