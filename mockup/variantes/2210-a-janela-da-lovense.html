@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>A janela da Lovense: três arranjos</title>
+<!-- A janela unificada da extensão Lovense, em três arranjos para a escolha (A-LOVENSE-VIBRA-O-BRINQUEDO-PELO-ADAPTADOR-E-PELOS-BOTOES-01).
+     Tudo aqui é da EXTENSÃO, desenhado pelo Hefesto a partir do manifesto e do acessorios.estado: o marcador
+     laranja numerado é a capacidade GENÉRICA nova da porta que a peça pede, com o campo na legenda. Nenhuma
+     linha do Hefesto sabe o que é Lovense. Gerado à mão; as ondas são os padrões da extensão (toques.py). -->
+<style>
+:root{
+  --app-bg:#21222c; --panel:#282a36; --elevated:#2b2d3a; --border-sutil:#343746; --border-forte:#44475a;
+  --fundo-da-pagina:#11121a; --fg:#f8f8f2; --texto-suave:#c8ccda; --texto-mudo:#9a9eb8; --comment:#8896c4;
+  --cyan:#8be9fd; --green:#50fa7b; --orange:#ffb86c; --pink:#ff79c6; --purple:#bd93f9; --red:#ff5555;
+  --yellow:#f1fa8c; --c-acessorio:#ff79c6; --gap:12px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden}
+body{background:var(--fundo-da-pagina);color:var(--fg);font:12px/1.35 "Inter","Cantarell",sans-serif}
+.pagina{width:1900px;height:836px;margin:2px auto;display:grid;grid-template-rows:28px 1fr 168px;gap:8px;padding:0 4px}
+.cab{display:flex;align-items:center;gap:14px}
+.cab h1{font-size:15px;margin:0;color:var(--purple);font-weight:600}
+.cab .leg{display:flex;gap:12px;margin-left:auto;color:var(--texto-suave)}
+.arranjos{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;min-height:0}
+.arranjo{display:flex;flex-direction:column;gap:6px;min-height:0}
+.arr-rot{display:flex;align-items:center;gap:8px;font-weight:600;color:var(--texto-suave)}
+.arr-rot .letra{width:22px;height:22px;border-radius:6px;border:1px solid var(--purple);color:var(--purple);
+  display:inline-flex;align-items:center;justify-content:center}
+.arr-rot .rec{margin-left:auto;font-weight:500;color:var(--green);border:1px solid var(--green);border-radius:6px;padding:1px 8px}
+.tn-cx{flex:1;min-height:0;background:var(--panel);border-radius:11px;border:1px solid var(--border-forte);
+  display:flex;flex-direction:column;overflow:hidden}
+.tn-topo{display:flex;align-items:center;gap:8px;padding:12px 16px 0;flex:none}
+.tn-tit{font-size:14.5px;font-weight:600;color:var(--purple)}
+.tn-topo .parar{margin-left:auto}
+.tn-x{width:26px;height:26px;border-radius:6px;border:1px solid var(--border-forte);display:flex;align-items:center;justify-content:center;font-size:13px}
+.tn-corpo{flex:1;min-height:0;padding:10px 16px;display:flex;flex-direction:column;gap:var(--gap)}
+.tn-rod{display:flex;gap:var(--gap);padding:0 16px 14px;flex:none}
+.tn-rod .btn{flex:1}
+.btn{height:32px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--border-forte);
+  border-radius:7px;color:var(--fg);padding:0 14px;cursor:pointer;background:var(--elevated);white-space:nowrap}
+.btn.mini{height:26px;padding:0 10px;font-size:11px}
+.btn.roxo{color:var(--purple);border-color:var(--purple)}
+.btn.vermelho{color:var(--red);border-color:var(--red)}
+.ac-card{border:1px solid var(--border-sutil);border-radius:8px;background:var(--app-bg);padding:9px 11px;
+  display:flex;flex-direction:column;gap:7px;min-width:0;position:relative}
+.ac-topo{display:flex;align-items:center;gap:8px;min-height:24px}
+.ac-tit{font-size:12.5px;font-weight:600;white-space:nowrap}
+.ac-topo .nj-tog{margin-left:auto}
+.duas{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap)}
+.c-cols{grid-template-columns:200px 1fr;flex:1;min-height:0}
+.nj-tog{display:inline-flex;align-items:center;width:34px;height:20px;padding:0 3px;border:1px solid var(--border-forte);
+  border-radius:10px;cursor:pointer;flex:none}
+.nj-tog .pino{width:12px;height:12px;border-radius:50%;background:var(--border-forte);transition:transform .15s}
+.nj-tog.ligado{border-color:var(--green);background:rgba(80,250,123,.12)}
+.nj-tog.ligado .pino{background:var(--green);transform:translateX(14px);box-shadow:0 0 6px var(--green)}
+.ext-desl{width:110px;accent-color:var(--purple)}
+.ac-topo .ext-desl{margin-left:auto}
+.ac-topo .ext-desl + .nj-tog{margin-left:0}
+.ext-sel{height:22px;border-radius:6px;font-size:11px;padding:0 8px;border:1px solid var(--border-forte);
+  display:inline-flex;align-items:center;margin-left:auto;min-width:64px}
+.campo{height:28px;border:1px solid var(--border-forte);border-radius:6px;display:flex;align-items:center;padding:0 9px;
+  font-variant-numeric:tabular-nums;color:var(--texto-suave)}
+.campo span{color:var(--texto-mudo);margin:0 1px}
+.ac-meio{display:flex;align-items:center;gap:6px}
+.seg{display:inline-flex;border:1px solid var(--border-forte);border-radius:7px;overflow:hidden}
+.seg button,.abas button{background:none;border:0;color:var(--texto-suave);font:inherit;height:26px;padding:0 10px;cursor:pointer}
+.seg button + button{border-left:1px solid var(--border-forte)}
+.seg button.ativo{background:rgba(189,147,249,.16);color:var(--purple)}
+.abas{display:flex;gap:4px;border-bottom:1px solid var(--border-sutil)}
+.abas button.ativo{color:var(--purple);box-shadow:inset 0 -2px var(--purple)}
+.ic{flex:none}
+.c-verde{color:var(--green)} .c-amarelo{color:var(--yellow)} .c-mudo{color:var(--texto-mudo)} .c-acessorio{color:var(--c-acessorio)}
+.est{display:inline-flex;align-items:center;gap:5px;font-size:11px;white-space:nowrap}
+.est i{width:8px;height:8px;border-radius:50%;display:inline-block}
+.est-verde{color:var(--green)} .est-verde i{background:var(--green);box-shadow:0 0 6px var(--green)}
+.est-amarelo{color:var(--yellow)} .est-amarelo i{background:var(--yellow);animation:piscar 1.2s infinite}
+.est-mudo{color:var(--texto-mudo)} .est-mudo i{background:var(--border-forte)}
+.est-vermelho{color:var(--red)} .est-vermelho i{background:var(--red)}
+@keyframes piscar{50%{opacity:.25}}
+.ap{display:flex;align-items:center;gap:8px;height:26px}
+.ap-nome{min-width:52px;font-weight:500}
+.bat{width:34px;height:10px;border:1px solid var(--texto-mudo);border-radius:2px;padding:1px;display:inline-block;flex:none}
+.bat i{display:block;height:100%;background:var(--green);border-radius:1px}
+.vivo{flex:1;height:18px;overflow:hidden;min-width:40px}
+.vivo svg{width:200%;height:18px;animation:correr 1.4s linear infinite}
+.vivo path{fill:none;stroke:var(--c-acessorio);stroke-width:2}
+@keyframes correr{to{transform:translateX(-50%)}}
+.pls{display:inline-flex;gap:4px}
+.pl{width:26px;height:24px;border-radius:6px;border:1px solid var(--border-forte);display:inline-flex;align-items:center;
+  justify-content:center;color:var(--texto-mudo);cursor:pointer}
+.pl .ic{width:18px;height:18px}
+.pl.ligado{border-color:var(--cor);color:var(--cor);background:color-mix(in srgb,var(--cor) 14%,transparent)}
+.tq-grade{display:grid;grid-template-columns:repeat(var(--col),1fr);gap:5px}
+.tq{background:var(--panel);border:1px solid var(--border-sutil);border-radius:6px;color:var(--fg);font:inherit;
+  display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 2px;cursor:pointer;min-width:0}
+.tq b{font-size:14px;font-weight:600;white-space:nowrap;line-height:16px}
+.tq:hover{border-color:var(--purple)}
+.tq.tocando{border-color:var(--c-acessorio);box-shadow:0 0 8px rgba(255,121,198,.5)}
+.tq.tocando .onda rect{fill:var(--c-acessorio)}
+.onda rect{fill:var(--purple)}
+.onda-zero{stroke:var(--border-forte);stroke-width:1.5;stroke-dasharray:3 3}
+.linha-forca{flex-direction:row;align-items:center;gap:16px}
+.fr{display:inline-flex;align-items:center;gap:8px;color:var(--texto-suave)}
+.linha-forca .btn{margin-left:auto}
+.cadeia{display:flex;align-items:center;gap:0;padding:4px 2px;position:relative;flex-wrap:nowrap}
+.no{display:flex;flex-direction:column;align-items:center;gap:2px;width:62px;color:var(--texto-mudo)}
+.no small{font-size:10.5px;color:var(--texto-suave)}
+.no .ic{width:30px;height:30px;padding:4px;border-radius:50%;border:1.5px solid currentColor}
+.no-verde{color:var(--green)} .no-amarelo{color:var(--yellow)}
+.elo{flex:1;height:2px;min-width:22px;margin-bottom:14px;background:repeating-linear-gradient(90deg,var(--green) 0 6px,transparent 6px 10px);
+  background-size:20px 2px;animation:fluir .8s linear infinite}
+.elo-amarelo{background:repeating-linear-gradient(90deg,var(--yellow) 0 3px,transparent 3px 9px);animation-duration:2s}
+@keyframes fluir{to{background-position:20px 0}}
+.ramo{display:flex;align-items:center;margin-left:8px;padding-left:8px;border-left:1px dashed var(--border-forte)}
+.pad-cx{position:relative;width:520px;height:190px;margin:0 auto}
+.pad path{stroke:var(--border-forte);stroke-width:1.5}
+.tq.solto{position:absolute;width:52px;padding:2px}
+.tq.solto b{font-size:13px}
+.vivo-col{gap:6px}
+.cx-linha{display:flex;align-items:center;gap:7px;height:26px}
+.cx-rot{flex:1;font-weight:500}
+.cx-linha .nj-tog{margin-left:4px}
+.sep{border-top:1px solid var(--border-sutil);margin:2px 0}
+.tq-lista{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px}
+.tql{display:flex;align-items:center;gap:8px;height:28px;border-bottom:1px solid var(--border-sutil)}
+.tql b{width:26px;text-align:center;font-size:14px}
+.cap{position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;border-radius:8px;
+  border:1px dashed var(--orange);color:var(--orange);font-size:10px;font-weight:700;flex:none;cursor:help;align-self:center}
+.ac-card > .cap{position:absolute;right:6px;bottom:6px}
+.inferior{display:grid;grid-template-columns:640px 1fr;gap:16px;min-height:0}
+.cx-aba{background:var(--panel);border:1px solid var(--border-forte);border-radius:11px;padding:10px 14px;display:flex;flex-direction:column;gap:8px}
+.cx-tit{font-weight:600;color:var(--purple);display:flex;align-items:center;gap:8px}
+.cx-grade{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.via{display:flex;align-items:center;gap:8px;color:var(--texto-mudo);font-size:11px}
+.legenda{background:var(--panel);border:1px dashed var(--orange);border-radius:11px;padding:8px 14px;
+  display:grid;grid-template-columns:1fr 1fr;gap:3px 22px;align-content:start;color:var(--texto-suave);font-size:11px}
+.legenda .t{grid-column:1/-1;color:var(--orange);font-weight:600;margin-bottom:2px}
+.legenda div{display:flex;gap:7px;align-items:baseline}
+.legenda code{font:10.5px ui-monospace,monospace;color:var(--fg)}
+[data-dica]{cursor:default}
+.gl{font-family:"DejaVu Sans",sans-serif;font-size:16px !important}
+</style>
+</head>
+<body>
+<div class="pagina">
+  <div class="cab"><h1>A janela da Lovense</h1>
+    <span class="leg"><span class="est est-verde"><i></i>Ligado</span><span class="est est-amarelo"><i></i>Procurando</span><span class="est est-mudo"><i></i>Desligado</span><span class="est est-vermelho"><i></i>Falhou</span>
+    <span><span class="cap">n</span> capacidade nova da porta</span></span></div>
+  <div class="arranjos">
+    <section class="arranjo" data-arranjo="A"><div class="arr-rot"><span class="letra">A</span>Tudo à vista<span class="rec" data-dica="O arranjo que a casa recomenda">Recomendado</span></div>
+<div class="tn-cx">
+  <div class="tn-topo"><span class="tn-tit">Configurar · Lovense</span><a class="btn mini vermelho parar" data-dica="Para o brinquedo, o telefone e os toques na hora">Parar tudo</a><span class="cap" data-dica="Capacidade nova da porta: veja a legenda 8">8</span><a class="tn-x" data-dica="Fechar">✕</a></div>
+  <div class="tn-corpo">
+    <div class="duas">
+      <div class="ac-card">
+        <div class="ac-topo"><svg class="ic c-verde" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><line x1="10" y1="18.5" x2="14" y2="18.5"/></svg><span class="ac-tit">Telefone</span><span class="est est-verde"><i></i>Ligado</span><span class="nj-tog ligado" data-dica="Mandar a cena ao app do telefone" role="switch" aria-checked="true"><span class="pino"></span></span></div>
+        <div class="campo" data-dica="O IP e a porta do app Lovense Remote">192.168.0.40<span>:</span>34567</div><span class="cap" data-dica="Capacidade nova da porta: veja a legenda 4">4</span>
+      </div>
+      <div class="ac-card">
+        <div class="ac-topo"><svg class="ic c-verde" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="11" height="8" rx="1.5"/><rect x="15" y="9.5" width="5" height="5" rx=".6"/><line x1="17" y1="11" x2="17" y2="13"/><line x1="7" y1="12" x2="12" y2="12"/></svg><span class="ac-tit">Brinquedo</span><span class="est est-verde"><i></i>Ligado</span><span class="nj-tog ligado" data-dica="Mandar a cena ao brinquedo" role="switch" aria-checked="true"><span class="pino"></span></span></div>
+        <div class="ac-meio"><span class="seg"><button type="button" class="ativo" data-dica="Adaptador USB: o Engine sobe com o adaptador, sem o Bluetooth do computador">USB</button><button type="button" class="" data-dica="Bluetooth do computador: só com um adaptador e nenhum controle no rádio">Bluetooth</button><button type="button" class="" data-dica="Intiface Central já aberto: nenhum Engine sobe">Central</button></span><span class="cap" data-dica="Capacidade nova da porta: veja a legenda 3">3</span></div>
+      </div>
+    </div>
+    <div class="ac-card">
+      <div class="ac-topo"><span class="ac-tit">Aparelhos</span><span class="cap" data-dica="Capacidade nova da porta: veja a legenda 2">2</span></div>
+      <div class="ap"><svg class="ic c-acessorio" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M3 9 q-1.5 3 0 6"/><path d="M21 9 q1.5 3 0 6"/></svg><span class="ap-nome">Lush 3</span><span class="bat" data-dica="Bateria 80%"><i style="width:80%"></i></span><span class="vivo" style="--f:0.7" data-dica="Força agora: 70%"><svg viewBox="0 0 120 18" preserveAspectRatio="none"><path d="M0 9 Q7.5 3.4 15 9 T30 9 T45 9 T60 9 T75 9 T90 9 T105 9 T120 9"/></svg></span><span class="cap" data-dica="Capacidade nova da porta: veja a legenda 1">1</span></div>
+      <div class="ap"><svg class="ic c-acessorio" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M3 9 q-1.5 3 0 6"/><path d="M21 9 q1.5 3 0 6"/></svg><span class="ap-nome">Edge 2</span><span class="bat" data-dica="Bateria 45%"><i style="width:45%"></i></span><span class="vivo" style="--f:0.3" data-dica="Força agora: 30%"><svg viewBox="0 0 120 18" preserveAspectRatio="none"><path d="M0 9 Q7.5 6.6 15 9 T30 9 T45 9 T60 9 T75 9 T90 9 T105 9 T120 9"/></svg></span><span class="cap" data-dica="Capacidade nova da porta: veja a legenda 1">1</span></div>
+    </div>
+    <div class="ac-card">
+      <div class="ac-topo"><span class="ac-tit">Toques</span><span class="pls"><span class="pl ligado" style="--cor:#7eb8d4" data-dica="Toques do controle Starlight Blue"><svg class="ic " viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9 h12 a4 4 0 0 1 4 4 v1 a3 3 0 0 1 -5 2 l-2 -2 h-6 l-2 2 a3 3 0 0 1 -5 -2 v-1 a4 4 0 0 1 4 -4z"/><line x1="7" y1="12" x2="7" y2="15"/><line x1="5.5" y1="13.5" x2="8.5" y2="13.5"/></svg></span><span class="pl" style="--cor:#e8e8ef" data-dica="Toques do controle White"><svg class="ic " viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9 h12 a4 4 0 0 1 4 4 v1 a3 3 0 0 1 -5 2 l-2 -2 h-6 l-2 2 a3 3 0 0 1 -5 -2 v-1 a4 4 0 0 1 4 -4z"/><line x1="7" y1="12" x2="7" y2="15"/><line x1="5.5" y1="13.5" x2="8.5" y2="13.5"/></svg></span><span class="pl" style="--cor:#ff6b6b" data-dica="Toques do controle Cosmic Red"><svg class="ic " viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9 h12 a4 4 0 0 1 4 4 v1 a3 3 0 0 1 -5 2 l-2 -2 h-6 l-2 2 a3 3 0 0 1 -5 -2 v-1 a4 4 0 0 1 4 -4z"/><line x1="7" y1="12" x2="7" y2="15"/><line x1="5.5" y1="13.5" x2="8.5" y2="13.5"/></svg></span><span class="pl" style="--cor:#a98bf0" data-dica="Toques do controle Galactic Purple"><svg class="ic " viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9 h12 a4 4 0 0 1 4 4 v1 a3 3 0 0 1 -5 2 l-2 -2 h-6 l-2 2 a3 3 0 0 1 -5 -2 v-1 a4 4 0 0 1 4 -4z"/><line x1="7" y1="12" x2="7" y2="15"/><line x1="5.5" y1="13.5" x2="8.5" y2="13.5"/></svg></span></span><span class="cap" data-dica="Capacidade nova da porta: veja a legenda 6">6</span>
+        <input class="ext-desl" type="range" value="60" data-dica="Força dos toques: 60%"><span class="nj-tog ligado" data-dica="Liga os toques por botão" role="switch" aria-checked="true"><span class="pino"></span></span></div>
+      <div class="tq-grade" style="--col:10"><button type="button" class="tq" data-padrao="Toque" data-dica="✕: Toque. Clique para trocar"><b class="gl">✕</b><svg class="onda" width="44" height="16" viewBox="0 0 44 16"><rect x="2.0" y="2.0" width="10.1" height="14.0" rx="1"/></svg></button><button type="button" class="tq" data-padrao="Duplo" data-dica="○: Duplo. Clique para trocar"><b class="gl">○</b><svg class="onda" width="44" height="16" viewBox="0 0 44 16"><rect x="2.0" y="2.0" width="5.7" height="14.0" rx="1"/><rect x="14.2" y="2.0" width="5.7" height="14.0" rx="1"/></svg></button><button type="button" class="tq" data-padrao="Pulso" data-dica="□: Pulso. Clique para trocar"><b class="gl">□</b><svg class="onda" width="44" height="16" viewBox="0 0 44 16"><rect x="2.0" y="2.0" width="2.9" height="14.0" rx="1"/><rect x="9.2" y="6.2" width="2.9" height="9.8" rx="1"/><rect x="16.4" y="10.4" width="2.9" height="5.6" rx="1"/></svg></button><button type="button" class="tq" data-padrao="Onda" data-dica="△: Onda. Clique para trocar"><b class="gl">△</b><svg class="onda" width="44" height="16" viewBox="0 0 44 16"><rect x="2.0" y="11.8" width="5.7" height="4.2" rx="1"/><rect x="8.7" y="7.6" width="5.7" height="8.4" rx="1"/><rect x="15.3" y="2.0" width="7.9" height="14.0" rx="1"/><rect x="24.2" y="7.6" width="5.7" height="8.4" rx="1"/><rect x="30.9" y="11.8" width="5.7" height="4.2" rx="1"/></svg></button><button type="button" class="tq" data-padrao="Curto" data-dica="L1: Curto. Clique para trocar"><b>L1</b><svg class="onda" width="44" height="16" viewBox="0 0 44 16"><rect x="2.0" y="7.6" width="5.7" height="8.4" rx="1"/></svg></button><button type="button" class="tq" data-padrao="Curto" data-dica="R1: Curto. Clique para trocar"><b>R1</b><svg class="onda" width="44" height="16" viewBox="0 0 44 16"><rect x="2.0" y="7.6" width="5.7" height="8.4" rx="1"/></svg></button><button type="button" class="tq" data-padrao="Subida" data-dica="L2: Subida. Clique para trocar"><b>L2</b><svg class="onda" width="44" height="16" viewBox="0 0 44 16"><rect x="2.0" y="12.5" width="5.7" height="3.5" rx="1"/><rect x="8.7" y="9.0" width="5.7" height="7.0" rx="1"/><rect x="15.3" y="5.5" width="5.7" height="10.5" rx="1"/><rect x="22.0" y="2.0" width="10.1" height="14.0" rx="1"/></svg></button><button type="button" class="tq" data-padrao="Longo" data-dica="R2: Longo. Clique para trocar"><b>R2</b><svg class="onda" width="44" height="16" viewBox="0 0 44 16"><rect x="2.0" y="2.0" width="37.9" height="14.0" rx="1"/></svg></button><button type="button" class="tq" data-padrao="Triplo" data-dica="L3: Triplo. Clique para trocar"><b>L3</b><svg class="onda" width="44" height="16" viewBox="0 0 44 16"><rect x="2.0" y="2.0" width="4.6" height="14.0" rx="1"/><rect x="12.0" y="2.0" width="4.6" height="14.0" rx="1"/><rect x="22.0" y="2.0" width="4.6" height="14.0" rx="1"/></svg></button><button type="button" class="tq" data-padrao="Triplo" data-dica="R3: Triplo. Clique para trocar"><b>R3</b><svg class="onda" width="44" height="16" viewBox="0 0 44 16"><rect x="2.0" y="2.0" width="4.6" height="14.0" rx="1"/><rect x="12.0" y="2.0" width="4.6" height="14.0" rx="1"/><rect x="22.0" y="2.0" width="4.6" height="14.0" rx="1"/></svg></button><button type="button" class="tq" data-padrao="Curto" data-dica="↑: Curto. Clique para trocar"><b>↑</b><svg class="onda" width="44" height="16" viewBox="0 0 44 16"><rect x="2.0" y="7.6" width="5.7" height="8.4" rx="1"/></svg></button><button type="button" class="tq" data-padrao="Curto" data-dica="↓: Curto. Clique para trocar"><b>↓</b><svg class="onda" width="44" height="16" viewBox="0 0 44 16"><rect x="2.0" y="7.6" width="5.7" height="8.4" rx="1"/></svg></button><button type="button" class="tq" data-padrao="Curto" data-dica="←: Curto. Clique para trocar"><b>←</b><svg class="onda" width="44" height="16" viewBox="0 0 44 16"><rect x="2.0" y="7.6" width="5.7" height="8.4" rx="1"/></svg></button><button type="button" class="tq" data-padrao="Curto" data-dica="→: Curto. Clique para trocar"><b>→</b><svg class="onda" width="44" height="16" viewBox="0 0 44 16"><rect x="2.0" y="7.6" width="5.7" height="8.4" rx="1"/></svg></button><button type="button" class="tq" data-padrao="Toque" data-dica="◧: Toque. Clique para trocar"><b>◧</b><svg class="onda" width="44" height="16" viewBox="0 0 44 16"><rect x="2.0" y="2.0" width="10.1" height="14.0" rx="1"/></svg></button><button type="button" class="tq" data-padrao="Duplo" data-dica="▣: Duplo. Clique para trocar"><b>▣</b><svg class="onda" width="44" height="16" viewBox="0 0 44 16"><rect x="2.0" y="2.0" width="5.7" height="14.0" rx="1"/><rect x="14.2" y="2.0" width="5.7" height="14.0" rx="1"/></svg></button><button type="button" class="tq" data-padrao="Toque" data-dica="◨: Toque. Clique para trocar"><b>◨</b><svg class="onda" width="44" height="16" viewBox="0 0 44 16"><rect x="2.0" y="2.0" width="10.1" height="14.0" rx="1"/></svg></button><button type="button" class="tq" data-padrao="Nenhum" data-dica="Options: Nenhum. Clique para trocar"><b>Options</b><svg class="onda" width="44" height="16" viewBox="0 0 44 16"><line x1="2" y1="15" x2="42" y2="15" class="onda-zero"/></svg></button><button type="button" class="tq" data-padrao="Nenhum" data-dica="Create: Nenhum. Clique para trocar"><b>Create</b><svg class="onda" width="44" height="16" viewBox="0 0 44 16"><line x1="2" y1="15" x2="42" y2="15" class="onda-zero"/></svg></button></div><span class="cap" data-dica="Capacidade nova da porta: veja a legenda 5">5</span>
+    </div>
+    <div class="ac-card linha-forca">
+      <span class="fr" data-dica="Cena do jogo: 100%">Cena<input class="ext-desl" type="range" value="100"></span>
+      <span class="fr" data-dica="Teto: 80%">Teto<input class="ext-desl" type="range" value="80"></span>
+      <a class="btn mini" data-dica="A ponte dos jogos, os controles na cena, o tempo máximo">Mais</a>
+    </div>
+  </div>
+  <div class="tn-rod"><a class="btn">Cancelar</a><a class="btn roxo">Guardar</a></div>
+</div></section>
+    <section class="arranjo" data-arranjo="B"><div class="arr-rot"><span class="letra">B</span>A cadeia ao vivo</div>
+<div class="tn-cx">
+  <div class="tn-topo"><span class="tn-tit">Configurar · Lovense</span><a class="btn mini vermelho parar" data-dica="Para o brinquedo, o telefone e os toques na hora">Parar tudo</a><span class="cap" data-dica="Capacidade nova da porta: veja a legenda 8">8</span><a class="tn-x" data-dica="Fechar">✕</a></div>
+  <div class="tn-corpo">
+    <div class="cadeia"><span class="no no-verde" data-dica="Jogo: ligado"><svg class="ic " viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9 h12 a4 4 0 0 1 4 4 v1 a3 3 0 0 1 -5 2 l-2 -2 h-6 l-2 2 a3 3 0 0 1 -5 -2 v-1 a4 4 0 0 1 4 -4z"/><line x1="7" y1="12" x2="7" y2="15"/><line x1="5.5" y1="13.5" x2="8.5" y2="13.5"/></svg><small>Jogo</small></span><span class="elo elo-verde"></span><span class="no no-verde" data-dica="Hefesto: ligado"><svg class="ic " viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M8 12 h8 M12 8 v8"/></svg><small>Hefesto</small></span><span class="elo elo-verde"></span><span class="no no-verde" data-dica="USB: ligado"><svg class="ic " viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="11" height="8" rx="1.5"/><rect x="15" y="9.5" width="5" height="5" rx=".6"/><line x1="17" y1="11" x2="17" y2="13"/><line x1="7" y1="12" x2="12" y2="12"/></svg><small>USB</small></span><span class="elo elo-verde"></span><span class="no no-verde" data-dica="Lush 3: ligado"><svg class="ic " viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M3 9 q-1.5 3 0 6"/><path d="M21 9 q1.5 3 0 6"/></svg><small>Lush 3</small></span><span class="ramo"><span class="elo elo-amarelo"></span><span class="no no-amarelo" data-dica="Telefone: procurando"><svg class="ic " viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><line x1="10" y1="18.5" x2="14" y2="18.5"/></svg><small>Telefone</small></span></span><span class="cap" data-dica="Capacidade nova da porta: veja a legenda 3">3</span></div>
+    <div class="abas"><button type="button">Conexões</button><button type="button" class="ativo">Toques</button><button type="button">Força</button><button type="button">Ponte</button></div>
+    <div class="ac-card">
+      <div class="ac-topo"><span class="pls"><span class="pl ligado" style="--cor:#7eb8d4" data-dica="Toques do controle Starlight Blue"><svg class="ic " viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9 h12 a4 4 0 0 1 4 4 v1 a3 3 0 0 1 -5 2 l-2 -2 h-6 l-2 2 a3 3 0 0 1 -5 -2 v-1 a4 4 0 0 1 4 -4z"/><line x1="7" y1="12" x2="7" y2="15"/><line x1="5.5" y1="13.5" x2="8.5" y2="13.5"/></svg></span><span class="pl" style="--cor:#e8e8ef" data-dica="Toques do controle White"><svg class="ic " viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9 h12 a4 4 0 0 1 4 4 v1 a3 3 0 0 1 -5 2 l-2 -2 h-6 l-2 2 a3 3 0 0 1 -5 -2 v-1 a4 4 0 0 1 4 -4z"/><line x1="7" y1="12" x2="7" y2="15"/><line x1="5.5" y1="13.5" x2="8.5" y2="13.5"/></svg></span><span class="pl" style="--cor:#ff6b6b" data-dica="Toques do controle Cosmic Red"><svg class="ic " viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9 h12 a4 4 0 0 1 4 4 v1 a3 3 0 0 1 -5 2 l-2 -2 h-6 l-2 2 a3 3 0 0 1 -5 -2 v-1 a4 4 0 0 1 4 -4z"/><line x1="7" y1="12" x2="7" y2="15"/><line x1="5.5" y1="13.5" x2="8.5" y2="13.5"/></svg></span><span class="pl" style="--cor:#a98bf0" data-dica="Toques do controle Galactic Purple"><svg class="ic " viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9 h12 a4 4 0 0 1 4 4 v1 a3 3 0 0 1 -5 2 l-2 -2 h-6 l-2 2 a3 3 0 0 1 -5 -2 v-1 a4 4 0 0 1 4 -4z"/><line x1="7" y1="12" x2="7" y2="15"/><line x1="5.5" y1="13.5" x2="8.5" y2="13.5"/></svg></span></span><span class="cap" data-dica="Capacidade nova da porta: veja a legenda 6">6</span>
+        <input class="ext-desl" type="range" value="60" data-dica="Força dos toques: 60%"><span class="nj-tog ligado" data-dica="Liga os toques por botão" role="switch" aria-checked="true"><span class="pino"></span></span></div>
+      <div class="pad-cx"><svg class="pad" viewBox="0 0 520 190" width="520" height="190" fill="none"><path d="M130 44 h260 c40 0 66 26 76 62 l20 52 c8 24 -18 34 -36 18 l-40 -38 h-300 l-40 38 c-18 16 -44 6 -36 -18 l20 -52 c10 -36 36 -62 76 -62z"/></svg><button type="button" class="tq solto" style="left:14px;top:0px" data-padrao="Subida" data-dica="L2: Subida. Clique para trocar"><b>L2</b><svg class="onda" width="34" height="13" viewBox="0 0 34 13"><rect x="2.0" y="10.2" width="4.0" height="2.8" rx="1"/><rect x="7.0" y="7.5" width="4.0" height="5.5" rx="1"/><rect x="12.0" y="4.8" width="4.0" height="8.2" rx="1"/><rect x="17.0" y="2.0" width="7.3" height="11.0" rx="1"/></svg></button><button type="button" class="tq solto" style="left:72px;top:0px" data-padrao="Curto" data-dica="L1: Curto. Clique para trocar"><b>L1</b><svg class="onda" width="34" height="13" viewBox="0 0 34 13"><rect x="2.0" y="6.4" width="4.0" height="6.6" rx="1"/></svg></button><button type="button" class="tq solto" style="left:394px;top:0px" data-padrao="Curto" data-dica="R1: Curto. Clique para trocar"><b>R1</b><svg class="onda" width="34" height="13" viewBox="0 0 34 13"><rect x="2.0" y="6.4" width="4.0" height="6.6" rx="1"/></svg></button><button type="button" class="tq solto" style="left:452px;top:0px" data-padrao="Longo" data-dica="R2: Longo. Clique para trocar"><b>R2</b><svg class="onda" width="34" height="13" viewBox="0 0 34 13"><rect x="2.0" y="2.0" width="28.2" height="11.0" rx="1"/></svg></button><button type="button" class="tq solto" style="left:58px;top:52px" data-padrao="Curto" data-dica="↑: Curto. Clique para trocar"><b>↑</b><svg class="onda" width="34" height="13" viewBox="0 0 34 13"><rect x="2.0" y="6.4" width="4.0" height="6.6" rx="1"/></svg></button><button type="button" class="tq solto" style="left:2px;top:92px" data-padrao="Curto" data-dica="←: Curto. Clique para trocar"><b>←</b><svg class="onda" width="34" height="13" viewBox="0 0 34 13"><rect x="2.0" y="6.4" width="4.0" height="6.6" rx="1"/></svg></button><button type="button" class="tq solto" style="left:114px;top:92px" data-padrao="Curto" data-dica="→: Curto. Clique para trocar"><b>→</b><svg class="onda" width="34" height="13" viewBox="0 0 34 13"><rect x="2.0" y="6.4" width="4.0" height="6.6" rx="1"/></svg></button><button type="button" class="tq solto" style="left:58px;top:132px" data-padrao="Curto" data-dica="↓: Curto. Clique para trocar"><b>↓</b><svg class="onda" width="34" height="13" viewBox="0 0 34 13"><rect x="2.0" y="6.4" width="4.0" height="6.6" rx="1"/></svg></button><button type="button" class="tq solto" style="left:408px;top:52px" data-padrao="Onda" data-dica="△: Onda. Clique para trocar"><b class="gl">△</b><svg class="onda" width="34" height="13" viewBox="0 0 34 13"><rect x="2.0" y="9.7" width="4.0" height="3.3" rx="1"/><rect x="7.0" y="6.4" width="4.0" height="6.6" rx="1"/><rect x="12.0" y="2.0" width="5.7" height="11.0" rx="1"/><rect x="18.7" y="6.4" width="4.0" height="6.6" rx="1"/><rect x="23.7" y="9.7" width="4.0" height="3.3" rx="1"/></svg></button><button type="button" class="tq solto" style="left:352px;top:92px" data-padrao="Pulso" data-dica="□: Pulso. Clique para trocar"><b class="gl">□</b><svg class="onda" width="34" height="13" viewBox="0 0 34 13"><rect x="2.0" y="2.0" width="1.9" height="11.0" rx="1"/><rect x="7.4" y="5.3" width="1.9" height="7.7" rx="1"/><rect x="12.8" y="8.6" width="1.9" height="4.4" rx="1"/></svg></button><button type="button" class="tq solto" style="left:464px;top:92px" data-padrao="Duplo" data-dica="○: Duplo. Clique para trocar"><b class="gl">○</b><svg class="onda" width="34" height="13" viewBox="0 0 34 13"><rect x="2.0" y="2.0" width="4.0" height="11.0" rx="1"/><rect x="11.2" y="2.0" width="4.0" height="11.0" rx="1"/></svg></button><button type="button" class="tq solto" style="left:408px;top:132px" data-padrao="Toque" data-dica="✕: Toque. Clique para trocar"><b class="gl">✕</b><svg class="onda" width="34" height="13" viewBox="0 0 34 13"><rect x="2.0" y="2.0" width="7.3" height="11.0" rx="1"/></svg></button><button type="button" class="tq solto" style="left:150px;top:46px" data-padrao="Nenhum" data-dica="Create: Nenhum. Clique para trocar"><b>Create</b><svg class="onda" width="34" height="13" viewBox="0 0 34 13"><line x1="2" y1="12" x2="32" y2="12" class="onda-zero"/></svg></button><button type="button" class="tq solto" style="left:316px;top:46px" data-padrao="Nenhum" data-dica="Options: Nenhum. Clique para trocar"><b>Options</b><svg class="onda" width="34" height="13" viewBox="0 0 34 13"><line x1="2" y1="12" x2="32" y2="12" class="onda-zero"/></svg></button><button type="button" class="tq solto" style="left:176px;top:96px" data-padrao="Toque" data-dica="◧: Toque. Clique para trocar"><b>◧</b><svg class="onda" width="34" height="13" viewBox="0 0 34 13"><rect x="2.0" y="2.0" width="7.3" height="11.0" rx="1"/></svg></button><button type="button" class="tq solto" style="left:233px;top:96px" data-padrao="Duplo" data-dica="▣: Duplo. Clique para trocar"><b>▣</b><svg class="onda" width="34" height="13" viewBox="0 0 34 13"><rect x="2.0" y="2.0" width="4.0" height="11.0" rx="1"/><rect x="11.2" y="2.0" width="4.0" height="11.0" rx="1"/></svg></button><button type="button" class="tq solto" style="left:290px;top:96px" data-padrao="Toque" data-dica="◨: Toque. Clique para trocar"><b>◨</b><svg class="onda" width="34" height="13" viewBox="0 0 34 13"><rect x="2.0" y="2.0" width="7.3" height="11.0" rx="1"/></svg></button><button type="button" class="tq solto" style="left:162px;top:150px" data-padrao="Triplo" data-dica="L3: Triplo. Clique para trocar"><b>L3</b><svg class="onda" width="34" height="13" viewBox="0 0 34 13"><rect x="2.0" y="2.0" width="3.2" height="11.0" rx="1"/><rect x="9.5" y="2.0" width="3.2" height="11.0" rx="1"/><rect x="17.0" y="2.0" width="3.2" height="11.0" rx="1"/></svg></button><button type="button" class="tq solto" style="left:304px;top:150px" data-padrao="Triplo" data-dica="R3: Triplo. Clique para trocar"><b>R3</b><svg class="onda" width="34" height="13" viewBox="0 0 34 13"><rect x="2.0" y="2.0" width="3.2" height="11.0" rx="1"/><rect x="9.5" y="2.0" width="3.2" height="11.0" rx="1"/><rect x="17.0" y="2.0" width="3.2" height="11.0" rx="1"/></svg></button></div><span class="cap" data-dica="Capacidade nova da porta: veja a legenda 5">5</span>
+    </div>
+    <div class="ac-card">
+      <div class="ac-topo"><span class="ac-tit">Aparelhos</span><span class="cap" data-dica="Capacidade nova da porta: veja a legenda 2">2</span></div>
+      <div class="ap"><svg class="ic c-acessorio" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M3 9 q-1.5 3 0 6"/><path d="M21 9 q1.5 3 0 6"/></svg><span class="ap-nome">Lush 3</span><span class="bat" data-dica="Bateria 80%"><i style="width:80%"></i></span><span class="vivo" style="--f:0.7" data-dica="Força agora: 70%"><svg viewBox="0 0 120 18" preserveAspectRatio="none"><path d="M0 9 Q7.5 3.4 15 9 T30 9 T45 9 T60 9 T75 9 T90 9 T105 9 T120 9"/></svg></span><span class="cap" data-dica="Capacidade nova da porta: veja a legenda 1">1</span></div>
+    </div>
+  </div>
+  <div class="tn-rod"><a class="btn">Cancelar</a><a class="btn roxo">Guardar</a></div>
+</div></section>
+    <section class="arranjo" data-arranjo="C"><div class="arr-rot"><span class="letra">C</span>Agora e ajustes</div>
+<div class="tn-cx">
+  <div class="tn-topo"><span class="tn-tit">Configurar · Lovense</span><a class="btn mini vermelho parar" data-dica="Para o brinquedo, o telefone e os toques na hora">Parar tudo</a><span class="cap" data-dica="Capacidade nova da porta: veja a legenda 8">8</span><a class="tn-x" data-dica="Fechar">✕</a></div>
+  <div class="tn-corpo">
+    <div class="duas c-cols">
+      <div class="ac-card vivo-col">
+        <div class="ac-topo"><span class="ac-tit">Agora</span><span class="cap" data-dica="Capacidade nova da porta: veja a legenda 7">7</span></div>
+        <div class="cx-linha" data-dica="O app do telefone, na rede"><svg class="ic c-amarelo" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><line x1="10" y1="18.5" x2="14" y2="18.5"/></svg><span class="cx-rot">Telefone</span><span class="est est-amarelo"><i></i>Procurando</span><span class="nj-tog ligado" data-dica="Mandar a cena ao app do telefone" role="switch" aria-checked="true"><span class="pino"></span></span></div>
+        <div class="cx-linha" data-dica="O adaptador da Lovense, no cabo"><svg class="ic c-verde" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="11" height="8" rx="1.5"/><rect x="15" y="9.5" width="5" height="5" rx=".6"/><line x1="17" y1="11" x2="17" y2="13"/><line x1="7" y1="12" x2="12" y2="12"/></svg><span class="cx-rot">USB</span><span class="est est-verde"><i></i>Ligado</span></div>
+        <div class="cx-linha" data-dica="Bluetooth do computador: escolha no servidor"><svg class="ic c-mudo" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><polyline points="7,7 17,16 12,20 12,4 17,8 7,17"/></svg><span class="cx-rot">Bluetooth</span><span class="est est-mudo"><i></i>Desligado</span></div>
+        <div class="cx-linha" data-dica="Intiface Central: escolha no servidor"><svg class="ic c-mudo" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><line x1="3" y1="8" x2="21" y2="8"/><circle cx="12" cy="13" r="2.4"/><line x1="8" y1="21" x2="16" y2="21"/></svg><span class="cx-rot">Central</span><span class="est est-mudo"><i></i>Desligado</span></div>
+        <div class="sep"></div>
+        <div class="ap"><svg class="ic c-acessorio" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M3 9 q-1.5 3 0 6"/><path d="M21 9 q1.5 3 0 6"/></svg><span class="ap-nome">Lush 3</span><span class="bat" data-dica="Bateria 80%"><i style="width:80%"></i></span><span class="vivo" style="--f:0.7" data-dica="Força agora: 70%"><svg viewBox="0 0 120 18" preserveAspectRatio="none"><path d="M0 9 Q7.5 3.4 15 9 T30 9 T45 9 T60 9 T75 9 T90 9 T105 9 T120 9"/></svg></span><span class="cap" data-dica="Capacidade nova da porta: veja a legenda 1">1</span></div>
+        <div class="ap"><svg class="ic c-acessorio" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M3 9 q-1.5 3 0 6"/><path d="M21 9 q1.5 3 0 6"/></svg><span class="ap-nome">Edge 2</span><span class="bat" data-dica="Bateria 45%"><i style="width:45%"></i></span><span class="vivo" style="--f:0.3" data-dica="Força agora: 30%"><svg viewBox="0 0 120 18" preserveAspectRatio="none"><path d="M0 9 Q7.5 6.6 15 9 T30 9 T45 9 T60 9 T75 9 T90 9 T105 9 T120 9"/></svg></span><span class="cap" data-dica="Capacidade nova da porta: veja a legenda 1">1</span></div>
+      </div>
+      <div class="ac-card">
+        <div class="abas"><button type="button">Servidor</button><button type="button" class="ativo">Toques</button><button type="button">Força</button><button type="button">Ponte</button></div>
+        <div class="ac-topo"><span class="pls"><span class="pl ligado" style="--cor:#7eb8d4" data-dica="Toques do controle Starlight Blue"><svg class="ic " viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9 h12 a4 4 0 0 1 4 4 v1 a3 3 0 0 1 -5 2 l-2 -2 h-6 l-2 2 a3 3 0 0 1 -5 -2 v-1 a4 4 0 0 1 4 -4z"/><line x1="7" y1="12" x2="7" y2="15"/><line x1="5.5" y1="13.5" x2="8.5" y2="13.5"/></svg></span><span class="pl" style="--cor:#e8e8ef" data-dica="Toques do controle White"><svg class="ic " viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9 h12 a4 4 0 0 1 4 4 v1 a3 3 0 0 1 -5 2 l-2 -2 h-6 l-2 2 a3 3 0 0 1 -5 -2 v-1 a4 4 0 0 1 4 -4z"/><line x1="7" y1="12" x2="7" y2="15"/><line x1="5.5" y1="13.5" x2="8.5" y2="13.5"/></svg></span><span class="pl" style="--cor:#ff6b6b" data-dica="Toques do controle Cosmic Red"><svg class="ic " viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9 h12 a4 4 0 0 1 4 4 v1 a3 3 0 0 1 -5 2 l-2 -2 h-6 l-2 2 a3 3 0 0 1 -5 -2 v-1 a4 4 0 0 1 4 -4z"/><line x1="7" y1="12" x2="7" y2="15"/><line x1="5.5" y1="13.5" x2="8.5" y2="13.5"/></svg></span><span class="pl" style="--cor:#a98bf0" data-dica="Toques do controle Galactic Purple"><svg class="ic " viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9 h12 a4 4 0 0 1 4 4 v1 a3 3 0 0 1 -5 2 l-2 -2 h-6 l-2 2 a3 3 0 0 1 -5 -2 v-1 a4 4 0 0 1 4 -4z"/><line x1="7" y1="12" x2="7" y2="15"/><line x1="5.5" y1="13.5" x2="8.5" y2="13.5"/></svg></span></span><span class="cap" data-dica="Capacidade nova da porta: veja a legenda 6">6</span><input class="ext-desl" type="range" value="60" data-dica="Força dos toques: 60%"><span class="nj-tog ligado" data-dica="Liga os toques por botão" role="switch" aria-checked="true"><span class="pino"></span></span></div>
+        <div class="tq-lista"><div class="tql"><b class="gl">✕</b><svg class="onda" width="52" height="14" viewBox="0 0 52 14"><rect x="2.0" y="2.0" width="12.3" height="12.0" rx="1"/></svg><span class="ext-sel" data-dica="O padrão do ✕">Toque</span></div><div class="tql"><b class="gl">○</b><svg class="onda" width="52" height="14" viewBox="0 0 52 14"><rect x="2.0" y="2.0" width="7.0" height="12.0" rx="1"/><rect x="16.7" y="2.0" width="7.0" height="12.0" rx="1"/></svg><span class="ext-sel" data-dica="O padrão do ○">Duplo</span></div><div class="tql"><b class="gl">□</b><svg class="onda" width="52" height="14" viewBox="0 0 52 14"><rect x="2.0" y="2.0" width="3.7" height="12.0" rx="1"/><rect x="10.7" y="5.6" width="3.7" height="8.4" rx="1"/><rect x="19.3" y="9.2" width="3.7" height="4.8" rx="1"/></svg><span class="ext-sel" data-dica="O padrão do □">Pulso</span></div><div class="tql"><b class="gl">△</b><svg class="onda" width="52" height="14" viewBox="0 0 52 14"><rect x="2.0" y="10.4" width="7.0" height="3.6" rx="1"/><rect x="10.0" y="6.8" width="7.0" height="7.2" rx="1"/><rect x="18.0" y="2.0" width="9.7" height="12.0" rx="1"/><rect x="28.7" y="6.8" width="7.0" height="7.2" rx="1"/><rect x="36.7" y="10.4" width="7.0" height="3.6" rx="1"/></svg><span class="ext-sel" data-dica="O padrão do △">Onda</span></div><div class="tql"><b>L1</b><svg class="onda" width="52" height="14" viewBox="0 0 52 14"><rect x="2.0" y="6.8" width="7.0" height="7.2" rx="1"/></svg><span class="ext-sel" data-dica="O padrão do L1">Curto</span></div><div class="tql"><b>R1</b><svg class="onda" width="52" height="14" viewBox="0 0 52 14"><rect x="2.0" y="6.8" width="7.0" height="7.2" rx="1"/></svg><span class="ext-sel" data-dica="O padrão do R1">Curto</span></div><div class="tql"><b>L2</b><svg class="onda" width="52" height="14" viewBox="0 0 52 14"><rect x="2.0" y="11.0" width="7.0" height="3.0" rx="1"/><rect x="10.0" y="8.0" width="7.0" height="6.0" rx="1"/><rect x="18.0" y="5.0" width="7.0" height="9.0" rx="1"/><rect x="26.0" y="2.0" width="12.3" height="12.0" rx="1"/></svg><span class="ext-sel" data-dica="O padrão do L2">Subida</span></div><div class="tql"><b>R2</b><svg class="onda" width="52" height="14" viewBox="0 0 52 14"><rect x="2.0" y="2.0" width="45.7" height="12.0" rx="1"/></svg><span class="ext-sel" data-dica="O padrão do R2">Longo</span></div><div class="tql"><b>L3</b><svg class="onda" width="52" height="14" viewBox="0 0 52 14"><rect x="2.0" y="2.0" width="5.7" height="12.0" rx="1"/><rect x="14.0" y="2.0" width="5.7" height="12.0" rx="1"/><rect x="26.0" y="2.0" width="5.7" height="12.0" rx="1"/></svg><span class="ext-sel" data-dica="O padrão do L3">Triplo</span></div><div class="tql"><b>R3</b><svg class="onda" width="52" height="14" viewBox="0 0 52 14"><rect x="2.0" y="2.0" width="5.7" height="12.0" rx="1"/><rect x="14.0" y="2.0" width="5.7" height="12.0" rx="1"/><rect x="26.0" y="2.0" width="5.7" height="12.0" rx="1"/></svg><span class="ext-sel" data-dica="O padrão do R3">Triplo</span></div><div class="tql"><b>↑</b><svg class="onda" width="52" height="14" viewBox="0 0 52 14"><rect x="2.0" y="6.8" width="7.0" height="7.2" rx="1"/></svg><span class="ext-sel" data-dica="O padrão do ↑">Curto</span></div><div class="tql"><b>↓</b><svg class="onda" width="52" height="14" viewBox="0 0 52 14"><rect x="2.0" y="6.8" width="7.0" height="7.2" rx="1"/></svg><span class="ext-sel" data-dica="O padrão do ↓">Curto</span></div></div><span class="cap" data-dica="Capacidade nova da porta: veja a legenda 5">5</span>
+      </div>
+    </div>
+  </div>
+  <div class="tn-rod"><a class="btn">Cancelar</a><a class="btn roxo">Guardar</a></div>
+</div></section>
+  </div>
+  <div class="inferior">
+
+<div class="cx-aba">
+  <div class="cx-tit">Na aba Conexões<span class="cap" data-dica="Capacidade nova da porta: veja a legenda 9">9</span></div>
+  <div class="cx-grade">
+    <div class="ac-card"><div class="ac-topo"><svg class="ic c-verde" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="11" height="8" rx="1.5"/><rect x="15" y="9.5" width="5" height="5" rx=".6"/><line x1="17" y1="11" x2="17" y2="13"/><line x1="7" y1="12" x2="12" y2="12"/></svg><span class="ac-tit">Adaptador USB</span><span class="est est-verde"><i></i>Ligado</span></div>
+      <div class="via" data-dica="Quem fala com ele: a extensão Lovense">via Lovense</div></div>
+    <div class="ac-card"><div class="ac-topo"><svg class="ic c-acessorio" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="3" width="10" height="18" rx="5"/><path d="M3 9 q-1.5 3 0 6"/><path d="M21 9 q1.5 3 0 6"/></svg><span class="ac-tit">Lush 3</span><span class="est est-verde"><i></i>Ligado</span></div>
+      <div class="via"><span class="bat" data-dica="Bateria 80%"><i style="width:80%"></i></span>via Lovense</div></div>
+    <div class="ac-card"><div class="ac-topo"><svg class="ic c-amarelo" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><line x1="10" y1="18.5" x2="14" y2="18.5"/></svg><span class="ac-tit">Telefone</span><span class="est est-amarelo"><i></i>Procurando</span></div>
+      <div class="via">via Lovense</div></div>
+  </div>
+</div>
+    <div class="legenda"><span class="t">Capacidades genéricas da porta (o campo proposto)</span><div><span class="cap">1</span><code>acessorios.estado.aparelhos[]: {nome, tipo, estado, bateria, forca}; hoje, só o nome</code></div><div><span class="cap">2</span><code>permissão publicar:acessorios.estado, sem ler:acessorios.gesto</code></div><div><span class="cap">3</span><code>acessorios.estado.conexoes[]: {id, tipo, transporte, estado, motivo}</code></div><div><span class="cap">4</span><code>opcoes[].tipo: "endereco": IP e porta num campo só</code></div><div><span class="cap">5</span><code>opcoes[].tipo: "por_botao", com formas: {padrao: [[força, s], …]}</code></div><div><span class="cap">6</span><code>o tópico botoes de todo controle: button.down {uniq, jogador, botao}</code></div><div><span class="cap">7</span><code>agora: ["conexoes", "aparelhos"]: a coluna ao vivo da janela</code></div><div><span class="cap">8</span><code>parar_tudo: true chega como extensao.parar, sem ler:acessorios.gesto</code></div><div><span class="cap">9</span><code>a aba Conexões lista conexoes[] e aparelhos[] de toda extensão ligada</code></div></div>
+  </div>
+</div>
+<script>
+document.querySelectorAll('.nj-tog').forEach(t => t.addEventListener('click', () => {
+  t.classList.toggle('ligado'); t.setAttribute('aria-checked', t.classList.contains('ligado'));
+}));
+document.querySelectorAll('.seg, .abas').forEach(g => g.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  g.querySelectorAll('button').forEach(x => x.classList.toggle('ativo', x === b));
+}));
+document.querySelectorAll('.pl').forEach(p => p.addEventListener('click', () => p.classList.toggle('ligado')));
+document.querySelectorAll('.tq').forEach(t => t.addEventListener('click', () => {
+  t.classList.add('tocando'); setTimeout(() => t.classList.remove('tocando'), 700);
+}));
+</script>
+</body>
+</html>
