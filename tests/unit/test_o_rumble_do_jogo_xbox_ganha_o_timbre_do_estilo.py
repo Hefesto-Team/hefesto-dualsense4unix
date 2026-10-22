@@ -240,6 +240,15 @@ def test_cada_classe_toca_o_timbre_do_estilo() -> None:
     assert formas.timbre_do_rumble("luta", formas.IMPACTO, classes.CONTINUO_GRAVE) is None
 
 
+def test_o_grao_do_timbre_nao_muda_o_grao_da_simulacao() -> None:
+    """O Grão contínuo da Simulação segue com os grãos de 6 ms: o do timbre tem nome próprio."""
+    formas._graos_prontos.cache_clear()
+    try:
+        assert {len(g) for g in formas._graos_prontos(formas.TAXA)} == {formas.TAXA * 6 // 1000}
+    finally:
+        formas._graos_prontos.cache_clear()
+
+
 # --- os quatro controles, cada um com a forma dele ---------------------------------------------
 
 

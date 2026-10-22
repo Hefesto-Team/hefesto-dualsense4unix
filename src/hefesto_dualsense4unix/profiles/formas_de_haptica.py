@@ -435,9 +435,9 @@ SEM_GRAO = frozenset({"luta", "plataforma", "ritmo", "souls", "esportes"})  # (n
 CORPO_HZ = 40
 PESO_DA_HARMONICA = 0.33
 #: O Grão do contínuo fino: grãos de 4 ms a 40 por segundo somados ao seno do fraco.
-GRAOS_POR_SEGUNDO = 40  # (noqa-acento): constante
-GRAO_MS = 4  # (noqa-acento): constante
-GANHO_DO_GRAO = 0.6  # (noqa-acento): constante
+GRAOS_DO_TIMBRE_POR_S = 40  # (noqa-acento): constante
+GRAO_DO_TIMBRE_MS = 4  # (noqa-acento): constante
+GANHO_DO_GRAO_DO_TIMBRE = 0.6  # (noqa-acento): constante
 #: A frequência de cada canal no seno de hoje: o forte (canal 3) e o fraco (canal 4).
 HZ_DO_FORTE = 60
 HZ_DO_FRACO = 160
@@ -535,14 +535,14 @@ def ciclos_do_timbre(
             [b + PESO_DA_HARMONICA * h for b, h in zip(base, harmonica, strict=True)]
         )
     elif tipo == "grao":  # (noqa-acento): chave
-        a_cada = max(1, taxa // GRAOS_POR_SEGUNDO)
-        largura = max(2, taxa * GRAO_MS // 1000)
+        a_cada = max(1, taxa // GRAOS_DO_TIMBRE_POR_S)
+        largura = max(2, taxa * GRAO_DO_TIMBRE_MS // 1000)
         grao = [  # (noqa-acento): variável
             math.sin(math.pi * (k % a_cada) / largura) if k % a_cada < largura else 0.0
             for k in range(ciclo)
         ]
         fraco = [
-            max(-1.0, min(1.0, s * (1.0 + GANHO_DO_GRAO * g)))
+            max(-1.0, min(1.0, s * (1.0 + GANHO_DO_GRAO_DO_TIMBRE * g)))
             for s, g in zip(fraco, grao, strict=True)
         ]
     elif tipo == "periodico":
@@ -566,10 +566,10 @@ __all__ = [
     "FORMAS",
     "FORMAS_LONGAS",
     "GANHO_DO_CORPO",
-    "GANHO_DO_GRAO",
+    "GANHO_DO_GRAO_DO_TIMBRE",
     "GRAO",
-    "GRAOS_POR_SEGUNDO",
-    "GRAO_MS",
+    "GRAOS_DO_TIMBRE_POR_S",
+    "GRAO_DO_TIMBRE_MS",
     "GUARDA",
     "HZ_DO_FORTE",
     "HZ_DO_FRACO",
