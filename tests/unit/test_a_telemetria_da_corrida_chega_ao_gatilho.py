@@ -10,8 +10,8 @@ MORDIDAS: tirar o portão de parado de ``em_movimento`` reprova
 ``test_o_mesmo_pacote_com_o_carro_parado_nao_da_nada``; trocar o ``ENDERECO`` da porta por
 ``0.0.0.0`` reprova ``test_a_porta_so_abre_no_localhost_e_so_com_a_corrida_ou_a_simulacao``; tirar o
 teto de subidas de ``LuzDaRotacao.andar`` reprova
-``test_a_luz_nao_passa_de_tres_subidas_por_segundo_com_a_rotacao_no_corte``; tirar o ``decidir``
-do gatilho do atuador reprova ``test_o_jogo_que_escreve_o_gatilho_decide_naquele_controle``.
+``test_a_arrancada_ate_o_corte_sobe_tres_degraus_no_primeiro_segundo``; tirar o ``decidir`` do
+gatilho do atuador reprova ``test_o_jogo_que_escreve_o_gatilho_decide_naquele_controle``.
 """
 from __future__ import annotations
 
@@ -240,6 +240,21 @@ def test_a_luz_nao_passa_de_tres_subidas_por_segundo_com_a_rotacao_no_corte() ->
     for inicio in subidas:
         assert sum(1 for t in subidas if inicio <= t < inicio + 1.0) <= tv.TETO_DA_LUZ_POR_S
     assert tj.CORES_DA_ROTACAO[-1] in cores, "no corte, a cor do corte aparece"
+
+
+def test_a_arrancada_ate_o_corte_sobe_tres_degraus_no_primeiro_segundo() -> None:
+    tel = tj.TelemetriaDoJogo(porta=0)
+    cores: list[tuple[int, int, int]] = []
+    for n in range(int(2.0 * 60)):  # do giro lento ao corte em 0,2 s, e segura no corte
+        agora = n / 60.0
+        rpm = 800.0 + min(1.0, agora / 0.2) * 7200.0
+        tel.alimentar(_pacote(rpm=rpm, velocidade=10.0), agora)
+        cor = tel.cor_da_rotacao(agora)
+        assert cor is not None
+        cores.append(cor)
+    no_primeiro = [i for i in _subidas(cores) if i < 60]
+    assert len(no_primeiro) == tv.TETO_DA_LUZ_POR_S, "quatro degraus, só três subidas no segundo"
+    assert cores[-1] == tj.CORES_DA_ROTACAO[-1], "no segundo seguinte, a cor do corte chega"
 
 
 def test_a_luz_da_rotacao_vai_do_verde_ao_vermelho_e_some_sem_corrida() -> None:
