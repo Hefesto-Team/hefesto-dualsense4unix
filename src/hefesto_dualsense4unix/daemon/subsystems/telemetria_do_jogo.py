@@ -261,7 +261,8 @@ class TelemetriaDoJogo:
         self.ultimo: EstadoDaCorrida | None = None
         self.recebido_em = float("-inf")
         self._toques = LeitorDosToques()
-        self._a_tocar: list[ToqueDaCorrida] = []
+        #: os toques à espera do motor do tato, com o instante do pacote que os trouxe
+        self._a_tocar: list[tuple[float, ToqueDaCorrida]] = []
         self.luz = LuzDaRotacao()
         self.contadores: dict[str, int] = {"pacotes": 0, "ignorados": 0, "toques": 0}
         #: os tamanhos estranhos já ditos no diário (cada um uma vez) e se o formato já foi dito
@@ -324,9 +325,11 @@ class TelemetriaDoJogo:
             self._formato_dito = True
             logger.info("telemetria_primeiro_pacote", formato=estado.formato, tamanho=len(dados))
         self.ultimo, self.recebido_em = estado, agora
+        # o toque que o motor não levou a tempo (a receita desligada) caduca: não sai em rajada
+        self._a_tocar = [(em, t) for em, t in self._a_tocar if agora - em <= VALIDADE_DO_PACOTE_S]
         toque = self._toques.ver(estado, agora)
         if toque is not None:
-            self._a_tocar.append(toque)
+            self._a_tocar.append((agora, toque))
         return True
 
     def receber(self, agora: float) -> int:
@@ -370,7 +373,7 @@ class TelemetriaDoJogo:
         toques, self._a_tocar = self._a_tocar, []
         if self.vivo(agora) is None:
             return []
-        return toques
+        return [toque for em, toque in toques if agora - em <= VALIDADE_DO_PACOTE_S]
 
     def cor_da_rotacao(self, agora: float) -> RGB | None:
         """A cor da barra pela rotação; ``None`` sem corrida viva ou sem o giro máximo do motor."""
@@ -404,8 +407,8 @@ class AtuadorDaTelemetria:
     """O pedido da corrida nos gatilhos e os toques no corpo, no relógio do motor do tato.
 
     Escreve o lado só enquanto a corrida pede, e só quando o efeito muda; o jogo que escreve o
-    gatilho ou a háptica cala este canal; a Bateria longa e o momento da imersão que a pessoa
-    escolheu também ficam (o ``cede``). Cada escrita passa pelo teto do motor.
+    gatilho ou a háptica cala este canal, e a Bateria longa também. O momento da imersão cede o
+    lado à corrida (``quer_o_lado``) e volta depois. Cada escrita passa pelo teto do motor.
     """
 
     canal = CANAL_DA_TELEMETRIA
@@ -442,8 +445,14 @@ class AtuadorDaTelemetria:
     def segura(self, uniq: str) -> list[str]:
         return [lado for lado in _LADO_DO_BACKEND if (uniq, lado) in self._escrito]
 
-    def quer_o_lado(self, lado: str, agora: float) -> bool:
-        """A corrida pede este lado agora (o momento da imersão cede a ela)."""
+    def quer_o_lado(self, uniq: str, lado: str, agora: float) -> bool:
+        """A corrida escreve este lado deste controle agora (o momento da imersão cede a ela).
+
+        A mesma conta do ``_gatilhos``: na Bateria longa a corrida não escreve, e o momento não
+        cede o lado a quem não vai escrevê-lo.
+        """
+        if self._na_economia(uniq) or self._cede(uniq, lado):
+            return False
         tel = self._fonte()
         return tel is not None and tel.pedido(agora).do_lado(lado) is not None
 

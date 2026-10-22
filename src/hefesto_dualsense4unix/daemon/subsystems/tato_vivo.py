@@ -2836,7 +2836,7 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
     )
 
     def a_corrida_quer(uniq: str, lado: str, agora: float) -> bool:
-        return corrida.quer_o_lado(lado, agora)
+        return corrida.quer_o_lado(uniq, lado, agora)
 
     def o_lado_tem_dono(uniq: str, lado: str) -> bool:
         # O momento da imersão, o gatilho do perfil que já vibra e a Bateria longa ficam.

@@ -288,20 +288,29 @@ def test_a_barra_de_cada_controle_ganha_a_cor_da_rotacao_no_brilho_do_perfil(
 
 
 class _Backend:
+    """O backend fiel ao de produção: o lado só se solta se ainda é o bloco dado."""
+
     def __init__(self) -> None:
         self.blocos: list[tuple[str, str, bytes]] = []
         self.sessoes: list[str] = []
         self.soltos: list[tuple[str, str]] = []
+        self.no_aparelho: dict[tuple[str, str], bytes] = {}
 
     def set_game_trigger_for(self, uniq: str, side: str, block: bytes) -> bool:
         self.blocos.append((uniq, side, bytes(block)))
+        self.no_aparelho[(uniq, side)] = bytes(block)
         return True
 
     def end_game_session_for(self, uniq: str) -> bool:
         self.sessoes.append(uniq)
+        for chave in [c for c in self.no_aparelho if c[0] == uniq]:
+            del self.no_aparelho[chave]
         return True
 
     def soltar_o_gatilho_do_jogo_for(self, uniq: str, side: str, block: bytes) -> bool:
+        if self.no_aparelho.get((uniq, side)) != bytes(block):
+            return False
+        del self.no_aparelho[(uniq, side)]
         self.soltos.append((uniq, side))
         return True
 
@@ -323,8 +332,8 @@ class _AltoFalante:
 
 
 class _Pad:
-    def __init__(self) -> None:
-        self.backend = "uinput"
+    def __init__(self, backend: str = "uinput") -> None:
+        self.backend = backend
         self.visto_ha_s: dict[str, float] = {}
         self.game_open = False
 
@@ -360,24 +369,27 @@ class _Mesa:
         self.daemon._last_state = SimpleNamespace(l2_raw=valor, r2_raw=0)
 
 
-def _mesa(monkeypatch: pytest.MonkeyPatch, *, estilo: str = "corrida") -> _Mesa:
+def _mesa(monkeypatch: pytest.MonkeyPatch, *, estilo: str = "corrida", backend: str = "uinput",
+          economia: set[str] | None = None) -> _Mesa:
+    """``backend``: ``uinput`` é o modo Xbox, ``uhid`` o DualSense; ``economia`` é mutável."""
+    na_economia = set() if economia is None else economia
     perfil = Profile.model_validate(
         {"name": "Corrida", "match": {"type": "any"}, "estilo": estilo, "triggers": AUTOMATICO})
     monkeypatch.setattr(loader, "perfil_em_disco", lambda _nome: perfil)
     monkeypatch.setattr(computador, "o_que_vale", lambda p: p)
     monkeypatch.setattr(tv, "_PELO_CARREGADOR", None)
     monkeypatch.setattr(tv, "_VISTA_LIDA", None)
-    monkeypatch.setattr(tv, "_controle_na_economia", lambda _u: False)
-    backend, alto_falante = _Backend(), _AltoFalante()
-    pads = {uniq: _Pad() for uniq in QUATRO}
+    monkeypatch.setattr(tv, "_controle_na_economia", lambda u: u in na_economia)
+    escritor, alto_falante = _Backend(), _AltoFalante()
+    pads = {uniq: _Pad(backend) for uniq in QUATRO}
     leitores = {uniq: _Leitor() for uniq in QUATRO[1:]}
     tel = tj.TelemetriaDoJogo(porta=0)
     daemon = SimpleNamespace(
         controller=SimpleNamespace(
             primary_uniq=P1,
-            set_game_trigger_for=backend.set_game_trigger_for,
-            end_game_session_for=backend.end_game_session_for,
-            soltar_o_gatilho_do_jogo_for=backend.soltar_o_gatilho_do_jogo_for),
+            set_game_trigger_for=escritor.set_game_trigger_for,
+            end_game_session_for=escritor.end_game_session_for,
+            soltar_o_gatilho_do_jogo_for=escritor.soltar_o_gatilho_do_jogo_for),
         _last_state=SimpleNamespace(l2_raw=0, r2_raw=0),
         _gamepad_device=pads[P1],
         _coop_manager=SimpleNamespace(_players={
@@ -389,7 +401,7 @@ def _mesa(monkeypatch: pytest.MonkeyPatch, *, estilo: str = "corrida") -> _Mesa:
     )
     motor = tv.TatoVivo(tv.atuadores_de_producao(daemon))
     daemon._tato_vivo = motor
-    mesa = _Mesa(daemon, backend, alto_falante, tel, tv.Passo(daemon, motor), pads,
+    mesa = _Mesa(daemon, escritor, alto_falante, tel, tv.Passo(daemon, motor), pads,
                  leitores=leitores)
     mesa.rodar(0.1)
     return mesa
@@ -398,10 +410,11 @@ def _mesa(monkeypatch: pytest.MonkeyPatch, *, estilo: str = "corrida") -> _Mesa:
 _ABS = tj.bloco_do_pedido(tj.EFEITO_ABS, tj.AMPLITUDE_DO_ABS)
 
 
+@pytest.mark.parametrize("modo", ["uinput", "uhid"])
 def test_os_quatro_controles_sentem_o_abs_e_a_volta_devolve_o_perfil(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, modo: str,
 ) -> None:
-    mesa = _mesa(monkeypatch)
+    mesa = _mesa(monkeypatch, backend=modo)
     mesa.rodar(1.0, _travando())
     for uniq in QUATRO:
         assert mesa.backend.de(uniq, "left") == [_ABS], uniq
@@ -462,3 +475,31 @@ def test_fora_da_corrida_e_da_simulacao_o_atuador_nao_escreve(
     mesa.tel.andar(mesa.t, tv.estilo_ativo(mesa.daemon))
     assert not mesa.tel.aberta
     assert math.isinf(mesa.tel.recebido_em)
+
+
+def test_o_toque_que_o_motor_nao_levou_a_tempo_caduca_e_nao_sai_em_rajada() -> None:
+    tel = tj.TelemetriaDoJogo(porta=0)
+    tel.alimentar(_pacote(velocidade=20.0, marcha=2), 0.0)
+    tel.alimentar(_pacote(velocidade=20.0, marcha=3), 0.02)
+    agora = 0.02
+    while agora < 2.0:  # a corrida segue viva e o motor não tirou o toque (a receita desligada)
+        agora += TIQUE
+        tel.alimentar(_pacote(velocidade=20.0, marcha=3), agora)
+    assert tel.tirar_os_toques(agora) == [], "a troca de marcha de dois segundos atrás não toca"
+    tel.alimentar(_pacote(velocidade=20.0, marcha=4), agora)
+    assert [t.tipo for t in tel.tirar_os_toques(agora)] == ["marcha"]
+
+
+def test_na_bateria_longa_o_momento_nao_cede_o_lado_a_corrida_que_nao_escreve(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    economia: set[str] = set()
+    mesa = _mesa(monkeypatch, economia=economia)
+    mesa.frear()
+    mesa.rodar(1.0, _pacote(velocidade=20.0, freio=255))
+    momento = tv._bloco_do_efeito(vibration(2, 3, 15))
+    assert mesa.backend.de(P1, "left") == [momento]
+    economia.add(P1)  # a Bateria longa liga no mesmo tique em que a roda trava
+    mesa.rodar(0.5, _travando())
+    assert _ABS not in mesa.backend.de(P1, "left"), "na Bateria longa a corrida não escreve"
+    assert P1 in mesa.backend.sessoes, "o momento devolve o lado, não o larga vibrando"
