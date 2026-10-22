@@ -1303,7 +1303,7 @@ ESTILO_DO_TRACO_VAZIO = ("display:flex;align-items:center;justify-content:center
 
 
 #: O EFEITO DA BARRA (A-ABA-ILUMINACAO-DO-TODO-01). A lista da coluna tem «Sem efeito» (a barra
-#: apagada), «Luz fixa» (a cor de sempre), as seis bases em grupos pelo que se vê (o desenho A de
+#: apagada), «Luz fixa» (a cor de sempre), as oito bases em grupos pelo que se vê (o desenho A de
 #: 15/10/2026, a escolha do usuário: «uma lista suspensa em cada escolha») e os efeitos que a pessoa
 #: criou.
 #: O valor de um efeito criado é o texto que o perfil guarda (`schema.escrever_o_efeito_da_luz`): o
@@ -1321,12 +1321,13 @@ PREFIXO_DA_BASE = "base:"
 SELETOR_DOS_EFEITOS = "#seus-efeitos"
 ROTULO_DA_BASE = {"respirar": "Respirar", "piscar": "Piscar",
                   "arco-iris": "Arco-íris",  # (noqa-acento) chave ASCII
-                  "batimento": "Batida", "chama": "Chama", "mare": "Maré"}
+                  "batimento": "Batida", "chama": "Chama", "mare": "Maré", "onda": "Onda",
+                  "relampago": "Relâmpago"}
 #: O ritmo com que cada base nasce na lista (o do desenho A): respirar 5 s, piscar 0,9 Hz, uma volta
 #: do arco-íris em 12 s, batida de 1 s, a chama troca de alvo a cada ~2 s, a Maré vai e volta em
 #: 8 s.
 RITMO_DA_BASE = {"respirar": 2, "piscar": 3, "arco-iris": 7,  # (noqa-acento) chave ASCII
-                 "batimento": 10, "chama": 5, "mare": 10}
+                 "batimento": 10, "chama": 5, "mare": 10, "onda": 5, "relampago": 5}
 DICA_SEM_EFEITO = "A barra fica apagada."
 DICA_LUZ_FIXA = "A cor do controle, parada."
 DICA_DO_EFEITO_CRIADO = "Um efeito que você montou."
@@ -1337,12 +1338,14 @@ DICA_DA_BASE = {
     "mare": "Vai e volta para uma cor vizinha.",
     "piscar": "Lampejos da cor, de borda suave.",
     "arco-iris": "As cores giram em cada controle.",  # (noqa-acento) identificador ASCII
+    "onda": "O brilho corre de um lado ao outro.",
+    "relampago": "Clarões curtos, de borda suave.",
 }
 #: Os grupos da lista, na ordem do desenho: o que a pessoa vê, não o nome técnico do efeito.
 GRUPOS_DA_LISTA = (
     ("Parado", (SEM_EFEITO, LUZ_FIXA)),
     ("Que respira", ("respirar", "batimento", "chama", "mare")),
-    ("Que se move", ("piscar", "arco-iris")),  # (noqa-acento) chave ASCII
+    ("Que se move", ("piscar", "arco-iris", "onda", "relampago")),  # (noqa-acento) chave ASCII
 )
 
 
@@ -2660,7 +2663,7 @@ def efeito_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
 
 @gesto("04-iluminacao.html", GESTO_DE_CRIAR_EFEITO, grava="guardar_meus_efeitos")
 def criar_efeito_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Guarda um efeito novo: a base (Respirar, Piscar ou Arco-íris), as cores, o ritmo e o nome.
+    """Guarda um efeito novo: a base (uma das cinco que se movem), as cores, o ritmo e o nome.
 
     Só a caixa de preferências da interface é gravada: nenhum perfil e nenhum aparelho. O efeito
     entra como chip em «Criar efeitos novos» e na lista «Efeito» de cada coluna.
@@ -2677,7 +2680,7 @@ def criar_efeito_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError("não consegui ler a área de criar efeitos. Nada foi guardado.")
     base = str(forma.get("base") or "").strip()
     if base not in BASES_DA_LUZ:
-        raise RuntimeError("Escolha como a luz se move: respirar, piscar ou arco-íris.")
+        raise RuntimeError("Escolha o jeito: respirar, piscar, arco-íris, onda ou relâmpago")
     cores = [c.strip().upper() for c in str(forma.get("cores") or "").split(",") if c.strip()]
     if not all(re.fullmatch(r"#[0-9A-F]{6}", c) for c in cores):
         raise RuntimeError("Alguma cor do efeito não é válida. Nada foi guardado.")

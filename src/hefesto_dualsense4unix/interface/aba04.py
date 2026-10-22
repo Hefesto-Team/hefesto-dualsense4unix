@@ -1276,7 +1276,7 @@ MIOLO = f'''
     <div class="quadro criar" id="criar-luz">
       <div class="criar-linha">
         <span class="quadro-titulo" data-dica="O que você criar entra na lista Efeito">Criar efeitos novos</span>
-        <span class="seg-criar" role="group" aria-label="Jeito">{_radios("base", [("respirar", "Respirar"), ("piscar", "Piscar"), ("arco-iris", "Arco-íris")])}</span>
+        <span class="seg-criar" role="group" aria-label="Jeito">{_radios("base", [("respirar", "Respirar"), ("piscar", "Piscar"), ("arco-iris", "Arco-íris"), ("onda", "Onda"), ("relampago", "Relâmpago")])}</span>
         <span class="g4-cores" aria-label="Cores">{"".join(_cor_do_efeito(h) for h in CORES_DE_PARTIDA)}<button type="button" class="g4-mais" aria-label="Mais uma cor" data-dica="Mais uma cor">+</button></span>
         <input type="hidden" data-linha="cores" value="{",".join(CORES_DE_PARTIDA)}">
         <label class="g4-vel" data-dica="Velocidade do efeito"><span>Ritmo</span><input type="range" min="{RITMO_MINIMO_DA_LUZ}" max="{RITMO_MAXIMO_DA_LUZ}" value="{RITMO_PADRAO_DA_LUZ}" data-linha="ritmo" aria-label="Ritmo do efeito"></label>

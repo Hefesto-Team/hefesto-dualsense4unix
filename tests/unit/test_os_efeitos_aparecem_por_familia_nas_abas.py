@@ -72,7 +72,7 @@ CHAVES_DAS_IMERSOES = (
     "energia-que-cresce", "motor-no-acelerador")
 HAPTICA_ANTIGA = ("do_estilo", "sem_efeito", "toque", "impacto", "estalo", "guarda", "aparo",
                   "som_no_corpo")
-LUZ_ANTIGA = ("respirar", "piscar", "arco-iris", "batimento", "chama", "mare")
+LUZ_ANTIGA = ("respirar", "piscar", "arco-iris", "batimento", "chama", "mare", "onda", "relampago")
 #: As chaves dos acionamentos que o perfil guarda (`trigger_specs`), cravadas: depois do
 #: `--publicar` a página publicada É o desenho, e comparar com ela deixaria de morder.
 CHAVES_DOS_ACIONAMENTOS = ("Off", "Resistance", "Weapon", "Bow", "Galloping", "Machine",
