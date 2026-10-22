@@ -2680,7 +2680,7 @@ def criar_efeito_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError("não consegui ler a área de criar efeitos. Nada foi guardado.")
     base = str(forma.get("base") or "").strip()
     if base not in BASES_DA_LUZ:
-        raise RuntimeError("Escolha o jeito: respirar, piscar, arco-íris, onda ou relâmpago.")
+        raise RuntimeError("Escolha como a luz se move: respirar, piscar, arco-íris, onda ou relâmpago.")  # noqa: E501
     cores = [c.strip().upper() for c in str(forma.get("cores") or "").split(",") if c.strip()]
     if not all(re.fullmatch(r"#[0-9A-F]{6}", c) for c in cores):
         raise RuntimeError("Alguma cor do efeito não é válida. Nada foi guardado.")
