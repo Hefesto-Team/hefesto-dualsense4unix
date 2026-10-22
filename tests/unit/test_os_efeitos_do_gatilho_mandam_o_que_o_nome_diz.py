@@ -44,7 +44,6 @@ from hefesto_dualsense4unix.core.trigger_effects import (
     build_from_name,
     custom,
 )
-from hefesto_dualsense4unix.profiles.trigger_presets import VIBRATION_POSITION_PRESETS
 
 RAIZ = Path(__file__).resolve().parents[2]
 MOCKUP_GATILHOS = RAIZ / "mockup" / "03-gatilhos.html"
@@ -222,7 +221,8 @@ def _efeito_com_os_padroes(nome: str) -> TriggerEffect:
 
 
 def _efeito_aninhado() -> TriggerEffect:
-    forcas = VIBRATION_POSITION_PRESETS["vibra_em_degraus"]
+    # A curva «Vibra em degraus», como a aba antiga a gravava no perfil.
+    forcas = [0, 8, 0, 8, 0, 8, 0, 8, 0, 8]
     return build_from_name("MultiPositionVibration", [[v] for v in forcas])
 
 

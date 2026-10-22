@@ -20,7 +20,6 @@ from hefesto_dualsense4unix.app.actions.config import secao_controles
 from hefesto_dualsense4unix.app.actions.config.secao_controles import (
     frase_da_capacidade_do_mic,
 )
-from hefesto_dualsense4unix.interface.dados_do_controle import DadosDoControle
 from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     HZ_AUDIO_COM_MIC,
     HZ_INPUT_COM_MIC,
@@ -32,21 +31,6 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
 UM = "aabbcc000001"
 DOIS = "aabbcc000002"
 OITO_BITDO = "e8473a000007"
-
-
-def _dados(**over: Any) -> DadosDoControle:
-    base: dict[str, Any] = dict(
-        chave=UM,
-        titulo="Jogador 1",
-        subtitulo="Sony · Bluetooth",
-        uniq=UM,
-        slot=1,
-        adotado=True,
-        no_cabo=False,
-        endereco=UM,
-    )
-    base.update(over)
-    return DadosDoControle(**base)
 
 
 def _assentar() -> None:

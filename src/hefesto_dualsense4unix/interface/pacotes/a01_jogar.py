@@ -598,7 +598,7 @@ def _html_dos_externos(ctx: Contexto) -> str:
     conta de `apagar_os_lugares_sem_dono` e recebe o alvo da fita; dar a mesma classe faria as duas
     coisas brigarem no mesmo pixel (o erro que o `marcador-principal` já pagou). **Estar no mesmo
     frame é escolha de DESENHO; ser assento é afirmação sobre o aparelho**, que esta função não faz.
-    Quem o distingue é a marca, como na GTK (`interface/dados_do_controle.py`): o assento diz *"Sony
+    Quem o distingue é a marca, como na GTK: o assento diz *"Sony
     · Player 1"*, o externo *"Controle 3 — 8BitDo"*, e a marca vem de
     ``external_controllers.brand_of`` por dentro de ``_format_external_title``.
     """

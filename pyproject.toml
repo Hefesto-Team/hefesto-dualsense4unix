@@ -190,7 +190,6 @@ module = [
     "hefesto_dualsense4unix.interface.calibrar",
     "hefesto_dualsense4unix.interface.casamento",
     "hefesto_dualsense4unix.interface.conexoes_vivas",
-    "hefesto_dualsense4unix.interface.conferir05",
     "hefesto_dualsense4unix.interface.controles_vivos",
     "hefesto_dualsense4unix.interface.exportar",
     "hefesto_dualsense4unix.interface.importar",

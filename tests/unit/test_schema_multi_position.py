@@ -23,7 +23,9 @@ from hefesto_dualsense4unix.core.trigger_effects import (
     build_from_name,
 )
 from hefesto_dualsense4unix.profiles.schema import TriggerConfig
-from hefesto_dualsense4unix.profiles.trigger_presets import VIBRATION_POSITION_PRESETS
+
+#: A curva `machine_gun` como a aba antiga a gravava no perfil (dez posições).
+CURVA_MACHINE_GUN_SALVA = [0, 8, 0, 8, 0, 8, 0, 8, 0, 8]
 
 
 class TestValidatorParams:
@@ -177,7 +179,7 @@ class TestBuildFromNameAninhado:
 
         Mordida: devolver `factory(0, …)` no caminho aninhado.
         """
-        nested = [[v] for v in VIBRATION_POSITION_PRESETS["machine_gun"]]
+        nested = [[v] for v in CURVA_MACHINE_GUN_SALVA]
         effect = build_from_name("MultiPositionVibration", nested)
         assert effect.forces[6] == 40
 

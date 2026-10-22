@@ -29,12 +29,6 @@ from hefesto_dualsense4unix.core.trigger_effects import (
     frequencia_limpa,
     vibration,
 )
-from hefesto_dualsense4unix.profiles.trigger_presets import (
-    FEEDBACK_POSITION_LABELS,
-    FEEDBACK_POSITION_PRESETS,
-    VIBRATION_POSITION_LABELS,
-    VIBRATION_POSITION_PRESETS,
-)
 
 ONZE = (
     "Off", "Resistance", "Weapon", "Bow", "Galloping", "Machine", "Vibration",
@@ -197,34 +191,6 @@ def test_o_mesmo_bloco_entra_no_report_do_cabo_e_no_do_radio(
     efeito = build_from_name(chave, list(params))
     assert _relatorio(efeito, ConnectionType.USB) == esperado
     assert _relatorio(efeito, ConnectionType.BT) == esperado
-
-
-def test_os_presets_de_posicao_ganham_os_nomes_do_catalogo_e_a_chave_velha_segue_lida() -> None:
-    assert list(FEEDBACK_POSITION_PRESETS) == [
-        "rampa_crescente", "rampa_decrescente", "plateau_central", "parede_no_fim",
-        "parede_macia", "linear_medio"]
-    assert list(VIBRATION_POSITION_PRESETS) == [
-        "pulso_crescente", "vibra_em_degraus", "duas_ondas_no_curso", "sobe_e_desce",
-        "vibra_no_fim"]
-    rotulos = {
-        "parede_no_fim": "Parede no fim", "parede_macia": "Parede macia",
-        "vibra_em_degraus": "Vibra em degraus", "duas_ondas_no_curso": "Duas ondas no curso",
-        "sobe_e_desce": "Sobe e desce", "vibra_no_fim": "Vibra no fim",
-    }
-    for chave, rotulo in rotulos.items():
-        rotulos_da_chave = {**FEEDBACK_POSITION_LABELS, **VIBRATION_POSITION_LABELS}
-        assert rotulos_da_chave[chave] == rotulo
-    velhos = {"stop_hard": "parede_no_fim", "stop_macio": "parede_macia",
-              "machine_gun": "vibra_em_degraus", "galope": "duas_ondas_no_curso",
-              "senoide": "sobe_e_desce", "vibracao_final": "vibra_no_fim"}
-    for velho, novo in velhos.items():
-        tabela = (FEEDBACK_POSITION_PRESETS if novo in FEEDBACK_POSITION_PRESETS
-                  else VIBRATION_POSITION_PRESETS)
-        rotulos_t = (FEEDBACK_POSITION_LABELS if novo in FEEDBACK_POSITION_LABELS
-                     else VIBRATION_POSITION_LABELS)
-        assert velho in tabela
-        assert tabela[velho] == tabela[novo]
-        assert rotulos_t[velho] == rotulos_t[novo]
 
 
 # --- a aba: onze opções, e o perfil antigo abre com o acionamento certo ----------------------

@@ -115,7 +115,17 @@ _REGUAS = (
     "`docs/process/agentes/2026-09-06/GTK-3-segunda-volta.md`."
 )
 
+_SO_O_TESTE_CHAMAVA = (
+    "módulo de `src/` que só o teste chamava, apagado em 22/10/2026 com o teste que "
+    "só existia para ele (sprint O-CODIGO-QUE-SO-O-TESTE-CHAMA-01). A régua "
+    "`tests/unit/test_o_codigo_de_src_tem_quem_o_chame.py` não deixa o próximo nascer."
+)
+
 APOSENTADOS: dict[str, str] = {
+    "src/hefesto_dualsense4unix/integrations/xlib_window.py": _SO_O_TESTE_CHAMAVA,
+    "src/hefesto_dualsense4unix/interface/dados_do_controle.py": _SO_O_TESTE_CHAMAVA,
+    "src/hefesto_dualsense4unix/interface/conferir05.py": _SO_O_TESTE_CHAMAVA,
+    "src/hefesto_dualsense4unix/profiles/trigger_presets.py": _SO_O_TESTE_CHAMAVA,
     "src/hefesto_dualsense4unix/gui/main.glade": (
         "a janela GTK — o XML de 292 KB com as onze abas. Apagado em 06/09/2026 "
         "(GTK-3). O que a tela declara hoje são as dez páginas de "
