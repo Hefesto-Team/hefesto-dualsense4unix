@@ -26,7 +26,7 @@ import subprocess
 import tempfile
 import time
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
@@ -159,6 +159,8 @@ class Resultado:
     permissoes_novas: list[str]
     #: ``False`` quando a atualização sozinha deixou a versão nova esperando o «Atualizar».
     trocou: bool = True
+    #: Os ids que o ``substitui`` do manifesto mandou embora nesta instalação.
+    substituidas: list[str] = field(default_factory=list)
 
 
 def _conferir_id(mod_id: str) -> str:
@@ -428,19 +430,23 @@ def instalar(
             if aviso_visto != manifesto.aviso and manifesto.aviso != aviso_aceito:
                 raise AvisoParaVerError(manifesto.nome, manifesto.aviso)
             aviso_aceito = manifesto.aviso
+        a_substituir = [i for i in manifesto.substitui if i in registro]
         if sozinha and anterior is not None:
-            motivo = _o_que_segura_a_atualizacao(lg, anterior, tipo, manifesto)
+            motivo = _o_que_segura_a_atualizacao(lg, anterior, tipo, manifesto, a_substituir)
             if motivo:
                 return Resultado(
                     _marcar_a_espera(lg, manifesto, commit, motivo), manifesto, novas, trocou=False
                 )
         seguia_ligada = anterior is not None and anterior.ligada
+        antigas_ligadas = _parar_as_substituidas(lg, a_substituir)
         if seguia_ligada:
             desligar(manifesto.id, lugares=lg)
             if not esperar_parar(manifesto.id, lugares=lg):
                 # Trocar o código debaixo do processo vivo não é atualizar. O código
                 # antigo fica como está, e a que seguia ligada segue ligada.
                 _religar_a_que_seguia(lg, manifesto.id)
+                for mod_id in antigas_ligadas:
+                    _religar_a_que_seguia(lg, mod_id)
                 raise InstalacaoRecusadaError(
                     f"A versão anterior de «{manifesto.id}» não parou; "
                     "não troquei o código."
@@ -455,23 +461,61 @@ def instalar(
             ref=ref,
             commit=commit,
             permissoes_aceitas=list(aceitas),
-            ligada=seguia_ligada and not novas and manifesto.aviso in ("", aviso_aceito),
+            ligada=(seguia_ligada or bool(antigas_ligadas)) and not novas
+            and manifesto.aviso in ("", aviso_aceito),
             aviso_aceito=aviso_aceito,
             instalada_em=datetime.now(timezone.utc).isoformat(timespec="microseconds"),
         )
         if anterior is not None:
             entrada.atualiza_sozinha = anterior.atualiza_sozinha
             entrada.intervalo_da_atualizacao_s = anterior.intervalo_da_atualizacao_s
+        if a_substituir:
+            from hefesto_dualsense4unix.mods import opcoes
+
+            opcoes.herdar(manifesto, a_substituir, lg)
         registro = ler_registro(lg.registro)
         registro[manifesto.id] = entrada
         gravar_registro(lg.registro, registro)
-        return Resultado(entrada, manifesto, novas)
+        _mandar_embora(lg, manifesto, a_substituir)
+        return Resultado(entrada, manifesto, novas, substituidas=a_substituir)
     finally:
         shutil.rmtree(temporaria, ignore_errors=True)
 
 
+def _parar_as_substituidas(lg: Lugares, ids: Sequence[str]) -> list[str]:
+    """Desliga e espera parar cada extensão que o ``substitui`` manda embora.
+
+    Devolve as que estavam ligadas. A que não para recusa a troca inteira: as que já foram
+    desligadas voltam a seguir ligadas, e nada se troca (a nova dividiria a porta com ela).
+    """
+    ligadas: list[str] = []
+    for mod_id in ids:
+        if ler_registro(lg.registro)[mod_id].ligada:
+            ligadas.append(mod_id)
+            desligar(mod_id, lugares=lg)
+        if not esperar_parar(mod_id, lugares=lg):
+            for religar in ligadas:
+                _religar_a_que_seguia(lg, religar)
+            raise InstalacaoRecusadaError(
+                f"«{mod_id}», que esta extensão substitui, não parou; não troquei nada."
+            )
+    return ligadas
+
+
+def _mandar_embora(lg: Lugares, manifesto: Manifesto, ids: Sequence[str]) -> None:
+    """A extensão substituída sai pelo caminho do ``remover``: para, apaga e confere."""
+    for mod_id in ids:
+        restos = remover(mod_id, lugares=lg)
+        if restos:
+            raise InstalacaoRecusadaError(
+                f"«{manifesto.nome}» foi instalada, mas «{mod_id}» não saiu por completo: "
+                + "; ".join(restos)
+            )
+
+
 def _o_que_segura_a_atualizacao(
-    lg: Lugares, anterior: Entrada, tipo: Origem, manifesto: Manifesto
+    lg: Lugares, anterior: Entrada, tipo: Origem, manifesto: Manifesto,
+    a_substituir: Sequence[str] = (),
 ) -> str:
     """Por que a atualização sozinha não troca o código; vazio quando troca.
 
@@ -488,6 +532,9 @@ def _o_que_segura_a_atualizacao(
         return f"A versão {manifesto.versao} traz outro aviso."
     if anterior.origem == "oficial" and tipo != "oficial":
         return f"A tag da versão {manifesto.versao} não confere com a chave oficial."
+    if a_substituir:
+        # Tirar uma extensão do ar é gesto de quem usa, não de quem atualiza sozinho.
+        return f"A versão {manifesto.versao} toma o lugar de {', '.join(a_substituir)}."
     return ""
 
 

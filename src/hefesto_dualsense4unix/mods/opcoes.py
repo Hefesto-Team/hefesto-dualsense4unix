@@ -9,6 +9,7 @@ import contextlib
 import json
 import os
 import tempfile
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -124,12 +125,18 @@ def guardar(manifesto: Manifesto, opcao_id: str, valor: Any, lugares: Lugares) -
     certo = validar(opcao, valor)
     atuais = ler(manifesto, lugares)
     atuais[opcao_id] = certo
-    destino = caminho(manifesto.id, lugares)
+    _gravar(manifesto.id, atuais, lugares)
+    return certo
+
+
+def _gravar(mod_id: str, valores: dict[str, Any], lugares: Lugares) -> None:
+    """Arquivo novo e ``rename``, em ``0600``: quem lê nunca vê o arquivo pela metade."""
+    destino = caminho(mod_id, lugares)
     destino.parent.mkdir(parents=True, exist_ok=True)
     fd, nome = tempfile.mkstemp(prefix=".opcoes-", suffix=".json", dir=destino.parent)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as arquivo:
-            json.dump(atuais, arquivo, ensure_ascii=False, indent=2)
+            json.dump(valores, arquivo, ensure_ascii=False, indent=2)
             arquivo.write("\n")
         os.chmod(nome, 0o600)
         os.replace(nome, destino)
@@ -137,7 +144,30 @@ def guardar(manifesto: Manifesto, opcao_id: str, valor: Any, lugares: Lugares) -
         with contextlib.suppress(FileNotFoundError):
             os.unlink(nome)
         raise
-    return certo
 
 
-__all__ = ["NOME_DO_ARQUIVO", "Valor", "guardar", "ler", "padrao_de", "validar"]
+def herdar(manifesto: Manifesto, antigas: Sequence[str], lugares: Lugares) -> dict[str, Valor]:
+    """As escolhas das extensões ``antigas`` que ``manifesto`` aceita, gravadas nas dele.
+
+    Passa a escolha de id igual cujo valor a opção da nova valida. A que já foi feita na nova
+    vale mais (fica); o que a nova não tem ou não aceita fica no padrão de produto, e nada se grava.
+    Entre duas antigas, a primeira da lista vale. Devolve o que foi herdado.
+    """
+    feitas = _guardados(manifesto.id, lugares)
+    herdadas: dict[str, Valor] = {}
+    for opcao in manifesto.opcoes:
+        if opcao.id in feitas:
+            continue
+        for mod_id in antigas:
+            bruto = _guardados(mod_id, lugares)
+            if opcao.id not in bruto:
+                continue
+            with contextlib.suppress(InstalacaoRecusadaError):
+                herdadas[opcao.id] = validar(opcao, bruto[opcao.id])
+                break
+    if herdadas:
+        _gravar(manifesto.id, {**feitas, **herdadas}, lugares)
+    return herdadas
+
+
+__all__ = ["NOME_DO_ARQUIVO", "Valor", "guardar", "herdar", "ler", "padrao_de", "validar"]

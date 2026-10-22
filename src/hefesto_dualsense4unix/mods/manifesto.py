@@ -28,6 +28,16 @@ from hefesto_dualsense4unix.mods.tema import (
 from hefesto_dualsense4unix.utils.maquina import _CHAVE_DE_LANCADOR
 
 NOME_DO_MANIFESTO = "hefesto-mod.json"
+PASTA_DE_FABRICA = Path(__file__).resolve().parent / "de_fabrica"
+
+
+def ids_de_fabrica() -> frozenset[str]:
+    """Os ids das extensões que vêm no pacote (uma pasta com manifesto em ``de_fabrica/``)."""
+    try:
+        return frozenset(p.name for p in PASTA_DE_FABRICA.iterdir()
+                         if (p / NOME_DO_MANIFESTO).is_file())
+    except OSError:
+        return frozenset()
 
 #: O que uma modificação pode ser. ``processo`` é a única que leva código; as
 #: outras três são declaração, e o Hefesto as lê sem abrir processo nenhum.
@@ -289,6 +299,8 @@ class Manifesto(BaseModel):
     lancador: dict[str, Any] | None = None
     tema: dict[str, Any] | None = None
     aparelhos: list[dict[str, Any]] | None = None
+    # As extensões que esta toma o lugar: ao instalar, as escolhas delas passam e elas saem.
+    substitui: list[str] = Field(default_factory=list)
 
     @field_validator("id")
     @classmethod
@@ -322,8 +334,23 @@ class Manifesto(BaseModel):
             raise ValueError("mais de um alcance de rede")
         return valor
 
+    @field_validator("substitui")
+    @classmethod
+    def _substitui_so_ids_de_fora(cls, valor: list[str]) -> list[str]:
+        if len(set(valor)) != len(valor):
+            raise ValueError("substitui: id repetido")
+        de_fabrica = ids_de_fabrica()
+        for mod_id in valor:
+            if not _CHAVE_DE_LANCADOR.match(mod_id):
+                raise ValueError(f"substitui: «{mod_id}» está fora da forma de id")
+            if mod_id in de_fabrica:
+                raise ValueError(f"substitui: «{mod_id}» vem com o Hefesto e não se substitui")
+        return valor
+
     @model_validator(mode="after")
     def _processo_quando_e_processo(self) -> Manifesto:
+        if self.id in self.substitui:
+            raise ValueError("substitui: uma extensão não substitui a si mesma")
         if len(set(self.tipos)) != len(self.tipos):
             raise ValueError("tipo repetido")
         if ("processo" in self.tipos) != (self.processo is not None):
