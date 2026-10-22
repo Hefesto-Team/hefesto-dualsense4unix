@@ -353,6 +353,7 @@ def test_a_recusa_e_curta_e_vermelha_na_tela_e_longa_so_no_log(
         lar: Any, ctx: Any, capsys: pytest.CaptureFixture[str]) -> None:
     """A tela diz «Linha 2: url()» na cor de erro da casa (``--red``); a frase longa vai ao
     stderr da janela, com o nome da extensão."""
+    # D-2210-O-CSS-DE-QUEM-USA-ENTRA-POR-CIMA-DO-TEMA.
     from hefesto_dualsense4unix.interface import janela as janela_gtk
 
     _instalada(lar)
