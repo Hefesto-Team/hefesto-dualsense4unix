@@ -1338,7 +1338,7 @@ DICA_DA_BASE = {
     "mare": "Vai e volta para uma cor vizinha.",
     "piscar": "Lampejos da cor, de borda suave.",
     "arco-iris": "As cores giram em cada controle.",  # (noqa-acento) identificador ASCII
-    "onda": "O brilho corre de um lado ao outro.",
+    "onda": "Uma onda de luz passa pela barra.",
     "relampago": "Clarões curtos, de borda suave.",
 }
 #: Os grupos da lista, na ordem do desenho: o que a pessoa vê, não o nome técnico do efeito.
@@ -2663,7 +2663,7 @@ def efeito_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
 
 @gesto("04-iluminacao.html", GESTO_DE_CRIAR_EFEITO, grava="guardar_meus_efeitos")
 def criar_efeito_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """Guarda um efeito novo: a base (uma das cinco que se movem), as cores, o ritmo e o nome.
+    """Guarda um efeito novo: a base (um dos cinco do «Jeito»), as cores, o ritmo e o nome.
 
     Só a caixa de preferências da interface é gravada: nenhum perfil e nenhum aparelho. O efeito
     entra como chip em «Criar efeitos novos» e na lista «Efeito» de cada coluna.
@@ -2680,7 +2680,7 @@ def criar_efeito_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError("não consegui ler a área de criar efeitos. Nada foi guardado.")
     base = str(forma.get("base") or "").strip()
     if base not in BASES_DA_LUZ:
-        raise RuntimeError("Escolha o jeito: respirar, piscar, arco-íris, onda ou relâmpago")
+        raise RuntimeError("Escolha o jeito: respirar, piscar, arco-íris, onda ou relâmpago.")
     cores = [c.strip().upper() for c in str(forma.get("cores") or "").split(",") if c.strip()]
     if not all(re.fullmatch(r"#[0-9A-F]{6}", c) for c in cores):
         raise RuntimeError("Alguma cor do efeito não é válida. Nada foi guardado.")

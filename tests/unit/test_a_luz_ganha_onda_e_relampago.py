@@ -340,6 +340,21 @@ def test_a_dica_de_cada_base_nova_cabe_na_coluna_e_comeca_maiuscula() -> None:
     assert set(a04.DICA_DA_BASE) == set(a04.RITMO_DA_BASE) == set(a04.ROTULO_DA_BASE)
 
 
+def test_a_dica_da_onda_diz_o_que_o_aparelho_faz_so_a_barra() -> None:
+    """A tela diz o que o aparelho faz: o escritor do daemon leva só a barra, então a dica da Onda
+    fala da barra e não promete o brilho correndo de um lado ao outro. Quando o quadro único levar
+    os LEDs do jogador, esta régua reprova e a dica muda junto."""
+    import inspect
+
+    from pacotes import a04_iluminacao as a04
+
+    escritor = inspect.getsource(luz.escritor_de_producao)
+    assert "pintar_a_barra_sem_lembrar" in escritor
+    assert "luzinhas" not in escritor, "o daemon passou a levar os LEDs: a dica da Onda muda junto"
+    frase = a04.DICA_DA_BASE["onda"]
+    assert "barra" in frase and "lado" not in frase, frase
+
+
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 #: 940 fica de fora: a janela do produto não desce de 1212 (``LARGURA_DO_DESENHO``), e a 940 a
 #: linha «Criar efeitos novos» já quebrava antes das duas opções (82 px, o miolo com 35 de sobra).
