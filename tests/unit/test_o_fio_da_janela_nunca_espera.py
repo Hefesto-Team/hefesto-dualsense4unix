@@ -137,7 +137,7 @@ def _tres_minutos(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
             if fora.acabou:
                 return False  # o temporizador sai com a medida, e o conftest esvazia o laço
             t0 = time.perf_counter()
-            volta = tique_original()
+            volta = bool(tique_original())
             custo = (time.perf_counter() - t0) * 1000
             if 0 <= fora.i < len(ABAS) and piloto.pagina == ABAS[fora.i]:
                 fora.tiques[ABAS[fora.i]].append(custo)
@@ -147,7 +147,7 @@ def _tres_minutos(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
                 gtk.main_quit()
             return volta
 
-        piloto._tique = tique  # type: ignore[method-assign]
+        piloto._tique = tique
 
         def proxima() -> bool:
             fora.i += 1
@@ -261,7 +261,7 @@ def test_a_primeira_faixa_lenta_da_09_nao_se_le_no_fio_da_janela(
     """No fio da janela, a primeira faixa lenta vai a um fio e o tique recebe o sinal."""
     from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 
-    valor = ("auto", [], "bateria", "online_systemd", None)
+    valor: tuple[Any, ...] = ("auto", [], "bateria", "online_systemd", None)
     ler, solta, quem = _leitura_presa(valor)
     monkeypatch.setattr(a09, "_ler_a_faixa_lenta", ler)
     monkeypatch.setattr(a09, "_LENTO", {})
@@ -304,9 +304,13 @@ def test_fora_da_janela_a_09_continua_lendo_na_hora(monkeypatch: pytest.MonkeyPa
     from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 
     quem: list[str] = []
-    valor = ("auto", [], "bateria", "offline", None)
-    monkeypatch.setattr(a09, "_ler_a_faixa_lenta",
-                        lambda *_a, **_k: quem.append(threading.current_thread().name) or valor)
+    valor: tuple[Any, ...] = ("auto", [], "bateria", "offline", None)
+
+    def ler(*_a: Any, **_k: Any) -> tuple[Any, ...]:
+        quem.append(threading.current_thread().name)
+        return valor
+
+    monkeypatch.setattr(a09, "_ler_a_faixa_lenta", ler)
     monkeypatch.setattr(a09, "_LENTO", {})
     assert a09._faixa_lenta({}, []) == valor
     assert quem == [threading.current_thread().name]
