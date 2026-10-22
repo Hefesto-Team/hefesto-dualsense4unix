@@ -1585,7 +1585,10 @@ def _publicar_divergencias(
                 motivo=item["motivo"],
             )
         else:
-            logger.info(
+            # O perfil de jogo fechado que diverge é o normal, e a troca da máscara viva
+            # faz dezenas de uma vez (25 no mesmo segundo, syslog de 19/10/2026): o
+            # arquivo por appid e o `state_full` guardam; o diário só no debug.
+            logger.debug(
                 "mascara_do_perfil_antecipada",
                 appid=item["appid"],
                 profile=item["profile"],

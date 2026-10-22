@@ -1,12 +1,16 @@
 """Configuração de logging do daemon com structlog."""
 from __future__ import annotations
 
+import atexit
+import contextlib
 import logging
 import os
 import re
 import sys
 import threading
+import time
 import traceback
+from collections.abc import Callable, MutableMapping
 from typing import TYPE_CHECKING, Any
 
 import structlog
@@ -22,8 +26,6 @@ else:
         try:
             from structlog.types import Processor
         except ImportError:
-            from collections.abc import Callable
-
             Processor = Callable[..., Any]  # type: ignore[misc,assignment]
 
 _configured = False
@@ -112,9 +114,120 @@ def instalar_os_ganchos_do_fio_que_cai() -> None:
     sys.excepthook = _o_processo_que_cai
 
 
+#: Os eventos que se repetem em rajada, e os campos que separam uma rajada da outra.
+#: Contados no syslog de 18/10 a 21/10/2026 (34.837 linhas do daemon): `gatilho_armado`
+#: chegou a 186 por minuto, `ipc_lento` a 79, `som_rotulo_velho_espera_o_silencio` a 21
+#: e `haptics_select_borda` a 19. A primeira de cada janela sai inteira; as outras viram
+#: UMA linha no fim da janela, com `vezes=` e os campos da última.
+EVENTOS_AGREGADOS: dict[str, tuple[str, ...]] = {
+    "gatilho_armado": ("nome",),
+    "ipc_lento": ("metodo",),  # (noqa-acento) chave do diário
+    "som_rotulo_velho_espera_o_silencio": ("uniq",),
+    "haptics_select_borda": ("uniq",),
+}
+JANELA_DO_AGREGADO_S = 60.0
+_MARCA_DO_AGREGADO = "_agregado"
+
+
+class _Janela:
+    __slots__ = ("contagem", "inicio", "nivel", "recente")
+
+    def __init__(self, inicio: float) -> None:
+        self.inicio = inicio
+        self.contagem = 0
+        self.nivel = "info"
+        self.recente: dict[str, Any] = {}
+
+
+class AgregadoDoDiario:
+    """O processador que junta a rajada de um evento repetido numa linha por janela.
+
+    A primeira ocorrência de cada (evento, campos da chave) sai na hora. As seguintes,
+    dentro de ``janela_s``, não escrevem: contam. No fim da janela sai uma linha com
+    ``vezes=<as contadas>``, ``janela_s=`` e os campos da última; a ocorrência que
+    chega com a janela vencida e a conta ainda aberta é ela mesma essa linha. O que
+    ficou contado quando o processo sai se escreve no ``atexit``.
+    """
+
+    def __init__(
+        self,
+        eventos: dict[str, tuple[str, ...]] | None = None,
+        janela_s: float = JANELA_DO_AGREGADO_S,
+        relogio: Callable[[], float] = time.monotonic,
+    ) -> None:
+        self.eventos = EVENTOS_AGREGADOS if eventos is None else eventos
+        self.janela_s = janela_s
+        self.relogio = relogio
+        #: quem escreve a linha do fim da janela; None = o logger do produto.
+        self.diario: Any = None
+        self._trava = threading.Lock()
+        self._janelas: dict[tuple[Any, ...], _Janela] = {}
+
+    def __call__(
+        self, _logger: Any, nivel: str, evento: MutableMapping[str, Any]
+    ) -> MutableMapping[str, Any]:
+        if evento.pop(_MARCA_DO_AGREGADO, False):
+            return evento
+        nome = evento.get("event")
+        campos = self.eventos.get(nome) if isinstance(nome, str) else None
+        if campos is None:
+            return evento
+        chave = (nome, *(repr(evento.get(c)) for c in campos))
+        with self._trava:
+            agora = self.relogio()
+            janela = self._janelas.get(chave)
+            if janela is not None and agora - janela.inicio < self.janela_s:
+                janela.contagem += 1
+                janela.nivel = nivel
+                janela.recente = dict(evento)
+                if janela.contagem == 1:
+                    self._agendar(chave, janela, self.janela_s - (agora - janela.inicio))
+                raise structlog.DropEvent
+            self._janelas[chave] = _Janela(agora)
+            if janela is not None and janela.contagem:
+                evento["vezes"] = janela.contagem + 1
+                evento["janela_s"] = self.janela_s
+        return evento
+
+    def _agendar(self, chave: tuple[Any, ...], janela: _Janela, segundos: float) -> None:
+        fio = threading.Timer(max(segundos, 0.0), self._fechar, args=(chave, janela))
+        fio.daemon = True
+        fio.name = "agregado-do-diario"
+        fio.start()
+
+    def _fechar(self, chave: tuple[Any, ...], janela: _Janela) -> None:
+        with self._trava:
+            if self._janelas.get(chave) is not janela or not janela.contagem:
+                return
+            del self._janelas[chave]
+        self._escrever(janela)
+
+    def fechar_tudo(self) -> None:
+        """Escreve agora toda conta aberta (o ``atexit`` do processo)."""
+        with self._trava:
+            abertas = [j for j in self._janelas.values() if j.contagem]
+            self._janelas.clear()
+        for janela in abertas:
+            self._escrever(janela)
+
+    def _escrever(self, janela: _Janela) -> None:
+        campos = {k: v for k, v in janela.recente.items() if k not in ("event", "log_level")}
+        campos.update(vezes=janela.contagem, janela_s=self.janela_s)
+        campos[_MARCA_DO_AGREGADO] = True
+        with contextlib.suppress(Exception):
+            diario = self.diario if self.diario is not None else structlog.get_logger("agregado")
+            escrever = getattr(diario, janela.nivel)
+            escrever(janela.recente.get("event"), **campos)
+
+
+_AGREGADO = AgregadoDoDiario()
+atexit.register(_AGREGADO.fechar_tudo)
+
+
 def cadeia_do_diario(fmt: str = "console", stream: Any = None) -> list[Processor]:
     """Os processadores do structlog do produto, na ordem, com o dono no fim."""
     shared_processors: list[Processor] = [
+        _AGREGADO,
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
         structlog.processors.StackInfoRenderer(),
@@ -191,6 +304,8 @@ def reset_for_tests() -> None:
 
 
 __all__ = [
+    "EVENTOS_AGREGADOS",
+    "AgregadoDoDiario",
     "MascaraDoDiario",
     "cadeia_do_diario",
     "configure_logging",
