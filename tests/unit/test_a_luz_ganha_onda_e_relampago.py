@@ -297,7 +297,8 @@ def test_as_duas_estao_em_que_se_move_em_cada_lista_do_desenho_e_na_frase_da_dic
         grupo = lista.split('<optgroup label="Que se move">', 1)[1].split("</optgroup>", 1)[0]
         assert _opcoes(grupo) == [
             ("base:piscar", "Piscar"), ("base:arco-iris", "Arco-íris"),
-            ("base:onda", "Onda"), ("base:relampago", "Relâmpago")]
+            ("base:onda", "Onda"), ("base:relampago", "Relâmpago"),
+            ("base:vaivem", "Vaivém"), ("base:enche", "Enche")]
     for base in NOVAS:
         assert a04.dica_do_efeito(f"base:{base}") == a04.DICA_DA_BASE[base]
         assert a04.rotulo_da_opcao(f"base:{base}") == a04.ROTULO_DA_BASE[base]
