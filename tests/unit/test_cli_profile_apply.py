@@ -38,6 +38,11 @@ def isolated_profiles_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
         return fake_cfg
 
     monkeypatch.setattr(xdg_paths, "config_dir", fake_config_dir)
+    # O `session` liga o `config_dir` no import: sem esta troca, a escolha gravada por um
+    # teste fica no lar da sessão e o seguinte a lê.
+    from hefesto_dualsense4unix.utils import session
+
+    monkeypatch.setattr(session, "config_dir", fake_config_dir)
     return target
 
 
