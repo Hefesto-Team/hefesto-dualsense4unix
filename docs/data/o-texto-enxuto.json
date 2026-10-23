@@ -5,7 +5,7 @@
       "data": "2026-10-23",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 54641,
+      "piso": 54664,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -200,7 +200,7 @@
         "interface/desenho_dos_lancadores.py": 1030,
         "interface/frases_que_ela_baniu.py": 94,
         "interface/hefesto_vivo.py": 504,
-        "interface/janela.py": 192,
+        "interface/janela.py": 194,
         "interface/mesa_viva.py": 256,
         "interface/monta.py": 279,
         "interface/navegacao_interna.py": 65,
@@ -213,7 +213,7 @@
         "interface/pacotes/a06_navegacao.py": 382,
         "interface/pacotes/a07_lancadores.py": 583,
         "interface/pacotes/a08_conexoes.py": 1180,
-        "interface/pacotes/a09_sistema.py": 1112,
+        "interface/pacotes/a09_sistema.py": 1115,
         "interface/pacotes/a10_perfis.py": 921,
         "interface/pacotes/a11_calibrar_sensores.py": 116,
         "interface/pacotes/a12_mapa_das_portas.py": 64,
@@ -249,7 +249,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +7 linhas (54634 -> 54641), pagas por Origem: D-2310-O-TERROR-DUPLICA-PELO-OUVIR-JUNTO; registrado no fecho, topo 2c624cc825f4",
+      "razao": "texto-em-src: +23 linhas (54641 -> 54664), pagas por Origem: D-2310-O-PISO-DA-SUITE-E-O-PYTEST-DAS-PARTES-EM-SERIE; registrado no fecho, topo fc6391787a29",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -436,10 +436,16 @@
           "de": 54634,
           "para": 54641,
           "razao": "texto-em-src: +7 linhas (54634 -> 54641), pagas por Origem: D-2310-O-TERROR-DUPLICA-PELO-OUVIR-JUNTO; registrado no fecho, topo 2c624cc825f4"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 54641,
+          "para": 54664,
+          "razao": "texto-em-src: +23 linhas (54641 -> 54664), pagas por Origem: D-2310-O-PISO-DA-SUITE-E-O-PYTEST-DAS-PARTES-EM-SERIE; registrado no fecho, topo fc6391787a29"
         }
       ],
       "unidade": "linhas",
-      "universo": 403
+      "universo": 405
     }
   }
 }
