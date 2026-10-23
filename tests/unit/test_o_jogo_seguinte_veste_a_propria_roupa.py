@@ -296,7 +296,8 @@ def _linhas(diario: Any, evento: str) -> list[dict[str, Any]]:
 def test_o_lancamento_de_outro_appid_encerra_a_autoridade_do_jogo_que_acabou(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, transporte: str, secundarios: int,
 ) -> None:
-    """O A (`0ce6`) fechou há 10 s e o B (Edge) arma: os pads vestem o Edge, no cabo e no rádio.
+    """A prova de D-2310-O-JOGO-SEGUINTE-VESTE-A-PROPRIA-ROUPA: o A (`0ce6`) fechou há 10 s e o B
+    (Edge) arma: os pads vestem o Edge, no cabo e no rádio.
 
     MORDIDA: tire o encerramento do `arm_launch_profile` e a autoridade fica `game`,
     a troca é recusada e os pads ficam `0ce6` (o Sackboy de 23/10).
