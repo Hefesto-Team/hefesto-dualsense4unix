@@ -156,17 +156,17 @@ os pares de todos.
 
 `trigger.reset` foi o último dos quatro primeiros a ganhar o parâmetro (25/07) — o botão
 "Desligar" da aba Gatilhos zerava o gatilho dos quatro enquanto o "Aplicar" ao
-lado mandava para um só. Ele libera a trava manual apenas da categoria
-`trigger`: desligar um gatilho não pode destravar o LED nem a
-vibração que ela ajustou em outra aba.
+lado mandava para um só. Ele grava `Off` na camada `usuaria` só do gatilho
+pedido: a luz e a vibração que ela ajustou em outra aba ficam como estão.
 
 ### `led.auto_release` — só registra
 
 `{}` → `{status, categoria: "led", escopo}`. **Não escreve byte nenhum no
 controle, não aceita `uniq` e não solta nada**: desde 14/09 ele é uma linha no
-diário (`led_auto_release`) e a resposta, porque a luz não tem trava a soltar. O
-`led.set` e o `led.player_set` com `uniq` entram na camada `usuaria` do
-controle, e quem a solta é a ativação de um perfil pelo gesto do usuário. Nenhum
+diário (`led_auto_release`) e a resposta: a trava manual por categoria saiu
+inteira (D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO). O `led.set` e o
+`led.player_set` entram na camada `usuaria` de cada controle que alcançam, e quem
+a solta é a ativação de um perfil pela mão (`origin` `manual`). Nenhum
 código do produto o chama; o método fica no contrato para quem ainda o usa, e
 `escopo` diz na resposta que nada aqui é por controle. O que está guardado por
 controle se lê em `controllers[].camada_da_usuaria` do `daemon.state_full`: a
@@ -239,9 +239,9 @@ depois do número (o nó do `hid_playstation` é 0/1 por lâmpada e não escolhe
 brilho); no rádio, no `0x31` que acende o número. O `flag2` leva só o bit0
 (`SET_PLAYER_LED_BRIGHTNESS`), nunca o 0x02 do LIGHTBAR_SETUP.
 
-**Não arma a trava manual `led`**, de propósito: quem chama é a pílula da aba
-Iluminação, e ela grava a palavra no override do controle ANTES de chamar —
-uma troca de perfil reaplica o que o perfil diz, que é o que o usuário escolheu.
+Quem chama é a pílula da aba Iluminação, e ela grava a palavra no override do
+controle ANTES de chamar: uma troca de perfil reaplica o que o perfil diz, que é
+o que o usuário escolheu.
 
 **A leitura de volta é o `state_full`**: cada
 controle traz `brilho_das_luzes` (`"fraco"`, `"medio"` ou `"forte"`, o degrau
@@ -417,10 +417,9 @@ mudo/desmudo não solta mais o alto-falante. Mande um `volume` antes. Pela mesma
 razão, nada no produto manda `speaker.set` **vazio**: a chamada sem `volume`
 toma a posse e manda ZERO.
 
-`speaker.set` arma a trava manual na categoria `audio` (a quarta, ao lado de
-`trigger`/`led`/`rumble`): volume é ajuste manual como qualquer outro, e o
-autoswitch não pode pisá-lo reaplicando o perfil na próxima troca de janela.
-`profile.switch` explícito continua limpando tudo.
+`speaker.set` não arma trava nenhuma: a trava manual por categoria saiu inteira
+em 14/09 (D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO), e o perfil ativado
+aplica o volume que guarda.
 
 Fora da janela, a linha de comando cobre o mesmo caminho:
 `hefesto-dualsense4unix speaker status|volume <0-100>|mute|unmute|release`

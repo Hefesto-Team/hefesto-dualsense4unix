@@ -144,3 +144,40 @@ def test_a_volta_do_protocolo_ve_a_camada_que_ficou() -> None:
 @pytest.mark.parametrize("campo", ["camada_da_usuaria"])
 def test_o_campo_esta_nos_campos_da_volta(campo: str) -> None:
     assert f"controllers[].{campo}" in _o_basico().CAMPOS_DA_VOLTA
+
+
+def test_o_pedido_pelo_ipc_vai_e_volta_nos_quatro_e_nos_dois_transportes(tmp_path: Path) -> None:
+    """Os comandos de saída com `uniq` (cabo e rádio, de P1 a P4) e a volta, lidos no estado."""
+    inst = PyDualSenseController(evdev_reader=_null_evdev())
+    chaves = [f"AA:BB:CC:00:00:0{n}" for n in range(1, 5)]
+    inst._handles = {
+        k: _FakeHandle(transport_name="USB" if n % 2 else "BT") for n, k in enumerate(chaves)
+    }
+    inst._primary_key = chaves[0]
+    server = IpcServer(
+        controller=inst,
+        store=StateStore(),
+        profile_manager=ProfileManager(controller=inst, store=StateStore()),
+        socket_path=tmp_path / "h.sock",
+        daemon=None,
+    )
+    u1, u2, u3, u4 = (k.replace(":", "").lower() for k in chaves)
+
+    async def roteiro() -> list[dict[str, Any]]:
+        await server._handle_led_set({"rgb": [0, 255, 0], "uniq": u2})
+        await server._handle_trigger_set(
+            {"side": "left", "mode": "Rigid", "params": [0, 255], "uniq": u3}
+        )
+        await server._handle_led_player_set({"bits": [True] * 5, "uniq": u4})
+        ida = await _estado_completo(inst, tmp_path)
+        inst.clear_user_output_overrides()
+        volta = await _estado_completo(inst, tmp_path)
+        return [ida, volta]
+
+    ida, volta = asyncio.run(roteiro())
+
+    def por_uniq(r: dict[str, Any]) -> dict[str, Any]:
+        return {c["uniq"]: c.get("camada_da_usuaria") for c in r["controllers"]}
+
+    assert por_uniq(ida) == {u1: [], u2: ["led"], u3: ["trigger_left"], u4: ["player_leds"]}
+    assert por_uniq(volta) == {u1: [], u2: [], u3: [], u4: []}
