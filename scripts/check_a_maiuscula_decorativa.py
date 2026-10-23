@@ -109,9 +109,6 @@ SELO = ("selo", "lanc-selo", "selo-som", "selo-ativo")
 _TITULO = re.compile(r"<title>.*?</title>", re.S | re.I)
 _CORPO = re.compile(r"<body\b", re.I)
 
-_FORA_DA_TELA = re.compile(
-    r"<style[^>]*>.*?</style>|<script[^>]*>.*?</script>|<!--.*?-->", re.S | re.I)
-
 _VALOR_DE_MAQUINA = re.compile(
     r"#[0-9A-Fa-f]{3,8}\b|\b(?:[0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}\b")
 
@@ -131,7 +128,9 @@ def _branco(texto: str) -> str:
 
 def _so_a_tela(pagina: str) -> str:
     """A página sem o `<style>`, o `<script>`, os comentários e o `<title>` dela."""
-    limpo = _FORA_DA_TELA.sub(lambda m: _branco(m.group(0)), pagina)
+    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import sem_o_mudo
+
+    limpo = sem_o_mudo(pagina)
     limpo = _VALOR_DE_MAQUINA.sub(lambda m: _branco(m.group(0)), limpo)
     corpo = _CORPO.search(limpo)
     ate = corpo.start() if corpo else len(limpo)

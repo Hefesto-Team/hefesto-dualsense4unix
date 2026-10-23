@@ -36,6 +36,7 @@ from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
 from hefesto_dualsense4unix.integrations import ordens_da_mesa as ordens
 from hefesto_dualsense4unix.integrations.censo_do_barramento import Censo
 from hefesto_dualsense4unix.interface import arranjo_desta_maquina, onde
+from hefesto_dualsense4unix.interface.frases_que_ela_baniu import roteiros_de
 from hefesto_dualsense4unix.utils.maquina import MaquinaConfig, lugar_de, migrar_o_documento
 from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
     PALAVRA_DA_ENTRADA,
@@ -68,7 +69,7 @@ def _limpo(texto: str) -> None:
 
 def _o_script() -> str:
     html = PAGINA.read_text(encoding="utf-8")
-    blocos = re.findall(r"<script>(.*?)</script>", html, re.DOTALL)
+    blocos = [corpo for atributos, corpo in roteiros_de(html) if not atributos]
     assert blocos, "a página publicada não tem <script> — a régua passaria por vacuidade"
     return "\n".join(blocos)
 

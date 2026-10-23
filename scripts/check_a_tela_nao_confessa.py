@@ -11,6 +11,7 @@ RAIZ = pathlib.Path(__file__).resolve().parents[1]
 BANCADA = RAIZ / "mockup"
 PUBLICADO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # noqa-acento: nome de PASTA, e caminho nao leva acento
 FONTE = RAIZ / "src"
+sys.path.insert(0, str(FONTE))
 PACOTES = FONTE / "hefesto_dualsense4unix" / "interface" / "pacotes"
 
 VALOR_DE_EXECUCAO = "‹…›"
@@ -100,11 +101,10 @@ A_DIVIDA: dict[str, str] = {}
 
 
 def _limpo(html: str) -> str:
-    """A página SEM comentário, `<style>` e `<script>` — nesta ordem, e antes de tudo."""
-    html = re.sub(r"<!--.*?-->", " ", html, flags=re.S)
-    html = re.sub(r"<style\b.*?</style>", " ", html, flags=re.S | re.I)
-    html = re.sub(r"<script\b.*?</script>", " ", html, flags=re.S | re.I)
-    return html
+    """A página SEM comentário, `<style>` e `<script>`, achados pelo `html.parser`, e antes de tudo."""
+    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import sem_o_mudo
+
+    return sem_o_mudo(html)
 
 
 def _dentro_da_janela(html: str) -> str:

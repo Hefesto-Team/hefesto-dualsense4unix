@@ -9,6 +9,7 @@ import sys
 
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
 PAGINAS = RAIZ / "src/hefesto_dualsense4unix/interface/paginas"
+sys.path.insert(0, str(RAIZ / "src"))
 
 ABAS = {
     "01": "01-jogar.html", "02": "02-controles.html", "03": "03-gatilhos.html",
@@ -24,10 +25,9 @@ def corpo_visivel(nome: str) -> str:
     corte = bruto.find('<div class="nota"')
     if corte > 0:
         bruto = bruto[:corte]
-    sem = re.sub(r"<!--.*?-->", " ", bruto, flags=re.S)
-    sem = re.sub(r"<style\b.*?</style>", " ", sem, flags=re.S | re.I)
-    sem = re.sub(r"<script\b.*?</script>", " ", sem, flags=re.S | re.I)
-    return re.sub(r"<[^>]+>", " ", sem)
+    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import sem_o_mudo
+
+    return re.sub(r"<[^>]+>", " ", sem_o_mudo(bruto))
 
 
 def html(nome: str) -> str:

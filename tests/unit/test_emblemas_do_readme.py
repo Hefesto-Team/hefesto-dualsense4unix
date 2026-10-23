@@ -4,6 +4,7 @@ from __future__ import annotations
 import re
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 REPO = Path(__file__).resolve().parents[2]
 README = REPO / "README.md"
@@ -35,6 +36,14 @@ def _texto_do_readme() -> str:
     return README.read_text(encoding="utf-8")
 
 
+def _host_da_url_em(texto: str, posicao: int) -> str | None:
+    """O host da URL do `texto` que contém `posicao`, lido por `urlsplit` e não por substring."""
+    for url in re.finditer(r"https?://[^\s)\"'>\]]+", texto):
+        if url.start() <= posicao < url.end():
+            return urlsplit(url.group(0)).hostname
+    return None
+
+
 def test_emblema_de_versao_e_alvo_do_portao_de_versao() -> None:
     """Sem alvo próprio, o emblema passa por baixo da régua da prosa."""
     alvos_do_readme = [alvo for alvo in _targets_do_portao() if alvo[1] == "README.md"]
@@ -48,7 +57,7 @@ def test_emblema_de_versao_e_alvo_do_portao_de_versao() -> None:
         alvo
         for alvo in alvos_do_readme
         if (achado := re.search(alvo[2], texto, re.MULTILINE)) is not None
-        and "shields.io" in achado.group(0)
+        and _host_da_url_em(texto, achado.start()) == "img.shields.io"
     ]
     assert casando, (
         "nenhum alvo do portão casa a URL do shields.io no README — o emblema "
@@ -73,3 +82,17 @@ def test_prosa_e_emblema_do_readme_dizem_a_mesma_versao() -> None:
     emblema = _RE_EMBLEMA_VERSAO.search(texto)
     assert prosa is not None and emblema is not None
     assert prosa.group(1) == emblema.group(1)
+
+
+def test_o_emblema_so_vale_se_o_host_da_url_e_o_do_shields() -> None:
+    """`shields.io` no caminho de OUTRO host não é o emblema.
+
+    A MORDIDA: volte a `"shields.io" in achado.group(0)` e o segundo texto passa.
+    """
+    certo = "[![V](https://img.shields.io/badge/vers%C3%A3o-1.0%20alfa-x.svg)](C.md)"
+    falso = "[![V](https://exemplo.test/img.shields.io/badge/vers%C3%A3o-1.0%20alfa-x.svg)](C.md)"
+    alvo = r"shields\.io/badge/vers%C3%A3o-([0-9][^%-]*)"
+    for texto, esperado in ((certo, "img.shields.io"), (falso, "exemplo.test")):
+        achado = re.search(alvo, texto)
+        assert achado is not None
+        assert _host_da_url_em(texto, achado.start()) == esperado

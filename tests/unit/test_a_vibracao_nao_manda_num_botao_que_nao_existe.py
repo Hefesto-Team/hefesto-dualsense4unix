@@ -82,6 +82,7 @@ import pytest
 
 
 from hefesto_dualsense4unix.app.actions.status_actions import StatusActionsMixin
+from hefesto_dualsense4unix.interface.frases_que_ela_baniu import sem_o_mudo
 
 RAIZ = Path(__file__).resolve().parents[2]
 PAGINAS = (
@@ -94,10 +95,6 @@ FONTES = (
 
 ROTULO_QUE_SAIU_COM_A_JANELA = "Deixar o jogo controlar a vibração"
 
-_MUDOS = re.compile(
-    r"<!--.*?-->|<style\b[^>]*>.*?</style>|<script\b[^>]*>.*?</script>",
-    re.S | re.I,
-)
 _TAG = re.compile(r"<[^>]*>", re.S)
 
 _CLICAVEL = re.compile(
@@ -120,7 +117,7 @@ def rotulos_clicaveis() -> frozenset[str]:
     )
     fora: set[str] = set()
     for pagina in achadas:
-        texto = _MUDOS.sub(" ", pagina.read_text(encoding="utf-8"))
+        texto = sem_o_mudo(pagina.read_text(encoding="utf-8"))
         for m in _CLICAVEL.finditer(texto):
             rotulo = " ".join(_TAG.sub(" ", m.group(2)).split())
             if rotulo:

@@ -2104,12 +2104,14 @@ def _conferir(html: str) -> None:
                "e permite alterar a largura da coluna» é a descrição dela do "
                "gesto, e sem o cursor não há gesto a achar")
 
-    roteiro = re.search(r"<script>.*?</script>", html, re.S)
+    from hefesto_dualsense4unix.interface.frases_que_ela_baniu import roteiros_de
+
+    roteiro = next((corpo for atributos, corpo in roteiros_de(html) if not atributos), None)
     exigir(roteiro is not None,
            "o roteiro da página sumiu — sem ele a lupa não abre, o duplo "
            "clique não ordena e a divisa não arrasta")
-    if roteiro:
-        corpo = roteiro.group(0)
+    if roteiro is not None:
+        corpo = roteiro
         for peca, queixa in (
                 ("icone-rot.lupa", "o roteiro parou de abrir o campo da lupa"),
                 ("dblclick", "o roteiro parou de ouvir o DUPLO clique — e um "

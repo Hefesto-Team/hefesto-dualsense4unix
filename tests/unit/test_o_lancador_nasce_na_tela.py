@@ -10,9 +10,25 @@ MOTOR = RAIZ / "run.sh"
 ATALHO = RAIZ / "packaging" / "hefesto-dualsense4unix.desktop"
 INSTALADOR = RAIZ / "install.sh"
 
-_EXEC_COM_TELA = re.compile(
-    r"^env\s+(?:\S+=\S+\s+)*HEFESTO_NA_TELA=1\s+(?:\S+=\S+\s+)*\S*/run\.sh\s+--gui\b"
-)
+
+def _abre_com_tela(linha: str) -> bool:
+    """`env [VAR=…]… HEFESTO_NA_TELA=1 [VAR=…]… …/run.sh --gui`, lido palavra por palavra.
+
+    A regex de `(?:\\S+=\\S+\\s+)*` volta atrás sem fim numa linha cheia de `=`; a lista de palavras
+    anda uma vez só.
+    """
+    palavras = linha.split()
+    if palavras[:1] != ["env"]:
+        return False
+    fim = 1
+    while fim < len(palavras) and "=" in palavras[fim][1:-1]:
+        fim += 1
+    return (
+        "HEFESTO_NA_TELA=1" in palavras[1:fim]
+        and fim + 1 < len(palavras)
+        and palavras[fim].endswith("/run.sh")
+        and re.match(r"--gui\b", palavras[fim + 1]) is not None
+    )
 
 
 def _exec_do_atalho() -> str:
@@ -54,7 +70,7 @@ def _linhas_vivas(fonte: str) -> list[str]:
 def test_o_atalho_versionado_abre_o_motor_com_a_tela() -> None:
     """O elo 1: o `.desktop` versionado chama `run.sh --gui` declarando a tela."""
     exec_ = _exec_do_atalho()
-    assert _EXEC_COM_TELA.match(exec_), (
+    assert _abre_com_tela(exec_), (
         "o `Exec=` do .desktop não abre `run.sh --gui` com `HEFESTO_NA_TELA=1` — "
         "sem a variável, o atalho dela atravessa a guarda TELA-DELA-02 e a "
         "janela nasce num `Xvfb` que ela não vê:\n  " + exec_
@@ -64,7 +80,7 @@ def test_o_atalho_versionado_abre_o_motor_com_a_tela() -> None:
 def test_o_atalho_instalado_abre_o_motor_com_a_tela() -> None:
     """O elo 1, do lado de quem instala: as duas formas do `Exec=` (com e sem"""
     for linha in _linhas_de_exec_do_instalador():
-        assert _EXEC_COM_TELA.match(linha), (
+        assert _abre_com_tela(linha), (
             "o `install.sh` escreve um `Exec=` sem `HEFESTO_NA_TELA=1` (ou que "
             "não chama `run.sh --gui`):\n  " + linha
         )
@@ -128,3 +144,19 @@ def test_a_guarda_honra_o_escape_declarado() -> None:
             os.environ.pop("HEFESTO_NA_TELA", None)
         else:
             os.environ["HEFESTO_NA_TELA"] = antes
+
+
+def test_a_leitura_do_exec_anda_uma_vez_so() -> None:
+    """Linha hostil de `=` não trava a régua, e a régua segue reprovando o `Exec=` sem a tela.
+
+    A MORDIDA: devolva a regex `(?:\\S+=\\S+\\s+)*` e a primeira asserção leva minutos.
+    """
+    import time
+
+    hostil = "env HEFESTO_NA_TELA=1 " + "!==! " * 4000
+    comeco = time.monotonic()
+    assert not _abre_com_tela(hostil)
+    assert time.monotonic() - comeco < 2.0, "a leitura do `Exec=` voltou a voltar atrás"
+    assert _abre_com_tela("env A=b HEFESTO_NA_TELA=1 C=d /raiz/run.sh --gui")
+    assert not _abre_com_tela("env A=b /raiz/run.sh --gui")
+    assert not _abre_com_tela("env HEFESTO_NA_TELA=1 /raiz/run.sh --cli")

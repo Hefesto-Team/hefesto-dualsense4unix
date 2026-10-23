@@ -12,6 +12,7 @@ from pydualsense.pydualsense import DSAudio, DSLight, DSTrigger
 
 from hefesto_dualsense4unix.core import backend_pydualsense as bp
 from hefesto_dualsense4unix.core.controller import OutputSpec
+from hefesto_dualsense4unix.interface.frases_que_ela_baniu import sem_o_mudo
 
 _RAIZ = Path(__file__).resolve().parents[2]
 _INTERFACE = _RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
@@ -58,7 +59,7 @@ def _citados(texto: str) -> list[str]:
 
 def _texto_visivel(pagina: str) -> str:
     corpo = (_PAGINAS / pagina).read_text(encoding="utf-8")
-    corpo = re.sub(r"<!--.*?-->|<script.*?</script>|<style.*?</style>", " ", corpo, flags=re.S)
+    corpo = sem_o_mudo(corpo)
     return html.unescape(re.sub(r"<[^>]+>", "\n", corpo))
 
 

@@ -82,6 +82,7 @@ from __future__ import annotations
 import re
 import threading
 from functools import cache
+from html.parser import HTMLParser
 
 FRASES_BANIDAS: tuple[str, ...] = (
     "derrubam o controle",
@@ -110,10 +111,95 @@ PALAVRAS_BANIDAS: tuple[str, ...] = (
 #: `-` e `_` estão aqui porque `mesa-frase`, `radio-mesa` e `NADA_ACONTECEU_MESA_VAZIA` são
 _COLADO = r"0-9A-Za-zÀ-ÖØ-öø-ÿ_\-"
 
-_MUDOS = re.compile(
-    r"<!--.*?-->|<style\b[^>]*>.*?</style>|<script\b[^>]*>.*?</script>",
-    re.S | re.I,
-)
+
+class _Mudos(HTMLParser):
+    """Onde ficam o comentário, o `<style>` e o `<script>`: o `html.parser` os acha, não uma regex.
+
+    Uma regex de `<script ...>` a `</script>` não vê `</script >`, nem `</SCRIPT>` sem a bandeira,
+    nem o comentário que fecha em `--!>`; o parser da biblioteca sabe onde o navegador fecha.
+    Os índices são do texto inteiro, porque a leitura apaga letra por letra, sem mover nenhuma.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=False)
+        self._base = 0
+        self._aberto: int | None = None
+        self.trechos: list[tuple[int, int]] = []
+
+    def goahead(self, end: bool) -> None:
+        antes, base = len(self.rawdata), self._base
+        super().goahead(end)
+        self._base = base + antes - len(self.rawdata)
+
+    def parse_comment(self, i: int, report: bool = True) -> int:
+        j = super().parse_comment(i, report)
+        if j >= 0:
+            self.trechos.append((self._base + i, self._base + j))
+        return j
+
+    def parse_starttag(self, i: int) -> int:
+        j = super().parse_starttag(i)
+        if j >= 0 and self.cdata_elem in ("script", "style") and self._aberto is None:
+            self._aberto = self._base + i
+        return j
+
+    def parse_endtag(self, i: int) -> int:
+        estava_dentro = self.cdata_elem is not None
+        j = super().parse_endtag(i)
+        if estava_dentro and self.cdata_elem is None and self._aberto is not None and j >= 0:
+            self.trechos.append((self._aberto, self._base + j))
+            self._aberto = None
+        return j
+
+
+def trechos_mudos(pagina: str) -> list[tuple[int, int]]:
+    """`[(início, fim)]` de cada comentário, `<style>` e `<script>`; o aberto vai até o fim."""
+    leitor = _Mudos()
+    leitor.feed(pagina)
+    leitor.close()
+    if leitor._aberto is not None:
+        leitor.trechos.append((leitor._aberto, len(pagina)))
+    return sorted(leitor.trechos)
+
+
+class _Roteiros(HTMLParser):
+    """O corpo de cada `<script>` e os atributos dele, lidos pelo `html.parser`."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=False)
+        self.achados: list[tuple[dict[str, str | None], str]] = []
+        self._atual: tuple[dict[str, str | None], list[str]] | None = None
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "script":
+            self._atual = (dict(attrs), [])
+
+    def handle_data(self, data: str) -> None:
+        if self._atual is not None:
+            self._atual[1].append(data)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag == "script" and self._atual is not None:
+            self.achados.append((self._atual[0], "".join(self._atual[1])))
+            self._atual = None
+
+
+def roteiros_de(pagina: str) -> list[tuple[dict[str, str | None], str]]:
+    """`[(atributos, corpo)]` de cada `<script>` da página, na ordem em que ela os traz."""
+    leitor = _Roteiros()
+    leitor.feed(pagina)
+    leitor.close()
+    if leitor._atual is not None:
+        leitor.achados.append((leitor._atual[0], "".join(leitor._atual[1])))
+    return leitor.achados
+
+
+def sem_o_mudo(pagina: str) -> str:
+    """A página sem o comentário, o `<style>` e o `<script>`: espaço no lugar, do mesmo tamanho."""
+    letras = list(pagina)
+    for inicio, fim in trechos_mudos(pagina):
+        _apagar(letras, inicio, fim)
+    return "".join(letras)
 
 _CODIGO = re.compile(r"<code\b[^>]*>.*?</code>", re.S | re.I)
 
@@ -202,9 +288,7 @@ def _apagar_o_escondido(
 
 def _ler(pagina: str, escondidos: tuple[str, ...] = ()) -> str:
     """O motor das duas leituras — a da bancada e a do produto."""
-    letras = list(pagina)
-    for muda in _MUDOS.finditer(pagina):
-        _apagar(letras, muda.start(), muda.end())
+    letras = list(sem_o_mudo(pagina))
     limpo = "".join(letras)
     _apagar_o_escondido(letras, limpo, escondidos)
     limpo = "".join(letras)

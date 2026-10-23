@@ -23,6 +23,7 @@ exigir_gi_real("importa `interface.hefesto_vivo`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import hefesto_vivo, mesa_viva, monta, onde, pacotes
 from hefesto_dualsense4unix.interface.pacotes import a13_mapa_do_controle as a13
+from hefesto_dualsense4unix.interface.frases_que_ela_baniu import sem_o_mudo
 from hefesto_dualsense4unix.interface.pacotes import perfil
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
@@ -107,7 +108,7 @@ def test_a_troca_aparece_no_valor_da_linha_com_o_nome_da_peca(com_troca: dict[st
 
 def test_o_endereco_existe_dos_dois_lados() -> None:
     texto = _a_pagina().read_text(encoding="utf-8")
-    sem_script = re.sub(r"<script\b[^>]*>.*?</script>", "", texto, flags=re.S)
+    sem_script = sem_o_mudo(texto)
     na_pagina = set(re.findall(r'data-campo="([^"]+)"', sem_script))
     carga = pacotes.pacote_da_pagina(PAGINA, _contexto("p1")) or {}
     no_pacote = set(carga["mesa"])

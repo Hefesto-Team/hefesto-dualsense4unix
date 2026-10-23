@@ -32,7 +32,7 @@ def _seletor_do_ouvinte() -> str:
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py").read_text(
         encoding="utf-8")
     corpo = fonte[fonte.index("function manda_do_alvo(ev)"):]
-    achado = re.search(r"ev\.target\.closest\(\s*((?:'[^']*'\s*\+?\s*)+)\)", corpo)
+    achado = re.search(r"ev\.target\.closest\(\s*('[^']*'(?:\s*\+\s*'[^']*')*)\s*\)", corpo)
     assert achado is not None, "o ouvinte do piloto mudou de forma"
     return "".join(re.findall(r"'([^']*)'", achado.group(1)))
 

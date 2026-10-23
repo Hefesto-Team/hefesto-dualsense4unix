@@ -26,6 +26,7 @@ import re
 import pytest
 
 from hefesto_dualsense4unix.interface import arranjo_desta_maquina, pagina_do_mapa
+from hefesto_dualsense4unix.interface.frases_que_ela_baniu import roteiros_de
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src/hefesto_dualsense4unix/interface"
@@ -265,8 +266,8 @@ def test_o_javascript_de_cada_pagina_compila(nome: str, tmp_path: pathlib.Path) 
     node = shutil.which("node")
     if node is None:
         pytest.skip("sem node para checar a sintaxe")
-    blocos = re.findall(r"<script(?![^>]*\bsrc=)(?![^>]*type=\"text/)[^>]*>(.*?)</script>",
-                        PAGINAS[nome], re.S)
+    blocos = [corpo for atributos, corpo in roteiros_de(PAGINAS[nome])
+              if "src" not in atributos and not (atributos.get("type") or "").startswith("text/")]
     assert blocos, f"{nome}: nenhum <script>"
     for numero, bloco in enumerate(blocos):
         arquivo = tmp_path / f"bloco{numero}.js"
