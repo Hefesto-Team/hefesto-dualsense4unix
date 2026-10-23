@@ -649,16 +649,14 @@ class FsAclOps:
     def aparelho_e_driver_hid(self, base: str) -> tuple[str, str] | None:
         """``(id do aparelho HID, driver)`` do pai de ``/sys/class/hidraw/<base>``.
 
-        O id é o nome do pai HID (``0005:054C:0CE6.006D``) e o driver é o nome
-        do destino do link ``device/driver``. ``None`` = sem driver preso, ou
-        nome que não tem a forma do kernel (nada vira caminho sem passar aqui).
+        ``None`` = sem driver preso, ou nome fora da forma do kernel (nada vira
+        caminho sem passar aqui). O link que some no meio levanta ``OSError``.
         """
         sys_dir = f"{self._sys_class_hidraw}/{base}"
-        try:
-            aparelho = os.path.basename(os.path.realpath(f"{sys_dir}/device"))
-            driver = os.path.basename(os.readlink(f"{sys_dir}/device/driver"))
-        except OSError:
+        if not os.path.islink(f"{sys_dir}/device/driver"):
             return None
+        aparelho = os.path.basename(os.path.realpath(f"{sys_dir}/device"))
+        driver = os.path.basename(os.readlink(f"{sys_dir}/device/driver"))
         if _ID_DO_APARELHO_HID_RE.match(aparelho) is None:
             return None
         if _NOME_DE_DRIVER_HID_RE.match(driver) is None:
@@ -2258,7 +2256,11 @@ class BrokerState:
             node = f"{self._dev_root}/{base}"
             if self._validate(node) is None:
                 continue
-            achado = achar(base)
+            try:
+                achado = achar(base)
+            except OSError as erro:
+                self._log("religar_falhou", node=node, passo="achar", erro=str(erro))
+                continue
             if achado is None or achado[0] in vistos:
                 continue
             aparelho, driver = achado

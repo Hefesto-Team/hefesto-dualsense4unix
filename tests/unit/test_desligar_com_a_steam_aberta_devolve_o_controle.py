@@ -60,6 +60,12 @@ class Religador(_Gravador):
         super().__init__(**kw)
         self.escritas: list[tuple[str, str]] = []
         self.falhar: dict[str, int] = {}
+        self.link_some = False
+
+    def aparelho_e_driver_hid(self, base: str) -> tuple[str, str] | None:
+        if self.link_some:
+            raise OSError(errno.ENOENT, "o link sumiu")
+        return super().aparelho_e_driver_hid(base)
 
     def _anota(self, passo: str, aparelho: str) -> None:
         self.escritas.append((passo, aparelho))
@@ -372,3 +378,18 @@ def test_o_estado_recebe_a_raiz_dos_drivers(mesa: Mesa, tmp_path: Path) -> None:
         log=lambda *_a, **_k: None,
     )
     assert st._ops._sys_bus_hid_drivers == str(tmp_path / "drivers")
+
+
+def test_o_link_do_driver_que_some_no_meio_e_logado_e_a_entrega_segue(mesa: Mesa) -> None:
+    """O aparelho sai entre a varredura e a leitura do link: o ``OSError`` do
+    ``readlink`` vira ``religar_falhou`` (passo ``achar``), e a entrega fica."""
+    mesa.nascer("hidraw5", "radio", 1)
+    _com_driver(mesa, "hidraw5")
+    cena = CenaReligavel(mesa)
+    cena.ops.link_some = True
+    cena.para_o_daemon(["hidraw5"])
+    cena.tique(GRACA)
+    assert cena.ops.escritas == []
+    assert [f["passo"] for f in _eventos(cena, "religar_falhou")] == ["achar"]
+    assert cena.st.entregue is True
+    assert _aberto_para_a_sessao(mesa.dev / "hidraw5")
