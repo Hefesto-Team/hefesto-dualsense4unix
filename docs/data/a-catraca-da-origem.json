@@ -245,14 +245,14 @@
       "data": "2026-10-23",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1191731,
+      "piso": 1192379,
       "por_item": {
-        "docs": 120796,
-        "scripts": 120350,
-        "src": 319052,
-        "tests": 631533
+        "docs": 120808,
+        "scripts": 120355,
+        "src": 319294,
+        "tests": 631922
       },
-      "razao": "tamanho: +12 linhas (1191719 -> 1191731), pagas por Origem: plataforma.big_picture; registrado no fecho, topo 4a0e31187de2",
+      "razao": "tamanho: +648 linhas (1191731 -> 1192379), pagas por Origem: D-2310-AS-FONTES-DA-INTERFACE-MORAM-NO-PRODUTO; registrado no fecho, topo e29667072c28",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -835,10 +835,16 @@
           "de": 1191719,
           "para": 1191731,
           "razao": "tamanho: +12 linhas (1191719 -> 1191731), pagas por Origem: plataforma.big_picture; registrado no fecho, topo 4a0e31187de2"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 1191731,
+          "para": 1192379,
+          "razao": "tamanho: +648 linhas (1191731 -> 1192379), pagas por Origem: D-2310-AS-FONTES-DA-INTERFACE-MORAM-NO-PRODUTO; registrado no fecho, topo e29667072c28"
         }
       ],
       "unidade": "linhas",
-      "universo": 3113
+      "universo": 3117
     }
   }
 }
