@@ -102,6 +102,7 @@ def test_a_linha_do_gameinput_pede_n_b_nos_mesmos_sinais_da_peca_gdk() -> None:
 
 
 def test_o_jogo_gdk_com_as_duas_pecas_recebe_os_dois_overrides(lar: Path) -> None:
+    """Prova da D-2210-O-JOGO-GDK-VIBRA-PELO-GAMEINPUT-DA-CASA."""
     raiz = _jogo(lar, "710001")
     assert rda.ambiente_do_jogo(raiz) == _TRIO
     assert rda.pecas_que_faltam(raiz) == ()
@@ -257,6 +258,7 @@ def test_o_juiz_da_regua_aceita_o_report_certo_e_recusa_o_torto() -> None:
 
 
 def test_sem_dualsense_a_peca_responde_como_o_gameinput_do_proton() -> None:
+    """Prova da D-2210-SEM-DUALSENSE-O-GAMEINPUT-DA-CASA-RESPONDE-COMO-O-DO-PROTON."""
     # O pior caso é o de hoje: sem DualSense (modo Xbox, ou só pad de outra marca), o jogo GDK que
     # lê a entrada pelo GameInput tem de receber o E_NOTIMPL do Proton e cair na XInput.
     fonte = (_FONTE / "gameinput.c").read_text(encoding="utf-8")
