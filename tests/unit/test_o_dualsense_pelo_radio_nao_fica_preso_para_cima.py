@@ -32,6 +32,7 @@ _ESTADOS = [
 def test_nenhum_estado_troca_o_dualsense_nativo_pelo_xinput(
     nativo: bool, mascara: str, backend: str, fisicos: int
 ) -> None:
+    # D-2310-O-MENU-PRESO-DO-RADIO-E-DO-WINE
     """MORDIDA: compor o `PROTON_SONY_HIDRAW_XINPUT` no Modo Nativo, e esta reprova."""
     env = le.compose_env(native_mode=nativo, emulation_enabled=True, flavor=mascara,
                          backends=[backend], fisicos=fisicos)
