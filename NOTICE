@@ -145,10 +145,13 @@ dependência Python.
 Fontes tipográficas e glifos
 ----------------------------
 
-  - As duas fontes da identidade visual (Space Grotesk e JetBrains Mono, ambas
-    OFL 1.1) não estão no repositório. O scripts/install_fonts.sh prefere o
-    pacote da distribuição e, se não houver, baixa do repositório oficial com
-    commit fixo e conferência por SHA-256.
+  - As duas fontes da identidade visual, Space Grotesk 2.000 e JetBrains Mono
+    2.211 (ambas OFL 1.1, variáveis, de google/fonts), vêm com o produto em
+    src/hefesto_dualsense4unix/interface/assets/fontes/, com o texto da licença
+    de cada uma ao lado e a origem e o SHA-256 em ORIGEM.md. Viajam com o pacote
+    Python (wheel e sdist), e as páginas da interface as declaram por
+    @font-face, sem pedir fonte à rede. O scripts/install_fonts.sh instala as
+    mesmas famílias no sistema; a interface não depende dele.
 
   - Os SVG de assets/glyphs/ são desenho do próprio projeto; os que terminam em
     _active são gerados por scripts/generate_glyph_active.py a partir dos
