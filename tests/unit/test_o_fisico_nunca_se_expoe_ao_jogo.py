@@ -172,6 +172,7 @@ class TestOFisicoAbrePeloFdDoBroker:
         id_da_saida: int,
     ) -> None:
         """A régua da sprint: nenhum ``expose`` chega ao fs do nó, e o handle vive pelo fd."""
+        # D-2310-O-HANDLE-ABRE-O-FISICO-PELO-FD-DO-BROKER
         with broker_no_ar(tmp_path) as (estado, fs, cliente):
             no = NOS[0]
             aparelho = fs.ligar(no)
