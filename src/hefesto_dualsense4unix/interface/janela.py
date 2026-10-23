@@ -22,8 +22,10 @@ from hefesto_dualsense4unix.interface import tema_da_sessao as tema  # noqa: E40
 from hefesto_dualsense4unix.interface.folha_da_casa import (  # noqa: E402
     CLASSE_DA_ESPERA,
     FOLHA_DA_CASA,
+    VISTA_DO_DESENHO,
     caminho_do_tamanho,
     tamanho_guardado,
+    tamanho_que_cabe,
 )
 from hefesto_dualsense4unix.mods import tema as _tema_das_mods  # noqa: E402
 from hefesto_dualsense4unix.utils import area_de_transferencia as _area  # noqa: E402
@@ -110,9 +112,7 @@ ROTEIRO_DA_ESPERA = (
     f"{PRAZO_DA_ESPERA_MS});}})();"
 )
 
-LARGURA_DO_DESENHO = 1212
-
-PISO_DA_VISTA = 809
+LARGURA_DO_DESENHO, PISO_DA_VISTA = VISTA_DO_DESENHO
 
 ALTURA_DO_DESENHO = PISO_DA_VISTA
 
@@ -365,6 +365,19 @@ def vestir_o_nome_acessivel(botao: Any, dica: str) -> None:
 
 #: O tamanho da interface que a 09 grava (100, 125 ou 150) vale por padrão quando o arquivo não diz.
 TAMANHO_PADRAO = 100
+
+#: A 09 diz o tamanho em uso na dica do botão escolhido, quando a janela cede (23/10/2026, a
+#: validar pelo usuário): a dica do desenho fica guardada no próprio botão e volta quando cabe.
+#: Página sem os botões do tamanho não tem o que trocar.
+ROTEIRO_DO_TAMANHO_EM_USO = (
+    "(function(escolhido,uso){document.querySelectorAll("
+    "'[data-id=\"tamanho-da-interface\"] button[data-v]').forEach(function(b){"
+    "if(!b.hasAttribute('data-dica-do-desenho'))"
+    "b.setAttribute('data-dica-do-desenho',b.getAttribute('data-dica')||'');"
+    "var base=b.getAttribute('data-dica-do-desenho');"
+    "b.setAttribute('data-dica',(Number(b.getAttribute('data-v'))===escolhido&&uso!==escolhido)"
+    "?(base?base+'. ':'')+'Em uso: '+uso+' %, o que cabe na janela':base);});})"
+)
 
 
 def tamanho_da_interface() -> int:
@@ -655,11 +668,16 @@ class JanelaDaAba:
         self._cor_da_barra = Gtk.CssProvider()
         self._cor_da_barra.load_from_data(
             css_da_cor_da_barra(self.ponte.tema_de_cores).encode("utf-8"))
-        #: O percentual de zoom que a página está usando AGORA (`None` até o primeiro aplicar).
+        #: O percentual de zoom que a página está usando AGORA (`None` até o primeiro aplicar), e
+        #: o que a 09 guardou: o em uso é o escolhido, ou o que cabe na vista (`tamanho_que_cabe`).
         self.tamanho_aplicado: int | None = None
-        self.aplicar_o_tamanho_guardado()
+        self.tamanho_escolhido = TAMANHO_PADRAO
+        #: O par (escolhido, em uso) que a dica da página mostra; `None` = a dica do desenho.
+        self._dica_cedida: tuple[int, int] | None = None
+        self._pagina_no_ar = False
         self._vigia_do_tamanho = self._vigiar_o_tamanho()
         self.view.connect("load-changed", self._carregou)
+        self.view.connect("size-allocate", self._a_vista_mudou)
         self.view.connect("web-process-terminated", self._morreu_a_pagina)
 
         if not oculta and janela_proibida_na_tela():
@@ -680,9 +698,12 @@ class JanelaDaAba:
         if oculta:
             self.janela: Any = Gtk.OffscreenWindow()
             self.janela.set_default_size(*(tamanho or TAMANHO_OCULTA))
+            self._vista_pedida = tamanho or TAMANHO_OCULTA
         else:
             self.janela = Gtk.Window(title=f"{titulo} — {subtitulo}" if subtitulo else titulo)
             self.janela.set_default_size(*(tamanho or TAMANHO_NA_TELA))
+            largura, altura = tamanho or TAMANHO_NA_TELA
+            self._vista_pedida = (largura, altura - ALTURA_DA_BARRA)
             self.janela.set_size_request(LARGURA_DO_DESENHO, PISO_DA_VISTA + ALTURA_DA_BARRA)
             barra, self._botoes_da_barra = montar_a_barra(
                 titulo, subtitulo or "", self._gesto_da_barra, cor=self._cor_da_barra,
@@ -694,20 +715,62 @@ class JanelaDaAba:
             self.janela.connect("window-state-event", self._o_tamanho_mudou)
             self.janela.connect("configure-event", self._o_tamanho_mudou)
             self.janela.connect("destroy", self._ao_destruir)
+        self.aplicar_o_tamanho_guardado()
         self.janela.add(self.view)
         self.janela.show_all()
         self.view.load_uri(arquivo.as_uri())
 
+    def vista(self) -> tuple[int, int]:
+        """A vista do WebView em pixels da tela; antes da primeira alocação, a pedida."""
+        largura, altura = self.view.get_allocated_width(), self.view.get_allocated_height()
+        if largura > 1 and altura > 1:
+            return largura, altura
+        return self._vista_pedida
+
     def aplicar_o_tamanho_guardado(self) -> bool:
-        """Põe no WebView o zoom que a aba Sistema guardou. Devolve se mudou o zoom."""
-        percentual = tamanho_da_interface()
-        if percentual == self.tamanho_aplicado:
-            return False
-        self.view.set_zoom_level(percentual / 100)
-        antes, self.tamanho_aplicado = self.tamanho_aplicado, percentual
-        if antes is not None:
-            print(f"[janela] tamanho da interface: {antes} % -> {percentual} %", file=sys.stderr)
-        return True
+        """Lê o tamanho que a aba Sistema guardou e o aplica no que cabe. Devolve se mudou."""
+        self.tamanho_escolhido = tamanho_da_interface()
+        return self.aplicar_o_tamanho()
+
+    def aplicar_o_tamanho(self) -> bool:
+        """Põe no WebView o menor entre o tamanho escolhido e o que a vista comporta, e a 09 diz
+        o tamanho em uso. Devolve se mudou o zoom.
+
+        A escolha de 23/10/2026, «Cede onde não cabe»
+        (O-TAMANHO-DE-150-NAO-CABE-NA-VISTA-DE-840-PX-01): o 150 % numa vista de 840 px de altura
+        deixava 560 px em CSS, e o desenho pede 809.
+        """
+        largura, altura = self.vista()
+        em_uso = tamanho_que_cabe(self.tamanho_escolhido, largura, altura)
+        mudou = em_uso != self.tamanho_aplicado
+        if mudou:
+            self.view.set_zoom_level(em_uso / 100)
+            antes, self.tamanho_aplicado = self.tamanho_aplicado, em_uso
+            if antes is not None or em_uso != self.tamanho_escolhido:
+                cede = (f" (escolhido {self.tamanho_escolhido} %; a vista de {largura}x{altura} "
+                        "não comporta mais)" if em_uso != self.tamanho_escolhido else "")
+                de = f"{antes} % -> " if antes is not None else ""
+                print(f"[janela] tamanho da interface: {de}{em_uso} %{cede}", file=sys.stderr)
+        self._dizer_o_tamanho_em_uso()
+        return mudou
+
+    def _dizer_o_tamanho_em_uso(self, *, pagina_nova: bool = False) -> None:
+        """A dica do botão escolhido na 09 diz o tamanho em uso quando a janela cede, e volta à
+        do desenho quando cabe. Sem ceder, a página fica como nasceu: nenhum roteiro roda."""
+        if pagina_nova:
+            self._pagina_no_ar, self._dica_cedida = True, None
+        if self.tamanho_aplicado is None or not self._pagina_no_ar:
+            return
+        par = (self.tamanho_escolhido, self.tamanho_aplicado)
+        cede = par[0] != par[1]
+        if (par if cede else None) == self._dica_cedida:
+            return
+        self._dica_cedida = par if cede else None
+        self.ponte.rodar(f"{ROTEIRO_DO_TAMANHO_EM_USO}({par[0]},{par[1]})")
+
+    def _a_vista_mudou(self, *_args: Any) -> None:
+        """A janela mudou de tamanho (arrastar, maximizar, restaurar): o tamanho em uso se refaz."""
+        self.aplicar_o_tamanho()
 
     def _vigiar_o_tamanho(self) -> Any:
         """Vigia o `interface_escala`: quando a 09 grava, o zoom muda na hora, sem reabrir.
@@ -981,6 +1044,8 @@ class JanelaDaAba:
     def _carregou(self, _view: Any, evento: Any) -> None:
         if evento != WebKit2.LoadEvent.FINISHED:
             return
+        # a página nova nasce com a dica do desenho: o tamanho em uso vai a ela de novo
+        self._dizer_o_tamanho_em_uso(pagina_nova=True)
         self._confirmar_a_pagina()
 
     def _confirmar_a_pagina(self) -> None:

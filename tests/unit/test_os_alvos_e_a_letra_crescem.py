@@ -20,11 +20,14 @@ MORDIDAS (todas executadas aqui, sobre cópias do HTML gerado):
 * uma letra de 11 px na 09 -> `test_a_regua_morde_a_letra_pequena`;
 * um alvo pequeno a mais numa aba de teto -> `test_a_regua_morde_o_teto`;
 * a vaga com os traços de volta -> `test_a_vaga_diz_so_player_n_desconectado`;
-* a janela ignorando `interface_escala` -> `test_a_janela_le_o_tamanho_da_interface`.
+* a janela ignorando `interface_escala` -> `test_a_janela_le_o_tamanho_da_interface`;
+* o 150 % que não cede na vista de 840 -> `test_a_regua_morde_o_tamanho_que_nao_cede` e o modo
+  `nao-cede` de `test_a_janela_le_o_tamanho_da_interface`.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import pathlib
 import re
@@ -246,6 +249,117 @@ def test_o_piso_e_uma_folha_so() -> None:
 
 
 # ---------------------------------------------------------------------------------------------
+# O tamanho cede onde não cabe (O-TAMANHO-DE-150-NAO-CABE-NA-VISTA-DE-840-PX-01)
+# ---------------------------------------------------------------------------------------------
+
+#: As vistas da janela em pixels da tela (a de quem usa e a menor) e os tamanhos acima de 100.
+VISTAS_DA_JANELA = ((1918, 840), (1212, 809))
+TAMANHOS_GRANDES = (125, 150)
+
+_ROLAGENS = r"""() => { const fora = [];
+ document.querySelectorAll('body *').forEach(e => { const c = getComputedStyle(e);
+  if (c.display === 'none' || c.visibility === 'hidden') return;
+  const r = e.getBoundingClientRect(); if (r.width === 0 || r.height === 0) return;
+  const y = ['auto', 'scroll'].includes(c.overflowY) && e.scrollHeight > e.clientHeight + 1;
+  const x = ['auto', 'scroll'].includes(c.overflowX) && e.scrollWidth > e.clientWidth + 1;
+  const quem = e.tagName + '.' + String(e.className).split(' ')[0];
+  if (y) fora.push('rola por dentro: ' + quem);
+  if (x) fora.push('rola de lado por dentro: ' + quem); });
+ const d = document.documentElement;
+ return {sobra: d.scrollHeight - d.clientHeight, lateral: d.scrollWidth > d.clientWidth + 1, fora}; }"""  # noqa: E501
+
+
+def _vista_em_css(vista: tuple[int, int], escolhido: int,
+                  cede: Any = None) -> tuple[int, int]:
+    """O que o WebKit vê com o zoom em uso: a vista da janela dividida pelo tamanho que a janela
+    aplica (`folha_da_casa.tamanho_que_cabe`, o mesmo que a `janela.JanelaDaAba` chama)."""
+    from hefesto_dualsense4unix.interface import folha_da_casa as fc
+
+    em_uso = (cede or fc.tamanho_que_cabe)(escolhido, *vista)
+    return vista[0] * 100 // em_uso, vista[1] * 100 // em_uso
+
+
+def _rolagens(navegador: Browser, arquivo: pathlib.Path, vista: tuple[int, int],
+              estado: str = "") -> set[str]:
+    """O que rola ou corta com a folha da casa por cima, como no produto: o documento (para baixo
+    ou de lado) e todo painel que rola por dentro."""
+    from hefesto_dualsense4unix.interface.folha_da_casa import FOLHA_DA_CASA
+
+    pg = navegador.new_page(viewport={"width": vista[0], "height": vista[1]})
+    try:
+        pg.route("**/*", _so_o_arquivo)
+        pg.goto(arquivo.as_uri())
+        pg.add_style_tag(content=FOLHA_DA_CASA)
+        pg.wait_for_timeout(300)
+        if estado:
+            pg.evaluate(_ABRE, estado)
+            pg.wait_for_timeout(200)
+        medida: dict[str, Any] = pg.evaluate(_ROLAGENS)
+    finally:
+        pg.close()
+    achado = set(medida["fora"])
+    if medida["sobra"] > 0:
+        achado.add("o documento rola")
+    if medida["lateral"]:
+        achado.add("o documento rola de lado")
+    return achado
+
+
+def _casos_do_zoom() -> list[tuple[str, tuple[int, int], int, str]]:
+    return [(aba, vista, escolhido, estado)
+            for aba in ABAS for vista in VISTAS_DA_JANELA for escolhido in TAMANHOS_GRANDES
+            for estado in (("", "c-todos") if aba.startswith("02") else ("",))]
+
+
+@pytest.mark.parametrize(("aba", "vista", "escolhido", "estado"), _casos_do_zoom())
+def test_o_tamanho_grande_cabe_na_janela(
+    navegador: Browser, geradas: pathlib.Path, aba: str, vista: tuple[int, int],
+    escolhido: int, estado: str,
+) -> None:
+    """125 % e 150 % na vista de quem usa (1918x840) e na menor (1212x809): nada rola nem corta
+    além do que já rola a 100 % na mesma janela (a 100 %, só a 02 com os quatro abertos rola, no
+    quadro, por desenho; o documento não rola em aba nenhuma).
+
+    A escolha de 23/10/2026, «Cede onde não cabe»: a janela aplica o menor entre o escolhido e o
+    que a vista comporta. A 150 % sem ceder, a vista de 840 vira 560 px em CSS, e a 04 rolava 72.
+    """
+    arquivo = geradas / f"{aba}.html"
+    a_cem = _rolagens(navegador, arquivo, vista, estado)
+    assert not {"o documento rola", "o documento rola de lado"} & a_cem, (aba, vista, estado)
+    grande = _rolagens(navegador, arquivo, _vista_em_css(vista, escolhido), estado)
+    assert grande - a_cem == set(), (aba, vista, escolhido, estado)
+
+
+def test_o_que_cabe_e_o_menor_entre_o_escolhido_e_a_vista() -> None:
+    """A conta da janela: 840 px de altura comportam 103 %; a vista alta, o escolhido; e nunca
+    abaixo de 100, que é o tamanho de hoje."""
+    from hefesto_dualsense4unix.interface.folha_da_casa import VISTA_DO_DESENHO, tamanho_que_cabe
+    from hefesto_dualsense4unix.interface.janela import LARGURA_DO_DESENHO, PISO_DA_VISTA
+
+    assert VISTA_DO_DESENHO == (LARGURA_DO_DESENHO, PISO_DA_VISTA) == (1212, 809)
+    assert tamanho_que_cabe(150, 1918, 840) == 103
+    assert tamanho_que_cabe(125, 1918, 840) == 103
+    assert tamanho_que_cabe(150, 1212, 809) == 100
+    assert tamanho_que_cabe(150, 1918, 1300) == 150
+    assert tamanho_que_cabe(150, 1918, 1041) == 128
+    assert tamanho_que_cabe(100, 1918, 1300) == 100
+    assert tamanho_que_cabe(150, 940, 600) == 100
+    for vista in ((1918, 840), (1212, 809), (1918, 1041), (1600, 900)):
+        largura, altura = _vista_em_css(vista, 150)
+        assert largura >= 1212 and altura >= 809, vista
+
+
+def test_a_regua_morde_o_tamanho_que_nao_cede(
+    navegador: Browser, geradas: pathlib.Path
+) -> None:
+    """MORDIDA: a 150 % sem ceder, a vista de 1918x840 é 1278x560 em CSS, e a 04 rola."""
+    sem_ceder = _vista_em_css((1918, 840), 150, cede=lambda escolhido, _l, _a: escolhido)
+    assert sem_ceder == (1278, 560)
+    achado = _rolagens(navegador, geradas / "04-iluminacao.html", sem_ceder)
+    assert "o documento rola" in achado, achado
+
+
+# ---------------------------------------------------------------------------------------------
 # A vaga: só o nome e «Desconectado»
 # ---------------------------------------------------------------------------------------------
 
@@ -348,7 +462,7 @@ def test_a_regua_morde_o_teto(
 
 _FILHO = textwrap.dedent(
     """
-    import pathlib, sys, time
+    import json, pathlib, sys, time
     from gi.repository import GLib
     from hefesto_dualsense4unix.interface import janela as jn
     from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
@@ -357,8 +471,12 @@ _FILHO = textwrap.dedent(
     a09.guardar_o_tamanho(150)
     if modo == "ignora":
         jn.tamanho_da_interface = lambda: 100  # a janela que não pergunta ao arquivo
-    tela = jn.JanelaDaAba(arquivo=arq, titulo_esperado="Prova do zoom",
-                          ao_carregar=lambda: None, oculta=True)
+    if modo == "nao-cede":
+        jn.tamanho_que_cabe = lambda escolhido, _l, _a: escolhido  # o zoom sem olhar a vista
+    carregou = []
+    # a vista alta (1300 px) comporta o 150 %; a de 840 px, a de quem usa, só 103 %
+    tela = jn.JanelaDaAba(arquivo=arq, titulo_esperado="Prova do zoom", tamanho=(1918, 1300),
+                          ao_carregar=lambda: carregou.append(1), oculta=True)
 
     def bombear(ate, prazo=8.0):
         contexto = GLib.MainContext.default()
@@ -369,22 +487,48 @@ _FILHO = textwrap.dedent(
             time.sleep(0.004)
         return ate()
 
-    print("ao-abrir", tela.view.get_zoom_level(), flush=True)
+    def dicas():
+        lido = {}
+        tela.ponte.perguntar(
+            "JSON.stringify([...document.querySelectorAll('button[data-v]')]"
+            ".map(b => [b.dataset.v, b.dataset.dica]))",
+            lambda v, e: lido.setdefault("v", v if e is None else repr(e)))
+        bombear(lambda: "v" in lido)
+        return dict(json.loads(lido["v"]))
+
+    def zoom(alvo):
+        bombear(lambda: abs(tela.view.get_zoom_level() - alvo) < 1e-6, 3.0)
+        return tela.view.get_zoom_level()
+
+    bombear(lambda: bool(carregou))
+    print("ao-abrir", json.dumps([zoom(1.5), dicas()]), flush=True)
     a09.guardar_o_tamanho(125)
-    bombear(lambda: abs(tela.view.get_zoom_level() - 1.25) < 1e-6)
-    print("ao-gravar", tela.view.get_zoom_level(), flush=True)
+    print("ao-gravar", json.dumps([zoom(1.25), dicas()]), flush=True)
+    tela.janela.set_default_size(1918, 840)  # a janela oculta muda pelo tamanho padrão
+    print("na-vista-baixa", json.dumps([zoom(1.03), dicas()]), flush=True)
+    tela.janela.set_default_size(1918, 1300)
+    print("de-volta", json.dumps([zoom(1.25), dicas()]), flush=True)
     """
 )
 
+_PROVA_DO_ZOOM = (
+    "<!doctype html><html><head><meta charset=\"utf-8\"><title>Prova do zoom</title></head><body>"
+    '<div data-id="tamanho-da-interface">'
+    '<button data-v="100" data-dica="O tamanho de hoje">Padrão</button>'
+    '<button data-v="125" data-dica="Letras e botões maiores">Confortável</button>'
+    '<button data-v="150" data-dica="Letras e botões maiores ainda">Espaçoso</button>'
+    "</div></body></html>"
+)
+_DICAS = {"100": "O tamanho de hoje", "125": "Letras e botões maiores",
+          "150": "Letras e botões maiores ainda"}
+_LEITURAS = ("ao-abrir", "ao-gravar", "na-vista-baixa", "de-volta")
 
-def _roda_o_filho(modo: str, tmp_path: pathlib.Path) -> dict[str, float]:
+
+def _roda_o_filho(modo: str, tmp_path: pathlib.Path) -> dict[str, tuple[float, dict[str, str]]]:
     if shutil.which("xvfb-run") is None:  # pragma: no cover - máquina sem xvfb
         pytest.skip("sem `xvfb-run` a janela nasceria na tela de quem roda")
     html = tmp_path / "zoom.html"
-    html.write_text(
-        "<!doctype html><html><head><title>Prova do zoom</title></head><body>oi</body></html>",
-        encoding="utf-8",
-    )
+    html.write_text(_PROVA_DO_ZOOM, encoding="utf-8")
     script = tmp_path / "filho_do_zoom.py"
     script.write_text(_FILHO, encoding="utf-8")
     ambiente = dict(os.environ, PYTHONPATH=str(RAIZ / "src"), GDK_BACKEND="x11",
@@ -396,25 +540,42 @@ def _roda_o_filho(modo: str, tmp_path: pathlib.Path) -> dict[str, float]:
         env=ambiente, capture_output=True, text=True, timeout=120, check=False,
     )
     assert feito.returncode == 0, (feito.stdout[-400:], feito.stderr[-800:])
-    achado = {}
+    achado: dict[str, tuple[float, dict[str, str]]] = {}
     for linha in feito.stdout.splitlines():
-        partes = linha.split()
-        if len(partes) == 2 and partes[0] in ("ao-abrir", "ao-gravar"):
-            achado[partes[0]] = float(partes[1])
-    assert set(achado) == {"ao-abrir", "ao-gravar"}, (feito.stdout[-400:], feito.stderr[-800:])
+        nome, _, resto = linha.partition(" ")
+        if nome in _LEITURAS:
+            zoom, dicas = json.loads(resto)
+            achado[nome] = (float(zoom), dicas)
+    assert set(achado) == set(_LEITURAS), (feito.stdout[-400:], feito.stderr[-800:])
     return achado
 
 
 # O filho importa o `gi` e abre a janela: sem o PyGObject real (o job leve do CI) não mede nada.
 @skip_sem_gi_real
 def test_a_janela_le_o_tamanho_da_interface(tmp_path: pathlib.Path) -> None:
-    """150 % guardado: a janela abre com zoom 1,5; a 09 grava 125: o zoom vai a 1,25 sem reabrir.
+    """150 % guardado: a janela alta abre com zoom 1,5; a 09 grava 125: o zoom vai a 1,25.
 
-    MORDIDA (`ignora`): a janela que não pergunta ao arquivo fica em 1,0 nas duas leituras.
+    E o tamanho cede onde não cabe (O-TAMANHO-DE-150-NAO-CABE-NA-VISTA-DE-840-PX-01, «Cede onde
+    não cabe», 23/10/2026): a janela baixada a 840 px de altura fica em 1,03, o que põe a vista do
+    desenho (1212x809 em CSS) dentro dela, e a dica do botão escolhido diz o tamanho em uso; de
+    volta à vista alta, o 1,25 e a dica do desenho voltam.
+
+    MORDIDAS: `ignora` (a janela que não pergunta ao arquivo fica em 1,0) e `nao-cede` (o zoom
+    que não olha a vista fica em 1,25 a 840 px, e a dica não diz nada).
     """
     certo = _roda_o_filho("le", tmp_path)
-    assert certo == {"ao-abrir": pytest.approx(1.5), "ao-gravar": pytest.approx(1.25)}
+    assert {k: v[0] for k, v in certo.items()} == {
+        "ao-abrir": pytest.approx(1.5), "ao-gravar": pytest.approx(1.25),
+        "na-vista-baixa": pytest.approx(1.03), "de-volta": pytest.approx(1.25)}
+    for leitura in ("ao-abrir", "ao-gravar", "de-volta"):
+        assert certo[leitura][1] == _DICAS, leitura
+    baixa = certo["na-vista-baixa"][1]
+    em_uso = "Letras e botões maiores. Em uso: 103 %, o que cabe na janela"
+    assert baixa == {**_DICAS, "125": em_uso}
     (tmp_path / "surdo").mkdir()
     surdo = _roda_o_filho("ignora", tmp_path / "surdo")
-    assert surdo["ao-abrir"] == pytest.approx(1.0)
-    assert surdo["ao-gravar"] == pytest.approx(1.0)
+    assert [v[0] for v in surdo.values()] == [pytest.approx(1.0)] * len(_LEITURAS)
+    (tmp_path / "teimoso").mkdir()
+    teimoso = _roda_o_filho("nao-cede", tmp_path / "teimoso")
+    assert teimoso["na-vista-baixa"][0] == pytest.approx(1.25)
+    assert teimoso["na-vista-baixa"][1] == _DICAS

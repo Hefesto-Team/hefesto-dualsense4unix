@@ -33,6 +33,25 @@ def tamanho_guardado() -> int:
             return int(palavra) if ok else padrao
     return padrao
 
+
+#: A menor vista, em CSS, em que o desenho das dez abas cabe sem rolar nem cortar (a janela não
+#: encolhe abaixo dela: `janela.LARGURA_DO_DESENHO` x `janela.PISO_DA_VISTA`).
+VISTA_DO_DESENHO = (1212, 809)
+
+
+def tamanho_que_cabe(escolhido: int, largura: int, altura: int) -> int:
+    """O percentual em uso: o escolhido, ou o maior que ainda põe a vista do desenho na vista da
+    janela (`largura` x `altura`, em pixels da tela). Nunca abaixo de 100: menor que isso é o
+    tamanho de hoje encolhido, e o 100 é o que a janela sempre mostrou.
+
+    A escolha de 23/10/2026 (O-TAMANHO-DE-150-NAO-CABE-NA-VISTA-DE-840-PX-01, «Cede onde não
+    cabe»): o zoom divide a vista em CSS pelo tamanho, e 150 % numa vista de 840 px de altura dá
+    560, onde a 04 rola. A 840 px, o que cabe é 103 %.
+    """
+    piso_l, piso_a = VISTA_DO_DESENHO
+    cabe = min(largura * 100 // piso_l, altura * 100 // piso_a)
+    return max(PERCENTUAIS_DO_TAMANHO[0], min(int(escolhido), cabe))
+
 #: (``daemon.reload``, medido em 01/09) e nenhuma das dez abas tinha estado "em
 #: ``.hef-sem-item`` É O BLOCO DO DESENHO QUE HOJE NÃO TEM ITEM — 19/09/2026,
 #:
