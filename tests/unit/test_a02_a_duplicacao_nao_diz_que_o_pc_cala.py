@@ -125,37 +125,51 @@ def test_sem_rota_publicada_o_mix_nao_acende_botao_nenhum() -> None:
     assert _card(entry)["alto-junto"] == ""
 
 
+def _fileira(doc: str) -> str:
+    """O HTML da fileira do som do primeiro card (da abertura de `.rota trio` ao seu fim)."""
+    ini = doc.index('<div class="rota trio">')
+    return doc[ini:doc.index("</div>", ini)]
+
+
 def _botoes_da_fileira(doc: str) -> dict[str, str]:
     """O HTML de cada botão da fileira do primeiro card: `{rota: html do botão}`."""
-    fila = doc[doc.index('<div class="rota trio">'):]
-    fila = fila[:fila.index("</div>")]
     return {m.group(1): m.group(0) for m in re.finditer(
-        r'<button[^>]*data-rota="(\w+)".*?</button>', fila, re.S)}
+        r'<button[^>]*data-rota="(\w+)".*?</button>', _fileira(doc), re.S)}
 
 
-def test_o_desenho_da_marca_mora_so_no_botao_jogo_e_a_dica_diz_o_que_acontece() -> None:
-    """No desenho: a marca é filha do botão «jogo», o endereço é `alto-junto`, e a frase é dica.
+def _dica(html: str) -> str:
+    achado = re.search(r'data-dica="([^"]+)"', html)
+    assert achado is not None, html
+    return achado.group(1)
 
-    A dica do botão do PC mudo continua dizendo que o PC fica mudo (é o que a rota 3 faz); a da
-    marca diz que o som do PC também toca no controle, e nenhuma frase nova ocupa a tela (a marca é
-    uma sigla, e a frase mora no `data-dica`).
+
+def test_o_desenho_da_marca_envolve_so_o_botao_jogo_e_a_dica_a_explica() -> None:
+    """No desenho: o invólucro do botão «jogo» carrega o endereço `alto-junto`; os outros não.
+
+    A marca é pintada pela folha (sem nó de texto e sem dica própria: o alvo que abre dica tem de
+    ter 24px, e a régua dos alvos reprova o que não tem). A dica do botão «jogo» a explica e não
+    diz que o PC cala; a do botão do PC mudo continua dizendo que ele fica mudo (a rota 3).
     """
     doc = onde.pagina("02-controles.html").read_text(encoding="utf-8")
+    fileira = _fileira(doc)
     botoes = _botoes_da_fileira(doc)
     assert set(botoes) == {"jogo", "pc", "nada"}
-    assert 'data-campo="alto-junto"' in botoes["jogo"]
-    assert 'data-campo="alto-junto"' not in botoes["pc"] + botoes["nada"]
-    marca = re.search(r'<span[^>]*data-campo="alto-junto"[^>]*>', botoes["jogo"])
-    assert marca is not None
-    dica = re.search(r'data-dica="([^"]+)"', marca.group(0))
-    assert dica is not None and "PC também toca no controle" in dica.group(1)
-    assert "mudo" not in dica.group(1)
-    assert "mudo" not in re.search(r'data-dica="([^"]+)"', botoes["jogo"]).group(1)
-    assert "mudo" in re.search(r'data-dica="([^"]+)"', botoes["pc"]).group(1)
+    assert fileira.count('data-campo="alto-junto"') == 1
+    envolucro = re.search(
+        r'<span class="fonte-mix[^"]*"[^>]*data-campo="alto-junto"[^>]*>\s*<button'
+        r'[^>]*data-rota="jogo"', fileira)
+    assert envolucro is not None, "o invólucro da marca não é pai do botão `jogo`"
+    assert 'data-hef-alvo="classe"' in envolucro.group(0)
+    assert 'data-hef-quando="sim"' in envolucro.group(0)
+    jogo = _dica(botoes["jogo"])
+    assert "também toca no controle" in jogo and "mudo" not in jogo
+    assert "mudo" in _dica(botoes["pc"])
 
 
-def test_o_gerador_e_o_mockup_dizem_a_mesma_marca() -> None:
-    """O desenho em disco vem do gerador: a constante do gerador é a dica da marca no mockup."""
+def test_a_folha_pinta_a_marca_que_o_gerador_declara() -> None:
+    """O desenho em disco vem do gerador: a sigla da folha é a constante, e a dica a cita."""
     doc = onde.pagina("02-controles.html").read_text(encoding="utf-8")
-    assert a02_gerador.DICA_JUNTO_NO_CONTROLE in doc
-    assert a02_gerador.MARCA_SIGLA_JUNTO in _botoes_da_fileira(doc)["jogo"]
+    marca = a02_gerador.MARCA_SIGLA_JUNTO
+    assert f'.fonte-mix.junto button.on::after{{content:"{marca}"' in doc
+    assert a02_gerador.MARCA_SIGLA_JUNTO in a02_gerador.DICA_SO_OS_EFEITOS
+    assert a02_gerador.DICA_SO_OS_EFEITOS in doc

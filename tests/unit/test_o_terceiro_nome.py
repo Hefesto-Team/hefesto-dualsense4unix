@@ -130,11 +130,16 @@ class TestAPinturaAcendeOTerceiro:
         assert botao_da_rota_aceso(3, "sink-do-p1", "a-televisao") == ""
 
     def test_o_terceiro_vence_o_mix_esquecido(self) -> None:
-        """Com a rota em 0 o alto-falante está fora do caminho: um `mix`"""
+        """Com a rota em 0, um `mix` esquecido não troca o botão.
+
+        Desde 23/10/2026 a fonte não escolhe botão nenhum (o Terror escreve `mix` com a rota 2 e
+        a fileira segue a rota): a pintura é a rota e mais nada.
+        """
         fonte = PACOTE.read_text(encoding="utf-8")
         i = fonte.index("def aceso_da_fileira")
         corpo = fonte[i : fonte.index("\ndef ", i + 10)]
-        assert "aceso in (ROTA_TUDO_NO_CONTROLE, ROTA_NADA_NO_CONTROLE)" in corpo
+        assert "fonte_do_controle" not in corpo
+        assert "return aceso_da_rota(uniq, entry)" in corpo
 
 
 def test_a_capacidade_velha_nao_foi_apagada() -> None:

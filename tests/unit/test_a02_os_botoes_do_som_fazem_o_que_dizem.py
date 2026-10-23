@@ -161,11 +161,11 @@ class TestOJuntoSaiuDaTela:
         assert not p.chamadas, f"o «junto» recusado ainda falou com o daemon: {p.chamadas}"
         assert not _do_controle(CHAVE_P1), "o «junto» recusado gravou no perfil"
 
-    def test_o_perfil_em_mix_acende_tudo_no_controle(self) -> None:
-        """Um perfil antigo com `fonte: mix` acende «Tudo no controle», o botão que leva o PC."""
+    def test_o_perfil_em_mix_acende_o_botao_da_rota(self) -> None:
+        """Um perfil com `fonte: mix` e a rota 2 acende «jogo»: o PC segue tocando (23/10/2026)."""
         from pacotes import a02_controles as a02
 
-        assert a02.aceso_da_fileira(P1, _dele(P1, fonte="mix")) == a02.ROTA_TUDO_NO_CONTROLE
+        assert a02.aceso_da_fileira(P1, _dele(P1, fonte="mix")) == "jogo"
         assert a02.aceso_da_fileira(P1, _dele(P1, fonte="sfx")) == "jogo"
 
 

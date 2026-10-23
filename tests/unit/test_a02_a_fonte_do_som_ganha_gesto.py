@@ -152,15 +152,17 @@ class TestOQueATelaLe:
         assert a02.fonte_do_controle(_dele(P1, "sfx")) == "sfx"
         assert a02.fonte_do_controle(_dele(P1)) == ""
 
-    def test_com_mix_acende_tudo_no_controle(self) -> None:
-        """Sem o «Ouvir junto» na tela (as três rotas do todo, 15/10/2026), um perfil em `mix`
-        acende o que o descreve: o som do jogo e o do PC no controle.
+    def test_com_mix_a_rota_manda_no_botao(self) -> None:
+        """A fonte `mix` não troca o botão aceso: quem manda é a rota que o controle tem.
 
-        MORDIDA: tire o ramo do `mix` de `aceso_da_fileira`.
+        O Terror escreve `mix` com a rota 2, e o som do PC continua no PC: acender o botão da rota 3
+        diria que o PC calou (23/10/2026).
+
+        MORDIDA: devolva a `aceso_da_fileira` o ramo que acende `ROTA_TUDO_NO_CONTROLE` com `mix`.
         """
         from pacotes import a02_controles as a02
 
-        assert a02.aceso_da_fileira(P1, _dele(P1, "mix")) == "pc"
+        assert a02.aceso_da_fileira(P1, _dele(P1, "mix")) == "jogo"
         assert a02.aceso_da_fileira(P1, _dele(P1, "sfx")) == "jogo"
 
 

@@ -2096,10 +2096,12 @@
   .rota.trio{gap:3px}
   .rota.trio button{height:22px;min-height:22px;white-space:nowrap;text-align:center;padding:0 9px}
   /* A MARCA DO «SONS DO JOGO» COM A FONTE `mix` (o Terror duplica o som do PC no controle, 23/10/2026):
-     uma sigla no botão aceso; sem `mix` ela não ocupa lugar. */
-  .rota .junto{display:none;margin-left:6px;padding:0 4px;border:1px solid var(--purple);border-radius:4px;
-    font-size:9px;line-height:12px;font-weight:600;vertical-align:1px}
-  .rota .junto.on{display:inline-block}
+     uma sigla pintada no botão aceso, sem nó de texto e sem dica própria (um alvo que abre dica tem de
+     ter 24px). O invólucro some do leiaute, como o do modo do microfone. */
+  .rota .fonte-mix{display:contents}
+  .rota .fonte-mix.junto button.on::after{content:"+ PC";margin-left:6px;padding:0 4px;
+    border:1px solid var(--purple);border-radius:4px;font-size:9px;line-height:12px;font-weight:600;
+    display:inline-block;vertical-align:1px}
   /* O MODO DO MICROFONE CONTINUA DEITADO, e agora precisa dizê-lo — 20/09/2026.
      Enquanto as duas fileiras eram a mesma, o `.mic-modo` não tinha uma linha
      própria de estilo, e o bloco de comentário mais acima registra por quê. A
@@ -3215,7 +3217,7 @@ body.por-controle .rot[data-dica]{min-height:24px !important;display:flex !impor
                  só. A gramática não muda: mesmo gesto, mesmo endereço, cada
                  botão com o seu valor. -->
             <div class="rota trio">
-              <button class="on" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="Efeitos do jogo no controle; o PC segue tocando">Canais sonoros nativos - Padrão<span class="junto on" data-campo="alto-junto" data-hef-alvo="classe" data-hef-quando="sim" data-dica="O som do PC também toca no controle">+ PC</span></button>
+              <span class="fonte-mix junto" data-campo="alto-junto" data-hef-alvo="classe" data-hef-classe="junto" data-hef-quando="sim"><button class="on" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="Efeitos do jogo no controle; o PC segue tocando. Com «+ PC», o som do PC também toca no controle">Canais sonoros nativos - Padrão</button></span>
               <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" data-dica="Todo o som sai no controle; o PC fica mudo">Canais sonoros apenas no DualSense</button>
               <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" data-dica="Todo o som sai no PC; o controle fica mudo">Canais sonoros apenas no PC</button>
             </div>
@@ -3703,7 +3705,7 @@ body.por-controle .rot[data-dica]{min-height:24px !important;display:flex !impor
                  só. A gramática não muda: mesmo gesto, mesmo endereço, cada
                  botão com o seu valor. -->
             <div class="rota trio">
-              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="Efeitos do jogo no controle; o PC segue tocando">Canais sonoros nativos - Padrão<span class="junto" data-campo="alto-junto" data-hef-alvo="classe" data-hef-quando="sim" data-dica="O som do PC também toca no controle">+ PC</span></button>
+              <span class="fonte-mix" data-campo="alto-junto" data-hef-alvo="classe" data-hef-classe="junto" data-hef-quando="sim"><button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="Efeitos do jogo no controle; o PC segue tocando. Com «+ PC», o som do PC também toca no controle">Canais sonoros nativos - Padrão</button></span>
               <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" data-dica="Todo o som sai no controle; o PC fica mudo">Canais sonoros apenas no DualSense</button>
               <button class="on" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" data-dica="Todo o som sai no PC; o controle fica mudo">Canais sonoros apenas no PC</button>
             </div>
@@ -4191,7 +4193,7 @@ body.por-controle .rot[data-dica]{min-height:24px !important;display:flex !impor
                  só. A gramática não muda: mesmo gesto, mesmo endereço, cada
                  botão com o seu valor. -->
             <div class="rota trio">
-              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="Efeitos do jogo no controle; o PC segue tocando">Canais sonoros nativos - Padrão<span class="junto" data-campo="alto-junto" data-hef-alvo="classe" data-hef-quando="sim" data-dica="O som do PC também toca no controle">+ PC</span></button>
+              <span class="fonte-mix" data-campo="alto-junto" data-hef-alvo="classe" data-hef-classe="junto" data-hef-quando="sim"><button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="Efeitos do jogo no controle; o PC segue tocando. Com «+ PC», o som do PC também toca no controle">Canais sonoros nativos - Padrão</button></span>
               <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" data-dica="Todo o som sai no controle; o PC fica mudo">Canais sonoros apenas no DualSense</button>
               <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" data-dica="Todo o som sai no PC; o controle fica mudo">Canais sonoros apenas no PC</button>
             </div>
@@ -4679,7 +4681,7 @@ body.por-controle .rot[data-dica]{min-height:24px !important;display:flex !impor
                  só. A gramática não muda: mesmo gesto, mesmo endereço, cada
                  botão com o seu valor. -->
             <div class="rota trio">
-              <button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="Efeitos do jogo no controle; o PC segue tocando">Canais sonoros nativos - Padrão<span class="junto" data-campo="alto-junto" data-hef-alvo="classe" data-hef-quando="sim" data-dica="O som do PC também toca no controle">+ PC</span></button>
+              <span class="fonte-mix" data-campo="alto-junto" data-hef-alvo="classe" data-hef-classe="junto" data-hef-quando="sim"><button class="" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="Efeitos do jogo no controle; o PC segue tocando. Com «+ PC», o som do PC também toca no controle">Canais sonoros nativos - Padrão</button></span>
               <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" data-dica="Todo o som sai no controle; o PC fica mudo">Canais sonoros apenas no DualSense</button>
               <button class="" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" data-dica="Todo o som sai no PC; o controle fica mudo">Canais sonoros apenas no PC</button>
             </div>

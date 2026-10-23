@@ -1143,10 +1143,12 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
   .rota.trio{gap:3px}
   .rota.trio button{height:22px;min-height:22px;white-space:nowrap;text-align:center;padding:0 9px}
   /* A MARCA DO «SONS DO JOGO» COM A FONTE `mix` (o Terror duplica o som do PC no controle, 23/10/2026):
-     uma sigla no botão aceso; sem `mix` ela não ocupa lugar. */
-  .rota .junto{display:none;margin-left:6px;padding:0 4px;border:1px solid var(--purple);border-radius:4px;
-    font-size:9px;line-height:12px;font-weight:600;vertical-align:1px}
-  .rota .junto.on{display:inline-block}
+     uma sigla pintada no botão aceso, sem nó de texto e sem dica própria (um alvo que abre dica tem de
+     ter 24px). O invólucro some do leiaute, como o do modo do microfone. */
+  .rota .fonte-mix{display:contents}
+  .rota .fonte-mix.junto button.on::after{content:"+ PC";margin-left:6px;padding:0 4px;
+    border:1px solid var(--purple);border-radius:4px;font-size:9px;line-height:12px;font-weight:600;
+    display:inline-block;vertical-align:1px}
   /* O MODO DO MICROFONE CONTINUA DEITADO, e agora precisa dizê-lo — 20/09/2026.
      Enquanto as duas fileiras eram a mesma, o `.mic-modo` não tinha uma linha
      própria de estilo, e o bloco de comentário mais acima registra por quê. A
@@ -1756,12 +1758,13 @@ DICA_MIC_TESTAR = "Ouvir a própria voz como o jogo ouve"
 #: As três rotas do alto-falante (todo, 15/10/2026). O «junto» saiu da tela; o gesto segue aceito
 #: no back-end.
 ROTULO_SO_OS_EFEITOS = "Canais sonoros nativos - Padrão"
-DICA_SO_OS_EFEITOS = "Efeitos do jogo no controle; o PC segue tocando"
-
 #: A marca do botão «Sons do jogo» quando a fonte do controle é `mix` (o Terror, 23/10/2026): o som do
-#: PC também toca no controle e continua no PC. Uma sigla no botão aceso; a frase mora na dica dela.
+#: PC também toca no controle e continua no PC. É uma sigla pintada pela folha no botão aceso
+#: (`.fonte-mix.junto button.on::after`), sem nó de texto e sem dica própria: a dica do botão a explica.
 MARCA_SIGLA_JUNTO = "+ PC"
-DICA_JUNTO_NO_CONTROLE = "O som do PC também toca no controle"
+DICA_SO_OS_EFEITOS = (
+    "Efeitos do jogo no controle; o PC segue tocando. "
+    f"Com «{MARCA_SIGLA_JUNTO}», o som do PC também toca no controle")
 
 #: (`audio_saida.mandar_o_som_do_pc`, byte `rota=3`) e calava a televisão.
 ROTULO_NADA_NO_CONTROLE = "Canais sonoros apenas no PC"
@@ -2181,7 +2184,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                  só. A gramática não muda: mesmo gesto, mesmo endereço, cada
                  botão com o seu valor. -->
             <div class="rota trio">
-              <button class="{'on' if not rota_nada else ''}" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="{DICA_SO_OS_EFEITOS}">{ROTULO_SO_OS_EFEITOS}<span class="junto{' on' if junto and not rota_nada else ''}" data-campo="alto-junto" data-hef-alvo="classe" data-hef-quando="sim" data-dica="{DICA_JUNTO_NO_CONTROLE}">{MARCA_SIGLA_JUNTO}</span></button>
+              <span class="fonte-mix{' junto' if junto and not rota_nada else ''}" data-campo="alto-junto" data-hef-alvo="classe" data-hef-classe="junto" data-hef-quando="sim"><button class="{'on' if not rota_nada else ''}" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="{DICA_SO_OS_EFEITOS}">{ROTULO_SO_OS_EFEITOS}</button></span>
               <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" data-dica="{DICA_TUDO_NO_CONTROLE}">{ROTULO_TUDO_NO_CONTROLE}</button>
               <button class="{'on' if rota_nada else ''}" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" data-dica="{DICA_NADA_NO_CONTROLE}">{ROTULO_NADA_NO_CONTROLE}</button>
             </div>
