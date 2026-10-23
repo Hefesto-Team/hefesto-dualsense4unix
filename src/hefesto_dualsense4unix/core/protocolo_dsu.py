@@ -42,7 +42,9 @@ SLOTS: Final = 4
 ESTADO_DESCONECTADO: Final = 0
 ESTADO_CONECTADO: Final = 2
 MODELO_GIRO_COMPLETO: Final = 2
+CONEXAO_NENHUMA: Final = 0
 CONEXAO_USB: Final = 1
+CONEXAO_BLUETOOTH: Final = 2
 
 _ANALOGICO_NEUTRO: Final = 128
 
@@ -139,6 +141,15 @@ def montar_versao(server_id: int) -> bytes:
     corpo = bytearray(TAMANHO_DA_VERSAO)
     struct.pack_into("<IH", corpo, 16, TIPO_VERSAO, VERSAO_DO_PROTOCOLO)
     return _fechar(corpo, server_id)
+
+
+#: O byte 23 de cada transporte que o backend publica; o que não está aqui é 0.
+_CONEXAO_POR_TRANSPORTE: Final = {"usb": CONEXAO_USB, "bt": CONEXAO_BLUETOOTH}
+
+
+def conexao_do_transporte(transporte: str | None) -> int:
+    """O byte 23 do transporte do controle: `usb` é 1, `bt` é 2, o resto é 0."""
+    return _CONEXAO_POR_TRANSPORTE.get(transporte or "", CONEXAO_NENHUMA)
 
 
 def _escrever_o_estado(
@@ -307,6 +318,8 @@ def validar_saida(pacote: bytes) -> int | None:
 
 
 __all__ = [
+    "CONEXAO_BLUETOOTH",
+    "CONEXAO_NENHUMA",
     "CONEXAO_USB",
     "ESTADO_CONECTADO",
     "ESTADO_DESCONECTADO",
@@ -327,6 +340,7 @@ __all__ = [
     "PedidoDePortas",
     "PedidoDeVersao",
     "Toque",
+    "conexao_do_transporte",
     "crc_do_pacote",
     "interpretar_pedido",
     "mac_em_bytes",

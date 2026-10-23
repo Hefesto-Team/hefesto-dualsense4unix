@@ -74,7 +74,7 @@ máxima (u16) em 20..21.
 | 20 | 1 | slot |
 | 21 | 1 | estado: 0 desconectado, 1 reservado, 2 conectado |
 | 22 | 1 | modelo: 0 não se aplica, 1 sem giro ou parcial, 2 giro completo, 3 reservado |
-| 23 | 1 | conexão: 0 nenhuma, 1 USB, 2 Bluetooth |
+| 23 | 1 | conexão: 0 nenhuma, 1 USB, 2 Bluetooth; a do controle físico daquele slot (`usb` é 1, `bt` é 2, transporte desconhecido é 0) |
 | 24 | 6 | MAC |
 | 30 | 1 | bateria |
 | 31 | 1 | zero |

@@ -54,7 +54,12 @@ def montar_a_tabela(
         slot = numero - 1
         if slot in tabela and not entrada.get("is_primary"):
             continue
-        tabela[slot] = SlotDsu(uniq=uniq, mac=vpad_mac(uniq, numero))
+        transporte = entrada.get("transport")
+        tabela[slot] = SlotDsu(
+            uniq=uniq,
+            mac=vpad_mac(uniq, numero),
+            transport=transporte if isinstance(transporte, str) else None,
+        )
     return tabela
 
 

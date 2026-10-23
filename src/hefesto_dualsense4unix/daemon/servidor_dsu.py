@@ -58,10 +58,15 @@ _ESPERA_COM_CLIENTE_S: Final = 0.002
 
 @dataclass(frozen=True)
 class SlotDsu:
-    """UM slot publicado: o controle (`uniq`) e o MAC virtual que ele veste."""
+    """UM slot publicado: o controle (`uniq`), o MAC virtual que ele veste e o transporte dele.
+
+    `transport` é o que o backend publica (`usb` ou `bt`); a tabela real sempre o leva. O `usb` de
+    omissão é só de quem monta um slot à mão, sem backend por trás.
+    """
 
     uniq: str
     mac: str
+    transport: str | None = "usb"
 
 
 Inscricao = tuple[int | None, bytes | None]  # (slot, mac); (None, None) = todos
@@ -244,7 +249,7 @@ class ServidorDsu:
             slot=slot,
             estado=dsu.ESTADO_CONECTADO,
             modelo=dsu.MODELO_GIRO_COMPLETO,
-            conexao=dsu.CONEXAO_USB,
+            conexao=dsu.conexao_do_transporte(publicado.transport),
             mac=publicado.mac,
         )
 
@@ -378,6 +383,7 @@ class ServidorDsu:
                     toques=toques,
                     aceleracao=aceleracao,
                     giro=giro,
+                    conexao=dsu.conexao_do_transporte(publicado.transport),
                 ),
             )
 
@@ -498,6 +504,11 @@ class ServidorDsu:
                 timestamp_us=carimbo,
                 conectado=publicado is not None,
                 estado=dsu.ESTADO_CONECTADO if publicado is not None else dsu.ESTADO_DESCONECTADO,
+                conexao=(
+                    dsu.conexao_do_transporte(publicado.transport)
+                    if publicado is not None
+                    else dsu.CONEXAO_NENHUMA
+                ),
             ),
         )
 
