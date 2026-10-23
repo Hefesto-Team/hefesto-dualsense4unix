@@ -5,7 +5,7 @@
       "data": "2026-10-23",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 54524,
+      "piso": 54567,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -67,8 +67,8 @@
         "daemon/connection.py": 220,
         "daemon/ipc_handlers.py": 1254,
         "daemon/ipc_server.py": 126,
-        "daemon/launch_env.py": 572,
-        "daemon/lifecycle.py": 1307,
+        "daemon/launch_env.py": 580,
+        "daemon/lifecycle.py": 1313,
         "daemon/protocols.py": 60,
         "daemon/sensor_hub.py": 227,
         "daemon/servidor_dsu.py": 54,
@@ -81,7 +81,7 @@
         "daemon/subsystems/coop.py": 731,
         "daemon/subsystems/external_identity.py": 621,
         "daemon/subsystems/external_mask.py": 157,
-        "daemon/subsystems/game_signal.py": 73,
+        "daemon/subsystems/game_signal.py": 96,
         "daemon/subsystems/gamepad.py": 757,
         "daemon/subsystems/gatilho_do_jogo.py": 40,
         "daemon/subsystems/governador_do_radio.py": 278,
@@ -169,7 +169,7 @@
         "integrations/sentinela_do_wrapper.py": 159,
         "integrations/sinal_da_barra.py": 191,
         "integrations/steam_input_ponte.py": 171,
-        "integrations/steam_launch_options.py": 497,
+        "integrations/steam_launch_options.py": 503,
         "integrations/storm_doctor.py": 136,
         "integrations/transiente_do_jogo.py": 97,
         "integrations/uhid_blueprint.py": 87,
@@ -249,7 +249,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +5 linhas (54519 -> 54524), pagas por Origem: D-2310-DESLIGAR-COM-A-STEAM-ABERTA-RELIGA-O-DRIVER; registrado no fecho, topo c8498375a50f",
+      "razao": "texto-em-src: +43 linhas (54524 -> 54567), pagas por Origem: D-2310-O-JOGO-SEGUINTE-VESTE-A-PROPRIA-ROUPA; registrado no fecho, topo 9e9ac3da2152",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -400,6 +400,12 @@
           "de": 54519,
           "para": 54524,
           "razao": "texto-em-src: +5 linhas (54519 -> 54524), pagas por Origem: D-2310-DESLIGAR-COM-A-STEAM-ABERTA-RELIGA-O-DRIVER; registrado no fecho, topo c8498375a50f"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 54524,
+          "para": 54567,
+          "razao": "texto-em-src: +43 linhas (54524 -> 54567), pagas por Origem: D-2310-O-JOGO-SEGUINTE-VESTE-A-PROPRIA-ROUPA; registrado no fecho, topo 9e9ac3da2152"
         }
       ],
       "unidade": "linhas",
