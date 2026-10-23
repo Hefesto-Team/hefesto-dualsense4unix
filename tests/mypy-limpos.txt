@@ -11,3 +11,6 @@ tests/unit/test_o_lancador_vem_da_modificacao.py
 tests/unit/porta_de_mentira.py
 tests/unit/test_todo_pad_tem_porta_propria.py
 tests/unit/test_o_fio_da_janela_nunca_espera.py
+tests/unit/test_o_contrato_do_sackboy.py
+tests/unit/test_a_identidade_do_pad_e_uma_regra_so.py
+tests/unit/test_o_jogo_do_dualsense_comum_veste_os_quatro.py

@@ -1224,16 +1224,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "(`test_o_dono_declarado_resolve`) importa o endereço e reprova se ele "
         "sumir. A frase que o lia na tela saiu com a janela GTK."
     ),
-    "integrations/steam_launch_options.py::read_launch_options_by_appid": (
-        "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o oráculo das "
-        "réguas, não promessa ao produto: seis arquivos de teste leem com ela o "
-        "que o aplicador gravou no VDF "
-        "(`tests/unit/test_steam_launch_options_vdf.py:464`, "
-        "`test_launch_options_apply_cli.py`, "
-        "`test_sentinela_do_wrapper_01_a_steam_comeu_o_hefesto_launch.py`, "
-        "`test_opcoes_por_jogo_01_uma_linha_um_dono.py`). O produto escreve o "
-        "VDF e nunca o lê por esta função desde que o lembrete do wrapper saiu."
-    ),
     "integrations/varredura_do_radio.py::Varredura": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o instrumento da "
         "bancada e o dono de dois números, não promessa ao produto: "

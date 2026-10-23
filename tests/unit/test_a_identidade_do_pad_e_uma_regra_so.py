@@ -72,6 +72,7 @@ def _arquivos(edge: str, comum: str, sony: str) -> dict[str, bytes]:
 def test_a_regra_em_toda_combinacao(
     tmp_path: Path, edge: str, comum: str, sony: str, caminho: str
 ) -> None:
+    """Prova da D-2210-A-IDENTIDADE-DO-PAD-E-UMA-REGRA-SO."""
     raiz = _jogo(tmp_path / "Jogo", _arquivos(edge, comum, sony))
 
     roupa, fonte = rj.roupa_do_jogo(raiz, **_CAMINHO[caminho])
