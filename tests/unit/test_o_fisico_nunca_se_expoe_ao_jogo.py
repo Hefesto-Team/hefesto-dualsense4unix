@@ -239,6 +239,48 @@ class TestOFisicoAbrePeloFdDoBroker:
                     backend._fechar_os_handles_juntos([handle])
 
 
+    def test_o_init_espera_o_primeiro_report_que_chega_depois_do_open(
+        self, tmp_path: Path, caminho_proibido: list[bytes]
+    ) -> None:
+        """O hidraw nasce de fila vazia a cada open: o ``init`` espera o primeiro report."""
+        with broker_no_ar(tmp_path) as (_estado, fs, cliente):
+            no = NOS[3]
+            aparelho = fs.ligar(no)
+            atraso = threading.Timer(0.3, aparelho.send, args=(REPORT_DO_RADIO,))
+            atraso.start()
+            ctl = controle_com_a_fabrica(DaemonDeMentira(cliente))
+            try:
+                handle = abrir(ctl, no)
+            finally:
+                atraso.join()
+            fs.soltar_as_pontas()
+            try:
+                assert handle is not None
+                assert handle.input_report_length == 78
+                assert caminho_proibido == []
+            finally:
+                if handle is not None:
+                    backend._fechar_os_handles_juntos([handle])
+
+    def test_o_init_que_falha_fecha_o_fd_do_broker(
+        self, tmp_path: Path, caminho_proibido: list[bytes]
+    ) -> None:
+        """Um primeiro report sem transporte derruba o ``init``: o fd do broker fecha na hora."""
+        with broker_no_ar(tmp_path) as (_estado, fs, cliente):
+            no = NOS[2]
+            aparelho = fs.ligar(no)
+            aparelho.send(bytes(10))
+            ctl = controle_com_a_fabrica(DaemonDeMentira(cliente))
+            with pytest.raises(Exception, match="connection type") as falha:
+                abrir(ctl, no)
+            fs.soltar_as_pontas()
+            # ``falha`` segura a pilha (e o handle nela): o ``__del__`` não fecha por acaso.
+            assert falha.value is not None
+            assert aparelho.recv(512) == b"", "o fd do broker vazou com o init que falhou"
+            assert fs.atos_de_acl() == []
+            assert caminho_proibido == []
+
+
 class TestSemOFdDoBroker:
     def test_broker_ausente_abre_por_caminho_sem_pedir_exposicao(
         self, tmp_path: Path, caminho_proibido: list[bytes]
