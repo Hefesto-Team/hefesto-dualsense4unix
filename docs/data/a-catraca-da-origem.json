@@ -245,14 +245,14 @@
       "data": "2026-10-23",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1189364,
+      "piso": 1189351,
       "por_item": {
         "docs": 120642,
         "scripts": 120350,
-        "src": 318616,
+        "src": 318603,
         "tests": 629756
       },
-      "razao": "tamanho: +1330 linhas (1188034 -> 1189364), pagas por Origem: D-2310-O-TERROR-DUPLICA-PELO-OUVIR-JUNTO; registrado no fecho, topo b0bfacc055cd",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
