@@ -1687,12 +1687,12 @@ class PyDualSenseController(IController):
         with self._io_lock:
             self._feature_opener = fn
 
-    def set_exposicao_do_no(
+    def set_abridor_do_handle(
         self, fn: Callable[[str], int | None] | None
     ) -> None:
         """Injeta (ou remove, com None) o abridor do handle: `fn(no)` é o fd `O_RDWR` do broker.
 
-        O nome é o que o lifecycle chama; o nó não se expõe mais. `None` do `fn` = sem fd do broker
+        O nó não se expõe: o fd vem do `open` do broker. `None` do `fn` = sem fd do broker
         (O-FISICO-NUNCA-SE-EXPOE-AO-JOGO-QUE-VESTE-O-COMUM-01). Consultada por `_open_one`.
         """
         with self._io_lock:

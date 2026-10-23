@@ -146,10 +146,10 @@ def caminho_proibido(monkeypatch: pytest.MonkeyPatch) -> list[bytes]:
 
 
 def controle_com_a_fabrica(daemon: Any) -> backend.PyDualSenseController:
-    """O backend com a fábrica que o lifecycle injeta (``_wire_exposicao_do_no``)."""
+    """O backend com o abridor que o lifecycle injeta (``_wire_abridor_do_handle``)."""
     ctl = backend.PyDualSenseController.__new__(backend.PyDualSenseController)
     ctl._io_lock = threading.RLock()
-    ctl.set_exposicao_do_no(cli.make_exposicao_factory(daemon))
+    ctl.set_abridor_do_handle(cli.make_abridor_do_handle(daemon))
     return ctl
 
 

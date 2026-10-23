@@ -484,10 +484,6 @@ def make_abridor_do_handle(daemon: Any) -> Callable[[str], int | None]:
     return _abrir
 
 
-#: O nome que o `lifecycle._wire_exposicao_do_no` importa: o abridor não expõe nada.
-make_exposicao_factory = make_abridor_do_handle
-
-
 # ---------------------------------------------------------------------------
 # A PORTA, DECLARADA — o que os INSTRUMENTOS usam (A-PORTA-QUE-A-CASA-CONSTRUIU-01)
 # ---------------------------------------------------------------------------
@@ -730,7 +726,6 @@ __all__ = [
     "main",
     "make_abridor_do_handle",
     "make_broker_opener",
-    "make_exposicao_factory",
     "porta_provavel",
 ]
 

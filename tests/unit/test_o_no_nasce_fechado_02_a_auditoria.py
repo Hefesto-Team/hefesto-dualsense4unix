@@ -205,7 +205,7 @@ class TestSobreviveAReplug:
         cliente.desexpor = lambda no: atos.append(("desexpor", no)) or True  # type: ignore[method-assign]
         cliente.abrir_no = lambda no: (atos.append(("open", no)) and None, "")  # type: ignore[method-assign]
         monkeypatch.setattr(cli, "broker_client_for", lambda _d: cliente)
-        abridor = cli.make_exposicao_factory(DaemonDeMentira())
+        abridor = cli.make_abridor_do_handle(DaemonDeMentira())
 
         assert abridor("/dev/hidraw3") is None
         assert abridor("/dev/hidraw9") is None

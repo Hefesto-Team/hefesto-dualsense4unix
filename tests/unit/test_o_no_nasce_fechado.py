@@ -412,7 +412,7 @@ class TestOHandleAbrePeloFdDoBroker:
 
         ctl = backend.PyDualSenseController.__new__(backend.PyDualSenseController)
         ctl._io_lock = threading.RLock()
-        ctl.set_exposicao_do_no(lambda no: pedidos.append(no) or ler)
+        ctl.set_abridor_do_handle(lambda no: pedidos.append(no) or ler)
         ctl._abrir_handle_pinado = abrir  # type: ignore[method-assign]
         assert ctl._open_one(b"/dev/hidraw3", is_edge=False) == "handle"
         assert pedidos == ["/dev/hidraw3"]
@@ -443,7 +443,7 @@ class TestOHandleAbrePeloFdDoBroker:
 
         ctl = PyDualSenseController.__new__(PyDualSenseController)
         ctl._io_lock = threading.RLock()
-        ctl.set_exposicao_do_no(lambda _no: ler)
+        ctl.set_abridor_do_handle(lambda _no: ler)
         ctl._abrir_handle_pinado = explode  # type: ignore[method-assign]
         with pytest.raises(OSError):
             ctl._open_one(b"/dev/hidraw3", is_edge=False)
@@ -461,8 +461,21 @@ class TestOHandleAbrePeloFdDoBroker:
         cliente.desexpor = lambda no: chamadas.append("desexpor") or True  # type: ignore[method-assign]
         cliente.abrir_no = lambda no: (chamadas.append("open") or 7, "")  # type: ignore[method-assign]
         monkeypatch.setattr(cli, "broker_client_for", lambda _d: cliente)
-        assert cli.make_exposicao_factory(object())("/dev/hidraw3") == 7
+        assert cli.make_abridor_do_handle(object())("/dev/hidraw3") == 7
         assert chamadas == ["open"]
+
+    def test_o_lifecycle_liga_o_abridor_no_backend(self) -> None:
+        """A fiação: `_wire_abridor_do_handle` põe o abridor no backend que tem o setter."""
+        from types import SimpleNamespace
+
+        from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
+        from hefesto_dualsense4unix.daemon.lifecycle import Daemon
+
+        ctl = PyDualSenseController.__new__(PyDualSenseController)
+        ctl._io_lock = threading.RLock()
+        ctl._abridor_do_handle = None
+        Daemon._wire_abridor_do_handle(SimpleNamespace(controller=ctl))  # type: ignore[arg-type]
+        assert callable(ctl._abridor_do_handle)
 
 
 class TestOModoNativoPede:

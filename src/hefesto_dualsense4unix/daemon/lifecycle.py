@@ -931,7 +931,7 @@ class Daemon:
             self._wire_identity_registry()
             self._wire_external_registry()
             self._wire_feature_opener()
-            self._wire_exposicao_do_no()
+            self._wire_abridor_do_handle()
             # PyDualSenseController.connect() trata "No device detected" em
             try:
                 await self._run_blocking(self.controller.connect)
@@ -3896,19 +3896,19 @@ class Daemon:
         except Exception as exc:
             logger.warning("feature_opener_wire_failed", err=str(exc))
 
-    def _wire_exposicao_do_no(self) -> None:
-        """O-NO-NASCE-FECHADO-01: injeta a fábrica de exposição no backend."""
-        if not hasattr(self.controller, "set_exposicao_do_no"):
+    def _wire_abridor_do_handle(self) -> None:
+        """O-NO-NASCE-FECHADO-01: injeta no backend o abridor do handle (o fd do broker)."""
+        if not hasattr(self.controller, "set_abridor_do_handle"):
             return
         try:
             from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
-                make_exposicao_factory,
+                make_abridor_do_handle,
             )
 
-            self.controller.set_exposicao_do_no(make_exposicao_factory(self))
-            logger.info("exposicao_do_no_wired")
+            self.controller.set_abridor_do_handle(make_abridor_do_handle(self))
+            logger.info("abridor_do_handle_wired")
         except Exception as exc:
-            logger.warning("exposicao_do_no_wire_failed", err=str(exc))
+            logger.warning("abridor_do_handle_wire_failed", err=str(exc))
 
     def _nos_do_modo_nativo_vivos(self) -> set[str]:
         """Os nós que a exposição do Modo Nativo segura AGORA. Dono único."""
@@ -3921,7 +3921,7 @@ class Daemon:
     def no_exposto_pelo_modo_nativo(self, path: str) -> bool:
         """`path` está aberto por causa do Modo Nativo, e tem de continuar?
 
-        Quem pergunta é o `make_exposicao_factory`, a fábrica do `with` que o
+        Quem pergunta é o `make_abridor_do_handle`, o abridor que o
         `_open_one` do backend usa para abrir o handle de controle
         (`hidapi.Device(path=…)`, que não aceita fd).
 

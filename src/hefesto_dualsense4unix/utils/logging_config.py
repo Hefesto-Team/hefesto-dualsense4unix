@@ -185,7 +185,7 @@ EVENTOS_DE_ESTADO_NORMAL: frozenset[str] = frozenset({
     "bt_mic_subsystem_iniciado", "governador_do_radio_iniciado", "som_subsystem_iniciado",
     "conexoes_subsystem_iniciado", "bluez_dono_vivo", "central_do_radio_ligada",
     "ouvido_do_usb_iniciado", "identity_fila_restaurada", "identity_registry_wired",
-    "external_registry_wired", "feature_opener_wired", "exposicao_do_no_wired", "usb_ouvindo",
+    "external_registry_wired", "feature_opener_wired", "abridor_do_handle_wired", "usb_ouvindo",
     "ouvinte_do_som_ligado", "cosmic_toplevel_ligado", "identity_slots_restaurados_de_outro_boot",
     "janela_lida_pelo_wayland_nativo", "daemon_shutting_down", "bt_mic_subsystem_parado",
     "som_subsystem_parado", "conexoes_subsystem_parado", "dsu_servidor_parado",
