@@ -84,6 +84,8 @@ import colorsys
 from dataclasses import dataclass
 from typing import Literal
 
+from hefesto_dualsense4unix.core.ds_output_report import SAIDA_SO_NO_ALTO_FALANTE
+
 RGB = tuple[int, int, int]
 
 DISTANCIA_MINIMA = 90
@@ -109,6 +111,26 @@ DURACAO_DE_SEMPRE_MS = 200  # [MDN]
 #: «acende»: o brilho segue o curso do gatilho (a Corrida); «bateria»: respira bem devagar quando a
 #: carga acaba e nunca pisca (a Maratona). As duas últimas são do laço da luz (`luz_animada`).
 LuzQueReage = Literal["parada", "respira", "pisca", "batida", "acende", "bateria"]
+
+
+@dataclass(frozen=True)
+class AltoFalanteDoEstilo:
+    """O que o estilo diz do alto-falante do controle: a camada que duplica o som do PC.
+
+    ``Receita.alto_falante`` é ``None`` quando o estilo não opina (o alto-falante fica com o jogo
+    e com o perfil). Quem escreve é ``ProfileManager.apply_som_do_estilo``, só com o Modo
+    automático da aba Controles ligado.
+    """
+
+    #: a ``fonte`` do nó de som do controle (``ProfileSpeakerConfig.fonte``): ``mix`` faz todo o
+    #: som do PC cair também no controle; ``sfx`` deixa o nó livre para o que o jogo mandar
+    fonte: Literal["mix", "sfx"]
+    #: o byte de saída do alto-falante (``core.ds_output_report.SAIDA_*``); ``None`` não toca nele
+    rota: int | None = None
+    #: ``True`` escreve o nível «Padrão» (100% do registrador, ``manager.VOLUME_DO_PADRAO``);
+    #: ``False`` não escreve nível nenhum: só a ``fonte`` vai, e o controle fica com o volume
+    #: que já tem (escrever o volume tomaria a posse dos bytes de áudio sem pedido)
+    nivel_padrao: bool = False
 
 
 @dataclass(frozen=True)
@@ -144,6 +166,13 @@ class Receita:
     luz_base: str | None = None
     #: o ritmo da base, de 1 a 10 (`schema.RITMO_MINIMO_DA_LUZ`..`RITMO_MAXIMO_DA_LUZ`)
     luz_ritmo: int = 0
+    #: o alto-falante do controle (O-ESTILO-TERROR-SOBE-O-ALTO-FALANTE-E-LIGA-O-MICROFONE-NO-
+    #: AUTOMATICO-01 e O-ALTO-FALANTE-SEGUE-O-ESTILO-E-O-RITMO-NUNCA-DUPLICA-01): ``None`` = sem
+    #: opinião, a rota do jogo; só o Terror (duplica) e o Ritmo (nunca duplica) opinam
+    alto_falante: AltoFalanteDoEstilo | None = None
+    #: abrir o microfone do controle quando o estilo entra (o Terror); ``None`` = sem opinião.
+    #: Nunca ``False``: nenhum estilo cala o microfone, e abrir sem pedir expõe a voz da pessoa
+    microfone_ligado: bool | None = None
 
 
 #: Os MOLDES da tabela de botões, para jogo de clicar: `{botão: ação}` do `Profile.button_actions`,
@@ -178,11 +207,25 @@ MOLDES: dict[str, dict[str, str]] = {
 }
 
 
+#: O Terror duplica o som do PC no controle com o PADRÃO DA ABA ÁUDIO e nenhum número novo
+#: (decisão por delegação de 23/10/2026, a validar na L2): a ``fonte`` ``mix`` é o que a aba acende
+#: como «Todo o som do PC» (``a02_controles.aceso_da_fileira``); a rota é a desse botão
+#: (``a02_controles.ROTA_TUDO_NO_CONTROLE`` = ``cartao_do_controle.ROTA_DO_CANAL[CANAL_TODO_O_PC]``
+#: = ``SAIDA_SO_NO_ALTO_FALANTE``); o nível é o «Padrão» (``manager.VOLUME_DO_PADRAO``, os 100% do
+#: registrador, que já passam do PS5). A L2 confirma o número.
+SOM_DO_PC_TAMBEM_NO_CONTROLE = AltoFalanteDoEstilo(
+    "mix", rota=SAIDA_SO_NO_ALTO_FALANTE, nivel_padrao=True)
+#: O Ritmo nunca duplica: a música em dois tempos (o PC e o alto-falante, pelo rádio com o
+#: codificador e a fila no caminho) faz a batida escorregar. Só a ``fonte`` ``sfx`` vai, e o
+#: controle fica com o volume que já tem. A L8 mede o atraso e confirma a trava.
+MUSICA_SO_NO_PC = AltoFalanteDoEstilo("sfx")
+
 #: as variáveis que o gesto do estilo aplica no perfil, por motor que já existe
 APLICADAS = ("ajustes_do_gatilho", "modo", "molde", "luz_base", "luz_ritmo")
 #: as que ficam aqui, como dado: o motor do tato lê pelo estilo guardado no perfil
 SO_DADO = ("luz", "luz_por_segundo", "duracao_da_vibracao_ms", "toque_por_tiro",
-           "lado_do_som", "som_quando_o_jogo_cala", "rumble_no_dedo")
+           "lado_do_som", "som_quando_o_jogo_cala", "rumble_no_dedo", "alto_falante",
+           "microfone_ligado")
 
 
 def _respira(
@@ -301,7 +344,8 @@ ESTILOS: tuple[Estilo, ...] = (
     Estilo("terror", "Terror", "Weapon", "max", (215, 30, 55), 0.7,
            "a arma não é confiável e o coração bate na luz e nos motores; a luz baixa não denuncia",
            Receita(duracao_da_vibracao_ms=2 * DURACAO_DE_SEMPRE_MS,
-                   luz_base="batimento", luz_ritmo=10, rumble_no_dedo=True),
+                   luz_base="batimento", luz_ritmo=10, rumble_no_dedo=True,
+                   alto_falante=SOM_DO_PC_TAMBEM_NO_CONTROLE, microfone_ligado=True),
            Lado("Weapon", "pino-que-falha"), Lado("Resistance", "mira-firme")),
     # A Luta separa o golpe forte (R2) do fraco (L2); a pancada vem do lado de onde veio o golpe.
     Estilo("luta", "Luta", "Weapon", "max", (255, 40, 180), 1.0,
@@ -339,7 +383,8 @@ ESTILOS: tuple[Estilo, ...] = (
     Estilo("ritmo", "Ritmo/Música", "Weapon", "max", (255, 0, 220), 1.0,
            "a vibração É o instrumento; cada nota tem um clique que volta livre",
            # a luz na batida da música, até o teto [WCAG]; o lado do estouro não serve à música
-           Receita(luz="batida", luz_por_segundo=TETO_DO_PISCAR, lado_do_som=False),
+           Receita(luz="batida", luz_por_segundo=TETO_DO_PISCAR, lado_do_som=False,
+                   alto_falante=MUSICA_SO_NO_PC),
            Lado("Weapon", "golpe-leve"), Lado("Weapon", "golpe-leve")),
     # O manche endurece com o curso (a Rampa de força) e o chão passa pelo L2 e pelo corpo
     # (decisão de 19/10/2026).

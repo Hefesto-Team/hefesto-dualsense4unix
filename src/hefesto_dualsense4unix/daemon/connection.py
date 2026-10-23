@@ -69,7 +69,7 @@ async def reapply_speaker_after_connect(
     """Reaplica o volume do perfil ATIVO no (re)connect (SOM-02/E4, armadilha 4)."""
     from functools import partial
 
-    from hefesto_dualsense4unix.profiles.manager import ProfileManager
+    from hefesto_dualsense4unix.profiles.manager import ProfileManager, pontes_do_som_do_daemon
 
     applier = getattr(daemon, "apply_profile_speaker", None)
     store = getattr(daemon, "store", None)
@@ -79,10 +79,9 @@ async def reapply_speaker_after_connect(
         controller=daemon.controller,
         store=store,
         speaker_applier=applier,
+        som_do_estilo=pontes_do_som_do_daemon(daemon),
     )
-    estado = await daemon._run_blocking(
-        partial(manager.reapply_speaker_on_connect, uniq)
-    )
+    estado = await daemon._run_blocking(partial(manager.reapply_speaker_on_connect, uniq))
     if estado is not None:
         logger.info("speaker_reaplicado_no_connect", estado=estado, uniq=uniq)
 
@@ -497,6 +496,7 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
             _canal_do_ps,
             ligar_o_freestyle,
             o_freestyle_manda,
+            pontes_do_som_do_daemon,
         )
         from hefesto_dualsense4unix.profiles.slug import mesmo_slug
 
@@ -536,7 +536,7 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
             # flag persistido próprio — o DualSense não devolve o valor que o
             speaker_applier=getattr(daemon, "apply_profile_speaker", None),
             mic_applier=getattr(daemon, "apply_profile_mic", None),
-            ps_action_sink=_canal_do_ps(daemon),
+            ps_action_sink=_canal_do_ps(daemon), som_do_estilo=pontes_do_som_do_daemon(daemon),
         )
 
         try:

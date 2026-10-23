@@ -18,6 +18,8 @@ from hefesto_dualsense4unix.core.led_control import (
 from hefesto_dualsense4unix.core.speaker_scale import volume_do_percentual
 from hefesto_dualsense4unix.core.trigger_effects import build_from_name
 from hefesto_dualsense4unix.daemon.state_store import StateStore
+from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE as ESTILOS_POR_CHAVE
+from hefesto_dualsense4unix.profiles.estilos_de_jogo import chave_do_catalogo
 from hefesto_dualsense4unix.profiles.loader import (
     e_perfil_de_jogo_automatico,
     load_all_profiles,
@@ -29,6 +31,7 @@ from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_que_vale
 from hefesto_dualsense4unix.profiles.schema import (
     CONFIRMADA_POR_ESCOLHA,
     CONFIRMADA_POR_GESTO,
+    MODO_AUTOMATICO,
     ControllerOverrides,
     LedsConfig,
     MatchCriteria,
@@ -36,6 +39,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
     ProfileModeConfig,
     ProfileMouseConfig,
+    ProfileSpeakerConfig,
     _mult_da_vibracao,
     controles_em_economia,
     e_endereco_de_jogo,
@@ -210,6 +214,31 @@ def soltar_a_trava_da_mao(store: object | None, motivo: str, **contexto: object)
     return True
 
 
+@dataclass(frozen=True)
+class PontesDoSom:
+    """O que o daemon sabe e faz do SOM de cada controle, para o estilo de jogo (23/10/2026).
+
+    O gerente não fala com o daemon: quem monta o gerente injeta isto
+    (:func:`pontes_do_som_do_daemon`), e sem as pontes o estilo não escreve som nenhum. Cada
+    ponte responde por um controle, pelo ``uniq`` dele.
+    """
+
+    #: os ``uniq`` dos controles conectados agora (os quatro da mesa)
+    conectados: Callable[[], list[str]]
+    #: o fone ligado no controle (byte 53 do report de entrada, lido no pad virtual);
+    #: ``None`` = ninguém sabe dizer, e conta como sem fone
+    fone: Callable[[str], bool | None]
+    #: o jogo já põe som no alto-falante deste controle (o carimbo de áudio do pad virtual)
+    jogo_no_alto_falante: Callable[[str], bool]
+    #: escreve a ``fonte`` (``mix``/``sfx``) no nó de som deste controle, ao vivo
+    escolher_a_fonte: Callable[[str, str], bool]
+    #: abre o microfone deste controle, pelo mesmo ato do nascimento no (re)connect
+    abrir_o_microfone: Callable[[str], object]
+    #: ``{uniq: fonte}`` que o ESTILO pôs, para devolver quando o estilo sai (a fonte viva do
+    #: daemon não se limpa sozinha); vive com quem monta as pontes
+    do_estilo: dict[str, str] = field(default_factory=dict)
+
+
 @dataclass
 class ProfileManager:
     controller: IController
@@ -233,6 +262,8 @@ class ProfileManager:
     speaker_applier: Callable[..., object] | None = None
     #
     mic_applier: Callable[..., object] | None = None
+    # O som que o ESTILO do perfil escolhe (Modo automático da aba Controles ligado).
+    som_do_estilo: PontesDoSom | None = None
     _ultimo_veto_catch_all: str | None = field(default=None, repr=False)
     _ultimo_empate_logado: tuple[str, str] | None = field(default=None, repr=False)
 
@@ -1001,6 +1032,8 @@ class ProfileManager:
         self.apply_mic(profile, origin=origin, relatorio=resultado)
         self.apply_controller_mics(profile, origin=origin, relatorio=resultado)
         self.apply_controller_sensores(profile, origin=origin, relatorio=resultado)
+        # por último: no Modo automático o estilo vale por cima do que a aba diz do som
+        self.apply_som_do_estilo(profile, origin=origin, relatorio=resultado)
         return resultado
 
     def apply_controller_mascaras(
@@ -1208,6 +1241,107 @@ class ProfileManager:
                 resultado[f"mic:{uniq}"] = estado
         return resultado
 
+    def apply_som_do_estilo(
+        self,
+        profile: Profile,
+        *,
+        origin: str = "manual",
+        relatorio: dict[str, str] | None = None,
+        so_uniq: str | None = None,
+        com_microfone: bool = True,
+    ) -> dict[str, str]:
+        """O som e o microfone que a receita do estilo pede, só no Modo automático da aba 02.
+
+        O Terror duplica o som do PC no controle e abre o microfone (o mesmo ato do nascimento no
+        (re)connect: respeita o mudo e a recusa); o Ritmo escreve só a ``fonte`` ``sfx``. O jogo
+        manda, com fone o Terror não duplica, e ao sair do estilo a ``fonte`` volta. ``so_uniq``
+        limita a um controle (o replug); ``com_microfone=False`` deixa o microfone ao (re)connect.
+        """
+        resultado: dict[str, str] = relatorio if relatorio is not None else {}
+        pontes = self.som_do_estilo
+        if pontes is None:
+            return resultado
+        receita = _receita_do_estilo_no_automatico(profile)
+        querido = getattr(receita, "alto_falante", None)
+        abrir = getattr(receita, "microfone_ligado", None) is True and com_microfone
+        if querido is None and not abrir and not pontes.do_estilo:
+            return resultado
+        try:
+            uniqs = [so_uniq] if so_uniq else list(pontes.conectados())
+        except Exception as exc:
+            logger.warning("som_do_estilo_sem_conectados", err=str(exc))
+            return resultado
+        for uniq in dict.fromkeys(str(u) for u in uniqs if u):
+            if querido is not None:
+                resultado[f"som_estilo:{uniq}"] = self._alto_falante_do_estilo(
+                    profile, querido, pontes, uniq, origin
+                )
+            else:
+                self._devolver_a_fonte(profile, pontes, uniq, resultado)
+            if abrir:
+                resultado[f"mic_estilo:{uniq}"] = self._abrir_o_microfone_do_estilo(
+                    pontes, uniq
+                )
+        return resultado
+
+    def _alto_falante_do_estilo(
+        self, profile: Profile, querido: Any, pontes: PontesDoSom, uniq: str, origin: str
+    ) -> str:
+        try:
+            if pontes.jogo_no_alto_falante(uniq):
+                self._devolver_a_fonte(profile, pontes, uniq, {})
+                return "ignorado_o_jogo_manda"
+            if querido.nivel_padrao and pontes.fone(uniq) is True:
+                self._devolver_a_fonte(profile, pontes, uniq, {})
+                return "ignorado_com_fone"
+        except Exception as exc:
+            logger.warning("som_do_estilo_leitura_falhou", uniq=uniq, err=str(exc))
+            return "falhou"
+        estado = "aplicado"
+        if querido.nivel_padrao:
+            secao = _secao_de_som_do_controle(profile, uniq)
+            vista = profile.model_copy(update={"speaker": ProfileSpeakerConfig(
+                volume=VOLUME_DO_PADRAO,
+                muted=bool(getattr(secao, "muted", False)),
+                rota=querido.rota,
+                fonte=querido.fonte,
+                volume_padrao=True,
+            )})
+            estado = self.apply_speaker(vista, origin=origin, uniq=uniq) or "sem_applier"
+        try:
+            if pontes.escolher_a_fonte(uniq, querido.fonte):
+                pontes.do_estilo[uniq] = querido.fonte
+            elif estado == "aplicado":
+                estado = "fonte_nao_escrita"
+        except Exception as exc:
+            logger.warning("som_do_estilo_fonte_falhou", uniq=uniq, err=str(exc))
+            return "falhou"
+        return estado
+
+    def _devolver_a_fonte(
+        self, profile: Profile, pontes: PontesDoSom, uniq: str, resultado: dict[str, str]
+    ) -> None:
+        """A fonte que o estilo pôs volta ao que o perfil diz (``sfx`` sem opinião)."""
+        if uniq not in pontes.do_estilo:
+            return
+        secao = _secao_de_som_do_controle(profile, uniq)
+        volta = getattr(secao, "fonte", None) or "sfx"
+        try:
+            if pontes.escolher_a_fonte(uniq, volta):
+                pontes.do_estilo.pop(uniq, None)
+                resultado[f"som_estilo:{uniq}"] = "devolvido"
+        except Exception as exc:
+            logger.warning("som_do_estilo_devolver_falhou", uniq=uniq, err=str(exc))
+
+    @staticmethod
+    def _abrir_o_microfone_do_estilo(pontes: PontesDoSom, uniq: str) -> str:
+        try:
+            pontes.abrir_o_microfone(uniq)
+        except Exception as exc:
+            logger.warning("som_do_estilo_microfone_falhou", uniq=uniq, err=str(exc))
+            return "falhou"
+        return "pedido"
+
     def apply_speaker(
         self,
         profile: Profile,
@@ -1410,14 +1544,19 @@ class ProfileManager:
             cfg = (getattr(profile, "controllers", None) or {}).get(chave)
             override = getattr(cfg, "speaker", None) if cfg is not None else None
         global_ = getattr(profile, "speaker", None)
-        if override is None and global_ is None:
-            return None
         estado = None
         if global_ is not None:
             estado = self.apply_speaker(profile, origin="system", uniq=uniq)
         if override is not None:
             vista = profile.model_copy(update={"speaker": override})
             estado = self.apply_speaker(vista, origin="system", uniq=uniq)
+        # o estilo entra por último, como na ativação; o microfone nasce no (re)connect, que já roda
+        do_estilo = self.apply_som_do_estilo(
+            profile, origin="system", so_uniq=uniq, com_microfone=False
+        )
+        for chave_do_estilo, valor in do_estilo.items():
+            if chave_do_estilo.startswith("som_estilo:"):
+                estado = valor
         return estado
 
     def reapply_mic_on_connect(self, uniq: str | None = None) -> str | None:
@@ -2556,6 +2695,110 @@ def _to_led_settings(leds: LedsConfig) -> LedSettings:
     )
 
 
+def _receita_do_estilo_no_automatico(profile: Profile) -> Any:
+    """A receita do estilo do perfil, só com o Modo automático da aba Controles escrito."""
+    if getattr(profile, "controles_modo", None) != MODO_AUTOMATICO:
+        return None
+    chave = chave_do_catalogo(getattr(profile, "estilo", None))
+    estilo = ESTILOS_POR_CHAVE.get(chave) if isinstance(chave, str) else None
+    return getattr(estilo, "receita_invisivel", None)
+
+
+def _secao_de_som_do_controle(profile: Profile, uniq: str) -> Any:
+    """A seção `speaker` que vale para este controle: a dele, ou a global."""
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    chave = norm_mac(str(uniq)) or str(uniq)
+    dele = (getattr(profile, "controllers", None) or {}).get(chave)
+    doele = getattr(dele, "speaker", None) if dele is not None else None
+    return doele if doele is not None else getattr(profile, "speaker", None)
+
+
+def pontes_do_som_do_daemon(daemon: Any) -> PontesDoSom | None:
+    """As pontes do som do estilo para um daemon de verdade; ``None`` sem daemon.
+
+    O fone e o áudio do jogo só existem no pad virtual do controle (``vpad.jack``, byte 53, e o
+    carimbo ``audio_do_jogo``, com a janela de ``tato_vivo.JANELA_DO_JOGO_S``): sem pad virtual de
+    pé, ``fone`` devolve ``None`` e o jogo não conta como falando no alto-falante.
+    """
+    if daemon is None:
+        return None
+    import asyncio
+    from functools import partial
+
+    from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
+
+    def _mesmo(a: object, b: object) -> bool:
+        return bool(a) and bool(b) and (
+            a == b or (norm_mac(str(a)) is not None and norm_mac(str(a)) == norm_mac(str(b)))
+        )
+
+    def _vpad_de(uniq: str) -> Any:
+        from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import controles_do_daemon
+
+        for controle in controles_do_daemon(daemon):
+            if _mesmo(controle.uniq, uniq):
+                return controle.vpad
+        return None
+
+    def conectados() -> list[str]:
+        alvos = getattr(getattr(daemon, "controller", None), "alvos_conectados", None)
+        if not callable(alvos):
+            return []
+        vistos = alvos()
+        if not isinstance(vistos, dict):
+            return []
+        return list(dict.fromkeys(str(u) for u in vistos.values() if u))
+
+    def fone(uniq: str) -> bool | None:
+        jack = getattr(_vpad_de(uniq), "jack", None)
+        if not isinstance(jack, dict) or "fone" not in jack:
+            return None
+        return bool(jack["fone"])
+
+    def jogo_no_alto_falante(uniq: str) -> bool:
+        from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import JANELA_DO_JOGO_S
+
+        visto = getattr(_vpad_de(uniq), "visto_ha_s", None)
+        ha = visto.get("audio_do_jogo") if isinstance(visto, dict) else None
+        return ha is not None and float(ha) <= JANELA_DO_JOGO_S
+
+    def escolher_a_fonte(uniq: str, fonte: str) -> bool:
+        sub = getattr(daemon, "_alto_falante_subsystem", None)
+        escolher = getattr(sub, "escolher_a_fonte", None)
+        return bool(escolher(uniq, fonte)) if callable(escolher) else False
+
+    def abrir_o_microfone(uniq: str) -> bool:
+        from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
+            agendar_o_nascimento_do_microfone,
+        )
+
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            laco = getattr(getattr(daemon, "bus", None), "_loop", None)
+            if laco is None or laco.is_closed():
+                return False
+            laco.call_soon_threadsafe(
+                partial(agendar_o_nascimento_do_microfone, daemon, uniq=uniq)
+            )
+            return True
+        return agendar_o_nascimento_do_microfone(daemon, uniq=uniq) is not None
+
+    memoria = getattr(daemon, "_fonte_posta_pelo_estilo", None)
+    if not isinstance(memoria, dict):
+        memoria = {}
+        daemon._fonte_posta_pelo_estilo = memoria
+    return PontesDoSom(
+        conectados=conectados,
+        fone=fone,
+        jogo_no_alto_falante=jogo_no_alto_falante,
+        escolher_a_fonte=escolher_a_fonte,
+        abrir_o_microfone=abrir_o_microfone,
+        do_estilo=memoria,
+    )
+
+
 APPLIERS_DO_DAEMON: tuple[tuple[str, str], ...] = (
     ("mouse_applier", "apply_profile_mouse"),
     ("suppression_applier", "apply_profile_suppression"),
@@ -2615,6 +2858,7 @@ def gerente_do_daemon(
         argumentos["store"] = store
     for parametro, atributo in APPLIERS_DO_DAEMON:
         argumentos[parametro] = getattr(daemon, atributo, None)
+    argumentos["som_do_estilo"] = pontes_do_som_do_daemon(daemon)
     if mode_applier is not HERDA_DO_DAEMON:
         argumentos["mode_applier"] = mode_applier
     _avisa_secoes_sem_applier(
@@ -2714,6 +2958,7 @@ __all__ = [
     "MOTIVO_SEM_CANDIDATO",
     "SECAO_DO_APPLIER",
     "OFreestyleMandaError",
+    "PontesDoSom",
     "ProfileManager",
     "_controllers_to_led_scales",
     "_controllers_to_procedencias",
@@ -2726,5 +2971,6 @@ __all__ = [
     "ligar_o_freestyle",
     "o_freestyle_manda",
     "os_perfis_de_escolher",
+    "pontes_do_som_do_daemon",
     "resolve_key_bindings",
 ]
