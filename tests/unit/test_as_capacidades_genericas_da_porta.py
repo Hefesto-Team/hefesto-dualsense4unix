@@ -258,6 +258,7 @@ def test_8_o_parar_tudo_nao_pede_o_gesto() -> None:
 
 
 def test_8_o_parar_tudo_chega_como_extensao_parar_a_quem_nao_le_o_gesto(curto) -> None:  # noqa: F811
+    """Prova da D-2210-O-PARAR-TUDO-E-UM-CAMPO-DO-MANIFESTO."""
     async def corrida() -> tuple[Any, Any]:
         bus = EventBus()
         porta = await _porta(curto, bus, [ESTADO])
@@ -315,7 +316,10 @@ def _drenar(ext: _Extensao) -> list[dict[str, Any]]:
 def test_6_o_aperto_de_cada_controle_chega_com_o_uniq_e_o_jogador_dele(
     curto, monkeypatch, kernel, quantos: int, transporte: str,  # noqa: F811
 ) -> None:
-    """Cada controle da mesa aperta o ✕ e solta: a extensão recebe a borda com o dele."""
+    """Cada controle da mesa aperta o ✕ e solta: a extensão recebe a borda com o dele.
+
+    Prova da D-2210-O-TOQUE-DE-BOTAO-CHEGA-DE-TODO-CONTROLE.
+    """
     bancada = montar_atalhos(monkeypatch, kernel, quantos, transporte)
     numeros = bancada.a_tela()
 

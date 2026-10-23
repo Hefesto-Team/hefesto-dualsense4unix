@@ -84,6 +84,7 @@ def _aberta(html: str) -> str:
 
 
 def test_com_agora_a_janela_e_o_arranjo_c_com_os_grupos_em_abas(janela) -> None:
+    """Prova da D-2210-A-JANELA-QUE-DECLARA-O-AGORA-ABRE-NO-ARRANJO-C."""
     _, abrir = janela
     agora = ["conexoes", "aparelhos"]  # (noqa-acento): chave
     html = abrir(agora=agora, parar_tudo=True)["blocos"]["#mod-janela"]
@@ -154,6 +155,7 @@ def _a08():
 
 
 def test_a_conexoes_diz_cada_peca_via_a_extensao() -> None:
+    """Prova da D-2210-A-CONEXOES-MOSTRA-O-QUE-A-EXTENSAO-USA."""
     a08 = _a08()
     falhou = {"id": "fone", "tipo": "Telefone", "transporte": "rede", "estado": "falhou",
               "motivo": "Sem resposta"}
