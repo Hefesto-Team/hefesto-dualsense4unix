@@ -123,7 +123,10 @@ def _alturas(m: dict[str, list[float]]) -> list[float]:
 @pytest.mark.parametrize("vista", [f"{w}x{h}" for w, h in VISTAS])
 def test_a_altura_do_cartao_nao_depende_das_extensoes(
         medida: dict[str, dict[str, list[float]]], vista: str) -> None:
-    """Com 2, 4 e 8 extensões, cada `.lf` tem a mesma altura (2 px de tolerância)."""
+    """Prova da D-2210-OS-CARTOES-DOS-LANCADORES-TEM-A-ALTURA-DO-CONTEUDO.
+
+    Com 2, 4 e 8 extensões, cada `.lf` tem a mesma altura (2 px de tolerância).
+    """
     por_n = {n: _alturas(medida[f"{vista}-{n}"]) for n in QUANTAS}
     todas = [a for alturas in por_n.values() for a in alturas]
     assert max(todas) - min(todas) <= 2, f"a altura do cartão muda com as extensões: {por_n}"

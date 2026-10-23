@@ -21,5 +21,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 07-lancadores.html
-- **22/10/2026** — os cartões dos lançadores com a altura do que mostram, e o quadro do tamanho da fila, com a sobra no fundo da janela (OS-CARTOES-DOS-LANCADORES-NAO-ESTICAM-01). Até publicar, o produto continua com os cartões que esticam com a sobra; só o `experimental.css` muda, o pacote não.
+<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
