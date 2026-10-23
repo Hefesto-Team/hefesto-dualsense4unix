@@ -131,8 +131,9 @@ def test_a_sobra_fica_fora_do_quadro(
         medida: dict[str, dict[str, list[float]]], vista: str) -> None:
     """Com poucas extensões, o quadro «Lançadores» acaba logo depois da fila, e a aba não rola."""
     m = medida[f"{vista}-2"]
-    lanc, fim, rola, miolo = (m.get(k) for k in ("lanc", "fim", "rola", "miolo"))
-    assert all(isinstance(v, list) for v in (lanc, fim, rola, miolo)), f"a sonda não leu: {m}"
+    assert all(isinstance(m.get(k), list) for k in ("lanc", "fim", "rola", "miolo")), \
+        f"a sonda não leu: {m}"
+    lanc, fim, rola, miolo = m["lanc"], m["fim"], m["rola"], m["miolo"]
     assert rola[0] <= rola[1] + 1, f"a fila dos lançadores rola com duas extensões: {m}"
     assert miolo[0] <= miolo[1] + 1, f"a aba rola: {m}"
     # Embaixo do último cartão, só o respiro do `.quadro-corpo` (14 px) e a borda.
