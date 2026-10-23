@@ -8,9 +8,14 @@ repartia a sobra do quadro, e cada cartão tinha 134 px com duas extensões, 115
 com oito (1600x855), para uma linha só. A cura: a fileira tem altura própria (42 px; 32 até 860
 px de altura) e o quadro fica do tamanho da fila, com a sobra no fundo da janela, fora dele.
 
-MORDIDA (executada em 22/10/2026): com o `1fr` de volta,
-`test_a_altura_do_cartao_nao_depende_das_extensoes` reprova nas três vistas; sem o `flex-grow:0` do
-quadro, `test_a_sobra_fica_fora_do_quadro` reprova nas três (o quadro estica até o rodapé, vazio).
+As duas metades da cura seguram cada uma o cartão: com o quadro sem esticar, a fileira não tem sobra
+a repartir; com a fileira de altura própria, o quadro que estica não estica o cartão.
+
+MORDIDA (executada em 22/10/2026): com a regra de antes inteira (o `1fr` e o quadro que estica),
+`test_a_altura_do_cartao_nao_depende_das_extensoes` reprova nas três vistas, e a régua da fonte
+também; só com o `1fr` de volta, `test_a_fileira_da_fila_nao_reparte_a_sobra` reprova; só
+sem o `flex-grow:0` do quadro, `test_a_sobra_fica_fora_do_quadro` reprova nas três (o quadro estica
+até o rodapé, vazio, embaixo do último cartão).
 """
 
 from __future__ import annotations
@@ -62,7 +67,8 @@ MEDIR = '''(function(){
   const m = document.querySelector('.janela > .miolo');
   const lf = [...fila.querySelectorAll('.lf')].map(e => e.getBoundingClientRect().height);
   return JSON.stringify({lf: lf,
-    lanc: r(lanc), fila: r(fila), rola: [fila.scrollHeight, fila.clientHeight],
+    lanc: r(lanc), fim: r(fila.querySelector('.lf:last-child')),
+    rola: [fila.scrollHeight, fila.clientHeight],
     miolo: [m.scrollHeight, m.clientHeight]});
 })()'''
 
@@ -125,12 +131,12 @@ def test_a_sobra_fica_fora_do_quadro(
         medida: dict[str, dict[str, list[float]]], vista: str) -> None:
     """Com poucas extensões, o quadro «Lançadores» acaba logo depois da fila, e a aba não rola."""
     m = medida[f"{vista}-2"]
-    lanc, fila, rola, miolo = (m.get(k) for k in ("lanc", "fila", "rola", "miolo"))
-    assert all(isinstance(v, list) for v in (lanc, fila, rola, miolo)), f"a sonda não leu: {m}"
+    lanc, fim, rola, miolo = (m.get(k) for k in ("lanc", "fim", "rola", "miolo"))
+    assert all(isinstance(v, list) for v in (lanc, fim, rola, miolo)), f"a sonda não leu: {m}"
     assert rola[0] <= rola[1] + 1, f"a fila dos lançadores rola com duas extensões: {m}"
     assert miolo[0] <= miolo[1] + 1, f"a aba rola: {m}"
-    # O fundo do quadro é o respiro do `.quadro-corpo` (14 px) mais a borda, não a sobra da janela.
-    assert lanc[1] - fila[1] <= 20, f"o quadro estica além da fila, com a sobra dentro dele: {m}"
+    # Embaixo do último cartão, só o respiro do `.quadro-corpo` (14 px) e a borda.
+    assert lanc[1] - fim[1] <= 20, f"o quadro estica além da fila, com a sobra dentro dele: {m}"
 
 
 def test_a_fileira_da_fila_nao_reparte_a_sobra() -> None:
