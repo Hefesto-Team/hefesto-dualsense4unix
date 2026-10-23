@@ -711,6 +711,35 @@ def _soltar_a_trava_do_lancamento(daemon: Any) -> None:
     daemon._pad_travado_pelo_lancamento = None
 
 
+def _encerrar_a_autoridade_do_jogo_que_acabou(daemon: Any, appid: int) -> bool:
+    """O lançamento de `appid` encerra a autoridade `game` que é só o resíduo do jogo anterior.
+
+    Com o jogo anterior fechado, o sinal segue `game` por 30 s (a histerese) e a troca de
+    roupa e de caminho do jogo novo é recusada (`gamepad._recriacao_bloqueada_por_jogo`).
+    O arme prova que o anterior acabou, se a varredura (as leituras do `classify`) não vê
+    outro jogo vivo (`game_signal.outro_jogo_vivo`): o launcher que fica, a janela aberta,
+    o jogo de fora da Steam com regra de perfil. Na dúvida, a autoridade fica. A borda
+    `game -> daemon` roda pela porta do tique (`Daemon.encerrar_a_autoridade_do_jogo`),
+    ANTES da roupa nova.
+    """
+    if getattr(daemon, "display_authority", "unknown") != "game":
+        return False
+    ler = getattr(daemon, "_gather_game_signal_inputs", None)
+    encerrar = getattr(daemon, "encerrar_a_autoridade_do_jogo", None)
+    if not (callable(ler) and callable(encerrar)):
+        return False
+    from hefesto_dualsense4unix.daemon.subsystems.game_signal import outro_jogo_vivo
+
+    try:
+        if outro_jogo_vivo(ler(), appid):
+            logger.info("launch_arm_autoridade_mantida_outro_jogo_vivo", appid=appid)
+            return False
+        return bool(encerrar("daemon_outro_lancamento"))
+    except Exception as exc:
+        logger.warning("launch_arm_autoridade_nao_encerrada", appid=appid, err=str(exc))
+        return False
+
+
 def _travar_o_pad_que_o_jogo_vai_abrir(daemon: Any, appid: int, epoch: float) -> None:
     """O pad de pé ao `exec` é o que o jogo abre. Nada automático o recria."""
     daemon._pad_travado_pelo_lancamento = (int(appid), epoch)
@@ -835,6 +864,7 @@ def arm_launch_profile(
     if getattr(daemon, "_launch_armed_for", None) == (appid, epoch):
         return None
     daemon._launch_armed_for = (appid, epoch)  # type: ignore[attr-defined]
+    _encerrar_a_autoridade_do_jogo_que_acabou(daemon, appid)
     _soltar_a_trava_do_lancamento(daemon)
 
     from hefesto_dualsense4unix.profiles.manager import o_freestyle_manda

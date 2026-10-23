@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import time
 from collections.abc import Callable
-from typing import Literal
+from typing import Any, Literal
 
 from hefesto_dualsense4unix.daemon.launch_env import (
     steam_appid_from_wm_class,
@@ -122,6 +122,49 @@ def classify(
     return "unknown"
 
 
+def outro_jogo_vivo(inputs: dict[str, Any], appid_do_lancamento: int) -> bool:
+    """Há, nas leituras de `classify`, evidência de um jogo que NÃO é o lançamento?
+
+    Quem pergunta é o arme de um lançamento novo (`launch_env`), com a autoridade
+    ainda `game`: se nenhum outro jogo está vivo, o que a segura é só a histerese
+    do jogo que acabou, e o lançamento a encerra (`GameSignal.encerrar`). As
+    evidências são as de `classify`, menos as duas que não dizem «outro»: o marcador
+    do próprio lançamento e a idade da última janela de jogo (`window_seen_age`),
+    que é o resíduo da histerese que se quer encerrar. O processo ou a janela do
+    próprio `appid_do_lancamento` também não contam.
+    """
+    vivo = inputs.get("appid_de_jogo_vivo")
+    if isinstance(vivo, int) and vivo > 0 and vivo != appid_do_lancamento:
+        return True
+    marker = inputs.get("marker")
+    if (
+        marker is not None
+        and int(marker[0]) != appid_do_lancamento
+        and wrapper_game_running(
+            marker=marker,
+            exit_marker=inputs.get("exit_marker"),
+            pid_alive=bool(inputs.get("marker_pid_alive")),
+            marker_pid=inputs.get("marker_pid"),
+            exit_pid=inputs.get("exit_pid"),
+            now=float(inputs.get("now") or time.time()),
+        )
+    ):
+        return True
+    classe = inputs.get("window_class_current")
+    da_janela = steam_appid_from_wm_class(classe) if classe is not None else None
+    if da_janela is not None:
+        return da_janela != appid_do_lancamento
+    return bool(inputs.get("profile_rule_match"))
+
+
+def _sem_derrubar_o_tique(nome: str, acao: Callable[[], None]) -> None:
+    """Roda um passo da borda; se falhar, o tique segue e o diário diz qual caiu."""
+    try:
+        acao()
+    except Exception as exc:
+        logger.warning("game_signal_borda_falhou", passo=nome, err=str(exc))
+
+
 class GameSignal:
     """Casca com histerese (30s) + telemetria de transição sobre `classify`."""
 
@@ -158,6 +201,45 @@ class GameSignal:
             self._transition("daemon", evidencia="daemon_histerese_expirada")
         return self._authority
 
+    def encerrar(self, evidencia: str) -> bool:
+        """Encerra a autoridade `game` na hora, sem esperar a histerese. ``True`` se havia.
+
+        O lançamento de outro jogo, sem nenhum outro vivo (`outro_jogo_vivo`), é a
+        prova de que o anterior acabou. A histerese de 30 s é da janela que pisca
+        dentro do MESMO jogo, e segue valendo para ela. O tique seguinte reavalia o
+        veredito cru como sempre, e o jogo novo volta a `game` pela evidência dele.
+        """
+        if self._authority != "game":
+            return False
+        self._non_game_since = None
+        self._transition("daemon", evidencia=evidencia)
+        return True
+
+    def na_borda(self, daemon: Any, anterior: str, novo: str) -> None:
+        """O que a troca de autoridade `anterior -> novo` faz com a cor e as saídas retidas.
+
+        Quem troca é o tique do sinal (`Daemon._sync_game_signal`) e o encerramento pelo
+        lançamento novo (`Daemon.encerrar_a_autoridade_do_jogo`): a mesma borda, uma só vez.
+        """
+        def cor() -> None:
+            from hefesto_dualsense4unix.daemon.connection import armar_gatilho_da_cor_por_evento
+
+            armar_gatilho_da_cor_por_evento(daemon, f"game_signal:{anterior}->{novo}")
+
+        def saida(nome: str) -> None:
+            def chama() -> None:
+                acao = getattr(daemon.controller, nome, None)
+                if callable(acao):
+                    acao()
+
+            _sem_derrubar_o_tique(nome, chama)
+
+        _sem_derrubar_o_tique("cor", cor)
+        if novo == "daemon":
+            saida("defend_display")
+        elif anterior == "daemon":
+            saida("replay_retained_game_outputs")
+
     def mark_degraded(self, motivo: str) -> Authority:
         """Força `unknown` (fail-safe) e loga a causa — leitura de I/O falhou."""
         self._non_game_since = None
@@ -177,4 +259,5 @@ __all__ = [
     "Authority",
     "GameSignal",
     "classify",
+    "outro_jogo_vivo",
 ]

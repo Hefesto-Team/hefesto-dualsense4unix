@@ -4168,15 +4168,16 @@ class Daemon:
             return
         from hefesto_dualsense4unix.daemon.subsystems.game_signal import classify
 
-        anterior = signal.authority
         inputs: dict[str, Any] | None = None
         try:
             inputs = await self._run_blocking(self._gather_game_signal_inputs)
         except Exception as exc:
             logger.warning("game_signal_degradado", motivo=str(exc))
+            anterior = signal.authority
             signal.mark_degraded(str(exc))
             self._appid_da_evidencia = None
         else:
+            anterior = signal.authority
             raw = classify(**inputs)
             signal.evaluate(raw, session_open=bool(inputs["session_open"]))
             self._appid_da_evidencia = _o_appid_da_evidencia(inputs)
@@ -4193,22 +4194,21 @@ class Daemon:
             _soltar_o_pad_do_lancamento(self, MOTIVO_DO_LANCAMENTO_QUE_CAIU)
         if novo == anterior:
             return
-        with contextlib.suppress(Exception):
-            from hefesto_dualsense4unix.daemon.connection import (
-                armar_gatilho_da_cor_por_evento,
-            )
+        signal.na_borda(self, anterior, novo)
 
-            armar_gatilho_da_cor_por_evento(self, f"game_signal:{anterior}->{novo}")
-        if novo == "daemon":
-            with contextlib.suppress(Exception):
-                defend = getattr(self.controller, "defend_display", None)
-                if callable(defend):
-                    defend()
-        elif anterior == "daemon":
-            with contextlib.suppress(Exception):
-                replay = getattr(self.controller, "replay_retained_game_outputs", None)
-                if callable(replay):
-                    replay()
+    def encerrar_a_autoridade_do_jogo(self, evidencia: str) -> bool:
+        """Encerra a autoridade `game` agora, pela borda `game -> daemon` do tique.
+
+        Quem chama é o arme de um lançamento sem outro jogo vivo (`launch_env`): a soltura
+        e a borda são as do tique, nenhuma cópia. O `anterior` do tique é lido DEPOIS da
+        varredura, e por isso ele vê a volta a `game` se o arme encerrou enquanto ela rodava.
+        """
+        signal = self._game_signal
+        if signal is None or not signal.encerrar(evidencia):
+            return False
+        _soltar_o_pad_do_lancamento(self, MOTIVO_DA_AUTORIDADE)
+        signal.na_borda(self, "game", "daemon")
+        return True
 
 
     _steam_jogo_task: asyncio.Task[Any] | None = None
