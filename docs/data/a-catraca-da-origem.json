@@ -55,7 +55,7 @@
       "data": "2026-10-23",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 970,
+      "piso": 969,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -143,7 +143,7 @@
         "integrations/fora_do_servico.py": 7,
         "integrations/ganho_do_microfone.py": 2,
         "integrations/gesto_de_pareamento.py": 3,
-        "integrations/hidraw_broker_client.py": 10,
+        "integrations/hidraw_broker_client.py": 9,
         "integrations/hotkey_daemon.py": 3,
         "integrations/jogos_locais.py": 9,
         "integrations/laco_de_audio.py": 2,
