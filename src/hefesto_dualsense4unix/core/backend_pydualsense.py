@@ -6014,11 +6014,8 @@ class _DispositivoPorFd:
                 return None
             if eventos[0][1] & (select.POLLERR | select.POLLHUP | select.POLLNVAL):
                 raise OSError("Failed to read from HID device: o nó saiu")
-        try:
-            lido = os.read(fd, length)
-        except BlockingIOError:
-            return None
-        return lido or None
+        # O fd do `open` nasce sem `O_NONBLOCK`: o `poll` decide a espera, o `read` não a recusa.
+        return os.read(fd, length) or None
 
     def write(self, data: bytes) -> int:
         return os.write(self._vivo(), bytes(data))
