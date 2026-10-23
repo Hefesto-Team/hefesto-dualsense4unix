@@ -24,8 +24,10 @@ INSTALL = (REPO_ROOT / "install.sh").read_text(encoding="utf-8")
 ASSET = REPO_ROOT / "assets" / "NetworkManager" / "hefesto-wifi-powersave.conf"
 
 FUNCOES = (
+    "_wifi_ferramenta",
     "_wifi_interfaces",
     "_wifi_economia_ligada",
+    "_wifi_comando_desliga",
     "_wifi_desliga_economia",
     "aplicar_wifi_powersave_off",
 )
@@ -62,7 +64,7 @@ class Cena:
     """Uma máquina de mentira: PATH só com dublês, `/etc` e rádio em tmp."""
 
     def __init__(self, base: Path, *, com_iw: bool = True, com_iwconfig: bool = False,
-                 com_sudo: bool = True) -> None:
+                 com_sudo: bool = True, iw_no_sbin: bool = False) -> None:
         self.base = base
         self.nm = base / "etc" / "NetworkManager"
         self.alvo = self.nm / "conf.d" / "hefesto-wifi-powersave.conf"
@@ -75,6 +77,9 @@ class Cena:
         bin_ = base / "bin"
         bin_.mkdir()
         self.bin = bin_
+        # O `/usr/sbin` de mentira: fora do PATH, como no usuário comum do Debian.
+        self.sbin = base / "sbin"
+        self.sbin.mkdir()
         for nome in FERRAMENTAS:
             real = shutil.which(nome)
             assert real, f"{nome} ausente na máquina de teste"
@@ -90,7 +95,7 @@ class Cena:
         lista = f'while read -r i; do {{ARGS}}; done < "{self.ifaces}"\n'
         if com_iw:
             _stub(
-                bin_ / "iw",
+                (self.sbin if iw_no_sbin else bin_) / "iw",
                 log
                 + f'est="{self.estado}"\n'
                 + 'if [ "$1" = dev ] && [ -z "$2" ]; then\n'
@@ -128,6 +133,9 @@ class Cena:
         funcoes = "\n".join(_extrai_funcao(n) for n in FUNCOES)
         # O `/etc` do passo aponta para o de mentira; o resto do texto é o do install.
         funcoes = funcoes.replace("/etc/NetworkManager", str(self.nm))
+        # O `/usr/sbin /sbin` do passo aponta para o de mentira: o real não vaza.
+        assert "for dir in /usr/sbin /sbin; do" in funcoes
+        funcoes = funcoes.replace("for dir in /usr/sbin /sbin; do", f"for dir in {self.sbin}; do")
         cena = (
             "set -euo pipefail\n"
             'warn() { printf "AVISO: %s\\n" "$*"; }\n'
@@ -203,8 +211,37 @@ class TestPrimeiraCorrida:
         r = c.roda()
         assert "RC=0" in r.stdout, r.stderr
         assert not c.alvo.exists()
-        assert "sudo iw dev wlan0 set power_save off" in r.stdout
+        assert f"sudo {c.bin}/iw dev wlan0 set power_save off" in r.stdout
         assert (c.estado / "wlan0").read_text(encoding="utf-8").strip() == "on"
+
+    def test_sem_sudo_e_sem_o_iw_avisa_o_comando_do_iwconfig(self, tmp_path: Path) -> None:
+        c = Cena(tmp_path, com_iw=False, com_iwconfig=True, com_sudo=False)
+        c.interface("wlan0", "on")
+        r = c.roda()
+        assert "RC=0" in r.stdout, r.stderr
+        assert f"sudo {c.bin}/iwconfig wlan0 power off" in r.stdout
+        assert " iw " not in r.stdout
+
+    def test_o_iw_fora_do_path_mora_no_sbin_e_e_achado(self, tmp_path: Path) -> None:
+        """No Debian 12 o `/usr/sbin` não está no PATH de usuário comum."""
+        c = Cena(tmp_path, iw_no_sbin=True)
+        c.interface("wlan0", "on")
+        r = c.roda()
+        assert "RC=0" in r.stdout, r.stderr
+        assert any(x.endswith(f"sudo {c.sbin}/iw dev wlan0 set power_save off") for x in c.log())
+        assert (c.estado / "wlan0").read_text(encoding="utf-8").strip() == "off"
+
+    def test_sem_iw_nem_iwconfig_nao_diz_que_esta_desligada(self, tmp_path: Path) -> None:
+        """Não saber o estado da interface não é «nenhuma interface ligada»."""
+        c = Cena(tmp_path, com_iw=False)
+        assert "RC=0" in c.roda().stdout
+        r = c.roda()
+        assert "RC=0" in r.stdout, r.stderr
+        assert "já desligada" not in r.stdout
+        assert "sem iw nem iwconfig" in r.stdout
+        r = c.roda(dry_run=1)
+        assert "já está desligada" not in r.stdout
+        assert "sem iw nem iwconfig" in r.stdout
 
 
 class TestSegundaCorrida:
@@ -282,9 +319,29 @@ class TestOPassoEPadrao:
         assert re.search(r"^aplicar_wifi_powersave_off$", INSTALL, re.MULTILINE), (
             "o passo 3d-bis tem de ser chamado na coluna 0: indentado, é opt-in de novo"
         )
+        assert re.search(
+            r'^step "3d-bis"[^\n]*\naplicar_wifi_powersave_off$', INSTALL, re.MULTILINE
+        ), "a chamada vem logo depois do `step` do 3d-bis, fora de qualquer bloco"
         assert "WIFI_POWERSAVE_OFF" not in INSTALL, (
             "não existe mais portão de opção: o padrão é desligar a economia"
         )
+
+    def test_a_secao_do_passo_nao_tem_bloco_na_coluna_zero(self) -> None:
+        """Na seção do 3d-bis, só as funções, o `step` e a chamada vivem na coluna 0."""
+        ini = INSTALL.index("\n# 3d-bis.")
+        fim = INSTALL.index("\n# 3e.", ini)
+        soltas = [
+            linha
+            for linha in INSTALL[ini:fim].splitlines()
+            if linha
+            and not linha[0].isspace()
+            and not linha.startswith("#")
+            and linha != "}"
+            and not re.match(r"^\w+\(\) \{$", linha)
+        ]
+        assert len(soltas) == 2, soltas
+        assert soltas[0].startswith('step "3d-bis" ')
+        assert soltas[1] == "aplicar_wifi_powersave_off"
 
     def test_a_opcao_velha_continua_aceita_sem_aviso(self) -> None:
         r = subprocess.run(

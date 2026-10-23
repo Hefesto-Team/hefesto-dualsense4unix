@@ -8609,36 +8609,52 @@ check_wifi_powersave() {
         [[ -n "${hit}" ]] && { val="${hit}"; src="${f}"; }
     done
 
-    # Interfaces Wi-Fi com a economia de energia LIGADA agora (só leitura).
-    local ligadas="" ifc
-    if command -v iw >/dev/null 2>&1; then
-        while IFS= read -r ifc; do
-            [[ -n "${ifc}" ]] || continue
-            if iw dev "${ifc}" get power_save 2>/dev/null | grep -qi 'power save: *on'; then
-                ligadas+="${ligadas:+ }${ifc}"
-            fi
-        done < <(iw dev 2>/dev/null | awk '$1 == "Interface" { print $2 }')
-    elif command -v iwconfig >/dev/null 2>&1; then
-        while IFS= read -r ifc; do
-            [[ -n "${ifc}" ]] || continue
-            if iwconfig "${ifc}" 2>/dev/null | grep -qi 'power management: *on'; then
-                ligadas+="${ligadas:+ }${ifc}"
-            fi
-        done < <(iwconfig 2>/dev/null | awk '/^[^ \t]/ && !/no wireless extensions/ { print $1 }')
-    fi
+    # Interfaces Wi-Fi com a economia de energia LIGADA agora (só leitura). O
+    # `iw` e o `iwconfig` moram em /usr/sbin, fora do PATH de usuário comum no
+    # Debian 12: procura-se também ali, senão «não sei» viraria «nenhuma ligada».
+    local ligadas="" ifc ferr="" nome dir desliga=""
+    for nome in iw iwconfig; do
+        ferr="$(command -v "${nome}" 2>/dev/null)" && break
+        for dir in /usr/sbin /sbin; do
+            [[ -x "${dir}/${nome}" ]] && { ferr="${dir}/${nome}"; break 2; }
+        done
+        ferr=""
+    done
+    case "${ferr##*/}" in
+        iw)
+            while IFS= read -r ifc; do
+                [[ -n "${ifc}" ]] || continue
+                if "${ferr}" dev "${ifc}" get power_save 2>/dev/null | grep -qi 'power save: *on'; then
+                    ligadas+="${ligadas:+ }${ifc}"
+                fi
+            done < <("${ferr}" dev 2>/dev/null | awk '$1 == "Interface" { print $2 }')
+            desliga="sudo ${ferr} dev ${ligadas%% *} set power_save off"
+            ;;
+        iwconfig)
+            while IFS= read -r ifc; do
+                [[ -n "${ifc}" ]] || continue
+                if "${ferr}" "${ifc}" 2>/dev/null | grep -qi 'power management: *on'; then
+                    ligadas+="${ligadas:+ }${ifc}"
+                fi
+            done < <("${ferr}" 2>/dev/null | awk '/^[^ \t]/ && !/no wireless extensions/ { print $1 }')
+            desliga="sudo ${ferr} ${ligadas%% *} power off"
+            ;;
+    esac
+    local agora="nenhuma interface Wi-Fi com ela ligada agora"
+    [[ -n "${ferr}" ]] || agora="sem iw nem iwconfig, cada interface não se confere"
 
     if [[ "${val}" == "2" && "${src}" == "/etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf" ]]; then
         if [[ -n "${ligadas}" ]]; then
-            warn "o conf do hefesto desliga a economia de energia do Wi-Fi (wifi.powersave=2), mas ${ligadas} ainda está com ela LIGADA — rode o install de novo, ou: sudo iw dev ${ligadas%% *} set power_save off (vale na hora, não reconecta)"
+            warn "o conf do hefesto desliga a economia de energia do Wi-Fi (wifi.powersave=2), mas ${ligadas} ainda está com ela LIGADA — rode o install de novo, ou: ${desliga} (vale na hora, não reconecta)"
         else
-            pass "economia de energia do Wi-Fi desligada (wifi.powersave=2 via o conf.d do hefesto)"
+            pass "economia de energia do Wi-Fi desligada (wifi.powersave=2 via o conf.d do hefesto; ${agora})"
         fi
     elif [[ -n "${ligadas}" ]]; then
         warn "economia de energia do Wi-Fi LIGADA em ${ligadas} (${src:-sem wifi.powersave configurado}) — histórico de instabilidade em dongles Realtek USB (rtw88); o install do hefesto a desliga sem reconectar"
     elif [[ -z "${val}" ]]; then
         info "NetworkManager sem wifi.powersave configurado (default do driver/firmware vale); o install do hefesto grava o conf que desliga a economia"
     elif [[ "${val}" == "3" ]]; then
-        info "wifi.powersave=3 (LIGA o power save do firmware) via ${src}, e nenhuma interface Wi-Fi com ela ligada agora; o install do hefesto grava o conf que a desliga"
+        info "wifi.powersave=3 (LIGA o power save do firmware) via ${src}, e ${agora}; o install do hefesto grava o conf que a desliga"
     else
         info "wifi.powersave=${val} via ${src}"
     fi

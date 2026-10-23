@@ -45,6 +45,7 @@ def _roda_check(
     raiz_fixture: Path,
     jornal: str,
     wifi: dict[str, str] | None = None,
+    ferramenta: str = "iw",
 ) -> subprocess.CompletedProcess[str]:
     """Extrai o check, aponta a raiz hardcoded (sysfs/etc) p/ a fixture e"""
     stubs = tmp_path / "bin"
@@ -56,18 +57,39 @@ def _roda_check(
     stub.chmod(0o755)
     # `iw` de mentira: sem `wifi`, a máquina não tem interface (e o `iw` real,
     # se houver, não vaza para o teste); com ele, {interface: "on"|"off"}.
-    iw = stubs / "iw"
-    interfaces = "".join(f"\\tInterface {i}\\n" for i in (wifi or {}))
-    estados = "".join(
-        f'[ "$2" = {i} ] && echo "Power save: {e}"\n' for i, e in (wifi or {}).items()
-    )
-    iw.write_text(
-        '#!/bin/sh\n[ "$1" = dev ] && [ -z "$2" ] && '
-        f'printf "phy#0\\n{interfaces}"\n{estados}exit 0\n',
-        encoding="utf-8",
-    )
-    iw.chmod(0o755)
+    if ferramenta == "iw":
+        iw = stubs / "iw"
+        interfaces = "".join(f"\\tInterface {i}\\n" for i in (wifi or {}))
+        estados = "".join(
+            f'[ "$2" = {i} ] && echo "Power save: {e}"\n' for i, e in (wifi or {}).items()
+        )
+        iw.write_text(
+            '#!/bin/sh\n[ "$1" = dev ] && [ -z "$2" ] && '
+            f'printf "phy#0\\n{interfaces}"\n{estados}exit 0\n',
+            encoding="utf-8",
+        )
+        iw.chmod(0o755)
+    elif ferramenta == "iwconfig":
+        # Só o `iwconfig`, no `/usr/sbin` de mentira (fora do PATH, como no
+        # usuário comum do Debian 12).
+        sbin = tmp_path / "sbin"
+        sbin.mkdir(exist_ok=True)
+        iwconfig = sbin / "iwconfig"
+        nomes = "".join(f'printf "{i}  IEEE 802.11\\n"\n' for i in (wifi or {}))
+        estados = "".join(
+            f'[ "$1" = {i} ] && printf "{i}  IEEE 802.11\\n          Power Management:{e}\\n"\n'
+            for i, e in (wifi or {}).items()
+        )
+        iwconfig.write_text(
+            f'#!/bin/sh\nif [ -z "$1" ]; then\n{nomes}exit 0\nfi\n{estados}exit 0\n',
+            encoding="utf-8",
+        )
+        iwconfig.chmod(0o755)
     funcao = _extrai_funcao_bash(DOCTOR, nome).replace(raiz_original, str(raiz_fixture))
+    # O `/usr/sbin /sbin` real não vaza: aponta para o de mentira.
+    funcao = funcao.replace(
+        "for dir in /usr/sbin /sbin; do", f"for dir in {tmp_path / 'sbin'}; do"
+    )
     corpo = f"{SHIMS}{funcao}\n{nome}\nprintf 'RC=%s\\n' \"$?\"\n"
     script = tmp_path / "cena.sh"
     script.write_text(corpo, encoding="utf-8")
@@ -241,10 +263,15 @@ class TestCheckWifiPowersave:
     RAIZ = "/etc/NetworkManager"
 
     def _roda(
-        self, tmp_path: Path, jornal: str = "", wifi: dict[str, str] | None = None
+        self,
+        tmp_path: Path,
+        jornal: str = "",
+        wifi: dict[str, str] | None = None,
+        ferramenta: str = "iw",
     ) -> subprocess.CompletedProcess[str]:
         return _roda_check(
-            tmp_path, "check_wifi_powersave", self.RAIZ, tmp_path / "nm", jornal, wifi
+            tmp_path, "check_wifi_powersave", self.RAIZ, tmp_path / "nm", jornal, wifi,
+            ferramenta,
         )
 
     def _conf_do_hefesto(self, tmp_path: Path) -> None:
@@ -295,6 +322,22 @@ class TestCheckWifiPowersave:
         assert "WARN: o conf do hefesto desliga" in resultado.stdout
         assert "wlan1 ainda está com ela LIGADA" in resultado.stdout
         assert "PASS" not in resultado.stdout
+
+    def test_so_o_iwconfig_no_sbin_le_a_interface_e_diz_o_comando_dele(
+        self, tmp_path: Path
+    ) -> None:
+        self._conf_do_hefesto(tmp_path)
+        resultado = self._roda(tmp_path, wifi={"wlan0": "on"}, ferramenta="iwconfig")
+        assert "wlan0 ainda está com ela LIGADA" in resultado.stdout, resultado.stdout
+        assert f"sudo {tmp_path}/sbin/iwconfig wlan0 power off" in resultado.stdout
+        assert " iw dev " not in resultado.stdout
+
+    def test_sem_iw_nem_iwconfig_o_pass_nao_afirma_a_interface(self, tmp_path: Path) -> None:
+        self._conf_do_hefesto(tmp_path)
+        resultado = self._roda(tmp_path, ferramenta="nenhuma")
+        assert "PASS: economia de energia do Wi-Fi desligada" in resultado.stdout
+        assert "sem iw nem iwconfig" in resultado.stdout
+        assert "nenhuma interface" not in resultado.stdout
 
     def test_sem_conf_nenhuma_fica_em_info_neutro(self, tmp_path: Path) -> None:
         (tmp_path / "nm").mkdir()

@@ -2732,45 +2732,75 @@ fi
 # nem recarrega o NetworkManager. Remoção: uninstall.sh (simétrico). O doctor
 # reporta o estado.
 
-# As interfaces Wi-Fi desta máquina, uma por linha. Só lê.
+# A ferramenta que lê e desliga a economia, por caminho absoluto: o `iw`
+# (nl80211) ou, sem ele, o `iwconfig` (wext). As duas moram em `/usr/sbin`, que
+# NÃO está no PATH de usuário comum no Debian 12 (o buraco do `ldconfig`,
+# medido em 19/08/2026): sem procurar ali, a máquina com Wi-Fi seria lida como
+# «nenhuma interface ligada». Sem nenhuma das duas, rc 1: o estado não se lê.
+_wifi_ferramenta() {
+    local nome dir
+    for nome in iw iwconfig; do
+        if command -v "${nome}" >/dev/null 2>&1; then
+            command -v "${nome}"
+            return 0
+        fi
+        for dir in /usr/sbin /sbin; do
+            if [[ -x "${dir}/${nome}" ]]; then
+                printf '%s\n' "${dir}/${nome}"
+                return 0
+            fi
+        done
+    done
+    return 1
+}
+
+# As interfaces Wi-Fi desta máquina, uma por linha, pela ferramenta $1. Só lê.
 _wifi_interfaces() {
-    if command -v iw >/dev/null 2>&1; then
-        iw dev 2>/dev/null | awk '$1 == "Interface" { print $2 }'
-    elif command -v iwconfig >/dev/null 2>&1; then
-        iwconfig 2>/dev/null | awk '/^[^ \t]/ && !/no wireless extensions/ { print $1 }'
-    fi
+    case "${1##*/}" in
+        iw)       "$1" dev 2>/dev/null | awk '$1 == "Interface" { print $2 }' ;;
+        iwconfig) "$1" 2>/dev/null | awk '/^[^ \t]/ && !/no wireless extensions/ { print $1 }' ;;
+    esac
 }
 
-# rc 0 quando a interface $1 está com a economia de energia LIGADA. Só lê.
+# rc 0 quando a interface $2 está com a economia de energia LIGADA. Só lê.
 _wifi_economia_ligada() {
-    if command -v iw >/dev/null 2>&1; then
-        iw dev "$1" get power_save 2>/dev/null | grep -qi 'power save: *on'
-    elif command -v iwconfig >/dev/null 2>&1; then
-        iwconfig "$1" 2>/dev/null | grep -qi 'power management: *on'
-    else
-        return 1
-    fi
+    case "${1##*/}" in
+        iw)       "$1" dev "$2" get power_save 2>/dev/null | grep -qi 'power save: *on' ;;
+        iwconfig) "$1" "$2" 2>/dev/null | grep -qi 'power management: *on' ;;
+        *)        return 1 ;;
+    esac
 }
 
-# Desliga a economia da interface $1, sem desassociar (precisa de root).
+# O comando que desliga a economia da interface $2, sem desassociar.
+_wifi_comando_desliga() {
+    case "${1##*/}" in
+        iw) printf '%s dev %s set power_save off\n' "$1" "$2" ;;
+        *)  printf '%s %s power off\n' "$1" "$2" ;;
+    esac
+}
+
+# Desliga a economia da interface $2 (precisa de root).
 _wifi_desliga_economia() {
-    if command -v iw >/dev/null 2>&1; then
-        sudo iw dev "$1" set power_save off
-    else
-        sudo iwconfig "$1" power off
-    fi
+    case "${1##*/}" in
+        iw) sudo "$1" dev "$2" set power_save off ;;
+        *)  sudo "$1" "$2" power off ;;
+    esac
 }
 
 aplicar_wifi_powersave_off() {
     local alvo="/etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf"
     local asset="${ROOT_DIR}/assets/NetworkManager/hefesto-wifi-powersave.conf"
-    local conf_igual=0 ifc
+    local conf_igual=0 ifc ferramenta=""
     local -a ligadas=()
     if cmp -s "${asset}" "${alvo}" 2>/dev/null; then conf_igual=1; fi
-    while IFS= read -r ifc; do
-        [[ -n "${ifc}" ]] || continue
-        if _wifi_economia_ligada "${ifc}"; then ligadas+=("${ifc}"); fi
-    done < <(_wifi_interfaces)
+    ferramenta="$(_wifi_ferramenta)" || ferramenta=""
+    if [[ -n "${ferramenta}" ]]; then
+        while IFS= read -r ifc; do
+            [[ -n "${ifc}" ]] || continue
+            if _wifi_economia_ligada "${ferramenta}" "${ifc}"; then ligadas+=("${ifc}"); fi
+        done < <(_wifi_interfaces "${ferramenta}")
+    fi
+    local sem_ferramenta="sem iw nem iwconfig, a economia de cada interface não se confere agora (o conf vale na próxima associação)"
 
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         if [[ "${SKIP_UDEV}" -eq 1 ]]; then
@@ -2785,7 +2815,9 @@ aplicar_wifi_powersave_off() {
         for ifc in ${ligadas[@]+"${ligadas[@]}"}; do
             _faria_root "desligar a economia de energia de ${ifc} na hora (power_save off, sem reconectar)"
         done
-        if [[ "${conf_igual}" -eq 1 && "${#ligadas[@]}" -eq 0 ]]; then
+        if [[ -z "${ferramenta}" ]]; then
+            _nao_faria "desligar na hora: ${sem_ferramenta}"
+        elif [[ "${conf_igual}" -eq 1 && "${#ligadas[@]}" -eq 0 ]]; then
             _nao_faria "mexer no Wi-Fi: a economia de energia já está desligada"
         fi
         return 0
@@ -2795,14 +2827,18 @@ aplicar_wifi_powersave_off() {
         return 0
     fi
     if [[ "${conf_igual}" -eq 1 && "${#ligadas[@]}" -eq 0 ]]; then
-        printf '      economia de energia do Wi-Fi já desligada (conf igual, nenhuma interface com ela ligada)\n'
+        if [[ -n "${ferramenta}" ]]; then
+            printf '      economia de energia do Wi-Fi já desligada (conf igual, nenhuma interface com ela ligada)\n'
+        else
+            printf '      conf igual; %s\n' "${sem_ferramenta}"
+        fi
         return 0
     fi
     if ! command -v sudo >/dev/null 2>&1 || ! sudo -n true 2>/dev/null; then
         warn "sudo indisponível/recusado — a economia de energia do Wi-Fi NÃO foi desligada; re-execute:"
         [[ "${conf_igual}" -eq 1 ]] || warn "  sudo install -Dm644 assets/NetworkManager/hefesto-wifi-powersave.conf ${alvo}"
         for ifc in ${ligadas[@]+"${ligadas[@]}"}; do
-            warn "  sudo iw dev ${ifc} set power_save off"
+            warn "  sudo $(_wifi_comando_desliga "${ferramenta}" "${ifc}")"
         done
         return 0
     fi
@@ -2812,9 +2848,11 @@ aplicar_wifi_powersave_off() {
         else
             warn "não consegui gravar ${alvo}"
         fi
+        [[ -n "${ferramenta}" ]] || printf '      %s\n' "${sem_ferramenta}"
     fi
     for ifc in ${ligadas[@]+"${ligadas[@]}"}; do
-        if _wifi_desliga_economia "${ifc}" 2>/dev/null && ! _wifi_economia_ligada "${ifc}"; then
+        if _wifi_desliga_economia "${ferramenta}" "${ifc}" 2>/dev/null \
+                && ! _wifi_economia_ligada "${ferramenta}" "${ifc}"; then
             printf '      economia de energia de %s desligada agora (a conexão não foi tocada)\n' "${ifc}"
         else
             warn "não consegui desligar a economia de energia de ${ifc} agora — vale na próxima associação"
