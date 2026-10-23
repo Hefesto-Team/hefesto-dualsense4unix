@@ -11,7 +11,7 @@
 # /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf).
 #
 # ESTE SCRIPT SÓ MEDE E RELATA. Ele NÃO persiste configuração nenhuma. A
-# economia de energia desligada já é o padrão do install.sh (decisão dela,
+# economia de energia desligada já é o padrão do install.sh (decisão de produto,
 # 23/10/2026, depois de seis quedas do dongle num dia com o powersave=3 da
 # distro: assets/NetworkManager/hefesto-wifi-powersave.conf); a medição A/B
 # fica para quem quiser ver o ganho no próprio aparelho. Ao final, o valor
