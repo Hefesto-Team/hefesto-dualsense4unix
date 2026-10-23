@@ -118,8 +118,8 @@
 #     no .ko) — se o patchado estiver CARREGADO, devolvemos hang_reset a 0
 #     a quente (desliga só o reset; a detecção/silenciamento continua até o
 #     módulo sair de fato no próximo boot). Também remove, se presente, o
-#     conf.d de powersave do NetworkManager (W2, opt-in/gateado por
-#     evidência) — sem flag nova, simetria "se instalado, some".
+#     conf.d de powersave do NetworkManager (W2, instalado por padrão pelo
+#     install.sh) — sem flag nova, simetria "se instalado, some".
 #
 # O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01 (23/09/2026) — removidos por DEFAULT:
 #   - o vigia do dongle Wi-Fi USB: hefesto-wifi-usb-vigia.{service,timer}, o
@@ -1863,10 +1863,11 @@ if command -v dkms >/dev/null 2>&1 && sudo -n true 2>/dev/null; then
     source "${ROOT_DIR}/scripts/dkms_lib.sh"
     dkms_flush_initramfs
 fi
-# Conf.d de powersave do WiFi (W2 — opt-in/gateado por evidência, NÃO
-# instalado por default pelo install.sh hoje): removido SE presente, sem
-# flag nova (simetria "se instalado, some" — mesmo padrão do storm.conf).
-# Só rm de um arquivo .conf: NUNCA chamamos nmcli/rfkill aqui.
+# Conf.d de powersave do WiFi (W2 — instalado por padrão pelo install.sh):
+# removido SE presente, sem flag nova (simetria "se instalado, some" — mesmo
+# padrão do storm.conf). Só rm de um arquivo .conf: NUNCA chamamos
+# nmcli/rfkill aqui, e a economia de cada interface volta ao que o
+# NetworkManager decidir na próxima associação.
 if [[ -e /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf ]]; then
     if sudo -n true 2>/dev/null; then
         log "removendo conf de powersave do WiFi (/etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf)"

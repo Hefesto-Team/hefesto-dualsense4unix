@@ -8587,10 +8587,13 @@ check_usb_fantasma() {
 }
 
 # Powersave EFETIVO do WiFi (W2 — vilão ATIVO é o LPS RASO via mac80211,
-# ligado hoje por wifi.powersave=3 do NetworkManager; disable_lps_deep é
-# NO-OP em USB, não é medido/julgado aqui). Leitura SÓ de arquivo (conf.d) —
-# NUNCA invoca nmcli/rfkill (regra da casa: doctor é read-only e não toca
-# NetworkManager). Sem julgamento até scripts/medir_w2_lps.sh medir A/B.
+# ligado pelo wifi.powersave=3 do NetworkManager da distro; disable_lps_deep é
+# NO-OP em USB, não é medido/julgado aqui). Desde 23/10/2026 o install DESLIGA
+# a economia em toda máquina com Wi-Fi (conf.d do hefesto, wifi.powersave=2, e
+# `iw dev <if> set power_save off` na hora); aqui se confere as duas pontas: o
+# conf (lido de ARQUIVO) e o estado vivo de cada interface (lido por `iw ... get
+# power_save` ou `iwconfig`, SÓ leitura). NUNCA invoca nmcli/rfkill (regra da
+# casa: doctor é read-only e não toca NetworkManager).
 check_wifi_powersave() {
     local -a files=(/etc/NetworkManager/NetworkManager.conf)
     if [[ -d /etc/NetworkManager/conf.d ]]; then
@@ -8605,12 +8608,37 @@ check_wifi_powersave() {
         hit="$(sed -n 's/^[[:space:]]*wifi\.powersave[[:space:]]*=[[:space:]]*\([0-9]\+\).*/\1/p' "${f}" 2>/dev/null | tail -1)"
         [[ -n "${hit}" ]] && { val="${hit}"; src="${f}"; }
     done
-    if [[ -z "${val}" ]]; then
-        info "NetworkManager sem wifi.powersave configurado (default do driver/firmware vale) — não medido ainda: scripts/medir_w2_lps.sh"
+
+    # Interfaces Wi-Fi com a economia de energia LIGADA agora (só leitura).
+    local ligadas="" ifc
+    if command -v iw >/dev/null 2>&1; then
+        while IFS= read -r ifc; do
+            [[ -n "${ifc}" ]] || continue
+            if iw dev "${ifc}" get power_save 2>/dev/null | grep -qi 'power save: *on'; then
+                ligadas+="${ligadas:+ }${ifc}"
+            fi
+        done < <(iw dev 2>/dev/null | awk '$1 == "Interface" { print $2 }')
+    elif command -v iwconfig >/dev/null 2>&1; then
+        while IFS= read -r ifc; do
+            [[ -n "${ifc}" ]] || continue
+            if iwconfig "${ifc}" 2>/dev/null | grep -qi 'power management: *on'; then
+                ligadas+="${ligadas:+ }${ifc}"
+            fi
+        done < <(iwconfig 2>/dev/null | awk '/^[^ \t]/ && !/no wireless extensions/ { print $1 }')
+    fi
+
+    if [[ "${val}" == "2" && "${src}" == "/etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf" ]]; then
+        if [[ -n "${ligadas}" ]]; then
+            warn "o conf do hefesto desliga a economia de energia do Wi-Fi (wifi.powersave=2), mas ${ligadas} ainda está com ela LIGADA — rode o install de novo, ou: sudo iw dev ${ligadas%% *} set power_save off (vale na hora, não reconecta)"
+        else
+            pass "economia de energia do Wi-Fi desligada (wifi.powersave=2 via o conf.d do hefesto)"
+        fi
+    elif [[ -n "${ligadas}" ]]; then
+        warn "economia de energia do Wi-Fi LIGADA em ${ligadas} (${src:-sem wifi.powersave configurado}) — histórico de instabilidade em dongles Realtek USB (rtw88); o install do hefesto a desliga sem reconectar"
+    elif [[ -z "${val}" ]]; then
+        info "NetworkManager sem wifi.powersave configurado (default do driver/firmware vale); o install do hefesto grava o conf que desliga a economia"
     elif [[ "${val}" == "3" ]]; then
-        info "wifi.powersave=3 (LIGA o power save do firmware) via ${src} — histórico de instabilidade em dongles Realtek USB (rtw88); meça antes de mudar: scripts/medir_w2_lps.sh"
-    elif [[ "${val}" == "2" && "${src}" == "/etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf" ]]; then
-        pass "wifi.powersave=2 (desliga) via o conf.d do hefesto — opt-in aplicado após medição W2 confirmar ganho"
+        info "wifi.powersave=3 (LIGA o power save do firmware) via ${src}, e nenhuma interface Wi-Fi com ela ligada agora; o install do hefesto grava o conf que a desliga"
     else
         info "wifi.powersave=${val} via ${src}"
     fi

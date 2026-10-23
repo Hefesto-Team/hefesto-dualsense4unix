@@ -39,7 +39,12 @@ def _sem_comentarios(texto: str) -> str:
 
 
 def _roda_check(
-    tmp_path: Path, nome: str, raiz_original: str, raiz_fixture: Path, jornal: str
+    tmp_path: Path,
+    nome: str,
+    raiz_original: str,
+    raiz_fixture: Path,
+    jornal: str,
+    wifi: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Extrai o check, aponta a raiz hardcoded (sysfs/etc) p/ a fixture e"""
     stubs = tmp_path / "bin"
@@ -49,6 +54,19 @@ def _roda_check(
     stub = stubs / "journalctl"
     stub.write_text(f'#!/bin/sh\ncat "{fixture}"\n', encoding="utf-8")
     stub.chmod(0o755)
+    # `iw` de mentira: sem `wifi`, a máquina não tem interface (e o `iw` real,
+    # se houver, não vaza para o teste); com ele, {interface: "on"|"off"}.
+    iw = stubs / "iw"
+    interfaces = "".join(f"\\tInterface {i}\\n" for i in (wifi or {}))
+    estados = "".join(
+        f'[ "$2" = {i} ] && echo "Power save: {e}"\n' for i, e in (wifi or {}).items()
+    )
+    iw.write_text(
+        '#!/bin/sh\n[ "$1" = dev ] && [ -z "$2" ] && '
+        f'printf "phy#0\\n{interfaces}"\n{estados}exit 0\n',
+        encoding="utf-8",
+    )
+    iw.chmod(0o755)
     funcao = _extrai_funcao_bash(DOCTOR, nome).replace(raiz_original, str(raiz_fixture))
     corpo = f"{SHIMS}{funcao}\n{nome}\nprintf 'RC=%s\\n' \"$?\"\n"
     script = tmp_path / "cena.sh"
@@ -218,32 +236,18 @@ class TestAssinaturaFantasmaUsb:
 
 
 class TestCheckWifiPowersave:
-    """Funcional: conf.d sintético (raiz substituída) + journalctl stubado."""
+    """Funcional: conf.d sintético (raiz substituída), jornal e `iw` stubados."""
 
     RAIZ = "/etc/NetworkManager"
 
     def _roda(
-        self, tmp_path: Path, jornal: str = ""
+        self, tmp_path: Path, jornal: str = "", wifi: dict[str, str] | None = None
     ) -> subprocess.CompletedProcess[str]:
         return _roda_check(
-            tmp_path, "check_wifi_powersave", self.RAIZ, tmp_path / "nm", jornal
+            tmp_path, "check_wifi_powersave", self.RAIZ, tmp_path / "nm", jornal, wifi
         )
 
-    def test_powersave_3_vira_info_apontando_a_medicao(self, tmp_path: Path) -> None:
-        confd = tmp_path / "nm" / "conf.d"
-        confd.mkdir(parents=True)
-        (confd / "default-wifi-powersave-on.conf").write_text(
-            "[connection]\nwifi.powersave = 3\n", encoding="utf-8"
-        )
-        resultado = self._roda(tmp_path)
-        assert "RC=0" in resultado.stdout, resultado.stderr
-        assert "INFO: wifi.powersave=3" in resultado.stdout
-        assert "medir_w2_lps.sh" in resultado.stdout, (
-            "sem a medição W2 o doctor NÃO julga — só aponta o script A/B"
-        )
-        assert "WARN" not in resultado.stdout
-
-    def test_conf_do_hefesto_com_2_e_pass(self, tmp_path: Path) -> None:
+    def _conf_do_hefesto(self, tmp_path: Path) -> None:
         confd = tmp_path / "nm" / "conf.d"
         confd.mkdir(parents=True)
         (confd / "hefesto-wifi-powersave.conf").write_text(
@@ -252,8 +256,45 @@ class TestCheckWifiPowersave:
             "wifi.powersave=2\n",
             encoding="utf-8",
         )
+
+    def test_powersave_3_da_distro_sem_interface_ligada_e_info(self, tmp_path: Path) -> None:
+        confd = tmp_path / "nm" / "conf.d"
+        confd.mkdir(parents=True)
+        (confd / "default-wifi-powersave-on.conf").write_text(
+            "[connection]\nwifi.powersave = 3\n", encoding="utf-8"
+        )
         resultado = self._roda(tmp_path)
-        assert "PASS: wifi.powersave=2" in resultado.stdout
+        assert "RC=0" in resultado.stdout, resultado.stderr
+        assert "INFO: wifi.powersave=3" in resultado.stdout
+        assert "WARN" not in resultado.stdout
+
+    def test_economia_ligada_numa_interface_sem_o_conf_e_warn(self, tmp_path: Path) -> None:
+        confd = tmp_path / "nm" / "conf.d"
+        confd.mkdir(parents=True)
+        (confd / "default-wifi-powersave-on.conf").write_text(
+            "[connection]\nwifi.powersave = 3\n", encoding="utf-8"
+        )
+        resultado = self._roda(tmp_path, wifi={"wlan0": "on"})
+        assert "WARN: economia de energia do Wi-Fi LIGADA em wlan0" in resultado.stdout
+        assert "sem reconectar" in resultado.stdout
+
+    def test_conf_do_hefesto_com_a_economia_desligada_e_pass(self, tmp_path: Path) -> None:
+        self._conf_do_hefesto(tmp_path)
+        resultado = self._roda(tmp_path, wifi={"wlan0": "off"})
+        assert "PASS: economia de energia do Wi-Fi desligada" in resultado.stdout
+        assert "WARN" not in resultado.stdout
+
+    def test_conf_do_hefesto_sem_interface_wifi_tambem_e_pass(self, tmp_path: Path) -> None:
+        self._conf_do_hefesto(tmp_path)
+        resultado = self._roda(tmp_path)
+        assert "PASS: economia de energia do Wi-Fi desligada" in resultado.stdout
+
+    def test_conf_existe_mas_interface_ainda_ligada_e_warn(self, tmp_path: Path) -> None:
+        self._conf_do_hefesto(tmp_path)
+        resultado = self._roda(tmp_path, wifi={"wlan0": "off", "wlan1": "on"})
+        assert "WARN: o conf do hefesto desliga" in resultado.stdout
+        assert "wlan1 ainda está com ela LIGADA" in resultado.stdout
+        assert "PASS" not in resultado.stdout
 
     def test_sem_conf_nenhuma_fica_em_info_neutro(self, tmp_path: Path) -> None:
         (tmp_path / "nm").mkdir()

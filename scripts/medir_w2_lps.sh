@@ -10,11 +10,12 @@
 # mac80211 pede PS — e o NM liga PS por default (wifi.powersave=3 em
 # /etc/NetworkManager/conf.d/default-wifi-powersave-on.conf).
 #
-# ESTE SCRIPT SÓ MEDE E RELATA. Ele NÃO persiste configuração nenhuma:
-# a decisão de fixar powersave=2 (se ganhar) entra por asset próprio
-# (assets/NetworkManager/hefesto-wifi-powersave.conf), gateada pela
-# evidência produzida aqui. Ao final, o valor ORIGINAL da conexão é
-# restaurado (trap EXIT), ganhe quem ganhar.
+# ESTE SCRIPT SÓ MEDE E RELATA. Ele NÃO persiste configuração nenhuma. A
+# economia de energia desligada já é o padrão do install.sh (decisão dela,
+# 23/10/2026, depois de seis quedas do dongle num dia com o powersave=3 da
+# distro: assets/NetworkManager/hefesto-wifi-powersave.conf); a medição A/B
+# fica para quem quiser ver o ganho no próprio aparelho. Ao final, o valor
+# ORIGINAL da conexão é restaurado (trap EXIT), ganhe quem ganhar.
 #
 # Uso:   ./medir_w2_lps.sh            # dry-run: mostra o plano, não toca nada
 #        ./medir_w2_lps.sh --run      # executa (interrompe o WiFi! ~6 min)

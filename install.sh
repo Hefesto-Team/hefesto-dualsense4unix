@@ -158,12 +158,11 @@
 #                         --no-udev também pula.
 #   --sem-desempenho      responde NÃO ao modo desempenho, sem perguntar. Não
 #                         escreve nada.
-#   --wifi-powersave-off  OPT-IN (W2 — gateado por evidência): instala
-#                         assets/NetworkManager/hefesto-wifi-powersave.conf em
-#                         /etc/NetworkManager/conf.d/ (wifi.powersave=2). Use
-#                         SÓ depois que scripts/medir_w2_lps.sh provar ganho
-#                         com margem clara. NUNCA chama nmcli/rfkill — vale na
-#                         próxima (re)conexão do NM. uninstall.sh remove.
+#   --wifi-powersave-off  aceita, sem efeito a mais: desligar a economia de energia
+#                         do Wi-Fi (conf.d do NetworkManager, wifi.powersave=2, e
+#                         `iw dev <if> set power_save off` na hora) é o padrão em
+#                         toda máquina com Wi-Fi (passo 3d-bis). NUNCA reconecta a
+#                         rede para aplicar. --no-udev pula. uninstall.sh remove.
 #   --yes, -y             responde sim a todos os prompts (autostart, hotplug,
 #                         AppIndicator extension, etc) e assume --format=native.
 #   --no-systemd          pula a unit do daemon por INTEIRO (passo 6 E passo 7a):
@@ -310,11 +309,6 @@ KEEP_STEAM_INPUT=0
 # CONFERENCIA-FINAL-01: o doctor roda no fim, por padrão. `--no-doctor` pula.
 RUN_DOCTOR=1
 FORCE_XWAYLAND=0
-# W2 (corretor final, achado #5): a flag documentada no asset e no desenho da
-# Onda W nunca tinha sido implementada — o parser só avisava "argumento
-# desconhecido" e a operadora podia achar que a cura foi aplicada. Opt-in,
-# nasce desligada; só vira default quando a medição do medir_w2_lps.sh provar.
-WIFI_POWERSAVE_OFF=0
 # O-QUE-E-DO-HEFESTO-SAI-DO-ZSH-01 (23/09/2026): o vigia do dongle Wi-Fi USB é
 # DEFAULT, e todo passo default da camada de máquina tem saída — o produto é
 # para qualquer usuário (resposta de produto 3).
@@ -363,7 +357,7 @@ for arg in "$@"; do
         --with-storm-watch)   : ;;  # deprecated: o kernel-watch já é DEFAULT
         --no-proton-pin)      NO_PROTON_PIN=1 ;;
         --keep-steam-input)   KEEP_STEAM_INPUT=1 ;;
-        --wifi-powersave-off) WIFI_POWERSAVE_OFF=1 ;;
+        --wifi-powersave-off) : ;;  # o padrão desde 23/10/2026: aceita sem efeito, para quem já a chama
         --no-wifi-usb)        NO_WIFI_USB=1 ;;
         --desempenho)         DESEMPENHO_PEDIDO="sim" ;;
         --sem-desempenho)     DESEMPENHO_PEDIDO="sem" ;;
@@ -2720,36 +2714,116 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 3d-bis. Powersave do WiFi desligado (Onda W2) — OPT-IN, gateado por evidência
+# 3d-bis. Economia de energia do Wi-Fi desligada — DEFAULT, vale na hora
 # ---------------------------------------------------------------------------
-# SÓ com --wifi-powersave-off: instala o conf.d do NetworkManager que põe
-# wifi.powersave=2 (disable) — a via de PROMOÇÃO documentada no próprio asset
-# para quando a medição A/B do scripts/medir_w2_lps.sh provar ganho (o LPS
-# raso do firmware rtw88 em dongle USB tem histórico de 'failed to leave lps
-# state'/beacon loss). NUNCA chamamos nmcli/rfkill aqui: só a cópia do conf —
-# vale na próxima (re)conexão gerida pelo NM. Remoção: uninstall.sh (simétrico,
-# "se instalado, some") ou sudo rm do conf. doctor.sh reporta o estado.
-if [[ "${WIFI_POWERSAVE_OFF}" -eq 1 ]]; then
-    step "3d-bis" "powersave do WiFi OFF (conf.d do NetworkManager — opt-in W2)"
+# Decisão dela, 23/10/2026: o Hefesto desliga a economia de energia do Wi-Fi em
+# toda máquina com Wi-Fi. Medido no mesmo dia: o NetworkManager da distro liga
+# `wifi.powersave = 3` e o dongle rtw88 USB caiu seis vezes com a assinatura do
+# firmware (`failed to get tx report`, `failed to leave ips state`). O passo faz
+# DUAS coisas, ambas idempotentes:
+#   1. grava o conf.d do NetworkManager (`wifi.powersave=2`), que vale em toda
+#      associação futura;
+#   2. desliga a economia AGORA em cada interface que a tem ligada, por
+#      `iw dev <if> set power_save off` (ou `iwconfig <if> power off`, sem o
+#      `iw`) — o que NÃO desassocia.
+# NUNCA reconectar para aplicar: o `nmcli connection up` do mesmo dia levou o
+# dongle a perder o aperto de mão em série (`WRONG_KEY` sem a senha errada) e a
+# máquina teve de ser reiniciada. Por isso o passo não chama `nmcli`, `rfkill`
+# nem recarrega o NetworkManager. Remoção: uninstall.sh (simétrico). O doctor
+# reporta o estado.
+
+# As interfaces Wi-Fi desta máquina, uma por linha. Só lê.
+_wifi_interfaces() {
+    if command -v iw >/dev/null 2>&1; then
+        iw dev 2>/dev/null | awk '$1 == "Interface" { print $2 }'
+    elif command -v iwconfig >/dev/null 2>&1; then
+        iwconfig 2>/dev/null | awk '/^[^ \t]/ && !/no wireless extensions/ { print $1 }'
+    fi
+}
+
+# rc 0 quando a interface $1 está com a economia de energia LIGADA. Só lê.
+_wifi_economia_ligada() {
+    if command -v iw >/dev/null 2>&1; then
+        iw dev "$1" get power_save 2>/dev/null | grep -qi 'power save: *on'
+    elif command -v iwconfig >/dev/null 2>&1; then
+        iwconfig "$1" 2>/dev/null | grep -qi 'power management: *on'
+    else
+        return 1
+    fi
+}
+
+# Desliga a economia da interface $1, sem desassociar (precisa de root).
+_wifi_desliga_economia() {
+    if command -v iw >/dev/null 2>&1; then
+        sudo iw dev "$1" set power_save off
+    else
+        sudo iwconfig "$1" power off
+    fi
+}
+
+aplicar_wifi_powersave_off() {
+    local alvo="/etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf"
+    local asset="${ROOT_DIR}/assets/NetworkManager/hefesto-wifi-powersave.conf"
+    local conf_igual=0 ifc
+    local -a ligadas=()
+    if cmp -s "${asset}" "${alvo}" 2>/dev/null; then conf_igual=1; fi
+    while IFS= read -r ifc; do
+        [[ -n "${ifc}" ]] || continue
+        if _wifi_economia_ligada "${ifc}"; then ligadas+=("${ifc}"); fi
+    done < <(_wifi_interfaces)
+
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         if [[ "${SKIP_UDEV}" -eq 1 ]]; then
             _nao_faria "nada aqui: --no-udev pula os passos que tocam /etc"
-        else
-            _faria_root "gravar /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf (wifi.powersave=2) — vale na próxima reconexão; nada é tocado no rádio agora"
+            return 0
         fi
-    elif [[ "${SKIP_UDEV}" -eq 1 ]]; then
-        warn "--no-udev ativo — passo de /etc pulado (rode sem --no-udev para aplicar)"
-    elif ! command -v sudo >/dev/null 2>&1 || ! sudo -n true 2>/dev/null; then
-        warn "sudo indisponível/recusado — conf de powersave NÃO instalado; re-execute:"
-        warn "  sudo install -Dm644 assets/NetworkManager/hefesto-wifi-powersave.conf /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf"
-    elif sudo install -Dm644 "${ROOT_DIR}/assets/NetworkManager/hefesto-wifi-powersave.conf" \
-            /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf 2>/dev/null; then
-        printf '      conf instalado em /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf (wifi.powersave=2)\n'
-        printf '      vale na próxima (re)conexão do NM — nada foi tocado no rádio agora\n'
-    else
-        warn "não consegui gravar /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf"
+        if [[ "${conf_igual}" -eq 1 ]]; then
+            _nao_faria "gravar ${alvo}: já está igual"
+        else
+            _faria_root "gravar ${alvo} (wifi.powersave=2) — vale em toda associação futura"
+        fi
+        for ifc in ${ligadas[@]+"${ligadas[@]}"}; do
+            _faria_root "desligar a economia de energia de ${ifc} na hora (power_save off, sem reconectar)"
+        done
+        if [[ "${conf_igual}" -eq 1 && "${#ligadas[@]}" -eq 0 ]]; then
+            _nao_faria "mexer no Wi-Fi: a economia de energia já está desligada"
+        fi
+        return 0
     fi
-fi
+    if [[ "${SKIP_UDEV}" -eq 1 ]]; then
+        warn "--no-udev ativo — passo de /etc pulado (rode sem --no-udev para aplicar)"
+        return 0
+    fi
+    if [[ "${conf_igual}" -eq 1 && "${#ligadas[@]}" -eq 0 ]]; then
+        printf '      economia de energia do Wi-Fi já desligada (conf igual, nenhuma interface com ela ligada)\n'
+        return 0
+    fi
+    if ! command -v sudo >/dev/null 2>&1 || ! sudo -n true 2>/dev/null; then
+        warn "sudo indisponível/recusado — a economia de energia do Wi-Fi NÃO foi desligada; re-execute:"
+        [[ "${conf_igual}" -eq 1 ]] || warn "  sudo install -Dm644 assets/NetworkManager/hefesto-wifi-powersave.conf ${alvo}"
+        for ifc in ${ligadas[@]+"${ligadas[@]}"}; do
+            warn "  sudo iw dev ${ifc} set power_save off"
+        done
+        return 0
+    fi
+    if [[ "${conf_igual}" -eq 0 ]]; then
+        if sudo install -Dm644 "${asset}" "${alvo}" 2>/dev/null; then
+            printf '      conf instalado em %s (wifi.powersave=2)\n' "${alvo}"
+        else
+            warn "não consegui gravar ${alvo}"
+        fi
+    fi
+    for ifc in ${ligadas[@]+"${ligadas[@]}"}; do
+        if _wifi_desliga_economia "${ifc}" 2>/dev/null && ! _wifi_economia_ligada "${ifc}"; then
+            printf '      economia de energia de %s desligada agora (a conexão não foi tocada)\n' "${ifc}"
+        else
+            warn "não consegui desligar a economia de energia de ${ifc} agora — vale na próxima associação"
+        fi
+    done
+}
+
+step "3d-bis" "economia de energia do WiFi OFF (conf.d do NetworkManager + na hora)"
+aplicar_wifi_powersave_off
 
 # ---------------------------------------------------------------------------
 # 3e. Cmdline do kernel gerenciado (PLAT-03 item 2) — DEFAULT, registro de dono

@@ -171,8 +171,8 @@ class TestNadaDestrutivoNemPersistente:
             "no W2 (o vilão ativo é o LPS raso via NM)"
         )
         assert "/etc/" not in codigo, (
-            "o W2 MEDE E RELATA — persistir powersave=2 é decisão gateada "
-            "pela evidência (asset próprio, opt-in do install)"
+            "o W2 MEDE E RELATA — persistir powersave=2 é do install "
+            "(asset próprio, padrão desde 23/10/2026)"
         )
 
     def test_w2_nao_toca_rfkill_nem_modulo(self) -> None:
@@ -200,7 +200,7 @@ class TestNadaDestrutivoNemPersistente:
             )
 
 
-class TestAssetPowersaveGateado:
+class TestAssetPowersavePadrao:
     def test_conteudo_minimo_da_cura(self) -> None:
         assert "[connection.hefesto-wifi-powersave]" in NM_CONF
         assert "match-device=type:wifi" in NM_CONF
@@ -218,7 +218,11 @@ class TestAssetPowersaveGateado:
             "wifi.powersave=2",
         ], "o conf.d carrega SÓ a cura medida — tuning extra não pega carona"
 
-    def test_asset_documenta_o_gate_por_evidencia(self) -> None:
+    def test_asset_diz_que_e_o_padrao_do_install(self) -> None:
+        assert "PADRÃO do install.sh" in NM_CONF
+        assert "GATEADO" not in NM_CONF and "SÓ É INSTALADO APÓS" not in NM_CONF, (
+            "a premissa do gate por evidência caiu (decisão dela, 23/10/2026)"
+        )
         assert "medir_w2_lps.sh" in NM_CONF, (
-            "o cabeçalho aponta a medição que justifica (ou não) instalar"
+            "o cabeçalho ainda aponta a medição A/B para quem quiser conferir"
         )

@@ -280,33 +280,24 @@ class TestUninstallSimetrico:
         assert "tee /sys/module/rtw88_usb/parameters/hang_reset" in bloco
 
 
-class TestPowersaveGateadoPorEvidencia:
-    """Corretor final (achado #5): a via de PROMOÇÃO documentada no asset e no"""
+class TestPowersaveEPadrao:
+    """23/10/2026: a economia de energia do Wi-Fi sai no install, em toda máquina."""
 
-    def test_flag_opt_in_existe_e_nasce_desligada(self) -> None:
-        assert re.search(r"^WIFI_POWERSAVE_OFF=0$", INSTALL, re.MULTILINE), (
-            "a flag --wifi-powersave-off precisa existir com default 0 (opt-in)"
+    def test_nao_existe_mais_flag_de_opt_in_com_efeito(self) -> None:
+        assert "WIFI_POWERSAVE_OFF" not in INSTALL, (
+            "a economia desligada é o padrão: não há variável de opt-in"
         )
-        assert re.search(r"--wifi-powersave-off\)\s+WIFI_POWERSAVE_OFF=1", INSTALL), (
-            "a flag opt-in precisa existir no parse (--wifi-powersave-off)"
+        assert re.search(r"--wifi-powersave-off\)\s+:", INSTALL), (
+            "a flag antiga continua aceita, sem efeito a mais"
         )
 
-    def test_conf_do_nm_so_entra_atras_da_flag(self) -> None:
-        copias = re.findall(
-            r"sudo install -Dm644[^\n]*hefesto-wifi-powersave\.conf", INSTALL
+    def test_conf_do_nm_e_copiado_pelo_passo_do_padrao(self) -> None:
+        copias = re.findall(r"sudo install -Dm644[^\n]*\"\$\{alvo\}\"", INSTALL)
+        assert copias, "o passo padrão precisa copiar o conf para /etc"
+        assert re.search(r"^aplicar_wifi_powersave_off$", INSTALL, re.MULTILINE), (
+            "o passo 3d-bis é chamado na coluna 0, sem portão de opção"
         )
-        assert copias, "a via de promoção precisa copiar o conf para /etc"
-        gate = INSTALL.index('if [[ "${WIFI_POWERSAVE_OFF}" -eq 1 ]]')
-        fim_bloco = INSTALL.index("# 3e. Cmdline", gate)
-        bloco = INSTALL[gate:fim_bloco]
-        for linha in copias:
-            assert linha in bloco, (
-                "cópia do conf de powersave FORA do gate --wifi-powersave-off"
-            )
-        sem_bloco = INSTALL[:gate] + INSTALL[fim_bloco:]
-        assert NM_CONF_ETC not in _sem_comentarios(sem_bloco), (
-            "o conf.d do NM só pode ser tocado atrás da flag opt-in"
-        )
+        assert NM_CONF_ETC in _sem_comentarios(INSTALL)
 
     def test_help_aceita_a_flag_sem_aviso_de_desconhecido(self) -> None:
         result = subprocess.run(
@@ -322,7 +313,7 @@ class TestPowersaveGateadoPorEvidencia:
     def test_install_nunca_chama_nmcli_ou_rfkill(self) -> None:
         codigo = _sem_comentarios(INSTALL)
         assert not re.search(r"\bnmcli\b", codigo), (
-            "install NUNCA mexe no NetworkManager — medição é do medir_w2_lps.sh"
+            "install NUNCA reconecta o NetworkManager: o powersave vale na hora por iw/iwconfig"
         )
         assert not re.search(r"\brfkill\b", codigo)
 
