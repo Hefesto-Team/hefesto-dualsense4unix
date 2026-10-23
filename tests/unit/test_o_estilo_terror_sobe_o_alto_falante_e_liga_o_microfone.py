@@ -96,14 +96,14 @@ class Gerente:
              origin: str = "manual") -> bool:
         self.mic.append({"volume": volume, "muted": muted, "uniq": uniq})
         return True
-
     def aplicar(self, perfil: Profile, **kw: Any) -> dict[str, str]:
-        return self.manager.apply_som_do_estilo(perfil, **kw)
+        relatorio: dict[str, str] = self.manager.apply_som_do_estilo(perfil, **kw)
+        return relatorio
 
 
 def _perfil(estilo: str | None, modo: str | None = MODO_AUTOMATICO, **kw: Any) -> Profile:
     return Profile(name="terror-de-teste", match=MatchAny(), estilo=estilo,
-                   controles_modo=modo, **kw)  # type: ignore[arg-type]
+                   controles_modo=modo, **kw)
 
 
 @pytest.fixture
@@ -115,10 +115,10 @@ def perfis_no_disco(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def test_a_receita_do_terror_usa_o_padrao_da_aba_audio_sem_numero_novo() -> None:
-    af = POR_CHAVE["terror"].receita_invisivel.alto_falante  # type: ignore[union-attr]
+    af = POR_CHAVE["terror"].receita_invisivel.alto_falante
     assert af is not None
     assert (af.fonte, af.rota, af.nivel_padrao) == ("mix", SAIDA_SO_NO_ALTO_FALANTE, True)
-    assert POR_CHAVE["terror"].receita_invisivel.microfone_ligado is True  # type: ignore[union-attr]
+    assert POR_CHAVE["terror"].receita_invisivel.microfone_ligado is True
 
 
 def test_terror_no_automatico_duplica_e_abre_nos_quatro_controles() -> None:
@@ -184,7 +184,7 @@ def test_os_outros_estilos_com_receita_nao_opinam_no_microfone() -> None:
     outros = [e for e in com_receita if e.chave != "terror"]
     assert len(outros) == 16
     for e in outros:
-        assert e.receita_invisivel.microfone_ligado is None, e.chave  # type: ignore[union-attr]
+        assert e.receita_invisivel.microfone_ligado is None, e.chave
         mesa = Mesa()
         g = Gerente(mesa)
         g.aplicar(_perfil(e.chave))
@@ -200,7 +200,7 @@ def test_o_terror_nao_enfraquece_a_vibracao_nem_o_gatilho_com_o_microfone_aberto
     assert mesa.abertos == QUATRO
     assert g.controle.commands == []
     assert terror.vibracao == "max"
-    assert terror.receita_invisivel.duracao_da_vibracao_ms == (  # type: ignore[union-attr]
+    assert terror.receita_invisivel.duracao_da_vibracao_ms == (
         2 * estilos_de_jogo.DURACAO_DE_SEMPRE_MS)
 
 
@@ -311,7 +311,7 @@ def test_a_ponte_sem_pad_virtual_diz_que_nao_sabe_e_o_jogo_calado() -> None:
     assert pontes is not None
     assert pontes.fone(QUATRO[0]) is None
     assert pontes.jogo_no_alto_falante(QUATRO[0]) is False
-    assert pontes_do_som_do_daemon(_daemon(_PadVirtual(False, 30.0))).jogo_no_alto_falante(  # type: ignore[union-attr]
+    assert pontes_do_som_do_daemon(_daemon(_PadVirtual(False, 30.0))).jogo_no_alto_falante(
         QUATRO[0]) is False
     assert pontes_do_som_do_daemon(None) is None
 
@@ -321,7 +321,7 @@ def test_a_ponte_escreve_a_fonte_viva_no_subsistema_do_daemon() -> None:
     pontes = pontes_do_som_do_daemon(daemon)
     assert pontes is not None and pontes.escolher_a_fonte(QUATRO[0], "mix") is True
     assert daemon._alto_falante_subsystem.vivas == {QUATRO[0]: "mix"}
-    assert pontes_do_som_do_daemon(daemon).do_estilo is pontes.do_estilo  # type: ignore[union-attr]
+    assert pontes_do_som_do_daemon(daemon).do_estilo is pontes.do_estilo
 
 
 def test_o_gerente_do_daemon_leva_as_pontes_do_som() -> None:
