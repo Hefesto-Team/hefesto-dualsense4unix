@@ -14,9 +14,10 @@ de mentira, para provar que o WebKit pinta o que a régua deixa passar.
 MORDIDAS (23/10/2026, executadas sobre a cura e devolvidas, md5 conferido):
 - ``_AGRUPAM`` só com os dois de antes reprova ``test_container_e_layer_com_bloco_...``
   e a sonda;
-- ``_apagar_os_dados`` de volta ao ``rmtree`` inteiro reprova ``test_remover_deixa_o_meu_css...`` e
-  ``test_reinstalar_encontra_o_mesmo_meu_css``;
-- ``_dizer_uma_vez`` sem a memória (sempre imprime) reprova ``test_tres_eventos_do_vigia_...``.
+- ``_apagar_os_dados`` de volta ao ``rmtree`` inteiro reprova ``test_remover_deixa_o_meu_css...``,
+  ``test_reinstalar_encontra_o_mesmo_meu_css``, ``test_a_frase_do_mod_remover_...`` e, ao lado,
+  ``test_as_modificacoes_rodam_fora_do_daemon.py::test_remover_para_o_processo_...``;
+- ``_dizer_uma_vez`` sem a memória (sempre imprime) reprova os três testes do diário.
 """
 from __future__ import annotations
 
