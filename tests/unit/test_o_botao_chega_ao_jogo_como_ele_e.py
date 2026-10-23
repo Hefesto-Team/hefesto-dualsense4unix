@@ -469,15 +469,17 @@ def test_regua_2b_a_frente_na_mascara_dualsense_do_uinput(jogador: int) -> None:
 
 
 def _modulo_do_uinput_com_o_leitor(mapa: dict[str, str]) -> Any:
-    """Uma CÓPIA do módulo do `uinput`, carregada com o `BUTTON_MAP` do leitor trocado.
+    """Uma CÓPIA do módulo do `uinput`, carregada com a tabela do leitor trocada.
 
     Cópia sob outro nome: o módulo de verdade (e as classes que os outros testes
-    importaram dele) fica como está, e o `BUTTON_MAP` volta ao que era no fim."""
+    importaram dele) fica como está, e o `BOTOES_DO_LEITOR` volta ao que era no fim."""
     import importlib.util
     import sys
 
-    original = EvdevReader.BUTTON_MAP
-    EvdevReader.BUTTON_MAP = mapa
+    from hefesto_dualsense4unix.core import evdev_reader
+
+    original = evdev_reader.BOTOES_DO_LEITOR
+    evdev_reader.BOTOES_DO_LEITOR = mapa
     try:
         spec = importlib.util.spec_from_file_location(
             "_copia_do_uinput_gamepad", Path(uinput_gamepad.__file__)
@@ -488,12 +490,12 @@ def _modulo_do_uinput_com_o_leitor(mapa: dict[str, str]) -> Any:
         spec.loader.exec_module(copia)
     finally:
         sys.modules.pop("_copia_do_uinput_gamepad", None)
-        EvdevReader.BUTTON_MAP = original
+        evdev_reader.BOTOES_DO_LEITOR = original
     return copia
 
 
 def test_regua_6_a_tabela_das_mascaras_de_vid_sony_nasce_do_leitor() -> None:
-    """Troque dois botões no `EvdevReader.BUTTON_MAP` e a tabela da DualSense e a
+    """Troque dois botões no `evdev_reader.BOTOES_DO_LEITOR` e a tabela da DualSense e a
     da Nintendo acompanham: ela nasce do leitor do físico, não é digitada.
 
     Mordida: a tabela digitada no `uinput_gamepad.py` (as 11 entradas, em

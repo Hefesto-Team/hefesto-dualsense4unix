@@ -201,16 +201,16 @@ _GATILHOS_DIGITAIS = frozenset({"l2_btn", "r2_btn"})
 def botoes_posicionais(mapa: dict[str, str] | None = None) -> dict[str, str]:
     """A tabela posicional da Sony: o nome do botão -> o `BTN_*` que o kernel usa.
 
-    Nasce do leitor do físico (`EvdevReader.BUTTON_MAP`, invertido), não
+    Nasce do leitor do físico (`evdev_reader.BOTOES_DO_LEITOR`, invertido), não
     digitada: o pad com VID Sony é, nos botões, o que o `hid-playstation`
     escreve, e o leitor é quem lê o que o driver escreve. Ficam de fora só os
     gatilhos digitais (:data:`_GATILHOS_DIGITAIS`). `mapa` existe para a régua
     provar que a tabela acompanha o leitor.
     """
     if mapa is None:
-        from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
+        from hefesto_dualsense4unix.core.evdev_reader import BOTOES_DO_LEITOR
 
-        mapa = EvdevReader.BUTTON_MAP
+        mapa = BOTOES_DO_LEITOR
     return {nome: codigo for codigo, nome in mapa.items() if nome not in _GATILHOS_DIGITAIS}
 
 

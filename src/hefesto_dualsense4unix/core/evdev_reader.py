@@ -1439,6 +1439,26 @@ class _EvdevReconnectLoop:
                 time.sleep(0.1)
 
 
+#: O vocabulário dos botões do leitor: o keycode do evdev -> o nome canônico do Hefesto. Mora no
+#: módulo, e não só na classe, porque a tabela posicional dos pads virtuais nasce dela no import
+#: (`uinput_gamepad.botoes_posicionais`), e um dublê do `EvdevReader` não leva a tabela junto.
+BOTOES_DO_LEITOR: dict[str, str] = {
+    "BTN_SOUTH": "cross",
+    "BTN_EAST": "circle",
+    "BTN_NORTH": "triangle",
+    "BTN_WEST": "square",
+    "BTN_TL": "l1",
+    "BTN_TR": "r1",
+    "BTN_TL2": "l2_btn",
+    "BTN_TR2": "r2_btn",
+    "BTN_SELECT": "create",
+    "BTN_START": "options",
+    "BTN_MODE": "ps",
+    "BTN_THUMBL": "l3",
+    "BTN_THUMBR": "r3",
+}
+
+
 class EvdevReader(_EvdevReconnectLoop):
     """Lê input do DualSense via evdev em thread dedicada.
 
@@ -1448,21 +1468,7 @@ class EvdevReader(_EvdevReconnectLoop):
 
     # Mapeamento de evdev keycode -> nome canônico no domínio Hefesto - DualSense4Unix.
     #   Injetado em `PyDualSenseController.read_state()`. Ver INFRA-MIC-HID-01.
-    BUTTON_MAP: ClassVar[dict[str, str]] = {
-        "BTN_SOUTH": "cross",
-        "BTN_EAST": "circle",
-        "BTN_NORTH": "triangle",
-        "BTN_WEST": "square",
-        "BTN_TL": "l1",
-        "BTN_TR": "r1",
-        "BTN_TL2": "l2_btn",
-        "BTN_TR2": "r2_btn",
-        "BTN_SELECT": "create",
-        "BTN_START": "options",
-        "BTN_MODE": "ps",
-        "BTN_THUMBL": "l3",
-        "BTN_THUMBR": "r3",
-    }
+    BUTTON_MAP: ClassVar[dict[str, str]] = BOTOES_DO_LEITOR
 
     _THREAD_NAME: ClassVar[str] = "hefesto-evdev"
 
