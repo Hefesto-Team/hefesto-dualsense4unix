@@ -135,6 +135,7 @@ def test_a_receita_do_terror_usa_o_ouvir_junto_da_aba_sem_numero_novo() -> None:
 
 
 def test_terror_no_automatico_duplica_e_abre_nos_quatro_controles() -> None:
+    """A prova de D-2310-O-TERROR-DUPLICA-PELO-OUVIR-JUNTO."""
     mesa = Mesa()
     g = Gerente(mesa)
     relatorio = g.aplicar(_perfil("terror"))
@@ -383,6 +384,7 @@ def test_o_gerente_do_daemon_leva_as_pontes_do_som() -> None:
 def test_a_ponte_abre_o_microfone_pelo_nascimento_do_controle_do_fio_de_fora(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """A prova de D-2310-O-MICROFONE-DO-TERROR-ABRE-PELO-NASCIMENTO."""
     chamado = threading.Event()
     visto: dict[str, Any] = {}
 

@@ -111,6 +111,7 @@ def test_o_ritmo_nunca_duplica_a_receita_e_sfx_sem_volume_nem_rota() -> None:
 
 
 def test_ritmo_no_automatico_escreve_sfx_nos_quatro_e_nao_toca_no_volume() -> None:
+    """A prova de D-2310-O-RITMO-ESCREVE-SO-A-FONTE-SFX."""
     mesa = Mesa()
     g = Gerente(mesa)
     relatorio = g.manager.apply_som_do_estilo(_perfil("ritmo"))
