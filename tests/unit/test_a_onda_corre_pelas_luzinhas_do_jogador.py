@@ -9,7 +9,9 @@ medidor do gesto (``volta_dos_acessorios``) mostra as luzinhas, a Onda segue só
 
 MORDIDAS (22/10/2026): tirar ``onda`` de ``BASES_COM_LUZINHAS``, escrever a barra avulsa além do
 quadro (um segundo report por quadro), devolver as luzinhas sempre acesas em vez do número no
-intervalo, ou ignorar ``luzinhas_com_dono`` no laço reprova.
+intervalo, ou ignorar ``luzinhas_com_dono`` no laço reprova. Tirar o ramo que manda o controle do
+medidor só para a barra reprova o medidor que abre no meio da Onda (o quadro levaria o número por
+cima do nível).
 """
 from __future__ import annotations
 
@@ -169,6 +171,28 @@ def test_com_o_medidor_do_gesto_a_onda_fica_so_na_barra_e_volta_depois() -> None
         agora += PASSO_S
         laco.tique(agora, _plano())
     assert JOGADORES[1] in {u for u, _, _ in quadros}, "o medidor fechou e a onda voltou"
+
+
+def test_o_medidor_que_abre_no_meio_da_onda_nao_leva_o_numero_por_cima() -> None:
+    """O caso de quem joga: a Onda já corre pelas luzinhas e o gesto abre o medidor. Nenhum
+    quadro sai mais para esse controle (nem o ``None`` que devolveria o número por cima do
+    nível); só a barra segue, e os outros três continuam no quadro."""
+    laco, barra, quadros = _laco()
+    agora = 100.0
+    for _ in range(120):
+        agora += PASSO_S
+        laco.tique(agora, _plano())
+    assert any(u == JOGADORES[1] and lz is not None for u, _, lz in quadros), "a onda não correu"
+    quadros.clear()
+    barra.clear()
+    dono = frozenset({JOGADORES[1]})
+    for _ in range(120):
+        agora += PASSO_S
+        laco.tique(agora, _plano(), luzinhas_com_dono=dono)
+    assert JOGADORES[1] not in {u for u, _, _ in quadros}, (
+        "com o medidor aberto, o quadro ainda escreveu as luzinhas desse controle")
+    assert {u for u, _ in barra} == {JOGADORES[1]}, "a barra do controle do medidor segue"
+    assert {u for u, _, _ in quadros} == set(JOGADORES) - dono
 
 
 def _volta() -> va.VoltaDosAcessorios:
