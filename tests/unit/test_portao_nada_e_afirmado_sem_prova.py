@@ -13,7 +13,10 @@ TETO_SEM_PROVA_NEM_RESSALVA = 35
 #: 15/10/2026: 105 -> 107, as duas células de `luz.lightbar.efeito@dualsense` (cabo e rádio):
 #: o produto manda o quadro, com teste que morde, e ninguém viu o efeito na barra. Fecha com o olho
 #: de quem confere, como `luz.lightbar.aviso_de_modo@dualsense`.
-TETO_SEM_PROVA = 107
+#: 23/10/2026: 107 -> 113, as células de cabo e rádio de `plataforma.big_picture`, `luz.modo` e
+#: `gatilho.modo` do DualSense: lidas do código, com teste que morde e ressalva; o Big Picture fecha
+#: no M1 da bancada na Steam, e os dois modos com o olho de quem confere no aparelho.
+TETO_SEM_PROVA = 113
 
 _SIM = {"sim", "1", "true"}
 
