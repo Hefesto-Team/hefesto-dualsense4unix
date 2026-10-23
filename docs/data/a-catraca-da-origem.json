@@ -245,14 +245,14 @@
       "data": "2026-10-23",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1191715,
+      "piso": 1191719,
       "por_item": {
-        "docs": 120786,
+        "docs": 120790,
         "scripts": 120350,
         "src": 319046,
         "tests": 631533
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +4 linhas (1191715 -> 1191719), pagas por Origem: plataforma.big_picture; registrado no fecho, topo afbfd6579ba4",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -823,6 +823,12 @@
           "de": 1191278,
           "para": 1191738,
           "razao": "tamanho: +460 linhas (1191278 -> 1191738), pagas por Origem: D-2310-O-HANDLE-ABRE-O-FISICO-PELO-FD-DO-BROKER; registrado no fecho, topo e7945a052f00"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 1191715,
+          "para": 1191719,
+          "razao": "tamanho: +4 linhas (1191715 -> 1191719), pagas por Origem: plataforma.big_picture; registrado no fecho, topo afbfd6579ba4"
         }
       ],
       "unidade": "linhas",
