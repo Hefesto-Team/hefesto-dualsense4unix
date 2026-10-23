@@ -232,8 +232,13 @@ def cmd_desligar(mod_id: str = typer.Argument(..., help="O id da modificação."
 
 @app.command("remover")
 def cmd_remover(mod_id: str = typer.Argument(..., help="O id da modificação.")) -> None:
-    """Para, apaga o código, os dados e a linha do registro, e confere os três."""
-    from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError, remover
+    """Para, apaga o código, os dados e a linha do registro, e confere os três. O ``meu.css``
+    fica: é escrita da pessoa, e reinstalar a extensão o encontra."""
+    from hefesto_dualsense4unix.mods.instalador import (
+        InstalacaoRecusadaError,
+        o_css_que_fica,
+        remover,
+    )
 
     try:
         restos = remover(mod_id)
@@ -244,7 +249,12 @@ def cmd_remover(mod_id: str = typer.Argument(..., help="O id da modificação.")
         for resto in restos:
             console.print(f"  {resto}")
         raise typer.Exit(code=1)
-    console.print(f"«{mod_id}» removida: o código, os dados e o registro não existem mais.")
+    fica = o_css_que_fica(mod_id)
+    if fica is None:
+        console.print(f"«{mod_id}» removida: o código, os dados e o registro não existem mais.")
+        return
+    console.print(f"«{mod_id}» removida: o código, os dados e o registro não existem mais. "
+                  f"O seu CSS ficou em {fica}, e volta se você instalar a extensão de novo.")
 
 
 __all__ = ["app"]

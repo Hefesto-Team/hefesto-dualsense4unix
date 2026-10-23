@@ -348,14 +348,15 @@ troca o tema na hora, sem recarregar a página; a barra de cima e a variante do 
 ### O CSS de quem usa
 
 A extensão de tema pode declarar UMA opção de `tipo` `css` (`padrao` falso de fábrica). Ligada, a janela põe o
-`<dados>/<id>/meu.css` por cima da folha do tema, pelo mesmo vigia: salvar o arquivo repinta sem recarregar. É
-livre (cor e layout), e quem confere é `src/hefesto_dualsense4unix/mods/meu_css.py`: nada de `url(`, `@import`,
-funções de imagem, `expression(`, `\` nem `<`, até 16 KB, e chaves em par. O WebKit só deixa a folha de usuário
-vencer a da página com `!important`, então a leitura o põe em cada declaração (menos dentro de `@keyframes`). O que
-a leitura recusa não se aplica, e a janela da extensão diz a linha na forma curta, em vermelho («Linha 3: url()»); a
-frase longa fica no log.
+`<dados>/<id>/meu.css` por cima da folha do tema, pelo mesmo vigia: salvar o arquivo repinta sem recarregar. É livre
+(cor e layout), e quem confere é `src/hefesto_dualsense4unix/mods/meu_css.py`: nada de `url(`, `@import`, funções de
+imagem, `expression(`, `\` nem `<`, até 16 KB, e chaves em par. Agrupam regras `@media`, `@supports`, `@container` e o
+`@layer` com bloco; o `@layer` sem bloco não entra. O WebKit só deixa a folha de usuário vencer a da página com
+`!important`, então a leitura o põe em cada declaração (menos dentro de `@keyframes`). O que a leitura recusa não se
+aplica, e a janela da extensão diz a linha na forma curta, em vermelho («Linha 3: url()»); a frase longa fica no log.
 O botão «Editar o meu CSS» cria o arquivo com um exemplo comentado e o abre no editor do sistema; o `mod atualizar`
-não o toca; desligar a opção ou a extensão tira o CSS na hora. Com mais de uma extensão assim, vale a ligada por último.
+não o toca, e o `mod remover` o deixa no disco (diz onde) para a extensão reinstalada o encontrar; desligar a opção ou
+a extensão tira o CSS na hora. Com mais de uma extensão assim, vale a ligada por último.
 
 ## A extensão que substitui outra
 
@@ -368,7 +369,7 @@ delas que estiver instalada:
 - passa as escolhas: a opção de `id` igual cujo valor a nova aceita vai para o `opcoes.json` da nova; a escolha
   já feita na nova vale mais; entre duas antigas, vale a primeira da lista. O «sim» às permissões não passa: a
   permissão nova pede o do usuário;
-- sai pelo caminho do remover (o código, os dados e a linha do registro).
+- sai pelo caminho do remover (o código, os dados menos o `meu.css` e a linha do registro).
 
 A nova fica ligada quando alguma das antigas estava ligada e nada novo espera o «sim». A atualização sozinha que
 substitui outra não troca o código: espera o «Atualizar», com a frase «A versão X toma o lugar de «Y».». O

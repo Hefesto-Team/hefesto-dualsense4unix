@@ -786,6 +786,9 @@ def test_remover_para_o_processo_e_deixa_os_tres_lugares_vazios(
     lar: Lugares, curto: Path
 ) -> None:
     _instalar_e_ligar(lar, curto, "fica")
+    # O meu.css é da pessoa e fica (O-CSS-DO-MOD-SOBREVIVE-A-REMOCAO-E-A-RECUSA-FALA-UMA-VEZ-01).
+    (lar.dados / "exemplo").mkdir(parents=True, exist_ok=True)
+    (lar.dados / "exemplo" / "meu.css").write_text(".a{color:red}", encoding="utf-8")
 
     async def corrida() -> list[str]:
         supervisor = _supervisor(lar, procurar_bwrap=False, intervalo_s=0.05)
@@ -804,7 +807,8 @@ def test_remover_para_o_processo_e_deixa_os_tres_lugares_vazios(
 
     assert asyncio.run(corrida()) == []
     assert not (lar.codigo / "exemplo").exists()
-    assert not (lar.dados / "exemplo").exists()
+    assert [p.name for p in (lar.dados / "exemplo").iterdir()] == ["meu.css"]
+    assert (lar.dados / "exemplo" / "meu.css").read_text(encoding="utf-8") == ".a{color:red}"
     assert "exemplo" not in ler_registro(lar.registro)
     assert conferir_remocao("exemplo", lugares=lar) == []
 
@@ -815,6 +819,7 @@ def test_a_conferencia_da_remocao_ve_a_pasta_de_dados_que_ficou(
     _instalar_e_ligar(lar, curto, "fica")
     (lar.dados / "exemplo").mkdir(parents=True)
     (lar.dados / "exemplo" / "algo.json").write_text("{}", encoding="utf-8")
+    (lar.dados / "exemplo" / "meu.css").write_text(".a{color:red}", encoding="utf-8")
     monkeypatch.setattr(instalador, "_apagar_os_dados", lambda lg, mod_id: None)
     assert remover("exemplo", lugares=lar, prazo=0.1) == [str(lar.dados / "exemplo")]
 

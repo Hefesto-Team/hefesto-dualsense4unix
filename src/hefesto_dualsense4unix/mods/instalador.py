@@ -33,6 +33,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from hefesto_dualsense4unix.mods import meu_css
 from hefesto_dualsense4unix.mods.manifesto import (
     Manifesto,
     ManifestoRecusadoError,
@@ -753,7 +754,29 @@ def _apagar_o_codigo(lg: Lugares, mod_id: str) -> None:
 
 
 def _apagar_os_dados(lg: Lugares, mod_id: str) -> None:
-    shutil.rmtree(lg.dados / mod_id, ignore_errors=True)
+    """Apaga ``<dados>/<id>`` menos o ``meu.css``: ele é escrita da pessoa, e reinstalar a
+    extensão o encontra (``meu_css.garantir`` nunca reescreve)."""
+    pasta = lg.dados / mod_id
+    if pasta.is_symlink() or not pasta.is_dir():
+        shutil.rmtree(pasta, ignore_errors=True)
+        return
+    for item in pasta.iterdir():
+        if item.name == meu_css.NOME_DO_ARQUIVO:
+            continue
+        if item.is_dir() and not item.is_symlink():
+            shutil.rmtree(item, ignore_errors=True)
+        else:
+            with contextlib.suppress(OSError):
+                item.unlink()
+    if not any(pasta.iterdir()):
+        with contextlib.suppress(OSError):
+            pasta.rmdir()
+
+
+def o_css_que_fica(mod_id: str, *, lugares: Lugares | None = None) -> Path | None:
+    """O ``meu.css`` que a remoção deixa no disco, ou ``None`` quando a pessoa não escreveu um."""
+    alvo = meu_css.caminho(mod_id, lugares or Lugares.do_xdg())
+    return alvo if alvo.exists() or alvo.is_symlink() else None
 
 
 def _tirar_do_registro(lg: Lugares, mod_id: str) -> None:
@@ -762,12 +785,21 @@ def _tirar_do_registro(lg: Lugares, mod_id: str) -> None:
         gravar_registro(lg.registro, registro)
 
 
+def _so_o_css_da_pessoa(pasta: Path) -> bool:
+    if pasta.is_symlink() or not pasta.is_dir():
+        return False
+    return [item.name for item in pasta.iterdir()] == [meu_css.NOME_DO_ARQUIVO]
+
+
 def conferir_remocao(mod_id: str, *, lugares: Lugares | None = None) -> list[str]:
-    """O que ainda existe de ``mod_id`` nos três lugares; vazio = removida."""
+    """O que ainda existe de ``mod_id`` nos três lugares; vazio = removida. O ``meu.css`` não
+    conta: ele é da pessoa e fica (``o_css_que_fica``)."""
     lg = lugares or Lugares.do_xdg()
     restos: list[str] = []
     for pasta in (lg.codigo / mod_id, lg.dados / mod_id):
         if pasta.exists() or pasta.is_symlink():
+            if pasta == lg.dados / mod_id and _so_o_css_da_pessoa(pasta):
+                continue
             restos.append(str(pasta))
     if mod_id in ler_registro(lg.registro):
         restos.append(f"{lg.registro} (a linha «{mod_id}»)")
@@ -814,6 +846,7 @@ __all__ = [
     "ler_registro",
     "ligar",
     "manifesto_instalado",
+    "o_css_que_fica",
     "origem_da_tag",
     "remover",
 ]

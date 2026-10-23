@@ -44,22 +44,36 @@ class _TemaLigado(str):
 TEMA_LIGADO = _TemaLigado("")
 
 
+#: A última frase que cada leitor disse ao diário. O vigia lê as folhas a cada gravação de
+#: qualquer arquivo vigiado, e a mesma recusa não se repete: só a frase que muda volta a ser
+#: dita (ela leva a linha e o motivo), e a que some deixa de ser lembrada.
+_DITO: dict[str, tuple[str, ...]] = {}
+
+
+def _dizer_uma_vez(quem: str, frases: tuple[str, ...]) -> None:
+    novas = tuple(frase for frase in frases if frase)
+    if _DITO.get(quem, ()) == novas:
+        return
+    _DITO[quem] = novas
+    for frase in novas:
+        print(f"[tema] {frase}", file=sys.stderr)
+
+
 def folha_do_tema() -> str:
     """A folha do tema ligado, ou vazio. O tema reprovado não liga, e a frase vai para o
-    diário: a interface não tem tela de modificações, e o tema que não ligou não muda a cor."""
+    diário (uma vez): a interface não tem tela de modificações, e o tema que não ligou não muda
+    a cor."""
     casa = _tema_das_mods.tema_da_casa()
-    for frase in (casa.recusa, *casa.avisos):
-        if frase:
-            print(f"[tema] {frase}", file=sys.stderr)
+    _dizer_uma_vez("tema", (casa.recusa, *casa.avisos))
     return casa.folha
 
 
 def css_de_quem_usa() -> str:
     """O CSS de quem usa (o ``meu.css`` da extensão de tema ligada), pronto para ir por cima do
-    tema, ou vazio. O que a régua dele recusa não se aplica, e a frase com a linha vai ao diário."""
+    tema, ou vazio. O que a régua dele recusa não se aplica, e a frase com a linha vai ao diário
+    (uma vez)."""
     casa = _tema_das_mods.tema_da_casa()
-    if casa.recusa_do_css:
-        print(f"[tema] {casa.recusa_do_css}", file=sys.stderr)
+    _dizer_uma_vez("css", (casa.recusa_do_css,))
     return casa.css
 
 
