@@ -5,7 +5,7 @@
       "data": "2026-10-23",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 54519,
+      "piso": 54524,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -31,7 +31,7 @@
         "app/telas/vibracao.py": 227,
         "app/textos_de_aplicacao.py": 73,
         "app/tray.py": 48,
-        "broker/hidraw_broker.py": 519,
+        "broker/hidraw_broker.py": 537,
         "cli/app.py": 119,
         "cli/cmd_doctor.py": 54,
         "cli/cmd_lightbar_reset.py": 64,
@@ -236,7 +236,7 @@
         "profiles/estilos_de_jogo.py": 209,
         "profiles/formas_de_haptica.py": 112,
         "profiles/loader.py": 294,
-        "profiles/manager.py": 712,
+        "profiles/manager.py": 699,
         "profiles/o_padrao_do_computador.py": 108,
         "profiles/sanidade.py": 44,
         "profiles/schema.py": 762,
@@ -249,7 +249,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +72 linhas (54447 -> 54519), pagas por Origem: D-2310-O-TERROR-DUPLICA-PELO-OUVIR-JUNTO; registrado no fecho, topo 15f04019269d",
+      "razao": "texto-em-src: +5 linhas (54519 -> 54524), pagas por Origem: D-2310-DESLIGAR-COM-A-STEAM-ABERTA-RELIGA-O-DRIVER; registrado no fecho, topo c8498375a50f",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -394,6 +394,12 @@
           "de": 54447,
           "para": 54519,
           "razao": "texto-em-src: +72 linhas (54447 -> 54519), pagas por Origem: D-2310-O-TERROR-DUPLICA-PELO-OUVIR-JUNTO; registrado no fecho, topo 15f04019269d"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 54519,
+          "para": 54524,
+          "razao": "texto-em-src: +5 linhas (54519 -> 54524), pagas por Origem: D-2310-DESLIGAR-COM-A-STEAM-ABERTA-RELIGA-O-DRIVER; registrado no fecho, topo c8498375a50f"
         }
       ],
       "unidade": "linhas",
