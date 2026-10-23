@@ -382,7 +382,7 @@ class TestONativoPedeOsQuatro:
         ]
 
     def test_o_payload_so_leva_o_campo_quando_e_verdade(self) -> None:
-        """Um broker antigo ignora o campo; o `with exposicao` do handle de"""
+        """Um broker antigo ignora o campo; só o Modo Nativo pede as entradas."""
         from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
             HidrawBrokerClient,
         )
@@ -397,11 +397,9 @@ class TestONativoPedeOsQuatro:
         c = Cliente(socket_path="/nao/existe")
         c.expor("/dev/hidraw3")
         c.expor("/dev/hidraw3", entradas=True)
-        with c.exposicao("/dev/hidraw3"):
-            pass
         assert enviados[0] == {"cmd": "expose", "node": "/dev/hidraw3"}
         assert enviados[1] == {"cmd": "expose", "node": "/dev/hidraw3", "entradas": True}
-        assert enviados[2] == {"cmd": "expose", "node": "/dev/hidraw3"}
+        assert len(enviados) == 2
 
     def test_a_reafirmacao_pergunta_aos_nos_de_entrada_tambem(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path

@@ -184,10 +184,14 @@ class TestSobreviveAReplug:
 
         assert atos == [("desexpor", "/dev/hidraw3")]
 
-    def test_o_with_transitorio_nao_fecha_o_no_do_modo_nativo(
+    def test_o_abridor_do_handle_nao_fecha_o_no_do_modo_nativo(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """A lease do broker é por CONEXÃO — e as duas saem do mesmo cliente."""
+        """A lease do broker é por CONEXÃO, e o handle não toca nela: ele pede só o fd.
+
+        O-FISICO-NUNCA-SE-EXPOE-AO-JOGO-QUE-VESTE-O-COMUM-01: o `with` transitório saiu, e com
+        ele o `desexpor` que decrementaria a lease do Modo Nativo.
+        """
         from hefesto_dualsense4unix.integrations import hidraw_broker_client as cli
 
         atos: list[tuple[str, str]] = []
@@ -197,18 +201,15 @@ class TestSobreviveAReplug:
                 return path == "/dev/hidraw3"
 
         cliente = cli.HidrawBrokerClient(socket_path="/dev/null/nao-existe")
-        cliente.expor = lambda no: atos.append(("expor", no)) or True  # type: ignore[method-assign]
+        cliente.expor = lambda no, **_k: atos.append(("expor", no)) or True  # type: ignore[method-assign]
         cliente.desexpor = lambda no: atos.append(("desexpor", no)) or True  # type: ignore[method-assign]
+        cliente.abrir_no = lambda no: (atos.append(("open", no)) and None, "")  # type: ignore[method-assign]
         monkeypatch.setattr(cli, "broker_client_for", lambda _d: cliente)
-        fabrica = cli.make_exposicao_factory(DaemonDeMentira())
+        abridor = cli.make_exposicao_factory(DaemonDeMentira())
 
-        with fabrica("/dev/hidraw3") as aberto:
-            assert aberto is True
-        assert atos == []
-
-        with fabrica("/dev/hidraw9"):
-            pass
-        assert atos == [("expor", "/dev/hidraw9"), ("desexpor", "/dev/hidraw9")]
+        assert abridor("/dev/hidraw3") is None
+        assert abridor("/dev/hidraw9") is None
+        assert atos == [("open", "/dev/hidraw3"), ("open", "/dev/hidraw9")]
 
 
 def _linhas_efetivas(texto: str) -> list[str]:

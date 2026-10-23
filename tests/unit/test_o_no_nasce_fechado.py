@@ -30,7 +30,9 @@ Cobre as quatro pontas da cura, e cada uma tem a sua mordida escrita no teste:
 from __future__ import annotations
 
 import json
+import os
 import re
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -390,83 +392,77 @@ class TestORepousoSegueARegra:
         assert ("hide", "/dev/assets", "assets") in ops.chamadas
 
 
-class TestQuemAbrePorCaminhoPede:
-    def test_open_one_abre_dentro_da_exposicao(self) -> None:
-        """O ÚNICO bloqueador real da cura, e ele é nosso."""
-        from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
+class TestOHandleAbrePeloFdDoBroker:
+    def test_open_one_abre_pelo_fd_sem_expor(self) -> None:
+        """O handle abre pelo fd do broker: o nó do `/dev` nunca ganha a ACL do usuário.
 
-        ordem: list[str] = []
+        O-FISICO-NUNCA-SE-EXPOE-AO-JOGO-QUE-VESTE-O-COMUM-01: a exposição por milissegundos era o
+        `IN_ATTRIB` que dava o físico ao `winebus` do jogo aberto.
+        """
+        from hefesto_dualsense4unix.core import backend_pydualsense as backend
 
-        class Exposicao:
-            def __init__(self, no: str) -> None:
-                self._no = no
+        pedidos: list[str] = []
+        recebidos: list[Any] = []
+        ler, escrever = os.pipe()
+        os.close(escrever)
 
-            def __enter__(self) -> bool:
-                ordem.append(f"expor:{self._no}")
-                return True
+        def abrir(path: bytes, *, is_edge: bool, dispositivo: Any = None) -> Any:
+            recebidos.append(dispositivo)
+            return "handle"
 
-            def __exit__(self, *_exc: object) -> None:
-                ordem.append(f"desexpor:{self._no}")
-
-        ctl = PyDualSenseController.__new__(PyDualSenseController)
-        ctl._exposicao_do_no = Exposicao  # type: ignore[assignment]
-        ctl._abrir_handle_pinado = (  # type: ignore[method-assign]
-            lambda path, *, is_edge: ordem.append("abrir") or "handle"
-        )
+        ctl = backend.PyDualSenseController.__new__(backend.PyDualSenseController)
+        ctl._io_lock = threading.RLock()
+        ctl.set_exposicao_do_no(lambda no: pedidos.append(no) or ler)
+        ctl._abrir_handle_pinado = abrir  # type: ignore[method-assign]
         assert ctl._open_one(b"/dev/hidraw3", is_edge=False) == "handle"
-        assert ordem == ["expor:/dev/hidraw3", "abrir", "desexpor:/dev/hidraw3"]
+        assert pedidos == ["/dev/hidraw3"]
+        assert isinstance(recebidos[0], backend._DispositivoPorFd)
+        recebidos[0].close()
 
-    def test_open_one_sem_fabrica_abre_como_sempre(self) -> None:
-        """Sem broker (CLI, dublê, máquina sem a cura) nada muda."""
+    def test_open_one_sem_abridor_abre_como_sempre(self) -> None:
+        """Sem broker (CLI, dublê, máquina sem a cura) nada muda: abre por caminho."""
         from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
 
+        recebidos: list[Any] = []
         ctl = PyDualSenseController.__new__(PyDualSenseController)
         ctl._abrir_handle_pinado = (  # type: ignore[method-assign]
-            lambda path, *, is_edge: "handle"
+            lambda path, *, is_edge, dispositivo=None: recebidos.append(dispositivo) or "handle"
         )
-        assert ctl._exposicao_do_no is None
+        assert ctl._abridor_do_handle is None
         assert ctl._open_one(b"/dev/hidraw3", is_edge=False) == "handle"
+        assert recebidos == [None]
 
-    def test_open_one_desexpoe_mesmo_com_erro(self) -> None:
-        """Exposição que vaza é a janela que a Steam usa — e ela vazaria no"""
+    def test_open_one_fecha_o_fd_mesmo_com_erro(self) -> None:
+        """Um fd que vaza no erro seguraria o físico aberto no daemon até ele morrer."""
         from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
 
-        ordem: list[str] = []
+        ler, escrever = os.pipe()
 
-        class Exposicao:
-            def __init__(self, no: str) -> None:
-                self._no = no
-
-            def __enter__(self) -> bool:
-                ordem.append("expor")
-                return True
-
-            def __exit__(self, *_exc: object) -> None:
-                ordem.append("desexpor")
-
-        def explode(path: bytes, *, is_edge: bool) -> Any:
+        def explode(path: bytes, *, is_edge: bool, dispositivo: Any = None) -> Any:
             raise OSError("USB transitório")
 
         ctl = PyDualSenseController.__new__(PyDualSenseController)
-        ctl._exposicao_do_no = Exposicao  # type: ignore[assignment]
+        ctl._io_lock = threading.RLock()
+        ctl.set_exposicao_do_no(lambda _no: ler)
         ctl._abrir_handle_pinado = explode  # type: ignore[method-assign]
         with pytest.raises(OSError):
             ctl._open_one(b"/dev/hidraw3", is_edge=False)
-        assert ordem == ["expor", "desexpor"]
+        with pytest.raises(OSError):
+            os.fstat(ler)
+        os.close(escrever)
 
-    def test_o_contexto_do_cliente_nunca_desexpoe_o_que_nao_expos(self) -> None:
-        """Desexpor o que não se expôs decrementaria a lease de OUTRO pedido."""
-        from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
-            HidrawBrokerClient,
-        )
+    def test_o_abridor_do_cliente_nunca_expoe(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """O abridor que o lifecycle injeta pede só o `open`: nem `expor`, nem `desexpor`."""
+        from hefesto_dualsense4unix.integrations import hidraw_broker_client as cli
 
-        cliente = HidrawBrokerClient(socket_path="/dev/null/nao-existe")
         chamadas: list[str] = []
-        cliente.expor = lambda no: chamadas.append("expor") or False  # type: ignore[method-assign]
+        cliente = cli.HidrawBrokerClient(socket_path="/dev/null/nao-existe")
+        cliente.expor = lambda *a, **k: chamadas.append("expor") or True  # type: ignore[method-assign]
         cliente.desexpor = lambda no: chamadas.append("desexpor") or True  # type: ignore[method-assign]
-        with cliente.exposicao("/dev/hidraw3") as aberto:
-            assert aberto is False
-        assert chamadas == ["expor"]
+        cliente.abrir_no = lambda no: (chamadas.append("open") or 7, "")  # type: ignore[method-assign]
+        monkeypatch.setattr(cli, "broker_client_for", lambda _d: cliente)
+        assert cli.make_exposicao_factory(object())("/dev/hidraw3") == 7
+        assert chamadas == ["open"]
 
 
 class TestOModoNativoPede:

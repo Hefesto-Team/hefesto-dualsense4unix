@@ -13,9 +13,9 @@ projeto) roda como root isolado/hardened e, a pedido do daemon:
   - `expose`/`unexpose` (O-NO-NASCE-FECHADO-01, 2026-09-20): a lease
     INVERTIDA. Com o `assets/73-hefesto-ps5-controller.rules` da cura, o nó do físico
     NASCE `0600 root` (`TAG-="uaccess"`) e o broker é quem o abre — enquanto
-    alguém pedir. É para quem só sabe `open(path)` e não pode receber fd: o
-    `hidapi.Device(path=...)` do handle de controle do daemon, e o JOGO no
-    Modo Nativo. Mesmo refcount, mesmo EOF e mesmo fail-safe do `hide`.
+    alguém pedir. É para quem só sabe `open(path)` e não pode receber fd: o JOGO
+    no Modo Nativo. O handle de controle do daemon lê pelo fd do `open`: a ACL era
+    o `IN_ATTRIB` do jogo aberto (O-FISICO-NUNCA-SE-EXPOE-AO-JOGO-QUE-VESTE-O-COMUM-01).
   - `open` (NOVO, desenho 2026-07-20): valida o nó, abre O_RDWR|O_CLOEXEC como
     root e devolve o fd via SCM_RIGHTS na MESMA conexão — o motion reader do
     daemon NUNCA reabre por caminho, então o hide deixa de ter qualquer

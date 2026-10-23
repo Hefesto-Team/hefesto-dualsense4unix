@@ -9,10 +9,10 @@ from __future__ import annotations
 import contextlib
 import fcntl
 import os
+import select
 import sys
 import threading
 import time
-from contextlib import AbstractContextManager
 from dataclasses import dataclass, replace
 from typing import TYPE_CHECKING, Any
 
@@ -577,8 +577,8 @@ _CAMPOS_QUE_MEXEM_NA_SAIDA: frozenset[str] = frozenset(
 
 
 class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
-    """`pydualsense` pinada a um hidraw `path` (via `hidapi.Device`), para manter N instâncias, uma
-    por controle."""
+    """`pydualsense` pinada a um hidraw `path` (pelo fd do broker, `_DispositivoPorFd`, ou pelo
+    `hidapi.Device`), para manter N instâncias, uma por controle."""
 
     # Defaults de CLASSE: a suíte constrói dublês sem passar pelo `__init__`.
 
@@ -746,8 +746,8 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
 
     def _pydualsense__find_device(self) -> tuple[Any, bool]:
         import hidapi
-
-        return hidapi.Device(path=self._pinned_path), self._pinned_is_edge
+        dispositivo = getattr(self, "_dispositivo", None) or hidapi.Device(path=self._pinned_path)
+        return dispositivo, self._pinned_is_edge
 
     def sendReport(self) -> None:  # noqa: N802 - override do nome do upstream
         """O laço do upstream, com throttle por volta e a fila esvaziada em cada uma.
@@ -775,7 +775,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
                     acordar.clear()
                 if not sem_espera:
                     with self._no_c():
-                        _hid_set_nonblocking(self.device)
+                        _ler_sem_espera(self.device)
                     sem_espera = True
                 lidos = self._esvaziar_a_fila()
                 if not self.ds_thread:
@@ -1424,7 +1424,7 @@ class PyDualSenseController(IController):
     """Implementação de `IController` baseada em `pydualsense` (multi-controle)."""
 
     #: entra. Default de CLASSE pela mesma razão dos de `_PinnedPyDualSense`:
-    _exposicao_do_no: Callable[[str], AbstractContextManager[bool]] | None = None
+    _abridor_do_handle: Callable[[str], int | None] | None = None
 
     _brilho_do_perfil: float | None = None
     _cor_do_perfil: tuple[int, int, int] | None = None
@@ -1470,7 +1470,7 @@ class PyDualSenseController(IController):
         self._auto_output_provider: Callable[[str], _DesiredOutput | None] | None = None
         self._mesa_apresentada: frozenset[str] = frozenset()
         self._feature_opener: Callable[[str], int] | None = None
-        self._exposicao_do_no = None
+        self._abridor_do_handle = None
         self._game_output_by_uniq: dict[str, _DesiredOutput] = {}
         self._game_triggers_by_uniq: dict[str, dict[str, bytes]] = {}
         # PERFIL ATÉ O JOGO PROVAR: o «sem efeito» do gatilho e o preto da lightbar são ausência
@@ -1681,15 +1681,15 @@ class PyDualSenseController(IController):
             self._feature_opener = fn
 
     def set_exposicao_do_no(
-        self, fn: Callable[[str], AbstractContextManager[bool]] | None
+        self, fn: Callable[[str], int | None] | None
     ) -> None:
-        """Injeta (ou remove, com None) a fábrica de exposição do nó hidraw (O-NO-NASCE-FECHADO-01).
+        """Injeta (ou remove, com None) o abridor do handle: `fn(no)` é o fd `O_RDWR` do broker.
 
-        O `hidapi` não aceita fd e o nó físico nasce `0600 root`, então o nó precisa estar exposto
-        DURANTE o open; irmã de `set_feature_opener`. Consultada por `_open_one`.
+        O nome é o que o lifecycle chama; o nó não se expõe mais. `None` do `fn` = sem fd do broker
+        (O-FISICO-NUNCA-SE-EXPOE-AO-JOGO-QUE-VESTE-O-COMUM-01). Consultada por `_open_one`.
         """
         with self._io_lock:
-            self._exposicao_do_no = fn
+            self._abridor_do_handle = fn
 
     def set_primary_change_observer(
         self, fn: Callable[[str | None, str | None], None] | None
@@ -2152,28 +2152,28 @@ class PyDualSenseController(IController):
         return out
 
     def _open_one(self, path: bytes, *, is_edge: bool) -> pydualsense | None:
-        """Abre UM controle por `path`, DENTRO de uma exposição do nó (O-NO-NASCE-FECHADO-01).
+        """Abre UM controle pelo fd que o broker abriu, sem tocar na permissão do nó do `/dev`.
 
-        O nó físico nasce `0600 root` e o hidapi não aceita fd; o broker expõe o nó, abre-se,
-        solta-se o pedido. A janela cobre o `join` do runner, não o runner inteiro (um `init()`
-        tardio acha o nó fechado e falha pelo handoff atômico). Sem fábrica (CLI, dublê), abre por
-        caminho.
-        """
-        exposicao = self._exposicao_do_no
-        no = path.decode("utf-8", "replace")
-        if exposicao is None or not no.startswith("/dev/hidraw"):
+        O-FISICO-NUNCA-SE-EXPOE-AO-JOGO-QUE-VESTE-O-COMUM-01: a ACL de usuário por milissegundos
+        era o `IN_ATTRIB` que dava o físico ao `winebus` do jogo aberto (sessão G2, 23/10/2026).
+        Sem fd do broker (CLI, dublê, máquina sem a cura, nó recusado), abre por caminho."""
+        fd = _fd_do_broker(self._abridor_do_handle, path.decode("utf-8", "replace"))
+        if fd is None:
             return self._abrir_handle_pinado(path, is_edge=is_edge)
+        dispositivo = _DispositivoPorFd(fd)
         try:
-            contexto = exposicao(no)
-        except Exception as exc:
-            logger.warning("exposicao_do_no_falhou", path=no, err=str(exc))
-            return self._abrir_handle_pinado(path, is_edge=is_edge)
-        with contexto:
-            return self._abrir_handle_pinado(path, is_edge=is_edge)
+            return self._abrir_handle_pinado(path, is_edge=is_edge, dispositivo=dispositivo)
+        except BaseException:
+            with contextlib.suppress(OSError):
+                dispositivo.close()
+            raise
 
-    def _abrir_handle_pinado(self, path: bytes, *, is_edge: bool) -> pydualsense | None:
-        """Abre UM controle por `path`, com a guarda de timeout do init."""
+    def _abrir_handle_pinado(
+        self, path: bytes, *, is_edge: bool, dispositivo: _DispositivoPorFd | None = None
+    ) -> pydualsense | None:
+        """Abre UM controle (pelo `dispositivo` ou por `path`), com a guarda de timeout do init."""
         ds = _PinnedPyDualSense(path, is_edge=is_edge)
+        ds._dispositivo = dispositivo
         result: list[Exception | None] = []
         entrega = threading.Lock()
         estado = {"terminou": False, "desistido": False}
@@ -5973,3 +5973,82 @@ def _forca_do_gatilho(handle: Any, bloco: bytes | bytearray | list[int]) -> byte
     cobre: a sobra abaixo de 100% e o reforço acima, até a força 8 do efeito."""
     escala = getattr(handle, "_escala_do_gatilho", 1.0)
     return rep.escalar_o_bloco_do_gatilho(bytes(bloco), rep.resto_do_software(escala))
+
+
+# ---------------------------------------------------------------------------
+# O handle de controle pelo fd do broker (O-FISICO-NUNCA-SE-EXPOE-AO-JOGO-QUE-VESTE-O-COMUM-01)
+# ---------------------------------------------------------------------------
+
+
+class _DispositivoPorFd:
+    """O `hidapi.Device` do handle de controle sobre o fd que o broker passou por SCM_RIGHTS.
+
+    O nó do físico nasce `0600 root` e fica assim: a ACL de usuário por milissegundos era o
+    `IN_ATTRIB` que dava o físico ao `winebus` do jogo aberto. `read`, `write`, `close` e o modo
+    do `read` são os do backend hidraw do hidapi: bloqueante, um `read(2)` direto; sem espera,
+    `poll` de prazo zero, e `POLLERR`/`POLLHUP`/`POLLNVAL` é erro.
+    """
+
+    def __init__(self, fd: int) -> None:
+        self._fd: int | None = fd
+        self._bloqueante = True
+
+    def _vivo(self) -> int:
+        fd = self._fd
+        if fd is None:
+            raise OSError("Trying to perform action on closed device.")
+        return fd
+
+    def set_nonblocking(self, ligado: bool) -> None:
+        self._vivo()
+        self._bloqueante = not ligado
+
+    def read(self, length: int, timeout_ms: int = 0, blocking: bool = False) -> bytes | None:
+        fd = self._vivo()
+        espera = timeout_ms or (-1 if blocking or self._bloqueante else 0)
+        if espera >= 0:
+            sondagem = select.poll()
+            sondagem.register(fd, select.POLLIN)
+            eventos = sondagem.poll(espera)
+            if not eventos:
+                return None
+            if eventos[0][1] & (select.POLLERR | select.POLLHUP | select.POLLNVAL):
+                raise OSError("Failed to read from HID device: o nó saiu")
+        try:
+            lido = os.read(fd, length)
+        except BlockingIOError:
+            return None
+        return lido or None
+
+    def write(self, data: bytes) -> int:
+        return os.write(self._vivo(), bytes(data))
+
+    def close(self) -> None:
+        fd = self._vivo()
+        self._fd = None
+        os.close(fd)
+
+    def __del__(self) -> None:
+        if self._fd is not None:
+            with contextlib.suppress(OSError):
+                self.close()
+
+
+def _ler_sem_espera(dispositivo: Any) -> None:
+    """O `read` do handle deixa de esperar o próximo report, no fd do broker ou no `hidapi`."""
+    if isinstance(dispositivo, _DispositivoPorFd):
+        dispositivo.set_nonblocking(True)
+        return
+    _hid_set_nonblocking(dispositivo)
+
+
+def _fd_do_broker(abridor: Callable[[str], int | None] | None, no: str) -> int | None:
+    """O fd `O_RDWR` que o broker abriu para `no`, ou None (sem abridor, sem broker, recusa)."""
+    if abridor is None or not no.startswith("/dev/hidraw"):
+        return None
+    try:
+        fd = abridor(no)
+    except Exception as exc:
+        logger.warning("abridor_do_handle_falhou", path=no, err=str(exc))
+        return None
+    return fd if isinstance(fd, int) and not isinstance(fd, bool) else None

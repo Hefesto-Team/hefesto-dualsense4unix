@@ -8,9 +8,8 @@ import os
 import socket
 import struct
 import threading
-from collections.abc import Callable, Iterator
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import AbstractContextManager
 from dataclasses import dataclass
 from typing import Any
 
@@ -83,16 +82,15 @@ class HidrawBrokerClient:
         """«Mantenha `node` ABERTO enquanto esta lease viver.» False = não deu.
 
         O-NO-NASCE-FECHADO-01 (20/09/2026). Com a regra udev da cura, o nó do
-        DualSense físico nasce `0600 root` e NINGUÉM o abre por caminho — nem
-        o `hidapi.Device(path=...)` do nosso próprio handle de controle, que
-        não aceita fd. Este é o pedido que põe a ACL de volta.
+        DualSense físico nasce `0600 root` e NINGUÉM o abre por caminho. Este é
+        o pedido que põe a ACL de volta, e só o Modo Nativo o faz: o handle de
+        controle do daemon abre pelo fd do `open`
+        (O-FISICO-NUNCA-SE-EXPOE-AO-JOGO-QUE-VESTE-O-COMUM-01).
 
         HIDE-SO-O-HIDRAW-02 (24/09/2026): `entradas=True` pede também os nós
         de entrada do aparelho (o evdev e o joydev), que nascem fechados como
-        o hidraw. É o pedido do Modo Nativo — «só o Modo Nativo devolve» — e
-        de mais ninguém: o `with exposicao` do handle de controle quer o
-        hidraw e mais nada. O campo só viaja quando é verdade, e um broker
-        antigo o ignora (expõe o hidraw, como antes).
+        o hidraw. O campo só viaja quando é verdade, e um broker antigo o
+        ignora (expõe o hidraw, como antes).
 
         Best-effort como todo o resto: broker ausente ⇒ False, e o chamador
         segue. Num mundo sem a cura instalada, o nó já está aberto e o False
@@ -121,18 +119,6 @@ class HidrawBrokerClient:
         else:
             self._log_falha("unexpose", node, response)
         return ok
-
-    @contextlib.contextmanager
-    def exposicao(self, node: str) -> Iterator[bool]:
-        """`with client.exposicao(no):` — expõe, cede, e desexpõe SEMPRE."""
-        aberto = False
-        try:
-            aberto = self.expor(node)
-            yield aberto
-        finally:
-            if aberto:
-                with contextlib.suppress(Exception):
-                    self.desexpor(node)
 
     def restore_all(self) -> bool:
         """Restaura TUDO que esta lease escondeu (teardown/Modo Nativo)."""
@@ -475,43 +461,31 @@ def make_broker_opener(daemon: Any) -> Callable[[str], int]:
     return _open
 
 
-def make_exposicao_factory(daemon: Any) -> Callable[[str], AbstractContextManager[bool]]:
-    """Fábrica do `with` que mantém um nó ABERTO — o injetável do backend.
+def make_abridor_do_handle(daemon: Any) -> Callable[[str], int | None]:
+    """O abridor do handle de controle: o fd `O_RDWR` do nó pelo `open` do broker, ou None.
 
-    O-NO-NASCE-FECHADO-01, item 4 da medição: `hidapi.Device(path=...)` é o
-    ÚNICO bloqueador real da cura. O hidapi não abre por fd, e reabrir por
-    `/proc/self/fd/N` refaz a checagem de permissão no inode — não é saída.
-    Então o handle de controle do daemon (barra, rumble, gatilhos, mic,
-    bateria) precisa do nó exposto DURANTE o `init()`, e fechado logo depois.
+    O-FISICO-NUNCA-SE-EXPOE-AO-JOGO-QUE-VESTE-O-COMUM-01 (23/10/2026). O
+    handle abria por caminho dentro de um `expose`/`unexpose`: a ACL de
+    usuário no nó do `/dev` por milissegundos é um `IN_ATTRIB`, e o `winebus`
+    do jogo aberto abria o físico dentro da janela, com o fd vivo depois do
+    `unexpose` (sessão G2). O `open` do broker não mexe na permissão do nó
+    nem na lease de ninguém, então o Modo Nativo não perde o que expôs.
 
-    Espelho de `make_broker_opener`, e com a mesma disciplina: nunca levanta.
-    Broker ausente ⇒ um contexto que não faz nada e cede `False`; o `_open_one`
-    tenta abrir assim mesmo, porque numa máquina SEM a cura instalada o nó já
-    está aberto e recusar ali seria inventar um defeito.
+    Nunca levanta: broker ausente ou recusa ⇒ None, e o `_open_one` abre por
+    caminho (a máquina sem a cura, onde o nó já nasce do usuário).
     """
 
-    def _exposicao(path: str) -> AbstractContextManager[bool]:
-        # O MODO NATIVO GANHA DO `with` TRANSITÓRIO (auditoria de 20/09/2026).
-        # A lease de exposição do broker é por CONEXÃO, e este `with` sai do
-        # MESMO cliente que o pedido do Modo Nativo: o `unexpose` do `finally`
-        # acharia o nó no `held` da conexão, veria `refcount == 1` e mandaria o
-        # nó para o REPOUSO — fechando, no meio do Modo Nativo, o nó que o
-        # jogo está usando. O reconciliador reabriria em até 2 s, e 2 s é
-        # exatamente a janela que a Steam usa.
-        with contextlib.suppress(Exception):
-            ja_aberto = getattr(daemon, "no_exposto_pelo_modo_nativo", None)
-            if callable(ja_aberto) and ja_aberto(path):
-                return contextlib.nullcontext(True)
+    def _abrir(path: str) -> int | None:
         try:
-            client = broker_client_for(daemon)
+            return broker_client_for(daemon).abrir_no(path)[0]  # type: ignore[no-any-return]
         except Exception:
-            return contextlib.nullcontext(False)
-        exposicao = getattr(client, "exposicao", None)
-        if not callable(exposicao):  # dublê antigo da suíte
-            return contextlib.nullcontext(False)
-        return exposicao(path)  # type: ignore[no-any-return]
+            return None
 
-    return _exposicao
+    return _abrir
+
+
+#: O nome que o `lifecycle._wire_exposicao_do_no` importa: o abridor não expõe nada.
+make_exposicao_factory = make_abridor_do_handle
 
 
 # ---------------------------------------------------------------------------
@@ -754,6 +728,7 @@ __all__ = [
     "linha_da_porta",
     "linha_do_grab",
     "main",
+    "make_abridor_do_handle",
     "make_broker_opener",
     "make_exposicao_factory",
     "porta_provavel",
