@@ -245,14 +245,14 @@
       "data": "2026-10-23",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1190741,
+      "piso": 1191278,
       "por_item": {
-        "docs": 120657,
+        "docs": 120664,
         "scripts": 120350,
-        "src": 318840,
-        "tests": 630894
+        "src": 318995,
+        "tests": 631269
       },
-      "razao": "tamanho: +816 linhas (1189925 -> 1190741), pagas por Origem: D-2310-O-JOGO-SEGUINTE-VESTE-A-PROPRIA-ROUPA; registrado no fecho, topo cab2526cb650",
+      "razao": "tamanho: +537 linhas (1190741 -> 1191278), pagas por Origem: D-2310-O-ARME-NAO-ENCERRA-A-AUTORIDADE-DO-PROPRIO-JOGO, D-2310-O-JOGO-SEGUINTE-VESTE-A-PROPRIA-ROUPA; registrado no fecho, topo 62aac8123b68",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -811,10 +811,16 @@
           "de": 1189925,
           "para": 1190741,
           "razao": "tamanho: +816 linhas (1189925 -> 1190741), pagas por Origem: D-2310-O-JOGO-SEGUINTE-VESTE-A-PROPRIA-ROUPA; registrado no fecho, topo cab2526cb650"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 1190741,
+          "para": 1191278,
+          "razao": "tamanho: +537 linhas (1190741 -> 1191278), pagas por Origem: D-2310-O-ARME-NAO-ENCERRA-A-AUTORIDADE-DO-PROPRIO-JOGO, D-2310-O-JOGO-SEGUINTE-VESTE-A-PROPRIA-ROUPA; registrado no fecho, topo 62aac8123b68"
         }
       ],
       "unidade": "linhas",
-      "universo": 3111
+      "universo": 3112
     }
   }
 }
