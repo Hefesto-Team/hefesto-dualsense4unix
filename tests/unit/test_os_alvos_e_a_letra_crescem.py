@@ -37,6 +37,8 @@ from typing import TYPE_CHECKING, Any
 
 import pytest
 
+from tests.conftest import skip_sem_gi_real
+
 if TYPE_CHECKING:
     from playwright.sync_api import Browser
 
@@ -403,6 +405,8 @@ def _roda_o_filho(modo: str, tmp_path: pathlib.Path) -> dict[str, float]:
     return achado
 
 
+# O filho importa o `gi` e abre a janela: sem o PyGObject real (o job leve do CI) não mede nada.
+@skip_sem_gi_real
 def test_a_janela_le_o_tamanho_da_interface(tmp_path: pathlib.Path) -> None:
     """150 % guardado: a janela abre com zoom 1,5; a 09 grava 125: o zoom vai a 1,25 sem reabrir.
 
