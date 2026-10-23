@@ -245,7 +245,8 @@ def test_a_soltura_do_pad_nao_ganha_a_passagem(
 def test_a_casca_guarda_o_appid_da_evidencia() -> None:
     """`GameSignal.appid` é o da evidência que pôs (ou mantém) `game`, e some com a saída.
 
-    MORDIDA: tire o `self._appid = appid` do `evaluate` e o primeiro assert reprova.
+    MORDIDA: tire o `self._appid = appid` do `evaluate` e o primeiro assert reprova; tire o
+    `self._appid = None` do `_transition` e a volta só por janela traz o appid de antes.
     """
     relogio = _Relogio()
     sinal = GameSignal(time_fn=relogio)
@@ -260,6 +261,8 @@ def test_a_casca_guarda_o_appid_da_evidencia() -> None:
     assert sinal.authority == "game" and sinal.appid == JOGO_B, "a histerese segura o jogo"
     assert sinal.encerrar("regua") is True
     assert sinal.appid is None
+    sinal.evaluate("game", session_open=True, appid=None)
+    assert sinal.appid is None, "a volta a game só por janela não traz o appid de antes"
     sinal.evaluate("game", session_open=True, appid=JOGO_A)
     sinal.mark_degraded("regua")
     assert sinal.appid is None
