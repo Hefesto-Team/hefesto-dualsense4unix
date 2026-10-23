@@ -491,7 +491,7 @@
 .lanc-fila::-webkit-scrollbar-track { background:var(--app-bg);border-radius:5px }
 .lanc-fila::-webkit-scrollbar-thumb { background:var(--border-forte);border-radius:5px }
 /* O CARTÃO TEM A ALTURA DO QUE MOSTRA — 22/10/2026, OS-CARTOES-DOS-LANCADORES-NAO-ESTICAM-01. Com o `1fr`
-   a fileira repartia a sobra do quadro: a 1600x855, cada cartão media 134 px com duas extensões, 115 com
+   a fileira repartia a sobra do quadro: a 1600x855, cada cartão tinha 134 px com duas extensões, 115 com
    quatro e 76 com oito, para uma linha só. A fileira tem altura própria (42 px; 32 até 860 px de altura,
    a que faz as seis fileiras caberem na maximizada), e o quadro fica do tamanho da fila: a sobra vai para
    o fundo da janela, fora dele, como em toda aba (27/08). Ele continua `estica` para ENCOLHER quando as
