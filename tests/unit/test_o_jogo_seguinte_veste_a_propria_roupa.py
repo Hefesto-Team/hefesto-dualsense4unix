@@ -11,7 +11,7 @@ mesma porta da borda `game -> daemon`, e só então veste a roupa do jogo novo.
 O `Daemon` aqui é o de verdade, com o `GameSignal` de verdade e o relógio dado pela
 régua; só a borda do aparelho é dublada (o pad, o leitor evdev, o broker). A varredura
 de processos entra pelas leituras do `_gather_game_signal_inputs` e por um `/proc` de
-mentira (`launch_env.PROC_DOS_LANCAMENTOS`), com a cmdline que a Steam dá ao `reaper`.
+mentira (`steam_launch_options.PROC`), com a cmdline que a Steam dá ao `reaper`.
 Os endereços são da faixa forjada da casa. A mordida de cada teste está no docstring dele.
 """
 from __future__ import annotations
@@ -41,6 +41,7 @@ from hefesto_dualsense4unix.daemon.subsystems.game_signal import (
     GameSignal,
     classify,
 )
+from hefesto_dualsense4unix.integrations import steam_launch_options as slo
 from hefesto_dualsense4unix.integrations import virtual_pad as vp
 from hefesto_dualsense4unix.profiles.schema import (
     MatchCriteria,
@@ -158,7 +159,7 @@ def _hermetico(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setattr(le, "launch_env_dir", lambda ensure=False: tmp_path)
     monkeypatch.setattr(le, "steam_input_appids", lambda path=None: set())
     (tmp_path / "proc").mkdir()
-    monkeypatch.setattr(le, "PROC_DOS_LANCAMENTOS", tmp_path / "proc")
+    monkeypatch.setattr(slo, "PROC", tmp_path / "proc")
     monkeypatch.setattr(gp, "_set_controller_grab", lambda *_a: None)
     monkeypatch.setattr(gp, "controller_allows_uhid", lambda _d: True)
     monkeypatch.setattr(gp, "_o_broker_atende", lambda _d: True)
@@ -366,7 +367,7 @@ def test_o_jogo_vivo_segura_a_autoridade(
     appid de B (o marcador é dele), e só o `/proc` mostra A ainda de pé.
 
     MORDIDA: encerre sempre e este teste reprova (a transição aparece); tire a
-    pergunta ao `/proc` (`_outro_jogo_da_steam_vivo`) e o caso do processo reprova.
+    pergunta ao `/proc` (`appids_de_jogo_vivos`) e o caso do processo reprova.
     """
     _roupa_do_jogo_novo(monkeypatch, EDGE)
     mesa = _Mesa(monkeypatch, "usb", 0)

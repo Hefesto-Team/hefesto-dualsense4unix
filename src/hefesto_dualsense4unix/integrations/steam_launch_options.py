@@ -2127,5 +2127,24 @@ def main(argv: list[str] | None = None) -> int:
     return rc
 
 
+def appids_de_jogo_vivos(proc: Path | None = None) -> set[int]:
+    """Todo appid com processo de jogo da Steam de pé (`SteamLaunch AppId=`), numa varredura.
+
+    A `steam_game_running_appid` responde UM, e com dois lançamentos responde o do
+    marcador: o arme do jogo novo pergunta aqui se o anterior segue de pé. O avaliador
+    do install script não é jogo (`e_avaliador_do_install_script`).
+    """
+    vivos: set[int] = set()
+    for pasta in (PROC if proc is None else proc).iterdir():
+        if not pasta.name.isdigit():
+            continue
+        cmd = _texto(pasta / "cmdline").replace("\0", " ")
+        achado = _STEAM_LAUNCH_APPID_RE.search(cmd)
+        if achado is not None and not e_avaliador_do_install_script(cmd):
+            vivos.add(int(achado.group(0).rsplit("=", 1)[1]))
+    vivos.discard(0)
+    return vivos
+
+
 if __name__ == "__main__":  # pragma: no cover - entrypoint do install/uninstall
     sys.exit(main())

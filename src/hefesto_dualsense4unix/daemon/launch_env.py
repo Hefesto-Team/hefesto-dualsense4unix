@@ -711,43 +711,6 @@ def _soltar_a_trava_do_lancamento(daemon: Any) -> None:
     daemon._pad_travado_pelo_lancamento = None
 
 
-#: Onde o arme procura o outro jogo da Steam ainda de pé (`_outro_jogo_da_steam_vivo`).
-PROC_DOS_LANCAMENTOS = Path("/proc")
-
-
-def _outro_jogo_da_steam_vivo(appid: int) -> int | None:
-    """O appid de um jogo da Steam com processo vivo que não é o do lançamento `appid`.
-
-    A varredura do sinal (`steam_game_running_appid`) responde UM appid, e no arme ela
-    responde o do lançamento novo: o marcador do wrapper é dele, e a camada 1 o confirma
-    pela cmdline do PID dele. O jogo anterior que segue de pé fica invisível a ela. Esta
-    pergunta varre `PROC_DOS_LANCAMENTOS` uma vez por lançamento, e só com a autoridade
-    `game`. O avaliador do install script não é jogo (`e_avaliador_do_install_script`).
-    """
-    import re
-
-    from hefesto_dualsense4unix.integrations.steam_launch_options import (
-        e_avaliador_do_install_script,
-    )
-
-    agulha = re.compile(r"SteamLaunch AppId=(\d+)")
-    for entrada in os.listdir(PROC_DOS_LANCAMENTOS):
-        if not entrada.isdigit():
-            continue
-        try:
-            bruto = (PROC_DOS_LANCAMENTOS / entrada / "cmdline").read_bytes()
-        except OSError:
-            continue
-        cmd = bruto.decode("utf-8", "replace").replace("\0", " ")
-        achado = agulha.search(cmd)
-        if achado is None or e_avaliador_do_install_script(cmd):
-            continue
-        outro = int(achado.group(1))
-        if outro > 0 and outro != appid:
-            return outro
-    return None
-
-
 def _encerrar_a_autoridade_do_jogo_que_acabou(
     daemon: Any, appid: int, anterior: object
 ) -> bool:
@@ -755,7 +718,7 @@ def _encerrar_a_autoridade_do_jogo_que_acabou(
 
     Sem isso a histerese de 30 s recusa a roupa e o caminho do jogo novo. Encerra só se
     nenhum outro jogo está vivo: nem pelas leituras do `classify` (`outro_jogo_vivo`) nem
-    por processo de outro appid da Steam (`_outro_jogo_da_steam_vivo`). O mesmo appid
+    por processo de outro appid da Steam (`appids_de_jogo_vivos`). O mesmo appid
     lançado de novo (`anterior`, o arme de antes, ou a trava) não é outro jogo. Na dúvida,
     fica. A borda roda pela porta do tique (`Daemon.encerrar_a_autoridade_do_jogo`).
     """
@@ -766,6 +729,7 @@ def _encerrar_a_autoridade_do_jogo_que_acabou(
     if not (callable(ler) and callable(encerrar)):
         return False
     from hefesto_dualsense4unix.daemon.subsystems.game_signal import outro_jogo_vivo
+    from hefesto_dualsense4unix.integrations.steam_launch_options import appids_de_jogo_vivos
 
     try:
         travado = getattr(daemon, "_pad_travado_pelo_lancamento", None)
@@ -773,10 +737,10 @@ def _encerrar_a_autoridade_do_jogo_que_acabou(
             if isinstance(lancado, tuple) and lancado and int(lancado[0]) == appid:
                 logger.info("launch_arm_autoridade_mantida_mesmo_jogo", appid=appid)
                 return False
-        outro = _outro_jogo_da_steam_vivo(appid)
-        if outro is not None or outro_jogo_vivo(ler(), appid):
+        outros = sorted(appids_de_jogo_vivos() - {appid})
+        if outros or outro_jogo_vivo(ler(), appid):
             logger.info(
-                "launch_arm_autoridade_mantida_outro_jogo_vivo", appid=appid, outro=outro
+                "launch_arm_autoridade_mantida_outro_jogo_vivo", appid=appid, outros=outros
             )
             return False
         return bool(encerrar("daemon_outro_lancamento"))
