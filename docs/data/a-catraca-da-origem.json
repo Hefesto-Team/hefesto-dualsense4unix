@@ -245,14 +245,14 @@
       "data": "2026-10-23",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1196436,
+      "piso": 1196721,
       "por_item": {
         "docs": 120867,
         "scripts": 120631,
-        "src": 319831,
-        "tests": 635107
+        "src": 319845,
+        "tests": 635378
       },
-      "razao": "tamanho: +391 linhas (1196045 -> 1196436), pagas por Origem: D-0210-OS-CHIPS-DO-MAPA-DESCEM-DE-LINHA, D-2110-O-MOTOR-DIZ-A-ENTRADA-PELO-DONO, D-2310-A-ACAO-DO-MAPA-SE-LE-INTEIRA-NA-VISTA-ESTREITA, D-A-ABA-LANCADORES; registrado no fecho, topo c50a2cf5b9b4",
+      "razao": "tamanho: +285 linhas (1196436 -> 1196721), pagas por Origem: D-2210-A-ROUPA-DO-PAD-SE-LE-NO-BINARIO, D-2310-O-DSU-DIZ-A-CONEXAO-DO-CONTROLE; registrado no fecho, topo 43dffbd150aa",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -883,10 +883,16 @@
           "de": 1196045,
           "para": 1196436,
           "razao": "tamanho: +391 linhas (1196045 -> 1196436), pagas por Origem: D-0210-OS-CHIPS-DO-MAPA-DESCEM-DE-LINHA, D-2110-O-MOTOR-DIZ-A-ENTRADA-PELO-DONO, D-2310-A-ACAO-DO-MAPA-SE-LE-INTEIRA-NA-VISTA-ESTREITA, D-A-ABA-LANCADORES; registrado no fecho, topo c50a2cf5b9b4"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 1196436,
+          "para": 1196721,
+          "razao": "tamanho: +285 linhas (1196436 -> 1196721), pagas por Origem: D-2210-A-ROUPA-DO-PAD-SE-LE-NO-BINARIO, D-2310-O-DSU-DIZ-A-CONEXAO-DO-CONTROLE; registrado no fecho, topo 43dffbd150aa"
         }
       ],
       "unidade": "linhas",
-      "universo": 3132
+      "universo": 3133
     }
   }
 }
