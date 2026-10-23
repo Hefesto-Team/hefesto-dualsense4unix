@@ -43,14 +43,21 @@ def _seletor_do_ouvinte() -> str:
 def test_a_leitura_do_closest_anda_uma_vez_so() -> None:
     """Fonte hostil (aspas coladas em espaços, sem o `)` que fecha) não trava a régua.
 
-    A MORDIDA: devolva `((?:'[^']*'\\s*\\+?\\s*)+)` e a primeira busca leva minutos (py/redos).
+    A MORDIDA: devolva `((?:'[^']*'\\s*\\+?\\s*)+)` e a busca hostil, que levaria minutos
+    (py/redos), estoura os 10 s do processo filho e reprova com o recado, em vez de travar a suíte.
     """
-    import time
+    import subprocess
 
     hostil = "ev.target.closest(" + ("'a'" + " " * 40) * 40 + "x"
-    comeco = time.monotonic()
-    assert _RE_CLOSEST.search(hostil) is None
-    assert time.monotonic() - comeco < 2.0, "a leitura do `closest` voltou a voltar atrás"
+    busca = "import re, sys; print(re.search(sys.argv[1], sys.argv[2]) is None)"
+    try:
+        saida = subprocess.run(
+            [sys.executable, "-c", busca, _RE_CLOSEST.pattern, hostil],
+            capture_output=True, text=True, timeout=10, check=True,
+        ).stdout.strip()
+    except subprocess.TimeoutExpired:
+        pytest.fail("a leitura do `closest` voltou a voltar atrás (py/redos)")
+    assert saida == "True"
     achado = _RE_CLOSEST.search("ev.target.closest( 'a' + 'b' ) e depois ev.target.closest('c')")
     assert achado is not None and achado.group(1) == "'a' + 'b'"
 
