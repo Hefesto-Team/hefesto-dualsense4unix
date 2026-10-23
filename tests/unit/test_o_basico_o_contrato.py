@@ -42,6 +42,7 @@ import ast
 import copy
 import importlib.util
 import json
+import os
 import re
 import sys
 from collections.abc import Callable, Iterator, Sequence
@@ -1190,3 +1191,132 @@ def test_sem_a_chave_do_controle_o_endpoint_e_nao_sei(ob: ModuleType, tmp_path: 
     ob.executar(["--saida", str(saida), "retrato"], maquina)
     vereditos = {p["veredito"] for p in da_linha(saida, "o endpoint de háptica")}
     assert vereditos == {ob.NAO_SEI}
+
+
+# ---------------------------------------------------------------------------
+# O ``doctor.sh --basico`` (O-BASICO-MEDIDO-01, o resto): chama SÓ o ``retrato``, o
+# ``sessão`` (janela curta) e o ``eixos``, e o código de saída do protocolo vira o veredito.
+# O doctor roda numa cópia, ao lado de um protocolo de mentira que anota o que lhe pediram.
+# ---------------------------------------------------------------------------
+
+PROTOCOLO_DE_MENTIRA = '''\
+import os, sys
+from pathlib import Path
+sub = sys.argv[1]
+with Path(os.environ["BASICO_ANOTA"]).open("a") as f:
+    f.write(" ".join(sys.argv[1:]) + "\\n")
+rc = int(os.environ.get("BASICO_RC_" + sub.upper(), "0"))
+print("  [      VERMELHO] " + sub + " · uma linha · P1 · quebrou" if rc == 1 else "  ok")
+if rc == 2:
+    print("RECUSO: a mesa mudou no meio")
+if rc == 3:
+    print("  [       NÃO SEI] " + sub + " · uma linha · P1 · não medido")
+print(f"\\n{sub}: rc={rc} · verde=1")
+sys.exit(rc)
+'''
+
+
+def _casa_do_doctor(
+    tmp_path: Path, *, protocolo: bool = True, socket_no_ar: bool = True
+) -> tuple[Path, dict[str, str]]:
+    """Uma instalação de mentira: o ``doctor.sh`` copiado, o protocolo ao lado, o socket vivo."""
+    import shutil
+    import socket
+    import tempfile
+
+    casa = tmp_path / "casa"
+    (casa / "scripts").mkdir(parents=True)
+    shutil.copy(SCRIPTS / "doctor.sh", casa / "scripts" / "doctor.sh")
+    (casa / ".venv" / "bin").mkdir(parents=True)
+    (casa / ".venv" / "bin" / "python").symlink_to(sys.executable)
+    if protocolo:
+        (casa / "scripts" / "o_basico.py").write_text(PROTOCOLO_DE_MENTIRA, encoding="utf-8")
+    curto = Path(tempfile.mkdtemp(prefix="bd", dir="/tmp"))
+    pasta = curto / "hefesto-dualsense4unix"
+    pasta.mkdir()
+    if socket_no_ar:
+        servidor = socket.socket(socket.AF_UNIX)
+        servidor.bind(str(pasta / "hefesto-dualsense4unix.sock"))
+        _SOCKETS_ABERTOS.append(servidor)
+    ambiente = {
+        "PATH": os.environ.get("PATH", ""),
+        "HOME": str(tmp_path / "home"),
+        "XDG_RUNTIME_DIR": str(curto),
+        "BASICO_ANOTA": str(tmp_path / "anotado.txt"),
+    }
+    return casa, ambiente
+
+
+_SOCKETS_ABERTOS: list[Any] = []
+
+
+@pytest.fixture(autouse=True)
+def _fecha_os_sockets_do_doctor() -> Iterator[None]:
+    yield
+    while _SOCKETS_ABERTOS:
+        _SOCKETS_ABERTOS.pop().close()
+
+
+def _doctor_basico(
+    casa: Path, ambiente: dict[str, str], **rcs: int
+) -> tuple[int, str, list[str]]:
+    import subprocess
+
+    env = dict(ambiente)
+    env.update({f"BASICO_RC_{nome.upper()}": str(rc) for nome, rc in rcs.items()})
+    feito = subprocess.run(
+        ["bash", str(casa / "scripts" / "doctor.sh"), "--basico"],
+        env=env, capture_output=True, text=True, timeout=60, check=False,
+    )
+    anotado = Path(env["BASICO_ANOTA"])
+    pedidos = anotado.read_text(encoding="utf-8").splitlines() if anotado.exists() else []
+    return feito.returncode, feito.stdout, pedidos
+
+
+def test_o_doctor_basico_chama_so_os_tres_que_leem_e_a_sessao_curta(tmp_path: Path) -> None:
+    casa, ambiente = _casa_do_doctor(tmp_path)
+    rc, saida, pedidos = _doctor_basico(casa, ambiente)
+    assert pedidos == ["retrato", "sessao --segundos 5", "eixos"]  # noqa-acento: subcomando
+    assert rc == 0
+    assert saida.count("[ OK ] o básico, ") == 3
+    assert "== daemon ==" not in saida, "o --basico não roda o resto do diagnóstico"
+
+
+def test_o_doctor_basico_vermelho_do_protocolo_e_falha_com_a_linha_a_mostra(
+    tmp_path: Path,
+) -> None:
+    casa, ambiente = _casa_do_doctor(tmp_path)
+    rc, saida, _ = _doctor_basico(casa, ambiente, eixos=1)
+    assert rc != 0
+    assert "[FAIL] o básico, eixos" in saida
+    assert "uma linha · P1 · quebrou" in saida
+
+
+@pytest.mark.parametrize("rc_do_protocolo", [2, 3])
+def test_o_doctor_basico_recusa_e_nao_sei_sao_aviso_e_nunca_verde(
+    tmp_path: Path, rc_do_protocolo: int
+) -> None:
+    casa, ambiente = _casa_do_doctor(tmp_path)
+    rc, saida, _ = _doctor_basico(casa, ambiente, retrato=rc_do_protocolo)
+    assert rc == 0
+    assert "[WARN] o básico, retrato" in saida
+    assert "[ OK ] o básico, retrato" not in saida
+
+
+def test_o_doctor_basico_sem_o_daemon_no_ar_avisa_e_nao_chama_nada(tmp_path: Path) -> None:
+    casa, ambiente = _casa_do_doctor(tmp_path, socket_no_ar=False)
+    rc, saida, pedidos = _doctor_basico(casa, ambiente)
+    assert pedidos == []
+    assert rc == 0
+    assert "[WARN] o básico não foi medido: o daemon não está no ar" in saida
+
+
+def test_o_doctor_basico_numa_instalacao_sem_o_protocolo_diz_que_nada_foi_medido(
+    tmp_path: Path,
+) -> None:
+    casa, ambiente = _casa_do_doctor(tmp_path, protocolo=False)
+    rc, saida, pedidos = _doctor_basico(casa, ambiente)
+    assert pedidos == []
+    assert rc == 0
+    assert "nada foi medido" in saida
+    assert "[ OK ]" not in saida

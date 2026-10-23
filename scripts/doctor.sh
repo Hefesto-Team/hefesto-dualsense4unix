@@ -30,7 +30,7 @@
 # Marcadores ASCII (compat sanitizer de anonimato).
 #
 # Uso: scripts/doctor.sh [--fix] [--fix-mic] [--restaurar-hidraw-uaccess]
-#                        [--quiet] [--watch-dropout] [--suggest-port]
+#                        [--quiet] [--watch-dropout] [--suggest-port] [--basico]
 #   --fix             aplica correções seguras: reaplica udev, instala/reseta o
 #                     fix de áudio do WirePlumber e cura as camadas 1 e 2 do
 #                     microfone mudo (MIC-USB-01: mute persistido por rota e
@@ -67,7 +67,7 @@ DO_FIX=0
 QUIET=0
 WATCH_DROPOUT=0
 SUGGEST_PORT=0
-FIX_MIC=0
+FIX_MIC=0; BASICO=0
 RESTAURAR_HIDRAW=0
 for arg in "$@"; do
     case "$arg" in
@@ -76,7 +76,7 @@ for arg in "$@"; do
         --restaurar-hidraw-uaccess) RESTAURAR_HIDRAW=1 ;;
         --quiet)          QUIET=1 ;;
         --watch-dropout)  WATCH_DROPOUT=1 ;;
-        --suggest-port)   SUGGEST_PORT=1 ;;
+        --suggest-port)   SUGGEST_PORT=1 ;; --basico) BASICO=1 ;;
         *) printf '[doctor] aviso: argumento desconhecido: %s\n' "$arg" ;;
     esac
 done
@@ -9325,9 +9325,61 @@ check_o_painel_do_cosmic_ve_o_som() {
     fi
 }
 
+# O BÁSICO MEDIDO (`--basico`, só ele: o resto do diagnóstico não roda): o doctor
+# chama SÓ os três subcomandos que leem
+# (o `retrato`, a `sessão` e os `eixos`) do `scripts/o_basico.py`, que mora ao
+# lado deste script em todo formato de instalação. A janela da `sessão` é curta
+# (o padrão dele é 60 s) e a saída já vem pelo mascarador do protocolo. O código
+# de saída do protocolo vira o veredito: 0 verde, 1 vermelho, 2 recusado e 3
+# «não sei» (os dois últimos são aviso: nada foi provado nem refutado). Quem
+# escreve no aparelho é o `o_basico.py` direto, nunca o doctor. As duas linhas do
+# `--basico` no começo do arquivo ficam coladas às vizinhas de propósito: os
+# endereços `doctor.sh:N` do mapa não andam.
+_BASICO_SEGUNDOS_DA_SESSAO=5
+check_o_basico() {
+    local protocolo="${ROOT_DIR}/scripts/o_basico.py" py sock sub rc saida resumo
+    local -a argv
+    if [[ ! -f "${protocolo}" ]]; then
+        info "o protocolo do básico não veio nesta instalação (scripts/o_basico.py) — nada foi medido"
+        return
+    fi
+    sock="$(runtime_socket)"
+    if [[ ! -S "${sock}" ]]; then
+        warn "o básico não foi medido: o daemon não está no ar (suba o daemon e rode de novo)"
+        return
+    fi
+    py="$(_python_do_produto)"
+    [[ -n "${py}" ]] || { warn "o básico não foi medido: sem python"; return; }
+    for sub in retrato sessao eixos; do  # noqa-acento: nome do subcomando do protocolo
+        argv=("${sub}")
+        [[ "${sub}" == "sessao" ]] && argv+=(--segundos "${_BASICO_SEGUNDOS_DA_SESSAO}")  # noqa-acento: nome do subcomando
+        saida="$(timeout 300 "${py}" "${protocolo}" "${argv[@]}" 2>&1)"
+        rc=$?
+        resumo="$(grep -E "^${sub}: rc=" <<<"${saida}" | tail -n 1)"
+        [[ -n "${resumo}" ]] || resumo="${sub}: rc=${rc}"
+        case "${rc}" in
+            0) pass "o básico, ${sub}: tudo no critério (${resumo#*: })" ;;
+            1) fail "o básico, ${sub}: há linha vermelha (${resumo#*: })"
+               grep -E '^\s+\[ +VERMELHO\]' <<<"${saida}" | while IFS= read -r linha; do info "${linha#"${linha%%[![:space:]]*}"}"; done ;;
+            2) warn "o básico, ${sub}: recusado, nada foi provado (${resumo#*: })"
+               grep -E '^RECUSO: ' <<<"${saida}" | head -n 3 | while IFS= read -r linha; do info "${linha#"${linha%%[![:space:]]*}"}"; done ;;
+            3) warn "o básico, ${sub}: há linha que não se soube medir (${resumo#*: })"
+               grep -E '^\s+\[ +NÃO SEI\]' <<<"${saida}" | head -n 3 | while IFS= read -r linha; do info "${linha#"${linha%%[![:space:]]*}"}"; done ;;
+            124) warn "o básico, ${sub}: passou do teto de 300 s e foi cortado" ;;
+            *) warn "o básico, ${sub}: o protocolo saiu com ${rc} (${resumo#*: })" ;;
+        esac
+    done
+}
+
 main() {
     [[ "${WATCH_DROPOUT}" -eq 1 ]] && { watch_dropout; exit 0; }
     [[ "${SUGGEST_PORT}" -eq 1 ]] && { suggest_port; exit 0; }
+    if [[ "${BASICO}" -eq 1 ]]; then
+        hdr "o básico medido (retrato, sessão e eixos)"
+        check_o_basico
+        [[ "${FAILS}" -eq 0 ]]
+        exit $?
+    fi
     # RESTAURO-SO-COM-SINTOMA-01 (decisão, 07/08/2026): rota própria, pedida
     # a dedo. Ela não é alcançável por nenhum outro modo do doctor — nem pelo
     # --fix, nem pelo install.
