@@ -632,10 +632,17 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
     _sinal_em: float | None = None
     _descartados_depois_do_sinal: int = 0
 
-    def __init__(self, path: bytes, *, is_edge: bool) -> None:
+    #: O-FISICO-NUNCA-SE-EXPOE-AO-JOGO-QUE-VESTE-O-COMUM-01: o handle aberto pelo fd do broker;
+    #: sem ele, o `hidapi.Device` abre o nó pelo caminho.
+    _dispositivo: _DispositivoPorFd | None = None
+
+    def __init__(
+        self, path: bytes, *, is_edge: bool, dispositivo: _DispositivoPorFd | None = None
+    ) -> None:
         super().__init__()
         self._pinned_path = path
         self._pinned_is_edge = is_edge
+        self._dispositivo = dispositivo
         self._write_lock = threading.Lock()
         self._entrega = threading.Lock()
         # LIGHTBAR-BT-ADOPT-01: nasce TRUE, nunca False: o report_thread escreve assim que o
@@ -746,7 +753,7 @@ class _PinnedPyDualSense(pydualsense):  # type: ignore[misc]
 
     def _pydualsense__find_device(self) -> tuple[Any, bool]:
         import hidapi
-        dispositivo = getattr(self, "_dispositivo", None) or hidapi.Device(path=self._pinned_path)
+        dispositivo = self._dispositivo or hidapi.Device(path=self._pinned_path)
         return dispositivo, self._pinned_is_edge
 
     def sendReport(self) -> None:  # noqa: N802 - override do nome do upstream
@@ -2172,8 +2179,7 @@ class PyDualSenseController(IController):
         self, path: bytes, *, is_edge: bool, dispositivo: _DispositivoPorFd | None = None
     ) -> pydualsense | None:
         """Abre UM controle (pelo `dispositivo` ou por `path`), com a guarda de timeout do init."""
-        ds = _PinnedPyDualSense(path, is_edge=is_edge)
-        ds._dispositivo = dispositivo
+        ds = _PinnedPyDualSense(path, is_edge=is_edge, dispositivo=dispositivo)
         result: list[Exception | None] = []
         entrega = threading.Lock()
         estado = {"terminou": False, "desistido": False}

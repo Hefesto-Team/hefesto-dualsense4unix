@@ -170,8 +170,8 @@ a solta é a ativação de um perfil pela mão (`origin` `manual`). Nenhum
 código do produto o chama; o método fica no contrato para quem ainda o usa, e
 `escopo` diz na resposta que nada aqui é por controle. O que está guardado por
 controle se lê em `controllers[].camada_da_usuaria` do `daemon.state_full`: a
-lista dos campos (`led`, `player_leds`, `trigger_left`…) que ela fixou e ainda
-valem, vazia quando o controle não tem ajuste dela.
+lista dos campos (`led`, `player_leds`, `trigger_left`…) que a usuária fixou e
+ainda valem, vazia quando o controle não tem ajuste próprio.
 
 ### `aplicado_em` e `guardado_em` — o que a resposta AFIRMA
 

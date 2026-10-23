@@ -580,7 +580,7 @@ def _escrever(backend: Any, uniq: str, valor: int | None) -> bool:
 
     **NÃO É `set_mic_led`.** Aquele esmaga em `bool` duas vezes em série e faz
     o `2` e o `3` virarem `1` sem erro e sem log (medido em 03/09/2026,
-    `core/backend_pydualsense.py:3629` e `:275`).
+    `core/backend_pydualsense.py:3635` e `:275`).
 
     `valor is None` é a DEVOLUÇÃO DA POSSE (o bit `0x01` do flag1 cai e o
     kernel volta a escrever a luz na borda do botão); `0` é uma ORDEM
