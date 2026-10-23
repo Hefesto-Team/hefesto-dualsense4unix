@@ -3,8 +3,9 @@
 ``OS-PORTOES-LENTOS-FICAM-RAPIDOS-POR-DENTRO-01`` (06/10/2026, leva 1.6). Esta régua
 guarda as duas metades da cura:
 
-* **Os três portões de página não dependem da rede.** As páginas pedem a fonte ao
-  Google; com a rede fora o ``goto`` esperava o ``load`` por 30 s e REPROVAVA. O ponto
+* **Os três portões de página não dependem da rede.** As páginas pediam a fonte ao
+  Google (desde 23/10/2026 ela mora no produto e a página real não pede nada fora da
+  máquina); com a rede fora o ``goto`` esperava o ``load`` por 30 s e REPROVAVA. O ponto
   comum ``scripts/chrome_sem_rede.py`` recusa o que não é local. A régua prova (1) que
   a página abre com uma rede que NUNCA responde, (2) que o instrumento morde
   (sem o bloqueio, a mesma rede pendura de verdade), (3) que o veredito de página
@@ -166,7 +167,9 @@ class TestAPaginaNaoPedeARede:
                 lido_com_rede = respondendo.evaluate(a01.O_QUE_O_NAVEGADOR_DESENHA)
             finally:
                 navegador.close()
-        assert recusadas, "a página real deixou de pedir recurso externo: o caso desta régua mudou"
+        assert recusadas == [], (
+            "a página real voltou a pedir recurso fora da máquina: a fonte mora no produto "
+            f"(AS-FONTES-DA-INTERFACE-MORAM-NO-PRODUTO-01) — {recusadas}")
         assert lido_sem_rede == lido_com_rede, (
             "o veredito da página muda com a rede recusada: o bloqueio alterou o que o "
             "portão mede, e deixou de ser a mesma pergunta")
@@ -201,9 +204,9 @@ class TestOsTresPortoesDePaginaPassamPeloPontoComum:
         assert [c["uri"].rsplit("/", 1)[-1] for c in chamadas] == [
             "01-jogar.html", "04-iluminacao.html"], chamadas
         assert all(c["bloquear"] for c in chamadas), chamadas
-        assert all(c["recusadas"] for c in chamadas), (
-            "uma página real pede a fonte de fora e o bloqueio TEM de recusá-la: "
-            f"{chamadas}")
+        assert all(c["recusadas"] == [] for c in chamadas), (
+            "uma página real não pede nada de fora (a fonte mora no produto); o bloqueio "
+            f"continua ligado e é ele que acusaria o pedido: {chamadas}")
 
     def test_altura_do_cartao(self, chamadas: list[dict[str, Any]]) -> None:
         altura = _modulo_do_script("check_a_altura_do_cartao")
@@ -213,7 +216,7 @@ class TestOsTresPortoesDePaginaPassamPeloPontoComum:
         altura.medir(pagina, altura.LARGURAS)
         assert [c["uri"].rsplit("/", 1)[-1] for c in chamadas] == (
             ["02-controles.html"] * len(altura.LARGURAS)), chamadas
-        assert all(c["bloquear"] and c["recusadas"] for c in chamadas), chamadas
+        assert all(c["bloquear"] and c["recusadas"] == [] for c in chamadas), chamadas
 
 
 class TestOsCachesNaoAdocamOVeredito:

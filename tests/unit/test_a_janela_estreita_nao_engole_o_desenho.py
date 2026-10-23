@@ -232,9 +232,9 @@ MEDIDA = r"""
     viewport: {larg: de.clientWidth, alt: de.clientHeight},
     documento: {rola_x: de.scrollWidth - de.clientWidth,
                 rola_y: de.scrollHeight - de.clientHeight},
-    // A LETRA VAI JUNTO DA MEDIDA. As dez abas pedem 'Space Grotesk' e
-    // 'JetBrains Mono' ao Google Fonts (`<link>` no topo de cada página): sem
-    // rede o motor cai na pilha de sistema, a largura de todo texto muda, e um
+    // A LETRA VAI JUNTO DA MEDIDA. As dez abas trazem 'Space Grotesk' e
+    // 'JetBrains Mono' do pacote (`@font-face` no topo de cada página): sem
+    // elas o motor cai na pilha de sistema, a largura de todo texto muda, e um
     // vermelho desta régua passaria a significar outra coisa.
     letra: (typeof document.fonts === 'undefined') ? null : {
       estado: document.fonts.status,

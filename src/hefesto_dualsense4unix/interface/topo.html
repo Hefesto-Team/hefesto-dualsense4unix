@@ -3,10 +3,13 @@
 <head>
 <meta charset="utf-8">
 <title>Hefesto — aba JOGAR</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
+  /* AS FONTES MORAM NO PRODUTO (AS-FONTES-DA-INTERFACE-MORAM-NO-PRODUTO-01): o `<link>` do Google segurava o
+     `complete` enquanto a rede não respondia. `../assets/fontes/` vale de `paginas/` e de `mockup/` (a raiz tem
+     `assets/fontes`, link para a mesma pasta). Os pesos são os que o `<link>` pedia (Space Grotesk 400–700, JetBrains
+     Mono 400–500): o negrito da mono continua o sintetizado de antes, e a letra não muda. Versão e origem: `assets/fontes/ORIGEM.md`. */
+  @font-face{font-family:'Space Grotesk';font-style:normal;font-weight:400 700;font-display:swap;src:url('../assets/fontes/SpaceGrotesk-wght.ttf') format('truetype')}
+  @font-face{font-family:'JetBrains Mono';font-style:normal;font-weight:400 500;font-display:swap;src:url('../assets/fontes/JetBrainsMono-wght.ttf') format('truetype')}
   /* ---------------------------------------------------------------
      As 11 cores do GUIA_IMPLEMENTACAO.md. Nenhuma inventada.
      --------------------------------------------------------------- */

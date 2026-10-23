@@ -1,16 +1,21 @@
 """Abre uma página LOCAL no Chrome sem depender da rede — o ponto comum dos portões de página.
 
 O DEFEITO, MEDIDO em 06/10/2026 (~04h), com a rede fora (`EAI_AGAIN`): as páginas
-da interface pedem a fonte ao Google (`<link href="https://fonts.googleapis.com/…">`),
-o `goto` de um `file://` esperava o evento `load` por 30 s e REPROVAVA; com a
-rede de volta os mesmos portões passavam em 3,5 s. Um portão que reprova pela rede
-mede a rede, não a página.
+da interface pediam a fonte ao Google, o `goto` de um `file://` esperava o evento `load`
+por 30 s e REPROVAVA; com a rede de volta os mesmos portões passavam em 3,5 s. Um portão
+que reprova pela rede mede a rede, não a página.
+
+DESDE 23/10/2026 a fonte é LOCAL (AS-FONTES-DA-INTERFACE-MORAM-NO-PRODUTO-01): Space Grotesk e
+JetBrains Mono moram em `interface/assets/fontes/`, e as páginas não pedem nada fora da máquina.
+A cura de 06/10 só alcançava o Chrome; a régua do WebKit e o produto esperavam a rede, e a
+suíte do fecho reprovou duas vezes por isso. O bloqueio abaixo continua, de propósito: o que uma
+página pedir de fora aparece em `recusadas` (quem reprova a página é o
+`tests/unit/test_as_fontes_da_interface_moram_no_produto.py`).
 
 A CURA, NA ORIGEM: toda requisição que não é local é RECUSADA na hora (`route.abort`),
 então o `load` não tem mais recurso externo a esperar e a medida deixa de depender de a
-rede responder, de demorar ou de chegar no meio da medida; a fonte vem do sistema ou cai
-no fallback, que é o que a pessoa sem internet também vê. A espera é pela condição que o
-portão mede: o `load` (que agora é imediato), as fontes aplicadas e dois quadros de
+rede responder, de demorar ou de chegar no meio da medida; a fonte vem do pacote. A espera é pela condição
+que o portão mede: o `load` (que agora é imediato), as fontes aplicadas e dois quadros de
 layout, no lugar do `networkidle` e dos 250 ms fixos.
 
 O que o portão MEDE não muda: a geometria que ele lê é a do desenho, não a de um CSS
