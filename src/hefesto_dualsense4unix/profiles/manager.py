@@ -62,6 +62,8 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 
+#: O Point and click de uma instalação limpa (o mesmo valor que a aba Navegação oferece).
+PADRAO_DO_POINT_AND_CLICK = "molde:point_and_click"
 MOTIVO_SELECIONADO = "selecionado"
 MOTIVO_SEM_CANDIDATO = "sem_candidato"
 MOTIVO_JOGO_SEM_PERFIL_PROPRIO = "jogo_sem_perfil_proprio"
@@ -100,7 +102,9 @@ def e_o_freestyle(nome: object) -> bool:
 def esquecer_o_perfil_apagado(nome: str) -> None:
     """O apagado sai da memória do boot (O-PERFIL-ATIVO-APAGADO-SOLTA-O-REMAP-E-O-ROTEADOR-01).
 
-    O `profile delete` chama depois de apagar (o ativo, recusa): sai a escolha e o último jogo.
+    O `profile delete` chama depois de apagar (o ativo, recusa): sai a escolha e o último
+    jogo, e o Point and click que apontava para ele (o do computador e o de cada perfil)
+    volta ao padrão, pela mesma passada do renomear.
     """
     from hefesto_dualsense4unix.utils.session import (
         esquecer_a_escolha,
@@ -112,7 +116,38 @@ def esquecer_o_perfil_apagado(nome: str) -> None:
         save_freestyle_ligado(False)
     esquecer_a_escolha(nome)
     esquecer_o_ultimo_jogo(nome)
+    _levar_o_point_and_click(nome, PADRAO_DO_POINT_AND_CLICK, origem="apagar")
     logger.info("profile_deleted", name=nome)
+
+
+def _levar_o_point_and_click(era: str, destino: str, *, origem: str) -> None:
+    """O Point and click que aponta para ``era`` (``perfil:<era>``) passa a dizer ``destino``.
+
+    A passada única do renomear (``destino`` é ``perfil:<novo>``) e do apagado (``destino`` é
+    o padrão): o do computador e o de cada perfil do disco. Casa pelo slug, como o resto.
+    """
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
+    from hefesto_dualsense4unix.profiles.slug import mesmo_slug
+    from hefesto_dualsense4unix.utils.maquina import gravar_o_computador
+
+    prefixo = "perfil:"
+
+    def _aponta_era(escolha: object) -> bool:
+        if not (isinstance(escolha, str) and escolha.startswith(prefixo)):
+            return False
+        alvo = escolha[len(prefixo):].strip()
+        return alvo == era or mesmo_slug(alvo, era)
+
+    documento = o_computador().model_dump(mode="json")
+    mouse = (documento.get("global") or {}).get("mouse") or {}
+    if _aponta_era(mouse.get("point_and_click")):
+        mouse["point_and_click"] = destino
+        if not gravar_o_computador(documento):
+            logger.warning("point_and_click_do_computador_nao_levado", era=era, destino=destino)
+    for perfil in load_all_profiles():
+        if perfil.mouse is not None and _aponta_era(perfil.mouse.point_and_click):
+            secao = perfil.mouse.model_copy(update={"point_and_click": destino})
+            save_profile(perfil.model_copy(update={"mouse": secao}), origem=origem)
 
 
 def levar_o_perfil_renomeado(era: str, novo: str) -> None:
@@ -122,9 +157,7 @@ def levar_o_perfil_renomeado(era: str, novo: str) -> None:
     do boot (e o espelho), o último jogo e o Point and click (``perfil:<nome>``), o do
     computador e o de cada perfil do disco. Casa pelo slug, como o apagado.
     """
-    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
     from hefesto_dualsense4unix.profiles.slug import mesmo_slug
-    from hefesto_dualsense4unix.utils.maquina import gravar_o_computador
     from hefesto_dualsense4unix.utils.session import (
         _ultimo_jogo_cru,
         espelhar_a_escolha,
@@ -141,22 +174,7 @@ def levar_o_perfil_renomeado(era: str, novo: str) -> None:
         espelhar_a_escolha()
     if _era(_ultimo_jogo_cru()):
         lembrar_o_ultimo_jogo(novo)
-    prefixo = "perfil:"
-
-    def _aponta_era(escolha: object) -> bool:
-        return (isinstance(escolha, str) and escolha.startswith(prefixo)
-                and _era(escolha[len(prefixo):].strip()))
-
-    documento = o_computador().model_dump(mode="json")
-    mouse = (documento.get("global") or {}).get("mouse") or {}
-    if _aponta_era(mouse.get("point_and_click")):
-        mouse["point_and_click"] = prefixo + novo
-        if not gravar_o_computador(documento):
-            logger.warning("point_and_click_do_computador_nao_renomeado", era=era, novo=novo)
-    for perfil in load_all_profiles():
-        if perfil.mouse is not None and _aponta_era(perfil.mouse.point_and_click):
-            secao = perfil.mouse.model_copy(update={"point_and_click": prefixo + novo})
-            save_profile(perfil.model_copy(update={"mouse": secao}), origem="renomear")
+    _levar_o_point_and_click(era, "perfil:" + novo, origem="renomear")
     logger.info("profile_renamed", era=era, novo=novo)
 
 
