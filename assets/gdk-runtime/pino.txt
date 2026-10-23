@@ -14,5 +14,5 @@ sha256=9b11967ae3e522ea3da942aa0853eac405c8ad806efe752124a7a05f03365f96
 sonda_url=https://github.com/Hefesto-Team/hefesto-dualsense4unix/releases/download/v{versao}/sonda-gdk.exe
 sonda_sha256=728d4f23359af74d820acb0dbde03f2c4f1e4913400ea144e1873a9a7ccde724
 gameinput_url=https://github.com/Hefesto-Team/hefesto-dualsense4unix/releases/download/v{versao}/gameinput.dll
-gameinput_sha256=0b97fcf602ef9d3b7b8f88ff8278690d7b0d56bf0069153091e99c51c9627a53
+gameinput_sha256=1e81d25a4cb55c86610b690ba721f7edd1a15cc219d126a73601f841aaf1f76b
 compilar=bash assets/gdk-runtime/construir.sh <saída> --conferir

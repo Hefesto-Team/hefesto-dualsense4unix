@@ -254,3 +254,23 @@ def test_o_juiz_da_regua_aceita_o_report_certo_e_recusa_o_torto() -> None:
     assert not julgar(usb, crc_errado)["bytes_bt"], "o CRC errado passou"
     assert not julgar(_usb(0x80, 0xFF) + _usb(0, 0), bt)["reenvio"], "sem reenvio passou"
     assert not julgar(usb + _usb(0, 0), bt)["zero_no_fim"], "o zero repetido passou"
+
+
+def test_sem_dualsense_a_peca_responde_como_o_gameinput_do_proton() -> None:
+    # O pior caso é o de hoje: sem DualSense (modo Xbox, ou só pad de outra marca), o jogo GDK que
+    # lê a entrada pelo GameInput tem de receber o E_NOTIMPL do Proton e cair na XInput.
+    fonte = (_FONTE / "gameinput.c").read_text(encoding="utf-8")
+    for nome in ("HRESULT WINAPI GameInputCreate(", "HRESULT WINAPI GameInputInitialize("):
+        corpo = fonte.split(nome, 1)[1].split("\n}\n", 1)[0]
+        assert "if (sem_dualsense()) return E_NOTIMPL;" in corpo, nome
+    regua = _regua()
+    julgar = regua.julgar_sem_aparelho  # type: ignore[attr-defined]
+    carregada = '{"prova": "preload", "ok": true}'
+    recusou = '{"prova": "qi_v2", "ok": false, "hr": "80004001"}'
+    assert julgar([carregada, recusou])
+    assert not julgar([carregada, '{"prova": "qi_v2", "ok": true, "hr": "00000000"}'])
+    assert not julgar(['{"prova": "preload", "ok": false}', recusou]), "o stub do Proton passou"
+    mordidas = regua.MORDIDAS  # type: ignore[attr-defined]
+    assert {"sem-aparelho", "reenvio", "crc", "ordem"} <= set(mordidas)
+    for arquivo, cura, _quebrado, _alvo in mordidas.values():
+        assert (_FONTE / arquivo).read_text(encoding="utf-8").count(cura) == 1, cura

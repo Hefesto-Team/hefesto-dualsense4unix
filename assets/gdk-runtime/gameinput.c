@@ -594,13 +594,16 @@ static aparelho *ap_por_caminho(const WCHAR *caminho)
     return NULL;
 }
 
-/* Abre (ou reabre) o aparelho e põe a leitura para andar. Chamado com g_lock. */
+/* Abre (ou reabre) o aparelho e põe a leitura para andar. Chamado com g_lock; a troca do handle
+ * vai sob o wlock, porque o SetRumbleState do jogo escreve nele de outra thread. */
 static int abrir(aparelho *a)
 {
     HANDLE t;
+    EnterCriticalSection(&a->wlock);
     if (a->escrita != INVALID_HANDLE_VALUE) CloseHandle(a->escrita);
     a->escrita = CreateFileW(a->caminho, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
                              NULL, OPEN_EXISTING, 0, NULL);
+    LeaveCriticalSection(&a->wlock);
     if (a->escrita == INVALID_HANDLE_VALUE) return 0;
     InterlockedExchange(&a->perdido, 0);
     t = CreateThread(NULL, 0, leitor_thread, a, 0, NULL);
@@ -627,7 +630,10 @@ static aparelho *novo_aparelho(const WCHAR *caminho, int dubla, int bt, DWORD sa
     lstrcpynW(a->caminho, caminho, 512);
     InitializeCriticalSection(&a->wlock);
     preencher_info(a, vid, pid, rev);
-    if (!abrir(a)) return NULL;
+    if (!abrir(a)) {
+        DeleteCriticalSection(&a->wlock);
+        return NULL;
+    }
     a->usado = 1;
     g_ap_n++;
     glog("aparelho %s %s saída=%lu", a->caminho_utf8, bt ? "rádio" : "cabo", (unsigned long)saida);
@@ -832,22 +838,37 @@ static DWORD WINAPI vigia_thread(void *arg)
 
 static int g_iniciado;
 
-static void iniciar(void)
+/* Lista os aparelhos na primeira chamada que acha um DualSense, e só então põe o vigia para andar.
+ * Devolve quantos há. */
+static int iniciar(void)
 {
     mudanca m[MAX_APARELHOS * 2];
     HANDLE t;
+    int n;
     EnterCriticalSection(&g_lock);
-    if (g_iniciado) {
-        LeaveCriticalSection(&g_lock);
-        return;
+    if (!g_iniciado) {
+        memset(&g_gamepad_info, 0xff, sizeof g_gamepad_info); /* GameInputLabelUnknown */
+        listar(m, (int)(sizeof m / sizeof m[0]));
+        if (g_ap_n) {
+            g_iniciado = 1;
+            glog("iniciado: %d aparelho(s)%s", g_ap_n, g_modo_duble ? " (dublê de teste)" : "");
+            t = CreateThread(NULL, 0, vigia_thread, NULL, 0, NULL);
+            if (t) CloseHandle(t);
+        }
     }
-    g_iniciado = 1;
+    n = g_ap_n;
     LeaveCriticalSection(&g_lock);
-    memset(&g_gamepad_info, 0xff, sizeof g_gamepad_info); /* GameInputLabelUnknown */
-    listar(m, (int)(sizeof m / sizeof m[0]));
-    glog("iniciado: %d aparelho(s)%s", g_ap_n, g_modo_duble ? " (dublê de teste)" : "");
-    t = CreateThread(NULL, 0, vigia_thread, NULL, 0, NULL);
-    if (t) CloseHandle(t);
+    return n;
+}
+
+/* Sem DualSense na partida, a peça responde como o GameInput do Proton (E_NOTIMPL): o jogo que lê
+ * a entrada pelo GameInput cai na XInput, como sempre caiu, e o controle Xbox (a máscara do
+ * Hefesto ou um de verdade, que a peça não lista) segue no jogo. */
+static int sem_dualsense(void)
+{
+    if (iniciar()) return 0;
+    glog("sem DualSense: E_NOTIMPL, como o GameInput do Proton");
+    return 1;
 }
 
 /* ---------- IGameInputReading ---------- */
@@ -1369,7 +1390,7 @@ const void *const g_vt_gi2[] = {
 __declspec(dllexport) HRESULT WINAPI GameInputCreate(void **out)
 {
     if (!out) return E_POINTER;
-    iniciar();
+    if (sem_dualsense()) return E_NOTIMPL;
     glog("GameInputCreate");
     *out = &g_gi.i0;
     return S_OK;
@@ -1379,7 +1400,7 @@ __declspec(dllexport) HRESULT WINAPI GameInputInitialize(const GUID *riid, void 
 {
     if (!out) return E_POINTER;
     *out = NULL;
-    iniciar();
+    if (sem_dualsense()) return E_NOTIMPL;
     glog("GameInputInitialize");
     return gi_QueryInterface(&g_gi.i0, riid, out);
 }

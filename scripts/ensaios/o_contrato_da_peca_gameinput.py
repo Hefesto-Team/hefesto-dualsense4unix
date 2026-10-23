@@ -15,7 +15,9 @@ uinput, uhid, gadget ou rádio de verdade. Julga:
   no 0x6c), `device_id` (estável, igual no v0 e no v2) e `leitura` (o Gamepad do cabo e do rádio);
 - dos bytes que chegaram ao dublê: `bytes_usb` (o report 0x02 com flag0 = 0x03, fraco e forte no
   lugar), `bytes_bt` (o 0x31 de 78 bytes com o CRC32 certo), `reenvio` (o rumble parado se
-  repete antes dos 3 s do pad virtual) e `zero_no_fim` (o zero chega uma vez só).
+  repete antes dos 3 s do pad virtual) e `zero_no_fim` (o zero chega uma vez só);
+- de uma segunda rodada, sem DualSense: `sem_aparelho` (a peça carregada responde E_NOTIMPL, como
+  o GameInput do Proton, e o jogo que lê a entrada pelo GameInput cai na XInput como hoje).
 
 `--mordida` quebra a cura numa cópia do fonte (nunca no repo) e confere que a prova dela reprova.
 O prefixo é sempre de teste, fora do HOME: nunca o do jogo, nunca o `~/.wine`. Nada abre janela.
@@ -39,7 +41,10 @@ WINE_PADRAO = Path.home() / ".steam/steam/compatibilitytools.d/GE-Proton11-7-x86
 
 PROVAS_DA_SONDA = ("preload", "qi_v2", "aparelhos", "motores", "device_id", "leitura")
 PROVAS_DOS_BYTES = ("bytes_usb", "bytes_bt", "reenvio", "zero_no_fim")
-PROVAS = PROVAS_DA_SONDA + PROVAS_DOS_BYTES
+PROVAS = PROVAS_DA_SONDA + PROVAS_DOS_BYTES + ("sem_aparelho",)
+
+#: O HRESULT do GameInputCreate do Proton fora do KCD2 (E_NOTIMPL): o que o jogo recebe hoje.
+E_NOTIMPL = "80004001"
 
 #: Cada mordida: (arquivo, trecho da cura, trecho quebrado) e a prova que tem de reprovar.
 MORDIDAS: dict[str, tuple[str, str, str, str]] = {
@@ -79,6 +84,30 @@ MORDIDAS: dict[str, tuple[str, str, str, str]] = {
         "            HMODULE h = NULL;\n",
         "preload",
     ),
+    "reenvio": (
+        "gameinput.c",
+        "            if ((a->fraco || a->forte) && GetTickCount64() - a->ultima_escrita_ms >= REENVIO_MS)\n",
+        "            if (0)\n",
+        "reenvio",
+    ),
+    "crc": (
+        "gameinput.c",
+        "        crc = crc32_continua(crc32_continua(0, &semente, 1), r, 74);\n",
+        "        crc = crc32_continua(0, r, 74); (void)semente;\n",
+        "bytes_bt",
+    ),
+    "ordem": (
+        "gameinput.c",
+        "    forte = p ? para_byte(p->lowFrequency) : 0;\n",
+        "    forte = p ? para_byte(p->highFrequency) : 0;\n",
+        "bytes_usb",
+    ),
+    "sem-aparelho": (
+        "gameinput.c",
+        "    if (iniciar()) return 0;\n",
+        "    iniciar();\n    return 0;\n",
+        "sem_aparelho",
+    ),
 }
 
 #: O que a sonda manda: o cabo a 1,0 no forte e 0,5 no fraco; o rádio a 0,25 e 0,75.
@@ -113,6 +142,23 @@ def julgar(linhas: Iterable[str]) -> dict[str, bool]:
         if isinstance(prova, str):
             vistas[prova] = obj.get("ok") is True
     return {p: vistas.get(p, False) for p in PROVAS_DA_SONDA}
+
+
+def julgar_sem_aparelho(linhas: Iterable[str]) -> bool:
+    """Sem DualSense, a peça da casa está no processo e o GameInputCreate devolve E_NOTIMPL."""
+    vistas: dict[str, dict[str, object]] = {}
+    for linha in linhas:
+        linha = linha.strip()
+        if not linha.startswith("{"):
+            continue
+        try:
+            obj = json.loads(linha)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(obj.get("prova"), str):
+            vistas[str(obj["prova"])] = obj
+    preload, qi = vistas.get("preload", {}), vistas.get("qi_v2", {})
+    return preload.get("ok") is True and qi.get("ok") is False and qi.get("hr") == E_NOTIMPL
 
 
 def _pedacos(dados: bytes, tamanho: int) -> list[bytes]:
@@ -212,9 +258,13 @@ def caminho_dos(p: Path) -> str:
     return "Z:" + str(p).replace("/", "\\")
 
 
-def rodar(wine: Path, prefixo: Path, trabalho: Path, saida: Path) -> tuple[list[str], bytes, bytes]:
+def rodar(
+    wine: Path, prefixo: Path, trabalho: Path, saida: Path, *, com_aparelhos: bool = True
+) -> tuple[list[str], bytes, bytes]:
     # O mesmo arranjo do install: a xgameruntime em <pasta>/x86_64-windows/, o gameinput em
-    # <pasta>/nativa/, o WINEDLLPATH na <pasta>.
+    # <pasta>/nativa/, o WINEDLLPATH na <pasta>. Sem aparelhos, o dublê aponta para um arquivo
+    # que não existe: a peça não lista nada, como numa máquina sem DualSense.
+    trabalho = trabalho / ("com" if com_aparelhos else "sem")
     pasta = trabalho / "wine"
     (pasta / "x86_64-windows").mkdir(parents=True)
     (pasta / "nativa").mkdir()
@@ -233,7 +283,10 @@ def rodar(wine: Path, prefixo: Path, trabalho: Path, saida: Path) -> tuple[list[
     env = ambiente_wine(prefixo)
     env["WINEDLLOVERRIDES"] = "xgameruntime=b;gameinput=n,b;mscoree,mshtml,winemenubuilder.exe="
     env["WINEDLLPATH"] = str(pasta)
-    env["HEFESTO_GAMEINPUT_DUBLE_DE_TESTE"] = f"{caminho_dos(usb)};{caminho_dos(bt)}"
+    env["HEFESTO_GAMEINPUT_DUBLE_DE_TESTE"] = (
+        f"{caminho_dos(usb)};{caminho_dos(bt)}" if com_aparelhos
+        else caminho_dos(aparelhos / "nenhum.usb")
+    )
     proc = subprocess.run([str(wine), "sonda-gameinput.exe"], cwd=jogo, env=env, check=False, timeout=180,
                           capture_output=True, text=True, errors="replace")
     subprocess.run([str(wine.with_name("wineserver")), "-w"], env=env, check=False, timeout=120)
@@ -259,6 +312,7 @@ def main(argv: list[str] | None = None) -> int:
         preparar_prefixo(args.wine, prefixo)
         saida = construir(trabalho, args.mordida, args.cc)
         linhas, usb, bt = rodar(args.wine, prefixo, trabalho, saida)
+        sem, _, _ = rodar(args.wine, prefixo, trabalho, saida, com_aparelhos=False)
     finally:
         if args.manter:
             print(f"pasta de trabalho: {trabalho}")
@@ -272,7 +326,9 @@ def main(argv: list[str] | None = None) -> int:
     if bt:
         print(f"rádio, o primeiro report: {bt[:8].hex(' ')}")
 
-    veredito = {**julgar(linhas), **julgar_bytes(usb, bt)}
+    for linha in sem:
+        print(f"sem aparelho: {linha}")
+    veredito = {**julgar(linhas), **julgar_bytes(usb, bt), "sem_aparelho": julgar_sem_aparelho(sem)}
     for prova, ok in veredito.items():
         print(f"{'PASSA' if ok else 'REPROVA'}  {prova}")
     if args.mordida:
