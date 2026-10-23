@@ -2913,6 +2913,59 @@ static int known_and_qi(const GUID *id, const GUID *iid, void **out)
     return 1; /* not ours */
 }
 
+/* ---------- o GameInput da casa ---------- */
+
+/* O Proton procura a DLL na pasta dele antes do WINEDLLPATH, e o gameinput.dll dele é um stub
+ * que não lista aparelho nenhum: o jogo GDK não acha onde vibrar. A peça carrega o gameinput.dll
+ * do Hefesto pelo caminho inteiro (fora do DllMain), e o LoadLibrary("GameInput.dll") que o jogo
+ * faz depois recebe o módulo já carregado. A receita põe gameinput=n,b; sem a peça na pasta, ou
+ * com o Wine trazendo a embutida, nada muda: o jogo fica com o GameInput do Proton. */
+typedef WCHAR *(CDECL *wine_get_dos_file_name_t)(const char *);
+
+static void preload_gameinput(void)
+{
+    char lista[4096], unix_path[1200], *p, *fim;
+    wine_get_dos_file_name_t dos_de;
+    DWORD n = GetEnvironmentVariableA("WINEDLLPATH", lista, sizeof(lista));
+    if (!n || n >= sizeof(lista)) {
+        xlog("gameinput: sem WINEDLLPATH, o jogo fica com o GameInput do Proton");
+        return;
+    }
+    dos_de = (wine_get_dos_file_name_t)(void *)GetProcAddress(GetModuleHandleA("kernel32.dll"),
+                                                               "wine_get_dos_file_name");
+    if (!dos_de) {
+        xlog("gameinput: sem wine_get_dos_file_name, o jogo fica com o GameInput do Proton");
+        return;
+    }
+    for (p = lista; p && *p; p = fim) {
+        WCHAR *dos;
+        fim = strpbrk(p, ":;");
+        if (fim) *fim++ = 0;
+        if (!*p) continue;
+        snprintf(unix_path, sizeof(unix_path), "%s/nativa/gameinput.dll", p);
+        dos = dos_de(unix_path);
+        if (!dos) continue;
+        if (GetFileAttributesW(dos) != INVALID_FILE_ATTRIBUTES) {
+            HMODULE h = LoadLibraryW(dos);
+            if (h && GetProcAddress(h, "HefestoPecaGameInput")) {
+                xlog("gameinput: a peça da casa carregada de %s", unix_path);
+                HeapFree(GetProcessHeap(), 0, dos);
+                return;
+            }
+            if (h) {
+                FreeLibrary(h);
+                xlog("gameinput: o Wine trouxe a embutida no lugar de %s (falta gameinput=n,b)", unix_path);
+            } else {
+                xlog("gameinput: LoadLibrary de %s falhou (%lu)", unix_path, (unsigned long)GetLastError());
+            }
+            HeapFree(GetProcessHeap(), 0, dos);
+            return;
+        }
+        HeapFree(GetProcessHeap(), 0, dos);
+    }
+    xlog("gameinput: a peça não está no WINEDLLPATH, o jogo fica com o GameInput do Proton");
+}
+
 /* ---------- exports ---------- */
 
 __declspec(dllexport) HRESULT WINAPI InitializeApiImplEx2(UINT64 gdk, UINT64 gs, UINT32 mode, const void *options)
@@ -2926,6 +2979,7 @@ __declspec(dllexport) HRESULT WINAPI InitializeApiImplEx2(UINT64 gdk, UINT64 gs,
         GetModuleFileNameA(NULL, exe, sizeof(exe));
         xlog("init gdk=%llx gs=%llx mode=%lu exe=%s",
              (unsigned long long)gdk, (unsigned long long)gs, (unsigned long)mode, exe);
+        preload_gameinput();
     }
     (void)options;
     return S_OK;

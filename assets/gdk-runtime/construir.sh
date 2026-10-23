@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-# A peça GDK do Hefesto e a sonda dela, compiladas de forma reprodutível.
+# A peça GDK do Hefesto, o GameInput da casa e as sondas deles, compilados de forma reprodutível.
 #
-#   construir.sh <saída>             compila xgameruntime.dll e sonda-gdk.exe em <saída>,
-#                                    marca a DLL como builtin do Wine e imprime o sha256 de cada um
+#   construir.sh <saída>             compila xgameruntime.dll, gameinput.dll, sonda-gdk.exe e
+#                                    sonda-gameinput.exe em <saída>, marca a xgameruntime como
+#                                    builtin do Wine e imprime o sha256 de cada um
 #   construir.sh <saída> --conferir  idem, e reprova se o sha256 não bate com o pino.txt
 #   construir.sh --marcar <dll>      só escreve a marca builtin numa DLL já compilada
 #
 # O Wine só carrega como builtin (o `xgameruntime=b` da receita) o PE que traz
 # «Wine builtin DLL\0» no offset 0x40 (medido no GE-Proton11-7). A marca se escreve aqui,
-# sem winebuild, para o CI e a máquina de quem usa saírem com o mesmo binário.
+# sem winebuild, para o CI e a máquina de quem usa saírem com o mesmo binário. O gameinput.dll
+# não leva marca: ele entra como nativa (gameinput=n,b), carregado pelo caminho inteiro.
 # O compilador é o x86_64-w64-mingw32-gcc-posix do Ubuntu 24.04 (o CI usa o mesmo).
 set -euo pipefail
 
@@ -46,16 +48,22 @@ mkdir -p "$saida"
 flags=(-O2 -s -Wall "-Wl,--no-insert-timestamp" "-Wl,--disable-auto-image-base" "-ffile-prefix-map=$aqui=." -fno-ident)
 ( cd "$aqui" && "$CC" -shared "${flags[@]}" -o "$saida/xgameruntime.dll" xgameruntime.c )
 ( cd "$aqui" && "$CC" "${flags[@]}" -o "$saida/sonda-gdk.exe" sonda-gdk.c )
+( cd "$aqui" && "$CC" -shared "${flags[@]}" -o "$saida/gameinput.dll" gameinput.c -lhid -lsetupapi )
+( cd "$aqui" && "$CC" "${flags[@]}" -o "$saida/sonda-gameinput.exe" sonda-gameinput.c )
 marcar "$saida/xgameruntime.dll"
 
 dll_sha="$(sha "$saida/xgameruntime.dll")"
 sonda_sha="$(sha "$saida/sonda-gdk.exe")"
+gi_sha="$(sha "$saida/gameinput.dll")"
 echo "xgameruntime.dll sha256=$dll_sha"
 echo "sonda-gdk.exe sha256=$sonda_sha"
+echo "gameinput.dll sha256=$gi_sha"
+echo "sonda-gameinput.exe sha256=$(sha "$saida/sonda-gameinput.exe")"
 
 if [ "$conferir" = "--conferir" ]; then
     falhou=0
     [ "$dll_sha" = "$(pino sha256)" ] || { echo "construir: a DLL não bate com o pino ($(pino sha256))" >&2; falhou=1; }
     [ "$sonda_sha" = "$(pino sonda_sha256)" ] || { echo "construir: a sonda não bate com o pino ($(pino sonda_sha256))" >&2; falhou=1; }
+    [ "$gi_sha" = "$(pino gameinput_sha256)" ] || { echo "construir: o gameinput.dll não bate com o pino ($(pino gameinput_sha256))" >&2; falhou=1; }
     exit "$falhou"
 fi

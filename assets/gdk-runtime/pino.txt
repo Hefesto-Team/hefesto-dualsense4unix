@@ -1,15 +1,18 @@
-# hefesto-dualsense4unix — o pino da peça GDK (xgameruntime.dll) e da sonda dela.
+# hefesto-dualsense4unix — o pino da peça GDK (xgameruntime.dll), da sonda dela e do
+# GameInput da casa (gameinput.dll).
 #
-# A fonte é assets/gdk-runtime/xgameruntime.c; o construir.sh a compila de forma
+# As fontes são assets/gdk-runtime/xgameruntime.c e gameinput.c; o construir.sh as compila de forma
 # reprodutível (x86_64-w64-mingw32-gcc-posix do Ubuntu 24.04) e escreve a marca
-# builtin do Wine. O job «peca-gdk» do release reprova se o binário não bate com
-# este sha256 e publica os dois arquivos no release da versão. O install.sh só
-# põe na máquina uma DLL cujo sha256 é este: baixada pela url ({versao} vira a
+# builtin do Wine na xgameruntime. O job «peca-gdk» do release reprova se um binário não bate
+# com o sha256 dele e publica os três arquivos no release da versão. O install.sh só
+# põe na máquina uma DLL cujo sha256 é o daqui: baixada pela url ({versao} vira a
 # versão do pyproject) ou compilada ali mesmo, se o compilador estiver no PATH.
-# Mudou o fonte? Rode o construir.sh e grave os dois sha256 aqui no mesmo commit.
+# Mudou um fonte? Rode o construir.sh e grave os sha256 aqui no mesmo commit.
 name=peca-gdk-1
 url=https://github.com/Hefesto-Team/hefesto-dualsense4unix/releases/download/v{versao}/xgameruntime.dll
-sha256=f95fab0d8bd2b8b3ab5fcce5a7c242458e73c7d4b80f21c6c46547a442258d85
+sha256=9b11967ae3e522ea3da942aa0853eac405c8ad806efe752124a7a05f03365f96
 sonda_url=https://github.com/Hefesto-Team/hefesto-dualsense4unix/releases/download/v{versao}/sonda-gdk.exe
 sonda_sha256=728d4f23359af74d820acb0dbde03f2c4f1e4913400ea144e1873a9a7ccde724
+gameinput_url=https://github.com/Hefesto-Team/hefesto-dualsense4unix/releases/download/v{versao}/gameinput.dll
+gameinput_sha256=0b97fcf602ef9d3b7b8f88ff8278690d7b0d56bf0069153091e99c51c9627a53
 compilar=bash assets/gdk-runtime/construir.sh <saída> --conferir
