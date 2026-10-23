@@ -1112,8 +1112,10 @@ CAMPO_DA_RAZAO_DO_ATIVAR = "perfis.ativar-razao"
 #: A recusa do último Ativar com o serviço parado; some quando o serviço volta a responder.
 _RECUSA_DO_ATIVAR: list[str] = [""]
 SERVICO_NAO_SUBIU = "O serviço não subiu"
-SERVICO_NAO_RESPONDEU = ("O serviço não respondeu depois de ligado. Ligue-o na aba Sistema e "
-                         "clique de novo")
+SERVICO_NAO_RESPONDEU = ("O serviço subiu e não respondeu à troca. Veja a aba Sistema e clique "
+                         "de novo")
+SERVICO_NAO_LIGOU = ("O serviço está parado e não liguei: ele não está instalado, ou um Hefesto "
+                     "roda por fora. Veja a aba Sistema")
 
 
 def _servico_responde(ctx: Contexto) -> bool:
@@ -1139,8 +1141,11 @@ def _recusar_o_ativar(frase: str) -> RuntimeError:
     return RuntimeError(frase)
 
 
-def _religar_o_servico() -> None:
-    """Liga o serviço parado antes da troca: um clique religa e troca, mesmo depois do Parar."""
+def _religar_o_servico() -> bool:
+    """Liga o serviço parado antes da troca (um clique religa e troca, mesmo depois do Parar).
+
+    Diz se ele subiu: sem unit, de pé ou com um avulso vivo o dono (`ativar_o_servico`) não liga.
+    """
     from hefesto_dualsense4unix.app.actions import atos_da_bandeja
 
     from . import a09_sistema
@@ -1151,6 +1156,7 @@ def _religar_o_servico() -> None:
         raise _recusar_o_ativar(f"{SERVICO_NAO_SUBIU}: {erro}") from erro
     if subiu:
         atos_da_bandeja.garantir_a_bandeja()
+    return subiu
 
 
 def _ativar_o(nome: str, p: Any, ctx: Contexto) -> dict[str, Any]:
@@ -1161,13 +1167,12 @@ def _ativar_o(nome: str, p: Any, ctx: Contexto) -> dict[str, Any]:
     gesto diz. A frase é do produto (`mensagem_de_ativacao`), com a carona do `launch_env.refresh`.
     """
     parado = not _servico_responde(ctx)
-    if parado:
-        _religar_o_servico()
+    subiu = _religar_o_servico() if parado else False
     try:
         corpo = p.resultado("profile.switch", name=nome)
     except RuntimeError as erro:
         if parado:
-            raise _recusar_o_ativar(SERVICO_NAO_RESPONDEU) from erro
+            raise _recusar_o_ativar(SERVICO_NAO_RESPONDEU if subiu else SERVICO_NAO_LIGOU) from erro
         raise RuntimeError(
             f"o Hefesto não confirmou a troca para {nome!r}") from erro
     _RECUSA_DO_ATIVAR[0] = ""

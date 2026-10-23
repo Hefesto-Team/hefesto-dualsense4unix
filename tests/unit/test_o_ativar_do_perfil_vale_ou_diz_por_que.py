@@ -148,6 +148,16 @@ def test_o_servico_que_sobe_e_cala_diz_por_que(
     assert razao == a10_perfis.SERVICO_NAO_RESPONDEU
 
 
+def test_o_servico_que_nao_liga_diz_por_que(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Sem unit (ou com um avulso vivo) o dono não liga, e a frase diz isso, não «subiu e calou»."""
+    monkeypatch.setattr(a09_sistema, "ativar_o_servico", lambda: False)
+    a10_perfis._ESCOLHIDO = "Ação"
+    with pytest.raises(RuntimeError, match=a10_perfis.SERVICO_NAO_LIGOU):
+        a10_perfis.ativar(_ctx(PARADO), {"texto": "Ativar"}, PonteDeMentira(cala=True))
+    razao = a10_perfis.pacote(_ctx(PARADO))[a10_perfis.CAMPO_DA_RAZAO_DO_ATIVAR]
+    assert razao == a10_perfis.SERVICO_NAO_LIGOU
+
+
 def _acesos(state: dict[str, Any]) -> int:
     pacote = a10_perfis.pacote(_ctx(state))
     assert "blocos" in pacote, pacote
