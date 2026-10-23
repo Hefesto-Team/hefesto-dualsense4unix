@@ -19,19 +19,25 @@
 #             uma DLL que o jogo já traz, e não há o que pôr ao lado do executável).
 #             `@hefesto` é a peça GDK do Hefesto, que o install põe em
 #             `~/.local/share/hefesto-dualsense4unix/wine/x86_64-windows/` e que só conta
-#             com o sha256 do `assets/gdk-runtime/pino.txt`
+#             com o sha256 do `assets/gdk-runtime/pino.txt`. `@hefesto-gameinput` é o GameInput
+#             do Hefesto, em `…/wine/nativa/gameinput.dll`: conta só com a peça GDK e o
+#             `gameinput_sha256` do pino, e sem ele o jogo abre como abria (sem vibrar, sem falta)
 #
-# As duas primeiras linhas são a família GDK (jogos do Xbox no PC, runtime `xgameruntime`):
+# As três primeiras linhas são a família GDK (jogos do Xbox no PC, runtime `xgameruntime`):
 # o Proton não traz essa DLL, e o jogo recebe a peça do Hefesto (fonte em `assets/gdk-runtime/`)
 # como embutida pelo par `xgameruntime=b` + `WINEDLLPATH`. O par vai inteiro ou nada: o `=b`
 # sem a pasta deixaria o Wine sem DLL nenhuma. A DLL que o usuário pôs ao lado do executável
-# não se toca e não carrega.
+# não se toca e não carrega. A terceira é o GameInput do Hefesto: o Proton acha o stub dele antes
+# do WINEDLLPATH, então a peça GDK carrega o `gameinput.dll` pelo caminho inteiro, e o `n,b` deixa
+# o Wine aceitar a nativa assim carregada. É o caminho da vibração do jogo GDK que a pede só pelo
+# GameInput (o Wwise Motion do Minecraft Dungeons II).
 #
-# A segunda é o kit da Lovense por Bluetooth direto (`LovenseWinrtBleDll.dll`, o kit para Unity):
+# A última é o kit da Lovense por Bluetooth direto (`LovenseWinrtBleDll.dll`, o kit para Unity):
 # o WinRT de Bluetooth do Wine é parcial, e a exceção C++ da DLL derruba o jogo. Desligada, o
 # P/Invoke vira `DllNotFoundException` gerenciada, que a Unity registra e segue; o brinquedo vai
 # pelo Game Mode que o mesmo kit traz.
 id,sinais,variavel,valor,peca
 gdk-xgameruntime,MicrosoftGame.config|installscript-gamingrepair.vdf,WINEDLLOVERRIDES,xgameruntime=b,@hefesto
 gdk-xgameruntime-pasta,MicrosoftGame.config|installscript-gamingrepair.vdf,WINEDLLPATH,@hefesto-wine,@hefesto
+gdk-gameinput,MicrosoftGame.config|installscript-gamingrepair.vdf,WINEDLLOVERRIDES,"gameinput=n,b",@hefesto-gameinput
 lovense-ble-winrt,*_Data/Plugins/x86_64/LovenseWinrtBleDll.dll,WINEDLLOVERRIDES,LovenseWinrtBleDll=d,@sinal

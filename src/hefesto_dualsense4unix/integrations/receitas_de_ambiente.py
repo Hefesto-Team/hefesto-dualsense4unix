@@ -1,13 +1,12 @@
 """As receitas de ambiente por sinal: o jogo que só abre com uma variável a recebe pelo wrapper.
 
 A tabela `docs/data/receitas-de-ambiente.csv` diz, por sinal no disco do jogo, qual variável vale
-e que peça ela exige. Três regras que ela não quebra: sem appid embarcado (o jogo se reconhece
-pelo que traz na pasta); só com a peça no lugar (sem ela o override quebraria o jogo, e o
-prontuário diz «falta a peça»); só o que o wrapper aceita (letra morta calada não entra). O sinal
-pode ser um caminho com curinga (`*_Data/Plugins/x86_64/X.dll`). A peça é um arquivo ao lado do
-executável, o próprio sinal (`@sinal`, o caso de desligar uma DLL do jogo) ou a peça do Hefesto
-(`@hefesto`, a `xgameruntime.dll` que o install põe na pasta da peça e que só conta se o sha256
-bate com o `assets/gdk-runtime/pino.txt`). 100% stdlib, como o prontuário.
+e que peça ela exige: sem appid embarcado, só com a peça no lugar (sem ela o prontuário diz «falta a
+peça») e só o que o wrapper aceita. O sinal pode ter curinga (`*_Data/Plugins/x86_64/X.dll`). A peça
+é um arquivo ao lado do executável, o próprio sinal (`@sinal`), a peça do Hefesto (`@hefesto`, a
+`xgameruntime.dll` no sha256 do `assets/gdk-runtime/pino.txt`) ou o GameInput do Hefesto
+(`@hefesto-gameinput`, complemento da peça GDK: conta só com as duas DLLs no sha do pino, e sem
+ele o jogo abre como abria, sem falta no prontuário). 100% stdlib, como o prontuário.
 """
 from __future__ import annotations
 
@@ -42,6 +41,9 @@ PECA_E_O_SINAL = "@sinal"
 
 #: A peça GDK do Hefesto, na pasta que o install escreve; conta só com o sha256 do pino.
 PECA_DO_HEFESTO = "@hefesto"
+
+#: O GameInput do Hefesto: o `gameinput.dll` que a peça GDK carrega pelo caminho inteiro.
+PECA_GAMEINPUT_DO_HEFESTO = "@hefesto-gameinput"
 
 #: O único `WINEDLLPATH` que a tabela escreve: o wrapper o troca pela pasta da peça.
 PASTA_DA_PECA = "@hefesto-wine"
@@ -82,14 +84,14 @@ def caminho_do_ajudante_de_login(home: Path | None = None) -> Path:
     return base.joinpath(*PASTA_DO_AJUDANTE, NOME_DO_AJUDANTE)
 
 
-def _sha256_do_pino(pino: Path | None = None) -> str | None:
+def _sha256_do_pino(pino: Path | None = None, chave: str = "sha256") -> str | None:
     try:
         texto = (pino if pino is not None else PINO_DA_PECA).read_text(encoding="utf-8")
     except OSError:
         texto = ""  # sem pino, nenhuma peça bate: o jogo GDK abre como sempre abriu
     for linha in texto.splitlines():
-        chave, igual, valor = linha.partition("=")
-        if igual and chave.strip() == "sha256" and re.fullmatch(r"[0-9a-f]{64}", valor.strip()):
+        nome, igual, valor = linha.partition("=")
+        if igual and nome.strip() == chave and re.fullmatch(r"[0-9a-f]{64}", valor.strip()):
             return valor.strip()
     return None
 
@@ -100,6 +102,19 @@ def peca_do_hefesto_instalada(home: Path | None = None, pino: Path | None = None
     if esperado is None:
         return False
     dll = pasta_da_peca(home) / "x86_64-windows" / "xgameruntime.dll"
+    try:
+        return hashlib.sha256(dll.read_bytes()).hexdigest() == esperado
+    except OSError:
+        return False
+
+
+def gameinput_do_hefesto_instalado(home: Path | None = None, pino: Path | None = None) -> bool:
+    """O `gameinput.dll` da pasta da peça (`nativa/`) existe e o sha256 dele é o `gameinput_sha256`
+    do pino."""
+    esperado = _sha256_do_pino(pino, "gameinput_sha256")
+    if esperado is None:
+        return False
+    dll = pasta_da_peca(home) / "nativa" / "gameinput.dll"
     try:
         return hashlib.sha256(dll.read_bytes()).hexdigest() == esperado
     except OSError:
@@ -249,6 +264,7 @@ def ler_jogo(
     achadas: list[Leitura] = []
     nomes: frozenset[str] | None = None
     instalada: bool | None = None
+    gameinput: bool | None = None
     for receita in receitas:
         achado = next(
             ((s, p) for s in receita.sinais if (p := achar_sinal(raiz, s)) is not None), None
@@ -263,6 +279,15 @@ def ler_jogo(
             if instalada is None:
                 instalada = peca_do_hefesto_instalada(home)
             achadas.append(Leitura(receita, sinal, instalada))
+            continue
+        if receita.peca == PECA_GAMEINPUT_DO_HEFESTO:
+            # O GameInput só vale com a peça GDK que o carrega: sem ela, o `gameinput.dll` da
+            # pasta da peça nunca entra no processo.
+            if instalada is None:
+                instalada = peca_do_hefesto_instalada(home)
+            if gameinput is None:
+                gameinput = instalada and gameinput_do_hefesto_instalado(home)
+            achadas.append(Leitura(receita, sinal, gameinput))
             continue
         if nomes is None:
             nomes = _nomes_ao_lado_do_executavel(raiz)
@@ -288,10 +313,11 @@ def pecas_que_faltam(
     raiz: Path | None, tabela: Iterable[Receita] | None = None, home: Path | None = None
 ) -> tuple[str, ...]:
     """Os nomes das peças que o sinal pede e o disco não tem, sem repetir (o par da peça do
-    Hefesto são duas linhas e uma peça só)."""
+    Hefesto são duas linhas e uma peça só). O GameInput do Hefesto não entra: sem ele o jogo abre
+    como abria, só sem vibrar."""
     faltam: list[str] = []
     for leitura in ler_jogo(raiz, tabela, home):
-        if leitura.peca_presente is not False:
+        if leitura.peca_presente is not False or leitura.receita.peca == PECA_GAMEINPUT_DO_HEFESTO:
             continue
         peca = leitura.receita.peca
         nome = NOME_DA_PECA_DO_HEFESTO if peca == PECA_DO_HEFESTO else peca
@@ -341,6 +367,7 @@ __all__ = [
     "PASTA_DO_AJUDANTE",
     "PECA_DO_HEFESTO",
     "PECA_E_O_SINAL",
+    "PECA_GAMEINPUT_DO_HEFESTO",
     "PINO_DA_PECA",
     "TABELA",
     "VARIAVEIS_DO_WRAPPER",
@@ -352,6 +379,7 @@ __all__ = [
     "arquivos_do_sinal",
     "caminho_do_ajudante_de_login",
     "carregar_tabela",
+    "gameinput_do_hefesto_instalado",
     "jogo_gdk_sem_ajudante",
     "ler_jogo",
     "override_valido",

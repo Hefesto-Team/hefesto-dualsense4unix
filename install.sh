@@ -4028,39 +4028,54 @@ fi
 # da versão ou, se o download falha, compilada aqui (construir.sh) quando o
 # x86_64-w64-mingw32-gcc-posix está no PATH. Sem nenhuma das duas, o jogo GDK
 # abre como sempre abriu, e o prontuário diz que a peça falta.
+# O GameInput do Hefesto (O-JOGO-GDK-VIBRA-PELO-GAMEINPUT-01) vai pelo mesmo
+# caminho, em `nativa/`: a peça GDK o carrega pelo caminho inteiro (`gameinput=n,b`).
+# Sem ele, o jogo GDK abre como abria, só sem vibrar pelo GameInput.
 readonly PECA_GDK_PINO="${ROOT_DIR}/assets/gdk-runtime/pino.txt"
 readonly PECA_GDK_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/wine/x86_64-windows/xgameruntime.dll"
+readonly PECA_GAMEINPUT_TARGET="${HOME}/.local/share/hefesto-dualsense4unix/wine/nativa/gameinput.dll"
 _peca_gdk_pino() { sed -n "s/^$1=//p" "${PECA_GDK_PINO}" | head -n 1; }
 _peca_gdk_sha() { sha256sum "$1" 2>/dev/null | cut -d' ' -f1; }
-if [[ "${DRY_RUN:-0}" -eq 1 && -f "${PECA_GDK_PINO}" ]]; then
-    _faria "pôr a peça GDK em ${PECA_GDK_TARGET} (baixada pelo pino ou compilada aqui, se o sha256 bater)"
-elif [[ -f "${PECA_GDK_PINO}" ]]; then
-    _peca_sha_pino="$(_peca_gdk_pino sha256)"
-    if [[ -f "${PECA_GDK_TARGET}" && "$(_peca_gdk_sha "${PECA_GDK_TARGET}")" == "${_peca_sha_pino}" ]]; then
-        printf '      a peça GDK já está instalada e bate com o pino\n'
-    else
-        _peca_versao="$(sed -n 's/^version *= *"\(.*\)"/\1/p' "${ROOT_DIR}/pyproject.toml" | head -n 1)"
-        _peca_url="$(_peca_gdk_pino url)"
-        _peca_url="${_peca_url//\{versao\}/${_peca_versao}}"
-        _peca_tmp="$(mktemp -d)"
-        _peca_ok=""
-        if command -v curl >/dev/null 2>&1 \
-           && curl -fsSL --max-time 60 -o "${_peca_tmp}/xgameruntime.dll" "${_peca_url}" 2>/dev/null \
-           && [[ "$(_peca_gdk_sha "${_peca_tmp}/xgameruntime.dll")" == "${_peca_sha_pino}" ]]; then
-            _peca_ok="${_peca_tmp}/xgameruntime.dll"
-        elif command -v x86_64-w64-mingw32-gcc-posix >/dev/null 2>&1 \
-           && bash "${ROOT_DIR}/assets/gdk-runtime/construir.sh" "${_peca_tmp}/construida" >/dev/null 2>&1 \
-           && [[ "$(_peca_gdk_sha "${_peca_tmp}/construida/xgameruntime.dll")" == "${_peca_sha_pino}" ]]; then
-            _peca_ok="${_peca_tmp}/construida/xgameruntime.dll"
-        fi
-        if [[ -n "${_peca_ok}" ]]; then
-            install -Dm644 "${_peca_ok}" "${PECA_GDK_TARGET}"
-            ok
-        else
-            warn "a peça GDK não entrou: o download (${_peca_url}) e a compilação local não deram o sha256 do pino — os jogos GDK abrem sem ela"
-        fi
-        rm -rf "${_peca_tmp}"
+# _peca_gdk_instalar <nome> <chave do sha256> <chave da url> <arquivo> <destino>
+_peca_gdk_instalar() {
+    local nome="$1" chave_sha="$2" chave_url="$3" arquivo="$4" alvo="$5"
+    local _peca_sha_pino _peca_versao _peca_url _peca_tmp _peca_ok
+    _peca_sha_pino="$(_peca_gdk_pino "${chave_sha}")"
+    if [[ -z "${_peca_sha_pino}" ]]; then
+        warn "o pino não traz ${chave_sha} — ${nome} ficou de fora"
+        return 0
     fi
+    if [[ -f "${alvo}" && "$(_peca_gdk_sha "${alvo}")" == "${_peca_sha_pino}" ]]; then
+        printf '      %s: já no lugar, e bate com o pino\n' "${nome}"
+        return 0
+    fi
+    _peca_versao="$(sed -n 's/^version *= *"\(.*\)"/\1/p' "${ROOT_DIR}/pyproject.toml" | head -n 1)"
+    _peca_url="$(_peca_gdk_pino "${chave_url}")"
+    _peca_url="${_peca_url//\{versao\}/${_peca_versao}}"
+    _peca_tmp="$(mktemp -d)"
+    _peca_ok=""
+    if command -v curl >/dev/null 2>&1 \
+       && curl -fsSL --max-time 60 -o "${_peca_tmp}/${arquivo}" "${_peca_url}" 2>/dev/null \
+       && [[ "$(_peca_gdk_sha "${_peca_tmp}/${arquivo}")" == "${_peca_sha_pino}" ]]; then
+        _peca_ok="${_peca_tmp}/${arquivo}"
+    elif command -v x86_64-w64-mingw32-gcc-posix >/dev/null 2>&1 \
+       && bash "${ROOT_DIR}/assets/gdk-runtime/construir.sh" "${_peca_tmp}/construida" >/dev/null 2>&1 \
+       && [[ "$(_peca_gdk_sha "${_peca_tmp}/construida/${arquivo}")" == "${_peca_sha_pino}" ]]; then
+        _peca_ok="${_peca_tmp}/construida/${arquivo}"
+    fi
+    if [[ -n "${_peca_ok}" ]]; then
+        install -Dm644 "${_peca_ok}" "${alvo}"
+        ok
+    else
+        warn "${nome} ficou de fora: o download (${_peca_url}) e a compilação local não deram o sha256 do pino — os jogos GDK abrem sem isso"
+    fi
+    rm -rf "${_peca_tmp}"
+}
+if [[ "${DRY_RUN:-0}" -eq 1 && -f "${PECA_GDK_PINO}" ]]; then
+    _faria "pôr a peça GDK em ${PECA_GDK_TARGET} e o GameInput em ${PECA_GAMEINPUT_TARGET} (baixados pelo pino ou compilados aqui, se o sha256 bater)"
+elif [[ -f "${PECA_GDK_PINO}" ]]; then
+    _peca_gdk_instalar "a peça GDK" sha256 url xgameruntime.dll "${PECA_GDK_TARGET}"
+    _peca_gdk_instalar "o GameInput do Hefesto" gameinput_sha256 gameinput_url gameinput.dll "${PECA_GAMEINPUT_TARGET}"
 else
     warn "assets/gdk-runtime/pino.txt ausente — a peça GDK não foi instalada"
 fi
