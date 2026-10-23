@@ -54,12 +54,19 @@
     border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-suave);font-size:12px}
   .voltar2:hover{border-color:var(--purple);color:var(--fg)}
   .mc-topo > .mc-rot{margin-left:auto}
+  /* O nome do controle corta com reticências, com o nome inteiro na dica (`base-comum.js`), quando a barra dos
+     chips não cabe. */
   .mc-chips{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}
   .chip{height:30px;padding:0 12px;border-radius:7px;border:2px solid var(--plastico,var(--border-forte));
-    background:var(--app-bg);color:var(--texto-suave);font:12px var(--f);cursor:pointer;white-space:nowrap;text-align:center}
+    background:var(--app-bg);color:var(--texto-suave);font:12px var(--f);cursor:pointer;white-space:nowrap;text-align:center;
+    overflow:hidden;text-overflow:ellipsis}
   .chip.on{background:rgba(189,147,249,.16);color:var(--fg);font-weight:600}
   .chip .pt{color:var(--fg);margin:0 2px}
-  @media (max-width:1000px){.mc-chips{gap:5px}.chip{padding:0 7px}}
+  /* Abaixo de 1000 px o título fica em duas linhas, de largura fixa, e os chips tomam o resto da barra: cada
+     coluna segue o texto do seu chip (`auto`) e cresce com a folga. Sem a folga, o texto cabia no chip por
+     centésimos de pixel, e a reticência cortava o nome de exemplo à toa; com ela, só o nome comprido corta. */
+  @media (max-width:1000px){.mc-chips{flex:1 1 auto;gap:5px;grid-auto-columns:auto}.chip{padding:0 7px}
+    .mc-topo h1{flex:none;width:6em}}
   .mc-perfil{display:grid;grid-template-columns:292px minmax(0,1fr) 292px;gap:20px;align-items:center;
     padding:12px 20px;border-bottom:1px solid var(--border-sutil);flex:none}
   .mc-perfil .cel{display:flex;align-items:center;gap:12px;min-width:0}
@@ -78,6 +85,10 @@
   .cx > .corpo{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column}
   .mapa.mc-mapa{flex:1 0 auto;display:grid;grid-template-columns:292px minmax(0,1fr) 292px;gap:20px;
     padding:14px 20px;align-items:stretch;align-content:center}
+  /* Abaixo de 1000 px as duas colunas laterais (292) deixariam ao centro 162 px na vista de 860: o Toque, o Meio
+     e o PS cruzavam a coluna da direita. A 252 px a ação mais longa do exemplo («Movimento do cursor») ainda cabe
+     na linha do lado, e o centro fica com 260 px, com as linhas dele uma embaixo da outra (regra mais abaixo). */
+  @media (max-width:1000px){.mc-perfil,.mapa.mc-mapa{grid-template-columns:252px minmax(0,1fr) 252px;gap:12px}}
   .mc-lado{display:flex;flex-direction:column;gap:7px;justify-content:space-between}
   .b2{display:grid;grid-template-columns:24px 74px minmax(0,1fr);align-items:center;gap:8px;height:37px;padding:0 10px;
     border-radius:8px;border:1px solid var(--border-sutil);background:var(--panel);color:var(--fg);font:12px var(--f);
@@ -86,7 +97,7 @@
   .b2-gl{display:flex;align-items:center;justify-content:center;color:var(--texto-suave)}
   .b2-gl svg{width:18px;height:18px}
   .b2-nm{font-size:11.5px;color:var(--texto-suave);white-space:nowrap}
-  .b2-val{height:25px;display:flex;align-items:center;padding:0 9px;border-radius:6px;background:var(--app-bg);
+  .b2-val{height:25px;line-height:25px;padding:0 9px;border-radius:6px;background:var(--app-bg);
     color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11.5px}
   .b2[data-estado~="muda"]{border-left:1px solid var(--tipo);box-shadow:inset 2px 0 0 var(--tipo)}
   .b2[data-estado~="muda"] .b2-val{color:var(--fg);box-shadow:inset 0 0 0 1px var(--tipo)}
@@ -99,6 +110,11 @@
   .mc-baixo{display:grid;grid-template-columns:1fr 1fr;gap:7px 12px}
   .mc-baixo .b2{grid-template-columns:24px 58px minmax(0,1fr);gap:8px}
   .mc-baixo .b2:last-child{grid-column:1 / -1;justify-self:center;width:calc(50% - 6px)}
+  /* Abaixo de 1000 px a linha aperta o nome (60 px cabem «R3 direção») e o centro empilha as cinco linhas: em
+     duas colunas de 124 px a ação não cabia. */
+  @media (max-width:1000px){.b2,.mc-baixo .b2{grid-template-columns:24px 60px minmax(0,1fr);gap:6px;padding:0 8px}
+    .mc-baixo{grid-template-columns:minmax(0,1fr)}
+    .mc-baixo .b2:last-child{grid-column:auto;justify-self:stretch;width:auto}}
   .sel2{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);z-index:5;background:var(--panel);
     border:1px solid var(--pink);border-radius:11px;box-shadow:0 18px 50px rgba(0,0,0,.55);
     display:flex;flex-direction:column;padding:14px 16px;gap:12px}

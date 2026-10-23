@@ -477,6 +477,7 @@ ACOES = r"""
 
 @pytest.mark.parametrize("vista", sorted(VISTAS_DO_MAPA))
 def test_a_acao_de_cada_linha_se_le_em_toda_janela(vista: str) -> None:
+    # D-2310-A-ACAO-DO-MAPA-SE-LE-INTEIRA-NA-VISTA-ESTREITA
     """O-CHIP-DO-MAPA-CABE-A-860-PX-01: dar o centro ao controle não pode tirar a ação das colunas
     dos lados. Com as laterais a 200 px, a 860 px dezessete ações saíam cortadas a seco."""
     linhas = list(_mede_na_vista(ACOES, *VISTAS_DO_MAPA[vista]))

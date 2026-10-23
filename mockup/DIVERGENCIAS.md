@@ -21,5 +21,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## mapa-do-controle.html
-- **23/10/2026** — o centro (Toque, Meio, PS) cabe entre as colunas laterais na vista de 860 px, a ação de cada linha se lê inteira (a que corta ganha reticências), e o nome comprido do chip corta com reticências (O-CHIP-DO-MAPA-CABE-A-860-PX-01). Até publicar, o produto continua com as colunas de 292 px, o chip sem corte e a ação cortada a seco.
+<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
