@@ -245,14 +245,14 @@
       "data": "2026-10-23",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1189925,
+      "piso": 1190741,
       "por_item": {
-        "docs": 120650,
+        "docs": 120657,
         "scripts": 120350,
-        "src": 318698,
-        "tests": 630227
+        "src": 318840,
+        "tests": 630894
       },
-      "razao": "tamanho: +574 linhas (1189351 -> 1189925), pagas por Origem: D-2310-DESLIGAR-COM-A-STEAM-ABERTA-RELIGA-O-DRIVER; registrado no fecho, topo b2c4e401837e",
+      "razao": "tamanho: +816 linhas (1189925 -> 1190741), pagas por Origem: D-2310-O-JOGO-SEGUINTE-VESTE-A-PROPRIA-ROUPA; registrado no fecho, topo cab2526cb650",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -805,10 +805,16 @@
           "de": 1189351,
           "para": 1189925,
           "razao": "tamanho: +574 linhas (1189351 -> 1189925), pagas por Origem: D-2310-DESLIGAR-COM-A-STEAM-ABERTA-RELIGA-O-DRIVER; registrado no fecho, topo b2c4e401837e"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 1189925,
+          "para": 1190741,
+          "razao": "tamanho: +816 linhas (1189925 -> 1190741), pagas por Origem: D-2310-O-JOGO-SEGUINTE-VESTE-A-PROPRIA-ROUPA; registrado no fecho, topo cab2526cb650"
         }
       ],
       "unidade": "linhas",
-      "universo": 3110
+      "universo": 3111
     }
   }
 }
