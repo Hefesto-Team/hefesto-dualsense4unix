@@ -384,6 +384,11 @@ class VoltaDosAcessorios:
         with self._trava:
             return frozenset(self._pulsos)
 
+    def segurando_as_luzinhas(self) -> frozenset[str]:
+        """Os controles cujas luzinhas o medidor mostra: o efeito com luzinhas fica só na barra."""
+        with self._trava:
+            return frozenset(self._medidores)
+
     def soltar_tudo(self, agora: float) -> None:
         """A modificação parou ou a conexão caiu: o pulso solta, o medidor volta, o toque zera."""
         with self._trava:

@@ -46,6 +46,7 @@ from hefesto_dualsense4unix.profiles.efeitos_de_luz import (
     cor_no_instante,
     estado_da_mao,
     frequencia_do_piscar_hz,
+    luzinhas_no_instante,
     periodo_do_arco_iris_s,
     periodo_do_respirar_s,
 )
@@ -255,12 +256,15 @@ class LuzAnimada:
         calados: frozenset[str] = frozenset(),
         pausados: frozenset[str] = frozenset(),
         velocidade_do_respirar: VelocidadeDoRespirar | None = None,
+        luzinhas_com_dono: frozenset[str] = frozenset(),
     ) -> int:
         """Escreve o quadro de cada controle que toca; devolve quantos quadros saíram.
 
         ``calados`` param e devolvem a barra; ``pausados`` só deixam de escrever (outro dono a
         segura por um instante) e, na volta, o primeiro quadro sai mesmo igual ao último.
         ``velocidade_do_respirar`` é a da intensidade da cena (``None``: o relógio de sempre).
+        ``luzinhas_com_dono`` são os controles cujas luzinhas outro dono mostra agora (o medidor
+        do gesto): o efeito segue só na barra e, na volta, o quadro leva as luzinhas de novo.
         """
         for uniq in [u for u in self._inicio if u not in plano or u in calados]:
             self.parar(uniq)
@@ -294,14 +298,19 @@ class LuzAnimada:
                 cor = cor_no_instante(
                     dele.efeito, tempo, dele.posicao, dele.semente, dele.amplitude
                 )
+                luzinhas = luzinhas_no_instante(dele.efeito, tempo)
             quadro = cor_com_o_brilho(cor, dele.brilho)
-            com_luzinhas = dele.efeito.base in BASES_COM_LUZINHAS
+            com_luzinhas = (dele.efeito.base in BASES_COM_LUZINHAS
+                            and uniq not in luzinhas_com_dono)
             chave: object = (quadro, luzinhas) if com_luzinhas else quadro
             self._escrito_em[uniq] = agora
             if self._ultimo_quadro.get(uniq) == chave:
                 continue
             self._ultimo_quadro[uniq] = chave
-            if self._escrever_quadro is not None and (com_luzinhas or uniq in self._luzinhas_fora):
+            if uniq in luzinhas_com_dono:
+                self._escrever(uniq, quadro)
+            elif self._escrever_quadro is not None and (
+                    com_luzinhas or uniq in self._luzinhas_fora):
                 self._escrever_quadro(uniq, quadro, luzinhas if com_luzinhas else None)
                 if com_luzinhas and luzinhas is not None:
                     self._luzinhas_fora.add(uniq)
@@ -596,7 +605,8 @@ class Passo:
         )
         return self.luz.tique(
             agora, plano, calados, self._quem_tem_outro_dono(),
-            velocidade_do_respirar=self._velocidade_do_respirar())
+            velocidade_do_respirar=self._velocidade_do_respirar(),
+            luzinhas_com_dono=self._quem_mostra_as_luzinhas())
 
     def _velocidade_do_respirar(self) -> VelocidadeDoRespirar | None:
         """A velocidade da luz que respira pela intensidade da cena do tato; ``None`` sem ele."""
@@ -711,6 +721,12 @@ class Passo:
     def _quem_tem_outro_dono(self) -> frozenset[str]:
         """As barras que outro dono pinta agora: o pulso do tiro e a subida da Chegada."""
         return self._o_pulso_do_tiro_segura() | segurando_a_luz(self.daemon)
+
+    def _quem_mostra_as_luzinhas(self) -> frozenset[str]:
+        """Os controles cujas luzinhas o medidor do gesto (a volta dos acessórios) mostra agora."""
+        volta = getattr(motor_do(self.daemon), "volta", None)
+        segurando = getattr(volta, "segurando_as_luzinhas", None)
+        return frozenset(segurando()) if callable(segurando) else frozenset()
 
     def _o_pulso_do_tiro_segura(self) -> frozenset[str]:
         """Os controles em que o pulso do tiro do tato vivo ainda está na barra."""

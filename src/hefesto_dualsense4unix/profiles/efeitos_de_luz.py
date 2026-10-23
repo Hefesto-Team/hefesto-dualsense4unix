@@ -45,6 +45,8 @@ LEDS_DA_ONDA = 5
 LED_DO_MEIO_DA_ONDA = LEDS_DA_ONDA // 2
 #: A meia-largura da crista, em LEDs: ela acende o LED que passa e esmaece nos vizinhos.
 MEIA_LARGURA_DA_ONDA = 1.5
+#: A luzinha do jogador é liga/desliga: acende quando a crista a leva acima do meio do passeio.
+LIMIAR_DA_LUZINHA_DA_ONDA = 0.5
 #: O fundo do Relâmpago: o clarão nunca vem do apagado (nem o vermelho alterna com o preto).
 PISO_DO_RELAMPAGO = 0.20
 #: O clarão sobe em cosseno e desce mais devagar; o eco vem logo depois, mais fraco. Duas subidas
@@ -85,7 +87,7 @@ BASES_DE_DADO_VIVO = frozenset(
     BASES_DA_MAO_DA_LUZ + BASES_DO_SOM_DA_LUZ
     + tuple(b for b in BASES_DE_AMBIENTE_DA_LUZ if b != "aurora"))
 #: Os efeitos que pintam também as luzinhas do jogador: o quadro leva barra e luzinhas juntas.
-BASES_COM_LUZINHAS = frozenset({"estrelas"})
+BASES_COM_LUZINHAS = frozenset({"estrelas", "onda"})
 #: A cor do símbolo apertado no «Reage ao botão» (△ verde, ○ vermelho, ✕ azul, □ rosa).
 COR_DO_TRIANGULO: RGB = (0, 255, 0)
 COR_DO_CIRCULO: RGB = (255, 0, 0)
@@ -234,6 +236,30 @@ def brilho_da_onda(t: float, periodo_s: float, led: int = LED_DO_MEIO_DA_ONDA) -
 def brilhos_da_onda(t: float, periodo_s: float) -> tuple[float, ...]:
     """O brilho de cada um dos cinco LEDs do jogador no instante ``t``, da esquerda à direita."""
     return tuple(brilho_da_onda(t, periodo_s, led) for led in range(LEDS_DA_ONDA))
+
+
+def luzinhas_da_onda(
+    t: float, periodo_s: float
+) -> tuple[bool, bool, bool, bool, bool] | None:
+    """As cinco luzinhas do jogador no instante ``t``: acesa a que a crista leva acima do limiar.
+
+    Entre uma passada e outra a crista está fora dos cinco LEDs e nenhuma acende: aí vale o número
+    do jogador (``None``), junto com a barra no piso. Cada luzinha acende no máximo duas vezes por
+    passada (a crista e a volta do número), e a passada mais curta é de 1,5 s.
+    """
+    corte = PISO_DA_ONDA + (1.0 - PISO_DA_ONDA) * LIMIAR_DA_LUZINHA_DA_ONDA
+    a, b, c, d, e = (brilho >= corte for brilho in brilhos_da_onda(t, periodo_s))
+    acesas = (a, b, c, d, e)
+    return acesas if any(acesas) else None
+
+
+def luzinhas_no_instante(
+    efeito: EfeitoDaLuz, t: float
+) -> tuple[bool, bool, bool, bool, bool] | None:
+    """As luzinhas de um efeito que é função só do tempo; ``None`` é o número do jogador."""
+    if efeito.base == "onda":
+        return luzinhas_da_onda(t, periodo_da_onda_s(efeito.ritmo))
+    return None
 
 
 def _clarao(x: float, subida_s: float, descida_s: float) -> float:
@@ -858,8 +884,8 @@ def cor_no_instante(
     quarto de volta por controle. ``semente`` é do controle: só a chama a usa. O respirar, o
     piscar, a batida, a onda e o relâmpago usam uma cor por ciclo, em ordem; a chama e a maré, a
     primeira cor; o arco-íris ignora as cores. ``amplitude`` (0 a 1) encurta os 30 graus da
-    Maré (ver :func:`amplitude_da_mare`). A onda, no daemon, é só da barra (o LED do meio);
-    ``brilhos_da_onda`` desenha os cinco LEDs do jogador para quando o quadro único os levar.
+    Maré (ver :func:`amplitude_da_mare`). Na onda a barra é o LED do meio; as cinco luzinhas do
+    jogador saem de :func:`luzinhas_no_instante`, no mesmo quadro.
     """
     if efeito.base == "arco-iris":  # (noqa-acento) chave ASCII
         r, g, b = colorsys.hsv_to_rgb(matiz_do_arco_iris(t, efeito.ritmo, posicao), 1.0, 1.0)
@@ -915,6 +941,7 @@ __all__ = [
     "ESTADOS_DE_CARGA_EM_DIA",
     "LEDS_DA_ONDA",
     "LED_DO_MEIO_DA_ONDA",
+    "LIMIAR_DA_LUZINHA_DA_ONDA",
     "LIMIAR_DE_BATERIA_PCT",
     "MEIO_VAIVEM_DO_ACENDE_S",
     "PISO_DA_BATIDA",
@@ -958,6 +985,8 @@ __all__ = [
     "deslocamento_da_mare",
     "estado_da_mao",
     "frequencia_do_piscar_hz",
+    "luzinhas_da_onda",
+    "luzinhas_no_instante",
     "matiz_da_carga",
     "matiz_do_arco_iris",
     "periodo_da_aurora_s",

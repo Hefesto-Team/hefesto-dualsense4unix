@@ -1344,7 +1344,7 @@ DICA_DA_BASE = {
     "mare": "Vai e volta para uma cor vizinha.",
     "piscar": "Lampejos da cor, de borda suave.",
     "arco-iris": "As cores giram em cada controle.",  # (noqa-acento) identificador ASCII
-    "onda": "Uma onda de luz passa pela barra.",
+    "onda": "Corre pelas luzinhas e pela barra.",
     "relampago": "Clarões curtos, de borda suave.",
     "reage-ao-botao": "A cor do botão que você aperta.",
     "inclinacao": "A cor muda ao inclinar o controle.",

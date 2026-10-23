@@ -6,10 +6,10 @@ da casa (WCAG 2.3.1): no máximo 3 subidas por segundo em qualquer ritmo, borda 
 brilho, e nunca o vermelho saturado alternando com o apagado. O pulso de batimento que ela citou já
 é a Batida e não se duplica.
 
-O desenho de cada LED do jogador existe (``brilhos_da_onda``), mas o daemon só leva a barra: um
-quadro com a barra e os LEDs juntos pede um escritor novo no backend (a barra sozinha é 1 report por
-quadro no rádio; a barra mais as luzinhas pelas duas pontas de hoje são 2). Por isso a prova de
-daemon aqui é a da barra, nos quatro controles.
+O desenho de cada LED do jogador é o ``brilhos_da_onda``; desde a
+A-ONDA-CORRE-PELAS-LUZINHAS-DO-JOGADOR-01 o daemon o leva às luzinhas no quadro único, e a prova
+dele mora em ``test_a_onda_corre_pelas_luzinhas_do_jogador.py``. Aqui a prova de daemon é a da
+barra, nos quatro controles.
 
 MORDIDAS (22/10/2026): trocar o piso do Relâmpago por 0, o `_entre_ritmos(ritmo, 7.0, 1.4)` por
 `(ritmo, 7.0, 0.3)` (o teto de 3 por segundo vai a ~7), o `LED_DO_MEIO_DA_ONDA` por 0, ou tirar
@@ -339,21 +339,6 @@ def test_a_dica_de_cada_base_nova_cabe_na_coluna_e_comeca_maiuscula() -> None:
         assert frase[0].isupper() and frase.endswith(".") and len(frase) <= 36, frase
         assert "Relâmpago" not in frase or base == "relampago"
     assert set(a04.DICA_DA_BASE) == set(a04.RITMO_DA_BASE) == set(a04.ROTULO_DA_BASE)
-
-
-def test_a_dica_da_onda_diz_o_que_o_aparelho_faz_so_a_barra() -> None:
-    """A tela diz o que o aparelho faz: o escritor do daemon leva só a barra, então a dica da Onda
-    fala da barra e não promete o brilho correndo de um lado ao outro. Quando o quadro único levar
-    os LEDs do jogador, esta régua reprova e a dica muda junto."""
-    import inspect
-
-    from pacotes import a04_iluminacao as a04
-
-    escritor = inspect.getsource(luz.escritor_de_producao)
-    assert "pintar_a_barra_sem_lembrar" in escritor
-    assert "luzinhas" not in escritor, "o daemon passou a levar os LEDs: a dica da Onda muda junto"
-    frase = a04.DICA_DA_BASE["onda"]
-    assert "barra" in frase and "lado" not in frase, frase
 
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
