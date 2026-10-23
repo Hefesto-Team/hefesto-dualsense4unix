@@ -245,14 +245,14 @@
       "data": "2026-10-23",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1191738,
+      "piso": 1191715,
       "por_item": {
-        "docs": 120672,
+        "docs": 120786,
         "scripts": 120350,
         "src": 319046,
-        "tests": 631670
+        "tests": 631533
       },
-      "razao": "tamanho: +460 linhas (1191278 -> 1191738), pagas por Origem: D-2310-O-HANDLE-ABRE-O-FISICO-PELO-FD-DO-BROKER; registrado no fecho, topo e7945a052f00",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -826,7 +826,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 3114
+      "universo": 3113
     }
   }
 }
