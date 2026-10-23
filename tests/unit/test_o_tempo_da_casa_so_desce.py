@@ -174,15 +174,24 @@ _QUEM = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t.t", "GIT_COMMITTER_NAM
          "GIT_COMMITTER_EMAIL": "t@t.t", "GIT_CONFIG_NOSYSTEM": "1"}
 
 
+_MARCA = "        corrida árvore=t1 arquivos=72 partição=p1\n"
+
+
+def _parte(n: int, segundos: float, marca: str = _MARCA, total: int = 72) -> str:
+    """Uma `parte-NN.txt` como o `rodar-a-suite.sh` escreve: o cabeçalho, a marca e o sumário."""
+    return (f"suíte — {total} arquivos em 24 partes\n{marca}"
+            f"  parte-{n:02d} (3 arq): 10 passed in {segundos:.2f}s (0:01:40)\n")
+
+
 def _escreve_casa(casa: Path, suite_s: float = 2400.0, rapido_s: int = 40, completo_s: int = 60,
                   com_rapido: bool = True) -> None:
-    """Os registros do fecho, de mentira: 24 partes que somam `suite_s`, rápidos e um completo."""
+    """Os registros do fecho, de mentira: 24 partes de uma corrida que somam `suite_s`, rápidos e um
+    completo."""
     suite = casa / "fecho" / "suite"
     suite.mkdir(parents=True, exist_ok=True)
     for n in range(TEMPO.PARTES):
-        (suite / f"parte-{n:02d}.txt").write_text(
-            f"  parte-{n:02d} (3 arq): 10 passed in {suite_s / TEMPO.PARTES:.2f}s (0:01:40)\n",
-            encoding="utf-8")
+        (suite / f"parte-{n:02d}.txt").write_text(_parte(n, suite_s / TEMPO.PARTES),
+                                                   encoding="utf-8")
     if com_rapido:
         for i in range(7):
             log = casa / f"rapido-{i:04d}.log"
@@ -385,3 +394,116 @@ def test_mordida_sem_o_pagamento_a_subida_com_tempo_reprova(
     _escreve_casa(casa, suite_s=2800.0)
     monkeypatch.setattr(TEMPO, "pagamentos_da_faixa", lambda *_a, **_k: {})
     assert _roda(raiz, casa, "--fechar", base=base) == 1, "sem o trailer a subida não passa"
+
+
+# --- a suíte só soma uma corrida (O-TEMPO-DA-SUITE-SO-SOMA-UMA-CORRIDA-01) ------------------------
+
+
+def test_uma_parte_de_outra_corrida_deixa_a_suite_indisponivel(tmp_path: Path) -> None:
+    _escreve_casa(tmp_path)
+    assert TEMPO.censo_da_suite(tmp_path).numero == 2400
+    parte = tmp_path / "fecho" / "suite" / "parte-05.txt"
+    parte.write_text(_parte(5, 100.0, "        corrida árvore=t0 arquivos=70 partição=p0\n", 70),
+                     encoding="utf-8")
+    censo = TEMPO.censo_da_suite(tmp_path)
+    assert censo.numero is None
+    assert (censo.indisponivel or "").startswith("partes de 2 corridas"), censo.indisponivel
+    assert "70 arquivos, partição p0 (partes 05)" in (censo.indisponivel or "")
+
+
+def test_a_pasta_sem_a_marca_diz_quantas_corridas_o_cabecalho_separa(tmp_path: Path) -> None:
+    """As partes de antes da marca (23/10): o cabeçalho separa as partições; sem ele, nada prova."""
+    pasta = tmp_path / "fecho" / "suite"
+    pasta.mkdir(parents=True)
+    for n in range(TEMPO.PARTES):
+        total = 2051 if n < 18 else 2043 if n == 18 else 2044
+        (pasta / f"parte-{n:02d}.txt").write_text(_parte(n, 100.0, "", total), encoding="utf-8")
+    censo = TEMPO.censo_da_suite(tmp_path)
+    assert censo.numero is None and (censo.indisponivel or "").startswith("partes de 3 corridas")
+    for n in range(TEMPO.PARTES):
+        (pasta / f"parte-{n:02d}.txt").write_text(_parte(n, 100.0, ""), encoding="utf-8")
+    censo = TEMPO.censo_da_suite(tmp_path)
+    assert censo.numero is None and "não trazem a marca da corrida" in (censo.indisponivel or "")
+
+
+def test_o_fecho_que_reaproveitou_recibo_nao_alimenta_o_piso(tmp_path: Path) -> None:
+    _escreve_casa(tmp_path)
+    reaproveitadas = tmp_path / "fecho" / "suite" / TEMPO.REAPROVEITADAS
+    reaproveitadas.write_text("partes com o recibo de antes: 00 01\n", encoding="utf-8")
+    censo = TEMPO.censo_da_suite(tmp_path)
+    assert censo.numero is None and "reaproveitou o recibo" in (censo.indisponivel or "")
+    reaproveitadas.write_text("partes com o recibo de antes:\n", encoding="utf-8")
+    assert TEMPO.censo_da_suite(tmp_path).numero == 2400
+
+
+def test_a_parte_trocada_vira_aviso_no_fecho_e_o_piso_fica(
+        mundo: tuple[Path, Path], capsys: pytest.CaptureFixture[str]) -> None:
+    raiz, casa = mundo
+    _escreve_casa(casa, suite_s=4800.0)  # o dobro: sem a conferência, reprovaria
+    (casa / "fecho" / "suite" / "parte-23.txt").write_text(
+        _parte(23, 200.0, "        corrida árvore=t9 arquivos=72 partição=p9\n"), encoding="utf-8")
+    assert _roda(raiz, casa, "--fechar") == 0
+    saida = capsys.readouterr().out
+    assert "AVISO suite-pytest-s: sem dado hoje" in saida and "partes de 2 corridas" in saida, saida
+    assert _piso(raiz, TEMPO.SUITE)["piso"] == 2400
+
+
+def test_mordida_sem_a_conferencia_da_marca_a_parte_trocada_entra_na_soma(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _escreve_casa(tmp_path)
+    (tmp_path / "fecho" / "suite" / "parte-05.txt").write_text(
+        _parte(5, 1100.0, "        corrida árvore=t0 arquivos=70 partição=p0\n", 70),
+        encoding="utf-8")
+    assert TEMPO.censo_da_suite(tmp_path).numero is None
+    monkeypatch.setattr(TEMPO, "_corrida", lambda _texto: "árvore t1, 72 arquivos, partição p1")
+    assert TEMPO.censo_da_suite(tmp_path).numero == 3400, "a mordida não mordeu: a marca não decide"
+
+
+def _arvore_da_suite(tmp_path: Path, arquivos: int) -> Path:
+    """Uma árvore git de mentira com o `rodar-a-suite.sh` de verdade e `arquivos` testes."""
+    raiz = tmp_path / "arvore"
+    (raiz / "scripts").mkdir(parents=True, exist_ok=True)
+    (raiz / "scripts" / "rodar-a-suite.sh").write_bytes(
+        (RAIZ / "scripts" / "rodar-a-suite.sh").read_bytes())
+    unit = raiz / "tests" / "unit"
+    unit.mkdir(parents=True, exist_ok=True)
+    for n in range(arquivos):
+        (unit / f"test_conta_{n}.py").write_text(f"def test_{n}():\n    assert True\n")
+    if not (raiz / ".git").exists():
+        _git(raiz, "init", "-q", "-b", "dev")
+    _git(raiz, "add", ".")
+    return raiz
+
+
+def _marca_da_suite(raiz: Path, tmp_path: Path) -> str:
+    """A linha da marca que o script imprime a seco (sem rodar pytest), em duas partes."""
+    py = tmp_path / "py-de-mentira"
+    py.write_text("#!/bin/bash\nexit 0\n")
+    py.chmod(0o755)
+    fora = ("PYTEST_ADDOPTS", "SUITE_PYTEST_ARGS", "LD_PRELOAD", "PARTIDO", "LOTE",
+            "PARTES_EM_PARALELO", "LISTAR_O_WEBKIT", "CSV_DOS_TEMPOS")
+    env = {k: v for k, v in os.environ.items() if k not in fora}
+    env.update({"PY": str(py), "A_SECO": "1", "PARTES": "2", "SAIDA": str(tmp_path / "saida"),
+                "PARTES_EM_PARALELO": "0"})
+    feito = subprocess.run(["bash", str(raiz / "scripts" / "rodar-a-suite.sh")], cwd=raiz,
+                           capture_output=True, text=True, timeout=120, check=False, env=env)
+    assert feito.returncode == 0, feito.stdout[-800:] + feito.stderr[-800:]
+    achado = TEMPO._MARCA.search(feito.stdout)
+    assert achado, f"o script não imprimiu a marca que o censo lê: {feito.stdout[:400]}"
+    return achado[0].strip()
+
+
+def test_o_script_da_suite_marca_a_arvore_os_arquivos_e_a_particao(tmp_path: Path) -> None:
+    raiz = _arvore_da_suite(tmp_path, 3)
+    primeira = _marca_da_suite(raiz, tmp_path)
+    assert "arquivos=3 " in primeira
+    assert _marca_da_suite(raiz, tmp_path) == primeira, "a mesma árvore deu duas marcas"
+    (raiz / "tests" / "unit" / "test_conta_0.py").write_text("def test_0():\n    assert 1\n")
+    _git(raiz, "add", ".")
+    outra_arvore = _marca_da_suite(raiz, tmp_path)
+    assert outra_arvore != primeira and "arquivos=3 " in outra_arvore
+    assert outra_arvore.split()[-1] == primeira.split()[-1], "a partição mudou sem mudar a lista"
+    _arvore_da_suite(tmp_path, 4)
+    mais_um = _marca_da_suite(raiz, tmp_path)
+    assert "arquivos=4 " in mais_um and mais_um.split()[-1] != primeira.split()[-1]
+

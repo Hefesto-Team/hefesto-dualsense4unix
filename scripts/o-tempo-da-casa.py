@@ -3,7 +3,9 @@
 
 Três medidas, lidas dos registros que o fecho e o rápido já deixam em ``$CASA``:
 
-* ``suite-pytest-s``: a soma do tempo de pytest das 24 partes (``fecho/suite/parte-NN.txt``);
+* ``suite-pytest-s``: a soma do tempo de pytest das 24 partes (``fecho/suite/parte-NN.txt``) de UMA
+  corrida: a marca de cada parte (a árvore, o número de arquivos e a partição) tem de bater, e o fecho
+  que reaproveitou o recibo de uma parte não alimenta o piso;
 * ``rapido-mediana-s``: a mediana de parede das últimas corridas do rápido (``rapido-*.log``);
 * ``completo-parede-s``: a parede do último ``portoes.sh`` completo (``fecho/portoes-*.out``).
 
@@ -53,6 +55,10 @@ MINIMO_DE_CORRIDAS = 5
 
 _PARTE = re.compile(r"^\s*parte-(\d+) \(\d+ arq\): .* in ([\d.]+)s")
 _PROCESSO_PROPRIO = re.compile(r"^\s+\S+, em processo próprio: .* in ([\d.]+)s")
+_MARCA = re.compile(r"^\s*corrida árvore=(\S+) arquivos=(\d+) partição=(\S+)\s*$", re.M)
+_CABECALHO = re.compile(r"^suíte — (\d+) arquivos em (\d+) partes", re.M)
+#: as partes que o último fecho NÃO rodou (o recibo delas era de antes); o `fecho.sh` escreve
+REAPROVEITADAS = "reaproveitadas.txt"
 _PAREDE = re.compile(r"^tempo: (\d+) s de parede", re.M)
 _CAMADAS = re.compile(r"^\s*camadas .*\bcompleto\b", re.M)
 _TRAILER = re.compile(r"^Tempo:[ \t]+(\S+)[ \t]+(\S.*?)[ \t]*$", re.M)
@@ -62,20 +68,36 @@ def _sem_casa(o_que: str) -> Censo:
     return Censo(numero=None, universo=1, indisponivel=o_que)
 
 
+def _corrida(texto: str) -> str:
+    """A marca da corrida que a parte traz; sem ela, o cabeçalho (que já separa as partições)."""
+    if m := _MARCA.search(texto):
+        return f"árvore {m[1]}, {m[2]} arquivos, partição {m[3]}"
+    if m := _CABECALHO.search(texto):
+        return f"{m[1]} arquivos em {m[2]} partes, sem marca"
+    return "sem marca nem cabeçalho"
+
+
 def censo_da_suite(casa: Path | None) -> Censo:
-    """Soma o pytest das 24 partes; parte ou linha faltando é medida indisponível, não zero."""
+    """Soma o pytest das 24 partes de UMA corrida; parte, linha ou marca que falta é indisponível.
+
+    O fecho guarda o recibo da parte verde e só reroda a vermelha, e a partição muda com o número de
+    arquivos: em 23/10 as 24 partes vinham de quatro corridas (O-TEMPO-DA-SUITE-SO-SOMA-UMA-CORRIDA-01).
+    """
     if casa is None:
         return _sem_casa("a casa não foi informada (`--casa` ou $CASA)")
     pasta = casa / "fecho" / "suite"
     por_parte: dict[str, float] = {}
+    corridas: dict[str, list[str]] = {}
     for n in range(PARTES):
         arquivo = pasta / f"parte-{n:02d}.txt"
         if not arquivo.is_file():
             return Censo(numero=None, universo=PARTES,
                          indisponivel=f"falta {arquivo.name} em {pasta}")
+        texto = arquivo.read_text(encoding="utf-8", errors="replace")
+        corridas.setdefault(_corrida(texto), []).append(f"{n:02d}")
         soma = 0.0
         achou = False
-        for linha in arquivo.read_text(encoding="utf-8", errors="replace").splitlines():
+        for linha in texto.splitlines():
             m = _PARTE.match(linha) or _PROCESSO_PROPRIO.match(linha)
             if m:
                 achou = True
@@ -84,9 +106,23 @@ def censo_da_suite(casa: Path | None) -> Censo:
             return Censo(numero=None, universo=PARTES,
                          indisponivel=f"{arquivo.name} não traz a linha de sumário do pytest")
         por_parte[f"parte-{n:02d}"] = soma
+    if len(corridas) > 1:
+        cada = "; ".join(f"{marca} (partes {' '.join(partes)})" for marca, partes in corridas.items())
+        return Censo(numero=None, universo=PARTES,
+                     indisponivel=f"partes de {len(corridas)} corridas em {pasta}: {cada}")
+    marca = next(iter(corridas))
+    if not marca.startswith("árvore "):
+        return Censo(numero=None, universo=PARTES,
+                     indisponivel=f"as partes em {pasta} não trazem a marca da corrida ({marca})")
+    reaproveitadas = pasta / REAPROVEITADAS
+    if reaproveitadas.is_file() and reaproveitadas.read_text(encoding="utf-8").split(":")[-1].split():
+        return Censo(numero=None, universo=PARTES,
+                     indisponivel=(f"o fecho reaproveitou o recibo de partes de antes "
+                                   f"({reaproveitadas.read_text(encoding='utf-8').strip()}): "
+                                   "a soma junta horas diferentes"))
     return Censo(numero=round(sum(por_parte.values())), universo=PARTES,
                  por_item={k: round(v) for k, v in por_parte.items()},
-                 nota=f"segundos de pytest das {PARTES} partes do último fecho da suíte")
+                 nota=f"segundos de pytest das {PARTES} partes de uma corrida da suíte ({marca})")
 
 
 def _mais_novos(arquivos: list[Path]) -> list[Path]:

@@ -406,6 +406,23 @@ if [ -n "$LOTE" ]; then
   echo "lote — $total arquivos de $LOTE (o WebKit em processo próprio, como na suíte)"
 else
   echo "suíte — $total arquivos em $PARTES partes"
+  # A MARCA DA CORRIDA (O-TEMPO-DA-SUITE-SO-SOMA-UMA-CORRIDA-01, 23/10/2026): a árvore do índice, o número
+  # de arquivos e o hash da partição. O fecho roda cada parte numa chamada e guarda o recibo da verde, e a
+  # pasta dele juntou partes de quatro corridas, com partições diferentes; o `o-tempo-da-casa.py` só soma
+  # as partes se as marcas batem. Dez caracteres, não doze: doze hex a casa lê como endereço de rádio.
+  _tree=""
+  _idx=$(git -C "$RAIZ" rev-parse --path-format=absolute --git-path index 2> /dev/null || true)
+  if [ -n "$_idx" ] && [ -f "$_idx" ]; then
+    _copia=$(mktemp "${TMPDIR:-/tmp}/suite-idx-XXXXXX")
+    cp "$_idx" "$_copia" && _tree=$(GIT_INDEX_FILE="$_copia" git -C "$RAIZ" write-tree 2> /dev/null || true)
+    rm -f "$_copia"
+  fi
+  [ -n "$_tree" ] || _tree=$(git -C "$RAIZ" rev-parse 'HEAD^{tree}' 2> /dev/null || echo sem-git)
+  _partes_md5=$(for ((k = 0; k < PARTES; k++)); do
+    printf '== %02d\n' "$k"; cat "$(printf '%s/parte-%02d' "$SAIDA" "$k")" 2> /dev/null
+  done | md5sum | cut -c1-10)
+  echo "        corrida árvore=${_tree:0:10} arquivos=$total partição=$_partes_md5"
+  unset _tree _idx _copia _partes_md5
 fi
 echo "        python $PY"
 echo "        saída  $SAIDA"
