@@ -1033,7 +1033,7 @@ class ProfileManager:
         self.apply_controller_mics(profile, origin=origin, relatorio=resultado)
         self.apply_controller_sensores(profile, origin=origin, relatorio=resultado)
         # por último: no Modo automático o estilo vale por cima do que a aba diz do som
-        self.apply_som_do_estilo(profile, origin=origin, relatorio=resultado)
+        _faltas_do_som_do_estilo(self.apply_som_do_estilo(profile, origin=origin), resultado)
         return resultado
 
     def apply_controller_mascaras(
@@ -1246,7 +1246,6 @@ class ProfileManager:
         profile: Profile,
         *,
         origin: str = "manual",
-        relatorio: dict[str, str] | None = None,
         so_uniq: str | None = None,
         com_microfone: bool = True,
     ) -> dict[str, str]:
@@ -1256,8 +1255,10 @@ class ProfileManager:
         (re)connect: respeita o mudo e a recusa); o Ritmo escreve só a ``fonte`` ``sfx``. O jogo
         manda, com fone o Terror não duplica, e ao sair do estilo a ``fonte`` volta. ``so_uniq``
         limita a um controle (o replug); ``com_microfone=False`` deixa o microfone ao (re)connect.
+        Devolve ``{som_estilo:<uniq>|mic_estilo:<uniq>: estado}``; o relatório da ativação só
+        recebe as faltas (:func:`_faltas_do_som_do_estilo`).
         """
-        resultado: dict[str, str] = relatorio if relatorio is not None else {}
+        resultado: dict[str, str] = {}
         pontes = self.som_do_estilo
         if pontes is None:
             return resultado
@@ -1291,21 +1292,22 @@ class ProfileManager:
             if pontes.jogo_no_alto_falante(uniq):
                 self._devolver_a_fonte(profile, pontes, uniq, {})
                 return "ignorado_o_jogo_manda"
-            if querido.nivel_padrao and pontes.fone(uniq) is True:
+            if querido.fonte == "mix" and pontes.fone(uniq) is True:
                 self._devolver_a_fonte(profile, pontes, uniq, {})
                 return "ignorado_com_fone"
         except Exception as exc:
             logger.warning("som_do_estilo_leitura_falhou", uniq=uniq, err=str(exc))
             return "falhou"
         estado = "aplicado"
-        if querido.nivel_padrao:
+        if querido.rota is not None:
+            # a rota vai com o volume que o perfil já dá ao controle (sem seção, o «Padrão»)
             secao = _secao_de_som_do_controle(profile, uniq)
             vista = profile.model_copy(update={"speaker": ProfileSpeakerConfig(
-                volume=VOLUME_DO_PADRAO,
+                volume=VOLUME_DO_PADRAO if secao is None else int(secao.volume),
                 muted=bool(getattr(secao, "muted", False)),
                 rota=querido.rota,
                 fonte=querido.fonte,
-                volume_padrao=True,
+                volume_padrao=True if secao is None else secao.volume_padrao,
             )})
             estado = self.apply_speaker(vista, origin=origin, uniq=uniq) or "sem_applier"
         try:
@@ -2693,6 +2695,21 @@ def _to_led_settings(leds: LedsConfig) -> LedSettings:
         brightness_level=float(leds.lightbar_brightness),
         player_leds=player_leds_tuple,
     )
+
+
+#: o que o som do estilo devolve quando fez, ou deixou de fazer de propósito (o jogo manda, o fone)
+_O_SOM_DO_ESTILO_SEM_FALTA = frozenset(
+    {"aplicado", "devolvido", "pedido", "ignorado_o_jogo_manda", "ignorado_com_fone"}
+)
+
+
+def _faltas_do_som_do_estilo(do_estilo: dict[str, str], relatorio: dict[str, str]) -> None:
+    """Leva ao relatório da ativação só o que NÃO entrou, pela peça que o rodapé já nomeia."""
+    for chave, estado in do_estilo.items():
+        if estado in _O_SOM_DO_ESTILO_SEM_FALTA:
+            continue
+        prefixo, _, uniq = chave.partition(":")
+        relatorio[f"{'speaker' if prefixo == 'som_estilo' else 'mic'}:{uniq}"] = estado
 
 
 def _receita_do_estilo_no_automatico(profile: Profile) -> Any:

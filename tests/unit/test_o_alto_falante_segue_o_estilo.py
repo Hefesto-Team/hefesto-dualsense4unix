@@ -107,7 +107,7 @@ def test_so_o_terror_e_o_ritmo_tem_opiniao_sobre_o_alto_falante() -> None:
 def test_o_ritmo_nunca_duplica_a_receita_e_sfx_sem_volume_nem_rota() -> None:
     af = POR_CHAVE["ritmo"].receita_invisivel.alto_falante
     assert af is not None
-    assert (af.fonte, af.rota, af.nivel_padrao) == ("sfx", None, False)
+    assert (af.fonte, af.rota) == ("sfx", None)
 
 
 def test_ritmo_no_automatico_escreve_sfx_nos_quatro_e_nao_toca_no_volume() -> None:
@@ -186,7 +186,7 @@ def test_a_ativacao_inteira_do_ritmo_escreve_so_a_fonte(perfis_no_disco: Path) -
     g.manager.activate("ritmo-de-teste", relatorio=relatorio)
     assert mesa.fontes == [(u, "sfx") for u in QUATRO]
     assert g.som == []
-    assert relatorio[f"som_estilo:{QUATRO[0]}"] == "aplicado"
+    assert not any(k.startswith(("som_estilo:", "speaker:")) for k in relatorio)
 
 
 def test_o_replug_devolve_a_fonte_do_ritmo_so_ao_controle_que_voltou(

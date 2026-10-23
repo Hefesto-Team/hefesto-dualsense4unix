@@ -84,7 +84,7 @@ import colorsys
 from dataclasses import dataclass
 from typing import Literal
 
-from hefesto_dualsense4unix.core.ds_output_report import SAIDA_SO_NO_ALTO_FALANTE
+from hefesto_dualsense4unix.core.ds_output_report import SAIDA_L_FONE_R_ALTO_FALANTE
 
 RGB = tuple[int, int, int]
 
@@ -125,12 +125,10 @@ class AltoFalanteDoEstilo:
     #: a ``fonte`` do nó de som do controle (``ProfileSpeakerConfig.fonte``): ``mix`` faz todo o
     #: som do PC cair também no controle; ``sfx`` deixa o nó livre para o que o jogo mandar
     fonte: Literal["mix", "sfx"]
-    #: o byte de saída do alto-falante (``core.ds_output_report.SAIDA_*``); ``None`` não toca nele
+    #: o byte de saída do alto-falante (``core.ds_output_report.SAIDA_*``), escrito com o volume
+    #: que o perfil já dá ao controle (sem seção, o «Padrão»); ``None`` não chama o
+    #: ``apply_speaker``: só a ``fonte`` vai (escrever o volume tomaria a posse dos bytes de áudio)
     rota: int | None = None
-    #: ``True`` escreve o nível «Padrão» (100% do registrador, ``manager.VOLUME_DO_PADRAO``);
-    #: ``False`` não escreve nível nenhum: só a ``fonte`` vai, e o controle fica com o volume
-    #: que já tem (escrever o volume tomaria a posse dos bytes de áudio sem pedido)
-    nivel_padrao: bool = False
 
 
 @dataclass(frozen=True)
@@ -207,14 +205,14 @@ MOLDES: dict[str, dict[str, str]] = {
 }
 
 
-#: O Terror duplica o som do PC no controle com o PADRÃO DA ABA ÁUDIO e nenhum número novo
-#: (decisão por delegação de 23/10/2026, a validar na L2): a ``fonte`` ``mix`` é o que a aba acende
-#: como «Todo o som do PC» (``a02_controles.aceso_da_fileira``); a rota é a desse botão
-#: (``a02_controles.ROTA_TUDO_NO_CONTROLE`` = ``cartao_do_controle.ROTA_DO_CANAL[CANAL_TODO_O_PC]``
-#: = ``SAIDA_SO_NO_ALTO_FALANTE``); o nível é o «Padrão» (``manager.VOLUME_DO_PADRAO``, os 100% do
-#: registrador, que já passam do PS5). A L2 confirma o número.
-SOM_DO_PC_TAMBEM_NO_CONTROLE = AltoFalanteDoEstilo(
-    "mix", rota=SAIDA_SO_NO_ALTO_FALANTE, nivel_padrao=True)
+#: O Terror duplica o som do PC no controle com o padrão do «Ouvir junto» da aba Controles, o
+#: único botão que duplicava (saiu da tela em 15/10/2026), e nenhum número novo (delegação de
+#: 23/10/2026, a validar na L2): a ``fonte`` ``mix`` e a rota «Sons do jogo»
+#: (``cartao_do_controle.ROTA_DO_CANAL[CANAL_SONS_DO_JOGO]`` = ``backend_pydualsense.
+#: ROTA_PADRAO_DO_SOM``), nunca a 3, a do botão «apenas no DualSense», que ficaria no controle e
+#: acesa na tela depois que o Terror sai. O nível é o que o perfil já dá ao controle: o «mais
+#: alto» vem da duplicação, não do registrador. A L2 confirma o número.
+SOM_DO_PC_TAMBEM_NO_CONTROLE = AltoFalanteDoEstilo("mix", rota=SAIDA_L_FONE_R_ALTO_FALANTE)
 #: O Ritmo nunca duplica: a música em dois tempos (o PC e o alto-falante, pelo rádio com o
 #: codificador e a fila no caminho) faz a batida escorregar. Só a ``fonte`` ``sfx`` vai, e o
 #: controle fica com o volume que já tem. A L8 mede o atraso e confirma a trava.

@@ -13,7 +13,12 @@ from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.core.ds_output_report import SAIDA_SO_NO_ALTO_FALANTE
+from hefesto_dualsense4unix.app.actions.profiles_actions import relato_da_ativacao
+from hefesto_dualsense4unix.core.backend_pydualsense import ROTA_PADRAO_DO_SOM
+from hefesto_dualsense4unix.core.ds_output_report import (
+    SAIDA_L_FONE_R_ALTO_FALANTE,
+    SAIDA_SO_NO_ALTO_FALANTE,
+)
 from hefesto_dualsense4unix.daemon.state_store import StateStore
 from hefesto_dualsense4unix.profiles import estilos_de_jogo
 from hefesto_dualsense4unix.profiles import loader as loader_module
@@ -26,7 +31,12 @@ from hefesto_dualsense4unix.profiles.manager import (
     gerente_do_daemon,
     pontes_do_som_do_daemon,
 )
-from hefesto_dualsense4unix.profiles.schema import MODO_AUTOMATICO, MatchAny, Profile
+from hefesto_dualsense4unix.profiles.schema import (
+    MODO_AUTOMATICO,
+    MatchAny,
+    Profile,
+    ProfileSpeakerConfig,
+)
 from hefesto_dualsense4unix.testing import FakeController
 
 # a faixa forjada das fixtures (nunca endereço real mascarado)
@@ -49,11 +59,12 @@ class Mesa:
         self.fontes: list[tuple[str, str]] = []
         self.abertos: list[str] = []
         self.memoria: dict[str, str] = {}
+        self.fonte_escreve = True
 
     def pontes(self) -> PontesDoSom:
         def escolher(uniq: str, fonte: str) -> bool:
             self.fontes.append((uniq, fonte))
-            return True
+            return self.fonte_escreve
 
         def abrir(uniq: str) -> bool:
             self.abertos.append(uniq)
@@ -114,10 +125,12 @@ def perfis_no_disco(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return pasta
 
 
-def test_a_receita_do_terror_usa_o_padrao_da_aba_audio_sem_numero_novo() -> None:
+def test_a_receita_do_terror_usa_o_ouvir_junto_da_aba_sem_numero_novo() -> None:
     af = POR_CHAVE["terror"].receita_invisivel.alto_falante
     assert af is not None
-    assert (af.fonte, af.rota, af.nivel_padrao) == ("mix", SAIDA_SO_NO_ALTO_FALANTE, True)
+    assert (af.fonte, af.rota) == ("mix", SAIDA_L_FONE_R_ALTO_FALANTE)
+    # a rota do nascimento: ao sair do Terror nada fica no «apenas no DualSense» (a 3)
+    assert af.rota == ROTA_PADRAO_DO_SOM != SAIDA_SO_NO_ALTO_FALANTE
     assert POR_CHAVE["terror"].receita_invisivel.microfone_ligado is True
 
 
@@ -127,7 +140,7 @@ def test_terror_no_automatico_duplica_e_abre_nos_quatro_controles() -> None:
     relatorio = g.aplicar(_perfil("terror"))
     assert [e["uniq"] for e in g.som] == QUATRO
     assert all(
-        e["volume"] == VOLUME_DO_PADRAO and e["rota"] == SAIDA_SO_NO_ALTO_FALANTE
+        e["volume"] == VOLUME_DO_PADRAO and e["rota"] == SAIDA_L_FONE_R_ALTO_FALANTE
         and e["muted"] is False for e in g.som
     )
     assert mesa.fontes == [(u, "mix") for u in QUATRO]
@@ -204,12 +217,13 @@ def test_o_terror_nao_enfraquece_a_vibracao_nem_o_gatilho_com_o_microfone_aberto
         2 * estilos_de_jogo.DURACAO_DE_SEMPRE_MS)
 
 
-def test_o_mudo_do_controle_segue_dele() -> None:
-    from hefesto_dualsense4unix.profiles.schema import ProfileSpeakerConfig
-
+def test_o_volume_e_o_mudo_do_perfil_seguem_do_controle() -> None:
+    """O «mais alto» vem da duplicação, não do registrador: o volume do perfil fica."""
     g = Gerente(Mesa())
     g.aplicar(_perfil("terror", speaker=ProfileSpeakerConfig(volume=10, muted=True)))
-    assert g.som and all(e["muted"] is True for e in g.som)
+    assert len(g.som) == 4
+    assert all(e["muted"] is True and e["volume"] == 10 for e in g.som)
+    assert all(e["rota"] == SAIDA_L_FONE_R_ALTO_FALANTE for e in g.som)
 
 
 def test_a_trava_manual_de_audio_nao_existe_mais_e_o_estilo_entra() -> None:
@@ -275,7 +289,42 @@ def test_a_ativacao_inteira_leva_o_som_do_estilo(perfis_no_disco: Path) -> None:
     g.manager.activate("terror-de-teste", relatorio=relatorio)
     assert [e["uniq"] for e in g.som] == QUATRO
     assert mesa.abertos == QUATRO
-    assert relatorio[f"som_estilo:{QUATRO[3]}"] == "aplicado"
+    assert not any(k.startswith(("som_estilo:", "mic_estilo:")) for k in relatorio)
+
+
+def _faltas_no_rodape(relatorio: dict[str, str]) -> dict[str, str]:
+    relato = relato_da_ativacao({"secoes": relatorio})
+    return {} if relato is None else dict(relato["failed"])
+
+
+def test_o_rodape_da_ativacao_nao_chama_de_falta_o_que_o_estilo_fez_ou_recusou(
+    perfis_no_disco: Path,
+) -> None:
+    """Com fone num, o jogo no outro, e a volta ao FPS: nenhuma peça «não entrou»."""
+    save_profile(_perfil("terror"))
+    mesa = Mesa(fones={QUATRO[1]}, jogo={QUATRO[2]})
+    g = Gerente(mesa)
+    relatorio: dict[str, str] = {}
+    g.manager.activate("terror-de-teste", relatorio=relatorio)
+    assert _faltas_no_rodape(relatorio) == {}
+    save_profile(_perfil("fps").model_copy(update={"name": "fps-de-teste"}))
+    relatorio = {}
+    g.manager.activate("fps-de-teste", relatorio=relatorio)
+    assert mesa.memoria == {}
+    assert _faltas_no_rodape(relatorio) == {}
+
+
+def test_a_fonte_que_nao_entrou_aparece_como_o_alto_falante_daquele_controle(
+    perfis_no_disco: Path,
+) -> None:
+    save_profile(_perfil("terror"))
+    mesa = Mesa(conectados=[QUATRO[0]])
+    mesa.fonte_escreve = False
+    g = Gerente(mesa)
+    relatorio: dict[str, str] = {}
+    g.manager.activate("terror-de-teste", relatorio=relatorio)
+    assert relatorio[f"speaker:{QUATRO[0]}"] == "fonte_nao_escrita"
+    assert list(_faltas_no_rodape(relatorio)) == [f"alto-falante de um controle ({QUATRO[0]})"]
 
 
 # --- as pontes de verdade, sobre um daemon de mentira ---------------------
