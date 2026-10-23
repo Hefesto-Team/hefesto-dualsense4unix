@@ -173,3 +173,76 @@ def test_quem_nao_pede_a_espera_ve_a_pagina_como_antes() -> None:
         assert all(v == "1" for v in aba.opacidades().values())
     finally:
         aba.janela.janela.destroy()
+
+
+class _Lenta:
+    """Um servidor local que segura a imagem da página além do prazo: o `load` chega tarde."""
+
+    def __init__(self, segundos: float) -> None:
+        import http.server
+        import threading
+
+        class _Resposta(http.server.BaseHTTPRequestHandler):
+            def do_GET(self) -> None:
+                time.sleep(segundos)
+                self.send_response(204)
+                self.end_headers()
+
+            def log_message(self, *_a: Any) -> None:
+                pass
+
+        self.servidor = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Resposta)
+        self.porta = self.servidor.server_address[1]
+        threading.Thread(target=self.servidor.serve_forever, daemon=True).start()
+
+    def fechar(self) -> None:
+        self.servidor.shutdown()
+        self.servidor.server_close()
+
+
+@pytest.mark.usefixtures("_tela_de_teste")
+def test_a_carga_lenta_nao_gasta_o_prazo(tmp_path: pathlib.Path) -> None:
+    """O prazo conta do `load`, não do início do documento: a carga que passa do prazo não
+    devolve o desenho antes de o piloto poder pintar, e a rede ainda vale depois dela."""
+    import json
+
+    from hefesto_dualsense4unix.interface import janela as pt
+
+    prazo = pt.PRAZO_DA_ESPERA_MS / 1000
+    lenta = _Lenta(prazo + 1.0)
+    arquivo = tmp_path / "lenta.html"
+    arquivo.write_text(
+        "<!doctype html><html><head><meta charset='utf-8'><title>Carga lenta</title></head>"
+        "<body><div class='miolo'>miolo</div>"
+        f"<img src='http://127.0.0.1:{lenta.porta}/lenta.png' alt=''></body></html>",
+        encoding="utf-8")
+    carregou: list[float] = []
+    janela = pt.JanelaDaAba(
+        arquivo=arquivo, titulo_esperado="Carga lenta", oculta=True,
+        ao_carregar=lambda: carregou.append(time.monotonic()), esperar_a_pintura=True)
+    try:
+        assert _bombear(lambda: bool(carregou), 20.0), "a página não carregou"
+        caixa: dict[str, Any] = {}
+        janela.ponte.perguntar(
+            "JSON.stringify({op:getComputedStyle(document.querySelector('div.miolo')).opacity,"
+            "load:performance.getEntriesByType('navigation')[0].loadEventEnd})",
+            lambda v, e: caixa.update(v=v, e=e))
+        assert _bombear(lambda: bool(caixa), 10.0) and caixa["e"] is None, caixa
+        lido = json.loads(caixa["v"])
+        assert lido["load"] > pt.PRAZO_DA_ESPERA_MS, (
+            f"a carga não passou do prazo ({lido}): o teste não mediria nada")
+        assert lido["op"] == "0", f"a carga lenta gastou o prazo e o desenho voltou: {lido}"
+
+        def miolo() -> str:
+            resposta: dict[str, Any] = {}
+            janela.ponte.perguntar(
+                "getComputedStyle(document.querySelector('div.miolo')).opacity",
+                lambda v, e: resposta.update(v=v, e=e))
+            _bombear(lambda: bool(resposta), 10.0)
+            return str(resposta.get("v"))
+
+        assert _bombear(lambda: miolo() == "1", prazo + 1.0), (
+            "depois da carga lenta, sem pintura, a página ficou escondida além do prazo")
+    finally:
+        janela.janela.destroy()
+        lenta.fechar()
