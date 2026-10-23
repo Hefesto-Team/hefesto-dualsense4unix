@@ -197,6 +197,35 @@ def test_a_conexoes_so_pergunta_a_extensao_ligada_que_publica_o_estado(
     assert perguntas == ["toque"], "perguntou a quem está desligada ou não publica o estado"
 
 
+def test_a_extensao_parada_pelo_parar_tudo_segue_mostrando_o_que_esta_ligado(
+        lar, ctx, tmp_path, monkeypatch) -> None:  # noqa: F811
+    """Depois do «Parar tudo» a extensão devolve ``ligado: false`` com o adaptador ainda ligado e a
+    força a zero: a coluna diz «Parada» e mostra os dois, e a aba Conexões não os apaga. A
+    conexão que cai devolve o estado vazio, e aí não sobra item nenhum."""
+    from hefesto_dualsense4unix.app import ipc_bridge
+    from hefesto_dualsense4unix.integrations import bluez_dbus
+    from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
+    from hefesto_dualsense4unix.mods.porta import estado_vazio_dos_acessorios
+
+    parada = {**VIVO, "ligado": False, "nivel": 3,
+              "aparelhos": [{**VIVO["aparelhos"][0], "forca": 0.0}]}
+    coluna = exp.agora_html(["conexoes", "aparelhos", "nivel"], parada)  # (noqa-acento): chave
+    assert "Parada" in coluna and "Adaptador" in coluna and "Motor" in coluna
+    assert '<div class="ap vazio">' not in coluna and "<b>—</b>" in coluna, "o nível segue vazio"
+    pedacos = ["conexoes", "aparelhos"]  # (noqa-acento): chave
+    vazia = exp.agora_html(pedacos, estado_vazio_dos_acessorios("x"))
+    assert "Adaptador" not in vazia and '<div class="ap vazio">' in vazia
+
+    a07, a08 = _a07(), _a08()
+    _instalar(a07, ctx, _fonte(tmp_path, "toque", nome="Toque", permissoes=(ESTADO,)))
+    a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
+    monkeypatch.setattr(ipc_bridge, "_corpo_do_daemon", lambda *_a, **_k: parada)
+    monkeypatch.setattr(bluez_dbus, "a_suite_esta_rodando", lambda: False)
+    html = a08.html_do_agora_das_extensoes(a08._ler_o_agora_das_extensoes())
+    assert html.count("via Toque") == 2, "a parada sumiu da aba Conexões"
+
+
 def test_sob_a_suite_a_conexoes_nunca_pergunta_ao_servico(monkeypatch) -> None:
     from hefesto_dualsense4unix.app import ipc_bridge
 

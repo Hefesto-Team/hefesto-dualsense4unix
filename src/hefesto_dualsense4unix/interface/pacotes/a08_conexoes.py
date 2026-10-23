@@ -1218,8 +1218,8 @@ VALIDADE_DO_AGORA_DAS_EXTENSOES_S = 2.0
 def _ler_o_agora_das_extensoes() -> list[tuple[str, dict[str, Any]]]:
     """``(nome, estado)`` de cada extensão ligada que publica o ``acessorios.estado``.
 
-    BLOQUEIA (um ``mods.agora`` por extensão): só num fio de ``em_fundo``. A extensão desligada,
-    parada ou sem a permissão do estado fica de fora; sob a suíte, nada (a régua injeta). Nunca
+    BLOQUEIA (um ``mods.agora`` por extensão): só num fio de ``em_fundo``. A extensão desligada
+    ou sem a permissão do estado fica de fora; sob a suíte, nada (a régua injeta). Nunca
     levanta.
     """
     from hefesto_dualsense4unix.integrations.bluez_dbus import a_suite_esta_rodando
@@ -1255,7 +1255,9 @@ def _ler_o_agora_das_extensoes() -> list[tuple[str, dict[str, Any]]]:
             continue
         corpo = ipc_bridge._corpo_do_daemon(
             "mods.agora", {"mod": mod_id}, timeout=PRAZO_DO_AGORA_DAS_EXTENSOES_S)
-        if isinstance(corpo, dict) and corpo.get("ligado") is True:
+        # Parada pelo «Parar tudo» (``ligado`` falso), ela segue com o adaptador e o aparelho
+        # ligados: a linha fica. A que não está conectada volta o estado vazio, sem item.
+        if isinstance(corpo, dict):
             saida.append((manifesto.nome, corpo))
     return saida
 

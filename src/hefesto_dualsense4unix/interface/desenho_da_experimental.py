@@ -628,8 +628,10 @@ def _aparelho_html(ap: Mapping[str, Any]) -> str:
 def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None) -> str:
     """O miolo da coluna «Agora»: só os pedaços que o manifesto declara, do ``acessorios.estado``.
 
-    Sem estado, ou com a extensão parada (``ligado`` falso), cada pedaço fica vazio: nenhum número
-    nem aparelho que a extensão não deu. O perfil e os nomes vêm de terceiros: escapados.
+    Sem estado, ou com a extensão parada (``ligado`` falso), o nível e o perfil ficam vazios: nenhum
+    número que a extensão não deu. As conexões e os aparelhos são os que ela publicou, parada ou não:
+    o «Parar tudo» zera a força, e o adaptador segue ligado (a conexão que cai já devolve o estado
+    vazio, sem item nenhum). O perfil e os nomes vêm de terceiros: escapados.
     """
     vivo = bool(estado and estado.get("ligado") is True)
     linhas = ['<div class="ja-ag-topo"><span class="pc-sub">Agora</span>'
@@ -637,7 +639,7 @@ def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None) -> str:
     declarados = [x for x in PEDACOS_DO_AGORA if x in pedacos]
     for pedaco in declarados:
         if pedaco == "conexoes":  # (noqa-acento): a chave do estado
-            itens = "".join(_conexao_html(c) for c in itens_do_estado(estado if vivo else None, pedaco))
+            itens = "".join(_conexao_html(c) for c in itens_do_estado(estado, pedaco))
             linhas.append(f'<div class="ja-cxs" data-agora="{pedaco}">'
                           f'{itens or f"""<div class="cx-linha vazia"><span class="cx-rot">{SEM_VALOR}</span></div>"""}'
                           "</div>")
@@ -660,7 +662,7 @@ def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None) -> str:
             linhas.append('<div class="ja-perfil-linha" data-agora="perfil"><span class="ja-rot">'
                           f'Perfil</span><span class="ja-perfil-nome">{texto}</span></div>')
         else:
-            itens = "".join(_aparelho_html(a) for a in itens_do_estado(estado if vivo else None, pedaco))
+            itens = "".join(_aparelho_html(a) for a in itens_do_estado(estado, pedaco))
             vazio = (f'<div class="ap vazio">{icone_html(ICONE_DO_APARELHO, "mudo")}'
                      f'<span class="ap-nome">{SEM_VALOR}</span></div>')
             linhas.append(f'<div class="ja-aps" data-agora="aparelhos">{itens or vazio}</div>')

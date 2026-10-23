@@ -42,7 +42,7 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `lancador.jogos` | `{jogos: [{chave, nome, abrir: [...], janela?}]}` | `lancador` | `{recebidos}` |
 | `controles.lista` | `{}` | `ler:conexao` | `{controles: [{uniq, jogador}]}` |
 
-Cada `aparelhos[]` é `{nome, tipo, estado, bateria, forca}`: `nome` (até 40 letras) é o único obrigatório, e um
+Cada `aparelhos[]` é `{nome, tipo, estado, bateria, forca}`: `nome` (até 60 letras) é o único obrigatório, e um
 texto solto vale `{nome}`; `tipo` é livre (até 30 letras); `estado` é `ligado` (o padrão), `procurando`,
 `desligado` ou `falhou`; `bateria` vai de 0 a 100 e `forca` de 0 a 1, ou `null`. Cada `conexoes[]` é
 `{id, tipo, transporte, estado, motivo}`: `id` (até 40 letras) e `tipo` (até 30) são da extensão, `transporte` é
@@ -304,7 +304,8 @@ ele mostra; sem nenhuma das duas o manifesto é recusado. O `parar_tudo` não pe
 
 - `mods.agora {mod}` devolve o último `acessorios.estado` daquela extensão, `{mod, ligado, nivel, perfil,
   aparelhos, conexoes, ajustes}`. Sem conexão viva da extensão, ou quando a conexão cai, volta o estado vazio (`ligado: false`), e a <!-- noqa-acento: chave do estado -->
-  coluna mostra cada pedaço vazio, sem número. A janela pergunta no máximo duas vezes por segundo, fora do tique,
+  coluna mostra cada pedaço vazio, sem número. Com o `ligado: false` da própria extensão (o «Parar tudo»), o nível
+  e o perfil ficam vazios e as conexões e os aparelhos seguem como ela os publicou, na janela e na aba Conexões. A janela pergunta no máximo duas vezes por segundo, fora do tique,
   e desenha só os pedaços do `agora`;
 - `mods.parar_tudo {mod}` publica `acessorios.gesto` com `gesto: "para"`, `uniq` e `jogador` nulos e
   `mod: <id>`: só aquela extensão o recebe (as outras com `ler:acessorios.gesto` não), nenhum controle dá o
