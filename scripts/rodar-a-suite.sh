@@ -77,6 +77,36 @@ set -uo pipefail
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$RAIZ" || exit 2
 
+# O D-BUS DA SUÍTE NÃO TEM PORTAL. O Chrome dos testes de tela pede o `org.freedesktop.portal.Desktop`
+# ao D-Bus da sessão, e o `dbus-daemon` acordava o portal da máquina, cujo backend do COSMIC morre sem
+# Wayland: 8 pânicos por parte, em 17 das 24 partes do fecho de 23/10/2026. O daemon procura o serviço
+# primeiro no `$XDG_DATA_HOME/dbus-1/services`, e ali o portal é um `/bin/false` (a medida está no
+# `_lar_sem_portal` do `portoes.sh`). Um dono só para os dois D-Bus da suíte: o do lar de cada parte
+# leve (`lancar_filho`) e o de quem roda a suíte inteira (`SUITE_SOB_DBUS_PROPRIO=1`, o do fecho).
+servicos_sem_portal() {  # $1 = a pasta que o `dbus-daemon` lê como `XDG_DATA_HOME`
+  local servicos="$1/dbus-1/services" portal
+  mkdir -p "$servicos"
+  for portal in org.freedesktop.portal.Desktop org.freedesktop.portal.Documents; do
+    printf '[D-BUS Service]\nName=%s\nExec=/bin/false\n' "$portal" > "$servicos/$portal.service"
+  done
+}
+# `SUITE_SOB_DBUS_PROPRIO=1` põe a corrida sob D-Bus e Xvfb próprios. A pasta dos serviços vai SÓ ao
+# `dbus-daemon`: o pytest recebe o `XDG_DATA_HOME` de quem chamou (a parte que toca a máquina roda no
+# ambiente dele).
+if [ -n "${SUITE_SOB_DBUS_PROPRIO:-}" ]; then
+  for _b in dbus-run-session xvfb-run; do
+    command -v "$_b" > /dev/null 2>&1 || { echo "ERRO: SUITE_SOB_DBUS_PROPRIO pede o $_b."; exit 2; }
+  done
+  _bus="$(mktemp -d "${TMPDIR:-/tmp}/suite-bus-XXXXXX")" || exit 2
+  servicos_sem_portal "$_bus"
+  if [ -n "${XDG_DATA_HOME+x}" ]; then _volta=(XDG_DATA_HOME="$XDG_DATA_HOME"); else _volta=(-u XDG_DATA_HOME); fi
+  env XDG_DATA_HOME="$_bus" dbus-run-session -- env -u SUITE_SOB_DBUS_PROPRIO "${_volta[@]}" \
+    xvfb-run -a bash "$RAIZ/scripts/${BASH_SOURCE[0]##*/}" "$@"
+  _rc=$?
+  rm -rf "$_bus"
+  exit "$_rc"
+fi
+
 PARTES="${PARTES:-24}"
 SAIDA="${SAIDA:-/tmp/suite-$(date +%H%M%S)}"
 # O python: o `PY` de quem chama, o `HEFESTO_PY` da casa (o mesmo que o `portoes.sh` lê; é o que a árvore
@@ -576,13 +606,10 @@ if [ "$PARTES_EM_PARALELO" -gt 0 ] 2> /dev/null && [ -z "$so_esta" ]; then
       comando=(bash "$0" "$n")
       if [ "$toca" = 0 ]; then
         lar=$(mktemp -d "${TMPDIR:-/tmp}/suite-lar-XXXXXX")
-        mkdir -p "$lar"/{config,data,cache,state,runtime,tmp} "$lar/data/dbus-1/services"
+        mkdir -p "$lar"/{config,data,cache,state,runtime,tmp}
         chmod 700 "$lar/runtime"
-        # O lar não tem portal nem sessão gráfica: a razão medida está no `_lar_sem_portal` do
-        # `portoes.sh` (o Chrome acordava o portal do COSMIC, que morria sem Wayland).
-        for portal in org.freedesktop.portal.Desktop org.freedesktop.portal.Documents; do
-          printf '[D-BUS Service]\nName=%s\nExec=/bin/false\n' "$portal" > "$lar/data/dbus-1/services/$portal.service"
-        done
+        # O lar não tem portal (o `servicos_sem_portal`, no alto) nem sessão gráfica.
+        servicos_sem_portal "$lar/data"
         command -v xvfb-run > /dev/null 2>&1 && prefixo=(xvfb-run -a)
         command -v dbus-run-session > /dev/null 2>&1 && prefixo=(dbus-run-session -- ${prefixo[@]+"${prefixo[@]}"})
         comando=(env HOME="$lar" XDG_CONFIG_HOME="$lar/config" XDG_DATA_HOME="$lar/data"
