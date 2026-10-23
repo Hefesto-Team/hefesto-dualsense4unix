@@ -5,7 +5,7 @@
       "data": "2026-10-23",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 54683,
+      "piso": 54735,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -133,7 +133,7 @@
         "integrations/exame_da_mesa.py": 158,
         "integrations/faixa_do_wifi.py": 52,
         "integrations/faixas_do_ar.py": 56,
-        "integrations/ficha_declarada.py": 55,
+        "integrations/ficha_declarada.py": 57,
         "integrations/fontes_de_captura.py": 210,
         "integrations/gesto_de_pareamento.py": 128,
         "integrations/gesto_de_reconexao.py": 116,
@@ -200,7 +200,7 @@
         "interface/desenho_dos_lancadores.py": 1030,
         "interface/frases_que_ela_baniu.py": 104,
         "interface/hefesto_vivo.py": 504,
-        "interface/janela.py": 194,
+        "interface/janela.py": 216,
         "interface/mesa_viva.py": 256,
         "interface/monta.py": 279,
         "interface/navegacao_interna.py": 65,
@@ -224,7 +224,7 @@
         "interface/pagina_do_mapa.py": 276,
         "interface/regua_do_mockup.py": 170,
         "interface/sistema.py": 116,
-        "mods/instalador.py": 124,
+        "mods/instalador.py": 128,
         "mods/manifesto.py": 95,
         "mods/porta.py": 155,
         "mods/supervisor.py": 117,
@@ -236,7 +236,7 @@
         "profiles/estilos_de_jogo.py": 209,
         "profiles/formas_de_haptica.py": 112,
         "profiles/loader.py": 294,
-        "profiles/manager.py": 699,
+        "profiles/manager.py": 707,
         "profiles/o_padrao_do_computador.py": 108,
         "profiles/sanidade.py": 44,
         "profiles/schema.py": 762,
@@ -249,7 +249,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +5 linhas (54678 -> 54683), pagas por Origem: D-2310-O-DSU-DIZ-A-CONEXAO-DO-CONTROLE; registrado no fecho, topo f7227aa56889",
+      "razao": "texto-em-src: +52 linhas (54683 -> 54735), pagas por Origem: D-2310-O-MEU-CSS-E-DA-PESSOA-E-FICA-NO-REMOVER, D-2310-O-TAMANHO-CEDE-ONDE-NAO-CABE; registrado no fecho, topo 9be480c37f62",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -454,6 +454,12 @@
           "de": 54678,
           "para": 54683,
           "razao": "texto-em-src: +5 linhas (54678 -> 54683), pagas por Origem: D-2310-O-DSU-DIZ-A-CONEXAO-DO-CONTROLE; registrado no fecho, topo f7227aa56889"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 54683,
+          "para": 54735,
+          "razao": "texto-em-src: +52 linhas (54683 -> 54735), pagas por Origem: D-2310-O-MEU-CSS-E-DA-PESSOA-E-FICA-NO-REMOVER, D-2310-O-TAMANHO-CEDE-ONDE-NAO-CABE; registrado no fecho, topo 9be480c37f62"
         }
       ],
       "unidade": "linhas",
