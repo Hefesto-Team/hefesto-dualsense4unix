@@ -22,6 +22,7 @@ from typing import Any
 import pytest
 import structlog.testing
 
+from hefesto_dualsense4unix.daemon import launch_env as le
 from hefesto_dualsense4unix.daemon import lifecycle as lc
 from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.daemon.subsystems.game_signal import (
@@ -42,6 +43,7 @@ from tests.unit.test_o_jogo_seguinte_veste_a_propria_roupa import (  # noqa: F40
     _hermetico,
     _linhas,
     _Mesa,
+    _perfil,
     _processo,
     _Relogio,
     _roupa_do_jogo_novo,
@@ -117,6 +119,36 @@ def test_o_arme_do_proprio_jogo_veste_a_roupa_com_a_autoridade_dele(
     assert _linhas(diario, "game_signal_transition") == []
     assert mesa.d.display_authority == "game"
     assert mesa.d._pad_travado_pelo_lancamento == (JOGO_A, EPOCH_B), "a trava nasce depois"
+
+
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+def test_o_caminho_do_perfil_do_proprio_jogo_nao_e_adiado(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, transporte: str,
+) -> None:
+    """O perfil de A pede o caminho Xbox e o tique já viu A: a máscara sai no arme dele.
+
+    O mesmo juiz da roupa decide a máscara do perfil (`apply_profile_mode`): sem a
+    passagem, a troca ficaria adiada até o jogo devolver a autoridade.
+
+    MORDIDA: tire a passagem do arme (`game_signal.o_arme_do_proprio_jogo` em
+    `launch_env.arm_launch_profile`) e o diário traz `profile_mode_mascara_adiada_jogo_aberto`
+    com o pad ainda DualSense.
+    """
+    _roupa_do_jogo_novo(monkeypatch, EDGE)
+    perfil = _perfil(JOGO_A, flavor="xbox", caminho="xbox")
+    monkeypatch.setattr(le, "_steam_profiles", lambda _d: [(JOGO_A, perfil)])
+    mesa = _Mesa(monkeypatch, transporte, 0)
+    _o_tique_ve_o_jogo(mesa, tmp_path, JOGO_A, por="o_marcador")
+    mesa.lancar(tmp_path, JOGO_A, EPOCH_B)
+    assert mesa.d._gamepad_device.flavor == "dualsense"
+
+    with structlog.testing.capture_logs() as diario:
+        resultado = _arme(mesa, tmp_path)
+
+    assert resultado is not None and resultado["appid"] == JOGO_A
+    assert _linhas(diario, "profile_mode_mascara_adiada_jogo_aberto") == []
+    assert _linhas(diario, "game_signal_transition") == []
+    assert mesa.d._gamepad_device.flavor == "xbox", "o caminho Xbox do perfil não foi vestido"
 
 
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
