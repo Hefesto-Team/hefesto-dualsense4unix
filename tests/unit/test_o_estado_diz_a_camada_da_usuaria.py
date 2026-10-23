@@ -147,7 +147,10 @@ def test_o_campo_esta_nos_campos_da_volta(campo: str) -> None:
 
 
 def test_o_pedido_pelo_ipc_vai_e_volta_nos_quatro_e_nos_dois_transportes(tmp_path: Path) -> None:
-    """Os comandos de saída com `uniq` (cabo e rádio, de P1 a P4) e a volta, lidos no estado."""
+    """Os comandos de saída com `uniq` (cabo e rádio, de P1 a P4) e a volta, lidos no estado.
+
+    A prova de D-2310-O-ESTADO-DIZ-A-CAMADA-DA-USUARIA.
+    """
     inst = PyDualSenseController(evdev_reader=_null_evdev())
     chaves = [f"AA:BB:CC:00:00:0{n}" for n in range(1, 5)]
     inst._handles = {
