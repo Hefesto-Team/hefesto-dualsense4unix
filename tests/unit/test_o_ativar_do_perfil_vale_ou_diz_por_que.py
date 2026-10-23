@@ -14,7 +14,9 @@ AS MORDIDAS (executadas em 22/10/2026):
    marcador com o serviço parado, e `test_com_o_servico_parado_nada_esta_em_uso_na_tela` reprova;
 3. devolva `"perfil": ativo or "—"` em `pacotes.topo`: o mesmo teste reprova no chip;
 4. tire o `lembrar_o_parar(True)` de `a09_sistema.desligar`: a janela reaberta liga o serviço que
-   ela parou de propósito, e `test_o_parar_da_aba_sistema_segura_o_servico_parado` reprova.
+   ela parou de propósito, e `test_o_parar_da_aba_sistema_segura_o_servico_parado` reprova;
+5. tire a chamada a `trazer_o_servico()` de `abrir.abrir`: a janela que vai para a tela abre sem
+   trazer o serviço, e `test_a_janela_que_vai_para_a_tela_traz_o_servico` reprova.
 """
 from __future__ import annotations
 
@@ -253,3 +255,27 @@ def test_o_sair_da_bandeja_deixa_a_janela_trazer_o_servico(
     assert pedidos == ["stop", "stop", "fechou"], pedidos
     assert not abrir.marca_do_parar().exists()
     assert _janela_traz(monkeypatch) == ["ligar"]
+
+
+@pytest.mark.parametrize("na_tela", [True, False], ids=["na-tela", "oculta"])
+def test_a_janela_que_vai_para_a_tela_traz_o_servico(
+    monkeypatch: pytest.MonkeyPatch, na_tela: bool,
+) -> None:
+    """A porta do produto (`abrir.abrir`) chama `trazer_o_servico` só quando a janela vai à tela."""
+    import runpy
+
+    from hefesto_dualsense4unix.app import arranque
+
+    trouxe: list[str] = []
+    monkeypatch.setattr(abrir, "garantir_tela_de_mentira", lambda: None)
+    monkeypatch.setattr(arranque, "sanear_loaders_do_gdk_pixbuf", lambda: False)
+    monkeypatch.setattr(abrir, "diario_da_janela", lambda: None)
+    monkeypatch.setattr(abrir, "achar_o_piloto", lambda: "piloto.de.mentira")
+    monkeypatch.setattr(abrir, "tomar_a_vez", lambda _a: "")
+    monkeypatch.setattr(abrir, "vestir_a_identidade", lambda _c: [])
+    monkeypatch.setattr(abrir, "a_janela_vai_para_a_tela", lambda _a: na_tela)
+    monkeypatch.setattr(abrir, "trazer_o_servico", lambda: trouxe.append("trouxe") or True)
+    monkeypatch.setattr(runpy, "run_module", lambda *_a, **_k: None)
+    monkeypatch.setattr("sys.argv", ["abrir"])
+    assert abrir.abrir(["--abre", "10-perfis.html"]) == 0
+    assert trouxe == (["trouxe"] if na_tela else []), trouxe
