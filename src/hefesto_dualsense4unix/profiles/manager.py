@@ -1365,20 +1365,11 @@ class ProfileManager:
            valor que o firmware tinha. Um perfil que não pediu nada não pode
            pagar esse preço (é a queixa de que a configuração do usuário nunca é
            respeitada, do lado do áudio).
-        2. **a trava manual de áudio vence o perfil.** Categoria `"audio"` do
-           `StateStore` (irmã de "trigger"/"led"/"rumble"): se ela acabou de
-           mexer no volume na mão, o autoswitch reaplicando o perfil a cada
-           troca de janela NÃO pisa o ajuste dela — a mesma disciplina do
-           PERFIL-MANUAL-VENCE-01, que trata cor e gatilho assim. Trocar de
-           perfil explicitamente limpa as categorias e solta a trava.
-
-           **NOTA DATADA — 18/08/2026.** A categoria `"audio"` deixou de ser só
-           do alto-falante: o `mic.set` e o `mic.volume.set` passaram a armá-la
-           também, e `apply_mic` a consulta aqui do lado. O que continua sendo
-           só daqui é a razão do item 1 (a POSSE dos bytes de volume do report);
-           o microfone tem razão própria, escrita em `apply_mic` — a trava
-           sozinha não bastava, porque o perfil de JOGO a limpa ao entrar, e
-           desde 28/09 o mudo é do controle (O-MUDO-E-DO-CONTROLE-01).
+        2. **nenhuma trava manual fica entre o perfil e o controle.** A trava
+           por categoria saiu em 14/09/2026
+           (D-1409-A-TRAVA-MANUAL-SAI-O-PERFIL-APLICA-TUDO): a ativação aplica a
+           seção inteira. Desde 28/09 o mudo é do controle e não atravessa
+           (O-MUDO-E-DO-CONTROLE-01).
         3. **o par vai SEMPRE completo.** `volume` e `muted` juntos, nunca um
            `speaker.set` sem volume — medido: sem volume e sem preferência
            guardada a chamada toma a posse e manda ZERO, publicando
@@ -1389,8 +1380,7 @@ class ProfileManager:
 
         Best-effort como os irmãos: falha do applier loga warning e não aborta
         a ativação. `relatorio` recebe `"speaker" → estado` para a GUI poder
-        contar a verdade (inclusive `"ignorado_trava_manual"`, que sem o
-        registro sumiria sem rastro — o buraco que o R-03 fechou).
+        contar a verdade.
         """
         resultado: dict[str, str] = relatorio if relatorio is not None else {}
         secao = getattr(profile, "speaker", None)
@@ -1498,10 +1488,7 @@ class ProfileManager:
         **Só reaplica quando o perfil ativo TEM opinião sobre aquela peça** —
         sem isso voltaríamos a tomar posse sem pedido a cada replug, que é o
         defeito que a E4 inteira existe para não cometer. Sem perfil ativo, sem
-        opinião nenhuma ou sem applier: devolve `None` e não escreve nada. Com
-        a trava manual de áudio armada devolve `"ignorado_trava_manual"` (e
-        também não escreve): se o usuário mexeu no volume na mão, quem manda é ele —
-        a reconexão não é ocasião para o perfil retomar o campo.
+        opinião nenhuma ou sem applier: devolve `None` e não escreve nada.
 
         **"A SEÇÃO" ERA SÓ A GLOBAL, E ISSO ERA O DEFEITO — SOM-ROTA-03,
         16/09/2026.** Este gancho olhava apenas `profile.speaker`, a seção

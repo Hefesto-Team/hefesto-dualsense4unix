@@ -3140,7 +3140,7 @@ class Daemon:
         PERFIL-GUARDA-O-MIC-01. Injetado como `mic_applier` do `ProfileManager`
         e consumido por `ProfileManager.apply_mic`, que já decidiu, ANTES de
         chegar aqui: que há opinião a aplicar (perfil sem a seção não chama
-        este método), que a trava manual de áudio não está armada, e se o
+        este método) e se o
         `muted` atravessa. Desde a O-MUDO-E-DO-CONTROLE-01 o mudo é do controle
         e mora no `maquina.json`: ativação de perfil nenhuma o leva, e o único
         `muted` que chega aqui é o `True` do dono, pelo replug

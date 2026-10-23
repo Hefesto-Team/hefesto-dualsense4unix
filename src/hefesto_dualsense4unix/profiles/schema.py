@@ -777,7 +777,7 @@ class ProfileMicConfig(BaseModel):
     **O MUDO NÃO É DO PERFIL — O-MUDO-E-DO-CONTROLE-01.** Os dois campos NÃO
     custam a mesma coisa, e por isso não atravessam pelos mesmos caminhos:
 
-    - `volume` aplica em TODA ativação (respeitada a trava manual de áudio):
+    - `volume` aplica em TODA ativação:
       ele é o ganho da fonte no PipeWire e não apaga luz nenhuma;
     - `muted` não aplica em ativação NENHUMA — nem na troca automática, nem na
       explícita, nem no boot. O mudo é do CONTROLE e mora no `maquina.json`
