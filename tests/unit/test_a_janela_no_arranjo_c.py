@@ -280,3 +280,39 @@ def test_os_toques_cabem_sem_corte_nos_dois_arranjos(navegador, larg, alt, com_a
         assert m["lista"] >= 64, m
     finally:
         pg.close()
+
+
+@pytest.mark.parametrize(("larg", "alt"), [(1212, 809), (1600, 840)])
+def test_a_janela_nao_muda_de_tamanho_ao_trocar_de_aba(navegador, larg, alt) -> None:  # noqa: F811
+    """Cada aba clicada deixa a janela na mesma caixa: com a tela de cada aba no próprio tamanho,
+    a janela centrada subia e descia até 147 px e as abas fugiam do clique (bancada de 22/10/2026).
+    MORDIDA: devolva ``display:none``/``display:block`` às ``.mj-tela`` no lugar da
+    ``visibility``."""
+    sys.path.insert(0, str(INTERFACE))
+    import desenho_da_experimental as exp
+
+    todos = [o._replace(botoes=BOTOES) if o.tipo == "por_botao" else o
+             for o in exp.OPCOES_DO_DESENHO_C]
+    janela = exp.modificacao_miolo_html("Minha extensão", todos, mod="exemplo",
+                                        agora=exp.AGORA_DO_DESENHO,
+                                        estado=exp.ESTADO_DO_DESENHO, parar_tudo=True)
+    pg = navegador.new_page(viewport={"width": larg, "height": alt})
+    try:
+        pg.goto(f"{MOCKUP.as_uri()}#modificacao")  # (noqa-acento: âncora do HTML)
+        pg.evaluate("h => { document.getElementById('mod-janela').innerHTML = h; }", janela)
+        caixas = pg.evaluate("""() => {
+          const j = document.getElementById('mod-janela');
+          return [...j.querySelectorAll('.mj-abas > label')].map(l => {
+            l.click();
+            const r = j.getBoundingClientRect(), a = l.getBoundingClientRect();
+            const tela = l.nextElementSibling;
+            return [Math.round(r.top), Math.round(r.bottom), Math.round(a.top),
+                    getComputedStyle(tela).visibility,
+                    [...j.querySelectorAll('.mj-tela')].filter(
+                      t => getComputedStyle(t).visibility === 'visible').length];
+          }); }""")
+        assert len(caixas) >= 3, caixas
+        assert len({tuple(c[:3]) for c in caixas}) == 1, caixas
+        assert all(c[3] == "visible" and c[4] == 1 for c in caixas), caixas
+    finally:
+        pg.close()

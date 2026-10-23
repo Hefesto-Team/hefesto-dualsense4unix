@@ -524,8 +524,9 @@ def _abas_das_opcoes(opcoes: Sequence[OpcaoDaJanela], aba: str) -> str:
     """O lado dos ajustes do arranjo C: os grupos do manifesto em abas, um cartão só.
 
     As abas são rádios (o navegador troca a tela sem gesto); ``aba`` é o grupo que nasce aberto, o
-    da última opção mudada, para a janela redesenhada não voltar à primeira. Com um grupo só, é o
-    cartão de sempre.
+    da última opção mudada, para a janela redesenhada não voltar à primeira. As telas se empilham
+    na mesma célula (``--n`` é o número de abas): a janela tem a altura da maior e não pula sob o
+    clique. Com um grupo só, é o cartão de sempre.
     """
     grupos = _grupos_das_opcoes(opcoes)
     if len(grupos) < 2:
@@ -536,7 +537,7 @@ def _abas_das_opcoes(opcoes: Sequence[OpcaoDaJanela], aba: str) -> str:
         f'<label for="mj-aba-{n}">{_e(nome)}</label>'
         f'<div class="mj-tela">{_linhas_das_opcoes(itens)}</div>'
         for n, (nome, itens) in enumerate(grupos.items()))
-    return f'<div class="ac-card mj-abas">{partes}</div>'
+    return f'<div class="ac-card mj-abas" style="--n:{len(grupos)}">{partes}</div>'
 
 
 #: Os pedaços da coluna «Agora» que um manifesto pode declarar, na ordem do desenho.
