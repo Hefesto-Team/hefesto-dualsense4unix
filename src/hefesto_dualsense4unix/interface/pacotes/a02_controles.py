@@ -973,13 +973,20 @@ def fonte_do_controle(entry: Any) -> str:
 
 
 def aceso_da_fileira(uniq: str, entry: Any) -> str:
-    """Qual botão da fileira do som acende (três na tela do todo, 15/10/2026)."""
-    aceso = aceso_da_rota(uniq, entry)
-    if aceso in (ROTA_TUDO_NO_CONTROLE, ROTA_NADA_NO_CONTROLE):
-        return aceso
-    # O perfil com a fonte «mix» (o «junto», que saiu da tela no todo) acende o que está mais
-    # perto: o som do PC chega ao controle.
-    return ROTA_TUDO_NO_CONTROLE if fonte_do_controle(entry) == "mix" else aceso
+    """Qual botão da fileira do som acende (três na tela do todo, 15/10/2026).
+
+    É a rota que o controle tem, e só ela: a fonte `mix` não troca o botão. O Terror escreve `mix`
+    com a rota 2 (o som do PC toca no controle e continua no PC); acender o botão da rota 3 ali
+    diria que o PC calou. A fonte aparece como a marca do botão aceso (`junto_na_tela`).
+    """
+    return aceso_da_rota(uniq, entry)
+
+
+def junto_na_tela(uniq: str, entry: Any) -> str:
+    """`"sim"` com «Sons do jogo» aceso e o som do PC também no controle (fonte `mix`)."""
+    if aceso_da_fileira(uniq, entry) != "jogo":
+        return ""
+    return "sim" if fonte_do_controle(entry) == "mix" else ""
 
 
 # AS QUATRO FACES, e cada uma tem chave própria no `state_full.audio` desde a
@@ -1464,6 +1471,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 # dos quatro degraus da Vibração, e é ela que faz "ligar um
                 # [09].** Era `rota_na_tela(c)`, o byte e mais nada, e foi
                 "alto-rota": aceso_da_fileira(uniq, c),
+                **_so_se_a_pagina_tiver({"alto-junto": junto_na_tela(uniq, c)}),
                 # O `getattr` É O MESMO DO `rotulo_lightbar` VINTE LINHAS ACIMA,
                 "giro-no-jogo": texto_motion(
                     c, getattr(ctx, "state", None) or {}) or "",

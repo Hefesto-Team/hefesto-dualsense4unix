@@ -1142,6 +1142,11 @@ CSS = CSS_GLIFO + CSS_LUZINHAS + """
      e os nomes do alvo cabem numa linha só; o cartão perde o que o par de baixo custava. */
   .rota.trio{gap:3px}
   .rota.trio button{height:22px;min-height:22px;white-space:nowrap;text-align:center;padding:0 9px}
+  /* A MARCA DO «SONS DO JOGO» COM A FONTE `mix` (o Terror duplica o som do PC no controle, 23/10/2026):
+     uma sigla no botão aceso; sem `mix` ela não ocupa lugar. */
+  .rota .junto{display:none;margin-left:6px;padding:0 4px;border:1px solid var(--purple);border-radius:4px;
+    font-size:9px;line-height:12px;font-weight:600;vertical-align:1px}
+  .rota .junto.on{display:inline-block}
   /* O MODO DO MICROFONE CONTINUA DEITADO, e agora precisa dizê-lo — 20/09/2026.
      Enquanto as duas fileiras eram a mesma, o `.mic-modo` não tinha uma linha
      própria de estilo, e o bloco de comentário mais acima registra por quê. A
@@ -1751,7 +1756,12 @@ DICA_MIC_TESTAR = "Ouvir a própria voz como o jogo ouve"
 #: As três rotas do alto-falante (todo, 15/10/2026). O «junto» saiu da tela; o gesto segue aceito
 #: no back-end.
 ROTULO_SO_OS_EFEITOS = "Canais sonoros nativos - Padrão"
-DICA_SO_OS_EFEITOS = "Efeitos do jogo no controle; o som do PC no PC"
+DICA_SO_OS_EFEITOS = "Efeitos do jogo no controle; o PC segue tocando"
+
+#: A marca do botão «Sons do jogo» quando a fonte do controle é `mix` (o Terror, 23/10/2026): o som do
+#: PC também toca no controle e continua no PC. Uma sigla no botão aceso; a frase mora na dica dela.
+MARCA_SIGLA_JUNTO = "+ PC"
+DICA_JUNTO_NO_CONTROLE = "O som do PC também toca no controle"
 
 #: (`audio_saida.mandar_o_som_do_pc`, byte `rota=3`) e calava a televisão.
 ROTULO_NADA_NO_CONTROLE = "Canais sonoros apenas no PC"
@@ -1845,7 +1855,7 @@ DICA_MIC_NATIVO = ("O microfone deste controle entra sozinho, sem o Hefesto no "
 def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
           touch2=None, tocando2=False,
           # class="mudo" data-campo="alto-estado" hidden>` saiu do desenho, e quem
-          giro, mic_v, mic_mudo, mic_vol, alto_v, rota_nada,
+          giro, mic_v, mic_mudo, mic_vol, alto_v, rota_nada, junto=False,
           alto_mudo=False, alto_pode=True, mic_posse=False, tocando=True,
           accel=None, conectado=True,
           no_jogo=None):
@@ -2171,7 +2181,7 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                  só. A gramática não muda: mesmo gesto, mesmo endereço, cada
                  botão com o seu valor. -->
             <div class="rota trio">
-              <button class="{'on' if not rota_nada else ''}" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="{DICA_SO_OS_EFEITOS}">{ROTULO_SO_OS_EFEITOS}</button>
+              <button class="{'on' if not rota_nada else ''}" data-gesto="rota" data-rota="jogo" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="jogo" data-dica="{DICA_SO_OS_EFEITOS}">{ROTULO_SO_OS_EFEITOS}<span class="junto{' on' if junto and not rota_nada else ''}" data-campo="alto-junto" data-hef-alvo="classe" data-hef-quando="sim" data-dica="{DICA_JUNTO_NO_CONTROLE}">{MARCA_SIGLA_JUNTO}</span></button>
               <button data-gesto="rota" data-rota="pc" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="pc" data-dica="{DICA_TUDO_NO_CONTROLE}">{ROTULO_TUDO_NO_CONTROLE}</button>
               <button class="{'on' if rota_nada else ''}" data-gesto="rota" data-rota="nada" data-campo="alto-rota" data-hef-alvo="classe" data-hef-quando="nada" data-dica="{DICA_NADA_NO_CONTROLE}">{ROTULO_NADA_NO_CONTROLE}</button>
             </div>
@@ -2341,7 +2351,7 @@ ESTADO = {
           ("Z", " +0.170", "left:50%;width:4%;background:var(--cyan)"),
     ],
     mic_v=[22, 48, 72, 95, 64, 38, 52, 80, 44, 26, 58, 88, 40, 20], mic_mudo=False,
-    alto_v=[100, 88, 64, 92, 76, 54, 82, 96, 70, 48, 86, 60, 74, 90], rota_nada=False),
+    alto_v=[100, 88, 64, 92, 76, 54, 82, 96, 70, 48, 86, 60, 74, 90], rota_nada=False, junto=True),
 
   "p2": dict(bat=64, carga="carregando", mic_vol=0,
     glifos_on=set(), tocando=False,
@@ -3043,7 +3053,9 @@ def _conferir(doc):
     for rota, palavra_dela in (("jogo", ROTULO_SO_OS_EFEITOS),
                                ("pc", ROTULO_TUDO_NO_CONTROLE),
                                ("nada", ROTULO_NADA_NO_CONTROLE)):
-        vistos = re.findall(rf'data-rota="{rota}"[^>]*>([^<]*)</button>', corpo)
+        # a marca da fonte `mix` é filha do botão «jogo» (`MARCA_SIGLA_JUNTO`): a palavra é o texto antes dela
+        vistos = re.findall(rf'data-rota="{rota}"[^>]*>([^<]*)(?:<span class="junto[^>]*>[^<]*</span>)?</button>',
+                            corpo)
         exigir(vistos == [palavra_dela] * len(MESA),
                f"o botão `{rota}` da rota do som diz {sorted(set(vistos)) or '[]'} "
                f"e a palavra do todo é {palavra_dela!r}")
