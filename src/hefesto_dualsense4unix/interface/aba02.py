@@ -3056,12 +3056,12 @@ def _conferir(doc):
     for rota, palavra_dela in (("jogo", ROTULO_SO_OS_EFEITOS),
                                ("pc", ROTULO_TUDO_NO_CONTROLE),
                                ("nada", ROTULO_NADA_NO_CONTROLE)):
-        # a marca da fonte `mix` é filha do botão «jogo» (`MARCA_SIGLA_JUNTO`): a palavra é o texto antes dela
-        vistos = re.findall(rf'data-rota="{rota}"[^>]*>([^<]*)(?:<span class="junto[^>]*>[^<]*</span>)?</button>',
-                            corpo)
+        vistos = re.findall(rf'data-rota="{rota}"[^>]*>([^<]*)</button>', corpo)
         exigir(vistos == [palavra_dela] * len(MESA),
                f"o botão `{rota}` da rota do som diz {sorted(set(vistos)) or '[]'} "
                f"e a palavra do todo é {palavra_dela!r}")
+    exigir(len(re.findall(r'data-campo="alto-junto"[^>]*><button[^>]*data-rota="jogo"', corpo)) == len(MESA),
+           "a marca da fonte `mix` perdeu o invólucro do botão «jogo» em algum controle")
 
     for campo in ("bateria", "bateria-barra"):
         exigir(corpo.count(f'data-campo="{campo}"') == len(MESA),

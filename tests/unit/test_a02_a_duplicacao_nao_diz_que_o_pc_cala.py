@@ -65,7 +65,7 @@ def _card(entry: dict[str, Any]) -> dict[str, Any]:
         fora = a02.pacote(Contexto(state={}, mesa=[], conectados=[entry], estados={}))
     finally:
         a02._ENDERECOS = None
-    return dict(fora["cards"][UNIQ])
+    return dict(fora["cards"][entry["uniq"]])
 
 
 def _no_controle() -> None:
@@ -83,6 +83,22 @@ def test_rota_2_com_mix_acende_jogo_e_nao_pc() -> None:
     entry = _entrada(BYTE_JOGO, "mix")
     assert a02.aceso_da_fileira(UNIQ, entry) == "jogo"
     assert _card(entry)["alto-rota"] == "jogo"
+
+
+@pytest.mark.parametrize("jogador", [1, 2, 3, 4])
+@pytest.mark.parametrize("transporte", ["usb", "bt"])
+@pytest.mark.parametrize("backend", ["uhid", "uinput"])
+def test_a_regra_vale_para_todo_jogador_transporte_e_modo(
+        jogador: int, transporte: str, backend: str) -> None:
+    """De P1 a P4, no cabo e no rádio, no DualSense e no Xbox: rota 2 + `mix` é «jogo» com a marca.
+
+    MORDE: a mesma do primeiro caso; aqui o que se prova é que nenhuma dessas chaves entra na regra.
+    """
+    entry = {**_entrada(BYTE_JOGO, "mix"), "uniq": f"aa:bb:cc:00:00:0{jogador}", "player": jogador,
+             "transport": transporte, "vpad_backend": backend, "is_primary": jogador == 1}
+    card = _card(entry)
+    assert card["alto-rota"] == "jogo"
+    assert card["alto-junto"] == "sim"
 
 
 def test_rota_2_com_mix_leva_a_marca_e_rota_2_com_sfx_nao() -> None:
