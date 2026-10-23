@@ -245,14 +245,14 @@
       "data": "2026-10-23",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1195074,
+      "piso": 1196045,
       "por_item": {
-        "docs": 120849,
+        "docs": 120859,
         "scripts": 120631,
-        "src": 319626,
-        "tests": 633968
+        "src": 319798,
+        "tests": 634757
       },
-      "razao": "tamanho: +195 linhas (1194879 -> 1195074), pagas por Origem: D-2310-O-DSU-DIZ-A-CONEXAO-DO-CONTROLE; registrado no fecho, topo 59a938427514",
+      "razao": "tamanho: +971 linhas (1195074 -> 1196045), pagas por Origem: D-2310-O-MEU-CSS-E-DA-PESSOA-E-FICA-NO-REMOVER, D-2310-O-TAMANHO-CEDE-ONDE-NAO-CABE; registrado no fecho, topo 733324791573",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -871,10 +871,16 @@
           "de": 1194879,
           "para": 1195074,
           "razao": "tamanho: +195 linhas (1194879 -> 1195074), pagas por Origem: D-2310-O-DSU-DIZ-A-CONEXAO-DO-CONTROLE; registrado no fecho, topo 59a938427514"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 1195074,
+          "para": 1196045,
+          "razao": "tamanho: +971 linhas (1195074 -> 1196045), pagas por Origem: D-2310-O-MEU-CSS-E-DA-PESSOA-E-FICA-NO-REMOVER, D-2310-O-TAMANHO-CEDE-ONDE-NAO-CABE; registrado no fecho, topo 733324791573"
         }
       ],
       "unidade": "linhas",
-      "universo": 3128
+      "universo": 3131
     }
   }
 }
