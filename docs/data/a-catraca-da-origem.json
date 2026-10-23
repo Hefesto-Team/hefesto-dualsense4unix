@@ -245,14 +245,14 @@
       "data": "2026-10-23",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1193301,
+      "piso": 1194127,
       "por_item": {
-        "docs": 120828,
-        "scripts": 120406,
-        "src": 319342,
-        "tests": 632725
+        "docs": 120835,
+        "scripts": 120632,
+        "src": 319384,
+        "tests": 633276
       },
-      "razao": "tamanho: +234 linhas (1193067 -> 1193301), pagas por Origem: D-2310-O-TERROR-DUPLICA-PELO-OUVIR-JUNTO; registrado no fecho, topo d6f05f238d5e",
+      "razao": "tamanho: +826 linhas (1193301 -> 1194127), pagas por Origem: D-2310-O-PISO-DA-SUITE-E-O-PYTEST-DAS-PARTES-EM-SERIE; registrado no fecho, topo 3d4059a43d84",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -853,10 +853,16 @@
           "de": 1193067,
           "para": 1193301,
           "razao": "tamanho: +234 linhas (1193067 -> 1193301), pagas por Origem: D-2310-O-TERROR-DUPLICA-PELO-OUVIR-JUNTO; registrado no fecho, topo d6f05f238d5e"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 1193301,
+          "para": 1194127,
+          "razao": "tamanho: +826 linhas (1193301 -> 1194127), pagas por Origem: D-2310-O-PISO-DA-SUITE-E-O-PYTEST-DAS-PARTES-EM-SERIE; registrado no fecho, topo 3d4059a43d84"
         }
       ],
       "unidade": "linhas",
-      "universo": 3120
+      "universo": 3124
     }
   }
 }
