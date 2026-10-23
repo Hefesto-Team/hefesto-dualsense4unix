@@ -271,12 +271,14 @@ def declaracoes_do_cache(
 
 
 def _bibliotecas_e_manifesto(
-    raiz: Path, roupa: list[Path] | None = None
+    raiz: Path, roupa: list[Path] | None = None, pastas: list[Path] | None = None
 ) -> tuple[list[Path], bool]:
     """As `libScePad*` e o `MicrosoftGame.config` da pasta, com teto de profundidade.
 
     Com `roupa`, junta nela os arquivos da roupa (`_ARQUIVOS_DA_ROUPA` e os
     primeiros `sharedassets<N>.assets`, com o `resources.assets`), na mesma volta.
+    Com `pastas`, junta nela as subpastas por onde a varredura andou (a raiz não entra):
+    arquivo que nasce ou some numa delas muda o `mtime` dela, e é o que o cache vigia.
     """
     bibliotecas: list[Path] = []
     assets: list[Path] = []
@@ -285,6 +287,8 @@ def _bibliotecas_e_manifesto(
     pilha: list[tuple[Path, int]] = [(raiz, 0)]
     while pilha:
         pasta, fundo = pilha.pop()
+        if pastas is not None and fundo > 0:
+            pastas.append(pasta)
         try:
             with os.scandir(pasta) as entradas:
                 for entrada in entradas:

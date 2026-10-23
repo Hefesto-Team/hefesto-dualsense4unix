@@ -120,11 +120,18 @@ def _sinais_do_arquivo(arquivo: Path, *, rewired: bool) -> tuple[bool, bool]:
 
 
 def _ler_o_disco(raiz: Path) -> tuple[_Declarado, list[Path]]:
-    """O que o jogo nomeia, pela leitura do disco, e os arquivos lidos (a chave do cache)."""
+    """O que o jogo nomeia, pela leitura do disco, e o que se olhou (a chave do cache).
+
+    O que se olhou são as subpastas por onde a varredura andou e os arquivos lidos.
+    """
     roupa: list[Path] = []
-    bibliotecas, _gdk = _bibliotecas_e_manifesto(raiz, roupa)
+    pastas: list[Path] = []
+    bibliotecas, _gdk = _bibliotecas_e_manifesto(raiz, roupa, pastas)
     executavel = escolher_executavel(raiz)
-    lidos = sorted(roupa) + bibliotecas + ([executavel] if executavel is not None else [])
+    lidos = (
+        sorted(pastas) + sorted(roupa) + bibliotecas
+        + ([executavel] if executavel is not None else [])
+    )
     rewired = any(p.name.lower() == _DO_REWIRED for p in roupa)
     edge: str | None = None
     comum: str | None = None
@@ -178,7 +185,7 @@ def _relativo(arquivo: Path, raiz: Path) -> str:
 
 
 def _chave(raiz: Path, lidos: list[Path]) -> _Chave:
-    """O caminho, o tamanho e o `mtime` da pasta e de cada arquivo lido."""
+    """O caminho, o tamanho e o `mtime` da raiz, das subpastas visitadas e de cada arquivo lido."""
     chave: list[tuple[str, int, int]] = []
     for caminho in [raiz, *lidos]:
         try:
@@ -191,7 +198,7 @@ def _chave(raiz: Path, lidos: list[Path]) -> _Chave:
 
 
 def _do_cache(raiz: Path) -> _Declarado | None:
-    """A leitura guardada, se nenhum arquivo lido mudou desde então."""
+    """A leitura guardada, se nenhuma pasta visitada nem arquivo lido mudou desde então."""
     with _TRAVA_DO_CACHE:
         guardado = _CACHE.get(str(raiz))
     if guardado is None:
@@ -239,9 +246,10 @@ def _aquecer(raizes: list[Path], ao_aquecer: Callable[[], None] | None) -> None:
     """Lê, fora do laço, os jogos que o cache ainda não tem, e avisa quem pediu."""
     try:
         for raiz in raizes:
-            roupa_do_jogo(raiz)
-    except Exception:
-        logger.debug("a roupa dos jogos não aqueceu", exc_info=True)
+            try:
+                roupa_do_jogo(raiz)
+            except Exception:
+                logger.debug("a roupa de %s não aqueceu", raiz, exc_info=True)
     finally:
         _AQUECENDO.clear()
     if ao_aquecer is not None:
