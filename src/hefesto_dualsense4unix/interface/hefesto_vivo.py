@@ -2098,13 +2098,30 @@ class _EscolhaDaFita:
 ESCOLHA_DA_FITA = _EscolhaDaFita()
 
 
-def _escolher_na_fita(ctx: pacotes.Contexto, o: dict[str, Any],
-                      _ipc: Any) -> dict[str, Any]:
-    """O clique no chip do `Selecionar:` — ele só ESCOLHE, e é todo o contrato.
+def _devolver_o_alvo_a_todos(ctx: pacotes.Contexto, ipc: Any) -> None:
+    """O «Todos» da fita desfaz o «só este»: `controller.target.set` com `index: null`, uma vez.
 
-    O QUE ELE NÃO FAZ, e está escrito porque é o risco desta cura: não troca de
-    perfil, não fala com o daemon e não grava no disco do usuário. O `_ipc` chega e
-    não é usado de propósito — a assinatura é a das dez abas.
+    O serviço guarda UM alvo de saída (`output_target_index`); com um `index`, luz, gatilhos,
+    luzes do jogador, vibração e luz do microfone miram só aquele controle, posto pelo «só este»
+    da 08. Sem esta chamada o chip só escolhia o lugar da fita (medido no piloto em 20/10/2026).
+    Só quando o estado diz um número: `None` já é «todos», e a chave ausente é serviço mudo.
+    Se o serviço recusa, o clique recusa dizendo e a fita não muda.
+    """
+    if ctx.state.get("output_target_index") is None:
+        return
+    if not ipc.chamar("controller.target.set", index=None):
+        raise RuntimeError(
+            "O serviço não devolveu as ações a todos os controles — o alvo "
+            "segue em um só.")
+
+
+def _escolher_na_fita(ctx: pacotes.Contexto, o: dict[str, Any],
+                      ipc: Any) -> dict[str, Any]:
+    """O clique no chip do `Selecionar:` — ele ESCOLHE, e só o «Todos» fala com o serviço.
+
+    O QUE ELE NÃO FAZ: não troca de perfil e não grava no disco do usuário. Só o «Todos»
+    fala com o serviço (`_devolver_o_alvo_a_todos`, escolha de 23/10/2026); os chips de um
+    controle apontam a aba, e o alvo de saída do serviço é o «só este» da 08.
 
     O `("*", …)` É O MESMO CORINGA DO RODAPÉ: a fita mora no `topo.html`, o
     esqueleto das dez, e registrá-la por página seria a mesma linha dez vezes.
@@ -2124,6 +2141,7 @@ def _escolher_na_fita(ctx: pacotes.Contexto, o: dict[str, Any],
             raise ValueError(
                 "o chip `Todos` não se escolhe com um controle só na mesa: "
                 "ele É a escolha.")
+        _devolver_o_alvo_a_todos(ctx, ipc)
         ESCOLHA_DA_FITA.uniq = "todos"
         return {"recado": f"Esta aba passa a mirar os {len(ctx.mesa)} controles."}
     for c in ctx.mesa:

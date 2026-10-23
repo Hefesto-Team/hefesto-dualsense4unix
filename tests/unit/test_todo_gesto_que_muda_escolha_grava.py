@@ -64,7 +64,9 @@ ATOS: dict[Chave, str] = {
         "`identity.renumber`); nenhuma escolha muda (19/10/2026)",
     ("*", "escolher-na-fita"):
         "tela: o chip do «Selecionar:» só escolhe qual controle a aba mira "
-        "(`hefesto_vivo.ESCOLHA_DA_FITA`); nada de perfil, nada de daemon",
+        "(`hefesto_vivo.ESCOLHA_DA_FITA`); nada de perfil. O «Todos» também devolve o alvo "
+        "de saída do serviço a todos (`controller.target.set` com `index: null`), que é "
+        "estado do serviço e não escolha guardada",
     ("01-jogar.html", "reconectar"):
         "ato: os jogadores voltam e a numeração se ajeita (`coop.sync`); o que "
         "sobra é o estado da mesa, não um campo de perfil",

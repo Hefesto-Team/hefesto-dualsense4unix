@@ -88,10 +88,10 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 05-vibracao | 31 | 12 | 11 | 5 | 3 | 0 | 39% |
 | 06-navegacao | 40 | 7 | 15 | 9 | 9 | 0 | 18% |
 | 07-lancadores | 24 | 8 | 11 | 2 | 3 | 0 | 33% |
-| 08-conexoes | 44 | 12 | 25 | 7 | 0 | 0 | 27% |
+| 08-conexoes | 44 | 13 | 24 | 7 | 0 | 0 | 30% |
 | 09-sistema | 38 | 13 | 18 | 4 | 3 | 0 | 34% |
 | 10-perfis | 48 | 15 | 20 | 7 | 6 | 0 | 31% |
-| TODAS | 381 | 109 | 172 | 53 | 44 | 3 | 29% |<!-- /TABELA-DA-PARIDADE -->
+| TODAS | 381 | 110 | 171 | 53 | 44 | 3 | 29% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -738,3 +738,9 @@ e `TODAS` de `110 · 170 · 53 · 45 · 29%` para `111 · 171 · 52 · 44 · 29%
 validado pelo usuário em 18/10; o que fica é o trilho de 0 a 200% por controle. **«QUAL degrau está aceso»** passa de `IGUAL` a
 `FALTA_NO_HTML`. A tabela acima foi recontada do CSV: `05-vibracao` vai de `13 IGUAL · 4 FALTA · 42%` para `12 · 5 · 39%`,
 e `TODAS` de `111 · 52` para `110 · 53`.
+
+**23/10/2026 — o «Todos» da fita devolve as ações a todos os controles**
+(`O-TODOS-DA-FITA-NAO-VOLTA-O-SERVICO-PARA-TODOS-OS-CONTROLES-01`). Depois de um «só este» na 08, o chip «Todos» do alto
+manda `controller.target.set` com `index: null`, uma vez, pela mesma ponte dos gestos (escolha do usuário, pelo chat). A linha
+**«Alvo de saída ("só este" / "Todos") — ESCREVER»** passa de `DIFERENTE` a `IGUAL`. A tabela acima foi recontada do CSV:
+`08-conexoes` vai de `12 IGUAL · 25 DIFER · 27%` para `13 · 24 · 30%`, e `TODAS` de `109 · 172 · 29%` para `110 · 171 · 29%`.
