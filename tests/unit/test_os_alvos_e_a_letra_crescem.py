@@ -48,7 +48,7 @@ if TYPE_CHECKING:
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 MOCKUP = RAIZ / "mockup"
 CHROME = pathlib.Path("/usr/bin/google-chrome")
-#: as três vistas da casa e a de 150 % (1280x720 é o zoom de 150 % numa tela de 1920)
+#: as três vistas da casa e uma abaixo do desenho (1280x720), onde o piso de 24 e 12 px também vale
 VISTAS = ((1212, 809), (1918, 840), (1212, 740), (1280, 720))
 ESTADOS_02 = ("c-p1", "c-p2", "c-p3", "c-todos")
 ABAS = (
@@ -506,6 +506,11 @@ _FILHO = textwrap.dedent(
     print("ao-gravar", json.dumps([zoom(1.25), dicas()]), flush=True)
     tela.janela.set_default_size(1918, 840)  # a janela oculta muda pelo tamanho padrão
     print("na-vista-baixa", json.dumps([zoom(1.03), dicas()]), flush=True)
+    # a página nova (trocar de aba e voltar) nasce com a dica do desenho, e o em uso volta a ela
+    vezes = len(carregou)
+    tela.view.reload()
+    bombear(lambda: len(carregou) > vezes)
+    print("recarregada", json.dumps([zoom(1.03), dicas()]), flush=True)
     tela.janela.set_default_size(1918, 1300)
     print("de-volta", json.dumps([zoom(1.25), dicas()]), flush=True)
     """
@@ -521,7 +526,7 @@ _PROVA_DO_ZOOM = (
 )
 _DICAS = {"100": "O tamanho de hoje", "125": "Letras e botões maiores",
           "150": "Letras e botões maiores ainda"}
-_LEITURAS = ("ao-abrir", "ao-gravar", "na-vista-baixa", "de-volta")
+_LEITURAS = ("ao-abrir", "ao-gravar", "na-vista-baixa", "recarregada", "de-volta")
 
 
 def _roda_o_filho(modo: str, tmp_path: pathlib.Path) -> dict[str, tuple[float, dict[str, str]]]:
@@ -557,21 +562,25 @@ def test_a_janela_le_o_tamanho_da_interface(tmp_path: pathlib.Path) -> None:
 
     E o tamanho cede onde não cabe (O-TAMANHO-DE-150-NAO-CABE-NA-VISTA-DE-840-PX-01, «Cede onde
     não cabe», 23/10/2026): a janela baixada a 840 px de altura fica em 1,03, o que põe a vista do
-    desenho (1212x809 em CSS) dentro dela, e a dica do botão escolhido diz o tamanho em uso; de
-    volta à vista alta, o 1,25 e a dica do desenho voltam.
+    desenho (1212x809 em CSS) dentro dela, e a dica do botão escolhido diz o tamanho em uso, de
+    novo na página recarregada; de volta à vista alta, o 1,25 e a dica do desenho voltam.
 
     MORDIDAS: `ignora` (a janela que não pergunta ao arquivo fica em 1,0) e `nao-cede` (o zoom
-    que não olha a vista fica em 1,25 a 840 px, e a dica não diz nada).
+    que não olha a vista fica em 1,25 a 840 px, e a dica não diz nada). Arrancar o recomeço da
+    dica na página nova (`_dizer_o_tamanho_em_uso(pagina_nova=True)` sem zerar `_dica_cedida`)
+    reprova a leitura `recarregada` (conferência de 23/10/2026).
     """
     certo = _roda_o_filho("le", tmp_path)
     assert {k: v[0] for k, v in certo.items()} == {
         "ao-abrir": pytest.approx(1.5), "ao-gravar": pytest.approx(1.25),
-        "na-vista-baixa": pytest.approx(1.03), "de-volta": pytest.approx(1.25)}
+        "na-vista-baixa": pytest.approx(1.03), "recarregada": pytest.approx(1.03),
+        "de-volta": pytest.approx(1.25)}
     for leitura in ("ao-abrir", "ao-gravar", "de-volta"):
         assert certo[leitura][1] == _DICAS, leitura
     baixa = certo["na-vista-baixa"][1]
     em_uso = "Letras e botões maiores. Em uso: 103 %, o que cabe na janela"
     assert baixa == {**_DICAS, "125": em_uso}
+    assert certo["recarregada"][1] == baixa, "a página nova perdeu o tamanho em uso"
     (tmp_path / "surdo").mkdir()
     surdo = _roda_o_filho("ignora", tmp_path / "surdo")
     assert [v[0] for v in surdo.values()] == [pytest.approx(1.0)] * len(_LEITURAS)
