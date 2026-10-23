@@ -32,6 +32,7 @@ from tests.unit.test_desligar_o_hefesto_devolve_o_controle_ao_linux import (
     Cena,
     Relogio,
     _aberto_para_a_sessao,
+    _fechado,
     _tudo_do_aparelho,
 )
 from tests.unit.test_o_broker_esquece_o_controle_que_saiu import (
@@ -82,6 +83,33 @@ class Religador(_Gravador):
         super().prender_driver_hid(aparelho, driver)
 
 
+class Renascedor(Religador):
+    """O ``Religador`` com o kernel de verdade atrás: o ``unbind`` apaga o
+    ``hidraw`` e os nós de entrada do aparelho, e o ``bind`` os recria FECHADOS
+    (``0600 root``, a regra 73), com nós de entrada novos. Na mesa o id do pai
+    HID avança com o ``<seq>``; no kernel ele fica, e a varredura não depende dele.
+    """
+
+    def __init__(self, mesa: Mesa, tipos: dict[str, tuple[str, int]], **kw: Any) -> None:
+        super().__init__(**kw)
+        self._mesa = mesa
+        self._tipos = tipos
+        self._soltos: dict[str, str] = {}
+
+    def soltar_driver_hid(self, aparelho: str, driver: str) -> None:
+        super().soltar_driver_hid(aparelho, driver)
+        base = next(b for b, a in self._mesa.aparelhos.items() if a.hid == aparelho)
+        self._mesa.sair(base)
+        self._soltos[aparelho] = base
+
+    def prender_driver_hid(self, aparelho: str, driver: str) -> None:
+        super().prender_driver_hid(aparelho, driver)
+        base = self._soltos.pop(aparelho)
+        tipo, n = self._tipos[base]
+        self._mesa.nascer(base, tipo, n)
+        _com_driver(self._mesa, base, driver)
+
+
 class _OpsAntigo(_Gravador):
     """Um ``ops`` de antes da cura: sabe a ACL, não sabe religar."""
 
@@ -107,23 +135,29 @@ def _drivers(mesa: Mesa) -> Path:
     return mesa.raiz / "sys" / "bus" / "hid" / "drivers"
 
 
+def _raizes(mesa: Mesa) -> dict[str, str]:
+    return {
+        "sys_class_hidraw": str(mesa.sys_hidraw),
+        "dev_input_root": str(mesa.dev_input),
+        "sys_class_input": str(mesa.sys_input),
+        "sys_class_bluetooth": str(mesa.bluetooth),
+        "sys_bus_hid_drivers": str(_drivers(mesa)),
+    }
+
+
 def _ops(mesa: Mesa) -> Religador:
-    return Religador(
-        sys_class_hidraw=str(mesa.sys_hidraw),
-        dev_input_root=str(mesa.dev_input),
-        sys_class_input=str(mesa.sys_input),
-        sys_class_bluetooth=str(mesa.bluetooth),
-        sys_bus_hid_drivers=str(_drivers(mesa)),
-    )
+    return Religador(**_raizes(mesa))
 
 
 class CenaReligavel(Cena):
     """A cena do arquivo vizinho com o ``Religador`` no lugar do ``FsAclOps``."""
 
-    def __init__(self, mesa: Mesa) -> None:  # não chama o super: troca o ops
+    def __init__(self, mesa: Mesa, ops: Religador | None = None) -> None:  # troca o ops
         self.mesa = mesa
         self.relogio = Relogio()
-        self.st, self.ops, self.diario = _estado(mesa, ops=_ops(mesa), no_nasce_fechado=True)
+        self.st, self.ops, self.diario = _estado(
+            mesa, ops=_ops(mesa) if ops is None else ops, no_nasce_fechado=True
+        )
         self.broker = Broker(
             self.st,
             None,
@@ -232,6 +266,46 @@ class TestAPrimeiraEntregaReligaODriver:
         aparelho = mesa.aparelhos["hidraw5"]
         (aparelho.hid_dir / "driver").symlink_to(mesa.raiz / "sys" / ".." / "..")
         assert _ops(mesa).aparelho_e_driver_hid("hidraw5") is None
+
+    def test_o_pai_fora_da_forma_de_id_hid_nao_vira_escrita(self, mesa: Mesa) -> None:
+        """O que vai ao ``unbind`` é só um id ``BUS:VVVV:PPPP.SEQ``."""
+        mesa.nascer("hidraw5", "radio", 1)
+        _com_driver(mesa, "hidraw5")
+        estranho = mesa.raiz / "sys" / "devices" / "nao-e-hid"
+        estranho.mkdir(parents=True)
+        (estranho / "driver").symlink_to(_drivers(mesa) / DRIVER)
+        enlace = mesa.sys_hidraw / "hidraw5" / "device"
+        enlace.unlink()
+        enlace.symlink_to(estranho)
+        assert _ops(mesa).aparelho_e_driver_hid("hidraw5") is None
+
+    def test_o_no_que_renasce_fechado_se_abre_na_varredura_seguinte(self, mesa: Mesa) -> None:
+        """O ciclo inteiro, na forma do kernel: o ``bind`` recria o rádio e o cabo
+        fechados, e a varredura do segundo seguinte os abre sem religar de novo.
+        MORDIDA: religar em toda volta, e o nó renasce fechado a cada segundo."""
+        tipos = {"hidraw5": ("radio", 1), "hidraw9": ("cabo", 4)}
+        mesa.nascer("hidraw5", "radio", 1)
+        mesa.nascer("hidraw6", "pad", 2)
+        mesa.nascer("hidraw9", "cabo", 4)
+        for base in ("hidraw5", "hidraw6", "hidraw9"):
+            _com_driver(mesa, base)
+        ops = Renascedor(mesa, tipos, **_raizes(mesa))
+        cena = CenaReligavel(mesa, ops=ops)
+        cena.para_o_daemon(["hidraw5", "hidraw9"])
+
+        cena.tique(GRACA)
+        feitas = list(ops.escritas)
+        assert [p for p, _ in feitas] == ["unbind", "bind", "unbind", "bind"]
+        for base in tipos:
+            assert all(_fechado(no) for no in _tudo_do_aparelho(mesa, base)), base
+
+        cena.tique(1.0)
+        for base in tipos:
+            for no in _tudo_do_aparelho(mesa, base):
+                assert _aberto_para_a_sessao(no), no
+        assert _aberto_para_a_sessao(mesa.dev / "hidraw6"), "o pad segue como estava"
+        cena.tique(1.0)
+        assert ops.escritas == feitas
 
 
 class TestSoNaPrimeiraEntrega:
