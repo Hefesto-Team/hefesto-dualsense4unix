@@ -1227,26 +1227,34 @@ def _ler_o_agora_das_extensoes() -> list[tuple[str, dict[str, Any]]]:
     if a_suite_esta_rodando():
         return []
     from hefesto_dualsense4unix.app import ipc_bridge
-    from hefesto_dualsense4unix.mods.instalador import Lugares, ler_registro
-    from hefesto_dualsense4unix.mods.manifesto import PERMISSOES_DO_ESTADO, ler_manifesto
+    from hefesto_dualsense4unix.mods.instalador import (
+        InstalacaoRecusadaError,
+        Lugares,
+        ler_registro,
+    )
+    from hefesto_dualsense4unix.mods.manifesto import (
+        PERMISSOES_DO_ESTADO,
+        ManifestoRecusadoError,
+        ler_manifesto,
+    )
 
+    lg = Lugares.do_xdg()
     try:
-        lg = Lugares.do_xdg()
         registro = ler_registro(lg.registro)
-    except Exception:
-        return []
+    except (InstalacaoRecusadaError, OSError):
+        registro = {}
     saida: list[tuple[str, dict[str, Any]]] = []
     for mod_id, entrada in sorted(registro.items()):
         if not entrada.ligada:
             continue
         try:
             manifesto = ler_manifesto(lg.codigo / mod_id, exigir_api=False)
-            if not set(PERMISSOES_DO_ESTADO) & set(manifesto.permissoes):
-                continue
-            corpo = ipc_bridge._corpo_do_daemon(
-                "mods.agora", {"mod": mod_id}, timeout=PRAZO_DO_AGORA_DAS_EXTENSOES_S)
-        except Exception:
+        except (ManifestoRecusadoError, OSError):
+            manifesto = None
+        if manifesto is None or not set(PERMISSOES_DO_ESTADO) & set(manifesto.permissoes):
             continue
+        corpo = ipc_bridge._corpo_do_daemon(
+            "mods.agora", {"mod": mod_id}, timeout=PRAZO_DO_AGORA_DAS_EXTENSOES_S)
         if isinstance(corpo, dict) and corpo.get("ligado") is True:
             saida.append((manifesto.nome, corpo))
     return saida

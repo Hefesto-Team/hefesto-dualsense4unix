@@ -171,18 +171,15 @@ def endereco_valido(texto: str) -> tuple[str, int] | None:
     host, separador, porta = texto.strip().rpartition(":")
     if not separador or not porta.isdigit() or not 1 <= int(porta) <= 65535:
         return None
-    if host.startswith("[") and host.endswith("]"):
+    colchetes = host.startswith("[") and host.endswith("]")
+    if colchetes or host.replace(".", "").isdigit():
         try:
-            ipaddress.IPv6Address(host[1:-1])
+            ip: ipaddress.IPv4Address | ipaddress.IPv6Address | None = ipaddress.ip_address(
+                host[1:-1] if colchetes else host)
         except ValueError:
-            return None
-        return host, int(porta)
-    if host.replace(".", "").isdigit():
-        try:
-            ipaddress.IPv4Address(host)
-        except ValueError:
-            return None
-        return host, int(porta)
+            ip = None
+        valido = ip is not None and ip.version == (6 if colchetes else 4)
+        return (host, int(porta)) if valido else None
     return (host, int(porta)) if _NOME_DE_HOST.match(host) else None
 
 
