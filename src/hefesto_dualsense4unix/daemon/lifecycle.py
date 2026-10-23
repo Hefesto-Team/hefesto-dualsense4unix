@@ -3921,9 +3921,9 @@ class Daemon:
     def no_exposto_pelo_modo_nativo(self, path: str) -> bool:
         """`path` está aberto por causa do Modo Nativo, e tem de continuar?
 
-        Quem pergunta é o `make_abridor_do_handle`, o abridor que o
-        `_open_one` do backend usa para abrir o handle de controle
-        (`hidapi.Device(path=…)`, que não aceita fd).
+        Quem perguntava era a fábrica do `with` que o `_open_one` usava.
+        O `make_abridor_do_handle` não pergunta: ele pede só o fd ao broker
+        e não toca na lease (O-FISICO-NUNCA-SE-EXPOE-AO-JOGO-QUE-VESTE-O-COMUM-01).
 
         POR QUE A PERGUNTA EXISTE. A lease de exposição do broker é por
         CONEXÃO: o pedido do Modo Nativo e o `with` transitório do `_open_one`

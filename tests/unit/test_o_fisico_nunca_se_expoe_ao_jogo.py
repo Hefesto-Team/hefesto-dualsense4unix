@@ -9,7 +9,7 @@ A cura: o broker abre o nó (ele é root) e passa o fd por ``SCM_RIGHTS``; o han
 nesse fd. O nó do ``/dev`` nunca ganha permissão de usuário.
 
 As réguas rodam o broker DE VERDADE (``BrokerState`` e ``Broker`` sobre um socket), o cliente DE
-VERDADE, a fábrica que o lifecycle injeta e o ``_PinnedPyDualSense`` de verdade. Só o fs é dublê:
+VERDADE, o abridor que o lifecycle injeta e o ``_PinnedPyDualSense`` de verdade. Só o fs é dublê:
 o ``restore`` que ele grava é a ACL do usuário no nó, e o «hidraw» é um ``SOCK_SEQPACKET``, que
 guarda a fronteira de cada report como o hidraw guarda. O ``hidapi.Device`` vira um dublê que
 recusa: nenhuma régua abre nó de verdade.
@@ -82,14 +82,10 @@ class FsQueGrava:
 
 
 class DaemonDeMentira:
-    """O que a fábrica pergunta ao daemon: o cliente-lease e o Modo Nativo."""
+    """O que o abridor pergunta ao daemon: só o cliente do broker."""
 
-    def __init__(self, cliente: Any, nativos: set[str] | None = None) -> None:
+    def __init__(self, cliente: Any) -> None:
         self._hidraw_broker_client = cliente
-        self._nativos = nativos or set()
-
-    def no_exposto_pelo_modo_nativo(self, path: str) -> bool:
-        return path in self._nativos
 
 
 @contextlib.contextmanager
@@ -145,7 +141,7 @@ def caminho_proibido(monkeypatch: pytest.MonkeyPatch) -> list[bytes]:
     return abertos
 
 
-def controle_com_a_fabrica(daemon: Any) -> backend.PyDualSenseController:
+def controle_com_o_abridor(daemon: Any) -> backend.PyDualSenseController:
     """O backend com o abridor que o lifecycle injeta (``_wire_abridor_do_handle``)."""
     ctl = backend.PyDualSenseController.__new__(backend.PyDualSenseController)
     ctl._io_lock = threading.RLock()
@@ -177,7 +173,7 @@ class TestOFisicoAbrePeloFdDoBroker:
             no = NOS[0]
             aparelho = fs.ligar(no)
             aparelho.send(report)
-            ctl = controle_com_a_fabrica(DaemonDeMentira(cliente))
+            ctl = controle_com_o_abridor(DaemonDeMentira(cliente))
             handle = abrir(ctl, no)
             fs.soltar_as_pontas()
             try:
@@ -201,7 +197,7 @@ class TestOFisicoAbrePeloFdDoBroker:
     ) -> None:
         """Um a quatro jogadores, cabo e rádio misturados: nenhum nó se expõe."""
         with broker_no_ar(tmp_path) as (_estado, fs, cliente):
-            ctl = controle_com_a_fabrica(DaemonDeMentira(cliente))
+            ctl = controle_com_o_abridor(DaemonDeMentira(cliente))
             handles = []
             try:
                 for indice, no in enumerate(NOS):
@@ -227,7 +223,7 @@ class TestOFisicoAbrePeloFdDoBroker:
             assert cliente.expor(no, entradas=True) is True
             atos_do_nativo = list(fs.atos)
             aparelho.send(REPORT_DO_RADIO)
-            ctl = controle_com_a_fabrica(DaemonDeMentira(cliente, nativos={no}))
+            ctl = controle_com_o_abridor(DaemonDeMentira(cliente))
             handle = abrir(ctl, no)
             fs.soltar_as_pontas()
             try:
@@ -249,7 +245,7 @@ class TestOFisicoAbrePeloFdDoBroker:
             aparelho = fs.ligar(no)
             atraso = threading.Timer(0.3, aparelho.send, args=(REPORT_DO_RADIO,))
             atraso.start()
-            ctl = controle_com_a_fabrica(DaemonDeMentira(cliente))
+            ctl = controle_com_o_abridor(DaemonDeMentira(cliente))
             try:
                 handle = abrir(ctl, no)
             finally:
@@ -271,7 +267,7 @@ class TestOFisicoAbrePeloFdDoBroker:
             no = NOS[2]
             aparelho = fs.ligar(no)
             aparelho.send(bytes(10))
-            ctl = controle_com_a_fabrica(DaemonDeMentira(cliente))
+            ctl = controle_com_o_abridor(DaemonDeMentira(cliente))
             with pytest.raises(Exception, match="connection type") as falha:
                 abrir(ctl, no)
             fs.soltar_as_pontas()
@@ -288,7 +284,7 @@ class TestSemOFdDoBroker:
     ) -> None:
         """Máquina sem a cura (o nó já nasce do usuário): abre por caminho, como sempre."""
         cliente = cli.HidrawBrokerClient(socket_path=str(tmp_path / "nao-existe.sock"))
-        ctl = controle_com_a_fabrica(DaemonDeMentira(cliente))
+        ctl = controle_com_o_abridor(DaemonDeMentira(cliente))
         with pytest.raises(OSError):
             abrir(ctl, NOS[2])
         assert caminho_proibido == [NOS[2].encode()]
@@ -298,7 +294,7 @@ class TestSemOFdDoBroker:
     ) -> None:
         """O broker recusa o que não é DualSense físico; a recusa não vira exposição."""
         with broker_no_ar(tmp_path) as (estado, fs, cliente):
-            ctl = controle_com_a_fabrica(DaemonDeMentira(cliente))
+            ctl = controle_com_o_abridor(DaemonDeMentira(cliente))
             with pytest.raises(OSError):
                 abrir(ctl, "/dev/hidraw89")
             assert fs.atos == []
