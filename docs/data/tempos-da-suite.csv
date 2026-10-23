@@ -1904,7 +1904,6 @@ tests/unit/test_status_cards.py,600,medido
 tests/unit/test_status_cards_sensores.py,325,medido
 tests/unit/test_status_o_modo_compacto_tem_dono.py,1821,medido
 tests/unit/test_status_som_02_controle_de_volume.py,620,medido
-tests/unit/test_steam_apply_button.py,307,medido
 tests/unit/test_steam_fora_do_servico_01.py,720,medido
 tests/unit/test_steam_input_01_o_chip_que_acende_por_jogo.py,852,medido
 tests/unit/test_steam_input_d33_nomeia_o_jogo.py,740,medido
