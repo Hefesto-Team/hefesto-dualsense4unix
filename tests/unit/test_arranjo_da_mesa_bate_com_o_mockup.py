@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -382,3 +383,89 @@ def test_o_oraculo_nao_remenda_a_grafia_da_pagina() -> None:
     assert "GRAFIA" not in fonte and "congelados" not in fonte
     assert "mapa-das-portas.html" in fonte
     assert "function naFraseDe" in PAGINA_VIVA.read_text(encoding="utf-8")
+
+
+# A divergência que o `_DIVERGE` declara é só de TEXTO (a frase do porquê e o título do
+# movimento). A regra embaixo dele (o veredito, o plano, o selo de cada razão, a entrada de
+# destino) tem de bater com a página viva sem exceção: sem estas réguas, um erro de regra no
+# porte se esconderia atrás do xfail do texto.
+def _entrada(titulo: str) -> str | None:
+    achou = re.findall(r"[Ee]ntrada (\w+)", titulo)
+    return achou[-1] if achou else None
+
+
+def _regra_da_receita(movs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [{"para": _entrada(m["titulo"]), "selos": [linha["s"] for linha in m["linhas"]],
+             "essencial": m["essencial"], "ganho": m["ganho"], "semNumero": m["semNumero"]}
+            for m in movs]
+
+
+def _regra_do_plano(p: dict[str, Any]) -> dict[str, Any]:
+    return {"plano": p["plano"], "motivo": {
+        quem: {**{k: v for k, v in m.items() if k != "razoes"},
+               "selos": [r["selo"] for r in m["razoes"]]}
+        for quem, m in p["motivo"].items()}}
+
+
+def _regra_do_veredito(v: dict[str, str] | None) -> str | None:
+    return v["v"] if v else None
+
+
+@pytest.mark.parametrize("variante", ["melhor", "poucos", "sem-ext", "so-pc"])
+def test_a_regra_do_plano_e_da_receita_bate_sem_o_texto(variante: str) -> None:
+    mesa = _mesa()
+    assert _regra_do_plano(como_o_mockup_planeja(motor.planejar(mesa, OPCOES[variante]))) == \
+        _regra_do_plano(ouro(f"planejar/{variante}"))
+    assert _regra_da_receita(como_o_mockup_receita(motor.receita(mesa, OPCOES[variante]))) == \
+        _regra_da_receita(_receita_do_ouro(f"receita/{variante}"))
+
+
+def test_a_regra_sem_o_bonus_do_mapa_vazio_e_do_torto_bate_sem_o_texto() -> None:
+    sem_bonus = motor.Opcoes(bonus_parado=0)
+    assert _regra_do_plano(como_o_mockup_planeja(motor.planejar(_mesa(), sem_bonus))) == \
+        _regra_do_plano(ouro("planejar/sem-bonus-parado"))
+    assert _regra_da_receita(como_o_mockup_receita(motor.receita(_mesa(), sem_bonus))) == \
+        _regra_da_receita(_receita_do_ouro("receita/sem-bonus-parado"))
+    vazio = _mesa(mapa={})
+    assert _regra_do_plano(como_o_mockup_planeja(motor.planejar(vazio))) == \
+        _regra_do_plano(ouro("mapa-vazio/planejar"))
+    assert _regra_da_receita(como_o_mockup_receita(motor.receita(vazio))) == \
+        _regra_da_receita(_receita_do_ouro("mapa-vazio/receita"))
+    assert [e.n for e in motor.candidatas(vazio, "pc")] == ouro("mapa-vazio/candidatas-pc")
+    assert _regra_da_receita(como_o_mockup_receita(motor.receita(_mesa(mapa={"99": "9-9"})))) == \
+        _regra_da_receita(_receita_do_ouro("mapa-inexistente/receita"))
+
+
+@pytest.mark.parametrize("n", ["1", "2", "3", "7", "9", "10", "13", "15", "15a"])
+@pytest.mark.parametrize("na_mao", ["bt", "wifi", "teclado", "mouse", "webcam", None])
+def test_o_veredito_de_cada_entrada_bate_sem_o_texto(n: str, na_mao: str | None) -> None:
+    mesa = _mesa()
+    e = motor.por_num(mesa.faces, n)
+    assert e is not None
+    assert _regra_do_veredito(_veredito(motor.julgar(e, na_mao, mesa))) == \
+        _regra_do_veredito(ouro(f"julgar/{n}/{_js(na_mao)}"))
+
+
+@pytest.mark.parametrize("n", ["1", "2", "10", "15a"])
+def test_o_veredito_segurando_um_dongle_do_hub_bate_sem_o_texto(n: str) -> None:
+    mesa = _mesa()
+    e = motor.por_num(mesa.faces, n)
+    assert e is not None
+    assert _regra_do_veredito(_veredito(motor.julgar(e, "bt", mesa, segurando="bt-c"))) == \
+        _regra_do_veredito(ouro(f"julgar-segurando/bt-c/{n}"))
+
+
+def test_sem_o_hub_a_regra_bate_sem_o_texto() -> None:
+    mesa = _mesa_sem_hub()
+    assert motor.alocacao(mesa.mapa, mesa.leitura) == ouro("sem-hub/alocacao")
+    assert motor.caminho_do_hub(mesa) is None
+    assert motor.regiao_do_caminho("1-3", None) == ouro("sem-hub/regiao-1-3")
+    assert motor.regiao_do_caminho("4-4", None) == ouro("sem-hub/regiao-4-4")
+    achado = [{"id": s.aparelho.id, "caminho": s.caminho, "regiao": s.regiao}
+              for s in motor.sem_entrada(mesa)]
+    assert achado == ouro("sem-hub/semEntrada")
+    assert motor.consequencias(mesa) == ouro("sem-hub/consequencias")
+    assert _regra_do_plano(como_o_mockup_planeja(motor.planejar(mesa))) == \
+        _regra_do_plano(ouro("sem-hub/planejar"))
+    assert _regra_da_receita(como_o_mockup_receita(motor.receita(mesa))) == \
+        _regra_da_receita(_receita_do_ouro("sem-hub/receita"))
