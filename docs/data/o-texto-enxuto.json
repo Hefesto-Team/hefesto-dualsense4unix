@@ -5,7 +5,7 @@
       "data": "2026-10-23",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 54678,
+      "piso": 54683,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -56,7 +56,7 @@
         "core/lightbar_reset.py": 80,
         "core/o_modo_no_ar.py": 45,
         "core/physical_report_reader.py": 372,
-        "core/protocolo_dsu.py": 46,
+        "core/protocolo_dsu.py": 48,
         "core/roteador_de_movimento.py": 154,
         "core/rumble.py": 112,
         "core/sysfs_leds.py": 98,
@@ -71,7 +71,7 @@
         "daemon/lifecycle.py": 1313,
         "daemon/protocols.py": 60,
         "daemon/sensor_hub.py": 227,
-        "daemon/servidor_dsu.py": 54,
+        "daemon/servidor_dsu.py": 58,
         "daemon/state_store.py": 67,
         "daemon/subsystems/__init__.py": 78,
         "daemon/subsystems/alto_falante.py": 570,
@@ -139,7 +139,7 @@
         "integrations/gesto_de_reconexao.py": 116,
         "integrations/gestos_dos_acessorios.py": 50,
         "integrations/haptica_do_cabo.py": 82,
-        "integrations/hidraw_broker_client.py": 108,
+        "integrations/hidraw_broker_client.py": 107,
         "integrations/hotkey_daemon.py": 136,
         "integrations/jogos_locais.py": 61,
         "integrations/kernel_cmdline.py": 64,
@@ -249,7 +249,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +14 linhas (54664 -> 54678), pagas por Origem: D-2310-O-CODEQL-ZERA-LENDO-O-HTML-PELO-PARSER; registrado no fecho, topo 74c5da0efc66",
+      "razao": "texto-em-src: +5 linhas (54678 -> 54683), pagas por Origem: D-2310-O-DSU-DIZ-A-CONEXAO-DO-CONTROLE; registrado no fecho, topo f7227aa56889",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -448,6 +448,12 @@
           "de": 54664,
           "para": 54678,
           "razao": "texto-em-src: +14 linhas (54664 -> 54678), pagas por Origem: D-2310-O-CODEQL-ZERA-LENDO-O-HTML-PELO-PARSER; registrado no fecho, topo 74c5da0efc66"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 54678,
+          "para": 54683,
+          "razao": "texto-em-src: +5 linhas (54678 -> 54683), pagas por Origem: D-2310-O-DSU-DIZ-A-CONEXAO-DO-CONTROLE; registrado no fecho, topo f7227aa56889"
         }
       ],
       "unidade": "linhas",
