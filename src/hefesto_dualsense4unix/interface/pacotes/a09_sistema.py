@@ -1329,6 +1329,8 @@ ID_DO_TEMA = {"serviço": "hefesto-estado", "troca-de-perfil": "hefesto-troca-de
 #: dono (`storm_doctor.storm_report`) e uma régua a compara com os `check_*` dele.
 POSICAO_NO_EXAME = {"steam-input": 3, "audio": 1}
 ROTULO_DO_AUDIO_BEM = "Áudio roteado"
+#: Os temas cuja frase curta é a frase inteira do achado (a do Bluetooth já cabe na linha).
+TEMAS_DE_CURTA_INTEIRA = ("bluetooth",)
 
 #: As classes do selo que pedem ação: a linha fica à vista e a frase inteira quebra em duas linhas
 #: (`.saude.longa`), para o gesto no fim não sair cortado.
@@ -1447,8 +1449,9 @@ def _so_o_que_a_tela_mostra(exame: dict[str, Any], status: list[dict[str, Any]],
     caras: dict[str, dict[str, Any]] = {
         t: dict(s) for t in ("serviço", "troca-de-perfil", "bluetooth")
         for s in status if s.get("id") == ID_DO_TEMA[t]}
-    if "bluetooth" in caras:
-        caras["bluetooth"]["curta"] = caras["bluetooth"].get("txt", "")
+    for cara in (caras.get(t) for t in TEMAS_DE_CURTA_INTEIRA):
+        if cara is not None:
+            cara["curta"] = cara.get("txt", "")
     avisos: dict[str, list[dict[str, Any]]] = {t: [] for t in TEMAS}
     for i, achado in enumerate(do_dono):
         tema = TEMA_DO_EXAME[i] if completo and i < len(TEMA_DO_EXAME) else TEMA_SEM_DONO
