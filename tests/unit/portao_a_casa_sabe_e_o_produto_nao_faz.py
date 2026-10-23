@@ -1318,13 +1318,6 @@ _NAO_E_PROMESSA: dict[str, str] = {
 }
 
 _SEM_CAMINHO_HOJE: dict[str, str] = {
-    # sai com: A-ONDA-CORRE-PELAS-LUZINHAS-DO-JOGADOR-01
-    "profiles/efeitos_de_luz.py::brilhos_da_onda": (
-        "22/10/2026 — o brilho de cada LED do jogador na Onda (A-LUZ-GANHA-ONDA-E-RELAMPAGO-01). "
-        "O caminho se perde no daemon, que leva à barra só o quadro único da Onda e deixa as "
-        "luzinhas no número do jogador. Fecha quando a A-ONDA-CORRE-PELAS-LUZINHAS-DO-JOGADOR-01 "
-        "fizer o laço da luz escrever as cinco luzinhas por este desenho."
-    ),
     # 09/10/2026, leva 1-11, costura do pads-1-14: as duas do multi-1-14, nascidas para a B9.
     # sai com: O-DEGRAU-DO-MEIO-E-A-FRASE-DA-FAIXA-SE-LIGAM-DEPOIS-DA-B9-01
     "integrations/radio_da_mesa.py::ordem_de_ceder": (
