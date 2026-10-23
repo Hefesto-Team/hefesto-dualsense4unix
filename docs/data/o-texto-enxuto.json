@@ -5,7 +5,7 @@
       "data": "2026-10-23",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 54447,
+      "piso": 54519,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -41,7 +41,7 @@
         "core/acoes_de_botao.py": 194,
         "core/acoes_do_gesto.py": 72,
         "core/ativacao_de_botao.py": 69,
-        "core/backend_pydualsense.py": 1052,
+        "core/backend_pydualsense.py": 1060,
         "core/controller.py": 48,
         "core/ds_output_report.py": 115,
         "core/escritor_cru.py": 237,
@@ -233,10 +233,10 @@
         "profiles/curva_propria.py": 49,
         "profiles/efeitos_de_imersao.py": 88,
         "profiles/efeitos_de_luz.py": 265,
-        "profiles/estilos_de_jogo.py": 183,
+        "profiles/estilos_de_jogo.py": 209,
         "profiles/formas_de_haptica.py": 112,
         "profiles/loader.py": 294,
-        "profiles/manager.py": 674,
+        "profiles/manager.py": 712,
         "profiles/o_padrao_do_computador.py": 108,
         "profiles/sanidade.py": 44,
         "profiles/schema.py": 762,
@@ -249,7 +249,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +497 linhas (53950 -> 54447), pagas por Origem: D-0810-PAD-USB-VESTIDOS, D-1510-ENTENDE-DUALSENSE-PELA-BIBLIOTECA-SONY, D-1710-A-PECA-GDK-DO-HEFESTO-VAI-PELO-PAR-B-E-WINEDLLPATH, D-2110-A-FILA-DOS-LANCADORES-ROLA-POR-DENTRO, D-2210-A-HAPTICA-NASCE-EM-150-TAMBEM-NO-PADRAO, D-2210-A-IDENTIDADE-DO-PAD-E-UMA-REGRA-SO, D-2210-A-JANELA-DA-LOVENSE-SAI-DO-DESENHO-ESCOLHIDO, D-2210-A-JANELA-QUE-DECLARA-O-AGORA-ABRE-NO-ARRANJO-C, D-2210-A-LOVENSE-E-UMA-EXTENSAO-SO, D-2210-A-ONDA-CORRE-PELAS-LUZINHAS, D-2210-O-CSS-DE-QUEM-USA-ENTRA-POR-CIMA-DO-TEMA, D-2210-O-DIARIO-CABE-EM-MIL-LINHAS, D-2210-O-JOGO-GDK-VIBRA-PELO-GAMEINPUT-DA-CASA, D-2210-O-PAD-PODE-VESTIR-O-DUALSENSE-COMUM, D-2210-O-PROTON-E-SEMPRE-O-MAIS-RECENTE-QUE-PASSA, D-2210-O-SALVAR-DEVOLVE-TODO-CAMPO-DE-CADA-SECAO, D-2210-O-START-SALVA-ATE-COM-O-MOUSE-LIGADO, D-2210-O-STATUS-DO-SISTEMA-TEM-SEIS-LINHAS, D-2210-OS-CARTOES-DOS-LANCADORES-TEM-A-ALTURA-DO-CONTEUDO, D-2210-OS-EFEITOS-DE-LUZ-DOS-PERIFERICOS-RGB, D-2310-ESCOLHER-NA-VIBRACAO-JA-TOCA, D-2909-HAPTICA-NASCE-EM-150, entrada.botoes, luz.led_jogador, luz.lightbar.efeito; registrado no fecho, topo 81146c3c635e",
+      "razao": "texto-em-src: +72 linhas (54447 -> 54519), pagas por Origem: D-2310-O-TERROR-DUPLICA-PELO-OUVIR-JUNTO; registrado no fecho, topo 15f04019269d",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -388,6 +388,12 @@
           "de": 53950,
           "para": 54447,
           "razao": "texto-em-src: +497 linhas (53950 -> 54447), pagas por Origem: D-0810-PAD-USB-VESTIDOS, D-1510-ENTENDE-DUALSENSE-PELA-BIBLIOTECA-SONY, D-1710-A-PECA-GDK-DO-HEFESTO-VAI-PELO-PAR-B-E-WINEDLLPATH, D-2110-A-FILA-DOS-LANCADORES-ROLA-POR-DENTRO, D-2210-A-HAPTICA-NASCE-EM-150-TAMBEM-NO-PADRAO, D-2210-A-IDENTIDADE-DO-PAD-E-UMA-REGRA-SO, D-2210-A-JANELA-DA-LOVENSE-SAI-DO-DESENHO-ESCOLHIDO, D-2210-A-JANELA-QUE-DECLARA-O-AGORA-ABRE-NO-ARRANJO-C, D-2210-A-LOVENSE-E-UMA-EXTENSAO-SO, D-2210-A-ONDA-CORRE-PELAS-LUZINHAS, D-2210-O-CSS-DE-QUEM-USA-ENTRA-POR-CIMA-DO-TEMA, D-2210-O-DIARIO-CABE-EM-MIL-LINHAS, D-2210-O-JOGO-GDK-VIBRA-PELO-GAMEINPUT-DA-CASA, D-2210-O-PAD-PODE-VESTIR-O-DUALSENSE-COMUM, D-2210-O-PROTON-E-SEMPRE-O-MAIS-RECENTE-QUE-PASSA, D-2210-O-SALVAR-DEVOLVE-TODO-CAMPO-DE-CADA-SECAO, D-2210-O-START-SALVA-ATE-COM-O-MOUSE-LIGADO, D-2210-O-STATUS-DO-SISTEMA-TEM-SEIS-LINHAS, D-2210-OS-CARTOES-DOS-LANCADORES-TEM-A-ALTURA-DO-CONTEUDO, D-2210-OS-EFEITOS-DE-LUZ-DOS-PERIFERICOS-RGB, D-2310-ESCOLHER-NA-VIBRACAO-JA-TOCA, D-2909-HAPTICA-NASCE-EM-150, entrada.botoes, luz.led_jogador, luz.lightbar.efeito; registrado no fecho, topo 81146c3c635e"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 54447,
+          "para": 54519,
+          "razao": "texto-em-src: +72 linhas (54447 -> 54519), pagas por Origem: D-2310-O-TERROR-DUPLICA-PELO-OUVIR-JUNTO; registrado no fecho, topo 15f04019269d"
         }
       ],
       "unidade": "linhas",
