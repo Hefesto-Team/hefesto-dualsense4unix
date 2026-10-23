@@ -144,6 +144,8 @@ class TestOCampoExisteEChegaAoPayload:
         backend._handles = {"aabbcc000003": handle}
         backend._primary_key = "aabbcc000003"
         backend._firmware_por_uniq = {}
+        backend._desired_by_uniq = {}
+        backend._desired_owner_by_uniq = {}
 
         import threading
 
@@ -161,6 +163,8 @@ class TestOCampoExisteEChegaAoPayload:
         backend._handles = {"aabbcc000003": handle}
         backend._primary_key = "aabbcc000003"
         backend._firmware_por_uniq = {}
+        backend._desired_by_uniq = {}
+        backend._desired_owner_by_uniq = {}
 
         import threading
 

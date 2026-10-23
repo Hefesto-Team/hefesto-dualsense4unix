@@ -41,7 +41,7 @@ aparece contada.
 
 <!-- BLOCO GERADO por scripts/gerar-contrato-ipc.py — não edite à mão -->
 
-**67 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **26** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
+**67 métodos** estão registrados no dicionário `_handlers` de `daemon/ipc_server.py`. Destes, **27** ainda não são citados em nenhuma outra parte deste documento, e **4** têm handler sem docstring.
 
 Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e é por isso que ele está aqui: escrito à mão, ele já saiu 15, 17, 18 e 14 em levantamentos do mesmo dia.
 
@@ -71,7 +71,7 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `controller.target.set` | `daemon/ipc_handlers.py:3399` (`_handle_controller_target_set`) | Define o ALVO das ações de output. | **não** |
 | `daemon.reload` | `daemon/ipc_handlers.py:4051` (`_handle_daemon_reload`) | Aplica overrides parciais de config em runtime. | sim |
 | `launch_env.refresh` | `daemon/ipc_handlers.py:4079` (`_handle_launch_env_refresh`) | Rematerializa as envs de launch do wrapper sob demanda. | **não** |
-| `lightbar.reset` | `daemon/ipc_handlers.py:3433` (`_handle_lightbar_reset`) | Manda o Reset LED state (0x08) sob demanda — INSTRUMENTO de medição. | sim |
+| `lightbar.reset` | `daemon/ipc_handlers.py:3433` (`_handle_lightbar_reset`) | Manda o Reset LED state (0x08) sob demanda — INSTRUMENTO de medição. | **não** |
 | `debug.player_leds` | `daemon/ipc_handlers.py:3444` (`_handle_debug_player_leds`) | Liga/desliga a escrita do LED de JOGADOR — INSTRUMENTO de eliminação. | **não** |
 | `speaker.set` | `daemon/ipc_handlers.py:4096` (`_handle_speaker_set`) | `speaker.set` — volume/mudo/devolução do alto-falante. | sim |
 | `mic.set` | `daemon/ipc_handlers.py:4251` (`_handle_mic_set`) | `mic.set` — mudo do microfone no FIRMWARE do controle. | sim |
@@ -160,30 +160,18 @@ lado mandava para um só. Ele libera a trava manual apenas da categoria
 `trigger`: desligar um gatilho não pode destravar o LED nem a
 vibração que ela ajustou em outra aba.
 
-### `led.auto_release` — o par que faltava à luz
+### `led.auto_release` — só registra
 
 `{}` → `{status, categoria: "led", escopo}`. **Não escreve byte nenhum no
-controle** e **não aceita `uniq`**: ele solta a trava manual da categoria
-`led`, e a trava mora no `StateStore` do daemon, sem dono por controle. O campo
-`escopo` diz isso na resposta em vez de deixar quem chama supor.
-
-O DEFEITO QUE ELE FECHA, medido em 29/08/2026: `led.set` e `led.player_set`
-ARMAVAM a trava e nenhuma linha de `src/` a soltava. Enquanto qualquer categoria
-está armada o autoswitch não reaplica o perfil por mudança de janela, então a
-única saída era trocar de perfil na mão — um gesto que a pessoa não tem como
-saber que precisa fazer. `trigger` tinha o `trigger.reset`, `rumble` tinha o
-`rumble.passthrough`; a luz não tinha porta de volta.
-
-QUEM CHAMA é o botão "Automático" da aba Iluminação, e ele é a TERCEIRA de três
-chamadas, nesta ordem: `lightbar.reset` (larga o claim da barra), `led.set`
-(pinta a cor do slot, para a barra não ficar preta) e então `led.auto_release`.
-A ordem é o conserto — o `led.set` do meio ARMA a categoria, então um release
-posto antes dele sairia desfeito na linha seguinte. É por isso que a rota é
-própria, e não um parâmetro nos outros dois.
-
-A categoria `audio` continua sem par. Para ela, e para
-todo caminho que arma `led` fora desse botão, a rede é o teto de ociosidade de
-`MANUAL_OVERRIDE_STALE_AFTER_SEC`.
+controle, não aceita `uniq` e não solta nada**: desde 14/09 ele é uma linha no
+diário (`led_auto_release`) e a resposta, porque a luz não tem trava a soltar. O
+`led.set` e o `led.player_set` com `uniq` entram na camada `usuaria` do
+controle, e quem a solta é a ativação de um perfil pelo gesto do usuário. Nenhum
+código do produto o chama; o método fica no contrato para quem ainda o usa, e
+`escopo` diz na resposta que nada aqui é por controle. O que está guardado por
+controle se lê em `controllers[].camada_da_usuaria` do `daemon.state_full`: a
+lista dos campos (`led`, `player_leds`, `trigger_left`…) que ela fixou e ainda
+valem, vazia quando o controle não tem ajuste dela.
 
 ### `aplicado_em` e `guardado_em` — o que a resposta AFIRMA
 

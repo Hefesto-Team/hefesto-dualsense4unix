@@ -4856,11 +4856,11 @@ class PyDualSenseController(IController):
             connected = bool(getattr(handle, "connected", False))
             out.append(
                 {
-                    "index": idx,
-                    "connected": connected,
+                    "index": idx, "connected": connected,
                     "transport": self._detect_transport(handle) if connected else None,
                     "is_primary": key == primary,
                     "uniq": self._key_to_uniq(key),
+                    "camada_da_usuaria": self.camada_da_usuaria_de(key),
                     **self._carga(handle, connected), **self._o_firmware_de(key, handle),
                 }
             )
@@ -5370,6 +5370,27 @@ class PyDualSenseController(IController):
                         setattr(override, campo, None)
             self._prune_overrides_locked()
 
+    def camada_da_usuaria_de(self, uniq: str) -> list[str]:
+        """Os campos de saída que a usuária fixou em `uniq` e que ainda valem (leitura pura).
+
+        A camada da usuária sobrevive a hotplug e vence todo perfil automático, e o `led.set`, o
+        `trigger.*` e o `led.player_set` com `uniq` entram nela. É a memória que o estado completo
+        publica por controle (`controllers[].camada_da_usuaria`): sem ela a volta de um ajuste
+        pelo IPC seria invisível. Lista vazia = o controle não tem ajuste dela; os nomes são os
+        campos de `_OUTPUT_FIELDS`, em ordem.
+        """
+        alvo = self._key_to_uniq(uniq)
+        if alvo is None:
+            return []
+        with self._io_lock:
+            donos = self._desired_owner_by_uniq.get(alvo, {})
+            override = self._desired_by_uniq.get(alvo)
+            return [
+                campo
+                for campo in _OUTPUT_FIELDS
+                if donos.get(campo) == _LAYER_USER
+                and getattr(override, campo, None) is not None
+            ]
 
     def _cartas_locked(self, chaves: list[str]) -> dict[str, int]:
         """A carta de cada key de `chaves` — vazio quando a mesa não tem carta.
