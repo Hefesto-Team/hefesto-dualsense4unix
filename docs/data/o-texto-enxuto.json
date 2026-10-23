@@ -5,7 +5,7 @@
       "data": "2026-10-23",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 54623,
+      "piso": 54624,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -41,7 +41,7 @@
         "core/acoes_de_botao.py": 194,
         "core/acoes_do_gesto.py": 72,
         "core/ativacao_de_botao.py": 69,
-        "core/backend_pydualsense.py": 1060,
+        "core/backend_pydualsense.py": 1071,
         "core/controller.py": 48,
         "core/ds_output_report.py": 115,
         "core/escritor_cru.py": 237,
@@ -139,7 +139,7 @@
         "integrations/gesto_de_reconexao.py": 116,
         "integrations/gestos_dos_acessorios.py": 50,
         "integrations/haptica_do_cabo.py": 82,
-        "integrations/hidraw_broker_client.py": 118,
+        "integrations/hidraw_broker_client.py": 108,
         "integrations/hotkey_daemon.py": 136,
         "integrations/jogos_locais.py": 61,
         "integrations/kernel_cmdline.py": 64,
@@ -249,7 +249,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +56 linhas (54567 -> 54623), pagas por Origem: D-2310-O-ARME-NAO-ENCERRA-A-AUTORIDADE-DO-PROPRIO-JOGO, D-2310-O-JOGO-SEGUINTE-VESTE-A-PROPRIA-ROUPA; registrado no fecho, topo 8d999dcfebd4",
+      "razao": "texto-em-src: +1 linhas (54623 -> 54624), pagas por Origem: D-2310-O-HANDLE-ABRE-O-FISICO-PELO-FD-DO-BROKER; registrado no fecho, topo 0d005b53f018",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -412,6 +412,12 @@
           "de": 54567,
           "para": 54623,
           "razao": "texto-em-src: +56 linhas (54567 -> 54623), pagas por Origem: D-2310-O-ARME-NAO-ENCERRA-A-AUTORIDADE-DO-PROPRIO-JOGO, D-2310-O-JOGO-SEGUINTE-VESTE-A-PROPRIA-ROUPA; registrado no fecho, topo 8d999dcfebd4"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 54623,
+          "para": 54624,
+          "razao": "texto-em-src: +1 linhas (54623 -> 54624), pagas por Origem: D-2310-O-HANDLE-ABRE-O-FISICO-PELO-FD-DO-BROKER; registrado no fecho, topo 0d005b53f018"
         }
       ],
       "unidade": "linhas",
