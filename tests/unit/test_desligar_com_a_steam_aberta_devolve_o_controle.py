@@ -95,6 +95,7 @@ class Renascedor(Religador):
         self._mesa = mesa
         self._tipos = tipos
         self._soltos: dict[str, str] = {}
+        self.renascidos: list[str] = []
 
     def soltar_driver_hid(self, aparelho: str, driver: str) -> None:
         super().soltar_driver_hid(aparelho, driver)
@@ -108,6 +109,8 @@ class Renascedor(Religador):
         tipo, n = self._tipos[base]
         self._mesa.nascer(base, tipo, n)
         _com_driver(self._mesa, base, driver)
+        assert all(_fechado(no) for no in _tudo_do_aparelho(self._mesa, base)), base
+        self.renascidos.append(base)
 
 
 class _OpsAntigo(_Gravador):
@@ -296,8 +299,7 @@ class TestAPrimeiraEntregaReligaODriver:
         cena.tique(GRACA)
         feitas = list(ops.escritas)
         assert [p for p, _ in feitas] == ["unbind", "bind", "unbind", "bind"]
-        for base in tipos:
-            assert all(_fechado(no) for no in _tudo_do_aparelho(mesa, base)), base
+        assert ops.renascidos == ["hidraw5", "hidraw9"]
 
         cena.tique(1.0)
         for base in tipos:
