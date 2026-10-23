@@ -245,14 +245,14 @@
       "data": "2026-10-23",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1189351,
+      "piso": 1189925,
       "por_item": {
-        "docs": 120642,
+        "docs": 120650,
         "scripts": 120350,
-        "src": 318603,
-        "tests": 629756
+        "src": 318698,
+        "tests": 630227
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +574 linhas (1189351 -> 1189925), pagas por Origem: D-2310-DESLIGAR-COM-A-STEAM-ABERTA-RELIGA-O-DRIVER; registrado no fecho, topo b2c4e401837e",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -799,10 +799,16 @@
           "de": 1188034,
           "para": 1189364,
           "razao": "tamanho: +1330 linhas (1188034 -> 1189364), pagas por Origem: D-2310-O-TERROR-DUPLICA-PELO-OUVIR-JUNTO; registrado no fecho, topo b0bfacc055cd"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 1189351,
+          "para": 1189925,
+          "razao": "tamanho: +574 linhas (1189351 -> 1189925), pagas por Origem: D-2310-DESLIGAR-COM-A-STEAM-ABERTA-RELIGA-O-DRIVER; registrado no fecho, topo b2c4e401837e"
         }
       ],
       "unidade": "linhas",
-      "universo": 3109
+      "universo": 3110
     }
   }
 }
