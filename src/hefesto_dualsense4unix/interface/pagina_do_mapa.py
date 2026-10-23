@@ -450,8 +450,8 @@ def _com_os_dados(js: str) -> str:
 #: da base comum no lugar do «?»; regra A1 do desenho do todo, nenhum botão «?»).
 RECEITA_COM_A_DICA_NO_TITULO = (
     '                 return \'<li><div><h4 data-dica="\' + '
-    'emAtributo(String(m.linhas[0] ? m.linhas[0].t : ""'
-    ').replace(/<[^>]+>/g, "")) + \'">\' + m.titulo + "</h4></div></li>";\n'
+    'emAtributo(soTexto(m.linhas[0] ? m.linhas[0].t : "")) + \'">\' + m.titulo + '
+    '"</h4></div></li>";\n'
 )
 
 #: As edições, uma a uma. Elas citam pedaços da origem congelada, que mora em
@@ -6151,6 +6151,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     *EDICOES_DOS_MAPAS_DO_TODO,
     *EDICOES_DO_CHIP_A_940,
     *EDICOES_DA_CONTA_DO_RADIO,
+    *EDICOES_DO_CODEQL,
 )
 
 
@@ -6601,6 +6602,109 @@ EDICOES_DA_CONTA_DO_RADIO: tuple[Edicao, ...] = (
         porque=(
             "17/10/2026 — fato errado num comentário do JavaScript: só o rumble clássico "
             "viaja dentro do 0x31; a háptica e o som pelo rádio têm relatório próprio."
+        ),
+    ),
+)
+
+#: 23/10/2026, OS-ALERTAS-DO-CODEQL-ZERAM-01: o texto que a página lê do próprio DOM (um
+#: atributo, um campo) não volta como HTML. O CodeQL acusava `js/xss-through-dom` em
+#: quatro `innerHTML` e `js/incomplete-multi-character-sanitization` na regex que tirava
+#: tag da dica.
+EDICOES_DO_CODEQL: tuple[Edicao, ...] = (
+    Edicao(
+        antes=(
+            '    return String(t).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, '
+            '"&lt;");\n'
+            "  }\n"
+        ),
+        depois=(
+            '    return String(t).replace(/&/g, "&amp;").replace(/"/g, "&quot;")'
+            '.replace(/\'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");\n'
+            "  }\n"
+            "  /* O TEXTO de um pedaço de HTML, lido pelo parser do navegador: nenhuma regex "
+            "adivinha onde a\n"
+            "     tag fecha, e nada executa (o DOMParser não roda script nem carrega imagem). */\n"
+            "  function soTexto(t) {\n"
+            '    return new DOMParser().parseFromString(String(t), "text/html").body.textContent;\n'
+            "  }\n"
+        ),
+        porque=(
+            "23/10/2026, OS-ALERTAS-DO-CODEQL-ZERAM-01 "
+            "(js/incomplete-multi-character-sanitization): "
+            "o `emAtributo` escapa também o apóstrofo e o `>`, e a dica do título lê o TEXTO pelo "
+            "parser em vez de tirar tag por regex."
+        ),
+    ),
+    Edicao(
+        antes=(
+            "  function porNum(n) { var t = todasPortas(); for (var i = 0; i < t.length; i++) "
+            "if (t[i].n === String(n)) return t[i]; return null; }\n"
+        ),
+        depois=(
+            "  function porNum(n) { var t = todasPortas(); for (var i = 0; i < t.length; i++) "
+            "if (t[i].n === String(n)) return t[i]; return null; }\n"
+            "  /* O número de entrada que o MODELO conhece, ou null: o que vem de um atributo "
+            "do DOM só\n"
+            "     entra no estado por aqui, e o que não é entrada vira nada. */\n"
+            "  function entradaConhecida(n) { var p = porNum(n); return p ? p.n : null; }\n"
+        ),
+        porque=(
+            "23/10/2026, OS-ALERTAS-DO-CODEQL-ZERAM-01 (js/xss-through-dom): o número da "
+            "entrada lido "
+            "do DOM passa pelo modelo antes de virar estado."
+        ),
+    ),
+    Edicao(
+        antes=(
+            "      editando = abre.getAttribute(\"data-ap-abre\"); if (modo === \"ideal\") "
+            "modo = \"mesa\";\n"
+        ),
+        depois=(
+            "      editando = entradaConhecida(abre.getAttribute(\"data-ap-abre\")); "
+            "if (modo === \"ideal\") modo = \"mesa\";\n"
+        ),
+        porque=(
+            "23/10/2026, OS-ALERTAS-DO-CODEQL-ZERAM-01 (js/xss-through-dom): a entrada em edição é "
+            "a do modelo, nunca o texto do atributo."
+        ),
+    ),
+    Edicao(
+        antes=(
+            "      var n = plug.getAttribute(\"data-porta\"), p = porNum(n);\n"
+        ),
+        depois=(
+            "      var p = porNum(plug.getAttribute(\"data-porta\")), n = p ? p.n : \"\";\n"
+        ),
+        porque=(
+            "23/10/2026, OS-ALERTAS-DO-CODEQL-ZERAM-01 (js/xss-through-dom): o número da porta vem "
+            "do modelo, não do atributo."
+        ),
+    ),
+    Edicao(
+        antes=(
+            "      sel.innerHTML = '<option value=\"' + para + '\" selected>' + para + "
+            "\"</option>\";\n"
+        ),
+        depois=(
+            "      var opc = document.createElement(\"option\");\n"
+            "      opc.value = para; opc.textContent = para; opc.selected = true;\n"
+            "      sel.appendChild(opc);\n"
+        ),
+        porque=(
+            "23/10/2026, OS-ALERTAS-DO-CODEQL-ZERAM-01 (js/xss-through-dom): a opção do seletor "
+            "nasce como nó, com o texto em `textContent`, não como HTML montado."
+        ),
+    ),
+    Edicao(
+        antes=(
+            "<h3>' + (f.titulo || f.nome) + '</h3><span class=\"quantas\">"
+        ),
+        depois=(
+            "<h3>' + emAtributo(f.titulo || f.nome) + '</h3><span class=\"quantas\">"
+        ),
+        porque=(
+            "23/10/2026, OS-ALERTAS-DO-CODEQL-ZERAM-01 (js/xss-through-dom): o título da face é "
+            "texto, e vai escapado para o `innerHTML` que o pinta."
         ),
     ),
 )

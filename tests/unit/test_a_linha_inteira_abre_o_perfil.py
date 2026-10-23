@@ -26,15 +26,33 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
 VELHA = re.compile(r"prioridade", re.IGNORECASE)
 
+#: o `closest('…' + '…')` do ouvinte: cada `+` é obrigatório, então o espaço só se casa de um jeito
+_RE_CLOSEST = re.compile(r"ev\.target\.closest\(\s*('[^']*'(?:\s*\+\s*'[^']*')*)\s*\)")
+
 
 def _seletor_do_ouvinte() -> str:
     """O seletor do `closest` do ouvinte do piloto, LIDO do fonte e nunca digitado."""
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py").read_text(
         encoding="utf-8")
     corpo = fonte[fonte.index("function manda_do_alvo(ev)"):]
-    achado = re.search(r"ev\.target\.closest\(\s*('[^']*'(?:\s*\+\s*'[^']*')*)\s*\)", corpo)
+    achado = _RE_CLOSEST.search(corpo)
     assert achado is not None, "o ouvinte do piloto mudou de forma"
     return "".join(re.findall(r"'([^']*)'", achado.group(1)))
+
+
+def test_a_leitura_do_closest_anda_uma_vez_so() -> None:
+    """Fonte hostil (aspas coladas em espaços, sem o `)` que fecha) não trava a régua.
+
+    A MORDIDA: devolva `((?:'[^']*'\\s*\\+?\\s*)+)` e a primeira busca leva minutos (py/redos).
+    """
+    import time
+
+    hostil = "ev.target.closest(" + ("'a'" + " " * 40) * 40 + "x"
+    comeco = time.monotonic()
+    assert _RE_CLOSEST.search(hostil) is None
+    assert time.monotonic() - comeco < 2.0, "a leitura do `closest` voltou a voltar atrás"
+    achado = _RE_CLOSEST.search("ev.target.closest( 'a' + 'b' ) e depois ev.target.closest('c')")
+    assert achado is not None and achado.group(1) == "'a' + 'b'"
 
 
 class _Visivel(HTMLParser):

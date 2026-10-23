@@ -1,0 +1,9 @@
+# O CodeQL lê este arquivo só quando um workflow o aponta (`config-file: ./.github/codeql/codeql-config.yml`
+# na ação `github/codeql-action/init`) ou quando a configuração padrão do repositório o escolhe em
+# Settings > Code security > CodeQL analysis > "Use configuration file". Sem uma das duas, o arquivo não vale.
+name: "Hefesto — CodeQL"
+
+paths-ignore:
+  # Cópias de estudo congeladas (as páginas de 12/10 e as réplicas dos mapas): o código vivo mora em
+  # src/, scripts/ e mockup/, e é nele que o alerta se cura. O mesmo achado em cópia velha só repete o ruído.
+  - docs/research/**
