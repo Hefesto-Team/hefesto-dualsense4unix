@@ -299,3 +299,38 @@ def test_o_daemon_sem_o_sinal_nao_tem_autoridade_de_ninguem() -> None:
 
     assert appid_da_autoridade(SimpleNamespace(_game_signal=None)) is None
     assert appid_da_autoridade(SimpleNamespace()) is None
+
+
+def test_a_tarefa_nascida_no_arme_nao_herda_a_passagem(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A tarefa criada durante o arme copia o contexto dele, mas a passagem acaba com o arme.
+
+    O `asyncio.create_task` copia o contexto da hora em que nasce (`copy_context`): uma
+    tarefa que o arme agenda roda depois dele, com o jogo já aberto no pad e a trava de pé.
+
+    MORDIDA: tire a conferência do arme em curso de `game_signal.decisao_do_arme` e a
+    recriação pedida pela tarefa passa por cima do jogo.
+    """
+    import contextvars
+
+    _roupa_do_jogo_novo(monkeypatch, COMUM)
+    mesa = _Mesa(monkeypatch, "usb", 0)
+    _o_tique_ve_o_jogo(mesa, tmp_path, JOGO_A, por="o_marcador")
+    mesa.lancar(tmp_path, JOGO_A, EPOCH_B)
+    contextos: list[contextvars.Context] = []
+    original = gp.vestir_a_roupa
+
+    def _vestir(daemon: Any, roupa: object) -> list[str]:
+        contextos.append(contextvars.copy_context())
+        return original(daemon, roupa)
+
+    monkeypatch.setattr(gp, "vestir_a_roupa", _vestir)
+    _arme(mesa, tmp_path)
+    assert contextos and mesa.roupas() == {"p1": COMUM}, "premissa: o arme vestiu a roupa"
+
+    bloqueada = contextos[0].run(
+        gp._recriacao_bloqueada_por_jogo, mesa.d, origin="profile", motivo="regua"
+    )
+
+    assert bloqueada is True

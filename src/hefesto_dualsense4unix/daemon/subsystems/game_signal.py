@@ -162,10 +162,13 @@ def outro_jogo_vivo(inputs: dict[str, Any], appid_do_lancamento: int) -> bool:
 #: A decisão do arme do próprio jogo (O-ARME-NAO-ENCERRA-A-AUTORIDADE-DO-PROPRIO-JOGO-01).
 DECISAO_ARME_DO_PROPRIO_JOGO = "D-2310-O-ARME-NAO-ENCERRA-A-AUTORIDADE-DO-PROPRIO-JOGO"
 
-#: O appid do arme que está recriando o pad, enquanto `o_arme_do_proprio_jogo` está aberto.
-_ARME_DO_PROPRIO_JOGO: ContextVar[int | None] = ContextVar(
+#: O appid do arme que está recriando o pad e a marca dele, enquanto `o_arme_do_proprio_jogo`
+#: está aberto. A marca só vale em `_ARMES_EM_CURSO`: a tarefa que nasce no arme copia o
+#: contexto (`asyncio.create_task`) e roda DEPOIS dele, com o jogo já no pad.
+_ARME_DO_PROPRIO_JOGO: ContextVar[tuple[int, object] | None] = ContextVar(
     "hefesto_arme_do_proprio_jogo", default=None
 )
+_ARMES_EM_CURSO: set[object] = set()
 
 
 @contextlib.contextmanager
@@ -175,12 +178,19 @@ def o_arme_do_proprio_jogo(appid: int | None) -> Iterator[None]:
     Só o arme (`launch_env.arm_launch_profile`) abre isto, e só quando a autoridade é do
     appid dele e nenhum outro jogo está vivo. O contexto é da chamada (``ContextVar``): a
     soltura do pad (`lifecycle._soltar_o_pad_do_lancamento`) e o tique de outra tarefa
-    não herdam a passagem. ``None`` não abre passagem nenhuma.
+    não herdam a passagem, e a tarefa que nasce dentro dele a perde quando ele acaba.
+    ``None`` não abre passagem nenhuma.
     """
-    token = _ARME_DO_PROPRIO_JOGO.set(appid)
+    if appid is None:
+        yield
+        return
+    marca = object()
+    token = _ARME_DO_PROPRIO_JOGO.set((appid, marca))
+    _ARMES_EM_CURSO.add(marca)
     try:
         yield
     finally:
+        _ARMES_EM_CURSO.discard(marca)
         _ARME_DO_PROPRIO_JOGO.reset(token)
 
 
@@ -197,10 +207,13 @@ def appid_da_autoridade(daemon: Any) -> int | None:
 def decisao_do_arme(daemon: Any) -> str | None:
     """A decisão que deixa o arme em curso recriar o pad, ou ``None`` (a recusa fica).
 
-    Vale só com a autoridade `game` do MESMO appid que o arme abriu.
+    Vale só com o arme ainda em curso e a autoridade `game` do MESMO appid que ele abriu.
     """
-    appid = _ARME_DO_PROPRIO_JOGO.get()
-    if appid is None or getattr(daemon, "display_authority", "unknown") != "game":
+    arme = _ARME_DO_PROPRIO_JOGO.get()
+    if arme is None or arme[1] not in _ARMES_EM_CURSO:
+        return None
+    appid = arme[0]
+    if getattr(daemon, "display_authority", "unknown") != "game":
         return None
     return DECISAO_ARME_DO_PROPRIO_JOGO if appid_da_autoridade(daemon) == appid else None
 
