@@ -14,6 +14,7 @@ import mmap
 import os
 import re
 import threading
+import time
 from collections.abc import Callable, Collection
 from dataclasses import dataclass
 from pathlib import Path
@@ -70,6 +71,11 @@ class _Declarado:
 
 _Chave = tuple[tuple[str, int, int], ...]
 _CACHE: dict[str, tuple[_Chave, _Declarado]] = {}
+#: O instante (ns) em que a leitura guardada em `_CACHE` COMEÇOU, tirado antes de ler o disco.
+_LIDO_EM: dict[str, int] = {}
+#: O grão do pior relógio de disco que se conhece (o FAT guarda o `mtime` em 2 s): um arquivo que
+#: muda a menos de uma margem da leitura pode ter mudado de novo no mesmo tique, sem mexer na chave.
+_MARGEM_NS = 2 * 10**9
 _TRAVA_DO_CACHE = threading.Lock()
 _AQUECENDO = threading.Event()
 
@@ -197,37 +203,63 @@ def _chave(raiz: Path, lidos: list[Path]) -> _Chave:
     return tuple(chave)
 
 
-def _do_cache(raiz: Path) -> _Declarado | None:
-    """A leitura guardada, se nenhuma pasta visitada nem arquivo lido mudou desde então."""
+def _agora_ns() -> int:
+    """O relógio com que os `mtime` dos arquivos se comparam (o de parede, em ns)."""
+    return time.time_ns()
+
+
+def _a_releitura_venceu(chave: _Chave, comecou: int | None) -> bool:
+    """A leitura é suspeita (um `mtime` a menos de uma margem do começo dela) e a margem já passou?
+
+    Num disco de tempo grosso, o arquivo que muda no mesmo tique deixa a chave igual. Enquanto a
+    margem corre, a leitura guardada serve (é o melhor que se sabe); passada ela, vale UMA nova.
+    """
+    if comecou is None:
+        return False
+    suspeitos = [m for _c, _t, m in chave if m >= comecou - _MARGEM_NS]
+    return bool(suspeitos) and _agora_ns() > max(suspeitos) + _MARGEM_NS
+
+
+def _do_cache(raiz: Path) -> tuple[_Declarado | None, bool]:
+    """A leitura guardada, se nada mudou desde então, e se ela pede uma releitura.
+
+    Sem leitura útil: `(None, False)`. Com ela: `(declarado, a_reler)`, e quem não pode esperar
+    o disco usa o `declarado` assim mesmo.
+    """
     with _TRAVA_DO_CACHE:
         guardado = _CACHE.get(str(raiz))
+        comecou = _LIDO_EM.get(str(raiz))
     if guardado is None:
-        return None
+        return None, False
     chave, declarado = guardado
     if _chave(raiz, [Path(c) for c, _t, _m in chave[1:]]) != chave:
-        return None
-    return declarado
+        return None, False
+    return declarado, _a_releitura_venceu(chave, comecou)
 
 
-def _o_que_o_jogo_declara(raiz: Path, *, so_o_cache: bool) -> _Declarado | None:
-    declarado = _do_cache(raiz)
-    if declarado is not None or so_o_cache:
-        return declarado
+def _o_que_o_jogo_declara(raiz: Path, *, so_o_cache: bool) -> tuple[_Declarado | None, bool]:
+    """`(declarado, a_reler)`: o que o jogo nomeia e se o cache pede leitura nova, fora do laço."""
+    declarado, a_reler = _do_cache(raiz)
+    if so_o_cache or (declarado is not None and not a_reler):
+        return declarado, a_reler
+    comecou = _agora_ns()
     declarado, lidos = _ler_o_disco(raiz)
     with _TRAVA_DO_CACHE:
         _CACHE[str(raiz)] = (_chave(raiz, lidos), declarado)
-    return declarado
+        _LIDO_EM[str(raiz)] = comecou
+    return declarado, False
 
 
 def _a_roupa(
     raiz: Path, opcoes_de_lancamento: str, no_steam_input: bool, modo_xbox: bool,
     *, so_o_cache: bool,
-) -> tuple[str, str] | None:
+) -> tuple[tuple[str, str] | None, bool]:
+    """`(roupa, a_reler)`; a roupa é `None` se o cache não tem o jogo e o caminho nada decide."""
     caminho = _o_caminho_pede_o_edge(opcoes_de_lancamento, no_steam_input, modo_xbox)
-    declarado = _o_que_o_jogo_declara(raiz, so_o_cache=so_o_cache)
+    declarado, a_reler = _o_que_o_jogo_declara(raiz, so_o_cache=so_o_cache)
     if declarado is None and caminho is None:
-        return None
-    return _a_regra(declarado or _Declarado(), caminho)
+        return None, a_reler
+    return _a_regra(declarado or _Declarado(), caminho), a_reler
 
 
 def roupa_do_jogo(
@@ -239,7 +271,8 @@ def roupa_do_jogo(
 ) -> tuple[str, str]:
     """`(roupa, fonte)` de UM jogo, pela `_a_regra`."""
     caminho = _o_caminho_pede_o_edge(opcoes_de_lancamento, no_steam_input, modo_xbox)
-    return _a_regra(_o_que_o_jogo_declara(raiz, so_o_cache=False) or _Declarado(), caminho)
+    declarado, _a_reler = _o_que_o_jogo_declara(raiz, so_o_cache=False)
+    return _a_regra(declarado or _Declarado(), caminho)
 
 
 def _aquecer(raizes: list[Path], ao_aquecer: Callable[[], None] | None) -> None:
@@ -283,7 +316,8 @@ def roupas_dos_jogos(
 
     Com `so_o_cache` (o laço do serviço, que não espera disco), o jogo que o cache
     não tem fica de fora (o Edge de hoje) e é lido num fio próprio, que chama
-    `ao_aquecer` no fim.
+    `ao_aquecer` no fim; o jogo de leitura suspeita já passada a margem segue com a roupa
+    guardada e ganha uma releitura nesse mesmo fio.
     """
     try:
         from .prontuario_dos_jogos import jogos_instalados
@@ -296,13 +330,13 @@ def roupas_dos_jogos(
     for appid, _nome, raiz in jogos_instalados(home):
         if raiz is None:
             continue
-        resposta = _a_roupa(
+        resposta, a_reler = _a_roupa(
             raiz, opcoes.get(appid, ""), appid in na_lista, modo_xbox, so_o_cache=so_o_cache
         )
-        if resposta is None:
-            frios.append(raiz)
-        else:
+        if resposta is not None:
             roupas[appid] = resposta
+        if resposta is None or a_reler:
+            frios.append(raiz)
     if frios and not _AQUECENDO.is_set():
         _AQUECENDO.set()
         threading.Thread(
