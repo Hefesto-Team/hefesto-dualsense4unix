@@ -486,6 +486,16 @@ def decode_acl_user_uids(blob: bytes) -> set[int]:
     return uids
 
 
+#: Onde o kernel guarda os drivers do barramento HID: ``<driver>/unbind`` e
+#: ``<driver>/bind`` aceitam o id do aparelho (DESLIGAR-COM-A-STEAM-ABERTA-01).
+SYS_BUS_HID_DRIVERS = "/sys/bus/hid/drivers"
+#: O id de um aparelho HID no sysfs: ``BUS:VVVV:PPPP.SEQ`` (``0005:054C:0CE6.006D``).
+_ID_DO_APARELHO_HID_RE = re.compile(
+    r"^[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4}$"
+)
+_NOME_DE_DRIVER_HID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
+
+
 class StaleNodeError(Exception):
     """O nome `hidrawN` foi reciclado para OUTRO device entre validar e agir."""
 
@@ -500,11 +510,13 @@ class FsAclOps:
         dev_input_root: str = DEV_INPUT_ROOT,
         sys_class_input: str = "/sys/class/input",
         sys_class_bluetooth: str = "/sys/class/bluetooth",
+        sys_bus_hid_drivers: str = SYS_BUS_HID_DRIVERS,
     ) -> None:
         self._sys_class_hidraw = sys_class_hidraw
         self._dev_input_root = dev_input_root
         self._sys_class_input = sys_class_input
         self._sys_class_bluetooth = sys_class_bluetooth
+        self._sys_bus_hid_drivers = sys_bus_hid_drivers
 
     def _sysfs_rdev(self, base: str) -> tuple[int, int] | None:
         """(major, minor) de /sys/class/hidraw/<base>/dev; None = ilegível."""
@@ -633,6 +645,33 @@ class FsAclOps:
             return os.getxattr(ref, _ACL_XATTR) == encode_access_acl(uid)
         except OSError:
             return False
+
+    def aparelho_e_driver_hid(self, base: str) -> tuple[str, str] | None:
+        """``(id do aparelho HID, driver)`` do pai de ``/sys/class/hidraw/<base>``.
+
+        O id é o nome do pai HID (``0005:054C:0CE6.006D``) e o driver é o nome
+        do destino do link ``device/driver``. ``None`` = sem driver preso, ou
+        nome que não tem a forma do kernel (nada vira caminho sem passar aqui).
+        """
+        sys_dir = f"{self._sys_class_hidraw}/{base}"
+        try:
+            aparelho = os.path.basename(os.path.realpath(f"{sys_dir}/device"))
+            driver = os.path.basename(os.readlink(f"{sys_dir}/device/driver"))
+        except OSError:
+            return None
+        if _ID_DO_APARELHO_HID_RE.match(aparelho) is None:
+            return None
+        if _NOME_DE_DRIVER_HID_RE.match(driver) is None:
+            return None
+        return aparelho, driver
+
+    def soltar_driver_hid(self, aparelho: str, driver: str) -> None:
+        """Escreve o id em ``<driver>/unbind``: o kernel apaga o ``hidraw`` do aparelho."""
+        _escrever_attr(f"{self._sys_bus_hid_drivers}/{driver}/unbind", aparelho)
+
+    def prender_driver_hid(self, aparelho: str, driver: str) -> None:
+        """Escreve o id em ``<driver>/bind``: o kernel recria o ``hidraw`` do aparelho."""
+        _escrever_attr(f"{self._sys_bus_hid_drivers}/{driver}/bind", aparelho)
 
     def is_exposed_to(self, node: str, uid: int | None) -> bool:
         """True se o nó está no estado canônico exposto (0660 + ACL do uid).
@@ -1362,6 +1401,7 @@ class BrokerState:
         no_nasce_fechado: bool = False,
         dev_input_root: str = DEV_INPUT_ROOT,
         sys_class_input: str = "/sys/class/input",
+        sys_bus_hid_drivers: str = SYS_BUS_HID_DRIVERS,
         validator_entrada: Callable[[str], str | None] | None = None,
         reinicio_sem_abrir: Callable[[], bool] = reinicio_sem_abrir_pedido,
         pad_ops: PadUsbOps | None = None,
@@ -1393,6 +1433,7 @@ class BrokerState:
                 dev_input_root=dev_input_root,
                 sys_class_input=sys_class_input,
                 sys_class_bluetooth=sys_class_bluetooth,
+                sys_bus_hid_drivers=sys_bus_hid_drivers,
             )
         )
         self._validator = validator
@@ -2188,9 +2229,61 @@ class BrokerState:
                 "fisico_entregue_ao_sistema",
                 nodes=",".join(sorted(set(entregues) | antes)) or "-",
             )
+            self._religar_o_driver_dos_fisicos()
         elif entregues:
             self._log("fisico_novo_entregue_ao_sistema", nodes=",".join(entregues))
         return entregues
+
+    def _religar_o_driver_dos_fisicos(self) -> list[str]:
+        """Solta e prende o driver HID de cada DualSense físico, na primeira entrega.
+
+        A Steam aberta enumerou o físico com o nó fechado e não o reabre nem com
+        a ACL nova nem com evento do udev; o nó que NASCE de novo volta à lista
+        dela, e quem o recria é o ``unbind``/``bind`` (rodadas A8 a A11 de
+        23/10/2026). Só na transição da entrega, nunca na varredura. Falha é
+        log, e a entrega segue: o nó com a ACL vale mais que o nó fechado.
+        """
+        soltar = getattr(self._ops, "soltar_driver_hid", None)
+        prender = getattr(self._ops, "prender_driver_hid", None)
+        achar = getattr(self._ops, "aparelho_e_driver_hid", None)
+        if not (callable(soltar) and callable(prender) and callable(achar)):
+            return []
+        try:
+            nomes = sorted(os.listdir(self._sys_class_hidraw))
+        except OSError:
+            return []
+        religados: list[str] = []
+        vistos: set[str] = set()
+        for base in nomes:
+            node = f"{self._dev_root}/{base}"
+            if self._validate(node) is None:
+                continue
+            achado = achar(base)
+            if achado is None or achado[0] in vistos:
+                continue
+            aparelho, driver = achado
+            vistos.add(aparelho)
+            try:
+                soltar(aparelho, driver)
+            except OSError as erro:
+                self._log("religar_falhou", node=node, passo="unbind", erro=str(erro))
+                continue
+            ultimo: OSError | None = None
+            for _tentativa in range(2):
+                try:
+                    prender(aparelho, driver)
+                except OSError as erro:
+                    ultimo = erro
+                    continue
+                ultimo = None
+                break
+            if ultimo is not None:
+                self._log("religar_falhou", node=node, passo="bind", erro=str(ultimo))
+                continue
+            religados.append(node)
+        if religados:
+            self._log("driver_hid_religado", nodes=",".join(religados))
+        return religados
 
     def retomar_o_esconderijo(self) -> list[str]:
         """O Hefesto voltou: fecha de novo (``0600 root``) o que a entrega abriu.

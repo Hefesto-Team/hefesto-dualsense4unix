@@ -118,6 +118,12 @@ DeviceAllow=char-input rw
 # `DeviceAllow`: o grupo `hidg` só aparece no /proc/devices com o primeiro
 # gadget (medido em 07/10), e o broker o cede por O_PATH, sem abri-lo.
 ReadWritePaths=-/sys/kernel/config -/sys/devices/platform
+# DESLIGAR-COM-A-STEAM-ABERTA-DEVOLVE-O-CONTROLE-A-ELA-01 (23/10/2026): na
+# primeira entrega o broker solta e prende o driver HID de cada DualSense físico
+# (`unbind`/`bind` com o id do aparelho), porque a Steam aberta não reabre o
+# controle que já conhecia fechado. O `ProtectKernelTunables` deixa o /sys só de
+# leitura; este ramo volta a ser gravável, e nada além dele.
+ReadWritePaths=-/sys/bus/hid/drivers
 # A marca da entrega (MARCA_DA_ENTREGA_PATH): o broker reiniciado com o
 # Hefesto parado herda o controle entregue em vez de fechá-lo.
 ReadWritePaths=-/run/hefesto-hidraw-broker
