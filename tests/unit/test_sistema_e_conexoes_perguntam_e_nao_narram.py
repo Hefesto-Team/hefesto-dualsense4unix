@@ -267,7 +267,7 @@ def test_o_exame_leva_a_coerencia_dos_perfis(perfis, monkeypatch) -> None:
     monkeypatch.setattr(a09, "linha_da_sobreposicao_vulkan", lambda: None)
 
     linhas = a09._achados({}) or []
-    frases = [f for _, f in linhas]
+    frases = [f for _, f, *_tema in linhas]
     assert any("'Desktop' vale para QUALQUER janela" in f for f in frases), linhas
     selos = {a["txt"]: a["selo"] for a in a09._tela.exame(linhas)["linhas"]}
     grave = next(t for t in selos if "QUALQUER janela" in t)

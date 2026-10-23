@@ -293,7 +293,7 @@ def test_os_dois_achados_condicionais_entram_no_exame(a09, monkeypatch):
     a09._PRONTUARIO["achado"] = ("[WARN]", "um jogo sem perfil no disco")
 
     linhas = a09._achados(ESTADO)
-    frases = [f for _, f in linhas]
+    frases = [f for _, f, *_tema in linhas]
     assert "o vigia do Steam Input está morto" in frases
     assert "um jogo sem perfil no disco" in frases
     assert len(linhas) == 3, f"o exame saiu com {len(linhas)} linhas: {linhas}"
@@ -312,7 +312,7 @@ def test_um_achado_condicional_que_levanta_nao_come_o_exame(a09, monkeypatch):
     a09._PRONTUARIO["quando"] = 1e18
     a09._PRONTUARIO["achado"] = None
     linhas = a09._achados(ESTADO)
-    assert [f for _, f in linhas] == ["base"]
+    assert [f for _, f, *_tema in linhas] == ["base"]
 
 
 def test_ver_os_plugins_saiu_da_aba_com_a_trava_dele(a09):

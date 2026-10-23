@@ -190,7 +190,8 @@ def test_a_dica_nao_promete_cura_de_engasgo() -> None:
 
 
 _LINHA_DO_EXAME = re.compile(
-    r'<div class="saude"><span class="selo (?P<cls>\w+)"><span class="sg">[^<]*'
+    r'<div class="saude"(?: data-[\w-]+="[^"]*")*>'
+    r'<span class="selo (?P<cls>\w+)"><span class="sg">[^<]*'
     r'</span>(?P<selo>[^<]*)</span><span class="txt" (?:title|data-dica)="(?P<frase>[^"]*)">')
 
 

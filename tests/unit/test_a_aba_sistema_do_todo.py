@@ -181,10 +181,15 @@ def _textos(saida: dict[str, Any]) -> list[tuple[str, str]]:
     return [(a["cls"], a.get("curta") or a["txt"]) for a in saida["linhas"]]
 
 
+def _do_exame(saida: dict[str, Any]) -> dict[str, Any]:
+    """As quatro linhas do exame: as duas primeiras das seis são do Status."""
+    return {"linhas": saida["linhas"][len(a09.LINHAS_DO_STATUS):]}
+
+
 def test_o_exame_so_mostra_os_quatro_temas() -> None:
     """Bluetooth, Steam Input, Áudio e o gamepad virtual; o resto fica calado se está bem."""
     estado = _estado()
-    saida = a09._so_o_que_a_tela_mostra(_exame_completo(), _status(estado), estado)
+    saida = _do_exame(a09._so_o_que_a_tela_mostra(_exame_completo(), _status(estado), estado))
     assert _textos(saida) == [
         ("ok", "Bluetooth: 1 adaptador · 0 controles"),
         ("ok", "Steam Input desligado para o DualSense"),
@@ -203,11 +208,13 @@ def test_o_aviso_fica_laranja_no_tema_e_fora_dele() -> None:
     exame = _exame_completo(p3=("aviso", "Steam Input ligado para 2 jogos"),
                             p4=("aviso", "o ajuste de áudio do hefesto não está instalado"),
                             p2=("nt", "quirk não aplicável"))
-    saida = a09._so_o_que_a_tela_mostra(exame, _status(estado), estado)
+    saida = _do_exame(a09._so_o_que_a_tela_mostra(exame, _status(estado), estado))
+    # o aviso de fora da linha do tema entra nela (O-STATUS-DO-SISTEMA-TEM-SEIS-LINHAS-SEMPRE-01):
+    # o WirePlumber é do Áudio, que fica laranja
     cls = [a["cls"] for a in saida["linhas"]]
-    assert cls == ["ok", "aviso", "ok", "ok", "aviso"], cls
+    assert cls == ["ok", "aviso", "aviso", "ok"], cls
     textos = [a.get("curta") or a["txt"] for a in saida["linhas"]]
-    assert "o ajuste de áudio do hefesto não está instalado" in textos[-1]
+    assert "o ajuste de áudio do hefesto não está instalado" in saida["linhas"][2]["dica"]
     assert not any("quirk não aplicável" in t for t in textos), "linha de nota fora dos temas"
     html_ = a09._html_do_exame(saida)
     assert html_.count('class="selo aviso"') == 2
@@ -218,7 +225,7 @@ def test_o_audio_que_nao_esta_bem_diz_a_frase_e_nao_o_rotulo_do_ok() -> None:
     estado = _estado()
     exame = _exame_completo(p1=("aviso", "áudio ausente em 1 dos 2 controles no cabo"))
     saida = a09._so_o_que_a_tela_mostra(exame, _status(estado), estado)
-    audio = saida["linhas"][2]
+    audio = saida["linhas"][a09.TEMAS.index("audio")]
     assert audio["cls"] == "aviso"
     assert "Áudio roteado" not in json.dumps(saida, ensure_ascii=False)
 
@@ -228,8 +235,12 @@ def test_exame_incompleto_mostra_o_que_nao_esta_bem_sem_adivinhar_a_posicao() ->
     exame = {"linhas": [_linha("ok", "alguma coisa"), _linha("aviso", "algo falhou"),
                         _linha("nt", "uma nota")], "vazio": ""}
     saida = a09._so_o_que_a_tela_mostra(exame, _status(estado), estado)
-    assert _textos(saida)[1:] == [("ok", "Um gamepad virtual por jogador"),
-                                  ("aviso", "algo falhou"), ("nt", "uma nota")]
+    # sem posição sabida, o aviso vai à linha do Serviço e os temas do exame dizem «sem leitura»
+    assert _textos(saida)[3:] == [("nt", "Steam Input: sem leitura"),
+                                  ("nt", "Áudio: sem leitura"),
+                                  ("ok", "Um gamepad virtual por jogador")]
+    assert _textos(saida)[0] == ("aviso", "Algo falhou"), _textos(saida)
+    assert saida["linhas"][3]["dica"] == "uma nota"
 
 
 def test_exame_que_nao_respondeu_diz_isso_numa_linha_de_nota() -> None:
@@ -237,8 +248,10 @@ def test_exame_que_nao_respondeu_diz_isso_numa_linha_de_nota() -> None:
     exame = {"linhas": [],
              "vazio": "O exame não respondeu — não dá para dizer o que esta máquina tem."}
     saida = a09._so_o_que_a_tela_mostra(exame, _status(estado), estado)
-    assert saida["linhas"][-1]["cls"] == "nt"
-    assert "O exame não respondeu" in saida["linhas"][-1]["txt"]
+    for tema in ("steam-input", "audio"):
+        linha = saida["linhas"][a09.TEMAS.index(tema)]
+        assert linha["cls"] == "nt", linha
+        assert "O exame não respondeu" in linha["dica"], linha
 
 
 def test_as_posicoes_do_exame_sao_as_do_dono(tmp_path: pathlib.Path) -> None:
@@ -272,11 +285,12 @@ def test_a_linha_do_gamepad_virtual(estado: Any, cls: str, texto: str) -> None:
 
 @pytest.mark.parametrize("estado", [
     _estado(0, 0), _estado(0, 0, native=True), _estado(0, 0, emulacao=False)])
-def test_sem_controle_a_linha_do_gamepad_nao_aparece(estado: Any) -> None:
-    """Sem controle ligado não há gamepad a esperar, em nenhum modo: a linha só ocupava o lugar
-    (21/10/2026). MORDIDA (executada em 21/10/2026): com a conta dos controles depois do nativo e
-    da emulação, como nasceu, o nativo e a emulação desligada reprovam."""
-    assert a09.linha_do_gamepad_por_jogador(estado) is None
+def test_sem_controle_a_linha_do_gamepad_diz_nenhum_controle(estado: Any) -> None:
+    """Sem controle ligado não há gamepad a esperar, em nenhum modo, e a linha diz isso em vez de
+    sumir (O-STATUS-DO-SISTEMA-TEM-SEIS-LINHAS-SEMPRE-01). MORDIDA (executada em 21/10/2026): com a
+    conta dos controles depois do nativo e da emulação, como nasceu, os dois reprovam."""
+    linha = a09.linha_do_gamepad_por_jogador(estado)
+    assert (linha["cls"], linha["txt"]) == ("nt", "Nenhum controle ligado"), linha
 
 
 def test_linha_do_status_e_do_exame_falam_pela_dica_curta() -> None:

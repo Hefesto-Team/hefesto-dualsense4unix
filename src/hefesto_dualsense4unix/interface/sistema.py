@@ -143,7 +143,7 @@ class Leitura(NamedTuple):
     status: str | None = None
     autostart: str | None = None
     state: dict[str, Any] | None = None
-    achados: list[tuple[str, str]] | None = None
+    achados: list[tuple[str, ...]] | None = None
     deteccao: str | None = None
     ambiente: str | None = None
     perfil: str | None = None
@@ -516,17 +516,23 @@ def _selo(veredito: object) -> tuple[str, str, str]:
     return _SELO_DO_VEREDITO.get(chave, _SELO_DO_VEREDITO["INFO"])
 
 
-def exame(achados: list[tuple[str, str]] | None) -> dict[str, Any]:
-    """A lista de achados, uma linha por veredito do ``storm_report``."""
+def exame(achados: list[tuple[str, ...]] | None) -> dict[str, Any]:
+    """A lista de achados, uma linha por veredito do ``storm_report``.
+
+    O terceiro campo, quando vem, é o tema do Status a que o achado pertence (`a09_sistema.TEMAS`).
+    """
     if achados is None:
         return {
             "linhas": [],
             "vazio": "O exame não respondeu — não dá para dizer o que esta máquina tem.",
         }
     linhas = []
-    for veredito, frase in achados:
+    for veredito, frase, *tema in achados:
         selo, cls, glifo = _selo(veredito)
-        linhas.append({"selo": selo, "cls": cls, "g": glifo, "txt": frase})
+        linha = {"selo": selo, "cls": cls, "g": glifo, "txt": frase}
+        if tema:
+            linha["tema"] = tema[0]
+        linhas.append(linha)
     return {
         "linhas": linhas,
         "vazio": "" if linhas else "O exame não achou nada a relatar nesta máquina.",

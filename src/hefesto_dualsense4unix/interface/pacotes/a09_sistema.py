@@ -313,7 +313,7 @@ def _autostart() -> str | None:
 
 
 def _achados(state: dict[str, Any] | None,
-             pode_perguntar: bool = True) -> list[tuple[str, str]] | None:
+             pode_perguntar: bool = True) -> list[tuple[str, ...]] | None:
     """O `storm_report` MAIS os dois achados condicionais da janela antiga.
 
     `None` **não é** lista vazia, e a camada do produto trata os dois de forma
@@ -346,8 +346,10 @@ def _achados(state: dict[str, Any] | None,
     E A COERÊNCIA DOS PERFIS, desde 28/09/2026 — ver :func:`linhas_dos_perfis`.
     Ela também só fala quando há problema, e é o bloco que o `doctor` já tinha.
     """
+    # Cada acréscimo leva o tema no terceiro campo (`TEMA_DOS_ACRESCIMOS`).
     try:
-        linhas = _exame.storm_report(controles_no_cabo=_exame.controles_no_cabo(state))
+        linhas: list[tuple[str, ...]] = list(
+            _exame.storm_report(controles_no_cabo=_exame.controles_no_cabo(state)))
     except Exception:
         return None
     try:
@@ -355,18 +357,19 @@ def _achados(state: dict[str, Any] | None,
     except Exception:
         vigia = None
     if vigia:
-        linhas.append(vigia)
+        linhas.append((*vigia, TEMA_DOS_ACRESCIMOS["vigia"]))
     prontuario = _prontuario(pode_perguntar)
     if prontuario:
-        linhas.append(prontuario)
+        linhas.append((*prontuario, TEMA_DOS_ACRESCIMOS["prontuario"]))
     som = linha_do_som_do_sistema(state)
     if som:
-        linhas.append(som)
+        linhas.append((*som, TEMA_DOS_ACRESCIMOS["som"]))
     vulkan = linha_da_sobreposicao_vulkan()
     if vulkan:
-        linhas.append(vulkan)
+        linhas.append((*vulkan, TEMA_DOS_ACRESCIMOS["vulkan"]))
     with contextlib.suppress(Exception):
-        linhas.extend(linhas_dos_perfis(pode_perguntar))
+        linhas.extend((*p, TEMA_DOS_ACRESCIMOS["perfis"])
+                      for p in linhas_dos_perfis(pode_perguntar))
     return linhas
 
 
@@ -1198,12 +1201,10 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     exame = bruto.get("exame")
     # D-A-CONTAGEM-DO-EXAME-SAIU — 25/09/2026, 22h13, pedido.
     if isinstance(exame, dict):
-        visto = _so_o_que_a_tela_mostra(_com_os_avisos(exame, ctx), status, ctx.state)
-        if visto.get("linhas"):
-            fora[CAMPO_DO_STATUS], fora["exame-lista"] = _notas_em_tercos(
-                do_status, list(visto["linhas"]))
-        else:
-            fora["exame-lista"] = _html_do_exame(visto)
+        seis = list(_so_o_que_a_tela_mostra(_com_os_avisos(exame, ctx), status,
+                                            ctx.state)["linhas"])
+        fora[CAMPO_DO_STATUS], fora["exame-lista"] = _notas_em_tercos(
+            seis[:len(LINHAS_DO_STATUS)], seis[len(LINHAS_DO_STATUS):])
     tira = _html_da_fita(ctx.mesa)
     if tira:
         fora[CAMPO_DA_FITA] = tira
@@ -1251,8 +1252,10 @@ def _avisos_do_produto(ctx: Contexto) -> list[dict[str, Any]]:
     except Exception as erro:
         avisos = [{"texto": f"os avisos do produto não responderam "
                             f"({type(erro).__name__})."}]
-    achados = [(VEREDITO_DO_AVISO, str(a.get("texto") or "")) for a in avisos
-               if a.get("texto") and a.get("fonte") not in FONTES_QUE_NAO_PEDEM_ACAO]
+    achados: list[tuple[str, ...]] = [
+        (VEREDITO_DO_AVISO, str(a.get("texto") or ""),
+         TEMA_DA_FONTE.get(str(a.get("fonte") or ""), TEMA_SEM_DONO)) for a in avisos
+        if a.get("texto") and a.get("fonte") not in FONTES_QUE_NAO_PEDEM_ACAO]
     linhas: list[dict[str, Any]] = _tela.exame(achados)["linhas"]
     return linhas
 
@@ -1263,6 +1266,40 @@ def _avisos_do_produto(ctx: Contexto) -> list[dict[str, Any]]:
 FONTES_QUE_NAO_PEDEM_ACAO: dict[str, str] = {
     "painel.aviso_da_origem_do_modo": "diz quem ligou o modo; não há o que fazer",
 }
+
+#: OS SEIS TEMAS DO STATUS, na ordem da tela (O-STATUS-DO-SISTEMA-TEM-SEIS-LINHAS-SEMPRE-01,
+#: 22/10/2026): seis linhas, sempre. Todo aviso pertence a um deles e entra na linha do tema, que
+#: fica com o pior veredito; nada abre uma sétima.
+TEMAS = ("serviço", "troca-de-perfil", "bluetooth", "steam-input", "audio", "gamepad")
+ROTULO_DO_TEMA = {"serviço": "Serviço", "troca-de-perfil": "Troca de perfil ao abrir o jogo",
+                  "bluetooth": "Bluetooth", "steam-input": "Steam Input", "audio": "Áudio",
+                  "gamepad": "Gamepad virtual"}
+#: Quem não declarou tema cai no Serviço, o tema do Hefesto inteiro; uma régua cobra que nenhuma
+#: fonte conhecida dependa disto.
+TEMA_SEM_DONO = "serviço"
+
+#: O tema de cada fonte da coluna de atenção que chega ao Status. Uma régua cobra os dois sentidos:
+#: toda fonte que não está em `FONTES_QUE_NAO_PEDEM_ACAO` nem tem outra casa tem tema aqui.
+TEMA_DA_FONTE: dict[str, str] = {
+    "home_actions.vpad_degradation_text": "gamepad",
+    "home_actions.texto_do_radio_fragil": "bluetooth",
+    "home_actions.aviso_do_wrapper": "steam-input",
+    "painel.aviso_do_modo_nativo": "gamepad",
+    "home_actions.texto_do_desktop_sem_emulacao": "gamepad",
+    "painel.aviso_do_grab_dobrado": "gamepad",
+    "home_actions._reconciliar_gate_text": "gamepad",
+    "home_actions.aviso_de_opt_out_antigo": "gamepad",
+    "home_actions.mascara_divergente_do_daemon": "gamepad",
+}
+
+#: O tema de cada achado do `storm_report`, na posição do dono (`storm_doctor.storm_report`): a cura
+#: do travamento do USB, o áudio, o quirk anti-storm, o Steam Input, o WirePlumber e a regra
+#: áudio-off.
+TEMA_DO_EXAME = ("audio", "audio", "audio", "steam-input", "audio", "audio")
+
+#: O tema de cada acréscimo que `_achados` junta ao `storm_report`.
+TEMA_DOS_ACRESCIMOS = {"vigia": "steam-input", "prontuario": "steam-input", "som": "audio",
+                       "vulkan": "steam-input", "perfis": "troca-de-perfil"}
 
 
 def _com_os_avisos(exame: dict[str, Any], ctx: Contexto) -> dict[str, Any]:
@@ -1278,12 +1315,14 @@ def _com_os_avisos(exame: dict[str, Any], ctx: Contexto) -> dict[str, Any]:
 
 
 #: As seis linhas à vista (A-ABA-SISTEMA-DO-TODO-01): o Status leva as duas primeiras, e o exame as
-#: quatro seguintes. Qualquer outra linha do exame só aparece se pedir ação: laranja no aviso,
-#: vermelho na falha.
+#: quatro seguintes, uma por tema (:data:`TEMAS`). Um aviso entra na linha do tema dele.
 LINHAS_DO_STATUS = ("hefesto-estado", "hefesto-troca-de-perfil")
 ID_DO_BLUETOOTH = "status-bluetooth"
 ID_DO_GAMEPAD = "gamepad-por-jogador"
 LINHAS_DO_EXAME_COMPLETO = 6
+#: A linha que é a cara de cada tema, pelo `id` que o produto já dá a ela.
+ID_DO_TEMA = {"serviço": "hefesto-estado", "troca-de-perfil": "hefesto-troca-de-perfil",
+              "bluetooth": ID_DO_BLUETOOTH, "gamepad": ID_DO_GAMEPAD}
 
 #: Onde, na lista do `storm_report`, mora o achado que a tela mostra de cada tema. A ordem é do
 #: dono (`storm_doctor.storm_report`) e uma régua a compara com os `check_*` dele.
@@ -1295,8 +1334,8 @@ ROTULO_DO_AUDIO_BEM = "Áudio roteado"
 PEDEM_ACAO = ("aviso", "falha")
 
 
-def linha_do_gamepad_por_jogador(state: Any) -> dict[str, Any] | None:
-    """A sexta linha: cada controle ligado tem o seu gamepad virtual? ``None`` sem controle.
+def linha_do_gamepad_por_jogador(state: Any) -> dict[str, Any]:
+    """A sexta linha: cada controle ligado tem o seu gamepad virtual?
 
     A fonte é a que o produto já lê para a vibração: os gamepads virtuais que o serviço publicou
     (`rumble_ff.vpads`), os controles conectados, a Conexão Nativa e a emulação. Vermelho só no
@@ -1321,9 +1360,10 @@ def linha_do_gamepad_por_jogador(state: Any) -> dict[str, Any] | None:
                      "O serviço não respondeu quantos gamepads virtuais existem.")
     conectados = _tela.quantos_controles(state)
     if not conectados:
-        # Sem controle ligado a linha só ocupava o lugar, em qualquer modo: não há gamepad a
-        # esperar nem jogo a quem dizer como ele fala com o controle (21/10/2026).
-        return None
+        # Sem controle ligado não há gamepad a esperar, em qualquer modo: a linha diz isso e não
+        # some, para o Status seguir com seis (O-STATUS-DO-SISTEMA-TEM-SEIS-LINHAS-SEMPRE-01).
+        return linha(nota, "Nenhum controle ligado",
+                     "Sem controle ligado não há gamepad virtual a esperar.")
     native = bool(state.get("native_mode"))
     emulacao = bool(bloco["enabled"])
     if native:
@@ -1345,45 +1385,85 @@ def _sem_o_prefixo_da_cura(txt: str) -> str:
     return txt.split(_exame.PREFIXO_DA_CURA, 1)[0].rstrip()
 
 
+#: Do pior ao melhor: na linha do tema vence o pior veredito.
+GRAVIDADE = {"falha": 3, "aviso": 2, "nt": 1, "ok": 0}
+#: O gesto no fim da cabeça da frase («…: confira o perfil dele na aba Perfis») vira o `href`.
+_GESTO_NA_ABA = re.compile(r"^(?P<curta>.+?):\s+(?P<gesto>.*\bna aba (?P<aba>[A-ZÀ-Ú]\w+).*)$")
+SEM_LEITURA_DO_EXAME = "O exame não respondeu — não dá para dizer o que esta máquina tem."
+
+
+def _sem_leitura(tema: str, motivo: str) -> dict[str, Any]:
+    """A nota do tema que ninguém leu: a linha fica, para a contagem não cair."""
+    return {"id": ID_DO_TEMA.get(tema, ""), "selo": "NOTA", "cls": "nt", "g": _tela.GLIFO_INFO,
+            "txt": f"{ROTULO_DO_TEMA[tema]}: sem leitura", "dica": motivo}
+
+
+def _pagina_da_aba(nome: str) -> str:
+    """`Perfis` -> `10-perfis.html`; ``""`` quando a aba não existe."""
+    return next((f"{slug}.html" for rotulo, slug in _monta().ABAS if rotulo == nome), "")
+
+
+def _cabeca_e_destino(achado: dict[str, Any]) -> tuple[str, str]:
+    """A frase curta da linha e o endereço do gesto que mora na cabeça dela."""
+    txt = _sem_o_prefixo_da_cura(str(achado.get("txt") or ""))
+    curta = str(achado.get("curta") or "") or frase_curta_do_exame(txt)
+    casou = _GESTO_NA_ABA.match(curta)
+    destino = _pagina_da_aba(casou.group("aba")) if casou else ""
+    if casou and destino:
+        curta = casou.group("curta")
+    return curta, destino or str(achado.get("href") or "")
+
+
+def _na_linha_do_tema(tema: str, cara: dict[str, Any],
+                      avisos: list[dict[str, Any]]) -> dict[str, Any]:
+    """A linha do tema com os avisos dele: o pior vence, os outros vão para a dica."""
+    todas = [{**cara, "tema": tema}, *avisos]
+    if not avisos:
+        return todas[0]
+    pior = max(todas, key=lambda a: GRAVIDADE.get(str(a.get("cls")), 1))
+    curta, destino = _cabeca_e_destino(pior)
+    longa = _sem_o_prefixo_da_cura(str(pior.get("dica") or pior.get("txt") or ""))
+    outras = [_cabeca_e_destino(a)[0] for a in todas if a is not pior]
+    dica = " ".join([longa, *(f"{o.rstrip('.')}." for o in outras if o)])
+    return {**pior, "id": cara.get("id", ""), "tema": tema, "txt": curta, "curta": curta,
+            "dica": dica, "href": destino}
+
+
 def _so_o_que_a_tela_mostra(exame: dict[str, Any], status: list[dict[str, Any]],
                             state: Any) -> dict[str, Any]:
-    """As quatro linhas do exame à vista: Bluetooth, Steam Input, Áudio e o gamepad virtual.
+    """As SEIS linhas do Status, uma por tema (:data:`TEMAS`), sempre, na ordem da tela.
 
-    O exame inteiro do `doctor` continua na camada do produto; aqui só ficam os quatro temas e,
-    depois deles, qualquer outra linha que peça ação. A cor é a do veredito, sem troca: o aviso
-    fica laranja e só a falha é vermelha (21/10/2026; antes todo aviso virava falha).
-    Exame que não veio completo (menos de seis linhas) mostra o que não está bem, sem adivinhar
-    qual posição é qual.
+    Cada tema tem a sua cara (a linha do Status, o achado do `storm_report` ou o gamepad virtual)
+    e recebe os avisos que declararam aquele tema; só os que pedem ação disputam a linha. A cor é
+    a do veredito, sem troca (21/10/2026). Tema sem leitura vira nota: a contagem não cai a cinco.
     """
     linhas = list(exame.get("linhas") or [])
-    saida: list[dict[str, Any]] = []
-    bluetooth = next((dict(s) for s in status if s.get("id") == ID_DO_BLUETOOTH), None)
-    if bluetooth is not None:
-        bluetooth["curta"] = bluetooth.get("txt", "")
-        saida.append(bluetooth)
-    usadas: set[int] = set()
-    if len(linhas) >= LINHAS_DO_EXAME_COMPLETO:
-        for tema, posicao in (("steam-input", POSICAO_NO_EXAME["steam-input"]),
-                              ("audio", POSICAO_NO_EXAME["audio"])):
-            achado = dict(linhas[posicao])
-            usadas.add(posicao)
+    do_dono = [a for a in linhas if not a.get("tema")]
+    completo = len(do_dono) >= LINHAS_DO_EXAME_COMPLETO
+    motivo = (str(exame.get("vazio") or "")
+              or next((str(a.get("txt")) for a in do_dono if a.get("cls") == "nt"), "")
+              or SEM_LEITURA_DO_EXAME)
+    caras: dict[str, dict[str, Any]] = {
+        t: dict(s) for t in ("serviço", "troca-de-perfil", "bluetooth")
+        for s in status if s.get("id") == ID_DO_TEMA[t]}
+    if "bluetooth" in caras:
+        caras["bluetooth"]["curta"] = caras["bluetooth"].get("txt", "")
+    avisos: dict[str, list[dict[str, Any]]] = {t: [] for t in TEMAS}
+    for i, achado in enumerate(do_dono):
+        tema = TEMA_DO_EXAME[i] if completo and i < len(TEMA_DO_EXAME) else TEMA_SEM_DONO
+        if completo and POSICAO_NO_EXAME.get(tema) == i:
+            caras[tema] = dict(achado)
             if achado.get("cls") == "ok" and tema == "audio":
-                achado["curta"] = ROTULO_DO_AUDIO_BEM
-            saida.append(achado)
-    gamepad = linha_do_gamepad_por_jogador(state)
-    if gamepad is not None:
-        saida.append(gamepad)
-    for i, achado in enumerate(linhas):
-        if i in usadas or achado.get("cls") not in PEDEM_ACAO:
-            continue
-        saida.append(dict(achado))
-    if len(linhas) < LINHAS_DO_EXAME_COMPLETO:
-        # Exame curto: as linhas de nota (o «exame não respondeu», por exemplo) também aparecem.
-        saida.extend(a for i, a in enumerate(linhas)
-                     if i not in usadas and a.get("cls") == "nt")
-    vazio = str(exame.get("vazio") or "")
-    if vazio and not linhas:
-        saida.append({"selo": "NOTA", "cls": "nt", "g": _tela.GLIFO_INFO, "txt": vazio})
+                caras[tema]["curta"] = ROTULO_DO_AUDIO_BEM
+        elif achado.get("cls") in PEDEM_ACAO:
+            avisos[tema].append(dict(achado))
+    for achado in linhas:
+        tema = str(achado.get("tema") or "")
+        if tema and achado.get("cls") in PEDEM_ACAO:
+            avisos[tema if tema in avisos else TEMA_SEM_DONO].append(dict(achado))
+    caras["gamepad"] = linha_do_gamepad_por_jogador(state)
+    saida = [_na_linha_do_tema(t, caras.get(t) or _sem_leitura(t, motivo), avisos[t])
+             for t in TEMAS]
     return {"linhas": saida, "vazio": ""}
 
 
@@ -1395,6 +1475,12 @@ def _pausado(ctx: Contexto) -> bool:
 def _classes_da_linha(linha: dict[str, Any], href: str) -> str:
     """` vai` na linha que leva a outro lugar; ` longa` na que pede ação (a frase quebra)."""
     return (" vai" if href else "") + (" longa" if linha.get("cls") in PEDEM_ACAO else "")
+
+
+def _do_tema(linha: dict[str, Any]) -> str:
+    """` data-tema="…"`: a linha diz de que tema é, para a régua e o piloto contarem seis."""
+    tema = str(linha.get("tema") or "")
+    return f' data-tema="{html.escape(tema)}"' if tema else ""
 
 
 def _html_do_status(linhas: list[dict[str, Any]]) -> str:
@@ -1411,7 +1497,8 @@ def linha_do_status(linha: dict[str, Any]) -> str:
     href = str(linha.get("href") or "")
     tag, fim = ("a", "a") if href else ("div", "div")
     destino = f' href="{html.escape(href)}"' if href else ""
-    return (f'<{tag} class="saude{_classes_da_linha(linha, href)}" data-id="{ident}"{destino}>'
+    return (f'<{tag} class="saude{_classes_da_linha(linha, href)}" data-id="{ident}"'
+            f'{_do_tema(linha)}{destino}>'
             f'<span class="selo {cls}"><span class="sg">'
             f'{html.escape(str(linha.get("g") or ""))}</span>'
             f'{html.escape(str(linha.get("selo") or ""))}</span>'
@@ -1474,7 +1561,8 @@ def _linha_do_exame(achado: dict[str, Any]) -> str:
     href = str(achado.get("href") or "")
     tag = "a" if href else "div"
     destino = f' href="{html.escape(href)}"' if href else ""
-    return (f'<{tag} class="saude{_classes_da_linha(achado, href)}"{ident}{destino}>'
+    return (f'<{tag} class="saude{_classes_da_linha(achado, href)}"{ident}'
+            f'{_do_tema(achado)}{destino}>'
             f'<span class="selo {cls}">'
             f'<span class="sg">{html.escape(str(achado.get("g") or ""))}</span>'
             f'{html.escape(str(achado.get("selo") or ""))}</span>'

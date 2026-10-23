@@ -15,7 +15,8 @@ MORDIDAS (executadas em 21/10/2026, cada uma vista reprovar e devolvida):
 * sem o `e_o_freestyle` na regra: `test_o_freestyle_nao_e_acusado`;
 * a frase velha da regra ou da ponte: `test_as_frases_dizem_o_gesto_na_cabeca`;
 * o «i» de volta na NOTA do exame: `test_um_glifo_por_selo`;
-* a linha do gamepad de volta sem controle: `test_sem_controle_nao_ha_linha_do_gamepad`;
+* a linha do gamepad de volta sem controle (22/10/2026, ela diz «Nenhum controle ligado» para o
+  Status seguir com seis): `test_sem_controle_a_linha_do_gamepad_diz_nenhum_controle`;
 * sem o `longa` na linha que pede ação, ou com a linha longa na altura fixa:
   `test_a_linha_que_pede_acao_quebra_em_vez_de_cortar`.
 """
@@ -54,7 +55,7 @@ def _estado(controles: int = 2, vpads: int = 2) -> dict[str, Any]:
             "gamepad_emulation": {"enabled": True}}
 
 
-def _exame(*vereditos: tuple[str, str]) -> dict[str, Any]:
+def _exame(*vereditos: tuple[str, ...]) -> dict[str, Any]:
     """Os seis do `storm_report`, todos bem, com os vereditos dados no fim."""
     base = [("[OK]", f"linha {i}") for i in range(6)]
     exame: dict[str, Any] = tela.exame([*base, *vereditos])
@@ -84,15 +85,16 @@ def test_o_ok_e_verde_de_contorno() -> None:
 def test_o_aviso_nunca_vira_falha() -> None:
     """Laranja pede atenção, vermelho é a falha: o `WARN` fica aviso e o `FAIL` vira falha."""
     estado = _estado()
-    exame = _exame(("[WARN]", "um aviso de outro tema"), ("[FAIL]", "uma falha de outro tema"))
+    exame = _exame(("[WARN]", "um aviso de outro tema", "bluetooth"),
+                   ("[FAIL]", "uma falha de outro tema", "gamepad"))
     linhas = exame["linhas"]
     linhas[a09.POSICAO_NO_EXAME["steam-input"]] = tela.exame(
         [("[WARN]", "Steam Input ligado para 2 jogos")])["linhas"][0]
     saida = a09._so_o_que_a_tela_mostra(exame, [], estado)
-    por_texto = {a["txt"]: a["cls"] for a in saida["linhas"]}
-    assert por_texto["Steam Input ligado para 2 jogos"] == "aviso", por_texto
-    assert por_texto["um aviso de outro tema"] == "aviso", por_texto
-    assert por_texto["uma falha de outro tema"] == "falha", por_texto
+    por_tema = {a["tema"]: (a.get("curta") or a["txt"], a["cls"]) for a in saida["linhas"]}
+    assert por_tema["steam-input"] == ("Steam Input ligado para 2 jogos", "aviso"), por_tema
+    assert por_tema["bluetooth"] == ("Um aviso de outro tema", "aviso"), por_tema
+    assert por_tema["gamepad"] == ("Uma falha de outro tema", "falha"), por_tema
 
 
 def test_a_origem_do_modo_nao_chega_ao_status(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -151,11 +153,12 @@ def test_um_glifo_por_selo() -> None:
     assert all(len(g) == 1 for g in glifos.values()), dict(glifos)
 
 
-def test_sem_controle_nao_ha_linha_do_gamepad() -> None:
+def test_sem_controle_a_linha_do_gamepad_diz_nenhum_controle() -> None:
     saida = a09._so_o_que_a_tela_mostra(_exame(), [], _estado(0, 0))
-    assert all(a.get("id") != a09.ID_DO_GAMEPAD for a in saida["linhas"]), saida
+    gamepad = [a for a in saida["linhas"] if a.get("id") == a09.ID_DO_GAMEPAD]
+    assert [(a["cls"], a["txt"]) for a in gamepad] == [("nt", "Nenhum controle ligado")], saida
     com = a09._so_o_que_a_tela_mostra(_exame(), [], _estado(2, 2))
-    assert any(a.get("id") == a09.ID_DO_GAMEPAD for a in com["linhas"]), com
+    assert any(a.get("txt") == "Um gamepad virtual por jogador" for a in com["linhas"]), com
 
 
 def test_a_linha_que_pede_acao_quebra_em_vez_de_cortar() -> None:

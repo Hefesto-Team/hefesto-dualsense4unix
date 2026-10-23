@@ -356,11 +356,11 @@ def ligavel(rotulo, gesto, campo, ligado, dica):
             f' data-hef-classe="ligada"><span class="p"></span>{rotulo}</button>')
 
 
-def linha(selo, cls, g, txt, ident="", href="", dica=""):
-    """Uma linha do Status ou do exame — a MESMA peça, na marcação do produto."""
+def linha(selo, cls, g, txt, ident="", href="", dica="", tema=""):
+    """Uma linha do Status ou do exame — a MESMA peça, na marcação do produto, com o tema."""
     tag = "a" if href else "div"
     vai = (" vai" if href else "") + (" longa" if cls in ("aviso", "falha") else "")
-    i = f' data-id="{ident}"' if ident else ""
+    i = (f' data-id="{ident}"' if ident else "") + (f' data-tema="{tema}"' if tema else "")
     h = f' href="{href}"' if href else ""
     t = f' data-dica="{dica}"' if dica else ""
     return (f'            <{tag} class="saude{vai}"{i}{h}>'
@@ -423,10 +423,10 @@ def _botoes_tamanho():
 # (`interface/sistema.status_do_*`) — o teste da forma compara as duas.
 _NO_RADIO = len(BT)
 STATUS = [
-    linha("LIGADO", "ok", "✓", "Serviço", ident="hefesto-estado",
+    linha("LIGADO", "ok", "✓", "Serviço", ident="hefesto-estado", tema="serviço",
           dica="Roda por trás e volta sozinho se travar."),
     linha("LIGADO", "ok", "✓", "Troca de perfil ao abrir o jogo",
-          ident="hefesto-troca-de-perfil",
+          ident="hefesto-troca-de-perfil", tema="troca-de-perfil",
           dica="O perfil do jogo entra sozinho quando ele abre."),
 ]
 
@@ -439,15 +439,15 @@ ACHADOS = [
     linha("OK", "ok", "✓",
           f"Bluetooth: 1 adaptador · {_NO_RADIO} "
           f"{'controle' if _NO_RADIO == 1 else 'controles'}",
-          ident="status-bluetooth", href="08-conexoes.html#rd-secao",
+          ident="status-bluetooth", tema="bluetooth", href="08-conexoes.html#rd-secao",
           dica="Clique para ver os adaptadores na aba Conexões."),
     linha("AVISO", "aviso", "!", "O Steam Input de Lure of Passion mudou",
-          href="10-perfis.html",
+          tema="steam-input", href="10-perfis.html",
           dica="A caixinha do Steam Input mudou depois que o Hefesto confirmou o jogo. "
                "Clique para conferir o perfil dele na aba Perfis."),
-    linha("NOTA", "nt", "◆", "Nenhum controle no cabo",
+    linha("NOTA", "nt", "◆", "Nenhum controle no cabo", tema="audio",
           dica="Sem controle no cabo, não há som nem vibração para rotear"),
-    linha("OK", "ok", "✓", "Um gamepad virtual por jogador",
+    linha("OK", "ok", "✓", "Um gamepad virtual por jogador", tema="gamepad",
           dica="Cada controle ligado tem o seu gamepad virtual"),
 ]
 #: AS NOTAS EM TERÇOS (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, S1): o Status e o exame são UMA lista,

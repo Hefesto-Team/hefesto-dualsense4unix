@@ -268,7 +268,7 @@ def test_o_exame_ganha_o_vigia_do_steam_input(a09, ctx, monkeypatch):
     """O achado condicional de 2,8 ms entra na lista, ao lado do `storm_report`."""
     monkeypatch.setattr(a09._daemon, "medir_guarda_do_steam_input",
                         lambda: ("WARN", "o vigia do Steam Input está morto"))
-    frases = [f for _, f in (a09._achados(ESTADO, pode_perguntar=False) or [])]
+    frases = [f for _, f, *_tema in (a09._achados(ESTADO, pode_perguntar=False) or [])]
     assert "o vigia do Steam Input está morto" in frases, (
         f"o vigia do Steam Input não chegou ao exame — a lista tem {len(frases)} "
         "linhas e a janela antiga mostraria uma a mais.")
