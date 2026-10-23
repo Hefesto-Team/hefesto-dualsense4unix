@@ -208,6 +208,7 @@ PESOS_DE_ANTES = {"Space Grotesk": "400 700", "JetBrains Mono": "400 500"}
 
 @pytest.mark.parametrize("arq", PAGINAS, ids=_id)
 def test_os_pesos_declarados_sao_os_que_o_link_do_google_pedia(arq: pathlib.Path) -> None:
+    # D-2310-AS-FONTES-DA-INTERFACE-MORAM-NO-PRODUTO
     texto = _COMENTARIO_CSS.sub("", arq.read_text(encoding="utf-8"))
     achados = {}
     for bloco in _FONT_FACE.findall(texto):
@@ -274,6 +275,7 @@ def test_o_deb_nao_leva_o_link_do_mockup_quebrado(tmp_path: pathlib.Path) -> Non
     sem a limpeza, `/usr/share/.../assets/fontes` apontaria para nada. Roda o bloco do próprio
     `build_deb.sh`, do `cp` até a primeira linha em branco.
     """
+    # D-2310-O-PACOTE-NAO-LEVA-LINK-QUE-NAO-RESOLVE
     linhas = (RAIZ / "scripts" / "build_deb.sh").read_text(encoding="utf-8").splitlines()
     (inicio,) = [i for i, ln in enumerate(linhas) if ln.startswith("cp -r assets/. ")]
     fim = linhas.index("", inicio)
