@@ -100,6 +100,7 @@ def _brilho(cor: RGB) -> float:
 
 
 def test_as_quatro_bases_novas_entram_so_na_lista() -> None:
+    """Prova da D-2210-OS-EFEITOS-DE-LUZ-DOS-PERIFERICOS-RGB."""
     assert BASES_DOS_PERIFERICOS_DA_LUZ == ("ondulacao", "vaivem", "enche", "respira-em-cores")
     assert set(BASES_DOS_PERIFERICOS_DA_LUZ) <= set(TODAS_AS_BASES_DA_LUZ)
     assert not set(BASES_DOS_PERIFERICOS_DA_LUZ) & set(BASES_DA_LUZ), "«Criar efeitos» não muda"

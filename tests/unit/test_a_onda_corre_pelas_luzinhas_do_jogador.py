@@ -64,6 +64,7 @@ def test_a_onda_e_uma_base_com_luzinhas() -> None:
 
 @pytest.mark.parametrize("ritmo", RITMOS)
 def test_o_limiar_acende_as_cinco_luzinhas_em_ordem(ritmo: int) -> None:
+    """Prova da D-2210-A-ONDA-CORRE-PELAS-LUZINHAS."""
     periodo = fx.periodo_da_onda_s(ritmo)
     primeira_vez: list[float | None] = [None] * 5
     for i in range(int(periodo / PASSO_S)):
