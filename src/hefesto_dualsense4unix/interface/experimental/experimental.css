@@ -339,7 +339,7 @@
 @media (max-height:860px) {.ext{padding:5px 0}.ext-forma{padding:3px 0}.ext-grupo{padding-bottom:2px}}
 @media (max-height:830px) and (min-height:781px) {.ext{padding:3px 0}.miolo{gap:10px}.lanc-fila{gap:4px 12px}}
 @media (max-height:780px) {.ext{min-height:0;padding:4px 0}.ext-forma{padding:2px 0}.ext-ramo{margin-top:-4px;height:calc(50% + 4px)} .ext-forma .ext-faz,.ext-grupo .ext-faz{display:none}.ext-forma{min-height:32px}.miolo{gap:10px}.lanc-fila{gap:4px 12px}}
-@media (max-height:860px) {.lanc-fila{grid-auto-rows:32px;gap:4px 12px}}
+@media (max-height:860px) {.lanc-fila{grid-auto-rows:32px;gap:4px 12px} .lf-nome-2{gap:0;line-height:1.15}}
 .ext { padding:12px 0 }
 .ext + .ext { border-top:1px solid var(--border-sutil) }
 .ext-lista .ext:last-child { border-bottom:0 }
@@ -495,7 +495,9 @@
    quatro e 76 com oito, para uma linha só. A fileira tem altura própria (42 px; 32 até 860 px de altura,
    a que faz as seis fileiras caberem na maximizada), e o quadro fica do tamanho da fila: a sobra vai para
    o fundo da janela, fora dele, como em toda aba (27/08). Ele continua `estica` para ENCOLHER quando as
-   extensões tomam o miolo, e a fila rola por dentro. */
+   extensões tomam o miolo, e a fila rola por dentro. Na fileira de 32 px, o nome de duas linhas (o
+   lançador e os jogos) media 32 para os 30 de dentro do cartão e vazava pela borda: até 860 px de
+   altura ele perde o vão e aperta a entrelinha (a regra `max-height:860px` da fila). */
 .miolo > .quadro.estica:has(> .quadro-corpo > .lanc-fila) { flex-grow:0 }
 /* O ARRANJO C — 22/10/2026 (o arranjo «Agora e ajustes» escolhido
    na foto dos três). A extensão que declara `agora` ganha a coluna à esquerda (as conexões, uma linha

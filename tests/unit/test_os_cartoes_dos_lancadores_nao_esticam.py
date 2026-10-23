@@ -15,7 +15,9 @@ MORDIDA (executada em 22/10/2026): com a regra de antes inteira (o `1fr` e o qua
 `test_a_altura_do_cartao_nao_depende_das_extensoes` reprova nas três vistas, e a régua da fonte
 também; só com o `1fr` de volta, `test_a_fileira_da_fila_nao_reparte_a_sobra` reprova; só
 sem o `flex-grow:0` do quadro, `test_a_sobra_fica_fora_do_quadro` reprova nas três (o quadro estica
-até o rodapé, vazio, embaixo do último cartão).
+até o rodapé, vazio, embaixo do último cartão); sem o nome compacto da fileira de 32 px,
+`test_o_que_o_cartao_mostra_cabe_nele` reprova a 1212 e a 1600 (o nome de duas linhas mede 32
+para os 30 de dentro do cartão).
 """
 
 from __future__ import annotations
@@ -66,7 +68,8 @@ MEDIR = '''(function(){
   const fila = document.querySelector('.lanc-fila');
   const m = document.querySelector('.janela > .miolo');
   const lf = [...fila.querySelectorAll('.lf')].map(e => e.getBoundingClientRect().height);
-  return JSON.stringify({lf: lf,
+  const cabe = [...fila.querySelectorAll('.lf')].map(e => [e.scrollHeight, e.clientHeight]);
+  return JSON.stringify({lf: lf, cabe: cabe,
     lanc: r(lanc), fim: r(fila.querySelector('.lf:last-child')),
     rola: [fila.scrollHeight, fila.clientHeight],
     miolo: [m.scrollHeight, m.clientHeight]});
@@ -147,3 +150,16 @@ def test_a_fileira_da_fila_nao_reparte_a_sobra() -> None:
     assert linhas, "a `.lanc-fila` perdeu a altura própria da fileira"
     com_fr = [d for d in linhas if re.search(r"grid-auto-rows:[^;]*\dfr", d)]
     assert not com_fr, f"a fileira reparte a sobra do quadro: {com_fr}"
+
+
+@pytest.mark.parametrize("vista", [f"{w}x{h}" for w, h in VISTAS])
+def test_o_que_o_cartao_mostra_cabe_nele(
+        medida: dict[str, dict[str, list[float]]], vista: str) -> None:
+    """O nome de duas linhas (o lançador e os jogos) cabe na fileira, sem vazar pela borda."""
+    for n in QUANTAS:
+        m = medida[f"{vista}-{n}"]
+        cabe = m.get("cabe")
+        assert isinstance(cabe, list) and cabe, f"a sonda não leu os cartões: {m}"
+        vazam = [par for par in cabe
+                 if not isinstance(par, list) or len(par) != 2 or par[0] > par[1]]
+        assert not vazam, f"vaza do cartão com {n} extensões ([conteúdo, cartão]): {cabe}"
