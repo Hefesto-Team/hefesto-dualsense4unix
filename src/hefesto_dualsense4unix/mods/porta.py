@@ -699,6 +699,10 @@ class Porta:
         for publico in topicos:
             for topico in TOPICOS_DE_LEITURA[publico]:
                 if publico == TOPICO_DOS_BOTOES:
+                    if not self.le_os_botoes():
+                        # O primeiro leitor começa do zero: o retrato do último tique com leitor
+                        # (o laço não chama ninguém sem ele) inventaria a borda de um aperto velho.
+                        self._botoes_antes = None
                     fila: asyncio.Queue[Any] = asyncio.Queue(maxsize=DEFAULT_QUEUE_MAXSIZE)
                     con.filas_dos_botoes.append((topico, fila))
                 else:

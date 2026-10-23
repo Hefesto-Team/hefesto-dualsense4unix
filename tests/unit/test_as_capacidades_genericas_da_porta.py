@@ -385,6 +385,38 @@ def test_6_o_controle_que_sai_solta_o_que_segurava(curto) -> None:  # noqa: F811
     assert visto == [(EventTopic.BUTTON_DOWN, "p2", "r1"), (EventTopic.BUTTON_UP, "p2", "r1")]
 
 
+def test_6_o_leitor_que_chega_depois_nao_recebe_a_borda_de_um_aperto_velho(curto) -> None:  # noqa: F811
+    """Sem leitor, o laço não chama a porta (``le_os_botoes``): o retrato do último tique fica.
+
+    A extensão que reabre (a vigia depois do «Parar tudo», uma queda) não pode receber, no
+    primeiro tique, o ``button.down`` de um botão que já estava apertado: seria um toque que
+    ninguém deu. O primeiro tique dela só guarda.
+    """
+    async def corrida() -> list[dict[str, Any]]:
+        porta = await _porta(curto, EventBus(), ["ler:botoes"])
+        primeira = await _entrar(curto, ["botoes"])
+        try:
+            porta.botoes_do_tique({"p2": frozenset()}, lambda u: 2)
+            porta.botoes_do_tique({"p2": frozenset({"r1"})}, lambda u: 2)
+            assert [e["dados"]["botao"] for e in await asyncio.to_thread(_drenar, primeira)] \
+                == ["r1"]
+            primeira.fechar()
+            assert await _esperar(lambda: not porta.le_os_botoes())
+            porta.registrar("ficha-2", "exemplo", os.getpid(), ["ler:botoes"])
+            segunda = _Extensao(curto / "mods.sock")
+            await asyncio.to_thread(segunda.pedir, "mod.ola", {"ficha": "ficha-2"})
+            await asyncio.to_thread(segunda.pedir, "eventos.assinar", {"topicos": ["botoes"]})
+            try:
+                porta.botoes_do_tique({"p2": frozenset({"cross"})}, lambda u: 2)
+                return await asyncio.to_thread(_drenar, segunda)
+            finally:
+                segunda.fechar()
+        finally:
+            await porta.parar()
+
+    assert asyncio.run(corrida()) == [], "a extensão nova recebeu a borda de um aperto velho"
+
+
 @pytest.mark.asyncio
 async def test_6_o_laco_do_servico_entrega_a_borda_do_posto_com_o_uniq(curto, monkeypatch) -> None:  # noqa: F811
     """O ``_poll_loop`` chama o tópico ``botoes`` a cada tique, com o estado do posto."""
