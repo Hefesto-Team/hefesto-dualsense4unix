@@ -1634,8 +1634,7 @@ def _tocar_a_forma_uma_vez(p: Any, uniq: str) -> None:
     try:
         _segurar(SEGUNDOS_DA_FORMA_UNICA)
     finally:
-        with contextlib.suppress(Exception):
-            p.haptica_testar(uniq, False)
+        p.haptica_testar(uniq, False)  # a ponte não levanta: o daemon fora do ar volta `False`
 
 
 def _padrao_escolhido(ctx: Contexto, uniq: str) -> str:

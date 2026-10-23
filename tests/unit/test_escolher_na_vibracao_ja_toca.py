@@ -82,6 +82,7 @@ def _escolher(gesto: str, uniq: str, valor: str, ponte: _Ponte) -> None:
 class TestOPadraoDosMotores:
     def test_escolher_o_ressoar_toca_a_sequencia_no_controle_da_coluna(self) -> None:
         """MORDIDA: arrancar o toque do `efeito_imersao` deixa a lista de sets vazia."""
+        # D-2310-ESCOLHER-NA-VIBRACAO-JA-TOCA
         ponte = _Ponte()
         _escolher(a05.GESTO_DO_EFEITO_IMERSAO, BRANCO, "ressoar", ponte)
         sets = ponte.de("rumble_set_checked")
