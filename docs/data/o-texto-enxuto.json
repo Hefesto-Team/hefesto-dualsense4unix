@@ -5,7 +5,7 @@
       "data": "2026-10-23",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 54735,
+      "piso": 54752,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -187,6 +187,7 @@
         "interface/aba03.py": 65,
         "interface/aba04.py": 142,
         "interface/aba05.py": 227,
+        "interface/aba06.py": 40,
         "interface/aba08.py": 215,
         "interface/aba09.py": 44,
         "interface/aba10.py": 65,
@@ -196,8 +197,8 @@
         "interface/cartao_do_controle.py": 332,
         "interface/conexoes.py": 67,
         "interface/controles_vivos.py": 145,
-        "interface/desenho_da_experimental.py": 143,
-        "interface/desenho_dos_lancadores.py": 1030,
+        "interface/desenho_da_experimental.py": 144,
+        "interface/desenho_dos_lancadores.py": 1032,
         "interface/frases_que_ela_baniu.py": 104,
         "interface/hefesto_vivo.py": 504,
         "interface/janela.py": 216,
@@ -211,7 +212,7 @@
         "interface/pacotes/a04_iluminacao.py": 1172,
         "interface/pacotes/a05_vibracao.py": 818,
         "interface/pacotes/a06_navegacao.py": 382,
-        "interface/pacotes/a07_lancadores.py": 583,
+        "interface/pacotes/a07_lancadores.py": 594,
         "interface/pacotes/a08_conexoes.py": 1180,
         "interface/pacotes/a09_sistema.py": 1115,
         "interface/pacotes/a10_perfis.py": 921,
@@ -249,7 +250,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +52 linhas (54683 -> 54735), pagas por Origem: D-2310-O-MEU-CSS-E-DA-PESSOA-E-FICA-NO-REMOVER, D-2310-O-TAMANHO-CEDE-ONDE-NAO-CABE; registrado no fecho, topo 9be480c37f62",
+      "razao": "texto-em-src: +17 linhas (54735 -> 54752), pagas por Origem: D-0210-OS-CHIPS-DO-MAPA-DESCEM-DE-LINHA, D-2110-O-MOTOR-DIZ-A-ENTRADA-PELO-DONO, D-2310-A-ACAO-DO-MAPA-SE-LE-INTEIRA-NA-VISTA-ESTREITA, D-A-ABA-LANCADORES; registrado no fecho, topo 67d440a48852",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -460,6 +461,12 @@
           "de": 54683,
           "para": 54735,
           "razao": "texto-em-src: +52 linhas (54683 -> 54735), pagas por Origem: D-2310-O-MEU-CSS-E-DA-PESSOA-E-FICA-NO-REMOVER, D-2310-O-TAMANHO-CEDE-ONDE-NAO-CABE; registrado no fecho, topo 9be480c37f62"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 54735,
+          "para": 54752,
+          "razao": "texto-em-src: +17 linhas (54735 -> 54752), pagas por Origem: D-0210-OS-CHIPS-DO-MAPA-DESCEM-DE-LINHA, D-2110-O-MOTOR-DIZ-A-ENTRADA-PELO-DONO, D-2310-A-ACAO-DO-MAPA-SE-LE-INTEIRA-NA-VISTA-ESTREITA, D-A-ABA-LANCADORES; registrado no fecho, topo 67d440a48852"
         }
       ],
       "unidade": "linhas",
