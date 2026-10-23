@@ -400,6 +400,7 @@ def test_mordida_sem_o_pagamento_a_subida_com_tempo_reprova(
 
 
 def test_uma_parte_de_outra_corrida_deixa_a_suite_indisponivel(tmp_path: Path) -> None:
+    # D-2310-O-PISO-DA-SUITE-E-O-PYTEST-DAS-PARTES-EM-SERIE
     _escreve_casa(tmp_path)
     assert TEMPO.censo_da_suite(tmp_path).numero == 2400
     parte = tmp_path / "fecho" / "suite" / "parte-05.txt"
