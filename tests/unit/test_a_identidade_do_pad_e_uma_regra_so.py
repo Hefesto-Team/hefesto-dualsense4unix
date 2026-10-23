@@ -107,6 +107,36 @@ def test_os_tres_jogos_da_bancada(tmp_path: Path, jogo: str) -> None:
     assert rj.roupa_do_jogo(_jogo(tmp_path / "Jogo", arquivos)) == esperada
 
 
+@pytest.mark.parametrize("so_o_cache", [False, True], ids=["fora-do-laco", "no-laco"])
+@pytest.mark.parametrize("caminho", sorted(_CAMINHO))
+def test_o_laco_do_servico_pergunta_a_mesma_regra(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caminho: str, so_o_cache: bool
+) -> None:
+    """O `roupas_dos_jogos` (o que o `launch_env` grava) dá a roupa do `roupa_do_jogo`.
+
+    MORDIDA: o caminho fora do `_a_roupa` e o jogo do comum na lista do Steam Input, com a
+    Launch Option ou no Modo Xbox, sai `0ce6` no arquivo do jogo, com o cache frio ou quente.
+    """
+    from hefesto_dualsense4unix.integrations import prontuario_dos_jogos
+
+    raiz = _jogo(tmp_path / "Jogo", {_METADATA: _PERFIL_DO_COMUM, "Jogo.exe": b"MZ"})
+    extras = _CAMINHO[caminho]
+    monkeypatch.setattr(prontuario_dos_jogos, "jogos_instalados",
+                        lambda home=None: [("10", "Jogo", raiz)])
+    monkeypatch.setattr(rj, "_opcoes_de_lancamento",
+                        lambda home: {"10": extras.get("opcoes_de_lancamento", "")})
+    esperada = rj.roupa_do_jogo(raiz, **extras)
+    if not so_o_cache:
+        rj._CACHE.clear()
+
+    roupas = rj.roupas_dos_jogos(
+        steam_input=["10"] if extras.get("no_steam_input") else [],
+        modo_xbox=bool(extras.get("modo_xbox")), so_o_cache=so_o_cache)
+
+    assert roupas == {"10": esperada}
+    assert esperada[0] == ("0ce6" if caminho == "direto" else "0df2"), esperada
+
+
 def test_a_decisao_mora_num_lugar_so() -> None:
     """Só a `_a_regra` devolve uma roupa; a leitura do disco devolve o que o jogo nomeia."""
     arvore = ast.parse(Path(rj.__file__).read_text(encoding="utf-8"))
