@@ -208,7 +208,9 @@ def test_a_passagem_vale_so_para_o_appid_da_autoridade(
     mesa.d._pad_travado_pelo_lancamento = None
 
     def juiz() -> bool:
-        return gp._recriacao_bloqueada_por_jogo(mesa.d, origin="profile", motivo="regua")
+        return bool(
+            gp._recriacao_bloqueada_por_jogo(mesa.d, origin="profile", motivo="regua")
+        )
 
     assert juiz() is True, "premissa: sem o arme, a autoridade de A recusa"
     with o_arme_do_proprio_jogo(JOGO_B):
