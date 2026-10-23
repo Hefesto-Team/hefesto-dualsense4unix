@@ -358,7 +358,8 @@ def test_a_tarefa_nascida_no_arme_nao_herda_a_passagem(
 
     def _vestir(daemon: Any, roupa: object) -> list[str]:
         contextos.append(contextvars.copy_context())
-        return original(daemon, roupa)
+        vestem: list[str] = original(daemon, roupa)
+        return vestem
 
     monkeypatch.setattr(gp, "vestir_a_roupa", _vestir)
     _arme(mesa, tmp_path)
