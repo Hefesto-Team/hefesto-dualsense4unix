@@ -456,3 +456,35 @@ def test_o_nome_de_exemplo_nao_ganha_reticencia_por_um_pixel_quebrado(vista: str
     apertados = [(c["texto"], round(c["folga"], 3)) for c in chips if c["folga"] < 0]
     assert apertados == [], (
         f"na janela {vista}, o texto passa da caixa de dentro do chip: {apertados}")
+
+
+ACOES = r"""
+(function(){
+  return JSON.stringify(Array.from(document.querySelectorAll('.mc-mapa .b2')).map(b => {
+    const v = b.querySelector('.b2-val'), cs = getComputedStyle(v);
+    const rg = document.createRange(); rg.selectNodeContents(v);
+    // a largura do texto contra a caixa de dentro do campo: o corte do `overflow` não aparece no
+    // `scrollWidth` de quem é `flex`, e a reticência só se desenha fora dele
+    const livre = v.getBoundingClientRect().width - parseFloat(cs.paddingLeft)
+                  - parseFloat(cs.paddingRight);
+    return {b: b.dataset.b, lado: !!b.closest('.mc-lado'), texto: (v.textContent || '').trim(),
+            corta: rg.getBoundingClientRect().width > livre + 0.5,
+            reticencia: cs.textOverflow === 'ellipsis' && cs.display !== 'flex'};
+  }));
+})()
+"""
+
+
+@pytest.mark.parametrize("vista", sorted(VISTAS_DO_MAPA))
+def test_a_acao_de_cada_linha_se_le_em_toda_janela(vista: str) -> None:
+    """O-CHIP-DO-MAPA-CABE-A-860-PX-01: dar o centro ao controle não pode tirar a ação das colunas
+    dos lados. Com as laterais a 200 px, a 860 px dezessete ações saíam cortadas a seco."""
+    linhas = list(_mede_na_vista(ACOES, *VISTAS_DO_MAPA[vista]))
+    assert len(linhas) == 23, linhas
+    do_lado = [x["texto"] for x in linhas if x["lado"] and x["corta"]]
+    assert do_lado == [], f"na janela {vista}, a ação da linha do lado sai cortada: {do_lado}"
+    if vista == "estreita":
+        cortadas = [x["texto"] for x in linhas if x["corta"]]
+        assert cortadas == [], f"na janela {vista}, a ação sai cortada: {cortadas}"
+    a_seco = [x["texto"] for x in linhas if x["corta"] and not x["reticencia"]]
+    assert a_seco == [], f"na janela {vista}, a ação corta sem reticências: {a_seco}"
