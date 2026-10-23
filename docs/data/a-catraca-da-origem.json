@@ -245,14 +245,14 @@
       "data": "2026-10-23",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1194879,
+      "piso": 1195074,
       "por_item": {
-        "docs": 120842,
+        "docs": 120849,
         "scripts": 120631,
-        "src": 319601,
-        "tests": 633805
+        "src": 319626,
+        "tests": 633968
       },
-      "razao": "tamanho: +752 linhas (1194127 -> 1194879), pagas por Origem: D-2310-O-CODEQL-ZERA-LENDO-O-HTML-PELO-PARSER; registrado no fecho, topo 74e1cfb2ecfb",
+      "razao": "tamanho: +195 linhas (1194879 -> 1195074), pagas por Origem: D-2310-O-DSU-DIZ-A-CONEXAO-DO-CONTROLE; registrado no fecho, topo 59a938427514",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -865,10 +865,16 @@
           "de": 1194127,
           "para": 1194879,
           "razao": "tamanho: +752 linhas (1194127 -> 1194879), pagas por Origem: D-2310-O-CODEQL-ZERA-LENDO-O-HTML-PELO-PARSER; registrado no fecho, topo 74e1cfb2ecfb"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 1194879,
+          "para": 1195074,
+          "razao": "tamanho: +195 linhas (1194879 -> 1195074), pagas por Origem: D-2310-O-DSU-DIZ-A-CONEXAO-DO-CONTROLE; registrado no fecho, topo 59a938427514"
         }
       ],
       "unidade": "linhas",
-      "universo": 3127
+      "universo": 3128
     }
   }
 }
