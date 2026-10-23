@@ -1414,6 +1414,9 @@ def _cabeca_e_destino(achado: dict[str, Any]) -> tuple[str, str]:
     destino = _pagina_da_aba(casou.group("aba")) if casou else ""
     if casou and destino:
         curta = casou.group("curta")
+    elif not achado.get("curta"):
+        # A cabeça de «título: explicação» é a frase da linha; a explicação inteira vai à dica.
+        curta = curta.split(": ", 1)[0]
     return curta, destino or str(achado.get("href") or "")
 
 

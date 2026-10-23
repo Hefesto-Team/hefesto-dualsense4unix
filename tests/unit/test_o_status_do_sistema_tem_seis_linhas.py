@@ -9,7 +9,10 @@ MORDIDAS (executadas em 22/10/2026, cada uma vista reprovar e devolvida):
 
 * o acréscimo das linhas «que pedem ação» de volta no fim: os cenários com aviso dão sete;
 * o prontuário sem tema em `_achados`: o aviso do Steam Input cai na linha do Serviço;
-* uma fonte nova da coluna de atenção sem tema: `test_toda_fonte_que_chega_ao_status_tem_tema`.
+* uma fonte nova da coluna de atenção sem tema: `test_toda_fonte_que_chega_ao_status_tem_tema`;
+* o corte da cabeça «título: explicação» arrancado de `_cabeca_e_destino`: o aviso do modo volta a
+  ocupar a linha inteira, quebrando em duas, e `test_o_aviso_de_titulo_e_explicacao_fica_curto`
+  reprova.
 """
 
 from __future__ import annotations
@@ -21,7 +24,7 @@ from typing import Any
 
 import pytest
 
-from hefesto_dualsense4unix.app.actions import daemon_actions
+from hefesto_dualsense4unix.app.actions import daemon_actions, home_actions
 from hefesto_dualsense4unix.app.actions.jogar import painel
 from hefesto_dualsense4unix.interface import sistema as tela
 from hefesto_dualsense4unix.interface.pacotes import Contexto
@@ -94,6 +97,7 @@ CENARIOS = {
     "dois-no-cabo": dict(state=_estado(cabo=2), storm=BEM),
     "quatro-no-cabo": dict(state=_estado(cabo=4), storm=BEM),
     "um-no-radio": dict(state=_estado(radio=1), storm=[*BEM[:1], SEM_CABO, *BEM[2:]]),
+    "dois-no-radio": dict(state=_estado(radio=2), storm=[*BEM[:1], SEM_CABO, *BEM[2:]]),
     "quatro-no-radio": dict(state=_estado(radio=4), storm=[*BEM[:1], SEM_CABO, *BEM[2:]]),
     "misturados": dict(state=_estado(cabo=2, radio=2), storm=BEM),
     "aviso-do-steam-input": dict(state=_estado(radio=1), prontuario=True,
@@ -102,6 +106,14 @@ CENARIOS = {
                          storm=[*BEM[:1], ("[WARN]", "áudio ausente em 1 dos 2 controles"),
                                 *BEM[2:]]),
     "falha-do-gamepad": dict(state=_estado(cabo=2, vpads=0), storm=BEM),
+    "conexao-nativa": dict(state={**_estado(radio=1), "native_mode": True},
+                           storm=[*BEM[:1], SEM_CABO, *BEM[2:]]),
+    "emulacao-desligada": dict(state={**_estado(cabo=1, radio=1),
+                                      "gamepad_emulation": {"enabled": False}}, storm=BEM),
+    "aviso-do-modo": dict(
+        state=_estado(radio=1), storm=[*BEM[:1], SEM_CABO, *BEM[2:]],
+        avisos=[{"selo": "MODO", "texto": home_actions.TEXTO_DESKTOP_SEM_MOUSE_NEM_TECLADO,
+                 "fonte": "home_actions.texto_do_desktop_sem_emulacao"}]),
     "exame-caiu": dict(state=_estado(cabo=1), storm=None),
     "avisos-de-todo-tema": dict(
         state=_estado(cabo=1, radio=1), prontuario=True, storm=[
@@ -133,6 +145,13 @@ def test_o_aviso_do_steam_input_e_a_linha_dele_laranja(monkeypatch: pytest.Monke
     assert a09._exame.PREFIXO_DA_CURA not in steam["dica"]
     html_ = a09._linha_do_exame(steam)
     assert 'class="saude vai longa"' in html_ and 'href="10-perfis.html"' in html_, html_
+
+
+def test_o_aviso_de_titulo_e_explicacao_fica_curto(monkeypatch: pytest.MonkeyPatch) -> None:
+    """«Título: explicação» põe só o título na linha; a frase inteira vai à dica."""
+    gamepad = _seis(monkeypatch, **CENARIOS["aviso-do-modo"])[a09.TEMAS.index("gamepad")]
+    assert (gamepad["cls"], gamepad["txt"]) == ("aviso", "Mouse e teclado emulados desligados")
+    assert home_actions.TEXTO_DESKTOP_SEM_MOUSE_NEM_TECLADO.split(". ")[0] in gamepad["dica"]
 
 
 def test_vence_o_pior_veredito(monkeypatch: pytest.MonkeyPatch) -> None:
