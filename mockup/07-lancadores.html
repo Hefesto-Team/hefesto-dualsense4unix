@@ -1351,7 +1351,7 @@
 .ext-sub { gap:8px;min-width:0 }
 .ext-sub .ext-nome { white-space:nowrap }
 .ext-faz { font-size:11.5px;color:var(--texto-suave);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3 }
-.lanc-fila { flex:1;min-height:0;grid-auto-rows:minmax(48px,1fr);gap:10px 12px }
+.lanc-fila { flex:1;min-height:0;grid-auto-rows:42px;align-content:start;gap:10px 12px }
 .lf { min-height:0;padding:0 12px;gap:10px;border:1px solid var(--border-sutil);border-radius:8px;background:var(--app-bg) }
 .lf-ico { color:var(--cyan) }
 .lf.ausente .lf-ico { color:var(--fg) }
@@ -1362,9 +1362,9 @@
 .ext-lista { max-height:none;overflow:visible }
 .ext { min-height:50px;padding:6px 0 }
 .ext-instalar-pe { padding-top:8px }
-.lanc-fila { grid-auto-rows:minmax(42px,1fr);gap:8px 12px }
+.lanc-fila { gap:8px 12px }
 @media (max-height:860px) {.lf .btn.mini{height:26px} .lf .lf-ico{width:26px;height:26px} .lf{min-height:0}}
-@media (max-height:780px) {.ext{min-height:42px;padding:2px 0} .ext-faz{font-size:11.5px} .lanc-fila{grid-auto-rows:minmax(34px,1fr);gap:6px 12px} .quadro-corpo{padding-bottom:8px} .ext-instalar-pe{padding-top:6px} .ext-instalar .btn,.ext-instalar input{height:30px}}
+@media (max-height:780px) {.ext{min-height:42px;padding:2px 0} .ext-faz{font-size:11.5px} .lanc-fila{gap:6px 12px} .quadro-corpo{padding-bottom:8px} .ext-instalar-pe{padding-top:6px} .ext-instalar .btn,.ext-instalar input{height:30px}}
 .ext-lista { max-height:none;overflow:visible }
 .ext { grid-template-columns:28px minmax(220px,1fr) 180px 104px 30px 26px;column-gap:12px;align-items:center;min-height:0;padding:7px 0 }
 .ext-sel { width:172px;max-width:none;height:26px }
@@ -1385,8 +1385,7 @@
 @media (max-height:860px) {.ext{padding:5px 0}.ext-forma{padding:3px 0}.ext-grupo{padding-bottom:2px}}
 @media (max-height:830px) and (min-height:781px) {.ext{padding:3px 0}.miolo{gap:10px}.lanc-fila{gap:4px 12px}}
 @media (max-height:780px) {.ext{min-height:0;padding:4px 0}.ext-forma{padding:2px 0}.ext-ramo{margin-top:-4px;height:calc(50% + 4px)} .ext-forma .ext-faz,.ext-grupo .ext-faz{display:none}.ext-forma{min-height:32px}.miolo{gap:10px}.lanc-fila{gap:4px 12px}}
-@media (max-height:860px) {.lanc-fila{grid-auto-rows:minmax(32px,1fr);gap:4px 12px}}
-@media (max-height:780px) {.lanc-fila{grid-auto-rows:minmax(32px,1fr)}}
+@media (max-height:860px) {.lanc-fila{grid-auto-rows:32px;gap:4px 12px}}
 .ext { padding:12px 0 }
 .ext + .ext { border-top:1px solid var(--border-sutil) }
 .ext-lista .ext:last-child { border-bottom:0 }
@@ -1532,11 +1531,18 @@
    por dentro, com a mesma barra fina da lista das extensões. Na janela de até 860 px de altura, o piso
    da fileira desce de 38 para 32 px (o botão tem 26) e o vão de 8 para 4 (a regra `max-height:860px`
    acima): as seis fileiras dela cabem inteiras na maximizada (212 px para 222); no piso da janela, e com
-   mais lançadores, a fila rola. Quando cabe, as fileiras esticam (`1fr`) como antes. */
+   mais lançadores, a fila rola. */
 .lanc-fila { overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border-forte) var(--app-bg) }
 .lanc-fila::-webkit-scrollbar { width:9px }
 .lanc-fila::-webkit-scrollbar-track { background:var(--app-bg);border-radius:5px }
 .lanc-fila::-webkit-scrollbar-thumb { background:var(--border-forte);border-radius:5px }
+/* O CARTÃO TEM A ALTURA DO QUE MOSTRA — 22/10/2026, OS-CARTOES-DOS-LANCADORES-NAO-ESTICAM-01. Com o `1fr`
+   a fileira repartia a sobra do quadro: a 1600x855, cada cartão media 134 px com duas extensões, 115 com
+   quatro e 76 com oito, para uma linha só. A fileira tem altura própria (42 px; 32 até 860 px de altura,
+   a que faz as seis fileiras caberem na maximizada), e o quadro fica do tamanho da fila: a sobra vai para
+   o fundo da janela, fora dele, como em toda aba (27/08). Ele continua `estica` para ENCOLHER quando as
+   extensões tomam o miolo, e a fila rola por dentro. */
+.miolo > .quadro.estica:has(> .quadro-corpo > .lanc-fila) { flex-grow:0 }
 /* O ARRANJO C — 22/10/2026 (o arranjo «Agora e ajustes» escolhido
    na foto dos três). A extensão que declara `agora` ganha a coluna à esquerda (as conexões, uma linha
    fina, os aparelhos) e os grupos do manifesto em abas à direita; o «Parar tudo» fica no topo. As abas são
