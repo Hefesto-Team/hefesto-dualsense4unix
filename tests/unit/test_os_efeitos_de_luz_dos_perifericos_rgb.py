@@ -485,6 +485,42 @@ def test_o_gerador_da_aba_monta_e_confere_sem_exigir_vermelho(tmp_path: pathlib.
             assert base in lista[grupo]
 
 
+def _ctx(n: int) -> Any:
+    import pacotes
+    from hefesto_dualsense4unix.core.led_control import player_slot_color
+
+    uniq = JOGADORES[n - 1]
+    return pacotes.Contexto(
+        state={"active_profile": ""},
+        mesa=[{"pref": f"p{n}", "jogador": n, "uniq": uniq, "nome": "Régua", "via": "USB",
+               "cor": "starlight-blue"}],
+        conectados=[{"uniq": uniq, "connected": True, "transport": "usb", "index": n - 1,
+                     "player": n, "lightbar_rgb": list(player_slot_color(n))}],
+        estados={})
+
+
+@pytest.mark.parametrize("base", BASES_DOS_PERIFERICOS_DA_LUZ)
+@pytest.mark.parametrize("n", [1, 2, 3, 4])
+def test_escolher_cada_uma_na_lista_grava_o_texto_que_o_perfil_le(n: int, base: str) -> None:
+    import pacotes
+    from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
+    from pacotes import a04_iluminacao as a04
+
+    uniq = JOGADORES[n - 1]
+    cor = a04.pacote(_ctx(n))["colunas"][uniq]["hex"].lstrip("#").upper()
+    gesto = pacotes.gesto_da_pagina("04-iluminacao.html", "efeito-da-luz")
+    assert gesto is not None
+    gesto(_ctx(n), {"uniq": uniq, "valor": f"base:{base}"}, None)
+    guardado = o_computador().controles[uniq.replace(":", "")].leds.efeito
+    ritmo = a04.RITMO_DA_BASE[base]
+    sem_cor = base == "respira-em-cores"  # a régua diz por si, sem ler a tabela que ela mede
+    assert guardado == (f"{base};;{ritmo}" if sem_cor else f"{base};{cor};{ritmo}")
+    assert _efeito(guardado).base == base
+    coluna = a04.pacote(_ctx(n))["colunas"][uniq]
+    assert coluna[a04.CAMPO_DO_EFEITO] == f"base:{base}"
+    assert coluna[a04.CAMPO_DA_DICA_DO_EFEITO] == DICA_DE[base]
+
+
 def test_nenhum_efeito_novo_toca_o_led_do_mic() -> None:
     fonte = pathlib.Path(fx.__file__).read_text()
     assert "luz_do_mic" not in fonte and "mic_led" not in fonte, "o LED do mic tem dono"
