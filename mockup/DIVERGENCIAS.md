@@ -21,8 +21,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 09-sistema.html
-- **22/10/2026** — o Status em seis linhas, com o aviso do Steam Input dentro da linha dele (O-STATUS-DO-SISTEMA-TEM-SEIS-LINHAS-SEMPRE-01). Até publicar, o produto continua com o aviso do Steam Input numa sétima linha; o pacote não muda antes do «pode seguir».
-
-## 10-perfis.html
-- **22/10/2026** — o Ativar que sabe ficar cinza com a razão na dica, para a cena do serviço parado (O-ATIVAR-DO-PERFIL-VALE-OU-A-TELA-DIZ-POR-QUE-01). Até publicar, o produto continua com o Ativar verde e sem endereço de razão; o pacote não escreve o campo novo antes do «pode seguir».
+<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->

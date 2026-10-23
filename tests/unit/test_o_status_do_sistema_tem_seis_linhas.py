@@ -129,6 +129,7 @@ CENARIOS = {
 
 @pytest.mark.parametrize("nome", list(CENARIOS))
 def test_sao_seis_linhas_uma_por_tema(monkeypatch: pytest.MonkeyPatch, nome: str) -> None:
+    """Prova da D-2210-O-STATUS-DO-SISTEMA-TEM-SEIS-LINHAS."""
     linhas = _seis(monkeypatch, **CENARIOS[nome])
     assert _contadas(linhas) == list(a09.TEMAS), [
         (a.get("tema"), a.get("cls"), a.get("txt")) for a in linhas]

@@ -86,7 +86,10 @@ def _ctx(state: dict[str, Any] | None) -> Contexto:
 def test_com_o_servico_parado_o_ativar_religa_e_troca(
     monkeypatch: pytest.MonkeyPatch, _mesa: list[str],
 ) -> None:
-    """Um clique: o serviço sobe, a bandeja volta e a troca sai, nessa ordem, sem recusa."""
+    """Prova da D-2210-UM-CLIQUE-RELIGA-E-TROCA.
+
+    Um clique: o serviço sobe, a bandeja volta e a troca sai, nessa ordem, sem recusa.
+    """
     _servico_que_sobe(monkeypatch, _mesa)
     a10_perfis._ESCOLHIDO = "Ação"
     ponte = PonteDeMentira()
@@ -261,7 +264,10 @@ def test_o_sair_da_bandeja_deixa_a_janela_trazer_o_servico(
 def test_a_janela_que_vai_para_a_tela_traz_o_servico(
     monkeypatch: pytest.MonkeyPatch, na_tela: bool,
 ) -> None:
-    """A porta do produto (`abrir.abrir`) chama `trazer_o_servico` só quando a janela vai à tela."""
+    """Prova da D-2210-ABRIR-O-HEFESTO-TRAZ-O-SERVICO.
+
+    A porta do produto (`abrir.abrir`) chama `trazer_o_servico` só quando a janela vai à tela.
+    """
     import runpy
 
     from hefesto_dualsense4unix.app import arranque
