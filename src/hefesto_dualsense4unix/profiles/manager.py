@@ -62,8 +62,6 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 
-#: O Point and click de uma instalação limpa (o mesmo valor que a aba Navegação oferece).
-PADRAO_DO_POINT_AND_CLICK = "molde:point_and_click"
 MOTIVO_SELECIONADO = "selecionado"
 MOTIVO_SEM_CANDIDATO = "sem_candidato"
 MOTIVO_JOGO_SEM_PERFIL_PROPRIO = "jogo_sem_perfil_proprio"
@@ -103,8 +101,9 @@ def esquecer_o_perfil_apagado(nome: str) -> None:
     """O apagado sai da memória do boot (O-PERFIL-ATIVO-APAGADO-SOLTA-O-REMAP-E-O-ROTEADOR-01).
 
     O `profile delete` chama depois de apagar (o ativo, recusa): sai a escolha e o último
-    jogo, e o Point and click que apontava para ele (o do computador e o de cada perfil)
-    volta ao padrão, pela mesma passada do renomear.
+    jogo, e sai o Point and click que apontava para ele (o do computador e o de cada perfil),
+    pela mesma passada do renomear. Sem a escolha, vale o que vale numa instalação limpa: o
+    perfil segue o computador, e o computador, o molde Point and click.
     """
     from hefesto_dualsense4unix.utils.session import (
         esquecer_a_escolha,
@@ -116,15 +115,15 @@ def esquecer_o_perfil_apagado(nome: str) -> None:
         save_freestyle_ligado(False)
     esquecer_a_escolha(nome)
     esquecer_o_ultimo_jogo(nome)
-    _levar_o_point_and_click(nome, PADRAO_DO_POINT_AND_CLICK, origem="apagar")
+    _levar_o_point_and_click(nome, None, origem="apagar")
     logger.info("profile_deleted", name=nome)
 
 
-def _levar_o_point_and_click(era: str, destino: str, *, origem: str) -> None:
+def _levar_o_point_and_click(era: str, destino: str | None, *, origem: str) -> None:
     """O Point and click que aponta para ``era`` (``perfil:<era>``) passa a dizer ``destino``.
 
     A passada única do renomear (``destino`` é ``perfil:<novo>``) e do apagado (``destino`` é
-    o padrão): o do computador e o de cada perfil do disco. Casa pelo slug, como o resto.
+    ``None``, sem escolha): o do computador e o de cada perfil do disco. Casa pelo slug.
     """
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
     from hefesto_dualsense4unix.profiles.slug import mesmo_slug
