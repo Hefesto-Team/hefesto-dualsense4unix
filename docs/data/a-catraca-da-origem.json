@@ -245,14 +245,14 @@
       "data": "2026-10-23",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1193067,
+      "piso": 1193301,
       "por_item": {
-        "docs": 120822,
+        "docs": 120828,
         "scripts": 120406,
-        "src": 319312,
-        "tests": 632527
+        "src": 319342,
+        "tests": 632725
       },
-      "razao": "tamanho: +688 linhas (1192379 -> 1193067), pagas por Origem: D-2310-O-TODOS-DA-FITA-DEVOLVE-O-ALVO-A-TODOS; registrado no fecho, topo 4a2f1e4c3e77",
+      "razao": "tamanho: +234 linhas (1193067 -> 1193301), pagas por Origem: D-2310-O-TERROR-DUPLICA-PELO-OUVIR-JUNTO; registrado no fecho, topo d6f05f238d5e",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -847,10 +847,16 @@
           "de": 1192379,
           "para": 1193067,
           "razao": "tamanho: +688 linhas (1192379 -> 1193067), pagas por Origem: D-2310-O-TODOS-DA-FITA-DEVOLVE-O-ALVO-A-TODOS; registrado no fecho, topo 4a2f1e4c3e77"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 1193067,
+          "para": 1193301,
+          "razao": "tamanho: +234 linhas (1193067 -> 1193301), pagas por Origem: D-2310-O-TERROR-DUPLICA-PELO-OUVIR-JUNTO; registrado no fecho, topo d6f05f238d5e"
         }
       ],
       "unidade": "linhas",
-      "universo": 3119
+      "universo": 3120
     }
   }
 }
