@@ -130,7 +130,7 @@ fi
 # Copiar assets
 # ---------------------------------------------------------------------------
 echo "Copiando assets/ ..."
-cp -r assets/. "${STAGING}/usr/share/hefesto-dualsense4unix/assets/"
+cp -r assets/. "${STAGING}/usr/share/hefesto-dualsense4unix/assets/"; find "${STAGING}/usr/share/hefesto-dualsense4unix/assets/" -xtype l -delete  # sem link quebrado: assets/fontes é o endereço do mockup (../src), e o .deb leva as fontes no venv
 
 # Icone principal (usa o da pasta appimage que é o mais completo)
 if [ -f "assets/appimage/Hefesto-Dualsense4Unix.png" ]; then

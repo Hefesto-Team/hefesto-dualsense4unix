@@ -14,7 +14,8 @@ A CURA, NA ORIGEM: Space Grotesk e JetBrains Mono (OFL) vêm em `interface/asset
    não contam;
 2. todo `@font-face` aponta para um arquivo que existe, está dentro do pacote e é uma fonte de
    verdade;
-3. a licença e a origem (versão e SHA-256) estão ao lado, e o pacote leva a pasta;
+3. a licença e a origem (versão e SHA-256) estão ao lado, o pacote leva a pasta, e o `.deb` não
+   leva o link `assets/fontes` do mockup quebrado;
 4. no WebKit, com a rede que não responde, a 02 e a 10 chegam ao `complete` em menos de 3 s e o
    `document.fonts` diz que as duas famílias carregaram;
 5. a mordida da 4 mora no próprio arquivo: com o `<link>` do Google de volta, a mesma página
@@ -260,6 +261,32 @@ def test_o_wheel_leva_a_pasta_das_fontes() -> None:
     )
 
 
+def test_o_endereco_do_mockup_e_um_link_para_a_pasta_do_pacote() -> None:
+    """De `mockup/`, `../assets/fontes/` é a raiz `assets/fontes`: um link relativo, não cópia."""
+    link = RAIZ / "assets" / "fontes"
+    assert link.is_symlink(), "assets/fontes deixou de ser link: há duas cópias das fontes"
+    assert not os.path.isabs(os.readlink(link)), os.readlink(link)
+    assert link.resolve() == FONTES.resolve()
+
+
+def test_o_deb_nao_leva_o_link_do_mockup_quebrado(tmp_path: pathlib.Path) -> None:
+    """O `.deb` copia `assets/` inteiro (`cp -r`, que copia o link como link) e não leva o `src/`:
+    sem a limpeza, `/usr/share/.../assets/fontes` apontaria para nada. Roda o bloco do próprio
+    `build_deb.sh`, do `cp` até a primeira linha em branco.
+    """
+    linhas = (RAIZ / "scripts" / "build_deb.sh").read_text(encoding="utf-8").splitlines()
+    (inicio,) = [i for i, ln in enumerate(linhas) if ln.startswith("cp -r assets/. ")]
+    fim = linhas.index("", inicio)
+    bloco = "\n".join(linhas[inicio:fim])
+    destino = tmp_path / "usr" / "share" / "hefesto-dualsense4unix" / "assets"
+    destino.mkdir(parents=True)
+    subprocess.run(["bash", "-euc", bloco], cwd=RAIZ, check=True,
+                   env={**os.environ, "STAGING": str(tmp_path)})
+    quebrados = [str(p) for p in destino.rglob("*") if p.is_symlink() and not p.exists()]
+    assert quebrados == [], f"o .deb levaria link quebrado: {quebrados}"
+    assert (destino / "71-uinput.rules").is_file(), "o bloco deixou de copiar os assets"
+
+
 # ---------------------------------------------------------------------------------------------
 # 4 e 5. no WebKit, com a rede que não responde
 # ---------------------------------------------------------------------------------------------
@@ -348,3 +375,10 @@ def test_a_mordida_com_o_link_do_google_de_volta_a_pagina_nao_abre(tmp_path: pat
     assert recursos_de_fora(mordido.read_text(encoding="utf-8")), "a mordida não pôs o link"
     r = _abrir_sem_rede(mordido, prazo=5.0)
     assert r["abriu"] is False, f"com o link do Google a página abriu com a rede muda: {r}"
+    # O controle: a mesma página copiada para `tmp_path`, sem o link, abre. O que fecha a de cima é
+    # o `<link>`, não a cópia (a fonte local não resolve dali, e isso não segura o `complete`).
+    controle = tmp_path / "controle" / original.name
+    controle.parent.mkdir()
+    controle.write_text(texto, encoding="utf-8")
+    r = _abrir_sem_rede(controle, prazo=5.0)
+    assert r["abriu"] is True, f"a cópia sem o link não abriu: a mordida mede outra coisa {r}"
