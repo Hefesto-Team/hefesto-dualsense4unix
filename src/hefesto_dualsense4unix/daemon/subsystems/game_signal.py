@@ -1,8 +1,10 @@
 """NUMA-01 — sinal de 3 estados "jogo real ativo": `game` / `daemon` / `unknown`."""
 from __future__ import annotations
 
+import contextlib
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
+from contextvars import ContextVar
 from typing import Any, Literal
 
 from hefesto_dualsense4unix.daemon.launch_env import (
@@ -157,6 +159,52 @@ def outro_jogo_vivo(inputs: dict[str, Any], appid_do_lancamento: int) -> bool:
     return bool(inputs.get("profile_rule_match"))
 
 
+#: A decisão do arme do próprio jogo (O-ARME-NAO-ENCERRA-A-AUTORIDADE-DO-PROPRIO-JOGO-01).
+DECISAO_ARME_DO_PROPRIO_JOGO = "D-2310-O-ARME-NAO-ENCERRA-A-AUTORIDADE-DO-PROPRIO-JOGO"
+
+#: O appid do arme que está recriando o pad, enquanto `o_arme_do_proprio_jogo` está aberto.
+_ARME_DO_PROPRIO_JOGO: ContextVar[int | None] = ContextVar(
+    "hefesto_arme_do_proprio_jogo", default=None
+)
+
+
+@contextlib.contextmanager
+def o_arme_do_proprio_jogo(appid: int | None) -> Iterator[None]:
+    """O arme de `appid` pede recriações com a autoridade `game` que é DESSE jogo.
+
+    Só o arme (`launch_env.arm_launch_profile`) abre isto, e só quando a autoridade é do
+    appid dele e nenhum outro jogo está vivo. O contexto é da chamada (``ContextVar``): a
+    soltura do pad (`lifecycle._soltar_o_pad_do_lancamento`) e o tique de outra tarefa
+    não herdam a passagem. ``None`` não abre passagem nenhuma.
+    """
+    token = _ARME_DO_PROPRIO_JOGO.set(appid)
+    try:
+        yield
+    finally:
+        _ARME_DO_PROPRIO_JOGO.reset(token)
+
+
+def appid_da_autoridade(daemon: Any) -> int | None:
+    """De quem é a autoridade `game` do daemon: o appid da evidência que a pôs, ou ``None``.
+
+    O sticky da casca (`GameSignal.appid`), que atravessa a histerese do jogo que fechou;
+    não é a leitura do tique corrente (`Daemon.appid_em_cena`).
+    """
+    appid = getattr(getattr(daemon, "_game_signal", None), "appid", None)
+    return appid if isinstance(appid, int) else None
+
+
+def decisao_do_arme(daemon: Any) -> str | None:
+    """A decisão que deixa o arme em curso recriar o pad, ou ``None`` (a recusa fica).
+
+    Vale só com a autoridade `game` do MESMO appid que o arme abriu.
+    """
+    appid = _ARME_DO_PROPRIO_JOGO.get()
+    if appid is None or getattr(daemon, "display_authority", "unknown") != "game":
+        return None
+    return DECISAO_ARME_DO_PROPRIO_JOGO if appid_da_autoridade(daemon) == appid else None
+
+
 def _sem_derrubar_o_tique(nome: str, acao: Callable[[], None]) -> None:
     """Roda um passo da borda; se falhar, o tique segue e o diário diz qual caiu."""
     try:
@@ -178,17 +226,37 @@ class GameSignal:
         self._hysteresis_sec = hysteresis_sec
         self._authority: Authority = "unknown"
         self._non_game_since: float | None = None
+        self._appid: int | None = None
 
     @property
     def authority(self) -> Authority:
         """Autoridade de exibição CORRENTE (contrato lido pelo provider)."""
         return self._authority
 
-    def evaluate(self, raw: Authority, *, session_open: bool) -> Authority:
-        """Aplica a histerese sobre um veredito CRU de `classify()` (1 tick)."""
+    @property
+    def appid(self) -> int | None:
+        """O appid da evidência que pôs (ou mantém) a autoridade em `game`; fora dela, ``None``.
+
+        Quem pergunta é o arme de um lançamento (`launch_env`): a autoridade que é do
+        PRÓPRIO jogo que está abrindo não é o resíduo de um jogo que acabou. Evidência só
+        de janela ou de regra de perfil não traz appid e deixa o anterior; a histerese
+        segura o appid junto com o jogo, e a saída de `game` o apaga.
+        """
+        return self._appid if self._authority == "game" else None
+
+    def evaluate(
+        self, raw: Authority, *, session_open: bool, appid: int | None = None
+    ) -> Authority:
+        """Aplica a histerese sobre um veredito CRU de `classify()` (1 tick).
+
+        `appid` é o da evidência do tique (`lifecycle._o_appid_da_evidencia`, o dono
+        dessa leitura); só vale com o veredito `game`.
+        """
         if raw != "daemon":
             self._non_game_since = None
             self._transition(raw, evidencia=raw)
+            if raw == "game" and appid is not None and appid > 0:
+                self._appid = appid
             return self._authority
         if not session_open:
             self._non_game_since = None
@@ -251,13 +319,19 @@ class GameSignal:
         if novo == anterior:
             return
         self._authority = novo
+        if novo != "game":
+            self._appid = None
         logger.info("game_signal_transition", de=anterior, para=novo, evidencia=evidencia)
 
 
 __all__ = [
+    "DECISAO_ARME_DO_PROPRIO_JOGO",
     "HYSTERESIS_SEC",
     "Authority",
     "GameSignal",
+    "appid_da_autoridade",
     "classify",
+    "decisao_do_arme",
+    "o_arme_do_proprio_jogo",
     "outro_jogo_vivo",
 ]

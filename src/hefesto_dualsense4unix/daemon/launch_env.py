@@ -711,6 +711,47 @@ def _soltar_a_trava_do_lancamento(daemon: Any) -> None:
     daemon._pad_travado_pelo_lancamento = None
 
 
+def _ha_outro_jogo_vivo(daemon: Any, appid: int) -> tuple[bool, list[int]]:
+    """Há jogo vivo além do lançamento `appid`? Devolve também os appids do `/proc`.
+
+    Junta as duas perguntas da casa: o `/proc` (`appids_de_jogo_vivos`) e as leituras do
+    `classify` (`outro_jogo_vivo`: marcador de outro appid, janela ou regra de perfil).
+    Levanta como a leitura levanta: quem chama decide o que fazer na dúvida.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.game_signal import outro_jogo_vivo
+    from hefesto_dualsense4unix.integrations.steam_launch_options import appids_de_jogo_vivos
+
+    outros = sorted(appids_de_jogo_vivos() - {appid})
+    return bool(outros) or outro_jogo_vivo(daemon._gather_game_signal_inputs(), appid), outros
+
+
+def _appid_da_autoridade(daemon: Any) -> int | None:
+    """De quem é a autoridade `game` de agora (`game_signal.appid_da_autoridade`)."""
+    from hefesto_dualsense4unix.daemon.subsystems.game_signal import appid_da_autoridade
+
+    return appid_da_autoridade(daemon)
+
+
+def _a_autoridade_e_do_proprio_jogo(daemon: Any, appid: int) -> bool:
+    """A autoridade `game` de agora é a do jogo que está abrindo, e nenhum outro está vivo?
+
+    O tique do sinal viu o jogo ANTES do ping do wrapper (a rodada C3 de 23/10: 43 ms): a
+    autoridade é dele e não é o resíduo de um jogo que acabou. Com outro jogo vivo a
+    autoridade pode ser dele também, e a recusa fica. Na dúvida, não.
+    """
+    if getattr(daemon, "display_authority", "unknown") != "game":
+        return False
+    if _appid_da_autoridade(daemon) != appid:
+        return False
+    if not callable(getattr(daemon, "_gather_game_signal_inputs", None)):
+        return False
+    try:
+        return not _ha_outro_jogo_vivo(daemon, appid)[0]
+    except Exception as exc:
+        logger.warning("launch_arm_autoridade_nao_lida", appid=appid, err=str(exc))
+        return False
+
+
 def _encerrar_a_autoridade_do_jogo_que_acabou(
     daemon: Any, appid: int, anterior: object
 ) -> bool:
@@ -719,7 +760,9 @@ def _encerrar_a_autoridade_do_jogo_que_acabou(
     Sem isso a histerese de 30 s recusa a roupa e o caminho do jogo novo. Encerra só se
     nenhum outro jogo está vivo: nem pelas leituras do `classify` (`outro_jogo_vivo`) nem
     por processo de outro appid da Steam (`appids_de_jogo_vivos`). O mesmo appid
-    lançado de novo (`anterior`, o arme de antes, ou a trava) não é outro jogo. Na dúvida,
+    lançado de novo (`anterior`, o arme de antes, ou a trava) não é outro jogo, e nem o
+    jogo a que a autoridade JÁ pertence (`GameSignal.appid`: o tique o viu antes
+    do ping do wrapper, e encerrar tomaria a tela do próprio jogo por 2 s). Na dúvida,
     fica. A borda roda pela porta do tique (`Daemon.encerrar_a_autoridade_do_jogo`).
     """
     if getattr(daemon, "display_authority", "unknown") != "game":
@@ -728,17 +771,17 @@ def _encerrar_a_autoridade_do_jogo_que_acabou(
     encerrar = getattr(daemon, "encerrar_a_autoridade_do_jogo", None)
     if not (callable(ler) and callable(encerrar)):
         return False
-    from hefesto_dualsense4unix.daemon.subsystems.game_signal import outro_jogo_vivo
-    from hefesto_dualsense4unix.integrations.steam_launch_options import appids_de_jogo_vivos
-
     try:
         travado = getattr(daemon, "_pad_travado_pelo_lancamento", None)
         for lancado in (anterior, travado):
             if isinstance(lancado, tuple) and lancado and int(lancado[0]) == appid:
                 logger.info("launch_arm_autoridade_mantida_mesmo_jogo", appid=appid)
                 return False
-        outros = sorted(appids_de_jogo_vivos() - {appid})
-        if outros or outro_jogo_vivo(ler(), appid):
+        if _appid_da_autoridade(daemon) == appid:
+            logger.info("launch_arm_autoridade_mantida_mesmo_jogo", appid=appid)
+            return False
+        ha_outro, outros = _ha_outro_jogo_vivo(daemon, appid)
+        if ha_outro:
             logger.info(
                 "launch_arm_autoridade_mantida_outro_jogo_vivo", appid=appid, outros=outros
             )
@@ -877,6 +920,19 @@ def arm_launch_profile(
     _encerrar_a_autoridade_do_jogo_que_acabou(daemon, appid, armado_antes)
     _soltar_a_trava_do_lancamento(daemon)
 
+    from hefesto_dualsense4unix.daemon.subsystems.game_signal import o_arme_do_proprio_jogo
+
+    # A autoridade que é do PRÓPRIO jogo deixa o arme recriar o pad (D-2310-O-ARME-NAO-
+    # ENCERRA-A-AUTORIDADE-DO-PROPRIO-JOGO); a de outro jogo vivo segue recusando.
+    do_proprio = _a_autoridade_e_do_proprio_jogo(daemon, appid)
+    with o_arme_do_proprio_jogo(appid if do_proprio else None):
+        return _armar_o_jogo(daemon, appid, epoch, base_dir)
+
+
+def _armar_o_jogo(
+    daemon: DaemonProtocol, appid: int, epoch: int, base_dir: Path | None
+) -> dict[str, Any] | None:
+    """O resto do arme de `arm_launch_profile`: a roupa, o perfil, o modo e a trava do pad."""
     from hefesto_dualsense4unix.profiles.manager import o_freestyle_manda
 
     if o_freestyle_manda(getattr(daemon, "store", None)):

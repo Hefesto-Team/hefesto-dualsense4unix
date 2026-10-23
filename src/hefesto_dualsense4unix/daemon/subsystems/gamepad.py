@@ -1147,7 +1147,7 @@ def _recriacao_bloqueada_por_jogo(
     daemon: DaemonProtocol, *, origin: str, motivo: str
 ) -> bool:
     """True quando destruir/recriar o vpad AGORA arrancaria o controle do jogo."""
-    decisao = ORIGENS_QUE_PASSAM_COM_O_JOGO.get(origin)
+    decisao = ORIGENS_QUE_PASSAM_COM_O_JOGO.get(origin) or _decisao_do_arme(daemon)
     if decisao is not None:
         if _autoridade_do_jogo(daemon):
             logger.info(
@@ -3039,6 +3039,18 @@ def parar_os_acionadores(daemon: Any) -> None:
     ponte = getattr(daemon, _ATRIBUTO_DA_PONTE, None)
     if isinstance(ponte, PonteDosAcionadores):
         ponte.parar()
+
+
+def _decisao_do_arme(daemon: Any) -> str | None:
+    """A decisão que deixa o arme do PRÓPRIO jogo recriar o pad com a autoridade dele, ou None.
+
+    O arme (`launch_env.arm_launch_profile`) abre `game_signal.o_arme_do_proprio_jogo` só
+    quando a autoridade é do appid dele e nenhum outro jogo está vivo; aqui se confere de
+    novo que a autoridade `game` de agora é desse appid.
+    """
+    from hefesto_dualsense4unix.daemon.subsystems.game_signal import decisao_do_arme
+
+    return decisao_do_arme(daemon)
 
 
 __all__ = [

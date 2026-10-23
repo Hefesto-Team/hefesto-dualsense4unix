@@ -222,7 +222,9 @@ class _Mesa:
         """Um tique do sinal, como o `_sync_game_signal` o faz (a varredura vem da régua)."""
         inputs = self._ler()
         self.d._game_signal.evaluate(
-            classify(**inputs), session_open=bool(inputs["session_open"])
+            classify(**inputs),
+            session_open=bool(inputs["session_open"]),
+            appid=lc._o_appid_da_evidencia(inputs),
         )
         return str(self.d.display_authority)
 

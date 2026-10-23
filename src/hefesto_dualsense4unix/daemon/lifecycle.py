@@ -4179,8 +4179,8 @@ class Daemon:
         else:
             anterior = signal.authority
             raw = classify(**inputs)
-            signal.evaluate(raw, session_open=bool(inputs["session_open"]))
-            self._appid_da_evidencia = _o_appid_da_evidencia(inputs)
+            appid = self._appid_da_evidencia = _o_appid_da_evidencia(inputs)
+            signal.evaluate(raw, session_open=bool(inputs["session_open"]), appid=appid)
         novo = signal.authority
         if anterior == "game" and novo == "daemon":
             _soltar_o_pad_do_lancamento(self, MOTIVO_DA_AUTORIDADE)
