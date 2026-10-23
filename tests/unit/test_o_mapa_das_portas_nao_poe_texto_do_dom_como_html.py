@@ -23,7 +23,7 @@ from hefesto_dualsense4unix.interface import pagina_do_mapa as gerador
 
 @pytest.fixture(scope="module")
 def pagina() -> str:
-    return gerador.pagina()
+    return str(gerador.pagina())
 
 
 def _corpo_de(pagina: str, assinatura: str) -> str:
