@@ -855,6 +855,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   function portaDe(id) { return portaDeEm(alocacaoDerivada(), id); }
   function todasPortas() { var r = []; FACES.forEach(function (f) { f.portas.forEach(function (p) { r.push(p); if (p.filho) r.push(p.filho); }); }); return r; }
   function porNum(n) { var t = todasPortas(); for (var i = 0; i < t.length; i++) if (t[i].n === String(n)) return t[i]; return null; }
+  /* O número de entrada que o MODELO conhece, ou null: o que vem de um atributo do DOM só
+     entra no estado por aqui, e o que não é entrada vira nada. */
+  function entradaConhecida(n) { var p = porNum(n); return p ? p.n : null; }
   /* DONO ÚNICO de "qual o caminho deste aparelho AGORA".
      A bandeja lia `a.caminho` — o campo gravado na constante — enquanto a
      faixa lia a leitura viva. Duas verdades na mesma tela sobre a mesma
@@ -1582,7 +1585,12 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     return nome ? PALAVRA_NA_FRASE + " " + nome : PALAVRA_DA_ENTRADA + " " + n;
   }
   function emAtributo(t) {
-    return String(t).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
+    return String(t).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/'/g, "&#39;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  /* O TEXTO de um pedaço de HTML, lido pelo parser do navegador: nenhuma regex adivinha onde a
+     tag fecha, e nada executa (o DOMParser não roda script nem carrega imagem). */
+  function soTexto(t) {
+    return new DOMParser().parseFromString(String(t), "text/html").body.textContent;
   }
   /* «TROCAR COM…» — 26/09/2026, O-MAPA-QUE-ELA-CORRIGE-01 (D-2609-TROCAR-MOVE-
      O-BURACO). Pedido: «trocar elas de lugar no mapeamento». Só nas
@@ -1887,7 +1895,9 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       sel.hidden = true;
       sel.setAttribute("data-gesto", "entrada-trocar");
       sel.setAttribute("data-entrada", de);
-      sel.innerHTML = '<option value="' + para + '" selected>' + para + "</option>";
+      var opc = document.createElement("option");
+      opc.value = para; opc.textContent = para; opc.selected = true;
+      sel.appendChild(opc);
       document.body.appendChild(sel);
       sel.dispatchEvent(new Event("change", { bubbles: true }));
       document.body.removeChild(sel);
@@ -2190,7 +2200,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         html += '<p class="chamada"><span class="grande">' + reais.length + " troca" + (reais.length > 1 ? "s" : "") + "</span></p>"
              + '<ol class="receita">'
              + reais.map(function (m) {
-                 return '<li><div><h4 data-dica="' + emAtributo(String(m.linhas[0] ? m.linhas[0].t : "").replace(/<[^>]+>/g, "")) + '">' + m.titulo + "</h4></div></li>";
+                 return '<li><div><h4 data-dica="' + emAtributo(soTexto(m.linhas[0] ? m.linhas[0].t : "")) + '">' + m.titulo + "</h4></div></li>";
                }).join("")
              + "</ol>";
         html += '<div class="acoes"><button class="btn forte ja-movi"' + examinaNoProduto() + '>Já mudei</button>'
@@ -2288,7 +2298,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       /* A FACE DIZ DE QUAL ENTRADA PENDE (D-2609-O-HUB-PENDE-DA-ENTRADA): o
          título é do dono («Hub na Entrada 3»), e a divergência é uma linha
          a mais, sem culpa. */
-      return '<div><div class="face-cab"><h3>' + (f.titulo || f.nome) + '</h3><span class="quantas">' + cheias + " de " + total + " ocupadas</span></div>"
+      return '<div><div class="face-cab"><h3>' + emAtributo(f.titulo || f.nome) + '</h3><span class="quantas">' + cheias + " de " + total + " ocupadas</span></div>"
         + (f.diverge ? '<p class="diverge">' + f.diverge + "</p>" : "")
         + '<div class="rolar"><div class="chapa ' + f.forma + '">' + f.portas.map(function (p) { return soqueteHTML(p, ctx); }).join("") + "</div></div>"
         + (f.leitura && modo !== "ideal"
@@ -2340,7 +2350,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     var abre = ev.target.closest("[data-ap-abre]");
     if (abre) {
       achado = null; editandoDe = "mapa"; editandoAp = null; segurando = null;
-      editando = abre.getAttribute("data-ap-abre"); if (modo === "ideal") modo = "mesa";
+      editando = entradaConhecida(abre.getAttribute("data-ap-abre")); if (modo === "ideal") modo = "mesa";
       pintar(); return;
     }
     var ext = ev.target.closest("#edita [data-extensor]");
@@ -2442,7 +2452,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     var plug = ev.target.closest(".plug[data-porta]");
     if (plug) {
       if (modo === "ideal") return;
-      var n = plug.getAttribute("data-porta"), p = porNum(n);
+      var p = porNum(plug.getAttribute("data-porta")), n = p ? p.n : "";
       if (segurando) {
         /* NO PRODUTO A PÁGINA ESPERA O DISCO (D-2609-ENSINAR-GRAVA-O-NO): o
            plugue candidato levou o gesto, e o arranjo relido tira o

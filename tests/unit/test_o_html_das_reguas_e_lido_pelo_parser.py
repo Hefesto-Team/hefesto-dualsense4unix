@@ -132,6 +132,7 @@ def _regex_de_script() -> list[str]:
 
 
 def test_nenhuma_regua_da_lista_le_script_por_regex() -> None:
+    # D-2310-O-CODEQL-ZERA-LENDO-O-HTML-PELO-PARSER
     assert _regex_de_script() == [], (
         "uma régua voltou a ler `<script>` por regex — o CodeQL acusa `py/bad-tag-filter`; "
         "use `trechos_mudos`, `sem_o_mudo` ou `roteiros_de` de `frases_que_ela_baniu`"

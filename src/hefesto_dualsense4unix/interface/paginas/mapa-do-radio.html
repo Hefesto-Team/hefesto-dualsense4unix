@@ -2030,12 +2030,29 @@ function sugestaoPara(destino) {
 /* A PERGUNTA — a janela que vem ANTES do ato (R7, R8). O terceiro botão é o
    da R3 + R4: «ligar aqui mesmo» para quem não pode re-parear agora. */
 let _fecharPergunta = null;
+/* A FRASE DA PERGUNTA É MONTADA EM NÓS, não em `innerHTML` (CodeQL, js/xss-through-dom): ela só
+   conhece `<b>`, `</b>` e `<br>`, e cada pedaço de texto — o nome que alguém digitou entre eles — entra
+   por `textContent`. As entidades que `texto()` escreveu voltam a ser letra numa passada só. */
+const _LETRA_DA_ENTIDADE = { amp: '&', lt: '<', gt: '>' };
+function poeFrase(onde, frase) {
+  onde.textContent = '';
+  let dentro = onde;
+  for (const parte of String(frase).split(/(<br>|<b>|<\/b>)/)) {
+    if (parte === '<br>') onde.appendChild(document.createElement('br'));
+    else if (parte === '<b>') dentro = onde.appendChild(document.createElement('b'));
+    else if (parte === '</b>') dentro = onde;
+    else if (parte) {
+      dentro.appendChild(document.createTextNode(
+        parte.replace(/&(amp|lt|gt);/g, (_, e) => _LETRA_DA_ENTIDADE[e])));
+    }
+  }
+}
 function perguntar(diz, rotuloSim, sim, nao, outro) {
   const caixa = document.getElementById('pergunta');
   const veu = document.getElementById('veu-pergunta');
   if (!caixa) return;
   const antesDoFoco = document.activeElement;
-  caixa.querySelector('.diz').innerHTML = diz;
+  poeFrase(caixa.querySelector('.diz'), diz);
   const s = caixa.querySelector('#pergunta-sim');
   const n = caixa.querySelector('#pergunta-nao');
   const o = caixa.querySelector('#pergunta-outro');
