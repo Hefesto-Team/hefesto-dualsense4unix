@@ -73,7 +73,9 @@ class _PonteQueGrava:
     def __getattr__(self, nome: str) -> Any:
         def registrar(*a: Any, **k: Any) -> Any:
             self.chamadas.append((nome, a, k))
-            return (True, None) if nome.endswith("_checked") else True
+            # a ponte de verdade devolve o par `(ok, corpo)` nestes; a escolha já toca (23/10)
+            com_corpo = nome.endswith("_checked") or nome == "haptica_testar"
+            return (True, None) if com_corpo else True
         return registrar
 
 

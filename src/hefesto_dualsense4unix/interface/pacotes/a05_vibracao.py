@@ -1590,14 +1590,52 @@ def _gravar_a_escolha(o: dict[str, Any], p: Any, campo: str, lista: tuple[str, .
 
 @gesto("05-vibracao.html", GESTO_DO_EFEITO_HAPTICO, grava="rumble_motores_set")
 def efeito_haptico(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """A lista «Efeito háptico» da coluna: a forma do toque deste controle (ou Do estilo)."""
+    """A lista «Efeito háptico» da coluna: a forma do toque deste controle (ou Do estilo).
+
+    Gravada, a forma toca uma vez no controle da coluna, como o gatilho e a luz aplicam na hora
+    (D-2310-ESCOLHER-NA-VIBRACAO-JA-TOCA).
+    """
     _gravar_a_escolha(o, p, "efeito_haptico", _formas.ESCOLHAS)
+    _tocar_a_forma_uma_vez(p, _uniq(o))
 
 
 @gesto("05-vibracao.html", GESTO_DO_EFEITO_IMERSAO, grava="rumble_motores_set")
 def efeito_imersao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
-    """A lista «Padrão dos motores» da coluna: o padrão deste controle (ou Do estilo)."""
+    """A lista «Padrão dos motores» da coluna: o padrão deste controle (ou Do estilo).
+
+    Gravado, o padrão que vale (o escolhido, ou o do estilo) toca uma vez e devolve ao jogo.
+    """
     _gravar_a_escolha(o, p, "efeito_imersao", _padroes.ESCOLHAS)
+    uniq = _uniq(o)
+    padrao = _padroes.padrao_que_vale(
+        str(o.get("valor") or "").strip(), _perfil_ativo(ctx).get("estilo"))
+    if padrao in _padroes.PADROES:
+        _padrao_neste_controle(ctx, p, uniq, padrao, _padroes.AMBOS)
+
+
+#: A forma mais longa que se escolhe (a Guarda) tem 850 ms; a volta do tocador cabe nisto.
+SEGUNDOS_DA_FORMA_UNICA = 1.0
+
+
+def _tocar_a_forma_uma_vez(p: Any, uniq: str) -> None:
+    """O tocador de `uniq` toca a forma que vale uma vez e cala; o que estava em teste para.
+
+    O daemon resolve «Do estilo»; «Sem efeito» e o som fora do ar não tocam nada, e a escolha
+    já gravada não vira recusa.
+    """
+    if uniq in _EM_TESTE:
+        parar_o_teste(uniq)
+        _devolver_ao_jogo(p, uniq)
+    parar_o_teste_da_haptica(uniq)
+    ok, corpo = p.haptica_testar(uniq, True)
+    resposta = corpo if isinstance(corpo, dict) else {}
+    if not ok or str(resposta.get("status") or "") != "ok":
+        return
+    try:
+        _segurar(SEGUNDOS_DA_FORMA_UNICA)
+    finally:
+        with contextlib.suppress(Exception):
+            p.haptica_testar(uniq, False)
 
 
 def _padrao_escolhido(ctx: Contexto, uniq: str) -> str:
