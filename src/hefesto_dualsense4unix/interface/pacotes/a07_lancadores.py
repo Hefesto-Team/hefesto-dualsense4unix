@@ -173,11 +173,10 @@ _LOG = logging.getLogger(__name__)
 
 TTL_S = 20.0
 
-#: O `heroic` SAIU DAQUI EM 09/09/2026 — LANCADORES-ZERO-01, e o motivo escrito
-SEM_DONO: dict[str, str] = {
-    "criar-perfil": "criar perfil é da aba Perfis (`a10_perfis`); dois caminhos "
-                    "para o mesmo disco é como duas telas passam a discordar",
-}
+#: Os endereços da página que a aba declara sem dono. Vazio: o `heroic` saiu em 09/09/2026
+#: (LANCADORES-ZERO-01) e o `criar-perfil` era um órfão que nenhuma página tem (a 07 publicada e o
+#: mockup usam o gesto `criar-perfil-para-um-jogo`, que tem dono).
+SEM_DONO: dict[str, str] = {}
 
 
 class _Vigia:
@@ -928,12 +927,18 @@ def onde_isso_esta(alvo: str) -> tuple[str, str, str]:
 
 
 def _botoes_do_cartao_agora(chave: str) -> tuple[str, ...]:
-    """Os rótulos que o cartão de `chave` mostra NESTE instante."""
+    """Os botões que o cartão de `chave` tem ACESOS na 07 publicada NESTE instante.
+
+    A fileira é a da página (`exp.BOTOES`, acesa por `exp.botao_ativo`): o achado acende «Criar
+    perfis» e «Configurar», o não achado acende só o «Identificar». Não é a de `desenho.cartoes`,
+    que descreve a fileira velha e já não é o que a tela mostra.
+    """
     try:
         lida = VIGIA.agora()
         for cartao in desenho.cartoes(lida):
             if cartao.chave == chave:
-                return tuple(a.rotulo for a in cartao.acoes)
+                return tuple(rotulo for gesto, rotulo, _ in exp.BOTOES
+                             if exp.botao_ativo(gesto, cartao.presente))
     except Exception:
         return ()
     return ()
@@ -941,22 +946,19 @@ def _botoes_do_cartao_agora(chave: str) -> tuple[str, ...]:
 
 def _recusa_de_quem_ja_tem_cartao(chave: str, nome: str,
                                   tem: tuple[str, ...] | None = None) -> str:
-    """A recusa do botão global para um lançador que já tem cartão de fábrica."""
+    """A recusa do botão global para um lançador que já tem cartão de fábrica.
+
+    Cita só o botão que o cartão tem aceso: o «Configurar», que abre a janela do «Onde ele está».
+    Sem ele aceso (o lançador não foi achado, ou a leitura falhou), a frase diz o fato e para.
+    """
     if tem is None:
         tem = _botoes_do_cartao_agora(chave)
     abertura = f"{nome} já tem cartão nesta aba"
 
-    for aponta in (desenho.ADICIONAR_ROTULO, desenho.APONTAR_ROTULO):
-        if aponta in tem:
-            return (f"{abertura}. Use o «{aponta}» do cartão dele — assim o "
-                    f"que você disser entra na busca daquele cartão, em vez "
-                    f"de criar um segundo.")
-
-    tirar = desenho.acao_de_tirar(chave).rotulo
-    if tirar in tem:
-        return (f"{abertura}, e ele já está apontado. Use o «{tirar}» do "
-                f"cartão dele primeiro — depois ele volta a perguntar onde "
-                f"está.")
+    if desenho.CONFIGURAR_ROTULO in tem:
+        return (f"{abertura}. Use o «{desenho.CONFIGURAR_ROTULO}» do cartão dele, em «Onde ele "
+                f"está» — assim o que você disser entra na busca daquele cartão, em vez de criar "
+                f"um segundo.")
 
     return (f"{abertura} — o que você digitar aqui criaria um segundo com o "
             f"mesmo nome.")

@@ -12,7 +12,12 @@ import pathlib
 from collections.abc import Mapping, Sequence
 from typing import Any, NamedTuple
 
-from hefesto_dualsense4unix.interface.desenho_dos_lancadores import _a, _e
+from hefesto_dualsense4unix.interface.desenho_dos_lancadores import (
+    CONFIGURAR_ROTULO,
+    IDENTIFICAR_ROTULO,
+    _a,
+    _e,
+)
 
 _PASTA = pathlib.Path(__file__).with_name("experimental")
 
@@ -24,9 +29,9 @@ _ICONES: dict[str, str] = json.loads((_PASTA / "icones.json").read_text(encoding
 
 #: Os três botões de todo lançador, na ordem em que aparecem.
 BOTOES = (
-    ("identificar-lancador", "Identificar", "#"),
+    ("identificar-lancador", IDENTIFICAR_ROTULO, "#"),
     ("criar-perfil-para-um-jogo", "Criar perfis", "#escolher-jogo"),
-    ("configurar-lancador", "Configurar", "#lanc-conf"),
+    ("configurar-lancador", CONFIGURAR_ROTULO, "#lanc-conf"),
 )
 
 
@@ -94,6 +99,11 @@ def _engrenagem() -> str:
             f'stroke-linejoin="round">{_ICONES["engrenagem"]}</svg>')
 
 
+def botao_ativo(gesto: str, achado: bool) -> bool:
+    """O «Identificar» acende para quem não foi achado; os outros dois, para quem foi."""
+    return (gesto == "identificar-lancador") != achado
+
+
 def _botao(gesto: str, rotulo: str, destino: str, chave: str, ativo: bool) -> str:
     """Um dos três botões da fila. O apagado fica à vista sem gesto, sem destino e sem chave.
 
@@ -125,7 +135,7 @@ def fila_html(fila: Fila) -> str:
     botoes = []
     for gesto, rotulo, destino in BOTOES:
         destino = fila.configurar if gesto == "configurar-lancador" else destino
-        ativo = (gesto == "identificar-lancador") != fila.achado
+        ativo = botao_ativo(gesto, fila.achado)
         botoes.append(_botao(gesto, rotulo, destino, fila.chave, ativo))
     contagem = f'<span class="lf-n">{_e(fila.jogos)}</span>' if fila.achado else ""
     nome_cl = "lf-nome lf-nome-2" if fila.achado else "lf-nome"

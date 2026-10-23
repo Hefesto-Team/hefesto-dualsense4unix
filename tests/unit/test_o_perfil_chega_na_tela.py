@@ -199,8 +199,6 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
         cada motor já vivia no perfil e o `rumble.motores.set` já a escrevia.
         Os oito interruptores acendem com `barra > 0` e o clique manda 0 ou 100
         (`a05_vibracao.lado`);
-      * `criar-perfil` — é da aba Perfis, e dois caminhos para o mesmo disco é
-        como duas telas passam a discordar;
       * `heroic` — **medido**: o produto PROCURA os seis lançadores
         (`_onde_estao_os_lancadores`) mas não LÊ a biblioteca de nenhum deles;
       * `plugins` — o IPC `plugin.list` existe e **só a CLI o chama**.
@@ -224,9 +222,6 @@ def test_nenhuma_aba_declara_orfao_que_tem_dono(ctx_com):
         if n:
             orfaos[pagina] = sorted(r.get("sem_dono") or {})
     assert orfaos == {
-        #                           `draft_config.with_controller_rumble`
-        # (`a05_vibracao._aplicar_a_forca`, frase no cartão daquele controle) e
-        "07-lancadores.html": ["criar-perfil"],
         "09-sistema.html": ["plugins"],
     }, (
         f"os órfãos mudaram: {orfaos}. Cada um aqui é um valor que a tela mostra "

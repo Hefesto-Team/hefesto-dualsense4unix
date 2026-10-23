@@ -213,7 +213,9 @@ def _celula_da_acao(linha):
         rotulo = _acoes_do_gesto.rotulo(_acoes_do_gesto.SCRIPT)
         return lista.replace(f"<option>{rotulo}</option>",
                              f'<option data-campo="{PREFIXO_DO_SCRIPT}ps">{rotulo}</option>')
-    # A lista é a da LINHA: «Teclas WASD» e «Setas» só nas dos analógicos (`por_grupo(linha)`).
+    # A lista é a da LINHA (`por_grupo(linha)`): cada ação de eixo só aparece na linha que a atende
+    # (`LINHAS_DA_ACAO_DE_EIXO`: «Movimento do cursor» no analógico esquerdo, «Rolagem» no direito,
+    # «Teclas WASD» e «Setas» nos dois), e a linha de botão não oferece nenhuma.
     return drop(por_grupo(linha), _PADRAO_DOS_BOTOES[linha], gesto=LINHA_DE_BOTAO, linha=linha,
                 campo=f"acao-{linha}")
 

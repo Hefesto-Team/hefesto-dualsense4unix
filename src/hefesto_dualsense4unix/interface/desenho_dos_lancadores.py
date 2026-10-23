@@ -831,6 +831,14 @@ ADICIONAR_ROTULO = "Localizar este lançador"
 APONTAR_ROTULO = "Outro caminho"
 APONTAR_DICA = "Apontar outro caminho para este lançador"
 
+#: Os dois botões da fileira que a 07 PUBLICADA mostra em cada cartão. O desenho da página
+#: (`desenho_da_experimental.BOTOES`) lê estes nomes e a recusa do «Adicionar um lançador» os cita:
+#: o nome mora num lugar só, e a frase não aponta mais para um rótulo que a página não tem. O
+#: «Configurar» abre a janela do lançador, onde o «Onde ele está» recebe o arquivo; o «Identificar»
+#: procura de novo.
+CONFIGURAR_ROTULO = "Configurar"
+IDENTIFICAR_ROTULO = "Identificar"
+
 #: A frase de quem PROCUROU E NÃO ACHOU.
 #:
 #: Diz «não localizei» desde 08/09/2026, pela razão do selo: a palavra de produto é «não localizei»,
@@ -1413,30 +1421,6 @@ def miolo_da_escolha_html(modo: str, nome_do_lancador: str,
     </div>"""
 
 
-def tela_da_escolha_html() -> str:
-    """A casca da pop-up; o miolo chega pelo pacote (:func:`miolo_da_escolha_html`)."""
-    return (f'<div class="tela-nova" id="{TELA_DA_ESCOLHA}">\n'
-            f'  <div class="tn-cx" id="{MIOLO_DA_ESCOLHA}">'
-            f"{miolo_da_escolha_html(EXCLUIR, '', [])}</div>\n</div>")
-
-
-#: O CSS das peças novas, o do desenho aprovado, com a `.excl-nota` na letra do corpo da caixa
-#: (defeito da página de proposta, §9 da sprint).
-CSS_DA_EXCLUSAO = """
-  .lanc-excl{font-size:11px;line-height:1.5;color:var(--fg);opacity:.85}
-  .lanc-excl b{font-weight:600}
-  .lanc-excl a.tirar{color:inherit;text-decoration:underline}
-  .excl-lista{max-height:46vh;overflow:auto;display:flex;flex-direction:column;
-    gap:4px;margin:10px 0;padding-right:6px}
-  .excl-jogo{display:flex;gap:10px;align-items:center;padding:6px 10px;font-size:12px;
-    border:1px solid rgba(255,255,255,.08);border-radius:8px;cursor:pointer}
-  .excl-jogo:hover{border-color:rgba(255,255,255,.22)}
-  .excl-tag{font-size:.78em;opacity:.65;margin-left:8px}
-  .excl-tag.ok{opacity:1;color:var(--verde, #3fd98a)}
-  .excl-nota{font-size:12px;opacity:.8;margin-top:8px;line-height:1.45}
-"""
-
-
 def cartao_da_steam(lida: Leitura | None) -> Lancador:
     """O ÚNICO cartão com fonte, e cada palavra dele sai de uma medição.
 
@@ -1765,10 +1749,12 @@ __all__ = [
     "APONTAR_ROTULO",
     "A_STEAM",
     "CLASSE_DA_GRADE",
+    "CONFIGURAR_ROTULO",
     "DIZ_NAO_ACHEI",
     "DIZ_NAO_LI",
     "DIZ_SEM_FONTE",
     "EMBUTIDOS",
+    "IDENTIFICAR_ROTULO",
     "MOLDURA",
     "NOVO_ALVO",
     "NOVO_PARA_O_CARTAO",

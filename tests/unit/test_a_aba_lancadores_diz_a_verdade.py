@@ -929,6 +929,15 @@ def test_a_tela_de_registro_chega_a_pagina_publicada(desenho):
             f"vezes por segundo por cima do que ela está digitando")
 
 
+def _fileira_publicada(chave: str) -> tuple[str, ...]:
+    """Os rótulos ACESOS do cartão `chave` na 07 PUBLICADA (o apagado não clica)."""
+    doc = _pagina_publicada()
+    achou = re.search(rf'data-lancador="{chave}".*?<span class="lf-botoes">(.*?)</span>\s*</div>',
+                      doc, flags=re.S)
+    assert achou, f"o cartão {chave!r} não está na 07 publicada — a régua mediria o vazio"
+    return tuple(re.findall(r'<(?:a|button) class="btn mini"[^>]*>([^<]+)</', achou.group(1)))
+
+
 class _PonteQueAnota:
     """Guarda o que o gesto mandou pela ponte, e responde como o daemon."""
 
@@ -1012,34 +1021,31 @@ def _lancadores_do_disco() -> dict:
 def test_a_recusa_do_botao_global_manda_clicar_num_botao_que_existe(
         a07, ctx, desenho, monkeypatch):
     """A TELA NÃO MANDA CLICAR ONDE NÃO HÁ NADA — e mandava, num cartão."""
-    lida = desenho.Leitura(
-        onde_estao=tuple((x.chave, "") for x in desenho.EMBUTIDOS))
-    cartoes = {c.chave: c for c in desenho.cartoes(lida)}
-    fileiras = {k: desenho.acoes_html(c) for k, c in cartoes.items()}
-
-    monkeypatch.setattr(
-        a07, "_botoes_do_cartao_agora",
-        lambda chave: tuple(a.rotulo for a in cartoes[chave].acoes))
+    fileiras = {x.chave: _fileira_publicada(x.chave)
+                for x in desenho.EMBUTIDOS}
+    monkeypatch.setattr(a07, "_botoes_do_cartao_agora", lambda chave: fileiras[chave])
 
     p = _PonteQueAnota()
-    for item in desenho.EMBUTIDOS:
-        assert a07.chave_do_rotulo(item.chave) == item.chave, (
-            f"a chave {item.chave!r} não sobrevive à derivação — a régua não "
+    for chave, fileira in fileiras.items():
+        assert a07.chave_do_rotulo(chave) == chave, (
+            f"a chave {chave!r} não sobrevive à derivação — a régua não "
             f"chegaria ao ramo da recusa")
         a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "v": ""}, p)
         with pytest.raises(RuntimeError) as caiu:
             a07.adicionar_lancador(ctx, {"gesto": desenho.ADICIONAR, "forma": {
-                desenho.NOVO_ROTULO: item.chave,
+                desenho.NOVO_ROTULO: chave,
                 desenho.NOVO_ALVO: "/bin/sh"}}, p)
         recusa = str(caiu.value)
-        assert desenho.ADICIONAR_ROTULO in recusa, (
-            f"a recusa do {item.chave!r} não nomeia o botão do cartão: "
-            f"{recusa!r} — sem o nome, quem lê não sabe para onde ir")
-        assert desenho.ADICIONAR_ROTULO in fileiras[item.chave], (
-            f"a recusa manda usar «{desenho.ADICIONAR_ROTULO}» do cartão "
-            f"{item.chave!r}, e AQUELE CARTÃO NÃO TEM ESSE BOTÃO. A fileira "
-            f"dele é: {fileiras[item.chave]!r}. É um beco: as duas portas para "
-            f"dizer onde este lançador está apontam uma para a outra.")
+        if desenho.CONFIGURAR_ROTULO in fileira:
+            assert desenho.CONFIGURAR_ROTULO in recusa, (
+                f"a recusa do {chave!r} não nomeia o botão do cartão: "
+                f"{recusa!r} — sem o nome, quem lê não sabe para onde ir")
+        for rotulo in (desenho.ADICIONAR_ROTULO, desenho.APONTAR_ROTULO,
+                       desenho.acao_de_tirar(chave).rotulo):
+            assert rotulo not in recusa, (
+                f"a recusa manda usar «{rotulo}» do cartão {chave!r}, e a "
+                f"07 publicada NÃO TEM esse botão. A fileira acesa dele é: "
+                f"{fileira!r}.")
     assert p.chamadas == [], (
         f"a recusa gravou alguma coisa: {p.chamadas}")
 
@@ -1078,35 +1084,32 @@ def test_o_campo_que_esta_aba_criou_tem_rotulo_de_tela():
         f"quem lê precisa saber que perdeu onde os lançadores dela estão.")
 
 
-def test_a_recusa_serve_os_tres_estados_do_cartao(a07, desenho):
-    """A frase cita um botão QUE ESTÁ NA FILEIRA — nos três estados, não em um."""
-    localizar = desenho.ADICIONAR_ROTULO
-    tirar = desenho.acao_de_tirar(desenho.STEAM).rotulo
-    achou = ("Abrir o lançador", "Criar perfil para um jogo")
+def test_a_recusa_serve_os_estados_do_cartao_publicado(a07, desenho):
+    """A frase cita um botão QUE ESTÁ ACESO NA FILEIRA publicada — nos estados dela."""
+    config = desenho.CONFIGURAR_ROTULO
+    identificar = desenho.IDENTIFICAR_ROTULO
 
     casos = (
-        ("não achou", (localizar, tirar), localizar),
-        ("achou, e ela apontou", (*achou, localizar, tirar), localizar),
-        ("achou sozinho", (*achou, localizar), localizar),
-        ("só ela apontou", (*achou, tirar), tirar),
-        ("ainda não procurei", achou, None),
+        ("achado", _fileira_publicada(desenho.STEAM), config),
+        ("não achado", _fileira_publicada("heroic"), None),
+        ("ainda não procurei", (), None),
     )
     for estado, fileira, esperado in casos:
         frase = a07._recusa_de_quem_ja_tem_cartao(desenho.STEAM, "Steam", fileira)
         assert "Steam já tem cartão nesta aba" in frase, (estado, frase)
-        citados = [r for r in (localizar, tirar) if r in frase]
+        citados = [r for r in (config, identificar) if r in frase]
         if esperado is None:
             assert not citados, (
-                f"estado {estado!r}: a fileira é {fileira} e a recusa manda "
-                f"clicar em {citados} — nenhum deles está lá. A tela não manda "
+                f"estado {estado!r}: a fileira acesa é {fileira} e a recusa manda "
+                f"clicar em {citados} — nenhum deles está aceso. A tela não manda "
                 f"clicar onde não há nada; sem botão, ela diz o fato e para.")
             continue
         assert citados == [esperado], (
-            f"estado {estado!r}: a fileira é {fileira} e a recusa cita "
+            f"estado {estado!r}: a fileira acesa é {fileira} e a recusa cita "
             f"{citados}, não «{esperado}»")
         assert esperado in fileira, (
             f"estado {estado!r}: a recusa manda usar «{esperado}» e AQUELE "
-            f"CARTÃO NÃO TEM ESSE BOTÃO — é o beco de volta.")
+            f"CARTÃO NÃO TEM ESSE BOTÃO ACESO — é o beco de volta.")
 
 
 def test_a_recusa_viva_nunca_cita_botao_ausente(a07, ctx, desenho):
@@ -1120,8 +1123,7 @@ def test_a_recusa_viva_nunca_cita_botao_ausente(a07, ctx, desenho):
 
     frase = str(caiu.value)
     fileira = a07._botoes_do_cartao_agora(desenho.STEAM)
-    for rotulo in (desenho.ADICIONAR_ROTULO,
-                   desenho.acao_de_tirar(desenho.STEAM).rotulo):
+    for rotulo in (desenho.CONFIGURAR_ROTULO, desenho.IDENTIFICAR_ROTULO):
         if rotulo in frase:
             assert rotulo in fileira, (
                 f"a recusa viva manda clicar em «{rotulo}» e a fileira do "
@@ -1388,15 +1390,10 @@ _CONFISSOES = ("não tem por onde", "ainda não sei fazer", "por enquanto não d
 
 def test_a_recusa_do_registro_nunca_confessa_divida_nossa(a07, desenho):
     """A TELA NÃO CONTA À USUÁRIA UM BURACO NOSSO — decisão, 07/09/2026."""
-    localizar = desenho.ADICIONAR_ROTULO
-    tirar = desenho.acao_de_tirar(desenho.STEAM).rotulo
-    achou = ("Abrir o lançador", "Criar perfil para um jogo")
     fileiras = {
-        "não achou": (localizar, tirar),
-        "achou sozinho": (*achou, localizar),
-        "achou, e ela apontou": (*achou, localizar, tirar),
-        "só ela apontou": (*achou, tirar),
-        "ainda não procurei": achou,
+        "achado": _fileira_publicada(desenho.STEAM),
+        "não achado": _fileira_publicada("heroic"),
+        "ainda não procurei": (),
         "a leitura levantou": (),
     }
 
