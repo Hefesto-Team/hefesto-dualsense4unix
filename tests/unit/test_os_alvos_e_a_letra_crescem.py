@@ -331,6 +331,7 @@ def test_o_tamanho_grande_cabe_na_janela(
 
 
 def test_o_que_cabe_e_o_menor_entre_o_escolhido_e_a_vista() -> None:
+    # D-2310-O-TAMANHO-CEDE-ONDE-NAO-CABE
     """A conta da janela: 840 px de altura comportam 103 %; a vista alta, o escolhido; e nunca
     abaixo de 100, que é o tamanho de hoje."""
     from hefesto_dualsense4unix.interface.folha_da_casa import VISTA_DO_DESENHO, tamanho_que_cabe

@@ -108,6 +108,7 @@ def test_import_e_layer_sem_bloco_seguem_recusados_com_o_motivo(
 
 
 def test_remover_deixa_o_meu_css_e_apaga_o_resto(lg: instalador.Lugares, tmp_path: Path) -> None:
+    # D-2310-O-MEU-CSS-E-DA-PESSOA-E-FICA-NO-REMOVER
     alvo = _instalada_com_o_css(lg, tmp_path)
     assert instalador.remover("tema-z", lugares=lg, prazo=0.1) == []
     assert alvo.read_text(encoding="utf-8") == ESCRITO, "a remoção apagou o CSS da pessoa"
