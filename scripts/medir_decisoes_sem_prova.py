@@ -72,6 +72,12 @@ CAMPOS_DA_TRIAGEM = ("titulo", "a_pergunta", "escolha", "onde_mora",
                      "recomendacao", "caminhos")
 
 COLISOES_DECLARADAS = {
+    "D-2310-O-PACOTE-NAO-LEVA-LINK-QUE-NAO-RESOLVE": (
+        "É de PRODUTO: a decisão diz o que o `.deb` instala, e `test_as_fontes_da_interface_moram_"
+        "no_produto.py::test_o_deb_nao_leva_o_link_do_mockup_quebrado` mede o pacote montado. A "
+        "triagem a chama de processo porque «leva» é o verbo do título e da pergunta («o .deb não "
+        "leva»), e «pacote» não está no vocabulário de produto (23/10/2026)."
+    ),
     "D-1910-A-EXTENSAO-DO-GIT-CONFERE-A-CADA-SEIS-HORAS": (
         "É de PRODUTO: a decisão diz de quanto em quanto tempo o serviço confere se a "
         "extensão instalada pelo git tem versão nova, e `test_a_extensao_instalada_pelo_git_"
