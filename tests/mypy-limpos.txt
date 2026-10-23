@@ -16,3 +16,4 @@ tests/unit/test_a_identidade_do_pad_e_uma_regra_so.py
 tests/unit/test_o_jogo_do_dualsense_comum_veste_os_quatro.py
 tests/unit/test_o_jogo_seguinte_veste_a_propria_roupa.py
 tests/unit/test_o_arme_nao_encerra_a_autoridade_do_proprio_jogo.py
+tests/unit/test_a_lista_do_webkit_tem_teto.py

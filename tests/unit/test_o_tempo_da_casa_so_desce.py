@@ -490,7 +490,7 @@ def _marca_da_suite(raiz: Path, tmp_path: Path) -> str:
     assert feito.returncode == 0, feito.stdout[-800:] + feito.stderr[-800:]
     achado = TEMPO._MARCA.search(feito.stdout)
     assert achado, f"o script não imprimiu a marca que o censo lê: {feito.stdout[:400]}"
-    return achado[0].strip()
+    return str(achado[0]).strip()
 
 
 def test_o_script_da_suite_marca_a_arvore_os_arquivos_e_a_particao(tmp_path: Path) -> None:
