@@ -10,8 +10,9 @@ mesma porta da borda `game -> daemon`, e só então veste a roupa do jogo novo.
 
 O `Daemon` aqui é o de verdade, com o `GameSignal` de verdade e o relógio dado pela
 régua; só a borda do aparelho é dublada (o pad, o leitor evdev, o broker). A varredura
-de processos entra pelas leituras do `_gather_game_signal_inputs`. Os endereços são da
-faixa forjada da casa. A mordida de cada teste está no docstring dele.
+de processos entra pelas leituras do `_gather_game_signal_inputs` e por um `/proc` de
+mentira (`launch_env.PROC_DOS_LANCAMENTOS`), com a cmdline que a Steam dá ao `reaper`.
+Os endereços são da faixa forjada da casa. A mordida de cada teste está no docstring dele.
 """
 from __future__ import annotations
 
@@ -156,6 +157,8 @@ def _hermetico(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Any:
     monkeypatch.setattr(le, "materialize_launch_env", lambda _d: None)
     monkeypatch.setattr(le, "launch_env_dir", lambda ensure=False: tmp_path)
     monkeypatch.setattr(le, "steam_input_appids", lambda path=None: set())
+    (tmp_path / "proc").mkdir()
+    monkeypatch.setattr(le, "PROC_DOS_LANCAMENTOS", tmp_path / "proc")
     monkeypatch.setattr(gp, "_set_controller_grab", lambda *_a: None)
     monkeypatch.setattr(gp, "controller_allows_uhid", lambda _d: True)
     monkeypatch.setattr(gp, "_o_broker_atende", lambda _d: True)
@@ -241,6 +244,7 @@ class _Mesa:
         (pasta / "last_run").write_text(
             f"appid={appid}\nepoch={int(epoch)}\npid=4242\n", encoding="utf-8"
         )
+        _processo(pasta, 4242, appid)
 
     def roupas(self) -> dict[str, int]:
         p1 = self.d._gamepad_device
@@ -250,6 +254,15 @@ class _Mesa:
                 if jogador.vpad is not None:
                     todas[chave] = int(jogador.vpad.product)
         return todas
+
+
+def _processo(pasta: Path, pid: int, appid: int, *, install: bool = False) -> None:
+    """Um processo de jogo da Steam no `/proc` de mentira, com a cmdline do `reaper`."""
+    extra = ["Install=1"] if install else []
+    argv = ["/lar/.steam/ubuntu12_32/reaper", "SteamLaunch", f"AppId={appid}", *extra,
+            "--", "/lar/jogo/jogo.exe"]
+    (pasta / "proc" / str(pid)).mkdir()
+    (pasta / "proc" / str(pid) / "cmdline").write_bytes("\0".join(argv).encode() + b"\0")
 
 
 def _perfil(appid: int, flavor: str = "dualsense", caminho: Any = None) -> Profile:
@@ -349,13 +362,19 @@ def test_o_jogo_vivo_segura_a_autoridade(
 ) -> None:
     """O mesmo arme de B com A vivo na varredura (o launcher que fica): a autoridade fica `game`.
 
-    MORDIDA: encerre sempre e este teste reprova (a transição aparece).
+    O processo de A é o caso da varredura de verdade: no arme, a do sinal responde o
+    appid de B (o marcador é dele), e só o `/proc` mostra A ainda de pé.
+
+    MORDIDA: encerre sempre e este teste reprova (a transição aparece); tire a
+    pergunta ao `/proc` (`_outro_jogo_da_steam_vivo`) e o caso do processo reprova.
     """
     _roupa_do_jogo_novo(monkeypatch, EDGE)
     mesa = _Mesa(monkeypatch, "usb", 0)
     mesa.abrir_o_jogo(JOGO_A, EPOCH_A, COMUM)
+    if quem_vive == "o_processo":
+        _processo(tmp_path, 3131, JOGO_A)
     escolhas: dict[str, dict[str, Any]] = {
-        "o_processo": {"appid_de_jogo_vivo": JOGO_A},
+        "o_processo": {"appid_de_jogo_vivo": JOGO_B},
         "a_janela": {"window_class_current": f"steam_app_{JOGO_A}"},
         "a_regra_do_perfil": {"window_class_current": "heroic-algum", "profile_rule_match": True},
     }
@@ -370,6 +389,55 @@ def test_o_jogo_vivo_segura_a_autoridade(
     assert _linhas(diario, "game_signal_transition") == []
     assert _linhas(diario, "pad_do_lancamento_destravado") == []
     assert mesa.roupas() == {"p1": COMUM}, "o pad do jogo vivo não é recriado"
+
+
+@pytest.mark.parametrize("quem_lembra", ["a_trava", "o_arme_anterior"])
+def test_o_mesmo_jogo_lancado_de_novo_nao_encerra_a_autoridade(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, quem_lembra: str,
+) -> None:
+    """O A fecha e abre de novo em 10 s: não é outro jogo, a autoridade e o pad ficam.
+
+    MORDIDA: tire a comparação com o lançamento anterior e a autoridade cai, com a
+    soltura devolvendo o Edge e o arme vestindo de novo a roupa que o pad já tinha.
+    """
+    _roupa_do_jogo_novo(monkeypatch, COMUM)
+    mesa = _Mesa(monkeypatch, "bt", 1)
+    mesa.abrir_o_jogo(JOGO_A, EPOCH_A, COMUM)
+    if quem_lembra == "o_arme_anterior":
+        mesa.d._pad_travado_pelo_lancamento = None
+        mesa.d._launch_armed_for = (JOGO_A, EPOCH_A)
+    mesa.fechar_o_jogo(10.0)
+    mesa.lancar(tmp_path, JOGO_A, EPOCH_B)
+    nascidos = len(_Nascidos.todos)
+
+    with structlog.testing.capture_logs() as diario:
+        _arme(mesa, tmp_path)
+
+    assert mesa.d.display_authority == "game"
+    assert _linhas(diario, "game_signal_transition") == []
+    assert _linhas(diario, "launch_arm_autoridade_mantida_mesmo_jogo") != []
+    assert len(_Nascidos.todos) == nascidos, "nenhum pad recriado"
+    assert set(mesa.roupas().values()) == {COMUM}
+
+
+def test_o_avaliador_do_install_script_de_outro_jogo_nao_segura_a_autoridade(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O `reaper ... Install=1` de outro appid não é jogo: o lançamento de B encerra.
+
+    MORDIDA: conte o avaliador como jogo e a autoridade fica `game`.
+    """
+    _roupa_do_jogo_novo(monkeypatch, EDGE)
+    mesa = _Mesa(monkeypatch, "usb", 0)
+    mesa.abrir_o_jogo(JOGO_A, EPOCH_A, COMUM)
+    mesa.fechar_o_jogo(10.0)
+    _processo(tmp_path, 3131, JOGO_A, install=True)
+    mesa.lancar(tmp_path, JOGO_B, EPOCH_B)
+
+    _arme(mesa, tmp_path)
+
+    assert mesa.d.display_authority == "daemon"
+    assert mesa.roupas() == {"p1": EDGE}
 
 
 def test_o_caminho_do_perfil_do_jogo_seguinte_nao_e_adiado(
