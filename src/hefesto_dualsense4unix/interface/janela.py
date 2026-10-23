@@ -26,6 +26,7 @@ from hefesto_dualsense4unix.interface.folha_da_casa import (  # noqa: E402
     tamanho_guardado,
 )
 from hefesto_dualsense4unix.mods import tema as _tema_das_mods  # noqa: E402
+from hefesto_dualsense4unix.utils import area_de_transferencia as _area  # noqa: E402
 from hefesto_dualsense4unix.utils import identidade as _identidade  # noqa: E402
 
 _CASA = _identidade.atual()
@@ -638,6 +639,8 @@ class JanelaDaAba:
             esperar_a_pintura=esperar_a_pintura, tema_de_cores=tema_de_cores,
         )
         self.view = self.ponte.view
+        # A moldura que nasce entrega a área de transferência à lógica (o «Copiar» da aba Sistema).
+        _area.receber(por_na_area_de_transferencia)
         #: O lado dos botões da barra; o dos temas é relido junto com a cor (só no padrão).
         self._lado = (lado_dos_botoes() if isinstance(tema_de_cores, _TemaLigado)
                       else tema.lado_do_sistema())

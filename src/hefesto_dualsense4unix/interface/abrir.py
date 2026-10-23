@@ -3,12 +3,11 @@
 Dois chamadores: o console script (`entrada`) e o calço `scripts/abrir_interface.py` (`abrir`).
 Nada roda no import; o piloto roda por `runpy.run_module`, depois da identidade e da guarda da
 tela. Uma janela por tela (`tomar_a_vez`); o serviço parado volta com a janela
-(`trazer_o_servico`), salvo o Parar da aba Sistema (`MARCA_DO_PARAR`). O porquê de cada parte está
-em `docs/research/o-porque-dos-modulos.md`, seção `abrir`.
+(`trazer_o_servico`), salvo o Parar da aba Sistema (a marca de `utils/marca_do_parar`). O porquê de
+cada parte está em `docs/research/o-porque-dos-modulos.md`, seção `abrir`.
 """
 from __future__ import annotations
 
-import contextlib
 import importlib.util
 import os
 import re
@@ -18,6 +17,7 @@ from pathlib import Path
 from typing import Any, TextIO
 
 from hefesto_dualsense4unix.utils.identidade import Identidade
+from hefesto_dualsense4unix.utils.marca_do_parar import marca_do_parar
 from hefesto_dualsense4unix.utils.tela_de_mentira import garantir_tela_de_mentira
 
 RAIZ = Path(__file__).resolve().parents[3]
@@ -244,28 +244,6 @@ def abrir(argv: list[str] | None = None, *, na_tela_por_padrao: bool = False) ->
     sys.argv = [piloto, *args]
     runpy.run_module(piloto, run_name="__main__")
     return 0
-
-
-#: O Parar da aba Sistema deixa esta marca no runtime da sessão, e abrir a janela a respeita.
-MARCA_DO_PARAR = "servico-parado-pela-aba-sistema"
-
-
-def marca_do_parar() -> Path:
-    """Onde mora a marca do Parar: no runtime da sessão, que o logout limpa."""
-    from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
-
-    return runtime_dir() / MARCA_DO_PARAR
-
-
-def lembrar_o_parar(parado: bool) -> None:
-    """Grava (o Parar da aba Sistema) ou apaga (o serviço que volta, o «Sair») a marca."""
-    marca = marca_do_parar()
-    with contextlib.suppress(OSError):
-        if parado:
-            marca.parent.mkdir(parents=True, exist_ok=True)
-            marca.touch()
-        else:
-            marca.unlink(missing_ok=True)
 
 
 def trazer_o_servico() -> bool:

@@ -1,12 +1,13 @@
 """O import RELATIVO de um módulo do WebKit também manda o teste para processo próprio.
 
-O `importa_um_de` do `scripts/rodar-a-suite.sh` casava `from x import`, `import x`,
-`from . import x` e `from tests.unit.x import`, mas não `from .x import y` nem
-`from ..pasta.x import y`: o prefixo `([A-Za-z0-9_]+\\.)*` não admitia o ponto inicial. Nenhum
+O fecho do `scripts/rodar-a-suite.sh` casava `from x import`, `import x`, `from . import x` e
+`from tests.unit.x import`, mas não `from .x import y` nem `from ..pasta.x import y`. Nenhum
 módulo do WebKit era importado assim, então o furo era latente; o primeiro a sê-lo mandaria o
 teste de WebKit para o processo da parte, onde ele morre com `rc=139`
-(A-JANELA-ABERTA-CABE-NA-PARTE-01). A régua pergunta ao próprio script (`LISTAR_O_WEBKIT=1`)
-numa árvore de mentira.
+(A-JANELA-ABERTA-CABE-NA-PARTE-01). Desde 23/10/2026 o fecho é lido pelo `ast` e casa pelo
+caminho pontuado inteiro (A-LISTA-DO-WEBKIT-DA-SUITE-VOLTA-AO-TAMANHO-REAL-01), e o relativo é
+resolvido contra o pacote de quem importa (`absoluto`). A régua pergunta ao próprio script
+(`LISTAR_O_WEBKIT=1`) numa árvore de mentira.
 """
 
 from __future__ import annotations
@@ -61,14 +62,14 @@ def test_o_import_relativo_de_um_modulo_do_webkit_roda_em_processo_proprio(tmp_p
     ]
 
 
-def test_a_regua_morde_com_a_expressao_antiga(tmp_path: Path) -> None:
-    """Com o prefixo sem o ponto inicial (a expressão de antes), o relativo fica de fora."""
+def test_a_regua_morde_sem_o_relativo(tmp_path: Path) -> None:
+    """Com o relativo ignorado (a leitura de antes), ele fica de fora."""
     texto = SUITE.read_text(encoding="utf-8")
-    nova = r"from[[:space:]]+\.*([A-Za-z0-9_]+\.)*($1)[[:space:]]+import"
-    antiga = r"from[[:space:]]+([A-Za-z0-9_]+\.)*($1)[[:space:]]+import"
-    assert nova in texto, "a expressão com o ponto inicial deixou de estar no script"
+    cura = "def absoluto(base, nivel, pacote):\n"
+    assert cura in texto, "a resolução do import relativo deixou de estar no script"
     velha = tmp_path / "velha.sh"
-    velha.write_text(texto.replace(nova, antiga), encoding="utf-8")
+    velha.write_text(texto.replace(cura, cura + '    if nivel:\n        return ""\n'),
+                     encoding="utf-8")
     sozinhos = _quem_roda_sozinho(tmp_path / "mentira", velha)
     assert "tests/unit/test_ponto.py" not in sozinhos
     assert "tests/unit/test_dois_pontos.py" not in sozinhos

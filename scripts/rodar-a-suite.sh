@@ -213,42 +213,188 @@ partir_pelo_tempo() {  # $1 lista · $2 csv · $3 partes · $4 prefixo · $5 toc
 [ -n "${PARTIDO:-}" ] || partir_pelo_tempo "$SAIDA/todos.txt" "$CSV_DOS_TEMPOS" "$PARTES" "$SAIDA/parte-" \
   "$SAIDA/toca-a-maquina.txt" "$SAIDA/pesos.tsv"
 
-# QUEM CARREGA O WEBKIT: os módulos de `src/` e `scripts/` que o pedem no
-# código e, até o fecho, quem importa um deles (a `aba09` o carrega pela
-# `ponte_da_tela`), lidos agora. O arquivo de teste é do WebKit se diz
-# `WebKit2` ou importa um deles; errar para mais custa um processo, errar para
-# menos põe o WebKit de volta no processo da parte. O nome do pacote tem
-# dígito (`hefesto_dualsense4unix`), e a classe de caracteres o aceita.
-# OS AJUDANTES DE `tests/unit/` (os `.py` sem prefixo `test_`: `janela_aberta_comum.py`,
-# `mesa_do_mockup.py`…) entram na varredura como os de `src/`: o arquivo de teste que
-# pede o `_gtk` a um ajudante não diz `WebKit2` e, sem isso, voltaria ao processo da
-# parte, onde o WebKit morre com `rc=139` (A-JANELA-ABERTA-CABE-NA-PARTE-01).
-# O `\.*` depois do `from` é o import RELATIVO (`from .x import y`, `from ..pasta.x import y`):
-# sem ele o teste de WebKit que importasse assim voltava ao processo da parte, com `rc=139`.
-importa_um_de() {  # $1 = os nomes, separados por `|`
-  printf '%s' "^[[:space:]]*(import[[:space:]]+([A-Za-z0-9_]+\.)*($1)\b|from[[:space:]]+\.*([A-Za-z0-9_]+\.)*($1)[[:space:]]+import|from[[:space:]]+[A-Za-z0-9_.]+[[:space:]]+import[[:space:]][^#]*\b($1)\b)"
-}
-nomes_de_modulo() { sed -E 's|/__init__\.py$|.py|; s|.*/||; s|\.py$||' | LC_ALL=C sort -u; }
-mapfile -t _ajudantes < <(find tests/unit -maxdepth 1 -name '*.py' ! -name 'test_*' \
-    ! -name '__init__.py' ! -name 'conftest.py' 2> /dev/null | LC_ALL=C sort)
-_onde_se_importa=(src scripts ${_ajudantes[@]+"${_ajudantes[@]}"})
-mapfile -t _modulos < <(grep -rlE --include='*.py' \
-    "^[[:space:]]*(gi\.require_version\([\"']WebKit2|from gi\.repository import .*\bWebKit2\b)" \
-    "${_onde_se_importa[@]}" 2> /dev/null | nomes_de_modulo)
-while [ ${#_modulos[@]} -gt 0 ]; do
-  mapfile -t _fecho < <({ printf '%s\n' "${_modulos[@]}"
-    grep -rlE --include='*.py' "$(importa_um_de "$(IFS='|'; printf '%s' "${_modulos[*]}")")" \
-      "${_onde_se_importa[@]}" 2> /dev/null | nomes_de_modulo; } | LC_ALL=C sort -u)
-  [ ${#_fecho[@]} -gt ${#_modulos[@]} ] || break
-  _modulos=("${_fecho[@]}")
-done
-padrao_do_webkit=""
-[ ${#_modulos[@]} -eq 0 ] || padrao_do_webkit=$(importa_um_de "$(IFS='|'; printf '%s' "${_modulos[*]}")")
-e_do_webkit() {
-  grep -qF 'WebKit2' "$1" && return 0
-  [ -n "$padrao_do_webkit" ] || return 1
-  grep -qE "$padrao_do_webkit" "$1"
-}
+# QUEM CARREGA O WEBKIT. O arquivo de teste é do WebKit se diz `WebKit2` ou importa um
+# módulo que o carrega; errar para mais custa um processo, errar para menos põe o WebKit de
+# volta no processo da parte, onde ele morre com `rc=139`. A leitura é do `ast` do Python
+# (o `FECHO_DO_WEBKIT` abaixo), rodada uma vez por corrida, e casa pelo CAMINHO PONTUADO
+# INTEIRO (A-LISTA-DO-WEBKIT-DA-SUITE-VOLTA-AO-TAMANHO-REAL-01, 23/10/2026):
+#
+#   * o módulo se chama pelo caminho dele (`hefesto_dualsense4unix.cli.app`) e por cada
+#     sufixo (`cli.app`, `app`), porque a casa põe pastas no `sys.path` (`import hefesto_vivo`,
+#     `from pacotes import …`, `import regua_de_tela`); e o import casa INTEIRO com um deles.
+#     O fecho textual de antes casava o nome nu em qualquer ponto do caminho, e o `app` de
+#     `cli/app.py` casava todo `import hefesto_dualsense4unix.app.…`: 421 módulos e 1582
+#     arquivos em processo próprio, 75 s só para listar (eram 38, 127 e 6 s em 17/10);
+#   * em `src/` e `scripts/`, SÓ O IMPORT DE TOPO propaga (o corpo do módulo, os `if`, `try`
+#     e corpos de classe, fora o `if TYPE_CHECKING:`): o import dentro de função só roda se a
+#     função for chamada, e foi uma corrente deles (`a09_sistema` → `janela`, `abrir` →
+#     `a09_sistema`, `tray` → `abrir`) que abriu a porta;
+#   * no arquivo de teste e nos ajudantes de `tests/unit/` (os `.py` sem `test_`, como
+#     `janela_aberta_comum.py`), TODO import conta, lido no texto (até o que está numa string,
+#     para errar para mais), com o relativo (`from .x import y`, `from ..pasta.x import y`)
+#     e o `__import__("…")`/`import_module("…")` de nome literal; o ajudante que pede o `_gtk`
+#     dentro de função leva consigo quem o importa (A-JANELA-ABERTA-CABE-NA-PARTE-01).
+#
+# O módulo que pede o WebKit é o que diz `gi.require_version("WebKit2", …)` ou
+# `from gi.repository import … WebKit2` (no topo, em `src/` e `scripts/`); o arquivo de teste
+# ou ajudante que diz `WebKit2` em qualquer lugar também é do WebKit.
+IFS= read -r -d '' FECHO_DO_WEBKIT << 'PY' || true
+import ast
+import os
+import re
+import sys
+
+raiz, lista = sys.argv[1], sys.argv[2]
+os.chdir(raiz)
+LER = re.compile(r"^[ \t]*import[ \t]+([^\n#;]+)", re.M)
+DE = re.compile(r"^[ \t]*from[ \t]+(\.*[\w.]*)[ \t]+import[ \t]+(\([^)]*\)|[^\n#;]*)", re.M)
+DINAMICO = re.compile(r"(?:__import__|import_module)\(\s*[\"']([\w.]+)[\"']")
+
+
+def arquivos(pasta, raso=False):
+    if raso:
+        return sorted(f"{pasta}/{n}" for n in os.listdir(pasta) if n.endswith(".py")) \
+            if os.path.isdir(pasta) else []
+    saida = []
+    for base, dirs, nomes in os.walk(pasta):
+        dirs[:] = sorted(d for d in dirs if d != "__pycache__")
+        saida += [f"{base}/{n}" for n in sorted(nomes) if n.endswith(".py")]
+    return saida
+
+
+def nomes_e_pacote(rel):
+    """Os nomes pelos quais o arquivo se importa (o caminho pontuado e cada sufixo) e o pacote."""
+    partes = rel[:-3].split("/")
+    init = partes[-1] == "__init__"
+    if init:
+        partes = partes[:-1]
+    if partes[0] == "src":
+        partes = partes[1:]
+    nomes = {".".join(partes[i:]) for i in range(len(partes))}
+    return nomes, ".".join(partes if init else partes[:-1])
+
+
+def com_os_pais(nome):
+    partes = nome.split(".")
+    return {".".join(partes[: i + 1]) for i in range(len(partes))}
+
+
+def absoluto(base, nivel, pacote):
+    """O `from .x` resolvido contra o pacote de quem importa; vazio se sobe além da raiz."""
+    if not nivel:
+        return base
+    p = pacote.split(".") if pacote else []
+    if nivel - 1 > len(p):
+        return ""
+    p = p[: len(p) - (nivel - 1)]
+    return ".".join([*p, base] if base else p)
+
+
+def do_texto(texto, pacote):
+    """Todo import do texto, em qualquer profundidade: o do arquivo de teste e do ajudante."""
+    saida = set()
+    for m in LER.finditer(texto):
+        for pedaco in m.group(1).split(","):
+            nome = pedaco.split(" as ")[0].strip(" \t\\")
+            if re.fullmatch(r"[\w.]+", nome):
+                saida |= com_os_pais(nome)
+    for m in DE.finditer(texto):
+        base = m.group(1)
+        nivel = len(base) - len(base.lstrip("."))
+        base = absoluto(base.lstrip("."), nivel, pacote)
+        if not base:
+            continue
+        saida |= com_os_pais(base)
+        for pedaco in re.split(r"[,\n]", m.group(2)):
+            nome = pedaco.split("#")[0].split(" as ")[0].strip(" \t\\()")
+            if re.fullmatch(r"\w+", nome):
+                saida.add(f"{base}.{nome}")
+    for m in DINAMICO.finditer(texto):
+        saida |= com_os_pais(m.group(1))
+    return saida
+
+
+def pede_o_webkit(no):
+    if isinstance(no, ast.Call):
+        f, a = no.func, no.args
+        return (isinstance(f, ast.Attribute) and f.attr == "require_version" and bool(a)
+                and isinstance(a[0], ast.Constant) and a[0].value == "WebKit2")
+    if isinstance(no, ast.ImportFrom):
+        return no.module == "gi.repository" and any(x.name == "WebKit2" for x in no.names)
+    return isinstance(no, ast.Import) and any("WebKit2" in x.name for x in no.names)
+
+
+def do_topo(arvore, pacote):
+    """Os imports que rodam ao importar o módulo (fora de função), e se ele pede o WebKit."""
+    saida, pede = set(), False
+    pilha = list(arvore.body)
+    while pilha:
+        no = pilha.pop()
+        if isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if isinstance(no, ast.If) and "TYPE_CHECKING" in ast.dump(no.test):
+            pilha += no.orelse
+            continue
+        for campo in ("body", "orelse", "finalbody", "handlers", "cases"):
+            pilha += getattr(no, campo, None) or []
+        pede = pede or pede_o_webkit(no) or (
+            isinstance(no, ast.Expr) and pede_o_webkit(no.value))
+        if isinstance(no, ast.Import):
+            for a in no.names:
+                saida |= com_os_pais(a.name)
+        elif isinstance(no, ast.ImportFrom):
+            base = absoluto(no.module or "", no.level, pacote)
+            if base:
+                saida |= com_os_pais(base)
+                saida |= {f"{base}.{a.name}" for a in no.names if a.name != "*"}
+    return saida, pede
+
+
+def ler(rel):
+    nomes, pacote = nomes_e_pacote(rel)
+    try:
+        with open(rel, encoding="utf-8") as fh:
+            texto = fh.read()
+    except (OSError, ValueError):
+        return nomes, set(), rel.startswith("tests/")
+    if rel.startswith("tests/"):
+        return nomes, do_texto(texto, pacote), "WebKit2" in texto
+    try:
+        return (nomes, *do_topo(ast.parse(texto, rel), pacote))
+    except (SyntaxError, ValueError):
+        return nomes, set(), False
+
+
+lidos = {rel: ler(rel) for rel in [*arquivos("src"), *arquivos("scripts"),
+                                     *arquivos("tests/unit", raso=True)]
+           if not rel.endswith("/conftest.py")}
+with open(lista, encoding="utf-8") as fh:
+    pedidos = [linha.strip() for linha in fh if linha.strip()]
+for rel in pedidos:
+    if rel not in lidos:
+        lidos[rel] = ler(rel)
+do_webkit, nomes_do_webkit = set(), set()
+mudou = True
+while mudou:
+    mudou = False
+    for rel, (nomes, importa, pede) in lidos.items():
+        if rel not in do_webkit and (pede or importa & nomes_do_webkit):
+            do_webkit.add(rel)
+            nomes_do_webkit |= nomes
+            mudou = True
+print("\n".join(rel for rel in pedidos if rel in do_webkit))
+PY
+# A lista do WebKit é lida UMA vez por corrida; o filho da chave PARTES_EM_PARALELO lê a do pai.
+# O fecho só usa a biblioteca padrão e roda no `python3` do sistema: o `PY` é o do pytest, e uma
+# régua pode passar um de mentira, que não lê nada.
+_py_do_fecho="$(command -v python3 || printf '%s' "$PY")"
+if [ -z "${PARTIDO:-}" ] || [ ! -f "$SAIDA/do-webkit.txt" ]; then
+  "$_py_do_fecho" -c "$FECHO_DO_WEBKIT" "$RAIZ" "$SAIDA/todos.txt" > "$SAIDA/do-webkit.txt" \
+    || { echo "ERRO: não consegui ler quem carrega o WebKit ($_py_do_fecho rodou o FECHO_DO_WEBKIT com erro)."; exit 2; }
+fi
+declare -A _do_webkit=()
+while IFS= read -r a; do [ -z "$a" ] || _do_webkit[$a]=1; done < "$SAIDA/do-webkit.txt"
+e_do_webkit() { [ -n "${_do_webkit[$1]:-}" ]; }
 # `LISTAR_O_WEBKIT=1` só diz quem roda em processo próprio, e sai: é a
 # pergunta que a régua faz a este script sobre a árvore de verdade.
 if [ -n "${LISTAR_O_WEBKIT:-}" ]; then

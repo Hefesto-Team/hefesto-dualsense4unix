@@ -63,11 +63,12 @@ from hefesto_dualsense4unix.core import formas_do_endereco as _formas
 from hefesto_dualsense4unix.daemon.subsystems.rumble import sem_dono_do_rumble
 from hefesto_dualsense4unix.integrations import storm_doctor as _exame
 from hefesto_dualsense4unix.integrations import vigia_do_jogo_novo as _vigia
-from hefesto_dualsense4unix.interface import abrir as _abrir
 from hefesto_dualsense4unix.interface import folha_da_casa as _folha
 from hefesto_dualsense4unix.interface import onde as _onde
 from hefesto_dualsense4unix.interface import sistema as _tela
+from hefesto_dualsense4unix.utils import area_de_transferencia as _area
 from hefesto_dualsense4unix.utils import maquina as _maquina
+from hefesto_dualsense4unix.utils.marca_do_parar import lembrar_o_parar
 
 from . import (
     TRAVESSAO,
@@ -2174,7 +2175,7 @@ def desligar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     _limpar_o_painel()
     _systemctl("stop")
     _matriz()._user_stopped_daemon = True
-    _abrir.lembrar_o_parar(True)
+    lembrar_o_parar(True)
     return {"blocos": blocos_dos_botoes(False)}
 
 
@@ -2230,13 +2231,13 @@ def ativar_o_servico() -> bool:
         # da unit, não um avulso. O `start` se junta à subida em curso e só volta com o IPC de pé;
         # quem chama (Jogar, «Ativar», «Corrigir») fala com o serviço logo em seguida, sem espera.
         janela._user_stopped_daemon = False
-        _abrir.lembrar_o_parar(False)
+        lembrar_o_parar(False)
         _systemctl("start")
         return True
     if janela._daemon_pid_alive():
         return False
     janela._user_stopped_daemon = False
-    _abrir.lembrar_o_parar(False)
+    lembrar_o_parar(False)
     _systemctl("start")
     return True
 
@@ -2544,12 +2545,11 @@ def _diario() -> str:
 
 
 def _por_na_area_de_transferencia(texto: str) -> bool:
-    """O texto na área de transferência, pela moldura (dona do GTK). `False` = não deu."""
-    try:
-        from hefesto_dualsense4unix.interface.janela import por_na_area_de_transferencia
-    except Exception:
-        return False
-    return por_na_area_de_transferencia(texto)
+    """O texto na área de transferência que a moldura entregou (`utils/area_de_transferencia`).
+
+    `False` = não há moldura, ou não deu. A lógica não importa a moldura: ela é quem dá.
+    """
+    return _area.por(texto)
 
 
 def _conhecidos_do_copiar(ctx: Contexto) -> list[str]:
