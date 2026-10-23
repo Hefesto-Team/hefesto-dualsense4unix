@@ -54,12 +54,19 @@
     border:1px solid var(--border-forte);background:var(--panel);color:var(--texto-suave);font-size:12px}
   .voltar2:hover{border-color:var(--purple);color:var(--fg)}
   .mc-topo > .mc-rot{margin-left:auto}
+  /* O nome do controle corta com reticências, com o nome inteiro na dica (`base-comum.js`), quando a barra dos
+     chips não cabe. */
   .mc-chips{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px}
   .chip{height:30px;padding:0 12px;border-radius:7px;border:2px solid var(--plastico,var(--border-forte));
-    background:var(--app-bg);color:var(--texto-suave);font:12px var(--f);cursor:pointer;white-space:nowrap;text-align:center}
+    background:var(--app-bg);color:var(--texto-suave);font:12px var(--f);cursor:pointer;white-space:nowrap;text-align:center;
+    overflow:hidden;text-overflow:ellipsis}
   .chip.on{background:rgba(189,147,249,.16);color:var(--fg);font-weight:600}
   .chip .pt{color:var(--fg);margin:0 2px}
-  @media (max-width:1000px){.mc-chips{gap:5px}.chip{padding:0 7px}}
+  /* Abaixo de 1000 px o título fica em duas linhas, de largura fixa, e os chips tomam o resto da barra: cada
+     coluna segue o texto do seu chip (`auto`) e cresce com a folga. Sem a folga, o texto cabia no chip por
+     centésimos de pixel, e a reticência cortava o nome de exemplo à toa; com ela, só o nome comprido corta. */
+  @media (max-width:1000px){.mc-chips{flex:1 1 auto;gap:5px;grid-auto-columns:auto}.chip{padding:0 7px}
+    .mc-topo h1{flex:none;width:6em}}
   .mc-perfil{display:grid;grid-template-columns:292px minmax(0,1fr) 292px;gap:20px;align-items:center;
     padding:12px 20px;border-bottom:1px solid var(--border-sutil);flex:none}
   .mc-perfil .cel{display:flex;align-items:center;gap:12px;min-width:0}
@@ -78,6 +85,9 @@
   .cx > .corpo{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column}
   .mapa.mc-mapa{flex:1 0 auto;display:grid;grid-template-columns:292px minmax(0,1fr) 292px;gap:20px;
     padding:14px 20px;align-items:stretch;align-content:center}
+  /* Abaixo de 1000 px as duas colunas laterais (292) deixariam ao centro 162 px na vista de 860: o Toque, o Meio
+     e o PS cruzavam a coluna da direita. O piso de 200 px devolve ao centro o que o controle desenhado pede. */
+  @media (max-width:1000px){.mc-perfil,.mapa.mc-mapa{grid-template-columns:200px minmax(0,1fr) 200px}}
   .mc-lado{display:flex;flex-direction:column;gap:7px;justify-content:space-between}
   .b2{display:grid;grid-template-columns:24px 74px minmax(0,1fr);align-items:center;gap:8px;height:37px;padding:0 10px;
     border-radius:8px;border:1px solid var(--border-sutil);background:var(--panel);color:var(--fg);font:12px var(--f);

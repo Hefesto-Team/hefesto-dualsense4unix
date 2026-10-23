@@ -291,7 +291,8 @@ CHIPS = r"""
 """
 
 
-def _chips_na_vista(largura: int, altura: int) -> list[dict[str, Any]]:
+def _mede_na_vista(js: str, largura: int, altura: int,
+                  pagina: pathlib.Path | None = None) -> Any:
     gi = pytest.importorskip("gi", reason="a GUI precisa do PyGObject do sistema")
     gi.require_version("Gtk", "3.0")
     gi.require_version("WebKit2", "4.1")
@@ -317,10 +318,10 @@ def _chips_na_vista(largura: int, altura: int) -> list[dict[str, Any]]:
     def carregou(v: Any, evento: Any) -> None:
         if evento == WebKit2.LoadEvent.FINISHED:
             GLib.timeout_add(300, lambda: (v.evaluate_javascript(
-                CHIPS, -1, None, None, None, mediu), False)[1])
+                js, -1, None, None, None, mediu), False)[1])
 
     view.connect("load-changed", carregou)
-    view.load_uri(_a_pagina().as_uri())
+    view.load_uri((pagina or _a_pagina()).as_uri())
     guarda = GLib.timeout_add(20000, Gtk.main_quit)
     try:
         Gtk.main()
@@ -328,7 +329,11 @@ def _chips_na_vista(largura: int, altura: int) -> list[dict[str, Any]]:
         GLib.source_remove(guarda)
         janela.destroy()
     assert len(saiu) == 1 and not saiu[0].startswith("ERRO"), f"o WebKit não respondeu: {saiu}"
-    return list(json.loads(saiu[0]))
+    return json.loads(saiu[0])
+
+
+def _chips_na_vista(largura: int, altura: int) -> list[dict[str, Any]]:
+    return list(_mede_na_vista(CHIPS, largura, altura))
 
 
 @pytest.mark.parametrize("vista", sorted(VISTAS_DO_MAPA))
@@ -339,3 +344,115 @@ def test_o_nome_do_controle_cabe_no_chip_em_toda_janela(vista: str) -> None:
     assert len(chips) >= 3, f"a página não tem os chips do «Controle»: {chips}"
     ruins = [c for c in chips if c["vaza"] or c["fora"]]
     assert ruins == [], f"na janela {vista}, o nome vaza do chip ou o chip sai do bloco: {ruins}"
+
+
+CENTRO = r"""
+(function(){
+  const R = e => e.getBoundingClientRect();
+  const lados = document.querySelectorAll('.mc-mapa > .mc-lado');
+  const c = R(document.querySelector('.mc-centro')), esq = R(lados[0]), dir = R(lados[1]);
+  const dentro = e => { const r = R(e); return r.left >= c.left - 1 && r.right <= c.right + 1; };
+  return JSON.stringify({
+    // o centro não pode entrar na coluna de um lado, nem os botões do centro sair dele
+    cruza: c.left < esq.right - 1 || c.right > dir.left + 1,
+    baixo: Array.from(document.querySelectorAll('.mc-baixo .b2'))
+        .map(b => ({b: b.dataset.b, dentro: dentro(b)})),
+    desenho: dentro(document.querySelector('.mc-desenho .ds'))
+  });
+})()
+"""
+
+NOMES_DO_EXEMPLO = ("Cosmic Red", "Starlight Blue", "Galactic Purple", "White")
+
+
+def _pagina_com_nomes_longos(destino: pathlib.Path) -> pathlib.Path:
+    """A mesma página, com os quatro nomes de exemplo trocados por nomes de 32 caracteres."""
+    texto = _a_pagina().read_text(encoding="utf-8")
+    for n, nome in enumerate(NOMES_DO_EXEMPLO):
+        longo = f"{nome} " + "ABCD"[n] * (32 - len(nome) - 1)
+        assert len(longo) == 32
+        marca = f'>{nome} <span class="pt">'
+        assert texto.count(marca) == 1, f"a página não tem o chip de exemplo {nome!r}"
+        texto = texto.replace(marca, f'>{longo} <span class="pt">')
+    pagina = destino / "mapa-com-nomes-longos.html"
+    pagina.write_text(texto, encoding="utf-8")
+    return pagina
+
+
+CHIPS_E_A_DICA = r"""
+(function(){
+  const caixa = document.querySelector('.cx').getBoundingClientRect();
+  return JSON.stringify(Array.from(
+      document.querySelectorAll('[data-bloco="controles-do-mapa"] .chip')).map(b => {
+    const r = b.getBoundingClientRect(), bloco = b.closest('.mc-chips').getBoundingClientRect();
+    const corta = b.scrollWidth > b.clientWidth + 1;
+    // o ponteiro passa pelo chip: a base põe o texto inteiro na dica de quem a reticência corta
+    b.dispatchEvent(new MouseEvent('mousemove', {bubbles: true}));
+    return {texto: (b.textContent || '').replace(/\s+/g, ' ').trim(), corta: corta,
+            reticencia: getComputedStyle(b).textOverflow === 'ellipsis',
+            dica: b.dataset.dica || '',
+            fora: r.right > Math.min(bloco.right, caixa.right, window.innerWidth) + 1
+                  || r.left < bloco.left - 1 || r.left < caixa.left - 1};
+  }));
+})()
+"""
+
+
+@pytest.mark.parametrize("vista", sorted(VISTAS_DO_MAPA))
+def test_o_centro_do_mapa_cabe_entre_as_colunas_em_toda_janela(vista: str) -> None:
+    """O-CHIP-DO-MAPA-CABE-A-860-PX-01: a 860 px o centro cruzava a coluna do lado."""
+    medida = _mede_na_vista(CENTRO, *VISTAS_DO_MAPA[vista])
+    assert not medida["cruza"], (
+        f"na janela {vista}, o centro do mapa entra na coluna de um lado: {medida}")
+    assert {b["b"] for b in medida["baixo"]} >= {"tp_toque", "tp_meio", "ps"}, medida
+    fora = [b["b"] for b in medida["baixo"] if not b["dentro"]]
+    assert fora == [], f"na janela {vista}, estes botões saem da coluna do meio: {fora}"
+    assert medida["desenho"], f"na janela {vista}, o desenho do controle sai da coluna do meio"
+
+
+@pytest.mark.parametrize("vista", sorted(VISTAS_DO_MAPA))
+def test_o_nome_comprido_do_controle_corta_no_chip_e_leva_o_nome_na_dica(
+        vista: str, tmp_path: pathlib.Path) -> None:
+    """O-CHIP-DO-MAPA-CABE-A-860-PX-01: quatro nomes de 32 caracteres não saem do chip."""
+    pagina = _pagina_com_nomes_longos(tmp_path)
+    chips = list(_mede_na_vista(CHIPS_E_A_DICA, *VISTAS_DO_MAPA[vista], pagina))
+    assert len(chips) == 4, chips
+    fora = [c["texto"] for c in chips if c["fora"]]
+    assert fora == [], (
+        f"na janela {vista}, o chip de nome comprido sai do bloco ou da caixa: {fora}")
+    sem_corte = [c["texto"] for c in chips if not c["reticencia"]]
+    assert sem_corte == [], f"o chip não corta com reticências: {sem_corte}"
+    if vista != "dela":
+        # na vista larga os quatro cabem; nas outras duas a barra não tem de onde tirar
+        assert all(c["corta"] for c in chips), (
+            f"na janela {vista} nenhum nome devia caber inteiro: {chips}")
+    cortados = [c for c in chips if c["corta"]]
+    sem_dica = [c["texto"] for c in cortados if c["dica"] != c["texto"]]
+    assert sem_dica == [], f"o nome cortado não leva o texto inteiro na dica: {sem_dica}"
+
+
+FOLGA_DOS_CHIPS = r"""
+(function(){
+  return JSON.stringify(Array.from(
+      document.querySelectorAll('[data-bloco="controles-do-mapa"] .chip')).map(b => {
+    const rg = document.createRange(); rg.selectNodeContents(b);
+    const cs = getComputedStyle(b), r = b.getBoundingClientRect();
+    // a caixa de dentro (sem borda nem margem interna) menos a largura real do texto, sem
+    // tolerância: a reticência aparece com um centésimo de pixel de sobra, e o `scrollWidth`
+    // inteiro não vê
+    const caixa = r.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)
+                  - parseFloat(cs.borderLeftWidth) - parseFloat(cs.borderRightWidth);
+    return {texto: (b.textContent || '').trim(), folga: caixa - rg.getBoundingClientRect().width};
+  }));
+})()
+"""
+
+
+@pytest.mark.parametrize("vista", sorted(VISTAS_DO_MAPA))
+def test_o_nome_de_exemplo_nao_ganha_reticencia_por_um_pixel_quebrado(vista: str) -> None:
+    """O corte do nome comprido não pega o nome de exemplo: o texto cabe na caixa de dentro."""
+    chips = list(_mede_na_vista(FOLGA_DOS_CHIPS, *VISTAS_DO_MAPA[vista]))
+    assert len(chips) == 4, chips
+    apertados = [(c["texto"], round(c["folga"], 3)) for c in chips if c["folga"] < 0]
+    assert apertados == [], (
+        f"na janela {vista}, o texto passa da caixa de dentro do chip: {apertados}")
