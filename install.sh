@@ -2721,8 +2721,12 @@ fi
 # `wifi.powersave = 3` e o dongle rtw88 USB caiu seis vezes com a assinatura do
 # firmware (`failed to get tx report`, `failed to leave ips state`). O passo faz
 # DUAS coisas, ambas idempotentes:
-#   1. grava o conf.d do NetworkManager (`wifi.powersave=2`), que vale em toda
-#      associação futura;
+#   1. grava o conf.d do NetworkManager (`wifi.powersave=2`). O NetworkManager
+#      só lê o conf.d no início (ou num reload, que o passo não faz): até o
+#      próximo boot, uma reconexão volta com o `powersave = 3` que ele já leu.
+#      Por isso o passo ANOTA o reinício pendente quando grava o conf (medido
+#      em 23/10/2026: o `Power Management:off` depois da reconexão das 15h15
+#      veio de um `reload` do NetworkManager às 15h14, no diário dele);
 #   2. desliga a economia AGORA em cada interface que a tem ligada, por
 #      `iw dev <if> set power_save off` (ou `iwconfig <if> power off`, sem o
 #      `iw`) — o que NÃO desassocia.
@@ -2800,7 +2804,7 @@ aplicar_wifi_powersave_off() {
             if _wifi_economia_ligada "${ferramenta}" "${ifc}"; then ligadas+=("${ifc}"); fi
         done < <(_wifi_interfaces "${ferramenta}")
     fi
-    local sem_ferramenta="sem iw nem iwconfig, a economia de cada interface não se confere agora (o conf vale na próxima associação)"
+    local sem_ferramenta="sem iw nem iwconfig, a economia de cada interface não se confere agora (o conf vale no próximo boot)"
 
     if [[ "${DRY_RUN:-0}" -eq 1 ]]; then
         if [[ "${SKIP_UDEV}" -eq 1 ]]; then
@@ -2810,7 +2814,7 @@ aplicar_wifi_powersave_off() {
         if [[ "${conf_igual}" -eq 1 ]]; then
             _nao_faria "gravar ${alvo}: já está igual"
         else
-            _faria_root "gravar ${alvo} (wifi.powersave=2) — vale em toda associação futura"
+            _faria_root "gravar ${alvo} (wifi.powersave=2) — o NetworkManager o lê no próximo boot"
         fi
         for ifc in ${ligadas[@]+"${ligadas[@]}"}; do
             _faria_root "desligar a economia de energia de ${ifc} na hora (power_save off, sem reconectar)"
@@ -2845,6 +2849,7 @@ aplicar_wifi_powersave_off() {
     if [[ "${conf_igual}" -eq 0 ]]; then
         if sudo install -Dm644 "${asset}" "${alvo}" 2>/dev/null; then
             printf '      conf instalado em %s (wifi.powersave=2)\n' "${alvo}"
+            anotar_reinicio_pendente "a economia de energia do Wi-Fi desligada de vez (o NetworkManager lê o conf no boot)"
         else
             warn "não consegui gravar ${alvo}"
         fi
@@ -2855,7 +2860,7 @@ aplicar_wifi_powersave_off() {
                 && ! _wifi_economia_ligada "${ferramenta}" "${ifc}"; then
             printf '      economia de energia de %s desligada agora (a conexão não foi tocada)\n' "${ifc}"
         else
-            warn "não consegui desligar a economia de energia de ${ifc} agora — vale na próxima associação"
+            warn "não consegui desligar a economia de energia de ${ifc} agora — o conf vale no próximo boot"
         fi
     done
 }

@@ -1866,8 +1866,8 @@ fi
 # Conf.d de powersave do WiFi (W2 — instalado por padrão pelo install.sh):
 # removido SE presente, sem flag nova (simetria "se instalado, some" — mesmo
 # padrão do storm.conf). Só rm de um arquivo .conf: NUNCA chamamos
-# nmcli/rfkill aqui, e a economia de cada interface volta ao que o
-# NetworkManager decidir na próxima associação.
+# nmcli/rfkill aqui, e a economia de cada interface volta ao default da
+# distro no próximo boot (o NetworkManager só lê o conf.d no início).
 if [[ -e /etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf ]]; then
     if sudo -n true 2>/dev/null; then
         log "removendo conf de powersave do WiFi (/etc/NetworkManager/conf.d/hefesto-wifi-powersave.conf)"

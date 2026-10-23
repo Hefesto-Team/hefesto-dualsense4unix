@@ -141,6 +141,7 @@ class Cena:
             'warn() { printf "AVISO: %s\\n" "$*"; }\n'
             '_faria_root() { printf "FARIA-ROOT: %s\\n" "$*"; }\n'
             '_nao_faria() { printf "NAO-FARIA: %s\\n" "$*"; }\n'
+            'anotar_reinicio_pendente() { printf "REINICIO-PENDENTE: %s\\n" "$*"; }\n'
             f'ROOT_DIR="{REPO_ROOT}"\nDRY_RUN={dry_run}\nSKIP_UDEV={skip_udev}\n'
             f"{funcoes}\naplicar_wifi_powersave_off\nprintf 'RC=0\\n'\n"
         )
@@ -184,6 +185,9 @@ class TestPrimeiraCorrida:
         )
         assert (cena.estado / "wlan0").read_text(encoding="utf-8").strip() == "off"
         assert "desligada agora" in r.stdout
+        # O NetworkManager só lê o conf.d no início: até o boot, uma reconexão
+        # volta com o powersave=3 que ele já leu. O fecho diz «reinicie».
+        assert "REINICIO-PENDENTE: a economia de energia do Wi-Fi" in r.stdout
 
     def test_sem_o_iw_usa_o_iwconfig(self, tmp_path: Path) -> None:
         c = Cena(tmp_path, com_iw=False, com_iwconfig=True)
@@ -253,6 +257,7 @@ class TestSegundaCorrida:
         r = cena.roda()
         assert "RC=0" in r.stdout, r.stderr
         assert "já desligada" in r.stdout
+        assert "REINICIO-PENDENTE" not in r.stdout, "o conf igual não pede outro reinício"
         assert cena.escritas() == [], cena.escritas()
         assert cena.alvo.stat().st_mtime_ns == antes, "o conf foi regravado sem mudança"
 
