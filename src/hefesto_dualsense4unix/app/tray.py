@@ -335,7 +335,10 @@ class AppTray:
             self.on_quit()
             return
         from hefesto_dualsense4unix.app.ipc_bridge import run_in_thread
+        from hefesto_dualsense4unix.interface.abrir import lembrar_o_parar
 
+        # O «Sair» não é o Parar da aba Sistema: a janela reaberta traz o serviço de volta.
+        lembrar_o_parar(False)
         servico = self.on_servico
 
         def _parou(deu_certo: Any) -> bool:
@@ -367,6 +370,10 @@ class AppTray:
         servico = self.on_servico
         if servico is None:
             return
+        from hefesto_dualsense4unix.interface.abrir import lembrar_o_parar
+
+        # O «Parar o serviço» daqui é o mesmo Parar da aba Sistema: a janela reaberta o respeita.
+        lembrar_o_parar(verbo == "stop")
         self._fora_do_fio(lambda: servico(verbo), "apptray_servico_nao_pegou", verbo=verbo)
 
     @staticmethod

@@ -961,7 +961,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     try:
         todos = os_perfis_de_escolher(load_all_profiles())
         foto = _foto_do_catalogo()
-        ativo = _valendo(ctx, todos)
+        ativo = _em_uso(ctx, todos)
         alvo = _alvo_do_editor(ctx, todos)
         escolhido = str(getattr(alvo, "name", "") or "")
         bruto = _tela.pacote_da_aba(todos, ativo=ativo or None,
@@ -1015,6 +1015,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     fora["perfis.remover"] = _rotulo_do_remover(escolhido)
 
     fora["perfis.desfecho"] = _desfecho_para_a_tela()
+    if _servico_responde(ctx):
+        _RECUSA_DO_ATIVAR[0] = ""
+    fora[CAMPO_DA_RAZAO_DO_ATIVAR] = _RECUSA_DO_ATIVAR[0]
 
     guarda = bruto.get("guarda") or []
     if isinstance(guarda, list):
@@ -1098,23 +1101,76 @@ def selecionar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
         return None
     from hefesto_dualsense4unix.profiles.slug import mesmo_slug
 
-    ativo = _valendo(ctx)
+    ativo = _em_uso(ctx)
     if ativo and mesmo_slug(ativo, nome):
         return None
-    return _ativar_o(nome, p)
+    return _ativar_o(nome, p, ctx)
 
 
-def _ativar_o(nome: str, p: Any) -> dict[str, Any]:
+#: O campo que apaga o Ativar e escreve a razão na dica dele (`aba10.CAMPO_DA_RAZAO_DO_ATIVAR`).
+CAMPO_DA_RAZAO_DO_ATIVAR = "perfis.ativar-razao"
+#: A recusa do último Ativar com o serviço parado; some quando o serviço volta a responder.
+_RECUSA_DO_ATIVAR: list[str] = [""]
+SERVICO_NAO_SUBIU = "O serviço não subiu"
+SERVICO_NAO_RESPONDEU = ("O serviço não respondeu depois de ligado. Ligue-o na aba Sistema e "
+                         "clique de novo")
+
+
+def _servico_responde(ctx: Contexto) -> bool:
+    """O serviço respondeu o estado neste tique? A mesma conta do topo (`servico_do_menu`)."""
+    from . import servico_do_menu
+
+    return servico_do_menu(ctx.state) != "parado"
+
+
+def _em_uso(ctx: Contexto, todos: list[Any] | None = None) -> str:
+    """O perfil em uso, para a tela e para o clique: nenhum com o serviço parado.
+
+    `_valendo` cai no marcador do disco quando o serviço cala, e é o que as guardas de apagar e de
+    voltar precisam; a lista, a ordem e o «já vale» do clique não: o perfil do marcador só vale
+    quando o serviço voltar (O-ATIVAR-DO-PERFIL-VALE-OU-A-TELA-DIZ-POR-QUE-01).
+    """
+    return _valendo(ctx, todos) if _servico_responde(ctx) else ""
+
+
+def _recusar_o_ativar(frase: str) -> RuntimeError:
+    """Guarda a recusa para o Ativar (campo `perfis.ativar-razao`) e a devolve para a tarja."""
+    _RECUSA_DO_ATIVAR[0] = frase
+    return RuntimeError(frase)
+
+
+def _religar_o_servico() -> None:
+    """Liga o serviço parado antes da troca: um clique religa e troca, mesmo depois do Parar."""
+    from hefesto_dualsense4unix.app.actions import atos_da_bandeja
+
+    from . import a09_sistema
+
+    try:
+        subiu = a09_sistema.ativar_o_servico()
+    except RuntimeError as erro:
+        raise _recusar_o_ativar(f"{SERVICO_NAO_SUBIU}: {erro}") from erro
+    if subiu:
+        atos_da_bandeja.garantir_a_bandeja()
+
+
+def _ativar_o(nome: str, p: Any, ctx: Contexto) -> dict[str, Any]:
     """`profile.switch` do perfil `nome`: o corpo único do clique na linha e do botão Ativar.
 
-    A recusa do daemon NÃO some (ATIVAR-NAO-MENTE-01): `resultado` levanta e o gesto diz. A frase é
-    do produto (`mensagem_de_ativacao`), e a carona do `launch_env.refresh` vai junto.
+    Com o serviço parado, ele sobe antes (`_religar_o_servico`); se não sobe, a recusa vai à dica
+    do Ativar e à tarja. A recusa do daemon NÃO some (ATIVAR-NAO-MENTE-01): `resultado` levanta e o
+    gesto diz. A frase é do produto (`mensagem_de_ativacao`), com a carona do `launch_env.refresh`.
     """
+    parado = not _servico_responde(ctx)
+    if parado:
+        _religar_o_servico()
     try:
         corpo = p.resultado("profile.switch", name=nome)
     except RuntimeError as erro:
+        if parado:
+            raise _recusar_o_ativar(SERVICO_NAO_RESPONDEU) from erro
         raise RuntimeError(
             f"o Hefesto não confirmou a troca para {nome!r}") from erro
+    _RECUSA_DO_ATIVAR[0] = ""
     from hefesto_dualsense4unix.app.actions.profiles_actions import (
         mensagem_de_ativacao,
     )
@@ -1134,13 +1190,13 @@ def ativar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     nome = _perfil_do_editor(ctx)
     from hefesto_dualsense4unix.profiles.slug import mesmo_slug
 
-    ativo = _valendo(ctx)
+    ativo = _em_uso(ctx)
     if ativo and mesmo_slug(ativo, nome):
         raise RuntimeError(
             f"“{nome}” já é o perfil que está valendo. Escolha outro na lista "
             f"e clique em Ativar — reativar o mesmo não muda nada, "
             f"e dizer “aplicado” seria mentira.")
-    return _ativar_o(nome, p)
+    return _ativar_o(nome, p, ctx)
 
 
 @gesto("10-perfis.html", "voltar-a-de-ontem", grava="restaurar_do_historico")

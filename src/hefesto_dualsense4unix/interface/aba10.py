@@ -809,9 +809,9 @@ CSS = CSS_GLIFO + """
   /* O «Ativar» é a ação principal: sólido, como o «Aplicar» do rodapé. */
   .barra-quatro .btn.verde,.barra-quatro .btn.verde:hover{background:var(--green);
       color:var(--app-bg);border-color:var(--green);font-weight:700}
-  /* O ATIVAR QUE VAI RECUSAR NASCE CINZA (O-ATIVAR-DO-PERFIL-VALE-OU-A-TELA-DIZ-POR-QUE-01): com o
-     serviço parado de propósito nenhum perfil vale, e o verde cheio prometeria uma troca que não vem.
-     A cara é a do `.btn.apagado` das dez abas; a razão mora na dica do próprio botão. */
+  /* O ATIVAR QUE RECUSOU FICA CINZA (O-ATIVAR-DO-PERFIL-VALE-OU-A-TELA-DIZ-POR-QUE-01): com o
+     serviço parado ele segue verde, porque o clique religa e troca; só o serviço que não subiu o
+     apaga. A cara é a do `.btn.apagado` das dez abas; a razão mora na dica do próprio botão. */
   .barra-quatro .btn.verde.apagado,.barra-quatro .btn.verde.apagado:hover{background:transparent;
       color:var(--fg);border-color:var(--border-sutil);font-weight:inherit;cursor:not-allowed}
   .perfis > div{padding:12px 16px}
@@ -1151,31 +1151,28 @@ def item_da_ordem(nome, posicao, ativo):
 
 
 #: O Ativar sabe ficar cinza: o campo que o acende escreve a razão na dica dele (`monta.botao_cinza`).
-#: No desenho ele nasce verde, que é a tela com o serviço de pé; a cena do serviço parado é
-#: `servico_parado()`, um estado do mesmo desenho, e não outra página.
+#: Ele nasce verde, inclusive com o serviço parado: o clique religa o serviço e troca o perfil
+#: (O-ATIVAR-DO-PERFIL-VALE-OU-A-TELA-DIZ-POR-QUE-01). Só fica cinza quando o serviço não subiu, e
+#: a razão é a recusa que o produto escreve (`a10_perfis`).
 CAMPO_DA_RAZAO_DO_ATIVAR = "perfis.ativar-razao"
 DICA_DO_ATIVAR = "Passa a usar este perfil agora"
-RAZAO_DO_ATIVAR_SEM_SERVICO = "O serviço está parado. Ligue-o na aba Sistema para trocar o perfil"
 ATIVAR = botao_cinza("Ativar", CAMPO_DA_RAZAO_DO_ATIVAR, tom="verde",
                      extra=f'data-hef-gesto="ativar" title="{DICA_DO_ATIVAR}"')
 
 
 def servico_parado(html):
-    """A cena do serviço parado de propósito, derivada do desenho normal: o que o produto escreve.
+    """A cena do serviço parado, derivada do desenho normal: o que o produto escreve.
 
     O topo leva `data-servico="parado"` (some a contagem, D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE) e
     o nome do perfil fica no travessão, que é o «nada está valendo» do topo; nenhuma linha da lista
-    nem da ordem fica verde de VALENDO; o Ativar fica cinza, com a razão na dica. Sem frase nova na
-    tela: a explicação mora nas dicas.
+    nem da ordem fica verde de VALENDO. O Ativar segue verde e clicável: um clique religa o serviço e
+    troca o perfil, e o clique na linha faz o mesmo. Sem frase nova na tela.
     """
     trocas = (
         ('data-servico="de-pe"', 'data-servico="parado"'),
         ('<tr tabindex="0" data-dica="Clique: ativa e abre no editor" class="ativo" ',
          '<tr tabindex="0" data-dica="Clique: ativa e abre no editor" class="" '),
         ('<li class="ativo" draggable="true"', '<li class="" draggable="true"'),
-        (ATIVAR.strip(), botao_cinza("Ativar", CAMPO_DA_RAZAO_DO_ATIVAR, tom="verde",
-                                     razao=RAZAO_DO_ATIVAR_SEM_SERVICO,
-                                     extra='data-hef-gesto="ativar" aria-disabled="true"')),
     )
     for velho, novo in trocas:
         if velho not in html:

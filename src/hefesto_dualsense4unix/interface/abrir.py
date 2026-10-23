@@ -1,66 +1,14 @@
 """A entrada do produto que abre a janela: a identidade veste o processo ANTES de ela nascer.
 
-Pedido, 29/08/2026: *"o nosso lançador.sh precisa ter a logo do app na dock"*. Em 07/10/2026 a
-bancada achou a segunda porta: o console script `hefesto-dualsense4unix-gui` ia direto ao piloto, e
-a janela da bandeja se anunciava `hefesto-dualsense4unix-gui`, nome que nenhum `.desktop` casa (dock
-com a engrenagem). O corpo do antigo envoltório mora aqui, no pacote, porque o wheel não leva
-`scripts/`; dele saem dois chamadores e nenhum terceiro: o console script (`entrada`) e o calço
-`scripts/abrir_interface.py` (`abrir`), que o `run.sh --gui` continua chamando.
-
-O QUE FALTAVA, MEDIDO
----------------------
-O piloto cria a janela sem `prgname`, sem `program_class` e sem ícone. Medido em Xvfb lendo do
-servidor X com `xprop`, a janela publicava `WM_CLASS = ("controles_vivos.py",
-"Controles_vivos.py")`; o cosmic-comp publica o SEGUNDO campo como `app_id`. Nome de script, dock
-com ícone genérico.
-
-AS TRÊS LINHAS QUE CURAM, e por que são de PROCESSO e não de janela
--------------------------------------------------------------------
-`Gdk.set_program_class` conserta TODA janela do processo, inclusive as que o piloto ainda não abriu
-(`Gtk.Window.set_wmclass` é por janela e depreciado). O `GLib.set_prgname` dá o `app_id` do Wayland.
-
-O ÍCONE TEM DOIS CAMINHOS, e o segundo é o que funciona SEM INSTALAR
----------------------------------------------------------------------
-`set_default_icon_name` só resolve se o ícone estiver no tema `hicolor`, isto é, depois do
-`install.sh`. Antes disso se carrega o PNG do disco, que vira `_NET_WM_ICON` na janela. Num pacote
-sem a árvore o PNG não existe, e o ícone vem do tema que o pacote instala.
-
-OS BOTÕES DA JANELA SAEM À ESQUERDA, E A CULPA NÃO É DO CÓDIGO (02/09/2026)
----------------------------------------------------------------------------
-O `gtk-decoration-layout` da sessão do usuário é `close,maximize,minimize:` (em
-`~/.config/gtk-3.0/settings.ini` e no gsettings), e vale para todo aplicativo GTK. **NÃO SE CONSERTA
-AQUI**: um aplicativo que chamasse `set_decoration_layout` ignoraria a escolha global dela. O
-conserto é de UMA LINHA na máquina do usuário.
-
-UMA JANELA POR TELA, E O SEGUNDO CLIQUE A TRAZ PARA A FRENTE (28/09/2026)
---------------------------------------------------------------------------
-Clicar duas vezes no ícone abria duas janelas. O modelo *primeira vence* volta aqui (`tomar_a_vez`):
-a janela aberta recebe o pedido pela porta dela (um socket no runtime, NUNCA um sinal: o WebKit toma
-o `SIGUSR1`), vem para a frente e responde; o segundo processo sai com `rc=0` antes de importar o
-GTK. A janela que não responde não segura o clique. O lock é POR TELA (`nome_da_vez`) e só vale
-quando a janela vai para uma tela de verdade (`HEFESTO_NA_TELA=1`, sem `--oculta`).
-
-A GUARDA DA TELA RODA DENTRO DA ENTRADA, NUNCA NO IMPORT
----------------------------------------------------------
-`garantir_tela_de_mentira` desvia o GTK para um Xvfb próprio quando `HEFESTO_NA_TELA` não vale `1`.
-A entrada do produto (console script) põe o padrão `1` ANTES dela, porque a bandeja que abre o
-painel não declara a variável; o calço da árvore (`run.sh`) não põe, e os instrumentos que o chamam
-seguem na tela de mentira. Em `abrir.py` nada roda no import.
-
-O CACHE DE LOADERS DO GDKPIXBUF SE CONFERE AQUI, ANTES DO GTK
---------------------------------------------------------------
-`app/arranque.sanear_loaders_do_gdk_pixbuf` descarta o `GDK_PIXBUF_MODULE_FILE` herdado de um
-terminal empacotado quando os módulos dele são de outro confinamento. Só serve antes de qualquer
-`gi.repository`; por isso o piloto, que importa o Gtk no topo, NUNCA é importado aqui no topo: ele
-roda por `runpy.run_module`, depois da identidade.
-
-A INTERFACE É UM VISOR
------------------------
-Ela lê `daemon.state_full` do daemon que estiver no ar. Esta entrada não mexe em socket, nem em
-config: veste a identidade da JANELA e sai da frente.
+Dois chamadores: o console script (`entrada`) e o calço `scripts/abrir_interface.py` (`abrir`).
+Nada roda no import; o piloto roda por `runpy.run_module`, depois da identidade e da guarda da
+tela. Uma janela por tela (`tomar_a_vez`); o serviço parado volta com a janela
+(`trazer_o_servico`), salvo o Parar da aba Sistema (`MARCA_DO_PARAR`). O porquê de cada parte está
+em `docs/research/o-porque-dos-modulos.md`, seção `abrir`.
 """
 from __future__ import annotations
 
+import contextlib
 import importlib.util
 import os
 import re
@@ -291,10 +239,55 @@ def abrir(argv: list[str] | None = None, *, na_tela_por_padrao: bool = False) ->
         from hefesto_dualsense4unix.app.actions.atos_da_bandeja import garantir_a_bandeja
 
         garantir_a_bandeja()
+        trazer_o_servico()
 
     sys.argv = [piloto, *args]
     runpy.run_module(piloto, run_name="__main__")
     return 0
+
+
+#: O Parar da aba Sistema deixa esta marca no runtime da sessão, e abrir a janela a respeita.
+MARCA_DO_PARAR = "servico-parado-pela-aba-sistema"
+
+
+def marca_do_parar() -> Path:
+    """Onde mora a marca do Parar: no runtime da sessão, que o logout limpa."""
+    from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
+
+    return runtime_dir() / MARCA_DO_PARAR
+
+
+def lembrar_o_parar(parado: bool) -> None:
+    """Grava (o Parar da aba Sistema) ou apaga (o serviço que volta, o «Sair») a marca."""
+    marca = marca_do_parar()
+    with contextlib.suppress(OSError):
+        if parado:
+            marca.parent.mkdir(parents=True, exist_ok=True)
+            marca.touch()
+        else:
+            marca.unlink(missing_ok=True)
+
+
+def trazer_o_servico() -> bool:
+    """Liga o serviço parado, num fio próprio para a janela não esperar a subida. Diz se tentou.
+
+    Quem decide se liga é `a09_sistema.ativar_o_servico`, o dono do ato (sem unit, de pé ou com
+    um avulso vivo, não liga); a marca do Parar da aba Sistema segura o serviço parado.
+    """
+    if marca_do_parar().exists():
+        print("  o serviço foi parado na aba Sistema: segue parado")
+        return False
+    from hefesto_dualsense4unix.interface.pacotes import a09_sistema, fios
+
+    def _subir() -> None:
+        try:
+            if a09_sistema.ativar_o_servico():
+                print("  o serviço estava parado: voltou com a janela")
+        except Exception as erro:
+            print(f"  o serviço estava parado e não voltou: {erro}")
+
+    fios.soltar("trazer-o-servico", _subir)
+    return True
 
 
 def entrada() -> int:

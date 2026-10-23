@@ -63,6 +63,7 @@ from hefesto_dualsense4unix.core import formas_do_endereco as _formas
 from hefesto_dualsense4unix.daemon.subsystems.rumble import sem_dono_do_rumble
 from hefesto_dualsense4unix.integrations import storm_doctor as _exame
 from hefesto_dualsense4unix.integrations import vigia_do_jogo_novo as _vigia
+from hefesto_dualsense4unix.interface import abrir as _abrir
 from hefesto_dualsense4unix.interface import folha_da_casa as _folha
 from hefesto_dualsense4unix.interface import onde as _onde
 from hefesto_dualsense4unix.interface import sistema as _tela
@@ -2167,6 +2168,7 @@ def desligar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     _limpar_o_painel()
     _systemctl("stop")
     _matriz()._user_stopped_daemon = True
+    _abrir.lembrar_o_parar(True)
     return {"blocos": blocos_dos_botoes(False)}
 
 
@@ -2222,11 +2224,13 @@ def ativar_o_servico() -> bool:
         # da unit, não um avulso. O `start` se junta à subida em curso e só volta com o IPC de pé;
         # quem chama (Jogar, «Ativar», «Corrigir») fala com o serviço logo em seguida, sem espera.
         janela._user_stopped_daemon = False
+        _abrir.lembrar_o_parar(False)
         _systemctl("start")
         return True
     if janela._daemon_pid_alive():
         return False
     janela._user_stopped_daemon = False
+    _abrir.lembrar_o_parar(False)
     _systemctl("start")
     return True
 

@@ -216,8 +216,13 @@ def test_o_chip_diz_freestyle_se_e_so_se_o_botao_diz_ligado(ligado: bool) -> Non
 
 
 @pytest.mark.parametrize("caso", ["escolha-apagado", "escolha-aceso", "sem-escolha"])
-def test_com_o_daemon_calado_o_chip_e_o_rodape_dizem_a_escolha(caso: str) -> None:
-    """A perna do disco: a escolha A com o botão apagado, o Freestyle aceso, ou «—»."""
+def test_com_o_daemon_calado_o_rodape_diz_a_escolha_e_o_chip_nenhuma(caso: str) -> None:
+    """A perna do disco: a escolha A com o botão apagado, o Freestyle aceso, ou «—».
+
+    O chip não nomeia perfil com o serviço calado (O-ATIVAR-DO-PERFIL-VALE-OU-A-TELA-DIZ-POR-QUE-01,
+    22/10/2026): a escolha do disco é a que VAI valer quando ele voltar, e ninguém a aplica agora.
+    O rodapé, alvo do Salvar, segue na escolha.
+    """
     from hefesto_dualsense4unix.interface.pacotes import topo
     from hefesto_dualsense4unix.interface.pacotes.rodape import perfil_do_rodape
 
@@ -229,7 +234,7 @@ def test_com_o_daemon_calado_o_chip_e_o_rodape_dizem_a_escolha(caso: str) -> Non
     session.save_active_marker(FREESTYLE)
     esperado = {"escolha-apagado": AVATAR, "escolha-aceso": FREESTYLE, "sem-escolha": ""}[caso]
 
-    assert topo(_ctx(None))["perfil"] == (esperado or "—")
+    assert topo(_ctx(None))["perfil"] == "—"
     assert perfil_do_rodape(None) == esperado
 
 

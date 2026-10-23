@@ -884,6 +884,10 @@ def topo(ctx: Contexto) -> dict[str, Any]:
 
     ativo = _perfil.nome_do_ativo(ctx.state)
     do_rodape = ativo or _o_perfil_do_rodape()
+    # Com o serviço parado nenhum perfil está em uso: o marcador do disco é o que VAI valer quando
+    # ele voltar, e o topo que o nomeava dizia um perfil que ninguém aplica
+    # (O-ATIVAR-DO-PERFIL-VALE-OU-A-TELA-DIZ-POR-QUE-01).
+    em_uso = ativo if servico_do_menu(ctx.state) != "parado" else ""
     return {
         # O NATIVO, para as cinco abas por controle (a camada recusa o gesto; a tela só se
         # ACINZENTA). `sim` com o `native_mode` de pé; o resto, não, inclusive o daemon calado.
@@ -891,7 +895,7 @@ def topo(ctx: Contexto) -> dict[str, Any]:
         # O item «Desligar»/«Ligar» do menu do botão direito lê daqui (A-BASE-COMUM-DAS-ABAS-01).
         "servico": servico_do_menu(ctx.state),  # (noqa-acento) endereço da página
         "conta-b": conta_b or _o_que_o_topo_diz_da_mesa_vazia(ctx.state),
-        "perfil": ativo or "—",
+        "perfil": em_uso or "—",
         "rodape.aplicar": _dica_do_aplicar(ctx.state),
         "rodape.salvar": _dica_do_salvar(do_rodape),
         "rodape.exportar": _dica_do_exportar(do_rodape),
