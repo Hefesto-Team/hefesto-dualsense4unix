@@ -89,6 +89,7 @@ def mundo() -> Iterator[SimpleNamespace]:
     servidor.parar()
 
 
+# D-2310-O-DSU-DIZ-A-CONEXAO-DO-CONTROLE
 def test_a_porta_diz_cabo_radio_e_desconhecido(mundo: SimpleNamespace) -> None:
     mundo.envia(_pede_portas(0, 1, 2, 3))
     respostas = mundo.recebe(0.5)
