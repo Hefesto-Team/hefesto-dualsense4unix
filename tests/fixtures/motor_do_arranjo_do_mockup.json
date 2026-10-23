@@ -80,10 +80,10 @@
  "planejar/melhor": {
   "plano": {
    "1": "teclado",
-   "2": "webcam",
    "3": "wifi",
    "4": "hub",
    "7": "mouse",
+   "8": "webcam",
    "9": "bt-a",
    "13": "bt-c",
    "15a": "bt-b"
@@ -118,10 +118,6 @@
      {
       "selo": "espec",
       "txt": "longe de outro rádio de 2,4 GHz — dois receptores encostados se atrapalham"
-     },
-     {
-      "selo": "derivado",
-      "txt": "sem gastar uma entrada azul, que ele não usa"
      }
     ],
     "peso": "essencial",
@@ -267,7 +263,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o dongle Bluetooth na Entrada 13",
+   "titulo": "Bluetooth → Entrada 13",
    "linhas": [
     {
      "s": "medido",
@@ -290,7 +286,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o wi-fi na Entrada 3",
+   "titulo": "Wi-Fi → Entrada 3",
    "linhas": [
     {
      "s": "medido",
@@ -313,7 +309,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o mouse na Entrada 7",
+   "titulo": "Mouse → Entrada 7",
    "linhas": [
     {
      "s": "medido",
@@ -336,7 +332,7 @@
   {
    "essencial": false,
    "ganho": "Infinity",
-   "titulo": "Ponha a webcam na Entrada 2  ·  melhora, não é urgente",
+   "titulo": "Webcam → Entrada 8",
    "linhas": [
     {
      "s": "medido",
@@ -368,14 +364,14 @@
   }
  ],
  "consequencias/melhor": [],
- "qualidade/melhor": 653,
+ "qualidade/melhor": 647,
  "planejar/poucos": {
   "plano": {
    "1": "teclado",
-   "2": "webcam",
    "3": "wifi",
    "4": "hub",
    "7": "mouse",
+   "8": "webcam",
    "9": "bt-a",
    "13": "bt-c",
    "15a": "bt-b"
@@ -410,10 +406,6 @@
      {
       "selo": "espec",
       "txt": "longe de outro rádio de 2,4 GHz — dois receptores encostados se atrapalham"
-     },
-     {
-      "selo": "derivado",
-      "txt": "sem gastar uma entrada azul, que ele não usa"
      }
     ],
     "peso": "essencial",
@@ -559,7 +551,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o dongle Bluetooth na Entrada 13",
+   "titulo": "Bluetooth → Entrada 13",
    "linhas": [
     {
      "s": "medido",
@@ -582,7 +574,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o wi-fi na Entrada 3",
+   "titulo": "Wi-Fi → Entrada 3",
    "linhas": [
     {
      "s": "medido",
@@ -605,7 +597,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o mouse na Entrada 7",
+   "titulo": "Mouse → Entrada 7",
    "linhas": [
     {
      "s": "medido",
@@ -628,7 +620,7 @@
   {
    "essencial": false,
    "ganho": "Infinity",
-   "titulo": "Ponha a webcam na Entrada 2  ·  melhora, não é urgente",
+   "titulo": "Webcam → Entrada 8",
    "linhas": [
     {
      "s": "medido",
@@ -660,14 +652,14 @@
   }
  ],
  "consequencias/poucos": [],
- "qualidade/poucos": 653,
+ "qualidade/poucos": 647,
  "planejar/sem-ext": {
   "plano": {
    "1": "teclado",
-   "2": "webcam",
    "3": "wifi",
    "4": "hub",
    "7": "mouse",
+   "8": "webcam",
    "9": "bt-a",
    "12": "bt-c",
    "15": "bt-b"
@@ -702,10 +694,6 @@
      {
       "selo": "espec",
       "txt": "longe de outro rádio de 2,4 GHz — dois receptores encostados se atrapalham"
-     },
-     {
-      "selo": "derivado",
-      "txt": "sem gastar uma entrada azul, que ele não usa"
      }
     ],
     "peso": "essencial",
@@ -761,7 +749,7 @@
     "razoes": [
      {
       "selo": "derivado",
-      "txt": "esta opção não usa a Entrada 15a, onde ele está hoje"
+      "txt": "esta opção não usa a entrada 15a, onde ele está hoje"
      },
      {
       "selo": "derivado",
@@ -851,15 +839,15 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Mova o dongle Bluetooth da Entrada 15a para a Entrada 15",
+   "titulo": "Bluetooth → Entrada 15",
    "linhas": [
     {
      "s": "medido",
-     "t": "Hoje ele está na <b>Entrada 15a</b> (<code>3-1.1.4</code>)."
+     "t": "Hoje ele está na entrada <b>15a</b> (<code>3-1.1.4</code>)."
     },
     {
      "s": "derivado",
-     "t": "Esta opção não usa a Entrada 15a, onde ele está hoje."
+     "t": "Esta opção não usa a entrada 15a, onde ele está hoje."
     },
     {
      "s": "derivado",
@@ -874,7 +862,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o dongle Bluetooth na Entrada 12",
+   "titulo": "Bluetooth → Entrada 12",
    "linhas": [
     {
      "s": "medido",
@@ -897,7 +885,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o wi-fi na Entrada 3",
+   "titulo": "Wi-Fi → Entrada 3",
    "linhas": [
     {
      "s": "medido",
@@ -920,7 +908,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o mouse na Entrada 7",
+   "titulo": "Mouse → Entrada 7",
    "linhas": [
     {
      "s": "medido",
@@ -943,7 +931,7 @@
   {
    "essencial": false,
    "ganho": "Infinity",
-   "titulo": "Ponha a webcam na Entrada 2  ·  melhora, não é urgente",
+   "titulo": "Webcam → Entrada 8",
    "linhas": [
     {
      "s": "medido",
@@ -977,7 +965,7 @@
  "consequencias/sem-ext": [
   "o extensor não é usado"
  ],
- "qualidade/sem-ext": 622,
+ "qualidade/sem-ext": 616,
  "planejar/so-pc": {
   "plano": {
    "1": "teclado",
@@ -1019,10 +1007,6 @@
      {
       "selo": "espec",
       "txt": "longe de outro rádio de 2,4 GHz — dois receptores encostados se atrapalham"
-     },
-     {
-      "selo": "derivado",
-      "txt": "sem gastar uma entrada azul, que ele não usa"
      }
     ],
     "peso": "essencial",
@@ -1054,7 +1038,7 @@
     "razoes": [
      {
       "selo": "derivado",
-      "txt": "esta opção não usa a Entrada 9, onde ele está hoje"
+      "txt": "esta opção não usa a entrada 9, onde ele está hoje"
      },
      {
       "selo": "espec",
@@ -1074,7 +1058,7 @@
     "razoes": [
      {
       "selo": "derivado",
-      "txt": "esta opção não usa a Entrada 15a, onde ele está hoje"
+      "txt": "esta opção não usa a entrada 15a, onde ele está hoje"
      },
      {
       "selo": "espec",
@@ -1132,15 +1116,15 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Mova o dongle Bluetooth da Entrada 9 para a Entrada 5",
+   "titulo": "Bluetooth → Entrada 5",
    "linhas": [
     {
      "s": "medido",
-     "t": "Hoje ele está na <b>Entrada 9</b> (<code>3-1.2</code>)."
+     "t": "Hoje ele está na entrada <b>9</b> (<code>3-1.2</code>)."
     },
     {
      "s": "derivado",
-     "t": "Esta opção não usa a Entrada 9, onde ele está hoje."
+     "t": "Esta opção não usa a entrada 9, onde ele está hoje."
     },
     {
      "s": "espec",
@@ -1155,15 +1139,15 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Mova o dongle Bluetooth da Entrada 15a para a Entrada 7",
+   "titulo": "Bluetooth → Entrada 7",
    "linhas": [
     {
      "s": "medido",
-     "t": "Hoje ele está na <b>Entrada 15a</b> (<code>3-1.1.4</code>)."
+     "t": "Hoje ele está na entrada <b>15a</b> (<code>3-1.1.4</code>)."
     },
     {
      "s": "derivado",
-     "t": "Esta opção não usa a Entrada 15a, onde ele está hoje."
+     "t": "Esta opção não usa a entrada 15a, onde ele está hoje."
     },
     {
      "s": "espec",
@@ -1174,7 +1158,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o dongle Bluetooth na Entrada 2",
+   "titulo": "Bluetooth → Entrada 2",
    "linhas": [
     {
      "s": "medido",
@@ -1189,7 +1173,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o wi-fi na Entrada 3",
+   "titulo": "Wi-Fi → Entrada 3",
    "linhas": [
     {
      "s": "medido",
@@ -1212,7 +1196,7 @@
   {
    "essencial": false,
    "ganho": "Infinity",
-   "titulo": "Ponha a webcam na Entrada 6  ·  melhora, não é urgente",
+   "titulo": "Webcam → Entrada 6",
    "linhas": [
     {
      "s": "medido",
@@ -1227,7 +1211,7 @@
   {
    "essencial": false,
    "ganho": "Infinity",
-   "titulo": "Ponha o mouse na Entrada 8  ·  melhora, não é urgente",
+   "titulo": "Mouse → Entrada 8",
    "linhas": [
     {
      "s": "medido",
@@ -1259,16 +1243,16 @@
   }
  ],
  "consequencias/so-pc": [
-  "os dongles ficam na altura da mesa, não no alto do rack",
+  "os dongles ficam na altura da escrivaninha, não no alto do rack",
   "o extensor não é usado",
   "2 par(es) de rádio ficam colados"
  ],
- "qualidade/so-pc": 216,
+ "qualidade/so-pc": 210,
  "receita/sem-bonus-parado": [
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o dongle Bluetooth na Entrada 13",
+   "titulo": "Bluetooth → Entrada 13",
    "linhas": [
     {
      "s": "medido",
@@ -1291,7 +1275,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o wi-fi na Entrada 4",
+   "titulo": "Wi-Fi → Entrada 3",
    "linhas": [
     {
      "s": "medido",
@@ -1314,7 +1298,30 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o mouse na Entrada 7",
+   "titulo": "Teclado → Entrada 2",
+   "linhas": [
+    {
+     "s": "medido",
+     "t": "Hoje ele está na entrada <b>1</b> (<code>1-3</code>)."
+    },
+    {
+     "s": "derivado",
+     "t": "A Entrada 1 passou a ser do Hub, então este precisa de outro lugar."
+    },
+    {
+     "s": "espec",
+     "t": "Entrada direta do PC: hub externo nem sempre é ligado pelo firmware, e sem teclado você não entra na BIOS."
+    },
+    {
+     "s": "derivado",
+     "t": "Na frente, que é a mais perto de você."
+    }
+   ]
+  },
+  {
+   "essencial": true,
+   "ganho": "Infinity",
+   "titulo": "Mouse → Entrada 7",
    "linhas": [
     {
      "s": "medido",
@@ -1335,32 +1342,9 @@
    ]
   },
   {
-   "essencial": true,
-   "ganho": "Infinity",
-   "titulo": "Mova o cabo do hub da Entrada 4 para a Entrada 3",
-   "linhas": [
-    {
-     "s": "medido",
-     "t": "Hoje ele está na <b>Entrada 4</b> (<code>3-1</code>)."
-    },
-    {
-     "s": "derivado",
-     "t": "A Entrada 4 passou a ser do Wi-Fi, entao este precisa de outro lugar."
-    },
-    {
-     "s": "derivado",
-     "t": "Entrada direta do PC — o hub não pode pendurar em si mesmo."
-    },
-    {
-     "s": "derivado",
-     "t": "Entrada azul, para o hub entregar o que ele oferece."
-    }
-   ]
-  },
-  {
    "essencial": false,
    "ganho": "Infinity",
-   "titulo": "Ponha a webcam na Entrada 2  ·  melhora, não é urgente",
+   "titulo": "Webcam → Entrada 8",
    "linhas": [
     {
      "s": "medido",
@@ -1393,11 +1377,11 @@
  ],
  "planejar/sem-bonus-parado": {
   "plano": {
-   "1": "teclado",
-   "2": "webcam",
-   "3": "hub",
-   "4": "wifi",
+   "2": "teclado",
+   "3": "wifi",
+   "4": "hub",
    "7": "mouse",
+   "8": "webcam",
    "9": "bt-a",
    "13": "bt-c",
    "15a": "bt-b"
@@ -1405,10 +1389,6 @@
   "motivo": {
    "hub": {
     "razoes": [
-     {
-      "selo": "derivado",
-      "txt": "a Entrada 4 passou a ser do Wi-Fi, entao este precisa de outro lugar"
-     },
      {
       "selo": "derivado",
       "txt": "entrada direta do PC — o hub não pode pendurar em si mesmo"
@@ -1419,12 +1399,16 @@
      }
     ],
     "peso": "essencial",
-    "ganho": "Infinity",
-    "forcado": true,
-    "essencial": true
+    "ganho": 0,
+    "forcado": false,
+    "essencial": false
    },
    "teclado": {
     "razoes": [
+     {
+      "selo": "derivado",
+      "txt": "a Entrada 1 passou a ser do Hub, então este precisa de outro lugar"
+     },
      {
       "selo": "espec",
       "txt": "entrada direta do PC: hub externo nem sempre é ligado pelo firmware, e sem teclado você não entra na BIOS"
@@ -1436,16 +1420,12 @@
      {
       "selo": "espec",
       "txt": "longe de outro rádio de 2,4 GHz — dois receptores encostados se atrapalham"
-     },
-     {
-      "selo": "derivado",
-      "txt": "sem gastar uma entrada azul, que ele não usa"
      }
     ],
     "peso": "essencial",
-    "ganho": 0,
-    "forcado": false,
-    "essencial": false
+    "ganho": "Infinity",
+    "forcado": true,
+    "essencial": true
    },
    "wifi": {
     "razoes": [
@@ -1588,15 +1568,15 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Mova o dongle Bluetooth da Entrada 5 para a Entrada 1",
+   "titulo": "Bluetooth → Entrada 1",
    "linhas": [
     {
      "s": "medido",
-     "t": "Hoje ele está na <b>Entrada 5</b> (<code>3-1.2</code>)."
+     "t": "Hoje ele está na entrada <b>5</b> (<code>3-1.2</code>)."
     },
     {
      "s": "derivado",
-     "t": "A Entrada 5 passou a ser do Wi-Fi, entao este precisa de outro lugar."
+     "t": "A Entrada 5 passou a ser do Wi-Fi, então este precisa de outro lugar."
     },
     {
      "s": "espec",
@@ -1607,15 +1587,15 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Mova o wi-fi da Entrada 3 para a Entrada 5",
+   "titulo": "Wi-Fi → Entrada 5",
    "linhas": [
     {
      "s": "medido",
-     "t": "Hoje ele está na <b>Entrada 3</b> (<code>4-2</code>)."
+     "t": "Hoje ele está na entrada <b>3</b> (<code>4-2</code>)."
     },
     {
      "s": "derivado",
-     "t": "A Entrada 3 passou a ser do Teclado, entao este precisa de outro lugar."
+     "t": "A Entrada 3 passou a ser do Teclado, então este precisa de outro lugar."
     },
     {
      "s": "espec",
@@ -1629,12 +1609,12 @@
   },
   {
    "essencial": false,
-   "ganho": 4,
-   "titulo": "Mova o teclado da Entrada 1 para a Entrada 3  ·  melhora, não é urgente",
+   "ganho": 10,
+   "titulo": "Teclado → Entrada 3",
    "linhas": [
     {
      "s": "medido",
-     "t": "Hoje ele está na <b>Entrada 1</b> (<code>1-3</code>)."
+     "t": "Hoje ele está na entrada <b>1</b> (<code>1-3</code>)."
     },
     {
      "s": "espec",
@@ -1663,272 +1643,272 @@
  ],
  "julgar/1/bt": {
   "v": "cheia",
-  "txt": "ocupada",
+  "txt": "Ocupada",
   "porque": "Teclado — clique para tirar"
  },
  "julgar/1/wifi": {
   "v": "cheia",
-  "txt": "ocupada",
+  "txt": "Ocupada",
   "porque": "Teclado — clique para tirar"
  },
  "julgar/1/teclado": {
   "v": "cheia",
-  "txt": "ocupada",
+  "txt": "Ocupada",
   "porque": "Teclado — clique para tirar"
  },
  "julgar/1/mouse": {
   "v": "cheia",
-  "txt": "ocupada",
+  "txt": "Ocupada",
   "porque": "Teclado — clique para tirar"
  },
  "julgar/1/webcam": {
   "v": "cheia",
-  "txt": "ocupada",
+  "txt": "Ocupada",
   "porque": "Teclado — clique para tirar"
  },
  "julgar/1/null": {
   "v": "cheia",
-  "txt": "ocupada",
+  "txt": "Ocupada",
   "porque": "Teclado — clique para tirar"
  },
  "julgar/2/bt": {
   "v": "evite",
-  "txt": "vale evitar",
+  "txt": "Vale evitar",
   "porque": "colada no Teclado, na Entrada 1"
  },
  "julgar/2/wifi": {
   "v": "evite",
-  "txt": "vale evitar",
-  "porque": "entrada preta — o Wi-Fi perde velocidade"
+  "txt": "Vale evitar",
+  "porque": "colada no Teclado, na Entrada 1"
  },
  "julgar/2/teclado": {
   "v": "evite",
-  "txt": "vale evitar",
+  "txt": "Vale evitar",
   "porque": "colada no Teclado, na Entrada 1"
  },
  "julgar/2/mouse": {
   "v": "evite",
-  "txt": "vale evitar",
+  "txt": "Vale evitar",
   "porque": "colada no Teclado, na Entrada 1"
  },
  "julgar/2/webcam": {
-  "v": "melhor",
-  "txt": "melhor lugar",
-  "porque": "entrada preta, que é o que ela pede"
+  "v": "serve",
+  "txt": "Serve",
+  "porque": "gasta uma entrada azul que ela não precisa"
  },
  "julgar/2/null": null,
  "julgar/3/bt": {
   "v": "serve",
-  "txt": "serve",
-  "porque": "entrada direta, mas na altura da mesa"
+  "txt": "Serve",
+  "porque": "entrada direta, mas na altura da escrivaninha"
  },
  "julgar/3/wifi": {
   "v": "melhor",
-  "txt": "melhor lugar",
+  "txt": "Melhor lugar",
   "porque": "azul, direta do PC e longe das antenas de rádio"
  },
  "julgar/3/teclado": {
   "v": "melhor",
-  "txt": "melhor lugar",
+  "txt": "Melhor lugar",
   "porque": "direta do PC — funciona na BIOS e na recuperação"
  },
  "julgar/3/mouse": {
   "v": "serve",
-  "txt": "serve",
+  "txt": "Serve",
   "porque": "gasta uma entrada azul que ele não usa"
  },
  "julgar/3/webcam": {
   "v": "serve",
-  "txt": "serve",
+  "txt": "Serve",
   "porque": "gasta uma entrada azul que ela não precisa"
  },
  "julgar/3/null": null,
  "julgar/7/bt": {
   "v": "serve",
-  "txt": "serve",
-  "porque": "entrada direta, mas na altura da mesa"
+  "txt": "Serve",
+  "porque": "entrada direta, mas na altura da escrivaninha"
  },
  "julgar/7/wifi": {
   "v": "evite",
-  "txt": "vale evitar",
+  "txt": "Vale evitar",
   "porque": "entrada preta — o Wi-Fi perde velocidade"
  },
  "julgar/7/teclado": {
   "v": "melhor",
-  "txt": "melhor lugar",
+  "txt": "Melhor lugar",
   "porque": "direta do PC — funciona na BIOS e na recuperação"
  },
  "julgar/7/mouse": {
   "v": "melhor",
-  "txt": "melhor lugar",
+  "txt": "Melhor lugar",
   "porque": "entrada preta, longe de outro rádio"
  },
  "julgar/7/webcam": {
   "v": "melhor",
-  "txt": "melhor lugar",
+  "txt": "Melhor lugar",
   "porque": "entrada preta, que é o que ela pede"
  },
  "julgar/7/null": null,
  "julgar/9/bt": {
   "v": "cheia",
-  "txt": "ocupada",
+  "txt": "Ocupada",
   "porque": "Bluetooth — clique para tirar"
  },
  "julgar/9/wifi": {
   "v": "cheia",
-  "txt": "ocupada",
+  "txt": "Ocupada",
   "porque": "Bluetooth — clique para tirar"
  },
  "julgar/9/teclado": {
   "v": "cheia",
-  "txt": "ocupada",
+  "txt": "Ocupada",
   "porque": "Bluetooth — clique para tirar"
  },
  "julgar/9/mouse": {
   "v": "cheia",
-  "txt": "ocupada",
+  "txt": "Ocupada",
   "porque": "Bluetooth — clique para tirar"
  },
  "julgar/9/webcam": {
   "v": "cheia",
-  "txt": "ocupada",
+  "txt": "Ocupada",
   "porque": "Bluetooth — clique para tirar"
  },
  "julgar/9/null": {
   "v": "cheia",
-  "txt": "ocupada",
+  "txt": "Ocupada",
   "porque": "Bluetooth — clique para tirar"
  },
  "julgar/10/bt": {
   "v": "evite",
-  "txt": "vale evitar",
+  "txt": "Vale evitar",
   "porque": "colada no Bluetooth, na Entrada 9"
  },
  "julgar/10/wifi": {
   "v": "ruim",
-  "txt": "evite",
+  "txt": "Evite",
   "porque": "aqui o tráfego dele em 5 Gbps fica ao lado dos dongles do controle"
  },
  "julgar/10/teclado": {
   "v": "ruim",
-  "txt": "evite",
+  "txt": "Evite",
   "porque": "no hub você pode ficar sem teclado na BIOS"
  },
  "julgar/10/mouse": {
   "v": "evite",
-  "txt": "vale evitar",
+  "txt": "Vale evitar",
   "porque": "colada no Bluetooth, na Entrada 9"
  },
  "julgar/10/webcam": {
   "v": "serve",
-  "txt": "serve",
+  "txt": "Serve",
   "porque": "gasta uma entrada azul que ela não precisa"
  },
  "julgar/10/null": null,
  "julgar/13/bt": {
   "v": "melhor",
-  "txt": "melhor lugar",
+  "txt": "Melhor lugar",
   "porque": "no alto do rack, com a antena acima das cabeças"
  },
  "julgar/13/wifi": {
   "v": "ruim",
-  "txt": "evite",
+  "txt": "Evite",
   "porque": "aqui o tráfego dele em 5 Gbps fica ao lado dos dongles do controle"
  },
  "julgar/13/teclado": {
   "v": "ruim",
-  "txt": "evite",
+  "txt": "Evite",
   "porque": "no hub você pode ficar sem teclado na BIOS"
  },
  "julgar/13/mouse": {
   "v": "serve",
-  "txt": "serve",
+  "txt": "Serve",
   "porque": "gasta uma entrada azul que ele não usa"
  },
  "julgar/13/webcam": {
   "v": "serve",
-  "txt": "serve",
+  "txt": "Serve",
   "porque": "gasta uma entrada azul que ela não precisa"
  },
  "julgar/13/null": null,
  "julgar/15/bt": {
   "v": "cheia",
-  "txt": "indisponível",
-  "porque": "o extensor está nela"
+  "txt": "Ocupada",
+  "porque": "Com o extensor"
  },
  "julgar/15/wifi": {
   "v": "cheia",
-  "txt": "indisponível",
-  "porque": "o extensor está nela"
+  "txt": "Ocupada",
+  "porque": "Com o extensor"
  },
  "julgar/15/teclado": {
   "v": "cheia",
-  "txt": "indisponível",
-  "porque": "o extensor está nela"
+  "txt": "Ocupada",
+  "porque": "Com o extensor"
  },
  "julgar/15/mouse": {
   "v": "cheia",
-  "txt": "indisponível",
-  "porque": "o extensor está nela"
+  "txt": "Ocupada",
+  "porque": "Com o extensor"
  },
  "julgar/15/webcam": {
   "v": "cheia",
-  "txt": "indisponível",
-  "porque": "o extensor está nela"
+  "txt": "Ocupada",
+  "porque": "Com o extensor"
  },
  "julgar/15/null": {
   "v": "cheia",
-  "txt": "indisponível",
-  "porque": "o extensor está nela"
+  "txt": "Ocupada",
+  "porque": "Com o extensor"
  },
  "julgar/15a/bt": {
   "v": "cheia",
-  "txt": "ocupada",
+  "txt": "Ocupada",
   "porque": "Bluetooth — clique para tirar"
  },
  "julgar/15a/wifi": {
   "v": "cheia",
-  "txt": "ocupada",
+  "txt": "Ocupada",
   "porque": "Bluetooth — clique para tirar"
  },
  "julgar/15a/teclado": {
   "v": "cheia",
-  "txt": "ocupada",
+  "txt": "Ocupada",
   "porque": "Bluetooth — clique para tirar"
  },
  "julgar/15a/mouse": {
   "v": "cheia",
-  "txt": "ocupada",
+  "txt": "Ocupada",
   "porque": "Bluetooth — clique para tirar"
  },
  "julgar/15a/webcam": {
   "v": "cheia",
-  "txt": "ocupada",
+  "txt": "Ocupada",
   "porque": "Bluetooth — clique para tirar"
  },
  "julgar/15a/null": {
   "v": "cheia",
-  "txt": "ocupada",
+  "txt": "Ocupada",
   "porque": "Bluetooth — clique para tirar"
  },
  "julgar-segurando/bt-c/1": {
   "v": "cheia",
-  "txt": "ocupada",
+  "txt": "Ocupada",
   "porque": "Teclado — clique para tirar"
  },
  "julgar-segurando/bt-c/2": {
   "v": "fora",
-  "txt": "outra região",
+  "txt": "Outra região",
   "porque": "este está no hub"
  },
  "julgar-segurando/bt-c/10": {
   "v": "evite",
-  "txt": "vale evitar",
+  "txt": "Vale evitar",
   "porque": "colada no Bluetooth, na Entrada 9"
  },
  "julgar-segurando/bt-c/15a": {
   "v": "cheia",
-  "txt": "ocupada",
+  "txt": "Ocupada",
   "porque": "Bluetooth — clique para tirar"
  },
  "reexame/antes-agora": [
@@ -2222,11 +2202,11 @@
  "mapa-vazio/alocacao": {},
  "mapa-vazio/planejar": {
   "plano": {
-   "1": "teclado",
-   "2": "webcam",
-   "3": "hub",
-   "4": "wifi",
+   "1": "hub",
+   "2": "teclado",
+   "3": "wifi",
    "7": "mouse",
+   "8": "webcam",
    "9": "bt-b",
    "13": "bt-c",
    "15a": "bt-a"
@@ -2261,10 +2241,6 @@
      {
       "selo": "espec",
       "txt": "longe de outro rádio de 2,4 GHz — dois receptores encostados se atrapalham"
-     },
-     {
-      "selo": "derivado",
-      "txt": "sem gastar uma entrada azul, que ele não usa"
      }
     ],
     "peso": "essencial",
@@ -2410,7 +2386,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o dongle Bluetooth na Entrada 15a",
+   "titulo": "Bluetooth → Entrada 15a",
    "linhas": [
     {
      "s": "medido",
@@ -2433,7 +2409,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o dongle Bluetooth na Entrada 9",
+   "titulo": "Bluetooth → Entrada 9",
    "linhas": [
     {
      "s": "medido",
@@ -2456,7 +2432,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o dongle Bluetooth na Entrada 13",
+   "titulo": "Bluetooth → Entrada 13",
    "linhas": [
     {
      "s": "medido",
@@ -2479,7 +2455,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o wi-fi na Entrada 4",
+   "titulo": "Wi-Fi → Entrada 3",
    "linhas": [
     {
      "s": "medido",
@@ -2502,7 +2478,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o teclado na Entrada 1",
+   "titulo": "Teclado → Entrada 2",
    "linhas": [
     {
      "s": "medido",
@@ -2525,7 +2501,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o mouse na Entrada 7",
+   "titulo": "Mouse → Entrada 7",
    "linhas": [
     {
      "s": "medido",
@@ -2548,7 +2524,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o cabo do hub na Entrada 3",
+   "titulo": "Hub → Entrada 1",
    "linhas": [
     {
      "s": "medido",
@@ -2567,7 +2543,7 @@
   {
    "essencial": false,
    "ganho": "Infinity",
-   "titulo": "Ponha a webcam na Entrada 2  ·  melhora, não é urgente",
+   "titulo": "Webcam → Entrada 8",
    "linhas": [
     {
      "s": "medido",
@@ -2613,7 +2589,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o dongle Bluetooth na Entrada 15a",
+   "titulo": "Bluetooth → Entrada 15a",
    "linhas": [
     {
      "s": "medido",
@@ -2636,7 +2612,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o dongle Bluetooth na Entrada 9",
+   "titulo": "Bluetooth → Entrada 9",
    "linhas": [
     {
      "s": "medido",
@@ -2659,7 +2635,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o dongle Bluetooth na Entrada 13",
+   "titulo": "Bluetooth → Entrada 13",
    "linhas": [
     {
      "s": "medido",
@@ -2682,7 +2658,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o wi-fi na Entrada 4",
+   "titulo": "Wi-Fi → Entrada 3",
    "linhas": [
     {
      "s": "medido",
@@ -2705,7 +2681,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o teclado na Entrada 1",
+   "titulo": "Teclado → Entrada 2",
    "linhas": [
     {
      "s": "medido",
@@ -2728,7 +2704,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o mouse na Entrada 7",
+   "titulo": "Mouse → Entrada 7",
    "linhas": [
     {
      "s": "medido",
@@ -2751,7 +2727,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o cabo do hub na Entrada 3",
+   "titulo": "Hub → Entrada 1",
    "linhas": [
     {
      "s": "medido",
@@ -2770,7 +2746,7 @@
   {
    "essencial": false,
    "ganho": "Infinity",
-   "titulo": "Ponha a webcam na Entrada 2  ·  melhora, não é urgente",
+   "titulo": "Webcam → Entrada 8",
    "linhas": [
     {
      "s": "medido",
@@ -2838,10 +2814,6 @@
      {
       "selo": "espec",
       "txt": "longe de outro rádio de 2,4 GHz — dois receptores encostados se atrapalham"
-     },
-     {
-      "selo": "derivado",
-      "txt": "sem gastar uma entrada azul, que ele não usa"
      }
     ],
     "peso": "essencial",
@@ -2895,7 +2867,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o wi-fi na Entrada 3",
+   "titulo": "Wi-Fi → Entrada 3",
    "linhas": [
     {
      "s": "medido",
@@ -2918,7 +2890,7 @@
   {
    "essencial": true,
    "ganho": "Infinity",
-   "titulo": "Ponha o mouse na Entrada 7",
+   "titulo": "Mouse → Entrada 7",
    "linhas": [
     {
      "s": "medido",

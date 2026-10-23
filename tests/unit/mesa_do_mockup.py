@@ -1,7 +1,7 @@
 """mesa_do_mockup.py — a bancada, do jeito que o mockup a declara.
 
 Transcrição das constantes de
-``mockup/congelados/2026-08-24-mapa-das-portas.html``:
+``mockup/mapa-das-portas.html`` (a página viva que o gerador escreve):
 os oito aparelhos, as três faces, o mapa de 8 entradas de 16 e as duas leituras
 reais de 24/08/2026 (20h15 e 22h50).
 
@@ -17,6 +17,8 @@ MAC não entram neste módulo, nem nos testes que o usam.
 """
 
 from __future__ import annotations
+
+from dataclasses import replace
 
 from hefesto_dualsense4unix.integrations.arranjo_da_mesa import (
     Aparelho,
@@ -73,6 +75,14 @@ FACES: tuple[Face, ...] = (
     ),
 )
 
+#: As faces como a PÁGINA VIVA as declara (`EXEMPLO`): as duas entradas da frente são USB 3. As
+#: `FACES` acima seguem a leitura de 24/08, a das provas de regra (`test_arranjo_invariantes`); a
+#: concordância com o oráculo mede o porte contra os dados da página viva.
+FACES_DA_PAGINA_VIVA: tuple[Face, ...] = (
+    replace(FACES[0], entradas=tuple(replace(e, usb=3) for e in FACES[0].entradas)),
+    *FACES[1:],
+)
+
 MAPA: Mapa = {
     "1": "1-3", "4": "3-1", "5": "3-3", "6": "3-4",
     "9": "3-1.2", "11": "4-1.1.2", "13": "3-1.4", "15a": "3-1.1.4",
@@ -110,16 +120,17 @@ def mesa(
     mapa: Mapa | None = None,
     leitura: Leitura | None = None,
     aparelhos: tuple[Aparelho, ...] | None = None,
+    faces: tuple[Face, ...] | None = None,
 ) -> Mesa:
     """A mesa do mockup, com o que você quiser trocar."""
     return Mesa(
         aparelhos=APARELHOS if aparelhos is None else aparelhos,
-        faces=FACES,
+        faces=FACES if faces is None else faces,
         mapa=MAPA if mapa is None else mapa,
         leitura=LEITURA_AGORA if leitura is None else leitura,
     )
 
 
-def mesa_sem_hub() -> Mesa:
+def mesa_sem_hub(faces: tuple[Face, ...] | None = None) -> Mesa:
     """A mesa de agora: o hub fora do barramento, os três dongles com ele."""
-    return mesa(aparelhos=SEM_HUB_APARELHOS, leitura=SEM_HUB_LEITURA)
+    return mesa(aparelhos=SEM_HUB_APARELHOS, leitura=SEM_HUB_LEITURA, faces=faces)

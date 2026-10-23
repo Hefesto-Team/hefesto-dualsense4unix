@@ -1,12 +1,16 @@
 /* motor_do_arranjo_do_mockup.js — o ORÁCULO da porta para Python.
  *
  * Ele não copia o motor: EXTRAI o `<script>` de `mapa-das-portas.html` (a
- * especificação executável, 1058 linhas de lógica), corta fora a camada de
- * interação e desenho, e chama as funções puras sobre os mesmos cenários que
+ * página que o gerador `interface/pagina_do_mapa.py` escreve, a que o
+ * `--publicar` leva ao produto), corta fora a camada de interação e desenho, e
+ * chama as funções puras sobre os mesmos cenários que
  * `tests/unit/test_arranjo_da_mesa_bate_com_o_mockup.py` dá ao Python.
  *
  * Copiar o motor para cá seria a segunda verdade que esta leva existe para
- * matar: a cópia envelheceria em silêncio no dia em que o mockup mudasse.
+ * matar: a cópia envelheceria em silêncio no dia em que o mockup mudasse. E
+ * ler o congelado de 24/08, que é só a origem do gerador, mediria a regra de
+ * antes: a página viva já diz a entrada pelo `naFraseDe` do dono e entrega o
+ * arranjo por `window.hefestoArranjo`.
  *
  *   node tests/fixtures/motor_do_arranjo_do_mockup.js > saida.json
  *
@@ -17,8 +21,7 @@
 var fs = require("fs");
 var path = require("path");
 
-var HTML = path.join(__dirname, "..", "..", "mockup",
-                     "congelados", "2026-08-24-mapa-das-portas.html");
+var HTML = path.join(__dirname, "..", "..", "mockup", "mapa-das-portas.html");
 
 var linhas = fs.readFileSync(HTML, "utf8").split("\n");
 var ini = linhas.findIndex(function (l) { return l.trim() === "(function () {"; });
@@ -27,38 +30,7 @@ if (ini === -1 || fim === -1 || fim <= ini) {
   console.error("não achei os limites do motor dentro do mockup");
   process.exit(2);
 }
-
-/* A GRAFIA DA ENTRADA, pelo dono (O-MOTOR-DO-ARRANJO-E-O-DESENHO-DIZEM-A-ENTRADA-
-   PELO-DONO-01, 21/10/2026). O congelado é de 24/08, de antes da D-2609-O-NOME-E-DA-
-   POSICAO: ele monta «entrada » + número à mão. A página viva do mapa
-   (`mockup/mapa-das-portas.html`) passa as mesmas frases pelo `naFraseDe`, e o
-   porte em Python pelo `utils/rotulo_da_entrada.py`. Aqui as mesmas frases do
-   congelado passam pelo `naFraseDe`; os cenários não declaram nome de entrada, e
-   sem nome o dono diz «Entrada N». Cada troca tem de casar exatamente as vezes
-   contadas: o congelado que mudar faz o oráculo parar, não mentir. */
-var GRAFIA = [
-  ['"a entrada " + atual + " passou', '"a " + naFraseDe(atual) + " passou', 2],
-  ['"a entrada " + de + " passou', '"a " + naFraseDe(de) + " passou', 1],
-  ['não usa a entrada {de}, onde', 'não usa a {de}, onde', 1],
-  ['PORQUE_A_VARIANTE_TIROU.replace("{de}", de)',
-   'PORQUE_A_VARIANTE_TIROU.replace("{de}", naFraseDe(de))', 1],
-  ['"Hoje ele está na entrada <b>" + de + "</b>', '"Hoje ele está na <b>" + naFraseDe(de) + "</b>', 1],
-  ['" da entrada " + de + " para a " + para', '" da " + naFraseDe(de) + " para a " + naFraseDe(para)', 1],
-  ['" na entrada " + para;', '" na " + naFraseDe(para);', 1],
-  ['", na entrada " + porta.par', '", na " + naFraseDe(porta.par)', 4],
-  ['rotulo: p ? "entrada " + p :', 'rotulo: p ? naFraseDe(p) :', 1],
-];
 var fonte = linhas.slice(ini, fim).join("\n");
-GRAFIA.forEach(function (t) {
-  var partes = fonte.split(t[0]);
-  if (partes.length - 1 !== t[2]) {
-    console.error("a grafia não casou " + t[2] + " vez(es): " + t[0] + " (casou " + (partes.length - 1) + ")");
-    process.exit(2);
-  }
-  fonte = partes.join(t[1]);
-});
-fonte = fonte.replace("(function () {",
-  "(function () {\n  function naFraseDe(n) { return \"Entrada \" + n; }");
 
 /* o motor, sem a camada de interação, mais o bloco que o exporta */
 var motor = fonte + "\n" + [
