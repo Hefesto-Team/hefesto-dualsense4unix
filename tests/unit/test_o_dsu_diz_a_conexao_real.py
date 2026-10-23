@@ -125,12 +125,13 @@ def test_a_conversao_do_transporte_e_um_dono_so() -> None:
 
 
 def test_a_tabela_do_laco_leva_o_transporte_do_backend() -> None:
-    """`montar_a_tabela` não descarta o `transport` que o `describe_controllers` publica."""
+    """`montar_a_tabela` leva o `transport` do `describe_controllers`, de P1 a P4."""
     cabo, radio = UNIQ_CABO, UNIQ_RADIO
+    radio_p3, cabo_p4 = "aa:bb:cc:00:00:04", "aa:bb:cc:00:00:05"
 
     class Coop:
         def player_indexes(self) -> dict[str, int]:
-            return {cabo: 1, radio: 2}
+            return {cabo: 1, radio: 2, radio_p3: 3, cabo_p4: 4}
 
     daemon: Any = SimpleNamespace(
         _gamepad_device=object(),
@@ -140,6 +141,13 @@ def test_a_tabela_do_laco_leva_o_transporte_do_backend() -> None:
     entradas = [
         {"uniq": cabo, "connected": True, "transport": "usb", "is_primary": True},
         {"uniq": radio, "connected": True, "transport": "bt", "is_primary": False},
+        {"uniq": radio_p3, "connected": True, "transport": "bt", "is_primary": False},
+        {"uniq": cabo_p4, "connected": True, "transport": "usb", "is_primary": False},
     ]
     tabela = montar_a_tabela(daemon, entradas)
-    assert {slot: s.transport for slot, s in tabela.items()} == {0: "usb", 1: "bt"}
+    assert {slot: s.transport for slot, s in tabela.items()} == {
+        0: "usb",
+        1: "bt",
+        2: "bt",
+        3: "usb",
+    }
