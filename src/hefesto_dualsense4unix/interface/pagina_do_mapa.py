@@ -6709,7 +6709,53 @@ EDICOES_DO_CODEQL: tuple[Edicao, ...] = (
     ),
 )
 
-EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = ()
+#: O que a bancada já diz e a cópia do produto ainda não: o `--publicar mapa-das-portas.html`
+#: (da costura) junta estas ao fim de `EDICOES` e deixa a tupla vazia.
+EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
+    Edicao(
+        antes=(
+            '          linhas.push({ s: "medido", t: "Hoje ele está na entrada <b>" + de'
+            ' + "</b> (<code>" + caminhoDe(a.id) + "</code>)." });\n'
+        ),
+        depois=(
+            '          linhas.push({ s: "medido", t: "Hoje ele está na <b>" + naFraseDe(de)'
+            ' + "</b> (<code>" + caminhoDe(a.id) + "</code>)." });\n'
+        ),
+        porque=(
+            "23/10/2026, O-PORTE-E-A-PAGINA-DO-ARRANJO-DIZEM-O-MESMO-TEXTO-01: a linha «Hoje ele "
+            "está na entrada 9» montava «entrada » + número à mão e ignorava o nome que o dono "
+            "deu; as nove vizinhas já dizem a entrada por `naFraseDe`."
+        ),
+    ),
+    Edicao(
+        antes=(
+            '  var PORQUE_A_VARIANTE_TIROU = "esta opção não usa a entrada {de}, onde ele está'
+            ' hoje";\n'
+        ),
+        depois=(
+            '  var PORQUE_A_VARIANTE_TIROU = "esta opção não usa a {de}, onde ele está hoje";\n'
+        ),
+        porque=(
+            "23/10/2026, O-PORTE-E-A-PAGINA-DO-ARRANJO-DIZEM-O-MESMO-TEXTO-01: o porquê da "
+            "variante que tirou a entrada de hoje deixava «a entrada {de}» com o número cru; o "
+            "lugar de `{de}` passa a receber a entrada dita pelo dono (a edição seguinte)."
+        ),
+    ),
+    Edicao(
+        antes=(
+            'txt: PORQUE_A_VARIANTE_TIROU.replace("{de}", de) });\n'
+        ),
+        depois=(
+            'txt: PORQUE_A_VARIANTE_TIROU.replace("{de}", function () { return naFraseDe(de); })'
+            ' });\n'
+        ),
+        porque=(
+            "23/10/2026, O-PORTE-E-A-PAGINA-DO-ARRANJO-DIZEM-O-MESMO-TEXTO-01: a entrada de "
+            "hoje entra no porquê pelo `naFraseDe` do dono («a Entrada 9», «a entrada Atrás»); a "
+            "troca é por função para que um nome com `$` não vire padrão de `replace`."
+        ),
+    ),
+)
 
 
 def pagina(com_as_que_esperam: bool = True) -> str:

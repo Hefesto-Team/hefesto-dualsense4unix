@@ -1102,7 +1102,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
   /* A frase que a receita diz quando a variante tirou do tabuleiro a entrada em
      que o aparelho está hoje — o único caso em que ele sai de um lugar bom sem
      ganho nenhum, e sem esta linha a ordem de serviço não teria porquê. */
-  var PORQUE_A_VARIANTE_TIROU = "esta opção não usa a entrada {de}, onde ele está hoje";
+  var PORQUE_A_VARIANTE_TIROU = "esta opção não usa a {de}, onde ele está hoje";
 
   /* D-MAPA-SEM-RECEITA: se não há ordem, o mapa não move nada. Roda DEPOIS do
      passe dos intercambiáveis, que ainda troca destinos entre irmãos.
@@ -1131,7 +1131,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
       var rz = n.razoes.slice();
       if (tomada) rz.unshift({ selo: "derivado",
         txt: "a " + naFraseDe(de) + " passou a ser do " + (acha(plano[de]) || {}).tipo + ", então este precisa de outro lugar" });
-      else if (!volta) rz.unshift({ selo: "derivado", txt: PORQUE_A_VARIANTE_TIROU.replace("{de}", de) });
+      else if (!volta) rz.unshift({ selo: "derivado", txt: PORQUE_A_VARIANTE_TIROU.replace("{de}", function () { return naFraseDe(de); }) });
       motivo[a.id] = { razoes: rz, peso: n.peso,
         ganho: (tomada || !volta) ? Infinity : (n.n - na),
         forcado: !!tomada || !volta,
@@ -1158,7 +1158,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
         else if (pd && pd.onde === "hub" && a.classe === "teclado")
           linhas.push({ s: "medido", t: "Hoje ele está pendurado no hub (<code>" + caminhoDe(a.id) + "</code>)." });
         else
-          linhas.push({ s: "medido", t: "Hoje ele está na entrada <b>" + de + "</b> (<code>" + caminhoDe(a.id) + "</code>)." });
+          linhas.push({ s: "medido", t: "Hoje ele está na <b>" + naFraseDe(de) + "</b> (<code>" + caminhoDe(a.id) + "</code>)." });
       } else {
         linhas.push({ s: "medido", t: "Ele apareceu no sistema e ainda não tem lugar no mapa." });
       }

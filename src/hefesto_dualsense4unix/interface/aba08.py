@@ -1245,17 +1245,16 @@ def _confere_no_produto(caminho, frases):
 
 
 _JULGAR = R / "src/hefesto_dualsense4unix/integrations/arranjo_da_mesa.py"
-V_OCUPADA = "ocupada"
-V_INDISPONIVEL = "indisponível"
-V_SERVE = "serve"
-V_EVITAR = "vale evitar"
-V_MELHOR = "melhor lugar"
+V_OCUPADA = "Ocupada"
+V_SERVE = "Serve"
+V_EVITAR = "Vale evitar"
+V_MELHOR = "Melhor lugar"
 P_TIRAR = "clique para tirar"
-P_EXTENSOR = "o extensor está nela"
+P_EXTENSOR = "Com o extensor"
 P_SERVE = "entrada direta, mas na altura da escrivaninha"
 P_MELHOR = "na ponta do extensor: a antena mais longe das outras"
 _confere_no_produto(_JULGAR, [
-    f'"{V_OCUPADA}", f"{{tipo}} — {P_TIRAR}"', f'"{V_INDISPONIVEL}"',
+    f'"{V_OCUPADA}", f"{{tipo}} — {P_TIRAR}"',
     f'"{P_EXTENSOR}"', f'Veredito("serve", "{V_SERVE}", "{P_SERVE}")',
     f'"{V_EVITAR}", colada', f'"{V_MELHOR}"', f'"{P_MELHOR}"',
 ])
@@ -1308,7 +1307,7 @@ def veredito(n, esticada=False):
     if n in QUEM_ESTA:
         return "cheia", V_OCUPADA, f"{QUEM_ESTA[n][0]} — {P_TIRAR}"
     if n in EXTENSAO:
-        return "cheia", V_INDISPONIVEL, P_EXTENSOR
+        return "cheia", V_OCUPADA, P_EXTENSOR
     vizinho = QUEM_ESTA.get(PARES.get(n, ""))
     if vizinho and vizinho[0] in ("Bluetooth", "Teclado", "Mouse"):
         return "evite", V_EVITAR, _motor.frase_da_colada(vizinho[0], na_frase(PARES[n]))

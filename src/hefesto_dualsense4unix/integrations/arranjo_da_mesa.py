@@ -80,7 +80,7 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     SLOTS_POR_RELATORIO,
     SLOTS_POR_SEGUNDO,
 )
-from hefesto_dualsense4unix.utils.rotulo_da_entrada import com_artigo, na_frase
+from hefesto_dualsense4unix.utils.rotulo_da_entrada import com_artigo, na_frase, rotulo
 
 Mapa = Mapping[str, str]
 Leitura = Mapping[str, str]
@@ -694,7 +694,7 @@ def _motivo_de(
         razoes.insert(0, Razao(
             SELO_DERIVADO,
             f"{com_artigo(mesa.na_frase(atual))} passou a ser do {outro.tipo if outro else ''},"
-            " entao este precisa de outro lugar",
+            " então este precisa de outro lugar",
         ))
     ganho = math.inf if tomada else (nota.n - nota_atual)
     return Motivo(
@@ -759,14 +759,10 @@ def _intercambiaveis_ficam(
             )
 
 
-def _rotulo(aparelho: Aparelho) -> tuple[str, str]:
-    if aparelho.classe == "bt":
-        return "o", "dongle Bluetooth"
-    if aparelho.classe == "hub":
-        return "o", "cabo do hub"
-    if aparelho.classe == "webcam":
-        return "a", "webcam"
-    return "o", aparelho.tipo.lower()
+def _em_atributo(texto: str) -> str:
+    """O texto como o ``emAtributo`` da página o escapa (o título vai direto ao ``innerHTML``)."""
+    return (texto.replace("&", "&amp;").replace('"', "&quot;").replace("'", "&#39;")
+            .replace("<", "&lt;").replace(">", "&gt;"))
 
 
 _FECHO = Movimento(
@@ -802,15 +798,9 @@ def receita(mesa: Mesa, op: Opcoes | None = None) -> list[Movimento]:
         for razao in motivo.razoes[:3]:
             linhas.append(Linha(razao.selo, razao.texto[:1].upper() + razao.texto[1:] + "."))
 
-        genero, nome = _rotulo(aparelho)
-        titulo = (
-            f"Mova {genero} {nome} {com_artigo(mesa.na_frase(de), de=True)}"
-            f" para {com_artigo(mesa.na_frase(para))}"
-            if de
-            else f"Ponha {genero} {nome} {com_artigo(mesa.na_frase(para), em=True)}"
-        )
-        if not motivo.essencial:
-            titulo += "  ·  melhora, não é urgente"
+        nome_dado = mesa.nomes.get(para) if para else None
+        titulo = (f"{_em_atributo(aparelho.tipo)} → "
+                  f"{_em_atributo(rotulo(para, nome_dado))}")
         movimentos.append(Movimento(
             titulo=titulo, linhas=tuple(linhas),
             essencial=motivo.essencial, ganho=motivo.ganho,
@@ -857,10 +847,10 @@ def julgar(
     if quem:
         aparelho = _acha(mesa, quem)
         tipo = aparelho.tipo if aparelho else ""
-        return Veredito("cheia", "ocupada", f"{tipo} — clique para tirar")
+        return Veredito("cheia", "Ocupada", f"{tipo} — clique para tirar")
     if ocupada(mesa.faces, aloc, entrada):
-        return Veredito("cheia", "indisponível",
-                        "o extensor está nela" if entrada.filho else "a entrada-mãe está em uso")
+        return Veredito("cheia", "Ocupada",
+                        "Com o extensor" if entrada.filho else "A entrada-mãe está em uso")
 
     if segurando:
         regiao = regiao_do_caminho(mesa.leitura.get(segurando), caminho_do_hub(mesa))
@@ -868,7 +858,7 @@ def julgar(
             entrada.onde == "hub" if regiao == "hub" else entrada.onde == "pc"
         )
         if not mesma:
-            return Veredito("fora", "outra região",
+            return Veredito("fora", "Outra região",
                             "este está no hub" if regiao == "hub" else "este está direto no PC")
 
     if not na_mao:
@@ -885,50 +875,50 @@ def julgar(
 
     if na_mao == "bt":
         if no_hub and superspeed:
-            return Veredito("ruim", "evite", "o Wi-Fi usa o SuperSpeed deste mesmo hub,"
+            return Veredito("ruim", "Evite", "o Wi-Fi usa o SuperSpeed deste mesmo hub,"
                                              " e esse tráfego vira ruído em 2,4 GHz")
         if vz_radio:
-            return Veredito("evite", "vale evitar", colada)
+            return Veredito("evite", "Vale evitar", colada)
         if entrada.esticada:
-            return Veredito("melhor", "melhor lugar",
+            return Veredito("melhor", "Melhor lugar",
                             "na ponta do extensor: a antena mais longe das outras")
         if no_hub:
-            return Veredito("melhor", "melhor lugar",
+            return Veredito("melhor", "Melhor lugar",
                             "no alto do rack, com a antena acima das cabeças")
-        return Veredito("serve", "serve", "entrada direta, mas na altura da escrivaninha")
+        return Veredito("serve", "Serve", "entrada direta, mas na altura da escrivaninha")
 
     if na_mao == "wifi":
         if no_hub:
-            return Veredito("ruim", "evite",
+            return Veredito("ruim", "Evite",
                             "aqui o tráfego dele em 5 Gbps fica ao lado dos dongles do controle")
         if entrada.usb != 3:
-            return Veredito("evite", "vale evitar", "entrada preta — o Wi-Fi perde velocidade")
+            return Veredito("evite", "Vale evitar", "entrada preta — o Wi-Fi perde velocidade")
         if vz_radio:
-            return Veredito("evite", "vale evitar", colada)
-        return Veredito("melhor", "melhor lugar",
+            return Veredito("evite", "Vale evitar", colada)
+        return Veredito("melhor", "Melhor lugar",
                         "azul, direta do PC e longe das antenas de rádio")
 
     if na_mao == "teclado":
         if no_hub:
-            return Veredito("ruim", "evite", "no hub você pode ficar sem teclado na BIOS")
+            return Veredito("ruim", "Evite", "no hub você pode ficar sem teclado na BIOS")
         if vz_radio:
-            return Veredito("evite", "vale evitar", colada)
-        return Veredito("melhor", "melhor lugar",
+            return Veredito("evite", "Vale evitar", colada)
+        return Veredito("melhor", "Melhor lugar",
                         "direta do PC — funciona na BIOS e na recuperação")
 
     if na_mao == "mouse":
         if vz_radio:
-            return Veredito("evite", "vale evitar", colada)
+            return Veredito("evite", "Vale evitar", colada)
         if no_hub and superspeed:
-            return Veredito("evite", "vale evitar", "hub com o tráfego do Wi-Fi ao lado")
+            return Veredito("evite", "Vale evitar", "hub com o tráfego do Wi-Fi ao lado")
         if entrada.usb == 3:
-            return Veredito("serve", "serve", "gasta uma entrada azul que ele não usa")
-        return Veredito("melhor", "melhor lugar", "entrada preta, longe de outro rádio")
+            return Veredito("serve", "Serve", "gasta uma entrada azul que ele não usa")
+        return Veredito("melhor", "Melhor lugar", "entrada preta, longe de outro rádio")
 
     if na_mao == "webcam":
         if entrada.usb == 3:
-            return Veredito("serve", "serve", "gasta uma entrada azul que ela não precisa")
-        return Veredito("melhor", "melhor lugar", "entrada preta, que é o que ela pede")
+            return Veredito("serve", "Serve", "gasta uma entrada azul que ela não precisa")
+        return Veredito("melhor", "Melhor lugar", "entrada preta, que é o que ela pede")
 
     return None
 

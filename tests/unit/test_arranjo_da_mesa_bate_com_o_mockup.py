@@ -38,20 +38,6 @@ def _js(v: object) -> str:
 
 PAGINA_VIVA = RAIZ / "mockup" / "mapa-das-portas.html"
 
-#: O que o porte em Python ainda diz diferente da página viva, medido em 23/10/2026: a caixa alta
-#: dos vereditos («Ocupada», «Vale evitar»), o título «Bluetooth → Entrada 13» da receita e duas
-#: frases que a página monta «entrada » + número à mão. A cura é a sprint
-#: `O-PORTE-E-A-PAGINA-DO-ARRANJO-DIZEM-O-MESMO-TEXTO-01`. O xfail é estrito: no dia em que o
-#: texto bater, o teste reprova e a marca sai daqui, em vez de mentir que ainda diverge.
-_DIVERGE = pytest.mark.xfail(
-    strict=True,
-    reason="o texto do porte diverge da página viva: sprint "
-           "O-PORTE-E-A-PAGINA-DO-ARRANJO-DIZEM-O-MESMO-TEXTO-01",
-)
-
-#: Os únicos julgamentos cujo texto o porte já diz igual à página viva (sem aparelho na mão).
-JULGAMENTOS_QUE_JA_BATEM = {(None, n) for n in ("2", "3", "7", "10", "13")}
-
 
 def ouro(chave: str) -> Any:
     """O que o mockup respondeu neste cenário, com ``Infinity`` de volta."""
@@ -166,13 +152,12 @@ def test_as_candidatas_saem_de_dezesseis_para_quatro() -> None:
 
 @pytest.mark.parametrize("variante", [
     "melhor", "poucos",
-    pytest.param("sem-ext", marks=_DIVERGE), pytest.param("so-pc", marks=_DIVERGE)])
+    "sem-ext", "so-pc"])
 def test_o_plano_e_o_mesmo_do_javascript(variante: str) -> None:
     plano = motor.planejar(_mesa(), OPCOES[variante])
     assert como_o_mockup_planeja(plano) == ouro(f"planejar/{variante}")
 
 
-@_DIVERGE
 @pytest.mark.parametrize("variante", ["melhor", "poucos", "sem-ext", "so-pc"])
 def test_a_receita_e_a_mesma_do_javascript(variante: str) -> None:
     movs = motor.receita(_mesa(), OPCOES[variante])
@@ -185,7 +170,6 @@ def test_o_que_se_perde_e_a_mesma_frase(variante: str) -> None:
     assert motor.qualidade(_mesa(), OPCOES[variante]) == ouro(f"qualidade/{variante}")
 
 
-@_DIVERGE
 def test_a_receita_sem_o_bonus_de_ficar_parado_bate_tambem() -> None:
     """A regra é PARÂMETRO, e o porte tem de reproduzir os dois valores dela."""
     op = motor.Opcoes(bonus_parado=0)
@@ -195,7 +179,6 @@ def test_a_receita_sem_o_bonus_de_ficar_parado_bate_tambem() -> None:
         "receita/sem-bonus-parado")
 
 
-@_DIVERGE
 def test_a_receita_do_mapa_vazio_e_do_mapa_torto() -> None:
     vazio = _mesa(mapa={})
     assert como_o_mockup_planeja(motor.planejar(vazio)) == ouro("mapa-vazio/planejar")
@@ -207,8 +190,7 @@ def test_a_receita_do_mapa_vazio_e_do_mapa_torto() -> None:
 
 
 @pytest.mark.parametrize("n, na_mao", [
-    pytest.param(n, na_mao, id=f"{na_mao}-{n}",
-                 marks=() if (na_mao, n) in JULGAMENTOS_QUE_JA_BATEM else (_DIVERGE,))
+    pytest.param(n, na_mao, id=f"{na_mao}-{n}")
     for na_mao in ("bt", "wifi", "teclado", "mouse", "webcam", None)
     for n in ("1", "2", "3", "7", "9", "10", "13", "15", "15a")])
 def test_o_julgamento_de_cada_entrada_e_o_mesmo(n: str, na_mao: str | None) -> None:
@@ -218,7 +200,6 @@ def test_o_julgamento_de_cada_entrada_e_o_mesmo(n: str, na_mao: str | None) -> N
     assert _veredito(motor.julgar(entrada, na_mao, mesa)) == ouro(f"julgar/{n}/{_js(na_mao)}")
 
 
-@_DIVERGE
 @pytest.mark.parametrize("n", ["1", "2", "10", "15a"])
 def test_segurando_um_dongle_do_hub_a_outra_regiao_se_recusa(n: str) -> None:
     mesa = _mesa()
@@ -254,7 +235,6 @@ def test_os_quatro_no_mesmo_dongle_e_o_adaptador_que_sumiu() -> None:
     assert _plano_dos_controles(_mesa(), 4, orfaos) == ouro("controles/adaptador-sumiu")
 
 
-@_DIVERGE
 def test_sem_o_hub_o_motor_responde_e_nao_inventa() -> None:
     mesa = _mesa_sem_hub()
     assert motor.alocacao(mesa.mapa, mesa.leitura) == ouro("sem-hub/alocacao")
@@ -280,23 +260,9 @@ def test_sem_adaptador_nenhum_controle_cabe_e_o_motor_diz_isso() -> None:
     assert plano.destino == {}
 
 
-#: Duas entradas com nome, como o mapa dela guarda (o ``nome`` da porta declarada).
-_NOMES = {"9": "Atrás", "15a": "Ponta"}
-
-
-def _com_os_nomes(v: Any) -> Any:
-    """O ouro com cada «Entrada N» nomeada trocada pelo sintagma do dono («entrada Atrás»)."""
-    import re
-
-    if isinstance(v, str):
-        for numero, nome in _NOMES.items():
-            v = re.sub(rf"\bEntrada {re.escape(numero)}(?![0-9a-z])", f"entrada {nome}", v)
-        return v
-    if isinstance(v, list):
-        return [_com_os_nomes(x) for x in v]
-    if isinstance(v, dict):
-        return {k: _com_os_nomes(x) for k, x in v.items()}
-    return v
+#: As entradas com nome, como o mapa dela as guarda (o ``nome`` da porta declarada). São as mesmas
+#: que o oráculo dá à página viva nos cenários ``nomes/...``.
+_NOMES = {"9": "Atrás", "15a": "Ponta", "13": "Alto", "5": "Meio"}
 
 
 def _mesa_com_nomes(**kw: Any) -> motor.Mesa:
@@ -305,44 +271,45 @@ def _mesa_com_nomes(**kw: Any) -> motor.Mesa:
     return replace(_mesa(**kw), nomes=_NOMES)
 
 
-@_DIVERGE
 @pytest.mark.parametrize("variante", ["melhor", "poucos", "sem-ext", "so-pc"])
 def test_o_nome_que_ela_deu_entra_em_toda_frase_da_receita(variante: str) -> None:
-    """A frase do motor diz a entrada pelo dono: com nome, «na entrada Atrás»; sem, «na Entrada 9».
+    """A página diz a entrada pelo dono: com nome, «na entrada Atrás» e o título «… → Alto»; sem,
+    «na Entrada 9». O ouro é a PÁGINA VIVA com os nomes dados, não o ouro sem nome remendado.
 
     MORDIDA: uma frase da receita que volte a montar «entrada » + número à mão reprova aqui
     (e na régua do dono único, `test_a_costura_da_onda_2::test_o_nome_da_porta_tem_um_dono_so`)."""
     movs = motor.receita(_mesa_com_nomes(), OPCOES[variante])
-    esperado = _com_os_nomes(_receita_do_ouro(f"receita/{variante}"))
-    assert como_o_mockup_receita(movs) == esperado
+    assert como_o_mockup_receita(movs) == _receita_do_ouro(f"nomes/receita/{variante}")
 
 
-@_DIVERGE
 @pytest.mark.parametrize("n", ["1", "2", "10", "15a"])
 @pytest.mark.parametrize("na_mao", ["bt", "teclado", "mouse"])
 def test_o_nome_que_ela_deu_entra_no_porque_do_julgamento(n: str, na_mao: str) -> None:
     mesa = _mesa_com_nomes()
     entrada = motor.por_num(mesa.faces, n)
     assert entrada is not None
-    esperado = _com_os_nomes(ouro(f"julgar/{n}/{na_mao}"))
-    assert _veredito(motor.julgar(entrada, na_mao, mesa)) == esperado
+    assert _veredito(motor.julgar(entrada, na_mao, mesa)) == ouro(f"nomes/julgar/{n}/{na_mao}")
 
 
 def test_o_nome_que_ela_deu_entra_no_rotulo_do_adaptador() -> None:
     plano = _controles(motor.plano_dos_controles(
         mock.CONTROLES[:4], motor.adaptadores_da_mesa(_mesa_com_nomes())))
-    assert plano == _com_os_nomes(ouro("controles/padrao"))
+    assert plano == ouro("nomes/controles/padrao")
     assert {a["rotulo"] for a in plano["ads"]} >= {"entrada Atrás", "entrada Ponta"}
 
 
-@_DIVERGE
 def test_a_prova_dos_nomes_nao_e_vazia() -> None:
-    """Os cenários acima passam por frases com a Entrada 9 e a 15a: a troca muda o ouro."""
-    receitas = [f"receita/{v}" for v in ("melhor", "poucos", "sem-ext", "so-pc")]
-    julgados = [f"julgar/{n}/{m}" for n in ("1", "2", "10", "15a")
-                for m in ("bt", "teclado", "mouse")]
-    assert sum(_com_os_nomes(ouro(k)) != ouro(k) for k in receitas) >= 2
-    assert sum(_com_os_nomes(ouro(k)) != ouro(k) for k in julgados) >= 2
+    """Os cenários acima passam por frases com a Entrada 9, a 13 e a 15a: o nome muda o ouro, e a
+    frase «Hoje ele está na entrada Atrás» (a que a página montava à mão) está nele."""
+    receitas = ("melhor", "poucos", "sem-ext", "so-pc")
+    assert sum(ouro(f"nomes/receita/{v}") != ouro(f"receita/{v}") for v in receitas) >= 3
+    julgados = [(n, m) for n in ("1", "2", "10", "15a") for m in ("bt", "teclado", "mouse")]
+    assert sum(ouro(f"nomes/julgar/{n}/{m}") != ouro(f"julgar/{n}/{m}") for n, m in julgados) >= 2
+    hoje = {ln["t"] for v in receitas for mov in ouro(f"nomes/receita/{v}") for ln in mov["linhas"]}
+    assert "Hoje ele está na <b>entrada Atrás</b> (<code>3-1.2</code>)." in hoje
+    assert any(t.startswith("Esta opção não usa a entrada Atrás") for t in hoje)
+    titulos = {mov["titulo"] for v in receitas for mov in ouro(f"nomes/receita/{v}")}
+    assert {"Bluetooth → Alto", "Bluetooth → Meio"} <= titulos
 
 
 def _oraculo_numa_arvore_so_com(pagina: str) -> subprocess.CompletedProcess[str]:
@@ -385,10 +352,9 @@ def test_o_oraculo_nao_remenda_a_grafia_da_pagina() -> None:
     assert "function naFraseDe" in PAGINA_VIVA.read_text(encoding="utf-8")
 
 
-# A divergência que o `_DIVERGE` declara é só de TEXTO (a frase do porquê e o título do
-# movimento). A regra embaixo dele (o veredito, o plano, o selo de cada razão, a entrada de
-# destino) tem de bater com a página viva sem exceção: sem estas réguas, um erro de regra no
-# porte se esconderia atrás do xfail do texto.
+# A régua da REGRA, sem o texto (o veredito, o plano, o selo de cada razão, a entrada de destino):
+# o texto já bate com a página viva nas réguas de cima, e estas separam o defeito de regra do de
+# frase — um erro de regra no porte aparece aqui com o nome certo, não como «a frase diverge».
 def _entrada(titulo: str) -> str | None:
     achou = re.findall(r"[Ee]ntrada (\w+)", titulo)
     return achou[-1] if achou else None

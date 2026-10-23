@@ -187,9 +187,9 @@ def test_as_edicoes_dos_mapas_estao_publicadas_e_a_copia_do_produto_e_a_pagina()
     MORDIDA: ponha uma edição dos mapas de volta em ``EDICOES_ESPERANDO_A_SESSAO_DELA``, ou a
     receita antiga na cópia publicada, e a régua reprova.
     """
-    assert pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA == ()
     for edicao in pagina_do_mapa.EDICOES_DOS_MAPAS_DO_TODO:
         assert edicao in pagina_do_mapa.EDICOES
+        assert edicao not in pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA
     publicada = (INTERFACE / "paginas/mapa-das-portas.html").read_text(encoding="utf-8")
     assert publicada == pagina_do_mapa.pagina(False)
     assert pagina_do_mapa.RECEITA_COM_A_DICA_NO_TITULO in publicada

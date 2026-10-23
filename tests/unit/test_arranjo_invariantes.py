@@ -26,9 +26,19 @@ TODAS = [("melhor", MELHOR), ("poucos", POUCOS), ("sem-ext", SEM_EXT),
          ("so-pc", SO_PC), ("sem-bonus", SEM_BONUS)]
 
 
+def _movs(mesa: motor.Mesa, op: motor.Opcoes | None = None) -> list[motor.Movimento]:
+    """Os movimentos da receita, sem a linha de fecho que não é movimento."""
+    return [m for m in motor.receita(mesa, op) if not m.sem_numero]
+
+
 def movimentos(mesa: motor.Mesa, op: motor.Opcoes | None = None) -> list[str]:
-    """Os títulos da receita, sem a linha de fecho que não é movimento."""
-    return [m.titulo for m in motor.receita(mesa, op) if not m.sem_numero]
+    """Os títulos da receita («Bluetooth → Entrada 9»), sem a linha de fecho."""
+    return [m.titulo for m in _movs(mesa, op)]
+
+
+def _tinha_lugar(m: motor.Movimento) -> bool:
+    """O aparelho já estava numa entrada (a primeira linha diz qual), não acabou de aparecer."""
+    return not m.linhas[0].texto.startswith("Ele apareceu")
 
 
 @pytest.fixture
@@ -68,9 +78,11 @@ def test_arrancada_a_regra_do_irmao_a_receita_salta_de_cinco_para_sete() -> None
     mesa = mock.mesa(leitura=mock.LEITURA_ANTES)
     saltou = movimentos(mesa)
     assert len(saltou) == 7, saltou
-    assert "Mova o dongle Bluetooth da Entrada 15a para a Entrada 9" in saltou
-    assert any(t.startswith("Mova o dongle Bluetooth da Entrada 9 para a Entrada 15a")
-               for t in saltou)
+    assert "Bluetooth → Entrada 9" in saltou
+    assert "Bluetooth → Entrada 15a" in saltou
+    de_para = {m.titulo: m.linhas[0].texto for m in _movs(mesa) if m.titulo.startswith("Bluetooth")}
+    assert "<b>Entrada 15a</b>" in de_para["Bluetooth → Entrada 9"]
+    assert "<b>Entrada 9</b>" in de_para["Bluetooth → Entrada 15a"]
 
 
 def test_o_bonus_de_ficar_parado_so_desempata() -> None:
@@ -89,10 +101,12 @@ def test_arrancado_o_bonus_mexendo_o_minimo_manda_mexer_em_mais() -> None:
     sem = movimentos(mesa, motor.Opcoes(bonus_parado=0, proibir=POUCOS.proibir))
     assert len(com) == 4, com
     assert len(sem) == 6, sem
-    webcam = "Mova a webcam da Entrada 6 para a Entrada 2  ·  melhora, não é urgente"
+    webcam = "Webcam → Entrada 2"
     assert webcam in sem
     assert webcam not in com
-    assert "Mova o cabo do hub da Entrada 4 para a Entrada 3" in sem
+    assert "Hub → Entrada 3" in sem
+    sem_movs = _movs(mesa, motor.Opcoes(bonus_parado=0, proibir=POUCOS.proibir))
+    assert [m.essencial for m in sem_movs if m.titulo == webcam] == [False]
 
 
 def test_ganho_negativo_nao_vira_ordem_de_servico() -> None:
@@ -102,14 +116,15 @@ def test_ganho_negativo_nao_vira_ordem_de_servico() -> None:
     parados = 0
     for nome, op in TODAS:
         plano = motor.planejar(mesa, op)
-        titulos = " || ".join(movimentos(mesa, op))
+        primeiras = " || ".join(m.linhas[0].texto for m in _movs(mesa, op))
         for aparelho in mesa.aparelhos:
             de = motor.entrada_de_em(aloc, aparelho.id)
             if not de or plano.motivo[aparelho.id].ganho > 0:
                 continue
             parados += 1
             assert motor.entrada_de_em(plano.plano, aparelho.id) == de, (nome, aparelho.id)
-            assert f"da entrada {de} para" not in titulos, (nome, aparelho.id)
+            caminho = mesa.leitura[aparelho.id]
+            assert f"<code>{caminho}</code>" not in primeiras, (nome, aparelho.id)
     assert parados, "o cenário deixou de exercitar ganho não-positivo"
 
 
@@ -140,26 +155,26 @@ def test_arrancado_o_filtro_a_receita_manda_mexer_a_toa(
         lambda de, para, motivo: bool(para) and de != para,
     )
     assert dict(motor.planejar(mesa, op).plano) == {"1": "cam"}
-    assert movimentos(mesa, op) == [
-        "Mova a webcam da Entrada 2 para a Entrada 1  ·  melhora, não é urgente"]
+    assert movimentos(mesa, op) == ["Webcam → Entrada 1"]
+    assert not _movs(mesa, op)[0].essencial
 
 
 def test_arrancado_o_filtro_a_mesa_dela_perde_a_urgencia_dos_forcados(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """A MORDIDA na mesa REAL: os três movimentos forçados viram "não é urgente"."""
+    """A MORDIDA na mesa REAL: os movimentos forçados de quem já tinha lugar não são urgentes."""
     mesa = mock.mesa()
-    com = movimentos(mesa, SO_PC)
+    com = _movs(mesa, SO_PC)
     monkeypatch.setattr(
         motor, "_receita_manda_mover",
         lambda de, para, motivo: bool(para) and de != para,
     )
-    sem = movimentos(mesa, SO_PC)
+    sem = _movs(mesa, SO_PC)
     assert len(com) == len(sem) == 6
-    urgentes = [t for t in com if "não é urgente" not in t]
-    assert len(urgentes) == 4, urgentes
-    assert [t for t in sem if "não é urgente" not in t] == [
-        t for t in urgentes if not t.startswith("Mova")]
+    urgentes = [m for m in com if m.essencial]
+    assert len(urgentes) == 4, [m.titulo for m in urgentes]
+    assert [m.titulo for m in sem if m.essencial] == [
+        m.titulo for m in urgentes if not _tinha_lugar(m)]
 
 
 DOIS_ADAPTADORES = (
@@ -216,12 +231,12 @@ def test_todo_aparelho_que_o_mapa_move_a_receita_manda_mover(
     mesa = mock.mesa()
     plano = motor.planejar(mesa, op)
     aloc = motor.alocacao(mesa.mapa, mesa.leitura)
-    titulos = " || ".join(movimentos(mesa, op))
+    titulos = movimentos(mesa, op)
     for aparelho in mesa.aparelhos:
         para = motor.entrada_de_em(plano.plano, aparelho.id)
         if not para or motor.entrada_de_em(aloc, aparelho.id) == para:
             continue
-        assert f"a Entrada {para}" in titulos, (nome, aparelho.id)
+        assert f"{aparelho.tipo} → Entrada {para}" in titulos, (nome, aparelho.id)
 
 
 @pytest.mark.usefixtures("sem_a_cura_do_mapa")
@@ -232,13 +247,13 @@ def test_arrancada_a_cura_o_mapa_move_tres_aparelhos_que_a_receita_nao_manda() -
     orfaos: dict[str, list[str]] = {}
     for nome, op in TODAS:
         plano = motor.planejar(mesa, op)
-        titulos = " || ".join(movimentos(mesa, op))
+        titulos = movimentos(mesa, op)
         for aparelho in mesa.aparelhos:
             para = motor.entrada_de_em(plano.plano, aparelho.id)
             de = motor.entrada_de_em(aloc, aparelho.id)
             if not para or de is None or de == para:
                 continue
-            if f"a Entrada {para}" not in titulos:
+            if f"{aparelho.tipo} → Entrada {para}" not in titulos:
                 orfaos.setdefault(nome, []).append(f"{aparelho.id}: {de}->{para}")
     assert orfaos == {
         "sem-ext": ["bt-b: 15a->15"],
@@ -253,7 +268,7 @@ def test_a_variante_que_tira_a_entrada_de_hoje_diz_por_que_esta_tirando() -> Non
     achou = 0
     for nome, op in [("sem-ext", SEM_EXT), ("so-pc", SO_PC)]:
         for movimento in motor.receita(mesa, op):
-            if not movimento.titulo.startswith("Mova"):
+            if not _tinha_lugar(movimento):
                 continue
             porques = [ln.texto for ln in movimento.linhas]
             if any(t.startswith("Esta opção não usa a Entrada") for t in porques):

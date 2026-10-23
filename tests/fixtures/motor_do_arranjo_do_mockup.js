@@ -47,6 +47,7 @@ var motor = fonte + "\n" + [
   "    set CONTROLES(v){ CONTROLES = v; },",
   "    get CONTROLES(){ return CONTROLES; },",
   "    set quantos(v){ quantos = v; },",
+  "    set DECLARADO(v){ DECLARADO = v; },",
   "    VARIANTES: VARIANTES,",
   "    FACES: FACES,",
   "    alocacao: function(){ return alocacaoDerivada(); },",
@@ -160,6 +161,27 @@ reset();
 m.segurando = "bt-c";
 m.naMao = "bt";
 ["1", "2", "10", "15a"].forEach(function (n) { out["julgar-segurando/bt-c/" + n] = m.julgar(n); });
+
+/* duas entradas COM NOME, como o mapa dela as guarda: a página diz a entrada pelo `naFraseDe` do
+   dono («entrada Atrás») e o porte em Python tem de dizer o mesmo, frase a frase */
+var NOMES = { "9": { nome: "Atrás" }, "15a": { nome: "Ponta" }, "13": { nome: "Alto" }, "5": { nome: "Meio" } };
+m.VARIANTES.forEach(function (v) {
+  reset();
+  m.DECLARADO = copia(NOMES);
+  out["nomes/receita/" + v.id] = m.receita(v.op);
+});
+["1", "2", "10", "15a"].forEach(function (n) {
+  ["bt", "teclado", "mouse"].forEach(function (mao) {
+    reset();
+    m.DECLARADO = copia(NOMES);
+    m.naMao = mao;
+    out["nomes/julgar/" + n + "/" + mao] = m.julgar(n);
+  });
+});
+reset();
+m.DECLARADO = copia(NOMES);
+out["nomes/controles/padrao"] = m.planoDosControles();
+m.DECLARADO = {};
 
 reset();
 out["reexame/antes-agora"] = m.reexame("antes", "agora");
