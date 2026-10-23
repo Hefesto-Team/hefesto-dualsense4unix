@@ -204,7 +204,8 @@ class _Relogio:
 
 
 def _slot(uniq: str, jogador: int) -> SlotDsu:
-    return SlotDsu(uniq=uniq, mac=vpad_mac(uniq, jogador))
+    # O transporte é dito aqui: o byte 23 = 1 do teste 2 vem do teste, não do servidor.
+    return SlotDsu(uniq=uniq, mac=vpad_mac(uniq, jogador), transport="usb")
 
 
 @pytest.fixture
@@ -284,6 +285,23 @@ def test_2_portas_zero_e_tres_com_um_controle_no_primeiro(
     assert ocupada[24:26] == bytes([0x02, 0xFE])
     assert tuple(vazia[20:24]) == (3, 0, 0, 0)
     assert vazia[24:31] == bytes(7)
+
+
+def test_2b_slot_sem_transporte_diz_conexao_zero_na_porta_e_nos_dados(
+    montar: Callable[..., SimpleNamespace],
+) -> None:
+    """O desconhecido não vira cabo: sem transporte, o byte 23 sai 0 nas duas respostas."""
+    slot = SlotDsu(uniq=UNIQ_1, mac=vpad_mac(UNIQ_1, 1))
+    assert slot.transport is None
+    mundo = montar({0: slot}, fontes={UNIQ_1: _andando()})
+    sock = mundo.cliente()
+    mundo.envia(sock, _pede_portas(0))
+    porta = _juntar(sock, 0.5)[0]
+    assert tuple(porta[20:24]) == (0, 2, 2, 0)  # slot, conectado, modelo 2, conexão 0
+    mundo.envia(sock, _pede_dados(slot=0))
+    pacotes = [_dados(p) for p in _juntar(sock, 0.4)]
+    assert pacotes and {p.conexao for p in pacotes} == {0}
+    assert mundo.hub.recusadas == []
 
 
 # -- 3 · o cliente só recebe o slot que pediu -----------------------------------------

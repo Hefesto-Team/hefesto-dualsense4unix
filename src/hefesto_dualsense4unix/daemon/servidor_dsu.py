@@ -60,13 +60,13 @@ _ESPERA_COM_CLIENTE_S: Final = 0.002
 class SlotDsu:
     """UM slot publicado: o controle (`uniq`), o MAC virtual que ele veste e o transporte dele.
 
-    `transport` é o que o backend publica (`usb` ou `bt`); a tabela real sempre o leva. O `usb` de
-    omissão é só de quem monta um slot à mão, sem backend por trás.
+    `transport` é o que o backend publica (`usb` ou `bt`); a tabela real sempre o leva. Sem ele, o
+    byte 23 da conexão sai 0 (desconhecido): o servidor não adivinha um cabo que ninguém mediu.
     """
 
     uniq: str
     mac: str
-    transport: str | None = "usb"
+    transport: str | None = None
 
 
 Inscricao = tuple[int | None, bytes | None]  # (slot, mac); (None, None) = todos

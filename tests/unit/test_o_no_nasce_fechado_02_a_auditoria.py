@@ -30,6 +30,7 @@ from __future__ import annotations
 import ast
 import os
 import subprocess
+import types
 from pathlib import Path
 from typing import Any
 
@@ -196,16 +197,15 @@ class TestSobreviveAReplug:
 
         atos: list[tuple[str, str]] = []
 
-        class DaemonDeMentira:
-            def no_exposto_pelo_modo_nativo(self, path: str) -> bool:
-                return path == "/dev/hidraw3"
+        # Um daemon que não responde pergunta nenhuma: o abridor só pede o fd ao broker.
+        daemon_vazio = types.SimpleNamespace()
 
         cliente = cli.HidrawBrokerClient(socket_path="/dev/null/nao-existe")
         cliente.expor = lambda no, **_k: atos.append(("expor", no)) or True  # type: ignore[method-assign]
         cliente.desexpor = lambda no: atos.append(("desexpor", no)) or True  # type: ignore[method-assign]
         cliente.abrir_no = lambda no: (atos.append(("open", no)) and None, "")  # type: ignore[method-assign]
         monkeypatch.setattr(cli, "broker_client_for", lambda _d: cliente)
-        abridor = cli.make_abridor_do_handle(DaemonDeMentira())
+        abridor = cli.make_abridor_do_handle(daemon_vazio)
 
         assert abridor("/dev/hidraw3") is None
         assert abridor("/dev/hidraw9") is None

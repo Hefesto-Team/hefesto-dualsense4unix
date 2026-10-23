@@ -3918,26 +3918,6 @@ class Daemon:
             self._nos_do_modo_nativo = nos
         return nos
 
-    def no_exposto_pelo_modo_nativo(self, path: str) -> bool:
-        """`path` está aberto por causa do Modo Nativo, e tem de continuar?
-
-        Quem perguntava era a fábrica do `with` que o `_open_one` usava.
-        O `make_abridor_do_handle` não pergunta: ele pede só o fd ao broker
-        e não toca na lease (O-FISICO-NUNCA-SE-EXPOE-AO-JOGO-QUE-VESTE-O-COMUM-01).
-
-        POR QUE A PERGUNTA EXISTE. A lease de exposição do broker é por
-        CONEXÃO: o pedido do Modo Nativo e o `with` transitório do `_open_one`
-        saem do MESMO cliente, logo da mesma conexão, logo do mesmo `held`. O
-        `unexpose` do `finally` acharia o nó no `held`, veria `refcount == 1`
-        e mandaria o nó para o REPOUSO — fechando, no meio do Modo Nativo, o
-        nó que o jogo está usando. A reconciliação do tique reabriria em até
-        2 s, e 2 s é exatamente a janela que a Steam usa.
-
-        Então o `with` vira no-op quando o nó já está aberto pelo modo: não
-        expõe (já está) e não desexpõe (não foi ele que pediu).
-        """
-        return path in self._nos_do_modo_nativo_vivos()
-
     @staticmethod
     def _no_de_fisico_esta_aberto(no: str) -> bool:
         """O nó responde a QUEM VAI ABRIR — o jogo, com o uid dela."""
