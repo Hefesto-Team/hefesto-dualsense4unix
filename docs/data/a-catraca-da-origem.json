@@ -245,14 +245,14 @@
       "data": "2026-10-23",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1191278,
+      "piso": 1191738,
       "por_item": {
-        "docs": 120664,
+        "docs": 120672,
         "scripts": 120350,
-        "src": 318995,
-        "tests": 631269
+        "src": 319046,
+        "tests": 631670
       },
-      "razao": "tamanho: +537 linhas (1190741 -> 1191278), pagas por Origem: D-2310-O-ARME-NAO-ENCERRA-A-AUTORIDADE-DO-PROPRIO-JOGO, D-2310-O-JOGO-SEGUINTE-VESTE-A-PROPRIA-ROUPA; registrado no fecho, topo 62aac8123b68",
+      "razao": "tamanho: +460 linhas (1191278 -> 1191738), pagas por Origem: D-2310-O-HANDLE-ABRE-O-FISICO-PELO-FD-DO-BROKER; registrado no fecho, topo e7945a052f00",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -817,10 +817,16 @@
           "de": 1190741,
           "para": 1191278,
           "razao": "tamanho: +537 linhas (1190741 -> 1191278), pagas por Origem: D-2310-O-ARME-NAO-ENCERRA-A-AUTORIDADE-DO-PROPRIO-JOGO, D-2310-O-JOGO-SEGUINTE-VESTE-A-PROPRIA-ROUPA; registrado no fecho, topo 62aac8123b68"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 1191278,
+          "para": 1191738,
+          "razao": "tamanho: +460 linhas (1191278 -> 1191738), pagas por Origem: D-2310-O-HANDLE-ABRE-O-FISICO-PELO-FD-DO-BROKER; registrado no fecho, topo e7945a052f00"
         }
       ],
       "unidade": "linhas",
-      "universo": 3112
+      "universo": 3114
     }
   }
 }
