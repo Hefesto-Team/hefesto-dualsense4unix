@@ -68,8 +68,9 @@ CONEXAO = {"id": "cabo", "tipo": "Adaptador", "transporte": "usb", "estado": "pr
 
 def _manifesto(**extra: Any) -> Manifesto:
     return Manifesto.model_validate({
-        "id": "exemplo", "nome": "Exemplo", "versao": "1.0", "api": ">=2,<3",  # (noqa-acento)
-        "licenca": "MIT", "tipos": ["tema"], "tema": {}, **extra,  # (noqa-acento)
+        "id": "exemplo", "nome": "Exemplo", "api": ">=2,<3",
+        "versao": "1.0",  # (noqa-acento): chave
+        "licenca": "MIT", "tipos": ["tema"], "tema": {}, **extra,  # (noqa-acento): chave
     })
 
 

@@ -48,9 +48,9 @@ pasta = lg.codigo / "so-lado"
 pasta.mkdir(parents=True)
 (pasta / "hefesto-mod.json").write_text(json.dumps({
     "id": "so-lado", "nome": "So lado", "api": ">=2,<3", "licenca": "MIT",
-    "versao": "1.0.0",  # (noqa-acento)
+    "versao": "1.0.0",  # (noqa-acento): chave
     "tipos": ["tema"], "tema": {"botoes": "esquerda"},
-    "permissoes": ["tema"]}), encoding="utf-8")  # (noqa-acento)
+    "permissoes": ["tema"]}), encoding="utf-8")  # (noqa-acento): chave
 instalador.gravar_registro(lg.registro, {"so-lado": instalador.Entrada(
     id="so-lado", nome="So lado", versao="1.0.0", origem="local", endereco=str(pasta),
     permissoes_aceitas=["tema"], ligada=True, ligada_em="2026-10-22T10:00:00")})

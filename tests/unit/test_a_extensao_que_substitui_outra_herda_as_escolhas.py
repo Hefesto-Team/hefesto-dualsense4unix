@@ -32,7 +32,7 @@ NOVA = "ponte-unica"
 
 def _opcao(opcao_id: str, tipo: str, valor: Any, **mais: Any) -> dict[str, Any]:
     return {"id": opcao_id, "rotulo": opcao_id, "tipo": tipo,
-            "padrao": valor, **mais}  # (noqa-acento)
+            "padrao": valor, **mais}  # (noqa-acento): chave
 
 
 OPCOES_DA_ANTIGA = [
@@ -48,7 +48,7 @@ OPCOES_DA_NOVA = [
 
 
 def _lugares(raiz: Path) -> Lugares:
-    return Lugares(codigo=raiz / "codigo", dados=raiz / "dados",  # (noqa-acento)
+    return Lugares(codigo=raiz / "codigo", dados=raiz / "dados",  # (noqa-acento): argumento
                    registro=raiz / "mods.json", estado=raiz / "estado.json")
 
 
@@ -61,11 +61,11 @@ def _pasta(raiz: Path, mod_id: str, *, versao: str = "1.0.0",
     pasta.mkdir(parents=True, exist_ok=True)
     (pasta / "mod.py").write_text("import time\nwhile True:\n    time.sleep(1)\n", encoding="utf-8")
     manifesto: dict[str, Any] = {
-        "id": mod_id, "nome": f"Extensão {mod_id}", "versao": versao,  # (noqa-acento)
+        "id": mod_id, "nome": f"Extensão {mod_id}", "versao": versao,  # (noqa-acento): chave
         "api": ">=2,<3", "licenca": "MIT", "tipos": ["processo"],
         "processo": {"executar": ["python3", "mod.py"]},
-        "permissoes": list(permissoes),  # (noqa-acento)
-        "opcoes": opcoes_ or [],  # (noqa-acento)
+        "permissoes": list(permissoes),  # (noqa-acento): chave
+        "opcoes": opcoes_ or [],  # (noqa-acento): chave
     }
     if substitui:
         manifesto["substitui"] = list(substitui)
@@ -252,8 +252,8 @@ def test_a_atualizacao_sozinha_nao_leva_embora_a_extensao_de_ninguem(
 
 
 def _manifesto(**mais: Any) -> dict[str, Any]:
-    base = {"id": NOVA, "nome": "Nova", "versao": "2.0.0", "api": ">=2,<3",  # (noqa-acento)
-            "licenca": "MIT", "tipos": ["tema"], "permissoes": ["tema"]}  # (noqa-acento)
+    base = {"id": NOVA, "nome": "Nova", "versao": "2.0.0", "api": ">=2,<3",  # (noqa-acento): chave
+            "licenca": "MIT", "tipos": ["tema"], "permissoes": ["tema"]}  # (noqa-acento): chave
     return {**base, **mais}
 
 

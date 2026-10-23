@@ -42,15 +42,17 @@ TEMA_CLARO = (":root{--app-bg:#eef0f5;--panel:#ffffff;--elevated:#f5f6fa;--fg:#1
               "--fundo-da-pagina:#dde1ea;--green:#1d7a3c;--cyan:#006d85;--purple:#6a3dc2;"
               "--orange:#a35200;--pink:#ad2f6c;--red:#c01f2e;--yellow:#7a6400}")
 OPCAO_DO_CSS = {"id": "meu_css", "rotulo": "Usar o meu CSS", "tipo": "css",
-                "padrao": False}  # (noqa-acento)
+                "padrao": False}  # (noqa-acento): chave
 BASE = {"id": "tema-x", "nome": "Tema X", "api": ">=2,<3", "licenca": "MIT",
-        "versao": "1.0.0",  # (noqa-acento)
-        "tipos": ["tema"], "permissoes": ["tema"], "tema": {"arquivo": "tema.css"},  # (noqa-acento)
-        "opcoes": [OPCAO_DO_CSS]}  # (noqa-acento)
+        "versao": "1.0.0",  # (noqa-acento): chave
+        "tipos": ["tema"], "tema": {"arquivo": "tema.css"},
+        "permissoes": ["tema"],  # (noqa-acento): chave
+        "opcoes": [OPCAO_DO_CSS]}  # (noqa-acento): chave
 
 
 def _lugares(raiz: Path) -> instalador.Lugares:
-    return instalador.Lugares(codigo=raiz / "codigo", dados=raiz / "dados",  # (noqa-acento)
+    return instalador.Lugares(codigo=raiz / "codigo",  # (noqa-acento): argumento
+                              dados=raiz / "dados",
                               registro=raiz / "mods.json", estado=raiz / "estado.json")
 
 
@@ -61,7 +63,7 @@ def _instalada(lg: instalador.Lugares, mod_id: str = "tema-x", *, com_opcao: boo
     pasta.mkdir(parents=True, exist_ok=True)
     (pasta / "tema.css").write_text(TEMA_CLARO, encoding="utf-8")
     manifesto = {**BASE, "id": mod_id, "nome": f"Tema {mod_id}",
-                 "opcoes": [OPCAO_DO_CSS] if com_opcao else []}  # (noqa-acento)
+                 "opcoes": [OPCAO_DO_CSS] if com_opcao else []}  # (noqa-acento): chave
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
     registro = instalador.ler_registro(lg.registro)
     registro[mod_id] = instalador.Entrada(
@@ -201,11 +203,11 @@ def test_ler_diz_quando_nao_e_utf8(lg: instalador.Lugares) -> None:
 
 def test_a_opcao_css_so_cabe_em_tema_e_so_uma() -> None:
     assert Manifesto.model_validate(BASE).opcao_do_css is not None
-    sem_tema = {**BASE, "tipos": ["processo"], "tema": {}, "permissoes": [],  # (noqa-acento)
+    sem_tema = {**BASE, "tipos": ["processo"], "tema": {}, "permissoes": [],  # (noqa-acento): chave
                 "processo": {"executar": ["python3", "m.py"]}}
     with pytest.raises(ValueError, match="css"):
         Manifesto.model_validate(sem_tema)
-    duas = {**BASE, "opcoes": [OPCAO_DO_CSS,  # (noqa-acento)
+    duas = {**BASE, "opcoes": [OPCAO_DO_CSS,  # (noqa-acento): chave
                                {**OPCAO_DO_CSS, "id": "outro"}]}
     with pytest.raises(ValueError, match="css"):
         Manifesto.model_validate(duas)
@@ -289,7 +291,7 @@ def test_o_meu_css_sobrevive_a_instalar_de_novo(lg: instalador.Lugares, tmp_path
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
     instalador.instalar(str(pasta), lugares=lg)
     meu = _escrever(lg, ".a{color:red}", "tema-y")
-    manifesto["versao"] = "1.0.1"  # (noqa-acento)
+    manifesto["versao"] = "1.0.1"  # (noqa-acento): chave
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
     instalador.instalar(str(pasta), lugares=lg)
     assert meu.read_text(encoding="utf-8") == ".a{color:red}", "a atualização apagou o meu.css"

@@ -44,21 +44,21 @@ TEMA_CLARO = (":root{--app-bg:#eef0f5;--panel:#ffffff;--elevated:#f5f6fa;--fg:#1
 
 OPCOES = [
     {"id": "cores_claras", "rotulo": "Cores claras", "tipo": "ligado",
-     "padrao": True},  # (noqa-acento)
+     "padrao": True},  # (noqa-acento): chave
     {"id": "botoes_a_esquerda", "rotulo": "Botões à esquerda", "tipo": "ligado",
-     "padrao": True},  # (noqa-acento)
+     "padrao": True},  # (noqa-acento): chave
 ]
 BLOCO = {"arquivo": "tema.css", "botoes": "esquerda", "cor_pela_opcao": "cores_claras",
          "botoes_pela_opcao": "botoes_a_esquerda"}
 
 BASE = {"id": "tema-x", "nome": "Tema X", "api": ">=2,<3", "licenca": "MIT",
-        "versao": "1.0.0",  # (noqa-acento)
+        "versao": "1.0.0",  # (noqa-acento): chave
         "tipos": ["tema"],
-        "permissoes": ["tema"]}  # (noqa-acento)
+        "permissoes": ["tema"]}  # (noqa-acento): chave
 
 
 def _lugares(raiz: Path) -> instalador.Lugares:
-    return instalador.Lugares(codigo=raiz / "codigo",  # (noqa-acento)
+    return instalador.Lugares(codigo=raiz / "codigo",  # (noqa-acento): argumento
                               dados=raiz / "dados",
                               registro=raiz / "mods.json", estado=raiz / "estado.json")
 
@@ -71,7 +71,7 @@ def _instalada(lg: instalador.Lugares, mod_id: str, bloco: dict[str, Any], *,
     (pasta / "tema.css").write_text(TEMA_CLARO, encoding="utf-8")
     opcoes_dele = OPCOES if opcoes_do_manifesto is None else opcoes_do_manifesto
     manifesto = {**BASE, "id": mod_id, "nome": f"Tema {mod_id}", "tema": bloco,
-                 "opcoes": opcoes_dele}  # (noqa-acento)
+                 "opcoes": opcoes_dele}  # (noqa-acento): chave
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
     registro = instalador.ler_registro(lg.registro)
     registro[mod_id] = instalador.Entrada(
@@ -92,7 +92,8 @@ def _manifesto(bloco: dict[str, Any], opcoes_do_manifesto: list[dict[str, Any]] 
                ) -> Manifesto:
     return Manifesto.model_validate({
         **BASE, "tema": bloco,
-        "opcoes": OPCOES if opcoes_do_manifesto is None else opcoes_do_manifesto})  # (noqa-acento)
+        "opcoes": (  # (noqa-acento): chave
+            OPCOES if opcoes_do_manifesto is None else opcoes_do_manifesto)})
 
 
 def test_a_regua_aceita_o_lado_a_cor_e_o_vinculo() -> None:
@@ -216,7 +217,7 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
 from types import SimpleNamespace
 from hefesto_dualsense4unix.interface import janela
-from hefesto_dualsense4unix.mods import instalador, opcoes  # (noqa-acento)
+from hefesto_dualsense4unix.mods import instalador, opcoes  # (noqa-acento): módulo
 
 raiz = pathlib.Path(os.environ["SONDA_RAIZ"])
 bloco = json.loads(os.environ["SONDA_BLOCO"])
@@ -245,7 +246,7 @@ tela = Gtk.OffscreenWindow()
 tela.set_default_size(janela.LARGURA_DO_DESENHO, 39)
 tela.add(barra)
 tela.show_all()
-fases = {"sem extensao": {"lado": lado, **medir(barra, botoes)}}  # (noqa-acento)
+fases = {"sem extensão": {"lado": lado, **medir(barra, botoes)}}
 
 # a barra montada SEM o lado pergunta ao sistema
 b2, bt2 = janela.montar_a_barra("Hefesto", "", lambda *_: None)
@@ -278,16 +279,16 @@ def refazer():
     janela.por_os_botoes_no_lado(barra, botoes, lado)
     return {"lado": lado, **medir(barra, botoes)}
 
-fases["extensao"] = refazer()  # (noqa-acento)
+fases["extensão"] = refazer()
 m = instalador.manifesto_instalado("claro", lugares=lg)
 opcoes.guardar(m, "botoes_a_esquerda", False, lg)
 girar()
-fases["opcao desligada"] = refazer()  # (noqa-acento)
+fases["opção desligada"] = refazer()
 fases["vigia acordou"] = sorted(set(avisos))
 opcoes.guardar(m, "botoes_a_esquerda", True, lg)
-fases["opcao ligada"] = refazer()  # (noqa-acento)
+fases["opção ligada"] = refazer()
 instalador.desligar("claro", lugares=lg)
-fases["extensao desligada"] = refazer()  # (noqa-acento)
+fases["extensão desligada"] = refazer()
 print(json.dumps(fases))
 """
 
@@ -296,7 +297,7 @@ print(json.dumps(fases))
 def fases(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
     raiz = tmp_path_factory.mktemp("lado")
     manifesto = {**BASE, "id": "claro", "nome": "Tema claro", "tema": BLOCO,
-                 "opcoes": OPCOES}  # (noqa-acento)
+                 "opcoes": OPCOES}  # (noqa-acento): chave
     ambiente = dict(
         os.environ, PYTHONDONTWRITEBYTECODE="1", SONDA_RAIZ=str(raiz),
         SONDA_BLOCO=json.dumps(BLOCO), SONDA_TEMA=TEMA_CLARO,
@@ -320,27 +321,27 @@ DA_ESQUERDA = ["fechar", "maximizar", "minimizar"]
 @skip_sem_gi_real
 def test_sem_extensao_a_barra_sai_do_lado_do_sistema(fases: dict[str, Any]) -> None:
     """No COSMIC, à direita: minimizar, maximizar, fechar."""
-    for chave in ("sem extensao", "sem lado dito"):  # (noqa-acento)
+    for chave in ("sem extensão", "sem lado dito"):
         f = fases[chave]
         assert f["ordem"] == DA_DIREITA and f["direita"] and not f["esquerda"], (chave, f)
-    assert fases["sem extensao"]["lado"] == "direita", fases  # (noqa-acento)
+    assert fases["sem extensão"]["lado"] == "direita", fases
 
 
 @skip_sem_gi_real
 def test_com_a_extensao_a_mesma_barra_vai_para_a_esquerda_na_ordem_dela(
         fases: dict[str, Any]) -> None:
-    f = fases["extensao"]  # (noqa-acento)
+    f = fases["extensão"]
     assert f["lado"] == "esquerda", f
     assert f["ordem"] == DA_ESQUERDA and f["esquerda"] and not f["direita"], f
 
 
 @skip_sem_gi_real
 def test_desligar_a_opcao_ou_a_extensao_devolve_o_lado_sem_reabrir(fases: dict[str, Any]) -> None:
-    for chave in ("opcao desligada", "extensao desligada"):  # (noqa-acento)
+    for chave in ("opção desligada", "extensão desligada"):
         f = fases[chave]
         assert f["lado"] == "direita", (chave, f)
         assert f["ordem"] == DA_DIREITA and f["direita"], (chave, f)
-    f = fases["opcao ligada"]  # (noqa-acento)
+    f = fases["opção ligada"]
     assert f["lado"] == "esquerda" and f["ordem"] == DA_ESQUERDA, f
 
 

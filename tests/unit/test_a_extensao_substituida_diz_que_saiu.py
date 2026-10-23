@@ -40,9 +40,9 @@ def _pasta(raiz: Path, mod_id: str, *, versao: str = "1.0.0",
     pasta = raiz / "fontes" / mod_id
     pasta.mkdir(parents=True, exist_ok=True)
     manifesto: dict[str, Any] = {
-        "id": mod_id, "nome": NOMES[mod_id], "versao": versao,  # (noqa-acento)
-        "api": ">=2,<3", "licenca": "MIT", "tipos": ["tema"], "tema": {},  # (noqa-acento)
-        "permissoes": [], "descricao": "Muda um detalhe.", "opcoes": [],  # (noqa-acento)
+        "id": mod_id, "nome": NOMES[mod_id], "versao": versao,  # (noqa-acento): chave
+        "api": ">=2,<3", "licenca": "MIT", "tipos": ["tema"], "tema": {},  # (noqa-acento): chave
+        "permissoes": [], "descricao": "Muda um detalhe.", "opcoes": [],  # (noqa-acento): chave
     }
     if substitui:
         manifesto["substitui"] = list(substitui)
@@ -53,7 +53,8 @@ def _pasta(raiz: Path, mod_id: str, *, versao: str = "1.0.0",
 @pytest.fixture
 def lg(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Lugares:
     """O lar de mentira, que a CLI e a aba acham pelo ``Lugares.do_xdg``."""
-    lugares = Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # (noqa-acento)
+    lugares = Lugares(codigo=tmp_path / "codigo",  # (noqa-acento): argumento
+                      dados=tmp_path / "dados",
                       registro=tmp_path / "config" / "mods.json",
                       estado=tmp_path / "run" / "mods-estado.json")
     monkeypatch.setattr(Lugares, "do_xdg", classmethod(lambda cls: lugares))
