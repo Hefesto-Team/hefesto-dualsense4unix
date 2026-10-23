@@ -117,10 +117,8 @@ CANAL_PADRAO = "hefesto"
 #: página aparecer. O prazo é a rede de segurança do caso em que o piloto NÃO
 #: pinta — travado, ou sem o bootstrap: aí a tela mostra o arquivo como está
 #: (o desenho), que é o comportamento de antes, em vez de ficar sem miolo.
-#: O relógio começa no `load` da página, o mesmo instante do `LoadEvent.FINISHED` que põe o piloto
-#: a pintar: contado do início do documento, uma carga mais longa que o prazo (a primeira página
-#: do processo, com as fontes do produto, mediu 1,8 a 2,9 s num lar novo em 23/10/2026) tirava a
-#: espera antes de o piloto poder pintar.
+#: O relógio começa no `load`, o instante em que o piloto pode pintar: do início do documento, a
+#: primeira carga do processo (1,8 a 2,9 s num lar novo, 23/10/2026) gastava o prazo antes dele.
 PRAZO_DA_ESPERA_MS = 1500
 
 ROTEIRO_DA_ESPERA = (
