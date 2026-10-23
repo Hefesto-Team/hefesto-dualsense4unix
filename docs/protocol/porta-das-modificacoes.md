@@ -352,7 +352,7 @@ A extensão de tema pode declarar UMA opção de `tipo` `css` (`padrao` falso de
 livre (cor e layout), e quem confere é `src/hefesto_dualsense4unix/mods/meu_css.py`: nada de `url(`, `@import`,
 funções de imagem, `expression(`, `\` nem `<`, até 16 KB, e chaves em par. O WebKit só deixa a folha de usuário
 vencer a da página com `!important`, então a leitura o põe em cada declaração (menos dentro de `@keyframes`). O que
-a régua recusa não se aplica, e a janela da extensão diz a linha na forma curta, em vermelho («Linha 3: url()»); a
+a leitura recusa não se aplica, e a janela da extensão diz a linha na forma curta, em vermelho («Linha 3: url()»); a
 frase longa fica no log.
 O botão «Editar o meu CSS» cria o arquivo com um exemplo comentado e o abre no editor do sistema; o `mod atualizar`
 não o toca; desligar a opção ou a extensão tira o CSS na hora. Com mais de uma extensão assim, vale a ligada por último.
@@ -367,7 +367,7 @@ delas que estiver instalada:
   sido desligadas voltam a seguir ligadas);
 - passa as escolhas: a opção de `id` igual cujo valor a nova aceita vai para o `opcoes.json` da nova; a escolha
   já feita na nova vale mais; entre duas antigas, vale a primeira da lista. O «sim» às permissões não passa: a
-  permissão nova pede o dela;
+  permissão nova pede o do usuário;
 - sai pelo caminho do remover (o código, os dados e a linha do registro).
 
 A nova fica ligada quando alguma das antigas estava ligada e nada novo espera o «sim». A atualização sozinha que

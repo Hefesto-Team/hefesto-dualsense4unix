@@ -1,7 +1,7 @@
 # A identidade do pad virtual
 
 Que modelo de DualSense o pad virtual do modo DualSense apresenta a cada jogo, e por quê.
-Escrito em 22/10/2026 (A-IDENTIDADE-DO-PAD-VIRTUAL-E-UMA-REGRA-SO-01). O código é
+Escrito em 22/10/2026. O código é
 `src/hefesto_dualsense4unix/integrations/a_roupa_do_jogo.py` (`_a_regra`).
 
 ## A regra
@@ -33,7 +33,7 @@ mesma fonte da escada anterior, linha a linha: ela muda a forma da decisão, nã
 
 O Edge não nasceu pelo Bluetooth. O que se lê na história:
 
-- **16/07/2026, `389e429ab` (UHID-04):** o pad uhid passou de `0ce6` para `0df2` para ter um
+- **16/07/2026, `389e429ab`:** o pad uhid passou de `0ce6` para `0df2` para ter um
   VID:PID diferente do físico. Com o físico `0ce6` e o pad `0df2`, a Launch Option
   `SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6` esconde só o físico, e o jogo vê um
   controle só, com o layout PlayStation e a vibração (validado no Sackboy, no cabo).
@@ -77,4 +77,4 @@ reconheceria o Edge.
 - A roupa não faz o Minecraft Dungeons II vibrar. Ele pede a vibração só pelo GameInput (o Wwise
   Motion, `AkMotion.dll`, exige o `IGameInput` v2 e um aparelho com motores de rumble), e o
   `GameInputCreate` do Proton é stub: com o Edge ou com o `0ce6`, nenhum `SetRumbleState` chega
-  ao pad. A cura é uma peça da casa (O-JOGO-GDK-VIBRA-PELO-GAMEINPUT-01), não a identidade.
+  ao pad. A cura é uma peça da casa (o GameInput de `assets/gdk-runtime/`), não a identidade.
