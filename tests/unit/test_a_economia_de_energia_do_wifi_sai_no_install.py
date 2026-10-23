@@ -173,6 +173,7 @@ def cena(tmp_path: Path) -> Cena:
 
 class TestPrimeiraCorrida:
     def test_sem_opcao_grava_o_conf_e_desliga_so_a_interface_ligada(self, cena: Cena) -> None:
+        # D-2310-A-ECONOMIA-DE-ENERGIA-DO-WIFI-SAI-NO-INSTALL
         cena.interface("wlan0", "on")
         cena.interface("wlan1", "off")
         r = cena.roda()
