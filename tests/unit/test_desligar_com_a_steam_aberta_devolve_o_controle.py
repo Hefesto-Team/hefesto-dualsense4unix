@@ -199,7 +199,9 @@ class TestAPrimeiraEntregaReligaODriver:
     def test_a_primeira_entrega_religa_o_driver_de_cada_fisico(
         self, cena: CenaReligavel
     ) -> None:
-        """MORDIDA: tire o ``_religar_o_driver_dos_fisicos`` da entrega, e a Steam
+        """A prova de D-2310-DESLIGAR-COM-A-STEAM-ABERTA-RELIGA-O-DRIVER.
+
+        MORDIDA: tire o ``_religar_o_driver_dos_fisicos`` da entrega, e a Steam
         aberta não acha o controle (A8, xinput 3)."""
         mesa = cena.mesa
         radio, cabo = mesa.aparelhos["hidraw5"].hid, mesa.aparelhos["hidraw9"].hid
