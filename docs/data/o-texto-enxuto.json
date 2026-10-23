@@ -5,7 +5,7 @@
       "data": "2026-10-23",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 54626,
+      "piso": 54634,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -199,7 +199,7 @@
         "interface/desenho_da_experimental.py": 143,
         "interface/desenho_dos_lancadores.py": 1030,
         "interface/frases_que_ela_baniu.py": 94,
-        "interface/hefesto_vivo.py": 496,
+        "interface/hefesto_vivo.py": 504,
         "interface/janela.py": 192,
         "interface/mesa_viva.py": 256,
         "interface/monta.py": 279,
@@ -249,7 +249,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +2 linhas (54624 -> 54626), pagas por Origem: plataforma.big_picture; registrado no fecho, topo 170f932379a1",
+      "razao": "texto-em-src: +8 linhas (54626 -> 54634), pagas por Origem: D-2310-O-TODOS-DA-FITA-DEVOLVE-O-ALVO-A-TODOS; registrado no fecho, topo d4174d3eae26",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -424,6 +424,12 @@
           "de": 54624,
           "para": 54626,
           "razao": "texto-em-src: +2 linhas (54624 -> 54626), pagas por Origem: plataforma.big_picture; registrado no fecho, topo 170f932379a1"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 54626,
+          "para": 54634,
+          "razao": "texto-em-src: +8 linhas (54626 -> 54634), pagas por Origem: D-2310-O-TODOS-DA-FITA-DEVOLVE-O-ALVO-A-TODOS; registrado no fecho, topo d4174d3eae26"
         }
       ],
       "unidade": "linhas",
