@@ -40,6 +40,7 @@ from hefesto_dualsense4unix.profiles.efeitos_de_luz import (
     Entrada,
     EstadoDaMao,
     Estrelas,
+    Ondulacao,
     Quadro,
     amplitude_da_mare,
     bateria_acabando,
@@ -346,7 +347,7 @@ class LuzAnimada:
         if efeito.base == "ao-som" and self._som is not None:
             entrada = dataclasses.replace(entrada, som=self._som.nivel())
         estado = guardado[1]
-        if isinstance(estado, Estrelas):
+        if isinstance(estado, Estrelas | Ondulacao):  # os estados que levam luzinhas
             return estado.quadro(entrada, agora)
         return Quadro(estado.andar(entrada, agora))
 
@@ -481,7 +482,7 @@ def leitor_da_mao(daemon: Any) -> LeitorDaMao:
 
     def ler(uniq: str, base: str) -> Entrada:
         with contextlib.suppress(*FALHAS_DA_LEITURA):
-            if base == "reage-ao-botao":
+            if base in ("reage-ao-botao", "ondulacao"):
                 return Entrada(apertos=apertos(uniq))
             if base == "cor-da-bateria":
                 return Entrada(carga=carga(uniq))

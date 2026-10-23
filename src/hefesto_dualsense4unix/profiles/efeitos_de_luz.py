@@ -78,16 +78,17 @@ RITMO_DA_BATERIA = 2
 ESTADOS_DE_CARGA_EM_DIA = frozenset({"carregando", "cheio"})
 #: Os efeitos cujo desenho é ENTRE os controles (a defasagem do arco-íris, o mesmo ângulo da
 #: Maré): o laço os conta num relógio só, o da mesa, e não do instante em que cada um entrou.
-BASES_DO_RELOGIO_COMUM = frozenset({"arco-iris", "mare", "aurora"})  # (noqa-acento) chave ASCII
+BASES_DO_RELOGIO_COMUM = frozenset(
+    {"arco-iris", "mare", "aurora", "respira-em-cores"})  # (noqa-acento) chave ASCII
 
 #: Os efeitos que leem um dado vivo ou guardam estado (a mão, o som, a carga, o calor e o acaso das
 #: Estrelas: 22/10/2026): têm estado por controle e por isso não são função só do tempo. A Aurora
 #: é função só do tempo e fica de fora.
 BASES_DE_DADO_VIVO = frozenset(
     BASES_DA_MAO_DA_LUZ + BASES_DO_SOM_DA_LUZ
-    + tuple(b for b in BASES_DE_AMBIENTE_DA_LUZ if b != "aurora"))
+    + tuple(b for b in BASES_DE_AMBIENTE_DA_LUZ if b != "aurora") + ("ondulacao",))
 #: Os efeitos que pintam também as luzinhas do jogador: o quadro leva barra e luzinhas juntas.
-BASES_COM_LUZINHAS = frozenset({"estrelas", "onda"})
+BASES_COM_LUZINHAS = frozenset({"estrelas", "onda", "ondulacao", "vaivem", "enche"})
 #: A cor do símbolo apertado no «Reage ao botão» (△ verde, ○ vermelho, ✕ azul, □ rosa).
 COR_DO_TRIANGULO: RGB = (0, 255, 0)
 COR_DO_CIRCULO: RGB = (255, 0, 0)
@@ -247,10 +248,86 @@ def luzinhas_da_onda(
     do jogador (``None``), junto com a barra no piso. Cada luzinha acende no máximo duas vezes por
     passada (a crista e a volta do número), e a passada mais curta é de 1,5 s.
     """
+    return _luzinhas_pelo_limiar(brilhos_da_onda(t, periodo_s))
+
+
+def _luzinhas_pelo_limiar(brilhos: Sequence[float]) -> tuple[bool, bool, bool, bool, bool] | None:
+    """Acesa a luzinha cuja crista passa do meio do passeio; nenhuma acesa é o número (``None``)."""
     corte = PISO_DA_ONDA + (1.0 - PISO_DA_ONDA) * LIMIAR_DA_LUZINHA_DA_ONDA
-    a, b, c, d, e = (brilho >= corte for brilho in brilhos_da_onda(t, periodo_s))
+    a, b, c, d, e = (brilho >= corte for brilho in brilhos)
     acesas = (a, b, c, d, e)
     return acesas if any(acesas) else None
+
+
+def periodo_do_vaivem_s(ritmo: int) -> float:
+    """Uma ida e volta da crista pelas luzinhas: de 8 s no ritmo 1 a 2 s no ritmo 10."""
+    return _entre_ritmos(ritmo, 8.0, 2.0)
+
+
+def crista_do_vaivem(t: float, periodo_s: float) -> float:
+    """Onde a crista do Vaivém está: sai de fora da luzinha 0, chega à 4 e volta para fora.
+
+    Fora da luzinha 0 nenhuma acende, e é aí, entre uma ida e volta e a seguinte, que o número do
+    jogador volta, pela regra da Onda.
+    """
+    fase = (t / periodo_s) % 1.0
+    ida = 1.0 - abs(2.0 * fase - 1.0)
+    return -MEIA_LARGURA_DA_ONDA + ida * (LEDS_DA_ONDA - 1 + MEIA_LARGURA_DA_ONDA)
+
+
+def brilhos_do_vaivem(t: float, periodo_s: float) -> tuple[float, ...]:
+    """O brilho de cada luzinha no Vaivém, com a lombada e o piso da Onda."""
+    crista = crista_do_vaivem(t, periodo_s)
+    return tuple(PISO_DA_ONDA + (1.0 - PISO_DA_ONDA) * _lombada(led, crista, MEIA_LARGURA_DA_ONDA)
+                 for led in range(LEDS_DA_ONDA))
+
+
+def brilho_do_vaivem(t: float, periodo_s: float) -> float:
+    """A barra do Vaivém: a crista no LED do meio, duas subidas por ida e volta."""
+    return brilhos_do_vaivem(t, periodo_s)[LED_DO_MEIO_DA_ONDA]
+
+
+#: O Enche: as luzinhas acendem uma por passo (cinco passos), as cinco ficam um passo e o número
+#: volta um passo. Uma subida da barra e de cada luzinha por ciclo.
+PASSOS_DO_ENCHE = LEDS_DA_ONDA + 2
+
+
+def passo_do_enche_s(ritmo: int) -> float:
+    """Um passo do Enche: de 1,2 s no ritmo 1 a 0,4 s no ritmo 10 (o ciclo de sete, 2,8 s)."""
+    return _entre_ritmos(ritmo, 1.2, 0.4)
+
+
+def luzinhas_do_enche(t: float, passo_s: float) -> tuple[bool, bool, bool, bool, bool] | None:
+    """As luzinhas do Enche em ``t``: da 0 à 4, uma por passo; no último passo, o número."""
+    passo = int(t / passo_s) % PASSOS_DO_ENCHE
+    if passo == PASSOS_DO_ENCHE - 1:
+        return None
+    acesas = min(passo + 1, LEDS_DA_ONDA)
+    a, b, c, d, e = (led < acesas for led in range(LEDS_DA_ONDA))
+    return (a, b, c, d, e)
+
+
+def brilho_do_enche(t: float, passo_s: float) -> float:
+    """A barra do Enche: sobe do piso ao cheio com as acesas e desce no passo do número.
+
+    De um nível ao seguinte em meio cosseno dentro do passo, em degraus de 1/16; função só do tempo.
+    """
+    corrido = t / passo_s
+    passo = int(corrido) % PASSOS_DO_ENCHE
+    u = _suave(corrido - math.floor(corrido))
+
+    def nivel(acesas: int) -> float:
+        return PISO_DA_ONDA + (1.0 - PISO_DA_ONDA) * acesas / LEDS_DA_ONDA
+
+    if passo < LEDS_DA_ONDA:
+        brilho = nivel(passo) + (nivel(passo + 1) - nivel(passo)) * u
+    elif passo == LEDS_DA_ONDA:
+        brilho = 1.0
+    else:
+        brilho = 1.0 - (1.0 - PISO_DA_ONDA) * u
+    # Em degraus, como a barra das Estrelas: não gasta um report a cada tique.
+    em_degraus = round(brilho * DEGRAUS_DA_BARRA_DAS_ESTRELAS) / DEGRAUS_DA_BARRA_DAS_ESTRELAS
+    return max(PISO_DA_ONDA, min(1.0, em_degraus))
 
 
 def luzinhas_no_instante(
@@ -259,6 +336,10 @@ def luzinhas_no_instante(
     """As luzinhas de um efeito que é função só do tempo; ``None`` é o número do jogador."""
     if efeito.base == "onda":
         return luzinhas_da_onda(t, periodo_da_onda_s(efeito.ritmo))
+    if efeito.base == "vaivem":
+        return _luzinhas_pelo_limiar(brilhos_do_vaivem(t, periodo_do_vaivem_s(efeito.ritmo)))
+    if efeito.base == "enche":
+        return luzinhas_do_enche(t, passo_do_enche_s(efeito.ritmo))
     return None
 
 
@@ -474,16 +555,18 @@ class ReageAoBotao:
         return _misturar(self._para, self._base, solta), PISO_DO_REAGE + (
             1.0 - PISO_DO_REAGE) * (1.0 - solta)
 
-    def _apertar(self, nomes: list[str], agora: float) -> None:
+    def _apertar(self, nomes: list[str], agora: float) -> bool:
+        """Acende pelo aperto, se a janela de três subidas deixar; devolve se acendeu."""
         while self._subidas and agora - self._subidas[0] >= 1.0:
             self._subidas.popleft()
         if len(self._subidas) >= SUBIDAS_DO_REAGE_POR_S:
-            return
+            return False
         simbolo = next((n for n in nomes if n in CORES_DOS_SIMBOLOS), None)
         self._de = self._estado(agora)
         self._para = CORES_DOS_SIMBOLOS[simbolo] if simbolo else self._base
         self._inicio = agora
         self._subidas.append(agora)
+        return True
 
     def andar(self, entrada: Entrada, agora: float) -> RGB:
         """A cor da barra em ``agora``, com os apertos que a ``entrada`` trouxe."""
@@ -496,6 +579,65 @@ class ReageAoBotao:
             self._vistos = dict(contagens)
         cor, brilho = self._estado(agora)
         return _escalar(cor, brilho)
+
+
+#: De onde o anel da Ondulação parte: os botões da esquerda da luzinha 0, os da direita da 4, e
+#: qualquer outro (o PS) da do meio, abrindo para os dois lados.
+BOTOES_DA_ESQUERDA = frozenset(
+    {"dpad_up", "dpad_down", "dpad_left", "dpad_right", "l1", "l2_btn", "l3", "create"})
+BOTOES_DA_DIREITA = frozenset(
+    {"triangle", "circle", "cross", "square", "r1", "r2_btn", "r3", "options"})
+
+
+def passo_da_ondulacao_s(ritmo: int) -> float:
+    """Quanto o anel leva de uma luzinha à seguinte: de 0,15 s no ritmo 1 a 0,06 s no 10."""
+    return _entre_ritmos(ritmo, 0.15, 0.06)
+
+
+def origem_do_anel(nome: str) -> int:
+    """A luzinha de onde o anel parte para o botão ``nome``."""
+    if nome in BOTOES_DA_ESQUERDA:
+        return 0
+    if nome in BOTOES_DA_DIREITA:
+        return LEDS_DA_ONDA - 1
+    return LED_DO_MEIO_DA_ONDA
+
+
+class Ondulacao(ReageAoBotao):
+    """A «Ondulação» de UM controle: a barra do Reage ao botão e um anel que corre pelas luzinhas.
+
+    O anel parte do lado do botão e se abre, uma luzinha por passo, e as já acesas ficam; com as
+    cinco acesas por um passo, o número do jogador volta (``None``). A luzinha que o anel apaga ao
+    partir volta acesa quando ele a alcança, então cada luzinha sobe no máximo uma vez por aperto
+    aceito. O aperto que a janela de três subidas recusa não ondula.
+    """
+
+    def __init__(self, base: RGB, ritmo: int) -> None:
+        super().__init__(base, ritmo)
+        self._passo = passo_da_ondulacao_s(ritmo)
+        self._anel: tuple[int, float] | None = None
+
+    def _apertar(self, nomes: list[str], agora: float) -> bool:
+        if not super()._apertar(nomes, agora):
+            return False
+        nome = next((n for n in nomes if n in CORES_DOS_SIMBOLOS), nomes[0])
+        self._anel = (origem_do_anel(nome), agora)
+        return True
+
+    def _luzinhas(self, agora: float) -> tuple[bool, bool, bool, bool, bool] | None:
+        if self._anel is None:
+            return None
+        origem, inicio = self._anel
+        passos = int(max(0.0, agora - inicio) / self._passo)
+        if passos > max(origem, LEDS_DA_ONDA - 1 - origem):
+            self._anel = None
+            return None
+        a, b, c, d, e = (abs(led - origem) <= passos for led in range(LEDS_DA_ONDA))
+        return (a, b, c, d, e)
+
+    def quadro(self, entrada: Entrada, agora: float) -> Quadro:
+        cor = self.andar(entrada, agora)
+        return Quadro(cor, self._luzinhas(agora))
 
 
 class Inclinacao:
@@ -834,7 +976,7 @@ class Estrelas:
         return self.quadro(entrada, agora).cor
 
 
-EstadoDaMao = (ReageAoBotao | Inclinacao | DedoNoTouchpad | AoSom | CorDaBateria
+EstadoDaMao = (ReageAoBotao | Ondulacao | Inclinacao | DedoNoTouchpad | AoSom | CorDaBateria
                | CorDaTemperatura | Estrelas)
 
 
@@ -845,6 +987,8 @@ def estado_da_mao(efeito: EfeitoDaLuz, semente: int = 0) -> EstadoDaMao | None:
     """
     if efeito.base == "reage-ao-botao":
         return ReageAoBotao((efeito.cores or ((255, 255, 255),))[0], efeito.ritmo)
+    if efeito.base == "ondulacao":
+        return Ondulacao((efeito.cores or ((255, 255, 255),))[0], efeito.ritmo)
     if efeito.base == "inclinacao":
         return Inclinacao(efeito.ritmo)
     if efeito.base == "dedo-no-touchpad":
@@ -871,6 +1015,18 @@ def matiz_do_arco_iris(t: float, ritmo: int, posicao: int = 0) -> float:
     return (t / periodo_do_arco_iris_s(ritmo) + DEFASAGEM_DO_ARCO_IRIS * posicao) % 1.0
 
 
+#: O Respira em cores: cada respiração anda 0,618 de volta na roda (137 graus da anterior), e cada
+#: lugar da mesa um quarto de volta, no relógio comum: os quatro nunca na mesma cor.
+PASSO_DO_RESPIRA_EM_CORES = 0.618
+DEFASAGEM_DO_RESPIRA_EM_CORES = 0.25
+
+
+def matiz_do_respira_em_cores(t: float, ritmo: int, posicao: int = 0) -> float:
+    """O matiz da respiração em curso: só troca no fundo, quando uma respiração dá a vez à outra."""
+    respiracao = math.floor(t / periodo_do_respirar_s(ritmo))
+    return (PASSO_DO_RESPIRA_EM_CORES * respiracao + DEFASAGEM_DO_RESPIRA_EM_CORES * posicao) % 1.0
+
+
 def cor_no_instante(
     efeito: EfeitoDaLuz,
     t: float,
@@ -880,18 +1036,22 @@ def cor_no_instante(
 ) -> RGB:
     """A cor do efeito no instante ``t`` (segundos), na intensidade cheia do perfil.
 
-    ``posicao`` é o lugar do controle na mesa (0 a 3): só o arco-íris a usa, para defasar um
-    quarto de volta por controle. ``semente`` é do controle: só a chama a usa. O respirar, o
-    piscar, a batida, a onda e o relâmpago usam uma cor por ciclo, em ordem; a chama e a maré, a
-    primeira cor; o arco-íris ignora as cores. ``amplitude`` (0 a 1) encurta os 30 graus da
-    Maré (ver :func:`amplitude_da_mare`). Na onda a barra é o LED do meio; as cinco luzinhas do
-    jogador saem de :func:`luzinhas_no_instante`, no mesmo quadro.
+    ``posicao`` é o lugar do controle na mesa (0 a 3): o arco-íris e o Respira em cores a usam,
+    para defasar um quarto de volta por controle. ``semente`` é do controle: só a chama a usa. O
+    respirar, o piscar, a batida, a onda, o vaivém, o enche e o relâmpago usam uma cor por ciclo,
+    em ordem; a chama e a maré, a primeira cor; o arco-íris e o Respira em cores ignoram as cores.
+    ``amplitude`` (0 a 1) encurta os 30 graus da Maré (ver :func:`amplitude_da_mare`). Na onda e no
+    vaivém a barra é o LED do meio; as cinco luzinhas do jogador saem de
+    :func:`luzinhas_no_instante`, no mesmo quadro.
     """
     if efeito.base == "arco-iris":  # (noqa-acento) chave ASCII
         r, g, b = colorsys.hsv_to_rgb(matiz_do_arco_iris(t, efeito.ritmo, posicao), 1.0, 1.0)
         return (_inteiro(r * 255), _inteiro(g * 255), _inteiro(b * 255))
     if efeito.base == "aurora":
         return cor_da_aurora(efeito, t, posicao)
+    if efeito.base == "respira-em-cores":
+        cor = _matiz_na_cor(matiz_do_respira_em_cores(t, efeito.ritmo, posicao))
+        return _escalar(cor, brilho_do_respirar(t, periodo_do_respirar_s(efeito.ritmo)))
     cores = efeito.cores or ((255, 255, 255),)
     if efeito.base in BASES_DE_DADO_VIVO:  # sem o dado vivo: a cor escolhida, parada
         return cores[0]
@@ -912,6 +1072,14 @@ def cor_no_instante(
         periodo = periodo_da_onda_s(efeito.ritmo)
         cor = cores[int(t / periodo) % len(cores)]
         return _escalar(cor, brilho_da_onda(t, periodo))
+    if efeito.base == "vaivem":
+        periodo = periodo_do_vaivem_s(efeito.ritmo)
+        cor = cores[int(t / periodo) % len(cores)]
+        return _escalar(cor, brilho_do_vaivem(t, periodo))
+    if efeito.base == "enche":
+        passo = passo_do_enche_s(efeito.ritmo)
+        cor = cores[int(t / (passo * PASSOS_DO_ENCHE)) % len(cores)]
+        return _escalar(cor, brilho_do_enche(t, passo))
     if efeito.base == "relampago":
         periodo = periodo_do_relampago_s(efeito.ritmo)
         cor = cores[int(t / periodo) % len(cores)]
@@ -934,16 +1102,21 @@ __all__ = [
     "BASES_DE_DADO_VIVO",
     "BASES_DO_RELOGIO_COMUM",
     "BORDA_DO_PISCAR_S",
+    "BOTOES_DA_DIREITA",
+    "BOTOES_DA_ESQUERDA",
     "CORES_DOS_SIMBOLOS",
     "COR_SEM_LEITURA",
     "DEFASAGEM_DA_AURORA",
     "DEFASAGEM_DO_ARCO_IRIS",
+    "DEFASAGEM_DO_RESPIRA_EM_CORES",
     "ESTADOS_DE_CARGA_EM_DIA",
     "LEDS_DA_ONDA",
     "LED_DO_MEIO_DA_ONDA",
     "LIMIAR_DA_LUZINHA_DA_ONDA",
     "LIMIAR_DE_BATERIA_PCT",
     "MEIO_VAIVEM_DO_ACENDE_S",
+    "PASSOS_DO_ENCHE",
+    "PASSO_DO_RESPIRA_EM_CORES",
     "PISO_DA_BATIDA",
     "PISO_DA_ONDA",
     "PISO_DO_ACENDE",
@@ -963,6 +1136,7 @@ __all__ = [
     "EstadoDaMao",
     "Estrelas",
     "Inclinacao",
+    "Ondulacao",
     "Quadro",
     "ReageAoBotao",
     "amplitude_da_mare",
@@ -971,24 +1145,33 @@ __all__ = [
     "brilho_da_chama",
     "brilho_da_onda",
     "brilho_do_acende",
+    "brilho_do_enche",
     "brilho_do_piscar",
     "brilho_do_relampago",
     "brilho_do_respirar",
+    "brilho_do_vaivem",
     "brilhos_da_onda",
+    "brilhos_do_vaivem",
     "cor_da_aurora",
     "cor_da_carga",
     "cor_do_calor",
     "cor_no_instante",
     "cores_da_aurora",
+    "crista_do_vaivem",
     "descida_do_reage_s",
     "descida_do_som_s",
     "deslocamento_da_mare",
     "estado_da_mao",
     "frequencia_do_piscar_hz",
     "luzinhas_da_onda",
+    "luzinhas_do_enche",
     "luzinhas_no_instante",
     "matiz_da_carga",
     "matiz_do_arco_iris",
+    "matiz_do_respira_em_cores",
+    "origem_do_anel",
+    "passo_da_ondulacao_s",
+    "passo_do_enche_s",
     "periodo_da_aurora_s",
     "periodo_da_batida_s",
     "periodo_da_mare_s",
@@ -996,6 +1179,7 @@ __all__ = [
     "periodo_do_arco_iris_s",
     "periodo_do_relampago_s",
     "periodo_do_respirar_s",
+    "periodo_do_vaivem_s",
     "tempo_da_inclinacao_s",
     "troca_da_chama_s",
 ]

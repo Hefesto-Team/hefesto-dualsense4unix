@@ -265,7 +265,7 @@ class TriggersConfig(BaseModel):
 BASES_DA_LUZ = ("respirar", "piscar", "arco-iris", "batimento", "chama", "mare", "onda", "relampago")  # noqa: E501  # noqa-acento: chave ASCII
 #: As bases que só a lista da aba Iluminação oferece (22/10/2026): as que dependem de um dado vivo
 #: (a mão, o som) e não se criam em «Criar efeitos novos». As oito acima são as que a pessoa
-#: também pode CRIAR.
+#: também pode CRIAR. Os modos dos periféricos RGB: OS-EFEITOS-DE-LUZ-DOS-PERIFERICOS-RGB-01.
 BASES_DA_MAO_DA_LUZ = ("reage-ao-botao", "inclinacao", "dedo-no-touchpad")
 #: «Ao som» (A-LUZ-DANCA-COM-O-SOM-01): lê só o monitor da saída padrão.
 BASES_DO_SOM_DA_LUZ = ("ao-som",)
@@ -273,12 +273,12 @@ BASES_DO_SOM_DA_LUZ = ("ao-som",)
 #: Estrelas (as luzinhas cintilam), e as que mostram um número da máquina, a carga do controle e o
 #: calor da placa e do processador.
 BASES_DE_AMBIENTE_DA_LUZ = ("aurora", "estrelas", "cor-da-bateria", "cor-da-temperatura")
+BASES_DOS_PERIFERICOS_DA_LUZ = ("ondulacao", "vaivem", "enche", "respira-em-cores")
 BASES_NOVAS_DA_LUZ = BASES_DA_MAO_DA_LUZ + BASES_DO_SOM_DA_LUZ + BASES_DE_AMBIENTE_DA_LUZ
-TODAS_AS_BASES_DA_LUZ = BASES_DA_LUZ + BASES_NOVAS_DA_LUZ
-#: As bases cujo texto pode vir sem cor: o arco-íris gira todas, e as que pintam pelo dado vivo
-#: (a inclinação, o dedo, a carga, o calor) não têm cor para escolher.
-BASES_SEM_COR_DA_LUZ = (
-    "arco-iris", "inclinacao", "dedo-no-touchpad", "cor-da-bateria", "cor-da-temperatura")
+TODAS_AS_BASES_DA_LUZ = BASES_DA_LUZ + BASES_NOVAS_DA_LUZ + BASES_DOS_PERIFERICOS_DA_LUZ
+#: As bases sem cor: giram a roda sozinhas (o Arco-íris, o Respira em cores) ou pintam pelo dado.
+BASES_SEM_COR_DA_LUZ = ("arco-iris", "inclinacao", "dedo-no-touchpad", "cor-da-bateria",
+                        "cor-da-temperatura", "respira-em-cores")
 RITMO_MINIMO_DA_LUZ = 1
 RITMO_MAXIMO_DA_LUZ = 10
 RITMO_PADRAO_DA_LUZ = 4
