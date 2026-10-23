@@ -5,7 +5,7 @@
       "data": "2026-10-23",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 54567,
+      "piso": 54623,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -67,7 +67,7 @@
         "daemon/connection.py": 220,
         "daemon/ipc_handlers.py": 1254,
         "daemon/ipc_server.py": 126,
-        "daemon/launch_env.py": 580,
+        "daemon/launch_env.py": 598,
         "daemon/lifecycle.py": 1313,
         "daemon/protocols.py": 60,
         "daemon/sensor_hub.py": 227,
@@ -81,8 +81,8 @@
         "daemon/subsystems/coop.py": 731,
         "daemon/subsystems/external_identity.py": 621,
         "daemon/subsystems/external_mask.py": 157,
-        "daemon/subsystems/game_signal.py": 96,
-        "daemon/subsystems/gamepad.py": 757,
+        "daemon/subsystems/game_signal.py": 128,
+        "daemon/subsystems/gamepad.py": 763,
         "daemon/subsystems/gatilho_do_jogo.py": 40,
         "daemon/subsystems/governador_do_radio.py": 278,
         "daemon/subsystems/hotkey.py": 670,
@@ -249,7 +249,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +43 linhas (54524 -> 54567), pagas por Origem: D-2310-O-JOGO-SEGUINTE-VESTE-A-PROPRIA-ROUPA; registrado no fecho, topo 9e9ac3da2152",
+      "razao": "texto-em-src: +56 linhas (54567 -> 54623), pagas por Origem: D-2310-O-ARME-NAO-ENCERRA-A-AUTORIDADE-DO-PROPRIO-JOGO, D-2310-O-JOGO-SEGUINTE-VESTE-A-PROPRIA-ROUPA; registrado no fecho, topo 8d999dcfebd4",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -406,6 +406,12 @@
           "de": 54524,
           "para": 54567,
           "razao": "texto-em-src: +43 linhas (54524 -> 54567), pagas por Origem: D-2310-O-JOGO-SEGUINTE-VESTE-A-PROPRIA-ROUPA; registrado no fecho, topo 9e9ac3da2152"
+        },
+        {
+          "data": "2026-10-23",
+          "de": 54567,
+          "para": 54623,
+          "razao": "texto-em-src: +56 linhas (54567 -> 54623), pagas por Origem: D-2310-O-ARME-NAO-ENCERRA-A-AUTORIDADE-DO-PROPRIO-JOGO, D-2310-O-JOGO-SEGUINTE-VESTE-A-PROPRIA-ROUPA; registrado no fecho, topo 8d999dcfebd4"
         }
       ],
       "unidade": "linhas",
