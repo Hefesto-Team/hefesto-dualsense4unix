@@ -245,14 +245,14 @@
       "data": "2026-10-24",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1198979,
+      "piso": 1199282,
       "por_item": {
-        "docs": 120942,
+        "docs": 120949,
         "scripts": 120631,
-        "src": 320288,
-        "tests": 637118
+        "src": 320372,
+        "tests": 637330
       },
-      "razao": "tamanho: +2 linhas (1198977 -> 1198979), pagas por Origem: D-2410-O-PORTE-DIZ-O-TEXTO-DA-PAGINA; registrado no fecho, topo 55e5a5d9746c",
+      "razao": "tamanho: +303 linhas (1198979 -> 1199282), pagas por Origem: D-2410-O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL; registrado no fecho, topo 436563456a12",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -937,10 +937,16 @@
           "de": 1198977,
           "para": 1198979,
           "razao": "tamanho: +2 linhas (1198977 -> 1198979), pagas por Origem: D-2410-O-PORTE-DIZ-O-TEXTO-DA-PAGINA; registrado no fecho, topo 55e5a5d9746c"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 1198979,
+          "para": 1199282,
+          "razao": "tamanho: +303 linhas (1198979 -> 1199282), pagas por Origem: D-2410-O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL; registrado no fecho, topo 436563456a12"
         }
       ],
       "unidade": "linhas",
-      "universo": 3137
+      "universo": 3138
     }
   }
 }
