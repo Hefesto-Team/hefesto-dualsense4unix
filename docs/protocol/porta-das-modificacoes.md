@@ -144,7 +144,7 @@ perde eventos velhos, e o tique do serviço nunca espera.
 
 O `eventos.publicar` `{topico, dados}` passa um evento de uma extensão a todas as que têm `ler:<tópico>`, pela
 mesma fila de 256 por assinatura. Só vale para a lista fechada de tópicos publicáveis, que hoje é um,
-`jogo.acessorio`, e pede `publicar:jogo.acessorio` no manifesto (a frase aparece no ⋮ da linha antes do «sim»). Em
+`jogo.acessorio`, e pede `publicar:jogo.acessorio` no manifesto (a frase vai na dica da chave armada e no «Ver permissões» do ⋮ antes do «sim»). Em
 `dados` vai só `funcoes`; o serviço monta o envelope com `origem` e `t`. As recusas:
 
 - sem a permissão: `-32010`;
@@ -235,8 +235,8 @@ endereço; nada se instala sozinho.
 
 O campo `aviso` (até 400 letras, opcional) é o aviso de uso da extensão: a marca que não a endossa, o jogo
 comprado, a idade. A linha de comando o imprime antes de gravar e pergunta (`--sim` aceita). Na tela, o
-«Instalar» grava a extensão desligada, e o primeiro clique da chave abre o ⋮ com o aviso no topo da lista das
-permissões; o segundo liga. O aviso aceito fica no registro (`aviso_aceito`); a versão nova com outro aviso
+«Instalar» grava a extensão desligada, e o primeiro clique da chave só a arma: ela diz «Aceitar e ligar», com o
+aviso antes das permissões na dica, sem abrir nada no cartão; o segundo liga. O aviso aceito fica no registro (`aviso_aceito`); a versão nova com outro aviso
 volta a pedir o «sim» do ligar, e a atualização sozinha a deixa esperando o «Atualizar». O «Atualizar» do ⋮ que
 traz permissão ou aviso novo deixa o ⋮ aberto já com a lista, e o próximo clique na chave é o «sim». O serviço
 não abre a extensão cujo aviso ainda não teve o «sim».
