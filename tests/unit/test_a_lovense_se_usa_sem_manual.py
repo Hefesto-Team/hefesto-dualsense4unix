@@ -67,6 +67,7 @@ def _chave(a07: Any, ctx: Any) -> str:  # noqa: F811
 
 
 def test_a_ligada_que_caiu_diz_caiu_em_vermelho_com_o_porque_na_dica(lar, ctx, tmp_path) -> None:  # noqa: F811
+    # D-2310-A-CHAVE-DIZ-O-QUE-O-SERVICO-FEZ
     a07 = _a07()
     _instalada_e_ligada(a07, ctx, tmp_path)
     _supervisor_diz(a07, lar, estado="parou", motivo="Caiu 4 vezes seguidas (código 1).",
@@ -135,6 +136,7 @@ def test_o_canto_do_agora_diz_que_ela_caiu(lar, ctx, tmp_path) -> None:  # noqa:
 
 
 def test_o_parar_tudo_sem_ela_na_porta_recusa_dizendo(lar, ctx, tmp_path) -> None:  # noqa: F811
+    # D-2310-O-PARAR-TUDO-SEM-NINGUEM-NA-PORTA-RECUSA
     a07 = _a07()
     _instalada_e_ligada(a07, ctx, tmp_path, permissoes=(GESTO,), agora=["aparelhos"],
                         parar_tudo=True)
@@ -167,6 +169,7 @@ def test_a_recusa_do_servico_chega_ao_parar_tudo(lar, ctx, tmp_path, monkeypatch
 @pytest.mark.parametrize("novo", [{"permissoes": [GESTO]}, {"aviso": AVISO}])  # noqa-acento: chave
 def test_atualizar_com_permissao_nova_mostra_a_lista_e_um_clique_liga(lar, ctx, tmp_path,  # noqa: F811
                                                                     novo) -> None:
+    # D-2310-O-ATUALIZAR-QUE-PEDE-SIM-ABRE-A-LISTA
     a07 = _a07()
     _instalada_e_ligada(a07, ctx, tmp_path)
     _fonte(tmp_path, extra={"versao": "0.2", **novo})  # noqa-acento: a chave do manifesto
