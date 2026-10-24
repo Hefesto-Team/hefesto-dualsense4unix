@@ -242,6 +242,7 @@ def test_sem_uhid_nada_se_recria(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_o_uhid_que_volta_a_cair_tenta_uma_vez_so(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # D-2410-A-PROMOCAO-DO-VPAD-NAO-RENASCE-EM-LACO
     """O `uhid_available()` diz sim e o bind cai: uma volta só, nunca um laço por janela.
 
     A máquina sem o canal (o `hid_playstation` que não faz bind) recriaria os pads do

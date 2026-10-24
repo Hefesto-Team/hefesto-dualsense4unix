@@ -164,6 +164,7 @@ def test_backend_sem_mesa_por_alvo_publica_um_so_com_o_primario() -> None:
 
 
 def test_a_borda_do_boot_publica_um_por_controle() -> None:
+    # D-2410-A-CONEXAO-E-UM-EVENTO-POR-CONTROLE
     """O boot (`lifecycle`) usa a mesma borda: a mesa já de pé ganha um evento por controle."""
     controle = _Mesa({P1: "usb", P2: "bt"}, P1)
     controle.na_tomada = True

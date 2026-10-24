@@ -194,6 +194,7 @@ def test_quem_cai_e_volta_no_prazo_fica_no_mesmo_vpad(
     mesa_de_mentira: pytest.MonkeyPatch, mesa: str, saem: tuple[str, ...],
     ficam: tuple[str, ...],
 ) -> None:
+    # D-2410-O-LUGAR-GUARDADO-ESPERA-NOS-QUATRO
     m = _Mesa(mesa_de_mentira, MESA_MISTA)
     mgr = m.mgr
     vpads = {mac: mgr._players[mac].vpad for mac in (P2, P3, P4)}
