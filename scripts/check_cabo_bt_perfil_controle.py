@@ -260,6 +260,18 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                        "até o «Guardar»",
     "acionador-guardar": "declara o controle e as teclas do acionador no `maquina.json` — é "
                          "da máquina",
+    # A janela da extensão age (24/10/2026): o pedido vai ao serviço da extensão, que fala
+    # com os aparelhos que a extensão gere; nenhum controle recebe nada.
+    "acao-da-modificacao": "um botão que a extensão declarou (Procurar, Testar, a chave de um "
+                           "aparelho) — é do serviço da extensão, não de um controle",
+    "mover-o-livre-da-modificacao": "o controle livre da extensão, no compasso de 1/20 s — é do "
+                                    "serviço da extensão, não de um controle",
+    "soltar-o-livre-da-modificacao": "o soltar do controle livre zera o que a extensão toca — é "
+                                     "do serviço da extensão",
+    "gravar-o-livre-da-modificacao": "grava o arrastar numa forma do rascunho da janela — é da "
+                                     "tela até o «Guardar»",
+    "esquecer-a-forma-do-livre": "tira uma forma gravada do rascunho da janela — é da tela até "
+                                 "o «Guardar»",
 }
 
 DO_APARELHO: dict[str, tuple[str, ...]] = {
