@@ -29,8 +29,8 @@ INTERFACE = RAIZ / "src/hefesto_dualsense4unix/interface"
 DESENHOS_COM_A_CENA = ("04-iluminacao.html", "05-vibracao.html", "08-conexoes.html")
 NOME_DA_CENA_VELHA = "Vitória"
 #: os nomes de pessoa que o desenho final do todo (14/10/2026, `FINAL.md`, «O nome de pessoa»)
-#: trocou pela cor do plástico, e os dois que a cena do rádio da 08 ainda dava aos controles que
-#: não conectaram
+#: trocou pela cor do plástico, e o «Davi», que a cena do rádio da 08 ainda dava a um dos controles
+#: que não conectaram (o outro era o «Lia»)
 NOMES_DE_PESSOA = ("Vitória", "Pedro", "Ana", "Rafa", "Lia", "Davi")
 
 

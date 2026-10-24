@@ -754,10 +754,14 @@ def test_o_dono_da_janela_nunca_grava_lapide(
 def test_o_desenho_nao_tem_linha_sem_aparelho() -> None:
     """A cena do desenho (a mesma que gera o mockup) mostra um «Não Conectou»"""
     from hefesto_dualsense4unix.interface import aba08
+    from hefesto_dualsense4unix.interface.pacotes.a08_conexoes import nome_na_conexoes
 
     linhas = [a for a in aba08.CENA_DO_RADIO["aparelhos"] if a.get("nao_conectou")]
     assert linhas, "o desenho perdeu o «Não Conectou»"
     assert [a["id"] for a in linhas if not a.get("aparelho")] == []
-    assert all(a.get("nome") and a.get("cor") for a in linhas), linhas
+    # o nome que a linha diz («DualSense ● Cosmic Red»), como no produto: o campo do nome de quem
+    # joga nasce vazio na cena, sem nome de pessoa
+    # (OS-RESTOS-DO-DESENHO-VELHO-SAEM-DAS-ABAS-03-05-08-01)
+    assert all(nome_na_conexoes(a) and a.get("cor") and a.get("cor_nome") for a in linhas), linhas
     mockup = (RAIZ / "mockup" / "08-conexoes.html").read_text(encoding="utf-8")
     assert "Não Conectou" in mockup
