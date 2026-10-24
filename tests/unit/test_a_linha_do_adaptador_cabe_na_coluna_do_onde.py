@@ -43,7 +43,7 @@ DESENHO = RAIZ / "mockup" / "08-conexoes.html"
 PUBLICADA = onde.pagina("08-conexoes.html", publicado=True)
 #: a marca da cura no CSS da página; o publicado a ganha no `--publicar` da costura
 MARCA_DA_CURA = "minmax(116px,max-content)"
-TAMANHOS = ((1280, 860), (1920, 1000))
+TAMANHOS = ((1212, 809), (1280, 860), (1920, 1000))
 QUEDA = {"carimbo": 0.0, "quando": "18:47", "porque": "Som além do limite"}
 
 
