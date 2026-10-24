@@ -5,7 +5,7 @@
       "data": "2026-10-24",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 54853,
+      "piso": 54864,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -198,7 +198,7 @@
         "interface/cartao_do_controle.py": 332,
         "interface/conexoes.py": 69,
         "interface/controles_vivos.py": 145,
-        "interface/desenho_da_experimental.py": 160,
+        "interface/desenho_da_experimental.py": 164,
         "interface/desenho_dos_lancadores.py": 1032,
         "interface/frases_que_ela_baniu.py": 104,
         "interface/hefesto_vivo.py": 504,
@@ -213,7 +213,7 @@
         "interface/pacotes/a04_iluminacao.py": 1172,
         "interface/pacotes/a05_vibracao.py": 818,
         "interface/pacotes/a06_navegacao.py": 382,
-        "interface/pacotes/a07_lancadores.py": 600,
+        "interface/pacotes/a07_lancadores.py": 607,
         "interface/pacotes/a08_conexoes.py": 1180,
         "interface/pacotes/a09_sistema.py": 1115,
         "interface/pacotes/a10_perfis.py": 921,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +43 linhas (54810 -> 54853), pagas por Origem: D-2410-O-ENDPOINT-DO-CABO-TEM-RELOGIO-PROPRIO, D-2410-O-PAD-RECUSADO-PELA-SESSAO-PEDE-DE-NOVO; registrado no fecho, topo 937baff4dbe4",
+      "razao": "texto-em-src: +11 linhas (54853 -> 54864), pagas por Origem: D-2410-O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL; registrado no fecho, topo b1ec4fa31868",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -498,6 +498,12 @@
           "de": 54810,
           "para": 54853,
           "razao": "texto-em-src: +43 linhas (54810 -> 54853), pagas por Origem: D-2410-O-ENDPOINT-DO-CABO-TEM-RELOGIO-PROPRIO, D-2410-O-PAD-RECUSADO-PELA-SESSAO-PEDE-DE-NOVO; registrado no fecho, topo 937baff4dbe4"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 54853,
+          "para": 54864,
+          "razao": "texto-em-src: +11 linhas (54853 -> 54864), pagas por Origem: D-2410-O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL; registrado no fecho, topo b1ec4fa31868"
         }
       ],
       "unidade": "linhas",
