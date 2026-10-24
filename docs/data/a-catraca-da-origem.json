@@ -245,14 +245,14 @@
       "data": "2026-10-24",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1201900,
+      "piso": 1201945,
       "por_item": {
         "docs": 121200,
         "scripts": 120631,
         "src": 320679,
-        "tests": 639390
+        "tests": 639435
       },
-      "razao": "tamanho: +425 linhas (1201475 -> 1201900), pagas por Origem: D-2210-O-DIARIO-CABE-EM-MIL-LINHAS, D-2410-O-DIARIO-NAO-ESCREVE-NO-DESTINO-FECHADO, D-2410-O-GESTO-DEVOLVE-A-COR-ANOTADA, D-2410-O-LED-PENDENTE-ACENDE-QUANDO-O-NO-APARECE, D-2410-O-LUGAR-GUARDADO-ESPERA-NOS-QUATRO; registrado no fecho, topo 1762231eddb2",
+      "razao": "tamanho: +45 linhas (1201900 -> 1201945), pagas por Origem: D-2410-O-GESTO-DEVOLVE-A-COR-ANOTADA; registrado no fecho, topo 2a9d47781f22",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -967,6 +967,12 @@
           "de": 1201475,
           "para": 1201900,
           "razao": "tamanho: +425 linhas (1201475 -> 1201900), pagas por Origem: D-2210-O-DIARIO-CABE-EM-MIL-LINHAS, D-2410-O-DIARIO-NAO-ESCREVE-NO-DESTINO-FECHADO, D-2410-O-GESTO-DEVOLVE-A-COR-ANOTADA, D-2410-O-LED-PENDENTE-ACENDE-QUANDO-O-NO-APARECE, D-2410-O-LUGAR-GUARDADO-ESPERA-NOS-QUATRO; registrado no fecho, topo 1762231eddb2"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 1201900,
+          "para": 1201945,
+          "razao": "tamanho: +45 linhas (1201900 -> 1201945), pagas por Origem: D-2410-O-GESTO-DEVOLVE-A-COR-ANOTADA; registrado no fecho, topo 2a9d47781f22"
         }
       ],
       "unidade": "linhas",
