@@ -33,7 +33,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, ValidationError
 
-from hefesto_dualsense4unix.mods import meu_css
+from hefesto_dualsense4unix.mods import API_DAS_MODIFICACOES, meu_css
 from hefesto_dualsense4unix.mods.manifesto import (
     Manifesto,
     ManifestoRecusadoError,
@@ -77,6 +77,22 @@ _PRAZO_DO_LS_REMOTE_S = 60.0
 INTERVALO_DA_ATUALIZACAO_S = 6 * 3600.0
 
 _ESTADOS_VIVOS = frozenset({"ligando", "rodando", "voltando"})
+
+#: O prazo do ``preparar`` de uma extensão: baixar e conferir um binário cabe nele. O que passa
+#: dele é parado pelo grupo de processos que o próprio instalador abriu (decisão
+#: D-2410-O-PREPARO-DA-EXTENSAO-TEM-DEZ-MINUTOS, por delegação, a validar pelo usuário).
+PRAZO_DO_PREPARO_S = 600.0
+
+#: O diário do preparo, na pasta de dados da extensão: a saída da última vez, até o teto.
+DIARIO_DO_PREPARO = "preparo.log"
+TETO_DO_DIARIO_DO_PREPARO_BYTES = 256 * 1024
+
+#: O que o preparo herda da sessão de quem usa: a casa, as pastas XDG e o proxy, e mais nada.
+_DA_SESSAO_NO_PREPARO = (
+    "PATH", "LANG", "HOME", "USER", "LOGNAME",
+    "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME", "XDG_RUNTIME_DIR",
+    "http_proxy", "https_proxy", "no_proxy", "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY",
+)
 
 
 class InstalacaoRecusadaError(Exception):
@@ -149,6 +165,11 @@ class Entrada(BaseModel):
     motivo_da_espera: str = ""
     #: O ``aviso`` do manifesto que teve o «sim» (no instalar ou no ligar).
     aviso_aceito: str = ""
+    #: O ``preparar`` que teve o «sim»; a instalação (``instalada_em``) que ele preparou; e o
+    #: motivo da última falha, que deixa a extensão desligada até o «ligar» o rodar de novo.
+    preparo_aceito: list[str] = []
+    preparada_em: str = ""
+    motivo_do_preparo: str = ""
 
 
 @dataclass(frozen=True)
@@ -374,6 +395,104 @@ def _conferir_o_lancador(manifesto: Manifesto, pasta: Path) -> None:
         raise InstalacaoRecusadaError(f"O hefesto-mod.json tem {exc}.") from exc
 
 
+def _ambiente_do_preparo(lg: Lugares, mod_id: str) -> dict[str, str]:
+    ambiente = {k: os.environ[k] for k in _DA_SESSAO_NO_PREPARO if k in os.environ}
+    ambiente.setdefault("PATH", "/usr/bin:/bin")
+    ambiente.setdefault("LANG", "C.UTF-8")
+    ambiente.update({
+        "HEFESTO_MOD_ID": mod_id,
+        "HEFESTO_MOD_DADOS": str(lg.dados / mod_id),
+        "HEFESTO_MOD_API": str(API_DAS_MODIFICACOES),
+    })
+    return ambiente
+
+
+def _aparar_o_diario_do_preparo(diario: Path) -> None:
+    """Fica só o fim do diário, até o teto: o preparo que fala demais não enche o disco."""
+    with contextlib.suppress(OSError):
+        if diario.stat().st_size > TETO_DO_DIARIO_DO_PREPARO_BYTES:
+            with diario.open("rb") as arquivo:
+                arquivo.seek(-TETO_DO_DIARIO_DO_PREPARO_BYTES, os.SEEK_END)
+                fim = arquivo.read()
+            diario.write_bytes(fim)
+
+
+def _parar_o_preparo(processo: subprocess.Popen[bytes]) -> None:
+    """O ``SIGKILL`` ao grupo do preparo (o PID é o do ``Popen`` deste instalador) e a espera."""
+    with contextlib.suppress(ProcessLookupError, PermissionError):
+        os.killpg(processo.pid, signal.SIGKILL)
+    processo.wait()
+
+
+def _preparar(lg: Lugares, manifesto: Manifesto) -> str:
+    """Roda o ``preparar`` fora da caixa, como quem usa: o motivo da falha, ou vazio.
+
+    Nunca como root. A pasta de trabalho é a do código, a entrada é vazia (sem terminal, vale o
+    padrão do comando) e a saída vai a :data:`DIARIO_DO_PREPARO`. Passado o prazo, o grupo de
+    processos que o instalador abriu recebe o ``SIGKILL``, pelo PID que ele mesmo guardou.
+    """
+    from hefesto_dualsense4unix.mods.supervisor import _resolver_o_comando, ultima_linha_do_diario
+
+    assert manifesto.preparar
+    nome = manifesto.nome
+    if os.geteuid() == 0:
+        return f"O preparo de «{nome}» não roda como root."
+    codigo = lg.codigo / manifesto.id
+    comando = _resolver_o_comando(codigo, manifesto.preparar)
+    if comando is None:
+        return f"O preparo de «{nome}» não achou o comando {manifesto.preparar[0]}."
+    diario = lg.dados / manifesto.id / DIARIO_DO_PREPARO
+    try:
+        diario.parent.mkdir(parents=True, exist_ok=True)
+        with diario.open("wb") as saida:
+            processo = subprocess.Popen(
+                comando,
+                cwd=codigo,
+                env=_ambiente_do_preparo(lg, manifesto.id),
+                stdin=subprocess.DEVNULL,
+                stdout=saida,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+            saiu: int | None = None
+            try:
+                saiu = processo.wait(timeout=PRAZO_DO_PREPARO_S)
+            except subprocess.TimeoutExpired:
+                _parar_o_preparo(processo)
+            except BaseException:
+                _parar_o_preparo(processo)
+                raise
+    except OSError as exc:
+        return f"O preparo de «{nome}» não abriu: {exc.strerror or exc}."
+    finally:
+        _aparar_o_diario_do_preparo(diario)
+    if saiu is None:
+        return f"O preparo de «{nome}» passou de {PRAZO_DO_PREPARO_S:.0f} s e foi parado."
+    if saiu != 0:
+        ultima = ultima_linha_do_diario(diario)
+        return f"O preparo de «{nome}» falhou (código {saiu})" + (f": {ultima}" if ultima else ".")
+    return ""
+
+
+def _rodar_o_preparo(lg: Lugares, manifesto: Manifesto, entrada: Entrada) -> None:
+    """O preparo com o «sim» já dado: grava na ``entrada`` o que ele fez; a falha a desliga."""
+    entrada.preparo_aceito = list(manifesto.preparar or [])
+    entrada.motivo_do_preparo = _preparar(lg, manifesto)
+    entrada.preparada_em = "" if entrada.motivo_do_preparo else entrada.instalada_em
+    if entrada.motivo_do_preparo:
+        entrada.ligada = False
+
+
+def _preparo_novo(lg: Lugares, anterior: Entrada, manifesto: Manifesto) -> bool:
+    """O ``preparar`` da versão nova é outro que o aceito e que o da versão instalada?"""
+    if not manifesto.preparar:
+        return False
+    ja_pedidos = [anterior.preparo_aceito]
+    with contextlib.suppress(ManifestoRecusadoError):
+        ja_pedidos.append(ler_manifesto(lg.codigo / anterior.id, exigir_api=False).preparar or [])
+    return manifesto.preparar not in ja_pedidos
+
+
 def instalar(
     origem: str,
     *,
@@ -385,12 +504,12 @@ def instalar(
 ) -> Resultado:
     """Instala de um endereço git (``--ref`` para a tag) ou de uma pasta, sem ligar.
 
-    Reinstalar é atualizar: segue ligada, a não ser que peça permissão nova ou traga
-    outro aviso. ``sozinha`` é a atualização que ninguém pediu: a versão com permissão
-    nova, aviso novo ou tag que não confere com a chave oficial fica em
-    ``versao_esperando`` até o «Atualizar». ``aviso_visto`` é o da tela: outro ``aviso``
-    no manifesto recusa com :class:`AvisoParaVerError` antes de gravar; ``None`` deixa
-    o aviso para o «sim» do ligar.
+    Reinstalar é atualizar: segue ligada sem permissão nem aviso novos. ``sozinha`` é a que
+    ninguém pediu: permissão, aviso ou preparo novos, a tag que não confere e o ``substitui``
+    esperam o «Atualizar» em ``versao_esperando``. ``aviso_visto`` é o da tela (outro aviso recusa
+    com :class:`AvisoParaVerError` antes de gravar; ``None`` o deixa para o ligar). O ``preparar``
+    roda depois da troca do código, quando nada espera o «sim» (senão, no ligar); o que falha
+    deixa a extensão instalada e desligada, com o motivo, e recusa com a frase.
     """
     lg = lugares or Lugares.do_xdg()
     pasta_local = Path(origem).expanduser()
@@ -453,6 +572,8 @@ def instalar(
                     "não troquei o código."
                 )
         _trocar_o_codigo(baixada, lg.codigo / manifesto.id)
+        # Nada espera o «sim»: o preparo roda agora; esperando, ele roda no «ligar», depois dele.
+        pronta = not novas and manifesto.aviso in ("", aviso_aceito)
         entrada = Entrada(
             id=manifesto.id,
             nome=manifesto.nome,
@@ -462,14 +583,16 @@ def instalar(
             ref=ref,
             commit=commit,
             permissoes_aceitas=list(aceitas),
-            ligada=(seguia_ligada or bool(antigas_ligadas)) and not novas
-            and manifesto.aviso in ("", aviso_aceito),
+            ligada=(seguia_ligada or bool(antigas_ligadas)) and pronta,
             aviso_aceito=aviso_aceito,
             instalada_em=datetime.now(timezone.utc).isoformat(timespec="microseconds"),
         )
         if anterior is not None:
             entrada.atualiza_sozinha = anterior.atualiza_sozinha
             entrada.intervalo_da_atualizacao_s = anterior.intervalo_da_atualizacao_s
+            entrada.preparo_aceito = list(anterior.preparo_aceito)
+        if manifesto.preparar and pronta:
+            _rodar_o_preparo(lg, manifesto, entrada)
         if a_substituir:
             from hefesto_dualsense4unix.mods import opcoes
 
@@ -478,6 +601,9 @@ def instalar(
         registro[manifesto.id] = entrada
         gravar_registro(lg.registro, registro)
         _mandar_embora(lg, manifesto, a_substituir)
+        if entrada.motivo_do_preparo:
+            raise InstalacaoRecusadaError(
+                f"«{manifesto.nome}» foi instalada e ficou desligada. {entrada.motivo_do_preparo}")
         return Resultado(entrada, manifesto, novas, substituidas=a_substituir)
     finally:
         shutil.rmtree(temporaria, ignore_errors=True)
@@ -532,6 +658,10 @@ def _o_que_segura_a_atualizacao(
         return f"A versão {manifesto.versao} pede {', '.join(novas)}."
     if aviso_por_ver(anterior, manifesto):
         return f"A versão {manifesto.versao} traz outro aviso."
+    if _preparo_novo(lg, anterior, manifesto):
+        # Rodar um comando fora da caixa é permissão nova (decisão
+        # D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR, por delegação, a validar pelo usuário).
+        return f"A versão {manifesto.versao} traz um preparo novo."
     if anterior.origem == "oficial" and tipo != "oficial":
         return f"A tag da versão {manifesto.versao} não confere com a chave oficial."
     if a_substituir:
@@ -663,6 +793,12 @@ def ligar(
     _conferir_o_tema(manifesto, lg.codigo / mod_id)
     entrada.permissoes_aceitas = list(manifesto.permissoes)
     entrada.aviso_aceito = manifesto.aviso
+    if manifesto.preparar and entrada.preparada_em != entrada.instalada_em:
+        # O preparo que esperava o «sim», ou o que falhou: roda agora, antes de ligar.
+        _rodar_o_preparo(lg, manifesto, entrada)
+        if entrada.motivo_do_preparo:
+            gravar_registro(lg.registro, registro)
+            raise InstalacaoRecusadaError(entrada.motivo_do_preparo)
     entrada.ligada = True
     entrada.ligada_em = datetime.now(timezone.utc).isoformat(timespec="microseconds")
     gravar_registro(lg.registro, registro)
@@ -826,7 +962,9 @@ def remover(
 
 __all__ = [
     "CHAVES_OFICIAIS",
+    "DIARIO_DO_PREPARO",
     "INTERVALO_DA_ATUALIZACAO_S",
+    "PRAZO_DO_PREPARO_S",
     "PRAZO_PARA_PARAR_S",
     "AvisoParaVerError",
     "Entrada",

@@ -244,12 +244,17 @@ class Processo(BaseModel):
     @field_validator("executar")
     @classmethod
     def _dentro_da_pasta(cls, valor: list[str]) -> list[str]:
-        primeiro = valor[0]
-        if not primeiro.strip():
-            raise ValueError("processo.executar começa vazio")
-        if primeiro.startswith("/") or ".." in Path(primeiro).parts:
-            raise ValueError("processo.executar aponta para fora da pasta da modificação")
-        return valor
+        return _comando_dentro_da_pasta(valor, "processo.executar")
+
+
+def _comando_dentro_da_pasta(valor: list[str], campo: str) -> list[str]:
+    """O primeiro da linha é um arquivo da pasta da modificação ou um nome do ``PATH``."""
+    primeiro = valor[0]
+    if not primeiro.strip():
+        raise ValueError(f"{campo} começa vazio")
+    if primeiro.startswith("/") or ".." in Path(primeiro).parts:
+        raise ValueError(f"{campo} aponta para fora da pasta da modificação")
+    return valor
 
 
 class Opcao(BaseModel):
@@ -371,6 +376,9 @@ class Manifesto(BaseModel):
     aviso: str = Field(default="", max_length=400)
     tipos: list[Literal["processo", "lancador", "tema", "perfil"]] = Field(min_length=1)
     processo: Processo | None = None
+    # O preparo (``instalador._preparar``): o comando, relativo à pasta da modificação, que o
+    # instalador roda fora da caixa, como quem usa, depois de trocar o código e antes de ligar.
+    preparar: list[str] | None = None
     permissoes: list[str] = Field(default_factory=list)
     opcoes: list[Opcao] = Field(default_factory=list)
     # A coluna «Agora» da janela: o que mostrar ao vivo do que a extensão devolve em
@@ -408,6 +416,15 @@ class Manifesto(BaseModel):
         if not _SPDX.match(valor):
             raise ValueError("licenca precisa ser um identificador SPDX (ex.: MIT)")
         return valor
+
+    @field_validator("preparar")
+    @classmethod
+    def _preparo_dentro_da_pasta(cls, valor: list[str] | None) -> list[str] | None:
+        if valor is None:
+            return None
+        if not valor:
+            raise ValueError("preparar é uma lista vazia")
+        return _comando_dentro_da_pasta(valor, "preparar")
 
     @field_validator("permissoes")  # (noqa-acento): contrato ASCII
     @classmethod
