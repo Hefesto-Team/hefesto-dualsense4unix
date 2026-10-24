@@ -1819,6 +1819,34 @@ class UhidDualSense:
                      struct.pack("<IIH", UHID_SET_REPORT_REPLY, request_id, 0))
 
 
+    #: a nova tentativa é a de um pedido que o broker recusou por falta de sessão
+    #: (O-PAD-QUE-NASCE-ANTES-DO-BROKER-ACEITAR-FICA-SEM-PORTA-01): ela pergunta
+    #: ao broker ANTES de desfazer o uhid, e o pad só troca de pele com o gadget na mão.
+    _gadget_recusado: bool = False
+    _gadget_na_mao: _GadgetDoPad | None = None
+
+    @property
+    def porta_propria(self) -> bool:
+        """O pad está no gadget dele, enumerado: o jogo acha o som do pad pelo USB.
+
+        Sem a porta, o pad é o uhid sem pai USB, e o jogo que procura o áudio do
+        controle pelo ContainerId não acha a háptica (`o_que_o_jogo_ve`).
+        """
+        gadget = self._gadget
+        return bool(
+            gadget is not None
+            and not self._gadget_falhou
+            and not self._gadget_caiu
+            and gadget.interface is not None
+        )
+
+    @property
+    def porta_motivo(self) -> str | None:
+        """Por que o pad está sem a porta própria (`pad_usb.porque_sem_porta`); None = tem."""
+        if self.porta_propria:
+            return None
+        return pad_usb.porque_sem_porta(self.identity or "")
+
     def start(self) -> bool:
         """Cria o device HID vestindo um MAC que nenhum outro vpad vivo veste."""
         if self._fd is not None:
@@ -1834,6 +1862,7 @@ class UhidDualSense:
     def stop(self) -> None:
         """Destrói o device e só DEPOIS devolve o MAC."""
         self._gadget_outra_vez = False
+        self._gadget_recusado = False
         self._destruir_o_device()
         _MACS_DOS_VPADS_VIVOS.despir(self)
         # o doctor conta quem está no uhid pelo diário: o pad que parou sai da conta.
@@ -2376,16 +2405,34 @@ def _sair_da_fila(serial: str) -> None:
         _FILA_DA_ENUMERACAO.discard(serial)
 
 
+#: as recusas do broker que passam sozinhas: ainda não há sessão na frente (o
+#: daemon de usuário sobe antes do login), ou o broker não está no ar. O pad
+#: recusado por uma delas pede de novo a cada `_GADGET_VARRE_S`, sem jogo aberto.
+_RECUSA_DA_SESSAO = frozenset({"broker_fora_do_ar", "sem_sessao_ativa",
+                               "nao_e_quem_esta_na_frente"})
+#: ``{serial: motivo}`` da última recusa do broker a este pad; o gadget montado a tira.
+_RECUSAS_DO_BROKER: dict[str, str] = {}
+#: o cliente do pedido recusado volta no pedido seguinte do mesmo serial: o
+#: broker fora do ar é dito uma vez, e não uma linha por volta.
+_CLIENTES_RECUSADOS: dict[str, Any] = {}
+_TRAVA_DAS_RECUSAS = threading.Lock()
+
+
 def _pedir_ao_broker(
     serial: str, descritor: bytes, identidade: str, par: tuple[int, int]
 ) -> _GadgetDoPad | None:
     """O gadget pedido ao broker, numa conexão só dele (a lease), ou None.
 
     ``par`` é o (VID, PID) do pad: o broker veste o que o pad pede, ou recusa.
+    A recusa fica em :data:`_RECUSAS_DO_BROKER`, e o diário a diz quando o
+    motivo muda (o pedido repetido antes do login não vira uma linha por volta).
     """
     from hefesto_dualsense4unix.integrations.hidraw_broker_client import HidrawBrokerClient
 
-    cliente = HidrawBrokerClient()
+    with _TRAVA_DAS_RECUSAS:
+        cliente = _CLIENTES_RECUSADOS.pop(serial, None)
+    if cliente is None:
+        cliente = HidrawBrokerClient()
     fd, resposta = cliente.montar_pad_usb(serial, descritor, par)
     if fd is None:
         with contextlib.suppress(Exception):
@@ -2395,8 +2442,15 @@ def _pedir_ao_broker(
             pad_usb.anotar_contrato_que_faltou(str(contrato))
         motivo = str((resposta or {}).get("error", "broker_fora_do_ar"))
         pad_usb.anotar_sem_porta(identidade, motivo)
-        logger.info("pad_usb_indisponivel_fica_o_uhid", motivo=motivo)
+        with _TRAVA_DAS_RECUSAS:
+            antes = _RECUSAS_DO_BROKER.get(serial)
+            _RECUSAS_DO_BROKER[serial] = motivo
+            _CLIENTES_RECUSADOS[serial] = cliente
+        if antes != motivo:
+            logger.info("pad_usb_indisponivel_fica_o_uhid", motivo=motivo)
         return None
+    with _TRAVA_DAS_RECUSAS:
+        _RECUSAS_DO_BROKER.pop(serial, None)
     return _GadgetDoPad(
         cliente=cliente,
         fd=fd,
@@ -2601,31 +2655,12 @@ def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
     """O pad nasce no gadget? False = segue o uhid de sempre, intacto."""
     if pad._sem_gadget or pad.blueprint is None:
         return False
-    par = (DUALSENSE_VENDOR, pad.product)
-    gadget = _GADGETS_ESTACIONADOS.retomar(pad.identity, par)
-    if gadget is None and QUIRK_DO_PAR(par):
-        pad_usb.anotar_sem_porta(pad.identity or "", "quirk_do_par")
-        logger.info("pad_usb_fica_o_uhid", player=pad.player, motivo="quirk_do_par",
-                    par=f"{par[0]:04x}:{par[1]:04x}")
-        return False
-    if gadget is None and pad_usb.porta_fora(pad.player):
-        pad_usb.anotar_sem_porta(pad.identity or "", "porta_fora")
-        logger.info("pad_usb_porta_fora", player=pad.player,
-                    falhas=pad_usb.FALHAS_ATE_A_PORTA_SAIR)
-        return False
+    gadget = _GADGETS_ESTACIONADOS.retomar(pad.identity, (DUALSENSE_VENDOR, pad.product))
     if gadget is None:
-        faltam = CONTRATO_QUE_FALTA()
-        if faltam:
-            _avisar_o_contrato_que_falta(faltam)
-            pad_usb.anotar_sem_porta(pad.identity or "", "sem_contrato:" + "+".join(faltam))
-            return False
-        try:
-            serial = pad_usb.serial_do_pad(pad.mac, pad.player)
-        except ValueError:
-            pad_usb.anotar_sem_porta(pad.identity or "", "sem_serial")
-            return False
-        gadget = PEDIR_O_PAD_USB(serial, bytes(pad.blueprint["descriptor"]), pad.identity or "",
-                                 par)
+        # o pedido que a nova tentativa já fez ao broker (`_tentar_o_gadget_outra_vez`)
+        gadget, pad._gadget_na_mao = pad._gadget_na_mao, None
+    if gadget is None:
+        gadget = _pedir_o_gadget(pad)
         if gadget is None:
             return False
     if pad_usb.medir_a_marca_do_f_hid() is False:
@@ -2657,6 +2692,48 @@ def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
     logger.info("pad_usb_montado", gadget=gadget.gadget, mac=pad.mac, player=pad.player)
     _vigiar_a_enumeracao(pad)
     return True
+
+
+def _pedir_o_gadget(pad: UhidDualSense) -> _GadgetDoPad | None:
+    """O gadget novo do pad, ou None com o motivo anotado (o pad segue no uhid).
+
+    A recusa do broker por falta de sessão (:data:`_RECUSA_DA_SESSAO`) arma a
+    nova tentativa do gadget que caiu, sem jogo aberto, a cada `_GADGET_VARRE_S`:
+    o pad que nasceu antes do login ganha a porta dele quando a sessão abre.
+    """
+    assert pad.blueprint is not None
+    par = (DUALSENSE_VENDOR, pad.product)
+    if QUIRK_DO_PAR(par):
+        pad_usb.anotar_sem_porta(pad.identity or "", "quirk_do_par")
+        logger.info("pad_usb_fica_o_uhid", player=pad.player, motivo="quirk_do_par",
+                    par=f"{par[0]:04x}:{par[1]:04x}")
+        return None
+    if pad_usb.porta_fora(pad.player):
+        pad_usb.anotar_sem_porta(pad.identity or "", "porta_fora")
+        logger.info("pad_usb_porta_fora", player=pad.player,
+                    falhas=pad_usb.FALHAS_ATE_A_PORTA_SAIR)
+        return None
+    faltam = CONTRATO_QUE_FALTA()
+    if faltam:
+        _avisar_o_contrato_que_falta(faltam)
+        pad_usb.anotar_sem_porta(pad.identity or "", "sem_contrato:" + "+".join(faltam))
+        return None
+    try:
+        serial = pad_usb.serial_do_pad(pad.mac, pad.player)
+    except ValueError:
+        pad_usb.anotar_sem_porta(pad.identity or "", "sem_serial")
+        return None
+    gadget = PEDIR_O_PAD_USB(serial, bytes(pad.blueprint["descriptor"]), pad.identity or "", par)
+    if gadget is not None:
+        pad._gadget_recusado = False
+        return gadget
+    with _TRAVA_DAS_RECUSAS:
+        recusa = _RECUSAS_DO_BROKER.get(serial)
+    if recusa in _RECUSA_DA_SESSAO:
+        pad._gadget_recusado = True
+        pad._gadget_outra_vez = True
+        pad._gadget_outra_vez_em = pad.time_fn() + _GADGET_VARRE_S
+    return None
 
 
 def _vigiar_a_enumeracao(pad: UhidDualSense) -> None:
@@ -2929,7 +3006,9 @@ def _tentar_o_gadget_outra_vez(pad: UhidDualSense) -> bool:
     """O pad que voltou ao uhid tenta o gadget uma vez de novo, sem jogo aberto.
 
     A pergunta pelo jogo sai a cada ``_GADGET_VARRE_S``: com o jogo aberto, o
-    pad não troca de pele embaixo dele. True = o device foi refeito.
+    pad não troca de pele embaixo dele. O pad que o broker recusou pede o
+    gadget ANTES de desfazer o uhid: recusado de novo, o uhid fica intacto e a
+    tentativa se rearma. True = o device foi refeito.
     """
     agora = pad.time_fn()
     if agora < pad._gadget_outra_vez_em:
@@ -2938,9 +3017,19 @@ def _tentar_o_gadget_outra_vez(pad: UhidDualSense) -> bool:
     if JOGO_ABERTO():
         return False
     pad._gadget_outra_vez = False
+    if pad._gadget_recusado:
+        pad._gadget_recusado = False
+        if pad.blueprint is None:
+            return False
+        pad._gadget_na_mao = _pedir_o_gadget(pad)
+        if pad._gadget_na_mao is None:
+            return False
     pad._destruir_o_device()
     pad._sem_gadget = False
     pad._criar_o_device()
+    sobra, pad._gadget_na_mao = pad._gadget_na_mao, None
+    if sobra is not None:
+        sobra.desmontar()
     return True
 
 

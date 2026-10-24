@@ -74,6 +74,17 @@ def _o_toque(forma: str, movimento: object, *, toque_ligado: bool) -> str:
     return PELO_HEFESTO
 
 
+def _a_porta(vpad: object) -> str | None:
+    """Por que o pad DualSense está sem a porta USB própria; None = tem, ou não sabe dizer.
+
+    A háptica do jogo é áudio do controle, e o jogo acha o áudio pelo pai USB
+    do pad: sem a porta, a háptica não é nativa, e chega só o rumble que o
+    Hefesto converte. O motivo é o que o pad anotou (`pad_usb.anotar_sem_porta`).
+    """
+    motivo = getattr(vpad, "porta_motivo", None)
+    return motivo if isinstance(motivo, str) and motivo else None
+
+
 def o_que_o_jogo_ve(
     vpad: object,
     movimento: object = None,
@@ -106,12 +117,16 @@ def o_que_o_jogo_ve(
         forma, movimento, giro_ligado=giro_ligado, acel_ligado=acel_ligado
     )
     funcoes["touchpad"] = _o_toque(forma, movimento, toque_ligado=toque_ligado)
+    porta = _a_porta(vpad) if forma == "dualsense" else None
+    if porta is not None:
+        funcoes["haptica"] = PELO_HEFESTO
     return {
         "forma": forma,
         "canal": canal,
         "conexao": _CONEXOES.get(str(transporte)),  # (noqa-acento): a chave ASCII do estado
         "troca_motivo": _texto(getattr(vpad, "troca_motivo", None)),
         "degradado_motivo": degradado,
+        "porta_motivo": porta,
         "funcoes": {nome: funcoes[nome] for nome in FUNCOES},  # (noqa-acento): idem
     }
 
