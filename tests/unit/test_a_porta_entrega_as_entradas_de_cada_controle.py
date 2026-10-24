@@ -321,7 +321,7 @@ def test_o_dedo_sai_normalizado_e_o_levantar_sai_como_nenhum_dedo(
         ext = await _entrar(curto, ["entradas"])
         try:
             for uniq in bancada.uniqs:
-                bancada.tocar(uniq, (1919, 0))
+                bancada.tocar(uniq, (960, 540))
                 bancada.tique(relogio)
                 bancada.tocar(uniq, (1919, 0), (0, 1079))
                 bancada.tique(relogio)
@@ -333,7 +333,8 @@ def test_o_dedo_sai_normalizado_e_o_levantar_sai_como_nenhum_dedo(
             await porta.parar()
 
     bancada, dados = asyncio.run(corrida())
-    um, dois = [{"x": 1.0, "y": 0.0}], [{"x": 1.0, "y": 0.0}, {"x": 0.0, "y": 1.0}]
+    # o meio da área prova a divisão; as pontas, o teto e o chão (só elas passam com a área errada)
+    um, dois = [{"x": 0.5, "y": 0.5}], [{"x": 1.0, "y": 0.0}, {"x": 0.0, "y": 1.0}]
     esperado = [(uniq, dedos) for uniq in bancada.uniqs for dedos in (um, dois, [])]
     assert [(d["uniq"], d["dedos"]) for d in dados] == esperado
 

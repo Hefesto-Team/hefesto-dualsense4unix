@@ -14,7 +14,9 @@ MORDIDAS (24/10/2026, executadas sobre a cura e devolvidas):
 - o teto do «Em curso» tirado da conta do ``esperando`` reprova
   ``test_o_em_curso_sai_no_teto_mesmo_sem_a_serie_subir``;
 - o ``aria-pressed`` tirado do «Gravar» reprova
-  ``test_o_gravar_aceso_continua_gravar_e_se_diz_apertado``.
+  ``test_o_gravar_aceso_continua_gravar_e_se_diz_apertado``;
+- a chave desenhada pedindo o mesmo estado (``data-ligado`` invertido) reprova
+  ``test_a_chave_do_aparelho_pede_o_contrario_e_o_botao_diz_em_curso``.
 """
 
 from __future__ import annotations
@@ -288,12 +290,22 @@ def test_quatro_aparelhos_viram_quatro_linhas_e_o_testar_leva_o_alvo(janela, ctx
 
 
 def test_a_chave_do_aparelho_pede_o_contrario_e_o_botao_diz_em_curso(janela, ctx) -> None:  # noqa: F811
+    import re
+
     a07, instalar, abrir = janela
     instalar(**_pecas())
     ponte = _Ponte(VIVO)
-    abrir(ponte)
-    a07.acao_da_modificacao(ctx, {"v": "toque:ligar:ap-4", "ligado": "1"}, ponte)
-    a07.acao_da_modificacao(ctx, {"v": "toque:ligar:ap-1", "ligado": "0"}, ponte)
+    html = abrir(ponte)["blocos"]["#mod-janela"]
+
+    def clique_da_chave(alvo: str) -> dict[str, str]:
+        """O que o clique na chave do aparelho manda, lido da chave que a janela desenhou."""
+        chave = re.search(rf'role="switch"[^>]*data-v="toque:ligar:{alvo}" data-ligado="(\d)"',
+                          html)
+        assert chave, f"a chave do {alvo} não foi desenhada"
+        return {"v": f"toque:ligar:{alvo}", "ligado": chave.group(1)}
+
+    a07.acao_da_modificacao(ctx, clique_da_chave("ap-4"), ponte)
+    a07.acao_da_modificacao(ctx, clique_da_chave("ap-1"), ponte)
     a07.acao_da_modificacao(ctx, {"v": "toque:parear"}, ponte)
     feitas = [p for m, p in ponte.chamadas if m == "mods.acao"]
     assert feitas[0]["valor"] is True and feitas[1]["valor"] is False
