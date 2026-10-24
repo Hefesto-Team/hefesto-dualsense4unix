@@ -245,14 +245,14 @@
       "data": "2026-10-24",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1196808,
+      "piso": 1197549,
       "por_item": {
-        "docs": 120875,
+        "docs": 120883,
         "scripts": 120631,
-        "src": 319850,
-        "tests": 635452
+        "src": 319889,
+        "tests": 636146
       },
-      "razao": "tamanho: +87 linhas (1196721 -> 1196808), pagas por Origem: D-2310-A-ESPERA-DA-PINTURA-CONTA-DO-LOAD; registrado no fecho, topo 127242a8f8e2",
+      "razao": "tamanho: +741 linhas (1196808 -> 1197549), pagas por Origem: D-2410-A-ENTRADA-MAE-DO-EXTENSOR-DIZ-COM-O-EXTENSOR, D-2410-O-PORTE-DIZ-O-TEXTO-DA-PAGINA; registrado no fecho, topo 4860d75ee913",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -895,6 +895,12 @@
           "de": 1196721,
           "para": 1196808,
           "razao": "tamanho: +87 linhas (1196721 -> 1196808), pagas por Origem: D-2310-A-ESPERA-DA-PINTURA-CONTA-DO-LOAD; registrado no fecho, topo 127242a8f8e2"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 1196808,
+          "para": 1197549,
+          "razao": "tamanho: +741 linhas (1196808 -> 1197549), pagas por Origem: D-2410-A-ENTRADA-MAE-DO-EXTENSOR-DIZ-COM-O-EXTENSOR, D-2410-O-PORTE-DIZ-O-TEXTO-DA-PAGINA; registrado no fecho, topo 4860d75ee913"
         }
       ],
       "unidade": "linhas",
