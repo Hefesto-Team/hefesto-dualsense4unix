@@ -186,6 +186,7 @@ def _conferir(pagina: Path, tamanho: tuple[int, int], nome: str) -> None:
 @pytest.mark.parametrize("tamanho", TAMANHOS, ids=lambda t: f"{t[0]}px")
 @pytest.mark.parametrize("nome", sorted(CENAS))
 def test_a_linha_do_adaptador_cabe_no_desenho(nome: str, tamanho: tuple[int, int]) -> None:
+    # D-2410-A-COLUNA-DO-ONDE-CRESCE-PARA-TODOS
     _conferir(DESENHO, tamanho, nome)
 
 

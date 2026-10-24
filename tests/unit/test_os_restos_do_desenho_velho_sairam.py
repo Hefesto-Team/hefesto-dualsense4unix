@@ -135,6 +135,7 @@ def test_a_08_nao_define_a_legenda() -> None:
 
 
 def test_nenhum_controle_da_cena_do_radio_tem_nome_de_pessoa() -> None:
+    # D-2410-A-CENA-DE-EXEMPLO-SEM-NOME
     """Todo controle da cena da 08, inclusive os dois que não conectaram, nasce sem nome: a tela
     o chama como chama o de qualquer pessoa que ainda não deu nome a ele."""
     import sys

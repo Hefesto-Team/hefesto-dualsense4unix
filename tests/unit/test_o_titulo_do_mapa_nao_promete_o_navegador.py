@@ -60,6 +60,7 @@ def _promessas(texto: str) -> list[str]:
 
 
 def test_o_gerador_da_08_nao_promete_o_navegador() -> None:
+    # D-2410-A-DICA-DIZ-QUE-ABRE-NA-JANELA
     achados = _promessas((INTERFACE / "aba08.py").read_text(encoding="utf-8"))
     assert achados == [], f"o gerador da 08 promete o navegador a uma página do produto: {achados}"
 
