@@ -5,7 +5,8 @@ camada do co-op): o aviso do `discover` que falha sai uma vez por borda, e não 
 de espera; quem volta e cujo nó de LED aparece depois do primeiro ciclo acende o número
 quando o nó aparece, uma vez; o `disable()` e a camada do co-op esvaziam os avisos ditos,
 e religado o co-op o nó que falta se avisa de novo. E o gesto do mapa não manda devolver
-a cor clicando na do número: a cor de antes pode ser a do plástico.
+a cor clicando na do número: a cor de antes pode ser a do plástico; nem a réplica da luz
+parte dela (O-GESTO-DA-REPLICA-DA-LUZ-DIZ-A-COR-DO-PLASTICO-01).
 
 MORDIDAS: cada cura arrancada reprova o caso dela (o relato do conjunto as lista).
 """
@@ -218,6 +219,44 @@ def test_a_cor_que_se_devolve_foi_anotada_antes() -> None:
         alvo = passos.get(_ORDINAIS.get(ref[1], 0), "") if ref else ""
         if not re.search(r"[Aa]note\b.*(«Cor»|\bcor\b)", alvo):
             erros.append(linha)
+    assert not erros, "\n".join(erros)
+
+
+#: A cor de partida dita como a do número, sem o plástico: «começa azul», «ficou verde e
+#: a do P4 rosa», «deixou o azul», «a cor do número continua»…
+_PARTIDA_PELO_NUMERO = re.compile(
+    r"[Cc]omeça (azul|vermelho|verde|rosa)|deixou o (azul|vermelho|verde|rosa)"
+    r"|ficou (azul|vermelha|verde|rosa) e a do P\d|cor automática do número"
+    r"|cor do número")
+
+
+def test_a_replica_da_luz_comeca_na_cor_do_plastico() -> None:
+    """Na réplica da luz a cor de partida é a automática: a do plástico, e sem ele a do número."""
+    erros: list[str] = []
+    celulas = 0
+    secao = ""
+    passos: dict[int, str] = {}
+    for linha in GESTO.read_text(encoding="utf-8").splitlines():
+        if linha.startswith("## "):
+            secao, passos = linha, {}
+            celulas += secao.startswith("## mapa-luz.replica_output_jogo-")
+            continue
+        if not secao.startswith("## mapa-luz.replica_output_jogo-"):
+            continue
+        for frase in re.split(r"(?<=[.;—])\s", linha):
+            if _PARTIDA_PELO_NUMERO.search(frase) and "sem o plástico" not in frase:
+                erros.append(f"{secao[3:].split(' — ')[0]}: {frase}")
+        achou = re.match(r"^(\d+)\. (.*)$", linha)
+        if not achou:
+            continue
+        passos[int(achou[1])] = achou[2]
+        if not re.search(r"\bdeixou\b", linha):
+            continue
+        ref = re.search(r"cor que você anotou no (\w+) passo", linha)
+        alvo = passos.get(_ORDINAIS.get(ref[1], 0), "") if ref else ""
+        if not re.search(r"[Aa]note\b.*\bcor\b", alvo):
+            erros.append(f"{secao[3:].split(' — ')[0]}: {linha}")
+    assert celulas == 2, f"as duas células da réplica sumiram: {celulas}"
     assert not erros, "\n".join(erros)
 
 

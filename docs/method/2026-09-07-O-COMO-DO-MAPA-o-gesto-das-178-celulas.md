@@ -4303,22 +4303,22 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `luz.replica_output_jogo @ cabo`
 
-**O que isto prova.** Prova que, quando o jogo pinta a luz do controle que ele enxerga, a barra do controle de verdade ligado por cabo acende igual — por cima da cor automática do número, que é a única que o jogo pode trocar.
+**O que isto prova.** Prova que, quando o jogo pinta a luz do controle que ele enxerga, a barra do controle de verdade ligado por cabo acende igual — por cima da cor automática, que é a única que o jogo pode trocar.
 
-**Onde olhar.** Na aba Jogar: a linha «Status» em «Ligado»; o quadro «Modo» com o cartão «Sony DualSense» aceso — é o caminho por onde a luz volta do jogo ao controle —; o «Modo Freestyle», no canto do quadro «Modo»; e o quadro «O controle é visto como:», onde cada controle escolhe entre «DualSense», «Xbox 360» e «Nintendo Pro». Para o jogo pintar a luz, o controle tem de ser visto como «DualSense»: um «Xbox 360» não tem barra de luz. Na aba Perfis, a lista «Perfis salvos», com «Novo», «Ativar» e «Remover», e o nome em «Perfil ativo», no alto de qualquer aba. A prova é a barra no aparelho. A fonte não diz qual jogo pinta a barra: escolha um que você saiba que pinta e anote o nome.
+**Onde olhar.** Na aba Jogar: a linha «Status» em «Ligado»; o quadro «Modo» com o cartão «Sony DualSense» aceso — é o caminho por onde a luz volta do jogo ao controle —; o «Modo Freestyle», no canto do quadro «Modo»; e o quadro «O controle é visto como:», onde cada controle escolhe entre «DualSense», «Xbox 360» e «Nintendo Pro». Para o jogo pintar a luz, o controle tem de ser visto como «DualSense»: um «Xbox 360» não tem barra de luz. A cor automática de cada controle é a do plástico dele, quando o Hefesto já o leu (um controle azul fica azul, um vermelho fica vermelho, um branco fica branco); sem o plástico lido, é a do número: 1 azul, 2 vermelho, 3 verde, 4 rosa. Na aba Perfis, a lista «Perfis salvos», com «Novo», «Ativar» e «Remover», e o nome em «Perfil ativo», no alto de qualquer aba. A prova é a barra no aparelho. A fonte não diz qual jogo pinta a barra: escolha um que você saiba que pinta e anote o nome.
 
 **Os passos.**
 
 1. Abra a aba Perfis e anote o nome que está em «Perfil ativo».
 2. Clique em «Novo», escreva «Teste da réplica» no campo «Nome:», clique nele na lista «Perfis salvos» e clique em «Ativar».
-3. Confira que a barra do P1 ficou azul e a do P2 vermelha — a cor do número, a única que o jogo pode trocar.
+3. Confira que as barras do P1 e do P2 foram para a cor automática de cada um, a única que o jogo pode trocar, e anote a cor de cada uma.
 4. Abra a aba Jogar e confira que o «Status» está em «Ligado» e que o cartão «Sony DualSense» do quadro «Modo» está aceso.
 5. Acenda o «Modo Freestyle», no canto do quadro «Modo».
 6. Clique em «DualSense» no cartão do P1 e no do P2, no quadro «O controle é visto como:».
 7. Anote a cor das barras do P3 e do P4.
 8. Abra o jogo que você escolheu e deixe-o carregar.
 9. Entre na partida SÓ com o P1, deixando os outros três fora.
-10. Confira que a barra do P1 deixou o azul e passou à cor que o jogo pediu.
+10. Confira que a barra do P1 deixou a cor que você anotou no terceiro passo e passou à cor que o jogo pediu.
 11. Confira que as barras do P2, do P3 e do P4 continuam como estavam.
 12. Entre na partida com o P2 também.
 13. Confira que a barra do P2 mudou, e que as do P3 e do P4 continuam nas cores anotadas.
@@ -4327,18 +4327,18 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 16. Na aba Perfis, escolha o perfil que você anotou e clique em «Ativar».
 17. Escolha «Teste da réplica» na lista, clique em «Remover» e, quando o botão perguntar, clique nele de novo.
 
-**Passa quando.** Nos dois controles do cabo a barra troca da cor do número para a cor que o jogo mandou, sozinha, sem você tocar em nada no Hefesto. E os dois do rádio, fora da partida, não mudam de cor.
+**Passa quando.** Nos dois controles do cabo a barra troca da cor automática para a cor que o jogo mandou, sozinha, sem você tocar em nada no Hefesto. E os dois do rádio, fora da partida, não mudam de cor.
 
 **Por controle.**
 
-* **P1** — No CABO, e é um dos dois desta célula. Começa azul, a cor do número 1, e entra na partida sozinho.
-* **P2** — No CABO, e é o outro. Começa vermelho e entra depois do P1. Se o P1 virar e o P2 não, o defeito é do segundo lugar na fila, não do transporte.
+* **P1** — No CABO, e é um dos dois desta célula. Começa na cor automática dele, a que você anotou no terceiro passo, e entra na partida sozinho.
+* **P2** — No CABO, e é o outro. Começa na cor automática dele e entra depois do P1. Se o P1 virar e o P2 não, o defeito é do segundo lugar na fila, não do transporte.
 * **P3** — No RÁDIO, testemunha. Ligado e FORA da partida. Se a barra dele mudar sem ele ter entrado, a cópia está indo para quem não pediu.
 * **P4** — No RÁDIO, segunda testemunha, também fora da partida.
 
-**A espera.** O jogo leva minutos para chegar ao menu, e nenhum deles é para ficar olhando. Deixe-o carregando e volte quando ouvir o som do menu: a cor do número continua nas barras até o jogo pintar por cima. Ao voltar, olhe primeiro a barra do P1, antes de entrar na partida — se ela já deixou o azul sem ninguém ter entrado, isso é achado e vale anotar a hora.
+**A espera.** O jogo leva minutos para chegar ao menu, e nenhum deles é para ficar olhando. Deixe-o carregando e volte quando ouvir o som do menu: a cor automática continua nas barras até o jogo pintar por cima. Ao voltar, olhe primeiro a barra do P1, antes de entrar na partida — se ela já deixou a cor anotada sem ninguém ter entrado, isso é achado e vale anotar a hora.
 
-**A armadilha.** Seis, e três delas deixam a barra parada sem haver defeito. (1) A COR QUE VOCÊ ESCOLHEU VENCE A DO JOGO — ordem sua de 16/09, «meu perfil manda»: um controle com cor escolhida na aba Iluminação, ou gravada no perfil, não troca de cor pelo jogo. É por isso que o teste roda num perfil novo, que nasce sem cor própria em controle nenhum, e com o «Modo Freestyle» aceso, para janela nenhuma trocar o perfil. Só o perfil próprio de um jogo entra por cima: se o «Perfil ativo» trocar ao abrir o jogo, a cor é a daquele perfil — escolha um jogo sem perfil próprio. (2) O NÚMERO É DO HEFESTO: o jogo que só numera os jogadores manda as cores de número (azul, vermelho, verde e rosa escuros), e o Hefesto as recusa desde 23/09 — a barra fica na cor do número, e isso é o produto certo. Escolha um jogo que pinta a barra de propósito, por vida, dano ou cena. (3) MÁSCARA ERRADA MATA O TESTE SEM HAVER DEFEITO: visto como «Xbox 360», o controle não tem barra do lado do jogo. (4) O CAMINHO TAMBÉM: com o cartão «Xbox» do quadro «Modo» aceso, o jogo vê o DualSense pelo canal comum, e por ele a luz não volta. (5) NO MODO NATIVO NÃO HÁ O QUE COPIAR, e a barra continua do Hefesto: o jogo que escreve direto no controle é corrigido em até um segundo. (6) Se o jogo escolhido nunca pintar, o resultado não é vermelho, é «não mediu»: troque de jogo e anote qual usou. A Steam não disputa mais a barra — o controle de verdade nasce escondido dela —, e não julgue pela tela: a prova é o plástico.
+**A armadilha.** Seis, e três delas deixam a barra parada sem haver defeito. (1) A COR QUE VOCÊ ESCOLHEU VENCE A DO JOGO — ordem sua de 16/09, «meu perfil manda»: um controle com cor escolhida na aba Iluminação, ou gravada no perfil, não troca de cor pelo jogo. É por isso que o teste roda num perfil novo, que nasce sem cor própria em controle nenhum, e com o «Modo Freestyle» aceso, para janela nenhuma trocar o perfil. Só o perfil próprio de um jogo entra por cima: se o «Perfil ativo» trocar ao abrir o jogo, a cor é a daquele perfil — escolha um jogo sem perfil próprio. (2) O NÚMERO É DO HEFESTO: o jogo que só numera os jogadores manda as cores de número (azul, vermelho, verde e rosa escuros), e o Hefesto as recusa desde 23/09 — a barra fica na cor automática, e isso é o produto certo. Escolha um jogo que pinta a barra de propósito, por vida, dano ou cena. (3) MÁSCARA ERRADA MATA O TESTE SEM HAVER DEFEITO: visto como «Xbox 360», o controle não tem barra do lado do jogo. (4) O CAMINHO TAMBÉM: com o cartão «Xbox» do quadro «Modo» aceso, o jogo vê o DualSense pelo canal comum, e por ele a luz não volta. (5) NO MODO NATIVO NÃO HÁ O QUE COPIAR, e a barra continua do Hefesto: o jogo que escreve direto no controle é corrigido em até um segundo. (6) Se o jogo escolhido nunca pintar, o resultado não é vermelho, é «não mediu»: troque de jogo e anote qual usou. A Steam não disputa mais a barra — o controle de verdade nasce escondido dela —, e não julgue pela tela: a prova é o plástico.
 
 ---
 
@@ -4346,15 +4346,15 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `luz.replica_output_jogo @ rádio`
 
-**O que isto prova.** Prova que, quando o jogo pinta a luz do controle que ele enxerga, a barra do controle de verdade ligado por rádio acende igual — por cima da cor automática do número — e anota se o gatilho pedido pelo jogo também chega.
+**O que isto prova.** Prova que, quando o jogo pinta a luz do controle que ele enxerga, a barra do controle de verdade ligado por rádio acende igual — por cima da cor automática — e anota se o gatilho pedido pelo jogo também chega.
 
-**Onde olhar.** Na aba Jogar: «Status» em «Ligado»; o cartão «Sony DualSense» aceso no quadro «Modo» — é o caminho por onde luz e gatilho voltam do jogo —; o «Modo Freestyle», no canto do quadro «Modo»; e o quadro «O controle é visto como:», com «DualSense» escolhido. Na aba Perfis, a lista «Perfis salvos», com «Novo», «Ativar» e «Remover», e o nome em «Perfil ativo», no alto de qualquer aba. A prova é o aparelho: a barra de luz e a resistência que a sua mão sente no L2 e no R2. Escolha um jogo que você saiba que pinta a barra e anote o nome.
+**Onde olhar.** Na aba Jogar: «Status» em «Ligado»; o cartão «Sony DualSense» aceso no quadro «Modo» — é o caminho por onde luz e gatilho voltam do jogo —; o «Modo Freestyle», no canto do quadro «Modo»; e o quadro «O controle é visto como:», com «DualSense» escolhido. A cor automática de cada controle é a do plástico dele, quando o Hefesto já o leu (um controle azul fica azul, um vermelho fica vermelho, um branco fica branco); sem o plástico lido, é a do número: 1 azul, 2 vermelho, 3 verde, 4 rosa. Na aba Perfis, a lista «Perfis salvos», com «Novo», «Ativar» e «Remover», e o nome em «Perfil ativo», no alto de qualquer aba. A prova é o aparelho: a barra de luz e a resistência que a sua mão sente no L2 e no R2. Escolha um jogo que você saiba que pinta a barra e anote o nome.
 
 **Os passos.**
 
 1. Abra a aba Perfis e anote o nome que está em «Perfil ativo».
 2. Clique em «Novo», escreva «Teste da réplica» no campo «Nome:», clique nele na lista «Perfis salvos» e clique em «Ativar».
-3. Confira que a barra do P3 ficou verde e a do P4 rosa — a cor do número, a única que o jogo pode trocar; se nem ela pegar, o teste não roda.
+3. Confira que as barras do P3 e do P4 foram para a cor automática de cada um, a única que o jogo pode trocar, e anote a cor de cada uma; se nem ela pegar, o teste não roda.
 4. Abra a aba Jogar e confira que o «Status» está em «Ligado» e que o cartão «Sony DualSense» do quadro «Modo» está aceso.
 5. Acenda o «Modo Freestyle», no canto do quadro «Modo».
 6. Clique em «DualSense» no cartão do P3 e no do P4, no quadro «O controle é visto como:».
@@ -4362,7 +4362,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 8. Anote a cor das barras do P1 e do P2.
 9. Abra o jogo que você escolheu e deixe-o carregar.
 10. Entre na partida SÓ com o P3, deixando os outros três fora.
-11. Confira que a barra do P3 deixou o verde e passou à cor que o jogo pediu.
+11. Confira que a barra do P3 deixou a cor que você anotou no terceiro passo e passou à cor que o jogo pediu.
 12. Aperte o L2 e o R2 do P3 até o fundo, dentro do jogo.
 13. Anote se a resistência mudou em relação à que você guardou na mão.
 14. Confira que as barras do P1, do P2 e do P4 continuam como estavam.
@@ -4373,18 +4373,18 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 19. Na aba Perfis, escolha o perfil que você anotou e clique em «Ativar».
 20. Escolha «Teste da réplica» na lista, clique em «Remover» e, quando o botão perguntar, clique nele de novo.
 
-**Passa quando.** Nos dois controles do rádio a barra troca da cor do número para a cor que o jogo mandou, sozinha — e os dois do cabo, fora da partida, não mudam. A resistência do L2 e do R2 é achado a anotar: se a luz chegar e o gatilho não, essa é a metade que o mapa ainda dá como incompleta neste lado.
+**Passa quando.** Nos dois controles do rádio a barra troca da cor automática para a cor que o jogo mandou, sozinha — e os dois do cabo, fora da partida, não mudam. A resistência do L2 e do R2 é achado a anotar: se a luz chegar e o gatilho não, essa é a metade que o mapa ainda dá como incompleta neste lado.
 
 **Por controle.**
 
 * **P1** — No CABO, testemunha e comparação. Fora da partida. Se as barras do P3 e do P4 não mudarem, entre com o P1: se a dele mudar, o defeito é do rádio; se nem a dele, o jogo não está pintando e o teste não mediu nada.
 * **P2** — No CABO, segunda testemunha. Fora da partida, e a barra não muda.
-* **P3** — No RÁDIO, e é um dos dois desta célula. Começa verde, entra sozinho, e é nele que se aperta o gatilho.
-* **P4** — No RÁDIO, e é o outro. Começa rosa e entra depois do P3.
+* **P3** — No RÁDIO, e é um dos dois desta célula. Começa na cor automática dele, a que você anotou no terceiro passo, entra sozinho, e é nele que se aperta o gatilho.
+* **P4** — No RÁDIO, e é o outro. Começa na cor automática dele e entra depois do P3.
 
-**A espera.** O jogo leva minutos para chegar ao menu, e nenhum deles é para ficar olhando. Deixe-o carregando e volte quando ouvir o som do menu: a cor do número continua nas barras até o jogo pintar por cima. Ao voltar, olhe primeiro as barras do P3 e do P4, ANTES de entrar na partida — se alguma já deixou a cor do número sem ninguém ter entrado, anote a hora.
+**A espera.** O jogo leva minutos para chegar ao menu, e nenhum deles é para ficar olhando. Deixe-o carregando e volte quando ouvir o som do menu: a cor automática continua nas barras até o jogo pintar por cima. Ao voltar, olhe primeiro as barras do P3 e do P4, ANTES de entrar na partida — se alguma já deixou a cor anotada sem ninguém ter entrado, anote a hora.
 
-**A armadilha.** Sete. (1) A COR E O GATILHO QUE VOCÊ ESCOLHEU VENCEM OS DO JOGO — ordem sua de 16/09, «meu perfil manda»: um controle com cor escolhida na aba Iluminação, ou gravada no perfil, não troca de cor nem de gatilho pelo jogo. É por isso que o teste roda num perfil novo, que nasce sem cor nem gatilho próprios em controle nenhum, e com o «Modo Freestyle» aceso, para janela nenhuma trocar o perfil. Só o perfil próprio de um jogo entra por cima: se o «Perfil ativo» trocar ao abrir o jogo, a cor e o gatilho são os daquele perfil — escolha um jogo sem perfil próprio. (2) O NÚMERO É DO HEFESTO: o jogo que só numera os jogadores manda as cores de número (azul, vermelho, verde e rosa escuros), e o Hefesto as recusa desde 23/09 — a barra fica na cor do número, e isso é o produto certo. Escolha um jogo que pinta a barra de propósito, por vida, dano ou cena. (3) Máscara «Xbox 360» não tem barra do lado do jogo: o teste morre sem defeito. (4) Com o cartão «Xbox» do quadro «Modo» aceso a luz não volta pelo canal comum. (5) No modo nativo não há cópia, e a barra continua do Hefesto: o jogo que escreve direto no controle é corrigido em até um segundo. (6) UMA CONEXÃO DE RÁDIO PODE NASCER COM A BARRA TRAVADA, sem nada avisar: por isso o passo da cor do número existe — se nem ela pegar, clique em «Reiniciar o serviço», na aba Sistema, e refaça. (7) Se o jogo nunca pintar, o resultado é «não mediu», não vermelho. A Steam não disputa mais a barra — o controle de verdade nasce escondido dela. E não some as duas metades: luz e gatilho vêm pelo mesmo caminho, mas são medidas separadas.
+**A armadilha.** Sete. (1) A COR E O GATILHO QUE VOCÊ ESCOLHEU VENCEM OS DO JOGO — ordem sua de 16/09, «meu perfil manda»: um controle com cor escolhida na aba Iluminação, ou gravada no perfil, não troca de cor nem de gatilho pelo jogo. É por isso que o teste roda num perfil novo, que nasce sem cor nem gatilho próprios em controle nenhum, e com o «Modo Freestyle» aceso, para janela nenhuma trocar o perfil. Só o perfil próprio de um jogo entra por cima: se o «Perfil ativo» trocar ao abrir o jogo, a cor e o gatilho são os daquele perfil — escolha um jogo sem perfil próprio. (2) O NÚMERO É DO HEFESTO: o jogo que só numera os jogadores manda as cores de número (azul, vermelho, verde e rosa escuros), e o Hefesto as recusa desde 23/09 — a barra fica na cor automática, e isso é o produto certo. Escolha um jogo que pinta a barra de propósito, por vida, dano ou cena. (3) Máscara «Xbox 360» não tem barra do lado do jogo: o teste morre sem defeito. (4) Com o cartão «Xbox» do quadro «Modo» aceso a luz não volta pelo canal comum. (5) No modo nativo não há cópia, e a barra continua do Hefesto: o jogo que escreve direto no controle é corrigido em até um segundo. (6) UMA CONEXÃO DE RÁDIO PODE NASCER COM A BARRA TRAVADA, sem nada avisar: por isso o passo da cor automática existe — se nem ela pegar, clique em «Reiniciar o serviço», na aba Sistema, e refaça. (7) Se o jogo nunca pintar, o resultado é «não mediu», não vermelho. A Steam não disputa mais a barra — o controle de verdade nasce escondido dela. E não some as duas metades: luz e gatilho vêm pelo mesmo caminho, mas são medidas separadas.
 
 ---
 
