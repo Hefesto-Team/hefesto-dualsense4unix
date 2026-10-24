@@ -242,17 +242,17 @@
       "universo": 403
     },
     "tamanho": {
-      "data": "2026-10-23",
+      "data": "2026-10-24",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1196721,
+      "piso": 1196808,
       "por_item": {
-        "docs": 120867,
+        "docs": 120875,
         "scripts": 120631,
-        "src": 319845,
-        "tests": 635378
+        "src": 319850,
+        "tests": 635452
       },
-      "razao": "tamanho: +285 linhas (1196436 -> 1196721), pagas por Origem: D-2210-A-ROUPA-DO-PAD-SE-LE-NO-BINARIO, D-2310-O-DSU-DIZ-A-CONEXAO-DO-CONTROLE; registrado no fecho, topo 43dffbd150aa",
+      "razao": "tamanho: +87 linhas (1196721 -> 1196808), pagas por Origem: D-2310-A-ESPERA-DA-PINTURA-CONTA-DO-LOAD; registrado no fecho, topo 127242a8f8e2",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -889,6 +889,12 @@
           "de": 1196436,
           "para": 1196721,
           "razao": "tamanho: +285 linhas (1196436 -> 1196721), pagas por Origem: D-2210-A-ROUPA-DO-PAD-SE-LE-NO-BINARIO, D-2310-O-DSU-DIZ-A-CONEXAO-DO-CONTROLE; registrado no fecho, topo 43dffbd150aa"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 1196721,
+          "para": 1196808,
+          "razao": "tamanho: +87 linhas (1196721 -> 1196808), pagas por Origem: D-2310-A-ESPERA-DA-PINTURA-CONTA-DO-LOAD; registrado no fecho, topo 127242a8f8e2"
         }
       ],
       "unidade": "linhas",
