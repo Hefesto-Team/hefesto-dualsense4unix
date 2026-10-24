@@ -73,8 +73,7 @@ RADIO = _constantes(
 MULT = _constantes(R / "src/hefesto_dualsense4unix/daemon/subsystems/rumble.py",
                    {"RUMBLE_POLICY_MULT"})["RUMBLE_POLICY_MULT"]
 _RUM = _constantes(R / "src/hefesto_dualsense4unix/core/rumble.py",
-                   {"_ORCAMENTO_COM_TETO", "SEM_TETO"})
-COM_TETO = _RUM["_ORCAMENTO_COM_TETO"]
+                   {"SEM_TETO"})
 ORC = _constantes(R / "src/hefesto_dualsense4unix/app/actions/config/secao_orcamento.py",
                   {"PERFIS", "ROTULOS_DOS_PERFIS", "TETO_POR_PERFIL"})
 ORC["SEM_TETO"] = _RUM["SEM_TETO"]
@@ -193,7 +192,6 @@ def e_radio(c):
 
 NO_CABO = [c for c in CONECTADOS if not e_radio(c)]
 NO_RADIO = [c for c in CONECTADOS if e_radio(c)]
-POR_PREF = {c["pref"]: c for c in MESA}
 
 CAMPO_DAS_DICAS = "dicas"
 
@@ -1076,7 +1074,6 @@ def nome_do_lugar_vazio(c):
 
 #: 26/09/2026; a bateria foi para o nome (`nome_com_a_bateria`).
 ESTADOS_DA_LINHA = ("est-mic", "est-som", "est-modo", "est-visto")
-DONO_DA_CENA = {"p1": "Vitória"}
 DONO_DICA = ("Escreva o nome de quem joga com este controle. O nome fica no controle: "
              "vale em qualquer entrada e adaptador. Apague para voltar a «P N».")
 from types import SimpleNamespace  # noqa: E402
@@ -1170,7 +1167,7 @@ def linha_do_controle(c):
               <div class="gc-quem">
                 <label class="gc-num" for="gc-{c["pref"]}" data-gesto="alvo" title="{dica_linha}">P{c["jogador"]}</label>
                 <input class="gc-dono" type="text" data-gesto="dono-renomear" data-campo="dono" data-hef-alvo="valor"
-                       value="{vale(DONO_DA_CENA.get(c["pref"], ""), "")}" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
+                       value="" placeholder="Nome de quem joga" maxlength="24" spellcheck="false"
                        aria-label="Nome de quem joga com este controle" title="{DONO_DICA}">
                 <span class="gc-nome" data-campo="nome" data-hef-alvo="html"{dica_da_borda}>{vale(_pacote08.nome_com_a_bateria(_pacote08.rotulo_curto_do_controle(c), DA_CONTROLES[c["pref"]]["bat"]), nome_do_lugar_vazio(c))}</span>
               </div>
@@ -2054,7 +2051,10 @@ def _cena_do_desenho() -> dict:
     for i, linha in enumerate(x for x in linhas if x["tabela"] == "aparelho"):
         ligado = linha.get("h", "")
         aparelhos.append({
-            "id": linha["id"], "tipo": linha["a"], "lugar": linha["c"], "nome": linha["nome"],
+            "id": linha["id"], "tipo": linha["a"], "lugar": linha["c"],
+            # O controle da cena não tem nome de quem joga: a tela diz «Player N», como faz
+            # com o controle de qualquer pessoa que ainda não deu nome a ele.
+            "nome": "" if linha["a"] == "controle" else linha["nome"],
             "rotulo": f"Player {i + 1}" if linha["a"] == "controle" else linha["nome"],
             "cor": linha["b"], "cor_nome": linha["g"],
             "mic": "mic" in ligado, "luz": "luz" in ligado, "fixo": "fixo" in ligado,
@@ -3317,99 +3317,6 @@ MIOLO = f'''
 {SCRIPT_DAS_FAIXAS}
 '''
 
-LEGENDA = f'''<div class="nota">
-  <h2>A gestão de controles (25/09 e 26/09)</h2>
-  <ul>
-    <li><b>Uma seção só</b>: as <b>dicas</b> (um cartão por ajuste, com o botão dele; as três que mais pesam, o resto em «mais N») em cima, quatro ferramentas com ícone no meio (o «Atualizar» entrou no «{EXAMINAR_PORTAS}»; o <b>{MAPEAR_ENTRADAS}</b> abre o fluxo porta a porta) e um cartão por controle embaixo.</li>
-    <li><b>O cartão diz o estado de agora</b>, no molde da aba Sistema: Mic, Som, Modo de conexão, Visto como, Conexão e Bateria, com o ✓ de «tudo certo». Nada abre nem fecha.</li>
-    <li><b>O nome ao lado do «P N» é de quem joga</b>: escreva; apagado, o campo volta vazio. O perfil de desempenho mora na aba Sistema. O lugar sem controle fica, tracejado, com «P N • Desconectado».</li>
-    <li><b>{MAPEAR_ENTRADAS}</b> abre uma tela com o que o Hefesto mediu da entrada da vez, o nome e o lugar que você dá, e a lista das que já têm nome.</li>
-  </ul>
-  <h2>«Rádio e adaptadores» é o desenho que você aprovou em 23/09 — e o que ficou diferente</h2>
-  <ul>
-    <li><b>A seção inteira é o <code>mapa-do-radio.html</code></b>: a folha, os ícones e esta cena de exemplo são lidos dele. No produto quem pinta é o Hefesto, com os Hz medidos, as pontes «N de {_pacote08.PONTES_POR_ADAPTADOR}» e o sino de cada adaptador.</li>
-    <li><b>Os vizinhos viraram selos, e não faixas.</b> O produto não lê o canal de um teclado ou de um Wi-Fi; desenhar a faixa seria estimar (R10). O hachurado — os canais que cada adaptador evita — é medido e continua.</li>
-    <li><b>Caixa e fone não mostram Hz</b>: o contador mede os controles. A vaga deles fica, com a cor e o ícone.</li>
-    <li><b>A fase em pé diz uma frase só</b>: «{ENCAIXE_CURTO}» (R9). A explicação longa foi para o hover do título.</li>
-    <li><b>A tabela dos adaptadores, a régua de turnos e as linhas «hub em comum» e «contagens do gabinete» saíram</b> com a seção velha. O nome do adaptador é o campo do cartão, e ele é o nome da ENTRADA.</li>
-  </ul>
-  <h2>As duas janelas do gabinete entraram na tela — e o que elas NÃO fazem</h2>
-  <ul>
-    <li><b>Os dois botões abrem agora, e o que abre não é tela nova.</b> <b>{MAPEAR_ENTRADAS}</b> é a janela <code>mapa_da_mesa.py</code> e <b>{MAPEAR_UMA_A_UMA}</b> é a <code>calibrar_entradas.py</code>, as duas já rodando. <b>Todo texto delas sai do produto, lido por AST</b> — a mesma disciplina dos sete números do rádio. O que o AST não alcança (o veredito de cada entrada, os dois relógios, as três dicas de botão) tem portão: a geração <b>para</b> se a frase deixar de existir no fonte.</li>
-    <li><b>A cena é o SEU gabinete, e é a ordem de serviço desta aba sendo cumprida.</b> O aparelho na mão é o adaptador <b>“{ADAPTADORES[0]["nome"]}”</b>, que o exame manda tirar da <b>Entrada 3</b> — e com ele escolhido cada quadrado publica o juízo <i>para ele</i>. Os cinco estados da tela são os cinco que a janela sabe produzir: <b>ocupada</b>, <b>indisponível</b>, <b>serve</b>, <b>vale evitar</b> e <b>melhor lugar</b>. Os três do modo ideal (<i>chega</i>, <i>sai</i>, <i>fica</i>) <b>não entram</b>: vêm do plano, e esta janela não calcula plano nenhum.</li>
-    <li><b>Nenhum plug é azul, e a própria tela diz por quê.</b> A velocidade vem dos nós declarados, e quem os escreve é a OUTRA janela — logo toda entrada desenhada aqui sai <code>usb=2</code>. Pintar azul contradiria a confissão três blocos abaixo. <b>Mas repare a tensão</b>: o exame desta aba afirma que a Entrada 3 é <b>USB 3.0</b> e a 9 é <b>2.0</b>. As duas telas são honestas cada uma no seu canto, e o produto ainda não junta o que já sabe.</li>
-    <li><b>Um nome não batia, e agora bate — no produto.</b> A confissão da velocidade mandava você a “Calibrar as entradas”, que era o título da outra janela no código; o botão desta aba chama-se <b>{MAPEAR_UMA_A_UMA}</b> desde 28/08. Até 05/09 a tela CORRIGIA a frase do produto ao gerar; agora os três lugares dizem o mesmo nome (<code>calibrar_entradas.TITULO_DA_JANELA</code>, <code>mapa_da_mesa.CONFISSAO</code> e <code>secao_mesa._BOTAO_CALIBRAR</code>) e a remenda saiu. <b>Uma tela que corrige uma frase já certa é uma segunda verdade esperando para divergir.</b></li>
-    <li><b>As duas perguntas da sala chegaram, e vieram inteiras</b> — pergunta, dica e as três opções, literais de onde moravam. A da altura está respondida e a da visada não, de propósito: <b>sem resposta não é “Não sei”</b>, e a tela precisa mostrar os dois. <b>O preço, escrito:</b> elas gravam sob <code>mesa</code> e o desenho grava sob <code>mapa</code> — chaves com disciplinas diferentes (substituição num, fusão no outro). É trabalho de código, não de desenho, e a sprint que as implementar tem de saber disto.</li>
-    <li><b>A cerimônia são TRÊS telas, ligadas pelos próprios botões dela</b>: a pergunta sentada, o fim da parte sem levantar, e a fase em pé. Custa só HTML e não mente sobre transição nenhuma — a webcam é o único aparelho sem lugar, então responder <i>aquela</i> pergunta leva mesmo ao fim.</li>
-    <li><b>A frase do jogo aberto está amarrada ao FOCO, e ela é ESPECIFICAÇÃO.</b> A tela diz <i>“enquanto esta janela estiver na frente”</i>, e não “enquanto estiver aberta”, porque é no foco que a janela toma o controle. <b>Hoje o produto não faz isso</b>: a peneira está escrita e não tem quem a chame — é lápide viva do portão da casa. A frase depende da <code>ONDA-CONEXOES-10</code>. Por isso também <b>nenhum glifo de X/O/D-pad</b> acompanha: hoje o botão não anda na janela <i>e</i> chega ao jogo.</li>
-  </ul>
-
-  <h2>O que eu desenhei de cabeça, e por que — derrube qualquer um numa frase</h2>
-  <ul>
-    <li><b>A lista de aparelhos ficou EM CIMA, e no produto ela é a coluna da esquerda.</b> A conta é fria: o quadrado do produto tem <b>84&nbsp;px</b> e a fileira tem <b>sete colunas fixas</b> — 7×84 mais os vãos pedem <b>618&nbsp;px</b>, e a caixa oferece <b>624</b> por dentro. Lado a lado com uma coluna de lista, o quadrado cairia para ~56&nbsp;px e as linhas de texto dele parariam de caber. Empilhada, a fileira do produto cabe inteira.</li>
-    <li><b>Os dois botões de ação nascem APAGADOS, e é o estado certo desta cena.</b> Eles só acendem com uma entrada em foco, e a janela <b>não tem realce nenhum de foco</b> — só os dois botões contam a história. Desenhá-los acesos seria desenhar um estado que ninguém consegue ver. As dicas dizem quando cada um acende. <b>Isto é defeito do produto</b>, não escolha de desenho.</li>
-    <li><b>O quadrado cresce em altura quando o texto pede</b>, e “Aparelho de entrada” pede. O <code>84×56</code> do produto é <i>mínimo</i>, não teto — em GTK ele cresce igual.</li>
-    <li><b>A pop-up do desenho bate no teto de 717&nbsp;px e rola por dentro</b> (mostra 478 de 658, esconde 180). É o padrão da casa, e o topo com o título e o rodapé com o <b>{MAPA["ROTULO_FECHAR"]}</b> ficam sempre à vista. <b>A janela GTK de verdade NÃO rola</b> — 720×520 num <code>Gtk.Box</code> puro, sem <code>ScrolledWindow</code> em lugar nenhum: com este conteúdo, o que sobra fica fora e ninguém avisa. É defeito a consertar, e o mockup já mostra a cura.</li>
-    <li><b>“entrada 1 de 1” conta APARELHO, não entrada</b> — e a palavra é do produto. Um passo de hub coloca vários aparelhos de uma vez, e mesmo assim o contador diz “entrada”. Fica registrado; a redação é da <code>CONFIGURACOES-O-LEXICO-01</code>.</li>
-    <li><b>Um aparelho aparece como “Aparelho de entrada”, e não como “DualSense”.</b> O censo classifica pela <i>interface 0</i>, e o próprio produto escreve que o DualSense por cabo é <code>03/00/00</code> — classe de entrada sem protocolo de arranque. Não inventei o rótulo: é o que a tela mostraria. E é ele que acende a terceira linha da confissão.</li>
-    <li><b>A ordem da confissão é minha, e no produto ela é SORTEADA.</b> As lacunas vivem num <code>set</code>, e um <code>set</code> de textos não tem ordem estável entre execuções: as mesmas três linhas saem em ordens diferentes a cada abertura. A tela as mostra na ordem em que o produto as declara. <b>É defeito, e é de uma linha.</b></li>
-  </ul>
-
-  <h2>MODO não é MÁSCARA, e nada nesta tela diz que você perde o microfone</h2>
-  <ul>
-    <li><b>O microfone segue o TRANSPORTE, e a máscara não o toca.</b> Pelo cabo o DualSense expõe uma placa USB Audio própria e o PipeWire a publica sozinho (medido em 15/08/2026: duas placas ALSA, ~475.000 amostras não-zero cada). Pelo rádio não existe placa nenhuma — o aparelho não anuncia A2DP, HFP nem HSP —, e o áudio vem em Opus <i>dentro</i> do relatório HID 0x31: quem o traz é a ponte do Hefesto, que publica uma fonte de captura do PipeWire. <b>No rádio o microfone já é emulado hoje</b>, com outro nome.</li>
-    <li><b>Por isso a chavinha “pelo cabo / pelo rádio” SAIU.</b> Ela oferecia uma escolha que o transporte já tinha feito — e o próprio mockup se contradizia: o gerador já derivava o caminho do transporte e desenhava a chavinha ao lado. Ponto final dela, 28/08: <i>“se tiver em modo rádio, então o mic é modo rádio”</i>. O custo do microfone virou <b>consequência</b>, e a tela o mostra em Hz na linha de cada controle, em «Rádio e adaptadores», em vez de perguntar por ele.</li>
-    <li><b>Nenhum aviso de máscara, em máscara nenhuma</b> — e o motivo é mais forte do que “o Pro só não tem microfone”. A máscara limita o que o <b>jogo</b> recebe, não o que o <b>controle</b> faz: o Hefesto continua acendendo a barra de luz, aplicando o gatilho e lendo o giro do DualSense físico em qualquer máscara. E a lacuna mais visível — o mic — tem cura: o estado <b>Emulado</b> da <code>ONDA-CONEXOES-06</code> entrega o áudio por um dispositivo que qualquer jogo enxerga, independentemente da máscara.</li>
-    <li><b>Nativo e Emulado desceram de escolha para LEITURA.</b> Com o transporte explícito e a máscara explícita por controle (aba Jogar), o resultado fica determinado: cabo → a placa do próprio aparelho; rádio → a ponte. Sobraram <b>dois estados</b> — Ligado e Desligado —, e a tela <b>diz</b> o caminho em vez de perguntá-lo. O “Automático” não entra: a heurística que o moveria (<code>integrations/api_de_entrada.py</code>) errou em <b>13 de 14</b> dos jogos dela.</li>
-  </ul>
-
-  <h2>Um número desta tela estava ERRADO pelo dobro, e nenhuma régua o via</h2>
-  <ul>
-    <li><b>A dica do teto dizia que “Bateria longa” corta a força em 60%. O produto corta em {fala_do_teto(COM_TETO)}.</b> O degrau tem um dono só — <code>RUMBLE_POLICY_MULT["{COM_TETO}"]</code> —, e é dele que o <code>secao_orcamento</code> deriva a frase, com o cuidado escrito no próprio arquivo: <i>“escrever «30%» à mão nesta tela”</i> é o que ele existe para evitar. Aqui o 60 estava digitado. Agora é lido por AST, como os sete números do rádio já eram — <b>oito literais a menos</b>.</li>
-    <li><b>A máscara e a bateria da linha fechada não são digitadas aqui, e nem no mesmo lugar.</b> A bateria vem do <code>ESTADO</code> da aba <b>Controles</b>, lido por AST — não por <code>import</code>, que <i>executaria</i> o gerador da outra aba e reescreveria o HTML dela. A máscara vem da <code>monta.MESA</code>, que virou o dono único dela em 28/08: o P2 aparece como <b>{POR_PREF["p2"]["mascara"]}</b> aqui, na Jogar e na Controles porque é o mesmo dado, não porque três listas concordam — e elas não concordavam.</li>
-  </ul>
-
-  <h2>O acordeão, em CSS puro — e o que ele não consegue</h2>
-  <ul>
-    <li><b>Zero JavaScript.</b> O mockup inteiro não tem uma linha de script, e o cruzamento do mapa do controle já é feito só com <code>:has()</code>. Aqui a peça é um grupo de <code>&lt;input type=radio&gt;</code> escondido: cada linha fechada é um <code>&lt;label&gt;</code> que marca o seu. Por ser rádio, <b>marcar um desmarca os outros</b> — que é, ao pé da letra, “clicar num abre e fecha os outros”.</li>
-    <li><b>Clicar numa linha muda a fita, de verdade.</b> As {len(ESTADOS)} regras que repintam os chips são geradas da <code>MESA</code> e casam <b>pelo número do jogador</b> (<code>data-pref</code>) — nem pelo texto do chip, que já mudou uma vez e matou a fita viva em silêncio, nem pela posição, que com o P1 fora acendia o vizinho (<code>A-GESTAO-SEGUE-O-JOGADOR-01</code>).</li>
-    <li><b>“Todos abre os {len(MESA)}” existe, e o chip da fita passou a clicar.</b> Ele era um <code>&lt;span&gt;</code> do esqueleto e virou <code>&lt;label&gt;</code> com endereço em 05/09/2026 (<code>monta.fita()</code>), nas três abas que escolhem controle — clicar nele muda o alvo desta aba. O gesto da própria linha <b>aberta</b> continua: clicar nela volta para “Todos”, com os {len(MESA)} abertos, e o <code>title</code> diz isso.</li>
-    <li><b>No estado “Todos” a seta de abrir virou a palavra <code>só este</code>.</b> As {len(MESA)} linhas mostravam <b>▾</b> com a dica <i>“Abre este controle”</i> — {len(MESA)} setas de abrir sobre {len(MESA)} linhas já abertas, e a dica mentia duas vezes: a linha estava aberta, e o que o clique faz ali é <b>fechar as outras</b>. A dica do corpo da linha também mudou, e agora é a mesma nos dois estados — <i>“deixa só este controle aberto, os outros fecham”</i> é verdade tanto na linha fechada quanto nas {len(MESA)} abertas. <b>Foi preciso</b>: <code>title</code> não muda com CSS, então uma frase que só vale num estado mente no outro. A coluna da seta ficou com <b>largura fixa</b> pela mesma razão que as colunas do resumo: se ela mudasse de tamanho ao clicar, os {len(MESA)} percentuais de bateria andariam de lado juntos.</li>
-  </ul>
-
-  <h2>O que saiu, e o que cada saída pagou</h2>
-  <ul>
-    <li><b>“Microfone e botões” saiu do quadro e entrou nas linhas dos controles</b> — <b>86&nbsp;px</b> com a margem da sub-seção. Os dois campos que valiam para a máquina inteira agora são de cada controle, que é onde a pergunta tem resposta: o botão do mic é <i>daquele</i> aparelho.</li>
-    <li><b>“Botões do controle externo” saiu da tela.</b> Nintendo e 8BitDo estão fora do escopo agora, por decisão dela — vira sprint. Nada substituiu o campo.</li>
-    <li><b>“O que só você sabe” saiu, e ele não paga nada</b>: a coluna tinha <b>110&nbsp;px</b> de conteúdo contra <b>150</b> da coluna do exame, que é quem manda na altura do quadro. As duas perguntas foram para o <b>{MAPEAR_ENTRADAS}</b> — e lá elas preenchem um vazio real: hoje a janela do desenho cria face com <code>perto=False, alto=False</code> e <b>não tem um único gesto</b> que mude os dois; ela não guarda nenhum fato que só você tem.</li>
-    <li><b>O dropdown de cor saiu das linhas dos controles.</b> Quem o produto lê aparece na borda; quem ele não lê fica com <b>borda neutra, e está dito</b> — no “?” do quadro e no <code>title</code> da linha. Os {len(NO_RADIO)} controles no rádio são os de borda neutra, porque o Hefesto <b>ainda não pergunta a cor pelo rádio</b> (<code>ONDA-CONEXOES-11</code>).</li>
-    <li><b>A moldura dos {len(MESA)} cartões saiu, e ela pagava {Q_GESTAO_ANTES - Q_GESTAO}&nbsp;px.</b> Quatro bordas de 2&nbsp;px mais os 27 de vão entre eles somavam mais altura do que uma linha inteira de controle — e não mostravam nada. <b>A cor lida não se perdeu:</b> ela virou a barra de 3&nbsp;px na aresta esquerda de cada linha, que é a mesma promessa e agora cai numa coluna só, alinhada nas {len(MESA)} — mais fácil de comparar do que {len(MESA)} retângulos soltos.</li>
-    <li><b>As lâmpadas de jogador saíram dos desenhos pequenos.</b> Neste tamanho elas medem 1,0 × 0,33&nbsp;px — tinta que ninguém vê. A barra de luz ficou, e ela é a cor do <i>jogador</i>.</li>
-  </ul>
-
-  <h2>O teto da vibração está nos dois, e a tela diz qual vale</h2>
-  <ul>
-    <li><b>O global vale para todos os controles, e ele MUDOU DE ABA.</b> O dropdown dos três perfis saiu daqui e foi para a <b>{ABA_DO_TETO_GLOBAL}</b>, onde se chama <b>{CASA_DO_TETO_GLOBAL}</b> — palavra dela, 28/08: <i>“Teto da Vibração, que na verdade é perfil de bateria”</i>. O código já lhe dava razão antes do nome: <code>secao_orcamento.py:97</code> chama a chave de <code>PERFIL_BATERIA_LONGA</code>, e a <code>D-PERFIL-DE-DESEMPENHO</code> (24/08) diz que <i>“o perfil decide o que custa BATERIA”</i>. Esta aba continua <b>lendo</b> o global — hoje <b>{ORC["ROTULOS_DOS_PERFIS"][PERFIL_DA_MESA]}</b>, que é <b>{TETO_GLOBAL}</b> —, e o que fica dela é a régua de turnos, que mede o <b>rádio</b>, não a bateria.</li>
-    <li><b>O do controle sobrepõe</b>, e o campo de cada linha mostra qual é o caso: o P{POR_PREF["p3"]["jogador"]} está com a bateria em {DA_CONTROLES["p3"]["bat"]}% e sobrepõe com <b>{fala_do_teto(COM_TETO)}</b>; os outros dizem <b>{SEGUE_O_GLOBAL}</b>. A conta feita — <b>qual dos dois está valendo, de onde ele veio, e em que aba o global se muda</b> — está no <code>?</code> ao lado do campo, e não mais numa coluna de texto ao lado dele.</li>
-    <li><b>Isso nasce como sprint sobre o que já existe.</b> A <code>POR-UNIDADE-01</code> (10/08) já grava política de vibração POR CONTROLE (<code>profiles/manager._controllers_to_rumble_scales</code>), relativa à global. <b>Falta uma frase sua:</b> quando o controle sobrepõe, ele vence sempre, ou o produto aplica o <code>min</code> como faz hoje entre o orçamento e a política? O <code>min</code> é o que impede um “teto” de <i>aumentar</i> a força.</li>
-  </ul>
-
-  <h2>Escolhas que precisam do seu aval</h2>
-  <ul>
-    <li><b>A ordem dos quadros mudou, e é a mudança que devolveu o terceiro para a tela.</b> “Gestão de controles” passou a vir <b>primeiro</b>, e “Está tudo certo?” desceu para junto de “Rádio e adaptadores”. Duas razões: a aritmética (só quem está acima decide quanto do de baixo aparece, e não havia arranjo com o exame na frente em que o terceiro coubesse), e a leitura — o exame fala da <b>Entrada 3</b>, e a tabela que diz o que está na Entrada 3 agora é a de baixo, não a de outro lugar.</li>
-    <li><b>“Vale Sem teto, do global, abaixo” SAIU — e o desempate que esta linha pedia deixou de existir.</b> Ela mandou tirar a leitura e deixar só o seletor (<code>D-O-SEM-TETO-SAI-DOS-DOIS-LUGARES</code>), e a frase saiu dos <b>dois</b> lugares em que estava: destas {len(MESA)} linhas de controle (o que ela via) e da capa do Desempenho (y=834, fora da dobra — o que casava letra por letra com o pedido, e que ela não podia ter visto). O <b>“abaixo”</b> caducou de qualquer jeito, por uma segunda razão independente: com o teto global mudando-se para a <b>{ABA_DO_TETO_GLOBAL}</b>, o endereço que a frase dava aponta para um lugar que não existe mais nesta aba. <b>A frase não se perdeu</b> — ela vive no <code>?</code> do campo, que a lê sob demanda em vez de gastar uma coluna nas {len(MESA)} linhas. E o desempate que este item pedia (“o teto global morar na mesma moldura dos {len(MESA)} tetos de controle”, por {H_ESCOLHA + 9}&nbsp;px) está <b>respondido</b>: o global saiu da aba inteira, e não custa px nenhum aqui.</li>
-    <li><b>Os quatro botões viraram UMA fileira, e ela custou zero.</b> Você escreveu a ordem com todas as letras — <i>“Examinar de novo. / Já Movi - Reexaminar. / Ignorar / Ver Ordens ignoradas.”</i> — e com um par em cada coluna essa ordem não existe: a leitura de uma grade de duas colunas é esquerda→direita, e “Ignorar” (que estava à direita) teria de vir antes de “{VER_IGNORADAS}” (que estava à esquerda). <b>Medido:</b> o quadro tinha 204&nbsp;px e continua com {Q_EXAME}; a fileira nasce no mesmo y=575; os quatro botões passaram de 265,5 para <b>272&nbsp;px cada</b>, todos iguais, e a borda direita não andou um pixel.</li>
-    <li><b>“Ver as ordens caladas” virou “{VER_IGNORADAS}”, e o motivo é o PAR.</b> O botão irmão chama-se <b>Ignorar</b>: quem o aperta procura depois as ordens <i>ignoradas</i>. “Caladas” era a única palavra da dupla sem par na tela. <b>Uma diferença para a sua frase:</b> você escreveu “Ver Ordens ignoradas” e a tela diz “Ver <u>as</u> ordens ignoradas” — o artigo é o que já estava lá, e só a última palavra mudou. Se você quiser a sua frase ao pé da letra, é <b>uma</b> palavra a menos.</li>
-    <li><b>O gesto de voltar para “Todos” está na própria linha aberta</b>, e o chip da fita também volta: ele clica desde 05/09/2026, e o mesmo endereço vale nas três abas que escolhem controle.</li>
-    <li><b>O resumo da linha fechada virou grade</b>: máscara, microfone e bateria repartem a linha em <code>126fr 272fr 76fr</code> — as três larguras <i>naturais</i> medidas, e não três números escolhidos. Assim as colunas caem no mesmo x nas {len(MESA)} linhas sozinhas, os percentuais terminam juntos, e o vão de 350&nbsp;px que sobrava entre o nome e um resumo encostado à direita desapareceu. É o mesmo remédio das quatro barras de bateria da aba Controles.</li>
-    <li><b>Onde as declarações desta aba gravam?</b> Continua aberto, e agora com um caso concreto: o microfone é da <b>máquina</b> ou do <b>perfil</b>? A sua resposta de 28/08 foi <i>“nos dois: a máquina decide o padrão, o perfil sobrepõe”</i> — a tela ainda não mostra o recibo disso.</li>
-    <li><b>Qual régua manda no arranjo</b> (<code>D-QUAL-REGUA-MANDA-NO-ARRANJO</code>) — a tela mostra a receita, que é o que o código tem; se o juízo por entrada vencer, o texto do imperativo muda.</li>
-  </ul>
-</div>
-
-</body>
-</html>
-'''
 
 if __name__ == "__main__":
     import os

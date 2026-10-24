@@ -306,14 +306,15 @@ def test_o_gerador_escapa_o_nome_dela_e_o_pacote_nao_o_transforma() -> None:
     assert monta.partes_do_modelo(c)[1] == "<b>Vi</b> & Cia"
 
 
-def test_o_desenho_aprovado_diz_o_nome_na_04_e_na_05() -> None:
-    """A BANCADA (o que o `--publicar` copia): o P1 do desenho tem nome, o P2 não, o vazio não."""
+def test_o_desenho_aprovado_nao_da_nome_de_pessoa_ao_p1_na_04_e_na_05() -> None:
+    """A BANCADA (o que o `--publicar` copia): nenhum controle do desenho tem nome de pessoa (o
+    Cosmic Red sem nome, OS-RESTOS-DO-DESENHO-VELHO-SAEM-DAS-ABAS-03-05-08-01); o vazio não."""
     for página, rotulo in (("04-iluminacao.html", r'data-campo="identidade"'),
                            ("05-vibracao.html", r'data-hef="identidade"')):
         texto = onde.pagina(página, publicado=False).read_text(encoding="utf-8")
         linhas = [re.sub(r"<[^>]+>", "", m).split() for m in
                   re.findall(rf'{rotulo}>(.*?)</div>', texto, re.S)]
         juntas = [" ".join(p) for p in linhas]
-        assert juntas[0] == "P1 • Vitória • Cosmic Red • USB", (página, juntas)
+        assert juntas[0] == "P1 • Cosmic Red • USB", (página, juntas)
         assert juntas[1] == "P2 • Starlight Blue • BT", (página, juntas)
         assert all("Desconectado" in j for j in juntas[2:]), (página, juntas)

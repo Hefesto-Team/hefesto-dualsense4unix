@@ -36,7 +36,7 @@ from hefesto_dualsense4unix.interface.pacotes.a03_gatilhos import (
     sem_comentarios_de_css,
 )
 from hefesto_dualsense4unix.profiles.efeitos_de_imersao import FAMILIAS_DA_PAGINA
-from aba05 import GLIFO_DO_CONTROLE  # o ícone da linha de força da 05
+from hefesto_dualsense4unix.interface.monta import glifo_do_controle
 from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
 from hefesto_dualsense4unix.interface.pacotes.meus_efeitos import (
     PREFIXO_DO_MEU,
@@ -106,9 +106,9 @@ GESTO_DA_INTENSIDADE = "intensidade-do-gatilho"
 #: Onde a linha entra na grade: `acima` (sob o chip de cada controle, antes do L2 e do R2; a
 #: recomendada, como a «Força da vibração» logo sob o «Modelo» da 05) ou `abaixo` (depois do R2).
 ONDE_ENTRA_A_INTENSIDADE = "acima"
-#: O ícone da linha: o mesmo da «Força da vibração» da 05 (o controle inteiro, de uma cor só), porque a
-#: silhueta do mapa, de 22 px, vira borrão.
-GLIFO_DA_INTENSIDADE = GLIFO_DO_CONTROLE
+#: O ícone da linha: o mesmo da «Força da vibração» da 05 (o controle inteiro, de uma cor só), do dono
+#: comum `monta.glifo_do_controle`, porque a silhueta do mapa, de 22 px, vira borrão.
+GLIFO_DA_INTENSIDADE = glifo_do_controle()
 
 #: A força do aperto que o desenho mostra (o cru de 0 a 255); o produto escreve a leitura viva.
 FORCA_DA_CENA = {"p1": {"l2": 96, "r2": 200}, "p2": {"l2": 0, "r2": 0}}

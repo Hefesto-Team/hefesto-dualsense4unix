@@ -6,7 +6,6 @@ import re
 import sys
 sys.path.insert(0, str(__import__('pathlib').Path(__file__).resolve().parent))
 import onde
-import mapa as _mapa  # a silhueta do DualSense
 import monta as monta_
 from monta import CONECTADOS, DADOS_DO_REPO
 
@@ -29,6 +28,7 @@ from hefesto_dualsense4unix.interface.pacotes.a05_vibracao import (
     GESTO_DO_MODO,
     html_dos_toques,
 )
+from hefesto_dualsense4unix.interface.monta import glifo_do_controle
 from hefesto_dualsense4unix.interface.pacotes.meus_efeitos import TETO_DO_NOME
 
 from hefesto_dualsense4unix.profiles import formas_de_haptica as formas
@@ -144,7 +144,7 @@ DICA_DO_AUTOMATICO = "O jogo decide a força; o estilo do perfil ajusta"
 
 #: o glifo da linha da Força: o DualSense do mapa (19/10/2026, o pedido: «usa o svg do dualsense»),
 #: o controle inteiro, porque ela vale para tudo o que vibra.
-GLIFO_DO_CONTROLE = _mapa.silhueta_do_dualsense(22, traco=1.4).replace("<svg ", '<svg class="gl gl-ctrl" ', 1)
+GLIFO_DO_CONTROLE = glifo_do_controle()
 DICA_DA_FORCA = ("Abaixo de 100% a vibração fica mais fraca; acima, a fraca é reforçada, "
                "até o máximo do motor")
 BOTAO_DA_FORCA = ('<span class="lado glifo-forca on" role="img" aria-label="O controle inteiro" '
