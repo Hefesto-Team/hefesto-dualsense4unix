@@ -266,3 +266,24 @@ def test_o_cooldown_de_um_nao_segura_o_outro(monkeypatch: pytest.MonkeyPatch) ->
     assert m.backends() == {P2: "uinput", P3: "uhid", P4: "uhid"}
     m.tique(REBACKEND_COOLDOWN_SEC)
     assert m.backends() == {P2: "uhid", P3: "uhid", P4: "uhid"}
+
+
+def test_quem_espera_no_lugar_nao_se_promove(monkeypatch: pytest.MonkeyPatch) -> None:
+    """O degradado que espera no lugar guardado segue no vpad parado: promovê-lo o mataria.
+
+    Mesmo com a R-04 deixando passar (o arme do jogo), o `teardown` da promoção tiraria do
+    jogo o lugar que espera a volta dele (D-2410).
+    """
+    from hefesto_dualsense4unix.daemon.subsystems import gamepad
+
+    m = _Mesa(monkeypatch, MESA_MISTA, sem_uhid_no_boot={P2})
+    m.daemon.display_authority = "game"
+    monkeypatch.setattr(gamepad, "_recriacao_bloqueada_por_jogo", lambda *a, **k: False)
+    vpad = m.vpads()[P2]
+    m.nos.pop(P2)
+    m.tique()
+    assert m.mgr._players[P2].a_espera
+    m.uhid = True
+    m.tique()
+    assert m.mgr._players[P2].vpad is vpad and vpad.paradas == 0, "a promoção matou quem esperava"
+    assert m.mgr.promover_os_degradados() == []

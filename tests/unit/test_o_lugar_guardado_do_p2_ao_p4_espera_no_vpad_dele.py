@@ -330,3 +330,39 @@ def test_um_so_o_posto_do_p1_e_a_mesma_pergunta(mesa_de_mentira: pytest.MonkeyPa
                 m.registro.saiu_em = {}
                 assert mgr.o_posto_do_p1_espera(P1) is de_antes(P1)
                 assert mgr.o_lugar_do_jogador_espera(P1) is de_antes(P1)
+
+
+def test_quem_espera_no_lugar_nao_segura_os_atalhos_da_vaga(
+    mesa_de_mentira: pytest.MonkeyPatch,
+) -> None:
+    """Na vaga do posto do P1, os atalhos vão ao próximo SENTADO: o P2 que espera não tem mão."""
+    from hefesto_dualsense4unix.daemon.subsystems import poll
+
+    m = _Mesa(mesa_de_mentira, MESA_MISTA)
+    m.daemon._coop_manager = m.mgr
+    m.daemon.controller._posto_vago_de = P1
+    assert poll._o_proximo_da_fila(m.daemon) == P2
+    m.sai(P2)
+    assert m.mgr.quem_espera_no_lugar() == frozenset({P2})
+    assert m.mgr.numeros_de_jogador().get(P2) == 2, "quem espera guarda o número"
+    assert poll._o_proximo_da_fila(m.daemon) == P3
+    m.volta(P2, "/dev/input/event60")
+    assert poll._o_proximo_da_fila(m.daemon) == P2
+
+
+def test_o_prazo_vencido_solta_o_vpad_mesmo_com_o_laco_adiado(
+    mesa_de_mentira: pytest.MonkeyPatch,
+) -> None:
+    """O laço do co-op adia enquanto o primário não tem MAC; o vpad de quem venceu sai igual.
+
+    Sem isso, o P2 cujo prazo venceu seguiria de pé no jogo enquanto o posto do P1 não
+    resolve o MAC (`coop_sync_defer_primary_sem_mac`): um boneco fantasma no lugar dele.
+    """
+    m = _Mesa(mesa_de_mentira, MESA_MISTA)
+    vpad = m.mgr._players[P2].vpad
+    m.sai(P2)
+    assert m.mgr._players[P2].a_espera
+    m.daemon.controller.primary_uniq = None
+    m.passa(PRAZO_S + 1)
+    assert P2 not in m.mgr._players, "o prazo venceu e o vpad dele ficou no jogo"
+    assert vpad.paradas == 1
