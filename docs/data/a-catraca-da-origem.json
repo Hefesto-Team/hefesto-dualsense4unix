@@ -245,14 +245,14 @@
       "data": "2026-10-24",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1199282,
+      "piso": 1200462,
       "por_item": {
-        "docs": 120949,
+        "docs": 120958,
         "scripts": 120631,
-        "src": 320372,
-        "tests": 637330
+        "src": 320631,
+        "tests": 638242
       },
-      "razao": "tamanho: +303 linhas (1198979 -> 1199282), pagas por Origem: D-2410-O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL; registrado no fecho, topo 436563456a12",
+      "razao": "tamanho: +1180 linhas (1199282 -> 1200462), pagas por Origem: D-2309-FORA-DE-ORDEM-SE-RECRIA-NA-HORA, D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO, plataforma.vpad; registrado no fecho, topo a8d75a9190f5",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -943,10 +943,16 @@
           "de": 1198979,
           "para": 1199282,
           "razao": "tamanho: +303 linhas (1198979 -> 1199282), pagas por Origem: D-2410-O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL; registrado no fecho, topo 436563456a12"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 1199282,
+          "para": 1200462,
+          "razao": "tamanho: +1180 linhas (1199282 -> 1200462), pagas por Origem: D-2309-FORA-DE-ORDEM-SE-RECRIA-NA-HORA, D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO, plataforma.vpad; registrado no fecho, topo a8d75a9190f5"
         }
       ],
       "unidade": "linhas",
-      "universo": 3138
+      "universo": 3141
     }
   }
 }
