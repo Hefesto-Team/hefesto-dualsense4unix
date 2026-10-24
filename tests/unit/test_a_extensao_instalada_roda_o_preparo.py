@@ -158,6 +158,7 @@ def test_a_primeira_instalacao_deixa_o_preparo_para_o_ligar(lar: Lugares, tmp_pa
 def test_atualizar_para_a_versao_nova_roda_o_preparo_de_novo(
     lar: Lugares, tmp_path: Path
 ) -> None:
+    # D-2410-A-EXTENSAO-SE-PREPARA-AO-INSTALAR-E-AO-ATUALIZAR
     """O defeito da 2.2.0: a cópia na pasta de dados sumiu, e atualizar a devolve."""
     fonte = _fonte(tmp_path)
     instalar(str(fonte), lugares=lar)
@@ -204,6 +205,7 @@ def test_o_preparo_que_falha_deixa_a_extensao_desligada_com_o_motivo(
 def test_o_preparo_novo_numa_atualizacao_sozinha_espera_o_atualizar(
     lar: Lugares, tmp_path: Path
 ) -> None:
+    # D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR
     fonte = _fonte(tmp_path, preparar=None)
     instalar(str(fonte), lugares=lar)
     _ligar(lar)
@@ -236,6 +238,7 @@ def test_o_preparo_novo_numa_atualizacao_sozinha_espera_o_atualizar(
 def test_o_preparo_espera_o_aviso_e_as_permissoes_e_roda_no_ligar(
     lar: Lugares, tmp_path: Path
 ) -> None:
+    # D-2410-O-PREPARO-RODA-SO-DEPOIS-DO-SIM
     """Nada da extensão roda fora da caixa antes do «sim» ao aviso e às permissões."""
     aviso = "Conteúdo de teste."
     instalar(str(_fonte(tmp_path, aviso=aviso, permissoes=["ler:estado"])), lugares=lar)
@@ -252,6 +255,7 @@ def test_o_preparo_espera_o_aviso_e_as_permissoes_e_roda_no_ligar(
 def test_o_preparo_que_passa_do_prazo_e_parado_pelo_pid(
     lar: Lugares, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    # D-2410-O-PREPARO-DA-EXTENSAO-TEM-DEZ-MINUTOS
     monkeypatch.setattr(instalador, "PRAZO_DO_PREPARO_S", 0.5)
     instalar(str(_fonte(tmp_path, modo="demora")), lugares=lar)
     with pytest.raises(InstalacaoRecusadaError, match="passou de"):
