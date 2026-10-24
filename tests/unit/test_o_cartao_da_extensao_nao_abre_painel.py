@@ -51,6 +51,7 @@ _PERMISSAO = "Acrescentar um lançador de jogos e abrir os jogos que ele lista."
 
 
 def test_o_primeiro_clique_na_chave_so_arma_sem_abrir_o_menu(lar, ctx, tmp_path) -> None:  # noqa: F811
+    # D-2410-O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL
     """A chave armada diz «Aceitar e ligar», com o aviso e as permissões na dica; nada abre."""
     a07 = _a07()
     _instalar(a07, ctx, _fonte(tmp_path, permissoes=("rede:local",), extra={"aviso": _AVISO}))
