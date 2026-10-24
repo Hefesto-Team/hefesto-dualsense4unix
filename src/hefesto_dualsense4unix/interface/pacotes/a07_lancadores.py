@@ -1636,10 +1636,9 @@ def configurar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str
 def parar_tudo_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O «Parar tudo» da janela: o serviço publica o gesto ``para`` só para esta extensão."""
     mod_id = _id_do_clique(o, exp.GESTO_DO_PARAR)
-    try:
-        corpo = p.resultado(METODO_DO_PARAR, mod=mod_id)
-    except RuntimeError as exc:
-        raise RuntimeError("O serviço não respondeu. Nada foi parado.") from exc
+    ok, motivo, corpo = p.chamar_com_o_corpo(METODO_DO_PARAR, mod=mod_id)
+    if not ok:
+        raise RuntimeError(motivo or "O serviço não respondeu. Nada foi parado.")
     if not (isinstance(corpo, dict) and corpo.get("parado") is True):
         # O serviço respondeu ``{parado: false}``: ela não está ligada à porta, nada recebeu.
         raise RuntimeError(f"{_a_instalada(mod_id).entrada.nome} não está rodando: nada a parar.")

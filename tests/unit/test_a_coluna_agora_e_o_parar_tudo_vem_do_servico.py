@@ -253,9 +253,11 @@ def test_o_ipc_do_parar_recusa_quem_nao_declara_parar_tudo(lar) -> None:  # noqa
 class _Ponte:
     """O ``p`` do gesto: ``mods.agora`` devolve o estado do teste; o resto é anotado."""
 
-    def __init__(self, estado: dict[str, Any] | None = None, *, falha: bool = False) -> None:
+    def __init__(self, estado: dict[str, Any] | None = None, *, falha: bool = False,
+                 recusa: str | None = "recusado") -> None:
         self.estado = estado
         self.falha = falha
+        self.recusa = recusa
         self.chamadas: list[tuple[str, dict[str, Any]]] = []
 
     def resultado(self, metodo: str, **params: Any) -> Any:
@@ -269,6 +271,12 @@ class _Ponte:
     def chamar_detalhado(self, metodo: str, **params: Any) -> tuple[bool, str | None]:
         self.chamadas.append((metodo, params))
         return (not self.falha, "recusado" if self.falha else None)
+
+    def chamar_com_o_corpo(self, metodo: str, **params: Any) -> tuple[bool, str | None, Any]:
+        self.chamadas.append((metodo, params))
+        if self.falha:
+            return False, self.recusa, None
+        return True, None, {"parado": True}
 
     def escolher_arquivo(self, *_: Any, **__: Any) -> str | None:
         return None
@@ -334,8 +342,10 @@ def test_o_clique_no_parar_tudo_pede_ao_servico_so_esta_extensao(janela, ctx) ->
     carga = a07.parar_tudo_da_modificacao(ctx, {"v": "toque"}, ponte)
     assert ("mods.parar_tudo", {"mod": "toque"}) in ponte.chamadas
     assert "Parar tudo" in carga["recado"]
-    with pytest.raises(RuntimeError, match="Nada foi parado"):
+    with pytest.raises(RuntimeError, match="recusado"):
         a07.parar_tudo_da_modificacao(ctx, {"v": "toque"}, _Ponte(falha=True))
+    with pytest.raises(RuntimeError, match="não respondeu"):
+        a07.parar_tudo_da_modificacao(ctx, {"v": "toque"}, _Ponte(falha=True, recusa=None))
 
 
 def test_a_pintura_nao_pergunta_ao_servico_no_tique(janela, ctx, monkeypatch) -> None:  # noqa: F811

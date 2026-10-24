@@ -149,6 +149,13 @@ def chamar_detalhado(metodo: str, **params: Any) -> tuple[bool, str | None]:
     return ok, motivo or _b._recusa_no_corpo(corpo)
 
 
+def chamar_com_o_corpo(metodo: str, **params: Any) -> tuple[bool, str | None, Any]:
+    """`(ok, motivo, corpo)`: a recusa de `chamar_detalhado` e o que o daemon respondeu, numa
+    chamada só. `ok` falso sem `motivo` é o daemon que não respondeu; com `motivo`, a recusa."""
+    ok, motivo, corpo = _b._call_checked_detalhado(metodo, params, timeout=teto(metodo))
+    return ok, motivo or _b._recusa_no_corpo(corpo), corpo
+
+
 def profile_reaplicar(nome: str, *, prender: bool = False) -> dict[str, Any] | None:
     """A resposta do `profile.reaplicar`, ou ``None``.
 

@@ -117,6 +117,9 @@ class _Ponte:
         vazio = {"ligado": False, "conexoes": [], "aparelhos": []}  # noqa-acento: chaves
         return {"mod": params.get("mod"), **vazio}
 
+    def chamar_com_o_corpo(self, metodo: str, **params: Any) -> tuple[bool, str | None, Any]:
+        return True, None, self.resultado(metodo, **params)
+
     def escolher_arquivo(self, *_: Any, **__: Any) -> str | None:
         return None
 
@@ -141,6 +144,24 @@ def test_o_parar_tudo_sem_ela_na_porta_recusa_dizendo(lar, ctx, tmp_path) -> Non
     ponte = _Ponte(True)
     assert "Parar tudo" in a07.parar_tudo_da_modificacao(ctx, {"v": "toque"}, ponte)["recado"]
     assert ponte.chamadas == ["mods.parar_tudo"]
+
+
+def test_a_recusa_do_servico_chega_ao_parar_tudo(lar, ctx, tmp_path, monkeypatch) -> None:  # noqa: F811
+    """A frase da recusa do serviço chega ao recado, e o ``{parado: false}`` vira «não está
+    rodando»: pela ponte da janela, só com o IPC dublado."""
+    from hefesto_dualsense4unix.interface.pacotes import ponte
+
+    a07 = _a07()
+    _instalada_e_ligada(a07, ctx, tmp_path, permissoes=(GESTO,), agora=["aparelhos"],
+                        parar_tudo=True)
+    respostas: list[tuple[bool, str | None, Any]] = [
+        (False, "«Toque» não declara o «Parar tudo».", None), (True, None, {"parado": False})]
+    monkeypatch.setattr(ponte._b, "_call_checked_detalhado",
+                        lambda metodo, params, timeout=None: respostas.pop(0))
+    with pytest.raises(RuntimeError, match="não declara o «Parar tudo»"):
+        a07.parar_tudo_da_modificacao(ctx, {"v": "toque"}, ponte)
+    with pytest.raises(RuntimeError, match="Toque não está rodando: nada a parar"):
+        a07.parar_tudo_da_modificacao(ctx, {"v": "toque"}, ponte)
 
 
 @pytest.mark.parametrize("novo", [{"permissoes": [GESTO]}, {"aviso": AVISO}])  # noqa-acento: chave
