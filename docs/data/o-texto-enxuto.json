@@ -5,7 +5,7 @@
       "data": "2026-10-24",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 54927,
+      "piso": 54929,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -185,11 +185,11 @@
         "integrations/window_detect.py": 90,
         "interface/aba01.py": 211,
         "interface/aba02.py": 272,
-        "interface/aba03.py": 65,
+        "interface/aba03.py": 64,
         "interface/aba04.py": 142,
-        "interface/aba05.py": 227,
+        "interface/aba05.py": 226,
         "interface/aba06.py": 40,
-        "interface/aba08.py": 215,
+        "interface/aba08.py": 217,
         "interface/aba09.py": 44,
         "interface/aba10.py": 65,
         "interface/arranjo_desta_maquina.py": 56,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +63 linhas (54864 -> 54927), pagas por Origem: D-2309-FORA-DE-ORDEM-SE-RECRIA-NA-HORA, D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO, plataforma.vpad; registrado no fecho, topo 36ef3ab46e9b",
+      "razao": "texto-em-src: +2 linhas (54927 -> 54929), pagas por Origem: D-2410-A-CENA-DE-EXEMPLO-SEM-NOME, D-2410-A-COLUNA-DO-ONDE-CRESCE-PARA-TODOS, D-2410-A-DICA-DIZ-QUE-ABRE-NA-JANELA; registrado no fecho, topo 7a2a38de7d29",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -510,6 +510,12 @@
           "de": 54864,
           "para": 54927,
           "razao": "texto-em-src: +63 linhas (54864 -> 54927), pagas por Origem: D-2309-FORA-DE-ORDEM-SE-RECRIA-NA-HORA, D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO, plataforma.vpad; registrado no fecho, topo 36ef3ab46e9b"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 54927,
+          "para": 54929,
+          "razao": "texto-em-src: +2 linhas (54927 -> 54929), pagas por Origem: D-2410-A-CENA-DE-EXEMPLO-SEM-NOME, D-2410-A-COLUNA-DO-ONDE-CRESCE-PARA-TODOS, D-2410-A-DICA-DIZ-QUE-ABRE-NA-JANELA; registrado no fecho, topo 7a2a38de7d29"
         }
       ],
       "unidade": "linhas",
