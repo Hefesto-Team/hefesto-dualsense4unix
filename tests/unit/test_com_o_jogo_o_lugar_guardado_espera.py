@@ -76,14 +76,11 @@ def _volta(bancada: MesaDoJogo, segundos: float = TIQUE) -> None:
 
 
 def _o_jogo_sem(sai: str) -> dict[int, str | None]:
-    """O jogo de fora com ``sai`` fora: o vpad do P1 fica parado, os outros morrem."""
-    jogo: dict[int, str | None] = {}
-    for n, uniq in enumerate(QUATRO):
-        if uniq != sai:
-            jogo[n + 1] = uniq
-        elif uniq == P1:
-            jogo[n + 1] = None
-    return jogo
+    """O jogo de fora com ``sai`` fora: o vpad de quem saiu fica parado no lugar (D-2410).
+
+    O do P1 fica sem dono enquanto espera; o do P2 ao P4 segue com o dono no co-op.
+    """
+    return {n + 1: None if uniq == sai == P1 else uniq for n, uniq in enumerate(QUATRO)}
 
 
 def _eventos(registros: list[dict[str, Any]], nome: str) -> list[dict[str, Any]]:
@@ -100,7 +97,7 @@ class TestTrezentosSegundosComOJogo:
     ) -> None:
         bancada = montar(monkeypatch, 4)
         _volta(bancada)
-        vpads = {u: bancada.vpad_de(u) for u in QUATRO if u not in (P1, sai)}
+        vpads = {u: bancada.vpad_de(u) for u in QUATRO if u != P1}
         bancada.mesa.levantar(sai)
         _volta(bancada)
         # A saída em si muda a mesa (quem saiu deixa de ter número na tela) e arma uma
