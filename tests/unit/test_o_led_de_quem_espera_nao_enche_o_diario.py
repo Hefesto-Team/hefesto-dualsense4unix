@@ -304,3 +304,25 @@ def test_o_vpad_de_quem_espera_nunca_e_recriado_pela_ordem(
     m.mgr._ordenar(None)
     assert feitos and all(P2 not in recriar for recriar in feitos), feitos
     assert m.mgr._players[P2].vpad is vpad and m.mgr._players[P2].a_espera
+
+
+@pytest.mark.parametrize("p3_slot", [1, 3, 4])
+def test_sem_o_jogo_na_autoridade_a_ordem_nao_recria_quem_espera(
+    monkeypatch: pytest.MonkeyPatch, p3_slot: int
+) -> None:
+    """O jogo soltou a autoridade com o P2 à espera, antes do `sync` soltá-lo.
+
+    Sem a autoridade os `fixos` ficam vazios, como o posto vago do P1; a carta
+    de quem espera também não vale, e a ordem sai cedo em vez de recriar o vpad.
+    """
+    m = _Mesa(monkeypatch, QUATRO)
+    _a_lampada_do_registro(m)
+    m.sai(P2)
+    vpad = m.mgr._players[P2].vpad
+    m.registro.slots[P4] = 1
+    m.registro.slots[P3] = p3_slot
+    m.daemon.display_authority = "unknown"
+    feitos = _planos(monkeypatch)
+    m.mgr._ordenar(None)
+    assert all(P2 not in recriar for recriar in feitos), feitos
+    assert m.mgr._players[P2].vpad is vpad and m.mgr._players[P2].a_espera

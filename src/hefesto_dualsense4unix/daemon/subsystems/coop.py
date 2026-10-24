@@ -2726,9 +2726,13 @@ class CoopManager:
         """O lugar do jogo de quem espera no vpad conta como a carta dele, como o posto do P1.
 
         A lâmpada do ausente não tem número (`numero_da_lampada` dá ``None``), e
-        sem isto `_ordenar` saía cedo enquanto alguém esperava.
+        sem isto `_ordenar` saía cedo enquanto alguém esperava. Só com o jogo na
+        autoridade, como o posto vago: sem ela, quem espera fica fora dos `fixos`
+        e a ordem recriaria o vpad parado; `_ordenar` sai cedo até o `sync` soltá-lo.
         """
         if lugar is None or chave not in self.quem_espera_no_lugar():
+            return None
+        if not self._jogo_com_a_autoridade():
             return None
         return lugar + 1
 
