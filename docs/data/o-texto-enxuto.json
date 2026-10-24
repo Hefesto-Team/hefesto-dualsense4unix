@@ -2,10 +2,10 @@
   "_LEIA": "O PISO DAS CATRACAS. Não se edita à mão: `--aceitar` desce, `--forcar-piso «razão»` sobe com razão e data.",
   "medidas": {
     "texto-em-src": {
-      "data": "2026-10-23",
+      "data": "2026-10-24",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 54752,
+      "piso": 54753,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -68,7 +68,7 @@
         "daemon/ipc_handlers.py": 1254,
         "daemon/ipc_server.py": 126,
         "daemon/launch_env.py": 598,
-        "daemon/lifecycle.py": 1313,
+        "daemon/lifecycle.py": 1296,
         "daemon/protocols.py": 60,
         "daemon/sensor_hub.py": 227,
         "daemon/servidor_dsu.py": 58,
@@ -105,6 +105,7 @@
         "daemon/subsystems/vibracao_do_jogo.py": 59,
         "daemon/subsystems/volta_dos_acessorios.py": 42,
         "daemon/udp_server.py": 66,
+        "integrations/a_roupa_do_jogo.py": 52,
         "integrations/alto_falante_bt.py": 521,
         "integrations/apelido_do_dongle.py": 138,
         "integrations/api_de_entrada.py": 89,
@@ -201,7 +202,7 @@
         "interface/desenho_dos_lancadores.py": 1032,
         "interface/frases_que_ela_baniu.py": 104,
         "interface/hefesto_vivo.py": 504,
-        "interface/janela.py": 216,
+        "interface/janela.py": 218,
         "interface/mesa_viva.py": 256,
         "interface/monta.py": 279,
         "interface/navegacao_interna.py": 65,
@@ -250,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +17 linhas (54735 -> 54752), pagas por Origem: D-0210-OS-CHIPS-DO-MAPA-DESCEM-DE-LINHA, D-2110-O-MOTOR-DIZ-A-ENTRADA-PELO-DONO, D-2310-A-ACAO-DO-MAPA-SE-LE-INTEIRA-NA-VISTA-ESTREITA, D-A-ABA-LANCADORES; registrado no fecho, topo 67d440a48852",
+      "razao": "texto-em-src: +1 linhas (54752 -> 54753), pagas por Origem: D-2310-A-ESPERA-DA-PINTURA-CONTA-DO-LOAD; registrado no fecho, topo 88afe2845a39",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -467,6 +468,12 @@
           "de": 54735,
           "para": 54752,
           "razao": "texto-em-src: +17 linhas (54735 -> 54752), pagas por Origem: D-0210-OS-CHIPS-DO-MAPA-DESCEM-DE-LINHA, D-2110-O-MOTOR-DIZ-A-ENTRADA-PELO-DONO, D-2310-A-ACAO-DO-MAPA-SE-LE-INTEIRA-NA-VISTA-ESTREITA, D-A-ABA-LANCADORES; registrado no fecho, topo 67d440a48852"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 54752,
+          "para": 54753,
+          "razao": "texto-em-src: +1 linhas (54752 -> 54753), pagas por Origem: D-2310-A-ESPERA-DA-PINTURA-CONTA-DO-LOAD; registrado no fecho, topo 88afe2845a39"
         }
       ],
       "unidade": "linhas",
