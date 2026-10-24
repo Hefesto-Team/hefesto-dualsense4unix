@@ -184,6 +184,27 @@ class TestARecusaDoBrokerTentaDeNovo:
             for pad in pads:
                 pad.stop()
 
+    def test_a_recusa_nao_martela_o_broker_entre_as_varreduras(
+        self, mesa: Mesa, jogadores: tuple[int, ...]
+    ) -> None:
+        """O ``pump_ff`` roda a cada tique: entre duas varreduras, nenhum pedido a mais.
+
+        Mordida: tire o prazo (``_gadget_outra_vez_em``) que a recusa arma, e o
+        primeiro tique depois do ``start`` já pede de novo.
+        """
+        pads = [mesa.pad(j) for j in jogadores]
+        try:
+            for pad in pads:
+                assert pad.start() and pad._gadget is None
+            for _ in range(120):
+                mesa.passar(0.1, pads)
+            assert mesa.pedidos_ao_broker == 3 * len(pads), (
+                "a recusa pediu fora da varredura de _GADGET_VARRE_S"
+            )
+        finally:
+            for pad in pads:
+                pad.stop()
+
     def test_com_o_jogo_aberto_nenhum_troca_de_pele(
         self, mesa: Mesa, jogadores: tuple[int, ...]
     ) -> None:
