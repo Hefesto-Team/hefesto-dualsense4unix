@@ -299,7 +299,7 @@ def test_ligar_com_permissao_nova_mostra_antes_e_liga_no_segundo(lar, ctx, tmp_p
     a07 = _a07()
     _instalar(a07, ctx, _fonte(tmp_path, permissoes=("rede:local",)))
     primeiro = a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
-    # o recado não chega à tela: a lista aparece no ⋮ aberto da linha, e o clique só armou
+    # o recado não chega à tela: a lista vai na dica da chave armada, e o clique só armou
     assert primeiro.get("armou") is True and "recado" not in primeiro
     assert "Usar a rede desta casa" in primeiro["blocos"][".ext-lista"]
     assert _entrada(lar, "toque").ligada is False, "ligou sem o «sim»"
@@ -314,7 +314,7 @@ _AVISO = "Não é afiliada à marca. Jogue só o que você comprou."
 
 
 def test_o_instalar_da_tela_deixa_o_aviso_para_o_sim_da_chave(lar, ctx, tmp_path) -> None:
-    """O recado do gesto não chega à tela: o aviso aparece no ⋮ do primeiro «sim»."""
+    """O recado do gesto não chega à tela: o aviso vai na dica da chave do primeiro «sim»."""
     a07 = _a07()
     feito = _instalar(a07, ctx, _fonte(tmp_path, extra={"aviso": _AVISO}))
     assert "Toque instalada" in feito["recado"]

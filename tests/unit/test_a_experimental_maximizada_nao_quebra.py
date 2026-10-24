@@ -24,6 +24,11 @@ rola); com o piso de volta em 38 px e o vão em 8, `test_a_fila_dela_cabe_inteir
 reprova; sem o vigia do ⋮ no `comportamento.js`,
 `test_o_menu_com_as_permissoes_da_ultima_fileira_fica_a_vista` reprova nas duas vistas; sem a
 dica na frase da extensão (`ext-faz`), seis dos sete reprovam pelo texto cortado.
+
+NOTA DE 24/10/2026 (O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL-01): o ⋮ com as permissões deixou de
+morar dentro do cartão (ele esticava a fileira e fazia a lista rolar); ele flutua fora da lista,
+posto pelo `comportamento.js` junto do ⋮. A régua do ⋮ da última fileira passa a exigir o menu
+inteiro dentro da janela e a fileira sem esticar, em vez de dentro da caixa da lista.
 """
 
 from __future__ import annotations
@@ -96,7 +101,9 @@ MEDIR = '''(function(){
   const novo = [...fila.querySelectorAll('.lf')].pop();
   return JSON.stringify({miolo: [m.scrollHeight, m.clientHeight], miolo_caixa: r(m),
     lanc: r(lanc), fila: [fila.scrollHeight, fila.clientHeight], fila_caixa: r(fila), novo: r(novo),
-    lista_caixa: r(lista), menu: menu ? r(menu) : null,
+    lista_caixa: r(lista), menu: menu ? r(menu) : null, janela: [0, innerHeight],
+    cartoes: [...lista.querySelectorAll('.ext')].map(
+      e => Math.round(e.getBoundingClientRect().height)),
     cortes: [...m.querySelectorAll('*')].filter(e => {
       const s = e.closest('.ext-lista, .lanc-fila');
       if (s) { const a = e.getBoundingClientRect(), b = s.getBoundingClientRect();
@@ -199,8 +206,9 @@ def test_o_menu_com_as_permissoes_da_ultima_fileira_fica_a_vista(
     """A prova da D-2110-A-FILA-DOS-LANCADORES-ROLA-POR-DENTRO."""
     m = medida[f"{vista}-perm"]
     _sem_rolar_o_miolo(m)
-    menu, lista = _caixas(m, "menu", "lista_caixa")
-    assert lista[0] <= menu[0] and menu[1] <= lista[1] + 1, f"o ⋮ aberto é cortado pela lista: {m}"
+    menu, janela, cartoes = _caixas(m, "menu", "janela", "cartoes")
+    assert janela[0] <= menu[0] and menu[1] <= janela[1], f"o ⋮ aberto sai da janela: {m}"
+    assert max(cartoes) - min(cartoes) <= 1, f"o ⋮ aberto estica a fileira dele: {m}"
 
 
 def test_a_barra_da_fila_usa_a_mesma_cor_da_lista() -> None:

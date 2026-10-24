@@ -16,6 +16,10 @@ MORDIDA (executada em 21/10/2026): com a lista numa coluna só (`repeat(1,…)`)
 (`max-height:none`), `test_doze_extensoes_cabem_e_os_lancadores_ficam_a_vista` reprova nas três
 larguras; sem a regra do ⋮ com as permissões dentro da lista,
 `test_o_menu_com_as_permissoes_fica_dentro_da_lista` reprova.
+
+NOTA DE 24/10/2026 (O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL-01): a regra do ⋮ dentro da lista
+(`position:static`) esticava o cartão e o vizinho da fileira; o ⋮ agora flutua fora da lista, e a
+régua virou `test_o_menu_com_as_permissoes_fica_a_vista_sem_esticar_o_cartao`.
 """
 
 from __future__ import annotations
@@ -47,7 +51,7 @@ from gi.repository import GLib, Gtk
 from hefesto_dualsense4unix.interface.janela import PISO_DA_VISTA, PonteDaTela
 
 PAGINA = pathlib.Path(sys.argv[1])
-MEDIR = '''
+PREPARAR = '''
 (function(n, abrir){
   const lista = document.querySelector('.ext-lista');
   const modelo = lista.querySelector('.ext');
@@ -66,6 +70,15 @@ MEDIR = '''
     lp.innerHTML = '<span>Trocar as cores da interface</span><span>Ler os jogos das pastas</span>';
     menu.appendChild(lp);
   }
+  return 'ok';
+})(%d, %s)
+'''
+# A medida vem num segundo pedido: o `comportamento.js` põe o ⋮ aberto no lugar quando a lista muda
+# (um `MutationObserver`, que só corre depois do script que mudou).
+MEDIR = '''
+(function(){
+  const lista = document.querySelector('.ext-lista');
+  const exts = [...lista.querySelectorAll('.ext')];
   const m = document.querySelector('.janela > .miolo');
   const lanc = [...document.querySelectorAll('.quadro')].find(
     q => /Lançadores/.test(q.querySelector('.quadro-titulo')?.textContent || ''));
@@ -79,7 +92,7 @@ MEDIR = '''
     colunas: new Set(exts.map(e => Math.round(e.getBoundingClientRect().left))).size,
     cartao: Math.round(exts[0].getBoundingClientRect().height),
     doc: [document.documentElement.scrollHeight, document.documentElement.clientHeight]});
-})(%d, %s)
+})()
 '''
 saida = {}
 for largura, n, abrir in [(1272, 12, 0), (1512, 12, 0), (1900, 12, 0), (1272, 1, 1)]:
@@ -92,9 +105,14 @@ for largura, n, abrir in [(1272, 12, 0), (1512, 12, 0), (1900, 12, 0), (1272, 1,
     fim = GLib.get_monotonic_time() + 4_000_000
     while GLib.get_monotonic_time() < fim:
         Gtk.main_iteration_do(False)
+    pronto = {}
+    ponte.perguntar(PREPARAR % (n, "true" if abrir else "false"),
+                    lambda v, e: pronto.update(v=v, e=repr(e) if e else ""))
+    fim = GLib.get_monotonic_time() + 8_000_000
+    while "v" not in pronto and GLib.get_monotonic_time() < fim:
+        Gtk.main_iteration_do(False)
     caixa = {}
-    ponte.perguntar(MEDIR % (n, "true" if abrir else "false"),
-                    lambda v, e: caixa.update(v=v, e=repr(e) if e else ""))
+    ponte.perguntar(MEDIR, lambda v, e: caixa.update(v=v, e=repr(e) if e else ""))
     fim = GLib.get_monotonic_time() + 8_000_000
     while "v" not in caixa and GLib.get_monotonic_time() < fim:
         Gtk.main_iteration_do(False)
@@ -129,12 +147,15 @@ def test_doze_extensoes_cabem_e_os_lancadores_ficam_a_vista(
     assert lista[1] <= TETO < lista[0], f"a lista não tem o teto e não rola por dentro: {m}"
 
 
-def test_o_menu_com_as_permissoes_fica_dentro_da_lista(
+def test_o_menu_com_as_permissoes_fica_a_vista_sem_esticar_o_cartao(
         medida: dict[str, dict[str, list[int] | int]]) -> None:
+    """Com uma extensão só, o ⋮ aberto com as permissões flutua inteiro dentro da janela, e o cartão
+    fica no piso: o menu não entra no fluxo da lista (O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL-01)."""
     m = medida["1272-1"]
-    menu, lista, rola = m["menu"], m["lista_caixa"], m["lista"]
-    assert isinstance(menu, list) and isinstance(lista, list) and isinstance(rola, list)
-    assert lista[0] <= menu[0] and menu[1] <= lista[1], f"o ⋮ aberto é cortado: {m}"
+    menu, doc, rola = m["menu"], m["doc"], m["lista"]
+    assert isinstance(menu, list) and isinstance(doc, list) and isinstance(rola, list)
+    assert menu[0] >= 0 and menu[1] <= doc[1], f"o ⋮ aberto sai da janela: {m}"
+    assert m["cartao"] == medida["1272-12"]["cartao"], f"o ⋮ aberto estica o cartão: {m}"
     assert rola[0] <= rola[1], m
 
 
