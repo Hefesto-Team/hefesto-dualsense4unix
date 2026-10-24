@@ -110,10 +110,14 @@ def test_a_03_nao_importa_o_desenho_da_05() -> None:
 
 
 def test_o_glifo_do_controle_tem_um_dono_comum() -> None:
-    """A 03 e a 05 o tiram de `monta.glifo_do_controle`, pelo caminho do pacote; nenhuma o refaz."""
+    """A 03 e a 05 o tiram de `mapa.glifo_do_controle`, pelo caminho do pacote; nenhuma o refaz.
+
+    Mora com a silhueta, no `mapa.py`, que está fora do produto: no `monta.py`, que o pacote
+    importa, ele abria ao produto um caminho até o gerador do mapa
+    (`test_o_codigo_de_src_tem_quem_o_chame`)."""
     for modulo in ("aba03.py", "aba05.py"):
         fonte = _fonte(modulo)
-        assert ("from hefesto_dualsense4unix.interface.monta import glifo_do_controle"
+        assert ("from hefesto_dualsense4unix.interface.mapa import glifo_do_controle"
                 in fonte), f"{modulo} não importa o glifo do dono comum"
         assert "silhueta_do_dualsense(22" not in fonte, f"{modulo} refaz o glifo do controle"
 

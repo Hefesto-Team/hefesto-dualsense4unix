@@ -74,6 +74,12 @@ def silhueta_do_dualsense(tam=40, traco=0.9):
     return re.sub(r">\s+<", "><", x).strip()
 
 
+def glifo_do_controle():
+    """O ícone do controle inteiro, de uma cor só: a «Força da vibração» da 05 e a «Intensidade
+    do gatilho» da 03. Mora com a silhueta, fora do produto: só os geradores o leem."""
+    return silhueta_do_dualsense(22, traco=1.4).replace("<svg ", '<svg class="gl gl-ctrl" ', 1)
+
+
 CAIXAS_PROPRIAS = {
     "lightbar": [(38.9, 30.0, 45.1, 52.0), (82.9, 30.0, 89.3, 52.0)],
 }

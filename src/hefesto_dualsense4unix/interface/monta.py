@@ -612,16 +612,6 @@ def glifo(nome: str, ativo: bool = False, tam: int = 24) -> str:
     i = x.index(">", x.index("<svg "))
     return f'{x[:i + 1]}<title>{html.escape(titulo)}</title>{x[i + 1:]}'
 
-
-def glifo_do_controle() -> str:
-    """O ícone do controle inteiro, de uma cor só: a «Força da vibração» da 05 e a «Intensidade
-    do gatilho» da 03. A silhueta é a do mapa (`mapa.silhueta_do_dualsense`), que lê o
-    `ds_limpo.svg` pela raiz do repositório: por isso só o gerador a chama, nunca o pacote."""
-    import mapa
-    silhueta = str(mapa.silhueta_do_dualsense(22, traco=1.4))
-    return silhueta.replace("<svg ", '<svg class="gl gl-ctrl" ', 1)
-
-
 CSS_GLIFO = """
   /* Os glifos são os MESMOS SVGs da aba Status (assets/glyphs, 27 peças).
      `currentColor` faz cada um herdar a cor da linha em que está. */

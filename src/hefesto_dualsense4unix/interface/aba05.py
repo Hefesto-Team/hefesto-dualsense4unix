@@ -28,7 +28,7 @@ from hefesto_dualsense4unix.interface.pacotes.a05_vibracao import (
     GESTO_DO_MODO,
     html_dos_toques,
 )
-from hefesto_dualsense4unix.interface.monta import glifo_do_controle
+from hefesto_dualsense4unix.interface.mapa import glifo_do_controle
 from hefesto_dualsense4unix.interface.pacotes.meus_efeitos import TETO_DO_NOME
 
 from hefesto_dualsense4unix.profiles import formas_de_haptica as formas

@@ -94,7 +94,7 @@ def test_o_gatilho_ganha_o_trilho_de_0_a_200_por_controle(d03: str) -> None:
     # o mesmo formato da 05: ícone do controle, trilho, número e `%`
     assert d03.count('class="teto">%</span>') >= len(aba03.MESA)
     # o ícone tem um dono comum de desenho, e as duas abas o conferem contra ele
-    from hefesto_dualsense4unix.interface.monta import glifo_do_controle
+    from hefesto_dualsense4unix.interface.mapa import glifo_do_controle
 
     dono = glifo_do_controle()
     assert (dono, dono) == (aba03.GLIFO_DA_INTENSIDADE, aba05.GLIFO_DO_CONTROLE)
