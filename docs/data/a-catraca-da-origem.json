@@ -245,14 +245,14 @@
       "data": "2026-10-24",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1197878,
+      "piso": 1198345,
       "por_item": {
-        "docs": 120898,
+        "docs": 120934,
         "scripts": 120631,
-        "src": 319991,
-        "tests": 636358
+        "src": 320153,
+        "tests": 636627
       },
-      "razao": "tamanho: +11 linhas (1197867 -> 1197878), pagas por Origem: D-2310-O-CODEQL-ZERA-LENDO-O-HTML-PELO-PARSER; registrado no fecho, topo 58216b2c38c2",
+      "razao": "tamanho: +467 linhas (1197878 -> 1198345), pagas por Origem: D-2410-A-EXTENSAO-SE-PREPARA-AO-INSTALAR-E-AO-ATUALIZAR, D-2410-O-PREPARO-RODA-SO-DEPOIS-DO-SIM; registrado no fecho, topo 2df6da954d26",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -913,10 +913,16 @@
           "de": 1197867,
           "para": 1197878,
           "razao": "tamanho: +11 linhas (1197867 -> 1197878), pagas por Origem: D-2310-O-CODEQL-ZERA-LENDO-O-HTML-PELO-PARSER; registrado no fecho, topo 58216b2c38c2"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 1197878,
+          "para": 1198345,
+          "razao": "tamanho: +467 linhas (1197878 -> 1198345), pagas por Origem: D-2410-A-EXTENSAO-SE-PREPARA-AO-INSTALAR-E-AO-ATUALIZAR, D-2410-O-PREPARO-RODA-SO-DEPOIS-DO-SIM; registrado no fecho, topo 2df6da954d26"
         }
       ],
       "unidade": "linhas",
-      "universo": 3134
+      "universo": 3135
     }
   }
 }
