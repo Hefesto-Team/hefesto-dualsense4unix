@@ -6152,6 +6152,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     *EDICOES_DO_CHIP_A_940,
     *EDICOES_DA_CONTA_DO_RADIO,
     *EDICOES_DO_CODEQL,
+    *EDICOES_DO_PORTE,
 )
 
 
@@ -6709,9 +6710,9 @@ EDICOES_DO_CODEQL: tuple[Edicao, ...] = (
     ),
 )
 
-#: O que a bancada já diz e a cópia do produto ainda não: o `--publicar mapa-das-portas.html`
-#: (da costura) junta estas ao fim de `EDICOES` e deixa a tupla vazia.
-EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
+#: O texto do porte na página (23/10/2026, O-PORTE-E-A-PAGINA-DO-ARRANJO-DIZEM-O-MESMO-TEXTO-01),
+#: publicado em 24/10 pela costura do porte (`1deb24177`).
+EDICOES_DO_PORTE: tuple[Edicao, ...] = (
     Edicao(
         antes=(
             '          linhas.push({ s: "medido", t: "Hoje ele está na entrada <b>" + de'
@@ -6756,6 +6757,10 @@ EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
         ),
     ),
 )
+
+#: O que a bancada já diz e a cópia do produto ainda não: o `--publicar mapa-das-portas.html`
+#: (da costura) junta estas ao fim de `EDICOES` e deixa a tupla vazia.
+EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = ()
 
 
 def pagina(com_as_que_esperam: bool = True) -> str:
