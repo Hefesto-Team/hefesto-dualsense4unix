@@ -21,8 +21,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 08-conexoes.html
-- **24/10/2026** — a entrada-mãe do extensor diz «Ocupada», e o quadrado diz «Com o extensor» no lugar de «Vazia», como no Mapa das conexões (O-PORTE-E-A-PAGINA-DO-ARRANJO-DIZEM-O-MESMO-TEXTO-01). O quadrado do mapa da aba já vem do motor e do `conexoes.html_do_mapa`, então o produto diz isso ao instalar; até publicar, só a cópia estática da aba continua com «Vazia / Indisponível».
-
-## mapa-das-portas.html
-- **24/10/2026** — a linha «Hoje ele está na …» e o porquê «esta opção não usa a …» dizem a entrada pelo nome que você deu («entrada Atrás»), como as outras frases do mapa (O-PORTE-E-A-PAGINA-DO-ARRANJO-DIZEM-O-MESMO-TEXTO-01). Até publicar, o produto continua com o número cru nessas duas frases.
+<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->

@@ -194,6 +194,7 @@ def test_a_receita_do_mapa_vazio_e_do_mapa_torto() -> None:
     for na_mao in ("bt", "wifi", "teclado", "mouse", "webcam", None)
     for n in ("1", "2", "3", "7", "9", "10", "13", "15", "15a")])
 def test_o_julgamento_de_cada_entrada_e_o_mesmo(n: str, na_mao: str | None) -> None:
+    # D-2410-O-PORTE-DIZ-O-TEXTO-DA-PAGINA
     mesa = _mesa()
     entrada = motor.por_num(mesa.faces, n)
     assert entrada is not None
@@ -471,6 +472,7 @@ def test_sem_o_hub_a_regra_bate_sem_o_texto() -> None:
 
 
 def test_o_quadrado_cheio_sem_aparelho_nao_diz_vazia() -> None:
+    # D-2410-A-ENTRADA-MAE-DO-EXTENSOR-DIZ-COM-O-EXTENSOR
     """A entrada-mãe do extensor é «Ocupada» sem aparelho direto: o quadrado da 08 diz o porquê.
 
     MORDIDA: devolva `corpo = … rotulos["vazia"]` sem o caso `tomada` em `conexoes.quadrado`, e o
