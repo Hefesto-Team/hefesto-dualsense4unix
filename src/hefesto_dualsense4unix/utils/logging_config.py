@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import atexit
+import errno
 import logging
 import os
 import re
@@ -225,7 +226,8 @@ class AgregadoDoDiario:
     contadas>``, ``janela_s=`` e os campos da última; a ocorrência que chega com a janela
     vencida e a conta ainda aberta é ela mesma essa linha. A janela começa em ``janela_s``
     e dobra enquanto o evento volta antes de duas janelas, até ``janela_max_s``. O que
-    ficou contado quando o processo sai se escreve no ``atexit``.
+    ficou contado quando o processo sai se escreve no ``atexit``, e se perde calado
+    quando o destino do diário já fechou.
     """
 
     def __init__(
@@ -311,7 +313,20 @@ class AgregadoDoDiario:
         campos.update(vezes=janela.contagem, janela_s=janela.largura)
         campos[_MARCA_DO_AGREGADO] = True
         diario = self.diario if self.diario is not None else structlog.get_logger("agregado")
-        getattr(diario, janela.nivel)(janela.recente.get("event"), **campos)
+        try:
+            getattr(diario, janela.nivel)(janela.recente.get("event"), **campos)
+        except (ValueError, OSError) as erro:
+            # O destino do diário já fechou (o pytest que sai, a unit parada com o journal
+            # fora): a conta aberta se perde, não há quem a leia. Outro erro sobe.
+            if not _o_destino_fechou(erro):
+                raise
+
+
+def _o_destino_fechou(erro: BaseException) -> bool:
+    """O erro de escrever num arquivo fechado ou num cano sem leitor, e só ele."""
+    if isinstance(erro, OSError):
+        return erro.errno in (errno.EPIPE, errno.EBADF)
+    return isinstance(erro, ValueError) and "closed file" in str(erro)
 
 
 _AGREGADO = AgregadoDoDiario()
