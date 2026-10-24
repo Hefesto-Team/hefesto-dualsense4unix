@@ -468,3 +468,37 @@ def test_sem_o_hub_a_regra_bate_sem_o_texto() -> None:
         _regra_do_plano(ouro("sem-hub/planejar"))
     assert _regra_da_receita(como_o_mockup_receita(motor.receita(mesa))) == \
         _regra_da_receita(_receita_do_ouro("sem-hub/receita"))
+
+
+def test_o_quadrado_cheio_sem_aparelho_nao_diz_vazia() -> None:
+    """A entrada-mãe do extensor é «Ocupada» sem aparelho direto: o quadrado da 08 diz o porquê.
+
+    MORDIDA: devolva `corpo = … rotulos["vazia"]` sem o caso `tomada` em `conexoes.quadrado`, e o
+    quadrado volta a dizer «Vazia» em cima de «Ocupada».
+    """
+    from hefesto_dualsense4unix.interface.conexoes import html_do_mapa
+
+    saiu = html_do_mapa(
+        [{"nome": "Traseira", "portas": ["10", "11"]}],
+        quem_esta={}, extensoes={},
+        veredito_de=lambda n, e: (("cheia", "Ocupada", "Com o extensor") if n == "10"
+                                  else ("serve", "Serve", "")),
+        rotulos={"vazia": "Vazia", "por_extensao": "Por extensão",
+                 "nova_entrada": "Acrescentar entrada"},
+        dicas={"esticada": "", "enumera": "{c}", "nova_entrada": "", "novo_hub": ""})
+    dez = re.search(r'data-entrada="10".*?</button>', saiu, re.S)
+    onze = re.search(r'data-entrada="11".*?</button>', saiu, re.S)
+    assert dez and onze
+    assert '<span class="mm-c">Com o extensor</span>' in dez.group(0), dez.group(0)
+    assert "Vazia" not in dez.group(0)
+    assert '<span class="mm-c mm-vazia">Vazia</span>' in onze.group(0), (
+        "a entrada livre de verdade deixou de dizer «Vazia»")
+
+
+def test_nenhum_quadrado_do_desenho_da_08_e_vazio_e_ocupado() -> None:
+    html = (RAIZ / "mockup" / "08-conexoes.html").read_text(encoding="utf-8")
+    quadrados = re.findall(r'<button class="mm-sq"[^>]*>.*?</button>', html, re.S)
+    assert quadrados, "o desenho da 08 perdeu os quadrados do mapa"
+    contraditos = [q for q in quadrados
+                   if "mm-vazia" in q and 'data-v="cheia"' in q]
+    assert not contraditos, contraditos

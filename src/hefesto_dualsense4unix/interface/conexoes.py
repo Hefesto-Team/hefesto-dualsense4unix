@@ -305,8 +305,12 @@ def html_do_mapa(
     def quadrado(numero: str, esticada: bool = False) -> str:
         classe, texto, porque = veredito_de(numero, esticada)
         dentro = quem_esta.get(numero)
-        corpo = _primeira_maiuscula(dentro[0] if dentro else rotulos["vazia"])
         texto, porque = _primeira_maiuscula(texto), _primeira_maiuscula(porque)
+        # Cheia sem aparelho direto (o extensor nela, a entrada-mãe em uso): o quadrado diz o
+        # porquê do motor, nunca «Vazia» ao lado de «Ocupada».
+        tomada = not dentro and classe == "cheia" and bool(porque)
+        corpo = _primeira_maiuscula(
+            dentro[0] if dentro else porque if tomada else rotulos["vazia"])
         dizeres = []
         if esticada:
             dizeres.append(dicas["esticada"])
@@ -314,7 +318,7 @@ def html_do_mapa(
             dizeres.append(dicas["enumera"].format(c=dentro[1]))
         dizeres.append(porque)
         linhas = [f'<span class="mm-n">{_e(numero)}</span>',
-                  f'<span class="mm-c{"" if dentro else " mm-vazia"}">{_e(corpo)}</span>']
+                  f'<span class="mm-c{"" if dentro or tomada else " mm-vazia"}">{_e(corpo)}</span>']
         if esticada:
             por_extensao = _primeira_maiuscula(rotulos["por_extensao"])
             linhas.append(f'<span class="mm-ext">{_e(por_extensao)}</span>')
