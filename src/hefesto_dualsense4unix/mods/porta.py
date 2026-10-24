@@ -1106,7 +1106,7 @@ class Porta:
                 _por_na_fila(fila, carga)
 
     def _repouso_de(self, uniq: str | None) -> None:
-        """Quem saiu fora do repouso sai uma vez em repouso: o brinquedo não fica preso."""
+        """Quem saiu fora do repouso sai uma vez em repouso: o aparelho não fica preso."""
         antes = self._entradas_enviadas.pop(uniq, None)
         if antes is None or antes[0] == REPOUSO_DAS_ENTRADAS:
             return
