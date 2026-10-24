@@ -2388,14 +2388,15 @@ class CoopManager:
     def _parar_no_lugar(self, player: _SecondaryPlayer) -> None:
         """Os leitores param e o vpad recebe o quadro neutro e o fim da vibração."""
         player.a_espera = True
-        with contextlib.suppress(Exception):
-            player.reader.set_grab(False)
-        with contextlib.suppress(Exception):
-            player.reader.stop()
+        paradas = [lambda: player.reader.set_grab(False), player.reader.stop]
         if player.motion_reader is not None:
-            with contextlib.suppress(Exception):
-                player.motion_reader.stop()
-            player.motion_reader = None
+            paradas.append(player.motion_reader.stop)
+        for parar in paradas:
+            try:
+                parar()
+            except Exception as exc:  # o leitor que não para se diz no diário
+                logger.warning("coop_leitor_nao_parou", identity=player.identity, err=str(exc))
+        player.motion_reader = None
         self._zerar_rumble_do_jogador(player.identity)
         vpad = player.vpad
         if vpad is not None:
