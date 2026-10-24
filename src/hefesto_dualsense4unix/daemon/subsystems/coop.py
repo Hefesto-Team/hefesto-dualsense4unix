@@ -1588,10 +1588,10 @@ class CoopManager:
             return
         from hefesto_dualsense4unix.core import sysfs_leds
 
-        try:
-            nodes = sysfs_leds.discover()
-        except Exception as exc:
-            logger.warning("coop_player_led_discover_falhou", err=str(exc))
+        # o `discover` que falha se diz uma vez por borda (`_os_nos_do_sysfs`, no
+        # fim da classe), e não a cada ciclo cheio da espera no lugar guardado
+        nodes = self._os_nos_do_sysfs(sysfs_leds.discover)
+        if nodes is None:
             return
         for mac, bits in padroes.items():
             # o lugar que espera não tem lâmpada; o nó que falta se diz uma vez
@@ -1796,7 +1796,7 @@ class CoopManager:
         except Exception as exc:
             logger.warning("coop_publicar_camada_falhou", err=str(exc))
             return True
-        self._camada_coop = dict(padroes)
+        self._camada_coop, self._led_indisponivel = dict(padroes), frozenset()
         self._leds_overridden = bool(padroes)
         return True
 
@@ -1904,10 +1904,10 @@ class CoopManager:
             return
         from hefesto_dualsense4unix.core import sysfs_leds
 
-        try:
-            nodes = sysfs_leds.discover()
-        except Exception as exc:
-            logger.warning("coop_player_led_discover_falhou", err=str(exc))
+        # o mesmo dono da borda do aviso do `discover` (`_os_nos_do_sysfs`, no fim
+        # da classe)
+        nodes = self._os_nos_do_sysfs(sysfs_leds.discover)
+        if nodes is None:
             return
         for mac, bits in pending:
             node = nodes.get(mac)
@@ -2270,6 +2270,9 @@ class CoopManager:
         for key in list(self._players):
             self._teardown_player(key)
         self._revert_player_leds()
+        # religado o co-op, o nó que segue faltando e o `discover` que falha se dizem de novo
+        self._led_indisponivel = frozenset()
+        self._discover_falhou = False
 
     stop_all = disable
 
@@ -2563,6 +2566,7 @@ class CoopManager:
     def _repintar_se_o_numero_mudou(self) -> None:
         """A barra de jogador segue o número mesmo sem hotplug (G6)."""
         self.publicar_os_numeros(escrever=True)
+        self._acender_quem_espera_o_no()
 
 
     _nomes_velhos_ditos: list[tuple[int, int]] | None = None
@@ -2721,6 +2725,53 @@ class CoopManager:
             self._led_indisponivel |= {mac}
             logger.warning("coop_player_led_indisponivel", identity=mac)
         return False
+
+    #: O `discover` do sysfs já se disse falhando, nesta borda.
+    _discover_falhou = False
+
+    def _os_nos_do_sysfs(
+        self, discover: Callable[[], dict[str, Any]]
+    ) -> dict[str, Any] | None:
+        """Os nós de LED do sysfs, ou ``None`` se o ``discover`` falhou.
+
+        A falha se diz uma vez por borda, como o nó que falta: enquanto alguém
+        espera no lugar guardado o ciclo cheio roda a cada tique, e o aviso saía
+        em cada um. Sai de novo só depois de um ``discover`` que funcionou.
+        """
+        try:
+            nodes = discover()
+        except Exception as exc:
+            if not self._discover_falhou:
+                self._discover_falhou = True
+                logger.warning("coop_player_led_discover_falhou", err=str(exc))
+            return None
+        self._discover_falhou = False
+        return nodes
+
+    def _acender_quem_espera_o_no(self) -> None:
+        """O jogador presente cujo nó de LED faltou acende o número quando o nó aparece.
+
+        No caminho do sysfs, o nó de quem volta ao lugar pode aparecer depois do
+        ciclo cheio da volta, e nenhum outro ciclo cheio viria até a próxima
+        mudança de mesa. Só há ``discover`` aqui enquanto alguém está em
+        ``_led_indisponivel``; aceso, ele sai dali e não se reescreve.
+        """
+        if not self._led_indisponivel or not self._players:
+            return
+        ctrl = getattr(self._daemon, "controller", None)
+        if callable(getattr(ctrl, "set_coop_outputs", None)):
+            return
+        from hefesto_dualsense4unix.core import sysfs_leds
+
+        nodes = self._os_nos_do_sysfs(sysfs_leds.discover)
+        if nodes is None:
+            return
+        numeros = self.numeros_de_jogador()
+        self._led_indisponivel &= frozenset(numeros)
+        for mac in sorted(self._led_indisponivel):
+            bits = player_led_pattern(numeros[mac])
+            if self._o_led_acendeu(mac, nodes.get(mac), bits):
+                self._leds_overridden = True
 
     def _carta_de_quem_espera(self, chave: str, lugar: int | None) -> int | None:
         """O lugar do jogo de quem espera no vpad conta como a carta dele, como o posto do P1.
