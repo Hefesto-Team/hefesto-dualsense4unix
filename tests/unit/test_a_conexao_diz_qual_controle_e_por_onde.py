@@ -183,3 +183,33 @@ def test_a_api_de_plugin_diz_o_transporte_de_cada_controle(do_posto: str) -> Non
     assert {u: proxy.transporte_de(u) for u in (P1, P2, P3, P4)} == {
         P1: "bt", P2: "bt", P3: "bt", P4: "usb"}
     assert proxy.transporte_de("aabbcc0000ff") is None
+
+
+def test_a_borda_sem_mac_conhecido_ainda_publica_a_conexao() -> None:
+    """O controle cuja chave é o caminho do hidraw (sem `uniq`) sobe a mesa: a borda não fica muda.
+
+    `_quem_entrou` pula quem não tem `uniq`; a borda de antes publicava sempre um, e o
+    perfil que troca ao conectar (`eventos_do_perfil`) depende desse evento.
+    """
+    controle = _Mesa({P1: "usb"}, P1)
+    controle.mesa = {"/dev/hidraw3": (None, "usb")}  # type: ignore[dict-item]
+    controle.primary_uniq = None  # type: ignore[assignment]
+    controle.na_tomada = True
+    controle.get_transport = lambda: "usb"  # type: ignore[method-assign]
+    daemon = _Daemon(controle)
+    entrou = daemon.bus.subscribe(EventTopic.CONTROLLER_CONNECTED)
+    conn_mod.publicar_a_borda_do_primario(daemon, {}, None)  # type: ignore[arg-type]
+    assert _drenar(entrou) == [{"transport": "usb", "uniq": None}]
+    daemon._hidraw_broker_executor.shutdown(wait=False)
+
+
+def test_a_borda_com_a_mesa_de_antes_velha_ainda_publica_o_primario() -> None:
+    """A volta em que a queda não leu a mesa deixa o `antes` velho: a borda ainda diz o primário."""
+    controle = _Mesa({P1: "bt", P2: "usb"}, P1)
+    controle.na_tomada = True
+    daemon = _Daemon(controle)
+    entrou = daemon.bus.subscribe(EventTopic.CONTROLLER_CONNECTED)
+    antes = controle.alvos_conectados()
+    conn_mod.publicar_a_borda_do_primario(daemon, antes, antes)  # type: ignore[arg-type]
+    assert _drenar(entrou) == [{"transport": "bt", "uniq": P1}]
+    daemon._hidraw_broker_executor.shutdown(wait=False)

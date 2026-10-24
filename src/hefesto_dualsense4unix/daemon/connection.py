@@ -1484,10 +1484,13 @@ def publicar_a_borda_do_primario(
     """A borda de quando a mesa sobe: um `controller.connected` por controle, com o `uniq` e o
     transporte DELE (`_publicar_quem_entrou`). O backend que não enumera alvos publica um só, o
     do primário, também com o `uniq`. É a do `reconnect_loop` e a do boot do `lifecycle`.
+
+    A borda nunca fica muda: se nenhum alvo conta como entrada (a chave sem MAC, que
+    `_quem_entrou` pula, ou o `antes` que a queda não chegou a ler), sai o do primário.
     """
     if agora is None:
         agora = alvos_conectados_de(daemon)
-    if agora is not None:
+    if agora is not None and _quem_entrou(daemon, antes, agora):
         _publicar_quem_entrou(daemon, antes, agora)
         return
     controller = daemon.controller
