@@ -245,14 +245,14 @@
       "data": "2026-10-24",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1198977,
+      "piso": 1198979,
       "por_item": {
         "docs": 120942,
         "scripts": 120631,
         "src": 320288,
-        "tests": 637116
+        "tests": 637118
       },
-      "razao": "tamanho: +23 linhas (1198954 -> 1198977), pagas por Origem: D-2410-O-PAD-RECUSADO-PELA-SESSAO-PEDE-DE-NOVO; registrado no fecho, topo 5118b6613505",
+      "razao": "tamanho: +2 linhas (1198977 -> 1198979), pagas por Origem: D-2410-O-PORTE-DIZ-O-TEXTO-DA-PAGINA; registrado no fecho, topo 55e5a5d9746c",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -931,6 +931,12 @@
           "de": 1198954,
           "para": 1198977,
           "razao": "tamanho: +23 linhas (1198954 -> 1198977), pagas por Origem: D-2410-O-PAD-RECUSADO-PELA-SESSAO-PEDE-DE-NOVO; registrado no fecho, topo 5118b6613505"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 1198977,
+          "para": 1198979,
+          "razao": "tamanho: +2 linhas (1198977 -> 1198979), pagas por Origem: D-2410-O-PORTE-DIZ-O-TEXTO-DA-PAGINA; registrado no fecho, topo 55e5a5d9746c"
         }
       ],
       "unidade": "linhas",
