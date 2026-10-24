@@ -252,6 +252,32 @@ Cada extensão da casa mora no seu repositório, `Hefesto-Team/hefesto-mod-<nome
 padrão e o `pytest`), o `README.md` com o mesmo aviso, a `LICENSE` MIT de Vitória Maria e André Farias e
 o `CHANGELOG.md`. A lista, com o endereço de cada uma, está no [README](../../README.md#extensões).
 
+## O preparo da extensão
+
+O campo `preparar` (opcional) é um comando, relativo à pasta da extensão, como o `processo.executar`: o
+primeiro da lista é um arquivo da pasta ou um nome do `PATH` (`["bash", "install.sh"]`), nunca um caminho
+absoluto nem `..`. É o que a extensão precisa fora do código dela (o binário conferido, a cópia na pasta de
+dados, o certificado), e é o instalador que o roda (`mods/instalador.py`, `_preparar`):
+
+- depois de trocar o código e antes de gravar a linha do registro, ao instalar e ao atualizar;
+- fora da caixa, como quem usa, nunca como root, com a entrada vazia (sem terminal, vale o padrão do
+  comando), na pasta do código e com um ambiente curto: `PATH`, `LANG`, `HOME`, `USER`, `LOGNAME`, as
+  `XDG_*` e o proxy da sessão, mais `HEFESTO_MOD_ID`, `HEFESTO_MOD_DADOS` e `HEFESTO_MOD_API`;
+- com prazo de dez minutos (`PRAZO_DO_PREPARO_S`): passado ele, o grupo de processos que o instalador abriu
+  recebe o `SIGKILL`;
+- com a saída em `preparo.log`, na pasta de dados (a da última vez, até 256 KiB).
+
+O preparo só roda depois do «sim». Quando a versão instalada ainda espera o «sim» do aviso ou das
+permissões (a primeira instalação de quem pede permissão, o aviso que mudou), ele roda no «ligar», antes de a
+chave ligar. O que falha (código diferente de zero, prazo passado, comando que não existe) deixa a extensão
+instalada e desligada, com o motivo na linha (`motivo_do_preparo`) e na recusa do gesto; o «ligar» seguinte o
+roda de novo. A linha guarda o comando que teve o «sim» (`preparo_aceito`) e a instalação que ele preparou
+(`preparada_em`, a `instalada_em` dela). Um `preparar` novo numa atualização sozinha é permissão nova: a
+versão espera o «Atualizar» com a frase «A versão X traz um preparo novo.».
+
+Um Hefesto anterior a este campo recusa o manifesto que o declara («O hefesto-mod.json tem o campo
+«preparar», que este Hefesto não conhece.»).
+
 ## A volta dos acessórios no controle
 
 Com o `acessorios.estado` e os gestos, o serviço devolve três coisas ao controle do gesto, sem a modificação
