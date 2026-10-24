@@ -96,7 +96,7 @@ class _Servidor:
             return "\n".join(
                 f"{mid}\tmodule-null-sink\tsink_name={nome} format=float32le "
                 f'sink_properties="device.bus=usb sysfs.path={caminho} '
-                f'priority.session=0"\t'
+                f'priority.session=0 priority.driver={eh.PRIORIDADE_DO_RELOGIO}"\t'
                 for mid, (nome, caminho) in self.modulos.items()
             )
         if argv[:2] == ["pactl", "load-module"]:

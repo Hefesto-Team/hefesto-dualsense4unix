@@ -176,6 +176,14 @@ MAX_NOME = 127
 
 PRIORIDADE_DA_SESSAO = 0
 
+#: O endpoint dá o passo do próprio grafo
+#: (O-ENDPOINT-DO-CABO-TEM-RELOGIO-PROPRIO-COMO-O-DO-RADIO-01). No cabo, o laço junta o
+#: endpoint e a placa USB num grupo só, e o driver do grupo é o de maior ``priority.driver``:
+#: sem este campo era a placa (o WirePlumber dá às placas ALSA de 744 a 2500), e o som do
+#: jogo andava no passo dela. Acima da faixa, a placa segue o endpoint e casa o passo pelo
+#: próprio resampler; no rádio o endpoint já era o único driver do grafo dele.
+PRIORIDADE_DO_RELOGIO = 3000
+
 #: a vibração (a háptica do DualSense viaja como áudio nos traseiros); em zero,
 VOLUME_DOS_MOTORES = "100%"
 
@@ -340,6 +348,7 @@ def propriedades_do_endpoint(uniq: str, ancora: Ancora, rotulo: str | None = Non
         *campos_do_nome(),
         f"device.description='{rotulo}'",
         f"priority.session={PRIORIDADE_DA_SESSAO}",
+        f"priority.driver={PRIORIDADE_DO_RELOGIO}",
         "device.icon_name=audio-speakers",
         *campo_do_controle(uniq),
     )
@@ -414,6 +423,22 @@ def rotulo_no_ar(
         if achado_id == str(module_id):
             return rotulo
     return ""
+
+
+def nasceu_com_o_relogio(
+    module_id: str, runner: Callable[[list[str]], str | None] | None = None
+) -> bool:
+    """O módulo ``module_id`` nasceu com :data:`PRIORIDADE_DO_RELOGIO`? Sem resposta, True.
+
+    O nó de antes desta cura (o daemon morto sem ``parar``) não se adota: ele
+    deixaria o som do jogo no passo da placa até o servidor de som reiniciar.
+    """
+    chamar = runner or rodar_pactl
+    for linha in (chamar(["pactl", "list", "short", "modules"]) or "").splitlines():
+        partes = linha.split("\t")
+        if len(partes) >= 3 and partes[0].strip() == str(module_id):
+            return f"priority.driver={PRIORIDADE_DO_RELOGIO}" in partes[2]
+    return True
 
 
 def varrer_endpoints_orfaos(
@@ -545,7 +570,11 @@ class EndpointDeHaptica:
             )
             return False
         instancias = endpoints_de_pe(self.runner).get(self.nome, [])
-        iguais = [m for m, caminho in instancias if caminho == self.ancora.declarado]
+        iguais = [
+            m
+            for m, caminho in instancias
+            if caminho == self.ancora.declarado and nasceu_com_o_relogio(m, self.runner)
+        ]
         if iguais:
             self._module_id = iguais[0]
             for sobrando in [m for m, _ in instancias if m != iguais[0]]:
@@ -1410,6 +1439,7 @@ __all__ = [
     "ORDEM_PELO_ENDERECO",
     "ORDENS_DOS_NOS",
     "PID_DUALSENSE",
+    "PRIORIDADE_DO_RELOGIO",
     "QUADROS_POR_BLOCO",
     "VID_SONY",
     "Ancora",
@@ -1428,6 +1458,7 @@ __all__ = [
     "forma_do_toque",
     "marca_do_aparelho",
     "misturar_o_toque",
+    "nasceu_com_o_relogio",
     "nome_da_marca",
     "nome_do_endpoint",
     "ordem_dos_nos",

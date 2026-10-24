@@ -29,6 +29,7 @@ from hefesto_dualsense4unix.daemon.subsystems.bt_mic import (
     uniqs_recusados,
 )
 from hefesto_dualsense4unix.integrations.endpoint_de_haptica import (
+    PRIORIDADE_DO_RELOGIO,
     Ancora,
     EndpointDeHaptica,
     endpoints_de_pe,
@@ -132,7 +133,8 @@ class _Pactl:
         self.comandos.append(argv)
         if argv[:3] == ["pactl", "list", "short"]:
             return "\n".join(
-                f"{mid}\tmodule-null-sink\tsink_name={nome} sysfs.path={caminho}\t"
+                f"{mid}\tmodule-null-sink\tsink_name={nome} sysfs.path={caminho} "
+                f"priority.driver={PRIORIDADE_DO_RELOGIO}\t"
                 for mid, nome, caminho in self.modulos
             )
         if argv[:2] == ["pactl", "unload-module"]:

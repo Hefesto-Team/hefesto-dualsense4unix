@@ -618,7 +618,8 @@ def test_o_no_herdado_com_o_rotulo_de_antes_renasce_uma_vez(mesa: _Mesa) -> None
             'sink_properties="device.bus=usb device.vendor.id=054c device.product.id=0ce6 '
             f"sysfs.path={ancora.declarado} device.vendor.name='Sony Interactive Entertainment' "
             f"device.description='DualSense {_rabo_hex(uniq)} (háptica)' "
-            'priority.session=0 device.icon_name=audio-speakers"',
+            f'priority.session=0 priority.driver={eh.PRIORIDADE_DO_RELOGIO} '
+            'device.icon_name=audio-speakers"',
         ])
     mesa.volta()
     assert set(mesa.servidor.cargas) == {eh.nome_do_endpoint(_P1), eh.nome_do_endpoint(_P2)}, (
@@ -645,7 +646,8 @@ def test_o_no_herdado_de_rotulo_ilegivel_nao_se_toca(mesa: _Mesa) -> None:
         "format=float32le", "rate=48000", "channels=4",
         "channel_map=front-left,front-right,rear-left,rear-right",
         'sink_properties="device.bus=usb device.vendor.id=054c device.product.id=0ce6 '
-        f'sysfs.path={_ANCORAS[2].declarado} priority.session=0"',
+        f'sysfs.path={_ANCORAS[2].declarado} priority.session=0 '
+        f'priority.driver={eh.PRIORIDADE_DO_RELOGIO}"',
     ])
     mesa.volta()
     mesa.volta()
