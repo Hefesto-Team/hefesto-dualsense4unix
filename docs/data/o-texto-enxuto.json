@@ -5,7 +5,7 @@
       "data": "2026-10-24",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 54929,
+      "piso": 54946,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -78,7 +78,7 @@
         "daemon/subsystems/base.py": 78,
         "daemon/subsystems/big_picture.py": 41,
         "daemon/subsystems/bt_mic.py": 233,
-        "daemon/subsystems/coop.py": 773,
+        "daemon/subsystems/coop.py": 788,
         "daemon/subsystems/external_identity.py": 621,
         "daemon/subsystems/external_mask.py": 157,
         "daemon/subsystems/game_signal.py": 128,
@@ -223,7 +223,7 @@
         "interface/pacotes/perfil.py": 328,
         "interface/pacotes/ponte.py": 138,
         "interface/pacotes/rodape.py": 164,
-        "interface/pagina_do_mapa.py": 278,
+        "interface/pagina_do_mapa.py": 280,
         "interface/regua_do_mockup.py": 170,
         "interface/sistema.py": 116,
         "mods/instalador.py": 153,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +2 linhas (54927 -> 54929), pagas por Origem: D-2410-A-CENA-DE-EXEMPLO-SEM-NOME, D-2410-A-COLUNA-DO-ONDE-CRESCE-PARA-TODOS, D-2410-A-DICA-DIZ-QUE-ABRE-NA-JANELA; registrado no fecho, topo 7a2a38de7d29",
+      "razao": "texto-em-src: +17 linhas (54929 -> 54946), pagas por Origem: D-2410-O-LUGAR-GUARDADO-ESPERA-NOS-QUATRO; registrado no fecho, topo d3528f978f4c",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -516,6 +516,12 @@
           "de": 54927,
           "para": 54929,
           "razao": "texto-em-src: +2 linhas (54927 -> 54929), pagas por Origem: D-2410-A-CENA-DE-EXEMPLO-SEM-NOME, D-2410-A-COLUNA-DO-ONDE-CRESCE-PARA-TODOS, D-2410-A-DICA-DIZ-QUE-ABRE-NA-JANELA; registrado no fecho, topo 7a2a38de7d29"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 54929,
+          "para": 54946,
+          "razao": "texto-em-src: +17 linhas (54929 -> 54946), pagas por Origem: D-2410-O-LUGAR-GUARDADO-ESPERA-NOS-QUATRO; registrado no fecho, topo d3528f978f4c"
         }
       ],
       "unidade": "linhas",
