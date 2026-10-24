@@ -274,6 +274,7 @@ def test_quatro_aparelhos_viram_quatro_linhas_e_o_testar_leva_o_alvo(janela, ctx
     else:
         coluna = carga["blocos"]["#mod-agora"]
         assert coluna.count('class="ap mj-ap-linha') == 4, "quatro aparelhos, quatro linhas"
+        assert f'data-dica="Aparelho {n}"' in coluna, "o nome cortado na coluna se lê na dica"
         html = coluna
     assert html.count('role="switch"') == 4, "cada aparelho tem a chave"
     data_v = _data_v_do_testar(html, f"ap-{n}")

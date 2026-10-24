@@ -1211,10 +1211,11 @@ def aparelhos_na_coluna_html(g: Gestao) -> str:
             f'{_icone_da_acao(a.icone) or _e(a.rotulo[:1])}</button>'
             for a in g.aparelhos.acoes if a.id != ACAO_DE_LIGAR)
         fora = "" if ap.get("ligado") is not False else " fora"
+        nome = str(ap.get("nome") or alvo)
         linhas.append(
             f'<div class="ap mj-ap-linha{fora}" data-alvo="{_a(alvo)}">'
             f'{icone_html(ICONE_DO_APARELHO, "acessorio")}'
-            f'<span class="ap-nome">{_e(ap.get("nome") or alvo)}</span>'
+            f'<span class="ap-nome" data-dica="{_a(nome)}">{_e(nome)}</span>'
             f'{bateria_html(ap.get("bateria"))}{botoes}{_chave_do_aparelho(g, ap)}</div>')
     return "".join(linhas)
 

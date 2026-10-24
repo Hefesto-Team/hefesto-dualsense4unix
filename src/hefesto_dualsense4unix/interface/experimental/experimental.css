@@ -613,8 +613,9 @@
   background:var(--texto-suave);transition:left .15s }
 #mod-janela .mj-chave.on { background:rgba(80,250,123,.22);box-shadow:inset 0 0 0 1px var(--green) }
 #mod-janela .mj-chave.on::after { left:19px;background:var(--green) }
-#mod-janela .ap.mj-ap-linha { gap:6px }
-#mod-janela .ap.mj-ap-linha .bat { margin-left:auto }
+#mod-janela .ap.mj-ap-linha { gap:4px }
+#mod-janela .ap.mj-ap-linha > svg.ic { display:none }
+#mod-janela .ap.mj-ap-linha .bat { margin-left:auto;width:26px }
 #mod-janela .ap.mj-ap-linha .btn.ico { width:24px;height:24px;padding:0;display:inline-flex;align-items:center;
   justify-content:center;flex:none }
 #mod-janela .mj-faixa { border:1px solid var(--border-sutil);border-radius:8px;background:var(--app-bg);padding:9px 12px 10px;
