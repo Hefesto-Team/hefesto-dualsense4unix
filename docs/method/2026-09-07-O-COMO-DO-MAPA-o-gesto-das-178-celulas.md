@@ -7575,3 +7575,221 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 * **P2** — Também no cabo, mesma leitura do P1.
 
 **A armadilha.** O trilho do Volume mexe em DUAS coisas ao mesmo tempo: no canal daquele controle no sistema e num byte do próprio controle. Pelo rádio ninguém mediu o byte sozinho — a voz subir prova o par, não o byte; é isso que você anota. Se o número do P3 for um travessão, a ponte do microfone daquele controle ainda não subiu: espere alguns segundos antes de concluir. O 🎙 não cala o microfone: ele liga o retorno; calar é o botão de microfone do próprio controle, e com o microfone calado o 🎙 nem liga. Se você não ouvir o retorno, confira se a saída de som do computador está alta. A leitura acontece de dois em dois segundos, então dê esse tempo antes de olhar o número. E se o painel mostrar mais de uma entrada para o mesmo controle, mude primeiro a «Microfone do Controle» com o número dele e anote qual fez o número andar.
+
+---
+
+## mapa-gatilho.modo-cabo — Modo dos gatilhos: Automático ou Personalizado (`triggers.modo`) · cabo
+
+*Célula:* `gatilho.modo @ cabo`
+
+**O que isto prova.** Prova que o botão «Modo automático» da aba Gatilhos solta de verdade os gatilhos dos controles do cabo, e que, ao desligá-lo, o efeito que você tinha escolhido volta sozinho, porque a escolha ficou guardada. Ninguém viu isto no aparelho ainda: o que se sabe veio do código e do teste, e o resultado desta linha é o que a sua mão sentir.
+
+**Onde olhar.** Na aba Gatilhos, na faixa do título, o botão «Modo automático». Ligado, ele fica ciano e as colunas dos controles esmaecem e param de aceitar clique; desligado, as colunas voltam e o Modo de cada seção vale de novo. Cada controle é uma coluna, com o chip no alto dizendo USB ou BT; a seção de cima é a do L2 e a de baixo, a do R2. O botão é do perfil inteiro, não de um controle: ele vale para os quatro de uma vez. A prova é o dedo: a tela mostra o que foi pedido, e o controle não devolve o efeito em que está.
+
+**Os passos.**
+
+1. Abra a aba Gatilhos.
+2. Confira que o «Modo automático» está desligado e que o chip das colunas do P1 e do P2 diz USB.
+3. Anote no papel o Modo das duas seções de cada uma das quatro colunas.
+4. Escolha «Rígido» no Modo das duas seções da coluna do P1 e das duas da coluna do P2.
+5. Aperte o L2 e o R2 do P1 e do P2 e confira que os quatro gatilhos estão duros.
+6. Clique em «Modo automático» e confira que ele ficou ciano e que as colunas esmaeceram.
+7. Aperte o L2 e o R2 do P1 e do P2 de novo.
+8. Confira que os quatro gatilhos ficaram leves do começo ao fim do curso.
+9. Aperte o L2 e o R2 do P3 e do P4 e anote se estão leves.
+10. Clique em «Modo automático» de novo e confira que ele apagou e que as colunas voltaram.
+11. Aperte o L2 e o R2 do P1 e do P2 sem escolher nada.
+12. Confira que os quatro voltaram duros e que o Modo das seções continua dizendo «Rígido».
+13. Devolva o Modo das oito seções ao que você anotou no papel.
+
+**Passa quando.** Com o «Modo automático» ligado, os gatilhos do P1 e do P2 ficam leves, e os do rádio também, porque o botão é do perfil. Com ele desligado, o «Rígido» volta aos dois do cabo sem você escolher de novo: a escolha não se perdeu ao passar pelo Automático.
+
+**Por controle.**
+
+* **P1** — No CABO, e é o primeiro alvo: duro antes, leve no Automático, duro de novo depois.
+* **P2** — No CABO, e é o segundo. Se o P1 obedecer e o P2 não, o defeito é daquele controle, e não do cabo.
+* **P3** — No RÁDIO. Aqui ele não é testemunha que fica parada: o botão vale para os quatro, então o gatilho dele também tem de estar leve no Automático. A volta dele é a linha do rádio.
+* **P4** — No RÁDIO, mesma leitura do P3.
+
+**A armadilha.** Três. (1) NINGUÉM SENTIU AINDA o gatilho trocar de modo pelo botão: o mapa diz «inferido do código», e esta é a primeira vez que a mão responde. Anote o que sentir, sem ajustar ao que a página espera. (2) O teste precisa de um gatilho DURO antes: se os gatilhos já estão leves quando você liga o Automático, nada muda e nada se prova — é por isso que o quarto passo põe «Rígido». (3) Sem jogo aberto, nada escreve nos gatilhos no Automático, e leve é o certo; com um jogo aberto, quem manda é o jogo, e o que você sente é a escrita dele, não o botão. Faça esta volta com o jogo fechado.
+
+---
+
+## mapa-gatilho.modo-radio — Modo dos gatilhos: Automático ou Personalizado (`triggers.modo`) · rádio
+
+*Célula:* `gatilho.modo @ rádio`
+
+**O que isto prova.** O mesmo que a linha do cabo, pelo rádio: o «Modo automático» solta os gatilhos dos controles do rádio, e, ao desligá-lo, o efeito escolhido volta sozinho. Ninguém viu isto no aparelho ainda; o resultado é o que a sua mão sentir.
+
+**Onde olhar.** Na aba Gatilhos, o botão «Modo automático» na faixa do título: ligado, fica ciano e as colunas esmaecem; desligado, o Modo de cada seção vale de novo. O chip no alto das colunas do P3 e do P4 diz BT. O botão é do perfil e vale para os quatro controles de uma vez. A prova é o dedo, não a tela.
+
+**Os passos.**
+
+1. Abra a aba Gatilhos.
+2. Confira que o «Modo automático» está desligado e que o chip das colunas do P3 e do P4 diz BT.
+3. Anote no papel o Modo das duas seções de cada uma das quatro colunas.
+4. Escolha «Rígido» no Modo das duas seções da coluna do P3 e das duas da coluna do P4.
+5. Aperte o L2 e o R2 do P3 e do P4 e confira que os quatro gatilhos estão duros.
+6. Clique em «Modo automático» e confira que ele ficou ciano e que as colunas esmaeceram.
+7. Aperte o L2 e o R2 do P3 e do P4 de novo.
+8. Confira que os quatro gatilhos ficaram leves do começo ao fim do curso.
+9. Aperte o L2 e o R2 do P1 e do P2 e anote se estão leves.
+10. Clique em «Modo automático» de novo e confira que ele apagou e que as colunas voltaram.
+11. Aperte o L2 e o R2 do P3 e do P4 sem escolher nada.
+12. Confira que os quatro voltaram duros e que o Modo das seções continua dizendo «Rígido».
+13. Devolva o Modo das oito seções ao que você anotou no papel.
+
+**Passa quando.** Com o «Modo automático» ligado, os gatilhos do P3 e do P4 ficam leves, igual aos do cabo, e o rádio não chega depois nem fica pela metade. Com ele desligado, o «Rígido» volta aos dois do rádio sem você escolher de novo.
+
+**Por controle.**
+
+* **P3** — No RÁDIO, e é o primeiro alvo: duro antes, leve no Automático, duro de novo depois.
+* **P4** — No RÁDIO, e é o segundo. Se o P3 obedecer e o P4 não, o defeito é daquele controle, e não do rádio.
+* **P1** — No CABO. O botão vale para os quatro, então o gatilho dele também fica leve no Automático. A volta dele é a linha do cabo.
+* **P2** — No CABO, mesma leitura do P1.
+
+**A armadilha.** Três. (1) NINGUÉM SENTIU AINDA o gatilho trocar de modo pelo botão: anote o que sentir, sem ajustar ao que a página espera. (2) O teste precisa de um gatilho DURO antes, por isso o quarto passo põe «Rígido». (3) Pelo rádio, se o gatilho continuar duro depois do clique, espere dois segundos e aperte de novo antes de anotar; se ainda estiver duro, anote: é o achado desta linha. Faça a volta com o jogo fechado, porque no Automático quem manda nos gatilhos é o jogo.
+
+---
+
+## mapa-luz.modo-cabo — Modo da iluminação: Automático ou Personalizado (`leds.modo`) · cabo
+
+*Célula:* `luz.modo @ cabo`
+
+**O que isto prova.** Prova que o botão «Modo automático» da aba Iluminação tira de verdade a cor que você escolheu da barra dos controles do cabo, que a barra fica na cor do número de cada um, e que, ao desligá-lo, a cor escolhida volta sozinha, porque ficou guardada. Ninguém viu isto no aparelho ainda: o que se sabe veio do código e do teste, e o resultado é o que o plástico mostrar.
+
+**Onde olhar.** Na aba Iluminação, na faixa do título, o botão «Modo automático». Ligado, ele fica ciano e as colunas dos controles esmaecem e param de aceitar clique; desligado, a linha «Cor» de cada coluna vale de novo. O nome de cada controle na linha «Modelo» termina em USB ou BT. As cores dos números: 1 azul, 2 vermelho, 3 verde, 4 rosa. O botão é do perfil inteiro e vale para os quatro de uma vez. A prova é a barra no aparelho, as duas tiras dos lados do touchpad.
+
+**Os passos.**
+
+1. Abra a aba Iluminação.
+2. Confira que o «Modo automático» está desligado e que o «Modelo» das colunas do P1 e do P2 termina em USB.
+3. Ponha os quatro controles virados para cima, onde você veja as quatro barras de uma vez.
+4. Anote a cor da barra dos quatro.
+5. Clique no quadradinho amarelo (o quinto) da linha «Cor» do P1 e no ciano (o sexto) da do P2.
+6. Confira que a barra do P1 ficou amarela e a do P2, ciano.
+7. Clique em «Modo automático» e confira que ele ficou ciano e que as colunas esmaeceram.
+8. Confira que a barra do P1 foi para o azul e a do P2, para o vermelho.
+9. Anote a cor das barras do P3 e do P4.
+10. Espere um minuto sem mexer em nada e confira que as barras do P1 e do P2 continuam azul e vermelha.
+11. Clique em «Modo automático» de novo e confira que ele apagou e que as colunas voltaram.
+12. Confira que a barra do P1 voltou amarela e a do P2, ciano, sem você clicar em cor nenhuma.
+13. Clique no quadradinho da cor do número de cada um para devolver: o primeiro no P1, o segundo no P2.
+
+**Passa quando.** Com o «Modo automático» ligado, as barras do P1 e do P2 deixam o amarelo e o ciano e vão para a cor do número de cada um, e ficam nela. Com ele desligado, o amarelo e o ciano voltam aos dois do cabo sem novo clique: a escolha não se perdeu ao passar pelo Automático.
+
+**Por controle.**
+
+* **P1** — No CABO, e é o primeiro alvo: amarelo, azul no Automático, amarelo de novo depois.
+* **P2** — No CABO, e é o segundo: ciano, vermelho no Automático, ciano de novo. Se o P1 obedecer e o P2 não, o defeito é daquele controle, e não do cabo.
+* **P3** — No RÁDIO. O botão vale para os quatro, então a barra dele também vai para o verde no Automático. A volta dele é a linha do rádio.
+* **P4** — No RÁDIO, mesma leitura do P3, no rosa.
+
+**A armadilha.** Três. (1) NINGUÉM OLHOU AINDA a barra trocar de modo pelo botão: o mapa diz «inferido do código». Anote a cor que vir, sem ajustar ao que a página espera. (2) A cor do teste tem de ser uma que o Automático não dê: amarelo e ciano são dos números 5 e 6. Azul no P1 seria o pior teste, porque é a cor que o Automático já dá ao 1, e nada mudaria. (3) A tela não é a prova: a linha «LEDs» desenha o pedido, e quem responde é o plástico. Faça a volta com o jogo fechado: no Automático, um jogo que pinte a barra manda nela.
+
+---
+
+## mapa-luz.modo-radio — Modo da iluminação: Automático ou Personalizado (`leds.modo`) · rádio
+
+*Célula:* `luz.modo @ rádio`
+
+**O que isto prova.** O mesmo que a linha do cabo, pelo rádio: o «Modo automático» tira a cor escolhida da barra dos controles do rádio, a barra fica na cor do número, e, ao desligá-lo, a cor escolhida volta sozinha. Ninguém viu isto no aparelho ainda; o resultado é o que o plástico mostrar.
+
+**Onde olhar.** Na aba Iluminação, o botão «Modo automático» na faixa do título: ligado, fica ciano e as colunas esmaecem; desligado, a linha «Cor» vale de novo. O «Modelo» das colunas do P3 e do P4 termina em BT. As cores dos números: 1 azul, 2 vermelho, 3 verde, 4 rosa. O botão vale para os quatro controles. A prova é a barra no aparelho.
+
+**Os passos.**
+
+1. Abra a aba Iluminação.
+2. Confira que o «Modo automático» está desligado e que o «Modelo» das colunas do P3 e do P4 termina em BT.
+3. Ponha os quatro controles virados para cima, onde você veja as quatro barras de uma vez.
+4. Anote a cor da barra dos quatro.
+5. Clique no quadradinho amarelo (o quinto) da linha «Cor» do P3 e no ciano (o sexto) da do P4.
+6. Confira que a barra do P3 ficou amarela e a do P4, ciano.
+7. Clique em «Modo automático» e confira que ele ficou ciano e que as colunas esmaeceram.
+8. Confira que a barra do P3 foi para o verde e a do P4, para o rosa.
+9. Anote a cor das barras do P1 e do P2.
+10. Espere um minuto sem mexer em nada e confira que as barras do P3 e do P4 continuam verde e rosa.
+11. Clique em «Modo automático» de novo e confira que ele apagou e que as colunas voltaram.
+12. Confira que a barra do P3 voltou amarela e a do P4, ciano, sem você clicar em cor nenhuma.
+13. Clique no quadradinho da cor do número de cada um para devolver: o terceiro no P3, o quarto no P4.
+
+**Passa quando.** Com o «Modo automático» ligado, as barras do P3 e do P4 deixam o amarelo e o ciano e vão para a cor do número de cada um, igual às do cabo, e ficam nela. Com ele desligado, o amarelo e o ciano voltam aos dois do rádio sem novo clique.
+
+**Por controle.**
+
+* **P3** — No RÁDIO, e é o primeiro alvo: amarelo, verde no Automático, amarelo de novo depois.
+* **P4** — No RÁDIO, e é o segundo: ciano, rosa no Automático, ciano de novo. Se o P3 obedecer e o P4 não, o defeito é daquele controle, e não do rádio.
+* **P1** — No CABO. O botão vale para os quatro, então a barra dele também vai para o azul no Automático. A volta dele é a linha do cabo.
+* **P2** — No CABO, mesma leitura do P1, no vermelho.
+
+**A armadilha.** Três. (1) NINGUÉM OLHOU AINDA a barra trocar de modo pelo botão: anote a cor que vir. (2) Verde no P3 e rosa no P4 seriam o pior teste, porque são as cores que o Automático já dá a eles: por isso o quinto passo usa amarelo e ciano. (3) Uma conexão de rádio pode nascer com a barra travada, ignorando toda escrita: se o P3 e o P4 não obedecerem nem ao quinto passo, a linha que responde é a da cor da barra pelo rádio, não esta. Faça a volta com o jogo fechado.
+
+---
+
+## mapa-plataforma.big_picture-cabo — Modo Big Picture na Steam (o controle navega o Big Picture) · cabo
+
+*Célula:* `plataforma.big_picture @ cabo`
+
+**O que isto prova.** Prova que, com «Steam» escolhido em «Permitir navegação», um controle do cabo navega o Big Picture um passo por toque: o direcional anda, a Cruz entra e o Círculo volta. E responde a pergunta que só a Steam responde, e que ninguém viu ainda: sem o modo, a Steam já anda sozinha pelo controle, ou fica parada? Se ela já anda, ligar o modo daria dois passos por toque.
+
+**Onde olhar.** Na aba Navegação, a linha «Permitir navegação», com «Interna», «Steam» e «Uso geral»: «Steam» liga o Big Picture, e os outros dois o desligam. Na aba Jogar, o quadro «Modo»: o modo só age com o cartão «Sony DualSense», «Xbox» ou «Navegação» aceso, porque nesses o controle é lido pelo Hefesto. Na fita do topo, o chip de cada controle diz USB ou BT. A resposta é a tela da Steam: quantas casas a seleção andou a cada toque.
+
+**Os passos.**
+
+1. Na aba Jogar, confira que o cartão «Sony DualSense» do quadro «Modo» está aceso e que o P1 diz USB na fita do topo.
+2. Na aba Navegação, escolha «Interna» em «Permitir navegação».
+3. Abra a Steam no Big Picture e deixe a janela dela na frente.
+4. No P1, toque uma vez no direcional para a direita e anote quantas casas a seleção andou: nenhuma, uma ou duas.
+5. Toque uma vez na Cruz e anote se a Steam entrou no item; toque uma vez no Círculo e anote se ela voltou.
+6. Volte ao Hefesto e escolha «Steam» em «Permitir navegação».
+7. Volte ao Big Picture e repita os passos 4 e 5 no P1, anotando de novo.
+8. Feche a janela da Steam e repita os passos 4 e 5 no P1, olhando o Hefesto: anote se alguma tecla chegou a ele.
+9. Na aba Jogar, acenda o cartão «Xbox» e refaça do passo 2 ao 8.
+10. Se o P2 estiver no cabo, refaça do passo 2 ao 8 nele, com o P1 parado.
+11. Devolva o cartão do quadro «Modo» e o «Permitir navegação» ao que estavam.
+
+**Passa quando.** Com «Steam» escolhido e a janela do Big Picture na frente, cada toque do direcional anda UMA casa, a Cruz entra e o Círculo volta, no Sony e no Xbox. Com a janela da Steam fechada, os mesmos toques não viram tecla em lugar nenhum. A contagem com «Interna» não reprova nada: é a resposta que decide se o modo deve nascer ligado ou desligado.
+
+**Por controle.**
+
+* **P1** — No CABO, e é o alvo: as três contagens, no Sony e no Xbox.
+* **P2** — No CABO, se houver: as mesmas contagens, com o P1 parado. Os do P2 ao P4 passam por outro caminho do Hefesto que o do P1, e é ele que prova esse caminho pelo cabo.
+* **P3** — No RÁDIO, testemunha: parado. A volta dele é a linha do rádio.
+* **P4** — No RÁDIO, testemunha: parado.
+
+**A armadilha.** Três. (1) NINGUÉM VIU AINDA a Steam navegar por este modo: o mapa diz «incerto», e é esta volta que dá a resposta. Anote a contagem que vir, sem ajustar ao que a página espera. (2) Dois passos por toque com «Steam» escolhido é o passo duplo: anote em qual cartão do quadro «Modo» ele aconteceu, porque é ele que decide o padrão. (3) No cartão «Steam Input», e com o «Status» em «Desligado», quem lê o controle é a Steam, e o modo não age de propósito: não conclua nada deles aqui.
+
+---
+
+## mapa-plataforma.big_picture-radio — Modo Big Picture na Steam (o controle navega o Big Picture) · rádio
+
+*Célula:* `plataforma.big_picture @ rádio`
+
+**O que isto prova.** O mesmo que a linha do cabo, pelo rádio: com «Steam» escolhido em «Permitir navegação», um controle do rádio navega o Big Picture um passo por toque. E a mesma pergunta que só a Steam responde, e que ninguém viu ainda: sem o modo, a Steam já anda sozinha pelo controle?
+
+**Onde olhar.** Na aba Navegação, a linha «Permitir navegação»: «Steam» liga o Big Picture, «Interna» e «Uso geral» o desligam. Na aba Jogar, o quadro «Modo», com o cartão «Sony DualSense», «Xbox» ou «Navegação» aceso. Na fita do topo, o chip do P3 e o do P4 dizem BT. A resposta é a tela da Steam.
+
+**Os passos.**
+
+1. Na aba Jogar, confira que o cartão «Sony DualSense» do quadro «Modo» está aceso e que o P3 diz BT na fita do topo.
+2. Na aba Navegação, escolha «Interna» em «Permitir navegação».
+3. Abra a Steam no Big Picture e deixe a janela dela na frente.
+4. No P3, toque uma vez no direcional para a direita e anote quantas casas a seleção andou: nenhuma, uma ou duas.
+5. Toque uma vez na Cruz e anote se a Steam entrou no item; toque uma vez no Círculo e anote se ela voltou.
+6. Volte ao Hefesto e escolha «Steam» em «Permitir navegação».
+7. Volte ao Big Picture e repita os passos 4 e 5 no P3, anotando de novo.
+8. Feche a janela da Steam e repita os passos 4 e 5 no P3, olhando o Hefesto: anote se alguma tecla chegou a ele.
+9. Na aba Jogar, acenda o cartão «Xbox» e refaça do passo 2 ao 8.
+10. Refaça do passo 2 ao 8 no P4, com o P3 parado.
+11. Devolva o cartão do quadro «Modo» e o «Permitir navegação» ao que estavam.
+
+**Passa quando.** Com «Steam» escolhido e a janela do Big Picture na frente, cada toque do direcional do P3 e do P4 anda UMA casa, a Cruz entra e o Círculo volta, no Sony e no Xbox, igual ao cabo. Com a janela da Steam fechada, os mesmos toques não viram tecla em lugar nenhum. A contagem com «Interna» não reprova nada: é a resposta que decide o padrão.
+
+**Por controle.**
+
+* **P3** — No RÁDIO, e é o alvo: as três contagens, no Sony e no Xbox.
+* **P4** — No RÁDIO, e é o segundo: as mesmas contagens, com o P3 parado.
+* **P1** — No CABO, testemunha: parado. A volta dele é a linha do cabo.
+* **P2** — No CABO, testemunha: parado.
+
+**A armadilha.** Três. (1) NINGUÉM VIU AINDA a Steam navegar por este modo: o mapa diz «incerto». Anote a contagem que vir. (2) Dois passos por toque com «Steam» escolhido é o passo duplo: anote em qual cartão ele aconteceu. (3) Pelo rádio, um toque que a Steam não viu pode ser a seleção que demorou a chegar: espere um segundo antes de anotar «nenhuma», e se a demora se repetir, anote a demora, que é o achado próprio do rádio.
