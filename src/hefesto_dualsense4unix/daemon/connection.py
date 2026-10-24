@@ -662,11 +662,11 @@ async def reconnect_loop(
             trocando = trocas_de_transporte_pendentes(daemon)
             if is_connected and not was_connected:
                 daemon._arm_input_grace()
-                transport = daemon.controller.get_transport()
-                daemon.bus.publish(
-                    EventTopic.CONTROLLER_CONNECTED, {"transport": transport}
-                )
-                logger.info("controller_connected", transport=transport)
+                # um `controller.connected` por controle, com o `uniq` e o transporte dele;
+                # o backend que não enumera alvos publica um só, o do primário
+                # (A-CONEXAO-DIZ-QUAL-CONTROLE-E-POR-ONDE-01)
+                publicar_a_borda_do_primario(daemon, alvos_antes, alvos_agora)
+
                 with contextlib.suppress(Exception):
                     from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
                         upgrade_primary_vpad_to_uhid,
@@ -690,9 +690,9 @@ async def reconnect_loop(
                 registrar_queda_da_bateria(
                     daemon, "probe_offline", asyncio.get_running_loop().time()
                 )
-                daemon.bus.publish(
-                    EventTopic.CONTROLLER_DISCONNECTED, {"reason": "probe_offline"}
-                )
+                # a queda diz quem saiu: um `controller.disconnected` por controle
+                # (A-CONEXAO-DIZ-QUAL-CONTROLE-E-POR-ONDE-01)
+                publicar_a_queda_de_cada_alvo(daemon, alvos_antes, alvos_agora, "probe_offline")
                 logger.info("controller_disconnected", reason="probe_offline")
                 was_connected = False
             elif alvos_agora is not None:
@@ -1476,6 +1476,45 @@ def o_jogo_que_o_boot_restaura(
     return None
 
 
+def publicar_a_borda_do_primario(
+    daemon: DaemonProtocol,
+    antes: dict[str, str | None],
+    agora: dict[str, str | None] | None,
+) -> None:
+    """A borda de quando a mesa sobe: um `controller.connected` por controle, com o `uniq` e o
+    transporte DELE (`_publicar_quem_entrou`). O backend que não enumera alvos publica um só, o
+    do primário, também com o `uniq`. É a do `reconnect_loop` e a do boot do `lifecycle`.
+    """
+    if agora is None:
+        agora = alvos_conectados_de(daemon)
+    if agora is not None:
+        _publicar_quem_entrou(daemon, antes, agora)
+        return
+    controller = daemon.controller
+    transport = controller.get_transport()
+    uniq = getattr(controller, "primary_uniq", None)
+    daemon.bus.publish(EventTopic.CONTROLLER_CONNECTED, {"transport": transport, "uniq": uniq})
+    logger.info("controller_connected", transport=transport, uniq=_endereco_mascarado(uniq))
+
+
+def publicar_a_queda_de_cada_alvo(
+    daemon: DaemonProtocol,
+    antes: dict[str, str | None],
+    agora: dict[str, str | None] | None,
+    reason: str,
+) -> None:
+    """A queda da mesa: um `controller.disconnected` por controle que saiu, com o `uniq` dele.
+
+    Sem alvos conhecidos (o backend que não enumera), sai um só, com o `uniq` do primário.
+    """
+    ficaram = {u for u in (agora or {}).values() if u}
+    uniqs: list[str | None] = [u for u in dict.fromkeys(antes.values()) if u and u not in ficaram]
+    if not uniqs:
+        uniqs = [getattr(daemon.controller, "primary_uniq", None)]
+    for uniq in uniqs:
+        daemon.bus.publish(EventTopic.CONTROLLER_DISCONNECTED, {"reason": reason, "uniq": uniq})
+
+
 __all__ = [
     "PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC",
     "PASSO_ENQUANTO_UM_CONTROLE_TROCA_DE_TRANSPORTE_SEC",
@@ -1491,6 +1530,8 @@ __all__ = [
     "disparar_gatilhos_devidos",
     "o_jogo_que_o_boot_restaura",
     "parar_as_tarefas",
+    "publicar_a_borda_do_primario",
+    "publicar_a_queda_de_cada_alvo",
     "reaplicar_som_de_quem_trocou_de_transporte",
     "reapply_mic_after_connect",
     "reapply_speaker_after_connect",

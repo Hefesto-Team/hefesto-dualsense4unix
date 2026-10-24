@@ -58,8 +58,25 @@ class ControllerProxy:
 
     @property
     def transport(self) -> str:
-        """Transporte ativo: "usb" ou "bt"."""
+        """O transporte do controle PRIMÁRIO: "usb" ou "bt". Por controle: `transporte_de`."""
         return self._ctrl.get_transport()
+
+    def transporte_de(self, uniq: str) -> str | None:
+        """O transporte do controle `uniq` na mesa ("usb" ou "bt"), ou None se ele não está nela."""
+        from types import SimpleNamespace
+
+        from hefesto_dualsense4unix.daemon.connection import (
+            alvos_conectados_de,
+            transportes_dos_alvos_de,
+        )
+
+        daemon: Any = SimpleNamespace(controller=self._ctrl)
+        alvos = alvos_conectados_de(daemon)
+        if alvos is None:  # o backend de um controle só: o primário é a mesa
+            primario = getattr(self._ctrl, "primary_uniq", None)
+            return self._ctrl.get_transport() if primario and uniq == primario else None
+        transportes = transportes_dos_alvos_de(daemon) or {}
+        return next((transportes.get(k) for k, u in alvos.items() if u == uniq), None)
 
 
 class BusProxy:

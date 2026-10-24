@@ -936,9 +936,9 @@ class Daemon:
             try:
                 await self._run_blocking(self.controller.connect)
                 if self.controller.is_connected():
-                    transport = self.controller.get_transport()
-                    self.bus.publish(EventTopic.CONTROLLER_CONNECTED, {"transport": transport})
-                    logger.info("controller_connected", transport=transport)
+                    from hefesto_dualsense4unix.daemon import connection as _conexao
+
+                    _conexao.publicar_a_borda_do_primario(self, {}, None)  # o controller_connected
                     with contextlib.suppress(Exception):
                         from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
                             upgrade_primary_vpad_to_uhid,
@@ -4350,10 +4350,10 @@ class Daemon:
                     registrar_queda_da_bateria(self, "poll_read_failed", tick_started)
                     if was_connected:
                         esquecer_a_leitura_publicada()
-                    soltar_o_que_o_controle_segurava(self, primary_identity(self))
-                    self.bus.publish(
-                        EventTopic.CONTROLLER_DISCONNECTED, {"reason": str(exc)}
-                    )
+                    quem = primary_identity(self)
+                    soltar_o_que_o_controle_segurava(self, quem)
+                    queda = {"reason": str(exc), "uniq": quem}  # a queda diz de quem é
+                    self.bus.publish(EventTopic.CONTROLLER_DISCONNECTED, queda)
                     levar_o_big_picture(self, None, frozenset())
                 terminar_o_tique(tick_started)
                 stop_event = self._stop_event

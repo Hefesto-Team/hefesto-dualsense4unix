@@ -85,7 +85,7 @@ async def test_connected_event_publicado_no_start():
     daemon.stop()
     await run_task
 
-    assert payload == {"transport": "bt"}
+    assert payload == {"transport": "bt", "uniq": None}  # o dublê não diz o uniq
 
 
 @pytest.mark.asyncio

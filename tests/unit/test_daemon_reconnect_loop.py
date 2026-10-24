@@ -138,7 +138,7 @@ async def test_reconnect_loop_publica_controller_connected_em_transicao(
     )
     fc.plugar()
     payload = await asyncio.wait_for(queue.get(), timeout=2.0)
-    assert payload == {"transport": "usb"}
+    assert payload == {"transport": "usb", "uniq": None}  # o dublê não diz o uniq
     daemon.stop()
     await asyncio.wait_for(run_task, timeout=2.0)
 
