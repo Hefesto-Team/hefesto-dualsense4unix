@@ -7656,9 +7656,9 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `luz.modo @ cabo`
 
-**O que isto prova.** Prova que o botão «Modo automático» da aba Iluminação tira de verdade a cor que você escolheu da barra dos controles do cabo, que a barra fica na cor do número de cada um, e que, ao desligá-lo, a cor escolhida volta sozinha, porque ficou guardada. Ninguém viu isto no aparelho ainda: o que se sabe veio do código e do teste, e o resultado é o que o plástico mostrar.
+**O que isto prova.** Prova que o botão «Modo automático» da aba Iluminação tira de verdade a cor que você escolheu da barra dos controles do cabo, que a barra fica na cor automática de cada um, e que, ao desligá-lo, a cor escolhida volta sozinha, porque ficou guardada. Ninguém viu isto no aparelho ainda: o que se sabe veio do código e do teste, e o resultado é o que o plástico mostrar.
 
-**Onde olhar.** Na aba Iluminação, na faixa do título, o botão «Modo automático». Ligado, ele fica ciano e as colunas dos controles esmaecem e param de aceitar clique; desligado, a linha «Cor» de cada coluna vale de novo. O nome de cada controle na linha «Modelo» termina em USB ou BT. As cores dos números: 1 azul, 2 vermelho, 3 verde, 4 rosa. O botão é do perfil inteiro e vale para os quatro de uma vez. A prova é a barra no aparelho, as duas tiras dos lados do touchpad.
+**Onde olhar.** Na aba Iluminação, na faixa do título, o botão «Modo automático». Ligado, ele fica ciano e as colunas dos controles esmaecem e param de aceitar clique; desligado, a linha «Cor» de cada coluna vale de novo. O nome de cada controle na linha «Modelo» termina em USB ou BT. A cor automática de cada controle é a do plástico dele, quando o Hefesto já o leu (um controle azul fica azul, um vermelho fica vermelho, um branco fica branco); sem o plástico lido, é a do número: 1 azul, 2 vermelho, 3 verde, 4 rosa. O botão é do perfil inteiro e vale para os quatro de uma vez. A prova é a barra no aparelho, as duas tiras dos lados do touchpad.
 
 **Os passos.**
 
@@ -7669,23 +7669,23 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 5. Clique no quadradinho amarelo (o quinto) da linha «Cor» do P1 e no ciano (o sexto) da do P2.
 6. Confira que a barra do P1 ficou amarela e a do P2, ciano.
 7. Clique em «Modo automático» e confira que ele ficou ciano e que as colunas esmaeceram.
-8. Confira que a barra do P1 foi para o azul e a do P2, para o vermelho.
+8. Confira que as barras do P1 e do P2 foram para a cor automática de cada um.
 9. Anote a cor das barras do P3 e do P4.
 10. Espere um minuto sem mexer em nada e confira que as barras do P1 e do P2 continuam azul e vermelha.
 11. Clique em «Modo automático» de novo e confira que ele apagou e que as colunas voltaram.
 12. Confira que a barra do P1 voltou amarela e a do P2, ciano, sem você clicar em cor nenhuma.
-13. Clique no quadradinho da cor do número de cada um para devolver: o primeiro no P1, o segundo no P2.
+13. Devolva a «Cor» do P1 e a do P2 à que você anotou no quarto passo.
 
-**Passa quando.** Com o «Modo automático» ligado, as barras do P1 e do P2 deixam o amarelo e o ciano e vão para a cor do número de cada um, e ficam nela. Com ele desligado, o amarelo e o ciano voltam aos dois do cabo sem novo clique: a escolha não se perdeu ao passar pelo Automático.
+**Passa quando.** Com o «Modo automático» ligado, as barras do P1 e do P2 deixam o amarelo e o ciano e vão para a cor automática de cada um, e ficam nela. Com ele desligado, o amarelo e o ciano voltam aos dois do cabo sem novo clique: a escolha não se perdeu ao passar pelo Automático.
 
 **Por controle.**
 
-* **P1** — No CABO, e é o primeiro alvo: amarelo, azul no Automático, amarelo de novo depois.
-* **P2** — No CABO, e é o segundo: ciano, vermelho no Automático, ciano de novo. Se o P1 obedecer e o P2 não, o defeito é daquele controle, e não do cabo.
-* **P3** — No RÁDIO. O botão vale para os quatro, então a barra dele também vai para o verde no Automático. A volta dele é a linha do rádio.
-* **P4** — No RÁDIO, mesma leitura do P3, no rosa.
+* **P1** — No CABO, e é o primeiro alvo: amarelo, a cor automática dele no Automático, amarelo de novo depois.
+* **P2** — No CABO, e é o segundo: ciano, a cor automática dele no Automático, ciano de novo. Se o P1 obedecer e o P2 não, o defeito é daquele controle, e não do cabo.
+* **P3** — No RÁDIO. O botão vale para os quatro, então a barra dele também vai para a cor automática dele no Automático. A volta dele é a linha do rádio.
+* **P4** — No RÁDIO, mesma leitura do P3.
 
-**A armadilha.** Três. (1) NINGUÉM OLHOU AINDA a barra trocar de modo pelo botão: o mapa diz «inferido do código». Anote a cor que vir, sem ajustar ao que a página espera. (2) A cor do teste tem de ser uma que o Automático não dê: amarelo e ciano são dos números 5 e 6. Azul no P1 seria o pior teste, porque é a cor que o Automático já dá ao 1, e nada mudaria. (3) A tela não é a prova: a linha «LEDs» desenha o pedido, e quem responde é o plástico. Faça a volta com o jogo fechado: no Automático, um jogo que pinte a barra manda nela.
+**A armadilha.** Três. (1) NINGUÉM OLHOU AINDA a barra trocar de modo pelo botão: o mapa diz «inferido do código». Anote a cor que vir, sem ajustar ao que a página espera. (2) A cor do teste tem de ser uma que o Automático não dê àquele controle: escolher a cor do plástico dele, ou a do número sem o plástico lido, seria o pior teste, porque nada mudaria. Se o plástico do P1 ou do P2 for amarelo ou ciano, troque no quinto passo pelo laranja (o sétimo). (3) A tela não é a prova: a linha «LEDs» desenha o pedido, e quem responde é o plástico. Faça a volta com o jogo fechado: no Automático, um jogo que pinte a barra manda nela.
 
 ---
 
@@ -7693,9 +7693,9 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 *Célula:* `luz.modo @ rádio`
 
-**O que isto prova.** O mesmo que a linha do cabo, pelo rádio: o «Modo automático» tira a cor escolhida da barra dos controles do rádio, a barra fica na cor do número, e, ao desligá-lo, a cor escolhida volta sozinha. Ninguém viu isto no aparelho ainda; o resultado é o que o plástico mostrar.
+**O que isto prova.** O mesmo que a linha do cabo, pelo rádio: o «Modo automático» tira a cor escolhida da barra dos controles do rádio, a barra fica na cor automática de cada um, e, ao desligá-lo, a cor escolhida volta sozinha. Ninguém viu isto no aparelho ainda; o resultado é o que o plástico mostrar.
 
-**Onde olhar.** Na aba Iluminação, o botão «Modo automático» na faixa do título: ligado, fica ciano e as colunas esmaecem; desligado, a linha «Cor» vale de novo. O «Modelo» das colunas do P3 e do P4 termina em BT. As cores dos números: 1 azul, 2 vermelho, 3 verde, 4 rosa. O botão vale para os quatro controles. A prova é a barra no aparelho.
+**Onde olhar.** Na aba Iluminação, o botão «Modo automático» na faixa do título: ligado, fica ciano e as colunas esmaecem; desligado, a linha «Cor» vale de novo. O «Modelo» das colunas do P3 e do P4 termina em BT. A cor automática de cada controle é a do plástico dele, quando o Hefesto já o leu (um controle azul fica azul, um vermelho fica vermelho, um branco fica branco); sem o plástico lido, é a do número: 1 azul, 2 vermelho, 3 verde, 4 rosa. O botão vale para os quatro controles. A prova é a barra no aparelho.
 
 **Os passos.**
 
@@ -7706,23 +7706,23 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 5. Clique no quadradinho amarelo (o quinto) da linha «Cor» do P3 e no ciano (o sexto) da do P4.
 6. Confira que a barra do P3 ficou amarela e a do P4, ciano.
 7. Clique em «Modo automático» e confira que ele ficou ciano e que as colunas esmaeceram.
-8. Confira que a barra do P3 foi para o verde e a do P4, para o rosa.
+8. Confira que as barras do P3 e do P4 foram para a cor automática de cada um.
 9. Anote a cor das barras do P1 e do P2.
 10. Espere um minuto sem mexer em nada e confira que as barras do P3 e do P4 continuam verde e rosa.
 11. Clique em «Modo automático» de novo e confira que ele apagou e que as colunas voltaram.
 12. Confira que a barra do P3 voltou amarela e a do P4, ciano, sem você clicar em cor nenhuma.
-13. Clique no quadradinho da cor do número de cada um para devolver: o terceiro no P3, o quarto no P4.
+13. Devolva a «Cor» do P3 e a do P4 à que você anotou no quarto passo.
 
-**Passa quando.** Com o «Modo automático» ligado, as barras do P3 e do P4 deixam o amarelo e o ciano e vão para a cor do número de cada um, igual às do cabo, e ficam nela. Com ele desligado, o amarelo e o ciano voltam aos dois do rádio sem novo clique.
+**Passa quando.** Com o «Modo automático» ligado, as barras do P3 e do P4 deixam o amarelo e o ciano e vão para a cor automática de cada um, igual às do cabo, e ficam nela. Com ele desligado, o amarelo e o ciano voltam aos dois do rádio sem novo clique.
 
 **Por controle.**
 
-* **P3** — No RÁDIO, e é o primeiro alvo: amarelo, verde no Automático, amarelo de novo depois.
-* **P4** — No RÁDIO, e é o segundo: ciano, rosa no Automático, ciano de novo. Se o P3 obedecer e o P4 não, o defeito é daquele controle, e não do rádio.
-* **P1** — No CABO. O botão vale para os quatro, então a barra dele também vai para o azul no Automático. A volta dele é a linha do cabo.
-* **P2** — No CABO, mesma leitura do P1, no vermelho.
+* **P3** — No RÁDIO, e é o primeiro alvo: amarelo, a cor automática dele no Automático, amarelo de novo depois.
+* **P4** — No RÁDIO, e é o segundo: ciano, a cor automática dele no Automático, ciano de novo. Se o P3 obedecer e o P4 não, o defeito é daquele controle, e não do rádio.
+* **P1** — No CABO. O botão vale para os quatro, então a barra dele também vai para a cor automática dele no Automático. A volta dele é a linha do cabo.
+* **P2** — No CABO, mesma leitura do P1.
 
-**A armadilha.** Três. (1) NINGUÉM OLHOU AINDA a barra trocar de modo pelo botão: anote a cor que vir. (2) Verde no P3 e rosa no P4 seriam o pior teste, porque são as cores que o Automático já dá a eles: por isso o quinto passo usa amarelo e ciano. (3) Uma conexão de rádio pode nascer com a barra travada, ignorando toda escrita: se o P3 e o P4 não obedecerem nem ao quinto passo, a linha que responde é a da cor da barra pelo rádio, não esta. Faça a volta com o jogo fechado.
+**A armadilha.** Três. (1) NINGUÉM OLHOU AINDA a barra trocar de modo pelo botão: anote a cor que vir. (2) A cor automática do P3 ou a do P4 seria o pior teste, porque nada mudaria: por isso o quinto passo usa amarelo e ciano, e se o plástico de um deles for amarelo ou ciano, troque pelo laranja (o sétimo). (3) Uma conexão de rádio pode nascer com a barra travada, ignorando toda escrita: se o P3 e o P4 não obedecerem nem ao quinto passo, a linha que responde é a da cor da barra pelo rádio, não esta. Faça a volta com o jogo fechado.
 
 ---
 
