@@ -262,6 +262,8 @@ class _Ponte:
         self.chamadas.append((metodo, params))
         if self.falha:
             raise RuntimeError(f"o daemon não respondeu a {metodo}")
+        if metodo == "mods.parar_tudo":
+            return {"parado": True}
         return {"mod": params.get("mod"), **(self.estado or {})}
 
     def chamar_detalhado(self, metodo: str, **params: Any) -> tuple[bool, str | None]:
@@ -311,7 +313,7 @@ def test_extensao_parada_mostra_a_coluna_vazia_sem_numero(janela, ctx) -> None: 
     vazio = {k: v for k, v in estado_vazio_dos_acessorios("toque").items() if k != "mod"}
     coluna = abrir(_Ponte(vazio), agora=["nivel", "perfil", "aparelhos"])["blocos"]["#mod-agora"]
     assert "<b>0</b>" not in coluna and "<b>—</b>" in coluna and 'class="on"' not in coluna
-    assert "Parada" in coluna and '<div class="ap vazio">' in coluna
+    assert "Desligada" in coluna and '<div class="ap vazio">' in coluna
     assert '<div class="ap">' not in coluna, "a extensão parada não tem aparelho"
     sem_servico = a07.configurar_modificacao(
         ctx, {"v": "toque"}, _Ponte(falha=True))["blocos"]["#mod-agora"]
@@ -332,7 +334,7 @@ def test_o_clique_no_parar_tudo_pede_ao_servico_so_esta_extensao(janela, ctx) ->
     carga = a07.parar_tudo_da_modificacao(ctx, {"v": "toque"}, ponte)
     assert ("mods.parar_tudo", {"mod": "toque"}) in ponte.chamadas
     assert "Parar tudo" in carga["recado"]
-    with pytest.raises(RuntimeError, match="recusado"):
+    with pytest.raises(RuntimeError, match="Nada foi parado"):
         a07.parar_tudo_da_modificacao(ctx, {"v": "toque"}, _Ponte(falha=True))
 
 

@@ -30,6 +30,10 @@
 .nj-tog .pino { width:7px;height:7px;border-radius:50%;background:var(--border-forte) }
 .nj-tog.ligado { border-color:var(--green);background:rgba(80,250,123,.1);color:var(--green) }
 .nj-tog.ligado .pino { background:var(--green);box-shadow:0 0 6px var(--green) }
+.nj-tog.ligado.amarelo { border-color:var(--yellow);background:rgba(241,250,140,.1);color:var(--yellow) }
+.nj-tog.ligado.amarelo .pino { background:var(--yellow);box-shadow:none;animation:mj-piscar 1.2s infinite }
+.nj-tog.ligado.vermelho { border-color:var(--red);background:rgba(255,85,85,.1);color:var(--red) }
+.nj-tog.ligado.vermelho .pino { background:var(--red);box-shadow:0 0 6px var(--red) }
 .ext-instalar { display:flex;align-items:center;gap:8px;padding:2px 0 10px;border-bottom:1px solid var(--border-sutil);margin-bottom:2px }
 .ext-inst-rot { font-size:11.5px;color:var(--rot-campo);white-space:nowrap;margin-right:4px }
 .ext-instalar input,.ext-inst-campo input { flex:1;min-width:0;height:var(--h-acao);border-radius:7px;padding:0 10px; border:1px solid var(--linha);background:var(--app-bg);color:var(--fg);font-family:inherit;font-size:12px }
@@ -530,6 +534,8 @@
 #mod-janela .est-laranja i { background:var(--orange) }
 #mod-janela .est-mudo { color:var(--texto-mudo) }
 #mod-janela .est-mudo i { background:var(--border-forte) }
+#mod-janela .est-vermelho { color:var(--red) }
+#mod-janela .est-vermelho i { background:var(--red);box-shadow:0 0 6px var(--red) }
 @keyframes mj-piscar { 50% { opacity:.25 } }
 #mod-janela .bat { width:34px;height:10px;border:1px solid var(--texto-mudo);border-radius:2px;padding:1px;flex:none;
   box-sizing:content-box;display:inline-block }

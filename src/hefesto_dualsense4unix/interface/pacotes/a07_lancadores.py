@@ -1197,6 +1197,8 @@ class _Instalada:
     estado: str = ""
     #: A recusa do ``meu.css`` (o CSS de quem usa) com a linha, lida junto com o registro.
     nota_do_css: str = ""
+    #: O porquê do supervisor para o processo que não roda: o motivo e a última linha do diário.
+    porque: str = ""
 
 
 class _Registro:
@@ -1365,9 +1367,23 @@ def _ler_as_instaladas() -> tuple[_Instalada, ...]:
         except (ManifestoRecusadoError, OSError):
             manifesto = None
         nota = tema.css_da_extensao(manifesto, lg).recusa_curta if manifesto is not None else ""
-        saida.append(_Instalada(entrada, manifesto, str(vivo.get(mod_id, {}).get("estado") or ""),
-                                nota))
+        dela = vivo.get(mod_id) or {}
+        saida.append(_Instalada(entrada, manifesto, str(dela.get("estado") or ""), nota,
+                                _porque_do_supervisor(dela)))
     return tuple(saida)
+
+
+#: A última linha do diário entra inteira na dica até aqui; o resto se lê no ``hefesto mod listar``.
+TETO_DA_ULTIMA_LINHA = 160
+
+
+def _porque_do_supervisor(dela: dict[str, Any]) -> str:
+    """O motivo e a última linha do diário que o supervisor gravou: a dica da chave que não roda."""
+    motivo = str(dela.get("motivo") or "").strip()
+    linha = " ".join(str(dela.get("ultima_linha") or "").split())
+    if len(linha) > TETO_DA_ULTIMA_LINHA:
+        linha = linha[: TETO_DA_ULTIMA_LINHA - 1] + "…"
+    return " ".join(x for x in (motivo, f"«{linha}»" if linha else "") if x)
 
 
 @contextlib.contextmanager
@@ -1404,7 +1420,8 @@ def _extensao_de(item: _Instalada) -> Any:
     return exp.Extensao(
         chave=e.id, nome=e.nome, dica=dica, janela=JANELA_DA_EXTENSAO,
         versao=versao, selo=exp.SELO_DA_ORIGEM.get(e.origem, "Oficial"),
-        ligada=e.ligada, menu=menu)
+        ligada=e.ligada, menu=menu, processo=exp.processo_de(e.ligada, item.estado),
+        porque=item.porque)
 
 
 def _jogos_da_fila(lanc: desenho.Lancador) -> str:
@@ -1453,7 +1470,11 @@ def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador],
         if miolo:
             blocos[seletor] = miolo
     if _MEXIDA.html_mod and _MEXIDA.agora:
-        blocos["#mod-agora"] = exp.agora_html(_MEXIDA.agora, _AGORA.agora())
+        dela = next((i for i in instaladas if i.entrada.id == _MEXIDA.mod), None)
+        blocos["#mod-agora"] = exp.agora_html(
+            _MEXIDA.agora, _AGORA.agora(),
+            processo=exp.processo_de(dela.entrada.ligada, dela.estado) if dela else "",
+            porque=dela.porque if dela else "")
     return carga
 
 
@@ -1537,7 +1558,8 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
     _MEXIDA.html_mod = exp.modificacao_miolo_html(
         manifesto.nome, linhas, mod=mod_id, agora=_MEXIDA.agora,
         estado=_AGORA.agora() if _MEXIDA.agora else None, parar_tudo=manifesto.parar_tudo,
-        aba=_MEXIDA.aba)
+        aba=_MEXIDA.aba, processo=exp.processo_de(item.entrada.ligada, item.estado),
+        porque=item.porque)
 
 
 def _a_pintura_agora(ctx: Contexto) -> dict[str, Any]:
@@ -1614,9 +1636,13 @@ def configurar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str
 def parar_tudo_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     """O «Parar tudo» da janela: o serviço publica o gesto ``para`` só para esta extensão."""
     mod_id = _id_do_clique(o, exp.GESTO_DO_PARAR)
-    ok, motivo = p.chamar_detalhado(METODO_DO_PARAR, mod=mod_id)
-    if not ok:
-        raise RuntimeError(motivo or "O serviço não respondeu. Nada foi parado.")
+    try:
+        corpo = p.resultado(METODO_DO_PARAR, mod=mod_id)
+    except RuntimeError as exc:
+        raise RuntimeError("O serviço não respondeu. Nada foi parado.") from exc
+    if not (isinstance(corpo, dict) and corpo.get("parado") is True):
+        # O serviço respondeu ``{parado: false}``: ela não está ligada à porta, nada recebeu.
+        raise RuntimeError(f"{_a_instalada(mod_id).entrada.nome} não está rodando: nada a parar.")
     _AGORA.esquecer()
     return {**_a_pintura_agora(ctx), "recado": "Parar tudo enviado."}
 
@@ -1790,7 +1816,7 @@ def _mexer_na_modificacao(mod_id: str, acao: str) -> str | None:
 
     O primeiro clique em Remover troca o botão por «Confirmar remoção» e devolve ``None``.
     """
-    from hefesto_dualsense4unix.mods.instalador import atualizar, remover
+    from hefesto_dualsense4unix.mods.instalador import atualizar, aviso_por_ver, remover
 
     item = _a_instalada(mod_id)
     nome = item.entrada.nome
@@ -1800,6 +1826,13 @@ def _mexer_na_modificacao(mod_id: str, acao: str) -> str | None:
             nomes = _nomes_das_instaladas(lg)
             feito = atualizar(mod_id, lugares=lg)
             REGISTRO.esquecer()
+            aviso = aviso_por_ver(feito.entrada, feito.manifesto)
+            if feito.permissoes_novas or aviso:
+                # A versão nova desligou à espera do «sim»: o ⋮ aberto já mostra o que ela
+                # pede, e o próximo clique na chave é o «sim» (o recado não chega à tela).
+                _MEXIDA.vistas[mod_id] = (*sorted(feito.manifesto.permissoes), aviso)
+                _MEXIDA.menu = _MEXIDA.permissoes = mod_id
+                _MEXIDA.remover = ""
             extra = (" Ela pede permissão nova: ligue-a de novo para aceitar."
                      if feito.permissoes_novas else "")
             return (f"{nome} atualizada para a versão {feito.entrada.versao}."

@@ -237,8 +237,14 @@ O campo `aviso` (até 400 letras, opcional) é o aviso de uso da extensão: a ma
 comprado, a idade. A linha de comando o imprime antes de gravar e pergunta (`--sim` aceita). Na tela, o
 «Instalar» grava a extensão desligada, e o primeiro clique da chave abre o ⋮ com o aviso no topo da lista das
 permissões; o segundo liga. O aviso aceito fica no registro (`aviso_aceito`); a versão nova com outro aviso
-volta a pedir o «sim» do ligar, e a atualização sozinha a deixa esperando o «Atualizar». O serviço não abre a
-extensão cujo aviso ainda não teve o «sim». A função `instalar(…, aviso_visto=…)` recusa com
+volta a pedir o «sim» do ligar, e a atualização sozinha a deixa esperando o «Atualizar». O «Atualizar» do ⋮ que
+traz permissão ou aviso novo deixa o ⋮ aberto já com a lista, e o próximo clique na chave é o «sim». O serviço
+não abre a extensão cujo aviso ainda não teve o «sim».
+
+A chave de uma extensão ligada diz o que o serviço fez dela (o `mods-estado.json`): «Ligada» em verde quando
+roda, «Ligando» e «Voltando» em amarelo, «Caiu» e «Recusada» em vermelho. A dica traz o motivo e a última linha
+do diário; na vermelha, o caminho de volta (desligar e ligar). O canto da coluna «Agora» diz o mesmo quando a
+conexão não responde. A função `instalar(…, aviso_visto=…)` recusa com
 `AvisoParaVerError` antes de gravar quando o aviso visto é outro.
 
 Cada extensão da casa mora no seu repositório, `Hefesto-Team/hefesto-mod-<nome>`, com o
@@ -310,7 +316,7 @@ ele mostra; sem nenhuma das duas o manifesto é recusado. O `parar_tudo` não pe
 - `mods.parar_tudo {mod}` publica `acessorios.gesto` com `gesto: "para"`, `uniq` e `jogador` nulos e
   `mod: <id>`: só aquela extensão o recebe (as outras com `ler:acessorios.gesto` não), nenhum controle dá o
   toque de confirmação, e o serviço confere o «parar curto» só da extensão. Volta `{parado}`, falso quando ela não
-  está conectada. Recusa (`-32003`, com a frase) a extensão que não está instalada ou cujo manifesto não declara
+  está conectada: o botão então recusa dizendo que ela não está rodando, em vez de piscar o «enviado». Recusa (`-32003`, com a frase) a extensão que não está instalada ou cujo manifesto não declara
   `parar_tudo`.
 
 ## A extensão de tema

@@ -74,6 +74,30 @@ class Extensao(NamedTuple):
     selo: str = "Oficial"
     ligada: bool = True
     menu: str = ""
+    #: O processo dela pelo supervisor (``mods-estado.json``), uma chave de ``PROCESSO``; o vazio
+    #: (rodando, declarativa ou sem serviço) é a chave verde de sempre.
+    processo: str = ""
+    #: O porquê do processo que não roda (o motivo e a última linha do diário): a dica da chave.
+    porque: str = ""
+
+
+#: O processo de uma extensão que não está rodando: a palavra e a cor da chave da linha e do topo
+#: da coluna «Agora». Ligada no registro e calada no supervisor não pode parecer verde.
+PROCESSO = {"ligando": ("Ligando", "amarelo"), "voltando": ("Voltando", "amarelo"),
+            "parou": ("Caiu", "vermelho"), "recusada": ("Recusada", "vermelho"),
+            "desligada": ("Desligada", "mudo")}
+#: O que a dica da chave vermelha acrescenta ao porquê: o caminho de volta.
+DICA_DE_TENTAR = "Desligue e ligue para tentar de novo."
+
+
+def processo_de(ligada: bool, estado: str) -> str:
+    """A chave de ``PROCESSO`` de uma extensão: o registro diz se ligou, o supervisor se roda.
+
+    Ligada no registro e ainda ``desligada`` no supervisor é a que o serviço não subiu: «Ligando».
+    """
+    if not ligada:
+        return "desligada"
+    return "ligando" if estado == "desligada" else (estado if estado in PROCESSO else "")
 
 
 #: As extensões de exemplo do desenho: uma de lançador e uma que só tem opções. As cores são do
@@ -149,9 +173,21 @@ def fila_html(fila: Fila) -> str:
 
 
 def _chave_html(ext: Extensao) -> str:
-    classe, texto = ("nj-tog ligado", "Ligada") if ext.ligada else ("nj-tog", "Desligada")
+    """A chave da linha: Ligada, Desligada ou, ligada e sem rodar, a palavra do processo na cor dele.
+
+    O clique segue o registro (a ligada desliga): a vermelha diz na dica como tentar de novo.
+    """
+    palavra, cor = PROCESSO.get(ext.processo, ("", "")) if ext.ligada else ("", "")
+    if not ext.ligada:
+        classe, texto, dica = "nj-tog", "Desligada", "Liga ou desliga"
+    elif palavra:
+        classe, texto = f"nj-tog ligado {cor}", palavra
+        dica = " ".join(x for x in (ext.porque, DICA_DE_TENTAR if cor == "vermelho" else "")
+                        if x) or "Liga ou desliga"
+    else:
+        classe, texto, dica = "nj-tog ligado", "Ligada", "Liga ou desliga"
     return (f'<span class="{classe}" data-gesto="ligar-modificacao" data-v="{_a(ext.chave)}" '
-            f'data-dica="Liga ou desliga"><span class="pino"></span><span class="txt">{texto}</span></span>')
+            f'data-dica="{_a(dica)}"><span class="pino"></span><span class="txt">{texto}</span></span>')
 
 
 SELO_DA_ORIGEM = {"oficial": "Oficial", "comunidade": "Comunidade", "local": "Local"}
@@ -636,17 +672,29 @@ def _aparelho_html(ap: Mapping[str, Any]) -> str:
             f'{bateria_html(ap.get("bateria"))}{vivo}</div>')
 
 
-def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None) -> str:
+def _topo_do_agora(vivo: bool, processo: str, porque: str) -> str:
+    """O canto do «Agora»: Ligada, Parada ou, sem conexão, a palavra do processo na cor dele."""
+    palavra, cor = PROCESSO.get(processo, ("", ""))
+    if vivo or not palavra:
+        return f'<span class="ja-srv">{"Ligada" if vivo else "Parada"}</span>'
+    dica = " ".join(x for x in (porque, DICA_DE_TENTAR if cor == "vermelho" else "") if x)
+    atributo = f' data-dica="{_a(dica)}"' if dica else ""
+    return f'<span class="ja-srv est est-{cor}"{atributo}><i></i>{palavra}</span>'
+
+
+def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None, *, processo: str = "",
+               porque: str = "") -> str:
     """O miolo da coluna «Agora»: só os pedaços que o manifesto declara, do ``acessorios.estado``.
 
     Sem estado, ou com a extensão parada (``ligado`` falso), o nível e o perfil ficam vazios: nenhum
     número que a extensão não deu. As conexões e os aparelhos são os que ela publicou, parada ou não:
     o «Parar tudo» zera a força, e o adaptador segue ligado (a conexão que cai já devolve o estado
-    vazio, sem item nenhum). O perfil e os nomes vêm de terceiros: escapados.
+    vazio, sem item nenhum). O perfil e os nomes vêm de terceiros: escapados. ``processo`` e
+    ``porque`` são os do supervisor: sem conexão, o canto diz se ela caiu, liga ou foi recusada.
     """
     vivo = bool(estado and estado.get("ligado") is True)
     linhas = ['<div class="ja-ag-topo"><span class="pc-sub">Agora</span>'
-              f'<span class="ja-srv">{"Ligada" if vivo else "Parada"}</span></div>']
+              f"{_topo_do_agora(vivo, processo, porque)}</div>"]
     declarados = [x for x in PEDACOS_DO_AGORA if x in pedacos]
     for pedaco in declarados:
         if pedaco == "conexoes":  # (noqa-acento): a chave do estado
@@ -689,14 +737,15 @@ def parar_tudo_html(mod: str) -> str:
 
 
 def _arranjo_c(nome: str, ajustes: str, *, mod: str, agora: Sequence[str],
-               estado: Mapping[str, Any] | None, parar: str) -> str:
+               estado: Mapping[str, Any] | None, parar: str, processo: str = "",
+               porque: str = "") -> str:
     """A janela do arranjo C: «Parar tudo» no topo, a coluna «Agora» e os ajustes, e o rodapé."""
     return f'''    <div class="tn-topo ja-topo">
       <span class="tn-tit">Configurar · {_e(nome)}</span>{parar}
       <a class="tn-x" href="#" data-dica="Fechar">\u00d7</a>
     </div>
     <div class="ja-corpo">
-      <div class="ja-agora" id="mod-agora">{agora_html(agora, estado)}</div>
+      <div class="ja-agora" id="mod-agora">{agora_html(agora, estado, processo=processo, porque=porque)}</div>
       <div class="ja-opcoes">{ajustes}</div>
     </div>
     <div class="tn-rod">
@@ -710,7 +759,8 @@ GESTO_DO_GUARDAR = "guardar-modificacao"
 
 def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: str = "",
                            agora: Sequence[str] = (), estado: Mapping[str, Any] | None = None,
-                           parar_tudo: bool = False, aba: str = "") -> str:
+                           parar_tudo: bool = False, aba: str = "", processo: str = "",
+                           porque: str = "") -> str:
     """O conteúdo da janela de uma extensão: um cartão por grupo, «Para» no topo, Cancelar e Guardar.
 
     É o arranjo aprovado em 19/10: cada opção que o manifesto declara vira uma linha
@@ -725,7 +775,8 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
     vazio = '<div class="ext-vazia">Esta extensão não tem opções para ajustar.</div>'
     if agora:
         return _arranjo_c(nome, _abas_das_opcoes(opcoes, aba) if opcoes else vazio, mod=mod,
-                          agora=agora, estado=estado, parar=parar)
+                          agora=agora, estado=estado, parar=parar, processo=processo,
+                          porque=porque)
     corpo = _cartoes_das_opcoes(opcoes) if opcoes else vazio
     return f'''    <div class="tn-topo">
       <span class="tn-tit">Configurar · {_e(nome)}</span>

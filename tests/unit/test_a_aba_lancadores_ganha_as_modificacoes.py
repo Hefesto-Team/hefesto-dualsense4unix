@@ -739,7 +739,7 @@ def test_o_mais_da_janela_nao_abre_o_menu_da_linha_atras_dela(lar, ctx, monkeypa
     a07 = _a07()
     monkeypatch.setattr(a07, "_montar_a_conf", lambda chave, state=None: None)
     a07._MEXIDA.conf, a07._MEXIDA.conf_da_modificacao = "kytyps5", "toque"
-    item = SimpleNamespace(manifesto=None, entrada=SimpleNamespace(
+    item = a07._Instalada(manifesto=None, entrada=SimpleNamespace(
         id="toque", nome="Toque", versao="1.0", origem="oficial", ligada=True,
         permissoes_aceitas=[]))
     monkeypatch.setattr(a07, "_a_instalada", lambda mod_id: item)
