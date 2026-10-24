@@ -5,7 +5,7 @@
       "data": "2026-10-24",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 54946,
+      "piso": 54969,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -78,7 +78,7 @@
         "daemon/subsystems/base.py": 78,
         "daemon/subsystems/big_picture.py": 41,
         "daemon/subsystems/bt_mic.py": 233,
-        "daemon/subsystems/coop.py": 788,
+        "daemon/subsystems/coop.py": 807,
         "daemon/subsystems/external_identity.py": 621,
         "daemon/subsystems/external_mask.py": 157,
         "daemon/subsystems/game_signal.py": 128,
@@ -243,7 +243,7 @@
         "profiles/sanidade.py": 44,
         "profiles/schema.py": 762,
         "profiles/simple_match.py": 179,
-        "utils/logging_config.py": 62,
+        "utils/logging_config.py": 66,
         "utils/maquina.py": 354,
         "utils/memoria_dos_controles.py": 85,
         "utils/repo_files.py": 46,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +17 linhas (54929 -> 54946), pagas por Origem: D-2410-O-LUGAR-GUARDADO-ESPERA-NOS-QUATRO; registrado no fecho, topo d3528f978f4c",
+      "razao": "texto-em-src: +23 linhas (54946 -> 54969), pagas por Origem: D-2210-O-DIARIO-CABE-EM-MIL-LINHAS, D-2410-O-DIARIO-NAO-ESCREVE-NO-DESTINO-FECHADO, D-2410-O-GESTO-DEVOLVE-A-COR-ANOTADA, D-2410-O-LED-PENDENTE-ACENDE-QUANDO-O-NO-APARECE, D-2410-O-LUGAR-GUARDADO-ESPERA-NOS-QUATRO; registrado no fecho, topo be05d54d1bc3",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -522,6 +522,12 @@
           "de": 54929,
           "para": 54946,
           "razao": "texto-em-src: +17 linhas (54929 -> 54946), pagas por Origem: D-2410-O-LUGAR-GUARDADO-ESPERA-NOS-QUATRO; registrado no fecho, topo d3528f978f4c"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 54946,
+          "para": 54969,
+          "razao": "texto-em-src: +23 linhas (54946 -> 54969), pagas por Origem: D-2210-O-DIARIO-CABE-EM-MIL-LINHAS, D-2410-O-DIARIO-NAO-ESCREVE-NO-DESTINO-FECHADO, D-2410-O-GESTO-DEVOLVE-A-COR-ANOTADA, D-2410-O-LED-PENDENTE-ACENDE-QUANDO-O-NO-APARECE, D-2410-O-LUGAR-GUARDADO-ESPERA-NOS-QUATRO; registrado no fecho, topo be05d54d1bc3"
         }
       ],
       "unidade": "linhas",
