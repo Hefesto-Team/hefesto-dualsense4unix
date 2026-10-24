@@ -245,14 +245,14 @@
       "data": "2026-10-24",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1200882,
+      "piso": 1201475,
       "por_item": {
-        "docs": 120967,
+        "docs": 121191,
         "scripts": 120631,
-        "src": 320572,
-        "tests": 638712
+        "src": 320613,
+        "tests": 639040
       },
-      "razao": "tamanho: +420 linhas (1200462 -> 1200882), pagas por Origem: D-2410-A-CENA-DE-EXEMPLO-SEM-NOME, D-2410-A-COLUNA-DO-ONDE-CRESCE-PARA-TODOS, D-2410-A-DICA-DIZ-QUE-ABRE-NA-JANELA; registrado no fecho, topo cefecf3e77f2",
+      "razao": "tamanho: +593 linhas (1200882 -> 1201475), pagas por Origem: D-2410-O-LUGAR-GUARDADO-ESPERA-NOS-QUATRO; registrado no fecho, topo d0f7f53904d2",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -955,10 +955,16 @@
           "de": 1200462,
           "para": 1200882,
           "razao": "tamanho: +420 linhas (1200462 -> 1200882), pagas por Origem: D-2410-A-CENA-DE-EXEMPLO-SEM-NOME, D-2410-A-COLUNA-DO-ONDE-CRESCE-PARA-TODOS, D-2410-A-DICA-DIZ-QUE-ABRE-NA-JANELA; registrado no fecho, topo cefecf3e77f2"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 1200882,
+          "para": 1201475,
+          "razao": "tamanho: +593 linhas (1200882 -> 1201475), pagas por Origem: D-2410-O-LUGAR-GUARDADO-ESPERA-NOS-QUATRO; registrado no fecho, topo d0f7f53904d2"
         }
       ],
       "unidade": "linhas",
-      "universo": 3144
+      "universo": 3145
     }
   }
 }
