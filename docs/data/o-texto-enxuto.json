@@ -5,7 +5,7 @@
       "data": "2026-10-24",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 54782,
+      "piso": 54810,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -226,8 +226,8 @@
         "interface/pagina_do_mapa.py": 278,
         "interface/regua_do_mockup.py": 170,
         "interface/sistema.py": 116,
-        "mods/instalador.py": 128,
-        "mods/manifesto.py": 95,
+        "mods/instalador.py": 153,
+        "mods/manifesto.py": 98,
         "mods/porta.py": 155,
         "mods/supervisor.py": 117,
         "mods/tema.py": 78,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +24 linhas (54758 -> 54782), pagas por Origem: D-2210-O-PARAR-TUDO-E-UM-CAMPO-DO-MANIFESTO, D-2310-A-CHAVE-DIZ-O-QUE-O-SERVICO-FEZ, D-2310-O-ATUALIZAR-QUE-PEDE-SIM-ABRE-A-LISTA, D-2310-O-PARAR-TUDO-SEM-NINGUEM-NA-PORTA-RECUSA; registrado no fecho, topo aed50d740f0a",
+      "razao": "texto-em-src: +28 linhas (54782 -> 54810), pagas por Origem: D-2410-A-EXTENSAO-SE-PREPARA-AO-INSTALAR-E-AO-ATUALIZAR, D-2410-O-PREPARO-RODA-SO-DEPOIS-DO-SIM; registrado no fecho, topo 11d1ebd10c8b",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -486,6 +486,12 @@
           "de": 54758,
           "para": 54782,
           "razao": "texto-em-src: +24 linhas (54758 -> 54782), pagas por Origem: D-2210-O-PARAR-TUDO-E-UM-CAMPO-DO-MANIFESTO, D-2310-A-CHAVE-DIZ-O-QUE-O-SERVICO-FEZ, D-2310-O-ATUALIZAR-QUE-PEDE-SIM-ABRE-A-LISTA, D-2310-O-PARAR-TUDO-SEM-NINGUEM-NA-PORTA-RECUSA; registrado no fecho, topo aed50d740f0a"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 54782,
+          "para": 54810,
+          "razao": "texto-em-src: +28 linhas (54782 -> 54810), pagas por Origem: D-2410-A-EXTENSAO-SE-PREPARA-AO-INSTALAR-E-AO-ATUALIZAR, D-2410-O-PREPARO-RODA-SO-DEPOIS-DO-SIM; registrado no fecho, topo 11d1ebd10c8b"
         }
       ],
       "unidade": "linhas",
