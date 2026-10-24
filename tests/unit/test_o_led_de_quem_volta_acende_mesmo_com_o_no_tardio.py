@@ -90,6 +90,7 @@ def test_o_discover_que_falha_na_espera_avisa_uma_vez(
 def test_o_no_que_aparece_depois_da_volta_acende_o_numero_uma_vez(
     monkeypatch: pytest.MonkeyPatch, mesa: str, nos: dict[str, str], esperam: tuple[str, ...]
 ) -> None:
+    # D-2410-O-LED-PENDENTE-ACENDE-QUANDO-O-NO-APARECE
     m = _Mesa(monkeypatch, nos)
     m.sai(*esperam)
     m.tiques(10)
@@ -200,6 +201,7 @@ _ORDINAIS = {
 
 
 def test_a_cor_que_se_devolve_foi_anotada_antes() -> None:
+    # D-2410-O-GESTO-DEVOLVE-A-COR-ANOTADA
     """Quem devolve a «Cor» devolve à que anotou num passo da mesma célula."""
     erros: list[str] = []
     passos: dict[int, str] = {}
