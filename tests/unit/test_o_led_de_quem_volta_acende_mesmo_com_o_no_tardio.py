@@ -144,6 +144,23 @@ def test_religado_o_coop_o_no_que_falta_se_avisa_de_novo(
         f"{mesa}: religado o co-op, o nó de {falta} que segue faltando não se avisou")
 
 
+@pytest.mark.parametrize(("mesa", "nos", "esperam"), MATRIZ, ids=[m[0] for m in MATRIZ])
+def test_religado_o_coop_o_discover_que_segue_falhando_se_avisa_de_novo(
+    monkeypatch: pytest.MonkeyPatch, mesa: str, nos: dict[str, str], esperam: tuple[str, ...]
+) -> None:
+    m = _Mesa(monkeypatch, nos)
+    _o_discover_falha(monkeypatch, m)
+    with structlog.testing.capture_logs() as registros:
+        m.mudou[0] = True
+        m.mgr.sync()
+        m.tiques(5)
+    assert len(_eventos(registros, DISCOVER)) == 1, mesa
+    with structlog.testing.capture_logs() as registros:
+        _desligar_e_religar(m)
+    assert len(_eventos(registros, DISCOVER)) == 1, (
+        f"{mesa}: religado o co-op, o discover que segue falhando não se avisou")
+
+
 def test_a_camada_do_coop_esvazia_os_avisos_do_sysfs(monkeypatch: pytest.MonkeyPatch) -> None:
     """O controle que passa a publicar a camada não guarda o aviso do caminho do sysfs."""
     m = _Mesa(monkeypatch, QUATRO)
@@ -174,6 +191,32 @@ def test_o_gesto_do_mapa_nao_devolve_a_cor_pela_do_numero() -> None:
                       r"|a cor do número de cada um", linha)
     ]
     assert not passos, "\n".join(passos)
+
+
+_ORDINAIS = {
+    "primeiro": 1, "segundo": 2, "terceiro": 3, "quarto": 4, "quinto": 5, "sexto": 6,
+    "sétimo": 7, "oitavo": 8, "nono": 9, "décimo": 10,
+}
+
+
+def test_a_cor_que_se_devolve_foi_anotada_antes() -> None:
+    """Quem devolve a «Cor» devolve à que anotou num passo da mesma célula."""
+    erros: list[str] = []
+    passos: dict[int, str] = {}
+    for linha in GESTO.read_text(encoding="utf-8").splitlines():
+        if linha.startswith("## "):
+            passos = {}
+        achou = re.match(r"^(\d+)\. (.*)$", linha)
+        if not achou:
+            continue
+        passos[int(achou[1])] = achou[2]
+        if not re.search(r"[Dd]evolva a «Cor»", linha):
+            continue
+        ref = re.search(r"à que você anotou no (\w+) passo\.$", linha)
+        alvo = passos.get(_ORDINAIS.get(ref[1], 0), "") if ref else ""
+        if not re.search(r"[Aa]note\b.*(«Cor»|\bcor\b)", alvo):
+            erros.append(linha)
+    assert not erros, "\n".join(erros)
 
 
 def test_os_quatro_jogadores_estao_na_matriz() -> None:

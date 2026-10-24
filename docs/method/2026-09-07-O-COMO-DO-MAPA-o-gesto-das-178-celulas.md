@@ -3787,7 +3787,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 **Os passos.**
 
 1. Abra a aba Iluminação.
-2. Anote o número em porcento da linha «Brilho» das quatro colunas.
+2. Anote o número em porcento da linha «Brilho» e a «Cor» das quatro colunas.
 3. Clique no quadradinho amarelo (o quinto) da linha «Cor», na coluna do P1.
 4. Confira que o amarelo ganhou a borda na coluna do P1 e um X nas colunas do P2, do P3 e do P4.
 5. Arraste o puxador da linha «Brilho» do P1 até o fim da direita, em 100%.
@@ -3813,7 +3813,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 25. Volte à aba Iluminação e confira que a barra do P1 continua apagada, a linha «Brilho» dele continua em 0%, e a borda continua no amarelo.
 26. Clique no quadradinho amarelo da coluna do P1 e confira que a barra volta acesa, amarela.
 27. Devolva os quatro números de brilho aos valores anotados.
-28. Devolva a «Cor» do P1 e a do P2 à que cada um tinha antes de você começar.
+28. Devolva a «Cor» do P1 e a do P2 à que você anotou no segundo passo.
 
 **Passa quando.** Nos dois controles do cabo a barra escurece junto com o número, some POR COMPLETO no 0 e volta cheia no 100, sem mudar de cor. Mexer no brilho de um nunca mexe no de outro. A marca da cor não sai do lugar em parada nenhuma, nem no 0: a borda fica na cor do próprio controle, e o X dela fica nas colunas dos outros três. As três voltas de «Salvar perfil», «Aplicar» e troca de perfil deixam as quatro barras exatamente como estavam — nenhuma fica mais fraca a cada volta. E o P1 «Desligado» atravessa a troca de perfil apagado, com o trilho em 0% e a cor dele guardada, e um clique na cor o acende de novo.
 
@@ -3840,7 +3840,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 1. Abra a aba Iluminação.
 2. Confira na linha «Modelo» que as colunas do P3 e do P4 terminam em BT.
-3. Anote o número em porcento da linha «Brilho» das quatro colunas.
+3. Anote o número em porcento da linha «Brilho» e a «Cor» das quatro colunas.
 4. Clique no quadradinho amarelo (o quinto) da linha «Cor», na coluna do P3.
 5. Confira que a barra do P3 ficou amarela — sem isto o teste não roda.
 6. Confira que o amarelo ganhou a borda na coluna do P3 e um X nas colunas do P1, do P2 e do P4.
@@ -3866,7 +3866,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 26. Volte à aba Iluminação e confira que a barra do P3 continua apagada, a linha «Brilho» dele continua em 0%, e a borda continua no amarelo.
 27. Clique no quadradinho amarelo da coluna do P3 e confira que a barra volta acesa, amarela.
 28. Devolva os quatro números de brilho aos valores anotados.
-29. Devolva a «Cor» do P3 e a do P4 à que cada um tinha antes de você começar.
+29. Devolva a «Cor» do P3 e a do P4 à que você anotou no terceiro passo.
 
 **Passa quando.** Nos dois controles do rádio a barra escurece junto com o número, some POR COMPLETO no 0 e volta cheia no 100. Mexer no brilho de um nunca mexe no de outro nem nos dois do cabo. A marca da cor não sai do lugar em parada nenhuma, nem no 0: a borda fica na cor do próprio controle, e o X dela fica nas colunas dos outros três. As três voltas de «Salvar perfil», «Aplicar» e troca de perfil deixam as quatro barras exatamente como estavam — nenhuma fica mais fraca a cada volta. E o P3 «Desligado» atravessa a troca de perfil apagado, com o trilho em 0% e a cor dele guardada, e um clique na cor o acende de novo.
 
@@ -3911,7 +3911,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 18. Volte à aba Iluminação e clique no quadradinho laranja (o sétimo) da coluna do P2.
 19. Confira no plástico que a barra do P2 ficou laranja.
 20. Na aba Jogar, clique em «Ligado» e no cartão que você anotou.
-21. Volte à aba Iluminação e devolva a «Cor» do P1 e a do P2 à que cada um tinha antes de você começar.
+21. Volte à aba Iluminação e devolva a «Cor» do P1 e a do P2 à que você anotou no quarto passo.
 
 **Passa quando.** As barras dos dois controles do cabo acendem na cor clicada, no instante do clique, e continuam nela um minuto depois. Pintar um nunca muda a cor do outro, e as barras dos dois do rádio ficam exatamente como estavam. Com a Steam aberta, o P1 reencaixado volta amarelo e no desenho do 1 em poucos segundos, e fica assim; e no modo nativo o P2 também acende a cor clicada.
 
@@ -3956,7 +3956,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 18. Volte à aba Iluminação e clique no quadradinho laranja (o sétimo) da coluna do P4.
 19. Confira no plástico que a barra do P4 ficou laranja.
 20. Na aba Jogar, clique em «Ligado» e no cartão que você anotou.
-21. Volte à aba Iluminação e devolva a «Cor» do P3 e a do P4 à que cada um tinha antes de você começar.
+21. Volte à aba Iluminação e devolva a «Cor» do P3 e a do P4 à que você anotou no quarto passo.
 
 **Passa quando.** As barras dos dois controles do rádio acendem na cor clicada, no instante do clique, e continuam nela um minuto depois. Pintar um nunca muda a cor do outro, e as barras dos dois do cabo ficam exatamente como estavam. Com a Steam aberta antes da volta, o P3 volta amarelo e no desenho do 3 em poucos segundos, e fica assim; e no modo nativo o P4 também acende a cor clicada.
 
@@ -4091,7 +4091,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 **Os passos.**
 
 1. Abra a aba Iluminação.
-2. Confira na linha «Modelo» que as colunas do P1 e do P2 terminam em USB.
+2. Confira na linha «Modelo» que as colunas do P1 e do P2 terminam em USB, e anote a «Cor» de cada uma.
 3. Ponha o P1 de lado, onde você o veja pelo canto do olho.
 4. Clique no quadradinho amarelo (o quinto) da linha «Cor», na coluna do P1.
 5. Anote se a barra acendeu de uma vez ou cresceu aos poucos.
@@ -4104,7 +4104,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 12. Faça os mesmos quatro cliques na coluna do P2 — amarelo, roxo, «Desligar», amarelo —, anotando cada troca.
 13. Faça os quatro cliques no P1 uma segunda vez, para descartar impressão sua.
 14. Confira que as barras do P3 e do P4 não acenderam, não apagaram nem mudaram de cor em momento nenhum.
-15. Devolva a «Cor» do P1 e a do P2 à que cada um tinha antes de você começar.
+15. Devolva a «Cor» do P1 e a do P2 à que você anotou no segundo passo.
 
 **Passa quando.** Nos dois controles do cabo a barra acende, troca de cor e apaga em corte seco, nas duas voltas. Uma transição suave que se repita nas duas voltas é o ACHADO, porque hoje ninguém a pede ao aparelho.
 
@@ -4130,7 +4130,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 **Os passos.**
 
 1. Abra a aba Iluminação.
-2. Confira na linha «Modelo» que as colunas do P3 e do P4 terminam em BT.
+2. Confira na linha «Modelo» que as colunas do P3 e do P4 terminam em BT, e anote a «Cor» de cada uma.
 3. Clique no quadradinho amarelo (o quinto) da linha «Cor», na coluna do P3, e confira que a barra dele obedeceu — sem isto o teste não roda.
 4. Ponha o P3 de lado, onde você o veja pelo canto do olho.
 5. Clique no quadradinho roxo (o oitavo), na mesma coluna.
@@ -4141,7 +4141,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 10. Anote se ela acendeu de uma vez ou cresceu aos poucos.
 11. Faça o mesmo na coluna do P4: amarelo e conferir que obedeceu, roxo, «Desligar», amarelo, anotando cada troca.
 12. Faça os cliques do P3 uma segunda vez, para descartar impressão sua.
-13. Devolva a «Cor» do P3 e a do P4 à que cada um tinha antes de você começar.
+13. Devolva a «Cor» do P3 e a do P4 à que você anotou no segundo passo.
 
 **Passa quando.** Nos dois controles do rádio a barra acende, troca de cor e apaga em corte seco, nas duas voltas. Uma transição suave que se repita é o ACHADO. Se a barra do P3 ou a do P4 não obedecer a clique nenhum, o teste NÃO reprovou: ele não mediu fade nenhum, e tem de ser refeito depois de destravar a barra.
 
@@ -5011,7 +5011,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB e os do P3 e do P4 em BT.
 2. Abra a aba Iluminação.
-3. Na linha «Cor» da coluna do P1, clique num quadradinho cuja cor nenhum dos outros três esteja usando, e olhe a barra de luz dele no aparelho.
+3. Anote a «Cor» das quatro colunas e, na do P1, clique num quadradinho cuja cor nenhum dos outros três esteja usando, e olhe a barra de luz dele no aparelho.
 4. Faça o mesmo nas colunas do P2, do P3 e do P4, uma cor diferente em cada.
 5. Olhe os quatro controles juntos: quatro barras acesas, quatro cores.
 6. Abra a aba Vibração.
@@ -5023,7 +5023,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 12. Repita os dois passos acima no P2.
 13. Repita no P3 e no P4.
 14. Anote se em algum momento o pontinho pulou para um canto sem a sua mão ir lá, se um botão acendeu sozinho, ou se um número de bateria deu um salto absurdo.
-15. Volte à aba Iluminação e devolva a «Cor» dos quatro à que cada um tinha antes de você começar.
+15. Volte à aba Iluminação e devolva a «Cor» dos quatro à que você anotou no terceiro passo.
 
 **Passa quando.** Os quatro obedecem à cor e ao tremor, e o desenho vivo dos quatro segue a sua mão sem pulos e sem acender nada sozinho. Pelo cabo, o P1 e o P2 fazem tudo isso sem nenhuma conferência de integridade no caminho — é este o ponto da linha: não há selo, e mesmo assim nada chega quebrado.
 
@@ -5050,7 +5050,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 1. Confira na fita do topo que os chips do P3 e do P4 terminam em BT e os do P1 e do P2 em USB.
 2. Abra a aba Iluminação.
-3. Na linha «Cor» da coluna do P1, clique num quadradinho cuja cor nenhum outro controle esteja usando, e confirme a cor na barra de luz dele — este é o controle de comparação, pelo cabo.
+3. Anote a «Cor» das quatro colunas e, na do P1, clique num quadradinho cuja cor nenhum outro controle esteja usando, e confirme a cor na barra de luz dele — este é o controle de comparação, pelo cabo.
 4. Clique num quadradinho livre de cor bem diferente na linha «Cor» da coluna do P3.
 5. Olhe a barra de luz do P3 no aparelho e confirme que ela acendeu nessa cor.
 6. Clique numa terceira cor livre na mesma coluna do P3 e confirme que a barra dele trocou.
@@ -5062,7 +5062,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 12. Clique no chip «Todos» da fita para abrir os quatro cartões.
 13. Mexa o analógico esquerdo do P3 em círculos, devagar, e olhe o pontinho do cartão dele acompanhar sem pular.
 14. Repita no P4.
-15. Volte à aba Iluminação e devolva a «Cor» do P1, a do P3 e a do P4 à que cada um tinha antes de você começar.
+15. Volte à aba Iluminação e devolva a «Cor» do P1, a do P3 e a do P4 à que você anotou no terceiro passo.
 16. Anote qualquer coisa que a tela tenha dito que aplicou e que o plástico não tenha feito.
 
 **Passa quando.** As barras de luz do P3 e do P4 acendem na cor escolhida e trocam quando você troca. Os chips deles trazem o nome da cor do plástico e a borda pintada, e o nome bate com o aparelho na sua mão. O pontinho do analógico segue a mão sem pulos. Nada disso chegaria com a assinatura errada — pelo rádio o controle descarta calado.
@@ -5387,7 +5387,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 **Os passos.**
 
 1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB e os do P3 e do P4 em BT.
-2. Abra a aba Iluminação e, na linha «Cor» da coluna do P1, clique num quadradinho cuja cor nenhum outro controle esteja usando.
+2. Abra a aba Iluminação, anote a «Cor» da coluna do P1 e clique, nela, num quadradinho cuja cor nenhum outro controle esteja usando.
 3. Olhe a barra de luz do P1 no aparelho e confirme a cor.
 4. Abra a aba Vibração, segure o P1 na mão e clique em «Testar» na coluna dele.
 5. Sinta o tremor nos dois punhos e clique em «Parar» na coluna do P1.
@@ -5398,7 +5398,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 10. Repita os passos 2 a 9 no P2.
 11. Volte à aba Iluminação e confira que a barra de luz do P1 continua na cor que você pôs.
 12. Na aba Gatilhos, devolva ao L2 e ao R2 do P1 e do P2 o «Modo» que você anotou, e aperte os quatro gatilhos para sentir que voltaram.
-13. Na aba Iluminação, devolva a «Cor» do P1 e a do P2 à que cada um tinha antes de você começar.
+13. Na aba Iluminação, devolva a «Cor» do P1 e a do P2 à que você anotou no segundo passo.
 
 **Passa quando.** Cor, tremor e gatilho chegam aos dois controles do cabo, e as três coisas viajam pelo mesmo caminho único e curto que o cabo oferece. Não há nada a mais para ver aqui, e é exatamente isso que esta linha do mapa afirma.
 
@@ -5425,7 +5425,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 
 1. Confira na fita do topo que os chips do P3 e do P4 terminam em BT e os do P1 e do P2 em USB.
 * Abra a aba Iluminação.
-2. Leia a linha «Modelo» das quatro colunas e confirme quem termina em USB e quem termina em BT.
+2. Leia a linha «Modelo» das quatro colunas e confirme quem termina em USB e quem termina em BT, e anote a «Cor» de cada uma.
 3. Clique num quadradinho de cor livre — que nenhum outro controle esteja usando — na linha «Cor» da coluna do P1 e confirme a cor na barra de luz dele: este é o controle de comparação, pelo cabo.
 4. Clique numa cor livre bem diferente na linha «Cor» da coluna do P3.
 5. Olhe a barra de luz do P3 no aparelho e confirme que ela acendeu nessa cor.
@@ -5434,7 +5434,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 8. Clique numa cor de novo na coluna do P3 e confirme que ela volta a acender.
 9. Repita os passos 4 a 8 na coluna do P4.
 10. Olhe os quatro controles juntos: quatro barras acesas, quatro cores diferentes.
-11. Devolva a «Cor» do P1, a do P3 e a do P4 à que cada um tinha antes de você começar.
+11. Devolva a «Cor» do P1, a do P3 e a do P4 à que você anotou no segundo passo.
 12. Anote o modelo de cada um dos dois do rádio ao lado do resultado.
 
 **Passa quando.** A barra de luz do P3 e a do P4 obedecem à cor escolhida, trocam quando você troca, apagam no «Desligar» e voltam quando você pinta de novo. As duas são do rádio, e é nas DUAS que a prova precisava existir: até hoje ela existia num aparelho só.
@@ -5468,9 +5468,9 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 5. Volte à aba Controles e fale perto do P1 de novo: a barrinha tem de continuar mexendo, porque no cabo o microfone não passa pela ponte.
 6. Volte à aba Conexões e escolha «Ligado» no campo do microfone do P1, para desfazer.
 7. Repita os passos 3 a 6 no P2.
-8. Abra a aba Iluminação e clique num quadradinho de cor livre na coluna do P1: a barra de luz dele tem de obedecer.
+8. Abra a aba Iluminação, anote a «Cor» do P1 e a do P2 e clique num quadradinho de cor livre na coluna do P1: a barra de luz dele tem de obedecer.
 9. Faça o mesmo na coluna do P2.
-10. Devolva a «Cor» do P1 e a do P2 à que cada um tinha antes de você começar.
+10. Devolva a «Cor» do P1 e a do P2 à que você anotou no oitavo passo.
 
 **Passa quando.** As linhas do P1 e do P2 dizem «pelo USB • Placa do controle» do começo ao fim, nunca «Pela ponte». Desligar a ponte de um controle do cabo não cala o microfone dele, e depois de tudo os dois continuam obedecendo à cor.
 
@@ -5684,7 +5684,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 1. Confira na fita do topo que os chips do P1 e do P2 terminam em USB.
 2. Feche a Steam e qualquer jogo aberto.
 * Abra a aba Iluminação.
-3. Olhe as quatro colunas e repare quais cores os outros três controles estão usando: a rajada só pode usar quadradinhos que nenhum deles tenha.
+3. Olhe as quatro colunas e anote a «Cor» de cada uma: a rajada só pode usar quadradinhos que nenhum dos outros três controles tenha.
 4. Clique num quadradinho livre, de cor bem diferente da atual, na linha «Cor» da coluna do P1.
 5. Confirme que a barra do P1 acendeu nessa cor.
 6. Clique agora, um atrás do outro e o mais rápido que você conseguir, em seis quadradinhos livres DIFERENTES da linha «Cor» do P1, terminando num que você reconheça de longe.
@@ -5694,7 +5694,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 10. Olhe as barras do P2, do P3 e do P4: nenhuma pode ter mudado.
 11. Repita os passos 6 a 10 na coluna do P2.
 12. Anote, mais ou menos, quanto tempo a barra levou para assentar na última cor depois de você parar de clicar.
-13. Devolva a «Cor» do P1 e a do P2 à que cada um tinha antes de você começar.
+13. Devolva a «Cor» do P1 e a do P2 à que você anotou no terceiro passo.
 
 **Passa quando.** Depois da rajada de cliques, a barra do controle em que você clicou fica na cor do ÚLTIMO quadradinho, e não numa do meio. O código escrito abaixo dos quadradinhos concorda com a barra acesa. As barras dos outros três não mudam. E a barra assenta em menos de um segundo depois do último clique.
 
@@ -5722,7 +5722,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 1. Confira na fita do topo que os chips do P3 e do P4 terminam em BT e que o do P1 termina em USB.
 2. Feche a Steam e qualquer jogo aberto.
 * Abra a aba Iluminação.
-3. Olhe as quatro colunas e repare quais cores cada controle está usando: a rajada só pode usar quadradinhos que nenhum dos outros tenha.
+3. Olhe as quatro colunas e anote a «Cor» de cada uma: a rajada só pode usar quadradinhos que nenhum dos outros tenha.
 4. Clique, um atrás do outro e o mais rápido que conseguir, em seis quadradinhos livres DIFERENTES da linha «Cor» da coluna do P1, terminando num que você reconheça de longe.
 5. Olhe a barra do P1 e anote se ela ficou na cor do último clique e quanto tempo levou para assentar.
 6. Faça a mesma rajada de seis quadradinhos livres diferentes na coluna do P3.
@@ -5732,7 +5732,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 10. Olhe as barras do P1, do P2 e do P4: nenhuma pode ter mudado por causa da rajada do P3.
 11. Repita os passos 6 a 10 na coluna do P4.
 12. Compare o que você anotou do P1 com o que aconteceu no P3 e no P4, e anote a diferença de tempo.
-13. Devolva a «Cor» do P1, a do P3 e a do P4 à que cada um tinha antes de você começar.
+13. Devolva a «Cor» do P1, a do P3 e a do P4 à que você anotou no terceiro passo.
 
 **Passa quando.** Depois da rajada, a barra do controle do rádio fica na cor do último quadradinho, e não numa do meio — exatamente como aconteceu no do cabo. O código escrito abaixo dos quadradinhos concorda com a barra. As barras dos outros três não mudam.
 
@@ -7671,7 +7671,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 7. Clique em «Modo automático» e confira que ele ficou ciano e que as colunas esmaeceram.
 8. Confira que as barras do P1 e do P2 foram para a cor automática de cada um.
 9. Anote a cor das barras do P3 e do P4.
-10. Espere um minuto sem mexer em nada e confira que as barras do P1 e do P2 continuam azul e vermelha.
+10. Espere um minuto sem mexer em nada e confira que as barras do P1 e do P2 continuam na cor automática de cada um.
 11. Clique em «Modo automático» de novo e confira que ele apagou e que as colunas voltaram.
 12. Confira que a barra do P1 voltou amarela e a do P2, ciano, sem você clicar em cor nenhuma.
 13. Devolva a «Cor» do P1 e a do P2 à que você anotou no quarto passo.
@@ -7708,7 +7708,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 7. Clique em «Modo automático» e confira que ele ficou ciano e que as colunas esmaeceram.
 8. Confira que as barras do P3 e do P4 foram para a cor automática de cada um.
 9. Anote a cor das barras do P1 e do P2.
-10. Espere um minuto sem mexer em nada e confira que as barras do P3 e do P4 continuam verde e rosa.
+10. Espere um minuto sem mexer em nada e confira que as barras do P3 e do P4 continuam na cor automática de cada um.
 11. Clique em «Modo automático» de novo e confira que ele apagou e que as colunas voltaram.
 12. Confira que a barra do P3 voltou amarela e a do P4, ciano, sem você clicar em cor nenhuma.
 13. Devolva a «Cor» do P3 e a do P4 à que você anotou no quarto passo.
