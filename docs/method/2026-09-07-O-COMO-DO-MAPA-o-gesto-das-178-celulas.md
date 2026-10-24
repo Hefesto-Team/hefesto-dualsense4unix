@@ -3813,7 +3813,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 25. Volte à aba Iluminação e confira que a barra do P1 continua apagada, a linha «Brilho» dele continua em 0%, e a borda continua no amarelo.
 26. Clique no quadradinho amarelo da coluna do P1 e confira que a barra volta acesa, amarela.
 27. Devolva os quatro números de brilho aos valores anotados.
-28. Clique no quadradinho da cor do número de cada um para devolver a cor: o primeiro no P1, o segundo no P2.
+28. Devolva a «Cor» do P1 e a do P2 à que cada um tinha antes de você começar.
 
 **Passa quando.** Nos dois controles do cabo a barra escurece junto com o número, some POR COMPLETO no 0 e volta cheia no 100, sem mudar de cor. Mexer no brilho de um nunca mexe no de outro. A marca da cor não sai do lugar em parada nenhuma, nem no 0: a borda fica na cor do próprio controle, e o X dela fica nas colunas dos outros três. As três voltas de «Salvar perfil», «Aplicar» e troca de perfil deixam as quatro barras exatamente como estavam — nenhuma fica mais fraca a cada volta. E o P1 «Desligado» atravessa a troca de perfil apagado, com o trilho em 0% e a cor dele guardada, e um clique na cor o acende de novo.
 
@@ -3866,7 +3866,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 26. Volte à aba Iluminação e confira que a barra do P3 continua apagada, a linha «Brilho» dele continua em 0%, e a borda continua no amarelo.
 27. Clique no quadradinho amarelo da coluna do P3 e confira que a barra volta acesa, amarela.
 28. Devolva os quatro números de brilho aos valores anotados.
-29. Clique no quadradinho da cor do número de cada um para devolver a cor: o terceiro no P3, o quarto no P4.
+29. Devolva a «Cor» do P3 e a do P4 à que cada um tinha antes de você começar.
 
 **Passa quando.** Nos dois controles do rádio a barra escurece junto com o número, some POR COMPLETO no 0 e volta cheia no 100. Mexer no brilho de um nunca mexe no de outro nem nos dois do cabo. A marca da cor não sai do lugar em parada nenhuma, nem no 0: a borda fica na cor do próprio controle, e o X dela fica nas colunas dos outros três. As três voltas de «Salvar perfil», «Aplicar» e troca de perfil deixam as quatro barras exatamente como estavam — nenhuma fica mais fraca a cada volta. E o P3 «Desligado» atravessa a troca de perfil apagado, com o trilho em 0% e a cor dele guardada, e um clique na cor o acende de novo.
 
@@ -3911,7 +3911,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 18. Volte à aba Iluminação e clique no quadradinho laranja (o sétimo) da coluna do P2.
 19. Confira no plástico que a barra do P2 ficou laranja.
 20. Na aba Jogar, clique em «Ligado» e no cartão que você anotou.
-21. Volte à aba Iluminação e clique no quadradinho da cor do número de cada um para devolver: o primeiro no P1, o segundo no P2.
+21. Volte à aba Iluminação e devolva a «Cor» do P1 e a do P2 à que cada um tinha antes de você começar.
 
 **Passa quando.** As barras dos dois controles do cabo acendem na cor clicada, no instante do clique, e continuam nela um minuto depois. Pintar um nunca muda a cor do outro, e as barras dos dois do rádio ficam exatamente como estavam. Com a Steam aberta, o P1 reencaixado volta amarelo e no desenho do 1 em poucos segundos, e fica assim; e no modo nativo o P2 também acende a cor clicada.
 
@@ -3956,7 +3956,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 18. Volte à aba Iluminação e clique no quadradinho laranja (o sétimo) da coluna do P4.
 19. Confira no plástico que a barra do P4 ficou laranja.
 20. Na aba Jogar, clique em «Ligado» e no cartão que você anotou.
-21. Volte à aba Iluminação e clique no quadradinho da cor do número de cada um para devolver: o terceiro no P3, o quarto no P4.
+21. Volte à aba Iluminação e devolva a «Cor» do P3 e a do P4 à que cada um tinha antes de você começar.
 
 **Passa quando.** As barras dos dois controles do rádio acendem na cor clicada, no instante do clique, e continuam nela um minuto depois. Pintar um nunca muda a cor do outro, e as barras dos dois do cabo ficam exatamente como estavam. Com a Steam aberta antes da volta, o P3 volta amarelo e no desenho do 3 em poucos segundos, e fica assim; e no modo nativo o P4 também acende a cor clicada.
 
@@ -4104,7 +4104,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 12. Faça os mesmos quatro cliques na coluna do P2 — amarelo, roxo, «Desligar», amarelo —, anotando cada troca.
 13. Faça os quatro cliques no P1 uma segunda vez, para descartar impressão sua.
 14. Confira que as barras do P3 e do P4 não acenderam, não apagaram nem mudaram de cor em momento nenhum.
-15. Clique no quadradinho da cor do número de cada um para devolver: o primeiro no P1, o segundo no P2.
+15. Devolva a «Cor» do P1 e a do P2 à que cada um tinha antes de você começar.
 
 **Passa quando.** Nos dois controles do cabo a barra acende, troca de cor e apaga em corte seco, nas duas voltas. Uma transição suave que se repita nas duas voltas é o ACHADO, porque hoje ninguém a pede ao aparelho.
 
@@ -4141,7 +4141,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 10. Anote se ela acendeu de uma vez ou cresceu aos poucos.
 11. Faça o mesmo na coluna do P4: amarelo e conferir que obedeceu, roxo, «Desligar», amarelo, anotando cada troca.
 12. Faça os cliques do P3 uma segunda vez, para descartar impressão sua.
-13. Clique no quadradinho da cor do número de cada um para devolver: o terceiro no P3, o quarto no P4.
+13. Devolva a «Cor» do P3 e a do P4 à que cada um tinha antes de você começar.
 
 **Passa quando.** Nos dois controles do rádio a barra acende, troca de cor e apaga em corte seco, nas duas voltas. Uma transição suave que se repita é o ACHADO. Se a barra do P3 ou a do P4 não obedecer a clique nenhum, o teste NÃO reprovou: ele não mediu fade nenhum, e tem de ser refeito depois de destravar a barra.
 
@@ -4175,7 +4175,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 7. Anote o que as cinco lâmpadas do P1 fizeram.
 8. Confira que a barra e as lâmpadas do P2, do P3 e do P4 não mudaram.
 9. Clique no quadradinho amarelo da coluna do P1 de novo e confira que a barra ainda obedece.
-10. Clique no quadradinho azul (o primeiro), na coluna do P1, para devolver a cor.
+10. Devolva a «Cor» do P1 à que você anotou no segundo passo.
 11. Se as lâmpadas do P1 apagaram, abra a aba Sistema, clique em «Reiniciar o serviço» e anote se elas voltaram.
 
 **Passa quando.** A barra do P1 continua na cor que estava e continua obedecendo às cores depois do comando — no cabo não há o que devolver —, e nenhum dos outros três muda. As cinco lâmpadas apagarem é o preço já medido: anota-se, não reprova.
@@ -4211,7 +4211,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 8. Confira que a barra e as lâmpadas do P1, do P2 e do P4 não mudaram.
 9. Clique no quadradinho ciano (o sexto), na coluna do P3.
 10. Confira que a barra do P3 ficou ciano — é aqui que se vê se ela travou.
-11. Clique no quadradinho verde (o terceiro), na coluna do P3, para devolver a cor.
+11. Devolva a «Cor» do P3 à que você anotou no terceiro passo.
 12. Se as lâmpadas do P3 apagaram, abra a aba Sistema, clique em «Reiniciar o serviço» e anote se elas voltaram.
 
 **Passa quando.** Depois do comando, a barra do P3 continua obedecendo às cores — ela vira ciano quando você clica —, e nenhum dos outros três muda. As cinco lâmpadas apagarem é o preço já medido: anota-se, não reprova. Barra que não obedece mais depois do comando reprova.
@@ -5023,7 +5023,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 12. Repita os dois passos acima no P2.
 13. Repita no P3 e no P4.
 14. Anote se em algum momento o pontinho pulou para um canto sem a sua mão ir lá, se um botão acendeu sozinho, ou se um número de bateria deu um salto absurdo.
-15. Volte à aba Iluminação e, em cada coluna, clique no quadradinho da cor do número daquele controle — o primeiro na coluna do P1, o segundo na do P2, o terceiro na do P3 e o quarto na do P4 —, para desfazer.
+15. Volte à aba Iluminação e devolva a «Cor» dos quatro à que cada um tinha antes de você começar.
 
 **Passa quando.** Os quatro obedecem à cor e ao tremor, e o desenho vivo dos quatro segue a sua mão sem pulos e sem acender nada sozinho. Pelo cabo, o P1 e o P2 fazem tudo isso sem nenhuma conferência de integridade no caminho — é este o ponto da linha: não há selo, e mesmo assim nada chega quebrado.
 
@@ -5062,7 +5062,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 12. Clique no chip «Todos» da fita para abrir os quatro cartões.
 13. Mexa o analógico esquerdo do P3 em círculos, devagar, e olhe o pontinho do cartão dele acompanhar sem pular.
 14. Repita no P4.
-15. Volte à aba Iluminação e clique, em cada coluna em que você mexeu, no quadradinho da cor do número daquele controle — o primeiro para o P1, o terceiro para o P3, o quarto para o P4 —, para desfazer.
+15. Volte à aba Iluminação e devolva a «Cor» do P1, a do P3 e a do P4 à que cada um tinha antes de você começar.
 16. Anote qualquer coisa que a tela tenha dito que aplicou e que o plástico não tenha feito.
 
 **Passa quando.** As barras de luz do P3 e do P4 acendem na cor escolhida e trocam quando você troca. Os chips deles trazem o nome da cor do plástico e a borda pintada, e o nome bate com o aparelho na sua mão. O pontinho do analógico segue a mão sem pulos. Nada disso chegaria com a assinatura errada — pelo rádio o controle descarta calado.
@@ -5398,7 +5398,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 10. Repita os passos 2 a 9 no P2.
 11. Volte à aba Iluminação e confira que a barra de luz do P1 continua na cor que você pôs.
 12. Na aba Gatilhos, devolva ao L2 e ao R2 do P1 e do P2 o «Modo» que você anotou, e aperte os quatro gatilhos para sentir que voltaram.
-13. Na aba Iluminação, clique no primeiro quadradinho da coluna do P1 e no segundo da coluna do P2 — a cor do número de cada um —, para desfazer.
+13. Na aba Iluminação, devolva a «Cor» do P1 e a do P2 à que cada um tinha antes de você começar.
 
 **Passa quando.** Cor, tremor e gatilho chegam aos dois controles do cabo, e as três coisas viajam pelo mesmo caminho único e curto que o cabo oferece. Não há nada a mais para ver aqui, e é exatamente isso que esta linha do mapa afirma.
 
@@ -5434,7 +5434,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 8. Clique numa cor de novo na coluna do P3 e confirme que ela volta a acender.
 9. Repita os passos 4 a 8 na coluna do P4.
 10. Olhe os quatro controles juntos: quatro barras acesas, quatro cores diferentes.
-11. Clique, em cada coluna em que você mexeu, no quadradinho da cor do número daquele controle — o primeiro para o P1, o terceiro para o P3, o quarto para o P4 —, para desfazer.
+11. Devolva a «Cor» do P1, a do P3 e a do P4 à que cada um tinha antes de você começar.
 12. Anote o modelo de cada um dos dois do rádio ao lado do resultado.
 
 **Passa quando.** A barra de luz do P3 e a do P4 obedecem à cor escolhida, trocam quando você troca, apagam no «Desligar» e voltam quando você pinta de novo. As duas são do rádio, e é nas DUAS que a prova precisava existir: até hoje ela existia num aparelho só.
@@ -5470,7 +5470,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 7. Repita os passos 3 a 6 no P2.
 8. Abra a aba Iluminação e clique num quadradinho de cor livre na coluna do P1: a barra de luz dele tem de obedecer.
 9. Faça o mesmo na coluna do P2.
-10. Clique no primeiro quadradinho da coluna do P1 e no segundo da do P2 — a cor do número de cada um —, para desfazer.
+10. Devolva a «Cor» do P1 e a do P2 à que cada um tinha antes de você começar.
 
 **Passa quando.** As linhas do P1 e do P2 dizem «pelo USB • Placa do controle» do começo ao fim, nunca «Pela ponte». Desligar a ponte de um controle do cabo não cala o microfone dele, e depois de tudo os dois continuam obedecendo à cor.
 
@@ -5694,7 +5694,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 10. Olhe as barras do P2, do P3 e do P4: nenhuma pode ter mudado.
 11. Repita os passos 6 a 10 na coluna do P2.
 12. Anote, mais ou menos, quanto tempo a barra levou para assentar na última cor depois de você parar de clicar.
-13. Clique no primeiro quadradinho da coluna do P1 e no segundo da do P2 — a cor do número de cada um —, para desfazer.
+13. Devolva a «Cor» do P1 e a do P2 à que cada um tinha antes de você começar.
 
 **Passa quando.** Depois da rajada de cliques, a barra do controle em que você clicou fica na cor do ÚLTIMO quadradinho, e não numa do meio. O código escrito abaixo dos quadradinhos concorda com a barra acesa. As barras dos outros três não mudam. E a barra assenta em menos de um segundo depois do último clique.
 
@@ -5732,7 +5732,7 @@ rótulo. Quatorze escreveram, quatorze conferiram.
 10. Olhe as barras do P1, do P2 e do P4: nenhuma pode ter mudado por causa da rajada do P3.
 11. Repita os passos 6 a 10 na coluna do P4.
 12. Compare o que você anotou do P1 com o que aconteceu no P3 e no P4, e anote a diferença de tempo.
-13. Clique, nas colunas do P1, do P3 e do P4, no quadradinho da cor do número de cada um — o primeiro, o terceiro e o quarto —, para desfazer.
+13. Devolva a «Cor» do P1, a do P3 e a do P4 à que cada um tinha antes de você começar.
 
 **Passa quando.** Depois da rajada, a barra do controle do rádio fica na cor do último quadradinho, e não numa do meio — exatamente como aconteceu no do cabo. O código escrito abaixo dos quadradinhos concorda com a barra. As barras dos outros três não mudam.
 
