@@ -91,6 +91,7 @@ function reset() {
   m.naMao = null;
   m.segurando = null;
   m.quantos = 4;
+  m.DECLARADO = {};
 }
 
 /* a mesa dela às 02:36 de 25/08/2026: o hub saiu do barramento e levou os três
@@ -162,6 +163,19 @@ m.segurando = "bt-c";
 m.naMao = "bt";
 ["1", "2", "10", "15a"].forEach(function (n) { out["julgar-segurando/bt-c/" + n] = m.julgar(n); });
 
+/* a ponta do extensor LIVRE: no exemplo ela está ocupada, e só com ela vazia o aparelho na mão
+   chega à regra da entrada esticada («na ponta do extensor») e à da entrada-mãe livre */
+["15", "15a"].forEach(function (n) {
+  ["bt", "wifi", "teclado", "mouse", "webcam", null].forEach(function (mao) {
+    reset();
+    var mapa = copia(MAPA_PADRAO);
+    delete mapa["15a"];
+    m.MAPA = mapa;
+    m.naMao = mao;
+    out["julgar-ponta-livre/" + n + "/" + mao] = m.julgar(n);
+  });
+});
+
 /* duas entradas COM NOME, como o mapa dela as guarda: a página diz a entrada pelo `naFraseDe` do
    dono («entrada Atrás») e o porte em Python tem de dizer o mesmo, frase a frase */
 var NOMES = { "9": { nome: "Atrás" }, "15a": { nome: "Ponta" }, "13": { nome: "Alto" }, "5": { nome: "Meio" } };
@@ -181,7 +195,6 @@ m.VARIANTES.forEach(function (v) {
 reset();
 m.DECLARADO = copia(NOMES);
 out["nomes/controles/padrao"] = m.planoDosControles();
-m.DECLARADO = {};
 
 reset();
 out["reexame/antes-agora"] = m.reexame("antes", "agora");

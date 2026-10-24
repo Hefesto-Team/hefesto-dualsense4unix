@@ -200,6 +200,29 @@ def test_o_julgamento_de_cada_entrada_e_o_mesmo(n: str, na_mao: str | None) -> N
     assert _veredito(motor.julgar(entrada, na_mao, mesa)) == ouro(f"julgar/{n}/{_js(na_mao)}")
 
 
+#: O mapa do exemplo com a ponta do extensor LIVRE: só assim a regra da entrada esticada é julgada.
+_MAPA_COM_A_PONTA_LIVRE = {n: c for n, c in mock.MAPA.items() if n != "15a"}
+
+
+@pytest.mark.parametrize("n", ["15", "15a"])
+@pytest.mark.parametrize("na_mao", ["bt", "wifi", "teclado", "mouse", "webcam", None])
+def test_a_ponta_do_extensor_livre_e_julgada_como_na_pagina(n: str, na_mao: str | None) -> None:
+    """No exemplo a 15a está ocupada, e nenhum outro cenário chega à regra da entrada esticada.
+
+    MORDIDA: troque o veredito ou o porquê da ponta do extensor só no porte e esta reprova."""
+    mesa = _mesa(mapa=_MAPA_COM_A_PONTA_LIVRE)
+    entrada = motor.por_num(mesa.faces, n)
+    assert entrada is not None
+    esperado = ouro(f"julgar-ponta-livre/{n}/{_js(na_mao)}")
+    assert _veredito(motor.julgar(entrada, na_mao, mesa)) == esperado
+
+
+def test_o_cenario_da_ponta_livre_alcanca_a_regra_da_entrada_esticada() -> None:
+    assert ouro("julgar-ponta-livre/15a/bt") == {
+        "v": "melhor", "txt": "Melhor lugar",
+        "porque": "na ponta do extensor: a antena mais longe das outras"}
+
+
 @pytest.mark.parametrize("n", ["1", "2", "10", "15a"])
 def test_segurando_um_dongle_do_hub_a_outra_regiao_se_recusa(n: str) -> None:
     mesa = _mesa()
@@ -419,6 +442,16 @@ def test_o_veredito_segurando_um_dongle_do_hub_bate_sem_o_texto(n: str) -> None:
     assert e is not None
     assert _regra_do_veredito(_veredito(motor.julgar(e, "bt", mesa, segurando="bt-c"))) == \
         _regra_do_veredito(ouro(f"julgar-segurando/bt-c/{n}"))
+
+
+@pytest.mark.parametrize("n", ["15", "15a"])
+@pytest.mark.parametrize("na_mao", ["bt", "wifi", "teclado", "mouse", "webcam", None])
+def test_o_veredito_da_ponta_livre_bate_sem_o_texto(n: str, na_mao: str | None) -> None:
+    mesa = _mesa(mapa=_MAPA_COM_A_PONTA_LIVRE)
+    e = motor.por_num(mesa.faces, n)
+    assert e is not None
+    assert _regra_do_veredito(_veredito(motor.julgar(e, na_mao, mesa))) == \
+        _regra_do_veredito(ouro(f"julgar-ponta-livre/{n}/{_js(na_mao)}"))
 
 
 def test_sem_o_hub_a_regra_bate_sem_o_texto() -> None:

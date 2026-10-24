@@ -1911,6 +1911,58 @@
   "txt": "Ocupada",
   "porque": "Bluetooth — clique para tirar"
  },
+ "julgar-ponta-livre/15/bt": {
+  "v": "melhor",
+  "txt": "Melhor lugar",
+  "porque": "no alto do rack, com a antena acima das cabeças"
+ },
+ "julgar-ponta-livre/15/wifi": {
+  "v": "ruim",
+  "txt": "Evite",
+  "porque": "aqui o tráfego dele em 5 Gbps fica ao lado dos dongles do controle"
+ },
+ "julgar-ponta-livre/15/teclado": {
+  "v": "ruim",
+  "txt": "Evite",
+  "porque": "no hub você pode ficar sem teclado na BIOS"
+ },
+ "julgar-ponta-livre/15/mouse": {
+  "v": "serve",
+  "txt": "Serve",
+  "porque": "gasta uma entrada azul que ele não usa"
+ },
+ "julgar-ponta-livre/15/webcam": {
+  "v": "serve",
+  "txt": "Serve",
+  "porque": "gasta uma entrada azul que ela não precisa"
+ },
+ "julgar-ponta-livre/15/null": null,
+ "julgar-ponta-livre/15a/bt": {
+  "v": "melhor",
+  "txt": "Melhor lugar",
+  "porque": "na ponta do extensor: a antena mais longe das outras"
+ },
+ "julgar-ponta-livre/15a/wifi": {
+  "v": "ruim",
+  "txt": "Evite",
+  "porque": "aqui o tráfego dele em 5 Gbps fica ao lado dos dongles do controle"
+ },
+ "julgar-ponta-livre/15a/teclado": {
+  "v": "ruim",
+  "txt": "Evite",
+  "porque": "no hub você pode ficar sem teclado na BIOS"
+ },
+ "julgar-ponta-livre/15a/mouse": {
+  "v": "serve",
+  "txt": "Serve",
+  "porque": "gasta uma entrada azul que ele não usa"
+ },
+ "julgar-ponta-livre/15a/webcam": {
+  "v": "serve",
+  "txt": "Serve",
+  "porque": "gasta uma entrada azul que ela não precisa"
+ },
+ "julgar-ponta-livre/15a/null": null,
  "nomes/receita/melhor": [
   {
    "essencial": true,
