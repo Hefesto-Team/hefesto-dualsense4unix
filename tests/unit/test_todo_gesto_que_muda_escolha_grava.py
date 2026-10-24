@@ -122,6 +122,21 @@ ATOS: dict[Chave, str] = {
     ("07-lancadores.html", "parar-tudo-da-modificacao"):
         "ato: o serviço publica o gesto «para» só àquela extensão (`mods.parar_tudo`), e os "
         "aparelhos dela vão a zero; o nível e o perfil guardados não mudam",
+    ("07-lancadores.html", "acao-da-modificacao"):
+        "ato: o serviço leva o clique só àquela extensão (`mods.acao`), e quem age no aparelho é "
+        "ela; nenhuma escolha guardada muda no Hefesto",
+    ("07-lancadores.html", "mover-o-livre-da-modificacao"):
+        "ato: o arrastar do controle livre vai à extensão (`mods.livre`, 20 por segundo); nada "
+        "fica guardado",
+    ("07-lancadores.html", "soltar-o-livre-da-modificacao"):
+        "ato: o soltar da barra do controle livre vai à extensão com o valor final; nada fica "
+        "guardado",
+    ("07-lancadores.html", "gravar-o-livre-da-modificacao"):
+        "rascunho da janela da extensão: a forma gravada espera o Guardar "
+        "(`guardar-modificacao`), que declara `grava=`",
+    ("07-lancadores.html", "esquecer-a-forma-do-livre"):
+        "rascunho da janela da extensão: a forma esquecida sai no Guardar "
+        "(`guardar-modificacao`), que declara `grava=`",
     ("07-lancadores.html", "ver-impedimentos"):
         "leitura: sonda a Steam de novo e abre a lista dos impedimentos; quem cura é o "
         "«Resolver», que declara `grava=`",

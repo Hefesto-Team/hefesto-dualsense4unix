@@ -1495,7 +1495,7 @@ def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador],
             _MEXIDA.agora, _AGORA.agora(),
             processo=exp.processo_de(dela.entrada.ligada, dela.estado) if dela else "",
             porque=dela.porque if dela else "")
-    return carga
+    return _com_os_aparelhos(carga)
 
 
 def _id_do_clique(o: dict[str, Any], gesto_: str) -> str:
@@ -1571,15 +1571,15 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
         maximo=x.maximo or 0, passo=x.passo or 1,
         jogos=jogos if x.tipo == "jogos" else (),
         nota=nota if x.tipo == "css" else "",
-        formas=tuple((f, tuple((a, b) for a, b in passos)) for f, passos in x.formas.items()),
+        formas=_formas_da_opcao(manifesto, x, valores),
         botoes=x.botoes_da_janela if x.tipo == "por_botao" else ()) for x in manifesto.opcoes]
     _MEXIDA.mod = mod_id
     _MEXIDA.agora = tuple(manifesto.agora)
     _MEXIDA.html_mod = exp.modificacao_miolo_html(
         manifesto.nome, linhas, mod=mod_id, agora=_MEXIDA.agora,
-        estado=_AGORA.agora() if _MEXIDA.agora else None, parar_tudo=manifesto.parar_tudo,
+        estado=_estado_da_janela(manifesto), parar_tudo=manifesto.parar_tudo,
         aba=_MEXIDA.aba, processo=exp.processo_de(item.entrada.ligada, item.estado),
-        porque=item.porque)
+        porque=item.porque, **_pecas_da_janela(manifesto, mod_id))
 
 
 def _a_pintura_agora(ctx: Contexto) -> dict[str, Any]:
@@ -1701,7 +1701,7 @@ def guardar_opcao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
             return None
         valor = o.get("valor")
     with _dizendo_a_recusa():
-        certo = opcoes.validar(opcao, valor)
+        certo = opcoes.validar(opcao, valor, formas_extras=_formas_da_janela(item))
     if _MEXIDA.mod != mod_id:
         _MEXIDA.mod, _MEXIDA.rascunho = mod_id, {}
     _MEXIDA.rascunho[opcao_id] = certo
@@ -1761,7 +1761,7 @@ def _guardar_a_opcao_da_modificacao(mod_id: str) -> str:
     if not rascunho:
         return ""
     with _dizendo_a_recusa():
-        for opcao_id, valor in rascunho.items():
+        for opcao_id, valor in _livre_primeiro(item.manifesto, rascunho):
             opcoes.guardar(item.manifesto, opcao_id, valor, _lugares())
     _MEXIDA.rascunho = {}
     return "Guardado."
@@ -2229,7 +2229,7 @@ PISO_DA_ABA = 14
 PROVAS: list[dict[str, Any]] = []
 
 #: TODOS, e não por preguiça: o `state_full` do daemon não tem UMA chave sobre
-SEM_ECO = (# `maquina.json`: o `state_full` não tem UMA chave sobre lançador.
+SEM_ECO: tuple[str, ...] = (# `maquina.json`: o `state_full` não tem UMA chave sobre lançador.
            desenho.ADICIONAR, desenho.PROCURAR_O_ARQUIVO,
            # Os gestos das extensões, da janela de cada lançador e dos impedimentos: o estado
            # que o daemon devolve não tem chave sobre o registro das modificações nem sobre a Steam.
@@ -2240,3 +2240,388 @@ SEM_ECO = (# `maquina.json`: o `state_full` não tem UMA chave sobre lançador.
            "ver-impedimentos", "resolver-impedimento", "resolver-todos-os-impedimentos",
            "identificar-lancador", "configurar-lancador", "criar-perfil-do-jogo")
 
+
+
+# AS TRÊS PEÇAS QUE AGEM — 24/10/2026,
+# A-JANELA-DA-EXTENSAO-GANHA-ACAO-APARELHOS-E-CONTROLE-LIVRE-01. A janela de qualquer extensão
+# ganha o botão que age na hora, os aparelhos que ela gere (a chave e as ações de cada um) e o
+# controle livre. O clique e o arrastar vão ao serviço, que os entrega só àquela extensão (os
+# métodos abaixo); nada aqui sabe de uma extensão em particular. Mora no fim do arquivo para não
+# deslocar as âncoras citadas do meio.
+
+METODO_DA_ACAO = "mods.acao"  # noqa-acento: contrato
+METODO_DO_LIVRE = "mods.livre"
+#: Quanto tempo um botão diz «Em curso» sem o estado novo da extensão, no máximo.
+TETO_DO_EM_CURSO_S = 5.0
+#: Os segundos de uma forma gravada, no máximo: 16 passos de até 10 s.
+SEGUNDOS_DA_GRAVACAO = 160.0
+
+
+class _Viva:
+    """O que as peças que agem seguram entre um gesto e outro, de UMA extensão: as ações à espera
+    do estado novo e o controle livre (o valor, o rastro e a gravação).
+
+    O arrastar chega por gestos vivos, cada um na sua thread: a série do vivo e o carimbo do
+    evento descartam o que chega fora de ordem, e a chamada ao serviço sai dentro da trava, na
+    ordem em que foi aceita.
+    """
+
+    def __init__(self) -> None:
+        self._trava = threading.Lock()
+        self._zerar("")
+
+    def _zerar(self, mod: str) -> None:
+        self.mod = mod
+        self.em_curso: dict[tuple[str, str], tuple[int, float]] = {}
+        self.valor = 0.0
+        self.ultimo_vivo = 0
+        self.solto_em = float("-inf")
+        self.rastro: list[tuple[float, float]] = []
+        self.gravando = False
+        self.gravadas: list[tuple[float, float]] = []
+
+    def _da(self, mod: str) -> None:
+        if mod != self.mod:
+            self._zerar(mod)
+
+    def marcar(self, mod: str, acao: str, alvo: str, serie: int) -> None:
+        with self._trava:
+            self._da(mod)
+            self.em_curso[(acao, alvo)] = (serie, time.monotonic())
+
+    def esperando(self, mod: str, estado: dict[str, Any] | None) -> frozenset[tuple[str, str]]:
+        """As ações à espera: saem quando a extensão devolve um estado novo, ou no teto."""
+        serie = estado.get("serie") if isinstance(estado, dict) else None
+        with self._trava:
+            if mod != self.mod:
+                return frozenset()
+            agora = time.monotonic()
+            self.em_curso = {
+                k: (s, t) for k, (s, t) in self.em_curso.items()
+                if agora - t < TETO_DO_EM_CURSO_S and not (isinstance(serie, int) and serie > s)}
+            return frozenset(self.em_curso)
+
+    def enviar(self, mod: str, opcao_id: str, valor: float, *, vivo: int, carimbo: float,
+               soltou: bool, ponte: Any) -> tuple[bool, str | None, Any] | None:
+        """O arrastar (ou o soltar) do livre ao serviço; ``None`` quando chegou fora de ordem."""
+        with self._trava:
+            self._da(mod)
+            if soltou:
+                self.solto_em = max(self.solto_em, carimbo)
+            elif vivo <= self.ultimo_vivo or carimbo <= self.solto_em:
+                return None
+            else:
+                self.ultimo_vivo = vivo
+            agora = time.monotonic()
+            self.valor = valor
+            self.rastro = [(t, v) for t, v in self.rastro if agora - t <= 2 * exp.RASTRO_S]
+            self.rastro.append((agora, valor))
+            if self.gravando:
+                self.gravadas.append((agora, valor))
+            return ponte.chamar_com_o_corpo(  # type: ignore[no-any-return]
+                METODO_DO_LIVRE, mod=mod, id=opcao_id, valor=valor, soltou=soltou)
+
+    def ao_vivo(self, mod: str) -> exp.LivreAoVivo:
+        with self._trava:
+            if mod != self.mod:
+                return exp.LivreAoVivo()
+            return exp.LivreAoVivo(self.valor, self.gravando, tuple(self.rastro), time.monotonic())
+
+    def gravar(self, mod: str) -> list[tuple[float, float]] | None:
+        """Começa a gravar (devolve ``None``) ou para, e devolve o que se arrastou."""
+        with self._trava:
+            self._da(mod)
+            agora = time.monotonic()
+            if not self.gravando:
+                self.gravando, self.gravadas = True, [(agora, self.valor)]
+                return None
+            self.gravando = False
+            amostras, self.gravadas = [*self.gravadas, (agora, self.valor)], []
+            return amostras
+
+
+_VIVA = _Viva()
+
+
+def passos_da_gravacao(amostras: Sequence[tuple[float, float]]) -> list[list[float]]:
+    """O arrastar gravado como forma: ``[[força, segundos], ...]``, no máximo 16 passos de 10 s.
+
+    ``amostras`` é ``(instante, valor)``, a última o instante do «Parar»: cada valor vale até o
+    seguinte. O tempo se divide em 16 fatias iguais (até 160 s), cada fatia leva a média da força
+    pesada pelo tempo, e as vizinhas iguais se juntam enquanto cabem em 10 s. Sem arrastar
+    nenhum (um valor só), a lista é vazia.
+    """
+    from hefesto_dualsense4unix.mods.manifesto import PASSOS_DA_FORMA, SEGUNDOS_DO_PASSO
+
+    if len(amostras) < 3:
+        return []
+    inicio = amostras[0][0]
+    fim = min(amostras[-1][0], inicio + SEGUNDOS_DA_GRAVACAO)
+    if fim - inicio <= 0:
+        return []
+    fatia = (fim - inicio) / PASSOS_DA_FORMA
+    trechos = [(t, amostras[n + 1][0], v) for n, (t, v) in enumerate(amostras[:-1])]
+    passos: list[list[float]] = []
+    for n in range(PASSOS_DA_FORMA):
+        a, b = inicio + n * fatia, inicio + (n + 1) * fatia
+        soma = sum(v * (min(b, t1) - max(a, t0)) for t0, t1, v in trechos if t1 > a and t0 < b)
+        forca = round(max(0.0, min(1.0, soma / fatia)), 2)
+        if passos and passos[-1][0] == forca and passos[-1][1] + fatia <= SEGUNDOS_DO_PASSO:
+            passos[-1][1] += fatia
+        else:
+            passos.append([forca, fatia])
+    return [[f, max(0.01, round(s, 2))] for f, s in passos]
+
+
+def _nome_da_forma_nova(formas: dict[str, Any]) -> str:
+    n = 1
+    while f"Meu {n}" in formas:
+        n += 1
+    return f"Meu {n}"
+
+
+def _formas_do_livre_na_janela(item: _Instalada) -> dict[str, Any]:
+    """As formas gravadas que a janela mostra agora: o rascunho, ou o guardado."""
+    from hefesto_dualsense4unix.mods import opcoes
+
+    livre = item.manifesto.opcao_livre if item.manifesto else None
+    if livre is None:
+        return {}
+    return dict(opcoes.formas_do_livre(item.manifesto, {livre.id: _valor_na_janela(item, livre)}))
+
+
+def _formas_da_janela(item: _Instalada) -> tuple[str, ...]:
+    """Os nomes das formas gravadas no livre (o rascunho por cima): os botões as aceitam."""
+    return tuple(_formas_do_livre_na_janela(item))
+
+
+def _formas_da_opcao(manifesto: Any, opcao: Any, valores: dict[str, Any]) -> tuple[Any, ...]:
+    """As formas que a linha da opção mostra: as declaradas e, num ``por_botao``, as gravadas no
+    ``livre`` da mesma extensão (nunca as de outra)."""
+    from hefesto_dualsense4unix.mods import opcoes
+
+    formas = dict(opcao.formas)
+    if opcao.tipo == "por_botao":
+        formas.update(opcoes.formas_do_livre(manifesto, valores))
+    return tuple((f, tuple((a, b) for a, b in passos)) for f, passos in formas.items())
+
+
+def _livre_primeiro(manifesto: Any, rascunho: dict[str, Any]) -> list[tuple[str, Any]]:
+    """O rascunho com o ``livre`` na frente: o ``por_botao`` que usa uma forma gravada agora só
+    passa depois que ela está no disco."""
+    livre = manifesto.opcao_livre if manifesto else None
+    return sorted(rascunho.items(), key=lambda par: livre is None or par[0] != livre.id)
+
+
+def _estado_da_janela(manifesto: Any) -> dict[str, Any] | None:
+    """O ``acessorios.estado`` que a janela desenha: com a coluna «Agora» ou com aparelhos."""
+    return _AGORA.agora() if _MEXIDA.agora or manifesto.aparelhos_acoes else None
+
+
+def _acao_da_janela(a: Any) -> exp.AcaoDaJanela:
+    return exp.AcaoDaJanela(a.id, a.rotulo, a.grupo or "", a.icone or "")
+
+
+def _aparelhos_da_janela(manifesto: Any) -> exp.AparelhosDaJanela | None:
+    geridos = manifesto.aparelhos_acoes
+    if geridos is None:
+        return None
+    return exp.AparelhosDaJanela(tuple(_acao_da_janela(a) for a in geridos.acoes),
+                                 geridos.grupo or "")
+
+
+def _pecas_da_janela(manifesto: Any, mod_id: str) -> dict[str, Any]:
+    """O que a janela desenha das peças que agem: as ações, os aparelhos, o «Em curso» e o livre."""
+    return {"acoes": tuple(_acao_da_janela(a) for a in manifesto.acoes),  # noqa-acento: contrato
+            "aparelhos": _aparelhos_da_janela(manifesto),
+            "em_curso": _VIVA.esperando(mod_id, _AGORA.agora()),
+            "livre": _VIVA.ao_vivo(mod_id)}
+
+
+def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
+    """A cada tique, os blocos vivos da janela aberta: os aparelhos, as ações em curso, o rastro
+    do livre e quem o recebe. A barra que se arrasta nunca está num bloco repintado."""
+    if not (_MEXIDA.html_mod and _MEXIDA.mod):
+        return carga
+    item = next((i for i in REGISTRO.ler() if i.entrada.id == _MEXIDA.mod), None)
+    manifesto = item.manifesto if item else None
+    if item is None or manifesto is None:
+        return carga
+    mod_id, estado, blocos = _MEXIDA.mod, _AGORA.agora(), carga["blocos"]
+    aparelhos = _aparelhos_da_janela(manifesto)
+    em_curso = _VIVA.esperando(mod_id, estado)
+    gestao = exp.Gestao(mod_id, aparelhos, estado, em_curso) if aparelhos else None
+    if gestao and gestao.aparelhos.grupo:
+        blocos["#mod-aparelhos"] = exp.aparelhos_geridos_html(gestao)
+    elif gestao and _MEXIDA.agora:
+        blocos["#mod-agora"] = exp.agora_html(
+            _MEXIDA.agora, estado, processo=exp.processo_de(item.entrada.ligada, item.estado),
+            porque=item.porque, gestao=gestao)
+    acoes = tuple(_acao_da_janela(a) for a in manifesto.acoes)
+    if acoes or (aparelhos and aparelhos.grupo):
+        grupos = [exp.OpcaoDaJanela(mod_id, o.id, o.rotulo, o.tipo, "", grupo=o.grupo or "")
+                  for o in manifesto.opcoes if o.tipo != "livre"]
+        for n, delas in exp.acoes_por_aba(grupos, acoes, aparelhos).items():
+            blocos[f"#mod-acoes-{n}"] = exp.barra_de_acoes_html(mod_id, delas, em_curso)
+    if manifesto.opcao_livre is not None:
+        blocos["#mod-livre-rastro"] = exp.rastro_html(_VIVA.ao_vivo(mod_id))
+        blocos["#mod-livre-alvos"] = exp.alvos_do_livre_html(gestao)
+    return carga
+
+
+def _partes_do_clique(o: dict[str, Any], gesto_: str, quantas: int) -> list[str]:
+    partes = _id_do_clique(o, gesto_).split(":", quantas - 1)
+    return partes + [""] * (quantas - len(partes))
+
+
+@gesto("07-lancadores.html", exp.GESTO_DA_ACAO)
+def acao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """Um botão de ação da janela, ou a chave e os botões de um aparelho gerido: o serviço leva o
+    clique só a esta extensão (``data-v`` é ``mod:ação[:alvo]``). O botão diz «Em curso» até a
+    extensão devolver o estado novo."""
+    mod_id, acao, alvo = _partes_do_clique(o, exp.GESTO_DA_ACAO, 3)
+    if not acao:
+        raise RuntimeError("O clique não disse qual ação. Nada foi enviado.")
+    params: dict[str, Any] = {"mod": mod_id, "acao": acao}  # noqa-acento: contrato
+    if alvo:
+        params["alvo"] = alvo
+    if alvo and acao == exp.ACAO_DE_LIGAR:
+        params["valor"] = str(o.get("ligado") or "") == "1"
+    antes = _AGORA.ler(mod_id, p) if _MEXIDA.mod == mod_id else None
+    ok, motivo, corpo = p.chamar_com_o_corpo(METODO_DA_ACAO, **params)
+    if not ok:
+        raise RuntimeError(motivo or "O serviço não respondeu. Nada foi enviado.")
+    if not (isinstance(corpo, dict) and corpo.get("enviada") is True):
+        raise RuntimeError(_nao_esta_rodando(mod_id))
+    serie = antes.get("serie") if isinstance(antes, dict) else None
+    _VIVA.marcar(mod_id, acao, alvo, serie if isinstance(serie, int) else 0)
+    _AGORA.esquecer()
+    return _a_pintura_agora(ctx)
+
+
+def _nao_esta_rodando(mod_id: str) -> str:
+    return f"{_a_instalada(mod_id).entrada.nome} não está rodando: nada foi enviado."
+
+
+def _do_trilho(o: dict[str, Any], gesto_: str) -> tuple[str, str, float]:
+    mod_id, opcao_id = _partes_do_clique(o, gesto_, 2)
+    try:
+        valor = float(str(o.get("valor") or "0")) / 100
+    except ValueError as erro:
+        raise RuntimeError("A barra não disse a força. Nada foi enviado.") from erro
+    return mod_id, opcao_id, max(0.0, min(1.0, valor))
+
+
+def _numero(texto: Any) -> float:
+    try:
+        return float(str(texto or "0"))
+    except ValueError:
+        return 0.0
+
+
+@gesto("07-lancadores.html", exp.GESTO_DO_LIVRE)
+def mover_o_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O arrastar do controle livre, um gesto VIVO (a cada ``input``): manda e não grava nada.
+
+    O serviço segura em 20 por segundo; o que chega fora de ordem cai aqui. Não pinta: o rastro
+    é do tique, e a barra é a que o dedo está arrastando.
+    """
+    mod_id, opcao_id, valor = _do_trilho(o, exp.GESTO_DO_LIVRE)
+    _VIVA.enviar(mod_id, opcao_id, valor, vivo=int(_numero(o.get("vivo"))),
+                 carimbo=_numero(o.get("carimbo")), soltou=False, ponte=p)
+    return {}
+
+
+@gesto("07-lancadores.html", exp.GESTO_DE_SOLTAR)
+def soltar_o_livre_da_modificacao(ctx: Contexto, o: dict[str, Any],
+                                  p: Any) -> dict[str, Any] | None:
+    """O soltar da barra (o ``change``): sai sempre, com o valor final, fora do compasso."""
+    if str(o.get("evento") or "") != "change":
+        return None
+    mod_id, opcao_id, valor = _do_trilho(o, exp.GESTO_DE_SOLTAR)
+    resposta = _VIVA.enviar(mod_id, opcao_id, valor, vivo=0, carimbo=_numero(o.get("carimbo")),
+                            soltou=True, ponte=p)
+    ok, motivo, corpo = resposta or (True, None, {"enviado": True})
+    if not ok:
+        raise RuntimeError(motivo or "O serviço não respondeu. Nada foi enviado.")
+    if not (isinstance(corpo, dict) and corpo.get("enviado") is True):
+        raise RuntimeError(_nao_esta_rodando(mod_id))
+    return _a_pintura_agora(ctx)
+
+
+def _o_livre_de(item: _Instalada, opcao_id: str) -> Any:
+    livre = item.manifesto.opcao_livre if item.manifesto else None
+    if livre is None or livre.id != opcao_id:
+        raise RuntimeError("Esta extensão não tem esse controle livre. Nada foi guardado.")
+    return livre
+
+
+def _ao_rascunho(mod_id: str, opcao: Any, valor: Any, item: _Instalada) -> None:
+    """Uma opção validada vai ao rascunho da janela, como no ``guardar-opcao-da-modificacao``."""
+    from hefesto_dualsense4unix.mods import opcoes
+
+    with _dizendo_a_recusa():
+        certo = opcoes.validar(opcao, valor, formas_extras=_formas_da_janela(item))
+    if _MEXIDA.mod != mod_id:
+        _MEXIDA.mod, _MEXIDA.rascunho = mod_id, {}
+    _MEXIDA.rascunho[opcao.id] = certo
+
+
+@gesto("07-lancadores.html", exp.GESTO_DE_GRAVAR)
+def gravar_o_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Gravar» começa; «Parar e guardar» faz do que se arrastou uma forma nova («Meu N») no
+    rascunho do livre. Quem grava no disco é o Guardar da janela, e a forma entra na escolha dos
+    botões desta extensão."""
+    from hefesto_dualsense4unix.mods.manifesto import FORMAS_POR_OPCAO
+
+    mod_id, opcao_id = _partes_do_clique(o, exp.GESTO_DE_GRAVAR, 2)
+    item = _a_instalada(mod_id)
+    livre = _o_livre_de(item, opcao_id)
+    formas = _formas_do_livre_na_janela(item)
+    if len(formas) >= FORMAS_POR_OPCAO and not _VIVA.ao_vivo(mod_id).gravando:
+        raise RuntimeError(
+            f"Já há {FORMAS_POR_OPCAO} formas gravadas: esqueça uma antes de gravar.")
+    amostras = _VIVA.gravar(mod_id)
+    recado = ""
+    if amostras is not None:
+        passos = passos_da_gravacao(amostras)
+        if not passos:
+            recado = "Nada foi arrastado enquanto gravava: nenhuma forma nova."
+        else:
+            nome = _nome_da_forma_nova(formas)
+            _ao_rascunho(mod_id, livre, {**formas, nome: passos}, item)
+            recado = f"«{nome}» gravada. Guarde para usá-la nos botões."
+    _montar_a_janela_da_extensao(mod_id)
+    carga = _a_pintura_agora(ctx)
+    return {**carga, "recado": recado} if recado else carga
+
+
+@gesto("07-lancadores.html", exp.GESTO_DE_ESQUECER_A_FORMA)
+def esquecer_a_forma_do_livre(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O «x» de uma forma gravada: sai do rascunho do livre, e o botão que a usava volta ao padrão.
+    Quem grava é o Guardar da janela."""
+    from hefesto_dualsense4unix.mods import opcoes
+
+    mod_id, opcao_id, nome = _partes_do_clique(o, exp.GESTO_DE_ESQUECER_A_FORMA, 3)
+    item = _a_instalada(mod_id)
+    livre = _o_livre_de(item, opcao_id)
+    formas = _formas_do_livre_na_janela(item)
+    if nome not in formas:
+        raise RuntimeError("Essa forma não está gravada. Nada foi esquecido.")
+    _ao_rascunho(mod_id, livre, {f: s for f, s in formas.items() if f != nome}, item)
+    for opcao in (item.manifesto.opcoes if item.manifesto else ()):
+        if opcao.tipo != "por_botao":
+            continue
+        atual = _valor_na_janela(item, opcao)
+        if isinstance(atual, dict) and nome in atual.values():
+            sem = {b: f for b, f in atual.items() if f != nome}
+            with _dizendo_a_recusa():
+                _MEXIDA.rascunho[opcao.id] = opcoes.validar(
+                    opcao, sem, formas_extras=_formas_da_janela(item))
+    _montar_a_janela_da_extensao(mod_id)
+    return {**_a_pintura_agora(ctx), "recado": f"«{nome}» esquecida. Guarde para valer."}
+
+
+METODOS |= {METODO_DA_ACAO, METODO_DO_LIVRE}
+SEM_ECO = (*SEM_ECO, exp.GESTO_DA_ACAO, exp.GESTO_DO_LIVRE, exp.GESTO_DE_SOLTAR,
+           exp.GESTO_DE_GRAVAR, exp.GESTO_DE_ESQUECER_A_FORMA)

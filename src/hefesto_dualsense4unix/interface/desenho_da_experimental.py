@@ -323,7 +323,7 @@ class OpcaoDaJanela(NamedTuple):
     id: str
     rotulo: str
     tipo: str
-    valor: str | bool | float | Sequence[str] | Mapping[str, str]
+    valor: str | bool | float | Sequence[str] | Mapping[str, Any]
     escolhas: tuple[str, ...] = ()
     grupo: str = ""
     # O ``deslizante`` desenha a faixa do manifesto; o ``jogos`` desenha uma caixa por jogo,
@@ -691,7 +691,7 @@ def _topo_do_agora(vivo: bool, processo: str, porque: str) -> str:
 
 
 def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None, *, processo: str = "",
-               porque: str = "") -> str:
+               porque: str = "", gestao: Gestao | None = None) -> str:
     """O miolo da coluna «Agora»: só os pedaços que o manifesto declara, do ``acessorios.estado``.
 
     Sem estado, ou com a extensão parada (``ligado`` falso), o nível e o perfil ficam vazios: nenhum
@@ -699,6 +699,7 @@ def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None, *, proc
     o «Parar tudo» zera a força, e o adaptador segue ligado (a conexão que cai já devolve o estado
     vazio, sem item nenhum). O perfil e os nomes vêm de terceiros: escapados. ``processo`` e
     ``porque`` são os do supervisor: sem conexão, o canto diz se ela caiu, liga ou foi recusada.
+    ``gestao`` são os aparelhos geridos sem ``grupo``: cada linha ganha a chave e as ações.
     """
     vivo = bool(estado and estado.get("ligado") is True)
     linhas = ['<div class="ja-ag-topo"><span class="pc-sub">Agora</span>'
@@ -729,7 +730,8 @@ def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None, *, proc
             linhas.append('<div class="ja-perfil-linha" data-agora="perfil"><span class="ja-rot">'
                           f'Perfil</span><span class="ja-perfil-nome">{texto}</span></div>')
         else:
-            itens = "".join(_aparelho_html(a) for a in itens_do_estado(estado, pedaco))
+            itens = (aparelhos_na_coluna_html(gestao) if gestao and not gestao.aparelhos.grupo
+                     else "".join(_aparelho_html(a) for a in itens_do_estado(estado, pedaco)))
             vazio = (f'<div class="ap vazio">{icone_html(ICONE_DO_APARELHO, "mudo")}'
                      f'<span class="ap-nome">{SEM_VALOR}</span></div>')
             linhas.append(f'<div class="ja-aps" data-agora="aparelhos">{itens or vazio}</div>')
@@ -746,15 +748,23 @@ def parar_tudo_html(mod: str) -> str:
 
 def _arranjo_c(nome: str, ajustes: str, *, mod: str, agora: Sequence[str],
                estado: Mapping[str, Any] | None, parar: str, processo: str = "",
-               porque: str = "") -> str:
-    """A janela do arranjo C: «Parar tudo» no topo, a coluna «Agora» e os ajustes, e o rodapé."""
+               porque: str = "", faixa: str = "", gestao: Gestao | None = None) -> str:
+    """A janela do arranjo C: «Parar tudo» no topo, a coluna «Agora» e os ajustes, e o rodapé.
+
+    ``faixa`` é a do controle livre, fixa embaixo das duas colunas; sem ``agora``, os ajustes
+    ocupam a largura inteira.
+    """
+    coluna = (f'<div class="ja-agora" id="mod-agora">{agora_html(agora, estado, processo=processo, porque=porque, gestao=gestao)}</div>'
+              if agora else "")
+    classe = "ja-corpo" + ("" if agora else " sem-agora") + (" com-faixa" if faixa else "")
     return f'''    <div class="tn-topo ja-topo">
       <span class="tn-tit">Configurar · {_e(nome)}</span>{parar}
       <a class="tn-x" href="#" data-dica="Fechar">\u00d7</a>
     </div>
-    <div class="ja-corpo">
-      <div class="ja-agora" id="mod-agora">{agora_html(agora, estado, processo=processo, porque=porque)}</div>
+    <div class="{classe}">
+      {coluna}
       <div class="ja-opcoes">{ajustes}</div>
+      {faixa}
     </div>
     <div class="tn-rod">
       <a class="btn" href="#">Cancelar</a>
@@ -768,23 +778,33 @@ GESTO_DO_GUARDAR = "guardar-modificacao"
 def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: str = "",
                            agora: Sequence[str] = (), estado: Mapping[str, Any] | None = None,
                            parar_tudo: bool = False, aba: str = "", processo: str = "",
-                           porque: str = "") -> str:
+                           porque: str = "", acoes: Sequence[AcaoDaJanela] = (),
+                           aparelhos: AparelhosDaJanela | None = None,
+                           em_curso: frozenset[tuple[str, str]] = frozenset(),
+                           livre: LivreAoVivo | None = None) -> str:
     """O conteúdo da janela de uma extensão: um cartão por grupo, «Para» no topo, Cancelar e Guardar.
 
-    É o arranjo aprovado em 19/10: cada opção que o manifesto declara vira uma linha
-    do cartão do grupo dela. Mudar uma opção só a põe no rascunho da janela; o Guardar grava todas.
-    ``agora`` são os pedaços da coluna «Agora» que o manifesto declara (``estado`` é o último
-    ``acessorios.estado`` dela) e ``parar_tudo`` põe o botão no topo; os dois só com ``mod``.
-    Com ``agora``, a janela é o arranjo C (escolhido em 22/10/2026): a coluna à esquerda e os
-    grupos em abas à direita (``aba`` é o grupo aberto), sem o «Para».
+    Cada opção vira uma linha do cartão do grupo dela; o Guardar grava o rascunho. ``agora`` são os
+    pedaços da coluna «Agora» (``estado`` é o último ``acessorios.estado``) e ``parar_tudo`` põe o
+    botão no topo, os dois só com ``mod``. Com ``agora``, as ações, os ``aparelhos`` ou o ``livre``, é
+    o arranjo C: a coluna à esquerda e os grupos em abas (``aba`` é a aberta); ``em_curso`` são os
+    pares (ação, alvo) que esperam a extensão, e a opção ``livre`` vai à faixa de baixo.
     """
     parar = parar_tudo_html(mod) if parar_tudo and mod else ""
     agora = agora if mod else ()
     vazio = '<div class="ext-vazia">Esta extensão não tem opções para ajustar.</div>'
-    if agora:
-        return _arranjo_c(nome, _abas_das_opcoes(opcoes, aba) if opcoes else vazio, mod=mod,
-                          agora=agora, estado=estado, parar=parar, processo=processo,
-                          porque=porque)
+    livre_op = next((o for o in opcoes if o.tipo == "livre"), None) if mod else None
+    opcoes = [o for o in opcoes if o.tipo != "livre"]
+    acoes = tuple(acoes) if mod else ()
+    gestao = Gestao(mod, aparelhos, estado, em_curso) if mod and aparelhos else None
+    if agora or acoes or gestao or livre_op:
+        if acoes or (gestao and gestao.aparelhos.grupo):
+            ajustes = _abas_com_as_pecas(opcoes, aba, mod=mod, acoes=acoes, gestao=gestao)
+        else:
+            ajustes = _abas_das_opcoes(opcoes, aba) if opcoes else vazio
+        faixa = faixa_do_livre_html(livre_op, livre or LivreAoVivo(), gestao) if livre_op else ""
+        return _arranjo_c(nome, ajustes, mod=mod, agora=agora, estado=estado, parar=parar,
+                          processo=processo, porque=porque, faixa=faixa, gestao=gestao)
     corpo = _cartoes_das_opcoes(opcoes) if opcoes else vazio
     return f'''    <div class="tn-topo">
       <span class="tn-tit">Configurar · {_e(nome)}</span>
@@ -1016,8 +1036,353 @@ def telas() -> str:
         texto = texto.replace("{{CONF}}", lanc_conf_miolo_html(CONF_DE_EXEMPLO))
         texto = texto.replace("{{IMPEDIMENTOS}}", impedimentos_miolo_html("Steam", IMPEDIMENTOS_DE_EXEMPLO))
         texto = texto.replace("{{MODIFICACAO}}", modificacao_miolo_html(
-            "Minha extensão", OPCOES_DO_DESENHO_C, mod="exemplo", agora=AGORA_DO_DESENHO,
-            estado=ESTADO_DO_DESENHO, parar_tudo=True))
+            "Minha extensão", OPCOES_DO_DESENHO_DAS_PECAS, mod="exemplo", agora=AGORA_DO_DESENHO,
+            estado=ESTADO_DOS_GERIDOS_DO_DESENHO, parar_tudo=True, acoes=ACOES_DO_DESENHO,
+            aparelhos=APARELHOS_DO_DESENHO, em_curso=frozenset({("testar", "ap-2")}),
+            livre=LIVRE_DO_DESENHO))
         partes.append(texto.strip())
     return ("\n".join(partes) + f"\n{sprite_dos_botoes()}"
             f"\n<script data-aba=\"experimental\">\n{SCRIPT}</script>\n")
+
+
+# AS TRÊS PEÇAS QUE AGEM — 24/10/2026, A-JANELA-DA-EXTENSAO-GANHA-ACAO-APARELHOS-E-CONTROLE-LIVRE-01, o
+# arranjo C escolhido no desenho da janela nova. A janela de QUALQUER extensão ganha o botão que age na
+# hora (as ações do manifesto), a lista dos aparelhos que ela gere (uma chave e um botão por ação em
+# cada um) e o controle livre (a faixa fixa embaixo, à vista em toda aba). Nada aqui é de uma extensão:
+# os nomes, as abas e as ações vêm do manifesto e do ``acessorios.estado`` de cada uma.
+
+class AcaoDaJanela(NamedTuple):
+    """Uma ação do manifesto: o botão que age na hora, sem rascunho e sem «Guardar»."""
+
+    id: str
+    rotulo: str
+    grupo: str = ""
+    icone: str = ""
+
+
+class AparelhosDaJanela(NamedTuple):
+    """As ações de cada aparelho gerido e a aba em que a lista mora (sem ela, a coluna «Agora»)."""
+
+    acoes: tuple[AcaoDaJanela, ...]
+    grupo: str = ""
+
+
+class LivreAoVivo(NamedTuple):
+    """O que a faixa do controle livre mostra agora: o valor, se grava e o rastro dos últimos
+    segundos, como (instante, valor de 0 a 1), com ``agora`` no mesmo relógio."""
+
+    valor: float = 0.0
+    gravando: bool = False
+    rastro: tuple[tuple[float, float], ...] = ()
+    agora: float = 0.0
+
+
+class Gestao(NamedTuple):
+    """A lista dos aparelhos geridos de uma extensão, pronta para virar cartões ou linhas."""
+
+    mod: str
+    aparelhos: AparelhosDaJanela
+    estado: Mapping[str, Any] | None
+    em_curso: frozenset[tuple[str, str]] = frozenset()
+
+
+GESTO_DA_ACAO = "acao-da-modificacao"
+GESTO_DO_LIVRE = "mover-o-livre-da-modificacao"
+GESTO_DE_SOLTAR = "soltar-o-livre-da-modificacao"
+GESTO_DE_GRAVAR = "gravar-o-livre-da-modificacao"
+GESTO_DE_ESQUECER_A_FORMA = "esquecer-a-forma-do-livre"
+#: A ação que é a chave do cartão do aparelho (o ``ligado`` dele), e não um botão.
+ACAO_DE_LIGAR = "ligar"
+EM_CURSO = "Em curso"
+DICA_DA_CHAVE = "Liga ou desliga este aparelho"
+DICA_DO_GRAVAR = "Grava o que você arrastar como uma forma nova, para os botões do controle"
+#: Os segundos de rastro que a faixa mostra.
+RASTRO_S = 10.0
+_TRACO_DA_ACAO = ('viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" '
+                  'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"')
+#: O desenho de cada ``icone`` que o manifesto pode pedir para uma ação.
+ICONE_DA_ACAO = {
+    "procurar": '<circle cx="7" cy="7" r="4.5"/><line x1="10.5" y1="10.5" x2="14" y2="14"/>',
+    "testar": '<path d="M1 8 Q3 3 5 8 T9 8 T13 8 T15 8"/>',
+    "esquecer": '<path d="M3 4.5h10M6 4.5V3h4v1.5M4.5 4.5l.7 9h5.6l.7-9"/>',
+    "ligar": '<path d="M8 2v6"/><path d="M4.6 4.6a5 5 0 1 0 6.8 0"/>',
+    "atualizar": '<path d="M13 8a5 5 0 1 1-1.5-3.6"/><polyline points="13,2 13,5 10,5"/>',
+}
+
+
+def _icone_da_acao(icone: str) -> str:
+    desenho = ICONE_DA_ACAO.get(icone, "")
+    return f"<svg {_TRACO_DA_ACAO}>{desenho}</svg>" if desenho else ""
+
+
+def valor_da_acao(mod: str, acao_id: str, alvo: str = "") -> str:
+    """O ``data-v`` do botão de ação, o mesmo no cartão e na linha: ``mod:ação`` e, num aparelho,
+    ``:alvo``."""
+    return f"{mod}:{acao_id}" + (f":{alvo}" if alvo else "")
+
+
+def acao_html(mod: str, acao: AcaoDaJanela, *, alvo: str = "", em_curso: bool = False,
+              forte: bool = False) -> str:
+    """Um botão de ação (:func:`valor_da_acao`). Enquanto a extensão não devolve o estado, ele diz
+    «Em curso»."""
+    v = valor_da_acao(mod, acao.id, alvo)
+    classe = "btn mj-acao" + (" forte" if forte else "") + (" em-curso" if em_curso else "")
+    ocupado = ' aria-busy="true"' if em_curso else ""
+    return (f'<button class="{classe}" data-gesto="{GESTO_DA_ACAO}" data-v="{_a(v)}"{ocupado}>'
+            f'{_icone_da_acao(acao.icone)}<span>{EM_CURSO if em_curso else _e(acao.rotulo)}</span>'
+            "</button>")
+
+
+def barra_de_acoes_html(mod: str, acoes: Sequence[AcaoDaJanela],
+                        em_curso: frozenset[tuple[str, str]] = frozenset()) -> str:
+    """As ações de uma aba, numa fileira; a primeira é a forte."""
+    return "".join(acao_html(mod, a, em_curso=(a.id, "") in em_curso, forte=n == 0)
+                   for n, a in enumerate(acoes))
+
+
+def _aparelhos_geridos(estado: Mapping[str, Any] | None) -> list[dict[str, Any]]:
+    """Os aparelhos do estado que têm ``id``: só eles recebem gesto."""
+    return [ap for ap in itens_do_estado(estado, "aparelhos")
+            if isinstance(ap.get("id"), str) and ap.get("id")]
+
+
+def _chave_do_aparelho(g: Gestao, ap: Mapping[str, Any]) -> str:
+    """A chave do cartão, quando o manifesto declara ``ligar``: o clique pede o contrário."""
+    if not any(a.id == ACAO_DE_LIGAR for a in g.aparelhos.acoes):
+        return ""
+    ligado = ap.get("ligado") is not False
+    em_curso = (ACAO_DE_LIGAR, str(ap["id"])) in g.em_curso
+    classe = "mj-chave" + (" on" if ligado else "") + (" em-curso" if em_curso else "")
+    v = valor_da_acao(g.mod, ACAO_DE_LIGAR, str(ap["id"]))
+    return (f'<span class="{classe}" role="switch" aria-checked="{"true" if ligado else "false"}" '
+            f'data-gesto="{GESTO_DA_ACAO}" data-v="{_a(v)}" '
+            f'data-ligado="{"0" if ligado else "1"}" data-dica="{DICA_DA_CHAVE}"></span>')
+
+
+def _botoes_do_aparelho(g: Gestao, ap: Mapping[str, Any]) -> str:
+    alvo = str(ap["id"])
+    return "".join(acao_html(g.mod, a, alvo=alvo, em_curso=(a.id, alvo) in g.em_curso)
+                   for a in g.aparelhos.acoes if a.id != ACAO_DE_LIGAR)
+
+
+def _por_cento(bateria: Any) -> str:
+    if isinstance(bateria, bool) or not isinstance(bateria, int):
+        return ""
+    return f'<span class="mj-pct">{max(0, min(100, bateria))}%</span>'
+
+
+def aparelhos_geridos_html(g: Gestao) -> str:
+    """Os cartões dos aparelhos geridos, dois por fileira: o nome, a pilha, a chave, a força de
+    agora e um botão por ação. O aparelho desligado fica apagado e segue com as ações."""
+    cartoes = []
+    for ap in _aparelhos_geridos(g.estado):
+        estado = str(ap.get("estado") or "ligado")
+        vivo = _forca_html(ap.get("forca")) if estado == "ligado" else estado_html(estado)
+        fora = "" if ap.get("ligado") is not False else " fora"
+        cartoes.append(
+            f'<div class="mj-ap{fora}" data-alvo="{_a(ap["id"])}"><div class="mj-ap-cab">'
+            f'{icone_html(ICONE_DO_APARELHO, "acessorio" if estado == "ligado" else "mudo")}'
+            f'<span class="mj-ap-nome">{_e(ap.get("nome") or ap["id"])}</span>'
+            f'{bateria_html(ap.get("bateria"))}{_por_cento(ap.get("bateria"))}'
+            f'{_chave_do_aparelho(g, ap)}</div>'
+            f'<div class="mj-ap-meio">{vivo}</div>'
+            f'<div class="mj-ap-pe">{_botoes_do_aparelho(g, ap)}</div></div>')
+    if not cartoes:
+        return f'<div class="mj-ap-vazio">{SEM_APARELHOS}</div>'
+    return "".join(cartoes)
+
+
+SEM_APARELHOS = "Nenhum aparelho por aqui ainda."
+
+
+def aparelhos_na_coluna_html(g: Gestao) -> str:
+    """Os aparelhos geridos na coluna «Agora» (o manifesto sem ``grupo``): uma linha por aparelho,
+    com a chave e as ações em ícone."""
+    linhas = []
+    for ap in itens_do_estado(g.estado, "aparelhos"):
+        if not (isinstance(ap.get("id"), str) and ap.get("id")):
+            linhas.append(_aparelho_html(ap))
+            continue
+        alvo = str(ap["id"])
+        botoes = "".join(
+            f'<button class="btn ico mj-acao{" em-curso" if (a.id, alvo) in g.em_curso else ""}" '
+            f'data-gesto="{GESTO_DA_ACAO}" data-v="{_a(valor_da_acao(g.mod, a.id, alvo))}" '
+            f'data-dica="{_a(a.rotulo)}" aria-label="{_a(a.rotulo)}">'
+            f'{_icone_da_acao(a.icone) or _e(a.rotulo[:1])}</button>'
+            for a in g.aparelhos.acoes if a.id != ACAO_DE_LIGAR)
+        fora = "" if ap.get("ligado") is not False else " fora"
+        linhas.append(
+            f'<div class="ap mj-ap-linha{fora}" data-alvo="{_a(alvo)}">'
+            f'{icone_html(ICONE_DO_APARELHO, "acessorio")}'
+            f'<span class="ap-nome">{_e(ap.get("nome") or alvo)}</span>'
+            f'{bateria_html(ap.get("bateria"))}{botoes}{_chave_do_aparelho(g, ap)}</div>')
+    return "".join(linhas)
+
+
+def _grupos_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], acoes: Sequence[AcaoDaJanela],
+                         aparelhos: AparelhosDaJanela | None) -> list[str]:
+    """As abas na ordem: a dos aparelhos, as das ações e, depois, as das opções."""
+    nomes = [aparelhos.grupo if aparelhos else "", *(a.grupo for a in acoes),
+             *(o.grupo for o in opcoes)]
+    ordem = list(dict.fromkeys(n for n in nomes if n))
+    return ordem or ["Opções"]
+
+
+def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
+                       acoes: Sequence[AcaoDaJanela], gestao: Gestao | None) -> str:
+    """As abas do arranjo C com as ações e a lista dos aparelhos geridos.
+
+    Cada aba é: a fileira das ações dela (``#mod-acoes-<n>``), a lista dos aparelhos se ela é a do
+    ``grupo`` deles (``#mod-aparelhos``) e as linhas das opções. A ação sem ``grupo`` vai à primeira
+    aba, como a opção sem grupo. A ponte repinta os dois blocos a cada tique, e a aba não pula.
+    """
+    nomes = _grupos_com_as_pecas(opcoes, acoes, gestao.aparelhos if gestao else None)
+    primeiro = nomes[0]
+    por_aba: dict[str, list[OpcaoDaJanela]] = {n: [] for n in nomes}
+    for o in opcoes:
+        por_aba[o.grupo or primeiro].append(o)
+    acoes_da: dict[str, list[AcaoDaJanela]] = {n: [] for n in nomes}
+    for a in acoes:
+        acoes_da[a.grupo or primeiro].append(a)
+    aberta = aba if aba in por_aba else primeiro
+    em_curso = gestao.em_curso if gestao else frozenset()
+    telas = []
+    for n, nome in enumerate(nomes):
+        partes = []
+        if acoes_da[nome]:
+            partes.append(f'<div class="mj-acoes" id="mod-acoes-{n}">'
+                          f"{barra_de_acoes_html(mod, acoes_da[nome], em_curso)}</div>")
+        if gestao and gestao.aparelhos.grupo == nome:
+            partes.append(f'<div class="mj-aps" id="mod-aparelhos">{aparelhos_geridos_html(gestao)}</div>')
+        if por_aba[nome]:
+            partes.append(_linhas_das_opcoes(por_aba[nome]))
+        telas.append(
+            f'<input type="radio" name="mj-aba" id="mj-aba-{n}"{" checked" if nome == aberta else ""}>'
+            f'<label for="mj-aba-{n}">{_e(nome)}</label>'
+            f'<div class="mj-tela">{"".join(partes)}</div>')
+    return f'<div class="ac-card mj-abas" style="--n:{len(nomes)}">{"".join(telas)}</div>'
+
+
+def acoes_por_aba(opcoes: Sequence[OpcaoDaJanela], acoes: Sequence[AcaoDaJanela],
+                  aparelhos: AparelhosDaJanela | None) -> dict[int, tuple[AcaoDaJanela, ...]]:
+    """As ações de cada aba pelo número dela, o mesmo de ``#mod-acoes-<n>``: quem repinta usa."""
+    nomes = _grupos_com_as_pecas(opcoes, acoes, aparelhos)
+    return {n: tuple(a for a in acoes if (a.grupo or nomes[0]) == nome)
+            for n, nome in enumerate(nomes) if any((a.grupo or nomes[0]) == nome for a in acoes)}
+
+
+def _y_do_rastro(v: float) -> str:
+    return f"{96 - 92 * max(0.0, min(1.0, v)):.1f}"
+
+
+def rastro_html(vivo: LivreAoVivo) -> str:
+    """O rastro dos últimos ``RASTRO_S`` segundos do controle livre, em degraus: cada valor vale
+    até o seguinte, e a linha fica vermelha enquanto grava."""
+    inicio = vivo.agora - RASTRO_S
+    antes = [v for t, v in vivo.rastro if t < inicio]
+    atual = antes[-1] if antes else (0.0 if vivo.rastro else vivo.valor)
+    pontos = [f"0,{_y_do_rastro(atual)}"]
+    for t, v in vivo.rastro:
+        if t < inicio:
+            continue
+        x = f"{(t - inicio) / RASTRO_S * 1000:.0f}"
+        pontos += [f"{x},{_y_do_rastro(atual)}", f"{x},{_y_do_rastro(v)}"]
+        atual = v
+    pontos.append(f"1000,{_y_do_rastro(atual)}")
+    classe = "mj-rastro gravando" if vivo.gravando else "mj-rastro"
+    return (f'<svg class="{classe}" viewBox="0 0 1000 100" preserveAspectRatio="none" '
+            f'aria-hidden="true"><line x1="0" y1="50" x2="1000" y2="50"/>'
+            f'<polyline points="{" ".join(pontos)}"/></svg>')
+
+
+def alvos_do_livre_html(g: Gestao | None) -> str:
+    """Quem recebe o controle livre: um chip por aparelho gerido, aceso se ligado. O clique é a
+    mesma chave do cartão (a ação ``ligar``), e só aparece quando o manifesto a declara."""
+    if g is None or not any(a.id == ACAO_DE_LIGAR for a in g.aparelhos.acoes):
+        return ""
+    chips = []
+    for ap in _aparelhos_geridos(g.estado):
+        ligado = ap.get("ligado") is not False
+        em_curso = " em-curso" if (ACAO_DE_LIGAR, str(ap["id"])) in g.em_curso else ""
+        v = valor_da_acao(g.mod, ACAO_DE_LIGAR, str(ap["id"]))
+        chips.append(f'<span class="chip mj-alvo{" on" if ligado else ""}{em_curso}" '
+                     f'data-gesto="{GESTO_DA_ACAO}" data-v="{_a(v)}" '
+                     f'data-ligado="{"0" if ligado else "1"}" data-dica="{DICA_DA_CHAVE}">'
+                     f'{_e(ap.get("nome") or ap["id"])}</span>')
+    return "".join(chips)
+
+
+def _formas_do_livre_html(o: OpcaoDaJanela) -> str:
+    """As formas gravadas: um chip com a onda e o nome, e o «x» que a esquece (no rascunho)."""
+    formas = o.valor if isinstance(o.valor, Mapping) else {}
+    chips = []
+    for nome, passos in formas.items():
+        pares = [(float(f), float(t)) for f, t in passos]
+        duracao = sum(t for _f, t in pares)
+        chips.append(
+            f'<span class="chip mj-forma" data-dica="{len(pares)} passos, {duracao:.1f} s">'
+            f'{_onda_da_forma(pares)}<span>{_e(nome)}</span>'
+            f'<button class="mj-x" data-gesto="{GESTO_DE_ESQUECER_A_FORMA}" '
+            f'data-v="{_a(o.mod)}:{_a(o.id)}:{_a(nome)}" aria-label="Esquecer «{_a(nome)}»" '
+            f'data-dica="Esquecer «{_a(nome)}»">\u00d7</button></span>')
+    return "".join(chips)
+
+
+def faixa_do_livre_html(o: OpcaoDaJanela, vivo: LivreAoVivo, gestao: Gestao | None) -> str:
+    """A faixa fixa embaixo do arranjo C: o rastro, a barra que se arrasta, o «Gravar», quem recebe
+    e as formas gravadas.
+
+    A barra é um ``range``: o ``input`` é o gesto vivo (lê e manda, nunca grava; a porta segura em
+    20 por segundo) e o ``change`` é o soltar, que sempre sai. O rastro e os chips de quem recebe
+    são blocos próprios (``#mod-livre-rastro`` e ``#mod-livre-alvos``), repintados pelo tique sem
+    tocar na barra que o dedo está arrastando.
+    """
+    v = round(max(0.0, min(1.0, vivo.valor)) * 100)
+    gravar = ("btn mj-gravar on", "Parar e guardar") if vivo.gravando else ("btn mj-gravar", "Gravar")
+    return f'''<div class="mj-faixa" data-livre="{_a(o.id)}">
+      <div class="mj-faixa-topo"><span class="pc-sub">{_e(o.rotulo)}</span></div>
+      <div class="mj-livre-rastro" id="mod-livre-rastro">{rastro_html(vivo)}</div>
+      <div class="mj-trilho" style="--v:{v}"><input type="range" min="0" max="100" step="1" value="{v}" data-hef-vivo="{GESTO_DO_LIVRE}" data-gesto="{GESTO_DE_SOLTAR}" data-v="{_a(o.mod)}:{_a(o.id)}" aria-label="{_a(o.rotulo)}" oninput="this.parentNode.style.setProperty('--v',this.value);this.nextElementSibling.textContent=this.value"><output>{v}</output></div>
+      <div class="mj-faixa-pe">
+        <button class="{gravar[0]}" data-gesto="{GESTO_DE_GRAVAR}" data-v="{_a(o.mod)}:{_a(o.id)}" data-dica="{DICA_DO_GRAVAR}"><i></i>{gravar[1]}</button>
+        <span class="mj-alvos" id="mod-livre-alvos">{alvos_do_livre_html(gestao)}</span>
+        <span class="mj-formas">{_formas_do_livre_html(o)}</span>
+      </div>
+    </div>'''
+
+
+# O exemplo das três peças no desenho (24/10/2026): a mesma extensão de exemplo, agora com uma ação
+# («Parear», na aba dos aparelhos), quatro aparelhos geridos com id (um desligado) e o controle livre
+# com duas formas gravadas, que entram na escolha de cada botão dos toques.
+ACOES_DO_DESENHO = (AcaoDaJanela("parear", "Parear", "Aparelhos", "procurar"),)
+APARELHOS_DO_DESENHO = AparelhosDaJanela((
+    AcaoDaJanela(ACAO_DE_LIGAR, "Ligar", icone="ligar"),
+    AcaoDaJanela("testar", "Testar", icone="testar"),
+    AcaoDaJanela("esquecer", "Esquecer", icone="esquecer"),
+), "Aparelhos")
+FORMAS_GRAVADAS_DO_DESENHO = {
+    "Meu 1": ((0.2, 0.4), (0.6, 0.4), (1.0, 0.6), (0.4, 0.4)),
+    "Meu 2": ((0.8, 0.2), (0.0, 0.2), (0.8, 0.2), (0.0, 0.2)),
+}
+ESTADO_DOS_GERIDOS_DO_DESENHO: dict[str, Any] = {
+    **ESTADO_DO_DESENHO,
+    "aparelhos": [
+        {"id": "ap-1", "nome": "Aparelho 1", "estado": "ligado", "ligado": True, "bateria": 80,
+         "forca": 0.7},
+        {"id": "ap-2", "nome": "Aparelho 2", "estado": "ligado", "ligado": True, "bateria": 45,
+         "forca": 0.3},
+        {"id": "ap-3", "nome": "Aparelho 3", "estado": "ligado", "ligado": True, "bateria": 62,
+         "forca": 0.5},
+        {"id": "ap-4", "nome": "Aparelho 4", "estado": "ligado", "ligado": False, "bateria": 18,
+         "forca": 0.0},
+    ],
+}
+OPCOES_DO_DESENHO_DAS_PECAS = (
+    OPCOES_DO_DESENHO_C[0]._replace(formas=(*FORMAS_DO_DESENHO, *FORMAS_GRAVADAS_DO_DESENHO.items())),
+    *OPCOES_DO_DESENHO_C[1:],
+    OpcaoDaJanela("exemplo", "ao-vivo", "Ao vivo", "livre",
+                  {n: [list(p) for p in f] for n, f in FORMAS_GRAVADAS_DO_DESENHO.items()}),
+)
+LIVRE_DO_DESENHO = LivreAoVivo(0.65, False, tuple(
+    (t / 10, 0.35 + 0.3 * ((t % 20) / 20 if (t // 20) % 2 == 0 else 1 - (t % 20) / 20))
+    for t in range(0, 100, 2)), 10.0)

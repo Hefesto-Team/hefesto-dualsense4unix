@@ -266,7 +266,7 @@ def test_a_janela_da_extensao_com_agora_no_desenho_e_o_arranjo_c() -> None:
     """O arranjo C escolhido em 22/10/2026: a coluna «Agora», os grupos em abas e o «Parar tudo»."""
     janela = _janela(_ler(SETE), _ID)
     abas = re.findall(r'<label for="mj-aba-\d+">([^<]*)</label>', janela)
-    assert abas == ["Toques", "Ligação", "Geral", "Luz e vibração", "Avançado"], abas
+    assert abas == ["Aparelhos", "Toques", "Ligação", "Geral", "Luz e vibração", "Avançado"], abas
     assert janela.count(" checked>") >= 1 and 'id="mj-aba-0" checked' in janela
     assert 'id="mod-agora"' in janela and "Para</span>Todos" not in janela
     assert 'class="ja-parar" data-gesto="parar-tudo-da-modificacao"' in janela

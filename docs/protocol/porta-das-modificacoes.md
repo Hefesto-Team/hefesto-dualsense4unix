@@ -42,9 +42,9 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `lancador.jogos` | `{jogos: [{chave, nome, abrir: [...], janela?}]}` | `lancador` | `{recebidos}` |
 | `controles.lista` | `{}` | `ler:conexao` | `{controles: [{uniq, jogador}]}` |
 
-Cada `aparelhos[]` é `{nome, tipo, estado, bateria, forca}`: `nome` (até 60 letras) é o único obrigatório, e um
+Cada `aparelhos[]` é `{nome, tipo, estado, bateria, forca, id?, ligado?}`: `nome` (até 60 letras) é o único obrigatório, e um
 texto solto vale `{nome}`; `tipo` é livre (até 30 letras); `estado` é `ligado` (o padrão), `procurando`,
-`desligado` ou `falhou`; `bateria` vai de 0 a 100 e `forca` de 0 a 1, ou `null`. Cada `conexoes[]` é
+`desligado` ou `falhou`; `bateria` vai de 0 a 100 e `forca` de 0 a 1, ou `null`; `id` (até 40 letras) é o alvo das ações do aparelho e `ligado` (verdadeiro ou falso) é a chave dele, os dois da extensão que gere os aparelhos (ver «As ações, os aparelhos e o controle livre»). Cada `conexoes[]` é
 `{id, tipo, transporte, estado, motivo}`: `id` (até 40 letras) e `tipo` (até 30) são da extensão, `transporte` é
 `usb`, `bluetooth`, `rede` ou `local`, `estado` é o mesmo dos aparelhos e `motivo` (até 120 letras, ou `null`) diz
 por que ela não liga. Até 32 de cada. Um item torto recusa o estado inteiro (`-32602`, com a frase).
@@ -313,7 +313,7 @@ escrever nada:
 A interface desenha a janela «Configurar» de cada extensão do que o `hefesto-mod.json` declara, sem
 código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opcionais, `escolhas`, `padrao` e `grupo`.
 
-- **`tipo`**: `escolha` (lista em `escolhas`), `ligado`, `numero`, `cor`, `deslizante`, `jogos`, `endereco`, `por_botao` e `css` (só em extensão de tema; ver «O CSS de quem usa»). A `cor` é um
+- **`tipo`**: `escolha` (lista em `escolhas`), `ligado`, `numero`, `cor`, `deslizante`, `jogos`, `endereco`, `por_botao`, `livre` (ver «As ações, os aparelhos e o controle livre») e `css` (só em extensão de tema; ver «O CSS de quem usa»). A `cor` é um
   seletor de cor da interface; o valor é `#rrggbb` em minúsculas, e um `padrao` que não seja `#rrggbb` recusa
   o manifesto. O `deslizante` declara `minimo`, `maximo` e `passo` (`minimo` menor que `maximo`, `passo`
   maior que zero) e o `padrao`, **obrigatório** e dentro da faixa: é a posição inicial; a janela desenha um
@@ -352,6 +352,43 @@ ele mostra; sem nenhuma das duas o manifesto é recusado. O `parar_tudo` não pe
   toque de confirmação, e o serviço confere o «parar curto» só da extensão. Volta `{parado}`, falso quando ela não
   está conectada: o botão então recusa dizendo que ela não está rodando, em vez de piscar o «enviado». Recusa (`-32003`, com a frase) a extensão que não está instalada ou cujo manifesto não declara
   `parar_tudo`.
+
+### As ações, os aparelhos e o controle livre
+
+Três peças fazem a janela AGIR em vez de só mostrar. As três pedem `publicar:acessorios.estado` (ou
+`ler:acessorios.gesto`): a resposta da extensão é o estado que ela devolve, e é ele que tira o «Em curso».
+
+- **`acoes`**: até 8 botões, `[{id, rotulo, grupo?, icone?}]`. O `id` é chave (até 32 letras minúsculas, números,
+  hífen e sublinhado), o `rotulo` tem até 30 letras, o `grupo` é a aba em que o botão mora (sem ele, a primeira) e o `icone`
+  é `procurar`, `testar`, `esquecer`, `ligar` ou `atualizar`. Id repetido recusa o manifesto.
+- **`aparelhos_acoes`**: `{grupo?, acoes: [{id, rotulo, icone?}]}` (de 1 a 6 ações), as ações de cada aparelho que a extensão
+  devolve em `acessorios.estado` com `id`. A ação `ligar` é a chave do cartão (o clique pede o contrário do
+  `ligado` de agora); as outras são botões. A ação do aparelho não declara `grupo`, porque mora no cartão. Com
+  `grupo`, a lista mora naquela aba, um cartão por aparelho; sem ele, na coluna «Agora», uma linha por aparelho,
+  e então o `agora` tem de listar `aparelhos`, senão o manifesto é recusado. O aparelho sem `id` aparece como
+  antes, sem chave nem botão.
+- **o tipo `livre`** de `opcoes[]`, um só por manifesto: o controle ao vivo, uma faixa fixa no pé da janela,
+  com o rastro dos últimos 10 s. Arrastar manda `extensao.livre`; «Gravar» guarda o arrastar como uma forma
+  `[[força, segundos], …]` (até 16 passos, 160 s); o valor da opção são as formas gravadas, `{nome: passos}`,
+  até 16, e o `padrao`, opcional, tem a mesma forma. As formas do `livre` entram nas `formas` das opções
+  `por_botao` da MESMA extensão: um botão pode tocar «Meu 1», e a forma esquecida devolve o botão ao padrão. A
+  forma de uma extensão nunca aparece na janela de outra, e o «Guardar» de outra a recusa.
+
+A extensão recebe as três como eventos (`{"method": "evento", "params": {"topico", "nome", "uniq": null,
+"dados"}}`), só ela, sem assinar tópico nenhum:
+
+- `extensao.acao` com `dados: {mod, acao, alvo, valor?}`: `alvo` é o `id` do aparelho (ou `null` nas `acoes` da
+  janela) e `valor` vem só na chave `ligar` (`true` liga);
+- `extensao.livre` com `dados: {mod, id, valor (0 a 1), soltou}`: no máximo 20 por segundo. O primeiro arrastar
+  abre um compasso de 50 ms e ao fim dele sai o valor mais novo; o soltar (`soltou: true`) sai na hora, fora do
+  compasso, e leva o valor final.
+
+A janela os pede ao serviço por `mods.acao {mod, acao, alvo?, valor?}` (volta `{enviada}`) e
+`mods.livre {mod, id, valor, soltou}` (volta `{enviado}`); os dois voltam falso quando a extensão não está
+conectada, e a janela recusa dizendo que ela não está rodando. O serviço recusa (`-32003`, com a frase) a ação
+que o manifesto não declara ali (nos aparelhos com `alvo`, na janela sem ele) e o `livre` de outro `id`. O botão
+diz «Em curso» até a extensão devolver um `acessorios.estado` novo: cada estado guardado ganha um `serie`, que
+`mods.agora` devolve e que sobe a cada estado; sem estado novo em 5 s, o botão volta.
 
 ## A extensão de tema
 

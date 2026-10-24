@@ -29,7 +29,7 @@ def _do_topo() -> set[str]:
     return set(pacotes.topo(_Vazio()))
 
 CAMPO = re.compile(r'data-campo="([^"]+)"')
-GESTO = re.compile(r'data-gesto="([^"]+)"')
+GESTO = re.compile(r'data-(?:gesto|hef-vivo)="([^"]+)"')  # o vivo é a quarta porta (24/10)
 
 
 @pytest.fixture(scope="module")
