@@ -1339,13 +1339,13 @@ def faixa_do_livre_html(o: OpcaoDaJanela, vivo: LivreAoVivo, gestao: Gestao | No
     tocar na barra que o dedo está arrastando.
     """
     v = round(max(0.0, min(1.0, vivo.valor)) * 100)
-    gravar = ("btn mj-gravar on", "Parar e guardar") if vivo.gravando else ("btn mj-gravar", "Gravar")
+    gravar = ("btn mj-gravar on", "true") if vivo.gravando else ("btn mj-gravar", "false")
     return f'''<div class="mj-faixa" data-livre="{_a(o.id)}">
       <div class="mj-faixa-topo"><span class="pc-sub">{_e(o.rotulo)}</span></div>
       <div class="mj-livre-rastro" id="mod-livre-rastro">{rastro_html(vivo)}</div>
       <div class="mj-trilho" style="--v:{v}"><input type="range" min="0" max="100" step="1" value="{v}" data-hef-vivo="{GESTO_DO_LIVRE}" data-gesto="{GESTO_DE_SOLTAR}" data-v="{_a(o.mod)}:{_a(o.id)}" aria-label="{_a(o.rotulo)}" oninput="this.parentNode.style.setProperty('--v',this.value);this.nextElementSibling.textContent=this.value"><output>{v}</output></div>
       <div class="mj-faixa-pe">
-        <button class="{gravar[0]}" data-gesto="{GESTO_DE_GRAVAR}" data-v="{_a(o.mod)}:{_a(o.id)}" data-dica="{DICA_DO_GRAVAR}"><i></i>{gravar[1]}</button>
+        <button class="{gravar[0]}" data-gesto="{GESTO_DE_GRAVAR}" data-v="{_a(o.mod)}:{_a(o.id)}" aria-pressed="{gravar[1]}" data-dica="{DICA_DO_GRAVAR}"><i></i>Gravar</button>
         <span class="mj-alvos" id="mod-livre-alvos">{alvos_do_livre_html(gestao)}</span>
         <span class="mj-formas">{_formas_do_livre_html(o)}</span>
       </div>

@@ -2569,9 +2569,9 @@ def _ao_rascunho(mod_id: str, opcao: Any, valor: Any, item: _Instalada) -> None:
 
 @gesto("07-lancadores.html", exp.GESTO_DE_GRAVAR)
 def gravar_o_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
-    """«Gravar» começa; «Parar e guardar» faz do que se arrastou uma forma nova («Meu N») no
-    rascunho do livre. Quem grava no disco é o Guardar da janela, e a forma entra na escolha dos
-    botões desta extensão."""
+    """«Gravar» começa; o segundo clique, com ele aceso, faz do que se arrastou uma forma nova
+    («Meu N») no rascunho do livre. Quem grava no disco é o Guardar da janela, e a forma entra
+    na escolha dos botões desta extensão."""
     from hefesto_dualsense4unix.mods.manifesto import FORMAS_POR_OPCAO
 
     mod_id, opcao_id = _partes_do_clique(o, exp.GESTO_DE_GRAVAR, 2)

@@ -10,7 +10,11 @@ MORDIDAS (24/10/2026, executadas sobre a cura e devolvidas):
 - o ``:alvo`` tirado do ``data-v`` do botão do aparelho reprova
   ``test_quatro_aparelhos_viram_quatro_linhas_e_o_testar_leva_o_alvo``;
 - o compasso da porta solto (1000 por segundo no lugar de 20) reprova
-  ``test_arrastar_um_segundo_sai_em_no_maximo_vinte_e_o_ultimo_e_o_soltar``.
+  ``test_arrastar_um_segundo_sai_em_no_maximo_vinte_e_o_ultimo_e_o_soltar``;
+- o teto do «Em curso» tirado da conta do ``esperando`` reprova
+  ``test_o_em_curso_sai_no_teto_mesmo_sem_a_serie_subir``;
+- o ``aria-pressed`` tirado do «Gravar» reprova
+  ``test_o_gravar_aceso_continua_gravar_e_se_diz_apertado``.
 """
 
 from __future__ import annotations
@@ -305,6 +309,23 @@ def test_a_chave_do_aparelho_pede_o_contrario_e_o_botao_diz_em_curso(janela, ctx
     assert "em-curso" not in blocos["#mod-aparelhos"]
 
 
+def test_o_em_curso_sai_no_teto_mesmo_sem_a_serie_subir(janela, ctx, monkeypatch) -> None:  # noqa: F811
+    """A extensão que não devolve estado nenhum não deixa o botão preso em «Em curso»."""
+    a07, instalar, abrir = janela
+    instalar(**_pecas())
+    ponte = _Ponte(VIVO)
+    abrir(ponte)
+    relogio = [1000.0]
+    monkeypatch.setattr(a07.time, "monotonic", lambda: relogio[0])
+    a07.acao_da_modificacao(ctx, {"v": "toque:parear"}, ponte)
+    a07._AGORA.ler("toque", ponte)
+    relogio[0] += a07.TETO_DO_EM_CURSO_S - 0.5
+    assert "Em curso" in a07._com_os_aparelhos({"blocos": {}})["blocos"]["#mod-acoes-0"]
+    relogio[0] += 1.0
+    assert "Em curso" not in a07._com_os_aparelhos({"blocos": {}})["blocos"]["#mod-acoes-0"], (
+        "sem a série subir, o «Em curso» passou do teto")
+
+
 def test_a_acao_da_extensao_parada_recusa_dizendo(janela, ctx) -> None:  # noqa: F811
     a07, instalar, abrir = janela
     instalar(**_pecas())
@@ -427,6 +448,29 @@ def test_esquecer_a_forma_devolve_o_botao_ao_padrao(janela, ctx, lar) -> None:  
     a07.guardar_modificacao(ctx, {"v": "toque"}, ponte)
     valores = opcoes.ler(manifesto_instalado("toque", lugares=lar), lar)
     assert valores["ao-vivo"] == {} and valores["toques"]["cross"] == "Pulso"
+
+
+def test_o_gravar_aceso_continua_gravar_e_se_diz_apertado(janela, ctx) -> None:  # noqa: F811
+    """O arranjo C: o «Gravar» aceso é o mesmo botão, vermelho e apertado; ele não promete guardar,
+    porque quem grava no disco é o Guardar da janela."""
+    import re
+
+    a07, instalar, abrir = janela
+    instalar(**_pecas())
+    ponte = _Ponte(VIVO)
+    abrir(ponte)
+
+    def botao(carga: dict[str, Any]) -> str:
+        achado = re.search(r'<button class="([^"]*)" data-gesto="gravar-o-livre-da-modificacao"'
+                           r'[^>]*>(.*?)</button>', carga["blocos"]["#mod-janela"], re.S)
+        assert achado, "a faixa não tem o «Gravar»"
+        return achado.group(0)
+
+    aceso = botao(a07.gravar_o_livre_da_modificacao(ctx, {"v": "toque:ao-vivo"}, ponte))
+    assert 'aria-pressed="true"' in aceso and "mj-gravar on" in aceso, aceso
+    assert aceso.endswith("Gravar</button>"), f"o botão aceso trocou o rótulo: {aceso}"
+    apagado = botao(a07.gravar_o_livre_da_modificacao(ctx, {"v": "toque:ao-vivo"}, ponte))
+    assert 'aria-pressed="false"' in apagado and "mj-gravar on" not in apagado, apagado
 
 
 def test_gravar_sem_arrastar_nao_cria_forma(janela, ctx) -> None:  # noqa: F811
