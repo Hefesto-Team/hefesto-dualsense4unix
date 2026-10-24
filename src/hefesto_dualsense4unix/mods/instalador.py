@@ -508,8 +508,9 @@ def instalar(
     ninguém pediu: permissão, aviso ou preparo novos, a tag que não confere e o ``substitui``
     esperam o «Atualizar» em ``versao_esperando``. ``aviso_visto`` é o da tela (outro aviso recusa
     com :class:`AvisoParaVerError` antes de gravar; ``None`` o deixa para o ligar). O ``preparar``
-    roda depois da troca do código, quando nada espera o «sim» (senão, no ligar); o que falha
-    deixa a extensão instalada e desligada, com o motivo, e recusa com a frase.
+    roda depois da troca do código quando ele já teve o «sim» e nada mais o espera (senão, no
+    ligar, e sempre no ligar na primeira instalação); o que falha deixa a extensão instalada e
+    desligada, com o motivo, e recusa com a frase.
     """
     lg = lugares or Lugares.do_xdg()
     pasta_local = Path(origem).expanduser()
@@ -572,8 +573,13 @@ def instalar(
                     "não troquei o código."
                 )
         _trocar_o_codigo(baixada, lg.codigo / manifesto.id)
-        # Nada espera o «sim»: o preparo roda agora; esperando, ele roda no «ligar», depois dele.
         pronta = not novas and manifesto.aviso in ("", aviso_aceito)
+        # O preparo é código fora da caixa: roda agora só na que segue ligada, com o «sim» já dado
+        # a ele (o «Atualizar», ou a atualização sozinha do preparo aceito); a primeira instalação,
+        # a desligada e a que espera o «sim» o deixam para o «ligar»
+        # (D-2410-O-PREPARO-RODA-SO-DEPOIS-DO-SIM).
+        prepara_agora = bool(manifesto.preparar) and pronta and anterior is not None and (
+            anterior.ligada and (not sozinha or anterior.preparo_aceito == manifesto.preparar))
         entrada = Entrada(
             id=manifesto.id,
             nome=manifesto.nome,
@@ -583,7 +589,8 @@ def instalar(
             ref=ref,
             commit=commit,
             permissoes_aceitas=list(aceitas),
-            ligada=(seguia_ligada or bool(antigas_ligadas)) and pronta,
+            ligada=(seguia_ligada or bool(antigas_ligadas)) and pronta
+            and (prepara_agora or not manifesto.preparar),
             aviso_aceito=aviso_aceito,
             instalada_em=datetime.now(timezone.utc).isoformat(timespec="microseconds"),
         )
@@ -591,7 +598,7 @@ def instalar(
             entrada.atualiza_sozinha = anterior.atualiza_sozinha
             entrada.intervalo_da_atualizacao_s = anterior.intervalo_da_atualizacao_s
             entrada.preparo_aceito = list(anterior.preparo_aceito)
-        if manifesto.preparar and pronta:
+        if prepara_agora:
             _rodar_o_preparo(lg, manifesto, entrada)
         if a_substituir:
             from hefesto_dualsense4unix.mods import opcoes

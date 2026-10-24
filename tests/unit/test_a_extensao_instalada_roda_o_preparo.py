@@ -100,9 +100,9 @@ def _entrada(lar: Lugares) -> instalador.Entrada:
     return ler_registro(lar.registro)["exemplo"]
 
 
-def _ligar(lar: Lugares, aviso: str = "") -> None:
-    ligar("exemplo", permissoes_vistas=manifesto_instalado("exemplo", lugares=lar).permissoes,
-          aviso_visto=aviso, lugares=lar)
+def _ligar(lar: Lugares, aviso: str = "") -> instalador.Entrada:
+    vistas = manifesto_instalado("exemplo", lugares=lar).permissoes
+    return ligar("exemplo", permissoes_vistas=vistas, aviso_visto=aviso, lugares=lar)
 
 
 # -- o manifesto ---------------------------------------------------------------
@@ -128,8 +128,9 @@ def test_o_manifesto_sem_preparar_segue_valendo(tmp_path: Path) -> None:
 # -- os quatro casos da sprint ----------------------------------------------------
 
 
-def test_instalar_roda_o_preparo_fora_da_caixa_como_quem_usa(lar: Lugares, tmp_path: Path) -> None:
-    feito = instalar(str(_fonte(tmp_path)), lugares=lar)
+def test_o_preparo_roda_fora_da_caixa_como_quem_usa(lar: Lugares, tmp_path: Path) -> None:
+    instalar(str(_fonte(tmp_path)), lugares=lar)
+    feito = _ligar(lar)
 
     casa, pasta = _preparado(lar).read_text(encoding="utf-8").splitlines()
     assert casa == os.environ["HOME"], "o preparo roda na casa de quem usa, não na caixa"
@@ -140,8 +141,18 @@ def test_instalar_roda_o_preparo_fora_da_caixa_como_quem_usa(lar: Lugares, tmp_p
     assert "SEGREDO_DA_SESSAO" not in ambiente, "o preparo não herda a sessão inteira"
     assert "preparando" in (lar.dados / "exemplo" / DIARIO_DO_PREPARO).read_text(encoding="utf-8")
     entrada = _entrada(lar)
-    assert entrada.preparada_em == entrada.instalada_em == feito.entrada.instalada_em
+    assert entrada.preparada_em == entrada.instalada_em == feito.instalada_em
     assert entrada.preparo_aceito == _PREPARAR and entrada.motivo_do_preparo == ""
+
+
+def test_a_primeira_instalacao_deixa_o_preparo_para_o_ligar(lar: Lugares, tmp_path: Path) -> None:
+    """Sem aviso nem permissão, colar o endereço não roda nada fora da caixa: a chave é o «sim»."""
+    instalar(str(_fonte(tmp_path)), lugares=lar)
+    assert not _preparado(lar).exists(), "o preparo rodou na instalação, antes do «sim»"
+    entrada = _entrada(lar)
+    assert not entrada.ligada and entrada.preparada_em == "" and entrada.preparo_aceito == []
+    instalar(str(_fonte(tmp_path, versao="1.1.0")), lugares=lar)
+    assert not _preparado(lar).exists(), "atualizar a desligada rodou o preparo antes do «sim»"
 
 
 def test_atualizar_para_a_versao_nova_roda_o_preparo_de_novo(
@@ -242,8 +253,9 @@ def test_o_preparo_que_passa_do_prazo_e_parado_pelo_pid(
     lar: Lugares, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setattr(instalador, "PRAZO_DO_PREPARO_S", 0.5)
+    instalar(str(_fonte(tmp_path, modo="demora")), lugares=lar)
     with pytest.raises(InstalacaoRecusadaError, match="passou de"):
-        instalar(str(_fonte(tmp_path, modo="demora")), lugares=lar)
+        _ligar(lar)
 
     pid = int((lar.dados / "exemplo" / "pid").read_text(encoding="utf-8"))
     fim = time.monotonic() + 5.0

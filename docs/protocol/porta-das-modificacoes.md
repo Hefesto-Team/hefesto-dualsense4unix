@@ -267,9 +267,9 @@ dados, o certificado), e é o instalador que o roda (`mods/instalador.py`, `_pre
   recebe o `SIGKILL`;
 - com a saída em `preparo.log`, na pasta de dados (a da última vez, até 256 KiB).
 
-O preparo só roda depois do «sim». Quando a versão instalada ainda espera o «sim» do aviso ou das
-permissões (a primeira instalação de quem pede permissão, o aviso que mudou), ele roda no «ligar», antes de a
-chave ligar. O que falha (código diferente de zero, prazo passado, comando que não existe) deixa a extensão
+O preparo só roda depois do «sim», e o «sim» é o «ligar». A primeira instalação, a extensão desligada e a
+versão que ainda espera o «sim» do aviso ou das permissões o deixam para o «ligar», antes de a chave ligar;
+só a atualização da que segue ligada o roda no `instalar`/`atualizar`. O que falha (código diferente de zero, prazo passado, comando que não existe) deixa a extensão
 instalada e desligada, com o motivo na linha (`motivo_do_preparo`) e na recusa do gesto; o «ligar» seguinte o
 roda de novo. A linha guarda o comando que teve o «sim» (`preparo_aceito`) e a instalação que ele preparou
 (`preparada_em`, a `instalada_em` dela). Um `preparar` novo numa atualização sozinha é permissão nova: a
