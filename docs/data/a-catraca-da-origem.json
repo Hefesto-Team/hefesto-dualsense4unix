@@ -245,14 +245,14 @@
       "data": "2026-10-24",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1198345,
+      "piso": 1198954,
       "por_item": {
-        "docs": 120934,
+        "docs": 120942,
         "scripts": 120631,
-        "src": 320153,
-        "tests": 636627
+        "src": 320288,
+        "tests": 637093
       },
-      "razao": "tamanho: +467 linhas (1197878 -> 1198345), pagas por Origem: D-2410-A-EXTENSAO-SE-PREPARA-AO-INSTALAR-E-AO-ATUALIZAR, D-2410-O-PREPARO-RODA-SO-DEPOIS-DO-SIM; registrado no fecho, topo 2df6da954d26",
+      "razao": "tamanho: +609 linhas (1198345 -> 1198954), pagas por Origem: D-2410-O-ENDPOINT-DO-CABO-TEM-RELOGIO-PROPRIO, D-2410-O-PAD-RECUSADO-PELA-SESSAO-PEDE-DE-NOVO; registrado no fecho, topo 8605ea2f0754",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -919,10 +919,16 @@
           "de": 1197878,
           "para": 1198345,
           "razao": "tamanho: +467 linhas (1197878 -> 1198345), pagas por Origem: D-2410-A-EXTENSAO-SE-PREPARA-AO-INSTALAR-E-AO-ATUALIZAR, D-2410-O-PREPARO-RODA-SO-DEPOIS-DO-SIM; registrado no fecho, topo 2df6da954d26"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 1198345,
+          "para": 1198954,
+          "razao": "tamanho: +609 linhas (1198345 -> 1198954), pagas por Origem: D-2410-O-ENDPOINT-DO-CABO-TEM-RELOGIO-PROPRIO, D-2410-O-PAD-RECUSADO-PELA-SESSAO-PEDE-DE-NOVO; registrado no fecho, topo 8605ea2f0754"
         }
       ],
       "unidade": "linhas",
-      "universo": 3135
+      "universo": 3137
     }
   }
 }
