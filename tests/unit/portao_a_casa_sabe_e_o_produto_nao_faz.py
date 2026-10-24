@@ -845,6 +845,17 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "`innerText` do Chrome, e o `test_o_stripper_nao_engole_a_dica_nem_"
         "inventa_tamanho` a morde."
     ),
+    "interface/frases_que_ela_baniu.py::roteiros_de": (
+        "24/10/2026, A-LEITURA-DOS-ROTEIROS-E-DE-REGUA-E-NAO-PROMESSA-01 — é a "
+        "terceira leitura da régua pelo `html.parser` (OS-ALERTAS-DO-CODEQL-"
+        "ZERAM-01, `e86a522e8`), irmã de `texto_visivel`, e não é promessa "
+        "pela mesma razão: o produto não lê a própria página, ele a ESCREVE. "
+        "Quem chama é o gerador `interface/aba10.py` (bancada, podado da "
+        "conta) e os testes. Evidência: o docstring de `tests/unit/"
+        "test_o_html_das_reguas_e_lido_pelo_parser.py`, e os casos "
+        "`test_os_roteiros_vem_com_os_atributos` e `test_o_roteiro_nao_inclui_"
+        "o_que_esta_em_comentario`, que a mordem."
+    ),
     "interface/monta.py::larg_rotulos": (
         "Auxiliar do gerador do mockup (interface/monta.py:125), chamado só pelos "
         "dez `interface/abaNN.py` — que são BANCADA e saem da conta pela poda de "
