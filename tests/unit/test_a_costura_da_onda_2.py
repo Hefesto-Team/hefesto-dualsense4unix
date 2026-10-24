@@ -391,8 +391,20 @@ def _composicoes_da_palavra(raiz: Path) -> set[tuple[str, str]]:
             and isinstance(no.body[0], ast.Expr)
             and isinstance(no.body[0].value, ast.Constant)
         }
+        # o ``antes=`` de uma ``Edicao`` é o texto velho que a edição TIRA da página, e o
+        # ``porque=`` é a prosa que o cita: medi-los como composição acusava a própria cura
+        # (A-REGUA-DO-DONO-DA-PORTA-LE-O-ANTES-DA-EDICAO-01)
+        textos_que_saem = {
+            id(chave.value)
+            for no in ast.walk(arvore)
+            if isinstance(no, ast.Call) and isinstance(no.func, ast.Name) and no.func.id == "Edicao"
+            for chave in no.keywords
+            if chave.arg in ("antes", "porque")
+        }
         nome = str(arquivo.relative_to(raiz))
         for no in ast.walk(arvore):
+            if id(no) in textos_que_saem:
+                continue
             if isinstance(no, ast.JoinedStr):
                 partes = no.values
                 for atual, seguinte in itertools.pairwise(partes):
@@ -449,6 +461,19 @@ def test_o_nome_da_porta_tem_um_dono_so() -> None:
     caducos = sorted(set(_OS_QUE_PODEM) - achados)
     assert not intrusos, f"um segundo dono do nome da porta: {intrusos}"
     assert not caducos, f"a exceção deixou de existir — tire-a de _OS_QUE_PODEM: {caducos}"
+
+
+
+def test_o_antes_da_edicao_nao_conta_e_o_depois_conta(tmp_path: Path) -> None:
+    """O que a ``Edicao`` tira, e o porquê que o cita, não são donos da porta; o que ela põe, sim.
+
+    Mordida: tire o ``textos_que_saem`` de ``_composicoes_da_palavra``, e o ``antes`` acusa.
+    """
+    tira = 'Edicao(antes="a Entrada {de} hoje", depois="a {de}", porque="tira «a Entrada {de}»")\n'
+    poe = 'Edicao(antes="a {de}", depois="a Entrada {de} hoje")\n'
+    (tmp_path / "tira.py").write_text(tira, encoding="utf-8")
+    (tmp_path / "poe.py").write_text(poe, encoding="utf-8")
+    assert _composicoes_da_palavra(tmp_path) == {("poe.py", "tem um modelo de .format")}
 
 
 @pytest.mark.parametrize(
