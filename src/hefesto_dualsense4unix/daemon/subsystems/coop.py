@@ -2445,8 +2445,10 @@ class CoopManager:
         A rede do P1 (`gamepad.upgrade_primary_vpad_to_uhid`) estendida aos
         secundários, com as mesmas travas: `uhid_available()`, a R-04 e o
         `REBACKEND_COOLDOWN_SEC`, este POR IDENTIDADE (a rajada de um não segura
-        o outro). Quem passa sai pelo `teardown` e renasce no laço, na ordem da
-        carta, com o mesmo número.
+        o outro). Quem passa sai pelo `teardown` e renasce no laço com o mesmo
+        número. O pad que renasceu de uma promoção e caiu de novo com o
+        `/dev/uhid` aberto (o `start` ou o bind, que a trava não vê) não tenta
+        mais enquanto estiver na mesa, como o P1, que só tenta na borda.
         """
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
             REBACKEND_COOLDOWN_SEC,
@@ -2464,12 +2466,24 @@ class CoopManager:
             and not self._espera(p)
             and (motivo := motivo_da_degradacao(p.vpad)) is not None
         ]
+        renascidos: set[str] = self.__dict__.setdefault("_renasceu_da_promocao", set())
+        sem_volta: set[str] = self.__dict__.setdefault("_promocao_sem_volta", set())
+        sem_volta &= set(self._players)  # quem saiu da mesa tenta de novo na volta
+        renascidos -= {m for m, p in self._players.items() if p.vpad is not None} - {
+            m for m, _ in degradados
+        }
         if not degradados or not controller_allows_uhid(self._daemon) or not uhid_available():
             return []
         carimbos: dict[str, float] = self.__dict__.setdefault("_promovido_em", {})
         agora = time.monotonic()
         promovidos: list[str] = []
         for mac, motivo in degradados:
+            if mac in renascidos and motivo != "uhid_indisponivel":
+                renascidos.discard(mac)
+                sem_volta.add(mac)
+                logger.info("vpad_promocao_sem_volta", motivo=motivo, identity=mac)
+            if mac in sem_volta:
+                continue
             if agora - carimbos.get(mac, float("-inf")) < REBACKEND_COOLDOWN_SEC:
                 continue
             player = self._players[mac]
@@ -2486,6 +2500,7 @@ class CoopManager:
                 **self._numero_e_indice(player),
             )
             self._teardown_player(mac)
+            renascidos.add(mac)
             promovidos.append(mac)
         if promovidos:
             self._retry_spawn = True

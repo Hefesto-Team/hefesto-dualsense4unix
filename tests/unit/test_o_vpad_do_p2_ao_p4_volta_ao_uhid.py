@@ -239,22 +239,51 @@ def test_sem_uhid_nada_se_recria(monkeypatch: pytest.MonkeyPatch) -> None:
     assert all(v.paradas == 0 for v in antes.values())
 
 
-def test_o_uhid_que_volta_a_cair_tenta_uma_vez_por_cooldown(
+def test_o_uhid_que_volta_a_cair_tenta_uma_vez_so(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """O `uhid_available()` diz sim e o CREATE2 cai: no máximo uma volta por janela."""
+    """O `uhid_available()` diz sim e o bind cai: uma volta só, nunca um laço por janela.
+
+    A máquina sem o canal (o `hid_playstation` que não faz bind) recriaria os pads do
+    P2 ao P4 a cada janela, para sempre; o P1 só tenta na borda de conexão.
+    """
     m = _Mesa(monkeypatch, MESA_MISTA)
     monkeypatch.setattr(
         "hefesto_dualsense4unix.integrations.virtual_pad._try_uhid",
-        lambda flavor, **kw: (None, "uhid_sem_bind"),
+        lambda flavor, **kw: (None, "uhid_bind_falhou"),
     )
     m.uhid = True
     janela = int(REBACKEND_COOLDOWN_SEC / 2.0)
-    for _ in range(3 * janela):
+    m.tique()
+    depois_da_volta = len(_Pad.criados)
+    assert depois_da_volta > 3, "a primeira volta não saiu"
+    for _ in range(5 * janela):
         m.tique()
-    tentativas = len(_Pad.criados) - 3
-    assert 3 * 2 <= tentativas <= 3 * 4, f"{tentativas} tentativas em três janelas"
+    assert len(_Pad.criados) == depois_da_volta, (
+        f"{len(_Pad.criados) - depois_da_volta} pads recriados depois da volta que caiu"
+    )
     assert set(m.backends().values()) == {"uinput"}
+
+
+def test_o_uhid_sem_acesso_segue_tentando_a_cada_janela(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """O `/dev/uhid` que pisca o acesso: a trava mede a causa, e a volta segue por janela."""
+    m = _Mesa(monkeypatch, MESA_MISTA, sem_uhid_no_boot={P4})
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.integrations.virtual_pad._try_uhid",
+        lambda flavor, **kw: (
+            (_Pad("uhid", flavor), None)
+            if kw.get("identity") != P4
+            else (None, "uhid_indisponivel")
+        ),
+    )
+    m.uhid = True
+    m.tique()
+    primeira = len(_Pad.criados)
+    m.tique(REBACKEND_COOLDOWN_SEC)
+    assert len(_Pad.criados) > primeira, "o acesso que volta não ganhou a segunda volta"
+    assert m.backends()[P4] == "uinput"
 
 
 def test_o_cooldown_de_um_nao_segura_o_outro(monkeypatch: pytest.MonkeyPatch) -> None:
