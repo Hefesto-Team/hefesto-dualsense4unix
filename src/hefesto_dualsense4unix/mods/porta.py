@@ -74,6 +74,12 @@ TRANSPORTES_DA_CONEXAO = ("usb", "bluetooth", "rede", "local")
 ITENS_DO_ESTADO = 32
 #: O evento que o «Parar tudo» da janela entrega à extensão que não lê o gesto ``para``.
 EVENTO_DO_PARAR = "extensao.parar"
+#: O clique num botão de ação da janela e o arrastar do ``livre``, só para a extensão dona.
+EVENTO_DA_ACAO = "extensao.acao"
+EVENTO_DO_LIVRE = "extensao.livre"
+#: O arrastar do ``livre`` sai no compasso de ``1 / LIVRE_POR_SEGUNDO`` s, com o valor mais novo ao
+#: fim de cada compasso; o soltar sai na hora, fora do compasso, e leva o valor final.
+LIVRE_POR_SEGUNDO = 20
 #: O tópico ``botoes``: o serviço entrega o aperto de TODO controle, cada um com o dele.
 TOPICO_DOS_BOTOES = "botoes"
 #: O tópico ``entradas``: os analógicos, os gatilhos e o touchpad de TODO controle.
@@ -388,7 +394,11 @@ def _estado_do_item(bruto: dict[str, Any], onde: str) -> str:
 
 
 def _aparelho(bruto: Any) -> dict[str, Any]:
-    """``{nome, tipo, estado, bateria, forca}``; o texto solto (o formato antigo) é só o nome."""
+    """``{nome, tipo, estado, bateria, forca}``; o texto solto (o formato antigo) é só o nome.
+
+    ``id`` (até 40 letras, o que a ação do aparelho leva como ``alvo``) e ``ligado`` (a chave do
+    cartão) só saem quando a extensão os manda.
+    """
     if isinstance(bruto, str):
         bruto = {"nome": bruto}
     if not isinstance(bruto, dict):
@@ -400,13 +410,20 @@ def _aparelho(bruto: Any) -> dict[str, Any]:
     if forca is not None and (not _numero(forca) or not 0.0 <= float(forca) <= 1.0):
         raise _recusa_do_estado("a força de um aparelho vai de 0 a 1, ou nula.")
     tipo = bruto.get("tipo")
-    return {
+    saida = {
         "nome": _curto(bruto.get("nome"), "o nome do aparelho", 60),
         "tipo": None if tipo is None else _curto(tipo, "o tipo do aparelho", 30),
         "estado": _estado_do_item(bruto, "um aparelho"),
         "bateria": bateria,
         "forca": None if forca is None else round(float(forca), 3),
     }
+    if bruto.get("id") is not None:
+        saida["id"] = _curto(bruto.get("id"), "o id do aparelho", 40)
+    if "ligado" in bruto:
+        if not isinstance(bruto["ligado"], bool):
+            raise _recusa_do_estado("o ligado de um aparelho é verdadeiro ou falso.")
+        saida["ligado"] = bruto["ligado"]
+    return saida
 
 
 def _conexao_do_estado(bruto: Any) -> dict[str, Any]:
@@ -504,6 +521,19 @@ def _carga_das_entradas(uniq: str | None, jogador: Any, via: Any, valores: _Valo
             "dedos": [{"x": x, "y": y} for x, y in dedos]}
 
 
+@dataclass
+class _Compasso:
+    """O compasso do arrastar de um ``livre``: o valor que espera e o relógio que o solta."""
+
+    pendente: dict[str, Any] | None = None
+    relogio: asyncio.TimerHandle | None = None
+
+    def cancelar(self) -> None:
+        if self.relogio is not None:
+            self.relogio.cancel()
+        self.pendente = self.relogio = None
+
+
 class Porta:
     """O servidor da porta das modificações, dentro do laço do serviço."""
 
@@ -543,6 +573,10 @@ class Porta:
         #: O que saiu por último no tópico ``entradas``, por controle: ``(valores, instante,
         #: jogador, transporte)``. Quem nunca saiu do repouso não está aqui.
         self._entradas_enviadas: dict[str | None, tuple[_Valores | None, float, Any, Any]] = {}
+        #: Quantos ``acessorios.estado`` cada extensão já devolveu: a janela vê a resposta à ação.
+        self._series: dict[str, int] = {}
+        #: O arrastar do ``livre`` de cada ``(mod, opção)``: o valor que espera o fim do compasso.
+        self._livres: dict[tuple[str, str], _Compasso] = {}
 
     # -- quem pode entrar -------------------------------------------------
 
@@ -854,7 +888,8 @@ class Porta:
             )
         estado = estado_dos_acessorios(con.sessao.mod_id, params)
         con.deu_o_estado = True
-        self._estados_dos_acessorios[con.sessao.mod_id] = estado
+        serie = self._series[con.sessao.mod_id] = self._series.get(con.sessao.mod_id, 0) + 1
+        self._estados_dos_acessorios[con.sessao.mod_id] = {**estado, "serie": serie}
         if "ler:acessorios.gesto" in con.sessao.permissoes:
             self.bus.publish(EventTopic.ACESSORIOS_ESTADO, estado)
         return {"recebido": True}
@@ -938,6 +973,62 @@ class Porta:
         tarefa = asyncio.get_running_loop().create_task(self._enviar(con, writer, linha))
         con.tarefas.append(tarefa)
         tarefa.add_done_callback(lambda t: con.tarefas.remove(t) if t in con.tarefas else None)
+
+    def _conexoes_de(self, mod_id: str) -> list[_Conexao]:
+        return [con for con in self._conexoes
+                if con.sessao is not None and con.sessao.mod_id == mod_id
+                and con.escritor is not None]
+
+    def _avisar_a(self, mod_id: str, nome: str, dados: dict[str, Any]) -> bool:
+        """O evento ``nome`` a cada conexão de ``mod_id``, e a nenhuma outra."""
+        delas = self._conexoes_de(mod_id)
+        for con in delas:
+            assert con.escritor is not None
+            self._avisar(con, con.escritor, nome, dados)
+        return bool(delas)
+
+    def acao(self, mod_id: str, acao: str, *, alvo: str | None = None,
+             valor: bool | None = None) -> bool:
+        """O clique numa ação da janela: ``extensao.acao`` só para as conexões de ``mod_id``.
+
+        ``alvo`` é o ``id`` do aparelho (as ``aparelhos_acoes``); ``valor`` é a chave ``ligar``
+        (``True`` liga). ``False`` quando a extensão não está conectada à porta.
+        """
+        dados: dict[str, Any] = {"mod": mod_id, "acao": acao, "alvo": alvo}  # noqa-acento: contrato
+        if valor is not None:
+            dados["valor"] = valor
+        return self._avisar_a(mod_id, EVENTO_DA_ACAO, dados)
+
+    def livre(self, mod_id: str, opcao_id: str, valor: float, *, soltou: bool) -> bool:
+        """O arrastar do ``livre``: ``extensao.livre {mod, id, valor, soltou}`` só para ``mod_id``.
+
+        No máximo ``LIVRE_POR_SEGUNDO`` eventos por segundo: o primeiro arrastar abre um compasso
+        de ``1 / LIVRE_POR_SEGUNDO`` s, e ao fim dele sai o valor mais novo. O soltar sai na hora,
+        cancela o que esperava e leva o valor final. ``False`` sem a extensão na porta.
+        """
+        if not self._conexoes_de(mod_id):
+            return False
+        dados = {"mod": mod_id, "id": opcao_id, "valor": round(min(1.0, max(0.0, valor)), 3),
+                 "soltou": soltou}
+        chave = (mod_id, opcao_id)
+        compasso = self._livres.setdefault(chave, _Compasso())
+        if soltou:
+            compasso.cancelar()
+            self._livres.pop(chave, None)
+            return self._avisar_a(mod_id, EVENTO_DO_LIVRE, dados)
+        compasso.pendente = dados
+        if compasso.relogio is None:
+            compasso.relogio = asyncio.get_running_loop().call_later(
+                1.0 / LIVRE_POR_SEGUNDO, self._fim_do_compasso, chave)
+        return True
+
+    def _fim_do_compasso(self, chave: tuple[str, str]) -> None:
+        compasso = self._livres.get(chave)
+        if compasso is None:
+            return
+        dados, compasso.pendente, compasso.relogio = compasso.pendente, None, None
+        if dados is not None:
+            self._avisar_a(chave[0], EVENTO_DO_LIVRE, dados)
 
     # -- o tópico ``botoes``, de todo controle ------------------------------
 
@@ -1372,8 +1463,11 @@ __all__ = [
     "CODE_QUEM_E_VOCE",
     "CODE_SEM_PERMISSAO",
     "ENTRADAS_POR_SEGUNDO",
+    "EVENTO_DA_ACAO",
+    "EVENTO_DO_LIVRE",
     "EVENTO_DO_PARAR",
     "JANELA_DA_VIBRACAO_DO_JOGO_S",
+    "LIVRE_POR_SEGUNDO",
     "PUBLICACOES_POR_SEGUNDO",
     "Controles",
     "Porta",

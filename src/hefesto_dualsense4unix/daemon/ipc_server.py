@@ -228,6 +228,8 @@ class IpcServer(IpcHandlersMixin):
             "mods.agora": self._handle_mods_agora,
             "mods.parar_tudo": self._handle_mods_parar_tudo,
             "mods.jogos": self._handle_mods_jogos,
+            "mods.acao": self._handle_mods_acao,
+            "mods.livre": self._handle_mods_livre,
             "radio.ponte.ligar_aqui": self._handle_radio_ponte_ligar_aqui,
             "radio.mover": self._handle_radio_mover,
             "mira.set": self._handle_mira_set,

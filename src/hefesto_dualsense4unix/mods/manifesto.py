@@ -156,6 +156,29 @@ BOTOES_DO_POR_BOTAO = (
 PASSOS_DA_FORMA = 16
 SEGUNDOS_DO_PASSO = 10.0
 FORMAS_POR_OPCAO = 16
+#: Uma ação da janela (nas duas listas do manifesto): o botão que AGE na hora, sem rascunho.
+ACOES_DA_JANELA = 8
+ACOES_DO_APARELHO = 6
+#: A ação do aparelho com este id é a chave «ligado» do cartão, e não um botão.
+ACAO_DE_LIGAR = "ligar"
+#: Os desenhos que uma ação pode pedir; sem ``icone``, o botão é só o rótulo.
+ICONES_DA_ACAO = ("procurar", "testar", "esquecer", "ligar", "atualizar")
+
+
+def forma_valida(nome: object, passos: object) -> bool:
+    """A forma ``nome: [[força 0..1, segundos], ...]``: o nome de 1 a 20 letras, até 16 passos,
+    cada passo até 10 s. A régua é uma só, do ``por_botao`` e do ``livre``."""
+    if not isinstance(nome, str) or not 1 <= len(nome) <= 20:
+        return False
+    if not isinstance(passos, list) or len(passos) > PASSOS_DA_FORMA:
+        return False
+    for passo in passos:
+        if not (isinstance(passo, (list, tuple)) and len(passo) == 2
+                and all(isinstance(x, (int, float)) and not isinstance(x, bool) for x in passo)):
+            return False
+        if not (0.0 <= passo[0] <= 1.0 and 0.0 < passo[1] <= SEGUNDOS_DO_PASSO):
+            return False
+    return True
 
 #: A cor de uma opção ``cor``: ``#rrggbb``, minúsculas ou maiúsculas.
 COR_HEXA = re.compile(r"^#[0-9a-fA-F]{6}$")
@@ -273,9 +296,11 @@ class Opcao(BaseModel):
     rotulo: str = Field(min_length=1, max_length=60)
     tipo: Literal[
         "escolha", "ligado", "numero", "cor", "deslizante", "jogos", "css", "endereco", "por_botao",
+        "livre",
     ]
     escolhas: list[str] = Field(default_factory=list)
-    padrao: str | bool | float | list[str] | dict[str, str] | None = None
+    padrao: (str | bool | float | list[str] | dict[str, str] | dict[str, list[list[float]]]
+             | None) = None
     # O ``por_botao``: as formas pelo nome (cada uma, passos ``[força, segundos]``; a lista vazia é
     # a forma que não toca) e os botões que a janela mostra. O valor é ``{botão: forma}``.
     formas: dict[str, list[list[float]]] = Field(default_factory=dict)
@@ -314,8 +339,10 @@ class Opcao(BaseModel):
             raise ValueError(f"a opção {self.id} não é de jogos e o padrão é uma lista")
         if self.tipo == "por_botao":
             self._conferir_o_por_botao()
-        elif self.formas or self.botoes or isinstance(self.padrao, dict):
+        elif self.formas or self.botoes or (isinstance(self.padrao, dict) and self.tipo != "livre"):
             raise ValueError(f"a opção {self.id} não é por_botao e declara formas ou botões")
+        if self.tipo == "livre":
+            self._conferir_o_livre()
         if self.tipo == "endereco" and self.padrao is not None and not (
             isinstance(self.padrao, str)
             and (not self.padrao or endereco_valido(self.padrao) is not None)
@@ -327,12 +354,8 @@ class Opcao(BaseModel):
         if not self.formas or len(self.formas) > FORMAS_POR_OPCAO:
             raise ValueError(f"o por_botao {self.id} declara de 1 a {FORMAS_POR_OPCAO} formas")
         for nome, passos in self.formas.items():
-            if not 1 <= len(nome) <= 20 or len(passos) > PASSOS_DA_FORMA:
-                raise ValueError(f"a forma «{nome}» de {self.id} tem o nome ou os passos fora")
-            for passo in passos:
-                if (len(passo) != 2 or not 0.0 <= passo[0] <= 1.0
-                        or not 0.0 < passo[1] <= SEGUNDOS_DO_PASSO):
-                    raise ValueError(f"a forma «{nome}» de {self.id} pede [força 0..1, segundos]")
+            if not forma_valida(nome, passos):
+                raise ValueError(f"a forma «{nome}» de {self.id} pede [força 0..1, segundos]")
         estranhos = [b for b in self.botoes if b not in BOTOES_DO_POR_BOTAO]
         if estranhos or len(set(self.botoes)) != len(self.botoes):
             raise ValueError(f"o por_botao {self.id} lista botão desconhecido ou repetido")
@@ -342,6 +365,17 @@ class Opcao(BaseModel):
             b not in self.botoes_da_janela or f not in self.formas for b, f in self.padrao.items()
         ):
             raise ValueError(f"o padrão do por_botao {self.id} é {{botão: forma declarada}}")
+
+    def _conferir_o_livre(self) -> None:
+        """O ``livre``: o controle ao vivo da faixa de baixo da janela. O valor são as formas
+        gravadas, ``{nome: [[força, segundos], ...]}``, até 16; sem escolhas."""
+        if self.escolhas:
+            raise ValueError(f"o livre {self.id} não lista escolhas")
+        if self.padrao is None:
+            return
+        if not isinstance(self.padrao, dict) or len(self.padrao) > FORMAS_POR_OPCAO or not all(
+                forma_valida(n, f) for n, f in self.padrao.items()):
+            raise ValueError(f"o padrão do livre {self.id} é {{nome: [[força 0..1, segundos]]}}")
 
     @property
     def botoes_da_janela(self) -> tuple[str, ...]:
@@ -365,6 +399,46 @@ class Opcao(BaseModel):
             isinstance(x, str) and CHAVE_DE_JOGO.match(x) for x in self.padrao
         ):
             raise ValueError(f"o padrão da opção {self.id} é uma lista de chaves de jogo")
+
+
+class Acao(BaseModel):
+    """Um botão da janela que AGE: o clique vai à extensão como o evento ``extensao.acao``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    rotulo: str = Field(min_length=1, max_length=30)
+    # A aba da janela em que o botão mora; sem ela, a primeira aba.
+    grupo: str | None = Field(default=None, min_length=1, max_length=30)
+    icone: Literal["procurar", "testar", "esquecer", "ligar", "atualizar"] | None = None
+
+    @field_validator("id")
+    @classmethod
+    def _chave(cls, valor: str) -> str:
+        if not _CHAVE_DE_LANCADOR.match(valor):
+            raise ValueError("id da ação fora da forma de chave")
+        return valor
+
+
+class AcoesDosAparelhos(BaseModel):
+    """Os aparelhos que a extensão devolve em ``acessorios.estado``, com uma ação por botão.
+
+    A ação ``ligar`` é a chave do cartão (o ``ligado`` do aparelho); as outras são botões. Com
+    ``grupo``, a lista mora naquela aba da janela; sem ele, na coluna «Agora».
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    grupo: str | None = Field(default=None, min_length=1, max_length=30)
+    acoes: list[Acao] = Field(min_length=1, max_length=ACOES_DO_APARELHO)
+
+    @model_validator(mode="after")
+    def _sem_grupo_na_acao(self) -> AcoesDosAparelhos:
+        if any(a.grupo for a in self.acoes):
+            raise ValueError("a ação do aparelho mora no cartão dele e não declara grupo")
+        if len({a.id for a in self.acoes}) != len(self.acoes):
+            raise ValueError("ação repetida nos aparelhos")
+        return self
 
 
 class Manifesto(BaseModel):
@@ -396,6 +470,10 @@ class Manifesto(BaseModel):
     # O botão «Parar tudo», sempre à vista: a extensão o recebe como o evento ``extensao.parar``
     # (e, com ``ler:acessorios.gesto``, como o gesto ``para``). O nível e o perfil ficam guardados.
     parar_tudo: bool = False
+    # Os botões que agem na hora (``extensao.acao``) e as ações de cada aparelho da lista: os dois
+    # pedem a permissão da coluna «Agora», porque a resposta da extensão é o estado que ela devolve.
+    acoes: list[Acao] = Field(default_factory=list, max_length=ACOES_DA_JANELA)
+    aparelhos_acoes: AcoesDosAparelhos | None = None
     # O conteúdo destes três é das sprints que os consomem (o lançador do
     # KytyPS5, o tema da interface, a ponte dos acessórios): aqui só a forma.
     lancador: dict[str, Any] | None = None
@@ -471,9 +549,33 @@ class Manifesto(BaseModel):
         if self.agora and not set(PERMISSOES_DO_ESTADO) & set(self.permissoes):
             raise ValueError(
                 "agora pede a permissão publicar:acessorios.estado ou ler:acessorios.gesto")
+        self._conferir_as_acoes_e_o_livre()
         self._conferir_o_lado_e_as_opcoes_do_tema()
         self._conferir_a_opcao_do_css()
         return self
+
+    def _conferir_as_acoes_e_o_livre(self) -> None:
+        """As ações, os aparelhos geridos e o ``livre``: a permissão do estado, ids sem repetição,
+        um ``livre`` só, e a lista sem ``grupo`` só onde a coluna «Agora» mostra os aparelhos."""
+        livres = [o.id for o in self.opcoes if o.tipo == "livre"]
+        pedem = [nome for nome, tem in (("acoes", bool(self.acoes)),  # noqa-acento: contrato
+                                        ("aparelhos_acoes", self.aparelhos_acoes is not None),
+                                        ("o livre", bool(livres))) if tem]
+        if pedem and not set(PERMISSOES_DO_ESTADO) & set(self.permissoes):
+            raise ValueError(f"{pedem[0]} pede a permissão publicar:acessorios.estado")
+        if len(livres) > 1:
+            raise ValueError("mais de uma opção livre")
+        if len({a.id for a in self.acoes}) != len(self.acoes):
+            raise ValueError("ação repetida em acoes")  # noqa-acento: contrato ASCII
+        geridos = self.aparelhos_acoes
+        if geridos is not None and geridos.grupo is None and "aparelhos" not in self.agora:
+            raise ValueError(
+                "aparelhos_acoes sem grupo mora na coluna Agora, e agora não lista aparelhos")
+
+    @property
+    def opcao_livre(self) -> Opcao | None:
+        """A opção ``livre`` (o controle ao vivo da faixa de baixo), se o manifesto declara."""
+        return next((o for o in self.opcoes if o.tipo == "livre"), None)
 
     def _conferir_a_opcao_do_css(self) -> None:
         """A opção ``css`` é a chave do CSS de quem usa: só uma, e só em extensão de tema."""
@@ -567,11 +669,15 @@ def ler_manifesto(pasta: Path, *, exigir_api: bool = True) -> Manifesto:
 
 
 __all__ = [
+    "ACAO_DE_LIGAR",
+    "ACOES_DA_JANELA",
+    "ACOES_DO_APARELHO",
     "ALCANCES_DE_REDE",
     "BOTOES_DO_POR_BOTAO",
     "CANAIS_DE_ESCRITA",
     "COR_HEXA",
     "FUNCOES_POR_PEDIDO",
+    "ICONES_DA_ACAO",
     "NOME_DAS_ENTRADAS",
     "NOME_DA_FUNCAO",
     "NOME_DO_MANIFESTO",
@@ -580,12 +686,15 @@ __all__ = [
     "TIPOS",
     "TOPICOS_DE_LEITURA",
     "TOPICOS_DE_PUBLICACAO",
+    "Acao",  # noqa-acento: contrato ASCII
+    "AcoesDosAparelhos",
     "Manifesto",
     "ManifestoRecusadoError",
     "Opcao",  # (noqa-acento): contrato ASCII
     "Processo",
     "aceita_a_api",
     "endereco_valido",
+    "forma_valida",
     "frase_da_api",
     "ler_manifesto",
     "o_que_a_permissao_deixa",

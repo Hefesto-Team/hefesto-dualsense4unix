@@ -2,6 +2,10 @@
 
 A tela escolhe, a modificação lê o mesmo arquivo na sua pasta de dados. Ler nunca levanta: um valor
 que o manifesto não aceita (arquivo editado, opção que saiu da versão nova) cai no padrão.
+
+As formas gravadas na opção ``livre`` valem também nos ``por_botao`` da MESMA extensão: a forma de
+um botão se procura pelo nome nas ``formas`` do manifesto e, depois, no valor do ``livre``. O botão
+cuja forma gravada saiu volta sozinho ao padrão dele, sem levar os outros botões junto.
 """
 from __future__ import annotations
 
@@ -20,11 +24,13 @@ from hefesto_dualsense4unix.mods.manifesto import (
     Manifesto,
     Opcao,
     endereco_valido,
+    forma_valida,
 )
 
 NOME_DO_ARQUIVO = "opcoes.json"
 
-Valor = str | bool | float | list[str] | dict[str, str]
+Formas = dict[str, list[list[float]]]
+Valor = str | bool | float | list[str] | dict[str, str] | Formas
 
 
 def caminho(mod_id: str, lugares: Lugares) -> Path:
@@ -35,6 +41,8 @@ def padrao_de(opcao: Opcao) -> Valor:
     """O que a opção vale sem escolha: o padrão do manifesto, ou o primeiro jeito de cada tipo."""
     if opcao.tipo == "por_botao":
         return _por_botao_inteiro(opcao, opcao.padrao if isinstance(opcao.padrao, dict) else {})
+    if opcao.tipo == "livre":
+        return _formas_validas(opcao, opcao.padrao or {})
     if opcao.padrao is not None:
         if opcao.tipo == "cor" and isinstance(opcao.padrao, str):
             return opcao.padrao.lower()
@@ -52,8 +60,12 @@ def padrao_de(opcao: Opcao) -> Valor:
     return False if opcao.tipo in ("ligado", "css") else 0.0
 
 
-def validar(opcao: Opcao, valor: Any) -> Valor:
-    """O valor no tipo da opção, ou a recusa dita em uma frase."""
+def validar(opcao: Opcao, valor: Any, *, formas_extras: Sequence[str] = ()) -> Valor:
+    """O valor no tipo da opção, ou a recusa dita em uma frase.
+
+    ``formas_extras``: os nomes das formas gravadas no ``livre`` da mesma extensão, que o
+    ``por_botao`` aceita além das que o manifesto declara.
+    """
     if opcao.tipo in ("ligado", "css"):
         if isinstance(valor, bool):
             return valor
@@ -75,7 +87,9 @@ def validar(opcao: Opcao, valor: Any) -> Valor:
     if opcao.tipo == "endereco":
         return _endereco_valido(opcao, valor)
     if opcao.tipo == "por_botao":
-        return _por_botao_valido(opcao, valor)
+        return _por_botao_valido(opcao, valor, formas_extras)
+    if opcao.tipo == "livre":
+        return _formas_validas(opcao, valor)
     numero = _numero_valido(opcao, valor)
     if opcao.tipo == "deslizante":
         return _na_faixa_do_deslizante(opcao, numero)
@@ -124,21 +138,45 @@ def _endereco_valido(opcao: Opcao, valor: Any) -> str:
     return texto
 
 
-def _por_botao_inteiro(opcao: Opcao, escolhidas: dict[str, str]) -> dict[str, str]:
+def _por_botao_inteiro(opcao: Opcao, escolhidas: dict[str, Any]) -> dict[str, str]:
     """A forma de cada botão da janela: a escolhida, ou a do padrão, ou a primeira declarada."""
-    padrao = opcao.padrao if isinstance(opcao.padrao, dict) else {}
+    padrao: dict[str, Any] = opcao.padrao if isinstance(opcao.padrao, dict) else {}
     primeira = next(iter(opcao.formas))
     return {b: escolhidas.get(b) or padrao.get(b) or primeira for b in opcao.botoes_da_janela}
 
 
-def _por_botao_valido(opcao: Opcao, valor: Any) -> dict[str, str]:
-    """``{botão: forma}``, só com os botões e as formas da opção; o que falta vale o padrão."""
+def _por_botao_valido(opcao: Opcao, valor: Any, extras: Sequence[str] = ()) -> dict[str, str]:
+    """``{botão: forma}``, só com os botões e as formas da opção (e as ``extras``, do ``livre``); o
+    que falta vale o padrão."""
     if not isinstance(valor, dict) or any(
-        b not in opcao.botoes_da_janela or not isinstance(f, str) or f not in opcao.formas
+        b not in opcao.botoes_da_janela or not isinstance(f, str)
+        or (f not in opcao.formas and f not in extras)
         for b, f in valor.items()
     ):
         raise InstalacaoRecusadaError(f"«{opcao.rotulo}» pede uma forma declarada para cada botão.")
     return _por_botao_inteiro(opcao, valor)
+
+
+def _formas_validas(opcao: Opcao, valor: Any) -> Formas:
+    """As formas gravadas do ``livre``: ``{nome: [[força 0..1, segundos], ...]}``, até 16."""
+    from hefesto_dualsense4unix.mods.manifesto import FORMAS_POR_OPCAO
+
+    if not isinstance(valor, dict) or len(valor) > FORMAS_POR_OPCAO or not all(
+            forma_valida(n, f) for n, f in valor.items()):
+        raise InstalacaoRecusadaError(
+            f"«{opcao.rotulo}» guarda até {FORMAS_POR_OPCAO} formas de passos [força, segundos].")
+    return {n: [[float(a), float(b)] for a, b in f] for n, f in valor.items()}
+
+
+def formas_do_livre(manifesto: Manifesto, valores: dict[str, Any]) -> Formas:
+    """As formas gravadas no ``livre`` da extensão, pelo valor de agora (``{}`` sem ``livre``)."""
+    livre = manifesto.opcao_livre
+    if livre is None:
+        return {}
+    try:
+        return _formas_validas(livre, valores.get(livre.id, {}))
+    except InstalacaoRecusadaError:
+        return {}
 
 
 def _guardados(mod_id: str, lugares: Lugares) -> dict[str, Any]:
@@ -153,12 +191,18 @@ def ler(manifesto: Manifesto, lugares: Lugares) -> dict[str, Valor]:
     """O valor de agora de cada opção: o guardado, se o manifesto o aceita; senão o padrão."""
     guardados = _guardados(manifesto.id, lugares)
     saida: dict[str, Valor] = {}
-    for opcao in manifesto.opcoes:
+    # O ``livre`` primeiro: as formas dele valem nos ``por_botao``.
+    for opcao in sorted(manifesto.opcoes, key=lambda o: o.tipo != "livre"):
+        bruto = guardados.get(opcao.id)
+        extras = tuple(formas_do_livre(manifesto, saida))
+        if opcao.tipo == "por_botao" and isinstance(bruto, dict):
+            bruto = {b: f for b, f in bruto.items() if f in opcao.formas or f in extras}
         try:
-            saida[opcao.id] = validar(opcao, guardados[opcao.id])
-        except (KeyError, InstalacaoRecusadaError):
+            saida[opcao.id] = validar(opcao, bruto, formas_extras=extras) if (
+                opcao.id in guardados) else padrao_de(opcao)
+        except InstalacaoRecusadaError:
             saida[opcao.id] = padrao_de(opcao)
-    return saida
+    return {o.id: saida[o.id] for o in manifesto.opcoes}
 
 
 def guardar(manifesto: Manifesto, opcao_id: str, valor: Any, lugares: Lugares) -> Valor:
@@ -166,8 +210,8 @@ def guardar(manifesto: Manifesto, opcao_id: str, valor: Any, lugares: Lugares) -
     opcao = next((o for o in manifesto.opcoes if o.id == opcao_id), None)
     if opcao is None:
         raise InstalacaoRecusadaError(f"«{manifesto.nome}» não tem a opção «{opcao_id}».")
-    certo = validar(opcao, valor)
     atuais = ler(manifesto, lugares)
+    certo = validar(opcao, valor, formas_extras=tuple(formas_do_livre(manifesto, atuais)))
     atuais[opcao_id] = certo
     _gravar(manifesto.id, atuais, lugares)
     return certo
@@ -225,4 +269,5 @@ def _escolhida(opcao: Opcao, guardados: dict[str, Any]) -> bool:
         return False
 
 
-__all__ = ["NOME_DO_ARQUIVO", "Valor", "guardar", "herdar", "ler", "padrao_de", "validar"]
+__all__ = ["NOME_DO_ARQUIVO", "Formas", "Valor", "formas_do_livre", "guardar", "herdar", "ler",
+           "padrao_de", "validar"]

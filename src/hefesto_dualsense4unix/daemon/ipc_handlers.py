@@ -6165,6 +6165,75 @@ class IpcHandlersMixin:
             return {"status": "failed", "reposto": False}
         return {"status": "ok", "reposto": bool(repor())}
 
+    # A-JANELA-DA-EXTENSAO-GANHA-ACAO-APARELHOS-E-CONTROLE-LIVRE-01 (24/10/2026): os dois pedidos
+    # novos da janela da extensão moram no fim da classe, e não junto do `mods.parar_tudo`, para não
+    # deslocar as âncoras citadas do meio do arquivo.
+
+    async def _manifesto_da_janela(self, mod: str) -> tuple[Any, Any] | None:
+        """O manifesto instalado de ``mod`` (o da janela aberta) e a porta; ``None`` sem o
+        supervisor."""
+        from hefesto_dualsense4unix.mods.instalador import (
+            InstalacaoRecusadaError,
+            manifesto_instalado,
+        )
+
+        supervisor = getattr(self.daemon, "_mods_supervisor", None) if self.daemon else None
+        if supervisor is None:
+            return None
+        try:
+            manifesto = await asyncio.to_thread(
+                manifesto_instalado, mod, lugares=supervisor.lugares)
+        except InstalacaoRecusadaError as exc:
+            raise ValueError(exc.frase) from exc
+        return manifesto, supervisor.porta
+
+    async def _handle_mods_acao(self, params: dict[str, Any]) -> dict[str, Any]:
+        """O clique numa ação da janela: ``extensao.acao`` vai só à extensão ``{mod}``.
+
+        Sem ``alvo``, a ação é uma das declaradas para a janela; com ele (o ``id``
+        de um aparelho), uma das ``aparelhos_acoes``, e ``valor`` (verdadeiro ou falso) é a chave
+        ``ligar``. ``{enviada}`` é falso quando a extensão não está conectada à porta.
+        """
+        mod = self._mod_do_pedido(params)
+        acao, alvo, valor = params.get("acao"), params.get("alvo"), params.get("valor")  # noqa-acento
+        if not isinstance(acao, str) or not acao:
+            raise ValueError("o pedido não diz qual ação")
+        if alvo is not None and (not isinstance(alvo, str) or not 1 <= len(alvo) <= 40):
+            raise ValueError("o alvo é o id de um aparelho, de 1 a 40 letras")
+        if valor is not None and not isinstance(valor, bool):
+            raise ValueError("o valor da ação é verdadeiro ou falso")
+        achado = await self._manifesto_da_janela(mod)
+        if achado is None:
+            return {"enviada": False}
+        manifesto, porta = achado
+        geridos = manifesto.aparelhos_acoes
+        declaradas = (geridos.acoes if geridos else []) if alvo is not None else manifesto.acoes
+        if not any(a.id == acao for a in declaradas):
+            onde = "nos aparelhos" if alvo is not None else "na janela"
+            raise ValueError(f"«{manifesto.nome}» não declara a ação «{acao}» {onde}.")
+        return {"enviada": bool(porta.acao(mod, acao, alvo=alvo, valor=valor))}
+
+    async def _handle_mods_livre(self, params: dict[str, Any]) -> dict[str, Any]:
+        """O arrastar do controle livre: ``extensao.livre`` só à extensão ``{mod}``.
+
+        ``{mod, id, valor (0 a 1), soltou}``; a porta solta no máximo 20 por segundo, e o soltar
+        sai sempre. ``{enviado}`` é falso quando a extensão não está conectada à porta.
+        """
+        mod = self._mod_do_pedido(params)
+        opcao_id, valor, soltou = params.get("id"), params.get("valor"), params.get("soltou", False)
+        if isinstance(valor, bool) or not isinstance(valor, (int, float)) or not 0 <= valor <= 1:
+            raise ValueError("o valor do livre vai de 0 a 1")
+        if not isinstance(soltou, bool):
+            raise ValueError("o soltou é verdadeiro ou falso")
+        achado = await self._manifesto_da_janela(mod)
+        if achado is None:
+            return {"enviado": False}
+        manifesto, porta = achado
+        livre = manifesto.opcao_livre
+        if livre is None or livre.id != opcao_id:
+            raise ValueError(f"«{manifesto.nome}» não declara o controle livre «{opcao_id}».")
+        return {"enviado": bool(porta.livre(mod, livre.id, float(valor), soltou=soltou))}
+
 
 def _uniq_do_rumble(params: dict[str, Any], metodo: str) -> str | None:
     """O ``uniq`` opcional do pedido de vibração: ausente é «o alvo de agora»."""
