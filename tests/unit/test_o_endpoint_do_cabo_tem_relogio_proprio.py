@@ -115,6 +115,7 @@ def _no(uniq: str, servidor: _Servidor) -> Any:
 
 @pytest.mark.parametrize("mesa", list(MESAS), ids=list(MESAS))
 def test_todo_endpoint_nasce_dando_o_passo_do_grafo(mesa: str) -> None:
+    # D-2410-O-ENDPOINT-DO-CABO-TEM-RELOGIO-PROPRIO
     """No cabo e no rádio, P1 a P4: o endpoint ganha da placa na eleição do driver."""
     servidor = _Servidor()
     for uniq, _transporte in MESAS[mesa]:

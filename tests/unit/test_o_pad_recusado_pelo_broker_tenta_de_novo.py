@@ -162,6 +162,7 @@ class TestARecusaDoBrokerTentaDeNovo:
     def test_sem_jogo_cada_pad_acaba_no_gadget_quando_a_sessao_abre(
         self, mesa: Mesa, jogadores: tuple[int, ...]
     ) -> None:
+        # D-2410-O-PAD-RECUSADO-PELA-SESSAO-PEDE-DE-NOVO
         """Mordida: tire o ``_gadget_outra_vez = True`` do ramo da recusa, e o pad fica no uhid."""
         pads = [mesa.pad(j) for j in jogadores]
         try:
