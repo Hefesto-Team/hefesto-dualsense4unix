@@ -767,8 +767,8 @@ class TestComOJogoNaAutoridade:
             "a R-04: o vpad do P1 não se recria com o jogo na autoridade"
         )
         assert bancada.dono_do_vpad_do_p1() is None, "o posto do P1 ainda espera por ele"
-        assert bancada.o_jogo_ve() == {1: None, 3: P3, 4: P4}, (
-            f"o jogo não vê a mesa de agora: {bancada.o_jogo_ve()}"
+        assert bancada.o_jogo_ve() == {1: None, 2: P2, 3: P3, 4: P4}, (
+            f"o boneco 2 espera no vpad do P2 (D-2410): {bancada.o_jogo_ve()}"
         )
 
     def test_o_p1_que_voltou_tarde_segue_no_boneco_do_posto(

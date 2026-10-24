@@ -381,7 +381,7 @@ class TestUmDosSessentaComSeisControles:
 
         assert planos.os_que_a_faixa_mudou() == []
         assert bancada.a_tela() == {P1: 1, P3: 3, P4: 4, SEXTO: 6}
-        assert 2 not in bancada.o_jogo_ve(), "o boneco 2 é do P2, que ainda pode voltar"
+        assert bancada.o_jogo_ve()[2] == P2, "o boneco 2 espera no vpad do P2 (D-2410)"
         assert len(bancada.vpads) == antes, "com o jogo aberto alguém renasceu"
         for uniq, vpad in vpads_de_antes.items():
             assert bancada.vpad_de(uniq) is vpad, f"{uniq} renasceu"

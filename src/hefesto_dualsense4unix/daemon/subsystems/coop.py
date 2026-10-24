@@ -143,6 +143,7 @@ class _SecondaryPlayer:
     cedido_ao_primario: bool = False
     # vpad é uhid E o backend resolve hidraw por-uniq (DualSense); None para
     motion_reader: Any = None
+    a_espera: bool = False  # fora da mesa, o vpad parado espera a volta
 
 
 class CoopManager:
@@ -181,7 +182,6 @@ class CoopManager:
         self._ultima_recriacao: tuple[Any, ...] | None = None
         self._ordem_travada = False
         self._p1_espera_o_jogo = False
-
 
     def should_be_active(self) -> bool:
         """True se o co-op deve estar ativo agora (flag + gamepad + 2+ controles)."""
@@ -228,7 +228,7 @@ class CoopManager:
         """
         out: dict[str, EvdevSnapshot] = {}
         for mac, player in list(self._players.items()):
-            if player.vpad is None or mac.startswith("path:"):
+            if player.vpad is None or self._espera(player) or mac.startswith("path:"):
                 continue
             try:
                 out[mac] = player.reader.snapshot()
@@ -436,7 +436,7 @@ class CoopManager:
 
         activated = not self._was_active
         self._was_active = True
-        self._recolher_os_cedidos()
+        self._recolher_quem_saiu_da_mesa()
         self._promote_pending()
         self._adotar_o_numero_do_jogo()
         self._corrigir_a_ordem()
@@ -488,7 +488,7 @@ class CoopManager:
 
         for mac in list(self._players):
             player = self._players[mac]
-            if self._segura_na_troca_de_transporte(player, want.get(mac)):
+            if self._segura_ou_espera_no_lugar(player, want.get(mac)):
                 continue
             if mac not in want:
                 self._teardown_player(mac)
@@ -1932,7 +1932,7 @@ class CoopManager:
         arranjo_de_movimento = roteador_ativo(store)
         marcas = marcas_da_partida(self._daemon)
         for player in list(self._players.values()):
-            if player.vpad is None:
+            if player.vpad is None or self._espera(player):
                 continue
             if player.cedido_ao_primario:
                 # do `_recolher_os_cedidos` acima — este `continue` é o que
@@ -2305,11 +2305,137 @@ class CoopManager:
            que refaz a mesa e o «Renumerar agora» são do registro, o mesmo dono
            do número que a tela e a lâmpada mostram.
         """
+        return self.o_lugar_do_jogador_espera(uniq)
+
+    def o_lugar_do_jogador_espera(self, uniq: str) -> bool:
+        """O lugar de ``uniq`` espera por ele no vpad? A mesma pergunta para os quatro.
+
+        As três condições de :meth:`o_posto_do_p1_espera`, que é esta mesma
+        pergunta aplicada ao primário; o P2 ao P4 a fazem no laço do co-op
+        (`_o_lugar_espera_no_vpad`).
+        """
         if not self.should_be_active() or not self._jogo_com_a_autoridade():
             return False
         registry = getattr(self._daemon, "identity_registry", None)
         pergunta = getattr(registry, "o_lugar_espera", None)
         return callable(pergunta) and bool(pergunta(uniq))
+
+    # D-2410-O-LUGAR-GUARDADO-ESPERA-NOS-QUATRO: o P2 ao P4 que caem com o lugar
+    # guardado esperam no vpad deles. Os métodos moram no fim da classe para não
+    # deslocar as faixas `coop.py:N` que o mapa de canais cita.
+
+    @staticmethod
+    def _espera(player: Any) -> bool:
+        """O jogador está fora da mesa, com o vpad parado à espera dele?"""
+        return bool(getattr(player, "a_espera", False))
+
+    def quem_espera_no_lugar(self) -> frozenset[str]:
+        """Os secundários fora da mesa com o vpad parado à espera deles. Só leitura."""
+        return frozenset(m for m, p in self._players.items() if self._espera(p))
+
+    def _recolher_quem_saiu_da_mesa(self) -> None:
+        """Os cedidos ao primário e quem esperava no vpad sem lugar que espere mais."""
+        self._recolher_os_cedidos()
+        self._soltar_quem_nao_espera_mais()
+
+    def _soltar_quem_nao_espera_mais(self) -> None:
+        """Desmonta quem esperava no vpad e o lugar não espera mais, antes da ordem.
+
+        O prazo vencido, o jogo que fechou e o «Renumerar agora» são do
+        registro; o vpad sai antes de `_corrigir_a_ordem`, que fecha o buraco
+        no mesmo tique, como fechava quando o vpad saía na queda.
+        """
+        for identity in sorted(self.quem_espera_no_lugar()):
+            if not self.o_lugar_do_jogador_espera(identity):
+                logger.info("coop_lugar_guardado_venceu", identity=identity)
+                self._teardown_player(identity)
+
+    def _segura_ou_espera_no_lugar(
+        self, player: _SecondaryPlayer, no_de_agora: str | None
+    ) -> bool:
+        """A troca de transporte segura primeiro; senão, o lugar guardado espera."""
+        if self._segura_na_troca_de_transporte(player, no_de_agora):
+            return True
+        return self._o_lugar_espera_no_vpad(player, no_de_agora)
+
+    def _o_lugar_espera_no_vpad(
+        self, player: _SecondaryPlayer, no_de_agora: str | None
+    ) -> bool:
+        """O jogador que caiu com o lugar guardado fica com o vpad. Devolve se cuidou dele.
+
+        `D-2410-O-LUGAR-GUARDADO-ESPERA-NOS-QUATRO` (a validar pelo usuário): a
+        `D-2409` do posto do P1 vale para o P2, o P3 e o P4. Fora da mesa, o
+        vpad fica parado e vivo no lugar dele no jogo; de volta com nó novo, o
+        leitor reabre no mesmo vpad. Com o lugar que não espera mais, o
+        `teardown` de sempre.
+        """
+        if player.vpad is None or player.cedido_ao_primario:
+            return False
+        if no_de_agora is not None and no_de_agora == player.evdev_path and not player.a_espera:
+            return False
+        if not self.o_lugar_do_jogador_espera(player.identity):
+            return False
+        if not player.a_espera:
+            self._parar_no_lugar(player)
+        if no_de_agora is None:
+            self._retry_spawn = True
+            return True
+        if not self._reabrir_no_lugar(player, no_de_agora):
+            self._retry_spawn = True
+        return True
+
+    def _parar_no_lugar(self, player: _SecondaryPlayer) -> None:
+        """Os leitores param e o vpad recebe o quadro neutro e o fim da vibração."""
+        player.a_espera = True
+        with contextlib.suppress(Exception):
+            player.reader.set_grab(False)
+        with contextlib.suppress(Exception):
+            player.reader.stop()
+        if player.motion_reader is not None:
+            with contextlib.suppress(Exception):
+                player.motion_reader.stop()
+            player.motion_reader = None
+        self._zerar_rumble_do_jogador(player.identity)
+        vpad = player.vpad
+        if vpad is not None:
+            try:
+                vpad.forward_analog(lx=128, ly=128, rx=128, ry=128, l2=0, r2=0)
+                vpad.forward_buttons(frozenset())
+            except Exception as exc:
+                logger.warning("coop_quadro_neutro_falhou", identity=player.identity,
+                               err=str(exc))
+        logger.info(
+            "coop_player_espera_no_lugar",
+            identity=player.identity,
+            evdev=player.evdev_path,
+            **self._numero_e_indice(player),
+        )
+
+    def _reabrir_no_lugar(self, player: _SecondaryPlayer, no: str) -> bool:
+        """O físico voltou com ``no``: um leitor novo alimenta o vpad que esperou."""
+        from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
+
+        target = None if player.identity.startswith("path:") else player.identity
+        reader = EvdevReader(device_path=Path(no), target_uniq=target)
+        if not reader.start():
+            logger.debug("coop_player_reader_unavailable", identity=player.identity, evdev=no)
+            return False
+        if not reader.set_grab(True):
+            logger.warning("coop_player_grab_refused", identity=player.identity, evdev=no)
+            reader.stop()
+            return False
+        logger.info(
+            "coop_player_volta_ao_lugar",
+            identity=player.identity,
+            old=player.evdev_path,
+            new=no,
+        )
+        player.reader = reader
+        player.evdev_path = no
+        player.a_espera = False
+        self._start_player_motion_reader(player)
+        self._broker_hide_player(player)
+        return True
 
 
     def quem_alimenta_cada_vpad(self) -> dict[str, str]:

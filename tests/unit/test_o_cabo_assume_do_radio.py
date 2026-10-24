@@ -815,7 +815,12 @@ class TestOCaboAssume:
     def test_a_troca_que_nao_termina_solta_o_jogador_no_prazo(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, posicao: int, caso: str
     ) -> None:
-        """Conferência de 25/09: o lugar espera o PRAZO, e não para sempre."""
+        """Conferência de 25/09: a troca espera o PRAZO dela, e não para sempre.
+
+        Vencida a troca, o lugar guardado espera no vpad parado enquanto o
+        registro e o jogo seguram (D-2410, como o posto do P1); o jogo que
+        fecha solta o jogador.
+        """
         mesa = montar(monkeypatch, tmp_path, ("bt", "bt", "bt", "bt"), watch_de_verdade=True)
         alvo = UNIQS[posicao]
         if caso == "a-ida-que-nao-sobe":
@@ -838,6 +843,11 @@ class TestOCaboAssume:
             mesa.tique()
 
         assert not mesa.inst.em_troca_de_transporte(alvo)
+        assert mesa.coop._players[alvo].a_espera, "com o jogo aberto o lugar dele espera"
+        assert mesa.boneco_de(alvo) is boneco and getattr(boneco, "vivo", False)
+
+        mesa.daemon.display_authority = "daemon"
+        mesa.tique()
         assert alvo not in mesa.coop._players, "o jogador de quem foi embora ficou no jogo"
         assert not getattr(boneco, "vivo", True), "o vpad fantasma ficou de pé"
 

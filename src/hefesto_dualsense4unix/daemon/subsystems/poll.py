@@ -347,10 +347,13 @@ def _o_proximo_da_fila(daemon: object) -> str | None:
         return None
     try:
         dono = getattr(getattr(daemon, "controller", None), "primary_uniq", None)
+        # Quem caiu e espera no vpad guarda o número, mas não tem mão para segurar.
+        esperam = getattr(coop, "quem_espera_no_lugar", None)
+        fora = esperam() if callable(esperam) else frozenset()
         sentados = {
             mac: numero
             for mac, numero in coop.numeros_de_jogador().items()
-            if mac != dono
+            if mac != dono and mac not in fora
         }
         if not sentados:
             return None

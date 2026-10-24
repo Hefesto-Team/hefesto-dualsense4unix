@@ -566,7 +566,7 @@ class TestOP1ForaPorVinteSegundos:
 
 @pytest.mark.usefixtures("config_isolado")
 class TestOsOutrosTresLugares:
-    """A matriz dos lugares: o P2, o P3 e o P4 saindo — o que já valia, e continua."""
+    """A matriz dos lugares: o P2, o P3 e o P4 saindo esperam no vpad deles (D-2410)."""
 
     @pytest.mark.parametrize("quem", [P2, P3, P4], ids=["p2", "p3", "p4"])
     @pytest.mark.parametrize("transporte", list(TRANSPORTES))
@@ -576,7 +576,7 @@ class TestOsOutrosTresLugares:
         bancada = montar(monkeypatch, 4, transporte)
         ficaram = [u for u in UNIQS[:4] if u != quem]
         numero = UNIQS.index(quem) + 1
-        vpads_de_antes = {u: bancada.vpad_de(u) for u in ficaram if u != P1}
+        vpads_de_antes = {u: bancada.vpad_de(u) for u in UNIQS[1:4]}
 
         via = bancada.mesa.transporte_de(quem)
         bancada.mesa.levantar(quem)
@@ -584,7 +584,8 @@ class TestOsOutrosTresLugares:
             bancada.tique()
             assert bancada.dono_do_vpad_do_p1() == P1
             assert bancada.a_tela() == {u: UNIQS.index(u) + 1 for u in ficaram}
-            assert numero not in bancada.o_jogo_ve()
+            assert bancada.o_jogo_ve().get(numero) == quem, "o lugar dele espera no vpad dele"
+            assert bancada.vpad_de(quem) is vpads_de_antes[quem]
             bancada.o_jogo_segue_a_tela()
 
         bancada.mesa.sentar(quem, transporte=via)
