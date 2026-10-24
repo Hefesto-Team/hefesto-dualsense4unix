@@ -245,14 +245,14 @@
       "data": "2026-10-24",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1198954,
+      "piso": 1198977,
       "por_item": {
         "docs": 120942,
         "scripts": 120631,
         "src": 320288,
-        "tests": 637093
+        "tests": 637116
       },
-      "razao": "tamanho: +609 linhas (1198345 -> 1198954), pagas por Origem: D-2410-O-ENDPOINT-DO-CABO-TEM-RELOGIO-PROPRIO, D-2410-O-PAD-RECUSADO-PELA-SESSAO-PEDE-DE-NOVO; registrado no fecho, topo 8605ea2f0754",
+      "razao": "tamanho: +23 linhas (1198954 -> 1198977), pagas por Origem: D-2410-O-PAD-RECUSADO-PELA-SESSAO-PEDE-DE-NOVO; registrado no fecho, topo 5118b6613505",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -925,6 +925,12 @@
           "de": 1198345,
           "para": 1198954,
           "razao": "tamanho: +609 linhas (1198345 -> 1198954), pagas por Origem: D-2410-O-ENDPOINT-DO-CABO-TEM-RELOGIO-PROPRIO, D-2410-O-PAD-RECUSADO-PELA-SESSAO-PEDE-DE-NOVO; registrado no fecho, topo 8605ea2f0754"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 1198954,
+          "para": 1198977,
+          "razao": "tamanho: +23 linhas (1198954 -> 1198977), pagas por Origem: D-2410-O-PAD-RECUSADO-PELA-SESSAO-PEDE-DE-NOVO; registrado no fecho, topo 5118b6613505"
         }
       ],
       "unidade": "linhas",
