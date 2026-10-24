@@ -5,7 +5,7 @@
       "data": "2026-10-24",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 54864,
+      "piso": 54927,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -64,11 +64,11 @@
         "core/trigger_effects.py": 202,
         "core/virtual_motion.py": 104,
         "daemon/battery_journal.py": 105,
-        "daemon/connection.py": 220,
+        "daemon/connection.py": 236,
         "daemon/ipc_handlers.py": 1254,
         "daemon/ipc_server.py": 126,
         "daemon/launch_env.py": 598,
-        "daemon/lifecycle.py": 1296,
+        "daemon/lifecycle.py": 1298,
         "daemon/protocols.py": 60,
         "daemon/sensor_hub.py": 227,
         "daemon/servidor_dsu.py": 58,
@@ -78,7 +78,7 @@
         "daemon/subsystems/base.py": 78,
         "daemon/subsystems/big_picture.py": 41,
         "daemon/subsystems/bt_mic.py": 233,
-        "daemon/subsystems/coop.py": 731,
+        "daemon/subsystems/coop.py": 773,
         "daemon/subsystems/external_identity.py": 621,
         "daemon/subsystems/external_mask.py": 157,
         "daemon/subsystems/game_signal.py": 128,
@@ -96,7 +96,7 @@
         "daemon/subsystems/mouse.py": 116,
         "daemon/subsystems/navegacao_interna.py": 58,
         "daemon/subsystems/padroes_de_vibracao.py": 52,
-        "daemon/subsystems/poll.py": 77,
+        "daemon/subsystems/poll.py": 78,
         "daemon/subsystems/quem_mexe.py": 82,
         "daemon/subsystems/recado_do_microfone.py": 137,
         "daemon/subsystems/rumble.py": 200,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +11 linhas (54853 -> 54864), pagas por Origem: D-2410-O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL; registrado no fecho, topo b1ec4fa31868",
+      "razao": "texto-em-src: +63 linhas (54864 -> 54927), pagas por Origem: D-2309-FORA-DE-ORDEM-SE-RECRIA-NA-HORA, D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO, plataforma.vpad; registrado no fecho, topo 36ef3ab46e9b",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -504,6 +504,12 @@
           "de": 54853,
           "para": 54864,
           "razao": "texto-em-src: +11 linhas (54853 -> 54864), pagas por Origem: D-2410-O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL; registrado no fecho, topo b1ec4fa31868"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 54864,
+          "para": 54927,
+          "razao": "texto-em-src: +63 linhas (54864 -> 54927), pagas por Origem: D-2309-FORA-DE-ORDEM-SE-RECRIA-NA-HORA, D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO, plataforma.vpad; registrado no fecho, topo 36ef3ab46e9b"
         }
       ],
       "unidade": "linhas",
