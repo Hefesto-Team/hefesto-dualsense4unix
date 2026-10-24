@@ -1594,11 +1594,11 @@ class CoopManager:
             logger.warning("coop_player_led_discover_falhou", err=str(exc))
             return
         for mac, bits in padroes.items():
-            node = nodes.get(mac)
-            if node is None or not node.set_players(bits):
-                logger.warning("coop_player_led_indisponivel", identity=mac)
-                continue
-            self._leds_overridden = True
+            # o lugar que espera não tem lâmpada; o nó que falta se diz uma vez
+            # por borda (`_o_led_acendeu`, no fim da classe)
+            if self._o_led_acendeu(mac, nodes.get(mac), bits):
+                self._leds_overridden = True
+        self._led_indisponivel &= frozenset(padroes)
 
     def _alvos_de_numeracao(self) -> list[tuple[str, int]]:
         """Quem recebe número nesta mesa, e o `fallback` de cada um.
@@ -2158,7 +2158,7 @@ class CoopManager:
             *self._mesa_do_jogo.items(),
             *((None, c) for c in chaves_novas),
         ]:
-            carta = self._carta_da_chave(chave)
+            carta = self._carta_da_chave(chave) or self._carta_de_quem_espera(chave, lugar)
             if carta is None and lugar is not None and self._posto_vago(chave, autoridade):
                 vago = True
                 carta = lugar + 1
@@ -2171,7 +2171,7 @@ class CoopManager:
             self._mesa_do_jogo,
             cartas,
             chaves_novas,
-            fixos=frozenset({_CHAVE_DO_P1}) if autoridade else frozenset(),
+            fixos=self.quem_espera_no_lugar() | {_CHAVE_DO_P1} if autoridade else frozenset(),
             compacta=not autoridade,
         )
         if not autoridade:
@@ -2699,6 +2699,38 @@ class CoopManager:
         if vistos is None:
             vistos = self._apertos_vistos[identity] = ApertosVistos()
         return vistos
+
+    #: Quem já ouviu, nesta borda, que o nó de LED dele falta.
+    _led_indisponivel: frozenset[str] = frozenset()
+
+    def _o_led_acendeu(
+        self, mac: str, node: Any, bits: tuple[bool, bool, bool, bool, bool]
+    ) -> bool:
+        """Acende pelo sysfs o padrão de ``mac``. O nó que falta se diz uma vez por borda.
+
+        Quem espera no lugar guardado não tem lâmpada, e o ciclo cheio de cada
+        tique da espera não o reaplica nem o avisa; a volta é outra borda.
+        """
+        if self._espera(self._players.get(mac)):
+            self._led_indisponivel -= {mac}
+            return False
+        if node is not None and node.set_players(bits):
+            self._led_indisponivel -= {mac}
+            return True
+        if mac not in self._led_indisponivel:
+            self._led_indisponivel |= {mac}
+            logger.warning("coop_player_led_indisponivel", identity=mac)
+        return False
+
+    def _carta_de_quem_espera(self, chave: str, lugar: int | None) -> int | None:
+        """O lugar do jogo de quem espera no vpad conta como a carta dele, como o posto do P1.
+
+        A lâmpada do ausente não tem número (`numero_da_lampada` dá ``None``), e
+        sem isto `_ordenar` saía cedo enquanto alguém esperava.
+        """
+        if lugar is None or chave not in self.quem_espera_no_lugar():
+            return None
+        return lugar + 1
 
 
 from hefesto_dualsense4unix.core.ativacao_de_botao import (  # noqa: E402
