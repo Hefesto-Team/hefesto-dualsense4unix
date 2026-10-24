@@ -236,6 +236,7 @@ def test_a_replica_da_luz_comeca_na_cor_do_plastico() -> None:
     celulas = 0
     secao = ""
     passos: dict[int, str] = {}
+    texto: dict[str, str] = {}
     for linha in GESTO.read_text(encoding="utf-8").splitlines():
         if linha.startswith("## "):
             secao, passos = linha, {}
@@ -243,6 +244,7 @@ def test_a_replica_da_luz_comeca_na_cor_do_plastico() -> None:
             continue
         if not secao.startswith("## mapa-luz.replica_output_jogo-"):
             continue
+        texto[secao] = texto.get(secao, "") + linha + "\n"
         for frase in re.split(r"(?<=[.;—])\s", linha):
             if _PARTIDA_PELO_NUMERO.search(frase) and "sem o plástico" not in frase:
                 erros.append(f"{secao[3:].split(' — ')[0]}: {frase}")
@@ -256,6 +258,10 @@ def test_a_replica_da_luz_comeca_na_cor_do_plastico() -> None:
         alvo = passos.get(_ORDINAIS.get(ref[1], 0), "") if ref else ""
         if not re.search(r"[Aa]note\b.*\bcor\b", alvo):
             erros.append(f"{secao[3:].split(' — ')[0]}: {linha}")
+    for nome, corpo in texto.items():
+        if not re.search(r"cor automática de cada controle é a do plástico dele.*"
+                         r"sem o plástico lido, é a do número", corpo):
+            erros.append(f"{nome[3:].split(' — ')[0]}: não diz que a automática é a do plástico")
     assert celulas == 2, f"as duas células da réplica sumiram: {celulas}"
     assert not erros, "\n".join(erros)
 
