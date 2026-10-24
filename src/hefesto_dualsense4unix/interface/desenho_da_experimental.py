@@ -79,6 +79,9 @@ class Extensao(NamedTuple):
     processo: str = ""
     #: O porquê do processo que não roda (o motivo e a última linha do diário): a dica da chave.
     porque: str = ""
+    #: O que a extensão desligada pede antes do «sim» (o aviso e as permissões): com ele, a chave
+    #: diz «Aceitar e ligar» e o pedido vai na dica; o próximo clique nela liga.
+    pede: str = ""
 
 
 #: O processo de uma extensão que não está rodando: a palavra e a cor da chave da linha e do topo
@@ -88,6 +91,9 @@ PROCESSO = {"ligando": ("Ligando", "amarelo"), "voltando": ("Voltando", "amarelo
             "desligada": ("Desligada", "mudo")}
 #: O que a dica da chave vermelha acrescenta ao porquê: o caminho de volta.
 DICA_DE_TENTAR = "Desligue e ligue para tentar de novo."
+#: A chave da extensão que pede o «sim»: o primeiro clique só a arma, sem abrir nada no cartão
+#: (24/10/2026, O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL-01). As três ações moram só no ⋮.
+ROTULO_DO_SIM = "Aceitar e ligar"
 
 
 def processo_de(ligada: bool, estado: str) -> str:
@@ -173,12 +179,14 @@ def fila_html(fila: Fila) -> str:
 
 
 def _chave_html(ext: Extensao) -> str:
-    """A chave da linha: Ligada, Desligada ou, ligada e sem rodar, a palavra do processo na cor dele.
+    """A chave da linha: Ligada, Desligada, Aceitar e ligar ou, ligada e sem rodar, a palavra do processo.
 
     O clique segue o registro (a ligada desliga): a vermelha diz na dica como tentar de novo.
     """
     palavra, cor = PROCESSO.get(ext.processo, ("", "")) if ext.ligada else ("", "")
-    if not ext.ligada:
+    if not ext.ligada and ext.pede:
+        classe, texto, dica = "nj-tog pede", ROTULO_DO_SIM, ext.pede
+    elif not ext.ligada:
         classe, texto, dica = "nj-tog", "Desligada", "Liga ou desliga"
     elif palavra:
         classe, texto = f"nj-tog ligado {cor}", palavra

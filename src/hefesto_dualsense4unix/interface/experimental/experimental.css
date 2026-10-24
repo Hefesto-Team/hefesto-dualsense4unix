@@ -478,9 +478,16 @@
 .ext-lista .ext-vazia { grid-column:1/-1 }
 .ext-instalar-pe { padding-top:6px;margin-top:6px }
 /* O ⋮ com as permissões desce para baixo da linha; dentro da lista que rola, flutuando, ele seria cortado
-   (medido em 21/10/2026: com uma extensão, a lista de 52 px escondia o menu inteiro). Na lista, ele ocupa a
-   largura do cartão logo abaixo da linha, e a chave do «sim» fica no lugar. */
-.ext-lista .ext-pop.aberto:has(.ext-perm) { position:static;grid-column:1/-1;width:auto;transform:none;box-shadow:none }
+   (medido em 21/10/2026: com uma extensão, a lista de 52 px escondia o menu inteiro).
+   NOTA DE 24/10/2026 (O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL-01): a cura de 21/10 o punha no fluxo do cartão
+   (`position:static`, a largura do cartão), e o cartão crescia de 52 para 159 px, o vizinho da fileira
+   crescia junto (`align-items:stretch`) e a lista passava do teto e rolava; na foto dela, um painel com as
+   três ações embaixo do cartão. Agora ele flutua fora da lista (`fixed`): o `comportamento.js` o põe junto
+   do ⋮, para baixo da linha ou, sem espaço, para cima. Nenhum cartão cresce e nada é cortado. */
+.ext-lista .ext-pop.aberto:has(.ext-perm) { position:fixed;right:auto;transform:none }
+/* A chave armada da extensão que pede o «sim»: o pedido mora na dica, e o próximo clique liga. */
+.nj-tog.pede { border-color:var(--yellow);background:rgba(241,250,140,.1);color:var(--yellow) }
+.nj-tog.pede .pino { background:var(--yellow) }
 /* A FILA DOS LANÇADORES ROLA POR DENTRO — 21/10/2026, A-EXPERIMENTAL-MAXIMIZADA-NAO-QUEBRA-COM-AS-EXTENSOES-DE-VERDADE-01.
    Medido no WebKit do piloto, com sete extensões de verdade e os atalhos de lançador de uma máquina de verdade: a fila tinha onze
    linhas (seis fileiras), a grade com o piso de cada fileira passava do quadro, e o miolo rolava 13 px na

@@ -1421,7 +1421,27 @@ def _extensao_de(item: _Instalada) -> Any:
         chave=e.id, nome=e.nome, dica=dica, janela=JANELA_DA_EXTENSAO,
         versao=versao, selo=exp.SELO_DA_ORIGEM.get(e.origem, "Oficial"),
         ligada=e.ligada, menu=menu, processo=exp.processo_de(e.ligada, item.estado),
-        porque=item.porque)
+        porque=item.porque, pede=_o_que_pede(item))
+
+
+def _o_que_pede(item: _Instalada) -> str:
+    """O aviso e as permissões da extensão cuja chave já armou o «sim»: a dica da chave.
+
+    Vazio quando a chave não está armada (o próximo clique não liga), ou quando a extensão já
+    está ligada. O primeiro clique na chave não abre nada no cartão: as três ações moram no ⋮.
+    """
+    from hefesto_dualsense4unix.mods.instalador import aviso_por_ver
+    from hefesto_dualsense4unix.mods.manifesto import o_que_a_permissao_deixa, permissoes_novas
+
+    e, m = item.entrada, item.manifesto
+    if e.ligada or m is None:
+        return ""
+    pedidas = tuple(sorted(m.permissoes))
+    aviso = aviso_por_ver(e, m)
+    if not (permissoes_novas(e.permissoes_aceitas, list(pedidas)) or aviso) or (
+            _MEXIDA.vistas.get(e.id) != (*pedidas, aviso)):
+        return ""
+    return " ".join([x for x in (aviso,) if x] + [o_que_a_permissao_deixa(x) for x in pedidas])
 
 
 def _jogos_da_fila(lanc: desenho.Lancador) -> str:
@@ -1576,10 +1596,10 @@ def ligar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
 
 
 def _ligar_ou_desligar_a_modificacao(mod_id: str) -> str | None:
-    """Liga ou desliga pela infra. Permissão nova pede o «sim»: o primeiro clique só a mostra.
+    """Liga ou desliga pela infra. Permissão nova pede o «sim»: o primeiro clique só arma.
 
-    A lista aparece no ⋮ aberto da linha (o recado não chega à tela), e o ``None`` é o
-    clique que só armou.
+    A chave armada diz «Aceitar e ligar», com o aviso e as permissões na dica (``_o_que_pede``;
+    o recado não chega à tela), e o ``None`` é o clique que só armou.
     """
     from hefesto_dualsense4unix.mods.instalador import (
         aviso_por_ver,
@@ -1604,9 +1624,9 @@ def _ligar_ou_desligar_a_modificacao(mod_id: str) -> str | None:
         aviso = aviso_por_ver(entrada, manifesto)
         if (permissoes_novas(entrada.permissoes_aceitas, list(pedidas)) or aviso) and (
                 _MEXIDA.vistas.get(mod_id) != (*pedidas, aviso)):
+            # O primeiro clique só arma a chave («Aceitar e ligar», o pedido na dica): nada abre
+            # no cartão, as três ações moram no ⋮ (O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL-01).
             _MEXIDA.vistas[mod_id] = (*pedidas, aviso)
-            _MEXIDA.menu = _MEXIDA.permissoes = mod_id
-            _MEXIDA.remover, _MEXIDA.menu_na_conf = "", False
             return None
         ligar(mod_id, permissoes_vistas=pedidas, aviso_visto=aviso, lugares=lg)
         _MEXIDA.vistas.pop(mod_id, None)

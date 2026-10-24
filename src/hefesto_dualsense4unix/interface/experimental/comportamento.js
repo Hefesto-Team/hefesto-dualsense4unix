@@ -19,18 +19,39 @@
     var c = e.target.closest('.ja-chips .chip, .ac-chips .chip');
     if (c){ c.classList.toggle('on'); }
   });
-  // O ⋮ ABERTO FICA À VISTA DENTRO DA LISTA QUE ROLA — 21/10/2026. O menu com as permissões desce para
-  // baixo da linha; na última fileira ele nascia abaixo do fim da lista (8 px com sete extensões, a
-  // fileira inteira com doze). O produto troca a lista inteira a cada clique, e a lista rola só o que
-  // falta para o menu aparecer.
+  // O ⋮ ABERTO FICA À VISTA DENTRO DA LISTA QUE ROLA — 21/10/2026. O produto troca a lista inteira a
+  // cada clique, e a lista rola só o que falta para o cartão do menu aparecer.
+  // 24/10/2026 (O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL-01): o menu com as permissões flutua fora da lista
+  // (`position:fixed`, sem esticar o cartão nem o vizinho); aqui ele ganha o lugar junto do ⋮: a borda
+  // direita na do ⋮, logo abaixo do cartão ou, sem espaço na janela, logo acima.
   function oMenuAVista(lista){
     var m = lista.querySelector('.ext-pop.aberto');
     if (!m) return;
-    var a = m.getBoundingClientRect(), b = lista.getBoundingClientRect();
+    var c = m.closest('.ext') || m.parentElement;
+    var a = c.getBoundingClientRect(), b = lista.getBoundingClientRect();
     if (a.bottom > b.bottom) lista.scrollTop += Math.ceil(a.bottom - b.bottom);
     else if (a.top < b.top) lista.scrollTop -= Math.ceil(b.top - a.top);
+    oMenuNoLugar(m);
+  }
+  function oMenuNoLugar(m){
+    if (getComputedStyle(m).position !== 'fixed') return;
+    var c = (m.closest('.ext') || m.parentElement).getBoundingClientRect();
+    var mais = m.parentElement.querySelector('.ext-mais');
+    var direita = mais ? mais.getBoundingClientRect().right : c.right;
+    var w = m.offsetWidth, h = m.offsetHeight;
+    var x = Math.max(8, Math.min(direita - w, innerWidth - w - 8));
+    var y = c.bottom + 4;
+    if (y + h > innerHeight - 8) y = Math.max(8, c.top - 4 - h);
+    m.style.left = Math.round(x) + 'px';
+    m.style.top = Math.round(y) + 'px';
   }
   document.querySelectorAll('.ext-lista').forEach(function(lista){
-    new MutationObserver(function(){ oMenuAVista(lista); }).observe(lista, {childList:true});
+    new MutationObserver(function(){ oMenuAVista(lista); }).observe(lista,
+      {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
   });
+  function osMenusNoLugar(){
+    document.querySelectorAll('.ext-lista .ext-pop.aberto').forEach(oMenuNoLugar);
+  }
+  document.addEventListener('scroll', osMenusNoLugar, true);
+  addEventListener('resize', osMenusNoLugar);
 })();
