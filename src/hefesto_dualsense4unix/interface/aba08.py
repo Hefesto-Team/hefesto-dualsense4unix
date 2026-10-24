@@ -2134,13 +2134,13 @@ def _cena_do_desenho() -> dict:
     # desenhava um «DualSense · Não Conectou» sem aparelho — a busca que
     # de um controle de verdade, com nome e cor. <!-- noqa-acento: citação literal -->
     aparelhos.append({"id": f"nao-conectou-{cheio['id']}-P5", "aparelho": "P5",
-                      "tipo": "controle", "lugar": cheio["id"], "nome": "Lia",
+                      "tipo": "controle", "lugar": cheio["id"], "nome": "",
                       "rotulo": "DualSense", "cor": "#7eb8d4", "cor_nome": "Starlight Blue",
                       "nao_conectou": True, "esperando": False, "fixo": True,
                       "pareado_aqui": True})
     # o par que não ficou guardado: a mesma linha oferece «Tentar de Novo», e o desenho mostra as duas
     aparelhos.append({"id": f"nao-conectou-{vazio['id']}-P6", "aparelho": "P6",
-                      "tipo": "controle", "lugar": vazio["id"], "nome": "Davi",
+                      "tipo": "controle", "lugar": vazio["id"], "nome": "",
                       "rotulo": "DualSense", "cor": "#b5232e", "cor_nome": "Cosmic Red",
                       "nao_conectou": True, "esperando": False, "fixo": True,
                       "pareado_aqui": False})

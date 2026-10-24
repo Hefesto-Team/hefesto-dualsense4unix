@@ -13,7 +13,8 @@ As réguas leem o fonte e o desenho (o que o `--publicar` copia), nunca o que um
 
 MORDIDAS (24/10/2026): devolver o `"dono": "Vitória"` à `monta.MESA`; devolver o
 `from aba05 import GLIFO_DO_CONTROLE` à 03; devolver a `LEGENDA` à 08; devolver o
-`"nome": linha["nome"]` ao controle da cena do rádio. Cada uma reprova uma régua daqui.
+`"nome": linha["nome"]` ao controle da cena do rádio; devolver o «Lia» ou o «Davi» aos dois
+controles que não conectaram, na cena do rádio. Cada uma reprova uma régua daqui.
 """
 from __future__ import annotations
 
@@ -27,6 +28,10 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src/hefesto_dualsense4unix/interface"
 DESENHOS_COM_A_CENA = ("04-iluminacao.html", "05-vibracao.html", "08-conexoes.html")
 NOME_DA_CENA_VELHA = "Vitória"
+#: os nomes de pessoa que o desenho final do todo (14/10/2026, `FINAL.md`, «O nome de pessoa»)
+#: trocou pela cor do plástico, e os dois que a cena do rádio da 08 ainda dava aos controles que
+#: não conectaram
+NOMES_DE_PESSOA = ("Vitória", "Pedro", "Ana", "Rafa", "Lia", "Davi")
 
 
 def _fonte(nome: str) -> str:
@@ -127,3 +132,20 @@ def test_a_08_nao_define_a_legenda() -> None:
     nomes = {alvo.id for no in arvore.body if isinstance(no, ast.Assign)
              for alvo in no.targets if isinstance(alvo, ast.Name)}
     assert "LEGENDA" not in nomes, "a LEGENDA da 08 voltou, e nada a lê"
+
+
+def test_nenhum_controle_da_cena_do_radio_tem_nome_de_pessoa() -> None:
+    """Todo controle da cena da 08, inclusive os dois que não conectaram, nasce sem nome: a tela
+    o chama como chama o de qualquer pessoa que ainda não deu nome a ele."""
+    import sys
+
+    sys.path.insert(0, str(INTERFACE))
+    sys.path.insert(0, str(RAIZ / "src"))
+    from hefesto_dualsense4unix.interface import aba08
+
+    com_nome = {str(a["id"]): a["nome"] for a in aba08.CENA_DO_RADIO["aparelhos"]
+                if a.get("tipo") == "controle" and a.get("nome")}
+    assert com_nome == {}, f"a cena do rádio dá nome de pessoa a controles: {com_nome}"
+    doc = _sem_comentarios_de_html(_desenho("08-conexoes.html"))
+    vazados = {n: len(re.findall(rf"\b{n}\b", doc)) for n in NOMES_DE_PESSOA}
+    assert not any(vazados.values()), f"nome de pessoa no desenho da 08: {vazados}"
