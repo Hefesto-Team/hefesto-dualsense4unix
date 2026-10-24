@@ -436,7 +436,7 @@ class CoopManager:
 
         activated = not self._was_active
         self._was_active = True
-        self._recolher_quem_saiu_da_mesa()
+        self._arrumar_a_mesa_antes_da_ordem()
         self._promote_pending()
         self._adotar_o_numero_do_jogo()
         self._corrigir_a_ordem()
@@ -2333,10 +2333,11 @@ class CoopManager:
         """Os secundários fora da mesa com o vpad parado à espera deles. Só leitura."""
         return frozenset(m for m, p in self._players.items() if self._espera(p))
 
-    def _recolher_quem_saiu_da_mesa(self) -> None:
-        """Os cedidos ao primário e quem esperava no vpad sem lugar que espere mais."""
+    def _arrumar_a_mesa_antes_da_ordem(self) -> None:
+        """Saem antes da ordem: os cedidos, quem esperava sem lugar e o degradado que volta."""
         self._recolher_os_cedidos()
         self._soltar_quem_nao_espera_mais()
+        self.promover_os_degradados()
 
     def _soltar_quem_nao_espera_mais(self) -> None:
         """Desmonta quem esperava no vpad e o lugar não espera mais, antes da ordem.
@@ -2436,6 +2437,58 @@ class CoopManager:
         self._start_player_motion_reader(player)
         self._broker_hide_player(player)
         return True
+
+    def promover_os_degradados(self) -> list[str]:
+        """O vpad do P2 ao P4 que caiu no `uinput` volta ao `uhid`. Devolve quem saiu.
+
+        A rede do P1 (`gamepad.upgrade_primary_vpad_to_uhid`) estendida aos
+        secundários, com as mesmas travas: `uhid_available()`, a R-04 e o
+        `REBACKEND_COOLDOWN_SEC`, este POR IDENTIDADE (a rajada de um não segura
+        o outro). Quem passa sai pelo `teardown` e renasce no laço, na ordem da
+        carta, com o mesmo número.
+        """
+        from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+            REBACKEND_COOLDOWN_SEC,
+            _recriacao_bloqueada_por_jogo,
+            controller_allows_uhid,
+        )
+        from hefesto_dualsense4unix.integrations.uhid_gamepad import uhid_available
+        from hefesto_dualsense4unix.integrations.virtual_pad import motivo_da_degradacao
+
+        degradados = [
+            (mac, motivo)
+            for mac, p in self._players.items()
+            if p.vpad is not None
+            and not p.cedido_ao_primario
+            and not self._espera(p)
+            and (motivo := motivo_da_degradacao(p.vpad)) is not None
+        ]
+        if not degradados or not controller_allows_uhid(self._daemon) or not uhid_available():
+            return []
+        carimbos: dict[str, float] = self.__dict__.setdefault("_promovido_em", {})
+        agora = time.monotonic()
+        promovidos: list[str] = []
+        for mac, motivo in degradados:
+            if agora - carimbos.get(mac, float("-inf")) < REBACKEND_COOLDOWN_SEC:
+                continue
+            player = self._players[mac]
+            rotulo = f"P{self.numero_para_o_nome(mac, player.player_index)}"
+            if _recriacao_bloqueada_por_jogo(
+                self._daemon, origin="hotplug", motivo=f"promocao_uhid:{rotulo}"
+            ):
+                continue
+            carimbos[mac] = agora
+            logger.info(
+                "vpad_promovendo_para_uhid",
+                motivo=motivo,
+                identity=mac,
+                **self._numero_e_indice(player),
+            )
+            self._teardown_player(mac)
+            promovidos.append(mac)
+        if promovidos:
+            self._retry_spawn = True
+        return promovidos
 
 
     def quem_alimenta_cada_vpad(self) -> dict[str, str]:
