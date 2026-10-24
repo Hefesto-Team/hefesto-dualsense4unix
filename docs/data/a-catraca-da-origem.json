@@ -245,14 +245,14 @@
       "data": "2026-10-24",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1197867,
+      "piso": 1197878,
       "por_item": {
         "docs": 120898,
         "scripts": 120631,
         "src": 319991,
-        "tests": 636347
+        "tests": 636358
       },
-      "razao": "tamanho: +318 linhas (1197549 -> 1197867), pagas por Origem: D-2210-O-PARAR-TUDO-E-UM-CAMPO-DO-MANIFESTO, D-2310-A-CHAVE-DIZ-O-QUE-O-SERVICO-FEZ, D-2310-O-ATUALIZAR-QUE-PEDE-SIM-ABRE-A-LISTA, D-2310-O-PARAR-TUDO-SEM-NINGUEM-NA-PORTA-RECUSA; registrado no fecho, topo b0670e459469",
+      "razao": "tamanho: +11 linhas (1197867 -> 1197878), pagas por Origem: D-2310-O-CODEQL-ZERA-LENDO-O-HTML-PELO-PARSER; registrado no fecho, topo 58216b2c38c2",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -907,6 +907,12 @@
           "de": 1197549,
           "para": 1197867,
           "razao": "tamanho: +318 linhas (1197549 -> 1197867), pagas por Origem: D-2210-O-PARAR-TUDO-E-UM-CAMPO-DO-MANIFESTO, D-2310-A-CHAVE-DIZ-O-QUE-O-SERVICO-FEZ, D-2310-O-ATUALIZAR-QUE-PEDE-SIM-ABRE-A-LISTA, D-2310-O-PARAR-TUDO-SEM-NINGUEM-NA-PORTA-RECUSA; registrado no fecho, topo b0670e459469"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 1197867,
+          "para": 1197878,
+          "razao": "tamanho: +11 linhas (1197867 -> 1197878), pagas por Origem: D-2310-O-CODEQL-ZERA-LENDO-O-HTML-PELO-PARSER; registrado no fecho, topo 58216b2c38c2"
         }
       ],
       "unidade": "linhas",
