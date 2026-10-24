@@ -5,7 +5,7 @@
       "data": "2026-10-24",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 54810,
+      "piso": 54853,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -127,7 +127,7 @@
         "integrations/dicas_da_conexao.py": 60,
         "integrations/dualsense_bt_audio.py": 298,
         "integrations/eleicao_de_microfone.py": 255,
-        "integrations/endpoint_de_haptica.py": 289,
+        "integrations/endpoint_de_haptica.py": 300,
         "integrations/entrada_a_entrada.py": 407,
         "integrations/entradas_do_gabinete.py": 92,
         "integrations/envelope_da_haptica.py": 42,
@@ -174,7 +174,7 @@
         "integrations/storm_doctor.py": 136,
         "integrations/transiente_do_jogo.py": 97,
         "integrations/uhid_blueprint.py": 87,
-        "integrations/uhid_gamepad.py": 562,
+        "integrations/uhid_gamepad.py": 588,
         "integrations/uinput_gamepad.py": 217,
         "integrations/uinput_keyboard.py": 48,
         "integrations/uinput_mouse.py": 194,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +28 linhas (54782 -> 54810), pagas por Origem: D-2410-A-EXTENSAO-SE-PREPARA-AO-INSTALAR-E-AO-ATUALIZAR, D-2410-O-PREPARO-RODA-SO-DEPOIS-DO-SIM; registrado no fecho, topo 11d1ebd10c8b",
+      "razao": "texto-em-src: +43 linhas (54810 -> 54853), pagas por Origem: D-2410-O-ENDPOINT-DO-CABO-TEM-RELOGIO-PROPRIO, D-2410-O-PAD-RECUSADO-PELA-SESSAO-PEDE-DE-NOVO; registrado no fecho, topo 937baff4dbe4",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -492,6 +492,12 @@
           "de": 54782,
           "para": 54810,
           "razao": "texto-em-src: +28 linhas (54782 -> 54810), pagas por Origem: D-2410-A-EXTENSAO-SE-PREPARA-AO-INSTALAR-E-AO-ATUALIZAR, D-2410-O-PREPARO-RODA-SO-DEPOIS-DO-SIM; registrado no fecho, topo 11d1ebd10c8b"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 54810,
+          "para": 54853,
+          "razao": "texto-em-src: +43 linhas (54810 -> 54853), pagas por Origem: D-2410-O-ENDPOINT-DO-CABO-TEM-RELOGIO-PROPRIO, D-2410-O-PAD-RECUSADO-PELA-SESSAO-PEDE-DE-NOVO; registrado no fecho, topo 937baff4dbe4"
         }
       ],
       "unidade": "linhas",
