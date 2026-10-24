@@ -5,7 +5,7 @@
       "data": "2026-10-24",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 54753,
+      "piso": 54758,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -110,7 +110,7 @@
         "integrations/apelido_do_dongle.py": 138,
         "integrations/api_de_entrada.py": 89,
         "integrations/ar_do_adaptador.py": 114,
-        "integrations/arranjo_da_mesa.py": 117,
+        "integrations/arranjo_da_mesa.py": 118,
         "integrations/audio_control.py": 180,
         "integrations/audio_ks_dualsense.py": 248,
         "integrations/bluez_dbus.py": 110,
@@ -196,7 +196,7 @@
         "interface/calibracao_das_entradas.py": 98,
         "interface/calibrar.py": 135,
         "interface/cartao_do_controle.py": 332,
-        "interface/conexoes.py": 67,
+        "interface/conexoes.py": 69,
         "interface/controles_vivos.py": 145,
         "interface/desenho_da_experimental.py": 144,
         "interface/desenho_dos_lancadores.py": 1032,
@@ -223,7 +223,7 @@
         "interface/pacotes/perfil.py": 328,
         "interface/pacotes/ponte.py": 136,
         "interface/pacotes/rodape.py": 164,
-        "interface/pagina_do_mapa.py": 276,
+        "interface/pagina_do_mapa.py": 278,
         "interface/regua_do_mockup.py": 170,
         "interface/sistema.py": 116,
         "mods/instalador.py": 128,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +1 linhas (54752 -> 54753), pagas por Origem: D-2310-A-ESPERA-DA-PINTURA-CONTA-DO-LOAD; registrado no fecho, topo 88afe2845a39",
+      "razao": "texto-em-src: +5 linhas (54753 -> 54758), pagas por Origem: D-2410-A-ENTRADA-MAE-DO-EXTENSOR-DIZ-COM-O-EXTENSOR, D-2410-O-PORTE-DIZ-O-TEXTO-DA-PAGINA; registrado no fecho, topo 1deb24177482",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -474,6 +474,12 @@
           "de": 54752,
           "para": 54753,
           "razao": "texto-em-src: +1 linhas (54752 -> 54753), pagas por Origem: D-2310-A-ESPERA-DA-PINTURA-CONTA-DO-LOAD; registrado no fecho, topo 88afe2845a39"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 54753,
+          "para": 54758,
+          "razao": "texto-em-src: +5 linhas (54753 -> 54758), pagas por Origem: D-2410-A-ENTRADA-MAE-DO-EXTENSOR-DIZ-COM-O-EXTENSOR, D-2410-O-PORTE-DIZ-O-TEXTO-DA-PAGINA; registrado no fecho, topo 1deb24177482"
         }
       ],
       "unidade": "linhas",
