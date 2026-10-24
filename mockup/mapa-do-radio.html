@@ -848,11 +848,17 @@
   .caixa-pergunta .outro[hidden] { display: none; }
 </style>
 <style id="rodada-3-g3">
-/* Rodada 3 (conferência de desenho): as barras dos adaptadores começam e acabam na mesma reta. */
-.lugar-topo{display:grid;grid-template-columns:24px auto 116px 26px minmax(110px,1fr) auto;column-gap:8px;align-items:center}
+/* Rodada 3 (conferência de desenho): as barras dos adaptadores começam e acabam na mesma reta.
+   24/10/2026: a grade é UMA, a da sala, herdada por cada caixa (`subgrid`); a coluna do «onde»
+   cresce até a espera e o «Onde fica?», sem quebrar a linha e sem passar para baixo do sino. A
+   primeira coluna leva a margem de 10 px da caixa e a seta de 24 px (a margem da subgrid entra ali). */
+.sala{display:grid;column-gap:8px;grid-template-columns:calc(10px + 24px) auto minmax(116px,max-content) 26px minmax(110px,1fr) auto}
+.sala > *,.lugar > *{grid-column:1/-1}
+.sala > .lugar{display:grid;grid-template-columns:subgrid;column-gap:normal}
+.lugar-topo{display:grid;grid-template-columns:subgrid;column-gap:normal;align-items:center}
 .lugar-topo > .abre-lugar{grid-column:1}
 .lugar-topo > .lugar-nome{grid-column:2}
-.lugar-topo > .onde{grid-column:3;min-width:0}
+.lugar-topo > .onde{grid-column:3;min-width:0;white-space:nowrap}
 .lugar-topo > .sino{grid-column:4}
 .lugar-topo > .barra-do-lugar{grid-column:5;min-width:0}
 .lugar-topo > .lugar-conta{grid-column:6;margin-left:0;display:grid;grid-template-columns:auto auto 48px;column-gap:8px;justify-content:end}

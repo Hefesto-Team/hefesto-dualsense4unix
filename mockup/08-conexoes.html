@@ -2253,12 +2253,23 @@
   .radio .ar-duas{row-gap:5px}
   .radio .ar-grupo{margin-top:3px}
   .radio .ar-rot,.radio .ar-rot button.rotulo{height:20px}
-  .radio .sala{gap:5px}
-  .radio .lugar-topo{display:grid;grid-template-columns:24px auto 116px 26px minmax(110px,1fr) auto;
-                     column-gap:8px;align-items:center}
+  /* A LINHA DO ADAPTADOR CABE NA COLUNA DO «ONDE» (24/10/2026): a coluna tinha 116 px fixos, e a
+     espera «Segure PS + Create» e o «Onde fica?» passavam dela para baixo do sino. A grade passa a
+     ser UMA, a da sala, e cada caixa e a linha de cima dela a herdam (`subgrid`): a coluna do
+     «onde» cresce até o que ela leva, sem quebrar a linha, e a barra de todo adaptador continua
+     começando e acabando na mesma reta, porque a coluna que cresce cresce para todos. A primeira
+     coluna leva a margem de 10 px da caixa e a seta de 24 px: na `subgrid` a margem da caixa entra
+     na coluna da ponta, e a de tamanho fixo não cresce por ela. */
+  .radio .sala{gap:5px;display:grid;column-gap:8px;
+               grid-template-columns:calc(10px + 24px) auto minmax(116px,max-content) 26px
+                                     minmax(110px,1fr) auto}
+  .radio .sala > *,.radio .lugar > *{grid-column:1/-1}
+  .radio .sala > .lugar{display:grid;grid-template-columns:subgrid;column-gap:normal}
+  .radio .lugar-topo{display:grid;grid-template-columns:subgrid;column-gap:normal;
+                     align-items:center}
   .radio .lugar-topo > .abre-lugar{grid-column:1}
   .radio .lugar-topo > .lugar-nome{grid-column:2}
-  .radio .lugar-topo > .onde{grid-column:3;min-width:0}
+  .radio .lugar-topo > .onde{grid-column:3;min-width:0;white-space:nowrap}
   .radio .lugar-topo > .sino{grid-column:4}
   .radio .lugar-topo > .barra-do-lugar{grid-column:5;min-width:0}
   .radio .lugar-topo > .lugar-conta{grid-column:6;margin-left:0;display:grid;
