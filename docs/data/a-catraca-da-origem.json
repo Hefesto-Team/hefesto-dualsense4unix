@@ -245,14 +245,14 @@
       "data": "2026-10-24",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1197549,
+      "piso": 1197867,
       "por_item": {
-        "docs": 120883,
+        "docs": 120898,
         "scripts": 120631,
-        "src": 319889,
-        "tests": 636146
+        "src": 319991,
+        "tests": 636347
       },
-      "razao": "tamanho: +741 linhas (1196808 -> 1197549), pagas por Origem: D-2410-A-ENTRADA-MAE-DO-EXTENSOR-DIZ-COM-O-EXTENSOR, D-2410-O-PORTE-DIZ-O-TEXTO-DA-PAGINA; registrado no fecho, topo 4860d75ee913",
+      "razao": "tamanho: +318 linhas (1197549 -> 1197867), pagas por Origem: D-2210-O-PARAR-TUDO-E-UM-CAMPO-DO-MANIFESTO, D-2310-A-CHAVE-DIZ-O-QUE-O-SERVICO-FEZ, D-2310-O-ATUALIZAR-QUE-PEDE-SIM-ABRE-A-LISTA, D-2310-O-PARAR-TUDO-SEM-NINGUEM-NA-PORTA-RECUSA; registrado no fecho, topo b0670e459469",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -901,10 +901,16 @@
           "de": 1196808,
           "para": 1197549,
           "razao": "tamanho: +741 linhas (1196808 -> 1197549), pagas por Origem: D-2410-A-ENTRADA-MAE-DO-EXTENSOR-DIZ-COM-O-EXTENSOR, D-2410-O-PORTE-DIZ-O-TEXTO-DA-PAGINA; registrado no fecho, topo 4860d75ee913"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 1197549,
+          "para": 1197867,
+          "razao": "tamanho: +318 linhas (1197549 -> 1197867), pagas por Origem: D-2210-O-PARAR-TUDO-E-UM-CAMPO-DO-MANIFESTO, D-2310-A-CHAVE-DIZ-O-QUE-O-SERVICO-FEZ, D-2310-O-ATUALIZAR-QUE-PEDE-SIM-ABRE-A-LISTA, D-2310-O-PARAR-TUDO-SEM-NINGUEM-NA-PORTA-RECUSA; registrado no fecho, topo b0670e459469"
         }
       ],
       "unidade": "linhas",
-      "universo": 3133
+      "universo": 3134
     }
   }
 }
