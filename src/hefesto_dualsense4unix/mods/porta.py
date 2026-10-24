@@ -76,6 +76,14 @@ ITENS_DO_ESTADO = 32
 EVENTO_DO_PARAR = "extensao.parar"
 #: O tópico ``botoes``: o serviço entrega o aperto de TODO controle, cada um com o dele.
 TOPICO_DOS_BOTOES = "botoes"
+#: O tópico ``entradas``: os analógicos, os gatilhos e o touchpad de TODO controle.
+TOPICO_DAS_ENTRADAS = "entradas"
+#: Quantas ``entradas`` de um controle saem por segundo, no máximo.
+ENTRADAS_POR_SEGUNDO = 30
+#: Quanto um analógico ou um gatilho (de 0 a 255) anda antes de sair; as pontas saem sempre.
+FAIXA_MORTA_DO_EIXO = 2
+#: Quanto um dedo (de 0 a 1) anda antes de sair; o dedo que chega ou levanta sai sempre.
+FAIXA_MORTA_DO_DEDO = 0.01
 
 Escritor = Callable[[str, dict[str, Any]], Awaitable[Any]]
 OJogoEscreve = Callable[[str, str], bool]
@@ -122,6 +130,8 @@ class _Conexao:
     #: As filas do tópico ``botoes`` (``button.down``, ``button.up``): o serviço as enche com o
     #: aperto de cada controle (:meth:`Porta.botoes_do_tique`), não pelo barramento.
     filas_dos_botoes: list[tuple[str, asyncio.Queue[Any]]] = field(default_factory=list)
+    #: As filas do tópico ``entradas``, cheias pelo serviço (:meth:`Porta.entradas_do_tique`).
+    filas_das_entradas: list[asyncio.Queue[Any]] = field(default_factory=list)
     #: O socket desta conexão: o «Parar tudo» fala por ele sem assinatura nenhuma.
     escritor: asyncio.StreamWriter | None = None
 
@@ -462,6 +472,38 @@ OPCOES_DOS_GESTOS = frozenset({
 })
 
 
+#: As ``entradas`` de um controle: ``lx, ly, rx, ry, l2, r2`` (0 a 255) e os dedos ``(x, y)``.
+_Valores = tuple[int, int, int, int, int, int, tuple[tuple[float, float], ...]]
+#: O controle parado: os analógicos no centro, os gatilhos soltos e nenhum dedo.
+REPOUSO_DAS_ENTRADAS: _Valores = (128, 128, 128, 128, 0, 0, ())
+#: As pontas de cada eixo (os analógicos e os gatilhos): chegar a uma delas sai sempre.
+_PONTAS = ((0, 128, 255),) * 4 + ((0, 255),) * 2
+
+
+def _mudou(antes: _Valores | None, agora: _Valores) -> bool:
+    """``agora`` sai? Um eixo passou da faixa morta ou chegou a uma ponta; um dedo chegou, saiu
+    ou andou além da faixa dele. Com ``antes`` ``None`` (quem acabou de assinar), sai sempre."""
+    if antes is None:
+        return agora != REPOUSO_DAS_ENTRADAS
+    for velho, novo, pontas in zip(antes[:6], agora[:6], _PONTAS, strict=True):
+        if novo != velho and (abs(novo - velho) > FAIXA_MORTA_DO_EIXO or novo in pontas):
+            return True
+    dedos_antes, dedos_agora = antes[6], agora[6]
+    return len(dedos_antes) != len(dedos_agora) or any(
+        abs(a - b) > FAIXA_MORTA_DO_DEDO
+        for velho, novo in zip(dedos_antes, dedos_agora, strict=True)
+        for a, b in zip(velho, novo, strict=True)
+    )
+
+
+def _carga_das_entradas(uniq: str | None, jogador: Any, via: Any, valores: _Valores
+                        ) -> dict[str, Any]:
+    lx, ly, rx, ry, l2, r2, dedos = valores
+    return {"uniq": uniq, "jogador": jogador, "transporte": via,
+            "lx": lx, "ly": ly, "rx": rx, "ry": ry, "l2": l2, "r2": r2,
+            "dedos": [{"x": x, "y": y} for x, y in dedos]}
+
+
 class Porta:
     """O servidor da porta das modificações, dentro do laço do serviço."""
 
@@ -498,6 +540,9 @@ class Porta:
         #: Os botões de cada controle no último tique entregue ao tópico ``botoes``; ``None``
         #: enquanto ninguém o lê (o primeiro tique com leitor só guarda, sem borda inventada).
         self._botoes_antes: dict[str | None, frozenset[str]] | None = None
+        #: O que saiu por último no tópico ``entradas``, por controle: ``(valores, instante,
+        #: jogador, transporte)``. Quem nunca saiu do repouso não está aqui.
+        self._entradas_enviadas: dict[str | None, tuple[_Valores | None, float, Any, Any]] = {}
 
     # -- quem pode entrar -------------------------------------------------
 
@@ -705,6 +750,23 @@ class Porta:
                         self._botoes_antes = None
                     fila: asyncio.Queue[Any] = asyncio.Queue(maxsize=DEFAULT_QUEUE_MAXSIZE)
                     con.filas_dos_botoes.append((topico, fila))
+                elif publico == TOPICO_DAS_ENTRADAS:
+                    # Quem chega começa do repouso: o controle fora dele sai de novo no tique
+                    # seguinte, a todos (o valor repetido não muda nada a quem já o tinha).
+                    self._entradas_enviadas = {
+                        uniq: (None, quando, jogador, via)
+                        for uniq, (_valores, quando, jogador, via)
+                        in self._entradas_enviadas.items()
+                    } if self.le_as_entradas() else {}
+                    fila = asyncio.Queue(maxsize=DEFAULT_QUEUE_MAXSIZE)
+                    con.filas_das_entradas.append(fila)
+                    # A mesa que cai inteira não tem tique que leia: a queda leva o repouso.
+                    saidas = self.bus.subscribe(EventTopic.CONTROLLER_DISCONNECTED)
+                    con.assinaturas.append((EventTopic.CONTROLLER_DISCONNECTED, saidas))
+                    con.tarefas.append(asyncio.create_task(
+                        self._repousar_quem_sai(saidas),
+                        name=f"mods-{con.sessao.mod_id}-entradas-quedas",
+                    ))
                 else:
                     fila = self.bus.subscribe(topico)
                     con.assinaturas.append((topico, fila))
@@ -913,6 +975,60 @@ class Porta:
                     for topico, fila in filas:
                         if topico == nome:
                             _por_na_fila(fila, carga)
+
+    # -- o tópico ``entradas``, de todo controle -----------------------------
+
+    def le_as_entradas(self) -> bool:
+        """Alguma extensão assinou o tópico ``entradas``? Sem ela, o tique não lê controle."""
+        return any(con.filas_das_entradas for con in self._conexoes)
+
+    def entradas_do_tique(self, leituras: dict[str | None, dict[str, Any]]) -> None:
+        """As ``entradas`` deste tique: ``{uniq: {jogador, transporte, valores}}`` de todo controle.
+
+        Cada controle sai quando algo passou da faixa morta (:func:`_mudou`), no máximo
+        :data:`ENTRADAS_POR_SEGUNDO` vezes por segundo; o que o teto segura sai num tique
+        seguinte, então o último valor sempre chega. O controle que sumiu fora do repouso sai
+        uma vez em repouso. Roda no laço do serviço e nunca espera o socket.
+        """
+        filas = [f for con in self._conexoes for f in con.filas_das_entradas]
+        if not filas:
+            self._entradas_enviadas = {}
+            return
+        agora = self._relogio()
+        intervalo = 1.0 / ENTRADAS_POR_SEGUNDO
+        for uniq in dict.fromkeys([*self._entradas_enviadas, *leituras]):
+            leitura = leituras.get(uniq)
+            antes = self._entradas_enviadas.get(uniq)
+            if leitura is None:
+                self._repouso_de(uniq)
+                continue
+            valores: _Valores = leitura["valores"]
+            base = antes[0] if antes is not None else REPOUSO_DAS_ENTRADAS
+            if not _mudou(base, valores):
+                continue
+            if antes is not None and agora - antes[1] < intervalo:
+                continue
+            jogador, via = leitura.get("jogador"), leitura.get("transporte")
+            self._entradas_enviadas[uniq] = (valores, agora, jogador, via)
+            carga = _carga_das_entradas(uniq, jogador, via, valores)
+            for fila in filas:
+                _por_na_fila(fila, carga)
+
+    def _repouso_de(self, uniq: str | None) -> None:
+        """Quem saiu fora do repouso sai uma vez em repouso: o brinquedo não fica preso."""
+        antes = self._entradas_enviadas.pop(uniq, None)
+        if antes is None or antes[0] == REPOUSO_DAS_ENTRADAS:
+            return
+        carga = _carga_das_entradas(uniq, antes[2], antes[3], REPOUSO_DAS_ENTRADAS)
+        for fila in (f for con in self._conexoes for f in con.filas_das_entradas):
+            _por_na_fila(fila, carga)
+
+    async def _repousar_quem_sai(self, saidas: asyncio.Queue[Any]) -> None:
+        """Cada ``controller.disconnected`` leva o repouso daquele controle, com tique ou sem."""
+        while True:
+            carga = await saidas.get()
+            uniq = carga.get("uniq") if isinstance(carga, dict) else None
+            self._repouso_de(uniq if isinstance(uniq, str) and uniq else None)
 
     def _pulsar(self, sessao: _Credencial, params: dict[str, Any]) -> dict[str, Any]:
         """O pulso da barra: a porta valida e recusa, e o motor da luz decide e escreve."""
@@ -1145,6 +1261,103 @@ def botoes_de_todo_controle_no_servico(
         logger.debug("mods_porta_botoes_do_tique_falhou", err=type(exc).__name__)
 
 
+def entradas_de_todo_controle_no_servico(daemon: Any, estado_do_posto: Any) -> None:
+    """O tópico ``entradas`` do tique: os analógicos, os gatilhos e os dedos de cada controle.
+
+    O dono do posto entra com ``estado_do_posto`` (o ``ControllerState`` do tique, ou ``None``
+    sem leitura); os outros, com as fontes dos atalhos
+    (:func:`~hefesto_dualsense4unix.daemon.subsystems.poll.entradas_de_cada_controle`). Os dedos
+    vêm do ``SensorHub`` de todos, que só VÊ o touchpad (``leitura``, sem segurar o nó). Vale em
+    todo modo: no Modo Nativo o laço chama daqui sem tocar o resto do tique. Sem extensão que
+    assine ``entradas``, não lê nada. Nunca levanta: o tique segue.
+    """
+    porta = getattr(getattr(daemon, "_mods_supervisor", None), "porta", None)
+    if not isinstance(porta, Porta) or not porta.le_as_entradas():
+        return
+    try:
+        from hefesto_dualsense4unix.daemon.subsystems.poll import entradas_de_cada_controle
+        from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import _jogador_de
+
+        eixos: dict[str | None, tuple[int, ...]] = {
+            uniq: tuple(e[1:]) for uniq, e in entradas_de_cada_controle(daemon).items()
+        }
+        posto = _primario(getattr(daemon, "controller", None))
+        if estado_do_posto is not None:
+            eixos[posto] = tuple(_eixo(getattr(estado_do_posto, campo, None), padrao)
+                                 for campo, padrao in _EIXOS_DO_POSTO)
+        vias = _transportes_por_controle(daemon)
+        if estado_do_posto is not None and posto not in vias:
+            vias[posto] = getattr(estado_do_posto, "transport", None)
+        leitura_do_hub = _leitura_do_toque(daemon)
+        porta.entradas_do_tique({
+            uniq: {
+                "jogador": _jogador_de(daemon, uniq),
+                "transporte": vias.get(uniq),
+                "valores": (*valores, _dedos(leitura_do_hub, uniq)),
+            }
+            for uniq, valores in eixos.items()
+        })
+    except Exception as exc:
+        logger.debug("mods_porta_entradas_do_tique_falhou", err=type(exc).__name__)
+
+
+#: Os eixos do ``ControllerState`` do posto, na ordem das ``entradas``, com o valor do repouso.
+_EIXOS_DO_POSTO = (("raw_lx", 128), ("raw_ly", 128), ("raw_rx", 128), ("raw_ry", 128),
+                   ("l2_raw", 0), ("r2_raw", 0))
+
+
+def _eixo(valor: Any, padrao: int) -> int:
+    if not isinstance(valor, int) or isinstance(valor, bool):
+        return padrao
+    return min(255, max(0, valor))
+
+
+def _transportes_por_controle(daemon: Any) -> dict[str | None, Any]:
+    """``{uniq: 'usb' | 'bt'}`` dos controles na mesa, pelo backend (sem E/S)."""
+    from hefesto_dualsense4unix.daemon.connection import (
+        alvos_conectados_de,
+        transportes_dos_alvos_de,
+    )
+
+    alvos = alvos_conectados_de(daemon) or {}
+    vias = transportes_dos_alvos_de(daemon) or {}
+    return {uniq: vias[chave] for chave, uniq in alvos.items() if uniq and chave in vias}
+
+
+def _leitura_do_toque(daemon: Any) -> Callable[[str], Any] | None:
+    """A ``SensorHub.leitura`` da sessão: vê o dedo sem pedir o nó (o ``toque_da_peca`` o pede)."""
+    garantir = getattr(daemon, "_garantir_sensor_hub", None)
+    if not callable(garantir):
+        return None
+    leitura = getattr(garantir(), "leitura", None)
+    return leitura if callable(leitura) else None
+
+
+def _dedos(
+    leitura: Callable[[str], Any] | None, uniq: str | None
+) -> tuple[tuple[float, float], ...]:
+    """Os dedos no touchpad de ``uniq``, de 0 a 1 pela área dele; nenhum sem leitura."""
+    if leitura is None or not uniq:
+        return ()
+    try:
+        toque = leitura(uniq).get("touchpad")
+    except Exception as exc:
+        logger.debug("mods_porta_sem_o_toque", err=type(exc).__name__)
+        return ()
+    if not isinstance(toque, dict):
+        return ()
+    largura = max(1, int(toque.get("width") or 1) - 1)
+    altura = max(1, int(toque.get("height") or 1) - 1)
+    pontos = toque.get("pontos")
+    if not isinstance(pontos, list):
+        pontos = [toque] if toque.get("touching") else []
+    return tuple(
+        (round(min(1.0, max(0.0, int(p["x"]) / largura)), 3),
+         round(min(1.0, max(0.0, int(p["y"]) / altura)), 3))
+        for p in pontos if isinstance(p, dict)
+    )
+
+
 def _primario(controle: Any) -> str | None:
     """O ``primary_uniq`` do backend (uma propriedade; num dublê, pode ser método)."""
     valor = getattr(controle, "primary_uniq", None)
@@ -1158,6 +1371,7 @@ __all__ = [
     "CODE_O_JOGO_ESCREVE",
     "CODE_QUEM_E_VOCE",
     "CODE_SEM_PERMISSAO",
+    "ENTRADAS_POR_SEGUNDO",
     "EVENTO_DO_PARAR",
     "JANELA_DA_VIBRACAO_DO_JOGO_S",
     "PUBLICACOES_POR_SEGUNDO",
@@ -1168,6 +1382,7 @@ __all__ = [
     "controles_no_servico",
     "credencial_do_par",
     "descende_de",
+    "entradas_de_todo_controle_no_servico",
     "escritor_do_servico",
     "estado_dos_acessorios",
     "estado_vazio_dos_acessorios",

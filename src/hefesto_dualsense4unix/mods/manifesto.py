@@ -43,11 +43,17 @@ def ids_de_fabrica() -> frozenset[str]:
 #: outras três são declaração, e o Hefesto as lê sem abrir processo nenhum.
 TIPOS = ("processo", "lancador", "tema", "perfil")
 
+#: O ``nome`` do evento do tópico ``entradas``.
+NOME_DAS_ENTRADAS = "controle.entradas"
+
 #: ``ler:<tópico>``: o nome público de cada tópico e os tópicos do barramento
 #: que ele entrega. O nome público é o contrato; o do barramento pode mudar.
 TOPICOS_DE_LEITURA: dict[str, tuple[str, ...]] = {
     "estado": (EventTopic.STATE_UPDATE,),
     "botoes": (EventTopic.BUTTON_DOWN, EventTopic.BUTTON_UP),
+    # Os analógicos, os gatilhos e o touchpad de CADA controle: como o `botoes`, o serviço enche a
+    # fila (`Porta.entradas_do_tique`) e o barramento não leva este tópico.
+    "entradas": (NOME_DAS_ENTRADAS,),
     "bateria": (EventTopic.BATTERY_CHANGE,),
     "conexao": (  # (noqa-acento): contrato ASCII
         EventTopic.CONTROLLER_CONNECTED,
@@ -97,8 +103,9 @@ ALCANCES_DE_REDE = ("nenhuma", "local", "internet")
 PERMISSOES_SIMPLES = ("bluetooth", "lancador", "tema", "aparelhos")
 
 _O_QUE_DEIXA: dict[str, str] = {
-    "ler:estado": "Ler os botões, os eixos, os gatilhos e a bateria a cada tique.",
+    "ler:estado": "Ler os botões, os eixos, os gatilhos e a bateria do controle do jogador 1.",
     "ler:botoes": "Saber quando um botão é apertado e solto.",
+    "ler:entradas": "Ler os analógicos, os gatilhos e o touchpad de cada controle.",
     "ler:bateria": "Saber a carga da bateria.",
     "ler:conexao": "Saber quando um controle entra ou sai.",  # (noqa-acento): contrato ASCII
     "ler:jogo.vibracao": (  # (noqa-acento): contrato ASCII
@@ -565,6 +572,7 @@ __all__ = [
     "CANAIS_DE_ESCRITA",
     "COR_HEXA",
     "FUNCOES_POR_PEDIDO",
+    "NOME_DAS_ENTRADAS",
     "NOME_DA_FUNCAO",
     "NOME_DO_MANIFESTO",
     "PERMISSOES_DO_ESTADO",

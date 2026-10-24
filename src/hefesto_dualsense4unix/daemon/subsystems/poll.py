@@ -1,6 +1,8 @@
 """Subsystem de poll loop — leitura de estado do controle e publicação de eventos."""
 from __future__ import annotations
 
+from typing import NamedTuple
+
 from hefesto_dualsense4unix.integrations.bluez_dbus import observar_o_gesto_da_vaga
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -169,17 +171,32 @@ def botoes_de_cada_controle(
     return maos
 
 
-def gatilhos_de_cada_controle(
-    daemon: object,
-) -> dict[str, tuple[frozenset[str], int, int]]:
-    """O que os OUTROS controles aperta agora: `{MAC: (botões, L2 0-255, R2 0-255)}`.
+class EntradasDoControle(NamedTuple):
+    """O que um controle faz agora: os botões, os analógicos e os gatilhos, de 0 a 255."""
+
+    botoes: frozenset[str]
+    lx: int
+    ly: int
+    rx: int
+    ry: int
+    l2: int
+    r2: int
+
+
+#: O controle parado, ou sem leitura neste tique: nada apertado, os analógicos no centro.
+PARADO = EntradasDoControle(frozenset(), 128, 128, 128, 128, 0, 0)
+
+
+def entradas_de_cada_controle(daemon: object) -> dict[str, EntradasDoControle]:
+    """O que os OUTROS controles fazem agora: `{MAC: EntradasDoControle}`.
 
     A tabela que age junto com o jogo (`subsystems/mouse.TabelaNoJogo`) precisa do
-    gatilho ANALÓGICO de cada controle, e não só do botão digital que
-    :func:`botoes_de_cada_controle` entrega. As fontes são as mesmas, na mesma
-    ordem — o co-op (`live_snapshots`) e o leitor passivo do `SensorHub` —, e o
-    dono do posto de P1 fica de fora: o laço já tem o `state` dele. Quem não
-    tem leitura neste tique fica com a mão vazia. Nunca levanta.
+    gatilho ANALÓGICO de cada controle, e o tópico `entradas` das extensões, dos
+    analógicos também; :func:`botoes_de_cada_controle` só entrega o botão digital.
+    As fontes são as mesmas, na mesma ordem — o co-op (`live_snapshots`) e o
+    leitor passivo do `SensorHub` —, e o dono do posto de P1 fica de fora: o laço
+    já tem o `state` dele. Quem não tem leitura neste tique fica :data:`PARADO`.
+    Nunca levanta.
     """
     controller = getattr(daemon, "controller", None)
     dono = _mac_ou_none(getattr(controller, "primary_uniq", None))
@@ -191,44 +208,65 @@ def gatilhos_de_cada_controle(
     sentados = _sentados_no_coop(daemon) if sem_leitor else frozenset()
     passivos = [u for u in sem_leitor if u not in sentados]
     entradas = _entradas_do_hub(daemon) if passivos else None
-    maos: dict[str, tuple[frozenset[str], int, int]] = {}
+    maos: dict[str, EntradasDoControle] = {}
     for uniq in outros:
         if uniq in vivos:
             snap = vivos[uniq]
-            maos[uniq] = (
-                frozenset(getattr(snap, "buttons_pressed", ()) or ()),
-                _como_inteiro(getattr(snap, "l2_raw", 0)),
-                _como_inteiro(getattr(snap, "r2_raw", 0)),
+            maos[uniq] = _entradas_de(
+                getattr(snap, "buttons_pressed", ()),
+                {campo: getattr(snap, campo, None) for campo in _CAMPOS_DAS_ENTRADAS},
             )
         elif uniq in sentados or entradas is None:
-            maos[uniq] = (frozenset(), 0, 0)
+            maos[uniq] = PARADO
         else:
-            maos[uniq] = _gatilhos_passivos(entradas, uniq)
+            maos[uniq] = _entradas_passivas(entradas, uniq)
     return maos
 
 
-def _como_inteiro(valor: object) -> int:
-    return valor if isinstance(valor, int) and not isinstance(valor, bool) else 0
+def gatilhos_de_cada_controle(
+    daemon: object,
+) -> dict[str, tuple[frozenset[str], int, int]]:
+    """O que os OUTROS controles apertam agora: `{MAC: (botões, L2 0-255, R2 0-255)}`.
+
+    A parte das :func:`entradas_de_cada_controle` que a tabela que age junto com o
+    jogo lê. Nunca levanta.
+    """
+    return {u: (e.botoes, e.l2, e.r2) for u, e in entradas_de_cada_controle(daemon).items()}
 
 
-def _gatilhos_passivos(entradas: object, uniq: str) -> tuple[frozenset[str], int, int]:
-    """Botões e gatilhos de `uniq` pelo leitor passivo do hub; vazio sem leitura."""
-    vazio: tuple[frozenset[str], int, int] = (frozenset(), 0, 0)
-    if not callable(entradas):
-        return vazio
-    try:
-        leitura = entradas(uniq)
-    except Exception as exc:
-        logger.debug("tabela_no_jogo_leitura_passiva_falhou", identity=uniq, err=str(exc))
-        return vazio
-    if not isinstance(leitura, dict):
-        return vazio
-    botoes = leitura.get("buttons")
+#: Os campos do leitor (o snapshot do co-op e a leitura do hub), na ordem de `EntradasDoControle`.
+_CAMPOS_DAS_ENTRADAS = ("lx", "ly", "rx", "ry", "l2_raw", "r2_raw")
+
+
+def _como_inteiro(valor: object, padrao: int = 0) -> int:
+    if not isinstance(valor, int) or isinstance(valor, bool):
+        return padrao
+    return min(255, max(0, valor))
+
+
+def _entradas_de(botoes: object, campos: dict[str, object]) -> EntradasDoControle:
     conjunto = (
         frozenset(str(b) for b in botoes)
         if isinstance(botoes, (list, tuple, set, frozenset)) else frozenset()
     )
-    return (conjunto, _como_inteiro(leitura.get("l2_raw")), _como_inteiro(leitura.get("r2_raw")))
+    return EntradasDoControle(conjunto, *(
+        _como_inteiro(campos.get(campo), padrao)
+        for campo, padrao in zip(_CAMPOS_DAS_ENTRADAS, PARADO[1:], strict=True)
+    ))
+
+
+def _entradas_passivas(entradas: object, uniq: str) -> EntradasDoControle:
+    """Botões, analógicos e gatilhos de `uniq` pelo leitor passivo do hub; parado sem leitura."""
+    if not callable(entradas):
+        return PARADO
+    try:
+        leitura = entradas(uniq)
+    except Exception as exc:
+        logger.debug("leitura_passiva_das_entradas_falhou", identity=uniq, err=str(exc))
+        return PARADO
+    if not isinstance(leitura, dict):
+        return PARADO
+    return _entradas_de(leitura.get("buttons"), leitura)
 
 
 def quem_segura_os_atalhos(daemon: object) -> str | None:
@@ -367,8 +405,11 @@ __all__ = [
     "BATTERY_DEBOUNCE_SEC",
     "BATTERY_DELTA_THRESHOLD_PCT",
     "BATTERY_MIN_INTERVAL_SEC",
+    "PARADO",
     "BatteryDebouncer",
+    "EntradasDoControle",
     "botoes_de_cada_controle",
+    "entradas_de_cada_controle",
     "evdev_buttons_once",
     "gatilhos_de_cada_controle",
     "observar_os_atalhos",

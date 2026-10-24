@@ -53,15 +53,23 @@ Quem só mostra o estado (a coluna «Agora» e a aba Conexões) pede `publicar:a
 último para a janela e para a aba, e ele NÃO vai ao barramento, então os gestos do PS ficam os de sempre. Com
 `ler:acessorios.gesto` o estado vai também ao barramento, e é ele que liga os gestos.
 
-Os tópicos de leitura são estes. `estado`, `bateria` e `conexao` são do controle do posto; `botoes` é de todo
-controle:
+Os tópicos de leitura são estes. `estado`, `bateria` e `conexao` são do controle do posto; `botoes` e `entradas`
+são de todo controle:
 
-- `estado`: o estado do controle a cada tique;
+- `estado`: o estado do controle do posto (o do jogador 1) a cada tique;
 - `botoes`: um botão apertado (`nome: "button.down"`) ou solto (`button.up`) em QUALQUER controle, de P1 a P4,
   cabo ou Bluetooth: `{botao, button, pressed, uniq, jogador}`. `botao` e `button` são o mesmo nome (`cross`,
   `r1`, `dpad_up`…; `button` fica para quem lia a 2.1), `uniq` é o do controle, também no envelope, e `jogador`
   o número que ele acende agora (ou `null`). Cada borda sai uma vez, no tique em que acontece; o controle que
   sai solta o que segurava. No Modo Nativo o tique para, e os botões também;
+- `entradas` (`nome: "controle.entradas"`): os analógicos, os gatilhos e o touchpad de QUALQUER controle, de P1 a
+  P4, cabo ou Bluetooth: `{uniq, jogador, transporte, lx, ly, rx, ry, l2, r2, dedos}`. Os eixos e os gatilhos vão
+  de 0 a 255 (o analógico solto é 128, o gatilho solto é 0); `transporte` é `usb` ou `bt`; `dedos` é a lista dos
+  dedos no touchpad, `[{x, y}]` de 0 a 1 pela área dele, e `[]` quando nenhum encosta. Um controle sai só quando
+  algo mudou além da faixa morta (2 num eixo, 0,01 num dedo; a ponta de um eixo sai sempre), no máximo 30 vezes por
+  segundo, e o último valor sempre chega. O parado não sai; quem assina recebe o que já está fora do repouso, e o
+  controle que sai manda o repouso uma vez. Vale em todo modo, inclusive o Nativo: a leitura só vê, nunca segura o
+  controle nem o touchpad;
 - `bateria`: a carga;
 - `conexao`: o controle que entra ou sai.
 
