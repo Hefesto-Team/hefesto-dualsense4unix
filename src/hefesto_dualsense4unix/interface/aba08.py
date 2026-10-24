@@ -3236,7 +3236,7 @@ MIOLO = f'''
             <svg class="i" aria-hidden="true"><use href="#rd-mapa"/></svg> {MAPEAR_ENTRADAS}</a>
           <button class="btn" data-gesto="examinar-portas" title="{EXAMINAR_PORTAS} — refaz o exame das entradas, da energia e do Bluetooth, e relê o estado de cada controle">
             <svg class="i" aria-hidden="true"><use href="#rd-reexaminar"/></svg> {EXAMINAR_PORTAS}</button>
-          <a class="btn" href="mapa-do-controle.html" title="O mapa do controle — abre no navegador">
+          <a class="btn" href="mapa-do-controle.html" title="O mapa do controle — abre aqui, na janela">
             <svg class="i ds" aria-hidden="true"><use href="#rd-ds"/></svg> Mapa do controle</a>
           <a class="btn" href="mapa-das-portas.html" title="O mapa das conexões: cada entrada do computador, o que está nela e o que mudar">
             <svg class="i" aria-hidden="true"><use href="#rd-hub"/></svg> Mapa das conexões</a>
