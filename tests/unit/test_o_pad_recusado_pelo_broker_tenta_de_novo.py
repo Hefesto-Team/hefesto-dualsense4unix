@@ -42,6 +42,10 @@ MESA_MISTA = {
     4: ("aa:bb:cc:00:00:44", "bt"),
 }
 RECUSAS = ("broker_ausente", "peer_recusado", "sem_sessao_ativa")
+#: o motivo que o pad anota em cada recusa: o socket que não existe e o peer
+#: recusado não respondem, e o cliente lê os dois como broker fora do ar.
+MOTIVO_DA_RECUSA = {"broker_ausente": "broker_fora_do_ar", "peer_recusado": "broker_fora_do_ar",
+                    "sem_sessao_ativa": "sem_sessao_ativa"}
 
 
 class BrokerAntesDoLogin:
@@ -108,6 +112,9 @@ class Mesa:
         monkeypatch.setattr(self.ug, "HIDRAW_DO_GADGET", self.enumerados.get)
         monkeypatch.setattr(self.ug, "QUIRK_DO_PAR", lambda _par: False)
         monkeypatch.setattr(self.ug, "_RECUSAS_DO_BROKER", {}, raising=False)
+        # o cliente recusado guarda o socket da mesa em que nasceu: sem esta
+        # troca, a mesa seguinte do mesmo serial pede ao socket da anterior.
+        monkeypatch.setattr(self.ug, "_CLIENTES_RECUSADOS", {}, raising=False)
         monkeypatch.setattr(pad_usb, "_SEM_PORTA", {})
         do_gadget = self.ug.PEDIR_O_PAD_USB
         de_verdade = self.ug._pedir_ao_broker
@@ -161,6 +168,9 @@ class TestARecusaDoBrokerTentaDeNovo:
             for pad in pads:
                 assert pad.start() and pad._gadget is None and pad.is_active()
             assert mesa.pedidos_ao_broker == len(pads)
+            assert {pad_usb.porque_sem_porta(pad.identity) for pad in pads} == {
+                MOTIVO_DA_RECUSA[mesa.broker.modo]
+            }, "o pedido não chegou ao broker desta mesa"
             mesa.passar(mesa.ug._GADGET_VARRE_S + 0.5, pads)
             assert mesa.pedidos_ao_broker == 2 * len(pads), "a recusa não pediu de novo"
             assert all(pad._gadget is None for pad in pads), "a recusa montou um gadget"
