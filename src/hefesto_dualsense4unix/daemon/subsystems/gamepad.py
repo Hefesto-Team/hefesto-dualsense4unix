@@ -2992,6 +2992,11 @@ def _selo_do_que_vale(nome: str | None) -> Any:
 
 #: De quanto em quanto tempo a ponte procura o aparelho declarado que ainda não está aberto.
 PROCURAR_O_ACIONADOR_A_CADA_S = 3.0
+#: O teto da espera entre os pedidos do aparelho que o sistema não deixa ler. Cada recusa no
+#: mesmo nó dobra a espera, de ``PROCURAR_O_ACIONADOR_A_CADA_S`` até aqui: cada pedido abre uma
+#: conexão com o broker, e a recusa que não muda não enche o diário dele nem o do daemon. O
+#: aparelho que volta à porta (outro nó) ou a declaração refeita se pedem na hora.
+REPEDIR_O_RECUSADO_ATE_S = 300.0
 #: De quanto em quanto tempo a ponte pergunta se há jogo em foco (prende ou solta o aparelho).
 OLHAR_O_FOCO_A_CADA_S = 1.0
 _EV_KEY = 1
@@ -3019,6 +3024,8 @@ class PonteDosAcionadores:
         self._declarados: dict[str, Any] = {}
         # Os aparelhos cuja falta de permissão já foi dita no diário (uma vez por aparelho).
         self._sem_permissao: set[str] = set()
+        # chave -> (o nó que recusou, quantas recusas seguidas nele, quando foi a última)
+        self._recusas: dict[str, tuple[str, int, float]] = {}
         self._procurou_em: float | None = None
         self._olhou_o_foco_em: float | None = None
         self._em_jogo = False
@@ -3030,6 +3037,7 @@ class PonteDosAcionadores:
                      declarados, dict) else {}
         self._declarados = vivos
         self._sem_permissao &= set(vivos)
+        self._recusas = {c: r for c, r in self._recusas.items() if c in vivos}
         for chave in [c for c in self._abertos if c not in vivos]:
             self._fechar(chave)
         if not vivos:
@@ -3039,7 +3047,7 @@ class PonteDosAcionadores:
         if faltam and (self._procurou_em is None
                        or agora - self._procurou_em >= PROCURAR_O_ACIONADOR_A_CADA_S):
             self._procurou_em = agora
-            self._procurar(faltam)
+            self._procurar(faltam, agora)
         if self._olhou_o_foco_em is None or agora - self._olhou_o_foco_em >= OLHAR_O_FOCO_A_CADA_S:
             self._olhou_o_foco_em = agora
             try:
@@ -3075,7 +3083,7 @@ class PonteDosAcionadores:
         for chave in list(self._abertos):
             self._fechar(chave)
 
-    def _procurar(self, faltam: list[str]) -> None:
+    def _procurar(self, faltam: list[str], agora: float) -> None:
         from hefesto_dualsense4unix.utils.maquina import (
             FRASE_SEM_PERMISSAO_DE_LER,
             aparelhos_de_entrada,
@@ -3085,9 +3093,16 @@ class PonteDosAcionadores:
             chave = aparelho.chave
             if chave not in faltam or chave in self._abertos:
                 continue
+            recusa = self._recusas.get(chave)
+            if recusa is not None and recusa[0] == aparelho.evento and agora < recusa[2] + min(
+                    PROCURAR_O_ACIONADOR_A_CADA_S * 2 ** (recusa[1] - 1),
+                    REPEDIR_O_RECUSADO_ATE_S):
+                continue
             try:
                 dispositivo = self._abrir(aparelho.evento)
             except PermissionError:
+                seguidas = recusa[1] + 1 if recusa and recusa[0] == aparelho.evento else 1
+                self._recusas[chave] = (aparelho.evento, seguidas, agora)
                 if chave not in self._sem_permissao:
                     self._sem_permissao.add(chave)
                     logger.warning("acionador_sem_permissao", evento=aparelho.evento,
@@ -3097,6 +3112,7 @@ class PonteDosAcionadores:
                 logger.info("acionador_nao_abriu", evento=aparelho.evento, err=str(exc))
                 continue
             self._sem_permissao.discard(chave)
+            self._recusas.pop(chave, None)
             self._abertos[chave] = _AcionadorAberto(aparelho.evento, dispositivo)
             logger.info("acionador_aberto", evento=aparelho.evento, nome=aparelho.nome)
 

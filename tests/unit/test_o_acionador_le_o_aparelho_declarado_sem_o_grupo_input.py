@@ -279,6 +279,36 @@ def test_a_ponte_le_o_declarado_pelo_broker_e_a_retirada_o_fecha(
     assert dispositivo.fechado
 
 
+def test_o_recusado_nao_se_pede_ao_broker_a_cada_procura(sem_permissao: dict[str, Any]) -> None:
+    """Cada pedido abre uma conexão com o broker, e cada uma deixa linhas no diário dele e no do
+    daemon: a recusa que não muda espera o dobro a cada vez, até o teto. O aparelho que volta à
+    porta num nó novo se pede na hora.
+
+    MORDIDA: tire o ``continue`` da espera do recusado em ``PonteDosAcionadores._procurar``."""
+    sem_permissao["serve"] = False
+    declarados = dict(maquina.MaquinaConfig.model_validate({"acionadores": {CHAVE: {
+        "controle": CONTROLE, "teclas": {"28": "cross"}}}}).acionadores)
+    relogio = {"t": 0.0}
+    ponte = gp.PonteDosAcionadores(raiz=sem_permissao["mesa"].sys, relogio=lambda: relogio["t"])
+
+    passo = gp.PROCURAR_O_ACIONADOR_A_CADA_S
+    hora = 3600.0
+    while relogio["t"] < hora:
+        ponte.andar(declarados, lambda: False)
+        relogio["t"] += passo
+    pedidos = len(sem_permissao["pedidos"])
+    assert 1 < pedidos <= 7 + hora / gp.REPEDIR_O_RECUSADO_ATE_S, pedidos
+    assert all(p == ("/dev/input/event3", CHAVE) for p in sem_permissao["pedidos"])
+
+    # o aparelho sai e volta à porta noutro nó: o pedido sai no tique seguinte
+    mesa = sem_permissao["mesa"]
+    (mesa.sys / "event3").unlink()
+    mesa.no("event7")
+    ponte.andar(declarados, lambda: False)
+    assert sem_permissao["pedidos"][pedidos:] == [("/dev/input/event7", CHAVE)]
+    ponte.parar()
+
+
 # --- a frase -------------------------------------------------------------------------------------
 
 _GRUPO = "usermod -aG " + "input"
@@ -330,7 +360,7 @@ def test_o_doctor_sem_declaracao_no_disco_sai_com_zero() -> None:
     assert cmd_doctor._print_bloco_entrada() == 0
 
 
-def test_o_declarado_que_recusa_da_warn_com_a_frase(tmp_path: Path) -> None:
+def test_o_declarado_que_recusa_da_warn_com_o_que_conferir(tmp_path: Path) -> None:
     mesa = _Mesa(tmp_path)
     mesa.no("event3")
     mesa.no("event5", nome="Teclado da casa")
@@ -344,7 +374,8 @@ def test_o_declarado_que_recusa_da_warn_com_a_frase(tmp_path: Path) -> None:
         raiz=str(mesa.sys), abrir=abrir, declarados=_declaracao())
 
     assert tag == "[WARN]"
-    assert NOME in mensagem and maquina.FRASE_SEM_PERMISSAO_DE_LER in mensagem
+    assert NOME in mensagem and system_check.LINHA_ACIONADOR_RECUSADO in mensagem
+    assert "doctor" not in mensagem, "dentro do doctor, a linha não manda rodar o doctor"
     assert abertos == ["event3"], "só o declarado se mede"
     assert cmd_doctor._gravidade_das_linhas([(tag, mensagem)]) > 0
 
