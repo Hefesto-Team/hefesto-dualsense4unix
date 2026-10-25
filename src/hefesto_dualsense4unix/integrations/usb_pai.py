@@ -58,6 +58,8 @@ from hefesto_dualsense4unix.utils.texto_do_sysfs import ler_texto
 
 RAIZ_SYSFS = "/sys"
 
+#: A raiz do sysfs onde cada nó `hidraw` declara de quem é (`HID_UNIQ`). O dono é este; o
+#: `conexao_zumbi` e o `physical_report_reader` a importam daqui.
 RAIZ_HIDRAW = "/sys/class/hidraw"
 
 

@@ -131,11 +131,11 @@ from typing import Any
 
 from hefesto_dualsense4unix.core.ds_output_report import BT_INPUT_CRC_SEED, bt_crc32
 from hefesto_dualsense4unix.core.virtual_motion import REGISTRO
+from hefesto_dualsense4unix.integrations import usb_pai
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 #: Report de input do DualSense por transporte (hid-playstation.c):
 #: USB = 0x01 (64 B, payload começa em data[1]); BT = 0x31 (78 B, payload em
 #: data[2] — 0x31 + 1 byte de header — e CRC-32 nos 4 últimos bytes).
@@ -227,8 +227,8 @@ _HZ_EMA_ALPHA = 0.25
 _HZ_STALE_S = 1.0
 
 
-#: Raiz do sysfs onde cada nó `hidraw` declara de quem é (`HID_UNIQ`).
-_RAIZ_HIDRAW = "/sys/class/hidraw"
+#: Raiz do sysfs onde cada nó `hidraw` declara de quem é (`HID_UNIQ`); o dono é o `usb_pai`.
+_RAIZ_HIDRAW = usb_pai.RAIZ_HIDRAW
 
 
 def uniq_do_hidraw(path: str) -> str | None:
@@ -286,7 +286,7 @@ def silence_budget_for(path: str | None) -> float:
     if not nome.startswith("hidraw"):
         return _SILENCE_REOPEN_BT_S
     try:
-        with open(f"/sys/class/hidraw/{nome}/device/uevent", encoding="utf-8") as fh:
+        with open(os.path.join(_RAIZ_HIDRAW, nome, "device", "uevent"), encoding="utf-8") as fh:
             for linha in fh:
                 if not linha.startswith("HID_ID="):
                     continue

@@ -93,6 +93,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from hefesto_dualsense4unix.integrations.ar_do_adaptador import TIPO_ACL, LeitorDoKernel
+from hefesto_dualsense4unix.integrations.usb_pai import RAIZ_HIDRAW
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
 
@@ -104,8 +105,6 @@ JANELA_DO_TETO_S = 600.0
 
 #: árvore de mentira — a de verdade é a bancada, com quatro DualSense de pé.
 RAIZ_ADAPTADORES = "/sys/class/bluetooth"
-
-RAIZ_HIDRAW = "/sys/class/hidraw"
 
 PONTE_INSTALADA = "/usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh"
 
