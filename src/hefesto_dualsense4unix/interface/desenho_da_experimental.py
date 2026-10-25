@@ -826,7 +826,7 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
                                          controles=cc)
         else:
             ajustes = _abas_das_opcoes(opcoes, aba) if opcoes else vazio
-        fora = DICA_DA_BARRA_FORA.format(nome=nome) if processo in PROCESSO else ""
+        fora = dica_da_barra_fora(nome, processo)
         faixa = (faixa_do_livre_html(livre_op, livre or LivreAoVivo(), gestao, fora=fora)
                  if livre_op else "")
         return _arranjo_c(nome, ajustes, mod=mod, agora=agora, estado=estado, parar=parar,
@@ -1131,6 +1131,15 @@ DICA_DO_GRAVAR = "Grava o que você arrastar como uma forma nova, para os botõe
 #: A dica da barra do controle livre com a extensão fora da porta (o ``processo`` não é o de quem
 #: roda): a barra ainda arrasta e grava formas, mas o que ela faz não chega à extensão.
 DICA_DA_BARRA_FORA = "{nome} não está rodando: a barra não chega a ela."
+#: O endereço da barra do livre: o alvo ``classe`` com a razão (``fora`` e a dica, ou nenhum dos
+#: dois), que o tique da janela aberta pinta sem tocar no ``input`` que o dedo arrasta.
+CAMPO_DA_BARRA_FORA = "mod-livre-fora"
+
+
+def dica_da_barra_fora(nome: str, processo: str) -> str:
+    """A dica da barra do livre fora da porta, ou vazio na porta: a regra da montagem e do tique."""
+    return DICA_DA_BARRA_FORA.format(nome=nome) if processo in PROCESSO else ""
+
 #: Os segundos de rastro que a faixa mostra.
 RASTRO_S = 10.0
 _TRACO_DA_ACAO = ('viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" '
@@ -1498,15 +1507,18 @@ def faixa_do_livre_html(o: OpcaoDaJanela, vivo: LivreAoVivo, gestao: Gestao | No
     A barra é um ``range``: o ``input`` é o gesto vivo (lê e manda, nunca grava; a porta segura em
     20 por segundo) e o ``change`` é o soltar, que sempre sai. O rastro e os chips de quem recebe
     são blocos próprios (``#mod-livre-rastro`` e ``#mod-livre-alvos``), repintados pelo tique sem
-    tocar na barra que o dedo está arrastando. Com ``fora`` (a dica), a barra nasce apagada.
+    tocar na barra que o dedo está arrastando. Com ``fora`` (a dica), a barra nasce apagada; o
+    trilho tem o endereço ``CAMPO_DA_BARRA_FORA``, e o tique o apaga ou acende sem refazê-lo.
     """
     v = round(max(0.0, min(1.0, vivo.valor)) * 100)
-    trilho = (f'mj-trilho fora" data-dica="{_a(fora)}' if fora else "mj-trilho")
+    trilho = ((f'class="mj-trilho fora" data-dica="{_a(fora)}"' if fora else 'class="mj-trilho"')
+              + f' data-campo="{CAMPO_DA_BARRA_FORA}" data-hef-alvo="classe"'
+              ' data-hef-classe="fora" data-hef-razao="sim"')
     gravar = ("btn mj-gravar on", "true") if vivo.gravando else ("btn mj-gravar", "false")
     return f'''<div class="mj-faixa" data-livre="{_a(o.id)}">
       <div class="mj-faixa-topo"><span class="pc-sub">{_e(o.rotulo)}</span></div>
       <div class="mj-livre-rastro" id="mod-livre-rastro">{rastro_html(vivo)}</div>
-      <div class="{trilho}" style="--v:{v}"><input type="range" min="0" max="100" step="1" value="{v}" data-hef-vivo="{GESTO_DO_LIVRE}" data-gesto="{GESTO_DE_SOLTAR}" data-v="{_a(o.mod)}:{_a(o.id)}" aria-label="{_a(o.rotulo)}" oninput="this.parentNode.style.setProperty('--v',this.value);this.nextElementSibling.textContent=this.value"><output>{v}</output></div>
+      <div {trilho} style="--v:{v}"><input type="range" min="0" max="100" step="1" value="{v}" data-hef-vivo="{GESTO_DO_LIVRE}" data-gesto="{GESTO_DE_SOLTAR}" data-v="{_a(o.mod)}:{_a(o.id)}" aria-label="{_a(o.rotulo)}" oninput="this.parentNode.style.setProperty('--v',this.value);this.nextElementSibling.textContent=this.value"><output>{v}</output></div>
       <div class="mj-faixa-pe">{modos_do_livre_html(o)}
         <button class="{gravar[0]}" data-gesto="{GESTO_DE_GRAVAR}" data-v="{_a(o.mod)}:{_a(o.id)}" aria-pressed="{gravar[1]}" data-dica="{DICA_DO_GRAVAR}"><i></i>Gravar</button>
         <span class="mj-alvos" id="mod-livre-alvos">{alvos_do_livre_html(gestao)}</span>

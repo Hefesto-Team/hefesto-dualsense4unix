@@ -1483,6 +1483,7 @@ def _com_as_extensoes(carga: dict[str, Any], lancadores: list[desenho.Lancador],
     """Acrescenta à carga da aba o quadro das extensões, a fila e as janelas abertas."""
     instaladas = REGISTRO.ler()
     carga["mesa"][CAMPO_DA_CONTA] = exp.conta_das_extensoes(len(instaladas))
+    carga["mesa"][exp.CAMPO_DA_BARRA_FORA] = ""
     blocos = carga["blocos"]
     blocos[".ext-lista"] = exp.extensoes_html([_extensao_de(i) for i in instaladas])
     blocos[".lanc-fila"] = exp.fila_com_novo_html(_fila_de(lancadores, viraram))
@@ -2614,6 +2615,9 @@ def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
     if manifesto.opcao_livre is not None:
         blocos["#mod-livre-rastro"] = exp.rastro_html(_VIVA.ao_vivo(mod_id))
         blocos["#mod-livre-alvos"] = exp.alvos_do_livre_html(gestao)
+        # A porta chega à barra pelo endereço dela: só a classe e a dica mudam, e o dedo fica.
+        carga["mesa"][exp.CAMPO_DA_BARRA_FORA] = exp.dica_da_barra_fora(
+            manifesto.nome, exp.processo_de(item.entrada.ligada, item.estado))
     return carga
 
 
