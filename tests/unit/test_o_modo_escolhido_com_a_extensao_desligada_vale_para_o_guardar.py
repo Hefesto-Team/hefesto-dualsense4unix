@@ -10,8 +10,10 @@ MORDIDAS (25/10/2026, executadas sobre a cura e devolvidas):
 
 - o gesto do modo que acusa a extensão fora da porta (sem o ``_o_modo_na_extensao``) reprova
   ``test_fora_da_porta_o_modo_trocado_depois_do_arrastar_vale_para_o_guardar`` (os três modos);
+- o ``_o_modo_na_extensao`` sem o ``sem_a_extensao`` reprova o mesmo teste no «Soltar» e no
+  «Repetir» (a barra fica no modo de antes) e o Cancelar fora da porta;
 - o ``_o_modo_na_extensao`` que toma a recusa de verdade como fora da porta reprova
-  ``test_na_porta_a_recusa_da_troca_continua_piscando``.
+  ``test_na_porta_a_recusa_da_troca_continua_piscando`` e os três casos de recusa do Cancelar.
 """
 
 from __future__ import annotations
@@ -98,3 +100,40 @@ def test_na_porta_a_recusa_da_troca_continua_piscando(
     assert a07._VIVA.modo == "soltar", "o modo recusado ficou valendo na barra"
     a07.guardar_modificacao(ctx, {"v": "toque"}, ponte)
     assert _guardado(lar) == "soltar", "o Guardar gravou o modo que a extensão recusou"
+
+
+#: A janela posta no desenho, num WebKit de verdade: o modo aceso na faixa e o gesto que o clique
+#: no Guardar leva.
+_GUARDAR = """(function(h){
+  const j = document.getElementById('mod-janela');
+  j.innerHTML = h;
+  location.hash = '#' + j.closest('.tela-nova').id;
+  const aceso = [...j.querySelectorAll('.mj-modos button.on')].map(b => b.dataset.modo);
+  const vistos = [];
+  const ouvir = e => { const g = e.target.closest && e.target.closest('[data-gesto]');
+    vistos.push(g ? g.dataset.gesto + '|' + g.dataset.v : ''); };
+  document.addEventListener('click', ouvir, true);
+  [...j.querySelectorAll('a.btn')].find(a => a.textContent.trim() === 'Guardar').click();
+  document.removeEventListener('click', ouvir, true);
+  return JSON.stringify({aceso: aceso, vistos: vistos});
+})(%s)"""
+
+
+def test_no_webkit_o_modo_trocado_fora_da_porta_acende_e_o_guardar_leva_o_gesto(
+        janela: Any, ctx: Any, relogio: list[float]) -> None:  # noqa: F811
+    import json
+
+    from tests.unit.test_o_aparelho_da_extensao_diz_os_controles_dele import VISTAS, rodar_no_webkit
+
+    a07, instalar, abrir = janela
+    instalar(**_com(COM_MODOS))
+    ponte = _Ponte(VIVO)
+    abrir(ponte)
+    _arrastar_e_soltar(a07, ctx, ponte, relogio)
+    ponte.rodando = False
+    carga = a07.modo_do_livre_da_modificacao(ctx, {"v": "toque:ao-vivo:repetir"}, ponte)
+    w, h = VISTAS[1]
+    passos = [["js", _GUARDAR % json.dumps(carga["blocos"]["#mod-janela"])]]
+    lido = json.loads(rodar_no_webkit({"janela": (w, h, passos)})["janela"][0])
+    assert lido["aceso"] == ["repetir"], lido
+    assert lido["vistos"] == ["guardar-modificacao|toque"], lido
