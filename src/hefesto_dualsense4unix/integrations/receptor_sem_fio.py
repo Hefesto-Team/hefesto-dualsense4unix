@@ -156,7 +156,7 @@ class ContadorDaSaude:
         elif valor == 2:
             aperto = self._apertadas.get(token)
             if aperto is not None and not aperto.contada \
-                    and t - aperto.inicio >= PRESA_APOS_S:
+                    and t >= aperto.inicio + PRESA_APOS_S:
                 aperto.contada = True
                 self._presas.append(t)
         elif valor == 0:
@@ -187,11 +187,12 @@ class ContadorDaSaude:
         self._intervalos.append(dt)
 
     def saude(self, agora: float, *, lendo: bool = True) -> Saude:
-        corte = agora - JANELA_S
+        # o prazo se compara na forma de quem o marca (``marca + prazo``): ``agora - marca`` em
+        # ponto flutuante sai menor que o prazo para alguns ``marca`` e o vencido não vence
         for fila in (self._presas, self._buracos):
-            while fila and fila[0] < corte:
+            while fila and fila[0] + JANELA_S < agora:
                 fila.popleft()
-        for token in [k for k, a in self._apertadas.items() if a.inicio < corte]:
+        for token in [k for k, a in self._apertadas.items() if a.inicio + JANELA_S < agora]:
             del self._apertadas[token]
         return Saude(teclas_presas=len(self._presas), buracos=len(self._buracos), lendo=lendo)
 
@@ -245,7 +246,7 @@ class MonitorDosReceptores:
         from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 
         agora = time.monotonic()
-        if agora - self._lidos_em >= self._varredura_s:
+        if agora >= self._lidos_em + self._varredura_s:
             self._lidos_em = agora
             self._reabrir()
         if not self._abertos:
@@ -549,7 +550,7 @@ class Descoberta:
                     self.com = {}
                 else:
                     self.sem = {}
-            elif agora - self.desde >= ESPERA_DO_GESTO_S:
+            elif agora >= self.desde + ESPERA_DO_GESTO_S:
                 self.cancelar()
             return
         # o receptor mexeu no meio da medida: ela não vale mais, e o passo anterior se refaz
@@ -559,7 +560,7 @@ class Descoberta:
         if self.passo == PASSO_MEDINDO_COM and presente is False:
             self.passo, self.desde = PASSO_PONHA, agora
             return
-        if agora - self.desde < ESPERA_DA_MEDIDA_S:
+        if agora < self.desde + ESPERA_DA_MEDIDA_S:
             return
         lido = {a: (None if v is None else tuple(sorted(v))) for a, v in evitados().items()}
         if self.passo == PASSO_MEDINDO_SEM:
@@ -569,7 +570,7 @@ class Descoberta:
                 antes = self.sem.get(adaptador, canais)
                 self.sem[adaptador] = (None if antes is None or canais is None else tuple(sorted(
                     set(antes) & set(canais))))
-            if agora - self.desde >= ESPERA_ATE_O_MAPA_SOLTAR_S:
+            if agora >= self.desde + ESPERA_ATE_O_MAPA_SOLTAR_S:
                 self.passo, self.desde = PASSO_PONHA, agora
             return
         # o «com» soma as leituras da espera: quem salta deixa canais diferentes em cada uma.
@@ -579,7 +580,7 @@ class Descoberta:
                 set(antes) | set(canais or ()))))
         resposta = classificar(self.sem, self.com)
         if (resposta.causa == CAUSA_SEM_MUDANCA
-                and agora - self._com_desde < ESPERA_ATE_O_MAPA_MUDAR_S):
+                and agora < self._com_desde + ESPERA_ATE_O_MAPA_MUDAR_S):
             return  # o mapa ainda não mudou: a próxima leitura decide
         self.banda, self.causa, self.canais = resposta.banda, resposta.causa, resposta.canais
         self.passo, self.desde = (PASSO_ACHOU if self.banda else PASSO_NADA), agora

@@ -9,6 +9,7 @@ do gesto; a gravação da banda achada; o cartão «Teclado errando»; a etiquet
 
 from __future__ import annotations
 
+import random
 import re
 import time
 from types import SimpleNamespace
@@ -152,8 +153,9 @@ def test_o_gesto_anda_pelo_censo_e_a_linha_fica_na_tela_com_o_receptor_tirado() 
     assert "ar-descobrir" not in html
     _clicar()  # segundo clique: não anda nada
     assert a08._DESCOBERTA.passo == rx.PASSO_TIRE
-    # o receptor SAIU: a linha dele some do censo, e o gesto a mantém para dizer o passo
-    a08._andar_a_descoberta({}, time.monotonic(), False)
+    # o receptor SAIU: a linha dele some do censo, e o gesto a mantém para dizer o passo. O
+    # relógio é fixo: o prazo da medida é pergunta da régua de fronteira, não do relógio da máquina
+    a08._andar_a_descoberta({}, 1000.0, False)
     assert a08._DESCOBERTA.passo == rx.PASSO_MEDINDO_SEM
     fora = _cena([])
     fora["descobrindo_ausente"] = mouse
@@ -165,6 +167,57 @@ def test_o_gesto_anda_pelo_censo_e_a_linha_fica_na_tela_com_o_receptor_tirado() 
     assert "Ponha o receptor de volta" in html and "Já pus" not in html
     a08._andar_a_descoberta({}, a08._DESCOBERTA.desde + 1, True)
     assert a08._DESCOBERTA.passo == rx.PASSO_MEDINDO_COM
+
+
+def _marcas_na_fronteira(prazo: float, vezes: int = 2000) -> tuple[int, list[float]]:
+    """``vezes`` marcas sorteadas: metade na faixa do ``time.monotonic()``, metade logo abaixo de
+    uma potência de dois, onde ``marca + prazo`` muda de expoente e ``(marca + prazo) - marca`` sai
+    menor que ``prazo`` (25/10/2026: 8 em 100 000 sorteios uniformes; aqui, a metade)."""
+    semente = random.randrange(2**32)
+    sorteio = random.Random(semente)
+    marcas = [2.0 ** sorteio.randint(6, 40) - sorteio.uniform(0.0, prazo) if i % 2 == 0
+              else sorteio.uniform(1.0, 1e7) for i in range(vezes)]
+    return semente, marcas
+
+
+def test_o_prazo_do_gesto_vence_na_hora_marcada_para_qualquer_desde() -> None:
+    """Cada prazo do gesto vence em ``desde + ESPERA`` exato, seja qual for o ``desde``."""
+    semente, marcas = _marcas_na_fronteira(rx.ESPERA_DA_MEDIDA_S)
+    mapa = {ADAPTADOR: [1, 2, 3]}
+    for desde in marcas:
+        g = rx.Descoberta()
+        g.iniciar("aaaa:bbbb", desde)
+        g.andar(desde + rx.ESPERA_DO_GESTO_S, dict, None)
+        assert not g.ativa, f"o gesto parado não se desfez (semente {semente}, desde {desde!r})"
+        g.iniciar("aaaa:bbbb", desde)
+        g.andar(desde, lambda: mapa, False)
+        assert g.passo == rx.PASSO_MEDINDO_SEM
+        g.andar(desde + rx.ESPERA_DA_MEDIDA_S, lambda: mapa, False)
+        assert g.passo == rx.PASSO_PONHA, (
+            f"a medida sem ele não fechou (semente {semente}, desde {desde!r})")
+        g.andar(desde, lambda: mapa, True)
+        assert g.passo == rx.PASSO_MEDINDO_COM
+        g.andar(desde + rx.ESPERA_DA_MEDIDA_S, lambda: mapa, True)
+        assert (g.passo, g.causa) == (rx.PASSO_NADA, rx.CAUSA_SEM_MUDANCA), (
+            f"a medida com ele não fechou (semente {semente}, desde {desde!r})")
+
+
+def test_a_tecla_presa_e_a_janela_vencem_na_hora_marcada_para_qualquer_instante() -> None:
+    semente, marcas = _marcas_na_fronteira(rx.PRESA_APOS_S)
+    for aperto in marcas:
+        contador = rx.ContadorDaSaude(sal=0)
+        contador.tecla(1, 30, aperto)
+        contador.tecla(2, 30, aperto + rx.PRESA_APOS_S)
+        assert contador.saude(aperto + rx.PRESA_APOS_S).teclas_presas == 1, (
+            f"a tecla presa não contou (semente {semente}, aperto {aperto!r})")
+    semente, marcas = _marcas_na_fronteira(float(rx.JANELA_S))
+    for presa in marcas:
+        contador = rx.ContadorDaSaude(sal=0)
+        contador.tecla(1, 30, presa - 2 * rx.PRESA_APOS_S)
+        contador.tecla(2, 30, presa)
+        assert contador.saude(presa + rx.JANELA_S).teclas_presas == 1, (
+            f"a presa saiu da janela antes da hora (semente {semente}, presa {presa!r})")
+        assert contador.saude(presa + rx.JANELA_S + 1).teclas_presas == 0
 
 
 def test_a_linha_do_receptor_tirado_so_existe_enquanto_o_gesto_esta_em_curso() -> None:
