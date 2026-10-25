@@ -636,7 +636,7 @@ CONTRATOS: tuple[Contrato, ...] = (
         id="kernel-nos",
         dono="kernel",
         promessa="uinput, uhid, hidraw e evdev existem como nós",
-        conferir="ls -l /dev/uinput /dev/uhid /dev/input /sys/class/hidraw",
+        conferir=f"ls -l /dev/uinput /dev/uhid /dev/input {usb_pai.RAIZ_HIDRAW}",
         sonda=_sonda_nos_do_kernel,
     ),
     Contrato(

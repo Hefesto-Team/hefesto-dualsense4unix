@@ -97,7 +97,9 @@ class TestInitQueEstouraNaoVazaFd:
     def _rodar(self, **kwargs: Any) -> tuple[Any, _HandleComFdDeVerdade]:
         criados: list[_HandleComFdDeVerdade] = []
 
-        def _fabrica(path: bytes, *, is_edge: bool) -> _HandleComFdDeVerdade:
+        def _fabrica(
+            path: bytes, *, is_edge: bool, dispositivo: object | None = None
+        ) -> _HandleComFdDeVerdade:
             handle = _HandleComFdDeVerdade(path, is_edge=is_edge, **kwargs)
             criados.append(handle)
             return handle
@@ -148,7 +150,9 @@ class TestInitQueEstouraNaoVazaFd:
         """Regressão do contrato antigo: erro que chega DENTRO do prazo não é"""
         criados: list[_HandleComFdDeVerdade] = []
 
-        def _fabrica(path: bytes, *, is_edge: bool) -> _HandleComFdDeVerdade:
+        def _fabrica(
+            path: bytes, *, is_edge: bool, dispositivo: object | None = None
+        ) -> _HandleComFdDeVerdade:
             handle = _HandleComFdDeVerdade(
                 path, is_edge=is_edge, erro=PermissionError("hidraw 0600 root")
             )
@@ -176,7 +180,9 @@ class TestHandoffNaBorda:
         teto = 0.02
         criados: list[_HandleComFdDeVerdade] = []
 
-        def _fabrica(path: bytes, *, is_edge: bool) -> _HandleComFdDeVerdade:
+        def _fabrica(
+            path: bytes, *, is_edge: bool, dispositivo: object | None = None
+        ) -> _HandleComFdDeVerdade:
             handle = _HandleComFdDeVerdade(path, is_edge=is_edge, atraso=teto)
             criados.append(handle)
             return handle

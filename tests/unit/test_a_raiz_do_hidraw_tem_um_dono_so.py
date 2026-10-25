@@ -61,13 +61,13 @@ def constantes_da_raiz(fonte: str) -> list[str]:
 
 
 def textos_com_a_raiz(fonte: str) -> list[int]:
-    """As linhas com um texto (ou pedaço de f-string) que começa pela raiz, sem as docstrings."""
+    """As linhas com um texto (ou pedaço de f-string) que traz a raiz, sem as docstrings."""
     arvore = ast.parse(fonte)
     docs = _docstrings(arvore)
     return sorted(
         no.lineno for no in ast.walk(arvore)
         if isinstance(no, ast.Constant) and isinstance(no.value, str)
-        and no.value.startswith(RAIZ) and id(no) not in docs)
+        and RAIZ in no.value and id(no) not in docs)
 
 
 def _modulos() -> dict[str, str]:
@@ -82,6 +82,7 @@ def test_a_regua_pega_a_constante_e_o_texto_cravados() -> None:
     assert textos_com_a_raiz(f'def f(n):\n    return open(f"{RAIZ}/{{n}}/device/uevent")\n') == [2]
     assert textos_com_a_raiz(f'"""{RAIZ} na docstring."""\n') == []
     assert textos_com_a_raiz(f'def f(raiz="{RAIZ}"):\n    pass\n') == [1]
+    assert textos_com_a_raiz(f'CONFERIR = "ls -l /dev/uhid {RAIZ}"\n') == [1]
 
 
 def test_a_raiz_do_hidraw_so_e_cravada_no_dono_e_nos_que_a_lista_ainda_guarda() -> None:
