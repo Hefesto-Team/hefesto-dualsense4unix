@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1209930,
+      "piso": 1210224,
       "por_item": {
-        "docs": 121350,
+        "docs": 121351,
         "scripts": 120700,
-        "src": 323536,
-        "tests": 644344
+        "src": 323547,
+        "tests": 644626
       },
-      "razao": "tamanho: +23 linhas (1209907 -> 1209930), pagas por Origem: D-0810-A-CITACAO-CRUA-SO-ANDA-COM-PROVA; registrado no fecho, topo 386f172e990f",
+      "razao": "tamanho: +294 linhas (1209930 -> 1210224), pagas por Origem: D-2410-O-PEDIDO-DE-NOVO-SAI-DO-TIQUE, D-2510-A-VOLTA-DO-GADGET-PEDE-FORA-DO-TIQUE; registrado no fecho, topo bbeb8fa478d1",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1045,10 +1045,16 @@
           "de": 1209907,
           "para": 1209930,
           "razao": "tamanho: +23 linhas (1209907 -> 1209930), pagas por Origem: D-0810-A-CITACAO-CRUA-SO-ANDA-COM-PROVA; registrado no fecho, topo 386f172e990f"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1209930,
+          "para": 1210224,
+          "razao": "tamanho: +294 linhas (1209930 -> 1210224), pagas por Origem: D-2410-O-PEDIDO-DE-NOVO-SAI-DO-TIQUE, D-2510-A-VOLTA-DO-GADGET-PEDE-FORA-DO-TIQUE; registrado no fecho, topo bbeb8fa478d1"
         }
       ],
       "unidade": "linhas",
-      "universo": 3159
+      "universo": 3160
     }
   }
 }
