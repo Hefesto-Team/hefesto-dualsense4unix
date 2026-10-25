@@ -109,12 +109,15 @@ class MesaHonesta(MesaDoJogo):
     cairia na bancada, e a cada tique a bancada confere que o kernel não
     recusou ninguém.
 
-    O jogo vê o pad ``uhid`` morrer quando a casa dele desce
+    O jogo vê o pad ``uhid`` morrer quando o kernel de mentira recebe o
+    ``DESTROY`` (ou o fd fecha) na descida da casa dele
     (``uhid_gamepad._parar_na_casa``), a porta comum do ``stop`` e da parada no
     tique (``parar_fora_do_tique``, da O-JOGADOR-QUE-SAI-NAO-PRENDE-O-TIQUE-NO-
-    BROKER-01), que não passa pelo ``stop`` do pad. Medido em 25/10/2026: com a
-    morte lida só no ``stop``, o pad de quem saía seguia vivo para o jogo e 146
-    testes de quatro arquivos reprovavam sozinhos. MORDIDA: a
+    BROKER-01), que não passa pelo ``stop`` do pad. Uma casa que descesse sem
+    derrubar o device seguiria viva para o jogo, como seguiria no kernel. O
+    ``stop`` vigiado fica só para o pad que caiu no ``uinput``. Medido em
+    25/10/2026: com a morte lida só no ``stop``, o pad de quem saía seguia vivo
+    para o jogo e 146 testes de quatro arquivos reprovavam sozinhos. MORDIDA: a
     ``test_o_teste_anterior_nao_deixa_pad_na_mesa_do_seguinte.py``.
     """
 
@@ -126,8 +129,11 @@ class MesaHonesta(MesaDoJogo):
         a_casa_desce = uhid_gamepad._parar_na_casa
 
         def _parar_na_casa(pad: Any) -> None:
-            self._morreu(pad)
+            fd = getattr(pad, "_fd", None)
             a_casa_desce(pad)
+            device = self.kernel.devices.get(fd) if fd is not None else None
+            if device is None or not device.criado:
+                self._morreu(pad)
 
         monkeypatch.setattr(uhid_gamepad, "_parar_na_casa", _parar_na_casa)
         self.vpad_do_p1.stop()
@@ -149,7 +155,8 @@ class MesaHonesta(MesaDoJogo):
         parar = pad.stop
 
         def _stop() -> None:
-            self._morreu(pad)
+            if getattr(pad, "backend", None) != "uhid":
+                self._morreu(pad)
             parar()
 
         pad.stop = _stop

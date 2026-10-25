@@ -12,9 +12,11 @@ desce a casa do pad ``uhid`` sem passar pelo ``stop`` dele, e a
 
 A régua: o pad de quem sai, e o de quem renasce atrás dele, parados no tique,
 somem do jogo da bancada, de dois a quatro controles, no cabo, no rádio e na
-mesa mista. MORDIDA: devolva o ``MesaHonesta.__init__`` sem o
+mesa mista. MORDIDAS: devolva o ``MesaHonesta.__init__`` sem o
 ``_parar_na_casa`` da bancada e esta régua reprova com a mensagem da
-``MesaDoJogo`` («a mesa que o co-op guarda não é a que o jogo vê»).
+``MesaDoJogo`` («a mesa que o co-op guarda não é a que o jogo vê»); tire o
+``_destruir_o_device`` do ``uhid_gamepad._parar_na_casa`` e ela reprova também,
+porque o jogo da bancada só vê a morte que o kernel de mentira recebeu.
 
 Nenhum endereço real: faixa forjada ``aa:bb:cc`` com os octetos 4 e 5 zerados.
 """
