@@ -326,6 +326,17 @@ def _print_bloco_proton_fixado() -> int:
     return _gravidade_das_linhas(linhas)
 
 
+def _print_bloco_entrada() -> int:
+    """A permissão de ler o teclado e o pedal do «Usar como botões de». Devolve a gravidade."""
+    from hefesto_dualsense4unix.core.system_check import permissao_de_ler_a_entrada
+
+    console.print("\n== teclado e pedal (o acionador da aba Conexões) ==")
+    linhas = [permissao_de_ler_a_entrada()]
+    for tag, mensagem in linhas:
+        console.print(f"{tag} {mensagem}", soft_wrap=True, highlight=False)
+    return _gravidade_das_linhas(linhas)
+
+
 def doctor_cmd(
     fix: bool = False,
     quiet: bool = False,
@@ -358,6 +369,8 @@ def doctor_cmd(
     rc = max(rc, _print_bloco_contratos())
 
     rc = max(rc, _print_bloco_proton_fixado())
+
+    rc = max(rc, _print_bloco_entrada())
 
     console.print("\n== daemon (via IPC) ==")
     linhas_do_daemon = asyncio.run(_daemon_checks())

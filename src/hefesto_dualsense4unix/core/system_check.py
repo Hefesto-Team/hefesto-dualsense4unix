@@ -8,8 +8,11 @@ sugerido. O reparo de fato fica a cargo do usuário (`doctor --fix`).
 """
 from __future__ import annotations
 
+import contextlib
 import os
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 _WRONG_HOTPLUG_PATTERN = 'SYSTEMD_USER_WANTS}="hefesto-gui-hotplug.service"'
 _UDEV_RULES = (
@@ -195,6 +198,64 @@ def system_warnings() -> list[str]:
     return warnings
 
 
+#: ``BTN_SOUTH`` (0x130): o botão que todo controle de jogo tem e nenhum teclado tem.
+_BTN_SOUTH = 0x130
+#: O DualSense fica fora da medida: a permissão do nó dele é do broker, que a tira para o jogo.
+_VENDOR_DA_SONY = "054c"
+LINHA_LE_A_ENTRADA = "o Hefesto lê o teclado e o pedal desta máquina"
+LINHA_SEM_ENTRADA_PARA_MEDIR = "nenhum teclado ou pedal ligado para medir a permissão de ler"
+
+
+def _teclas_do_no(base: Path, evento: str) -> int:
+    """O ``capabilities/key`` do nó em ``/sys``, como inteiro (0 = sem tecla ou ilegível)."""
+    try:
+        palavras = (base / evento / "device" / "capabilities" / "key").read_text(
+            encoding="utf-8").split()
+        return int("".join(f"{int(p, 16):016x}" for p in palavras), 16) if palavras else 0
+    except (OSError, ValueError):
+        return 0
+
+
+def permissao_de_ler_a_entrada(
+    *, raiz: str | None = None, abrir: Callable[[str], Any] | None = None
+) -> tuple[str, str]:
+    """``(tag, mensagem)`` de «este usuário lê um teclado ou um pedal comum?», pela medida.
+
+    Abre para leitura, pelo mesmo dono da 08 e do daemon
+    (``utils.maquina.abrir_o_aparelho_de_entrada``, que nunca prende), um nó de evento que tem
+    tecla e não é controle de jogo, nem DualSense, nem do Hefesto, e o fecha na hora. A
+    permissão pode vir do grupo ``input`` ou de uma ACL do udev; a medida vale para as duas.
+    Sem permissão, a frase é a do dono (``FRASE_SEM_PERMISSAO_DE_LER``). Nunca levanta.
+    """
+    from hefesto_dualsense4unix.utils import maquina
+
+    base = Path(maquina.RAIZ_DAS_ENTRADAS if raiz is None else raiz)
+    abrir = abrir or maquina.abrir_o_aparelho_de_entrada
+    recusou = False
+    try:
+        candidatos = [
+            a for a in maquina.aparelhos_de_entrada(base)
+            if a.vendor.lower() != _VENDOR_DA_SONY and "hefesto" not in a.nome.lower()
+            and (teclas := _teclas_do_no(base, a.evento)) and not teclas >> _BTN_SOUTH & 1
+        ]
+    except Exception:
+        candidatos = []
+    for aparelho in candidatos:
+        try:
+            dispositivo = abrir(aparelho.evento)
+        except PermissionError:
+            recusou = True
+            continue
+        except Exception:
+            continue
+        with contextlib.suppress(Exception):
+            dispositivo.close()
+        return ("[ OK ]", LINHA_LE_A_ENTRADA)
+    if recusou:
+        return ("[WARN]", maquina.FRASE_SEM_PERMISSAO_DE_LER)
+    return ("[INFO]", LINHA_SEM_ENTRADA_PARA_MEDIR)
+
+
 def contrato_do_pad_em_usb(
     *, raiz_modulos: str = "/sys/module", lib_modules: str | None = None
 ) -> list[str]:
@@ -236,6 +297,7 @@ def vagas_do_pad_em_usb(*, raiz_modulos: str = "/sys/module") -> tuple[int | Non
 __all__ = [
     "contrato_do_pad_em_usb",
     "fonte_configurada_do_wireplumber",
+    "permissao_de_ler_a_entrada",
     "system_warnings",
     "vagas_do_pad_em_usb",
 ]
