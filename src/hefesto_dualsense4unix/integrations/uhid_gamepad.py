@@ -2560,7 +2560,7 @@ class _GadgetsEstacionados:
             antigo.gadget.desmontar()
 
     def retomar(
-        self, identidade: str | None, par: tuple[int, int] | None = None
+        self, identidade: str | None, par: tuple[int, int] | None = None, dono: object = None
     ) -> _GadgetDoPad | None:
         """O gadget estacionado do aparelho, se ele veste ``par`` (None = qualquer).
 
@@ -2576,8 +2576,8 @@ class _GadgetsEstacionados:
         if par is not None and achado.gadget.par != par:
             logger.info("pad_usb_estacionado_desce", gadget=achado.gadget.gadget,
                         motivo="outra_roupa")
-            # o refazer do tique passa por aqui: a descida não espera o broker nele
-            _DESCIDA_AO_BROKER.descer(achado.gadget, None)
+            # o refazer do tique passa por aqui; o `stop` do ``dono`` espera esta descida
+            _DESCIDA_AO_BROKER.descer(achado.gadget, dono)
             return None
         return achado.gadget
 
@@ -2689,7 +2689,7 @@ def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
     """O pad nasce no gadget? False = segue o uhid de sempre, intacto."""
     if pad._sem_gadget or pad.blueprint is None:
         return False
-    gadget = _GADGETS_ESTACIONADOS.retomar(pad.identity, (DUALSENSE_VENDOR, pad.product))
+    gadget = _GADGETS_ESTACIONADOS.retomar(pad.identity, (DUALSENSE_VENDOR, pad.product), pad)
     if gadget is None:
         # o pedido que a nova tentativa já fez ao broker (`_tentar_o_gadget_outra_vez`)
         gadget, pad._gadget_na_mao = pad._gadget_na_mao, None

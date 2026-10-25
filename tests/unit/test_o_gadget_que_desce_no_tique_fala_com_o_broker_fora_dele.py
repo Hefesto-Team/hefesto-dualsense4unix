@@ -209,6 +209,84 @@ def test_a_sobra_do_refazer_desce_fora_do_tique(
         _fechar(m, pads)
 
 
+@pytest.mark.parametrize("troca", ("outra_roupa", "features_recusadas"))
+@pytest.mark.parametrize(("jogadores", "quem_volta"), MESAS, ids=IDS)
+def test_as_outras_descidas_do_refazer_saem_fora_do_tique(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, jogadores: tuple[int, ...],
+    quem_volta: int, troca: str,
+) -> None:
+    """As outras duas descidas que o refazer do tique faz: o estacionado de outra roupa e o
+    gadget na mão cujas features o ``f_hid`` recusa. Nenhuma espera o broker no tique, e o
+    ``stop`` do pad espera as duas (o dono é ele).
+
+    Mordida: devolva o ``achado.gadget.desmontar()`` ao ``retomar`` (ou o
+    ``gadget.desmontar()`` às features recusadas), e o tique da troca leva ~4 s;
+    desça o de outra roupa sem dono, e o ``stop`` não o espera.
+    """
+    m = _mesa(monkeypatch, tmp_path)
+    pads: list[Any] = []
+    try:
+        pads = _ate_a_queda(m, jogadores, quem_volta, "caiu")
+        volta = pads[jogadores.index(quem_volta)]
+        m.passar(0.1, pads, assentar=False)
+        assert volta._gadget is None and volta._gadget_outra_vez
+        descida = _a_descida(m)
+        assert descida.esperar_tudo(2.0)
+        preso = None
+        if troca == "outra_roupa":
+            nosso, jogo = socket.socketpair(socket.AF_UNIX, socket.SOCK_SEQPACKET)
+            os.set_blocking(nosso.fileno(), False)
+            m.__dict__.setdefault("lados_do_jogo", []).append(jogo)
+            preso = m.ug._GadgetDoPad(
+                cliente=hbc.HidrawBrokerClient(), fd=nosso.detach(), gadget="hefesto-pad-9",
+                serial=m.serial(volta), identidade=volta.identity or "",
+                hidraw=f"hidraw{volta.player}", interface=INTERFACE_DO_GADGET,
+                par=(m.ug.DUALSENSE_VENDOR, volta.product ^ 1),
+            )
+            chave = pad_usb._so_hex(volta.identity or "")
+            m.ug._GADGETS_ESTACIONADOS._por_aparelho[chave] = m.ug._Estacionado(preso)
+        pedir = m.ug.PEDIR_O_PAD_USB
+        presos: list[Any] = []
+
+        def na_mao(*args: Any) -> Any:
+            gadget = pedir(*args)
+            if gadget is not None and troca == "features_recusadas":
+                gadget.cliente = hbc.HidrawBrokerClient()
+            if gadget is not None:
+                presos.append(gadget)
+            return gadget
+
+        monkeypatch.setattr(m.ug, "PEDIR_O_PAD_USB", na_mao)
+        assert _tique(m, pads, m.ug._GADGET_VARRE_S + 0.5) < TETO_DO_TIQUE_S
+        pedido = volta._pedido_ao_broker
+        assert pedido is not None and pedido.esperar(5.0)
+        assert presos, "a volta não trouxe o gadget na mão"
+        if troca == "features_recusadas":
+            def recusa(*_args: Any) -> None:
+                raise OSError("o f_hid recusou")
+
+            monkeypatch.setattr(m.ug.pad_usb, "escrever_get_report", recusa)
+        m.broker.modo = "travado"
+        conexoes = m.broker.conexoes
+        duracao = _tique(m, pads, 0.1)
+        assert duracao < TETO_DO_TIQUE_S, (
+            f"o tique da troca levou {duracao * 1000:.2f} ms com o broker preso ({troca})"
+        )
+        if troca == "outra_roupa":
+            assert volta._gadget is presos[0], "o pad não vestiu o gadget na mão"
+        else:
+            assert volta._gadget is None and volta.is_active(), "o pad não ficou no uhid"
+        assert _tique(m, pads, 0.1) < TETO_DO_TIQUE_S
+        assert m.b.esperar(lambda: m.broker.conexoes > conexoes), (
+            f"a descida ({troca}) não chegou ao broker"
+        )
+        assert m.b.esperar(lambda: descida.em_voo_de(volta)), (
+            f"a descida ({troca}) não é do pad: o stop dele não a espera"
+        )
+    finally:
+        _fechar(m, pads)
+
+
 @pytest.mark.parametrize("vez", ("em_voo", "na_fila"))
 @pytest.mark.parametrize(("jogadores", "quem_volta"), MESAS, ids=IDS)
 def test_o_stop_com_a_descida_em_voo_nao_larga_gadget_montado(
