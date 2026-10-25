@@ -225,32 +225,28 @@ def permissao_de_ler_a_entrada(
     (``utils.maquina.abrir_o_aparelho_de_entrada``, que nunca prende), um nó de evento que tem
     tecla e não é controle de jogo, nem DualSense, nem do Hefesto, e o fecha na hora. A
     permissão pode vir do grupo ``input`` ou de uma ACL do udev; a medida vale para as duas.
-    Sem permissão, a frase é a do dono (``FRASE_SEM_PERMISSAO_DE_LER``). Nunca levanta.
+    Sem permissão, a frase é a do dono (``FRASE_SEM_PERMISSAO_DE_LER``).
     """
     from hefesto_dualsense4unix.utils import maquina
 
     base = Path(maquina.RAIZ_DAS_ENTRADAS if raiz is None else raiz)
     abrir = abrir or maquina.abrir_o_aparelho_de_entrada
     recusou = False
-    try:
-        candidatos = [
-            a for a in maquina.aparelhos_de_entrada(base)
-            if a.vendor.lower() != _VENDOR_DA_SONY and "hefesto" not in a.nome.lower()
-            and (teclas := _teclas_do_no(base, a.evento)) and not teclas >> _BTN_SOUTH & 1
-        ]
-    except Exception:
-        candidatos = []
+    candidatos = [
+        a for a in maquina.aparelhos_de_entrada(base)
+        if a.vendor.lower() != _VENDOR_DA_SONY and "hefesto" not in a.nome.lower()
+        and (teclas := _teclas_do_no(base, a.evento)) and not teclas >> _BTN_SOUTH & 1
+    ]
     for aparelho in candidatos:
         try:
             dispositivo = abrir(aparelho.evento)
-        except PermissionError:
-            recusou = True
-            continue
-        except Exception:
-            continue
-        with contextlib.suppress(Exception):
-            dispositivo.close()
-        return ("[ OK ]", LINHA_LE_A_ENTRADA)
+        except OSError as erro:
+            # O nó que some entre o ``/sys`` e o ``/dev`` não mede nada; o que recusa, mede.
+            recusou = recusou or isinstance(erro, PermissionError)
+        else:
+            with contextlib.suppress(OSError):
+                dispositivo.close()
+            return ("[ OK ]", LINHA_LE_A_ENTRADA)
     if recusou:
         return ("[WARN]", maquina.FRASE_SEM_PERMISSAO_DE_LER)
     return ("[INFO]", LINHA_SEM_ENTRADA_PARA_MEDIR)
