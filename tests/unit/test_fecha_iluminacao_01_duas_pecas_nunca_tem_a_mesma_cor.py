@@ -723,9 +723,9 @@ def _comentarios_aninhados(html: str) -> list[int]:
 
 
 class TestAProsaQueVaiPararNaTela:
-    """*"Ainda temos 3 cantos falando sobre o automatico"* (noqa-acento: citação literal)
+    """Palavra de produto, na frase de produto.
 
-    — palavra de produto.
+    *"Ainda temos 3 cantos falando sobre o automatico"* (noqa-acento: citação literal)
     """
 
     @pytest.mark.parametrize("pasta", [PAGINAS, BANCADA])
