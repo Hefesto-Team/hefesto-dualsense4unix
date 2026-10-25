@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1216051,
+      "piso": 1216194,
       "por_item": {
         "docs": 121438,
         "scripts": 121272,
         "src": 324534,
-        "tests": 648807
+        "tests": 648950
       },
-      "razao": "tamanho: +78 linhas (1215973 -> 1216051), pagas por Origem: D-1910-O-SERVIDOR-BUTTPLUG-MORA-NA-EXTENSAO, D-2510-O-JOGADOR-QUE-SAI-DESCE-O-GADGET-FORA-DO-TIQUE; registrado no fecho, topo 46200be8fc4e",
+      "razao": "tamanho: +143 linhas (1216051 -> 1216194), pagas por Origem: D-0810-A-CITACAO-CRUA-SO-ANDA-COM-PROVA; registrado no fecho, topo 16e34fd73dff",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1111,10 +1111,16 @@
           "de": 1215973,
           "para": 1216051,
           "razao": "tamanho: +78 linhas (1215973 -> 1216051), pagas por Origem: D-1910-O-SERVIDOR-BUTTPLUG-MORA-NA-EXTENSAO, D-2510-O-JOGADOR-QUE-SAI-DESCE-O-GADGET-FORA-DO-TIQUE; registrado no fecho, topo 46200be8fc4e"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1216051,
+          "para": 1216194,
+          "razao": "tamanho: +143 linhas (1216051 -> 1216194), pagas por Origem: D-0810-A-CITACAO-CRUA-SO-ANDA-COM-PROVA; registrado no fecho, topo 16e34fd73dff"
         }
       ],
       "unidade": "linhas",
-      "universo": 3176
+      "universo": 3177
     }
   }
 }
