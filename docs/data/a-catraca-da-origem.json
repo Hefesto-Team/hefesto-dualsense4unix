@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1209739,
+      "piso": 1209907,
       "por_item": {
-        "docs": 121341,
-        "scripts": 120677,
-        "src": 323562,
-        "tests": 644159
+        "docs": 121350,
+        "scripts": 120691,
+        "src": 323536,
+        "tests": 644330
       },
-      "razao": "tamanho: +522 linhas (1209217 -> 1209739), pagas por Origem: D-0110-O-COMPUTADOR-DA-O-PADRAO-O-JOGO-SOBREPOE, D-2410-O-PAD-RECUSADO-PELA-SESSAO-PEDE-DE-NOVO; registrado no fecho, topo 5161a270f4fc",
+      "razao": "tamanho: +168 linhas (1209739 -> 1209907), pagas por Origem: D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO; registrado no fecho, topo a3cb0e1656a8",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1033,10 +1033,16 @@
           "de": 1209217,
           "para": 1209739,
           "razao": "tamanho: +522 linhas (1209217 -> 1209739), pagas por Origem: D-0110-O-COMPUTADOR-DA-O-PADRAO-O-JOGO-SOBREPOE, D-2410-O-PAD-RECUSADO-PELA-SESSAO-PEDE-DE-NOVO; registrado no fecho, topo 5161a270f4fc"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1209739,
+          "para": 1209907,
+          "razao": "tamanho: +168 linhas (1209739 -> 1209907), pagas por Origem: D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO; registrado no fecho, topo a3cb0e1656a8"
         }
       ],
       "unidade": "linhas",
-      "universo": 3158
+      "universo": 3159
     }
   }
 }
