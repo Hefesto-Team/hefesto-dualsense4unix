@@ -2616,7 +2616,7 @@ def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
         blocos["#mod-livre-rastro"] = exp.rastro_html(_VIVA.ao_vivo(mod_id))
         blocos["#mod-livre-alvos"] = exp.alvos_do_livre_html(gestao)
         # A porta chega à barra pelo endereço dela: só a classe e a dica mudam, e o dedo fica.
-        carga["mesa"][exp.CAMPO_DA_BARRA_FORA] = exp.dica_da_barra_fora(
+        carga.setdefault("mesa", {})[exp.CAMPO_DA_BARRA_FORA] = exp.dica_da_barra_fora(
             manifesto.nome, exp.processo_de(item.entrada.ligada, item.estado))
     return carga
 
