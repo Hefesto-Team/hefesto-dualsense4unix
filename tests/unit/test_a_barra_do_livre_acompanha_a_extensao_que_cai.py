@@ -14,13 +14,14 @@ MORDIDAS (25/10/2026, executadas sobre a cura e devolvidas, md5 conferido):
 
 - o tique sem a dica da porta (a linha da mesa arrancada de ``_com_os_aparelhos``) reprova
   ``test_o_tique_apaga_a_barra_quando_a_extensao_cai_e_acende_quando_volta`` nos cinco estados,
-  ``test_a_barra_que_nasce_apagada_acende_no_tique_da_volta`` e
+  ``test_a_barra_que_nasce_apagada_acende_no_tique_da_volta``,
+  ``test_a_montagem_e_o_tique_dizem_o_mesmo`` nos quatro estados fora da porta e
   ``test_a_barra_apaga_e_acende_no_navegador_sem_perder_o_arrasto``;
 - o trilho sem o endereço (os atributos de pintura arrancados de ``faixa_do_livre_html``)
   reprova ``test_o_trilho_tem_o_endereco_nos_dois_estados`` e o do navegador;
-- o tique com uma regra própria (``processo == "parou"`` no lugar de ``processo in PROCESSO``)
+- o tique com uma regra própria (``processo == "parou"`` no lugar de ``dica_da_barra_fora``)
   reprova ``test_o_tique_apaga_a_barra_quando_a_extensao_cai_e_acende_quando_volta`` em quatro
-  estados e ``test_a_montagem_e_o_tique_dizem_o_mesmo``.
+  estados e ``test_a_montagem_e_o_tique_dizem_o_mesmo`` em três.
 """
 
 from __future__ import annotations
