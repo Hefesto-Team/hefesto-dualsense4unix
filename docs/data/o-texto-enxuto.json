@@ -5,7 +5,7 @@
       "data": "2026-10-25",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 55672,
+      "piso": 55677,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_exame.py": 83,
@@ -197,7 +197,7 @@
         "interface/cartao_do_controle.py": 332,
         "interface/conexoes.py": 69,
         "interface/controles_vivos.py": 145,
-        "interface/desenho_da_experimental.py": 253,
+        "interface/desenho_da_experimental.py": 258,
         "interface/desenho_dos_lancadores.py": 1032,
         "interface/frases_que_ela_baniu.py": 104,
         "interface/hefesto_vivo.py": 504,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +84 linhas (55588 -> 55672), pagas por Origem: D-0510-O-DESCOBRIR-A-FAIXA-ANDA-PELO-CENSO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-2510-A-FALTA-DE-PERMISSAO-DE-LER-DIZ-O-GRUPO; registrado no fecho, topo 0007e7f62d8e",
+      "razao": "texto-em-src: +5 linhas (55672 -> 55677), pagas por Origem: D-2510-O-JOGADOR-QUE-SAI-DESCE-O-GADGET-FORA-DO-TIQUE; registrado no fecho, topo 5488cf9f2456",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -606,6 +606,12 @@
           "de": 55588,
           "para": 55672,
           "razao": "texto-em-src: +84 linhas (55588 -> 55672), pagas por Origem: D-0510-O-DESCOBRIR-A-FAIXA-ANDA-PELO-CENSO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-2510-A-FALTA-DE-PERMISSAO-DE-LER-DIZ-O-GRUPO; registrado no fecho, topo 0007e7f62d8e"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 55672,
+          "para": 55677,
+          "razao": "texto-em-src: +5 linhas (55672 -> 55677), pagas por Origem: D-2510-O-JOGADOR-QUE-SAI-DESCE-O-GADGET-FORA-DO-TIQUE; registrado no fecho, topo 5488cf9f2456"
         }
       ],
       "unidade": "linhas",
