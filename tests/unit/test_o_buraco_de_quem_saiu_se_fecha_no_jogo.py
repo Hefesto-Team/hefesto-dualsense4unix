@@ -21,7 +21,7 @@ from hefesto_dualsense4unix.daemon.subsystems.coop import (
 )
 from hefesto_dualsense4unix.daemon.subsystems.gamepad import vpad_vivo
 from hefesto_dualsense4unix.daemon.subsystems.identity import prazo_do_lugar_guardado
-from hefesto_dualsense4unix.integrations import virtual_pad
+from hefesto_dualsense4unix.integrations import uhid_gamepad, virtual_pad
 from hefesto_dualsense4unix.integrations.uhid_gamepad import vpad_mac
 from tests.unit.test_dois_vpads_nunca_tem_o_mesmo_mac import (
     KernelDoHidPlaystation,
@@ -108,6 +108,14 @@ class MesaHonesta(MesaDoJogo):
     :class:`KernelDoHidPlaystation`. Recusado, o produto cai no ``uinput``, como
     cairia na bancada, e a cada tique a bancada confere que o kernel não
     recusou ninguém.
+
+    O jogo vê o pad ``uhid`` morrer quando a casa dele desce
+    (``uhid_gamepad._parar_na_casa``), a porta comum do ``stop`` e da parada no
+    tique (``parar_fora_do_tique``, da O-JOGADOR-QUE-SAI-NAO-PRENDE-O-TIQUE-NO-
+    BROKER-01), que não passa pelo ``stop`` do pad. Medido em 25/10/2026: com a
+    morte lida só no ``stop``, o pad de quem saía seguia vivo para o jogo e 146
+    testes de quatro arquivos reprovavam sozinhos. MORDIDA: a
+    ``test_o_teste_anterior_nao_deixa_pad_na_mesa_do_seguinte.py``.
     """
 
     def __init__(
@@ -115,6 +123,13 @@ class MesaHonesta(MesaDoJogo):
     ) -> None:
         self.kernel = kernel
         super().__init__(monkeypatch, **kw)
+        a_casa_desce = uhid_gamepad._parar_na_casa
+
+        def _parar_na_casa(pad: Any) -> None:
+            self._morreu(pad)
+            a_casa_desce(pad)
+
+        monkeypatch.setattr(uhid_gamepad, "_parar_na_casa", _parar_na_casa)
         self.vpad_do_p1.stop()
         self.vpads = []
         posto = self._nascer_vpad("dualsense", player=1, identity=None, allow_uhid=True)
@@ -134,14 +149,18 @@ class MesaHonesta(MesaDoJogo):
         parar = pad.stop
 
         def _stop() -> None:
-            if pad.vivo:
-                pad.vivo = False
-                self.jogo.morreu(pad)
+            self._morreu(pad)
             parar()
 
         pad.stop = _stop
         self.vpads.append(pad)
         return pad
+
+    def _morreu(self, pad: Any) -> None:
+        """O pad desta bancada saiu do ar: o jogo vê a morte uma vez só."""
+        if getattr(pad, "vivo", False) and any(v is pad for v in self.vpads):
+            pad.vivo = False
+            self.jogo.morreu(pad)
 
     def conferir_invariantes(self) -> None:
         """As da bancada, sobre os vpads que TÊM MAC — e o kernel não recusou ninguém."""
