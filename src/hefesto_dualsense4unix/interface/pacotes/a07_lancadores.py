@@ -1568,6 +1568,7 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
                **(_MEXIDA.rascunho if _MEXIDA.mod == mod_id else {})}
     jogos = _jogos_com_perfil() if any(x.tipo == "jogos" for x in manifesto.opcoes) else ()
     nota = _MEXIDA.nota_do_css = item.nota_do_css
+    aparecem = opcoes.aparecem(manifesto, valores)
     linhas = [exp.OpcaoDaJanela(
         mod=mod_id, id=x.id, rotulo=x.rotulo, tipo=x.tipo, valor=_valor_na_tela(valores[x.id]),
         escolhas=tuple(x.escolhas), grupo=x.grupo or "", minimo=x.minimo or 0,
@@ -1577,7 +1578,7 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
         formas=_formas_da_opcao(manifesto, x, valores),
         botoes=x.botoes_da_janela if x.tipo == "por_botao" else (),
         modo=_o_modo_de(manifesto, valores) if x.tipo == "livre" else "")
-        for x in manifesto.opcoes]
+        for x in manifesto.opcoes if x.id in aparecem]
     _MEXIDA.mod = mod_id
     _VIVA.com_o_modo(mod_id, _o_modo_de(manifesto, valores) or None)
     _MEXIDA.agora = tuple(manifesto.agora)

@@ -35,3 +35,4 @@ tests/unit/test_o_pad_que_nasce_pede_o_gadget_fora_do_tique.py
 tests/unit/test_o_doctor_diz_quando_falta_o_grupo_input.py
 scripts/prosa_do_codigo.py
 tests/unit/test_a_porta_desassina_o_topico.py
+tests/unit/test_a_opcao_da_extensao_aparece_quando_a_outra_a_pede.py

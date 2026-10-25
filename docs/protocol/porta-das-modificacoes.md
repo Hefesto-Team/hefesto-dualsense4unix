@@ -332,7 +332,7 @@ escrever nada:
 ## A janela da extensão (o que o manifesto declara)
 
 A interface desenha a janela «Configurar» de cada extensão do que o `hefesto-mod.json` declara, sem
-código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opcionais, `escolhas`, `padrao` e `grupo`.
+código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opcionais, `escolhas`, `padrao`, `grupo` e `aparece_com`.
 
 - **`tipo`**: `escolha` (lista em `escolhas`), `ligado`, `numero`, `cor`, `deslizante`, `jogos`, `endereco`, `por_botao`, `livre` (ver «As ações, os aparelhos e o controle livre») e `css` (só em extensão de tema; ver «O CSS de quem usa»). A `cor` é um
   seletor de cor da interface; o valor é `#rrggbb` em minúsculas, e um `padrao` que não seja `#rrggbb` recusa
@@ -350,6 +350,17 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
 - **`grupo`**: o nome (até 30 letras) da aba interna em que a opção mora. Com dois ou mais grupos a janela
   desenha uma aba por grupo, na ordem em que aparecem; a opção sem grupo vai à primeira aba; com um grupo
   só, não há aba. Ao mudar uma opção a janela reabre na aba da opção.
+- **`aparece_com`**: `{id: valor}`, a opção só aparece quando cada outra opção do mesmo manifesto vale o que
+  se pede: uma `escolha` vale um texto das `escolhas` dela (ou um da lista, `["A", "B"]`), um `ligado` vale
+  `true` ou `false`. Com duas chaves, as duas têm de valer. A opção que aponta para uma escondida também
+  some. A janela a mostra no mesmo gesto em que a outra muda, sem reabrir. Esconder é só da tela: o valor
+  guardado fica e segue indo à extensão em `opcoes.json`. Recusam o manifesto: o `aparece_com` vazio, o id
+  que não existe, a opção que aponta para si mesma, o ciclo, o alvo que não é `escolha` nem `ligado`, o valor
+  que não é escolha do alvo, o `ligado` com valor que não é `true`/`false` e o `livre` que declara o campo.
+  Por exemplo, o endereço que só serve quando a ligação é pela rede:
+  `{"id": "servidor", "tipo": "endereco", "rotulo": "Servidor", "aparece_com": {"ligacao": "Pela rede"}}`.
+  O campo entra depois da 0.9.5, com a mesma `api` 2; um Hefesto até a 0.9.5 recusa o manifesto que o
+  declara, como recusa os `modos`.
 - **onde ficam os valores**: a tela grava cada opção em `<dados>/<id>/opcoes.json`, um objeto `{id: valor}`, em
   `0600`, depois de validar contra o manifesto. A extensão lê o mesmo arquivo na pasta de dados
   (`HEFESTO_MOD_DADOS`). Valor ausente, ou que o manifesto não aceita mais, vale o `padrao` (sem `padrao`: a

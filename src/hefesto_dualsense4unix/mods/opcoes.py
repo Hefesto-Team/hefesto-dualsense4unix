@@ -289,6 +289,31 @@ def herdar(manifesto: Manifesto, antigas: Sequence[str], lugares: Lugares) -> di
     return herdadas
 
 
+def aparecem(manifesto: Manifesto, valores: dict[str, Any]) -> frozenset[str]:
+    """As opções que a janela mostra com ``valores`` (o guardado, com o rascunho por cima): a que
+    declara ``aparece_com`` aparece quando cada outra vale o pedido E também aparece. Só da tela:
+    a escondida segue guardada e indo à extensão."""
+    por_id = {o.id: o for o in manifesto.opcoes}
+    vistas: dict[str, bool] = {}
+
+    def aparece(opcao: Opcao) -> bool:
+        if opcao.id not in vistas:
+            # O manifesto recusa o ciclo; a marca falsa só segura um manifesto sem validação.
+            vistas[opcao.id] = False
+            vistas[opcao.id] = all(
+                alvo in por_id and aparece(por_id[alvo]) and _vale(valores.get(alvo), pedido)
+                for alvo, pedido in (opcao.aparece_com or {}).items())
+        return vistas[opcao.id]
+
+    return frozenset(o.id for o in manifesto.opcoes if aparece(o))
+
+
+def _vale(valor: Any, pedido: str | bool | list[str]) -> bool:
+    if isinstance(pedido, bool):
+        return isinstance(valor, bool) and valor is pedido
+    return valor in pedido if isinstance(pedido, list) else valor == pedido
+
+
 def _escolhida(opcao: Opcao, guardados: dict[str, Any], extras: Sequence[str] = ()) -> bool:
     """O ``guardar`` grava o arquivo inteiro, com o padrão de cada opção que ninguém tocou: só o
     valor válido e diferente do padrão é escolha de quem usa."""
@@ -300,5 +325,5 @@ def _escolhida(opcao: Opcao, guardados: dict[str, Any], extras: Sequence[str] = 
         return False
 
 
-__all__ = ["NOME_DO_ARQUIVO", "Formas", "Valor", "chave_do_modo", "formas_do_livre", "guardar",
-           "herdar", "ler", "modo_valido", "padrao_de", "validar"]
+__all__ = ["NOME_DO_ARQUIVO", "Formas", "Valor", "aparecem", "chave_do_modo", "formas_do_livre",
+           "guardar", "herdar", "ler", "modo_valido", "padrao_de", "validar"]

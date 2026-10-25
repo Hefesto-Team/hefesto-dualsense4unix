@@ -323,6 +323,11 @@ class Opcao(BaseModel):
     grupo: str | None = Field(default=None, min_length=1, max_length=30)
     # O ``livre`` com ``modos``: a faixa ganha «Soltar», «Segurar» e «Repetir» (``MODOS_DO_LIVRE``).
     modos: bool = False
+    # A janela só mostra a opção quando cada outra opção daqui vale o que se pede: ``{id: valor}``,
+    # o valor de uma ``escolha`` (ou a lista dos que servem) ou o ``true``/``false`` de um
+    # ``ligado``.
+    # Esconder é só da tela: o valor guardado fica e segue indo à extensão.
+    aparece_com: dict[str, str | bool | list[str]] | None = None
 
     @field_validator("id")
     @classmethod
@@ -351,6 +356,8 @@ class Opcao(BaseModel):
             self._conferir_o_por_botao()
         elif self.formas or self.botoes or (isinstance(self.padrao, dict) and self.tipo != "livre"):
             raise ValueError(f"a opção {self.id} não é por_botao e declara formas ou botões")
+        if self.aparece_com is not None:
+            self._conferir_o_aparece_com()
         if self.tipo == "livre":
             self._conferir_o_livre()
         elif self.modos:
@@ -377,6 +384,16 @@ class Opcao(BaseModel):
             b not in self.botoes_da_janela or f not in self.formas for b, f in self.padrao.items()
         ):
             raise ValueError(f"o padrão do por_botao {self.id} é {{botão: forma declarada}}")
+
+    def _conferir_o_aparece_com(self) -> None:
+        """A forma do ``aparece_com`` que se confere sem as outras opções."""
+        assert self.aparece_com is not None
+        if not self.aparece_com:
+            raise ValueError(f"o aparece_com de {self.id} está vazio")
+        if self.id in self.aparece_com:
+            raise ValueError(f"a opção {self.id} aparece com ela mesma")
+        if self.tipo == "livre":
+            raise ValueError(f"o livre {self.id} mora na faixa de baixo e não declara aparece_com")
 
     def _conferir_o_livre(self) -> None:
         """O ``livre``: o controle ao vivo da faixa de baixo da janela. O valor são as formas
@@ -573,6 +590,7 @@ class Manifesto(BaseModel):
             raise ValueError(
                 "agora pede a permissão publicar:acessorios.estado ou ler:acessorios.gesto")
         self._conferir_as_acoes_e_o_livre()
+        self._conferir_o_aparece_com()
         self._conferir_o_lado_e_as_opcoes_do_tema()
         self._conferir_a_opcao_do_css()
         return self
@@ -596,6 +614,41 @@ class Manifesto(BaseModel):
         if geridos is not None and geridos.grupo is None and "aparelhos" not in self.agora:
             raise ValueError(
                 "aparelhos_acoes sem grupo mora na coluna Agora, e agora não lista aparelhos")
+
+    def _conferir_o_aparece_com(self) -> None:
+        """Cada ``aparece_com`` aponta para outra ``escolha`` ou ``ligado`` daqui, com um valor que
+        ela tem, e nenhuma cadeia volta à opção de onde saiu."""
+        por_id = {o.id: o for o in self.opcoes}
+        for opcao in self.opcoes:
+            for alvo, valor in (opcao.aparece_com or {}).items():
+                outra = por_id.get(alvo)
+                if outra is None:
+                    raise ValueError(f"a opção {opcao.id} aparece com {alvo!r}, que não existe")
+                if outra.tipo == "ligado":
+                    if not isinstance(valor, bool):
+                        raise ValueError(
+                            f"a opção {opcao.id} aparece com {alvo!r}, que é ligado: true ou false")
+                elif outra.tipo == "escolha":
+                    valores = valor if isinstance(valor, list) else [valor]
+                    if not valores or any(v not in outra.escolhas for v in valores):
+                        raise ValueError(f"a opção {opcao.id} aparece com {alvo!r} valendo "
+                                         f"{valor!r}, que não é escolha de {alvo!r}")
+                else:
+                    raise ValueError(f"a opção {opcao.id} aparece com {alvo!r}, que não é "
+                                     "escolha nem ligado")
+        aponta = {o.id: tuple(o.aparece_com or ()) for o in self.opcoes}
+        for inicio in aponta:
+            pilha: list[tuple[str, tuple[str, ...]]] = [(inicio, (inicio,))]
+            vistos = {inicio}
+            while pilha:
+                atual, caminho = pilha.pop()
+                for alvo in aponta[atual]:
+                    if alvo == inicio:
+                        raise ValueError(f"a opção {inicio} fecha um ciclo de aparece_com: "
+                                         f"{', '.join((*caminho, alvo))}")
+                    if alvo not in vistos:
+                        vistos.add(alvo)
+                        pilha.append((alvo, (*caminho, alvo)))
 
     @property
     def opcao_livre(self) -> Opcao | None:
