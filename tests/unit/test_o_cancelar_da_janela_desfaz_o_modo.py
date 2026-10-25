@@ -4,10 +4,11 @@ O-CANCELAR-DA-JANELA-DESFAZ-O-MODO-E-A-RECUSA-APARECE-01 (25/10/2026). Trocar «
 ou «Repetir» vale na hora na extensão, e o modo fica no rascunho até o Guardar. O Cancelar, o X e
 o Esc (que clica o X) devolvem à extensão o modo guardado, pelo mesmo caminho que aplica: um
 soltar com ele, só quando o modo vivo difere. Reabrir a janela que fechou sem Cancelar faz o mesmo.
-O modo que a extensão recusa (ou a extensão fora da porta) volta na janela e na barra, e a recusa
-vai à mesma borda e ao mesmo diário dos outros gestos. Na porta, o controle de um aparelho com o
-id de uma ação dos aparelhos é recusado nomeando o id: o clique dos dois chega à extensão com a
-mesma forma (a ação e o alvo), e o serviço o tomava pela ação declarada.
+O modo que a extensão recusa volta na janela e na barra, e a recusa vai à mesma borda e ao mesmo
+diário dos outros gestos (fora da porta, a troca vale para o Guardar: o teste dela é o do
+O-MODO-ESCOLHIDO-COM-A-EXTENSAO-DESLIGADA-VALE-PARA-O-GUARDAR-01). Na porta, o controle de um
+aparelho com o id de uma ação dos aparelhos é recusado nomeando o id: o clique dos dois chega à
+extensão com a mesma forma (a ação e o alvo), e o serviço o tomava pela ação declarada.
 
 MORDIDAS (25/10/2026, executadas sobre a cura e devolvidas):
 
@@ -144,13 +145,10 @@ def test_reabrir_a_janela_que_fechou_sem_cancelar_devolve_o_modo_guardado(
 # -- 2. a recusa aparece e o modo volta -------------------------------------------------------
 
 
-@pytest.mark.parametrize(("como", "frase"), [
-    ("recusa", "A extensão recusou o modo."),
-    ("fora", "não está rodando"),
-])
 def test_o_modo_recusado_volta_na_janela_e_na_barra_e_a_recusa_aparece(
-        janela: Any, ctx: Any, relogio: list[float], como: str, frase: str) -> None:  # noqa: F811
+        janela: Any, ctx: Any, relogio: list[float]) -> None:  # noqa: F811
     # D-2510-A-RECUSA-DO-MODO-DEVOLVE-A-BARRA
+    frase = "A extensão recusou o modo."
     a07, instalar, abrir = janela
     instalar(**_com(COM_MODOS))
     ponte = _PonteQueRecusa(VIVO)
@@ -158,10 +156,7 @@ def test_o_modo_recusado_volta_na_janela_e_na_barra_e_a_recusa_aparece(
     a07.modo_do_livre_da_modificacao(ctx, {"v": "toque:ao-vivo:segurar"}, ponte)
     a07.guardar_modificacao(ctx, {"v": "toque"}, ponte)
     _arrastar_e_soltar(a07, ctx, ponte, relogio)
-    if como == "recusa":
-        ponte.recusa = frase
-    else:
-        ponte.rodando = False
+    ponte.recusa = frase
     with pytest.raises(RuntimeError, match=frase):
         a07.modo_do_livre_da_modificacao(ctx, {"v": "toque:ao-vivo:soltar"}, ponte)
     assert a07._VIVA.modo == "segurar", "o modo recusado ficou valendo na barra"

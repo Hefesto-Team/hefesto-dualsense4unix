@@ -2676,8 +2676,15 @@ def _a_recusa_do_soltar(resposta: tuple[bool, str | None, Any] | None) -> str | 
     return None if isinstance(corpo, dict) and corpo.get("enviado") is True else ""
 
 
-def _dizer_a_recusa_do_soltar(mod_id: str, recusa: str) -> str:
-    return recusa or _nao_esta_rodando(mod_id)
+def _o_modo_na_extensao(mod_id: str, opcao_id: str, modo: str, p: Any) -> str | None:
+    """O ``modo`` do livre vale na barra e na extensão (``_Viva.mudar_o_modo``). Fora da porta,
+    ela não segura modo nenhum e volta lendo o guardado: a barra faz o modo sem mandar nada e sem
+    acusar recusa (``_Viva.sem_a_extensao``). Devolve a frase da recusa de verdade, ou ``None``."""
+    recusa = _a_recusa_do_soltar(_VIVA.mudar_o_modo(mod_id, opcao_id, modo, p))
+    if recusa == "":
+        _VIVA.sem_a_extensao(mod_id, modo)
+        return None
+    return recusa
 
 
 def _desfazer_o_modo(mod_id: str, p: Any) -> str | None:
@@ -2693,12 +2700,7 @@ def _desfazer_o_modo(mod_id: str, p: Any) -> str | None:
     if manifesto is None or livre is None or chave is None:
         return None
     guardado = str(opcoes.ler(manifesto, _lugares())[chave])
-    recusa = _a_recusa_do_soltar(_VIVA.mudar_o_modo(mod_id, livre.id, guardado, p))
-    if recusa == "":
-        # Fora da porta não há modo a desfazer: a extensão volta lendo o guardado.
-        _VIVA.sem_a_extensao(mod_id, guardado)
-        return None
-    return None if recusa is None else _dizer_a_recusa_do_soltar(mod_id, recusa)
+    return _o_modo_na_extensao(mod_id, livre.id, guardado, p)
 
 
 def _o_modo_que_vale(mod_id: str) -> dict[str, Any]:
@@ -2863,12 +2865,12 @@ def modo_do_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
         _MEXIDA.mod, _MEXIDA.rascunho = mod_id, {}
     antes = dict(_MEXIDA.rascunho)
     _MEXIDA.rascunho[chave] = certo
-    recusa = _a_recusa_do_soltar(_VIVA.mudar_o_modo(mod_id, livre.id, certo, p))
+    recusa = _o_modo_na_extensao(mod_id, livre.id, certo, p)
     if recusa is not None:
-        # A extensão não recebeu: a janela volta ao modo que vale nela, e a recusa aparece.
+        # A extensão recusou: a janela volta ao modo que vale nela, e a recusa aparece.
         _MEXIDA.rascunho = antes
         _montar_a_janela_da_extensao(mod_id)
-        raise RuntimeError(_dizer_a_recusa_do_soltar(mod_id, recusa))
+        raise RuntimeError(recusa)
     _montar_a_janela_da_extensao(mod_id)
     return _a_pintura_agora(ctx)
 
