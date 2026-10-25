@@ -54,6 +54,10 @@ def single_instance_name() -> str:
 
 
 def run_daemon(poll_hz: int | None = None) -> int:
+    from hefesto_dualsense4unix.utils import sd_notify
+
+    # Antes de qualquer filho: o soquete do systemd é só deste processo (`NotifyAccess=main`).
+    sd_notify.guardar_o_soquete()
     configure_logging()
     logger = get_logger(__name__)
 
