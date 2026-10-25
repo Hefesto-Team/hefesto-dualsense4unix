@@ -5,7 +5,7 @@
       "data": "2026-10-25",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 55400,
+      "piso": 55453,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -68,9 +68,9 @@
         "daemon/ipc_handlers.py": 1281,
         "daemon/ipc_server.py": 126,
         "daemon/launch_env.py": 598,
-        "daemon/lifecycle.py": 1298,
+        "daemon/lifecycle.py": 1300,
         "daemon/protocols.py": 60,
-        "daemon/sensor_hub.py": 240,
+        "daemon/sensor_hub.py": 251,
         "daemon/servidor_dsu.py": 58,
         "daemon/state_store.py": 67,
         "daemon/subsystems/__init__.py": 78,
@@ -227,8 +227,8 @@
         "interface/regua_do_mockup.py": 170,
         "interface/sistema.py": 116,
         "mods/instalador.py": 153,
-        "mods/manifesto.py": 128,
-        "mods/porta.py": 248,
+        "mods/manifesto.py": 131,
+        "mods/porta.py": 285,
         "mods/supervisor.py": 117,
         "mods/tema.py": 78,
         "profiles/autoswitch.py": 135,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +121 linhas (55279 -> 55400), pagas por Origem: D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo 233f569af302",
+      "razao": "texto-em-src: +53 linhas (55400 -> 55453), pagas por Origem: D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo 79cd0aa8c6ff",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -564,6 +564,12 @@
           "de": 55279,
           "para": 55400,
           "razao": "texto-em-src: +121 linhas (55279 -> 55400), pagas por Origem: D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo 233f569af302"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 55400,
+          "para": 55453,
+          "razao": "texto-em-src: +53 linhas (55400 -> 55453), pagas por Origem: D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo 79cd0aa8c6ff"
         }
       ],
       "unidade": "linhas",
