@@ -22,4 +22,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 ---
 
 ## mapa-das-portas.html
-- **25/10/2026** — sem leitura deste computador, o mapa diz o porquê («Entradas ainda não mapeadas» ou «Não deu para ler as entradas deste computador») e não desenha o gabinete de exemplo; a validar por ela.
+- **25/10/2026** — sem leitura deste computador, o mapa diz o porquê («Entradas ainda não mapeadas» ou «Não deu para ler as entradas deste computador») e não desenha o gabinete de exemplo; a validar por ela. Até publicar, a página do produto não tem `hefestoSemLeitura`: o mapa sem leitura continua no gabinete de exemplo, e o piloto registra a cegueira «o arranjo desta máquina não chegou à página».
