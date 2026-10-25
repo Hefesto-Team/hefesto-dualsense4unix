@@ -2,10 +2,10 @@
   "_LEIA": "O PISO DAS CATRACAS. Não se edita à mão: `--aceitar` desce, `--forcar-piso «razão»` sobe com razão e data.",
   "medidas": {
     "casos-especiais-fora-do-dono": {
-      "data": "2026-10-19",
+      "data": "2026-10-25",
       "nota": "ramos por eixo, fora dos arquivos dono de cada eixo",
       "o_que_conta": "ramos que decidem por eixo, escritos fora do dono do eixo",
-      "piso": 37,
+      "piso": 36,
       "por_item": {
         "app/actions/external_controllers.py::transporte": 1,
         "broker/hidraw_broker.py::modelo": 3,
@@ -29,7 +29,7 @@
         "interface/aba10.py::mascara": 1,
         "interface/monta.py::jogador": 1,
         "interface/monta.py::transporte": 2,
-        "interface/pacotes/a08_conexoes.py::transporte": 4,
+        "interface/pacotes/a08_conexoes.py::transporte": 3,
         "interface/sistema.py::transporte": 1,
         "testing/fake_controller.py::transporte": 1
       },
@@ -49,13 +49,13 @@
         }
       ],
       "unidade": "ramos",
-      "universo": 411
+      "universo": 405
     },
     "remendos-de-sintoma": {
       "data": "2026-10-25",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 963,
+      "piso": 962,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -185,7 +185,7 @@
         "interface/pacotes/a05_vibracao.py": 5,
         "interface/pacotes/a06_navegacao.py": 3,
         "interface/pacotes/a07_lancadores.py": 8,
-        "interface/pacotes/a08_conexoes.py": 21,
+        "interface/pacotes/a08_conexoes.py": 20,
         "interface/pacotes/a09_sistema.py": 16,
         "interface/pacotes/a10_perfis.py": 2,
         "interface/pacotes/perfil.py": 4,
