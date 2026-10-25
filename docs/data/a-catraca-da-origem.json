@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1217822,
+      "piso": 1217893,
       "por_item": {
         "docs": 121467,
         "scripts": 121272,
-        "src": 324748,
-        "tests": 650335
+        "src": 324752,
+        "tests": 650402
       },
-      "razao": "tamanho: +3 linhas (1217819 -> 1217822), pagas por Origem: D-2809-A-RAIZ-DO-HIDRAW-DO-BACKEND-SE-DESVIA; registrado no fecho, topo 97f3d95fdb8d",
+      "razao": "tamanho: +71 linhas (1217822 -> 1217893), pagas por Origem: plataforma.udev_autosuspend; registrado no fecho, topo de3d34bd0dc2",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1153,10 +1153,16 @@
           "de": 1217819,
           "para": 1217822,
           "razao": "tamanho: +3 linhas (1217819 -> 1217822), pagas por Origem: D-2809-A-RAIZ-DO-HIDRAW-DO-BACKEND-SE-DESVIA; registrado no fecho, topo 97f3d95fdb8d"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1217822,
+          "para": 1217893,
+          "razao": "tamanho: +71 linhas (1217822 -> 1217893), pagas por Origem: plataforma.udev_autosuspend; registrado no fecho, topo de3d34bd0dc2"
         }
       ],
       "unidade": "linhas",
-      "universo": 3183
+      "universo": 3184
     }
   }
 }
