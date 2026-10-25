@@ -2020,10 +2020,10 @@ def _resolver_cru(
             resolvidas.add((contexto.modulo, nome))
     for partes, atributo in cru.cadeias:
         entrada = tabela.get(partes[0]) if partes else None
-        if entrada is not None and entrada[0] == "módulo":
-            alvo = ".".join([str(entrada[1]), *partes[1:-1]])  # type: ignore[index]
+        if partes and entrada is not None and entrada[0] == "módulo":
+            alvo = ".".join([entrada[1], *partes[1:-1]])
             if alvo in mapa.modulos:
-                resolvidas.add(_canonico(mapa, alvo, partes[-1]))  # type: ignore[index]
+                resolvidas.add(_canonico(mapa, alvo, partes[-1]))
                 continue
         planas.add(atributo)
     for no in cru.de_imports:
