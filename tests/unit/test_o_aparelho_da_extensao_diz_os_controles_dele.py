@@ -449,7 +449,7 @@ def _cartoes_na_borda() -> str:
              "opcoes": _JEITOS}]},  # noqa-acento: contrato
         {"id": "ap-2", "nome": "Aparelho 2", "estado": "ligado", "ligado": True, "controles": [
             {"id": "luz", "tipo": "chave", "valor": False}]}]
-    return exp.controles_dos_aparelhos_html("toque", _estado(aparelhos))
+    return str(exp.controles_dos_aparelhos_html("toque", _estado(aparelhos)))
 
 
 _ABRIR = """(function(h){
@@ -480,8 +480,9 @@ _MEDIR = """(function(){
 @pytest.fixture(scope="module")
 def na_borda() -> dict[str, dict[str, Any]]:
     html = _cartoes_na_borda()
-    casos = {f"{w}x{h}": (w, h, [["js", _ABRIR % json.dumps(html)], ["espera", 0.5],
-                                 ["js", _MEDIR]]) for w, h in VISTAS}
+    casos: dict[str, tuple[int, int, list[list[Any]]]] = {
+        f"{w}x{h}": (w, h, [["js", _ABRIR % json.dumps(html)], ["espera", 0.5], ["js", _MEDIR]])
+        for w, h in VISTAS}
     return {k: json.loads(v[1]) for k, v in rodar_no_webkit(casos).items()}
 
 
