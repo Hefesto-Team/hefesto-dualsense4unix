@@ -289,6 +289,51 @@ def test_a_promessa_velha_das_oito_reprova_pelo_vizinho(
     assert any("vizinha da citada" in q for q in queixas), queixas
 
 
+AS_CINCO_LIGACOES = [
+    # (aba, começo da feature, arquivo citado, nome): as cinco da lista da sprint que citam o
+    # `def`, cujo `@gesto` repete o nome na linha de cima: a regra do vizinho as guarda
+    ("04-iluminacao", "Botão de reenvio explícito da cor",
+     "src/hefesto_dualsense4unix/interface/pacotes/a04_iluminacao.py", "cor"),
+    ("08-conexoes", 'Alvo de saída ("só este"',
+     "src/hefesto_dualsense4unix/interface/pacotes/a08_conexoes.py", "alvo"),
+    ("09-sistema", 'Botão "Reiniciar o serviço"',
+     "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py", "reiniciar"),
+    ("09-sistema", 'Botão "Atualizar"',
+     "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py", "atualizar"),
+    ("09-sistema", 'Chave "Ligar junto com o computador" — AÇÃO',
+     "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py", "autostart"),
+]
+
+
+def _montar_sem_a_linha(tmp_path: Path, arquivo: str, linha: int, nome: str) -> Path:
+    """Como :func:`_montar`, com a última linha em branco acima da citada arrancada (o arquivo
+    continua compilando, e a ligação continua sendo lida)."""
+    planilha = _montar(tmp_path, arquivo, linha, nome, None)
+    alvo = planilha.parents[2] / arquivo
+    corpo = alvo.read_text(encoding="utf-8").split("\n")
+    del corpo[max(n for n in range(linha - 1) if not corpo[n].strip())]
+    alvo.write_text("\n".join(corpo), encoding="utf-8")
+    return planilha
+
+
+@pytest.mark.parametrize(
+    ("aba", "feature", "arquivo", "nome"), AS_CINCO_LIGACOES,
+    ids=[f"{o[0]}-{o[3]}" for o in AS_CINCO_LIGACOES],
+)
+def test_a_linha_a_mais_ou_a_menos_acima_do_def_das_cinco_reprova(
+    val: ModuleType, tmp_path: Path, aba: str, feature: str, arquivo: str, nome: str
+) -> None:
+    """Deslocada uma linha, a citação cai no decorador (ou na docstring), que também tem o nome:
+    só a regra do vizinho a reprova, e é esta prova que morde a régua com os dados de hoje."""
+    linha = _linha_da_celula(aba, feature, arquivo, nome)
+
+    assert _queixas(val, _montar(tmp_path / "hoje", arquivo, linha, nome, None)) == []
+    acima = _queixas(val, _montar(tmp_path / "acima", arquivo, linha, nome, 1))
+    assert acima, f"uma linha inserida no começo deixou `{nome}` verde na {linha}"
+    tirada = _queixas(val, _montar_sem_a_linha(tmp_path / "tirada", arquivo, linha, nome))
+    assert tirada, f"uma linha em branco tirada acima deixou `{nome}` verde na {linha}"
+
+
 ALVO_COM_DECORADOR = '''"""O alvo."""
 
 
@@ -340,3 +385,64 @@ def test_a_faixa_nao_passa_pela_regra_do_vizinho(val: ModuleType, tmp_path: Path
     planilha.write_text(f"id,onde\na,{arquivo}:13-14 (`VALOR`)\n", encoding="utf-8")
 
     assert [str(a) for a in val.varrer_planilha(planilha, tmp_path, {})[0]] == []
+
+
+# --- 3. o reapontar não leva a casa-sabe pelo caminho que só a mão confere ----------------------
+
+
+def _casa_crua(um: int, dois: int, quatro: int) -> str:
+    end = "src/hefesto_dualsense4unix/alvo.py"
+    return (f'RAZAO = (\n    "Um, {end}:{um}. Dois, {end}:{dois}. "\n'
+            f'    "Quatro, {end}:{quatro}."\n)\n')
+
+
+def test_no_codigo_a_massa_nao_da_segunda_chance_e_a_crua_vai_a_mao(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O mesmo enredo em que a segunda chance leva o documento (nasce certo, o código anda 4, a
+    massa acompanha, o código anda 12): no arquivo de código ela não vale, e as três vão à mão."""
+    from tests.unit.test_as_citacoes_andam_com_o_codigo import ALVO as ALVO_DA_SEGUNDA_CHANCE
+    from tests.unit.test_as_citacoes_andam_com_o_codigo import (
+        _escrever_e_commitar,
+        _inserir_no_topo,
+    )
+
+    raiz = tmp_path / "repo"
+    (raiz / "src" / "hefesto_dualsense4unix").mkdir(parents=True)
+    (raiz / "src" / "hefesto_dualsense4unix" / "alvo.py").write_text(
+        ALVO_DA_SEGUNDA_CHANCE, encoding="utf-8")
+    (raiz / "docs" / "protocol").mkdir(parents=True)
+    _git(raiz, "init", "-q")
+    _git(raiz, "add", ".")
+    _git(raiz, "commit", "-q", "-m", "o alvo nasce")
+    mod = _carregar(REAPONTAR, "reapontar_citacoes")
+    monkeypatch.setattr(mod, "REESCRITA_EM_MASSA", 3)
+    casa = _escrever_e_commitar(raiz, CASA_SABE, _casa_crua(3, 10, 15), "nasce certo")
+    _inserir_no_topo(raiz, 4, commitar=True)
+    casa.write_text(_casa_crua(7, 14, 19), encoding="utf-8")
+    _git(raiz, "commit", "-q", "-am", "o reapontamento em massa acompanha")
+    _inserir_no_topo(raiz, 12, commitar=True)
+
+    feitos, a_mao = mod.reapontar(raiz, escrever=True)
+
+    assert casa.read_text(encoding="utf-8") == _casa_crua(7, 14, 19), (feitos, a_mao)
+    mao = [f for f in a_mao if "só se reaponta em massa à mão" in f]
+    assert len(mao) == 3, a_mao
+
+
+def test_a_queixa_de_forma_nao_move_a_citacao(repo: Path) -> None:
+    """O nome que casa também na vizinha é queixa de FORMA (o decorador citado, e o `def` logo
+    abaixo com o mesmo nome): o código não andou, e o reapontar não a leva; ela vai à mão."""
+    arquivo = "src/hefesto_dualsense4unix/alvo.py"
+    (repo / arquivo).write_text(ALVO_COM_DECORADOR, encoding="utf-8")
+    (repo / CASA_SABE).write_text('RAZAO = "sem citação"\n', encoding="utf-8")
+    planilha = repo / "docs" / "data" / "x.csv"
+    planilha.write_text(f"id,onde\na,{arquivo}:8 (`reiniciar`)\n", encoding="utf-8")
+    _git(repo, "add", ".")
+    _git(repo, "commit", "-q", "-m", "a planilha cita o decorador")
+    antes = planilha.read_text(encoding="utf-8")
+
+    feitos, a_mao = _carregar(REAPONTAR, "reapontar_citacoes").reapontar(repo, escrever=True)
+
+    assert planilha.read_text(encoding="utf-8") == antes, (feitos, a_mao)
+    assert any("é de forma, e se cura à mão" in f and "x.csv" in f for f in a_mao), a_mao
