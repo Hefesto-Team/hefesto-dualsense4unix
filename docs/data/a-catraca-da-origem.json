@@ -242,17 +242,17 @@
       "universo": 403
     },
     "tamanho": {
-      "data": "2026-10-24",
+      "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1205303,
+      "piso": 1205750,
       "por_item": {
-        "docs": 121266,
+        "docs": 121272,
         "scripts": 120674,
-        "src": 322313,
-        "tests": 641050
+        "src": 322428,
+        "tests": 641376
       },
-      "razao": "tamanho: +563 linhas (1204740 -> 1205303), pagas por Origem: D-0810-O-LADO-DO-TIRO-E-O-ESTALO; registrado no fecho, topo a0c5a3eb1e6d",
+      "razao": "tamanho: +447 linhas (1205303 -> 1205750), pagas por Origem: D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP; registrado no fecho, topo 37fa4d522891",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -991,10 +991,16 @@
           "de": 1204740,
           "para": 1205303,
           "razao": "tamanho: +563 linhas (1204740 -> 1205303), pagas por Origem: D-0810-O-LADO-DO-TIRO-E-O-ESTALO; registrado no fecho, topo a0c5a3eb1e6d"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1205303,
+          "para": 1205750,
+          "razao": "tamanho: +447 linhas (1205303 -> 1205750), pagas por Origem: D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP; registrado no fecho, topo 37fa4d522891"
         }
       ],
       "unidade": "linhas",
-      "universo": 3150
+      "universo": 3151
     }
   }
 }
