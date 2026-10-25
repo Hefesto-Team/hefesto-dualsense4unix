@@ -5,10 +5,18 @@ O-CARTAO-DO-NAO-SEI-NAO-SE-ANUNCIA-COMO-DEFEITO-01.
 Medido em 25/10/2026: com o ``/sys`` vazio, a 08 mostrava «Rádio pode desligar» e «Entrada com
 pouca energia», e o exame não tinha achado defeito nenhum, só não tinha conseguido ler. O título
 do verbete de ``DA_CONFERENCIA`` é o do alarme, e vale só no alarme.
+
+O-CARTAO-DO-NAO-SEI-DIZ-DE-QUE-ASSUNTO-E-01 (25/10/2026): os dois cartões do ``/sys`` vazio saíam
+iguais (o mesmo título, o ``ICONE_AJUDA`` e o mesmo ``aria-label``); só o ⓘ os separava. O «não
+sei» leva o ícone do assunto (o do verbete) e o nome da região leva o rótulo da conferência.
+
+MORDIDAS (25/10/2026): o ``ICONE_AJUDA`` de volta no «não sei» reprova o ícone; o ``aria-label``
+sem o assunto reprova os nomes iguais.
 """
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -21,13 +29,14 @@ ALARMES = (exame.ESTADO_ATENCAO, exame.ESTADO_PROBLEMA)
 
 @pytest.mark.parametrize("chave", sorted(dicas.DA_CONFERENCIA))
 def test_no_nao_sei_o_cartao_diz_que_nao_deu_para_olhar(chave: str) -> None:
-    _icone, alarme, _certo = dicas.DA_CONFERENCIA[chave]
+    icone, alarme, _certo = dicas.DA_CONFERENCIA[chave]
     porque = "Este sistema não deixa ler isto."
     dica = dicas.dica_da_conferencia(chave, "Rótulo", exame.ESTADO_NAO_SEI, porque)
     assert dica.titulo == dicas.TITULO_SEM_VERBETE, (
         f"o «não sei» de {chave} saiu com {dica.titulo!r}, a cara do defeito")
     assert dica.titulo != alarme
-    assert dica.icone == dicas.ICONE_AJUDA
+    assert dica.icone == icone, f"o «não sei» de {chave} perdeu o ícone do assunto"
+    assert dica.assunto == "Rótulo", "o nome da região perdeu de que conferência é"
     assert dica.porque == porque, "o porquê do exame segue o mesmo"
     assert dica.nivel == dicas.NOTA
 
@@ -38,11 +47,13 @@ def test_no_alarme_o_cartao_segue_com_o_titulo_do_verbete(chave: str, estado: st
     icone, alarme, _certo = dicas.DA_CONFERENCIA[chave]
     dica = dicas.dica_da_conferencia(chave, "Rótulo", estado, "Vi o defeito.")
     assert (dica.titulo, dica.icone) == (dicas.limitar_o_titulo(alarme), icone)
+    assert dica.assunto == "", "no alarme o título já diz o assunto"
 
 
 def test_a_conferencia_sem_verbete_no_nao_sei_tambem_nao_usa_o_rotulo() -> None:
     dica = dicas.dica_da_conferencia("outra", "Coisa quebrada", exame.ESTADO_NAO_SEI, "")
     assert dica.titulo == dicas.TITULO_SEM_VERBETE
+    assert (dica.icone, dica.assunto) == (dicas.ICONE_AJUDA, "Coisa quebrada")
 
 
 def test_a_08_num_sys_vazio_nao_mostra_alarme(tmp_path: Path) -> None:
@@ -65,3 +76,12 @@ def test_a_08_num_sys_vazio_nao_mostra_alarme(tmp_path: Path) -> None:
     html = a08._html_das_dicas(itens, None)
     for _icone, alarme, _certo in dicas.DA_CONFERENCIA.values():
         assert alarme not in html, f"«{alarme}» apareceu num /sys vazio"
+    nomes = re.findall(r'<section class="cartao-dica[^"]*" role="region" aria-label="([^"]*)"',
+                       html)
+    assert nomes == [f"{dicas.PALAVRA_DO_NIVEL[dicas.NOTA]}: {dicas.TITULO_SEM_VERBETE}, {i.rotulo}"
+                     for i in itens], nomes
+    assert len(set(nomes)) == 2, f"os dois cartões têm o mesmo nome: {nomes}"
+    icones = re.findall(r'<span class="cd-ic"><svg class="i" aria-hidden="true"><use href="#rd-'
+                        r'([^"]+)"', html)
+    assert icones == [dicas.DA_CONFERENCIA[i.chave][0] for i in itens], icones
+    assert len(set(icones)) == 2, f"os dois cartões têm o mesmo ícone: {icones}"

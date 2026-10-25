@@ -206,7 +206,7 @@ def _o_x_da_dica(acao: Any) -> str:
 
 def _o_cartao_da_dica(dica: Any, n: int, icone: Callable[[str], str]) -> str:
     """Um cartão: título (o porquê no hover), o de→para, UM botão e o X que ignora no canto."""
-    quem = f"dica-{n}"
+    nome = ", ".join(t for t in (dica.titulo, dica.assunto) if t)
     detalhe = f'<p class="cd-detalhe">{_e(dica.detalhe)}</p>' if dica.detalhe else ""
     desenho = (
         f'<p class="cd-pic" aria-label="De {_e(dica.de)} para {_e(dica.para)}">'
@@ -217,9 +217,9 @@ def _o_cartao_da_dica(dica: Any, n: int, icone: Callable[[str], str]) -> str:
     no_titulo = f' data-dica="{_e(porque)}"' if porque else ""
     return (
         f'<section class="cartao-dica nivel-{_e(dica.nivel)}{" calada" if dica.calada else ""}" '
-        f'role="region" aria-label="{_e(PALAVRA_DO_NIVEL[dica.nivel])}: {_e(dica.titulo)}" '
+        f'role="region" aria-label="{_e(PALAVRA_DO_NIVEL[dica.nivel])}: {_e(nome)}" '
         f'data-dica-id="{_e(dica.chave)}"><div class="cd-cab"><span class="cd-ic">'
-        f'{icone(dica.icone)}</span><h4 id="{quem}-t"{no_titulo}><span class="t">'
+        f'{icone(dica.icone)}</span><h4 id="dica-{n}-t"{no_titulo}><span class="t">'
         f'{_e(dica.titulo)}</span></h4>{x}</div>'
         f"{detalhe}{desenho}"
         f'<div class="cd-acao">{_o_botao_da_dica(dica.acao, "cd-botao")}</div></section>')

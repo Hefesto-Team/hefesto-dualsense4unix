@@ -1,9 +1,8 @@
 """dicas_da_conexao.py — as dicas da aba Conexões: cartões de poucas palavras, com UM gesto.
 
 AS-DICAS-SAO-CARTOES-COM-UM-GESTO-01 (04/10/2026), o desenho 4 que o usuário aprovou. O usuário
-pediu «a ideia é
-educar o user: pouco texto, muito mais intuitivo e orgânico». O quadro de frases (CERTO/AJUSTAR) e o
-quadro «Sugestão de Conexão» viram uma fileira de cartões:
+pediu «a ideia é educar o user: pouco texto, muito mais intuitivo e orgânico». O quadro de
+frases (CERTO/AJUSTAR) e o quadro «Sugestão de Conexão» viram uma fileira de cartões:
 
 * **três a cinco palavras** no título («Meio sufocado», «Wi-Fi colado nos rádios»);
 * **o pictograma do que muda** (`P2 · Meio → Direita`) quando há destino;
@@ -135,6 +134,7 @@ class Dica:
     calada: bool = False
     #: vem antes de todos os que falam (o controle que pede para parear: alguém está esperando)
     primeiro: bool = False
+    assunto: str = ""  # de que conferência é o «não sei» (vai ao nome da região, depois do título)
 
     @property
     def peso(self) -> int:
@@ -217,17 +217,17 @@ def _acao_de_ignorar_de_volta(slot: int, titulo: str = "") -> Acao:
 def dica_da_conferencia(
     chave: str, rotulo: str, estado: str, porque: str, cura: str = ""
 ) -> Dica:
-    """O cartão de uma conferência que não deu certo: o título do alarme vale só no alarme."""
+    """O cartão de uma conferência: o ícone diz o assunto; o título do alarme, só no alarme."""
     nivel = _nivel_do_estado(estado)
+    icone, titulo, _certo = DA_CONFERENCIA.get(
+        chave, (ICONE_AJUDA, limitar_o_titulo(rotulo) or TITULO_SEM_VERBETE, ""))
+    assunto = ""
     if nivel == NOTA:
-        icone, titulo = ICONE_AJUDA, TITULO_SEM_VERBETE
-    else:
-        icone, titulo, _certo = DA_CONFERENCIA.get(
-            chave, (ICONE_AJUDA, limitar_o_titulo(rotulo) or TITULO_SEM_VERBETE, ""))
+        titulo, assunto = TITULO_SEM_VERBETE, " ".join(str(rotulo or "").split())
     return Dica(
         chave=chave, icone=icone, titulo=limitar_o_titulo(titulo), nivel=nivel,
         acao=Acao(MAPA, ROTULO_VER_NO_MAPA, href=PAGINA_DO_MAPA), porque=uma_frase(porque),
-        cura=cura)
+        cura=cura, assunto=assunto)
 
 
 def o_que_esta_certo(chave: str, rotulo: str) -> str:
