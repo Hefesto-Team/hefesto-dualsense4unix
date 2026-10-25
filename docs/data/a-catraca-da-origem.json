@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1218043,
+      "piso": 1219309,
       "por_item": {
-        "docs": 121467,
-        "scripts": 121272,
-        "src": 324752,
-        "tests": 650552
+        "docs": 121473,
+        "scripts": 121407,
+        "src": 324982,
+        "tests": 651447
       },
-      "razao": "tamanho: +150 linhas (1217893 -> 1218043), pagas por Origem: D-2809-A-RAIZ-DO-HIDRAW-DO-BACKEND-SE-DESVIA; registrado no fecho, topo 51b138d04a3a",
+      "razao": "tamanho: +1266 linhas (1218043 -> 1219309), pagas por Origem: D-2309-O-REPO-QUE-SE-LE, D-2609-O-DESENHO-DA-08-EM-CARTOES-APROVADO, D-2809-A-RAIZ-DO-HIDRAW-DO-BACKEND-SE-DESVIA, D-MAPA-2D-DAS-PORTAS, plataforma.udev_autosuspend; registrado no fecho, topo 691b64e16269",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1165,10 +1165,16 @@
           "de": 1217893,
           "para": 1218043,
           "razao": "tamanho: +150 linhas (1217893 -> 1218043), pagas por Origem: D-2809-A-RAIZ-DO-HIDRAW-DO-BACKEND-SE-DESVIA; registrado no fecho, topo 51b138d04a3a"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1218043,
+          "para": 1219309,
+          "razao": "tamanho: +1266 linhas (1218043 -> 1219309), pagas por Origem: D-2309-O-REPO-QUE-SE-LE, D-2609-O-DESENHO-DA-08-EM-CARTOES-APROVADO, D-2809-A-RAIZ-DO-HIDRAW-DO-BACKEND-SE-DESVIA, D-MAPA-2D-DAS-PORTAS, plataforma.udev_autosuspend; registrado no fecho, topo 691b64e16269"
         }
       ],
       "unidade": "linhas",
-      "universo": 3185
+      "universo": 3189
     }
   }
 }
