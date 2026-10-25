@@ -13,6 +13,9 @@ from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import prosa_do_codigo
+
 PASTA = Path("docs") / "protocol"
 
 PASTA_CSV = Path("docs") / "data"
@@ -66,10 +69,14 @@ def ancora_da_curta(celula: str, inteiras: list[re.Match[str]], vao: int) -> re.
             return None
     return ancora
 
-NOME_ANTES = re.compile(r"`(?P<nome>[A-Za-z_][A-Za-z0-9_]{2,})`\s*(?:em|no|na)\s+$")
+NOME = r"[A-Za-z_][A-Za-z0-9_-]+[A-Za-z0-9_]"
+"""O nome que a citação promete: identificador de três letras ou mais, ou o id e a classe do HTML,
+com o ``-`` no meio (``est-mic``), que o ``casa_o_nome`` lê inteiros."""
+
+NOME_ANTES = re.compile(rf"`(?P<nome>{NOME})`\s*(?:em|no|na)\s+$")
 
 NOME_DEPOIS = re.compile(
-    r"\s*\(`(?P<nome>[A-Za-z_][A-Za-z0-9_]{2,})`\s*(?:[,)]|$)")
+    rf"\s*\(`(?P<nome>{NOME})`\s*(?:[,)]|$)")
 
 JANELA_ESQUERDA = 120
 
@@ -136,6 +143,37 @@ def _inicios_das_definicoes(texto: str) -> dict[str, tuple[int, ...]]:
     return {nome: tuple(linhas) for nome, linhas in inicios.items()}
 
 
+_BORDA_DO_NOME: dict[str, str] = {".html": r"\w-", ".htm": r"\w-", ".js": r"\w$", ".mjs": r"\w$"}
+"""O que, além de letra, dígito e ``_``, ainda é parte do nome: o ``-`` do id e da classe do HTML, o
+``$`` do JS. O ponto nunca: ``self.nome`` usa ``nome``."""
+
+
+@functools.lru_cache(maxsize=64)
+def _linhas_sem_comentario(texto: str, sufixo: str) -> tuple[str, ...]:
+    return tuple(prosa_do_codigo.sem_comentario(texto, sufixo).split("\n"))
+
+
+@functools.lru_cache(maxsize=1024)
+def _agulha_do_nome(nome: str, sufixo: str) -> re.Pattern[str]:
+    borda = _BORDA_DO_NOME.get(sufixo, r"\w")
+    return re.compile(rf"(?<![{borda}]){re.escape(nome)}(?![{borda}])")
+
+
+def casa_o_nome(nome: str, corpo: list[str], primeira: int, ultima: int, sufixo: str) -> bool:
+    """O nome está INTEIRO na faixa citada do ``corpo`` (as duas pontas incluídas), fora de comentário.
+
+    Inteiro: ``cor`` não casa em ``cores``, e no HTML ``est`` não casa em ``est-mic``. Fora de
+    comentário: o ``#`` do ``.py``, o ``<!-- -->`` do HTML e o ``//`` e o ``/* */`` do JS não
+    contam, e a docstring e a cadeia contam, porque a prosa da tela mora nelas. É o dono do
+    casamento: o ``_contem`` do `reapontar-citacoes.py` pergunta aqui.
+    """
+    if nome not in "\n".join(corpo[primeira - 1:ultima]):
+        return False
+    limpo = _linhas_sem_comentario("\n".join(corpo), sufixo)
+    trecho = "\n".join(limpo[primeira - 1:ultima])
+    return _agulha_do_nome(nome, sufixo).search(trecho) is not None
+
+
 def abraca_de_fora(corpo: list[str], primeira: int, ultima: int, nome: str) -> int | None:
     """A pergunta 3: a linha do `def` de ``nome`` quando a faixa o abraça"""
     inicios = _inicios_das_definicoes("\n".join(corpo)).get(nome, ())
@@ -187,18 +225,18 @@ def confere_endereco(
                         contexto, curta)],
                 True, False)
 
-    trecho = "\n".join(corpo[primeira - 1:ultima])
     de, ate = achado.span("vao") if curta else achado.span()
     nomes = sorted(nomes_prometidos(texto, de, ate, separadores))
     achados = [
         Achado(origem, linha, endereco,
                f"a faixa não contém `{nome}`, que a citação promete", contexto, curta)
         for nome in nomes
-        if nome not in trecho
+        if not casa_o_nome(nome, corpo, primeira, ultima, alvo.suffix)
     ]
     if alvo.suffix == ".py" and achado.group("b"):
         for nome in nomes:
-            no_def = abraca_de_fora(corpo, primeira, ultima, nome) if nome in trecho else None
+            no_def = (abraca_de_fora(corpo, primeira, ultima, nome)
+                      if casa_o_nome(nome, corpo, primeira, ultima, alvo.suffix) else None)
             if no_def is not None:
                 achados.append(Achado(
                     origem, linha, endereco,

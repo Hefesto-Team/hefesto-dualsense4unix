@@ -249,7 +249,7 @@ class Arvore:
         return None
 
 
-NOME_PROMETIDO = re.compile(r"\s*\(`[A-Za-z_][A-Za-z0-9_]{2,}`\)$")
+NOME_PROMETIDO = re.compile(r"\s*\(`[A-Za-z_][A-Za-z0-9_-]+[A-Za-z0-9_]`\)$")
 """O `` (`nome`)`` que o endereço da célula pode prometer (25/10/2026, AS-CITACOES-NOVAS-A-MAO-SAEM-
 DA-LISTA-DO-REAPONTAR-01): é o ``NOME_DEPOIS`` do `validar-citacoes-de-linha.py`, que confere o nome;
 com ele o `reapontar-citacoes.py` leva o endereço quando o código anda. A forma crua segue valendo."""

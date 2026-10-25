@@ -94,16 +94,18 @@ def _validador(raiz: Path) -> ModuleType:
 
 
 def _contem(linhas: Sequence[str], a: int, b: int, nomes: set[str], relativo: str = "") -> bool:
-    """A faixa é verdadeira: contém todo nome prometido e, em `.py`, não"""
+    """A faixa é verdadeira: tem cada nome prometido inteiro e fora de comentário (o ``casa_o_nome``
+    do validador) e, em `.py`, não começa antes do `def` dele abraçando código de fora."""
     if a < 1 or b < a or b > len(linhas):
         return False
-    trecho = "\n".join(linhas[a - 1 : b])
-    if not all(nome in trecho for nome in nomes):
+    val = _validador_carregado()
+    corpo = list(linhas)
+    sufixo = Path(relativo).suffix
+    if not all(val.casa_o_nome(nome, corpo, a, b, sufixo) for nome in nomes):
         return False
-    if not relativo.endswith(".py") or a == b:
+    if sufixo != ".py" or a == b:
         return True
-    abraca = _validador_carregado().abraca_de_fora
-    return all(abraca(list(linhas), a, b, nome) is None for nome in nomes)
+    return all(val.abraca_de_fora(corpo, a, b, nome) is None for nome in nomes)
 
 
 def _hunks(raiz: Path, sha: str, relativo: str) -> list[tuple[int, int, int, int]] | None:
@@ -186,7 +188,8 @@ def _mapear(
     if len(lugares) > 1 or hunks is None:
         return None
     for n in range(a, b + 1):
-        if any(nome in velho[n - 1] for nome in nomes):
+        if any(_validador_carregado().casa_o_nome(nome, velho, n, n, Path(relativo).suffix)
+               for nome in nomes):
             hoje = _levar_linha(n, hunks)
             if hoje is None:
                 return None

@@ -109,24 +109,79 @@ def sem_prosa(fonte: str, sufixo: str = ".py") -> str:
         return fonte
     inicio = _inicio_das_linhas(fonte)
     for no in _docstrings(arvore):
-        if no.lineno is None or no.end_lineno is None:
+        if no.end_lineno is None or no.end_col_offset is None:
             continue
         _apagar(letras,
                 inicio[no.lineno - 1] + no.col_offset,
                 inicio[no.end_lineno - 1] + no.end_col_offset)
 
     parcial = "".join(letras)
-    letras = list(parcial)
+    sem_comentario = _sem_comentario_py(parcial)
+    return parcial if sem_comentario is None else sem_comentario
+
+
+def _sem_comentario_py(fonte: str) -> str | None:
+    """O ``.py`` com cada comentário (o ``#`` que o ``tokenize`` diz) em branco; ``None`` se não tokeniza."""
+    inicio = _inicio_das_linhas(fonte)
+    letras = list(fonte)
     try:
-        for tok in tokenize.generate_tokens(io.StringIO(parcial).readline):
+        for tok in tokenize.generate_tokens(io.StringIO(fonte).readline):
             if tok.type != tokenize.COMMENT:
                 continue
             _apagar(letras,
                     inicio[tok.start[0] - 1] + tok.start[1],
                     inicio[tok.end[0] - 1] + tok.end[1])
     except (tokenize.TokenError, IndentationError, SyntaxError):
-        return parcial
+        return None
     return "".join(letras)
+
+
+_BLOCO_DE_SCRIPT = re.compile(r"(<script\b[^>]*>)(.*?)(</script\s*>)", re.S | re.I)
+
+
+def _sem_comentario_js(fonte: str) -> str:
+    """O JS com ``//`` e ``/* */`` em branco; o que está entre aspas ou crases fica."""
+    letras = list(fonte)
+    i, n = 0, len(fonte)
+    while i < n:
+        c = fonte[i]
+        if c in "'\"`":
+            i += 1
+            while i < n and fonte[i] != c and (c == "`" or fonte[i] != "\n"):
+                i += 2 if fonte[i] == "\\" else 1
+            i += 1
+        elif fonte.startswith("//", i):
+            fim = fonte.find("\n", i)
+            fim = n if fim < 0 else fim
+            _apagar(letras, i, fim)
+            i = fim
+        elif fonte.startswith("/*", i):
+            fim = fonte.find("*/", i + 2)
+            fim = n if fim < 0 else fim + 2
+            _apagar(letras, i, fim)
+            i = fim
+        else:
+            i += 1
+    return "".join(letras)
+
+
+def sem_comentario(fonte: str, sufixo: str) -> str:
+    """O texto sem comentário, com a docstring e a cadeia intactas, e as quebras de linha no lugar.
+
+    Comentário é o ``#`` do ``.py`` (pelo ``tokenize``), o ``<!-- -->`` do HTML e o ``//`` e o
+    ``/* */`` do JS, inclusive o do ``<script>`` dentro do HTML. Outro sufixo volta como veio, e o
+    ``.py`` que não tokeniza também (o lado seguro de cima).
+    """
+    if sufixo == ".py":
+        limpo = _sem_comentario_py(fonte)
+        return fonte if limpo is None else limpo
+    if sufixo in (".js", ".mjs"):
+        return _sem_comentario_js(fonte)
+    if sufixo in (".html", ".htm"):
+        sem_html = _COMENTARIO_HTML.sub(lambda m: re.sub(r"[^\n]", " ", m.group(0)), fonte)
+        return _BLOCO_DE_SCRIPT.sub(
+            lambda m: m.group(1) + _sem_comentario_js(m.group(2)) + m.group(3), sem_html)
+    return fonte
 
 
 def codigo_de(caminho: Path) -> str:
