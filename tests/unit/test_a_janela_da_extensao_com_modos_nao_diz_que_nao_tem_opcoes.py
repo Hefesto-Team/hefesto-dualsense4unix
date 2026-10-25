@@ -15,6 +15,8 @@ MORDIDAS (25/10/2026, executadas sobre a cura e devolvidas, md5 conferido):
   ``test_o_livre_com_ou_sem_modos_nao_diz_que_nao_tem_opcoes``;
 - a barra igual nos dois estados (``fora=""`` na chamada da faixa) reprova
   ``test_fora_da_porta_a_barra_nasce_apagada_com_a_dica`` nos cinco estados.
+- sem a regra do rastro apagado (o rastro da barra fora da porta segue rosa) reprova
+  ``test_a_barra_apagada_nao_e_vermelha``.
 """
 
 from __future__ import annotations
@@ -136,4 +138,8 @@ def test_a_barra_apagada_nao_e_vermelha() -> None:
            / "interface" / "experimental" / "experimental.css").read_text(encoding="utf-8")
     regras = re.findall(r"#mod-janela \.mj-trilho\.fora [^{]*\{[^}]*\}", css)
     assert len(regras) == 2, "a barra apagada e o número dela"
+    rastro = re.findall(r"#mod-janela \.mj-faixa:has\(> \.mj-trilho\.fora\) "
+                        r"\.mj-rastro:not\(\.gravando\) polyline \{[^}]*\}", css)
+    assert len(rastro) == 1, "o rastro da barra apagada segue rosa por cima dela"
+    regras += rastro
     assert all("pink" not in r and "red" not in r and "vermelho" not in r for r in regras)
