@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1217684,
+      "piso": 1217832,
       "por_item": {
-        "docs": 121478,
+        "docs": 121482,
         "scripts": 121272,
-        "src": 324747,
-        "tests": 650187
+        "src": 324748,
+        "tests": 650330
       },
-      "razao": "tamanho: +143 linhas (1217541 -> 1217684), pagas por Origem: D-2510-A-MARCA-DE-ACENTO-VAI-ENTRE-PARENTESES; registrado no fecho, topo 7c057cabefd3",
+      "razao": "tamanho: +148 linhas (1217684 -> 1217832), pagas por Origem: D-2809-A-RAIZ-DO-HIDRAW-DO-BACKEND-SE-DESVIA; registrado no fecho, topo ab7628303499",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1141,10 +1141,16 @@
           "de": 1217541,
           "para": 1217684,
           "razao": "tamanho: +143 linhas (1217541 -> 1217684), pagas por Origem: D-2510-A-MARCA-DE-ACENTO-VAI-ENTRE-PARENTESES; registrado no fecho, topo 7c057cabefd3"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1217684,
+          "para": 1217832,
+          "razao": "tamanho: +148 linhas (1217684 -> 1217832), pagas por Origem: D-2809-A-RAIZ-DO-HIDRAW-DO-BACKEND-SE-DESVIA; registrado no fecho, topo ab7628303499"
         }
       ],
       "unidade": "linhas",
-      "universo": 3182
+      "universo": 3183
     }
   }
 }
