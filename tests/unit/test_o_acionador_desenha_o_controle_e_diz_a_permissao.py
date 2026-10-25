@@ -96,6 +96,7 @@ def _declarados() -> dict[str, Any]:
 
 
 def test_a_ponte_diz_a_frase_em_warning_uma_vez_por_aparelho(tmp_path: Path) -> None:
+    # D-2510-A-FALTA-DE-PERMISSAO-DE-LER-DIZ-O-GRUPO
     """Três procuras sem permissão: um ``warning`` com a frase e o aparelho, e nenhum ``info``
     de «não abriu» por cima."""
     ponte = _ponte(tmp_path, lambda evento: _recusar(f"/dev/input/{evento}"))

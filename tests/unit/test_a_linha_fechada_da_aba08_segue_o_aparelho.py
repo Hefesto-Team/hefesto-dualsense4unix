@@ -138,6 +138,7 @@ PAGINAS = {
 
 @pytest.mark.parametrize("qual", sorted(PAGINAS))
 def test_toda_chave_da_coluna_tem_endereco_na_08(qual: str) -> None:
+    # D-2510-A-COLUNA-DA-08-NAO-EMITE-CAMPO-SEM-ENDERECO
     """Campo da coluna sem `data-campo` na página escreve zero e some calado."""
     html = PAGINAS[qual].read_text(encoding="utf-8")
     na_pagina = set(re.findall(r'data-campo="([^"]+)"', html))
