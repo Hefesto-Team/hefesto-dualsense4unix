@@ -245,14 +245,14 @@
       "data": "2026-10-24",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1204709,
+      "piso": 1204740,
       "por_item": {
         "docs": 121260,
-        "scripts": 120643,
+        "scripts": 120674,
         "src": 322195,
         "tests": 640611
       },
-      "razao": "tamanho: +2764 linhas (1201945 -> 1204709), pagas por Origem: D-2210-A-JANELA-QUE-DECLARA-O-AGORA-ABRE-NO-ARRANJO-C, D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo c017ce0bb0e0",
+      "razao": "tamanho: +31 linhas (1204709 -> 1204740), pagas por Origem: D-2310-O-ATUALIZAR-QUE-PEDE-SIM-ABRE-A-LISTA, D-2310-O-PISO-DA-SUITE-E-O-PYTEST-DAS-PARTES-EM-SERIE, D-2410-A-ENTRADA-MAE-DO-EXTENSOR-DIZ-COM-O-EXTENSOR, D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR; registrado no fecho, topo 10108d0ca939",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -979,6 +979,12 @@
           "de": 1201945,
           "para": 1204709,
           "razao": "tamanho: +2764 linhas (1201945 -> 1204709), pagas por Origem: D-2210-A-JANELA-QUE-DECLARA-O-AGORA-ABRE-NO-ARRANJO-C, D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo c017ce0bb0e0"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 1204709,
+          "para": 1204740,
+          "razao": "tamanho: +31 linhas (1204709 -> 1204740), pagas por Origem: D-2310-O-ATUALIZAR-QUE-PEDE-SIM-ABRE-A-LISTA, D-2310-O-PISO-DA-SUITE-E-O-PYTEST-DAS-PARTES-EM-SERIE, D-2410-A-ENTRADA-MAE-DO-EXTENSOR-DIZ-COM-O-EXTENSOR, D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR; registrado no fecho, topo 10108d0ca939"
         }
       ],
       "unidade": "linhas",
