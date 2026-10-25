@@ -958,7 +958,7 @@ class SensorHub:
         """``(giro, acel)`` de `uniq` agora, em °/s e em g, se o leitor já vive; ``None`` sem ele.
 
         Só VÊ: não registra demanda (quem a registra é :meth:`pedir_o_movimento`) e não drena o
-        ângulo. Um acelerômetro que falha sai zerado, sem levar o giro.
+        ângulo. O giro e o acelerômetro vêm do mesmo leitor: o que falha leva os dois.
         """
         with self._lock:
             motion = self._motion.get(uniq)
@@ -966,15 +966,11 @@ class SensorHub:
             return None
         try:
             g = motion.snapshot()
-            giro = (float(g.x), float(g.y), float(g.z))
+            a = motion.accel_snapshot()
+            return (float(g.x), float(g.y), float(g.z)), (float(a.x), float(a.y), float(a.z))
         except Exception as exc:
             logger.debug("sensor_hub_movimento_visto_falhou", identity=uniq, err=str(exc))
             return None
-        acel = (0.0, 0.0, 0.0)
-        with contextlib.suppress(Exception):
-            a = motion.accel_snapshot()
-            acel = (float(a.x), float(a.y), float(a.z))
-        return giro, acel
 
 
 __all__ = ["AmostraDoDsu", "SensorHub"]
