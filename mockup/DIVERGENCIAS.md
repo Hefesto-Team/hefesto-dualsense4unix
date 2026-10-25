@@ -21,4 +21,6 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## 07-lancadores.html
+- **25/10/2026** — a janela da extensão ganha os modos do controle livre (Soltar, Segurar e
+  Repetir) e os cartões dos controles de cada aparelho; o `--publicar 07` sai no fecho.

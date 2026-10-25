@@ -272,6 +272,9 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                                      "tela até o «Guardar»",
     "esquecer-a-forma-do-livre": "tira uma forma gravada do rascunho da janela — é da tela até "
                                  "o «Guardar»",
+    "modo-do-livre-da-modificacao": "Soltar, Segurar ou Repetir do controle livre, no rascunho "
+                                    "da janela até o «Guardar» — é da tela e do serviço da "
+                                    "extensão, não de um controle",
 }
 
 DO_APARELHO: dict[str, tuple[str, ...]] = {
