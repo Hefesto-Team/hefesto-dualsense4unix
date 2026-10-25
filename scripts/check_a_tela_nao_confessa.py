@@ -250,7 +250,7 @@ def _do_dono(fn: ast.FunctionDef | ast.AsyncFunctionDef, p: pathlib.Path,
     for no in ast.walk(fn):
         if isinstance(no, ast.Return) and no.value is not None:
             achou = True
-            t, c = _montar(no.value, p, dentro, prof + 1, vistos)
+            t, c = _montar(no.value, p, dentro, prof + 1, vistos, fn)
             pedacos.append(t)
             inteiro = inteiro and c
     if not achou:
@@ -262,8 +262,14 @@ _TETO = 12
 
 
 def _montar(no: ast.expr, p: pathlib.Path, local: tuple[dict, dict, dict],
-            prof: int = 0, vistos: frozenset = frozenset()) -> tuple[str, bool]:
-    """A frase como ela CHEGA ao cartão — e se a régua a montou inteira."""
+            prof: int = 0, vistos: frozenset = frozenset(),
+            dono: ast.AST | None = None) -> tuple[str, bool]:
+    """A frase como ela CHEGA ao cartão — e se a régua a montou inteira.
+
+    ``dono`` é a função cujo corpo deu o ``local`` (``None``: o módulo). O nome já seguido se
+    guarda pelo escopo em que ele mora, ``(arquivo, dono, nome)``: a local de mesmo nome na
+    função chamada é outro nome, e se segue; o mesmo nome no mesmo escopo, não (o laço termina).
+    """
     if prof > _TETO:
         return VALOR_DE_EXECUCAO, False
     consts, apelidos, funcoes = _escopo(p)
@@ -277,12 +283,15 @@ def _montar(no: ast.expr, p: pathlib.Path, local: tuple[dict, dict, dict],
                 else (VALOR_DE_EXECUCAO, False))
 
     if isinstance(no, ast.Name):
-        chave = (p, no.id)
+        de_dentro = no.id in l_consts or no.id in l_funcoes or no.id in l_apelidos
+        chave = (p, dono if de_dentro else None, no.id)
         if chave in vistos:
             return VALOR_DE_EXECUCAO, False
         adiante = vistos | {chave}
+        if no.id in l_consts:
+            return _montar(l_consts[no.id], p, local, prof + 1, adiante, dono)
         if no.id in consts:
-            return _montar(consts[no.id], p, local, prof + 1, adiante)
+            return _montar(consts[no.id], p, ({}, {}, {}), prof + 1, adiante)
         if no.id in funcoes:
             return _do_dono(funcoes[no.id], p, prof, adiante)
         if no.id in apelidos:
@@ -298,7 +307,7 @@ def _montar(no: ast.expr, p: pathlib.Path, local: tuple[dict, dict, dict],
         base = no.value
         if isinstance(base, ast.Name) and apelidos.get(base.id, ("", None, ""))[0] == "módulo":
             onde = apelidos[base.id][1]
-            chave = (onde, no.attr)
+            chave = (onde, None, no.attr)
             if chave in vistos:
                 return VALOR_DE_EXECUCAO, False
             adiante = vistos | {chave}
@@ -311,39 +320,39 @@ def _montar(no: ast.expr, p: pathlib.Path, local: tuple[dict, dict, dict],
 
     if isinstance(no, ast.Call):
         if isinstance(no.func, ast.Name) and no.func.id == "str" and len(no.args) == 1:
-            return _montar(no.args[0], p, local, prof + 1, vistos)
+            return _montar(no.args[0], p, local, prof + 1, vistos, dono)
         if isinstance(no.func, (ast.Name, ast.Attribute)):
-            return _montar(no.func, p, local, prof, vistos)
+            return _montar(no.func, p, local, prof, vistos, dono)
         return VALOR_DE_EXECUCAO, False
 
     if isinstance(no, ast.JoinedStr):
         pedacos, inteiro = [], True
         for parte in no.values:
-            t, c = _montar(parte, p, local, prof + 1, vistos)
+            t, c = _montar(parte, p, local, prof + 1, vistos, dono)
             pedacos.append(t)
             inteiro = inteiro and c
         return "".join(pedacos), inteiro
 
     if isinstance(no, ast.FormattedValue):
-        t, c = _montar(no.value, p, local, prof + 1, vistos)
+        t, c = _montar(no.value, p, local, prof + 1, vistos, dono)
         return (t, c) if c else (VALOR_DE_EXECUCAO, False)
 
     if isinstance(no, ast.BinOp) and isinstance(no.op, ast.Add):
-        a, ca = _montar(no.left, p, local, prof + 1, vistos)
-        b, cb = _montar(no.right, p, local, prof + 1, vistos)
+        a, ca = _montar(no.left, p, local, prof + 1, vistos, dono)
+        b, cb = _montar(no.right, p, local, prof + 1, vistos, dono)
         return a + b, ca and cb
 
     if isinstance(no, ast.BoolOp):
         pedacos, inteiro = [], True
         for parte in no.values:
-            t, c = _montar(parte, p, local, prof + 1, vistos)
+            t, c = _montar(parte, p, local, prof + 1, vistos, dono)
             pedacos.append(t)
             inteiro = inteiro and c
         return f" {VALOR_DE_EXECUCAO} ".join(pedacos), inteiro
 
     if isinstance(no, ast.IfExp):
-        a, ca = _montar(no.body, p, local, prof + 1, vistos)
-        b, cb = _montar(no.orelse, p, local, prof + 1, vistos)
+        a, ca = _montar(no.body, p, local, prof + 1, vistos, dono)
+        b, cb = _montar(no.orelse, p, local, prof + 1, vistos, dono)
         return f"{a} {VALOR_DE_EXECUCAO} {b}", ca and cb
 
     return VALOR_DE_EXECUCAO, False
@@ -370,7 +379,7 @@ def _recados() -> tuple[list[tuple[str, str]], list[tuple[str, str]]]:
                         else getattr(alvo, "attr", ""))
                 if qual != "RuntimeError" or not no.exc.args:
                     continue
-                texto, inteiro = _montar(no.exc.args[0], p, local)
+                texto, inteiro = _montar(no.exc.args[0], p, local, dono=fn)
                 onde = f"{p.relative_to(RAIZ)}:{no.lineno}"
                 if not inteiro and not texto.replace(VALOR_DE_EXECUCAO, "").strip():
                     mudos.append((
