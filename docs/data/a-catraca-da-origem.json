@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1217832,
+      "piso": 1217819,
       "por_item": {
-        "docs": 121482,
+        "docs": 121467,
         "scripts": 121272,
         "src": 324748,
-        "tests": 650330
+        "tests": 650332
       },
-      "razao": "tamanho: +148 linhas (1217684 -> 1217832), pagas por Origem: D-2809-A-RAIZ-DO-HIDRAW-DO-BACKEND-SE-DESVIA; registrado no fecho, topo ab7628303499",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
