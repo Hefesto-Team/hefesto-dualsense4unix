@@ -131,7 +131,7 @@ VPAD_UNIQ_PREFIX = "02fe"
 #: O começo do serial USB do pad em USB (``pad_usb.SERIAL_PREFIXO``).
 PAD_USB_SERIAL_PREFIX = "hefesto-pad-"
 _USB_DEVICE_RE = re.compile(r"^\d+-[\d.]+$")
-
+SYS_CLASS_HIDRAW = "/sys/class/hidraw"  # a raiz do hidraw: só aqui (o broker não lê o pacote)
 _HIDRAW_BASE_RE = re.compile(r"^hidraw[0-9]+$")
 
 # mesmo DualSense aparece em três superfícies: o hidraw, o evdev
@@ -271,7 +271,7 @@ def validate_physical_node(
     node: object,
     *,
     dev_root: str = "/dev",
-    sys_class_hidraw: str = "/sys/class/hidraw",
+    sys_class_hidraw: str = SYS_CLASS_HIDRAW,
     sys_class_bluetooth: str = "/sys/class/bluetooth",
     stat_fn: Callable[[str], Any] = os.stat,
     lstat_fn: Callable[[str], Any] = os.lstat,
@@ -606,7 +606,7 @@ class FsAclOps:
     def __init__(
         self,
         *,
-        sys_class_hidraw: str = "/sys/class/hidraw",
+        sys_class_hidraw: str = SYS_CLASS_HIDRAW,
         dev_input_root: str = DEV_INPUT_ROOT,
         sys_class_input: str = "/sys/class/input",
         sys_class_bluetooth: str = "/sys/class/bluetooth",
@@ -1516,7 +1516,7 @@ class BrokerState:
         ops: Any | None = None,
         validator: Callable[[str], str | None] | None = None,
         dev_root: str = "/dev",
-        sys_class_hidraw: str = "/sys/class/hidraw",
+        sys_class_hidraw: str = SYS_CLASS_HIDRAW,
         sys_class_bluetooth: str = "/sys/class/bluetooth",
         log: Callable[..., None] = _log,
         sleep_fn: Callable[[float], None] = time.sleep,
@@ -2519,7 +2519,7 @@ def physical_nodes_exposure(
     uid: int,
     *,
     dev_root: str = "/dev",
-    sys_class_hidraw: str = "/sys/class/hidraw",
+    sys_class_hidraw: str = SYS_CLASS_HIDRAW,
     sys_class_bluetooth: str = "/sys/class/bluetooth",
     ops: Any | None = None,
     validator: Callable[[str], str | None] | None = None,
@@ -2567,7 +2567,7 @@ def restore_all_physical(
     uid: int,
     ops: Any | None = None,
     dev_root: str = "/dev",
-    sys_class_hidraw: str = "/sys/class/hidraw",
+    sys_class_hidraw: str = SYS_CLASS_HIDRAW,
     sys_class_bluetooth: str = "/sys/class/bluetooth",
     validator: Callable[[str], str | None] | None = None,
     log: Callable[..., None] = _log,
@@ -2626,7 +2626,7 @@ def fechar_todo_fisico(
     uid: int | None,
     ops: Any | None = None,
     dev_root: str = "/dev",
-    sys_class_hidraw: str = "/sys/class/hidraw",
+    sys_class_hidraw: str = SYS_CLASS_HIDRAW,
     sys_class_bluetooth: str = "/sys/class/bluetooth",
     validator: Callable[[str], str | None] | None = None,
     log: Callable[..., None] = _log,

@@ -4,7 +4,7 @@ Em 25/10/2026, oito módulos cravavam a mesma constante. A sprint A-RAIZ-DO-HIDR
 deu o dono ao `usb_pai`, e a A-RAIZ-DO-HIDRAW-SAI-DOS-MODULOS-QUE-AINDA-A-CRAVAM-01 tirou a raiz
 dos outros quinze. A régua lê a árvore de sintaxe do `src/` e reprova a raiz cravada fora do dono
 em qualquer forma: a constante, o padrão de um parâmetro, o pedaço de uma f-string. Só o broker
-fica, isento com o porquê medido.
+fica, isento com o porquê medido, e crava a raiz uma vez só, na constante dele.
 """
 
 from __future__ import annotations
@@ -26,9 +26,12 @@ AINDA_CRAVADA: set[str] = set()
 #: em `test_o_broker_isento_nao_importa_o_pacote`.
 ISENTO = "broker/hidraw_broker.py"
 
+#: a constante do isento: a raiz cravada uma vez no broker, e os padrões dos parâmetros a leem.
+CONSTANTE_DO_ISENTO = "SYS_CLASS_HIDRAW"
+
 #: quantos textos com a raiz (fora das docstrings) cada módulo ainda tem, em qualquer forma. Só o
-#: isento fica, e o número dele não cresce; um módulo fora dela tem zero.
-TEXTOS_AINDA_CRAVADOS = {ISENTO: 6}
+#: isento fica, com o texto da constante dele; um módulo fora dela tem zero.
+TEXTOS_AINDA_CRAVADOS = {ISENTO: 1}
 
 #: os que importam do dono; neles a raiz não aparece em texto nenhum fora das docstrings.
 IMPORTAM_DO_DONO = ("integrations/conexao_zumbi.py", "core/physical_report_reader.py")
@@ -75,6 +78,13 @@ def _modulos() -> dict[str, str]:
             for p in sorted(SRC.rglob("*.py"))}
 
 
+def _recado(nome: str) -> str:
+    """O que fazer com a raiz que cresceu: o broker não importa o pacote, e lê a constante dele."""
+    if nome == ISENTO:
+        return f"leia `{CONSTANTE_DO_ISENTO}` do próprio broker"
+    return "importe `RAIZ_HIDRAW` de `integrations/usb_pai`"
+
+
 def test_a_regua_pega_a_constante_e_o_texto_cravados() -> None:
     assert constantes_da_raiz(f'RAIZ_HIDRAW = "{RAIZ}"\n') == ["RAIZ_HIDRAW"]
     assert constantes_da_raiz(f'_R: str = "{RAIZ}"\n') == ["_R"]
@@ -83,6 +93,8 @@ def test_a_regua_pega_a_constante_e_o_texto_cravados() -> None:
     assert textos_com_a_raiz(f'"""{RAIZ} na docstring."""\n') == []
     assert textos_com_a_raiz(f'def f(raiz="{RAIZ}"):\n    pass\n') == [1]
     assert textos_com_a_raiz(f'CONFERIR = "ls -l /dev/uhid {RAIZ}"\n') == [1]
+    assert CONSTANTE_DO_ISENTO in _recado(ISENTO) and "usb_pai" not in _recado(ISENTO)
+    assert "usb_pai" in _recado("core/um_modulo.py")
 
 
 def test_a_raiz_do_hidraw_so_e_cravada_no_dono_e_nos_que_a_lista_ainda_guarda() -> None:
@@ -90,7 +102,8 @@ def test_a_raiz_do_hidraw_so_e_cravada_no_dono_e_nos_que_a_lista_ainda_guarda() 
     assert DONO in modulos, f"a régua não achou o dono em {SRC}"
     cravada = {nome for nome, fonte in modulos.items() if constantes_da_raiz(fonte)}
     assert constantes_da_raiz(modulos[DONO]) == ["RAIZ_HIDRAW"]
-    novos = cravada - AINDA_CRAVADA - {DONO}
+    assert constantes_da_raiz(modulos[ISENTO]) == [CONSTANTE_DO_ISENTO]
+    novos = cravada - AINDA_CRAVADA - {DONO, ISENTO}
     assert not novos, (
         f"a raiz do hidraw voltou a ser cravada em {sorted(novos)}: importe "
         "`RAIZ_HIDRAW` de `integrations/usb_pai`")
@@ -115,8 +128,8 @@ def test_o_texto_com_a_raiz_nao_cresce_em_modulo_nenhum() -> None:
     cresceu = {nome: n for nome, n in contagem.items() if n > TEXTOS_AINDA_CRAVADOS.get(nome, 0)}
     assert not cresceu, (
         f"a raiz do hidraw ganhou texto novo em {cresceu} (a catraca: "
-        f"{ {n: TEXTOS_AINDA_CRAVADOS.get(n, 0) for n in cresceu} }): importe `RAIZ_HIDRAW` de "
-        "`integrations/usb_pai`")
+        f"{ {n: TEXTOS_AINDA_CRAVADOS.get(n, 0) for n in cresceu} }): "
+        + "; ".join(f"{nome}: {_recado(nome)}" for nome in sorted(cresceu)))
     encolheu = {nome: contagem.get(nome, 0) for nome, n in TEXTOS_AINDA_CRAVADOS.items()
                 if contagem.get(nome, 0) < n}
     assert not encolheu, f"{encolheu} já crava menos: baixe a `TEXTOS_AINDA_CRAVADOS`"
