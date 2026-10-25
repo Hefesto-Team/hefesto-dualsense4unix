@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1205750,
+      "piso": 1206006,
       "por_item": {
-        "docs": 121272,
+        "docs": 121278,
         "scripts": 120674,
-        "src": 322428,
-        "tests": 641376
+        "src": 322459,
+        "tests": 641595
       },
-      "razao": "tamanho: +447 linhas (1205303 -> 1205750), pagas por Origem: D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP; registrado no fecho, topo 37fa4d522891",
+      "razao": "tamanho: +256 linhas (1205750 -> 1206006), pagas por Origem: D-1610-A-UNIT-DO-DAEMON-E-NOTIFY-COM-PRAZO-DE-30-S; registrado no fecho, topo 4f4d617c2dc1",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -997,10 +997,16 @@
           "de": 1205303,
           "para": 1205750,
           "razao": "tamanho: +447 linhas (1205303 -> 1205750), pagas por Origem: D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP; registrado no fecho, topo 37fa4d522891"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1205750,
+          "para": 1206006,
+          "razao": "tamanho: +256 linhas (1205750 -> 1206006), pagas por Origem: D-1610-A-UNIT-DO-DAEMON-E-NOTIFY-COM-PRAZO-DE-30-S; registrado no fecho, topo 4f4d617c2dc1"
         }
       ],
       "unidade": "linhas",
-      "universo": 3151
+      "universo": 3152
     }
   }
 }
