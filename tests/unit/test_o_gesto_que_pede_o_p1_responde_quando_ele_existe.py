@@ -20,7 +20,7 @@ import time
 from collections.abc import Callable, Coroutine, Iterator
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -133,7 +133,7 @@ def _no_laco(
 
 def _mascara_pela_ipc(b: SimpleNamespace, flavor: str) -> tuple[Any, float]:
     ipc = _Ipc(b.m.daemon)
-    ipc.store = None
+    cast(Any, ipc).store = None
     return _no_laco(b, lambda: ipc._handle_gamepad_mask_set({"uniq": _P1, "flavor": flavor}))
 
 
@@ -252,7 +252,7 @@ def test_o_teto_da_interface_e_o_prazo_do_daemon_com_folga(rota: str) -> None:
     teto = getattr(protocolo_do_ipc, "TETO_DO_GESTO_QUE_PEDE_O_P1_S", None)
     prazo = getattr(protocolo_do_ipc, "PRAZO_DO_P1_QUE_NASCE_S", None)
     assert teto is not None and prazo is not None, "o prazo e o teto não moram juntos"
-    assert gp.PRAZO_DO_P1_QUE_NASCE_S is prazo, "o daemon espera por outro número"
+    assert getattr(gp, "PRAZO_DO_P1_QUE_NASCE_S", None) is prazo, "o daemon espera por outro número"
     espera = inspect.signature(gp.esperar_o_p1_que_nasce).parameters["prazo_s"].default
     assert espera == prazo
     assert ipc_bridge.TETOS[rota] == teto > prazo, (
