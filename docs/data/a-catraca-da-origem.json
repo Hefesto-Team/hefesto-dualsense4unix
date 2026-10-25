@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1210791,
+      "piso": 1210686,
       "por_item": {
         "docs": 121357,
         "scripts": 120796,
-        "src": 323613,
-        "tests": 645025
+        "src": 323576,
+        "tests": 644957
       },
-      "razao": "tamanho: +270 linhas (1210521 -> 1210791), pagas por Origem: D-0810-A-CITACAO-CRUA-SO-ANDA-COM-PROVA; registrado no fecho, topo 5e6cf6d9cd3c",
+      "razao": "o teto desceu sozinho com o número",
       "subidas": [
         {
           "data": "2026-10-03",
