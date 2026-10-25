@@ -21,9 +21,4 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-## 07-lancadores.html
-- **25/10/2026** — a janela da extensão ganha os modos do controle livre (Soltar, Segurar e
-  Repetir) e os cartões dos controles de cada aparelho. A janela chega pelo pacote, então o
-  produto já desenha os modos e os cartões ao instalar; até publicar, a página publicada não traz o
-  CSS novo (`.mj-modos`, `.mj-cores`, `.mj-cc-linha`) nem o bloco dos modos do
-  `comportamento.js`: os pontos e os modos aparecem sem o desenho do arranjo C.
+<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
