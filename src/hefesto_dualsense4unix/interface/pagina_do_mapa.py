@@ -6758,9 +6758,101 @@ EDICOES_DO_PORTE: tuple[Edicao, ...] = (
     ),
 )
 
+# ═══ O MAPA SEM LEITURA DESTE COMPUTADOR — 25/10/2026 ═══════════════════════
+#
+# O-MAPA-SEM-LEITURA-DA-MAQUINA-NAO-DESENHA-O-EXEMPLO-01. Sem leitura, ninguém falava com a
+# página e ela ficava no exemplo de 24/08: um gabinete que não é o de quem abre, com
+# sugestões para ele. O produto passa a sempre responder, e sem leitura é pela irmã de
+# `hefestoArranjo`, `hefestoSemLeitura(porque)`. O exemplo fica para a página aberta fora
+# do produto, que se declara exemplo.
+
+#: O porquê, a chave que o produto entrega (`arranjo_desta_maquina.porque_sem_leitura`).
+SEM_MAPA = "sem-mapa"
+SEM_LEITURA = "sem-leitura"
+
+#: O cabeçalho de cada porquê: nada mapeado ainda não é «não deu para ler».
+FRASES_SEM_LEITURA: dict[str, str] = {
+    SEM_MAPA: "Entradas ainda não mapeadas",
+    SEM_LEITURA: "Não deu para ler as entradas deste computador",
+}
+
+#: O que «Sugestões» e «Adicionar» dizem sem leitura.
+NADA_A_SUGERIR = "Nada a sugerir."
+
+JS_SEM_LEITURA = """\
+  /* ══ SEM LEITURA DESTE COMPUTADOR — 25/10/2026 ═══════════════════════
+     O-MAPA-SEM-LEITURA-DA-MAQUINA-NAO-DESENHA-O-EXEMPLO-01: sem o que desenhar, o
+     produto diz o porquê por aqui, e a página troca o exemplo pelo vazio. O cabeçalho
+     diz o porquê, o Examinar sai e nenhuma aba sugere. */
+  var FRASES_SEM_LEITURA = __FRASES_SEM_LEITURA__;
+  var NADA_A_SUGERIR = __NADA_A_SUGERIR__;
+  var semLeitura = false;
+
+  window.hefestoSemLeitura = function (porque) {
+    var frase = FRASES_SEM_LEITURA[porque];
+    if (!frase) throw new Error("sem leitura por um porquê desconhecido: " + porque);
+    aplicarArranjo({ quando: frase, aparelhos: [], faces: [], mapa: {}, controles: [],
+                     leituras: { agora: { rotulo: "", caminho: {} },
+                                 antes: { rotulo: "", caminho: {} } } }, false);
+    semLeitura = true;
+    modo = "mesa"; segurando = null; naMao = null; editandoAp = null;
+    var el = document.getElementById("de-quando");
+    if (el) el.textContent = frase;
+    var ex = document.querySelector(".topo #reexaminar");
+    if (ex) ex.remove();
+    pintar();
+    return "ok";
+  };
+
+""".replace("__FRASES_SEM_LEITURA__", json.dumps(FRASES_SEM_LEITURA, ensure_ascii=False)).replace(
+    "__NADA_A_SUGERIR__", json.dumps(NADA_A_SUGERIR, ensure_ascii=False))
+
+JS_DO_VAZIO_NA_PINTURA = r"""    /* SEM LEITURA, NADA SE DESENHA: o cabeçalho já disse o porquê. */
+    if (semLeitura) {
+      document.querySelector(".palco").hidden = true;
+      document.getElementById("legenda").hidden = true;
+      document.getElementById("faces").innerHTML = "";
+      document.getElementById("bandeja").innerHTML = "";
+      var sugere = modo === "ideal" || modo === "mao";  /* (noqa-acento: JS) */
+      var oPainel = document.getElementById("painel");
+      oPainel.hidden = !sugere;
+      oPainel.innerHTML = sugere
+        ? '<div class="nada-a-fazer"><b>' + NADA_A_SUGERIR + "</b></div>" : "";
+      pintarORegistro(null);
+      return;
+    }
+"""
+
+_DA_SPRINT_SEM_LEITURA = "25/10/2026, O-MAPA-SEM-LEITURA-DA-MAQUINA-NAO-DESENHA-O-EXEMPLO-01"
+
+_A_LEGENDA_DO_REGISTRO = '    document.getElementById("legenda").hidden = noRegistro;\n'
+
+EDICOES_DO_MAPA_SEM_LEITURA: tuple[Edicao, ...] = (
+    Edicao(
+        antes="  function aplicarArranjo(f, manterOEditor) {\n    fonte = f;\n",
+        depois=("  function aplicarArranjo(f, manterOEditor) {\n    fonte = f;\n"
+                "    semLeitura = false;\n"),
+        porque=f"{_DA_SPRINT_SEM_LEITURA}: a leitura que chega tira a página do vazio.",
+    ),
+    Edicao(
+        antes=_A_LEGENDA_DO_REGISTRO,
+        depois=_A_LEGENDA_DO_REGISTRO + JS_DO_VAZIO_NA_PINTURA,
+        porque=(f"{_DA_SPRINT_SEM_LEITURA}: sem leitura, as abas ficam e nada se desenha; "
+                "«Sugestões» e «Adicionar» dizem que não há o que sugerir."),
+    ),
+    Edicao(
+        antes="  pintar();\n})();\n",
+        depois=JS_SEM_LEITURA + "  pintar();\n})();\n",
+        porque=(f"{_DA_SPRINT_SEM_LEITURA}: a irmã de `hefestoArranjo`, por onde o produto "
+                "diz que não há leitura, e por quê."),
+    ),
+)
+
 #: O que a bancada já diz e a cópia do produto ainda não: o `--publicar mapa-das-portas.html`
 #: (da costura) junta estas ao fim de `EDICOES` e deixa a tupla vazia.
-EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = ()
+EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
+    *EDICOES_DO_MAPA_SEM_LEITURA,
+)
 
 
 def pagina(com_as_que_esperam: bool = True) -> str:

@@ -21,4 +21,5 @@ seção daqui**: a aba deixou de estar em trabalho.
 
 ---
 
-<!-- Nenhuma aba em trabalho: o produto está igual ao desenho dela. -->
+## mapa-das-portas.html
+- **25/10/2026** — sem leitura deste computador, o mapa diz o porquê («Entradas ainda não mapeadas» ou «Não deu para ler as entradas deste computador») e não desenha o gabinete de exemplo; a validar por ela.

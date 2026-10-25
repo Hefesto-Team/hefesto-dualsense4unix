@@ -3473,8 +3473,8 @@ class Piloto:
 
         def ler() -> None:
             dado = arranjo_desta_maquina.para_a_pagina(faixas=self._as_faixas_do_mapa)
-            if dado is not None:
-                GLib.idle_add(lambda: self._entregar(pagina, dado, reexame=False))
+            porque = "" if dado is not None else arranjo_desta_maquina.porque_sem_leitura()
+            GLib.idle_add(lambda: self._entregar(pagina, dado, porque=porque))
 
         pacotes.fios.soltar("arranjo-desta-maquina", ler)
 
@@ -3488,13 +3488,13 @@ class Piloto:
         return a08_conexoes.faixas_para_o_mapa(ctx)
 
     def _entregar(self, pagina: str, dado: Any, *, reexame: bool = False,
-                  como: str = "") -> bool:
-        """O arranjo lido vai à página — no laço do GTK, e só se ela ainda é a dele."""
+                  como: str = "", porque: str = "") -> bool:
+        """O arranjo lido (ou o porquê de não haver) vai à página, no laço do GTK e se ela é a dele."""
         from hefesto_dualsense4unix.interface import arranjo_desta_maquina
 
         if self.pagina != pagina:
             return False
-        js = arranjo_desta_maquina.js_da_entrega(dado, reexame=reexame, como=como)
+        js = arranjo_desta_maquina.js_da_entrega(dado, reexame=reexame, como=como, porque=porque)
         self.ponte.perguntar(js, self._arranjo_entregue)
         return False
 

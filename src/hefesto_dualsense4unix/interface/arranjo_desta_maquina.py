@@ -99,7 +99,7 @@ def _ler_a_maquina(
     try:
         documento = (carregar or carregar_maquina)()
         declarado = getattr(documento, "mapa", None)
-        if declarado is None or not (declarado.faces or _numeradas(declarado)):
+        if not _ha_o_que_desenhar(declarado):
             return None
         censo = (ler_o_barramento or _ler)()
         tipos = mapa_das_portas.tipos_declarados(documento)
@@ -214,10 +214,38 @@ def _guardar_e_entregar(lido: tuple[dict[str, Any], Lida] | None) -> dict[str, A
     return dado
 
 
+def _ha_o_que_desenhar(declarado: Any) -> bool:
+    """Há face declarada, ou entrada numerada fora de face: sem isso o mapa não tem desenho."""
+    return declarado is not None and bool(declarado.faces or _numeradas(declarado))
+
+
+def porque_sem_leitura(carregar: Callable[[], Any] | None = None) -> str:
+    """Por que :func:`para_a_pagina` não leu: nada mapeado, ou o computador não deixa ler."""
+    try:
+        from hefesto_dualsense4unix.utils.maquina import carregar_maquina
+
+        documento = (carregar or carregar_maquina)()
+    except Exception:
+        return pagina_do_mapa.SEM_LEITURA
+    if _ha_o_que_desenhar(getattr(documento, "mapa", None)):
+        return pagina_do_mapa.SEM_LEITURA
+    return pagina_do_mapa.SEM_MAPA
+
+
+def js_sem_leitura(porque: str) -> str:
+    """O JavaScript que diz à página que não há leitura, e por quê: o exemplo sai."""
+    if porque not in pagina_do_mapa.FRASES_SEM_LEITURA:
+        raise ValueError(f"{porque!r} não é um porquê que a página conheça")
+    return f"window.hefestoSemLeitura({json.dumps(porque)})"
+
+
 def js_da_entrega(
-    dado: Mapping[str, Any], *, reexame: bool = False, como: str = COMO_ABRE
+    dado: Mapping[str, Any] | None, *, reexame: bool = False, como: str = COMO_ABRE,
+    porque: str = "",
 ) -> str:
     """O JavaScript que entrega um arranjo à página — a abertura, o reexame e a"""
+    if dado is None:
+        return js_sem_leitura(porque)
     corpo = json.dumps(dado, ensure_ascii=False)
     if reexame:
         como = COMO_REEXAME
