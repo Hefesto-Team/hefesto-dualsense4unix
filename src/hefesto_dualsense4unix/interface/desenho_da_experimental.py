@@ -1338,10 +1338,11 @@ def controles_dos_aparelhos_html(mod: str, estado: Mapping[str, Any] | None,
 
 def _grupos_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], acoes: Sequence[AcaoDaJanela],
                          aparelhos: AparelhosDaJanela | None, controles: str = "") -> list[str]:
-    """As abas na ordem: a dos aparelhos, as das ações, a dos controles dos aparelhos (só quando
-    algum os tem) e, depois, as das opções."""
-    nomes = [aparelhos.grupo if aparelhos else "", *(a.grupo for a in acoes), controles,
-             *(o.grupo for o in opcoes)]
+    """As abas na ordem: a dos aparelhos, as das ações, as das opções e, por último, a dos
+    controles dos aparelhos (só quando algum os tem), como a Luz no arranjo C; se ela é a aba de
+    uma opção, fica no lugar daquela."""
+    nomes = [aparelhos.grupo if aparelhos else "", *(a.grupo for a in acoes),
+             *(o.grupo for o in opcoes), controles]
     ordem = list(dict.fromkeys(n for n in nomes if n))
     return ordem or ["Opções"]
 

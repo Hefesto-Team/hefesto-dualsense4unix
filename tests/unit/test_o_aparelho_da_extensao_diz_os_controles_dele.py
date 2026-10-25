@@ -48,6 +48,7 @@ from tests.unit.test_a_coluna_agora_e_o_parar_tudo_vem_do_servico import (  # no
 from tests.unit.test_a_janela_da_extensao_age_e_gere_os_aparelhos import (  # noqa: F401
     _manifesto,
     _Ponte,
+    _pecas as _pecas_geridas,
     _servico,
     janela,
 )
@@ -150,6 +151,21 @@ def test_sem_aparelho_com_controles_a_aba_some_e_volta_com_o_primeiro(
     a07._AGORA.ler("toque", ponte)
     blocos = a07._com_os_aparelhos({"blocos": {}})["blocos"]
     assert f">{ABA}</label>" not in blocos.get("#mod-janela", "-"), "a aba ficou sem controle"
+
+
+@pytest.mark.parametrize(("grupo", "abas"), [
+    ("Luz", ["Aparelhos", "Toques", "Luz"]),
+    ("Toques", ["Aparelhos", "Toques"]),
+])
+def test_a_aba_dos_controles_vem_por_ultimo_ou_no_lugar_da_opcao(
+        janela: Any, ctx: Any, grupo: str, abas: list[str]) -> None:  # noqa: F811
+    """A aba nova fica depois das opções, como a Luz no arranjo C; a de uma opção fica onde ela
+    está, e a ordem das abas escolhida em 19/10 não muda."""
+    _a07, instalar, abrir = janela
+    instalar(**{**_pecas_geridas(), "aparelhos_controles": {"grupo": grupo}})
+    html = abrir(_Ponte(_estado()))["blocos"]["#mod-janela"]
+    assert re.findall(r'<label for="mj-aba-\d+">([^<]*)</label>', html) == abas
+    assert set(_cartoes(html)) == {"ap-1", "ap-2"}
 
 
 # -- 2. o clique ----------------------------------------------------------------------------
