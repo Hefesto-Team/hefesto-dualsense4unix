@@ -5,10 +5,9 @@
       "data": "2026-10-25",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 55494,
+      "piso": 55551,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
-        "app/actions/config/secao_controles.py": 47,
         "app/actions/config/secao_exame.py": 83,
         "app/actions/config/secao_mesa.py": 119,
         "app/actions/config/secao_orcamento.py": 91,
@@ -174,7 +173,7 @@
         "integrations/storm_doctor.py": 136,
         "integrations/transiente_do_jogo.py": 112,
         "integrations/uhid_blueprint.py": 87,
-        "integrations/uhid_gamepad.py": 618,
+        "integrations/uhid_gamepad.py": 645,
         "integrations/uinput_gamepad.py": 217,
         "integrations/uinput_keyboard.py": 48,
         "integrations/uinput_mouse.py": 194,
@@ -198,7 +197,7 @@
         "interface/cartao_do_controle.py": 332,
         "interface/conexoes.py": 69,
         "interface/controles_vivos.py": 145,
-        "interface/desenho_da_experimental.py": 250,
+        "interface/desenho_da_experimental.py": 253,
         "interface/desenho_dos_lancadores.py": 1032,
         "interface/frases_que_ela_baniu.py": 104,
         "interface/hefesto_vivo.py": 504,
@@ -213,8 +212,8 @@
         "interface/pacotes/a04_iluminacao.py": 1172,
         "interface/pacotes/a05_vibracao.py": 818,
         "interface/pacotes/a06_navegacao.py": 382,
-        "interface/pacotes/a07_lancadores.py": 687,
-        "interface/pacotes/a08_conexoes.py": 1165,
+        "interface/pacotes/a07_lancadores.py": 704,
+        "interface/pacotes/a08_conexoes.py": 1162,
         "interface/pacotes/a09_sistema.py": 1115,
         "interface/pacotes/a10_perfis.py": 921,
         "interface/pacotes/a11_calibrar_sensores.py": 116,
@@ -227,9 +226,10 @@
         "interface/regua_do_mockup.py": 170,
         "interface/sistema.py": 116,
         "mods/instalador.py": 153,
-        "mods/manifesto.py": 131,
-        "mods/porta.py": 285,
-        "mods/supervisor.py": 117,
+        "mods/manifesto.py": 139,
+        "mods/opcoes.py": 43,
+        "mods/porta.py": 295,
+        "mods/supervisor.py": 118,
         "mods/tema.py": 78,
         "profiles/autoswitch.py": 135,
         "profiles/curva_propria.py": 49,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +11 linhas (55483 -> 55494), pagas por Origem: D-2510-A-FALTA-DE-PERMISSAO-DE-LER-DIZ-O-GRUPO; registrado no fecho, topo d1861b8e5af1",
+      "razao": "texto-em-src: +57 linhas (55494 -> 55551), pagas por Origem: D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO, D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2510-A-VOLTA-DO-GADGET-PEDE-FORA-DO-TIQUE, D-2510-O-MODO-DO-LIVRE-E-RASCUNHO-E-VALE-NA-HORA, D-2510-O-MOVIMENTO-CHEGA-AS-EXTENSOES-COM-FAIXA-MORTA, D-2510-OS-DEDOS-SO-PARA-QUEM-PEDE; registrado no fecho, topo cff697255b57",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -582,6 +582,12 @@
           "de": 55483,
           "para": 55494,
           "razao": "texto-em-src: +11 linhas (55483 -> 55494), pagas por Origem: D-2510-A-FALTA-DE-PERMISSAO-DE-LER-DIZ-O-GRUPO; registrado no fecho, topo d1861b8e5af1"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 55494,
+          "para": 55551,
+          "razao": "texto-em-src: +57 linhas (55494 -> 55551), pagas por Origem: D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO, D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2510-A-VOLTA-DO-GADGET-PEDE-FORA-DO-TIQUE, D-2510-O-MODO-DO-LIVRE-E-RASCUNHO-E-VALE-NA-HORA, D-2510-O-MOVIMENTO-CHEGA-AS-EXTENSOES-COM-FAIXA-MORTA, D-2510-OS-DEDOS-SO-PARA-QUEM-PEDE; registrado no fecho, topo cff697255b57"
         }
       ],
       "unidade": "linhas",
