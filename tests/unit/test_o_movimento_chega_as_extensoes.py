@@ -232,11 +232,11 @@ def test_cada_controle_sai_com_o_uniq_o_jogador_e_o_transporte_dele(
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("nativo", [True, False], ids=["nativo", "fora-do-nativo"])
+@pytest.mark.parametrize("modo", ["nativo", "pausa", "fora-do-nativo"])
 @pytest.mark.parametrize("mesa", list(MESAS))
 async def test_o_laco_do_servico_entrega_o_movimento_em_todo_modo(
     curto: pathlib.Path, monkeypatch: pytest.MonkeyPatch, mesa: str,  # noqa: F811
-    nativo: bool,
+    modo: str,
 ) -> None:
     # D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO
     """O ``_poll_loop`` de verdade: cada controle da mesa gira, e o movimento sai com o dele."""
@@ -272,14 +272,16 @@ async def test_o_laco_do_servico_entrega_o_movimento_em_todo_modo(
         return None
 
     daemon._mods_supervisor = SimpleNamespace(porta=porta, parar=_nada)
-    contador = "input.settling.tick" if nativo else "poll.tick"
+    # O Nativo e a pausa correm pelo tique congelado; fora deles, pelo comum.
+    contador = "poll.tick" if modo == "fora-do-nativo" else "input.settling.tick"
     rodando = asyncio.create_task(daemon.run())
     laco = asyncio.get_running_loop()
     try:
         prazo = laco.time() + 8.0
         while controle._idx < 1 and laco.time() < prazo:
             await asyncio.sleep(0.02)
-        daemon._native_mode = nativo
+        daemon._native_mode = modo == "nativo"
+        daemon._paused = modo == "pausa"
         for n, uniq in enumerate(uniqs):
             leitores[uniq].giro = (200.0 + n, 0.0, 0.0)
             antes = daemon.store.counter(contador)
@@ -294,7 +296,7 @@ async def test_o_laco_do_servico_entrega_o_movimento_em_todo_modo(
     await porta.parar()
     vistos = {(d["uniq"], d["transporte"], d["giro"]["x"]) for d in dados}
     esperado = {(u, v, 200.0 + n) for n, (u, v) in enumerate(zip(uniqs, vias, strict=True))}
-    assert esperado <= vistos, f"{mesa}/{'nativo' if nativo else 'comum'}: {sorted(vistos)}"
+    assert esperado <= vistos, f"{mesa}/{modo}: {sorted(vistos)}"
     assert not any(leitor.parado for leitor in leitores.values())
 
 
@@ -308,10 +310,11 @@ class _VigiaParada:
         return False
 
 
-def _hub_que_descobre(uniqs: tuple[str, ...]) -> SensorHub:
+def _hub_que_descobre(uniqs: tuple[str, ...], relogio: _Relogio | None = None) -> SensorHub:
     """Um ``SensorHub`` que abre leitores de mentira pela reconciliação de verdade."""
     nos = {u: f"/dev/input/mentira-{n}" for n, u in enumerate(uniqs)}
     hub = SensorHub(
+        relogio=relogio,
         auto_manutencao=False,
         motion_factory=lambda uniq, no: _LeitorDoMovimento(),
         touch_factory=lambda uniq, no: _LeitorDoMovimento(),
@@ -348,6 +351,42 @@ def test_quem_assina_o_movimento_segura_so_o_leitor_de_movimento(
     assert set(hub._motion) == set(UNIQS), "o pedido não abriu o leitor de movimento"
     assert hub._touch == {} and hub._gamepad == {}, "o pedido do movimento abriu outro leitor"
     assert hub._demanda == {}, "o pedido do movimento passou pela demanda do toque"
+
+
+def test_o_leitor_de_movimento_morre_quando_o_ultimo_assinante_sai(
+    curto: pathlib.Path,  # noqa: F811
+) -> None:
+    """Assinado, o leitor de cada controle abre; a extensão sai, e ele fecha passado o prazo."""
+    relogio = _Relogio()
+
+    async def corrida() -> tuple[set[str], set[str], dict[str, Any]]:
+        porta = await _porta(curto, relogio)
+        bancada = _Mesa(porta, MESAS["mista"])
+        bancada.hub = _hub_que_descobre(bancada.uniqs, relogio)
+        bancada.daemon._garantir_sensor_hub = lambda: bancada.hub
+        ext = await _entrar(curto, ["movimento"])
+        try:
+            bancada.tique(relogio)
+            bancada.hub.reconciliar()
+            abertos = set(bancada.hub._motion)
+            leitores = dict(bancada.hub._motion)
+        finally:
+            ext.fechar()
+        prazo = asyncio.get_running_loop().time() + 3.0
+        while porta.le_o_movimento() and asyncio.get_running_loop().time() < prazo:
+            await asyncio.sleep(0.02)
+        try:
+            for _ in range(3):  # os tiques seguem, e ninguém mais pede
+                bancada.tique(relogio, SensorHub._DEMANDA_TTL_S)
+            bancada.hub.reconciliar()
+            return abertos, set(bancada.hub._motion), leitores
+        finally:
+            await porta.parar()
+
+    abertos, depois, leitores = asyncio.run(corrida())
+    assert abertos == set(UNIQS), "o pedido não abriu o leitor de movimento"
+    assert depois == set(), f"o leitor seguiu vivo sem assinante: {sorted(depois)}"
+    assert all(leitor.parado for leitor in leitores.values()), "o leitor saiu sem parar"
 
 
 def test_quem_assina_so_as_entradas_nao_pede_o_movimento(
