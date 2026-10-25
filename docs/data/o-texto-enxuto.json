@@ -5,7 +5,7 @@
       "data": "2026-10-25",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 55265,
+      "piso": 55271,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +29 linhas (55236 -> 55265), pagas por Origem: D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP; registrado no fecho, topo 70ba7d9fd578",
+      "razao": "texto-em-src: +6 linhas (55265 -> 55271), pagas por Origem: D-1610-A-UNIT-DO-DAEMON-E-NOTIFY-COM-PRAZO-DE-30-S; registrado no fecho, topo 868d7fd05d62",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -546,6 +546,12 @@
           "de": 55236,
           "para": 55265,
           "razao": "texto-em-src: +29 linhas (55236 -> 55265), pagas por Origem: D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP; registrado no fecho, topo 70ba7d9fd578"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 55265,
+          "para": 55271,
+          "razao": "texto-em-src: +6 linhas (55265 -> 55271), pagas por Origem: D-1610-A-UNIT-DO-DAEMON-E-NOTIFY-COM-PRAZO-DE-30-S; registrado no fecho, topo 868d7fd05d62"
         }
       ],
       "unidade": "linhas",
