@@ -192,7 +192,7 @@ Quando algo não funcionar, comece por `hefesto-dualsense4unix doctor` e por [tr
 
 ## Contribuir
 
-Issues e pull requests são bem-vindos. Para uma mudança grande, abra uma issue antes, para combinarmos o caminho. O guia está em [CONTRIBUTING.md](.github/CONTRIBUTING.md).
+Issues são bem-vindas. Para mexer no código, abra uma issue antes, para combinarmos o caminho: o pull request de quem ainda não contribuiu só é revisado depois dessa conversa. O guia está em [CONTRIBUTING.md](.github/CONTRIBUTING.md).
 
 Relatos de outras distribuições ajudam muito: abra uma issue com a saída de `hefesto-dualsense4unix doctor`, o nome da distribuição e a versão do kernel.
 
