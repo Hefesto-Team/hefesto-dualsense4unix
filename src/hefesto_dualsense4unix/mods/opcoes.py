@@ -196,7 +196,8 @@ def ler(manifesto: Manifesto, lugares: Lugares) -> dict[str, Valor]:
         bruto = guardados.get(opcao.id)
         extras = tuple(formas_do_livre(manifesto, saida))
         if opcao.tipo == "por_botao" and isinstance(bruto, dict):
-            bruto = {b: f for b, f in bruto.items() if f in opcao.formas or f in extras}
+            bruto = {b: f for b, f in bruto.items()
+                     if isinstance(f, str) and (f in opcao.formas or f in extras)}
         try:
             saida[opcao.id] = validar(opcao, bruto, formas_extras=extras) if (
                 opcao.id in guardados) else padrao_de(opcao)
@@ -243,28 +244,30 @@ def herdar(manifesto: Manifesto, antigas: Sequence[str], lugares: Lugares) -> di
     """
     feitas = _guardados(manifesto.id, lugares)
     herdadas: dict[str, Valor] = {}
-    for opcao in manifesto.opcoes:
-        if _escolhida(opcao, feitas):
+    # O ``livre`` primeiro: a forma gravada nele vale no ``por_botao`` que a escolheu.
+    for opcao in sorted(manifesto.opcoes, key=lambda o: o.tipo != "livre"):
+        extras = tuple(formas_do_livre(manifesto, {**feitas, **herdadas}))
+        if _escolhida(opcao, feitas, extras):
             continue
         for mod_id in antigas:
             bruto = _guardados(mod_id, lugares)
             if opcao.id not in bruto:
                 continue
             with contextlib.suppress(InstalacaoRecusadaError):
-                herdadas[opcao.id] = validar(opcao, bruto[opcao.id])
+                herdadas[opcao.id] = validar(opcao, bruto[opcao.id], formas_extras=extras)
                 break
     if herdadas:
         _gravar(manifesto.id, {**feitas, **herdadas}, lugares)
     return herdadas
 
 
-def _escolhida(opcao: Opcao, guardados: dict[str, Any]) -> bool:
+def _escolhida(opcao: Opcao, guardados: dict[str, Any], extras: Sequence[str] = ()) -> bool:
     """O ``guardar`` grava o arquivo inteiro, com o padrão de cada opção que ninguém tocou: só o
     valor válido e diferente do padrão é escolha de quem usa."""
     if opcao.id not in guardados:
         return False
     try:
-        return validar(opcao, guardados[opcao.id]) != padrao_de(opcao)
+        return validar(opcao, guardados[opcao.id], formas_extras=extras) != padrao_de(opcao)
     except InstalacaoRecusadaError:
         return False
 

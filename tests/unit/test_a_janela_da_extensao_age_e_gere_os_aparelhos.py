@@ -17,6 +17,11 @@ MORDIDAS (24/10/2026, executadas sobre a cura e devolvidas):
   ``test_o_gravar_aceso_continua_gravar_e_se_diz_apertado``;
 - a chave desenhada pedindo o mesmo estado (``data-ligado`` invertido) reprova
   ``test_a_chave_do_aparelho_pede_o_contrario_e_o_botao_diz_em_curso``.
+- o ``isinstance(f, str)`` tirado do filtro do ``ler`` reprova
+  ``test_o_botao_editado_a_mao_com_forma_que_nao_e_texto_cai_no_padrao_sem_levantar`` (o
+  ``TypeError`` sobe);
+- o ``herdar`` sem as formas do ``livre`` reprova
+  ``test_a_extensao_que_substitui_herda_o_botao_com_a_forma_gravada``.
 """
 
 from __future__ import annotations
@@ -460,6 +465,49 @@ def test_esquecer_a_forma_devolve_o_botao_ao_padrao(janela, ctx, lar) -> None:  
     a07.guardar_modificacao(ctx, {"v": "toque"}, ponte)
     valores = opcoes.ler(manifesto_instalado("toque", lugares=lar), lar)
     assert valores["ao-vivo"] == {} and valores["toques"]["cross"] == "Pulso"
+
+
+def _lugares_de(tmp_path: pathlib.Path) -> Any:
+    from hefesto_dualsense4unix.mods.instalador import Lugares
+
+    return Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # noqa-acento: campo
+                   registro=tmp_path / "registro.json", estado=tmp_path / "estado.json")
+
+
+def _guardar_a_mao(lugares: Any, mod_id: str, valores: dict[str, Any]) -> None:
+    from hefesto_dualsense4unix.mods import opcoes
+
+    destino = opcoes.caminho(mod_id, lugares)
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    destino.write_text(json.dumps(valores), encoding="utf-8")
+
+
+def test_o_botao_editado_a_mao_com_forma_que_nao_e_texto_cai_no_padrao_sem_levantar(
+        tmp_path) -> None:
+    """O ``ler`` nunca levanta: a forma de um botão que não é texto (o ``opcoes.json`` editado a
+    mão) volta ao padrão daquele botão, e os outros ficam."""
+    from hefesto_dualsense4unix.mods import opcoes
+
+    manifesto = Manifesto.model_validate(_manifesto(**_pecas()))
+    lugares = _lugares_de(tmp_path)
+    for torta in (["Pulso"], {"Pulso": 1}):
+        _guardar_a_mao(lugares, "toque", {"toques": {"cross": torta, "circle": "Sem toque"}})
+        valores = opcoes.ler(manifesto, lugares)
+        assert valores["toques"] == {"cross": "Pulso", "circle": "Sem toque"}, valores
+
+
+def test_a_extensao_que_substitui_herda_o_botao_com_a_forma_gravada(tmp_path) -> None:
+    """A extensão nova herda a forma gravada no ``livre`` da antiga E o botão que a escolheu."""
+    from hefesto_dualsense4unix.mods import opcoes
+
+    manifesto = Manifesto.model_validate(_manifesto(**_pecas()))
+    lugares = _lugares_de(tmp_path)
+    _guardar_a_mao(lugares, "velha", {"ao-vivo": {"Meu 1": [[0.5, 1.0]]},
+                                      "toques": {"cross": "Meu 1", "circle": "Sem toque"}})
+    herdadas = opcoes.herdar(manifesto, ["velha"], lugares)
+    assert herdadas.get("toques") == {"cross": "Meu 1", "circle": "Sem toque"}, herdadas
+    valores = opcoes.ler(manifesto, lugares)
+    assert valores["toques"]["cross"] == "Meu 1" and set(valores["ao-vivo"]) == {"Meu 1"}
 
 
 def test_o_gravar_aceso_continua_gravar_e_se_diz_apertado(janela, ctx) -> None:  # noqa: F811
