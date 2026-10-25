@@ -141,6 +141,34 @@ def test_ler_nos_devolve_o_nome_e_a_descricao_inteiros() -> None:
     assert no.perdidos == frozenset({"device.description"})
 
 
+@pytest.mark.parametrize("nome_da_saida", ["alsa_output.pci-0000_0b_00.4.iec958-stereo",
+                                           "alsa_output.Fone do João™"])
+def test_o_monitor_da_saida_nao_ganha_o_nome_nem_a_descricao_dela(nome_da_saida: str) -> None:
+    """O monitor tem o serial da saída: do nó vêm as propriedades, e o nome e a descrição não.
+
+    A forma medida em 24/10/2026 nesta máquina: o monitor 74 tem `object.serial` 74, o
+    `node.name` da saída e `device.class=monitor`, e a descrição «(null)» (era «Monitor of …
+    Estéreo digital»); o grafo só tem o nó da saída, com a descrição DO USUÁRIO.
+    """
+    descricao = "Starship/Matisse HD Audio Controller Estéreo digital (IEC958)"
+    perfil = "Estéreo digital (IEC958)"
+    props = {"node.name": _perdido(nome_da_saida), "object.id": "61", "object.serial": "74",
+             "device.class": "monitor", "device.profile.description": NULO}
+    monitor = pj.no(74, _perdido(f"{nome_da_saida}.monitor"), descricao=NULO, props=props)
+    saida = pj.no(74, _perdido(nome_da_saida), descricao=NULO,
+                  props={**props, "device.class": "sound"})
+    grafo = _Grafo(_grafo_de(_no_do_grafo(61, 74, nome_da_saida, **{
+        "node.description": descricao, "device.profile.description": perfil,
+        "device.class": "sound"})))
+    (no_monitor,) = ps.nos_do_texto(ps.completar_o_json(pj.texto(monitor), grafo) or "")
+    assert no_monitor.nome == (nome_da_saida + ".monitor" if nome_da_saida.isascii() else ""), (
+        "o nome do monitor é dele, e o perdido segue perdido")
+    assert no_monitor.descricao != descricao and no_monitor.descricao_nula
+    assert no_monitor.propriedades["device.profile.description"] == perfil
+    (no_saida,) = ps.nos_do_texto(ps.completar_o_json(pj.texto(saida), grafo) or "")
+    assert (no_saida.nome, no_saida.descricao) == (nome_da_saida, descricao)
+
+
 def test_sem_nada_perdido_o_grafo_nao_e_lido() -> None:
     pactl = json.dumps([_fluxo(171, 719, 76, "Celeste")])
     grafo = _Grafo(_grafo_de())

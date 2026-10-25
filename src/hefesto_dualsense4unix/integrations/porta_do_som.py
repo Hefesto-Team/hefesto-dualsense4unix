@@ -374,7 +374,13 @@ def _o_mesmo_no(o: Mapping[str, Any], nos: NosDoGrafo) -> Mapping[str, str] | No
 
 
 def _completo(o: Mapping[str, Any], nos: NosDoGrafo) -> dict[str, Any]:
-    """O objeto com o texto perdido devolvido pelo grafo, e marcado como conferido."""
+    """O objeto com o texto perdido devolvido pelo grafo, e marcado como conferido.
+
+    O monitor de uma saída (``device.class=monitor``) é o MESMO nó do grafo, com o
+    serial dela, mas o nome e a descrição dele são do ``pipewire-pulse``
+    («….monitor», «Monitor of …»): dele só as propriedades vêm do nó, e o nome e a
+    descrição perdidos seguem perdidos, nunca os da saída.
+    """
     novo = {**o, CHAVE_DO_GRAFO: "lido"}
     achado = _o_mesmo_no(o, nos)
     if achado is None:
@@ -384,6 +390,8 @@ def _completo(o: Mapping[str, Any], nos: NosDoGrafo) -> dict[str, Any]:
         novo["properties"] = {
             k: (achado.get(str(k)) or v) if v == NULO_DO_PACTL else v
             for k, v in bruto.items()}
+    if _propriedades(bruto).get("device.class") == "monitor":
+        return novo
     for campo, chave in (("name", "node.name"), ("description", "node.description")):
         if o.get(campo) == NULO_DO_PACTL and achado.get(chave):
             novo[campo] = achado[chave]
