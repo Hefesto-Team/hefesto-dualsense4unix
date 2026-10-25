@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1217494,
+      "piso": 1217541,
       "por_item": {
-        "docs": 121471,
+        "docs": 121477,
         "scripts": 121272,
-        "src": 324726,
-        "tests": 650025
+        "src": 324739,
+        "tests": 650053
       },
-      "razao": "tamanho: +299 linhas (1217195 -> 1217494), pagas por Origem: D-2510-A-BARRA-FORA-DA-PORTA-NASCE-APAGADA; registrado no fecho, topo 4db7c84aaadf",
+      "razao": "tamanho: +47 linhas (1217494 -> 1217541), pagas por Origem: D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO; registrado no fecho, topo 14d625b5d2d8",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1129,6 +1129,12 @@
           "de": 1217195,
           "para": 1217494,
           "razao": "tamanho: +299 linhas (1217195 -> 1217494), pagas por Origem: D-2510-A-BARRA-FORA-DA-PORTA-NASCE-APAGADA; registrado no fecho, topo 4db7c84aaadf"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1217494,
+          "para": 1217541,
+          "razao": "tamanho: +47 linhas (1217494 -> 1217541), pagas por Origem: D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO; registrado no fecho, topo 14d625b5d2d8"
         }
       ],
       "unidade": "linhas",
