@@ -5,7 +5,7 @@
       "data": "2026-10-25",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 55728,
+      "piso": 55748,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_exame.py": 83,
@@ -30,7 +30,7 @@
         "app/telas/vibracao.py": 227,
         "app/textos_de_aplicacao.py": 73,
         "app/tray.py": 48,
-        "broker/hidraw_broker.py": 565,
+        "broker/hidraw_broker.py": 571,
         "cli/app.py": 119,
         "cli/cmd_doctor.py": 55,
         "cli/cmd_lightbar_reset.py": 64,
@@ -123,14 +123,14 @@
         "integrations/contratos_de_fora.py": 97,
         "integrations/cor_do_plastico.py": 327,
         "integrations/cura_por_estrada.py": 304,
-        "integrations/dicas_da_conexao.py": 60,
+        "integrations/dicas_da_conexao.py": 62,
         "integrations/dualsense_bt_audio.py": 298,
         "integrations/eleicao_de_microfone.py": 255,
         "integrations/endpoint_de_haptica.py": 304,
         "integrations/entrada_a_entrada.py": 407,
         "integrations/entradas_do_gabinete.py": 92,
         "integrations/envelope_da_haptica.py": 42,
-        "integrations/exame_da_mesa.py": 158,
+        "integrations/exame_da_mesa.py": 156,
         "integrations/faixa_do_wifi.py": 52,
         "integrations/faixas_do_ar.py": 56,
         "integrations/ficha_declarada.py": 57,
@@ -191,7 +191,7 @@
         "interface/aba08.py": 213,
         "interface/aba09.py": 44,
         "interface/aba10.py": 65,
-        "interface/arranjo_desta_maquina.py": 56,
+        "interface/arranjo_desta_maquina.py": 59,
         "interface/calibracao_das_entradas.py": 98,
         "interface/calibrar.py": 135,
         "interface/cartao_do_controle.py": 332,
@@ -222,7 +222,7 @@
         "interface/pacotes/perfil.py": 328,
         "interface/pacotes/ponte.py": 138,
         "interface/pacotes/rodape.py": 164,
-        "interface/pagina_do_mapa.py": 279,
+        "interface/pagina_do_mapa.py": 290,
         "interface/regua_do_mockup.py": 170,
         "interface/sistema.py": 116,
         "mods/instalador.py": 153,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +1 linhas (55727 -> 55728), pagas por Origem: D-2809-A-RAIZ-DO-HIDRAW-DO-BACKEND-SE-DESVIA; registrado no fecho, topo a5d2f219c4dc",
+      "razao": "texto-em-src: +20 linhas (55728 -> 55748), pagas por Origem: D-2309-O-REPO-QUE-SE-LE, D-2609-O-DESENHO-DA-08-EM-CARTOES-APROVADO, D-2809-A-RAIZ-DO-HIDRAW-DO-BACKEND-SE-DESVIA, D-MAPA-2D-DAS-PORTAS, plataforma.udev_autosuspend; registrado no fecho, topo 686d395e4518",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -636,6 +636,12 @@
           "de": 55727,
           "para": 55728,
           "razao": "texto-em-src: +1 linhas (55727 -> 55728), pagas por Origem: D-2809-A-RAIZ-DO-HIDRAW-DO-BACKEND-SE-DESVIA; registrado no fecho, topo a5d2f219c4dc"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 55728,
+          "para": 55748,
+          "razao": "texto-em-src: +20 linhas (55728 -> 55748), pagas por Origem: D-2309-O-REPO-QUE-SE-LE, D-2609-O-DESENHO-DA-08-EM-CARTOES-APROVADO, D-2809-A-RAIZ-DO-HIDRAW-DO-BACKEND-SE-DESVIA, D-MAPA-2D-DAS-PORTAS, plataforma.udev_autosuspend; registrado no fecho, topo 686d395e4518"
         }
       ],
       "unidade": "linhas",
