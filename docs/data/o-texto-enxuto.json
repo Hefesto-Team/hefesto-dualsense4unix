@@ -5,7 +5,7 @@
       "data": "2026-10-25",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 55720,
+      "piso": 55727,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_exame.py": 83,
@@ -77,7 +77,7 @@
         "daemon/subsystems/base.py": 78,
         "daemon/subsystems/big_picture.py": 41,
         "daemon/subsystems/bt_mic.py": 233,
-        "daemon/subsystems/coop.py": 811,
+        "daemon/subsystems/coop.py": 818,
         "daemon/subsystems/external_identity.py": 621,
         "daemon/subsystems/external_mask.py": 151,
         "daemon/subsystems/game_signal.py": 128,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +5 linhas (55715 -> 55720), pagas por Origem: D-2510-A-BARRA-FORA-DA-PORTA-NASCE-APAGADA; registrado no fecho, topo 284316e5f9dd",
+      "razao": "texto-em-src: +7 linhas (55720 -> 55727), pagas por Origem: D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO; registrado no fecho, topo d96bcb7ccc1a",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -624,6 +624,12 @@
           "de": 55715,
           "para": 55720,
           "razao": "texto-em-src: +5 linhas (55715 -> 55720), pagas por Origem: D-2510-A-BARRA-FORA-DA-PORTA-NASCE-APAGADA; registrado no fecho, topo 284316e5f9dd"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 55720,
+          "para": 55727,
+          "razao": "texto-em-src: +7 linhas (55720 -> 55727), pagas por Origem: D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO; registrado no fecho, topo d96bcb7ccc1a"
         }
       ],
       "unidade": "linhas",
