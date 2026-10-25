@@ -25,9 +25,7 @@ AINDA_CRAVADA: set[str] = set()
 #: ele roda no python3 do sistema, sem o pacote, logo não pode importar o dono. O porquê se mede
 #: em `test_o_broker_isento_nao_importa_o_pacote`.
 ISENTO = "broker/hidraw_broker.py"
-
-#: a constante do isento: a raiz cravada uma vez no broker, e os padrões dos parâmetros a leem.
-CONSTANTE_DO_ISENTO = "SYS_CLASS_HIDRAW"
+CONSTANTE_DO_ISENTO = "SYS_CLASS_HIDRAW"  # a raiz cravada uma vez no broker; os parâmetros a leem
 
 #: quantos textos com a raiz (fora das docstrings) cada módulo ainda tem, em qualquer forma. Só o
 #: isento fica, com o texto da constante dele; um módulo fora dela tem zero.
@@ -78,13 +76,6 @@ def _modulos() -> dict[str, str]:
             for p in sorted(SRC.rglob("*.py"))}
 
 
-def _recado(nome: str) -> str:
-    """O que fazer com a raiz que cresceu: o broker não importa o pacote, e lê a constante dele."""
-    if nome == ISENTO:
-        return f"leia `{CONSTANTE_DO_ISENTO}` do próprio broker"
-    return "importe `RAIZ_HIDRAW` de `integrations/usb_pai`"
-
-
 def test_a_regua_pega_a_constante_e_o_texto_cravados() -> None:
     assert constantes_da_raiz(f'RAIZ_HIDRAW = "{RAIZ}"\n') == ["RAIZ_HIDRAW"]
     assert constantes_da_raiz(f'_R: str = "{RAIZ}"\n') == ["_R"]
@@ -93,8 +84,6 @@ def test_a_regua_pega_a_constante_e_o_texto_cravados() -> None:
     assert textos_com_a_raiz(f'"""{RAIZ} na docstring."""\n') == []
     assert textos_com_a_raiz(f'def f(raiz="{RAIZ}"):\n    pass\n') == [1]
     assert textos_com_a_raiz(f'CONFERIR = "ls -l /dev/uhid {RAIZ}"\n') == [1]
-    assert CONSTANTE_DO_ISENTO in _recado(ISENTO) and "usb_pai" not in _recado(ISENTO)
-    assert "usb_pai" in _recado("core/um_modulo.py")
 
 
 def test_a_raiz_do_hidraw_so_e_cravada_no_dono_e_nos_que_a_lista_ainda_guarda() -> None:
@@ -129,7 +118,8 @@ def test_o_texto_com_a_raiz_nao_cresce_em_modulo_nenhum() -> None:
     assert not cresceu, (
         f"a raiz do hidraw ganhou texto novo em {cresceu} (a catraca: "
         f"{ {n: TEXTOS_AINDA_CRAVADOS.get(n, 0) for n in cresceu} }): "
-        + "; ".join(f"{nome}: {_recado(nome)}" for nome in sorted(cresceu)))
+        + "; ".join(f"{n}: leia `{CONSTANTE_DO_ISENTO}` do próprio broker" if n == ISENTO
+                    else f"{n}: importe `RAIZ_HIDRAW` de `integrations/usb_pai`" for n in cresceu))
     encolheu = {nome: contagem.get(nome, 0) for nome, n in TEXTOS_AINDA_CRAVADOS.items()
                 if contagem.get(nome, 0) < n}
     assert not encolheu, f"{encolheu} já crava menos: baixe a `TEXTOS_AINDA_CRAVADOS`"

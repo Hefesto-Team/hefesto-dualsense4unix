@@ -131,7 +131,7 @@ VPAD_UNIQ_PREFIX = "02fe"
 #: O começo do serial USB do pad em USB (``pad_usb.SERIAL_PREFIXO``).
 PAD_USB_SERIAL_PREFIX = "hefesto-pad-"
 _USB_DEVICE_RE = re.compile(r"^\d+-[\d.]+$")
-SYS_CLASS_HIDRAW = "/sys/class/hidraw"  # a raiz do hidraw: só aqui (o broker não lê o pacote)
+SYS_CLASS_HIDRAW = "/sys/class/hidraw"
 _HIDRAW_BASE_RE = re.compile(r"^hidraw[0-9]+$")
 
 # mesmo DualSense aparece em três superfícies: o hidraw, o evdev
