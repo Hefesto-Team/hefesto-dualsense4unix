@@ -17,6 +17,9 @@ MORDIDAS (24/10/2026, executadas sobre a cura e devolvidas):
   ``test_o_estado_torto_e_recusado_com_a_frase[sete-controles]``;
 - o ponto aceso pelo clique (e não pelo estado) reprova
   ``test_o_cartao_mostra_o_valor_do_estado_e_espera_em_curso``.
+- (25/10/2026, no desenho regerado) o grupo sem quebrar a fileira (``nowrap``), a coluna do
+  rótulo de volta aos 40px, e os dois juntos como eram, reprovam
+  ``test_toda_opcao_do_contrato_fica_inteira_e_o_rotulo_nao_invade`` nas duas vistas.
 """
 
 from __future__ import annotations
@@ -465,6 +468,7 @@ _MEDIR = """(function(){
     linhas: [...cc.querySelectorAll('.mj-cc-linha')].map(l => {
       const rot = l.querySelector('.mj-cc-rot');
       return {rotulo: rot.textContent, caixa: r(rot), largo: [rot.scrollWidth, rot.clientWidth],
+              letra: parseFloat(getComputedStyle(rot).fontSize),
               controle: r(l.querySelector('.mj-cc-ctrl')), cartao: r(l.closest('.mj-cc'))};
     }),
     tela: [tela.scrollHeight, tela.clientHeight], visivel: getComputedStyle(tela).visibility});
@@ -484,7 +488,7 @@ def test_toda_opcao_do_contrato_fica_inteira_e_o_rotulo_nao_invade(
         na_borda: dict[str, dict[str, Any]], vista: str) -> None:
     # D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA
     """Na borda do contrato, cada ponto e cada opção ficam inteiros dentro do grupo (nenhum some
-    atrás da borda), o rótulo longo quebra a linha sem invadir o controle, e a aba não rola."""
+    atrás da borda), o rótulo longo cabe em duas linhas sem invadir o controle, e a aba não rola."""
     m = na_borda[vista]
     assert m["visivel"] == "visible" and m["grupos"], f"a aba dos controles não abriu: {m}"
     botoes = sum(len(g["botoes"]) for g in m["grupos"])
@@ -498,5 +502,7 @@ def test_toda_opcao_do_contrato_fica_inteira_e_o_rotulo_nao_invade(
         rot, ctrl, cartao = linha["caixa"], linha["controle"], linha["cartao"]
         assert linha["largo"][0] <= linha["largo"][1] + 1, f"o rótulo transborda: {linha}"
         assert rot[2] <= ctrl[0] + 0.5, f"o rótulo invade o controle: {linha}"
+        assert rot[3] - rot[1] <= 2 * 1.5 * linha["letra"], (
+            f"o rótulo virou uma coluna de pedaços de palavra (mais de duas linhas): {linha}")
         assert ctrl[2] <= cartao[2] + 0.5, f"o controle sai do cartão: {linha}"
     assert m["tela"][0] <= m["tela"][1] + 1, f"a aba dos controles rola: {m['tela']}"

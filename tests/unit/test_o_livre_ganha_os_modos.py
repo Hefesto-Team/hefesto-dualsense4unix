@@ -18,6 +18,9 @@ MORDIDAS (24/10/2026, executadas sobre a cura e devolvidas):
   ``test_soltar_volta_a_zero_segurar_fica_e_repetir_toca_o_trecho[soltar]``;
 - o ``modo`` tirado do ``mods.livre`` que o arrastar da janela manda reprova
   ``test_o_clique_no_modo_acende_vai_ao_rascunho_e_o_guardar_grava`` (os três modos).
+- (25/10/2026, no desenho regerado) o zero do «Soltar», o ``setInterval`` do laço e o
+  ``aoSoltar`` do clique tirados do ``comportamento.js`` reprovam, cada um,
+  ``test_no_navegador_soltar_volta_a_zero_segurar_fica_e_repetir_toca_em_laco``.
 """
 
 from __future__ import annotations
