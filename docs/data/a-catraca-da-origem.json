@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1206332,
+      "piso": 1208349,
       "por_item": {
-        "docs": 121282,
-        "scripts": 120674,
-        "src": 322444,
-        "tests": 641932
+        "docs": 121313,
+        "scripts": 120677,
+        "src": 323181,
+        "tests": 643178
       },
-      "razao": "tamanho: +325 linhas (1206007 -> 1206332), pagas por Origem: D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP; registrado no fecho, topo 28cde2196199",
+      "razao": "tamanho: +2017 linhas (1206332 -> 1208349), pagas por Origem: D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo 80da67d57ae2",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1015,10 +1015,16 @@
           "de": 1206007,
           "para": 1206332,
           "razao": "tamanho: +325 linhas (1206007 -> 1206332), pagas por Origem: D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP; registrado no fecho, topo 28cde2196199"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1206332,
+          "para": 1208349,
+          "razao": "tamanho: +2017 linhas (1206332 -> 1208349), pagas por Origem: D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo 80da67d57ae2"
         }
       ],
       "unidade": "linhas",
-      "universo": 3153
+      "universo": 3156
     }
   }
 }
