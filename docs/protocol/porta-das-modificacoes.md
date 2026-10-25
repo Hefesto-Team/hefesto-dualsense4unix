@@ -42,9 +42,9 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | `lancador.jogos` | `{jogos: [{chave, nome, abrir: [...], janela?}]}` | `lancador` | `{recebidos}` |
 | `controles.lista` | `{}` | `ler:conexao` | `{controles: [{uniq, jogador}]}` |
 
-Cada `aparelhos[]` é `{nome, tipo, estado, bateria, forca, id?, ligado?}`: `nome` (até 60 letras) é o único obrigatório, e um
+Cada `aparelhos[]` é `{nome, tipo, estado, bateria, forca, id?, ligado?, controles?}`: `nome` (até 60 letras) é o único obrigatório, e um
 texto solto vale `{nome}`; `tipo` é livre (até 30 letras); `estado` é `ligado` (o padrão), `procurando`,
-`desligado` ou `falhou`; `bateria` vai de 0 a 100 e `forca` de 0 a 1, ou `null`; `id` (até 40 letras) é o alvo das ações do aparelho e `ligado` (verdadeiro ou falso) é a chave dele, os dois da extensão que gere os aparelhos (ver «As ações, os aparelhos e o controle livre»). Cada `conexoes[]` é
+`desligado` ou `falhou`; `bateria` vai de 0 a 100 e `forca` de 0 a 1, ou `null`; `id` (até 40 letras) é o alvo das ações do aparelho e `ligado` (verdadeiro ou falso) é a chave dele, os dois da extensão que gere os aparelhos, e `controles` são os que só aquele aparelho tem (ver «As ações, os aparelhos e o controle livre»). Cada `conexoes[]` é
 `{id, tipo, transporte, estado, motivo}`: `id` (até 40 letras) e `tipo` (até 30) são da extensão, `transporte` é
 `usb`, `bluetooth`, `rede` ou `local`, `estado` é o mesmo dos aparelhos e `motivo` (até 120 letras, ou `null`) diz
 por que ela não liga. Até 32 de cada. Um item torto recusa o estado inteiro (`-32602`, com a frase).
@@ -382,12 +382,24 @@ Três peças fazem a janela AGIR em vez de só mostrar. As três pedem `publicar
   em laço o trecho do último arrastar (o trecho de menos de 0,1 s fica, como no «Segurar»). O modo escolhido
   vai a `opcoes.json` na chave `<id>:modo` pelo «Guardar», e vale na hora: depois de um arrastar, a troca manda
   um soltar com o valor de agora e o modo novo. `modos` fora do `livre` recusa o manifesto.
+- **`aparelhos_controles`**: `{grupo}`, a aba em que moram os `controles` que cada aparelho declara no
+  `acessorios.estado`. O aparelho com `controles` tem `id`, e leva até 6 deles, `{id, tipo, valor, opcoes?, rotulo?, <!-- noqa-acento: chave do estado -->
+  dica?}`, com ids sem repetição. O `tipo` é `chave` (`valor` verdadeiro ou falso), `paleta` (`opcoes` = <!-- noqa-acento: chave do estado -->
+  `[{id, cor, rotulo?}]`, a `cor` em `#rrggbb` ou uma lista de até 3 delas, desenhada como um ponto em fatias; o
+  `rotulo` é a dica do ponto) ou `escolha` (`opcoes` = `[{id, rotulo}]`); a paleta e a escolha levam de 1 a 16
+  opções, e o `valor` delas é o `id` de uma opção ou `null`. O `rotulo` (até 30 letras) nomeia a linha do controle
+  (a paleta sem ele diz «Cor») e a `dica` (até 120) é a dica dele. A janela desenha naquela aba um cartão por
+  aparelho com `controles`: a primeira chave no topo, ao lado do nome, e uma linha por controle embaixo, a paleta
+  com as cores de um ponto numa fileira e as de duas ou três noutra. O aparelho sem `controles` não ganha cartão,
+  e sem aparelho com controle a aba não aparece. O cartão mostra o `valor` do estado: o clique pede, e o valor novo
+  só aparece quando a extensão o devolve. Um controle torto recusa o estado inteiro, com a frase.
 
 A extensão recebe as três como eventos (`{"method": "evento", "params": {"topico", "nome", "uniq": null,
 "dados"}}`), só ela, sem assinar tópico nenhum:
 
 - `extensao.acao` com `dados: {mod, acao, alvo, valor?}`: `alvo` é o `id` do aparelho (ou `null` nas `acoes` da
-  janela) e `valor` vem só na chave `ligar` (`true` liga);
+  janela) e `valor` vem só na chave `ligar` (`true` liga) e nos `controles` do aparelho: a `acao` é o `id` do
+  controle, e o `valor`, o pedido (a chave, `true` ou `false`; a paleta e a escolha, o `id` da opção);
 - `extensao.livre` com `dados: {mod, id, valor (0 a 1), soltou, modo?}`: no máximo 20 por segundo. O primeiro
   arrastar abre um compasso de 50 ms e ao fim dele sai o valor mais novo; o soltar (`soltou: true`) sai na hora,
   fora do compasso, e leva o valor final. `modo` vem só no `livre` com `modos`, e diz o que fazer ao soltar.
@@ -396,8 +408,9 @@ A janela os pede ao serviço por `mods.acao {mod, acao, alvo?, valor?}` (volta `
 `mods.livre {mod, id, valor, soltou, modo?}` (volta `{enviado}`; `modo` só no `livre` com `modos`, e sem ele
 vale `"soltar"`); os dois voltam falso quando a extensão não está
 conectada, e a janela recusa dizendo que ela não está rodando. O serviço recusa (`-32003`, com a frase) a ação
-que o manifesto não declara ali (nos aparelhos com `alvo`, na janela sem ele), o `livre` de outro `id`, o `modo`
-de um `livre` sem `modos` e o `modo` fora dos três. O botão
+que o manifesto não declara ali (nos aparelhos com `alvo`, na janela sem ele), o controle que o aparelho `alvo`
+não publicou no último estado (ou de um manifesto sem `aparelhos_controles`), o `valor` fora do tipo do
+controle, o `livre` de outro `id`, o `modo` de um `livre` sem `modos` e o `modo` fora dos três. O botão
 diz «Em curso» até a extensão devolver um `acessorios.estado` novo: cada estado guardado ganha um `serie`, que
 `mods.agora` devolve e que sobe a cada estado; sem estado novo em 5 s, o botão volta.
 
