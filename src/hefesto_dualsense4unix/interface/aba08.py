@@ -238,10 +238,6 @@ def _dicas_da_cena():
     return _aba_conexoes.html_das_dicas(painel, _pacote08.icone_da_dica)
 
 
-def tem_mic_pelo_radio(c):
-    return e_radio(c)
-
-
 # `a04_iluminacao.um_botao_de_player`.
 rotulo = _pacote08.rotulo_do_controle
 
@@ -993,9 +989,6 @@ BORDA_NEUTRA = ("A borda é <b>neutra</b> porque a cor deste controle <b>não fo
                 "Uma borda colorida aqui seria uma cor que ninguém leu — e o desenho "
                 "continua na cor que o resto do Hefesto já conhece.")
 
-MIC_LIGADO_DICA = (
-    "Liga o microfone deste controle. Desligado, nenhum programa o ouve — nem o jogo, nem a "
-    "chamada. Por onde ele chega quem decide é o USB ou o BT; a linha ao lado diz qual.")
 BOTAO_DICA = (
     "O botão físico do microfone faz o mesmo que o desta tela: liga o microfone "
     "<b>e</b> o canal dele. O que ele cala vale para o computador todo, não só "
