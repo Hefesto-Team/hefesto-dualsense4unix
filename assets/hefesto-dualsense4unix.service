@@ -19,10 +19,10 @@ OnFailure=hefesto-dualsense4unix-presenca.service
 # ele voltava no `fork`, ~0,6 s antes de o soquete existir, e quem ligava e já falava recebia a
 # recusa. `NotifyAccess=main`: só o processo principal avisa. O `NOTIFY_SOCKET` não passa aos
 # programas que o daemon lança porque a entrada dele (`daemon/main.run_daemon`) o tira do
-# ambiente antes de qualquer filho e o guarda (`sd_notify.guardar_o_soquete`). O `TimeoutStartSec` é o
-# prazo da subida (medida: ~1 s); existe para o daemon que trava antes do pronto não prender o
-# `start` para sempre. O `start` de quem chama (`daemon_actions`) espera mais que ele; um teste
-# confere os dois.
+# ambiente antes de qualquer filho e o guarda (`sd_notify.guardar_o_soquete`). O
+# `TimeoutStartSec` é o prazo da subida (medida: ~1 s); existe para o daemon que trava antes do
+# pronto não prender o `start` para sempre. O `start` de quem chama (`daemon_actions`) espera
+# mais que ele; um teste confere os dois.
 Type=notify
 NotifyAccess=main
 TimeoutStartSec=30
