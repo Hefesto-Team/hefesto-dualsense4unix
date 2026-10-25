@@ -410,10 +410,14 @@ Três peças fazem a janela AGIR em vez de só mostrar. As três pedem `publicar
   três botões do que a barra faz ao soltar: «Soltar» volta a zero, «Segurar» fica onde parou e «Repetir» toca
   em laço o trecho do último arrastar (o trecho de menos de 0,1 s fica, como no «Segurar»). O modo escolhido
   vai a `opcoes.json` na chave `<id>:modo` pelo «Guardar», e vale na hora: depois de um arrastar, a troca manda
-  um soltar com o valor de agora e o modo novo. `modos` fora do `livre` recusa o manifesto.
+  um soltar com o valor de agora e o modo novo. O «Cancelar» e o X da janela (e o Esc) desfazem o modo que já
+  valeu pelo mesmo caminho: um soltar com o modo guardado, só quando o vivo difere; reabrir a janela que fechou
+  sem eles faz o mesmo. O soltar que o serviço recusa (ou que volta `{enviado: false}`) devolve a barra e o
+  botão ao modo de antes, e a janela diz por quê. `modos` fora do `livre` recusa o manifesto.
 - **`aparelhos_controles`**: `{grupo}`, a aba em que moram os `controles` que cada aparelho declara no
   `acessorios.estado`. O aparelho com `controles` tem `id`, e leva até 6 deles, `{id, tipo, valor, opcoes?, rotulo?, <!-- noqa-acento: chave do estado -->
-  dica?}`, com ids sem repetição. O `tipo` é `chave` (`valor` verdadeiro ou falso), `paleta` (`opcoes` = <!-- noqa-acento: chave do estado -->
+  dica?}`, com ids sem repetição e nenhum igual ao de uma das `aparelhos_acoes` (o clique dos dois chega como a
+  mesma `extensao.acao`, com `acao` e `alvo`, e a porta recusa o estado dizendo o id). O `tipo` é `chave` (`valor` verdadeiro ou falso), `paleta` (`opcoes` = <!-- noqa-acento: chave do estado -->
   `[{id, cor, rotulo?}]`, a `cor` em `#rrggbb` ou uma lista de até 3 delas, desenhada como um ponto em fatias; o
   `rotulo` é a dica do ponto) ou `escolha` (`opcoes` = `[{id, rotulo}]`); a paleta e a escolha levam de 1 a 16
   opções, e o `valor` delas é o `id` de uma opção ou `null`. O `rotulo` (até 30 letras) nomeia a linha do controle

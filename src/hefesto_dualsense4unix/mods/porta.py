@@ -139,6 +139,8 @@ class _Credencial:
     permissoes: frozenset[str]
     #: Os ``lancador.comandos`` do manifesto: o primeiro termo de todo ``abrir``.
     comandos: frozenset[str] = frozenset()
+    #: Os ids das ``aparelhos_acoes.acoes`` do manifesto: nenhum controle de aparelho os repete.
+    acoes_dos_aparelhos: frozenset[str] = frozenset()
 
 
 @dataclass(eq=False)
@@ -459,11 +461,12 @@ def _estado_do_item(bruto: dict[str, Any], onde: str) -> str:
     return str(estado)
 
 
-def _aparelho(bruto: Any) -> dict[str, Any]:
+def _aparelho(bruto: Any, ids_das_acoes: frozenset[str] = frozenset()) -> dict[str, Any]:
     """``{nome, tipo, estado, bateria, forca}``; o texto solto (o formato antigo) é só o nome.
 
     ``id`` (até 40 letras, o que a ação do aparelho leva como ``alvo``), ``ligado`` (a chave do
     cartão) e ``controles`` (os que só este aparelho tem) só saem quando a extensão os manda.
+    ``ids_das_acoes`` são os das ações dos aparelhos, que nenhum controle repete.
     """
     if isinstance(bruto, str):
         bruto = {"nome": bruto}
@@ -490,13 +493,17 @@ def _aparelho(bruto: Any) -> dict[str, Any]:
             raise _recusa_do_estado("o ligado de um aparelho é verdadeiro ou falso.")
         saida["ligado"] = bruto["ligado"]
     if bruto.get("controles") is not None:
-        saida["controles"] = _controles_do_aparelho(bruto["controles"], "id" in saida)
+        saida["controles"] = _controles_do_aparelho(bruto["controles"], "id" in saida,
+                                                    ids_das_acoes)
     return saida
 
 
-def _controles_do_aparelho(bruto: Any, tem_id: bool) -> list[dict[str, Any]]:
+def _controles_do_aparelho(bruto: Any, tem_id: bool,
+                           ids_das_acoes: frozenset[str] = frozenset()) -> list[dict[str, Any]]:
     """Os ``controles`` de um aparelho: até ``CONTROLES_DO_APARELHO``, ids sem repetição, e só
-    no aparelho com ``id`` (o clique volta com ele como ``alvo``)."""
+    no aparelho com ``id`` (o clique volta com ele como ``alvo``). Nenhum repete o id de uma das
+    ações dos aparelhos (``ids_das_acoes``): o clique dos dois chega à extensão com a mesma forma
+    (a ação e o alvo), e o serviço o tomaria pela ação."""
     if not tem_id:
         raise _recusa_do_estado("o aparelho com controles tem id.")
     if not isinstance(bruto, list) or len(bruto) > CONTROLES_DO_APARELHO:
@@ -505,6 +512,10 @@ def _controles_do_aparelho(bruto: Any, tem_id: bool) -> list[dict[str, Any]]:
     controles = [_controle(c) for c in bruto]
     if len({c["id"] for c in controles}) != len(controles):
         raise _recusa_do_estado("controle repetido num aparelho.")
+    for controle in controles:
+        if controle["id"] in ids_das_acoes:
+            raise _recusa_do_estado(
+                f"o controle «{controle['id']}» tem o id de uma ação dos aparelhos.")
     return controles
 
 
@@ -535,8 +546,7 @@ def _controle(bruto: Any) -> dict[str, Any]:
 
 def _opcoes_do_controle(bruto: Any, tipo: str) -> list[dict[str, Any]]:
     """As opções da paleta (``{id, cor, rotulo?}``, o rótulo é a dica do ponto) ou da escolha
-    (``{id, rotulo}``), de 1 a
-    ``OPCOES_DO_CONTROLE``, ids sem repetição."""
+    (``{id, rotulo}``), de 1 a ``OPCOES_DO_CONTROLE``, ids sem repetição."""
     if not isinstance(bruto, list) or not 1 <= len(bruto) <= OPCOES_DO_CONTROLE:
         raise _recusa_do_estado(f"a {tipo} de um aparelho leva de 1 a {OPCOES_DO_CONTROLE} opções.")
     saida = []
@@ -583,14 +593,15 @@ def _conexao_do_estado(bruto: Any) -> dict[str, Any]:
     }
 
 
-def estado_dos_acessorios(mod_id: str, params: dict[str, Any]) -> dict[str, Any]:
+def estado_dos_acessorios(mod_id: str, params: dict[str, Any], *,
+                          acoes_dos_aparelhos: frozenset[str] = frozenset()) -> dict[str, Any]:
     """O ``acessorios.estado`` validado, com o ``mod`` de quem o mandou.
 
     Cada aparelho sai ``{nome, tipo, estado, bateria, forca}`` (o texto solto vira o nome) e cada
     conexão ``{id, tipo, transporte, estado, motivo}``, até ``ITENS_DO_ESTADO`` de cada. ``ajustes``
     leva só o que a modificação declara e o Hefesto entende (limiar do fundo do L2, acelerador,
     camada, lado único, gestos no Modo Nativo, toque de confirmação, pulso da barra e «Sem pisca»);
-    o resto cai.
+    o resto cai. Nenhum controle de aparelho repete um dos ``acoes_dos_aparelhos``.
     """
     ligado = params.get("ligado", False)
     nivel = params.get("nivel", 0)
@@ -616,7 +627,7 @@ def estado_dos_acessorios(mod_id: str, params: dict[str, Any]) -> dict[str, Any]
         "ligado": ligado,
         "nivel": nivel,
         "perfil": perfil,
-        "aparelhos": [_aparelho(a) for a in aparelhos[:ITENS_DO_ESTADO]],
+        "aparelhos": [_aparelho(a, acoes_dos_aparelhos) for a in aparelhos[:ITENS_DO_ESTADO]],
         "conexoes": as_conexoes,  # (noqa-acento): a chave do estado
         "ajustes": {k: v for k, v in opcoes.items() if k in OPCOES_DOS_GESTOS},
     }
@@ -753,10 +764,12 @@ class Porta:
     # -- quem pode entrar -------------------------------------------------
 
     def registrar(self, ficha: str, mod_id: str, pid: int, permissoes: list[str],
-                  *, comandos: tuple[str, ...] = ()) -> None:
+                  *, comandos: tuple[str, ...] = (),
+                  acoes_dos_aparelhos: tuple[str, ...] = ()) -> None:
         """O supervisor diz: esta ficha é da modificação ``mod_id``, no PID ``pid``."""
         self._fichas[ficha] = _Credencial(
-            mod_id, pid, frozenset(permissoes), frozenset(comandos))
+            mod_id, pid, frozenset(permissoes), frozenset(comandos),
+            frozenset(acoes_dos_aparelhos))
 
     def esquecer(self, ficha: str) -> None:
         self._fichas.pop(ficha, None)
@@ -1079,7 +1092,8 @@ class Porta:
                 CODE_SEM_PERMISSAO,
                 "falta a permissão publicar:acessorios.estado ou ler:acessorios.gesto",
             )
-        estado = estado_dos_acessorios(con.sessao.mod_id, params)
+        estado = estado_dos_acessorios(con.sessao.mod_id, params,
+                                       acoes_dos_aparelhos=con.sessao.acoes_dos_aparelhos)
         con.deu_o_estado = True
         serie = self._series[con.sessao.mod_id] = self._series.get(con.sessao.mod_id, 0) + 1
         self._estados_dos_acessorios[con.sessao.mod_id] = {**estado, "serie": serie}

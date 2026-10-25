@@ -257,7 +257,8 @@ def test_a_janela_generica_da_extensao_tem_um_cartao_por_grupo_e_cancelar_guarda
     assert "mj-abas" not in janela and 'type="radio"' not in janela
     # seis opções do exemplo e a do CSS de quem usa (22/10/2026: «Usar o meu CSS», em «Avançado»)
     assert janela.count('<div class="ky-linha">') == 7
-    assert '<a class="btn" href="#">Cancelar</a>' in janela
+    assert ('<a class="btn" href="#" data-gesto="cancelar-modificacao" data-v="exemplo">'
+            'Cancelar</a>') in janela
     assert '<a class="btn roxo" href="#" data-gesto="guardar-modificacao"' in janela
     assert ">Fechar</a>" not in janela.split('class="tn-rod"')[1]
 

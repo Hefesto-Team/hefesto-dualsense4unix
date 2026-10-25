@@ -132,6 +132,12 @@ def _comandos_do_lancador(manifesto: Manifesto) -> tuple[str, ...]:
     return tuple(c for c in comandos if isinstance(c, str) and c.strip())
 
 
+def _acoes_dos_aparelhos(manifesto: Manifesto) -> tuple[str, ...]:
+    """Os ids das ``aparelhos_acoes``: a porta recusa o controle de aparelho que repete um deles."""
+    geridos = manifesto.aparelhos_acoes
+    return tuple(a.id for a in geridos.acoes) if geridos else ()
+
+
 def _morre_com_o_pai(prctl: Callable[..., int] | None) -> Callable[[], None]:
     """O ``preexec_fn`` do filho: ``PR_SET_PDEATHSIG`` com ``SIGKILL``.
 
@@ -721,7 +727,8 @@ class Supervisor:
             _copiar_para_o_diario(processo.stdout, diario), name=f"mods-diario-{manifesto.id}"
         )
         self.porta.registrar(vigiada.ficha, manifesto.id, processo.pid, manifesto.permissoes,
-                             comandos=_comandos_do_lancador(manifesto))
+                             comandos=_comandos_do_lancador(manifesto),
+                             acoes_dos_aparelhos=_acoes_dos_aparelhos(manifesto))
         logger.info("mods_aberta", mod=manifesto.id, pid=processo.pid, caixa=bool(self.bwrap))
         return processo
 

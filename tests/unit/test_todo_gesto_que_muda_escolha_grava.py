@@ -111,6 +111,9 @@ ATOS: dict[Chave, str] = {
     ("07-lancadores.html", "configurar-modificacao"):
         "tela: abre a janela de opções da extensão com o valor de agora; quem grava as opções "
         "é o Guardar dela (`guardar-modificacao`), que declara `grava=`",
+    ("07-lancadores.html", "cancelar-modificacao"):
+        "rascunho da janela da extensão: o Cancelar joga o rascunho fora e devolve à extensão o "
+        "modo guardado do controle livre; nada se grava, o guardado é o que volta",
     ("07-lancadores.html", "guardar-opcao-da-modificacao"):
         "rascunho da janela da extensão: a opção mudada espera o Guardar "
         "(`guardar-modificacao`), que declara `grava=`; gravar a cada clique salvaria meia escolha",

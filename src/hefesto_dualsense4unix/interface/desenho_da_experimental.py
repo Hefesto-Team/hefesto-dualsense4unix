@@ -761,9 +761,10 @@ def _arranjo_c(nome: str, ajustes: str, *, mod: str, agora: Sequence[str],
     coluna = (f'<div class="ja-agora" id="mod-agora">{agora_html(agora, estado, processo=processo, porque=porque, gestao=gestao)}</div>'
               if agora else "")
     classe = "ja-corpo" + ("" if agora else " sem-agora") + (" com-faixa" if faixa else "")
+    fecha = _o_fecho(mod)
     return f'''    <div class="tn-topo ja-topo">
       <span class="tn-tit">Configurar · {_e(nome)}</span>{parar}
-      <a class="tn-x" href="#" data-dica="Fechar">\u00d7</a>
+      <a class="tn-x" href="#" data-dica="Fechar"{fecha}>\u00d7</a>
     </div>
     <div class="{classe}">
       {coluna}
@@ -771,12 +772,20 @@ def _arranjo_c(nome: str, ajustes: str, *, mod: str, agora: Sequence[str],
       {faixa}
     </div>
     <div class="tn-rod">
-      <a class="btn" href="#">Cancelar</a>
+      <a class="btn" href="#"{fecha}>Cancelar</a>
       <a class="btn roxo" href="#" data-gesto="{GESTO_DO_GUARDAR}" data-v="{_a(mod)}">Guardar</a>
     </div>'''
 
 
 GESTO_DO_GUARDAR = "guardar-modificacao"
+#: O Cancelar e o X da janela da extensão (o Esc clica o X): o modo do controle livre que já valeu
+#: volta ao guardado, e o rascunho sai.
+GESTO_DO_CANCELAR = "cancelar-modificacao"
+
+
+def _o_fecho(mod: str) -> str:
+    """O gesto do Cancelar e do X, só na janela de uma extensão (o desenho sem ``mod`` fecha e só)."""
+    return f' data-gesto="{GESTO_DO_CANCELAR}" data-v="{_a(mod)}"' if mod else ""
 
 
 def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: str = "",
@@ -815,16 +824,17 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
         return _arranjo_c(nome, ajustes, mod=mod, agora=agora, estado=estado, parar=parar,
                           processo=processo, porque=porque, faixa=faixa, gestao=gestao)
     corpo = _cartoes_das_opcoes(opcoes) if opcoes else vazio
+    fecha = _o_fecho(mod)
     return f'''    <div class="tn-topo">
       <span class="tn-tit">Configurar · {_e(nome)}</span>
       <span class="pc-para"><span class="ext-rot">Para</span>Todos</span>{parar}
-      <a class="tn-x" href="#" data-dica="Fechar">\u00d7</a>
+      <a class="tn-x" href="#" data-dica="Fechar"{fecha}>\u00d7</a>
     </div>
     <div class="tn-corpo">
       {corpo}
     </div>
     <div class="tn-rod">
-      <a class="btn" href="#">Cancelar</a>
+      <a class="btn" href="#"{fecha}>Cancelar</a>
       <a class="btn roxo" href="#" data-gesto="{GESTO_DO_GUARDAR}" data-v="{_a(mod)}">Guardar</a>
     </div>'''
 

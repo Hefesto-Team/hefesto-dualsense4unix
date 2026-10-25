@@ -1653,12 +1653,18 @@ def configurar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str
     """
     _MEXIDA.menu = _MEXIDA.permissoes = ""
     mod_id = _id_do_clique(o, "configurar-modificacao")
-    _MEXIDA.rascunho = {}
+    # A janela que fechou sem o Cancelar (a pessoa foi a outra aba) desfaz aqui o modo da extensão
+    # dela; recusado, o rascunho da mesma janela diz o modo que ainda vale na extensão.
+    anterior = _VIVA.mod
+    recusa = _desfazer_o_modo(anterior, p) if anterior else None
+    _MEXIDA.rascunho = (_o_modo_que_vale(mod_id) if recusa is not None and anterior == mod_id
+                        else {})
     _MEXIDA.mod, _MEXIDA.aba = mod_id, ""
     _AGORA.abrir(mod_id, p)
     _AGORA.ler(mod_id, p)
     _montar_a_janela_da_extensao(mod_id)
-    return _a_pintura_agora(ctx)
+    carga = _a_pintura_agora(ctx)
+    return {**carga, "recado": recusa} if recusa else carga
 
 
 @gesto("07-lancadores.html", exp.GESTO_DO_PARAR)
@@ -2390,11 +2396,14 @@ class _Viva:
                      ponte: Any) -> tuple[bool, str | None, Any] | None:
         """O modo novo vale na hora, como um soltar nele: a barra faz o que ele faz e, depois de um
         arrastar, a extensão recebe o soltar com o valor de agora e o modo novo. ``None`` quando
-        o modo não mudou ou nada foi arrastado nesta janela."""
+        o modo não mudou ou nada foi arrastado nesta janela. O soltar que não chega à extensão
+        (recusado, ou ela fora da porta) devolve a barra e o modo ao que eram."""
         with self._trava:
             self._da(mod)
             if modo == self.modo:
                 return None
+            antes = (self.modo, self.valor, list(self.rastro), list(self.gravadas), self.laco,
+                     self.laco_ate)
             self.modo = modo
             if not self.rastro:
                 return None
@@ -2402,8 +2411,17 @@ class _Viva:
             self._assentar(agora)
             valor = self.valor
             self._soltar_no_modo(agora, modo)
-            return ponte.chamar_com_o_corpo(  # type: ignore[no-any-return]
+            resposta: tuple[bool, str | None, Any] = ponte.chamar_com_o_corpo(
                 METODO_DO_LIVRE, mod=mod, id=opcao_id, valor=valor, soltou=True, modo=modo)
+            if _a_recusa_do_soltar(resposta) is not None:
+                (self.modo, self.valor, self.rastro, self.gravadas, self.laco,
+                 self.laco_ate) = antes
+            return resposta
+
+    def modo_de(self, mod: str) -> str | None:
+        """O modo que vale agora na barra (e na extensão) de ``mod``, ou ``None``."""
+        with self._trava:
+            return self.modo if mod == self.mod else None
 
     def ao_vivo(self, mod: str) -> exp.LivreAoVivo:
         with self._trava:
@@ -2630,6 +2648,64 @@ def _nao_esta_rodando(mod_id: str) -> str:
     return f"{_a_instalada(mod_id).entrada.nome} não está rodando: nada foi enviado."
 
 
+def _a_recusa_do_soltar(resposta: tuple[bool, str | None, Any] | None) -> str | None:
+    """Por que o soltar não chegou à extensão (a frase do serviço, ou vazio quando ela está fora
+    da porta); ``None`` quando chegou, ou quando nada foi mandado."""
+    if resposta is None:
+        return None
+    ok, motivo, corpo = resposta
+    if not ok:
+        return motivo or "O serviço não respondeu. Nada foi enviado."
+    return None if isinstance(corpo, dict) and corpo.get("enviado") is True else ""
+
+
+def _dizer_a_recusa_do_soltar(mod_id: str, recusa: str) -> str:
+    return recusa or _nao_esta_rodando(mod_id)
+
+
+def _desfazer_o_modo(mod_id: str, p: Any) -> str | None:
+    """O Cancelar (e o reabrir) devolve à extensão o modo guardado do ``livre``, pelo mesmo
+    caminho que aplica: o soltar com ele, só quando o modo vivo difere. Devolve a frase da recusa,
+    ou ``None`` quando nada havia a desfazer ou a extensão recebeu."""
+    from hefesto_dualsense4unix.mods import opcoes
+
+    try:
+        manifesto = _a_instalada(mod_id).manifesto
+    except RuntimeError:
+        return None  # a extensão saiu: não há modo a desfazer
+    livre = manifesto.opcao_livre if manifesto else None
+    chave = opcoes.chave_do_modo(manifesto) if manifesto else None
+    if livre is None or chave is None:
+        return None
+    guardado = str(opcoes.ler(manifesto, _lugares())[chave])
+    recusa = _a_recusa_do_soltar(_VIVA.mudar_o_modo(mod_id, livre.id, guardado, p))
+    return None if recusa is None else _dizer_a_recusa_do_soltar(mod_id, recusa)
+
+
+def _o_modo_que_vale(mod_id: str) -> dict[str, Any]:
+    """O rascunho que diz o modo que ainda vale na extensão, depois de um desfazer recusado."""
+    from hefesto_dualsense4unix.mods import opcoes
+
+    chave = opcoes.chave_do_modo(_a_instalada(mod_id).manifesto)
+    vivo = _VIVA.modo_de(mod_id)
+    return {chave: vivo} if chave and vivo else {}
+
+
+@gesto("07-lancadores.html", exp.GESTO_DO_CANCELAR)
+def cancelar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """O Cancelar e o X da janela da extensão (o Esc clica o X): o modo do ``livre`` que já valeu
+    volta ao guardado na extensão e o rascunho sai. Recusado o desfazer, nada muda (o rascunho diz
+    o modo que ainda vale) e a recusa aparece; o reabrir tenta de novo."""
+    mod_id = _id_do_clique(o, exp.GESTO_DO_CANCELAR)
+    recusa = _desfazer_o_modo(mod_id, p)
+    if recusa is not None:
+        raise RuntimeError(recusa)
+    if _MEXIDA.mod == mod_id:
+        _MEXIDA.rascunho = {}
+        _montar_a_janela_da_extensao(mod_id)
+    return _a_pintura_agora(ctx)
+
+
 def _do_trilho(o: dict[str, Any], gesto_: str) -> tuple[str, str, float]:
     mod_id, opcao_id = _partes_do_clique(o, gesto_, 2)
     try:
@@ -2766,12 +2842,19 @@ def modo_do_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
         certo = opcoes.modo_valido(modo)
     if _MEXIDA.mod != mod_id:
         _MEXIDA.mod, _MEXIDA.rascunho = mod_id, {}
+    antes = dict(_MEXIDA.rascunho)
     _MEXIDA.rascunho[chave] = certo
-    _VIVA.mudar_o_modo(mod_id, livre.id, certo, p)
+    recusa = _a_recusa_do_soltar(_VIVA.mudar_o_modo(mod_id, livre.id, certo, p))
+    if recusa is not None:
+        # A extensão não recebeu: a janela volta ao modo que vale nela, e a recusa aparece.
+        _MEXIDA.rascunho = antes
+        _montar_a_janela_da_extensao(mod_id)
+        raise RuntimeError(_dizer_a_recusa_do_soltar(mod_id, recusa))
     _montar_a_janela_da_extensao(mod_id)
     return _a_pintura_agora(ctx)
 
 
 METODOS |= {METODO_DA_ACAO, METODO_DO_LIVRE}
 SEM_ECO = (*SEM_ECO, exp.GESTO_DA_ACAO, exp.GESTO_DO_LIVRE, exp.GESTO_DE_SOLTAR,
-           exp.GESTO_DE_GRAVAR, exp.GESTO_DE_ESQUECER_A_FORMA, exp.GESTO_DO_MODO)
+           exp.GESTO_DE_GRAVAR, exp.GESTO_DE_ESQUECER_A_FORMA, exp.GESTO_DO_MODO,
+           exp.GESTO_DO_CANCELAR)

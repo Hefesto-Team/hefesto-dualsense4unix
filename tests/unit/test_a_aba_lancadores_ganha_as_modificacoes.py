@@ -404,7 +404,7 @@ def test_o_cancelar_joga_fora_o_rascunho(lar, ctx, tmp_path) -> None:
     a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())
     a07.guardar_opcao_da_modificacao(
         ctx, {"v": "toque:quando", "valor": "Nunca", "evento": "change"}, _Ponte())
-    # o Cancelar é `href="#"`: fecha sem gesto, e a janela reaberta nasce do guardado
+    # a janela que fecha (pelo Cancelar ou indo a outra aba) e se reabre nasce do guardado
     janela = a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())["blocos"]["#mod-janela"]
     assert "<option selected>Sempre" in janela
     a07.guardar_modificacao(ctx, {"v": "toque"}, _Ponte())
@@ -895,7 +895,8 @@ def test_a_janela_com_tres_grupos_desenha_um_cartao_por_grupo_e_a_cor(lar, ctx, 
     assert 'type="color"' in janela and 'value="#00aaff"' in janela  # o padrão, em minúsculas
     assert '<span class="ext-rot">Para</span>Todos' in janela.split('class="tn-corpo"')[0]
     rodape = janela.split('class="tn-rod"')[1]
-    assert '<a class="btn" href="#">Cancelar</a>' in rodape
+    assert ('<a class="btn" href="#" data-gesto="cancelar-modificacao" data-v="toque">'
+            'Cancelar</a>') in rodape
     assert 'data-gesto="guardar-modificacao" data-v="toque">Guardar</a>' in rodape
 
 
