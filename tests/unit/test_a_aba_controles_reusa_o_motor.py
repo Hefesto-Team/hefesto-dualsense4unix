@@ -444,7 +444,7 @@ def test_o_bloco_que_a_recusa_protegia_o_daemon_nao_publica():
     `bloco['y']`: um bloco com `{"touching": True}` e sem coordenada cai no
     `except KeyError` e volta `None`"*. É verdade sobre a função e falso sobre
     o produto — quem monta a chave é `daemon/sensor_hub.py`, num literal com as
-    CINCO chaves juntas.
+    CINCO chaves juntas (o `_o_toque`, que a `leitura` e o `toque_visto` usam).
 
     ESTA RÉGUA MEDE O DAEMON, e não o pacote: ela lê o fonte do dono da chave e
     exige que as cinco nasçam no mesmo dicionário. Se alguém partir aquele
@@ -452,14 +452,17 @@ def test_o_bloco_que_a_recusa_protegia_o_daemon_nao_publica():
     reprova e manda reabrir a discussão, em vez de deixar a tela dizer "não
     sei" sobre um dedo que o daemon está vendo.
 
-    MORDE: apagar `"x"` do literal do `sensor_hub` reprova aqui.
+    MORDE: apagar `"x"` do literal do `sensor_hub._o_toque` reprova aqui.
     """
     import inspect
 
     from hefesto_dualsense4unix.daemon import sensor_hub
 
-    fonte = inspect.getsource(sensor_hub.SensorHub.leitura)
-    bloco = fonte.split('out["touchpad"] = {', 1)[1].split("}", 1)[0]
+    assert 'out["touchpad"] = self._o_toque(touch)' in inspect.getsource(
+        sensor_hub.SensorHub.leitura), "a `leitura` deixou de montar o toque pelo dono dele"
+    fonte = inspect.getsource(sensor_hub.SensorHub._o_toque)
+    # até os ``pontos``: o ``"x"`` de cada ponto não pode passar pelo do dedo principal
+    bloco = fonte.split("return {", 1)[1].split('"pontos"', 1)[0]
     faltando = [c for c in ("touching", "x", "y", "width", "height")
                 if f'"{c}":' not in bloco]
     assert not faltando, (

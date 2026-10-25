@@ -32,6 +32,7 @@ import functools
 import json
 import pathlib
 from types import SimpleNamespace
+from collections.abc import Callable
 from typing import Any
 
 import pytest
@@ -58,6 +59,9 @@ from tests.unit.test_a_coluna_agora_e_o_parar_tudo_vem_do_servico import (  # no
 )
 
 ESTADO = "publicar:acessorios.estado"
+
+#: O pacote da aba 07 (o ``_a07`` do vizinho, sem anotação), com o tipo que o mypy aceita.
+_o_pacote: Callable[[], Any] = _a07
 APARELHOS = [
     {"id": f"ap-{n}", "nome": f"Aparelho {n}", "estado": "ligado", "ligado": n != 4,
      "bateria": 20 * n, "forca": n / 10}
@@ -118,7 +122,8 @@ def test_o_manifesto_com_as_tres_pecas_valida() -> None:
     (lambda d: d["acoes"][0].update(icone="foguete"),  # noqa-acento: contrato
      "acoes.0.icone"),
 ])
-def test_o_manifesto_torto_e_recusado_com_a_frase(tmp_path, mexer, frase) -> None:
+def test_o_manifesto_torto_e_recusado_com_a_frase(
+        tmp_path: pathlib.Path, mexer: Any, frase: str) -> None:
     bruto = _manifesto(**_pecas())
     mexer(bruto)
     (tmp_path / "hefesto-mod.json").write_text(json.dumps(bruto), encoding="utf-8")
@@ -130,7 +135,7 @@ def test_o_manifesto_torto_e_recusado_com_a_frase(tmp_path, mexer, frase) -> Non
 # -- 2. a ação chega só à extensão dela -------------------------------------------------------
 
 
-def test_a_acao_chega_so_a_extensao_dela(curto) -> None:  # noqa: F811
+def test_a_acao_chega_so_a_extensao_dela(curto: pathlib.Path) -> None:  # noqa: F811
     # D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA
     async def corrida() -> None:
         porta = await _porta(curto, EventBus())
@@ -159,7 +164,7 @@ def test_a_acao_chega_so_a_extensao_dela(curto) -> None:  # noqa: F811
 
 
 def _servico(supervisor: Any) -> Any:
-    servico = SimpleNamespace(daemon=SimpleNamespace(_mods_supervisor=supervisor),
+    servico: Any = SimpleNamespace(daemon=SimpleNamespace(_mods_supervisor=supervisor),
                               _mod_do_pedido=IpcHandlersMixin._mod_do_pedido)
     servico._manifesto_da_janela = functools.partial(IpcHandlersMixin._manifesto_da_janela,
                                                      servico)
@@ -172,7 +177,7 @@ def _instalada(lugares: Any, **extra: Any) -> None:
     (pasta / "hefesto-mod.json").write_text(json.dumps(_manifesto(**extra)), encoding="utf-8")
 
 
-def test_o_ipc_da_acao_so_leva_o_que_o_manifesto_declara(lar) -> None:  # noqa: F811
+def test_o_ipc_da_acao_so_leva_o_que_o_manifesto_declara(lar: Any) -> None:  # noqa: F811
     _instalada(lar, **_pecas())
     enviadas: list[tuple[Any, ...]] = []
 
@@ -202,7 +207,12 @@ def test_o_ipc_da_acao_so_leva_o_que_o_manifesto_declara(lar) -> None:  # noqa: 
         pedir(acao="testar", alvo="x" * 41)
     assert len(enviadas) == 3, "um pedido recusado chegou à porta"
     arrastou: list[tuple[Any, ...]] = []
-    sup.porta.livre = lambda mod, i, v, *, soltou: arrastou.append((mod, i, v, soltou)) or True
+
+    def livre(mod: str, i: str, v: float, *, soltou: bool) -> bool:
+        arrastou.append((mod, i, v, soltou))
+        return True
+
+    sup.porta.livre = livre
     assert arrastar(id="ao-vivo", valor=0.5) == {"enviado": True}
     with pytest.raises(ValueError, match="não declara o controle livre «outro»"):
         arrastar(id="outro", valor=0.5)
@@ -241,9 +251,10 @@ class _Ponte:
 
 
 @pytest.fixture
-def janela(lar, ctx, tmp_path, monkeypatch):  # noqa: F811
+def janela(lar: Any, ctx: Any, tmp_path: pathlib.Path,  # noqa: F811
+           monkeypatch: pytest.MonkeyPatch) -> Any:
     """Instala extensões de tema com as peças e abre a janela de uma delas."""
-    a07 = _a07()
+    a07 = _o_pacote()
     monkeypatch.setattr(a07, "_AGORA", a07._Agora())
     monkeypatch.setattr(a07, "_VIVA", a07._Viva())
 
@@ -252,7 +263,7 @@ def janela(lar, ctx, tmp_path, monkeypatch):  # noqa: F811
                                    permissoes=(ESTADO,), extra=extra))
 
     def abrir(ponte: _Ponte, mod_id: str = "toque") -> dict[str, Any]:
-        return a07.configurar_modificacao(ctx, {"v": mod_id}, ponte)
+        return dict(a07.configurar_modificacao(ctx, {"v": mod_id}, ponte))
 
     return a07, instalar, abrir
 
@@ -270,8 +281,8 @@ def _data_v_do_testar(html: str, alvo: str) -> str:
 
 @pytest.mark.parametrize("onde", ["aba", "coluna"])
 @pytest.mark.parametrize("n", [1, 2, 3, 4])
-def test_quatro_aparelhos_viram_quatro_linhas_e_o_testar_leva_o_alvo(janela, ctx, onde,  # noqa: F811
-                                                                    n) -> None:
+def test_quatro_aparelhos_viram_quatro_linhas_e_o_testar_leva_o_alvo(
+        janela: Any, ctx: Any, onde: str, n: int) -> None:  # noqa: F811
     """A matriz: a lista na aba do ``grupo`` ou na coluna «Agora», e o «Testar» de cada um dos
     quatro aparelhos (um deles desligado) leva o ``alvo`` dele, e só o dele."""
     a07, instalar, abrir = janela
@@ -295,7 +306,7 @@ def test_quatro_aparelhos_viram_quatro_linhas_e_o_testar_leva_o_alvo(janela, ctx
     assert feitas == [{"mod": "toque", "acao": "testar", "alvo": f"ap-{n}"}], feitas  # noqa-acento: contrato
 
 
-def test_a_chave_do_aparelho_pede_o_contrario_e_o_botao_diz_em_curso(janela, ctx) -> None:  # noqa: F811
+def test_a_chave_do_aparelho_pede_o_contrario_e_o_botao_diz_em_curso(janela: Any, ctx: Any) -> None:  # noqa: F811
     import re
 
     a07, instalar, abrir = janela
@@ -327,7 +338,8 @@ def test_a_chave_do_aparelho_pede_o_contrario_e_o_botao_diz_em_curso(janela, ctx
     assert "em-curso" not in blocos["#mod-aparelhos"]
 
 
-def test_o_em_curso_sai_no_teto_mesmo_sem_a_serie_subir(janela, ctx, monkeypatch) -> None:  # noqa: F811
+def test_o_em_curso_sai_no_teto_mesmo_sem_a_serie_subir(
+        janela: Any, ctx: Any, monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
     # D-2410-O-BOTAO-DA-ACAO-DIZ-EM-CURSO-ATE-A-SERIE-SUBIR
     """A extensão que não devolve estado nenhum não deixa o botão preso em «Em curso»."""
     a07, instalar, abrir = janela
@@ -345,7 +357,7 @@ def test_o_em_curso_sai_no_teto_mesmo_sem_a_serie_subir(janela, ctx, monkeypatch
         "sem a série subir, o «Em curso» passou do teto")
 
 
-def test_a_acao_da_extensao_parada_recusa_dizendo(janela, ctx) -> None:  # noqa: F811
+def test_a_acao_da_extensao_parada_recusa_dizendo(janela: Any, ctx: Any) -> None:  # noqa: F811
     a07, instalar, abrir = janela
     instalar(**_pecas())
     ponte = _Ponte(VIVO, rodando=False)
@@ -357,7 +369,8 @@ def test_a_acao_da_extensao_parada_recusa_dizendo(janela, ctx) -> None:  # noqa:
 # -- 4. o arrastar ----------------------------------------------------------------------------
 
 
-def test_arrastar_um_segundo_sai_em_no_maximo_vinte_e_o_ultimo_e_o_soltar(curto) -> None:  # noqa: F811
+def test_arrastar_um_segundo_sai_em_no_maximo_vinte_e_o_ultimo_e_o_soltar(
+        curto: pathlib.Path) -> None:  # noqa: F811
     # D-2410-O-CONTROLE-LIVRE-SAI-A-VINTE-POR-SEGUNDO-E-O-SOLTAR-NA-HORA
     async def corrida() -> list[dict[str, Any]]:
         porta = await _porta(curto, EventBus())
@@ -387,7 +400,7 @@ def test_arrastar_um_segundo_sai_em_no_maximo_vinte_e_o_ultimo_e_o_soltar(curto)
     assert not any(c["dados"]["soltou"] for c in chegaram[:-1])
 
 
-def test_o_arrastar_fora_de_ordem_cai_e_o_soltar_sempre_sai(janela, ctx) -> None:  # noqa: F811
+def test_o_arrastar_fora_de_ordem_cai_e_o_soltar_sempre_sai(janela: Any, ctx: Any) -> None:  # noqa: F811
     a07, instalar, abrir = janela
     instalar(**_pecas())
     ponte = _Ponte(VIVO)
@@ -419,11 +432,11 @@ def _gravar(a07: Any, ctx: Any, ponte: _Ponte, mod_id: str = "toque") -> dict[st
         a07.mover_o_livre_da_modificacao(
             ctx, {"v": f"{mod_id}:ao-vivo", "valor": str(valor), "vivo": str(n + 1),
                   "carimbo": str(n + 1)}, ponte)
-    return a07.gravar_o_livre_da_modificacao(ctx, {"v": f"{mod_id}:ao-vivo"}, ponte)
+    return dict(a07.gravar_o_livre_da_modificacao(ctx, {"v": f"{mod_id}:ao-vivo"}, ponte))
 
 
-def test_a_forma_gravada_entra_nos_botoes_da_mesma_extensao_e_nao_na_outra(janela, ctx,  # noqa: F811
-                                                                          lar) -> None:  # noqa: F811
+def test_a_forma_gravada_entra_nos_botoes_da_mesma_extensao_e_nao_na_outra(
+        janela: Any, ctx: Any, lar: Any) -> None:  # noqa: F811
     # D-2410-A-FORMA-GRAVADA-VALE-SO-NA-MESMA-EXTENSAO
     from hefesto_dualsense4unix.mods import opcoes
     from hefesto_dualsense4unix.mods.instalador import manifesto_instalado
@@ -441,7 +454,7 @@ def test_a_forma_gravada_entra_nos_botoes_da_mesma_extensao_e_nao_na_outra(janel
     a07.guardar_opcao_da_modificacao(
         ctx, {"v": "toque:toques:circle", "valor": "Meu 1", "evento": "change"}, ponte)
     a07.guardar_modificacao(ctx, {"v": "toque"}, ponte)
-    toque = opcoes.ler(manifesto_instalado("toque", lugares=lar), lar)
+    toque: Any = opcoes.ler(manifesto_instalado("toque", lugares=lar), lar)
     assert toque["toques"]["circle"] == "Meu 1"
     assert set(toque["ao-vivo"]) == {"Meu 1"} and len(toque["ao-vivo"]["Meu 1"]) <= 16
 
@@ -452,7 +465,8 @@ def test_a_forma_gravada_entra_nos_botoes_da_mesma_extensao_e_nao_na_outra(janel
             ctx, {"v": "outra:toques:circle", "valor": "Meu 1", "evento": "change"}, ponte)
 
 
-def test_esquecer_a_forma_devolve_o_botao_ao_padrao(janela, ctx, lar) -> None:  # noqa: F811
+def test_esquecer_a_forma_devolve_o_botao_ao_padrao(
+        janela: Any, ctx: Any, lar: Any) -> None:  # noqa: F811
     from hefesto_dualsense4unix.mods import opcoes
     from hefesto_dualsense4unix.mods.instalador import manifesto_instalado
 
@@ -467,7 +481,7 @@ def test_esquecer_a_forma_devolve_o_botao_ao_padrao(janela, ctx, lar) -> None:  
     carga = a07.esquecer_a_forma_do_livre(ctx, {"v": "toque:ao-vivo:Meu 1"}, ponte)
     assert "Meu 1" not in carga["blocos"]["#mod-janela"].replace("«Meu 1»", "")
     a07.guardar_modificacao(ctx, {"v": "toque"}, ponte)
-    valores = opcoes.ler(manifesto_instalado("toque", lugares=lar), lar)
+    valores: Any = opcoes.ler(manifesto_instalado("toque", lugares=lar), lar)
     assert valores["ao-vivo"] == {} and valores["toques"]["cross"] == "Pulso"
 
 
@@ -487,7 +501,7 @@ def _guardar_a_mao(lugares: Any, mod_id: str, valores: dict[str, Any]) -> None:
 
 
 def test_o_botao_editado_a_mao_com_forma_que_nao_e_texto_cai_no_padrao_sem_levantar(
-        tmp_path) -> None:
+        tmp_path: pathlib.Path) -> None:
     # D-2410-A-FORMA-DO-BOTAO-QUE-NAO-E-TEXTO-VOLTA-AO-PADRAO
     """O ``ler`` nunca levanta: a forma de um botão que não é texto (o ``opcoes.json`` editado a
     mão) volta ao padrão daquele botão, e os outros ficam."""
@@ -501,7 +515,8 @@ def test_o_botao_editado_a_mao_com_forma_que_nao_e_texto_cai_no_padrao_sem_levan
         assert valores["toques"] == {"cross": "Pulso", "circle": "Sem toque"}, valores
 
 
-def test_a_extensao_que_substitui_herda_o_botao_com_a_forma_gravada(tmp_path) -> None:
+def test_a_extensao_que_substitui_herda_o_botao_com_a_forma_gravada(
+        tmp_path: pathlib.Path) -> None:
     # D-2410-A-EXTENSAO-QUE-SUBSTITUI-HERDA-A-FORMA-GRAVADA
     """A extensão nova herda a forma gravada no ``livre`` da antiga E o botão que a escolheu."""
     from hefesto_dualsense4unix.mods import opcoes
@@ -512,11 +527,11 @@ def test_a_extensao_que_substitui_herda_o_botao_com_a_forma_gravada(tmp_path) ->
                                       "toques": {"cross": "Meu 1", "circle": "Sem toque"}})
     herdadas = opcoes.herdar(manifesto, ["velha"], lugares)
     assert herdadas.get("toques") == {"cross": "Meu 1", "circle": "Sem toque"}, herdadas
-    valores = opcoes.ler(manifesto, lugares)
+    valores: Any = opcoes.ler(manifesto, lugares)
     assert valores["toques"]["cross"] == "Meu 1" and set(valores["ao-vivo"]) == {"Meu 1"}
 
 
-def test_o_gravar_aceso_continua_gravar_e_se_diz_apertado(janela, ctx) -> None:  # noqa: F811
+def test_o_gravar_aceso_continua_gravar_e_se_diz_apertado(janela: Any, ctx: Any) -> None:  # noqa: F811
     """O arranjo C: o «Gravar» aceso é o mesmo botão, vermelho e apertado; ele não promete guardar,
     porque quem grava no disco é o Guardar da janela."""
     import re
@@ -539,7 +554,7 @@ def test_o_gravar_aceso_continua_gravar_e_se_diz_apertado(janela, ctx) -> None: 
     assert 'aria-pressed="false"' in apagado and "mj-gravar on" not in apagado, apagado
 
 
-def test_gravar_sem_arrastar_nao_cria_forma(janela, ctx) -> None:  # noqa: F811
+def test_gravar_sem_arrastar_nao_cria_forma(janela: Any, ctx: Any) -> None:  # noqa: F811
     a07, instalar, abrir = janela
     instalar(**_pecas())
     ponte = _Ponte(VIVO)
@@ -553,7 +568,7 @@ def test_gravar_sem_arrastar_nao_cria_forma(janela, ctx) -> None:  # noqa: F811
 def test_os_passos_da_gravacao_cabem_na_forma() -> None:
     from hefesto_dualsense4unix.mods.manifesto import forma_valida
 
-    a07 = _a07()
+    a07 = _o_pacote()
     amostras = [(0.0, 0.0)] + [(t / 10, (t % 7) / 6) for t in range(1, 2000)] + [(200.0, 0.5)]
     passos = a07.passos_da_gravacao(amostras)
     assert 1 <= len(passos) <= 16 and forma_valida("Meu 1", passos)
@@ -566,7 +581,7 @@ def test_os_passos_da_gravacao_cabem_na_forma() -> None:
 def test_os_gestos_e_os_metodos_estao_declarados() -> None:
     import sys
 
-    a07 = _a07()
+    a07 = _o_pacote()
     assert {"mods.acao", "mods.livre"} <= a07.METODOS  # noqa-acento: contrato
     novos = ("acao-da-modificacao", "mover-o-livre-da-modificacao",
              "soltar-o-livre-da-modificacao", "gravar-o-livre-da-modificacao",

@@ -572,11 +572,13 @@ def test_o_interruptor_de_sensor_existe_e_e_por_peca() -> None:
         "grab_do_toque",
         "hz_do_movimento",
         "leitura",
+        "pedir_os_dedos",
         "perguntar_ao_daemon",
         "reconciliar",
         "segurar_o_dedo",
         "stop_all",
         "toque_da_peca",
+        "toque_visto",
         "velocidade_do_movimento",
         "vigiar",
     }, f"o SensorHub mudou de superfície pública: {sorted(publicos)}"

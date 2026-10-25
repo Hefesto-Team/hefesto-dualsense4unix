@@ -153,9 +153,9 @@ class SensorHub:
 
         self._lock = threading.RLock()
         self._demanda: dict[str, float] = {}
-        #: `state_full` pede sensor de TODO controle que já tem `inputs`, e
-        self._demanda_entradas: dict[str, float] = {}
+        self._demanda_entradas: dict[str, float] = {}  # o `state_full`: TODO controle com `inputs`
         self._demanda_do_toque: dict[str, float] = {}
+        self._demanda_dos_dedos: dict[str, float] = {}  # `pedir_os_dedos`: só o toque, sem grab
         #: Os controles cujo dedo o servidor DSU segura (``segurar_o_dedo``).
         self._dedo_segurado: dict[str, float] = {}
         self._motion: dict[str, Any] = {}
@@ -281,31 +281,63 @@ class SensorHub:
                 }
         if touch is not None:
             with contextlib.suppress(Exception):
-                estado = touch.touch_state()
-                out["touchpad"] = {
-                    "touching": bool(estado.touching),
-                    "x": int(estado.x),
-                    "y": int(estado.y),
-                    "width": int(estado.largura),
-                    "height": int(estado.altura),
-                    # MULTITOQUE-01 (18/09/2026): os dedos, um por slot do
-                    # kernel. `x`/`y` acima continuam sendo o dedo principal
-                    # — quem conhecia só eles não muda de comportamento.
-                    # Lista VAZIA quer dizer "nenhum dedo agora", e é
-                    # diferente da chave AUSENTE, que quer dizer "este
-                    # reader não sabe ler dedo por slot": a tela desenha o
-                    # resumo no segundo caso e a verdade no primeiro.
-                    "pontos": [
-                        {
-                            "slot": int(ponto.slot),
-                            "x": int(ponto.x),
-                            "y": int(ponto.y),
-                            "id": int(ponto.identidade),
-                        }
-                        for ponto in getattr(estado, "pontos", ())
-                    ],
-                }
+                out["touchpad"] = self._o_toque(touch)
         return out
+
+    def toque_visto(self, uniq: str) -> dict[str, Any] | None:
+        """O ``touchpad`` da :meth:`leitura` de `uniq`, só se o leitor já vive; ``None`` sem ele.
+
+        Só VÊ: não registra demanda nem sobe a manutenção. Quem lê a cada tique sem pedir o
+        touchpad (o tópico ``entradas`` das extensões) usa esta, e o leitor fica vivo só pela
+        tela, pelo toque roteado, pelo DSU ou por :meth:`pedir_os_dedos`.
+        """
+        with self._lock:
+            touch = self._touch.get(uniq)
+        if touch is None:
+            return None
+        try:
+            return self._o_toque(touch)
+        except Exception as exc:
+            logger.debug("sensor_hub_toque_visto_falhou", identity=uniq, err=str(exc))
+            return None
+
+    def pedir_os_dedos(self, uniq: str) -> None:
+        """Mantém vivo o leitor de toque de `uniq` pelo prazo da demanda, sem o de movimento.
+
+        Não graba o nó: o cursor do computador segue com o dedo (o grab é do
+        :meth:`toque_da_peca` e do DSU).
+        """
+        with self._lock:
+            self._demanda_dos_dedos[uniq] = self._relogio()
+        self._garantir_manutencao()
+
+    @staticmethod
+    def _o_toque(touch: Any) -> dict[str, Any]:
+        """O ``touchpad`` de um leitor, na forma da :meth:`leitura`; levanta se o leitor falha."""
+        estado = touch.touch_state()
+        return {
+            "touching": bool(estado.touching),
+            "x": int(estado.x),
+            "y": int(estado.y),
+            "width": int(estado.largura),
+            "height": int(estado.altura),
+            # MULTITOQUE-01 (18/09/2026): os dedos, um por slot do
+            # kernel. `x`/`y` acima continuam sendo o dedo principal
+            # — quem conhecia só eles não muda de comportamento.
+            # Lista VAZIA quer dizer "nenhum dedo agora", e é
+            # diferente da chave AUSENTE, que quer dizer "este
+            # reader não sabe ler dedo por slot": a tela desenha o
+            # resumo no segundo caso e a verdade no primeiro.
+            "pontos": [
+                {
+                    "slot": int(ponto.slot),
+                    "x": int(ponto.x),
+                    "y": int(ponto.y),
+                    "id": int(ponto.identidade),
+                }
+                for ponto in getattr(estado, "pontos", ())
+            ],
+        }
 
     def entradas(self, uniq: str) -> dict[str, Any] | None:
         """Analógicos, gatilhos e botões de `uniq` agora; `None` sem reader."""
@@ -385,6 +417,7 @@ class SensorHub:
             self._demanda.clear()
             self._demanda_entradas.clear()
             self._demanda_do_toque.clear()
+            self._demanda_dos_dedos.clear()
             self._dedo_segurado.clear()
         for reader in readers:
             with contextlib.suppress(Exception):
@@ -446,6 +479,10 @@ class SensorHub:
             self._demanda_entradas = {
                 u: t for u, t in self._demanda_entradas.items() if u in vivos_entradas
             }
+            vivos_dedos = self._podar(self._demanda_dos_dedos, agora)
+            self._demanda_dos_dedos = {
+                u: t for u, t in self._demanda_dos_dedos.items() if u in vivos_dedos
+            }
             segurados = {
                 u
                 for u, t in self._dedo_segurado.items()
@@ -453,7 +490,7 @@ class SensorHub:
             }
             desejados: dict[str, set[str]] = {
                 "motion": vivos_sensores | desligados,
-                "touchpad": vivos_sensores | segurados | do_toque,
+                "touchpad": vivos_sensores | segurados | do_toque | vivos_dedos,
                 "gamepad": vivos_entradas,
             }
             sobrando = [

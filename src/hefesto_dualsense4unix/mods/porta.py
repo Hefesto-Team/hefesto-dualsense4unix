@@ -138,6 +138,9 @@ class _Conexao:
     filas_dos_botoes: list[tuple[str, asyncio.Queue[Any]]] = field(default_factory=list)
     #: As filas do tópico ``entradas``, cheias pelo serviço (:meth:`Porta.entradas_do_tique`).
     filas_das_entradas: list[asyncio.Queue[Any]] = field(default_factory=list)
+    #: O ``eventos.assinar`` das ``entradas`` pediu os dedos (``dedos: true``): o serviço mantém
+    #: o leitor de toque de cada controle vivo enquanto esta conexão durar.
+    quer_os_dedos: bool = False
     #: O socket desta conexão: o «Parar tudo» fala por ele sem assinatura nenhuma.
     escritor: asyncio.StreamWriter | None = None
 
@@ -775,6 +778,10 @@ class Porta:
                 raise RecusaError(CODE_INVALID_PARAMS, f"tópico desconhecido: {publico}")
             if f"ler:{publico}" not in con.sessao.permissoes:
                 raise RecusaError(CODE_SEM_PERMISSAO, f"falta a permissão ler:{publico}")
+        dedos = params.get("dedos", False)
+        if not isinstance(dedos, bool) or (dedos and TOPICO_DAS_ENTRADAS not in topicos):
+            raise RecusaError(CODE_INVALID_PARAMS, "dedos é true ou false, com o tópico entradas")
+        con.quer_os_dedos = con.quer_os_dedos or dedos
         for publico in topicos:
             for topico in TOPICOS_DE_LEITURA[publico]:
                 if publico == TOPICO_DOS_BOTOES:
@@ -1073,6 +1080,10 @@ class Porta:
         """Alguma extensão assinou o tópico ``entradas``? Sem ela, o tique não lê controle."""
         return any(con.filas_das_entradas for con in self._conexoes)
 
+    def pede_os_dedos(self) -> bool:
+        """Alguma extensão inscrita em ``entradas`` pediu os dedos (``dedos: true``)?"""
+        return any(con.quer_os_dedos and con.filas_das_entradas for con in self._conexoes)
+
     def entradas_do_tique(self, leituras: dict[str | None, dict[str, Any]]) -> None:
         """As ``entradas`` deste tique: ``{uniq: {jogador, transporte, valores}}`` de todo controle.
 
@@ -1352,15 +1363,29 @@ def botoes_de_todo_controle_no_servico(
         logger.debug("mods_porta_botoes_do_tique_falhou", err=type(exc).__name__)
 
 
+def topicos_de_todo_controle_no_servico(
+    daemon: Any, estado_do_posto: Any, botoes_do_posto: frozenset[str],
+    botoes_do_leitor: frozenset[str],
+) -> None:
+    """Os tópicos ``botoes`` e ``entradas`` do tique, nos dois ramos do laço (um dono só).
+
+    O tique comum e o congelado (o Modo Nativo, a pausa, a carência) chamam daqui: a extensão
+    que reage ao controle não emudece quando o jogo fala com ele. ``estado_do_posto`` é o
+    ``ControllerState`` do tique, ``botoes_do_posto`` os botões dele e ``botoes_do_leitor`` o
+    que os atalhos do PS leem.
+    """
+    botoes_de_todo_controle_no_servico(daemon, botoes_do_posto, botoes_do_leitor)
+    entradas_de_todo_controle_no_servico(daemon, estado_do_posto)
+
+
 def entradas_de_todo_controle_no_servico(daemon: Any, estado_do_posto: Any) -> None:
     """O tópico ``entradas`` do tique: os analógicos, os gatilhos e os dedos de cada controle.
 
     O dono do posto entra com ``estado_do_posto`` (o ``ControllerState`` do tique, ou ``None``
-    sem leitura); os outros, com as fontes dos atalhos
-    (:func:`~hefesto_dualsense4unix.daemon.subsystems.poll.entradas_de_cada_controle`). Os dedos
-    vêm do ``SensorHub`` de todos, que só VÊ o touchpad (``leitura``, sem segurar o nó). Vale em
-    todo modo: no Modo Nativo o laço chama daqui sem tocar o resto do tique. Sem extensão que
-    assine ``entradas``, não lê nada. Nunca levanta: o tique segue.
+    sem leitura); os outros, com as fontes dos atalhos (``poll.entradas_de_cada_controle``). Os
+    dedos são os que o ``SensorHub`` já lê (``toque_visto``, sem demanda nem grab); o leitor de
+    toque vive pela tela ou pela extensão que pediu os dedos (``pedir_os_dedos``). Vale em todo
+    modo, inclusive o Nativo. Sem extensão que assine ``entradas``, não lê nada. Nunca levanta.
     """
     porta = getattr(getattr(daemon, "_mods_supervisor", None), "porta", None)
     if not isinstance(porta, Porta) or not porta.le_as_entradas():
@@ -1379,12 +1404,16 @@ def entradas_de_todo_controle_no_servico(daemon: Any, estado_do_posto: Any) -> N
         vias = _transportes_por_controle(daemon)
         if estado_do_posto is not None and posto not in vias:
             vias[posto] = getattr(estado_do_posto, "transport", None)
-        leitura_do_hub = _leitura_do_toque(daemon)
+        hub = _o_hub(daemon)
+        if hub is not None and porta.pede_os_dedos():
+            for uniq in eixos:
+                if uniq:
+                    hub.pedir_os_dedos(uniq)
         porta.entradas_do_tique({
             uniq: {
                 "jogador": _jogador_de(daemon, uniq),
                 "transporte": vias.get(uniq),
-                "valores": (*valores, _dedos(leitura_do_hub, uniq)),
+                "valores": (*valores, _dedos(hub, uniq)),
             }
             for uniq, valores in eixos.items()
         })
@@ -1415,23 +1444,21 @@ def _transportes_por_controle(daemon: Any) -> dict[str | None, Any]:
     return {uniq: vias[chave] for chave, uniq in alvos.items() if uniq and chave in vias}
 
 
-def _leitura_do_toque(daemon: Any) -> Callable[[str], Any] | None:
-    """A ``SensorHub.leitura`` da sessão: vê o dedo sem pedir o nó (o ``toque_da_peca`` o pede)."""
+def _o_hub(daemon: Any) -> Any:
+    """O ``SensorHub`` da sessão, se ele sabe ver o toque sem pedi-lo; ``None`` sem ele."""
     garantir = getattr(daemon, "_garantir_sensor_hub", None)
     if not callable(garantir):
         return None
-    leitura = getattr(garantir(), "leitura", None)
-    return leitura if callable(leitura) else None
+    hub = garantir()
+    return hub if callable(getattr(hub, "toque_visto", None)) else None
 
 
-def _dedos(
-    leitura: Callable[[str], Any] | None, uniq: str | None
-) -> tuple[tuple[float, float], ...]:
-    """Os dedos no touchpad de ``uniq``, de 0 a 1 pela área dele; nenhum sem leitura."""
-    if leitura is None or not uniq:
+def _dedos(hub: Any, uniq: str | None) -> tuple[tuple[float, float], ...]:
+    """Os dedos que o hub já lê no touchpad de ``uniq``, de 0 a 1 pela área; nenhum sem leitor."""
+    if hub is None or not uniq:
         return ()
     try:
-        toque = leitura(uniq).get("touchpad")
+        toque = hub.toque_visto(uniq)
     except Exception as exc:
         logger.debug("mods_porta_sem_o_toque", err=type(exc).__name__)
         return ()
@@ -1482,5 +1509,6 @@ __all__ = [
     "estado_vazio_dos_acessorios",
     "o_jogo_escreve_no_servico",
     "pulsar_no_servico",
+    "topicos_de_todo_controle_no_servico",
     "uniq_do_posto_no_servico",
 ]

@@ -197,7 +197,7 @@ class _Mesa:
                 numero_da_lampada=lambda uniq, assign=False: numeros.get(uniq)),
         )
         self.posto = ControllerState(battery_pct=80, l2_raw=0, r2_raw=0, connected=True,
-                                     transport=vias[0])  # type: ignore[arg-type]
+                                     transport="bt" if vias[0] == "bt" else "usb")
 
     def mexer(self, uniq: str, **eixos: int) -> None:
         """``uniq`` mexe os ``eixos`` (``lx``… ``l2``, ``r2``), de 0 a 255."""
@@ -360,7 +360,7 @@ def test_o_dedo_vem_da_leitura_que_so_ve_e_nunca_do_toque_que_segura_o_no(
 
     hub = asyncio.run(corrida())
     assert hub._demanda_do_toque == {}, "a porta pediu o nó do touchpad"
-    assert set(hub._demanda) == set(UNIQS), "a leitura de cada controle mantém o leitor vivo"
+    assert hub._demanda == {}, "a leitura do dedo segurou o leitor de movimento e o de toque"
 
 
 # -- 3: sem quem assine, ninguém é lido -----------------------------------------------------

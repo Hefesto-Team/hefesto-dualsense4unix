@@ -22,3 +22,6 @@ tests/unit/test_o_nome_do_jogo_com_acento_nao_se_perde.py
 tests/unit/test_o_nome_que_o_pactl_perde_vem_do_grafo.py
 tests/unit/test_o_aviso_ao_systemd_nao_vaza_aos_filhos.py
 tests/unit/test_o_grafo_do_som_se_le_por_um_dono_so.py
+tests/unit/test_a_porta_entrega_as_entradas_de_cada_controle.py
+tests/unit/test_a_janela_da_extensao_age_e_gere_os_aparelhos.py
+tests/unit/test_a_porta_fala_os_botoes_no_nativo.py

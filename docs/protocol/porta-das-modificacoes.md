@@ -32,7 +32,7 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | método | params | pede | resposta |
 | --- | --- | --- | --- |
 | `mod.ola` | `{ficha}` | a ficha e o `SO_PEERCRED` | `{id, api, permissoes}` |
-| `eventos.assinar` | `{topicos: [...]}` | `ler:<tópico>` para cada um | `{assinados}` |
+| `eventos.assinar` | `{topicos: [...], dedos?}` | `ler:<tópico>` para cada um | `{assinados}` |
 | `luz.set` | `{uniq, rgb: [r, g, b], brilho?}` | `escrever:luz` | o resultado do `led.set` |
 | `vibracao.set` | `{uniq, fraco, forte}` (0 a 255) | `escrever:vibracao` | o resultado do `rumble.set` |
 | `gatilho.set` | `{uniq, lado: esquerdo\|direito, modo, params}` | `escrever:gatilho` | o resultado do `trigger.set` |
@@ -61,11 +61,14 @@ são de todo controle:
   cabo ou Bluetooth: `{botao, button, pressed, uniq, jogador}`. `botao` e `button` são o mesmo nome (`cross`,
   `r1`, `dpad_up`…; `button` fica para quem lia a 2.1), `uniq` é o do controle, também no envelope, e `jogador`
   o número que ele acende agora (ou `null`). Cada borda sai uma vez, no tique em que acontece; o controle que
-  sai solta o que segurava. No Modo Nativo o tique para, e os botões também;
+  sai solta o que segurava. Vale em todo modo, inclusive o Nativo, a pausa e a carência;
 - `entradas` (`nome: "controle.entradas"`): os analógicos, os gatilhos e o touchpad de QUALQUER controle, de P1 a
   P4, cabo ou Bluetooth: `{uniq, jogador, transporte, lx, ly, rx, ry, l2, r2, dedos}`. Os eixos e os gatilhos vão
   de 0 a 255 (o analógico solto é 128, o gatilho solto é 0); `transporte` é `usb` ou `bt`; `dedos` é a lista dos
-  dedos no touchpad, `[{x, y}]` de 0 a 1 pela área dele, e `[]` quando nenhum encosta. Um controle sai só quando
+  dedos no touchpad, `[{x, y}]` de 0 a 1 pela área dele, e `[]` quando nenhum encosta ou quando o touchpad não está
+  sendo lido. Os dedos são o que o serviço já lê (a tela aberta, o cursor, o DSU): quem os quer sempre assina com
+  `dedos: true` (só com `entradas`; outro valor é recusado), e o serviço mantém o touchpad de cada controle lido
+  enquanto a conexão durar, sem tirá-lo do cursor do computador. Um controle sai só quando
   algo mudou além da faixa morta (2 num eixo, 0,01 num dedo; a ponta de um eixo sai sempre), no máximo 30 vezes por
   segundo, e o último valor sempre chega. O parado não sai; quem assina recebe o que já está fora do repouso, e o
   controle que sai manda o repouso uma vez. Vale em todo modo, inclusive o Nativo: a leitura só vê, nunca segura o

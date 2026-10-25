@@ -142,9 +142,9 @@ def botoes_de_cada_controle(
        pergunta devolve None (o leitor nasce na volta seguinte da thread do
        hub), e a mão vem vazia nesse tique.
 
-    O MODO NATIVO NÃO PASSA POR AQUI: o `_poll_loop` congela o tique antes
-    dos atalhos (`input_ready` com `not self._native_mode`), para o P1 e para
-    os outros — é o beco sem saída que o `build_next_bridge_callback` descreve.
+    OS ATALHOS NÃO VALEM NO MODO NATIVO: o `_poll_loop` congela o tique antes deles
+    (`input_ready` com `not self._native_mode`), para o P1 e os outros (o beco do
+    `build_next_bridge_callback`); no congelado, só o tópico `botoes` das extensões lê daqui.
 
     A chave é o MAC; a do dono do posto é None quando o backend não tem MAC
     (o `FakeController`). Nunca levanta: uma fonte que falha deixa a mão

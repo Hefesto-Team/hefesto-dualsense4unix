@@ -4439,8 +4439,8 @@ class Daemon:
                     self._prime_keyboard_emulation(buttons_pressed)
                 previous_buttons = current_buttons
                 self.store.bump("input.settling.tick")
-                from hefesto_dualsense4unix.mods.porta import entradas_de_todo_controle_no_servico
-                entradas_de_todo_controle_no_servico(self, state)  # em todo modo: só lê
+                from hefesto_dualsense4unix.mods.porta import topicos_de_todo_controle_no_servico
+                topicos_de_todo_controle_no_servico(self, state, current_buttons, buttons_pressed)
                 if battery.should_emit(state.battery_pct, tick_started):
                     self.bus.publish(EventTopic.BATTERY_CHANGE, state.battery_pct)
                     battery.mark_emitted(state.battery_pct, tick_started)
@@ -4553,14 +4553,10 @@ class Daemon:
                 self.bus.publish(EventTopic.BUTTON_UP, {"button": name, "pressed": False})
                 self.store.bump("button.up.emitted")
             previous_buttons = current_buttons
-            # O tópico `botoes` das extensões: a borda de TODO controle, cada uma com o dele.
-            from hefesto_dualsense4unix.mods.porta import (
-                botoes_de_todo_controle_no_servico,
-                entradas_de_todo_controle_no_servico,
-            )
+            # Os tópicos `botoes` e `entradas` das extensões: TODO controle, cada um com o dele.
+            from hefesto_dualsense4unix.mods.porta import topicos_de_todo_controle_no_servico
 
-            botoes_de_todo_controle_no_servico(self, current_buttons, buttons_pressed)
-            entradas_de_todo_controle_no_servico(self, state)
+            topicos_de_todo_controle_no_servico(self, state, current_buttons, buttons_pressed)
 
             if battery.should_emit(state.battery_pct, tick_started):
                 self.bus.publish(EventTopic.BATTERY_CHANGE, state.battery_pct)
