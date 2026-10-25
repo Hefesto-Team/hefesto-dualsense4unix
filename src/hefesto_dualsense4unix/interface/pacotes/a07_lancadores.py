@@ -1509,9 +1509,13 @@ def _id_do_clique(o: dict[str, Any], gesto_: str) -> str:
     return mod_id
 
 
-def _a_instalada(mod_id: str) -> _Instalada:
+def _a_instalada_ou_nada(mod_id: str) -> _Instalada | None:
     REGISTRO.esquecer()
-    item = next((i for i in REGISTRO.ler() if i.entrada.id == mod_id), None)
+    return next((i for i in REGISTRO.ler() if i.entrada.id == mod_id), None)
+
+
+def _a_instalada(mod_id: str) -> _Instalada:
+    item = _a_instalada_ou_nada(mod_id)
     if item is None:
         raise RuntimeError(f"«{mod_id}» não está instalada.")
     return item
@@ -2669,13 +2673,11 @@ def _desfazer_o_modo(mod_id: str, p: Any) -> str | None:
     ou ``None`` quando nada havia a desfazer ou a extensão recebeu."""
     from hefesto_dualsense4unix.mods import opcoes
 
-    try:
-        manifesto = _a_instalada(mod_id).manifesto
-    except RuntimeError:
-        return None  # a extensão saiu: não há modo a desfazer
+    item = _a_instalada_ou_nada(mod_id)  # a extensão que saiu não tem modo a desfazer
+    manifesto = item.manifesto if item else None
     livre = manifesto.opcao_livre if manifesto else None
     chave = opcoes.chave_do_modo(manifesto) if manifesto else None
-    if livre is None or chave is None:
+    if manifesto is None or livre is None or chave is None:
         return None
     guardado = str(opcoes.ler(manifesto, _lugares())[chave])
     recusa = _a_recusa_do_soltar(_VIVA.mudar_o_modo(mod_id, livre.id, guardado, p))
