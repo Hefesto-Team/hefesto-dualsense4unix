@@ -2506,7 +2506,6 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
 
   function aplicarArranjo(f, manterOEditor) {
     fonte = f;
-    semLeitura = false;
     APARELHOS = f.aparelhos;
     FACES = f.faces;
     MAPA = f.mapa;
@@ -2616,6 +2615,14 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     if (ex) ex.remove();
     pintar();
     return "ok";
+  };
+
+  /* A leitura que chega depois tira a página do vazio; a recusa a deixa onde estava. */
+  var arranjoDaPorta = window.hefestoArranjo;
+  window.hefestoArranjo = function (dado, como) {
+    var estava = semLeitura;
+    semLeitura = false;
+    try { return arranjoDaPorta(dado, como); } catch (erro) { semLeitura = estava; throw erro; }
   };
 
   pintar();

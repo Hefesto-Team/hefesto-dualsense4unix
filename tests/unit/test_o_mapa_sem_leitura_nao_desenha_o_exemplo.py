@@ -166,7 +166,13 @@ def test_a_leitura_que_chega_depois_desenha_o_gabinete(tela: Any) -> None:
     from hefesto_dualsense4unix.integrations.censo_do_barramento import Barramento, Censo
 
     assert tela.executar(arranjo_desta_maquina.js_sem_leitura(pagina_do_mapa.SEM_MAPA)) == "ok"
-    dado = arranjo_desta_maquina.para_a_pagina(
+    recusa = "(function(){try{window.hefestoArranjo({}, false);return 'aceitou';}" \
+             "catch(e){return 'recusou';}})()"
+    assert tela.executar(recusa) == "recusou"
+    lido = _ler(tela)
+    assert lido["faces"] == 0 and lido["quando"] == pagina_do_mapa.FRASES_SEM_LEITURA[
+        pagina_do_mapa.SEM_MAPA], f"o arranjo recusado tirou a página do vazio: {lido}"
+    dado =arranjo_desta_maquina.para_a_pagina(
         carregar=lambda: MaquinaConfig(mapa=_o_mapa()),
         ler_o_barramento=lambda: Censo(aparelhos=(), barramentos=(
             Barramento(no="/sys/usb9", nome_do_kernel="usb9", velocidade_mbps=480.0),)),

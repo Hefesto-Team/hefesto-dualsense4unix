@@ -6804,6 +6804,14 @@ JS_SEM_LEITURA = """\
     return "ok";
   };
 
+  /* A leitura que chega depois tira a página do vazio; a recusa a deixa onde estava. */
+  var arranjoDaPorta = window.hefestoArranjo;
+  window.hefestoArranjo = function (dado, como) {
+    var estava = semLeitura;
+    semLeitura = false;
+    try { return arranjoDaPorta(dado, como); } catch (erro) { semLeitura = estava; throw erro; }
+  };
+
 """.replace("__FRASES_SEM_LEITURA__", json.dumps(FRASES_SEM_LEITURA, ensure_ascii=False)).replace(
     "__NADA_A_SUGERIR__", json.dumps(NADA_A_SUGERIR, ensure_ascii=False))
 
@@ -6828,12 +6836,6 @@ _DA_SPRINT_SEM_LEITURA = "25/10/2026, O-MAPA-SEM-LEITURA-DA-MAQUINA-NAO-DESENHA-
 _A_LEGENDA_DO_REGISTRO = '    document.getElementById("legenda").hidden = noRegistro;\n'
 
 EDICOES_DO_MAPA_SEM_LEITURA: tuple[Edicao, ...] = (
-    Edicao(
-        antes="  function aplicarArranjo(f, manterOEditor) {\n    fonte = f;\n",
-        depois=("  function aplicarArranjo(f, manterOEditor) {\n    fonte = f;\n"
-                "    semLeitura = false;\n"),
-        porque=f"{_DA_SPRINT_SEM_LEITURA}: a leitura que chega tira a página do vazio.",
-    ),
     Edicao(
         antes=_A_LEGENDA_DO_REGISTRO,
         depois=_A_LEGENDA_DO_REGISTRO + JS_DO_VAZIO_NA_PINTURA,
