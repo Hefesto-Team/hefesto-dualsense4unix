@@ -5,7 +5,7 @@
       "data": "2026-10-25",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 55715,
+      "piso": 55720,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_exame.py": 83,
@@ -197,7 +197,7 @@
         "interface/cartao_do_controle.py": 332,
         "interface/conexoes.py": 69,
         "interface/controles_vivos.py": 145,
-        "interface/desenho_da_experimental.py": 258,
+        "interface/desenho_da_experimental.py": 262,
         "interface/desenho_dos_lancadores.py": 1032,
         "interface/frases_que_ela_baniu.py": 104,
         "interface/hefesto_vivo.py": 504,
@@ -212,7 +212,7 @@
         "interface/pacotes/a04_iluminacao.py": 1172,
         "interface/pacotes/a05_vibracao.py": 818,
         "interface/pacotes/a06_navegacao.py": 382,
-        "interface/pacotes/a07_lancadores.py": 705,
+        "interface/pacotes/a07_lancadores.py": 706,
         "interface/pacotes/a08_conexoes.py": 1162,
         "interface/pacotes/a09_sistema.py": 1115,
         "interface/pacotes/a10_perfis.py": 921,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +38 linhas (55677 -> 55715), pagas por Origem: D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-2510-A-DESCIDA-DO-GADGET-FALA-COM-O-BROKER-FORA-DO-TIQUE; registrado no fecho, topo 08594f15490a",
+      "razao": "texto-em-src: +5 linhas (55715 -> 55720), pagas por Origem: D-2510-A-BARRA-FORA-DA-PORTA-NASCE-APAGADA; registrado no fecho, topo 284316e5f9dd",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -618,6 +618,12 @@
           "de": 55677,
           "para": 55715,
           "razao": "texto-em-src: +38 linhas (55677 -> 55715), pagas por Origem: D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-2510-A-DESCIDA-DO-GADGET-FALA-COM-O-BROKER-FORA-DO-TIQUE; registrado no fecho, topo 08594f15490a"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 55715,
+          "para": 55720,
+          "razao": "texto-em-src: +5 linhas (55715 -> 55720), pagas por Origem: D-2510-A-BARRA-FORA-DA-PORTA-NASCE-APAGADA; registrado no fecho, topo 284316e5f9dd"
         }
       ],
       "unidade": "linhas",
