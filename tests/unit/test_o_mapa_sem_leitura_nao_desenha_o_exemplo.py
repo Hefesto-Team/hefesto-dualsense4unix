@@ -7,7 +7,7 @@ import os
 import pathlib
 import sys
 import threading
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -111,7 +111,7 @@ def test_o_piloto_sem_leitura_diz_o_porque_a_pagina(monkeypatch: pytest.MonkeyPa
             self.ponte = _Ponte()
             self.cegueiras: list[str] = []
 
-    hefesto_vivo.Piloto._entregar_o_arranjo(_Piloto())
+    hefesto_vivo.Piloto._entregar_o_arranjo(cast(Any, _Piloto()))
     assert leu.wait(5), "a leitura não aconteceu"
     contexto = GLib.MainContext.default()
     for _ in range(200):

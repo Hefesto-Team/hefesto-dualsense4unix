@@ -99,7 +99,7 @@ def _ler_a_maquina(
     try:
         documento = (carregar or carregar_maquina)()
         declarado = getattr(documento, "mapa", None)
-        if not _ha_o_que_desenhar(declarado):
+        if declarado is None or not _ha_o_que_desenhar(declarado):
             return None
         censo = (ler_o_barramento or _ler)()
         tipos = mapa_das_portas.tipos_declarados(documento)
