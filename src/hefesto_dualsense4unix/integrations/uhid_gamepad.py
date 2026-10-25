@@ -1866,10 +1866,10 @@ class UhidDualSense:
 
     def stop(self) -> None:
         """Destrói o device, devolve o gadget dele ao broker e só DEPOIS devolve o MAC."""
-        # a casa desce como na parada do tique (`parar_fora_do_tique`); o broker, aqui
+        # a casa desce como no tique (`parar_fora_do_tique`); o MAC, com a última descida
         _parar_na_casa(self)
+        _DESCIDA_AO_BROKER.soltar(self, lambda: _despir_se_parado(self))
         _DESCIDA_AO_BROKER.terminar(self)  # a descida do pad, a do tique em voo inclusive
-        _MACS_DOS_VPADS_VIVOS.despir(self)
         # o doctor conta quem está no uhid pelo diário: o pad que parou sai da conta.
         logger.info("vpad_parou", player=self.player)
 
@@ -3115,8 +3115,9 @@ class _PedidoAoBroker:
     de pé e preso (aceita e não responde) faz o cliente esperar o ``_TIMEOUT_S``
     dele, 2 s; dentro do `pump_ff`, eram 2 s de tique preso a cada varredura, por
     pad. O fio pergunta; o tique só lê a resposta (:attr:`pronto`, :meth:`tomar`).
-    O pedido largado pelo `stop` desmonta o gadget que chegar tarde, e o que chega
-    com um jogo aberto também (:attr:`jogo_abriu`): a troca de pele segue o `JOGO_ABERTO`.
+    O pedido que o `stop` larga em voo é promessa do pad na fila da descida
+    (:meth:`_DescidaAoBroker.prometer`), e o gadget tardio desce por ela; o que chega
+    com um jogo aberto desce no fio (:attr:`jogo_abriu`).
     """
 
     def __init__(
@@ -3129,6 +3130,10 @@ class _PedidoAoBroker:
         self.jogo_abriu = False
         self._gadget: _GadgetDoPad | None = None
         self._largado = False
+        #: o fio já leu o ``_largado``: o que chega daqui em diante o `largar` desce.
+        self._decidido = False
+        #: a fila em que o `largar` deixou a promessa (a do módulo naquela hora).
+        self._prometido_a: _DescidaAoBroker | None = None
         #: o pad que pediu: o gadget que o `stop` dele larga desce na fila dele.
         self._dono = pad
         self._trava = threading.Lock()
@@ -3159,15 +3164,17 @@ class _PedidoAoBroker:
             logger.debug("pad_usb_pedido_de_novo_falhou", player=pad.player, exc_info=True)
         with self._trava:
             largado = self._largado
+            self._decidido = True
             if not largado:
                 self._gadget = gadget
         try:
-            if largado:
-                if gadget is not None:
-                    gadget.desmontar()
-                if self.serial is not None:
-                    _esquecer_a_recusa_do_serial(self.serial)
+            if largado and self.serial is not None:
+                _esquecer_a_recusa_do_serial(self.serial)
         finally:
+            # o gadget tardio desce pela fila, e a promessa do pad se cumpre nela
+            fila = self._prometido_a
+            if largado and fila is not None:
+                fila.cumprir(self._dono, self, gadget)
             # pronto só depois da arrumação do largado: quem espera vê o fio terminado
             self._pronto.set()
 
@@ -3189,10 +3196,14 @@ class _PedidoAoBroker:
 
         O que já chegou desce pela fila da descida, com o pad por dono: o `stop`
         que espera o desce ele mesmo, e o que para no tique não fala com o broker.
+        O que ainda não chegou é promessa do pad na fila: desce por ela quando chegar.
         """
         with self._trava:
-            self._largado = True
+            ja_largado, self._largado = self._largado, True
             gadget, self._gadget = self._gadget, None
+            if not ja_largado and not self._decidido:
+                self._prometido_a = _DESCIDA_AO_BROKER
+                self._prometido_a.prometer(self._dono, self)
         if gadget is not None:
             _DESCIDA_AO_BROKER.descer(gadget, self._dono)
 
@@ -3208,18 +3219,20 @@ class _DescidaAoBroker:
     """A descida do gadget que o tique solta, num fio só, fora do tique de entrada.
 
     O irmão do :class:`_PedidoAoBroker`: a parte da casa desce na hora
-    (:meth:`_GadgetDoPad._soltar_na_casa`), o pad já está no uhid, e a devolução
-    ao broker vai à fila de um fio só, na ordem de chegada; nada no tique espera
-    a resposta. A ordem que o broker exige se guarda dos dois lados: o `stop`
-    desce o que é do pad antes de voltar (:meth:`terminar`), e o pedido novo do
-    mesmo serial espera a descida dele (:func:`_pedir_na_vez`): o broker recusa
-    o serial repetido.
+    (:meth:`_GadgetDoPad._soltar_na_casa`), o pad já está no uhid, e a devolução ao broker
+    vai à fila de um fio só, na ordem de chegada; nada no tique espera a resposta. A ordem
+    que o broker exige se guarda dos dois lados: o `stop` desce o que é do pad antes de
+    voltar (:meth:`terminar`), e o pedido novo do mesmo serial espera a descida dele
+    (:func:`_pedir_na_vez`): o broker recusa o serial repetido. O pedido que o `stop`
+    larga em voo conta como descida do pad até responder (:meth:`prometer`).
     """
 
     def __init__(self) -> None:
         self._trava = threading.Condition()
         #: ``(dono, gadget)`` na ordem de chegada; o dono é o pad, ou None.
         self._fila: collections.deque[tuple[object, _GadgetDoPad]] = collections.deque()
+        #: ``(dono, pedido)`` do pedido largado em voo: o gadget dele ainda pode chegar.
+        self._prometidas: list[tuple[object, object]] = []
         self._em_voo: tuple[object, _GadgetDoPad] | None = None
         #: as que o `stop` tirou da fila e desce ele mesmo: seguem pendentes até o fim.
         self._no_stop: list[tuple[object, _GadgetDoPad]] = []
@@ -3238,6 +3251,25 @@ class _DescidaAoBroker:
                     target=self._rodar, name="hefesto-pad-usb-descida", daemon=True
                 )
                 self._fio.start()
+
+    def prometer(self, dono: object, pedido: object) -> None:
+        """O pedido do ``dono`` largado em voo: pendente até :meth:`cumprir`."""
+        with self._trava:
+            self._prometidas.append((dono, pedido))
+
+    def cumprir(self, dono: object, pedido: object, gadget: _GadgetDoPad | None) -> None:
+        """O fio do pedido largado respondeu: o gadget que trouxe vai à fila antes de a
+        promessa sair, e quem espera o ``dono`` nunca o vê sem nada pendente no meio."""
+        if gadget is not None:
+            self.descer(gadget, dono)
+        with self._trava:
+            self._prometidas = [vez for vez in self._prometidas if vez[1] is not pedido]
+            self._trava.notify_all()
+        self._cumprir(dono)
+
+    def _prometeu(self, dono: object) -> bool:
+        """O ``dono`` tem pedido largado em voo? Sob a trava."""
+        return any(vez[0] is dono for vez in self._prometidas)
 
     def _rodar(self) -> None:
         while True:
@@ -3259,7 +3291,7 @@ class _DescidaAoBroker:
         """O `stop` que não espera (:func:`parar_fora_do_tique`): o do ``dono`` desce no
         fio, e ``depois`` roda quando a última descida dele terminar (já, se não há)."""
         with self._trava:
-            if any(vez[0] is dono for vez in self._pendentes()):
+            if self._prometeu(dono) or any(vez[0] is dono for vez in self._pendentes()):
                 self._depois.append((dono, depois))
                 return
         depois()
@@ -3268,7 +3300,7 @@ class _DescidaAoBroker:
         """Roda o ``depois`` do ``dono`` sem descida pendente, e só então o tira da lista:
         quem espera o aparelho, ou a fila inteira, o encontra feito."""
         with self._trava:
-            if any(vez[0] is dono for vez in self._pendentes()):
+            if self._prometeu(dono) or any(vez[0] is dono for vez in self._pendentes()):
                 return
             prontos = [item for item in self._depois if item[0] is dono]
         if not prontos:
@@ -3284,21 +3316,26 @@ class _DescidaAoBroker:
             self._trava.notify_all()
 
     def esperar_o_aparelho(self, pad: object, segundos: float) -> bool:
-        """O pad novo espera a descida do pad do MESMO aparelho que parou no tique.
+        """O pad novo espera a descida do pad do MESMO aparelho que parou.
 
         O gadget dele segue no kernel com o MAC do aparelho até o broker o
         desmontar, e o `hid_playstation` recusa o MAC repetido: sem a espera, o
-        pad novo vestiria outro MAC. True = nenhum, em até ``segundos``.
+        pad novo vestiria outro MAC. Conta o MAC que ainda não voltou, a descida
+        pendente e o pedido largado em voo, cujo gadget ainda pode chegar.
+        True = nenhum, em até ``segundos``.
         """
         identidade = pad_usb._so_hex(getattr(pad, "identity", None) or "")
         if not identidade:
             return True
 
         def livre() -> bool:
+            donos = [quem for quem, _ in self._depois]
+            donos += [quem for quem, _ in self._prometidas]
+            donos += [quem for quem, _ in self._pendentes()]
             return not any(
                 quem is not pad
                 and pad_usb._so_hex(getattr(quem, "identity", None) or "") == identidade
-                for quem, _ in self._depois
+                for quem in donos
             )
 
         with self._trava:
@@ -3318,8 +3355,10 @@ class _DescidaAoBroker:
             return self._em_voo is not None and self._em_voo[0] is dono
 
     def terminar(self, dono: object) -> None:
-        """O `stop`: o do ``dono`` que está na fila desce aqui; o que está em voo se espera."""
+        """O `stop`: o pedido largado em voo se espera, o do ``dono`` que está na fila
+        desce aqui, e o que está em voo se espera."""
         with self._trava:
+            self._trava.wait_for(lambda: not self._prometeu(dono), _DESCIDA_ESPERA_S)
             meus = [vez for vez in self._fila if vez[0] is dono]
             if meus:
                 self._fila = collections.deque(vez for vez in self._fila if vez[0] is not dono)
@@ -3347,10 +3386,12 @@ class _DescidaAoBroker:
             )
 
     def esperar_tudo(self, segundos: float) -> bool:
-        """True = a fila esvaziou, o fio terminou e o MAC de quem parou no tique voltou."""
+        """True = a fila esvaziou, o fio terminou, nenhum pedido largado segue em voo e o
+        MAC de quem parou no tique voltou."""
         with self._trava:
             return self._trava.wait_for(
-                lambda: not self._pendentes() and not self._depois, segundos
+                lambda: not self._pendentes() and not self._prometidas and not self._depois,
+                segundos,
             )
 
 

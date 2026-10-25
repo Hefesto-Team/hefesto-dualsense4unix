@@ -2155,7 +2155,7 @@ def stop_gamepad_emulation(
     tinha_device = daemon._gamepad_device is not None
     if tinha_device:
         with contextlib.suppress(Exception):
-            daemon._gamepad_device.stop()
+            _parar_o_pad_do_p1(daemon, daemon._gamepad_device)
         daemon._gamepad_device = None
     daemon.config.gamepad_emulation_enabled = False
     if release_grab:
@@ -3221,6 +3221,26 @@ def _decisao_do_arme(daemon: Any) -> str | None:
     from hefesto_dualsense4unix.daemon.subsystems.game_signal import decisao_do_arme
 
     return decisao_do_arme(daemon)
+
+
+
+def _parar_o_pad_do_p1(daemon: DaemonProtocol, device: Any) -> None:
+    """O pad do P1 para sem esperar o broker, e só a parada do daemon espera.
+
+    O-P1-E-O-GADGET-TARDIO-DESCEM-PELA-FILA-DA-DESCIDA-01 (25/10/2026): o `stop`
+    do pad termina a descida do gadget no próprio fio, e quem para o P1 roda no
+    laço do tique (a troca de ordem do co-op, a recriação do `start`, a promoção
+    ao uhid, a IPC que desliga, o mouse que liga); com o broker preso, a entrada
+    de todos parava ~4 s. A descida vai à fila (`uhid_gamepad.parar_fora_do_tique`),
+    que guarda a ordem do MAC e do serial; a parada do daemon espera, porque nada
+    depois dela espera a fila por ele.
+    """
+    if _daemon_parando(daemon):
+        device.stop()
+        return
+    from hefesto_dualsense4unix.integrations.uhid_gamepad import parar_fora_do_tique
+
+    parar_fora_do_tique(device)
 
 
 __all__ = [
