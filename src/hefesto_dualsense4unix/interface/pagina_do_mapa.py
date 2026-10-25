@@ -6153,6 +6153,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
     *EDICOES_DA_CONTA_DO_RADIO,
     *EDICOES_DO_CODEQL,
     *EDICOES_DO_PORTE,
+    *EDICOES_DO_MAPA_SEM_LEITURA,
 )
 
 
@@ -6855,9 +6856,7 @@ EDICOES_DO_MAPA_SEM_LEITURA: tuple[Edicao, ...] = (
 
 #: O que a bancada já diz e a cópia do produto ainda não: o `--publicar mapa-das-portas.html`
 #: (da costura) junta estas ao fim de `EDICOES` e deixa a tupla vazia.
-EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = (
-    *EDICOES_DO_MAPA_SEM_LEITURA,
-)
+EDICOES_ESPERANDO_A_SESSAO_DELA: tuple[Edicao, ...] = ()
 
 
 def pagina(com_as_que_esperam: bool = True) -> str:
