@@ -59,14 +59,17 @@ def _declarados(*nomes: str) -> dict[str, Any]:
         for nome in nomes}}).acionadores)
 
 
-def test_o_declarado_que_recusa_a_leitura_da_warn_com_a_frase_do_dono(tmp_path: Path) -> None:
+def test_o_declarado_que_recusa_a_leitura_da_warn_com_o_que_conferir(tmp_path: Path) -> None:
+    """Dentro do doctor, a frase do dono («rode o doctor») mandaria a pessoa aonde ela já está:
+    a linha diz o aparelho e onde conferir o serviço que não o serviu."""
     _no(tmp_path, "event3", nome="Teclado USB", teclas=TECLAS_DE_TECLADO)
 
     tag, mensagem = system_check.permissao_de_ler_a_entrada(
         raiz=str(tmp_path), abrir=_recusa, declarados=_declarados("Teclado USB"))
 
     assert tag == "[WARN]"
-    assert mensagem == f"«Teclado USB»: {maquina.FRASE_SEM_PERMISSAO_DE_LER}"
+    assert mensagem == f"«Teclado USB»: {system_check.LINHA_ACIONADOR_RECUSADO}"
+    assert "doctor" not in mensagem and "hefesto-hidraw-broker" in mensagem
 
 
 def test_o_declarado_que_abre_da_ok_e_fecha_na_hora(tmp_path: Path) -> None:
@@ -140,20 +143,20 @@ def test_por_omissao_a_pergunta_abre_pelo_dono_da_08(
         raiz=str(tmp_path), declarados=_declarados("Teclado USB"))
 
     assert tag == "[WARN]"
-    assert maquina.FRASE_SEM_PERMISSAO_DE_LER in mensagem
+    assert system_check.LINHA_ACIONADOR_RECUSADO in mensagem
 
 
 def test_o_bloco_do_doctor_imprime_a_resposta_do_dono_e_devolve_a_gravidade(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     monkeypatch.setattr(system_check, "permissao_de_ler_a_entrada",
-                        lambda: ("[WARN]", maquina.FRASE_SEM_PERMISSAO_DE_LER))
+                        lambda: ("[WARN]", system_check.LINHA_ACIONADOR_RECUSADO))
 
     rc = cmd_doctor._print_bloco_entrada()
 
     assert rc == cmd_doctor._gravidade_das_linhas([("[WARN]", "")])
     assert rc > 0
-    assert maquina.FRASE_SEM_PERMISSAO_DE_LER in capsys.readouterr().out.replace("\n", " ")
+    assert system_check.LINHA_ACIONADOR_RECUSADO in capsys.readouterr().out.replace("\n", " ")
 
 
 def test_o_aviso_da_permissao_sobe_o_codigo_de_saida_do_doctor(
@@ -172,7 +175,7 @@ def test_o_aviso_da_permissao_sobe_o_codigo_de_saida_do_doctor(
     monkeypatch.setattr(cmd_doctor, "_print_bloco_perfis", lambda: False)
     monkeypatch.setattr(cmd_doctor, "_daemon_checks", sem_daemon)
     monkeypatch.setattr(system_check, "permissao_de_ler_a_entrada",
-                        lambda: ("[WARN]", maquina.FRASE_SEM_PERMISSAO_DE_LER))
+                        lambda: ("[WARN]", system_check.LINHA_ACIONADOR_RECUSADO))
 
     with pytest.raises(typer.Exit) as saiu:
         cmd_doctor.doctor_cmd()
