@@ -245,14 +245,14 @@
       "data": "2026-10-24",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1201945,
+      "piso": 1204709,
       "por_item": {
-        "docs": 121200,
-        "scripts": 120631,
-        "src": 320679,
-        "tests": 639435
+        "docs": 121260,
+        "scripts": 120643,
+        "src": 322195,
+        "tests": 640611
       },
-      "razao": "tamanho: +45 linhas (1201900 -> 1201945), pagas por Origem: D-2410-O-GESTO-DEVOLVE-A-COR-ANOTADA; registrado no fecho, topo 2a9d47781f22",
+      "razao": "tamanho: +2764 linhas (1201945 -> 1204709), pagas por Origem: D-2210-A-JANELA-QUE-DECLARA-O-AGORA-ABRE-NO-ARRANJO-C, D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo c017ce0bb0e0",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -973,10 +973,16 @@
           "de": 1201900,
           "para": 1201945,
           "razao": "tamanho: +45 linhas (1201900 -> 1201945), pagas por Origem: D-2410-O-GESTO-DEVOLVE-A-COR-ANOTADA; registrado no fecho, topo 2a9d47781f22"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 1201945,
+          "para": 1204709,
+          "razao": "tamanho: +2764 linhas (1201945 -> 1204709), pagas por Origem: D-2210-A-JANELA-QUE-DECLARA-O-AGORA-ABRE-NO-ARRANJO-C, D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo c017ce0bb0e0"
         }
       ],
       "unidade": "linhas",
-      "universo": 3147
+      "universo": 3149
     }
   }
 }
