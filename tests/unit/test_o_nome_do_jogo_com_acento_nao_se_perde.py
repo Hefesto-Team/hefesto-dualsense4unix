@@ -291,7 +291,7 @@ def _pw_dump(monkeypatch: pytest.MonkeyPatch, saida: str) -> None:
         assert list(argv[:1]) == ["pw-dump"], argv
         return SimpleNamespace(returncode=0, stdout=saida, stderr="")
 
-    monkeypatch.setattr(afb.subprocess, "run", run)
+    monkeypatch.setattr("hefesto_dualsense4unix.integrations.alto_falante_bt.subprocess.run", run)
 
 
 @pytest.mark.parametrize("nome", NOMES)
@@ -342,3 +342,97 @@ def test_o_ouvido_do_produto_pede_a_identidade_ao_grafo(monkeypatch: pytest.Monk
     origem = tj.conferir_o_alvo_do_ouvido(tj.ROTULO_DO_OUVIDO)
     assert origem == afb.OrigemDoGravador(171, 719, NOMES[0])
     assert tj.OuvidoDoJogo(lambda: False)._conferir_o_alvo is tj.conferir_o_alvo_do_ouvido
+
+
+# --- A matriz: cabo e rádio, P1 a P4 misturados ------------------------------------------
+# O nó de som do controle é ``hefesto_som_<marca>`` nos dois transportes, e o endpoint da
+# háptica tem o nome da marca; o jogo de nome perdido toca no nó de UM assento, e os outros
+# três não podem ver jogo nem perder a conferência do próprio gravador.
+
+MESA = (
+    ("P1", "APARELHOGHJKMN", "cabo"),
+    ("P2", "APARELHOPQRSTU", "radio"),
+    ("P3", "APARELHOVWXYZG", "cabo"),
+    ("P4", "APARELHOHJKMNP", "radio"),
+)
+ASSENTOS = tuple(range(len(MESA)))
+
+
+def _som(marca: str) -> str:
+    return f"{afb.PREFIXO_SINK_DO_SOM}{marca}"
+
+
+def _sinks_da_mesa() -> str:
+    return json.dumps([
+        {"index": 70 + i, "name": _som(marca), "description": f"Som {assento}",
+         "properties": {"node.name": _som(marca)}}
+        for i, (assento, marca, _t) in enumerate(MESA)
+    ])
+
+
+def _jogo_no_assento(nome: str, assento: int) -> str:
+    fluxos = [_sink_input(i, s, 70 + assento, nome=nome, pid=PID_DO_JOGO)
+              for i, s, _k in FLUXOS_DO_JOGO]
+    return json.dumps(fluxos)
+
+
+@pytest.mark.parametrize("assento", ASSENTOS)
+@pytest.mark.parametrize("nome", NOMES)
+def test_a_mesa_mista_o_estalo_cala_so_no_no_onde_o_jogo_toca(nome: str, assento: int) -> None:
+    nos = ps.nos_do_texto(_sinks_da_mesa())
+    fluxos = ps.fluxos_do_texto(_jogo_no_assento(nome, assento))
+    vistos = [
+        tj.outro_fluxo_no_no(nos, fluxos, _som(marca), tj.rotulo_do_estalo(_som(marca)))
+        for _a, marca, _t in MESA
+    ]
+    assert vistos == [i == assento for i in ASSENTOS], (MESA[assento], vistos)
+
+
+@pytest.mark.parametrize("assento", ASSENTOS)
+@pytest.mark.parametrize("nome", NOMES)
+def test_a_mesa_mista_o_endpoint_ve_o_jogo_so_no_do_assento(nome: str, assento: int) -> None:
+    endpoints = [eh.nome_da_marca(marca) for _a, marca, _t in MESA]
+    curtos = "".join(f"{70 + i}\t{n}\tPipeWire\ts16le 4ch 48000Hz\tRUNNING\n"
+                     for i, n in enumerate(endpoints))
+    texto = _jogo_no_assento(nome, assento)
+
+    def runner(argv: list[str]) -> str | None:
+        return curtos if argv[-1] == "sinks" else texto
+
+    resposta = eh.fluxos_nos_endpoints(endpoints, runner)
+    assert resposta == (frozenset(), frozenset({endpoints[assento]}))
+
+
+@pytest.mark.parametrize("assento", ASSENTOS)
+@pytest.mark.parametrize("nome", NOMES)
+def test_a_mesa_mista_cada_gravador_confere_o_proprio_no_com_o_jogo_no_grafo(
+    nome: str, assento: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A ponte do rádio (P2, P4), o laço do cabo (P1, P3) e o ouvido, num grafo só."""
+    objetos = json.loads(_grafo(nome, origem_do_ouvido=171))
+    rotulos: list[tuple[str, str]] = []
+    for i, (_a, marca, transporte) in enumerate(MESA):
+        no = _som(marca) if transporte == "radio" else eh.nome_da_marca(marca)
+        rotulo = (f"hefesto-ponte-{marca}-som" if transporte == "radio"
+                  else hc.no_de_captura(marca))
+        objetos += [_no(60 + i, 600 + i, no, "Audio/Sink"),
+                    _no(80 + i, 800 + i, rotulo, "Stream/Input/Audio"), _link(60 + i, 80 + i)]
+        rotulos.append((rotulo, no))
+    # o jogo toca no nó do assento: o fluxo dele liga ao sink, e o grafo traz o nome inteiro
+    objetos += [_link(i, 60 + assento) for i, _s, _k in FLUXOS_DO_JOGO]
+    _pw_dump(monkeypatch, json.dumps(objetos))
+    for rotulo, no in rotulos:
+        assert afb.conferir_o_alvo_do_gravador(rotulo) == no, rotulo
+    origem = tj.conferir_o_alvo_do_ouvido(tj.ROTULO_DO_OUVIDO)
+    assert origem == afb.OrigemDoGravador(171, 719, nome)
+    fluxo = tj.FluxoDoJogo(719, 719, "", PID_DO_JOGO, ident=171, nome_perdido=True)
+    assert tj.e_o_fluxo_pedido(origem, fluxo) is True
+
+
+@pytest.mark.parametrize("assento", ASSENTOS)
+def test_a_mesa_mista_o_ouvido_fica_no_jogo_de_qualquer_assento(assento: int) -> None:
+    bancada = _Bancada(NOMES[0])
+    bancada.pactl = _jogo_no_assento(NOMES[0], assento)
+    bancada.voltas(12)
+    assert bancada.abertos == [["pw-record", "--target=719"]]
+    assert bancada.ouvido.contadores["alvo_errado"] == 0 and bancada.derrubados == []
