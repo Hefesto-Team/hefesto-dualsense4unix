@@ -796,13 +796,16 @@ class TestOPsR3DoP2TrocaOModo:
         assert quem_segura_os_atalhos(bancada.daemon) is None
         assert bancada.apertar(P2, "ps", "r3") == []
 
+    @pytest.mark.parametrize("ato", ["ps-r3", "chip"])
     @pytest.mark.parametrize("transporte", list(TRANSPORTES))
     def test_a_leitura_do_executor_no_meio_do_ato_nao_solta_o_posto(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation, transporte: str,
+        ato: str,
     ) -> None:
-        """O laço lê o estado num fio do executor enquanto o gesto recria o vpad do posto.
+        """O laço lê o estado num fio do executor enquanto o ato recria o vpad do posto.
 
-        A mesa do co-op segue de pé no meio do ato (`CoopManager._o_co_op_de_pe`).
+        O ato é o PS + R3 do P2 ou o chip do modo da aba Jogar (o `gamepad.emulation.set`
+        à mão); a mesa do co-op segue de pé no meio dele (`CoopManager._o_co_op_de_pe`).
         """
         bancada = montar_atalhos(monkeypatch, kernel, 3, transporte)
         armar_o_ato_do_daemon(bancada, monkeypatch)
@@ -820,8 +823,14 @@ class TestOPsR3DoP2TrocaOModo:
             "hefesto_dualsense4unix.integrations.virtual_pad.make_virtual_pad",
             _nascer_com_a_leitura_no_meio,
         )
-        _gesto_com_o_laco(bancada, build_next_bridge_callback(bancada.daemon))  # type: ignore[arg-type]
+        if ato == "chip":
+            bancada.daemon.set_gamepad_emulation(
+                True, None, origin="manual", caminho=CAMINHO_XBOX, grava_o_modo="ipc"
+            )
+        else:
+            _gesto_com_o_laco(bancada, build_next_bridge_callback(bancada.daemon))  # type: ignore[arg-type]
         assert no_meio == [None], "premissa: a leitura caiu no meio da recriação do posto"
+        assert hotkey.ponte_atual(bancada.daemon) == hotkey.PONTE_XBOX, "premissa: o modo trocou"
         for _ in range(3):
             bancada.tique(0.0)
         if not bancada.vaga() or bancada.dono_do_vpad_do_p1() is not None:
@@ -829,6 +838,24 @@ class TestOPsR3DoP2TrocaOModo:
                 f"o posto soltou: dono do boneco 1 = {bancada.dono_do_vpad_do_p1()}, "
                 f"o jogo {bancada.o_jogo_ve()}, a tela {bancada.a_tela()}"
             )
+
+    def test_o_vpad_do_p1_que_sai_de_vez_solta_o_posto_no_sync_e_a_flag_na_hora(
+        self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
+    ) -> None:
+        """O contrapeso: fora do ato, a mesa que o laço desmonta solta o posto."""
+        bancada = montar_atalhos(monkeypatch, kernel, 3)
+        armar_o_ato_do_daemon(bancada, monkeypatch)
+        _fora_dentro_do_prazo(bancada, P1)
+        coop = bancada.coop
+        gp.stop_gamepad_emulation(bancada.daemon, persist=False, release_grab=False)
+        assert coop.o_posto_do_p1_espera(P1), "sem o tique, a mesa do co-op segue de pé"
+        bancada.daemon.config.coop_enabled = False
+        assert not coop.o_posto_do_p1_espera(P1), "a flag desligada derruba a mesa na hora"
+        bancada.daemon.config.coop_enabled = True
+        bancada.tique(0.0)
+        assert not coop.o_posto_do_p1_espera(P1), "o sync desmontou a mesa e o posto segue preso"
+        bancada.tique(0.0)
+        assert not bancada.vaga(), "sem vpad do P1, o outro controle é a reserva e assume"
 
 
 class _CoopDaEspera:
