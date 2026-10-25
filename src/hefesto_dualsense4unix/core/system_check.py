@@ -198,8 +198,10 @@ def system_warnings() -> list[str]:
     return warnings
 
 
-#: ``BTN_SOUTH`` (0x130): o botão que todo controle de jogo tem e nenhum teclado tem.
-_BTN_SOUTH = 0x130
+#: Os botões que só controle de jogo tem: de ``BTN_JOYSTICK`` a ``BTN_THUMBR`` (0x120 a 0x13f) e os
+#: ``BTN_TRIGGER_HAPPY`` (0x2c0 a 0x2e7). É o bloco pelo qual o udev marca o joystick, e o
+#: joystick ganha a ACL da sessão (``uaccess``): o manche e o volante sem ``BTN_SOUTH`` também.
+_MASCARA_DE_CONTROLE = sum(1 << b for b in (*range(0x120, 0x140), *range(0x2C0, 0x2E8)))
 #: O DualSense fica fora da medida: a permissão do nó dele é do broker, que a tira para o jogo.
 _VENDOR_DA_SONY = "054c"
 LINHA_LE_A_ENTRADA = "o Hefesto lê o teclado e o pedal desta máquina"
@@ -235,7 +237,7 @@ def permissao_de_ler_a_entrada(
     candidatos = [
         a for a in maquina.aparelhos_de_entrada(base)
         if a.vendor.lower() != _VENDOR_DA_SONY and "hefesto" not in a.nome.lower()
-        and (teclas := _teclas_do_no(base, a.evento)) and not teclas >> _BTN_SOUTH & 1
+        and (teclas := _teclas_do_no(base, a.evento)) and not teclas & _MASCARA_DE_CONTROLE
     ]
     for aparelho in candidatos:
         try:

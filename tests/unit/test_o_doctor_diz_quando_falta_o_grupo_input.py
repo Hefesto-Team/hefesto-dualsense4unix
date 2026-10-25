@@ -17,6 +17,8 @@ from hefesto_dualsense4unix.utils import maquina
 #: O ``capabilities/key`` de um teclado (só teclas baixas) e o de um controle (com BTN_SOUTH).
 TECLAS_DE_TECLADO = "fffffffffffffffe"
 TECLAS_DE_CONTROLE = "7fff000000000000 0 0 0 0"
+#: O de um manche sem ``BTN_SOUTH``: só ``BTN_TRIGGER`` (0x120), que também ganha a ACL da sessão.
+TECLAS_DE_MANCHE = "100000000 0 0 0 0"
 
 
 def _no(raiz: Path, evento: str, *, nome: str, vendor: str = "1a2c", teclas: str = "") -> None:
@@ -96,6 +98,24 @@ def test_controle_dualsense_e_no_do_hefesto_ficam_fora_da_medida(tmp_path: Path)
     assert abertos == []
 
 
+def test_o_manche_sem_btn_south_tambem_fica_fora_da_medida(tmp_path: Path) -> None:
+    """O joystick tem a ACL da sessão: abri-lo daria [ OK ] numa máquina que não lê o teclado."""
+    _no(tmp_path, "event1", nome="Manche USB", vendor="044f", teclas=TECLAS_DE_MANCHE)
+    _no(tmp_path, "event3", nome="Teclado USB", teclas=TECLAS_DE_TECLADO)
+    abertos: list[str] = []
+
+    def abrir(evento: str) -> _Aberto:
+        abertos.append(evento)
+        if evento == "event3":
+            _recusa(evento)
+        return _Aberto()
+
+    tag, _ = system_check.permissao_de_ler_a_entrada(raiz=str(tmp_path), abrir=abrir)
+
+    assert tag == "[WARN]"
+    assert abertos == ["event3"]
+
+
 def test_um_que_abre_vence_o_que_recusa(tmp_path: Path) -> None:
     _no(tmp_path, "event3", nome="Teclado A", teclas=TECLAS_DE_TECLADO)
     _no(tmp_path, "event7", nome="Teclado B", teclas=TECLAS_DE_TECLADO)
@@ -135,7 +155,40 @@ def test_o_bloco_do_doctor_imprime_a_resposta_do_dono_e_devolve_a_gravidade(
     assert maquina.FRASE_SEM_PERMISSAO_DE_LER in capsys.readouterr().out.replace("\n", " ")
 
 
-def test_o_doctor_chama_o_bloco_da_entrada() -> None:
-    import inspect
+def test_o_aviso_da_permissao_sobe_o_codigo_de_saida_do_doctor(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """O ``doctor_cmd`` inteiro, com os outros blocos mudos: o [WARN] da permissão sai como 1."""
+    import typer
 
-    assert "_print_bloco_entrada()" in inspect.getsource(cmd_doctor.doctor_cmd)
+    async def sem_daemon() -> list[tuple[str, str]]:
+        return []
+
+    for bloco in ("_print_storm_block", "_print_bloco_contratos", "_print_bloco_proton_fixado"):
+        monkeypatch.setattr(cmd_doctor, bloco, lambda: 0)
+    monkeypatch.setattr(cmd_doctor, "_find_doctor_sh", lambda: None)
+    monkeypatch.setattr(cmd_doctor, "_avisar_ausente", lambda *a, **k: None)
+    monkeypatch.setattr(cmd_doctor, "_print_bloco_perfis", lambda: False)
+    monkeypatch.setattr(cmd_doctor, "_daemon_checks", sem_daemon)
+    monkeypatch.setattr(system_check, "permissao_de_ler_a_entrada",
+                        lambda: ("[WARN]", maquina.FRASE_SEM_PERMISSAO_DE_LER))
+
+    with pytest.raises(typer.Exit) as saiu:
+        cmd_doctor.doctor_cmd()
+
+    assert saiu.value.exit_code == 1
+    assert "== teclado e pedal" in capsys.readouterr().out
+
+
+def test_a_suite_nunca_abre_o_teclado_desta_maquina() -> None:
+    """A fixture da sessão (``tests/conftest.py``) põe a pergunta num ``/sys`` vazio.
+
+    Sem ela, o ``doctor_cmd`` dos outros testes abria o aparelho de quem roda e o código de saída
+    dependia do grupo ``input`` dessa pessoa.
+    """
+    def abrir(evento: str) -> Any:
+        raise AssertionError(f"a suíte abriu o {evento} desta máquina")
+
+    assert maquina.RAIZ_DAS_ENTRADAS != "/sys/class/input"
+    assert system_check.permissao_de_ler_a_entrada(abrir=abrir) == (
+        "[INFO]", system_check.LINHA_SEM_ENTRADA_PARA_MEDIR)

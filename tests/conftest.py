@@ -3408,3 +3408,33 @@ def _armar_jogo_so_da_sessao() -> None:
 def _o_jogo_de_fora_nao_entra() -> None:
     """JOGO-SO-DA-SESSAO: confere o embrulho antes de cada teste."""
     _armar_jogo_so_da_sessao()
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _nenhum_teclado_vivo_na_pergunta_da_permissao(
+    tmp_path_factory: pytest.TempPathFactory,
+) -> Iterator[None]:
+    """Os nós de evento da suíte saem de um ``/sys/class/input`` VAZIO.
+
+    ``system_check.permissao_de_ler_a_entrada`` (o bloco do doctor) abre um teclado de verdade.
+    Sem esta fixture, todo teste que roda o ``doctor_cmd`` inteiro abria o aparelho desta máquina
+    e o código de saída dependia de quem roda estar no grupo ``input``: medido em 25/10/2026, com
+    a abertura recusando como num runner sem o grupo, ``test_doctor_tudo_ok_sai_0`` e
+    ``test_o_doctor_imprime_o_bloco_do_proton_fixado`` reprovam. Quem precisa de nós forjados
+    passa a própria ``raiz``.
+    """
+    vazio = tmp_path_factory.mktemp("input-sem-no")
+    try:
+        from hefesto_dualsense4unix.utils import maquina
+    except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
+        if not _o_produto_nao_roda_neste_ambiente(erro):
+            raise
+        yield
+        return
+
+    antes = maquina.RAIZ_DAS_ENTRADAS
+    maquina.RAIZ_DAS_ENTRADAS = str(vazio)
+    try:
+        yield
+    finally:
+        maquina.RAIZ_DAS_ENTRADAS = antes
