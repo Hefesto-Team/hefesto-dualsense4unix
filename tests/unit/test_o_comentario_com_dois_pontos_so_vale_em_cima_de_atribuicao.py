@@ -93,6 +93,7 @@ def test_o_piso_por_arquivo_vale_tambem_para_o_dois_pontos(
     """O `#:` solto que nasce num arquivo do ramo reprova pelo nome, como o cortado."""
     monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/dev/null")
     monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    monkeypatch.setattr(cortado, "COMMIT_DO_CORTE", "corte")  # a régua lê o histórico do corte
 
     def git(*args: str) -> None:
         subprocess.run(
@@ -104,8 +105,10 @@ def test_o_piso_por_arquivo_vale_tambem_para_o_dois_pontos(
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "x.py").write_text("#: colado.\nNOME = 1\n", encoding="utf-8")
     git("init", "-q", "-b", "dev")
+    git("commit", "-q", "--allow-empty", "-m", "pai")
     git("add", ".")
     git("commit", "-q", "-m", "base")
+    git("tag", "corte")
     git("checkout", "-q", "-b", "ramo")
     (tmp_path / "src" / "x.py").write_text(
         "#: colado.\nNOME = 1\n\n#: solto acima de def.\ndef f() -> None:\n    pass\n",
@@ -119,4 +122,4 @@ def test_o_piso_por_arquivo_vale_tambem_para_o_dois_pontos(
 
 def test_o_de_marca_o_dois_pontos_solto(tmp_path: Path) -> None:
     (tmp_path / "x.py").write_text("#: solto.\n\nNOME = 1\n", encoding="utf-8")
-    assert cortado.candidatos_de(["x.py"], tmp_path) == ["[#:] x.py:1 #: solto."]
+    assert cortado.candidatos_de(["x.py"], tmp_path, deixadas={}) == ["[#:] x.py:1 #: solto."]

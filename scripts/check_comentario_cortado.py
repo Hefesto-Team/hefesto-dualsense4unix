@@ -10,6 +10,12 @@ vem depois, e a casa não tinha régua para isso.
 A RÉGUA CONTA o bloco de comentário que acaba em conectivo (a, o, de, que, e, para, com, em…)
 ou numa citação `arquivo:linha` sem pontuação, seguido de linha que não é comentário.
 
+E O CORTE PELO HISTÓRICO (A-REGUA-DO-COMENTARIO-CORTADO-VE-O-CORTE-PELO-HISTORICO-01): o bloco
+que o `8002c142c` deixou pela metade conta seja qual for a última palavra, se o texto vivo não
+termina em ponto, `!`, `?` ou reticência. O conectivo sozinho via 477 de uns 950 fragmentos vivos:
+«…que o broker», seguido de código, passava. O conectivo continua, para o corte que nasce depois.
+Sem o `8002c142c` e o pai alcançáveis (clone raso), a régua FALHA dizendo «sem o histórico».
+
 A SEGUNDA PERGUNTA (O-COMENTARIO-COM-DOIS-PONTOS-SO-VALE-EM-CIMA-DE-ATRIBUICAO-01): o `#:` é o
 comentário de documentação de atributo e só significa algo colado numa atribuição. O bloco com
 `#:` cuja linha seguinte não começa uma atribuição (`NOME = 1`, `FORTE, LEVE = 1, 0`,
@@ -47,7 +53,7 @@ import re
 import subprocess
 import sys
 import tokenize
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
@@ -69,6 +75,18 @@ CONECTIVOS = frozenset({
 
 _CITACAO_NO_FIM = re.compile(r"`[\w./-]+\.(?:py|sh|md|csv|html|js|json|yml):\d+`$")
 _ULTIMA_PALAVRA = re.compile(r"([^\W\d_]+)$")
+_LETRA = re.compile(r"[^\W\d_]")
+_COMENTARIO_CRU = re.compile(r"^\s*#")
+_FIM_DE_FRASE = ".!?…"
+_FECHOS = ")]}»\"'*_` "
+_MARCA_NO_FIM = re.compile(r"\s{2,}#.*$")  # a marca depois de dois espaços (a do acento, a do E501)
+
+#: `{arquivo: textos}`: a última linha viva de cada bloco que o corte deixou pela metade
+Deixadas = Mapping[str, frozenset[str]]
+
+
+class SemHistorico(RuntimeError):
+    """O `COMMIT_DO_CORTE` ou o pai dele não é alcançável deste repositório."""
 
 
 def termina_no_meio(ultima_linha: str) -> bool:
@@ -80,6 +98,18 @@ def termina_no_meio(ultima_linha: str) -> bool:
         return True
     achou = _ULTIMA_PALAVRA.search(texto)
     return achou is not None and achou.group(1).lower() in CONECTIVOS
+
+
+def termina_sem_ponto(linha: str) -> bool:
+    """A linha de comentário tem texto e não acaba em ponto, `!`, `?` ou reticência?
+
+    O fecho (parêntese, aspas, crase) e a marca no fim não contam; régua de traços e o `#!`
+    não são frase.
+    """
+    texto = _MARCA_NO_FIM.sub("", linha.strip().lstrip("#").lstrip(":").strip()).rstrip(_FECHOS)
+    if not _LETRA.search(texto) or texto.startswith("!"):
+        return False
+    return texto[-1] not in _FIM_DE_FRASE
 
 
 @functools.lru_cache(maxsize=4)
@@ -98,11 +128,12 @@ def _comentarios_soltos(texto: str) -> dict[int, str]:
     return soltos
 
 
-def cortados_do_texto(texto: str) -> list[tuple[int, str]]:
+def cortados_do_texto(texto: str, deixadas: frozenset[str] = frozenset()) -> list[tuple[int, str]]:
     """`(linha, texto)` do fim de cada bloco de comentário cortado, em ordem.
 
-    Bloco: linhas seguidas que só têm comentário. Cortado: a última acaba no meio e a
-    linha seguinte existe e não é comentário (fim de arquivo não conta).
+    Bloco: linhas seguidas que só têm comentário. Cortado: a linha seguinte existe e não é
+    comentário (fim de arquivo não conta), e a última acaba no meio, ou está em `deixadas`
+    (o que o corte deixou deste arquivo) sem ponto no fim.
     """
     soltos = _comentarios_soltos(texto)
     linhas = texto.splitlines()
@@ -110,9 +141,83 @@ def cortados_do_texto(texto: str) -> list[tuple[int, str]]:
     for n in sorted(soltos):
         if n + 1 in soltos or n >= len(linhas):
             continue
-        if termina_no_meio(soltos[n]):
-            achados.append((n, soltos[n]))
+        ultima = soltos[n]
+        if termina_no_meio(ultima) or (ultima.strip() in deixadas and termina_sem_ponto(ultima)):
+            achados.append((n, ultima))
     return achados
+
+
+def deixadas_do_diff(diff: str) -> dict[str, set[str]]:
+    """`{arquivo: textos}` da última linha de cada bloco que o diff cortou e não apagou inteiro.
+
+    O diff vem com o arquivo inteiro de contexto. Bloco: as linhas de comentário que ficaram,
+    seguidas no arquivo novo (a linha de código tirada entre elas não separa). Cortado: uma linha
+    de comentário saiu antes, no meio ou logo depois dele.
+    """
+    deixadas: dict[str, set[str]] = {}
+    arquivo: str | None = None
+    no_trecho = False
+    bloco: list[str] = []
+    saiu = False
+
+    def fecha() -> None:
+        nonlocal bloco, saiu
+        if bloco and saiu and arquivo is not None:
+            deixadas.setdefault(arquivo, set()).add(bloco[-1].strip())
+        bloco, saiu = [], False
+
+    for linha in diff.splitlines():
+        if linha.startswith("diff --git "):
+            fecha()
+            arquivo, no_trecho = None, False
+        elif not no_trecho:
+            if linha.startswith("+++ "):
+                arquivo = linha[6:] if linha.startswith("+++ b/") else None
+            no_trecho = linha.startswith("@@")
+        elif linha.startswith("@@"):
+            fecha()
+        elif linha[:1] in (" ", "+"):
+            if not _COMENTARIO_CRU.match(linha[1:]):
+                fecha()
+                continue
+            bloco.append(linha[1:])
+        elif linha[:1] == "-" and _COMENTARIO_CRU.match(linha[1:]):
+            saiu = True
+    fecha()
+    return deixadas
+
+
+def linhas_que_o_corte_deixou(raiz: Path = RAIZ) -> dict[str, frozenset[str]] | None:
+    """O `deixadas_do_diff` do `COMMIT_DO_CORTE`, pelo nome de hoje (`None`: sem o histórico)."""
+    for ref in (COMMIT_DO_CORTE, f"{COMMIT_DO_CORTE}~1"):
+        if _git(raiz, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}").returncode != 0:
+            return None
+    feito = _git(raiz, "-c", "core.quotepath=off", "show", "--format=", "--no-color",
+                 "--no-ext-diff", "-U999999", COMMIT_DO_CORTE, "--", *PASTAS)
+    if feito.returncode != 0:
+        return None
+    nomes = _git(raiz, "-c", "core.quotepath=off", "diff", "-M", "--name-status", "-z",
+                 COMMIT_DO_CORTE, "--", *PASTAS).stdout.split("\0")
+    hoje: dict[str, str] = {}
+    i = 0
+    while i < len(nomes) and nomes[i]:
+        if nomes[i][0] in "RC":
+            hoje[nomes[i + 1]] = nomes[i + 2]
+            i += 3
+        else:
+            i += 2
+    return {hoje.get(velho, velho): frozenset(textos)
+            for velho, textos in deixadas_do_diff(feito.stdout).items()}
+
+
+def deixadas_ou_falha(raiz: Path = RAIZ) -> dict[str, frozenset[str]]:
+    deixadas = linhas_que_o_corte_deixou(raiz)
+    if deixadas is None:
+        raise SemHistorico(
+            f"sem o histórico: `{COMMIT_DO_CORTE}` ou o pai dele não é alcançável deste repositório; "
+            "sem ele a régua não vê o bloco que o corte deixou pela metade (no CI, `fetch-depth: 0`)."
+        )
+    return deixadas
 
 
 _ATRIBUICAO_CRUA = re.compile(r"^\s*[A-Za-z_][\w.]*(?:\s*,\s*[A-Za-z_][\w.]*)*\s*(?::[^=]+)?=(?!=)")
@@ -164,28 +269,40 @@ def arquivos_versionados(raiz: Path = RAIZ) -> list[str]:
     return sorted(a for a in feito.stdout.split("\0") if a.endswith(".py"))
 
 
-def varrer(raiz: Path = RAIZ, pergunta: Callable[[str], list[tuple[int, str]]] = cortados_do_texto,
+PERGUNTAS: dict[str, Callable[[str], list[tuple[int, str]]]] = {
+    "cortado": cortados_do_texto,
+    "#: fora de atribuição": dois_pontos_soltos_do_texto,
+}
+
+
+def perguntar(nome: str, texto: str, arquivo: str, deixadas: Deixadas) -> list[tuple[int, str]]:
+    """A pergunta `nome` no `texto` de `arquivo`; a do cortado lê também o que o corte deixou."""
+    if nome == "cortado":
+        return cortados_do_texto(texto, deixadas.get(arquivo, frozenset()))
+    return PERGUNTAS[nome](texto)
+
+
+def varrer(raiz: Path = RAIZ, pergunta: str = "cortado", deixadas: Deixadas | None = None,
            ) -> list[tuple[str, int, str]]:
-    """`(arquivo, linha, texto)` de cada achado da `pergunta` nos arquivos versionados."""
+    """`(arquivo, linha, texto)` de cada achado da `pergunta` nos arquivos versionados.
+
+    O cortado sem `deixadas` as lê do histórico, e sem ele levanta `SemHistorico`.
+    """
+    if deixadas is None:
+        deixadas = deixadas_ou_falha(raiz) if pergunta == "cortado" else {}
     achados: list[tuple[str, int, str]] = []
     for arquivo in arquivos_versionados(raiz):
         caminho = raiz / arquivo
         if not caminho.is_file():
             continue
         texto = caminho.read_text(encoding="utf-8", errors="replace")
-        achados += [(arquivo, n, t) for n, t in pergunta(texto)]
+        achados += [(arquivo, n, t) for n, t in perguntar(pergunta, texto, arquivo, deixadas)]
     return achados
 
 
 def varrer_dois_pontos(raiz: Path = RAIZ) -> list[tuple[str, int, str]]:
     """`(arquivo, linha, texto)` de todo bloco `#:` que não está colado numa atribuição."""
-    return varrer(raiz, dois_pontos_soltos_do_texto)
-
-
-PERGUNTAS: dict[str, Callable[[str], list[tuple[int, str]]]] = {
-    "cortado": cortados_do_texto,
-    "#: fora de atribuição": dois_pontos_soltos_do_texto,
-}
+    return varrer(raiz, "#: fora de atribuição")
 
 
 def _git(raiz: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -221,8 +338,11 @@ def arquivos_mudados(raiz: Path, base: str) -> dict[str, str | None]:
     return mudados
 
 
-def subidas(raiz: Path, base: str) -> list[tuple[str, str, int, int]]:
-    """`(arquivo, pergunta, na base, agora)` de cada arquivo em que uma pergunta SOBE."""
+def subidas(raiz: Path, base: str, deixadas: Deixadas) -> list[tuple[str, str, int, int]]:
+    """`(arquivo, pergunta, na base, agora)` de cada arquivo em que uma pergunta SOBE.
+
+    A base e o disco leem o mesmo `deixadas`: o arquivo que ninguém tocou não entra.
+    """
     achados: list[tuple[str, str, int, int]] = []
     for arquivo, antigo in sorted(arquivos_mudados(raiz, base).items()):
         caminho = raiz / arquivo
@@ -233,20 +353,25 @@ def subidas(raiz: Path, base: str) -> list[tuple[str, str, int, int]]:
         if antigo is not None:
             feito = _git(raiz, "show", f"{base}:{antigo}")
             antes = feito.stdout if feito.returncode == 0 else ""
-        for nome, pergunta in PERGUNTAS.items():
-            n_antes, n_agora = len(pergunta(antes)), len(pergunta(agora))
+        for nome in PERGUNTAS:
+            n_antes = len(perguntar(nome, antes, arquivo, deixadas))
+            n_agora = len(perguntar(nome, agora, arquivo, deixadas))
             if n_agora > n_antes:
                 achados.append((arquivo, nome, n_antes, n_agora))
     return achados
 
 
 def verificar(raiz: Path = RAIZ) -> tuple[int, list[str]]:
-    """`(rc, linhas)`: rc 1 se algum arquivo mudado subiu, ou se não há base."""
+    """`(rc, linhas)`: rc 1 se algum arquivo mudado subiu, ou se não há base nem histórico."""
     base = base_de_comparacao(raiz)
     if base is None:
         return 1, [f"FALHA: sem base: nem {' nem '.join(REFS_DA_BASE)} alcançável deste HEAD; "
                    "sem base a régua não mede (no CI, `fetch-depth: 0`)."]
-    subiu = subidas(raiz, base)
+    try:
+        deixadas = deixadas_ou_falha(raiz)
+    except SemHistorico as erro:
+        return 1, [f"FALHA: {erro}"]
+    subiu = subidas(raiz, base, deixadas)
     linhas = [f"{len(arquivos_mudados(raiz, base))} arquivo(s) .py mudado(s) desde {base[:9]}; "
               f"{len(subiu)} com mais candidato(s) que na base."]
     for arquivo, nome, antes, agora in subiu:
@@ -255,15 +380,19 @@ def verificar(raiz: Path = RAIZ) -> tuple[int, list[str]]:
     return (1 if subiu else 0), linhas
 
 
-def candidatos_de(arquivos: list[str], raiz: Path = RAIZ) -> list[str]:
-    """Os candidatos das duas perguntas nos arquivos dados, um por linha."""
+def candidatos_de(arquivos: list[str], raiz: Path = RAIZ, deixadas: Deixadas | None = None,
+                  ) -> list[str]:
+    """Os candidatos das duas perguntas nos arquivos dados, um por linha (sem histórico, levanta)."""
+    if deixadas is None:
+        deixadas = deixadas_ou_falha(raiz)
     linhas: list[str] = []
     for arquivo in arquivos:
         caminho = raiz / arquivo
         if not caminho.is_file() or not arquivo.endswith(".py"):
             continue
         texto = caminho.read_text(encoding="utf-8", errors="replace")
-        linhas += [f"{arquivo}:{n} {t.strip()}" for n, t in cortados_do_texto(texto)]
+        linhas += [f"{arquivo}:{n} {t.strip()}"
+                   for n, t in perguntar("cortado", texto, arquivo, deixadas)]
         linhas += [f"[#:] {arquivo}:{n} {t.strip()}" for n, t in dois_pontos_soltos_do_texto(texto)]
     return linhas
 
@@ -296,11 +425,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--de", nargs="+", metavar="ARQUIVO", help="os candidatos destes arquivos")
     args = ap.parse_args(argv)
 
+    try:
+        deixadas = deixadas_ou_falha() if args.de or args.lista or args.original else {}
+    except SemHistorico as erro:
+        print(f"FALHA: {erro}", file=sys.stderr)
+        return 1
     if args.de:
-        print("\n".join(candidatos_de(args.de)) or "nenhum candidato.")
+        print("\n".join(candidatos_de(args.de, deixadas=deixadas)) or "nenhum candidato.")
         return 0
     if args.lista or args.original:
-        achados, soltos = varrer(), varrer_dois_pontos()
+        achados, soltos = varrer(deixadas=deixadas), varrer_dois_pontos()
         for arquivo, n, texto in achados:
             print(f"{arquivo}:{n} {texto.strip()}")
             if args.original:
