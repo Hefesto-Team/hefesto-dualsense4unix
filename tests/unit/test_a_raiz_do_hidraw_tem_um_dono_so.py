@@ -1,12 +1,10 @@
 """A raiz do hidraw (`/sys/class/hidraw`) tem um dono, o `integrations/usb_pai`.
 
 Em 25/10/2026, oito módulos cravavam a mesma constante. A sprint A-RAIZ-DO-HIDRAW-TEM-UM-DONO-SO-01
-deu o dono ao `usb_pai`, e o `conexao_zumbi` e o `physical_report_reader` passam a importá-la
-dele. A régua lê a árvore de sintaxe do `src/` e reprova a constante cravada num módulo fora da
-lista, e a lista só encolhe: quem cura um dos outros tira o nome dela. O mesmo vale para o texto
-com a raiz em qualquer forma (o padrão de um parâmetro, um pedaço de f-string): a catraca
-`TEXTOS_AINDA_CRAVADOS` guarda quantos cada módulo tinha, e um texto novo, num módulo da lista ou
-fora dela, reprova.
+deu o dono ao `usb_pai`, e a A-RAIZ-DO-HIDRAW-SAI-DOS-MODULOS-QUE-AINDA-A-CRAVAM-01 tirou a raiz
+dos outros quinze. A régua lê a árvore de sintaxe do `src/` e reprova a raiz cravada fora do dono
+em qualquer forma: a constante, o padrão de um parâmetro, o pedaço de uma f-string. Só o broker
+fica, isento com o porquê medido.
 """
 
 from __future__ import annotations
@@ -20,37 +18,17 @@ SRC = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
 #: o dono.
 DONO = "integrations/usb_pai.py"
 
-#: os outros módulos com a constante cravada, medidos em 25/10/2026 e fora da posse da sprint que
-#: deu o dono ao `usb_pai`. A lista só encolhe.
-AINDA_CRAVADA = {
-    "core/backend_pydualsense.py",
-    "integrations/dualsense_bt_audio.py",
-    "integrations/quem_o_jogo_le.py",
-    "integrations/radio_da_mesa.py",
-    "integrations/uhid_gamepad.py",
-}
+#: os outros módulos com a constante cravada. A lista só encolhe, e está vazia desde 25/10/2026.
+AINDA_CRAVADA: set[str] = set()
 
-#: quantos textos com a raiz (fora das docstrings) cada módulo ainda tinha em 25/10/2026, em
-#: qualquer forma: a constante, o padrão de um parâmetro, o pedaço de uma f-string. A catraca só
-#: encolhe; um módulo fora dela tem zero.
-TEXTOS_AINDA_CRAVADOS = {
-    "broker/hidraw_broker.py": 6,
-    "core/backend_pydualsense.py": 1,
-    "core/external_leds.py": 2,
-    "daemon/subsystems/bt_mic.py": 1,
-    "daemon/subsystems/governador_do_radio.py": 1,
-    "integrations/apelido_do_dongle.py": 4,
-    "integrations/contratos_de_fora.py": 2,
-    "integrations/cor_do_plastico.py": 3,
-    "integrations/dualsense_bt_audio.py": 1,
-    "integrations/hidraw_broker_client.py": 1,
-    "integrations/pad_usb.py": 3,
-    "integrations/plano_de_radio.py": 1,
-    "integrations/quem_o_jogo_le.py": 1,
-    "integrations/radio_da_mesa.py": 2,
-    "integrations/sinal_da_barra.py": 1,
-    "integrations/uhid_gamepad.py": 2,
-}
+#: o broker é 100% stdlib e autocontido de propósito (a docstring dele): o install copia só ele, e
+#: ele roda no python3 do sistema, sem o pacote, logo não pode importar o dono. O porquê se mede
+#: em `test_o_broker_isento_nao_importa_o_pacote`.
+ISENTO = "broker/hidraw_broker.py"
+
+#: quantos textos com a raiz (fora das docstrings) cada módulo ainda tem, em qualquer forma. Só o
+#: isento fica, e o número dele não cresce; um módulo fora dela tem zero.
+TEXTOS_AINDA_CRAVADOS = {ISENTO: 6}
 
 #: os que importam do dono; neles a raiz não aparece em texto nenhum fora das docstrings.
 IMPORTAM_DO_DONO = ("integrations/conexao_zumbi.py", "core/physical_report_reader.py")
@@ -141,3 +119,20 @@ def test_o_texto_com_a_raiz_nao_cresce_em_modulo_nenhum() -> None:
     encolheu = {nome: contagem.get(nome, 0) for nome, n in TEXTOS_AINDA_CRAVADOS.items()
                 if contagem.get(nome, 0) < n}
     assert not encolheu, f"{encolheu} já crava menos: baixe a `TEXTOS_AINDA_CRAVADOS`"
+
+
+def test_so_o_isento_guarda_texto_com_a_raiz() -> None:
+    assert set(TEXTOS_AINDA_CRAVADOS) == {ISENTO}, (
+        f"a catraca guarda {sorted(TEXTOS_AINDA_CRAVADOS)}: só o broker é isento")
+
+
+def test_o_broker_isento_nao_importa_o_pacote() -> None:
+    """A isenção vale enquanto o broker não importa nada do pacote; se importar, ele lê o dono."""
+    pacote = "hefesto_dualsense4unix"
+    do_pacote = [
+        no.lineno for no in ast.walk(ast.parse(_modulos()[ISENTO]))
+        if (isinstance(no, ast.ImportFrom) and (no.module or "").startswith(pacote))
+        or (isinstance(no, ast.Import) and any(a.name.startswith(pacote) for a in no.names))]
+    assert do_pacote == [], (
+        f"o broker importa o pacote (linhas {do_pacote}): tire a isenção e leia `RAIZ_HIDRAW` do "
+        "`usb_pai`")

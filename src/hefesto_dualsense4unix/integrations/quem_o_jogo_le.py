@@ -110,6 +110,8 @@ from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Any
 
+from hefesto_dualsense4unix.integrations.usb_pai import RAIZ_HIDRAW
+
 __all__ = [
     "ENV_DO_JOGO",
     "RAIZ_CLASS_HIDRAW",
@@ -123,11 +125,9 @@ __all__ = [
 ]
 
 ENV_DO_JOGO = "STEAM_COMPAT_DATA_PATH"
-
 _EVENTO = re.compile(r"/(event\d+)$")
 _HIDRAW = re.compile(r"/(hidraw\d+)$")
-
-RAIZ_CLASS_HIDRAW = "/sys/class/hidraw"
+RAIZ_CLASS_HIDRAW = RAIZ_HIDRAW
 
 
 @dataclass(frozen=True)

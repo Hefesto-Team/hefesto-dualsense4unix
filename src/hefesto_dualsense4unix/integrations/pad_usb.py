@@ -58,10 +58,10 @@ import threading
 import time
 from collections.abc import Callable, Iterable
 
+from hefesto_dualsense4unix.integrations.usb_pai import RAIZ_HIDRAW
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 VENDOR_SONY = 0x054C
 
 #: O ``HID_PHYS`` que o uhid do pad declara (``uhid_gamepad.VPAD_HID_PHYS``).
@@ -202,7 +202,7 @@ def e_pad_nosso(
 def e_hidraw_de_pad_nosso(
     no: str,
     *,
-    raiz_class_hidraw: str = "/sys/class/hidraw",
+    raiz_class_hidraw: str = RAIZ_HIDRAW,
     ler: Callable[[str], str] = _ler_atributo,
     real: Callable[[str], str] = os.path.realpath,
 ) -> bool:
@@ -228,7 +228,7 @@ def e_hidraw_de_pad_nosso(
 def hidraw_do_gadget(
     serial: str,
     *,
-    raiz_class_hidraw: str = "/sys/class/hidraw",
+    raiz_class_hidraw: str = RAIZ_HIDRAW,
     ler: Callable[[str], str] = _ler_atributo,
     real: Callable[[str], str] = os.path.realpath,
 ) -> tuple[str, str] | None:
@@ -269,7 +269,7 @@ def hidraw_do_gadget(
 def aparelho_presente(
     identidade: str,
     *,
-    raiz_class_hidraw: str = "/sys/class/hidraw",
+    raiz_class_hidraw: str = RAIZ_HIDRAW,
     raiz_class_input: str = "/sys/class/input",
     ler: Callable[[str], str] = _ler_atributo,
     real: Callable[[str], str] = os.path.realpath,

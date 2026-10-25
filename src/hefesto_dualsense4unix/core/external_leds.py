@@ -30,10 +30,10 @@ from __future__ import annotations
 import glob
 import os
 
+from hefesto_dualsense4unix.integrations.usb_pai import RAIZ_HIDRAW
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 LEDS_ROOT: str = os.environ.get(
     "HEFESTO_DUALSENSE4UNIX_LEDS_ROOT", "/sys/class/leds"
 )
@@ -65,7 +65,7 @@ def hid_instance_for_hidraw(hidraw_dev: str | None) -> str | None:
     if not name.startswith("hidraw"):
         return None
     try:
-        target = os.path.realpath(f"/sys/class/hidraw/{name}/device")
+        target = os.path.realpath(f"{RAIZ_HIDRAW}/{name}/device")
     except OSError:
         return None
     inst = os.path.basename(target)
@@ -280,7 +280,7 @@ def _hid_device_dir(hidraw_dev: str | None) -> str | None:
     if not name.startswith("hidraw"):
         return None
     try:
-        return os.path.realpath(f"/sys/class/hidraw/{name}/device")
+        return os.path.realpath(f"{RAIZ_HIDRAW}/{name}/device")
     except OSError:
         return None
 

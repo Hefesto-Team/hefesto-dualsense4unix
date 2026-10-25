@@ -121,11 +121,11 @@ from hefesto_dualsense4unix.integrations.ar_do_adaptador import (
     NIVEL_LISO,
     NIVEL_MEDIO,
 )
+from hefesto_dualsense4unix.integrations.usb_pai import RAIZ_HIDRAW
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.texto_do_sysfs import ler_texto
 
 _log = get_logger(__name__)
-
 #: Fatias de tempo por segundo do Bluetooth Classic — 625 µs cada. É
 #: ESPECIFICAÇÃO, não medição desta máquina; ver o cabeçalho.
 SLOTS_POR_SEGUNDO = 1600
@@ -193,7 +193,7 @@ _MAC_RE = re.compile(r"^[0-9a-f]{2}(:[0-9a-f]{2}){5}$")
 _MARCA_UNIQ = "HID_UNIQ="
 _MARCA_PHYS = "HID_PHYS="
 
-RAIZ_DO_HIDRAW = "/sys/class/hidraw"
+RAIZ_DO_HIDRAW = RAIZ_HIDRAW
 
 _MAPA_DO_HIDRAW: tuple[str, tuple[int, ...], dict[str, str]] | None = None
 _MAPA_TRAVA = threading.Lock()
@@ -876,7 +876,7 @@ def orcamento_por_adaptador(
     enlaces: Mapping[str, Mapping[str, Any]] | None = None,
     sinais: Mapping[str, int | None] | None = None,
     n_max: int = N_MAX_PONTES,
-    raiz: str = "/sys/class/hidraw",
+    raiz: str = RAIZ_DO_HIDRAW,
     listar: Callable[[str], list[str]] = os.listdir,
     ler: Callable[[str], str] | None = None,
 ) -> dict[str, OrcamentoDoAdaptador]:

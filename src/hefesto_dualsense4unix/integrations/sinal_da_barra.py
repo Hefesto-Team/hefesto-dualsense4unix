@@ -121,9 +121,9 @@ from dataclasses import dataclass, replace
 
 from hefesto_dualsense4unix.core import banco_do_udev
 from hefesto_dualsense4unix.core import formas_do_endereco as _formas
+from hefesto_dualsense4unix.integrations.usb_pai import RAIZ_HIDRAW
 
 RAIZ_UHID = "/sys/devices/virtual/misc/uhid"
-
 #: O DualSense, e só ele: ``0CE6`` e o Edge ``0DF2``, por rádio e por cabo. O
 #: ``0DF2`` é também o PID do NOSSO pad, e quem o separa do Edge de plástico é o
 #: ``pad_usb.e_pad_nosso`` (07/10/2026), não o PID: o pad em USB e o Edge pelo
@@ -378,7 +378,7 @@ def nascimentos_do_udev(
             continue
         perguntou += 1
         no = os.path.basename(viva.hidraw)
-        usec = pergunta(f"/sys/class/hidraw/{no}", "USEC_INITIALIZED") or ""
+        usec = pergunta(f"{RAIZ_HIDRAW}/{no}", "USEC_INITIALIZED") or ""
         # O udev escreve o instante em dígitos ASCII; o resto é «não respondeu».
         if not (usec.isascii() and usec.isdigit()):
             continue

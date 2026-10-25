@@ -132,7 +132,7 @@ from hefesto_dualsense4unix.core.linhagem_nintendo import (
     OUIS_LINHAGEM_COM_DOIS_PONTOS,
     _e_da_linhagem_nintendo,
 )
-from hefesto_dualsense4unix.integrations import bluez_dbus
+from hefesto_dualsense4unix.integrations import bluez_dbus, usb_pai
 from hefesto_dualsense4unix.utils.texto_do_sysfs import ler_texto
 
 #: de ``scripts/bt_active_mode.sh:142`` — os dois escritores têm de produzir a
@@ -234,7 +234,7 @@ def _caber(texto: str, *, intocavel: int = 0) -> str:
 
 def adaptadores_com_nintendo(
     *,
-    raiz: str = "/sys/class/hidraw",
+    raiz: str = usb_pai.RAIZ_HIDRAW,
     listar: Callable[[str], list[str]] = os.listdir,
     ler: Callable[[str], str] | None = None,
 ) -> frozenset[str]:
@@ -265,7 +265,7 @@ def adaptadores_com_nintendo(
 def ler_os_dongles(
     *,
     executar: Callable[[Sequence[str]], str | None] | None = None,
-    raiz_hidraw: str = "/sys/class/hidraw",
+    raiz_hidraw: str = usb_pai.RAIZ_HIDRAW,
     listar: Callable[[str], list[str]] = os.listdir,
     ler: Callable[[str], str] | None = None,
 ) -> tuple[Dongle, ...]:
@@ -307,7 +307,7 @@ def renomear_o_dongle(
     *,
     dongles: Iterable[Dongle] | None = None,
     executar: Callable[[Sequence[str]], str | None] | None = None,
-    raiz_hidraw: str = "/sys/class/hidraw",
+    raiz_hidraw: str = usb_pai.RAIZ_HIDRAW,
     listar: Callable[[str], list[str]] = os.listdir,
     ler: Callable[[str], str] | None = None,
 ) -> Renomeacao:
@@ -370,7 +370,7 @@ def renomear_o_dongle(
 def costurar_a_mesa(
     *,
     executar: Callable[[Sequence[str]], str | None] | None = None,
-    raiz_hidraw: str = "/sys/class/hidraw",
+    raiz_hidraw: str = usb_pai.RAIZ_HIDRAW,
     listar: Callable[[str], list[str]] = os.listdir,
     ler: Callable[[str], str] | None = None,
 ) -> tuple[Renomeacao, ...]:

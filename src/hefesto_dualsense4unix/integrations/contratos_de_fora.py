@@ -25,7 +25,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from hefesto_dualsense4unix.integrations import bluez_dbus
+from hefesto_dualsense4unix.integrations import bluez_dbus, usb_pai
 
 ESPERA_S = 3.0
 
@@ -171,7 +171,7 @@ def _sonda_nos_do_kernel(amb: Ambiente) -> Resultado:
         for nome, caminho in (
             ("/dev/uinput", "/dev/uinput"),
             ("/dev/uhid", "/dev/uhid"),
-            ("/sys/class/hidraw", "/sys/class/hidraw"),
+            (usb_pai.RAIZ_HIDRAW, usb_pai.RAIZ_HIDRAW),
             ("/dev/input", "/dev/input"),
         )
         if not amb.caminho(caminho).exists()

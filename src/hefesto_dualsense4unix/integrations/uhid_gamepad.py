@@ -67,7 +67,7 @@ from hefesto_dualsense4unix.core import ds_output_report as rep
 from hefesto_dualsense4unix.core import system_check
 from hefesto_dualsense4unix.core.numeros_da_sony import roupa_normalizada
 from hefesto_dualsense4unix.core.rumble import pedido_mais_forte
-from hefesto_dualsense4unix.integrations import pad_usb
+from hefesto_dualsense4unix.integrations import pad_usb, usb_pai
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalacao
@@ -434,7 +434,7 @@ def _hidiocgfeature(fd: int, report_id: int, size: int) -> bytes:
 
 
 #: A classe ``hidraw`` do sysfs, de onde o `_is_dualsense` lê o par e a posse.
-RAIZ_DOS_HIDRAW = "/sys/class/hidraw"
+RAIZ_DOS_HIDRAW = usb_pai.RAIZ_HIDRAW
 
 
 def _is_dualsense(node: str) -> bool:
@@ -481,7 +481,7 @@ def capture_dualsense_blueprint(hidraw_path: str) -> dict[str, Any] | None:
         logger.warning("uhid_nao_e_dualsense", path=hidraw_path)
         return None
 
-    descriptor_path = f"/sys/class/hidraw/{node}/device/report_descriptor"
+    descriptor_path = f"{RAIZ_DOS_HIDRAW}/{node}/device/report_descriptor"
     try:
         with open(descriptor_path, "rb") as handle:
             descriptor = handle.read()

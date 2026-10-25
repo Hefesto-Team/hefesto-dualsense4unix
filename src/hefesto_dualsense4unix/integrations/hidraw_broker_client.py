@@ -13,10 +13,10 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import Any
 
+from hefesto_dualsense4unix.integrations.usb_pai import RAIZ_HIDRAW
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 DEFAULT_SOCKET_PATH = "/run/hefesto-hidraw-broker/broker.sock"
 #: caminho inexistente (conftest) — na máquina da mantenedora o broker REAL
 SOCKET_PATH_ENV = "HEFESTO_BROKER_SOCKET"
@@ -388,7 +388,7 @@ def reabrir_o_no_cedido(fd_o_path: int) -> int:
 def nos_de_entrada_do_hidraw(
     no: str,
     *,
-    sys_class_hidraw: str = "/sys/class/hidraw",
+    sys_class_hidraw: str = RAIZ_HIDRAW,
     dev_input_root: str = "/dev/input",
 ) -> list[str]:
     """Os nós de entrada (`eventN`, `jsN`) do MESMO aparelho de um hidraw."""

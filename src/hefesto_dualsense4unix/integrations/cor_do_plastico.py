@@ -99,11 +99,11 @@ import unicodedata
 from dataclasses import dataclass
 from typing import Any, Protocol
 
+from hefesto_dualsense4unix.integrations.usb_pai import RAIZ_HIDRAW
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.texto_do_sysfs import ler_texto
 
 logger = get_logger(__name__)
-
 FEATURE_COMANDO = 0x80
 FEATURE_RESPOSTA = 0x81
 
@@ -588,7 +588,7 @@ def _e_o_nosso_vpad(campos: dict[str, str], pai: str, barramento: int) -> bool:
 def alvo_do_controle(
     uniq: str,
     *,
-    raiz: str = "/sys/class/hidraw",
+    raiz: str = RAIZ_HIDRAW,
     listar: Any = os.listdir,
     ler: Any = None,
     resolver: Any = None,
@@ -769,7 +769,7 @@ def _hidiocsfeature(tamanho: int) -> int:
 def ler_identidade_pelo_cabo(
     uniq: str,
     *,
-    raiz: str = "/sys/class/hidraw",
+    raiz: str = RAIZ_HIDRAW,
     listar: Any = os.listdir,
     ler: Any = None,
     perguntar: _Pedidor | None = None,
@@ -817,7 +817,7 @@ def ler_identidade_pelo_cabo(
 def ler_pelo_cabo(
     uniq: str,
     *,
-    raiz: str = "/sys/class/hidraw",
+    raiz: str = RAIZ_HIDRAW,
     listar: Any = os.listdir,
     ler: Any = None,
     perguntar: _Pedidor | None = None,

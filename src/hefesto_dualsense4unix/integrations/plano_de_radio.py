@@ -25,9 +25,9 @@ from hefesto_dualsense4unix.integrations.radio_da_mesa import (
     orcamento_por_adaptador,
     palavra_das_pontes,
 )
+from hefesto_dualsense4unix.integrations.usb_pai import RAIZ_HIDRAW
 
 ENSAIO_MAXIMO_DESTA_CASA = 2
-
 MESA_CHEIA_DESTA_CASA = 4
 
 SEM_NUMERO = "Sem número ainda"
@@ -208,7 +208,7 @@ def plano_por_adaptador(
     ar: Mapping[str, Any] | None = None,
     n_max: int = N_MAX_PONTES,
     adaptadores: Iterable[str] = (),
-    raiz: str = "/sys/class/hidraw",
+    raiz: str = RAIZ_HIDRAW,
     listar: Callable[[str], list[str]] = os.listdir,
     ler: Callable[[str], str] | None = None,
 ) -> dict[str, PlanoDoAdaptador]:

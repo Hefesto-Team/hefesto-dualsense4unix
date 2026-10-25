@@ -319,10 +319,10 @@ def _listar_o_hidraw(raiz: str) -> list[str]:
 
 def _adaptador_pelo_hid_phys(uniq: str) -> str:
     """O endereço do adaptador do controle, pelo ``HID_PHYS`` — ``""`` = não está no rádio."""
-    from hefesto_dualsense4unix.integrations import dualsense_bt_audio
+    from hefesto_dualsense4unix.integrations import dualsense_bt_audio, usb_pai
     from hefesto_dualsense4unix.integrations.radio_da_mesa import adaptador_por_uniq
 
-    raiz = str(getattr(dualsense_bt_audio, "_SYSFS_HIDRAW", "") or "/sys/class/hidraw")
+    raiz = str(getattr(dualsense_bt_audio, "_SYSFS_HIDRAW", "") or usb_pai.RAIZ_HIDRAW)
     return adaptador_por_uniq([uniq], raiz=raiz, listar=_listar_o_hidraw).get(uniq, "")
 
 

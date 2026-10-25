@@ -66,9 +66,9 @@ MOTIVO_SEM_A_GUARDA = "driver_sem_a_guarda_do_audio"
 def o_driver_le_este_no(caminho: str, raiz_hidraw: str | None = None) -> bool:
     """O nó `/dev/hidrawN` está ligado ao driver `playstation`?"""
     if raiz_hidraw is None:
-        from hefesto_dualsense4unix.integrations import dualsense_bt_audio
+        from hefesto_dualsense4unix.integrations import dualsense_bt_audio, usb_pai
 
-        raiz_hidraw = str(getattr(dualsense_bt_audio, "_SYSFS_HIDRAW", "/sys/class/hidraw"))
+        raiz_hidraw = str(getattr(dualsense_bt_audio, "_SYSFS_HIDRAW", usb_pai.RAIZ_HIDRAW))
     nome = os.path.basename(str(caminho or ""))
     if not nome:
         return False

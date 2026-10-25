@@ -53,6 +53,7 @@ from hefesto_dualsense4unix.core.trigger_effects import (
     TAMANHO_DO_BLOCO_DO_GATILHO,
     bloco_do_gatilho,
 )
+from hefesto_dualsense4unix.integrations import usb_pai
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
@@ -60,7 +61,6 @@ if TYPE_CHECKING:
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 #: PID do DualSense Edge.
 DUALSENSE_EDGE_PID = 0x0DF2
 
@@ -5753,7 +5753,7 @@ def _o_cabo_vence(novo: bytes, guardado: bytes) -> bool:
     return _barramento_do_hidraw(novo) == "usb" and _barramento_do_hidraw(guardado) != "usb"
 
 
-RAIZ_CLASS_HIDRAW = "/sys/class/hidraw"
+RAIZ_CLASS_HIDRAW = usb_pai.RAIZ_HIDRAW
 
 
 def numero_do_desenho(bits: object) -> int | None:

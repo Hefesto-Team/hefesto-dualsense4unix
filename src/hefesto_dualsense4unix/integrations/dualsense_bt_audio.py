@@ -34,11 +34,11 @@ from hefesto_dualsense4unix.integrations.fontes_de_captura import (
     PREFIXO_SOURCE_PONTE_BT,
 )
 from hefesto_dualsense4unix.integrations.storm_doctor import gesto_de_instalar
+from hefesto_dualsense4unix.integrations.usb_pai import RAIZ_HIDRAW
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-
 # ---------------------------------------------------------------------------
 
 #: Report de input do DualSense por BT (o mesmo do espelho de motion).
@@ -136,7 +136,7 @@ _VENDOR_SONY = 0x054C
 _PRODUTOS_DUALSENSE = (0x0CE6, 0x0DF2)
 _PHYS_VPAD = "hefesto-vpad"
 
-_SYSFS_HIDRAW = "/sys/class/hidraw"
+_SYSFS_HIDRAW = RAIZ_HIDRAW
 
 
 @dataclass(frozen=True)
