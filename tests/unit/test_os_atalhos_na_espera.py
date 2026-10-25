@@ -857,6 +857,16 @@ class TestOPsR3DoP2TrocaOModo:
         bancada.tique(0.0)
         assert not bancada.vaga(), "sem vpad do P1, o outro controle é a reserva e assume"
 
+    def test_o_vpad_do_p1_de_pe_responde_antes_de_o_sync_montar_a_mesa(
+        self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation,
+    ) -> None:
+        """A pergunta de antes segue valendo: o vpad do P1 de pé basta, sem o `sync`."""
+        bancada = montar_atalhos(monkeypatch, kernel, 3)
+        _fora_dentro_do_prazo(bancada, P1)
+        assert bancada.daemon._gamepad_device is not None, "premissa: o vpad do P1 de pé"
+        bancada.coop._was_active = False
+        assert bancada.coop.o_posto_do_p1_espera(P1), "o vpad do P1 de pé não bastou"
+
 
 class _CoopDaEspera:
     """O co-op como o laço o vê: o P2 e o P3 na mesa, cada um apertando um botão."""
