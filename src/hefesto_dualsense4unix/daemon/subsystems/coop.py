@@ -2299,7 +2299,7 @@ class CoopManager:
         O backend pergunta sob o `_io_lock` (`_quem_senta_no_posto`), então as
         três perguntas são de memória:
 
-        1. **o co-op está de pé** (`should_be_active`): cada controle tem o
+        1. **o co-op está de pé** (`_o_co_op_de_pe`): cada controle tem o
            próprio vpad. Fora do co-op o outro controle é a RESERVA e assume na
            hora — é o gesto do usuário de desligar um e seguir jogando com o outro;
         2. **o jogo está com a autoridade** (o sinal pegajoso da R-04): sem
@@ -2320,11 +2320,24 @@ class CoopManager:
         pergunta aplicada ao primário; o P2 ao P4 a fazem no laço do co-op
         (`_o_lugar_espera_no_vpad`).
         """
-        if not self.should_be_active() or not self._jogo_com_a_autoridade():
+        if not self._o_co_op_de_pe() or not self._jogo_com_a_autoridade():
             return False
         registry = getattr(self._daemon, "identity_registry", None)
         pergunta = getattr(registry, "o_lugar_espera", None)
         return callable(pergunta) and bool(pergunta(uniq))
+
+    def _o_co_op_de_pe(self) -> bool:
+        """O co-op está de pé: o vpad do P1 de agora, ou a mesa que o laço montou.
+
+        O ato que recria o posto (o PS + R3, o chip do modo, a máscara) para o vpad
+        do P1 e põe o novo sem tique no meio, e a leitura do executor que cai ali vê
+        o `_gamepad_device` vazio. A mesa segue montada até o `sync` desmontá-la
+        (`_was_active`), e só a flag desligada a derruba antes.
+        """
+        if self.should_be_active():
+            return True
+        cfg = getattr(self._daemon, "config", None)
+        return self._was_active and bool(getattr(cfg, "coop_enabled", False))
 
     # D-2410-O-LUGAR-GUARDADO-ESPERA-NOS-QUATRO: o P2 ao P4 que caem com o lugar
     # guardado esperam no vpad deles. Os métodos moram no fim da classe para não

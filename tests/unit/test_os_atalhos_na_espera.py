@@ -712,7 +712,7 @@ class TestOPsL3AndaOCartaoDeQuemSegura:
 
 
 class _OPostoSoltouNoMeioDoAtoError(AssertionError):
-    """O posto que espera o P1 soltou durante o ato — e só isso conta como o xfail."""
+    """O posto que espera o P1 soltou durante o ato: o P2 sentou no vpad do jogador 1."""
 
 
 @pytest.mark.usefixtures("config_isolado")
@@ -796,23 +796,14 @@ class TestOPsR3DoP2TrocaOModo:
         assert quem_segura_os_atalhos(bancada.daemon) is None
         assert bancada.apertar(P2, "ps", "r3") == []
 
-    @pytest.mark.xfail(
-        strict=True,
-        raises=_OPostoSoltouNoMeioDoAtoError,
-        reason=(
-            "o `read_state` do executor que cai no meio da recriação do posto pergunta "
-            "a vaga com o `_gamepad_device` vazio, e o co-op responde que não espera "
-            "(`CoopManager.o_posto_do_p1_espera` → `should_be_active`): o P2 senta no "
-            "posto e dirige o boneco 1 com a lâmpada dizendo 2. Anterior a esta sprint "
-            "(o chip do modo na aba Jogar corre o mesmo risco); o dono é o co-op, que "
-            "está na O-ASSENTO-GUARDADO-NAO-ANDA-04."
-        ),
-    )
     @pytest.mark.parametrize("transporte", list(TRANSPORTES))
     def test_a_leitura_do_executor_no_meio_do_ato_nao_solta_o_posto(
         self, monkeypatch: pytest.MonkeyPatch, kernel: KernelDoHidPlaystation, transporte: str,
     ) -> None:
-        """O laço lê o estado num fio do executor enquanto o gesto recria o vpad do posto."""
+        """O laço lê o estado num fio do executor enquanto o gesto recria o vpad do posto.
+
+        A mesa do co-op segue de pé no meio do ato (`CoopManager._o_co_op_de_pe`).
+        """
         bancada = montar_atalhos(monkeypatch, kernel, 3, transporte)
         armar_o_ato_do_daemon(bancada, monkeypatch)
         _fora_dentro_do_prazo(bancada, P1)
