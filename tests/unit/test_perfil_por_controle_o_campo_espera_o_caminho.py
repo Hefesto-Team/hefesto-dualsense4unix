@@ -581,6 +581,8 @@ def test_o_interruptor_de_sensor_existe_e_e_por_peca() -> None:
         "toque_visto",
         "velocidade_do_movimento",
         "vigiar",
+        "movimento_visto",  # o tópico movimento da porta
+        "pedir_o_movimento",
     }, f"o SensorHub mudou de superfície pública: {sorted(publicos)}"
 
     from hefesto_dualsense4unix.daemon import ipc_handlers, ipc_server
