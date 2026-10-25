@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1217195,
+      "piso": 1217494,
       "por_item": {
-        "docs": 121465,
+        "docs": 121471,
         "scripts": 121272,
-        "src": 324710,
-        "tests": 649748
+        "src": 324726,
+        "tests": 650025
       },
-      "razao": "tamanho: +1001 linhas (1216194 -> 1217195), pagas por Origem: D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-2510-A-DESCIDA-DO-GADGET-FALA-COM-O-BROKER-FORA-DO-TIQUE; registrado no fecho, topo 9dcac738db7a",
+      "razao": "tamanho: +299 linhas (1217195 -> 1217494), pagas por Origem: D-2510-A-BARRA-FORA-DA-PORTA-NASCE-APAGADA; registrado no fecho, topo 4db7c84aaadf",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1123,10 +1123,16 @@
           "de": 1216194,
           "para": 1217195,
           "razao": "tamanho: +1001 linhas (1216194 -> 1217195), pagas por Origem: D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-2510-A-DESCIDA-DO-GADGET-FALA-COM-O-BROKER-FORA-DO-TIQUE; registrado no fecho, topo 9dcac738db7a"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1217195,
+          "para": 1217494,
+          "razao": "tamanho: +299 linhas (1217195 -> 1217494), pagas por Origem: D-2510-A-BARRA-FORA-DA-PORTA-NASCE-APAGADA; registrado no fecho, topo 4db7c84aaadf"
         }
       ],
       "unidade": "linhas",
-      "universo": 3180
+      "universo": 3181
     }
   }
 }
