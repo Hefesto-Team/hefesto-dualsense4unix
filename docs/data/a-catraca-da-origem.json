@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1210521,
+      "piso": 1210791,
       "por_item": {
         "docs": 121357,
-        "scripts": 120700,
+        "scripts": 120796,
         "src": 323613,
-        "tests": 644851
+        "tests": 645025
       },
-      "razao": "tamanho: +297 linhas (1210224 -> 1210521), pagas por Origem: D-2510-A-FALTA-DE-PERMISSAO-DE-LER-DIZ-O-GRUPO; registrado no fecho, topo 49d26ff519be",
+      "razao": "tamanho: +270 linhas (1210521 -> 1210791), pagas por Origem: D-0810-A-CITACAO-CRUA-SO-ANDA-COM-PROVA; registrado no fecho, topo 5e6cf6d9cd3c",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1057,10 +1057,16 @@
           "de": 1210224,
           "para": 1210521,
           "razao": "tamanho: +297 linhas (1210224 -> 1210521), pagas por Origem: D-2510-A-FALTA-DE-PERMISSAO-DE-LER-DIZ-O-GRUPO; registrado no fecho, topo 49d26ff519be"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1210521,
+          "para": 1210791,
+          "razao": "tamanho: +270 linhas (1210521 -> 1210791), pagas por Origem: D-0810-A-CITACAO-CRUA-SO-ANDA-COM-PROVA; registrado no fecho, topo 5e6cf6d9cd3c"
         }
       ],
       "unidade": "linhas",
-      "universo": 3161
+      "universo": 3162
     }
   }
 }
