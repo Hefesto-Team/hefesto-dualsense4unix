@@ -245,14 +245,14 @@
       "data": "2026-10-24",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1204740,
+      "piso": 1205303,
       "por_item": {
-        "docs": 121260,
+        "docs": 121266,
         "scripts": 120674,
-        "src": 322195,
-        "tests": 640611
+        "src": 322313,
+        "tests": 641050
       },
-      "razao": "tamanho: +31 linhas (1204709 -> 1204740), pagas por Origem: D-2310-O-ATUALIZAR-QUE-PEDE-SIM-ABRE-A-LISTA, D-2310-O-PISO-DA-SUITE-E-O-PYTEST-DAS-PARTES-EM-SERIE, D-2410-A-ENTRADA-MAE-DO-EXTENSOR-DIZ-COM-O-EXTENSOR, D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR; registrado no fecho, topo 10108d0ca939",
+      "razao": "tamanho: +563 linhas (1204740 -> 1205303), pagas por Origem: D-0810-O-LADO-DO-TIRO-E-O-ESTALO; registrado no fecho, topo a0c5a3eb1e6d",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -985,10 +985,16 @@
           "de": 1204709,
           "para": 1204740,
           "razao": "tamanho: +31 linhas (1204709 -> 1204740), pagas por Origem: D-2310-O-ATUALIZAR-QUE-PEDE-SIM-ABRE-A-LISTA, D-2310-O-PISO-DA-SUITE-E-O-PYTEST-DAS-PARTES-EM-SERIE, D-2410-A-ENTRADA-MAE-DO-EXTENSOR-DIZ-COM-O-EXTENSOR, D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR; registrado no fecho, topo 10108d0ca939"
+        },
+        {
+          "data": "2026-10-24",
+          "de": 1204740,
+          "para": 1205303,
+          "razao": "tamanho: +563 linhas (1204740 -> 1205303), pagas por Origem: D-0810-O-LADO-DO-TIRO-E-O-ESTALO; registrado no fecho, topo a0c5a3eb1e6d"
         }
       ],
       "unidade": "linhas",
-      "universo": 3149
+      "universo": 3150
     }
   }
 }
