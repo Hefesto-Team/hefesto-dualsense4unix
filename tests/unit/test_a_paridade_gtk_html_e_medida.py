@@ -135,6 +135,20 @@ def test_recusa_linha_alem_do_fim_do_arquivo(regua, tmp_path) -> None:
     assert "endereco-morto" in _familias(falhas), falhas
 
 
+def test_aceita_o_endereco_que_promete_o_nome(regua, tmp_path) -> None:
+    """A forma nomeada, que o `reapontar-citacoes.py` leva pelo nome, ao lado da crua."""
+    falhas = _com(regua, tmp_path, html_onde=(
+        "src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py:3 (`nome`) · "
+        "src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py:233"))
+    assert falhas == [], falhas
+
+
+def test_o_nome_nao_esconde_o_numero_errado(regua, tmp_path) -> None:
+    falhas = _com(regua, tmp_path, html_onde=(
+        "src/hefesto_dualsense4unix/interface/pacotes/a05_vibracao.py:999999 (`nome`)"))
+    assert "endereco-morto" in _familias(falhas), falhas
+
+
 def test_recusa_endereco_da_gtk_na_coluna_do_html(regua, tmp_path) -> None:
     """É o que impede este portão de virar a régua que se compara consigo mesma."""
     falhas = _com(regua, tmp_path,

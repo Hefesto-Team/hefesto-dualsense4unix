@@ -304,10 +304,12 @@ CELULAS_DE_ENDERECO_PURO: dict[str, tuple[tuple[str, ...], str]] = {
     "paridade-gtk-html.csv": (
         ("gtk_onde", "html_onde"),
         "10/10/2026: o `check_paridade_gtk_html.py` lê a célula como `caminho:N · caminho:N` e "
-        "confere que cada um abre e é do lado certo; a forma nomeada não cabe nela"),
+        "confere que cada um abre e é do lado certo. 25/10/2026: ele aceita também "
+        "`caminho:N (`nome`)` (`NOME_PROMETIDO`), e a crua continua aceita: o `--novas` não a exige"),
 }
 """As colunas de planilha que são lista de endereço por formato, com o motivo. O ``--novas`` não
-as lê: o nome prometido ali quebraria o leitor dono da coluna."""
+exige o nome nelas, porque o leitor dono da coluna aceita as duas formas; o ``--all`` confere o
+nome que a célula prometer."""
 
 
 def _git(raiz: Path, *args: str) -> subprocess.CompletedProcess[str]:
