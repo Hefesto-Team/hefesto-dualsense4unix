@@ -174,6 +174,37 @@ COLISOES_DECLARADAS = {
         "processo pela palavra «versão» nos caminhos («troca pela versão mais nova»), e a decisão "
         "fala de PINO e de arquivo, não de tela. Mais um caso do limite."
     ),
+    "D-2310-O-ATUALIZAR-QUE-PEDE-SIM-ABRE-A-LISTA": (
+        "É de PRODUTO: o «Atualizar» do ⋮ que pede um sim novo deixa o ⋮ aberto com a lista, e "
+        "`test_a_lovense_se_usa_sem_manual.py::test_atualizar_com_permissao_nova_mostra_a_lista_e_"
+        "um_clique_liga` mede o clique. A triagem a chama de processo pela palavra «versão» na "
+        "pergunta e na escolha, que aqui é a da extensão instalada, e «⋮», «lista», «chave» e "
+        "«clique» não casam o vocabulário de produto. Tirar «versão» muda quinze decisões; mais "
+        "um caso do limite (24/10/2026)."
+    ),
+    "D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR": (
+        "É de PRODUTO: a atualização sozinha que traz um preparar novo espera o «Atualizar», e "
+        "`test_a_extensao_instalada_roda_o_preparo.py::test_o_preparo_novo_numa_atualizacao_"
+        "sozinha_espera_o_atualizar` mede a espera. A triagem a chama de processo pela palavra "
+        "«versão» na escolha (a versão da extensão que fica esperando), e a decisão fala de "
+        "EXTENSÃO e de comando, não de tela. Mais um caso do limite (24/10/2026)."
+    ),
+    "D-2410-A-ENTRADA-MAE-DO-EXTENSOR-DIZ-COM-O-EXTENSOR": (
+        "É de PRODUTO: o quadrado cheio da entrada-mãe do extensor diz «Com o extensor» na 08, e "
+        "`test_arranjo_da_mesa_bate_com_o_mockup.py::test_o_quadrado_cheio_sem_aparelho_nao_diz_"
+        "vazia` mede a frase. A triagem a chama de processo pela palavra «leva» na escolha («não "
+        "leva a classe de vazio», no sentido de «carrega»), e «quadrado» e «entrada» não casam o "
+        "vocabulário de produto. Estreitar «leva» ao substantivo muda cinquenta e oito decisões; "
+        "mais um caso do limite (24/10/2026)."
+    ),
+    "D-2310-O-PISO-DA-SUITE-E-O-PYTEST-DAS-PARTES-EM-SERIE": (
+        "É de PRODUTO pelo oráculo: a decisão diz o que o `scripts/o-tempo-da-casa.py`, que é "
+        "versionado e viaja com o código, soma como piso da suíte, e `test_o_tempo_da_casa_so_"
+        "desce.py::test_uma_parte_de_outra_corrida_deixa_a_suite_indisponivel` mede a soma. A "
+        "triagem a chama de processo pela palavra «leva» na escolha («cada parte leva no "
+        "cabeçalho a marca»), no sentido de «carrega»; o lado que ela acerta é por acaso, como na "
+        "D-0810-A-SUITE-PARTE-PELO-TEMPO-MEDIDO. Mais um caso do limite (24/10/2026)."
+    ),
 }
 
 
