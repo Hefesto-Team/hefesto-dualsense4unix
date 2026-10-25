@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1212430,
+      "piso": 1212436,
       "por_item": {
         "docs": 121396,
         "scripts": 120799,
         "src": 323983,
-        "tests": 646252
+        "tests": 646258
       },
-      "razao": "tamanho: +1744 linhas (1210686 -> 1212430), pagas por Origem: D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO, D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2510-A-VOLTA-DO-GADGET-PEDE-FORA-DO-TIQUE, D-2510-O-MODO-DO-LIVRE-E-RASCUNHO-E-VALE-NA-HORA, D-2510-O-MOVIMENTO-CHEGA-AS-EXTENSOES-COM-FAIXA-MORTA, D-2510-OS-DEDOS-SO-PARA-QUEM-PEDE; registrado no fecho, topo 9c028920750e",
+      "razao": "tamanho: +6 linhas (1212430 -> 1212436), pagas por Origem: D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO, D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2510-A-VOLTA-DO-GADGET-PEDE-FORA-DO-TIQUE, D-2510-O-MODO-DO-LIVRE-E-RASCUNHO-E-VALE-NA-HORA, D-2510-O-MOVIMENTO-CHEGA-AS-EXTENSOES-COM-FAIXA-MORTA, D-2510-OS-DEDOS-SO-PARA-QUEM-PEDE; registrado no fecho, topo 7b7eae6d7b95",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1069,6 +1069,12 @@
           "de": 1210686,
           "para": 1212430,
           "razao": "tamanho: +1744 linhas (1210686 -> 1212430), pagas por Origem: D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO, D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2510-A-VOLTA-DO-GADGET-PEDE-FORA-DO-TIQUE, D-2510-O-MODO-DO-LIVRE-E-RASCUNHO-E-VALE-NA-HORA, D-2510-O-MOVIMENTO-CHEGA-AS-EXTENSOES-COM-FAIXA-MORTA, D-2510-OS-DEDOS-SO-PARA-QUEM-PEDE; registrado no fecho, topo 9c028920750e"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1212430,
+          "para": 1212436,
+          "razao": "tamanho: +6 linhas (1212430 -> 1212436), pagas por Origem: D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO, D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2510-A-VOLTA-DO-GADGET-PEDE-FORA-DO-TIQUE, D-2510-O-MODO-DO-LIVRE-E-RASCUNHO-E-VALE-NA-HORA, D-2510-O-MOVIMENTO-CHEGA-AS-EXTENSOES-COM-FAIXA-MORTA, D-2510-OS-DEDOS-SO-PARA-QUEM-PEDE; registrado no fecho, topo 7b7eae6d7b95"
         }
       ],
       "unidade": "linhas",
