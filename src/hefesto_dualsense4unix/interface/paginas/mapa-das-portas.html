@@ -2171,6 +2171,22 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     document.querySelector(".palco").hidden = noRegistro;
     document.getElementById("painel").hidden = noRegistro;
     document.getElementById("legenda").hidden = noRegistro;
+    /* SEM LEITURA, NADA SE DESENHA: o cabeçalho já disse o
+       porquê, e o registro vazio não tem o que copiar. */
+    document.getElementById("registro-copiar").hidden = semLeitura;
+    if (semLeitura) {
+      document.querySelector(".palco").hidden = true;
+      document.getElementById("legenda").hidden = true;
+      document.getElementById("faces").innerHTML = "";
+      document.getElementById("bandeja").innerHTML = "";
+      var sugere = modo === "ideal" || modo === "mao";  /* (noqa-acento: JS) */
+      var oPainel = document.getElementById("painel");
+      oPainel.hidden = !sugere;
+      oPainel.innerHTML = sugere
+        ? '<p class="chamada">' + NADA_A_SUGERIR + "</p>" : "";
+      pintarORegistro(null);
+      return;
+    }
 
     /* o painel */
     var painel = document.getElementById("painel"), html = "";
@@ -2577,6 +2593,38 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     marcarOExaminar();
     pintar();
     return "ok";
+  };
+
+  /* ══ SEM LEITURA DESTE COMPUTADOR — 25/10/2026 ═══════════════════════
+     O-MAPA-SEM-LEITURA-DA-MAQUINA-NAO-DESENHA-O-EXEMPLO-01: sem o que desenhar, o
+     produto diz o porquê por aqui, e a página troca o exemplo pelo vazio. O cabeçalho
+     diz o porquê, o Examinar sai e nenhuma aba sugere. */
+  var FRASES_SEM_LEITURA = {"sem-mapa": "Entradas ainda não mapeadas", "sem-leitura": "Não deu para ler as entradas deste computador"};
+  var NADA_A_SUGERIR = "Nada a sugerir";
+  var semLeitura = false;
+
+  window.hefestoSemLeitura = function (porque) {
+    var frase = FRASES_SEM_LEITURA[porque];
+    if (!frase) throw new Error("sem leitura por um porquê desconhecido: " + porque);
+    aplicarArranjo({ quando: frase, aparelhos: [], faces: [], mapa: {}, controles: [],
+                     leituras: { agora: { rotulo: "", caminho: {} },
+                                 antes: { rotulo: "", caminho: {} } } }, false);
+    semLeitura = true;
+    modo = "mesa"; segurando = null; naMao = null; editandoAp = null;
+    var el = document.getElementById("de-quando");
+    if (el) el.textContent = frase;
+    var ex = document.querySelector(".topo #reexaminar");
+    if (ex) ex.remove();
+    pintar();
+    return "ok";
+  };
+
+  /* A leitura que chega depois tira a página do vazio; a recusa a deixa onde estava. */
+  var arranjoDaPorta = window.hefestoArranjo;
+  window.hefestoArranjo = function (dado, como) {
+    var estava = semLeitura;
+    semLeitura = false;
+    try { return arranjoDaPorta(dado, como); } catch (erro) { semLeitura = estava; throw erro; }
   };
 
   pintar();
