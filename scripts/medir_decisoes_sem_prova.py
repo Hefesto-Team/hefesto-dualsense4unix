@@ -205,6 +205,13 @@ COLISOES_DECLARADAS = {
         "cabeçalho a marca»), no sentido de «carrega», e nenhuma palavra de produto aparece. Mais "
         "um caso do limite, como a D-0810-A-SUITE-PARTE-PELO-TEMPO-MEDIDO (24/10/2026)."
     ),
+    "D-2510-O-PACOTE-DECLARA-OS-TIPOS": (
+        "É de PRODUTO pelo oráculo: a decisão diz o que o pacote instalado do Hefesto leva (o "
+        "`py.typed`, no wheel e no sdist), e `test_o_pacote_do_hefesto_declara_os_tipos.py::test_o_"
+        "marcador_mora_no_pacote_e_e_vazio` mede o marcador no pacote. A triagem a chama de processo "
+        "pela palavra «leva» («o pacote leva o py.typed vazio»), no sentido de «carrega», e «pacote» "
+        "e «extensão» não casam o vocabulário de produto. Mais um caso do limite (25/10/2026)."
+    ),
 }
 
 

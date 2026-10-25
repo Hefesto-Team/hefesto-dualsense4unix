@@ -496,12 +496,14 @@ def test_a_medicao_de_hoje_bate_com_o_csv_de_hoje(mi):
     # D-2210-O-GATILHO-SO-TEM-O-EFEITO revogou («Sai tudo», 21/10). Trinta e duas no fim de
     # 22/10/2026: a D-0510-EM-PADRAO-A-HAPTICA-CHEGA-A-100, a D-0810-PAD-USB-VESTIDOS e a
     # D-1510-O-REPOSITORIO-DA-EXTENSAO-B-E-HEFESTO-MOD-LOVENSE-REMOTE, revogadas pela háptica a 150,
-    # pelo pad que veste o DualSense comum e pela Lovense numa extensão só.
+    # pelo pad que veste o DualSense comum e pela Lovense numa extensão só. Trinta e três desde
+    # 25/10/2026: a D-2510-A-FALTA-DE-PERMISSAO-DE-LER-DIZ-O-GRUPO, que a
+    # D-2510-O-ACIONADOR-SE-LE-PELO-FD-DO-BROKER revogou (o grupo input é proibido).
     estados = [linha["estado"] for linha in mi._linhas()]
     adiante = sum(estado in ("implementada", "feita", "no ar") for estado in estados)
-    assert estados.count("caduca") == 32, (
-        "o CSV tem trinta e duas linhas `caduca`; se isso mudou, o laudo tem de dizer")
-    assert medida["decididas"] == medida["linhas"] - 32 - adiante
+    assert estados.count("caduca") == 33, (
+        "o CSV tem trinta e três linhas `caduca`; se isso mudou, o laudo tem de dizer")
+    assert medida["decididas"] == medida["linhas"] - 33 - adiante
     assert medida["decididas"] > 0
     assert len(medida["com_regua_dentro_de_teste"]) <= medida["decididas"]
     assert set(medida["com_regua_dentro_de_teste"]).isdisjoint(

@@ -270,7 +270,7 @@ volta a pedir o «sim» do ligar, e a atualização sozinha a deixa esperando o 
 traz permissão ou aviso novo deixa o ⋮ aberto já com a lista, e o próximo clique na chave é o «sim». O serviço
 não abre a extensão cujo aviso ainda não teve o «sim».
 
-A chave de uma extensão ligada diz o que o serviço fez dela (o `mods-estado.json`): «Ligada» em verde quando
+A chave de uma extensão ligada diz o que o serviço fez com a extensão (o `mods-estado.json`): «Ligada» em verde quando
 roda, «Ligando» e «Voltando» em amarelo, «Caiu» e «Recusada» em vermelho. A dica traz o motivo e a última linha
 do diário; na vermelha, o caminho de volta (desligar e ligar). O canto da coluna «Agora» diz o mesmo quando a
 conexão não responde. A função `instalar(…, aviso_visto=…)` recusa com
@@ -285,7 +285,7 @@ o `CHANGELOG.md`. A lista, com o endereço de cada uma, está no [README](../../
 
 O campo `preparar` (opcional) é um comando, relativo à pasta da extensão, como o `processo.executar`: o
 primeiro da lista é um arquivo da pasta ou um nome do `PATH` (`["bash", "install.sh"]`), nunca um caminho
-absoluto nem `..`. É o que a extensão precisa fora do código dela (o binário conferido, a cópia na pasta de
+absoluto nem `..`. É o que a extensão precisa fora do próprio código (o binário conferido, a cópia na pasta de
 dados, o certificado), e é o instalador que o roda (`mods/instalador.py`, `_preparar`):
 
 - depois de trocar o código e antes de gravar a linha do registro, ao instalar e ao atualizar;
@@ -301,7 +301,7 @@ versão que ainda espera o «sim» do aviso ou das permissões o deixam para o �
 só a atualização da que segue ligada o roda no `instalar`/`atualizar`. O que falha (código diferente de zero, prazo passado, comando que não existe) deixa a extensão
 instalada e desligada, com o motivo na linha (`motivo_do_preparo`) e na recusa do gesto; o «ligar» seguinte o
 roda de novo. A linha guarda o comando que teve o «sim» (`preparo_aceito`) e a instalação que ele preparou
-(`preparada_em`, a `instalada_em` dela). Um `preparar` novo numa atualização sozinha é permissão nova: a
+(`preparada_em`, a `instalada_em` da extensão). Um `preparar` novo numa atualização sozinha é permissão nova: a
 versão espera o «Atualizar» com a frase «A versão X traz um preparo novo.».
 
 Um Hefesto anterior a este campo recusa o manifesto que o declara («O hefesto-mod.json tem o campo
@@ -351,7 +351,7 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   desenha uma aba por grupo, na ordem em que aparecem; a opção sem grupo vai à primeira aba; com um grupo
   só, não há aba. Ao mudar uma opção a janela reabre na aba da opção.
 - **`aparece_com`**: `{id: valor}`, a opção só aparece quando cada outra opção do mesmo manifesto vale o que
-  se pede: uma `escolha` vale um texto das `escolhas` dela (ou um da lista, `["A", "B"]`), um `ligado` vale
+  se pede: uma `escolha` vale um texto das próprias `escolhas` (ou um da lista, `["A", "B"]`), um `ligado` vale
   `true` ou `false`. Com duas chaves, as duas têm de valer. A opção que aponta para uma escondida também
   some. A janela a mostra no mesmo gesto em que a outra muda, sem reabrir. Esconder é só da tela: o valor
   guardado fica e segue indo à extensão em `opcoes.json`. Recusam o manifesto: o `aparece_com` vazio, o id
