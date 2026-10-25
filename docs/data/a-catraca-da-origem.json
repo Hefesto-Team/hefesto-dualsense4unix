@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1210686,
+      "piso": 1212430,
       "por_item": {
-        "docs": 121357,
-        "scripts": 120796,
-        "src": 323576,
-        "tests": 644957
+        "docs": 121396,
+        "scripts": 120799,
+        "src": 323983,
+        "tests": 646252
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +1744 linhas (1210686 -> 1212430), pagas por Origem: D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO, D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2510-A-VOLTA-DO-GADGET-PEDE-FORA-DO-TIQUE, D-2510-O-MODO-DO-LIVRE-E-RASCUNHO-E-VALE-NA-HORA, D-2510-O-MOVIMENTO-CHEGA-AS-EXTENSOES-COM-FAIXA-MORTA, D-2510-OS-DEDOS-SO-PARA-QUEM-PEDE; registrado no fecho, topo 9c028920750e",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1063,10 +1063,16 @@
           "de": 1210521,
           "para": 1210791,
           "razao": "tamanho: +270 linhas (1210521 -> 1210791), pagas por Origem: D-0810-A-CITACAO-CRUA-SO-ANDA-COM-PROVA; registrado no fecho, topo 5e6cf6d9cd3c"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1210686,
+          "para": 1212430,
+          "razao": "tamanho: +1744 linhas (1210686 -> 1212430), pagas por Origem: D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO, D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2510-A-VOLTA-DO-GADGET-PEDE-FORA-DO-TIQUE, D-2510-O-MODO-DO-LIVRE-E-RASCUNHO-E-VALE-NA-HORA, D-2510-O-MOVIMENTO-CHEGA-AS-EXTENSOES-COM-FAIXA-MORTA, D-2510-OS-DEDOS-SO-PARA-QUEM-PEDE; registrado no fecho, topo 9c028920750e"
         }
       ],
       "unidade": "linhas",
-      "universo": 3162
+      "universo": 3166
     }
   }
 }
