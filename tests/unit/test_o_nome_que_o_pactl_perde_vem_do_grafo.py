@@ -14,9 +14,11 @@ from typing import Any
 
 import pytest
 
+from hefesto_dualsense4unix.integrations import alto_falante_bt as afb
 from hefesto_dualsense4unix.integrations import porta_do_som as ps
 from hefesto_dualsense4unix.integrations import quem_ouve_o_microfone as qom
 from hefesto_dualsense4unix.integrations import retrato_do_som as rs
+from hefesto_dualsense4unix.integrations import transiente_do_jogo as tj
 from tests.unit import pactl_json_de_mentira as pj
 
 NULO = ps.NULO_DO_PACTL
@@ -211,6 +213,30 @@ def test_nome_vazio_nunca_casa_com_o_no_sem_nome_do_grafo() -> None:
          "info": {"props": {"node.name": "", "node.description": "Vizinho"}}}]))
     (no,) = ps.nos_do_texto(ps.completar_o_json(json.dumps([sem_identidade]), grafo) or "")
     assert (no.nome, no.descricao) == ("", "")
+
+
+def test_com_o_nome_inteiro_o_alvo_errado_de_verdade_ainda_cala_o_ouvido() -> None:
+    """O nome que o grafo devolve não decide: dois fluxos do MESMO jogo, e o serial manda.
+
+    Medido em 24/10/2026: um jogo do Proton abre dois fluxos com o mesmo `node.name`. O nome
+    inteiro de volta não pode fazer o gravador ligado ao fluxo vizinho passar por certo.
+    """
+    nome = NOMES[0]
+    fluxos_crus = [_fluxo(171, 719, 76, nome), _fluxo(179, 739, 76, nome)]
+    for f in fluxos_crus:
+        f["properties"]["application.process.id"] = "4242"
+    fluxos_crus[1]["corked"] = True
+    grafo = _Grafo(_grafo_de(_no_do_grafo(171, 719, nome), _no_do_grafo(179, 739, nome)))
+    fluxos = ps.ler_fluxos("sink-inputs",
+                           _leitor({"--format=json list sink-inputs": json.dumps(fluxos_crus)}),
+                           grafo)
+    assert fluxos is not None
+    jogo = tj.fluxo_do_jogo(fluxos, [4242])
+    assert jogo is not None
+    assert (jogo.serial, jogo.nome, jogo.nome_perdido) == (719, nome, False)
+    assert tj.e_o_fluxo_pedido(afb.OrigemDoGravador(179, 739, nome), jogo) is False
+    assert tj.e_o_fluxo_pedido(afb.OrigemDoGravador(171, 719, nome), jogo) is True
+    assert tj.e_o_fluxo_pedido(afb.OrigemDoGravador(500, None, "Outro jogo"), jogo) is False
 
 
 def _retrato(sinks: str, *, info: str, pw_dump: str = "",
