@@ -1301,7 +1301,7 @@ def _pedido_do_controle(mod: str, alvo: str, c: Mapping[str, Any], quer: str) ->
 def _chave_do_controle(mod: str, alvo: str, c: Mapping[str, Any], em_curso: bool) -> str:
     ligada = c.get("valor") is True
     classe = "mj-chave" + (" on" if ligada else "") + (" em-curso" if em_curso else "")
-    dica = str(c.get("dica") or c.get("rotulo") or "")  # noqa-acento: contrato
+    dica = str(c.get("dica") or c.get("rotulo") or "")  # (noqa-acento) contrato
     atributo = f' data-dica="{_a(dica)}"' if dica else ""
     return (f'<span class="{classe}" role="switch" aria-checked="{str(ligada).lower()}" '
             f'{_pedido_do_controle(mod, alvo, c, "0" if ligada else "1")}{atributo}></span>')
@@ -1313,9 +1313,9 @@ def _botoes_do_controle(mod: str, alvo: str, c: Mapping[str, Any], opcoes: Seque
         aceso = op["id"] == c.get("valor")
         if c["tipo"] == "paleta":
             miolo = f'<i style="background:{_fundo_do_ponto(op.get("cor"))}"></i>'
-            dica = str(op.get("rotulo") or op["id"])  # noqa-acento: contrato
+            dica = str(op.get("rotulo") or op["id"])  # (noqa-acento) contrato
         else:
-            miolo, dica = _e(op.get("rotulo") or op["id"]), ""  # noqa-acento: contrato
+            miolo, dica = _e(op.get("rotulo") or op["id"]), ""  # (noqa-acento) contrato
         atributo = f' data-dica="{_a(dica)}"' if dica else ""
         classe = ' class="on"' if aceso else ""
         botoes.append(f'<button{classe} aria-pressed="{str(aceso).lower()}" '
@@ -1326,11 +1326,12 @@ def _botoes_do_controle(mod: str, alvo: str, c: Mapping[str, Any], opcoes: Seque
 def _linha_do_controle(mod: str, alvo: str, c: Mapping[str, Any], em_curso: bool) -> str:
     """Uma linha do cartão: o rótulo e o controle. A paleta põe as cores de um ponto numa fileira
     e as de dois ou três noutra, como no arranjo C."""
-    rotulo = str(c.get("rotulo") or (ROTULO_DA_PALETA if c["tipo"] == "paleta" else ""))  # noqa-acento: contrato
+    rotulo = str(c.get("rotulo")  # (noqa-acento) contrato
+                 or (ROTULO_DA_PALETA if c["tipo"] == "paleta" else ""))
     if c["tipo"] == "chave":
         miolo = _chave_do_controle(mod, alvo, c, em_curso)
     else:
-        opcoes = list(c.get("opcoes") or [])  # noqa-acento: contrato
+        opcoes = list(c.get("opcoes") or [])  # (noqa-acento) contrato
         fileiras = ([[o for o in opcoes if not isinstance(o.get("cor"), list)],
                      [o for o in opcoes if isinstance(o.get("cor"), list)]]
                     if c["tipo"] == "paleta" else [opcoes])
@@ -1557,7 +1558,8 @@ ESTADO_DOS_GERIDOS_DO_DESENHO: dict[str, Any] = {
          "forca": 0.7, "controles": [
              {"id": "luz", "tipo": "chave", "valor": True, "dica": "Acesa"},
              {"id": "cor", "tipo": "paleta", "valor": "magenta",
-              "opcoes": [{"id": i, "cor": c, "rotulo": r} for i, c, r in CORES_DO_DESENHO]}]},  # noqa-acento: contrato
+              "opcoes": [{"id": i, "cor": c, "rotulo": r}  # (noqa-acento) contrato
+                         for i, c, r in CORES_DO_DESENHO]}]},
         {"id": "ap-2", "nome": "Aparelho 2", "estado": "ligado", "ligado": True, "bateria": 45,
          "forca": 0.3, "controles": [{"id": "luz", "tipo": "chave", "valor": False,
                                       "dica": "Acesa"}]},

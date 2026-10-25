@@ -2269,7 +2269,7 @@ SEM_ECO: tuple[str, ...] = (# `maquina.json`: o `state_full` não tem UMA chave 
 # métodos abaixo); nada aqui sabe de uma extensão em particular. Mora no fim do arquivo para não
 # deslocar as âncoras citadas do meio.
 
-METODO_DA_ACAO = "mods.acao"  # noqa-acento: contrato
+METODO_DA_ACAO = "mods.acao"  # (noqa-acento) contrato
 METODO_DO_LIVRE = "mods.livre"
 #: Quanto tempo um botão diz «Em curso» sem o estado novo da extensão, no máximo.
 TETO_DO_EM_CURSO_S = 5.0
@@ -2571,7 +2571,7 @@ def _aparelhos_da_janela(manifesto: Any) -> exp.AparelhosDaJanela | None:
 
 def _pecas_da_janela(manifesto: Any, mod_id: str) -> dict[str, Any]:
     """O que a janela desenha das peças que agem: as ações, os aparelhos, o «Em curso» e o livre."""
-    return {"acoes": tuple(_acao_da_janela(a) for a in manifesto.acoes),  # noqa-acento: contrato
+    return {"acoes": tuple(_acao_da_janela(a) for a in manifesto.acoes),  # (noqa-acento) contrato
             "aparelhos": _aparelhos_da_janela(manifesto),
             "em_curso": _VIVA.esperando(mod_id, _AGORA.agora()),
             "livre": _VIVA.ao_vivo(mod_id), "controles": _aba_dos_controles(manifesto)}
@@ -2634,7 +2634,7 @@ def acao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
     mod_id, acao, alvo = _partes_do_clique(o, exp.GESTO_DA_ACAO, 3)
     if not acao:
         raise RuntimeError("O clique não disse qual ação. Nada foi enviado.")
-    params: dict[str, Any] = {"mod": mod_id, "acao": acao}  # noqa-acento: contrato
+    params: dict[str, Any] = {"mod": mod_id, "acao": acao}  # (noqa-acento) contrato
     if alvo:
         params["alvo"] = alvo
     if alvo and acao == exp.ACAO_DE_LIGAR:
