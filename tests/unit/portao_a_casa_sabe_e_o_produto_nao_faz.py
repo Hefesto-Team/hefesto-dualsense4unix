@@ -21,7 +21,7 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "pyproject.toml",
         'hefesto-dualsense4unix = "hefesto_dualsense4unix.cli.app:main"',
         "console_script da CLI; é também o ExecStart da unit do daemon "
-        "(assets/hefesto-dualsense4unix.service:22, `daemon start --foreground`)",
+        "(assets/hefesto-dualsense4unix.service:34, `daemon start --foreground`)",
     ),
     "__main__.py": (
         "src/hefesto_dualsense4unix/__main__.py",
@@ -35,63 +35,63 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "própria régua: a fonte era `install.sh` e o commit 304b5f39 do mesmo "
         "dia (*a camada de máquina ganha casa própria*) mudou a boca de lugar "
         "— as dez curas de HOST saíram do instalador e viraram "
-        "`scripts/lib/camada_de_maquina.sh`, que o `install.sh`:988 passa a "
-        "carregar com `source`. O `install_broker_host` de lá (:169) é quem "
+        "`scripts/lib/camada_de_maquina.sh`, que o `install.sh`:1437 passa a "
+        "carregar com `source`. O `install_broker_host` de lá (:277) é quem "
         "COPIA o arquivo para /usr/local/lib/hefesto-dualsense4unix/ com "
         "`sudo install -Dm755`, e o ExecStart continua sendo "
         "assets/systemd/hefesto-hidraw-broker.service:34. O .deb "
-        "(scripts/build_deb.sh:346) e o flatpak fazem o mesmo por conta "
+        "(scripts/build_deb.sh:409) e o flatpak fazem o mesmo por conta "
         "própria. A boca não morreu; ela mudou de arquivo, que é exatamente o "
         "caso que esta régua manda CONFERIR em vez de apagar",
     ),
     "integrations/sentinela_do_wrapper.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/sentinela_do_wrapper.py",
-        "install.sh:3972 substitui __SENTINELA__ na unit, cujo ExecStart é "
+        "install.sh:5283 substitui __SENTINELA__ na unit, cujo ExecStart é "
         "`python3 __SENTINELA__ --reparar` "
-        "(assets/hefesto-steam-input-guard.service:29); o doctor.sh:1982 "
+        "(assets/hefesto-steam-input-guard.service:28); o doctor.sh:2792 "
         "(check_sentinela_wrapper, --censo) também o roda",
     ),
     "integrations/steam_input_ponte.py": (
         "scripts/disable_steam_input.sh",
         "integrations/steam_input_ponte.py",
         "roda como `python3 ${PONTE_PY} --ligar` em "
-        "scripts/disable_steam_input.sh:283+298, e esse roteiro é o ExecStart "
-        "de assets/hefesto-steam-input-guard.service:14 (install.sh:3973)",
+        "scripts/disable_steam_input.sh:361+373, e esse roteiro é o ExecStart "
+        "de assets/hefesto-steam-input-guard.service:13 (install.sh:5282)",
     ),
     "integrations/steam_launch_options.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/steam_launch_options.py",
-        "install.sh:4018 o roda com `--migrate`; uninstall.sh:1966 o roda para "
-        "tirar o wrapper; doctor.sh:2228 o publica como cura",
+        "install.sh:5333 o roda com `--migrate`; uninstall.sh:2550 o roda para "
+        "tirar o wrapper; doctor.sh:3051 o publica como cura",
     ),
     "integrations/proton_pin.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/proton_pin.py",
-        "install.sh:4190 (--ensure) e uninstall.sh:1944 o rodam; "
-        "doctor.sh:4056 (check_proton_pin, --report) também",
+        "install.sh:5073 (--ensure) e uninstall.sh:2450 o rodam; "
+        "doctor.sh:6001 (check_proton_pin, --report) também",
     ),
     "integrations/opcoes_por_jogo.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/opcoes_por_jogo.py",
-        "install.sh:4336 substitui __OPCOES_POR_JOGO__ na unit, cujo ExecStart "
+        "install.sh:5285 substitui __OPCOES_POR_JOGO__ na unit, cujo ExecStart "
         "é `python3 __OPCOES_POR_JOGO__ --aplicar` "
-        "(assets/hefesto-steam-input-guard.service:54) — o mesmo caminho dos "
+        "(assets/hefesto-steam-input-guard.service:53) — o mesmo caminho dos "
         "irmãos __SENTINELA__ e __PROTON_PIN__, que rodam na mesma unit",
     ),
     "integrations/audio_ks_dualsense.py": (
         "install.sh",
         "src/hefesto_dualsense4unix/integrations/audio_ks_dualsense.py",
-        "install.sh:3295 o copia para ~/.local/share/hefesto-dualsense4unix/"
-        "bin/hefesto-audio-ks, e o assets/hefesto-launch.sh:511 "
-        "(curar_audio_ks) o roda a cada jogo lançado; uninstall.sh:2006 o "
+        "install.sh:4133 o copia para ~/.local/share/hefesto-dualsense4unix/"
+        "bin/hefesto-audio-ks, e o assets/hefesto-launch.sh:691 "
+        "(curar_audio_ks) o roda a cada jogo lançado; uninstall.sh:2593 o "
         "roda com --remover-de-todos",
     ),
     "integrations/exame_da_mesa.py": (
         "scripts/doctor.sh",
         "src/hefesto_dualsense4unix/integrations/exame_da_mesa.py",
-        "scripts/doctor.sh:3978 (check_exame_da_mesa) o roda — e o "
-        "install.sh:4265 roda o doctor",
+        "scripts/doctor.sh:5885 (check_exame_da_mesa) o roda — e o "
+        "install.sh:5599 roda o doctor",
     ),
 }
 
@@ -233,39 +233,39 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "do XDG. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_CARONA_WRAPPER": (
-        "Desliga a carona do wrapper da Steam (app/actions/carona_do_wrapper.py:183). "
+        "Desliga a carona do wrapper da Steam (app/actions/carona_do_wrapper.py:179). "
         "A razão está escrita na seção `O DESLIGADOR, e por que ele existe` do "
         "próprio módulo, em maiúsculas: `Ele NÃO é uma flag de produto — a regra "
         "da casa é toda cura entra no install, sem flag, e em produção a carona "
         "está sempre ligada`. Ausente = LIGADA, e é isolamento de suíte: a suíte "
         "roda na máquina DELA e um teste de GUI que chamasse `Salvar` com a "
         "carona ligada varreria o `localconfig.vdf` REAL. Quem a desliga é o "
-        "`tests/conftest.py`:1197, em todo teste. MEDIDO em 18/08/2026."
+        "`tests/conftest.py`:1623, em todo teste. MEDIDO em 18/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_ASSETS_DIR": (
-        "Onde procurar os arquivos de `assets/` (daemon/service_install.py:35). "
+        "Onde procurar os arquivos de `assets/` (daemon/service_install.py:72). "
         "Existe para o teste e para a execução a partir do fonte não dependerem "
         "de instalação; em produção o caminho é derivado do pacote. Não abre "
         "feature nenhuma. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_FAKE": (
-        "Sobe o daemon com controle de mentira (daemon/main.py:13 e :113). É a "
+        "Sobe o daemon com controle de mentira (daemon/main.py:13 e :122). É a "
         "chave que permite a suíte inteira rodar sem aparelho na mesa. Ligá-la "
         "em produção seria o defeito, não a cura. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_FAKE_TRANSPORT": (
         "Diz ao controle de mentira se ele deve fingir cabo ou Bluetooth "
-        "(daemon/main.py:16). Irmã da chave FAKE e sem sentido fora dela — é "
+        "(daemon/main.py:17). Irmã da chave FAKE e sem sentido fora dela — é "
         "instrumento de bancada. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_INIT_TIMEOUT_SEC": (
         "Ajuste fino do tempo de espera da inicialização do backend "
-        "(core/backend_pydualsense.py:149). Número de calibração, não escolha "
+        "(core/backend_pydualsense.py:199). Número de calibração, não escolha "
         "dela: não há nada na tela que ela reconheceria como esta chave. "
         "MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_IPC_SOCKET_NAME": (
-        "Nome do socket de IPC (utils/xdg_paths.py:15). Isola instâncias "
+        "Nome do socket de IPC (utils/xdg_paths.py:21). Isola instâncias "
         "paralelas em teste; o applet do COSMIC apenas LÊ a chave "
         "(packaging/cosmic-applet/src/ipc.rs:54) para achar o mesmo socket. "
         "Ninguém a liga como feature. MEDIDO em 12/08/2026."
@@ -276,31 +276,31 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "sob si; em produção a raiz é fixa. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_LOG_FORMAT": (
-        "Formato do log (utils/logging_config.py:259). Chave de diagnóstico de "
+        "Formato do log (utils/logging_config.py:372). Chave de diagnóstico de "
         "quem lê log, não superfície de produto — não muda o que o aparelho faz. "
         "MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_LOG_LEVEL": (
-        "Verbosidade do log (utils/logging_config.py:258). Mesma família da "
+        "Verbosidade do log (utils/logging_config.py:371). Mesma família da "
         "anterior: instrumento de quem investiga um defeito, e o caminho "
         "publicado para investigar é o `doctor`, não esta chave. MEDIDO em "
         "12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_METRICS_PORT": (
-        "Porta do servidor de métricas (daemon/subsystems/metrics.py:21). É "
+        "Porta do servidor de métricas (daemon/subsystems/metrics.py:20). É "
         "parâmetro do instrumento cujo INTERRUPTOR é o verbo `hefesto metrics "
         "ligar` (cli/cmd_metrics.py, que grava o `metrics.flag` lido por "
         "daemon/main.py) — a chave `..._METRICS_ENABLED` saiu em 03/10/2026. "
         "MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_NICE": (
-        "Prioridade de escalonamento do processo do daemon (daemon/main.py:66). "
+        "Prioridade de escalonamento do processo do daemon (daemon/main.py:93). "
         "Ajuste de operação, não escolha publicada: a unit é quem decidiria "
         "isso, e decide por outros meios. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_NO_WINDOW_DETECT": (
-        "Desliga a detecção de janela em foco (cli/app.py:265, "
-        "profiles/autoswitch.py:70). Existe para o teste do autoswitch não "
+        "Desliga a detecção de janela em foco (cli/app.py:359, "
+        "profiles/autoswitch.py:193). Existe para o teste do autoswitch não "
         "depender de um compositor vivo, e para a CLI poder rodar num shell sem "
         "sessão gráfica. MEDIDO em 12/08/2026."
     ),
@@ -311,14 +311,14 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "outra chave. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_POLL_HZ": (
-        "Frequência do laço de poll (daemon/main.py:69). Já é escolha publicada "
+        "Frequência do laço de poll (daemon/main.py:105). Já é escolha publicada "
         "por OUTRA porta — `--poll-hz` do subcomando `daemon start` "
-        "(cli/app.py:251). A env é o atalho de bancada para o mesmo número. "
+        "(cli/app.py:337). A env é o atalho de bancada para o mesmo número. "
         "MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS": (
         "Quantos milissegundos seguram o PS para contar como pressão longa "
-        "(daemon/main.py:73). Calibração de gesto; afinada por quem mede, não "
+        "(daemon/main.py:107). Calibração de gesto; afinada por quem mede, não "
         "escolhida por quem usa. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_PS_TOQUE_CURTO_TETO_MS": (
@@ -334,17 +334,17 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_REPORT_THROTTLE_SEC": (
         "Intervalo mínimo entre escritas de report de saída "
-        "(core/backend_pydualsense.py:162). Número de calibração do transporte, "
+        "(core/backend_pydualsense.py:204). Número de calibração do transporte, "
         "medido com o aparelho na mão; não é superfície de escolha. MEDIDO em "
         "12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_RESET_TRAY_WARNING": (
-        "Faz o aviso da bandeja ser emitido de novo (app/tray.py:171). Existe "
+        "Faz o aviso da bandeja ser emitido de novo (app/tray.py:220). Existe "
         "para reencenar um aviso já visto durante uma medição de tela; o "
         "caminho publicado é apagar o arquivo de estado. MEDIDO em 12/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED": (
-        "Pula a semeadura dos perfis de fábrica (profiles/loader.py:79). Existe "
+        "Pula a semeadura dos perfis de fábrica (profiles/loader.py:104). Existe "
         "para o teste começar de um diretório de perfis vazio; em produção a "
         "semeadura é justamente o que se quer. MEDIDO em 12/08/2026."
     ),
@@ -411,7 +411,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     "HEFESTO_BROKER_GRACA_DA_ENTREGA_S": (
         "08/10/2026, DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01 — quanto "
         "o broker espera sem cliente antes de entregar o físico ao sistema "
-        "(broker/hidraw_broker.py:2443, `_graca_da_entrega_do_ambiente`). O "
+        "(broker/hidraw_broker.py:2784, `_graca_da_entrega_do_ambiente`). O "
         "padrão é a medida (30 s, o dobro do pior reinício do daemon), e "
         "nenhuma unit, install ou empacotamento a escreve: `0` é a válvula de "
         "quem depura o broker para voltar ao comportamento de antes. Nenhum "
@@ -460,7 +460,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_WIREPLUMBER_SISTEMA": (
         "13/10/2026, as regras do som no WirePlumber da distro — desvia as pastas de sistema "
-        "que decidem a forma do drop-in (utils/xdg_paths.py:97, `wireplumber_forma`; as "
+        "que decidem a forma do drop-in (utils/xdg_paths.py:115, `wireplumber_forma`; as "
         "irmãs em shell são `scripts/doctor.sh:1722` e "
         "`scripts/fix_wireplumber_default_source.sh:100`). O comentário do dono escreve a "
         "razão: «existe para o teste e para a bancada: o lar de mentira declara um "
@@ -544,7 +544,7 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
     "HEFESTO_BROKER_NO_NASCE_FECHADO": (
         "Se o nó hidraw do DualSense físico NASCE FECHADO — `0600 root`, pela "
         "regra `assets/73-hefesto-ps5-controller.rules` da cura O-NO-NASCE-FECHADO-01 "
-        "(broker/hidraw_broker.py:91). É promessa dela, decidida em "
+        "(broker/hidraw_broker.py:14). É promessa dela, decidida em "
         "20/09/2026: «o Hefesto tem que ter prioridade em tudo e isso deveria "
         "estar no install por default». Ela acopla as duas metades da cura — "
         "a udev decide o NASCIMENTO do nó, e esta env conta ao broker qual é o "
@@ -562,14 +562,14 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
     ),
     "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED": (
         "Declara que ela QUER o DualSense como microfone padrão do sistema "
-        "(core/system_check.py:119), e com isso cala o alarme do doctor. É "
+        "(core/system_check.py:140), e com isso cala o alarme do doctor. É "
         "escolha dela por definição. REMEDIDO em 03/10/2026: a mão existe e não "
         "é a env — é a marca do gesto, que `install.sh --keep-dualsense-mic` "
-        "grava (install.sh:4090). Ver `_MAO_FORA_DO_AMBIENTE`."
+        "grava (install.sh:4921). Ver `_MAO_FORA_DO_AMBIENTE`."
     ),
     "HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION": (
-        "Liga/desliga o teclado emulado (daemon/main.py:79). É feature dela e "
-        "o próprio comentário de :104 escreve a precedência: default < esta env "
+        "Liga/desliga o teclado emulado (daemon/main.py:111). É feature dela e "
+        "o próprio comentário de :109 escreve a precedência: default < esta env "
         "< o `keyboard_emulation.flag`, que é a decisão DELA. MEDIDO em "
         "12/08/2026: LIGADA — não pela env, e sim pelo companheiro declarado em "
         "`_MAO_FORA_DO_AMBIENTE`."
@@ -580,7 +580,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
     "HEFESTO_MOD_ID": (
         "mods/supervisor.py::Supervisor",
         "13/10/2026 — a mão é o supervisor das modificações: o `Supervisor._abrir` "
-        "(mods/supervisor.py:484) põe a chave no ambiente da modificação antes de abri-la, "
+        "(mods/supervisor.py:668) põe a chave no ambiente da modificação antes de abri-la, "
         "e o serviço o sobe pelo `Daemon._start_mods` (daemon/lifecycle.py). Não há "
         "`Environment=` a escrever: a chave nasce a cada modificação, para ela, e não para "
         "o serviço.",
@@ -588,7 +588,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
     "HEFESTO_MOD_SOCKET": (
         "mods/supervisor.py::Supervisor",
         "13/10/2026 — a mão é o supervisor das modificações: o `Supervisor._abrir` "
-        "(mods/supervisor.py:484) põe a chave no ambiente da modificação antes de abri-la, "
+        "(mods/supervisor.py:668) põe a chave no ambiente da modificação antes de abri-la, "
         "e o serviço o sobe pelo `Daemon._start_mods` (daemon/lifecycle.py). Não há "
         "`Environment=` a escrever: a chave nasce a cada modificação, para ela, e não para "
         "o serviço.",
@@ -596,7 +596,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
     "HEFESTO_MOD_FICHA": (
         "mods/supervisor.py::Supervisor",
         "13/10/2026 — a mão é o supervisor das modificações: o `Supervisor._abrir` "
-        "(mods/supervisor.py:484) põe a chave no ambiente da modificação antes de abri-la, "
+        "(mods/supervisor.py:668) põe a chave no ambiente da modificação antes de abri-la, "
         "e o serviço o sobe pelo `Daemon._start_mods` (daemon/lifecycle.py). Não há "
         "`Environment=` a escrever: a chave nasce a cada modificação, para ela, e não para "
         "o serviço.",
@@ -604,7 +604,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
     "HEFESTO_MOD_DADOS": (
         "mods/supervisor.py::Supervisor",
         "13/10/2026 — a mão é o supervisor das modificações: o `Supervisor._abrir` "
-        "(mods/supervisor.py:484) põe a chave no ambiente da modificação antes de abri-la, "
+        "(mods/supervisor.py:668) põe a chave no ambiente da modificação antes de abri-la, "
         "e o serviço o sobe pelo `Daemon._start_mods` (daemon/lifecycle.py). Não há "
         "`Environment=` a escrever: a chave nasce a cada modificação, para ela, e não para "
         "o serviço.",
@@ -612,7 +612,7 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
     "HEFESTO_MOD_API": (
         "mods/supervisor.py::Supervisor",
         "13/10/2026 — a mão é o supervisor das modificações: o `Supervisor._abrir` "
-        "(mods/supervisor.py:484) põe a chave no ambiente da modificação antes de abri-la, "
+        "(mods/supervisor.py:668) põe a chave no ambiente da modificação antes de abri-la, "
         "e o serviço o sobe pelo `Daemon._start_mods` (daemon/lifecycle.py). Não há "
         "`Environment=` a escrever: a chave nasce a cada modificação, para ela, e não para "
         "o serviço.",
@@ -627,16 +627,16 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
     ),
     "HEFESTO_JOGADOR": (
         "daemon/subsystems/hotkey.py::start_hotkey_manager",
-        "02/10/2026 — a mão é o despachante dos gestos: `start_hotkey_manager` (hotkey.py:712) "
+        "02/10/2026 — a mão é o despachante dos gestos: `start_hotkey_manager` (hotkey.py:776) "
         "cria o `_AtosDoGesto`, e o `_rodar_o_script_do_gesto` põe esta chave no ambiente do "
-        "script dela antes de rodá-lo (hotkey.py:2631). Não há `Environment=` a escrever: a chave"
+        "script dela antes de rodá-lo (hotkey.py:2700). Não há `Environment=` a escrever: a chave"
         " nasce a cada gesto, para o script dela, e não para o serviço.",
     ),
     "HEFESTO_TRANSPORTE": (
         "daemon/subsystems/hotkey.py::start_hotkey_manager",
-        "02/10/2026 — a mão é o despachante dos gestos: `start_hotkey_manager` (hotkey.py:712) "
+        "02/10/2026 — a mão é o despachante dos gestos: `start_hotkey_manager` (hotkey.py:776) "
         "cria o `_AtosDoGesto`, e o `_rodar_o_script_do_gesto` põe esta chave no ambiente do "
-        "script dela antes de rodá-lo (hotkey.py:2631). Não há `Environment=` a escrever: a chave"
+        "script dela antes de rodá-lo (hotkey.py:2700). Não há `Environment=` a escrever: a chave"
         " nasce a cada gesto, para o script dela, e não para o serviço.",
     ),
     "HEFESTO_DUALSENSE4UNIX_CONEXAO_ZUMBI": (
@@ -656,10 +656,10 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
     "HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION": (
         "utils/session.py::save_keyboard_emulation",
         "MEDIDO em 12/08/2026: a env é o degrau do MEIO de uma precedência de "
-        "três, escrita em daemon/main.py:78 — default da dataclass (True) < "
+        "três, escrita em daemon/main.py:109 — default da dataclass (True) < "
         "esta env < `keyboard_emulation.flag`. Quem grava o flag é "
         "`save_keyboard_emulation`, e ele É chamado em produção "
-        "(daemon/lifecycle.py:743-747, dentro de `set_keyboard_emulation`, na "
+        "(daemon/lifecycle.py:1704-1707, dentro de `set_keyboard_emulation`, na "
         "borda que alterna o teclado em runtime — o endereço era :1300 e caducou; "
         "RECONFERIDO em 26/08/2026, quando a frente da poda o mediu de novo "
         "JUSTAMENTE para saber se podia apagá-lo. Não pode: tem chamador vivo). "
@@ -671,9 +671,9 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
         "REMEDIDO em 03/10/2026, e a lacuna de 12/08 já estava curada desde "
         "26/08 (DROPIN-AMBIGUO-01): `install.sh --keep-dualsense-mic` grava a "
         "MARCA DO GESTO (`fix_wireplumber_default_source.sh --marcar-gesto-do-mic`, "
-        "install.sh:4090), e as duas perguntas leem o mesmo dono em cinco "
+        "install.sh:4921), e as duas perguntas leem o mesmo dono em cinco "
         "degraus — `system_warnings` pelo `_dualsense_mic_intended` "
-        "(system_check.py:88, chamada por lifecycle.py:3424) e o doctor pelo "
+        "(system_check.py:107, chamada por lifecycle.py:3654) e o doctor pelo "
         "`_prefere_mic_do_dualsense`. A env é o degrau 2 desses cinco, o atalho "
         "de quem exporta à mão; gravá-la no instalador daria uma SEGUNDA fonte "
         "de verdade para a mesma escolha, que é o defeito que o DROPIN-AMBIGUO "
@@ -857,7 +857,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "o_que_esta_em_comentario`, que a mordem."
     ),
     "interface/monta.py::larg_rotulos": (
-        "Auxiliar do gerador do mockup (interface/monta.py:125), chamado só pelos "
+        "Auxiliar do gerador do mockup (interface/monta.py:294), chamado só pelos "
         "dez `interface/abaNN.py` — que são BANCADA e saem da conta pela poda de "
         "`promessas_sem_caminho`. O produto não gera página em tempo de execução: "
         "ele lê o HTML já escrito em `interface/paginas/`. MEDIDO em 01/09/2026."
@@ -865,7 +865,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "interface/pacotes/a01_jogar.py::mascaras_montaveis": (
         "Pergunta ao catálogo do vpad quais máscaras o produto SABE MONTAR "
         "(`external_mask.mascaras_validas`), e quem a chama é o GERADOR da aba "
-        "Jogar — `interface/aba01.py:629` e `:1799` —, que é BANCADA e sai da "
+        "Jogar — `interface/aba01.py:880` e `:1925` —, que é BANCADA e sai da "
         "conta pela poda de `promessas_sem_caminho`. "
         "E ISSO ESTÁ CERTO, e a razão é do dado: a lista de máscaras montáveis "
         "é do CÓDIGO, e não do estado da máquina: ela não muda entre dois tiques. "
@@ -981,10 +981,10 @@ _NAO_E_PROMESSA: dict[str, str] = {
     ),
     "profiles/curva_propria.py::gerar_tabela_markdown": (
         "MEDIDO em 22/08/2026, e isto SUBSTITUI a nota de 15/08 que o dava por "
-        "fiado em produção. O docstring (:290) diz o que ele é: gera a tabela de "
+        "fiado em produção. O docstring (:236) diz o que ele é: gera a tabela de "
         "`docs/protocol/curvas-proprias.md`. O único chamador é "
         "`scripts/gerar-tabela-de-curvas.py`:52-83, que roda no CI com `--check` "
-        "(`.github/workflows/ci.yml`:400). Gerador de documentação é instrumento, "
+        "(`.github/workflows/ci.yml`:525). Gerador de documentação é instrumento, "
         "e instrumento não é caminho de produção — a mesma linha que vale para "
         "`tests/`."
     ),
@@ -1204,9 +1204,9 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "app/fala_do_mapa.py::Fala": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o tipo que duas "
         "réguas leem por AST, não promessa ao produto: "
-        "`scripts/validar-fala-de-tela.py:151` e "
-        "`scripts/check_a_tela_nao_confessa.py:160` varrem toda chamada "
-        "`Fala(...)` em `src/`. Hoje há zero (`validar-fala-de-tela.py:674`, "
+        "`scripts/validar-fala-de-tela.py:150` e "
+        "`scripts/check_a_tela_nao_confessa.py:127` varrem toda chamada "
+        "`Fala(...)` em `src/`. Hoje há zero (`validar-fala-de-tela.py:675`, "
         "`PISO_DA_REGUA[\"falas\"] = 0`): a interface nova não declara nenhuma. "
         "O tipo fica para a próxima frase de tela que ligar um número ao mapa."
     ),
@@ -1215,13 +1215,13 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "piloto da aba Controles, não promessa ao produto: só "
         "`interface/controles_vivos.py:899` o instancia (bancada). A janela "
         "viva desenha a onda do microfone por `integrations/ondas_de_som` "
-        "(`interface/hefesto_vivo.py:3835`) e o daemon publica o estado do "
+        "(`interface/hefesto_vivo.py:4800`) e o daemon publica o estado do "
         "mudo; as funções soltas do módulo (`sinks_dualsense`, `muted_de_saida`) "
         "seguem chamadas por `app/audio_saida.py`. Sai com o piloto."
     ),
     "integrations/cor_do_plastico.py::ler_pelo_cabo": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o instrumento da "
-        "bancada, não promessa ao produto: `scripts/mesa_de_medicao.py:735` e "
+        "bancada, não promessa ao produto: `scripts/mesa_de_medicao.py:731` e "
         "`scripts/ensaios/a_folha_dos_ensaios.py:390` leem a cor do plástico "
         "pelo cabo com ela. O produto lê pela porta do broker "
         "(`tests/unit/test_a_cor_do_plastico_entra_pela_porta_do_broker.py`), "
@@ -1230,7 +1230,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "integrations/plano_de_radio.py::microfone_nasce_ligado": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o DONO declarado do "
         "padrão «o microfone nasce ligado», não promessa ao produto: "
-        "`profiles/schema.py:1953` e `:2137` o citam em `dono=` por nome, e "
+        "`profiles/schema.py:2464` e `:2885` o citam em `dono=` por nome, e "
         "`tests/unit/test_nasce_ligado_01_nenhuma_feature_nasce_muda.py` "
         "(`test_o_dono_declarado_resolve`) importa o endereço e reprova se ele "
         "sumir. A frase que o lia na tela saiu com a janela GTK."
@@ -1240,10 +1240,10 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "bancada e o dono de dois números, não promessa ao produto: "
         "`scripts/ensaios/o_travamento_fator_a_fator.py:886` pergunta quem varre "
         "com ela, e `QUEDA_MINIMA_MEDIDA` e `QUEDA_MAXIMA_MEDIDA` são os que o "
-        "`scripts/doctor.sh:4400` cita (régua: "
+        "`scripts/doctor.sh:4607` cita (régua: "
         "`tests/unit/test_a_varredura_do_radio_se_le_e_custa.py`). A janela "
-        "viva lê a varredura do estado do BlueZ que o daemon publica "
-        "(`interface/pacotes/a08_conexoes.py:4343`)."
+        "viva lê quem varre do dono do BlueZ, no próprio processo "
+        "(interface/pacotes/a08_conexoes.py:4942 (`varrendo`))."
     ),
     "integrations/varredura_do_radio.py::quem_esta_varrendo": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o instrumento da "
@@ -1295,7 +1295,7 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "profiles/curva_propria.py::CurvaPropria": (
         "03/10/2026, decisão pelo padrão dela (o mais reversível na dúvida): "
         "FICA. É a entrega da regra R3 do clean-room — o dado e a origem nunca se "
-        "separam —, e `docs/protocol/curvas-proprias.md:16-22` e `NOTICE:195-199` "
+        "separam —, e `docs/protocol/curvas-proprias.md:16-22` e `NOTICE:217-223` "
         "dizem que o arquivo fica; a decisão de 29/08/2026 "
         "(`D-A-CORRENTE-DO-CLEAN-ROOM-SAI`) tirou a corrente CR-03, CR-04 e "
         "CR-06, não o formato da CR-02. Nenhum módulo de `src/` o importa e não "
@@ -1305,13 +1305,13 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "03/10/2026, FICA, pela mesma decisão de `::CurvaPropria`: é o catálogo "
         "compartilhado do formato da CR-02, e o único leitor dele é "
         "`scripts/gerar-tabela-de-curvas.py:52`, o gerador de "
-        "`docs/protocol/curvas-proprias.md`, que o `NOTICE:195-199` cita. "
+        "`docs/protocol/curvas-proprias.md`, que o `NOTICE:217-223` cita. "
         "Apagá-lo quebra o gerador e a entrega da R3."
     ),
     "interface/pacotes/a03_gatilhos.py::sem_comentarios_de_css": (
         "15/10/2026, D-1510-ACIONAMENTO-E-IMERSAO-EM-BIBLIOTECAS-SEPARADAS — é do gerador do "
         "desenho, não do produto: o `interface/aba03.py` (o gerador do mockup dos Gatilhos, "
-        "o import de :32 e a chamada de :488) tira com ela os `/* … */` do CSS para conferir "
+        "o import de :36 e a chamada de :662) tira com ela os `/* … */` do CSS para conferir "
         "a grade `minmax(0,1fr)` antes de gravar o desenho; o produto só renderiza a página "
         "publicada. O commit 6b5e2e917 tirou o outro chamador, a régua da página antiga."
     ),
@@ -1335,7 +1335,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "09/10/2026 — o degrau do meio antes do corte inteiro "
         "(A-PONTE-SE-OTIMIZA-ATE-QUATRO-NO-ULTRA-NUM-ADAPTADOR-01). "
         "O caminho se perde no governador do rádio, que ainda corta a ponte inteira: o "
-        "`DEGRAU_DO_MEIO_LIGADO` nasceu `False` (integrations/radio_da_mesa.py:654) até a "
+        "`DEGRAU_DO_MEIO_LIGADO` nasceu `False` (integrations/radio_da_mesa.py:662) até a "
         "bancada de quatro com ponte dela. Fecha quando a medida ligar o degrau e o "
         "governador chamar esta ordem."
     ),
@@ -1344,9 +1344,10 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "09/10/2026 — a frase da causa medida quando a procura da faixa termina sem faixa "
         "(A-FAIXA-DO-TECLADO-SE-ACHA-01). Hoje só o ensaio "
         "`scripts/ensaios/a_faixa_do_receptor.py` "
-        "a lê; a 08 ainda diz `FAIXA_NAO_ENCONTRADA` (interface/pacotes/a08_conexoes.py:4353, "
-        "`_andar_a_descoberta`). Fecha quando a bancada B9 confirmar as causas e a 08 "
-        "trocar a frase genérica por esta, que é mudança visível e passa pelo desenho."
+        "a lê; a 08 ainda diz `FAIXA_NAO_ENCONTRADA` (interface/pacotes/a08_conexoes.py:4127 "
+        "(`FAIXA_NAO_ENCONTRADA`), no `_andar_a_descoberta`). Fecha quando a bancada B9 "
+        "confirmar as causas e a 08 trocar a frase genérica por esta, que é mudança visível e "
+        "passa pelo desenho."
     ),
 
 
@@ -1366,10 +1367,10 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     # fica: a decisão D-COSTURA-BLUEZ (25/08) deixa o script dono do alias,
     "integrations/apelido_do_dongle.py::costurar_a_mesa": (
         "MEDIDO em 22/08/2026, RECONFERIDO em 23/08 e DECIDIDO em 25/08: é "
-        "promessa ao produto e o caminho está DELIBERADAMENTE fechado — a "
-        "nota datada está no próprio docstring da função (`:588-602`), e ela "
-        "diz o contrário do que um chamador faria. Desde `a75a514` (22/08, "
-        "21h26) o `scripts/bt_active_mode.sh:349` itera TODOS os adaptadores "
+        "promessa ao produto e o caminho está DELIBERADAMENTE fechado — o "
+        "docstring de hoje (`:377`) diz só o que ela faz, e a razão mora na "
+        "`D-COSTURA-BLUEZ`, abaixo. Desde `a75a514` (22/08, "
+        "21h26) o `scripts/bt_active_mode.sh:354` itera TODOS os adaptadores "
         "que hospedam Nintendo (`_hci_com_nintendo`, `:281`), e o mesmo commit "
         "registra que resolveu 'a duplicidade … dois escritores do mesmo "
         "alias'. "
@@ -2797,15 +2798,15 @@ class TestOPortaoMorde:
             "daemon/subsystems/gamepad.py::sync_steam_input_exception"
             not in soltas
         ), (
-            "a varredura não vê chamada direta (gamepad.py:989) — e é ela que "
+            "a varredura não vê chamada direta (gamepad.py:1222) — e é ela que "
             "prova que a exceção do Steam Input continua viva"
         )
         assert (
             "integrations/proton_pin.py::lock_proton_for_all_games" not in soltas
         ), (
-            "a varredura não vê despacho por STRING — `getattr(pp, "
+            "a varredura não vê despacho por STRING — `getattr(pin, "
             '"lock_proton_for_all_games", None)` em '
-            "app/actions/daemon_actions.py:1126 é o ÚNICO caminho deste "
+            "interface/pacotes/a09_sistema.py:2595 é o ÚNICO caminho deste "
             "símbolo. Foi assim que a passada anterior errou cinco vezes numa "
             "só medição."
         )
@@ -2830,7 +2831,7 @@ class TestOPortaoMorde:
         """Citar não é ligar, e é essa diferença que o portão inteiro mede."""
         assert not portas_que_ligam(
             "HEFESTO_DUALSENSE4UNIX_DUALSENSE_MIC_INTENDED"
-        ), "o detector aceitou o COMENTÁRIO de install.sh:227 como escrita"
+        ), "o detector aceitou o COMENTÁRIO de install.sh:282 como escrita"
         assert not portas_que_ligam("HEFESTO_DUALSENSE4UNIX_BT_MIC"), (
             "o detector aceitou o TEXTO DE AJUDA do controller_card como escrita"
         )
@@ -3217,10 +3218,10 @@ class TestOPortaoMorde:
         embutido = "\n".join(trechos_python_embutidos(_RAIZ / "uninstall.sh"))
         assert "kc.strip_quirks_token(tok)" in embutido, (
             "o extrator não achou a chamada dentro do heredoc de "
-            "uninstall.sh:1688 — o delimitador ou a linha de abertura mudaram"
+            "uninstall.sh:2128 — o delimitador ou a linha de abertura mudaram"
         )
         assert "IDs do hefesto (strip_quirks_token do módulo puro)" not in embutido, (
-            "o extrator engoliu o COMENTÁRIO de uninstall.sh:1663 junto com o "
+            "o extrator engoliu o COMENTÁRIO de uninstall.sh:2107 junto com o "
             "heredoc — ele está pegando texto demais, e menção viraria prova"
         )
 
