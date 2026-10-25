@@ -105,6 +105,7 @@ def _com(opcao_id: str, aparece_com: Any) -> list[dict[str, Any]]:
         "ligado-sem-bool", "ligado-com-1", "lista-com-numero", "alvo-de-outro-tipo", "vazio",
         "livre"])
 def test_o_manifesto_recusa(declaradas: list[dict[str, Any]], frase: str) -> None:
+    # D-2510-O-APARECE-COM-NAO-CONVERTE-O-1-EM-TRUE
     """Cada recusa diz o id da opção que a causou."""
     with pytest.raises(ValidationError, match=re.escape(frase)):
         Manifesto.model_validate(_manifesto(opcoes=declaradas))  # noqa-acento: chave

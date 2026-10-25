@@ -84,6 +84,7 @@ def _vivas(tarefas: list[asyncio.Task[None]]) -> list[asyncio.Task[None]]:
 def test_desassinar_o_movimento_fecha_o_leitor_de_cada_controle(
     curto: pathlib.Path, mesa: str,  # noqa: F811
 ) -> None:
+    # D-2510-A-PORTA-DESASSINA
     relogio = _Relogio()
 
     async def corrida() -> dict[str, Any]:

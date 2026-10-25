@@ -88,6 +88,7 @@ def _cancelar(a07: Any, ctx: Any, ponte: _Ponte) -> dict[str, Any]:  # noqa: F81
 @pytest.mark.parametrize("modo", ["segurar", "repetir"])
 def test_trocar_o_modo_e_cancelar_devolve_a_extensao_ao_modo_guardado(
         janela: Any, ctx: Any, relogio: list[float], modo: str) -> None:  # noqa: F811
+    # D-2510-O-CANCELAR-DA-JANELA-DESFAZ-O-MODO
     a07, instalar, abrir = janela
     instalar(**_com(COM_MODOS))
     ponte = _Ponte(VIVO)
@@ -149,6 +150,7 @@ def test_reabrir_a_janela_que_fechou_sem_cancelar_devolve_o_modo_guardado(
 ])
 def test_o_modo_recusado_volta_na_janela_e_na_barra_e_a_recusa_aparece(
         janela: Any, ctx: Any, relogio: list[float], como: str, frase: str) -> None:  # noqa: F811
+    # D-2510-A-RECUSA-DO-MODO-DEVOLVE-A-BARRA
     a07, instalar, abrir = janela
     instalar(**_com(COM_MODOS))
     ponte = _PonteQueRecusa(VIVO)
@@ -192,6 +194,7 @@ def test_o_cancelar_recusado_diz_por_que_e_o_reabrir_desfaz_quando_ela_volta(
 @pytest.mark.parametrize("como", ["cancelar", "reabrir"])
 def test_a_extensao_fora_da_porta_nao_tem_modo_a_desfazer(
         janela: Any, ctx: Any, relogio: list[float], como: str) -> None:  # noqa: F811
+    # D-2510-A-EXTENSAO-FORA-DA-PORTA-NAO-TEM-MODO-A-DESFAZER
     """A extensão que saiu da porta depois da troca volta lendo o guardado: o Cancelar e o reabrir
     não acusam recusa, e a janela e a barra mostram o guardado, não o modo que ela largou."""
     a07, instalar, abrir = janela
@@ -304,6 +307,7 @@ def _com_o_controle(controle_id: str) -> dict[str, Any]:
 @pytest.mark.parametrize("controle_id", sorted(ACOES))
 def test_o_controle_com_o_id_de_uma_acao_dos_aparelhos_e_recusado_nomeando_o_id(
         controle_id: str) -> None:
+    # D-2510-O-CONTROLE-NAO-REPETE-O-ID-DE-UMA-ACAO
     with pytest.raises(RecusaError) as recusa:
         estado_dos_acessorios("toque", _com_o_controle(controle_id), acoes_dos_aparelhos=ACOES)
     assert recusa.value.codigo == CODE_INVALID_PARAMS
