@@ -262,9 +262,16 @@ def podres_do_validador(raiz: Path) -> tuple[list[Citacao], list[str]]:
         achados.extend(val.varrer_documento(documento, raiz, corpos)[0])
     for planilha in val.planilhas_de(raiz):
         achados.extend(val.varrer_planilha(planilha, raiz, corpos)[0])
+    for codigo in val.codigos_de(raiz):
+        achados.extend(val.varrer_codigo(codigo, raiz, corpos)[0])
     por_chave: dict[tuple[str, str, bool], Citacao] = {}
     a_mao: list[str] = []
     for achado in achados:
+        if achado.forma:
+            # a queixa é da FORMA (o caminho que não abre da raiz, a curta no código, o nome que
+            # casa na vizinha), não da posição: mover o endereço não a cura, e o histórico a pioraria
+            a_mao.append(f"{achado}: é de forma, e se cura à mão")
+            continue
         endereco = _ENDERECO.search(achado.endereco)
         nome = _NOME_NA_QUEIXA.search(achado.motivo)
         if endereco is None:
@@ -328,6 +335,10 @@ def com_promessa(raiz: Path) -> list[Citacao]:
                     if ":" in celula:
                         for achado in val.ENDERECO_CSV.finditer(celula):
                             anotar(planilha, celula, achado, val.SEPARADORES_DE_BLOCO)
+    for codigo in val.codigos_de(raiz):
+        for trecho in val.trechos_do_codigo(codigo.read_text(encoding="utf-8")):
+            for achado in val.ENDERECO_CSV.finditer(trecho.texto):
+                anotar(codigo, trecho.texto, achado, val.SEPARADORES_DE_BLOCO)
     return list(achadas.values())
 
 
@@ -1324,6 +1335,11 @@ def segunda_chance(
     def sem_prova(porque: str) -> tuple[str, tuple[int, int] | None, str]:
         return "varredura", None, f"{motivo_da_varredura}; sem segunda chance: {porque}"
 
+    if _relativo(raiz, documento) in val.CODIGO_COM_CITACOES:
+        # Medido em 25/10/2026: no arquivo da casa-sabe as sete segundas chances levavam endereços
+        # certos para linhas erradas. O reapontamento em massa dele (5df9b0c2d) foi À MÃO e certo,
+        # e o endereço de antes dele, que nunca passou por régua, já nascia errado.
+        return sem_prova("o arquivo de código só se reaponta em massa à mão, conferido")
     if volta > PROFUNDIDADE_DA_SEGUNDA_CHANCE:
         return sem_prova(
             f"o endereço de antes também veio de uma varredura ou de um reapontamento em massa, "
@@ -1438,9 +1454,12 @@ def cruas(raiz: Path) -> list[Citacao]:
         onde: Callable[[int], int],
         separadores: tuple[str, ...],
         antes: str = "",
+        so_inteiras: bool = False,
     ) -> None:
         """``onde`` leva um índice de ``texto`` ao lugar dele no texto CRU do documento."""
         for inicio, fim, arquivo, a, b, faixa, curta, vao in _achar(texto, val, modo, resolve):
+            if curta and so_inteiras:
+                continue
             alvo = val.resolve(arquivo, raiz)
             if alvo is None or val.nomes_prometidos(texto, inicio, fim, separadores):
                 continue
@@ -1466,6 +1485,12 @@ def cruas(raiz: Path) -> list[Citacao]:
                     return inicio + i if mapa is None else mapa[i]
 
                 anotar(planilha, celula, "csv", onde, val.SEPARADORES_DE_BLOCO)
+    for codigo in val.codigos_de(raiz):
+        # a cadeia emendada é UMA (o nome prometido pode estar no pedaço de baixo); no código a
+        # curta não se escreve (o validador a reprova), então só a inteira entra
+        for trecho in val.trechos_do_codigo(codigo.read_text(encoding="utf-8")):
+            anotar(codigo, trecho.texto, "csv", _desde(0), val.SEPARADORES_DE_BLOCO,
+                   so_inteiras=True)
     return list(achadas.values())
 
 
@@ -1819,10 +1844,13 @@ def reapontar(
 
 def _quebradas_pela_troca(raiz: Path, documento: Path, novos: set[str]) -> list[str]:
     """As citações do documento que o endereço novo deixou podres."""
+    val = _validador(raiz)
     if documento.suffix in (".md", ".csv") and (raiz / "docs") in documento.parents:
-        val = _validador(raiz)
         varrer = val.varrer_planilha if documento.suffix == ".csv" else val.varrer_documento
         achados = varrer(documento, raiz, {})[0]
+        return [str(a) for a in achados if any(novo in a.endereco for novo in novos)]
+    if _relativo(raiz, documento) in val.CODIGO_COM_CITACOES:
+        achados = val.varrer_codigo(documento, raiz, {})[0]
         return [str(a) for a in achados if any(novo in a.endereco for novo in novos)]
     citacoes, _ = podres_do_src(raiz)
     return [

@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import argparse
 import ast
+import bisect
 import csv
 import functools
+import io
 import re
 import subprocess
 import sys
+import tokenize
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
@@ -22,6 +25,16 @@ PASTA_CSV = Path("docs") / "data"
 
 CSV_FORA_DO_PORTAO: dict[str, str] = {}
 
+CODIGO_COM_CITACOES: dict[str, str] = {
+    "tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py": (
+        "25/10/2026, AS-CITACOES-DA-CASA-SABE-E-AS-DE-LINHA-UNICA-GANHAM-REGUA-01: as razões das "
+        "isenções da casa-sabe citam `arquivo:linha` em cadeias Python (121 citações, mais 2 "
+        "exemplos fabricados), e nenhuma régua as lia: 59 só abriam pelo prefixo de `src/` ou pelo "
+        "fim do caminho, 18 eram curtas, e 5 apontavam a linha errada"),
+}
+"""O código cujas cadeias e comentários são PROSA que cita: lido como as planilhas, cadeia a cadeia
+(a cadeia emendada é uma só), com o caminho inteiro a partir da raiz e sem a forma curta."""
+
 PREFIXOS = ("", "src/hefesto_dualsense4unix")
 
 EXTENSOES = "[A-Za-z0-9]+"
@@ -32,9 +45,11 @@ ENDERECO = re.compile(
 )
 
 ENDERECO_CSV = re.compile(
-    rf"(?<![A-Za-z0-9_./-])`?(?P<arq>[A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:{EXTENSOES}))"
+    rf"(?<![A-Za-z0-9_./-])`?(?P<arq>\.?[A-Za-z0-9_][A-Za-z0-9_./-]*\.(?:{EXTENSOES}))"
     r":(?P<a>\d+)(?:-(?P<b>\d+))?`?"
 )
+"""A inteira solta (planilha, código). O ``.`` do começo é o da pasta oculta (``.github/…``), que sem
+ele a régua não via."""
 
 CURTA_CSV = re.compile(
     r"(?:[,;(]|(?<![A-Za-z0-9_])e)\s*`?(?P<vao>:(?P<a>\d+)(?:-(?P<b>\d+))?)(?!\w)")
@@ -92,6 +107,9 @@ class Achado:
     contexto: str = ""
     curta: bool = False
     """Escrita na forma curta ``:N``, presa à inteira da célula: o ``endereco`` diz o arquivo dela."""
+    forma: bool = False
+    """A queixa é da FORMA da citação (o nome vizinho, o caminho curto, a curta no código), e não do
+    lugar: o código não andou, e o `reapontar-citacoes.py` não a leva; só a mão a cura."""
 
     def __str__(self) -> str:
         onde = f" ({self.contexto})" if self.contexto else ""
@@ -174,6 +192,54 @@ def casa_o_nome(nome: str, corpo: list[str], primeira: int, ultima: int, sufixo:
     return _agulha_do_nome(nome, sufixo).search(trecho) is not None
 
 
+@functools.lru_cache(maxsize=64)
+def _ligacoes_por_linha(texto: str) -> frozenset[tuple[str, int]]:
+    """``{(nome, linha)}`` de cada nome que o ``.py`` LIGA numa linha: a do ``def`` e a da ``class``
+    (sem o decorador), e a da atribuição a um nome (``NOME = …``, ``nome: T = …``)."""
+    try:
+        arvore = ast.parse(texto)
+    except (SyntaxError, ValueError):
+        return frozenset()
+    ligacoes: set[tuple[str, int]] = set()
+    for no in ast.walk(arvore):
+        if isinstance(no, ast.FunctionDef | ast.AsyncFunctionDef | ast.ClassDef):
+            ligacoes.add((no.name, no.lineno))
+        elif isinstance(no, ast.Assign | ast.AnnAssign):
+            alvos = no.targets if isinstance(no, ast.Assign) else [no.target]
+            ligacoes.update((a.id, a.lineno) for a in alvos if isinstance(a, ast.Name))
+    return frozenset(ligacoes)
+
+
+DISTANCIA_DO_VIZINHO = 1
+"""A citação de UMA linha reprova se o nome que ela promete casa também a esta distância dela.
+
+Medido em 25/10/2026 sobre as 610 citações de linha única com nome prometido do ``--all``: 14 casavam
+o nome na linha de cima ou na de baixo, 13 a duas linhas e 5 a três. Das 14, seis prometem o nome que
+a própria linha liga (cinco ``def`` cujo decorador ``@gesto`` repete o nome acima, e uma atribuição),
+e ficam isentas; as outras oito eram de `docs/data/paridade-gtk-html.csv` e passaram a prometer o
+nome que só a linha delas tem. Com o nome na vizinha, uma linha inserida ou tirada acima deixa a
+citação verde no lugar errado: o deslocamento de uma linha é o caso de toda costura, e é ele que a
+régua pega. A promessa com o nome a duas linhas já reprova nesse deslocamento de uma (a linha que
+desce para o lugar da citada não tem o nome); só o de duas a escaparia, e o N=2 reprovaria também
+três linhas do `mapa-controles.csv`, que não é desta régua de posse."""
+
+
+def vizinha_com_o_nome(corpo: list[str], linha: int, nome: str, sufixo: str) -> int | None:
+    """A linha vizinha (a ``DISTANCIA_DO_VIZINHO``) em que ``nome`` também casa, ou ``None``.
+
+    O nome que o ``.py`` LIGA na própria linha (o ``def``, a ``class``, a atribuição) é dela só: a
+    linha vizinha que o repete (o decorador, o uso logo abaixo) não é ele, e uma linha a mais acima
+    leva a citação para fora da ligação, onde a régua reprova.
+    """
+    if sufixo == ".py" and (nome, linha) in _ligacoes_por_linha("\n".join(corpo)):
+        return None
+    for outra in range(linha - DISTANCIA_DO_VIZINHO, linha + DISTANCIA_DO_VIZINHO + 1):
+        if outra != linha and 1 <= outra <= len(corpo) and casa_o_nome(
+                nome, corpo, outra, outra, sufixo):
+            return outra
+    return None
+
+
 def abraca_de_fora(corpo: list[str], primeira: int, ultima: int, nome: str) -> int | None:
     """A pergunta 3: a linha do `def` de ``nome`` quando a faixa o abraça"""
     inicios = _inicios_das_definicoes("\n".join(corpo)).get(nome, ())
@@ -233,6 +299,18 @@ def confere_endereco(
         for nome in nomes
         if not casa_o_nome(nome, corpo, primeira, ultima, alvo.suffix)
     ]
+    if not achado.group("b"):
+        for nome in nomes:
+            if not casa_o_nome(nome, corpo, primeira, primeira, alvo.suffix):
+                continue
+            vizinha = vizinha_com_o_nome(corpo, primeira, nome, alvo.suffix)
+            if vizinha is not None:
+                achados.append(Achado(
+                    origem, linha, endereco,
+                    f"`{nome}` casa também na linha {vizinha}, vizinha da citada: com uma linha "
+                    "a mais ou a menos acima a citação segue verde no lugar errado; prometa o "
+                    "nome que só a linha citada tem (o `def`, a classe, a chave ou a cadeia dela)",
+                    contexto, curta, forma=True))
     if alvo.suffix == ".py" and achado.group("b"):
         for nome in nomes:
             no_def = (abraca_de_fora(corpo, primeira, ultima, nome)
@@ -325,6 +403,135 @@ def varrer_planilha(
                     conferidos += conferido
                     de_fora += fora
     return achados, conferidos, de_fora
+
+
+@dataclass(frozen=True)
+class Trecho:
+    """Uma cadeia (a emendada é UMA: ``"a" "b"`` é ``"ab"``) ou um comentário de um ``.py``."""
+
+    texto: str
+    marcos: tuple[tuple[int, int], ...]
+    """``(letra do texto, linha do arquivo)`` onde cada pedaço começa, e cada quebra de linha da cadeia
+    de três aspas: a linha de uma letra é a do último marco antes dela."""
+
+    def linha_de(self, letra: int) -> int:
+        return self.marcos[bisect.bisect_right([m[0] for m in self.marcos], letra) - 1][1]
+
+
+def trechos_do_codigo(texto: str) -> list[Trecho]:
+    """As cadeias e os comentários do código, pelo ``tokenize`` (a f-string não é prosa que cita)."""
+    trechos: list[Trecho] = []
+    partes: list[str] = []
+    marcos: list[tuple[int, int]] = []
+
+    def fechar() -> None:
+        if partes:
+            trechos.append(Trecho("".join(partes), tuple(marcos)))
+        partes.clear()
+        marcos.clear()
+
+    try:
+        for tok in tokenize.generate_tokens(io.StringIO(texto).readline):
+            if tok.type == tokenize.STRING:
+                try:
+                    valor = ast.literal_eval(tok.string)
+                except (ValueError, SyntaxError):
+                    fechar()
+                    continue
+                if not isinstance(valor, str):
+                    fechar()
+                    continue
+                onde = sum(len(p) for p in partes)
+                marcos.append((onde, tok.start[0]))
+                if tok.start[0] != tok.end[0]:
+                    marcos.extend((onde + i + 1, tok.start[0] + k + 1)
+                                  for k, i in enumerate(
+                                      j for j, letra in enumerate(valor) if letra == "\n"))
+                partes.append(valor)
+            elif tok.type == tokenize.COMMENT:
+                trechos.append(Trecho(tok.string, ((0, tok.start[0]),)))
+            elif tok.type != tokenize.NL:
+                fechar()
+    except (tokenize.TokenError, IndentationError, SyntaxError):
+        pass
+    fechar()
+    return trechos
+
+
+CURTA_NO_CODIGO = re.compile(r"(?<![A-Za-z0-9_./-]):\d+(?:-\d+)?(?![\d])|(?<=\d)\+\d+")
+"""A forma curta solta numa cadeia (``(:277)``, `` `install.sh`:1437``) e o ``:N+M``: no código a
+citação se escreve inteira, porque a curta e o arquivo entre crases não se leem nem se levam."""
+
+
+@functools.lru_cache(maxsize=4)
+def _arquivos_da_arvore(raiz: Path) -> tuple[str, ...]:
+    feito = _git(raiz, "ls-files")
+    if feito.returncode == 0 and feito.stdout:
+        return tuple(feito.stdout.splitlines())
+    return tuple(sorted(p.relative_to(raiz).as_posix() for p in raiz.rglob("*")
+                        if p.is_file() and ".git" not in p.parts))
+
+
+def caminho_inteiro(arquivo: str, raiz: Path) -> str | None:
+    """O caminho a partir da raiz do arquivo citado por um caminho que só abre com prefixo ou pelo
+    fim (``daemon/main.py``, ``doctor.sh``); ``None`` se nenhum, ou mais de um, termina assim."""
+    alvo = resolve(arquivo, raiz)
+    if alvo is not None:
+        return alvo.relative_to(raiz).as_posix()
+    candidatos = [p for p in _arquivos_da_arvore(raiz) if p.endswith(f"/{arquivo}")]
+    return candidatos[0] if len(candidatos) == 1 else None
+
+
+def varrer_codigo(
+    codigo: Path,
+    raiz: Path,
+    corpos: dict[Path, list[str]] | None = None,
+) -> tuple[list[Achado], int, int]:
+    """O mesmo, trecho a trecho de um arquivo de CODIGO_COM_CITACOES.
+
+    A citação tem o caminho inteiro a partir da raiz, e a curta não se escreve: a que só abre com o
+    prefixo de `src/` ou pelo fim do caminho reprova dizendo o caminho inteiro, e a de fora (o
+    exemplo fabricado de um teste, o kernel) é ignorada como nas planilhas.
+    """
+    achados: list[Achado] = []
+    conferidos = de_fora = 0
+    if corpos is None:
+        corpos = {}
+    relativo = codigo.resolve().relative_to(raiz).as_posix()
+    for trecho in trechos_do_codigo(codigo.read_text(encoding="utf-8")):
+        texto = trecho.texto
+        if ":" not in texto:
+            continue
+        for achado in ENDERECO_CSV.finditer(texto):
+            arquivo = achado.group("arq")
+            linha = trecho.linha_de(achado.start())
+            if not (raiz / arquivo).is_file():
+                inteiro = caminho_inteiro(arquivo, raiz)
+                if inteiro is None:
+                    de_fora += 1
+                    continue
+                conferidos += 1
+                achados.append(Achado(
+                    relativo, linha, f"`{achado.group(0).strip('`')}`",
+                    f"o caminho não abre a partir da raiz: escreva `{inteiro}`", forma=True))
+                continue
+            seus, conferido, fora = confere_endereco(
+                relativo, linha, "", texto, achado, arquivo, corpos, raiz, SEPARADORES_DE_BLOCO)
+            achados.extend(seus)
+            conferidos += conferido
+            de_fora += fora
+        for curta in CURTA_NO_CODIGO.finditer(texto):
+            conferidos += 1
+            achados.append(Achado(
+                relativo, trecho.linha_de(curta.start()), f"`{curta.group(0)}`",
+                "forma curta no código: escreva a citação inteira, `caminho:N`, a partir da raiz",
+                forma=True))
+    return achados, conferidos, de_fora
+
+
+def codigos_de(raiz: Path) -> list[Path]:
+    """Os arquivos de CODIGO_COM_CITACOES que existem nesta árvore."""
+    return [raiz / r for r in sorted(CODIGO_COM_CITACOES) if (raiz / r).is_file()]
 
 
 # --- a citação NOVA promete o nome (A-CITACAO-NOVA-DE-LINHA-PROMETE-O-NOME-01, 10/10/2026) ------
@@ -569,7 +776,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("arquivos", nargs="*", type=Path,
                         help="documentos ou planilhas a varrer")
     parser.add_argument("--all", action="store_true",
-                        help=f"varre {PASTA.as_posix()}/ e {PASTA_CSV.as_posix()}/*.csv")
+                        help=f"varre {PASTA.as_posix()}/, {PASTA_CSV.as_posix()}/*.csv e CODIGO_COM_CITACOES")
     parser.add_argument("--novas", action="store_true",
                         help="reprova a citação de linha ACRESCENTADA desde o pé comum com o "
                              "`dev` que não promete o nome; sem base, falha")
@@ -594,6 +801,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.all:
         alvos = documentos_de(raiz)
         planilhas = planilhas_de(raiz)
+        codigos = codigos_de(raiz)
     else:
         pasta_vigiada = (raiz / PASTA).resolve()
         pasta_de_dados = (raiz / PASTA_CSV).resolve()
@@ -608,7 +816,12 @@ def main(argv: list[str] | None = None) -> int:
             and p.resolve().parent == pasta_de_dados
             and p.name not in CSV_FORA_DO_PORTAO
         ]
-    if not alvos and not planilhas:
+        codigos = [
+            p for p in args.arquivos
+            if p.is_file() and p.resolve().is_relative_to(raiz)
+            and p.resolve().relative_to(raiz).as_posix() in CODIGO_COM_CITACOES
+        ]
+    if not alvos and not planilhas and not codigos:
         print("Nenhum documento para varrer.")
         return rc_novas
 
@@ -625,8 +838,14 @@ def main(argv: list[str] | None = None) -> int:
         achados.extend(seus)
         conferidos += quantos
         de_fora += fora
+    for codigo in codigos:
+        seus, quantos, fora = varrer_codigo(codigo, raiz, corpos)
+        achados.extend(seus)
+        conferidos += quantos
+        de_fora += fora
 
-    onde = f"{len(alvos)} documento(s) e {len(planilhas)} planilha(s)"
+    onde = (f"{len(alvos)} documento(s), {len(planilhas)} planilha(s) e "
+            f"{len(codigos)} arquivo(s) de código")
     if achados:
         print(f"{len(achados)} citação(ões) de linha podre(s) em {onde}:")
         for achado in achados:
