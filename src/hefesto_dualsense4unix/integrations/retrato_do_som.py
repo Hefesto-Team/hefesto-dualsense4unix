@@ -290,8 +290,8 @@ def ler_do_servidor(argv: Sequence[str]) -> str | None:
 def ler_o_pw_dump() -> str | None:
     """O stdout do ``pw-dump``, ou ``None``: sem a ferramenta, falhou, ou é a suíte.
 
-    Só leitura, e não passa pelo recuo do ``pactl``: é outro programa, e a
-    resposta dele não diz nada da saúde do servidor pela porta do ``pactl``.
+    O único leitor do grafo em ``src/``: a varredura do dono único reprova o segundo. Só
+    leitura, fora do recuo do ``pactl``: a resposta dele não diz da saúde do servidor.
     """
     from hefesto_dualsense4unix.integrations.bluez_dbus import a_suite_esta_rodando
 
