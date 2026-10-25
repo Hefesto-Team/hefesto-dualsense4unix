@@ -20,3 +20,4 @@ tests/unit/test_a_lista_do_webkit_tem_teto.py
 tests/unit/test_o_copiar_da_09_chega_a_area_da_moldura.py
 tests/unit/test_o_nome_do_jogo_com_acento_nao_se_perde.py
 tests/unit/test_o_nome_que_o_pactl_perde_vem_do_grafo.py
+tests/unit/test_o_aviso_ao_systemd_nao_vaza_aos_filhos.py
