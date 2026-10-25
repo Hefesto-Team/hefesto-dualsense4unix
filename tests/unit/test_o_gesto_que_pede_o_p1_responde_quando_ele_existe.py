@@ -196,6 +196,39 @@ def test_o_ps_l3_confere_e_grava_quando_o_p1_existe(
         assert bancada.gravadas == [("xbox", novo)], bancada.gravadas
 
 
+def test_a_mascara_escolhida_com_outro_p1_nascendo_fica_e_o_pad_a_veste(
+    bancada: SimpleNamespace,
+) -> None:
+    """O P1 de outro pedido nasce na máscara de antes, e a escolha chega no meio: ela não
+    se confere por esse pad, fica no registro e no perfil, e a reconciliação a veste.
+
+    Mordida: deixe o `_o_p1_que_veste` devolver o pedido em voo sem olhar a máscara dele,
+    e o pad de antes «recusa» a escolha, que sai do registro.
+    """
+    bancada.m.daemon._gamepad_device = None
+    bancada.m.daemon.config.gamepad_emulation_enabled = False
+    ipc = _Ipc(bancada.m.daemon)
+    cast(Any, ipc).store = None
+
+    async def _ligar_e_escolher() -> Any:
+        ligar = asyncio.ensure_future(ipc._handle_gamepad_emulation_set(
+            {"enabled": True, "origin": "manual"}))
+        await asyncio.sleep(4 * _TIQUE_S)
+        assert gp.o_p1_que_nasce(bancada.m.daemon) is not None, "o P1 não está nascendo"
+        resposta = await ipc._handle_gamepad_mask_set({"uniq": _P1, "flavor": "xbox"})
+        await ligar
+        return resposta
+
+    resposta, _gasto = _no_laco(bancada, _ligar_e_escolher)
+    assert resposta["motivo"] != "aparelho_nao_vestiu", resposta
+    assert em.registro_de_mascaras().mask_for(_P1) == "xbox", "a escolha saiu do registro"
+    assert [m for m, _pad in bancada.gravadas] == ["xbox"], bancada.gravadas
+    _ate(bancada.m, lambda: _o_p1_novo(bancada) is not None)
+    # o pad de antes leu a máscara antes da escolha (ou depois, e já a veste)
+    gp.reconciliar_as_mascaras(bancada.m.daemon)
+    _ate(bancada.m, lambda: getattr(_o_p1_novo(bancada), "flavor", None) == "xbox")
+
+
 # --- 2. o pedido igual em voo se junta ao primeiro -----------------------------------------
 
 

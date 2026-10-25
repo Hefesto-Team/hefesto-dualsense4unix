@@ -652,12 +652,19 @@ def _pedir_a_mascara(daemon: Any, uniq: str, flavor: object) -> _AEscolha:
 
 
 def _o_p1_que_veste(daemon: Any, uniq: str) -> Any:
-    """O pedido do P1 que nasce pelo fio vestindo a escolha de `uniq`, ou ``None``."""
+    """O pedido do P1 que nasce pelo fio vestindo a escolha de `uniq`, ou ``None``.
+
+    O P1 de outro pedido, que nasce na máscara de antes, não confere a escolha: ela
+    vale para o próximo, e a reconciliação a veste (`gamepad.reconciliar_as_mascaras`).
+    """
     if not mesma_identidade(uniq, _identidade_do_primario(daemon)):
         return None
     from hefesto_dualsense4unix.daemon.subsystems.gamepad import depois_do_p1
 
-    return depois_do_p1(daemon)
+    nascendo = depois_do_p1(daemon)
+    if nascendo is None or nascendo.mascara_do_p1 != mascara_efetiva(uniq, nascendo.key):
+        return None
+    return nascendo
 
 
 def _fechar_a_escolha(
