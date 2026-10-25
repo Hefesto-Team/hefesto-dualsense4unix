@@ -993,8 +993,6 @@ BORDA_NEUTRA = ("A borda é <b>neutra</b> porque a cor deste controle <b>não fo
                 "Uma borda colorida aqui seria uma cor que ninguém leu — e o desenho "
                 "continua na cor que o resto do Hefesto já conhece.")
 
-# continua verdadeira) mais `secao_controles.frase_da_capacidade_do_mic()` (o
-# `frase_da_capacidade_do_mic` foi escrita para impedir.
 MIC_LIGADO_DICA = (
     "Liga o microfone deste controle. Desligado, nenhum programa o ouve — nem o jogo, nem a "
     "chamada. Por onde ele chega quem decide é o USB ou o BT; a linha ao lado diz qual.")
