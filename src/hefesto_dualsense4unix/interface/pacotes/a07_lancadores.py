@@ -2677,14 +2677,13 @@ def _a_recusa_do_soltar(resposta: tuple[bool, str | None, Any] | None) -> str | 
 
 
 def _o_modo_na_extensao(mod_id: str, opcao_id: str, modo: str, p: Any) -> str | None:
-    """O ``modo`` do livre vale na barra e na extensão (``_Viva.mudar_o_modo``). Fora da porta,
-    ela não segura modo nenhum e volta lendo o guardado: a barra faz o modo sem mandar nada e sem
-    acusar recusa (``_Viva.sem_a_extensao``). Devolve a frase da recusa de verdade, ou ``None``."""
-    recusa = _a_recusa_do_soltar(_VIVA.mudar_o_modo(mod_id, opcao_id, modo, p))
-    if recusa == "":
+    """O ``modo`` do livre na barra e na extensão. Fora da porta, ela volta lendo o guardado: a
+    barra segue o modo sem acusar recusa. Devolve a frase da recusa de verdade, ou ``None``."""
+    porque = _a_recusa_do_soltar(_VIVA.mudar_o_modo(mod_id, opcao_id, modo, p))
+    if porque == "":
         _VIVA.sem_a_extensao(mod_id, modo)
         return None
-    return recusa
+    return porque
 
 
 def _desfazer_o_modo(mod_id: str, p: Any) -> str | None:
