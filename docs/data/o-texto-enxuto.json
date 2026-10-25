@@ -5,7 +5,7 @@
       "data": "2026-10-25",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 55271,
+      "piso": 55279,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -106,7 +106,7 @@
         "daemon/subsystems/volta_dos_acessorios.py": 42,
         "daemon/udp_server.py": 66,
         "integrations/a_roupa_do_jogo.py": 52,
-        "integrations/alto_falante_bt.py": 535,
+        "integrations/alto_falante_bt.py": 539,
         "integrations/apelido_do_dongle.py": 138,
         "integrations/api_de_entrada.py": 89,
         "integrations/ar_do_adaptador.py": 114,
@@ -127,7 +127,7 @@
         "integrations/dicas_da_conexao.py": 60,
         "integrations/dualsense_bt_audio.py": 298,
         "integrations/eleicao_de_microfone.py": 255,
-        "integrations/endpoint_de_haptica.py": 300,
+        "integrations/endpoint_de_haptica.py": 304,
         "integrations/entrada_a_entrada.py": 407,
         "integrations/entradas_do_gabinete.py": 92,
         "integrations/envelope_da_haptica.py": 42,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +6 linhas (55265 -> 55271), pagas por Origem: D-1610-A-UNIT-DO-DAEMON-E-NOTIFY-COM-PRAZO-DE-30-S; registrado no fecho, topo 868d7fd05d62",
+      "razao": "texto-em-src: +8 linhas (55271 -> 55279), pagas por Origem: D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP; registrado no fecho, topo 2c38c166fda0",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -552,6 +552,12 @@
           "de": 55265,
           "para": 55271,
           "razao": "texto-em-src: +6 linhas (55265 -> 55271), pagas por Origem: D-1610-A-UNIT-DO-DAEMON-E-NOTIFY-COM-PRAZO-DE-30-S; registrado no fecho, topo 868d7fd05d62"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 55271,
+          "para": 55279,
+          "razao": "texto-em-src: +8 linhas (55271 -> 55279), pagas por Origem: D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP; registrado no fecho, topo 2c38c166fda0"
         }
       ],
       "unidade": "linhas",
