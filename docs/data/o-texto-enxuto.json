@@ -5,7 +5,7 @@
       "data": "2026-10-25",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 55677,
+      "piso": 55715,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_exame.py": 83,
@@ -17,7 +17,7 @@
         "app/actions/home_actions.py": 343,
         "app/actions/jogar/painel.py": 203,
         "app/actions/lightbar_actions.py": 51,
-        "app/actions/mode_transition.py": 70,
+        "app/actions/mode_transition.py": 74,
         "app/actions/perfis_web.py": 86,
         "app/actions/profiles_actions.py": 117,
         "app/actions/rumble_actions.py": 101,
@@ -25,7 +25,7 @@
         "app/alvo_de_edicao.py": 72,
         "app/audio_saida.py": 285,
         "app/draft_config.py": 237,
-        "app/ipc_bridge.py": 450,
+        "app/ipc_bridge.py": 451,
         "app/mic_monitor.py": 80,
         "app/telas/vibracao.py": 227,
         "app/textos_de_aplicacao.py": 73,
@@ -79,9 +79,9 @@
         "daemon/subsystems/bt_mic.py": 233,
         "daemon/subsystems/coop.py": 811,
         "daemon/subsystems/external_identity.py": 621,
-        "daemon/subsystems/external_mask.py": 157,
+        "daemon/subsystems/external_mask.py": 151,
         "daemon/subsystems/game_signal.py": 128,
-        "daemon/subsystems/gamepad.py": 802,
+        "daemon/subsystems/gamepad.py": 820,
         "daemon/subsystems/gatilho_do_jogo.py": 40,
         "daemon/subsystems/governador_do_radio.py": 278,
         "daemon/subsystems/hotkey.py": 670,
@@ -173,7 +173,7 @@
         "integrations/storm_doctor.py": 136,
         "integrations/transiente_do_jogo.py": 112,
         "integrations/uhid_blueprint.py": 87,
-        "integrations/uhid_gamepad.py": 677,
+        "integrations/uhid_gamepad.py": 691,
         "integrations/uinput_gamepad.py": 217,
         "integrations/uinput_keyboard.py": 48,
         "integrations/uinput_mouse.py": 194,
@@ -244,14 +244,14 @@
         "profiles/schema.py": 762,
         "profiles/simple_match.py": 179,
         "utils/logging_config.py": 66,
-        "utils/maquina.py": 364,
+        "utils/maquina.py": 368,
         "utils/memoria_dos_controles.py": 85,
         "utils/repo_files.py": 46,
         "utils/session.py": 145,
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +5 linhas (55672 -> 55677), pagas por Origem: D-2510-O-JOGADOR-QUE-SAI-DESCE-O-GADGET-FORA-DO-TIQUE; registrado no fecho, topo 5488cf9f2456",
+      "razao": "texto-em-src: +38 linhas (55677 -> 55715), pagas por Origem: D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-2510-A-DESCIDA-DO-GADGET-FALA-COM-O-BROKER-FORA-DO-TIQUE; registrado no fecho, topo 08594f15490a",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -612,6 +612,12 @@
           "de": 55672,
           "para": 55677,
           "razao": "texto-em-src: +5 linhas (55672 -> 55677), pagas por Origem: D-2510-O-JOGADOR-QUE-SAI-DESCE-O-GADGET-FORA-DO-TIQUE; registrado no fecho, topo 5488cf9f2456"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 55677,
+          "para": 55715,
+          "razao": "texto-em-src: +38 linhas (55677 -> 55715), pagas por Origem: D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-2510-A-DESCIDA-DO-GADGET-FALA-COM-O-BROKER-FORA-DO-TIQUE; registrado no fecho, topo 08594f15490a"
         }
       ],
       "unidade": "linhas",
