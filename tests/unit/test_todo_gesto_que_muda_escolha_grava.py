@@ -137,6 +137,9 @@ ATOS: dict[Chave, str] = {
     ("07-lancadores.html", "esquecer-a-forma-do-livre"):
         "rascunho da janela da extensão: a forma esquecida sai no Guardar "
         "(`guardar-modificacao`), que declara `grava=`",
+    ("07-lancadores.html", "modo-do-livre-da-modificacao"):
+        "rascunho da janela da extensão: o modo do controle livre espera o Guardar "
+        "(`guardar-modificacao`), que declara `grava=`; a barra e a extensão o seguem na hora",
     ("07-lancadores.html", "ver-impedimentos"):
         "leitura: sonda a Steam de novo e abre a lista dos impedimentos; quem cura é o "
         "«Resolver», que declara `grava=`",
