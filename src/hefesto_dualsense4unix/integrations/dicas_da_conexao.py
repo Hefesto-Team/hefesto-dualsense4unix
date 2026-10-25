@@ -214,6 +214,17 @@ def _acao_de_ignorar_de_volta(slot: int, titulo: str = "") -> Acao:
                 dados=(("v", str(slot)),), titulo=titulo)
 
 
+#: o assunto de cada conferência, sem veredito, para o nome da região do «não sei»: o rótulo do
+#: exame («Economia de energia desligada») e o «certo» do Wi-Fi afirmam um estado que não se leu.
+ASSUNTO_DA_CONFERENCIA: dict[str, str] = {
+    "energia_do_radio": "Energia do rádio",
+    "energia_das_portas": "Energia das entradas",
+    "suporte_ao_controle": "Suporte ao controle",
+    "pareamentos": "Pareamentos salvos",
+    "vizinhanca_das_portas": "Vizinhança das portas",
+}
+
+
 def dica_da_conferencia(
     chave: str, rotulo: str, estado: str, porque: str, cura: str = ""
 ) -> Dica:
@@ -223,7 +234,8 @@ def dica_da_conferencia(
         chave, (ICONE_AJUDA, limitar_o_titulo(rotulo) or TITULO_SEM_VERBETE, ""))
     assunto = ""
     if nivel == NOTA:
-        titulo, assunto = TITULO_SEM_VERBETE, " ".join(str(rotulo or "").split())
+        titulo = TITULO_SEM_VERBETE
+        assunto = ASSUNTO_DA_CONFERENCIA.get(chave) or " ".join(str(rotulo or "").split())
     return Dica(
         chave=chave, icone=icone, titulo=limitar_o_titulo(titulo), nivel=nivel,
         acao=Acao(MAPA, ROTULO_VER_NO_MAPA, href=PAGINA_DO_MAPA), porque=uma_frase(porque),
@@ -348,6 +360,7 @@ def montar(dicas: Iterable[Dica], certos: Sequence[str] = ()) -> Painel:
 
 __all__ = [
     "AJUSTE",
+    "ASSUNTO_DA_CONFERENCIA",
     "CARTOES_VISIVEIS",
     "DA_CONFERENCIA",
     "DA_ORDEM",
