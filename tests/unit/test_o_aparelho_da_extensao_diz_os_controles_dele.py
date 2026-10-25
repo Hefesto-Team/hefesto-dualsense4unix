@@ -116,6 +116,7 @@ def _pedido(cartao: str, controle: str, quer: str) -> dict[str, str]:
 
 
 def test_tres_aparelhos_dao_dois_cartoes_cada_um_com_os_seus(janela: Any, ctx: Any) -> None:  # noqa: F811
+    # D-2510-OS-CONTROLES-DO-APARELHO-NA-JANELA
     _a07, instalar, abrir = janela
     instalar(**_pecas())
     html = abrir(_Ponte(_estado()))["blocos"]["#mod-janela"]

@@ -275,6 +275,7 @@ def test_o_dedo_que_o_hub_ja_le_pela_tela_chega_sem_segurar_nada(
 def test_quem_pede_os_dedos_segura_so_o_leitor_de_toque_e_sem_grab(
     curto: pathlib.Path,  # noqa: F811
 ) -> None:
+    # D-2510-OS-DEDOS-SO-PARA-QUEM-PEDE
     hub, dados = _vivos(curto, {"topicos": ["entradas"], "dedos": True}, tocar=True)
     assert set(hub._touch) == set(UNIQS), "quem pediu os dedos não segurou o leitor de toque"
     assert hub._motion == {}, "pedir os dedos não segura o leitor de movimento"

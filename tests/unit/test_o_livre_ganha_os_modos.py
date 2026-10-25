@@ -315,6 +315,7 @@ def test_o_repetir_curto_demais_fica_como_o_segurar(
 
 def test_trocar_o_modo_depois_do_arrastar_vale_na_hora(
         janela: Any, ctx: Any, relogio: list[float]) -> None:  # noqa: F811
+    # D-2510-O-MODO-DO-LIVRE-E-RASCUNHO-E-VALE-NA-HORA
     """O «Repetir» em laço vira «Soltar»: a barra volta a zero e a extensão recebe o soltar com o
     modo novo; o «Segurar» depois deixa a barra no zero."""
     a07, instalar, abrir = janela

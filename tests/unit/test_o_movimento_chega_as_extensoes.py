@@ -522,6 +522,7 @@ def test_o_parado_nao_sai_de_novo_o_ritmo_tem_teto_e_o_ultimo_valor_chega(
 def test_um_eixo_que_passa_da_faixa_sai_e_o_que_nao_passa_nao(
     curto: pathlib.Path,  # noqa: F811
 ) -> None:
+    # D-2510-O-MOVIMENTO-CHEGA-AS-EXTENSOES-COM-FAIXA-MORTA
     relogio = _Relogio()
 
     async def corrida() -> list[dict[str, Any]]:
