@@ -331,20 +331,6 @@ def nos_do_grafo(texto: str | None) -> NosDoGrafo | None:
     return NosDoGrafo(por_serial, por_id, por_nome)
 
 
-def descricoes_do_pw_dump(texto: str | None) -> dict[str, str] | None:
-    """``{node.name: node.description}`` dos nós do ``pw-dump``. Função pura.
-
-    ``None`` é «não sei» (o texto não é JSON). Medido em 08/10/2026 nesta máquina:
-    «HDA NVidia Estéreo digital (HDMI)» pelo ``pw-dump`` contra «HDA NVidia» pelo
-    recuo do ``pactl``.
-    """
-    nos = nos_do_grafo(texto)
-    if nos is None:
-        return None
-    return {nome: props["node.description"] for nome, props in nos.por_nome.items()
-            if _texto(props.get("node.description"))}
-
-
 def ler_o_grafo() -> str | None:
     """O texto do ``pw-dump``, pelo leitor do retrato (que cala na suíte), ou ``None``."""
     from hefesto_dualsense4unix.integrations import retrato_do_som
@@ -624,7 +610,6 @@ __all__ = [
     "argv_da_lista",
     "argv_do_curto",
     "completar_o_json",
-    "descricoes_do_pw_dump",
     "diretorios_de_modulos",
     "fluxos_do_texto",
     "ler_a_lista",

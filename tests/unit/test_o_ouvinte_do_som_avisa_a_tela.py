@@ -115,11 +115,13 @@ def test_a_descricao_com_acento_volta_pelo_pw_dump(monkeypatch: pytest.MonkeyPat
 
 
 def test_o_pw_dump_ilegivel_e_nao_sei() -> None:
-    from hefesto_dualsense4unix.integrations.porta_do_som import descricoes_do_pw_dump
+    from hefesto_dualsense4unix.integrations.porta_do_som import nos_do_grafo
 
-    assert descricoes_do_pw_dump("") is None
-    assert descricoes_do_pw_dump("pw-dump: não conectou") is None
-    assert descricoes_do_pw_dump(PW_DUMP_MEDIDO) == {
+    assert nos_do_grafo("") is None
+    assert nos_do_grafo("pw-dump: não conectou") is None
+    nos = nos_do_grafo(PW_DUMP_MEDIDO)
+    assert nos is not None
+    assert {nome: p["node.description"] for nome, p in nos.por_nome.items()} == {
         HDMI: "HDA NVidia Estéreo digital (HDMI)",
         HAPTICA: NOME_DA_HAPTICA}
 
