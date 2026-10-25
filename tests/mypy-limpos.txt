@@ -47,3 +47,4 @@ tests/unit/test_as_citacoes_da_casa_sabe_ganham_regua.py
 tests/unit/test_a_janela_da_extensao_com_modos_nao_diz_que_nao_tem_opcoes.py
 tests/unit/test_a_regua_da_tela_que_nao_confessa_segue_o_nome_por_funcao.py
 tests/unit/test_o_pacote_do_hefesto_declara_os_tipos.py
+tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py
