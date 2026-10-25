@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1206007,
+      "piso": 1206332,
       "por_item": {
-        "docs": 121278,
+        "docs": 121282,
         "scripts": 120674,
-        "src": 322460,
-        "tests": 641595
+        "src": 322444,
+        "tests": 641932
       },
-      "razao": "tamanho: +1 linhas (1206006 -> 1206007), pagas por Origem: D-1610-A-MEMORIA-DOS-CONTROLES-CLASSIFICA-O-ULTIMO-JOGO-E-O-DIARIO-DO-USB-COMO-CASA; registrado no fecho, topo 8b0a3ef6def6",
+      "razao": "tamanho: +325 linhas (1206007 -> 1206332), pagas por Origem: D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP; registrado no fecho, topo 28cde2196199",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1009,10 +1009,16 @@
           "de": 1206006,
           "para": 1206007,
           "razao": "tamanho: +1 linhas (1206006 -> 1206007), pagas por Origem: D-1610-A-MEMORIA-DOS-CONTROLES-CLASSIFICA-O-ULTIMO-JOGO-E-O-DIARIO-DO-USB-COMO-CASA; registrado no fecho, topo 8b0a3ef6def6"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1206007,
+          "para": 1206332,
+          "razao": "tamanho: +325 linhas (1206007 -> 1206332), pagas por Origem: D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP; registrado no fecho, topo 28cde2196199"
         }
       ],
       "unidade": "linhas",
-      "universo": 3152
+      "universo": 3153
     }
   }
 }
