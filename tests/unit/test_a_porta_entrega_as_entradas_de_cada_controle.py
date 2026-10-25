@@ -522,6 +522,7 @@ def test_quem_assina_depois_recebe_o_gatilho_que_ja_estava_apertado(
 async def test_no_modo_nativo_o_gatilho_do_posto_e_o_do_hub_passivo_ainda_saem(
     curto: pathlib.Path, monkeypatch: pytest.MonkeyPatch,  # noqa: F811
 ) -> None:
+    # D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO
     """O ``_poll_loop`` de verdade, com o tique congelado do Nativo: as entradas saem."""
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
     from hefesto_dualsense4unix.daemon.state_store import StateStore

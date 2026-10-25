@@ -131,6 +131,7 @@ def test_o_manifesto_torto_e_recusado_com_a_frase(tmp_path, mexer, frase) -> Non
 
 
 def test_a_acao_chega_so_a_extensao_dela(curto) -> None:  # noqa: F811
+    # D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA
     async def corrida() -> None:
         porta = await _porta(curto, EventBus())
         a = await _entrar(curto, "ficha-a", {"ligado": True})
@@ -327,6 +328,7 @@ def test_a_chave_do_aparelho_pede_o_contrario_e_o_botao_diz_em_curso(janela, ctx
 
 
 def test_o_em_curso_sai_no_teto_mesmo_sem_a_serie_subir(janela, ctx, monkeypatch) -> None:  # noqa: F811
+    # D-2410-O-BOTAO-DA-ACAO-DIZ-EM-CURSO-ATE-A-SERIE-SUBIR
     """A extensão que não devolve estado nenhum não deixa o botão preso em «Em curso»."""
     a07, instalar, abrir = janela
     instalar(**_pecas())
@@ -356,6 +358,7 @@ def test_a_acao_da_extensao_parada_recusa_dizendo(janela, ctx) -> None:  # noqa:
 
 
 def test_arrastar_um_segundo_sai_em_no_maximo_vinte_e_o_ultimo_e_o_soltar(curto) -> None:  # noqa: F811
+    # D-2410-O-CONTROLE-LIVRE-SAI-A-VINTE-POR-SEGUNDO-E-O-SOLTAR-NA-HORA
     async def corrida() -> list[dict[str, Any]]:
         porta = await _porta(curto, EventBus())
         a = await _entrar(curto, "ficha-a", {"ligado": True})
@@ -421,6 +424,7 @@ def _gravar(a07: Any, ctx: Any, ponte: _Ponte, mod_id: str = "toque") -> dict[st
 
 def test_a_forma_gravada_entra_nos_botoes_da_mesma_extensao_e_nao_na_outra(janela, ctx,  # noqa: F811
                                                                           lar) -> None:  # noqa: F811
+    # D-2410-A-FORMA-GRAVADA-VALE-SO-NA-MESMA-EXTENSAO
     from hefesto_dualsense4unix.mods import opcoes
     from hefesto_dualsense4unix.mods.instalador import manifesto_instalado
 
@@ -484,6 +488,7 @@ def _guardar_a_mao(lugares: Any, mod_id: str, valores: dict[str, Any]) -> None:
 
 def test_o_botao_editado_a_mao_com_forma_que_nao_e_texto_cai_no_padrao_sem_levantar(
         tmp_path) -> None:
+    # D-2410-A-FORMA-DO-BOTAO-QUE-NAO-E-TEXTO-VOLTA-AO-PADRAO
     """O ``ler`` nunca levanta: a forma de um botão que não é texto (o ``opcoes.json`` editado a
     mão) volta ao padrão daquele botão, e os outros ficam."""
     from hefesto_dualsense4unix.mods import opcoes
@@ -497,6 +502,7 @@ def test_o_botao_editado_a_mao_com_forma_que_nao_e_texto_cai_no_padrao_sem_levan
 
 
 def test_a_extensao_que_substitui_herda_o_botao_com_a_forma_gravada(tmp_path) -> None:
+    # D-2410-A-EXTENSAO-QUE-SUBSTITUI-HERDA-A-FORMA-GRAVADA
     """A extensão nova herda a forma gravada no ``livre`` da antiga E o botão que a escolheu."""
     from hefesto_dualsense4unix.mods import opcoes
 
