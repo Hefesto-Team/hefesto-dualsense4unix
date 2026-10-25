@@ -2,7 +2,7 @@
 
 A sprint A-PORTA-DESASSINA-O-TOPICO-QUE-A-EXTENSAO-LARGA-01. A porta só tinha
 ``eventos.assinar``: quem assinava ``movimento`` segurava o leitor de movimento de cada controle
-até a conexão fechar, e a Lovense que tira «Sacudir» não tinha como largá-lo. Aqui:
+até a conexão fechar, e a extensão que tira «Sacudir» não tinha como largá-lo. Aqui:
 
 1. ``eventos.desassinar`` do ``movimento`` faz os tiques seguintes pararem de pedir o leitor, e
    a reconciliação o fecha nos quatro controles, em toda mesa;
