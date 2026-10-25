@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1206006,
+      "piso": 1206007,
       "por_item": {
         "docs": 121278,
         "scripts": 120674,
-        "src": 322459,
+        "src": 322460,
         "tests": 641595
       },
-      "razao": "tamanho: +256 linhas (1205750 -> 1206006), pagas por Origem: D-1610-A-UNIT-DO-DAEMON-E-NOTIFY-COM-PRAZO-DE-30-S; registrado no fecho, topo 4f4d617c2dc1",
+      "razao": "tamanho: +1 linhas (1206006 -> 1206007), pagas por Origem: D-1610-A-MEMORIA-DOS-CONTROLES-CLASSIFICA-O-ULTIMO-JOGO-E-O-DIARIO-DO-USB-COMO-CASA; registrado no fecho, topo 8b0a3ef6def6",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1003,6 +1003,12 @@
           "de": 1205750,
           "para": 1206006,
           "razao": "tamanho: +256 linhas (1205750 -> 1206006), pagas por Origem: D-1610-A-UNIT-DO-DAEMON-E-NOTIFY-COM-PRAZO-DE-30-S; registrado no fecho, topo 4f4d617c2dc1"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1206006,
+          "para": 1206007,
+          "razao": "tamanho: +1 linhas (1206006 -> 1206007), pagas por Origem: D-1610-A-MEMORIA-DOS-CONTROLES-CLASSIFICA-O-ULTIMO-JOGO-E-O-DIARIO-DO-USB-COMO-CASA; registrado no fecho, topo 8b0a3ef6def6"
         }
       ],
       "unidade": "linhas",
