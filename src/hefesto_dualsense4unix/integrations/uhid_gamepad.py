@@ -2429,8 +2429,7 @@ def _esquecer_a_recusa_do_serial(serial: str) -> None:
         _RECUSAS_DO_BROKER.pop(serial, None)
         cliente = _CLIENTES_RECUSADOS.pop(serial, None)
     if cliente is not None:
-        with contextlib.suppress(Exception):
-            cliente.close()
+        cliente.close()
 
 
 def _esquecer_a_recusa(pad: UhidDualSense) -> None:
