@@ -100,7 +100,6 @@ import contextlib
 import contextvars
 import ctypes
 import errno as _errno
-import json
 import os
 import shutil
 import subprocess
@@ -1410,26 +1409,15 @@ def origem_no_grafo(objetos: object, rotulo: str) -> OrigemDoGravador | None:
 def origem_do_gravador(
     rotulo: str, ler_o_grafo: Callable[[], str | None] | None = None
 ) -> OrigemDoGravador | None:
-    """A que nó de ORIGEM o gravador chamado ``rotulo`` se ligou. ``None`` = não sei."""
+    """A que nó de ORIGEM o gravador chamado ``rotulo`` se ligou. ``None`` = não sei.
+
+    O grafo vem do dono dele (:func:`porta_do_som.ler_o_grafo`), com a guarda da suíte
+    e o prazo dele; sem grafo, ou ilegível, «não sei».
+    """
     if not rotulo:
         return None
-    if ler_o_grafo is not None:
-        texto = ler_o_grafo()
-    else:
-        try:
-            proc = subprocess.run(
-                ["pw-dump"], capture_output=True, text=True, timeout=3.0, check=False
-            )
-        except (OSError, subprocess.SubprocessError):
-            return None
-        if getattr(proc, "returncode", 1) != 0:
-            return None
-        texto = proc.stdout
-    try:
-        objetos = json.loads(texto or "[]")
-    except (ValueError, TypeError):
-        return None
-    return origem_no_grafo(objetos, rotulo)
+    objetos = porta_do_som.lista_do_json((ler_o_grafo or porta_do_som.ler_o_grafo)())
+    return origem_no_grafo(objetos, rotulo) if objetos is not None else None
 
 
 def conferir_o_alvo_do_gravador(rotulo: str) -> str | None:

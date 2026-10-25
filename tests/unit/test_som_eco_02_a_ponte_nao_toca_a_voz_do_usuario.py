@@ -144,15 +144,11 @@ def _dump(origem: str, *, rotulo: str = "hefesto-ponte-000003",
     return json.dumps(objetos)
 
 
-def _pwlink(monkeypatch: pytest.MonkeyPatch, saida: str, rc: int = 0):
-    real = subprocess.run
+def _pwlink(monkeypatch: pytest.MonkeyPatch, saida: str | None):
+    """O grafo pelo dublê do DONO (``retrato_do_som.ler_o_pw_dump``); ``None`` = não veio."""
+    from hefesto_dualsense4unix.integrations import retrato_do_som as rs
 
-    def run(argv, *a, **k):
-        if list(argv[:1]) == ["pw-dump"]:
-            return SimpleNamespace(returncode=rc, stdout=saida, stderr="")
-        return real(argv, *a, **k)
-
-    monkeypatch.setattr(afb.subprocess, "run", run)
+    monkeypatch.setattr(rs, "ler_o_pw_dump", lambda: saida)
 
 
 class TestAConferenciaDepoisDeSubir:
@@ -175,14 +171,11 @@ class TestAConferenciaDepoisDeSubir:
         )
 
     def test_nao_sei_nunca_e_esta_certo(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Sem `pw-link` ou com ele reprovando: `None`, e o chamador não derruba."""
-        def run(argv, *a, **k):
-            raise OSError("sem pw-link")
-
-        monkeypatch.setattr(afb.subprocess, "run", run)
+        """Sem o grafo (o dono não leu) ou ilegível: `None`, e o chamador não derruba."""
+        _pwlink(monkeypatch, None)
         assert afb.conferir_o_alvo_do_gravador("hefesto-ponte-000003") is None
 
-        _pwlink(monkeypatch, "", rc=1)
+        _pwlink(monkeypatch, "")
         assert afb.conferir_o_alvo_do_gravador("hefesto-ponte-000003") is None
 
         _pwlink(monkeypatch, "isto não é json")

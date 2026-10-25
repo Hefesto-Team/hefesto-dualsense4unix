@@ -287,11 +287,10 @@ def test_o_jogo_de_nome_perdido_que_ouve_o_microfone_nao_e_nosso(nome: str) -> N
 
 
 def _pw_dump(monkeypatch: pytest.MonkeyPatch, saida: str) -> None:
-    def run(argv: list[str], *_a: object, **_k: object) -> SimpleNamespace:
-        assert list(argv[:1]) == ["pw-dump"], argv
-        return SimpleNamespace(returncode=0, stdout=saida, stderr="")
-
-    monkeypatch.setattr("hefesto_dualsense4unix.integrations.alto_falante_bt.subprocess.run", run)
+    """O grafo pelo dublê do DONO (``retrato_do_som.ler_o_pw_dump``), o único leitor."""
+    monkeypatch.setattr(
+        "hefesto_dualsense4unix.integrations.retrato_do_som.ler_o_pw_dump", lambda: saida
+    )
 
 
 @pytest.mark.parametrize("nome", NOMES)

@@ -878,7 +878,7 @@ em `:1514`, diz que a faixa aceita parece ser `[0x3d..0x64]`.)
   e o `0x11` não é opcional. **O que o produto escreve é o `0x36` combinado**,
   de 398 B, com os quatro blocos num quadro só (`0x11`, `0x10`, `0x12` e o som
   em `0x13`/`0x16`), desde 03/10/2026, provado no aparelho:
-  `integrations/alto_falante_bt.py:557` (`DEGRAU_COMBINADO`).
+  `integrations/alto_falante_bt.py:556` (`DEGRAU_COMBINADO`).
 
 > **NOTA DATADA — 11/08/2026: CONTRADIÇÃO INTERNA EM ABERTO, e não é a que
 > parece.**

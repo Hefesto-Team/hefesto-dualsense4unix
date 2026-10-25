@@ -114,7 +114,6 @@ from __future__ import annotations
 
 import contextlib
 import fcntl
-import json
 import math
 import os
 import re
@@ -924,25 +923,22 @@ def argv_do_tocador(
     return []
 
 
-def conferir_o_destino_do_tocador(rotulo: str) -> str | None:
-    """O ``node.name`` do nó a que o tocador chamado ``rotulo`` se ligou. ``None`` = não sei."""
-    if not rotulo or shutil.which("pw-dump") is None:
+def conferir_o_destino_do_tocador(
+    rotulo: str, ler_o_grafo: Callable[[], str | None] | None = None
+) -> str | None:
+    """O ``node.name`` do nó a que o tocador chamado ``rotulo`` se ligou. ``None`` = não sei.
+
+    O grafo vem do dono dele (:func:`porta_do_som.ler_o_grafo`), com a guarda da suíte
+    e o prazo dele; sem grafo, ou ilegível, «não sei».
+    """
+    if not rotulo:
         return None
-    try:
-        proc = subprocess.run(
-            ["pw-dump"], capture_output=True, text=True, timeout=3.0, check=False
-        )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    if proc.returncode != 0:
-        return None
-    try:
-        objetos = json.loads(proc.stdout or "[]")
-    except (ValueError, TypeError):
+    objetos = porta_do_som.lista_do_json((ler_o_grafo or porta_do_som.ler_o_grafo)())
+    if objetos is None:
         return None
     nomes: dict[int, str] = {}
     meus: set[int] = set()
-    for o in objetos if isinstance(objetos, list) else ():
+    for o in objetos:
         if not isinstance(o, dict) or o.get("type") != "PipeWire:Interface:Node":
             continue
         ident = o.get("id")
