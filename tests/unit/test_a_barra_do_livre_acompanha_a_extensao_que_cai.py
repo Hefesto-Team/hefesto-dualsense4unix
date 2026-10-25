@@ -185,7 +185,10 @@ def test_a_barra_apaga_e_acende_no_navegador_sem_perder_o_arrasto(
     pagina = tmp_path / "janela.html"
     pagina.write_text('<!doctype html><html><head><meta charset="utf-8"></head><body>'
                       '<div id="mod-janela"></div></body></html>', encoding="utf-8")
-    js = lambda c: ["js", c]  # noqa: E731
+
+    def js(codigo: str) -> list[str]:
+        return ["js", codigo]
+
     passos = [
         js(hefesto_vivo.BOOTSTRAP),
         js(f"window.__hef.pintar({json.dumps({'blocos': {'#mod-janela': montada}})}); "
