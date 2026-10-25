@@ -10,6 +10,7 @@ import subprocess
 import sys
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 import pytest
 
@@ -52,7 +53,8 @@ def arvore(tmp_path: Path) -> Path:
 
 def _chave(raiz: Path, entradas: list[str]) -> str | None:
     ent = RECIBO.Entradas(raiz)
-    return RECIBO.chave_do_portao(ent, "ambiente", "um-portao", "pytest", "", entradas)
+    chave: str | None = RECIBO.chave_do_portao(ent, "ambiente", "um-portao", "pytest", "", entradas)
+    return chave
 
 
 def _escreve_bytecode(raiz: Path) -> None:
@@ -233,13 +235,15 @@ def _topo(raiz: Path) -> str:
                           capture_output=True, text=True).stdout.strip()
 
 
-def _piso(raiz: Path, nome: str) -> dict:
-    return json.loads((raiz / CADERNO_DO_TEMPO).read_text(encoding="utf-8"))["medidas"][nome]
+def _piso(raiz: Path, nome: str) -> dict[str, Any]:
+    medida: dict[str, Any] = json.loads(
+        (raiz / CADERNO_DO_TEMPO).read_text(encoding="utf-8"))["medidas"][nome]
+    return medida
 
 
 def _roda(raiz: Path, casa: Path, *args: str, base: str | None = None) -> int:
     extra = ["--base", base] if base else []
-    return TEMPO.main(["--raiz", str(raiz), "--casa", str(casa), *extra, *args])
+    return int(TEMPO.main(["--raiz", str(raiz), "--casa", str(casa), *extra, *args]))
 
 
 def test_dentro_da_folga_nada_muda(
