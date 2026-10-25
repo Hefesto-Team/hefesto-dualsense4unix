@@ -1864,11 +1864,11 @@ class UhidDualSense:
         return False
 
     def stop(self) -> None:
-        """Destrói o device e só DEPOIS devolve o MAC."""
+        """Destrói o device, devolve o gadget dele ao broker e só DEPOIS devolve o MAC."""
         self._gadget_outra_vez = False
-        # o pedido em voo se larga aqui: o gadget que chegar depois do stop desce
-        _esquecer_a_recusa(self)
+        _esquecer_a_recusa(self)  # o pedido em voo se larga: o gadget tardio desce
         self._destruir_o_device()
+        _DESCIDA_AO_BROKER.terminar(self)  # a descida do pad, a do tique em voo inclusive
         _MACS_DOS_VPADS_VIVOS.despir(self)
         # o doctor conta quem está no uhid pelo diário: o pad que parou sai da conta.
         logger.info("vpad_parou", player=self.player)
@@ -2384,16 +2384,25 @@ class _GadgetDoPad:
     par: tuple[int, int] = (DUALSENSE_VENDOR, VPAD_PRODUCT)
 
     def desmontar(self) -> None:
+        """Desce o gadget aqui e agora: a parte da casa e a devolução ao broker."""
+        self._soltar_na_casa()
+        self._devolver_ao_broker()
+
+    def _soltar_na_casa(self) -> None:
+        """O que a descida muda deste lado, sem esperar ninguém: o fd, a fila e a âncora."""
         _sair_da_fila(self.serial)
         with contextlib.suppress(OSError):
             os.close(self.fd)
+        pad_usb.gadget_chegou(self.serial)
+        if self.identidade and self.interface:
+            pad_usb.esquecer_gadget(self.identidade, self.interface)
+
+    def _devolver_ao_broker(self) -> None:
+        """A volta do gadget ao broker: espera o cliente, até duas vezes o `_TIMEOUT_S` dele."""
         with contextlib.suppress(Exception):
             self.cliente.desmontar_pad_usb(self.gadget)
         with contextlib.suppress(Exception):
             self.cliente.close()
-        pad_usb.gadget_chegou(self.serial)
-        if self.identidade and self.interface:
-            pad_usb.esquecer_gadget(self.identidade, self.interface)
         logger.info("pad_usb_desmontado", gadget=self.gadget)
 
 
@@ -2567,7 +2576,8 @@ class _GadgetsEstacionados:
         if par is not None and achado.gadget.par != par:
             logger.info("pad_usb_estacionado_desce", gadget=achado.gadget.gadget,
                         motivo="outra_roupa")
-            achado.gadget.desmontar()
+            # o refazer do tique passa por aqui: a descida não espera o broker nele
+            _DESCIDA_AO_BROKER.descer(achado.gadget, None)
             return None
         return achado.gadget
 
@@ -2699,7 +2709,7 @@ def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
         logger.warning("pad_usb_features_recusadas_fica_o_uhid", err=str(exc),
                        player=pad.player)
         pad_usb.anotar_sem_porta(pad.identity or "", "features_recusadas")
-        gadget.desmontar()
+        _DESCIDA_AO_BROKER.descer(gadget, pad)
         return False
     prazo_s = _GADGET_ENUMERA_S
     if gadget.interface is None:
@@ -2723,7 +2733,7 @@ def _pedir_o_gadget(pad: UhidDualSense) -> _GadgetDoPad | None:
     pedido = _o_pedido_do_gadget(pad)
     if pedido is None:
         return None
-    return _a_resposta_do_broker(pad, pedido[0], PEDIR_O_PAD_USB(*pedido))
+    return _a_resposta_do_broker(pad, pedido[0], _pedir_na_vez(PEDIR_O_PAD_USB, pedido))
 
 
 def _o_pedido_do_gadget(pad: UhidDualSense) -> tuple[str, bytes, str, tuple[int, int]] | None:
@@ -3094,7 +3104,7 @@ def _refazer_o_device(pad: UhidDualSense) -> bool:
     pad._criar_o_device()
     sobra, pad._gadget_na_mao = pad._gadget_na_mao, None
     if sobra is not None:
-        sobra.desmontar()
+        _DESCIDA_AO_BROKER.descer(sobra, pad)
     return True
 
 
@@ -3136,7 +3146,7 @@ class _PedidoAoBroker:
             argumentos = _o_pedido_do_gadget(pad)
             if argumentos is not None:
                 self.serial = argumentos[0]
-                gadget = pedir(*argumentos)
+                gadget = _pedir_na_vez(pedir, argumentos)
             if gadget is not None and JOGO_ABERTO():
                 self.jogo_abriu = True
                 descer, gadget = gadget, None
@@ -3181,6 +3191,117 @@ class _PedidoAoBroker:
             gadget.desmontar()
 
 
+#: quanto quem espera uma descida espera por ela: as duas tentativas do cliente
+#: (`hidraw_broker_client._TIMEOUT_S`, 2 s cada) e folga.
+_DESCIDA_ESPERA_S = 5.0
+#: quanto o pedido novo espera a descida do mesmo serial: uma por jogador na frente.
+_DESCIDA_DO_SERIAL_ESPERA_S = 4 * _DESCIDA_ESPERA_S
+
+
+class _DescidaAoBroker:
+    """A descida do gadget que o tique solta, num fio só, fora do tique de entrada.
+
+    O irmão do :class:`_PedidoAoBroker`: a parte da casa desce na hora
+    (:meth:`_GadgetDoPad._soltar_na_casa`), o pad já está no uhid, e a devolução
+    ao broker vai à fila de um fio só, na ordem de chegada; nada no tique espera
+    a resposta. A ordem que o broker exige se guarda dos dois lados: o `stop`
+    desce o que é do pad antes de voltar (:meth:`terminar`), e o pedido novo do
+    mesmo serial espera a descida dele (:func:`_pedir_na_vez`): o broker recusa
+    o serial repetido.
+    """
+
+    def __init__(self) -> None:
+        self._trava = threading.Condition()
+        #: ``(dono, gadget)`` na ordem de chegada; o dono é o pad, ou None.
+        self._fila: collections.deque[tuple[object, _GadgetDoPad]] = collections.deque()
+        self._em_voo: tuple[object, _GadgetDoPad] | None = None
+        #: as que o `stop` tirou da fila e desce ele mesmo: seguem pendentes até o fim.
+        self._no_stop: list[tuple[object, _GadgetDoPad]] = []
+        self._fio: threading.Thread | None = None
+
+    def descer(self, gadget: _GadgetDoPad, dono: object) -> None:
+        """Solta o gadget na casa agora e põe a devolução ao broker na fila. Volta na hora."""
+        gadget._soltar_na_casa()
+        with self._trava:
+            self._fila.append((dono, gadget))
+            if self._fio is None:
+                self._fio = threading.Thread(
+                    target=self._rodar, name="hefesto-pad-usb-descida", daemon=True
+                )
+                self._fio.start()
+
+    def _rodar(self) -> None:
+        while True:
+            with self._trava:
+                if not self._fila:
+                    self._fio = None
+                    self._trava.notify_all()
+                    return
+                vez = self._em_voo = self._fila.popleft()
+            try:
+                vez[1]._devolver_ao_broker()
+            finally:
+                with self._trava:
+                    self._em_voo = None
+                    self._trava.notify_all()
+
+    def _pendentes(self) -> list[tuple[object, _GadgetDoPad]]:
+        """A fila e a que está em voo. Sob a trava."""
+        em_voo = [self._em_voo] if self._em_voo is not None else []
+        return em_voo + self._no_stop + list(self._fila)
+
+    def em_voo_de(self, dono: object) -> bool:
+        """O fio fala agora com o broker por um gadget de ``dono``?"""
+        with self._trava:
+            return self._em_voo is not None and self._em_voo[0] is dono
+
+    def terminar(self, dono: object) -> None:
+        """O `stop`: o do ``dono`` que está na fila desce aqui; o que está em voo se espera."""
+        with self._trava:
+            meus = [vez for vez in self._fila if vez[0] is dono]
+            if meus:
+                self._fila = collections.deque(vez for vez in self._fila if vez[0] is not dono)
+                self._no_stop.extend(meus)
+        for vez in meus:
+            try:
+                vez[1]._devolver_ao_broker()
+            finally:
+                with self._trava:
+                    self._no_stop.remove(vez)
+                    self._trava.notify_all()
+        with self._trava:
+            self._trava.wait_for(
+                lambda: self._em_voo is None or self._em_voo[0] is not dono,
+                _DESCIDA_ESPERA_S,
+            )
+
+    def esperar(self, serial: str, segundos: float) -> bool:
+        """True = nenhuma descida do ``serial`` pendente, em até ``segundos``."""
+        with self._trava:
+            return self._trava.wait_for(
+                lambda: all(gadget.serial != serial for _, gadget in self._pendentes()),
+                segundos,
+            )
+
+    def esperar_tudo(self, segundos: float) -> bool:
+        """True = a fila esvaziou e o fio terminou em até ``segundos`` (para quem mede)."""
+        with self._trava:
+            return self._trava.wait_for(lambda: not self._pendentes(), segundos)
+
+
+_DESCIDA_AO_BROKER = _DescidaAoBroker()
+
+
+def _pedir_na_vez(
+    pedir: Callable[[str, bytes, str, tuple[int, int]], _GadgetDoPad | None],
+    argumentos: tuple[str, bytes, str, tuple[int, int]],
+) -> _GadgetDoPad | None:
+    """O pedido ao broker depois da descida do mesmo serial (o broker recusa o repetido)."""
+    if not _DESCIDA_AO_BROKER.esperar(argumentos[0], _DESCIDA_DO_SERIAL_ESPERA_S):
+        logger.info("pad_usb_pede_com_a_descida_em_voo", serial=argumentos[0])
+    return pedir(*argumentos)
+
+
 def _report_neutro(pad: UhidDualSense) -> bytes:
     """O 0x01 de um controle largado: eixos no centro, nada apertado."""
     body = bytearray(_INPUT_PAYLOAD_SIZE)
@@ -3209,7 +3330,7 @@ def _soltar_o_gadget(pad: UhidDualSense) -> bool:
         _GADGETS_ESTACIONADOS.estacionar(pad.identity, gadget)
         logger.info("pad_usb_espera_o_jogo_fechar", gadget=gadget.gadget, player=pad.player)
         return True
-    gadget.desmontar()
+    _DESCIDA_AO_BROKER.descer(gadget, pad)
     return True
 
 
