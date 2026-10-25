@@ -5,7 +5,7 @@
       "data": "2026-10-25",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 55552,
+      "piso": 55588,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_exame.py": 83,
@@ -77,7 +77,7 @@
         "daemon/subsystems/base.py": 78,
         "daemon/subsystems/big_picture.py": 41,
         "daemon/subsystems/bt_mic.py": 233,
-        "daemon/subsystems/coop.py": 807,
+        "daemon/subsystems/coop.py": 811,
         "daemon/subsystems/external_identity.py": 621,
         "daemon/subsystems/external_mask.py": 157,
         "daemon/subsystems/game_signal.py": 128,
@@ -173,7 +173,7 @@
         "integrations/storm_doctor.py": 136,
         "integrations/transiente_do_jogo.py": 112,
         "integrations/uhid_blueprint.py": 87,
-        "integrations/uhid_gamepad.py": 645,
+        "integrations/uhid_gamepad.py": 677,
         "integrations/uinput_gamepad.py": 217,
         "integrations/uinput_keyboard.py": 48,
         "integrations/uinput_mouse.py": 194,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +1 linhas (55551 -> 55552), pagas por Origem: D-2510-A-EXTENSAO-FORA-DA-PORTA-NAO-TEM-MODO-A-DESFAZER; registrado no fecho, topo 9d9767bc9eee",
+      "razao": "texto-em-src: +36 linhas (55552 -> 55588), pagas por Origem: D-2510-A-DESCIDA-DO-GADGET-FALA-COM-O-BROKER-FORA-DO-TIQUE; registrado no fecho, topo 298353a6cbae",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -594,6 +594,12 @@
           "de": 55551,
           "para": 55552,
           "razao": "texto-em-src: +1 linhas (55551 -> 55552), pagas por Origem: D-2510-A-EXTENSAO-FORA-DA-PORTA-NAO-TEM-MODO-A-DESFAZER; registrado no fecho, topo 9d9767bc9eee"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 55552,
+          "para": 55588,
+          "razao": "texto-em-src: +36 linhas (55552 -> 55588), pagas por Origem: D-2510-A-DESCIDA-DO-GADGET-FALA-COM-O-BROKER-FORA-DO-TIQUE; registrado no fecho, topo 298353a6cbae"
         }
       ],
       "unidade": "linhas",
