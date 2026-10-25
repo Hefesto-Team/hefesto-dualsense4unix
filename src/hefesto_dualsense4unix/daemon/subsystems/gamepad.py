@@ -56,9 +56,11 @@ Política:
 from __future__ import annotations
 
 import contextlib
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
+from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Literal
 
 from hefesto_dualsense4unix.core.numeros_da_sony import ROUPA_PADRAO, roupa_normalizada
@@ -89,6 +91,10 @@ EMU_BLOQUEADO_POR_JOGO = "bloqueado_por_jogo"
 EMU_RECUSADO_STEAM_INPUT = "recusado_steam_input"
 EMU_FALHOU = "falhou"
 EMU_DESLIGADO = "desligado"
+
+#: quanto a IPC espera o P1 que nasce pelo fio: o broker (2 s) e a fila dos pads à frente
+PRAZO_DO_P1_QUE_NASCE_S = 8.0
+_PASSO_DA_ESPERA_DO_P1_S = 0.01
 
 DESFECHOS_EMULACAO_ATIVA = frozenset(
     {EMU_APLICADO, EMU_JA_ESTAVA, EMU_BLOQUEADO_POR_JOGO}
@@ -1116,10 +1122,13 @@ def vestir_a_roupa(daemon: Any, roupa: object) -> list[str]:
         logger.info("roupa_do_pad", pedida=f"{pedida:04x}", veste=f"{efetiva:04x}")
     convergiram: list[str] = []
     cfg = getattr(daemon, "config", None)
-    if not getattr(cfg, "gamepad_emulation_enabled", False):
-        return convergiram
     vpad = getattr(daemon, "_gamepad_device", None)
-    if vpad is not None and a_roupa_mudou(vpad, efetiva):
+    nascendo = o_p1_que_nasce(daemon) if vpad is None else None
+    if not getattr(cfg, "gamepad_emulation_enabled", False) and nascendo is None:
+        return convergiram
+    if (vpad is not None and a_roupa_mudou(vpad, efetiva)) or (
+        nascendo is not None and nascendo.kwargs.get("roupa") != efetiva
+    ):
         with getattr(daemon, "_emu_lock", contextlib.nullcontext()):
             start_gamepad_emulation_desfecho(
                 daemon,
@@ -1129,7 +1138,10 @@ def vestir_a_roupa(daemon: Any, roupa: object) -> list[str]:
                 caminho_e_escolha=False,
             )
         vpad = getattr(daemon, "_gamepad_device", None)
-    if vpad is not None and not a_roupa_mudou(vpad, efetiva):
+    nascendo = o_p1_que_nasce(daemon) if vpad is None else None
+    if (vpad is not None and not a_roupa_mudou(vpad, efetiva)) or (
+        nascendo is not None and nascendo.kwargs.get("roupa") == efetiva
+    ):
         convergiram.append("p1")
     coop = getattr(daemon, "_coop_manager", None)
     vestir_os_secundarios = getattr(coop, "vestir_a_roupa", None)
@@ -1656,7 +1668,9 @@ class OP1QueNasce:
     """O pedido do pad do P1 que nasce pelo fio, com o que a instalação precisa.
 
     `kwargs` são os argumentos do `make_virtual_pad` fora a máscara (`key`) e a
-    identidade, que vão à parte.
+    identidade, que vão à parte. `desfecho` é o `EMU_*` da instalação (``None``
+    enquanto nasce), e `depois` é o que quem pediu faz com ele, no tique em que o
+    pad se instala (:func:`fechar_o_p1_que_nasceu`).
     """
 
     key: str
@@ -1670,6 +1684,95 @@ class OP1QueNasce:
     carta: int
     kwargs: dict[str, Any] = field(default_factory=dict)
     pedido: Any = None
+    desfecho: str | None = None
+    depois: list[Callable[[str], None]] = field(default_factory=list)
+
+    def mesmo_pedido(self, outro: OP1QueNasce) -> bool:
+        """O mesmo pad pedido pelos mesmos motivos: o que nasce vale pelo novo."""
+        return (
+            self.key, self.flavor, self.identity, self.mascara_do_p1, self.caminho,
+            self.caminho_pedido, self.caminho_e_escolha, self.origin,
+            self.kwargs.get("roupa"),
+        ) == (
+            outro.key, outro.flavor, outro.identity, outro.mascara_do_p1, outro.caminho,
+            outro.caminho_pedido, outro.caminho_e_escolha, outro.origin,
+            outro.kwargs.get("roupa"),
+        )
+
+
+def o_p1_que_nasce(daemon: Any) -> OP1QueNasce | None:
+    """O pedido do P1 que nasce pelo fio agora, ou ``None``."""
+    contexto = getattr(getattr(daemon, "_coop_manager", None), "_p1_que_nasce", None)
+    return contexto if isinstance(contexto, OP1QueNasce) else None
+
+
+def o_p1_nasce_pelo_fio(daemon: Any, *, no_tique: bool = False) -> bool:
+    """O pad do P1 pedido agora nasce no fio de nascimento?
+
+    O-P1-QUE-NASCE-FORA-DO-TIQUE-NASCE-NO-FIO-DE-NASCIMENTO-01: quem decide é o fio em
+    que o pedido roda, e não quem o pede. O laço do asyncio é o do `_poll_loop`, e
+    todo pedido nele (o tique, o PS + R3, a roupa, a saída do Nativo, a IPC) segura a
+    leitura de todos os controles enquanto o broker responde; fora dele (a subida,
+    um executor) o pad nasce na hora, como sempre. `no_tique`: o laço do tique, que
+    ainda vale sem a marca do fio (os dublês).
+    """
+    from hefesto_dualsense4unix.integrations.virtual_pad import o_fio_de_nascimento
+
+    if o_fio_de_nascimento(daemon) is None:
+        return False
+    coop = getattr(daemon, "_coop_manager", None)
+    if no_tique:
+        from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
+
+        return bool(get_coop_manager(daemon)._no_fio_do_laco())
+    fio_do_laco = getattr(coop, "_fio_do_laco", None)
+    return fio_do_laco is not None and fio_do_laco == threading.get_ident()
+
+
+def depois_do_p1(daemon: Any, contexto_antes: OP1QueNasce | None) -> OP1QueNasce | None:
+    """O pedido que o `start` deixou nascendo agora, se ele é novo (não o de antes)."""
+    contexto = o_p1_que_nasce(daemon)
+    if contexto is None or contexto is contexto_antes or contexto.desfecho is not None:
+        return None
+    return contexto
+
+
+def fechar_o_p1_que_nasceu(daemon: Any) -> None:
+    """O que quem pediu o P1 faz com o desfecho, no tique em que ele se instalou.
+
+    O `_poll_loop` chama depois do `forward_all`, fora da fila do co-op: o
+    `coop.sync` de quem ligou a emulação e o modo que se grava no perfil não rodam
+    no meio da entrega.
+    """
+    nasceram: list[OP1QueNasce] | None = getattr(daemon, "_p1_que_nasceu", None)
+    while nasceram:
+        contexto = nasceram.pop(0)
+        for passo in contexto.depois:
+            try:
+                passo(contexto.desfecho or EMU_FALHOU)
+            except Exception as exc:
+                logger.warning("p1_que_nasceu_passo_falhou", err=str(exc))
+
+
+async def esperar_o_p1_que_nasce(
+    daemon: Any, contexto: OP1QueNasce | None, prazo_s: float = PRAZO_DO_P1_QUE_NASCE_S
+) -> str | None:
+    """O desfecho de verdade do P1 que nasce pelo fio, sem segurar o laço.
+
+    ``None``: nada nasce (o `start` já disse o desfecho). O pedido que outro venceu,
+    ou que não se instalou no prazo, é ``"falhou"``: o pad dele não existe.
+    """
+    import asyncio
+
+    if contexto is None:
+        return None
+    limite = time.monotonic() + prazo_s
+    while contexto.desfecho is None:
+        if o_p1_que_nasce(daemon) is not contexto or time.monotonic() >= limite:
+            logger.info("p1_que_nasce_sem_desfecho", vencido=o_p1_que_nasce(daemon) is contexto)
+            return EMU_FALHOU
+        await asyncio.sleep(_PASSO_DA_ESPERA_DO_P1_S)
+    return contexto.desfecho
 
 
 def _largar_o_p1_que_nasce(daemon: Any) -> None:
@@ -1778,11 +1881,9 @@ def start_gamepad_emulation_desfecho(
         make_virtual_pad,
         normalizar_caminho,
         o_aparelho_mudou,
-        o_fio_de_nascimento,
         quer_uhid,
     )
 
-    _largar_o_p1_que_nasce(daemon)
     key = normalize_flavor(
         flavor if flavor is not None else getattr(daemon.config, "gamepad_flavor", None)
     )
@@ -1791,6 +1892,23 @@ def start_gamepad_emulation_desfecho(
     caminho_pedido = normalizar_caminho(caminho) or _caminho_a_herdar(daemon)
     uhid_pedido = quer_uhid(caminho_pedido, mascara_do_p1)
     roupa = a_roupa_que_o_pad_veste(daemon)
+    nascendo = o_p1_que_nasce(daemon)
+    if (
+        nascendo is not None
+        and nascendo.desfecho is None
+        and daemon._gamepad_device is None
+        and nascendo.mesmo_pedido(
+            OP1QueNasce(
+                key=key, flavor=flavor, identity=identity, mascara_do_p1=mascara_do_p1,
+                caminho=caminho, caminho_pedido=caminho_pedido,
+                caminho_e_escolha=caminho_e_escolha, origin=origin, carta=0,
+                kwargs={"roupa": roupa},
+            )
+        )
+    ):
+        # o mesmo pedido de novo (o relógio da identidade, o duplo clique): o que nasce vale
+        return EMU_APLICADO
+    _largar_o_p1_que_nasce(daemon)
 
     existing = daemon._gamepad_device
     if existing is not None:
@@ -1863,47 +1981,70 @@ def start_gamepad_emulation_desfecho(
             **make_primary_replica_sinks(daemon),
         },
     )
-    # `no_tique`: quem chama é o laço do tique. Com o fio de nascimento no ar, o pad
-    # é pedido na fila do coop e se instala no tique seguinte à entrega, e o
-    # desfecho é «aplicado» já no pedido. O gesto (a IPC, a janela) nasce na hora.
-    if no_tique and o_fio_de_nascimento(daemon) is not None:
+    def gravar_o_gesto(desfecho: str) -> None:
+        """O gesto manual que pôs o pad de pé vai ao arquivo dela; o que falhou, não."""
+        if desfecho != EMU_APLICADO:
+            return
+        if origin == "manual":
+            with contextlib.suppress(Exception):
+                from hefesto_dualsense4unix.utils.session import (
+                    load_gamepad_preference,
+                    save_gamepad_emulation,
+                )
+
+                # medido na bancada: o gesto com que o usuário diz «Sony DualSense»
+                # `gamepad.mask.set`, que grava no registro por aparelho.
+                if flavor is not None:
+                    save_gamepad_emulation(True, key)
+                else:
+                    _preferencia, gravada = load_gamepad_preference()
+                    save_gamepad_emulation(True, gravada)
+
+    # No laço do asyncio (`o_p1_nasce_pelo_fio`), com o fio de nascimento no ar, o pad
+    # é pedido na fila do coop e se instala no tique seguinte à entrega: o desfecho é
+    # «aplicado» já no pedido, e o de verdade fica no contexto (a IPC o espera, e o
+    # que vem depois dele vai a `contexto.depois`). Fora do laço, nasce na hora.
+    if o_p1_nasce_pelo_fio(daemon, no_tique=no_tique):
         from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
 
-        coop = get_coop_manager(daemon)
-        if coop._no_fio_do_laco():
-            coop.pedir_o_p1(contexto)
-            logger.info(
-                "gamepad_emulation_pedida_ao_fio",
-                flavor=key,
-                mascara_do_p1=mascara_do_p1,
-                identity=identity,
-            )
-            return EMU_APLICADO
+        if origin == "manual":
+            contexto.depois.append(gravar_o_gesto)
+        get_coop_manager(daemon).pedir_o_p1(contexto)
+        logger.info(
+            "gamepad_emulation_pedida_ao_fio",
+            flavor=key,
+            mascara_do_p1=mascara_do_p1,
+            identity=identity,
+            origin=origin,
+        )
+        return EMU_APLICADO
     device: VirtualPad | None = make_virtual_pad(key, identity=identity, **contexto.kwargs)
     desfecho = instalar_o_p1(daemon, device, contexto, None)
-    if desfecho != EMU_APLICADO:
-        return desfecho
-    if origin == "manual":
-        with contextlib.suppress(Exception):
-            from hefesto_dualsense4unix.utils.session import (
-                load_gamepad_preference,
-                save_gamepad_emulation,
-            )
-
-            # medido na bancada: o gesto com que o usuário diz «Sony DualSense»
-            # `gamepad.mask.set`, que grava no registro por aparelho.
-            if flavor is not None:
-                save_gamepad_emulation(True, key)
-            else:
-                _preferencia, gravada = load_gamepad_preference()
-                save_gamepad_emulation(True, gravada)
+    gravar_o_gesto(desfecho)
     return desfecho
 
 
 def instalar_o_p1(
     daemon: DaemonProtocol, device: VirtualPad | None, contexto: OP1QueNasce, ms: float | None
 ) -> str:
-    """O pad do P1 nasceu (ou não): instala no daemon e devolve o desfecho `EMU_*`."""
+    """O pad do P1 nasceu (ou não): instala no daemon e devolve o desfecho `EMU_*`.
+
+    O que quem pediu faz com o desfecho (`contexto.depois`) vai ao tique, por
+    :func:`fechar_o_p1_que_nasceu`; o daemon sem o laço (um dublê) o faz aqui.
+    """
+    contexto.desfecho = _instalar_o_p1(daemon, device, contexto, ms)
+    if contexto.depois:
+        nasceram = getattr(daemon, "_p1_que_nasceu", None)
+        if isinstance(nasceram, list):
+            nasceram.append(contexto)
+        else:
+            fechar_o_p1_que_nasceu(SimpleNamespace(_p1_que_nasceu=[contexto]))
+    return contexto.desfecho
+
+
+def _instalar_o_p1(
+    daemon: DaemonProtocol, device: VirtualPad | None, contexto: OP1QueNasce, ms: float | None
+) -> str:
     from hefesto_dualsense4unix.daemon.subsystems.coop import anotar_o_nascimento
     from hefesto_dualsense4unix.integrations.virtual_pad import (
         caminho_resolvido,
@@ -3090,14 +3231,19 @@ __all__ = [
     "com_os_acionadores",
     "cortar_pelo_limiar",
     "dedup_status",
+    "depois_do_p1",
     "dispatch_gamepad",
     "end_game_output_session",
     "esconder_o_fisico_para_o_jogo",
+    "esperar_o_p1_que_nasce",
     "esquecer_motores_do_perfil",
+    "fechar_o_p1_que_nasceu",
     "gatilhos_dos_acionadores",
     "make_primary_replica_sinks",
     "make_primary_rumble_sink",
     "notify_vpad_degradado",
+    "o_p1_nasce_pelo_fio",
+    "o_p1_que_nasce",
     "parar_os_acionadores",
     "ponte_dos_acionadores",
     "ralos_do_mic",

@@ -38,6 +38,9 @@ from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
     LAUNCH_RECONCILE_INTERVAL_SEC,
     OrigemEmulacao,
     ancorar_o_p1_no_aparelho,
+    depois_do_p1,
+    fechar_o_p1_que_nasceu,
+    o_p1_que_nasce,
     primary_identity,
     reconciliar_as_mascaras,
     sem_o_eixo_do_gesto,
@@ -733,6 +736,8 @@ class Daemon:
     _rumble_policy_from_profile: bool = False
     _rumble_policy_before_profile: tuple[RumblePolicy, float] | None = None
     _emu_lock: Any = field(default_factory=threading.RLock)
+    # o P1 que nasceu pelo fio e cujo desfecho espera o tique (`fechar_o_p1_que_nasceu`)
+    _p1_que_nasceu: list[Any] = field(default_factory=list)
     _audio: Any = None
     _plugins_subsystem: Any = None
     _metrics_subsystem: Any = None
@@ -1814,6 +1819,29 @@ class Daemon:
             stop_gamepad_emulation,
         )
 
+        def depois_de_ligar(feito: str, *, recriou: bool) -> None:
+            """O que segue o pad de pé: o co-op, as tabelas do perfil e o modo gravado.
+
+            Roda depois do `start`, ou no tique em que o P1 que nasceu pelo fio se
+            instalou (`gamepad.fechar_o_p1_que_nasceu`), com o desfecho de verdade.
+            """
+            ok = feito in (EMU_APLICADO, EMU_JA_ESTAVA)
+            if ok and recriou:
+                from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
+
+                with self._emu_lock, contextlib.suppress(Exception):
+                    get_coop_manager(self).sync(force=True, origem=origin)
+            elif ok:
+                logger.debug("gamepad_apply_identico_sem_recriacao")
+            if ok:
+                self._devolver_as_tabelas_do_perfil()
+            if grava_o_modo and ok:
+                self.gravar_o_modo_escolhido(
+                    "gamepad",
+                    caminho=caminho if caminho_e_escolha else None,
+                    porta=grava_o_modo,
+                )
+
         if origin == "manual":
             self._emu_manual_ts = time.monotonic()
             self._mode_from_profile = None
@@ -1825,6 +1853,7 @@ class Daemon:
                         False, origin="manual" if origin == "manual" else "profile"
                     )
                 device_antes = self._gamepad_device
+                nascendo_antes = o_p1_que_nasce(self)
                 desfecho = start_gamepad_emulation_desfecho(
                     self,
                     flavor=flavor,
@@ -1832,28 +1861,19 @@ class Daemon:
                     caminho=caminho,
                     caminho_e_escolha=caminho_e_escolha,
                 )
-                ok = desfecho in (EMU_APLICADO, EMU_JA_ESTAVA)
-                if ok and self._gamepad_device is not device_antes:
-                    from hefesto_dualsense4unix.daemon.subsystems.coop import (
-                        get_coop_manager,
-                    )
-
-                    with contextlib.suppress(Exception):
-                        get_coop_manager(self).sync(force=True, origem=origin)
-                elif ok:
-                    logger.debug("gamepad_apply_identico_sem_recriacao")
+                nascendo = depois_do_p1(self, nascendo_antes)
+                if nascendo is not None:
+                    # O-P1-QUE-NASCE-FORA-DO-TIQUE-NASCE-NO-FIO-DE-NASCIMENTO-01: o pad
+                    # nasce pelo fio, e o que segue vai ao tique em que ele se instala,
+                    # com o desfecho de verdade.
+                    nascendo.depois.append(lambda feito: depois_de_ligar(feito, recriou=True))
+                    return desfecho
+                recriou = self._gamepad_device is not device_antes
             else:
                 tinha_device = self._gamepad_device is not None
                 stop_gamepad_emulation(self, persist=(origin == "manual"))
                 return EMU_DESLIGADO if tinha_device else EMU_JA_ESTAVA
-        if ok:
-            self._devolver_as_tabelas_do_perfil()
-        if grava_o_modo and ok:
-            self.gravar_o_modo_escolhido(
-                "gamepad",
-                caminho=caminho if caminho_e_escolha else None,
-                porta=grava_o_modo,
-            )
+        depois_de_ligar(desfecho, recriou=recriou)
         return desfecho
 
     def gravar_o_modo_escolhido(
@@ -4320,6 +4340,7 @@ class Daemon:
             grace_passed = tick_started >= self._input_ready_at
             if grace_passed:
                 get_coop_manager(self).forward_all()
+                fechar_o_p1_que_nasceu(self)
             if not self.controller.is_connected():
                 # que `daemon.state_full` prioriza, CLUSTER-IPC-STATE-PROFILE-01)
                 # três handlers de estado (`daemon.status`, `state_full`,

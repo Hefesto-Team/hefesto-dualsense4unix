@@ -330,6 +330,9 @@ SYNC_FORCADO: dict[tuple[str, str], bool] = {
     ("daemon/ipc_handlers.py", "_repintar_apos_renumeracao"): False,
     ("daemon/ipc_handlers.py", "_handle_coop_sync"): False,
     ("daemon/lifecycle.py", "set_gamepad_emulation_desfecho"): True,
+    # o passo de depois do pad de pé, aninhado no dono: roda na hora ou no tique em que
+    # o P1 que nasceu pelo fio se instalou (O-P1-QUE-NASCE-FORA-DO-TIQUE-...-01)
+    ("daemon/lifecycle.py", "depois_de_ligar"): True,
     ("daemon/lifecycle.py", "vestir_a_mascara_do_aparelho"): True,
     ("daemon/lifecycle.py", "set_coop_enabled"): False,
     ("daemon/subsystems/gamepad.py", "reconciliar_as_mascaras"): False,

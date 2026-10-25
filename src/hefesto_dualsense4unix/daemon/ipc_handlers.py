@@ -4925,6 +4925,16 @@ class IpcHandlersMixin:
             origin=origem,
             **modo,
         )
+        if enabled and ok:
+            # o P1 que nasce pelo fio: a resposta é o desfecho dele, sem segurar o laço
+            from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
+                EMU_APLICADO,
+                depois_do_p1,
+                esperar_o_p1_que_nasce,
+            )
+
+            nasceu = await esperar_o_p1_que_nasce(self.daemon, depois_do_p1(self.daemon, None))
+            ok = ok if nasceu is None else nasceu == EMU_APLICADO
         active_flavor = getattr(self.daemon.config, "gamepad_flavor", None)
         resposta: dict[str, Any] = {
             "status": "ok" if ok else "failed",

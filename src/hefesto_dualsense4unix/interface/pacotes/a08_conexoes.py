@@ -2425,7 +2425,7 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 # deduzido: as chaves de topo do `state_full` do daemon vivo são 47, e nenhuma
 # delas é `mapa` nem `maquina`. O caminho é `machine_declare` →
-# `_handle_machine_declare` (`daemon/ipc_handlers.py:5011`) → `maquina.json`, e
+# `_handle_machine_declare` (`daemon/ipc_handlers.py:5021`) → `maquina.json`, e
 
 
 def _gravar_o_mapa(p: Any) -> None:

@@ -130,7 +130,7 @@ class MicDraft(BaseModel):
     """Draft do MICROFONE (MIC-EXPOSE-01, 25/07; volume e mudo em 18/08/2026).
 
     ``button_toggles_system`` espelha ``ProfileMicConfig.button_toggles_system``
-    e o ``DaemonConfig.mic_button_toggles_system`` (daemon/lifecycle.py:163): o
+    e o ``DaemonConfig.mic_button_toggles_system`` (daemon/lifecycle.py:455): o
     botão de mic do controle alterna (ou não) o mute do microfone PADRÃO DO
     SISTEMA. ``None`` = **sem opinião**, e é o default DAQUI de propósito —
     ver o gate por campo no parágrafo abaixo.
