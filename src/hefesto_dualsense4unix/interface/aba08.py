@@ -242,12 +242,6 @@ def tem_mic_pelo_radio(c):
     return e_radio(c)
 
 
-#: escolhido. Pelo CABO o DualSense expõe placa USB Audio própria e o PipeWire a
-#: DualSense" e "Bateria 100%". Medido em 28/08 nas quatro linhas.
-def caminho_do_mic(c):
-    return _pacote08.caminho_do_microfone(transporte_de(c))
-
-
 # `a04_iluminacao.um_botao_de_player`.
 rotulo = _pacote08.rotulo_do_controle
 

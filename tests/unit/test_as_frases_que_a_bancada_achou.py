@@ -177,28 +177,11 @@ def test_a_tabela_da_gestao_diz_o_que_o_dono_diz(cru: str) -> None:
 
 
 @pytest.mark.parametrize("via", ["usb", "bt"])
-def test_o_pacote_e_a_gestao_dizem_a_mesma_frase_do_microfone(via: str) -> None:
-    """A repintura (`a08_conexoes.caminho_do_microfone`) e a Gestão"""
-    from pacotes import a08_conexoes
-
-    do_pacote = _texto(a08_conexoes.caminho_do_microfone(via))
+def test_a_gestao_diz_o_caminho_do_microfone_na_palavra_do_dono(via: str) -> None:
+    """A frase do microfone da Gestão diz o transporte na palavra do dono."""
     c = gestao.Controle(uniq="c1", jogador=1, via=via, bateria=None)
-    assert c.texto_do_microfone == f"Ligado, {do_pacote}", (
-        f"a Gestão diz {c.texto_do_microfone!r} e a repintura {do_pacote!r}")
-    assert do_pacote.startswith(f"pelo {palavra(via)} •")
-
-
-@pytest.mark.parametrize("via", ["usb", "bt"])
-def test_a_dica_do_microfone_no_pacote_nao_volta_a_dizer_pelo_cabo(via: str) -> None:
-    """A dica que o pacote pinta a cada tique fala a palavra do dono — as DUAS"""
-    from pacotes import a08_conexoes
-
-    dica = html.unescape(a08_conexoes.dica_do_microfone(via))
-    assert f"<b>pelo {palavra(via)}</b>" in dica, dica[:120]
-    velha = re.search(r"\b[Pp]elo (cabo|rádio)\b", dica)
-    assert not velha, (
-        f"a dica do microfone no {palavra(via)} voltou a dizer {velha.group(0)!r} "
-        f"— a palavra do transporte é USB/BT desde 21/09: {dica!r}")
+    assert c.texto_do_microfone.startswith(f"Ligado, pelo {palavra(via)} •"), (
+        c.texto_do_microfone)
 
 
 _SOM_PELO_RADIO = ("mapa-audio.saida_dedicada-radio",

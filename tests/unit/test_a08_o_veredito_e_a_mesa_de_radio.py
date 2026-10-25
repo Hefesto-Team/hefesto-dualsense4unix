@@ -148,32 +148,3 @@ def test_o_escopo_le_o_valor_da_maquina() -> None:
         "piloto é a resposta honesta")
     assert p.pacote(_ctx())["mic-escopo"] == "", (
         "o `_ctx()` não publica a chave, e o pacote inventou um valor")
-
-
-def test_o_custo_do_mic_no_radio_nao_e_digitado(monkeypatch) -> None:  # type: ignore[no-untyped-def]
-    """A MORDIDA do número: mude a constante do medidor e a frase acompanha.
-
-    Os 16,3 do desenho conferiam com `radio_da_mesa` HOJE — eles eram a segunda
-    grafia. `frase_da_capacidade_do_mic` deriva os quatro números das constantes
-    do medidor, *"que é o mesmo lugar de onde a barra de Rádio em uso tira os
-    dela"*.
-    """
-    from hefesto_dualsense4unix.integrations import radio_da_mesa as rm
-
-    p = _pacote()
-    antes = p.dica_do_microfone("bt")
-    monkeypatch.setattr(rm, "HZ_AUDIO_COM_MIC", rm.HZ_AUDIO_COM_MIC * 3)
-    depois = p.dica_do_microfone("bt")
-    assert antes != depois, (
-        "a frase do custo do microfone não seguiu a constante do medidor — ela "
-        "está digitada, e no dia em que alguém remedir o A/B a janela estável "
-        "acompanha e o HTML não")
-
-
-def test_o_mic_pelo_cabo_nao_cobra_turno_de_radio() -> None:
-    """Pelo cabo não há conta a fazer — e "0 turnos" seria um número sem conta."""
-    p = _pacote()
-    cabo = p.dica_do_microfone("usb")
-    assert p._MIC_NAO_CUSTA_RADIO in cabo
-    assert "turnos de rádio" not in cabo.replace(p._MIC_NAO_CUSTA_RADIO, ""), (
-        "a frase do cabo trouxe a conta do rádio junto")

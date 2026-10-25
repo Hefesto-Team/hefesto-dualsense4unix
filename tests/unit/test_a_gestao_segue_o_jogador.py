@@ -417,12 +417,16 @@ def a08() -> Any:
     return a08_conexoes
 
 
-def test_a_dica_do_microfone_no_bt_conta_o_custo_na_palavra_do_dono(a08: Any) -> None:
-    """A metade do custo vem de `secao_controles.frase_da_capacidade_do_mic`.
+def test_a_frase_do_custo_do_mic_diz_a_palavra_do_dono(a08: Any) -> None:
+    """O custo do microfone no BT (`secao_controles.frase_da_capacidade_do_mic`).
 
     MORDIDA: devolva *"um controle no rádio troca"* à frase — reprova.
     """
-    dica = html.unescape(a08.dica_do_microfone("bt"))
+    from hefesto_dualsense4unix.app.actions.config.secao_controles import (
+        frase_da_capacidade_do_mic,
+    )
+
+    dica = html.unescape(frase_da_capacidade_do_mic())
     assert "relatórios de entrada por segundo" in dica, (
         f"a dica do microfone no BT perdeu a frase do custo — a régua ficou cega: {dica!r}")
     assert f"um controle no {palavra('bt')} troca" in dica, dica

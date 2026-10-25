@@ -1406,58 +1406,6 @@ def rotulo_curto_do_controle(c: Any) -> str:
 _PONTO = ' <span class="pt">•</span> '
 
 
-#: DERIVADO do transporte. Pelo CABO o DualSense expõe placa USB Audio própria e
-_CAMINHO_DO_MIC = {"bt": ("pelo BT", "Pela ponte"),
-                   "usb": ("pelo USB", "Placa do controle")}
-
-
-def caminho_do_microfone(via: str) -> str:
-    """*"pelo BT • Pela ponte"* ou *"pelo USB • Placa do controle"*."""
-    chave = (via or "").strip().lower()
-    rota, quem = _CAMINHO_DO_MIC.get(chave, _CAMINHO_DO_MIC["usb"])
-    return f"{rota}{_PONTO}{quem}"
-
-
-#: Pelo cabo o DualSense expõe uma placa USB Audio própria (medido em
-#: **O QUE ELA NÃO DIZ MAIS**, e é a correção de 04/09: nenhuma das duas
-_DICA_DO_MIC = {
-    "bt": (
-        "O microfone deste controle chega <b>pelo BT</b>, pela ponte do "
-        "Hefesto — o DualSense não tem canal de áudio Bluetooth próprio."
-    ),
-    "usb": (
-        "O microfone deste controle chega <b>pelo USB</b>, pela placa de áudio "
-        "do próprio aparelho."
-    ),
-}
-
-_MIC_NAO_CUSTA_RADIO = "Pelo USB ele não custa turno de rádio nenhum."
-
-
-def dica_do_microfone(via: str) -> str:
-    """O `title` da linha do microfone: por onde ele chega e quanto ele custa.
-
-    O número não se digita (04/09/2026): o desenho cravava *"Custa +16,3 turnos de rádio"*, conferia
-    com `radio_da_mesa` então, e no dia em que se remedir o A/B a janela estável acompanha e o HTML
-    não. `frase_da_capacidade_do_mic` deriva os quatro números das constantes do medidor (*"o mesmo
-    lugar de onde a barra de Rádio em uso tira os dela"*). A frase do custo só entra no rádio, como
-    no medidor: pelo cabo o microfone não toca o rádio; o que muda com o transporte é a ROTA e o
-    PREÇO, nunca se o microfone existe.
-    """
-    chave = (via or "").strip().lower()
-    fisica = _DICA_DO_MIC.get(chave, _DICA_DO_MIC["usb"])
-    if chave != "bt":
-        return f"{fisica} {_MIC_NAO_CUSTA_RADIO}"
-    with contextlib.suppress(Exception):
-        perfil._com_o_src()
-        from hefesto_dualsense4unix.app.actions.config.secao_controles import (
-            frase_da_capacidade_do_mic,
-        )
-
-        return f"{fisica} {frase_da_capacidade_do_mic()}"
-    return fisica
-
-
 #: A recusa estava registrada em `SEM_GESTO` e só aparecia no terminal, a cada
 FALA_DO_BOTAO_DO_MIC = {
     True: "O computador inteiro",
@@ -1763,10 +1711,6 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
             "desenho": colorway_do_controle(eu),
             "ponte": bool(c.get("uniq") in (st.get("pontes_confirmadas") or {})),
             "fragil": bool(c.get("uniq") in (st.get("native_bt_fragil_controles") or [])),
-            # DESLIGADA no `maquina.json` do usuário (medido em 03/09), a tela
-            "mic-caminho": caminho_do_microfone(str(c.get("transport") or "")),
-            # O `title` DA LINHA DO MICROFONE — ver :func:`dica_do_microfone`. O
-            "mic-dica": dica_do_microfone(str(c.get("transport") or "")),
         }
         if modo_da_mesa is None:
             modo_da_mesa = modo_da_fileira(st)

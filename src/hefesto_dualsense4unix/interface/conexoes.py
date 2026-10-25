@@ -130,7 +130,7 @@ class Controle:
 
         A PALAVRA DO TRANSPORTE É A DA TELA (:data:`NOME_DO_TRANSPORTE`) desde
         24/09/2026 — era «pelo cabo»/«pelo rádio», de antes da decisão de
-        21/09. É a mesma frase de ``pacotes.a08_conexoes.caminho_do_microfone``.
+        21/09.
         """
         estado = "Ligado" if self.mic_ligado else "Desligado"
         if self.pelo_radio:

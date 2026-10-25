@@ -6,6 +6,7 @@ import argparse
 import json
 import pathlib
 import sys
+from typing import Any
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
@@ -30,8 +31,14 @@ from hefesto_dualsense4unix.interface import hefesto_vivo, onde
 
 ABA = "08-conexoes.html"
 
+#: Os endereços que a linha fechada TEM hoje: o selo do microfone em cada
+#: controle e a linha da confissão. Endereço que a página não tiver reprova com
+#: o nome dele — nunca um `null` calado.
+POR_CONTROLE = ("nome", "est-mic")
+DA_PAGINA = ("confissao-nada", "confissao-conta")
+
 ROTEIRO = r"""
-(function(){
+(function(por_controle, da_aba){
   function um(raiz, campo){
     const el = raiz.querySelector('[data-campo="' + campo + '"]');
     if(!el) return null;
@@ -40,30 +47,22 @@ ROTEIRO = r"""
             classes: el.className,
             visto: el.dataset.hefVisto || null};
   }
-  const saida = {controles: {}, confissao: null};
-  for(const raiz of document.querySelectorAll('[data-controle]')){
-    const pref = raiz.dataset.controle;
-    const botao = raiz.querySelector('[data-campo="luz-trava"]');
-    saida.controles[pref] = {
-      conectado: raiz.dataset.conectado || null,
-      nome: um(raiz, 'nome'),
-      mic_existe: um(raiz, 'mic-existe'),
-      mic_caminho: um(raiz, 'mic-caminho'),
-      luz: botao === null ? null : {apagado: botao.classList.contains('apagado'),
-                                   visto: botao.dataset.hefVisto || null}
-    };
+  const saida = {controles: {}, aba: {}};
+  for(const raiz of document.querySelectorAll('.gc-item[data-controle]')){
+    const campos = {conectado: raiz.dataset.conectado || null};
+    for(const c of por_controle) campos[c] = um(raiz, c);
+    saida.controles[raiz.dataset.controle] = campos;
   }
-  const linha = document.querySelector('[data-campo="confissao-nada"]');
-  if(linha){
-    saida.confissao = {
-      sumido: linha.classList.contains('sumido'),
-      conta: um(linha, 'confissao-conta'),
-      dica: um(linha, 'confissao-dica')
-    };
+  for(const c of da_aba){
+    const el = document.querySelector('[data-campo="' + c + '"]');
+    saida.aba[c] = el === null ? null
+      : {texto: (el.textContent || '').trim(),
+         sumido: el.classList.contains('sumido'),
+         visto: el.dataset.hefVisto || null};
   }
   return JSON.stringify(saida);
-})()
-"""
+})(%s, %s)
+""" % (json.dumps(POR_CONTROLE), json.dumps(DA_PAGINA))
 
 BANDEIRAS = dict(oculta=True, segundos=0.0, passear=False, parada=900,
                  espera=1200, incluir_perigosos=False, prova_clique="",
@@ -72,17 +71,25 @@ BANDEIRAS = dict(oculta=True, segundos=0.0, passear=False, parada=900,
                  prova_no_aparelho=False, entre=2500)
 
 
-def _do_arquivo() -> dict[str, str]:
-    """O ANTES — o que a bancada crava, lido do arquivo e não do DOM."""
+def _do_arquivo() -> dict[str, list[str]]:
+    """O ANTES — o que a bancada crava em cada endereço, lido do arquivo."""
     import re
 
     html = onde.pagina(ABA).read_text(encoding="utf-8")
-    cravado: dict[str, str] = {}
-    for campo in ("mic-existe", "mic-caminho", "confissao-conta"):
+    cravado: dict[str, list[str]] = {}
+    for campo in (*POR_CONTROLE, *DA_PAGINA):
         achados = re.findall(
             rf'data-campo="{campo}"[^>]*>(.*?)<', html, flags=re.S)
-        cravado[campo] = " · ".join(a.strip() for a in achados)
+        cravado[campo] = [a.strip() for a in achados]
     return cravado
+
+
+def faltando(dom: dict[str, Any]) -> list[str]:
+    """Os endereços esperados que o DOM não tem, com o dono de cada um."""
+    fora = [c for c in DA_PAGINA if dom["aba"].get(c) is None]
+    for pref, d in sorted(dom["controles"].items()):
+        fora += [f"{pref}.{c}" for c in POR_CONTROLE if d.get(c) is None]
+    return fora
 
 
 def main() -> int:
@@ -93,6 +100,10 @@ def main() -> int:
     onde.PUBLICADO = onde.BANCADA
 
     antes = _do_arquivo()
+    sem_endereco = [c for c, achados in antes.items() if not achados]
+    if sem_endereco:
+        print(f"REPROVA: a {ABA} não tem os endereços {sem_endereco}.")
+        return 1
     args = argparse.Namespace(**BANDEIRAS, abre=ABA, foto=escolha.foto)
     piloto = hefesto_vivo.Piloto(args)
     saida: dict[str, object] = {"dom": None, "erro": ""}
@@ -117,7 +128,7 @@ def main() -> int:
     Gtk.main()
 
     dom = saida.get("dom")
-    if not dom:
+    if not isinstance(dom, dict) or not dom.get("controles"):
         print(f"REPROVA: não li o DOM da {ABA}. {saida.get('erro', '')}")
         return 1
 
@@ -125,25 +136,28 @@ def main() -> int:
     print()
     for pref, d in sorted(dom["controles"].items()):
         print(f"  {pref}  conectado={d['conectado']!r}")
-        for chave in ("nome", "mic_existe", "mic_caminho"):
-            v = d[chave]
+        for chave in POR_CONTROLE:
+            v = d.get(chave)
             marca = "" if v is None else ("  [pintado]" if v.get("visto") else "  [NÃO visitado]")
             print(f"        {chave:12s} {v if v is None else v['texto']!r}{marca}")
-        print(f"        luz          {d['luz']}")
-    print(f"\n  confissão   {dom['confissao']}")
+    print(f"\n  página      {dom['aba']}")
+
+    fora = faltando(dom)
+    if fora:
+        print(f"\nREPROVA: endereço esperado que a {ABA} não tem: {', '.join(fora)}.")
+        return 1
 
     visitados = [f"{pref}.{chave}"
                  for pref, d in dom["controles"].items()
-                 for chave in ("mic_existe", "mic_caminho")
-                 if d[chave] and d[chave].get("visto")]
-    if dom["confissao"] and (dom["confissao"]["conta"] or {}).get("visto"):
-        visitados.append("confissao-conta")
+                 for chave in POR_CONTROLE
+                 if d[chave].get("visto")]
+    visitados += [c for c in DA_PAGINA if dom["aba"][c].get("visto")]
     if not visitados:
-        print("\nREPROVA: nenhum campo desta leva foi visitado pelo piloto — "
-              "ou os endereços sumiram da bancada, ou o pacote parou de emitir.")
+        print("\nREPROVA: nenhum campo da linha fechada foi visitado pelo piloto — "
+              "o pacote parou de emitir.")
         return 1
 
-    print(f"\nOK: {len(visitados)} campo(s) desta leva visitados pelo produto "
+    print(f"\nOK: {len(visitados)} campo(s) da linha fechada visitados pelo produto "
           f"— {', '.join(sorted(visitados))}.")
     return 0
 

@@ -18,11 +18,14 @@ ponte" no P2                 dela não tem P2
 ===========================  ==================================  ==============
 
 AS TRÊS CURAS TÊM A MESMA FORMA, e é a desta casa: o valor ganha ENDEREÇO no
-gerador e DONO no pacote. Nenhuma palavra nova foi escrita — `caminho_do_mic`
-e a tabela do "por extenso" mudaram-se para o pacote, que agora é o dono único
-chamado pelos dois lados (o gerador com a mesa da bancada, o pacote a cada
-tique com o aparelho vivo), e a confissão passa a vir de
-`mapa_da_mesa.confissao_do_desenho`, que já era o dono das frases.
+gerador e DONO no pacote. A tabela do "por extenso" mudou-se para o pacote, e a
+confissão passa a vir de `mapa_da_mesa.confissao_do_desenho`, que já era o dono
+das frases.
+
+**23/10/2026:** a linha do microfone saiu da 08 (o estado é o selo `est-mic`
+do cartão), e o pacote seguia emitindo `mic-caminho` e `mic-dica` para
+endereço nenhum. Os dois saíram com as funções que só eles chamavam, e a régua
+da coluna passou a exigir endereço para toda chave.
 
 **AS DUAS METADES SE PRECISAM** (a lição do `IDENTIDADE-VEM-DE-CIMA-01`): um
 `data-campo` sem ninguém escrevendo nele troca um congelado por um vazio, e um
@@ -32,10 +35,8 @@ A MORDIDA — medida, e cada uma reprova SÓ o seu:
 
 * tire o `data-campo="confissao-conta"` do `aba08.py` e regenere  →
   `test_os_enderecos_novos_existem_na_bancada` reprova (1);
-* comente `"mic-caminho"`  →  `test_o_caminho_do_mic_segue_o_transporte` e
-  `test_o_pacote_emite_o_que_a_bancada_enderecou` reprovam (2);
-* devolva o `caminho_do_mic` literal ao gerador  →
-  `test_o_gerador_e_o_pacote_dizem_a_mesma_frase` reprova (1);
+* devolva `"mic-caminho"` à coluna do pacote  →
+  `test_toda_chave_da_coluna_tem_endereco_na_08` reprova (2, as duas páginas);
 * faça `_confissao_do_mapa` devolver a conta da CENA em vez da bancada  →
   `test_a_confissao_conta_as_lacunas_da_bancada` reprova (1).
 """
@@ -45,6 +46,8 @@ import pathlib
 import re
 import sys
 from typing import Any
+
+import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
@@ -78,11 +81,6 @@ def _ctx() -> Any:
     ]
     return Contexto(state={"controllers": conectados}, mesa=mesa,
                     conectados=conectados, estados={})
-
-
-def _por_transporte(pac: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    """As colunas indexadas pelo transporte — `{"USB": {...}, "BT": {...}}`."""
-    return {str(c.get("via") or ""): c for c in pac["colunas"].values()}
 
 
 def test_os_enderecos_novos_existem_na_bancada() -> None:
@@ -126,38 +124,34 @@ def test_o_pacote_emite_o_que_a_bancada_enderecou() -> None:
         f"escreva: {sorted(sem_dono)} — endereço mudo é congelado com outro nome")
 
 
-def test_o_caminho_do_mic_segue_o_transporte() -> None:
-    """A frase do caminho é a do rádio no rádio e a do cabo no cabo."""
-    pac = _pacote()
-    colunas = _por_transporte(pac.pacote(_ctx()))
-    assert colunas["USB"]["mic-caminho"] == pac.caminho_do_microfone("usb")
-    assert colunas["BT"]["mic-caminho"] == pac.caminho_do_microfone("bt")
-    assert (pac.caminho_do_microfone("usb")
-            != pac.caminho_do_microfone("bt")), (
-        "as duas frases do caminho do microfone viraram a mesma — a régua "
-        "acima passaria a dar verde sobre um campo que não distingue nada")
+#: As chaves da coluna que são DADO da carga, não texto da linha: quem as lê
+#: é a própria carga (`via` indexa o transporte, `bateria` entra no `nome`), e
+#: nenhuma tem `data-campo` na 08. A lista é fechada e conferida abaixo nos dois
+#: sentidos: chave que ganhar endereço, ou deixar de ser emitida, sai daqui.
+DADOS_DA_COLUNA = frozenset({"via", "bateria", "ponte", "fragil"})
+
+PAGINAS = {
+    "mockup": BANCADA,
+    "publicado": RAIZ / "src/hefesto_dualsense4unix/interface/paginas/08-conexoes.html",
+}
 
 
-def test_o_transporte_que_ninguem_leu_nao_promete_a_ponte() -> None:
-    """Sem transporte lido, o caminho é o do CABO — nunca o da ponte."""
-    pac = _pacote()
-    assert pac.caminho_do_microfone("") == pac.caminho_do_microfone("usb")
-
-
-def test_o_gerador_e_o_pacote_dizem_a_mesma_frase() -> None:
-    """O gerador não tem mais a frase do caminho do mic — ele a PEDE."""
-    fonte = GERADOR.read_text(encoding="utf-8")
-    corpo = re.search(r"^def caminho_do_mic\(.*?^(?=\S)", fonte,
-                      flags=re.S | re.M)
-    assert corpo, "o `caminho_do_mic` sumiu do gerador da 08"
-    texto = corpo.group(0)
-    assert "_pacote08.caminho_do_microfone" in texto, (
-        "o `caminho_do_mic` do gerador deixou de PEDIR a frase ao pacote — "
-        "a bancada e a repintura voltam a poder divergir sem ninguém ver")
-    for metade in ("Pela ponte", "Placa do controle"):
-        assert metade not in texto, (
-            f"a frase `{metade}` voltou a ser digitada no gerador — ela é do "
-            f"`a08_conexoes.caminho_do_microfone`, que os dois lados chamam")
+@pytest.mark.parametrize("qual", sorted(PAGINAS))
+def test_toda_chave_da_coluna_tem_endereco_na_08(qual: str) -> None:
+    """Campo da coluna sem `data-campo` na página escreve zero e some calado."""
+    html = PAGINAS[qual].read_text(encoding="utf-8")
+    na_pagina = set(re.findall(r'data-campo="([^"]+)"', html))
+    pac = _pacote().pacote(_ctx())
+    emitidas = {k for coluna in pac["colunas"].values() for k in coluna}
+    sem_endereco = emitidas - na_pagina - DADOS_DA_COLUNA
+    assert not sem_endereco, (
+        f"a coluna do pacote da 08 emite {sorted(sem_endereco)} e a página "
+        f"({qual}) não tem `data-campo` para recebê-los — o valor não chega à tela")
+    assert emitidas >= DADOS_DA_COLUNA, (
+        f"{sorted(DADOS_DA_COLUNA - emitidas)} saiu da coluna: tire de `DADOS_DA_COLUNA`")
+    assert not DADOS_DA_COLUNA & na_pagina, (
+        f"{sorted(DADOS_DA_COLUNA & na_pagina)} ganhou endereço na página: tire de "
+        f"`DADOS_DA_COLUNA`, que a régua passa a cobri-lo")
 
 
 def _com_lacunas(monkeypatch: Any, quantas: int) -> dict[str, str]:
