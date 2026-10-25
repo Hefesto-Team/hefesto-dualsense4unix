@@ -223,14 +223,15 @@ class Arvore:
         return self._linhas[p]
 
     def ocorre(self, alvo: str, arquivos: list[Path]) -> Path | None:
-        """O símbolo APARECE, prosa incluída — e aqui isso é de propósito.
+        """O símbolo APARECE, prosa incluída: a pergunta da citação por desenho, e só dela.
 
         NÃO CONFUNDIR COM :meth:`usa`. **Muitos sinais deste CSV são citações
         por desenho**: a linha 19 vigia ``test_os_donos_de_fato.py`` (um nome de
         arquivo de teste) e a linha 2 vigia
         ``app/actions/mode_transition.plan_mode_transition`` (um caminho de
         módulo) — os dois só podem viver num comentário, e é assim que aquelas
-        linhas mordem. Exigir USO aqui derruba 82 linhas legítimas (medido).
+        linhas mordem. Quem diz qual sinal é citação é a FORMA dele
+        (``prosa_do_codigo.e_citacao``), e :meth:`presente` escolhe a pergunta.
 
         A borda de palavra, essa sim, é ganho puro, e revelou um defeito: a
         linha 66 vigiava ``player_slot``, que não existe sozinho na página — só
@@ -240,6 +241,17 @@ class Arvore:
             if prosa_do_codigo.ocorre_no_texto(self.texto(p), alvo):
                 return p
         return None
+
+    def presente(self, alvo: str, arquivos: list[Path]) -> Path | None:
+        """O sinal de ``PRESENTE`` está no lado HTML do jeito que a forma dele pede.
+
+        A citação (caminho, nome de arquivo, ID de decisão) basta aparecer; o símbolo de código tem de
+        ser USADO, e citado só num comentário ele sumiu (25/10/2026: a linha «A QUARTA cor do selo» da
+        08 vigiava ``.selo.grave``, que só sobrava em dois comentários, e passava verde).
+        """
+        if prosa_do_codigo.e_citacao(alvo):
+            return self.ocorre(alvo, arquivos)
+        return self.usa(alvo, arquivos)
 
     def usa(self, alvo: str, arquivos: list[Path]) -> Path | None:
         """O símbolo é USADO — citá-lo na prosa não conta."""
@@ -377,10 +389,13 @@ def conferir(linhas: list[dict[str, str]], arvore: Arvore) -> list[str]:
                         f"    sinal_escopo aponta {escopo}, que é do lado GTK.")
                     continue
                 alvos = [p]
-            if arvore.ocorre(sinal, alvos) is None:
+            if arvore.presente(sinal, alvos) is None:
+                so_na_prosa = arvore.ocorre(sinal, alvos) is not None
                 falhas.append(
                     f"sinal-sumiu: {onde}\n"
-                    f"    o sinal {sinal!r} não está mais em {escopo}.\n"
+                    f"    o sinal {sinal!r} não está mais em {escopo}"
+                    + (" — só sobra num comentário ou numa docstring, e símbolo citado não é usado"
+                       if so_na_prosa else "") + ".\n"
                     f"    O CSV diz {l['veredito']}: ou a feature saiu do HTML, ou o sinal mudou de nome.\n"
                     "    Confira a feature e atualize a linha — não troque o sinal por outro que só passe.")
         else:
