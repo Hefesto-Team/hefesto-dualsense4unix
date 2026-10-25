@@ -5,7 +5,7 @@
       "data": "2026-10-25",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 55727,
+      "piso": 55728,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_exame.py": 83,
@@ -177,7 +177,7 @@
         "integrations/uinput_gamepad.py": 217,
         "integrations/uinput_keyboard.py": 48,
         "integrations/uinput_mouse.py": 194,
-        "integrations/usb_pai.py": 82,
+        "integrations/usb_pai.py": 84,
         "integrations/varredura_do_radio.py": 65,
         "integrations/vestido_de_dualsense.py": 48,
         "integrations/virtual_pad.py": 266,
@@ -222,7 +222,7 @@
         "interface/pacotes/perfil.py": 328,
         "interface/pacotes/ponte.py": 138,
         "interface/pacotes/rodape.py": 164,
-        "interface/pagina_do_mapa.py": 280,
+        "interface/pagina_do_mapa.py": 279,
         "interface/regua_do_mockup.py": 170,
         "interface/sistema.py": 116,
         "mods/instalador.py": 153,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +7 linhas (55720 -> 55727), pagas por Origem: D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO; registrado no fecho, topo d96bcb7ccc1a",
+      "razao": "texto-em-src: +1 linhas (55727 -> 55728), pagas por Origem: D-2809-A-RAIZ-DO-HIDRAW-DO-BACKEND-SE-DESVIA; registrado no fecho, topo a5d2f219c4dc",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -630,6 +630,12 @@
           "de": 55720,
           "para": 55727,
           "razao": "texto-em-src: +7 linhas (55720 -> 55727), pagas por Origem: D-2409-O-JOGO-ESPERA-O-LUGAR-GUARDADO; registrado no fecho, topo d96bcb7ccc1a"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 55727,
+          "para": 55728,
+          "razao": "texto-em-src: +1 linhas (55727 -> 55728), pagas por Origem: D-2809-A-RAIZ-DO-HIDRAW-DO-BACKEND-SE-DESVIA; registrado no fecho, topo a5d2f219c4dc"
         }
       ],
       "unidade": "linhas",
