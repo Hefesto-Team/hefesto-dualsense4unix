@@ -144,3 +144,28 @@ def test_o_reapontar_leva_a_citacao_e_nao_a_deixa_verde_no_lugar_errado(repo: Pa
     texto = (repo / "docs" / "data" / "mapa.csv").read_text(encoding="utf-8")
     assert "alvo.py:4 (`acao_mic`)" in texto and "alvo.py:7 (`cor`)" in texto, texto
     assert _validar(repo).returncode == 0, _validar(repo).stdout
+
+
+def test_o_reapontar_ancora_a_faixa_no_nome_fora_do_comentario(tmp_path: Path) -> None:
+    """A âncora do `_mapear` é a linha do código, não o comentário que cita o nome.
+
+    A linha `:2` (o comentário) mudou e caiu dentro do pedaço alterado; a `:4` (o código) só andou.
+    Ancorada no comentário, a faixa se perde; ancorada no código, ela anda junto.
+    """
+    raiz = tmp_path / "repo"
+    pacote = raiz / "src" / "hefesto_dualsense4unix"
+    pacote.mkdir(parents=True)
+    alvo = pacote / "alvo.py"
+    alvo.write_text(
+        "def f():\n    # chama acao_mic aqui\n    x = 0\n    acao_mic()\n    return x\n",
+        encoding="utf-8")
+    _git(raiz, "init", "-q")
+    _git(raiz, "add", ".")
+    _git(raiz, "commit", "-q", "-m", "o alvo nasce")
+    alvo.write_text(
+        "def f():\n    y = 0\n    z = 0\n    # chama o acao_mic logo abaixo\n    x = 0\n"
+        "    acao_mic()\n    return x\n",
+        encoding="utf-8")
+    _git(raiz, "commit", "-q", "-am", "o comentário muda e duas linhas entram acima")
+    reapontar = _carregar(REAPONTAR, "reapontar_citacoes")
+    assert reapontar.levar(raiz, "src/hefesto_dualsense4unix/alvo.py", 2, 4, {"acao_mic"}) == (4, 6)
