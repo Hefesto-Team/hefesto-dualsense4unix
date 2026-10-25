@@ -2,10 +2,10 @@
   "_LEIA": "O PISO DAS CATRACAS. Não se edita à mão: `--aceitar` desce, `--forcar-piso «razão»` sobe com razão e data.",
   "medidas": {
     "texto-em-src": {
-      "data": "2026-10-24",
+      "data": "2026-10-25",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 55236,
+      "piso": 55265,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -156,17 +156,17 @@
         "integrations/plano_de_radio.py": 82,
         "integrations/ponte_escada.py": 205,
         "integrations/ponte_tentativa.py": 223,
-        "integrations/porta_do_som.py": 100,
+        "integrations/porta_do_som.py": 126,
         "integrations/prontuario_dos_jogos.py": 170,
         "integrations/proton_pin.py": 238,
         "integrations/qualificar_proton.py": 67,
         "integrations/quem_o_jogo_le.py": 118,
-        "integrations/quem_ouve_o_microfone.py": 104,
+        "integrations/quem_ouve_o_microfone.py": 105,
         "integrations/radio_da_mesa.py": 270,
         "integrations/receitas_de_ambiente.py": 73,
         "integrations/receptor_sem_fio.py": 149,
         "integrations/reposicao_dos_lancadores.py": 54,
-        "integrations/retrato_do_som.py": 134,
+        "integrations/retrato_do_som.py": 136,
         "integrations/sentinela_do_wrapper.py": 159,
         "integrations/sinal_da_barra.py": 191,
         "integrations/steam_input_ponte.py": 171,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +34 linhas (55202 -> 55236), pagas por Origem: D-0810-O-LADO-DO-TIRO-E-O-ESTALO; registrado no fecho, topo 4166aa6beb57",
+      "razao": "texto-em-src: +29 linhas (55236 -> 55265), pagas por Origem: D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP; registrado no fecho, topo 70ba7d9fd578",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -540,6 +540,12 @@
           "de": 55202,
           "para": 55236,
           "razao": "texto-em-src: +34 linhas (55202 -> 55236), pagas por Origem: D-0810-O-LADO-DO-TIRO-E-O-ESTALO; registrado no fecho, topo 4166aa6beb57"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 55236,
+          "para": 55265,
+          "razao": "texto-em-src: +29 linhas (55236 -> 55265), pagas por Origem: D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP; registrado no fecho, topo 70ba7d9fd578"
         }
       ],
       "unidade": "linhas",
