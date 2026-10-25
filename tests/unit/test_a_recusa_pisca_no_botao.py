@@ -29,6 +29,10 @@ na mesa dublê:
 9. **a recusa do «Na Steam» padrão da 06** (A-ABA-NAVEGACAO-DO-TODO-01): o modo padrão da
    Steam ainda não tem dono, o clique é recusado pelo gesto REAL, e a recusa segue as regras
    1 a 3 — sem frase na tela, com a piscada no botão e a frase no diário.
+10. **o «Copiar» que falha na 09** (O-COPIAR-QUE-FALHA-NA-09-PISCA-E-A-RAZAO-FICA-NO-DIARIO-01,
+    25/10/2026): com a área de transferência recusando (o dublê da área diz `False`) e com o
+    painel vazio, o `copiar-registro` REAL recusa, e a recusa segue as regras 1 a 3. A regra 1
+    lê também o `data-dica`, que é a dica do botão nas dez abas.
 
 O TEMPO É CONDIÇÃO, NÃO RELÓGIO — a lição da FLAKE-DO-PISCA, escrita em
 `test_o_recado_de_sucesso_pousa_no_cartao`: a piscada é estado de PASSAGEM, e
@@ -44,7 +48,11 @@ AS MORDIDAS, medidas e coladas na entrega da sprint:
 * devolva a frase à dica do `.fora` em `a04_iluminacao.um_botao_de_player` →
   reprovam os casos 1 (na 04) e 4;
 * faça `Piloto._recusou_dizendo` pousar a frase na página quando ela for a 06
-  → reprova o caso 1 na 06.
+  → reprova o caso 1 na 06;
+* faça `copiar_registro` engolir a falha da área (devolver sem levantar) → reprovam o
+  desfecho e os casos 2 e 3 na 09 da área;
+* faça `Piloto._recusou_dizendo` pôr a frase no `data-dica` do «Copiar» → reprova o caso
+  1 nas duas recusas da 09 (com a leitura de antes, sem o `data-dica`, passava verde).
 """
 from __future__ import annotations
 
@@ -73,6 +81,7 @@ PAGINA_01 = "01-jogar.html"
 PAGINA_02 = "02-controles.html"
 PAGINA_04 = "04-iluminacao.html"
 PAGINA_06 = "06-navegacao.html"  # (noqa-acento) nome de arquivo
+PAGINA_09 = "09-sistema.html"
 
 BOTOES = {
     "04": (PAGINA_04, "player",
@@ -80,10 +89,15 @@ BOTOES = {
     "02": (PAGINA_02, "mudo", '[data-controle="p1"] [data-mudo="alto-falante"]'),
     "01": (PAGINA_01, "cadeado", '[data-gesto="cadeado"]'),
     "06": (PAGINA_06, "na-steam", '[data-gesto="na-steam"][value="padrao"]'),
+    "09": (PAGINA_09, "copiar-registro", '[data-gesto="copiar-registro"]'),
+    "09v": (PAGINA_09, "copiar-registro", '[data-gesto="copiar-registro"]'),
 }
-CASOS = ("04", "02", "01", "06")
+CASOS = ("04", "02", "01", "06", "09", "09v")
 
 RECUSA_DO_MIC = "o volume deste alto-falante ainda é desconhecido"
+RECUSA_DA_AREA = "Não consegui usar a área de transferência."
+RECUSA_DO_VAZIO = "O registro ainda está vazio — não há o que copiar."
+NO_PAINEL = "linha 1 do registro\nlinha 2 do registro"
 
 PASSO_MS = 50
 TETO_S = 10.0
@@ -136,6 +150,7 @@ LER_A_TELA = r"""
     recados: document.querySelectorAll('.hef-recado').length,
     visivel: visivel.indexOf(frase) >= 0,
     dica: em('data-hef-dica'),
+    dica_do_botao: em('data-dica'),
     title: em('title'),
   });
 })(%s)
@@ -236,10 +251,20 @@ def medido() -> dict:
     import pacotes.a01_jogar as a01
     import pacotes.a06_navegacao as a06
     from hefesto_dualsense4unix.app.ipc_bridge import _MOTIVOS_NUMERO
+    from hefesto_dualsense4unix.utils import area_de_transferencia as area
 
     armar: dict[str, str] = {}
     frases = {"04": _MOTIVOS_NUMERO["numero_fora_da_mesa"], "02": RECUSA_DO_MIC,
-              "01": a01.CADEADO_RECUSA, "06": a06.FRASE_DO_STEAM_PADRAO}
+              "01": a01.CADEADO_RECUSA, "06": a06.FRASE_DO_STEAM_PADRAO,
+              "09": RECUSA_DA_AREA, "09v": RECUSA_DO_VAZIO}
+    # A 09: o gesto é o REAL; a faixa lenta (systemctl, disco) e a área de transferência são
+    # dublês, e o pacote da página só pinta o painel.
+    a09 = sys.modules[hv.pacotes.gesto_da_pagina(PAGINA_09, "copiar-registro").__module__]
+    pediu_a_area: list[str] = []
+    guardado_da_09 = (a09._faixa_lenta, hv.pacotes.PACOTES.get(PAGINA_09),
+                      list(area._A_DA_MOLDURA))
+    a09._faixa_lenta = lambda *a, **k: (None, None, None, "online_systemd", None)
+    hv.pacotes.PACOTES[PAGINA_09] = lambda _ctx: {a09.REGISTRO: a09._no_painel(None)}
 
     chave_01 = (PAGINA_01, "cadeado")
     chave_02 = (PAGINA_02, "mudo")
@@ -270,8 +295,11 @@ def medido() -> dict:
         sem_cravado=False, sem_selo=False,
     )
     piloto = hv.Piloto(args)
+    # A moldura que nasceu entregou a área de verdade; a régua a troca pela que recusa.
+    area.receber(lambda texto: pediu_a_area.append(texto) or False)
     faltou: dict[str, str] = {}
-    fora: dict[str, object] = {"faltou": faltou, "frases": frases}
+    fora: dict[str, object] = {"faltou": faltou, "frases": frases,
+                               "pediu_a_area": pediu_a_area}
     diario = io.StringIO()
     no_ar = {"sim": True}
 
@@ -398,7 +426,16 @@ def medido() -> dict:
             "01", lambda: abrir(PAGINA_06, BOTOES["06"][2], recusa_da_06))
 
     def recusa_da_06() -> None:
-        clicar_e_esperar_a_recusa("06", fim)
+        clicar_e_esperar_a_recusa(
+            "06", lambda: abrir(PAGINA_09, BOTOES["09"][2], recusa_da_09))
+
+    def recusa_da_09() -> None:
+        a09._para_o_painel(NO_PAINEL)
+        clicar_e_esperar_a_recusa("09", recusa_da_09_vazia)
+
+    def recusa_da_09_vazia() -> None:
+        a09._limpar_o_painel()
+        clicar_e_esperar_a_recusa("09v", fim)
 
     def fim() -> None:
         fora["diario"] = diario.getvalue()
@@ -418,6 +455,12 @@ def medido() -> dict:
         piloto.tela.janela.destroy()
         (hv.mesa_viva.estado_do_daemon, hv.ponte.identity_number_set,
          hv.ponte.mic_canal_set_detalhado) = guardado
+        a09._faixa_lenta, pacote_da_09, area._A_DA_MOLDURA[:] = guardado_da_09
+        a09._limpar_o_painel()
+        if pacote_da_09 is None:
+            hv.pacotes.PACOTES.pop(PAGINA_09, None)
+        else:
+            hv.pacotes.PACOTES[PAGINA_09] = pacote_da_09
         for k, velho in guardado_gestos.items():
             if velho is None:
                 hv.pacotes.GESTOS.pop(k, None)
@@ -458,9 +501,10 @@ def test_a_recusa_nao_poe_frase_na_tela(medido: dict, caso: str) -> None:
         f"caixa laranja que ela mandou parar de aparecer")
     assert not tela["visivel"], (
         f"{tela['aba']}: a frase da recusa está no texto visível da página")
-    assert tela["dica"] == 0 and tela["title"] == 0, (
-        f"{tela['aba']}: a frase da recusa está em {tela['dica']} dica(s) e "
-        f"{tela['title']} `title` — a dica flutuante é uma das formas que saem")
+    assert tela["dica"] == 0 and tela["dica_do_botao"] == 0 and tela["title"] == 0, (
+        f"{tela['aba']}: a frase da recusa está em {tela['dica']} dica(s), "
+        f"{tela['dica_do_botao']} `data-dica` e {tela['title']} `title` — a dica "
+        f"flutuante é uma das formas que saem")
 
 
 @pytest.mark.parametrize("caso", CASOS)
@@ -493,6 +537,12 @@ def test_a_frase_da_recusa_vai_ao_diario(medido: dict, caso: str) -> None:
     assert any(medido["frases"][caso] in linha for linha in linhas), (
         f"a frase da recusa de {pagina} · {gesto} não chegou ao diário — ela saiu "
         f"da tela, e não pode sumir inteira. Linhas: {linhas!r}")
+
+
+def test_o_copiar_da_09_pediu_a_area_so_com_o_painel_cheio(medido: dict) -> None:
+    """A recusa da área é a da área: o painel cheio chegou a ela, mascarado, e o vazio
+    recusou antes de pedir."""
+    assert medido["pediu_a_area"] == [NO_PAINEL], medido["pediu_a_area"]
 
 
 def test_o_numero_fora_diz_so_o_numero(medido: dict) -> None:
