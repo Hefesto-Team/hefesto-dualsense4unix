@@ -424,14 +424,11 @@ def _itens_da_tela() -> list[Any]:
         if chave == CHAVE_DA_LEITURA and _o_aviso_do_grab(_ULTIMO_ESTADO) is None:
             continue
         conferidas.append(item)
-    # `secao_exame._desenhar_o_que_fazer` a escreve com estas palavras.
-    # `teclado_so_no_hub`, ambas `atencao`, medidas nesta  # (noqa-acento) id
     return sorted(conferidas, key=lambda i: getattr(i, "ordem", None) is None)
 
 
 _SELO_DESCONHECIDO = ("info", "NOTA")
 
-#: e `selo-nao-sei`, e a regra `.selo.grave` do vermelho. Aquela metade da S-09
 ENDERECO_DO_VEREDITO = {
     "certo": "veredito-certo",
     "atencao": "veredito-atencao",  # (noqa-acento) chave de máquina, ASCII por contrato
@@ -528,9 +525,9 @@ def _selo_do_estado(estado: str) -> tuple[str, str]:
 
     A palavra de `problema` ainda é a de `atencao` (02/09/2026)  (noqa-acento)
     por espera do usuário: o mapa manda os dois estados para **AJUSTAR** e ele decidiu que *"o que
-    está quebrado agora não pode parecer igual ao que só podia estar melhor"*. A COR já saiu
-    (`selo-estado` no :func:`pacote`, regra `.selo.grave` do gerador); a PALAVRA é de produto e
-    trocá-la aqui seria escolher no lugar dela. Quando ela disser, muda
+    está quebrado agora não pode parecer igual ao que só podia estar melhor"*. A COR já saiu (o
+    `nivel-grave` do cartão de dica, por `dicas_da_conexao._nivel_do_estado`); a PALAVRA é de
+    produto e trocá-la aqui seria escolher no lugar dela. Quando ela disser, muda
     `interface.conexoes.SELO_DO_ESTADO`, o mapa é um só.
     """
     perfil._com_o_src()

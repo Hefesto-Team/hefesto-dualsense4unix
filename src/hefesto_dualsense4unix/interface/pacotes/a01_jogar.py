@@ -1771,7 +1771,7 @@ STEAM_INPUT_A_PERGUNTA_VENCEU = (
 def _fechar_a_steam_e_ligar(alvo: str) -> dict[str, Any]:
     """O SEGUNDO CLIQUE: fecha a Steam, liga o jogo no vdf e a reabre.
 
-    Nada é mecanismo novo: `with_steam_closed` é o fluxo do «Aplicar aos jogos da Steam» da aba 09
+    Nada é mecanismo novo: `with_steam_closed` é o dono do fechar e reabrir a Steam
     (portão de JOGO aberto antes de tudo, Steam que não fecha não é editada, reabertura em
     `finally`), a escrita é `garantir_ponte` com `allowlist=[alvo]`, como no primeiro clique, e a
     recusa é `daemon_actions.format_steam_janela_recusa`. A lista é garantida antes (o primeiro
