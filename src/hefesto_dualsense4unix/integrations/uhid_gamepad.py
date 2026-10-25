@@ -1819,10 +1819,10 @@ class UhidDualSense:
                      struct.pack("<IIH", UHID_SET_REPORT_REPLY, request_id, 0))
 
 
-    #: a nova tentativa é a de um pedido que o broker recusou por falta de sessão
-    #: (O-PAD-QUE-NASCE-ANTES-DO-BROKER-ACEITAR-FICA-SEM-PORTA-01): ela pergunta
-    #: ao broker ANTES de desfazer o uhid, e o pad só troca de pele com o gadget na mão.
-    _gadget_recusado: bool = False
+    #: a nova tentativa pergunta ao broker ANTES de desfazer o uhid, e o pad só
+    #: troca de pele com o gadget na mão. Vale para o pad recusado pela sessão
+    #: (O-PAD-QUE-NASCE-ANTES-DO-BROKER-ACEITAR-FICA-SEM-PORTA-01) e para o pad cujo
+    #: gadget caiu (O-PAD-QUE-NASCE-OU-VOLTA-PEDE-O-GADGET-FORA-DO-TIQUE-01).
     _gadget_na_mao: _GadgetDoPad | None = None
     #: o pedido da nova tentativa em voo, fora do tique (`_PedidoAoBroker`).
     _pedido_ao_broker: _PedidoAoBroker | None = None
@@ -1866,7 +1866,7 @@ class UhidDualSense:
     def stop(self) -> None:
         """Destrói o device e só DEPOIS devolve o MAC."""
         self._gadget_outra_vez = False
-        self._gadget_recusado = False
+        # o pedido em voo se larga aqui: o gadget que chegar depois do stop desce
         _esquecer_a_recusa(self)
         self._destruir_o_device()
         _MACS_DOS_VPADS_VIVOS.despir(self)
@@ -2763,14 +2763,12 @@ def _a_resposta_do_broker(
     o pad que nasceu antes do login ganha a porta dele quando a sessão abre.
     """
     if gadget is not None:
-        pad._gadget_recusado = False
         pad._serial_da_recusa = None
         return gadget
     pad._serial_da_recusa = serial
     with _TRAVA_DAS_RECUSAS:
         recusa = _RECUSAS_DO_BROKER.get(serial)
     if recusa in _RECUSA_DA_SESSAO:
-        pad._gadget_recusado = True
         pad._gadget_outra_vez = True
         pad._gadget_outra_vez_em = pad.time_fn() + _GADGET_VARRE_S
     return None
@@ -3046,10 +3044,11 @@ def _tentar_o_gadget_outra_vez(pad: UhidDualSense) -> bool:
     """O pad que voltou ao uhid tenta o gadget uma vez de novo, sem jogo aberto.
 
     A pergunta pelo jogo sai a cada ``_GADGET_VARRE_S``: com o jogo aberto, o
-    pad não troca de pele embaixo dele. O pad que o broker recusou pede o
-    gadget ANTES de desfazer o uhid, num fio fora do tique (`_PedidoAoBroker`),
-    e o tique seguinte lê a resposta: recusado de novo, o uhid fica intacto e a
-    tentativa se rearma. True = o device foi refeito.
+    pad não troca de pele embaixo dele. O pad (o recusado pela sessão e o
+    de gadget que caiu ou não enumerou) pede o gadget ANTES de desfazer o uhid,
+    num fio fora do tique (`_PedidoAoBroker`): o broker preso não prende o tique
+    dos outros. O tique seguinte lê a resposta; sem gadget, o uhid fica intacto.
+    True = o device foi refeito.
     """
     pedido = pad._pedido_ao_broker
     if pedido is not None:
@@ -3060,22 +3059,25 @@ def _tentar_o_gadget_outra_vez(pad: UhidDualSense) -> bool:
     pad._gadget_outra_vez_em = agora + _GADGET_VARRE_S
     if JOGO_ABERTO():
         return False
-    if pad._gadget_recusado:
-        if pad.blueprint is None:
-            pad._gadget_outra_vez = pad._gadget_recusado = False
-            return False
-        pad._pedido_ao_broker = _PedidoAoBroker(pad, PEDIR_O_PAD_USB)
+    if pad.blueprint is None:
+        pad._gadget_outra_vez = False
         return False
-    pad._gadget_outra_vez = False
-    return _refazer_o_device(pad)
+    pad._pedido_ao_broker = _PedidoAoBroker(pad, PEDIR_O_PAD_USB)
+    return False
 
 
 def _ler_o_pedido(pad: UhidDualSense, pedido: _PedidoAoBroker) -> bool:
-    """O tique lê o pedido em voo: sem resposta ainda, nada; com o gadget, a troca."""
+    """O tique lê o pedido em voo: sem resposta ainda, nada; com o gadget, a troca.
+
+    O jogo que abriu com o pedido em voo já desceu o gadget no fio
+    (:attr:`_PedidoAoBroker.jogo_abriu`): a tentativa se rearma para a varredura seguinte.
+    """
     if not pedido.pronto:
         return False
     pad._pedido_ao_broker = None
-    pad._gadget_outra_vez = pad._gadget_recusado = False
+    pad._gadget_outra_vez = pedido.jogo_abriu
+    if pedido.jogo_abriu:
+        return False
     gadget = pedido.tomar()
     if pedido.serial is None:
         return False
@@ -3097,13 +3099,14 @@ def _refazer_o_device(pad: UhidDualSense) -> bool:
 
 
 class _PedidoAoBroker:
-    """A nova tentativa do pad recusado, num fio fora do tique de entrada.
+    """A nova tentativa do pad no uhid, num fio fora do tique de entrada.
 
     O-PAD-RECUSADO-NAO-PRENDE-O-TIQUE-NEM-ENCHE-O-DIARIO-01 (24/10/2026): o broker
     de pé e preso (aceita e não responde) faz o cliente esperar o ``_TIMEOUT_S``
     dele, 2 s; dentro do `pump_ff`, eram 2 s de tique preso a cada varredura, por
     pad. O fio pergunta; o tique só lê a resposta (:attr:`pronto`, :meth:`tomar`).
-    O pedido largado pelo `stop` desmonta o gadget que chegar tarde.
+    O pedido largado pelo `stop` desmonta o gadget que chegar tarde, e o que chega
+    com um jogo aberto também (:attr:`jogo_abriu`): a troca de pele segue o `JOGO_ABERTO`.
     """
 
     def __init__(
@@ -3112,6 +3115,8 @@ class _PedidoAoBroker:
         pedir: Callable[[str, bytes, str, tuple[int, int]], _GadgetDoPad | None],
     ) -> None:
         self.serial: str | None = None
+        #: o gadget chegou com um jogo aberto e desceu no fio: o pad fica no uhid.
+        self.jogo_abriu = False
         self._gadget: _GadgetDoPad | None = None
         self._largado = False
         self._trava = threading.Lock()
@@ -3132,6 +3137,12 @@ class _PedidoAoBroker:
             if argumentos is not None:
                 self.serial = argumentos[0]
                 gadget = pedir(*argumentos)
+            if gadget is not None and JOGO_ABERTO():
+                self.jogo_abriu = True
+                gadget, descer = None, gadget
+                logger.info("pad_usb_espera_o_jogo_fechar", gadget=descer.gadget,
+                            player=pad.player)
+                descer.desmontar()
         except Exception:  # pragma: no cover - defensivo: o fio nunca derruba o pad
             logger.debug("pad_usb_pedido_de_novo_falhou", player=pad.player, exc_info=True)
         with self._trava:
