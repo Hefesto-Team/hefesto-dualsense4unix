@@ -11,6 +11,7 @@ from __future__ import annotations
 import ast
 import json
 import os
+import shutil
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
@@ -22,6 +23,7 @@ from hefesto_dualsense4unix.integrations import bluez_dbus as bd
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 from hefesto_dualsense4unix.integrations import haptica_do_cabo as hc
 from hefesto_dualsense4unix.integrations import retrato_do_som as rs
+from hefesto_dualsense4unix.integrations import transiente_do_jogo as td
 
 SRC = Path(rs.__file__).resolve().parents[1]
 FERRAMENTA = "pw-dump"
@@ -225,6 +227,53 @@ def test_a_mesa_mista_le_o_grafo_so_pelo_dono(
     assert armadilha.chamadas == [], "um segundo leitor rodou a ferramenta fora do dono"
 
 
+def _sink_do_controle(i: int, marca: str, transporte: str) -> str:
+    """O nó de som em que o estalo do tato toca: o do rádio é nosso, o do cabo é do ALSA."""
+    if transporte == "radio":
+        return f"{afb.PREFIXO_SINK_DO_SOM}{marca}"
+    return f"alsa_output.usb-Sony_DualSense-0{i}.analog-surround-40"
+
+
+def test_o_ouvido_e_o_estalo_do_tato_leem_pelo_dono(
+    dono: _Dono, armadilha: _Armadilha
+) -> None:
+    """O ouvido e o estalo do tato, P1 a P4 na mesa mista, pelo dono.
+
+    O ouvido confere o fluxo do jogo pela identidade (o nome com ™ se perdeu no ``pactl``),
+    e o estalo de cada assento confere o nó dele. Uma leitura por pergunta.
+    """
+    grafo, _origens, _destinos = _grafo_da_mesa()
+    objetos = json.loads(grafo)
+    objetos += [_no(181, 819, td.ROTULO_DO_OUVIDO), _link(171, 181)]
+    estalos: dict[str, str] = {}
+    for i, (_assento, marca, transporte) in enumerate(MESA):
+        sink = _sink_do_controle(i + 1, marca, transporte)
+        base = 500 + 10 * i
+        rotulo = td.rotulo_do_estalo(sink)
+        objetos += [_no(base, base + 1000, sink), _no(base + 1, base + 1001, rotulo),
+                    _link(base + 1, base)]
+        estalos[rotulo] = sink
+    dono.saida = json.dumps(objetos, ensure_ascii=False)
+
+    origem = td.conferir_o_alvo_do_ouvido(td.ROTULO_DO_OUVIDO)
+    assert origem == afb.OrigemDoGravador(171, 719, "Sackboy™: A Big Adventure")
+    pedido = td.FluxoDoJogo(indice=7, serial=719, nome="", pid=4242, ident=171,
+                            nome_perdido=True)
+    assert td.e_o_fluxo_pedido(origem, pedido) is True
+    outro = td.FluxoDoJogo(indice=8, serial=720, nome="", pid=4242, ident=172,
+                           nome_perdido=True)
+    assert td.e_o_fluxo_pedido(origem, outro) is False
+    for rotulo, sink in estalos.items():
+        assert td.conferir_o_destino_do_estalo(rotulo) == sink, rotulo
+    assert dono.chamadas == 1 + len(estalos), "uma pergunta sem o dono, ou com duas leituras"
+    assert armadilha.chamadas == []
+
+    dono.saida = None
+    assert td.conferir_o_alvo_do_ouvido(td.ROTULO_DO_OUVIDO) is None
+    assert td.e_o_fluxo_pedido(None, pedido) is None
+    assert td.conferir_o_destino_do_estalo(next(iter(estalos))) is None
+
+
 @pytest.mark.parametrize("saida", [None, "", "pw-dump: sem conexão", '{"não": "lista"}'])
 def test_sem_grafo_os_dois_dizem_nao_sei(
     saida: str | None, dono: _Dono, armadilha: _Armadilha
@@ -261,9 +310,9 @@ def test_o_leitor_injetado_vence_o_dono(dono: _Dono) -> None:
 @pytest.fixture
 def com_a_ferramenta(monkeypatch: pytest.MonkeyPatch) -> None:
     """A ferramenta «existe»: só a guarda da suíte fica entre o teste e o grafo real."""
-    real = rs.shutil.which
+    real = shutil.which
     monkeypatch.setattr(
-        rs.shutil, "which", lambda nome, *a, **k: f"/usr/bin/{nome}" if nome == FERRAMENTA
+        shutil, "which", lambda nome, *a, **k: f"/usr/bin/{nome}" if nome == FERRAMENTA
         else real(nome, *a, **k))
 
 
