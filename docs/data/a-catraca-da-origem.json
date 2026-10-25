@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1212436,
+      "piso": 1212579,
       "por_item": {
-        "docs": 121396,
+        "docs": 121403,
         "scripts": 120799,
-        "src": 323983,
-        "tests": 646258
+        "src": 323984,
+        "tests": 646393
       },
-      "razao": "tamanho: +6 linhas (1212430 -> 1212436), pagas por Origem: D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO, D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2510-A-VOLTA-DO-GADGET-PEDE-FORA-DO-TIQUE, D-2510-O-MODO-DO-LIVRE-E-RASCUNHO-E-VALE-NA-HORA, D-2510-O-MOVIMENTO-CHEGA-AS-EXTENSOES-COM-FAIXA-MORTA, D-2510-OS-DEDOS-SO-PARA-QUEM-PEDE; registrado no fecho, topo 7b7eae6d7b95",
+      "razao": "tamanho: +143 linhas (1212436 -> 1212579), pagas por Origem: D-2510-A-EXTENSAO-FORA-DA-PORTA-NAO-TEM-MODO-A-DESFAZER; registrado no fecho, topo e19bda4d1718",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1075,10 +1075,16 @@
           "de": 1212430,
           "para": 1212436,
           "razao": "tamanho: +6 linhas (1212430 -> 1212436), pagas por Origem: D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO, D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2510-A-VOLTA-DO-GADGET-PEDE-FORA-DO-TIQUE, D-2510-O-MODO-DO-LIVRE-E-RASCUNHO-E-VALE-NA-HORA, D-2510-O-MOVIMENTO-CHEGA-AS-EXTENSOES-COM-FAIXA-MORTA, D-2510-OS-DEDOS-SO-PARA-QUEM-PEDE; registrado no fecho, topo 7b7eae6d7b95"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1212436,
+          "para": 1212579,
+          "razao": "tamanho: +143 linhas (1212436 -> 1212579), pagas por Origem: D-2510-A-EXTENSAO-FORA-DA-PORTA-NAO-TEM-MODO-A-DESFAZER; registrado no fecho, topo e19bda4d1718"
         }
       ],
       "unidade": "linhas",
-      "universo": 3166
+      "universo": 3167
     }
   }
 }
