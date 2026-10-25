@@ -48,7 +48,7 @@ def cruas_do_codigo(codigo: Path, raiz: Path) -> list[str]:
 
 
 def _codigos() -> list[Path]:
-    codigos = VAL.codigos_de(RAIZ)
+    codigos: list[Path] = VAL.codigos_de(RAIZ)
     assert codigos, "nenhum arquivo de CODIGO_COM_CITACOES nesta árvore: a régua mede o vazio"
     return codigos
 
