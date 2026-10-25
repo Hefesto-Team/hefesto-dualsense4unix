@@ -168,6 +168,41 @@ def test_a_entrada_do_daemon_tira_o_soquete_antes_de_tudo(
     assert _recebidas(ouvinte) == ["READY=1"]
 
 
+#: A subida inteira, da linha de comando da unit (`daemon start --foreground`) ao primeiro passo
+#: do `run_daemon`: o `init_locale`, o Typer e TODOS os imports do daemon. Um gancho de auditoria
+#: conta cada filho lançado, e o primeiro passo para a subida antes da chave e de qualquer disco.
+_A_SUBIDA_ATE_O_PRIMEIRO_PASSO = """
+import os, sys
+filhos = []
+sys.addaudithook(lambda ev, _a: filhos.append(ev) if ev in (
+    "subprocess.Popen", "os.posix_spawn", "os.spawn", "os.exec", "os.fork", "os.system",
+) else None)
+sys.argv = ["hefesto-dualsense4unix", "daemon", "start", "--foreground"]
+from hefesto_dualsense4unix.daemon import main as entrada
+def _primeiro_passo():
+    print("FILHOS", filhos, "SOQUETE", os.environ.get("NOTIFY_SOCKET"), flush=True)
+    raise SystemExit(0)
+entrada.configure_logging = _primeiro_passo
+from hefesto_dualsense4unix.cli.app import main
+main()
+"""
+
+
+def test_nada_se_lanca_na_subida_antes_de_o_soquete_sair(ouvinte: socket.socket) -> None:
+    """Da linha de comando da unit ao primeiro passo do `run_daemon`, nenhum filho nasce.
+
+    É o que faz o `guardar_o_soquete` no começo do `run_daemon` valer «antes de qualquer
+    filho»: os imports do daemon, o `init_locale` e o Typer vêm antes dele. MORDIDA: um
+    `subprocess.run` no topo de um módulo que o daemon importa aparece aqui.
+    """
+    saida = subprocess.run(
+        [sys.executable, "-c", _A_SUBIDA_ATE_O_PRIMEIRO_PASSO],
+        capture_output=True, text=True, timeout=60, check=True,
+    ).stdout
+    assert "FILHOS [] SOQUETE None" in saida, saida
+    assert _recebidas(ouvinte) == []
+
+
 # -- a unit -----------------------------------------------------------------------------
 
 
