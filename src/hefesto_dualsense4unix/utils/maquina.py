@@ -587,11 +587,31 @@ def _ler_do_sys(caminho: Any) -> str:
         return ""
 
 
+#: A recusa de ler um teclado ou um pedal, com o que fazer. Uma frase só: o gesto da 08 e a ponte
+#: do daemon dizem esta, nenhum inventa a própria.
+FRASE_SEM_PERMISSAO_DE_LER: Final = (
+    "o sistema não deixa o Hefesto ler este aparelho: entre no grupo input "
+    "(sudo usermod -aG input $USER) e saia da sessão")
+
+
+class SemPermissaoDeLerError(PermissionError):
+    """O ``PermissionError`` da abertura do nó, dito pela frase que ensina a liberar."""
+
+    def __str__(self) -> str:
+        return FRASE_SEM_PERMISSAO_DE_LER
+
+
 def abrir_o_aparelho_de_entrada(evento: str) -> Any:
-    """O ``/dev/input/<evento>`` aberto pelo evdev, sem prender (quem prende é a ponte, no jogo)."""
+    """O ``/dev/input/<evento>`` aberto pelo evdev, sem prender (quem prende é a ponte, no jogo).
+
+    Sem permissão de ler o nó, levanta ``SemPermissaoDeLerError`` (a frase do que fazer)."""
     import evdev
 
-    return evdev.InputDevice(f"/dev/input/{evento}")
+    try:
+        return evdev.InputDevice(f"/dev/input/{evento}")
+    except PermissionError as exc:
+        raise SemPermissaoDeLerError(exc.errno, FRASE_SEM_PERMISSAO_DE_LER,
+                                f"/dev/input/{evento}") from exc
 
 
 def aparelhos_de_entrada(raiz: Any = None) -> list[AparelhoDeEntrada]:

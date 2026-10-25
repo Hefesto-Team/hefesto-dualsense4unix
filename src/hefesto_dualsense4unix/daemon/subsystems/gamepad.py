@@ -2876,6 +2876,8 @@ class PonteDosAcionadores:
         self._relogio = relogio or time.monotonic
         self._abertos: dict[str, _AcionadorAberto] = {}
         self._declarados: dict[str, Any] = {}
+        # Os aparelhos cuja falta de permissão já foi dita no diário (uma vez por aparelho).
+        self._sem_permissao: set[str] = set()
         self._procurou_em: float | None = None
         self._olhou_o_foco_em: float | None = None
         self._em_jogo = False
@@ -2886,6 +2888,7 @@ class PonteDosAcionadores:
                  if isinstance(k, str) and getattr(v, "teclas", None)} if isinstance(
                      declarados, dict) else {}
         self._declarados = vivos
+        self._sem_permissao &= set(vivos)
         for chave in [c for c in self._abertos if c not in vivos]:
             self._fechar(chave)
         if not vivos:
@@ -2932,7 +2935,10 @@ class PonteDosAcionadores:
             self._fechar(chave)
 
     def _procurar(self, faltam: list[str]) -> None:
-        from hefesto_dualsense4unix.utils.maquina import aparelhos_de_entrada
+        from hefesto_dualsense4unix.utils.maquina import (
+            FRASE_SEM_PERMISSAO_DE_LER,
+            aparelhos_de_entrada,
+        )
 
         for aparelho in aparelhos_de_entrada(self._raiz):
             chave = aparelho.chave
@@ -2940,9 +2946,16 @@ class PonteDosAcionadores:
                 continue
             try:
                 dispositivo = self._abrir(aparelho.evento)
+            except PermissionError:
+                if chave not in self._sem_permissao:
+                    self._sem_permissao.add(chave)
+                    logger.warning("acionador_sem_permissao", evento=aparelho.evento,
+                                   nome=aparelho.nome, frase=FRASE_SEM_PERMISSAO_DE_LER)
+                continue
             except Exception as exc:
                 logger.info("acionador_nao_abriu", evento=aparelho.evento, err=str(exc))
                 continue
+            self._sem_permissao.discard(chave)
             self._abertos[chave] = _AcionadorAberto(aparelho.evento, dispositivo)
             logger.info("acionador_aberto", evento=aparelho.evento, nome=aparelho.nome)
 
