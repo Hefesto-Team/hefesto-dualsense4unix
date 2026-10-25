@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1214289,
+      "piso": 1215551,
       "por_item": {
-        "docs": 121418,
-        "scripts": 120799,
+        "docs": 121429,
+        "scripts": 121263,
         "src": 324507,
-        "tests": 647565
+        "tests": 648352
       },
-      "razao": "tamanho: +1221 linhas (1213068 -> 1214289), pagas por Origem: D-0510-O-DESCOBRIR-A-FAIXA-ANDA-PELO-CENSO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-2510-A-FALTA-DE-PERMISSAO-DE-LER-DIZ-O-GRUPO; registrado no fecho, topo e4b7b7f6e840",
+      "razao": "tamanho: +1262 linhas (1214289 -> 1215551), pagas por Origem: D-0609-O-SINAL-DA-PARIDADE-NAO-E-PROSA, D-0810-A-CITACAO-CRUA-SO-ANDA-COM-PROVA; registrado no fecho, topo 77c094aa698f",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1093,10 +1093,16 @@
           "de": 1213068,
           "para": 1214289,
           "razao": "tamanho: +1221 linhas (1213068 -> 1214289), pagas por Origem: D-0510-O-DESCOBRIR-A-FAIXA-ANDA-PELO-CENSO, D-1610-O-PAD-VIRTUAL-NASCE-NUM-FIO-PROPRIO, D-2510-A-FALTA-DE-PERMISSAO-DE-LER-DIZ-O-GRUPO; registrado no fecho, topo e4b7b7f6e840"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1214289,
+          "para": 1215551,
+          "razao": "tamanho: +1262 linhas (1214289 -> 1215551), pagas por Origem: D-0609-O-SINAL-DA-PARIDADE-NAO-E-PROSA, D-0810-A-CITACAO-CRUA-SO-ANDA-COM-PROVA; registrado no fecho, topo 77c094aa698f"
         }
       ],
       "unidade": "linhas",
-      "universo": 3170
+      "universo": 3172
     }
   }
 }
