@@ -210,12 +210,10 @@ def test_nenhuma_copia_declarada_sobreviveu_a_propria_cura() -> None:
     )
 
 
-def test_as_duas_convertidas_devolvem_o_que_o_dono_devolve() -> None:
+def test_a_convertida_devolve_o_que_o_dono_devolve() -> None:
     """Saída idêntica: a prova de que nenhum texto da tela mudou em BG-03."""
-    from hefesto_dualsense4unix.app.actions.config import secao_controles
     from hefesto_dualsense4unix.integrations import plano_de_radio
 
     for valor in (0.0, 0.04, 3.4, 260.4, 260.45, 1234.56, -7.25):
         esperado = formata_pt_br(valor)
-        assert secao_controles._numero(valor) == esperado, valor
         assert plano_de_radio._numero(valor) == esperado, valor

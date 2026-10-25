@@ -39,8 +39,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from hefesto_dualsense4unix.app.actions.config import secao_mesa
-from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -60,38 +58,6 @@ DICA_MIC_SEM_ENDERECO = (
     "Este controle não tem endereço fixo, então o Hefesto não tem como guardar "
     "a quem esta ponte pertence."
 )
-
-
-def _numero(valor: float) -> str:
-    """Uma casa decimal, com vírgula — é assim que ela lê número nesta casa.
-
-    Delega ao DONO ÚNICO (`app/fala_do_mapa.formata_pt_br`) desde 26/08/2026.
-    Até então era uma segunda implementação da mesma regra, e a saída idêntica
-    é o que fazia ninguém notar: no dia em que uma delas mudasse de
-    arredondamento, esta seção e a célula do mapa passariam a dizer números
-    diferentes sobre o mesmo fato. O nome local fica porque as quatro chamadas
-    abaixo o usam e ele diz o que faz nesta seção.
-    """
-    return formata_pt_br(valor)
-
-
-def frase_da_capacidade_do_mic() -> str:
-    """Quanto do rádio um microfone ocupa. DERIVADA, nunca digitada."""
-    from hefesto_dualsense4unix.integrations.radio_da_mesa import (
-        HZ_AUDIO_COM_MIC,
-        HZ_INPUT_COM_MIC,
-        HZ_INPUT_SEM_MIC,
-        SLOTS_POR_SEGUNDO,
-    )
-
-    total = HZ_INPUT_COM_MIC + HZ_AUDIO_COM_MIC
-    return (
-        f"Com o microfone ligado, um controle no BT troca {_numero(HZ_INPUT_SEM_MIC)} "
-        f"relatórios de entrada por segundo por {_numero(HZ_INPUT_COM_MIC)} mais "
-        f"{_numero(HZ_AUDIO_COM_MIC)} quadros de áudio: {_numero(total)} das "
-        f"{SLOTS_POR_SEGUNDO} fatias daquele adaptador. Quanto já está em uso "
-        f'está na seção "{secao_mesa.TITULO}".'
-    )
 
 
 def _lista(valor: Any) -> list[dict[str, Any]]:
