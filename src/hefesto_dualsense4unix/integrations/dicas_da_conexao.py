@@ -217,11 +217,19 @@ def _acao_de_ignorar_de_volta(slot: int, titulo: str = "") -> Acao:
 def dica_da_conferencia(
     chave: str, rotulo: str, estado: str, porque: str, cura: str = ""
 ) -> Dica:
-    """O cartão de uma conferência do exame que não deu certo."""
-    icone, titulo, _certo = DA_CONFERENCIA.get(
-        chave, (ICONE_AJUDA, limitar_o_titulo(rotulo) or TITULO_SEM_VERBETE, ""))
+    """O cartão de uma conferência do exame que não deu certo.
+
+    O título do verbete é o do alarme e só vale no alarme: a leitura que não correu
+    (o «não sei») sai como tal, sem a cara do defeito que o exame não viu.
+    """
+    nivel = _nivel_do_estado(estado)
+    if nivel == NOTA:
+        icone, titulo = ICONE_AJUDA, TITULO_SEM_VERBETE
+    else:
+        icone, titulo, _certo = DA_CONFERENCIA.get(
+            chave, (ICONE_AJUDA, limitar_o_titulo(rotulo) or TITULO_SEM_VERBETE, ""))
     return Dica(
-        chave=chave, icone=icone, titulo=limitar_o_titulo(titulo), nivel=_nivel_do_estado(estado),
+        chave=chave, icone=icone, titulo=limitar_o_titulo(titulo), nivel=nivel,
         acao=Acao(MAPA, ROTULO_VER_NO_MAPA, href=PAGINA_DO_MAPA), porque=uma_frase(porque),
         cura=cura)
 

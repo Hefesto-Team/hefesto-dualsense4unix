@@ -69,7 +69,7 @@ def test_cada_ajuste_do_exame_vira_um_cartao_e_o_certo_vira_a_linha_do_fim() -> 
     painel = a08._o_painel_das_dicas(vivos, None)
     assert _titulos(painel.visiveis) == [
         "Entrada com pouca energia", "Bluetooth atrás de hub", "Teclado só no hub",
-        "Pareamento incompleto"], painel
+        "Não deu para olhar"], painel  # o «não sei» não tem cara de defeito
     assert painel.demais == (), "a fileira mostra quatro, sem «mais N»"
     html = a08._html_das_dicas(vivos, None)
     assert html.count("<section ") == 4 and "mais-dicas" not in html
