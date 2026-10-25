@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1209217,
+      "piso": 1209739,
       "por_item": {
-        "docs": 121329,
+        "docs": 121341,
         "scripts": 120677,
-        "src": 323401,
-        "tests": 643810
+        "src": 323562,
+        "tests": 644159
       },
-      "razao": "tamanho: +868 linhas (1208349 -> 1209217), pagas por Origem: D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo 12c8606ef7e8",
+      "razao": "tamanho: +522 linhas (1209217 -> 1209739), pagas por Origem: D-0110-O-COMPUTADOR-DA-O-PADRAO-O-JOGO-SOBREPOE, D-2410-O-PAD-RECUSADO-PELA-SESSAO-PEDE-DE-NOVO; registrado no fecho, topo 5161a270f4fc",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1027,10 +1027,16 @@
           "de": 1208349,
           "para": 1209217,
           "razao": "tamanho: +868 linhas (1208349 -> 1209217), pagas por Origem: D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo 12c8606ef7e8"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1209217,
+          "para": 1209739,
+          "razao": "tamanho: +522 linhas (1209217 -> 1209739), pagas por Origem: D-0110-O-COMPUTADOR-DA-O-PADRAO-O-JOGO-SOBREPOE, D-2410-O-PAD-RECUSADO-PELA-SESSAO-PEDE-DE-NOVO; registrado no fecho, topo 5161a270f4fc"
         }
       ],
       "unidade": "linhas",
-      "universo": 3157
+      "universo": 3158
     }
   }
 }
