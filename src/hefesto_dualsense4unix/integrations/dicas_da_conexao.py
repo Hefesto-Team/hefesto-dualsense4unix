@@ -217,11 +217,7 @@ def _acao_de_ignorar_de_volta(slot: int, titulo: str = "") -> Acao:
 def dica_da_conferencia(
     chave: str, rotulo: str, estado: str, porque: str, cura: str = ""
 ) -> Dica:
-    """O cartão de uma conferência do exame que não deu certo.
-
-    O título do verbete é o do alarme e só vale no alarme: a leitura que não correu
-    (o «não sei») sai como tal, sem a cara do defeito que o exame não viu.
-    """
+    """O cartão de uma conferência que não deu certo: o título do alarme vale só no alarme."""
     nivel = _nivel_do_estado(estado)
     if nivel == NOTA:
         icone, titulo = ICONE_AJUDA, TITULO_SEM_VERBETE
