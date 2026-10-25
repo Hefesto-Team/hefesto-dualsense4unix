@@ -394,7 +394,7 @@ def test_o_pad_anota_a_marca_ao_montar(
 
     monkeypatch.setattr(pad_usb, "medir_a_marca_do_f_hid", medir)
     monkeypatch.setattr(
-        uhid_gamepad._GADGETS_ESTACIONADOS, "retomar", lambda _i, _par=None: _Gadget()
+        uhid_gamepad._GADGETS_ESTACIONADOS, "retomar", lambda _i, _par=None, _dono=None: _Gadget()
     )
     monkeypatch.setattr(pad_usb, "escrever_get_report", lambda *_a: None)
     monkeypatch.setattr(uhid_gamepad, "_F_HID_SEM_MARCA_AVISADO", [])
