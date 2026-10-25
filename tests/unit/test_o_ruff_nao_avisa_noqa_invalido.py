@@ -39,6 +39,8 @@ def _avisos(cwd: Path, *alvos: str) -> list[str]:
     feito = subprocess.run(
         [_ruff(), "check", "--no-cache", "--exit-zero", *alvos],
         cwd=cwd, capture_output=True, text=True, check=False)
+    # com `--exit-zero`, rc≠0 é um ruff que nem leu a árvore: a falta de aviso ali não é zero
+    assert feito.returncode == 0, f"o ruff não rodou (rc={feito.returncode}):\n{feito.stderr}"
     return AVISO.findall(feito.stdout + feito.stderr)
 
 

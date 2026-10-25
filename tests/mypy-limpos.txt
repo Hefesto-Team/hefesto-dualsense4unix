@@ -54,3 +54,4 @@ tests/unit/test_o_gesto_que_pede_o_p1_responde_quando_ele_existe.py
 tests/unit/test_a_08_diz_a_recusa_de_ler_o_aparelho_pelo_dono_da_frase.py
 tests/unit/test_a_barra_do_livre_acompanha_a_extensao_que_cai.py
 tests/unit/test_o_tempo_da_casa_so_desce.py
+tests/unit/test_o_ruff_nao_avisa_noqa_invalido.py
