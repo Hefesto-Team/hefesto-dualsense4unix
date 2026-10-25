@@ -124,7 +124,7 @@ PHYS_PRODUCTS = frozenset({PHYS_PRODUCT, VPAD_PRODUCT})
 BUS_USB = 0x0003
 BUS_BT = 0x0005
 ACCEPTED_BUSES = frozenset({BUS_USB, BUS_BT})
-
+SYS_CLASS_BLUETOOTH = "/sys/class/bluetooth"
 #: Identidade do vpad no HID — espelhada de `core/backend_pydualsense.py`
 VPAD_PHYS_PREFIX = "hefesto-vpad"
 VPAD_UNIQ_PREFIX = "02fe"
@@ -133,7 +133,7 @@ PAD_USB_SERIAL_PREFIX = "hefesto-pad-"
 _USB_DEVICE_RE = re.compile(r"^\d+-[\d.]+$")
 SYS_CLASS_HIDRAW = "/sys/class/hidraw"
 _HIDRAW_BASE_RE = re.compile(r"^hidraw[0-9]+$")
-
+DEV_ROOT = "/dev"
 # mesmo DualSense aparece em três superfícies: o hidraw, o evdev
 # (`/dev/input/eventN`: o gamepad, o touchpad, os sensores de movimento e a
 DEV_INPUT_ROOT = "/dev/input"
@@ -142,7 +142,7 @@ _EVENT_BASE_RE = re.compile(r"^event[0-9]+$")
 _SUFIXO_DO_MOVIMENTO = "Motion Sensors"
 _EVIOCGID = 0x80084502
 _INPUT_ID_FMT = "=HHHH"
-
+SYS_CLASS_INPUT = "/sys/class/input"
 REINICIO_SEM_ABRIR_PATH = "/run/hefesto-hidraw-broker/reinicio-sem-abrir"
 REINICIO_SEM_ABRIR_VALIDADE_S = 120.0
 
@@ -177,7 +177,7 @@ def _log(event: str, **fields: object) -> None:
 # Validador — SÓ nós filhos do DualSense físico 054c:0ce6/0df2 (BLUEZ-UHID-01)
 
 
-def canonical_hidraw_base(node: object, *, dev_root: str = "/dev") -> str | None:
+def canonical_hidraw_base(node: object, *, dev_root: str = DEV_ROOT) -> str | None:
     """Basename `hidrawN` se `node` é EXATAMENTE `<dev_root>/hidrawN`; senão None."""
     if not isinstance(node, str) or not node:
         return None
@@ -270,9 +270,9 @@ def _usb_device_do_caminho(caminho: str) -> str:
 def validate_physical_node(
     node: object,
     *,
-    dev_root: str = "/dev",
+    dev_root: str = DEV_ROOT,
     sys_class_hidraw: str = SYS_CLASS_HIDRAW,
-    sys_class_bluetooth: str = "/sys/class/bluetooth",
+    sys_class_bluetooth: str = SYS_CLASS_BLUETOOTH,
     stat_fn: Callable[[str], Any] = os.stat,
     lstat_fn: Callable[[str], Any] = os.lstat,
 ) -> str | None:
@@ -396,8 +396,8 @@ def validate_physical_input_node(
     node: object,
     *,
     dev_input_root: str = DEV_INPUT_ROOT,
-    sys_class_input: str = "/sys/class/input",
-    sys_class_bluetooth: str = "/sys/class/bluetooth",
+    sys_class_input: str = SYS_CLASS_INPUT,
+    sys_class_bluetooth: str = SYS_CLASS_BLUETOOTH,
     stat_fn: Callable[[str], Any] = os.stat,
     lstat_fn: Callable[[str], Any] = os.lstat,
 ) -> str | None:
@@ -503,7 +503,7 @@ def motivo_de_recusar_o_acionador(
     chave: object,
     *,
     dev_input_root: str = DEV_INPUT_ROOT,
-    sys_class_input: str = "/sys/class/input",
+    sys_class_input: str = SYS_CLASS_INPUT,
     stat_fn: Callable[[str], Any] = os.stat,
     lstat_fn: Callable[[str], Any] = os.lstat,
 ) -> str | None:
@@ -608,8 +608,8 @@ class FsAclOps:
         *,
         sys_class_hidraw: str = SYS_CLASS_HIDRAW,
         dev_input_root: str = DEV_INPUT_ROOT,
-        sys_class_input: str = "/sys/class/input",
-        sys_class_bluetooth: str = "/sys/class/bluetooth",
+        sys_class_input: str = SYS_CLASS_INPUT,
+        sys_class_bluetooth: str = SYS_CLASS_BLUETOOTH,
         sys_bus_hid_drivers: str = SYS_BUS_HID_DRIVERS,
     ) -> None:
         self._sys_class_hidraw = sys_class_hidraw
@@ -1139,7 +1139,7 @@ class RaizesDoPad:
     configfs: str = field(default_factory=lambda: CONFIGFS_GADGETS)
     plataforma: str = field(default_factory=lambda: SYS_PLATFORM)
     classe_udc: str = field(default_factory=lambda: SYS_CLASS_UDC)
-    dev: str = "/dev"
+    dev: str = DEV_ROOT
 
 
 def _escrever_attr(caminho: str, valor: str | bytes) -> None:
@@ -1366,7 +1366,7 @@ class PadUsbOps:
                 os.close(fd)
                 raise
             os.close(fd)
-        raise OSError(errno.ENOENT, f"nenhum /dev/hidg* tem o dev {alvo}")
+        raise OSError(errno.ENOENT, f"nenhum {self.raizes.dev}/hidg* tem o dev {alvo}")
 
     def desmontar(self, nome: str, porta: int | None) -> None:
         """Desliga do ``vhci``, solta o ``udc`` e desfaz o configfs, nesta ordem."""
@@ -1515,14 +1515,14 @@ class BrokerState:
         allowed_uid: int | None = None,
         ops: Any | None = None,
         validator: Callable[[str], str | None] | None = None,
-        dev_root: str = "/dev",
+        dev_root: str = DEV_ROOT,
         sys_class_hidraw: str = SYS_CLASS_HIDRAW,
-        sys_class_bluetooth: str = "/sys/class/bluetooth",
+        sys_class_bluetooth: str = SYS_CLASS_BLUETOOTH,
         log: Callable[..., None] = _log,
         sleep_fn: Callable[[float], None] = time.sleep,
         no_nasce_fechado: bool = False,
         dev_input_root: str = DEV_INPUT_ROOT,
-        sys_class_input: str = "/sys/class/input",
+        sys_class_input: str = SYS_CLASS_INPUT,
         sys_bus_hid_drivers: str = SYS_BUS_HID_DRIVERS,
         validator_entrada: Callable[[str], str | None] | None = None,
         validator_acionador: Callable[[str, str], str | None] | None = None,
@@ -2518,9 +2518,9 @@ class BrokerState:
 def physical_nodes_exposure(
     uid: int,
     *,
-    dev_root: str = "/dev",
+    dev_root: str = DEV_ROOT,
     sys_class_hidraw: str = SYS_CLASS_HIDRAW,
-    sys_class_bluetooth: str = "/sys/class/bluetooth",
+    sys_class_bluetooth: str = SYS_CLASS_BLUETOOTH,
     ops: Any | None = None,
     validator: Callable[[str], str | None] | None = None,
 ) -> dict[str, bool]:
@@ -2566,9 +2566,9 @@ def restore_all_physical(
     *,
     uid: int,
     ops: Any | None = None,
-    dev_root: str = "/dev",
+    dev_root: str = DEV_ROOT,
     sys_class_hidraw: str = SYS_CLASS_HIDRAW,
-    sys_class_bluetooth: str = "/sys/class/bluetooth",
+    sys_class_bluetooth: str = SYS_CLASS_BLUETOOTH,
     validator: Callable[[str], str | None] | None = None,
     log: Callable[..., None] = _log,
 ) -> list[str]:
@@ -2625,9 +2625,9 @@ def fechar_todo_fisico(
     *,
     uid: int | None,
     ops: Any | None = None,
-    dev_root: str = "/dev",
+    dev_root: str = DEV_ROOT,
     sys_class_hidraw: str = SYS_CLASS_HIDRAW,
-    sys_class_bluetooth: str = "/sys/class/bluetooth",
+    sys_class_bluetooth: str = SYS_CLASS_BLUETOOTH,
     validator: Callable[[str], str | None] | None = None,
     log: Callable[..., None] = _log,
 ) -> list[str]:
