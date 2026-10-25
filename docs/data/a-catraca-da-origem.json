@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1208349,
+      "piso": 1209217,
       "por_item": {
-        "docs": 121313,
+        "docs": 121329,
         "scripts": 120677,
-        "src": 323181,
-        "tests": 643178
+        "src": 323401,
+        "tests": 643810
       },
-      "razao": "tamanho: +2017 linhas (1206332 -> 1208349), pagas por Origem: D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo 80da67d57ae2",
+      "razao": "tamanho: +868 linhas (1208349 -> 1209217), pagas por Origem: D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo 12c8606ef7e8",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1021,10 +1021,16 @@
           "de": 1206332,
           "para": 1208349,
           "razao": "tamanho: +2017 linhas (1206332 -> 1208349), pagas por Origem: D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo 80da67d57ae2"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1208349,
+          "para": 1209217,
+          "razao": "tamanho: +868 linhas (1208349 -> 1209217), pagas por Origem: D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo 12c8606ef7e8"
         }
       ],
       "unidade": "linhas",
-      "universo": 3156
+      "universo": 3157
     }
   }
 }
