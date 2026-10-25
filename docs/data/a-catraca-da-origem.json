@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1210224,
+      "piso": 1210521,
       "por_item": {
-        "docs": 121351,
+        "docs": 121357,
         "scripts": 120700,
-        "src": 323547,
-        "tests": 644626
+        "src": 323613,
+        "tests": 644851
       },
-      "razao": "tamanho: +294 linhas (1209930 -> 1210224), pagas por Origem: D-2410-O-PEDIDO-DE-NOVO-SAI-DO-TIQUE, D-2510-A-VOLTA-DO-GADGET-PEDE-FORA-DO-TIQUE; registrado no fecho, topo bbeb8fa478d1",
+      "razao": "tamanho: +297 linhas (1210224 -> 1210521), pagas por Origem: D-2510-A-FALTA-DE-PERMISSAO-DE-LER-DIZ-O-GRUPO; registrado no fecho, topo 49d26ff519be",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1051,10 +1051,16 @@
           "de": 1209930,
           "para": 1210224,
           "razao": "tamanho: +294 linhas (1209930 -> 1210224), pagas por Origem: D-2410-O-PEDIDO-DE-NOVO-SAI-DO-TIQUE, D-2510-A-VOLTA-DO-GADGET-PEDE-FORA-DO-TIQUE; registrado no fecho, topo bbeb8fa478d1"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1210224,
+          "para": 1210521,
+          "razao": "tamanho: +297 linhas (1210224 -> 1210521), pagas por Origem: D-2510-A-FALTA-DE-PERMISSAO-DE-LER-DIZ-O-GRUPO; registrado no fecho, topo 49d26ff519be"
         }
       ],
       "unidade": "linhas",
-      "universo": 3160
+      "universo": 3161
     }
   }
 }
