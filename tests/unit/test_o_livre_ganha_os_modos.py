@@ -344,3 +344,63 @@ def test_o_gesto_do_modo_esta_declarado_sem_eco() -> None:
 
     pacotes._carregar_tudo()
     assert ("07-lancadores.html", "modo-do-livre-da-modificacao") in pacotes.GESTOS
+
+
+# -- o modo no navegador: a barra que o dedo solta --------------------------------------------
+
+#: A faixa «Ao vivo» do desenho; ``modo`` acende o botão como a janela o repinta (o clique vai ao
+#: serviço e volta aceso), ``soltar`` é o fim do arrasto (``change``) depois de ``input`` nos
+#: valores dados.
+_FAIXA = """(function(){
+  window.aFaixa = document.querySelector('#mod-janela .mj-faixa');
+  location.hash = '#' + aFaixa.closest('.tela-nova').id;
+  window.aBarraDaFaixa = aFaixa.querySelector('.mj-trilho input[type=range]');
+  window.oModoAceso = m => aFaixa.querySelectorAll('.mj-modos button').forEach(
+    b => b.classList.toggle('on', b.dataset.modo === m));
+  window.arrastar = v => { aBarraDaFaixa.value = String(v);
+    aBarraDaFaixa.dispatchEvent(new Event('input', {bubbles: true})); };
+  window.soltarADaFaixa = () => aBarraDaFaixa.dispatchEvent(new Event('change', {bubbles: true}));
+  return aBarraDaFaixa ? 'ok' : 'sem barra';
+})()"""
+
+
+@pytest.fixture(scope="module")
+def no_navegador() -> list[Any]:
+    from tests.unit.test_o_aparelho_da_extensao_diz_os_controles_dele import VISTAS, rodar_no_webkit
+
+    def js(codigo: str) -> list[Any]:
+        return ["js", codigo]
+
+    passos: list[list[Any]] = [
+        js(_FAIXA),
+        # Soltar: o dedo sai em 70 e a barra volta a zero
+        js("oModoAceso('soltar'); arrastar(70); soltarADaFaixa(); aBarraDaFaixa.value"),
+        # Segurar: o dedo sai em 70 e a barra fica
+        js("oModoAceso('segurar'); arrastar(70); soltarADaFaixa(); aBarraDaFaixa.value"),
+        # Repetir: 20 por 0,4 s, 80 por 0,4 s, e o laço toca os dois
+        js("oModoAceso('repetir'); arrastar(20); 'ok'"), ["espera", 0.4],
+        js("arrastar(80); 'ok'"), ["espera", 0.4],
+        js("soltarADaFaixa(); window.lidos = []; window.amostra = setInterval("
+           "() => lidos.push(aBarraDaFaixa.value), 60); 'ok'"), ["espera", 1.6],
+        js("clearInterval(amostra); JSON.stringify(lidos)"),
+        # o clique em «Soltar» vale na hora: o laço para e a barra vai a zero
+        js("aFaixa.querySelector('.mj-modos button[data-modo=soltar]').click(); 'ok'"),
+        ["espera", 0.4],
+        js("aBarraDaFaixa.value"),
+    ]
+    w, h = VISTAS[1]
+    return rodar_no_webkit({"faixa": (w, h, passos)})["faixa"]
+
+
+def test_no_navegador_soltar_volta_a_zero_segurar_fica_e_repetir_toca_em_laco(
+        no_navegador: list[Any]) -> None:
+    # D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA
+    """O ``comportamento.js`` na barra que o dedo solta: «Soltar» a devolve a zero, «Segurar» a
+    deixa onde parou, «Repetir» toca o trecho em laço, e o clique em «Soltar» para o laço."""
+    pronta, soltar, segurar, *_, repetir, _clique, depois = no_navegador
+    assert pronta == "ok", f"a faixa do desenho não abriu: {no_navegador}"
+    assert soltar == "0", f"«Soltar» não devolveu a barra a zero: {soltar}"
+    assert segurar == "70", f"«Segurar» não deixou a barra onde o dedo saiu: {segurar}"
+    lidos = set(json.loads(repetir))
+    assert {"20", "80"} <= lidos, f"«Repetir» não tocou o trecho em laço: {sorted(lidos)}"
+    assert depois == "0", f"o clique em «Soltar» não parou o laço nem zerou a barra: {depois}"

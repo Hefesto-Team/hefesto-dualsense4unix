@@ -356,3 +356,147 @@ def test_o_manifesto_dos_controles_torto_e_recusado(
     with pytest.raises(ManifestoRecusadoError) as recusa:
         ler_manifesto(tmp_path)
     assert frase in recusa.value.frase, recusa.value.frase
+
+
+# -- 5. o cartão inteiro no WebKit ------------------------------------------------------------
+
+DESENHO = pathlib.Path(__file__).resolve().parents[2] / "mockup" / "07-lancadores.html"
+#: A janela maximizada no monitor do usuário e o piso da janela.
+VISTAS = ((1918, 840), (1212, 809))
+
+#: A sonda abre o desenho num WebKit de verdade, sob a tela de mentira, e roda os passos de cada
+#: caso: ``["js", código]`` devolve o que o código devolve, ``["espera", segundos]`` deixa o laço
+#: do GTK andar (os ``setInterval`` da página andam junto).
+SONDA = r"""
+import json, pathlib, sys
+from hefesto_dualsense4unix.utils.tela_de_mentira import garantir_tela_de_mentira
+garantir_tela_de_mentira(anunciar=False)
+import gi
+gi.require_version("Gtk", "3.0")
+from gi.repository import GLib, Gtk
+from hefesto_dualsense4unix.interface.janela import PonteDaTela
+
+PAGINA = pathlib.Path(sys.argv[1])
+CASOS = json.loads(sys.stdin.read())
+
+def esperar(caixa, segundos):
+    fim = GLib.get_monotonic_time() + int(segundos * 1_000_000)
+    while "v" not in caixa and GLib.get_monotonic_time() < fim:
+        Gtk.main_iteration_do(False)
+
+saida = {}
+for chave, (largura, altura, passos) in CASOS.items():
+    ponte = PonteDaTela(folha=None)
+    janela = Gtk.OffscreenWindow()
+    janela.set_default_size(largura, altura)
+    janela.add(ponte.view)
+    janela.show_all()
+    ponte.view.load_uri(PAGINA.as_uri())
+    esperar({}, 4)
+    lidos = []
+    for tipo, corpo in passos:
+        if tipo == "espera":
+            esperar({}, corpo)
+            continue
+        caixa = {}
+        ponte.perguntar(corpo, lambda v, e: caixa.update(v=v, e=repr(e) if e else ""))
+        esperar(caixa, 8)
+        lidos.append(caixa.get("v") if not caixa.get("e") else {"erro": caixa["e"]})
+    saida[chave] = lidos
+    janela.destroy()
+print(json.dumps(saida))
+"""
+
+
+def rodar_no_webkit(casos: dict[str, tuple[int, int, list[list[Any]]]]) -> dict[str, list[Any]]:
+    """Os passos de cada caso no desenho, num WebKit de verdade; sem WebKit, o teste é pulado."""
+    import os
+    import subprocess
+    import sys
+
+    ambiente = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
+    filho = subprocess.run([sys.executable, "-c", SONDA, str(DESENHO)], input=json.dumps(casos),
+                           env=ambiente, capture_output=True, text=True, timeout=300)
+    if filho.returncode != 0:
+        pytest.skip(f"o WebKit não subiu na tela de mentira: {filho.stderr.strip()[-300:]}")
+    return dict(json.loads(filho.stdout.strip().splitlines()[-1]))
+
+
+#: O cartão na borda do contrato: dezesseis pontos (treze de uma cor e três de três), uma escolha
+#: de seis opções compridas e um rótulo de 28 letras (o teto é 30).
+_PONTOS = [{"id": f"c{n}", "cor": f"#{40 + n * 12:02x}{200 - n * 9:02x}{90 + n * 10:02x}",
+            "rotulo": f"Cor {n + 1}"} for n in range(13)] + [  # noqa-acento: contrato
+    {"id": f"t{n}", "cor": ["#ff5555", "#50fa7b", "#6c8cff"][n:] + ["#ff5555", "#50fa7b"][:n],
+     "rotulo": f"Mistura {n + 1}"} for n in range(3)]  # noqa-acento: contrato
+_JEITOS = [{"id": f"j{n}", "rotulo": r} for n, r in enumerate(  # noqa-acento: contrato
+    ("Fixa", "Pisca devagar", "Pisca depressa", "Respira", "Onda de cores", "Segue o jogo"))]
+_ROTULO_LONGO = "Como a luz se comporta agora"
+
+
+def _cartoes_na_borda() -> str:
+    from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
+
+    aparelhos = [
+        {"id": "ap-1", "nome": "Aparelho 1", "estado": "ligado", "ligado": True, "controles": [
+            {"id": "luz", "tipo": "chave", "valor": True},
+            {"id": "cor", "tipo": "paleta", "valor": "c2", "opcoes": _PONTOS},  # noqa-acento: contrato
+            {"id": "jeito", "tipo": "escolha", "valor": "j0", "rotulo": _ROTULO_LONGO,  # noqa-acento: contrato
+             "opcoes": _JEITOS}]},  # noqa-acento: contrato
+        {"id": "ap-2", "nome": "Aparelho 2", "estado": "ligado", "ligado": True, "controles": [
+            {"id": "luz", "tipo": "chave", "valor": False}]}]
+    return exp.controles_dos_aparelhos_html("toque", _estado(aparelhos))
+
+
+_ABRIR = """(function(h){
+  const cc = document.getElementById('mod-controles');
+  location.hash = '#' + cc.closest('.tela-nova').id;
+  cc.innerHTML = h;
+  const tela = cc.closest('.mj-tela'), aba = tela.previousElementSibling.previousElementSibling;
+  aba.checked = true;
+  return 'ok';
+})(%s)"""
+_MEDIR = """(function(){
+  const r = e => { const x = e.getBoundingClientRect();
+    return [x.left, x.top, x.right, x.bottom]; };
+  const cc = document.getElementById('mod-controles'), tela = cc.closest('.mj-tela');
+  return JSON.stringify({
+    grupos: [...cc.querySelectorAll('.mj-cores')].map(g => ({caixa: r(g),
+      botoes: [...g.querySelectorAll('button')].map(b => [b.textContent.trim(), r(b)])})),
+    linhas: [...cc.querySelectorAll('.mj-cc-linha')].map(l => {
+      const rot = l.querySelector('.mj-cc-rot');
+      return {rotulo: rot.textContent, caixa: r(rot), largo: [rot.scrollWidth, rot.clientWidth],
+              controle: r(l.querySelector('.mj-cc-ctrl')), cartao: r(l.closest('.mj-cc'))};
+    }),
+    tela: [tela.scrollHeight, tela.clientHeight], visivel: getComputedStyle(tela).visibility});
+})()"""
+
+
+@pytest.fixture(scope="module")
+def na_borda() -> dict[str, dict[str, Any]]:
+    html = _cartoes_na_borda()
+    casos = {f"{w}x{h}": (w, h, [["js", _ABRIR % json.dumps(html)], ["espera", 0.5],
+                                 ["js", _MEDIR]]) for w, h in VISTAS}
+    return {k: json.loads(v[1]) for k, v in rodar_no_webkit(casos).items()}
+
+
+@pytest.mark.parametrize("vista", [f"{w}x{h}" for w, h in VISTAS])
+def test_toda_opcao_do_contrato_fica_inteira_e_o_rotulo_nao_invade(
+        na_borda: dict[str, dict[str, Any]], vista: str) -> None:
+    # D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA
+    """Na borda do contrato, cada ponto e cada opção ficam inteiros dentro do grupo (nenhum some
+    atrás da borda), o rótulo longo quebra a linha sem invadir o controle, e a aba não rola."""
+    m = na_borda[vista]
+    assert m["visivel"] == "visible" and m["grupos"], f"a aba dos controles não abriu: {m}"
+    botoes = sum(len(g["botoes"]) for g in m["grupos"])
+    assert botoes == len(_PONTOS) + len(_JEITOS), f"faltou opção no cartão: {m}"
+    for g in m["grupos"]:
+        e, t, d, b = g["caixa"]
+        for nome, (be, bt, bd, bb) in g["botoes"]:
+            assert be >= e - 0.5 and bd <= d + 0.5 and bt >= t - 0.5 and bb <= b + 0.5, (
+                f"a opção «{nome}» ficou cortada pelo grupo {g['caixa']}: {(be, bt, bd, bb)}")
+    for linha in m["linhas"]:
+        rot, ctrl, cartao = linha["caixa"], linha["controle"], linha["cartao"]
+        assert linha["largo"][0] <= linha["largo"][1] + 1, f"o rótulo transborda: {linha}"
+        assert rot[2] <= ctrl[0] + 0.5, f"o rótulo invade o controle: {linha}"
+        assert ctrl[2] <= cartao[2] + 0.5, f"o controle sai do cartão: {linha}"
+    assert m["tela"][0] <= m["tela"][1] + 1, f"a aba dos controles rola: {m['tela']}"
