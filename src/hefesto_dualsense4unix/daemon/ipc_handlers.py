@@ -6195,7 +6195,8 @@ class IpcHandlersMixin:
         ``ligar``. ``{enviada}`` é falso quando a extensão não está conectada à porta.
         """
         mod = self._mod_do_pedido(params)
-        acao, alvo, valor = params.get("acao"), params.get("alvo"), params.get("valor")  # noqa-acento
+        acao = params.get("acao")  # a chave do contrato (noqa-acento)
+        alvo, valor = params.get("alvo"), params.get("valor")
         if not isinstance(acao, str) or not acao:
             raise ValueError("o pedido não diz qual ação")
         if alvo is not None and (not isinstance(alvo, str) or not 1 <= len(alvo) <= 40):

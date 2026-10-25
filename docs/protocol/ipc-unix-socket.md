@@ -103,7 +103,7 @@ Esta tabela é **gerada**. O número acima nunca foi digitado por ninguém — e
 | `mods.parar_tudo` | `daemon/ipc_handlers.py:5116` (`_handle_mods_parar_tudo`) | O «Parar tudo» da janela: o gesto ``para`` vai só à extensão ``{mod}``. | **não** |
 | `mods.jogos` | `daemon/ipc_handlers.py:5141` (`_handle_mods_jogos`) | Os jogos da extensão de lançador ``{mod}``: o último ``lancador.jogos`` publicado. | **não** |
 | `mods.acao` | `daemon/ipc_handlers.py:6190` (`_handle_mods_acao`) | O clique numa ação da janela: ``extensao.acao`` vai só à extensão ``{mod}``. | **não** |
-| `mods.livre` | `daemon/ipc_handlers.py:6216` (`_handle_mods_livre`) | O arrastar do controle livre: ``extensao.livre`` só à extensão ``{mod}``. | **não** |
+| `mods.livre` | `daemon/ipc_handlers.py:6217` (`_handle_mods_livre`) | O arrastar do controle livre: ``extensao.livre`` só à extensão ``{mod}``. | **não** |
 | `radio.ponte.ligar_aqui` | `daemon/ipc_handlers.py:5450` (`_handle_radio_ponte_ligar_aqui`) | «Ligar aqui»: a ponte deste controle sobe além do limite do adaptador. | **não** |
 | `radio.mover` | `daemon/ipc_handlers.py:5480` (`_handle_radio_mover`) | «Mover» um aparelho para um adaptador, ou o «Conectar» (D8). | sim |
 | `mira.set` | `daemon/ipc_handlers.py:5576` (`_handle_mira_set`) | `mira.set` — o chip «Analógico Virtual» e os ajustes da Calibrar, POR CONTROLE. | sim |
