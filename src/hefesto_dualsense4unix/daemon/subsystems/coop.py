@@ -1548,7 +1548,7 @@ class CoopManager:
                 with contextlib.suppress(Exception):
                     player.vpad.rumble_sink = None  # type: ignore[attr-defined]
             with contextlib.suppress(Exception):
-                player.vpad.stop()
+                _parar_fora_do_tique(player.vpad)
         self._levantar(identity)
         if not calado:
             # O LED do aparelho que cedeu é do P1 agora: não se devolve ao perfil do P2.
@@ -2247,7 +2247,7 @@ class CoopManager:
             jogador.motion_reader = None
         self._zerar_rumble_do_jogador(chave)
         with contextlib.suppress(Exception):
-            jogador.vpad.stop()
+            _parar_fora_do_tique(jogador.vpad)
         jogador.vpad = None
         self._levantar(chave)
 
@@ -2274,7 +2274,10 @@ class CoopManager:
         self._led_indisponivel = frozenset()
         self._discover_falhou = False
 
-    stop_all = disable
+    def stop_all(self) -> None:
+        """O daemon para: a mesa desce, e só se volta com o gadget de cada pad devolvido."""
+        self.disable()
+        _esperar_as_descidas()
 
 
     def _pendurar_a_espera_do_posto(self, ctrl: Any) -> None:
@@ -3088,3 +3091,18 @@ __all__ = [
     "player_led_pattern",
     "resolve_player_numbers",
 ]
+
+
+def _parar_fora_do_tique(vpad: Any) -> None:
+    """O `stop` do vpad de quem sai no `sync`, que roda no laço do tique: a devolução
+    do gadget ao broker vai à fila da descida (`uhid_gamepad.parar_fora_do_tique`)."""
+    from hefesto_dualsense4unix.integrations.uhid_gamepad import parar_fora_do_tique
+
+    parar_fora_do_tique(vpad)
+
+
+def _esperar_as_descidas() -> None:
+    """O `stop_all` espera a descida de quem saiu antes, e a dos que ele acabou de parar."""
+    from hefesto_dualsense4unix.integrations.uhid_gamepad import esperar_as_descidas
+
+    esperar_as_descidas()

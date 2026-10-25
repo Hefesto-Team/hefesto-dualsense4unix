@@ -1857,6 +1857,7 @@ class UhidDualSense:
             return True
         self._as_janelas_do_eco().clear()
         self._mic_bit_que_saiu = False
+        _DESCIDA_AO_BROKER.esperar_o_aparelho(self, _DESCIDA_DO_SERIAL_ESPERA_S)
         _MACS_DOS_VPADS_VIVOS.vestir(self)
         if self._criar_o_device():
             return True
@@ -1865,9 +1866,8 @@ class UhidDualSense:
 
     def stop(self) -> None:
         """Destrói o device, devolve o gadget dele ao broker e só DEPOIS devolve o MAC."""
-        self._gadget_outra_vez = False
-        _esquecer_a_recusa(self)  # o pedido em voo se larga: o gadget tardio desce
-        self._destruir_o_device()
+        # a casa desce como na parada do tique (`parar_fora_do_tique`); o broker, aqui
+        _parar_na_casa(self)
         _DESCIDA_AO_BROKER.terminar(self)  # a descida do pad, a do tique em voo inclusive
         _MACS_DOS_VPADS_VIVOS.despir(self)
         # o doctor conta quem está no uhid pelo diário: o pad que parou sai da conta.
@@ -3129,6 +3129,8 @@ class _PedidoAoBroker:
         self.jogo_abriu = False
         self._gadget: _GadgetDoPad | None = None
         self._largado = False
+        #: o pad que pediu: o gadget que o `stop` dele larga desce na fila dele.
+        self._dono = pad
         self._trava = threading.Lock()
         self._pronto = threading.Event()
         threading.Thread(
@@ -3183,12 +3185,16 @@ class _PedidoAoBroker:
         return gadget
 
     def largar(self) -> None:
-        """O pad parou: o gadget que chegou (ou que chegar) se desmonta."""
+        """O pad parou: o gadget que chegou (ou que chegar) se desmonta.
+
+        O que já chegou desce pela fila da descida, com o pad por dono: o `stop`
+        que espera o desce ele mesmo, e o que para no tique não fala com o broker.
+        """
         with self._trava:
             self._largado = True
             gadget, self._gadget = self._gadget, None
         if gadget is not None:
-            gadget.desmontar()
+            _DESCIDA_AO_BROKER.descer(gadget, self._dono)
 
 
 #: quanto quem espera uma descida espera por ela: as duas tentativas do cliente
@@ -3217,6 +3223,9 @@ class _DescidaAoBroker:
         self._em_voo: tuple[object, _GadgetDoPad] | None = None
         #: as que o `stop` tirou da fila e desce ele mesmo: seguem pendentes até o fim.
         self._no_stop: list[tuple[object, _GadgetDoPad]] = []
+        #: ``(dono, depois)`` do pad que parou sem esperar: roda quando a última descida
+        #: do dono termina (:meth:`soltar`).
+        self._depois: list[tuple[object, Callable[[], None]]] = []
         self._fio: threading.Thread | None = None
 
     def descer(self, gadget: _GadgetDoPad, dono: object) -> None:
@@ -3244,6 +3253,59 @@ class _DescidaAoBroker:
                 with self._trava:
                     self._em_voo = None
                     self._trava.notify_all()
+                self._cumprir(vez[0])
+
+    def soltar(self, dono: object, depois: Callable[[], None]) -> None:
+        """O `stop` que não espera (:func:`parar_fora_do_tique`): o do ``dono`` desce no
+        fio, e ``depois`` roda quando a última descida dele terminar (já, se não há)."""
+        with self._trava:
+            if any(vez[0] is dono for vez in self._pendentes()):
+                self._depois.append((dono, depois))
+                return
+        depois()
+
+    def _cumprir(self, dono: object) -> None:
+        """Roda o ``depois`` do ``dono`` sem descida pendente, e só então o tira da lista:
+        quem espera o aparelho, ou a fila inteira, o encontra feito."""
+        with self._trava:
+            if any(vez[0] is dono for vez in self._pendentes()):
+                return
+            prontos = [item for item in self._depois if item[0] is dono]
+        if not prontos:
+            return
+        for _quem, depois in prontos:
+            try:
+                depois()
+            except Exception:  # pragma: no cover - defensivo: o fio da descida não cai
+                logger.debug("pad_usb_descida_depois_falhou", exc_info=True)
+        with self._trava:
+            self._depois = [item for item in self._depois
+                            if all(item is not feito for feito in prontos)]
+            self._trava.notify_all()
+
+    def esperar_o_aparelho(self, pad: object, segundos: float) -> bool:
+        """O pad novo espera a descida do pad do MESMO aparelho que parou no tique.
+
+        O gadget dele segue no kernel com o MAC do aparelho até o broker o
+        desmontar, e o `hid_playstation` recusa o MAC repetido: sem a espera, o
+        pad novo vestiria outro MAC. True = nenhum, em até ``segundos``.
+        """
+        identidade = pad_usb._so_hex(getattr(pad, "identity", None) or "")
+        if not identidade:
+            return True
+
+        def livre() -> bool:
+            return not any(
+                quem is not pad
+                and pad_usb._so_hex(getattr(quem, "identity", None) or "") == identidade
+                for quem, _ in self._depois
+            )
+
+        with self._trava:
+            if livre():
+                return True
+            logger.info("vpad_espera_a_descida_do_aparelho", player=getattr(pad, "player", None))
+            return self._trava.wait_for(livre, segundos)
 
     def _pendentes(self) -> list[tuple[object, _GadgetDoPad]]:
         """A fila e a que está em voo. Sob a trava."""
@@ -3274,6 +3336,7 @@ class _DescidaAoBroker:
                 lambda: self._em_voo is None or self._em_voo[0] is not dono,
                 _DESCIDA_ESPERA_S,
             )
+        self._cumprir(dono)
 
     def esperar(self, serial: str, segundos: float) -> bool:
         """True = nenhuma descida do ``serial`` pendente, em até ``segundos``."""
@@ -3284,9 +3347,11 @@ class _DescidaAoBroker:
             )
 
     def esperar_tudo(self, segundos: float) -> bool:
-        """True = a fila esvaziou e o fio terminou em até ``segundos`` (para quem mede)."""
+        """True = a fila esvaziou, o fio terminou e o MAC de quem parou no tique voltou."""
         with self._trava:
-            return self._trava.wait_for(lambda: not self._pendentes(), segundos)
+            return self._trava.wait_for(
+                lambda: not self._pendentes() and not self._depois, segundos
+            )
 
 
 _DESCIDA_AO_BROKER = _DescidaAoBroker()
@@ -3312,6 +3377,47 @@ def _report_neutro(pad: UhidDualSense) -> bytes:
     body[_BUTTONS0_OFFSET] = _DPAD_NEUTRAL
     body[_SEQ_OFFSET] = (pad._seq + 1) & 0xFF
     return bytes([_INPUT_REPORT_USB]) + bytes(body)
+
+
+def _parar_na_casa(pad: UhidDualSense) -> None:
+    """A parte do `stop` que não fala com o broker: o pedido em voo se larga (o gadget
+    tardio desce), e o uhid e o fd descem; o gadget do pad vai à fila da descida."""
+    pad._gadget_outra_vez = False
+    _esquecer_a_recusa(pad)
+    pad._destruir_o_device()
+
+
+def _despir_se_parado(pad: UhidDualSense) -> None:
+    """O MAC volta depois da descida, se o pad não voltou ao ar nesse meio-tempo."""
+    if pad._fd is None:
+        _MACS_DOS_VPADS_VIVOS.despir(pad)
+
+
+def parar_fora_do_tique(pad: Any) -> None:
+    """O `stop` do pad que para no laço do tique, sem esperar o broker.
+
+    O-JOGADOR-QUE-SAI-NAO-PRENDE-O-TIQUE-NO-BROKER-01 (25/10/2026): o `stop`
+    termina a descida do gadget no próprio fio, e o co-op o chamava no `sync`
+    do laço; com o broker preso, o jogador que saía segurava a entrada de todos
+    por ~4 s. Aqui a casa desce na hora, a devolução ao broker fica na fila da
+    descida (:class:`_DescidaAoBroker`), e o MAC só volta quando ela termina. O
+    `stop` do daemon que para espera a fila (:func:`esperar_as_descidas`). O pad
+    que não é do uhid não fala com o broker e para como sempre.
+    """
+    if not isinstance(pad, UhidDualSense):
+        pad.stop()
+        return
+    _parar_na_casa(pad)
+    _DESCIDA_AO_BROKER.soltar(pad, lambda: _despir_se_parado(pad))
+    logger.info("vpad_parou", player=pad.player)
+
+
+def esperar_as_descidas(segundos: float = _DESCIDA_DO_SERIAL_ESPERA_S) -> bool:
+    """O daemon que para: só volta com toda descida ao broker feita, em até ``segundos``."""
+    if _DESCIDA_AO_BROKER.esperar_tudo(segundos):
+        return True
+    logger.warning("pad_usb_descida_nao_terminou", segundos=segundos)
+    return False
 
 
 def _soltar_o_gadget(pad: UhidDualSense) -> bool:
@@ -3341,7 +3447,9 @@ __all__ = [
     "VPAD_PRODUCT",
     "UhidDualSense",
     "capture_dualsense_blueprint",
+    "esperar_as_descidas",
     "o_pad_do_aparelho_nasceu",
+    "parar_fora_do_tique",
     "player_mac",
     "uhid_available",
     "vpad_mac",
