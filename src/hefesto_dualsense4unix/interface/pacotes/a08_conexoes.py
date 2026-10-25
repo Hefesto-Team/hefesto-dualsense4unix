@@ -2092,18 +2092,16 @@ def acionador_nova_tecla(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
     if evento is None:
         raise RuntimeError("o aparelho não está ligado nesta máquina")
     from hefesto_dualsense4unix.utils.maquina import (
-        FRASE_SEM_PERMISSAO_DE_LER,
         abrir_o_aparelho_de_entrada,
+        frase_da_recusa_de_ler,
     )
 
     # O nó se abre aqui, não na thread: o que o sistema não deixa ler falha o clique, em vez de
-    # a espera morrer calada e o botão parecer morto. A falta de permissão diz o que fazer.
+    # a espera morrer calada e o botão parecer morto. A frase de cada recusa é do dono da abertura.
     try:
         dispositivo = (_ABRIR_O_EVENTO or abrir_o_aparelho_de_entrada)(evento)
-    except PermissionError as exc:
-        raise RuntimeError(FRASE_SEM_PERMISSAO_DE_LER) from exc
     except OSError as exc:
-        raise RuntimeError("o sistema não deixa o Hefesto ler este aparelho") from exc
+        raise RuntimeError(frase_da_recusa_de_ler(exc)) from exc
     with _TRAVA_DO_RASCUNHO:
         _RASCUNHO = r
         r.esperando = True

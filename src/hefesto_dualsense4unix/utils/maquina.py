@@ -593,6 +593,9 @@ def _ler_do_sys(caminho: Any) -> str:
 FRASE_SEM_PERMISSAO_DE_LER: Final = (
     "o sistema não deixa ler este aparelho, nem pelo serviço do Hefesto: "
     "rode «hefesto-dualsense4unix doctor» para ver o que falta")
+#: A recusa do teclado ou do pedal que some ou não abre (o cabo saiu, o nó sumiu do ``/dev``).
+FRASE_O_APARELHO_NAO_ABRE: Final = (
+    "este aparelho não abre agora: confira se ele continua ligado e tente de novo")
 
 #: Quanto o pedido do acionador espera o broker: a ponte pergunta de dentro do tique.
 _PRAZO_DO_BROKER_DO_ACIONADOR_S = 0.5
@@ -603,6 +606,19 @@ class SemPermissaoDeLerError(PermissionError):
 
     def __str__(self) -> str:
         return FRASE_SEM_PERMISSAO_DE_LER
+
+
+class AparelhoNaoAbreError(OSError):
+    """O ``OSError`` da abertura do nó que não é de permissão, dito pela frase do aparelho."""
+
+    def __str__(self) -> str:
+        return FRASE_O_APARELHO_NAO_ABRE
+
+
+def frase_da_recusa_de_ler(erro: OSError) -> str:
+    """A frase de quem usa para a abertura recusada: a da permissão, ou a do aparelho."""
+    return (FRASE_SEM_PERMISSAO_DE_LER if isinstance(erro, PermissionError)
+            else FRASE_O_APARELHO_NAO_ABRE)
 
 
 def _pedir_o_acionador_ao_broker(no: str, chave: str) -> int | None:
@@ -626,7 +642,8 @@ def abrir_o_aparelho_de_entrada(
 
     O nó que o sistema não deixa abrir se pede ao broker pela identidade do aparelho (a
     :func:`chave_do_acionador` que o ``/sys`` diz dele): o fd é só de quem pede, e a permissão
-    do nó não muda. Sem o fd, levanta ``SemPermissaoDeLerError`` (a frase do que fazer)."""
+    do nó não muda. Sem o fd, levanta ``SemPermissaoDeLerError`` (a frase do que fazer); o nó que
+    some ou não abre levanta ``AparelhoNaoAbreError``, com a frase dele."""
     import evdev
 
     caminho = f"/dev/input/{evento}"
@@ -634,6 +651,8 @@ def abrir_o_aparelho_de_entrada(
         return evdev.InputDevice(caminho)
     except PermissionError as exc:
         recusa = exc
+    except OSError as exc:
+        raise AparelhoNaoAbreError(exc.errno, FRASE_O_APARELHO_NAO_ABRE, caminho) from exc
     chave = next((a.chave for a in aparelhos_de_entrada() if a.evento == evento), None)
     fd = None if chave is None else (pedir_ao_broker or _pedir_o_acionador_ao_broker)(
         caminho, chave)
@@ -642,7 +661,10 @@ def abrir_o_aparelho_de_entrada(
                                      caminho) from recusa
     from hefesto_dualsense4unix.core.evdev_reader import _input_device_do_fd
 
-    return _input_device_do_fd(fd, caminho)
+    try:
+        return _input_device_do_fd(fd, caminho)
+    except OSError as exc:
+        raise AparelhoNaoAbreError(exc.errno, FRASE_O_APARELHO_NAO_ABRE, caminho) from exc
 
 
 def aparelhos_de_entrada(raiz: Any = None) -> list[AparelhoDeEntrada]:
