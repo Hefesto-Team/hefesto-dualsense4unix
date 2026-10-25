@@ -30,3 +30,4 @@ tests/unit/test_o_livre_ganha_os_modos.py
 tests/unit/test_o_aparelho_da_extensao_diz_os_controles_dele.py
 tests/unit/test_o_pad_recusado_pelo_broker_tenta_de_novo.py
 tests/unit/test_o_perfil_que_vale_tem_uma_casa_so.py
+tests/unit/test_o_acionador_desenha_o_controle_e_diz_a_permissao.py

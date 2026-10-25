@@ -144,3 +144,19 @@ def test_a_ponte_volta_a_dizer_depois_que_o_aparelho_abriu(tmp_path: Path) -> No
     ponte.parar()
     eventos = [d["event"] for d in diario]
     assert eventos == ["acionador_sem_permissao", *(e for _, e in passos)], eventos
+
+
+def test_a_ponte_volta_a_dizer_quando_a_declaracao_volta(tmp_path: Path) -> None:
+    """O aparelho que sai da declaração leva a lembrança junto: declarado de novo, ainda sem
+    permissão, a frase volta ao diário (a pessoa tentou de novo e precisa ler o que fazer).
+
+    MORDIDA: tire o ``self._sem_permissao &= set(vivos)`` de ``PonteDosAcionadores.andar``.
+    """
+    ponte = _ponte(tmp_path, lambda evento: _recusar(f"/dev/input/{evento}"))
+    with structlog.testing.capture_logs() as diario:
+        ponte.andar(_declarados(), lambda: False)
+        ponte.andar({}, lambda: False)
+        ponte.andar(_declarados(), lambda: False)
+    ponte.parar()
+    avisos = [d for d in diario if d.get("event") == "acionador_sem_permissao"]
+    assert len(avisos) == 2, diario
