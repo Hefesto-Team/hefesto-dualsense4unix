@@ -238,8 +238,11 @@ def test_o_diff_do_corte_diz_o_que_ficou_de_cada_bloco() -> None:
         "-# o começo saiu e\n # o fim ficou.\n z = 3\n"
         "-# o bloco inteiro saiu.\n v = 4\n"
         " # o bloco inteiro ficou\n w = 5\n"
+        "-# ----------\n # 2. O título que só perdeu a régua de traços\n-# ----------\n u = 6\n"
     )
-    assert cortado.deixadas_do_diff(diff) == {"src/x.py": {"# o fim saiu e", "# o fim ficou."}}
+    assert cortado.deixadas_do_diff(diff) == {"src/x.py": {"# o fim saiu e", "# o fim ficou."}}, (
+        "a régua de traços que saiu em volta do título não corta frase"
+    )
 
 
 @pytest.fixture

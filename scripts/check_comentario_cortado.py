@@ -12,7 +12,7 @@ ou numa citação `arquivo:linha` sem pontuação, seguido de linha que não é 
 
 E O CORTE PELO HISTÓRICO (A-REGUA-DO-COMENTARIO-CORTADO-VE-O-CORTE-PELO-HISTORICO-01): o bloco
 que o `8002c142c` deixou pela metade conta seja qual for a última palavra, se o texto vivo não
-termina em ponto, `!`, `?` ou reticência. O conectivo sozinho via 477 de uns 950 fragmentos vivos:
+termina em ponto, `!`, `?` ou reticência. O conectivo sozinho via 423 de 958 fragmentos vivos:
 «…que o broker», seguido de código, passava. O conectivo continua, para o corte que nasce depois.
 Sem o `8002c142c` e o pai alcançáveis (clone raso), a régua FALHA dizendo «sem o histórico».
 
@@ -152,7 +152,8 @@ def deixadas_do_diff(diff: str) -> dict[str, set[str]]:
 
     O diff vem com o arquivo inteiro de contexto. Bloco: as linhas de comentário que ficaram,
     seguidas no arquivo novo (a linha de código tirada entre elas não separa). Cortado: uma linha
-    de comentário saiu antes, no meio ou logo depois dele.
+    de comentário com texto saiu antes, no meio ou logo depois dele; a régua de traços que saiu
+    em volta de um título não corta frase.
     """
     deixadas: dict[str, set[str]] = {}
     arquivo: str | None = None
@@ -181,7 +182,7 @@ def deixadas_do_diff(diff: str) -> dict[str, set[str]]:
                 fecha()
                 continue
             bloco.append(linha[1:])
-        elif linha[:1] == "-" and _COMENTARIO_CRU.match(linha[1:]):
+        elif linha[:1] == "-" and _COMENTARIO_CRU.match(linha[1:]) and _LETRA.search(linha[1:]):
             saiu = True
     fecha()
     return deixadas
