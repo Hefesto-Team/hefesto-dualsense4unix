@@ -111,6 +111,7 @@ def test_a_chave_do_broker_e_a_que_o_daemon_declara(tmp_path: Path) -> None:
 
 
 def test_o_broker_serve_so_o_no_do_aparelho_declarado(tmp_path: Path) -> None:
+    # D-2510-O-ACIONADOR-SE-LE-PELO-FD-DO-BROKER
     """O fd é só de leitura e é o do nó pedido; o nó de outro aparelho com a mesma chave pedida é
     recusado pela identidade, não pelo número do ``event``. A permissão do nó não muda."""
     mesa = _Mesa(tmp_path)
@@ -341,6 +342,7 @@ def _declaracao() -> dict[str, Any]:
 
 
 def test_sem_declaracao_o_doctor_da_info_e_nao_abre_nada(tmp_path: Path) -> None:
+    # D-2510-O-DOCTOR-MEDE-SO-O-ACIONADOR-DECLARADO
     """O teclado da casa que recusa não é pergunta de ninguém: sem declaração, nada se abre."""
     mesa = _Mesa(tmp_path)
     mesa.no("event5", nome="Teclado da casa")
