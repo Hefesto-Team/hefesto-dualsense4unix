@@ -95,7 +95,7 @@ class _Leitor:
                                buttons_pressed=frozenset(), apertos=None)
 
 
-class _Ipc(IpcHandlersMixin):
+class _Ipc(IpcHandlersMixin):  # type: ignore[misc]
     def __init__(self, daemon: Any) -> None:
         self.daemon = daemon
 
