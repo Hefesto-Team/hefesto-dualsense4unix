@@ -339,6 +339,9 @@ class OpcaoDaJanela(NamedTuple):
     # da janela; o valor é ``{botão: forma}``.
     formas: tuple[tuple[str, tuple[tuple[float, float], ...]], ...] = ()
     botoes: tuple[str, ...] = ()
+    # O ``livre`` com ``modos``: o modo de agora (``soltar``, ``segurar`` ou ``repetir``); vazio,
+    # a faixa não desenha os três.
+    modo: str = ""
 
 
 GESTO_DO_CSS = "editar-o-css-da-modificacao"
@@ -1091,6 +1094,11 @@ GESTO_DO_LIVRE = "mover-o-livre-da-modificacao"
 GESTO_DE_SOLTAR = "soltar-o-livre-da-modificacao"
 GESTO_DE_GRAVAR = "gravar-o-livre-da-modificacao"
 GESTO_DE_ESQUECER_A_FORMA = "esquecer-a-forma-do-livre"
+GESTO_DO_MODO = "modo-do-livre-da-modificacao"
+#: Os modos do ``livre`` com ``modos``: o valor, o rótulo e a dica, na ordem da faixa.
+MODOS_DA_FAIXA = (("soltar", "Soltar", "Ao soltar, volta a zero"),
+                  ("segurar", "Segurar", "Ao soltar, fica onde parou"),
+                  ("repetir", "Repetir", "Ao soltar, repete o que você desenhou"))
 #: A ação que é a chave do cartão do aparelho (o ``ligado`` dele), e não um botão.
 ACAO_DE_LIGAR = "ligar"
 EM_CURSO = "Em curso"
@@ -1329,9 +1337,23 @@ def _formas_do_livre_html(o: OpcaoDaJanela) -> str:
     return "".join(chips)
 
 
+def modos_do_livre_html(o: OpcaoDaJanela) -> str:
+    """«Soltar», «Segurar» e «Repetir», o que a barra faz ao soltar; aceso, o ``modo`` de agora.
+    Sem ``modo`` (o ``livre`` sem ``modos``), nada."""
+    if not o.modo:
+        return ""
+    aceso = ' class="on"'
+    botoes = "".join(
+        f'<button{aceso if valor == o.modo else ""} data-modo="{valor}" '
+        f'data-gesto="{GESTO_DO_MODO}" data-v="{_a(o.mod)}:{_a(o.id)}:{valor}" '
+        f'aria-pressed="{str(valor == o.modo).lower()}" data-dica="{dica}">{rotulo}</button>'
+        for valor, rotulo, dica in MODOS_DA_FAIXA)
+    return f'<span class="seg mj-modos" role="group" aria-label="Ao soltar">{botoes}</span>'
+
+
 def faixa_do_livre_html(o: OpcaoDaJanela, vivo: LivreAoVivo, gestao: Gestao | None) -> str:
-    """A faixa fixa embaixo do arranjo C: o rastro, a barra que se arrasta, o «Gravar», quem recebe
-    e as formas gravadas.
+    """A faixa fixa embaixo do arranjo C: o rastro, a barra que se arrasta, os modos (com
+    ``modos``), o «Gravar», quem recebe e as formas gravadas.
 
     A barra é um ``range``: o ``input`` é o gesto vivo (lê e manda, nunca grava; a porta segura em
     20 por segundo) e o ``change`` é o soltar, que sempre sai. O rastro e os chips de quem recebe
@@ -1344,7 +1366,7 @@ def faixa_do_livre_html(o: OpcaoDaJanela, vivo: LivreAoVivo, gestao: Gestao | No
       <div class="mj-faixa-topo"><span class="pc-sub">{_e(o.rotulo)}</span></div>
       <div class="mj-livre-rastro" id="mod-livre-rastro">{rastro_html(vivo)}</div>
       <div class="mj-trilho" style="--v:{v}"><input type="range" min="0" max="100" step="1" value="{v}" data-hef-vivo="{GESTO_DO_LIVRE}" data-gesto="{GESTO_DE_SOLTAR}" data-v="{_a(o.mod)}:{_a(o.id)}" aria-label="{_a(o.rotulo)}" oninput="this.parentNode.style.setProperty('--v',this.value);this.nextElementSibling.textContent=this.value"><output>{v}</output></div>
-      <div class="mj-faixa-pe">
+      <div class="mj-faixa-pe">{modos_do_livre_html(o)}
         <button class="{gravar[0]}" data-gesto="{GESTO_DE_GRAVAR}" data-v="{_a(o.mod)}:{_a(o.id)}" aria-pressed="{gravar[1]}" data-dica="{DICA_DO_GRAVAR}"><i></i>Gravar</button>
         <span class="mj-alvos" id="mod-livre-alvos">{alvos_do_livre_html(gestao)}</span>
         <span class="mj-formas">{_formas_do_livre_html(o)}</span>
@@ -1382,7 +1404,8 @@ OPCOES_DO_DESENHO_DAS_PECAS = (
     OPCOES_DO_DESENHO_C[0]._replace(formas=(*FORMAS_DO_DESENHO, *FORMAS_GRAVADAS_DO_DESENHO.items())),
     *OPCOES_DO_DESENHO_C[1:],
     OpcaoDaJanela("exemplo", "ao-vivo", "Ao vivo", "livre",
-                  {n: [list(p) for p in f] for n, f in FORMAS_GRAVADAS_DO_DESENHO.items()}),
+                  {n: [list(p) for p in f] for n, f in FORMAS_GRAVADAS_DO_DESENHO.items()},
+                  modo="soltar"),
 )
 LIVRE_DO_DESENHO = LivreAoVivo(0.65, False, tuple(
     (t / 10, 0.35 + 0.3 * ((t % 20) / 20 if (t // 20) % 2 == 0 else 1 - (t % 20) / 20))

@@ -54,4 +54,63 @@
   }
   document.addEventListener('scroll', osMenusNoLugar, true);
   addEventListener('resize', osMenusNoLugar);
+  // OS MODOS DO CONTROLE LIVRE — 24/10/2026, O-LIVRE-GANHA-OS-MODOS-SOLTAR-SEGURAR-REPETIR-01. Ao soltar
+  // a barra, «Soltar» a devolve a 0, «Segurar» a deixa onde o dedo saiu e «Repetir» toca em laço o
+  // trecho arrastado desde o último soltar; escolher um modo vale na hora, como um soltar. O que a
+  // barra guarda mora aqui pelo `data-v`, e não no nó: a janela se repinta e a barra nasce de novo.
+  var livres = {};
+  function oLivre(v){ return livres[v] || (livres[v] = {trecho: [], ultimo: [], laco: null}); }
+  function aBarra(v){
+    var l = document.querySelectorAll('.mj-trilho input[type=range]');
+    for (var i = 0; i < l.length; i++) if (l[i].dataset.v === v) return l[i];
+    return null;
+  }
+  function mostrar(r, valor){
+    r.value = String(valor);
+    r.parentNode.style.setProperty('--v', r.value);
+    if (r.nextElementSibling) r.nextElementSibling.textContent = r.value;
+  }
+  function pararOLaco(e){ if (e.laco){ clearInterval(e.laco); e.laco = null; } }
+  function oModo(r){
+    var f = r.closest('.mj-faixa'), b = f && f.querySelector('.mj-modos button.on');
+    return b ? b.dataset.modo : '';
+  }
+  function aoSoltar(v, modo){
+    var e = oLivre(v), r = aBarra(v);
+    pararOLaco(e);
+    if (!r || !modo) return;
+    if (modo === 'soltar'){ mostrar(r, 0); return; }
+    var t = e.ultimo, n = t.length;
+    if (modo !== 'repetir' || n < 2 || t[n - 1][0] - t[0][0] < 100) return;
+    var inicio = t[0][0], periodo = t[n - 1][0] - inicio, desde = performance.now();
+    e.laco = setInterval(function(){
+      var b = aBarra(v);
+      if (!b){ pararOLaco(e); return; }
+      var x = inicio + (performance.now() - desde) % periodo, valor = t[0][1];
+      for (var i = 0; i < n && t[i][0] <= x; i++) valor = t[i][1];
+      mostrar(b, valor);
+    }, 50);
+  }
+  function aBarraDo(ev){ return ev.target.closest ? ev.target.closest('.mj-trilho input[type=range]') : null; }
+  document.addEventListener('input', function(ev){
+    var r = aBarraDo(ev);
+    if (!r) return;
+    var e = oLivre(r.dataset.v);
+    if (e.laco){ pararOLaco(e); e.trecho = []; }
+    e.trecho.push([performance.now(), Number(r.value)]);
+  });
+  document.addEventListener('change', function(ev){
+    var r = aBarraDo(ev);
+    if (!r) return;
+    var e = oLivre(r.dataset.v);
+    e.trecho.push([performance.now(), Number(r.value)]);
+    e.ultimo = e.trecho;
+    e.trecho = [];
+    aoSoltar(r.dataset.v, oModo(r));
+  });
+  document.addEventListener('click', function(ev){
+    var b = ev.target.closest('.mj-modos button[data-modo]');
+    var r = b && b.closest('.mj-faixa') && b.closest('.mj-faixa').querySelector('.mj-trilho input[type=range]');
+    if (r) aoSoltar(r.dataset.v, b.dataset.modo);
+  });
 })();

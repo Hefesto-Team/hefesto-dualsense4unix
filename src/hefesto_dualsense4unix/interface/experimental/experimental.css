@@ -656,3 +656,14 @@
 #mod-janela .mj-x { width:18px;height:18px;border-radius:50%;border:0;background:none;color:var(--texto-suave);cursor:pointer;
   font-size:13px;line-height:1;padding:0 }
 #mod-janela .mj-x:hover { color:var(--red) }
+/* Os modos do controle livre (24/10/2026, O-LIVRE-GANHA-OS-MODOS-SOLTAR-SEGURAR-REPETIR-01): o
+   segmentado do arranjo C, «Soltar», «Segurar» e «Repetir», antes do «Gravar». */
+#mod-janela .seg.mj-modos { display:inline-flex;gap:0;flex:none;flex-wrap:nowrap;border:1px solid var(--border-forte);
+  border-radius:6px;overflow:hidden }
+#mod-janela .seg.mj-modos button { flex:none;min-width:0;height:28px;padding:0 10px;font-size:11.5px;font-weight:400;
+  background:var(--panel);color:var(--texto-suave);border:0;border-right:1px solid var(--border-forte);border-radius:0;
+  cursor:pointer;white-space:nowrap }
+#mod-janela .seg.mj-modos button:last-child { border-right:0 }
+#mod-janela .seg.mj-modos button:hover:not(.on) { color:var(--fg);border-color:var(--border-forte) }
+#mod-janela .seg.mj-modos button.on { background:var(--sel-bg);color:var(--fg);font-weight:400;
+  border-color:var(--border-forte);box-shadow:inset 0 -2px 0 var(--purple) }

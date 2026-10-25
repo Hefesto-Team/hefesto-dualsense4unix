@@ -1572,8 +1572,11 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
         jogos=jogos if x.tipo == "jogos" else (),
         nota=nota if x.tipo == "css" else "",
         formas=_formas_da_opcao(manifesto, x, valores),
-        botoes=x.botoes_da_janela if x.tipo == "por_botao" else ()) for x in manifesto.opcoes]
+        botoes=x.botoes_da_janela if x.tipo == "por_botao" else (),
+        modo=_o_modo_de(manifesto, valores) if x.tipo == "livre" else "")
+        for x in manifesto.opcoes]
     _MEXIDA.mod = mod_id
+    _VIVA.com_o_modo(mod_id, _o_modo_de(manifesto, valores) or None)
     _MEXIDA.agora = tuple(manifesto.agora)
     _MEXIDA.html_mod = exp.modificacao_miolo_html(
         manifesto.nome, linhas, mod=mod_id, agora=_MEXIDA.agora,
@@ -2255,11 +2258,14 @@ METODO_DO_LIVRE = "mods.livre"
 TETO_DO_EM_CURSO_S = 5.0
 #: Os segundos de uma forma gravada, no máximo: 16 passos de até 10 s.
 SEGUNDOS_DA_GRAVACAO = 160.0
+#: O trecho mais curto que o «Repetir» toca em laço; mais curto que isso, a barra fica.
+LACO_MINIMO_S = 0.1
 
 
 class _Viva:
     """O que as peças que agem seguram entre um gesto e outro, de UMA extensão: as ações à espera
-    do estado novo e o controle livre (o valor, o rastro e a gravação).
+    do estado novo e o controle livre (o valor, o rastro, a gravação e, com ``modos``, o modo e o
+    trecho que o «Repetir» toca em laço).
 
     O arrastar chega por gestos vivos, cada um na sua thread: a série do vivo e o carimbo do
     evento descartam o que chega fora de ordem, e a chamada ao serviço sai dentro da trava, na
@@ -2279,10 +2285,59 @@ class _Viva:
         self.rastro: list[tuple[float, float]] = []
         self.gravando = False
         self.gravadas: list[tuple[float, float]] = []
+        # O livre com ``modos``: o modo que a janela mostra (``None`` sem ``modos``), o arrastar
+        # desde o último soltar, o trecho do último soltar e o laço do «Repetir» (início e
+        # período), que entra no rastro até ``laco_ate``.
+        self.modo: str | None = None
+        self.trecho: list[tuple[float, float]] = []
+        self.ultimo: list[tuple[float, float]] = []
+        self.laco: tuple[float, float] | None = None
+        self.laco_ate = 0.0
 
     def _da(self, mod: str) -> None:
         if mod != self.mod:
             self._zerar(mod)
+
+    def com_o_modo(self, mod: str, modo: str | None) -> None:
+        """O modo que a janela de ``mod`` mostra, a cada vez que ela se monta."""
+        with self._trava:
+            self._da(mod)
+            self.modo = modo
+
+    def _anotar(self, t: float, valor: float) -> None:
+        self.valor = valor
+        self.rastro = [(a, v) for a, v in self.rastro if t - a <= 2 * exp.RASTRO_S]
+        self.rastro.append((t, valor))
+        if self.gravando:
+            self.gravadas.append((t, valor))
+
+    def _assentar(self, agora: float) -> None:
+        """O laço do «Repetir» entra no rastro (e na gravação) até ``agora``: cada volta toca o
+        trecho do último soltar com os tempos dele."""
+        if self.laco is None:
+            return
+        inicio, periodo = self.laco
+        t0 = self.ultimo[0][0]
+        desde = max(self.laco_ate, agora - 2 * exp.RASTRO_S)
+        volta = max(0, int((desde - inicio) // periodo))
+        while (base := inicio + volta * periodo) <= agora:
+            for t, v in self.ultimo[:-1]:
+                if desde < base + (t - t0) <= agora:
+                    self._anotar(base + (t - t0), v)
+            volta += 1
+        self.laco_ate = agora
+
+    def _soltar_no_modo(self, agora: float, modo: str | None) -> None:
+        """O que a barra faz ao soltar: «Soltar» volta a 0, «Segurar» fica e «Repetir» toca o
+        trecho em laço (o curto demais fica)."""
+        self.laco = None
+        if modo == "soltar" and self.valor:
+            self._anotar(agora, 0.0)
+        elif modo == "repetir" and len(self.ultimo) >= 2 and (
+                self.ultimo[-1][0] - self.ultimo[0][0] >= LACO_MINIMO_S):
+            self.laco = (agora, self.ultimo[-1][0] - self.ultimo[0][0])
+            self.laco_ate = agora - 1e-6
+            self._assentar(agora)
 
     def marcar(self, mod: str, acao: str, alvo: str, serie: int) -> None:
         with self._trava:
@@ -2313,25 +2368,51 @@ class _Viva:
             else:
                 self.ultimo_vivo = vivo
             agora = time.monotonic()
-            self.valor = valor
-            self.rastro = [(t, v) for t, v in self.rastro if agora - t <= 2 * exp.RASTRO_S]
-            self.rastro.append((agora, valor))
-            if self.gravando:
-                self.gravadas.append((agora, valor))
+            self._assentar(agora)
+            if not soltou and self.laco is not None:
+                self.laco, self.trecho = None, []
+            self._anotar(agora, valor)
+            self.trecho.append((agora, valor))
+            if soltou:
+                self.ultimo, self.trecho = self.trecho, []
+                self._soltar_no_modo(agora, self.modo)
+            com_o_modo = {"modo": self.modo} if self.modo else {}
             return ponte.chamar_com_o_corpo(  # type: ignore[no-any-return]
-                METODO_DO_LIVRE, mod=mod, id=opcao_id, valor=valor, soltou=soltou)
+                METODO_DO_LIVRE, mod=mod, id=opcao_id, valor=valor, soltou=soltou, **com_o_modo)
+
+    def mudar_o_modo(self, mod: str, opcao_id: str, modo: str,
+                     ponte: Any) -> tuple[bool, str | None, Any] | None:
+        """O modo novo vale na hora, como um soltar nele: a barra faz o que ele faz e, depois de um
+        arrastar, a extensão recebe o soltar com o valor de agora e o modo novo. ``None`` quando
+        o modo não mudou ou nada foi arrastado nesta janela."""
+        with self._trava:
+            self._da(mod)
+            if modo == self.modo:
+                return None
+            self.modo = modo
+            if not self.rastro:
+                return None
+            agora = time.monotonic()
+            self._assentar(agora)
+            valor = self.valor
+            self._soltar_no_modo(agora, modo)
+            return ponte.chamar_com_o_corpo(  # type: ignore[no-any-return]
+                METODO_DO_LIVRE, mod=mod, id=opcao_id, valor=valor, soltou=True, modo=modo)
 
     def ao_vivo(self, mod: str) -> exp.LivreAoVivo:
         with self._trava:
             if mod != self.mod:
                 return exp.LivreAoVivo()
-            return exp.LivreAoVivo(self.valor, self.gravando, tuple(self.rastro), time.monotonic())
+            agora = time.monotonic()
+            self._assentar(agora)
+            return exp.LivreAoVivo(self.valor, self.gravando, tuple(self.rastro), agora)
 
     def gravar(self, mod: str) -> list[tuple[float, float]] | None:
         """Começa a gravar (devolve ``None``) ou para, e devolve o que se arrastou."""
         with self._trava:
             self._da(mod)
             agora = time.monotonic()
+            self._assentar(agora)
             if not self.gravando:
                 self.gravando, self.gravadas = True, [(agora, self.valor)]
                 return None
@@ -2411,6 +2492,15 @@ def _livre_primeiro(manifesto: Any, rascunho: dict[str, Any]) -> list[tuple[str,
     passa depois que ela está no disco."""
     livre = manifesto.opcao_livre if manifesto else None
     return sorted(rascunho.items(), key=lambda par: livre is None or par[0] != livre.id)
+
+
+def _o_modo_de(manifesto: Any, valores: dict[str, Any]) -> str:
+    """O modo do ``livre`` com ``modos`` que a janela mostra (o rascunho por cima do guardado), ou
+    vazio sem ``modos``."""
+    from hefesto_dualsense4unix.mods import opcoes
+
+    chave = opcoes.chave_do_modo(manifesto)
+    return str(valores.get(chave) or "") if chave else ""
 
 
 def _estado_da_janela(manifesto: Any) -> dict[str, Any] | None:
@@ -2622,6 +2712,29 @@ def esquecer_a_forma_do_livre(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[
     return {**_a_pintura_agora(ctx), "recado": f"«{nome}» esquecida. Guarde para valer."}
 
 
+@gesto("07-lancadores.html", exp.GESTO_DO_MODO)
+def modo_do_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
+    """«Soltar», «Segurar» ou «Repetir» (o ``livre`` com ``modos``): o modo vai ao rascunho, como
+    as outras escolhas (quem grava no disco é o Guardar), e vale na hora na barra e na extensão.
+    ``data-v`` é ``mod:id:modo``."""
+    from hefesto_dualsense4unix.mods import opcoes
+
+    mod_id, opcao_id, modo = _partes_do_clique(o, exp.GESTO_DO_MODO, 3)
+    item = _a_instalada(mod_id)
+    livre = _o_livre_de(item, opcao_id)
+    chave = opcoes.chave_do_modo(item.manifesto)
+    if chave is None:
+        raise RuntimeError("Este controle livre não tem modos. Nada foi guardado.")
+    with _dizendo_a_recusa():
+        certo = opcoes.modo_valido(modo)
+    if _MEXIDA.mod != mod_id:
+        _MEXIDA.mod, _MEXIDA.rascunho = mod_id, {}
+    _MEXIDA.rascunho[chave] = certo
+    _VIVA.mudar_o_modo(mod_id, livre.id, certo, p)
+    _montar_a_janela_da_extensao(mod_id)
+    return _a_pintura_agora(ctx)
+
+
 METODOS |= {METODO_DA_ACAO, METODO_DO_LIVRE}
 SEM_ECO = (*SEM_ECO, exp.GESTO_DA_ACAO, exp.GESTO_DO_LIVRE, exp.GESTO_DE_SOLTAR,
-           exp.GESTO_DE_GRAVAR, exp.GESTO_DE_ESQUECER_A_FORMA)
+           exp.GESTO_DE_GRAVAR, exp.GESTO_DE_ESQUECER_A_FORMA, exp.GESTO_DO_MODO)
