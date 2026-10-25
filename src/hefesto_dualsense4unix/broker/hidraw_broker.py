@@ -446,6 +446,106 @@ def validate_physical_input_node(
     return base
 
 
+# O ACIONADOR DECLARADO (O-ACIONADOR-LE-O-APARELHO-DECLARADO-SEM-O-GRUPO-INPUT-01, 25/10/2026).
+# O teclado ou o pedal do «Usar como botões de» não ganha a ACL da sessão (o uaccess só cobre o
+# joystick), e o grupo `input` é proibido (item 3.3 de `docs/history/RESPOSTAS_V1.md`): quem
+# está nele lê todo teclado da máquina. O broker serve o fd do nó do aparelho que o pedido nomeia
+# pela identidade, só a quem pede, sem mexer na permissão do nó: o fd morre com quem o recebeu.
+
+#: Os botões que só controle de jogo tem (de ``BTN_JOYSTICK`` a ``BTN_THUMBR`` e os
+#: ``BTN_TRIGGER_HAPPY``): a permissão do controle é do uaccess, e a do DualSense, do broker.
+_MASCARA_DE_CONTROLE = sum(1 << b for b in (*range(0x120, 0x140), *range(0x2C0, 0x2E8)))
+_CHAVE_DO_ACIONADOR_RE = re.compile(r"^[0-9a-f]{4}:[0-9a-f]{4}:[0-9a-f]{8}$")
+#: Onde moram os nós do uinput (o teclado e o mouse virtuais do Hefesto entre eles).
+_RAIZ_DO_UINPUT = "/devices/virtual/input/"
+
+
+def _ler_o_sys(caminho: str) -> str:
+    try:
+        with open(caminho, encoding="utf-8", errors="replace") as fh:
+            return fh.read().strip()
+    except OSError:
+        return ""
+
+
+def _hex4_do_sys(valor: str) -> str:
+    texto = valor.strip().lower().removeprefix("0x")
+    try:
+        return f"{int(texto, 16) & 0xFFFF:04x}" if texto else "0000"
+    except ValueError:
+        return "0000"
+
+
+def chave_do_acionador_no_sys(sys_dir: str) -> str:
+    """A identidade do nó ``sys_dir`` (``/sys/class/input/eventN``), como o daemon a declara.
+
+    A conta é a de ``utils.maquina.chave_do_acionador`` (o vendor, o product e oito hex do
+    resumo do nome e do caminho físico); o broker não importa o pacote, e a régua confere que as
+    duas dão o mesmo."""
+    dentro = f"{sys_dir}/device"
+    nome = _ler_o_sys(f"{dentro}/name")
+    fisico = _ler_o_sys(f"{dentro}/phys")
+    resumo = hashlib.sha1(f"{nome}\0{fisico}".encode(), usedforsecurity=False).hexdigest()[:8]
+    return (f"{_hex4_do_sys(_ler_o_sys(f'{dentro}/id/vendor'))}:"
+            f"{_hex4_do_sys(_ler_o_sys(f'{dentro}/id/product'))}:{resumo}")
+
+
+def _teclas_no_sys(sys_dir: str) -> int:
+    palavras = _ler_o_sys(f"{sys_dir}/device/capabilities/key").split()
+    try:
+        return int("".join(f"{int(p, 16):016x}" for p in palavras), 16) if palavras else 0
+    except ValueError:
+        return 0
+
+
+def motivo_de_recusar_o_acionador(
+    node: object,
+    chave: object,
+    *,
+    dev_input_root: str = DEV_INPUT_ROOT,
+    sys_class_input: str = "/sys/class/input",
+    stat_fn: Callable[[str], Any] = os.stat,
+    lstat_fn: Callable[[str], Any] = os.lstat,
+) -> str | None:
+    """O erro do pedido de abrir ``node`` como o acionador ``chave``; None = é ele, e serve.
+
+    1. caminho canônico literal e chave na forma ``vvvv:pppp:hhhhhhhh``;
+    2. nem symlink, e char device com o ``(major, minor)`` do ``/sys/class/input/<base>/dev``;
+    3. a identidade do nó no ``/sys`` é a chave pedida (o número do ``event`` não é a identidade);
+    4. tem tecla e não é controle de jogo, nem da Sony, nem do uinput.
+
+    NUNCA abre o device; na dúvida, recusa."""
+    base = canonical_input_base(node, dev_input_root=dev_input_root)
+    if base is None or not isinstance(node, str):
+        return "reject_bad_path"
+    if not isinstance(chave, str) or _CHAVE_DO_ACIONADOR_RE.match(chave) is None:
+        return "reject_bad_path"
+    sys_dir = f"{sys_class_input}/{base}"
+    try:
+        if stat_mod.S_ISLNK(lstat_fn(node).st_mode):
+            return "reject_bad_path"
+        st = stat_fn(node)
+        with open(f"{sys_dir}/dev", encoding="ascii") as fh:
+            dev_sysfs = fh.read().strip()
+    except OSError:
+        return "reject_stale_node"
+    if not stat_mod.S_ISCHR(st.st_mode) or dev_sysfs != (
+        f"{os.major(st.st_rdev)}:{os.minor(st.st_rdev)}"
+    ):
+        return "reject_stale_node"
+    if chave_do_acionador_no_sys(sys_dir) != chave:
+        return "reject_nao_e_o_aparelho_declarado"
+    teclas = _teclas_no_sys(sys_dir)
+    if (
+        not teclas
+        or teclas & _MASCARA_DE_CONTROLE
+        or chave.startswith(f"{PHYS_VENDOR:04x}:")
+        or _RAIZ_DO_UINPUT in os.path.realpath(sys_dir)
+    ):
+        return "reject_controle_de_jogo"
+    return None
+
+
 _ACL_XATTR = "system.posix_acl_access"
 _SEM_ACL = frozenset({errno.ENODATA, errno.EOPNOTSUPP})
 _ACL_VERSION = 2
@@ -892,6 +992,30 @@ class FsAclOps:
             os.close(fd)
             raise StaleNodeError(node) from None
         if _e_o_nosso_vpad(uevent, pai, bus):
+            os.close(fd)
+            raise StaleNodeError(node)
+        return fd
+
+    def open_acionador(self, node: str, base: str, chave: str) -> int:
+        """open(2) só de leitura do nó do acionador declarado + revalidação pós-open NO fd.
+
+        O rdev do fd tem de casar o sysfs do `base`, e a identidade do `base` no sysfs tem de
+        ser a `chave` de novo (o nó que trocou de aparelho entre a validação e o open sai
+        como `StaleNodeError`). Só leitura: a ponte lê as teclas e prende o nó, nada escreve."""
+        fd = os.open(node, os.O_RDONLY | os.O_NONBLOCK | os.O_CLOEXEC | os.O_NOFOLLOW)
+        sys_dir = f"{self._sys_class_input}/{base}"
+        try:
+            st = os.fstat(fd)
+            with open(f"{sys_dir}/dev", encoding="ascii") as fh:
+                dev_sysfs = fh.read().strip()
+        except OSError:
+            os.close(fd)
+            raise StaleNodeError(node) from None
+        if (
+            not self._e_char_device(st.st_mode)
+            or dev_sysfs != f"{os.major(st.st_rdev)}:{os.minor(st.st_rdev)}"
+            or chave_do_acionador_no_sys(sys_dir) != chave
+        ):
             os.close(fd)
             raise StaleNodeError(node)
         return fd
@@ -1401,6 +1525,7 @@ class BrokerState:
         sys_class_input: str = "/sys/class/input",
         sys_bus_hid_drivers: str = SYS_BUS_HID_DRIVERS,
         validator_entrada: Callable[[str], str | None] | None = None,
+        validator_acionador: Callable[[str, str], str | None] | None = None,
         reinicio_sem_abrir: Callable[[], bool] = reinicio_sem_abrir_pedido,
         pad_ops: PadUsbOps | None = None,
         marca_da_entrega: str | None = None,
@@ -1436,6 +1561,8 @@ class BrokerState:
         )
         self._validator = validator
         self._validator_entrada = validator_entrada
+        #: O motivo de recusar o acionador (``None`` = serve); o teste troca o ``stat``.
+        self._validator_acionador = validator_acionador
         self._dev_root = dev_root
         self._dev_input_root = dev_input_root
         self._sys_class_hidraw = sys_class_hidraw
@@ -1682,6 +1809,9 @@ class BrokerState:
         if cmd == "restore_all":
             return (self._cmd_restore_all(conn_id), None)
         if cmd == "open":
+            if "acionador" in request:
+                return self._cmd_open_acionador(
+                    conn_id, request.get("node"), request.get("acionador"))
             return self._cmd_open(conn_id, request.get("node"))
         if cmd == "pad_usb_montar":
             return self._cmd_pad_usb_montar(conn_id, request)
@@ -2029,6 +2159,41 @@ class BrokerState:
                 self._log("pad_usb_desmontar_falhou", gadget=gadget, errno=exc.errno)
                 continue
             self._log("pad_usb_desmontado_no_eof", gadget=gadget, conn=conn_id)
+
+    def _cmd_open_acionador(
+        self, conn_id: int, node: object, chave: object
+    ) -> tuple[dict[str, object], int | None]:
+        """O `open` do nó de um acionador declarado: o fd só de leitura, só a quem pede."""
+        raw = node if isinstance(node, str) else None
+        validar = self._validator_acionador or (
+            lambda n, c: motivo_de_recusar_o_acionador(
+                n, c, dev_input_root=self._dev_input_root,
+                sys_class_input=self._sys_class_input))
+        motivo = validar(raw, chave) if raw is not None and isinstance(chave, str) else (
+            "reject_bad_path")
+        if motivo is not None:
+            self._log("acionador_recusado", node=raw, motivo=motivo)
+            return ({"ok": False, "cmd": "open", "node": raw, "error": motivo}, None)
+        assert raw is not None and isinstance(chave, str)
+        base = os.path.basename(raw)
+        abrir = getattr(self._ops, "open_acionador", None)
+        if not callable(abrir):
+            return ({"ok": False, "cmd": "open", "node": raw, "error": "reject_sem_entrada"},
+                    None)
+        try:
+            fd = abrir(raw, base, chave)
+        except StaleNodeError:
+            self._log("open_stale_node", node=raw)
+            return ({"ok": False, "cmd": "open", "node": raw, "error": "reject_stale_node"}, None)
+        except OSError as exc:
+            self._log("open_failed", node=raw, errno=exc.errno)
+            return (
+                {"ok": False, "cmd": "open", "node": raw, "error": "open_failed",
+                 "errno": exc.errno},
+                None,
+            )
+        self._log("acionador_fd_servido", node=raw, conn=conn_id)
+        return ({"ok": True, "cmd": "open", "node": raw, "state": "acionador"}, fd)
 
     def _cmd_open_entrada(
         self, conn_id: int, raw: str

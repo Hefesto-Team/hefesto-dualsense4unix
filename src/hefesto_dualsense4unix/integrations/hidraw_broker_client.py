@@ -139,8 +139,21 @@ class HidrawBrokerClient:
 
     def abrir_no(self, node: str) -> tuple[int | None, str]:
         """`(fd, motivo)` — o `open` do broker COM a razão dita em português."""
+        return self._abrir_pelo_pedido({"cmd": "open", "node": node}, node)
+
+    def abrir_acionador(self, node: str, chave: str) -> tuple[int | None, str]:
+        """`(fd, motivo)` do nó do acionador declarado `chave`, só de leitura.
+
+        O broker confere que o nó é o aparelho da chave, e que não é controle de jogo: a
+        permissão é do aparelho declarado, e só dele (nunca o grupo `input`)."""
+        return self._abrir_pelo_pedido(
+            {"cmd": "open", "node": node, "acionador": chave}, node)
+
+    def _abrir_pelo_pedido(
+        self, pedido: dict[str, Any], node: str
+    ) -> tuple[int | None, str]:
         with self._lock:
-            response, fds = self._request_with_fds({"cmd": "open", "node": node})
+            response, fds = self._request_with_fds(pedido)
         if response is not None and response.get("ok") and len(fds) == 1:
             estado = response.get("state")
             with contextlib.suppress(Exception):

@@ -18,6 +18,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import re
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
@@ -38,6 +39,7 @@ from hefesto_dualsense4unix.integrations.uinput_gamepad import (
     UinputGamepad,
 )
 from hefesto_dualsense4unix.utils.maquina import (
+    FRASE_SEM_PERMISSAO_DE_LER,
     MaquinaConfig,
     chave_do_acionador,
     fundir_declaracao,
@@ -584,7 +586,7 @@ def test_o_aparelho_que_o_sistema_nao_deixa_ler_falha_o_clique_e_nao_fica_espera
 
     monkeypatch.setattr(a08, "_ABRIR_O_EVENTO", recusar)
     a08.usar_como_botoes(None, {"alvo": CHAVE}, None)
-    with pytest.raises(RuntimeError, match="não deixa o Hefesto ler"):
+    with pytest.raises(RuntimeError, match=re.escape(FRASE_SEM_PERMISSAO_DE_LER)):
         a08.acionador_nova_tecla(None, {}, None)
     assert not a08._RASCUNHO.esperando
 

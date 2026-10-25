@@ -53,9 +53,8 @@ def a08() -> Any:
 
 
 def test_a_frase_diz_o_que_fazer() -> None:
-    """A frase nomeia o grupo e o passo que falta: entrar nele e sair da sessão."""
-    assert "grupo input" in FRASE and "saia da sessão" in FRASE
-    assert "usermod -aG input" in FRASE
+    """A frase manda ao doctor, que diz o que falta; grupo nenhum (item 3.3 do RESPOSTAS_V1)."""
+    assert "doctor" in FRASE and "grupo" not in FRASE
 
 
 def test_abrir_sem_permissao_levanta_a_frase(monkeypatch: pytest.MonkeyPatch) -> None:

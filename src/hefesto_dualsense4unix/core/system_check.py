@@ -198,60 +198,48 @@ def system_warnings() -> list[str]:
     return warnings
 
 
-#: Os botões que só controle de jogo tem: de ``BTN_JOYSTICK`` a ``BTN_THUMBR`` (0x120 a 0x13f) e os
-#: ``BTN_TRIGGER_HAPPY`` (0x2c0 a 0x2e7). É o bloco pelo qual o udev marca o joystick, e o
-#: joystick ganha a ACL da sessão (``uaccess``): o manche e o volante sem ``BTN_SOUTH`` também.
-_MASCARA_DE_CONTROLE = sum(1 << b for b in (*range(0x120, 0x140), *range(0x2C0, 0x2E8)))
-#: O DualSense fica fora da medida: a permissão do nó dele é do broker, que a tira para o jogo.
-_VENDOR_DA_SONY = "054c"
-LINHA_LE_A_ENTRADA = "o Hefesto lê o teclado e o pedal desta máquina"
-LINHA_SEM_ENTRADA_PARA_MEDIR = "nenhum teclado ou pedal ligado para medir a permissão de ler"
-
-
-def _teclas_do_no(base: Path, evento: str) -> int:
-    """O ``capabilities/key`` do nó em ``/sys``, como inteiro (0 = sem tecla ou ilegível)."""
-    try:
-        palavras = (base / evento / "device" / "capabilities" / "key").read_text(
-            encoding="utf-8").split()
-        return int("".join(f"{int(p, 16):016x}" for p in palavras), 16) if palavras else 0
-    except (OSError, ValueError):
-        return 0
+LINHA_LE_A_ENTRADA = "o Hefesto lê o teclado e o pedal declarados em «Usar como botões de»"
+LINHA_SEM_ACIONADOR_DECLARADO = "nenhum teclado ou pedal declarado em «Usar como botões de»"
+LINHA_ACIONADOR_FORA = "o teclado ou o pedal declarado não está ligado nesta máquina"
 
 
 def permissao_de_ler_a_entrada(
-    *, raiz: str | None = None, abrir: Callable[[str], Any] | None = None
+    *,
+    raiz: str | None = None,
+    abrir: Callable[[str], Any] | None = None,
+    declarados: Any = None,
 ) -> tuple[str, str]:
-    """``(tag, mensagem)`` de «este usuário lê um teclado ou um pedal comum?», pela medida.
+    """``(tag, mensagem)`` de «o Hefesto lê os aparelhos declarados no «Usar como botões de»?».
 
-    Abre para leitura, pelo mesmo dono da 08 e do daemon
-    (``utils.maquina.abrir_o_aparelho_de_entrada``, que nunca prende), um nó de evento que tem
-    tecla e não é controle de jogo, nem DualSense, nem do Hefesto, e o fecha na hora. A
-    permissão pode vir do grupo ``input`` ou de uma ACL do udev; a medida vale para as duas.
-    Sem permissão, a frase é a do dono (``FRASE_SEM_PERMISSAO_DE_LER``).
+    Só o aparelho declarado (o ``acionadores`` do ``maquina.json``) se mede, e pelo mesmo dono
+    da 08 e do daemon (``utils.maquina.abrir_o_aparelho_de_entrada``, que nunca prende e pede o
+    nó ao broker quando o sistema não deixa abrir). Sem declaração, ``[INFO]``; ``[WARN]`` só
+    quando um aparelho declarado e ligado não abre, com a frase do dono.
     """
     from hefesto_dualsense4unix.utils import maquina
 
+    if declarados is None:
+        declarados = maquina.carregar_maquina().acionadores
+    chaves = {c for c, v in (declarados or {}).items() if isinstance(c, str) and v}
+    if not chaves:
+        return ("[INFO]", LINHA_SEM_ACIONADOR_DECLARADO)
     base = Path(maquina.RAIZ_DAS_ENTRADAS if raiz is None else raiz)
     abrir = abrir or maquina.abrir_o_aparelho_de_entrada
-    recusou = False
-    candidatos = [
-        a for a in maquina.aparelhos_de_entrada(base)
-        if a.vendor.lower() != _VENDOR_DA_SONY and "hefesto" not in a.nome.lower()
-        and (teclas := _teclas_do_no(base, a.evento)) and not teclas & _MASCARA_DE_CONTROLE
-    ]
-    for aparelho in candidatos:
+    ligados = [a for a in maquina.aparelhos_de_entrada(base) if a.chave in chaves]
+    leu = False
+    for aparelho in ligados:
         try:
             dispositivo = abrir(aparelho.evento)
-        except OSError as erro:
-            # O nó que some entre o ``/sys`` e o ``/dev`` não mede nada; o que recusa, mede.
-            recusou = recusou or isinstance(erro, PermissionError)
-        else:
-            with contextlib.suppress(OSError):
-                dispositivo.close()
-            return ("[ OK ]", LINHA_LE_A_ENTRADA)
-    if recusou:
-        return ("[WARN]", maquina.FRASE_SEM_PERMISSAO_DE_LER)
-    return ("[INFO]", LINHA_SEM_ENTRADA_PARA_MEDIR)
+        except PermissionError:
+            nome = aparelho.nome or aparelho.evento
+            return ("[WARN]", f"«{nome}»: {maquina.FRASE_SEM_PERMISSAO_DE_LER}")
+        except OSError:
+            # O nó que some entre o ``/sys`` e o ``/dev`` não mede nada.
+            continue
+        with contextlib.suppress(OSError):
+            dispositivo.close()
+        leu = True
+    return ("[ OK ]", LINHA_LE_A_ENTRADA) if leu else ("[INFO]", LINHA_ACIONADOR_FORA)
 
 
 def contrato_do_pad_em_usb(

@@ -587,31 +587,62 @@ def _ler_do_sys(caminho: Any) -> str:
         return ""
 
 
-#: A recusa de ler um teclado ou um pedal, com o que fazer. Uma frase só: o gesto da 08 e a ponte
-#: do daemon dizem esta, nenhum inventa a própria.
+#: A recusa de ler um teclado ou um pedal, com o que fazer. Uma frase só: o gesto da 08, a ponte
+#: do daemon e o doctor dizem esta. Nunca o grupo ``input`` (item 3.3 de
+#: ``docs/history/RESPOSTAS_V1.md``): quem está nele lê todo teclado da máquina.
 FRASE_SEM_PERMISSAO_DE_LER: Final = (
-    "o sistema não deixa o Hefesto ler este aparelho: entre no grupo input "
-    "(sudo usermod -aG input $USER) e saia da sessão")
+    "o Hefesto não conseguiu abrir este aparelho pelo serviço dele: "
+    "rode «hefesto-dualsense4unix doctor» para ver o que falta")
+
+#: Quanto o pedido do acionador espera o broker: a ponte pergunta de dentro do tique.
+_PRAZO_DO_BROKER_DO_ACIONADOR_S = 0.5
 
 
 class SemPermissaoDeLerError(PermissionError):
-    """O ``PermissionError`` da abertura do nó, dito pela frase que ensina a liberar."""
+    """O ``PermissionError`` da abertura do nó, dito pela frase do que fazer."""
 
     def __str__(self) -> str:
         return FRASE_SEM_PERMISSAO_DE_LER
 
 
-def abrir_o_aparelho_de_entrada(evento: str) -> Any:
+def _pedir_o_acionador_ao_broker(no: str, chave: str) -> int | None:
+    """O fd só de leitura do nó pelo ``open`` do broker, numa conexão curta; None = não serviu."""
+    from hefesto_dualsense4unix.integrations.hidraw_broker_client import HidrawBrokerClient
+
+    cliente = HidrawBrokerClient(timeout_s=_PRAZO_DO_BROKER_DO_ACIONADOR_S)
+    try:
+        fd = cliente.abrir_acionador(no, chave)[0]
+    except Exception:
+        fd = None
+    finally:
+        cliente.close()
+    return fd
+
+
+def abrir_o_aparelho_de_entrada(
+    evento: str, *, pedir_ao_broker: Callable[[str, str], int | None] | None = None
+) -> Any:
     """O ``/dev/input/<evento>`` aberto pelo evdev, sem prender (quem prende é a ponte, no jogo).
 
-    Sem permissão de ler o nó, levanta ``SemPermissaoDeLerError`` (a frase do que fazer)."""
+    O nó que o sistema não deixa abrir se pede ao broker pela identidade do aparelho (a
+    :func:`chave_do_acionador` que o ``/sys`` diz dele): o fd é só de quem pede, e a permissão
+    do nó não muda. Sem o fd, levanta ``SemPermissaoDeLerError`` (a frase do que fazer)."""
     import evdev
 
+    caminho = f"/dev/input/{evento}"
     try:
-        return evdev.InputDevice(f"/dev/input/{evento}")
+        return evdev.InputDevice(caminho)
     except PermissionError as exc:
-        raise SemPermissaoDeLerError(exc.errno, FRASE_SEM_PERMISSAO_DE_LER,
-                                f"/dev/input/{evento}") from exc
+        recusa = exc
+    chave = next((a.chave for a in aparelhos_de_entrada() if a.evento == evento), None)
+    fd = None if chave is None else (pedir_ao_broker or _pedir_o_acionador_ao_broker)(
+        caminho, chave)
+    if fd is None:
+        raise SemPermissaoDeLerError(recusa.errno, FRASE_SEM_PERMISSAO_DE_LER,
+                                     caminho) from recusa
+    from hefesto_dualsense4unix.core.evdev_reader import _input_device_do_fd
+
+    return _input_device_do_fd(fd, caminho)
 
 
 def aparelhos_de_entrada(raiz: Any = None) -> list[AparelhoDeEntrada]:

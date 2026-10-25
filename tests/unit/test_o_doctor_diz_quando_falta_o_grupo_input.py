@@ -1,7 +1,10 @@
-"""O doctor diz quando o sistema não deixa ler o teclado ou o pedal (o acionador da aba Conexões).
+"""O doctor diz quando o Hefesto não consegue ler o teclado ou o pedal declarado (aba Conexões).
 
-A pergunta tem um dono só, ``system_check.permissao_de_ler_a_entrada``, que abre um nó de evento
-comum pelo mesmo dono da 08 (``utils.maquina.abrir_o_aparelho_de_entrada``) e o fecha na hora.
+A pergunta tem um dono só, ``system_check.permissao_de_ler_a_entrada``, que abre só o aparelho
+declarado em «Usar como botões de», pelo mesmo dono da 08 e do daemon
+(``utils.maquina.abrir_o_aparelho_de_entrada``, que pede o nó ao broker quando o sistema não deixa
+abrir), e o fecha na hora. O teclado que ninguém declarou não é pergunta: grupo nenhum resolve
+nada aqui (item 3.3 do RESPOSTAS_V1).
 """
 from __future__ import annotations
 
@@ -45,17 +48,30 @@ def _recusa(evento: str) -> Any:
         13, maquina.FRASE_SEM_PERMISSAO_DE_LER, f"/dev/input/{evento}")
 
 
-def test_o_aparelho_que_recusa_a_leitura_da_warn_com_a_frase_do_dono(tmp_path: Path) -> None:
+def _chave(nome: str, vendor: str = "1a2c") -> str:
+    chave: str = maquina.chave_do_acionador(vendor, "0002", nome, "usb-0000:00:14.0-1/input0")
+    return chave
+
+
+def _declarados(*nomes: str) -> dict[str, Any]:
+    return dict(maquina.MaquinaConfig.model_validate({"acionadores": {
+        _chave(nome): {"nome": nome, "controle": "aabbcc000002", "teclas": {"28": "cross"}}
+        for nome in nomes}}).acionadores)
+
+
+def test_o_declarado_que_recusa_a_leitura_da_warn_com_a_frase_do_dono(tmp_path: Path) -> None:
     _no(tmp_path, "event3", nome="Teclado USB", teclas=TECLAS_DE_TECLADO)
 
-    tag, mensagem = system_check.permissao_de_ler_a_entrada(raiz=str(tmp_path), abrir=_recusa)
+    tag, mensagem = system_check.permissao_de_ler_a_entrada(
+        raiz=str(tmp_path), abrir=_recusa, declarados=_declarados("Teclado USB"))
 
     assert tag == "[WARN]"
-    assert mensagem is maquina.FRASE_SEM_PERMISSAO_DE_LER
+    assert mensagem == f"«Teclado USB»: {maquina.FRASE_SEM_PERMISSAO_DE_LER}"
 
 
-def test_o_aparelho_que_abre_da_ok_e_fecha_na_hora(tmp_path: Path) -> None:
+def test_o_declarado_que_abre_da_ok_e_fecha_na_hora(tmp_path: Path) -> None:
     _no(tmp_path, "event3", nome="Pedal USB", teclas=TECLAS_DE_TECLADO)
+    _no(tmp_path, "event4", nome="Teclado da casa", teclas=TECLAS_DE_TECLADO)
     abertos: list[tuple[str, _Aberto]] = []
 
     def abrir(evento: str) -> _Aberto:
@@ -63,71 +79,55 @@ def test_o_aparelho_que_abre_da_ok_e_fecha_na_hora(tmp_path: Path) -> None:
         abertos.append((evento, aberto))
         return aberto
 
-    tag, mensagem = system_check.permissao_de_ler_a_entrada(raiz=str(tmp_path), abrir=abrir)
+    tag, mensagem = system_check.permissao_de_ler_a_entrada(
+        raiz=str(tmp_path), abrir=abrir, declarados=_declarados("Pedal USB"))
 
     assert (tag, mensagem) == ("[ OK ]", system_check.LINHA_LE_A_ENTRADA)
-    assert [e for e, _ in abertos] == ["event3"]
+    assert [e for e, _ in abertos] == ["event3"], "só o declarado se abre"
     assert abertos[0][1].fechado, "o doctor nunca segura o aparelho aberto"
 
 
-def test_a_pasta_vazia_da_info(tmp_path: Path) -> None:
-    def abrir(evento: str) -> Any:
-        raise AssertionError(f"nada para abrir, e abriu {evento}")
-
-    tag, mensagem = system_check.permissao_de_ler_a_entrada(raiz=str(tmp_path), abrir=abrir)
-
-    assert (tag, mensagem) == ("[INFO]", system_check.LINHA_SEM_ENTRADA_PARA_MEDIR)
-
-
-def test_controle_dualsense_e_no_do_hefesto_ficam_fora_da_medida(tmp_path: Path) -> None:
-    """O nó de controle e o do DualSense têm a permissão do broker; o do Hefesto é nosso."""
+def test_sem_declaracao_da_info_e_nao_abre_teclado_nenhum(tmp_path: Path) -> None:
+    """O teclado da casa, o controle e o DualSense: sem declaração, nada se abre."""
     _no(tmp_path, "event1", nome="Pro Controller", vendor="057e", teclas=TECLAS_DE_CONTROLE)
     _no(tmp_path, "event2", nome="DualSense Wireless Controller Touchpad", vendor="054c",
         teclas=TECLAS_DE_TECLADO)
-    _no(tmp_path, "event4", nome="Hefesto Virtual Keyboard", teclas=TECLAS_DE_TECLADO)
-    _no(tmp_path, "event5", nome="Power Button", teclas="")
-    abertos: list[str] = []
-
-    def abrir(evento: str) -> _Aberto:
-        abertos.append(evento)
-        return _Aberto()
-
-    tag, _ = system_check.permissao_de_ler_a_entrada(raiz=str(tmp_path), abrir=abrir)
-
-    assert tag == "[INFO]"
-    assert abertos == []
-
-
-def test_o_manche_sem_btn_south_tambem_fica_fora_da_medida(tmp_path: Path) -> None:
-    """O joystick tem a ACL da sessão: abri-lo daria [ OK ] numa máquina que não lê o teclado."""
-    _no(tmp_path, "event1", nome="Manche USB", vendor="044f", teclas=TECLAS_DE_MANCHE)
     _no(tmp_path, "event3", nome="Teclado USB", teclas=TECLAS_DE_TECLADO)
-    abertos: list[str] = []
+    _no(tmp_path, "event5", nome="Manche USB", vendor="044f", teclas=TECLAS_DE_MANCHE)
 
-    def abrir(evento: str) -> _Aberto:
-        abertos.append(evento)
-        if evento == "event3":
-            _recusa(evento)
-        return _Aberto()
+    def abrir(evento: str) -> Any:
+        raise AssertionError(f"sem declaração, abriu {evento}")
 
-    tag, _ = system_check.permissao_de_ler_a_entrada(raiz=str(tmp_path), abrir=abrir)
+    linha = system_check.permissao_de_ler_a_entrada(raiz=str(tmp_path), abrir=abrir,
+                                                     declarados={})
 
-    assert tag == "[WARN]"
-    assert abertos == ["event3"]
+    assert linha == ("[INFO]", system_check.LINHA_SEM_ACIONADOR_DECLARADO)
+    assert cmd_doctor._gravidade_das_linhas([linha]) == 0
 
 
-def test_um_que_abre_vence_o_que_recusa(tmp_path: Path) -> None:
+def test_o_declarado_fora_da_porta_da_info(tmp_path: Path) -> None:
+    _no(tmp_path, "event3", nome="Teclado da casa", teclas=TECLAS_DE_TECLADO)
+
+    linha = system_check.permissao_de_ler_a_entrada(
+        raiz=str(tmp_path), abrir=_recusa, declarados=_declarados("Pedal USB"))
+
+    assert linha == ("[INFO]", system_check.LINHA_ACIONADOR_FORA)
+
+
+def test_o_declarado_que_recusa_vence_o_que_abre(tmp_path: Path) -> None:
+    """Dois declarados, um lê e outro não: o que não lê é o que falta dizer."""
     _no(tmp_path, "event3", nome="Teclado A", teclas=TECLAS_DE_TECLADO)
     _no(tmp_path, "event7", nome="Teclado B", teclas=TECLAS_DE_TECLADO)
 
     def abrir(evento: str) -> _Aberto:
-        if evento == "event3":
+        if evento == "event7":
             _recusa(evento)
         return _Aberto()
 
-    tag, _ = system_check.permissao_de_ler_a_entrada(raiz=str(tmp_path), abrir=abrir)
+    tag, mensagem = system_check.permissao_de_ler_a_entrada(
+        raiz=str(tmp_path), abrir=abrir, declarados=_declarados("Teclado A", "Teclado B"))
 
-    assert tag == "[ OK ]"
+    assert tag == "[WARN]" and "«Teclado B»" in mensagem
 
 
 def test_por_omissao_a_pergunta_abre_pelo_dono_da_08(
@@ -136,10 +136,11 @@ def test_por_omissao_a_pergunta_abre_pelo_dono_da_08(
     _no(tmp_path, "event3", nome="Teclado USB", teclas=TECLAS_DE_TECLADO)
     monkeypatch.setattr(maquina, "abrir_o_aparelho_de_entrada", _recusa)
 
-    tag, mensagem = system_check.permissao_de_ler_a_entrada(raiz=str(tmp_path))
+    tag, mensagem = system_check.permissao_de_ler_a_entrada(
+        raiz=str(tmp_path), declarados=_declarados("Teclado USB"))
 
     assert tag == "[WARN]"
-    assert mensagem is maquina.FRASE_SEM_PERMISSAO_DE_LER
+    assert maquina.FRASE_SEM_PERMISSAO_DE_LER in mensagem
 
 
 def test_o_bloco_do_doctor_imprime_a_resposta_do_dono_e_devolve_a_gravidade(
@@ -184,11 +185,12 @@ def test_a_suite_nunca_abre_o_teclado_desta_maquina() -> None:
     """A fixture da sessão (``tests/conftest.py``) põe a pergunta num ``/sys`` vazio.
 
     Sem ela, o ``doctor_cmd`` dos outros testes abria o aparelho de quem roda e o código de saída
-    dependia do grupo ``input`` dessa pessoa.
+    dependia da permissão dessa pessoa.
     """
     def abrir(evento: str) -> Any:
         raise AssertionError(f"a suíte abriu o {evento} desta máquina")
 
     assert maquina.RAIZ_DAS_ENTRADAS != "/sys/class/input"
-    assert system_check.permissao_de_ler_a_entrada(abrir=abrir) == (
-        "[INFO]", system_check.LINHA_SEM_ENTRADA_PARA_MEDIR)
+    assert system_check.permissao_de_ler_a_entrada(
+        abrir=abrir, declarados=_declarados("Teclado USB")) == (
+        "[INFO]", system_check.LINHA_ACIONADOR_FORA)
