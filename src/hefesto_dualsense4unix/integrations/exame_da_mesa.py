@@ -123,15 +123,13 @@ def energia_do_radio(
     parametro: Path = Path("/sys/module/btusb/parameters/enable_autosuspend"),
     conf: Path = Path("/etc/modprobe.d/hefesto-btusb-no-autosuspend.conf"),
 ) -> Item:
-    """O rádio dos controles está proibido de dormir? (`doctor.sh:2401-2417`)
+    """O rádio dos controles está proibido de dormir? (`doctor.sh:4006-4022`)
 
-    O `btusb` liga o autosuspend do adaptador no probe, por default do módulo;
-    o conf do Hefesto corta na raiz e o esperado pós-boot é ``N``.
-
-    O ramo do meio é o que engana: com o conf JÁ instalado e o módulo ainda com
-    o valor antigo, a cura está no disco e não está valendo — só vale no
-    próximo probe. Verde ali seria dizer que o rádio não dorme enquanto ele
-    ainda dorme.
+    O `btusb` liga o autosuspend do adaptador no probe (default do módulo); o
+    conf do Hefesto corta na raiz e o esperado pós-boot é ``N``. Com o conf no
+    disco e o módulo com o valor antigo, a cura só vale no próximo probe: verde
+    ali diria que o rádio não dorme enquanto ele ainda dorme. Sem o parâmetro,
+    o `btusb` não está carregado, e nada foi medido, com ou sem o conf.
     """
     valor = _texto_de(parametro)
     if valor in ("N", "0"):
@@ -163,6 +161,17 @@ def energia_do_radio(
                 "reinicie o computador."
             ),
         )
+    cura = "Rode a instalação do Hefesto de novo: a regra entra por padrão."
+    if not valor:
+        return Item(
+            chave="energia_do_radio",
+            rotulo=ROTULO_ENERGIA_DO_RADIO,
+            estado=ESTADO_NAO_SEI,
+            porque=(
+                "A regra não está no lugar; nenhum adaptador BT ligado agora."
+            ),
+            cura=cura,
+        )
     return Item(
         chave="energia_do_radio",
         rotulo=ROTULO_ENERGIA_DO_RADIO,
@@ -170,7 +179,7 @@ def energia_do_radio(
         porque=(
             "O sistema pode desligar o adaptador, e o controle cai."
         ),
-        cura="Rode a instalação do Hefesto de novo: a regra entra por padrão.",
+        cura=cura,
     )
 
 
