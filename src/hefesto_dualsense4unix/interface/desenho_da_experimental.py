@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import pathlib
+import re
 from collections.abc import Mapping, Sequence
 from typing import Any, NamedTuple
 
@@ -784,7 +785,7 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
                            porque: str = "", acoes: Sequence[AcaoDaJanela] = (),
                            aparelhos: AparelhosDaJanela | None = None,
                            em_curso: frozenset[tuple[str, str]] = frozenset(),
-                           livre: LivreAoVivo | None = None) -> str:
+                           livre: LivreAoVivo | None = None, controles: str = "") -> str:
     """O conteúdo da janela de uma extensão: um cartão por grupo, «Para» no topo, Cancelar e Guardar.
 
     Cada opção vira uma linha do cartão do grupo dela; o Guardar grava o rascunho. ``agora`` são os
@@ -792,6 +793,8 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
     botão no topo, os dois só com ``mod``. Com ``agora``, as ações, os ``aparelhos`` ou o ``livre``, é
     o arranjo C: a coluna à esquerda e os grupos em abas (``aba`` é a aberta); ``em_curso`` são os
     pares (ação, alvo) que esperam a extensão, e a opção ``livre`` vai à faixa de baixo.
+    ``controles`` é a aba dos cartões dos controles de cada aparelho (``aparelhos_controles``), que
+    só aparece quando algum aparelho do ``estado`` os tem.
     """
     parar = parar_tudo_html(mod) if parar_tudo and mod else ""
     agora = agora if mod else ()
@@ -800,9 +803,12 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
     opcoes = [o for o in opcoes if o.tipo != "livre"]
     acoes = tuple(acoes) if mod else ()
     gestao = Gestao(mod, aparelhos, estado, em_curso) if mod and aparelhos else None
-    if agora or acoes or gestao or livre_op:
-        if acoes or (gestao and gestao.aparelhos.grupo):
-            ajustes = _abas_com_as_pecas(opcoes, aba, mod=mod, acoes=acoes, gestao=gestao)
+    cartoes = controles_dos_aparelhos_html(mod, estado, em_curso) if mod and controles else ""
+    cc = (controles, cartoes) if cartoes else ("", "")
+    if agora or acoes or gestao or livre_op or cartoes:
+        if acoes or (gestao and gestao.aparelhos.grupo) or cartoes:
+            ajustes = _abas_com_as_pecas(opcoes, aba, mod=mod, acoes=acoes, gestao=gestao,
+                                         controles=cc)
         else:
             ajustes = _abas_das_opcoes(opcoes, aba) if opcoes else vazio
         faixa = faixa_do_livre_html(livre_op, livre or LivreAoVivo(), gestao) if livre_op else ""
@@ -1042,7 +1048,7 @@ def telas() -> str:
             "Minha extensão", OPCOES_DO_DESENHO_DAS_PECAS, mod="exemplo", agora=AGORA_DO_DESENHO,
             estado=ESTADO_DOS_GERIDOS_DO_DESENHO, parar_tudo=True, acoes=ACOES_DO_DESENHO,
             aparelhos=APARELHOS_DO_DESENHO, em_curso=frozenset({("testar", "ap-2")}),
-            livre=LIVRE_DO_DESENHO))
+            livre=LIVRE_DO_DESENHO, controles=CONTROLES_DO_DESENHO))
         partes.append(texto.strip())
     return ("\n".join(partes) + f"\n{sprite_dos_botoes()}"
             f"\n<script data-aba=\"experimental\">\n{SCRIPT}</script>\n")
@@ -1228,24 +1234,131 @@ def aparelhos_na_coluna_html(g: Gestao) -> str:
     return "".join(linhas)
 
 
+# OS CONTROLES DE CADA APARELHO — 24/10/2026, O-APARELHO-DA-EXTENSAO-DIZ-OS-CONTROLES-DELE-NA-JANELA-01,
+# a aba «Luz» do arranjo C. O aparelho do ``acessorios.estado`` declara os ``controles`` que só ele
+# tem (uma chave, uma paleta, uma escolha), e a aba ``aparelhos_controles.grupo`` desenha um cartão
+# por aparelho que os tem. O cartão mostra o valor do ESTADO, nunca o do clique: o clique pede, e o
+# ponto só acende quando a extensão devolve o estado novo (até lá, «em curso»).
+
+#: O rótulo da linha da paleta quando o controle não traz o dele.
+ROTULO_DA_PALETA = "Cor"
+
+
+def com_controles(estado: Mapping[str, Any] | None) -> list[dict[str, Any]]:
+    """Os aparelhos geridos que publicaram ``controles``: só eles ganham cartão."""
+    return [ap for ap in _aparelhos_geridos(estado) if ap.get("controles")]
+
+
+def _fundo_do_ponto(cor: Any) -> str:
+    """A cor do ponto da paleta; a lista de duas ou três vira fatias iguais, como no arranjo C."""
+    cores = [c for c in (cor if isinstance(cor, list) else [cor])
+             if isinstance(c, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", c)]
+    if len(cores) < 2:
+        return cores[0] if cores else "transparent"
+    passo = 360 // len(cores)
+    fatias = ",".join(f"{c} 0 {passo * (n + 1)}deg" if n + 1 < len(cores) else f"{c} 0"
+                      for n, c in enumerate(cores))
+    return f"conic-gradient({fatias})"
+
+
+def _pedido_do_controle(mod: str, alvo: str, c: Mapping[str, Any], quer: str) -> str:
+    """O gesto de um controle: a ação é o ``id`` dele, o ``alvo`` é o aparelho e ``data-quer`` é o
+    valor pedido (``1``/``0`` na chave, o ``id`` da opção nas outras)."""
+    return (f'data-gesto="{GESTO_DA_ACAO}" data-v="{_a(valor_da_acao(mod, str(c["id"]), alvo))}" '
+            f'data-quer="{_a(quer)}"')
+
+
+def _chave_do_controle(mod: str, alvo: str, c: Mapping[str, Any], em_curso: bool) -> str:
+    ligada = c.get("valor") is True
+    classe = "mj-chave" + (" on" if ligada else "") + (" em-curso" if em_curso else "")
+    dica = str(c.get("dica") or c.get("rotulo") or "")  # noqa-acento: contrato
+    atributo = f' data-dica="{_a(dica)}"' if dica else ""
+    return (f'<span class="{classe}" role="switch" aria-checked="{str(ligada).lower()}" '
+            f'{_pedido_do_controle(mod, alvo, c, "0" if ligada else "1")}{atributo}></span>')
+
+
+def _botoes_do_controle(mod: str, alvo: str, c: Mapping[str, Any], opcoes: Sequence[Any]) -> str:
+    botoes = []
+    for op in opcoes:
+        aceso = op["id"] == c.get("valor")
+        if c["tipo"] == "paleta":
+            miolo = f'<i style="background:{_fundo_do_ponto(op.get("cor"))}"></i>'
+            dica = str(op.get("rotulo") or op["id"])  # noqa-acento: contrato
+        else:
+            miolo, dica = _e(op.get("rotulo") or op["id"]), ""  # noqa-acento: contrato
+        atributo = f' data-dica="{_a(dica)}"' if dica else ""
+        classe = ' class="on"' if aceso else ""
+        botoes.append(f'<button{classe} aria-pressed="{str(aceso).lower()}" '
+                      f'{_pedido_do_controle(mod, alvo, c, str(op["id"]))}{atributo}>{miolo}</button>')
+    return "".join(botoes)
+
+
+def _linha_do_controle(mod: str, alvo: str, c: Mapping[str, Any], em_curso: bool) -> str:
+    """Uma linha do cartão: o rótulo e o controle. A paleta põe as cores de um ponto numa fileira
+    e as de dois ou três noutra, como no arranjo C."""
+    rotulo = str(c.get("rotulo") or (ROTULO_DA_PALETA if c["tipo"] == "paleta" else ""))  # noqa-acento: contrato
+    if c["tipo"] == "chave":
+        miolo = _chave_do_controle(mod, alvo, c, em_curso)
+    else:
+        opcoes = list(c.get("opcoes") or [])  # noqa-acento: contrato
+        fileiras = ([[o for o in opcoes if not isinstance(o.get("cor"), list)],
+                     [o for o in opcoes if isinstance(o.get("cor"), list)]]
+                    if c["tipo"] == "paleta" else [opcoes])
+        classe = "mj-cores" + (" mj-pontos" if c["tipo"] == "paleta" else "") + (
+            " em-curso" if em_curso else "")
+        miolo = "".join(f'<span class="{classe}" role="group">'
+                        f"{_botoes_do_controle(mod, alvo, c, f)}</span>" for f in fileiras if f)
+    dica = f' data-dica="{_a(c["dica"])}"' if c.get("dica") and c["tipo"] != "chave" else ""
+    return (f'<div class="mj-cc-linha" data-controle-do-aparelho="{_a(c["id"])}"{dica}>'
+            f'<span class="mj-cc-rot">{_e(rotulo)}</span>'
+            f'<span class="mj-cc-ctrl">{miolo}</span></div>')
+
+
+def controles_dos_aparelhos_html(mod: str, estado: Mapping[str, Any] | None,
+                                 em_curso: frozenset[tuple[str, str]] = frozenset()) -> str:
+    """Um cartão por aparelho com ``controles``: o nome e, à direita, a primeira chave; embaixo,
+    uma linha por controle. O desligado fica apagado; o aparelho sem controles não ganha cartão."""
+    cartoes = []
+    for ap in com_controles(estado):
+        alvo = str(ap["id"])
+        controles = list(ap["controles"])
+        cabeca = next((c for c in controles if c["tipo"] == "chave"), None)
+        chave = (_chave_do_controle(mod, alvo, cabeca, (str(cabeca["id"]), alvo) in em_curso)
+                 if cabeca else "")
+        linhas = "".join(_linha_do_controle(mod, alvo, c, (str(c["id"]), alvo) in em_curso)
+                         for c in controles if c is not cabeca)
+        fora = "" if ap.get("ligado") is not False else " fora"
+        cartoes.append(
+            f'<div class="mj-ap mj-cc{fora}" data-alvo="{_a(alvo)}"><div class="mj-ap-cab">'
+            f'{icone_html(ICONE_DO_APARELHO, "acessorio")}'
+            f'<span class="mj-ap-nome">{_e(ap.get("nome") or alvo)}</span>{chave}</div>'
+            f"{linhas}</div>")
+    return "".join(cartoes)
+
+
 def _grupos_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], acoes: Sequence[AcaoDaJanela],
-                         aparelhos: AparelhosDaJanela | None) -> list[str]:
-    """As abas na ordem: a dos aparelhos, as das ações e, depois, as das opções."""
-    nomes = [aparelhos.grupo if aparelhos else "", *(a.grupo for a in acoes),
+                         aparelhos: AparelhosDaJanela | None, controles: str = "") -> list[str]:
+    """As abas na ordem: a dos aparelhos, as das ações, a dos controles dos aparelhos (só quando
+    algum os tem) e, depois, as das opções."""
+    nomes = [aparelhos.grupo if aparelhos else "", *(a.grupo for a in acoes), controles,
              *(o.grupo for o in opcoes)]
     ordem = list(dict.fromkeys(n for n in nomes if n))
     return ordem or ["Opções"]
 
 
 def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
-                       acoes: Sequence[AcaoDaJanela], gestao: Gestao | None) -> str:
+                       acoes: Sequence[AcaoDaJanela], gestao: Gestao | None,
+                       controles: tuple[str, str] = ("", "")) -> str:
     """As abas do arranjo C com as ações e a lista dos aparelhos geridos.
 
     Cada aba é: a fileira das ações dela (``#mod-acoes-<n>``), a lista dos aparelhos se ela é a do
-    ``grupo`` deles (``#mod-aparelhos``) e as linhas das opções. A ação sem ``grupo`` vai à primeira
-    aba, como a opção sem grupo. A ponte repinta os dois blocos a cada tique, e a aba não pula.
+    ``grupo`` deles (``#mod-aparelhos``), os cartões dos controles se ela é a do ``grupo`` deles
+    (``#mod-controles``; ``controles`` é o par aba e cartões, a aba vazia quando nenhum aparelho
+    os tem) e as linhas das opções. A ação sem ``grupo`` vai à primeira aba, como a opção sem
+    grupo. A ponte repinta os blocos a cada tique, e a aba não pula.
     """
-    nomes = _grupos_com_as_pecas(opcoes, acoes, gestao.aparelhos if gestao else None)
+    nomes = _grupos_com_as_pecas(opcoes, acoes, gestao.aparelhos if gestao else None,
+                                 controles[0])
     primeiro = nomes[0]
     por_aba: dict[str, list[OpcaoDaJanela]] = {n: [] for n in nomes}
     for o in opcoes:
@@ -1263,6 +1376,8 @@ def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
                           f"{barra_de_acoes_html(mod, acoes_da[nome], em_curso)}</div>")
         if gestao and gestao.aparelhos.grupo == nome:
             partes.append(f'<div class="mj-aps" id="mod-aparelhos">{aparelhos_geridos_html(gestao)}</div>')
+        if controles[0] and controles[0] == nome:
+            partes.append(f'<div class="mj-aps mj-ccs" id="mod-controles">{controles[1]}</div>')
         if por_aba[nome]:
             partes.append(_linhas_das_opcoes(por_aba[nome]))
         telas.append(
@@ -1273,9 +1388,11 @@ def _abas_com_as_pecas(opcoes: Sequence[OpcaoDaJanela], aba: str, *, mod: str,
 
 
 def acoes_por_aba(opcoes: Sequence[OpcaoDaJanela], acoes: Sequence[AcaoDaJanela],
-                  aparelhos: AparelhosDaJanela | None) -> dict[int, tuple[AcaoDaJanela, ...]]:
-    """As ações de cada aba pelo número dela, o mesmo de ``#mod-acoes-<n>``: quem repinta usa."""
-    nomes = _grupos_com_as_pecas(opcoes, acoes, aparelhos)
+                  aparelhos: AparelhosDaJanela | None,
+                  controles: str = "") -> dict[int, tuple[AcaoDaJanela, ...]]:
+    """As ações de cada aba pelo número dela, o mesmo de ``#mod-acoes-<n>``: quem repinta usa.
+    ``controles`` é a aba dos controles dos aparelhos, só quando algum os tem."""
+    nomes = _grupos_com_as_pecas(opcoes, acoes, aparelhos, controles)
     return {n: tuple(a for a in acoes if (a.grupo or nomes[0]) == nome)
             for n, nome in enumerate(nomes) if any((a.grupo or nomes[0]) == nome for a in acoes)}
 
@@ -1387,13 +1504,27 @@ FORMAS_GRAVADAS_DO_DESENHO = {
     "Meu 1": ((0.2, 0.4), (0.6, 0.4), (1.0, 0.6), (0.4, 0.4)),
     "Meu 2": ((0.8, 0.2), (0.0, 0.2), (0.8, 0.2), (0.0, 0.2)),
 }
+#: As cores da paleta do exemplo, as do arranjo C: sete de um ponto e três de três cores.
+CORES_DO_DESENHO: tuple[tuple[str, Any, str], ...] = (
+    ("vermelho", "#ff5555", "Vermelho"), ("verde", "#50fa7b", "Verde"), ("azul", "#6c8cff", "Azul"),
+    ("outono", "#ffb86c", "Outono"), ("magenta", "#ff79c6", "Magenta"), ("agua", "#8be9fd", "Água"),
+    ("lilas", "#bd93f9", "Lilás"),
+    ("fantasia", ["#8be9fd", "#ff79c6", "#ffb86c"], "Fantasia"),
+    ("brasa", ["#bd93f9", "#ffb86c", "#ff5555"], "Brasa"),
+    ("neon", ["#8be9fd", "#6c8cff", "#ff5555"], "Neon"))
+#: A aba em que o exemplo põe os cartões dos controles.
+CONTROLES_DO_DESENHO = "Luz e vibração"
 ESTADO_DOS_GERIDOS_DO_DESENHO: dict[str, Any] = {
     **ESTADO_DO_DESENHO,
     "aparelhos": [
         {"id": "ap-1", "nome": "Aparelho 1", "estado": "ligado", "ligado": True, "bateria": 80,
-         "forca": 0.7},
+         "forca": 0.7, "controles": [
+             {"id": "luz", "tipo": "chave", "valor": True, "dica": "Acesa"},
+             {"id": "cor", "tipo": "paleta", "valor": "magenta",
+              "opcoes": [{"id": i, "cor": c, "rotulo": r} for i, c, r in CORES_DO_DESENHO]}]},  # noqa-acento: contrato
         {"id": "ap-2", "nome": "Aparelho 2", "estado": "ligado", "ligado": True, "bateria": 45,
-         "forca": 0.3},
+         "forca": 0.3, "controles": [{"id": "luz", "tipo": "chave", "valor": False,
+                                      "dica": "Acesa"}]},
         {"id": "ap-3", "nome": "Aparelho 3", "estado": "ligado", "ligado": True, "bateria": 62,
          "forca": 0.5},
         {"id": "ap-4", "nome": "Aparelho 4", "estado": "ligado", "ligado": False, "bateria": 18,

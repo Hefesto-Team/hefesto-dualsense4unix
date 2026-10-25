@@ -667,3 +667,21 @@
 #mod-janela .seg.mj-modos button:hover:not(.on) { color:var(--fg);border-color:var(--border-forte) }
 #mod-janela .seg.mj-modos button.on { background:var(--sel-bg);color:var(--fg);font-weight:400;
   border-color:var(--border-forte);box-shadow:inset 0 -2px 0 var(--purple) }
+/* Os controles de cada aparelho (24/10/2026, O-APARELHO-DA-EXTENSAO-DIZ-OS-CONTROLES-DELE-NA-JANELA-01):
+   a aba «Luz» do arranjo C, um cartão por aparelho com a chave no topo e uma linha por controle. */
+#mod-janela .mj-ccs { align-items:start }
+#mod-janela .mj-cc-linha { display:grid;grid-template-columns:40px minmax(0,1fr);align-items:center;gap:10px;
+  padding-bottom:6px;min-width:0 }
+#mod-janela .mj-cc-rot { font-size:11.5px;color:var(--texto-suave) }
+#mod-janela .mj-cc-ctrl { display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0 }
+#mod-janela .mj-cores { display:inline-flex;gap:0;flex:none;flex-wrap:nowrap;border:1px solid var(--border-forte);
+  border-radius:6px;overflow:hidden;max-width:100% }
+#mod-janela .mj-cores button { flex:none;min-width:0;height:28px;padding:0 10px;font-size:11.5px;font-weight:400;
+  background:var(--panel);color:var(--texto-suave);border:0;border-right:1px solid var(--border-forte);border-radius:0;
+  cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center }
+#mod-janela .mj-cores.mj-pontos button { padding:0 8px }
+#mod-janela .mj-cores button:last-child { border-right:0 }
+#mod-janela .mj-cores button:hover:not(.on) { color:var(--fg) }
+#mod-janela .mj-cores button.on { background:var(--sel-bg);color:var(--fg);box-shadow:inset 0 -2px 0 var(--purple) }
+#mod-janela .mj-pontos i { display:block;width:14px;height:14px;border-radius:50% }
+#mod-janela .mj-cores.em-curso { animation:mj-pulso 1.2s ease-in-out infinite }

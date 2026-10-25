@@ -1254,6 +1254,8 @@ class _Mexida:
     nota_do_css: str = ""
     #: O grupo da última opção mudada: a aba que a janela reconstruída abre.
     aba: str = ""
+    #: A janela aberta desenhou a aba dos controles dos aparelhos (algum aparelho os tinha).
+    com_controles: bool = False
 
     def limpar(self) -> None:
         self.menu = self.permissoes = self.remover = self.conf = self.imp = self.mod = ""
@@ -1264,6 +1266,7 @@ class _Mexida:
         self.agora = ()
         self.rascunho = {}
         self.onde_escolhido = self.conf_da_modificacao = self.nota_do_css = self.aba = ""
+        self.com_controles = False
 
 
 _MEXIDA = _Mexida()
@@ -1578,9 +1581,11 @@ def _montar_a_janela_da_extensao(mod_id: str, item: _Instalada | None = None) ->
     _MEXIDA.mod = mod_id
     _VIVA.com_o_modo(mod_id, _o_modo_de(manifesto, valores) or None)
     _MEXIDA.agora = tuple(manifesto.agora)
+    estado = _estado_da_janela(manifesto)
+    _MEXIDA.com_controles = bool(_aba_dos_controles(manifesto) and exp.com_controles(estado))
     _MEXIDA.html_mod = exp.modificacao_miolo_html(
         manifesto.nome, linhas, mod=mod_id, agora=_MEXIDA.agora,
-        estado=_estado_da_janela(manifesto), parar_tudo=manifesto.parar_tudo,
+        estado=estado, parar_tudo=manifesto.parar_tudo,
         aba=_MEXIDA.aba, processo=exp.processo_de(item.entrada.ligada, item.estado),
         porque=item.porque, **_pecas_da_janela(manifesto, mod_id))
 
@@ -2504,8 +2509,15 @@ def _o_modo_de(manifesto: Any, valores: dict[str, Any]) -> str:
 
 
 def _estado_da_janela(manifesto: Any) -> dict[str, Any] | None:
-    """O ``acessorios.estado`` que a janela desenha: com a coluna «Agora» ou com aparelhos."""
-    return _AGORA.agora() if _MEXIDA.agora or manifesto.aparelhos_acoes else None
+    """O ``acessorios.estado`` que a janela desenha: com a coluna «Agora», com aparelhos ou com
+    os controles deles."""
+    return (_AGORA.agora() if _MEXIDA.agora or manifesto.aparelhos_acoes
+            or manifesto.aparelhos_controles else None)
+
+
+def _aba_dos_controles(manifesto: Any) -> str:
+    """A aba dos controles dos aparelhos (``aparelhos_controles.grupo``), ou vazio sem ela."""
+    return str(manifesto.aparelhos_controles.grupo) if manifesto.aparelhos_controles else ""
 
 
 def _acao_da_janela(a: Any) -> exp.AcaoDaJanela:
@@ -2525,7 +2537,7 @@ def _pecas_da_janela(manifesto: Any, mod_id: str) -> dict[str, Any]:
     return {"acoes": tuple(_acao_da_janela(a) for a in manifesto.acoes),  # noqa-acento: contrato
             "aparelhos": _aparelhos_da_janela(manifesto),
             "em_curso": _VIVA.esperando(mod_id, _AGORA.agora()),
-            "livre": _VIVA.ao_vivo(mod_id)}
+            "livre": _VIVA.ao_vivo(mod_id), "controles": _aba_dos_controles(manifesto)}
 
 
 def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
@@ -2547,11 +2559,21 @@ def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
         blocos["#mod-agora"] = exp.agora_html(
             _MEXIDA.agora, estado, processo=exp.processo_de(item.entrada.ligada, item.estado),
             porque=item.porque, gestao=gestao)
+    aba_cc = _aba_dos_controles(manifesto)
+    cartoes = exp.controles_dos_aparelhos_html(mod_id, estado, em_curso) if aba_cc else ""
+    if bool(cartoes) != _MEXIDA.com_controles:
+        # A aba dos controles nasce no primeiro aparelho que os publica e some com o último: a
+        # janela inteira se refaz, porque as abas são do esqueleto e não de um bloco.
+        _montar_a_janela_da_extensao(mod_id, item)
+        blocos["#mod-janela"] = _MEXIDA.html_mod
+    elif cartoes:
+        blocos["#mod-controles"] = cartoes
     acoes = tuple(_acao_da_janela(a) for a in manifesto.acoes)
-    if acoes or (aparelhos and aparelhos.grupo):
+    if acoes or (aparelhos and aparelhos.grupo) or cartoes:
         grupos = [exp.OpcaoDaJanela(mod_id, o.id, o.rotulo, o.tipo, "", grupo=o.grupo or "")
                   for o in manifesto.opcoes if o.tipo != "livre"]
-        for n, delas in exp.acoes_por_aba(grupos, acoes, aparelhos).items():
+        com_cc = aba_cc if cartoes else ""
+        for n, delas in exp.acoes_por_aba(grupos, acoes, aparelhos, com_cc).items():
             blocos[f"#mod-acoes-{n}"] = exp.barra_de_acoes_html(mod_id, delas, em_curso)
     if manifesto.opcao_livre is not None:
         blocos["#mod-livre-rastro"] = exp.rastro_html(_VIVA.ao_vivo(mod_id))
@@ -2578,6 +2600,8 @@ def acao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
     if alvo and acao == exp.ACAO_DE_LIGAR:
         params["valor"] = str(o.get("ligado") or "") == "1"
     antes = _AGORA.ler(mod_id, p) if _MEXIDA.mod == mod_id else None
+    if alvo and o.get("quer") is not None:
+        params["valor"] = _valor_do_controle(antes, alvo, acao, str(o.get("quer")))
     ok, motivo, corpo = p.chamar_com_o_corpo(METODO_DA_ACAO, **params)
     if not ok:
         raise RuntimeError(motivo or "O serviço não respondeu. Nada foi enviado.")
@@ -2587,6 +2611,18 @@ def acao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
     _VIVA.marcar(mod_id, acao, alvo, serie if isinstance(serie, int) else 0)
     _AGORA.esquecer()
     return _a_pintura_agora(ctx)
+
+
+def _valor_do_controle(estado: dict[str, Any] | None, alvo: str, controle_id: str,
+                       quer: str) -> bool | str:
+    """O valor que o clique num controle do aparelho pede, no tipo do controle do estado de agora:
+    a chave, verdadeiro ou falso (``quer`` é ``1`` ou ``0``); a paleta e a escolha, o ``id``."""
+    aparelho = next((a for a in exp.com_controles(estado) if a.get("id") == alvo), None)
+    controle = next((c for c in (aparelho or {}).get("controles") or []
+                     if c.get("id") == controle_id), None)
+    if controle is None:
+        raise RuntimeError("Este controle não está mais no aparelho. Nada foi enviado.")
+    return quer == "1" if controle.get("tipo") == "chave" else quer
 
 
 def _nao_esta_rodando(mod_id: str) -> str:

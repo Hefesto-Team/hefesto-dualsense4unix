@@ -447,6 +447,15 @@ class AcoesDosAparelhos(BaseModel):
         return self
 
 
+class ControlesDosAparelhos(BaseModel):
+    """A aba em que moram os ``controles`` que cada aparelho do ``acessorios.estado`` declara: um
+    cartão por aparelho com controles, e a aba só aparece quando algum deles tem."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    grupo: str = Field(min_length=1, max_length=30)
+
+
 class Manifesto(BaseModel):
     """O ``hefesto-mod.json`` inteiro."""
 
@@ -476,10 +485,12 @@ class Manifesto(BaseModel):
     # O botão «Parar tudo», sempre à vista: a extensão o recebe como o evento ``extensao.parar``
     # (e, com ``ler:acessorios.gesto``, como o gesto ``para``). O nível e o perfil ficam guardados.
     parar_tudo: bool = False
-    # Os botões que agem na hora (``extensao.acao``) e as ações de cada aparelho da lista: os dois
-    # pedem a permissão da coluna «Agora», porque a resposta da extensão é o estado que ela devolve.
+    # Os botões que agem na hora (``extensao.acao``), as ações de cada aparelho da lista e a aba dos
+    # controles de cada um: os três pedem a permissão da coluna «Agora», porque a resposta da
+    # extensão é o estado que ela devolve.
     acoes: list[Acao] = Field(default_factory=list, max_length=ACOES_DA_JANELA)
     aparelhos_acoes: AcoesDosAparelhos | None = None
+    aparelhos_controles: ControlesDosAparelhos | None = None
     # O conteúdo destes três é das sprints que os consomem (o lançador do
     # KytyPS5, o tema da interface, a ponte dos acessórios): aqui só a forma.
     lancador: dict[str, Any] | None = None
@@ -566,6 +577,8 @@ class Manifesto(BaseModel):
         livres = [o.id for o in self.opcoes if o.tipo == "livre"]
         pedem = [nome for nome, tem in (("acoes", bool(self.acoes)),  # noqa-acento: contrato
                                         ("aparelhos_acoes", self.aparelhos_acoes is not None),
+                                        ("aparelhos_controles",
+                                         self.aparelhos_controles is not None),
                                         ("o livre", bool(livres))) if tem]
         if pedem and not set(PERMISSOES_DO_ESTADO) & set(self.permissoes):
             raise ValueError(f"{pedem[0]} pede a permissão publicar:acessorios.estado")

@@ -16,6 +16,7 @@ import dataclasses
 import json
 import math
 import os
+import re
 import socket
 import struct
 import time
@@ -72,6 +73,15 @@ ESTADOS_DO_ACESSORIO = ("ligado", "procurando", "desligado", "falhou")
 TRANSPORTES_DA_CONEXAO = ("usb", "bluetooth", "rede", "local")
 #: Quantas conexões e quantos aparelhos um ``acessorios.estado`` leva, no máximo.
 ITENS_DO_ESTADO = 32
+#: Os controles próprios de um aparelho do ``acessorios.estado``: no máximo
+#: ``CONTROLES_DO_APARELHO``, de um dos ``TIPOS_DO_CONTROLE`` (a chave é verdadeiro ou falso, a
+#: paleta e a escolha são o ``id`` de uma das opções delas).
+CONTROLES_DO_APARELHO = 6
+TIPOS_DO_CONTROLE = ("chave", "paleta", "escolha")
+#: Quantas opções uma paleta ou uma escolha leva, e quantas cores mistura um ponto da paleta.
+OPCOES_DO_CONTROLE = 16
+CORES_DO_PONTO = 3
+_COR_DO_PONTO = re.compile(r"#[0-9a-fA-F]{6}")
 #: O evento que o «Parar tudo» da janela entrega à extensão que não lê o gesto ``para``.
 EVENTO_DO_PARAR = "extensao.parar"
 #: O clique num botão de ação da janela e o arrastar do ``livre``, só para a extensão dona.
@@ -399,8 +409,8 @@ def _estado_do_item(bruto: dict[str, Any], onde: str) -> str:
 def _aparelho(bruto: Any) -> dict[str, Any]:
     """``{nome, tipo, estado, bateria, forca}``; o texto solto (o formato antigo) é só o nome.
 
-    ``id`` (até 40 letras, o que a ação do aparelho leva como ``alvo``) e ``ligado`` (a chave do
-    cartão) só saem quando a extensão os manda.
+    ``id`` (até 40 letras, o que a ação do aparelho leva como ``alvo``), ``ligado`` (a chave do
+    cartão) e ``controles`` (os que só este aparelho tem) só saem quando a extensão os manda.
     """
     if isinstance(bruto, str):
         bruto = {"nome": bruto}
@@ -413,7 +423,7 @@ def _aparelho(bruto: Any) -> dict[str, Any]:
     if forca is not None and (not _numero(forca) or not 0.0 <= float(forca) <= 1.0):
         raise _recusa_do_estado("a força de um aparelho vai de 0 a 1, ou nula.")
     tipo = bruto.get("tipo")
-    saida = {
+    saida: dict[str, Any] = {
         "nome": _curto(bruto.get("nome"), "o nome do aparelho", 60),
         "tipo": None if tipo is None else _curto(tipo, "o tipo do aparelho", 30),
         "estado": _estado_do_item(bruto, "um aparelho"),
@@ -426,7 +436,81 @@ def _aparelho(bruto: Any) -> dict[str, Any]:
         if not isinstance(bruto["ligado"], bool):
             raise _recusa_do_estado("o ligado de um aparelho é verdadeiro ou falso.")
         saida["ligado"] = bruto["ligado"]
+    if bruto.get("controles") is not None:
+        saida["controles"] = _controles_do_aparelho(bruto["controles"], "id" in saida)
     return saida
+
+
+def _controles_do_aparelho(bruto: Any, tem_id: bool) -> list[dict[str, Any]]:
+    """Os ``controles`` de um aparelho: até ``CONTROLES_DO_APARELHO``, ids sem repetição, e só
+    no aparelho com ``id`` (o clique volta com ele como ``alvo``)."""
+    if not tem_id:
+        raise _recusa_do_estado("o aparelho com controles tem id.")
+    if not isinstance(bruto, list) or len(bruto) > CONTROLES_DO_APARELHO:
+        raise _recusa_do_estado(
+            f"os controles de um aparelho são uma lista de até {CONTROLES_DO_APARELHO}.")
+    controles = [_controle(c) for c in bruto]
+    if len({c["id"] for c in controles}) != len(controles):
+        raise _recusa_do_estado("controle repetido num aparelho.")
+    return controles
+
+
+def _controle(bruto: Any) -> dict[str, Any]:
+    """Um controle do aparelho: a chave leva o valor verdadeiro ou falso; a paleta e a escolha levam
+    as opções e, no valor, o ``id`` de uma delas (ou nulo). O rótulo e a dica são opcionais."""
+    if not isinstance(bruto, dict):
+        raise _recusa_do_estado("cada controle é um objeto {id, tipo, valor, opcoes, dica}.")  # noqa-acento: contrato
+    tipo = bruto.get("tipo")
+    if tipo not in TIPOS_DO_CONTROLE:
+        raise _recusa_do_estado(f"o tipo de um controle é um de {', '.join(TIPOS_DO_CONTROLE)}.")
+    saida: dict[str, Any] = {"id": _curto(bruto.get("id"), "o id do controle", 40), "tipo": tipo}
+    valor = bruto.get("valor")
+    if tipo == "chave":
+        if not isinstance(valor, bool):
+            raise _recusa_do_estado("o valor da chave é verdadeiro ou falso.")
+    else:
+        saida["opcoes"] = _opcoes_do_controle(bruto.get("opcoes"), tipo)  # noqa-acento: contrato
+        if valor is not None and valor not in {o["id"] for o in saida["opcoes"]}:  # noqa-acento: contrato
+            raise _recusa_do_estado(f"o valor da {tipo} é o id de uma das opções dela, ou nulo.")
+    saida["valor"] = valor
+    if bruto.get("rotulo") is not None:  # noqa-acento: contrato
+        saida["rotulo"] = _curto(bruto["rotulo"], "o rótulo de um controle", 30)  # noqa-acento: contrato
+    if bruto.get("dica") is not None:
+        saida["dica"] = _curto(bruto["dica"], "a dica de um controle", 120)
+    return saida
+
+
+def _opcoes_do_controle(bruto: Any, tipo: str) -> list[dict[str, Any]]:
+    """As opções da paleta (``{id, cor, rotulo?}``, o rótulo é a dica do ponto) ou da escolha
+    (``{id, rotulo}``), de 1 a
+    ``OPCOES_DO_CONTROLE``, ids sem repetição."""
+    if not isinstance(bruto, list) or not 1 <= len(bruto) <= OPCOES_DO_CONTROLE:
+        raise _recusa_do_estado(f"a {tipo} de um aparelho leva de 1 a {OPCOES_DO_CONTROLE} opções.")
+    saida = []
+    for item in bruto:
+        if not isinstance(item, dict):
+            raise _recusa_do_estado(f"cada opção da {tipo} é um objeto com id.")
+        certo: dict[str, Any] = {"id": _curto(item.get("id"), "o id de uma opção", 40)}
+        if tipo == "paleta":
+            certo["cor"] = _cor_do_ponto(item.get("cor"))
+            if item.get("rotulo") is not None:  # noqa-acento: contrato
+                certo["rotulo"] = _curto(item["rotulo"], "o rótulo de uma cor", 30)  # noqa-acento: contrato
+        else:
+            certo["rotulo"] = _curto(item.get("rotulo"), "o rótulo de uma opção", 30)  # noqa-acento: contrato
+        saida.append(certo)
+    if len({o["id"] for o in saida}) != len(saida):
+        raise _recusa_do_estado(f"opção repetida na {tipo} de um aparelho.")
+    return saida
+
+
+def _cor_do_ponto(cor: Any) -> str | list[str]:
+    """A cor de um ponto da paleta: ``#rrggbb``, ou uma lista de até ``CORES_DO_PONTO`` delas."""
+    cores = cor if isinstance(cor, list) else [cor]
+    if not 1 <= len(cores) <= CORES_DO_PONTO or not all(
+            isinstance(c, str) and _COR_DO_PONTO.fullmatch(c) for c in cores):
+        raise _recusa_do_estado(
+            f"a cor de uma paleta é #rrggbb, ou uma lista de até {CORES_DO_PONTO} delas.")
+    return [c.lower() for c in cores] if isinstance(cor, list) else str(cor).lower()
 
 
 def _conexao_do_estado(bruto: Any) -> dict[str, Any]:
@@ -995,11 +1079,12 @@ class Porta:
         return bool(delas)
 
     def acao(self, mod_id: str, acao: str, *, alvo: str | None = None,
-             valor: bool | None = None) -> bool:
+             valor: bool | str | None = None) -> bool:
         """O clique numa ação da janela: ``extensao.acao`` só para as conexões de ``mod_id``.
 
-        ``alvo`` é o ``id`` do aparelho (as ``aparelhos_acoes``); ``valor`` é a chave ``ligar``
-        (``True`` liga). ``False`` quando a extensão não está conectada à porta.
+        ``alvo`` é o ``id`` do aparelho (as ``aparelhos_acoes`` e os ``controles`` dele); ``valor``
+        é a chave ``ligar`` ou a de um controle (``True`` liga), ou o ``id`` da opção escolhida
+        numa paleta ou numa escolha. ``False`` quando a extensão não está conectada à porta.
         """
         dados: dict[str, Any] = {"mod": mod_id, "acao": acao, "alvo": alvo}  # noqa-acento: contrato
         if valor is not None:

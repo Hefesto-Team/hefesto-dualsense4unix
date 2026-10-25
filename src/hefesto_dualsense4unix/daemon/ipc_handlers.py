@@ -6192,7 +6192,8 @@ class IpcHandlersMixin:
 
         Sem ``alvo``, a ação é uma das declaradas para a janela; com ele (o ``id``
         de um aparelho), uma das ``aparelhos_acoes``, e ``valor`` (verdadeiro ou falso) é a chave
-        ``ligar``. ``{enviada}`` é falso quando a extensão não está conectada à porta.
+        ``ligar``; ou um dos ``controles`` que o aparelho publicou (``_conferir_a_acao``).
+        ``{enviada}`` é falso quando a extensão não está conectada à porta.
         """
         mod = self._mod_do_pedido(params)
         acao = params.get("acao")  # a chave do contrato (noqa-acento)
@@ -6201,7 +6202,7 @@ class IpcHandlersMixin:
             raise ValueError("o pedido não diz qual ação")
         if alvo is not None and (not isinstance(alvo, str) or not 1 <= len(alvo) <= 40):
             raise ValueError("o alvo é o id de um aparelho, de 1 a 40 letras")
-        if valor is not None and not isinstance(valor, bool):
+        if valor is not None and not isinstance(valor, (bool, str)):
             raise ValueError("o valor da ação é verdadeiro ou falso")
         achado = await self._manifesto_da_janela(mod)
         if achado is None:
@@ -6209,9 +6210,8 @@ class IpcHandlersMixin:
         manifesto, porta = achado
         geridos = manifesto.aparelhos_acoes
         declaradas = (geridos.acoes if geridos else []) if alvo is not None else manifesto.acoes
-        if not any(a.id == acao for a in declaradas):
-            onde = "nos aparelhos" if alvo is not None else "na janela"
-            raise ValueError(f"«{manifesto.nome}» não declara a ação «{acao}» {onde}.")
+        conhecida = any(a.id == acao for a in declaradas)
+        _conferir_a_acao(manifesto, porta, mod, alvo, acao, valor, conhecida)
         return {"enviada": bool(porta.acao(mod, acao, alvo=alvo, valor=valor))}
 
     async def _handle_mods_livre(self, params: dict[str, Any]) -> dict[str, Any]:
@@ -6244,6 +6244,46 @@ class IpcHandlersMixin:
         com_modo = {"modo": modo} if livre.modos else {}
         return {"enviado": bool(porta.livre(mod, livre.id, float(valor), soltou=soltou,
                                             **com_modo))}
+
+
+def _conferir_a_acao(manifesto: Any, porta: Any, mod: str, alvo: str | None, acao: str,
+                     valor: Any, declarada: bool) -> None:
+    """A ação declarada leva ``valor`` verdadeiro ou falso (a chave ``ligar``). A que o manifesto
+    não declara só passa com ``aparelhos_controles``, se for um dos ``controles`` que o aparelho
+    ``alvo`` publicou no último estado, e com o valor do tipo dele (a chave, verdadeiro ou falso; a
+    paleta e a escolha, o ``id`` de uma das opções)."""
+    if declarada:
+        if valor is not None and not isinstance(valor, bool):
+            raise ValueError("o valor da ação é verdadeiro ou falso")
+        return
+    controle = _controle_do_alvo(manifesto, porta, mod, alvo, acao)
+    if controle is None:
+        onde = "nos aparelhos" if alvo is not None else "na janela"
+        raise ValueError(f"«{manifesto.nome}» não declara a ação «{acao}» {onde}.")
+    _conferir_o_valor_do_controle(controle, valor)
+
+
+def _controle_do_alvo(manifesto: Any, porta: Any, mod: str, alvo: str | None,
+                      acao: str) -> dict[str, Any] | None:
+    """O controle pedido do aparelho ``alvo`` no último ``acessorios.estado`` de ``mod``: só com
+    ``aparelhos_controles`` no manifesto e com o aparelho que o publicou."""
+    if alvo is None or manifesto.aparelhos_controles is None:
+        return None
+    estado = porta.agora_de(mod)
+    aparelho = next((a for a in estado.get("aparelhos") or [] if a.get("id") == alvo), None)
+    controles = (aparelho or {}).get("controles") or []
+    return next((c for c in controles if c.get("id") == acao), None)
+
+
+def _conferir_o_valor_do_controle(controle: dict[str, Any], valor: Any) -> None:
+    """A chave pede verdadeiro ou falso; a paleta e a escolha, o ``id`` de uma das opções."""
+    if controle["tipo"] == "chave":
+        if not isinstance(valor, bool):
+            raise ValueError("o valor da chave é verdadeiro ou falso")
+        return
+    ids = [o["id"] for o in controle.get("opcoes") or []]  # noqa-acento: contrato
+    if valor not in ids:
+        raise ValueError(f"o valor de «{controle['id']}» é uma de: {', '.join(ids)}")
 
 
 def _uniq_do_rumble(params: dict[str, Any], metodo: str) -> str | None:
