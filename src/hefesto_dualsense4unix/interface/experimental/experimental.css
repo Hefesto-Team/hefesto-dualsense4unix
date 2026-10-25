@@ -670,14 +670,18 @@
 /* Os controles de cada aparelho (24/10/2026, O-APARELHO-DA-EXTENSAO-DIZ-OS-CONTROLES-DELE-NA-JANELA-01):
    a aba «Luz» do arranjo C, um cartão por aparelho com a chave no topo e uma linha por controle. */
 #mod-janela .mj-ccs { align-items:start }
-#mod-janela .mj-cc-linha { display:grid;grid-template-columns:40px minmax(0,1fr);align-items:center;gap:10px;
-  padding-bottom:6px;min-width:0 }
-#mod-janela .mj-cc-rot { font-size:11.5px;color:var(--texto-suave) }
+/* O rótulo cabe em 40px quando é curto e cresce até 120px quando é longo (o contrato aceita 30
+   letras), quebrando a linha sem invadir o controle; as opções que não cabem descem para outra
+   fileira do mesmo grupo, e nenhuma some atrás da borda. */
+#mod-janela .mj-cc-linha { display:grid;grid-template-columns:minmax(40px,max-content) minmax(0,1fr);
+  align-items:center;gap:10px;padding-bottom:6px;min-width:0 }
+#mod-janela .mj-cc-rot { font-size:11.5px;color:var(--texto-suave);max-width:120px;overflow-wrap:anywhere }
 #mod-janela .mj-cc-ctrl { display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0 }
-#mod-janela .mj-cores { display:inline-flex;gap:0;flex:none;flex-wrap:nowrap;border:1px solid var(--border-forte);
+#mod-janela .mj-cores { display:inline-flex;gap:0;flex:none;flex-wrap:wrap;border:1px solid var(--border-forte);
   border-radius:6px;overflow:hidden;max-width:100% }
-#mod-janela .mj-cores button { flex:none;min-width:0;height:28px;padding:0 10px;font-size:11.5px;font-weight:400;
-  background:var(--panel);color:var(--texto-suave);border:0;border-right:1px solid var(--border-forte);border-radius:0;
+#mod-janela .mj-cores button { flex:none;min-width:0;height:29px;padding:0 10px;font-size:11.5px;font-weight:400;
+  background:var(--panel);color:var(--texto-suave);border:0;border-right:1px solid var(--border-forte);
+  border-bottom:1px solid var(--border-forte);margin-bottom:-1px;border-radius:0;
   cursor:pointer;white-space:nowrap;display:inline-flex;align-items:center }
 #mod-janela .mj-cores.mj-pontos button { padding:0 8px }
 #mod-janela .mj-cores button:last-child { border-right:0 }
