@@ -83,6 +83,14 @@ class Mesa:
     def eventos(self, nome: str) -> int:
         return sum(1 for _nivel, evento in self.espiao.eventos if evento == nome)
 
+    def tentar(self, pad: Any) -> None:
+        """O tique da nova tentativa pede o gadget fora dele, e o tique seguinte lê a resposta."""
+        pad.pump_ff()
+        pedido = pad._pedido_ao_broker
+        if pedido is not None:
+            assert pedido.esperar(5.0), "o pedido ao broker não voltou"
+            pad.pump_ff()
+
 
 @pytest.fixture
 def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Mesa:
@@ -123,7 +131,7 @@ class TestAFalhaDeUmNaoViraAFalhaDeTodos:
             assert len(mesa.b.pedidos) == 1, "com o jogo aberto o pad não troca de pele"
             mesa.b.jogo_aberto = False
             mesa.relogio[0] += 10.0
-            p3.pump_ff()
+            mesa.tentar(p3)
             assert len(mesa.b.pedidos) == 2 and p3._gadget is not None
             mesa.enumerados[mesa.serial(p3)] = ("hidraw7", INTERFACE_DO_GADGET)
             assert mesa.b.esperar(lambda: p3.is_bound)
@@ -138,7 +146,7 @@ class TestAFalhaDeUmNaoViraAFalhaDeTodos:
             mesa.nao_enumera(p3)
             assert mesa.eventos("pad_usb_porta_fora") == 0
             mesa.relogio[0] += 10.0
-            p3.pump_ff()  # sem jogo: a nova tentativa
+            mesa.tentar(p3)  # sem jogo: a nova tentativa
             assert len(mesa.b.pedidos) == 2
             mesa.nao_enumera(p3)
             assert mesa.eventos("pad_usb_porta_fora") == 1

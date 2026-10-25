@@ -3139,7 +3139,7 @@ class _PedidoAoBroker:
                 gadget = pedir(*argumentos)
             if gadget is not None and JOGO_ABERTO():
                 self.jogo_abriu = True
-                gadget, descer = None, gadget
+                descer, gadget = gadget, None
                 logger.info("pad_usb_espera_o_jogo_fechar", gadget=descer.gadget,
                             player=pad.player)
                 descer.desmontar()
