@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1209907,
+      "piso": 1209930,
       "por_item": {
         "docs": 121350,
-        "scripts": 120691,
+        "scripts": 120700,
         "src": 323536,
-        "tests": 644330
+        "tests": 644344
       },
-      "razao": "tamanho: +168 linhas (1209739 -> 1209907), pagas por Origem: D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO; registrado no fecho, topo a3cb0e1656a8",
+      "razao": "tamanho: +23 linhas (1209907 -> 1209930), pagas por Origem: D-0810-A-CITACAO-CRUA-SO-ANDA-COM-PROVA; registrado no fecho, topo 386f172e990f",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1039,6 +1039,12 @@
           "de": 1209739,
           "para": 1209907,
           "razao": "tamanho: +168 linhas (1209739 -> 1209907), pagas por Origem: D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO; registrado no fecho, topo a3cb0e1656a8"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1209907,
+          "para": 1209930,
+          "razao": "tamanho: +23 linhas (1209907 -> 1209930), pagas por Origem: D-0810-A-CITACAO-CRUA-SO-ANDA-COM-PROVA; registrado no fecho, topo 386f172e990f"
         }
       ],
       "unidade": "linhas",
