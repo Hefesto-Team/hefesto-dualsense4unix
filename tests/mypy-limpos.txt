@@ -33,3 +33,4 @@ tests/unit/test_o_perfil_que_vale_tem_uma_casa_so.py
 tests/unit/test_o_acionador_desenha_o_controle_e_diz_a_permissao.py
 tests/unit/test_o_pad_que_nasce_pede_o_gadget_fora_do_tique.py
 tests/unit/test_o_doctor_diz_quando_falta_o_grupo_input.py
+scripts/prosa_do_codigo.py
