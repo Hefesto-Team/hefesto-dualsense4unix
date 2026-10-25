@@ -131,8 +131,11 @@ def tela() -> Any:
     sys.path.insert(0, str(RAIZ / "scripts"))
     import regua_de_tela
 
+    # O título prova que é o mapa, e não o about:blank de antes da carga.
     t = regua_de_tela.Tela(onde.BANCADA / arranjo_desta_maquina.PAGINA,
-                           largura=1280, altura=900)
+                           titulo_esperado="o mapa das entradas", largura=1280, altura=900)
+    t.esperar_ate("document.querySelectorAll('#faces .face-cab').length > 0",
+                  motivo="o exemplo da página não se desenhou")
     yield t
     t.fechar()
 
