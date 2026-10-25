@@ -54,6 +54,7 @@ def _validador() -> ModuleType:
 
 
 def test_a_casa_nao_tem_noqa_invalido() -> None:
+    # D-2510-A-MARCA-DE-ACENTO-VAI-ENTRE-PARENTESES
     avisos = _avisos(RAIZ, *PASTAS)
     assert not avisos, (
         f"{len(avisos)} comentário(s) que o ruff lê como `# noqa` estragado:\n  "
