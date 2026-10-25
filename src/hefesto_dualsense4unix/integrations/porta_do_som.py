@@ -325,8 +325,9 @@ def nos_do_grafo(texto: str | None) -> NosDoGrafo | None:
         ident = _inteiro(o.get("id"))
         if ident is not None:
             por_id[str(ident)] = props
-        if _texto(props.get("node.name")):
-            por_nome[props["node.name"]] = props
+        nome = _texto(props.get("node.name"))
+        if nome:
+            por_nome[nome] = props
     return NosDoGrafo(por_serial, por_id, por_nome)
 
 
@@ -376,7 +377,7 @@ def _o_mesmo_no(o: Mapping[str, Any], nos: NosDoGrafo) -> Mapping[str, str] | No
     else:
         indice = _inteiro(o.get("index"))
         achado = None if indice is None else nos.por_serial.get(str(indice))
-        if achado is None and nome and "name" in o:
+        if achado is None and "name" in o:
             achado = nos.por_nome.get(nome)
     if achado is None:
         return None
