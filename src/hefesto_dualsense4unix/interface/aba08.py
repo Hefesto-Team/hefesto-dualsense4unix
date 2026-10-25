@@ -365,7 +365,7 @@ CSS = CSS_GLIFO + CSS_POPUP + """
   .cartao-dica.nivel-nota{border-left-color:var(--yellow)}
   .cd-cab{display:flex;align-items:center;gap:8px}
   .cd-ic{flex:0 0 auto;display:inline-flex;color:var(--texto-suave)}
-  .cartao-dica .cd-ic svg.i{width:16px;height:16px;flex:0 0 16px}
+  .cartao-dica .cd-ic svg.i{width:16px;height:16px;flex:0 0 16px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
   .cartao-dica h4{flex:1;min-width:0;margin:0;font-size:12.5px;font-weight:600;color:var(--fg);
            line-height:1.3}
   /* a palavra do nível mora no nome da região (`aria-label`), não num texto escondido: texto
