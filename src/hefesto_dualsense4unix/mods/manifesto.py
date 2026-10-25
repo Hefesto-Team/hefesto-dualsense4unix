@@ -45,6 +45,8 @@ TIPOS = ("processo", "lancador", "tema", "perfil")
 
 #: O ``nome`` do evento do tópico ``entradas``.
 NOME_DAS_ENTRADAS = "controle.entradas"
+#: O ``nome`` do evento do tópico ``movimento``.
+NOME_DO_MOVIMENTO = "controle.movimento"
 
 #: ``ler:<tópico>``: o nome público de cada tópico e os tópicos do barramento
 #: que ele entrega. O nome público é o contrato; o do barramento pode mudar.
@@ -54,6 +56,9 @@ TOPICOS_DE_LEITURA: dict[str, tuple[str, ...]] = {
     # Os analógicos, os gatilhos e o touchpad de CADA controle: como o `botoes`, o serviço enche a
     # fila (`Porta.entradas_do_tique`) e o barramento não leva este tópico.
     "entradas": (NOME_DAS_ENTRADAS,),
+    # O giroscópio e o acelerômetro de CADA controle, à parte das entradas: o leitor de movimento
+    # só fica vivo enquanto alguém o pede, e o serviço enche a fila (`Porta.movimento_do_tique`).
+    "movimento": (NOME_DO_MOVIMENTO,),
     "bateria": (EventTopic.BATTERY_CHANGE,),
     "conexao": (  # (noqa-acento): contrato ASCII
         EventTopic.CONTROLLER_CONNECTED,
@@ -106,6 +111,7 @@ _O_QUE_DEIXA: dict[str, str] = {
     "ler:estado": "Ler os botões, os eixos, os gatilhos e a bateria do controle do jogador 1.",
     "ler:botoes": "Saber quando um botão é apertado e solto.",
     "ler:entradas": "Ler os analógicos, os gatilhos e o touchpad de cada controle.",
+    "ler:movimento": "Ler o giroscópio e o acelerômetro de cada controle.",
     "ler:bateria": "Saber a carga da bateria.",
     "ler:conexao": "Saber quando um controle entra ou sai.",  # (noqa-acento): contrato ASCII
     "ler:jogo.vibracao": (  # (noqa-acento): contrato ASCII
@@ -701,6 +707,7 @@ __all__ = [
     "NOME_DAS_ENTRADAS",
     "NOME_DA_FUNCAO",
     "NOME_DO_MANIFESTO",
+    "NOME_DO_MOVIMENTO",
     "PERMISSOES_DO_ESTADO",
     "PERMISSOES_SIMPLES",
     "TIPOS",

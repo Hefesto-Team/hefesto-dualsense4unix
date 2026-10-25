@@ -4447,6 +4447,8 @@ class Daemon:
                     self.store.bump("battery.change.emitted")
                     if self._plugins_subsystem is not None:
                         self._plugins_subsystem.dispatch_battery_change(state.battery_pct)
+                from hefesto_dualsense4unix.mods.porta import movimento_de_todo_controle_no_servico
+                movimento_de_todo_controle_no_servico(self, state)  # em todo modo: só lê
                 terminar_o_tique(tick_started)
                 elapsed = loop.time() - tick_started
                 sleep_for = period - elapsed
@@ -4564,6 +4566,10 @@ class Daemon:
                 self.store.bump("battery.change.emitted")
                 if self._plugins_subsystem is not None:
                     self._plugins_subsystem.dispatch_battery_change(state.battery_pct)
+            # O tópico `movimento` das extensões: o giro e o acelerômetro de TODO controle.
+            from hefesto_dualsense4unix.mods.porta import movimento_de_todo_controle_no_servico
+
+            movimento_de_todo_controle_no_servico(self, state)
 
             terminar_o_tique(tick_started)
             elapsed = loop.time() - tick_started

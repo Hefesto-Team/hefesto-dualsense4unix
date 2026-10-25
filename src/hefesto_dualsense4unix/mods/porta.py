@@ -100,6 +100,17 @@ ENTRADAS_POR_SEGUNDO = 30
 FAIXA_MORTA_DO_EIXO = 2
 #: Quanto um dedo (de 0 a 1) anda antes de sair; o dedo que chega ou levanta sai sempre.
 FAIXA_MORTA_DO_DEDO = 0.01
+#: O tópico ``movimento``: o giroscópio e o acelerômetro de TODO controle.
+TOPICO_DO_MOVIMENTO = "movimento"
+#: Quantos ``movimento`` de um controle saem por segundo, no máximo.
+MOVIMENTO_POR_SEGUNDO = 30
+#: Quanto um eixo do giro (°/s) anda antes de sair. O controle parado treme menos de 1,5 °/s
+#: de pico a pico por eixo (a janela quieta do roteador de movimento, de 21/09), e o viés de cada
+#: unidade (até 1,6 °/s, E-8 de 15/08) não anda: só passa daqui a mão que mexe.
+FAIXA_MORTA_DO_GIRO = 2.0
+#: Quanto um eixo da aceleração (g) anda antes de sair: ~1,1° de inclinação, abaixo dos 2° que o
+#: roteador ainda chama de parado e acima do degrau de 0,01 g que o hub arredonda.
+FAIXA_MORTA_DA_ACEL = 0.02
 
 Escritor = Callable[[str, dict[str, Any]], Awaitable[Any]]
 OJogoEscreve = Callable[[str, str], bool]
@@ -153,6 +164,8 @@ class _Conexao:
     quer_os_dedos: bool = False
     #: O socket desta conexão: o «Parar tudo» fala por ele sem assinatura nenhuma.
     escritor: asyncio.StreamWriter | None = None
+    #: As filas do tópico ``movimento``, cheias pelo serviço (:meth:`Porta.movimento_do_tique`).
+    filas_do_movimento: list[asyncio.Queue[Any]] = field(default_factory=list)
 
     def acessorio_preso(self) -> bool:
         """Alguma função ficou acima de zero: se a conexão cair, o serviço publica o zero."""
@@ -608,6 +621,35 @@ def _carga_das_entradas(uniq: str | None, jogador: Any, via: Any, valores: _Valo
             "dedos": [{"x": x, "y": y} for x, y in dedos]}
 
 
+#: O ``movimento`` de um controle: o giro (°/s) e a aceleração (g), cada um ``(x, y, z)``.
+_Movimento = tuple[tuple[float, float, float], tuple[float, float, float]]
+#: O controle que saiu (ou que nunca foi lido): giro e aceleração zerados. A aceleração zerada é
+#: «sem leitura», não um controle parado (que mede ~1 g).
+REPOUSO_DO_MOVIMENTO: _Movimento = ((0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
+
+
+def _o_movimento_mudou(antes: _Movimento | None, agora: _Movimento) -> bool:
+    """``agora`` sai? Um eixo do giro ou da aceleração passou da faixa morta dele, contada do
+    último que saiu. Com ``antes`` ``None`` (quem acabou de assinar), sai o que não é repouso."""
+    if antes is None:
+        return agora != REPOUSO_DO_MOVIMENTO
+    return any(
+        abs(novo - velho) > faixa
+        for (lado_antes, lado_agora), faixa in zip(
+            zip(antes, agora, strict=True), (FAIXA_MORTA_DO_GIRO, FAIXA_MORTA_DA_ACEL),
+            strict=True)
+        for velho, novo in zip(lado_antes, lado_agora, strict=True)
+    )
+
+
+def _carga_do_movimento(uniq: str | None, jogador: Any, via: Any, valores: _Movimento
+                        ) -> dict[str, Any]:
+    (gx, gy, gz), (ax, ay, az) = valores
+    return {"uniq": uniq, "jogador": jogador, "transporte": via,
+            "giro": {"x": round(gx, 2), "y": round(gy, 2), "z": round(gz, 2)},
+            "acel": {"x": round(ax, 3), "y": round(ay, 3), "z": round(az, 3)}}
+
+
 @dataclass
 class _Compasso:
     """O compasso do arrastar de um ``livre``: o valor que espera e o relógio que o solta."""
@@ -664,6 +706,9 @@ class Porta:
         self._series: dict[str, int] = {}
         #: O arrastar do ``livre`` de cada ``(mod, opção)``: o valor que espera o fim do compasso.
         self._livres: dict[tuple[str, str], _Compasso] = {}
+        #: O que saiu por último no tópico ``movimento``, por controle: ``(valores, instante,
+        #: jogador, transporte)``, como o das ``entradas``.
+        self._movimento_enviado: dict[str | None, tuple[_Movimento | None, float, Any, Any]] = {}
 
     # -- quem pode entrar -------------------------------------------------
 
@@ -892,6 +937,8 @@ class Porta:
                         self._repousar_quem_sai(saidas),
                         name=f"mods-{con.sessao.mod_id}-entradas-quedas",
                     ))
+                elif publico == TOPICO_DO_MOVIMENTO:
+                    fila = self._assinar_o_movimento(con)
                 else:
                     fila = self.bus.subscribe(topico)
                     con.assinaturas.append((topico, fila))
@@ -1220,6 +1267,77 @@ class Porta:
             carga = await saidas.get()
             uniq = carga.get("uniq") if isinstance(carga, dict) else None
             self._repouso_de(uniq if isinstance(uniq, str) and uniq else None)
+
+    # -- o tópico ``movimento``, de todo controle ----------------------------
+
+    def le_o_movimento(self) -> bool:
+        """Alguma extensão assinou o tópico ``movimento``? Sem ela, ninguém pede o leitor."""
+        return any(con.filas_do_movimento for con in self._conexoes)
+
+    def _assinar_o_movimento(self, con: _Conexao) -> asyncio.Queue[Any]:
+        """A fila do ``movimento`` desta conexão, e a queda de um controle levando o repouso."""
+        assert con.sessao is not None
+        # Quem chega começa do repouso: o controle que já saiu sai de novo no tique seguinte.
+        self._movimento_enviado = {
+            uniq: (None, quando, jogador, via)
+            for uniq, (_valores, quando, jogador, via) in self._movimento_enviado.items()
+        } if self.le_o_movimento() else {}
+        fila: asyncio.Queue[Any] = asyncio.Queue(maxsize=DEFAULT_QUEUE_MAXSIZE)
+        con.filas_do_movimento.append(fila)
+        saidas = self.bus.subscribe(EventTopic.CONTROLLER_DISCONNECTED)
+        con.assinaturas.append((EventTopic.CONTROLLER_DISCONNECTED, saidas))
+        con.tarefas.append(asyncio.create_task(
+            self._repousar_o_movimento_de_quem_sai(saidas),
+            name=f"mods-{con.sessao.mod_id}-movimento-quedas",
+        ))
+        return fila
+
+    def movimento_do_tique(self, leituras: dict[str | None, dict[str, Any]]) -> None:
+        """O ``movimento`` deste tique: ``{uniq: {jogador, transporte, valores}}`` de todo controle.
+
+        Cada controle sai quando um eixo passou da faixa morta (:func:`_o_movimento_mudou`), no
+        máximo :data:`MOVIMENTO_POR_SEGUNDO` vezes por segundo; o que o teto segura sai num tique
+        seguinte. O controle que sumiu sai uma vez em repouso. Nunca espera o socket.
+        """
+        filas = [f for con in self._conexoes for f in con.filas_do_movimento]
+        if not filas:
+            self._movimento_enviado = {}
+            return
+        agora = self._relogio()
+        intervalo = 1.0 / MOVIMENTO_POR_SEGUNDO
+        for uniq in dict.fromkeys([*self._movimento_enviado, *leituras]):
+            leitura = leituras.get(uniq)
+            antes = self._movimento_enviado.get(uniq)
+            if leitura is None:
+                self._repouso_do_movimento(uniq)
+                continue
+            valores: _Movimento = leitura["valores"]
+            base = antes[0] if antes is not None else None
+            if not _o_movimento_mudou(base, valores):
+                continue
+            if antes is not None and agora - antes[1] < intervalo:
+                continue
+            jogador, via = leitura.get("jogador"), leitura.get("transporte")
+            self._movimento_enviado[uniq] = (valores, agora, jogador, via)
+            carga = _carga_do_movimento(uniq, jogador, via, valores)
+            for fila in filas:
+                _por_na_fila(fila, carga)
+
+    def _repouso_do_movimento(self, uniq: str | None) -> None:
+        """Quem saiu sai uma vez em repouso: o aparelho que segue o movimento não fica preso."""
+        antes = self._movimento_enviado.pop(uniq, None)
+        if antes is None or antes[0] == REPOUSO_DO_MOVIMENTO:
+            return
+        carga = _carga_do_movimento(uniq, antes[2], antes[3], REPOUSO_DO_MOVIMENTO)
+        for fila in (f for con in self._conexoes for f in con.filas_do_movimento):
+            _por_na_fila(fila, carga)
+
+    async def _repousar_o_movimento_de_quem_sai(self, saidas: asyncio.Queue[Any]) -> None:
+        """Cada ``controller.disconnected`` leva o repouso do movimento daquele controle."""
+        while True:
+            carga = await saidas.get()
+            uniq = carga.get("uniq") if isinstance(carga, dict) else None
+            self._repouso_do_movimento(uniq if isinstance(uniq, str) and uniq else None)
 
     def _pulsar(self, sessao: _Credencial, params: dict[str, Any]) -> dict[str, Any]:
         """O pulso da barra: a porta valida e recusa, e o motor da luz decide e escreve."""
@@ -1565,6 +1683,54 @@ def _dedos(hub: Any, uniq: str | None) -> tuple[tuple[float, float], ...]:
     )
 
 
+def movimento_de_todo_controle_no_servico(daemon: Any, estado_do_posto: Any) -> None:
+    """O tópico ``movimento`` do tique: o giroscópio e o acelerômetro de cada controle.
+
+    Os controles são os da mesa (``alvos_conectados``, sem E/S) e o dono do posto. Só com
+    extensão inscrita em ``movimento`` o serviço pede o leitor de movimento de cada um
+    (``pedir_o_movimento``, sem o touchpad e sem grab) e lê o que ele já vê
+    (``movimento_visto``). Os dois ramos do laço chamam daqui: vale em todo modo, inclusive o
+    Nativo e a pausa. ``estado_do_posto`` dá o transporte do posto quando o backend não o diz.
+    Nunca levanta: o tique segue.
+    """
+    porta = getattr(getattr(daemon, "_mods_supervisor", None), "porta", None)
+    if not isinstance(porta, Porta) or not porta.le_o_movimento():
+        return
+    try:
+        from hefesto_dualsense4unix.daemon.subsystems.poll import _na_mesa
+        from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import _jogador_de
+
+        controle = getattr(daemon, "controller", None)
+        posto = _primario(controle)
+        hub = _o_hub_do_movimento(daemon)
+        vias = _transportes_por_controle(daemon)
+        if estado_do_posto is not None and posto and posto not in vias:
+            vias[posto] = getattr(estado_do_posto, "transport", None)
+        leituras: dict[str | None, dict[str, Any]] = {}
+        for uniq in dict.fromkeys([posto, *_na_mesa(controle)]):
+            if not uniq or hub is None:
+                continue
+            hub.pedir_o_movimento(uniq)
+            visto = hub.movimento_visto(uniq)
+            if visto is not None:
+                leituras[uniq] = {"jogador": _jogador_de(daemon, uniq),
+                                  "transporte": vias.get(uniq), "valores": visto}
+        porta.movimento_do_tique(leituras)
+    except Exception as exc:
+        logger.debug("mods_porta_movimento_do_tique_falhou", err=type(exc).__name__)
+
+
+def _o_hub_do_movimento(daemon: Any) -> Any:
+    """O ``SensorHub`` da sessão, se ele sabe pedir e ver o movimento; ``None`` sem ele."""
+    garantir = getattr(daemon, "_garantir_sensor_hub", None)
+    if not callable(garantir):
+        return None
+    hub = garantir()
+    sabe = callable(getattr(hub, "pedir_o_movimento", None)) and callable(
+        getattr(hub, "movimento_visto", None))
+    return hub if sabe else None
+
+
 def _primario(controle: Any) -> str | None:
     """O ``primary_uniq`` do backend (uma propriedade; num dublê, pode ser método)."""
     valor = getattr(controle, "primary_uniq", None)
@@ -1584,6 +1750,7 @@ __all__ = [
     "EVENTO_DO_PARAR",
     "JANELA_DA_VIBRACAO_DO_JOGO_S",
     "LIVRE_POR_SEGUNDO",
+    "MOVIMENTO_POR_SEGUNDO",
     "PUBLICACOES_POR_SEGUNDO",
     "Controles",
     "Porta",
@@ -1596,6 +1763,7 @@ __all__ = [
     "escritor_do_servico",
     "estado_dos_acessorios",
     "estado_vazio_dos_acessorios",
+    "movimento_de_todo_controle_no_servico",
     "o_jogo_escreve_no_servico",
     "pulsar_no_servico",
     "topicos_de_todo_controle_no_servico",

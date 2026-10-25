@@ -53,8 +53,8 @@ Quem só mostra o estado (a coluna «Agora» e a aba Conexões) pede `publicar:a
 último para a janela e para a aba, e ele NÃO vai ao barramento, então os gestos do PS ficam os de sempre. Com
 `ler:acessorios.gesto` o estado vai também ao barramento, e é ele que liga os gestos.
 
-Os tópicos de leitura são estes. `estado`, `bateria` e `conexao` são do controle do posto; `botoes` e `entradas`
-são de todo controle:
+Os tópicos de leitura são estes. `estado`, `bateria` e `conexao` são do controle do posto; `botoes`, `entradas` e
+`movimento` são de todo controle:
 
 - `estado`: o estado do controle do posto (o do jogador 1) a cada tique;
 - `botoes`: um botão apertado (`nome: "button.down"`) ou solto (`button.up`) em QUALQUER controle, de P1 a P4,
@@ -73,6 +73,16 @@ são de todo controle:
   segundo, e o último valor sempre chega. O parado não sai; quem assina recebe o que já está fora do repouso, e o
   controle que sai manda o repouso uma vez. Vale em todo modo, inclusive o Nativo: a leitura só vê, nunca segura o
   controle nem o touchpad;
+- `movimento` (`ler:movimento`, `nome: "controle.movimento"`): o giroscópio e o acelerômetro de QUALQUER controle,
+  de P1 a P4, cabo ou Bluetooth: `{uniq, jogador, transporte, giro: {x, y, z}, acel: {x, y, z}}`. `giro` é a
+  velocidade angular em graus por segundo (duas casas) e `acel` a aceleração em g (três casas; parado, o módulo
+  fica perto de 1, a gravidade), nas escalas do nó «Motion Sensors» do controle. É um tópico à parte das
+  `entradas` de propósito: só enquanto alguém o assina o serviço mantém vivo o leitor de movimento de cada
+  controle, sem o touchpad e sem tirar o giro do jogo. Um controle sai só quando um eixo andou além da faixa
+  morta (2 °/s no giro, 0,02 g na aceleração, acima do tremor do controle parado), no máximo 30 vezes por
+  segundo; quem assina recebe o de agora de cada controle, e o controle que sai manda uma vez o repouso, com giro
+  e aceleração zerados (a aceleração zerada é «sem leitura», nunca um controle parado). Vale em todo modo,
+  inclusive o Nativo e a pausa: a leitura só vê, nunca segura o controle;
 - `bateria`: a carga;
 - `conexao`: o controle que entra ou sai.
 

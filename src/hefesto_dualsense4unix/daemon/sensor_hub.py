@@ -170,6 +170,8 @@ class SensorHub:
         self._watch: Any = None
         self._parar = threading.Event()
         self._thread: threading.Thread | None = None
+        #: `pedir_o_movimento`: o tópico `movimento` das extensões segura só o leitor de movimento.
+        self._demanda_do_movimento: dict[str, float] = {}
 
     # -- API consumida pelo event loop (barata por contrato) --------------
 
@@ -422,6 +424,8 @@ class SensorHub:
         for reader in readers:
             with contextlib.suppress(Exception):
                 reader.stop()
+        with self._lock:
+            self._demanda_do_movimento.clear()
 
 
     def _garantir_manutencao(self) -> None:
@@ -493,6 +497,11 @@ class SensorHub:
                 "touchpad": vivos_sensores | segurados | do_toque | vivos_dedos,
                 "gamepad": vivos_entradas,
             }
+            vivos_do_movimento = self._podar(self._demanda_do_movimento, agora)
+            self._demanda_do_movimento = {
+                u: t for u, t in self._demanda_do_movimento.items() if u in vivos_do_movimento
+            }
+            desejados["motion"] |= vivos_do_movimento
             sobrando = [
                 (uniq, tipo)
                 for tipo in self._TIPOS
@@ -932,6 +941,40 @@ class SensorHub:
             return "sem_reader"
         estado = getattr(leitor, "grab_state", None)
         return str(estado) if isinstance(estado, str) else "off"
+
+    def pedir_o_movimento(self, uniq: str) -> None:
+        """Mantém vivo o leitor de movimento de `uniq` pelo prazo da demanda, sem o de toque.
+
+        É o pedido do tópico ``movimento`` das extensões. Não graba o nó: o giro e o
+        acelerômetro seguem chegando ao jogo (o grab é só do sensor desligado).
+        """
+        with self._lock:
+            self._demanda_do_movimento[uniq] = self._relogio()
+        self._garantir_manutencao()
+
+    def movimento_visto(
+        self, uniq: str
+    ) -> tuple[tuple[float, float, float], tuple[float, float, float]] | None:
+        """``(giro, acel)`` de `uniq` agora, em °/s e em g, se o leitor já vive; ``None`` sem ele.
+
+        Só VÊ: não registra demanda (quem a registra é :meth:`pedir_o_movimento`) e não drena o
+        ângulo. Um acelerômetro que falha sai zerado, sem levar o giro.
+        """
+        with self._lock:
+            motion = self._motion.get(uniq)
+        if motion is None:
+            return None
+        try:
+            g = motion.snapshot()
+            giro = (float(g.x), float(g.y), float(g.z))
+        except Exception as exc:
+            logger.debug("sensor_hub_movimento_visto_falhou", identity=uniq, err=str(exc))
+            return None
+        acel = (0.0, 0.0, 0.0)
+        with contextlib.suppress(Exception):
+            a = motion.accel_snapshot()
+            acel = (float(a.x), float(a.y), float(a.z))
+        return giro, acel
 
 
 __all__ = ["AmostraDoDsu", "SensorHub"]
