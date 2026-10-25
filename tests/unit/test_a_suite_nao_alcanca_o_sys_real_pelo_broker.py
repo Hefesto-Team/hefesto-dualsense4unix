@@ -250,7 +250,7 @@ def test_a_raiz_se_resolve_so_no_ajudante() -> None:
     nomes = [n.args[1].value for n in ast.walk(arvore) if isinstance(n, ast.Call)
              and isinstance(n.func, ast.Name) and n.func.id == "_raiz"
              and isinstance(n.args[1], ast.Constant)]
-    assert nomes and set(nomes) <= set(RAIZES_DE_PARAMETRO), set(nomes) - set(RAIZES)
+    assert nomes and set(nomes) <= set(RAIZES_DE_PARAMETRO), set(nomes) - set(RAIZES_DE_PARAMETRO)
 
 
 def test_a_regua_pega_o_padrao_ligado_e_a_leitura_a_mao() -> None:
