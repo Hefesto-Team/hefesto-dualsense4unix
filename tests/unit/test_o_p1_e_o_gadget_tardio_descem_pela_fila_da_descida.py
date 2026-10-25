@@ -77,7 +77,7 @@ def _a_mesa_com_o_p1(
     daemon._gamepad_device = p1
     daemon.config.gamepad_emulation_enabled = True
     daemon.config.rumble_active = None
-    daemon._is_stopping = lambda: parando
+    monkeypatch.setattr(daemon, "_is_stopping", lambda: parando, raising=False)
     coop._vpad_do_p1_visto = p1
     return pads, coop, p1
 
