@@ -230,15 +230,15 @@ def permissao_de_ler_a_entrada(
     for aparelho in ligados:
         try:
             dispositivo = abrir(aparelho.evento)
-        except PermissionError:
-            nome = aparelho.nome or aparelho.evento
-            return ("[WARN]", f"«{nome}»: {maquina.FRASE_SEM_PERMISSAO_DE_LER}")
-        except OSError:
-            # O nó que some entre o ``/sys`` e o ``/dev`` não mede nada.
-            continue
-        with contextlib.suppress(OSError):
-            dispositivo.close()
-        leu = True
+        except OSError as erro:
+            # O nó que some entre o ``/sys`` e o ``/dev`` não mede nada; o que recusa, mede.
+            if isinstance(erro, PermissionError):
+                nome = aparelho.nome or aparelho.evento
+                return ("[WARN]", f"«{nome}»: {maquina.FRASE_SEM_PERMISSAO_DE_LER}")
+        else:
+            with contextlib.suppress(OSError):
+                dispositivo.close()
+            leu = True
     return ("[ OK ]", LINHA_LE_A_ENTRADA) if leu else ("[INFO]", LINHA_ACIONADOR_FORA)
 
 

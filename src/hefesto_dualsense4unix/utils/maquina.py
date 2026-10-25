@@ -591,7 +591,7 @@ def _ler_do_sys(caminho: Any) -> str:
 #: do daemon e o doctor dizem esta. Nunca o grupo ``input`` (item 3.3 de
 #: ``docs/history/RESPOSTAS_V1.md``): quem está nele lê todo teclado da máquina.
 FRASE_SEM_PERMISSAO_DE_LER: Final = (
-    "o Hefesto não conseguiu abrir este aparelho pelo serviço dele: "
+    "o sistema não deixa ler este aparelho, nem pelo serviço do Hefesto: "
     "rode «hefesto-dualsense4unix doctor» para ver o que falta")
 
 #: Quanto o pedido do acionador espera o broker: a ponte pergunta de dentro do tique.
