@@ -3,7 +3,10 @@
 Em 25/10/2026, oito módulos cravavam a mesma constante. A sprint A-RAIZ-DO-HIDRAW-TEM-UM-DONO-SO-01
 deu o dono ao `usb_pai`, e o `conexao_zumbi` e o `physical_report_reader` passam a importá-la
 dele. A régua lê a árvore de sintaxe do `src/` e reprova a constante cravada num módulo fora da
-lista, e a lista só encolhe: quem cura um dos outros tira o nome dela.
+lista, e a lista só encolhe: quem cura um dos outros tira o nome dela. O mesmo vale para o texto
+com a raiz em qualquer forma (o padrão de um parâmetro, um pedaço de f-string): a catraca
+`TEXTOS_AINDA_CRAVADOS` guarda quantos cada módulo tinha, e um texto novo, num módulo da lista ou
+fora dela, reprova.
 """
 
 from __future__ import annotations
@@ -25,6 +28,28 @@ AINDA_CRAVADA = {
     "integrations/quem_o_jogo_le.py",
     "integrations/radio_da_mesa.py",
     "integrations/uhid_gamepad.py",
+}
+
+#: quantos textos com a raiz (fora das docstrings) cada módulo ainda tinha em 25/10/2026, em
+#: qualquer forma: a constante, o padrão de um parâmetro, o pedaço de uma f-string. A catraca só
+#: encolhe; um módulo fora dela tem zero.
+TEXTOS_AINDA_CRAVADOS = {
+    "broker/hidraw_broker.py": 6,
+    "core/backend_pydualsense.py": 1,
+    "core/external_leds.py": 2,
+    "daemon/subsystems/bt_mic.py": 1,
+    "daemon/subsystems/governador_do_radio.py": 1,
+    "integrations/apelido_do_dongle.py": 4,
+    "integrations/contratos_de_fora.py": 2,
+    "integrations/cor_do_plastico.py": 3,
+    "integrations/dualsense_bt_audio.py": 1,
+    "integrations/hidraw_broker_client.py": 1,
+    "integrations/pad_usb.py": 3,
+    "integrations/plano_de_radio.py": 1,
+    "integrations/quem_o_jogo_le.py": 1,
+    "integrations/radio_da_mesa.py": 2,
+    "integrations/sinal_da_barra.py": 1,
+    "integrations/uhid_gamepad.py": 2,
 }
 
 #: os que importam do dono; neles a raiz não aparece em texto nenhum fora das docstrings.
@@ -78,6 +103,7 @@ def test_a_regua_pega_a_constante_e_o_texto_cravados() -> None:
     assert constantes_da_raiz(f'def f(raiz="{RAIZ}"):\n    pass\n') == []
     assert textos_com_a_raiz(f'def f(n):\n    return open(f"{RAIZ}/{{n}}/device/uevent")\n') == [2]
     assert textos_com_a_raiz(f'"""{RAIZ} na docstring."""\n') == []
+    assert textos_com_a_raiz(f'def f(raiz="{RAIZ}"):\n    pass\n') == [1]
 
 
 def test_a_raiz_do_hidraw_so_e_cravada_no_dono_e_nos_que_a_lista_ainda_guarda() -> None:
@@ -98,3 +124,20 @@ def test_quem_importa_do_dono_nao_crava_a_raiz_em_texto_nenhum() -> None:
     achados = {nome: linhas for nome in IMPORTAM_DO_DONO
                if (linhas := textos_com_a_raiz(modulos[nome]))}
     assert achados == {}, f"a raiz do hidraw cravada fora do dono: {achados}"
+
+
+def test_o_texto_com_a_raiz_nao_cresce_em_modulo_nenhum() -> None:
+    """A constante é uma forma; o padrão de um parâmetro e a f-string são outras, e a mesma raiz
+    cravada por elas é um segundo dono do mesmo jeito."""
+    modulos = _modulos()
+    assert len(textos_com_a_raiz(modulos[DONO])) == 1, "o dono crava a raiz uma vez só"
+    contagem = {nome: len(linhas) for nome, fonte in modulos.items()
+                if nome != DONO and (linhas := textos_com_a_raiz(fonte))}
+    cresceu = {nome: n for nome, n in contagem.items() if n > TEXTOS_AINDA_CRAVADOS.get(nome, 0)}
+    assert not cresceu, (
+        f"a raiz do hidraw ganhou texto novo em {cresceu} (a catraca: "
+        f"{ {n: TEXTOS_AINDA_CRAVADOS.get(n, 0) for n in cresceu} }): importe `RAIZ_HIDRAW` de "
+        "`integrations/usb_pai`")
+    encolheu = {nome: contagem.get(nome, 0) for nome, n in TEXTOS_AINDA_CRAVADOS.items()
+                if contagem.get(nome, 0) < n}
+    assert not encolheu, f"{encolheu} já crava menos: baixe a `TEXTOS_AINDA_CRAVADOS`"
