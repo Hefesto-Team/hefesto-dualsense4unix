@@ -84,14 +84,14 @@ O dado mora em **[`docs/data/paridade-gtk-html.csv`](../data/paridade-gtk-html.c
 | 01-jogar | 42 | 11 | 25 | 1 | 4 | 1 | 26% |
 | 02-controles | 48 | 15 | 24 | 5 | 4 | 0 | 31% |
 | 03-gatilhos | 31 | 8 | 10 | 7 | 5 | 1 | 26% |
-| 04-iluminacao | 35 | 8 | 13 | 6 | 7 | 1 | 23% |
+| 04-iluminacao | 34 | 8 | 13 | 6 | 6 | 1 | 24% |
 | 05-vibracao | 31 | 12 | 11 | 5 | 3 | 0 | 39% |
 | 06-navegacao | 40 | 7 | 15 | 9 | 9 | 0 | 18% |
 | 07-lancadores | 24 | 8 | 11 | 2 | 3 | 0 | 33% |
 | 08-conexoes | 44 | 12 | 23 | 9 | 0 | 0 | 27% |
-| 09-sistema | 38 | 13 | 18 | 4 | 3 | 0 | 34% |
-| 10-perfis | 48 | 15 | 20 | 7 | 6 | 0 | 31% |
-| TODAS | 381 | 109 | 170 | 55 | 44 | 3 | 29% |<!-- /TABELA-DA-PARIDADE -->
+| 09-sistema | 38 | 12 | 19 | 4 | 3 | 0 | 32% |
+| 10-perfis | 48 | 12 | 21 | 9 | 6 | 0 | 25% |
+| TODAS | 380 | 105 | 172 | 57 | 43 | 3 | 28% |<!-- /TABELA-DA-PARIDADE -->
 
 A tabela é **gerada da contagem do CSV** e conferida pelo portão (regra
 `numero-publicado`): quem mexer no dado e não regerar esta seção é barrado
@@ -751,3 +751,15 @@ nenhuma das duas páginas tinha onde pintá-los: a linha fechada do cartão most
 microfone (**«a trava no cabo e sem endereço»** e **«quanto ele custa de rádio»**) passam a `FALTA_NO_HTML`. A tabela acima
 foi recontada do CSV: `08-conexoes` vai de `13 IGUAL · 24 DIFER · 7 FALTA · 30%` para `12 · 23 · 9 · 27%`, e `TODAS` de
 `110 · 171 · 53` para `109 · 170 · 55`.
+
+**25/10/2026 — o sinal PRESENTE é código, e não comentário**
+(`O-SINAL-PRESENTE-DA-PARIDADE-E-CODIGO-E-NAO-COMENTARIO-01`). A régua passou a pedir USO para o sinal que é símbolo de
+código, e 44 linhas só achavam o sinal num comentário ou numa docstring. Em 38 o sinal virou o símbolo que o código usa
+hoje; seis mudaram pelo que se mede no código. **«Largar o claim da lightbar para o jogo»** sai do CSV: o `lightbar.reset`
+deixou a aba 04 em 07/09/2026, com o `Automático` de cada coluna, e a GTK nunca o teve. **«Consertar problemas
+conhecidos»** passa de `IGUAL` a `DIFERENTE` (o `--install` do WirePlumber saiu dos consertos em 13/09/2026). Na 10, a
+lista do desenho do todo trocou as colunas: **«nome · prioridade · Quando usar»** e **«o perfil ativo primeiro»** passam
+de `IGUAL` a `DIFERENTE`, **«a dica da disputa»** de `IGUAL` a `FALTA_NO_HTML`, e **«Mostrar a prioridade»** de `DIFERENTE`
+a `FALTA_NO_HTML`. A tabela acima foi recontada do CSV: `04-iluminacao` vai de `35 · 7 SO_HTML · 23%` para `34 · 6 · 24%`,
+`09-sistema` de `13 IGUAL · 18 DIFER · 34%` para `12 · 19 · 32%`, `10-perfis` de `15 · 20 · 7 FALTA · 31%` para
+`12 · 21 · 9 · 25%`, e `TODAS` de `381 · 109 · 170 · 55 · 44 · 29%` para `380 · 105 · 172 · 57 · 43 · 28%`.
