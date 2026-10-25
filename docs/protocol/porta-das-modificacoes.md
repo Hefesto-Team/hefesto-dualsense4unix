@@ -376,20 +376,28 @@ Três peças fazem a janela AGIR em vez de só mostrar. As três pedem `publicar
   até 16, e o `padrao`, opcional, tem a mesma forma. As formas do `livre` entram nas `formas` das opções
   `por_botao` da MESMA extensão: um botão pode tocar «Meu 1», e a forma esquecida devolve o botão ao padrão. A
   forma de uma extensão nunca aparece na janela de outra, e o «Guardar» de outra a recusa.
+  A opção `livre` aceita `modos: true`. Com ele, `extensao.livre` e `mods.livre` levam `modo`, um de
+  `"soltar"`, `"segurar"` e `"repetir"` (`"soltar"` por padrão). Sem `modos`, o campo não vai. A faixa ganha os
+  três botões do que a barra faz ao soltar: «Soltar» volta a zero, «Segurar» fica onde parou e «Repetir» toca
+  em laço o trecho do último arrastar (o trecho de menos de 0,1 s fica, como no «Segurar»). O modo escolhido
+  vai a `opcoes.json` na chave `<id>:modo` pelo «Guardar», e vale na hora: depois de um arrastar, a troca manda
+  um soltar com o valor de agora e o modo novo. `modos` fora do `livre` recusa o manifesto.
 
 A extensão recebe as três como eventos (`{"method": "evento", "params": {"topico", "nome", "uniq": null,
 "dados"}}`), só ela, sem assinar tópico nenhum:
 
 - `extensao.acao` com `dados: {mod, acao, alvo, valor?}`: `alvo` é o `id` do aparelho (ou `null` nas `acoes` da
   janela) e `valor` vem só na chave `ligar` (`true` liga);
-- `extensao.livre` com `dados: {mod, id, valor (0 a 1), soltou}`: no máximo 20 por segundo. O primeiro arrastar
-  abre um compasso de 50 ms e ao fim dele sai o valor mais novo; o soltar (`soltou: true`) sai na hora, fora do
-  compasso, e leva o valor final.
+- `extensao.livre` com `dados: {mod, id, valor (0 a 1), soltou, modo?}`: no máximo 20 por segundo. O primeiro
+  arrastar abre um compasso de 50 ms e ao fim dele sai o valor mais novo; o soltar (`soltou: true`) sai na hora,
+  fora do compasso, e leva o valor final. `modo` vem só no `livre` com `modos`, e diz o que fazer ao soltar.
 
 A janela os pede ao serviço por `mods.acao {mod, acao, alvo?, valor?}` (volta `{enviada}`) e
-`mods.livre {mod, id, valor, soltou}` (volta `{enviado}`); os dois voltam falso quando a extensão não está
+`mods.livre {mod, id, valor, soltou, modo?}` (volta `{enviado}`; `modo` só no `livre` com `modos`, e sem ele
+vale `"soltar"`); os dois voltam falso quando a extensão não está
 conectada, e a janela recusa dizendo que ela não está rodando. O serviço recusa (`-32003`, com a frase) a ação
-que o manifesto não declara ali (nos aparelhos com `alvo`, na janela sem ele) e o `livre` de outro `id`. O botão
+que o manifesto não declara ali (nos aparelhos com `alvo`, na janela sem ele), o `livre` de outro `id`, o `modo`
+de um `livre` sem `modos` e o `modo` fora dos três. O botão
 diz «Em curso» até a extensão devolver um `acessorios.estado` novo: cada estado guardado ganha um `serie`, que
 `mods.agora` devolve e que sobe a cada estado; sem estado novo em 5 s, o botão volta.
 
@@ -447,7 +455,8 @@ delas que estiver instalada:
 - para (é desligada, e o instalador espera ela parar; a que não para recusa a troca inteira, e as que já tinham
   sido desligadas voltam a seguir ligadas);
 - passa as escolhas: a opção de `id` igual cujo valor a nova aceita vai para o `opcoes.json` da nova; a escolha
-  já feita na nova vale mais; entre duas antigas, vale a primeira da lista. O «sim» às permissões não passa: a
+  já feita na nova vale mais; entre duas antigas, vale a primeira da lista. O modo do `livre` com `modos`
+  (`<id>:modo`) passa do mesmo jeito, quando não é o `"soltar"` do padrão. O «sim» às permissões não passa: a
   permissão nova pede o do usuário;
 - sai pelo caminho do remover (o código, os dados menos o `meu.css` e a linha do registro).
 
