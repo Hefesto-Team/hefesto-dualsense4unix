@@ -57,7 +57,8 @@ class BrokerAntesDoLogin:
     (o ``register_client`` com ``nao_e_quem_esta_na_frente``). ``sem_sessao_ativa``:
     aceita, lê o pedido e recusa com o erro do ``_cmd_pad_usb_montar``.
     ``travado``: aceita e nunca responde (o broker de pé e preso), e o cliente
-    espera o ``_TIMEOUT_S`` dele inteiro.
+    espera o ``_TIMEOUT_S`` dele inteiro. ``atende``: responde ``ok`` a um pedido
+    e fecha (o broker que reinicia depois de atender).
     """
 
     def __init__(self, caminho: Path, modo: str) -> None:
@@ -89,6 +90,11 @@ class BrokerAntesDoLogin:
                 self._presas.append(conn)
                 continue
             with conn:
+                if self.modo == "atende":
+                    conn.settimeout(2.0)
+                    with contextlib.suppress(OSError):
+                        conn.recv(65536)
+                        conn.sendall(b'{"ok": true}\n')
                 if self.modo == "sem_sessao_ativa":
                     conn.settimeout(2.0)
                     with contextlib.suppress(OSError):
@@ -371,6 +377,101 @@ def test_o_broker_preso_nao_prende_o_tique(
         m.broker.fechar()
         for pedido in m.pedidos_vistos:
             pedido.esperar(5.0)
+
+
+@pytest.mark.parametrize("jogadores", [(1, 2), (1, 2, 3, 4), (1,), (2, 4), (1, 3)],
+                         ids=["p1-usb+p2-bt", "quatro-mistos", "um-so", "todos-bt", "todos-usb"])
+def test_o_gadget_que_chega_depois_do_stop_volta_ao_broker(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, jogadores: tuple[int, ...]
+) -> None:
+    """O pad para com a nova tentativa em voo: o gadget que chega tarde se desmonta.
+
+    Mordida: tire o ``desmontar`` do pedido largado, e o gadget fica montado sem pad.
+    """
+    m = Mesa(monkeypatch, tmp_path, "sem_sessao_ativa")
+    solta = threading.Event()
+    pedir = m.ug.PEDIR_O_PAD_USB
+
+    def preso(*args: Any) -> Any:
+        solta.wait(5.0)
+        return pedir(*args)
+
+    pads = [m.pad(j) for j in jogadores]
+    try:
+        for pad in pads:
+            assert pad.start() and pad._gadget is None
+        m.sessao_aberta = True
+        monkeypatch.setattr(m.ug, "PEDIR_O_PAD_USB", preso)
+        m.passar(m.ug._GADGET_VARRE_S + 0.5, pads, assentar=False)
+        assert all(pad._pedido_ao_broker is not None for pad in pads)
+        for pad in pads:
+            pad.stop()
+        solta.set()
+        for pedido in m.pedidos_vistos:
+            assert pedido.esperar(5.0), "o pedido largado não terminou"
+        assert len(m.b.clientes) == len(pads)
+        assert all(cliente.desmontados for cliente in m.b.clientes), (
+            "o gadget que chegou depois do stop ficou montado sem pad"
+        )
+        assert all(pad._gadget is None and not pad.is_active() for pad in pads)
+        assert not any(m.serial(pad) in m.ug._RECUSAS_DO_BROKER for pad in pads)
+    finally:
+        solta.set()
+        for pad in pads:
+            pad.stop()
+        m.broker.fechar()
+        for pedido in m.pedidos_vistos:
+            pedido.esperar(5.0)
+
+
+def _leases(espiao: Any) -> int:
+    return sum(1 for nivel, evento in espiao.eventos
+               if nivel == "info" and evento == "hidraw_broker_lease_open")
+
+
+def test_a_lease_se_diz_de_novo_depois_de_ok_e_depois_do_broker_fora(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A lease calada é só a reabertura sem resposta; as outras voltas se dizem.
+
+    O cliente principal do daemon recebe ``ok`` e, quando o broker reinicia, diz a
+    lease nova; o peer recusado que volta depois do broker fora do ar também.
+    Mordida: tire o ``_lease_dita = False`` do ``ok`` ou do connect que falhou, e
+    a volta fica muda.
+    """
+    espiao = _EspiaoDoDiario(hbc.logger)
+    monkeypatch.setattr(hbc, "logger", espiao)
+    caminho = tmp_path / "broker.sock"
+
+    atende = BrokerAntesDoLogin(caminho, "atende")
+    try:
+        cliente = hbc.HidrawBrokerClient(str(caminho), timeout_s=1.0)
+        for _ in range(3):
+            assert cliente.ping()
+        assert _leases(espiao) == 3, "o broker que atendeu e reiniciou ficou sem a lease nova"
+        cliente.close()
+    finally:
+        atende.fechar()
+    caminho.unlink()
+
+    espiao.eventos.clear()
+    recusa = BrokerAntesDoLogin(caminho, "peer_recusado")
+    cliente = hbc.HidrawBrokerClient(str(caminho), timeout_s=1.0)
+    try:
+        for _ in range(5):
+            assert not cliente.ping()
+        assert _leases(espiao) == 1, "a reabertura recusada se disse a cada volta"
+    finally:
+        recusa.fechar()
+    assert not cliente.ping()
+    caminho.unlink()
+    volta = BrokerAntesDoLogin(caminho, "peer_recusado")
+    try:
+        assert not cliente.ping()
+        assert _leases(espiao) == 2, "o broker que voltou depois de fora do ar ficou mudo"
+    finally:
+        volta.fechar()
+        cliente.close()
 
 
 def test_a_recusa_que_nao_passa_nao_pede_de_novo(

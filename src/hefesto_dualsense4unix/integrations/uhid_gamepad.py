@@ -3138,19 +3138,22 @@ class _PedidoAoBroker:
             largado = self._largado
             if not largado:
                 self._gadget = gadget
+        try:
+            if largado:
+                if gadget is not None:
+                    gadget.desmontar()
+                if self.serial is not None:
+                    _esquecer_a_recusa_do_serial(self.serial)
+        finally:
+            # pronto só depois da arrumação do largado: quem espera vê o fio terminado
             self._pronto.set()
-        if largado:
-            if gadget is not None:
-                gadget.desmontar()
-            if self.serial is not None:
-                _esquecer_a_recusa_do_serial(self.serial)
 
     @property
     def pronto(self) -> bool:
         return self._pronto.is_set()
 
     def esperar(self, segundos: float) -> bool:
-        """True = a resposta chegou em até ``segundos`` (para quem mede)."""
+        """True = o fio terminou em até ``segundos`` (para quem mede)."""
         return self._pronto.wait(segundos)
 
     def tomar(self) -> _GadgetDoPad | None:
