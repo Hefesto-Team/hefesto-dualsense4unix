@@ -33,6 +33,8 @@ _LER_O_MAPA = r"""
     quando: (q('#de-quando') || {}).textContent || null,
     examinar: !!q('#reexaminar'),
     painel: vis(q('#painel')) ? q('#painel').innerText.trim() : '',
+    verde: !!q('#painel .nada-a-fazer'),
+    copiar: vis(q('#registro-copiar')),
     faces: document.querySelectorAll('#faces .face-cab').length,
     palco: vis(q('.palco')),
     corpo: document.body.innerText
@@ -162,6 +164,10 @@ def test_a_pagina_sem_leitura_nao_mostra_o_exemplo(tela: Any, porque: str) -> No
         assert lido["quando"] == frase and not lido["examinar"], (modo, lido["quando"])
         esperado = "" if modo == "mesa" else pagina_do_mapa.NADA_A_SUGERIR
         assert lido["painel"] == esperado, (modo, lido["painel"])
+        # o verde do «nada a fazer» diria «está tudo certo», e sem leitura não se sabe
+        assert not lido["verde"], f"{modo}: sem leitura o painel se pinta de tudo certo"
+    assert tela.executar(_modo("registro")) == "ok"
+    assert not _ler(tela)["copiar"], "sem leitura o Registro oferece copiar um registro vazio"
 
 
 @skip_sem_gi_real
@@ -175,7 +181,7 @@ def test_a_leitura_que_chega_depois_desenha_o_gabinete(tela: Any) -> None:
     lido = _ler(tela)
     assert lido["faces"] == 0 and lido["quando"] == pagina_do_mapa.FRASES_SEM_LEITURA[
         pagina_do_mapa.SEM_MAPA], f"o arranjo recusado tirou a página do vazio: {lido}"
-    dado =arranjo_desta_maquina.para_a_pagina(
+    dado = arranjo_desta_maquina.para_a_pagina(
         carregar=lambda: MaquinaConfig(mapa=_o_mapa()),
         ler_o_barramento=lambda: Censo(aparelhos=(), barramentos=(
             Barramento(no="/sys/usb9", nome_do_kernel="usb9", velocidade_mbps=480.0),)),
@@ -185,3 +191,5 @@ def test_a_leitura_que_chega_depois_desenha_o_gabinete(tela: Any) -> None:
     lido = _ler(tela)
     assert lido["faces"] == 1 and lido["palco"], lido
     assert pagina_do_mapa.NADA_A_SUGERIR not in lido["corpo"]
+    assert tela.executar(_modo("registro")) == "ok"
+    assert _ler(tela)["copiar"], "a leitura que chegou depois não devolveu o Copiar do Registro"

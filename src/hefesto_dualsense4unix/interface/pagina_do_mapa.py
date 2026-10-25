@@ -6776,8 +6776,9 @@ FRASES_SEM_LEITURA: dict[str, str] = {
     SEM_LEITURA: "Não deu para ler as entradas deste computador",
 }
 
-#: O que «Sugestões» e «Adicionar» dizem sem leitura.
-NADA_A_SUGERIR = "Nada a sugerir."
+#: O que «Sugestões» e «Adicionar» dizem sem leitura, na chamada neutra de «Nada a mudar de
+#: lugar»: o verde do `.nada-a-fazer` diz «está tudo certo», e sem leitura não se sabe.
+NADA_A_SUGERIR = "Nada a sugerir"
 
 JS_SEM_LEITURA = """\
   /* ══ SEM LEITURA DESTE COMPUTADOR — 25/10/2026 ═══════════════════════
@@ -6815,7 +6816,9 @@ JS_SEM_LEITURA = """\
 """.replace("__FRASES_SEM_LEITURA__", json.dumps(FRASES_SEM_LEITURA, ensure_ascii=False)).replace(
     "__NADA_A_SUGERIR__", json.dumps(NADA_A_SUGERIR, ensure_ascii=False))
 
-JS_DO_VAZIO_NA_PINTURA = r"""    /* SEM LEITURA, NADA SE DESENHA: o cabeçalho já disse o porquê. */
+JS_DO_VAZIO_NA_PINTURA = r"""    /* SEM LEITURA, NADA SE DESENHA: o cabeçalho já disse o
+       porquê, e o registro vazio não tem o que copiar. */
+    document.getElementById("registro-copiar").hidden = semLeitura;
     if (semLeitura) {
       document.querySelector(".palco").hidden = true;
       document.getElementById("legenda").hidden = true;
@@ -6825,7 +6828,7 @@ JS_DO_VAZIO_NA_PINTURA = r"""    /* SEM LEITURA, NADA SE DESENHA: o cabeçalho j
       var oPainel = document.getElementById("painel");
       oPainel.hidden = !sugere;
       oPainel.innerHTML = sugere
-        ? '<div class="nada-a-fazer"><b>' + NADA_A_SUGERIR + "</b></div>" : "";
+        ? '<p class="chamada">' + NADA_A_SUGERIR + "</p>" : "";
       pintarORegistro(null);
       return;
     }
