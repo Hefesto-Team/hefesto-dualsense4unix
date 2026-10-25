@@ -24,12 +24,12 @@ estáveis, lido onde só o índice e o nome bastam.
 
 * texto com acento vira `null` no campo inteiro (`Invalid non-ASCII character`
   no stderr, e o valor sai como a cadeia `(null)`): a descrição «Estéreo digital» de
-  uma placa vem `(null)`. Aqui `(null)` é lido como VAZIO, a descrição recua para
-  o `device.description` do nó (também `(null)` quando tem acento, e só «HDA NVidia»
-  na placa HDMI) e o nó fica marcado (:attr:`NoDeSom.descricao_nula`): quem mostra o
-  nome ao usuário pede o inteiro ao ``pw-dump``, que fala UTF-8
-  (:func:`descricoes_do_pw_dump`). Nome de nó, `sysfs.path`, `alsa.card` e as
-  identidades de fabricante são ASCII e chegam inteiros;
+  uma placa e o `node.name` do Sackboy™ vêm `(null)`. O leitor desta porta
+  (:func:`ler_a_lista`) completa o que se perdeu pelo grafo do PipeWire (o
+  ``pw-dump``, que fala UTF-8), casando pela identidade do nó, numa leitura só
+  por pergunta e só quando algo se perdeu (:func:`completar_o_json`). Sem o
+  grafo, o campo fica VAZIO e marcado (:attr:`Fluxo.perdidos`,
+  :attr:`NoDeSom.descricao_nula`), nunca inventado;
 * `list modules` em JSON não traz o ÍNDICE do módulo. Quem precisa dele (os
   módulos que o Hefesto carrega e descarrega) lê `list short modules`, de colunas
   estáveis.
@@ -72,6 +72,12 @@ PRAZO_DA_PERGUNTA_S: Final[int] = 5
 
 #: o que o `pactl` imprime no lugar de um texto que o JSON não conseguiu escrever.
 NULO_DO_PACTL: Final[str] = "(null)"
+
+#: a marca do objeto já conferido contra o grafo: o que ainda falta nele, o grafo não tem.
+CHAVE_DO_GRAFO: Final[str] = "hefesto.grafo"
+
+#: quem lê o grafo do PipeWire: o texto do ``pw-dump``, ou ``None`` («não sei»).
+Grafo = Callable[[], "str | None"]
 
 TIPOS_DE_NO: Final[tuple[str, ...]] = ("sinks", "sources")
 TIPOS_DE_FLUXO: Final[tuple[str, ...]] = ("sink-inputs", "source-outputs")
@@ -285,30 +291,138 @@ def _no_do_json(o: Mapping[str, Any]) -> NoDeSom | None:
     )
 
 
-def descricoes_do_pw_dump(texto: str | None) -> dict[str, str] | None:
-    """``{node.name: node.description}`` dos nós do ``pw-dump``. Função pura.
+@dataclass(frozen=True)
+class NosDoGrafo:
+    """As propriedades de texto dos nós do ``pw-dump``, pelo serial, pelo id e pelo nome."""
 
-    ``None`` é «não sei» (o texto não é JSON). O ``pw-dump`` fala UTF-8 inteiro, e é
-    por ele que volta a descrição com acento que o JSON do ``pactl`` 16.1 perde:
-    medido em 08/10/2026 nesta máquina, «HDA NVidia Estéreo digital (HDMI)» pelo
-    ``pw-dump`` contra «HDA NVidia» pelo recuo.
+    por_serial: Mapping[str, Mapping[str, str]]
+    por_id: Mapping[str, Mapping[str, str]]
+    por_nome: Mapping[str, Mapping[str, str]]
+
+
+def nos_do_grafo(texto: str | None) -> NosDoGrafo | None:
+    """Os nós do ``pw-dump``, ou ``None`` («não sei»: o texto não é JSON). Função pura.
+
+    O serial, que o grafo dá como número, vira texto como no ``pactl``.
     """
     objetos = lista_do_json(texto)
     if objetos is None:
         return None
-    fora: dict[str, str] = {}
+    por_serial: dict[str, dict[str, str]] = {}
+    por_id: dict[str, dict[str, str]] = {}
+    por_nome: dict[str, dict[str, str]] = {}
     for o in objetos:
         if o.get("type") != "PipeWire:Interface:Node":
             continue
         info = o.get("info")
-        props = info.get("props") if isinstance(info, dict) else None
-        if not isinstance(props, dict):
+        bruto = info.get("props") if isinstance(info, dict) else None
+        if not isinstance(bruto, dict):
             continue
-        nome = _texto(props.get("node.name"))
-        descricao = _texto(props.get("node.description"))
-        if nome and descricao:
-            fora[nome] = descricao
-    return fora
+        props = {str(k): str(v) for k, v in bruto.items()
+                 if isinstance(v, (str, int)) and not isinstance(v, bool)}
+        if props.get("object.serial"):
+            por_serial[props["object.serial"]] = props
+        ident = _inteiro(o.get("id"))
+        if ident is not None:
+            por_id[str(ident)] = props
+        if _texto(props.get("node.name")):
+            por_nome[props["node.name"]] = props
+    return NosDoGrafo(por_serial, por_id, por_nome)
+
+
+def descricoes_do_pw_dump(texto: str | None) -> dict[str, str] | None:
+    """``{node.name: node.description}`` dos nós do ``pw-dump``. Função pura.
+
+    ``None`` é «não sei» (o texto não é JSON). Medido em 08/10/2026 nesta máquina:
+    «HDA NVidia Estéreo digital (HDMI)» pelo ``pw-dump`` contra «HDA NVidia» pelo
+    recuo do ``pactl``.
+    """
+    nos = nos_do_grafo(texto)
+    if nos is None:
+        return None
+    return {nome: props["node.description"] for nome, props in nos.por_nome.items()
+            if _texto(props.get("node.description"))}
+
+
+def ler_o_grafo() -> str | None:
+    """O texto do ``pw-dump``, pelo leitor do retrato (que cala na suíte), ou ``None``."""
+    from hefesto_dualsense4unix.integrations import retrato_do_som
+
+    return retrato_do_som.ler_o_pw_dump()
+
+
+def _perdeu_algo(o: Mapping[str, Any]) -> bool:
+    """O ``pactl`` perdeu algum texto deste objeto, e ele ainda não foi ao grafo?"""
+    if CHAVE_DO_GRAFO in o:
+        return False
+    props = o.get("properties")
+    return (o.get("name") == NULO_DO_PACTL or o.get("description") == NULO_DO_PACTL
+            or (isinstance(props, Mapping) and NULO_DO_PACTL in props.values()))
+
+
+def _o_mesmo_no(o: Mapping[str, Any], nos: NosDoGrafo) -> Mapping[str, str] | None:
+    """O nó do grafo que É este objeto do ``pactl``, ou ``None``.
+
+    A identidade decide: o ``object.serial`` (o índice do ``pipewire-pulse``), e sem
+    ele o ``object.id``; sem os dois, o índice como serial. O nome só casa nó (que
+    tem ``name``) sem identidade nenhuma, e só nome inteiro. Nome inteiro dos dois
+    lados que não bate desfaz o par: nome vazio nunca casa.
+    """
+    props = _propriedades(o.get("properties"))
+    serial, ident = props.get("object.serial", ""), props.get("object.id", "")
+    nome = props.get("node.name", "") or _texto(o.get("name"))
+    if serial or ident:
+        achado = nos.por_serial.get(serial) if serial else nos.por_id.get(ident)
+    else:
+        indice = _inteiro(o.get("index"))
+        achado = None if indice is None else nos.por_serial.get(str(indice))
+        if achado is None and nome and "name" in o:
+            achado = nos.por_nome.get(nome)
+    if achado is None:
+        return None
+    do_grafo = _texto(achado.get("node.name"))
+    if nome and do_grafo and nome != do_grafo:
+        return None
+    return achado
+
+
+def _completo(o: Mapping[str, Any], nos: NosDoGrafo) -> dict[str, Any]:
+    """O objeto com o texto perdido devolvido pelo grafo, e marcado como conferido."""
+    novo = {**o, CHAVE_DO_GRAFO: "lido"}
+    achado = _o_mesmo_no(o, nos)
+    if achado is None:
+        return novo
+    bruto = o.get("properties")
+    if isinstance(bruto, Mapping):
+        novo["properties"] = {
+            k: (achado.get(str(k)) or v) if v == NULO_DO_PACTL else v
+            for k, v in bruto.items()}
+    for campo, chave in (("name", "node.name"), ("description", "node.description")):
+        if o.get(campo) == NULO_DO_PACTL and achado.get(chave):
+            novo[campo] = achado[chave]
+    return novo
+
+
+def completar_o_json(texto: str | None, grafo: Grafo | None = None) -> str | None:
+    """O JSON de um ``pactl --format=json list`` com o texto perdido vindo do grafo.
+
+    O dono único do completar: ``(null)`` é o texto que o ``pactl`` 16.1 não soube
+    escrever (™, acento, japonês), e o ``pw-dump`` (``grafo``, por padrão
+    :func:`ler_o_grafo`) o tem inteiro; o par é pela identidade (:func:`_o_mesmo_no`).
+    O grafo é lido UMA vez, só se algum objeto perdeu texto. Sem grafo, o campo
+    segue perdido; o que o grafo não tem (o ``module-stream-restore.id``) também, e o
+    objeto sai marcado (:data:`CHAVE_DO_GRAFO`). Idempotente.
+    """
+    if texto is None or f'"{NULO_DO_PACTL}"' not in texto:
+        return texto
+    objetos = lista_do_json(texto)
+    if objetos is None or not any(_perdeu_algo(o) for o in objetos):
+        return texto
+    nos = nos_do_grafo((grafo or ler_o_grafo)())
+    if nos is None:
+        return texto
+    return json.dumps([_completo(o, nos) if _perdeu_algo(o) else o for o in objetos],
+                      ensure_ascii=False)
 
 
 def _fluxo_do_json(o: Mapping[str, Any]) -> Fluxo | None:
@@ -364,21 +478,28 @@ def fluxos_do_texto(texto: str) -> tuple[Fluxo, ...]:
         for c in _colunas(texto))
 
 
-def ler_nos(tipo: str, ler: Leitor) -> tuple[NoDeSom, ...] | None:
+def ler_a_lista(tipo: str, ler: Leitor, grafo: Grafo | None = None) -> str | None:
+    """O JSON da lista de um tipo, já completo pelo grafo (:func:`completar_o_json`)."""
+    if tipo not in (*TIPOS_DE_NO, *TIPOS_DE_FLUXO):
+        raise ValueError(tipo)
+    return completar_o_json(ler(argv_da_lista(tipo)), grafo)
+
+
+def ler_nos(tipo: str, ler: Leitor, grafo: Grafo | None = None) -> tuple[NoDeSom, ...] | None:
     """Os nós de ``sinks`` ou ``sources``, ou ``None`` («não sei», ou sem a porta do JSON)."""
     if tipo not in TIPOS_DE_NO:
         raise ValueError(tipo)
-    lista = lista_do_json(ler(argv_da_lista(tipo)))
+    lista = lista_do_json(ler_a_lista(tipo, ler, grafo))
     if lista is None:
         return None
     return tuple(n for n in (_no_do_json(o) for o in lista) if n is not None)
 
 
-def ler_fluxos(tipo: str, ler: Leitor) -> tuple[Fluxo, ...] | None:
+def ler_fluxos(tipo: str, ler: Leitor, grafo: Grafo | None = None) -> tuple[Fluxo, ...] | None:
     """Os fluxos de ``sink-inputs`` ou ``source-outputs``, ou ``None`` («não sei»)."""
     if tipo not in TIPOS_DE_FLUXO:
         raise ValueError(tipo)
-    lista = lista_do_json(ler(argv_da_lista(tipo)))
+    lista = lista_do_json(ler_a_lista(tipo, ler, grafo))
     if lista is None:
         return None
     return tuple(f for f in (_fluxo_do_json(o) for o in lista) if f is not None)
@@ -491,19 +612,26 @@ def tem_modulo(arquivo: str, diretorios: Iterable[str] | None = None) -> bool:
 
 __all__ = [
     "AMBIENTE_DO_DIRETORIO",
+    "CHAVE_DO_GRAFO",
     "FORMATO_JSON",
     "NULO_DO_PACTL",
     "Canal",
     "Fluxo",
+    "Grafo",
     "NoDeSom",
+    "NosDoGrafo",
     "argv_da_lista",
     "argv_do_curto",
+    "completar_o_json",
     "descricoes_do_pw_dump",
     "diretorios_de_modulos",
     "fluxos_do_texto",
+    "ler_a_lista",
     "ler_fluxos",
     "ler_nos",
+    "ler_o_grafo",
     "lista_do_json",
+    "nos_do_grafo",
     "nos_do_texto",
     "placa_de_cada_fonte",
     "sem_o_formato",

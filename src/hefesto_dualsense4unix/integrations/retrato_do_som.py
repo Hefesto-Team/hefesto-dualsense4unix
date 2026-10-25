@@ -76,7 +76,7 @@ from hefesto_dualsense4unix.integrations.porta_do_som import (
     NoDeSom,
     argv_da_lista,
     argv_do_curto,
-    descricoes_do_pw_dump,
+    completar_o_json,
     fluxos_do_texto,
     nos_do_texto,
     sem_o_formato,
@@ -346,7 +346,6 @@ class RetratoDoSom:
         self._geracao_do_tipo: dict[str, int] = dict.fromkeys(TIPOS, 0)
         self._esperas: set[tuple[asyncio.AbstractEventLoop, asyncio.Event]] = set()
         self._sem_json = False
-        self._do_pw_dump: tuple[tuple[int, int], dict[str, str]] | None = None
 
 
     def _ler(self, argv: Sequence[str]) -> str | None:
@@ -357,19 +356,25 @@ class RetratoDoSom:
             logger.debug("retrato_do_som_leitura_falhou", err=str(exc))
             return None
 
+    def _ler_o_grafo(self) -> str | None:
+        """O ``pw-dump``: pelo leitor injetado (as réguas), ou pelo do produto."""
+        return self._ler(["pw-dump"]) if self._ler_injetado is not None else ler_o_pw_dump()
+
     def _ler_o_tipo(self, tipo: str) -> str | None:
         """O texto de UM tipo: o JSON, ou o curto quando o servidor não conhece a porta.
 
         A porta ausente se PROVA, e não se presume: o JSON falhou, a sonda
         `info` em JSON também, e o curto respondeu. Servidor mudo falha nos
         três e segue «não sei»; leitura que falhou com a porta de pé também.
+        O JSON se guarda já completo pelo grafo (:func:`completar_o_json`): o
+        texto que o `pactl` perdeu volta uma vez por releitura, e não por pergunta.
         """
         if tipo not in _TIPOS_EM_JSON:
             return self._ler(_LEITURA_DO_TIPO[tipo])
         if not self._sem_json:
             texto = self._ler(_LEITURA_DO_TIPO[tipo])
             if texto is not None and texto.lstrip().startswith("["):
-                return texto
+                return completar_o_json(texto, self._ler_o_grafo)
             sonda = self._ler(_SONDA_DO_JSON)
             if sonda is not None and sonda.lstrip().startswith("{"):
                 return None
@@ -672,8 +677,10 @@ class RetratoDoSom:
                 nome = campos.get("Default Source", "")
             else:
                 nome = campos.get("Default Sink", "")
-                if alvo == "@DEFAULT_MONITOR@":
+                if nome and alvo == "@DEFAULT_MONITOR@":
                     nome = f"{nome}.monitor"
+        if not nome:
+            return None
         for no in nos:
             if no.nome == nome or (nome.isdigit() and no.indice == int(nome)):
                 return no
@@ -716,36 +723,16 @@ class RetratoDoSom:
     def descricoes(self) -> dict[str, str]:
         """``{nome cru: Description}`` de todas as saídas e entradas que o retrato tem.
 
-        São as palavras do painel de som do sistema. Nó cuja descrição o JSON do
-        ``pactl`` perdeu (:attr:`NoDeSom.descricao_nula`, o acento) pede a inteira ao
-        ``pw-dump``, UMA vez por releitura dos nós; sem resposta, fica o recuo.
+        São as palavras do painel de som do sistema. A descrição que o JSON do
+        ``pactl`` perdeu (o acento) já veio do grafo na releitura dos nós
+        (:meth:`_ler_o_tipo`); sem ele, fica o recuo do ``device.description``.
         """
         fora: dict[str, str] = {}
-        nulas: list[str] = []
         for tipo in ("sinks", "sources"):
             for no in self._nos(tipo) or ():
-                if no.descricao_nula:
-                    nulas.append(no.nome)
-                if no.descricao:
+                if no.nome and no.descricao:
                     fora[no.nome] = no.descricao
-        if nulas:
-            inteiras = self._descricoes_inteiras()
-            for nome in nulas:
-                if inteiras.get(nome):
-                    fora[nome] = inteiras[nome]
         return fora
-
-    def _descricoes_inteiras(self) -> dict[str, str]:
-        """O ``pw-dump`` desta releitura dos nós, guardado até a próxima."""
-        with self._trava:
-            chave = (self._seq.get("sinks", 0), self._seq.get("sources", 0))
-            if self._do_pw_dump is not None and self._do_pw_dump[0] == chave:
-                return self._do_pw_dump[1]
-        texto = self._ler(["pw-dump"]) if self._ler_injetado is not None else ler_o_pw_dump()
-        inteiras = descricoes_do_pw_dump(texto) or {}
-        with self._trava:
-            self._do_pw_dump = (chave, inteiras)
-        return inteiras
 
 
 RETRATO: Final[RetratoDoSom] = RetratoDoSom()

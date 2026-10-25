@@ -284,6 +284,12 @@ def _os_nos_que_carregam_a_voz(
     return nos
 
 
+def _ler_se_respondeu(argv: list[str]) -> str | None:
+    """O executor desta peça na forma da porta do som: ``None`` quando o ``rc`` falhou."""
+    rc, saida = _rodar(argv)
+    return saida if rc == 0 else None
+
+
 def quem_ouve_agora(
     uniqs: list[str], raiz_proc: Path | str = "/proc"
 ) -> dict[str, list[str]] | None:
@@ -313,9 +319,9 @@ def ler_quem_ouve(
     if not uniqs:
         return LeituraDeOuvintes(lida=True)
 
-    rc_so, saida_so = _rodar(porta_do_som.argv_da_lista("source-outputs"))
-    if rc_so != 0 or porta_do_som.lista_do_json(saida_so) is None:
-        logger.debug("pactl list source-outputs sem JSON (rc=%s): não sei quem ouve", rc_so)
+    saida_so = porta_do_som.ler_a_lista("source-outputs", _ler_se_respondeu)
+    if saida_so is None or porta_do_som.lista_do_json(saida_so) is None:
+        logger.debug("pactl list source-outputs sem JSON: não sei quem ouve")
         return LeituraDeOuvintes(lida=False)
 
     rc_short, saida_short = _rodar(["pactl", "list", "sources", "short"])
