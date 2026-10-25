@@ -594,10 +594,16 @@ def test_os_metodos_da_troca_de_modo_tem_a_folga_do_produto() -> None:
     # `mouse.emulation.restore` saiu do conjunto porque saiu do PLANO, e o passo
     # razão do `gamepad.mask.set`, com o sinal trocado: ele abre um `.json` de
     # perfil do disco e tem teto PRÓPRIO de 3,0 s, a família do `profile.switch`.
+    # O-GESTO-QUE-PEDE-O-P1-RESPONDE-QUANDO-ELE-EXISTE-01: o que pede o P1 espera o
+    # prazo do daemon, com folga (`protocolo_do_ipc.TETO_DO_GESTO_QUE_PEDE_O_P1_S`).
+    from hefesto_dualsense4unix.daemon.protocolo_do_ipc import TETO_DO_GESTO_QUE_PEDE_O_P1_S
+
     for metodo in aba.METODOS_DA_TROCA_DE_MODO:
-        assert ponte.teto(metodo) == MODE_IPC_TIMEOUT_S, (
+        esperado = (TETO_DO_GESTO_QUE_PEDE_O_P1_S if metodo == "gamepad.emulation.set"
+                    else MODE_IPC_TIMEOUT_S)
+        assert ponte.teto(metodo) == esperado, (
             f"{metodo} espera {ponte.teto(metodo)}s e o produto declara "
-            f"{MODE_IPC_TIMEOUT_S}s para trocar de modo")
+            f"{esperado}s para ele")
     assert "TETOS" in aba.ACHADO_DO_TIMEOUT and "2,0 s" in aba.ACHADO_DO_TIMEOUT, (
         f"o fato caduco voltou — o texto precisa nomear a tabela que já dá a "
         f"folga: {aba.ACHADO_DO_TIMEOUT!r}")

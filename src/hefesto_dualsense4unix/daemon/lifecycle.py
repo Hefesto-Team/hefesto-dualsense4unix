@@ -40,9 +40,9 @@ from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
     ancorar_o_p1_no_aparelho,
     depois_do_p1,
     fechar_o_p1_que_nasceu,
-    o_p1_que_nasce,
     primary_identity,
     reconciliar_as_mascaras,
+    seguir_o_p1_uma_vez,
     sem_o_eixo_do_gesto,
     soltar_o_que_o_controle_segurava,
     vestir_a_roupa,
@@ -1853,7 +1853,6 @@ class Daemon:
                         False, origin="manual" if origin == "manual" else "profile"
                     )
                 device_antes = self._gamepad_device
-                nascendo_antes = o_p1_que_nasce(self)
                 desfecho = start_gamepad_emulation_desfecho(
                     self,
                     flavor=flavor,
@@ -1861,12 +1860,13 @@ class Daemon:
                     caminho=caminho,
                     caminho_e_escolha=caminho_e_escolha,
                 )
-                nascendo = depois_do_p1(self, nascendo_antes)
+                nascendo = depois_do_p1(self)
                 if nascendo is not None:
                     # O-P1-QUE-NASCE-FORA-DO-TIQUE-NASCE-NO-FIO-DE-NASCIMENTO-01: o pad
                     # nasce pelo fio, e o que segue vai ao tique em que ele se instala,
-                    # com o desfecho de verdade.
-                    nascendo.depois.append(lambda feito: depois_de_ligar(feito, recriou=True))
+                    # com o desfecho de verdade; o pedido igual em voo não o repete.
+                    seguir_o_p1_uma_vez(nascendo, ("ligar", grava_o_modo),
+                                        lambda feito: depois_de_ligar(feito, recriou=True))
                     return desfecho
                 recriou = self._gamepad_device is not device_antes
             else:

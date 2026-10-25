@@ -17,7 +17,7 @@ import threading
 import time
 from collections.abc import Iterable
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 from hefesto_dualsense4unix.daemon.subsystems.external_identity import (
     ExternalIdentityRegistry,
@@ -571,44 +571,60 @@ _SEM_STORE = object()
 def escolher_a_mascara(
     daemon: Any, uniq: str, flavor: object, *, store: Any = _SEM_STORE
 ) -> dict[str, Any]:
-    """A ESCOLHA DE MÁSCARA DE UM APARELHO — o ato, num lugar só.
+    """A escolha de máscara de um aparelho, num lugar só: o chip da aba Jogar e o PS + L3.
 
-    TROCA-DENTRO-DO-JOGO-01 (14/09/2026). O chip do cartão da aba Jogar e o
-    gesto PS + L3 fazem a MESMA coisa, e agora pela mesma porta: até aqui o chip
-    entrava pelo handler do socket (`gamepad.mask.set`) e o gesto alcançava esse
-    handler privado por `daemon._ipc_server._handle_gamepad_mask_set` — um
-    método achado por string, num atributo sem tipo. A casa já tinha recusado
-    isso em 13/09, quando a regra de em que perfil gravar saiu do handler
-    porque *"o gesto não passa pelo handler"* (`profiles/manager.py`).
-
-    A ORDEM É O CONTRATO, e ela mudou — é a do modo, que se grava só depois de o
-    aparelho trocar (`Daemon.gravar_o_modo_escolhido`):
-
-    1. **o registro vivo** recebe a escolha, porque é dele que a fábrica do vpad
-       lê a máscara ao nascer (`mascara_efetiva`). Sem esta escrita ANTES, não
-       há como o aparelho vestir o que o usuário pediu;
-    2. **o aparelho veste** (`Daemon.vestir_a_mascara_do_aparelho`);
-    3. **o perfil ativo** guarda — SÓ SE o aparelho concordou. Antes o perfil já
-       tinha a máscara nova quando a barra de luz ainda dizia falha, e a aba
-       Jogar acendia um chip que o jogo não estava vendo. Quando o aparelho
-       recusa, o registro VOLTA para o que era: uma escolha que não pegou não
-       fica pendurada esperando o próximo vpad.
-
-    Sem vpad de pé (a Navegação) não há o que conferir, e a escolha vale para o
-    próximo — é o que o usuário pediu em 13/09 ao escolher máscara com o Hefesto
-    desligado.
-
-    `flavor` vazio LIMPA a escolha (o aparelho volta a herdar a do perfil), como
-    o campo em branco de `ControllerOverrides`.
-
-    Devolve o mesmo dicionário que a rota `gamepad.mask.set` sempre devolveu.
+    A ordem é o contrato: o registro vivo recebe a escolha (a fábrica do vpad a lê
+    ao nascer), o aparelho veste (`Daemon.vestir_a_mascara_do_aparelho`) e o perfil
+    ativo guarda só se ele concordou; senão o registro volta. Sem vpad de pé, vale
+    para o próximo; `flavor` vazio limpa. O P1 que nasce pelo fio veste no tique em
+    que o pad se instala, e a conferência vai para lá (`gamepad.seguir_o_p1_uma_vez`);
+    a rota que pode esperar usa :func:`escolher_a_mascara_e_esperar`.
     """
-    from hefesto_dualsense4unix.profiles.manager import (
-        chave_de_peca_que_grava,
-        gravar_a_mascara_no_perfil_ativo,
-        nome_do_perfil_que_grava,
-    )
+    escolha = _pedir_a_mascara(daemon, uniq, flavor)
+    nascendo = _o_p1_que_veste(daemon, uniq)
+    if nascendo is None:
+        return _fechar_a_escolha(daemon, escolha, None, store)
+    from hefesto_dualsense4unix.daemon.subsystems.gamepad import seguir_o_p1_uma_vez
 
+    def _no_desfecho(desfecho: str) -> None:
+        _fechar_a_escolha(daemon, escolha, desfecho, store)
+
+    seguir_o_p1_uma_vez(nascendo, ("mascara", uniq, escolha.alvo), _no_desfecho)
+    return {"status": "ok", "uniq": uniq, "flavor": escolha.alvo,
+            "mudou": bool(escolha.mudou), "perfil": None, "gravado": False,
+            "motivo": "p1_nascendo", "vestiu": escolha.vestiu}
+
+
+async def escolher_a_mascara_e_esperar(
+    daemon: Any, uniq: str, flavor: object, *, store: Any = _SEM_STORE
+) -> dict[str, Any]:
+    """:func:`escolher_a_mascara` que responde quando o P1 que veste a máscara existe.
+
+    O dono da espera é o da `gamepad.emulation.set`, `gamepad.esperar_o_p1_que_nasce`:
+    o pad que não nasce responde «falhou», e o registro volta ao que era.
+    """
+    escolha = _pedir_a_mascara(daemon, uniq, flavor)
+    nascendo = _o_p1_que_veste(daemon, uniq)
+    if nascendo is None:
+        return _fechar_a_escolha(daemon, escolha, None, store)
+    from hefesto_dualsense4unix.daemon.subsystems.gamepad import esperar_o_p1_que_nasce
+
+    desfecho = await esperar_o_p1_que_nasce(daemon, nascendo)
+    return _fechar_a_escolha(daemon, escolha, desfecho, store)
+
+
+class _AEscolha(NamedTuple):
+    """O que a escolha fez antes de o aparelho responder."""
+
+    uniq: str
+    alvo: str | None
+    anterior: str | None
+    mudou: bool
+    vestiu: str | None
+
+
+def _pedir_a_mascara(daemon: Any, uniq: str, flavor: object) -> _AEscolha:
+    """Os passos 1 e 2: o registro recebe a escolha, e o aparelho é chamado a vestir."""
     alvo: str | None
     if flavor is None or str(flavor).strip() == "":
         alvo = None
@@ -632,14 +648,45 @@ def escolher_a_mascara(
             vestiu = str(ato(uniq))
         except Exception as exc:
             logger.warning("gamepad_mascara_nao_vestiu", uniq=uniq, err=str(exc))
+    return _AEscolha(uniq, alvo, anterior, bool(mudou), vestiu)
 
+
+def _o_p1_que_veste(daemon: Any, uniq: str) -> Any:
+    """O pedido do P1 que nasce pelo fio vestindo a escolha de `uniq`, ou ``None``."""
+    if not mesma_identidade(uniq, _identidade_do_primario(daemon)):
+        return None
+    from hefesto_dualsense4unix.daemon.subsystems.gamepad import depois_do_p1
+
+    return depois_do_p1(daemon)
+
+
+def _fechar_a_escolha(
+    daemon: Any, escolha: _AEscolha, desfecho: str | None, store: Any
+) -> dict[str, Any]:
+    """O passo 3: confere o que o aparelho vestiu e grava no perfil só se ele concordou.
+
+    `desfecho` é o do P1 que nasceu pelo fio (``None``: o aparelho já respondeu); o
+    pad que não nasceu («falhou») não vestiu nada, e o registro volta.
+    """
+    from hefesto_dualsense4unix.profiles.manager import (
+        chave_de_peca_que_grava,
+        gravar_a_mascara_no_perfil_ativo,
+        nome_do_perfil_que_grava,
+    )
+
+    uniq, alvo = escolha.uniq, escolha.alvo
+    vestiu = escolha.vestiu if desfecho is None else desfecho
     vestida = mascara_vestida(daemon, uniq)
     esperada = alvo if alvo is not None else vestida
-    if vestida is not None and esperada is not None and vestida != esperada:
-        if anterior is None:
-            registro.clear_mask(uniq)
-        else:
-            registro.set_mask(uniq, anterior)
+    if desfecho == "falhou" or (
+        vestida is not None and esperada is not None and vestida != esperada
+    ):
+        registro = registro_de_mascaras()
+        if registro.mask_for(uniq) == alvo:
+            if escolha.anterior is None:
+                registro.clear_mask(uniq)
+            else:
+                registro.set_mask(uniq, escolha.anterior)
         logger.warning(
             "gamepad_mascara_recusada_pelo_aparelho",
             uniq=uniq, pedida=alvo, vestida=vestida, vestiu=vestiu,
@@ -653,10 +700,9 @@ def escolher_a_mascara(
     perfil, gravado, motivo = gravar_a_mascara_no_perfil_ativo(
         nome, chave=chave_de_peca_que_grava(uniq), mascara=alvo
     )
-    return {"status": "ok", "uniq": uniq, "flavor": alvo, "mudou": bool(mudou),
+    return {"status": "ok", "uniq": uniq, "flavor": alvo, "mudou": escolha.mudou,
             "perfil": perfil, "gravado": gravado, "motivo": motivo,
             "vestiu": vestiu}
-
 
 __all__ = [
     "FLAVOR_FIELD",
@@ -667,6 +713,7 @@ __all__ = [
     "VERSION_FIELD",
     "ExternalMaskRegistry",
     "escolher_a_mascara",
+    "escolher_a_mascara_e_esperar",
     "mascara_efetiva",
     "mascara_vestida",
     "mascaras_validas",

@@ -7,7 +7,10 @@ from collections.abc import Callable
 from typing import Any
 
 from hefesto_dualsense4unix.cli.ipc_client import IpcClient, IpcError
-from hefesto_dualsense4unix.daemon.protocolo_do_ipc import CODE_INVALID_PARAMS
+from hefesto_dualsense4unix.daemon.protocolo_do_ipc import (
+    CODE_INVALID_PARAMS,
+    TETO_DO_GESTO_QUE_PEDE_O_P1_S,
+)
 from hefesto_dualsense4unix.integrations.central_do_radio import (
     PRAZO_DA_TRAVA_DO_GESTO_S,
 )
@@ -38,7 +41,8 @@ _TETO_DO_ATO_DE_AUDIO = 6.0
 #: aplicar, porque o prazo vencido com o modo JÁ aplicado vira «falhou» na tela
 #: e «nada foi ativado» no terminal. A ponte da janela reexporta esta tabela.
 TETOS: dict[str, float] = {
-    "gamepad.emulation.set": 2.0, "native.mode.set": 2.0,
+    # O gesto que pede o P1 espera o desfecho dele (o prazo do daemon), com folga.
+    "gamepad.emulation.set": TETO_DO_GESTO_QUE_PEDE_O_P1_S, "native.mode.set": 2.0,
     "mouse.emulation.set": 2.0, "keyboard.emulation.set": 2.0,
     "desktop.status.set": 2.0,
     # A Navegação Interna: o interruptor e a lista gravam uma flag; o foco é o
@@ -56,7 +60,7 @@ TETOS: dict[str, float] = {
     # cadeia da ativação, e por isso o teto é o do `profile.switch`.
     "profile.reaplicar": PROFILE_SWITCH_TIMEOUT_S,
     "coop.set": 2.0, "coop.sync": 2.0, "identity.renumber": 2.0,
-    "gamepad.mask.set": 2.0,
+    "gamepad.mask.set": TETO_DO_GESTO_QUE_PEDE_O_P1_S,
     "identity.number.set": 2.0,
     # O pedido do «Procurar» espera a busca SUBIR no serviço (o BlueZ abre a janela:
     # 107 a 366 ms medidos no diário da bancada em 03/10), e o serviço espera, no pior caso,

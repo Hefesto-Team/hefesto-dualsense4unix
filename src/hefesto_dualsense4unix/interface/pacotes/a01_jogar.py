@@ -1323,12 +1323,12 @@ def _dizer_se_nao_confirmou(confirmou: bool) -> None:
         raise RuntimeError(MODO_SEM_CONFIRMACAO)
 
 
-#: daquele conjunto têm teto próprio e declarado: `gamepad.mask.set` (2,0 s, e
+#: daquele conjunto têm teto próprio e declarado: `gamepad.mask.set` (o do P1, e
 #: «Xbox» no `interface.log` de 22/09 — `modo-xbox → aplicado`, depois
 ACHADO_DO_TIMEOUT = (
-    "ponte.TETOS dá 2,0 s aos cinco métodos desta aba, o mesmo valor de "
-    "mode_transition.MODE_IPC_TIMEOUT_S; o teto de 250 ms é só o dos métodos "
-    "fora da tabela."
+    "ponte.TETOS dá 2,0 s à troca de modo, o mesmo valor de mode_transition."
+    "MODE_IPC_TIMEOUT_S, e ao gesto que pede o P1 o prazo do daemon com folga; "
+    "o teto de 250 ms é só o dos métodos fora da tabela."
 )
 
 

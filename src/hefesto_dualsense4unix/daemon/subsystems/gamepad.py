@@ -64,6 +64,7 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any, Literal
 
 from hefesto_dualsense4unix.core.numeros_da_sony import ROUPA_PADRAO, roupa_normalizada
+from hefesto_dualsense4unix.daemon.protocolo_do_ipc import PRAZO_DO_P1_QUE_NASCE_S
 from hefesto_dualsense4unix.daemon.subsystems.vibracao_do_jogo import (
     _uniq_do_pedido,
     bater_a_vibracao,
@@ -92,8 +93,7 @@ EMU_RECUSADO_STEAM_INPUT = "recusado_steam_input"
 EMU_FALHOU = "falhou"
 EMU_DESLIGADO = "desligado"
 
-#: quanto a IPC espera o P1 que nasce pelo fio: o broker (2 s) e a fila dos pads à frente
-PRAZO_DO_P1_QUE_NASCE_S = 8.0
+#: o `PRAZO_DO_P1_QUE_NASCE_S` mora no protocolo do IPC, ao lado do teto da interface
 _PASSO_DA_ESPERA_DO_P1_S = 0.01
 
 DESFECHOS_EMULACAO_ATIVA = frozenset(
@@ -1729,10 +1729,10 @@ def o_p1_nasce_pelo_fio(daemon: Any, *, no_tique: bool = False) -> bool:
     return fio_do_laco is not None and fio_do_laco == threading.get_ident()
 
 
-def depois_do_p1(daemon: Any, contexto_antes: OP1QueNasce | None) -> OP1QueNasce | None:
-    """O pedido que o `start` deixou nascendo agora, se ele é novo (não o de antes)."""
+def depois_do_p1(daemon: Any) -> OP1QueNasce | None:
+    """O pedido que o `start` deixou nascendo agora: o novo, ou o igual a que se juntou."""
     contexto = o_p1_que_nasce(daemon)
-    if contexto is None or contexto is contexto_antes or contexto.desfecho is not None:
+    if contexto is None or contexto.desfecho is not None:
         return None
     return contexto
 
@@ -3243,6 +3243,32 @@ def _parar_o_pad_do_p1(daemon: DaemonProtocol, device: Any) -> None:
     parar_fora_do_tique(device)
 
 
+class _PassoDoP1:
+    """O passo que segue o P1, com a chave que o faz único no pedido."""
+
+    def __init__(self, chave: object, passo: Callable[[str], None]) -> None:
+        self.chave = chave
+        self.passo = passo
+
+    def __call__(self, desfecho: str) -> None:
+        self.passo(desfecho)
+
+
+def seguir_o_p1_uma_vez(
+    contexto: OP1QueNasce, chave: object, passo: Callable[[str], None]
+) -> None:
+    """O que segue o P1 que nasce, uma vez por pedido, com o desfecho de verdade.
+
+    O-GESTO-QUE-PEDE-O-P1-RESPONDE-QUANDO-ELE-EXISTE-01 (25/10/2026): o pedido igual
+    em voo se junta ao primeiro (`start_gamepad_emulation_desfecho` devolve o que
+    nasce), e o passo dele, de mesma `chave`, já está no pedido: roda uma vez, no
+    tique em que o pad se instala (:func:`fechar_o_p1_que_nasceu`).
+    """
+    if any(isinstance(p, _PassoDoP1) and p.chave == chave for p in contexto.depois):
+        return
+    contexto.depois.append(_PassoDoP1(chave, passo))
+
+
 __all__ = [
     "DESFECHOS_EMULACAO_ATIVA",
     "EMU_APLICADO",
@@ -3285,6 +3311,7 @@ __all__ = [
     "ralos_do_mic",
     "read_primary_calibration",
     "rehide_physical_hidraw",
+    "seguir_o_p1_uma_vez",
     "sem_o_eixo_do_gesto",
     "sem_o_gesto_do_ps",
     "soltar_o_cursor_do_toque",

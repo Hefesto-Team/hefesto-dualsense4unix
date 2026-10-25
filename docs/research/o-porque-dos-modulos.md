@@ -1723,3 +1723,24 @@ config; o que ela faz pelo serviço é `trazer_o_servico`: o «Sair» da bandeja
 janela reaberta pelo dock era um visor de nada, com o Ativar da aba Perfis recusando
 (O-ATIVAR-DO-PERFIL-VALE-OU-A-TELA-DIZ-POR-QUE-01, o `stop` das 20:17 medido no diário). O Parar
 da aba Sistema é escolha e fica: ele deixa a marca `MARCA_DO_PARAR` no runtime da sessão.
+
+## A escolha de máscara (`daemon/subsystems/external_mask.py`, `escolher_a_mascara`), 25/10/2026
+
+**Uma porta só desde 14/09/2026** (TROCA-DENTRO-DO-JOGO-01). O chip do cartão da aba Jogar entrava pelo handler
+do socket (`gamepad.mask.set`), e o gesto PS + L3 alcançava esse handler privado por
+`daemon._ipc_server._handle_gamepad_mask_set`, um método achado por string num atributo sem tipo. A casa já tinha
+recusado isso em 13/09, quando a regra de em que perfil gravar saiu do handler porque *"o gesto não passa pelo
+handler"* (`profiles/manager.py`).
+
+**O perfil grava depois de o aparelho trocar**, como o modo (`Daemon.gravar_o_modo_escolhido`). Antes, o perfil já
+tinha a máscara nova quando a barra de luz ainda dizia falha, e a aba Jogar acendia um chip que o jogo não via. Sem
+vpad de pé (a Navegação), a escolha vale para o próximo: é o pedido de 13/09, de escolher máscara com o Hefesto
+desligado.
+
+**O P1 que nasce pelo fio** (O-GESTO-QUE-PEDE-O-P1-RESPONDE-QUANDO-ELE-EXISTE-01, 25/10/2026). Desde que o pad do P1
+nasce fora do tique, o aparelho que «vestiu» na hora da escolha ainda não existia: a rota respondia em ~1 ms e o
+perfil já guardava a máscara com o pad por nascer, sem saber se ele nasceria. Agora a conferência, a volta do
+registro e o perfil correm no tique em que o pad se instala, com o desfecho dele (`gamepad.seguir_o_p1_uma_vez`); a
+rota `gamepad.mask.set` espera esse desfecho pelo mesmo dono da `gamepad.emulation.set`
+(`gamepad.esperar_o_p1_que_nasce`, prazo `PRAZO_DO_P1_QUE_NASCE_S`), e a interface lhe dá esse prazo com folga
+(`TETO_DO_GESTO_QUE_PEDE_O_P1_S`). O PS + L3 roda no tique e não pode esperar: ele deixa o passo para o desfecho.

@@ -4858,7 +4858,7 @@ class IpcHandlersMixin:
         R3 faz com o modo.
         """
         from hefesto_dualsense4unix.daemon.subsystems.external_mask import (
-            escolher_a_mascara,
+            escolher_a_mascara_e_esperar,
         )
 
         uniq = str(params.get("uniq") or "").strip()
@@ -4867,7 +4867,7 @@ class IpcHandlersMixin:
                 "gamepad.mask.set exige 'uniq' — a máscara é de UM aparelho, e "
                 "sem o endereço dele a escrita iria para o registro errado")
 
-        return escolher_a_mascara(
+        return await escolher_a_mascara_e_esperar(
             self.daemon, uniq, params.get("flavor"), store=self.store
         )
 
@@ -4933,7 +4933,7 @@ class IpcHandlersMixin:
                 esperar_o_p1_que_nasce,
             )
 
-            nasceu = await esperar_o_p1_que_nasce(self.daemon, depois_do_p1(self.daemon, None))
+            nasceu = await esperar_o_p1_que_nasce(self.daemon, depois_do_p1(self.daemon))
             ok = ok if nasceu is None else nasceu == EMU_APLICADO
         active_flavor = getattr(self.daemon.config, "gamepad_flavor", None)
         resposta: dict[str, Any] = {
