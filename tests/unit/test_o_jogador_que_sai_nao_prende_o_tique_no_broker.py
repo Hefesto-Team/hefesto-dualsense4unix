@@ -306,3 +306,50 @@ def test_o_pad_que_renasce_veste_o_mac_de_antes(
     finally:
         solta.set()
         _fechar(m, pads)
+
+
+@pytest.mark.parametrize(("jogadores", "quem_sai"), MESAS, ids=IDS)
+def test_o_stop_do_daemon_so_volta_com_o_mac_de_quem_saiu_devolvido(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, jogadores: tuple[int, ...],
+    quem_sai: int,
+) -> None:
+    """A descida de quem saiu terminou, e o MAC dele ainda volta à lista no fio da descida:
+    o ``stop_all`` espera também essa volta, e não só a fila esvaziar.
+
+    Mordida: tire o ``not self._depois`` do ``esperar_tudo``, e o daemon para com o MAC
+    de quem saiu ainda vestido (onde quem sai é o único do co-op; nos outros, a descida
+    dos que o ``stop_all`` para segura a volta junto).
+    """
+    m = _mesa(monkeypatch, tmp_path)
+    pads: list[Any] = []
+    solta, no_gancho, segura, parou = (threading.Event() for _ in range(4))
+    try:
+        pads, coop = _a_mesa_de_pe(m, jogadores)
+        sai = pads[jogadores.index(quem_sai)]
+        sai._gadget.cliente = ClienteLento(solta)
+        despir = m.ug._despir_se_parado
+
+        def devagar(pad: Any) -> None:
+            if pad is sai:
+                no_gancho.set()
+                segura.wait(PRESO_S)
+            despir(pad)
+
+        monkeypatch.setattr(m.ug, "_despir_se_parado", devagar)
+        coop._teardown_player(sai.identity)
+        solta.set()
+        assert no_gancho.wait(PRESO_S), "a descida de quem saiu não terminou"
+
+        def parar() -> None:
+            coop.stop_all()
+            parou.set()
+
+        threading.Thread(target=parar, daemon=True).start()
+        assert not parou.wait(0.3), "o daemon parou com o MAC de quem saiu ainda vestido"
+        segura.set()
+        assert parou.wait(PRESO_S), "o daemon não parou depois da volta do MAC"
+        assert m.ug._MACS_DOS_VPADS_VIVOS.vestido_por(sai) is None
+    finally:
+        solta.set()
+        segura.set()
+        _fechar(m, pads)
