@@ -113,8 +113,8 @@ COLISOES_DECLARADAS = {
         "do adaptador, e `test_entrada_a_entrada_02_as_telas_aprovadas.py::"
         "test_o_motor_nao_escreve_no_bluez` mede que o motor das portas não "
         "importa escritor de BlueZ. A triagem a chama de processo porque a "
-        "`escolha` fala de «script» e de «dono», e o vocabulário de produto "
-        "não tem palavra de rádio. Até a ENTRADA-A-ENTRADA-02 ela era citada "
+        "`escolha` diz «commit» duas vezes, e «BlueZ», «Alias» e «adaptador» "
+        "não estão no vocabulário de produto. Até a ENTRADA-A-ENTRADA-02 era citada "
         "só no cabeçalho; ganhou régua de verdade, e a colisão é a prova."
     ),
     "D-0810-A-SUITE-PARTE-PELO-TEMPO-MEDIDO": (
@@ -122,8 +122,8 @@ COLISOES_DECLARADAS = {
         "`scripts/rodar-a-suite.sh`, que é versionado e viaja com o código, "
         "parte a suíte, e `test_a_suite_parte_pelo_tempo.py::"
         "test_dez_arquivos_de_tempo_conhecido_dao_partes_com_diferenca_menor_"
-        "que_o_maior` mede a partição. A triagem a chama de processo porque "
-        "«suíte» e «partes» são palavras de processo. A colisão fica declarada "
+        "que_o_maior` mede a partição. A triagem a chama de processo pela "
+        "palavra «leva» na escolha («acima da leva»). A colisão fica declarada "
         "porque é mais um caso do limite: o classificador lê palavra, não assunto."
     ),
     "D-1510-O-PIPEWIRE-DA-CASA-LEVA-O-CVE-DO-DEBIAN": (
