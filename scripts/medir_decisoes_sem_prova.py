@@ -202,8 +202,8 @@ COLISOES_DECLARADAS = {
         "versionado e viaja com o código, soma como piso da suíte, e `test_o_tempo_da_casa_so_"
         "desce.py::test_uma_parte_de_outra_corrida_deixa_a_suite_indisponivel` mede a soma. A "
         "triagem a chama de processo pela palavra «leva» na escolha («cada parte leva no "
-        "cabeçalho a marca»), no sentido de «carrega»; o lado que ela acerta é por acaso, como na "
-        "D-0810-A-SUITE-PARTE-PELO-TEMPO-MEDIDO. Mais um caso do limite (24/10/2026)."
+        "cabeçalho a marca»), no sentido de «carrega», e nenhuma palavra de produto aparece. Mais "
+        "um caso do limite, como a D-0810-A-SUITE-PARTE-PELO-TEMPO-MEDIDO (24/10/2026)."
     ),
 }
 
