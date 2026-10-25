@@ -245,14 +245,14 @@
       "data": "2026-10-25",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1212579,
+      "piso": 1213068,
       "por_item": {
-        "docs": 121403,
+        "docs": 121410,
         "scripts": 120799,
-        "src": 323984,
-        "tests": 646393
+        "src": 324110,
+        "tests": 646749
       },
-      "razao": "tamanho: +143 linhas (1212436 -> 1212579), pagas por Origem: D-2510-A-EXTENSAO-FORA-DA-PORTA-NAO-TEM-MODO-A-DESFAZER; registrado no fecho, topo e19bda4d1718",
+      "razao": "tamanho: +489 linhas (1212579 -> 1213068), pagas por Origem: D-2510-A-DESCIDA-DO-GADGET-FALA-COM-O-BROKER-FORA-DO-TIQUE; registrado no fecho, topo cbfef39fca06",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1081,10 +1081,16 @@
           "de": 1212436,
           "para": 1212579,
           "razao": "tamanho: +143 linhas (1212436 -> 1212579), pagas por Origem: D-2510-A-EXTENSAO-FORA-DA-PORTA-NAO-TEM-MODO-A-DESFAZER; registrado no fecho, topo e19bda4d1718"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 1212579,
+          "para": 1213068,
+          "razao": "tamanho: +489 linhas (1212579 -> 1213068), pagas por Origem: D-2510-A-DESCIDA-DO-GADGET-FALA-COM-O-BROKER-FORA-DO-TIQUE; registrado no fecho, topo cbfef39fca06"
         }
       ],
       "unidade": "linhas",
-      "universo": 3167
+      "universo": 3168
     }
   }
 }
