@@ -33,6 +33,7 @@ desconhecida ou um processo que não foi o supervisor que abriu fecham a conexã
 | --- | --- | --- | --- |
 | `mod.ola` | `{ficha}` | a ficha e o `SO_PEERCRED` | `{id, api, permissoes}` |
 | `eventos.assinar` | `{topicos: [...], dedos?}` | `ler:<tópico>` para cada um | `{assinados}` |
+| `eventos.desassinar` | `{topicos: [...]}` | os tópicos já assinados pela conexão | `{desassinados}` |
 | `luz.set` | `{uniq, rgb: [r, g, b], brilho?}` | `escrever:luz` | o resultado do `led.set` |
 | `vibracao.set` | `{uniq, fraco, forte}` (0 a 255) | `escrever:vibracao` | o resultado do `rumble.set` |
 | `gatilho.set` | `{uniq, lado: esquerdo\|direito, modo, params}` | `escrever:gatilho` | o resultado do `trigger.set` |
@@ -47,7 +48,7 @@ texto solto vale `{nome}`; `tipo` é livre (até 30 letras); `estado` é `ligado
 `desligado` ou `falhou`; `bateria` vai de 0 a 100 e `forca` de 0 a 1, ou `null`; `id` (até 40 letras) é o alvo das ações do aparelho e `ligado` (verdadeiro ou falso) é a chave dele, os dois da extensão que gere os aparelhos, e `controles` são os que só aquele aparelho tem (ver «As ações, os aparelhos e o controle livre»). Cada `conexoes[]` é
 `{id, tipo, transporte, estado, motivo}`: `id` (até 40 letras) e `tipo` (até 30) são da extensão, `transporte` é
 `usb`, `bluetooth`, `rede` ou `local`, `estado` é o mesmo dos aparelhos e `motivo` (até 120 letras, ou `null`) diz
-por que ela não liga. Até 32 de cada. Um item torto recusa o estado inteiro (`-32602`, com a frase).
+por que ela não liga. Até 32 de cada. Um item torto recusa o estado inteiro (`-32003`, com a frase).
 
 Quem só mostra o estado (a coluna «Agora» e a aba Conexões) pede `publicar:acessorios.estado`: o serviço guarda o
 último para a janela e para a aba, e ele NÃO vai ao barramento, então os gestos do PS ficam os de sempre. Com
@@ -157,6 +158,13 @@ Cada evento chega como notificação, sem `id`:
 {"jsonrpc": "2.0", "method": "evento",
  "params": {"topico": "estado", "nome": "state.update", "uniq": "<uniq>", "dados": {}}}
 ```
+
+`eventos.desassinar` larga cada tópico da lista sem fechar a conexão: as filas dele saem, o encaminhamento e o
+aviso das quedas param, e nada dele chega depois da resposta. Quem larga as `entradas` larga também os `dedos`;
+para seguir com elas sem os dedos, assina de novo sem `dedos`. Sem nenhuma extensão no `movimento` (ou nos
+`dedos`), o tique deixa de pedir o leitor de cada controle e ele fecha no prazo da demanda, 5 s; a extensão que
+segue assinada continua recebendo. Um tópico da lista que esta conexão não assinou recusa o pedido inteiro
+(`-32003`), sem largar nenhum.
 
 O serviço guarda até 256 eventos por assinatura. Quando a fila enche, o mais antigo sai: quem lê devagar
 perde eventos velhos, e o tique do serviço nunca espera.

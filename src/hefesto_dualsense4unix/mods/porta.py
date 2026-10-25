@@ -21,7 +21,7 @@ import socket
 import struct
 import time
 from collections import deque
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Coroutine
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -142,6 +142,17 @@ class _Credencial:
 
 
 @dataclass(eq=False)
+class _Assinatura:
+    """O que um tópico assinado abriu na conexão: o ``eventos.desassinar`` fecha tudo isto."""
+
+    #: As filas do barramento (a do tópico e a das quedas, nas ``entradas`` e no ``movimento``).
+    barramento: list[tuple[str, asyncio.Queue[Any]]] = field(default_factory=list)
+    #: As filas que o serviço enche (``botoes``, ``entradas``, ``movimento``).
+    filas: list[asyncio.Queue[Any]] = field(default_factory=list)
+    tarefas: list[asyncio.Task[None]] = field(default_factory=list)
+
+
+@dataclass(eq=False)
 class _Conexao:
     sessao: _Credencial | None = None
     #: A modificação desta conexão devolveu o estado dos acessórios: ao cair, o estado se apaga.
@@ -166,6 +177,35 @@ class _Conexao:
     escritor: asyncio.StreamWriter | None = None
     #: As filas do tópico ``movimento``, cheias pelo serviço (:meth:`Porta.movimento_do_tique`).
     filas_do_movimento: list[asyncio.Queue[Any]] = field(default_factory=list)
+    #: O que cada tópico público assinado abriu, para o ``eventos.desassinar``.
+    assinados: dict[str, _Assinatura] = field(default_factory=dict)
+
+    def no_barramento(self, feito: _Assinatura, topico: str, fila: asyncio.Queue[Any]) -> None:
+        self.assinaturas.append((topico, fila))
+        feito.barramento.append((topico, fila))
+
+    def tarefa(self, feito: _Assinatura, corrotina: Coroutine[Any, Any, None], nome: str) -> None:
+        tarefa = asyncio.create_task(corrotina, name=nome)
+        self.tarefas.append(tarefa)
+        feito.tarefas.append(tarefa)
+
+    def desassinar(self, publico: str, bus: EventBus) -> None:
+        """Tira as filas, cancela o encaminhamento e as quedas de ``publico``: nada dele sobra."""
+        feito = self.assinados.pop(publico)
+        for tarefa in feito.tarefas:
+            tarefa.cancel()
+        self.tarefas = [t for t in self.tarefas if t not in feito.tarefas]
+        for topico, fila in feito.barramento:
+            bus.unsubscribe(topico, fila)
+        self.assinaturas = [a for a in self.assinaturas if a not in feito.barramento]
+        self.filas_dos_botoes = [(t, f) for t, f in self.filas_dos_botoes
+                                 if all(f is not g for g in feito.filas)]
+        self.filas_das_entradas = [f for f in self.filas_das_entradas
+                                   if all(f is not g for g in feito.filas)]
+        self.filas_do_movimento = [f for f in self.filas_do_movimento
+                                   if all(f is not g for g in feito.filas)]
+        if publico == TOPICO_DAS_ENTRADAS:
+            self.quer_os_dedos = False
 
     def acessorio_preso(self) -> bool:
         """Alguma função ficou acima de zero: se a conexão cair, o serviço publica o zero."""
@@ -848,6 +888,8 @@ class Porta:
                 })
             if metodo == "eventos.assinar":
                 return _resposta(req_id, self._assinar(con, writer, params))
+            if metodo == "eventos.desassinar":
+                return _resposta(req_id, self._desassinar(con, params))
             if metodo == "eventos.publicar":
                 return _resposta(req_id, self._publicar(con, params))
             if metodo == "acessorios.estado":
@@ -912,6 +954,7 @@ class Porta:
             raise RecusaError(CODE_INVALID_PARAMS, "dedos é true ou false, com o tópico entradas")
         con.quer_os_dedos = con.quer_os_dedos or dedos
         for publico in topicos:
+            feito = con.assinados.setdefault(publico, _Assinatura())
             for topico in TOPICOS_DE_LEITURA[publico]:
                 if publico == TOPICO_DOS_BOTOES:
                     if not self.le_os_botoes():
@@ -920,6 +963,7 @@ class Porta:
                         self._botoes_antes = None
                     fila: asyncio.Queue[Any] = asyncio.Queue(maxsize=DEFAULT_QUEUE_MAXSIZE)
                     con.filas_dos_botoes.append((topico, fila))
+                    feito.filas.append(fila)
                 elif publico == TOPICO_DAS_ENTRADAS:
                     # Quem chega começa do repouso: o controle fora dele sai de novo no tique
                     # seguinte, a todos (o valor repetido não muda nada a quem já o tinha).
@@ -930,23 +974,34 @@ class Porta:
                     } if self.le_as_entradas() else {}
                     fila = asyncio.Queue(maxsize=DEFAULT_QUEUE_MAXSIZE)
                     con.filas_das_entradas.append(fila)
+                    feito.filas.append(fila)
                     # A mesa que cai inteira não tem tique que leia: a queda leva o repouso.
                     saidas = self.bus.subscribe(EventTopic.CONTROLLER_DISCONNECTED)
-                    con.assinaturas.append((EventTopic.CONTROLLER_DISCONNECTED, saidas))
-                    con.tarefas.append(asyncio.create_task(
-                        self._repousar_quem_sai(saidas),
-                        name=f"mods-{con.sessao.mod_id}-entradas-quedas",
-                    ))
+                    con.no_barramento(feito, EventTopic.CONTROLLER_DISCONNECTED, saidas)
+                    con.tarefa(feito, self._repousar_quem_sai(saidas),
+                               f"mods-{con.sessao.mod_id}-entradas-quedas")
                 elif publico == TOPICO_DO_MOVIMENTO:
-                    fila = self._assinar_o_movimento(con)
+                    fila = self._assinar_o_movimento(con, feito)
                 else:
                     fila = self.bus.subscribe(topico)
-                    con.assinaturas.append((topico, fila))
-                con.tarefas.append(asyncio.create_task(
-                    self._encaminhar(con, writer, publico, topico, fila),
-                    name=f"mods-{con.sessao.mod_id}-{topico}",
-                ))
+                    con.no_barramento(feito, topico, fila)
+                con.tarefa(feito, self._encaminhar(con, writer, publico, topico, fila),
+                           f"mods-{con.sessao.mod_id}-{topico}")
         return {"assinados": list(topicos)}
+
+    def _desassinar(self, con: _Conexao, params: dict[str, Any]) -> dict[str, Any]:
+        """Larga cada tópico: sem fila de ``movimento`` (ou de dedos), o tique para de pedir o
+        leitor e o prazo da demanda o fecha. Um tópico não assinado recusa tudo, sem efeito."""
+        topicos = params.get("topicos")
+        if not isinstance(topicos, list) or not topicos:
+            raise RecusaError(CODE_INVALID_PARAMS, "eventos.desassinar pede a lista topicos")
+        for publico in topicos:
+            if not isinstance(publico, str) or publico not in con.assinados:
+                raise RecusaError(CODE_INVALID_PARAMS, f"tópico não assinado: {publico}")
+        largados = list(dict.fromkeys(topicos))
+        for publico in largados:
+            con.desassinar(publico, self.bus)
+        return {"desassinados": largados}
 
     def _lista_dos_controles(self, sessao: _Credencial) -> dict[str, Any]:
         """Os controles ligados agora, ``{controles: [{uniq, jogador}]}``, a quem lê a conexão.
@@ -1274,7 +1329,7 @@ class Porta:
         """Alguma extensão assinou o tópico ``movimento``? Sem ela, ninguém pede o leitor."""
         return any(con.filas_do_movimento for con in self._conexoes)
 
-    def _assinar_o_movimento(self, con: _Conexao) -> asyncio.Queue[Any]:
+    def _assinar_o_movimento(self, con: _Conexao, feito: _Assinatura) -> asyncio.Queue[Any]:
         """A fila do ``movimento`` desta conexão, e a queda de um controle levando o repouso."""
         assert con.sessao is not None
         # Quem chega começa do repouso: o controle que já saiu sai de novo no tique seguinte.
@@ -1284,12 +1339,11 @@ class Porta:
         } if self.le_o_movimento() else {}
         fila: asyncio.Queue[Any] = asyncio.Queue(maxsize=DEFAULT_QUEUE_MAXSIZE)
         con.filas_do_movimento.append(fila)
+        feito.filas.append(fila)
         saidas = self.bus.subscribe(EventTopic.CONTROLLER_DISCONNECTED)
-        con.assinaturas.append((EventTopic.CONTROLLER_DISCONNECTED, saidas))
-        con.tarefas.append(asyncio.create_task(
-            self._repousar_o_movimento_de_quem_sai(saidas),
-            name=f"mods-{con.sessao.mod_id}-movimento-quedas",
-        ))
+        con.no_barramento(feito, EventTopic.CONTROLLER_DISCONNECTED, saidas)
+        con.tarefa(feito, self._repousar_o_movimento_de_quem_sai(saidas),
+                   f"mods-{con.sessao.mod_id}-movimento-quedas")
         return fila
 
     def movimento_do_tique(self, leituras: dict[str | None, dict[str, Any]]) -> None:
