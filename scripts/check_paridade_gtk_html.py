@@ -384,11 +384,11 @@ def conferir(linhas: list[dict[str, str]], arvore: Arvore) -> list[str]:
                     f"    O CSV diz {l['veredito']}: ou a feature saiu do HTML, ou o sinal mudou de nome.\n"
                     "    Confira a feature e atualize a linha — não troque o sinal por outro que só passe.")
         else:
-            achado = arvore.usa(sinal, arvore.html)
-            if achado is not None:
+            apareceu = arvore.usa(sinal, arvore.html)
+            if apareceu is not None:
                 falhas.append(
                     f"divida-fechada: {onde}\n"
-                    f"    o sinal {sinal!r} APARECEU em {achado.relative_to(RAIZ)}.\n"
+                    f"    o sinal {sinal!r} APARECEU em {apareceu.relative_to(RAIZ)}.\n"
                     "    O CSV diz FALTA_NO_HTML e o lado HTML passou a ter o símbolo.\n"
                     "    Se a dívida fechou, o veredito desta linha mudou: meça-a de novo e reescreva-a.")
     return falhas
