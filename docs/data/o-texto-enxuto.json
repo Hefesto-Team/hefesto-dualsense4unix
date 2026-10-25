@@ -5,7 +5,7 @@
       "data": "2026-10-25",
       "nota": "5973 linhas de comentário e 45686 de docstring, em src/hefesto_dualsense4unix/",
       "o_que_conta": "linhas de comentário e de docstring em src/hefesto_dualsense4unix/",
-      "piso": 55279,
+      "piso": 55400,
       "por_item": {
         "app/actions/carona_do_wrapper.py": 174,
         "app/actions/config/secao_controles.py": 47,
@@ -65,12 +65,12 @@
         "core/virtual_motion.py": 104,
         "daemon/battery_journal.py": 105,
         "daemon/connection.py": 236,
-        "daemon/ipc_handlers.py": 1271,
+        "daemon/ipc_handlers.py": 1281,
         "daemon/ipc_server.py": 126,
         "daemon/launch_env.py": 598,
-        "daemon/lifecycle.py": 1299,
+        "daemon/lifecycle.py": 1298,
         "daemon/protocols.py": 60,
-        "daemon/sensor_hub.py": 227,
+        "daemon/sensor_hub.py": 240,
         "daemon/servidor_dsu.py": 58,
         "daemon/state_store.py": 67,
         "daemon/subsystems/__init__.py": 78,
@@ -198,7 +198,7 @@
         "interface/cartao_do_controle.py": 332,
         "interface/conexoes.py": 69,
         "interface/controles_vivos.py": 145,
-        "interface/desenho_da_experimental.py": 216,
+        "interface/desenho_da_experimental.py": 250,
         "interface/desenho_dos_lancadores.py": 1032,
         "interface/frases_que_ela_baniu.py": 104,
         "interface/hefesto_vivo.py": 504,
@@ -213,7 +213,7 @@
         "interface/pacotes/a04_iluminacao.py": 1172,
         "interface/pacotes/a05_vibracao.py": 818,
         "interface/pacotes/a06_navegacao.py": 382,
-        "interface/pacotes/a07_lancadores.py": 661,
+        "interface/pacotes/a07_lancadores.py": 687,
         "interface/pacotes/a08_conexoes.py": 1180,
         "interface/pacotes/a09_sistema.py": 1115,
         "interface/pacotes/a10_perfis.py": 921,
@@ -227,8 +227,8 @@
         "interface/regua_do_mockup.py": 170,
         "interface/sistema.py": 116,
         "mods/instalador.py": 153,
-        "mods/manifesto.py": 123,
-        "mods/porta.py": 217,
+        "mods/manifesto.py": 128,
+        "mods/porta.py": 248,
         "mods/supervisor.py": 117,
         "mods/tema.py": 78,
         "profiles/autoswitch.py": 135,
@@ -251,7 +251,7 @@
         "utils/single_instance.py": 50,
         "utils/xdg_paths.py": 65
       },
-      "razao": "texto-em-src: +8 linhas (55271 -> 55279), pagas por Origem: D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP; registrado no fecho, topo 2c38c166fda0",
+      "razao": "texto-em-src: +121 linhas (55279 -> 55400), pagas por Origem: D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo 233f569af302",
       "subidas": [
         {
           "data": "2026-10-13",
@@ -558,6 +558,12 @@
           "de": 55271,
           "para": 55279,
           "razao": "texto-em-src: +8 linhas (55271 -> 55279), pagas por Origem: D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP; registrado no fecho, topo 2c38c166fda0"
+        },
+        {
+          "data": "2026-10-25",
+          "de": 55279,
+          "para": 55400,
+          "razao": "texto-em-src: +121 linhas (55279 -> 55400), pagas por Origem: D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA, D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO; registrado no fecho, topo 233f569af302"
         }
       ],
       "unidade": "linhas",
