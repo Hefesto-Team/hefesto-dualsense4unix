@@ -1824,6 +1824,10 @@ class UhidDualSense:
     #: ao broker ANTES de desfazer o uhid, e o pad só troca de pele com o gadget na mão.
     _gadget_recusado: bool = False
     _gadget_na_mao: _GadgetDoPad | None = None
+    #: o pedido da nova tentativa em voo, fora do tique (`_PedidoAoBroker`).
+    _pedido_ao_broker: _PedidoAoBroker | None = None
+    #: o serial da última recusa: o `stop` a esquece, e o pad que volta a diz de novo.
+    _serial_da_recusa: str | None = None
 
     @property
     def porta_propria(self) -> bool:
@@ -1863,6 +1867,7 @@ class UhidDualSense:
         """Destrói o device e só DEPOIS devolve o MAC."""
         self._gadget_outra_vez = False
         self._gadget_recusado = False
+        _esquecer_a_recusa(self)
         self._destruir_o_device()
         _MACS_DOS_VPADS_VIVOS.despir(self)
         # o doctor conta quem está no uhid pelo diário: o pad que parou sai da conta.
@@ -2418,6 +2423,26 @@ _CLIENTES_RECUSADOS: dict[str, Any] = {}
 _TRAVA_DAS_RECUSAS = threading.Lock()
 
 
+def _esquecer_a_recusa_do_serial(serial: str) -> None:
+    """A recusa e o cliente recusado do ``serial`` saem: o próximo pedido é o primeiro."""
+    with _TRAVA_DAS_RECUSAS:
+        _RECUSAS_DO_BROKER.pop(serial, None)
+        cliente = _CLIENTES_RECUSADOS.pop(serial, None)
+    if cliente is not None:
+        with contextlib.suppress(Exception):
+            cliente.close()
+
+
+def _esquecer_a_recusa(pad: UhidDualSense) -> None:
+    """O `stop`: larga o pedido em voo e esquece a recusa do serial do pad."""
+    pedido, pad._pedido_ao_broker = pad._pedido_ao_broker, None
+    if pedido is not None:
+        pedido.largar()
+    serial, pad._serial_da_recusa = pad._serial_da_recusa, None
+    if serial is not None:
+        _esquecer_a_recusa_do_serial(serial)
+
+
 def _pedir_ao_broker(
     serial: str, descritor: bytes, identidade: str, par: tuple[int, int]
 ) -> _GadgetDoPad | None:
@@ -2695,12 +2720,15 @@ def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
 
 
 def _pedir_o_gadget(pad: UhidDualSense) -> _GadgetDoPad | None:
-    """O gadget novo do pad, ou None com o motivo anotado (o pad segue no uhid).
+    """O gadget novo do pad, ou None com o motivo anotado (o pad segue no uhid)."""
+    pedido = _o_pedido_do_gadget(pad)
+    if pedido is None:
+        return None
+    return _a_resposta_do_broker(pad, pedido[0], PEDIR_O_PAD_USB(*pedido))
 
-    A recusa do broker por falta de sessão (:data:`_RECUSA_DA_SESSAO`) arma a
-    nova tentativa do gadget que caiu, sem jogo aberto, a cada `_GADGET_VARRE_S`:
-    o pad que nasceu antes do login ganha a porta dele quando a sessão abre.
-    """
+
+def _o_pedido_do_gadget(pad: UhidDualSense) -> tuple[str, bytes, str, tuple[int, int]] | None:
+    """Os argumentos do `PEDIR_O_PAD_USB`, ou None com o motivo anotado. Não muda o pad."""
     assert pad.blueprint is not None
     par = (DUALSENSE_VENDOR, pad.product)
     if QUIRK_DO_PAR(par):
@@ -2723,10 +2751,23 @@ def _pedir_o_gadget(pad: UhidDualSense) -> _GadgetDoPad | None:
     except ValueError:
         pad_usb.anotar_sem_porta(pad.identity or "", "sem_serial")
         return None
-    gadget = PEDIR_O_PAD_USB(serial, bytes(pad.blueprint["descriptor"]), pad.identity or "", par)
+    return serial, bytes(pad.blueprint["descriptor"]), pad.identity or "", par
+
+
+def _a_resposta_do_broker(
+    pad: UhidDualSense, serial: str, gadget: _GadgetDoPad | None
+) -> _GadgetDoPad | None:
+    """O pad lê a resposta do pedido: o gadget, ou a recusa.
+
+    A recusa do broker por falta de sessão (:data:`_RECUSA_DA_SESSAO`) arma a
+    nova tentativa do gadget que caiu, sem jogo aberto, a cada `_GADGET_VARRE_S`:
+    o pad que nasceu antes do login ganha a porta dele quando a sessão abre.
+    """
     if gadget is not None:
         pad._gadget_recusado = False
+        pad._serial_da_recusa = None
         return gadget
+    pad._serial_da_recusa = serial
     with _TRAVA_DAS_RECUSAS:
         recusa = _RECUSAS_DO_BROKER.get(serial)
     if recusa in _RECUSA_DA_SESSAO:
@@ -3007,23 +3048,46 @@ def _tentar_o_gadget_outra_vez(pad: UhidDualSense) -> bool:
 
     A pergunta pelo jogo sai a cada ``_GADGET_VARRE_S``: com o jogo aberto, o
     pad não troca de pele embaixo dele. O pad que o broker recusou pede o
-    gadget ANTES de desfazer o uhid: recusado de novo, o uhid fica intacto e a
+    gadget ANTES de desfazer o uhid, num fio fora do tique (`_PedidoAoBroker`),
+    e o tique seguinte lê a resposta: recusado de novo, o uhid fica intacto e a
     tentativa se rearma. True = o device foi refeito.
     """
+    pedido = pad._pedido_ao_broker
+    if pedido is not None:
+        return _ler_o_pedido(pad, pedido)
     agora = pad.time_fn()
     if agora < pad._gadget_outra_vez_em:
         return False
     pad._gadget_outra_vez_em = agora + _GADGET_VARRE_S
     if JOGO_ABERTO():
         return False
-    pad._gadget_outra_vez = False
     if pad._gadget_recusado:
-        pad._gadget_recusado = False
         if pad.blueprint is None:
+            pad._gadget_outra_vez = pad._gadget_recusado = False
             return False
-        pad._gadget_na_mao = _pedir_o_gadget(pad)
-        if pad._gadget_na_mao is None:
-            return False
+        pad._pedido_ao_broker = _PedidoAoBroker(pad, PEDIR_O_PAD_USB)
+        return False
+    pad._gadget_outra_vez = False
+    return _refazer_o_device(pad)
+
+
+def _ler_o_pedido(pad: UhidDualSense, pedido: _PedidoAoBroker) -> bool:
+    """O tique lê o pedido em voo: sem resposta ainda, nada; com o gadget, a troca."""
+    if not pedido.pronto:
+        return False
+    pad._pedido_ao_broker = None
+    pad._gadget_outra_vez = pad._gadget_recusado = False
+    gadget = pedido.tomar()
+    if pedido.serial is None:
+        return False
+    pad._gadget_na_mao = _a_resposta_do_broker(pad, pedido.serial, gadget)
+    if pad._gadget_na_mao is None:
+        return False
+    return _refazer_o_device(pad)
+
+
+def _refazer_o_device(pad: UhidDualSense) -> bool:
+    """Desfaz o uhid e refaz o device, no gadget na mão se houver. True sempre."""
     pad._destruir_o_device()
     pad._sem_gadget = False
     pad._criar_o_device()
@@ -3031,6 +3095,77 @@ def _tentar_o_gadget_outra_vez(pad: UhidDualSense) -> bool:
     if sobra is not None:
         sobra.desmontar()
     return True
+
+
+class _PedidoAoBroker:
+    """A nova tentativa do pad recusado, num fio fora do tique de entrada.
+
+    O-PAD-RECUSADO-NAO-PRENDE-O-TIQUE-NEM-ENCHE-O-DIARIO-01 (24/10/2026): o broker
+    de pé e preso (aceita e não responde) faz o cliente esperar o ``_TIMEOUT_S``
+    dele, 2 s; dentro do `pump_ff`, eram 2 s de tique preso a cada varredura, por
+    pad. O fio pergunta; o tique só lê a resposta (:attr:`pronto`, :meth:`tomar`).
+    O pedido largado pelo `stop` desmonta o gadget que chegar tarde.
+    """
+
+    def __init__(
+        self,
+        pad: UhidDualSense,
+        pedir: Callable[[str, bytes, str, tuple[int, int]], _GadgetDoPad | None],
+    ) -> None:
+        self.serial: str | None = None
+        self._gadget: _GadgetDoPad | None = None
+        self._largado = False
+        self._trava = threading.Lock()
+        self._pronto = threading.Event()
+        threading.Thread(
+            target=self._perguntar, args=(pad, pedir), daemon=True,
+            name=f"hefesto-pad-usb-p{pad.player}",
+        ).start()
+
+    def _perguntar(
+        self,
+        pad: UhidDualSense,
+        pedir: Callable[[str, bytes, str, tuple[int, int]], _GadgetDoPad | None],
+    ) -> None:
+        gadget: _GadgetDoPad | None = None
+        try:
+            argumentos = _o_pedido_do_gadget(pad)
+            if argumentos is not None:
+                self.serial = argumentos[0]
+                gadget = pedir(*argumentos)
+        except Exception:  # pragma: no cover - defensivo: o fio nunca derruba o pad
+            logger.debug("pad_usb_pedido_de_novo_falhou", player=pad.player, exc_info=True)
+        with self._trava:
+            largado = self._largado
+            if not largado:
+                self._gadget = gadget
+            self._pronto.set()
+        if largado:
+            if gadget is not None:
+                gadget.desmontar()
+            if self.serial is not None:
+                _esquecer_a_recusa_do_serial(self.serial)
+
+    @property
+    def pronto(self) -> bool:
+        return self._pronto.is_set()
+
+    def esperar(self, segundos: float) -> bool:
+        """True = a resposta chegou em até ``segundos`` (para quem mede)."""
+        return self._pronto.wait(segundos)
+
+    def tomar(self) -> _GadgetDoPad | None:
+        with self._trava:
+            gadget, self._gadget = self._gadget, None
+        return gadget
+
+    def largar(self) -> None:
+        """O pad parou: o gadget que chegou (ou que chegar) se desmonta."""
+        with self._trava:
+            self._largado = True
+            gadget, self._gadget = self._gadget, None
+        if gadget is not None:
+            gadget.desmontar()
 
 
 def _report_neutro(pad: UhidDualSense) -> bytes:

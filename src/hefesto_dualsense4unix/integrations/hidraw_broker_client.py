@@ -48,6 +48,10 @@ class HidrawBrokerClient:
         self._lock = threading.Lock()
         self._sock: socket.socket | None = None
         self._indisponivel_logado = False
+        #: a linha da lease já dita, e nenhuma resposta ``ok`` desde então: a
+        #: lease que o broker fecha sem atender (o peer recusado antes do login)
+        #: e que se reabre na nova tentativa não é motivo novo, e não se diz.
+        self._lease_dita = False
         self._estado_por_no: dict[str, str] = {}
         self._estado_lock = threading.Lock()
 
@@ -244,7 +248,10 @@ class HidrawBrokerClient:
             response = json.loads(raw.decode("utf-8"))
         except (UnicodeDecodeError, ValueError):
             return None
-        return response if isinstance(response, dict) else None
+        if not isinstance(response, dict):
+            return None
+        self._lease_atendeu(response)
+        return response
 
     def _request_with_fds(
         self, payload: dict[str, Any]
@@ -289,7 +296,13 @@ class HidrawBrokerClient:
                 with contextlib.suppress(OSError):
                     os.close(fd)
             return None, []
+        self._lease_atendeu(response)
         return response, fds
+
+    def _lease_atendeu(self, response: dict[str, Any]) -> None:
+        """A resposta ``ok`` fecha a história da lease: a próxima que abrir é dita."""
+        if response.get("ok"):
+            self._lease_dita = False
 
     def _ensure_sock_locked(self) -> socket.socket | None:
         if self._sock is not None:
@@ -300,6 +313,7 @@ class HidrawBrokerClient:
             sock.connect(self._path)
         except OSError as exc:
             sock.close()
+            self._lease_dita = False
             if not self._indisponivel_logado:
                 logger.info("hidraw_broker_unavailable", path=self._path, err=str(exc))
                 self._indisponivel_logado = True
@@ -308,7 +322,9 @@ class HidrawBrokerClient:
             return None
         self._sock = sock
         self._indisponivel_logado = False
-        logger.info("hidraw_broker_lease_open", path=self._path)
+        if not self._lease_dita:
+            self._lease_dita = True
+            logger.info("hidraw_broker_lease_open", path=self._path)
         return sock
 
     def _read_line_locked(self, sock: socket.socket) -> bytes:

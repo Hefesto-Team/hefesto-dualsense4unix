@@ -19,12 +19,14 @@ import contextlib
 import os
 import socket
 import threading
+import time
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from hefesto_dualsense4unix.integrations import hidraw_broker_client as hbc
 from hefesto_dualsense4unix.integrations import o_que_o_jogo_ve as oqv
 from hefesto_dualsense4unix.integrations import pad_usb
 from hefesto_dualsense4unix.integrations.hidraw_broker_client import SOCKET_PATH_ENV
@@ -54,6 +56,8 @@ class BrokerAntesDoLogin:
     ``broker_ausente``: o socket não existe. ``peer_recusado``: aceita e fecha
     (o ``register_client`` com ``nao_e_quem_esta_na_frente``). ``sem_sessao_ativa``:
     aceita, lê o pedido e recusa com o erro do ``_cmd_pad_usb_montar``.
+    ``travado``: aceita e nunca responde (o broker de pé e preso), e o cliente
+    espera o ``_TIMEOUT_S`` dele inteiro.
     """
 
     def __init__(self, caminho: Path, modo: str) -> None:
@@ -63,6 +67,7 @@ class BrokerAntesDoLogin:
         self._pare = threading.Event()
         self._sock: socket.socket | None = None
         self._fio: threading.Thread | None = None
+        self._presas: list[socket.socket] = []
         if modo == "broker_ausente":
             return
         self._sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
@@ -80,6 +85,9 @@ class BrokerAntesDoLogin:
             except (TimeoutError, OSError):
                 continue
             self.conexoes += 1
+            if self.modo == "travado":
+                self._presas.append(conn)
+                continue
             with conn:
                 if self.modo == "sem_sessao_ativa":
                     conn.settimeout(2.0)
@@ -92,6 +100,8 @@ class BrokerAntesDoLogin:
         self._pare.set()
         if self._fio is not None:
             self._fio.join(timeout=2.0)
+        for conn in self._presas:
+            conn.close()
         if self._sock is not None:
             self._sock.close()
 
@@ -128,22 +138,54 @@ class Mesa:
         monkeypatch.setattr(self.ug, "PEDIR_O_PAD_USB", pedir)
         self.espiao = _EspiaoDoDiario(self.ug.logger)
         monkeypatch.setattr(self.ug, "logger", self.espiao)
+        self.espiao_do_cliente = _EspiaoDoDiario(hbc.logger)
+        monkeypatch.setattr(hbc, "logger", self.espiao_do_cliente)
+        self.pads: list[Any] = []
+        #: todo pedido em voo que um tique deixou: a mesa o espera ao se desfazer.
+        self.pedidos_vistos: list[Any] = []
 
     def pad(self, jogador: int) -> Any:
         identidade, _transporte = MESA_MISTA[jogador]
-        return self.b.pad(player=jogador, identity=identidade,
-                          time_fn=lambda: self.relogio[0])
+        pad = self.b.pad(player=jogador, identity=identidade,
+                         time_fn=lambda: self.relogio[0])
+        self.pads.append(pad)
+        return pad
 
     def serial(self, pad: Any) -> str:
         return str(pad_usb.serial_do_pad(pad.mac, pad.player))
 
-    def passar(self, segundos: float, pads: list[Any]) -> None:
+    def passar(self, segundos: float, pads: list[Any], *, assentar: bool = True) -> None:
+        """O relógio anda e cada pad dá um tique.
+
+        O pedido da nova tentativa corre fora do tique, e o tique seguinte lê a
+        resposta: ``assentar`` espera os pedidos em voo responderem e dá o tique
+        que a lê, no mesmo instante do relógio.
+        """
         self.relogio[0] += segundos
         for pad in pads:
             pad.pump_ff()
+            pedido = getattr(pad, "_pedido_ao_broker", None)
+            if pedido is not None and pedido not in self.pedidos_vistos:
+                self.pedidos_vistos.append(pedido)
+        if assentar and self.esperar_os_pedidos(pads):
+            for pad in pads:
+                pad.pump_ff()
+
+    def esperar_os_pedidos(self, pads: list[Any], segundos: float = 5.0) -> bool:
+        """True = havia pedido em voo, e todos já responderam."""
+        em_voo = [p for p in (getattr(pad, "_pedido_ao_broker", None) for pad in pads) if p]
+        for pedido in em_voo:
+            assert pedido.esperar(segundos), "o pedido ao broker não voltou"
+        return bool(em_voo)
 
     def eventos(self, nome: str) -> int:
         return sum(1 for _nivel, evento in self.espiao.eventos if evento == nome)
+
+    def linhas_do_cliente(self) -> int:
+        """As linhas de ``info`` do cliente do broker sobre a lease."""
+        return sum(1 for nivel, evento in self.espiao_do_cliente.eventos
+                   if nivel == "info" and evento in ("hidraw_broker_lease_open",
+                                                     "hidraw_broker_unavailable"))
 
 
 @pytest.fixture(params=RECUSAS)
@@ -154,6 +196,9 @@ def mesa(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch,
         yield m
     finally:
         m.broker.fechar()
+        # o pedido largado pelo ``stop`` termina antes de a mesa se desfazer
+        for pedido in m.pedidos_vistos:
+            pedido.esperar(5.0)
 
 
 @pytest.mark.parametrize("jogadores", [(1, 2), (1, 2, 3, 4), (1,), (2, 4), (1, 3)],
@@ -216,6 +261,50 @@ class TestARecusaDoBrokerTentaDeNovo:
             for pad in pads:
                 pad.stop()
 
+    def test_120_tiques_recusados_dao_uma_linha_por_pad_tambem_no_cliente(
+        self, mesa: Mesa, jogadores: tuple[int, ...]
+    ) -> None:
+        # D-2410-O-PAD-RECUSADO-NAO-ENCHE-O-DIARIO
+        """Mordida: grave a linha da lease em toda conexão, e o cliente dá três por pad."""
+        pads = [mesa.pad(j) for j in jogadores]
+        try:
+            for pad in pads:
+                assert pad.start() and pad._gadget is None
+            for _ in range(120):
+                mesa.passar(0.1, pads)
+            assert mesa.pedidos_ao_broker == 3 * len(pads)
+            assert mesa.eventos("pad_usb_indisponivel_fica_o_uhid") == len(pads)
+            assert mesa.linhas_do_cliente() == len(pads), (
+                "o cliente do broker gravou a lease a cada nova tentativa"
+            )
+        finally:
+            for pad in pads:
+                pad.stop()
+
+    def test_o_pad_montado_de_novo_diz_a_recusa_de_novo(
+        self, mesa: Mesa, jogadores: tuple[int, ...]
+    ) -> None:
+        """O mesmo serial, o mesmo motivo: o pad que parou e voltou grava a recusa.
+
+        Mordida: tire a limpeza da recusa do ``stop``, e a volta fica muda no diário.
+        """
+        pads = [mesa.pad(j) for j in jogadores]
+        try:
+            for pad in pads:
+                assert pad.start() and pad._gadget is None
+            for pad in pads:
+                pad.stop()
+            for pad in pads:
+                assert pad.start() and pad._gadget is None
+            assert mesa.pedidos_ao_broker == 2 * len(pads)
+            assert mesa.eventos("pad_usb_indisponivel_fica_o_uhid") == 2 * len(pads), (
+                "o pad que voltou com o mesmo serial ficou mudo na recusa"
+            )
+            assert mesa.linhas_do_cliente() == 2 * len(pads)
+        finally:
+            for pad in pads:
+                pad.stop()
+
     def test_com_o_jogo_aberto_nenhum_troca_de_pele(
         self, mesa: Mesa, jogadores: tuple[int, ...]
     ) -> None:
@@ -235,6 +324,53 @@ class TestARecusaDoBrokerTentaDeNovo:
         finally:
             for pad in pads:
                 pad.stop()
+
+
+#: o teto de um tique do ``pump_ff``: o laço de entrada não espera o broker.
+TETO_DO_TIQUE_S = 0.05
+
+
+@pytest.mark.parametrize("jogadores", [(1, 2), (1, 2, 3, 4), (1,), (2, 4), (1, 3)],
+                         ids=["p1-usb+p2-bt", "quatro-mistos", "um-so", "todos-bt", "todos-usb"])
+def test_o_broker_preso_nao_prende_o_tique(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, jogadores: tuple[int, ...]
+) -> None:
+    # D-2410-O-PEDIDO-DE-NOVO-SAI-DO-TIQUE
+    """O broker aceita e não responde: nenhum tique passa de 50 ms.
+
+    O pad nasce recusado pela sessão; depois o broker fica preso, e cada nova
+    tentativa esperaria o ``_TIMEOUT_S`` do cliente (2 s) dentro do tique de
+    entrada. Mordida: peça ao broker de dentro do tique, e o tique leva 2 s.
+    """
+    m = Mesa(monkeypatch, tmp_path, "sem_sessao_ativa")
+    pads = [m.pad(j) for j in jogadores]
+    tiques: list[float] = []
+    try:
+        for pad in pads:
+            assert pad.start() and pad._gadget is None
+        m.broker.modo = "travado"
+        for volta in range(3):
+            m.relogio[0] += m.ug._GADGET_VARRE_S + 0.5 if volta == 0 else 0.1
+            for pad in pads:
+                antes = time.perf_counter()
+                pad.pump_ff()
+                tiques.append(time.perf_counter() - antes)
+                pedido = getattr(pad, "_pedido_ao_broker", None)
+                if pedido is not None and pedido not in m.pedidos_vistos:
+                    m.pedidos_vistos.append(pedido)
+        assert m.b.esperar(lambda: m.pedidos_ao_broker == 2 * len(pads)), (
+            "a nova tentativa não pediu ao broker"
+        )
+        assert max(tiques) < TETO_DO_TIQUE_S, (
+            f"um tique levou {max(tiques) * 1000:.2f} ms com o broker preso"
+        )
+        assert all(pad.is_active() and pad._gadget is None for pad in pads)
+    finally:
+        for pad in pads:
+            pad.stop()
+        m.broker.fechar()
+        for pedido in m.pedidos_vistos:
+            pedido.esperar(5.0)
 
 
 def test_a_recusa_que_nao_passa_nao_pede_de_novo(
