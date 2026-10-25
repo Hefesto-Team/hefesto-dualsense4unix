@@ -21,6 +21,7 @@ from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError, Luga
 from hefesto_dualsense4unix.mods.manifesto import (
     CHAVE_DE_JOGO,
     COR_HEXA,
+    MODOS_DO_LIVRE,
     Manifesto,
     Opcao,
     endereco_valido,
@@ -179,6 +180,19 @@ def formas_do_livre(manifesto: Manifesto, valores: dict[str, Any]) -> Formas:
         return {}
 
 
+def chave_do_modo(manifesto: Manifesto) -> str | None:
+    """A chave do modo do ``livre`` com ``modos`` (``<id>:modo``), ou ``None``."""
+    livre = manifesto.opcao_livre
+    return f"{livre.id}:modo" if livre is not None and livre.modos else None
+
+
+def modo_valido(valor: Any) -> str:
+    """O modo do ``livre``: ``soltar``, ``segurar`` ou ``repetir``, ou a recusa dita."""
+    if not isinstance(valor, str) or valor not in MODOS_DO_LIVRE:
+        raise InstalacaoRecusadaError(f"«{valor}» não é Soltar, Segurar nem Repetir.")
+    return valor
+
+
 def _guardados(mod_id: str, lugares: Lugares) -> dict[str, Any]:
     try:
         bruto = json.loads(caminho(mod_id, lugares).read_text(encoding="utf-8"))
@@ -203,16 +217,24 @@ def ler(manifesto: Manifesto, lugares: Lugares) -> dict[str, Valor]:
                 opcao.id in guardados) else padrao_de(opcao)
         except InstalacaoRecusadaError:
             saida[opcao.id] = padrao_de(opcao)
-    return {o.id: saida[o.id] for o in manifesto.opcoes}
+    lidas = {o.id: saida[o.id] for o in manifesto.opcoes}
+    chave = chave_do_modo(manifesto)
+    if chave is not None:
+        bruto = guardados.get(chave)
+        lidas[chave] = bruto if bruto in MODOS_DO_LIVRE else MODOS_DO_LIVRE[0]
+    return lidas
 
 
 def guardar(manifesto: Manifesto, opcao_id: str, valor: Any, lugares: Lugares) -> Valor:
-    """Valida e grava UMA opção, preservando as outras (arquivo novo e ``rename``, em ``0600``)."""
+    """Valida e grava UMA opção (ou o modo do ``livre``), preservando as outras (arquivo novo e
+    ``rename``, em ``0600``)."""
     opcao = next((o for o in manifesto.opcoes if o.id == opcao_id), None)
-    if opcao is None:
+    modo = opcao_id == chave_do_modo(manifesto)
+    if opcao is None and not modo:
         raise InstalacaoRecusadaError(f"«{manifesto.nome}» não tem a opção «{opcao_id}».")
     atuais = ler(manifesto, lugares)
-    certo = validar(opcao, valor, formas_extras=tuple(formas_do_livre(manifesto, atuais)))
+    certo = modo_valido(valor) if opcao is None else validar(
+        opcao, valor, formas_extras=tuple(formas_do_livre(manifesto, atuais)))
     atuais[opcao_id] = certo
     _gravar(manifesto.id, atuais, lugares)
     return certo
@@ -256,6 +278,12 @@ def herdar(manifesto: Manifesto, antigas: Sequence[str], lugares: Lugares) -> di
             with contextlib.suppress(InstalacaoRecusadaError):
                 herdadas[opcao.id] = validar(opcao, bruto[opcao.id], formas_extras=extras)
                 break
+    chave = chave_do_modo(manifesto)
+    if chave is not None and feitas.get(chave) not in MODOS_DO_LIVRE[1:]:
+        for mod_id in antigas:
+            if (antigo := _guardados(mod_id, lugares).get(chave)) in MODOS_DO_LIVRE[1:]:
+                herdadas[chave] = antigo
+                break
     if herdadas:
         _gravar(manifesto.id, {**feitas, **herdadas}, lugares)
     return herdadas
@@ -272,5 +300,5 @@ def _escolhida(opcao: Opcao, guardados: dict[str, Any], extras: Sequence[str] = 
         return False
 
 
-__all__ = ["NOME_DO_ARQUIVO", "Formas", "Valor", "formas_do_livre", "guardar", "herdar", "ler",
-           "padrao_de", "validar"]
+__all__ = ["NOME_DO_ARQUIVO", "Formas", "Valor", "chave_do_modo", "formas_do_livre", "guardar",
+           "herdar", "ler", "modo_valido", "padrao_de", "validar"]

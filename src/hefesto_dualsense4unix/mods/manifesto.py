@@ -163,6 +163,8 @@ ACOES_DO_APARELHO = 6
 ACAO_DE_LIGAR = "ligar"
 #: Os desenhos que uma ação pode pedir; sem ``icone``, o botão é só o rótulo.
 ICONES_DA_ACAO = ("procurar", "testar", "esquecer", "ligar", "atualizar")
+#: O que o ``livre`` com ``modos`` faz ao soltar; o primeiro é o de fábrica.
+MODOS_DO_LIVRE = ("soltar", "segurar", "repetir")
 
 
 def forma_valida(nome: object, passos: object) -> bool:
@@ -313,6 +315,8 @@ class Opcao(BaseModel):
     # A aba interna da janela em que a opção mora; sem ela, a opção vai à primeira aba. Com
     # um grupo só, a janela não desenha aba nenhuma.
     grupo: str | None = Field(default=None, min_length=1, max_length=30)
+    # O ``livre`` com ``modos``: a faixa ganha «Soltar», «Segurar» e «Repetir» (``MODOS_DO_LIVRE``).
+    modos: bool = False
 
     @field_validator("id")
     @classmethod
@@ -343,6 +347,8 @@ class Opcao(BaseModel):
             raise ValueError(f"a opção {self.id} não é por_botao e declara formas ou botões")
         if self.tipo == "livre":
             self._conferir_o_livre()
+        elif self.modos:
+            raise ValueError(f"a opção {self.id} não é livre e declara modos")
         if self.tipo == "endereco" and self.padrao is not None and not (
             isinstance(self.padrao, str)
             and (not self.padrao or endereco_valido(self.padrao) is not None)
@@ -678,6 +684,7 @@ __all__ = [
     "COR_HEXA",
     "FUNCOES_POR_PEDIDO",
     "ICONES_DA_ACAO",
+    "MODOS_DO_LIVRE",
     "NOME_DAS_ENTRADAS",
     "NOME_DA_FUNCAO",
     "NOME_DO_MANIFESTO",

@@ -1006,8 +1006,10 @@ class Porta:
             dados["valor"] = valor
         return self._avisar_a(mod_id, EVENTO_DA_ACAO, dados)
 
-    def livre(self, mod_id: str, opcao_id: str, valor: float, *, soltou: bool) -> bool:
-        """O arrastar do ``livre``: ``extensao.livre {mod, id, valor, soltou}`` só para ``mod_id``.
+    def livre(self, mod_id: str, opcao_id: str, valor: float, *, soltou: bool,
+              modo: str | None = None) -> bool:
+        """O arrastar do ``livre``: ``extensao.livre {mod, id, valor, soltou, modo?}`` só para
+        ``mod_id``; ``modo`` vai só quando o ``livre`` declara ``modos``.
 
         No máximo ``LIVRE_POR_SEGUNDO`` eventos por segundo: o primeiro arrastar abre um compasso
         de ``1 / LIVRE_POR_SEGUNDO`` s, e ao fim dele sai o valor mais novo. O soltar sai na hora,
@@ -1015,8 +1017,10 @@ class Porta:
         """
         if not self._conexoes_de(mod_id):
             return False
-        dados = {"mod": mod_id, "id": opcao_id, "valor": round(min(1.0, max(0.0, valor)), 3),
-                 "soltou": soltou}
+        dados: dict[str, Any] = {"mod": mod_id, "id": opcao_id,
+                                 "valor": round(min(1.0, max(0.0, valor)), 3), "soltou": soltou}
+        if modo is not None:
+            dados["modo"] = modo
         chave = (mod_id, opcao_id)
         compasso = self._livres.setdefault(chave, _Compasso())
         if soltou:

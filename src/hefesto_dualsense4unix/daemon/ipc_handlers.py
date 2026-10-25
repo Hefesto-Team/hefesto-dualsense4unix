@@ -6217,8 +6217,9 @@ class IpcHandlersMixin:
     async def _handle_mods_livre(self, params: dict[str, Any]) -> dict[str, Any]:
         """O arrastar do controle livre: ``extensao.livre`` só à extensão ``{mod}``.
 
-        ``{mod, id, valor (0 a 1), soltou}``; a porta solta no máximo 20 por segundo, e o soltar
-        sai sempre. ``{enviado}`` é falso quando a extensão não está conectada à porta.
+        ``{mod, id, valor (0 a 1), soltou, modo?}``; a porta solta no máximo 20 por segundo, e o
+        soltar sai sempre. ``modo`` só vale no ``livre`` com ``modos`` (sem ele, ``soltar``).
+        ``{enviado}`` é falso quando a extensão não está conectada à porta.
         """
         mod = self._mod_do_pedido(params)
         opcao_id, valor, soltou = params.get("id"), params.get("valor"), params.get("soltou", False)
@@ -6233,7 +6234,16 @@ class IpcHandlersMixin:
         livre = manifesto.opcao_livre
         if livre is None or livre.id != opcao_id:
             raise ValueError(f"«{manifesto.nome}» não declara o controle livre «{opcao_id}».")
-        return {"enviado": bool(porta.livre(mod, livre.id, float(valor), soltou=soltou))}
+        from hefesto_dualsense4unix.mods.manifesto import MODOS_DO_LIVRE
+
+        modo = params.get("modo", MODOS_DO_LIVRE[0] if livre.modos else None)
+        if not livre.modos and modo is not None:
+            raise ValueError(f"«{manifesto.nome}» não declara os modos do controle livre.")
+        if livre.modos and modo not in MODOS_DO_LIVRE:
+            raise ValueError("o modo do livre é soltar, segurar ou repetir")
+        com_modo = {"modo": modo} if livre.modos else {}
+        return {"enviado": bool(porta.livre(mod, livre.id, float(valor), soltou=soltou,
+                                            **com_modo))}
 
 
 def _uniq_do_rumble(params: dict[str, Any], metodo: str) -> str | None:
