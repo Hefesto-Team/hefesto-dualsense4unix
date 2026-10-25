@@ -14,6 +14,7 @@ MORDIDAS (25/10/2026, executadas sobre a cura e devolvidas):
 - o gesto do Cancelar sem o soltar do modo guardado reprova o Cancelar e o reabrir;
 - o reabrir sem o mesmo desfazer reprova ``test_reabrir_a_janela_que_fechou_sem_cancelar``;
 - o ``mudar_o_modo`` que não volta ao modo de antes na recusa reprova a recusa (a barra e a janela);
+- o desfazer que acusa a extensão fora da porta (sem o ``sem_a_extensao``) reprova o caso dela;
 - o gesto do modo que ignora a resposta reprova a recusa (nada levanta);
 - o Cancelar e o X sem o ``data-gesto`` reprovam o HTML e o WebKit;
 - a porta sem a conferência do id da ação reprova os três casos dela, e o supervisor que não passa
@@ -186,6 +187,30 @@ def test_o_cancelar_recusado_diz_por_que_e_o_reabrir_desfaz_quando_ela_volta(
     html = abrir(ponte)["blocos"]["#mod-janela"]
     assert [p["modo"] for p in _livres(ponte)[antes:]] == ["soltar"]
     assert _modos_na_faixa(html) == _acesos("soltar")
+
+
+@pytest.mark.parametrize("como", ["cancelar", "reabrir"])
+def test_a_extensao_fora_da_porta_nao_tem_modo_a_desfazer(
+        janela: Any, ctx: Any, relogio: list[float], como: str) -> None:  # noqa: F811
+    """A extensão que saiu da porta depois da troca volta lendo o guardado: o Cancelar e o reabrir
+    não acusam recusa, e a janela e a barra mostram o guardado, não o modo que ela largou."""
+    a07, instalar, abrir = janela
+    instalar(**_com(COM_MODOS))
+    ponte = _PonteQueRecusa(VIVO)
+    abrir(ponte)
+    _arrastar_e_soltar(a07, ctx, ponte, relogio)
+    a07.modo_do_livre_da_modificacao(ctx, {"v": "toque:ao-vivo:repetir"}, ponte)
+    ponte.rodando = False
+    if como == "cancelar":
+        carga = _cancelar(a07, ctx, ponte)
+        assert "ao-vivo:modo" not in a07._MEXIDA.rascunho, "o Cancelar deixou o modo no rascunho"
+    else:
+        carga = abrir(ponte)
+        assert "recado" not in carga, carga.get("recado")
+    assert _modos_na_faixa(carga["blocos"]["#mod-janela"]) == _acesos("soltar")
+    assert a07._VIVA.modo == "soltar", "a barra seguiu no modo que a extensão largou"
+    relogio[0] += 0.5
+    assert a07._VIVA.ao_vivo("toque").valor == 0.0, "a barra não fez o «Soltar» guardado"
 
 
 def test_o_reabrir_recusado_mostra_o_modo_que_vale_na_extensao(

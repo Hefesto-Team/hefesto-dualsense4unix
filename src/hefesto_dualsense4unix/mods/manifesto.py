@@ -14,7 +14,15 @@ import re
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    ValidationError,
+    ValidationInfo,
+    field_validator,
+    model_validator,
+)
 
 from hefesto_dualsense4unix.core.events import EventTopic
 from hefesto_dualsense4unix.mods import API_DAS_MODIFICACOES
@@ -335,6 +343,17 @@ class Opcao(BaseModel):
         if not _CHAVE_DE_LANCADOR.match(valor):
             raise ValueError("id da opção fora da forma de chave")
         return valor
+
+    @field_validator("aparece_com", mode="before")
+    @classmethod
+    def _aparece_com_sem_conversao(cls, bruto: Any, info: ValidationInfo) -> Any:
+        """O valor pedido chega como foi escrito: o ``1`` não vira ``true``."""
+        for alvo, valor in (bruto.items() if isinstance(bruto, dict) else ()):
+            if not (isinstance(valor, (str, bool)) or (
+                    isinstance(valor, list) and all(isinstance(v, str) for v in valor))):
+                raise ValueError(f"a opção {info.data.get('id')} aparece com {alvo!r} valendo "
+                                 f"{valor!r}: um texto, uma lista deles, true ou false")
+        return bruto
 
     @model_validator(mode="after")
     def _escolhas_da_escolha(self) -> Opcao:

@@ -11,6 +11,7 @@ MORDIDAS (25/10/2026, executadas sobre a cura e devolvidas):
 - o ``_vale`` que aceita todo valor reprova a janela e o ``aparecem``;
 - o ``aparecem`` que não olha se a outra também aparece reprova a escondida em cadeia;
 - cada recusa do manifesto arrancada reprova o caso dela em ``test_o_manifesto_recusa``.
+- o campo sem a conferência do valor cru aceita o ``1`` como ``true`` e reprova ``ligado-com-1``.
 """
 
 from __future__ import annotations
@@ -91,6 +92,9 @@ def _com(opcao_id: str, aparece_com: Any) -> list[dict[str, Any]]:
     (_com("servidor", {"ligacao": []}), "a opção servidor aparece com 'ligacao' valendo"),
     (_com("endereco-do-telefone", {"telefone": "sim"}),
      "a opção endereco-do-telefone aparece com 'telefone', que é ligado: true ou false"),
+    (_com("endereco-do-telefone", {"telefone": 1}),
+     "a opção endereco-do-telefone aparece com 'telefone' valendo 1"),
+    (_com("servidor", {"ligacao": [REDE, 2]}), "a opção servidor aparece com 'ligacao' valendo"),
     (_com("telefone", {"servidor": "127.0.0.1:12345"}),
      "a opção telefone aparece com 'servidor', que não é escolha nem ligado"),
     (_com("servidor", {}), "o aparece_com de servidor está vazio"),
@@ -98,7 +102,8 @@ def _com(opcao_id: str, aparece_com: Any) -> list[dict[str, Any]]:
               "aparece_com": {"telefone": True}}),
      "o livre ao-vivo mora na faixa de baixo e não declara aparece_com"),
 ], ids=["nao-existe", "ela-mesma", "ciclo", "valor-fora", "lista-com-um-fora", "lista-vazia",
-        "ligado-sem-bool", "alvo-de-outro-tipo", "vazio", "livre"])
+        "ligado-sem-bool", "ligado-com-1", "lista-com-numero", "alvo-de-outro-tipo", "vazio",
+        "livre"])
 def test_o_manifesto_recusa(declaradas: list[dict[str, Any]], frase: str) -> None:
     """Cada recusa diz o id da opção que a causou."""
     with pytest.raises(ValidationError, match=re.escape(frase)):

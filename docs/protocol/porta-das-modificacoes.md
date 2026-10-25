@@ -356,7 +356,8 @@ código da extensão na tela. Cada `opcoes[]` tem `id`, `rotulo`, `tipo` e, opci
   some. A janela a mostra no mesmo gesto em que a outra muda, sem reabrir. Esconder é só da tela: o valor
   guardado fica e segue indo à extensão em `opcoes.json`. Recusam o manifesto: o `aparece_com` vazio, o id
   que não existe, a opção que aponta para si mesma, o ciclo, o alvo que não é `escolha` nem `ligado`, o valor
-  que não é escolha do alvo, o `ligado` com valor que não é `true`/`false` e o `livre` que declara o campo.
+  que não é escolha do alvo, o `ligado` com valor que não é `true`/`false` (o `1` não é `true`) e o `livre`
+  que declara o campo.
   Por exemplo, o endereço que só serve quando a ligação é pela rede:
   `{"id": "servidor", "tipo": "endereco", "rotulo": "Servidor", "aparece_com": {"ligacao": "Pela rede"}}`.
   O campo entra depois da 0.9.5, com a mesma `api` 2; um Hefesto até a 0.9.5 recusa o manifesto que o
@@ -412,8 +413,9 @@ Três peças fazem a janela AGIR em vez de só mostrar. As três pedem `publicar
   vai a `opcoes.json` na chave `<id>:modo` pelo «Guardar», e vale na hora: depois de um arrastar, a troca manda
   um soltar com o valor de agora e o modo novo. O «Cancelar» e o X da janela (e o Esc) desfazem o modo que já
   valeu pelo mesmo caminho: um soltar com o modo guardado, só quando o vivo difere; reabrir a janela que fechou
-  sem eles faz o mesmo. O soltar que o serviço recusa (ou que volta `{enviado: false}`) devolve a barra e o
-  botão ao modo de antes, e a janela diz por quê. `modos` fora do `livre` recusa o manifesto.
+  sem eles faz o mesmo; a extensão fora da porta não tem modo a desfazer, porque volta lendo o guardado. Na
+  troca, o soltar que o serviço recusa (ou que volta `{enviado: false}`) devolve a barra e o botão ao modo de
+  antes; o botão pisca e a frase vai ao diário. `modos` fora do `livre` recusa o manifesto.
 - **`aparelhos_controles`**: `{grupo}`, a aba em que moram os `controles` que cada aparelho declara no
   `acessorios.estado`. O aparelho com `controles` tem `id`, e leva até 6 deles, `{id, tipo, valor, opcoes?, rotulo?, <!-- noqa-acento: chave do estado -->
   dica?}`, com ids sem repetição e nenhum igual ao de uma das `aparelhos_acoes` (o clique dos dois chega como a

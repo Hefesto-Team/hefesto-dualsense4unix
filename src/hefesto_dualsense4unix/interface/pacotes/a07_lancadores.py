@@ -2422,6 +2422,19 @@ class _Viva:
                  self.laco_ate) = antes
             return resposta
 
+    def sem_a_extensao(self, mod: str, modo: str) -> None:
+        """A extensão fora da porta não segura modo nenhum (ao voltar, ela lê o guardado): a barra
+        faz o ``modo`` sem mandar nada."""
+        with self._trava:
+            self._da(mod)
+            if modo == self.modo:
+                return
+            self.modo = modo
+            if self.rastro:
+                agora = time.monotonic()
+                self._assentar(agora)
+                self._soltar_no_modo(agora, modo)
+
     def modo_de(self, mod: str) -> str | None:
         """O modo que vale agora na barra (e na extensão) de ``mod``, ou ``None``."""
         with self._trava:
@@ -2670,7 +2683,7 @@ def _dizer_a_recusa_do_soltar(mod_id: str, recusa: str) -> str:
 def _desfazer_o_modo(mod_id: str, p: Any) -> str | None:
     """O Cancelar (e o reabrir) devolve à extensão o modo guardado do ``livre``, pelo mesmo
     caminho que aplica: o soltar com ele, só quando o modo vivo difere. Devolve a frase da recusa,
-    ou ``None`` quando nada havia a desfazer ou a extensão recebeu."""
+    ou ``None`` quando nada havia a desfazer, a extensão recebeu ou ela está fora da porta."""
     from hefesto_dualsense4unix.mods import opcoes
 
     item = _a_instalada_ou_nada(mod_id)  # a extensão que saiu não tem modo a desfazer
@@ -2681,6 +2694,10 @@ def _desfazer_o_modo(mod_id: str, p: Any) -> str | None:
         return None
     guardado = str(opcoes.ler(manifesto, _lugares())[chave])
     recusa = _a_recusa_do_soltar(_VIVA.mudar_o_modo(mod_id, livre.id, guardado, p))
+    if recusa == "":
+        # Fora da porta não há modo a desfazer: a extensão volta lendo o guardado.
+        _VIVA.sem_a_extensao(mod_id, guardado)
+        return None
     return None if recusa is None else _dizer_a_recusa_do_soltar(mod_id, recusa)
 
 
