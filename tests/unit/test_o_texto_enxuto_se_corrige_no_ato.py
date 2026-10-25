@@ -37,6 +37,7 @@ COPIAR = (
     "check_docstring_longa.py",
     "check_comentario_cortado.py",
     "validar-citacoes-de-linha.py",
+    "prosa_do_codigo.py",
     "check_a_origem.py",
     "catraca.py",
 )
