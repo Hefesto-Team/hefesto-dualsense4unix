@@ -106,7 +106,7 @@ import shutil
 import subprocess
 import threading
 import time
-from collections.abc import Callable, Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -1352,48 +1352,95 @@ def argv_do_gravador(
     return []
 
 
-def conferir_o_alvo_do_gravador(rotulo: str) -> str | None:
-    """A que nó de ORIGEM o gravador chamado `rotulo` se ligou. ``None``=não sei."""
-    if not rotulo:
-        return None
-    try:
-        proc = subprocess.run(
-            ["pw-dump"], capture_output=True, text=True, timeout=3.0, check=False
-        )
-    except (OSError, subprocess.SubprocessError):
-        return None
-    if getattr(proc, "returncode", 1) != 0:
-        return None
-    try:
-        objetos = json.loads(proc.stdout or "[]")
-    except (ValueError, TypeError):
-        return None
+@dataclass(frozen=True)
+class OrigemDoGravador:
+    """O nó de ORIGEM a que um gravador se ligou, como o grafo do PipeWire o diz.
 
-    nomes: dict[int, str] = {}
+    O-NOME-DO-JOGO-COM-ACENTO-NAO-SE-PERDE-NO-PACTL-01 (24/10/2026): a identidade
+    (``ident`` é o id do grafo, que o ``pactl`` chama ``object.id``; ``serial`` é o
+    ``object.serial``) é o que a conferência compara com o fluxo pedido. O nome vem
+    inteiro daqui, em UTF-8, e o do ``pactl`` pode ter chegado ``(null)``.
+    """
+
+    ident: int
+    serial: int | None
+    nome: str
+
+
+def _serial_do_grafo(props: Mapping[str, Any]) -> int | None:
+    bruto = props.get("object.serial")
+    if isinstance(bruto, bool):
+        return None
+    if isinstance(bruto, int):
+        return bruto
+    texto = str(bruto or "").strip()
+    return int(texto) if texto.isdigit() else None
+
+
+def origem_no_grafo(objetos: object, rotulo: str) -> OrigemDoGravador | None:
+    """A origem do gravador chamado ``rotulo`` num ``pw-dump`` já lido. Pura."""
+    if not rotulo or not isinstance(objetos, list):
+        return None
+    nos: dict[int, OrigemDoGravador] = {}
     meus: set[int] = set()
     for o in objetos:
-        if o.get("type") != "PipeWire:Interface:Node":
+        if not isinstance(o, dict) or o.get("type") != "PipeWire:Interface:Node":
             continue
         props = (o.get("info") or {}).get("props") or {}
-        nome = str(props.get("node.name") or "")
         ident = o.get("id")
-        if not isinstance(ident, int):
+        if not isinstance(ident, int) or not isinstance(props, Mapping):
             continue
-        nomes[ident] = nome
+        nome = str(props.get("node.name") or "")
+        nos[ident] = OrigemDoGravador(ident, _serial_do_grafo(props), nome)
         if nome == rotulo:
             meus.add(ident)
     if not meus:
         return None
-
     for o in objetos:
-        if o.get("type") != "PipeWire:Interface:Link":
+        if not isinstance(o, dict) or o.get("type") != "PipeWire:Interface:Link":
             continue
         info = o.get("info") or {}
         if info.get("input-node-id") in meus:
             origem = info.get("output-node-id")
             if isinstance(origem, int):
-                return nomes.get(origem) or None
+                return nos.get(origem)
     return None
+
+
+def origem_do_gravador(
+    rotulo: str, ler_o_grafo: Callable[[], str | None] | None = None
+) -> OrigemDoGravador | None:
+    """A que nó de ORIGEM o gravador chamado ``rotulo`` se ligou. ``None`` = não sei."""
+    if not rotulo:
+        return None
+    if ler_o_grafo is not None:
+        texto = ler_o_grafo()
+    else:
+        try:
+            proc = subprocess.run(
+                ["pw-dump"], capture_output=True, text=True, timeout=3.0, check=False
+            )
+        except (OSError, subprocess.SubprocessError):
+            return None
+        if getattr(proc, "returncode", 1) != 0:
+            return None
+        texto = proc.stdout
+    try:
+        objetos = json.loads(texto or "[]")
+    except (ValueError, TypeError):
+        return None
+    return origem_no_grafo(objetos, rotulo)
+
+
+def conferir_o_alvo_do_gravador(rotulo: str) -> str | None:
+    """O ``node.name`` do nó de ORIGEM do gravador ``rotulo``. ``None`` = não sei.
+
+    Serve a quem confere contra um nó desta casa (o monitor do ``hefesto_som_*``, o
+    endpoint), cujo nome é ASCII. Quem confere contra o fluxo de um PROGRAMA compara a
+    identidade (:func:`origem_do_gravador`): o nome dele pelo ``pactl`` pode ter-se perdido.
+    """
+    origem = origem_do_gravador(rotulo)
+    return (origem.nome or None) if origem is not None else None
 
 
 FILA_CHEIA_DO_KERNEL: frozenset[int] = frozenset(
@@ -3215,6 +3262,7 @@ __all__ = [
     "CodificadorOpus",
     "ContagemDaBomba",
     "Diagnostico",
+    "OrigemDoGravador",
     "OuvidoDaPlaca",
     "OuvidoDoNo",
     "OuvidoDosNos",
@@ -3251,6 +3299,8 @@ __all__ = [
     "o_mix_fecha_laco",
     "o_servidor_e_o_pipewire",
     "orcamento_do_degrau",
+    "origem_do_gravador",
+    "origem_no_grafo",
     "propriedades_do_sink",
     "rodar_pactl",
     "rota_do_no",

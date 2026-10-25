@@ -48,6 +48,7 @@ from typing import Any
 from hefesto_dualsense4unix.integrations.alto_falante_bt import (
     LATENCIA_DO_GRAVADOR_MS,
     RECUO_PROIBIDO_DO_OUVIDO,
+    OrigemDoGravador,
 )
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
@@ -299,12 +300,24 @@ ROTULO_DO_OUVIDO = "hefesto-tato-ouvido-do-jogo"
 
 @dataclass(frozen=True)
 class FluxoDoJogo:
-    """O fluxo que o jogo toca: o índice do servidor, o serial do nó e o nome dele."""
+    """O fluxo que o jogo toca: o índice do servidor, o serial do nó e o nome dele.
+
+    A identidade é o ``serial`` (o ``object.serial``) e o ``ident`` (o ``object.id``,
+    o id do grafo). O ``nome`` é o que o ``pactl`` entregou, e o do jogo com ™, ® ou
+    acento chega vazio (``nome_perdido``): ele serve ao diário, nunca à conferência.
+    """
 
     indice: int
     serial: int | None
     nome: str
     pid: int
+    ident: int | None = None
+    nome_perdido: bool = False
+
+
+def _inteiro_da_propriedade(propriedades: Mapping[str, str], chave: str) -> int | None:
+    bruto = str(propriedades.get(chave, "")).strip()
+    return int(bruto) if bruto.isdigit() else None
 
 
 def _pid_do_fluxo(propriedades: Mapping[str, str]) -> int | None:
@@ -324,20 +337,47 @@ def fluxo_do_jogo(fluxos: Iterable[Any], pids: Iterable[int]) -> FluxoDoJogo | N
         nome = str(propriedades.get("node.name", "") or "")
         if pid is None or pid not in dos_jogos or nome.startswith("hefesto"):
             continue
-        serial_cru = str(propriedades.get("object.serial", "")).strip()
+        perdidos: frozenset[str] = getattr(fluxo, "perdidos", frozenset()) or frozenset()
         candidatos.append((
             bool(getattr(fluxo, "corked", False)),
             FluxoDoJogo(
                 indice=int(getattr(fluxo, "indice", -1)),
-                serial=int(serial_cru) if serial_cru.isdigit() else None,
+                serial=_inteiro_da_propriedade(propriedades, "object.serial"),
                 nome=nome,
                 pid=pid,
+                ident=_inteiro_da_propriedade(propriedades, "object.id"),
+                nome_perdido="node.name" in perdidos,
             ),
         ))
     if not candidatos:
         return None
     candidatos.sort(key=lambda par: par[0])
     return candidatos[0][1]
+
+
+def e_o_fluxo_pedido(origem: OrigemDoGravador | str | None, fluxo: FluxoDoJogo) -> bool | None:
+    """O gravador se ligou ao fluxo pedido? ``None`` = não sei.
+
+    O-NOME-DO-JOGO-COM-ACENTO-NAO-SE-PERDE-NO-PACTL-01 (24/10/2026): compara a
+    IDENTIDADE do nó, o serial e depois o id do grafo. O nome do fluxo vem do
+    ``pactl``, que entrega ``(null)`` no lugar de todo texto fora do ASCII (o ™ do
+    Sackboy™), e o da origem vem do ``pw-dump``, inteiro: comparar os dois calava o
+    ouvido a cada volta. O nome só decide quando nenhum dos lados tem identidade e o
+    do fluxo não se perdeu. Uma origem que é só um texto é uma origem sem identidade.
+    """
+    if origem is None:
+        return None
+    if isinstance(origem, str):
+        serial, ident, nome = None, None, origem
+    else:
+        serial, ident, nome = origem.serial, origem.ident, origem.nome
+    if serial is not None and fluxo.serial is not None:
+        return bool(serial == fluxo.serial)
+    if ident is not None and fluxo.ident is not None:
+        return bool(ident == fluxo.ident)
+    if nome and fluxo.nome and not fluxo.nome_perdido:
+        return nome == fluxo.nome
+    return None
 
 
 #: os dois gravadores, na ordem da ponte do rádio; o alvo é o FLUXO do jogo.
@@ -404,7 +444,7 @@ class OuvidoDoJogo:
         montar_argv: Callable[[FluxoDoJogo], list[str]] | None = None,
         abrir: Callable[[list[str]], Any] | None = None,
         derrubar: Callable[..., Any] | None = None,
-        conferir_o_alvo: Callable[[str], str | None] | None = None,
+        conferir_o_alvo: Callable[[str], OrigemDoGravador | str | None] | None = None,
         relogio: Callable[[], float] = time.monotonic,
         procura_s: float = PROCURA_S,
         recortar: Callable[[], bool] | None = None,
@@ -466,12 +506,19 @@ class OuvidoDoJogo:
             self._ligar()
             return
         if not self._conferido and self._fluxo is not None:
-            alvo = self._conferir_o_alvo(ROTULO_DO_OUVIDO)
-            if alvo is None:
+            origem = self._conferir_o_alvo(ROTULO_DO_OUVIDO)
+            certo = e_o_fluxo_pedido(origem, self._fluxo)
+            if certo is None:
                 return  # «não sei» não derruba; pergunta de novo na próxima volta
-            if alvo != self._fluxo.nome:
+            if not certo:
                 self.contadores["alvo_errado"] += 1
-                logger.warning("tato_ouvido_alvo_errado", alvo=alvo, fluxo=self._fluxo.nome)
+                identidade = origem if isinstance(origem, OrigemDoGravador) else None
+                logger.warning(
+                    "tato_ouvido_alvo_errado",
+                    alvo=identidade.nome if identidade is not None else origem,
+                    alvo_serial=identidade.serial if identidade is not None else None,
+                    fluxo=self._fluxo.nome, serial=self._fluxo.serial,
+                )
                 self._calar()
                 return
             self._conferido = True
@@ -506,7 +553,7 @@ class OuvidoDoJogo:
             target=self._ler, args=(saida,), name="tato-ouvido-leitor", daemon=True
         )
         self._leitor.start()
-        logger.info("tato_ouvido_ligado", fluxo=fluxo.nome, pid=fluxo.pid)
+        logger.info("tato_ouvido_ligado", fluxo=fluxo.nome, serial=fluxo.serial, pid=fluxo.pid)
 
     def _ler(self, saida: Any) -> None:
         while True:
@@ -592,12 +639,11 @@ def montar_o_argv_do_ouvido(fluxo: FluxoDoJogo) -> list[str]:
     return argv_do_ouvido(fluxo, pipewire=o_servidor_e_o_pipewire())
 
 
-def conferir_o_alvo_do_ouvido(rotulo: str) -> str | None:
-    from hefesto_dualsense4unix.integrations.alto_falante_bt import (
-        conferir_o_alvo_do_gravador,
-    )
+def conferir_o_alvo_do_ouvido(rotulo: str) -> OrigemDoGravador | None:
+    """A origem do gravador do ouvido, com a identidade do nó. ``None`` = não sei."""
+    from hefesto_dualsense4unix.integrations.alto_falante_bt import origem_do_gravador
 
-    return conferir_o_alvo_do_gravador(rotulo)
+    return origem_do_gravador(rotulo)
 
 
 # --- O estalo no alto-falante do controle -------------------------------------
@@ -982,6 +1028,7 @@ __all__ = [
     "argv_do_estalo",
     "argv_do_ouvido",
     "conferir_o_alvo_do_ouvido",
+    "e_o_fluxo_pedido",
     "fluxo_do_jogo",
     "lado_da_razao",
     "montar_o_argv_do_ouvido",

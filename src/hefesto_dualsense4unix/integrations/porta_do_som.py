@@ -155,6 +155,12 @@ class NoDeSom:
     propriedades: Mapping[str, str] = field(default_factory=dict)
     #: o servidor perdeu a descrição (``null`` ou ``(null)``): a de cima é o recuo
     descricao_nula: bool = False
+    #: as propriedades cujo texto o ``pactl`` perdeu (``(null)``): vazias aqui, não ausentes
+    perdidos: frozenset[str] = frozenset()
+
+    def perdeu(self, chave: str) -> bool:
+        """O ``pactl`` perdeu o texto desta propriedade (o acento, o ™)?"""
+        return chave in self.perdidos
 
     @property
     def volume(self) -> str:
@@ -179,6 +185,12 @@ class Fluxo:
     corked: bool | None = None
     mudo: bool | None = None
     propriedades: Mapping[str, str] = field(default_factory=dict)
+    #: as propriedades cujo texto o ``pactl`` perdeu (``(null)``): vazias aqui, não ausentes
+    perdidos: frozenset[str] = frozenset()
+
+    def perdeu(self, chave: str) -> bool:
+        """O ``pactl`` perdeu o texto desta propriedade (o nome do jogo com ™)?"""
+        return chave in self.perdidos
 
     def carrega(self, marca: str) -> bool:
         """A ``marca`` aparece em alguma propriedade do fluxo (o nome que o dono deu)?"""
@@ -199,6 +211,13 @@ def _propriedades(bruto: object) -> dict[str, str]:
     if not isinstance(bruto, Mapping):
         return {}
     return {str(k): _texto(v) for k, v in bruto.items()}
+
+
+def _perdidos(bruto: object) -> frozenset[str]:
+    """As chaves cujo valor o ``pactl`` trocou por ``(null)``: o texto existia e se perdeu."""
+    if not isinstance(bruto, Mapping):
+        return frozenset()
+    return frozenset(str(k) for k, v in bruto.items() if v == NULO_DO_PACTL)
 
 
 def _canais(bruto: object) -> tuple[Canal, ...]:
@@ -262,6 +281,7 @@ def _no_do_json(o: Mapping[str, Any]) -> NoDeSom | None:
         balanco=_balanco(o.get("balance")),
         propriedades=props,
         descricao_nula=nula,
+        perdidos=_perdidos(o.get("properties")),
     )
 
 
@@ -305,6 +325,7 @@ def _fluxo_do_json(o: Mapping[str, Any]) -> Fluxo | None:
         corked=_sim_ou_nao(o.get("corked")),
         mudo=_sim_ou_nao(o.get("mute")),
         propriedades=_propriedades(o.get("properties")),
+        perdidos=_perdidos(o.get("properties")),
     )
 
 
@@ -391,7 +412,7 @@ def volumes_do_no(tipo: str, nome: str, ler: Leitor) -> list[int] | None:
     if nos is None:
         return None
     for no in nos:
-        if no.nome == nome:
+        if nome and no.nome == nome:
             return no.porcentos or None
     return None
 
