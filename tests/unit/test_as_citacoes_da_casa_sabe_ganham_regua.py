@@ -6,7 +6,9 @@ Sprint AS-CITACOES-DA-CASA-SABE-E-AS-DE-LINHA-UNICA-GANHAM-REGUA-01 (25/10/2026)
   o `validar-citacoes-de-linha.py` quando o código anda, e o `reapontar-citacoes.py` a leva;
 - cada uma das oito citações de linha única da `docs/data/paridade-gtk-html.csv` cujo nome casava
   também na linha vizinha reprova com uma linha inserida acima do alvo, e a promessa velha delas
-  reprova pela regra do vizinho.
+  reprova pela regra do vizinho;
+- a citação crua NOVA numa cadeia da casa-sabe reprova o `--novas`, como a das planilhas, e a crua
+  antiga que só mudou de número não.
 """
 
 from __future__ import annotations
@@ -446,3 +448,46 @@ def test_a_queixa_de_forma_nao_move_a_citacao(repo: Path) -> None:
 
     assert planilha.read_text(encoding="utf-8") == antes, (feitos, a_mao)
     assert any("é de forma, e se cura à mão" in f and "x.csv" in f for f in a_mao), a_mao
+
+
+# --- o `--novas` lê as cadeias da casa-sabe ------------------------------------------------------
+
+
+def _casa_sabe_com(razao: str) -> str:
+    return f'RAZOES = {{\n    "x.py::fala": (\n        "{razao}"\n    ),\n}}\n'
+
+
+def _repo_da_casa_sabe(tmp_path: Path, razao: str) -> Path:
+    """O `dev` já com a casa-sabe de ``razao``; o HEAD no ramo nascido dele."""
+    from tests.unit.test_a_citacao_nova_de_linha_promete_o_nome import (
+        _commita,
+        _escreve,
+        _git,
+        _repo,
+    )
+
+    raiz = _repo(tmp_path, "# P\n")
+    _escreve(raiz, CASA_SABE, _casa_sabe_com(razao))
+    _commita(raiz)
+    _git(raiz, "branch", "-f", "dev", "ramo")
+    return raiz
+
+
+@pytest.mark.parametrize(("antes", "depois", "rc"), [
+    ("o laço mora em `fala` em `x.py:3`.", "o laço mora em `x.py:3`, e o resto em `x.py:8`.", 1),
+    ("o laço mora em `x.py:3`.", "o laço mora em `x.py:4`.", 0),
+    ("nada aqui.", "o laço mora em `fala` em `x.py:3`, e `x.py:8` (`guarda`).", 0),
+])
+def test_a_crua_nova_na_casa_sabe_reprova_o_novas(
+        tmp_path: Path, antes: str, depois: str, rc: int) -> None:
+    from tests.unit.test_a_citacao_nova_de_linha_promete_o_nome import _commita, _escreve, _roda
+
+    raiz = _repo_da_casa_sabe(tmp_path, antes)
+    _escreve(raiz, CASA_SABE, _casa_sabe_com(depois))
+    _commita(raiz)
+
+    feito = _roda(raiz)
+
+    assert feito.returncode == rc, feito.stdout + feito.stderr
+    if rc:
+        assert f"{CASA_SABE}:3" in feito.stdout and "sem nome prometido" in feito.stdout

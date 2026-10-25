@@ -35,9 +35,9 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "própria régua: a fonte era `install.sh` e o commit 304b5f39 do mesmo "
         "dia (*a camada de máquina ganha casa própria*) mudou a boca de lugar "
         "— as dez curas de HOST saíram do instalador e viraram "
-        "`scripts/lib/camada_de_maquina.sh`, que o `install.sh:1437` passa a "
+        "`scripts/lib/camada_de_maquina.sh`, que o `install.sh:1437` (`camada_de_maquina`) passa a "
         "carregar com `source`. O `install_broker_host` de lá "
-        "(scripts/lib/camada_de_maquina.sh:277) é quem "
+        "(`install_broker_host` em `scripts/lib/camada_de_maquina.sh:277`) é quem "
         "COPIA o arquivo para /usr/local/lib/hefesto-dualsense4unix/ com "
         "`sudo install -Dm755`, e o ExecStart continua sendo "
         "assets/systemd/hefesto-hidraw-broker.service:34. O .deb "
@@ -57,7 +57,8 @@ _PONTOS_DE_ENTRADA: dict[str, tuple[str, str, str]] = {
         "scripts/disable_steam_input.sh",
         "integrations/steam_input_ponte.py",
         "roda como `python3 ${PONTE_PY} --ligar` em "
-        "scripts/disable_steam_input.sh:361 e scripts/disable_steam_input.sh:373, e esse roteiro é "
+        "`scripts/disable_steam_input.sh:361` (`ligar`) e "
+        "`scripts/disable_steam_input.sh:373` (`desligar`), e esse roteiro é "
         "o ExecStart "
         "de assets/hefesto-steam-input-guard.service:13 (install.sh:5282)",
     ),
@@ -244,7 +245,7 @@ _INSTRUMENTO_DE_AMBIENTE: dict[str, str] = {
         "está sempre ligada`. Ausente = LIGADA, e é isolamento de suíte: a suíte "
         "roda na máquina DELA e um teste de GUI que chamasse `Salvar` com a "
         "carona ligada varreria o `localconfig.vdf` REAL. Quem a desliga é o "
-        "`tests/conftest.py:1623`, em todo teste. MEDIDO em 18/08/2026."
+        "`tests/conftest.py:1623` (`HEFESTO_CARONA_WRAPPER`), em todo teste. MEDIDO em 18/08/2026."
     ),
     "HEFESTO_DUALSENSE4UNIX_ASSETS_DIR": (
         "Onde procurar os arquivos de `assets/` "
@@ -597,7 +598,8 @@ _PROMESSA_DE_AMBIENTE: dict[str, str] = {
     "HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION": (
         "Liga/desliga o teclado emulado (src/hefesto_dualsense4unix/daemon/main.py:111). É feature "
         "dela e "
-        "o próprio comentário de src/hefesto_dualsense4unix/daemon/main.py:109 escreve a "
+        "o próprio comentário de `src/hefesto_dualsense4unix/daemon/main.py:109-110` "
+        "(`keyboard_emulation_enabled`) escreve a "
         "precedência: default < esta env "
         "< o `keyboard_emulation.flag`, que é a decisão DELA. MEDIDO em "
         "12/08/2026: LIGADA — não pela env, e sim pelo companheiro declarado em "
@@ -696,7 +698,9 @@ _MAO_FORA_DO_AMBIENTE: dict[str, tuple[str, str]] = {
     "HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION": (
         "utils/session.py::save_keyboard_emulation",
         "MEDIDO em 12/08/2026: a env é o degrau do MEIO de uma precedência de "
-        "três, escrita em src/hefesto_dualsense4unix/daemon/main.py:109 — default da dataclass "
+        "três, escrita em `src/hefesto_dualsense4unix/daemon/main.py:109-110` "
+        "(`keyboard_emulation_enabled`) "
+        "— default da dataclass "
         "(True) < "
         "esta env < `keyboard_emulation.flag`. Quem grava o flag é "
         "`save_keyboard_emulation`, e ele É chamado em produção "
@@ -910,7 +914,8 @@ _NAO_E_PROMESSA: dict[str, str] = {
         "Pergunta ao catálogo do vpad quais máscaras o produto SABE MONTAR "
         "(`external_mask.mascaras_validas`), e quem a chama é o GERADOR da aba "
         "Jogar — `src/hefesto_dualsense4unix/interface/aba01.py:880` e "
-        "`src/hefesto_dualsense4unix/interface/aba01.py:1925` —, que é BANCADA e sai da "
+        "`src/hefesto_dualsense4unix/interface/aba01.py:1925` (`mascaras_montaveis`) —, "
+        "que é BANCADA e sai da "
         "conta pela poda de `promessas_sem_caminho`. "
         "E ISSO ESTÁ CERTO, e a razão é do dado: a lista de máscaras montáveis "
         "é do CÓDIGO, e não do estado da máquina: ela não muda entre dois tiques. "
@@ -1026,11 +1031,14 @@ _NAO_E_PROMESSA: dict[str, str] = {
     ),
     "profiles/curva_propria.py::gerar_tabela_markdown": (
         "MEDIDO em 22/08/2026, e isto SUBSTITUI a nota de 15/08 que o dava por "
-        "fiado em produção. O docstring (src/hefesto_dualsense4unix/profiles/curva_propria.py:236) "
+        "fiado em produção. O docstring "
+        "(`gerar_tabela_markdown` em "
+        "`src/hefesto_dualsense4unix/profiles/curva_propria.py:235-236`) "
         "diz o que ele é: gera a tabela de "
         "`docs/protocol/curvas-proprias.md`. O único chamador é "
-        "`scripts/gerar-tabela-de-curvas.py:52-83`, que roda no CI com `--check` "
-        "(`.github/workflows/ci.yml:525`). Gerador de documentação é instrumento, "
+        "`scripts/gerar-tabela-de-curvas.py:52-83` (`gerar_tabela_markdown`), que roda no CI com "
+        "`--check` "
+        "(`.github/workflows/ci.yml:525` (`curvas`)). Gerador de documentação é instrumento, "
         "e instrumento não é caminho de produção — a mesma linha que vale para "
         "`tests/`."
     ),
@@ -1280,8 +1288,9 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "integrations/plano_de_radio.py::microfone_nasce_ligado": (
         "03/10/2026, O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01 — é o DONO declarado do "
         "padrão «o microfone nasce ligado», não promessa ao produto: "
-        "`src/hefesto_dualsense4unix/profiles/schema.py:2464` e "
-        "`src/hefesto_dualsense4unix/profiles/schema.py:2885` o citam em `dono=` por nome, e "
+        "`src/hefesto_dualsense4unix/profiles/schema.py:2464` (`microfone_nasce_ligado`) e "
+        "`src/hefesto_dualsense4unix/profiles/schema.py:2885` (`microfone_nasce_ligado`) o citam "
+        "em `dono=` por nome, e "
         "`tests/unit/test_nasce_ligado_01_nenhuma_feature_nasce_muda.py` "
         "(`test_o_dono_declarado_resolve`) importa o endereço e reprova se ele "
         "sumir. A frase que o lia na tela saiu com a janela GTK."
@@ -1362,16 +1371,20 @@ _NAO_E_PROMESSA: dict[str, str] = {
     "interface/pacotes/a03_gatilhos.py::sem_comentarios_de_css": (
         "15/10/2026, D-1510-ACIONAMENTO-E-IMERSAO-EM-BIBLIOTECAS-SEPARADAS — é do gerador do "
         "desenho, não do produto: o `interface/aba03.py` (o gerador do mockup dos Gatilhos, "
-        "o import de src/hefesto_dualsense4unix/interface/aba03.py:36 e a chamada de "
-        "src/hefesto_dualsense4unix/interface/aba03.py:662) tira com ela os `/* … */` do CSS para "
+        "o import de `src/hefesto_dualsense4unix/interface/aba03.py:36` (`sem_comentarios_de_css`) "
+        "e a chamada de "
+        "`src/hefesto_dualsense4unix/interface/aba03.py:662` (`sem_comentarios_de_css`)) tira com "
+        "ela os `/* … */` do CSS para "
         "conferir "
         "a grade `minmax(0,1fr)` antes de gravar o desenho; o produto só renderiza a página "
         "publicada. O commit 6b5e2e917 tirou o outro chamador, a régua da página antiga."
     ),
     "app/telas/vibracao.py::degraus_da_forca": (
         "21/10/2026 — é do gerador do desenho, não do produto: o `interface/aba05.py` (o import "
-        "de src/hefesto_dualsense4unix/interface/aba05.py:47 e a conferência de "
-        "src/hefesto_dualsense4unix/interface/aba05.py:88) confere com ela que os degraus do "
+        "de `src/hefesto_dualsense4unix/interface/aba05.py:47` (`degraus_da_forca`) e a "
+        "conferência de "
+        "`src/hefesto_dualsense4unix/interface/aba05.py:88` (`degraus_da_forca`)) confere com ela "
+        "que os degraus do "
         "desenho são os do "
         "produto antes de gravar o mockup. O 80d0008c5 tirou o chamador do produto com o gesto "
         "`forca`, e a entrada do `a05_vibracao.py::degrau_da_faixa`, que saiu da árvore, sai junto."
@@ -1425,11 +1438,12 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
     "integrations/apelido_do_dongle.py::costurar_a_mesa": (
         "MEDIDO em 22/08/2026, RECONFERIDO em 23/08 e DECIDIDO em 25/08: é "
         "promessa ao produto e o caminho está DELIBERADAMENTE fechado — o "
-        "docstring de hoje (`src/hefesto_dualsense4unix/integrations/apelido_do_dongle.py:377`) "
+        "docstring de hoje (`reparo` em "
+        "`src/hefesto_dualsense4unix/integrations/apelido_do_dongle.py:377`) "
         "diz só o que ela faz, e a razão mora na "
         "`D-COSTURA-BLUEZ`, abaixo. Desde `a75a514` (22/08, "
         "21h26) o `scripts/bt_active_mode.sh:354` itera TODOS os adaptadores "
-        "que hospedam Nintendo (`_hci_com_nintendo`, `scripts/bt_active_mode.sh:281`), e o mesmo "
+        "que hospedam Nintendo (`_hci_com_nintendo` em `scripts/bt_active_mode.sh:281`), e o mesmo "
         "commit "
         "registra que resolveu 'a duplicidade … dois escritores do mesmo "
         "alias'. "

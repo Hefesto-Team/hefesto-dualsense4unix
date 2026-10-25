@@ -540,7 +540,8 @@ def codigos_de(raiz: Path) -> list[Path]:
 # mão do fecho. A antiga é das sprints das cruas; aqui se fecha a porta da NOVA: endereço que
 # aparece em linha acrescentada desde o pé comum com o `dev`. A crua que só mudou de número ou de
 # prosa em volta não é nova: cada crua removida do MESMO documento, para o mesmo arquivo citado,
-# paga uma acrescentada (é o que o `reapontar --escrever` faz: o número muda, o nome não).
+# paga uma acrescentada (é o que o `reapontar --escrever` faz: o número muda, o nome não). As
+# cadeias de CODIGO_COM_CITACOES entram pela mesma porta (25/10/2026), lidas como o `--all` as lê.
 
 BASES_DAS_NOVAS = ("dev", "origin/dev")
 """Onde se procura o pé comum, nesta ordem: na árvore da casa o `dev`; no CI, o `origin/dev`."""
@@ -735,6 +736,70 @@ def varrer_novas(raiz: Path, pe: str) -> tuple[list[Achado], int]:
     return achados, reescritas
 
 
+def _linhas_do_diff(raiz: Path, pe: str, relativo: str) -> tuple[set[int], set[int]]:
+    """``(linhas acrescentadas, no lado de hoje; linhas removidas, no lado do pé)`` de ``relativo``
+    desde ``pe``, contra a árvore de trabalho, como o :func:`linhas_mudadas`."""
+    diff = _git(raiz, "diff", "-U0", "--no-color", "--no-ext-diff", pe, "--", relativo)
+    acrescentadas: set[int] = set()
+    removidas: set[int] = set()
+    for linha in diff.stdout.splitlines():
+        cabeca = re.match(r"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@", linha)
+        if cabeca:
+            velha, quantas_velhas = int(cabeca[1]), int(cabeca[2] or 1)
+            nova, quantas_novas = int(cabeca[3]), int(cabeca[4] or 1)
+            removidas.update(range(velha, velha + quantas_velhas))
+            acrescentadas.update(range(nova, nova + quantas_novas))
+    return acrescentadas, removidas
+
+
+def cruas_do_codigo(texto: str, raiz: Path) -> list[tuple[int, str, str]]:
+    """``(linha, caminho inteiro do citado, citação escrita)`` de cada citação sem nome prometido
+    das cadeias de um arquivo de CODIGO_COM_CITACOES (a cadeia emendada é uma só, e o nome pode vir
+    no pedaço de baixo). O caminho inteiro é a chave: a citação que só passou a sair da raiz é a
+    mesma."""
+    cruas: list[tuple[int, str, str]] = []
+    for trecho in trechos_do_codigo(texto):
+        if ":" not in trecho.texto:
+            continue
+        for achado in ENDERECO_CSV.finditer(trecho.texto):
+            inteiro = caminho_inteiro(achado.group("arq"), raiz)
+            if inteiro is None or nomes_prometidos(
+                    trecho.texto, achado.start(), achado.end(), SEPARADORES_DE_BLOCO):
+                continue
+            cruas.append((trecho.linha_de(achado.start()), inteiro, achado.group(0).strip("`")))
+    return cruas
+
+
+def varrer_novas_do_codigo(raiz: Path, pe: str) -> tuple[list[Achado], int]:
+    """O mesmo do :func:`varrer_novas`, nas cadeias de CODIGO_COM_CITACOES: a crua removida do
+    arquivo, para o mesmo arquivo citado, paga uma acrescentada."""
+    achados: list[Achado] = []
+    reescritas = 0
+    for codigo in codigos_de(raiz):
+        relativo = codigo.relative_to(raiz).as_posix()
+        acrescentadas, removidas = _linhas_do_diff(raiz, pe, relativo)
+        if not acrescentadas:
+            continue
+        antes = _git(raiz, "show", f"{pe}:{relativo}")
+        pagas: Counter[str] = Counter(
+            inteiro for linha, inteiro, _ in cruas_do_codigo(
+                antes.stdout if antes.returncode == 0 else "", raiz)
+            if linha in removidas)
+        for linha, inteiro, escrita in cruas_do_codigo(codigo.read_text(encoding="utf-8"), raiz):
+            if linha not in acrescentadas:
+                continue
+            if pagas[inteiro] > 0:
+                pagas[inteiro] -= 1
+                reescritas += 1
+                continue
+            achados.append(Achado(
+                relativo, linha, f"`{escrita}`",
+                "citação de linha NOVA sem nome prometido: escreva o nome que está na linha "
+                "citada logo depois dela, (`nome`), e o `reapontar-citacoes.py` a leva quando o "
+                "código andar"))
+    return achados, reescritas
+
+
 def documentos_de(raiz: Path) -> list[Path]:
     """Todo `.md` sob a pasta vigiada, em QUALQUER profundidade."""
     pasta = raiz / PASTA
@@ -760,6 +825,9 @@ def conferir_novas(raiz: Path, base: str | None) -> int:
               "(`fetch-depth: 0`).", file=sys.stderr)
         return 2
     achados, reescritas = varrer_novas(raiz, pe)
+    do_codigo, reescritas_do_codigo = varrer_novas_do_codigo(raiz, pe)
+    achados += do_codigo
+    reescritas += reescritas_do_codigo
     if achados:
         print(f"{len(achados)} citação(ões) de linha NOVA(S) sem nome prometido desde {pe[:12]}:")
         for achado in achados:
@@ -779,7 +847,8 @@ def main(argv: list[str] | None = None) -> int:
                         help=f"varre {PASTA.as_posix()}/, {PASTA_CSV.as_posix()}/*.csv e CODIGO_COM_CITACOES")
     parser.add_argument("--novas", action="store_true",
                         help="reprova a citação de linha ACRESCENTADA desde o pé comum com o "
-                             "`dev` que não promete o nome; sem base, falha")
+                             "`dev` que não promete o nome (documento, planilha e cadeia de "
+                             "CODIGO_COM_CITACOES); sem base, falha")
     parser.add_argument("--base", default=None,
                         help="a ref do pé comum do --novas (padrão: dev, depois origin/dev)")
     parser.add_argument("--root", type=Path,
