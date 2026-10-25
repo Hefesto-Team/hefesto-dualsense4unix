@@ -531,14 +531,12 @@ def perfil_ativo(daemon: Any) -> Profile | None:
     nome = getattr(getattr(daemon, "store", None), "active_profile", None)
     try:
         from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
-            o_computador,
+            o_perfil_sem_perfil_ativo,
             o_que_vale,
-            perfil_que_vale,
-            perfil_vazio,
         )
 
         if not isinstance(nome, str) or not nome:
-            return perfil_que_vale(perfil_vazio(), o_computador())
+            return o_perfil_sem_perfil_ativo()
         from hefesto_dualsense4unix.profiles.loader import perfil_em_disco
 
         perfil = perfil_em_disco(nome)

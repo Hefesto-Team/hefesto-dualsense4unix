@@ -2537,14 +2537,13 @@ def _receita_do_computador() -> Receita:
     try:
         from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
             o_computador,
-            perfil_que_vale,
-            perfil_vazio,
+            o_perfil_sem_perfil_ativo,
         )
 
         computador = o_computador()
         feita = _VISTA_DO_COMPUTADOR
         if feita is None or feita[0] is not computador:
-            feita = (computador, perfil_que_vale(perfil_vazio(), computador))
+            feita = (computador, o_perfil_sem_perfil_ativo(computador))
             _VISTA_DO_COMPUTADOR = feita
         _VISTA_LIDA = ("", feita[1])
         return receita_do_perfil(feita[1])

@@ -672,6 +672,17 @@ def perfil_vazio() -> Profile:
     return Profile.model_validate({"name": "computador", "match": {"type": "manual"}})
 
 
+def o_perfil_sem_perfil_ativo(computador: Any = None) -> Profile:
+    """O perfil que vale sem perfil ativo: o padrão do computador por baixo do perfil vazio.
+
+    ``computador`` None é o do disco (:func:`o_computador`). A luz, o tato e as abas
+    perguntam isto aqui, e não montam o par à mão.
+    """
+    if computador is None:
+        computador = o_computador()
+    return perfil_que_vale(perfil_vazio(), computador)
+
+
 def gravar_pelo_gesto(
     cartao: str,
     nome: str,
@@ -691,7 +702,8 @@ def gravar_pelo_gesto(
     cru = loader.load_profile(nome) if nome else None
     onde = onde_grava(cartao, cru)
     computador = o_computador()
-    vista = perfil_que_vale(cru if cru is not None else perfil_vazio(), computador)
+    vista = (perfil_que_vale(cru, computador) if cru is not None
+             else o_perfil_sem_perfil_ativo(computador))
     novo = muda(vista)
     if novo is not None:
         globais, por_controle = o_que_mudou(cartao, vista, novo, uniq)
@@ -1139,6 +1151,7 @@ __all__ = [
     "gravar_pelo_gesto",
     "migrar_uma_vez",
     "o_computador",
+    "o_perfil_sem_perfil_ativo",
     "o_que_mudou",
     "o_que_vale",
     "onde_grava",

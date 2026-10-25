@@ -1549,12 +1549,10 @@ def perfil_da_lista_de_efeito(p: dict[str, Any] | None) -> dict[str, Any] | None
         return p
     try:
         from hefesto_dualsense4unix.profiles.o_padrao_do_computador import (
-            o_computador,
-            perfil_que_vale,
-            perfil_vazio,
+            o_perfil_sem_perfil_ativo,
         )
 
-        vista = perfil_que_vale(perfil_vazio(), o_computador())
+        vista = o_perfil_sem_perfil_ativo()
         return vista.model_dump(mode="json", exclude_unset=True)
     except Exception:
         return p

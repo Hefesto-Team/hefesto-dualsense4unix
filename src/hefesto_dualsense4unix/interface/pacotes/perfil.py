@@ -220,7 +220,7 @@ def _o_computador_sem_perfil() -> dict[str, Any]:
         computador = opc.o_computador()
         if opc.computador_vazio(computador):
             return {}
-        vista = opc.perfil_que_vale(opc.perfil_vazio(), computador)
+        vista = opc.o_perfil_sem_perfil_ativo(computador)
         cru = vista.model_dump(mode="json", exclude_unset=True)
     except Exception:
         return {}

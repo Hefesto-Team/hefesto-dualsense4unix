@@ -1257,7 +1257,7 @@ def _o_computador_sem_perfil() -> dict[str, Any]:
     from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
 
     try:
-        vista = opc.perfil_que_vale(opc.perfil_vazio(), opc.o_computador())
+        vista = opc.o_perfil_sem_perfil_ativo()
         return dict(vista.model_dump(mode="json", exclude_unset=True))
     except Exception:
         return {}

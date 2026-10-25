@@ -28,3 +28,5 @@ tests/unit/test_a_janela_da_extensao_age_e_gere_os_aparelhos.py
 tests/unit/test_a_porta_fala_os_botoes_no_nativo.py
 tests/unit/test_o_livre_ganha_os_modos.py
 tests/unit/test_o_aparelho_da_extensao_diz_os_controles_dele.py
+tests/unit/test_o_pad_recusado_pelo_broker_tenta_de_novo.py
+tests/unit/test_o_perfil_que_vale_tem_uma_casa_so.py
