@@ -85,14 +85,14 @@ def _a_mesa_de_pe(m: Mesa, jogadores: tuple[int, ...]) -> tuple[list[Any], CoopM
 
 def _o_coop_de(pads: list[Any]) -> CoopManager:
     """O co-op com um jogador por pad do P2 ao P4 (o P1 é o primário)."""
-    coop = CoopManager(_Daemon())  # type: ignore[arg-type]
-    coop._materialize_launch_env = lambda: None  # type: ignore[method-assign]
+    coop = CoopManager(_Daemon())
+    coop._materialize_launch_env = lambda: None
     for pad in pads:
         if pad.player == 1:
             continue
         coop._players[pad.identity] = _SecondaryPlayer(
             identity=pad.identity, evdev_path=f"/dev/input/event9{pad.player}",
-            reader=SimpleNamespace(  # type: ignore[arg-type]
+            reader=SimpleNamespace(
                 set_grab=lambda _g: True, stop=lambda: None, grab_state="held"),
             player_index=pad.player, vpad=pad,
         )
