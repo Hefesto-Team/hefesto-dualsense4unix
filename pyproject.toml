@@ -190,6 +190,15 @@ module = [
 # `ignore_errors`: relaxar só as flags de anotação deixaria queixas que não são defeito.
 ignore_errors = true
 
+# Nos testes, o Hefesto entra como `Any`, como entrava antes do `py.typed` (25/10/2026): a lista
+# `tests/mypy-limpos.txt` foi limpa assim. Sem isto, o portão `mypy-testes` mede a instalação: com
+# o marcador instalado, 43 erros em 11 arquivos da lista; numa árvore que lê outra instalação, verde.
+# O `mypy src/…` não muda (o que vem na linha de comando não passa por `follow_imports`), e quem
+# importa o Hefesto de fora segue com os tipos dele.
+[[tool.mypy.overrides]]
+module = ["hefesto_dualsense4unix", "hefesto_dualsense4unix.*"]
+follow_imports = "skip"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

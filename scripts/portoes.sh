@@ -472,7 +472,7 @@ completo|mypy|bin|mypy --cache-dir .mypy_cache/src src/hefesto_dualsense4unix|sr
 # erros e não cabe em portão nenhum; `tests/mypy-limpos.txt` lista, um caminho por linha e sem
 # comentário (o `@` do mypy lê cada linha como argumento), os arquivos de teste que passam. A lista
 # só CRESCE: quem limpa um arquivo de teste o põe ali, e o teste novo entra no nascimento. O que vem
-# de `hefesto_dualsense4unix` chega como `Any` (o pacote não tem `py.typed`), aqui e no CI.
+# de `hefesto_dualsense4unix` chega como `Any` (o `follow_imports = "skip"` do `pyproject.toml`), aqui e no CI.
 # O `--follow-imports=silent` mede SÓ os arquivos da lista: sem ele, o `tests/conftest.py` e todo
 # teste importado reprovam por conta própria, e nenhum teste que os importa entra na lista.
 # Custo medido com o cache frio: de 3,5 a 5,2 s com seis arquivos (09/10, máquina carregada).
