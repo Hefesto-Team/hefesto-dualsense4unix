@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from hefesto_dualsense4unix.app.ipc_bridge import call_async
+from hefesto_dualsense4unix.app.ipc_bridge import call_async, teto
 from hefesto_dualsense4unix.integrations.uinput_gamepad import DEFAULT_FLAVOR
 
 MODE_IPC_TIMEOUT_S = 2.0
@@ -138,16 +138,18 @@ def apply_mode(
     on_done: Callable[[Any], bool],
     on_fail: Callable[[Exception], bool],
 ) -> None:
-    """Aplica ``mode_id`` disparando a sequência completa da transição."""
+    """Aplica ``mode_id`` disparando a sequência completa da transição.
+
+    O prazo de cada passo é o teto do método na ponte (`ipc_bridge.TETOS`): o gesto
+    que pede o P1 espera o desfecho dele, e o arranjo, o perfil que ele abre.
+    """
     steps = plan_mode_transition(mode_id, flavor, caminho)
     reported = reported_step_index(steps)
     for idx, (method, params) in enumerate(steps):
         if idx == reported:
-            call_async(method, params, on_done, on_fail, timeout_s=MODE_IPC_TIMEOUT_S)
+            call_async(method, params, on_done, on_fail, timeout_s=teto(method))
         else:
-            call_async(
-                method, params, _ignore_ok, _ignore_err, timeout_s=MODE_IPC_TIMEOUT_S
-            )
+            call_async(method, params, _ignore_ok, _ignore_err, timeout_s=teto(method))
 
 
 def mode_of_state(state: dict[str, Any] | None) -> str | None:

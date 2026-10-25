@@ -292,3 +292,29 @@ def test_o_teto_da_interface_e_o_prazo_do_daemon_com_folga(rota: str) -> None:
         f"{rota}: a interface desiste aos {ipc_bridge.TETOS[rota]} s, e o daemon "
         f"espera o P1 por {prazo} s")
 
+
+
+@pytest.mark.parametrize("modo", ["gamepad", "desktop", "native"])
+def test_a_transicao_de_modo_espera_cada_passo_pelo_teto_dele(
+    monkeypatch: pytest.MonkeyPatch, modo: str,
+) -> None:
+    """O `apply_mode` (o dono da sequência) dá a cada passo o teto do método, e o
+    `gamepad.emulation.set` espera o P1 que nasce como a ponte.
+
+    Mordida: devolva o `timeout_s=MODE_IPC_TIMEOUT_S` ao `apply_mode`, e o pedido do P1
+    desiste aos 2 s, antes do prazo do daemon.
+    """
+    from hefesto_dualsense4unix.app.actions import mode_transition as mt
+
+    chamadas: list[tuple[str, Any]] = []
+    monkeypatch.setattr(mt, "call_async", lambda metodo, _p, _ok, _err, timeout_s=None:
+                        chamadas.append((metodo, timeout_s)))
+    mt.apply_mode(modo, on_done=lambda _r: False, on_fail=lambda _e: False)
+    assert chamadas, "a transição não despachou nada"
+    for metodo, prazo in chamadas:
+        assert prazo == ipc_bridge.teto(metodo), (
+            f"{metodo}: a transição espera {prazo} s, e a ponte declara "
+            f"{ipc_bridge.teto(metodo)} s")
+    if modo == "gamepad":
+        assert dict(chamadas)["gamepad.emulation.set"] == (
+            protocolo_do_ipc.TETO_DO_GESTO_QUE_PEDE_O_P1_S)
