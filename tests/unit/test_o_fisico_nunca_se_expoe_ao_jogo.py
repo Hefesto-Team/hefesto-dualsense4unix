@@ -96,6 +96,7 @@ def broker_no_ar(tmp_path: Path) -> Iterator[tuple[BrokerState, FsQueGrava, Any]
         allowed_uid=os.getuid(),
         ops=fs,
         validator=lambda no: no.rsplit("/", 1)[-1] if no in NOS else None,
+        dev_root="/dev",
         sys_class_hidraw=str(tmp_path / "sys-class-hidraw"),
         sys_class_bluetooth=str(tmp_path / "sys-class-bluetooth"),
         log=lambda *a, **k: None,

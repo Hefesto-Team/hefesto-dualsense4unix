@@ -75,6 +75,7 @@ def make_state(**kw: Any) -> tuple[BrokerState, FakeOps]:
         allowed_uid=UID,
         ops=ops,
         validator=_validator,
+        dev_root="/dev",
         log=lambda *a, **k: None,
         sleep_fn=ops.sleeps.append,
         **kw,

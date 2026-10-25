@@ -269,6 +269,7 @@ def estado(**kw: Any) -> tuple[BrokerState, OpsDeMentira]:
         allowed_uid=UID,
         ops=ops,
         validator=_validador,
+        dev_root="/dev",
         log=lambda *a, **k: None,
         sleep_fn=lambda _s: None,
         **kw,

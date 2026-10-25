@@ -130,20 +130,20 @@ def _valida(node: str, kwargs: _TreeKwargs) -> str | None:
 
 class TestCanonicalBase:
     def test_aceita_caminho_literal(self) -> None:
-        assert canonical_hidraw_base("/dev/hidraw3") == "hidraw3"
-        assert canonical_hidraw_base("/dev/hidraw13") == "hidraw13"
+        assert canonical_hidraw_base("/dev/hidraw3", dev_root="/dev") == "hidraw3"
+        assert canonical_hidraw_base("/dev/hidraw13", dev_root="/dev") == "hidraw13"
 
     def test_rejeita_traversal_e_lixo(self) -> None:
-        assert canonical_hidraw_base("/dev/foo/../hidraw3") is None
-        assert canonical_hidraw_base("/dev/../dev/hidraw3") is None
-        assert canonical_hidraw_base("//dev/hidraw3") is None
-        assert canonical_hidraw_base("/dev/hidraw") is None
-        assert canonical_hidraw_base("/dev/hidrawX") is None
-        assert canonical_hidraw_base("/dev/tty0") is None
-        assert canonical_hidraw_base("/dev/hidraw3 ") is None
-        assert canonical_hidraw_base("") is None
-        assert canonical_hidraw_base(None) is None
-        assert canonical_hidraw_base(3) is None
+        assert canonical_hidraw_base("/dev/foo/../hidraw3", dev_root="/dev") is None
+        assert canonical_hidraw_base("/dev/../dev/hidraw3", dev_root="/dev") is None
+        assert canonical_hidraw_base("//dev/hidraw3", dev_root="/dev") is None
+        assert canonical_hidraw_base("/dev/hidraw", dev_root="/dev") is None
+        assert canonical_hidraw_base("/dev/hidrawX", dev_root="/dev") is None
+        assert canonical_hidraw_base("/dev/tty0", dev_root="/dev") is None
+        assert canonical_hidraw_base("/dev/hidraw3 ", dev_root="/dev") is None
+        assert canonical_hidraw_base("", dev_root="/dev") is None
+        assert canonical_hidraw_base(None, dev_root="/dev") is None
+        assert canonical_hidraw_base(3, dev_root="/dev") is None
 
     def test_dev_root_injetavel(self) -> None:
         assert canonical_hidraw_base("/x/hidraw1", dev_root="/x") == "hidraw1"

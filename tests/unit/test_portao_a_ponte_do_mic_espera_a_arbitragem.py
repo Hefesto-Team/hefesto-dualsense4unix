@@ -107,6 +107,7 @@ def _broker_de_bancada(tmp_path: Path) -> Any:
         allowed_uid=1000,
         ops=_OpsQueAbre(str(alvo)),
         validator=lambda no: "hidraw9" if no.endswith("hidraw9") else None,
+        dev_root="/dev",
         log=lambda *a, **k: None,
         sleep_fn=lambda _s: None,
     )

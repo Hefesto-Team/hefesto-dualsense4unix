@@ -430,7 +430,8 @@ class TestAUnit:
             "-/run/hefesto-hidraw-broker",
             "-/sys/bus/hid/drivers",
         ])
-        assert hb.SYS_BUS_HID_DRIVERS == "/sys/bus/hid/drivers"
+        fonte = Path(hb.__file__).read_text(encoding="utf-8")
+        assert 'SYS_BUS_HID_DRIVERS = "/sys/bus/hid/drivers"\n' in fonte
 
     def test_o_resto_do_endurecimento_fica_o_de_antes(self) -> None:
         for chave, esperado in {

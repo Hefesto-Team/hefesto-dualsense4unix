@@ -177,8 +177,19 @@ def _log(event: str, **fields: object) -> None:
 # Validador — SÓ nós filhos do DualSense físico 054c:0ce6/0df2 (BLUEZ-UHID-01)
 
 
-def canonical_hidraw_base(node: object, *, dev_root: str = DEV_ROOT) -> str | None:
+def _raiz(valor: str | None, constante: str) -> str:
+    """A raiz pedida, ou a constante do módulo lida na CHAMADA, e não na definição.
+
+    Todo parâmetro de raiz nasce ``None`` e passa por aqui no começo da função: um
+    ``monkeypatch`` da constante desvia todo chamador que não passa a raiz, como o
+    ``conftest`` faz para a suíte nunca alcançar o ``/sys`` e o ``/dev`` da máquina.
+    """
+    return globals()[constante] if valor is None else valor
+
+
+def canonical_hidraw_base(node: object, *, dev_root: str | None = None) -> str | None:
     """Basename `hidrawN` se `node` é EXATAMENTE `<dev_root>/hidrawN`; senão None."""
+    dev_root = _raiz(dev_root, "DEV_ROOT")
     if not isinstance(node, str) or not node:
         return None
     base = os.path.basename(node)
@@ -270,9 +281,9 @@ def _usb_device_do_caminho(caminho: str) -> str:
 def validate_physical_node(
     node: object,
     *,
-    dev_root: str = DEV_ROOT,
-    sys_class_hidraw: str = SYS_CLASS_HIDRAW,
-    sys_class_bluetooth: str = SYS_CLASS_BLUETOOTH,
+    dev_root: str | None = None,
+    sys_class_hidraw: str | None = None,
+    sys_class_bluetooth: str | None = None,
     stat_fn: Callable[[str], Any] = os.stat,
     lstat_fn: Callable[[str], Any] = os.lstat,
 ) -> str | None:
@@ -307,6 +318,9 @@ def validate_physical_node(
     seguro". `stat_fn`/`lstat_fn` são injetáveis só para os testes herméticos
     (não dá para criar char device sem root); default = os.stat/os.lstat.
     """
+    dev_root = _raiz(dev_root, "DEV_ROOT")
+    sys_class_hidraw = _raiz(sys_class_hidraw, "SYS_CLASS_HIDRAW")
+    sys_class_bluetooth = _raiz(sys_class_bluetooth, "SYS_CLASS_BLUETOOTH")
     if not isinstance(node, str):
         return None
     base = canonical_hidraw_base(node, dev_root=dev_root)
@@ -380,8 +394,9 @@ def _pai_hid_e_dualsense_fisico(
     return True
 
 
-def canonical_input_base(node: object, *, dev_input_root: str = DEV_INPUT_ROOT) -> str | None:
+def canonical_input_base(node: object, *, dev_input_root: str | None = None) -> str | None:
     """Basename `eventN` se `node` é EXATAMENTE `<dev_input_root>/eventN`; senão None."""
+    dev_input_root = _raiz(dev_input_root, "DEV_INPUT_ROOT")
     if not isinstance(node, str) or not node:
         return None
     base = os.path.basename(node)
@@ -395,9 +410,9 @@ def canonical_input_base(node: object, *, dev_input_root: str = DEV_INPUT_ROOT) 
 def validate_physical_input_node(
     node: object,
     *,
-    dev_input_root: str = DEV_INPUT_ROOT,
-    sys_class_input: str = SYS_CLASS_INPUT,
-    sys_class_bluetooth: str = SYS_CLASS_BLUETOOTH,
+    dev_input_root: str | None = None,
+    sys_class_input: str | None = None,
+    sys_class_bluetooth: str | None = None,
     stat_fn: Callable[[str], Any] = os.stat,
     lstat_fn: Callable[[str], Any] = os.lstat,
 ) -> str | None:
@@ -418,6 +433,9 @@ def validate_physical_input_node(
 
     NUNCA abre o device; na dúvida, recusa (fail-closed, como o do hidraw).
     """
+    dev_input_root = _raiz(dev_input_root, "DEV_INPUT_ROOT")
+    sys_class_input = _raiz(sys_class_input, "SYS_CLASS_INPUT")
+    sys_class_bluetooth = _raiz(sys_class_bluetooth, "SYS_CLASS_BLUETOOTH")
     if not isinstance(node, str):
         return None
     base = canonical_input_base(node, dev_input_root=dev_input_root)
@@ -502,8 +520,8 @@ def motivo_de_recusar_o_acionador(
     node: object,
     chave: object,
     *,
-    dev_input_root: str = DEV_INPUT_ROOT,
-    sys_class_input: str = SYS_CLASS_INPUT,
+    dev_input_root: str | None = None,
+    sys_class_input: str | None = None,
     stat_fn: Callable[[str], Any] = os.stat,
     lstat_fn: Callable[[str], Any] = os.lstat,
 ) -> str | None:
@@ -515,6 +533,8 @@ def motivo_de_recusar_o_acionador(
     4. tem tecla e não é controle de jogo, nem da Sony, nem do uinput.
 
     NUNCA abre o device; na dúvida, recusa."""
+    dev_input_root = _raiz(dev_input_root, "DEV_INPUT_ROOT")
+    sys_class_input = _raiz(sys_class_input, "SYS_CLASS_INPUT")
     base = canonical_input_base(node, dev_input_root=dev_input_root)
     if base is None or not isinstance(node, str):
         return "reject_bad_path"
@@ -606,17 +626,17 @@ class FsAclOps:
     def __init__(
         self,
         *,
-        sys_class_hidraw: str = SYS_CLASS_HIDRAW,
-        dev_input_root: str = DEV_INPUT_ROOT,
-        sys_class_input: str = SYS_CLASS_INPUT,
-        sys_class_bluetooth: str = SYS_CLASS_BLUETOOTH,
-        sys_bus_hid_drivers: str = SYS_BUS_HID_DRIVERS,
+        sys_class_hidraw: str | None = None,
+        dev_input_root: str | None = None,
+        sys_class_input: str | None = None,
+        sys_class_bluetooth: str | None = None,
+        sys_bus_hid_drivers: str | None = None,
     ) -> None:
-        self._sys_class_hidraw = sys_class_hidraw
-        self._dev_input_root = dev_input_root
-        self._sys_class_input = sys_class_input
-        self._sys_class_bluetooth = sys_class_bluetooth
-        self._sys_bus_hid_drivers = sys_bus_hid_drivers
+        self._sys_class_hidraw = _raiz(sys_class_hidraw, "SYS_CLASS_HIDRAW")
+        self._dev_input_root = _raiz(dev_input_root, "DEV_INPUT_ROOT")
+        self._sys_class_input = _raiz(sys_class_input, "SYS_CLASS_INPUT")
+        self._sys_class_bluetooth = _raiz(sys_class_bluetooth, "SYS_CLASS_BLUETOOTH")
+        self._sys_bus_hid_drivers = _raiz(sys_bus_hid_drivers, "SYS_BUS_HID_DRIVERS")
 
     def _sysfs_rdev(self, base: str) -> tuple[int, int] | None:
         """(major, minor) de /sys/class/hidraw/<base>/dev; None = ilegível."""
@@ -1139,7 +1159,7 @@ class RaizesDoPad:
     configfs: str = field(default_factory=lambda: CONFIGFS_GADGETS)
     plataforma: str = field(default_factory=lambda: SYS_PLATFORM)
     classe_udc: str = field(default_factory=lambda: SYS_CLASS_UDC)
-    dev: str = DEV_ROOT
+    dev: str = field(default_factory=lambda: DEV_ROOT)
 
 
 def _escrever_attr(caminho: str, valor: str | bytes) -> None:
@@ -1515,15 +1535,15 @@ class BrokerState:
         allowed_uid: int | None = None,
         ops: Any | None = None,
         validator: Callable[[str], str | None] | None = None,
-        dev_root: str = DEV_ROOT,
-        sys_class_hidraw: str = SYS_CLASS_HIDRAW,
-        sys_class_bluetooth: str = SYS_CLASS_BLUETOOTH,
+        dev_root: str | None = None,
+        sys_class_hidraw: str | None = None,
+        sys_class_bluetooth: str | None = None,
         log: Callable[..., None] = _log,
         sleep_fn: Callable[[float], None] = time.sleep,
         no_nasce_fechado: bool = False,
-        dev_input_root: str = DEV_INPUT_ROOT,
-        sys_class_input: str = SYS_CLASS_INPUT,
-        sys_bus_hid_drivers: str = SYS_BUS_HID_DRIVERS,
+        dev_input_root: str | None = None,
+        sys_class_input: str | None = None,
+        sys_bus_hid_drivers: str | None = None,
         validator_entrada: Callable[[str], str | None] | None = None,
         validator_acionador: Callable[[str, str], str | None] | None = None,
         reinicio_sem_abrir: Callable[[], bool] = reinicio_sem_abrir_pedido,
@@ -1532,6 +1552,12 @@ class BrokerState:
         quem_esta_na_frente: Callable[[], int | None] | None = None,
         relogio: Callable[[], float] = time.monotonic,
     ) -> None:
+        dev_root = _raiz(dev_root, "DEV_ROOT")
+        sys_class_hidraw = _raiz(sys_class_hidraw, "SYS_CLASS_HIDRAW")
+        sys_class_bluetooth = _raiz(sys_class_bluetooth, "SYS_CLASS_BLUETOOTH")
+        dev_input_root = _raiz(dev_input_root, "DEV_INPUT_ROOT")
+        sys_class_input = _raiz(sys_class_input, "SYS_CLASS_INPUT")
+        sys_bus_hid_drivers = _raiz(sys_bus_hid_drivers, "SYS_BUS_HID_DRIVERS")
         #: O uid FIXO (a env ou o argumento do belt); ``None`` = quem está na
         #: frente do seat, perguntado a ``quem_esta_na_frente`` (o logind).
         self.allowed_uid = allowed_uid
@@ -2518,9 +2544,9 @@ class BrokerState:
 def physical_nodes_exposure(
     uid: int,
     *,
-    dev_root: str = DEV_ROOT,
-    sys_class_hidraw: str = SYS_CLASS_HIDRAW,
-    sys_class_bluetooth: str = SYS_CLASS_BLUETOOTH,
+    dev_root: str | None = None,
+    sys_class_hidraw: str | None = None,
+    sys_class_bluetooth: str | None = None,
     ops: Any | None = None,
     validator: Callable[[str], str | None] | None = None,
 ) -> dict[str, bool]:
@@ -2538,6 +2564,9 @@ def physical_nodes_exposure(
     falar com o broker — quem chama roda como a usuária, e é a permissão DO USUÁRIO
     que decide. Nunca levanta: sysfs ilegível devolve `{}`.
     """
+    dev_root = _raiz(dev_root, "DEV_ROOT")
+    sys_class_hidraw = _raiz(sys_class_hidraw, "SYS_CLASS_HIDRAW")
+    sys_class_bluetooth = _raiz(sys_class_bluetooth, "SYS_CLASS_BLUETOOTH")
     fs_ops = ops if ops is not None else FsAclOps(sys_class_hidraw=sys_class_hidraw)
     out: dict[str, bool] = {}
     try:
@@ -2566,13 +2595,16 @@ def restore_all_physical(
     *,
     uid: int,
     ops: Any | None = None,
-    dev_root: str = DEV_ROOT,
-    sys_class_hidraw: str = SYS_CLASS_HIDRAW,
-    sys_class_bluetooth: str = SYS_CLASS_BLUETOOTH,
+    dev_root: str | None = None,
+    sys_class_hidraw: str | None = None,
+    sys_class_bluetooth: str | None = None,
     validator: Callable[[str], str | None] | None = None,
     log: Callable[..., None] = _log,
 ) -> list[str]:
     """Varre /sys/class/hidraw e restaura físicos não-expostos (baseline limpo)."""
+    dev_root = _raiz(dev_root, "DEV_ROOT")
+    sys_class_hidraw = _raiz(sys_class_hidraw, "SYS_CLASS_HIDRAW")
+    sys_class_bluetooth = _raiz(sys_class_bluetooth, "SYS_CLASS_BLUETOOTH")
     fs_ops = (
         ops
         if ops is not None
@@ -2625,9 +2657,9 @@ def fechar_todo_fisico(
     *,
     uid: int | None,
     ops: Any | None = None,
-    dev_root: str = DEV_ROOT,
-    sys_class_hidraw: str = SYS_CLASS_HIDRAW,
-    sys_class_bluetooth: str = SYS_CLASS_BLUETOOTH,
+    dev_root: str | None = None,
+    sys_class_hidraw: str | None = None,
+    sys_class_bluetooth: str | None = None,
     validator: Callable[[str], str | None] | None = None,
     log: Callable[..., None] = _log,
 ) -> list[str]:
@@ -2636,6 +2668,9 @@ def fechar_todo_fisico(
     ``uid=None``: sem uid conhecido (o seat sem ninguém), fecha o que estiver
     aberto a QUALQUER usuário.
     """
+    dev_root = _raiz(dev_root, "DEV_ROOT")
+    sys_class_hidraw = _raiz(sys_class_hidraw, "SYS_CLASS_HIDRAW")
+    sys_class_bluetooth = _raiz(sys_class_bluetooth, "SYS_CLASS_BLUETOOTH")
     fs_ops = (
         ops
         if ops is not None

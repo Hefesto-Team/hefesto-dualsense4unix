@@ -97,7 +97,8 @@ def live_broker(tmp_path: Path) -> Any:
     listen.listen(4)
     ops = FakeOps(target=str(target))
     state = BrokerState(
-        allowed_uid=os.getuid(), ops=ops, validator=_validator, log=lambda *a, **k: None
+        allowed_uid=os.getuid(), ops=ops, validator=_validator, dev_root="/dev",
+        log=lambda *a, **k: None,
     )
     broker = Broker(state, listen, log=lambda *a, **k: None)
     thread = threading.Thread(target=broker.run, daemon=True)

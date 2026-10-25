@@ -63,6 +63,7 @@ def make_state(tmp_path: Path) -> tuple[BrokerState, FakeOpenOps, str]:
         allowed_uid=UID,
         ops=ops,
         validator=_validator,
+        dev_root="/dev",
         log=lambda *a, **k: None,
         sleep_fn=lambda _s: None,
     )

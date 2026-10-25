@@ -2282,6 +2282,20 @@ def _nenhuma_placa_de_som_viva_no_aviso_do_ucm(
         system_check._PROC_CARDS = antes
 
 
+#: cada raiz da máquina que o broker lê, e a pasta vazia da sessão que a cega na suíte.
+RAIZES_DO_BROKER = {
+    "CONFIGFS_GADGETS": "usb_gadget",
+    "SYS_PLATFORM": "platform",
+    "SYS_CLASS_UDC": "udc",
+    "DEV_ROOT": "dev",
+    "DEV_INPUT_ROOT": "dev-input",
+    "SYS_CLASS_HIDRAW": "hidraw",
+    "SYS_CLASS_INPUT": "input",
+    "SYS_CLASS_BLUETOOTH": "bluetooth",
+    "SYS_BUS_HID_DRIVERS": "hid-drivers",
+}
+
+
 @pytest.fixture(autouse=True, scope="session")
 def _nenhum_pad_em_usb_na_suite(
     tmp_path_factory: pytest.TempPathFactory,
@@ -2299,6 +2313,11 @@ def _nenhum_pad_em_usb_na_suite(
     configfs, o vudc e o vhci da máquina, e o ``restore_all`` e o EOF da régua
     listariam os gadgets do usuário e tentariam desmontá-los. As raízes do
     pad apontam para uma pasta vazia da sessão.
+
+    E as raízes do físico (A-SUITE-NAO-ALCANCA-O-SYS-REAL-PELO-PADRAO-DO-BROKER-01,
+    25/10/2026): o broker lê cada raiz na chamada, da constante, e o ``chmod`` e a
+    ACL caem nos nós que ele valida. Todas as nove apontam para a pasta vazia; o
+    teste que precisa de uma raiz passa a dele.
     """
     vazio = tmp_path_factory.mktemp("sem-pad-em-usb")
     try:
@@ -2310,25 +2329,17 @@ def _nenhum_pad_em_usb_na_suite(
         yield
         return
     antes = (uhid_gamepad.CONTRATO_QUE_FALTA, uhid_gamepad.PEDIR_O_PAD_USB)
-    raizes = (
-        hidraw_broker.CONFIGFS_GADGETS,
-        hidraw_broker.SYS_PLATFORM,
-        hidraw_broker.SYS_CLASS_UDC,
-    )
+    raizes = {nome: getattr(hidraw_broker, nome) for nome in RAIZES_DO_BROKER}
     uhid_gamepad.CONTRATO_QUE_FALTA = lambda **_kw: []
     uhid_gamepad.PEDIR_O_PAD_USB = lambda *_a: None
-    hidraw_broker.CONFIGFS_GADGETS = str(vazio / "usb_gadget")
-    hidraw_broker.SYS_PLATFORM = str(vazio / "platform")
-    hidraw_broker.SYS_CLASS_UDC = str(vazio / "udc")
+    for nome, pasta in RAIZES_DO_BROKER.items():
+        setattr(hidraw_broker, nome, str(vazio / pasta))
     try:
         yield
     finally:
         uhid_gamepad.CONTRATO_QUE_FALTA, uhid_gamepad.PEDIR_O_PAD_USB = antes
-        (
-            hidraw_broker.CONFIGFS_GADGETS,
-            hidraw_broker.SYS_PLATFORM,
-            hidraw_broker.SYS_CLASS_UDC,
-        ) = raizes
+        for nome, valor in raizes.items():
+            setattr(hidraw_broker, nome, valor)
 
 
 @pytest.fixture(autouse=True, scope="session")

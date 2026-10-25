@@ -645,6 +645,8 @@ def _estado(**kw: Any) -> tuple[BrokerState, OpsComEntradas, list[tuple[Any, ...
         ops=ops,
         validator=_validador,
         validator_entrada=_validador_de_entrada,
+        dev_root="/dev",
+        dev_input_root="/dev/input",
         log=lambda evento, **campos: diario.append((evento, campos)),
         sleep_fn=lambda _s: None,
         **kw,
@@ -740,8 +742,8 @@ class TestAsEntradasSeguemALease:
                 return True
 
         st = BrokerState(
-            allowed_uid=UID, ops=OpsAntigo(), validator=_validador, log=lambda *a, **k: None,
-            no_nasce_fechado=True,
+            allowed_uid=UID, ops=OpsAntigo(), validator=_validador, dev_root="/dev",
+            log=lambda *a, **k: None, no_nasce_fechado=True,
         )
         resposta, _ = st.handle_line(1, UID, b'{"cmd": "hide", "node": "/dev/hidraw3"}')
         assert resposta["ok"] is True
