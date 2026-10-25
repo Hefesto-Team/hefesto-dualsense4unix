@@ -866,7 +866,8 @@ class TestOVpadNasceNoGadget:
             assert bancada.esperar(lambda: pad._gadget_falhou)
             pad.pump_ff()
             assert pad._gadget is None and pad.is_active
-            assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
+            # a devolução ao broker sai fora do tique (`_DescidaAoBroker`)
+            assert bancada.esperar(lambda: bancada.clientes[0].desmontados == ["hefesto-pad-0"])
             # A falha é da porta dele, não um contrato do processo
             # (UM-GADGET-QUE-NAO-ENUMERA-NAO-CONDENA-OS-OUTROS-01).
             assert pad_usb.contrato_que_faltou_ao_montar() == []
@@ -1076,7 +1077,7 @@ class TestOPadEmUsbNaoQuebraOResto:
             assert bancada.esperar(lambda: pad._gadget_caiu, segundos=6.0)
             pad.pump_ff()
             assert pad._gadget is None and pad.is_active
-            assert bancada.clientes[0].desmontados == ["hefesto-pad-0"]
+            assert bancada.esperar(lambda: bancada.clientes[0].desmontados == ["hefesto-pad-0"])
             assert bancada.ug._GADGETS_ESTACIONADOS.quantos() == 0
             assert pad_usb.contrato_que_faltou_ao_montar() == []
         finally:

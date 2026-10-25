@@ -411,19 +411,32 @@ def test_sem_o_broker_a_roupa_e_o_edge(monkeypatch: pytest.MonkeyPatch) -> None:
 class _GadgetDeMentira:
     par: tuple[int, int]
     gadget: str = "hefesto-pad-0"
+    serial: str = "hefesto-pad-de-mentira"
+    na_casa: int = 0
     desmontado: int = 0
 
     def desmontar(self) -> None:
+        self._soltar_na_casa()
+        self._devolver_ao_broker()
+
+    def _soltar_na_casa(self) -> None:
+        self.na_casa += 1
+
+    def _devolver_ao_broker(self) -> None:
         self.desmontado += 1
 
 
-def test_o_gadget_estacionado_nao_troca_de_roupa() -> None:
+def test_o_gadget_estacionado_nao_troca_de_roupa(monkeypatch: pytest.MonkeyPatch) -> None:
+    descida = uhid_gamepad._DescidaAoBroker()
+    monkeypatch.setattr(uhid_gamepad, "_DESCIDA_AO_BROKER", descida)
     estacionados = uhid_gamepad._GadgetsEstacionados()
     estacionados._vigia = SimpleNamespace(is_alive=lambda: True)  # type: ignore[assignment]
     edge = _GadgetDeMentira((SONY, EDGE))
     estacionados.estacionar(MACS[1], edge)  # type: ignore[arg-type]
     assert estacionados.retomar(MACS[1], (SONY, COMUM)) is None
-    assert edge.desmontado == 1, "o gadget de outra roupa desce na hora"
+    assert edge.na_casa == 1, "o gadget de outra roupa desce na hora"
+    # a devolução ao broker vai ao fio da descida: o refazer do tique passa por aqui
+    assert descida.esperar_tudo(2.0) and edge.desmontado == 1
     assert estacionados.quantos() == 0
     outro = _GadgetDeMentira((SONY, EDGE))
     estacionados.estacionar(MACS[1], outro)  # type: ignore[arg-type]
