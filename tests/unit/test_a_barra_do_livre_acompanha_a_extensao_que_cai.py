@@ -220,3 +220,57 @@ def test_a_barra_apaga_e_acende_no_navegador_sem_perder_o_arrasto(
     assert not acendeu["fora"] and acendeu["dica"] is None, (
         f"a extensão voltou e a barra segue apagada: {acendeu}")
     assert segue == acendeu
+
+
+# -- 3. a dica da barra apagada se vê no produto -----------------------------------------------
+
+
+def test_a_dica_da_barra_apagada_se_ve_com_a_camada_da_janela(
+        janela: Any, ctx: Any, lar: Any, tmp_path: pathlib.Path) -> None:  # noqa: F811
+    """A dica é o porquê do cinza; aberta pela camada da janela, ela tem de se ver na Experimental.
+
+    25/10/2026: a folha da Experimental trazia a regra da caixa do desenho sem o ``.da-base``
+    (``#hef-dica{opacity:0}``), e ela pegava a caixa da camada da janela, que nunca veste
+    ``visivel``: no produto, toda dica da aba abria invisível. A medida é a opacidade lida no
+    WebKit, com a folha da aba e a camada da janela de verdade.
+    """
+    import os
+    import subprocess
+    import sys
+
+    from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
+    from hefesto_dualsense4unix.interface import hefesto_vivo, monta
+    from tests.unit.test_o_aparelho_da_extensao_diz_os_controles_dele import SONDA
+
+    _, instalar, abrir = janela
+    instalar(opcoes=[dict(COM_MODOS)])
+    _ligar_e_o_supervisor_diz(janela, ctx, lar, "parou")
+    montada = str(abrir(_Ponte(VIVO))["blocos"]["#mod-janela"])
+    assert 'class="mj-trilho fora"' in _trilho(montada)
+    pagina = tmp_path / "janela.html"
+    pagina.write_text(f'<!doctype html><html><head><meta charset="utf-8"><style>{monta.BASE_CSS}'
+                      f'</style><style>{exp.CSS}</style></head><body><div id="mod-janela">'
+                      f'{montada}</div></body></html>', encoding="utf-8")
+    pairar = """(function(){ const b = document.querySelector('#mod-janela .mj-trilho input');
+      const r = b.getBoundingClientRect();
+      b.dispatchEvent(new MouseEvent('mousemove', {bubbles: true,
+        clientX: r.left + r.width / 2, clientY: r.top + r.height / 2}));
+      return 'pairou'; })()"""
+    ler = """(function(){ const c = document.getElementById('hef-dica');
+      if (!c) return JSON.stringify({caixa: false});
+      const s = getComputedStyle(c);
+      return JSON.stringify({caixa: true, aberta: s.display !== 'none', opacidade: s.opacity,
+                             texto: c.textContent}); })()"""
+    passos = [["js", hefesto_vivo.DICA_DA_CASA], ["js", pairar], ["espera", 1.2], ["js", ler]]
+    filho = subprocess.run([sys.executable, "-c", SONDA, str(pagina)],
+                           input=json.dumps({"dica": (1212, 809, passos)}),
+                           env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"),
+                           capture_output=True, text=True, timeout=300)
+    if filho.returncode != 0:
+        pytest.skip(f"o WebKit não subiu na tela de mentira: {filho.stderr.strip()[-300:]}")
+    _, pairou, lido = json.loads(filho.stdout.strip().splitlines()[-1])["dica"]
+    assert pairou == "pairou", pairou
+    dica = json.loads(lido)
+    assert dica.get("aberta") and dica.get("texto") == DICA_FORA, dica
+    assert float(dica["opacidade"]) == 1.0, (
+        f"a dica da barra apagada abre invisível na Experimental: {dica}")

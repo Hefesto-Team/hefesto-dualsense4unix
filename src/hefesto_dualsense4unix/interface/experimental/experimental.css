@@ -302,8 +302,8 @@
 .ja-ctrl > select,.ja-ctrl > .campo-linha { flex:1 1 auto;min-width:0;width:100%;max-width:none }
 .ja-ctrl > .ja-tons { flex:1 1 auto;display:grid;grid-template-columns:repeat(12,22px);justify-content:space-between }
 .ja-tela.l-larga > .moldura:last-child .ja-linha:not(.empilha) { grid-template-columns:136px minmax(0,1fr) }
-#hef-dica { position:fixed;z-index:2147483000;max-width:280px;padding:7px 11px;border-radius:8px; background:#1b1c25;border:1px solid var(--border-forte,#44475a);color:var(--texto-suave,#c8ccda); font:500 12.5px/1.45 'Space Grotesk',system-ui,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.45);pointer-events:none; opacity:0;transform:translateY(3px);transition:opacity .12s,transform .12s }
-#hef-dica.visivel { opacity:1;transform:none }
+/* A caixa da dica não mora aqui: a do desenho é a `#hef-dica.da-base` da base comum, e a do produto é da
+   camada da janela, que nunca veste `visivel` (sem o `.da-base`, esta folha a deixava invisível). */
 .ext { padding:11px 0;min-height:60px }
 .ext-quem { cursor:default;gap:5px }
 .ext-sub { gap:8px;min-width:0 }
