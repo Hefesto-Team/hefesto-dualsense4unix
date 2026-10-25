@@ -234,3 +234,40 @@ def test_o_jogo_que_abre_com_o_pedido_em_voo_nao_troca_a_pele(
         assert volta._gadget is not None, "o jogo fechou e a volta não voltou ao gadget"
     finally:
         _fechar(m, pads)
+
+
+@pytest.mark.parametrize("sem_gadget", ("sem_sessao", "sem_contrato"))
+@pytest.mark.parametrize(("jogadores", "quem_volta"), MESAS, ids=IDS)
+def test_a_volta_sem_gadget_deixa_o_uhid_intacto(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, jogadores: tuple[int, ...],
+    quem_volta: int, sem_gadget: str,
+) -> None:
+    """A resposta sem gadget não desfaz o uhid: o jogo não vê o pad sumir e voltar.
+
+    Mordida: refaça o device com a resposta vazia (o ``_refazer_o_device`` sem
+    o gadget na mão), e o uhid se desfaz e se refaz a cada volta.
+    """
+    m = Mesa(monkeypatch, tmp_path, "sem_sessao_ativa")
+    pads: list[Any] = []
+    try:
+        pads = _de_pe(m, jogadores, quem_volta, "caiu")
+        volta = pads[jogadores.index(quem_volta)]
+        criados = m.eventos("uhid_device_created")
+        if sem_gadget == "sem_contrato":
+            m.b.falta = ["?"]
+        else:
+            m.sessao_aberta = False
+        _tique(m, pads, m.ug._GADGET_VARRE_S + 0.5)
+        pedido = volta._pedido_ao_broker
+        assert pedido is not None, "a volta não pediu fora do tique"
+        assert pedido.esperar(5.0)
+        assert _tique(m, pads, 0.1) < TETO_DO_TIQUE_S
+        assert volta._pedido_ao_broker is None
+        assert volta._gadget is None and volta.is_active()
+        assert m.eventos("uhid_device_created") == criados, (
+            "a volta sem gadget desfez e refez o uhid"
+        )
+        # a recusa da sessão rearma a volta; o contrato que falta, não
+        assert volta._gadget_outra_vez is (sem_gadget == "sem_sessao")
+    finally:
+        _fechar(m, pads)
