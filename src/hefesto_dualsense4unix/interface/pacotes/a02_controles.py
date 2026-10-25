@@ -204,7 +204,7 @@ def meias_da_barra(estilo: Any) -> tuple[str, str, str]:
     """`(negativa%, positiva%, cor)` de uma barrinha de eixo."""
     if isinstance(estilo, str):
         estilo = dict(
-            p.split(":", 1) for p in estilo.split(";") if ":" in p  # noqa-acento (CSS)
+            p.split(":", 1) for p in estilo.split(";") if ":" in p  # (noqa-acento) CSS
         )
     largura = str(estilo.get("width", "0%")).strip().removesuffix("%")
     esquerda = str(estilo.get("left", "50%")).strip().removesuffix("%")
@@ -1143,7 +1143,7 @@ def texto_da_bateria(pct: int | None) -> str:
         {} if pct is None else {"battery_pct": pct})[1]
 
 
-#     "icone mas no radio ele pode tá carregando tambem."  # noqa-acento: citação literal
+#     "icone mas no radio ele pode tá carregando tambem."  # (noqa-acento) citação literal
 #
 # coisa do cabo e o rádio fosse sempre descarregar. **Não é**: um DualSense
 _NA_TELA_POR_CARGA: dict[str, str] = {
@@ -1435,7 +1435,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 **campos_da_onda(LADO_MIC, alturas_do_no(no_do_microfone(c))),
                 **_so_se_a_pagina_tiver({
                     campo_da_onda_calada(LADO_MIC): (
-                        "sim" if _faces_do_microfone(a)[0] else "nao"  # noqa-acento: valor de atributo
+                        "sim" if _faces_do_microfone(a)[0] else "nao"  # (noqa-acento) valor
                     ),
                 }),
                 **campos_da_onda(

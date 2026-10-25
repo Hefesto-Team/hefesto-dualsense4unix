@@ -77,11 +77,11 @@ def test_abrir_um_jogo_publica_jogo_perfil_estilo_e_jogador() -> None:
 
 
 def test_fora_de_jogo_o_jogo_e_nulo_e_o_controle_que_entra_e_troca() -> None:
-    save_profile(Profile(name="padrao", match=MatchAny(), priority=0))  # noqa-acento: chave do contrato
+    save_profile(Profile(name="padrao", match=MatchAny(), priority=0))  # (noqa-acento) contrato
     bus = EventBus()
     fila = bus.subscribe(EventTopic.PERFIL_TROCOU)
     sem_jogo = _daemon(None, bus, dois=False)
-    anunciador = AnunciadorDoJogo(bus, _store("padrao"), sem_jogo)  # noqa-acento: chave do contrato
+    anunciador = AnunciadorDoJogo(bus, _store("padrao"), sem_jogo)  # (noqa-acento) contrato
     anunciador.ver()
     anunciador.ver()
     sem_jogo._coop_manager._players[MAC_2] = SimpleNamespace(
@@ -94,11 +94,12 @@ def test_fora_de_jogo_o_jogo_e_nulo_e_o_controle_que_entra_e_troca() -> None:
 
 
 def test_dois_controles_em_jogos_diferentes_publicam_cada_um_o_seu() -> None:
-    save_profile(Profile(name="padrao", match=MatchAny(), priority=0))  # noqa-acento: chave do contrato
+    save_profile(Profile(name="padrao", match=MatchAny(), priority=0))  # (noqa-acento) contrato
     bus = EventBus()
     fila = bus.subscribe(EventTopic.PERFIL_TROCOU)
     appids = {MAC_1: 1245620, MAC_2: 730}
-    AnunciadorDoJogo(bus, _store("padrao"), _daemon(1245620, bus), appids.get).ver()  # noqa-acento: chave do contrato
+    AnunciadorDoJogo(bus, _store("padrao"), _daemon(1245620, bus),  # (noqa-acento) contrato
+                     appids.get).ver()
 
     (evento,) = _tudo(fila)
     assert {c["jogador"]: c["jogo"] for c in evento["controles"]} == {
@@ -106,22 +107,22 @@ def test_dois_controles_em_jogos_diferentes_publicam_cada_um_o_seu() -> None:
 
 
 def test_a_conexao_tardia_recebe_o_jogo_de_agora() -> None:
-    save_profile(Profile(name="padrao", match=MatchAny(), priority=0))  # noqa-acento: chave do contrato
+    save_profile(Profile(name="padrao", match=MatchAny(), priority=0))  # (noqa-acento) contrato
     bus = EventBus()
-    AnunciadorDoJogo(bus, _store("padrao"), _daemon(730, bus)).ver()  # noqa-acento: chave do contrato
+    AnunciadorDoJogo(bus, _store("padrao"), _daemon(730, bus)).ver()  # (noqa-acento) contrato
     tardia = bus.subscribe(EventTopic.PERFIL_TROCOU)
     (evento,) = _tudo(tardia)
     assert evento["jogo"] == "steam_app_730"
 
 
 def test_o_jogo_que_fecha_diz_fechou_e_depois_o_perfil_sem_jogo() -> None:
-    save_profile(Profile(name="padrao", match=MatchAny(), priority=0))  # noqa-acento: chave do contrato
+    save_profile(Profile(name="padrao", match=MatchAny(), priority=0))  # (noqa-acento) contrato
     bus = EventBus()
     ordem: list[str] = []
     publicar = bus.publish
     bus.publish = lambda t, c: (ordem.append(t), publicar(t, c))[1]  # type: ignore[method-assign]
     servico = _daemon(730, bus)
-    anunciador = AnunciadorDoJogo(bus, _store("padrao"), servico)  # noqa-acento: chave do contrato
+    anunciador = AnunciadorDoJogo(bus, _store("padrao"), servico)  # (noqa-acento) chave do contrato
     anunciador.ver()
     servico.appid_em_cena = None
     anunciador.ver()
@@ -156,8 +157,9 @@ def test_o_pulso_da_barra_le_o_estilo_do_arquivo_e_nao_do_evento() -> None:
 # O manifesto.
 
 def _opcao(**campos: Any) -> dict[str, Any]:
-    return {"id": "forca", "rotulo": "Força", "tipo": "deslizante", "minimo": 0, "maximo": 20,  # noqa-acento: chave do contrato
-            "passo": 1, "padrao": 10, **campos}  # noqa-acento: chave do contrato
+    return {"id": "forca", "rotulo": "Força", "tipo": "deslizante",
+            "minimo": 0, "maximo": 20,  # (noqa-acento) chave do contrato
+            "passo": 1, "padrao": 10, **campos}  # (noqa-acento) chave do contrato
 
 
 def test_o_manifesto_aceita_o_deslizante_com_faixa_passo_e_padrao() -> None:
@@ -169,7 +171,7 @@ def test_o_manifesto_aceita_o_deslizante_com_faixa_passo_e_padrao() -> None:
 def test_o_deslizante_sem_padrao_o_fora_da_faixa_e_a_faixa_torta_sao_recusados() -> None:
     # D-1810-O-MANIFESTO-GANHA-O-DESLIZANTE-E-A-LISTA-DE-JOGOS
     sem_padrao = _opcao()
-    del sem_padrao["padrao"]  # noqa-acento: chave do contrato
+    del sem_padrao["padrao"]  # (noqa-acento) chave do contrato
     for ruim in (sem_padrao, _opcao(padrao=21), _opcao(padrao=-1), _opcao(padrao=True),
                  _opcao(maximo=0), _opcao(passo=0), _opcao(minimo=None)):
         with pytest.raises(ValueError):
@@ -192,15 +194,19 @@ def test_o_manifesto_inteiro_lido_do_arquivo_traz_o_deslizante(tmp_path) -> None
     pasta = tmp_path / "ext"
     pasta.mkdir()
     (pasta / "hefesto-mod.json").write_text(json.dumps({
-        "id": "ext", "nome": "Ext", "versao": "0.1", "api": ">=1,<3", "licenca": "MIT",  # noqa-acento: chave do contrato
-        "tipos": ["tema"], "tema": {}, "opcoes": [_opcao(), {"id": "j", "rotulo": "Jogos",  # noqa-acento: chave do contrato
+        "id": "ext", "nome": "Ext", "versao": "0.1", "api": ">=1,<3",  # (noqa-acento) contrato
+        "licenca": "MIT",
+        "tipos": ["tema"], "tema": {},
+        "opcoes": [_opcao(), {"id": "j", "rotulo": "Jogos",  # (noqa-acento) chave do contrato
                                                              "tipo": "jogos"}],
     }), encoding="utf-8")
     manifesto = ler_manifesto(pasta)
     assert [o.tipo for o in manifesto.opcoes] == ["deslizante", "jogos"]
     (pasta / "hefesto-mod.json").write_text(json.dumps({
-        "id": "ext", "nome": "Ext", "versao": "0.1", "api": ">=1,<3", "licenca": "MIT",  # noqa-acento: chave do contrato
-        "tipos": ["tema"], "tema": {}, "opcoes": [{**_opcao(), "padrao": None}],  # noqa-acento: chave do contrato
+        "id": "ext", "nome": "Ext", "versao": "0.1", "api": ">=1,<3",  # (noqa-acento) contrato
+        "licenca": "MIT",
+        "tipos": ["tema"], "tema": {},
+        "opcoes": [{**_opcao(), "padrao": None}],  # (noqa-acento) chave do contrato
     }), encoding="utf-8")
     with pytest.raises(ManifestoRecusadoError):
         ler_manifesto(pasta)
@@ -230,7 +236,7 @@ def test_o_valor_de_jogos_e_uma_lista_de_chaves_sem_repetir() -> None:
 def lar(tmp_path, monkeypatch):
     from hefesto_dualsense4unix.mods.instalador import Lugares
 
-    lg = Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # noqa-acento: campo
+    lg = Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # (noqa-acento) campo
                  registro=tmp_path / "config" / "mods.json",
                  estado=tmp_path / "run" / "mods-estado.json")
     monkeypatch.setattr(Lugares, "do_xdg", classmethod(lambda cls: lg))
@@ -267,8 +273,9 @@ def _instalada(a07, ctx, tmp_path) -> None:
     pasta = tmp_path / "fonte" / "acess"
     pasta.mkdir(parents=True)
     (pasta / "hefesto-mod.json").write_text(json.dumps({
-        "id": "acess", "nome": "Acess", "versao": "0.1", "api": ">=1,<3", "licenca": "MIT",  # noqa-acento: chave do contrato
-        "tipos": ["tema"], "tema": {}, "opcoes": [  # noqa-acento: chave do contrato
+        "id": "acess", "nome": "Acess", "versao": "0.1", "api": ">=1,<3",  # (noqa-acento) contrato
+        "licenca": "MIT",
+        "tipos": ["tema"], "tema": {}, "opcoes": [  # (noqa-acento) chave do contrato
             _opcao(id="vibracao", rotulo="Vibração", maximo=20, passo=1, padrao=10),
             {"id": "jogos", "rotulo": "Jogos que seguem", "tipo": "jogos"},
         ],
@@ -282,15 +289,16 @@ def test_a_janela_desenha_o_range_do_manifesto_e_uma_caixa_por_jogo_com_perfil(
                          match=MatchCriteria(window_class=["steam_app_1245620"])))
     save_profile(Profile(name="Counter-Strike 2", priority=5,
                          match=MatchCriteria(window_class=["steam_app_730"])))
-    save_profile(Profile(name="padrao", match=MatchAny(), priority=0))  # noqa-acento: chave do contrato
+    save_profile(Profile(name="padrao", match=MatchAny(), priority=0))  # (noqa-acento) contrato
     a07 = _a07()
     _instalada(a07, ctx, tmp_path)
     carga = a07.configurar_modificacao(ctx, {"v": "acess"}, _Ponte())
     janela = carga["blocos"]["#mod-janela"]
 
     assert re.search(r'<input type="range" min="0" max="20" step="1" value="10"', janela)
-    caixas = re.findall(r'<input type="checkbox"( checked)? data-gesto="guardar-opcao-da-'
-                        r'modificacao" data-v="acess:jogos:(steam_app_\d+)">', janela)  # noqa-acento: chave do contrato
+    caixas = re.findall(
+        r'<input type="checkbox"( checked)? data-gesto="guardar-opcao-da-'
+        r'modificacao" data-v="acess:jogos:(steam_app_\d+)">', janela)  # (noqa-acento) contrato
     assert caixas == [("", "steam_app_730"), ("", "steam_app_1245620")], (
         "uma caixa por jogo que tem perfil, na ordem dos nomes, e nenhuma marcada de fábrica")
 

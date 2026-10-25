@@ -340,7 +340,7 @@ class LedsConfig(BaseModel):
     # `#0000FF`. Sem este campo o resolvedor tinha de ADIVINHAR qual repetição
     lightbar_para_o_numero: int | None = None
     # Quem enxerga pouco não tinha como
-    player_led_brightness: Literal["fraco", "medio", "forte"] = "fraco"  # noqa-acento: chave ASCII
+    player_led_brightness: Literal["fraco", "medio", "forte"] = "fraco"  # (noqa-acento) chave ASCII
     #: ``None`` = ninguém escolheu o modo: vale a leitura de :func:`decidir_o_modo_da_luz`.
     modo: ModoDaAba | None = None
     #: O efeito da barra (``base;cores;ritmo``, ver :func:`ler_o_efeito_da_luz`). ``None`` = luz

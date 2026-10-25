@@ -142,7 +142,7 @@ def test_a_peca_sobrepoe_o_perfil_campo_a_campo() -> None:
 def test_a_mao_e_a_troca_nao_se_pedem_juntas() -> None:
     with pytest.raises(ValidationError):
         ProfileAnalogicosConfig(mao="direita", trocar=True)
-    perfil = SimpleNamespace(mao="direita", model_fields_set={"mao"})  # noqa-acento: chave ASCII
+    perfil = SimpleNamespace(mao="direita", model_fields_set={"mao"})  # (noqa-acento) chave ASCII
     peca = SimpleNamespace(trocar=True, model_fields_set={"trocar"})
     junta = cv.montar(perfil, peca)
     assert junta is not None and junta.mao is None and junta.trocar, (
@@ -382,15 +382,16 @@ def test_o_computador_vale_por_baixo_e_o_conflito_fica_com_o_jogo() -> None:
     from hefesto_dualsense4unix.utils.maquina import ComputadorDeclarado
 
     computador = ComputadorDeclarado.model_validate({
-        "global": {"analogicos": {"zona_morta": 15, "mao": "direita"}}})  # noqa-acento: chave ASCII
+        "global": {"analogicos": {"zona_morta": 15, "mao": "direita"}}})  # (noqa-acento) chave
     sem_nada = Profile.model_validate({"name": "Jogo", "match": {"type": "any"}})
     vale = perfil_que_vale(sem_nada, computador)
     assert vale.analogicos is not None  # (noqa-acento) identificador ASCII
-    assert (vale.analogicos.zona_morta, vale.analogicos.mao) == (15, "direita")  # noqa-acento: chave ASCII
+    assert (vale.analogicos.zona_morta, vale.analogicos.mao) == (  # (noqa-acento) chave ASCII
+        15, "direita")
     do_jogo = Profile.model_validate({
         "name": "Jogo", "match": {"type": "any"},
         "analogicos": {"zona_morta": 30, "trocar": True}})  # (noqa-acento) identificador ASCII
     vale = perfil_que_vale(do_jogo, computador)
     assert vale.analogicos is not None  # (noqa-acento) identificador ASCII
-    assert vale.analogicos.zona_morta == 30 and vale.analogicos.trocar  # noqa-acento: chave ASCII
-    assert vale.analogicos.mao is None, "a mão do computador quebra a troca e cai"  # noqa-acento: chave ASCII
+    assert vale.analogicos.zona_morta == 30 and vale.analogicos.trocar  # (noqa-acento) chave ASCII
+    assert vale.analogicos.mao is None, "a mão do computador quebra a troca e cai"

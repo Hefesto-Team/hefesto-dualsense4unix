@@ -5,7 +5,7 @@ aberto ou ativado. Até que eu mude ou outro jogo inicie»*. Medido no mesmo dia
 depois do reinício, o daemon subiu na escolha à mão («Lure Of Passion»), com o
 gamepad desligado, por cima do perfil do jogo que valia. O reinício não é
 mudança dela nem jogo novo.
-"""  # noqa-acento: citação literal
+"""  # (noqa-acento) citação literal
 
 from __future__ import annotations
 

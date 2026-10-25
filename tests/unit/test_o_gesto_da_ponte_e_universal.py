@@ -199,8 +199,8 @@ class TestOPuloSeAnuncia:
             "native/-",
             "gamepad/dualsense+steam_input",
         ], f"o journal não anunciou os dois degraus pulados: {avisos}"
-        # `preco` é o nome do kwarg no journal, não prosa.  # noqa: acentuacao
-        assert [kw["preco"] for kw in pulados] == [  # noqa: acentuacao
+        # `preco` é o nome do kwarg no journal, não prosa.  # (noqa: acentuacao)
+        assert [kw["preco"] for kw in pulados] == [  # (noqa: acentuacao)
             pe.SUBIR_REABRINDO_O_JOGO,
             pe.SUBIR_FECHANDO_A_STEAM,
         ], "não disse quanto cada degrau custa"

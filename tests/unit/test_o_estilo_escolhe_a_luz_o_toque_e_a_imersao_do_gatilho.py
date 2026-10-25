@@ -27,7 +27,7 @@ QUATRO = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03", "aa:bb:
 #: O acionamento do R2 de cada estilo (tabela S da página de 19/10/2026), já na chave da lista de
 #: onze. O Arco saiu do catálogo e carrega como a Ação.
 ACIONAMENTO = {
-    "fps": "Machine", "corrida": "MultiPositionVibration", "acao": "Weapon",  # noqa-acento: chave
+    "fps": "Machine", "corrida": "MultiPositionVibration", "acao": "Weapon",  # (noqa-acento) chave
     "arco": "Weapon", "aventura": "Bow", "esportes": "Resistance",
     "point_and_click": "Weapon", "terror": "Weapon", "luta": "Weapon", "maratona": "Off",
     "plataforma": "SlopeFeedback", "retro": "Off", "ritmo": "Weapon",
@@ -99,7 +99,7 @@ def test_a_duracao_do_toque_e_40_vezes_d_sobre_200_de_25_a_60(duracao: int, toqu
 
 FORMA_DO_ESTILO = {
     "luta": fh.IMPACTO, "esportes": fh.IMPACTO, "ritmo": fh.ESTALO,
-    "fps": fh.TOQUE, "acao": fh.IMPACTO, "arco": fh.IMPACTO,  # noqa-acento: chave
+    "fps": fh.TOQUE, "acao": fh.IMPACTO, "arco": fh.IMPACTO,  # (noqa-acento) chave
     "aventura": fh.TOQUE, "plataforma": fh.ESTALO, "terror": fh.TOQUE,
     "souls": fh.ECO, "furtivo": fh.ESTALO,  # o Eco da Souls (bloco C, 20/10/2026)
     "corrida": fh.SOM_NO_CORPO, "simulacao": fh.GRAO,  # o motor no corpo; o chão em grãos
@@ -138,7 +138,7 @@ def test_so_cinco_estilos_tem_forma_longa_de_estilo() -> None:
     assert set(fh.POR_ESTILO) <= set(ej.POR_CHAVE)
 
 
-@pytest.mark.parametrize("chave", ["fps", "acao", "luta"])  # noqa-acento: chave
+@pytest.mark.parametrize("chave", ["fps", "acao", "luta"])  # (noqa-acento) chave
 def test_o_tiro_pulsa_a_luz_onde_o_estilo_reage(chave: str) -> None:
     receita = tv.receita_do_estilo(ej.POR_CHAVE[chave])
     luz = _luz()

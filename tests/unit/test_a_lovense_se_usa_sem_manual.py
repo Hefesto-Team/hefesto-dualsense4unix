@@ -115,7 +115,7 @@ class _Ponte:
         self.chamadas.append(metodo)
         if metodo == "mods.parar_tudo":
             return {"parado": self.parado}
-        vazio = {"ligado": False, "conexoes": [], "aparelhos": []}  # noqa-acento: chaves
+        vazio = {"ligado": False, "conexoes": [], "aparelhos": []}  # (noqa-acento) chaves
         return {"mod": params.get("mod"), **vazio}
 
     def chamar_com_o_corpo(self, metodo: str, **params: Any) -> tuple[bool, str | None, Any]:
@@ -166,13 +166,13 @@ def test_a_recusa_do_servico_chega_ao_parar_tudo(lar, ctx, tmp_path, monkeypatch
         a07.parar_tudo_da_modificacao(ctx, {"v": "toque"}, ponte)
 
 
-@pytest.mark.parametrize("novo", [{"permissoes": [GESTO]}, {"aviso": AVISO}])  # noqa-acento: chave
+@pytest.mark.parametrize("novo", [{"permissoes": [GESTO]}, {"aviso": AVISO}])  # (noqa-acento) chave
 def test_atualizar_com_permissao_nova_mostra_a_lista_e_um_clique_liga(lar, ctx, tmp_path,  # noqa: F811
                                                                     novo) -> None:
     # D-2310-O-ATUALIZAR-QUE-PEDE-SIM-ABRE-A-LISTA
     a07 = _a07()
     _instalada_e_ligada(a07, ctx, tmp_path)
-    _fonte(tmp_path, extra={"versao": "0.2", **novo})  # noqa-acento: a chave do manifesto
+    _fonte(tmp_path, extra={"versao": "0.2", **novo})  # (noqa-acento) a chave do manifesto
     p = SimpleNamespace()
     carga = a07.mais_da_modificacao(ctx, {"v": "toque:atualizar"}, p)
     entrada = _entrada(lar, "toque")

@@ -94,7 +94,7 @@ DONO = (
 )
 PAGINA_SERVIDA = (
     RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
-    / "paginas" / PAGINA  # noqa-acento: nome da PASTA no disco, não leva acento
+    / "paginas" / PAGINA  # (noqa-acento) nome da PASTA no disco, não leva acento
 )
 
 

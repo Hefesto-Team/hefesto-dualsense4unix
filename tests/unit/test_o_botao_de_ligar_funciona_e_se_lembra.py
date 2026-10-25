@@ -70,7 +70,8 @@ from hefesto_dualsense4unix.app.actions import mode_transition
 from hefesto_dualsense4unix.app.actions.jogar import painel
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
-DESENHO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "01-jogar.html"  # noqa-acento (`paginas` e o nome da PASTA; caminho nao leva acento)
+DESENHO = (RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
+           / "paginas" / "01-jogar.html")  # (noqa-acento) `paginas` e o nome da PASTA
 PILOTO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "controles_vivos.py"
 
 _DATA_MODO = re.compile(r'data-modo="([a-z-]+)"')

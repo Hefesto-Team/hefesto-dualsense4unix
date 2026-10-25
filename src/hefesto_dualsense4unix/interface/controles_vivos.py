@@ -115,7 +115,7 @@ from hefesto_dualsense4unix.interface.pacotes import fios  # noqa: E402
 
 import aba02  # noqa: E402  isort:skip
 
-PAGINA = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "02-controles.html"  # noqa-acento (`paginas` e o nome da PASTA; caminho nao leva acento)
+PAGINA = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "02-controles.html"  # (noqa-acento) `paginas` e o nome da PASTA; caminho nao leva acento
 TITULO_ESPERADO = "Hefesto — aba CONTROLES"
 
 TIQUE_MS = 100

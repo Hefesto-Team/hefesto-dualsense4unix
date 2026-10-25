@@ -735,8 +735,8 @@ def test_o_ponto_do_touchpad_obedece_a_classe_na_tela(arquivo: pathlib.Path):
         finally:
             navegador.close()
 
-    cheios = [d for d in medido if d["conectado"] != "nao"]  # noqa-acento: `nao` é o VALOR do atributo
-    vazios = [d for d in medido if d["conectado"] == "nao"]  # noqa-acento: `nao` é o VALOR do atributo
+    cheios = [d for d in medido if d["conectado"] != "nao"]  # (noqa-acento) valor de atributo
+    vazios = [d for d in medido if d["conectado"] == "nao"]  # (noqa-acento) valor de atributo
 
     assert len(cheios) >= 2, (
         f"achei {len(cheios)} ponto(s) de controle conectado em {arquivo.name} — "

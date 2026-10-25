@@ -892,7 +892,7 @@ ENDERECO_DO_BRILHO_DAS_LUZES = "brilho-luzes"
 GESTO_DO_BRILHO_DAS_LUZES = "brilho-luzes"
 ROTULO_DO_BRILHO_DAS_LUZES = {
     "fraco": "Fraco",
-    "medio": "Médio",  # noqa-acento: chave ASCII, o rótulo ao lado
+    "medio": "Médio",  # (noqa-acento) chave ASCII, o rótulo ao lado
     "forte": "Forte",
 }
 

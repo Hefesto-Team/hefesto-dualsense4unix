@@ -660,7 +660,7 @@ def test_o_clique_sem_dono_pisca_a_recusa(capsys) -> None:
     nome = "gesto-sem-dono-de-prova"
     falso = _PilotoDoCliqueSemDono()
     carga = {"gesto": nome, "voo": "7",
-             "pagina": PAGINA_04}  # noqa-acento: chave da carga do piloto
+             "pagina": PAGINA_04}  # (noqa-acento) chave da carga do piloto
     hv.Piloto._gesto(falso, carga)
     assert falso.desfechos == {f"{PAGINA_04}:{nome}": ("sem dono", "")}, falso.desfechos
     assert falso.pousos == [("7", False)], (

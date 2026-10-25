@@ -11,7 +11,7 @@ AQUI = pathlib.Path(__file__).resolve().parent
 
 BANCADA = RAIZ / "mockup"
 
-PUBLICADO = AQUI / "paginas"  # noqa-acento (`paginas` e o nome da PASTA; caminho nao leva acento)
+PUBLICADO = AQUI / "paginas"  # (noqa-acento) `paginas` e o nome da PASTA; caminho nao leva acento
 
 
 #: um diretório temporário, `pagina()` e `gravar()` passam a escrever lá  # (noqa-acento): função

@@ -155,10 +155,10 @@ def vizinhas_de_verdade(
 
 
 LACUNA_PAR = "par"
-LACUNA_POSICAO = "posicao"  # noqa-acento: chave de contrato ASCII, não texto de tela
+LACUNA_POSICAO = "posicao"  # (noqa-acento) chave de contrato ASCII, não texto de tela
 LACUNA_VELOCIDADE = "velocidade"
-LACUNA_REGIAO = "regiao"  # noqa-acento: chave de contrato ASCII, não texto de tela
-LACUNA_ESPECIE = "especie"  # noqa-acento: chave de contrato ASCII, não texto de tela
+LACUNA_REGIAO = "regiao"  # (noqa-acento) chave de contrato ASCII, não texto de tela
+LACUNA_ESPECIE = "especie"  # (noqa-acento) chave de contrato ASCII, não texto de tela
 
 _CLASSE_DO_MOTOR_POR_TRIPLA: dict[tuple[str, str, str], str] = {
     ("e0", "01", "01"): "bt",

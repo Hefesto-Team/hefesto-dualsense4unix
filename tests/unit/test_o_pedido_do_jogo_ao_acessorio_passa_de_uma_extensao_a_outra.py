@@ -44,7 +44,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 DOC = RAIZ / "docs" / "protocol" / "porta-das-modificacoes.md"
 LER = "ler:jogo.acessorio"
 PUBLICAR = "publicar:jogo.acessorio"
-F = "funcoes"  # noqa-acento: chave do contrato
+F = "funcoes"  # (noqa-acento) chave do contrato
 INVALIDO = CODE_INVALID_PARAMS
 
 
@@ -164,13 +164,14 @@ def test_o_topico_e_as_duas_permissoes_existem_e_a_lista_de_publicaveis_e_fechad
 def test_o_manifesto_aceita_publicar_e_ler_o_jogo_acessorio_e_recusa_publicar_o_que_nao_existe(
 ) -> None:
     base: dict[str, Any] = {
-        "id": "ponte", "nome": "Ponte", "versao": "0.1", "api": ">=1,<3", "licenca": "MIT",  # noqa-acento: chave do contrato
-        "tipos": ["tema"], "tema": {},  # noqa-acento: chave do contrato
+        "id": "ponte", "nome": "Ponte", "versao": "0.1", "api": ">=1,<3",  # (noqa-acento) contrato
+        "licenca": "MIT",
+        "tipos": ["tema"], "tema": {},  # (noqa-acento) chave do contrato
     }
-    m = Manifesto(**base, permissoes=[LER, PUBLICAR])  # noqa-acento: chave do contrato
+    m = Manifesto(**base, permissoes=[LER, PUBLICAR])  # (noqa-acento) chave do contrato
     assert set(m.permissoes) == {LER, PUBLICAR}
     with pytest.raises(ValueError, match="permissão desconhecida"):
-        Manifesto(**base, permissoes=["publicar:jogo.vibracao"])  # noqa-acento: chave do contrato
+        Manifesto(**base, permissoes=["publicar:jogo.vibracao"])  # (noqa-acento) chave do contrato
 
 
 def test_quem_le_recebe_com_a_origem_de_quem_publicou_e_o_t_do_servico() -> None:

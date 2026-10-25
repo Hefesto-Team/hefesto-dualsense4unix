@@ -26,8 +26,8 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 
 _SECOES = {
-    "ativacao": ProfileAtivacaoConfig(alternar=["l1"], repique_ms=40),  # noqa-acento: chave ASCII
-    "analogicos": ProfileAnalogicosConfig(zona_morta=12, curva="precisa"),  # noqa-acento: chave ASCII
+    "ativacao": ProfileAtivacaoConfig(alternar=["l1"], repique_ms=40),  # (noqa-acento) chave ASCII
+    "analogicos": ProfileAnalogicosConfig(zona_morta=12, curva="precisa"),  # (noqa-acento) chave
     "cursor": ProfileCursorConfig(precisao_botao="r1", clique_travado="l3", permanencia_ms=800),
 }
 

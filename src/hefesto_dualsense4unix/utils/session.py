@@ -186,7 +186,7 @@ def lembrar_o_ultimo_jogo(nome: str) -> None:
     com o gamepad desligado, por cima do perfil do jogo que valia. Quem grava é
     o autoswitch e o lançamento; quem apaga é o gesto do usuário
     (:func:`gravar_a_escolha`) e o perfil apagado (`manager.esquecer_o_perfil_apagado`).
-    """  # noqa-acento: citação literal
+    """  # (noqa-acento) citação literal
     if not isinstance(nome, str) or not nome.strip() or _e_o_freestyle(nome):
         return
     path = _ultimo_jogo_path()

@@ -60,7 +60,7 @@ def test_a_porta_da_ao_servidor_a_lista_e_a_vibracao_do_controle_pedido(curto: P
                       controles=lambda: [{"uniq": UM, "jogador": 1}, {"uniq": DOIS, "jogador": 2}])
         await porta.iniciar()
         porta.registrar("ficha", "intiface", os.getpid(),
-                        ["ler:conexao", "escrever:vibracao", "rede:local"])  # noqa-acento: contrato
+                        ["ler:conexao", "escrever:vibracao", "rede:local"])  # (noqa-acento) chave
         cliente = _Cliente(curto / "mods.sock")
         try:
             await asyncio.to_thread(cliente.pedir, "mod.ola", {"ficha": "ficha"})

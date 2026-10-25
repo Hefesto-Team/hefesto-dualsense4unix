@@ -18,7 +18,7 @@ def _atributo_do_trilho(nome: str) -> float:
     pagina = (
         Path(__file__).resolve().parents[2]
         / "src" / "hefesto_dualsense4unix"
-        / "interface" / "paginas" / "05-vibracao.html"  # noqa-acento (pasta)
+        / "interface" / "paginas" / "05-vibracao.html"  # (noqa-acento) pasta
     ).read_text(encoding="utf-8")
     achado = _TRILHO_DA_INTENSIDADE.search(pagina)
     assert achado is not None, (

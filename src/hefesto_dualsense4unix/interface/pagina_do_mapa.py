@@ -2073,7 +2073,7 @@ def _montar_as_edicoes() -> tuple[Edicao, ...]:
             "     dela: «me referi as portas renomear». O nome é da POSIÇÃO, e quem o\n"
             "     compõe é o Python (`utils/rotulo_da_entrada`): o produto entrega os\n"
             "     `rotulos` no arranjo. A palavra de reserva é a do dono, que o gerador\n"
-            "     escreve aqui; no exemplo, o nome é o que se digitou nesta tela. */\n"  # noqa-acento: citação literal
+            "     escreve aqui; no exemplo, o nome é o que se digitou nesta tela. */\n"
             "  var PALAVRA_DA_ENTRADA = "
             + json.dumps(PALAVRA_DA_ENTRADA, ensure_ascii=False) + ";\n"
             "  var PALAVRA_NA_FRASE = "
@@ -6426,7 +6426,7 @@ EDICOES_DA_CADEIA_E_DO_REGISTRO: tuple[Edicao, ...] = (
             """      + '<button class="modo destaque" data-modo="ideal" aria-pressed="' + """
             """(modo === "ideal") + '">Sugestões</button>'\n"""
             """      + '<button class="modo" data-modo="mao" aria-pressed="' + """
-            """(modo === "mao") + '">Adicionar</button>';\n"""  # noqa-acento: data-modo
+            """(modo === "mao") + '">Adicionar</button>';\n"""  # (noqa-acento) data-modo
         ),
         depois=JS_DOS_MODOS,
         porque="15/10/2026, mesma sprint — «Registro» é o quarto modo, e ele esconde o palco",

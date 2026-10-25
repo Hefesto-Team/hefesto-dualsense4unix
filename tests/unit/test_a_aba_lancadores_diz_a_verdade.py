@@ -804,7 +804,7 @@ _FIM_DA_ABA = "<!-- ===== fim da aba ===== -->"
 def _publicada(com_a_legenda: bool = False) -> str:
     """A página que o PRODUTO renderiza — `interface/paginas/`."""
     caminho = (RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
-               / "paginas" / PAGINA)  # noqa-acento: nome de PASTA, e caminho não leva acento
+               / "paginas" / PAGINA)  # (noqa-acento) nome de PASTA, e caminho não leva acento
     if not caminho.exists():
         pytest.fail(f"{caminho} não existe — a régua mediria o vazio.")
     doc = caminho.read_text(encoding="utf-8")

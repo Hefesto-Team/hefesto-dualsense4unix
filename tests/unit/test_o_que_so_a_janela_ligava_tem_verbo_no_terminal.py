@@ -63,7 +63,7 @@ ISENTOS: dict[str, str] = {
     "mods.parar_tudo": _GESTO_DA_TELA + " (o «Parar tudo» da janela da extensão); no terminal, "
                        "`mod desligar <id>` para o processo dela",
     "mods.jogos": _GESTO_DA_TELA + " (os jogos da extensão na aba Lançadores)",
-    "mods.acao": _GESTO_DA_TELA + " (um botão de ação da janela da extensão, ou a chave e as "  # noqa-acento: contrato
+    "mods.acao": _GESTO_DA_TELA + " (um botão de ação da janela da extensão, ou a chave e as "
                  "ações de um aparelho que ela gere); no terminal, a extensão tem os verbos dela",
     "mods.livre": _GESTO_DA_TELA + " (o arrastar do controle livre da janela da extensão, a 20 "
                   "por segundo)",

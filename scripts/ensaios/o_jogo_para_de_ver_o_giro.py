@@ -641,7 +641,7 @@ def _processo_de_uma_biblioteca(args: argparse.Namespace) -> int:
         return 2
     sdl = _carregar(bib)
     versao, revisao = _versao_e_revisao(sdl, bib.api)
-    fora: dict[str, Any] = {"versao": versao, "revisao": revisao}  # noqa-acento: chave de dado, não prosa
+    fora: dict[str, Any] = {"versao": versao, "revisao": revisao}  # (noqa-acento) chave de dado, não prosa
     if args.processo == "enumerar":
         fora["hid"] = o_hidapi_da_biblioteca_enumera(sdl, bib.api)
     else:
@@ -730,8 +730,8 @@ def medir_uma_biblioteca(
         medida["erro"] = controles["erro"]
         medida["stderr"] = controles.get("stderr")
         return medida
-    medida["versao"] = controles["versao"]  # noqa-acento: chave de dado, não prosa
-    medida["revisao"] = controles["revisao"]  # noqa-acento: chave de dado, não prosa
+    medida["versao"] = controles["versao"]  # (noqa-acento) chave de dado, não prosa
+    medida["revisao"] = controles["revisao"]  # (noqa-acento) chave de dado, não prosa
     medida["controles"] = controles["controles"]
     return medida
 
@@ -767,7 +767,7 @@ def _rotulo(medida: dict[str, Any]) -> str:
     caminho = str(medida["biblioteca"]).replace(str(pathlib.Path.home()), "~", 1)
     compat = " sdl2-compat" if medida.get("sdl2_compat") else ""
     return (
-        f"libSDL {medida.get('versao', '?')}{compat} «{medida.get('revisao', '?')}» "  # noqa-acento: chave de dado
+        f"libSDL {medida.get('versao', '?')}{compat} «{medida.get('revisao', '?')}» "  # (noqa-acento) chave de dado
         f"em {caminho}, {DICA_DO_ACELEROMETRO}={medida['dicas'][DICA_DO_ACELEROMETRO]}"
     )
 
@@ -1355,7 +1355,7 @@ def _processo_do_vpad(args: argparse.Namespace) -> int:
         fotografar=lambda: contadores_dos_vpads(_estado_do_daemon()),
         fase_segundos=args.fase_segundos, avisar=_avisar_a_fase)
     jogo.encerrar()
-    medida.update({"versao": versao, "revisao": revisao, "hidapi": args.hidapi,  # noqa-acento: chave de dado, não prosa
+    medida.update({"versao": versao, "revisao": revisao, "hidapi": args.hidapi,  # (noqa-acento) chave de dado, não prosa
                    "jogador": args.jogador})
     medida["laudo"] = laudo(medida)
     print(json.dumps(_para_a_saida(medida), ensure_ascii=False, default=str))

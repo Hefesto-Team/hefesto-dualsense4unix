@@ -223,9 +223,10 @@ def _servico(supervisor: Any) -> Any:
 def _instalada(lugares: Any, **extra: Any) -> None:
     pasta = lugares.codigo / "acessorios"
     pasta.mkdir(parents=True)
-    manifesto = {"id": "acessorios", "nome": "Acessórios", "versao": "0.1", "api": ">=1,<3",  # noqa-acento: chave
-                 "licenca": "MIT", "tipos": ["tema"], "tema": {},  # noqa-acento: chave
-                 "permissoes": [GESTO], **extra}  # noqa-acento: chave do manifesto
+    manifesto = {"id": "acessorios", "nome": "Acessórios", "versao": "0.1",  # (noqa-acento) chave
+                 "api": ">=1,<3",
+                 "licenca": "MIT", "tipos": ["tema"], "tema": {},  # (noqa-acento) chave
+                 "permissoes": [GESTO], **extra}  # (noqa-acento) chave do manifesto
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
 
 

@@ -704,7 +704,7 @@ def test_o_botao_por_controle_do_automatico_saiu_com_o_widget():
         "oferecia — ela mandou tirar os dois botões do automático em "
         "07/09/2026, e a poda acompanha a peça")
 
-    # régua errava aí: com o `DO_CABO` inteiro ela media o SWATCH,  # noqa-acento: verbo medir
+    # régua errava aí: com o `DO_CABO` inteiro ela media o SWATCH,  # (noqa-acento) verbo medir
     mudo = {k: v for k, v in DO_CABO.items() if k != "lightbar_rgb"}
     ctx = pacotes.Contexto(state={"active_profile": "regua"}, mesa=list(MESA),
                            conectados=[mudo], estados={})
@@ -925,7 +925,7 @@ def test_a_frase_da_recusa_e_a_do_motor_e_nao_uma_reescrita(monkeypatch):
             f"dia em que a GTK mudar a dela as duas telas divergem.")
 
 
-# Ele media que o botão POR CONTROLE não pintava a cor nova  # noqa-acento: verbo medir
+# Ele media que o botão POR CONTROLE não pintava a cor nova  # (noqa-acento) verbo medir
 
 
 def test_a_coluna_que_esvazia_le_como_a_que_nasce_vazia():

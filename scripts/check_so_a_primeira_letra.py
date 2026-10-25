@@ -62,7 +62,7 @@ import re
 import sys
 
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
-PUBLICADO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # noqa-acento: nome de PASTA
+PUBLICADO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento) nome de PASTA
 BANCADA = RAIZ / "mockup"
 CORES_CSV = RAIZ / "docs" / "data" / "cores-do-dualsense.csv"
 PECAS_CSV = RAIZ / "docs" / "data" / "pecas-do-dualsense.csv"

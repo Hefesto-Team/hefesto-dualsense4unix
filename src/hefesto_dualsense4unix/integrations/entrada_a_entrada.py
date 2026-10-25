@@ -333,7 +333,7 @@ class PortaVista:
             "caminho": self.caminho,
             "vid": self.vid,
             "pid": self.pid,
-            "especie": self.especie,  # noqa-acento: chave de máquina, ASCII por contrato
+            "especie": self.especie,  # (noqa-acento) chave de máquina, ASCII por contrato
             "produto": self.produto,
             "e_dualsense": self.e_dualsense,
             "e_bluetooth": self.e_bluetooth,

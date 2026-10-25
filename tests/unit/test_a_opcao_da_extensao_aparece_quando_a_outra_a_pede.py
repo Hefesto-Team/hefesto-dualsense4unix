@@ -33,22 +33,22 @@ from tests.unit.test_a_janela_da_extensao_age_e_gere_os_aparelhos import (  # no
 
 USB, REDE = "Adaptador USB", "Servidor na rede"
 LIGACAO: dict[str, Any] = {
-    "id": "ligacao", "rotulo": "Ligação por", "tipo": "escolha",  # noqa-acento: chave
-    "escolhas": [USB, REDE], "padrao": USB}  # noqa-acento: chave do manifesto
+    "id": "ligacao", "rotulo": "Ligação por", "tipo": "escolha",  # (noqa-acento) chave
+    "escolhas": [USB, REDE], "padrao": USB}  # (noqa-acento) chave do manifesto
 SERVIDOR: dict[str, Any] = {
     "id": "servidor", "rotulo": "Endereço do servidor", "tipo": "endereco",
-    "padrao": "127.0.0.1:12345", "aparece_com": {"ligacao": REDE}}  # noqa-acento: chave do manifesto
+    "padrao": "127.0.0.1:12345", "aparece_com": {"ligacao": REDE}}  # (noqa-acento) manifesto
 SEGURO: dict[str, Any] = {
-    "id": "seguro", "rotulo": "Ligação segura", "tipo": "ligado",  # noqa-acento: chave
-    "padrao": False, "aparece_com": {"ligacao": [REDE]}}  # noqa-acento: chave do manifesto
+    "id": "seguro", "rotulo": "Ligação segura", "tipo": "ligado",  # (noqa-acento) chave
+    "padrao": False, "aparece_com": {"ligacao": [REDE]}}  # (noqa-acento) chave do manifesto
 PORTA_SEGURA: dict[str, Any] = {
     "id": "porta-segura", "rotulo": "Endereço seguro", "tipo": "endereco",
-    "padrao": "", "aparece_com": {"seguro": True}}  # noqa-acento: chave do manifesto
+    "padrao": "", "aparece_com": {"seguro": True}}  # (noqa-acento) chave do manifesto
 TELEFONE: dict[str, Any] = {"id": "telefone", "rotulo": "Telefone", "tipo": "ligado",
-                            "padrao": False}  # noqa-acento: chave do manifesto
+                            "padrao": False}  # (noqa-acento) chave do manifesto
 DO_TELEFONE: dict[str, Any] = {
     "id": "endereco-do-telefone", "rotulo": "Endereço do telefone", "tipo": "endereco",
-    "padrao": "", "aparece_com": {"telefone": True}}  # noqa-acento: chave do manifesto
+    "padrao": "", "aparece_com": {"telefone": True}}  # (noqa-acento) chave do manifesto
 
 
 def _opcoes(*extras: dict[str, Any]) -> list[dict[str, Any]]:
@@ -66,7 +66,7 @@ def _linhas(html: str) -> set[str]:
 
 
 def test_o_manifesto_aceita_o_aparece_com_de_escolha_lista_e_ligado() -> None:
-    m = Manifesto.model_validate(_manifesto(opcoes=_opcoes()))  # noqa-acento: chave
+    m = Manifesto.model_validate(_manifesto(opcoes=_opcoes()))  # (noqa-acento) chave
     por_id = {o.id: o for o in m.opcoes}
     assert por_id["servidor"].aparece_com == {"ligacao": REDE}
     assert por_id["seguro"].aparece_com == {"ligacao": [REDE]}
@@ -108,14 +108,14 @@ def test_o_manifesto_recusa(declaradas: list[dict[str, Any]], frase: str) -> Non
     # D-2510-O-APARECE-COM-NAO-CONVERTE-O-1-EM-TRUE
     """Cada recusa diz o id da opção que a causou."""
     with pytest.raises(ValidationError, match=re.escape(frase)):
-        Manifesto.model_validate(_manifesto(opcoes=declaradas))  # noqa-acento: chave
+        Manifesto.model_validate(_manifesto(opcoes=declaradas))  # (noqa-acento) chave
 
 
 def test_o_ciclo_longo_tambem_se_recusa() -> None:
     todas = _com("ligacao", {"telefone": True})
     next(o for o in todas if o["id"] == "telefone")["aparece_com"] = {"seguro": False}
     with pytest.raises(ValidationError, match="fecha um ciclo de aparece_com"):
-        Manifesto.model_validate(_manifesto(opcoes=todas))  # noqa-acento: chave
+        Manifesto.model_validate(_manifesto(opcoes=todas))  # (noqa-acento) chave
 
 
 # -- 2. quem aparece ---------------------------------------------------------------------------
@@ -136,7 +136,7 @@ def test_o_ciclo_longo_tambem_se_recusa() -> None:
 def test_aparecem_pelos_valores(valores: dict[str, Any], esperadas: set[str]) -> None:
     from hefesto_dualsense4unix.mods import opcoes
 
-    m = Manifesto.model_validate(_manifesto(opcoes=_opcoes()))  # noqa-acento: chave
+    m = Manifesto.model_validate(_manifesto(opcoes=_opcoes()))  # (noqa-acento) chave
     assert opcoes.aparecem(m, valores) == esperadas
 
 
@@ -161,7 +161,7 @@ def test_a_janela_mostra_o_dependente_na_hora_e_esconde_sem_apagar(
     from hefesto_dualsense4unix.mods.instalador import manifesto_instalado
 
     a07, instalar, abrir = janela
-    instalar(opcoes=_opcoes())  # noqa-acento: chave
+    instalar(opcoes=_opcoes())  # (noqa-acento) chave
     ponte = _Ponte(VIVO)
     aberta = _linhas(abrir(ponte)["blocos"]["#mod-janela"])
     assert aberta == {"ligacao", "telefone"}, f"com USB, o que não vale apareceu: {aberta}"
@@ -187,7 +187,7 @@ def test_a_janela_reaberta_le_o_guardado(janela: Any, ctx: Any) -> None:  # noqa
     """A condição vale pelo valor guardado, não só pelo rascunho: reabrir a janela com «Servidor
     na rede» guardado mostra o servidor."""
     a07, instalar, abrir = janela
-    instalar(opcoes=_opcoes())  # noqa-acento: chave
+    instalar(opcoes=_opcoes())  # (noqa-acento) chave
     ponte = _Ponte(VIVO)
     abrir(ponte)
     _mudar(a07, ctx, ponte, "ligacao", REDE)
@@ -218,7 +218,7 @@ def test_no_webkit_o_servidor_so_aparece_com_a_rede(janela: Any, ctx: Any) -> No
     from tests.unit.test_o_aparelho_da_extensao_diz_os_controles_dele import VISTAS, rodar_no_webkit
 
     a07, instalar, abrir = janela
-    instalar(opcoes=_opcoes())  # noqa-acento: chave
+    instalar(opcoes=_opcoes())  # (noqa-acento) chave
     ponte = _Ponte(VIVO)
     feitas = [abrir(ponte)["blocos"]["#mod-janela"], _mudar(a07, ctx, ponte, "ligacao", REDE),
               _mudar(a07, ctx, ponte, "ligacao", USB)]

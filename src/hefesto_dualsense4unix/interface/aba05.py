@@ -77,7 +77,7 @@ MOTORES = [
 ]
 ESQ, DIR = MOTORES
 
-#      entao a vibração dos 2 será 150%, mas se so a do motor fraco tiver 100 e  # noqa-acento: citação literal
+#      entao a vibração dos 2 será 150%, mas se so a do motor fraco tiver 100 e  # (noqa-acento) citação literal
 # (`daemon/subsystems/rumble.py:20`). O `data-forca` do HTML carrega a CHAVE,
 # (`a05_vibracao._aplicar_a_forca`, desfecho 3, medido em 04/09). Um botão a
 # bem. `a05_vibracao._pct_da_coluna` chama `_pedido_da_politica`, que faz

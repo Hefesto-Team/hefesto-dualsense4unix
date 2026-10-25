@@ -618,7 +618,7 @@ class Manifesto(BaseModel):
         """As ações, os aparelhos geridos e o ``livre``: a permissão do estado, ids sem repetição,
         um ``livre`` só, e a lista sem ``grupo`` só onde a coluna «Agora» mostra os aparelhos."""
         livres = [o.id for o in self.opcoes if o.tipo == "livre"]
-        pedem = [nome for nome, tem in (("acoes", bool(self.acoes)),  # noqa-acento: contrato
+        pedem = [nome for nome, tem in (("acoes", bool(self.acoes)),  # (noqa-acento) contrato
                                         ("aparelhos_acoes", self.aparelhos_acoes is not None),
                                         ("aparelhos_controles",
                                          self.aparelhos_controles is not None),
@@ -628,7 +628,7 @@ class Manifesto(BaseModel):
         if len(livres) > 1:
             raise ValueError("mais de uma opção livre")
         if len({a.id for a in self.acoes}) != len(self.acoes):
-            raise ValueError("ação repetida em acoes")  # noqa-acento: contrato ASCII
+            raise ValueError("ação repetida em acoes")  # (noqa-acento) contrato ASCII
         geridos = self.aparelhos_acoes
         if geridos is not None and geridos.grupo is None and "aparelhos" not in self.agora:
             raise ValueError(
@@ -785,7 +785,7 @@ __all__ = [
     "TIPOS",
     "TOPICOS_DE_LEITURA",
     "TOPICOS_DE_PUBLICACAO",
-    "Acao",  # noqa-acento: contrato ASCII
+    "Acao",  # (noqa-acento) contrato ASCII
     "AcoesDosAparelhos",
     "Manifesto",
     "ManifestoRecusadoError",

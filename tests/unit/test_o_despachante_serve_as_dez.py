@@ -75,7 +75,8 @@ def test_todo_pacote_declara_cobertura(pacotes_mod):
 @pytest.mark.parametrize("aba", [a for a in ABAS if a not in SEM_PACOTE])
 def test_a_pagina_tem_onde_pintar(aba):
     """Um pacote sem endereço na página pinta no vazio."""
-    html = (RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / aba)  # noqa-acento (`paginas` e o nome da PASTA; caminho nao leva acento)
+    html = (RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
+            / "paginas" / aba)  # (noqa-acento) `paginas` e o nome da PASTA
     assert html.exists(), f"{aba} não existe no produto"
     n = len(ENDERECO.findall(html.read_text(encoding="utf-8")))
     assert n > 0, f"{aba}: nenhum endereço de pintura — o pacote dela pintaria no vazio"

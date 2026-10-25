@@ -160,7 +160,7 @@ def test_o_trilho_da_intensidade_vai_ate_o_teto_do_schema() -> None:
     pagina = (
         Path(__file__).resolve().parents[2]
         / "src" / "hefesto_dualsense4unix"
-        / "interface" / "paginas" / "05-vibracao.html"  # noqa-acento (pasta)
+        / "interface" / "paginas" / "05-vibracao.html"  # (noqa-acento) pasta
     ).read_text(encoding="utf-8")
     trilho = re.search(
         r'<input[^>]*type="range"[^>]*data-campo="mult-pos"[^>]*>', pagina
@@ -187,7 +187,7 @@ def test_faixa_do_trilho_cabe_no_que_o_handler_do_daemon_aceita() -> None:
     pagina = (
         Path(__file__).resolve().parents[2]
         / "src" / "hefesto_dualsense4unix"
-        / "interface" / "paginas" / "05-vibracao.html"  # noqa-acento (pasta)
+        / "interface" / "paginas" / "05-vibracao.html"  # (noqa-acento) pasta
     ).read_text(encoding="utf-8")
     trilho = re.search(
         r'<input[^>]*type="range"[^>]*data-campo="mult-pos"[^>]*>', pagina

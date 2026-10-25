@@ -388,8 +388,8 @@ def test_perfil_sem_a_secao_nao_grava_a_chave_e_com_ela_volta_igual() -> None:
     assert "ativacao" not in vazio.model_dump(mode="json")  # (noqa-acento) identificador ASCII
     cheio = Profile.model_validate({
         "name": "Cheio", "match": {"type": "any"},
-        "ativacao": {"longo": {"cross": "circle"}, "longo_ms": 800},  # noqa-acento: chave ASCII
-        "controllers": {P2: {"ativacao": {"repetir": ["l1"]}}}})  # noqa-acento: chave ASCII
+        "ativacao": {"longo": {"cross": "circle"}, "longo_ms": 800},  # (noqa-acento) chave ASCII
+        "controllers": {P2: {"ativacao": {"repetir": ["l1"]}}}})  # (noqa-acento) chave ASCII
     volta = Profile.model_validate(cheio.model_dump(mode="json"))
     assert volta.ativacao is not None and volta.ativacao.longo_ms == 800
     assert volta.controllers is not None and volta.controllers[P2].ativacao is not None

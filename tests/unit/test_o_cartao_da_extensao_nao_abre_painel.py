@@ -75,7 +75,7 @@ def test_o_mais_continua_com_as_tres_acoes(lar, ctx, tmp_path) -> None:  # noqa:
     aberto = a07.mais_da_modificacao(ctx, {"v": "toque"}, _Ponte())["blocos"][".ext-lista"]
     for rotulo in ("Atualizar", "Ver permissões", "Remover"):
         assert rotulo in aberto, rotulo
-    pedido = {"v": "toque:permissoes"}  # noqa-acento: chave
+    pedido = {"v": "toque:permissoes"}  # (noqa-acento) chave
     com = a07.mais_da_modificacao(ctx, pedido, _Ponte())["blocos"][".ext-lista"]
     assert 'class="ext-perm"' in com and "Usar a rede desta casa" in com
 

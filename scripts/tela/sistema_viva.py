@@ -68,7 +68,7 @@ from gi.repository import GLib, Gtk  # noqa: E402
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 sys.path.insert(0, str(INTERFACE))
-PAGINA = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "09-sistema.html"  # noqa-acento (`paginas` e o nome da PASTA; caminho nao leva acento)
+PAGINA = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "09-sistema.html"  # (noqa-acento) `paginas` e o nome da PASTA; caminho nao leva acento
 TITULO_ESPERADO = "Hefesto — aba SISTEMA"
 
 import mesa_viva  # noqa: E402  (só pelo `estado_do_daemon`, que é leitura pura)

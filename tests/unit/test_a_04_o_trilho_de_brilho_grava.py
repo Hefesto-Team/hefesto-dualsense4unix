@@ -156,7 +156,7 @@ def test_a_pagina_oferece_o_trilho_e_o_lugar_vazio_nasce_em_zero(a04):
         r'<div class="ctrl(?: off)?" [^>]*data-conectado="nao"(.*?)(?=<div class="ctrl[ "]|\Z)',
         grade, re.S)
     assert vazias, "a página não tem lugar vazio — a régua não mediria nada"
-    # media o  # noqa-acento: verbo medir
+    # media o  # (noqa-acento) verbo medir
     for bloco in vazias:
         assert "cel-brilho" in bloco and "cel-acoes" in bloco, (
             "o recorte da coluna vazia não alcança as células — a régua estaria "

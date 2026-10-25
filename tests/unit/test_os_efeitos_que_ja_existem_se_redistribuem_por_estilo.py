@@ -33,7 +33,7 @@ OFF = ("Off", None)
 #: Rampa). Os efeitos novos do bloco C (20/10/2026) estão na tabela com o nome deles.
 TABELA: dict[str, tuple[Any, Any, str, str | None, str | None, float]] = {
     "fps": (("Machine", None), ("Resistance", "mira-firme"), "toque", "coice", "respirar", 1.0),
-    "acao": (("Weapon", "golpe-pesado"), ("Resistance", "mira-firme"),  # noqa-acento: chave
+    "acao": (("Weapon", "golpe-pesado"), ("Resistance", "mira-firme"),  # (noqa-acento) chave
              "impacto", "tranco", "respirar", 1.0),
     "luta": (("Weapon", "golpe-pesado"), ("Weapon", "golpe-leve"),
              "impacto", "pancada_do_lado", "respirar", 1.0),
@@ -66,7 +66,8 @@ TABELA: dict[str, tuple[Any, Any, str, str | None, str | None, float]] = {
 FRENTE: dict[str, set[str]] = {
     "fps": {"ferrolho-que-volta", "rajada-que-sobe-sozinha", "recuo-pesado", "clique-no-meio",
             "trava-seca"},
-    "acao": {"golpe-leve", "golpe-carregado", "corda-que-estica", "energia-que-cresce",  # noqa-acento: chave
+    "acao": {"golpe-leve", "golpe-carregado", "corda-que-estica",  # (noqa-acento) chave
+             "energia-que-cresce",
              "escudo-que-aguenta"},
     "luta": {"golpe-carregado", "golpe-falha", "ferrolho-que-volta"},
     "souls": {"golpe-aparo", "golpe-carregado", "pique-que-cansa", "travar-esgotado"},
@@ -158,10 +159,10 @@ def test_o_arco_carrega_como_acao_e_nao_esta_no_catalogo() -> None:
     """
     assert "arco" not in {e.chave for e in ej.ESTILOS}
     assert "Arco" not in ej.POR_ROTULO
-    assert ej.POR_CHAVE["arco"] is ej.POR_CHAVE["acao"]  # noqa-acento: chave
-    assert ej.chave_do_catalogo("arco") == "acao"  # noqa-acento: chave
+    assert ej.POR_CHAVE["arco"] is ej.POR_CHAVE["acao"]  # (noqa-acento) chave
+    assert ej.chave_do_catalogo("arco") == "acao"  # (noqa-acento) chave
     antigo = Profile(name="Arco antigo", match=MatchAny(), estilo="arco")
-    nova = Profile(name="Acao nova", match=MatchAny(), estilo="acao")  # noqa-acento: chave
+    nova = Profile(name="Acao nova", match=MatchAny(), estilo="acao")  # (noqa-acento) chave
     assert tv.receita_do_perfil(antigo) == tv.receita_do_perfil(nova)
 
 

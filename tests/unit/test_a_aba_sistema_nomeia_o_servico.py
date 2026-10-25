@@ -56,7 +56,8 @@ from hefesto_dualsense4unix.app.actions import ambiente_na_tela
 from hefesto_dualsense4unix.interface import sistema as aba_sistema
 
 RAIZ = Path(__file__).resolve().parents[2]
-PAGINA = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "09-sistema.html"  # noqa-acento (`paginas` e o nome da PASTA; caminho nao leva acento)
+PAGINA = (RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
+          / "paginas" / "09-sistema.html")  # (noqa-acento) `paginas` e o nome da PASTA
 
 PALAVRA = "Hefesto"
 

@@ -37,7 +37,7 @@ def _params_escritos(texto: str) -> set[tuple[str, str]]:
 
 EXCECAO_INSTALL_SH = {("snd_usb_audio", "quirk_flags")}
 
-#: teste próprio, e não um `# noqa`.
+#: teste próprio, e não o marcador noqa.
 CHAMADA_QUE_CUMPRE_A_EXCECAO = "install_snd_quirk.sh"
 
 

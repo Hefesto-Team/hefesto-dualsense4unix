@@ -366,7 +366,7 @@ def test_quem_entra_depois_segue_o_relogio_da_mesa(base: str, atraso: float) -> 
     defasagem do arco-íris nem o ângulo comum da Maré: os dois contam pelo mesmo relógio.
     """
     # Prova da D-1510-O-ARCO-IRIS-E-A-MARE-TEM-UM-RELOGIO-SO.
-    texto = "arco-iris;;10" if base == "arco-iris" else "mare;FF0000,0000FF;10"  # noqa-acento: chave ASCII
+    texto = "arco-iris;;10" if base == "arco-iris" else "mare;FF0000,0000FF;10"
     plano = luz.plano_do_perfil(
         _perfil(texto), JOGADORES[:2], mesa_em_economia=False, em_economia=frozenset()
     )

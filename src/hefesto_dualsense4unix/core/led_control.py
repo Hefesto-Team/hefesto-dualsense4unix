@@ -120,7 +120,7 @@ _PLAYER_LED_OVERFLOW = (True, False, True, True, False)
 
 
 #: O BRILHO DAS LUZES DE NÚMERO — `D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`,
-BRILHOS_DAS_LUZES: dict[str, int] = {"fraco": 2, "medio": 1, "forte": 0}  # noqa-acento: chave ASCII
+BRILHOS_DAS_LUZES: dict[str, int] = {"fraco": 2, "medio": 1, "forte": 0}  # (noqa-acento) chave
 
 BRILHO_DAS_LUZES_PADRAO = "fraco"
 
@@ -177,7 +177,7 @@ def player_slot_color(slot: int) -> RGB:
 DA_PALETA = "paleta"
 DO_BROADCAST = "todos"
 DO_GLOBAL = "global"
-DA_MAO = "mao"  # noqa-acento: VALOR de carimbo, legível por máquina — a mesma escolha de `sim`/`nao` desta casa
+DA_MAO = "mao"  # (noqa-acento) VALOR de carimbo, legível por máquina, como `sim`/`nao`
 LEGADO = "legado"
 
 _APAGADA: RGB = (0, 0, 0)

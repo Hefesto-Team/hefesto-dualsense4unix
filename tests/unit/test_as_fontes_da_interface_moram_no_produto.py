@@ -38,7 +38,7 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 FONTES = INTERFACE / "assets" / "fontes"
 MOCKUP = RAIZ / "mockup"
-PUBLICADO = INTERFACE / "paginas"  # noqa-acento: nome da pasta
+PUBLICADO = INTERFACE / "paginas"  # (noqa-acento) nome da pasta
 TOPO = INTERFACE / "topo.html"
 
 #: a rede que não responde: o endereço engole o pacote, e nada volta.

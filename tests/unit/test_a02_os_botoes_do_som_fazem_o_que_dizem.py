@@ -236,7 +236,7 @@ class TestATabelaDosBotoes:
                 f"a página tem `data-gesto={nome}` e ninguém o atende")
 
     @pytest.mark.parametrize(
-        ("o", "metodo"),  # noqa-acento: nome de parametro
+        ("o", "metodo"),  # (noqa-acento) nome de parametro
         [
             ({"mudo": "microfone"}, "mic_canal_set_detalhado"),
             ({"mudo": "alto-falante"}, "speaker_set"),

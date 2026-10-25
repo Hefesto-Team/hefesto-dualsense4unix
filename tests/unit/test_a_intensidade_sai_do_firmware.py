@@ -593,7 +593,7 @@ def test_a_economia_e_o_automatico_nao_perdem_a_intensidade() -> None:
     dele = TriggersConfig.model_validate({"right": {"mode": "Rigid", "params": [2, 200]},
                                           "intensidade": 1.5})
     assert gatilhos_na_economia(dele, TriggersConfig()).intensidade == 1.5
-    auto = _perfil(triggers={"modo": "automatico"},  # noqa-acento: chave ASCII
+    auto = _perfil(triggers={"modo": "automatico"},  # (noqa-acento) chave ASCII
                    controllers={_MAC[2]: {"triggers": {"right": {"mode": "Rigid"},
                                                        "intensidade": 0.3}}})
     vista = perfil_no_modo(auto)

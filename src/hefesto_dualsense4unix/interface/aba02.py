@@ -1684,7 +1684,7 @@ MIC_RETORNO = mesa_viva.BOTAO_MIC_RETORNO
 ATRIBUTO_DO_SOM = "data-som"
 
 # mesma (*o número ao lado não vale*), e o que os separa é a palavra do `title`.
-FRASE_DELA = "icone mas no radio ele pode tá carregando tambem"  # noqa-acento: citação literal
+FRASE_DELA = "icone mas no radio ele pode tá carregando tambem"  # (noqa-acento) citação literal
 
 _RAIO = ('<svg class="g-raio" viewBox="0 0 24 24" width="11" height="11"'
          ' aria-hidden="true" focusable="false">'

@@ -9,7 +9,7 @@ import sys
 
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
 BANCADA = RAIZ / "mockup"
-PUBLICADO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # noqa-acento: nome de PASTA, e caminho nao leva acento
+PUBLICADO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento) nome de PASTA, e caminho nao leva acento
 FONTE = RAIZ / "src"
 sys.path.insert(0, str(FONTE))
 PACOTES = FONTE / "hefesto_dualsense4unix" / "interface" / "pacotes"

@@ -181,7 +181,7 @@ def test_o_botao_nao_muda_de_lugar_em_cena_nenhuma(largura: int) -> None:
             f"y {base['y']:.1f} → {m['y']:.1f}")
 
 
-LUGAR_VAZIO = "nao"  # noqa-acento: valor do atributo `data-conectado`, não a palavra
+LUGAR_VAZIO = "nao"  # (noqa-acento) valor do atributo `data-conectado`, não a palavra
 
 APAGAR_OS_QUATRO = ("for (const el of document.querySelectorAll('[data-controle]'))"
                     " { el.dataset.conectado = a.vazio; el.classList.add('off'); }")

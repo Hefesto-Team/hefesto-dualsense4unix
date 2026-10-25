@@ -334,7 +334,7 @@ def _numero(valor: Any) -> bool:
 def _funcoes_do_acessorio(dados: Any) -> dict[str, float]:
     """O campo de funções do ``jogo.acessorio`` validado: nome curto, minúsculo, valor de 0 a 1."""
     corpo = dados if isinstance(dados, dict) else {}
-    pedidas = corpo.get("funcoes")  # noqa-acento: chave do contrato
+    pedidas = corpo.get("funcoes")  # (noqa-acento) chave do contrato
     if not isinstance(pedidas, dict) or not pedidas:
         raise RecusaError(
             CODE_INVALID_PARAMS, "eventos.publicar pede dados.funcoes com ao menos uma função."
@@ -523,7 +523,8 @@ def _controle(bruto: Any) -> dict[str, Any]:
     """Um controle do aparelho: a chave leva o valor verdadeiro ou falso; a paleta e a escolha levam
     as opções e, no valor, o ``id`` de uma delas (ou nulo). O rótulo e a dica são opcionais."""
     if not isinstance(bruto, dict):
-        raise _recusa_do_estado("cada controle é um objeto {id, tipo, valor, opcoes, dica}.")  # noqa-acento: contrato
+        raise _recusa_do_estado(
+            "cada controle é um objeto {id, tipo, valor, opcoes, dica}.")  # (noqa-acento) contrato
     tipo = bruto.get("tipo")
     if tipo not in TIPOS_DO_CONTROLE:
         raise _recusa_do_estado(f"o tipo de um controle é um de {', '.join(TIPOS_DO_CONTROLE)}.")
@@ -533,12 +534,14 @@ def _controle(bruto: Any) -> dict[str, Any]:
         if not isinstance(valor, bool):
             raise _recusa_do_estado("o valor da chave é verdadeiro ou falso.")
     else:
-        saida["opcoes"] = _opcoes_do_controle(bruto.get("opcoes"), tipo)  # noqa-acento: contrato
-        if valor is not None and valor not in {o["id"] for o in saida["opcoes"]}:  # noqa-acento: contrato
+        saida["opcoes"] = _opcoes_do_controle(bruto.get("opcoes"), tipo)  # (noqa-acento) contrato
+        if valor is not None and valor not in {
+            o["id"] for o in saida["opcoes"]}:  # (noqa-acento) contrato
             raise _recusa_do_estado(f"o valor da {tipo} é o id de uma das opções dela, ou nulo.")
     saida["valor"] = valor
-    if bruto.get("rotulo") is not None:  # noqa-acento: contrato
-        saida["rotulo"] = _curto(bruto["rotulo"], "o rótulo de um controle", 30)  # noqa-acento: contrato
+    if bruto.get("rotulo") is not None:  # (noqa-acento) contrato
+        saida["rotulo"] = _curto(bruto["rotulo"],  # (noqa-acento) contrato
+                                 "o rótulo de um controle", 30)
     if bruto.get("dica") is not None:
         saida["dica"] = _curto(bruto["dica"], "a dica de um controle", 120)
     return saida
@@ -556,10 +559,12 @@ def _opcoes_do_controle(bruto: Any, tipo: str) -> list[dict[str, Any]]:
         certo: dict[str, Any] = {"id": _curto(item.get("id"), "o id de uma opção", 40)}
         if tipo == "paleta":
             certo["cor"] = _cor_do_ponto(item.get("cor"))
-            if item.get("rotulo") is not None:  # noqa-acento: contrato
-                certo["rotulo"] = _curto(item["rotulo"], "o rótulo de uma cor", 30)  # noqa-acento: contrato
+            if item.get("rotulo") is not None:  # (noqa-acento) contrato
+                certo["rotulo"] = _curto(item["rotulo"],  # (noqa-acento) contrato
+                                         "o rótulo de uma cor", 30)
         else:
-            certo["rotulo"] = _curto(item.get("rotulo"), "o rótulo de uma opção", 30)  # noqa-acento: contrato
+            certo["rotulo"] = _curto(item.get("rotulo"),  # (noqa-acento) contrato
+                                     "o rótulo de uma opção", 30)
         saida.append(certo)
     if len({o["id"] for o in saida}) != len(saida):
         raise _recusa_do_estado(f"opção repetida na {tipo} de um aparelho.")
@@ -1022,7 +1027,8 @@ class Porta:
         Sem a lista do serviço, vale o controle do posto. Nunca levanta: a lista que falha é vazia.
         """
         if "ler:conexao" not in sessao.permissoes:  # (noqa-acento): contrato ASCII
-            raise RecusaError(CODE_SEM_PERMISSAO, "falta a permissão ler:conexao")  # noqa-acento: contrato
+            raise RecusaError(CODE_SEM_PERMISSAO,
+                              "falta a permissão ler:conexao")  # (noqa-acento) contrato
         try:
             if self._controles is not None:
                 brutos = self._controles()
@@ -1067,7 +1073,7 @@ class Porta:
                 f"eventos.publicar aceita até {PUBLICACOES_POR_SEGUNDO} por segundo por extensão.",
             )
         janela.append(agora)
-        evento = {"funcoes": pedidas, "origem": mod_id, "t": agora}  # noqa-acento: chave do contrato
+        evento = {"funcoes": pedidas, "origem": mod_id, "t": agora}  # (noqa-acento) contrato
         self.bus.publish(TOPICOS_DE_PUBLICACAO[topico], evento)
         con.funcoes_do_acessorio.update(pedidas)
         return {"publicado": True}
@@ -1075,7 +1081,7 @@ class Porta:
     def _soltar_o_acessorio(self, mod_id: str, funcoes: dict[str, float]) -> None:
         """Quem publicou saiu: o serviço publica, em nome dele, o zero de cada função usada."""
         self.bus.publish(EventTopic.JOGO_ACESSORIO, {
-            "funcoes": dict.fromkeys(funcoes, 0.0),  # noqa-acento: chave do contrato
+            "funcoes": dict.fromkeys(funcoes, 0.0),  # (noqa-acento) chave do contrato
             "origem": mod_id,
             "t": self._relogio(),
         })
@@ -1202,7 +1208,7 @@ class Porta:
         é a chave ``ligar`` ou a de um controle (``True`` liga), ou o ``id`` da opção escolhida
         numa paleta ou numa escolha. ``False`` quando a extensão não está conectada à porta.
         """
-        dados: dict[str, Any] = {"mod": mod_id, "acao": acao, "alvo": alvo}  # noqa-acento: contrato
+        dados: dict[str, Any] = {"mod": mod_id, "acao": acao, "alvo": alvo}  # (noqa-acento) chave
         if valor is not None:
             dados["valor"] = valor
         return self._avisar_a(mod_id, EVENTO_DA_ACAO, dados)

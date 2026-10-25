@@ -60,7 +60,7 @@ NOS = {
 
 DO_GESTO = "D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR"
 DA_ORDEM = "D-2309-FORA-DE-ORDEM-SE-RECRIA-NA-HORA"
-CAMPO_DA_DECISAO = "decisao"  # noqa-acento: nome do campo no diário
+CAMPO_DA_DECISAO = "decisao"  # (noqa-acento) nome do campo no diário
 
 
 class _Pad:

@@ -1083,7 +1083,7 @@ def coluna(c):
               + '</select></span>\n            ')
 
     # `nao` da régua de acentuação é um `#`, e dentro de uma f-string de  (noqa-acento: o próprio valor que a nota explica)
-    conectado = "sim" if ligado else "nao"  # noqa-acento: valor de atributo
+    conectado = "sim" if ligado else "nao"  # (noqa-acento) valor de atributo
     #: `off` acompanha o `data-conectado="nao"` porque é o par que o piloto escreve no lugar que esvazia
     #: (passo `1b`): o P2 que sai na frente do usuário e o P3 que nasce vazio ficam com a MESMA classe.
     #: A folha lê só o `data-conectado`.
@@ -1148,7 +1148,7 @@ def coluna(c):
         </div>'''
 
 # `noqa-acento` num comentário HTML aninhado — e **comentário HTML NÃO
-# A REGRA QUE SOBRA: `# noqa-…` só comenta em Python. Prosa de projeto que
+# A REGRA QUE SOBRA: o marcador noqa só comenta em Python. Prosa de projeto que
 # precise de um `noqa` sai do HTML e vem para cá.
 
 #: o gesto do par dos modos; o pintor (`data-modo-da-aba` do quadro) é do pacote
@@ -1444,7 +1444,7 @@ def _conferir(doc):
         exigir(f'id="{alvo}"' in doc,
                f"a folha aponta para `url(#{alvo})` e a página não tem esse id "
                f"— o modelo que usa esse fundo pinta nada")
-    #    cobrava o endereço só nas colunas CONECTADAS, e com isso media o  # noqa-acento: verbo medir, imperfeito
+    #    cobrava o endereço só nas colunas CONECTADAS, e com isso media o  # (noqa-acento) verbo medir, imperfeito
     #    `[data-conectado="nao"] .ds-svg{display:none}`, e o piloto vira essa
     exigir(corpo.count(ENDERECO_DO_DESENHO) == len(MESA),
            "algum desenho da grade não pede o alvo do atributo — sem ele o "

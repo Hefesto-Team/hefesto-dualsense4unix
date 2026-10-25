@@ -30,7 +30,7 @@ PAGINA_RELATIVA = (
     "src",
     "hefesto_dualsense4unix",
     "interface",
-    "paginas",  # noqa-acento (nome de pasta)
+    "paginas",  # (noqa-acento) nome de pasta
     "09-sistema.html",
 )
 
@@ -134,7 +134,7 @@ def test_as_dez_paginas_reais_estao_no_alcance() -> None:
 
     pasta = (
         RAIZ_REAL / "src" / "hefesto_dualsense4unix"
-        / "interface" / "paginas"  # noqa-acento (nome de pasta)
+        / "interface" / "paginas"  # (noqa-acento) nome de pasta
     )
     paginas = sorted(pasta.glob("[0-9][0-9]-*.html"))
     assert len(paginas) >= 10, (

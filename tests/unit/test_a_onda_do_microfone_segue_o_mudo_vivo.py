@@ -14,7 +14,7 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 MOCKUP = RAIZ / "mockup"
-PUBLICADO = INTERFACE / "paginas"  # noqa-acento: nome da pasta
+PUBLICADO = INTERFACE / "paginas"  # (noqa-acento) nome da pasta
 
 
 for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
@@ -192,7 +192,7 @@ def test_o_cinza_da_onda_segue_o_selo(audio: dict[str, Any]) -> None:
     card = _card(audio)
     campo = a02.campo_da_onda_calada(a02.LADO_MIC)
     assert campo in card, "o pacote não pinta o endereço do mudo"
-    esperado = "sim" if a02.selo_composto(audio) == MUDO else "nao"  # noqa-acento: valor de atributo
+    esperado = "sim" if a02.selo_composto(audio) == MUDO else "nao"  # (noqa-acento) valor
     assert card[campo] == esperado, audio
 
 

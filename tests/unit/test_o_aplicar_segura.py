@@ -10,7 +10,7 @@ Parte 3 (respostas, 14/10/2026): **só o «Aplicar» prende**. O ajuste numa aba
 o perfil que já vale pelo mesmo `profile.reaplicar`, mas sem o ``prender``: a trava não arma e o
 autoswitch segue trocando por janela. O gesto leva o ``prender`` por parâmetro do IPC, com o padrão
 sem trava, e as réguas daqui mordem para os dois lados.
-"""  # noqa-acento: citação literal
+"""  # (noqa-acento) citação literal
 
 from __future__ import annotations
 

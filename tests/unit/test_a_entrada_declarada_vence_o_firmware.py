@@ -416,7 +416,7 @@ def test_o_clique_na_pagina_grava_e_a_pagina_relida_mostra(disco: Path) -> None:
     assert [(m["gesto"], m.get("entrada")) for m in pedidos] == [
         ("entrada-o-que-tem", "5"), ("entrada-velocidade", "7")], pedidos
     for m in pedidos:
-        de_onde = m["pagina"]  # noqa-acento: chave ASCII da mensagem do piloto
+        de_onde = m["pagina"]  # (noqa-acento) chave ASCII da mensagem do piloto
         dono = pacotes.gesto_da_pagina(de_onde, m["gesto"])
         assert dono is not None, f"{de_onde} · {m['gesto']} não tem dono"
         dono(None, m, None)

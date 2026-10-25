@@ -17,7 +17,7 @@ Regras:
 - Ignora identificadores em UPPERCASE_SNAKE (IDs de sprint, constantes).
 - Em ``.md``, pula conteúdo dentro de blocos de código cercados (``` ```)
   e blocos indentados por 4+ espaços.
-- Ignora qualquer linha contendo ``# noqa: acentuacao`` ou ``noqa-acento``.
+- Ignora a linha com ``noqa-acento`` ou ``noqa: acentuacao``; em Python, ``# (noqa-acento) razão``.
 - Aplica whitelist de paths (ver ``WHITELIST_PATTERNS``).
 
 Exit code 0 se limpo, 1 se houver violações.

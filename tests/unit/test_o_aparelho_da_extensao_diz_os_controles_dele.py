@@ -57,11 +57,14 @@ from tests.unit.test_a_janela_da_extensao_age_e_gere_os_aparelhos import (  # no
 )
 
 ABA = "Luz"
-CORES: list[dict[str, Any]] = [{"id": "vermelho", "cor": "#ff5555", "rotulo": "Vermelho"},  # noqa-acento: contrato
-         {"id": "verde", "cor": "#50fa7b", "rotulo": "Verde"},  # noqa-acento: contrato
-         {"id": "azul", "cor": "#6c8cff", "rotulo": "Azul"},  # noqa-acento: contrato
-         {"id": "brasa", "cor": ["#bd93f9", "#ffb86c", "#ff5555"], "rotulo": "Brasa"}]  # noqa-acento: contrato
-ESCOLHA = [{"id": "fixa", "rotulo": "Fixa"}, {"id": "pisca", "rotulo": "Pisca"}]  # noqa-acento: contrato
+CORES: list[dict[str, Any]] = [
+    {"id": "vermelho", "cor": "#ff5555", "rotulo": "Vermelho"},  # (noqa-acento) contrato
+    {"id": "verde", "cor": "#50fa7b", "rotulo": "Verde"},  # (noqa-acento) contrato
+    {"id": "azul", "cor": "#6c8cff", "rotulo": "Azul"},  # (noqa-acento) contrato
+    {"id": "brasa", "cor": ["#bd93f9", "#ffb86c", "#ff5555"],
+     "rotulo": "Brasa"}]  # (noqa-acento) contrato
+ESCOLHA = [{"id": "fixa", "rotulo": "Fixa"},  # (noqa-acento) contrato
+           {"id": "pisca", "rotulo": "Pisca"}]
 
 
 def _aparelhos() -> list[dict[str, Any]]:
@@ -69,9 +72,11 @@ def _aparelhos() -> list[dict[str, Any]]:
     return [
         {"id": "ap-1", "nome": "Aparelho 1", "estado": "ligado", "ligado": True, "controles": [
             {"id": "luz", "tipo": "chave", "valor": True, "dica": "Acesa"},
-            {"id": "cor", "tipo": "paleta", "valor": "verde", "opcoes": copy.deepcopy(CORES)},  # noqa-acento: contrato
-            {"id": "jeito", "tipo": "escolha", "valor": "fixa", "rotulo": "Jeito",  # noqa-acento: contrato
-             "opcoes": copy.deepcopy(ESCOLHA)}]},  # noqa-acento: contrato
+            {"id": "cor", "tipo": "paleta", "valor": "verde",
+             "opcoes": copy.deepcopy(CORES)},  # (noqa-acento) contrato
+            {"id": "jeito", "tipo": "escolha", "valor": "fixa",  # (noqa-acento) contrato
+             "rotulo": "Jeito",
+             "opcoes": copy.deepcopy(ESCOLHA)}]},  # (noqa-acento) contrato
         {"id": "ap-2", "nome": "Aparelho 2", "estado": "ligado", "ligado": True, "controles": [
             {"id": "luz", "tipo": "chave", "valor": False}]},
         {"id": "ap-3", "nome": "Aparelho 3", "estado": "ligado", "ligado": True},
@@ -85,7 +90,7 @@ def _estado(aparelhos: list[dict[str, Any]] | None = None, serie: int = 1) -> di
 
 
 def _pecas() -> dict[str, Any]:
-    return {"aparelhos_controles": {"grupo": ABA}}  # noqa-acento: contrato
+    return {"aparelhos_controles": {"grupo": ABA}}  # (noqa-acento) contrato
 
 
 def _cartoes(html: str) -> dict[str, str]:
@@ -191,7 +196,8 @@ def test_cada_tipo_de_controle_pede_o_valor_do_tipo_dele(
     cartao = _cartoes(abrir(ponte)["blocos"]["#mod-janela"])[alvo]
     a07.acao_da_modificacao(ctx, _pedido(cartao, controle, quer), ponte)
     feitas = [p for m, p in ponte.chamadas if m == "mods.acao"]
-    assert feitas == [{"mod": "toque", "acao": controle, "alvo": alvo, "valor": valor}], feitas  # noqa-acento: contrato
+    assert feitas == [{"mod": "toque", "acao": controle, "alvo": alvo,  # (noqa-acento) contrato
+                       "valor": valor}], feitas
 
 
 def _instalada_como(lugares: Any, mod_id: str) -> None:
@@ -226,7 +232,8 @@ def test_a_paleta_clicada_no_terceiro_ponto_chega_so_a_extensao_dona(
             chegou = await asyncio.to_thread(a.esperar_evento, 2.0)
             assert chegou is not None, "a extensão dona não recebeu o clique"
             assert chegou["params"]["nome"] == "extensao.acao"
-            assert chegou["params"]["dados"] == {"mod": "acessorios", "acao": "cor",  # noqa-acento: contrato
+            assert chegou["params"]["dados"] == {"mod": "acessorios",
+                                                 "acao": "cor",  # (noqa-acento) contrato
                                                  "alvo": "ap-1", "valor": terceira}
             vazou = await asyncio.to_thread(b.esperar_evento, 0.4)
             assert vazou is None, f"a outra extensão recebeu o clique: {vazou}"
@@ -275,9 +282,10 @@ def _com(mexer: Callable[[list[dict[str, Any]]], Any]) -> dict[str, Any]:
         "uma lista de até 6", id="sete-controles"),
     pytest.param(lambda a: a[1]["controles"][0].update(tipo="deslizante"),
                  "o tipo de um controle é um de chave, paleta, escolha", id="tipo-desconhecido"),
-    pytest.param(lambda a: a[0]["controles"][1]["opcoes"][0].update(cor="vermelho"),  # noqa-acento: contrato
+    pytest.param(
+        lambda a: a[0]["controles"][1]["opcoes"][0].update(cor="vermelho"),  # (noqa-acento) chave
                  "a cor de uma paleta é #rrggbb", id="cor-torta"),
-    pytest.param(lambda a: a[0]["controles"][1]["opcoes"][3].update(  # noqa-acento: contrato
+    pytest.param(lambda a: a[0]["controles"][1]["opcoes"][3].update(  # (noqa-acento) contrato
         cor=["#000000", "#111111", "#222222", "#333333"]),
         "lista de até 3", id="quatro-cores"),
     pytest.param(lambda a: a[0]["controles"][1].update(valor="roxo"),
@@ -301,7 +309,8 @@ def test_seis_controles_e_tres_cores_ainda_passam() -> None:
 
     certo = estado_dos_acessorios("toque", _com(seis))
     assert len(certo["aparelhos"][1]["controles"]) == 6
-    assert certo["aparelhos"][0]["controles"][1]["opcoes"][3]["cor"] == ["#bd93f9", "#ffb86c",  # noqa-acento: contrato
+    assert certo["aparelhos"][0]["controles"][1]["opcoes"][3]["cor"] == [  # (noqa-acento) contrato
+        "#bd93f9", "#ffb86c",
                                                                          "#ff5555"]
     assert "controles" not in certo["aparelhos"][2], "o aparelho sem controles ganhou a chave"
 
@@ -345,11 +354,12 @@ def test_sem_aparelhos_controles_no_manifesto_o_controle_nao_passa(lar: Any) -> 
     servico = _servico(SimpleNamespace(lugares=lar, porta=porta))
     with pytest.raises(ValueError, match="não declara a ação «cor» nos aparelhos"):
         asyncio.run(IpcHandlersMixin._handle_mods_acao(
-            servico, {"mod": "toque", "acao": "cor", "alvo": "ap-1", "valor": "azul"}))  # noqa-acento: contrato
+            servico, {"mod": "toque", "acao": "cor", "alvo": "ap-1",  # (noqa-acento) contrato
+                      "valor": "azul"}))
 
 
 @pytest.mark.parametrize(("mexer", "frase"), [
-    (lambda d: d.update(permissoes=[]),  # noqa-acento: chave do manifesto
+    (lambda d: d.update(permissoes=[]),  # (noqa-acento) chave do manifesto
      "aparelhos_controles pede a permissão publicar:acessorios.estado"),
     (lambda d: d["aparelhos_controles"].pop("grupo"), "aparelhos_controles.grupo"),
     (lambda d: d["aparelhos_controles"].update(cor="#fff"), "aparelhos_controles.cor"),
@@ -431,10 +441,10 @@ def rodar_no_webkit(casos: dict[str, tuple[int, int, list[list[Any]]]]) -> dict[
 #: O cartão na borda do contrato: dezesseis pontos (treze de uma cor e três de três), uma escolha
 #: de seis opções compridas e um rótulo de 28 letras (o teto é 30).
 _PONTOS = [{"id": f"c{n}", "cor": f"#{40 + n * 12:02x}{200 - n * 9:02x}{90 + n * 10:02x}",
-            "rotulo": f"Cor {n + 1}"} for n in range(13)] + [  # noqa-acento: contrato
+            "rotulo": f"Cor {n + 1}"} for n in range(13)] + [  # (noqa-acento) contrato
     {"id": f"t{n}", "cor": ["#ff5555", "#50fa7b", "#6c8cff"][n:] + ["#ff5555", "#50fa7b"][:n],
-     "rotulo": f"Mistura {n + 1}"} for n in range(3)]  # noqa-acento: contrato
-_JEITOS = [{"id": f"j{n}", "rotulo": r} for n, r in enumerate(  # noqa-acento: contrato
+     "rotulo": f"Mistura {n + 1}"} for n in range(3)]  # (noqa-acento) contrato
+_JEITOS = [{"id": f"j{n}", "rotulo": r} for n, r in enumerate(  # (noqa-acento) contrato
     ("Fixa", "Pisca devagar", "Pisca depressa", "Respira", "Onda de cores", "Segue o jogo"))]
 _ROTULO_LONGO = "Como a luz se comporta agora"
 
@@ -445,9 +455,11 @@ def _cartoes_na_borda() -> str:
     aparelhos = [
         {"id": "ap-1", "nome": "Aparelho 1", "estado": "ligado", "ligado": True, "controles": [
             {"id": "luz", "tipo": "chave", "valor": True},
-            {"id": "cor", "tipo": "paleta", "valor": "c2", "opcoes": _PONTOS},  # noqa-acento: contrato
-            {"id": "jeito", "tipo": "escolha", "valor": "j0", "rotulo": _ROTULO_LONGO,  # noqa-acento: contrato
-             "opcoes": _JEITOS}]},  # noqa-acento: contrato
+            {"id": "cor", "tipo": "paleta", "valor": "c2",
+             "opcoes": _PONTOS},  # (noqa-acento) contrato
+            {"id": "jeito", "tipo": "escolha", "valor": "j0",  # (noqa-acento) contrato
+             "rotulo": _ROTULO_LONGO,
+             "opcoes": _JEITOS}]},  # (noqa-acento) contrato
         {"id": "ap-2", "nome": "Aparelho 2", "estado": "ligado", "ligado": True, "controles": [
             {"id": "luz", "tipo": "chave", "valor": False}]}]
     return str(exp.controles_dos_aparelhos_html("toque", _estado(aparelhos)))

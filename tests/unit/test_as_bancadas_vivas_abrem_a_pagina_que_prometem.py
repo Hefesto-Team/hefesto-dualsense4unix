@@ -33,8 +33,8 @@ def _caminho_da_pagina(fonte: str) -> pathlib.Path | None:
     nome = re.search(r'"([\w.-]+\.html)"', expr)
     if nome is None:
         return None
-    if "onde.PUBLICADO" in expr or '"paginas"' in expr:  # noqa-acento (nome de pasta)
-        return INTERFACE / "paginas" / nome.group(1)  # noqa-acento (nome de pasta)
+    if "onde.PUBLICADO" in expr or '"paginas"' in expr:  # (noqa-acento) nome de pasta
+        return INTERFACE / "paginas" / nome.group(1)  # (noqa-acento) nome de pasta
     return INTERFACE.parent / nome.group(1)
 
 

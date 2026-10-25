@@ -197,7 +197,7 @@ def test_o_token_que_nenhum_degrau_conhece_e_endereco_morto():
     cravados = regua._campos_cravados(DEGRAUS)
     apagada = ["", "", "", ""]
     vereditos = regua._classificar(cravados, apagada,
-                                   {("p1", "degrau"): "maximo"}, [True] * 4)  # noqa-acento: valor
+                                   {("p1", "degrau"): "maximo"}, [True] * 4)  # (noqa-acento) valor
     conta = regua._contar(vereditos)
     assert conta[regua.MOCKUP] == 3, (
         "os três degraus que a tela mostra apagados E o arquivo cravou apagados "

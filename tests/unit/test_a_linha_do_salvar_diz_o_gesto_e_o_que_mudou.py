@@ -257,7 +257,7 @@ def test_o_gesto_e_posto_no_dispatch_e_no_trabalhar_de_gesto_e_em_nenhum_gesto_d
     vivo = _arvore(RAIZ / "interface/hefesto_vivo.py")
     gesto = _funcao(vivo, "_gesto")
     trabalhar = _funcao(gesto, "trabalhar")
-    assert _poe_o_gesto(trabalhar, com=("pagina", "nome"))  # noqa-acento: nomes de variável
+    assert _poe_o_gesto(trabalhar, com=("pagina", "nome"))  # (noqa-acento) nomes de variável
     # A quarta porta só LÊ: ela não põe gesto.
     assert not _poe_o_gesto(_funcao(vivo, "_gesto_vivo"))
 

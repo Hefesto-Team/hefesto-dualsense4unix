@@ -934,7 +934,7 @@ class GestoDeclarado(BaseModel):
 
 
 SECOES_DO_CONTROLE_NO_COMPUTADOR: tuple[str, ...] = (
-    "leds", "speaker", "mic", "rumble", "sensores", "ativacao", "analogicos",  # noqa-acento: chave ASCII
+    "leds", "speaker", "mic", "rumble", "sensores", "ativacao", "analogicos",  # (noqa-acento) chave
     "triggers",
 )
 

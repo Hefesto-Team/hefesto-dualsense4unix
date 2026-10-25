@@ -4,7 +4,7 @@ A regra (14/10/2026): *«Ele deveria ficar sempre com o perfil do último jogo
 aberto ou ativado. Até que eu mude ou outro jogo inicie»*. Medido às 10h24m37:
 o Sackboy fechou, o foco foi à Steam e ao terminal, e a volta «à escolha» pôs
 o perfil de outro jogo, no modo Navegação, por cima do dele.
-"""  # noqa-acento: citação literal
+"""  # (noqa-acento) citação literal
 
 from __future__ import annotations
 

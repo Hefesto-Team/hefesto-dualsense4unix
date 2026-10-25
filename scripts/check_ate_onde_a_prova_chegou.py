@@ -247,7 +247,7 @@ def _nada_a_acionar(linha: dict[str, str], lado: str) -> bool:
     """
     aciona = (linha.get(f"{lado}_aciona") or "").strip().lower()
     causa = (linha.get(f"{lado}_por_que_nao_aciona") or "").strip().lower()
-    sem_acento = "n" + "ao"  # noqa-acento: é VALOR de coluna, não texto de tela
+    sem_acento = "n" + "ao"  # (noqa-acento) é VALOR de coluna, não texto de tela
     return aciona in ("não", sem_acento) and causa == "nada-a-acionar"
 
 

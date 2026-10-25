@@ -63,7 +63,7 @@ COM_MODOS = {**LIVRE, "modos": True}
 
 
 def _com(livre: dict[str, Any]) -> dict[str, Any]:
-    return {"opcoes": [dict(livre)]}  # noqa-acento: chave do manifesto
+    return {"opcoes": [dict(livre)]}  # (noqa-acento) chave do manifesto
 
 
 # -- 1. o manifesto ---------------------------------------------------------------------------

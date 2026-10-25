@@ -19,7 +19,7 @@ from hefesto_dualsense4unix.app.actions import home_actions
 from hefesto_dualsense4unix.app.actions.jogar import painel
 
 INTERFACE = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix" / "interface"
-PUBLICADAS = INTERFACE / "paginas"  # noqa-acento: nome da pasta
+PUBLICADAS = INTERFACE / "paginas"  # (noqa-acento) nome da pasta
 
 #: Os nomes da janela GTK que saiu (06/09/2026) e da fileira antiga.
 NOMES_QUE_SAIRAM = ("Controlar o PC", "Jogar pelo Hefesto", "Conexão Nativa", "Emular mouse",

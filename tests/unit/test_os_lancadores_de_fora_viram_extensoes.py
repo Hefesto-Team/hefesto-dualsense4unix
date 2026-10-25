@@ -163,9 +163,9 @@ def _extensao_de_lancador(pasta: Path, lugares: Lugares) -> None:
     (pasta / "mod.py").write_text("import time\ntime.sleep(60)\n", encoding="utf-8")
     (pasta / "hefesto-mod.json").write_text(json.dumps({
         "id": "meu", "nome": "Meu lançador", "api": ">=2,<3", "licenca": "MIT",
-        "versao": "0.1",  # noqa-acento: chave do contrato
+        "versao": "0.1",  # (noqa-acento) chave do contrato
         "tipos": ["lancador", "processo"], "processo": {"executar": ["python3", "mod.py"]},
-        "permissoes": ["lancador"],  # noqa-acento: chave do contrato
+        "permissoes": ["lancador"],  # (noqa-acento) chave do contrato
         "lancador": {"rotulo": "Meu lançador", "comandos": ["meulancador"]},
     }), encoding="utf-8")
     instalar(str(pasta), lugares=lugares)

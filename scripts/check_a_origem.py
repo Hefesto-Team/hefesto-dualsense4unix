@@ -310,7 +310,7 @@ def _arquivos_do_pacote(raiz: Path) -> list[Path]:
     base = raiz / PACOTE
     return sorted(
         p for p in base.rglob("*.py")
-        if not {"paginas", "__pycache__"} & set(p.relative_to(base).parts))  # noqa-acento: PASTA
+        if not {"paginas", "__pycache__"} & set(p.relative_to(base).parts))  # (noqa-acento) PASTA
 
 
 def censo_dos_casos(raiz: Path) -> Censo:

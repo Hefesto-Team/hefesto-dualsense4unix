@@ -6291,7 +6291,7 @@ def _conferir_o_valor_do_controle(controle: dict[str, Any], valor: Any) -> None:
         if not isinstance(valor, bool):
             raise ValueError("o valor da chave é verdadeiro ou falso")
         return
-    ids = [o["id"] for o in controle.get("opcoes") or []]  # noqa-acento: contrato
+    ids = [o["id"] for o in controle.get("opcoes") or []]  # (noqa-acento) contrato
     if valor not in ids:
         raise ValueError(f"o valor de «{controle['id']}» é uma de: {', '.join(ids)}")
 

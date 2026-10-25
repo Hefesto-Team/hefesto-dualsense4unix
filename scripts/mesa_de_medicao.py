@@ -330,9 +330,9 @@ def _como_da_celula(r: dict[str, str], lado: str) -> list[tuple[str, str]]:
     return [(k, v.strip()) for k, v in pares if v and v.strip()]
 
 
-# noqa-acento: as chaves abaixo são DOBRADAS (minúsculas, sem acento), que
-_CALADO_DIZ = ("ninguem toca", "nao pode", "fica fora", "fica ligado",  # noqa-acento: chaves DOBRADAS, sem acento de propósito
-               "fica no", "continua", "nao e este", "e a testemunha",  # noqa-acento: chave DOBRADA, sem acento de propósito
+# (noqa-acento) as chaves abaixo são DOBRADAS (minúsculas, sem acento), que
+_CALADO_DIZ = ("ninguem toca", "nao pode", "fica fora", "fica ligado",  # (noqa-acento) chaves DOBRADAS, sem acento de propósito
+               "fica no", "continua", "nao e este", "e a testemunha",  # (noqa-acento) chave DOBRADA, sem acento de propósito
                "de comparacao")
 _REAGE_DIZ = ("e este", "liga", "poe ", "muda", "troca", "aperta", "anota",
               "desliga", "religa", "recebe", "entra", "deve", "tem de",
@@ -744,7 +744,7 @@ def ler_a_cor_no_aparelho() -> dict[str, Any]:
         guardar_cor_dela(endereco, slug)
         fora["lidos"][endereco] = {
             "nome": cor.nome, "colorway": slug,
-            "codigo": cor.codigo}  # noqa-acento: campo publicado pelo dono
+            "codigo": cor.codigo}  # (noqa-acento) campo publicado pelo dono
     return fora
 
 

@@ -237,8 +237,10 @@ def _fechos(html: str) -> list[str]:
 def test_o_cancelar_e_o_x_da_janela_levam_o_gesto(
         janela: Any, ctx: Any, arranjo: str) -> None:  # noqa: F811
     _a07, instalar, abrir = janela
-    opcao = {"id": "telefone", "rotulo": "Telefone", "tipo": "ligado", "padrao": False}  # noqa-acento: chave
-    instalar(**(_com(COM_MODOS) if arranjo == "com o livre" else {"opcoes": [opcao]}))  # noqa-acento: chave
+    opcao = {"id": "telefone", "rotulo": "Telefone", "tipo": "ligado",
+             "padrao": False}  # (noqa-acento) chave
+    instalar(**(_com(COM_MODOS) if arranjo == "com o livre" else {
+        "opcoes": [opcao]}))  # (noqa-acento) chave
     html = abrir(_Ponte(VIVO))["blocos"]["#mod-janela"]
     fechos = _fechos(html)
     assert len(fechos) == 2, fechos
@@ -351,14 +353,16 @@ def test_o_supervisor_passa_a_porta_as_acoes_dos_aparelhos(
     from hefesto_dualsense4unix.mods import supervisor as sup
     from hefesto_dualsense4unix.mods.instalador import Lugares
 
-    lugares = Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # noqa-acento: campo
+    lugares = Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # (noqa-acento) campo
                       registro=tmp_path / "mods.json", estado=tmp_path / "estado.json")
     (lugares.codigo / "toque").mkdir(parents=True)
     manifesto = Manifesto.model_validate({
-        "id": "toque", "nome": "Toque", "versao": "0.1", "api": ">=1,<3",  # noqa-acento: chave
-        "licenca": "MIT", "tipos": ["processo"],  # noqa-acento: chave
-        "processo": {"executar": ["python3", "mod.py"]}, "permissoes": [ESTADO],  # noqa-acento: chave
-        "agora": ["aparelhos"], "aparelhos_acoes": {"acoes": ACOES_DOS_APARELHOS}})  # noqa-acento: chave
+        "id": "toque", "nome": "Toque", "versao": "0.1", "api": ">=1,<3",  # (noqa-acento) chave
+        "licenca": "MIT", "tipos": ["processo"],  # (noqa-acento) chave
+        "processo": {"executar": ["python3", "mod.py"]},
+        "permissoes": [ESTADO],  # (noqa-acento) chave
+        "agora": ["aparelhos"],
+        "aparelhos_acoes": {"acoes": ACOES_DOS_APARELHOS}})  # (noqa-acento) chave
 
     async def abrir_de_mentira(*_argv: Any, **_kw: Any) -> Any:
         saida = asyncio.StreamReader()

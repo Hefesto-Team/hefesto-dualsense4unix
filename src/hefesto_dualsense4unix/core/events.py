@@ -43,7 +43,7 @@ class EventTopic:
     PERFIL_TROCOU = "perfil.trocou"
     #: `{funcoes: {<função>: 0..1}, origem, t}`: o que o jogo pede a um acessório, passado de uma
     #: extensão a outra (`eventos.publicar`); `origem` é o `id` de quem publicou.
-    JOGO_ACESSORIO = "jogo.acessorio"  # noqa-acento: contrato ASCII do tópico
+    JOGO_ACESSORIO = "jogo.acessorio"  # (noqa-acento) contrato ASCII do tópico
     ACESSORIOS_GESTO = "acessorios.gesto"
     ACESSORIOS_ESTADO = "acessorios.estado"
 

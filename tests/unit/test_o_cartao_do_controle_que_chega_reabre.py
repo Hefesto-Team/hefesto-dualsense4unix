@@ -124,7 +124,7 @@ def test_o_lugar_sem_dono_continua_fechando() -> None:
     """A metade que já existia não pode morrer com a cura nova."""
     fora = _rodar({"p1": False, "p2": False},
                   {"vazios": ["p2"], "ocupados": ["p1"]})
-    assert fora["lugares"]["p2"] == {"conectado": "nao", "off": True}  # noqa-acento: valor de atributo
+    assert fora["lugares"]["p2"] == {"conectado": "nao", "off": True}  # (noqa-acento) valor
     assert fora["lugares"]["p1"]["off"] is False
 
 
@@ -146,7 +146,7 @@ def test_o_lugar_cheio_sem_o_atributo_ganha_a_marca() -> None:
 def test_sem_ocupados_nada_reabre() -> None:
     """Uma carga velha, sem a chave nova, não pode explodir nem reabrir sozinha."""
     fora = _rodar({"p1": True}, {"vazios": []})
-    assert fora["lugares"]["p1"] == {"conectado": "nao", "off": True}  # noqa-acento: valor de atributo
+    assert fora["lugares"]["p1"] == {"conectado": "nao", "off": True}  # (noqa-acento) valor
 
 
 def test_o_pacote_diz_quem_tem_dono() -> None:

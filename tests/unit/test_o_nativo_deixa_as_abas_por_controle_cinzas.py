@@ -181,7 +181,7 @@ def test_o_rodape_despachado_pelas_cinco_abas_recusa_no_nativo() -> None:
 def test_o_topo_manda_o_nativo_para_o_corpo() -> None:
     pacotes = _pacotes()
     assert pacotes.topo(_ctx(True))["nativo"] == "sim"
-    assert pacotes.topo(_ctx(False))["nativo"] == "nao"  # noqa-acento: valor que a página lê
+    assert pacotes.topo(_ctx(False))["nativo"] == "nao"  # (noqa-acento) valor que a página lê
 
 
 def test_os_vivos_do_css_sao_os_da_camada() -> None:

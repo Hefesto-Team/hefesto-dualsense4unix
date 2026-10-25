@@ -100,7 +100,7 @@ _CONSUMIDOR: dict[str, ConsumidorPorUnidade] = {
     "ativacao": ConsumidorPorUnidade(  # (noqa-acento) identificador ASCII
         funcao="apply_acessibilidade",
         chega_em=(
-            "{uniq: Ativacao}, depositado no store por definir_ativo e "  # noqa-acento: chave ASCII
+            "{uniq: Ativacao}, depositado no store por definir_ativo e "  # (noqa-acento) chave
             "perguntado pelo tique com o uniq de cada jogador (da_peca)"
         ),
     ),

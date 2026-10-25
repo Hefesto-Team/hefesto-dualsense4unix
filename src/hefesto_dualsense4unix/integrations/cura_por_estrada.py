@@ -735,7 +735,7 @@ def _soltar_as_caixas_que_sairam(pasta_do_ambiente: Path | None,
 
 
 #: Quem desistiu da trava, como o diário diz (`quem=` na linha `carona_esperou_a_janela`).
-QUEM_SERVICO = "servico"  # noqa-acento: valor do diário que a régua de 02/10 lê
+QUEM_SERVICO = "servico"  # (noqa-acento) valor do diário que a régua de 02/10 lê
 QUEM_JANELA = "janela"
 
 

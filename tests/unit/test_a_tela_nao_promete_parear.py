@@ -13,7 +13,7 @@ PUBLICADO = (
     / "src"
     / "hefesto_dualsense4unix"
     / "interface"
-    / "paginas"  # noqa-acento: nome da pasta no disco, não prosa
+    / "paginas"  # (noqa-acento) nome da pasta no disco, não prosa
     / "mapa-das-portas.html"
 )
 CONGELADO = RAIZ / "mockup" / "congelados" / "2026-08-24-mapa-das-portas.html"

@@ -72,7 +72,7 @@ import re
 import sys
 
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
-PUBLICADO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # noqa-acento: nome de PASTA, e caminho nao leva acento
+PUBLICADO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento) nome de PASTA, e caminho nao leva acento
 E_ABA = re.compile(r"^\d\d-[a-z]+\.html$")
 
 sys.path.insert(0, str(RAIZ / "src"))

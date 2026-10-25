@@ -149,7 +149,7 @@ def test_o_jogo_que_abre_outro_comando_ou_vem_torto_e_recusado(curto: Path) -> N
 def test_o_supervisor_passa_so_os_comandos_do_lancador() -> None:
     base: dict[str, Any] = {"id": "lanc", "nome": "Lanc", "api": ">=1,<3",
                             "versao": "1",  # (noqa-acento): contrato ASCII
-                            "licenca": "MIT", "permissoes": ["lancador"]}  # noqa-acento: chave
+                            "licenca": "MIT", "permissoes": ["lancador"]}  # (noqa-acento) chave
     lancador = Manifesto.model_validate({
         **base, "tipos": ["lancador", "processo"], "processo": {"executar": ["python3", "m.py"]},
         "lancador": {"rotulo": "Lanc", "comandos": ["lutris", "", 3, "flatpak"]}})
@@ -184,7 +184,7 @@ def test_o_filho_de_lancador_entrega_os_jogos_pelo_supervisor(lar: Any, curto: P
         "id": "lanc", "nome": "Lanc", "api": ">=2,<3", "licenca": "MIT",
         "versao": "0.1",  # (noqa-acento): contrato ASCII
         "tipos": ["lancador", "processo"], "processo": {"executar": ["python3", "mod.py"]},
-        "permissoes": ["lancador"],  # noqa-acento: chave do contrato
+        "permissoes": ["lancador"],  # (noqa-acento) chave do contrato
         "lancador": {"rotulo": "Lanc", "comandos": ["lutris"]},
     }), encoding="utf-8")
     instalar(str(pasta), lugares=lar)
@@ -246,7 +246,7 @@ def _pasta_com_aviso(curto: Path, aviso: str = AVISO) -> Path:
         "id": "avisada", "nome": "Avisada", "api": ">=2,<3", "licenca": "MIT",
         "versao": "0.1",  # (noqa-acento): contrato ASCII
         "tipos": ["tema"], "tema": {}, "aviso": aviso,
-        "permissoes": ["tema"],  # noqa-acento: chave do contrato
+        "permissoes": ["tema"],  # (noqa-acento) chave do contrato
     }), encoding="utf-8")
     return pasta
 

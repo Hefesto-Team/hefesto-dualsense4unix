@@ -22,7 +22,7 @@ from tests.unit import test_as_modificacoes_rodam_fora_do_daemon as _base
 
 _Cliente, curto = _base._Cliente, _base.curto
 UM, DOIS = "aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02"
-LER_CONEXAO = "ler:conexao"  # noqa-acento: contrato ASCII da permissão
+LER_CONEXAO = "ler:conexao"  # (noqa-acento) contrato ASCII da permissão
 
 
 async def _nada(_metodo: str, _pedido: dict[str, Any]) -> Any:

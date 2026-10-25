@@ -840,7 +840,7 @@ def test_o_norm_mac_nao_devolve_none_para_caminho() -> None:
 
 
 #:      esquerdo × força de vibração (ou personalizado), motor direito ×  # noqa: RUF003
-#: `# noqa` dentro de uma docstring é texto, não diretiva. Trocar o símbolo
+#: o marcador noqa dentro de uma docstring é texto, não diretiva. Trocar o símbolo
 _QUEIXA = "os slicers não estão se multiplicando"
 
 

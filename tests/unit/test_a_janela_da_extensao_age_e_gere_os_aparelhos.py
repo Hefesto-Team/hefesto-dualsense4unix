@@ -77,21 +77,21 @@ LIVRE = {"id": "ao-vivo", "rotulo": "Ao vivo", "tipo": "livre"}
 
 
 def _manifesto(**extra: Any) -> dict[str, Any]:
-    return {"id": "toque", "nome": "Toque", "versao": "0.1", "api": ">=1,<3",  # noqa-acento: chave
-            "licenca": "MIT", "tipos": ["tema"], "tema": {},  # noqa-acento: chave
-            "permissoes": [ESTADO], **extra}  # noqa-acento: chave do manifesto
+    return {"id": "toque", "nome": "Toque", "versao": "0.1", "api": ">=1,<3",  # (noqa-acento) chave
+            "licenca": "MIT", "tipos": ["tema"], "tema": {},  # (noqa-acento) chave
+            "permissoes": [ESTADO], **extra}  # (noqa-acento) chave do manifesto
 
 
 def _pecas(grupo: str | None = "Aparelhos") -> dict[str, Any]:
-    geridos: dict[str, Any] = {"acoes": copy.deepcopy(ACOES_DOS_APARELHOS)}  # noqa-acento: contrato
-    extra: dict[str, Any] = {"acoes": [{"id": "parear", "rotulo": "Parear",  # noqa-acento: contrato
+    geridos: dict[str, Any] = {"acoes": copy.deepcopy(ACOES_DOS_APARELHOS)}  # (noqa-acento) chave
+    extra: dict[str, Any] = {"acoes": [{"id": "parear", "rotulo": "Parear",  # (noqa-acento) chave
                                         "grupo": "Aparelhos", "icone": "procurar"}],
-                             "opcoes": copy.deepcopy([TOQUES, LIVRE])}  # noqa-acento: chave
+                             "opcoes": copy.deepcopy([TOQUES, LIVRE])}  # (noqa-acento) chave
     if grupo:
         geridos["grupo"] = grupo
     else:
         extra["agora"] = ["nivel", "aparelhos"]
-    extra["aparelhos_acoes"] = geridos  # noqa-acento: contrato
+    extra["aparelhos_acoes"] = geridos  # (noqa-acento) contrato
     return extra
 
 
@@ -108,18 +108,18 @@ def test_o_manifesto_com_as_tres_pecas_valida() -> None:
 
 
 @pytest.mark.parametrize(("mexer", "frase"), [
-    (lambda d: d.update(permissoes=[]),  # noqa-acento: chave do manifesto
+    (lambda d: d.update(permissoes=[]),  # (noqa-acento) chave do manifesto
      "pede a permissão publicar:acessorios.estado"),
-    (lambda d: d["aparelhos_acoes"]["acoes"].append(  # noqa-acento: contrato
+    (lambda d: d["aparelhos_acoes"]["acoes"].append(  # (noqa-acento) contrato
         {"id": "x", "rotulo": "X", "grupo": "Outra"}),
      "a ação do aparelho mora no cartão dele e não declara grupo"),
-    (lambda d: d["opcoes"].append({**LIVRE, "id": "outro"}),  # noqa-acento: chave
+    (lambda d: d["opcoes"].append({**LIVRE, "id": "outro"}),  # (noqa-acento) chave
      "mais de uma opção livre"),
-    (lambda d: d["acoes"].append({"id": "parear", "rotulo": "De novo"}),  # noqa-acento: contrato
+    (lambda d: d["acoes"].append({"id": "parear", "rotulo": "De novo"}),  # (noqa-acento) contrato
      "ação repetida"),
-    (lambda d: d["aparelhos_acoes"].pop("grupo"),  # noqa-acento: contrato
+    (lambda d: d["aparelhos_acoes"].pop("grupo"),  # (noqa-acento) contrato
      "agora não lista aparelhos"),
-    (lambda d: d["acoes"][0].update(icone="foguete"),  # noqa-acento: contrato
+    (lambda d: d["acoes"][0].update(icone="foguete"),  # (noqa-acento) contrato
      "acoes.0.icone"),
 ])
 def test_o_manifesto_torto_e_recusado_com_a_frase(
@@ -146,7 +146,8 @@ def test_a_acao_chega_so_a_extensao_dela(curto: pathlib.Path) -> None:  # noqa: 
             chegou = await asyncio.to_thread(a.esperar_evento, 2.0)
             assert chegou is not None, "a extensão dona não recebeu a ação"
             assert chegou["params"]["nome"] == "extensao.acao"
-            assert chegou["params"]["dados"] == {"mod": "acessorios", "acao": "parear",  # noqa-acento: contrato
+            assert chegou["params"]["dados"] == {"mod": "acessorios",
+                                                 "acao": "parear",  # (noqa-acento) contrato
                                                  "alvo": None}
             assert porta.acao("acessorios", "ligar", alvo="ap-2", valor=False) is True
             chave = await asyncio.to_thread(a.esperar_evento, 2.0)
@@ -219,8 +220,8 @@ def test_o_ipc_da_acao_so_leva_o_que_o_manifesto_declara(lar: Any) -> None:  # n
     with pytest.raises(ValueError, match="de 0 a 1"):
         arrastar(id="ao-vivo", valor=1.5)
     assert arrastou == [("toque", "ao-vivo", 0.5, False)]
-    sem = asyncio.run(IpcHandlersMixin._handle_mods_acao(_servico(None), {"mod": "toque",
-                                                                         "acao": "parear"}))  # noqa-acento: contrato
+    sem = asyncio.run(IpcHandlersMixin._handle_mods_acao(
+        _servico(None), {"mod": "toque", "acao": "parear"}))  # (noqa-acento) contrato
     assert sem == {"enviada": False}
 
 
@@ -243,7 +244,7 @@ class _Ponte:
 
     def chamar_com_o_corpo(self, metodo: str, **params: Any) -> tuple[bool, str | None, Any]:
         self.chamadas.append((metodo, params))
-        chave = "enviada" if metodo == "mods.acao" else "enviado"  # noqa-acento: contrato
+        chave = "enviada" if metodo == "mods.acao" else "enviado"  # (noqa-acento) contrato
         return True, None, {chave: self.rodando}
 
     def escolher_arquivo(self, *_: Any, **__: Any) -> str | None:
@@ -303,7 +304,8 @@ def test_quatro_aparelhos_viram_quatro_linhas_e_o_testar_leva_o_alvo(
     data_v = _data_v_do_testar(html, f"ap-{n}")
     a07.acao_da_modificacao(ctx, {"v": data_v}, ponte)
     feitas = [p for m, p in ponte.chamadas if m == "mods.acao"]
-    assert feitas == [{"mod": "toque", "acao": "testar", "alvo": f"ap-{n}"}], feitas  # noqa-acento: contrato
+    assert feitas == [
+        {"mod": "toque", "acao": "testar", "alvo": f"ap-{n}"}], feitas  # (noqa-acento) contrato
 
 
 def test_a_chave_do_aparelho_pede_o_contrario_e_o_botao_diz_em_curso(janela: Any, ctx: Any) -> None:  # noqa: F811
@@ -488,7 +490,7 @@ def test_esquecer_a_forma_devolve_o_botao_ao_padrao(
 def _lugares_de(tmp_path: pathlib.Path) -> Any:
     from hefesto_dualsense4unix.mods.instalador import Lugares
 
-    return Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # noqa-acento: campo
+    return Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # (noqa-acento) campo
                    registro=tmp_path / "registro.json", estado=tmp_path / "estado.json")
 
 
@@ -582,7 +584,7 @@ def test_os_gestos_e_os_metodos_estao_declarados() -> None:
     import sys
 
     a07 = _o_pacote()
-    assert {"mods.acao", "mods.livre"} <= a07.METODOS  # noqa-acento: contrato
+    assert {"mods.acao", "mods.livre"} <= a07.METODOS  # (noqa-acento) contrato
     novos = ("acao-da-modificacao", "mover-o-livre-da-modificacao",
              "soltar-o-livre-da-modificacao", "gravar-o-livre-da-modificacao",
              "esquecer-a-forma-do-livre")

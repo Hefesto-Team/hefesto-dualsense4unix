@@ -510,7 +510,7 @@ def test_o_perfil_sem_os_campos_nao_grava_a_chave_e_com_eles_volta_igual() -> No
         "name": "Cheio", "match": {"type": "any"},
         "ativacao": {"repique_ms": 120, "aperto_minimo_ms": 50,  # (noqa-acento) identificador ASCII
                      "travar": ["l1", "r1"], "ps_travado_ms": 600},
-        "controllers": {P2: {"ativacao": {"repique_ms": 200}}}})  # noqa-acento: chave ASCII
+        "controllers": {P2: {"ativacao": {"repique_ms": 200}}}})  # (noqa-acento) chave ASCII
     volta = Profile.model_validate(cheio.model_dump(mode="json"))
     assert volta.ativacao is not None and volta.ativacao.travar == ["l1", "r1"]
     assert volta.controllers is not None

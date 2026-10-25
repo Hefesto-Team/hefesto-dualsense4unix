@@ -194,7 +194,7 @@ def lar(tmp_path, monkeypatch):
     """O lar de mentira das modificações, e o pacote com o cache e as janelas zerados."""
     from hefesto_dualsense4unix.mods.instalador import Lugares
 
-    lg = Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # noqa-acento: campo
+    lg = Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # (noqa-acento) campo
                  registro=tmp_path / "config" / "mods.json",
                  estado=tmp_path / "run" / "mods-estado.json")
     monkeypatch.setattr(Lugares, "do_xdg", classmethod(lambda cls: lg))
@@ -223,11 +223,12 @@ def _fonte(tmp_path: pathlib.Path, mod_id: str = "toque", *, nome: str = "Toque"
     """A pasta de uma extensão de tema (só declaração: nenhum processo)."""
     pasta = tmp_path / "fonte" / mod_id
     pasta.mkdir(parents=True, exist_ok=True)
-    manifesto = {"id": mod_id, "nome": nome, "versao": "0.1", "api": ">=1,<3",  # noqa-acento: chave
-                 "licenca": "MIT", "tipos": ["tema"], "tema": {},  # noqa-acento: chave
-                 "permissoes": list(permissoes),  # noqa-acento: chave do manifesto
-                 "descricao": "Muda um detalhe.",  # noqa-acento: chave
-                 "opcoes": opcoes or [], **(extra or {})}  # noqa-acento: chave do manifesto
+    manifesto = {"id": mod_id, "nome": nome, "versao": "0.1",  # (noqa-acento) chave
+                 "api": ">=1,<3",
+                 "licenca": "MIT", "tipos": ["tema"], "tema": {},  # (noqa-acento) chave
+                 "permissoes": list(permissoes),  # (noqa-acento) chave do manifesto
+                 "descricao": "Muda um detalhe.",  # (noqa-acento) chave
+                 "opcoes": opcoes or [], **(extra or {})}  # (noqa-acento) chave do manifesto
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
     return pasta
 
@@ -358,9 +359,9 @@ def test_ligar_o_que_nao_esta_instalado_recusa(lar, ctx) -> None:
 
 _OPCOES = [
     {"id": "quando", "rotulo": "Quando", "tipo": "escolha",
-     "escolhas": ["Sempre", "Nunca"], "padrao": "Sempre"},  # noqa-acento: chave
+     "escolhas": ["Sempre", "Nunca"], "padrao": "Sempre"},  # (noqa-acento) chave
     {"id": "avisar", "rotulo": "Avisar", "tipo": "ligado"},
-    {"id": "teto", "rotulo": "Teto", "tipo": "numero", "padrao": 50},  # noqa-acento: chave
+    {"id": "teto", "rotulo": "Teto", "tipo": "numero", "padrao": 50},  # (noqa-acento) chave
 ]
 
 
@@ -439,7 +440,7 @@ def test_o_menu_abre_mostra_as_permissoes_e_fecha(lar, ctx, tmp_path) -> None:
     _instalar(a07, ctx, _fonte(tmp_path, permissoes=("rede:local",)))
     aberto = a07.mais_da_modificacao(ctx, {"v": "toque"}, _Ponte())
     assert "Ver permissões" in aberto["blocos"][".ext-lista"]
-    pedido = {"v": "toque:permissoes"}  # noqa-acento: chave
+    pedido = {"v": "toque:permissoes"}  # (noqa-acento) chave
     com_permissoes = a07.mais_da_modificacao(ctx, pedido, _Ponte())
     assert "Usar a rede desta casa" in com_permissoes["blocos"][".ext-lista"]
     fechado = a07.mais_da_modificacao(ctx, {"v": "toque"}, _Ponte())
@@ -470,7 +471,7 @@ def test_atualizar_baixa_de_novo_do_endereco_gravado(lar, ctx, tmp_path) -> None
     pasta = _fonte(tmp_path)
     _instalar(a07, ctx, pasta)
     manifesto = json.loads((pasta / "hefesto-mod.json").read_text(encoding="utf-8"))
-    manifesto["versao"] = "0.2"  # noqa-acento: chave
+    manifesto["versao"] = "0.2"  # (noqa-acento) chave
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
     feito = a07.mais_da_modificacao(ctx, {"v": "toque:atualizar"}, _Ponte())
     assert "atualizada para a versão 0.2" in feito["recado"]
@@ -843,25 +844,26 @@ def test_criar_perfil_do_jogo_marca_tem_perfil_e_mantem_a_janela(lar, ctx, monke
 # --- o contrato das peças da janela: grupos em abas, cor, «Agora» e «Parar tudo» (18/10/2026) -----
 
 _EM_GRUPOS = [
-    {"id": "teto", "rotulo": "Teto", "tipo": "numero", "grupo": "Segurança", "padrao": 50},  # noqa-acento: chave
-    {"id": "gesto", "rotulo": "Gesto", "tipo": "ligado", "grupo": "Gestos"},  # noqa-acento: chave
-    {"id": "luz", "rotulo": "Cor da luz", "tipo": "cor", "grupo": "Luz",  # noqa-acento: chave
-     "padrao": "#00AAFF"},  # noqa-acento: chave
+    {"id": "teto", "rotulo": "Teto", "tipo": "numero", "grupo": "Segurança",
+     "padrao": 50},  # (noqa-acento) chave
+    {"id": "gesto", "rotulo": "Gesto", "tipo": "ligado", "grupo": "Gestos"},  # (noqa-acento) chave
+    {"id": "luz", "rotulo": "Cor da luz", "tipo": "cor", "grupo": "Luz",  # (noqa-acento) chave
+     "padrao": "#00AAFF"},  # (noqa-acento) chave
 ]
 
 
 def _manifesto_de(**campos) -> object:
     from hefesto_dualsense4unix.mods.manifesto import Manifesto
 
-    base = {"id": "toque", "nome": "Toque", "versao": "0.1", "api": ">=1,<3",  # noqa-acento: chave
-            "licenca": "MIT", "tipos": ["tema"], "tema": {}}  # noqa-acento: chave
+    base = {"id": "toque", "nome": "Toque", "versao": "0.1", "api": ">=1,<3",  # (noqa-acento) chave
+            "licenca": "MIT", "tipos": ["tema"], "tema": {}}  # (noqa-acento) chave
     return Manifesto.model_validate({**base, **campos})
 
 
 def test_o_manifesto_aceita_grupo_cor_agora_e_parar_tudo() -> None:
     m = _manifesto_de(opcoes=_EM_GRUPOS, agora=["nivel", "perfil", "aparelhos"], parar_tudo=True,
-                      permissoes=["ler:acessorios.gesto"])  # noqa-acento: chave
-    assert [o.grupo for o in m.opcoes] == ["Segurança", "Gestos", "Luz"]  # noqa-acento: chave
+                      permissoes=["ler:acessorios.gesto"])  # (noqa-acento) chave
+    assert [o.grupo for o in m.opcoes] == ["Segurança", "Gestos", "Luz"]  # (noqa-acento) chave
     assert m.agora == ["nivel", "perfil", "aparelhos"] and m.parar_tudo is True
 
 
@@ -873,16 +875,19 @@ def test_o_manifesto_recusa_o_agora_sem_a_permissao_do_retorno() -> None:
     with pytest.raises(pydantic.ValidationError, match=r"publicar:acessorios\.estado"):
         _manifesto_de(agora=["nivel"])
     with pytest.raises(pydantic.ValidationError):
-        _manifesto_de(agora=["nivel", "nivel"], permissoes=["ler:acessorios.gesto"])  # noqa-acento: chave
+        _manifesto_de(agora=["nivel", "nivel"],  # (noqa-acento) chave
+                      permissoes=["ler:acessorios.gesto"])
     with pytest.raises(pydantic.ValidationError):
-        _manifesto_de(agora=["temperatura"], permissoes=["ler:acessorios.gesto"])  # noqa-acento: chave
+        _manifesto_de(agora=["temperatura"],  # (noqa-acento) chave
+                      permissoes=["ler:acessorios.gesto"])
 
 
 def test_a_opcao_de_cor_recusa_o_padrao_que_nao_e_hexa() -> None:
     import pydantic
 
     with pytest.raises(pydantic.ValidationError, match="#rrggbb"):
-        _manifesto_de(opcoes=[{"id": "luz", "rotulo": "Luz", "tipo": "cor", "padrao": "azul"}])  # noqa-acento: chave
+        _manifesto_de(opcoes=[
+            {"id": "luz", "rotulo": "Luz", "tipo": "cor", "padrao": "azul"}])  # (noqa-acento) chave
 
 
 def test_a_janela_com_tres_grupos_desenha_um_cartao_por_grupo_e_a_cor(lar, ctx, tmp_path) -> None:
@@ -890,7 +895,7 @@ def test_a_janela_com_tres_grupos_desenha_um_cartao_por_grupo_e_a_cor(lar, ctx, 
     _instalar(a07, ctx, _fonte(tmp_path, opcoes=_EM_GRUPOS))
     janela = a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())["blocos"]["#mod-janela"]
     titulos = re.findall(r'<span class="ac-tit">([^<]*)</span>', janela)
-    assert titulos == ["Segurança", "Gestos", "Luz"], titulos  # noqa-acento: chave
+    assert titulos == ["Segurança", "Gestos", "Luz"], titulos  # (noqa-acento) chave
     assert "mg-aba" not in janela and 'type="radio"' not in janela
     assert 'type="color"' in janela and 'value="#00aaff"' in janela  # o padrão, em minúsculas
     assert '<span class="ext-rot">Para</span>Todos' in janela.split('class="tn-corpo"')[0]

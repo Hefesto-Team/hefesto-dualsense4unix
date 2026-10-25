@@ -515,7 +515,7 @@ def test_o_clique_grava_no_perfil_que_sobrepoe_o_cartao() -> None:
     """O mesmo clique, com o jogo que já escolheu a luz do P1: vai ao perfil."""
     pac = _pacotes()
     save_profile(_perfil("Jogo X", controllers={
-        P1: {"leds": {"player_led_brightness": "medio"}}}))  # noqa-acento: chave ASCII
+        P1: {"leds": {"player_led_brightness": "medio"}}}))  # (noqa-acento) chave ASCII
     fn = pac.gesto_da_pagina("04-iluminacao.html", "brilho-luzes")
     fn(_contexto(pac, "Jogo X"), {"uniq": UM, "controle": "p1", "luzes": "forte"}, _Ponte())
     assert load_profile("Jogo X").controllers[P1].leds.player_led_brightness == "forte"
