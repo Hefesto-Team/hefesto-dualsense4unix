@@ -6203,7 +6203,7 @@ class IpcHandlersMixin:
         if alvo is not None and (not isinstance(alvo, str) or not 1 <= len(alvo) <= 40):
             raise ValueError("o alvo é o id de um aparelho, de 1 a 40 letras")
         if valor is not None and not isinstance(valor, (bool, str)):
-            raise ValueError("o valor da ação é verdadeiro ou falso")
+            raise ValueError("o valor da ação é verdadeiro, falso ou o id de uma opção")
         achado = await self._manifesto_da_janela(mod)
         if achado is None:
             return {"enviada": False}

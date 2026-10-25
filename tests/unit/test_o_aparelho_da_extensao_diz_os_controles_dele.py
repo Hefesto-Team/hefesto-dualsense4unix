@@ -331,6 +331,8 @@ def test_o_servico_so_leva_o_controle_que_o_aparelho_publicou(lar: Any) -> None:
         pedir(acao="luz", alvo="ap-1", valor="1")
     with pytest.raises(ValueError, match="na janela"):
         pedir(acao="cor", valor="azul")
+    with pytest.raises(ValueError, match="verdadeiro, falso ou o id de uma opção"):
+        pedir(acao="cor", alvo="ap-1", valor=3)
     assert enviadas == [("toque", "cor", "ap-1", "azul"), ("toque", "luz", "ap-2", True)]
 
 
