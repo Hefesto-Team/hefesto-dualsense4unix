@@ -1345,7 +1345,7 @@ _SEM_CAMINHO_HOJE: dict[str, str] = {
         "(A-FAIXA-DO-TECLADO-SE-ACHA-01). Hoje só o ensaio "
         "`scripts/ensaios/a_faixa_do_receptor.py` "
         "a lê; a 08 ainda diz `FAIXA_NAO_ENCONTRADA` (interface/pacotes/a08_conexoes.py:4127 "
-        "(`FAIXA_NAO_ENCONTRADA`), no `_andar_a_descoberta`). Fecha quando a bancada B9 "
+        "(`FAIXA_NAO_ENCONTRADA`), no `_o_botao_da_descoberta`). Fecha quando a bancada B9 "
         "confirmar as causas e a 08 trocar a frase genérica por esta, que é mudança visível e "
         "passa pelo desenho."
     ),
