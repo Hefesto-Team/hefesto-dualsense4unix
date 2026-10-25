@@ -267,3 +267,42 @@ def test_o_gadget_que_chegou_para_quem_sai_desce_fora_do_tique(
         )
     finally:
         _fechar(m, pads)
+
+
+@pytest.mark.parametrize(("jogadores", "quem_sai"), MESAS, ids=IDS)
+def test_o_pad_que_renasce_veste_o_mac_de_antes(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, jogadores: tuple[int, ...],
+    quem_sai: int,
+) -> None:
+    """A troca de roupa derruba o pad e o faz nascer de novo, fora do tique: o pad novo do
+    mesmo aparelho espera a descida do que parou e veste o MAC de antes, como no ``stop``
+    que esperava.
+
+    Mordida: tire o ``esperar_o_aparelho`` do ``start``, e o pad novo veste outro MAC
+    (o de antes segue no gadget que o broker ainda não desmontou).
+    """
+    m = _mesa(monkeypatch, tmp_path)
+    pads: list[Any] = []
+    solta = threading.Event()
+    try:
+        pads, coop = _a_mesa_de_pe(m, jogadores)
+        sai = pads[jogadores.index(quem_sai)]
+        mac_de_antes = sai.mac
+        lento = ClienteLento(solta)
+        sai._gadget.cliente = lento
+        coop._derrubar_para_renascer(sai.identity)
+        novo = m.pad(quem_sai)
+        pads.append(novo)
+        threading.Timer(0.3, solta.set).start()
+        nasceu = threading.Thread(target=novo.start, daemon=True)
+        nasceu.start()
+        nasceu.join(PRESO_S + 1.0)
+        _guardar_o_lado_do_jogo(m)
+        assert not nasceu.is_alive(), "o pad novo não nasceu"
+        assert lento.desmontados, "o pad novo nasceu antes da descida do de antes"
+        assert novo.mac == mac_de_antes, (
+            f"o pad que renasceu vestiu {novo.mac}, e não o MAC de antes"
+        )
+    finally:
+        solta.set()
+        _fechar(m, pads)
