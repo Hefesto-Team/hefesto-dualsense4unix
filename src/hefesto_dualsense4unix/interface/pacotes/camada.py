@@ -93,6 +93,7 @@ CAMADA: dict[tuple[str, str], str] = {
     ("07-lancadores.html", "instalar-modificacao"): _C,
     ("07-lancadores.html", "ligar-modificacao"): _C,
     ("07-lancadores.html", "mais-da-modificacao"): _C,
+    ("07-lancadores.html", "modo-do-livre-da-modificacao"): _W,
     ("07-lancadores.html", "parar-tudo-da-modificacao"): _A,
     ("07-lancadores.html", "procurar-o-arquivo"): _C,
     ("07-lancadores.html", "resolver-impedimento"): _C,
