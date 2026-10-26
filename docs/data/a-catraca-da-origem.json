@@ -55,7 +55,7 @@
       "data": "2026-10-26",
       "nota": "remendos de sintoma por arquivo",
       "o_que_conta": "remendos de sintoma acima do teto de cada arquivo",
-      "piso": 961,
+      "piso": 958,
       "por_item": {
         "__init__.py": 1,
         "app/actions/base.py": 1,
@@ -154,7 +154,6 @@
         "integrations/ponte_tentativa.py": 2,
         "integrations/prontuario_dos_jogos.py": 4,
         "integrations/proton_pin.py": 9,
-        "integrations/quem_o_jogo_le.py": 3,
         "integrations/quem_ouve_o_microfone.py": 4,
         "integrations/reposicao_dos_lancadores.py": 1,
         "integrations/retrato_do_som.py": 1,
@@ -244,12 +243,12 @@
       "data": "2026-10-26",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1217712,
+      "piso": 1217474,
       "por_item": {
-        "docs": 121487,
+        "docs": 121640,
         "scripts": 121414,
-        "src": 324567,
-        "tests": 650244
+        "src": 324265,
+        "tests": 650155
       },
       "razao": "o teto desceu sozinho com o número",
       "subidas": [
@@ -1179,7 +1178,7 @@
         }
       ],
       "unidade": "linhas",
-      "universo": 3189
+      "universo": 3190
     }
   }
 }
