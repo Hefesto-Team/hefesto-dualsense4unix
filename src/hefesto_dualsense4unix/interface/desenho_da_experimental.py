@@ -920,8 +920,8 @@ def _arranjo_c(nome: str, ajustes: str, *, mod: str, agora: Sequence[str],
 
 
 DESCARTAR = "Descartar"
-DICA_DO_DESCARTAR = "As mudanças sem Guardar se perdem."
-DICA_DO_GUARDAR_SEM_MUDANCA = "Nada mudou desde o último Guardar."
+DICA_DO_DESCARTAR = "As mudanças não guardadas se perdem."
+DICA_DO_GUARDAR_SEM_MUDANCA = "Nada mudou para guardar."
 
 
 def _fecha_na_hora(mod: str, rascunho: Rascunho) -> bool:
