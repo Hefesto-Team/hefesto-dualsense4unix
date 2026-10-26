@@ -6,7 +6,11 @@ A-LISTA-DA-JANELA-CONFIGURAR-NAO-PULA-AO-CLICAR-UM-EFEITO-01 (26/10/2026).
 from __future__ import annotations
 
 import json
+import os
 import pathlib
+import shutil
+import subprocess
+import sys
 from typing import Any
 
 import pytest
@@ -91,7 +95,23 @@ CLIQUES = {
 MOSTRA = {"efeito": "Duplo", "entrada": "Suave", "forca": "65", "chave": "Desligado",
           "modo": "repetir"}
 VISTAS = ((1918, 840), (1212, 809))
-DESENHO = pathlib.Path(__file__).resolve().parents[2] / "mockup" / "07-lancadores.html"
+RAIZ = pathlib.Path(__file__).resolve().parents[2]
+
+@pytest.fixture(scope="session")
+def pagina_fresca(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
+    """O desenho da 07 gerado agora, do CSS e do Python desta árvore, numa pasta de prova: a
+    régua mede o que o gerador faz hoje, e a ``mockup/`` (que a costura regera) não entra."""
+    pasta = tmp_path_factory.mktemp("bancada-07")
+    for vizinha in (RAIZ / "mockup").glob("*.html"):
+        shutil.copy2(vizinha, pasta / vizinha.name)
+    ambiente = dict(os.environ, HEFESTO_BANCADA=str(pasta), PYTHONDONTWRITEBYTECODE="1",
+                    PYTHONPATH=os.pathsep.join(filter(None, [str(RAIZ / "src"),
+                                                             os.environ.get("PYTHONPATH", "")])))
+    gerou = subprocess.run([sys.executable, "-m", "hefesto_dualsense4unix.interface.aba07"],
+                           cwd=RAIZ, env=ambiente, capture_output=True, text=True, timeout=300)
+    assert gerou.returncode == 0, gerou.stdout[-300:] + gerou.stderr[-300:]
+    return pasta / "07-lancadores.html"
+
 
 _ABRIR = """(function(endereco, h, aba){
   location.hash = endereco;
@@ -100,7 +120,7 @@ _ABRIR = """(function(endereco, h, aba){
   const rot = [...j.querySelectorAll('.mj-abas > label')].find(l => l.textContent === aba);
   if (!rot) return 'sem a aba ' + aba;
   rot.click();
-  const lista = j.querySelector('.ja-opcoes');
+  const lista = rot.nextElementSibling;
   lista.scrollTop = lista.scrollHeight;
   return 'ok';
 })(%s, %s, %s)"""
@@ -108,15 +128,16 @@ ENDERECO = "#modificacao"  # (noqa-acento)
 ENDERECO = "#modificacao"  # (noqa-acento)
 _PINTAR = "(function(b){ window.__hef.pintar({blocos: b}); return 'ok'; })(%s)"
 _LER = """(function(){
-  const j = document.getElementById('mod-janela'), lista = j.querySelector('.ja-opcoes');
+  const j = document.getElementById('mod-janela');
   const marcada = j.querySelector('.mj-abas > input:checked');
+  const lista = marcada.nextElementSibling.nextElementSibling;
   return JSON.stringify({topo: lista.scrollTop, altura: lista.scrollHeight,
     vista: lista.clientHeight, janela: j.getBoundingClientRect().height,
     aba: marcada ? marcada.nextElementSibling.textContent : null,
     mesma: lista === window.__lista, mostra: String(%s).trim()});
 })()"""
-_GUARDAR = "(function(){ window.__lista = document.querySelector('#mod-janela .ja-opcoes'); " \
-           "return 'ok'; })()"
+_GUARDAR = "(function(){ window.__lista = document.querySelector(" \
+           "'#mod-janela .mj-abas > input:checked + label + .mj-tela'); return 'ok'; })()"
 
 
 Medida = tuple[str, str, dict[str, str], dict[str, str]]
@@ -144,14 +165,9 @@ def cliques(janela: Any, ctx: Any) -> dict[str, Medida]:  # noqa: F811
     return saida
 
 
-def _medir(cliques: dict[str, Medida]
-           ) -> dict[str, list[Any]]:
+def _medir(cliques: dict[str, Medida], pagina: pathlib.Path) -> dict[str, list[Any]]:
     from hefesto_dualsense4unix.interface import hefesto_vivo
-    from tests.unit.test_o_aparelho_da_extensao_diz_os_controles_dele import SONDA
-
-    import os
-    import subprocess
-    import sys
+    from tests.unit.test_a_linha_sem_aparelho_fica_a_direita_do_parear import no_webkit
 
     casos = {}
     for nome, (montada, aba, resposta, tique) in cliques.items():
@@ -164,23 +180,23 @@ def _medir(cliques: dict[str, Medida]
                 ["js", _GUARDAR], ["js", ler],
                 ["js", _PINTAR % json.dumps(resposta)], ["espera", 0.3], ["js", ler],
                 ["js", _PINTAR % json.dumps(tique)], ["espera", 0.3], ["js", ler]])
-    filho = subprocess.run([sys.executable, "-c", SONDA, str(DESENHO)], input=json.dumps(casos),
-                           env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"),
-                           capture_output=True, text=True, timeout=600)
-    if filho.returncode != 0:
-        pytest.skip(f"o WebKit não subiu na tela de mentira: {filho.stderr.strip()[-300:]}")
-    return dict(json.loads(filho.stdout.strip().splitlines()[-1]))
+    return no_webkit(pagina, casos)
 
 
 def test_o_clique_na_lista_nao_mexe_na_rolagem_nem_na_aba(
-        cliques: dict[str, Medida]) -> None:
-    medidas = _medir(cliques)
+        cliques: dict[str, Medida], pagina_fresca: pathlib.Path) -> None:
+    """A aba que rola vai ao fim antes do clique, e a que cabe (a regra sem rolagem) segue cabendo.
+
+    Nos dois casos, o gesto e o tique não mexem na rolagem, na aba nem na janela.
+    """
+    medidas = _medir(cliques, pagina_fresca)
     falhas = []
     for caso, lidos in medidas.items():
         _, abriu, _, antes, _, depois, _, tique = lidos
         assert abriu == "ok", (caso, abriu)
         antes, depois, tique = json.loads(antes), json.loads(depois), json.loads(tique)
-        assert antes["topo"] > 0, f"{caso}: a lista não rolou antes do clique: {antes}"
+        if antes["altura"] > antes["vista"]:
+            assert antes["topo"] > 0, f"{caso}: a lista não rolou antes do clique: {antes}"
         mostra = MOSTRA[caso.partition("@")[0]]
         for quando, lido in (("no gesto", depois), ("no tique", tique)):
             for chave in ("topo", "altura", "aba", "janela"):

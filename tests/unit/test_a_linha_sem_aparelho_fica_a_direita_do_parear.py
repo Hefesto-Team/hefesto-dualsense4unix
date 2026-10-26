@@ -23,7 +23,6 @@ from __future__ import annotations
 import json
 import os
 import pathlib
-import shutil
 import subprocess
 import sys
 from typing import Any
@@ -39,31 +38,16 @@ from tests.unit.test_a_janela_da_extensao_age_e_gere_os_aparelhos import (  # no
     _Ponte,
     janela,
 )
-from tests.unit.test_a_lista_da_janela_configurar_nao_pula_ao_clicar_um_efeito import (
+from tests.unit.test_a_lista_da_janela_configurar_nao_pula_ao_clicar_um_efeito import (  # noqa: F401
     ENDERECO,
     MOD,
     VISTAS,
+    pagina_fresca,
     pecas_da_lovense,
 )
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 SEM_APARELHOS = {**VIVO, "aparelhos": []}
-
-
-@pytest.fixture(scope="session")
-def pagina_fresca(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
-    """O desenho da 07 gerado agora, do CSS e do Python desta árvore, numa pasta de prova: a
-    régua mede o que o gerador faz hoje, e a ``mockup/`` (que a costura regera) não entra."""
-    pasta = tmp_path_factory.mktemp("bancada-07")
-    for vizinha in (RAIZ / "mockup").glob("*.html"):
-        shutil.copy2(vizinha, pasta / vizinha.name)
-    ambiente = dict(os.environ, HEFESTO_BANCADA=str(pasta), PYTHONDONTWRITEBYTECODE="1",
-                    PYTHONPATH=os.pathsep.join(filter(None, [str(RAIZ / "src"),
-                                                             os.environ.get("PYTHONPATH", "")])))
-    gerou = subprocess.run([sys.executable, "-m", "hefesto_dualsense4unix.interface.aba07"],
-                           cwd=RAIZ, env=ambiente, capture_output=True, text=True, timeout=300)
-    assert gerou.returncode == 0, gerou.stdout[-300:] + gerou.stderr[-300:]
-    return pasta / "07-lancadores.html"
 
 
 def no_webkit(pagina: pathlib.Path, casos: dict[str, tuple[int, int, list[list[Any]]]]
