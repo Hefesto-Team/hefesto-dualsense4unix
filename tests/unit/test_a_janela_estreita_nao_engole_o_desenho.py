@@ -553,3 +553,47 @@ def test_a_mordida_da_afordancia_sem_o_title_o_corte_vira_sumico(tmp_path):
         f"com o `title` arrancado os {len(salvos)} cortes salvos tinham de virar "
         f"engolidos: eram {len(engolidos(inteira))} e viraram "
         f"{len(engolidos(mordida))}")
+
+
+QUATRO_NA_FITA = r"""
+(function(PLASTICOS, PERFIL){
+  const f = document.querySelector('.fita');
+  const modelo = f.querySelector('.chip.plastico');
+  f.querySelectorAll('.chip.plastico').forEach(c => c.remove());
+  const pt = ' <span class="pt">•</span> ';
+  PLASTICOS.forEach((p, i) => { const c = modelo.cloneNode(true);
+    c.innerHTML = 'P' + (i + 1) + pt + p + pt + (i % 2 ? 'BT' : 'USB'); f.appendChild(c); });
+  const nome = document.querySelector('.pa-nome');
+  nome.textContent = PERFIL;
+  const n = nome.getBoundingClientRect();
+  const p = document.querySelector('.perfil-ativo').getBoundingClientRect();
+  return JSON.stringify({larg: Math.round(n.width), dir: Math.round(n.right),
+                         dir_da_pilula: Math.round(p.right)});
+})(@@PLASTICOS@@, @@PERFIL@@)
+"""
+
+
+@pytest.mark.parametrize("largura", [940, LARGURA_DO_DESENHO])
+@pytest.mark.parametrize("perfil", ["—", "Freestyle"])
+def test_com_quatro_controles_o_nome_do_perfil_ativo_fica_a_vista(
+    largura: int, perfil: str
+) -> None:
+    """O nome do perfil ativo nunca some da fita, nem com quatro controles de nome longo.
+
+    Prova da D-1710-A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO depois do cadeado da moldura
+    (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01): quem cede primeiro é o rótulo «Perfil ativo»,
+    e o nome guarda um piso de 3em dentro da pílula.
+
+    MORDIDAS (26/10/2026): o ``topo.html`` de ``08a6ff5ac`` reprova com o nome em 0 px; tirar o
+    ``min-width:min-content`` da pílula reprova com o nome passando da borda dela.
+    """
+    from tests.unit.test_as_telas_de_16_10_no_webkit import _no_webkit
+
+    plasticos = ["Galactic Purple", "Starlight Blue"] * 2
+    passo = (QUATRO_NA_FITA.replace("@@PLASTICOS@@", json.dumps(plasticos))
+             .replace("@@PERFIL@@", json.dumps(perfil)))
+    uri = onde.pagina("01-jogar.html", publicado=False).as_uri()
+    lido: dict[str, Any] = _no_webkit(uri, (largura, ALTURA_DO_DESENHO), [passo])[0]
+    assert lido["larg"] >= 30, f"o nome do perfil ativo sumiu da fita: {lido}"
+    assert lido["dir"] <= lido["dir_da_pilula"] + 1, (
+        f"o nome do perfil ativo passa da borda da pílula, que o recorta: {lido}")

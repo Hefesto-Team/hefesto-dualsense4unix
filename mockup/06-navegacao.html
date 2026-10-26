@@ -78,7 +78,7 @@
   .trava-nav[aria-pressed="true"] .t-arco{transform:none}
   .trava-nav:focus-visible{outline:2px solid var(--cyan,#8be9fd);outline-offset:2px}
   .fita{min-width:0}
-  .fita-linha .perfil-ativo{flex-shrink:1000;overflow:hidden}
+  .fita-linha .perfil-ativo{display:grid;grid-auto-flow:column;grid-template-columns:minmax(0,max-content) minmax(3em,max-content);flex-shrink:1000;overflow:hidden;min-width:min-content}.fita-linha .pa-rot{min-width:0;overflow:hidden;text-overflow:ellipsis}
   .fita .chip.plastico{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .fita > span:first-child,.fita .chip:not(.plastico){flex-shrink:0}
   .fita.inerte{color:var(--fg)}
@@ -678,7 +678,7 @@ button[data-dica],a[data-dica],select[data-dica],input[data-dica],[role="button"
     <div class="marca-nome"><span class="m-hef">Hefesto</span><br><span class="m-ds">DualSense<span class="m-4">4</span>Unix</span></div>
     <div class="fita inerte" data-campo="fita-chips" data-hef-alvo="html"><span>Selecionar:</span><label class="chip on">Todos</label><label class="chip plastico on" data-campo="fita-chip" style="--plastico:#ae335a" title="A borda é a cor do plástico">P1 <span class="pt">•</span> Cosmic Red <span class="pt">•</span> USB</label><label class="chip plastico on" data-campo="fita-chip" style="--plastico:#7eb8d4" title="A borda é a cor do plástico">P2 <span class="pt">•</span> Starlight Blue <span class="pt">•</span> BT</label></div>
     <div class="conectado"><span class="bolinha">●</span> <b data-campo="conta-b">1 USB · 1 BT</b></div>
-    <div class="perfil-ativo" data-dica="O que você mudar em qualquer aba cai neste perfil ao Salvar perfil.">
+    <div class="perfil-ativo" data-dica="Perfil ativo: o que você mudar em qualquer aba cai neste perfil ao Salvar perfil.">
       <span class="pa-rot">Perfil ativo</span>
       <span class="pa-nome" data-campo="perfil">—</span>
     </div>
