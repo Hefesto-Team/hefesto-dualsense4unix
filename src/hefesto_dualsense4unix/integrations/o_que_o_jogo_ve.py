@@ -18,7 +18,6 @@ NATIVO: Final = "nativo"
 PELO_HEFESTO: Final = "pelo_hefesto"
 NAO_CHEGA: Final = "nao_chega"
 
-#: A máscara da fábrica e o nome da forma que o estado publica.
 FORMAS: Final[dict[str, str]] = {"dualsense": "dualsense", "xbox": "xbox360", "nintendo": "pro"}
 
 FUNCOES: Final[tuple[str, ...]] = (
@@ -26,7 +25,6 @@ FUNCOES: Final[tuple[str, ...]] = (
     "luz", "luz_de_jogador", "giroscopio", "touchpad", "microfone", "alto_falante",
 )
 
-#: O giroscópio e o touchpad saem das escolhas (o perfil e o controle), e não da tabela.
 _TABELA: Final[dict[str, dict[str, str]]] = {
     "dualsense": dict.fromkeys(FUNCOES, NATIVO),
     "xbox360": {
@@ -123,11 +121,11 @@ def o_que_o_jogo_ve(
     return {
         "forma": forma,
         "canal": canal,
-        "conexao": _CONEXOES.get(str(transporte)),  # (noqa-acento): a chave ASCII do estado
+        "conexao": _CONEXOES.get(str(transporte)),  # (noqa-acento)
         "troca_motivo": _texto(getattr(vpad, "troca_motivo", None)),
         "degradado_motivo": degradado,
         "porta_motivo": porta,
-        "funcoes": {nome: funcoes[nome] for nome in FUNCOES},  # (noqa-acento): idem
+        "funcoes": {nome: funcoes[nome] for nome in FUNCOES},  # (noqa-acento)
     }
 
 

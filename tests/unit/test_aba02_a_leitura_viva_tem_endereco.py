@@ -50,8 +50,6 @@ LUGARES = _lugares_da_bancada()
 UNIQ_CABO = "aa:bb:cc:00:00:01"
 UNIQ_RADIO = "aa:bb:cc:00:00:02"
 
-#: OS DOIS CONTROLES DA BANCADA, na forma do `state_full` medido em
-#: 03/09/2026: um `is_primary` COM leitura e um por rádio SEM `inputs` nenhum.
 CABO = {
     "uniq": UNIQ_CABO, "transport": "usb", "battery_pct": 95, "player_slot": 1,
     "vpad_backend": "uhid",
@@ -271,7 +269,6 @@ def test_a_ancora_do_plastico_acha_os_chips_da_fita_de_hoje():
     import aba02
     from monta import fita
 
-    # que é a condição para `monta.fita()` escrever o `style="--plastico:…"`.
     clicavel = aba02.fita_clicavel(fita(ativo="p1"))
     achados = aba02.CHIP_COM_COR.findall(clicavel)
     assert len(achados) == len(aba02.CONECTADOS), (

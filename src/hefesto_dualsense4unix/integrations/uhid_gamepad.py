@@ -96,39 +96,23 @@ UHID_EVENT_SIZE = 4 + _CREATE2_HEAD + HID_MAX_DESCRIPTOR_SIZE
 
 BUS_USB = 0x03
 
-#: VID/PID do DualSense FÍSICO de linha. É o que o `_is_dualsense` exige do
-#: controle de onde se copia o blueprint, além de ele não ser um pad nosso.
 DUALSENSE_VENDOR = 0x054C
 DUALSENSE_PRODUCT = 0x0CE6
 
-#: A roupa padrão do pad (`numeros_da_sony.ROUPA_PADRAO`, o Edge): com ela o
-#: `hid_playstation` registra o pad forjado como DualSense COMPLETO (validado ao
-#: vivo: hidraw+lightbar+motion+touchpad+rumble, "Registered DualSense
-#: controller" no log do kernel) e o SDL o reconhece como PS5. O pad também veste
-#: o DualSense de linha (`numeros_da_sony.ROUPA_COMUM`), pelo campo `product`. Nas
-#: duas roupas ele divide o par com um físico, e quem o separa do físico é a
-#: posse (`pad_usb.e_pad_nosso`: o ``HID_PHYS``, o ``HID_UNIQ``, o serial do gadget).
 VPAD_PRODUCT = 0x0DF2
 
-#: Feature reports que o probe do hid_playstation lê, com os tamanhos que o
 _FEATURE_SIZES: tuple[tuple[int, int], ...] = ((0x05, 41), (0x09, 20), (0x20, 64))
 
-#: Report de output do DualSense em USB (rumble/lightbar/gatilhos do jogo).
 _OUTPUT_REPORT_USB = 0x02
 
 _VALID_FLAG0_OFFSET = 0
 _RUMBLE_WEAK_OFFSET = 2
 _RUMBLE_STRONG_OFFSET = 3
 
-#: 0x02 SOZINHO. Os dois DualSense da máquina de teste são 0x0630 — testar só o
-#: SDL, winebus, a implementação DualSense do próprio título). Nada obriga
 _VIBRATION_FLAGS = 0x03
 
-#: tremendo sem parar, em todo jogo, em qualquer DualSense".
 _RUMBLE_STALE_SEC = 3.0
 
-#: Quantos tiques o pico do intervalo segura antes do último par sair: o piso
-#: do toque curto que o jogo pede entre dois tiques (~16,7 ms cada).
 _TOQUE_MINIMO_TIQUES = 1
 
 _TRIGGER_FLAGS = 0x0C
@@ -183,26 +167,18 @@ _REPLICA_MIN_INTERVAL_S = 1.0 / 250.0
 
 _GAME_REPLICA_GRACE_S = 0.5
 
-# A graça filtra o que o kernel escreve na sonda (player-LED e luz), não o
-# gatilho do jogo: um efeito mandado uma vez nela é evento, e não pode cair.
-# As escolhas de 09/10/2026, cada uma
-# com o seu interruptor no ambiente do daemon, sem editar código:
-#: «guarda»: o último gatilho da graça sai quando ela vence; «descarta» é o de antes.
 _GRACA_GUARDA = "guarda"
 _GRACA_DESCARTA = "descarta"
 _A_GRACA_DO_JOGO = _GRACA_GUARDA
 _INTERRUPTOR_DA_GRACA = "HEFESTO_DUALSENSE4UNIX_GRACA_DO_JOGO"
 _INTERRUPTOR_DO_PRAZO_DA_GRACA = "HEFESTO_DUALSENSE4UNIX_GRACA_DO_JOGO_S"
 _PRAZO_DA_GRACA_MAX_S = 5.0
-#: O que a graça guarda; a luz e o player-LED são o que o kernel escreve na sonda.
 _GUARDADAS_NA_GRACA = frozenset({"trigger_right", "trigger_left"})
-#: «sequencia»: X → Off → X chega inteiro, um por vez; «coalescido» (vale o último) é o de antes.
 _GATILHO_EM_SEQUENCIA = "sequencia"
 _GATILHO_COALESCIDO = "coalescido"
 _A_REPLICA_DO_GATILHO = _GATILHO_EM_SEQUENCIA
 _INTERRUPTOR_DA_REPLICA_DO_GATILHO = "HEFESTO_DUALSENSE4UNIX_REPLICA_DO_GATILHO"
 _REPLICADAS_EM_SEQUENCIA = frozenset({"trigger_right", "trigger_left"})
-#: Teto da fila por lado, entre duas voltas do laço; a entrega guarda só o último (ou o rearme).
 _SEQUENCIA_MAX = 8
 
 
@@ -232,7 +208,6 @@ def _o_gatilho_em_sequencia() -> bool:
     )
     return escolha == _GATILHO_EM_SEQUENCIA
 
-#: Report de input do DualSense em USB (sticks/gatilhos/botões → jogo).
 _INPUT_REPORT_USB = 0x01
 
 _INPUT_PAYLOAD_SIZE = 63
@@ -266,39 +241,19 @@ _BUTTONS2_BITS: dict[str, int] = {
     "mic_btn": 0x04,
 }
 
-#: (esquerda/meio/direita) é invenção nossa para o modo mouse, o DualSense real
 _TOUCHPAD_BUTTONS = frozenset({
     "touchpad", "touchpad_press",
     "touchpad_left_press", "touchpad_middle_press", "touchpad_right_press",
 })
 _TOUCHPAD_BIT = 0x02
 
-#: Pontos de toque do touchpad (4 B cada) dentro do payload do report 0x01.
-#:
-#: O byte de contato é INVERTIDO: o `dualsense_parse_report` lê
-#: ``active = !(point->contact & 0x80)`` — ou seja, payload zerado significa
-#: **dedo encostado em (0,0)**, não "sem toque". Sem carimbar o 0x80 o vpad nasce
-#: com dois toques fantasma presos no canto do touchpad.
-#:
-#: 32/36, não 31/35: o `reserved2` do `struct dualsense_input_report` fica no 31 e
-#: empurra os pontos. Medido num report cru do controle com o dedo FORA do
-#: touchpad — o 0x80 aparece exatamente em ``payload[32]`` e ``payload[36]``
-#: (o 31 vale 0x15, lixo do sensor_timestamp).
 _TOUCH_POINT_OFFSETS = (32, 36)
 _TOUCH_INACTIVE = 0x80
 
-#: GYRO-01 — janela de MOTION do payload do report 0x01: bytes 15..39 do
-#: `struct dualsense_input_report` (hid-playstation.c): gyro[3] __le16 em
-#: 15-20, accel[3] __le16 em 21-26, sensor_timestamp __le32 em 27-30 (unidade
-#: de 0,33 µs — o dt que o SDL usa para integrar o gyro), reserved2 em 31 e os
-#: dois pontos de toque (4 B cada) em 32-35/36-39. É a fatia que o
-#: `PhysicalReportReader` copia VERBATIM do report cru do físico (0x01 USB /
-#: 0x31 BT) e entrega em `forward_motion` — zero matemática no caminho.
 _MOTION_WINDOW_START = 15
 _MOTION_WINDOW_LEN = 25
 _MOTION_WINDOW = slice(_MOTION_WINDOW_START, _MOTION_WINDOW_START + _MOTION_WINDOW_LEN)
 
-#: Janela NEUTRA — byte a byte idêntica ao que o encoder sempre emitiu: IMU
 _MOTION_NEUTRAL = bytes(
     _TOUCH_INACTIVE if offset in _TOUCH_POINT_OFFSETS else 0
     for offset in range(_MOTION_WINDOW_START, _MOTION_WINDOW_START + _MOTION_WINDOW_LEN)
@@ -307,36 +262,11 @@ _MOTION_NEUTRAL = bytes(
 _CALIBRATION_FEATURE_ID = 0x05
 _CALIBRATION_FEATURE_SIZE = 41
 
-#: Zerado, o vpad anuncia **5% descarregando para sempre** — o jogo mostra alerta
-#: de bateria fraca num controle carregado. Medido: o físico manda 0x29 (= 95%).
-#: Espelhamos a bateria do controle físico daquele jogador; sem dado, "cheio e
-#: carregando" (0x1F) é a mentira menos daninha — não dispara alerta.
 _STATUS_OFFSET = 52
 _STATUS_DESCONHECIDO = 0x1F
 
-#: BT-E-VPAD-01, furo 2 — o byte 53 do report de entrada (`status[1]`), que o
-#: vpad NUNCA escrevia.
-#:
-#: Ele carrega três bits, documentados no kernel 6.18 (patches do jack de
-#: áudio, Collabora):
-#:
-#:   bit0 HP_DETECT   — há fone plugado
-#:   bit1 MIC_DETECT  — há microfone plugado
-#:   bit2 MIC_MUTE    — o microfone está mudo
-#:
-#: Saindo sempre `0x00`, o vpad anunciava... exatamente o contrário do que
-#: parece: com os bits em zero, **nenhum** dispositivo é declarado. O problema
-#: é que o campo nunca acompanhava o físico — um jogo que decida rotear som
-#: para o alto-falante do controle SÓ quando não há fone estava lendo um valor
-#: fixo que não corresponde a nada.
-#:
-#: A cura é espelhar o byte do controle físico daquele jogador. O dado está
-#: FORA da janela de motion (15..39), então precisa de caminho próprio — o
-#: mesmo desenho que o clique do touchpad já usa.
 _STATUS1_OFFSET = 53
 
-#: O valor neutro do byte 53: nada plugado, nada mudo. É o que o vpad manda
-#: enquanto o físico não disser o contrário — e é honesto, porque "não sei" e
 _STATUS1_NEUTRO = 0x00
 
 _STATUS1_BITS_CONHECIDOS = 0x07
@@ -356,11 +286,8 @@ _HAT_BY_VECTOR: dict[tuple[int, int], int] = {
 
 _BIND_POLL_INTERVAL_S = 0.01
 
-#: Medido ao vivo: o probe que recusa manda CLOSE+STOP em ~2 ms → 50 ms são 25x de
-#: folga, pagos uma vez por promoção de jogador. (Começou em 150 ms, que davam 75x
 _BIND_SETTLE_S = 0.05
 
-#: escreve (num DualSense de verdade este campo é o MAC do adaptador, no rádio,
 VPAD_HID_PHYS = "hefesto-vpad"
 
 
@@ -420,7 +347,7 @@ def _percent_para_nibble(percent: int) -> int:
     """
     if percent >= 100:
         return _BATTERY_MAX_NIBBLE
-    nibble = int((percent - 5 + 5) // 10)  # == round-half-up de (percent-5)/10
+    nibble = int((percent - 5 + 5) // 10)
     return min(max(nibble, 0), _BATTERY_MAX_NIBBLE - 1)
 
 
@@ -433,7 +360,6 @@ def _hidiocgfeature(fd: int, report_id: int, size: int) -> bytes:
     return bytes(buf[:ret]) if ret > 0 else b""
 
 
-#: A classe ``hidraw`` do sysfs, de onde o `_is_dualsense` lê o par e a posse.
 RAIZ_DOS_HIDRAW = usb_pai.RAIZ_HIDRAW
 
 
@@ -586,7 +512,6 @@ class UhidDualSense:
     identity: str | None = None
     product: int = VPAD_PRODUCT
     blueprint: dict[str, Any] | None = None
-    #: do físico, o 0x05 precisa ser o DAQUELA unidade — o canônico veio de UMA
     calibration_0x05: bytes | None = None
     rumble_sink: Callable[[int, int], None] | None = None
     trigger_sink: Callable[[str, bytes], None] | None = None
@@ -672,8 +597,6 @@ class UhidDualSense:
     _gadget_falhou: bool = False
     _gadget_caiu: bool = False
     _sem_gadget: bool = False
-    #: o pad que voltou ao uhid (não enumerou, ou o gadget caiu) tenta o gadget
-    #: UMA vez de novo, sem jogo aberto (UM-GADGET-QUE-NAO-ENUMERA-NAO-CONDENA-OS-OUTROS-01).
     _gadget_outra_vez: bool = False
     _gadget_outra_vez_em: float = 0.0
 
@@ -732,7 +655,6 @@ class UhidDualSense:
             session_end_sink=session_end_sink,
             mic_led_sink=mic_led_sink,
             mic_mute_sink=mic_mute_sink,
-            # a roupa que o pad veste; a desconhecida e o None vestem o Edge
             product=roupa_normalizada(roupa),
         )
 
@@ -1016,8 +938,6 @@ class UhidDualSense:
             if fd is None:
                 return
             self._fd = None
-            # O pad some: não há tique seguinte para o último par, então o pico do
-            # intervalo não o segura, e o controle termina no que o jogo pediu por último.
             self._rumble_pico_a_entregar = None
             self._rumble_toque_restante = 0
             self._entregar_o_pendente()
@@ -1345,7 +1265,7 @@ class UhidDualSense:
         if self._fd is None:
             return False
         if self._gadget is not None:
-            return True  # a enumeração pelo vhci leva segundos: o fio a vigia
+            return True
         deadline = self.time_fn() + timeout_s
         while not self._started:
             self.pump_ff()
@@ -1378,7 +1298,6 @@ class UhidDualSense:
         if len(report) > HID_MAX_DESCRIPTOR_SIZE:
             logger.warning("uhid_input_grande_demais", tamanho=len(report))
             return False
-        # e zera o resto, então mandar o report cru poupa ~4 KB de copy_from_user
         event = struct.pack("<IH", UHID_INPUT2, len(report)) + report
         with self._lock:
             fd = self._fd
@@ -1520,7 +1439,6 @@ class UhidDualSense:
             self._rumble_maior_pedido = pedido_mais_forte(
                 self._rumble_maior_pedido, (weak, strong)
             )
-        # mesmo sem haver o que reenviar ao hardware.
         self._rumble_visto_em = self.time_fn() if (weak or strong) else None
         self._carimbar(ATIVIDADE_RUMBLE)
         if (weak, strong) == self._last_sent:
@@ -1704,10 +1622,6 @@ class UhidDualSense:
             self._replica_last[categoria] = valor
             self._forward_replica(categoria, valor, primeira=primeira)
         for categoria, fila in filas.items():
-            # A fila sai uma por volta do laço (o fio do uhid só enfileira), e o
-            # jogo que muda o gatilho a cada quadro ficaria até oito voltas atrás:
-            # o último vale, e só a volta ao bloco que o físico já tem passa
-            # antes pelo bloco diferente que veio antes dela (o rearme).
             if fila and fila[-1] != self._replica_last.get(categoria):
                 ultimo = fila[-1]
                 fila.clear()
@@ -1819,14 +1733,8 @@ class UhidDualSense:
                      struct.pack("<IIH", UHID_SET_REPORT_REPLY, request_id, 0))
 
 
-    #: a nova tentativa pergunta ao broker ANTES de desfazer o uhid, e o pad só
-    #: troca de pele com o gadget na mão. Vale para o pad recusado pela sessão
-    #: (O-PAD-QUE-NASCE-ANTES-DO-BROKER-ACEITAR-FICA-SEM-PORTA-01) e para o pad cujo
-    #: gadget caiu (O-PAD-QUE-NASCE-OU-VOLTA-PEDE-O-GADGET-FORA-DO-TIQUE-01).
     _gadget_na_mao: _GadgetDoPad | None = None
-    #: o pedido da nova tentativa em voo, fora do tique (`_PedidoAoBroker`).
     _pedido_ao_broker: _PedidoAoBroker | None = None
-    #: o serial da última recusa: o `stop` a esquece, e o pad que volta a diz de novo.
     _serial_da_recusa: str | None = None
 
     @property
@@ -1866,11 +1774,9 @@ class UhidDualSense:
 
     def stop(self) -> None:
         """Destrói o device, devolve o gadget dele ao broker e só DEPOIS devolve o MAC."""
-        # a casa desce como no tique (`parar_fora_do_tique`); o MAC, com a última descida
         _parar_na_casa(self)
         _DESCIDA_AO_BROKER.soltar(self, lambda: _despir_se_parado(self))
-        _DESCIDA_AO_BROKER.terminar(self)  # a descida do pad, a do tique em voo inclusive
-        # o doctor conta quem está no uhid pelo diário: o pad que parou sai da conta.
+        _DESCIDA_AO_BROKER.terminar(self)
         logger.info("vpad_parou", player=self.player)
 
     def ancorar_no_aparelho(self, identidade: str | None) -> bool:
@@ -2039,8 +1945,6 @@ class UhidDualSense:
                 return
         self._rumble_a_entregar = None
         self._emit_rumble(*par)
-
-    # `hid-playstation` que o adotou faz o que faria num DualSense: na borda de
 
     @property
     def mic_mudo_do_jogo(self) -> int:
@@ -2257,7 +2161,6 @@ class _MacsDosVpadsVivos:
 _MACS_DOS_VPADS_VIVOS = _MacsDosVpadsVivos()
 
 
-#: módulo para não deslocar as citações `arquivo:linha` do meio.
 _MIC_LED_OFFSET = 8
 
 _MIC_MUDO_OFFSET = 9
@@ -2305,58 +2208,18 @@ def _e_eco_puro(body: bytes) -> bool:
     return not body[_VALID_FLAG1_OFFSET] & ~_FLAG1_DO_ECO_PURO & 0xFF
 
 
-# --- O PAD EM USB (O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01, 07/10/2026) ---
-#
-# O vpad nascia só por uhid, sem `usb_device` pai, e o jogo com a biblioteca da
-# Sony não casava o som dele pelo contêiner (o engasgo do Sackboy). Onde o
-# kernel cumpre o contrato (`pad_usb.contrato_que_falta`), o MESMO
-# `UhidDualSense` nasce num gadget só HID que o broker monta, prende ao
-# `usbip-vudc` e liga pelo `vhci_hcd`; o resto da classe não sabe a diferença.
-# O fd do `/dev/hidgN` faz o papel do `/dev/uhid`, e o que ele diz se traduz
-# nos eventos do uhid que a classe já atende:
-#   - a entrada (o report 0x01) se escreve crua, um report por `write()`;
-#   - o output do jogo (o 0x02, que sem endpoint OUT chega por SET_REPORT) se
-#     lê do `read()` e vira um UHID_OUTPUT;
-#   - as features do probe (0x05, 0x09, 0x20) se guardam no `f_hid` antes do
-#     `attach` (`GADGET_HID_WRITE_GET_REPORT`), e o GET_REPORT que sobrar
-#     (`POLLPRI`) se responde com elas;
-#   - o 0x08 que o jogo manda é SET_FEATURE: o `f_hid` já o confirmou, e ele
-#     não vai ao controle (é o que o uhid fazia com o UHID_SET_REPORT);
-#   - o bind é o `hidraw` do lado do jogo nascer sob o `usb_device` com o serial
-#     do gadget, e vira o UHID_START + UHID_OPEN de sempre (o `hid_playstation`
-#     abre o aparelho no probe).
-# A enumeração leva segundos (~9 s na prova): o `wait_for_bind` aceita o gadget
-# montado, e o fio vigia a enumeração; se ela não vier em
-# `_GADGET_ENUMERA_S` por gadget da fila (o dele e os montados à frente, que o
-# hub enumera um por vez), o pad volta ao uhid, e a falha é da porta dele, não
-# do processo (`pad_usb.anotar_falha_da_porta`): o pad seguinte tenta o gadget.
-
 _GADGET_ENUMERA_S = 15.0
 _GADGET_VARRE_S = 5.0
-#: o prazo do estacionado cujo aparelho está AQUI e que nenhuma adoção decidiu
-#: (a emulação desligada): conta de quando o vigia o viu de volta, nunca do estacionamento.
 _GADGET_RETOMA_S = 10.0
 _GADGET_VIGIA_S = 0.25
 _GADGET_VEZ_DA_ESCRITA_MS = 8
 _GADGET_LEITURA = 512
 _GADGET_PERGUNTA_A_CADA = 8
-#: a rajada de leituras que falham e não acaba (o gadget de pé, o ENOMEM sem
-#: fim: 15/10/2026, mais de dois minutos) diz-se a cada este tanto, e não só no fim.
 _GADGET_RAJADA_LONGA_S = 60.0
-#: quanto o som espera a âncora do gadget montado antes de emprestar uma: a
-#: enumeração e duas voltas do relógio da identidade (o P1 que monta sem dono).
 _GADGET_A_CAMINHO_S = _GADGET_ENUMERA_S + 4.0
-#: o gadget que enumerou sem dono (o P1 do boot) só espera o relógio da
-#: identidade, uma volta e folga, e não a montagem inteira.
 _GADGET_SEM_DONO_S = 3.0
-#: os seriais dos gadgets montados que o hub do `vhci_hcd` ainda não enumerou.
-#: Ele enumera uma porta por vez, ~5,6 s cada (medido em 12/10/2026, quatro pads
-#: montados no mesmo ms: o terceiro achado aos 14,85 s e morto aos 15,0 s pelo
-#: prazo, o quarto nunca começou), e o prazo de cada gadget conta a fila.
 _FILA_DA_ENUMERACAO: set[str] = set()
 _TRAVA_DA_FILA = threading.Lock()
-#: a identidade do gadget e o registro da âncora mudam juntos: o fio da
-#: enumeração e o relógio da identidade nunca se cruzam com metade feita.
 _TRAVA_DA_ANCORA = threading.Lock()
 _FEATURES_DO_PROBE = (0x05, 0x09, 0x20)
 
@@ -2374,13 +2237,10 @@ class _GadgetDoPad:
     interface: str | None = None
     escrita_falhou: int = 0
     falhas_seguidas: int = 0
-    #: a rajada de leituras que falham: quantas e o último erro (uma linha por rajada).
     leituras_falhas: int = 0
     leitura_erro: str = ""
     leitura_falhou_desde: float = 0.0
-    #: quanto o som espera a âncora deste gadget (a fila da enumeração conta).
     a_caminho_s: float = _GADGET_A_CAMINHO_S
-    #: a roupa que o gadget veste, (VID, PID): o pad que o retoma tem de vestir a mesma.
     par: tuple[int, int] = (DUALSENSE_VENDOR, VPAD_PRODUCT)
 
     def desmontar(self) -> None:
@@ -2419,15 +2279,9 @@ def _sair_da_fila(serial: str) -> None:
         _FILA_DA_ENUMERACAO.discard(serial)
 
 
-#: as recusas do broker que passam sozinhas: ainda não há sessão na frente (o
-#: daemon de usuário sobe antes do login), ou o broker não está no ar. O pad
-#: recusado por uma delas pede de novo a cada `_GADGET_VARRE_S`, sem jogo aberto.
 _RECUSA_DA_SESSAO = frozenset({"broker_fora_do_ar", "sem_sessao_ativa",
                                "nao_e_quem_esta_na_frente"})
-#: ``{serial: motivo}`` da última recusa do broker a este pad; o gadget montado a tira.
 _RECUSAS_DO_BROKER: dict[str, str] = {}
-#: o cliente do pedido recusado volta no pedido seguinte do mesmo serial: o
-#: broker fora do ar é dito uma vez, e não uma linha por volta.
 _CLIENTES_RECUSADOS: dict[str, Any] = {}
 _TRAVA_DAS_RECUSAS = threading.Lock()
 
@@ -2500,25 +2354,17 @@ def _ha_jogo_aberto() -> bool:
 
     try:
         return bool(pids_de_jogo())
-    except Exception:  # pragma: no cover - defensivo: na dúvida, há jogo
+    except Exception:  # pragma: no cover
         return True
 
 
-#: as portas do pad em USB, injetáveis pela régua (a suíte nunca fala com o
-#: broker da máquina: o `conftest` desvia o socket, e a régua troca estas).
 PEDIR_O_PAD_USB: Callable[[str, bytes, str, tuple[int, int]], _GadgetDoPad | None] = (
     _pedir_ao_broker
 )
 HIDRAW_DO_GADGET: Callable[[str], tuple[str, str] | None] = pad_usb.hidraw_do_gadget
 JOGO_ABERTO: Callable[[], bool] = _ha_jogo_aberto
-#: o aparelho físico ainda está na máquina? O estacionado dele que não foi
-#: retomado é fantasma, e desce mesmo com o jogo aberto.
 APARELHO_PRESENTE: Callable[[str], bool] = pad_usb.aparelho_presente
-#: a mesma pergunta do doctor (`system_check.contrato_do_pad_em_usb`): o que não
-#: se lê volta «não sei» (``["?"]``), e na dúvida o pad nasce uhid.
 CONTRATO_QUE_FALTA: Callable[[], list[str]] = system_check.contrato_do_pad_em_usb
-#: o ``usbcore`` vivo atrasa os pedidos de controle deste par (a quirk ``n``)?
-#: O gadget herda a quirk do par que veste; com ela, o pad fica no uhid.
 QUIRK_DO_PAR: Callable[[tuple[int, int]], bool] = pad_usb.o_par_tem_a_quirk_que_atrasa
 
 
@@ -2527,7 +2373,6 @@ class _Estacionado:
     """Um gadget que espera o jogo fechar, e desde quando o aparelho dele está aqui."""
 
     gadget: _GadgetDoPad
-    #: a varredura que viu o aparelho de volta (None = ainda fora); o prazo conta daqui.
     aqui_desde: float | None = None
 
 
@@ -2576,7 +2421,6 @@ class _GadgetsEstacionados:
         if par is not None and achado.gadget.par != par:
             logger.info("pad_usb_estacionado_desce", gadget=achado.gadget.gadget,
                         motivo="outra_roupa")
-            # o refazer do tique passa por aqui; o `stop` do ``dono`` espera esta descida
             _DESCIDA_AO_BROKER.descer(achado.gadget, dono)
             return None
         return achado.gadget
@@ -2691,7 +2535,6 @@ def _o_pad_em_usb(pad: UhidDualSense, features: dict[int, bytes]) -> bool:
         return False
     gadget = _GADGETS_ESTACIONADOS.retomar(pad.identity, (DUALSENSE_VENDOR, pad.product), pad)
     if gadget is None:
-        # o pedido que a nova tentativa já fez ao broker (`_tentar_o_gadget_outra_vez`)
         gadget, pad._gadget_na_mao = pad._gadget_na_mao, None
     if gadget is None:
         gadget = _pedir_o_gadget(pad)
@@ -2798,7 +2641,7 @@ def _vigiar_a_enumeracao(pad: UhidDualSense) -> None:
             _sair_da_fila(gadget.serial)
             pad._gadget_falhou = True
             pad_usb.anotar_sem_porta(
-                pad.identity or gadget.identidade, "nao_enumerou"  # (noqa-acento): chave de máquina
+                pad.identity or gadget.identidade, "nao_enumerou"
             )
         return
     _sair_da_fila(gadget.serial)
@@ -2866,14 +2709,10 @@ def _drenar_o_gadget(pad: UhidDualSense, fd: int, eventos: int) -> bool:
         try:
             report = os.read(fd, _GADGET_LEITURA)
         except OSError as exc:
-            # EAGAIN é a fila do f_hid vazia (o fim normal da drenagem); EBADF,
-            # o fd que o stop fechou. O resto é falha: conta na rajada e
-            # pergunta se o gadget ainda existe, como a escrita.
             if exc.errno in (errno.EAGAIN, errno.EBADF) or gadget is None:
                 _fechar_a_rajada(pad, gadget)
                 return False
             if pad._gadget_caiu:
-                # já se sabe: o bombeio do tique desmonta, e o fio só espera.
                 return True
             gadget.leituras_falhas += 1
             gadget.leitura_erro = str(exc)
@@ -2885,12 +2724,6 @@ def _drenar_o_gadget(pad: UhidDualSense, fd: int, eventos: int) -> bool:
             if pad._started:
                 _o_gadget_caiu(pad, gadget, gadget.leituras_falhas)
             if pad._gadget_caiu:
-                # O ENOMEM que vem com a queda é o `f_hidg_ssreport_read` do f_hid sem
-                # endpoint OUT: o host desligou a função (`hidg_disable`, a porta do vhci
-                # solta quando o broker reinicia) e não há SET_REPORT na fila. A linha
-                # `pad_usb_caiu_fica_o_uhid` já diz isso; a da rajada só sai se a função
-                # ficou desligada por mais de uma leitura antes de a porta sumir, ou se o
-                # erro não é esse ENOMEM (um errno que a queda não explica se escreve).
                 if gadget.leituras_falhas > 1 or exc.errno != errno.ENOMEM:
                     _fechar_a_rajada(pad, gadget)
                 gadget.leituras_falhas = 0
@@ -3023,7 +2856,6 @@ def _enviar_pelo_gadget(pad: UhidDualSense, report: bytes) -> bool:
                     gadget.falhas_seguidas += 1
                     _o_gadget_caiu(pad, gadget)
                 break
-        # O estado que não saiu sai no próximo compasso do fio: nada fica preso.
         pad._last_body = None
         return False
 
@@ -3126,15 +2958,11 @@ class _PedidoAoBroker:
         pedir: Callable[[str, bytes, str, tuple[int, int]], _GadgetDoPad | None],
     ) -> None:
         self.serial: str | None = None
-        #: o gadget chegou com um jogo aberto e desceu no fio: o pad fica no uhid.
         self.jogo_abriu = False
         self._gadget: _GadgetDoPad | None = None
         self._largado = False
-        #: o fio já leu o ``_largado``: o que chega daqui em diante o `largar` desce.
         self._decidido = False
-        #: a fila em que o `largar` deixou a promessa (a do módulo naquela hora).
         self._prometido_a: _DescidaAoBroker | None = None
-        #: o pad que pediu: o gadget que o `stop` dele larga desce na fila dele.
         self._dono = pad
         self._trava = threading.Lock()
         self._pronto = threading.Event()
@@ -3160,7 +2988,7 @@ class _PedidoAoBroker:
                 logger.info("pad_usb_espera_o_jogo_fechar", gadget=descer.gadget,
                             player=pad.player)
                 descer.desmontar()
-        except Exception:  # pragma: no cover - defensivo: o fio nunca derruba o pad
+        except Exception:  # pragma: no cover
             logger.debug("pad_usb_pedido_de_novo_falhou", player=pad.player, exc_info=True)
         with self._trava:
             largado = self._largado
@@ -3171,11 +2999,9 @@ class _PedidoAoBroker:
             if largado and self.serial is not None:
                 _esquecer_a_recusa_do_serial(self.serial)
         finally:
-            # o gadget tardio desce pela fila, e a promessa do pad se cumpre nela
             fila = self._prometido_a
             if largado and fila is not None:
                 fila.cumprir(self._dono, self, gadget)
-            # pronto só depois da arrumação do largado: quem espera vê o fio terminado
             self._pronto.set()
 
     @property
@@ -3208,10 +3034,7 @@ class _PedidoAoBroker:
             _DESCIDA_AO_BROKER.descer(gadget, self._dono)
 
 
-#: quanto quem espera uma descida espera por ela: as duas tentativas do cliente
-#: (`hidraw_broker_client._TIMEOUT_S`, 2 s cada) e folga.
 _DESCIDA_ESPERA_S = 5.0
-#: quanto o pedido novo espera a descida do mesmo serial: uma por jogador na frente.
 _DESCIDA_DO_SERIAL_ESPERA_S = 4 * _DESCIDA_ESPERA_S
 
 
@@ -3229,15 +3052,10 @@ class _DescidaAoBroker:
 
     def __init__(self) -> None:
         self._trava = threading.Condition()
-        #: ``(dono, gadget)`` na ordem de chegada; o dono é o pad, ou None.
         self._fila: collections.deque[tuple[object, _GadgetDoPad]] = collections.deque()
-        #: ``(dono, pedido)`` do pedido largado em voo: o gadget dele ainda pode chegar.
         self._prometidas: list[tuple[object, object]] = []
         self._em_voo: tuple[object, _GadgetDoPad] | None = None
-        #: as que o `stop` tirou da fila e desce ele mesmo: seguem pendentes até o fim.
         self._no_stop: list[tuple[object, _GadgetDoPad]] = []
-        #: ``(dono, depois)`` do pad que parou sem esperar: roda quando a última descida
-        #: do dono termina (:meth:`soltar`).
         self._depois: list[tuple[object, Callable[[], None]]] = []
         self._fio: threading.Thread | None = None
 
@@ -3308,7 +3126,7 @@ class _DescidaAoBroker:
         for _quem, depois in prontos:
             try:
                 depois()
-            except Exception:  # pragma: no cover - defensivo: o fio da descida não cai
+            except Exception:  # pragma: no cover
                 logger.debug("pad_usb_descida_depois_falhou", exc_info=True)
         with self._trava:
             self._depois = [item for item in self._depois

@@ -126,7 +126,7 @@ def _gravar_o_diario(veredito: Veredito, agora: float) -> None:
 class ConexoesSubsystem:
     """Vigia as conexões de rádio e cura o link que não virou controle."""
 
-    name = "conexoes"  # (noqa-acento): nome ASCII do subsystem, como os irmãos
+    name = "conexoes"  # (noqa-acento)
 
     def __init__(
         self,
@@ -149,8 +149,7 @@ class ConexoesSubsystem:
         bruto = os.environ.get(ENV_DESLIGA)
         if bruto is None:
             return True
-        # (noqa-acento) na linha do conjunto: "nao" é a digitação de quem não
-        negativos = {"0", "false", "no", "nao", "não"}  # (noqa-acento): digitação
+        negativos = {"0", "false", "no", "nao", "não"}  # (noqa-acento)
         return bruto.strip().lower() not in negativos
 
     async def start(self, ctx: DaemonContext) -> None:

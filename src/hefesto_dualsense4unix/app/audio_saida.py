@@ -507,8 +507,6 @@ class RotaDeSaida:
             guardar = False
         if guardar:
             self._gravar_memoria(atual)
-        # O sink do DualSense estava `MUTED` no PipeWire, por estado que o
-        # default-routes`) e restaura a cada conexão sem escrever nada em log
         garantir_saida_audivel(sink_do_controle, runner=self._runner)
         return self._trocar(sink_do_controle)
 
@@ -531,9 +529,6 @@ class RotaDeSaida:
         return sink_padrao_da_saida(self._runner(["pactl", "get-default-sink"])) == sink
 
 
-# `card.definir_pedido_de_rota(self._aplicar_rota_do_sistema)`, e aquele método
-
-
 @dataclass(frozen=True)
 class DesfechoDaRota:
     """O que aconteceu com o pedido de camada 1. `motivo` vazio = deu certo."""
@@ -543,7 +538,6 @@ class DesfechoDaRota:
     sink: str = ""
 
 
-#: * a primeira continua exata — o DualSense **não** expõe placa ALSA própria
 MOTIVO_ROTA_SEM_SINK: Final[str] = (
     "não achei a saída de som deste controle agora, então não há para onde "
     "mandar o som do computador. Se ele acabou de chegar, espere alguns "
@@ -839,8 +833,6 @@ def caminho_regra_nunca_dorme(home: str | None = None) -> str:
 
     from hefesto_dualsense4unix.utils.xdg_paths import wireplumber_dropin
 
-    # O dono único diz a pasta e a forma (SPA-JSON ou Lua) que o WirePlumber
-    # instalado lê; `home` só desvia a raiz, para o teste e para a bancada.
     raiz = Path(home) / ".config" if home is not None else None
     return str(wireplumber_dropin(NOME_REGRA_NUNCA_DORME, raiz))
 

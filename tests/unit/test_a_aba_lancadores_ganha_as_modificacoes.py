@@ -130,7 +130,7 @@ def test_a_aba_e_as_janelas_cabem_sem_rolagem_vertical(navegador, larg, alt) -> 
           return {alto: d.scrollHeight, cabe: d.clientHeight,
                   largo: d.scrollWidth > d.clientWidth + 1}; }""")
         assert m["alto"] <= m["cabe"] + 1 and not m["largo"], ("aba", m)
-        for ancora in ("modificacao", "lanc-conf", "impedimentos"):  # (noqa-acento: âncora do HTML)
+        for ancora in ("modificacao", "lanc-conf", "impedimentos"):  # (noqa-acento)
             pg.goto(f"{MOCKUP.as_uri()}#{ancora}")
             dentro = pg.evaluate("""(a) => { const r = document.getElementById(a);
               const cx = r.querySelector('.tn-cx').getBoundingClientRect();
@@ -159,7 +159,7 @@ def test_a_janela_da_extensao_com_tres_grupos_vai_em_duas_colunas(navegador, lar
     sem_agora = exp.modificacao_miolo_html("Minha extensão", exp.OPCOES_DO_DESENHO, mod="exemplo")
     pg = navegador.new_page(viewport={"width": larg, "height": alt})
     try:
-        pg.goto(f"{MOCKUP.as_uri()}#modificacao")  # (noqa-acento: âncora do HTML)
+        pg.goto(f"{MOCKUP.as_uri()}#modificacao")  # (noqa-acento)
         pg.evaluate("h => { document.getElementById('mod-janela').innerHTML = h; }", sem_agora)
         m = pg.evaluate("""() => { const j = document.getElementById('mod-janela');
           const g = j.querySelector('.ky-grade');
@@ -172,11 +172,6 @@ def test_a_janela_da_extensao_com_tres_grupos_vai_em_duas_colunas(navegador, lar
         assert m["colunas"] == 2 and m["fundo"] <= m["corpo"] + 1, m
     finally:
         pg.close()
-
-# -- O produto: o pacote liga a aba ao registro das modificações ---------------------------------
-#
-# Tudo em ``tmp_path``: o registro, o código, os dados e a pasta de origem são de mentira, e a Steam
-# é um dublê da sondagem. Nada toca o ``~/.config`` nem o ``~/.local`` dela.
 
 import json
 import shutil
@@ -194,7 +189,7 @@ def lar(tmp_path, monkeypatch):
     """O lar de mentira das modificações, e o pacote com o cache e as janelas zerados."""
     from hefesto_dualsense4unix.mods.instalador import Lugares
 
-    lg = Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # (noqa-acento) campo
+    lg = Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # (noqa-acento)
                  registro=tmp_path / "config" / "mods.json",
                  estado=tmp_path / "run" / "mods-estado.json")
     monkeypatch.setattr(Lugares, "do_xdg", classmethod(lambda cls: lg))
@@ -223,12 +218,12 @@ def _fonte(tmp_path: pathlib.Path, mod_id: str = "toque", *, nome: str = "Toque"
     """A pasta de uma extensão de tema (só declaração: nenhum processo)."""
     pasta = tmp_path / "fonte" / mod_id
     pasta.mkdir(parents=True, exist_ok=True)
-    manifesto = {"id": mod_id, "nome": nome, "versao": "0.1",  # (noqa-acento) chave
+    manifesto = {"id": mod_id, "nome": nome, "versao": "0.1",  # (noqa-acento)
                  "api": ">=1,<3",
-                 "licenca": "MIT", "tipos": ["tema"], "tema": {},  # (noqa-acento) chave
-                 "permissoes": list(permissoes),  # (noqa-acento) chave do manifesto
-                 "descricao": "Muda um detalhe.",  # (noqa-acento) chave
-                 "opcoes": opcoes or [], **(extra or {})}  # (noqa-acento) chave do manifesto
+                 "licenca": "MIT", "tipos": ["tema"], "tema": {},
+                 "permissoes": list(permissoes),  # (noqa-acento)
+                 "descricao": "Muda um detalhe.",  # (noqa-acento)
+                 "opcoes": opcoes or [], **(extra or {})}  # (noqa-acento)
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
     return pasta
 
@@ -276,9 +271,7 @@ def test_escolher_a_pasta_instala_o_manifesto_apontado(lar, ctx, tmp_path) -> No
     carga = a07.escolher_arquivo_da_modificacao(
         ctx, {}, _Ponte(str(pasta / "hefesto-mod.json")))
     assert "Toque instalada" in carga["recado"] and _entrada(lar, "toque") is not None
-    # cancelar não é erro: a tela não fala
     assert a07.escolher_arquivo_da_modificacao(ctx, {}, _Ponte(None)) is None
-    # outro arquivo não é o manifesto
     with pytest.raises(RuntimeError, match=r"hefesto-mod\.json"):
         a07.escolher_arquivo_da_modificacao(ctx, {}, _Ponte(str(pasta / "LEIA.txt")))
 
@@ -300,7 +293,6 @@ def test_ligar_com_permissao_nova_mostra_antes_e_liga_no_segundo(lar, ctx, tmp_p
     a07 = _a07()
     _instalar(a07, ctx, _fonte(tmp_path, permissoes=("rede:local",)))
     primeiro = a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
-    # o recado não chega à tela: a lista vai na dica da chave armada, e o clique só armou
     assert primeiro.get("armou") is True and "recado" not in primeiro
     assert "Usar a rede desta casa" in primeiro["blocos"][".ext-lista"]
     assert _entrada(lar, "toque").ligada is False, "ligou sem o «sim»"
@@ -359,9 +351,9 @@ def test_ligar_o_que_nao_esta_instalado_recusa(lar, ctx) -> None:
 
 _OPCOES = [
     {"id": "quando", "rotulo": "Quando", "tipo": "escolha",
-     "escolhas": ["Sempre", "Nunca"], "padrao": "Sempre"},  # (noqa-acento) chave
+     "escolhas": ["Sempre", "Nunca"], "padrao": "Sempre"},  # (noqa-acento)
     {"id": "avisar", "rotulo": "Avisar", "tipo": "ligado"},
-    {"id": "teto", "rotulo": "Teto", "tipo": "numero", "padrao": 50},  # (noqa-acento) chave
+    {"id": "teto", "rotulo": "Teto", "tipo": "numero", "padrao": 50},  # (noqa-acento)
 ]
 
 
@@ -388,7 +380,6 @@ def test_a_opcao_mudada_espera_o_guardar_e_o_guardar_grava(lar, ctx, tmp_path) -
         ctx, {"v": "toque:quando", "valor": "Nunca", "evento": "change"}, _Ponte())
     assert "<option selected>Nunca" in carga["blocos"]["#mod-janela"], "sem o rascunho na janela"
     assert _guardado(lar) == {}, "a opção gravou antes do Guardar"
-    # o clique do select (o mesmo gesto dispara click e change) não muda nada
     assert a07.guardar_opcao_da_modificacao(
         ctx, {"v": "toque:quando", "valor": "Sempre", "evento": "click"}, _Ponte()) is None
     feito = a07.guardar_modificacao(ctx, {"v": "toque"}, _Ponte())
@@ -405,7 +396,6 @@ def test_o_cancelar_joga_fora_o_rascunho(lar, ctx, tmp_path) -> None:
     a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())
     a07.guardar_opcao_da_modificacao(
         ctx, {"v": "toque:quando", "valor": "Nunca", "evento": "change"}, _Ponte())
-    # a janela que fecha (pelo Cancelar ou indo a outra aba) e se reabre nasce do guardado
     janela = a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())["blocos"]["#mod-janela"]
     assert "<option selected>Sempre" in janela
     a07.guardar_modificacao(ctx, {"v": "toque"}, _Ponte())
@@ -440,7 +430,7 @@ def test_o_menu_abre_mostra_as_permissoes_e_fecha(lar, ctx, tmp_path) -> None:
     _instalar(a07, ctx, _fonte(tmp_path, permissoes=("rede:local",)))
     aberto = a07.mais_da_modificacao(ctx, {"v": "toque"}, _Ponte())
     assert "Ver permissões" in aberto["blocos"][".ext-lista"]
-    pedido = {"v": "toque:permissoes"}  # (noqa-acento) chave
+    pedido = {"v": "toque:permissoes"}  # (noqa-acento)
     com_permissoes = a07.mais_da_modificacao(ctx, pedido, _Ponte())
     assert "Usar a rede desta casa" in com_permissoes["blocos"][".ext-lista"]
     fechado = a07.mais_da_modificacao(ctx, {"v": "toque"}, _Ponte())
@@ -448,7 +438,7 @@ def test_o_menu_abre_mostra_as_permissoes_e_fecha(lar, ctx, tmp_path) -> None:
 
 
 def test_remover_pede_o_segundo_clique_e_apaga_o_codigo_e_os_dados(lar, ctx, tmp_path) -> None:
-    # D-1810-O-SIM-DAS-PERMISSOES-E-O-REMOVER-SE-CONFIRMAM-NO-MENU-DA-LINHA
+    """Prova da D-1810-O-SIM-DAS-PERMISSOES-E-O-REMOVER-SE-CONFIRMAM-NO-MENU-DA-LINHA."""
     a07 = _a07()
     _instalar(a07, ctx, _fonte(tmp_path, opcoes=_OPCOES))
     a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())
@@ -471,7 +461,7 @@ def test_atualizar_baixa_de_novo_do_endereco_gravado(lar, ctx, tmp_path) -> None
     pasta = _fonte(tmp_path)
     _instalar(a07, ctx, pasta)
     manifesto = json.loads((pasta / "hefesto-mod.json").read_text(encoding="utf-8"))
-    manifesto["versao"] = "0.2"  # (noqa-acento) chave
+    manifesto["versao"] = "0.2"  # (noqa-acento)
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
     feito = a07.mais_da_modificacao(ctx, {"v": "toque:atualizar"}, _Ponte())
     assert "atualizada para a versão 0.2" in feito["recado"]
@@ -484,9 +474,6 @@ def test_acao_inventada_do_menu_recusa(lar, ctx, tmp_path) -> None:
     _instalar(a07, ctx, _fonte(tmp_path))
     with pytest.raises(RuntimeError, match="não existe"):
         a07.mais_da_modificacao(ctx, {"v": "toque:formatar"}, _Ponte())
-
-
-# -- A Steam: os impedimentos ----------------------------------------------------------------------
 
 
 def _dois_impedimentos():
@@ -583,9 +570,6 @@ def test_a_sondagem_nunca_levanta_e_nomeia_o_jogo(monkeypatch) -> None:
     assert [(i.chave, i.jogo) for i in achados] == [("proton:222", "Jogo 222")]
 
 
-# -- A janela de cada lançador e a escolha ---------------------------------------------------------
-
-
 class _Seletor(_Ponte):
     """A ponte do «Configurar»: o seletor devolve o que o teste mandar e o declare anota."""
 
@@ -664,7 +648,6 @@ def test_o_escolher_espera_o_guardar_e_o_guardar_grava_o_atalho_e_a_chave(
     assert p.chamadas[1] == {"perfil_por_jogo": {"heroic": False}}
     assert len(p.chamadas) == 2 and "recado" in feito
     assert a07._PARA_QUEM == "" and a07._MEXIDA.onde_escolhido == ""
-    # a chave igual à guardada não escreve nada
     p.chamadas.clear()
     a07.guardar_lancador(ctx, {"v": "heroic", "forma": {"perfil-por-jogo": "Ligado"}}, p)
     assert p.chamadas == []
@@ -687,7 +670,6 @@ def test_o_escolher_fora_das_pastas_recusa_e_o_cancelar_esquece(lar, ctx, casa) 
     p.escolha = str(dentro)
     a07.escolher_o_lancador(ctx, {"v": "heroic"}, p)
     assert a07._MEXIDA.onde_escolhido == str(dentro)
-    # o Cancelar é `href="#"`; a janela reaberta não traz o rascunho
     a07.configurar_lancador(ctx, {"v": "heroic"}, p)
     assert a07._MEXIDA.onde_escolhido == ""
     a07.guardar_lancador(ctx, {"v": "heroic", "forma": {}}, p)
@@ -770,7 +752,6 @@ def test_a_chave_desligada_tira_os_jogos_daquele_lancador_da_semeadura(
     assert censo.lancador_do_jogo("heroic") == "heroic"
     assert censo.lancador_do_jogo("lutris") == "", "o Lutris sem a extensão ganhou cartão"
     assert {"steam", "heroic"} <= censo.LANCADORES_COM_JOGOS
-    # o Lutris virou extensão (19/10/2026): com a extensão ligada, o jogo é do cartão da extensão
     bloco = censo.LancadorDaModificacao(chave="lutris", rotulo="Lutris")
     monkeypatch.setattr(censo, "lancadores_das_extensoes",
                         lambda lugares=None: (censo.LancadorDaExtensao(bloco),))
@@ -797,7 +778,7 @@ def test_a_chave_desligada_tira_os_jogos_daquele_lancador_da_semeadura(
 
 
 def test_identificar_diz_o_que_achou_ou_como_ensinar(lar, ctx, monkeypatch) -> None:
-    # D-1810-O-IDENTIFICAR-QUE-NAO-ACHA-PISCA-A-RECUSA
+    """Prova da D-1810-O-IDENTIFICAR-QUE-NAO-ACHA-PISCA-A-RECUSA."""
     from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 
     a07 = _a07()
@@ -806,8 +787,6 @@ def test_identificar_diz_o_que_achou_ou_como_ensinar(lar, ctx, monkeypatch) -> N
     monkeypatch.setattr(a07.VIGIA, "esquecer", lambda: None)
     dito = a07.identificar_lancador(ctx, {"v": "flatpak"}, _Ponte())["recado"]
     assert dito.startswith("Achei Flatpak") and "/usr/bin/flatpak" in dito
-    # O não achado sobe como recusa (o botão pisca a recusa); pelo recado, piscaria «deu certo».
-    # MORDIDA: devolver a frase em `recado` deixa este `raises` sem exceção.
     with pytest.raises(RuntimeError, match=r"^Não achei Heroic.*Adicionar um lançador"):
         a07.identificar_lancador(ctx, {"v": "heroic"}, _Ponte())
     with pytest.raises(RuntimeError, match="Não conheço"):
@@ -841,29 +820,27 @@ def test_criar_perfil_do_jogo_marca_tem_perfil_e_mantem_a_janela(lar, ctx, monke
         a07.criar_perfil_do_jogo(ctx, {"v": "steam_app_9"}, _Ponte())
 
 
-# --- o contrato das peças da janela: grupos em abas, cor, «Agora» e «Parar tudo» (18/10/2026) -----
-
 _EM_GRUPOS = [
     {"id": "teto", "rotulo": "Teto", "tipo": "numero", "grupo": "Segurança",
-     "padrao": 50},  # (noqa-acento) chave
-    {"id": "gesto", "rotulo": "Gesto", "tipo": "ligado", "grupo": "Gestos"},  # (noqa-acento) chave
-    {"id": "luz", "rotulo": "Cor da luz", "tipo": "cor", "grupo": "Luz",  # (noqa-acento) chave
-     "padrao": "#00AAFF"},  # (noqa-acento) chave
+     "padrao": 50},  # (noqa-acento)
+    {"id": "gesto", "rotulo": "Gesto", "tipo": "ligado", "grupo": "Gestos"},
+    {"id": "luz", "rotulo": "Cor da luz", "tipo": "cor", "grupo": "Luz",
+     "padrao": "#00AAFF"},  # (noqa-acento)
 ]
 
 
 def _manifesto_de(**campos) -> object:
     from hefesto_dualsense4unix.mods.manifesto import Manifesto
 
-    base = {"id": "toque", "nome": "Toque", "versao": "0.1", "api": ">=1,<3",  # (noqa-acento) chave
-            "licenca": "MIT", "tipos": ["tema"], "tema": {}}  # (noqa-acento) chave
+    base = {"id": "toque", "nome": "Toque", "versao": "0.1", "api": ">=1,<3",  # (noqa-acento)
+            "licenca": "MIT", "tipos": ["tema"], "tema": {}}
     return Manifesto.model_validate({**base, **campos})
 
 
 def test_o_manifesto_aceita_grupo_cor_agora_e_parar_tudo() -> None:
     m = _manifesto_de(opcoes=_EM_GRUPOS, agora=["nivel", "perfil", "aparelhos"], parar_tudo=True,
-                      permissoes=["ler:acessorios.gesto"])  # (noqa-acento) chave
-    assert [o.grupo for o in m.opcoes] == ["Segurança", "Gestos", "Luz"]  # (noqa-acento) chave
+                      permissoes=["ler:acessorios.gesto"])
+    assert [o.grupo for o in m.opcoes] == ["Segurança", "Gestos", "Luz"]
     assert m.agora == ["nivel", "perfil", "aparelhos"] and m.parar_tudo is True
 
 
@@ -875,10 +852,10 @@ def test_o_manifesto_recusa_o_agora_sem_a_permissao_do_retorno() -> None:
     with pytest.raises(pydantic.ValidationError, match=r"publicar:acessorios\.estado"):
         _manifesto_de(agora=["nivel"])
     with pytest.raises(pydantic.ValidationError):
-        _manifesto_de(agora=["nivel", "nivel"],  # (noqa-acento) chave
+        _manifesto_de(agora=["nivel", "nivel"],
                       permissoes=["ler:acessorios.gesto"])
     with pytest.raises(pydantic.ValidationError):
-        _manifesto_de(agora=["temperatura"],  # (noqa-acento) chave
+        _manifesto_de(agora=["temperatura"],
                       permissoes=["ler:acessorios.gesto"])
 
 
@@ -887,7 +864,7 @@ def test_a_opcao_de_cor_recusa_o_padrao_que_nao_e_hexa() -> None:
 
     with pytest.raises(pydantic.ValidationError, match="#rrggbb"):
         _manifesto_de(opcoes=[
-            {"id": "luz", "rotulo": "Luz", "tipo": "cor", "padrao": "azul"}])  # (noqa-acento) chave
+            {"id": "luz", "rotulo": "Luz", "tipo": "cor", "padrao": "azul"}])  # (noqa-acento)
 
 
 def test_a_janela_com_tres_grupos_desenha_um_cartao_por_grupo_e_a_cor(lar, ctx, tmp_path) -> None:
@@ -895,9 +872,9 @@ def test_a_janela_com_tres_grupos_desenha_um_cartao_por_grupo_e_a_cor(lar, ctx, 
     _instalar(a07, ctx, _fonte(tmp_path, opcoes=_EM_GRUPOS))
     janela = a07.configurar_modificacao(ctx, {"v": "toque"}, _Ponte())["blocos"]["#mod-janela"]
     titulos = re.findall(r'<span class="ac-tit">([^<]*)</span>', janela)
-    assert titulos == ["Segurança", "Gestos", "Luz"], titulos  # (noqa-acento) chave
+    assert titulos == ["Segurança", "Gestos", "Luz"], titulos
     assert "mg-aba" not in janela and 'type="radio"' not in janela
-    assert 'type="color"' in janela and 'value="#00aaff"' in janela  # o padrão, em minúsculas
+    assert 'type="color"' in janela and 'value="#00aaff"' in janela
     assert '<span class="ext-rot">Para</span>Todos' in janela.split('class="tn-corpo"')[0]
     rodape = janela.split('class="tn-rod"')[1]
     assert ('<a class="btn" href="#" data-gesto="cancelar-modificacao" data-v="toque">'
@@ -929,8 +906,10 @@ def test_guardar_a_cor_valida_e_normaliza(lar, ctx, tmp_path) -> None:
 
 
 def test_a_linha_da_fila_so_leva_a_contagem_e_a_frase_do_cartao_velho_fica_fora() -> None:
-    """A frase «Abra o Heroic uma vez…» passava por baixo dos três botões da linha."""
-    # D-1810-A-LINHA-DO-LANCADOR-LEVA-SO-A-CONTAGEM
+    """A frase «Abra o Heroic uma vez…» passava por baixo dos três botões da linha.
+
+    Prova da D-1810-A-LINHA-DO-LANCADOR-LEVA-SO-A-CONTAGEM.
+    """
     from hefesto_dualsense4unix.integrations.censo_dos_lancadores import FRASE_NUNCA_ABERTO
     from hefesto_dualsense4unix.interface import desenho_dos_lancadores as dl
 
@@ -963,8 +942,6 @@ def test_o_mais_do_configurar_da_extensao_fica_ao_lado_do_x_aberto_ou_fechado(na
     pg = navegador.new_page(viewport={"width": 1212, "height": 800})
     try:
         pg.goto(f"{MOCKUP.as_uri()}#lanc-conf")
-        # A folha medida é a do código, não a cópia que o desenho gerado guarda: a da Experimental
-        # fecha o primeiro <style>, e é trocada ali, do começo dela ao fim.
         trocou = pg.evaluate("""(folha) => {
           const s = document.querySelector('style');
           const i = s.textContent.indexOf(folha.slice(0, 120));

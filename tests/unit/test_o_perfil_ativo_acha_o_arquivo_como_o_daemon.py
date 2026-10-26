@@ -92,9 +92,6 @@ def _a_08_sem_os_fios_da_maquina(monkeypatch: pytest.MonkeyPatch) -> None:
             fio.join(timeout=15)
     monkeypatch.setattr(a08_conexoes, "_EXAME_PEDIDO", True)
     monkeypatch.setattr(a08_conexoes, "_EXTRAS", ())
-    # O dublê vai no `em_fundo` que a 08 CHAMA: ela é importada como `pacotes.a08_conexoes`,
-    # e o `pacotes.em_fundo` dela é outro objeto que o `hefesto_dualsense4unix.interface.
-    # pacotes.em_fundo`; o dublê no segundo deixava o fio ler o barramento da máquina no meio.
     monkeypatch.setattr(a08_conexoes.em_fundo, "em_fundo",
                         lambda chave, ler, validade_s: None)
 
@@ -236,9 +233,6 @@ def _a_03_mente(pintura: dict[str, Any], ctx: Any, manda: _Camadas) -> list[str]
                     rf'data-campo="aj-val-{sig}-\d+">(-?\d+)<', caixa)]
             vai = manda.efetivo(uniq, disco)
             if ajustes is None:
-                # Campo da imersão em branco: o perfil guarda números próprios (o `Rigid` 5/200
-                # do esquema abre como Resistência 5/6). A tela não afirma número nenhum; a
-                # régua confere só o modo do efeito.
                 diz = build_from_name(modo, _padroes(modo))
                 casa = diz.mode == vai.mode
             else:

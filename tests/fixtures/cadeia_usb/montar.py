@@ -16,8 +16,6 @@ from typing import Any
 
 DADOS = Path(__file__).with_name("barramento.json")
 
-#: o serial do adaptador Bluetooth (12 hex, a forma de um endereço de rádio), montado aqui para
-#: nunca existir como literal versionado; o portão de endereço de rádio o acusa
 SERIAL_FORJADO = "E8473A" + "C0FFEE"
 
 _ATRIBUTOS_DA_TRIPLA = ("bInterfaceClass", "bInterfaceSubClass", "bInterfaceProtocol")

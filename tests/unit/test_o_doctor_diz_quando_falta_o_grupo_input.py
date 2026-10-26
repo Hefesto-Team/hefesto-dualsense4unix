@@ -17,10 +17,8 @@ from hefesto_dualsense4unix.cli import cmd_doctor
 from hefesto_dualsense4unix.core import system_check
 from hefesto_dualsense4unix.utils import maquina
 
-#: O ``capabilities/key`` de um teclado (só teclas baixas) e o de um controle (com BTN_SOUTH).
 TECLAS_DE_TECLADO = "fffffffffffffffe"
 TECLAS_DE_CONTROLE = "7fff000000000000 0 0 0 0"
-#: O de um manche sem ``BTN_SOUTH``: só ``BTN_TRIGGER`` (0x120), que também ganha a ACL da sessão.
 TECLAS_DE_MANCHE = "100000000 0 0 0 0"
 
 

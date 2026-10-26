@@ -29,7 +29,7 @@ def _ordem(chave: str, acao: str, destino: str = "", arranjo: str = "") -> Any:
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import Identidade, Linha, Ordem
 
     frase = Linha(texto="O hub divide o caminho. Isto não entra no cartão.", selo="")
-    return Ordem(chave=chave, acao=acao,  # (noqa-acento) campo da Ordem
+    return Ordem(chave=chave, acao=acao,
                  o_que_eu_vi=frase, por_que_importa=frase, ganho_esperado=frase,
                  alvo=Identidade(caminho="3-1.2"), destino=destino, arranjo=arranjo)
 
@@ -69,7 +69,7 @@ def test_cada_ajuste_do_exame_vira_um_cartao_e_o_certo_vira_a_linha_do_fim() -> 
     painel = a08._o_painel_das_dicas(vivos, None)
     assert _titulos(painel.visiveis) == [
         "Entrada com pouca energia", "Bluetooth atrás de hub", "Teclado só no hub",
-        "Não deu para olhar"], painel  # o «não sei» não tem cara de defeito
+        "Não deu para olhar"], painel
     assert painel.demais == (), "a fileira mostra quatro, sem «mais N»"
     html = a08._html_das_dicas(vivos, None)
     assert html.count("<section ") == 4 and "mais-dicas" not in html
@@ -134,7 +134,7 @@ def test_as_duas_pontas_dizem_a_entrada(monkeypatch: pytest.MonkeyPatch, caminho
     documento = MaquinaConfig(mapa=mapa)
     monkeypatch.setattr(a08, "_declaracao", lambda recarregar=False: documento)
     vazio = Linha(texto="", selo="")
-    ordem = Ordem(chave="k", acao="Mova isto para a entrada 2",  # (noqa-acento) campo da Ordem
+    ordem = Ordem(chave="k", acao="Mova isto para a entrada 2",
                   o_que_eu_vi=vazio, por_que_importa=vazio, ganho_esperado=vazio,
                   alvo=Identidade(caminho=caminho), destino="2", arranjo="a")
     assert a08._a_ordem_na_tela(ordem) == (esperado, "Entrada 2")

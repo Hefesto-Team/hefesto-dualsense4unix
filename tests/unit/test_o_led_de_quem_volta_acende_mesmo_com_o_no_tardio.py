@@ -39,7 +39,6 @@ DISCOVER_DO_SYSFS = "hefesto_dualsense4unix.core.sysfs_leds.discover"
 RAIZ = Path(__file__).resolve().parents[2]
 GESTO = RAIZ / "docs/method/2026-09-07-O-COMO-DO-MAPA-o-gesto-das-178-celulas.md"
 
-#: A matriz do vizinho e a mesa de um só (o P1 sem secundário: não há lâmpada do co-op).
 MATRIZ_COM_UM = [*MATRIZ, ("um-so", {P1: QUATRO[P1]}, ())]
 
 
@@ -91,7 +90,7 @@ def test_o_discover_que_falha_na_espera_avisa_uma_vez(
 def test_o_no_que_aparece_depois_da_volta_acende_o_numero_uma_vez(
     monkeypatch: pytest.MonkeyPatch, mesa: str, nos: dict[str, str], esperam: tuple[str, ...]
 ) -> None:
-    # D-2410-O-LED-PENDENTE-ACENDE-QUANDO-O-NO-APARECE
+    """Prova da D-2410-O-LED-PENDENTE-ACENDE-QUANDO-O-NO-APARECE."""
     m = _Mesa(monkeypatch, nos)
     m.sai(*esperam)
     m.tiques(10)
@@ -202,8 +201,10 @@ _ORDINAIS = {
 
 
 def test_a_cor_que_se_devolve_foi_anotada_antes() -> None:
-    # D-2410-O-GESTO-DEVOLVE-A-COR-ANOTADA
-    """Quem devolve a «Cor» devolve à que anotou num passo da mesma célula."""
+    """Quem devolve a «Cor» devolve à que anotou num passo da mesma célula.
+
+    Prova da D-2410-O-GESTO-DEVOLVE-A-COR-ANOTADA.
+    """
     erros: list[str] = []
     passos: dict[int, str] = {}
     for linha in GESTO.read_text(encoding="utf-8").splitlines():
@@ -222,8 +223,6 @@ def test_a_cor_que_se_devolve_foi_anotada_antes() -> None:
     assert not erros, "\n".join(erros)
 
 
-#: A cor de partida dita como a do número, sem o plástico: «começa azul», «ficou verde e
-#: a do P4 rosa», «deixou o azul», «a cor do número continua»…
 _PARTIDA_PELO_NUMERO = re.compile(
     r"[Cc]omeça (azul|vermelho|verde|rosa)|deixou o (azul|vermelho|verde|rosa)"
     r"|ficou (azul|vermelha|verde|rosa) e a do P\d|cor automática do número"

@@ -146,9 +146,6 @@ def aperto(pad: PadDeMentira, botao: str, descida: float, duracao: float) -> Non
                     Evento(ecodes.EV_SYN, 0, 0, descida + duracao)]
 
 
-# O `state_full` de mentira: os cartões, e o que cada um tem apertado em cada hora
-
-
 @dataclass
 class Cena:
     relogio: Relogio

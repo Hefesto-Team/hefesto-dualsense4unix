@@ -71,13 +71,11 @@ def _gesto(nome: str) -> Any:
     return fn
 
 
-# 1. O INTERRUPTOR -------------------------------------------------------------------------------
-
 def test_o_interruptor_esta_em_todo_cartao_e_o_cursor_e_os_botoes_saíram() -> None:
     doc = _pagina()
     cartoes = doc.count('data-gesto="touchpad"')
     assert cartoes >= 2, "o interruptor do touchpad sumiu dos cartões"
-    doc = re.sub(r"<style>.*?</style>|<!--.*?-->", "", doc, flags=re.S)  # só o que se vê
+    doc = re.sub(r"<style>.*?</style>|<!--.*?-->", "", doc, flags=re.S)
     assert cartoes == len(re.findall(r'class="sw todo-sw-toque"', doc)), (
         "há interruptor sem a classe do desenho, ou o contrário")
     for velho in ("Cursor", "Botões", "Sem toque", 'data-campo="touch-estado"'):
@@ -85,16 +83,12 @@ def test_o_interruptor_esta_em_todo_cartao_e_o_cursor_e_os_botoes_saíram() -> N
     assert doc.count(">Ligado<") >= cartoes and doc.count(">Desligado<") >= cartoes
 
 
-# 2. AS TERÇAS -----------------------------------------------------------------------------------
-
 def test_as_tres_tercas_acendem_sem_texto() -> None:
     doc = _pagina()
     tercas = re.findall(r'<span class="todo-terca[^"]*"[^>]*>([^<]*)</span>', doc)
     assert len(tercas) == 3 * doc.count('data-gesto="touchpad"')
     assert set(tercas) == {""}, f"uma terça ganhou texto: {sorted(set(tercas))}"
 
-
-# 3. O GESTO -------------------------------------------------------------------------------------
 
 def test_o_gesto_manda_o_oposto_so_daquele_controle() -> None:
     for agora, vai in (("ligado", "desligado"), ("desligado", "ligado")):
@@ -151,8 +145,6 @@ def test_o_pacote_pinta_o_estado_de_cada_controle() -> None:
     assert a02._toque_ligado({"sensores": {"touchpad": "talvez"}}) is None
 
 
-# 4. OS TERÇOS -----------------------------------------------------------------------------------
-
 @pytest.mark.parametrize(("x", "terca"), [
     (0.0, "esquerda"), (33.0, "esquerda"), (33.4, "meio"), (50.0, "meio"),
     (66.6, "meio"), (66.7, "direita"), (100.0, "direita"),
@@ -165,8 +157,6 @@ def test_sem_dedo_nenhuma_terca_acende() -> None:
     assert a02.regiao_do_toque(None) == ""
 
 
-# 5. SEM «?», SEM GANHO, SEM «JUNTO» -------------------------------------------------------------
-
 def test_a_aba_sai_sem_ponto_de_interrogacao_nem_ganho() -> None:
     doc = _pagina()
     assert 'class="ajuda' not in doc and ">?<" not in doc and "?<span" not in doc, (
@@ -176,8 +166,6 @@ def test_a_aba_sai_sem_ponto_de_interrogacao_nem_ganho() -> None:
     assert 'data-rota="junto"' not in doc, "o quarto botão do alto-falante voltou"
     assert "chip-da-mira" not in doc, "o botão da mira voltou ao cabeçalho do cartão"
 
-
-# 6. AS TRÊS ROTAS -------------------------------------------------------------------------------
 
 def test_o_alto_falante_tem_as_tres_rotas_do_todo() -> None:
     doc = _pagina()

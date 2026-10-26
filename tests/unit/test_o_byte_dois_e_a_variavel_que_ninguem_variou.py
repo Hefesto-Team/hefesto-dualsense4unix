@@ -110,7 +110,6 @@ def test_a_sequencia_rotaciona_no_nibble_alto() -> None:
         assert pkt[1] == (seq & 0x0F) << 4, f"seq={seq} saiu como 0x{pkt[1]:02x}"
 
 
-#: O ``common`` no ``0x36`` da ponte: o bloco ``0x10`` em [11], os dados em [13].
 _COMMON_NO_0X36 = slice(13, 13 + COMMON_LEN)
 
 

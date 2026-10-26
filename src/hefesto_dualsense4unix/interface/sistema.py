@@ -57,7 +57,6 @@ ENDERECOS: dict[str, str] = {
     "da bandeja, que a sessão lê ao entrar",
 }
 
-#: quem o aplica está escrito aqui — inclusive quando a resposta é "ninguém".
 GESTOS: dict[str, str] = {
     "parar-ou-retomar": "`a09_sistema.desligar` — com a pausa ativa, IPC "
     "`daemon.resume` (daemon/ipc_server.py:125); com o serviço de pé, "
@@ -151,7 +150,6 @@ class Leitura(NamedTuple):
     adaptadores: int | None = None
 
 
-# ---------------------------------------------------------------------------
 _MARCACAO = re.compile(r"<[^>]+>")
 
 
@@ -171,7 +169,6 @@ def _campos_de_janela(state: object) -> dict[str, Any] | None:
     }
 
 
-# `tests/unit/test_a_aba_sistema_nomeia_o_servico.py`, que olha SÓ a dica das
 _ESTADO_DO_HEFESTO: dict[str, Linha] = {
     "online_systemd": Linha(
         "Ligado", OK, GLIFO_OK,
@@ -386,7 +383,6 @@ def _lista(nomes: list[str]) -> str:
     return f"{', '.join(nomes[:-1])} e {nomes[-1]}"
 
 
-# ---------------------------------------------------------------------------
 PILULA_OK, PILULA_AVISO, PILULA_NOTA = "ok", "aviso", "nt"
 
 
@@ -498,9 +494,6 @@ def linhas_do_status(leitura: Leitura) -> list[dict[str, str]]:
     ]
 
 
-#: Um glifo por selo, e a cor pelo veredito (O-STATUS-DO-SISTEMA-DIZ-O-QUE-ESTA-BEM-EM-VERDE-E-SO-
-#: AVISA-O-QUE-PEDE-ACAO-01, 21/10/2026): o ``WARN`` pede atenção e fica laranja, o ``FAIL`` é a
-#: falha e fica vermelho. A NOTA saía com «i» aqui e com «◆» na linha do gamepad.
 _SELO_DO_VEREDITO: dict[str, tuple[str, str, str]] = {
     "OK": ("OK", PILULA_OK, GLIFO_OK),
     "WARN": ("AVISO", PILULA_AVISO, GLIFO_AVISO),

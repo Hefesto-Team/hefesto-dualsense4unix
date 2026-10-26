@@ -8,14 +8,8 @@ from collections.abc import Sequence
 from hefesto_dualsense4unix.app import audio_saida
 from hefesto_dualsense4unix.integrations import porta_do_som
 
-#: responder sobre o DualSense e calar em qualquer outro aparelho — e o produto
 _CAPACIDADE_DE_GANHO = "cvolume"
 
-#: **É o topo da faixa**, que é o que o firmware entrega: o `Headset Capture Volume`
-#: vive em 101/101 = +48,00 dB. A razão de não baixar está medida: o único microfone
-#: do usuário é o do DualSense, e baixar por conta própria faria o microfone ficar
-#: MAIS BAIXO do que está hoje, numa sprint cujo nome é «ter dono», não «mudar o som».
-#: O que muda é que, a partir daqui, o valor é ESCOLHA, e não sobra de firmware.
 GANHO_PADRAO_PCT = 100
 
 def _nome_do_scontrol(crua: str) -> str:

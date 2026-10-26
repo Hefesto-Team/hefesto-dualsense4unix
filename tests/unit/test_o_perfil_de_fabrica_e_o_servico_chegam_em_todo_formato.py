@@ -54,15 +54,11 @@ def _pyproject() -> dict[str, Any]:
     return projeto
 
 
-# --- 1. o loader procura onde a instalação pôs a fábrica ------------------------------
-
-
 def test_as_fontes_do_loader_sao_as_bases_do_dono_unico() -> None:
     """MORDIDA: devolver ao loader a lista própria de três lugares."""
     from hefesto_dualsense4unix.utils import xdg_paths
     from hefesto_dualsense4unix.utils.repo_files import bases_de_instalacao
 
-    # O `data_dir()` do usuário muda por teste (o conftest desvia o XDG); o resto é fixo.
     bases = [b for b in bases_de_instalacao() if b != xdg_paths.data_dir()]
     for pasta, fontes in (
         ("profiles_default", loader._DEFAULT_SEED_SOURCE_DIRS),
@@ -123,9 +119,6 @@ def test_a_falta_de_fonte_diz_onde_olhou(tmp_path: Path, monkeypatch: pytest.Mon
     assert "Freestyle" in aviso["efeito"]
 
 
-# --- 2. o wheel leva a fábrica -------------------------------------------------------
-
-
 def test_o_wheel_declara_a_fabrica_e_as_units_no_share() -> None:
     """MORDIDA: tirar o `shared-data` do pyproject (o wheel voltava sem a fábrica)."""
     projeto = _pyproject()
@@ -137,7 +130,6 @@ def test_o_wheel_declara_a_fabrica_e_as_units_no_share() -> None:
     }
     assert esperado <= set(dados), sorted(esperado - set(dados))
     for origem, destino in dados.items():
-        # O destino espelha o caminho do repositório: é `<base>/<caminho>` que quem lê procura.
         assert destino == f"share/{NOME}/{origem}", (origem, destino)
         assert (RAIZ / origem).exists(), origem
 
@@ -223,9 +215,6 @@ def test_o_wheel_de_verdade_semeia_o_freestyle_e_acha_os_estilos(tmp_path: Path)
     resultado = json.loads(proc.stdout.strip().splitlines()[-1])
     assert "freestyle.json" in resultado["copiados"]
     assert resultado["estilos"] == list(loader.ARQUIVOS_DOS_ESTILOS_DE_JOGO)
-
-
-# --- 3. as units saem vestidas em todo formato --------------------------------------
 
 
 @pytest.mark.parametrize("formato,bin_dir,python", FORMATOS)
@@ -363,9 +352,6 @@ def test_o_nix_da_a_presenca_o_caminho_do_pacote() -> None:
     assert "makePythonPath dependencies" in texto
 
 
-# --- 4. daemon install-service -------------------------------------------------------
-
-
 @pytest.fixture
 def lar_de_mentira(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     config = tmp_path / "config"
@@ -373,7 +359,6 @@ def lar_de_mentira(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     monkeypatch.setenv("XDG_CONFIG_HOME", str(config))
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.delenv("HEFESTO_DUALSENSE4UNIX_ASSETS_DIR", raising=False)
-    # nenhum `systemctl` de verdade: o que se mede aqui é a unit escrita, não o gerente.
     monkeypatch.setattr(si.ServiceInstaller, "_systemctl", lambda self, *a, **k: None)
     return config / "systemd" / "user"
 
@@ -475,7 +460,6 @@ def test_o_executavel_do_produto_segue_a_ordem(
     monkeypatch.setattr(shutil, "which", lambda n: str(no_path) if n == NOME else None)
     assert si.executavel_do_produto() == no_path
 
-    # um `which` que devolve OUTRO binário (o dublê dos testes de systemctl) não vale:
     monkeypatch.setattr(shutil, "which", lambda _n: "/usr/bin/systemctl")
     monkeypatch.setattr(sys, "argv", [str(no_path)])
     assert si.executavel_do_produto() == no_path
@@ -491,9 +475,6 @@ def test_o_executavel_do_produto_segue_a_ordem(
     assert si.executavel_do_produto() is None
 
 
-# --- 5. o portão de paridade renderiza as units -------------------------------------
-
-
 def test_o_portao_de_paridade_renderiza_as_units_de_cada_formato() -> None:
     """MORDIDA: pôr `__PYTHON__` solto em ``assets/hefesto-dualsense4unix-gui-hotplug.service``
     ou devolver a cópia às cegas à spec — o portão reprova."""
@@ -507,9 +488,6 @@ def test_o_portao_de_paridade_renderiza_as_units_de_cada_formato() -> None:
     )
     assert "[ OK ] units de usuário" in proc.stdout, proc.stdout[-2500:]
     assert "[FAIL] units de usuário" not in proc.stdout
-
-
-# --- 6. o ensaio pergunta o GTK a um Python que existe -------------------------------
 
 
 def _python_de_mentira(pasta: Path, *, enxerga: bool) -> Path:

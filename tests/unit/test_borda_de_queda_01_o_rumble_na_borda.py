@@ -169,7 +169,7 @@ class _HandleFalso:
         self.direito: int | None = None
         self._rumble_stop_pending = False
 
-    def setLeftMotor(self, v: int) -> None:  # noqa: N802 (API da pydualsense)
+    def setLeftMotor(self, v: int) -> None:  # noqa: N802
         self.esquerdo = v
 
     def setRightMotor(self, v: int) -> None:  # noqa: N802

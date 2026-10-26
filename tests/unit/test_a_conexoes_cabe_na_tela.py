@@ -38,16 +38,11 @@ from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 
 RAIZ = Path(__file__).resolve().parents[2]
 CONJUNTO = "Conexões 3"
-#: o Mapa espera a publicação pelas edições da bancada; a 08, pelo desenho novo na página.
 MAPA_NA_BANCADA = any(CONJUNTO in e.porque for e in pagina_do_mapa.EDICOES_ESPERANDO_A_SESSAO_DELA)
 _PUBLICADA_08 = onde.pagina("08-conexoes.html", publicado=True)
-#: o desenho do todo (A-ABA-CONEXOES-DO-TODO-01) é o primeiro com o ``data-dica-id`` no cartão
 A_08_NA_BANCADA = any(marca not in _PUBLICADA_08.read_text(encoding="utf-8")
                       for marca in ('class="ar-do"', "data-dica-id="))
 LARGURAS = {1272: 860, 1512: 860, 1900: 1000}
-
-
-# ───────────────────────── sem página: o que o gerador escreve ─────────────────────────
 
 
 def _dica(chave: str, nivel: str = dicas.AJUSTE) -> dicas.Dica:
@@ -145,9 +140,6 @@ def test_o_mapa_fala_em_frase_e_sem_primeira_pessoa() -> None:
         assert f">{velha}" not in pagina, velha
 
 
-# ───────────────────────── as páginas (WebKit) ─────────────────────────
-
-
 def _medir() -> str:
     return r"""(function(){
   const r = [];
@@ -212,21 +204,14 @@ def _pintar_as_dicas(html: str) -> str:
     return f"String(window.__hef.pintar({json.dumps({'mesa': {'dicas': html}})}))"
 
 
-#: Espera por CONDIÇÃO no lugar do relógio fixo (250 ms depois de cada passo, 300 depois de
-#: carregar): o passo seguinte sai quando o DOM parou de mudar e nenhuma animação corre, e só no
-#: teto (`TETO_DA_ESPERA_S`) se segue sem isso. Desligada (`False`) o passo seguinte sai na hora:
-#: é assim que `test_a_espera_por_condicao_...` prova que a espera existe.
 ESPERA_POR_CONDICAO = True
 QUIETO_MS = 60
 QUIETO_NA_CARGA_MS = 300
 TETO_DA_ESPERA_S = 2.0
 INTERVALO_DO_POLL_MS = 15
-#: Os WebViews abertos, um por tamanho, enquanto o módulo os reusa (`um_webview_por_modulo`).
 _ABERTOS: dict[tuple[int, int], tuple[Any, Any]] = {}
 _REUSANDO = [False]
 
-#: Pergunta ao DOM se aquietou. A primeira vez só arma o observador. Animação que não acaba
-#: (`iterations` infinito: o selo que pulsa) não conta como movimento.
 _QUIETO_JS = """(function(){
 const w = window;
 if (!w.__quieto) {
@@ -262,7 +247,7 @@ def um_webview_por_modulo() -> Any:
 def _fechar_os_webviews() -> None:
     abertos = list(_ABERTOS.values())
     _ABERTOS.clear()
-    if not abertos:  # sem o gi nenhum caso abriu o WebView, e não há o que recolher
+    if not abertos:
         return
     for _view, janela in abertos:
         janela.destroy()
@@ -331,8 +316,6 @@ def _no_webkit_sem_recolher(pagina: Path, tamanho: tuple[int, int],
             return
         limite = time.monotonic() + TETO_DA_ESPERA_S
         js = _QUIETO_JS.replace("MINIMO", str(minimo_ms))
-        # duas respostas «quieto» seguidas: a transição que acaba de terminar ainda pinta o
-        # último quadro, e a primeira resposta soltava a leitura em 199,86 px dos 200
         seguidas = [0]
 
         def pergunta() -> bool:
@@ -385,17 +368,13 @@ def _no_webkit_sem_recolher(pagina: Path, tamanho: tuple[int, int],
     return [json.loads(x) if x.startswith("{") else x for x in respostas[1:]]
 
 
-# ───────────────── o instrumento: a espera por condição e o WebView reusado ─────────────────
-
 _PAGINA_DA_ESPERA = (
     '<!doctype html><meta charset="utf-8"><body><div id="e" '
     'style="width:10px;height:10px;background:#888"></div></body>')
-#: dez mudanças de DOM a cada 30 ms (a primeira na hora): o passo seguinte só pode ler o fim
 _MEXE_O_DOM = ("(function(){let n=1; document.body.dataset.n=n; "
                "const id=setInterval(function(){document.body.dataset.n=++n; "
                "if(n===10){clearInterval(id);}},30); return 'mexeu';})()")
 _LE_O_DOM = "document.body.dataset.n"
-#: uma transição de 300 ms: o passo seguinte só pode ler a largura de chegada
 _ANIMA = ("(function(){const e=document.getElementById('e'); e.style.transition='width 300ms'; "
           "void e.offsetWidth; e.style.width='200px'; return 'anima';})()")
 _LE_A_LARGURA = "getComputedStyle(document.getElementById('e')).width"
@@ -412,7 +391,7 @@ def _a_pagina_da_espera(tmp_path: Path) -> Path:
                          ids=("dom-que-muda", "transicao"))
 def test_a_espera_por_condicao_so_solta_o_passo_com_o_dom_quieto(
         tmp_path: Path, mexe: str, le: str, chegou: str) -> None:
-    # D-1610-A-REGUA-DE-TELA-ESPERA-PELO-DOM-QUIETO
+    """Prova da D-1610-A-REGUA-DE-TELA-ESPERA-PELO-DOM-QUIETO."""
     lidas = _no_webkit(_a_pagina_da_espera(tmp_path), (400, 300), [mexe, le])
     assert lidas[1] == chegou, f"o passo seguinte leu {lidas[1]!r} no meio do movimento"
 
@@ -472,8 +451,6 @@ def _vistas(largura: int) -> dict[str, Any]:
 def test_nenhuma_vista_rola_na_vertical_nem_corta_texto(largura: int) -> None:
     """As 21 vistas do ``medir_ajustado.py`` (sete por largura e o título pairado), sem rolagem."""
     vistas = _vistas(largura)
-    # a vista do adaptador aberto só mede alguma coisa se a caixa abriu de fato: sem isto, um
-    # clique que não abre deixa medir o Rádio fechado duas vezes, e o verde não diz nada
     assert vistas["radio"]["aberta"] == 0, "uma caixa nasceu aberta: o desenho as quer fechadas"
     assert vistas["adaptador"]["aberta"] == 1, "o clique não abriu a caixa do adaptador"
     rolam = {nome: v["rola"] for nome, v in vistas.items() if v["rola"]}
@@ -493,14 +470,7 @@ def test_os_cartoes_tem_a_mesma_altura_e_o_porque_nao_estica_os_vizinhos(largura
     assert vistas["certo"]["alturas"] == [], "o «Tudo certo» ainda tem cartão"
 
 
-# ───────────────── os controles externos (A-LINHA-DO-EXTERNO-VOLTA-AOS-30-PX-01) ─────────────────
-
-#: Quantos externos a régua fixa: quatro, o número de assentos (decisão de produto de
-#: 08/10/2026). Com a linha de 28 px e dois por fileira, quatro cabem
-#: a 1272 px.
 TETO_DE_EXTERNOS = 4
-#: A linha do externo não passa de 30 px: era 38 (o `select` de 28 px dentro de um padding de 4 px)
-#: e somava uma linha inteira por controle.
 ALTURA_DA_LINHA_DO_EXTERNO = 30
 
 
@@ -570,8 +540,6 @@ def _vistas_dos_externos(largura: int) -> dict[str, Any]:
         with mock.patch.object(mesa_viva, "_declaracao_do_disco", lambda: declarados):
             passos = [_pintar(2), _medir_os_externos(), _pintar(TETO_DE_EXTERNOS),
                       _medir_os_externos(), _pintar(TETO_DE_EXTERNOS, 2), _medir_os_externos()]
-        # a bancada (o que o gerador escreve), não o publicado: a régua morde o gerador e, depois do
-        # `--publicar`, as duas páginas são a mesma
         lidas = _no_webkit(onde.pagina("08-conexoes.html"), (largura, LARGURAS[largura]), passos)
         _VISTAS_DOS_EXTERNOS[largura] = {"dois": lidas[1], "quatro": lidas[3],
                                          "quatro_com_aviso": lidas[5]}

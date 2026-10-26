@@ -335,7 +335,6 @@ def test_o_governador_pergunta_o_nome_ao_dono_da_entrada(
     )
 
 
-#: ``utils/rotulo_da_entrada.py``, só stdlib, para as ordens compor dali sem o
 _O_DONO = "utils/rotulo_da_entrada.py"
 _OS_QUE_PODEM = {
     # fica: é o dono da palavra, e as duas entradas dele são a regra
@@ -366,9 +365,6 @@ def _composicoes_da_palavra(raiz: Path) -> set[tuple[str, str]]:
         arquivo: ast.parse(arquivo.read_text(encoding="utf-8"))
         for arquivo in sorted(raiz.rglob("*.py"))
     }
-    # constante de módulo cujo texto termina em «na entrada» (fora do dono): quem a junta a um valor
-    # numa f-string compõe o nome da porta sem passar por ele (O-LIGADO-NA-ENTRADA-...-01).
-    # «Acrescentar entrada» e «Mapear entrada a entrada» não esperam número: ficam de fora.
     na_entrada_no_fim = re.compile(r"\b(?:na|da|pela|para a|à)\s+entrada\s*$", re.IGNORECASE)
     constantes_da_palavra = {
         alvo.id
@@ -391,9 +387,6 @@ def _composicoes_da_palavra(raiz: Path) -> set[tuple[str, str]]:
             and isinstance(no.body[0], ast.Expr)
             and isinstance(no.body[0].value, ast.Constant)
         }
-        # o ``antes=`` de uma ``Edicao`` é o texto velho que a edição TIRA da página, e o
-        # ``porque=`` é a prosa que o cita: medi-los como composição acusava a própria cura
-        # (A-REGUA-DO-DONO-DA-PORTA-LE-O-ANTES-DA-EDICAO-01)
         textos_que_saem = {
             id(chave.value)
             for no in ast.walk(arvore)

@@ -97,14 +97,14 @@ _CONSUMIDOR: dict[str, ConsumidorPorUnidade] = {
             "(da_peca)"
         ),
     ),
-    "ativacao": ConsumidorPorUnidade(  # (noqa-acento) identificador ASCII
+    "ativacao": ConsumidorPorUnidade(  # (noqa-acento)
         funcao="apply_acessibilidade",
         chega_em=(
-            "{uniq: Ativacao}, depositado no store por definir_ativo e "  # (noqa-acento) chave
+            "{uniq: Ativacao}, depositado no store por definir_ativo e "  # (noqa-acento)
             "perguntado pelo tique com o uniq de cada jogador (da_peca)"
         ),
     ),
-    "analogicos": ConsumidorPorUnidade(  # (noqa-acento) identificador ASCII
+    "analogicos": ConsumidorPorUnidade(
         funcao="apply_acessibilidade",
         chega_em=(
             "{uniq: Curva}, depositado no store por definir_ativo e "
@@ -149,8 +149,8 @@ def test_a_regua_sabe_recusar() -> None:
     sintetico = {"leds", "touchpad"}
     assert _campos_sem_consumidor(sintetico, _CONSUMIDOR) == ["touchpad"]
     assert _consumidores_orfaos(sintetico, _CONSUMIDOR) == [
-        "analogicos",  # (noqa-acento) identificador ASCII
-        "ativacao",  # (noqa-acento) identificador ASCII
+        "analogicos",
+        "ativacao",  # (noqa-acento)
         "mascara",
         "mic",
         "movimento",
@@ -414,8 +414,8 @@ _PROVAS = {
     "mascara": _prova_mascara,
     "movimento": _prova_movimento,
     "remapeamento": _prova_remapeamento,
-    "ativacao": _prova_ativacao,  # (noqa-acento) identificador ASCII
-    "analogicos": _prova_analogicos,  # (noqa-acento) identificador ASCII
+    "ativacao": _prova_ativacao,  # (noqa-acento)
+    "analogicos": _prova_analogicos,
 }
 
 
@@ -581,7 +581,7 @@ def test_o_interruptor_de_sensor_existe_e_e_por_peca() -> None:
         "toque_visto",
         "velocidade_do_movimento",
         "vigiar",
-        "movimento_visto",  # o tópico movimento da porta
+        "movimento_visto",
         "pedir_o_movimento",
     }, f"o SensorHub mudou de superfície pública: {sorted(publicos)}"
 

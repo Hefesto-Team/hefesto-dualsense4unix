@@ -72,15 +72,9 @@ DEFAULT_SCROLL_SPEED = 1
 MOUSE_SPEED_MIN, MOUSE_SPEED_MAX = 1, 12
 SCROLL_SPEED_MIN, SCROLL_SPEED_MAX = 1, 5
 
-#: O gatilho conta como apertado a partir daqui, em fração do curso. UM DONO: o
-#: mouse emulado e a tabela que age junto com o jogo leem o mesmo número. É o
-#: 0,35 que a ponte provisória do GON mediu; os 64/255 de antes (~0,25) clicavam
-#: com o dedo apenas encostado.
 LIMIAR_DO_GATILHO = 0.35
 TRIGGER_PRESS_THRESHOLD = math.ceil(LIMIAR_DO_GATILHO * 255)
 
-#: As duas linhas dos analógicos e os dois tokens que as ligam. Moram aqui e não em
-#: `core/acoes_de_botao` porque o device precisa delas e o módulo da tabela o importa.
 EIXO_ESQUERDO = "l3_direcao"
 EIXO_DIREITO = "r3_direcao"
 TOKEN_CURSOR = "__CURSOR__"
@@ -88,7 +82,6 @@ TOKEN_ROLAGEM = "__ROLAGEM__"
 
 MOUSE_EXPO = 1.6
 MOUSE_PX_PER_SEC_STEP = 125.0
-# daemon). Os callsites reais passam `config.poll_hz`.
 DEFAULT_POLL_HZ = 60
 
 TOUCHPAD_SENSITIVITY = 0.45
@@ -97,8 +90,6 @@ BUTTON_TO_UINPUT: dict[str, str] = {
     "cross": "BTN_LEFT",
     "triangle": "BTN_RIGHT",
     "r3": "BTN_MIDDLE",
-    # Os gatilhos são linha própria, e não mais espelho do Cruz e do Triângulo: o
-    # perfil escolhe o que cada um faz (um botão do mouse ou uma tecla).
     "l2": "BTN_LEFT",
     "r2": "BTN_RIGHT",
 }
@@ -121,9 +112,7 @@ def gatilho_apertado(bruto: int) -> bool:
     return bruto >= TRIGGER_PRESS_THRESHOLD
 
 
-#: O gatilho escolhido como botão de precisão vale a partir da metade do curso.
 PRECISAO_DO_GATILHO = 127
-#: Sem notícia do controle por tanto tempo, o clique travado solta na volta (queda do controle).
 TRAVA_SEM_NOTICIA_S = 1.0
 
 _ATRIBUTO_DO_AJUSTE = "_ajuste_do_cursor_da_mesa"
@@ -158,7 +147,7 @@ def montar_o_ajuste(secao: Any) -> AjusteDoCursor | None:
         zona_morta=int(getattr(secao, "zona_morta", padrao.zona_morta)),
         curva=float(getattr(secao, "curva", padrao.curva)),
         precisao_botao=getattr(secao, "precisao_botao", None) or None,
-        precisao=int(getattr(secao, "precisao", 30)) / 100.0,  # (noqa-acento) identificador ASCII
+        precisao=int(getattr(secao, "precisao", 30)) / 100.0,  # (noqa-acento)
         permanencia_s=int(getattr(secao, "permanencia_ms", 0) or 0) / 1000.0,
         clique_travado=getattr(secao, "clique_travado", None) or None,
     )
@@ -257,8 +246,6 @@ class UinputMouseDevice:
     scroll_speed: int = DEFAULT_SCROLL_SPEED
     poll_hz: int = DEFAULT_POLL_HZ
 
-    # quando ninguém escolhe nada: `set_button_actions` é quem os troca, e o
-    # perfil sem `button_actions` nunca o chama.
     _mapa_botoes: dict[str, str] = field(
         default_factory=lambda: dict(BUTTON_TO_UINPUT))
     _mapa_dpad: dict[str, str] = field(default_factory=lambda: dict(DPAD_TO_KEY))
@@ -266,14 +253,8 @@ class UinputMouseDevice:
 
     _device: Any = None
     _uinput_mod: Any = None
-    # Os códigos `BTN_*` que ESTE device mantém apertados. A borda é por código, e
-    # não por botão: dois botões (a Cruz e o L2) podem dar o mesmo clique, e o
-    # clique só solta quando o último deles solta.
     _codigos_apertados: frozenset[str] = field(default_factory=frozenset)
-    # As setas `KEY_*` que ESTE device mantém apertadas, pela mesma razão: a troca
-    # de tabela as solta, e a borda seguinte pergunta pelo código, não pelo mapa.
     _setas_apertadas: frozenset[str] = field(default_factory=frozenset)
-    # O cursor e a rolagem só andam se a linha do analógico escolher o próprio token.
     _cursor_ligado: bool = True
     _rolagem_ligada: bool = True
     _last_scroll_at: float = -math.inf
@@ -284,7 +265,6 @@ class UinputMouseDevice:
     _giro_carry_y: float = 0.0
     _stick_carry_x: float = 0.0
     _stick_carry_y: float = 0.0
-    # O ajuste de acessibilidade do cursor (None = o de sempre) e o que ele guarda entre tiques.
     _ajuste: AjusteDoCursor | None = None
     _epoca: int = 0
     _fator: float = 1.0
@@ -425,9 +405,6 @@ class UinputMouseDevice:
             self._rolagem_ligada = True
             return
         mudos = frozenset(calados or ())
-        # AS DUAS LINHAS DOS ANALÓGICOS NÃO SÃO BOTÃO: o token delas liga o eixo.
-        # Linha ausente é o de fábrica (ligado); `— Nada —` chega por `calados`;
-        # qualquer outro token que não seja o próprio eixo desliga.
         self._cursor_ligado = (
             EIXO_ESQUERDO not in mudos
             and do_mouse.get(EIXO_ESQUERDO, TOKEN_CURSOR) == TOKEN_CURSOR)

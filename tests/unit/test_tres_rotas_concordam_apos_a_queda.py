@@ -96,8 +96,6 @@ async def test_as_tres_rotas_concordam_depois_da_queda_real(
 
     run_task = asyncio.create_task(daemon.run())
     try:
-        # a borda de queda só dispara se houve ao menos um tique conectado (`was_connected`
-        # no laço do `lifecycle.py`), e a queda só vale depois de o laço a ter publicado
         await _esperar(
             lambda: store.snapshot().controller is not None,
             "o laço de poll publicar um tique com o controle conectado (store.controller)",

@@ -389,8 +389,6 @@ def _o_que_o_jogo_ve_no_uinput(
     return apertadas, (eixos.get(ecodes.ABS_HAT0X, 0), eixos.get(ecodes.ABS_HAT0Y, 0)), eixos
 
 
-#: Os dois botões da frente que o SDL lê em códigos diferentes conforme o VID do nó
-#: (o quadrado e o triângulo): o par que a régua 2b isola na máscara DualSense.
 _A_FRENTE_QUE_O_VID_DECIDE = frozenset({"BTN_WEST", "BTN_NORTH"})
 
 
@@ -486,7 +484,7 @@ def _modulo_do_uinput_com_o_leitor(mapa: dict[str, str]) -> Any:
         )
         assert spec is not None and spec.loader is not None
         copia = importlib.util.module_from_spec(spec)
-        sys.modules[spec.name] = copia  # o @dataclass procura o módulo da classe aqui
+        sys.modules[spec.name] = copia
         spec.loader.exec_module(copia)
     finally:
         sys.modules.pop("_copia_do_uinput_gamepad", None)

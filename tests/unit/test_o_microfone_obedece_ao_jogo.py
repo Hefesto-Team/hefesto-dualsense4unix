@@ -79,13 +79,13 @@ from tests.unit.test_o_botao_do_mic_grava_no_perfil import (
     _Eleitor,
     _Kernel,
     _reconectar,
-    casa,  # noqa: F401 — a fixture da cena do botão, a mesma da régua irmã
+    casa,  # noqa: F401
 )
 from tests.unit.test_o_botao_e_a_luz_do_microfone_no_jogo import (
     _blueprint,
     _evento_de_output,
     _UhidPorFd,
-    uhid,  # noqa: F401 — o /dev/uhid de mentira da O-BOTAO
+    uhid,  # noqa: F401
 )
 
 P1 = "aabbcc000011"
@@ -1102,9 +1102,6 @@ class TestSemJogoORetido:
             assert (pad.mic_led_do_jogo, pad.mic_do_jogo_retido) == (0, 0)
         finally:
             pad.stop()
-
-
-# 9. O `state_full`
 
 
 class _ControleComMicrofone(FakeController):  # type: ignore[misc]

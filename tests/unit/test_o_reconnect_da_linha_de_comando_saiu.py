@@ -75,9 +75,6 @@ _SEM_COR = re.compile(r"\x1b\[[0-9;]*m")
 
 
 def test_a_ajuda_nao_fala_de_reconnect() -> None:
-    # Sob `GITHUB_ACTIONS` o rich do Typer força o terminal e pinta `--poll-hz` em pedaços: a
-    # régua lê o texto sem os códigos de cor, que é o que a pessoa lê.
-    # O Typer 0.27.3 não traz mais o click como dependência: a cor sai por expressão.
     saida = _SEM_COR.sub("", runner.invoke(app, ["daemon", "start", "--help"]).output)
     assert "--poll-hz" in saida, "a ajuda não saiu: o teste mediria o vazio"
     assert "reconnect" not in saida.lower()
@@ -109,8 +106,10 @@ def test_nenhum_codigo_de_src_cita_os_dois_campos_fora_da_lista_do_reload() -> N
 def test_a_opcao_velha_nao_derruba_o_daemon(
     flag: str, run_daemon_de_mentira: list[dict[str, Any]]
 ) -> None:
-    # D-1610-A-OPCAO-RECONNECT-SAI-E-A-VELHA-SO-AVISA
-    """Uma unit ou um script antigo com a opção sobe o daemon igual, com um aviso."""
+    """Uma unit ou um script antigo com a opção sobe o daemon igual, com um aviso.
+
+    Prova da D-1610-A-OPCAO-RECONNECT-SAI-E-A-VELHA-SO-AVISA.
+    """
     r = runner.invoke(app, ["daemon", "start", "--poll-hz", "30", flag])
     assert r.exit_code == 0, r.output
     assert run_daemon_de_mentira == [{"poll_hz": 30}]

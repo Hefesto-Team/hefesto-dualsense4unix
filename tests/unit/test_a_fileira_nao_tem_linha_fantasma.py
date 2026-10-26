@@ -34,7 +34,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[2]
 PAGINA = (
     RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
-    / "paginas"  # (noqa-acento) nome de PASTA; caminho não leva acento
+    / "paginas"  # (noqa-acento)
     / "01-jogar.html"
 )
 

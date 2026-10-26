@@ -46,8 +46,6 @@ def _sem_estilo(doc: str) -> str:
     return re.sub(r"<style.*?</style>|<!--.*?-->|<svg.*?</svg>", "", doc, flags=re.S)
 
 
-# 1. O NOME --------------------------------------------------------------------------------------
-
 def test_a_janela_se_chama_calibrar_giroscopio_aqui_e_na_aba_controles() -> None:
     doc = _doc()
     assert calibrar.TITULO == "Calibrar giroscópio" == aba02.ROTULO_DO_CALIBRAR
@@ -57,8 +55,6 @@ def test_a_janela_se_chama_calibrar_giroscopio_aqui_e_na_aba_controles() -> None
     assert "sensores de movimento" not in _sem_estilo(doc) + re.search(
         r"<title>.*?</title>", doc).group(0), "o nome velho voltou à janela"
 
-
-# 2. SEM «?» E SEM title -------------------------------------------------------------------------
 
 def test_a_pagina_sai_sem_ponto_de_interrogacao() -> None:
     visivel = _sem_estilo(_doc())
@@ -77,8 +73,6 @@ def test_a_frase_dos_passos_mora_em_data_dica_e_nao_em_title() -> None:
         assert len(dica.split()) <= 12, f"dica longa demais: {dica!r}"
 
 
-# 3. O SELO --------------------------------------------------------------------------------------
-
 def test_a_calibrar_nao_tem_o_selo_nem_o_liga_do_analogico_virtual() -> None:
     assert not hasattr(calibrar, "ROTULO_DA_MIRA") and not hasattr(calibrar, "LADOS")
     visivel = _sem_estilo(_doc())
@@ -86,8 +80,6 @@ def test_a_calibrar_nao_tem_o_selo_nem_o_liga_do_analogico_virtual() -> None:
                  "analogico-lado", "mira-ligada", "mira-lado"):
         assert saiu not in visivel, f"`{saiu}` voltou à Calibrar: o dono é a aba Controles"
 
-
-# 4. OS ALVOS DE 24 PX ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("largura", [940, 1212])
 def test_todo_alvo_clicavel_mede_24_px_ou_mais(largura: int) -> None:
@@ -113,13 +105,10 @@ def test_todo_alvo_clicavel_mede_24_px_ou_mais(largura: int) -> None:
     assert len(lido["alvos"]) >= 11, f"a régua mediu poucos alvos: {len(lido['alvos'])}"
     baixos = [a for a in lido["alvos"] if a[1] < 24]
     assert not baixos, f"alvos abaixo de 24 px a {largura} px: {sorted({tuple(b) for b in baixos})}"
-    # 5. AS BARRAS COMEÇAM NA MESMA RETA
     for esquerdas in lido["barras"]:
         assert len(esquerdas) == 6 and len(set(esquerdas)) == 1, (
             f"as seis barras do cartão não começam juntas: {esquerdas}")
 
-
-# 6. A JANELA ESTREITA ---------------------------------------------------------------------------
 
 def test_a_coluna_da_mira_cabe_na_janela_estreita() -> None:
     if not CHROME.exists():

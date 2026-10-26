@@ -64,8 +64,6 @@ class Maquina:
         if gerenciador == "system76-power":
             self._cliente("system76-power", f'echo "Power Profile: {perfil_agora}"\n')
         elif gerenciador == "power-profiles-daemon":
-            # Como o real: `get` diz o perfil, `list` só traz «performance» quando
-            # um driver da máquina o sustenta.
             desempenho = (
                 "  performance:\n    CpuDriver:\tamd_pstate\n    Degraded:   no\n\n"
                 if ppd_com_performance
@@ -99,7 +97,6 @@ class Maquina:
             )
         energia = self.sys / "class/power_supply"
         energia.mkdir(parents=True)
-        # A bateria de um controle não é a do computador e não conta.
         (energia / "ps-controller-battery-aa:bb:cc:00:00:01").mkdir()
         if bateria:
             (energia / "BAT0").mkdir()
@@ -153,11 +150,6 @@ def _roda(
     )
 
 
-# ---------------------------------------------------------------------------
-# O mecanismo: scripts/desempenho.sh
-# ---------------------------------------------------------------------------
-
-
 class TestOMecanismo:
     def test_o_perfil_e_o_unico_que_entra_sem_prova(self, tmp_path: Path) -> None:
         m = Maquina(tmp_path, nvidia=True, hda=True, aspm=True)
@@ -188,7 +180,6 @@ class TestOMecanismo:
     @pytest.mark.parametrize(
         ("gerenciador", "cliente", "pedido_sai", "le_de_volta", "deve_passar"),
         [
-            # o pedido sai 1 com o perfil aplicado (a porta SATA da máquina do usuário)
             ("system76-power", "system76-power", 1, "Power Profile: Performance", True),
             ("system76-power", "system76-power", 0, "Power Profile: Balanced", False),
             ("power-profiles-daemon", "powerprofilesctl", 1, "performance", True),
@@ -207,8 +198,6 @@ class TestOMecanismo:
         m = Maquina(tmp_path, gerenciador=gerenciador)
         _roda(m, "aplicar")
         argv = shlex.split(_exec_start((m.raiz / UNIT).read_text(encoding="utf-8")))
-        # Um cliente como o real: o pedido (com argumento de perfil) sai com o
-        # código dado; a leitura (sem ele) diz o perfil de agora.
         falso = tmp_path / "pelo-boot"
         falso.mkdir()
         alvo = falso / cliente
@@ -226,7 +215,6 @@ class TestOMecanismo:
         assert (r.returncode == 0) is deve_passar, (argv, r.returncode, r.stderr)
 
     def test_ppd_sem_o_perfil_performance_e_pulado_e_dito_sem_erro(self, tmp_path: Path) -> None:
-        # Sem driver que sustente «performance», a unit falharia a cada boot.
         m = Maquina(tmp_path, gerenciador="power-profiles-daemon", ppd_com_performance=False)
         r = _roda(m, "aplicar")
         assert r.returncode == 0, r.stdout + r.stderr
@@ -303,8 +291,6 @@ class TestOMecanismo:
             assert arq in texto, f"o uninstall não olha {arq} (nem para pedir a credencial)"
 
     def test_o_uninstall_pede_a_credencial_por_cada_arquivo(self) -> None:
-        # Sem a credencial pedida no começo, o bloco cai no «sudo indisponível» e
-        # os arquivos de root ficam: cada um tem de armar o `_NEEDS_SUDO`.
         texto = UNINSTALL.read_text(encoding="utf-8")
         armam = " ".join(
             re.findall(r"\[\[ -e (?:[^\]]|\](?!\]))*\]\] && _NEEDS_SUDO=1", texto)
@@ -316,11 +302,6 @@ class TestOMecanismo:
             "/etc/tmpfiles.d/hefesto-desempenho-aspm.conf",
         ):
             assert arq in armam, f"{arq} não arma o _NEEDS_SUDO do uninstall"
-
-
-# ---------------------------------------------------------------------------
-# A decisão: a pergunta, as flags e o padrão sem TTY — pela função do install
-# ---------------------------------------------------------------------------
 
 
 def _ask_yn_do_install() -> str:
@@ -361,12 +342,12 @@ def _roda_o_passo(
 
 class TestADecisao:
     def test_desempenho_escreve_os_arquivos_do_perfil(self, tmp_path: Path) -> None:
-        m = Maquina(tmp_path, bateria=True)  # até no notebook: a flag manda
+        m = Maquina(tmp_path, bateria=True)
         _, escritos = _roda_o_passo(m, tmp_path, pedido="sim")
         assert escritos == {UNIT, WANTS}
 
     def test_sem_desempenho_nao_escreve_nada(self, tmp_path: Path) -> None:
-        m = Maquina(tmp_path, bateria=False)  # até no desktop: a flag manda
+        m = Maquina(tmp_path, bateria=False)
         saida, escritos = _roda_o_passo(m, tmp_path, pedido="sem", auto_yes=1)
         assert escritos == set()
         assert "modo desempenho não pedido" in saida
@@ -402,7 +383,7 @@ class TestADecisao:
         m = Maquina(tmp_path, nvidia=True, hda=True, aspm=True)
         saida, escritos = _roda_o_passo(m, tmp_path, pedido="sim", provados="nvidia audio aspm")
         assert escritos == set(TODOS)
-        assert "Reinicie o computador" not in saida  # o fecho é do install; o passo só anota
+        assert "Reinicie o computador" not in saida
 
     def test_sem_a_prova_os_tres_ficam_de_fora(self, tmp_path: Path) -> None:
         m = Maquina(tmp_path, nvidia=True, hda=True, aspm=True)
@@ -428,11 +409,6 @@ class TestADecisao:
         assert r.returncode == 0, r.stdout + r.stderr
         assert "pulado (--no-udev)" in r.stdout
         assert m.escritos() == set()
-
-
-# ---------------------------------------------------------------------------
-# O ensaio e as flags do install (o `--dry-run` real, num lar de mentira)
-# ---------------------------------------------------------------------------
 
 
 def _ensaio(tmp: Path, m: Maquina, *flags: str) -> str:
@@ -498,11 +474,6 @@ class TestOEnsaioEAsFlags:
         assert "modo desempenho (--no-udev)" in saida
 
 
-# ---------------------------------------------------------------------------
-# O doctor: o estado de cada ajuste, com o comando de ligar e de desligar
-# ---------------------------------------------------------------------------
-
-
 def _doctor(m: Maquina, **extra: str) -> str:
     r = subprocess.run(
         [BASH, "-c", f'source "{DOCTOR}"; check_desempenho'],
@@ -556,9 +527,6 @@ class TestODoctor:
     def test_perfil_gravado_e_depois_trocado_no_menu_e_estado_nao_alarme(
         self, tmp_path: Path
     ) -> None:
-        # O perfil não é arquivo de módulo: trocá-lo no menu de energia depois do
-        # boot é direito de quem usa. O doctor diz o estado e o caminho de volta,
-        # em qualquer época de gravação da unit (ela roda na hora do install).
         m = Maquina(tmp_path, perfil_agora="Balanced")
         _roda(m, "aplicar")
         for boot, mtime in (("1000", 100), ("1", None)):
@@ -578,10 +546,8 @@ class TestODoctor:
     def test_arquivo_gravado_depois_do_boot_diz_proximo_boot(self, tmp_path: Path) -> None:
         m = Maquina(tmp_path, nvidia=True)
         _roda(m, "aplicar", "nvidia")
-        # gravada DEPOIS do boot (agora > 1): ainda não teve um boot para valer
         linha = _linha(_doctor(m, HEFESTO_DESEMPENHO_BOOT="1"), "GPU NVIDIA")
         assert "PRÓXIMO BOOT" in linha and not linha.startswith("[WARN]"), linha
-        # gravada ANTES do boot e o driver segue com 3: alguém desfez
         os.utime(m.raiz / NVIDIA, (100, 100))
         linha = _linha(_doctor(m, HEFESTO_DESEMPENHO_BOOT="1000"), "GPU NVIDIA")
         assert linha.startswith("[WARN]") and "DESFEITO" in linha, linha
@@ -599,7 +565,7 @@ class TestODoctor:
         (m.sys / "module/pcie_aspm/parameters/policy").write_text(
             "default [performance] powersave\n", encoding="utf-8"
         )
-        saida = _doctor(m, HEFESTO_DESEMPENHO_BOOT="1")  # o valor igual passa em qualquer época
+        saida = _doctor(m, HEFESTO_DESEMPENHO_BOOT="1")
         for rotulo in ("GPU NVIDIA", "áudio da placa-mãe", "PCIe"):
             assert _linha(saida, rotulo).startswith("[ OK ]"), saida
 
@@ -614,11 +580,6 @@ class TestODoctor:
 
     def test_o_main_do_doctor_pergunta(self) -> None:
         assert "\n    check_desempenho\n" in DOCTOR.read_text(encoding="utf-8")
-
-
-# ---------------------------------------------------------------------------
-# Os quatro lugares falam do mesmo
-# ---------------------------------------------------------------------------
 
 
 class TestOsQuatroLugaresFalamDoMesmo:

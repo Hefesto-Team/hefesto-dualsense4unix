@@ -123,7 +123,6 @@ def test_sem_resposta_a_sala_nao_diz_que_nao_ha(bancada: Any) -> None:
         "a sala afirmou alguma coisa sem que ninguém tivesse respondido: "
         f"{campos['radio-sala']!r}")
     assert _pacote().NENHUM_ADAPTADOR not in campos["radio-sala"]
-    # a conta do topo («4 controles · 3 adaptadores») saiu no desenho aprovado de 05/10/2026
     assert "conta-de-adaptadores" not in campos
 
 

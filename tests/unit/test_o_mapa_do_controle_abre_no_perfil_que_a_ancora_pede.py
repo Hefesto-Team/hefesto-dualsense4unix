@@ -74,9 +74,6 @@ def _mesa(ctx: Contexto) -> dict[str, Any]:
     return mesa
 
 
-# ---------------------------------------------------------------- o que a âncora pede
-
-
 @pytest.mark.parametrize("molde", loader.MOLDES_DE_PERFIL, ids=lambda m: m.chave)
 def test_o_point_and_click_abre_o_molde_que_a_06_escolheu(
         monkeypatch: pytest.MonkeyPatch, molde: Any) -> None:
@@ -166,9 +163,6 @@ def test_abrir_pela_ancora_nao_grava_nada(monkeypatch: pytest.MonkeyPatch,
     assert a13._estado()["edicoes"] == {}
 
 
-# ---------------------------------------------------------------- o tipo vem da receita do estilo
-
-
 def test_o_visual_novel_e_um_perfil_de_clicar_pela_receita_do_catalogo(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """MORDIDA: voltar a reconhecer só `estilo == "point_and_click"` reprova o Visual novel."""
@@ -189,9 +183,6 @@ def test_nenhuma_chave_de_estilo_de_clicar_mora_no_mapa() -> None:
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/pacotes/a13_mapa_do_controle.py"
              ).read_text(encoding="utf-8")
     assert '"point_and_click"' not in fonte and '"visual_novel"' not in fonte
-
-
-# ---------------------------------------------------------------- a página, no WebKit
 
 
 def _no_webkit(fragmento: str, passos: list[str]) -> list[Any]:
@@ -330,12 +321,13 @@ def test_a_ancora_segue_a_escolha_da_06_no_tempo(monkeypatch: pytest.MonkeyPatch
 
 
 def test_seguida_a_ancora_o_seletor_e_de_quem_usa(monkeypatch: pytest.MonkeyPatch) -> None:
-    # D-1610-A-ANCORA-ABRE-O-MAPA-DO-CONTROLE-NO-PERFIL-QUE-PROMETE-UMA-VEZ-POR-CHEGADA
     """A âncora se segue uma vez por chegada. Depois, o perfil ativo que troca no meio da edição
     (um jogo que abre e troca o perfil) não muda o seletor nem dispara outro `change`, que no
     Python largaria o que ainda não foi salvo.
 
     MORDIDA: seguir de novo sempre que a chave pintada muda reprova aqui.
+
+    Prova da D-1610-A-ANCORA-ABRE-O-MAPA-DO-CONTROLE-NO-PERFIL-QUE-PROMETE-UMA-VEZ-POR-CHEGADA.
     """
     _o_disco(monkeypatch, {
         ATIVO: {"name": ATIVO, "remapeamento": {"triangle": "cross"}},
@@ -343,8 +335,8 @@ def test_seguida_a_ancora_o_seletor_e_de_quem_usa(monkeypatch: pytest.MonkeyPatc
     _a_escolha_da_06(monkeypatch, "molde:visual_novel")
     ctx = _ctx()
     primeira = _pintar(ctx)
-    a13.mapa_perfil(ctx, {"valor": f"perfil:{ATIVO}"}, None)  # o `change` chegou ao Python
-    a13._estado()["edicoes"]["cross"] = ("troca", "square")  # e ela começou a trocar um botão
+    a13.mapa_perfil(ctx, {"valor": f"perfil:{ATIVO}"}, None)
+    a13._estado()["edicoes"]["cross"] = ("troca", "square")
     depois = _ctx(ativo="Corrida")
     assert _mesa(depois)["ancora-trocar"] == "perfil:Corrida"
     segunda = _pintar(depois)

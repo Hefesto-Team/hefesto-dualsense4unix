@@ -86,7 +86,6 @@ def _roda_o_main(monkeypatch: pytest.MonkeyPatch) -> int:
     monkeypatch.setattr(daemon_main, "build_controller", lambda: FakeController())
 
     async def com_prazo(coro: Any) -> None:
-        # Um daemon que ficasse no ar sem o IPC prenderia a régua para sempre.
         await asyncio.wait_for(coro, timeout=5.0)
 
     monkeypatch.setattr(vigia_do_laco, "vigiado", com_prazo)

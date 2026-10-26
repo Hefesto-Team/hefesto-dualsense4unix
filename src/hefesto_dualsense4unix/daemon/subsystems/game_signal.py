@@ -159,12 +159,8 @@ def outro_jogo_vivo(inputs: dict[str, Any], appid_do_lancamento: int) -> bool:
     return bool(inputs.get("profile_rule_match"))
 
 
-#: A decisão do arme do próprio jogo (O-ARME-NAO-ENCERRA-A-AUTORIDADE-DO-PROPRIO-JOGO-01).
 DECISAO_ARME_DO_PROPRIO_JOGO = "D-2310-O-ARME-NAO-ENCERRA-A-AUTORIDADE-DO-PROPRIO-JOGO"
 
-#: O appid do arme que está recriando o pad e a marca dele, enquanto `o_arme_do_proprio_jogo`
-#: está aberto. A marca só vale em `_ARMES_EM_CURSO`: a tarefa que nasce no arme copia o
-#: contexto (`asyncio.create_task`) e roda DEPOIS dele, com o jogo já no pad.
 _ARME_DO_PROPRIO_JOGO: ContextVar[tuple[int, object] | None] = ContextVar(
     "hefesto_arme_do_proprio_jogo", default=None
 )

@@ -47,8 +47,8 @@ F = frozenset
 P1 = "aabbcc000001"
 P2 = "aabbcc000002"
 P3 = "aabbcc000003"
-ATIVACAO = "ativacao"  # (noqa-acento): a chave da seção do perfil
-ACAO = "acao"  # (noqa-acento): o parâmetro do IPC
+ATIVACAO = "ativacao"  # (noqa-acento)
+ACAO = "acao"  # (noqa-acento)
 TRES = [{"botao": "cross", "ms": 80}, {"botao": "circle", "ms": 120}, {"botao": "r1", "ms": 0}]
 
 
@@ -89,9 +89,6 @@ def _subidas(saida: list[tuple[float, frozenset[str]]], botao: str,
             n += 1
         antes = agora
     return n
-
-
-# -- o motor: ordem, tempo, jeito e ritmo -------------------------------------
 
 
 def test_a_sequencia_sai_na_ordem_e_no_tempo() -> None:
@@ -176,9 +173,6 @@ def test_o_botao_sem_sequencia_passa_intacto() -> None:
     assert b == F({"cross"})
 
 
-# -- por perfil e por controle ------------------------------------------------
-
-
 def test_a_sequencia_da_peca_vale_so_nela() -> None:
     perfil = _cfg(passos=[{"botao": "cross", "ms": 0}])
     peca = _cfg(passos=[{"botao": "square", "ms": 0}])
@@ -219,9 +213,6 @@ def test_o_perfil_seguinte_larga_a_sequencia_em_curso() -> None:
     assert ab.preso(store, P1)
     ab.definir_ativo(store, None)
     assert not ab.preso(store, P1)
-
-
-# -- os dois caminhos do pad virtual ------------------------------------------
 
 
 class _Device:
@@ -302,9 +293,6 @@ def test_os_dois_caminhos_ainda_passam_pelo_dono_unico() -> None:
                    for c in ast.walk(no)), f"{funcao} não chama o dono único"
 
 
-# -- a gravação ---------------------------------------------------------------
-
-
 def _ouvir(store: Any, eventos: list[tuple[float, str, set[str], int, int, set[str]]]) -> None:
     for t, uniq, botoes, l2, r2, soltos in eventos:
         b, a, c, s = ab.traduzir(store, uniq, F(botoes), l2, r2, t, F(soltos))
@@ -379,9 +367,6 @@ def test_a_tabela_de_teclas_nao_dobra_a_gravacao() -> None:
     assert ab.gravar_estado(store) == (True, [])
 
 
-# -- o «Tocar para ouvir» -----------------------------------------------------
-
-
 def test_o_teste_toca_uma_vez_no_controle_pedido_e_se_apaga() -> None:
     store = SimpleNamespace()
     ab.tocar_agora(store, P2, {"passos": TRES}, 5.0)
@@ -394,9 +379,6 @@ def test_o_teste_toca_uma_vez_no_controle_pedido_e_se_apaga() -> None:
     assert _ordem(visto) == ["cross", "circle", "r1"]
     assert "l1" in visto[0], "o botão que a mão aperta segue junto do teste"
     assert not ab.alguma(store), "o teste acabou e o motor ficou ligado"
-
-
-# -- o esquema e a recusa -----------------------------------------------------
 
 
 def test_o_perfil_guarda_e_devolve_a_sequencia_do_perfil_e_da_peca() -> None:
@@ -437,9 +419,6 @@ def test_texto_e_sequencia_se_conversam_sem_perder_nada() -> None:
     texto = ab.sequencia_em_texto(seq)
     assert texto == "cross:80,circle:120,r1:0|alterna|devagar"
     assert ab.sequencia_do_texto(texto) == seq
-
-
-# -- o IPC --------------------------------------------------------------------
 
 
 class _Handlers(IpcHandlersMixin):
@@ -493,9 +472,6 @@ def test_o_servidor_publica_os_dois() -> None:
     for metodo in ("gravar", "tocar"):
         assert re.search(rf'"sequencia\.{metodo}":\s*self\._handle_sequencia_{metodo}', fonte), (
             f"o servidor não publica sequencia.{metodo}")
-
-
-# -- a tela: gravar, ajustar, tocar e guardar ---------------------------------
 
 
 def _ctx(escolhido: str = "p2") -> Any:

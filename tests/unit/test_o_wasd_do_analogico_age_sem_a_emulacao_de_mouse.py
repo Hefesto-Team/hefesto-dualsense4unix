@@ -106,7 +106,6 @@ async def _rodar_o_laco(
     prazo = time.monotonic() + PRAZO_S
     while daemon.store.counter("input.settling.tick") < 3 and time.monotonic() < prazo:
         await asyncio.sleep(0.005)
-    # Dá ao laço o tempo de despachar a tecla com o analógico à esquerda.
     fim = time.monotonic() + (PRAZO_S if not (so_no_jogo or suspensa or not teclado) else 0.3)
     while not _teclas(mod) and time.monotonic() < fim:
         await asyncio.sleep(0.005)

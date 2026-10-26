@@ -51,7 +51,6 @@ class XlibBackend:
         self._connect_backoff_sec: float = _RECONNECT_BACKOFF_SEC
         self._connect_fail_warned: bool = False
         self._desacordo_ativo: str | None = None
-        # `WindowReaderDiag` e daí para o `StateStore`/`state_full`.
         self.last_failure_reason: str | None = None
 
     def _sem_leitura(self, motivo: str) -> None:
@@ -114,7 +113,7 @@ class XlibBackend:
         """Erro de CONEXÃO (display morto) — nunca um BadWindow pontual."""
         try:
             from Xlib.error import ConnectionClosedError
-        except Exception:  # pragma: no cover - python-xlib sempre presente
+        except Exception:  # pragma: no cover
             return isinstance(exc, OSError)
         return isinstance(exc, (ConnectionClosedError, OSError))
 

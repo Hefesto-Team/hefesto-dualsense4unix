@@ -61,7 +61,6 @@ class PonteDeMentira:
         self.chamadas.append((metodo, args))
         return True
 
-    # daemon antigo e faz `mensagem_de_ativacao` cair na frase de sempre.
     def resultado(self, metodo: str, *args: Any, **kw: Any) -> Any:
         self.chamadas.append((metodo, tuple(kw.values())))
         return {}
@@ -126,8 +125,6 @@ def test_o_daemon_vence_o_disco_quando_os_dois_falam(
 
 
 def _remover(nome: str, state: dict[str, Any]) -> tuple[PonteDeMentira, Exception | None]:
-    # O perfil existe no disco: desde O-EDITOR-DA-ABA-PERFIS-SO-GRAVA-NO-PERFIL-QUE-MOSTRA-01
-    # o alvo do editor é uma linha da lista de escolher, e um nome sem arquivo não é.
     from hefesto_dualsense4unix.profiles import loader
     from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
 

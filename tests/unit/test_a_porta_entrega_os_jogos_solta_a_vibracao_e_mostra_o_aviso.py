@@ -45,7 +45,6 @@ from hefesto_dualsense4unix.mods.supervisor import _comandos_do_lancador
 from tests.unit import test_as_modificacoes_rodam_fora_do_daemon as _base
 
 _ate, _supervisor, _Cliente = _base._ate, _base._supervisor, _base._Cliente
-#: O lar de mentira e a pasta curta são as mesmas fixtures das modificações.
 curto, lar = _base.curto, _base.lar
 
 P1, P2, P3 = "aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03"
@@ -76,9 +75,6 @@ def _servico(supervisor: Any) -> Any:
                            _mod_do_pedido=IpcHandlersMixin._mod_do_pedido)
 
 
-# -- a extensão de lançador entrega os jogos --------------------------------------------
-
-
 def test_a_extensao_de_lancador_entrega_os_jogos_e_a_interface_os_le(curto: Path) -> None:
     async def corrida() -> None:
         porta = await _porta(curto, ["lancador"])
@@ -93,7 +89,6 @@ def test_a_extensao_de_lancador_entrega_os_jogos_e_a_interface_os_le(curto: Path
             corpo = await IpcHandlersMixin._handle_mods_jogos(
                 _servico(SimpleNamespace(porta=porta)), {"mod": "lanc"})
             assert corpo == {"mod": "lanc", "jogos": esperado}
-            # A lista inteira substitui a anterior.
             await asyncio.to_thread(cliente.pedir, "lancador.jogos", {"jogos": JOGOS[1:]})
             assert [j["chave"] for j in porta.jogos_de("lanc")] == ["lutris:13"]
         finally:
@@ -148,8 +143,8 @@ def test_o_jogo_que_abre_outro_comando_ou_vem_torto_e_recusado(curto: Path) -> N
 
 def test_o_supervisor_passa_so_os_comandos_do_lancador() -> None:
     base: dict[str, Any] = {"id": "lanc", "nome": "Lanc", "api": ">=1,<3",
-                            "versao": "1",  # (noqa-acento): contrato ASCII
-                            "licenca": "MIT", "permissoes": ["lancador"]}  # (noqa-acento) chave
+                            "versao": "1",  # (noqa-acento)
+                            "licenca": "MIT", "permissoes": ["lancador"]}  # (noqa-acento)
     lancador = Manifesto.model_validate({
         **base, "tipos": ["lancador", "processo"], "processo": {"executar": ["python3", "m.py"]},
         "lancador": {"rotulo": "Lanc", "comandos": ["lutris", "", 3, "flatpak"]}})
@@ -182,9 +177,9 @@ def test_o_filho_de_lancador_entrega_os_jogos_pelo_supervisor(lar: Any, curto: P
     (pasta / "mod.py").write_text(_O_LANCADOR, encoding="utf-8")
     (pasta / "hefesto-mod.json").write_text(json.dumps({
         "id": "lanc", "nome": "Lanc", "api": ">=2,<3", "licenca": "MIT",
-        "versao": "0.1",  # (noqa-acento): contrato ASCII
+        "versao": "0.1",  # (noqa-acento)
         "tipos": ["lancador", "processo"], "processo": {"executar": ["python3", "mod.py"]},
-        "permissoes": ["lancador"],  # (noqa-acento) chave do contrato
+        "permissoes": ["lancador"],  # (noqa-acento)
         "lancador": {"rotulo": "Lanc", "comandos": ["lutris"]},
     }), encoding="utf-8")
     instalar(str(pasta), lugares=lar)
@@ -202,9 +197,6 @@ def test_o_filho_de_lancador_entrega_os_jogos_pelo_supervisor(lar: Any, curto: P
             await sup.parar()
 
     asyncio.run(corrida())
-
-
-# -- a vibração que a extensão deixou ligada se solta -----------------------------------
 
 
 def test_a_vibracao_que_a_extensao_deixou_ligada_se_solta_quando_ela_cai(curto: Path) -> None:
@@ -232,11 +224,7 @@ def test_a_vibracao_que_a_extensao_deixou_ligada_se_solta_quando_ela_cai(curto: 
         await porta.parar()
 
     asyncio.run(corrida())
-    # P1 ficou vibrando e se solta; P2 já tinha voltado a zero; P3 é do jogo agora.
     assert escritas[4:] == [("rumble.set", {"uniq": P1, "weak": 0, "strong": 0})]
-
-
-# -- o aviso do manifesto ---------------------------------------------------------------
 
 
 def _pasta_com_aviso(curto: Path, aviso: str = AVISO) -> Path:
@@ -244,9 +232,9 @@ def _pasta_com_aviso(curto: Path, aviso: str = AVISO) -> Path:
     pasta.mkdir(exist_ok=True)
     (pasta / "hefesto-mod.json").write_text(json.dumps({
         "id": "avisada", "nome": "Avisada", "api": ">=2,<3", "licenca": "MIT",
-        "versao": "0.1",  # (noqa-acento): contrato ASCII
+        "versao": "0.1",  # (noqa-acento)
         "tipos": ["tema"], "tema": {}, "aviso": aviso,
-        "permissoes": ["tema"],  # (noqa-acento) chave do contrato
+        "permissoes": ["tema"],  # (noqa-acento)
     }), encoding="utf-8")
     return pasta
 
@@ -259,7 +247,6 @@ def test_o_aviso_aparece_antes_de_instalar_e_nada_se_grava(lar: Any, curto: Path
     assert ler_registro(lar.registro) == {} and not (lar.codigo / "avisada").exists()
     feito = instalar(str(pasta), lugares=lar, aviso_visto=AVISO)
     assert feito.entrada.aviso_aceito == AVISO and not feito.entrada.ligada
-    # O aviso visto no instalar vale para o ligar: o «sim» pede só as permissões.
     assert ligar("avisada", permissoes_vistas=["tema"], lugares=lar).ligada
 
 

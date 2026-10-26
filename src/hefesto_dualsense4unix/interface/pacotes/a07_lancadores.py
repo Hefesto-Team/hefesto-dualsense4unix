@@ -168,14 +168,10 @@ from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 
 from . import Contexto, fios, perfil, registrar
 
-#: `RuntimeError`/`ValueError` (`hefesto_vivo`), não a um terminal.
 _LOG = logging.getLogger(__name__)
 
 TTL_S = 20.0
 
-#: Os endereços da página que a aba declara sem dono. Vazio: o `heroic` saiu em 09/09/2026
-#: (LANCADORES-ZERO-01) e o `criar-perfil` era um órfão que nenhuma página tem (a 07 publicada e o
-#: mockup usam o gesto `criar-perfil-para-um-jogo`, que tem dono).
 SEM_DONO: dict[str, str] = {}
 
 
@@ -255,13 +251,12 @@ def _porque(motivo: str) -> str:
 
 def _declarados() -> tuple[desenho.SemCenso, ...]:
     """O que o usuário declarou no `maquina.json`, no molde do procurador."""
-    # veria, porque o motor estava todo lá.
     perfil._com_o_src()
     from hefesto_dualsense4unix.utils.maquina import carregar_maquina
 
     try:
         declaracao = carregar_maquina()
-    except Exception:  # pragma: no cover - o disco do usuário não derruba a aba
+    except Exception:  # pragma: no cover
         return ()
     return tuple(
         desenho.SemCenso(chave=chave, nome=item.rotulo,
@@ -297,7 +292,7 @@ def _achados_por_conteudo() -> tuple[desenho.SemCenso, ...]:
 
     try:
         achados = jl.lancadores_por_conteudo()
-    except Exception:  # pragma: no cover - o disco do usuário não derruba a aba
+    except Exception:  # pragma: no cover
         return ()
     de_fabrica = {atalho for item in desenho.SEM_FONTE for atalho in item.atalhos}
     if desenho.A_STEAM is not None:
@@ -405,7 +400,7 @@ def _onde_estao_os_lancadores(
                     if caminho.is_file():
                         onde = str(caminho)
                         break
-                except OSError:  # pragma: no cover - pasta sumiu no meio
+                except OSError:  # pragma: no cover
                     continue
             if onde:
                 break
@@ -413,7 +408,7 @@ def _onde_estao_os_lancadores(
             for comando in item.comandos:
                 try:
                     achado = shutil.which(comando)
-                except Exception:  # pragma: no cover - PATH torto
+                except Exception:  # pragma: no cover
                     continue
                 if achado:
                     onde = achado
@@ -526,7 +521,6 @@ def _ler_do_disco() -> desenho.Leitura:
         pontes=pontes,
         onde_estao=onde_estao,
         declarados=declarados,
-        # e a MESMA que o `apply_wrapper_to_all_games` grava no vdf. Digitá-la
         linha=slo.WRAPPER_LAUNCH,
         erros=tuple(censo.erros),
         do_disco=do_disco,
@@ -534,7 +528,6 @@ def _ler_do_disco() -> desenho.Leitura:
     )
 
 
-#: O prazo de cada ``mods.jogos``: a vigia pergunta numa thread de fundo, uma vez por extensão.
 PRAZO_DOS_JOGOS_DA_PORTA_S = 1.5
 
 
@@ -613,10 +606,7 @@ class _Escolha:
     lancador: str = ""
     jogos: tuple[desenho.JogoParaEscolher, ...] = ()
     janelas: dict[str, tuple[str, ...]] = dataclasses.field(default_factory=dict)
-    #: O título que casa cada jogo, por chave: o jogo de um lançador de
-    #: modificação, cuja janela é a do emulador para todos os jogos.
     titulos: dict[str, str] = dataclasses.field(default_factory=dict)
-    #: A lista da janela «Criar perfis» (Criar / Tem perfil).
     miolo_novo: str = ""
 
     def limpar(self) -> None:
@@ -766,7 +756,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     """A aba inteira, e ela NÃO depende de controle nenhum."""
     carga = _resposta(VIGIA.agora(), ctx.state)
     valores = carga["mesa"]
-    # ajuda; a de 03/09 deu-lhe endereço e alimentou-o da mesa VIVA. Agora a
     fora: dict[str, Any] = dict(valores)
     fora["blocos"] = dict(carga["blocos"])
     fora["sem_dono"] = {k: {"sem_dono": True, "oque": v} for k, v in SEM_DONO.items()}
@@ -774,7 +763,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     return fora
 
 
-# `jogos_sem_wrapper.txt`, dois arquivos em disco. O inventário do daemon
 from . import gesto  # noqa: E402
 
 FECHADO = "fechado"
@@ -821,19 +809,19 @@ def a_escada_do_jogo(state: dict[str, Any] | None) -> tuple[int | None, str]:
         vivo = launch_session_appid()
         if vivo is not None:
             return vivo, ABERTO
-    except Exception:  # pragma: no cover - marker ilegível
+    except Exception:  # pragma: no cover
         pass
     foco = _o_jogo_em_foco(state)
     if foco:
         try:
             return int(foco), ABERTO
-        except ValueError:  # pragma: no cover - `extract_steam_appid` já filtra
+        except ValueError:  # pragma: no cover
             pass
     try:
         marker = read_last_run_marker()
         if marker is not None:
             return marker[0], FECHADO
-    except Exception:  # pragma: no cover - marker ilegível
+    except Exception:  # pragma: no cover
         pass
     return None, FECHADO
 
@@ -851,9 +839,6 @@ def _criar_o_perfil_de(ctx: Contexto, p: Any, jogo: desenho.JogoParaEscolher) ->
 
     titulo = _ESCOLHA.titulos.get(jogo.chave, "")
     if titulo:
-        # O JOGO DE UM EMULADOR QUE ABRE TODOS NA MESMA JANELA casa pelo ID
-        # no título, e só por ele: a classe e o processo do KytyPS5 ainda não
-        # foram medidos, e uma condição a mais que não casa calaria o perfil.
         from hefesto_dualsense4unix.profiles.schema import MatchCriteria
 
         regra = MatchCriteria(window_title_regex=titulo)
@@ -907,19 +892,19 @@ def onde_isso_esta(alvo: str) -> tuple[str, str, str]:
     if nu:
         try:
             pastas = jl.pastas_de_atalhos()
-        except Exception:  # pragma: no cover - pastas ilegíveis
+        except Exception:  # pragma: no cover
             pastas = []
         for pasta in pastas:
             try:
                 caminho = pasta / f"{nu}.desktop"
                 if caminho.is_file():
                     return "atalhos", nu, str(caminho)
-            except OSError:  # pragma: no cover - pasta sumiu no meio
+            except OSError:  # pragma: no cover
                 continue
 
     try:
         achado = shutil.which(alvo)
-    except Exception:  # pragma: no cover - PATH torto
+    except Exception:  # pragma: no cover
         achado = None
     if achado:
         return "comandos", alvo, achado
@@ -1019,7 +1004,6 @@ def adicionar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, An
         raise ValueError(
             f"São {len(alvo)} caracteres, e o teto é {_MAXIMO_DA_AGULHA}. Diga "
             "só o comando ou o nome do atalho.")
-    # chama `VIGIA.esquecer()`, e num `{**_resposta(VIGIA.ler(), …), "recado":
     recado = _guardar_onde_ele_esta(p, rotulo, alvo, _achar_o_que_ela_digitou)
     return {**_resposta(VIGIA.ler(), ctx.state), "recado": recado}
 
@@ -1080,7 +1064,7 @@ def _pasta_de_partida() -> str:
         for pasta in jl.pastas_de_atalhos():
             if pasta.is_dir():
                 return str(pasta)
-    except Exception:  # pragma: no cover - pastas ilegíveis
+    except Exception:  # pragma: no cover
         return ""
     return ""
 
@@ -1120,7 +1104,7 @@ def _pastas_de_atalhos_para_a_frase() -> tuple[str, ...]:
 
     try:
         return tuple(str(x) for x in jl.pastas_de_atalhos())
-    except Exception:  # pragma: no cover - pastas ilegíveis
+    except Exception:  # pragma: no cover
         return ()
 
 
@@ -1173,16 +1157,9 @@ def _ok_e_motivo(resposta: Any) -> tuple[bool, str | None]:
     return bool(resposta), None
 
 
-# -- As extensões (modificações) e as janelas da aba Experimental ----------------------------------
-#
-# O desenho é o de `desenho_da_experimental`, o mesmo do gerador. O pacote só entrega os dados:
-# o registro das modificações (`mods.instalador`), o que a janela de cada uma pede (`mods.opcoes`) e
-# os impedimentos da Steam (`integrations.impedimentos_da_steam`). A pintura não abre arquivo a cada
-# tique além da releitura do registro, que dura `TTL_DO_REGISTRO_S`; o resto é montado no clique.
-
 TTL_DO_REGISTRO_S = 1.0
 CAMPO_DA_CONTA = "mod-conta"
-JANELA_DA_EXTENSAO = "#modificacao"  # (noqa-acento): contrato ASCII
+JANELA_DA_EXTENSAO = "#modificacao"  # (noqa-acento)
 JANELA_DO_LANCADOR = "#lanc-conf"
 NOME_DO_ARQUIVO_DO_MANIFESTO = "hefesto-mod.json"
 TITULO_DO_SELETOR_DA_EXTENSAO = "Escolha o hefesto-mod.json da pasta da extensão"
@@ -1195,9 +1172,7 @@ class _Instalada:
     entrada: Any
     manifesto: Any
     estado: str = ""
-    #: A recusa do ``meu.css`` (o CSS de quem usa) com a linha, lida junto com o registro.
     nota_do_css: str = ""
-    #: O porquê do supervisor para o processo que não roda: o motivo e a última linha do diário.
     porque: str = ""
 
 
@@ -1229,7 +1204,6 @@ class _Mexida:
     """O que a pessoa abriu: o ⋮ de uma extensão e as janelas, com o miolo já montado no clique."""
 
     menu: str = ""
-    #: O ⋮ aberto é o da janela «Configurar», não o da linha: cada um se desenha só no seu lugar.
     menu_na_conf: bool = False
     permissoes: str = ""
     remover: str = ""
@@ -1237,24 +1211,16 @@ class _Mexida:
     imp: str = ""
     mod: str = ""
     impedimentos: tuple[Any, ...] = ()
-    #: As permissões (e o aviso, por último) que a pessoa viu antes do «sim» de ligar.
     vistas: dict[str, tuple[str, ...]] = dataclasses.field(default_factory=dict)
     html_conf: str = ""
     html_imp: str = ""
     html_mod: str = ""
-    #: Os pedaços da coluna «Agora» que o manifesto da janela aberta declara.
     agora: tuple[str, ...] = ()
-    #: O rascunho da janela da extensão: as opções mudadas, já validadas, à espera do Guardar.
     rascunho: dict[str, Any] = dataclasses.field(default_factory=dict)
-    #: O atalho que a pessoa escolheu na janela «Configurar», à espera do Guardar.
     onde_escolhido: str = ""
-    #: A extensão que trouxe o lançador da janela «Configurar» aberta; vazio no que é de fábrica.
     conf_da_modificacao: str = ""
-    #: A recusa do ``meu.css`` que a janela da extensão aberta mostra.
     nota_do_css: str = ""
-    #: O grupo da última opção mudada: a aba que a janela reconstruída abre.
     aba: str = ""
-    #: A janela aberta desenhou a aba dos controles dos aparelhos (algum aparelho os tinha).
     com_controles: bool = False
 
     def limpar(self) -> None:
@@ -1271,7 +1237,6 @@ class _Mexida:
 
 _MEXIDA = _Mexida()
 
-#: De quanto em quanto a coluna «Agora» pergunta ao serviço, no máximo.
 TTL_DO_AGORA_S = 0.5
 METODO_DO_AGORA = "mods.agora"
 METODO_DO_PARAR = "mods.parar_tudo"
@@ -1376,7 +1341,6 @@ def _ler_as_instaladas() -> tuple[_Instalada, ...]:
     return tuple(saida)
 
 
-#: A última linha do diário entra inteira na dica até aqui; o resto se lê no ``hefesto mod listar``.
 TETO_DA_ULTIMA_LINHA = 160
 
 
@@ -1417,7 +1381,6 @@ def _extensao_de(item: _Instalada) -> Any:
     versao = e.versao
     esperando = getattr(e, "versao_esperando", "")
     if esperando:
-        # A atualização sozinha baixou e não instalou: a linha diz o que espera o «Atualizar».
         versao = f"{e.versao} · a {esperando} espera o «Atualizar»"
         dica = " ".join(x for x in (getattr(e, "motivo_da_espera", ""), dica) if x)
     return exp.Extensao(
@@ -1638,8 +1601,6 @@ def _ligar_ou_desligar_a_modificacao(mod_id: str) -> str | None:
         aviso = aviso_por_ver(entrada, manifesto)
         if (permissoes_novas(entrada.permissoes_aceitas, list(pedidas)) or aviso) and (
                 _MEXIDA.vistas.get(mod_id) != (*pedidas, aviso)):
-            # O primeiro clique só arma a chave («Aceitar e ligar», o pedido na dica): nada abre
-            # no cartão, as três ações moram no ⋮ (O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL-01).
             _MEXIDA.vistas[mod_id] = (*pedidas, aviso)
             return None
         ligar(mod_id, permissoes_vistas=pedidas, aviso_visto=aviso, lugares=lg)
@@ -1658,8 +1619,6 @@ def configurar_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str
     """
     _MEXIDA.menu = _MEXIDA.permissoes = ""
     mod_id = _id_do_clique(o, "configurar-modificacao")
-    # A janela que fechou sem o Cancelar (a pessoa foi a outra aba) desfaz aqui o modo da extensão
-    # dela; recusado, o rascunho da mesma janela diz o modo que ainda vale na extensão.
     anterior = _VIVA.mod
     recusa = _desfazer_o_modo(anterior, p) if anterior else None
     _MEXIDA.rascunho = (_o_modo_que_vale(mod_id) if recusa is not None and anterior == mod_id
@@ -1680,7 +1639,6 @@ def parar_tudo_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[
     if not ok:
         raise RuntimeError(motivo or "O serviço não respondeu. Nada foi parado.")
     if not (isinstance(corpo, dict) and corpo.get("parado") is True):
-        # O serviço respondeu ``{parado: false}``: ela não está ligada à porta, nada recebeu.
         raise RuntimeError(f"{_a_instalada(mod_id).entrada.nome} não está rodando: nada a parar.")
     _AGORA.esquecer()
     return {**_a_pintura_agora(ctx), "recado": "Parar tudo enviado."}
@@ -1820,7 +1778,7 @@ def mais_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
         _repintar_a_conf_da(mod_id)
         return _a_pintura_agora(ctx)
     _MEXIDA.menu, _MEXIDA.menu_na_conf = mod_id, na_conf
-    if acao == "permissoes":  # (noqa-acento): contrato ASCII
+    if acao == "permissoes":  # (noqa-acento)
         _a_instalada(mod_id)
         _MEXIDA.permissoes, _MEXIDA.remover = mod_id, ""
         _repintar_a_conf_da(mod_id)
@@ -1867,8 +1825,6 @@ def _mexer_na_modificacao(mod_id: str, acao: str) -> str | None:
             REGISTRO.esquecer()
             aviso = aviso_por_ver(feito.entrada, feito.manifesto)
             if feito.permissoes_novas or aviso:
-                # A versão nova desligou à espera do «sim»: o ⋮ aberto já mostra o que ela
-                # pede, e o próximo clique na chave é o «sim» (o recado não chega à tela).
                 _MEXIDA.vistas[mod_id] = (*sorted(feito.manifesto.permissoes), aviso)
                 _MEXIDA.menu = _MEXIDA.permissoes = mod_id
                 _MEXIDA.remover = ""
@@ -1958,9 +1914,6 @@ def escolher_arquivo_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any
     return {**_a_pintura_agora(ctx), "recado": recado}
 
 
-# -- Os impedimentos da Steam --------------------------------------------------------------------
-
-
 def _sondar_a_steam() -> tuple[Any, ...]:
     from hefesto_dualsense4unix.integrations import impedimentos_da_steam
 
@@ -2023,9 +1976,6 @@ def resolver_todos_os_impedimentos(ctx: Contexto, o: dict[str, Any], p: Any) -> 
     return {**_a_pintura_agora(ctx), "recado": frase}
 
 
-# -- Os três botões de todo lançador ---------------------------------------------------------------
-
-
 def _montar_a_conf(chave: str, state: dict[str, Any] | None = None) -> None:
     """O miolo da janela «Configurar», com o que o produto sabe do lançador e o rascunho dela."""
     from hefesto_dualsense4unix.integrations.censo_dos_lancadores import lancadores_com_jogos
@@ -2074,7 +2024,7 @@ def _pastas_dos_jogos(chave: str) -> tuple[str, ...]:
 
     try:
         return tuple(dict.fromkeys(_abreviado(str(x.parent)) for x in pastas_steamapps()))
-    except Exception:  # pragma: no cover - o disco do usuário não derruba a janela
+    except Exception:  # pragma: no cover
         return ()
 
 
@@ -2084,7 +2034,7 @@ def _perfil_por_jogo(chave: str) -> bool:
 
     try:
         return carregar_maquina().perfil_por_jogo.get(chave, True)
-    except Exception:  # pragma: no cover - o disco do usuário não derruba a janela
+    except Exception:  # pragma: no cover
         return True
 
 
@@ -2180,9 +2130,6 @@ def identificar_lancador(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
     return {**_resposta(lida, ctx.state), "recado": frase}
 
 
-# -- A janela «Criar perfis» ---------------------------------------------------------------------
-
-
 def _perfis_que_casam() -> tuple[set[str], set[str]]:
     """As classes de janela e os títulos que algum perfil já casa."""
     from hefesto_dualsense4unix.profiles.loader import load_all_profiles
@@ -2236,23 +2183,17 @@ def _nome_da_escolha() -> str:
 
 METODO_DA_RECARGA = "launch_env.refresh"
 
-#: o wrapper vive em dois arquivos em disco, e o `state_full` não tem UMA chave
-# `machine_declare` ENTROU EM 08/09/2026 com o lançador declarado pelo usuário: é a
 PONTE: set[str] = {"chamar", "chamar_detalhado", "resultado", "machine_declare", "escolher_arquivo"}
 METODOS: set[str] = {"machine.declare", METODO_DO_AGORA, METODO_DO_PARAR}
 
 
 PAGINA = "07-lancadores.html"
-#: caminho para `with_steam_closed`, que a interface nova não tinha); e de
 PISO_DA_ABA = 14
 
 PROVAS: list[dict[str, Any]] = []
 
-#: TODOS, e não por preguiça: o `state_full` do daemon não tem UMA chave sobre
-SEM_ECO: tuple[str, ...] = (# `maquina.json`: o `state_full` não tem UMA chave sobre lançador.
+SEM_ECO: tuple[str, ...] = (
            desenho.ADICIONAR, desenho.PROCURAR_O_ARQUIVO,
-           # Os gestos das extensões, da janela de cada lançador e dos impedimentos: o estado
-           # que o daemon devolve não tem chave sobre o registro das modificações nem sobre a Steam.
            "ligar-modificacao", "configurar-modificacao", "guardar-opcao-da-modificacao",
            "mais-da-modificacao", "instalar-modificacao", "escolher-arquivo-da-modificacao",
            exp.GESTO_DO_PARAR, exp.GESTO_DO_GUARDAR, exp.GESTO_DE_ESCOLHER,
@@ -2262,20 +2203,10 @@ SEM_ECO: tuple[str, ...] = (# `maquina.json`: o `state_full` não tem UMA chave 
 
 
 
-# AS TRÊS PEÇAS QUE AGEM — 24/10/2026,
-# A-JANELA-DA-EXTENSAO-GANHA-ACAO-APARELHOS-E-CONTROLE-LIVRE-01. A janela de qualquer extensão
-# ganha o botão que age na hora, os aparelhos que ela gere (a chave e as ações de cada um) e o
-# controle livre. O clique e o arrastar vão ao serviço, que os entrega só àquela extensão (os
-# métodos abaixo); nada aqui sabe de uma extensão em particular. Mora no fim do arquivo para não
-# deslocar as âncoras citadas do meio.
-
-METODO_DA_ACAO = "mods.acao"  # (noqa-acento) contrato
+METODO_DA_ACAO = "mods.acao"
 METODO_DO_LIVRE = "mods.livre"
-#: Quanto tempo um botão diz «Em curso» sem o estado novo da extensão, no máximo.
 TETO_DO_EM_CURSO_S = 5.0
-#: Os segundos de uma forma gravada, no máximo: 16 passos de até 10 s.
 SEGUNDOS_DA_GRAVACAO = 160.0
-#: O trecho mais curto que o «Repetir» toca em laço; mais curto que isso, a barra fica.
 LACO_MINIMO_S = 0.1
 
 
@@ -2302,9 +2233,6 @@ class _Viva:
         self.rastro: list[tuple[float, float]] = []
         self.gravando = False
         self.gravadas: list[tuple[float, float]] = []
-        # O livre com ``modos``: o modo que a janela mostra (``None`` sem ``modos``), o arrastar
-        # desde o último soltar, o trecho do último soltar e o laço do «Repetir» (início e
-        # período), que entra no rastro até ``laco_ate``.
         self.modo: str | None = None
         self.trecho: list[tuple[float, float]] = []
         self.ultimo: list[tuple[float, float]] = []
@@ -2571,7 +2499,7 @@ def _aparelhos_da_janela(manifesto: Any) -> exp.AparelhosDaJanela | None:
 
 def _pecas_da_janela(manifesto: Any, mod_id: str) -> dict[str, Any]:
     """O que a janela desenha das peças que agem: as ações, os aparelhos, o «Em curso» e o livre."""
-    return {"acoes": tuple(_acao_da_janela(a) for a in manifesto.acoes),  # (noqa-acento) contrato
+    return {"acoes": tuple(_acao_da_janela(a) for a in manifesto.acoes),  # (noqa-acento)
             "aparelhos": _aparelhos_da_janela(manifesto),
             "em_curso": _VIVA.esperando(mod_id, _AGORA.agora()),
             "livre": _VIVA.ao_vivo(mod_id), "controles": _aba_dos_controles(manifesto)}
@@ -2599,8 +2527,6 @@ def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
     aba_cc = _aba_dos_controles(manifesto)
     cartoes = exp.controles_dos_aparelhos_html(mod_id, estado, em_curso) if aba_cc else ""
     if bool(cartoes) != _MEXIDA.com_controles:
-        # A aba dos controles nasce no primeiro aparelho que os publica e some com o último: a
-        # janela inteira se refaz, porque as abas são do esqueleto e não de um bloco.
         _montar_a_janela_da_extensao(mod_id, item)
         blocos["#mod-janela"] = _MEXIDA.html_mod
     elif cartoes:
@@ -2615,7 +2541,6 @@ def _com_os_aparelhos(carga: dict[str, Any]) -> dict[str, Any]:
     if manifesto.opcao_livre is not None:
         blocos["#mod-livre-rastro"] = exp.rastro_html(_VIVA.ao_vivo(mod_id))
         blocos["#mod-livre-alvos"] = exp.alvos_do_livre_html(gestao)
-        # A porta chega à barra pelo endereço dela: só a classe e a dica mudam, e o dedo fica.
         carga.setdefault("mesa", {})[exp.CAMPO_DA_BARRA_FORA] = exp.dica_da_barra_fora(
             manifesto.nome, exp.processo_de(item.entrada.ligada, item.estado))
     return carga
@@ -2634,7 +2559,7 @@ def acao_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
     mod_id, acao, alvo = _partes_do_clique(o, exp.GESTO_DA_ACAO, 3)
     if not acao:
         raise RuntimeError("O clique não disse qual ação. Nada foi enviado.")
-    params: dict[str, Any] = {"mod": mod_id, "acao": acao}  # (noqa-acento) contrato
+    params: dict[str, Any] = {"mod": mod_id, "acao": acao}  # (noqa-acento)
     if alvo:
         params["alvo"] = alvo
     if alvo and acao == exp.ACAO_DE_LIGAR:
@@ -2696,7 +2621,7 @@ def _desfazer_o_modo(mod_id: str, p: Any) -> str | None:
     ou ``None`` quando nada havia a desfazer, a extensão recebeu ou ela está fora da porta."""
     from hefesto_dualsense4unix.mods import opcoes
 
-    item = _a_instalada_ou_nada(mod_id)  # a extensão que saiu não tem modo a desfazer
+    item = _a_instalada_ou_nada(mod_id)
     manifesto = item.manifesto if item else None
     livre = manifesto.opcao_livre if manifesto else None
     chave = opcoes.chave_do_modo(manifesto) if manifesto else None
@@ -2870,7 +2795,6 @@ def modo_do_livre_da_modificacao(ctx: Contexto, o: dict[str, Any], p: Any) -> di
     _MEXIDA.rascunho[chave] = certo
     recusa = _o_modo_na_extensao(mod_id, livre.id, certo, p)
     if recusa is not None:
-        # A extensão recusou: a janela volta ao modo que vale nela, e a recusa aparece.
         _MEXIDA.rascunho = antes
         _montar_a_janela_da_extensao(mod_id)
         raise RuntimeError(recusa)

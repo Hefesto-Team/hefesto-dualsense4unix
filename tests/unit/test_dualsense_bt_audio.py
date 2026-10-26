@@ -190,7 +190,6 @@ def test_descobre_so_dualsense_em_bluetooth(tmp_path) -> None:  # type: ignore[n
         "DRIVER=playstation\nHID_ID=0005:0000054C:00000CE6\n"
         "HID_PHYS=aa:bb:cc:00:00:c4\nHID_UNIQ=aa:bb:cc:00:00:f0\n",
     )
-    # DualSense no CABO: bus 0x03 — o mic já funciona sozinho, fora daqui.
     _sysfs_falso(
         tmp_path, "hidraw1", "HID_ID=0003:0000054C:00000CE6\nHID_UNIQ=aa:bb:cc:dd:ee:ff\n"
     )
@@ -437,8 +436,7 @@ def test_descartes_vem_da_source_e_nao_sao_somados(par) -> None:  # type: ignore
 
 
 class _RunnerFalso:
-    # (noqa-acento) `modulos` é o NOME do parâmetro de `__init__`, logo abaixo:
-    """`pactl` falso: `modulos` é a saída de `list modules`."""  # (noqa-acento) nome do parâmetro
+    """`pactl` falso: `modulos` é a saída de `list modules`."""  # (noqa-acento)
 
     def __init__(self, saida: str | None = "42\n", modulos: str = "") -> None:
         self.chamadas: list[list[str]] = []

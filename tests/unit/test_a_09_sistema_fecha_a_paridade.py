@@ -54,7 +54,6 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 PAGINA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/09-sistema.html"
 
-#: O `state_full` de mentira. O MAC é da faixa sintética da casa.
 ESTADO = {
     "active_profile": "meu_perfil",
     "paused": False,
@@ -153,7 +152,6 @@ def _pagina() -> str:
     return PAGINA.read_text(encoding="utf-8")
 
 
-#: `aba_sistema._ESTADO_DO_HEFESTO`, e o texto de cada um é o dela. Uma régua
 def _os_quatro() -> list[str]:
     from hefesto_dualsense4unix.interface import sistema as tela
 
@@ -468,8 +466,6 @@ def test_o_tique_escreve_o_status_e_os_tres_ligaveis(a09, ctx):
     from hefesto_dualsense4unix.interface.pacotes import normalizar
 
     mesa = normalizar(dict(a09.pacote(ctx)))["mesa"]
-    # Desde 15/10/2026 a aba tem DOIS ligáveis e o interruptor das correções junta o Proton e o
-    # Vulkan: a página lida é o desenho (`mockup/`), que o `--publicar` copia para a publicada.
     desenho = (RAIZ / "mockup/09-sistema.html").read_text(encoding="utf-8")
     for campo in (a09.CAMPO_DO_STATUS, "hefesto-autostart", a09.CAMPO_DAS_CORRECOES,
                   a09.CAMPO_DO_VERDE):

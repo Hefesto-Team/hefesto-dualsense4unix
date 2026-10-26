@@ -161,7 +161,6 @@ def _coluna(pac) -> dict[str, Any]:
     return fora[UNIQ]
 
 
-#: o número que o trilho mostra com a força geral em `max`, e com o override `economia`
 NO_TRILHO_DO_GLOBAL = "150"
 NO_TRILHO_DO_OVERRIDE = "30"
 

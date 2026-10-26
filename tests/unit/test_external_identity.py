@@ -173,9 +173,7 @@ def test_dualsense_novo_nao_colide_com_slot_de_externo() -> None:
 
     assert ds.slot_for(MAC_DS) == 1
     assert ds.slot_for(MAC_DS_B) == 2
-    # Externo continua os DualSense: reserve=max(1,2)=2 → slot 3.
     assert ext.slot_for(MAC_A, reserve=2) == 3
-    # 3º DualSense DEPOIS: menor livre próprio seria 3, mas o 3 é do externo.
     assert ds.slot_for(MAC_DS_C) == 4
     assert ds.slot_for(MAC_DS) == 1
     assert ds.slot_for(MAC_DS_B) == 2
@@ -238,7 +236,6 @@ def test_persistencia_atravessa_o_boot_e_so_o_schema_renumera(
 
     novo = ExternalIdentityRegistry()
     novo.load()
-    # dois DualSense de volta na mesa ele volta a ser 3; sem nenhum deles
     assert novo.snapshot() == {_KEY_A: 3}, "restart do daemon preserva o lugar"
     assert novo.slot_for(MAC_A, reserve=2) == 3
 
@@ -271,7 +268,6 @@ def test_schema_antigo_nao_ressuscita_pelo_save_do_outro_lado(
     """
     _gravar_fila(
         tmp_path,
-        # com o externo à frente dos DualSense.
         dualsense={MAC_DS.replace(":", ""): 2},
         externos={_KEY_A: 1},
         version=2,
@@ -336,7 +332,6 @@ def test_namespaces_coexistem_no_mesmo_arquivo(tmp_path: Path) -> None:
         MAC_A.replace(":", ""): 2
     }
 
-    # E o save do lado DualSense preserva as entradas externas (RMW).
     ds2 = id_mod.ControllerIdentityRegistry()
     ds2.load()
     ds2.slot_for(MAC_DS)
@@ -518,7 +513,6 @@ def test_externo_sem_mac_gui_bate_com_led_do_tick(
     sync.tick(now=0.0)
     assert led_escritas == [("/dev/hidraw6", 3)]
 
-    # IPC: a GUI conta só os DualSense CONECTADOS (1 = B). Sem o fix,
     monkeypatch.setattr(ih_mod, "_steam_hidraw_holders", lambda: {})
     inv = ih_mod._external_inventory(
         dualsense_count=1, slot_resolver=sync._registry.peek

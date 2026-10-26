@@ -121,13 +121,8 @@ BASE: dict[str, Any] = {
 }
 
 
-# O `alto-estado` era um `<span class="mudo" data-campo="alto-estado" hidden>` —
-
-
 def test_o_volume_nao_e_o_registrador_cru_com_por_cento(pac, a02, monkeypatch):
     """102 no registrador é **100 %** no campo, e nunca "102%"."""
-    # o número, não a palavra: nos 100% sem perfil a página publicada diz «Padrão» (05/10/2026),
-    # e essa regra tem régua própria em test_o_volume_do_alto_falante_tem_o_botao_padrao.py
     monkeypatch.setattr(a02, "volume_em_padrao", lambda *_: False)
     d = _card(pac, a02, {**BASE, "speaker": {"volume": VOLUME_VIVO, "muted": False}})
     assert d["alto-num"] == 100
@@ -139,7 +134,7 @@ def test_o_talo_do_registrador_nao_vira_duzentos_e_cinquenta_e_cinco_por_cento(
     pac, a02, monkeypatch
 ):
     """255 é o talo da escala do protocolo, e o talo da tela é 100 %."""
-    monkeypatch.setattr(a02, "volume_em_padrao", lambda *_: False)  # o número, não a palavra
+    monkeypatch.setattr(a02, "volume_em_padrao", lambda *_: False)
     talo = _card(pac, a02, {**BASE, "speaker": {"volume": 255, "muted": False}})
     meio = _card(pac, a02, {**BASE, "speaker": {"volume": 128, "muted": False}})
     assert talo["alto-num"] == 100
@@ -386,7 +381,6 @@ def test_o_backend_uinput_e_ambiguo_e_diz_nao_sei(pac, a02):
     assert _card(pac, a02, {**BASE, "vpad_backend": None})["mascara"] == "—"
 
 
-#: `daemon.state_full` com os dois controles do usuário na mesa: 36 blocos, todos com
 TOUCHPAD_COMO_O_DAEMON_PUBLICA = {
     "touching": False, "x": 960, "y": 540, "width": 1920, "height": 1080,
 }
@@ -461,7 +455,6 @@ def test_o_bloco_que_a_recusa_protegia_o_daemon_nao_publica():
     assert 'out["touchpad"] = self._o_toque(touch)' in inspect.getsource(
         sensor_hub.SensorHub.leitura), "a `leitura` deixou de montar o toque pelo dono dele"
     fonte = inspect.getsource(sensor_hub.SensorHub._o_toque)
-    # até os ``pontos``: o ``"x"`` de cada ponto não pode passar pelo do dedo principal
     bloco = fonte.split("return {", 1)[1].split('"pontos"', 1)[0]
     faltando = [c for c in ("touching", "x", "y", "width", "height")
                 if f'"{c}":' not in bloco]
@@ -528,10 +521,6 @@ def test_a_aba_chama_o_motor_em_vez_de_reescreve_lo(a02, motor):
         "texto_volume": texto_volume,
         "texto_toques": texto_toques,
         "mascara_viva": mascara_viva,
-        # OS QUATRO DE 02/09/2026 À NOITE. `touchpad_do_inputs` tinha sido
-        # `acao_mic` e `acao_speaker_mudo` são as regras dos dois botões de
-        # (MULTITOQUE-01): a aba desenha os DOIS dedos que o DualSense
-        # por sua vez cai em `touchpad_do_inputs` quando o daemon é anterior à
         "dedos_do_inputs": motor.dedos_do_inputs,
         "acao_mic": motor.acao_mic,
         "acao_speaker_mudo": motor.acao_speaker_mudo,
@@ -659,8 +648,6 @@ def test_publicada_a_pagina_o_ponto_do_touchpad_segue_o_campo(
     assert tocando["touch-ponto"]
 
 
-# já cobra a PALAVRA (que o `data-campo="touch-ponto"` carregue o seu
-# `data-hef-alvo="classe"`), e foi exatamente por medir palavra que ele passou
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
 PAGINAS_COM_O_PONTO = [
@@ -735,8 +722,8 @@ def test_o_ponto_do_touchpad_obedece_a_classe_na_tela(arquivo: pathlib.Path):
         finally:
             navegador.close()
 
-    cheios = [d for d in medido if d["conectado"] != "nao"]  # (noqa-acento) valor de atributo
-    vazios = [d for d in medido if d["conectado"] == "nao"]  # (noqa-acento) valor de atributo
+    cheios = [d for d in medido if d["conectado"] != "nao"]  # (noqa-acento)
+    vazios = [d for d in medido if d["conectado"] == "nao"]  # (noqa-acento)
 
     assert len(cheios) >= 2, (
         f"achei {len(cheios)} ponto(s) de controle conectado em {arquivo.name} — "
@@ -754,8 +741,6 @@ def test_o_ponto_do_touchpad_obedece_a_classe_na_tela(arquivo: pathlib.Path):
         f"em {arquivo.name} a classe `on` não acende o ponto: {apagados} — o "
         f"pacote emitiria 'sim' e a tela ficaria muda")
 
-    # A palavra «Sem toque» saiu do desenho de 15/10/2026 (o touchpad ganhou o interruptor e as
-    # terças): sem ela ao lado, só a classe decide, e a comparação fica para o desenho que a tem.
     discordam = [d for d in cheios
                  if d["estado"] and (d["estado"] == sem_toque) == d["aceso_na_cena"]]
     assert not discordam, (

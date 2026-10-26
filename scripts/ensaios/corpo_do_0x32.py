@@ -39,7 +39,7 @@ INPUT_OFFSET_VIZINHO = 54
 STATUS_MIC_MUDO = 0x04
 
 _FONTE_DAS_CONSTANTES = "repetidas neste arquivo"
-try:  # pragma: no cover - depende do interpretador
+try:  # pragma: no cover
     from hefesto_dualsense4unix.integrations import dualsense_bt_audio as _dsa
 
     INPUT_REPORT_BT = _dsa.INPUT_REPORT_BT
@@ -49,7 +49,7 @@ try:  # pragma: no cover - depende do interpretador
     INPUT_OFFSET_AUDIO_STATUS = _dsa.INPUT_OFFSET_AUDIO_STATUS
     STATUS_MIC_MUDO = _dsa.STATUS_MIC_MUDO
     _FONTE_DAS_CONSTANTES = _dsa.__file__
-except Exception:  # pragma: no cover - fora do venv do projeto
+except Exception:  # pragma: no cover
     pass
 
 _CLI = os.path.join(os.path.dirname(os.path.dirname(_AQUI)), ".venv", "bin",

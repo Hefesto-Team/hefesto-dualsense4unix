@@ -34,7 +34,7 @@ for _caminho in (str(RAIZ / "src"), str(RAIZ / "src" / "hefesto_dualsense4unix" 
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
-import chrome_sem_rede  # o ponto comum dos portões de página
+import chrome_sem_rede
 
 CHROME = pathlib.Path(chrome_sem_rede.CHROME)
 EXTERNO = "https://exemplo.invalid/fonte.css"
@@ -46,8 +46,6 @@ _PAGINA_COM_FONTE_DE_FORA = f"""<!doctype html><html><head><meta charset="utf-8"
 
 _LARGURA_DA_CAIXA = "document.getElementById('caixa').getBoundingClientRect().width"
 
-#: o prazo do ``goto`` diante da rede que nunca responde: folgado para a carga da máquina
-#: (a página abre em décimos de segundo), e ainda assim finito diante de uma espera infinita.
 _PRAZO_FOLGADO_MS = 20_000
 
 pytestmark = pytest.mark.skipif(
@@ -82,7 +80,7 @@ def _rede_que_nunca_responde(contexto: Any) -> list[str]:
         if chrome_sem_rede.e_local(url):
             rota.continue_()
             return
-        pedidos.append(url)  # nem continue_, nem abort, nem fulfill: o pedido não termina
+        pedidos.append(url)
 
     contexto.route("**/*", pendura)
     return pedidos
@@ -211,7 +209,7 @@ class TestOsTresPortoesDePaginaPassamPeloPontoComum:
     def test_altura_do_cartao(self, chamadas: list[dict[str, Any]]) -> None:
         altura = _modulo_do_script("check_a_altura_do_cartao")
         pagina = altura._onde.pagina("02-controles.html")
-        if not pagina.exists():  # pragma: no cover — a bancada se gera com o gerador
+        if not pagina.exists():  # pragma: no cover
             pytest.skip("a página da aba 02 não está na bancada desta árvore")
         altura.medir(pagina, altura.LARGURAS)
         assert [c["uri"].rsplit("/", 1)[-1] for c in chamadas] == (

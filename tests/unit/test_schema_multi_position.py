@@ -24,7 +24,6 @@ from hefesto_dualsense4unix.core.trigger_effects import (
 )
 from hefesto_dualsense4unix.profiles.schema import TriggerConfig
 
-#: A curva `machine_gun` como a aba antiga a gravava no perfil (dez posições).
 CURVA_MACHINE_GUN_SALVA = [0, 8, 0, 8, 0, 8, 0, 8, 0, 8]
 
 

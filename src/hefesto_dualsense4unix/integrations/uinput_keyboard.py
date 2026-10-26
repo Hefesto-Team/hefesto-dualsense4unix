@@ -42,7 +42,6 @@ logger = get_logger(__name__)
 
 DEVICE_NAME = "Hefesto - Dualsense4Unix Virtual Keyboard"
 
-# Superset de teclas que o device expõe. Cobre DEFAULT_BUTTON_BINDINGS mais
 SUPPORTED_KEYS: tuple[str, ...] = (
     "KEY_LEFTALT", "KEY_RIGHTALT",
     "KEY_LEFTCTRL", "KEY_RIGHTCTRL",
@@ -92,12 +91,7 @@ class UinputKeyboardDevice:
 
     _device: Any = None
     _uinput_mod: Any = None
-    # Botões canônicos (do DualSense) atualmente pressionados e já emitidos.
     _pressed_buttons: frozenset[str] = field(default_factory=frozenset)
-    # Quantos botões seguram cada tecla. A tecla é compartilhada entre botões
-    # (`l1 = Alt+Shift+Tab`, `r1 = Alt+Tab`): o key down sai na passagem de 0
-    # para 1 e o key up na de 1 para 0, para que soltar um botão não derrube a
-    # tecla que outro ainda segura. Os tokens virtuais não entram na conta.
     _quem_segura: dict[str, int] = field(default_factory=dict)
     _virtual_token_warned: bool = False
 

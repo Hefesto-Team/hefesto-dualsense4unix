@@ -80,7 +80,7 @@ ESTADO = {
 PAGINA_01 = "01-jogar.html"
 PAGINA_02 = "02-controles.html"
 PAGINA_04 = "04-iluminacao.html"
-PAGINA_06 = "06-navegacao.html"  # (noqa-acento) nome de arquivo
+PAGINA_06 = "06-navegacao.html"
 PAGINA_09 = "09-sistema.html"
 
 BOTOES = {
@@ -257,8 +257,6 @@ def medido() -> dict:
     frases = {"04": _MOTIVOS_NUMERO["numero_fora_da_mesa"], "02": RECUSA_DO_MIC,
               "01": a01.CADEADO_RECUSA, "06": a06.FRASE_DO_STEAM_PADRAO,
               "09": RECUSA_DA_AREA, "09v": RECUSA_DO_VAZIO}
-    # A 09: o gesto é o REAL; a faixa lenta (systemctl, disco) e a área de transferência são
-    # dublês, e o pacote da página só pinta o painel.
     a09 = sys.modules[hv.pacotes.gesto_da_pagina(PAGINA_09, "copiar-registro").__module__]
     pediu_a_area: list[str] = []
     guardado_da_09 = (a09._faixa_lenta, hv.pacotes.PACOTES.get(PAGINA_09),
@@ -272,7 +270,6 @@ def medido() -> dict:
                 hv.ponte.mic_canal_set_detalhado)
     guardado_gestos = {k: hv.pacotes.GESTOS.get(k) for k in (chave_01, chave_02)}
     hv.mesa_viva.estado_do_daemon = lambda *a, **k: ESTADO  # type: ignore[assignment]
-    # que é o corpo que `identity_number_set` devolve quando o daemon recusa.
     hv.ponte.identity_number_set = (  # type: ignore[assignment]
         lambda uniq, n: (False, frases["04"]))
     hv.ponte.mic_canal_set_detalhado = lambda *a, **k: {  # type: ignore[assignment]
@@ -295,7 +292,6 @@ def medido() -> dict:
         sem_cravado=False, sem_selo=False,
     )
     piloto = hv.Piloto(args)
-    # A moldura que nasceu entregou a área de verdade; a régua a troca pela que recusa.
     area.receber(lambda texto: pediu_a_area.append(texto) or False)
     faltou: dict[str, str] = {}
     fora: dict[str, object] = {"faltou": faltou, "frases": frases,
@@ -660,7 +656,7 @@ def test_o_clique_sem_dono_pisca_a_recusa(capsys) -> None:
     nome = "gesto-sem-dono-de-prova"
     falso = _PilotoDoCliqueSemDono()
     carga = {"gesto": nome, "voo": "7",
-             "pagina": PAGINA_04}  # (noqa-acento) chave da carga do piloto
+             "pagina": PAGINA_04}  # (noqa-acento)
     hv.Piloto._gesto(falso, carga)
     assert falso.desfechos == {f"{PAGINA_04}:{nome}": ("sem dono", "")}, falso.desfechos
     assert falso.pousos == [("7", False)], (

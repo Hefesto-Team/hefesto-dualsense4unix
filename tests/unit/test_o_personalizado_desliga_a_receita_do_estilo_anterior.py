@@ -63,7 +63,6 @@ def _no_disco(**extra: Any) -> Profile:
 
 def _personalizado(ativo: str | None = None) -> tuple[dict[str, Any] | None, Ponte]:
     ponte = Ponte()
-    # `freestyle_ligado`: o clique na linha só ABRE o perfil; ativá-lo não é o assunto desta régua
     ctx = Contexto(state={"active_profile": ativo, "freestyle_ligado": True}, mesa=[],
                    conectados=[], estados={})
     a10_perfis.selecionar(ctx, {"hefPerfil": NOME}, ponte)

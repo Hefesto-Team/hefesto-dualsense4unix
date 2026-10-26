@@ -131,7 +131,6 @@ for arq in (RAIZ / "src/hefesto_dualsense4unix/interface/topo.html",
             velhas.append(f"{arq.name}:--{nome}={m.group(1)} (é {certo})")
 diz(not velhas, f"as cores do esqueleto batem com o desenho — velhas: {velhas}")
 
-# 1f-ter. TODO `--plastico` DIGITADO NA `01-jogar.html` É UMA COR DA MESA.
 da_mesa = {monta.cor_da_zona(c["cor"]).lower() for c in monta.MESA}
 jogar = (RAIZ / "src/hefesto_dualsense4unix/interface/paginas/01-jogar.html").read_text()
 forasteiras = sorted({h.lower() for h in re.findall(r"--plastico:\s*(#[0-9a-fA-F]{6})", jogar)}

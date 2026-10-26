@@ -44,15 +44,16 @@ from tests.unit.test_a_aba_lancadores_ganha_as_modificacoes import (  # noqa: F4
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 DESENHO = RAIZ / "mockup" / "07-lancadores.html"
-#: A janela maximizada no monitor do usuário e o piso da janela.
 VISTAS = ((1918, 840), (1212, 809))
 _AVISO = "Extensão independente: troca as cores da interface. Não roda programa nenhum."
 _PERMISSAO = "Acrescentar um lançador de jogos e abrir os jogos que ele lista."
 
 
 def test_o_primeiro_clique_na_chave_so_arma_sem_abrir_o_menu(lar, ctx, tmp_path) -> None:  # noqa: F811
-    # D-2410-O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL
-    """A chave armada diz «Aceitar e ligar», com o aviso e as permissões na dica; nada abre."""
+    """A chave armada diz «Aceitar e ligar», com o aviso e as permissões na dica; nada abre.
+
+    Prova da D-2410-O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL.
+    """
     a07 = _a07()
     _instalar(a07, ctx, _fonte(tmp_path, permissoes=("rede:local",), extra={"aviso": _AVISO}))
     primeiro = a07.ligar_modificacao(ctx, {"v": "toque"}, _Ponte())
@@ -75,7 +76,7 @@ def test_o_mais_continua_com_as_tres_acoes(lar, ctx, tmp_path) -> None:  # noqa:
     aberto = a07.mais_da_modificacao(ctx, {"v": "toque"}, _Ponte())["blocos"][".ext-lista"]
     for rotulo in ("Atualizar", "Ver permissões", "Remover"):
         assert rotulo in aberto, rotulo
-    pedido = {"v": "toque:permissoes"}  # (noqa-acento) chave
+    pedido = {"v": "toque:permissoes"}  # (noqa-acento)
     com = a07.mais_da_modificacao(ctx, pedido, _Ponte())["blocos"][".ext-lista"]
     assert 'class="ext-perm"' in com and "Usar a rede desta casa" in com
 
@@ -156,9 +157,7 @@ print(json.dumps(saida))
 def medida() -> dict[str, dict]:
     casos = {}
     for w, h in VISTAS:
-        # as oito dela, o ⋮ aberto na última fileira (o «Tema claro» da foto)
         casos[f"{w}x{h}-oito"] = (w, h, _extensoes(8, 7))
-        # doze, a lista rola por dentro, o ⋮ aberto numa fileira do meio
         casos[f"{w}x{h}-doze"] = (w, h, _extensoes(12, 4))
     ambiente = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
     filho = subprocess.run([sys.executable, "-c", _SONDA, str(DESENHO)], input=json.dumps(casos),

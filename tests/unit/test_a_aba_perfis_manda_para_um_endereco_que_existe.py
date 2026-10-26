@@ -43,7 +43,7 @@ from hefesto_dualsense4unix.interface import onde, pacotes
 from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
 from hefesto_dualsense4unix.profiles import loader
 
-PAGINA = "10-perfis.html"  # (noqa-acento) nome de arquivo
+PAGINA = "10-perfis.html"
 CAMPO = re.compile(r'data-(?:campo|papel|hef)="([^"]+)"')
 
 UNIQ = "aabbcc000001"

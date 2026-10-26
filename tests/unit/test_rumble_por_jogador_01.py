@@ -48,7 +48,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# teste (`app.actions.rumble_actions`) importa `gi` na primeira linha, e sem
 exigir_gi_real("aba Rumble: o caminho por peça, da tela ao daemon")
 
 from typing import Any

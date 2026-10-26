@@ -333,7 +333,7 @@ def test_a_camada_de_tela_desta_aba_continua_sem_gtk() -> None:
 
     codigo = (
         "import sys\n"
-        "from hefesto_dualsense4unix.interface import conexoes as t\n"  # (noqa-acento) módulo
+        "from hefesto_dualsense4unix.interface import conexoes as t\n"  # (noqa-acento)
         "t.fala_do_teto('economia')\n"
         "c = t.Controle(uniq='aa:bb:cc:00:00:01', jogador=1, via='usb', bateria=50,\n"
         "               plastico='#fff', cor_nome='Branco', fabricante='Sony',\n"

@@ -28,36 +28,26 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: A única fonte que este módulo abre: o monitor da saída padrão (a que o servidor aponta agora).
 FONTE_DO_MONITOR = "@DEFAULT_MONITOR@"
 SUFIXO_DE_MONITOR = ".monitor"
 
 NOME_DO_FLUXO = "luz-ao-som"
 APLICACAO_ID = "br.dev.hefesto.luz_ao_som"
 
-#: Mono, 8 kHz: sobra para separar graves e agudos e custa pouco para ler em Python.
 TAXA_HZ = 8000
 LATENCIA_MS = 40
-#: O bloco de análise: 40 ms.
 AMOSTRAS_POR_BLOCO = TAXA_HZ * LATENCIA_MS // 1000
 _TAM_AMOSTRA = 4
 
-#: O filtro dos agudos: dois polos de um pólo a ~2 kHz, e o que sobra do sinal é agudo.
 CORTE_DOS_AGUDOS_HZ = 2000.0
 _ALFA_DOS_AGUDOS = 1.0 - math.exp(-2.0 * math.pi * CORTE_DOS_AGUDOS_HZ / TAXA_HZ)
 
-#: Abaixo disto (RMS, escala cheia = 1) é silêncio: o nível é zero, e ruído de fundo não acende.
 PISO_DE_SILENCIO = 0.002
-#: O pico recente nunca cai abaixo disto, para o ruído não ser ampliado até o cheio.
 PISO_DO_PICO = 0.01
-#: O pico recente cai a esta fração a cada segundo de som mais fraco.
 FRACAO_DO_PICO_POR_S = 0.85
-#: O contraste do nível: ``(energia / pico) ** CONTRASTE``; a pancada se destaca do fundo.
 CONTRASTE = 2.0
-#: Sem bloco novo por tanto tempo, a leitura é «não sei» (o efeito deixa a luz descer).
 MUDEZ_S = 1.0
 ESPERA_APOS_FALHA_S = 2.0
-#: Quanto esperar o ``parec`` sair e a thread de leitura voltar, ao fechar.
 PRAZO_DO_FILHO_S = 2.0
 PRAZO_DA_THREAD_S = 3.0
 LEITURA_BYTES = 4096
@@ -138,7 +128,7 @@ def abrir_fluxo(fonte: str = FONTE_DO_MONITOR) -> Fluxo | None:
     except (OSError, ValueError) as exc:
         logger.warning("energia_do_som_nao_abriu", err=str(exc))
         return None
-    if proc.stdout is None:  # pragma: no cover - defensivo
+    if proc.stdout is None:  # pragma: no cover
         with contextlib.suppress(OSError):
             proc.kill()
         return None
@@ -165,7 +155,7 @@ class Medidor:
         while len(self._resto) >= tam:
             bloco = array.array("f")
             bloco.frombytes(bytes(self._resto[:tam]))
-            if sys.byteorder == "big":  # pragma: no cover - o fluxo vem em little-endian
+            if sys.byteorder == "big":  # pragma: no cover
                 bloco.byteswap()
             del self._resto[:tam]
             medida = self._bloco(bloco)

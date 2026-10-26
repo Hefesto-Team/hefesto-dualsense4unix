@@ -67,8 +67,10 @@ def _pacote(entradas: list[dict], monkeypatch: pytest.MonkeyPatch) -> dict:
 
 
 def test_o_pacote_mostra_o_que_o_dono_diz(monkeypatch: pytest.MonkeyPatch) -> None:
-    # D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO
-    """Um dono com números inconfundíveis aparece, um por um, na página."""
+    """Um dono com números inconfundíveis aparece, um por um, na página.
+
+    Prova da D-1610-O-ESTADO-DO-CARD-TEM-UM-DONO-SO.
+    """
     import mesa_viva
 
     real = mesa_viva.estado_do_card
@@ -103,8 +105,6 @@ def test_o_pacote_mostra_o_que_o_dono_diz(monkeypatch: pytest.MonkeyPatch) -> No
         assert "1.5" in card["giro-x"] and "2.5" in card["giro-y"] and "3.5" in card["giro-z"]
         assert "0.25" in card["accel-x"] and "0.75" in card["accel-z"]
         assert card["alto-mudo"] == mesa_viva.selo_do_mic(True, True)
-    # O clique do L3 e o mudo do alto-falante também são do dono: o cabo não aperta o L3
-    # nem cala o alto-falante, e só o dono diz que sim (o rádio, sem leitor, fica no travessão).
     assert cards[UNIQ_CABO]["l3"] == CLICADO % ROTULO_DO_CLIQUE["l"]
     assert cards[UNIQ_CABO]["r3"] == ROTULO_DO_CLIQUE["r"]
 
@@ -135,13 +135,11 @@ def test_o_dono_le_com_os_leitores_do_cartao() -> None:
         texto_eixo(-0.24), texto_eixo(-412.0), texto_eixo(22.8)
     ]
     assert est["giro_lido"] == (-0.24, -412.0, 22.8)
-    # O curso decide: o nome `l2` na lista não acende o glifo sem curso.
     por_nome = {**CABO, "inputs": {**CABO["inputs"], "buttons": ["l2", "r2"], "l2_raw": 0}}
     assert not {"l2", "r2"} & mesa_viva.estado_do_card(por_nome)["glifos_on"]
     por_curso = {**CABO, "inputs": {**CABO["inputs"], "buttons": [], "l2_raw": L2_R2_THRESHOLD + 1}}
     assert "l2" in mesa_viva.estado_do_card(por_curso)["glifos_on"]
     assert "share" in est["glifos_on"] and "create" not in est["glifos_on"]
-    # O alto-falante vem da posição que `speaker_do_entry` achar, nas duas.
     dentro = {"uniq": UNIQ_CABO, "transport": "usb", "inputs": {"speaker": {"volume": 102}}}
     fora = {"uniq": UNIQ_CABO, "transport": "usb", "speaker": {"volume": 102}}
     for entrada in (dentro, fora):

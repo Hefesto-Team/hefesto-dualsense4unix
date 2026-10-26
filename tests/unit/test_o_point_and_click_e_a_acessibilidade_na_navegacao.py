@@ -47,7 +47,6 @@ def test_todo_controle_da_acessibilidade_sem_dono_esta_apagado_e_inerte() -> Non
     assert "data-gesto" not in tela, "a Acessibilidade acendeu um gesto que ninguém atende"
 
 
-#: o que a dica de cada botão apagado diz: o que ele faz, não quando chega.
 DICAS_DO_RODAPE = {"Voltar ao padrão": "Volta estes ajustes ao de fábrica",
                    "Guardar": "Guarda estes ajustes para quem joga"}
 

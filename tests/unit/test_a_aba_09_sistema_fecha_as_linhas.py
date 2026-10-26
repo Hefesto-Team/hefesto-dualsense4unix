@@ -114,7 +114,6 @@ def _com_a_leitura(monkeypatch: pytest.MonkeyPatch, status: str,
     e deixar a conta acontecer.
     """
     ctx = _ctx(status, pausado)
-    #: preço foi medido: `aba_sistema.pacote()` levantava `AttributeError`, o
     leitura = _tela.Leitura(status=status, autostart="enabled", state=ctx.state,
                             achados=None, deteccao=None, ambiente=None,
                             perfil=None)
@@ -315,7 +314,6 @@ class TestODesenhoCarregaAPeca:
         assert achado, "a dica do botão do `atualizar` sumiu"
         dica = achado.group(1)
         assert "Não muda nada" not in dica, dica
-        # `config_overrides` vazio o `daemon.reload` NÃO reaplica configuração
         assert "atalhos" in dica.lower() and "Steam" in dica, dica
         assert "reaplicar" not in dica.lower(), dica
 
@@ -392,7 +390,6 @@ CLICAR_NO_ATUALIZAR = r"""
 })()
 """
 
-#: QUANTO O GESTO DUBLÊ DEMORA. O `daemon.reload` do produto leva 9,5 s; aqui
 GESTO_LENTO_S = 1.4
 
 
@@ -414,14 +411,14 @@ def na_tela() -> dict:
     import hefesto_vivo as hv
 
     berco = pathlib.Path(tempfile.mkdtemp(prefix="a09-desenho-"))
-    shutil.copytree(_onde.PUBLICADO, berco / "paginas",  # (noqa-acento) PASTA
+    shutil.copytree(_onde.PUBLICADO, berco / "paginas",  # (noqa-acento)
                     dirs_exist_ok=True)
-    shutil.copy2(BANCADA, berco / "paginas" / PAGINA)  # (noqa-acento) PASTA
+    shutil.copy2(BANCADA, berco / "paginas" / PAGINA)  # (noqa-acento)
 
     chave = (PAGINA, "atualizar")
     guardado = (hv.onde.PUBLICADO, hv.mesa_viva.estado_do_daemon,
                 hv.pacotes.PACOTES.get(PAGINA), hv.pacotes.GESTOS.get(chave))
-    hv.onde.PUBLICADO = berco / "paginas"  # type: ignore[assignment]  # (noqa-acento) PASTA
+    hv.onde.PUBLICADO = berco / "paginas"  # type: ignore[assignment]  # (noqa-acento)
     hv.mesa_viva.estado_do_daemon = lambda *a, **k: {"active_profile": "regua"}  # type: ignore[assignment]
 
     leitura_parada = _tela.Leitura(

@@ -83,7 +83,6 @@ def test_o_clique_marca_a_linha_dele_e_desmarca_as_outras() -> None:
 
     assert _marcada(linhas) == ["Terceiro"], (
         "a marca de ESCOLHIDA tem de estar na linha clicada, e só nela")
-    # atributo que aparece e some — ver a nota do `blocos` em `_linha_da_lista`.
     assert sum('aria-selected="false"' in x for x in linhas) == 2
 
 

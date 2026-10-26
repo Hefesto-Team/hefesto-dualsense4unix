@@ -11,7 +11,6 @@ from typing import Any
 from hefesto_dualsense4unix.app.actions import home_actions as ha
 from hefesto_dualsense4unix.app.actions import profiles_actions as pa
 
-#: Payload do `daemon.state_full` com a mesa conhecida e DOIS controles no
 DOIS_NO_RADIO: dict[str, Any] = {
     "native_bt_fragil": True,
     "native_bt_fragil_controles": [2, 3],

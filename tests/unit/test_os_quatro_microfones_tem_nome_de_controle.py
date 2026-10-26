@@ -243,7 +243,7 @@ def dono_dublado(monkeypatch):  # type: ignore[no-untyped-def]
     from hefesto_dualsense4unix.integrations import eleicao_de_microfone as el
 
     abertos: dict[str, str] = {}
-    registro = {"abriu": [], "fechou": []}  # type: dict[str, list[Any]]
+    registro = {"abriu": [], "fechou": []}
 
     def _abrir(uniq: str, descricao: str, **kw: Any) -> Any:
         registro["abriu"].append((uniq, descricao, kw.get("fonte")))

@@ -16,7 +16,6 @@ _ECODES = SimpleNamespace(
     ABS_X=0x00, ABS_Y=0x01, ABS_Z=0x02, ABS_RX=0x03, ABS_RY=0x04, ABS_RZ=0x05
 )
 
-#: A faixa que o DualSense declara nos quatro sticks.
 _FAIXA_STICK = EixoAbsoluto(minimo=0, maximo=255, flat=0, fuzz=0, resolucao=0)
 
 

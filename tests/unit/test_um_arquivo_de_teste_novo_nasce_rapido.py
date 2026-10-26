@@ -32,7 +32,6 @@ CSV = RAIZ / "docs" / "data" / "tempos-da-suite.csv"
 TETO_DE_UMA_ESPERA = 2.0
 TETO_DAS_ESPERAS = 5.0
 
-#: Arquivo sem linha no CSV que precisa de espera acima do teto, e o porquê. Hoje nenhum precisa.
 EXCECOES: dict[str, str] = {}
 
 

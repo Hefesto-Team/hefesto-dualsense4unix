@@ -58,7 +58,7 @@ def test_sem_perfil_o_brilho_guardado_aparece(a04):
 
 
 def test_sem_perfil_o_modo_guardado_aparece(a04):
-    # Prova da D-1510-SEM-PERFIL-A-ILUMINACAO-LE-O-COMPUTADOR.
+    """Prova da D-1510-SEM-PERFIL-A-ILUMINACAO-LE-O-COMPUTADOR."""
     from pacotes import perfil
 
     def _automatico(prof):
@@ -70,7 +70,6 @@ def test_sem_perfil_o_modo_guardado_aparece(a04):
     assert a04.modo_da_luz_do_perfil(perfil.ativo_que_vale(None)) == a04.MODO_AUTOMATICO
 
 
-#: Dois controles, um no cabo e outro no rádio: a vista sem perfil vale para as duas conexões.
 DOIS = (("aa:bb:cc:00:00:01", "usb", "White", 40), ("aa:bb:cc:00:00:02", "bt", "Cosmic Red", 70))
 
 
@@ -125,8 +124,9 @@ def test_sem_perfil_o_efeito_e_o_brilho_nao_viram_a_aba_para_o_automatico(a04):
     Medido no lar de mentira (15/10/2026): escolher Respirar sem perfil acendia «Modo automático» e
     apagava a grade, porque a vista do computador caía na dedução do esquema (cores automáticas
     ligadas por padrão, nenhuma cor própria).
+
+    Prova da D-1510-SEM-PERFIL-A-ILUMINACAO-LE-O-COMPUTADOR.
     """
-    # Prova da D-1510-SEM-PERFIL-A-ILUMINACAO-LE-O-COMPUTADOR.
     ctx = _ctx_dos_dois()
     assert a04.pacote(ctx)[a04.GESTO_DO_MODO] == a04.MODO_PERSONALIZADO
     for uniq, via, _plastico, pct in DOIS:

@@ -26,19 +26,15 @@ from hefesto_dualsense4unix.integrations import ar_do_adaptador as ar
 from hefesto_dualsense4unix.integrations import bluez_dbus as bd
 from hefesto_dualsense4unix.integrations import faixas_do_ar as fx
 from hefesto_dualsense4unix.integrations import radio_da_mesa
-from tests.unit import radio_de_mentira as rm  # noqa: F401  (a guarda do BlueZ da suíte)
+from tests.unit import radio_de_mentira as rm  # noqa: F401
 
 RAIZ = Path(__file__).resolve().parents[2]
 MOCKUP = RAIZ / "mockup/08-conexoes.html"
 
 ADAPTADOR = "aa:bb:cc:00:00:aa"
-#: três acessórios de baixa energia, na faixa forjada
 ACESSORIOS = ("aa:bb:cc:00:00:e1", "aa:bb:cc:00:00:e2", "aa:bb:cc:00:00:e3")
 UUID_BATERIA = "0000180f-0000-1000-8000-00805f9b34fb"
-#: um serviço de fabricante, com o último grupo na faixa forjada (12 hex lê-se como endereço)
 UUID_DO_FABRICANTE = "5a300001-0023-4bd4-bbd5-aabbcc0000f1"
-
-# --- o sinal: o enlace LE também se pergunta ---------------------------------------------
 
 
 def _leitura() -> ar.ArDoAdaptador:
@@ -46,7 +42,6 @@ def _leitura() -> ar.ArDoAdaptador:
         ar.Enlace(11, "aa:bb:cc:00:00:01", ar.TIPO_ACL, True, 1, 1),
         ar.Enlace(17, ACESSORIOS[0], ar.TIPO_LE, True, 1, 1),
         ar.Enlace(18, ACESSORIOS[1], ar.TIPO_LE, True, 1, 1),
-        # um celular com os dois enlaces: o do clássico vale, e o LE não se pergunta de novo
         ar.Enlace(19, "aa:bb:cc:00:00:02", ar.TIPO_LE, True, 1, 1),
         ar.Enlace(12, "aa:bb:cc:00:00:02", ar.TIPO_ACL, True, 1, 1)))
 
@@ -82,9 +77,6 @@ def test_o_leitor_do_sinal_publica_o_do_acessorio_no_estado() -> None:
         "le": True, "canais_evitados": None, "qualidade_do_enlace": None, "rssi": -67}
     assert publicado["enlaces"]["aabbcc0000e2"]["rssi"] == -68
     json.dumps(publicado)
-
-
-# --- o BlueZ: os UUIDs, pela mesma leitura de propriedade --------------------------------
 
 
 def _busctl(uuids_de: dict[str, str]) -> bd.PeloBusctl:
@@ -126,9 +118,6 @@ def test_os_uuids_do_barramento_vem_em_lista_e_lixo_nao_passa() -> None:
     assert bd._uuids(None) == () and bd._uuids(180) == ()
 
 
-# --- a régua: os 40 canais LE, «não medido», e o selo do sinal ---------------------------
-
-
 def test_o_enlace_le_tem_os_40_canais_nao_medidos_e_nunca_o_mapa_do_adaptador() -> None:
     ap = fx.AparelhoNoAdaptador(id="x", tipo="acessorio", nome="Acessório", le=True, rssi=-61)
     adaptador = fx.Adaptador(id="L1", nome="Meio", evitados=frozenset(range(10, 30)),
@@ -137,16 +126,12 @@ def test_o_enlace_le_tem_os_40_canais_nao_medidos_e_nunca_o_mapa_do_adaptador() 
     assert len(linha.celulas) == ar.CANAIS_DO_BT
     assert {c.estado for c in linha.celulas} == {fx.NAO_MEDIDO, fx.ANUNCIO}
     anuncio = [c.canal for c in linha.celulas if c.estado == fx.ANUNCIO]
-    # 2402, 2426 e 2480 MHz: o canal LE 0, 12 e 39, duas células cada (a última cabe numa)
     assert anuncio == [0, 1, 24, 25, 78]
     assert linha.bons is None and linha.sem_faixa == fx.DIVIDE_O_RADIO
     assert linha.selo == fx.Selo(fx.SINAL, "sinal -61 dBm")
     sem_sinal = fx.montar([fx.Adaptador(id="L1", nome="Meio", aparelhos=(
         fx.AparelhoNoAdaptador(id="y", tipo="acessorio", nome="Acessório", le=True),))], ())
     assert sem_sinal.grupos[0][1][0].selo is None, "sem o número, o ponto não inventa um"
-
-
-# --- a tela: a categoria e a linha ------------------------------------------------------
 
 
 from hefesto_dualsense4unix.interface import pacotes
@@ -172,9 +157,9 @@ def test_a_categoria_sai_do_enlace_le_e_do_tipo_que_falta() -> None:
     a08._com_a_categoria_do_enlace(aps, enlaces)
     assert [a["tipo"] for a in aps] == [
         "acessorio", "acessorio", "acessorio",
-        "relogio",   # o tipo lido vale: a categoria é só para quem não tem
-        "outro",     # enlace clássico sem tipo: não é baixa energia
-        "outro",     # sem enlace naquele adaptador
+        "relogio",
+        "outro",
+        "outro",
         "controle"]
 
 
@@ -182,7 +167,6 @@ def test_a_categoria_mora_numa_tabela_so() -> None:
     cat = a08.CATEGORIA_ACESSORIO
     assert a08.glifo_do_tipo(a08.TIPO_ACESSORIO) == cat["glifo"] != "ajuda"
     assert a08.PALAVRA_DO_TIPO[a08.TIPO_ACESSORIO] == cat["palavra"]
-    # as cores são os tokens da raiz da aba (O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01)
     assert a08.COR_DO_TIPO[a08.TIPO_ACESSORIO] == cat["cor"] == "var(--sala-acessorio)"
     assert cat["cor_na_regua"] == "var(--c-acessorio)"
     assert a08._cor_na_regua(a08.TIPO_ACESSORIO) == cat["cor_na_regua"]
@@ -250,7 +234,6 @@ def test_a_cena_inteira_do_bluez_ate_a_linha(monkeypatch: pytest.MonkeyPatch) ->
         assert ponto and ponto.group(1) == fx.SINAL
         assert ponto.group(2) == f"Sinal {-61 - k} dBm · {fx.DIVIDE_O_RADIO}"
         assert ponto.group(2).count("dBm") == 1
-    # sem o número do rádio, o ponto diz a frase UMA vez, no título e na fala
     sem_sinal = fx.montar([fx.Adaptador(id="L1", nome="Meio", aparelhos=(
         fx.AparelhoNoAdaptador(id="y", tipo="acessorio", nome="Sensor", le=True),))], ())
     ponto_sem = a08._o_ponto(sem_sinal.grupos[0][1][0])
@@ -258,8 +241,6 @@ def test_a_cena_inteira_do_bluez_ate_a_linha(monkeypatch: pytest.MonkeyPatch) ->
         dito = re.search(rf'{campo}="([^"]*)"', ponto_sem)
         assert dito and dito.group(1) == fx.DIVIDE_O_RADIO, (campo, ponto_sem)
 
-
-# --- a tela no WebKit: a textura e o ponto, no motor do usuário -----------------------------------
 
 SONDA = r"""
 (function(){
@@ -307,7 +288,7 @@ def _no_webkit(pagina: Path) -> dict[str, Any]:
     def guardou(v: Any, res: Any) -> None:
         try:
             saiu.append(v.evaluate_javascript_finish(res).to_string())
-        except Exception as e:  # pragma: no cover — só quando o roteiro quebra
+        except Exception as e:  # pragma: no cover
             saiu.append(f"ERRO {e}")
         Gtk.main_quit()
 

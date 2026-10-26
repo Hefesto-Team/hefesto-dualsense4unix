@@ -72,11 +72,6 @@ def _apertar(h: Any, transporte: str, *, bit: int) -> None:
     _segurar(h, transporte, status=bit, botao=False, n=20)
 
 
-# ---------------------------------------------------------------------------
-# Régua 1: o pedido contra a posse em voo, no handle de produção.
-# ---------------------------------------------------------------------------
-
-
 @_TRANSPORTES
 @pytest.mark.parametrize("jogador", range(4))
 def test_o_pedido_do_aperto_e_o_contrario_da_posse_em_voo(transporte: str, jogador: int) -> None:
@@ -159,10 +154,6 @@ def test_sem_posse_o_pedido_e_o_contrario_do_bit(transporte: str) -> None:
     assert pedido is True
     assert em_voo is False
 
-
-# ---------------------------------------------------------------------------
-# Régua 2: no tempo, o laço inteiro, com a mesa de quatro.
-# ---------------------------------------------------------------------------
 
 LATENCIA_S = 0.03
 
@@ -350,10 +341,6 @@ def test_o_aperto_dentro_da_escrita_e_depois_dela_dao_o_mesmo_ato(
     )
 
 
-# ---------------------------------------------------------------------------
-# Régua 3: uma guarda de tempo só.
-# ---------------------------------------------------------------------------
-
 _NOMES_DO_ECO = ("_ECO_DO_ATO", "ECO_DO_ATO_S", "_marcar_eco_do_ato", "_borda_e_eco_do_ato")
 
 
@@ -371,11 +358,6 @@ def test_a_metade_do_firmware_nao_tem_mais_o_parametro_do_eco() -> None:
     import inspect
 
     assert "marcar_eco" not in inspect.signature(hotkey._metade_do_firmware).parameters
-
-
-# ---------------------------------------------------------------------------
-# A confirmação do ato velho não desfaz o pedido do ato novo.
-# ---------------------------------------------------------------------------
 
 
 class _ControleQueMudouDeDono:

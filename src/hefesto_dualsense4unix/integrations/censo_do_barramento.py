@@ -118,14 +118,8 @@ GRAU_DESCONHECIDO = "desconhecido"
 
 ESPECIE_DESCONHECIDA = "Não identificado"
 ESPECIE_CAMERA = "Câmera"
-#: As espécies que NÃO usam a velocidade do enlace: a câmera comprime o vídeo e roda no mesmo
-#: 480 Mb/s em qualquer porta, então «sabe 5 Gb/s» nela seria aviso de uma perda que não existe.
-#: Entra outra espécie só quando alguém a medir.
 _ESPECIES_QUE_NAO_USAM_A_VELOCIDADE = frozenset({ESPECIE_CAMERA})
 
-#: O que o KERNEL ligou nas interfaces do aparelho (``ligado_como``), na ordem em que a palavra
-#: vale quando há mais de uma: Wi-Fi vence Bluetooth (um combo é as duas coisas, e o que
-#: atrapalha o rádio do usuário é o Wi-Fi), e o resto vem depois.
 LIGADO_COMO_WIFI = "wifi"
 LIGADO_COMO_BLUETOOTH = "bluetooth"
 LIGADO_COMO_CONTROLE = "controle"
@@ -139,19 +133,13 @@ _ESPECIE_DO_QUE_O_KERNEL_LIGOU = {
     LIGADO_COMO_REDE: "Rede",
 }
 _ORDEM_DO_QUE_O_KERNEL_LIGOU = tuple(_ESPECIE_DO_QUE_O_KERNEL_LIGOU)
-#: A interface 0 de um receptor já diz «Teclado» ou «Mouse» (a tripla de arranque): essa palavra
-#: fica, é a sugestão de tipo da tela; ``Aparelho.receptor`` é quem diz que ele é um receptor.
 _ESPECIES_QUE_O_RECEPTOR_JA_DIZ = frozenset({"Teclado", "Mouse"})
-#: A pasta que o driver pendura na interface → o que ele ligou.
 _O_QUE_O_KERNEL_PENDURA = {
     "ieee80211": LIGADO_COMO_WIFI,
     "bluetooth": LIGADO_COMO_BLUETOOTH,
     "video4linux": LIGADO_COMO_CAMERA,
 }
-#: ``BTN_SOUTH`` (0x130): o botão que todo controle de jogo tem e nenhum teclado tem.
 _BTN_SOUTH = 0x130
-#: As classes em que a tripla da interface NÃO diz o que o aparelho é (fabricante, «diversos»,
-#: específico do programa, sem fio sem a tripla do Bluetooth): ali a palavra é a do kernel.
 _CLASSES_QUE_NAO_DIZEM = frozenset({"", "ef", "fe", "ff", "e0", "02", "0a"})
 
 CLASSE_HUB = "09"
@@ -165,23 +153,19 @@ _CARGA_UNITARIA_MA = 100
 
 _BIT_AUTOALIMENTADO = 0x40
 
-#: As capacidades do BOS que só aparelho de 5 Gb/s ou mais publica (SuperSpeed e SuperSpeedPlus).
 _CAPACIDADES_SUPERSPEED = frozenset({0x03, 0x0A})
 _CAPACIDADE_CONTAINER_ID = 0x04
 _TIPO_DO_BOS = 0x0F
 _TIPO_DA_CAPACIDADE = 0x10
-#: A maior velocidade do enlace USB 2.0; o que negociou isto ou menos não está em SuperSpeed.
 _ALTA_VELOCIDADE_MBPS = 480.0
 _SUPERSPEED_MBPS = 5000.0
 
-#: A porta de um hub no ``/sys``: ``3-1-port4`` (de um hub) ou ``usb3-port1`` (do hub-raiz).
 _PORTA = re.compile(r"^(.+)-port([0-9]+)$")
 
 _CONTROLADOR_PCI = re.compile(r"0000:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]")
 
 _CORRENTE = re.compile(r"^([0-9]+)")
 
-#: O filho HID que o kernel pendura na interface: ``0003:25A7:FA07.0003``.
 _FILHO_HID = re.compile(r"^[0-9a-fA-F]{4}:[0-9a-fA-F]{4}:[0-9a-fA-F]{4}\.[0-9a-fA-F]{4}$")
 _EVENTO = re.compile(r"^event[0-9]+$")
 
@@ -246,13 +230,9 @@ class Aparelho:
     subclasse: str = ""
     protocolo: str = ""
     origem_da_classe: str = ""
-    #: o que o kernel ligou nas interfaces dele (:data:`LIGADO_COMO_WIFI`…), ou ``""``
     ligado_como: str = ""
-    #: a tripla (classe, subclasse, protocolo) de CADA interface, como ``"030101"``
     interfaces: tuple[str, ...] = ()
-    #: os nós ``/dev/input/eventN`` que as interfaces dele criaram (só o nome: ``event8``)
     eventos: tuple[str, ...] = ()
-    #: receptor 2.4G de teclado e mouse (:mod:`receptor_sem_fio`), reconhecido de forma genérica
     receptor: bool = False
     especie: str = ESPECIE_DESCONHECIDA
     grau: str = GRAU_DESCONHECIDO
@@ -260,22 +240,14 @@ class Aparelho:
     e_raiz: bool = False
     atras_de_hub: bool = False
     energia: Energia = field(default_factory=Energia)
-    #: o ``bcdUSB`` que o aparelho declara (``version``), como ``"2.10"``
     versao_usb: str = ""
-    #: o número da enumeração; sobe a cada uma, e é por ele que a reenumeração se prova
     devnum: int = 0
-    #: os drivers ligados nas interfaces, sem repetir, na ordem delas (``"btusb"``)
     driver: str = ""
-    #: o nome na base do sistema (libudev), ``""`` quando a base não tem a linha
     fabricante_da_base: str = ""
     produto_da_base: str = ""
-    #: publica SuperSpeed no BOS? ``None`` é «não sei» (sem ``bos_descriptors``)
     sabe_superspeed: bool | None = None
-    #: o Container ID do BOS, em hex; ``""`` quando não há
     container_id: str = ""
-    #: as portas de um hub (``maxchild``)
     portas: int = 0
-    #: ``(porta, hub do par, porta do par)``: as portas deste hub amarradas pelo ``peer``
     pares: tuple[tuple[int, str, int], ...] = ()
 
 
@@ -447,7 +419,6 @@ def _entradas(nos: Sequence[Aparelho]) -> int:
     contadas = len(portas) - sum(1 for par in pares if par <= abertas)
     if pares or len({a.busnum for a in nos}) < 2:
         return contadas
-    # sem ``peer`` nenhum, os dois lados contariam a mesma entrada duas vezes: vale o lado maior
     por_lado: dict[int, int] = {}
     for nome, _porta in portas:
         lado = next(a.busnum for a in nos if a.nome_do_kernel == nome)
@@ -771,8 +742,6 @@ def _montar(
         bruto.interfaces, _decimal(campos["speed"]),
         (campos["product"], campos["manufacturer"]))
     if receptor and especie not in _ESPECIES_QUE_O_RECEPTOR_JA_DIZ:
-        # a interface 0 não disse teclado nem mouse («Aparelho de entrada», classe do
-        # fabricante…): as duas interfaces de arranque dizem o que ela não disse
         especie, grau = _receptor_sem_fio.ESPECIE, GRAU_LIDO
         origem = "as interfaces de teclado e mouse"
     sabe_superspeed, container_id = ler_o_bos(bruto.bos)

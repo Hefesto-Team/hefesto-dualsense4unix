@@ -36,7 +36,6 @@ UNIQ_RADIO = "aa:bb:cc:00:00:02"
 
 DO_MOCKUP = ("Cosmic Red", "Starlight Blue")
 
-#: A BANCADA EM 03/09/2026, na forma que `mesa_viva.mesa_do_estado` devolve.
 MESA = [
     {"pref": "p1", "uniq": UNIQ_CABO, "jogador": 1, "cor": "white",
      "nome": "White", "via": "USB", "transporte": "usb", "alvo": True,
@@ -159,7 +158,6 @@ def test_nada_do_mockup_sai_deste_pacote(a02, ctx):
         assert nome not in texto, f"o pacote emitiu `{nome}`, que é do mockup"
 
 
-#: que é o que `mesa_viva.mesa_do_estado` põe no campo `cor` do item da mesa.
 @pytest.mark.parametrize("slug", ["white", "galactic-purple", "midnight-black"])
 def test_a_cor_da_borda_sai_do_mapa(a02, slug):
     """Um hexa de verdade, e nunca o token neutro, para plástico conhecido."""

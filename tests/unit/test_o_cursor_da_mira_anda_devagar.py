@@ -181,7 +181,7 @@ def _andou_em_um_segundo(
 
     _tique()
     mesa.hub.reconciliar()
-    _tique()  # a primeira drenagem é um acumulado e se descarta
+    _tique()
     mesa.no.eventos.clear()
     for _ in range(64):
         _tique()
@@ -224,8 +224,10 @@ def _esperado(giro: float, sensibilidade: int = rot.SENSIBILIDADE_PADRAO) -> flo
 def test_cinco_graus_por_segundo_andam_sessenta_pixels(
     perfis: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, transporte: str,
 ) -> None:
-    # D-1610-A-ZONA-MORTA-DA-MIRA-SE-MEDE-NA-VELOCIDADE
-    """Sensibilidade 6, zona 3: 5 graus/s por um segundo são 12 px por grau vezes 5 graus."""
+    """Sensibilidade 6, zona 3: 5 graus/s por um segundo são 12 px por grau vezes 5 graus.
+
+    Prova da D-1610-A-ZONA-MORTA-DA-MIRA-SE-MEDE-NA-VELOCIDADE.
+    """
     dx, dy = _na_navegacao(tmp_path, monkeypatch, giro=5.0, transporte=transporte)
     assert abs(dx - _esperado(5.0)) <= 1 and dy == 0, (
         f"o cursor andou {dx} px a 5 graus/s; esperado ~{_esperado(5.0):.0f}")

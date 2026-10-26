@@ -78,7 +78,7 @@ def _so_o_yml_falha(monkeypatch: pytest.MonkeyPatch, yml: Path) -> None:
 
 def test_a_gravacao_que_falha_depois_da_anotacao_vai_ao_diario(
         _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    # A decisão D-0810-A-GRAVACAO-QUE-FALHA-VAI-AO-DIARIO.
+    """Prova da D-0810-A-GRAVACAO-QUE-FALHA-VAI-AO-DIARIO."""
     yml = _excluido_com_a_carona_por_fazer(_lar, monkeypatch)
     disco_antes = yml.read_bytes()
     registro_antes = _o_registro()
@@ -98,7 +98,7 @@ def test_a_gravacao_que_falha_depois_da_anotacao_vai_ao_diario(
 @pytest.mark.parametrize("como", ["erro", "excecao"])
 def test_a_reanotacao_que_tambem_falha_nao_morre_calada(
         _lar: Path, monkeypatch: pytest.MonkeyPatch, como: str) -> None:
-    # A decisão D-0810-A-GRAVACAO-QUE-FALHA-VAI-AO-DIARIO.
+    """Prova da D-0810-A-GRAVACAO-QUE-FALHA-VAI-AO-DIARIO."""
     yml = _excluido_com_a_carona_por_fazer(_lar, monkeypatch)
     disco_antes = yml.read_bytes()
     registro_antes = _o_registro()
@@ -157,7 +157,7 @@ def test_o_docstring_da_carona_nao_chama_o_usuario_de_ela() -> None:
 def test_a_pasta_que_recusa_de_verdade_tambem_vai_ao_diario(
         _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Sem dublê na gravação: a pasta dos `.yml` sem escrita, como o disco a recusa."""
-    if os.geteuid() == 0:  # pragma: no cover - como root o 0555 não recusa nada
+    if os.geteuid() == 0:  # pragma: no cover
         pytest.skip("como root a pasta sem escrita não recusa")
     yml = _excluido_com_a_carona_por_fazer(_lar, monkeypatch)
     disco_antes = yml.read_bytes()
@@ -195,8 +195,10 @@ def _segunda_copia(yml: Path) -> Path:
 
 def test_so_o_yml_que_falhou_conta_e_volta(
         _lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    # A decisão D-0810-A-GRAVACAO-QUE-FALHA-VAI-AO-DIARIO.
-    """Dois `.yml` no mesmo jogo: só o que falhou volta ao de antes e entra na conta."""
+    """Dois `.yml` no mesmo jogo: só o que falhou volta ao de antes e entra na conta.
+
+    Prova da D-0810-A-GRAVACAO-QUE-FALHA-VAI-AO-DIARIO.
+    """
     falha = _lutris_flatpak(_lar)
     grava = _segunda_copia(falha)
     _carona(_lar)

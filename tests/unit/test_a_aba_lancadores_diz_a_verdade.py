@@ -29,7 +29,7 @@ def _do_topo() -> set[str]:
     return set(pacotes.topo(_Vazio()))
 
 CAMPO = re.compile(r'data-campo="([^"]+)"')
-GESTO = re.compile(r'data-(?:gesto|hef-vivo)="([^"]+)"')  # o vivo é a quarta porta (24/10)
+GESTO = re.compile(r'data-(?:gesto|hef-vivo)="([^"]+)"')
 
 
 @pytest.fixture(scope="module")
@@ -94,8 +94,6 @@ def _pagina_publicada() -> str:
     return _pagina(publicado=True)
 
 
-# Os dois endereços da janela do servidor que saiu do desenho em 19/10/2026 (o servidor é da
-# extensão, que desenha a janela dela pelo manifesto): ficam só no publicado, até o `--publicar 07`.
 SEM_PINTOR_AINDA = frozenset({"controle-1", "controle-2"})
 
 
@@ -123,11 +121,7 @@ def test_todo_gesto_do_html_tem_dono_ou_esta_declarado_sem_dono(a07):
 
     no_html = set(GESTO.findall(_bancada() + _pagina_publicada()))
     com_dono = {n for (p, n) in pacotes.GESTOS if p == PAGINA}
-    # O menu do botão direito é da casa, com um dono só em `hefesto_vivo` (régua em
-    # `test_a_base_comum_das_abas.py`): a página o traz, mas o gesto não é do usuário.
     no_html -= pacotes.camada.GESTOS_DO_MENU
-    # O botão que trava a navegação dos controles é da moldura de toda aba (gesto `*`, régua em
-    # `test_o_botao_que_trava_a_navegacao_dos_controles.py`).
     no_html -= pacotes.camada.GESTOS_DA_MOLDURA
     assert no_html <= com_dono, (
         f"a página tem gestos que ninguém atende: {sorted(no_html - com_dono)}")
@@ -138,8 +132,6 @@ def test_todo_gesto_do_html_tem_dono_ou_esta_declarado_sem_dono(a07):
                                   "desligar-steam-input",
                                   "deixar-tudo-pronto",
                                   "consertar-lancador",
-                                  # Só com uma extensão que declara o «Parar tudo» no manifesto;
-                                  # a do desenho não declara (a dos acessórios saiu em 19/10).
                                   "parar-tudo-da-modificacao"}, (
         f"estes gestos têm dono e não aparecem em estado nenhum da página: "
         f"{sorted(com_dono - no_html)}")
@@ -357,7 +349,6 @@ def test_o_cartao_achado_e_o_nao_achado_dizem_coisas_diferentes(desenho):
     assert len({nao_procurei.diz, nao_achei.diz, achei.diz}) == 3, (
         "dois dos três estados dizem a MESMA frase — a tela voltou a não "
         "separar 'procurei e não achei' de 'ainda não procurei'")
-    # O cartão do lançador ACHADO só traz o contador: a frase «achei esse lançador aqui» saiu.
     assert achei.diz == desenho.contador_html(0), (
         f"o cartão do lançador ACHADO diz outra coisa além do contador: "
         f"{achei.diz!r}. Ela o calou em 11/09 e deu a ele o contador em 21/09")
@@ -470,7 +461,6 @@ def test_os_dois_botoes_do_registro_dizem_coisas_diferentes(desenho):
         f"os dois botões voltaram a dizer a mesma coisa ({do_cartao!r}): um é "
         f"«ele está aqui, te mostro onde» e o outro é «tem um que você não "
         f"conhece». Ela pediu um sinônimo justamente para separá-los.")
-    # O rótulo aprovado do botão do cartão.
     assert do_cartao == "Localizar este lançador", (
         f"o rótulo do botão do cartão é {do_cartao!r}, e a decisão dela é "
         f"'Localizar este lançador' — a palavra do SELO daquele cartão")
@@ -676,8 +666,6 @@ def test_a_leitura_carrega_os_dispensados_e_as_pontes_da_fonte_certa(
         "as pontes chegaram à leitura e não chegaram ao carimbo do cartão")
     assert "Jogo 4242" in valores["steam-fora"], (
         "o jogo dispensado chegou à leitura e não chegou à lista do cartão")
-    # O «Voltar a perguntar» saiu com o lembrete em 19/10/2026: a linha informa, e botão sem quem
-    # o atenda some no clique. MORDIDA (executada): o gesto de volta na linha reprova aqui.
     linhas = valores["steam-fora"].split('<div class="lanc-jogo">')
     linha = next((x for x in linhas if "Jogo 4242" in x), "")
     assert linha and "data-gesto" not in linha, (
@@ -800,14 +788,13 @@ def test_o_cartao_da_steam_nao_achada_mantem_os_enderecos_da_pagina(desenho):
         "um travessão solto no pé do cartão")
 
 
-#     DualSense na mesa
 _FIM_DA_ABA = "<!-- ===== fim da aba ===== -->"
 
 
 def _publicada(com_a_legenda: bool = False) -> str:
     """A página que o PRODUTO renderiza — `interface/paginas/`."""
     caminho = (RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
-               / "paginas" / PAGINA)  # (noqa-acento) nome de PASTA, e caminho não leva acento
+               / "paginas" / PAGINA)  # (noqa-acento)
     if not caminho.exists():
         pytest.fail(f"{caminho} não existe — a régua mediria o vazio.")
     doc = caminho.read_text(encoding="utf-8")

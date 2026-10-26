@@ -285,9 +285,6 @@ def test_o_ensaio_recusa_com_a_bancada_tomada(
     assert ensaio.borda["abriu"] == [] and ensaio.borda["escritos"] == []
 
 
-# O SEGUNDO TEMPO: a ponte com UM escritor por controle.
-
-
 class _Codificador:
     """O Opus de mentira: a régua não depende da libopus da máquina."""
 

@@ -79,9 +79,6 @@ def _o_modo_vivo_e_o_do_duble(monkeypatch: pytest.MonkeyPatch) -> None:
         hotkey, "modo_vigente", lambda d: getattr(d, "_modo_de_mentira", hotkey.MODO_NATIVO))
 
 
-# 1 ─ Quem lê o controle em cada um dos cinco modos ─────────────────────────
-
-
 @pytest.mark.parametrize("modo,quem", [
     (hotkey.MODO_NATIVO, hotkey.LE_A_STEAM),
     (hotkey.MODO_STEAM_INPUT, hotkey.LE_A_STEAM),
@@ -108,7 +105,7 @@ def test_1_na_duvida_o_controle_e_do_hefesto() -> None:
     (hotkey.PONTE_MOUSE_TECLADO, True),
 ])
 def test_1_o_hefesto_so_entra_onde_o_controle_e_dele(modo: str, age: bool) -> None:
-    # A decisão D-0810-O-MODO-BIG-PICTURE-NASCE-DESLIGADO.
+    """Prova da D-0810-O-MODO-BIG-PICTURE-NASCE-DESLIGADO."""
     bp, teclado, _ = _dono()
     d = _daemon(modo)
     ficam, _ = bp.rotear(d, None, frozenset({"dpad_down", "cross", "square"}))
@@ -119,9 +116,6 @@ def test_1_o_hefesto_so_entra_onde_o_controle_e_dele(modo: str, age: bool) -> No
         assert ficam == frozenset({"dpad_down", "cross", "square"}), (
             f"no {modo} a Steam lê o físico, e o Hefesto roubou botão")
         assert teclado.entregas == []
-
-
-# 2 ─ O foco da Steam e o interruptor decidem ───────────────────────────────
 
 
 def test_2_so_com_a_steam_na_frente() -> None:
@@ -167,11 +161,8 @@ def test_2_desligar_solta_tudo_e_fecha_o_teclado() -> None:
     assert bp.ligado is False
 
 
-# 3 ─ Um caminho só, e o toque curto ────────────────────────────────────────
-
-
 def test_3_so_o_direcional_a_cruz_e_o_circulo_viram_tecla() -> None:
-    # A decisão D-0810-O-MODO-BIG-PICTURE-NASCE-DESLIGADO.
+    """Prova da D-0810-O-MODO-BIG-PICTURE-NASCE-DESLIGADO."""
     from hefesto_dualsense4unix.integrations.uinput_keyboard import SUPPORTED_KEYS
 
     assert dono.BOTOES_QUE_NAVEGAM == NAVEGAM
@@ -193,9 +184,6 @@ def test_3_o_toque_curto_vira_aperto_e_solta() -> None:
     assert soltos == frozenset({"square"}), "o toque da Cruz tem de sair da lista de soltos"
     assert ficam == frozenset()
     assert teclado.entregas == [frozenset({"cross"}), frozenset()], teclado.entregas
-
-
-# 4 ─ P1 a P4: a tecla é a união das fontes ─────────────────────────────────
 
 
 def test_4_o_p2_e_o_p3_navegam_o_big_picture() -> None:
@@ -220,9 +208,6 @@ def test_4_a_fonte_que_some_nao_deixa_a_tecla_presa() -> None:
     assert teclado.entregas[-1] == frozenset(), "o P2 saiu e a seta ficou apertada"
 
 
-# 5 ─ Sem teclado virtual, nada é roubado ───────────────────────────────────
-
-
 def test_5_sem_uinput_o_hefesto_nao_rouba_botao_nenhum() -> None:
     bp, _, _ = _dono(teclado=_Teclado(abre=False))
     d = _daemon(hotkey.PONTE_DUALSENSE)
@@ -230,9 +215,6 @@ def test_5_sem_uinput_o_hefesto_nao_rouba_botao_nenhum() -> None:
     assert bp.rotear(d, None, botoes) == (botoes, frozenset()), (
         "sem teclado para entregar, o botão sumiu do pad e não foi a lugar nenhum")
     assert bp._falhou is True
-
-
-# 6 ─ O bloco que a tela lê ────────────────────────────────────────────────
 
 
 def test_6_o_bloco_diz_ligado_agindo_e_quem_le() -> None:
@@ -247,11 +229,8 @@ def test_6_o_bloco_diz_ligado_agindo_e_quem_le() -> None:
         "ligado": False, "agindo": False, "quem_le": None}
 
 
-# 7 ─ A escolha é da máquina, e vive entre sessões ──────────────────────────
-
-
 def test_7_a_escolha_e_guardada_e_nasce_desligada() -> None:
-    # A decisão D-0810-O-MODO-BIG-PICTURE-NASCE-DESLIGADO.
+    """Prova da D-0810-O-MODO-BIG-PICTURE-NASCE-DESLIGADO."""
     from hefesto_dualsense4unix.utils.session import load_big_picture
 
     assert load_big_picture() is False, "sem arquivo, o Modo Big Picture nasce desligado"
@@ -277,9 +256,6 @@ def test_7_o_daemon_define_e_devolve_o_bloco() -> None:
     assert load_big_picture() is False
 
 
-# 8 ─ O gesto da aba chama o dono, e a lista não está mais entre os sem dono ─
-
-
 class _PonteQueAnota:
     def __init__(self) -> None:
         self.chamadas: list[tuple[str, dict[str, Any]]] = []
@@ -295,9 +271,9 @@ def test_8_permitir_navegacao_liga_e_desliga_pelo_daemon() -> None:
     «Quem navega» e «Tipo de navegação» viraram os três botões de «Permitir navegação»
     (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, N5, 16/10/2026), com os mesmos donos. O interruptor do
     topo continua dono de ligar: nenhum dos três manda `ligada`.
+
+    Prova da D-1510-QUEM-NAVEGA-DECIDE-O-BIG-PICTURE.
     """
-    # D-1510-QUEM-NAVEGA-DECIDE-O-BIG-PICTURE
-    # Prova da D-1510-QUEM-NAVEGA-DECIDE-O-BIG-PICTURE.
     from hefesto_dualsense4unix.interface import pacotes
     from hefesto_dualsense4unix.interface.pacotes import a06_navegacao as a06
 
@@ -356,9 +332,6 @@ def test_8_o_big_picture_esta_no_metodo_e_na_prova_da_aba() -> None:
     assert {p["chama"][0][2]["ligado"] for p in provas} == {True, False}
 
 
-# 9 ─ O IPC: handler, despacho e estado ─────────────────────────────────────
-
-
 def test_9_o_metodo_esta_no_despacho_e_o_handler_valida() -> None:
     from hefesto_dualsense4unix.daemon import ipc_server
     from hefesto_dualsense4unix.daemon.ipc_handlers import IpcHandlersMixin
@@ -393,9 +366,6 @@ def test_9_o_state_full_traz_o_bloco_dentro_do_navegacao() -> None:
 
     bloco = _Eu()._navegacao_payload()  # type: ignore[no-untyped-call]
     assert bloco is not None and bloco["big_picture"]["ligado"] is True
-
-
-# 10 ─ Os três lugares onde o botão sai do controle chamam o dono ────────────
 
 
 class _Pad:

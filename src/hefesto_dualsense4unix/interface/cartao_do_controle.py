@@ -134,8 +134,6 @@ L2_R2_THRESHOLD: Final[int] = 30
 
 TEXTO_BOTAO_MIC_ATIVAR: Final[str] = "Ativar"
 TEXTO_BOTAO_MIC_SILENCIAR: Final[str] = "Silenciar"
-#: DualSense não devolve o volume nem o estado do mute (não há report de
-#: ~90px e faria os três rótulos da linha cortarem em 1180px (medido).
 TEXTO_BOTAO_MIC_DEVOLVER: Final[str] = "Liberar"
 TEXTO_BOTAO_MIC_SEM_LEITURA: Final[str] = "Silenciar"
 
@@ -158,8 +156,6 @@ DICA_MIC_SEM_LEITURA: Final[str] = (
 )
 
 
-#:
-#: **PROVISÓRIO — decisão de produto.** Com dois DualSense no cabo há DUAS placas de
 TEXTO_MIC_ALVO_NAO_HONRADO: Final[str] = (
     "O volume foi para o microfone de OUTRO controle: o Hefesto não conseguiu "
     "mirar este, e o pedido caiu no controle PRIMÁRIO. O perfil deste controle "
@@ -366,7 +362,6 @@ def texto_motion(entry: dict[str, Any], state_global: dict[str, Any]) -> str | N
 ATIVIDADE_FRESCA_S: Final[float] = 3.0
 
 
-#: `home_actions.TEXTO_CUSTO_MASCARA_XBOX`, para caber dentro do bloco.
 _FRASE_MASCARA_XBOX: Final[dict[str, str]] = {
     "giroscopio": (
         "o jogo vê este controle como Xbox 360, e essa API não leva "
@@ -376,9 +371,6 @@ _FRASE_MASCARA_XBOX: Final[dict[str, str]] = {
         "touchpad — no Hefesto ele segue ativo"),
 }
 
-#: E a do modo nativo, em que não há gamepad virtual nenhum: o jogo abre o
-#: hidraw do controle FÍSICO e fala com ele direto. Tudo chega — não porque
-#: nós entregamos, mas porque não há intermediário.
 _FRASE_NATIVO: Final[str] = "o jogo fala direto com o controle"
 
 
@@ -572,7 +564,6 @@ def dedos_do_inputs(inputs: Any) -> tuple[tuple[float, float], ...] | None:
             except (KeyError, TypeError, ValueError):
                 continue
         return tuple(saida)
-    # Payload sem `pontos`: cai para o resumo (ver a docstring).
     lido = touchpad_do_inputs(inputs)
     if lido is None:
         return None

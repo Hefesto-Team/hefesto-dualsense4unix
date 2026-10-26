@@ -47,7 +47,7 @@ import pytest
 
 from hefesto_dualsense4unix.interface import mesa_viva, onde
 
-PAGINA = "02-controles.html"  # (noqa-acento) nome de arquivo
+PAGINA = "02-controles.html"
 
 UNIQ = "aa:bb:cc:00:00:02"
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",

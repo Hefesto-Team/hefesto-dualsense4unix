@@ -552,8 +552,6 @@ def na_tela(tmp_path_factory) -> dict:
         achados=None, deteccao=None, ambiente=None, perfil=None)
 
     def janela_da_steam(fn: object, *_a: object, **_k: object) -> tuple[str, None]:
-        # `nao_fechou` é a recusa que SEGUE sendo recusa; o `jogo_aberto` virou
-        # recibo (03/10/2026) e o roteiro troca para ele no passo `janela`.
         fechou.append(fn)
         return (steam["janela"], None)
 
@@ -565,7 +563,6 @@ def na_tela(tmp_path_factory) -> dict:
         (slo, "with_steam_closed"): janela_da_steam,
         (footer_actions, "_meu_perfil_asset"): lambda: asset,
         (a9._daemon, "medir_jogos_com_steam_input"): lambda: [],
-        # o interruptor das correções: nem o arquivo dela nem o systemd dela
         (a9, "_guardar_o_interruptor"): guardou.append,
         (a9._vigia, "interruptor_ligado"): lambda *a, **k: True,
         (a9._vigia, "garantir"): lambda *a, **k: "escrito",

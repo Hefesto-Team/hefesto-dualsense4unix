@@ -28,9 +28,6 @@ P4 = "aa:bb:cc:00:00:54"
 QUATRO = (P1, P2, P3, P4)
 
 
-# --- O som sintético ----------------------------------------------------------
-
-
 def _fundo(segundos: float, nivel: float = 0.03, semente: int = 7) -> list[list[float]]:
     sorteio = random.Random(semente)
     return [
@@ -77,9 +74,6 @@ def _ouvir(
     return achados
 
 
-# --- O detector ----------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     ("ganhos", "lado"),
     [((1.0, 0.1), "esquerdo"), ((0.1, 1.0), "direito"), ((1.0, 1.0), "centro")],
@@ -119,7 +113,6 @@ def test_o_som_alto_que_sobe_e_desce_devagar_nao_e_tiro() -> None:
         t = i / TAXA
         nivel = 0.01 + 0.59 * (1 - math.cos(2 * math.pi * 4 * t)) / 2 if t > 0.3 else 0.01
         quadros.append([sorteio.gauss(0, nivel), sorteio.gauss(0, nivel)])
-    # O primeiro crescendo depois do silêncio pode valer um; o resto é o fundo que se move.
     assert len(_ouvir(quadros)) <= 1
 
 
@@ -141,9 +134,6 @@ def test_a_cpu_do_detector_por_segundo_de_som() -> None:
     por_segundo = (time.process_time() - comeco) / 5.0
     print(f"cpu do detector: {por_segundo * 1000:.2f} ms por segundo de som")
     assert por_segundo < 0.05
-
-
-# --- O fluxo do jogo e o gravador ----------------------------------------------
 
 
 def _fluxo(indice: int, pid: int, nome: str, serial: int, corked: bool = False) -> Any:
@@ -276,9 +266,6 @@ def test_o_pedido_que_acaba_cala_o_gravador() -> None:
     bancada.quer = False
     bancada.ouvido.uma_volta()
     assert bancada.derrubados == [bancada.gravador]
-
-
-# --- O motor: o estalo vai a quem atirou, do lado certo -------------------------
 
 
 class _Ouvido:
@@ -414,7 +401,6 @@ def test_um_tiro_da_um_toque_com_o_ouvido_no_jogo(monkeypatch: pytest.MonkeyPatc
     tv.anotar_o_rumble(mesa.daemon, P1, 0, 200, mesa.agora)
     mesa.estalo("esquerdo")
     assert mesa.alto_falante.toques == [(P1, "esquerdo")]
-    # Sem o som do jogo chegando, o toque volta a vir do rumble.
     mesa.ouvido.ouvindo = False
     mesa.tique(0.5)
     tv.anotar_o_rumble(mesa.daemon, P1, 0, 0, mesa.agora)

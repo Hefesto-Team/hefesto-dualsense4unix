@@ -50,7 +50,6 @@ FALSO = {
 }
 
 
-#: delegam para a camada do produto. `mesa_viva.mesa_do_estado` devolve `pref`,
 MESA = [{"pref": "p1", "jogador": 1, "uniq": "aa:bb:cc:00:00:01",
          "nome": "Régua", "via": "USB", "cor": "starlight-blue",
          "mascara": "DualSense", "alvo": True}]
@@ -76,7 +75,7 @@ def test_todo_pacote_declara_cobertura(pacotes_mod):
 def test_a_pagina_tem_onde_pintar(aba):
     """Um pacote sem endereço na página pinta no vazio."""
     html = (RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
-            / "paginas" / aba)  # (noqa-acento) `paginas` e o nome da PASTA
+            / "paginas" / aba)  # (noqa-acento)
     assert html.exists(), f"{aba} não existe no produto"
     n = len(ENDERECO.findall(html.read_text(encoding="utf-8")))
     assert n > 0, f"{aba}: nenhum endereço de pintura — o pacote dela pintaria no vazio"

@@ -51,9 +51,6 @@ def _attach(kernel: KernelDeMentira) -> str:
     return kernel.lido(Path(kernel.raizes.plataforma) / "vhci_hcd.0/attach")
 
 
-# --- 1. O broker escreve o par que chegou --------------------------------------
-
-
 @pytest.mark.parametrize("produto", [EDGE, COMUM])
 def test_o_broker_escreve_o_par_que_chegou_nos_quatro(
     kernel: KernelDeMentira, produto: int
@@ -73,9 +70,6 @@ def test_o_broker_escreve_o_par_que_chegou_nos_quatro(
         assert kernel.lido(g / "strings/0x409/serialnumber") == _serial(jogador)
     assert sorted(os.listdir(kernel.raizes.configfs)) == [
         f"hefesto-pad-{n}" for n in range(4)]
-
-
-# --- 2. Fora da lista, nada nasce ------------------------------------------------
 
 
 @pytest.mark.parametrize("campos", [
@@ -101,9 +95,6 @@ def test_a_lista_de_verdade_veste_as_duas_roupas() -> None:
         (SONY, EDGE): "DualSense Edge Wireless Controller",
         (SONY, COMUM): "DualSense Wireless Controller",
     }
-
-
-# --- 3. O pad manda o PID dele, pela cadeia inteira -----------------------------
 
 
 class Gravador:
@@ -153,9 +144,6 @@ def test_o_pad_manda_o_pid_dele_ate_o_socket(
     assert (pedido["vendor"], pedido["product"]) == (SONY, produto)
     criado = (tmp_path / "uhid-de-mentira").read_bytes()
     assert int.from_bytes(criado[268:272], "little") == produto, "o CREATE2 não levou o PID do pad"
-
-
-# --- 4. O ramo não troca de lugar --------------------------------------------------
 
 
 def _check_a_origem() -> Any:

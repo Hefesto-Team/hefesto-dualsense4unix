@@ -121,13 +121,12 @@ from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
     abrir_hidraw,
 )
 
-SERIAL_FORJADO = "ZZ9Y02Q0000000000"  # serial-de-mentira: prefixo forjado
+SERIAL_FORJADO = "ZZ9Y02Q0000000000"  # serial-de-mentira
 
 NAO_SEI = "Não sei"
 
 UNIQ = "aa:bb:cc:00:00:01"
 
-#: O ``HID_ID`` de um DualSense no cabo: ``BARRAMENTO:VENDOR:PRODUCT``.
 HID_ID_DUALSENSE_NO_CABO = "0003:0000054C:00000CE6"
 
 

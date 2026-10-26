@@ -118,7 +118,6 @@ _SRC = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
 
 _DONO = "app/fala_do_mapa.py"
 
-#: `portao_a_casa_sabe_e_o_produto_nao_faz.py`: registro que sobrevive à cura
 _COPIAS_DECLARADAS: dict[str, str] = {
     "interface/calibracao_das_entradas.py": (
         "`_virgula`, dono do texto OS_DOIS_RELOGIOS. Fora da posse da L3-F "

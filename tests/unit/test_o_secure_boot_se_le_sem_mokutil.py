@@ -47,7 +47,7 @@ def _bin(tmp_path: Path) -> Path:
     pasta.mkdir()
     for nome in ("od", "awk", "python3", "cat", "sed", "diff", "cp", "rm", "install"):
         real = shutil.which(nome)
-        if real is None:  # pragma: no cover - a máquina da casa tem todos
+        if real is None:  # pragma: no cover
             pytest.skip(f"sem {nome} nesta máquina")
         os.symlink(real, pasta / nome)
     return pasta

@@ -36,9 +36,6 @@ NAO_SE_EXPOE: dict[str, str] = {
     ),
 }
 
-#: O que o sandbox monta porque uma BIBLIOTECA lê dali, e não porque o código cita o
-#: caminho. A `libudev` abre o banco do udev sozinha (`core/banco_do_udev.py`); o
-#: código não tem mais o caminho escrito, e o Flatpak ainda precisa dele montado.
 LIDOS_PELA_BIBLIOTECA: dict[str, str] = {
     "/run/udev/data": "libudev.so.1",
 }

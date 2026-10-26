@@ -114,7 +114,7 @@ class _Daemon:
         self._gamepad_multi_log = ""
         self._last_rebackend_ts = float("-inf")
         self.display_authority = "unknown"
-        self._devolver_as_tabelas_do_perfil = lambda: None  # o teclado não é deste teste
+        self._devolver_as_tabelas_do_perfil = lambda: None
         for nome in (
             "set_gamepad_emulation",
             "set_gamepad_emulation_desfecho",
@@ -208,7 +208,6 @@ def _pelo_revive(d: _Daemon) -> None:
 
 
 def _pelo_cartao(d: _Daemon) -> None:
-    # O gesto do cartão escolhe MÁSCARA (do Pro de volta ao DualSense); o modo
     em.registro_de_mascaras().set_mask(P1, "dualsense")
     assert d.vestir_a_mascara_do_aparelho(P1) == gp.EMU_APLICADO
 
@@ -229,7 +228,6 @@ def _pelo_juiz_das_mascaras(d: _Daemon) -> None:
     assert gp.reconciliar_as_mascaras(d) == gp.EMU_APLICADO
 
 
-#: máscara partem do Pro no cartão, para a troca ao DualSense ser o que recria.
 RESTARTS: dict[str, tuple[Any, str | None]] = {
     "ordem_do_coop": (_pela_ordem_do_coop, None),
     "revive_pos_falha_total": (_pelo_revive, None),
@@ -564,9 +562,6 @@ def test_o_boot_restaura_a_escolha_de_janela_e_nasce_no_modo_dela(
     assert gp.caminho_da_sessao(daemon) == "xbox"
 
 
-# pé, e o P1 e o P3 ficaram com a máscara DualSense do Freestyle. (Desde
-
-
 def _perfis_do_g3() -> None:
     from hefesto_dualsense4unix.profiles.schema import ControllerOverrides
 
@@ -726,7 +721,7 @@ from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (
     UNIQS,
     MesaDoJogo,
     Relogio,
-    config_isolado,  # noqa: F401 — a fixture do lar de mentira da bancada
+    config_isolado,  # noqa: F401
 )
 
 BRANCO, VERMELHO, ROXO, AZUL = UNIQS[:4]

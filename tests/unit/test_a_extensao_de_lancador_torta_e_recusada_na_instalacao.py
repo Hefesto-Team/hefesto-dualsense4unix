@@ -37,9 +37,9 @@ def _pasta(curto: Path, nome: str, **campos: Any) -> Path:
     """Uma extensão só de lançador, com os campos do manifesto ajustados (``None`` tira o campo)."""
     dado: dict[str, Any] = {
         "id": nome, "nome": "Meu lançador", "api": ">=2,<3", "licenca": "MIT",
-        "versao": "0.1",  # (noqa-acento): chave do contrato
+        "versao": "0.1",  # (noqa-acento)
         "tipos": ["lancador"],
-        "permissoes": ["lancador"],  # (noqa-acento): chave do contrato
+        "permissoes": ["lancador"],  # (noqa-acento)
         "lancador": _BLOCO_CERTO,
     }
     for chave, valor in campos.items():
@@ -59,7 +59,7 @@ def _pasta(curto: Path, nome: str, **campos: Any) -> Path:
     ({"lancador": {**_BLOCO_CERTO, "ordem": 0}}, "«ordem», que não existe"),
     ({"lancador": None}, "o tipo «lancador» sem o bloco «lancador»"),
     ({"tipos": ["tema"], "tema": {}}, "o bloco «lancador» sem o tipo «lancador»"),
-    ({"permissoes": []},  # (noqa-acento): chave do contrato
+    ({"permissoes": []},  # (noqa-acento)
      "o bloco «lancador» sem a permissão «lancador»"),
 ])
 def test_o_manifesto_de_lancador_torto_e_recusado_com_a_frase(

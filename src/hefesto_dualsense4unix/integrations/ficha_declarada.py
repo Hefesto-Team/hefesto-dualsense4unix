@@ -27,7 +27,7 @@ try:
         _ler_vdf_binario,
         default_steam_root,
     )
-except ImportError:  # pragma: no cover - executado como script avulso
+except ImportError:  # pragma: no cover
     from api_de_entrada import Evidencia, escolher_executavel  # type: ignore[no-redef]
     from proton_pin import (  # type: ignore[no-redef]
         _APPINFO_CABECALHO_DA_ENTRADA,
@@ -44,7 +44,6 @@ PREVE_TRADUCAO = "preve_traducao"
 SO_XBOX_DECLARADO = "so_xbox_declarado"
 NAO_SEI = "nao_sei"
 
-#: As categorias da loja que dizem algo sobre controle, com o nome que a Steam dá.
 CATEGORIAS: dict[int, str] = {
     18: "controle Xbox parcial",
     28: "controle Xbox completo",
@@ -74,7 +73,6 @@ def _grafias(*nomes: str) -> tuple[bytes, ...]:
     )
 
 
-#: A biblioteca Sony no binário: o nome da fonte e as grafias que a denunciam.
 _SINAIS_SONY: tuple[tuple[str, tuple[bytes, ...]], ...] = (
     ("libScePad", _grafias("libScePad", "libscepad")),
     ("scePad", _grafias("scePad", "ScePad")),
@@ -91,8 +89,6 @@ _MANIFESTO_GDK = "MicrosoftGame.config"
 _PROFUNDIDADE_DA_PASTA = 6
 _TETO_DE_ENTRADAS = 50_000
 _TETO_DE_BIBLIOTECAS = 4
-#: O que o jogo declara do controle fora do executável: o InControl (IL2CPP e Mono), o
-#: Rewired e a SDL. Só o `a_roupa_do_jogo` lê estes; o veredito da ficha não muda.
 _ARQUIVOS_DA_ROUPA = frozenset(
     {"global-metadata.dat", "incontrol.dll", "rewired_core.dll", "sdl2.dll", "sdl3.dll"}
 )
@@ -163,10 +159,6 @@ class FichaDeclarada:
             "sinais_sony": list(self.binario.sony),
             "pids": [p.upper() for p in self.binario.pids],
         }
-
-
-# ---------------------------------------------------------------------------
-# A declaração da Steam
 
 
 def caminho_do_cache_da_steam(home: Path | None = None) -> Path:
@@ -264,10 +256,6 @@ def declaracoes_do_cache(
         logger.debug("o cache da Steam não se leu, a ficha cai no binário: %s", erro)
         return None
     return achados
-
-
-# ---------------------------------------------------------------------------
-# O que o disco do jogo mostra
 
 
 def _bibliotecas_e_manifesto(
@@ -380,10 +368,6 @@ def examinar_o_binario(raiz: Path, evidencia: Evidencia | None = None) -> Sinais
     )
 
 
-# ---------------------------------------------------------------------------
-# O veredito
-
-
 def _nomes(categorias: Iterable[int]) -> str:
     return ", ".join(f"{n} ({CATEGORIAS[n]})" for n in sorted(categorias))
 
@@ -472,10 +456,6 @@ def fichas_dos_jogos(
         decl = declaracoes.get(str(appid)) if declaracoes is not None else None
         fichas[str(appid)] = montar_ficha(appid, decl, binario)
     return fichas
-
-
-# ---------------------------------------------------------------------------
-# A capa da biblioteca
 
 
 def explicar_a_capa(

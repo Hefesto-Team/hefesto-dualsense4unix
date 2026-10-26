@@ -142,7 +142,7 @@ class TestOSeparadorAlinhaAosBlocos:
         sep = hb.SeparadorDaFrente()
         pcm = FRENTE * 2
         saidas: list[bytes] = []
-        for i in range(0, len(pcm), 1001):  # 1001 B: nunca cai na fronteira do quadro
+        for i in range(0, len(pcm), 1001):
             saidas.extend(sep.alimentar(pcm[i : i + 1001]))
         assert len(saidas) == 2
         assert all(len(f) == af.BYTES_DE_PCM_POR_QUADRO for f in saidas)

@@ -84,7 +84,6 @@ LINHA_ESTENDIDA = (
     "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6,0x057e/0x2009 %command%"
 )
 
-#: DualSense do usuário, com a tela dizendo que o atalho estava no lugar.
 LINHA_NOSSO_PAR_EM_SEGUNDO = (
     "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x057e/0x2009,0x054c/0x0ce6 %command%"
 )
@@ -438,9 +437,6 @@ def test_install_migra_fora_do_bloco_do_steam_input():
     assert pos_migrate > pos_fim_bloco_steam_input
 
 
-# --- apply_wrapper_to_all_games (PATH-06 item 2: via em-massa consentida) ----
-
-
 def _vdf_sem_launch_options(appid: str) -> str:
     """Um localconfig.vdf com um app SEM a linha LaunchOptions."""
     return (
@@ -632,9 +628,6 @@ def test_apply_wrapper_to_all_games_pula_vdf_de_sandbox(tmp_path, monkeypatch):
     assert vdf.read_text(encoding="utf-8") == original
 
 
-# HONESTIDADE-STEAM-01: o CORPO de stop_steam + a janela with_steam_closed
-
-
 class _RelogioFalso:
     """`time` falso: `sleep` não dorme, só registra quanto FOI pedido."""
 
@@ -658,7 +651,7 @@ class _SubprocessFalso:
         self.popen: list[list[str]] = []
         self.run_args: list[list[str]] = []
 
-    def Popen(self, args, **_kwargs):  # noqa: N802 - espelha a API do stdlib
+    def Popen(self, args, **_kwargs):  # noqa: N802
         self.popen.append(list(args))
         return None
 
@@ -754,9 +747,6 @@ def test_stop_steam_sem_binario_steam_vai_direto_ao_sinal(monkeypatch):
     assert subproc.popen == []
     assert subproc.run_args == []
     assert relogio.dormido == [3, 3, 2]
-
-
-# --- with_steam_closed: a janela consentida que a GUI usa -------------------
 
 
 def test_with_steam_closed_recusa_com_jogo_aberto_antes_de_tudo(monkeypatch):

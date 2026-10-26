@@ -163,7 +163,7 @@ def no_webkit_09():
     def guardou(v, res) -> None:
         try:
             saiu.append(v.evaluate_javascript_finish(res).to_string())
-        except Exception as e:  # pragma: no cover — só quando o roteiro quebra
+        except Exception as e:  # pragma: no cover
             saiu.append(f"ERRO {e}")
         Gtk.main_quit()
 

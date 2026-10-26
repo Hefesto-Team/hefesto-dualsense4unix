@@ -52,7 +52,7 @@ from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyManager
 from hefesto_dualsense4unix.profiles import autoswitch
 from hefesto_dualsense4unix.utils import maquina as mq
 
-PAGINA = "06-navegacao.html"  # (noqa-acento) nome de arquivo
+PAGINA = "06-navegacao.html"
 
 CONTROLES = [
     ("aa:bb:cc:00:00:01", "usb", 1),
@@ -197,7 +197,7 @@ def test_todo_token_tem_atendente(atendentes: dict[str, list[Any]],
             assert rodados == ["/x/y.sh"]
         elif faz == ag.NADA:
             assert nomes == () and d.chamados == []
-        else:  # pragma: no cover - token novo sem atendente
+        else:  # pragma: no cover
             pytest.fail(f"o token {faz!r} não tem atendente nesta régua")
 
 

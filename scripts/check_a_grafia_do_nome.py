@@ -99,7 +99,6 @@ _ERRADA = re.compile(
     r"(?<![-\w])Dualsense4Unix(?! Virtual )(?! virtual\))"
 )
 
-#: limpa, pela mesma razão do `noqa-acento`: apagar a grafia errada de dentro
 ISENTOS: dict[str, str] = {
     "scripts/check_a_grafia_do_nome.py":
         "esta régua: a docstring tem de poder escrever o que ela caça.",

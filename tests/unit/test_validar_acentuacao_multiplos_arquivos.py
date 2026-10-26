@@ -12,7 +12,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ / "scripts" / "validar-acentuacao.py"
 CONFIG_PRE_COMMIT = RAIZ / ".pre-commit-config.yaml"
 
-# desta casa. Cada linha carrega o `noqa` para não acusar o próprio arquivo.
 LINHA_SUJA = 'msg = "a configuracao nao tem acao"\n'  # (noqa-acento)
 LINHA_LIMPA = 'msg = "a configuração não tem ação"\n'
 

@@ -66,7 +66,6 @@ def _ancora(i: int) -> eh.Ancora:
 
 
 _QUATRO = [_ancora(i) for i in range(4)]
-#: a porta para onde o gadget de um aparelho volta quando desce e sobe de novo.
 _A_QUINTA = _ancora(4)
 
 
@@ -316,7 +315,7 @@ def test_o_endpoint_tirado_por_fora_sobe_de_novo_na_volta_seguinte(mesa: _Mesa) 
     mesa.casar(_MENOR, _MAIOR)
     nome = eh.nome_do_endpoint(_MAIOR)
     (antigo,) = [m for m, (n, _c) in mesa.servidor.modulos.items() if n == nome]
-    del mesa.servidor.modulos[antigo]  # `pactl unload-module` na mão de alguém
+    del mesa.servidor.modulos[antigo]
     mesa.casar(_MENOR, _MAIOR)
     depois = mesa.servidor.caminho_de(_MAIOR)
     assert len(depois) == 1, f"o endpoint não voltou, ou voltou duplicado: {depois}"

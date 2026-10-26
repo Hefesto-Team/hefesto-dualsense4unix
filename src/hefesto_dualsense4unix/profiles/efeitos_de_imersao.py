@@ -14,7 +14,6 @@ import functools
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 
-#: acionamento (família de modos) → os modos que a compõem
 FAMILIAS: dict[str, tuple[str, ...]] = {
     "arma": ("Weapon",),
     "metralhadora": ("Machine", "Vibration"),
@@ -29,13 +28,7 @@ FAMILIAS: dict[str, tuple[str, ...]] = {
 Ajustes = Mapping[str, int]
 
 
-#: O-MOTOR-DOS-MOMENTOS-NAO-REESCREVE-O-BLOCO-E-LE-O-CLIQUE-01 (15/10/2026): dois `quando` além de
-#: `ao_apertar`, `segurando` e `sempre`.
-#: `passou_do_clique`: o Disparo passou do clique (o status 2 do report de entrada). Sem o status,
-#: o `apos_ms` conta do aperto: o momento nunca fica mudo.
 QUANDO_PASSOU_DO_CLIQUE = "passou_do_clique"
-#: `pronto`: toma o gatilho por pouco tempo (de `PRONTO_MIN_MS` a `PRONTO_MAX_MS`), por cima de
-#: qualquer outro momento, e devolve o bloco de antes. Conta no teto de escritas.
 QUANDO_PRONTO = "pronto"
 PRONTO_MIN_MS = 60
 PRONTO_MAX_MS = 150
@@ -56,7 +49,6 @@ class Momento:
     ajustes: Ajustes
     dura_ms: int | None = None
     a_cada_ms: int | None = None
-    #: os modos do acionamento em que ele vale; vazio vale em todos
     valem_em: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
@@ -72,15 +64,11 @@ class Imersao:
     chave: str
     rotulo: str
     familia: str
-    #: a frase da dica da opção (o que se sente), sem «?» na tela
     dica: str
     ajustes: Mapping[str, Ajustes]
-    #: estilo (`estilos_de_jogo.Estilo.chave`) → ajustes que SOBREPÕEM os de `ajustes`
     variantes: Mapping[str, Mapping[str, Ajustes]] = field(default_factory=dict)
     momentos: tuple[Momento, ...] = ()
-    #: os estilos que a põem no começo da lista com o automático ligado
     na_frente: tuple[str, ...] = ()
-    #: nome ainda sem a palavra de produto
     a_validar: bool = False
 
 
@@ -98,11 +86,7 @@ def _curva(*forcas: int) -> dict[str, int]:
     return {f"pos_{i}": f for i, f in enumerate(forcas)}
 
 
-#: O `na_frente` de cada uma é a `frente` de cada estilo na tabela `S` da página de 19/10/2026
-#: (de 1 a 5 por estilo); o `sem-efeito` da frente é o «Nenhum» da tela. As cinco
-#: de 20/10/2026 levam o nome na forma «Família · variante» da página.
 IMERSOES: tuple[Imersao, ...] = (
-    # --- Arma: Disparo ----------------------------------------------------------------------
     Imersao("ferrolho-que-volta", "Golpe · imersivo", "arma",
             "O gatilho rearma sozinho a cada tiro, firme e curto.",
             {"Weapon": {"start": 2, "end": 6, "force": 210}},
@@ -134,29 +118,22 @@ IMERSOES: tuple[Imersao, ...] = (
     Imersao("golpe-leve", "Golpe · fraco", "arma",
             "Um clique curto e macio no meio do curso.",
             {"Weapon": {"start": 3, "end": 5, "force": 32}},
-            na_frente=("acao", "esportes", "plataforma", "retro",  # (noqa-acento): chave
+            na_frente=("acao", "esportes", "plataforma", "retro",  # (noqa-acento)
                        "maratona", "point_and_click", "visual_novel")),
     Imersao("golpe-pesado", "Golpe · forte", "arma",
             "Parede longa e dura que estala no fundo.",
-            # Na luta o catálogo pedia 2/8/255, que é a Arma pesada: sem variante, a tela não
-            # distinguiria as duas pelos números.
             {"Weapon": {"start": 2, "end": 8, "force": 191}},
             na_frente=("terror",)),
     Imersao("clique-no-meio", "Carga · dois estágios", "arma",
             "Um clique na metade, e a resistência cresce depois dele.",
             {"Weapon": {"start": 4, "end": 6, "force": 160}},
-            # Com o status do Disparo o momento nasce no clique; sem ele, 300 ms do aperto.
             momentos=(Momento(QUANDO_PASSOU_DO_CLIQUE, 300, "Resistance",
                               {"start": 7, "force": 6}),),
             na_frente=("fps", "furtivo", "retro")),
-    # O botão do mouse: raso e seco no começo do curso, sem o meio macio do Golpe leve. O Point and
-    # click o usa nos dois lados e ele não vai à frente da lista (a frente dele é o Golpe leve).
     Imersao("clique-mouse", "Clique · mouse", "arma",
             "Um clique raso e seco logo no começo do curso, que volta na hora.",
             {"Weapon": {"start": 2, "end": 3, "force": 96}},
             na_frente=()),
-    # Afunda mole e cede no vazio: a parede larga e leve, e uma queda de 250 ms a 200 ms do aperto
-    # (o gatilho solta e volta). Onde o jogo escreve o gatilho, o momento cala e a parede mole fica.
     Imersao("golpe-falha", "Golpe · falha", "arma",
             "Afunda mole e cede no vazio por um instante.",
             {"Weapon": {"start": 2, "end": 8, "force": 24}},
@@ -166,12 +143,10 @@ IMERSOES: tuple[Imersao, ...] = (
             "Um clique duro logo no começo do curso.",
             {"Weapon": {"start": 2, "end": 4, "force": 224}},
             na_frente=("souls",)),
-    # --- Metralhadora: Metralhadora e Vibração -------------------------------------------------
     Imersao("rajada-que-sobe-sozinha", "Golpe · rajada que sobe", "metralhadora",
             "As batidas começam médias e ficam mais fortes a cada meio segundo segurando.",
             {"Machine": {"start": 0, "end": 9, "strength": 4, "frequency": 40},
              "Vibration": {"position": 0, "amplitude": 5, "frequency": 8}},
-            # Uma escrita por degrau; o firmware faz o ritmo, nenhum `a_cada_ms` repete o bloco.
             momentos=(Momento("segurando", 500, "Machine", {"strength": 5}, valem_em=("Machine",)),
                       Momento("segurando", 1000, "Machine", {"strength": 6},
                               valem_em=("Machine",)),
@@ -198,14 +173,12 @@ IMERSOES: tuple[Imersao, ...] = (
             {"Machine": {"start": 0, "end": 9, "strength": 8, "frequency": 6},
              "Vibration": {"position": 0, "amplitude": 8, "frequency": 6}},
             na_frente=("fps",)),
-    # --- Arco ---------------------------------------------------------------------------
     Imersao("corda-que-estica", "Carga · estica", "arco",
             "A corda começa leve e pesa mais a cada meio segundo segurando.",
             {"Bow": {"start": 0, "end": 8, "force": 7, "snap": 6}},
             {"arco": {"Bow": {"start": 0, "end": 8, "force": 6, "snap": 7}}},
-            # Começa leve no aperto (a rampa só dá os degraus depois do primeiro).
             (Momento("segurando", 0, "Bow", {"force": 1}), *_rampa("Bow", "force", 1, 7, 500)),
-            na_frente=("acao", "plataforma")),  # (noqa-acento): chave
+            na_frente=("acao", "plataforma")),  # (noqa-acento)
     Imersao("flecha-que-escapa", "Carga · solta seca", "arco",
             "O estalo da soltura chega seco, no fim do curso.",
             {"Bow": {"start": 2, "end": 8, "force": 6, "snap": 7}},
@@ -217,7 +190,6 @@ IMERSOES: tuple[Imersao, ...] = (
             momentos=(Momento("segurando", 3000, "Vibration",
                               {"position": 6, "amplitude": 2, "frequency": 8}),),
             na_frente=()),
-    # --- Resistência e Curva de força --------------------------------------------------------
     Imersao("freio-abs-que-pulsa", "Peso · freio", "resistência",
             "Resistência firme no começo, e o pedal pulsa depois de um instante segurando.",
             {"Resistance": {"start": 2, "force": 6}},
@@ -230,7 +202,6 @@ IMERSOES: tuple[Imersao, ...] = (
             {"Resistance": {"start": 1, "force": 8}},
             {"simulacao": {"Resistance": {"start": 1, "force": 7}}},
             na_frente=("corrida", "simulacao")),
-    # O Pique vem antes do Golpe carregado: nos Esportes ele é o da frente (CATALOGO §2.4).
     Imersao("pique-que-cansa", "Peso · cansaço", "resistência",
             "Um peso leve que vai pesando segurando a corrida: mais forte aos 2, 4 e 6 s.",
             {"Resistance": {"start": 0, "force": 2}},
@@ -241,26 +212,22 @@ IMERSOES: tuple[Imersao, ...] = (
     Imersao("golpe-carregado", "Golpe · carregado", "resistência",
             "Uma parede que endurece segurando, treme de pronto aos 1,5 s e some.",
             {"Resistance": {"start": 4, "force": 3}},
-            # O pronto (150 ms de Metralhadora, por cima de tudo) e depois a parede some.
             momentos=(Momento("segurando", 500, "Resistance", {"force": 5}),
                       Momento("segurando", 1000, "Resistance", {"force": 7}),
                       Momento(QUANDO_PRONTO, 1500, "Machine",
                               {"start": 4, "end": 9, "strength": 3, "frequency": 40},
                               dura_ms=150),
                       Momento("segurando", 1650, "Off", {})),
-            na_frente=("acao", "luta", "souls")),  # (noqa-acento): chave
+            na_frente=("acao", "luta", "souls")),  # (noqa-acento)
     Imersao("mira-firme", "Peso · leve", "resistência",
             "Peso leve e constante no gatilho da mira.",
             {"Resistance": {"start": 2, "force": 3}},
             na_frente=("furtivo", "simulacao", "esportes", "plataforma", "retro", "maratona")),
-    # O atirador de elite prende a respiração: o peso leve endurece de leve a partir de 2 s
-    # segurando. A Onda dos motores, ao soltar, é do estilo (`padroes_de_vibracao`).
     Imersao("carga-folego", "Carga · fôlego preso", "resistência",
             "Segurar a mira por mais de 2 s endurece de leve, como prender a respiração.",
             {"Resistance": {"start": 2, "force": 2}},
             momentos=(Momento("segurando", 2000, "Resistance", {"force": 3}),),
             na_frente=()),
-    # Sem estamina o golpe não sai: sobe até a parede em 800 ms e cede aos 1,2 s.
     Imersao("travar-esgotado", "Travar · esgotado", "resistência",
             "Sobe até a parede e cede depois de 1,2 s segurando.",
             {"Resistance": {"start": 3, "force": 4}},
@@ -277,12 +244,11 @@ IMERSOES: tuple[Imersao, ...] = (
             {"MultiPositionFeedback": _curva(0, 0, 2, 2, 3, 4, 5, 6, 7, 8)},
             momentos=(Momento("segurando", 2000, "MultiPositionFeedback",
                               _curva(0, 0, 3, 3, 4, 5, 6, 7, 8, 8)),),
-            na_frente=("acao",)),  # (noqa-acento): chave
+            na_frente=("acao",)),  # (noqa-acento)
     Imersao("duas-travas", "Travar · em duas", "curva",
             "Duas travas no curso, uma na entrada e outra no meio.",
             {"MultiPositionFeedback": _curva(1, 2, 8, 0, 0, 1, 2, 8, 0, 0)},
             na_frente=()),
-    # --- Galope --------------------------------------------------------------------------
     Imersao("galope-no-chao", "Terreno · passos", "galope",
             "Patas lentas e baixas, só se sentem devagar.",
             {"Galloping": {"start": 0, "end": 9, "first_foot": 6, "second_foot": 3,
@@ -292,7 +258,6 @@ IMERSOES: tuple[Imersao, ...] = (
             "Passadas iguais que aceleram enquanto você segura, como um motor girando.",
             {"Galloping": {"start": 0, "end": 9, "first_foot": 5, "second_foot": 5,
                            "frequency": 12}},
-            # Até 33 Hz qualquer valor é limpo; acima disso só os que dividem 1000.
             momentos=_rampa("Galloping", "frequency", 12, 33, 500),
             na_frente=("corrida",), a_validar=True),
     Imersao("terreno-que-muda", "Terreno · irregular", "galope",
@@ -300,7 +265,6 @@ IMERSOES: tuple[Imersao, ...] = (
             {"Galloping": {"start": 1, "end": 8, "first_foot": 4, "second_foot": 6,
                            "frequency": 16}},
             na_frente=("corrida",), a_validar=True),
-    # --- Rampa de força e Vibração por posição -----------------------------------------------
     Imersao("besta", "Carga · curta e dura", "rampa",
             "Rampa curta e dura, que solta seca.",
             {"SlopeFeedback": {"start": 2, "end": 9, "start_strength": 5, "end_strength": 8}},
@@ -315,16 +279,13 @@ IMERSOES: tuple[Imersao, ...] = (
             {"corrida": {"MultiPositionVibration": {"frequency": 25}}},
             (Momento("segurando", 1500, "Machine",
                      {"start": 2, "end": 9, "strength": 8, "frequency": 50}),),
-            na_frente=("acao",)),  # (noqa-acento): chave
+            na_frente=("acao",)),  # (noqa-acento)
     Imersao("motor-no-acelerador", "Peso · motor", "vibração por posição",
             "Ronco fraco que cresce com o pedal.",
             {"MultiPositionVibration": {"frequency": 25, **_curva(1, 1, 2, 2, 3, 3, 4, 4, 5, 5)}},
             na_frente=("simulacao",)),
 )
 
-#: Os números de ontem de cada imersão que mudou: `(imersão, chave de ontem, ajustes de ontem)`.
-#: Um perfil salvo com eles abre com a imersão de hoje selecionada (`imersao_dos_numeros`). A
-#: chave de ontem pode ser uma que saiu da lista de onze: ela passa pela tradução do perfil.
 NUMEROS_DE_ONTEM: tuple[tuple[str, str, Mapping[str, int]], ...] = (
     ("ferrolho-que-volta", "SemiAutoGun", {"start": 3, "end": 7, "force": 6}),
     ("trava-seca", "SemiAutoGun", {"start": 2, "end": 3, "force": 8}),
@@ -366,16 +327,12 @@ def _familia_do_modo(modo: str) -> str:
     return ""
 
 
-#: As famílias da página dos efeitos (19/10/2026), na ordem em que a lista da aba Gatilhos as traz.
 FAMILIAS_DA_PAGINA: tuple[str, ...] = (
     "Golpe", "Carga", "Peso", "Travar", "Terreno", "Pulso", "Clique")
 SEPARADOR_DO_NOME = " · "
-#: A imersão que a lista não mostra porque a página a funde noutra («Golpe pesado, Arma pesada»
-#: é o «Golpe · forte»): o campo mostra a de lá quando os números são os dela.
 IGUAL_A: dict[str, str] = {"arma-pesada": "golpe-pesado"}
 
 
-#: A ordem dentro de cada grupo da lista, a da página dos efeitos de 19/10/2026.
 ORDEM_NA_LISTA: tuple[str, ...] = (
     "ferrolho-que-volta", "golpe-leve", "golpe-pesado", "golpe-carregado", "golpe-falha",
     "rajada-que-sobe-sozinha", "cano-que-esquenta", "recuo-pesado", "escudo-que-aguenta",
@@ -473,7 +430,7 @@ def imersao_dos_numeros(modo: str, params: Sequence[object]) -> tuple[Imersao, s
     alvo: list[int] = []
     for valor in params:
         if isinstance(valor, bool) or not isinstance(valor, int):
-            return None  # o aninhado dos modos por posição não é de imersão nenhuma
+            return None
         alvo.append(valor)
     for imersao, do_modo, estilo, ajustes in todos_os_ajustes():
         if do_modo == modo and list(preset_to_positional_params(spec, ajustes)) == alvo:

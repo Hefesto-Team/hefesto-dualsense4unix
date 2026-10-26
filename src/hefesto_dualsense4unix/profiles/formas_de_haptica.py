@@ -18,8 +18,6 @@ from dataclasses import dataclass
 
 TAXA = 48_000
 
-#: «Do estilo» é o automático (o que o estilo pede, e o Toque de hoje quando ele não pede nada);
-#: «Sem efeito» cala o toque deste controle.
 DO_ESTILO = "do_estilo"
 SEM_EFEITO = "sem_efeito"
 TOQUE = "toque"
@@ -28,12 +26,10 @@ ESTALO = "estalo"
 GUARDA = "guarda"
 APARO = "aparo"
 SOM_NO_CORPO = "som_no_corpo"
-#: As três que o estilo pede e a lista mostra (20/10/2026), ao fim das escolhas.
 ECO = "eco"
-GRAO = "grao"  # (noqa-acento): chave
+GRAO = "grao"
 MOTOR_DE_EPOCA = "motor_de_epoca"
 
-#: As escolhas, na ordem em que a tela as mostra. A chave é a que o perfil guarda.
 ESCOLHAS: tuple[str, ...] = (
     DO_ESTILO, SEM_EFEITO, TOQUE, IMPACTO, ESTALO, GUARDA, APARO, SOM_NO_CORPO,
     ECO, GRAO, MOTOR_DE_EPOCA)
@@ -52,7 +48,6 @@ ROTULOS: dict[str, str] = {
     MOTOR_DE_EPOCA: "Motor de época",
 }
 
-#: O que se sente, em uma linha (até 36 letras, para caber na coluna da lista).
 DICAS: dict[str, str] = {
     DO_ESTILO: "O que o estilo pede",
     SEM_EFEITO: "O controle não toca",
@@ -67,30 +62,24 @@ DICAS: dict[str, str] = {
     MOTOR_DE_EPOCA: "O zumbido grosso do rumble antigo",
 }
 
-#: As contínuas: o laço do tato as leva por tique, e nenhum toque de tiro as toca.
 CONTINUAS = frozenset({SOM_NO_CORPO, GRAO, MOTOR_DE_EPOCA})
 
-#: As formas longas: a Bateria longa as troca pelo Toque (as contínuas, por nada), e o rádio só as
-#: toca com fatia livre.
 FORMAS_LONGAS = frozenset({GUARDA, APARO, ECO} | CONTINUAS)
 
-#: O que cada estilo pede da háptica (a tabela `S` da página de 19/10/2026): toda forma, inclusive
-#: as contínuas (o Som no corpo da Corrida, o Grão da Simulação, o Motor de época do Retrô). O
-#: estilo que não está aqui toca o Toque.
 POR_ESTILO: dict[str, str] = {
     "fps": TOQUE,
-    "acao": IMPACTO,  # (noqa-acento): chave
+    "acao": IMPACTO,  # (noqa-acento)
     "luta": IMPACTO,
-    "souls": ECO,  # o Impacto com cauda grave de 300 ms: só o golpe forte reverbera
+    "souls": ECO,
     "furtivo": ESTALO,
     "aventura": TOQUE,
-    "terror": TOQUE,  # 80 ms: `duracao_da_vibracao_ms` do Terror
+    "terror": TOQUE,
     "corrida": SOM_NO_CORPO,
-    "simulacao": GRAO,  # grãos finos e rápidos: o chão, a pista ou a turbulência
+    "simulacao": GRAO,
     "esportes": IMPACTO,
     "plataforma": ESTALO,
     "ritmo": ESTALO,
-    "retro": MOTOR_DE_EPOCA,  # soma o zumbido grosso quando o jogo vibra; sem rumble, mudo
+    "retro": MOTOR_DE_EPOCA,
     "maratona": TOQUE,
     "point_and_click": TOQUE,
     "visual_novel": TOQUE,
@@ -103,10 +92,7 @@ class Forma:
 
     componentes: tuple[tuple[int, float], ...]
     ataque_ms: int
-    #: ``None``: a duração vem do pedido (o Toque do estilo, de 25 a 60 ms).
     duracao_ms: int | None
-    #: A cauda grave (o Eco): um seno de ``cauda_hz`` que nasce no fim do golpe e cai até zero em
-    #: ``cauda_ms``, no ``cauda_peso`` da energia. Sem ``cauda_hz`` a forma não tem cauda.
     cauda_hz: int = 0
     cauda_ms: int = 0
     cauda_peso: float = 0.55
@@ -118,13 +104,9 @@ FORMAS: dict[str, Forma] = {
     ESTALO: Forma(((250, 1.0),), 1, 15),
     GUARDA: Forma(((115, 0.6), (220, 0.4)), 3, 850),
     APARO: Forma(((170, 0.5), (270, 0.5)), 3, 600),
-    # o Impacto de 80 ms e uma cauda de 50 Hz de 300 ms, como o eco de um golpe pesado
     ECO: Forma(((60, 0.6), (160, 0.4)), 2, 380, 50, 300),
 }
 
-#: A Assinatura (20/10/2026): o Toque na nota de cada unidade, de 150 a 195 Hz de 15 em 15. A
-#: nota é da cor do plástico (``daemon/subsystems/chegada``), e a forma é só do estilo: fora de
-#: ``FORMAS`` e de ``ESCOLHAS``.
 NOTAS_DA_ASSINATURA: tuple[int, ...] = (150, 165, 180, 195)
 ASSINATURAS: dict[str, Forma] = {
     f"toque-{hz}": Forma(((hz, 1.0),), 3, None) for hz in NOTAS_DA_ASSINATURA
@@ -177,7 +159,6 @@ def _molde(chave: str, n: int, taxa: int) -> tuple[array[float], array[float]]:
             envelopes[i] = ((corpo - 1 - i) / queda) ** 2 if queda > 0 else 0.0
         ondas[i] = sum(peso * math.sin(passo * i) for passo, peso in passos)
     if cauda and n > corpo:
-        # a cauda sobe em 20 ms e cai ao quadrado até zero; o fim do corpo já é zero, sem estalo
         sobe = max(1, min(cauda - 1, round(taxa * CAUDA_SOBE_MS / 1000)))
         passo_da_cauda = 2.0 * math.pi * forma.cauda_hz / taxa
         for j in range(n - corpo):
@@ -190,7 +171,6 @@ def _molde(chave: str, n: int, taxa: int) -> tuple[array[float], array[float]]:
     return envelopes, ondas
 
 
-#: A cauda do Eco sobe em tantos ms (a pancada e o eco se separam).
 CAUDA_SOBE_MS = 20
 
 
@@ -224,19 +204,15 @@ def forma_que_vale(escolha: object, estilo: object, economia: bool = False) -> s
         return None
     if chave is None:
         chave = forma_do_estilo(estilo)
-        if chave == SEM_EFEITO:  # o estilo que não toca nada (o Retrô)
+        if chave == SEM_EFEITO:
             return None
     if economia and chave in FORMAS_LONGAS:
         return None if chave in CONTINUAS else TOQUE
     return chave
 
 
-# --- O Som no corpo: o grave do som do jogo -------------------------------------------------
-
-#: A faixa do corpo: abaixo de 40 Hz o atuador não responde, acima de 220 Hz já é toque.
 CORTE_BAIXO_HZ = 40
 CORTE_ALTO_HZ = 220
-#: Valores de partida: o ganho é fixo (o Sensor háptico regula adiante) e o teto protege o atuador.
 GANHO_DO_CORPO = 4.0
 TETO_DO_CORPO = 0.7
 _ESCALA_DO_PCM = 32768.0
@@ -279,7 +255,7 @@ class FiltroDoCorpo:
         """O pedaço filtrado. Meio quadro solto no fim do pedaço é descartado."""
         quadros = array("h")
         quadros.frombytes(pcm[: len(pcm) - len(pcm) % 4])
-        if sys.byteorder != "little":  # pragma: no cover — o formato é little-endian
+        if sys.byteorder != "little":  # pragma: no cover
             quadros.byteswap()
         saida = array("f", bytes(4 * (len(quadros) // 2)))
         for i in range(len(saida)):
@@ -289,10 +265,6 @@ class FiltroDoCorpo:
         return saida
 
 
-# --- O Grão e o Motor de época: as contínuas que o estilo pede -----------------------------
-
-#: O Grão: rajadas de 6 ms de um seno de 180 a 260 Hz, com 12 a 38 ms de silêncio entre uma e
-#: outra (uns 32 grãos por segundo), na amplitude de 0,35 a 0,6 (abaixo do teto do corpo).
 GRAO_MS = 6
 GRAO_FOLGA_MIN_MS = 12
 GRAO_FOLGA_VARIA_MS = 26
@@ -300,8 +272,6 @@ GRAO_HZ = (180, 200, 220, 240, 260)
 GRAO_AMPLITUDES = (0.35, 0.48, 0.6)
 _SEMENTE_DO_GRAO = 20_101_920
 
-#: O Motor de época: um zumbido grosso de 30 a 50 Hz que SOBE devagar (arranque de 120 ms) e
-#: ARRASTA ao parar (250 ms), no teto do corpo. A frequência segue a força do rumble do jogo.
 EPOCA_HZ_MIN = 30.0
 EPOCA_HZ_MAX = 50.0
 EPOCA_ARRANQUE_S = 0.120
@@ -421,24 +391,14 @@ def _volta_da_continua(
     return saida
 
 
-# --- O timbre do rumble do jogo Xbox (O-RUMBLE-DO-JOGO-XBOX-GANHA-O-TIMBRE-DO-ESTILO-01) ---------
-
-#: Os estilos que tocam o seno de hoje, byte a byte: sem pedido (Nativo, Personalizado), o que já
-#: soma o timbre dele (o Retrô, com o Motor de época) e o Adulto, que não é estilo de golpe.
 SEM_TIMBRE = frozenset({"nativo", "personalizado", "retro", "adulto"})
-#: O contínuo que cada estilo NÃO veste (valores de partida, a validar na bancada): a Luta, a
-#: Plataforma e o Ritmo vivem de golpe limpo; o Furtivo e os Esportes não pedem o corpo grave; o
-#: Souls e os Esportes não pedem o Grão.
 SEM_CORPO = frozenset({"luta", "plataforma", "ritmo", "furtivo", "esportes"})
-SEM_GRAO = frozenset({"luta", "plataforma", "ritmo", "souls", "esportes"})  # (noqa-acento): chave
-#: O corpo do contínuo grave: 40 Hz com a terceira harmônica (o peso dela), no canal do forte.
+SEM_GRAO = frozenset({"luta", "plataforma", "ritmo", "souls", "esportes"})
 CORPO_HZ = 40
 PESO_DA_HARMONICA = 0.33
-#: O Grão do contínuo fino: grãos de 4 ms a 40 por segundo somados ao seno do fraco.
-GRAOS_DO_TIMBRE_POR_S = 40  # (noqa-acento): constante
-GRAO_DO_TIMBRE_MS = 4  # (noqa-acento): constante
-GANHO_DO_GRAO_DO_TIMBRE = 0.6  # (noqa-acento): constante
-#: A frequência de cada canal no seno de hoje: o forte (canal 3) e o fraco (canal 4).
+GRAOS_DO_TIMBRE_POR_S = 40
+GRAO_DO_TIMBRE_MS = 4
+GANHO_DO_GRAO_DO_TIMBRE = 0.6
 HZ_DO_FORTE = 60
 HZ_DO_FRACO = 160
 
@@ -466,7 +426,7 @@ def timbre_do_rumble(
     if classe == classes.CONTINUO_GRAVE:
         return None if chave in SEM_CORPO else "corpo"
     if classe == classes.CONTINUO_FINO:
-        return None if chave in SEM_GRAO else "grao"  # (noqa-acento): chave
+        return None if chave in SEM_GRAO else "grao"
     return None
 
 
@@ -534,10 +494,10 @@ def ciclos_do_timbre(
         forte = _ate_o_pico(
             [b + PESO_DA_HARMONICA * h for b, h in zip(base, harmonica, strict=True)]
         )
-    elif tipo == "grao":  # (noqa-acento): chave
+    elif tipo == "grao":
         a_cada = max(1, taxa // GRAOS_DO_TIMBRE_POR_S)
         largura = max(2, taxa * GRAO_DO_TIMBRE_MS // 1000)
-        grao = [  # (noqa-acento): variável
+        grao = [
             math.sin(math.pi * (k % a_cada) / largura) if k % a_cada < largura else 0.0
             for k in range(ciclo)
         ]

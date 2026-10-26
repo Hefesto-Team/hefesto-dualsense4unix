@@ -11,35 +11,22 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import NamedTuple
 
-#: `(ms, esquerdo, direito)`.
 Passo = tuple[int, int, int]
 
-#: O motor esquerdo é o pesado (`strong`); o direito, o leve (`weak`).
 ESQUERDO = "esquerdo"
 DIREITO = "direito"
 AMBOS = "ambos"
 MOTORES: tuple[str, ...] = (ESQUERDO, DIREITO, AMBOS)
 
-#: As formas, na ordem em que a tela as mostra. A chave é a que o clique manda. O Ronco (contínuo)
-#: não entra: o teto de 2000 ms e o silêncio no fim valem para todo padrão.
 PADROES: dict[str, tuple[Passo, ...]] = {
-    # duas pancadas e um respiro, como um coração
     "batida": ((110, 255, 255), (90, 0, 0), (110, 190, 190), (520, 0, 0)),
-    # sobe e desce devagar, sem corte
     "onda": ((90, 60, 60), (90, 120, 120), (90, 190, 190), (90, 255, 255),
              (90, 190, 190), (90, 120, 120), (90, 60, 60), (60, 0, 0)),
-    # um golpe seco, um segundo menor e o silêncio
     "tranco": ((150, 255, 255), (70, 0, 0), (90, 150, 150), (60, 0, 0)),
-    # o coice da arma: um golpe fundo que cai logo, para a soltura do tiro
     "coice": ((60, 200, 120), (60, 0, 0)),
-    # um golpe só; no motor do lado de onde veio o som (`motores`), nos dois quando não se sabe
     "pancada_do_lado": ((90, 255, 255), (60, 0, 0)),
-    # o golpe nos dois e a cauda só no esquerdo, o grave, em degraus que caem a zero em 300 ms
-    # (o motor não é seno: a cauda são passos de força, cada um longo o bastante para se sentir)
     "ressoar": ((90, 255, 255), (60, 200, 0), (60, 150, 0), (60, 100, 0), (60, 60, 0),
                 (60, 30, 0), (60, 0, 0)),
-    # o golpe num lado e a resposta mais fraca no outro, duas vezes, com o vão encurtando,
-    # como a bola que quica
     "ricochete": ((90, 255, 0), (120, 0, 0), (80, 0, 180), (90, 0, 0), (70, 120, 0),
                   (60, 0, 0)),
 }
@@ -49,14 +36,10 @@ ROTULOS: dict[str, str] = {
     "pancada_do_lado": "Pancada do lado", "ressoar": "Ressoar", "ricochete": "Ricochete",
 }
 
-#: O que o efeito imersão de um controle guarda (``rumble.efeito_imersao``): «Do estilo» é o
-#: automático (o padrão do estilo, `POR_ESTILO`), «Sem efeito» cala o controle.
 DO_ESTILO = "do_estilo"
 SEM_EFEITO = "sem_efeito"
-#: Os padrões na ordem da lista da tela, depois das duas escolhas de sempre.
 ESCOLHAS: tuple[str, ...] = (DO_ESTILO, SEM_EFEITO, "tranco", "batida", "onda", "coice",
                              "pancada_do_lado", "ressoar", "ricochete")
-#: Cada padrão em uma linha, para a lista (até 36 letras).
 DICAS: dict[str, str] = {
     DO_ESTILO: "O que o estilo pede",
     SEM_EFEITO: "Os motores não tocam efeito",
@@ -68,11 +51,7 @@ DICAS: dict[str, str] = {
     "ressoar": "Um golpe e o grave que ressoa",
     "ricochete": "O golpe quica de um lado ao outro",
 }
-#: As formas de «Criar efeitos novos». O Ressoar e o Ricochete ficam fora: a forma deles É o
-#: desenho entre os dois motores (a cauda no grave, o quique de um lado ao outro), e o «Esquerdo»
-#: ou o «Direito» do criar a apagaria (o Ressoar no direito é só o golpe).
 FORMAS_DE_CRIAR: tuple[str, ...] = ("batida", "onda", "tranco", "coice", "pancada_do_lado")
-#: O Coice é o recuo: toca quando o dedo solta o gatilho, não quando aperta.
 NA_SOLTURA = frozenset({"coice"})
 
 
@@ -80,12 +59,9 @@ class NaSoltura(NamedTuple):
     """Onde um padrão do estilo toca ao soltar o gatilho, e depois de quanto tempo de aperto."""
 
     segurado_s: float
-    #: o gatilho que vale (``"esquerdo"``/``"direito"``); ``None``: os dois
     lado: str | None
 
 
-#: A Onda do Furtivo (20/10/2026) toca ao soltar a mira (L2) segurada por 2 s ou mais, e não ao
-#: apertar: o atirador de elite solta o fôlego (a Carga · fôlego preso é a imersão do L2).
 NA_SOLTURA_DO_ESTILO: dict[tuple[str, str], NaSoltura] = {
     ("furtivo", "onda"): NaSoltura(2.0, "esquerdo"),
 }
@@ -96,10 +72,8 @@ def na_soltura_do_estilo(padrao: str, estilo: object) -> NaSoltura | None:
     return NA_SOLTURA_DO_ESTILO.get((estilo, padrao)) if isinstance(estilo, str) else None
 
 
-#: A Pancada do lado olha de onde veio o som do jogo.
 DO_LADO_DO_SOM = frozenset({"pancada_do_lado"})
 
-#: Quanto um padrão pode durar: a fila do controle espera por ele.
 TETO_MS = 2000
 
 
@@ -110,11 +84,9 @@ def escolha_valida(valor: object) -> str | None:
     return None
 
 
-#: O padrão que cada estilo pede (a tabela `S` da página de 19/10/2026). O estilo fora daqui deixa
-#: os motores «só ao jogo»; o Ronco, contínuo, nunca entra aqui.
 POR_ESTILO: dict[str, str] = {
     "fps": "coice",
-    "acao": "tranco",  # (noqa-acento): chave
+    "acao": "tranco",  # (noqa-acento)
     "luta": "pancada_do_lado",
     "souls": "tranco",
     "furtivo": "onda",

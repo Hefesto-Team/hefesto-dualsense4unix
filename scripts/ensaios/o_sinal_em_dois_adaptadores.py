@@ -78,9 +78,7 @@ DISTANCIAS = ("encostado", "1 m", "3 m com obstáculo", "5 m")
 SEGUNDOS = 60.0
 SEGUNDOS_DA_FASE_3 = 120.0
 NOME_DO_CONTROLE = "Wireless Controller"
-#: o enlace que lê isto ou mais com o controle encostado mede a distância à faixa ideal, não dBm
 PERTO_DA_FAIXA_IDEAL_DBM = -2.0
-#: abaixo desta fração dos segundos da fase 3, o Equilibrar pelo sinal quase não age
 OUVIU_MINIMO = 0.1
 PARES_GRAVADOS = _RAIZ / "tests" / "fixtures" / INSTRUMENTO / "bancada.json"
 
@@ -93,9 +91,6 @@ RECUSA_SEM_ENLACE = "o controle não tem enlace em A (no cabo, ou desconectado):
 
 def _do_ambiente(nome: str, padrao: str) -> str:
     return os.environ.get(nome, "").strip() or padrao
-
-
-# --------------------------------------------------------------- o que se lê
 
 
 @dataclass(frozen=True)
@@ -133,7 +128,6 @@ class Par:
     varredura_a: int | None
     varredura_b: int | None
     enlace_a: int | None
-    #: quantos outros controles têm enlace em A neste segundo (o P2 do roteiro)
     vizinhos: int = 0
     instrumento: str = INSTRUMENTO
     versão: int = VERSAO
@@ -157,9 +151,6 @@ def pares_do_instante(
     ]
 
 
-# --------------------------------------------------------------- as recusas
-
-
 @dataclass(frozen=True)
 class Pedido:
     medir: bool
@@ -180,9 +171,6 @@ def recusas(pedido: Pedido, *, daemon_no_ar: Callable[[], bool]) -> list[str]:
     if pedido.medir and daemon_no_ar():
         saida.append(RECUSA_DAEMON)
     return saida
-
-
-# --------------------------------------------------------------- as portas
 
 
 @dataclass
@@ -232,7 +220,7 @@ def modelo_do_adaptador(hci: str) -> str:
     return texto.split(":", 1)[0] or "não sei"
 
 
-def portas_de_verdade(nome: str) -> Portas:  # pragma: no cover - a bancada
+def portas_de_verdade(nome: str) -> Portas:  # pragma: no cover
     from hefesto_dualsense4unix.integrations import ar_do_adaptador as ar
     from hefesto_dualsense4unix.integrations import bluez_dbus
 
@@ -246,7 +234,6 @@ def portas_de_verdade(nome: str) -> Portas:  # pragma: no cover - a bancada
         if not dono.ligar():
             raise RuntimeError("o BlueZ não respondeu")
         caminhos = {f"/org/bluez/{a}": "A", f"/org/bluez/{b}": "B"}
-        # fase 1: A e B varrem; fase 3: só B (o controle está conectado em A); fase 2: ninguém.
         varrer = [c for c, lado in caminhos.items() if fase == 1 or (fase == 3 and lado == "B")]
         for caminho in varrer:
             dono.comecar_busca(caminho, quem=INSTRUMENTO)
@@ -276,9 +263,6 @@ def portas_de_verdade(nome: str) -> Portas:  # pragma: no cover - a bancada
 
     return Portas(daemon_no_ar=daemon_no_ar, modelo=modelo_do_adaptador, abrir=abrir,
                   ler=ler, fechar=fechar)
-
-
-# --------------------------------------------------------------- a gravação
 
 
 def gravar(
@@ -324,9 +308,6 @@ def ler_pares(caminho: Path) -> list[Par]:
     return [Par(**{k: v for k, v in b.items() if k in nomes}) for b in brutos]
 
 
-# --------------------------------------------------------------- a conta
-
-
 def _media(valores: Iterable[float | None]) -> float | None:
     lidos = [float(v) for v in valores if v is not None]
     return statistics.fmean(lidos) if lidos else None
@@ -355,12 +336,10 @@ class Distancia:
     distancia: str
     varredura_a: float | None
     varredura_b: float | None
-    #: varredura(B) - varredura(A), nos segundos em que as duas ouviram (fase 1)
     entre_adaptadores: float | None
     ruido: float
     correlacao: float | None
     enlace_a: float | None
-    #: enlace(A, fase 2) - varredura(A, fase 1): a conversão de uma régua na outra
     conversao: float | None
 
 
@@ -459,9 +438,6 @@ def gravada(caminho: Path | None = None) -> list[Par] | None:
     """Os pares gravados da bancada, ou ``None`` enquanto ela não rodou."""
     alvo = PARES_GRAVADOS if caminho is None else caminho
     return ler_pares(alvo) if alvo.exists() else None
-
-
-# --------------------------------------------------------------- o roteiro
 
 
 def roteiro(a: str, b: str) -> list[str]:

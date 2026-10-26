@@ -269,7 +269,6 @@ def test_a_pagina_manda_os_dois_gestos_e_eles_tem_dono() -> None:
     pagina = pagina_do_mapa.pagina()
     produto = onde.pagina(arranjo_desta_maquina.PAGINA, publicado=True)
     assert produto.read_text(encoding="utf-8") == pagina_do_mapa.pagina(com_as_que_esperam=False)
-    # o painel único (05/10/2026) chama pela entrada `n` dele
     gestos = set(re.findall(r'gravaNaEntrada\((?:editando|n), "([a-z-]+)"\)', pagina))
     assert {"entrada-o-que-tem", "entrada-velocidade"} <= gestos, gestos
     fonte = (Path(ee.__file__).parents[1] / "interface" / "pacotes"
@@ -407,7 +406,6 @@ def test_o_clique_na_pagina_grava_e_a_pagina_relida_mostra(disco: Path) -> None:
         "entrada-o-que-tem:direto@5", "entrada-o-que-tem:hub@5",
         "entrada-velocidade:3@5", "entrada-velocidade:2@5"]), (
         f"a entrada do mapa dela não leva o gesto ao disco: {editor_na_5['gestos']}")
-    # desde 04/10/2026 o extensor é a chave da porta, e não uma resposta de «O que tem aqui»
     assert editor_na_5["extensor"] == ["entrada-extensor@5"], editor_na_5["extensor"]
     assert len(sem_esperar["faces"]) == len(entregue["faces"]), (
         f"a página desenhou o hub antes do disco: {sem_esperar['faces']}")
@@ -416,7 +414,7 @@ def test_o_clique_na_pagina_grava_e_a_pagina_relida_mostra(disco: Path) -> None:
     assert [(m["gesto"], m.get("entrada")) for m in pedidos] == [
         ("entrada-o-que-tem", "5"), ("entrada-velocidade", "7")], pedidos
     for m in pedidos:
-        de_onde = m["pagina"]  # (noqa-acento) chave ASCII da mensagem do piloto
+        de_onde = m["pagina"]  # (noqa-acento)
         dono = pacotes.gesto_da_pagina(de_onde, m["gesto"])
         assert dono is not None, f"{de_onde} · {m['gesto']} não tem dono"
         dono(None, m, None)

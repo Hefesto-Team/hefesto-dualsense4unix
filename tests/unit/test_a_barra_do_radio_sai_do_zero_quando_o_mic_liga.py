@@ -94,9 +94,6 @@ def _controles() -> list[dict[str, Any]]:
     ]
 
 
-# 1. O elo do daemon: o `state_full` diz de QUEM é cada ponte
-
-
 class _Ponte:
     def __init__(self, uniq: str) -> None:
         self.no = type("No", (), {"uniq": uniq})()

@@ -157,10 +157,6 @@ def test_o_teclado_recusado_sem_bloco_nao_culpa_o_hefesto_de_estar_morto() -> No
     assert "não disse por quê" in str(caiu.value), caiu.value
 
 
-# duas linhas eram um par de botões `-`/`+`, e os gestos `vel-cursor-menos` e
-# `vel-cursor-mais` somavam ±1 ao número do ÚLTIMO TIQUE (500 ms). Daí vinha
-
-
 def test_a_barra_sem_numero_reprova_e_nao_manda_nada() -> None:
     """Clicar no rótulo ao lado da barra não pode virar um pedido em branco."""
     from pacotes import a06_navegacao as mod

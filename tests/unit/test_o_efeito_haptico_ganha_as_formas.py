@@ -36,9 +36,6 @@ def _potencia(amostras: Any, hz: float, taxa: int = fh.TAXA) -> float:
     return s1 * s1 + s2 * s2 - coef * s1 * s2
 
 
-# --- A conta de cada forma --------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     ("chave", "ms", "componentes", "ataque_ms"),
     [
@@ -54,8 +51,6 @@ def test_cada_forma_tem_a_frequencia_a_duracao_e_o_ataque_da_sprint(
 ) -> None:
     onda = fh.amostras(chave, 1.0, 40)
     assert len(onda) == round(fh.TAXA * ms / 1000)
-    # o ataque sobe de zero e o pico vem logo: depois de ataque + 3 períodos da menor componente
-    # a onda não cresce mais
     janela = round(fh.TAXA * (ataque_ms / 1000 + 3 / min(componentes)))
     assert max(abs(x) for x in onda[:janela]) >= 0.9 * max(abs(x) for x in onda)
     assert max(abs(x) for x in onda[: round(fh.TAXA * ataque_ms / 3000)]) < 0.5 * max(
@@ -130,11 +125,8 @@ def test_o_toque_que_cai_atras_da_guarda_nem_faz_a_conta(monkeypatch: pytest.Mon
         tocador.parar()
 
 
-# --- A Bateria longa e o estilo ---------------------------------------------------------
-
-
 def test_a_bateria_longa_troca_as_longas_por_toque_e_cala_o_som_no_corpo() -> None:
-    # D-1610-A-BATERIA-LONGA-ENCURTA-AS-FORMAS-DO-TOQUE
+    """Prova da D-1610-A-BATERIA-LONGA-ENCURTA-AS-FORMAS-DO-TOQUE."""
     assert fh.forma_que_vale(fh.GUARDA, None, economia=True) == fh.TOQUE
     assert fh.forma_que_vale(fh.APARO, None, economia=True) == fh.TOQUE
     assert fh.forma_que_vale(fh.SOM_NO_CORPO, None, economia=True) is None
@@ -150,23 +142,17 @@ def test_sem_escolha_vale_o_estilo_e_o_toque_quando_ele_nao_pede(
     assert fh.forma_que_vale(fh.DO_ESTILO, "fps") == fh.TOQUE
     monkeypatch.setitem(fh.POR_ESTILO, "fps", fh.IMPACTO)
     assert fh.forma_que_vale(None, "fps") == fh.IMPACTO
-    assert fh.forma_que_vale(fh.ESTALO, "fps") == fh.ESTALO  # a escolha vence o estilo
+    assert fh.forma_que_vale(fh.ESTALO, "fps") == fh.ESTALO
     assert fh.forma_que_vale(fh.SEM_EFEITO, "fps") is None
 
 
 def test_o_continuo_so_e_forma_do_estilo_onde_o_corpo_e_o_motor() -> None:
-    # D-2010-O-CONTINUO-VOLTA-A-CORRIDA-E-A-SIMULACAO: revoga a de 16/10 (CATALOGO, 3)
-    # o bloco C (20/10/2026) deu o Grão à Simulação e o Motor de época ao Retrô: o Som no corpo
-    # ficou só na Corrida; as formas novas do estilo não entram nas `FORMAS` do estilo, mas a aba
-    # Vibração as mostra na lista (Eco, Grão e Motor de época: a página «Os efeitos na tela»)
+    """Prova da D-2010-O-CONTINUO-VOLTA-A-CORRIDA-E-A-SIMULACAO."""
     donos = {e for e, f in fh.POR_ESTILO.items() if f == fh.SOM_NO_CORPO}
     assert donos == {"corrida"}
     assert fh.SOM_NO_CORPO not in fh.FORMAS
     assert {fh.GRAO, fh.MOTOR_DE_EPOCA} & set(fh.FORMAS) == set()
     assert {fh.ECO, fh.GRAO, fh.MOTOR_DE_EPOCA} <= set(fh.ESCOLHAS)
-
-
-# --- O atuador: a escolha por controle ---------------------------------------------------
 
 
 class Toques:
@@ -198,7 +184,7 @@ def _tocar(
 def test_sem_escolha_o_toque_e_o_de_hoje_com_quatro_argumentos() -> None:
     toques = _tocar({}, tv.Receita(vibracao_por_tiro=True), P1)
     assert [t[0] for t in toques.feitos] == [P1]
-    assert len(toques.feitos[0]) == 4  # a chamada de sempre: ninguém precisa saber de forma
+    assert len(toques.feitos[0]) == 4
 
 
 def test_a_forma_escolhida_chega_ao_tocador_de_quem_escolheu() -> None:
@@ -208,10 +194,10 @@ def test_a_forma_escolhida_chega_ao_tocador_de_quem_escolheu() -> None:
 
 
 def test_a_escolha_dispara_mesmo_quando_o_estilo_nao_pede_toque() -> None:
-    assert not tv.Receita().ligada  # sem a escolha o motor nem liga
+    assert not tv.Receita().ligada
     assert tv.Receita(efeitos_escolhidos=True).ligada
     com = _tocar({P1: fh.ESTALO}, tv.Receita(efeitos_escolhidos=True), P1, P2)
-    assert [t[0] for t in com.feitos] == [P1]  # P2 não escolheu e o estilo não pede
+    assert [t[0] for t in com.feitos] == [P1]
 
 
 def test_sem_efeito_cala_so_o_controle_que_escolheu() -> None:
@@ -221,7 +207,7 @@ def test_sem_efeito_cala_so_o_controle_que_escolheu() -> None:
 
 def test_na_bateria_longa_a_guarda_toca_como_toque() -> None:
     toques = _tocar({P1: fh.GUARDA}, tv.Receita(efeitos_escolhidos=True), P1, economia=True)
-    assert len(toques.feitos[0]) == 4  # Toque: sem o argumento da forma
+    assert len(toques.feitos[0]) == 4
     longa = _tocar({P1: fh.GUARDA}, tv.Receita(efeitos_escolhidos=True), P1, economia=False)
     assert longa.feitos[0][4] == fh.GUARDA
 
@@ -235,9 +221,6 @@ def test_o_estilo_pede_a_forma_quando_ninguem_escolheu(monkeypatch: pytest.Monke
     monkeypatch.setitem(fh.POR_ESTILO, "fps", fh.ESTALO)
     toques = _tocar({}, tv.Receita(vibracao_por_tiro=True), P1, estilo="fps")
     assert toques.feitos[0][4] == fh.ESTALO
-
-
-# --- O perfil: o campo, a receita e o disco ----------------------------------------------
 
 
 def test_o_campo_do_perfil_so_aceita_forma_conhecida() -> None:
@@ -279,9 +262,6 @@ def test_as_escolhas_do_perfil_saem_por_mac_normalizado() -> None:
     assert escolhas == {norm_mac(P1): fh.APARO}
 
 
-# --- O Som no corpo -----------------------------------------------------------------------
-
-
 def _pcm(hz: float, quadros: int = 9600, amplitude: float = 0.5, inicio: int = 0) -> bytes:
     saida = array("h")
     for i in range(inicio, inicio + quadros):
@@ -297,7 +277,7 @@ def _rms(amostras: Any) -> float:
 def test_o_filtro_deixa_passar_o_grave_e_barra_o_agudo_e_o_infragrave() -> None:
     def medir(hz: float) -> float:
         filtro = fh.FiltroDoCorpo()
-        filtro.processar(_pcm(hz, 4800))  # o regime, depois da partida do filtro
+        filtro.processar(_pcm(hz, 4800))
         return _rms(filtro.processar(_pcm(hz, 9600, inicio=4800)))
 
     grave = medir(100)

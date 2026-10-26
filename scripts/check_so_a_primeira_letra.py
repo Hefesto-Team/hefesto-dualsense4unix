@@ -62,16 +62,13 @@ import re
 import sys
 
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
-PUBLICADO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento) nome de PASTA
+PUBLICADO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento)
 BANCADA = RAIZ / "mockup"
 CORES_CSV = RAIZ / "docs" / "data" / "cores-do-dualsense.csv"
 PECAS_CSV = RAIZ / "docs" / "data" / "pecas-do-dualsense.csv"
 E_ABA = re.compile(r"^\d\d-[a-z]+\.html$")
 MAPAS = ("mapa-das-portas.html", "mapa-do-controle.html", "mapa-do-radio.html")
 
-#: A marca do JS de 26/09/2026 que punha maiúscula em toda palavra do mapa na hora da
-#: pintura (o `emTitulo` da `pagina_do_mapa`). O texto parado não o mostra: a régua
-#: o procura no HTML inteiro, com o `<script>`.
 TITULO_EM_TODA_PALAVRA = re.compile(r"function\s+emTitulo\b|TODA PALAVRA COM MAI[UÚ]SCULA")
 
 sys.path.insert(0, str(RAIZ / "src"))
@@ -92,13 +89,6 @@ TECLAS = frozenset({
 
 UNIDADES = frozenset({"MHz", "GHz", "Hz", "kHz", "dB", "dBm", "mA", "ms"})
 
-#: O dado de exemplo dos geradores: os donos dos controles da mesa do desenho
-#: (`monta.MESA`, `aba08`), os jogos da lista de perfis (`aba10.PERFIS`), os
-#: aparelhos do rádio (o `Alias` do BlueZ, que nasce da classe: «Caixa de som»)
-#: e as entradas que o usuário nomeou na mesa de exemplo (Esquerda, Meio, Direita), os
-#: jogos e os brinquedos da 07 (`desenho_da_experimental`), o jogo do aviso da 09 e os nomes que a Lovense dá ao
-#: servidor e ao modo do app («Intiface Engine», «Game Mode»). O produto troca cada um pelo nome que a pessoa deu ou que o jogo tem; nome de
-#: gente, de jogo, de aparelho e de entrada é próprio.
 NOMES_DO_DESENHO = (
     "Vitória", "Ana", "Pedro", "Rafa", "Davi", "Lia",
     "Mortal Kombat", "Elden Ring", "Don't Scream", "Wendigo Blue",
@@ -111,12 +101,8 @@ NOMES_DO_DESENHO = (
     "Nora", "Domi", "Ferri", "Intiface Engine", "Game Mode", "Lure of Passion",
 )
 
-#: A palavra que, seguida do número, é o nome de um lugar: «Entrada 4».
 DESIGNADORES = frozenset({"Entrada", "Canal", "Player", "Controle"})
 
-#: O nome de um controle da tela citado no meio da frase, como a tela o escreve
-#: («quando clicar em Salvar perfil»). A régua confere que cada um É rótulo de
-#: alguma página: o nome que some da tela sai daqui.
 ROTULOS_CITADOS: tuple[str, ...] = (
     "Aplicar", "Salvar perfil", "Conectar", "Parar",
     "Padrão", "Sensor háptico",
@@ -125,7 +111,6 @@ ROTULOS_CITADOS: tuple[str, ...] = (
     "Personalizado", "Universal", "Adulto",
 )
 
-#: A régua lê `+` como separador de tecla («Alt + Tab»).
 _INICIO = re.compile(r"(?:^|[.!?…:;]\s+|[«“\"(\[]\s*|\s[—–·•●|→+]\s+|/)$")
 _PALAVRA = re.compile(r"[^\W\d_][^\W_]*(?:[-'’][^\W_]+)*")
 _TAG = re.compile(r"<(/?)([A-Za-z][A-Za-z0-9-]*)((?:\"[^\"]*\"|'[^']*'|[^>\"'])*)>", re.S)
@@ -135,11 +120,6 @@ _DA_FRASE = frozenset({
     "b", "strong", "i", "em", "code", "kbd", "small", "abbr", "sup", "sub",
     "u", "mark", "q", "s", "wbr",
 })
-#: O valor do selo da linha (a 08: «Visto como <b>Xbox 360</b>», «Analógico virtual
-#: <b>Apagado</b>») é peça própria: o `.gc-est .est` é `display:flex`, o `<b>` vira item do
-#: flex e abre bloco, e a régua irmã (test_todo_texto_que_abre_uma_linha_comeca_com_maiuscula)
-#: exige a maiúscula ali. As duas réguas leem o mesmo corte. A linha da sessão da 07
-#: («Surto <b>Pronto</b>», o `.ja-ses-l`, também flex) é o mesmo selo.
 _VALOR_DO_SELO = re.compile(
     r'<(?:span class="est(?: [^"]*)?"|div class="ja-ses-l")[^>]*>[^<]*(<b>)')
 _ABA_DA_FITA = re.compile(r'<a class="aba[^"]*" href="\d\d-[^"]+">([^<]+)</a>')
@@ -251,7 +231,6 @@ def dividas_mortas(paginas: list[pathlib.Path]) -> list[str]:
     return [d for d in DIVIDA if not re.search(rf"(?<!\w){re.escape(d)}(?!\w)", lido)]
 
 
-#: O que ainda sai com maiúscula no meio, e a origem não é desta régua.
 DIVIDA: dict[str, str] = {}
 
 

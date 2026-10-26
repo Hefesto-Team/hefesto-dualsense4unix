@@ -44,14 +44,14 @@ DOCUMENTO_VELHO = {
 
 
 def test_a_migracao_descarta_a_chave_velha() -> None:
-    # D-1610-O-SEM-PISCAR-SAI
+    """Prova da D-1610-O-SEM-PISCAR-SAI."""
     migrado = maquina.migrar_o_documento(DOCUMENTO_VELHO)
     assert "luz" not in migrado, "a chave `luz` sobreviveu à migração"
     assert migrado["mesa"] == {"altura_da_antena": "acima"}, "a migração levou o vizinho junto"
 
 
 def test_o_arquivo_velho_carrega_e_a_gravacao_tira_a_chave_do_disco() -> None:
-    # D-1610-O-SEM-PISCAR-SAI
+    """Prova da D-1610-O-SEM-PISCAR-SAI."""
     caminho = maquina.caminho_da_maquina()
     caminho.write_text(json.dumps(DOCUMENTO_VELHO), encoding="utf-8")
     carregada = maquina.carregar_maquina()
@@ -72,7 +72,7 @@ def test_a_tela_nao_tem_o_interruptor_nem_o_gesto() -> None:
 
 
 def test_o_motor_nao_tem_mais_o_modo_suave() -> None:
-    # D-1510-O-PISCAR-SEM-PISCAR-VIRA-RESPIRAR
+    """Prova da D-1510-O-PISCAR-SEM-PISCAR-VIRA-RESPIRAR."""
     assert "sem_piscar" not in inspect.signature(efeitos_de_luz.cor_no_instante).parameters
     assert "sem_piscar" not in inspect.signature(luz_animada.LuzAnimada).parameters
     assert "luz" not in maquina.MaquinaConfig.model_fields
@@ -81,8 +81,10 @@ def test_o_motor_nao_tem_mais_o_modo_suave() -> None:
 
 
 def test_nenhum_codigo_fala_do_sem_piscar() -> None:
-    """Só a migração pode lembrar dele, e a conferência do gerador, que cobra a ausência."""
-    # D-1510-O-SEM-PISCAR-E-DO-COMPUTADOR
+    """Só a migração pode lembrar dele, e a conferência do gerador, que cobra a ausência.
+
+    Prova da D-1510-O-SEM-PISCAR-E-DO-COMPUTADOR.
+    """
     achados = []
     for arquivo in sorted(SRC.rglob("*")):
         if arquivo.suffix not in {".py", ".css", ".js"} or arquivo.name == "maquina.py":

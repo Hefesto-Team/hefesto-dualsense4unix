@@ -12,7 +12,7 @@ from pathlib import Path
 
 try:
     import tomllib
-except ImportError:  # pragma: no cover — 3.10, que o pyproject ainda declara
+except ImportError:  # pragma: no cover
     import tomli as tomllib  # type: ignore[no-redef]
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))

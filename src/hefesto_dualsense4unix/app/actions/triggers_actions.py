@@ -4,7 +4,6 @@ from __future__ import annotations
 import re
 from typing import Any
 
-# HARM-19: formatos de recusa que `core/trigger_effects` levanta (ValueError ->
 _RE_ERRO_ORDEM = re.compile(r"(\w+) \((-?\d+)\) deve ser > (\w+) \((-?\d+)\)")
 _RE_ERRO_RANGE = re.compile(r"(\w+) fora do range (-?\d+)-(-?\d+): (-?\d+)")
 

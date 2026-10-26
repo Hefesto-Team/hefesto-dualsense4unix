@@ -94,7 +94,7 @@ def test_a_steam_que_desfaz_a_opcao_depois_e_nomeada(lar: Lar) -> None:
     """
     lar.steam_escreve(_vdf("algo velho %command%"))
     lar.aplicar()
-    lar.steam_escreve(_vdf("algo velho %command%"))  # a Steam devolveu o que era
+    lar.steam_escreve(_vdf("algo velho %command%"))
 
     conferido = lar.conferir()
 
@@ -275,9 +275,6 @@ def test_o_json_continua_sendo_a_tabela(
     assert '"$DONO" --json' in ensaio
 
 
-# --- o contrato steam-localconfig -------------------------------------------------------
-
-
 def _ambiente(lar: Lar) -> cf.Ambiente:
     return cf.Ambiente(
         rodar=lambda argv: cf.Falta("sem a ferramenta"),
@@ -322,9 +319,6 @@ def test_o_censo_declara_que_o_doctor_ve_a_conta_da_steam() -> None:
     assert "contrato:steam-localconfig" in linha
 
 
-# --- o doctor.sh --------------------------------------------------------------------------
-
-
 def _roda_o_check(lar: Lar, raiz_do_codigo: Path = RAIZ) -> str:
     texto = (RAIZ / "scripts/doctor.sh").read_text(encoding="utf-8")
     funcoes = ""
@@ -358,8 +352,6 @@ def test_o_doctor_sh_nomeia_o_jogo_que_perdeu_a_opcao(lar: Lar) -> None:
 
     saida = _roda_o_check(lar)
 
-    # [WARN], como a sprint pede («viram aviso com o que fazer»): o guard repõe sozinho, e o
-    # código de saída do doctor não reprova o Hefesto pela linha que a Steam reescreveu
     assert "[WARN]" in saida and "[FAIL]" not in saida, saida
     assert "steam-localconfig" in saida and APPID in saida and "--conferir" in saida, saida
 
@@ -410,9 +402,6 @@ def test_o_doctor_sh_repete_o_conferir_e_nao_reabre_o_vdf(lar: Lar, tmp_path: Pa
 def test_o_doctor_sh_chama_o_check_na_cadeia() -> None:
     texto = (RAIZ / "scripts/doctor.sh").read_text(encoding="utf-8")
     assert len(re.findall(r"^\s+check_opcoes_por_jogo$", texto, re.M)) == 1
-
-
-# --- o state é dela só até o uninstall ------------------------------------------------------
 
 
 def test_o_registro_e_estado_do_install_e_o_uninstall_o_tira() -> None:

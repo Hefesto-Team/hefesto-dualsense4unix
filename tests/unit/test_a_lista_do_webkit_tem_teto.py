@@ -160,8 +160,6 @@ def test_a_lista_do_webkit_da_arvore_cabe_no_teto(tmp_path: Path) -> None:
     _cabe_no_teto(lista, chegam)
 
 
-# A árvore de mentira das mordidas: uma moldura com WebKit, uma lógica que a importa dentro de
-# função, um `cli/app.py` que a importa no topo (legítimo) e um pacote `app` que não tem nada.
 _ARVORE = {
     "src/casa/__init__.py": "",
     "src/casa/moldura.py": 'import gi\ngi.require_version("WebKit2", "4.1")\n'

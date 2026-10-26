@@ -96,7 +96,6 @@ def test_a_jogar_escreve_o_cartao_do_externo() -> None:
     """O cartão traz o NÚMERO, a MARCA e o transporte, pelos donos da frase."""
     html = jogar.pacote(_ctx([UM_8BITDO]))["externos"]
     assert 'class="ext-cartao"' in html
-    # de player do aparelho. Ele vem do `player_slot` que o daemon mandou, e não
     assert "Controle 3" in html
     assert "8BitDo" in html
     from hefesto_dualsense4unix.app.actions.home_actions import (

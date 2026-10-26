@@ -11,7 +11,7 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-PAGINA = "06-navegacao.html"  # (noqa-acento) nome de arquivo
+PAGINA = "06-navegacao.html"
 
 _SELECT = r'<select[^>]*data-campo="teclado-estado"[^>]*>(.*?)</select>'
 

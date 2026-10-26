@@ -23,9 +23,8 @@ import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src/hefesto_dualsense4unix/interface"
-PUBLICADAS = INTERFACE / "paginas"  # (noqa-acento): nome de pasta
+PUBLICADAS = INTERFACE / "paginas"  # (noqa-acento)
 DICAS = ("title", "aria-label", "data-dica")
-#: as duas páginas que a sprint corrige; o publicado delas troca no `--publicar` da costura
 DA_SPRINT = ("08-conexoes.html", "mapa-do-radio.html")
 FRASE_NOVA = "abre aqui, na janela"
 
@@ -60,7 +59,7 @@ def _promessas(texto: str) -> list[str]:
 
 
 def test_o_gerador_da_08_nao_promete_o_navegador() -> None:
-    # D-2410-A-DICA-DIZ-QUE-ABRE-NA-JANELA
+    """Prova da D-2410-A-DICA-DIZ-QUE-ABRE-NA-JANELA."""
     achados = _promessas((INTERFACE / "aba08.py").read_text(encoding="utf-8"))
     assert achados == [], f"o gerador da 08 promete o navegador a uma página do produto: {achados}"
 

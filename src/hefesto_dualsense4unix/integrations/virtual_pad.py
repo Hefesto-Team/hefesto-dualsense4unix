@@ -53,30 +53,16 @@ logger = get_logger(__name__)
 
 UHID_BIND_TIMEOUT_S = 0.5
 
-# controle chega — o `uhid` (o relatório do DualSense, por onde voltam
-# O `uhid` só se constrói com máscara DualSense.
-# PRAGMATA segurou só o mouse e o teclado com quatro Edge `uinput`, e o Future
 CAMINHO_DUALSENSE = "dualsense"
 CAMINHO_XBOX = "xbox"
 CAMINHOS: tuple[str, ...] = (CAMINHO_DUALSENSE, CAMINHO_XBOX)
 
 MASCARA_DO_CANAL_COMUM = "xbox"
 
-#: Por que o jogo recebeu outro aparelho que o do cartão: o modo Xbox foi o
-#: escolhido (D-2709-O-XBOX-360-EM-TODA-MASCARA-NO-MODO-XBOX). É a única troca
-#: que a fábrica faz, e é este nome que o diário e o pad (`troca_motivo`) levam.
 MOTIVO_MODO_XBOX_ESCOLHIDO = "modo_xbox_escolhido"
 
-#: A outra troca, a pergunta 6 da NO-MODO-XBOX-TUDO-FUNCIONA-01 (a resposta de 13/10): o modo
-#: DualSense sem o canal próprio (o `uhid` que não sobe) cai no Xbox 360 até o
-#: canal voltar, porque o Edge no `uinput` não tem hidraw e o Proton não o usa.
 MOTIVO_SEM_CANAL_PROPRIO = "sem_canal_proprio"
 
-#: A máscara Pro Controller nasce no `uinput` em todo modo (o passo 0 da
-#: O-PRO-CONTROLLER-GANHA-O-CANAL-COM-HIDRAW-01, 16/10/2026): o winebus do Proton só dá hidraw
-#: por padrão ao DualSense, ao DualShock 4 e a volantes e manches da lista
-#: (`dlls/winebus.sys/main.c`, `is_hidraw_enabled`, :543-667); a Pro só o ganharia pela
-#: `PROTON_ENABLE_HIDRAW`, que não se liga sem a prova no aparelho. É a linha do doctor.
 LINHA_DA_PRO_NO_UINPUT = (
     "a máscara Pro Controller vai ao jogo pelo uinput: os botões, os analógicos e a vibração, "
     "sem o giroscópio e as luzes de jogador, porque o Proton só dá hidraw ao DualSense e ao "
@@ -403,7 +389,6 @@ def make_virtual_pad(
     resolvido = caminho_resolvido(caminho, key)
     motivo: str | None = None
     if not quer_uhid(caminho, key):
-        # escolha, sem `motivo` — o `state_full` não o chama de degradado.
         pass
     elif allow_uhid:
         uhid, motivo = _try_uhid(
@@ -418,8 +403,6 @@ def make_virtual_pad(
             calibration_0x05=calibration_0x05,
             mic_led_sink=mic_led_sink,
             mic_mute_sink=mic_mute_sink,
-            # o PID que o pad uhid veste (D-2210-O-PAD-PODE-VESTIR-O-DUALSENSE-COMUM;
-            # None = o Edge); o uinput nunca a veste, e sem uhid o pad já é Xbox 360
             roupa=roupa,
         )
         if uhid is not None:
@@ -437,7 +420,6 @@ def make_virtual_pad(
             motivo=motivo_da_troca(caminho, key, sem_canal=sem_canal),
         )
     if motivo is not None:
-        # `state_full` o expõe (`gamepad_emulation.degraded_motivo`) para a
         pad.fallback_motivo = motivo
     if not pad.start():
         return None
@@ -497,7 +479,7 @@ def _try_uhid(
         mic_mute_sink=mic_mute_sink,
         roupa=roupa,
     )
-    if pad is None:  # pragma: no cover - o gate de flavor acima já garante
+    if pad is None:  # pragma: no cover
         return None, "uhid_indisponivel"
     pad.identity = identity
     if not pad.start():
@@ -606,7 +588,6 @@ class FioDeNascimento:
                     self._thread.start()
         if not fechado:
             return
-        # Fio fechado: o pad tardio para aqui mesmo, e o pedido tardio sai sem pad.
         if tipo == "parar":
             self._parar_agora(alvo)
         else:
@@ -670,7 +651,6 @@ def o_aparelho_mudou(vpad: object, caminho: object, mascara: str) -> bool:
     vestido = getattr(vpad, "mascara_no_jogo", None)
     if not isinstance(vestido, str) or not vestido:
         return False
-    # o pad que caiu do canal próprio veste o Xbox 360 até a promoção o devolver ao `uhid`
     sem_canal = motivo_da_degradacao(vpad) is not None
     return vestido != mascara_no_jogo(caminho, mascara, sem_canal=sem_canal)
 

@@ -15,7 +15,6 @@ from pathlib import Path, PurePosixPath
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-# pasta (relativa à raiz) -> motivo de a casca ser necessária. Vazia de propósito: nenhuma hoje.
 EXCECOES: dict[str, str] = {}
 
 
@@ -58,7 +57,7 @@ def pastas_so_casca(arquivos: list[str], raiz: Path = RAIZ) -> list[str]:
 
 
 def test_nenhuma_pasta_versionada_e_so_casca() -> None:
-    # D-2110-AS-PASTAS-VAZIAS-SAEM-DO-REPOSITORIO
+    """Prova da D-2110-AS-PASTAS-VAZIAS-SAEM-DO-REPOSITORIO."""
     achadas = pastas_so_casca(_versionados())
     assert not achadas, (
         "pasta versionada cujo único conteúdo é casca (`__init__.py` vazio, `.gitkeep` ou "

@@ -55,11 +55,6 @@ UNIQ = "aa:bb:cc:00:00:01"
 OUTRO = "aa:bb:cc:00:00:02"
 
 
-# -- o lar de mentira ---------------------------------------------------------
-
-
-#: Fora do ``/tmp``: a caixa monta um ``/tmp`` vazio, e uma casa de mentira
-#: dentro dele sumiria da caixa por isso, com ou sem a cura que se quer provar.
 _FORA_DO_TMP = "/var/tmp" if os.access("/var/tmp", os.W_OK) else None
 
 
@@ -97,18 +92,17 @@ def _manifesto(mod_id: str = "exemplo", **mais: Any) -> dict[str, Any]:
     corpo: dict[str, Any] = {
         "id": mod_id,
         "nome": "Exemplo",
-        "versao": "0.1.0",  # (noqa-acento): contrato ASCII
+        "versao": "0.1.0",  # (noqa-acento)
         "api": ">=1,<3",
         "licenca": "MIT",
         "tipos": ["processo"],
         "processo": {"executar": ["python3", "mod.py"]},
-        "permissoes": ["ler:estado", "escrever:luz"],  # (noqa-acento): contrato ASCII
+        "permissoes": ["ler:estado", "escrever:luz"],  # (noqa-acento)
     }
     corpo.update(mais)
     return corpo
 
 
-#: O filho de mentira: fala com a porta e faz o que o arquivo ``modo`` manda.
 _O_FILHO = textwrap.dedent('''
     import json, os, signal, socket, sys, time
     modo = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "modo")).read().strip()
@@ -196,9 +190,6 @@ def _supervisor(
     )
 
 
-# -- o manifesto e a versão da porta -------------------------------------------
-
-
 def test_o_manifesto_fora_da_faixa_da_api_e_recusado_com_a_frase(tmp_path: Path) -> None:
     (tmp_path / "hefesto-mod.json").write_text(
         json.dumps(_manifesto(api=">=3,<4")), encoding="utf-8")
@@ -262,9 +253,6 @@ def test_a_atualizacao_que_pede_permissao_nova_volta_a_pedir_o_sim(
     entrada = ler_registro(lar.registro)["exemplo"]
     assert not entrada.ligada
     assert "rede:internet" not in entrada.permissoes_aceitas
-
-
-# -- a porta -------------------------------------------------------------------
 
 
 class _Cliente:
@@ -479,16 +467,9 @@ def test_o_assinante_que_nao_le_nao_atrasa_o_tique(curto: Path) -> None:
             await porta.parar()
 
     pior, tamanho, cheia = asyncio.run(corrida())
-    # A modificação não leu nada: a fila encheu (senão a prova não prova nada)...
     assert cheia > tiques // 2, f"a fila nunca encheu ({cheia})"
     assert tamanho <= 16
-    # ...e o tique nunca esperou por ela.
-    # Publicar custa microssegundos; 10 ms é folga para a máquina carregada, e
-    # ainda menos que um tique de 60 Hz (16,7 ms).
     assert pior < 0.010, f"o tique esperou {pior * 1000:.1f} ms pela modificação"
-
-
-# -- o supervisor --------------------------------------------------------------
 
 
 def _instalar_e_ligar(lar: Lugares, curto: Path, modo: str, **mais: Any) -> None:
@@ -779,14 +760,10 @@ def test_a_instancia_isolada_nao_abre_as_modificacoes(
     assert supervisor_do_servico(servico) is None
 
 
-# -- o instalador: os três lugares e a origem ------------------------------------
-
-
 def test_remover_para_o_processo_e_deixa_os_tres_lugares_vazios(
     lar: Lugares, curto: Path
 ) -> None:
     _instalar_e_ligar(lar, curto, "fica")
-    # O meu.css é da pessoa e fica (O-CSS-DO-MOD-SOBREVIVE-A-REMOCAO-E-A-RECUSA-FALA-UMA-VEZ-01).
     (lar.dados / "exemplo").mkdir(parents=True, exist_ok=True)
     (lar.dados / "exemplo" / "meu.css").write_text(".a{color:red}", encoding="utf-8")
 

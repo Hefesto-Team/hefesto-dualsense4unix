@@ -332,8 +332,6 @@ def test_o_preset_ausente_recusa_na_lingua_dela(
 
 def test_o_desenho_tem_os_dois_botoes_novos() -> None:
     pagina = _html()
-    # O «Aplicar aos jogos da Steam» foi juntado, no desenho do todo, ao interruptor «Permitir
-    # correções automáticas» (A-ABA-SISTEMA-DO-TODO-01, 15/10/2026): o gesto segue no pacote.
     for gesto in ("corrigir-modo", "correcoes-automaticas"):
         assert f'data-gesto="{gesto}"' in pagina, (
             f"o botão de {gesto!r} não está na bancada — rode "
@@ -450,15 +448,15 @@ def na_tela() -> dict:
     import hefesto_vivo as hv
 
     berco = pathlib.Path(tempfile.mkdtemp(prefix="a09-quatro-"))
-    shutil.copytree(_onde.PUBLICADO, berco / "paginas",  # (noqa-acento) PASTA
+    shutil.copytree(_onde.PUBLICADO, berco / "paginas",  # (noqa-acento)
                     dirs_exist_ok=True)
-    shutil.copy2(BANCADA, berco / "paginas" / PAGINA)  # (noqa-acento) PASTA
+    shutil.copy2(BANCADA, berco / "paginas" / PAGINA)  # (noqa-acento)
 
     chaves = [(PAGINA, g) for g in ("reiniciar", "autostart", "atualizar")]
     guardado = (hv.onde.PUBLICADO, hv.mesa_viva.estado_do_daemon,
                 hv.pacotes.PACOTES.get(PAGINA),
                 {c: hv.pacotes.GESTOS.get(c) for c in chaves})
-    hv.onde.PUBLICADO = berco / "paginas"  # type: ignore[assignment]  # (noqa-acento) PASTA
+    hv.onde.PUBLICADO = berco / "paginas"  # type: ignore[assignment]  # (noqa-acento)
     hv.mesa_viva.estado_do_daemon = lambda *a, **k: {"active_profile": "regua"}  # type: ignore[assignment]
 
     for pagina, nome in chaves[:2]:

@@ -29,7 +29,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ControllerOverrides,
     LedsConfig,
     Profile,
-    ProfileAnalogicosConfig,  # (noqa-acento) identificador ASCII
+    ProfileAnalogicosConfig,
     ProfileAtivacaoConfig,
     ProfileCursorConfig,
     ProfileMouseConfig,
@@ -61,8 +61,6 @@ _MAQUINA_FILE = "maquina.json"
 
 _MAQUINA_INVALIDO_SUFIXO = ".invalido"
 
-#: A cópia do arquivo ilegível, guardada ao lado antes da primeira escrita
-#: (``maquina.json.ilegivel-<data>``), como a do registro de máscaras.
 _SUFIXO_DO_ILEGIVEL = ".ilegivel-"
 
 MAQUINA_SCHEMA_VERSION = 1
@@ -77,7 +75,6 @@ _CHAVE_DE_CONTROLE = re.compile(r"^[0-9a-f]{12}$")
 
 _OCTETO_SINTETIZADO = "02"
 
-#: próxima versão herdaria lixo.
 _CHAVE_DE_RADIO = re.compile(r"^[0-9a-f]{4}:[0-9a-f]{4}$")
 
 _CAMINHO_DE_BARRAMENTO = FORMA_DO_CAMINHO
@@ -92,7 +89,6 @@ _NO_DE_ENTRADA = FORMA_DO_NO
 
 _MAXIMO_DE_NOS_POR_ENTRADA = 4
 
-#: A chave de ``ordens_dispensadas`` é o slug da regra que produziu a ordem
 _CHAVE_DE_ORDEM = re.compile(r"^[a-z][a-z0-9_]{0,63}$")
 
 _DATA_ISO = re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
@@ -111,8 +107,6 @@ class RadioDeclarado(BaseModel):
         Literal["wifi", "teclado", "mouse", "webcam", "caixa_de_som", "outro"] | None
     ) = None
     apelido: str | None = None
-    #: A faixa que o «Descobrir a faixa» MEDIU (``[ini, fim)`` nos 79 canais do Bluetooth) e o dia
-    #: em que mediu. É medida, não declaração: ``voltar_ao_automatico`` não a apaga.
     banda: list[int] | None = None
     banda_em: str = ""
 
@@ -296,13 +290,8 @@ class PortaDeclarada(BaseModel):
     filha_de: str | None = None
     nos: list[str] = Field(default_factory=list)
     liga: Literal["hub"] | None = None
-    #: A CHAVE DA PORTA (O-APARELHO-SE-CORRIGE-ONDE-SE-CLICA-01, 04/10/2026): há um cabo de
-    #: extensão entre este buraco e o aparelho. É da porta, separada do que está ligado nela
-    #: (``liga``), e pesa no arranjo: o motor lê a entrada como esticada. Cabo passivo não tem
-    #: descritor USB, e nenhuma leitura do ``/sys`` o vê — quem sabe é a pessoa.
     extensor: bool | None = None
     usb: Literal[2, 3] | None = None
-    #: escreve na tela é ``utils/rotulo_da_entrada``. É o único lugar do nome
     nome: str | None = None
 
     @model_validator(mode="before")
@@ -513,8 +502,6 @@ class AdaptadorDeclarado(BaseModel):
     ordem: int | None = Field(default=None, ge=0, le=_TETO_DA_ORDEM_DOS_ADAPTADORES)
 
 
-#: O que a pessoa pode dizer que um aparelho do Bluetooth é, quando nem o ``Icon``, nem a
-#: ``Class``, nem a ``Appearance`` dele dizem (a grade «O que é este aparelho?» da Conexões).
 TIPOS_DO_APARELHO = (
     "controle", "fone", "caixa", "teclado", "mouse", "celular", "relogio", "acessorio", "outro",
 )
@@ -535,13 +522,9 @@ class AparelhoDeclarado(BaseModel):
     ] | None = None
 
 
-#: A chave de um acionador no ``maquina.json``: ``vvvv:pppp:hhhhhhhh``, o vendor e o product que o
-#: kernel diz dele e oito hex do resumo do nome e do caminho físico (:func:`chave_do_acionador`).
-#: O caminho físico entra só pelo resumo: no rádio ele carrega o endereço do adaptador.
 _CHAVE_DO_ACIONADOR = re.compile(r"^[0-9a-f]{4}:[0-9a-f]{4}:[0-9a-f]{8}$")
 _MAXIMO_DE_ACIONADORES = 16
 _MAXIMO_DE_TECLAS = 64
-#: O código da tecla no evdev (``KEY_MAX`` é 0x2ff), em decimal.
 _CODIGO_DA_TECLA = re.compile(r"^[0-9]{1,3}$")
 _MAXIMO_DO_NOME_DO_ACIONADOR = 128
 
@@ -562,7 +545,6 @@ def chave_do_acionador(vendor: object, product: object, nome: object, fisico: ob
     return f"{_hex4(vendor)}:{_hex4(product)}:{resumo}"
 
 
-#: Onde o kernel lista os nós de evento; o teste e a bancada trocam por uma pasta de mentira.
 RAIZ_DAS_ENTRADAS = "/sys/class/input"
 
 
@@ -587,17 +569,12 @@ def _ler_do_sys(caminho: Any) -> str:
         return ""
 
 
-#: A recusa de ler um teclado ou um pedal, com o que fazer. Uma frase só: o gesto da 08, a ponte
-#: do daemon e o doctor dizem esta. Nunca o grupo ``input`` (item 3.3 de
-#: ``docs/history/RESPOSTAS_V1.md``): quem está nele lê todo teclado da máquina.
 FRASE_SEM_PERMISSAO_DE_LER: Final = (
     "o sistema não deixa ler este aparelho, nem pelo serviço do Hefesto: "
     "rode «hefesto-dualsense4unix doctor» para ver o que falta")
-#: A recusa do teclado ou do pedal que some ou não abre (o cabo saiu, o nó sumiu do ``/dev``).
 FRASE_O_APARELHO_NAO_ABRE: Final = (
     "este aparelho não abre agora: confira se ele continua ligado e tente de novo")
 
-#: Quanto o pedido do acionador espera o broker: a ponte pergunta de dentro do tique.
 _PRAZO_DO_BROKER_DO_ACIONADOR_S = 0.5
 
 
@@ -792,7 +769,6 @@ class ControleDeclarado(BaseModel):
     microfone: bool | None = None
     economia: bool | None = None
     microfone_mudo: bool | None = None
-    #: <!-- noqa-acento: citação literal -->
     nome: str | None = None
 
     @field_validator("nome")
@@ -899,8 +875,6 @@ class GestoDeclarado(BaseModel):
 
     faz: str
     script: str | None = None
-    #: O gesto de fábrica que o usuário tirou da tabela: não dispara nem cala o botão
-    #: (`acoes_do_gesto.gestos_ativos`). Os gestos novos saem por ``None``, que esquece a escolha.
     removido: bool | None = None
 
     @model_validator(mode="before")
@@ -934,12 +908,10 @@ class GestoDeclarado(BaseModel):
 
 
 SECOES_DO_CONTROLE_NO_COMPUTADOR: tuple[str, ...] = (
-    "leds", "speaker", "mic", "rumble", "sensores", "ativacao", "analogicos",  # (noqa-acento) chave
+    "leds", "speaker", "mic", "rumble", "sensores", "ativacao", "analogicos",  # (noqa-acento)
     "triggers",
 )
 
-#: As seções do controle de que o computador guarda só uma parte: do gatilho, só a «Intensidade do
-#: gatilho»; o efeito é de cada jogo (A-INTENSIDADE-DO-GATILHO-VALE-NO-PADRAO-DO-COMPUTADOR-01).
 CAMPOS_DO_CONTROLE_NO_COMPUTADOR: dict[str, tuple[str, ...]] = {"triggers": ("intensidade",)}
 
 
@@ -975,12 +947,8 @@ class ComputadorGlobal(BaseModel):
     teclado_so_no_jogo: bool | None = None
     teclado_sempre: bool | None = None
     tabela_no_jogo: bool | None = None
-    #: Como o botão ativa (alternar, repetir, longo, duplo): a necessidade é de quem joga,
-    #: não do jogo, e vale em todo perfil; o perfil só sobrepõe.
     ativacao: ProfileAtivacaoConfig | None = None
-    #: A zona morta, a curva e a mão dos analógicos: também necessidade de quem joga.
-    analogicos: ProfileAnalogicosConfig | None = None  # (noqa-acento) identificador ASCII
-    #: O cursor do controle (precisão, permanência, clique travado): só do primeiro controle.
+    analogicos: ProfileAnalogicosConfig | None = None
     cursor: ProfileCursorConfig | None = None
 
     @model_validator(mode="after")
@@ -1077,14 +1045,9 @@ class MaquinaConfig(BaseModel):
     lancadores: dict[str, LancadorDeclarado] = Field(default_factory=dict)
     adaptadores: dict[str, AdaptadorDeclarado] = Field(default_factory=dict)
     aparelhos: dict[str, AparelhoDeclarado] = Field(default_factory=dict)
-    #: Os aparelhos de entrada que viram botões de um controle, pela :func:`chave_do_acionador`.
     acionadores: dict[str, AcionadorDeclarado] = Field(default_factory=dict)
-    # seis gestos do controle faz, pela chave de ``core/acoes_do_gesto.GESTOS``.
-    # ninguém declarou, e vale ``acoes_do_gesto.PADRAO``; ``{"gestos": {g:
     gestos: dict[str, GestoDeclarado] = Field(default_factory=dict)
     computador: ComputadorDeclarado = Field(default_factory=ComputadorDeclarado)
-    #: «Cada jogo ganha o seu perfil», por cartão de lançador da aba 07. Quem não está nela
-    #: vale ligado; ``False`` deixa os jogos novos daquele lançador sem perfil semeado.
     perfil_por_jogo: dict[str, bool] = Field(default_factory=dict)
 
     @field_validator("perfil_por_jogo")
@@ -1303,7 +1266,6 @@ def migrar_o_documento(bruto: Mapping[str, Any]) -> dict[str, Any]:
     Sem ``lugares`` e sem ``caminho``, devolve uma cópia igual.
     """
     documento: dict[str, Any] = _copia_funda(dict(bruto))
-    # A `luz` sai (16/10/2026): o único campo era o «Sem piscar», que saiu da tela e do motor.
     documento.pop("luz", None)
     lugares = documento.pop("lugares", None)
     mapa = documento.get("mapa")

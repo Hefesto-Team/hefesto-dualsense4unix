@@ -16,8 +16,6 @@ from collections.abc import Iterable
 
 from hefesto_dualsense4unix.integrations.uinput_mouse import MOVE_DEADZONE, STICK_CENTER
 
-#: A zona morta do repouso (``uinput_mouse.MOVE_DEADZONE``): o repouso de um
-#: DualSense fica a poucas unidades do centro.
 ZONA_MORTA = MOVE_DEADZONE
 
 

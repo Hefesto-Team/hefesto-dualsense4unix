@@ -22,7 +22,7 @@ from tests.unit.janela_aberta_comum import (
     _na_cadencia,
     _PonteDeMentira,
 )
-from tests.unit.test_o_app_responde_na_hora import casa  # noqa: F401 (a casa da régua 1)
+from tests.unit.test_o_app_responde_na_hora import casa  # noqa: F401
 
 RAIZ = Path(__file__).resolve().parents[2]
 
@@ -36,11 +36,6 @@ TETO_DA_MEDIANA_MS = 15.0
 TETO_DO_P95_MS = 40.0
 TETO_DA_ABA_S = 20.0
 
-#: A régua mede a CPU de cada tique, não o ritmo. A cadência do produto (100 ms) é trocada por esta
-#: para as dez abas passarem em ~1 s cada, não em ~4. Não é 10 ms: o tique que custa mais que o
-#: `TIQUE_MS` faz o produto pular o próximo, e a 10 ms a mediana de algumas abas (6 a 11 ms) já
-#: o faria pular quase sempre, medindo tiques que não rodaram. A 25 ms só o tique lento pula, e o
-#: tique pulado fica fora da conta: o custo dele (~0 ms) baixaria a mediana do tique lento à metade.
 CADENCIA_DA_MEDIDA_MS = 25
 
 
@@ -165,10 +160,10 @@ def _p95(valores: list[float]) -> float:
 def test_o_tique_de_cada_aba_tem_teto(
     casa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
-    # D-1610-A-JANELA-DE-TESTE-ANDA-NA-CADENCIA-ACELERADA
-    """Dez abas, 40 tiques cada, a CPU do fio do GTK em cada tique: mediana até"""
-    # O teto é do custo do PRODUTO: sob `--cov` a mediana da aba 10 ia de 6,5 ms
-    # a 10,9 ms aqui e a 15,5 ms no CI de 13/10, acima do teto.
+    """Dez abas, 40 tiques cada, a CPU do fio do GTK em cada tique: mediana até
+
+    Prova da D-1610-A-JANELA-DE-TESTE-ANDA-NA-CADENCIA-ACELERADA.
+    """
     assert sys.gettrace() is None, "a cobertura está ligada durante a medida"
     custos = _medir_as_dez(monkeypatch)
     acima = {}

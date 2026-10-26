@@ -42,15 +42,9 @@ class AudioControl:
     def __init__(self, clock: Callable[[], float] | None = None) -> None:
         self._clock: Callable[[], float] = clock or time.monotonic
         self._backend: Backend | None = None
-        # Inicializado suficientemente negativo para que a primeira chamada
-        # nunca seja bloqueada pelo debounce, independente do clock injetado.
         self._last_call_at: float = -(DEBOUNCE_SEC + 1.0)
         self._last_known_muted: bool = False
         self._warned_no_backend: bool = False
-
-    # ------------------------------------------------------------------
-    # Deteccao de backend
-    # ------------------------------------------------------------------
 
     def _detect_backend(self) -> Backend:
         """Detecta qual utilitario de audio esta disponivel no PATH."""
@@ -98,7 +92,6 @@ class AudioControl:
         backend = self._ensure_backend()
         try:
             if backend == "wpctl":
-                # `node.description`; o do controle carrega "DualSense".
                 saida = self._run(
                     ["wpctl", "inspect", "@DEFAULT_AUDIO_SOURCE@"]
                 ).stdout
@@ -160,10 +153,6 @@ class AudioControl:
         return "yes" in (result.stdout or "").lower()
 
 
-#: - no CABO o DualSense é uma placa de áudio USB de verdade, e o source se
-#:   chama ``alsa_input.usb-Sony_Interactive_Entertainment_DualSense_Wireless_
-#:   cabo**. Ele TEM a palavra "DualSense";
-#:   que o nome no cabo "não teria a palavra DualSense". **Tem.** A medição
 _MARCAS_DA_FONTE_DO_CONTROLE: tuple[str, ...] = ("dualsense",)
 
 
@@ -194,7 +183,6 @@ def fonte_de_captura_do_controle() -> str | None:
             continue
         nome = partes[1].strip()
         alvo = nome.lower()
-        # `alsa_output.usb-…DualSense…analog-surround-40.monitor`, que é o ECO
         if alvo.endswith(".monitor") or alvo.startswith("alsa_output."):
             continue
         if any(marca in alvo for marca in _MARCAS_DA_FONTE_DO_CONTROLE):
@@ -313,7 +301,6 @@ def fonte_de_captura_do_uniq(
     curta = _texto_do_pactl(["pactl", "list", "sources", "short"])
     if curta is None:
         return None
-    # O dono do "quais destas são de DualSense" é o mesmo de sempre: ele
     fontes = fontes_dualsense(curta)
     if not fontes:
         return None

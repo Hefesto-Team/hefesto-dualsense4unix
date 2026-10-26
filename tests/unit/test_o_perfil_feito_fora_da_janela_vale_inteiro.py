@@ -106,7 +106,7 @@ class TestOVigiaEnxergaOPerfilGravadoPorFora:
         assert not (mesa / f"steam_app_{APPID_NOVO}.env").exists()
         antes = le._assinatura_da_mesa(daemon)
 
-        save_profile(_perfil_do_jogo_novo())  # outro processo: o terminal, ou o JSON à mão
+        save_profile(_perfil_do_jogo_novo())
 
         assert le._assinatura_da_mesa(daemon) != antes, "a assinatura não viu o perfil novo"
         le.vigiar_a_mesa(daemon, agora=100.0)

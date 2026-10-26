@@ -48,12 +48,9 @@ def _tokens(botao: str | None = None) -> set[str]:
     return tokens
 
 
-# -- a lista ------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("linha", [b for b in LINHAS_DE_BOTAO if b != acoes.BOTAO_PS])
 def test_a_linha_de_botao_nao_oferece_wasd_nem_setas(linha: str) -> None:
-    # D-1710-OS-ANALOGICOS-OFERECEM-TECLAS-SO-NA-LINHA-DELES
+    """Prova da D-1710-OS-ANALOGICOS-OFERECEM-TECLAS-SO-NA-LINHA-DELES."""
     oferecidos = _tokens(linha)
     assert not oferecidos & TECLAS, f"a linha {linha} oferece o que é de analógico"
     assert oferecidos, f"a linha {linha} ficou sem lista"
@@ -86,9 +83,6 @@ def test_o_que_a_lista_esconde_e_o_que_o_resolver_recusa(token: str) -> None:
         assert linha not in acoes.resolver({linha: token})[2]
 
 
-# -- a função única da deflexão -------------------------------------------------------
-
-
 def test_a_deflexao_vira_direcao_pelo_limiar_e_a_diagonal_sao_duas() -> None:
     teclas = acoes.teclas_dos_analogicos({acoes.EIXO_ESQUERDO: acoes.TOKEN_WASD})
     e, d = acoes.nome_da_direcao(acoes.EIXO_ESQUERDO, "esquerda"), acoes.nome_da_direcao(
@@ -98,7 +92,6 @@ def test_a_deflexao_vira_direcao_pelo_limiar_e_a_diagonal_sao_duas() -> None:
     assert acoes.direcoes_apertadas(teclas, [(250, CENTRO, CENTRO, CENTRO)]) == {d}
     assert not acoes.direcoes_apertadas(teclas, [(80, 176, CENTRO, CENTRO)]), "menos de meia"
     assert not acoes.direcoes_apertadas(teclas, [(CENTRO,) * 4])
-    # O direito não escolheu teclas: não vira nada.
     assert not acoes.direcoes_apertadas(teclas, [(CENTRO, CENTRO, 250, 250)])
 
 
@@ -110,9 +103,6 @@ def test_a_tecla_e_a_uniao_dos_controles() -> None:
     assert acoes.direcoes_apertadas(teclas, dois) == {esq, dir_}
     mesmo_lado = [(20, CENTRO, CENTRO, CENTRO), (10, CENTRO, CENTRO, CENTRO)]
     assert acoes.direcoes_apertadas(teclas, mesmo_lado) == {esq}
-
-
-# -- o desktop, sem o jogo aberto ----------------------------------------------------
 
 
 class _MouseDoDesktop:
@@ -146,7 +136,6 @@ def desktop(monkeypatch: pytest.MonkeyPatch) -> tuple[Any, _UinputPorDevice]:
     daemon._mouse_device = _MouseDoDesktop()
     daemon._teclas_do_analogico = None
     daemon._outros = {}
-    # A «Função do teclado» ligada fora do jogo: o teclado do desktop existe.
     daemon._keyboard_device = types.SimpleNamespace(dispatch=lambda *_a: None, stop=lambda: None)
     return daemon, mod
 
@@ -201,7 +190,7 @@ def test_dois_controles_na_mesma_direcao_soltam_so_quando_o_ultimo_solta(
         "aa:bb:cc:00:00:02": types.SimpleNamespace(lx=20, ly=CENTRO, rx=CENTRO, ry=CENTRO)})
     _tique(daemon, raw_lx=20)
     assert _tecla(mod).count(("KEY_A", 1)) == 1, _tecla(mod)
-    _tique(daemon)  # o primário volta ao centro, o outro segue empurrando
+    _tique(daemon)
     assert ("KEY_A", 0) not in _tecla(mod), "a tecla soltou com o outro controle ainda empurrando"
     daemon._coop_manager = types.SimpleNamespace(live_snapshots=lambda: {
         "aa:bb:cc:00:00:02": types.SimpleNamespace(
@@ -258,7 +247,7 @@ def test_a_parada_do_daemon_fecha_o_teclado_do_analogico(desktop: Any) -> None:
     _tique(daemon, raw_lx=250)
     sub_mouse.stop_mouse_emulation(daemon, persist=False)
     assert ("KEY_D", 0) not in _tecla(mod), "parar o mouse soltou a tecla do analógico"
-    _tique(daemon, raw_lx=250)  # o atendente segue vivo até o perfil trocar ou o daemon parar
+    _tique(daemon, raw_lx=250)
     sub_mouse.fechar_as_teclas_do_analogico(daemon)
     assert ("KEY_D", 0) in _tecla(mod), "a parada do daemon deixou a tecla presa"
     assert daemon._teclas_do_analogico is None
@@ -314,9 +303,6 @@ def test_a_tabela_com_o_jogo_usa_a_uniao_dos_controles(
     assert ("KEY_UP", 1) in _tecla(mod), "o analógico do outro controle não chegou à tabela"
 
 
-# -- o perfil gravado antes de a lista encolher ---------------------------------------
-
-
 def test_o_perfil_antigo_com_o_token_fora_da_lista_mostra_o_que_o_botao_faz(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Any,
 ) -> None:
@@ -346,7 +332,5 @@ def test_o_perfil_antigo_com_o_token_fora_da_lista_mostra_o_que_o_botao_faz(
     nada = acoes.rotulo(acoes.TOKEN_NADA)
     assert mesa["acao-cross"] == nada, mesa["acao-cross"]
     assert mesa[f"acao-{acoes.EIXO_ESQUERDO}"] == nada, mesa[f"acao-{acoes.EIXO_ESQUERDO}"]
-    # O que a lista da linha ainda oferece segue com o próprio nome (a resposta da linha avisa).
-    # O cursor num botão deixou de ser oferecido (CURSOR-E-ROLAGEM-SO-NA-LINHA-QUE-OS-ATENDE-01).
     assert mesa["acao-circle"] == nada
     assert mesa["acao-square"] == "Esc"

@@ -46,7 +46,7 @@ SEM_FONTE: tuple[tuple[str, str, str], ...] = (
 )
 
 
-class EnderecoInvalido(ValueError):  # noqa: N818 — o projeto é em português
+class EnderecoInvalido(ValueError):  # noqa: N818
     """Endereço fora da gramática. É erro de programação, não de dado."""
 
 
@@ -179,7 +179,7 @@ ABA_DO_TETO_GLOBAL = "Sistema"
 
 SELO_DO_ESTADO = {
     "certo": ("ok", "CERTO"),
-    "atencao": ("warn", "AJUSTAR"),  # (noqa-acento): chave de máquina, ASCII por contrato
+    "atencao": ("warn", "AJUSTAR"),  # (noqa-acento)
     "problema": ("warn", "AJUSTAR"),
     "nao_sei": ("info", "NOTA"),
 }
@@ -252,12 +252,7 @@ RESPOSTAS_DO_VIZINHO = (
 )
 
 
-#      (`confissao_do_desenho`). A tela mostrava menos e podia mostrar diferente.
-
-
 DICA_NOVA_ENTRADA = "Cria uma entrada nova nesta face, com o próximo número livre."
-#: A face «Hubs e extensões» está SEMPRE no desenho, com o botão «Acrescentar hub»: ele abre a
-#: pergunta curta (em qual entrada, nome opcional) e o ato é `LogicaDoMapa.acrescentar_hub`.
 DICA_DOS_HUBS = (
     "O sistema não enxerga hubs nem extensões — quem diz onde estão é você."
 )
@@ -306,8 +301,6 @@ def html_do_mapa(
         classe, texto, porque = veredito_de(numero, esticada)
         dentro = quem_esta.get(numero)
         texto, porque = _primeira_maiuscula(texto), _primeira_maiuscula(porque)
-        # Cheia sem aparelho direto (o extensor nela, a entrada-mãe em uso): o quadrado diz o
-        # porquê do motor, nunca «Vazia» ao lado de «Ocupada».
         tomada = not dentro and classe == "cheia" and bool(porque)
         corpo = _primeira_maiuscula(
             dentro[0] if dentro else porque if tomada else rotulos["vazia"])
@@ -330,7 +323,6 @@ def html_do_mapa(
     face_da_entrada = {n: str(f.get("nome", "")) for f in faces for n in f.get("portas", [])}
 
     if not faces:
-        # branco — e "não há nada aqui" é indistinguível de "isto quebrou".
         from hefesto_dualsense4unix.interface.logica_do_mapa import (
             DICA_SEM_FACE,
             ROTULO_SEM_FACE,

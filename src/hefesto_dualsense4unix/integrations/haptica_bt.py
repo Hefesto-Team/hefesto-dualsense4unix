@@ -10,17 +10,12 @@ TAXA_DO_BLOCO = 3000
 AMOSTRAS_POR_CANAL = 32
 BYTES_DO_BLOCO = AMOSTRAS_POR_CANAL * 2
 
-#: A entrada é a do endpoint do DualSense: 48 kHz, quatro canais, s16le.
 TAXA_DE_ENTRADA = 48000
 CANAIS_DE_ENTRADA = 4
 CANAIS_DOS_MOTORES = (2, 3)
 
 FATOR = TAXA_DE_ENTRADA // TAXA_DO_BLOCO
 
-#: A FRENTE do endpoint (canais 1-2) é o som que o jogo manda ao controle. Um bloco
-#: háptico consome 512 quadros a 48 kHz; o bloco de som do ``0x36`` leva 480 quadros
-#: a 45 kHz (a taxa da fonte do som, ``alto_falante_bt.TAXA_DA_FONTE_DO_SOM``): a
-#: frente de UM bloco é reamostrada de 512 para 480 quadros.
 CANAIS_DA_FRENTE = (0, 1)
 QUADROS_POR_BLOCO = AMOSTRAS_POR_CANAL * FATOR
 QUADROS_DA_FRENTE_NO_SOM = 480
@@ -28,8 +23,6 @@ QUADROS_DA_FRENTE_NO_SOM = 480
 _PICO_INT16 = 32768
 _PICO_INT8 = 127
 
-#: Para cada quadro de saída, o quadro de entrada à esquerda, o da direita (o
-#: último segura o valor) e o peso deste: a interpolação linear em tabela.
 _ESQUERDA_DA_FRENTE = [
     (i * QUADROS_POR_BLOCO) // QUADROS_DA_FRENTE_NO_SOM for i in range(QUADROS_DA_FRENTE_NO_SOM)
 ]

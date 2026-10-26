@@ -255,8 +255,6 @@ def _o_botao(seletor: str) -> str:
             f" voo: b.getAttribute('data-hef-voo') || ''}});}})()")
 
 
-#: Desde o desenho aprovado de 05/10 a entrada e o aparelho abrem o MESMO painel (o
-#: `painel-unico`), com o cabeçalho em `.cab`: a bolinha, o nome, «Entrada N · Lugar» e o «Fechar».
 _O_EDITOR = r"""
 (function(){
   const ed = document.getElementById('edita');
@@ -273,9 +271,6 @@ _O_EDITOR = r"""
 """
 
 
-#: O PAINEL ÚNICO (desenho aprovado de 05/10/2026): a entrada com um aparelho abre o painel com
-#: a coluna «Aparelho» (o nome dele) e a coluna «Entrada» (o nome dela), e o cabeçalho diz
-#: «Entrada N · Lugar» — com o nome que o usuário deu à entrada no lugar de «Entrada N».
 _O_PAINEL = r"""
 (function(){
   const ed = document.getElementById('edita');
@@ -580,7 +575,7 @@ def test_no_produto_o_chip_de_quem_esta_numa_entrada_abre_o_editor(disco: Path) 
         ".find(x => x.dataset.alocado === '1'); if(!c) return 'sem chip'; c.click();"
         " return c.dataset.ap;})()",
         _O_PAINEL,
-        "String(document.querySelector('.modo[data-modo=\"mao\"]')"  # (noqa-acento: JS)
+        "String(document.querySelector('.modo[data-modo=\"mao\"]')"  # (noqa-acento)
         ".getAttribute('aria-pressed'))",
     ])
     assert lidas[1].startswith("ap-"), lidas[1]
@@ -590,8 +585,6 @@ def test_no_produto_o_chip_de_quem_esta_numa_entrada_abre_o_editor(disco: Path) 
     assert lidas[3] == "false", "o chip pôs o aparelho na mão"
 
 
-#: O painel único do desenho aprovado de 05/10: o mesmo para a entrada vazia e para o
-#: aparelho, com o cabeçalho numa linha só (nome, «Entrada N · Lugar», «Fechar»).
 _A_GEOMETRIA_DO_PAINEL = r"""
 (function(){
   const ed = document.getElementById('edita');

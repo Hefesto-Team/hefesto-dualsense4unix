@@ -67,7 +67,6 @@ sys.path.insert(0, str(INTERFACE))
 
 PAGINA = "07-lancadores.html"
 
-#: As chaves são as de `mesa_viva.mesa_do_estado`, que é quem monta a mesa viva.
 def _palavra(transporte: str) -> str:
     """A palavra do transporte PERGUNTADA À DONA — nunca digitada aqui."""
     from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
@@ -83,7 +82,6 @@ MESA_COM_UM_SEM_COR = [
 ]
 
 
-#: O texto que `mesa_viva.mesa_do_estado` põe em `nome` quando o leitor de cor
 SEM_LEITURA_DE_COR = "Não sei"
 
 SELETOR_DA_FITA = ".fita"

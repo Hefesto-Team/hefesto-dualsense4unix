@@ -245,7 +245,7 @@ def test_o_aceitar_sem_nada_a_tirar_nao_reescreve_o_piso(arvore):
     _arvore_do_piso_anotado(raiz)
     linhas = list(csv.DictReader(
         (raiz / "docs/data/decisoes-de-produto.csv").open(encoding="utf-8")))
-    linhas[1]["prova"] = ""  # D-C volta a ser decisão sem prova e continua no piso
+    linhas[1]["prova"] = ""
     _escreve_csv(raiz, linhas)
     piso = raiz / "docs/data/decisoes-sem-prova.txt"
     antes = piso.stat().st_mtime_ns

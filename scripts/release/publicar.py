@@ -65,13 +65,11 @@ def principal(a: argparse.Namespace) -> int:
     if not pasta.is_dir() or not notas.is_file():
         print(f"publicar.py: sem a pasta {pasta} ou sem o arquivo de notas {notas}")
         return 2
-    # 1. o que vai publicar confere com o SHA256SUMS
     ok = sums.main(["conferir", str(pasta), "--exigir", *exigir])
     if ok != 0:
         print("publicar.py: recusado: a pasta não confere com o SHA256SUMS; nada foi publicado")
         return 1
     locais = {p.relative_to(pasta).as_posix(): sums.sha256_de(p) for p in sorted(pasta.rglob("*")) if p.is_file()}
-    # 2. a release da tag
     existente = release_do_servidor(a.repo, a.tag)
     if existente is not None and not existente["isDraft"]:
         remotos = arquivos_do_servidor(existente)
@@ -93,9 +91,7 @@ def principal(a: argparse.Namespace) -> int:
     if existente is None:
         gh("release", "create", a.tag, "--repo", a.repo, "--draft", "--verify-tag",
            "--title", a.titulo or f"Hefesto - DualSense4Unix {a.tag}", "--notes-file", str(notas), "--generate-notes")
-    # 3. os arquivos, com --clobber (só o rascunho aceita)
     gh("release", "upload", a.tag, "--repo", a.repo, "--clobber", *[str(pasta / n) for n in locais])
-    # 4. o servidor tem exatamente a pasta
     depois = release_do_servidor(a.repo, a.tag)
     assert depois is not None
     no_servidor = arquivos_do_servidor(depois)
@@ -105,7 +101,6 @@ def principal(a: argparse.Namespace) -> int:
     if faltam or sobram or trocados:
         print(f"publicar.py: recusado: o rascunho de {a.tag} não confere (faltam {faltam}, sobram {sobram}, trocados {trocados}); não foi publicado")
         return 1
-    # 5. publica
     gh("release", "edit", a.tag, "--repo", a.repo, "--draft=false")
     print(f"publicar.py: {a.tag} publicada com {len(locais)} arquivo(s) e o SHA256SUMS")
     return 0

@@ -35,6 +35,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import tokenize
 from collections.abc import Callable
 from pathlib import Path
@@ -103,7 +104,62 @@ def limpar(texto: str, tipo: str, rel: str = "") -> tuple[str, int, int]:
             linhas.append(APAGADA)
             continue
         linhas.append(_arrumar(linha))
-    return _juntar_brancas("\n".join(linhas), texto.endswith("\n")), saiu, ficou
+    novo = _juntar_brancas("\n".join(linhas), texto.endswith("\n"))
+    novo, sobrou = _escapes_a_mais(novo, tipo, rel)
+    return novo, saiu + sobrou, ficou - sobrou
+
+
+_VALIDADOR: list[ModuleType] = []
+
+
+def _validador() -> ModuleType:
+    if not _VALIDADOR:
+        caminho = AQUI / "validar-acentuacao.py"
+        spec = importlib.util.spec_from_file_location("validar_acentuacao_do_corte", caminho)
+        if spec is None or spec.loader is None:
+            raise SystemExit(f"o validador não carrega: {caminho}")
+        modulo = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(modulo)
+        _VALIDADOR.append(modulo)
+    return _VALIDADOR[0]
+
+
+_ESCAPE = re.compile(r"[ \t]*#[ \t]*\(?noqa-acento\)?")
+
+
+def _escapes_a_mais(texto: str, tipo: str, rel: str) -> tuple[str, int]:
+    """Tira o ``# noqa-acento`` que o validador não pede na linha dele: o que ele escapava saiu com o corte."""
+    if tipo not in ("py", "sh"):
+        return texto, 0
+    marcas = [c for c in G.comentarios(texto, tipo) if "noqa-acento" in c.texto]
+    if not marcas:
+        return texto, 0
+    val = _validador()
+    precisa: set[int] = set()
+    sufixo = Path(rel).suffix.lower()
+    if not val.is_whitelisted(rel) and sufixo in val.EXTENSOES_ALVO:
+        sem = texto
+        for c in sorted(marcas, key=lambda c: c.inicio, reverse=True):
+            sem = sem[:c.inicio] + _ESCAPE.sub("", c.texto) + sem[c.fim:]
+        with tempfile.TemporaryDirectory() as pasta:
+            alvo = Path(pasta) / f"x{sufixo}"
+            alvo.write_text(sem, encoding="utf-8")
+            precisa = {n for n, *_ in val.checar_arquivo(alvo, Path(pasta))}
+    tirados = 0
+    novo = texto
+    for c in sorted(marcas, key=lambda c: c.inicio, reverse=True):
+        if c.linha in precisa:
+            continue
+        resto = _ESCAPE.sub("", c.texto).strip()
+        if resto:
+            novo = novo[:c.inicio] + resto + novo[c.fim:]
+        else:
+            inicio = c.inicio
+            while inicio > 0 and novo[inicio - 1] in " \t":
+                inicio -= 1
+            novo = novo[:inicio] + novo[c.fim:]
+            tirados += 1
+    return novo, tirados
 
 
 def _arrumar(linha: str) -> str:
@@ -399,10 +455,9 @@ def _fechados(conteudo: str, tipo: str) -> bool:
 def contar(arquivos: list[tuple[str, str]], raiz: Path) -> dict[str, collections.Counter[str]]:
     conta: dict[str, collections.Counter[str]] = collections.defaultdict(collections.Counter)
     for rel, tipo in arquivos:
-        texto = (raiz / rel).read_text(encoding="utf-8")
-        for c in G.comentarios(texto, tipo):
-            forma = G.forma_da_diretiva(c, tipo, rel, texto)
-            conta[tipo]["sai" if forma is None else "fica"] += 1
+        _, sai, fica = limpar((raiz / rel).read_text(encoding="utf-8"), tipo, rel)
+        conta[tipo]["sai"] += sai
+        conta[tipo]["fica"] += fica
         conta[tipo]["arquivos"] += 1
     return conta
 

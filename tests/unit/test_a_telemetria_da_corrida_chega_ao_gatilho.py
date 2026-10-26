@@ -37,10 +37,8 @@ from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 P1 = "aa:bb:cc:00:00:41"
 QUATRO = (P1, "aa:bb:cc:00:00:42", "aa:bb:cc:00:00:43", "aa:bb:cc:00:00:44")
 TIQUE = 1.0 / 60.0
-AUTOMATICO = {"modo": "automatico"}  # (noqa-acento) chave ASCII do schema
+AUTOMATICO = {"modo": "automatico"}  # (noqa-acento)
 
-
-# --- o pacote, byte a byte, nos deslocamentos do documento ---------------------------------
 
 _TAMANHO = {"sled": 232, "dash": 311, "horizon": 324, "motorsport_2023": 331}
 _INICIO_DO_DASH = {"dash": 232, "horizon": 244, "motorsport_2023": 232}
@@ -54,19 +52,19 @@ def _pacote(
     marcha: int = 2,
 ) -> bytes:
     dados = bytearray(_TAMANHO[formato])
-    struct.pack_into("<i", dados, 0, 1 if corrida else 0)  # IsRaceOn
-    struct.pack_into("<fff", dados, 8, rpm_maximo, rpm_ocioso, rpm)  # EngineMaxRpm..Current
-    struct.pack_into("<f", dados, 28, aceleracao)  # AccelerationZ (para a frente)
-    struct.pack_into("<f", dados, 40, vel_z)  # VelocityZ
-    struct.pack_into("<ffff", dados, 84, *(razao,) * 4)  # TireSlipRatio FL..RR
-    struct.pack_into("<ffff", dados, 100, *(giro,) * 4)  # WheelRotationSpeed FL..RR
-    struct.pack_into("<i", dados, 120, 1 if zebra else 0)  # WheelOnRumbleStrip FR
-    struct.pack_into("<f", dados, 188, combinada)  # TireCombinedSlip RL
+    struct.pack_into("<i", dados, 0, 1 if corrida else 0)
+    struct.pack_into("<fff", dados, 8, rpm_maximo, rpm_ocioso, rpm)
+    struct.pack_into("<f", dados, 28, aceleracao)
+    struct.pack_into("<f", dados, 40, vel_z)
+    struct.pack_into("<ffff", dados, 84, *(razao,) * 4)
+    struct.pack_into("<ffff", dados, 100, *(giro,) * 4)
+    struct.pack_into("<i", dados, 120, 1 if zebra else 0)
+    struct.pack_into("<f", dados, 188, combinada)
     if formato != "sled":
         b = _INICIO_DO_DASH[formato]
-        struct.pack_into("<f", dados, b + 12, velocidade)  # Speed
-        struct.pack_into("<BB", dados, b + 71, acelerador, freio)  # Accel, Brake
-        struct.pack_into("<B", dados, b + 75, marcha)  # Gear
+        struct.pack_into("<f", dados, b + 12, velocidade)
+        struct.pack_into("<BB", dados, b + 71, acelerador, freio)
+        struct.pack_into("<B", dados, b + 75, marcha)
     return bytes(dados)
 
 
@@ -103,7 +101,6 @@ def test_o_formato_curto_nao_tem_pedais_e_o_tamanho_estranho_nao_vira_estado() -
     assert curto.velocidade_do_carro == pytest.approx(9.0), "no curto, o módulo do vetor"
     assert tc.ler_o_pacote(bytes(300)) is None
     assert tc.ler_o_pacote(b"") is None
-    # sem pedais não se sabe se é freio ou acelerador: nada no gatilho
     assert tj.pedido_da_corrida(_ler(_pacote("sled", vel_z=20.0, razao=-1.4))
                                 ) == tj.SEM_PEDIDO
 
@@ -117,25 +114,20 @@ def test_o_montador_do_ensaio_bate_com_o_documento() -> None:
         assert estado is not None and estado.rpm == 5000.0
 
 
-# --- a tradução --------------------------------------------------------------------------
-
-
 def test_a_roda_travada_sob_freio_da_o_pulso_do_abs_no_l2() -> None:
     pedido = tj.pedido_da_corrida(_ler(_travando()))
     assert pedido.l2 == (tj.EFEITO_ABS, tj.AMPLITUDE_DO_ABS)
     assert pedido.r2 is None
     assert tj.bloco_do_pedido(*pedido.l2) == tv._bloco_do_efeito(
         vibration(0, tj.AMPLITUDE_DO_ABS, tj.FREQUENCIA_DO_ABS_HZ))
-    # a roda que agarra (|x| <= 1) não pulsa
     assert tj.pedido_da_corrida(_ler(_travando(razao=-0.8))).l2 is None
 
 
 def test_o_mesmo_pacote_com_o_carro_parado_nao_da_nada() -> None:
-    # D-2210-OS-VALORES-DE-PARTIDA-DA-CORRIDA
+    """Prova da D-2210-OS-VALORES-DE-PARTIDA-DA-CORRIDA."""
     parado = _ler(_travando(velocidade=0.0, giro=0.0))
     assert not tj.em_movimento(parado)
     assert tj.pedido_da_corrida(parado) == tj.SEM_PEDIDO
-    # a roda que gira com o carro parado (a patinação saindo do lugar) passa o portão
     saindo = _ler(_pacote(velocidade=0.0, giro=40.0, acelerador=255, combinada=2.0))
     assert tj.pedido_da_corrida(saindo).r2 is not None
 
@@ -167,22 +159,16 @@ def test_a_troca_de_marcha_da_um_toque_e_a_batida_um_impacto_que_vence_a_marcha(
     assert leitor.ver(_ler(_pacote(velocidade=20.0, marcha=2)), 0.0) is None
     marcha = leitor.ver(_ler(_pacote(velocidade=20.0, marcha=3)), 0.1)
     assert marcha is not None and marcha.forma == formas.TOQUE
-    # a batida e a marcha no mesmo pacote: a colisão primeiro
     batida = leitor.ver(_ler(_pacote(velocidade=20.0, marcha=4, aceleracao=-45.0)), 0.2)
     assert batida is not None and batida.forma == formas.IMPACTO
     assert batida.energia == pytest.approx(45.0 / tj.BATIDA_CHEIA_M_S2)
-    # o chassi que segue acima de 3 g não bate de novo (a borda)
     assert leitor.ver(_ler(_pacote(velocidade=20.0, marcha=4, aceleracao=-45.0)),
                       0.3) is None
-    # parado, a marcha que troca no menu não toca
     assert leitor.ver(_ler(_pacote(velocidade=0.0, marcha=1)), 1.0) is None
 
 
-# --- a porta ------------------------------------------------------------------------------
-
-
 def test_a_porta_so_abre_no_localhost_e_so_com_a_corrida_ou_a_simulacao() -> None:
-    # D-2210-A-TELEMETRIA-SO-NO-LOCALHOST-E-SO-NA-CORRIDA
+    """Prova da D-2210-A-TELEMETRIA-SO-NO-LOCALHOST-E-SO-NA-CORRIDA."""
     tel = tj.TelemetriaDoJogo(porta=0)
     try:
         assert tel.andar(0.0, "fps") == 0 and not tel.aberta
@@ -202,7 +188,7 @@ def test_a_porta_so_abre_no_localhost_e_so_com_a_corrida_ou_a_simulacao() -> Non
         assert lidos == 2
         assert tel.contadores["pacotes"] == 1 and tel.contadores["ignorados"] == 1
         assert tel.pedido(0.02).l2 is not None
-        tel.andar(0.03, "acao")  # (noqa-acento) chave do estilo
+        tel.andar(0.03, "acao")  # (noqa-acento)
         assert not tel.aberta and tel.ultimo is None, "o estilo saiu: a porta fecha"
     finally:
         tel.fechar()
@@ -217,9 +203,6 @@ def test_sem_pacote_ha_meio_segundo_a_corrida_cala() -> None:
     assert tel.pedido(2.0) == tj.SEM_PEDIDO, "no menu (IsRaceOn 0), nada"
 
 
-# --- a luz --------------------------------------------------------------------------------
-
-
 def _subidas(cores: list[tuple[int, int, int]]) -> list[int]:
     degraus = [tj.CORES_DA_ROTACAO.index(c) for c in cores]
     return [i for i in range(1, len(degraus)) if degraus[i] > degraus[i - 1]]
@@ -229,9 +212,8 @@ def test_a_luz_nao_passa_de_tres_subidas_por_segundo_com_a_rotacao_no_corte() ->
     tel = tj.TelemetriaDoJogo(porta=0)
     cores: list[tuple[int, int, int]] = []
     instantes: list[float] = []
-    for n in range(int(3.0 * 30)):  # três segundos no corte, a luz a 30 quadros por segundo
+    for n in range(int(3.0 * 30)):
         agora = n / 30.0
-        # o limitador balança o giro dez vezes por segundo, entre 99% e 80%
         rpm = 7928.0 if int(agora * 20) % 2 == 0 else 6560.0
         tel.alimentar(_pacote(rpm=rpm, velocidade=40.0), agora)
         cor = tel.cor_da_rotacao(agora)
@@ -247,7 +229,7 @@ def test_a_luz_nao_passa_de_tres_subidas_por_segundo_com_a_rotacao_no_corte() ->
 def test_a_arrancada_ate_o_corte_sobe_tres_degraus_no_primeiro_segundo() -> None:
     tel = tj.TelemetriaDoJogo(porta=0)
     cores: list[tuple[int, int, int]] = []
-    for n in range(int(2.0 * 60)):  # do giro lento ao corte em 0,2 s, e segura no corte
+    for n in range(int(2.0 * 60)):
         agora = n / 60.0
         rpm = 800.0 + min(1.0, agora / 0.2) * 7200.0
         tel.alimentar(_pacote(rpm=rpm, velocidade=10.0), agora)
@@ -284,9 +266,6 @@ def test_a_barra_de_cada_controle_ganha_a_cor_da_rotacao_no_brilho_do_perfil(
     for plano in planos.values():
         assert plano.efeito.cores == (tj.CORES_DA_ROTACAO[-1],)
     assert passo._planos_da_corrida(controles, 5.0) == {}
-
-
-# --- o motor de produção, com o perfil da Corrida -----------------------------------------
 
 
 class _Backend:
@@ -421,7 +400,6 @@ def test_os_quatro_controles_sentem_o_abs_e_a_volta_devolve_o_perfil(
     for uniq in QUATRO:
         assert mesa.backend.de(uniq, "left") == [_ABS], uniq
         assert mesa.backend.de(uniq, "right") == [], "o R2 fica no perfil"
-    # a roda volta a agarrar: o lado volta ao perfil, pela sessão
     mesa.rodar(0.2, _travando(razao=-0.5))
     assert sorted(mesa.backend.sessoes) == sorted(QUATRO)
 
@@ -430,7 +408,7 @@ def test_o_jogo_que_escreve_o_gatilho_decide_naquele_controle(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     mesa = _mesa(monkeypatch)
-    mesa.pads[QUATRO[1]].visto_ha_s["trigger"] = 0.1  # o jogo escreveu o gatilho de P2
+    mesa.pads[QUATRO[1]].visto_ha_s["trigger"] = 0.1
     mesa.rodar(0.5, _travando())
     assert mesa.backend.de(QUATRO[1], "left") == []
     assert mesa.backend.de(P1, "left") == [_ABS]
@@ -458,14 +436,13 @@ def test_o_abs_do_jogo_vence_o_momento_do_freio_e_o_momento_volta_depois(
 ) -> None:
     mesa = _mesa(monkeypatch)
     mesa.frear()
-    mesa.rodar(1.0, _pacote(velocidade=20.0, freio=255))  # sem travar: o momento do estilo
+    mesa.rodar(1.0, _pacote(velocidade=20.0, freio=255))
     momento = tv._bloco_do_efeito(vibration(2, 3, 15))
     assert mesa.backend.de(P1, "left") == [momento]
     mesa.rodar(0.5, _travando())
     assert mesa.backend.de(P1, "left") == [momento, _ABS], "o ABS do jogo vence o do estilo"
     mesa.rodar(0.5, _pacote(velocidade=20.0, freio=255))
     assert mesa.backend.de(P1, "left")[-1] == momento, "a roda agarrou: o momento volta"
-    # o momento segura a sessão de P1; nos outros três, sem freio apertado, a corrida a devolve
     assert P1 not in mesa.backend.sessoes
     assert sorted(mesa.backend.sessoes) == sorted(QUATRO[1:])
 
@@ -484,7 +461,7 @@ def test_o_toque_que_o_motor_nao_levou_a_tempo_caduca_e_nao_sai_em_rajada() -> N
     tel.alimentar(_pacote(velocidade=20.0, marcha=2), 0.0)
     tel.alimentar(_pacote(velocidade=20.0, marcha=3), 0.02)
     agora = 0.02
-    while agora < 2.0:  # a corrida segue viva e o motor não tirou o toque (a receita desligada)
+    while agora < 2.0:
         agora += TIQUE
         tel.alimentar(_pacote(velocidade=20.0, marcha=3), agora)
     assert tel.tirar_os_toques(agora) == [], "a troca de marcha de dois segundos atrás não toca"
@@ -501,7 +478,7 @@ def test_na_bateria_longa_o_momento_nao_cede_o_lado_a_corrida_que_nao_escreve(
     mesa.rodar(1.0, _pacote(velocidade=20.0, freio=255))
     momento = tv._bloco_do_efeito(vibration(2, 3, 15))
     assert mesa.backend.de(P1, "left") == [momento]
-    economia.add(P1)  # a Bateria longa liga no mesmo tique em que a roda trava
+    economia.add(P1)
     mesa.rodar(0.5, _travando())
     assert _ABS not in mesa.backend.de(P1, "left"), "na Bateria longa a corrida não escreve"
     assert P1 in mesa.backend.sessoes, "o momento devolve o lado, não o larga vibrando"

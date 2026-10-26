@@ -104,7 +104,7 @@ def test_a_05_e_a_janela_da_extensao_nao_rolam_na_vertical(navegador, larg, alt)
           return {alto: d.scrollHeight, cabe: d.clientHeight,
                   largo: d.scrollWidth > d.clientWidth + 1}; }""")
         assert m["alto"] <= m["cabe"] + 1 and not m["largo"], ("05", m)
-        for ancora in ("modificacao",):  # (noqa-acento: âncora do HTML)
+        for ancora in ("modificacao",):  # (noqa-acento)
             pg.goto(f"{M07.as_uri()}#{ancora}")
             dentro = pg.evaluate("""(a) => { const r = document.getElementById(a);
               const cx = r.querySelector('.tn-cx').getBoundingClientRect();

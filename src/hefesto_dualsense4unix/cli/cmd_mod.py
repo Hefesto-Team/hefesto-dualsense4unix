@@ -163,7 +163,7 @@ def cmd_listar() -> None:
     console.print(tabela)
 
 
-@app.command("permissoes")  # (noqa-acento): contrato ASCII
+@app.command("permissoes")  # (noqa-acento)
 def cmd_permissoes(mod_id: str = typer.Argument(..., help="O id da modificação.")) -> None:
     """O que a modificação instalada pede, uma linha por permissão."""
     from hefesto_dualsense4unix.mods.instalador import InstalacaoRecusadaError, manifesto_instalado

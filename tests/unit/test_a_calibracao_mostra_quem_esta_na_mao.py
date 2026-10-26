@@ -175,7 +175,7 @@ def test_a_contagem_viva_e_a_do_gerador(pacotes_mod, calibrar_mod):
 def test_o_seletor_do_bloco_existe_na_pagina_publicada():
     """O `blocos` do pacote e o `data-bloco` do gerador são dois lugares, um fato."""
     from pacotes import a11_calibrar_sensores as a11
-    publicado = (INTERFACE / "paginas" / PAGINA).read_text(encoding="utf-8")  # (noqa-acento) PASTA
+    publicado = (INTERFACE / "paginas" / PAGINA).read_text(encoding="utf-8")  # (noqa-acento)
     atributo = a11.BLOCO_DOS_CONTROLES.strip("[]")
     assert atributo in publicado, (
         f"o seletor {a11.BLOCO_DOS_CONTROLES} não existe na página publicada")
@@ -187,7 +187,7 @@ def test_todo_endereco_que_o_pacote_emite_existe_na_pagina(pacotes_mod):
     from pacotes import a11_calibrar_sensores as a11
     assert a11.BLOCO_DOS_CONTROLES in carga["blocos"]
     html = "".join(str(b) for b in carga["blocos"].values())
-    publicado = (INTERFACE / "paginas" / PAGINA).read_text(encoding="utf-8")  # (noqa-acento) PASTA
+    publicado = (INTERFACE / "paginas" / PAGINA).read_text(encoding="utf-8")  # (noqa-acento)
     for campos in carga["colunas"].values():
         for chave in campos:
             assert f'data-campo="{chave}"' in html, (
@@ -203,7 +203,7 @@ def test_a_pagina_esta_no_despachante(pacotes_mod):
 
 def test_o_arquivo_publicado_nao_carrega_leitura_inventada():
     """Nenhum número de sensor mora no HTML: eles nascem no travessão."""
-    publicado = (INTERFACE / "paginas" / PAGINA).read_text(encoding="utf-8")  # (noqa-acento) PASTA
+    publicado = (INTERFACE / "paginas" / PAGINA).read_text(encoding="utf-8")  # (noqa-acento)
     for bloco in re.findall(r'<span class="v" data-campo="[^"]+">([^<]*)</span>',
                             publicado):
         assert bloco == "—", f"o arquivo carrega a leitura {bloco!r}"

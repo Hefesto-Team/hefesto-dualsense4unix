@@ -116,7 +116,7 @@ def test_o_arme_do_proprio_jogo_veste_a_roupa_com_a_autoridade_dele(
     assert mesa.d.roupa_do_pad == COMUM
     assert _linhas(diario, "vpad_recriacao_bloqueada_por_jogo") == []
     passagem = _linhas(diario, "pad_recriado_com_o_jogo_aberto")
-    assert passagem and passagem[0]["decisao"] == DECISAO, passagem  # (noqa-acento) chave do diário
+    assert passagem and passagem[0]["decisao"] == DECISAO, passagem  # (noqa-acento)
     assert _linhas(diario, "game_signal_transition") == []
     assert mesa.d.display_authority == "game"
     assert mesa.d._pad_travado_pelo_lancamento == (JOGO_A, EPOCH_B), "a trava nasce depois"

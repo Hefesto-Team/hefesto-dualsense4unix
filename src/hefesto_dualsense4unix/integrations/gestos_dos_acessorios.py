@@ -21,8 +21,6 @@ logger = get_logger(__name__)
 
 PS_BUTTON = "ps"
 
-#: Gatilho analógico (0 a 255): aperta aos 20 % e só solta abaixo de 10 %, para o ruído do curso
-#: não picotar o gesto.
 GATILHO_APERTA = 51
 GATILHO_SOLTA = 26
 
@@ -34,11 +32,8 @@ PS_DUPLO_S = 0.4
 CAMADA_PADRAO_S = 6.0
 PARAR_SEGURANDO_S = 0.6
 NIVEL_AO_VIVO_INTERVALO_S = 1 / 20
-#: O membro que já estava apertado até este tempo antes do PS entra no gesto: ninguém aperta
-#: os dois no mesmo milissegundo.
 GRACA_DO_PS_S = 0.1
 
-#: O membro do gesto → o nome do botão que o jogo deixa de receber.
 BOTAO_DO_MEMBRO: dict[str, str] = {
     "r2": "r2_btn",
     "l2": "l2_btn",
@@ -50,7 +45,6 @@ BOTAO_DO_MEMBRO: dict[str, str] = {
 _MEMBROS_NORMAIS = ("r2", "l2", "r1", "l1")
 _MEMBROS_DO_LADO_UNICO = (*_MEMBROS_NORMAIS, "dpad_left", "dpad_right")
 
-#: Os gestos que a modificação recebe (o vocabulário público).
 GESTOS = (
     "sobe", "desce", "para", "perfil_seguinte", "perfil_anterior", "nivel_ao_vivo", "surto",
     "camada",
@@ -64,7 +58,6 @@ class Opcoes:
     limiar_fundo: float = LIMIAR_DO_FUNDO_PADRAO
     acelerador: bool = False
     camada: bool = False
-    #: Segundos sem gesto até a camada desligar sozinha; 0 = «até eu desligar».
     camada_s: float = CAMADA_PADRAO_S
     lado_unico: bool = False
     gestos_no_nativo: bool = False
@@ -106,17 +99,13 @@ class _Mao:
     """O que a máquina guarda de UM controle."""
 
     t: float = 0.0
-    #: Os membros que o gesto cala ao jogo: entram na borda e saem quando o próprio membro solta.
     calados: set[str] = field(default_factory=set)
-    #: Quando cada membro foi visto apertado pela primeira vez (ausente = solto).
     vistos: dict[str, float] = field(default_factory=dict)
     ps_apertado: bool = False
     ps_toques: list[float] = field(default_factory=list)
     camada: bool = False
     camada_ate: float | None = None
-    #: O PS desta mão fez gesto (ou virou a camada): o toque dele não abre a Steam.
     usou_o_ps: bool = False
-    #: A camada virou neste PS: o toque pendente que espera o duplo é cancelado.
     camada_virou: bool = False
     repete_ate: float = 0.0
     r2_valor: float | None = None
@@ -126,8 +115,6 @@ class _Mao:
     l2_cruzou: bool = False
     segurou: dict[str, float] = field(default_factory=dict)
     parou_segurando: set[str] = field(default_factory=set)
-    #: A última pressão ``(L2, R2)`` lida deste controle: quem chama sem ela (o calar dos botões)
-    #: lê a mesma, senão o eixo sem o bit digital soltava e reapertava o membro no mesmo tique.
     gatilhos: tuple[int, int] | None = None
 
 
@@ -145,8 +132,6 @@ class GestosDosAcessorios:
         self._emitir = emitir
         self._relogio = relogio
         self._maos: dict[str | None, _Mao] = {}
-
-    # -- perguntas baratas ---------------------------------------------------
 
     def opcoes_de(self, de: str | None) -> Opcoes | None:
         """As opções que valem para o controle ``de``, ou None (os gestos não valem)."""
@@ -189,8 +174,6 @@ class GestosDosAcessorios:
         for chave in [c for c in self._maos if c not in manter]:
             del self._maos[chave]
 
-    # -- o que o jogo não vê ---------------------------------------------------
-
     def botoes_calados(self, de: str | None) -> frozenset[str]:
         mao = self._maos.get(de)
         if mao is None:
@@ -203,8 +186,6 @@ class GestosDosAcessorios:
         if mao is None:
             return frozenset()
         return frozenset(m for m in mao.calados if m in ("l2", "r2"))
-
-    # -- o tique -----------------------------------------------------------------
 
     def avaliar(
         self,
@@ -253,7 +234,7 @@ class GestosDosAcessorios:
 
         membros = opcoes.membros()
         for membro in list(mao.calados):
-            if membro not in membros:  # o «Lado único» foi desligado no meio do aperto
+            if membro not in membros:
                 mao.calados.discard(membro)
         for membro in membros:
             apertado = self._apertado(membro, botoes, gatilhos, segurando=membro in mao.vistos)
@@ -289,8 +270,6 @@ class GestosDosAcessorios:
             return cru >= (GATILHO_SOLTA if segurando else GATILHO_APERTA)
         return BOTAO_DO_MEMBRO[membro] in botoes
 
-    # -- o PS e a camada -----------------------------------------------------------
-
     def _toque_do_ps(self, mao: _Mao, opcoes: Opcoes, t: float, de: str | None) -> None:
         """A borda do PS: o segundo toque em 0,4 s liga ou desliga a camada (se a opção vale)."""
         recentes = [x for x in mao.ps_toques if t - x <= PS_DUPLO_S]
@@ -305,8 +284,6 @@ class GestosDosAcessorios:
         recentes.append(t)
         mao.ps_toques = recentes
 
-    # -- cada membro -----------------------------------------------------------------
-
     def _dizer(self, de: str | None, gesto: str, valor: float) -> None:
         mao = self._maos.get(de)
         if mao is not None and gesto != "camada" and mao.camada and mao.camada_ate is not None:
@@ -315,7 +292,7 @@ class GestosDosAcessorios:
                 mao.camada_ate = mao.t + opcoes.camada_s
         try:
             self._emitir(de, gesto, valor)
-        except Exception as exc:  # quem escuta nunca derruba o tique
+        except Exception as exc:
             logger.warning("gesto_dos_acessorios_nao_saiu", gesto=gesto, err=str(exc))
 
     def _sobe(self, mao: _Mao, t: float, de: str | None) -> None:
@@ -446,5 +423,5 @@ __all__ = [
     "GATILHO_SOLTA",
     "GESTOS",
     "GestosDosAcessorios",
-    "Opcoes",  # (noqa-acento): nome da classe
+    "Opcoes",  # (noqa-acento)
 ]

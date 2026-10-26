@@ -130,7 +130,7 @@ def test_o_estilo_grava_gatilho_vibracao_e_uma_cor_por_unidade(
 
     prof = disco["perfil"]
     receita = estilos_de_jogo.POR_ROTULO["FPS"]
-    assert prof.triggers.left.mode == receita.l2.modo  # o L2 e o R2 são receitas separadas
+    assert prof.triggers.left.mode == receita.l2.modo
     assert prof.triggers.right.mode == receita.r2.modo == receita.gatilho
     assert prof.rumble.policy == receita.vibracao
     assert set(prof.controllers or {}) == {c["uniq"] for c in MESA}
@@ -165,7 +165,6 @@ def test_o_gatilho_sai_do_dono_dos_parametros(disco: dict[str, Any]) -> None:
         for disco_do_lado, dele in (("left", estilo.l2), ("right", estilo.r2)):
             spec = trigger_specs.get_spec(dele.modo)
             assert spec is not None, f"{estilo.rotulo}: gatilho fora do produto"
-            # os números do dono: a imersão do lado, ou os de partida do acionamento
             numeros = (
                 efeitos_de_imersao.ajustes_da_imersao(
                     efeitos_de_imersao.POR_CHAVE[dele.imersao], dele.modo, estilo.chave)
@@ -174,7 +173,7 @@ def test_o_gatilho_sai_do_dono_dos_parametros(disco: dict[str, Any]) -> None:
             tem = list(getattr(disco["perfil"].triggers, disco_do_lado).params)
             assert tem == esperado, (
                 f"{estilo.rotulo}/{disco_do_lado}: params {tem} != {esperado} do dono")
-            if spec.params and not esperado:  # pragma: no cover — defesa da régua
+            if spec.params and not esperado:  # pragma: no cover
                 sem_params.append(estilo.rotulo)
     assert not sem_params
 

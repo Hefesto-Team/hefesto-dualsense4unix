@@ -55,7 +55,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ProfileModeConfig,
 )
 
-PAGINA = "10-perfis.html"  # (noqa-acento) nome de arquivo
+PAGINA = "10-perfis.html"
 
 MESA = [
     {"pref": "p1", "uniq": "aabbcc000001", "jogador": 1, "cor": "cosmic-red",

@@ -217,7 +217,7 @@ class _LeitorDoPrimario:
     def request_reopen(self, reason: str = "") -> None:
         self.refresh_device()
 
-    def snapshot(self) -> Any:  # pragma: no cover — a bancada não lê input do P1
+    def snapshot(self) -> Any:  # pragma: no cover
         raise AssertionError("a bancada não usa o input do primário")
 
 
@@ -344,7 +344,6 @@ class Bancada:
             "hefesto_dualsense4unix.integrations.virtual_pad.make_virtual_pad",
             self._nascer_vpad,
         )
-        # Hermético: NUNCA o /sys/class/leds real (há DualSense de verdade na
         monkeypatch.setattr("hefesto_dualsense4unix.core.sysfs_leds.discover", lambda: {})
 
     def _nascer_vpad(self, _flavor: Any, *, player: int = 1, **_kw: Any) -> _VpadFalso:

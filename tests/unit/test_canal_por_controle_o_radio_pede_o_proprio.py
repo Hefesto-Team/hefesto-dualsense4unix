@@ -123,7 +123,7 @@ class TestORegistro:
                     registro.pedir(qual)
                     registro.abertos()
                     registro.soltar(qual)
-            except BaseException as exc:  # pragma: no cover - só se houver corrida
+            except BaseException as exc:  # pragma: no cover
                 erros.append(exc)
 
         fios = [threading.Thread(target=_pede, args=(u,)) for u in (UM, DOIS)]

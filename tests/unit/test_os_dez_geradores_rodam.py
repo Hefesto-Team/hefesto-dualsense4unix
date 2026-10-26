@@ -50,9 +50,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src/hefesto_dualsense4unix/interface"
 sys.path.insert(0, str(RAIZ / "src"))
 
-#: OS GERADORES, DERIVADOS DO DISCO — nunca uma lista escrita aqui. O gerador
-#: número onze nasce coberto, e nenhuma frente precisa lembrar de vir avisar
-#: este arquivo. É a mesma disciplina do `_DECORADORES_DE_FRAMEWORK`.
 GERADORES = sorted(p.name for p in INTERFACE.glob("aba[0-9][0-9].py"))
 
 
@@ -81,8 +78,6 @@ def bancada_de_prova(tmp_path_factory: pytest.TempPathFactory) -> pathlib.Path:
 
 def _rodar(nome: str, destino: pathlib.Path) -> subprocess.CompletedProcess[str]:
     ambiente = dict(os.environ)
-    # O DESVIO DA ESCRITA (`interface/onde.py`). Sem ele o gerador escreveria na
-    # bancada, e uma régua que muda o que mede não é régua.
     ambiente["HEFESTO_BANCADA"] = str(destino)
     ambiente["PYTHONPATH"] = str(RAIZ / "src")
     return subprocess.run(
@@ -167,8 +162,6 @@ def test_nenhuma_pagina_publicada_carrega_marcador_de_lint(monkeypatch) -> None:
     fora: list[str] = []
     for pagina in sorted(onde.PUBLICADO.glob("[0-9][0-9]-*.html")):
         texto = pagina.read_text(encoding="utf-8")
-        # Tira os dois tipos de comentário ANTES de procurar: o que sobra é o
-        # que a página mostra.
         visivel = re.sub(r"<!--.*?-->", "", texto, flags=re.S)
         visivel = re.sub(r"/\*.*?\*/", "", visivel, flags=re.S)
         for linha in visivel.splitlines():

@@ -92,7 +92,6 @@ def test_todo_gatilho_da_receita_e_um_modo_real() -> None:
     reais = {p.name for p in PRESETS}
     assert len(reais) >= 10, "a tabela de acionamentos do produto veio vazia — a régua ficaria cega"
 
-    # A receita com a chave que saiu da lista de onze vale pelo acionamento que a tela mostra.
     ruins = []
     for e in estilos.ESTILOS:
         if e.gatilho is None:

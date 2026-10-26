@@ -147,7 +147,6 @@ def _codigo_para_colorway() -> dict[str, tuple[str, str]]:
 
 CORES = _codigo_para_colorway()
 
-#: `mesa_do_estado` escrevia no lugar do nome quando a cor não era legível —
 COR_DESCONHECIDA = "Não sei"
 
 
@@ -272,7 +271,6 @@ class LeitorDeCor:
         self._agenda.esquecer_ausentes(vivos)
 
 
-#: linhas diziam «o catálogo do produto tem DUAS máscaras, não três» e
 NOME_DA_MASCARA = {
     "dualsense": "DualSense",
     "xbox": "Xbox 360",
@@ -280,18 +278,11 @@ NOME_DA_MASCARA = {
 }
 
 
-#: A FAMÍLIA DOS BOTÕES DE FACE que a tela escreve, e `""` é o desenho do DualSense
-#: (✕ ○ □ △). As duas outras trocam só o rótulo dos quatro botões da face, pela
-#: POSIÇÃO: sul, leste, oeste, norte.
 LETRAS_DA_FACE: dict[str, dict[str, str]] = {
     "xbox": {"cross": "A", "circle": "B", "square": "X", "triangle": "Y"},
     "nintendo": {"cross": "B", "circle": "A", "square": "Y", "triangle": "X"},
 }
 
-#: `ControleDeclarado.modo` (a chave física do controle genérico) -> família. O
-#: `dinput` fica de fora de propósito: a disposição dos botões nele varia de
-#: modelo para modelo, e o produto não sabe qual. Sem resposta, o desenho fica
-#: no do DualSense, que é «não sei».
 FAMILIA_DO_MODO: dict[str, str] = {"xinput": "xbox", "switch": "nintendo"}
 
 _DECLARACAO_DO_DISCO: tuple[tuple[int, int, int] | None, Any] | None = None
@@ -450,14 +441,12 @@ def mesa_do_estado(
     for posicao, entrada in enumerate(conectados, start=1):
         uniq = str(entrada.get("uniq") or "")
         transporte = str(entrada.get("transport") or "").lower()
-        # guardou do sysfs) ou o da família, e o desenho fica no neutro: um
         cor = cores.get(uniq)
-        if cor is None or not getattr(cor, "codigo", ""):  # (noqa-acento): nome de atributo
-            # sem cor LIDA do aparelho: a declarada (`controles.cor`).
+        if cor is None or not getattr(cor, "codigo", ""):  # (noqa-acento)
             cor = cor_declarada(uniq, declaracao) or cor
         slug, nome = "", MODELO_GENERICO
         if cor is not None:
-            de_fabrica = str(getattr(cor, "codigo", "") or "")  # (noqa-acento): nome de atributo
+            de_fabrica = str(getattr(cor, "codigo", "") or "")  # (noqa-acento)
             slug, nome = CORES.get(de_fabrica, (str(getattr(cor, "id", "") or ""), ""))
             nome = nome or nome_do_aparelho(cor)
         fora.append(
@@ -468,22 +457,9 @@ def mesa_do_estado(
                 "cor": slug,
                 "nome": nome,
                 "botoes": familia_dos_botoes(uniq, declaracao),
-                # O TRAVESSÃO NÃO É "BT" — corrigido em 05/09/2026. Este
-                # `if/else` devolvia "BT" quando o daemon NÃO publicava o
-                # transporte, e a aba 01 afirmava rádio sobre um campo que
-                # ninguém leu. O dono da palavra curta é
-                # `pacotes.VIA_DO_TRANSPORTE`, cujo `.get(..., "")` já
-                # respondia certo na aba 02 — e o comentário DELE já afirmava
-                # (errado) que as duas traduções eram a mesma. Agora são.
-                # A razão está escrita no dono da frase longa
-                # (`app/actions/home_actions.py`): «'?' não é resposta —
-                # é a tela encolhendo os ombros».
                 "via": _via_do_transporte(transporte),
                 "transporte": transporte,
                 "alvo": (uniq == alvo) if alvo else (posicao == 1),
-                # O `mascara` da sessão é o FALLBACK, e não o valor: um daemon
-                # velho (sem `por_aparelho`) devolve exatamente o que devolvia
-                # antes deste campo existir.
                 "mascara": NOME_DA_MASCARA.get(
                     str(por_aparelho.get(uniq) or ""),
                     str(por_aparelho.get(uniq) or "") or mascara),
@@ -528,7 +504,6 @@ def frase_dos_transportes(usb: int, bt: int) -> str:
     return " · ".join(pedacos)
 
 
-#: (`interface/sensores.ESCALA_GYRO_GRAUS_S`), lida de lá.
 from hefesto_dualsense4unix.interface.cartao_do_controle import (  # noqa: E402
     L2_R2_THRESHOLD,
     accel_do_inputs,
@@ -616,7 +591,6 @@ def selo_do_mic(mudo: bool, sabemos: bool) -> str:
     return DESLIGADO if mudo else ATIVO
 
 
-#: <!-- noqa-acento: citação literal -->
 ATIVO = "ATIVO"
 DESLIGADO = "DESLIGADO"
 
@@ -631,7 +605,6 @@ def selo_do_alto_falante(mudo: bool, sabemos: bool) -> str:
 
 BOTAO_MIC_RETORNO = "retorno"
 
-#:      tambem.  <!-- noqa-acento: citação literal, a digitação não se limpa -->
 NINGUEM_TE_OUVE = ""
 
 LIMITE_DA_LINHA_DE_QUEM_OUVE = 46
@@ -683,8 +656,6 @@ def estado_do_card(
     apertados = {TRADUZ_GLIFO.get(str(nome), str(nome)) for nome in inputs.get("buttons") or []}
     l2 = int(inputs.get("l2_raw") or 0)
     r2 = int(inputs.get("r2_raw") or 0)
-    # Os gatilhos acendem pelo curso, nunca pelo nome: o `l2` na lista de botões
-    # não vale mais que o número que o próprio gatilho leu.
     apertados -= {"l2", "r2"}
     if l2 > L2_R2_THRESHOLD:
         apertados.add("l2")

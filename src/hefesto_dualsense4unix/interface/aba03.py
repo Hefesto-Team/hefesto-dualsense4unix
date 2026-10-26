@@ -4,8 +4,8 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).parent))
 import re
 import onde
-import mapa as _mapa  # a silhueta do DualSense
-import monta as monta_  # o MÓDULO, para ler CONECTADOS
+import mapa as _mapa
+import monta as monta_
 from monta import CSS_GLIFO, MESA, R, cor_da_zona, glifo, monta, trava_do_nativo
 
 sys.path.insert(0, str(R / "src"))
@@ -58,17 +58,13 @@ if _SEM_DICA or _DICA_ORFA:
 
 ROT = {p.name: p.label for p in PRESETS}
 
-#: O «Montar do zero» (`Custom`) não é ponto de partida nesta tela: os ajustes saíram dela.
 SEM_NA_LISTA = ("Custom",)
 
-#: o gesto do botão do Modo automático; o pintor (`data-modo-da-aba` do quadro) é do pacote
 GESTO_DO_MODO = "modo-dos-gatilhos"
 
-#: o quadro que governa o botão: a grade, menos o DualSense, o «Controle» e os chips
 GOVERNA = ".g2-grade > :is(.g2-gl:not(.g2-ds),.g2-rot,.g2-cel,.g2-sep:not(.g2-sep-cab))"
 DICA_DO_AUTOMATICO = "O jogo manda; o estilo do perfil ajusta"
 
-#: o que a cena do desenho mostra: (acionamento, imersão) por gatilho de cada controle
 CENA = {
     "p1": {"e": ("Machine", "rajada-que-sobe-sozinha"),
            "d": ("Bow", "corda-que-estica")},
@@ -81,36 +77,22 @@ ESTILO_DA_CENA = "FPS"
 MEU_ACIONAMENTO = "Freio tardio"
 MEU_IMERSAO = "Recuo do MK"
 
-#: as barras da área de criar: (chave, rótulo, mínimo, máximo, valor, unidade)
 BARRAS = [("inicio", "Início", 0, 9, 2, ""), ("fim", "Fim", 0, 9, 9, ""),
           ("forca", "Força", 0, 8, 4, ""), ("freq", "Frequência", 0, 255, 40, "Hz")]
 
-#: O ícone ao lado de «Controle» é o DualSense do mapa (16/10/2026): um arquivo de desenho manda.
 GLIFO_DO_DUALSENSE = _mapa.silhueta_do_dualsense(40)
 
-#: A «Intensidade do gatilho» (desenho de 18/10/2026, o pedido: «igual é na aba vibração»): um
-#: trilho por controle, de 0 a 200% e de 5 em 5, que multiplica a força do efeito que o estilo do
-#: jogo escolheu. O teto e o passo são os do trilho da «Força da vibração» da aba 05, e a linha tem o
-#: mesmo formato: o ícone, o trilho, o número e o `%`. O estilo continua escolhendo o efeito.
 TETO_DA_INTENSIDADE = round(RUMBLE_CUSTOM_MULT_MAX * 100)
 PASSO_DA_INTENSIDADE = 5
 ROTULO_DA_INTENSIDADE = "Intensidade do gatilho"
 DICA_DA_INTENSIDADE = ("Abaixo de 100% o efeito do gatilho fica mais fraco; acima, o fraco é reforçado, "
                        "até o máximo do gatilho")
 CAMPO_DA_INTENSIDADE = "intensidade-do-gatilho"
-#: A intensidade do desenho, por controle, em porcento. É a mesma cena da «Força da vibração».
 INTENSIDADE_DA_CENA = {"p1": 120, "p2": 70}
-#: O gesto do trilho (`data-papel`): o pacote a03 o atende e grava a escala em
-#: `controllers[uniq].triggers.intensidade` (segunda passagem, 20/10/2026).
 GESTO_DA_INTENSIDADE = "intensidade-do-gatilho"
-#: Onde a linha entra na grade: `acima` (sob o chip de cada controle, antes do L2 e do R2; a
-#: recomendada, como a «Força da vibração» logo sob o «Modelo» da 05) ou `abaixo` (depois do R2).
 ONDE_ENTRA_A_INTENSIDADE = "acima"
-#: O ícone da linha: o mesmo da «Força da vibração» da 05 (o controle inteiro, de uma cor só), do dono
-#: comum `mapa.glifo_do_controle`, porque a silhueta do mapa, de 22 px, vira borrão.
 GLIFO_DA_INTENSIDADE = glifo_do_controle()
 
-#: A força do aperto que o desenho mostra (o cru de 0 a 255); o produto escreve a leitura viva.
 FORCA_DA_CENA = {"p1": {"l2": 96, "r2": 200}, "p2": {"l2": 0, "r2": 0}}
 
 CSS = CSS_GLIFO + """
@@ -254,7 +236,7 @@ CSS += "".join(
     f"\n  .g2-forca .degraus i:nth-child({n}){{height:{round(36 * n / DEGRAUS_DA_FORCA)}px}}"
     for n in range(1, DEGRAUS_DA_FORCA + 1))
 CSS += "".join(
-    f'\n  .g2-forca:not([data-conectado="nao"]) .escada[data-nivel="{n}"] '  # (noqa-acento) valor
+    f'\n  .g2-forca:not([data-conectado="nao"]) .escada[data-nivel="{n}"] '
     f"i:nth-child(-n+{n}){{background:var(--purple)}}"
     for n in range(1, DEGRAUS_DA_FORCA + 1)) + "\n"
 
@@ -314,7 +296,7 @@ def _celula_da_imersao(pref, sig, vazio):
 
 
 def _marca(vazio):
-    return ' data-conectado="nao"' if vazio else ""  # (noqa-acento) valor
+    return ' data-conectado="nao"' if vazio else ""
 
 
 def _off(vazio):
@@ -564,7 +546,7 @@ def _conferir(doc):
 
     for c in vazios:
         pref = c["pref"]
-        exigir(f'data-controle="{pref}" data-conectado="nao"' in corpo,  # (noqa-acento) valor
+        exigir(f'data-controle="{pref}" data-conectado="nao"' in corpo,
                f"o lugar {pref.upper()} deixou de se dar por vazio")
         exigir(c["nome"] not in corpo, f"o nome do plástico {c['nome']!r} voltou a um lugar vazio")
         exigir(corpo.count(f'<option value="{TRAVESSAO}" selected disabled hidden>')
@@ -573,7 +555,7 @@ def _conferir(doc):
            and len(re.findall(rf'<option value="{TRAVESSAO}"[^>]*\bdisabled\b', corpo))
            == corpo.count('<select class="g2-i'),
            "um campo de escolha não oferece `—` ao piloto")
-    exigir('[data-conectado="nao"] select' in doc,  # (noqa-acento) valor
+    exigir('[data-conectado="nao"] select' in doc,
            "a trava do lugar vazio sumiu do CSS")
 
     _por_lugar = _enderecos_de_cada_lugar(corpo)
@@ -618,7 +600,7 @@ def _conferir(doc):
     exigir(len(re.findall(r'class="g2-forca(?: off)?"', corpo)) == n,
            "a linha da força do aperto perdeu um lugar")
     for classe in ("g2-cab", "g2-cel", "g2-forca", "g2-int"):
-        marcas = re.findall(rf'class="{classe}( off)?"[^>]*?(data-conectado="nao")?>', corpo)  # (noqa-acento) identificador ASCII
+        marcas = re.findall(rf'class="{classe}( off)?"[^>]*?(data-conectado="nao")?>', corpo)
         exigir(bool(vazios) and all(bool(off) == bool(vazio) for off, vazio in marcas),
                f"o `{classe}` vazio não tem a classe `off` que o piloto escreve, ou o cheio tem")
     exigir(corpo.index('class="g2-forca') < corpo.index('class="g2-cab'),
@@ -626,7 +608,6 @@ def _conferir(doc):
     exigir(' id="' not in GLIFO_DO_DUALSENSE and "<title>" not in GLIFO_DO_DUALSENSE,
            "o ícone do DualSense voltou a ter `id` e colidiria com outro desenho")
 
-    # A «Intensidade do gatilho» (18/10/2026): um trilho de 0 a 200 por lugar, no formato da 05
     trilhos = re.findall(rf'<input class="trilho arrasta"[^>]*data-campo="{CAMPO_DA_INTENSIDADE}"[^>]*>', corpo)
     exigir(len(trilhos) == n, f"a intensidade não tem um trilho por lugar ({n}): há {len(trilhos)}")
     for t in trilhos:

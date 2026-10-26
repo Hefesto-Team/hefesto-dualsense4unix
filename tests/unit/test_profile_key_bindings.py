@@ -69,7 +69,6 @@ def test_to_key_bindings_override_parcial() -> None:
         key_bindings={"triangle": ["KEY_C"], "r1": ["KEY_LEFTCTRL", "KEY_Z"]},
     )
     resolved = _to_key_bindings(profile)
-    # Override é explícito — não mescla com DEFAULT_BUTTON_BINDINGS.
     assert resolved == {
         "triangle": ("KEY_C",),
         "r1": ("KEY_LEFTCTRL", "KEY_Z"),

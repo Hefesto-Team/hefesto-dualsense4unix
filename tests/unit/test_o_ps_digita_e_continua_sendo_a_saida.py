@@ -205,8 +205,6 @@ def test_as_outras_vinte_e_uma_linhas_continuam_como_eram():
     assert "cross" in sem_dono, (
         "o `__STEAM__` escolhido para o X deixou de ir para a terceira sacola: "
         "a saída do PS vazou para os outros vinte e um.")
-    # O gatilho deixou de ser espelho do Cruz (O-GATILHO-VIRA-CLIQUE-SEM-LIGAR-O-CURSOR-01):
-    # a linha dele tem dono, e a tecla escolhida vai para o teclado.
     _m, teclado, sem_dono = acoes.resolver({"l2": "KEY_ESC"})
     assert "l2" not in sem_dono
     assert teclado.get("l2") == ("KEY_ESC",)

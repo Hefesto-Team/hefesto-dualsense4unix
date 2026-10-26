@@ -11,7 +11,7 @@ class _NaoMedidoSentinela:
 
     __slots__ = ()
 
-    def __repr__(self) -> str:  # pragma: no cover — só ajuda debug
+    def __repr__(self) -> str:  # pragma: no cover
         return "NAO_MEDIDO"
 
 

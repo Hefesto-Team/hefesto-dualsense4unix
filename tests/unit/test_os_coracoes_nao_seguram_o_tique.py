@@ -38,10 +38,8 @@ P4 = "aa:bb:cc:00:00:04"
 NA_VIBRACAO = (P1, P2)
 NA_HAPTICA = (P3, P4)
 
-#: O teto de tela da ponte de verdade: o serviço com o laço ocupado gasta todo.
 DEMORA_S = 0.25
 
-#: O que o tique pode gastar entregando os quatro batimentos.
 TETO_DO_TIQUE_MS = 20.0
 
 
@@ -209,12 +207,6 @@ def test_a_recusa_vai_ao_diario_uma_vez_por_episodio(
             f"{uniq}: {len(linhas)} linha(s) de recusa no diário, esperava uma por "
             f"episódio (duas): {linhas}")
 
-
-# O BATIMENTO NÃO DESFAZ O ARRASTE (13/10/2026, conferência do conjunto). O par do
-# batimento é lido no tique, e o batimento sai depois, na fila do controle. Se um
-# gesto de barra daquele controle ainda está no ar quando o tique lê, o batimento
-# entra atrás dele com o par de ANTES do arraste e o reenvia por cima do novo: a
-# barra mostra o motor calado e a mão sente o motor ligado até o próximo batimento.
 
 CHAVE_P1 = "aabbcc000001"
 

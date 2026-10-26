@@ -22,7 +22,7 @@ _ABA = re.compile(r'<a class="aba[^"]*" href="(\d\d-[a-z]+)\.html"')
 DOCUMENTOS = [
     INTERFACE / "topo.html",
     *sorted((RAIZ / "mockup").glob("[01]*.html")),
-    *sorted((INTERFACE / "paginas").glob("[01]*.html")),  # (noqa-acento) nome de pasta
+    *sorted((INTERFACE / "paginas").glob("[01]*.html")),  # (noqa-acento)
 ]
 
 

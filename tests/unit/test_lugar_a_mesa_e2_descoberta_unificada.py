@@ -137,9 +137,6 @@ def test_o_normalizador_e_do_aparelho_nao_de_uma_tabela_de_conhecidos() -> None:
     assert normalizar_eixo(1023, faixa_de_1023) == 255
 
 
-# --- 2. o DualSense sai bit a bit idêntico ao de hoje ------------------------
-
-
 def test_o_dualsense_sai_bit_a_bit_identico_ao_de_hoje() -> None:
     """Regressão do caminho quente: com a faixa 0..255 declarada, TODO valor sai"""
     reader = _reader_com(_caps_dualsense())

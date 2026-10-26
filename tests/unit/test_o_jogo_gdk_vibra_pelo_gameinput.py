@@ -81,9 +81,6 @@ def _casa(biblioteca: Path) -> Path:
     return biblioteca.parents[2]
 
 
-# --- a tabela -------------------------------------------------------------------------------
-
-
 def test_a_linha_do_gameinput_pede_n_b_nos_mesmos_sinais_da_peca_gdk() -> None:
     tabela = {r.id: r for r in rda.carregar_tabela()}
     gi, gdk = tabela["gdk-gameinput"], tabela["gdk-xgameruntime"]
@@ -96,9 +93,6 @@ def test_a_linha_do_gameinput_pede_n_b_nos_mesmos_sinais_da_peca_gdk() -> None:
         if ln.startswith("gdk-gameinput,")
     )
     assert not re.search(r"\b\d{5,}\b", linha), "appid embarcado na linha do GameInput"
-
-
-# --- o disco do jogo ------------------------------------------------------------------------
 
 
 def test_o_jogo_gdk_com_as_duas_pecas_recebe_os_dois_overrides(lar: Path) -> None:
@@ -146,9 +140,6 @@ def test_o_gameinput_sem_a_peca_gdk_nao_entra(lar: Path) -> None:
     assert rda.pecas_que_faltam(raiz) == (rda.NOME_DA_PECA_DO_HEFESTO,)
 
 
-# --- o arquivo do daemon e o wrapper --------------------------------------------------------
-
-
 def _daemon_de_mentira() -> SimpleNamespace:
     return SimpleNamespace(
         is_native_mode=lambda: False,
@@ -177,9 +168,6 @@ def test_os_dois_overrides_atravessam_o_wrapper_ate_o_processo_do_jogo(tmp_path:
         tmp_path, [f"WINEDLLOVERRIDES={_OS_DOIS}", f"WINEDLLPATH={_PASTA}"], com_peca=True
     )
     assert saida == (_OS_DOIS, _pasta_real(tmp_path))
-
-
-# --- a peça C, o pino e o install falam da mesma pasta --------------------------------------
 
 
 def test_a_peca_gdk_carrega_o_gameinput_da_pasta_que_o_python_confere() -> None:
@@ -221,9 +209,6 @@ def test_o_install_poe_o_gameinput_em_nativa_so_com_o_sha_do_pino() -> None:
     assert "sudo" not in bloco
 
 
-# --- o juiz dos bytes da régua --------------------------------------------------------------
-
-
 def _regua() -> object:
     caminho = _RAIZ / "scripts" / "ensaios" / "o_contrato_da_peca_gameinput.py"
     spec = importlib.util.spec_from_file_location("o_contrato_da_peca_gameinput", caminho)
@@ -259,8 +244,6 @@ def test_o_juiz_da_regua_aceita_o_report_certo_e_recusa_o_torto() -> None:
 
 def test_sem_dualsense_a_peca_responde_como_o_gameinput_do_proton() -> None:
     """Prova da D-2210-SEM-DUALSENSE-O-GAMEINPUT-DA-CASA-RESPONDE-COMO-O-DO-PROTON."""
-    # O pior caso é o de hoje: sem DualSense (modo Xbox, ou só pad de outra marca), o jogo GDK que
-    # lê a entrada pelo GameInput tem de receber o E_NOTIMPL do Proton e cair na XInput.
     fonte = (_FONTE / "gameinput.c").read_text(encoding="utf-8")
     for nome in ("HRESULT WINAPI GameInputCreate(", "HRESULT WINAPI GameInputInitialize("):
         corpo = fonte.split(nome, 1)[1].split("\n}\n", 1)[0]

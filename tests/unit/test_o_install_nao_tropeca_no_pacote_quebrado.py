@@ -33,8 +33,6 @@ from tests.unit.test_install_garante_deps_em_qualquer_familia import (
     _roda as _roda_com,
 )
 
-# O código de «pacote a meio» e a lista dos nomes são variáveis do install, e o
-# prelúdio da outra régua só traz funções: aqui elas vêm junto, do fonte.
 PRELUDO = "\n".join(
     [
         PRELUDO_BASE,
@@ -93,9 +91,11 @@ def _linhas(arquivo: Path) -> list[str]:
 
 
 def test_pacote_a_meio_o_apt_nao_e_chamado(tmp_path: Path) -> None:
-    # D-1710-O-INSTALL-NAO-CHAMA-O-APT-COM-PACOTE-A-MEIO
     """O caso da bancada: `iF`/`iU` no dpkg. Nenhum `apt-get` roda, e o recado diz
-    o pacote, o que é do sistema e os dois comandos."""
+    o pacote, o que é do sistema e os dois comandos.
+
+    Prova da D-1710-O-INSTALL-NAO-CHAMA-O-APT-COM-PACOTE-A-MEIO.
+    """
     binario = _bancada(tmp_path, dpkg=A_MEIO)
     proc = _roda(
         "run_pkg toolchain-c || echo RC=$?",
@@ -352,7 +352,6 @@ def test_o_install_nunca_reconfigura_remove_nem_segura_pacote_do_sistema() -> No
 
 
 INSTALL = (Path(__file__).resolve().parents[2] / "install.sh").read_text(encoding="utf-8")
-# Uma linha que EXECUTA o apt para instalar (com sudo), fora de texto impresso.
 _APT_QUE_INSTALA = re.compile(
     r"^\s*(?:if\s+(?:!\s+)?)?(?:_run_pkg_quieto\s+)?sudo\b[^#]*\bapt-get install\b"
 )
@@ -368,7 +367,7 @@ def test_todo_apt_get_install_do_install_passa_pela_checagem() -> None:
             continue
         vistos.append(linha.strip())
         if "_run_pkg_quieto sudo apt-get install" in linha:
-            continue  # o run_apt: o teste seguinte cobre
+            continue
         j = i - 1
         while j >= 0 and not re.match(r"^(?:\S+\(\) \{|\})$", linhas[j]):
             if "_avisa_pacote_a_meio" in linhas[j]:
@@ -420,20 +419,13 @@ def test_o_deb_com_tudo_em_ii_vai_ao_apt(tmp_path: Path) -> None:
     assert chamada.startswith("apt-get install -y ") and chamada.endswith("hefesto_1_all.deb")
 
 
-# A MENSAGEM DE QUEM DÁ CAUSA (17/10/2026). O `run_pkg` com pacote a meio devolve
-# um código próprio; o GTK e o wlrctl liam o 1 genérico e acrescentavam, depois do
-# aviso certo, uma causa errada («verifique a conexão», «não está nos repos»).
-
-
 def _trecho(padrao: str) -> str:
     achado = re.search(padrao, INSTALL, re.MULTILINE | re.DOTALL)
     assert achado is not None, f"trecho ausente em install.sh: {padrao}"
     return achado.group(0)
 
 
-# Do `run_pkg` do GTK obrigatório até o «GTK3 instalado».
 GTK = _trecho(r"^[ ]*(?:_rc_pkg=0\n[ ]*)?run_pkg python-gi .*?GTK3 instalado\\n'")
-# Do `run_pkg` do wlrctl até o `fi` que fecha o «instalou ou não».
 WLRCTL = _trecho(
     r"(?:^[ ]*_rc_pkg=0\n[ ]*run_pkg wlrctl|^[ ]*if run_pkg wlrctl).*?"
     r"brocellous/wlrctl\\n'\n[ ]*fi\n"
@@ -451,8 +443,6 @@ def test_o_gtk_com_pacote_a_meio_diz_o_pacote_e_nao_a_conexao(tmp_path: Path) ->
     assert proc.returncode == 42, saida
     assert "linux-image-7.2.6-76070206-generic" in saida
     assert "GTK3" in proc.stderr and "comando acima" in proc.stderr, proc.stderr
-    # «o comando acima» é a última linha antes do erro: o aviso do sistema sai uma vez só, e
-    # pode ter saído bem antes, num outro pacote que o install pediu
     assert "sudo apt-get install -f" in proc.stdout.rstrip().splitlines()[-1], proc.stdout
     assert not re.search(r"conex|\brepos\b", saida), saida
     assert _linhas(tmp_path / "pkg.log") == [], "o apt foi chamado com pacote a meio"

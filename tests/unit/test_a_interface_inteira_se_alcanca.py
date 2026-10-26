@@ -36,7 +36,7 @@ for _caminho in (str(RAIZ / "src"), str(RAIZ / "scripts")):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
-import chrome_sem_rede  # o ponto comum dos portões de página, sem a rede
+import chrome_sem_rede
 
 from tests.conftest import exigir_gi_real
 
@@ -140,7 +140,6 @@ def medir_pagina(navegador: Any, arquivo: pathlib.Path, nav_js: str) -> dict[str
             ".map(t => t.id).filter(Boolean)")
     finally:
         pg.close()
-    # Janela «aberta» sem nenhuma caixa dentro é o defeito: a página fica fora do alcance.
     saida: dict[str, Any] = {
         "parado": parado, "popup_parado": lei["popup"] and not lei["caixas"], "telas": {}}
     for tela in telas:
@@ -271,9 +270,6 @@ def test_a_barra_das_abas_e_a_calibracao_entram_na_navegacao(navegador: Any) -> 
         assert visiveis and not faltam, f"{pagina}: a navegação não enxerga {faltam[:5]}"
 
 
-# ---- as mordidas: tirar UMA cura de uma cópia e ver a régua reprovar ----------------------
-
-
 def _sem_o_contrato(texto: str) -> str:
     """A página sem o IIFE do alcance (do marcador até o fim do `<script id="base-comum">`)."""
     ini = texto.index(MARCA_DO_CONTRATO)
@@ -303,7 +299,6 @@ def _mordida(
 
 
 def test_morde_sem_o_contrato_do_alcance(navegador: Any, tmp_path: pathlib.Path) -> None:
-    # 06: tem a tela por âncora (sem o diálogo e o Tab preso a régua reprova); 01: tem a fita.
     assert _mordida(navegador, tmp_path, "06-navegacao.html", _sem_o_contrato)
     assert _mordida(navegador, tmp_path, "01-jogar.html", _sem_o_contrato)
 
@@ -328,8 +323,6 @@ def test_morde_sem_o_presente_do_aberta(navegador: Any, tmp_path: pathlib.Path) 
                        nav_js=velho.replace(" && presente(d)", ""))
     assert any("nasce com janela aberta" in a for a in achados), achados
 
-
-# ---- o teclado aciona e o foco volta: Enter e Espaço clicam, e o Esc devolve o foco -----------
 
 _JS_DO_GESTO = """() => {
   const NATIVO = 'a[href],button,input,select,textarea,summary';
@@ -375,7 +368,7 @@ def medir_o_teclado(
 
 
 def test_enter_e_espaco_clicam_o_gesto_e_o_esc_devolve_o_foco(navegador: Any) -> None:
-    # D-1610-A-INTERFACE-SE-ALCANCA-PELO-TECLADO-E-PELO-CONTROLE
+    """Prova da D-1610-A-INTERFACE-SE-ALCANCA-PELO-TECLADO-E-PELO-CONTROLE."""
     m = medir_o_teclado(
         navegador, MOCKUP / "01-jogar.html", MOCKUP / "06-navegacao.html", "acessibilidade")
     assert m["gesto"], "a 01 perdeu o gesto que não é botão: a régua não mede o Enter"

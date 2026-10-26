@@ -73,7 +73,6 @@ NOME_DO_ENVELOPE = {
     "set_report": "SET_REPORT · ioctl HIDIOCSOUTPUT, canal de controle",
 }
 
-#: A cor do passo 0. Azul porque é o que a barra do DualSense não mostra em
 COR_DO_PASSO_0 = (0, 0, 255)
 
 
@@ -663,7 +662,7 @@ class Folha:
             motivo = self._acender(coluna, linha, botao, recado)
         elif botao.acao == "audio":
             motivo = self._bombear(coluna, linha, botao, recado)
-        else:  # pragma: no cover — a tabela é fechada
+        else:  # pragma: no cover
             motivo = f"ato desconhecido: {botao.acao}"
         if motivo:
             recado.set_markup(f"<span foreground='#c01c28'>{_escapar(motivo)}</span>")
@@ -685,7 +684,7 @@ class Folha:
             f"--channel-map={af.CANAIS_DO_ALTO_FALANTE}",
             wav_do_tom(self.segundos),
         ]
-        saida = open(registro, "wb")  # noqa: SIM115 — fechado no `conferir`
+        saida = open(registro, "wb")  # noqa: SIM115
         try:
             proc = subprocess.Popen(argv, stdout=subprocess.DEVNULL, stderr=saida)
         except OSError as erro:

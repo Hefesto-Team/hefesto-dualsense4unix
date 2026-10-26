@@ -46,9 +46,6 @@ _ESQ, _DIR = rot.DESTINO_ANALOGICO_ESQUERDO, rot.DESTINO_ANALOGICO_DIREITO
 _RAIZ = Path(__file__).resolve().parents[2]
 
 
-# ---------------------------------------------------------------- 1. o roteador e o perfil
-
-
 def test_o_perfil_antigo_so_com_ligada_le_o_direito() -> None:
     """O perfil gravado antes desta sprint (o `destino` direito, sem `lado`) não muda."""
     from hefesto_dualsense4unix.profiles.schema import ProfileMovimentoConfig
@@ -84,9 +81,6 @@ def test_o_mouse_conta_como_apagado() -> None:
 def test_o_lado_desconhecido_e_recusado() -> None:
     with pytest.raises(rot.ArranjoRecusadoError):
         rot.montar(SimpleNamespace(lado="mouse"))
-
-
-# ---------------------------------------------------------------- 2. o daemon de verdade
 
 
 @pytest.fixture
@@ -253,9 +247,6 @@ def test_o_lado_torto_e_recusado(perfis: Path, tmp_path: Path) -> None:
             _mira_set(servidor, uniq=_P2, lado=torto)
 
 
-# ---------------------------------------------------------------- 3. o motor, P2 e P3
-
-
 class _Hub:
     """O `SensorHub` mínimo do motor: o giro e a aceleração de um controle."""
 
@@ -296,9 +287,6 @@ def test_o_motor_move_o_lado_de_cada_controle(
     assert (lx, ly) != (128, 128) and (rx, ry) == (128, 128), saida
     lx, ly, rx, ry = saida[_P3]
     assert (lx, ly) == (128, 128) and (rx, ry) != (128, 128), saida
-
-
-# ---------------------------------------------------------------- 4. a tela: a 02 e a Calibrar
 
 
 def _ligar_a_ponte_ao_servidor(monkeypatch: pytest.MonkeyPatch, servidor: Any) -> None:
@@ -362,7 +350,6 @@ def test_o_clique_no_lado_pela_02(
     cards = list(a02.pacote(_ctx(_lidos(servidor)))["cards"].values())
     assert [c["mira-lado"] for c in cards] == ["nenhum", _ESQ, "nenhum", "nenhum"]
 
-    # a Calibrar não liga nem escolhe lado: nem gesto, nem campo pintado
     import pacotes
 
     for nome in ("analogico-lado", "analogico-virtual"):

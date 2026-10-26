@@ -364,9 +364,7 @@ class TestInvarianteVpad06:
             "vpad dividindo VID/PID com o físico — a launch option persistida "
             "esconderia os dois (jogo com ZERO controles)"
         )
-        # o `uhid` é o Edge; sem ele, o Xbox 360 (a pergunta 6 da NO-MODO-XBOX-TUDO-FUNCIONA-01)
         esperado = (0x054C, 0x0DF2) if backend_esperado == "uhid" else (0x045E, 0x028E)
-        # UhidDualSense não tem campo vendor (constante do módulo, testada em
         assert (getattr(pad, "vendor", 0x054C), product) == esperado
 
 

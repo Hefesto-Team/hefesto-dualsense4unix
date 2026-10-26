@@ -24,7 +24,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 ESTE = Path(__file__).resolve().relative_to(RAIZ).as_posix()
 PASTAS = ("scripts", "tests", "src")
 
-#: o arquivo, a data e o motivo; a isenção que deixou de casar reprova (não fica de enfeite).
 ISENTOS: dict[str, str] = {
     "tests/unit/test_as_abas_vivas_falam_com_o_daemon_certo.py": (
         "10/10/2026: é a régua que proíbe a árvore dela nas abas vivas; o caminho literal é o "

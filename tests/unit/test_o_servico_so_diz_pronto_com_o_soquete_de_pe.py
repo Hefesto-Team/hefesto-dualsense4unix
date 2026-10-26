@@ -36,9 +36,6 @@ def _campo_da_unit(nome: str) -> str | None:
     return achados[0] if achados else None
 
 
-# -- a unit -----------------------------------------------------------------------------
-
-
 def test_a_unit_e_notify_com_o_prazo_da_subida_escrito() -> None:
     """MORDIDA: volte `Type=notify` para `simple` (ou tire o prazo) e isto reprova."""
     assert _campo_da_unit("Type") == "notify"
@@ -48,8 +45,10 @@ def test_a_unit_e_notify_com_o_prazo_da_subida_escrito() -> None:
 
 
 def test_o_prazo_da_unit_e_o_do_codigo() -> None:
-    # D-1610-A-UNIT-DO-DAEMON-E-NOTIFY-COM-PRAZO-DE-30-S
-    """O `TimeoutStartSec` da unit e `PRAZO_DA_PARTIDA_S` são o mesmo número (um dono)."""
+    """O `TimeoutStartSec` da unit e `PRAZO_DA_PARTIDA_S` são o mesmo número (um dono).
+
+    Prova da D-1610-A-UNIT-DO-DAEMON-E-NOTIFY-COM-PRAZO-DE-30-S.
+    """
     prazo = _campo_da_unit("TimeoutStartSec")
     assert prazo is not None and float(prazo.rstrip("s")) == sd_notify.PRAZO_DA_PARTIDA_S
 
@@ -58,9 +57,6 @@ def test_a_unit_mantem_o_restart_e_o_onfailure() -> None:
     """A cura não tira o respawn nem a devolução do controle ao Linux."""
     assert _campo_da_unit("Restart") == "on-failure"
     assert _campo_da_unit("OnFailure") == "hefesto-dualsense4unix-presenca.service"
-
-
-# -- o aviso ----------------------------------------------------------------------------
 
 
 @pytest.fixture
@@ -105,9 +101,6 @@ def test_notify_socket_sem_ouvinte_nao_levanta(
     assert sd_notify.pronto() is False
 
 
-# -- o daemon ---------------------------------------------------------------------------
-
-
 class _Cena:
     """O que o daemon de mentira viu, na ordem: o aviso, o IPC escutando, o resto."""
 
@@ -137,7 +130,6 @@ def cena(tmp_path: Path, monkeypatch: pytest.MonkeyPatch,
          ouvinte: socket.socket) -> Iterator[_Cena]:
     """Um `Daemon` real com a lista de subsystems reduzida: o IPC, um marcador depois dele e
     as paradas que fecham o laço. Nada de som, de uinput nem de rádio."""
-    # O caminho do soquete unix cabe em 108 bytes: o `tmp_path` do pytest estoura isso.
     run = Path(tempfile.mkdtemp(prefix="sdr", dir="/tmp"))
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(run))
     c = _Cena()

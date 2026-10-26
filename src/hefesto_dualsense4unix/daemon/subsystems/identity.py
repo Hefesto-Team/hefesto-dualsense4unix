@@ -30,14 +30,6 @@ logger = get_logger(__name__)
 
 _CONTROLLERS_FILE = "controllers.json"
 
-#: R-23: versão do SCHEMA de ``controllers.json``. É o que decide se o mapa
-#: gravado ainda vale — o ``boot_id`` deixou de decidir. Bump OBRIGATÓRIO sempre
-#: que a REGRA de numeração mudar: um arquivo de versão diferente é descartado UMA
-#: vez e a sessão seguinte renumera com a regra nova. Sem isso, a numeração torta
-#: gravada pela versão anterior (medida numa bancada: externo com o slot 1,
-#: DualSense em 2 e 3) sobreviveria para sempre, justamente porque agora o mapa
-#: NÃO morre mais no reboot.
-#: 2 = R-23/R-24 (slot sobrevive ao boot + espaço de numeração único).
 CONTROLLERS_SCHEMA_VERSION = 3
 
 ORDER_FIELD = "order"
@@ -72,8 +64,6 @@ FRASE_SEM_CRACHA = (
     "lembrar dele no próximo jogo."
 )
 
-#: dois namespaces podia sumir quando o tick do externo e o sync do DualSense
-#: salvavam intercalados). ``external_identity.py`` IMPORTA e usa este MESMO
 CONTROLLERS_FILE_LOCK = threading.Lock()
 
 
@@ -210,24 +200,17 @@ class ControllerIdentityRegistry:
         self._dirty = False
         self._loaded = False
         self._vpad_logged: set[str] = set()
-        #: ``uniq`` cru de um controle SEM serial e devolve o endereço que o
         self._cracha_provider: Callable[[str], str | None] | None = None
         self._cracha: dict[str, str] = {}
         self._sem_cracha: set[str] = set()
-        #: a fila é ÚNICA entre DualSense e externos, então a atribuição une
-        #: esses lugares ao ``ocupados`` — um DualSense que entra DEPOIS de um
         self._extra_reserved: Callable[[], set[int]] | None = None
-        #: nenhum DualSense pode exibir), mas ``_extra_reserved`` não sabe
         self._external_present: Callable[[], set[int]] | None = None
         self._soltar_os_externos: Callable[[], object] | None = None
-        #: D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA: o instante em que o jogo
-        #: tomou a autoridade (None = o prazo corre), e quem segura o dos externos.
         self._prazos_seguros_desde: float | None = None
         self._segurar_os_externos: Callable[[bool], object] | None = None
         self._auto_colors = True
         self._auto_numbers = True
         self._auto_brightness = 1.0
-        #: provider lê sem I/O e o `state_full` lê também. Só a RESPOSTA
         self._fabrica: dict[str, Any] = {}
         self._agenda_da_fabrica: Any = None
         self._perguntar_a_fabrica: Callable[[str], Any] | None = None
@@ -523,7 +506,6 @@ class ControllerIdentityRegistry:
         ocupados = set(self._ordem.values())
         prov = self._extra_reserved
         if prov is not None:
-            # externos detêm (um DualSense que conecta DEPOIS de um externo
             with contextlib.suppress(Exception):
                 ocupados |= {int(s) for s in prov()}
         rank = max(ocupados) + 1 if ocupados else 1
@@ -1419,7 +1401,6 @@ class ControllerIdentityRegistry:
             if data is None:
                 return
             if data.get("version") != CONTROLLERS_SCHEMA_VERSION:
-                # sempre, agora que nada mais expira. NUM-01 é exatamente um
                 logger.info(
                     "identity_arquivo_de_schema_antigo_descartado",
                     versao_arquivo=data.get("version"),
@@ -1711,9 +1692,6 @@ def relogio_do_lugar_guardado() -> float:
     return relogio_do_prazo()
 
 
-# Mora no fim do módulo porque o mapa de canais cita este arquivo por linha.
-#: O sufixo da cópia do ``controllers.json`` ilegível, guardada ao lado antes da
-#: primeira escrita sobre ele.
 SUFIXO_DO_ILEGIVEL = ".ilegivel-"
 
 

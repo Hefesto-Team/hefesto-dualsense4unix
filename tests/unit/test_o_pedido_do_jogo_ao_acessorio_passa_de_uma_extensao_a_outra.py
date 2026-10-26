@@ -44,7 +44,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 DOC = RAIZ / "docs" / "protocol" / "porta-das-modificacoes.md"
 LER = "ler:jogo.acessorio"
 PUBLICAR = "publicar:jogo.acessorio"
-F = "funcoes"  # (noqa-acento) chave do contrato
+F = "funcoes"  # (noqa-acento)
 INVALIDO = CODE_INVALID_PARAMS
 
 
@@ -61,7 +61,7 @@ class _Mod:
 
     def __init__(self, caminho: Path) -> None:
         self.sock = socket.socket(socket.AF_UNIX)
-        self.sock.settimeout(3)  # a leitura sem resposta estoura aqui, e o teste não fica preso
+        self.sock.settimeout(3)
         self.sock.connect(str(caminho))
         self.arquivo = self.sock.makefile("rb")
         self.proximo = 0
@@ -150,8 +150,6 @@ def _quem_publica_e_quem_le() -> dict[str, tuple[list[str], bool]]:
     return {"b": ([PUBLICAR], False), "a": ([LER], True)}
 
 
-# 1. A permissão, o tópico e o envelope.
-
 def test_o_topico_e_as_duas_permissoes_existem_e_a_lista_de_publicaveis_e_fechada() -> None:
     assert permissao_valida(LER) and permissao_valida(PUBLICAR)
     assert TOPICOS_DE_LEITURA["jogo.acessorio"] == (EventTopic.JOGO_ACESSORIO,)
@@ -164,14 +162,14 @@ def test_o_topico_e_as_duas_permissoes_existem_e_a_lista_de_publicaveis_e_fechad
 def test_o_manifesto_aceita_publicar_e_ler_o_jogo_acessorio_e_recusa_publicar_o_que_nao_existe(
 ) -> None:
     base: dict[str, Any] = {
-        "id": "ponte", "nome": "Ponte", "versao": "0.1", "api": ">=1,<3",  # (noqa-acento) contrato
+        "id": "ponte", "nome": "Ponte", "versao": "0.1", "api": ">=1,<3",  # (noqa-acento)
         "licenca": "MIT",
-        "tipos": ["tema"], "tema": {},  # (noqa-acento) chave do contrato
+        "tipos": ["tema"], "tema": {},
     }
-    m = Manifesto(**base, permissoes=[LER, PUBLICAR])  # (noqa-acento) chave do contrato
+    m = Manifesto(**base, permissoes=[LER, PUBLICAR])
     assert set(m.permissoes) == {LER, PUBLICAR}
     with pytest.raises(ValueError, match="permissão desconhecida"):
-        Manifesto(**base, permissoes=["publicar:jogo.vibracao"])  # (noqa-acento) chave do contrato
+        Manifesto(**base, permissoes=["publicar:jogo.vibracao"])
 
 
 def test_quem_le_recebe_com_a_origem_de_quem_publicou_e_o_t_do_servico() -> None:
@@ -206,8 +204,6 @@ def test_a_assinatura_do_jogo_acessorio_usa_a_fila_de_256() -> None:
 
     _correr(_quem_publica_e_quem_le(), corpo)
 
-
-# 2. As recusas.
 
 def test_sem_a_permissao_a_porta_recusa_com_32010_e_ninguem_recebe() -> None:
     async def corpo(_p: Porta, _b: EventBus, c: dict[str, _Mod]) -> None:
@@ -258,8 +254,6 @@ def test_dados_ausentes_ou_que_nao_sao_objeto_sao_recusados() -> None:
     _correr(_quem_publica_e_quem_le(), corpo)
 
 
-# 3. Quem publica não recebe o próprio evento.
-
 def test_quem_publica_nunca_recebe_o_proprio_evento() -> None:
     async def corpo(_p: Porta, _b: EventBus, c: dict[str, _Mod]) -> None:
         await c["b"].publicar({"vibrar": 0.1})
@@ -272,8 +266,6 @@ def test_quem_publica_nunca_recebe_o_proprio_evento() -> None:
     todos = ([LER, PUBLICAR], True)
     _correr({"a": todos, "b": todos, "c": todos}, corpo)
 
-
-# 4. O zero no fim.
 
 def test_a_extensao_que_publicou_e_sai_deixa_o_zero_para_quem_assina() -> None:
     async def corpo(_p: Porta, _b: EventBus, c: dict[str, _Mod]) -> None:
@@ -304,9 +296,12 @@ def test_quem_ja_tinha_zerado_ou_nunca_publicou_nao_deixa_zero_nenhum() -> None:
 
 
 def test_a_publicacao_parcial_nao_esconde_a_funcao_que_ficou_acima_de_zero() -> None:
-    """Quem manda só a função que mudou (vibrar, depois girar em 0) deixa o vibrar preso."""
-    # D-1810-UMA-EXTENSAO-PUBLICA-O-PEDIDO-DO-JOGO-AO-BRINQUEDO-PELA-PORTA
-    # D-1910-O-PEDIDO-DO-JOGO-SE-CHAMA-JOGO-ACESSORIO-E-AS-FUNCOES-SAO-DAS-EXTENSOES
+    """Quem manda só a função que mudou (vibrar, depois girar em 0) deixa o vibrar preso.
+
+    Prova de:
+    D-1810-UMA-EXTENSAO-PUBLICA-O-PEDIDO-DO-JOGO-AO-BRINQUEDO-PELA-PORTA,
+    D-1910-O-PEDIDO-DO-JOGO-SE-CHAMA-JOGO-ACESSORIO-E-AS-FUNCOES-SAO-DAS-EXTENSOES.
+    """
 
     async def corpo(_p: Porta, _b: EventBus, c: dict[str, _Mod]) -> None:
         await c["b"].publicar({"vibrar": 0.8})
@@ -333,8 +328,6 @@ def test_a_17a_funcao_da_mesma_extensao_e_recusada_e_a_que_ja_usou_segue() -> No
 
     _correr(_quem_publica_e_quem_le(), corpo)
 
-
-# 5. O teto de 20 por segundo por extensão.
 
 def test_a_21a_publicacao_no_mesmo_segundo_e_recusada_e_o_segundo_seguinte_libera() -> None:
     relogio = _Relogio()
@@ -366,8 +359,6 @@ def test_a_publicacao_recusada_nao_conta_no_teto() -> None:
 
     _correr(_quem_publica_e_quem_le(), corpo, relogio)
 
-
-# 6. O documento da porta.
 
 def test_a_doc_da_porta_descreve_o_metodo_o_topico_o_zero_e_o_teto() -> None:
     texto = DOC.read_text(encoding="utf-8")

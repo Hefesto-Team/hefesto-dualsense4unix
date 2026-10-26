@@ -99,7 +99,7 @@ def test_o_custo_da_foto_tem_teto_qualquer_que_seja_o_nome_do_filho(
 
     foto = canario._fotografar_tudo_de_aviso()
 
-    resto = 1  # launch_env/default.env
+    resto = 1
     assert len(chamadas) <= TETO + resto, len(chamadas)
     pasta = str(_estado(lar) / "uma-pasta-qualquer")
     assert foto[pasta][2] == canario._CANARIO_PESADO
@@ -277,7 +277,7 @@ def test_o_link_nao_e_seguido_e_so_o_de_fora_e_nomeado(
     sessao: Any = _SessaoFalsa()
     canario.pytest_sessionfinish(sessao, 0)
 
-    assert resumos_da_foto <= 3, resumos_da_foto  # vitoria.json, default.env, kernel.log
+    assert resumos_da_foto <= 3, resumos_da_foto
     assert not [c for c in chamadas if "fora-da-arvore" in c]
     saida = capsys.readouterr().out
     assert "casa-de-fora" in saida

@@ -91,10 +91,6 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-#: Vars que o wrapper aceita exportar (allowlist ESPELHADA em
-#: `assets/hefesto-launch.sh` — mudar aqui exige mudar lá). Qualquer outra
-#: linha no arquivo é ignorada pelo wrapper (fail-safe contra arquivo
-#: corrompido/adulterado exportando LD_PRELOAD e afins).
 ENV_ALLOWLIST = (
     "SDL_GAMECONTROLLER_IGNORE_DEVICES",
     "SDL_JOYSTICK_HIDAPI",
@@ -107,14 +103,6 @@ ENV_ALLOWLIST = (
     "PROTON_ENABLE_MHWILDS_USB_AUDIO",
 )
 
-# `PAR_DUALSENSE_FISICO` (do dono, `core/numeros_da_sony.py`) é o que as listas de ignorar do
-# SDL e do Proton escondem do jogo. O nosso pad usa outro PID em toda máscara DualSense, e no
-# `/proc/bus/input/devices` o jogo vê os dois lado a lado (quem os separa é o `HID_PHYS`):
-#
-#     event2   Sony ... DualSense Wireless Controller       054c:0ce6  (físico)
-#     event6   DualSense Wireless Controller (Hefesto P1)   054c:0df2  (nosso)
-
-#: O pad virtual que o Steam Input cria (Valve, `28de:11ff`).
 PAR_STEAM_INPUT_VIRTUAL = (0x28DE, 0x11FF)
 
 _MASCARAS_SO_EVDEV = frozenset({"xbox", "nintendo"})
@@ -174,8 +162,6 @@ def valor_disable_hidraw(pares: Iterable[tuple[int, int]]) -> str:
     return compor_lista_vidpid(pares, maiusculas=True)
 
 
-#: O valor de HOJE, byte a byte: o DualSense físico E o espelho do Steam Input.
-#:
 _IGNORE_VALUE = valor_ignore_devices(
     (PAR_DUALSENSE_FISICO, PAR_STEAM_INPUT_VIRTUAL)
 )
@@ -519,7 +505,6 @@ def _modo_da_ponte(ponte: ponte_escada.Ponte) -> Any:
     )
 
     if ponte.kind == ponte_escada.KIND_GAMEPAD:
-        # máscara DualSense no caminho DualSense é o uhid, a Xbox no caminho
         return ProfileModeConfig(
             kind="gamepad",
             gamepad_flavor=normalizar_gamepad_flavor(ponte.mascara),
@@ -922,8 +907,6 @@ def arm_launch_profile(
 
     from hefesto_dualsense4unix.daemon.subsystems.game_signal import o_arme_do_proprio_jogo
 
-    # A autoridade que é do PRÓPRIO jogo deixa o arme recriar o pad (D-2310-O-ARME-NAO-
-    # ENCERRA-A-AUTORIDADE-DO-PROPRIO-JOGO); a de outro jogo vivo segue recusando.
     do_proprio = _a_autoridade_e_do_proprio_jogo(daemon, appid)
     with o_arme_do_proprio_jogo(appid if do_proprio else None):
         return _armar_o_jogo(daemon, appid, epoch, base_dir)
@@ -941,7 +924,6 @@ def _armar_o_jogo(
         return {"appid": appid, "armado": False, "motivo": "freestyle_ligado"}
 
     na_allowlist = appid in steam_input_appids()
-    # A roupa que o `materialize` gravou (D-2210-A-ROUPA-VALE-PARA-O-JOGO-E-VOLTA-NO-FIM).
     roupa = ROUPA_PADRAO if na_allowlist else roupa_gravada(appid, base_dir, lido_ate=epoch)
 
     profile = None
@@ -981,8 +963,6 @@ def _armar_o_jogo(
                 err=str(exc),
             )
 
-    # faz o Hefesto CONTINUAR FUNCIONANDO, com a saída sendo xbox ou DualSense e
-    # (`CONTROLE-SONY-MEDIDO-01`, seção A INVERSÃO): com o DualSense físico e
     ativacao = _ativar_o_perfil_do_lancamento(
         daemon, profile, appid=appid, na_allowlist=na_allowlist
     )
@@ -1002,12 +982,11 @@ def _armar_o_jogo(
             "armado": False,
             "motivo": "allowlist_steam_input",
             "supressao": supressao,
-            "ativacao": ativacao,  # chave de payload, como a `supressao` ao lado (noqa-acento)
+            "ativacao": ativacao,  # (noqa-acento)
         }
 
     mode = getattr(profile, "mode", None)
     ponte_perfil = ponte_do_lancamento(profile, na_allowlist=na_allowlist)
-    # pragmata2), e aí o produto armaria um e leria o carimbo do outro.
     ponte_gravada = ponte_escada.ponte_do_carimbo(getattr(profile, "ponte", None))
 
     ponte_de_pe = ponte_perfil
@@ -1113,7 +1092,6 @@ def _armar_o_jogo(
             mascara_viva=flavor_pos,
             motivo=divergencia,
         )
-    # e para a divergência acima chegar ao `state_full` pelo mesmo caminho de
     with escrita_na_hora():
         materialize_launch_env(daemon)
     ponte_entregue = ponte_gravada if veio_do_carimbo else ponte_perfil
@@ -1138,7 +1116,7 @@ def _armar_o_jogo(
         "ponte_confirmada": (
             ponte_gravada.chave if ponte_gravada is not None else None
         ),
-        "ativacao": ativacao,  # chave de payload, como a `supressao` ao lado (noqa-acento)
+        "ativacao": ativacao,  # (noqa-acento)
     }
 
 
@@ -1208,16 +1186,7 @@ def compose_env(
     "carregamento completo" que o botão da GUI sempre prometeu.
     """
     env: dict[str, str] = {}
-    # O `SDL_GAMECONTROLLER_IGNORE_DEVICES` esconde o DualSense físico do SDL
-    # passava trivialmente sobre uma lista incompleta. Com 2 DualSense físicos
     tem_cobertura = cobertura_total(backends=backends, fisicos=fisicos)
-    # O script `proton` do GE apaga o IGNORE no ramo Wayland com o Steam Input
-    # desligado (11-7 `:2640-2641`), e o físico segue escondido sem ele: o winebus
-    # do GE ignora todo Sony no barramento SDL (patches 0014 e 0177, «ignoring SDL
-    # Sony controller»), o udev adia o evdev, e o `PROTON_DISABLE_HIDRAW` que o
-    # ramo não toca fecha o hidraw (A-MASCARA-DUALSENSE-SOBREVIVE-AO-SCRIPT-DO-GE-…).
-    # O `PROTON_SONY_AUTO_XINPUT` do 11-8 (`setdefault`) não se compõe aqui: a
-    # opção por jogo chega depois destas envs no `exec env` do wrapper.
     if not native_mode and emulation_enabled and backends:
         if flavor in _MASCARAS_SO_EVDEV:
             env["SDL_JOYSTICK_HIDAPI"] = "0"
@@ -1230,7 +1199,6 @@ def compose_env(
                 env["PROTON_DISABLE_HIDRAW"] = disable
             if tem_cobertura:
                 env["SDL_GAMECONTROLLER_IGNORE_DEVICES"] = ignore
-        # PS-L3-MASCARA-01: o DualSense em uinput também esconde o físico.
         if not tem_cobertura:
             logger.info(
                 "launch_env_ignore_omitido_sem_cobertura",
@@ -1240,11 +1208,8 @@ def compose_env(
             )
     env["__GL_SHADER_DISK_CACHE"] = "1"
     env["__GL_SHADER_DISK_CACHE_SKIP_CLEANUP"] = "1"
-    # Inócua para DualSense/Xbox; entra em toda variante, como o preload.
     env["SDL_GAMECONTROLLER_USE_BUTTON_LABELS"] = "0"
     env["SDL_ACCELEROMETER_AS_JOYSTICK"] = "0"
-    # HAPTICA-NATIVA-01 (17/09/2026): a vibração do DualSense viaja como ÁUDIO —
-    #   a pergunta que a RE Engine faz para achar o alvo (0103). Sem DualSense
     env["PROTON_KEEP_SONY_AUDIO_ENDPOINT_VISIBLE"] = "1"
     env["PROTON_ENABLE_MHWILDS_USB_AUDIO"] = "1"
     return env
@@ -1529,7 +1494,6 @@ class ModoAntecipado:
     motivo: str
     fisicos: int = 0
     pronto_para_troca: bool = False
-    #: A roupa do pad para o jogo (`a_roupa_do_jogo`); o Edge é a de hoje.
     roupa: int = ROUPA_PADRAO
 
     def como_estado(self) -> str:
@@ -1594,8 +1558,6 @@ def _modo_antecipado(
         )
     mascara = _mascara_prevista(profile, mode, flavor_atual=flavor_atual, identidade=identidade)
     if kind == "desktop":
-        # que abriu na Navegação fica com o DualSense de plástico (que o Hefesto
-        # fora do Modo Nativo o jogo não vê o DualSense de plástico, com perfil ou
         return ModoAntecipado(
             native=False, emulacao=False, mascara=mascara,
             backends=_backends_da_troca(
@@ -1615,12 +1577,10 @@ def _modo_antecipado(
                 backends=("uinput",), motivo=f"perfil gamepad {flavor}",
             )
         if normalizar_caminho(getattr(mode, "caminho", None)) == "xbox":
-            # PS-L3-MASCARA-01: o caminho Xbox com a máscara DualSense é o Edge
             return ModoAntecipado(
                 native=False, emulacao=True, mascara=flavor,
                 backends=("uinput",), motivo="perfil gamepad dualsense (caminho xbox)",
             )
-        # DualSense físico junto com o virtual (o controle duplicado).
         backends_efetivos = backends
         fisicos_efetivos = fisicos
         motivo = "perfil gamepad dualsense (backends reais)"
@@ -1731,7 +1691,6 @@ def _publicar_divergencias(
         if (item["appid"], item["motivo"]) in anteriores:
             continue
         if item["em_cena"]:
-            # DualSense com o jogo aberto. Warning porque é defeito visível
             logger.warning(
                 "mascara_do_perfil_divergente",
                 appid=item["appid"],
@@ -1741,9 +1700,6 @@ def _publicar_divergencias(
                 motivo=item["motivo"],
             )
         else:
-            # O perfil de jogo fechado que diverge é o normal, e a troca da máscara viva
-            # faz dezenas de uma vez (25 no mesmo segundo, syslog de 19/10/2026): o
-            # arquivo por appid e o `state_full` guardam; o diário só no debug.
             logger.debug(
                 "mascara_do_perfil_antecipada",
                 appid=item["appid"],
@@ -1770,7 +1726,6 @@ def _render(env: dict[str, str], estado: str, roupa: tuple[int, str] | None = No
     return "\n".join(lines) + "\n"
 
 
-#: A linha que leva a roupa do jogo no `steam_app_<appid>.env`, lida pelo arme.
 _LINHA_DA_ROUPA = "# roupa: "
 
 
@@ -1813,7 +1768,6 @@ def _jogos_do_comum(foto: _FotoDoLancamento) -> dict[str, str]:
             roupas_dos_jogos,
         )
 
-        # No laço do serviço, só o cache: a leitura fria vai a um fio, que pede outra escrita.
         roupas = roupas_dos_jogos(
             steam_input=steam_input_appids(),
             so_o_cache=_no_laco_do_servico(),
@@ -1980,7 +1934,6 @@ def _a_parte_de_fora(
     leitor = foto.leitor
     modo_vivo = foto.modo_vivo
     estado = modo_vivo.como_estado()
-    # vivo e, sem vpad de pé, abria o jogo com o DualSense de plástico à
     default_env = env_do_modo(modo_vivo)
     if "SDL_GAMECONTROLLER_IGNORE_DEVICES" in default_env:
         arriscados = _nativos_fora_da_antecipacao(_load_profiles(leitor))
@@ -2053,7 +2006,6 @@ def _a_parte_de_fora(
             ),
         )
         desired.add(name)
-    # O jogo do `0ce6` sem perfil veste o modo vivo; o `default.env` nunca leva a roupa.
     sem_perfil = (
         _jogos_do_comum(foto) if comuns is None else comuns
     ) if freestyle is None and modo_vivo.veste_roupa else {}
@@ -2186,7 +2138,6 @@ class _FotoDoLancamento:
     publicar: Callable[[list[dict[str, Any]]], None]
     carimbar: Callable[[], None]
     foto_ms: float
-    #: O broker esconde o físico? Sem ele, nenhum jogo veste o `0ce6` (pergunta só se preciso).
     o_dono_esconde: Callable[[], bool] = lambda: False
     a_roupa_aqueceu: Callable[[], None] = lambda: None
 
@@ -2211,17 +2162,12 @@ def _foto_do_lancamento(daemon: DaemonProtocol, *, no_fio: bool) -> _FotoDoLanca
         daemon, native=native, enabled=enabled, flavor=flavor,
         backends=backends, fisicos=fisicos,
     )
-    # materialização (transição de estado) — nunca no state_full de 20 Hz.
     from hefesto_dualsense4unix.daemon.subsystems.gamepad import dedup_status
 
     dedup_ok, dedup_motivos = dedup_status(daemon)
     if not dedup_ok and not native and enabled and backends:
         logger.warning("dedup_broken", motivos=dedup_motivos, backends=backends)
-    # O QUE ELE DIZ QUE NINGUÉM DIZIA: com a máscara DualSense de pé, o
-    # PRAGMATA com controle por movimento e o controle não respondeu.
     _avisar_canal_sem_imu(daemon, native=native, enabled=enabled)
-    # O diário só acusa a FALHA do vpad (emulação ligada e nenhum vpad), com o
-    # estado real da mesa; a Navegação não é defeito (D-2909).
     from hefesto_dualsense4unix.daemon.subsystems.rumble import (
         sem_dono_do_rumble,
     )

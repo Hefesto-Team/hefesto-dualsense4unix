@@ -73,8 +73,8 @@ UNIQS = ["aabbcc000011", "aabbcc000012", "aabbcc000013", "aabbcc000014"]
 MENOR_CORPO: dict[str, Any] = {
     "leds": {}, "triggers": {}, "rumble": {}, "speaker": {"volume": 40},
     "mic": {}, "sensores": {}, "mascara": "xbox", "movimento": {},
-    "ativacao": {"alternar": ["l1"]},  # (noqa-acento) identificador ASCII
-    "analogicos": {"zona_morta": 20},  # (noqa-acento) identificador ASCII
+    "ativacao": {"alternar": ["l1"]},  # (noqa-acento)
+    "analogicos": {"zona_morta": 20},
     "remapeamento": {"cross": "circle"},
 }
 
@@ -91,7 +91,7 @@ def _entrada(uniq: str, jogador: int, **troca: Any) -> dict[str, Any]:
         "sensores": {"giroscopio_ligado": True, "acelerometro_ligado": True},
         "mira": {"ligada": False, "toque": rot.DESTINO_NENHUM,
                  "inclinacao": rot.DESTINO_NENHUM},
-        "acessibilidade": {"ativacao": True, "analogicos": True},  # (noqa-acento) chaves ASCII
+        "acessibilidade": {"ativacao": True, "analogicos": True},  # (noqa-acento)
     }
     for chave, valor in troca.items():
         if valor is None:
@@ -119,9 +119,9 @@ def _o_cenario() -> dict[str, Any]:
     """P1 com o microfone mudo, P2 com a barra apagada, P3 com a máscara Xbox,"""
     return _estado(
         _entrada(UNIQS[0], 1, audio={"mic_mudo": True},
-                 acessibilidade={"ativacao": False}),  # (noqa-acento) chave ASCII
+                 acessibilidade={"ativacao": False}),  # (noqa-acento)
         _entrada(UNIQS[1], 2, lightbar_on=False, lightbar_rgb=[0, 0, 0],
-                 acessibilidade={"analogicos": False}),  # (noqa-acento) chave ASCII
+                 acessibilidade={"analogicos": False}),
         _entrada(UNIQS[2], 3),
         _entrada(UNIQS[3], 4, mira={"ligada": True,
                                     "toque": rot.DESTINO_NENHUM,
@@ -188,7 +188,7 @@ def _o_dono_diz(secao: str, entrada: dict[str, Any], state: dict[str, Any],
         destinos = {a02_controles._destino_da_mira(entrada, c) for c in ("toque", "inclinacao")}
         return bool(a02_controles._mira_ligada(entrada)) or bool(
             destinos - {None, rot.DESTINO_NENHUM})
-    if secao in ("ativacao", "analogicos"):  # (noqa-acento) chaves ASCII
+    if secao in ("ativacao", "analogicos"):  # (noqa-acento)
         valor = (entrada.get("acessibilidade") or {}).get(secao)
         return valor if isinstance(valor, bool) else None
     raise AssertionError(f"a seção `{secao}` não tem dono nesta régua")
@@ -217,7 +217,7 @@ def test_o_glifo_diz_o_que_o_dono_diz_de_cada_controle(
     assert linhas[1]["leds"] == ""
     assert linhas[2]["mascara"] == ""
     assert linhas[3]["movimento"] == "sim"
-    assert linhas[0]["ativacao"] == "" and linhas[1]["analogicos"] == ""  # (noqa-acento) chaves
+    assert linhas[0]["ativacao"] == "" and linhas[1]["analogicos"] == ""  # (noqa-acento)
     assert [linha["triggers"] for linha in linhas] == [TRAVESSAO] * 4
 
 
@@ -290,9 +290,6 @@ def test_o_motor_sem_mapa_nao_vira_o_padrao(monkeypatch: pytest.MonkeyPatch) -> 
     assert {linha["rumble"] for linha in _por_linha(fora["guarda.secao"])} == {TRAVESSAO}
 
 
-#: A seção que o esquema guarda e o desenho já mostra, mas a página publicada ainda não tem: o
-#: pacote não a distribui (a distribuição é posicional e a página publicada tem uma célula a
-#: menos), e a régua da coluna passa a cobri-la no dia do `--publicar`.
 ESPERANDO = perfis_web.SECOES_ESPERANDO_A_SESSAO_DELA
 
 
@@ -489,7 +486,7 @@ def test_o_daemon_diz_a_ativacao_e_a_curva_de_cada_controle() -> None:
     entradas = [{"uniq": u} for u in UNIQS[:3]]
     IpcHandlersMixin._merge_acessibilidade(SimpleNamespace(store=store), entradas)  # type: ignore[arg-type]
     assert [e["acessibilidade"] for e in entradas] == [
-        {"ativacao": True, "analogicos": False},  # (noqa-acento) chaves ASCII
-        {"ativacao": False, "analogicos": True},  # (noqa-acento) chaves ASCII
-        {"ativacao": False, "analogicos": False},  # (noqa-acento) chaves ASCII
+        {"ativacao": True, "analogicos": False},  # (noqa-acento)
+        {"ativacao": False, "analogicos": True},  # (noqa-acento)
+        {"ativacao": False, "analogicos": False},  # (noqa-acento)
     ]

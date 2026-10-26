@@ -75,9 +75,6 @@ FACES: tuple[Face, ...] = (
     ),
 )
 
-#: As faces como a PÁGINA VIVA as declara (`EXEMPLO`): as duas entradas da frente são USB 3. As
-#: `FACES` acima seguem a leitura de 24/08, a das provas de regra (`test_arranjo_invariantes`); a
-#: concordância com o oráculo mede o porte contra os dados da página viva.
 FACES_DA_PAGINA_VIVA: tuple[Face, ...] = (
     replace(FACES[0], entradas=tuple(replace(e, usb=3) for e in FACES[0].entradas)),
     *FACES[1:],
@@ -104,8 +101,6 @@ CONTROLES: tuple[Controle, ...] = (
     Controle("Jogador 3", mic=True, onde="bt-b"),
     Controle("Jogador 4", mic=True, onde="bt-b"),
 )
-
-# teclado em `1-3`, DualSense por cabo em `1-4`, mouse em `1-6` e Wi-Fi em `4-4`.
 
 SEM_HUB_APARELHOS: tuple[Aparelho, ...] = (
     Aparelho("wifi", "Wi-Fi", "Archer T3U", "wifi"),

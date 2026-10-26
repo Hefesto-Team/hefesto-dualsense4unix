@@ -29,7 +29,7 @@ def _doc() -> str:
 
 
 def test_nao_ha_span_ajuda_nem_janela_velha() -> None:
-    # Prova da D-1510-A-NAVEGACAO-PERDE-O-STATUS-DO-MODO-E-O-TAMBEM-NO-JOGO.
+    """Prova da D-1510-A-NAVEGACAO-PERDE-O-STATUS-DO-MODO-E-O-TAMBEM-NO-JOGO."""
     doc = _doc()
     assert "span class=\"ajuda\"" not in doc and 'class="ajuda"' not in doc
     telas = re.findall(r'<[^<>]*\bclass="tela-nova"[^<>]*>', doc)
@@ -59,7 +59,7 @@ def test_a_fila_leva_ao_mapa_e_a_acessibilidade() -> None:
 
 
 def test_a_acessibilidade_traz_o_giroscopio_e_as_opcoes_do_desenho() -> None:
-    # Prova da D-1510-A-ACESSIBILIDADE-APARECE-APAGADA-ATE-OS-DONOS.
+    """Prova da D-1510-A-ACESSIBILIDADE-APARECE-APAGADA-ATE-OS-DONOS."""
     doc = _doc()
     tela = doc[doc.index('id="acessibilidade"'):]
     texto = re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", tela))
@@ -70,8 +70,7 @@ def test_a_acessibilidade_traz_o_giroscopio_e_as_opcoes_do_desenho() -> None:
 
 
 def test_os_rotulos_do_permitir_e_do_teclado_sao_os_do_produto() -> None:
-    # D-1510-AS-PALAVRAS-DOS-BOTOES-SAO-AS-DO-DESENHO
-    # Prova da D-1510-AS-PALAVRAS-DOS-BOTOES-SAO-AS-DO-DESENHO.
+    """Prova da D-1510-AS-PALAVRAS-DOS-BOTOES-SAO-AS-DO-DESENHO."""
     doc = _doc()
     permitir = re.findall(r'<button[^>]*data-gesto="permitir-navegacao"[^>]*>([^<]+)</button>', doc)
     assert permitir == ["Interna", "Steam", "Uso geral"], permitir
@@ -121,8 +120,9 @@ def test_os_tres_de_permitir_navegacao_cabem_numa_linha(pagina) -> None:
     O «Navega com» saiu com o pedido de 16/10 (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, N5), e com ele a
     linha de chips que encolhia o nome com quatro controles; os três botões são fixos.
     MORDIDA: `flex-wrap:wrap` no `.seg.mini` com a coluna estreita quebra em duas linhas.
+
+    Prova da D-1510-O-NAVEGA-COM-ENCOLHE-O-NOME-COM-QUATRO.
     """
-    # D-1510-O-NAVEGA-COM-ENCOLHE-O-NOME-COM-QUATRO
     pagina.goto(MOCKUP.as_uri())
     m = pagina.evaluate("""() => {
       const seg = document.querySelector('[role=radiogroup][aria-label="Permitir navegação"]');
@@ -139,8 +139,9 @@ def test_o_que_ainda_nao_grava_aparece_apagado(pagina) -> None:
     """O «Voltar ao padrão» e o «Guardar» da Acessibilidade não gravam, e a tela os mostra apagados.
 
     MORDIDA: tirar a regra `.btn.apagado` deixa os dois acesos, iguais a um botão que funciona.
+
+    Prova da D-1510-A-ACESSIBILIDADE-APARECE-APAGADA-ATE-OS-DONOS.
     """
-    # Prova da D-1510-A-ACESSIBILIDADE-APARECE-APAGADA-ATE-OS-DONOS.
     pagina.goto(MOCKUP.as_uri() + "#acessibilidade")
     opacidades = pagina.evaluate("""() => [...document.querySelectorAll(
       '#acessibilidade .apagado[aria-disabled="true"]')].map(b => getComputedStyle(b).opacity)""")

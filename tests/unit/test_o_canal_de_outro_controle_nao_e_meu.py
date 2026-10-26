@@ -23,8 +23,6 @@ from hefesto_dualsense4unix.integrations.fontes_de_captura import (
 DELE = "e8:47:3a:00:00:5c"
 VIZINHO = "e8:47:3a:00:00:9e"
 
-#: O canal DELE como o Hefesto o ergue hoje (a marca do aparelho); o do vizinho
-#: fica na forma velha, a do rabo hex, que segue dizendo de QUEM é um nó alheio.
 CANAL_DELE = canal.nome_do_canal(DELE)
 PONTE_DELE = f"{bt.PREFIXO_SOURCE_PONTE_BT}{bt.marca_do_aparelho(DELE)}"
 CANAL_VELHO_DELE = "hefesto_mic_00005c"

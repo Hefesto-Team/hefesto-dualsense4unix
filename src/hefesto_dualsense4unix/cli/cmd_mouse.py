@@ -97,6 +97,3 @@ def cmd_status(
 
 
 __all__ = ["app"]
-
-# - `mouse.emulation.set` já existe em ipc_server (FEAT-MOUSE-01).
-# - `daemon.state_full` é estendido nesta sprint (FEAT-CLI-PARITY-01) para

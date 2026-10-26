@@ -37,7 +37,6 @@ SIMULADOS = frozenset({"html", "cor", "atributo"})
 _BLOCO_DE_UM_CAMPO = re.compile(
     r'\[data-controle="(p\d+)"\]\s*\[data-campo="([^"]+)"\]')
 
-#: anonimato. `player_slot` 2 é o que o põe no P2.
 UNIQ = "aa:bb:cc:00:00:02"
 NO_P2: dict[str, Any] = {
     "uniq": UNIQ, "connected": True, "transport": "usb", "player": 2,
@@ -223,7 +222,7 @@ def test_as_paginas_com_cartao_sao_as_seis() -> None:
                         "04-iluminacao.html", "05-vibracao.html", "08-conexoes.html"], COM_CARTAO
 
 
-@pytest.mark.parametrize("pagina", COM_CARTAO)  # (noqa-acento): nome de parâmetro
+@pytest.mark.parametrize("pagina", COM_CARTAO)  # (noqa-acento)
 def test_as_paginas_com_cartao_com_a_mesa_vazia(pagina: str) -> None:
     """Zero controles: nenhum dos quatro lugares mostra o que o desenho pôs"""
     carga = _carga(pagina, [])
@@ -235,7 +234,7 @@ def test_as_paginas_com_cartao_com_a_mesa_vazia(pagina: str) -> None:
         "controle — a foto dela de 23/09/2026:\n  " + "\n  ".join(vazaram))
 
 
-@pytest.mark.parametrize("pagina", COM_CARTAO)  # (noqa-acento): nome de parâmetro
+@pytest.mark.parametrize("pagina", COM_CARTAO)  # (noqa-acento)
 def test_as_paginas_com_cartao_com_um_controle_no_p2(pagina: str) -> None:
     """Um controle no P2: o P1, o P3 e o P4 continuam dizendo o lugar vazio."""
     carga = _carga(pagina, [NO_P2])
@@ -297,7 +296,7 @@ def test_o_p2_sai_e_volta_ao_lugar_vazio_no_tique_seguinte() -> None:
         cravados, sem, vazio["vazios"], texto)
 
 
-@pytest.mark.parametrize("pagina", COM_CARTAO)  # (noqa-acento): nome de parâmetro
+@pytest.mark.parametrize("pagina", COM_CARTAO)  # (noqa-acento)
 def test_o_que_a_regra_escreve_no_vazio_a_aba_reescreve_no_cheio(pagina: str) -> None:
     """A trava da regra: ela só escreve onde a aba escreve."""
     vazio = _carga(pagina, [])
@@ -463,8 +462,6 @@ def _tiques_do_piloto(pagina: str, mesas: list[list[dict[str, Any]]],
         _estado_do_tique=lambda: agora["st"], _contexto=contexto,
         trocas={}, tiques={}, pinturas={}, voltas=0, custos=[], custo_do_ipc=[],
         _contar_mutacoes=lambda: None)
-    # A-NAVEGACAO-INTERNA-…-01 (08/10/2026): o tique dá um passo da Navegação Interna;
-    # sem o bloco `navegacao` no estado, ele só apaga as molduras que houver.
     for metodo in ("_o_que_mandar", "_esperando_o_estado_novo", "_moldes_da_pagina",
                    "_navegar"):
         setattr(piloto, metodo, types.MethodType(getattr(hefesto_vivo.Piloto, metodo), piloto))

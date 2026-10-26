@@ -116,9 +116,6 @@ def _tiques(sw: AutoSwitcher, info: dict[str, Any], de: float, ate: float) -> No
         t += 0.5
 
 
-# A entrada pela prova do jogo -------------------------------------------------------
-
-
 def test_leitura_vazia_com_o_jogo_em_cena_entra_no_perfil_dele(
     perfis_isolados: Path,
 ) -> None:
@@ -206,7 +203,6 @@ def test_quando_a_prova_some_e_a_leitura_segue_vazia_o_jogo_fica(
     assert store.active_profile == "o_jogo"
     cena.appid = None
     _tiques(sw, {}, 3.0, 20.0)
-    # OS-QUATRO-EM-HARMONIA-01, item 4: o perfil fica no último jogo até ela mudar.
     assert store.active_profile == "o_jogo"
 
 
@@ -240,11 +236,8 @@ def test_o_servico_entrega_o_jogo_em_cena_ao_autoswitch(
     assert leitor() == APPID
     daemon.appid_em_cena = None
     assert leitor() is None
-    daemon.appid_em_cena = True  # um bool não é appid
+    daemon.appid_em_cena = True
     assert leitor() is None
-
-
-# O ambiente gráfico -----------------------------------------------------------------------
 
 
 def _systemctl_com(monkeypatch: pytest.MonkeyPatch, saida: str) -> MagicMock:
@@ -284,9 +277,6 @@ def test_com_as_tres_no_processo_nao_pergunta_ao_systemctl(
         monkeypatch.setenv(chave, valor)
     sub._ensure_display_env()
     rodou.assert_not_called()
-
-
-# A unit ------------------------------------------------------------------------------------
 
 
 def test_a_unit_nao_tem_o_import_environment_inutil() -> None:

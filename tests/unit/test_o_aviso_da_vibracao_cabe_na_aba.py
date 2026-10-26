@@ -94,7 +94,7 @@ try:
         TAMANHO_NA_TELA,
         TAMANHO_OCULTA,
     )
-except (ImportError, ValueError) as _erro:  # pragma: no cover — ambiente sem WebKit
+except (ImportError, ValueError) as _erro:  # pragma: no cover
     pytest.skip(
         f"VIBRAÇÃO-CABE-01: a biblioteca da janela não importou ({_erro}). "
         "Falta gir1.2-webkit2-4.1?",
@@ -109,7 +109,6 @@ SEM_VPAD = {"rumble_policy": "max", "rumble_mult_applied": 1.5,
             "native_mode": False, "gamepad_emulation": {"enabled": True},
             "rumble_ff": {"plays": 0, "nao_nulos": 0, "vpads": 0}}
 
-#: O único estado em que o aviso sai: emulação ligada e nenhum gamepad virtual.
 ESTADOS_DO_AVISO: dict[str, dict] = {
     "vpad-nao-subiu": SEM_VPAD,
 }

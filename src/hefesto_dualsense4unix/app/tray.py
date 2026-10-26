@@ -67,10 +67,8 @@ def _painel_recolore_simbolico() -> bool:
 QuitFn = Callable[[], None]
 ListProfilesFn = Callable[[], list[dict[str, Any]]]
 SwitchProfileFn = Callable[[str], bool]
-#: Snapshot de `daemon.state_full` (ou None se offline) — usado para o tray
 StateFn = Callable[[], dict[str, Any] | None]
 
-#: <!-- noqa-acento: citação literal -->
 ModoFn = Callable[[bool], bool]
 ReconectarFn = Callable[[], bool]
 ServicoFn = Callable[[str], bool]
@@ -314,8 +312,6 @@ class AppTray:
             return
         definir = self.on_set_modo
         if definir is not None:
-            # O «Ligado» liga o serviço antes do modo (`cmd_tray._definir_o_modo`): o `start`
-            # da unit `Type=notify` só volta com o IPC de pé, então sai do fio da janela.
             self._chamar_sem_cair(lambda: self._fora_do_fio(
                 lambda: definir(ligado), "apptray_modo_nao_pegou", ligado=ligado))
 
@@ -337,7 +333,6 @@ class AppTray:
         from hefesto_dualsense4unix.app.ipc_bridge import run_in_thread
         from hefesto_dualsense4unix.utils.marca_do_parar import lembrar_o_parar
 
-        # O «Sair» não é o Parar da aba Sistema: a janela reaberta traz o serviço de volta.
         lembrar_o_parar(False)
         servico = self.on_servico
 
@@ -372,7 +367,6 @@ class AppTray:
             return
         from hefesto_dualsense4unix.utils.marca_do_parar import lembrar_o_parar
 
-        # O «Parar o serviço» daqui é o mesmo Parar da aba Sistema: a janela reaberta o respeita.
         lembrar_o_parar(verbo == "stop")
         self._fora_do_fio(lambda: servico(verbo), "apptray_servico_nao_pegou", verbo=verbo)
 
@@ -428,7 +422,7 @@ class AppTray:
             return None
         try:
             from hefesto_dualsense4unix.app.actions.jogar import painel
-        except Exception:  # pragma: no cover — ambiente sem o motor
+        except Exception:  # pragma: no cover
             return None
         try:
             return painel.hefesto_ligado(state)

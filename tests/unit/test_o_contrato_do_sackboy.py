@@ -41,13 +41,11 @@ from tests.unit.test_uhid_replica import (
 SACKBOY = 1599660
 JOGADORES = (1, 2, 3, 4)
 
-#: Os sinais que o executável do Sackboy traz (medidos em 22/10/2026 pela `ficha_declarada`).
 _EXE_DO_SACKBOY = (
     b"MZ\0" + "WinDualSense".encode("utf-16-le")
     + b"\0\0\x4c\x05\xe6\x0c\0\0\0\0\0\0\0\0\0\0\0\0\x4c\x05\xf2\x0d\0"
 )
 
-#: A env do Sackboy em 22/10/2026, 20h07 (`steam_app_1599660.env`), sem o cabeçalho.
 ENV_DO_SACKBOY: dict[str, str] = {
     "PROTON_DISABLE_HIDRAW": "0x054C/0x0CE6",
     "SDL_GAMECONTROLLER_IGNORE_DEVICES": "0x054c/0x0ce6,0x28de/0x11ff",
@@ -59,7 +57,6 @@ ENV_DO_SACKBOY: dict[str, str] = {
     "PROTON_ENABLE_MHWILDS_USB_AUDIO": "1",
 }
 
-#: O descritor e os features que o pad do Sackboy apresenta (o blueprint canônico).
 SHA_DO_DESCRITOR = "4f48767516627510521512af13c20a064877465122b7bcc7cac1f3b608d37994"
 SHA_DOS_FEATURES = {
     0x05: "f8ca61e4506db188bfcb51ed5e1b6069b0ce1c531928fb7ca8e9342e77c3bfff",
@@ -82,18 +79,12 @@ def _o_sackboy(tmp_path: Path) -> Path:
     return raiz
 
 
-# --- 1. A roupa ------------------------------------------------------------------
-
-
 def test_o_sackboy_veste_o_edge(tmp_path: Path) -> None:
     raiz = _o_sackboy(tmp_path)
 
     assert rj.roupa_do_jogo(raiz) == ("0df2", "o executável conhece o modelo 0DF2 do Edge")
     assert rj.roupa_do_jogo(raiz, no_steam_input=True)[0] == "0df2"
     assert rj.roupa_do_jogo(raiz, modo_xbox=True)[0] == "0df2"
-
-
-# --- 2. O VID:PID, o nome e o descritor ------------------------------------------
 
 
 @pytest.mark.parametrize("jogador", JOGADORES)
@@ -115,9 +106,6 @@ def test_o_pad_do_sackboy_e_o_edge_de_hoje(jogador: int) -> None:
     assert (tamanho, hashlib.sha256(descritor).hexdigest()) == (289, SHA_DO_DESCRITOR)
     for numero, sha in SHA_DOS_FEATURES.items():
         assert hashlib.sha256(blueprint["features"][numero]).hexdigest() == sha, hex(numero)
-
-
-# --- 3. A env gravada --------------------------------------------------------------
 
 
 @pytest.mark.parametrize("vpads", [1, 2, 4])
@@ -178,9 +166,6 @@ def test_o_arquivo_do_sackboy_sai_o_de_hoje(
     assert le.roupa_gravada(SACKBOY, pasta) == ROUPA_PADRAO == ROUPA_EDGE
 
 
-# --- 4. O caminho: o Edge sobe no gadget, com a quirk do físico no lugar ------------
-
-
 @pytest.mark.parametrize("jogador", JOGADORES)
 def test_o_pad_do_sackboy_pede_o_gadget(
     gravador: Gravador, tmp_path: Path, monkeypatch: pytest.MonkeyPatch,  # noqa: F811
@@ -199,9 +184,6 @@ def test_o_pad_do_sackboy_pede_o_gadget(
         pad.stop()
 
     assert [(p["vendor"], p["product"]) for p in gravador.pedidos] == [(VENDOR_SONY, ROUPA_EDGE)]
-
-
-# --- 5. A vibração, a luz e os gatilhos que o jogo escreve -------------------------
 
 
 def test_o_que_o_sackboy_escreve_chega_ao_controle(fake_uhid: _FakeFd) -> None:  # noqa: F811

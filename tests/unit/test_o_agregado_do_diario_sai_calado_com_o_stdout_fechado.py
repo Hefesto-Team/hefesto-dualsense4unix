@@ -46,7 +46,7 @@ def _agregado_com_conta_aberta(destino: Any) -> logging_config.AgregadoDoDiario:
 
 
 def test_destino_fechado_a_conta_se_perde_calada(tmp_path: Path) -> None:
-    # D-2410-O-DIARIO-NAO-ESCREVE-NO-DESTINO-FECHADO
+    """Prova da D-2410-O-DIARIO-NAO-ESCREVE-NO-DESTINO-FECHADO."""
     destino = (tmp_path / "diario.txt").open("w", encoding="utf-8")
     agregado = _agregado_com_conta_aberta(destino)
     destino.close()

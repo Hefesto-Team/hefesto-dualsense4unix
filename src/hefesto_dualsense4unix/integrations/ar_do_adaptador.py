@@ -78,10 +78,6 @@ MAX_CONEXOES = 20
 FLAG_HCI_UP = 0x01
 LINK_MODE_MESTRE = 0x0001
 TIPO_ACL = 0x01
-#: ``LE_LINK`` do kernel: o enlace de baixa energia (pulseira, relógio, fone novo). O
-#: ``Read AFH Channel Map`` é do enlace clássico; o equivalente LE (``LE Read Channel Map``,
-#: OGF 0x08 OCF 0x0015) NÃO passa pelo ``hci_sec_filter`` sem ``CAP_NET_RAW`` (a tabela do
-#: filtro acaba no OGF 5), então um enlace LE não tem faixa própria lida sem root.
 TIPO_LE = 0x80
 
 VOLTA_DO_CONTADOR = 1 << 32
@@ -99,7 +95,7 @@ CANAIS_DO_BT = 79
 CANAIS_MINIMOS_DO_AFH = 20
 CANAIS_CALMOS = 60
 NIVEL_LISO = "liso"
-NIVEL_MEDIO = "medio"  # (noqa-acento): nome de máquina, o valor do `data-nivel`
+NIVEL_MEDIO = "medio"  # (noqa-acento)
 NIVEL_ENGASGA = "engasga"
 PRAZO_DO_AFH_S = 0.5
 
@@ -692,7 +688,7 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-if __name__ == "__main__":  # pragma: no cover - bancada
+if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())
 
 

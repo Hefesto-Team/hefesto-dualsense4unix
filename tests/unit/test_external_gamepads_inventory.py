@@ -486,7 +486,6 @@ def test_exclui_vpads_virtuais_teclado_do_daemon_e_dualsense_fisico(
     _instalar_realpath_fake(
         monkeypatch,
         {
-            # Físicos: fora de /devices/virtual/. O DualSense nem chega ao
             "/sys/class/input/event33/device": pro_dir,
             "/sys/class/input/event7/device": (
                 "/sys/devices/pci0000:00/usb1/1-5/1-5:1.3/0003:054C:0CE6.0002/"
@@ -684,7 +683,6 @@ def test_holders_merge_e_degradacao(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(ih_mod, "_steam_hidraw_holders", explode)
     inventario = ih_mod._external_inventory()
-    # `player_slot` (8BIT-02) e `identity` (CLONE-01) seguem expostas — são
     assert "holders" not in inventario[0]
     assert inventario[0] == {
         **base,
@@ -753,7 +751,6 @@ def test_external_inventory_prefere_o_slot_do_registry(
         dualsense_count=1, slot_resolver=lambda uniq: slots.get(uniq or "")
     )
 
-    # (NUMA-05 — nunca mais o posicional 1 DualSense + índice 1 + 1 = 3).
     assert [e["player_slot"] for e in inventario] == [4, None]
 
     def resolver_quebrado(_uniq: str | None) -> int | None:
@@ -793,7 +790,7 @@ def test_posicional_legado_nao_existe_mais_em_caminho_nenhum(
     )
     monkeypatch.setattr(ih_mod, "_steam_hidraw_holders", lambda: {})
 
-    resolver_sem_opiniao = lambda _uniq: None  # noqa: E731 — registry mudo
+    resolver_sem_opiniao = lambda _uniq: None  # noqa: E731
 
     com_ds_count_1 = ih_mod._external_inventory(
         dualsense_count=1, slot_resolver=resolver_sem_opiniao

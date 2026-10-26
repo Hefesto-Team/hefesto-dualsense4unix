@@ -237,7 +237,6 @@ def gesto_do_jogo(p: Pergunta, c: Controle, forja: Forja) -> Gesto:
     if not p.sala:
         if falta:
             return Gesto("Tocar pelo jogo", recusa=falta)
-        # se ele é um alto-falante de DualSense é a Forja, pela palavra da Sony.
         return Gesto(
             "Tocar pelo jogo",
             argv=[

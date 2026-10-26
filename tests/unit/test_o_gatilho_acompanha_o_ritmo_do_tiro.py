@@ -78,9 +78,6 @@ def _modos(backend: Backend) -> list[str]:
     return [nomes.get(bloco, "?") for _u, _l, bloco in backend.blocos]
 
 
-# --- Os blocos são os da tela, nenhum byte novo ----------------------------
-
-
 def _da_tela(nome: str, **troca: int) -> bytes:
     spec = get_spec(nome)
     assert spec is not None
@@ -101,12 +98,8 @@ def test_o_bloco_da_rajada_e_a_vibracao_oficial_com_a_frequencia_da_receita() ->
     bloco = tv.bloco_do_gatilho(tv.GATILHO_RAJADA, _RITMO)
     assert len(bloco) == 11
     assert bloco[0] == TriggerMode.VIBRATION
-    # A frequência do modo oficial mora no décimo byte do bloco (o `forces[6]`).
     assert bloco[9] == 25
     assert bloco == _da_tela("MultiPositionVibration", frequency=25)
-
-
-# --- O ritmo ---------------------------------------------------------------
 
 
 def test_tiros_a_400_ms_pedem_a_arma_uma_vez() -> None:
@@ -146,7 +139,7 @@ def test_o_dedo_segurado_com_o_rumble_do_jogo_e_rajada() -> None:
     motor = _motor(backend, lambda uniq, lado: (uniq, lado) in segurado)
     motor.anotar(tv.Evento(0.0, P1, tv.TIPO_DEDO, tv.LADO_DIREITO))
     motor.tique(0.001, _xbox, _RITMO)
-    for t in _cadencia(0.01, 0.07, 10):  # o primeiro rumble é do mesmo tiro do aperto
+    for t in _cadencia(0.01, 0.07, 10):
         motor.anotar(tv.Evento(t, P1, tv.TIPO_RUMBLE, tv.LADO_CENTRO))
         motor.tique(t + 0.001, _xbox, _RITMO)
     assert _modos(backend) == [tv.GATILHO_ARMA, tv.GATILHO_RAJADA]
@@ -165,9 +158,6 @@ def test_sem_o_gatilho_no_ritmo_na_receita_nada_se_escreve() -> None:
     backend = Backend()
     _atirar(_motor(backend), _cadencia(0.0, 0.07, 12), receita=tv.Receita(vibracao_por_tiro=True))
     assert backend.blocos == []
-
-
-# --- O jogo manda ----------------------------------------------------------
 
 
 def test_o_jogo_que_escreve_o_gatilho_passa_cru_e_o_motor_cala() -> None:
@@ -207,9 +197,6 @@ def test_no_modo_nativo_o_gatilho_e_do_aparelho() -> None:
     assert backend.blocos == []
 
 
-# --- Um ciclo, uma escrita por controle -------------------------------------
-
-
 def test_os_dois_gatilhos_no_mesmo_tique_saem_numa_escrita_so() -> None:
     backend = Backend()
     motor = _motor(backend)
@@ -226,7 +213,6 @@ def test_o_mesmo_controle_nao_escreve_duas_vezes_no_mesmo_ciclo() -> None:
     _atirar(motor, [0.0], lado=tv.LADO_DIREITO)
     _atirar(motor, [0.01], lado=tv.LADO_ESQUERDO)
     assert [lado for _u, lado, _b in backend.blocos] == ["right"]
-    # O lado que esperou o ciclo sai na escrita seguinte do controle.
     _atirar(motor, [0.5], lado=tv.LADO_DIREITO)
     assert [lado for _u, lado, _b in backend.blocos] == ["right", "left"]
 
@@ -240,13 +226,10 @@ def test_dois_controles_no_mesmo_ciclo_escrevem_cada_um_o_seu() -> None:
     assert sorted(u for u, _l, _b in backend.blocos) == sorted(QUATRO)
 
 
-# --- A volta ao perfil -----------------------------------------------------
-
-
 def test_a_volta_vem_depois_do_ultimo_tiro_e_nao_no_meio_da_rajada() -> None:
     backend = Backend()
     motor = _motor(backend)
-    tiros = _cadencia(0.0, 0.07, 43)  # três segundos de rajada
+    tiros = _cadencia(0.0, 0.07, 43)
     _atirar(motor, tiros)
     assert backend.sessoes == [], "devolveu no meio da rajada"
     motor.tique(tiros[-1] + tv.VOLTA_DO_GATILHO_S - 0.05, _xbox, _RITMO)
@@ -264,9 +247,6 @@ def test_depois_da_volta_o_primeiro_tiro_escreve_de_novo() -> None:
     motor.tique(3.0, _xbox, _RITMO)
     _atirar(motor, [4.0])
     assert _modos(backend) == [tv.GATILHO_ARMA, tv.GATILHO_ARMA]
-
-
-# --- P1 a P4, pelo caminho do produto --------------------------------------
 
 
 class _Pad:
@@ -325,7 +305,6 @@ def test_cada_controle_tem_o_seu_ritmo(lugar: int, monkeypatch: pytest.MonkeyPat
     passo = tv.Passo(daemon, motor)
     alvo = QUATRO[lugar - 1]
     t = 0.0
-    # Rajada de toques curtos no gatilho do alvo; os outros atiram devagar.
     for i in range(12):
         _apertar(daemon, leitores, alvo, 255)
         if i % 6 == 0:

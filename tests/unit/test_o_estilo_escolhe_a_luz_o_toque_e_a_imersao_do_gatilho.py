@@ -24,10 +24,8 @@ from hefesto_dualsense4unix.profiles import formas_de_haptica as fh
 
 QUATRO = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03", "aa:bb:cc:00:00:04")
 
-#: O acionamento do R2 de cada estilo (tabela S da página de 19/10/2026), já na chave da lista de
-#: onze. O Arco saiu do catálogo e carrega como a Ação.
 ACIONAMENTO = {
-    "fps": "Machine", "corrida": "MultiPositionVibration", "acao": "Weapon",  # (noqa-acento) chave
+    "fps": "Machine", "corrida": "MultiPositionVibration", "acao": "Weapon",  # (noqa-acento)
     "arco": "Weapon", "aventura": "Bow", "esportes": "Resistance",
     "point_and_click": "Weapon", "terror": "Weapon", "luta": "Weapon", "maratona": "Off",
     "plataforma": "SlopeFeedback", "retro": "Off", "ritmo": "Weapon",
@@ -99,13 +97,11 @@ def test_a_duracao_do_toque_e_40_vezes_d_sobre_200_de_25_a_60(duracao: int, toqu
 
 FORMA_DO_ESTILO = {
     "luta": fh.IMPACTO, "esportes": fh.IMPACTO, "ritmo": fh.ESTALO,
-    "fps": fh.TOQUE, "acao": fh.IMPACTO, "arco": fh.IMPACTO,  # (noqa-acento) chave
+    "fps": fh.TOQUE, "acao": fh.IMPACTO, "arco": fh.IMPACTO,  # (noqa-acento)
     "aventura": fh.TOQUE, "plataforma": fh.ESTALO, "terror": fh.TOQUE,
-    "souls": fh.ECO, "furtivo": fh.ESTALO,  # o Eco da Souls (bloco C, 20/10/2026)
-    "corrida": fh.SOM_NO_CORPO, "simulacao": fh.GRAO,  # o motor no corpo; o chão em grãos
-    "retro": fh.MOTOR_DE_EPOCA,  # o zumbido do motor de peso, só quando o jogo vibra
-    # A resposta de 08/10 («Toque por tiro e lado do som, como nos outros») vence o «Sem efeito»
-    # que a tabela do catálogo de 15/10 dá ao Point and click e à Maratona.
+    "souls": fh.ECO, "furtivo": fh.ESTALO,
+    "corrida": fh.SOM_NO_CORPO, "simulacao": fh.GRAO,
+    "retro": fh.MOTOR_DE_EPOCA,
     "point_and_click": fh.TOQUE, "maratona": fh.TOQUE,
 }
 
@@ -138,7 +134,7 @@ def test_so_cinco_estilos_tem_forma_longa_de_estilo() -> None:
     assert set(fh.POR_ESTILO) <= set(ej.POR_CHAVE)
 
 
-@pytest.mark.parametrize("chave", ["fps", "acao", "luta"])  # (noqa-acento) chave
+@pytest.mark.parametrize("chave", ["fps", "acao", "luta"])  # (noqa-acento)
 def test_o_tiro_pulsa_a_luz_onde_o_estilo_reage(chave: str) -> None:
     receita = tv.receita_do_estilo(ej.POR_CHAVE[chave])
     luz = _luz()
@@ -188,7 +184,6 @@ def test_o_ritmo_sobe_o_ouvido_do_jogo() -> None:
     """Sem o ouvido, a batida nunca chega: o Ritmo não segue o lado do som nem toca o estalo."""
     assert tv.pede_o_ouvido(tv.receita_do_estilo(ej.POR_CHAVE["ritmo"]))
     assert not tv.pede_o_ouvido(tv.DESLIGADA)
-    # o Som no corpo da Corrida também é o grave do jogo: pede o ouvido sem escolha nenhuma
     assert tv.pede_o_ouvido(tv.receita_do_estilo(ej.POR_CHAVE["corrida"]))
 
 

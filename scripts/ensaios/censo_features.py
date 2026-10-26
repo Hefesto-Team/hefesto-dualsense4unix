@@ -44,7 +44,6 @@ def _hidiocgfeature(tamanho: int) -> int:
 
 SEGUNDOS_DE_TIMEOUT_L2CAP = 2.5
 
-# CRC-32 do DualSense: semente 0xA3 no primeiro byte, IEEE 802.3 no resto.
 SEMENTE_CRC = 0xA3
 
 

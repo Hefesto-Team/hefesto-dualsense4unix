@@ -38,19 +38,17 @@ from hefesto_dualsense4unix.mods.instalador import (
 from tests.unit import test_as_modificacoes_rodam_fora_do_daemon as _base
 
 _ate, _chave, _git, _supervisor = _base._ate, _base._chave, _base._git, _base._supervisor
-#: O lar de mentira e a pasta curta são as mesmas fixtures das modificações.
 curto, lar = _base.curto, _base.lar
 
-#: O filho de mentira: só fica de pé; a prova é o PID que o supervisor grava.
 _O_FILHO = "import time\nwhile True:\n    time.sleep(1)\n"
 
 
 def _manifesto(versao: str = "0.1.0", permissoes: tuple[str, ...] = ("ler:estado",)) -> str:
     return json.dumps({
-        "id": "exemplo", "nome": "Exemplo", "versao": versao,  # (noqa-acento): contrato ASCII
+        "id": "exemplo", "nome": "Exemplo", "versao": versao,  # (noqa-acento)
         "api": ">=1,<3", "licenca": "MIT", "tipos": ["processo"],
         "processo": {"executar": ["python3", "mod.py"]},
-        "permissoes": list(permissoes),  # (noqa-acento): contrato ASCII
+        "permissoes": list(permissoes),  # (noqa-acento)
     })
 
 
@@ -92,9 +90,6 @@ def _supervisor_rapido(lar: Lugares, **mais: Any) -> Any:
 def _rodando(sup: Any) -> bool:
     estado = sup.estado_de("exemplo")
     return estado is not None and estado.estado == "rodando" and sup.pid_de("exemplo") is not None
-
-
-# -- o commit novo instala sozinho ---------------------------------------------
 
 
 def test_o_commit_novo_do_remoto_se_instala_sozinho_e_a_viva_volta(
@@ -144,9 +139,6 @@ def test_a_chave_desligada_no_registro_nao_pergunta_ao_git(
     asyncio.run(corrida())
 
 
-# -- o que não se instala sozinho ----------------------------------------------
-
-
 def test_a_versao_que_pede_permissao_nova_fica_esperando_o_atualizar(
     lar: Lugares, remoto: Path
 ) -> None:
@@ -171,7 +163,6 @@ def test_a_versao_que_pede_permissao_nova_fica_esperando_o_atualizar(
             await sup.parar()
 
     asyncio.run(corrida())
-    # A versão que espera não se baixa de novo a cada volta; o «Atualizar» a instala.
     assert commit_novo(ler_registro(lar.registro)["exemplo"]) is None
     feito = atualizar("exemplo", lugares=lar)
     assert feito.trocou and feito.permissoes_novas == ["rede:internet"]
@@ -209,9 +200,6 @@ def test_a_tag_oficial_que_deixa_de_conferir_com_a_chave_fica_esperando(
     assert feito.trocou and feito.entrada.origem == "oficial" and feito.entrada.versao == "0.2.0"
 
 
-# -- a origem local e a falta de rede ------------------------------------------
-
-
 def test_a_origem_local_nunca_se_atualiza_sozinha(
     lar: Lugares, curto: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -234,7 +222,6 @@ def test_a_origem_local_nunca_se_atualiza_sozinha(
     sup = _supervisor_rapido(lar)
 
     async def uma_volta() -> None:
-        # Sem o reconciliar, o registro lido está vazio e a volta não veria a extensão.
         await sup.reconciliar()
         assert "exemplo" in sup._registro_lido
         sup._talvez_atualizar()
@@ -286,8 +273,10 @@ def test_a_linha_da_extensao_diz_a_versao_que_espera_o_atualizar() -> None:
 
 
 def test_o_intervalo_de_fabrica_e_de_seis_horas_e_o_piso_de_um_minuto() -> None:
-    """A extensão nova guarda as seis horas; o registro não desce abaixo do piso."""
-    # D-1910-A-EXTENSAO-DO-GIT-CONFERE-A-CADA-SEIS-HORAS
+    """A extensão nova guarda as seis horas; o registro não desce abaixo do piso.
+
+    Prova da D-1910-A-EXTENSAO-DO-GIT-CONFERE-A-CADA-SEIS-HORAS.
+    """
     from hefesto_dualsense4unix.mods import supervisor
     from hefesto_dualsense4unix.mods.instalador import Entrada
 

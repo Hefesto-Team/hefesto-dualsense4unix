@@ -65,10 +65,7 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 RGB = tuple[int, int, int]
-#: Quem lê a mão de um controle: ``(uniq, base) -> Entrada``, só o dado que a base precisa.
 LeitorDaMao = Callable[[str, str], Entrada]
-#: Quem escreve o quadro único: ``(uniq, cor, luzinhas) -> ok``; ``luzinhas`` ``None`` é o número
-#: do jogador, como o perfil o tem.
 EscritorDoQuadro = Callable[[str, RGB, tuple[bool, bool, bool, bool, bool] | None], object]
 
 
@@ -83,22 +80,14 @@ class FonteDoSom(Protocol):
         """``(nivel, agudos)`` de agora, ou ``None`` sem leitura."""
 
 
-#: O teto de quadros por segundo de cada controle.
 QUADROS_POR_SEGUNDO_MAXIMO = 30
 INTERVALO_MINIMO = 1.0 / QUADROS_POR_SEGUNDO_MAXIMO
-#: O laço dorme isto entre um tique e outro (o ``INTERVALO_MINIMO`` é quem corta o excesso).
 INTERVALO_DO_LACO_S = INTERVALO_MINIMO
-#: De quanto em quanto tempo o laço relê o perfil ativo (só o arquivo, sem semear).
 RELEITURA_DO_PLANO_S = 0.5
-#: De quanto em quanto tempo o laço relê a carga dos controles (a Bateria da Maratona).
 RELEITURA_DA_CARGA_S = 2.0
-#: As duas luzes que o estilo pede e o perfil não guarda (``leds.efeito`` só tem as seis bases).
 REACAO_ACENDE = "acende"
 REACAO_BATERIA = "bateria"
-#: As bases cujo ritmo a intensidade da cena gradua (A-INTENSIDADE-DA-CENA-REGE-O-QUE-O-HEFESTO-
-#: SOMA-01): a luz que respira vai do ritmo mais lento, na cena calma, ao do efeito, no combate.
 BASES_QUE_RESPIRAM = frozenset({"respirar"})
-#: Quanto a luz que respira anda, pelo ritmo do efeito: ``1,0`` é o relógio de sempre.
 VelocidadeDoRespirar = Callable[[int], float]
 
 
@@ -159,7 +148,7 @@ def plano_do_perfil(
     vista que vai ao aparelho) o controle fica de fora: a barra segue fixa na cor do perfil, e ao
     sair da economia o plano o devolve. Sem a economia na mão, lê a declaração viva.
     """
-    if perfil.leds.modo == "automatico":  # (noqa-acento) chave do contrato
+    if perfil.leds.modo == "automatico":  # (noqa-acento)
         return {}
     mesa = economia_da_mesa() if mesa_em_economia is None else bool(mesa_em_economia)
     ligados = controles_em_economia() if em_economia is None else em_economia
@@ -228,22 +217,13 @@ class LuzAnimada:
         self._som = som
         self._escrever_quadro = quadro
         self._som_aberto = False
-        #: O estado de cada controle nos efeitos que leem a mão, com o efeito a que pertence: um
-        #: efeito novo (outra base, cor ou ritmo) nasce com estado novo.
         self._estados_da_mao: dict[str, tuple[EfeitoDaLuz, EstadoDaMao]] = {}
-        #: Os controles cujas luzinhas o efeito deixou fora do número do jogador (a cintilada das
-        #: Estrelas): o primeiro quadro de outro efeito devolve o número junto com a barra.
         self._luzinhas_fora: set[str] = set()
         self._intervalo = max(intervalo_minimo, INTERVALO_MINIMO)
         self._ultimo_quadro: dict[str, object] = {}
         self._escrito_em: dict[str, float] = {}
         self._inicio: dict[str, float] = {}
-        #: O relógio da mesa: nasce com o primeiro controle que toca e morre com o último. O
-        #: arco-íris e a Maré contam por ele, senão quem entrou depois desfaz a defasagem.
         self._origem: float | None = None
-        #: O relógio da luz que respira quando a cena a desacelera: ``(tempo andado, último
-        #: instante)``. Nasce só na primeira vez que a velocidade fica abaixo de 1,0 e segue até o
-        #: efeito parar, para a troca de faixa não pular a fase da respiração.
         self._relogio_da_cena: dict[str, tuple[float, float]] = {}
 
     @property
@@ -327,7 +307,7 @@ class LuzAnimada:
         relogio = self._relogio_da_cena.get(uniq)
         if relogio is None:
             if velocidade >= 1.0:
-                return agora - inicio  # a cena não desacelera: o relógio de sempre, intocado
+                return agora - inicio
             relogio = (agora - inicio, agora)
         andado, antes = relogio
         andado += max(0.0, agora - antes) * min(1.0, max(0.0, velocidade))
@@ -347,7 +327,7 @@ class LuzAnimada:
         if efeito.base == "ao-som" and self._som is not None:
             entrada = dataclasses.replace(entrada, som=self._som.nivel())
         estado = guardado[1]
-        if isinstance(estado, Estrelas | Ondulacao):  # os estados que levam luzinhas
+        if isinstance(estado, Estrelas | Ondulacao):
             return estado.quadro(entrada, agora)
         return Quadro(estado.andar(entrada, agora))
 
@@ -416,7 +396,6 @@ def escritor_do_quadro(daemon: Any) -> EscritorDoQuadro:
     return escrever
 
 
-#: O que um sensor sem dono, sem nó ou em corrida pode levantar; a luz segue sem ler a mão.
 FALHAS_DA_LEITURA: tuple[type[Exception], ...] = (
     ArithmeticError, AttributeError, KeyError, OSError, RuntimeError, TypeError, ValueError)
 
@@ -468,12 +447,10 @@ def leitor_da_mao(daemon: Any) -> LeitorDaMao:
             jogadores = getattr(getattr(daemon, "_coop_manager", None), "_players", None)
             if isinstance(jogadores, dict) and uniq in jogadores:
                 leitor = getattr(jogadores.get(uniq), "reader", None)
-            else:  # sem co-op: o leitor passivo do hub, a fonte do secundário
+            else:
                 hub = _o_hub(daemon)
                 if hub is None:
                     return None
-                # O `entradas` registra a demanda que mantém o leitor do secundário aberto com a
-                # janela fechada; o `apertos` sozinho só lê o que outro pediu.
                 hub.entradas(uniq)
                 contagem = hub.apertos(uniq)
                 return dict(contagem) if isinstance(contagem, dict) else None
@@ -495,8 +472,6 @@ def leitor_da_mao(daemon: Any) -> LeitorDaMao:
                 return Entrada()
             if base == "inclinacao":
                 return Entrada(gravidade=hub.aceleracao_do_movimento(uniq))
-            # A `leitura` só VÊ o dedo: o `toque_da_peca` é do roteador do toque e segura o nó
-            # (EVIOCGRAB), o que tiraria o touchpad do cursor do computador.
             toque = hub.leitura(uniq).get("touchpad")
             if isinstance(toque, dict):
                 dedo = None
@@ -555,8 +530,6 @@ class Passo:
         self._plano: dict[str, PlanoDoControle] = {}
         self._lido_em = float("-inf")
         self._repinturas: int | None = None
-        # As luzes do estilo (Acende, Bateria): o perfil e a reação lidos com o plano, a cor base
-        # de cada controle, o brilho do Acende e a carga (relida a cada 2 s).
         self._perfil: Profile | None = None
         self._reacao: str | None = None
         self._cores: dict[str, RGB] = {}
@@ -586,8 +559,6 @@ class Passo:
             )
             self._reacao = reacao_da_luz_do_estilo(estilo_ativo(self.daemon))
             self._cores = self._cores_base(controles) if self._reacao else {}
-        # a luz explícita do perfil vence a da corrida, que vence a do estilo; quem quer a luz
-        # fixa usa o Personalizado
         plano = {
             **self._planos_do_estilo(controles, agora),
             **self._planos_da_corrida(controles, agora),
@@ -655,7 +626,7 @@ class Passo:
         if reacao not in (REACAO_ACENDE, REACAO_BATERIA) or perfil is None:
             self._brilho_do_acende.clear()
             return {}
-        if perfil.leds.modo == "automatico":  # (noqa-acento) chave do contrato
+        if perfil.leds.modo == "automatico":  # (noqa-acento)
             return {}
         from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
@@ -697,7 +668,7 @@ class Passo:
 
         tel, perfil = telemetria_do(self.daemon), self._perfil
         cor = None if tel is None else tel.cor_da_rotacao(agora)
-        if cor is None or perfil is None or perfil.leds.modo == "automatico":  # (noqa-acento) chave
+        if cor is None or perfil is None or perfil.leds.modo == "automatico":  # (noqa-acento)
             return {}
         mesa, ligados = economia_da_mesa(), controles_em_economia()
         planos: dict[str, PlanoDoControle] = {}

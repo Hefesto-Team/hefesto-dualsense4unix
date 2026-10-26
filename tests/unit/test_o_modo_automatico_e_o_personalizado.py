@@ -47,7 +47,7 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.testing import FakeController
 
-AUTOMATICO = "automatico"  # (noqa-acento) chave ASCII
+AUTOMATICO = "automatico"  # (noqa-acento)
 UM = "aa:bb:cc:00:00:01"
 CHAVE_UM = "aabbcc000001"
 NOME = "regua-dos-modos"
@@ -59,13 +59,9 @@ P1 = {"uniq": UM, "index": 0, "transport": "usb", "connected": True, "player": 1
       "lightbar_rgb": [0, 0, 255], "lightbar_on": True, "lightbar_source": "sysfs"}
 
 
-# ---------------------------------------------------------------------------------------------
-# a cena
-
-
 @pytest.fixture
 def a03():
-    import pacotes  # noqa: F401  (registra os dez)
+    import pacotes  # noqa: F401
     from pacotes import a03_gatilhos
 
     a03_gatilhos.esquecer_o_rascunho()
@@ -142,10 +138,6 @@ def _com_overrides(**controles: ControllerOverrides) -> dict[str, ControllerOver
     return dict(controles)
 
 
-# ---------------------------------------------------------------------------------------------
-# 1. a regra de leitura é uma só
-
-
 def test_as_constantes_do_desenho_sao_as_do_esquema() -> None:
     """O quadro e os botões falam a língua do esquema: uma palavra, um dono."""
     from hefesto_dualsense4unix.interface import monta
@@ -175,7 +167,6 @@ def test_as_constantes_do_desenho_sao_as_do_esquema() -> None:
 ], ids=["vazio", "global-nao-conta", "auto-desligado", "cor-no-controle",
         "preto-no-controle-nao-conta", "escrito-personalizado", "escrito-vence"])
 def test_a_regra_da_luz_sem_o_campo_escrito(perfil: Profile, esperado: str, a04: Any) -> None:
-    # A decisão D-0810-O-MODO-AUTOMATICO-E-O-PERSONALIZADO.
     """``None`` vale o que o perfil já dizia; o escrito manda; o modelo e o JSON concordam.
 
     A cor GLOBAL não conta como «cor própria»: no merge do backend a paleta automática vence
@@ -183,6 +174,8 @@ def test_a_regra_da_luz_sem_o_campo_escrito(perfil: Profile, esperado: str, a04:
     sobre um aparelho que acende o plástico.
 
     MORDIDA: faça ``_tem_cor_propria`` contar o global e ``global-nao-conta`` reprova.
+
+    Prova da D-0810-O-MODO-AUTOMATICO-E-O-PERSONALIZADO.
     """
     cru = perfil.model_dump(mode="json", exclude_unset=True)
     assert a04.modo_da_luz_do_perfil(cru) == esperado
@@ -229,10 +222,6 @@ def test_sem_perfil_o_modo_e_o_personalizado(a03: Any, a04: Any) -> None:
         assert a04.modo_da_luz_do_perfil(vazio) == "personalizado"
 
 
-# ---------------------------------------------------------------------------------------------
-# 2. a vista que vai ao aparelho
-
-
 def test_o_perfil_sem_modo_escrito_vai_inteiro_ao_aparelho() -> None:
     """A vista só age sobre o modo ESCRITO: o perfil de antes segue como estava."""
     p = Profile(name="a", match=MatchAny(),
@@ -244,10 +233,11 @@ def test_o_perfil_sem_modo_escrito_vai_inteiro_ao_aparelho() -> None:
 
 
 def test_o_automatico_dos_gatilhos_manda_sem_efeito_e_o_disco_fica() -> None:
-    # A decisão D-0810-O-MODO-AUTOMATICO-E-O-PERSONALIZADO.
     """Global e overrides saem ``Off``; o original (o que vai ao disco) não se mexe.
 
     MORDIDA: tire o ramo dos gatilhos de ``perfil_no_modo`` e o ``right`` volta ``Rigid``.
+
+    Prova da D-0810-O-MODO-AUTOMATICO-E-O-PERSONALIZADO.
     """
     p = Profile(
         name="a", match=MatchAny(),
@@ -325,10 +315,6 @@ def test_o_manager_aplica_a_vista_da_luz(pasta_de_perfis: pathlib.Path) -> None:
         ProfileManager(controller=fc, store=StateStore()).activate(f"l-{modo}")
         cores = [c.payload for c in fc.commands if c.kind == "set_led"]
         assert (cores == [(10, 20, 30)]) is acende, (modo, cores)
-
-
-# ---------------------------------------------------------------------------------------------
-# 3. os gestos
 
 
 def test_o_gesto_dos_gatilhos_grava_o_modo_e_guarda_a_escolha(
@@ -413,10 +399,6 @@ def test_o_perfil_de_antes_segue_aceitando_o_efeito(
     a03_gatilhos._nao_no_automatico(_ctx(pac))
 
 
-# ---------------------------------------------------------------------------------------------
-# 4. o que a tela pinta
-
-
 def test_no_automatico_a_tela_dos_gatilhos_diz_sem_efeito(a03: Any) -> None:
     """Com o modo escrito, a tela mostra ``Off`` antes de olhar o rascunho e o disco.
 
@@ -430,8 +412,10 @@ def test_no_automatico_a_tela_dos_gatilhos_diz_sem_efeito(a03: Any) -> None:
 
 
 def test_o_rotulo_da_chave_off_e_sem_efeito(a03: Any) -> None:
-    # A decisão D-0810-O-MODO-AUTOMATICO-E-O-PERSONALIZADO.
-    """Resposta de 06/10: o ``Off`` aparece como «Sem efeito»; a chave não muda."""
+    """Resposta de 06/10: o ``Off`` aparece como «Sem efeito»; a chave não muda.
+
+    Prova da D-0810-O-MODO-AUTOMATICO-E-O-PERSONALIZADO.
+    """
     assert a03.ROTULO_DO_JOGO_DECIDE == "Sem efeito"
     assert a03._rotulo_do_modo("Off") == "Sem efeito"
 
@@ -470,10 +454,6 @@ def test_no_automatico_o_hex_e_o_do_plastico_mesmo_com_cor_guardada(
     assert tuple(cor) != (12, 34, 56)
     cru["leds"]["modo"] = "personalizado"
     assert tuple(a04._a_cor_de_agora(ctx, cru, cego)) == (12, 34, 56)
-
-
-# ---------------------------------------------------------------------------------------------
-# 5. o desenho
 
 
 def test_o_par_de_botoes_acende_pelo_modo_e_leva_o_pintor() -> None:
@@ -518,17 +498,12 @@ def test_a_folha_para_as_colunas_no_automatico() -> None:
     for pagina in ("03-gatilhos.html", "04-iluminacao.html"):
         texto = onde.pagina(pagina).read_text(encoding="utf-8")
         if 'data-governa="' in texto:
-            # a base comum: o botão aponta a área (`data-governa`) e a classe que a cala
             assert ".governado-pelo-jogo{" in texto
             assert "pointer-events:none" in texto.split(".governado-pelo-jogo{", 1)[1][:120]
             continue
         assert '.quadro[data-modo-da-aba="automatico"]' in texto
         assert "pointer-events:none" in texto.split(
             '.quadro[data-modo-da-aba="automatico"]', 1)[1][:300]
-
-
-# ---------------------------------------------------------------------------------------------
-# 6. o que saiu
 
 
 def test_a_luz_do_jogo_saiu_da_iluminacao_e_o_led_do_microfone_ficou(a04: Any) -> None:
@@ -549,10 +524,6 @@ def test_a_luz_do_jogo_saiu_da_iluminacao_e_o_led_do_microfone_ficou(a04: Any) -
     assert hasattr(luz_do_mic, "luz_do_mic_do_jogo")
     desenho = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
     assert "luz-do-jogo" not in desenho and 'data-gesto="auto-cores"' not in desenho
-
-
-# ---------------------------------------------------------------------------------------------
-# 7. o gesto da luz
 
 
 def test_o_gesto_da_luz_grava_o_modo_liga_as_cores_e_reaplica(

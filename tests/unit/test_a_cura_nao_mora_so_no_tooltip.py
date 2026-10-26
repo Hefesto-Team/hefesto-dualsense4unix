@@ -86,7 +86,7 @@ def _itens(**extra: Any) -> list[exame_mod.Item]:
         "parametro_do_radio": SEM_BANCADA,
         "conf_do_radio": SEM_BANCADA,
         "raiz_usb": SEM_BANCADA,
-        "modulos": SEM_BANCADA,  # (noqa-acento): nome de argumento
+        "modulos": SEM_BANCADA,  # (noqa-acento)
         "diretorio_do_modulo": SEM_BANCADA,
         "executar_busctl": lambda _argumentos: None,
         "leitura_da_vizinhanca": list,

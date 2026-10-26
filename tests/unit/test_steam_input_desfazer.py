@@ -148,7 +148,7 @@ def chamadores_em_src() -> list[str]:
             continue
         try:
             arvore = ast.parse(arquivo.read_text(encoding="utf-8", errors="replace"))
-        except SyntaxError:  # pragma: no cover - arquivo quebrado é outro problema
+        except SyntaxError:  # pragma: no cover
             continue
         for no in ast.walk(arvore):
             referencia = (

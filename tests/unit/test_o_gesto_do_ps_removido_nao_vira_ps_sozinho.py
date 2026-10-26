@@ -36,12 +36,11 @@ from tests.unit.test_o_gesto_novo_do_ps import (  # noqa: F401
     sem_steam,
 )
 
-#: Os quatro controles pela cor do plástico, na faixa sintética da casa.
 CONTROLES = [
-    ("aa:bb:cc:00:00:01", "usb"),  # Starlight Blue, cabo
-    ("aa:bb:cc:00:00:02", "bt"),   # White, rádio
-    ("aa:bb:cc:00:00:03", "usb"),  # Cosmic Red, cabo
-    ("aa:bb:cc:00:00:04", "bt"),   # Galactic Purple, rádio
+    ("aa:bb:cc:00:00:01", "usb"),
+    ("aa:bb:cc:00:00:02", "bt"),
+    ("aa:bb:cc:00:00:03", "usb"),
+    ("aa:bb:cc:00:00:04", "bt"),
 ]
 
 
@@ -81,7 +80,7 @@ def _steam_abriu(mgr: HotkeyManager, pedidos: list[str], antes: int) -> int:
 @pytest.mark.parametrize("mac,via", CONTROLES)
 def test_o_ps_com_o_dpad_removido_nao_abre_a_steam(
         sem_steam: list[str], mac: str, via: str) -> None:  # noqa: F811
-    # D-1710-O-PS-COM-OUTRO-BOTAO-NAO-E-PS-SOZINHO
+    """Prova da D-1710-O-PS-COM-OUTRO-BOTAO-NAO-E-PS-SOZINHO."""
     mgr = _gerente(sem_ps_dpad=True)
     _toque(mgr, [["ps"], ["ps", "dpad_up"], ["ps", "dpad_up"], ["ps"]], mac)
     _toque(mgr, [["ps"], ["ps", "dpad_down"], ["ps"]], mac, t0=1.0)

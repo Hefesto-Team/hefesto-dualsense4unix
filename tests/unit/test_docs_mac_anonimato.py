@@ -12,9 +12,6 @@ from hefesto_dualsense4unix.core.formas_do_endereco import (
     formas_do_endereco,
 )
 
-#: OUIs de hardware REAL desta bancada (adaptador BT, DualSense, 8BitDo,
-#: NOTA DATADA — 06/08/2026: entrou `14:3a:9a`, o OUI do SEGUNDO DualSense da
-#: `44:46:48`, o TERCEIRO e o QUARTO DualSense — os dois que chegaram na mesa
 _OUIS_REAIS_OCTETOS = (
     ("d8", "44", "89"),
     ("a0", "fa", "9c"),
@@ -24,7 +21,6 @@ _OUIS_REAIS_OCTETOS = (
     ("14", "3a", "9a"),
     ("d4", "2f", "4b"),
     ("44", "46", "48"),
-    # 06/10/2026: o OUI de dois adaptadores BT desta bancada, que a lista não tinha.
     ("ac", "a7", "f1"),
 )
 
@@ -32,7 +28,6 @@ OUIS_REAIS = tuple("[:_-]".join(o) for o in _OUIS_REAIS_OCTETOS)
 
 _OUIS_COLADOS = tuple("".join(o) for o in _OUIS_REAIS_OCTETOS)
 
-# (`...battery-44:46:48:xx:xx:xxPOWER_SUPPLY_TYPE=`), que é como o endereço
 _NAO_HEX_ANTES = r"(?<![0-9a-f])"
 _NAO_HEX_DEPOIS = r"(?![0-9a-f])"
 MAC_COMPLETO_RE = re.compile(
@@ -233,10 +228,6 @@ def test_o_regex_nao_confunde_pedaco_de_hexadecimal_maior() -> None:
     assert not list(MAC_COMPLETO_RE.finditer(sha_falso))
 
 
-#       legítimos, os dois com prefixo forjado — o exemplo da docstring  # serial-de-mentira
-#       de `mascarar_serial` e o de  # serial-de-mentira
-
-#: do serial de fábrica do DualSense, como MEDIDA nos aparelhos da bancada: as
 SERIAL_DE_FABRICA_RE = re.compile(PADRAO_DE_SERIAL)
 
 _PAR_HEX_SOLTO = re.compile(rb"(?<![0-9A-Fa-f])([0-9A-Fa-f]{2})(?![0-9A-Fa-f])")
@@ -352,10 +343,10 @@ def test_o_portao_de_serial_nao_reprova_palavra_comprida_nem_forjado() -> None:
         "MICROCASSYVOLTAGE",
         "MICROCASSYCURRENT",
         "INDEPENDENTEMENTE",
-        "PROGRAMATICAMENTE",  # transcrito de sessão
+        "PROGRAMATICAMENTE",
         "REDIMENSIONAMENTO",
-        "AB1C05D1234567890",  # serial-de-mentira: da docstring de mascarar_serial
-        "ZZ9Y02Q0000000000",  # serial-de-mentira: de test_cor_do_plastico_recusa
+        "AB1C05D1234567890",  # serial-de-mentira
+        "ZZ9Y02Q0000000000",  # serial-de-mentira
     )
     for palavra in ruido:
         assert len(palavra) == 17, palavra
@@ -385,8 +376,6 @@ def test_o_check_anonymity_usa_o_mesmo_padrao_de_serial() -> None:
         f"  aqui:   {PADRAO_DE_SERIAL}"
     )
 
-
-# como bytes soltos por espaço, e o ``0x09`` e o ``0x0b`` do DualSense o trazem
 
 _SEIS_OCTETOS_EM_TEXTO = re.compile(
     r"(?i)(?<![0-9a-f])(?=([0-9a-f]{2})([:_\-. ]?)([0-9a-f]{2})\2([0-9a-f]{2})\2"

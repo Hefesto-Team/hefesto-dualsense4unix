@@ -26,7 +26,6 @@ def carregar(nome: str) -> ModuleType:
     if spec is None or spec.loader is None:  # pragma: no cover
         raise ImportError(str(alvo))
     modulo = importlib.util.module_from_spec(spec)
-    # O portão pode ter `@dataclass` (que procura o módulo em `sys.modules`) e irmãos em `scripts/`.
     sys.modules[spec.name] = modulo
     if str(SCRIPTS) not in sys.path:
         sys.path.insert(0, str(SCRIPTS))

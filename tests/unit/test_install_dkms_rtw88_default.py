@@ -65,9 +65,6 @@ def _roda_funcao(
     stubs.mkdir(exist_ok=True)
     script = (
         'warn() { printf "WARN: %s\\n" "$*"; }\n'
-        # A pergunta «há adaptador que o rtw88_usb atenda?» é da sprint
-        # O-QUE-E-DA-BANCADA-FICA-NA-BANCADA-01 e tem régua própria; aqui o
-        # adaptador está presente, para medir o resto do contrato.
         "_rtw88_adaptadores_presentes() { echo 2357:012d; }\n"
         f"{prologo}\n{FN}\n"
         "install_dkms_rtw88_usb_host\n"

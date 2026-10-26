@@ -43,17 +43,13 @@ PAGINAS = [
     "09-sistema.html", "10-perfis.html", "mapa-do-controle.html",
 ]
 
-#: `--comment`, `--texto-mudo` e `--linha` do `topo.html`, como o WebKit os devolve.
 CINZAS = ["rgb(136, 150, 196)", "rgb(154, 158, 184)", "rgb(83, 87, 111)"]
 
-#: O que o piloto faz antes da medida, onde o mockup nasce com os lugares cheios.
-#: Na Jogar, o piloto põe a classe `off` e escreve o travessão em cada campo do cartão vazio.
 PREPARO = {"01-jogar.html": (
     "document.querySelectorAll('.cartao').forEach(c => { c.classList.add('off');"
     " c.querySelectorAll('[data-campo]')"
     ".forEach(e => { if (!e.children.length) e.textContent = '—'; });"
     " });"),
-    # Na Conexões, o «Rádio e adaptadores» nasce fechado: a régua o abre, como o clique no título.
     "08-conexoes.html": "document.getElementById('cx8-3').checked = true;"}
 
 MEDIR = r"""
@@ -99,13 +95,13 @@ def _ler(aba: str) -> dict[str, Any]:
 
 @pytest.mark.parametrize("aba", PAGINAS)
 def test_nenhuma_letra_e_cinza(aba: str) -> None:
-    # D-1610-O-CINZA-SAI-DA-LETRA
+    """Prova da D-1610-O-CINZA-SAI-DA-LETRA."""
     assert _ler(aba)["cinzas"] == []
 
 
 @pytest.mark.parametrize("aba", [p for p in PAGINAS if p[:2].isdigit()])
 def test_o_quadro_respira_igual_dos_dois_lados(aba: str) -> None:
-    # D-1610-O-RESPIRO-E-18-DOS-DOIS-LADOS
+    """Prova da D-1610-O-RESPIRO-E-18-DOS-DOIS-LADOS."""
     respiro = _ler(aba)["respiro"]
     assert respiro is not None, "a página perdeu o .miolo ou o .quadro"
     esquerda, direita = respiro
@@ -114,7 +110,7 @@ def test_o_quadro_respira_igual_dos_dois_lados(aba: str) -> None:
 
 @pytest.mark.parametrize("aba", ["01-jogar.html", "06-navegacao.html", "09-sistema.html"])
 def test_o_perfil_ativo_tem_o_tamanho_do_nome_e_e_branco(aba: str) -> None:
-    # D-1610-O-PERFIL-ATIVO-NUMA-LINHA-DO-TAMANHO-DO-NOME
+    """Prova da D-1610-O-PERFIL-ATIVO-NUMA-LINHA-DO-TAMANHO-DO-NOME."""
     perfil = _ler(aba)["perfil"]
     assert perfil is not None
     rotulo, nome, cor = perfil

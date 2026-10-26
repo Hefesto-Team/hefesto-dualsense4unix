@@ -220,7 +220,7 @@ def test_valor_fora_do_campo_e_recusado_sem_struct_error() -> None:
 
 
 def test_o_mac_de_fixture_e_da_faixa_forjada_e_sem_sequencia_simples() -> None:
-    assert MAC_FORJADO.startswith("02:fe:00:")  # a faixa do test_anonimato_de_fixtures
+    assert MAC_FORJADO.startswith("02:fe:00:")
     octetos = MAC_FORJADO.split(":")
     assert len(set(octetos)) == 6
     assert re.fullmatch(r"([0-9a-f]{2}:){5}[0-9a-f]{2}", MAC_FORJADO)

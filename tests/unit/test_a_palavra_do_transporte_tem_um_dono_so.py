@@ -101,7 +101,6 @@ def test_a_contagem_do_cabecalho_nao_se_mexe_quando_a_palavra_muda(monkeypatch) 
     _, mesa = _mesa("usb", "usb")
     assert mesa_viva.texto_da_contagem(mesa) == ("● 2 controles: ", "2 USB")
 
-    # não. A `via` deixou de vir da tabela `VIA_DO_TRANSPORTE` e passou a vir da
     monkeypatch.setattr(
         mesa_viva, "_via_do_transporte", lambda _t: SENTINELA)
     _, mesa_depois = _mesa("usb", "usb")

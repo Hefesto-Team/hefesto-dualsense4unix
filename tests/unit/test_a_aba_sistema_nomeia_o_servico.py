@@ -57,7 +57,7 @@ from hefesto_dualsense4unix.interface import sistema as aba_sistema
 
 RAIZ = Path(__file__).resolve().parents[2]
 PAGINA = (RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
-          / "paginas" / "09-sistema.html")  # (noqa-acento) `paginas` e o nome da PASTA
+          / "paginas" / "09-sistema.html")  # (noqa-acento)
 
 PALAVRA = "Hefesto"
 
@@ -135,7 +135,6 @@ def test_a_regua_sabe_onde_olhar() -> None:
         "NENHUM botão desta aba diz 'serviço' — mesma pergunta da linha acima. "
         f"Botões vistos: {botoes}"
     )
-    # as nomeia é `aba_sistema.linhas_do_status` — é com ela que a página casa.
     do_produto = {linha["id"] for linha in aba_sistema.linhas_do_status(
         aba_sistema.Leitura())}
     assert set(_rotulos_das_linhas()) & do_produto, (

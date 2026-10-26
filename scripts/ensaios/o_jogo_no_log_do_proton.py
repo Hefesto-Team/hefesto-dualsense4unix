@@ -139,7 +139,7 @@ if os.path.isdir(_SRC) and _SRC not in sys.path:
 
 from identidade_do_vpad import VPAD_HID_PHYS, VPAD_UNIQ_PREFIXO
 
-try:  # pragma: no cover - o caminho sem pacote é o do checkout sem venv
+try:  # pragma: no cover
     from hefesto_dualsense4unix.integrations.uhid_gamepad import (
         VPAD_HID_PHYS as _CARIMBO_DO_PRODUTO,
     )
@@ -467,7 +467,7 @@ def ler_log(caminho: str) -> Log:
                 if func == "sdl_add_device":
                     log.sdl.append(resto)
                     continue
-    except OSError as erro:  # pragma: no cover - o stat já passou
+    except OSError as erro:  # pragma: no cover
         log.erro = str(erro)
     return log
 

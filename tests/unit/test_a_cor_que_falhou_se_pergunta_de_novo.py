@@ -262,7 +262,6 @@ def test_o_piloto_dela_pergunta_pelo_leitor_e_nao_por_trava_propria() -> None:
     assert "disparar" in chamadas and "perguntar" not in chamadas, chamadas
 
 
-# 4 · O DAEMON — a mesma agenda, e o `modelo` do `state_full` volta
 class _Handler:
     """O mixin com o mínimo que `_identidade_de_fabrica` toca."""
 

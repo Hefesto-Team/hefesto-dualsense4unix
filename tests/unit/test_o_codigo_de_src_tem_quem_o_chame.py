@@ -27,7 +27,6 @@ _GERADOR = (
     "Mora ao lado do `monta.py`, que ele usa como biblioteca"
 )
 
-#: O que fica em `src/` sem caminho do produto, e por quê. Chave: o módulo sem o pacote.
 _FORA_DO_PRODUTO: dict[str, str] = {
     "interface.aba01": _GERADOR,
     "interface.aba03": _GERADOR,
@@ -75,20 +74,17 @@ _FORA_DO_PRODUTO: dict[str, str] = {
 
 _PONTUADO = re.compile(r"hefesto_dualsense4unix(?:\.[A-Za-z_]\w*)+")
 _CAMINHO = re.compile(r"hefesto_dualsense4unix/[\w/]+\.py")
-#: O `from pacote import módulo` do Python embutido num heredoc de shell.
 _DE_IMPORT = re.compile(
     r"from\s+(hefesto_dualsense4unix[\w.]*)\s+import[ \t]+(?:\(([^)]*)\)|([\w \t,]+))")
 _SCRIPT = re.compile(r"scripts/[\w./-]+\.(?:sh|py)")
 _FORA = ("src/", "tests/", "scripts/", "docs/", "mockup/", ".github/", "LICENSES/", "po/",
          "examples/")
 _DOC = (".md", ".csv", ".txt", ".html", ".png", ".svg", ".json")
-#: Texto da casa que nada executa: a licença, o aviso, e a configuração do git e dos ganchos.
 _NAO_EXECUTA = frozenset({"NOTICE", "LICENSE"})
 
 
 def _arquivos(raiz: Path) -> list[str]:
     if (raiz / ".git").exists():
-        # O arquivo novo ainda fora do índice também conta: a régua não fica cega a ele.
         saida = subprocess.run(["git", "-C", str(raiz), "ls-files", "-z", "--cached", "--others",
                                 "--exclude-standard"],
                                capture_output=True, check=True).stdout.decode()
@@ -157,7 +153,6 @@ class _Grafo:
                 if atual and " " not in no.value and f"{PACOTE}.{no.value}" in self.do_src:
                     achados.add(f"{PACOTE}.{no.value}")
         if f"{PACOTE}.interface" in atual or "/interface/" in arquivo:
-            # A pasta da interface entra no `sys.path`: o irmão se importa por nome nu.
             nus = {n for n in nomes if not n.startswith(PACOTE)
                    and n.split(".")[0] not in sys.stdlib_module_names}
             nomes |= {f"{PACOTE}.interface.{n}" for n in nus}
@@ -217,8 +212,10 @@ _FORA_HOJE = _sem_pacote(_Grafo(RAIZ).fora_do_produto())
 
 
 def test_todo_modulo_de_src_tem_caminho_do_produto_ou_razao_declarada() -> None:
-    """O módulo novo que só o teste chama reprova aqui, com o nome dele."""
-    # D-2210-O-CODIGO-DE-SRC-TEM-QUEM-O-CHAME
+    """O módulo novo que só o teste chama reprova aqui, com o nome dele.
+
+    Prova da D-2210-O-CODIGO-DE-SRC-TEM-QUEM-O-CHAME.
+    """
     sem_razao = sorted(_FORA_HOJE - set(_FORA_DO_PRODUTO))
     assert not sem_razao, (
         "estes módulos de `src/` não têm caminho do produto (nem entrada do pyproject, "

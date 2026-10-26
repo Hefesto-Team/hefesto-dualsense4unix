@@ -26,7 +26,6 @@ from __future__ import annotations
 
 from typing import Final
 
-#: do protocolo: tom de 1 kHz no sink, o microfone do próprio DualSense como
 _SPEAKER_REG_MUDO_ATE: Final[int] = 38
 _SPEAKER_REG_SATURA_EM: Final[int] = 102
 

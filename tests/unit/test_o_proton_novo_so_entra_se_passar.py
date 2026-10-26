@@ -37,7 +37,6 @@ def _proton_de_mentira(raiz: Path, script: str = SCRIPT_DA_FIXADA, sem: str = ""
     for _comp, arquivos, texto in qp.CONTRATO_DE_STRINGS:
         if f"{arquivos[0]}:{texto}" == sem:
             continue
-        # o winebus.sys guarda em UTF-16, como o medido no 11-7
         dado = texto.encode("utf-16-le") if texto == "PROTON_DISABLE_HIDRAW" else texto.encode()
         alvo = arquivos[-1] if texto == "PROTON_DISABLE_HIDRAW" else arquivos[0]
         conteudos[alvo] = conteudos.get(alvo, b"\x00") + dado + b"\x00"
@@ -118,17 +117,15 @@ def _pino(nome: str, sha: str) -> dict[str, str]:
 
 
 def test_o_pino_com_versao_sem_a_linha_passou_reprova() -> None:
-    # D-1610-O-PROTON-NOVO-SO-ENTRA-COM-A-FICHA
+    """Prova da D-1610-O-PROTON-NOVO-SO-ENTRA-COM-A-FICHA."""
     recibo = qp.ler_recibo(RECIBO.format(a="a" * 64, b="b" * 64))
     assert qp.o_pino_sem_recibo(_pino("GE-Proton11-7-x86_64", "a" * 64), recibo) == []
     assert qp.o_pino_sem_recibo(_pino("GE-Proton11-8-x86_64", "b" * 64), recibo)
     assert qp.o_pino_sem_recibo(_pino("GE-Proton11-9-x86_64", "c" * 64), recibo)
-    # o mesmo nome com outro tarball não passou
     assert qp.o_pino_sem_recibo(_pino("GE-Proton11-7-x86_64", "d" * 64), recibo)
 
 
 def test_entre_duas_que_passam_fica_a_mais_recente() -> None:
-    # D-2210-O-PROTON-E-SEMPRE-O-MAIS-RECENTE-QUE-PASSA (revoga «a mínima que passa»)
     texto = RECIBO.format(a="a" * 64, b="b" * 64).replace(
         "a háptica não chegou,reprovou,háptica", "passou,passou,"
     )

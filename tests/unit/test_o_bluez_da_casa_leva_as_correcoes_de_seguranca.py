@@ -119,9 +119,6 @@ def _rodar(corpo: str, env: dict[str, str]) -> str:
     return res.stdout
 
 
-# ------------------------------------------------ 1. o changelog da revisão 5
-
-
 def test_o_changelog_da_r5_diz_o_que_cobre_e_o_que_leva() -> None:
     entrada = _entrada_de_cima(R5)
     assert CHANGELOG_HEFESTO.read_text(encoding="utf-8").startswith(f"bluez ({R5}) noble;")
@@ -165,9 +162,6 @@ def test_cada_patch_do_upstream_abre_com_o_commit_e_tem_o_hash_do_baseline(nome:
     assert hashlib.sha256(arquivo.read_bytes()).hexdigest() == sha
 
 
-# ----------------------------------------- 2. a distro contra o que a casa cobre
-
-
 def test_a_distro_no_ponto_que_a_casa_cobre_passa(tmp_path: Path) -> None:
     """O dpkg.log diz 5.4, mas o changelog diz que a R5 cobre até o 5.8."""
     env = _ambiente(tmp_path, pacote=R5, changelog=_entrada_de_cima(R5), candidatas=(COBERTA,))
@@ -208,9 +202,6 @@ def test_so_a_entrada_de_cima_conta(tmp_path: Path) -> None:
     assert _rodar(pergunta, env).strip() == COBERTA
 
 
-# --------------------------------------------------------------- 3. o teto
-
-
 def test_o_5_87_da_casa_passa_no_teto(tmp_path: Path) -> None:
     env = _ambiente(tmp_path, pacote=R5, changelog=_entrada_de_cima(R5), daemon="5.87")
     saida = _rodar("check_bluez_backport_version", env)
@@ -238,9 +229,6 @@ def test_o_5_87_que_nao_leva_o_5bc6aa79_segue_barrado(
     )
     primeira = _rodar("check_bluez_backport_version", env).splitlines()[0]
     assert "[WARN]" in primeira and "dev_disconnected" in primeira, (caso, primeira)
-
-
-# ------------------------------------- 4. o script confere o patch do upstream
 
 
 def _conferir(tmp_path: Path, patch: Path) -> subprocess.CompletedProcess[str]:

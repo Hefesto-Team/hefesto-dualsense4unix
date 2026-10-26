@@ -35,26 +35,20 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 PACOTE = "src/hefesto_dualsense4unix"
 
-#: Os módulos do GTK que fazem widget e janela. O `WebKit2` carrega o `Gtk` junto.
 MODULOS_DE_WIDGET = frozenset({"Gtk", "Gdk", "WebKit2"})
 
-#: `gi.require_version(...)` e o `require_version(...)` puxado por `from gi import`.
 _PEDIDOS_DE_VERSAO = frozenset({"gi.require_version", "require_version"})
 
-#: Os donos do GTK, relativos a `src/hefesto_dualsense4unix/`, cada um com o motivo.
 DONOS_DO_GTK: dict[str, str] = {
-    # A MOLDURA da interface.
     "interface/janela.py": "moldura: a janela do WebKit, a barra, o tema e a área de transferência",
     "interface/tema_da_sessao.py": "moldura: o tema e a barra da sessão, que só a janela adota",
     "interface/abrir.py": "moldura: o lançador que abre a janela e sobe a bandeja",
     "interface/ver.py": "moldura: o visor de uma página dentro do WebKit",
     "interface/hefesto_vivo.py": "moldura: o piloto das dez abas",
-    # A BANDEJA.
     "app/tray.py": "bandeja: o ícone e o menu da área de notificação",
     "cli/cmd_tray.py": "bandeja: o comando que a sobe e sonda o que a sessão oferece",
 }
 
-#: Os pilotos de uma aba só, que dirigem o WebKit por dentro: nascem e morrem com a moldura.
 PADROES_DOS_PILOTOS: dict[str, str] = {
     "interface/*_vivo.py": "moldura: piloto de uma aba (dirige o WebKit por dentro)",
     "interface/*_vivos.py": "moldura: piloto de uma aba (dirige o WebKit por dentro)",

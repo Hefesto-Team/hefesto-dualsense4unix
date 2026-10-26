@@ -53,7 +53,7 @@ class _Bus:
         if args[0] == "get-property" and args[-1] == "Modalias":
             if args[2] == _CAMINHO:
                 return 's "usb:v054Cp0CE6d0100"'
-            return 's "usb:v046DpC52Bd0100"'  # um receptor qualquer, não-DualSense
+            return 's "usb:v046DpC52Bd0100"'
         if args[0] == "call":
             self.chamadas.append(args[-1])
             if args[-1] == "Connect" and not self.connect_ok:

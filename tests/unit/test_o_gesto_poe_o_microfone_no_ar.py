@@ -15,7 +15,6 @@ P2 = "aa:bb:cc:00:00:02"
 P3 = "aa:bb:cc:00:00:03"
 P4 = "aa:bb:cc:00:00:04"
 
-#: A BANCADA — quatro DualSense, dois no cabo e dois no rádio, na disposição
 MESA_DELA: tuple[tuple[str, str], ...] = (
     (P1, "bluetooth"),
     (P2, "usb"),
@@ -372,9 +371,6 @@ def test_ligar_pede_o_canal_e_calar_nao_o_solta(subsystem, registro) -> None:  #
         f"calar o microfone derrubou o canal dele: {registro.abertos()}"
     )
     assert registro.no_ar() == {"aabbcc000001": False}
-
-
-# AS RÉGUAS DAQUI EXERCITAM A BANCADA INTEIRA — os quatro DualSense.
 
 
 def _mesa_de_quatro(daemon: Any) -> None:

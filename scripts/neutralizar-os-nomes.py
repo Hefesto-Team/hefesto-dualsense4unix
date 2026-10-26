@@ -77,7 +77,6 @@ TABELA: dict[str, str] = {
     _T + "test_um_numero_so_01_o_alvo_fala_a_lingua_dela.py": _T + "test_um_numero_so_01_o_alvo_fala_a_lingua.py",
 }
 
-#: O marcador de isenção: a razão perde o «dela».
 MARCADOR_NOVO = "citação literal"
 MARCADOR_VELHO = MARCADOR_NOVO + " " + "dela"
 
@@ -113,10 +112,8 @@ def pares_de_nome(tabela: dict[str, str]) -> tuple[re.Pattern[str], dict[str, st
     return padrao, mapa
 
 
-#: Arquivos de posse alheia: recebem só a troca do caminho que quebraria, nunca o marcador.
 SO_REFERENCIA = (
     "install.sh", "uninstall.sh", "README.md", "docs/usage/", "tests/conftest.py", ".github/",
-    # dados que a costura escreve: só o caminho, nunca o marcador dentro das células
     "docs/data/mapa-controles.csv", "docs/data/decisoes-de-produto.csv", "docs/specs.html",
 )
 

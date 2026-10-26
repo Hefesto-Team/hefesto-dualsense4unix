@@ -31,8 +31,6 @@ fi
 exit 0
 """
 
-# O gerente de usuário de mentira: roda a unidade fora do lançamento, com o
-# ambiente mínimo do gerente (nada do ambiente do jogo chega ao restaurador).
 _FAKE_SYSTEMD_RUN = """#!/bin/sh
 while [ "$#" -gt 0 ]; do
     case "$1" in --) shift; break ;; --*) shift ;; *) break ;; esac
@@ -83,8 +81,6 @@ def _run_wrapper(
         "XDG_STATE_HOME": str(tmp_path / "state"),
         "SteamAppId": "1599660",
         "HEFESTO_GM_POLL_SECS": "0.2",
-        # A placa de verdade fica fora: com o sudo real no PATH, o lançamento
-        # travaria o piso da placa desta máquina.
         "HEFESTO_PLACA_ACORDADA": str(tmp_path / "sem-placa.sh"),
     }
     env.update(extra_env or {})

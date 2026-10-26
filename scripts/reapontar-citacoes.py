@@ -268,8 +268,6 @@ def podres_do_validador(raiz: Path) -> tuple[list[Citacao], list[str]]:
     a_mao: list[str] = []
     for achado in achados:
         if achado.forma:
-            # a queixa é da FORMA (o caminho que não abre da raiz, a curta no código, o nome que
-            # casa na vizinha), não da posição: mover o endereço não a cura, e o histórico a pioraria
             a_mao.append(f"{achado}: é de forma, e se cura à mão")
             continue
         endereco = _ENDERECO.search(achado.endereco)
@@ -284,7 +282,6 @@ def podres_do_validador(raiz: Path) -> tuple[list[Citacao], list[str]]:
         chave = (achado.documento, endereco.group(0).strip("`"), curta)
         if chave not in por_chave:
             a = int(endereco["a"])
-            # a curta de célula vem sem posição: o lugar sai de ``_trechos_da_curta``, pela linha
             por_chave[chave] = Citacao(
                 raiz / achado.documento,
                 endereco["arq"],
@@ -296,7 +293,6 @@ def podres_do_validador(raiz: Path) -> tuple[list[Citacao], list[str]]:
             )
         por_chave[chave].linhas.add(achado.linha)
         if nome is None:
-            # linha que não existe, faixa invertida, `def` abraçado: o histórico do documento
             por_chave[chave].podre = True
         else:
             por_chave[chave].nomes.add(nome["nome"])
@@ -510,7 +506,6 @@ def _caracteres_uteis(linha: str) -> int:
 
 HISTORICO_DA_CRUA = 2000
 
-#: Contagem da última corrida: ``conferidas``, ``no_lugar``, ``andaram``, ``a_mao``, ``recentes``.
 ESTATISTICA: collections.Counter[str] = collections.Counter()
 """Chaves de motivo (``a_mao:<estado>``) somam em ``a_mao``."""
 
@@ -788,7 +783,7 @@ def _registros_do_csv(texto: str) -> Iterator[list[Celula]]:
                 i += 1
             break
         if len(registro) == 1 and registro[0][0] == "" and registro[0][2] is None:
-            registro = []  # a linha em branco: o ``csv.reader`` devolve ``[]``
+            registro = []
         yield registro
 
 
@@ -808,7 +803,6 @@ def _contagens(
                 inteiras[endereco] += 1
 
     if modo == "csv":
-        # célula a célula, pela mesma ``_achar``: nenhum endereço cruza a vírgula do CSV
         for registro in csv.reader(io.StringIO(texto, newline="")):
             for celula in registro:
                 if _DOIS_PONTOS_E_NUMERO.search(celula) is not None:
@@ -864,7 +858,7 @@ def _historico_do_documento(raiz: Path, relativo: str) -> list[tuple[str, str, b
                 nome_velho = campos[1] if estado == "R" and len(campos) == 3 else ""
         historico.append((sha, caminho, estado == "A"))
         if nome_velho:
-            caminho = nome_velho  # daqui para trás, o documento tinha o nome velho
+            caminho = nome_velho
     return historico
 
 
@@ -1336,9 +1330,6 @@ def segunda_chance(
         return "varredura", None, f"{motivo_da_varredura}; sem segunda chance: {porque}"
 
     if _relativo(raiz, documento) in val.CODIGO_COM_CITACOES:
-        # Medido em 25/10/2026: no arquivo da casa-sabe as sete segundas chances levavam endereços
-        # certos para linhas erradas. O reapontamento em massa dele (5df9b0c2d) foi À MÃO e certo,
-        # e o endereço de antes dele, que nunca passou por régua, já nascia errado.
         return sem_prova("o arquivo de código só se reaponta em massa à mão, conferido")
     if volta > PROFUNDIDADE_DA_SEGUNDA_CHANCE:
         return sem_prova(
@@ -1358,7 +1349,6 @@ def segunda_chance(
         return sem_prova("o commit trocou também o arquivo citado")
     a, b = int(achado["a"]), int(achado["b"] or achado["a"])
     if b - a != destino[1] - destino[0]:
-        # o bloco de antes tem outra largura: levá-lo escreveria ``:N-N`` ou cortaria a faixa
         return sem_prova(f"o commit mudou a largura do endereço (`{antigo}` -> `{endereco}`)")
     sha_antes, caminho_antes, _ = historico[posicao + 1]
     quantas = memo.conta(cat, val, modo, resolve, sha_antes, caminho_antes)[antigo]
@@ -1486,8 +1476,6 @@ def cruas(raiz: Path) -> list[Citacao]:
 
                 anotar(planilha, celula, "csv", onde, val.SEPARADORES_DE_BLOCO)
     for codigo in val.codigos_de(raiz):
-        # a cadeia emendada é UMA (o nome prometido pode estar no pedaço de baixo); no código a
-        # curta não se escreve (o validador a reprova), então só a inteira entra
         for trecho in val.trechos_do_codigo(codigo.read_text(encoding="utf-8")):
             anotar(codigo, trecho.texto, "csv", _desde(0), val.SEPARADORES_DE_BLOCO,
                    so_inteiras=True)
@@ -1654,7 +1642,7 @@ def _aplicar(texto: str, trocas: Sequence[tuple[Citacao, str]]) -> tuple[str, li
         if cit.curta:
             continue
         if cit.texto not in inteiras and _padrao_da_inteira(cit.texto).search(texto):
-            inteiras.add(cit.texto)  # a inteira leva todas as escritas do mesmo texto de uma vez
+            inteiras.add(cit.texto)
         else:
             pela_curta[i] = True
             trechos[i] = _trechos_da_curta(texto, cit)
@@ -1770,7 +1758,7 @@ def reapontar(
     for cit in cruas(raiz) + curtas_do_src(raiz):
         ja = do_historico.setdefault((cit.documento, cit.texto, cit.curta), cit)
         if ja.curta and not ja.trechos:
-            ja.trechos = list(cit.trechos)  # a do validador não sabe onde a curta está escrita
+            ja.trechos = list(cit.trechos)
     for cit in pelo_nome:
         vistos.add((cit.documento, cit.texto))
         relativo = cit.alvo.resolve().relative_to(raiz.resolve()).as_posix()
@@ -1818,8 +1806,6 @@ def reapontar(
                 )
                 certas.add(a_mao[-1])
                 continue
-            # A curta se escreve `:N` no documento: a linha diz que a troca foi nela, e a que
-            # inteira ela se prendeu, para quem lê o plano não procurar o endereço inteiro.
             presa = f" (curta, presa a `{cit.arquivo}`)" if cit.curta else ""
             feitos.append(
                 f"{documento.relative_to(raiz)}: `{cit.texto}` -> `{endereco}` ({n}x){presa}"

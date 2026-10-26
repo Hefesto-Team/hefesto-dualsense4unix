@@ -159,7 +159,6 @@ def test_os_quatro_botoes_dizem_quem_sao_no_desenho(a02, onde):
     `data-hef-quando` o alvo vira booleano e os DOIS acenderiam ao mesmo tempo.
     """
     doc = onde.read_text(encoding="utf-8")
-    # veio curar: com os quatro DualSense do usuário ligados, dois assentos ficavam
     cards = len(re.findall(r'class="ctl card[^"]*"', doc))
     assert cards >= 2, "o desenho precisa de mais de um card para esta régua morder"
     for campo, valores in _pares(a02, onde).items():

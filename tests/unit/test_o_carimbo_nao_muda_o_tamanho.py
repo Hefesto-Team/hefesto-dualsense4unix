@@ -126,8 +126,6 @@ def _devolvendo(raiz: Path) -> None:
 def brinquedo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     if not _git_existe():
         pytest.skip("sem `git` nesta máquina: a sujeira da árvore não se mede")
-    # O relógio parado: a régua mede a árvore, e a virada do minuto entre dois
-    # carimbos (00:57 → 00:58 no CI de 13/10) mudava a linha sem a árvore mudar.
     monkeypatch.setattr(carimbo_da_casa, "agora", lambda: "13/10/2026 às 00:57")
     ganchos = tmp_path / "sem-ganchos"
     ganchos.mkdir()

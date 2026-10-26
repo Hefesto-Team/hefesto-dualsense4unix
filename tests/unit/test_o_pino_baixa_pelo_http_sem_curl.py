@@ -15,7 +15,7 @@ import pytest
 
 from hefesto_dualsense4unix.integrations import proton_pin as pp
 
-CORPO = bytes(range(256)) * 4096  # 1 MiB
+CORPO = bytes(range(256)) * 4096
 
 
 def _servidor(honra_range: bool, pedidos: list[str | None]) -> http.server.ThreadingHTTPServer:

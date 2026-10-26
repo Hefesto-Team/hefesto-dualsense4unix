@@ -19,7 +19,6 @@ import pytest
 
 from hefesto_dualsense4unix.core.backend_pydualsense import PyDualSenseController
 
-# Faixa forjada da casa (``aa:bb:cc``), na forma da key do handle; nunca um endereço real.
 UM, DOIS, TRES, QUATRO = (f"aabbcc0000{n:02x}" for n in range(1, 5))
 
 
@@ -109,10 +108,6 @@ def test_a_lampada_menor_que_chega_leva_o_posto() -> None:
         assert ctl._a_carta_menor_locked(chaves[0]) == chaves[1]
 
 
-# A MAC-DA-VOLTA (17/10/2026): as mesmas perguntas, ao registro de verdade. A
-# carta de quem ainda não tem lâmpada é a mesa que vai sentar, e ela não troca
-# quando a lâmpada acende: o tique da volta e o seguinte dizem a mesma carta.
-
 from hefesto_dualsense4unix.daemon.subsystems.identity import (
     ControllerIdentityRegistry,
     make_auto_output_provider,
@@ -120,10 +115,9 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
 )
 from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (
     Relogio,
-    config_isolado,  # noqa: F401 — o lar de mentira: a fila nunca toca o disco do usuário
+    config_isolado,  # noqa: F401
 )
 
-#: Key do handle (a forma do hidraw) -> o uniq que o registro conhece.
 _KEY = {
     u: ":".join(u[i : i + 2] for i in range(0, 12, 2)).upper() for u in (UM, DOIS, TRES, QUATRO)
 }
@@ -172,8 +166,9 @@ def test_quem_volta_depois_do_prazo_e_a_carta_dele_ja_no_hotplug(quantos: int) -
     MORDIDA: tire a ``_mesa_que_vai_sentar`` de ``_cartas_locked`` e, no
     hotplug, a carta põe quem voltou depois das acesas (o 2 vira o 1), e um
     tique depois inverte.
+
+    Prova da D-1710-A-CARTA-SEM-LAMPADA-E-A-MESA-QUE-VAI-SENTAR.
     """
-    # D-1710-A-CARTA-SEM-LAMPADA-E-A-MESA-QUE-VAI-SENTAR
     relogio = Relogio()
     mesa = (UM, DOIS, TRES, QUATRO)[:quantos]
     _sessao_anterior(mesa)
@@ -243,8 +238,9 @@ def test_a_mesa_que_vai_sentar_e_a_do_tique_seguinte(jogo: bool, volta: bool) ->
     segurando (D-3009); o dono do lugar o retoma. A carta do hotplug é a mesa
     depois do tique. A gente nova é o ``QUATRO``, com lugar na fila de outra
     sessão e sem lâmpada no hotplug, como quem volta.
+
+    Prova da D-1710-A-CARTA-SEM-LAMPADA-E-A-MESA-QUE-VAI-SENTAR.
     """
-    # D-1710-A-CARTA-SEM-LAMPADA-E-A-MESA-QUE-VAI-SENTAR
     relogio = Relogio()
     _sessao_anterior((UM, DOIS, TRES, QUATRO))
     ctl, reg = _o_backend_do_registro(relogio)

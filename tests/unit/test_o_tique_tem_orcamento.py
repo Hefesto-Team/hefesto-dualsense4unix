@@ -161,9 +161,6 @@ def _uma_so_fase(monkeypatch: pytest.MonkeyPatch, *relogios: tuple[str, float, f
     monkeypatch.setattr(lc, "RELOGIOS_LENTOS", relogios)
 
 
-# 1. O gather lento do sinal de jogo não segura a entrada
-
-
 def test_o_gather_de_50_ms_nao_atrasa_a_entrada_do_tique(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -183,9 +180,7 @@ def test_o_gather_de_50_ms_nao_atrasa_a_entrada_do_tique(
     ]
     assert len(atrasos) >= 3, "nenhum tique que carregou o sinal encaminhou a entrada"
     mediana = statistics.median(atrasos)
-    # O defeito é de 50 ms; 5 ms deixa folga ao jitter de uma máquina carregada.
     assert mediana < 0.005, f"a entrada esperou {mediana * 1000:.1f} ms pelo sinal de jogo"
-    # E o tique SEGUINTE também não espera: o intervalo entre despachos fica no período.
     intervalos = [
         max(
             daemon.despachos.get(t + 1, 0.0) - daemon.despachos.get(t, 0.0),
@@ -228,9 +223,6 @@ def test_a_entrada_vai_antes_da_manutencao_no_mesmo_tique(
             assert ordem[i - 1] == "entrada", ordem[: i + 1]
 
 
-# 2. A fase: um tique carrega no máximo dois relógios lentos
-
-
 @pytest.mark.parametrize("poll_hz", [30, 60, 120])
 def test_em_10_s_nenhum_tique_roda_mais_que_dois_relogios(poll_hz: int) -> None:
     """Dez segundos simulados: cada relógio vence do seu jeito, e nunca três juntos.
@@ -259,7 +251,7 @@ def test_a_fase_fica_na_grade_depois_de_um_atraso() -> None:
     """Um tique que atrasa não leva os relógios para o mesmo ponto da grade."""
     relogios = lc._RelogiosLentos(0.0)
     relogios.vencidos(0.0)
-    relogios.vencidos(5.0)  # o laço ficou parado: todos vencidos, rearmados na grade
+    relogios.vencidos(5.0)
     depois = [relogios.vencidos(5.0 + i * 0.005) for i in range(1, 400)]
 
     assert max(len(v) for v in depois) <= 2
@@ -285,9 +277,6 @@ def test_o_laco_de_producao_anda_pela_tabela_de_relogios(
     asyncio.run(daemon.rodar())
 
     assert 3 <= len(chamadas) <= 6, chamadas
-
-
-# 3. A medida: o estouro sobe o contador e o doctor diz a linha
 
 
 def test_um_tique_de_30_ms_sobe_o_contador_e_o_doctor_imprime(

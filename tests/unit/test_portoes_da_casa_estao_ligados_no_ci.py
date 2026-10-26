@@ -12,7 +12,6 @@ from tests.unit.test_portao_a_lista_de_portoes_e_uma_so import ids_do_so, tabela
 
 RAIZ = Path(__file__).resolve().parents[2]
 CI = RAIZ / ".github" / "workflows" / "ci.yml"
-# O `autoria.yml` também roda portão da lista: a régua única de autoria.
 AUTORIA = RAIZ / ".github" / "workflows" / "autoria.yml"
 
 PORTOES_SH = RAIZ / "scripts" / "portoes.sh"

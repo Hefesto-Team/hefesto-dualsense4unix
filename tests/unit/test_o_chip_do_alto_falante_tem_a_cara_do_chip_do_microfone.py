@@ -78,7 +78,7 @@ from hefesto_dualsense4unix.interface.pacotes import a02_controles
 sys.path.insert(0, str(RAIZ / "scripts"))
 from check_a_maiuscula_decorativa import SOBE_A_CAIXA as _SOBE_A_CAIXA
 
-PAGINA = "02-controles.html"  # (noqa-acento) nome de arquivo
+PAGINA = "02-controles.html"
 
 CAMPO_DO_CHIP_DO_MIC = "mic-selo"
 CAMPO_DO_CHIP_DO_CANAL = "alto-canal"
@@ -177,7 +177,7 @@ def _cara_de_chip(doc: str) -> dict[str, str]:
 @pytest.fixture(params=["bancada", "publicado"])
 def pagina(request: pytest.FixtureRequest) -> str:
     caminho = _paginas()[0 if request.param == "bancada" else 1]
-    if not caminho.exists():  # pragma: no cover - a página existe nas duas
+    if not caminho.exists():  # pragma: no cover
         pytest.skip(f"{caminho} não existe")
     return _doc(caminho)
 

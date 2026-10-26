@@ -16,7 +16,6 @@ PAGINA = RAIZ / "src/hefesto_dualsense4unix/interface/paginas/09-sistema.html"
 
 SERIAL_DE_MENTIRA = "ZZZ0ZZ###########"
 
-#: O `state_full` de mentira. O MAC é da faixa sintética da casa.
 ESTADO = {
     "active_profile": "meu_perfil",
     "paused": False,
@@ -56,7 +55,6 @@ class JanelaDeMentira:
         return R()
 
 
-#: As duas linhas do Status desde 15/10/2026, escritas aqui e não lidas do pacote que se mede.
 DO_STATUS = ("hefesto-estado", "hefesto-troca-de-perfil")
 
 
@@ -146,13 +144,9 @@ def test_o_pacote_emite_o_glifo_de_cada_linha_do_status(a09, ctx, monkeypatch, a
     pac = a09.pacote(ctx)
     coluna = pac[a09.CAMPO_DO_STATUS]
     ids = re.findall(r'data-id="([^"]+)"', coluna)
-    # Desde 15/10/2026 o Status tem DUAS linhas (Serviço e Troca de perfil); o Bluetooth e o resto
-    # vivem no exame.
     assert a09.LINHAS_DO_STATUS == DO_STATUS, a09.LINHAS_DO_STATUS
     assert tuple(ids[:2]) == DO_STATUS, ids
     assert not set(ids[2:]) & set(DO_STATUS), ids
-    # Uma linha que volta do exame ao Status sai duas vezes na lista (a do Bluetooth é a primeira
-    # do exame): cada endereço aparece uma vez só nas três colunas.
     todos = ids + re.findall(r'data-id="([^"]+)"', str(pac.get("exame-lista") or ""))
     assert len(todos) == len(set(todos)), todos
     pilulas = _pilulas(coluna)
@@ -299,7 +293,7 @@ def test_o_prontuario_de_sete_segundos_nunca_roda_no_tique(a09, monkeypatch):
         _t.sleep(0.01)
     assert chamou, ("a releitura tem de perguntar — sem isso o prontuário nunca "
                     "chega ao exame e a linha some para sempre.")
-    assert chamou[0].get("examinar") is False, (  # (noqa-acento) nome do parâmetro
+    assert chamou[0].get("examinar") is False, (
         "a releitura voltou a varrer os executáveis de todo jogo instalado. "
         f"Ela pediu o censo com {chamou[0]!r}, e o `examinar=True` é o que fez o "
         "tique da 09 custar 1.329 ms num teto de 100 — treze vezes o teto, com "

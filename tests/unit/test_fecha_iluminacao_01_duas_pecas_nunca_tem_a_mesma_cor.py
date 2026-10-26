@@ -701,7 +701,6 @@ class TestOGestoDaAba:
         assert ponte.cores[-1][0] == (0, 0, 0)
 
 
-#: `modo-da-luz`, `brilho`, `cor` e `player`.
 _BOTAO_MORTO = re.compile("autom" + "[áa]tico", re.I)
 
 
@@ -739,9 +738,6 @@ class TestAProsaQueVaiPararNaTela:
         ler = texto_visivel if pasta is BANCADA else texto_visivel_no_produto
         texto = ler((pasta / "04-iluminacao.html").read_text(encoding="utf-8"))
 
-        # O PAR «Modo automático | Modo personalizado» é palavra de produto desde 08/10/2026
-        # (ordem de 06/10): só ele tira o «Automático» da conta. Qualquer outro canto que
-        # fale do automático — o botão por controle, o interruptor — continua banido.
         achados = _BOTAO_MORTO.findall(texto.replace("Modo automático", ""))
 
         assert achados == [], (

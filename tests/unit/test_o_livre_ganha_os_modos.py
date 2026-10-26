@@ -63,10 +63,7 @@ COM_MODOS = {**LIVRE, "modos": True}
 
 
 def _com(livre: dict[str, Any]) -> dict[str, Any]:
-    return {"opcoes": [dict(livre)]}  # (noqa-acento) chave do manifesto
-
-
-# -- 1. o manifesto ---------------------------------------------------------------------------
+    return {"opcoes": [dict(livre)]}  # (noqa-acento)
 
 
 def test_o_livre_com_modos_valida_e_sem_eles_nasce_sem() -> None:
@@ -91,12 +88,8 @@ def test_modos_fora_do_livre_ou_que_nao_e_sim_ou_nao_e_recusado(
     assert frase in recusa.value.frase, recusa.value.frase
 
 
-# -- 2. a porta: o modo vai só à extensão dona ------------------------------------------------
-
-
 @pytest.mark.parametrize("modo", [*MODOS_DO_LIVRE, None])
 def test_a_porta_leva_o_modo_so_a_extensao_dona(curto: pathlib.Path, modo: str | None) -> None:  # noqa: F811
-    # D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA
     async def corrida() -> tuple[Any, Any, Any]:
         porta = await _porta(curto, EventBus())
         a = await _entrar(curto, "ficha-a", {"ligado": True})
@@ -120,9 +113,6 @@ def test_a_porta_leva_o_modo_so_a_extensao_dona(curto: pathlib.Path, modo: str |
     assert da_outra is not None and "modo" not in da_outra["params"]["dados"], (
         f"o modo de uma extensão chegou à outra: {da_outra}")
     assert vazou is None, f"o soltar da outra extensão chegou à dona: {vazou}"
-
-
-# -- 3. o IPC: o modo só com ``modos`` --------------------------------------------------------
 
 
 def _arrastar(lar: Any, livre: dict[str, Any]) -> tuple[Any, list[tuple[Any, ...]]]:  # noqa: F811
@@ -163,9 +153,6 @@ def test_o_ipc_sem_modos_nao_leva_modo_e_recusa_o_que_chega(lar: Any) -> None:  
     assert arrastou == [("toque", "ao-vivo", 0.5, True, {})], arrastou
 
 
-# -- 4. as opções: o modo guardado, lido e herdado --------------------------------------------
-
-
 def test_o_modo_se_le_com_padrao_e_o_torto_volta_a_soltar(tmp_path: pathlib.Path) -> None:
     from hefesto_dualsense4unix.mods import opcoes
 
@@ -189,9 +176,6 @@ def test_a_extensao_que_substitui_herda_o_modo(tmp_path: pathlib.Path) -> None:
     _guardar_a_mao(lugares, "velha", {"ao-vivo:modo": "segurar"})
     assert opcoes.herdar(manifesto, ["velha"], lugares).get("ao-vivo:modo") == "segurar"
     assert opcoes.ler(manifesto, lugares)["ao-vivo:modo"] == "segurar"
-
-
-# -- 5. a janela ------------------------------------------------------------------------------
 
 
 def _modos_na_faixa(html: str) -> dict[str, bool]:
@@ -315,9 +299,11 @@ def test_o_repetir_curto_demais_fica_como_o_segurar(
 
 def test_trocar_o_modo_depois_do_arrastar_vale_na_hora(
         janela: Any, ctx: Any, relogio: list[float]) -> None:  # noqa: F811
-    # D-2510-O-MODO-DO-LIVRE-E-RASCUNHO-E-VALE-NA-HORA
     """O «Repetir» em laço vira «Soltar»: a barra volta a zero e a extensão recebe o soltar com o
-    modo novo; o «Segurar» depois deixa a barra no zero."""
+    modo novo; o «Segurar» depois deixa a barra no zero.
+
+    Prova da D-2510-O-MODO-DO-LIVRE-E-RASCUNHO-E-VALE-NA-HORA.
+    """
     a07, instalar, abrir = janela
     instalar(**_com(COM_MODOS))
     ponte = _Ponte(VIVO)
@@ -350,11 +336,6 @@ def test_o_gesto_do_modo_esta_declarado_sem_eco() -> None:
     assert ("07-lancadores.html", "modo-do-livre-da-modificacao") in pacotes.GESTOS
 
 
-# -- o modo no navegador: a barra que o dedo solta --------------------------------------------
-
-#: A faixa «Ao vivo» do desenho; ``modo`` acende o botão como a janela o repinta (o clique vai ao
-#: serviço e volta aceso), ``soltar`` é o fim do arrasto (``change``) depois de ``input`` nos
-#: valores dados.
 _FAIXA = """(function(){
   window.aFaixa = document.querySelector('#mod-janela .mj-faixa');
   location.hash = '#' + aFaixa.closest('.tela-nova').id;
@@ -377,17 +358,13 @@ def no_navegador() -> list[Any]:
 
     passos: list[list[Any]] = [
         js(_FAIXA),
-        # Soltar: o dedo sai em 70 e a barra volta a zero
         js("oModoAceso('soltar'); arrastar(70); soltarADaFaixa(); aBarraDaFaixa.value"),
-        # Segurar: o dedo sai em 70 e a barra fica
         js("oModoAceso('segurar'); arrastar(70); soltarADaFaixa(); aBarraDaFaixa.value"),
-        # Repetir: 20 por 0,4 s, 80 por 0,4 s, e o laço toca os dois
         js("oModoAceso('repetir'); arrastar(20); 'ok'"), ["espera", 0.4],
         js("arrastar(80); 'ok'"), ["espera", 0.4],
         js("soltarADaFaixa(); window.lidos = []; window.amostra = setInterval("
            "() => lidos.push(aBarraDaFaixa.value), 60); 'ok'"), ["espera", 1.6],
         js("clearInterval(amostra); JSON.stringify(lidos)"),
-        # o clique em «Soltar» vale na hora: o laço para e a barra vai a zero
         js("aFaixa.querySelector('.mj-modos button[data-modo=soltar]').click(); 'ok'"),
         ["espera", 0.4],
         js("aBarraDaFaixa.value"),
@@ -398,7 +375,6 @@ def no_navegador() -> list[Any]:
 
 def test_no_navegador_soltar_volta_a_zero_segurar_fica_e_repetir_toca_em_laco(
         no_navegador: list[Any]) -> None:
-    # D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA
     """O ``comportamento.js`` na barra que o dedo solta: «Soltar» a devolve a zero, «Segurar» a
     deixa onde parou, «Repetir» toca o trecho em laço, e o clique em «Soltar» para o laço."""
     pronta, soltar, segurar, *_, repetir, _clique, depois = no_navegador

@@ -51,9 +51,6 @@ def _interna(relogio: _Relogio, *, foco: bool = True) -> dono.NavegacaoInterna:
     return n
 
 
-# 1 ─ O interruptor liga a Interna fora do Modo Navegação ─────────────────────
-
-
 class _PonteQueAnota:
     def __init__(self) -> None:
         self.chamadas: list[tuple[str, dict[str, Any]]] = []
@@ -61,9 +58,6 @@ class _PonteQueAnota:
     def resultado(self, metodo: str, **kw: Any) -> dict[str, Any]:
         self.chamadas.append((metodo, kw))
         return {"status": "ok"}
-
-
-# 2 ─ O foco decide o R1 (D-20) ─────────────────────────────────────────────
 
 
 def test_2_com_o_foco_vivo_o_r1_nao_sai_como_alt_tab_e_e_contado() -> None:
@@ -101,9 +95,6 @@ def test_2_ligar_a_interna_nao_mexe_no_mouse() -> None:
     from hefesto_dualsense4unix.utils.session import load_navegacao_interna
 
     assert load_navegacao_interna() == (True, "interna"), "a escolha não foi guardada"
-
-
-# 3 e 4 ─ O que navega não chega ao pad virtual (D-22), e o foco tem prazo ───
 
 
 class _Pad:
@@ -169,9 +160,6 @@ def test_4_sem_renovacao_o_foco_cai_em_um_segundo_e_o_x_volta() -> None:
     assert dono.PRAZO_DO_FOCO_S == 1.0
 
 
-# 5, 6 e 7 ─ Os toques viram atos ───────────────────────────────────────────
-
-
 def _toques(**contas: int) -> dict[str, int]:
     return dict(contas)
 
@@ -208,8 +196,6 @@ def test_6_o_x_do_p2_escolhe_o_p2_na_fita_antes_do_clique(monkeypatch: pytest.Mo
     mesa = [{"uniq": P1, "pref": "p1"}, {"uniq": P2, "pref": "p2"}]
     ctx = SimpleNamespace(mesa=mesa)
     js: list[str] = []
-    # Na 02 a fita ESCOLHE (`monta.ABAS_QUE_ESCOLHEM`); na 04 cada controle tem
-    # a sua coluna, e o X no bloco do P2 já é do P2 (`caixas_do_leiaute`).
     piloto = SimpleNamespace(_selecoes=nav.Selecoes(), pagina="02-controles.html",
                              _js=js.append, _com_molduras=False, _ir=lambda p: False)
     leiaute = {"largura": 800, "altura": 600, "popup": False, "caixas": [
@@ -232,22 +218,14 @@ def test_7_a_janela_inativa_nao_anda() -> None:
                   ativa=True) == [], "o R1 apertado com a janela atrás andou depois"
 
 
-# 8 e 9 ─ O cartão não mente, e nenhuma opção sem dono ──────────────────────
-
-
 def test_9_nenhuma_opcao_sem_dono() -> None:
     from hefesto_dualsense4unix.interface import pacotes
     from hefesto_dualsense4unix.interface.pacotes import a06_navegacao as a06
 
     assert "navegacao-interna" not in a06.SEM_GESTO
-    # A lista «Tipo de navegação» virou os botões «Interna» e «Uso geral» de «Permitir navegação»
-    # (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, N5, 16/10/2026).
     assert "permitir-navegacao" not in a06.SEM_GESTO
     assert ("06-navegacao.html", "permitir-navegacao") in pacotes.GESTOS
     assert ("06-navegacao.html", "navegacao-tipo") not in pacotes.GESTOS
-
-
-# 10 ─ O contador sobe na borda ─────────────────────────────────────────────
 
 
 @dataclass
@@ -267,9 +245,6 @@ def test_10_o_r1_segurado_por_tres_leituras_conta_um() -> None:
         leitor._handle_event(_Evento(ecodes.EV_KEY, ecodes.BTN_TR, 2), ecodes)
     assert leitor.snapshot().apertos.get("r1") == 1
     assert n.toques()[P2]["r1"] == 1, f"um R1 segurado contou {n.toques()[P2]['r1']}"
-
-
-# 11 e 12 ─ A seleção ───────────────────────────────────────────────────────
 
 
 def _cruz() -> list[nav.Caixa]:

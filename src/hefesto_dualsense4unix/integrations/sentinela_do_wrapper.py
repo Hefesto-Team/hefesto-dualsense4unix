@@ -136,7 +136,7 @@ try:
     )
     from .vigia_do_jogo_novo import garantir as garantir_o_vigia
     from .vigia_do_jogo_novo import jogos_novos_a_receber
-except ImportError:  # pragma: no cover - executado como script avulso pelo doctor
+except ImportError:  # pragma: no cover
     from steam_launch_options import (  # type: ignore[no-redef]
         WRAPPER_PREFIX,
         apply_wrapper_to_all_games,
@@ -185,11 +185,9 @@ class Censo:
 
     com_wrapper: list[str] = field(default_factory=list)
     faltantes: list[JogoSemWrapper] = field(default_factory=list)
-    #: appids que o usuário recusou explicitamente (`jogos_sem_wrapper.txt`).
     recusados: list[str] = field(default_factory=list)
     recusados_com_wrapper: list[str] = field(default_factory=list)
     sandbox: list[str] = field(default_factory=list)
-    #: appids instalados (com `appmanifest`) que algum vdf ainda não tem em bloco.
     sem_bloco: list[str] = field(default_factory=list)
     erros: list[str] = field(default_factory=list)
     steam_aberta: bool = False
@@ -475,8 +473,6 @@ def reparar_ou_adiar(
         return REPARO_ADIADO_JOGO, censo, None
     if censo.steam_aberta:
         return REPARO_ADIADO_STEAM, censo, None
-    # pôs em `jogos_sem_wrapper.txt` (à mão ou pela lista de exclusão do
-    # tinha ficava.
     tirado: dict[str, list[dict[str, str]]] = {"removed": [], "errors": []}
     if censo.recusados_com_wrapper:
         tirado = tirar_o_atalho_dos_jogos(
@@ -576,7 +572,7 @@ def main(argv: list[str] | None = None) -> int:
                 desmarcar_jogo_sem_wrapper,
                 marcar_jogo_sem_wrapper,
             )
-        except ImportError:  # pragma: no cover - script avulso
+        except ImportError:  # pragma: no cover
             from steam_launch_options import (  # type: ignore[no-redef]
                 desmarcar_jogo_sem_wrapper,
                 marcar_jogo_sem_wrapper,
@@ -594,8 +590,6 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.reparar:
-        # O vigia primeiro e sempre: escrever o drop-in não toca a Steam, então
-        # nem o jogo aberto nem a Steam viva o adiam.
         print(f"[sentinela-wrapper] vigia do jogo novo: {garantir_o_vigia(dry_run=args.dry_run)}")
         status, censo, _ = reparar_ou_adiar(vdfs=args.vdf, dry_run=args.dry_run)
         _imprimir_relatorio(censo)
@@ -607,5 +601,5 @@ def main(argv: list[str] | None = None) -> int:
     return _imprimir_relatorio(censo_do_wrapper(vdfs=args.vdf))
 
 
-if __name__ == "__main__":  # pragma: no cover - entrypoint do doctor
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(main())

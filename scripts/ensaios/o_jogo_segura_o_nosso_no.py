@@ -198,13 +198,13 @@ try:
     from hefesto_dualsense4unix.integrations.uhid_gamepad import (
         VPAD_HID_PHYS as PHYS_DO_PRODUTO,
     )
-    from hefesto_dualsense4unix.integrations.uinput_gamepad import (  # noqa: F401 - as réguas leem daqui
+    from hefesto_dualsense4unix.integrations.uinput_gamepad import (  # noqa: F401
         XBOX360_NAME,
     )
     from hefesto_dualsense4unix.utils.xdg_paths import ipc_socket_path
 
     PRODUTO_IMPORTAVEL = ""
-except ImportError as _erro:  # pragma: no cover - só fora do venv do projeto
+except ImportError as _erro:  # pragma: no cover
     PRODUTO_IMPORTAVEL = str(_erro)
 
 NOMES_DO_UINPUT = nomes_do_pad_uinput()
@@ -222,7 +222,6 @@ V_NAO_SONDADO = "NÃO SONDADO"
 
 CAMPOS_DO_NO = ("evdev", "hidraw", "ino", "hidraw_ino", "game_open")
 
-#: O papel de cada nó de entrada de um DualSense, pelo sufixo do nome. Um
 SUFIXOS_DE_PAPEL = (
     ("Motion Sensors", "movimento"),
     ("Touchpad", "touchpad"),

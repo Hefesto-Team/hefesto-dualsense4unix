@@ -9,8 +9,6 @@ from pathlib import Path
 import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
-#: já divergiram 25 KB, então a régua media  (noqa-acento: verbo medir, imperfeito) verbo medir
-#: (noqa-acento: verbo medir, imperfeito — "a régua media", não "a média") verbo medir
 FERRAMENTAS = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 
 ABAS_VIVAS = (
@@ -25,7 +23,6 @@ ABAS_VIVAS = (
 ARVORE_DELA = "/mnt/Apate/Desenvolvimento/hefesto-dualsense4unix"
 
 
-#: Os pilotos de uma aba só saíram de `src/` para `scripts/tela/` em 22/10/2026.
 PILOTOS = RAIZ / "scripts" / "tela"
 
 

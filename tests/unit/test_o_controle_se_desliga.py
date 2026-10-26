@@ -95,9 +95,6 @@ def _mesa_no_hidraw(hidraw: _Hidraw, **handles: _Handle) -> PyDualSenseControlle
     return inst
 
 
-# --- o verbo -------------------------------------------------------------------------------------
-
-
 def test_o_verbo_escreve_o_0x08_so_no_controle_pedido(hidraw: _Hidraw) -> None:
     """**A MORDIDA.** O White se desliga e o Starlight Blue, no mesmo adaptador, não recebe nada.
 
@@ -155,9 +152,6 @@ def test_o_hidraw_que_recusa_devolve_falso(
     inst = _mesa_no_hidraw(hidraw, **{WHITE: _Handle(b"/dev/hidraw-falso-5")})
 
     assert inst.desligar_o_controle(_uniq(WHITE)) is False
-
-
-# --- o gesto -------------------------------------------------------------------------------------
 
 
 class _Prazo:
@@ -229,10 +223,11 @@ def _connect(
 def test_segurar_o_ps_por_10_s_desliga_so_aquele_controle(
     monkeypatch: pytest.MonkeyPatch, prazos: list[_Prazo], desligados: list[str]
 ) -> None:
-    # D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE
     """**A MORDIDA.** O `connect()` adota os dois; o PS segurado do White desliga só o White.
 
     MORDIDA: tirar a assinatura do laço de `new_handles` (ou o prazo) reprova aqui.
+
+    Prova da D-1610-O-PS-SEGURADO-10-S-DESLIGA-AQUELE-CONTROLE.
     """
     azul, branco = _Handle(b"/dev/hidraw-falso-3"), _Handle(b"/dev/hidraw-falso-5")
     inst = _backend()

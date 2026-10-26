@@ -153,9 +153,6 @@ def _anotador() -> tuple[dict[str, list[Any]], dict[str, Any]]:
     anota_a_supressao = appliers["suppression_applier"]
 
     def _supressao(*args: Any, **kwargs: Any) -> str:
-        # O `apply_profile_suppression` do daemon entrega o perfil ao dono da
-        # chave «Também no jogo» e do «Só dentro do jogo» ANTES de tudo (ver
-        # `test_o_applier_da_supressao_entrega_o_perfil_ao_dono_da_tabela`).
         trocar_a_tabela_no_jogo(types.SimpleNamespace(), kwargs["profile"])
         return str(anota_a_supressao(*args, **kwargs))
 

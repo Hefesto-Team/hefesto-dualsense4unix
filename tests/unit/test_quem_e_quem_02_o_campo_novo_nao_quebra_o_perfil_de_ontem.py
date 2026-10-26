@@ -121,8 +121,6 @@ class _ProfileDeBinarioDeOntem(BaseModel):
     mode: dict[str, Any] | None = None
     suppress_desktop_emulation: bool = False
     controllers: dict[str, Any] | None = None
-    # 15/10/2026: o perfil novo nasce com a data (O-PERFIL-GUARDA-A-DATA-EM-QUE-NASCEU-...-01);
-    # um hefesto de antes das datas recusa esse arquivo, como já faz com `estilo` e `marcas`.
     criado_em: str | None = None
     modificado_em: str | None = None
     alvo: str | None = None
@@ -210,7 +208,7 @@ def _payload_pela_tupla_escrita_a_mao(profile: Profile) -> dict[str, object]:
             payload.pop(secao, None)
     mouse = payload.get("mouse")
     if isinstance(mouse, dict) and mouse.get("point_and_click") is None:
-        mouse.pop("point_and_click", None)  # campo aditivo: sem escolha, o arquivo não o diz
+        mouse.pop("point_and_click", None)
     if not payload.get("controllers"):
         payload.pop("controllers", None)
     else:

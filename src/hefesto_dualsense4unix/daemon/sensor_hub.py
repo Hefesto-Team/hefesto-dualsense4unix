@@ -107,8 +107,6 @@ class AmostraDoDsu:
     carimbo_us: int | None = None
     epoca: int = 0
     toques: tuple[Any, ...] = ()
-    #: Quais leitores responderam. Giro e aceleração zerados sem
-    #: ``com_movimento`` são ausência, não repouso.
     com_movimento: bool = False
     com_toque: bool = False
 
@@ -153,27 +151,19 @@ class SensorHub:
 
         self._lock = threading.RLock()
         self._demanda: dict[str, float] = {}
-        self._demanda_entradas: dict[str, float] = {}  # o `state_full`: TODO controle com `inputs`
+        self._demanda_entradas: dict[str, float] = {}
         self._demanda_do_toque: dict[str, float] = {}
-        self._demanda_dos_dedos: dict[str, float] = {}  # `pedir_os_dedos`: só o toque, sem grab
-        #: Os controles cujo dedo o servidor DSU segura (``segurar_o_dedo``).
+        self._demanda_dos_dedos: dict[str, float] = {}
         self._dedo_segurado: dict[str, float] = {}
         self._motion: dict[str, Any] = {}
         self._touch: dict[str, Any] = {}
         self._gamepad: dict[str, Any] = {}
-        #: varrer `/dev/input` inteiro a cada segundo por causa do que falta.
-        #: Só saem daqui quando `/dev/input` muda de verdade.
         self._sem_node: set[tuple[str, str]] = set()
-        #: O mesmo, para as peças com sensor desligado (`_sensores_desligados`):
-        #: as chaves já procuradas desde a última mudança de `/dev/input`.
         self._desligados_procurados: set[str] = set()
         self._watch: Any = None
         self._parar = threading.Event()
         self._thread: threading.Thread | None = None
-        #: `pedir_o_movimento`: o tópico `movimento` das extensões segura só o leitor de movimento.
         self._demanda_do_movimento: dict[str, float] = {}
-
-    # -- API consumida pelo event loop (barata por contrato) --------------
 
     def velocidade_do_movimento(self, uniq: str) -> tuple[float, float, float] | None:
         """Velocidade angular de `uniq` AGORA, em graus/s; `None` sem reader.
@@ -257,23 +247,6 @@ class SensorHub:
                     "y": round(float(gyro.y), 2),
                     "z": round(float(gyro.z), 2),
                 }
-            # DOIS `suppress` e não um, e o motivo é o que a MORDIDA mediu, não
-            # o que parecia (29/08/2026). A primeira redação desta linha dizia
-            # que um bloco só faria o `AttributeError` do acelerômetro "apagar o
-            # `out["gyro"]`" — e é FALSO: a atribuição do giro já aconteceu
-            # quando a exceção sobe, e o dicionário fica com ela. Arrancada a
-            # separação, o teste passou igual, que é como o erro apareceu.
-            #
-            # O que a separação protege de verdade é o SENTIDO CONTRÁRIO: com um
-            # bloco só, um `snapshot()` que levanta (node sumindo no meio da
-            # leitura) aborta o bloco ANTES de chegar ao acelerômetro, e o
-            # acelerômetro some da tela por causa de um defeito do giroscópio.
-            # Separados, cada sensor cai sozinho.
-            #
-            # Três casas e não duas (o giro usa duas): a escala é g, e 1 g é o
-            # repouso. Com duas casas a inclinação de um controle na mão anda em
-            # degraus de 0,01 g — visível como serrilha nas barras. Três casas
-            # custam ~6 bytes por controle por tique.
             with contextlib.suppress(Exception):
                 accel = motion.accel_snapshot()
                 out["accel"] = {
@@ -323,13 +296,6 @@ class SensorHub:
             "y": int(estado.y),
             "width": int(estado.largura),
             "height": int(estado.altura),
-            # MULTITOQUE-01 (18/09/2026): os dedos, um por slot do
-            # kernel. `x`/`y` acima continuam sendo o dedo principal
-            # — quem conhecia só eles não muda de comportamento.
-            # Lista VAZIA quer dizer "nenhum dedo agora", e é
-            # diferente da chave AUSENTE, que quer dizer "este
-            # reader não sabe ler dedo por slot": a tela desenha o
-            # resumo no segundo caso e a verdade no primeiro.
             "pontos": [
                 {
                     "slot": int(ponto.slot),
@@ -362,7 +328,7 @@ class SensorHub:
                 "r2_raw": int(snap.r2_raw),
                 "buttons": sorted(snap.buttons_pressed),
             }
-        except Exception as exc:  # o `state_full` não cai por causa de um node
+        except Exception as exc:
             logger.debug("sensor_hub_entradas_falhou", identity=uniq, err=str(exc))
             return None
 
@@ -379,7 +345,7 @@ class SensorHub:
             return None
         try:
             apertos = getattr(reader.snapshot(), "apertos", None)
-        except Exception as exc:  # o IPC não cai por causa de um node
+        except Exception as exc:
             logger.debug("sensor_hub_apertos_falhou", identity=uniq, err=str(exc))
             return None
         return dict(apertos) if isinstance(apertos, dict) else None
@@ -755,8 +721,6 @@ class SensorHub:
 
 
     _TOQUE_ROTEADO_TTL_S: ClassVar[float] = 1.5
-    #: Quanto o dedo fica guardado para o emulador depois do último pedido do
-    #: servidor DSU. É o mesmo prazo da inscrição do cliente (5 s).
     _DEDO_SEGURADO_TTL_S: ClassVar[float] = 5.0
 
     def aceleracao_do_movimento(self, uniq: str) -> tuple[float, float, float] | None:

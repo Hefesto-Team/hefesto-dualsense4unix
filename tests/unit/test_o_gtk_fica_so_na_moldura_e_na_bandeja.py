@@ -55,7 +55,7 @@ def _arvore_em_ordem(tmp_path: Path) -> Path:
 
 
 def test_o_portao_passa_na_arvore_de_hoje() -> None:
-    # D-2110-O-GTK-FICA-SO-NA-MOLDURA-E-NA-BANDEJA
+    """Prova da D-2110-O-GTK-FICA-SO-NA-MOLDURA-E-NA-BANDEJA."""
     saida = _rodar(RAIZ)
     assert saida.returncode == 0, saida.stdout + saida.stderr
 
@@ -151,9 +151,6 @@ def test_cada_dono_do_gtk_tem_motivo_e_o_tema_morou_na_moldura() -> None:
     assert "interface/tema_da_sessao.py" in portao.DONOS_DO_GTK
     assert not (RAIZ / PACOTE / "app/theme.py").exists(), "o tema da janela mora na moldura"
 
-
-# ---------------------------------------------------------------------------
-# A lógica importa SEM o `gi`: a medida de que o GTK saiu, e não só o nome dele.
 
 _SEM_GI = r"""
 import importlib, pkgutil, sys

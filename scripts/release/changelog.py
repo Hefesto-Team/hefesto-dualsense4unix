@@ -40,8 +40,6 @@ FECHADA = re.compile(r"^#\s*fechada\s+(\d{2})/(\d{2})/(\d{4})")
 EM_CICLO = re.compile(r"^#\s*ciclo:\s*feita\b.*\bem=(\d{2})/(\d{2})/(\d{4})")
 
 
-# ------------------------------------------------------------ o arquivo
-
 def partir(texto: str) -> tuple[str, list[tuple[str, list[str]]]]:
     """(o que vem antes da primeira seção, [(linha do cabeçalho, linhas do corpo)])."""
     linhas = texto.split("\n")
@@ -82,8 +80,6 @@ def corpo_de(grupos: dict[str, list[str]]) -> list[str]:
 def normal(item: str) -> str:
     return re.sub(r"\s+", " ", item.removeprefix("- ")).strip().lower()
 
-
-# ------------------------------------------------------------ as fontes
 
 def data_da_tag(raiz: Path, tag: str | None) -> dt.date | None:
     if not tag:
@@ -154,8 +150,6 @@ def do_prs(raiz: Path, tag: str | None, avisos: list[str]) -> list[tuple[str, st
     return achados
 
 
-# ------------------------------------------------------------ montar
-
 def montar_texto(raiz: Path, numero: str, data: str, avisos: list[str]) -> tuple[str, list[str]]:
     arq = raiz / "CHANGELOG.md"
     texto = arq.read_text(encoding="utf-8")
@@ -170,7 +164,7 @@ def montar_texto(raiz: Path, numero: str, data: str, avisos: list[str]) -> tuple
     tag = f"v{anterior[-1]}" if anterior else None
     desde = data_da_tag(raiz, tag)
 
-    novas: list[tuple[str, str, str]] = []  # (grupo, item, de onde)
+    novas: list[tuple[str, str, str]] = []
     indice_nao_lancado = next((i for i, (c, _b) in enumerate(secoes) if (m := CABECALHO.match(c)) and m.group("numero") == "Unreleased"), None)
     if indice_nao_lancado is not None:
         for grupo, lista in itens(secoes[indice_nao_lancado][1]).items():
@@ -197,7 +191,6 @@ def montar_texto(raiz: Path, numero: str, data: str, avisos: list[str]) -> tuple
 
     if indice_versao is None and not existente:
         return texto, []
-    # a ordem do arquivo: Unreleased (vazio), a versão nova, as anteriores
     topo: list[tuple[str, list[str]]] = [("## [Unreleased]", [""]), (cab_versao, corpo_de(existente))]
     resto = [(c, b) for c, b in secoes if not ((m := CABECALHO.match(c)) and m.group("numero") in ("Unreleased", numero))]
     saida = cabeca.rstrip("\n") + "\n\n"
@@ -227,8 +220,6 @@ def cmd_montar(a: argparse.Namespace, raiz: Path) -> int:
     arq.write_text(novo, encoding="utf-8")
     return _comum.encerrar("changelog", raiz, 0, f"changelog.py montar: seção {numero} de {data} com {len(adicionadas)} item(ns)", detalhe, a.detalhe)
 
-
-# ------------------------------------------------------------ notas
 
 def corpo_da_versao(raiz: Path, numero: str) -> list[str] | None:
     _cab, secoes = partir((raiz / "CHANGELOG.md").read_text(encoding="utf-8"))

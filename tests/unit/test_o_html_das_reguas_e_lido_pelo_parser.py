@@ -24,7 +24,6 @@ from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
-#: página -> o que o navegador entende por mudo (comentário, `<style>`, `<script>`), na ordem
 CASOS = {
     "fecho com espaço": ("a<script>x</script >b", ["<script>x</script >"]),
     "fecho com quebra": ("a<script>x</script\n>b", ["<script>x</script\n>"]),
@@ -90,7 +89,6 @@ def test_o_roteiro_nao_inclui_o_que_esta_em_comentario() -> None:
     assert roteiros_de("<!-- <script>fora</script> --><script>dentro</script>") == [({}, "dentro")]
 
 
-#: os arquivos que o CodeQL acusou e que hoje leem a tag pelo parser; cada um é a mordida do outro
 LIDOS_PELO_PARSER = (
     "scripts/check_a_conferencia.py",
     "scripts/check_a_maiuscula_decorativa.py",
@@ -132,7 +130,7 @@ def _regex_de_script() -> list[str]:
 
 
 def test_nenhuma_regua_da_lista_le_script_por_regex() -> None:
-    # D-2310-O-CODEQL-ZERA-LENDO-O-HTML-PELO-PARSER
+    """Prova da D-2310-O-CODEQL-ZERA-LENDO-O-HTML-PELO-PARSER."""
     assert _regex_de_script() == [], (
         "uma régua voltou a ler `<script>` por regex — o CodeQL acusa `py/bad-tag-filter`; "
         "use `trechos_mudos`, `sem_o_mudo` ou `roteiros_de` de `frases_que_ela_baniu`"

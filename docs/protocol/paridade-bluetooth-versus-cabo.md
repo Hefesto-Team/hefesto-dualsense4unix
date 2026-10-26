@@ -202,7 +202,7 @@ Ordenado por (impacto ÷ custo):
    > e a precisão importa para não fechá-la com a medição errada.** O `0x32`
    > que este projeto mediu ao vivo em 25/07 é o de **controle** (142 bytes, TLV
    > `0x11` AudioControl, o byte que destrava o microfone —
-   > `integrations/dualsense_bt_audio.py:62`). O report em disputa é o que
+   > `integrations/dualsense_bt_audio.py:59`). O report em disputa é o que
    > leva os **dados**: o módulo o dá como `0x39`, com os blocos `0x12`
    > (háptico) e `0x13`/`0x16` (alto-falante), em `:31` e `:213-219`; a
    > canônica o dá como `0x32` com tag `0x12`. **Continuam os dois de fonte
@@ -223,7 +223,7 @@ Ordenado por (impacto ÷ custo):
   medida desde 11/08 nos dois transportes (cabo 250,0 Hz, rádio em rajadas);
 - **a taxa que o SDL DECLARA ao jogo** — e é só essa metade que falta. O
   gamepad virtual se anuncia DualSense Edge (`VPAD_PRODUCT = 0x0DF2`,
-  `integrations/uhid_gamepad.py:111`), e o SDL atribui **1000 Hz a um Edge por
+  `integrations/uhid_gamepad.py:102`), e o SDL atribui **1000 Hz a um Edge por
   USB**. O que o aparelho entrega **está medido desde 11/08, e por transporte**:
   **250,0 Hz exatos no cabo**, e no rádio uma taxa **variável em rajadas**, de
   ~38 a ~392 Hz de média conforme a janela. A razão de 4× que preocupa é a do

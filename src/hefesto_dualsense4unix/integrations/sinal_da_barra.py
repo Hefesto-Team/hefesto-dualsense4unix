@@ -124,23 +124,16 @@ from hefesto_dualsense4unix.core import formas_do_endereco as _formas
 from hefesto_dualsense4unix.integrations.usb_pai import RAIZ_HIDRAW
 
 RAIZ_UHID = "/sys/devices/virtual/misc/uhid"
-#: O DualSense, e só ele: ``0CE6`` e o Edge ``0DF2``, por rádio e por cabo. O
-#: ``0DF2`` é também o PID do NOSSO pad, e quem o separa do Edge de plástico é o
-#: ``pad_usb.e_pad_nosso`` (07/10/2026), não o PID: o pad em USB e o Edge pelo
-#: rádio passariam os dois por um filtro de ID.
 _IDS_DUALSENSE = ("054C:0CE6", "054C:0DF2")
 
 CONFIANCA_LIMPA = "limpa"
 CONFIANCA_SUSPEITA = "suspeita"
-CONFIANCA_NAO_SEI = "nao_sei"  # (noqa-acento): chave de máquina, ASCII por contrato
+CONFIANCA_NAO_SEI = "nao_sei"
 
-#: ``Registered DualSense controller``. Cinco segundos cobre as quatro com
 JANELA_DE_NASCIMENTO_S: float = 5.0
 
 ORCAMENTO_DO_DIARIO_S: float = 8.0
 
-#: Até onde o diário do daemon (a metade ``escritor_cru_detectado``) é lido. Uma
-#: instância que nasceu antes disso nasceu fora do que ele guarda: ``não sei``.
 JANELA_DO_DIARIO_S: float = 6 * 3600.0
 
 _RE_UEVENT = re.compile(r"^(HID_PHYS|HID_UNIQ|HID_ID)=(.*)$", re.MULTILINE)
@@ -294,8 +287,6 @@ def instancias_dualsense(raiz_uhid: str = RAIZ_UHID) -> list[Instancia]:
                     campos[chave] = valor.strip()
         except OSError:
             continue
-        # Tudo o que esta raiz lista mora sob o uhid (também na régua, que a
-        # desvia para um diretório de mentira): o caminho é o do sistema.
         if pad_usb.e_pad_nosso(
             os.path.join(RAIZ_UHID, nome),
             phys=campos.get("HID_PHYS", ""),
@@ -379,7 +370,6 @@ def nascimentos_do_udev(
         perguntou += 1
         no = os.path.basename(viva.hidraw)
         usec = pergunta(f"{RAIZ_HIDRAW}/{no}", "USEC_INITIALIZED") or ""
-        # O udev escreve o instante em dígitos ASCII; o resto é «não respondeu».
         if not (usec.isascii() and usec.isdigit()):
             continue
         quando = int(usec) / 1e6

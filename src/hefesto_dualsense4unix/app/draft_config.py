@@ -102,7 +102,6 @@ class RumbleDraft(BaseModel):
     policy: Literal["economia", "balanceado", "max", "auto", "custom"] | None = None
     custom_mult: float | None = Field(default=None, ge=0.0, le=RUMBLE_CUSTOM_MULT_MAX)
     passthrough: bool = True
-    #: O modo da aba Vibração (``rumble.modo``): o draft não o edita, só o leva de volta ao perfil.
     modo: ModoDaAba | None = None
 
 
@@ -190,17 +189,7 @@ class SpeakerDraft(BaseModel):
     volume: int | None = Field(default=None, ge=0, le=255)
     muted: bool = False
     rota: int | None = Field(default=None, ge=0, le=3)
-    #: escrevo".
-    #:
-    #: **ELE FALTAVA AQUI, e a falta DESTRUÍA a escolha do usuário** — 10/09/2026.
-    #: `ProfileSpeakerConfig.fonte` existe desde 09/09 e o daemon o OBEDECE
-    #: (`AltoFalanteSubsystem._fonte_do_controle`), mas o caminho de disco da
-    #: janela e da aba Perfis passa por este draft: sem o campo, todo "Salvar
-    #: Perfil" reescrevia a seção do som sem ele. É a família exata do item 13
-    #: do laudo de 05/09: o Salvar destruía o que a aba tinha gravado.
     fonte: Literal["mix", "sfx"] | None = None
-    #: o botão «Padrão» do volume (`ProfileSpeakerConfig.volume_padrao`): sem o campo aqui, todo
-    #: «Salvar Perfil» o apagaria, que é a família do `fonte` logo acima.
     volume_padrao: bool | None = None
     dirty: bool = False
     in_profile: bool = False
@@ -358,21 +347,11 @@ def _triggers_draft_to_config(triggers: TriggersDraft) -> Any:
     )
 
 
-#: Os campos do perfil que nenhuma aba edita pelo rascunho (o estilo do jogo, os meus
-#: toques, a receita do tato, o alvo, o evento e o nome do jogo da aba Perfis): o draft só os
-#: devolve, e sem isto todo Salvar do rodapé, da Vibração e da Controles os apagava do disco.
-#: A régua `test_o_salvar_devolve_todo_campo_do_perfil` exige que todo campo novo do `Profile`
-#: caia aqui ou num argumento do `to_profile`.
 CAMPOS_QUE_O_RASCUNHO_SO_DEVOLVE = (
     "meus_toques", "estilo", "receita_do_tato", "alvo", "evento", "evento_comando",
     "nome_do_jogo",
 )
 
-#: Os campos de cada seção que o rascunho não edita (o modo das abas Gatilhos e Iluminação, a
-#: intensidade, o efeito e o número da luz): o draft só os devolve. Medido em 22/10/2026 no perfil
-#: do Sackboy: sem isto, todo Salvar regravava a seção sem eles, e o «Modo automático» das duas
-#: abas voltava a `null` no disco. A régua `test_o_salvar_devolve_todo_campo_do_perfil` exige que
-#: todo campo novo de uma seção caia aqui ou no que o rascunho edita.
 CAMPOS_DA_SECAO_QUE_O_RASCUNHO_SO_DEVOLVE: dict[str, tuple[str, ...]] = {
     "triggers": ("modo", "intensidade"),
     "leds": ("lightbar_para_o_numero", "modo", "efeito"),
@@ -391,7 +370,6 @@ class DraftConfig(BaseModel):
     emulation: EmulationDraft = Field(default_factory=EmulationDraft)
     mic: MicDraft = Field(default_factory=MicDraft)
     speaker: SpeakerDraft = Field(default_factory=SpeakerDraft)
-    # None = herdar DEFAULT_BUTTON_BINDINGS; {} = teclado silencioso; dict
     key_bindings: dict[str, list[str]] | None = None
 
     source_match: Any | None = None
@@ -402,14 +380,8 @@ class DraftConfig(BaseModel):
     suppress_dirty: bool = False
     source_controllers: Any | None = None
     controllers_esvaziados_nesta_edicao: bool = False
-    # (`profiles_actions._build_profile_from_editor`). O gesto mais banal do usuário
-    # `manager.pontes_confirmadas()` e a escada de `integrations/ponte_escada.py`
     source_ponte: Any | None = None
-    #: O modo da aba Controles (``Profile.controles_modo``): o draft só o leva de volta.
     source_controles_modo: ModoDaAba | None = None
-    # valendo): `button_actions={"circle": "KEY_ESC"}` entrava e saía `None`;
-    # `Profile` (`Profile.button_actions` e `Profile.teclado_emulado`, em
-    # método. O `button_actions` nasceu por decisão em 01/09 e nenhum
     source_button_actions: Any | None = None
     source_teclado_emulado: bool | None = None
     source_teclado_so_no_jogo: bool | None = None
@@ -417,14 +389,10 @@ class DraftConfig(BaseModel):
     source_tabela_no_jogo: bool | None = None
     source_remapeamento: dict[str, str] | None = None
     source_movimento: Any | None = None
-    #: A acessibilidade do perfil (o modo do botão, a curva dos analógicos, o cursor): o draft
-    #: não as edita, só as leva de volta, para o Salvar de qualquer aba não as apagar.
     source_ativacao: Any | None = None
-    source_analogicos: Any | None = None  # (noqa-acento) identificador ASCII
+    source_analogicos: Any | None = None
     source_cursor: Any | None = None
-    #: Os de :data:`CAMPOS_QUE_O_RASCUNHO_SO_DEVOLVE` que o perfil de origem tinha.
     source_so_devolve: dict[str, Any] = Field(default_factory=dict)
-    #: Por seção, os campos de `CAMPOS_DA_SECAO_QUE_O_RASCUNHO_SO_DEVOLVE` que a origem tinha.
     source_secoes_so_devolve: dict[str, dict[str, Any]] = Field(default_factory=dict)
 
     source_name: str | None = None
@@ -508,8 +476,8 @@ class DraftConfig(BaseModel):
             source_tabela_no_jogo=profile.tabela_no_jogo,
             source_remapeamento=profile.remapeamento,
             source_movimento=profile.movimento,
-            source_ativacao=profile.ativacao,  # (noqa-acento) identificador ASCII
-            source_analogicos=profile.analogicos,  # (noqa-acento) identificador ASCII
+            source_ativacao=profile.ativacao,
+            source_analogicos=profile.analogicos,
             source_cursor=profile.cursor,
             source_secoes_so_devolve={
                 secao: {
@@ -616,8 +584,6 @@ class DraftConfig(BaseModel):
             else None
         )
 
-        # título do FPS e prioridade 60 — e nenhuma regra para o jogo do usuário.
-        # já tem a comparação certa (`profiles/slug.mesmo_slug`, usada nas duas
         mesmo_perfil = self.source_name is not None and (
             name == self.source_name or mesmo_slug(name, self.source_name)
         )
@@ -659,8 +625,8 @@ class DraftConfig(BaseModel):
             tabela_no_jogo=self.source_tabela_no_jogo,
             remapeamento=self.source_remapeamento,
             movimento=self.source_movimento,
-            ativacao=self.source_ativacao,  # (noqa-acento) identificador ASCII
-            analogicos=self.source_analogicos,  # (noqa-acento) identificador ASCII
+            ativacao=self.source_ativacao,
+            analogicos=self.source_analogicos,
             cursor=self.source_cursor,
             mouse=mouse_cfg,
             mic=mic_cfg,
@@ -712,7 +678,6 @@ class DraftConfig(BaseModel):
             return self.with_controller_fields_cleared(
                 uniq, "rumble", {"policy", "custom_mult"}
             )
-        # Só a força troca: as barras e os efeitos escolhidos desta peça ficam na seção.
         antes = getattr(self.controller_override(uniq), "rumble", None)
         return self._with_override_section(
             uniq, "rumble", rumble_com_a_forca(antes, rumble.policy, rumble.custom_mult)

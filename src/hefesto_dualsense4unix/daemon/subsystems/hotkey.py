@@ -29,12 +29,9 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-#: propósito em menos de um segundo. Ver o docstring de `mic_button_loop` para
 MIC_SOSSEGO_S = 1.0
 
 
-#: O PS tem DOIS donos, e a precedência é escrita: `Profile.button_actions["ps"]`
-#: `profiles/manager.apply_button_actions` o escreve a cada ativação, pelo
 _ATRIBUTO_DA_ACAO_DO_PS = "_acao_do_ps_do_perfil"
 
 _TOKENS_QUE_O_TECLADO_ENTREGA: Final[frozenset[str]] = frozenset({
@@ -197,8 +194,6 @@ def build_ps_solo_callback(daemon: DaemonProtocol, atos: Any = None) -> Any:
     return _GestoDoPs(fazer=_on_ps_solo, fio=fio)
 
 
-#: pegar": máscara Xbox primeiro não, porque a casa parte do DualSense — a
-#: máscaras: Sony DualSense → Xbox → Navegação → Sony DualSense, os mesmos três
 PONTE_DUALSENSE = "dualsense"
 PONTE_XBOX = "xbox"
 PONTE_MOUSE_TECLADO = "mouse_teclado"
@@ -207,8 +202,6 @@ CICLO_DE_PONTES: tuple[str, ...] = (PONTE_DUALSENSE, PONTE_XBOX, PONTE_MOUSE_TEC
 MODO_STEAM_INPUT = "steam_input"
 MODO_NATIVO = "nativo"
 
-#: DualSense era AZUL (0, 60, 255). Não é decisão apagada, é fato corrigido: o
-#: mais precisa distinguir. A máscara DualSense é o "Hefesto na frente", e a
 CORES_DO_MODO: dict[str, tuple[int, int, int]] = {
     MODO_STEAM_INPUT: (139, 233, 253),
     PONTE_XBOX: (80, 250, 123),
@@ -219,7 +212,6 @@ CORES_DO_MODO: dict[str, tuple[int, int, int]] = {
 COR_AVISO_RISCO = (255, 0, 0)
 PULSO_SEG = 0.14
 
-#: daemon que sobe já em máscara DualSense não pode piscar como se ela tivesse
 _NUNCA_ANUNCIADO = object()
 
 _AVISO_EM_CURSO = threading.Lock()
@@ -313,14 +305,6 @@ def modo_vigente(daemon: DaemonProtocol) -> str:
     return ponte_atual(daemon)
 
 
-#: QUEM ENTREGA O CONTROLE À STEAM, em cada um dos cinco modos de conexão
-#: (A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-STEAM-NAVEGA-O-BIG-PICTURE-01, lido
-#: no código em 08/10/2026). Nativo: o físico fica solto e a Steam o lê direto.
-#: Steam Input: a exceção da allowlist solta o físico para a Steam. Sony
-#: DualSense e Xbox: o físico fica escondido e a Steam só enxerga o pad virtual
-#: do Hefesto. Navegação: não há pad nenhum, só o mouse e o teclado virtuais.
-#: Onde a Steam lê o físico, o Big Picture navega sozinho e o Hefesto não entra;
-#: nos outros três o controle é do Hefesto, e é ele quem leva o Big Picture.
 LE_A_STEAM = "steam"
 LE_O_HEFESTO = "hefesto"
 QUEM_LE_O_CONTROLE: dict[str, str] = {
@@ -434,8 +418,6 @@ def _aplicar_ponte(daemon: DaemonProtocol, alvo: str) -> bool:
         return bool(
             setter(True, None, origin="manual", caminho=alvo, grava_o_modo="controle")
         )
-    # fazia `mouse.emulation.restore` e mais nada. O mesmo modo com DOIS donos
-    # `keyboard_emulation.flag`, porque `set_keyboard_emulation` persiste por
     setter(False, origin="manual")
     arranjo = getattr(daemon, "aplicar_o_arranjo_do_desktop", None)
     if not callable(arranjo):
@@ -554,7 +536,6 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
         atual = ponte_atual(daemon)
         jogo_no_controle = getattr(daemon, "display_authority", "unknown") == "game"
 
-        # que carrega o dado: o mapa de canais diz por que a máscara DualSense
         passo = None
         with contextlib.suppress(Exception):
             passo = ponte_tentativa.avancar_por_gesto(
@@ -565,10 +546,6 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
             alvo = passo.caminho
             degrau_da_escada = passo.degrau
         else:
-            # Inclui o degrau caro, o caso em que a escada acabou, e o jogo sem
-            # tentativa nenhuma (carimbado, ou fora do wrapper). O gesto não
-            # pode ficar sem resposta: o usuário apertou, e alguma coisa tem de
-            # mudar. Volta ao ciclo de sempre.
             alvo = proxima_ponte(atual)
 
         logger.info(
@@ -580,11 +557,6 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
             pulados=[d.ponte.chave for d in passo.pulados] if passo else [],
         )
 
-        # O DEGRAU CARO NÃO SOME EM SILÊNCIO (29/08/2026,
-        # `D-O-GESTO-DA-PONTE-E-UNIVERSAL-NAO-APRENDE-POR-JOGO`). A escada
-        # acabou de pular um degrau que só o LANÇAMENTO alcança, e ela tem de
-        # saber disso sem sair do jogo — senão a única diferença visível entre
-        # "pulei o Nativo" e "o ciclo de sempre" é nenhuma.
         for degrau_pulado in passo.pulados if passo is not None else ():
             cor_pulada = _cor_do_degrau(degrau_pulado)
             if cor_pulada is None:
@@ -623,7 +595,6 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
                     caminho=efetiva,
                     jogo_vivo=jogo_no_controle,
                 )
-            # setter do daemon (`grava_o_modo="controle"` em `_aplicar_ponte`,
         logger.info(
             "ponte_trocada_por_gesto",
             de=atual,
@@ -638,7 +609,6 @@ def build_next_bridge_callback(daemon: DaemonProtocol) -> Any:
 
         if ok and efetiva == alvo:
             return
-        # desfechos diferentes (aplicou, já-estava, bloqueado), então o sinal
         logger.warning("ponte_nao_subiu", pedida=alvo, efetiva=efetiva, retorno=ok)
         await _sinalizar_lightbar(
             daemon,
@@ -685,7 +655,6 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
             logger.info("profile_cycle_skip_native_mode")
             return
 
-        # FÁBRICA — paridade com o `profile.switch` (IPC), o autoswitch e o
         manager = gerente_do_daemon(daemon, store=daemon.store)
         profiles = os_perfis_de_escolher(await daemon._run_blocking(manager.list_profiles))
         if len(profiles) < 2:
@@ -708,7 +677,6 @@ def build_profile_cycle_callback(daemon: DaemonProtocol, direction: int) -> Any:
             daemon.store.mark_manual_profile_lock(
                 _time.monotonic() + MANUAL_PROFILE_LOCK_SEC
             )
-            # persiste a intenção em session.json (paridade com o profile.switch).
             try:
                 profile = await daemon._run_blocking(
                     functools.partial(manager.activate, target, origin="manual")
@@ -734,11 +702,11 @@ def gestos_dos_acessorios_valem(daemon: Any) -> Callable[[str | None], Any]:
     from hefesto_dualsense4unix.core.events import EventTopic
     from hefesto_dualsense4unix.integrations.gestos_dos_acessorios import Opcoes
 
-    lido: list[Any] = [None, None]  # [estado, as opções]: mudam de vez em quando, o tique não
+    lido: list[Any] = [None, None]
 
     def valem(_de: str | None) -> Opcoes | None:
         bus = getattr(daemon, "bus", None)
-        ultimo = getattr(bus, "ultimo", None)  # (noqa-acento): nome do método
+        ultimo = getattr(bus, "ultimo", None)  # (noqa-acento)
         estado = ultimo(EventTopic.ACESSORIOS_ESTADO) if callable(ultimo) else None
         if not isinstance(estado, dict) or not estado.get("aparelhos"):
             return None
@@ -783,7 +751,6 @@ def start_hotkey_manager(daemon: DaemonProtocol) -> None:
         HotkeyManager,
     )
 
-    # mesmo caminho do profile.switch). Antes ficavam disabled_until_wired: o
     hotkey_config = HotkeyConfig(
         ps_long_press_ms=getattr(daemon.config, "ps_long_press_ms", 0),
         next_profile=DEFAULT_COMBO_NEXT,
@@ -856,7 +823,6 @@ def start_mic_hotkey(daemon: DaemonProtocol) -> None:
     daemon._tasks.append(
         asyncio.create_task(mic_button_loop(daemon), name=mic_button_loop.__name__)
     )
-    # `state_full` roda a 20 Hz e só LÊ o que o laço já leu. O laço acorda pelo
     tarefa_do_canal = asyncio.create_task(
         canal_do_microfone_loop(daemon), name="canal_do_microfone_loop"
     )
@@ -866,7 +832,6 @@ def start_mic_hotkey(daemon: DaemonProtocol) -> None:
 
 CANAL_TTL_S: float = 2.0
 
-#: varredura o `state_full` não publica as chaves, e ausência é a resposta
 _CANAL_POR_UNIQ: dict[str, dict[str, Any]] = {}
 
 
@@ -1060,10 +1025,6 @@ def _o_que_a_borda_pede(daemon: DaemonProtocol, uniq: str, mudo: bool) -> bool:
     return False
 
 
-#: O teto da espera pela confirmação do mudo no aparelho. Os ~550 ms medidos em
-#: 30/08 eram a fila do report (63 vezes 8,7 ms com um controle); desde a
-#: O-BOTAO-DO-MIC-CHEGA-NA-HORA-01 a volta esvazia a fila e a confirmação chega
-#: em uma volta. O teto segue folgado para o rádio cheio.
 CONFIRMACAO_DO_MUDO_S: float = 3.0
 
 PASSO_DA_CONFIRMACAO_S: float = 0.1
@@ -1472,7 +1433,6 @@ async def _confirmar_e_devolver(
     logger.info("mic_ato_represado", uniq=uniq, mudo_desejado=mudo_desejado)
     if not recado:
         return
-    # recado do represamento nunca chegou ao `state_full` — o log dizia
     with contextlib.suppress(Exception):
         recado_do_microfone.anotar(
             daemon,
@@ -1501,8 +1461,6 @@ async def _eleger_ou_devolver(
     fora_do_padrao = not _mesmo_controle(eleitor.eleito, uniq)
     if mudo:
         if fora_do_padrao and not no_ar.esta(uniq):
-            # o `state_full` usa: `recado_do_microfone.mesa_de_agora`. Esta
-            # faz: o MESMO `state_full` saía com `eleito_na_mesa: false` e o
             dono = eleitor.eleito
             mesa = recado_do_microfone.mesa_de_agora(daemon)
             if dono is not None and mesa and dono not in mesa:
@@ -1578,8 +1536,6 @@ async def _apagar_a_luz_de_quem_perdeu_o_canal(
     eleitor: Any,
 ) -> None:
     """O plástico de quem perdeu o microfone SEM TER TOCADO EM NADA."""
-    # defeito é de FORMA, não de lógica. Medido na bancada com o DualSense
-    # (noqa-acento: a citação literal vem na linha seguinte)
     antes = norm_mac(dono_antes) or dono_antes
     tocou = norm_mac(quem_tocou) or quem_tocou
     eleito_agora = norm_mac(eleitor.eleito) or eleitor.eleito
@@ -1587,7 +1543,6 @@ async def _apagar_a_luz_de_quem_perdeu_o_canal(
         return
     if eleito_agora == antes:
         return
-    # em 10/09/2026 com dois DualSense no rádio: sem esta guarda, ligar o
     if _no_ar_da_sessao(daemon).esta(dono_antes):
         logger.info(
             "mic_da_mesa_ex_dono_continua_no_ar",
@@ -1645,7 +1600,7 @@ def _uniqs_conectados(daemon: DaemonProtocol) -> list[str]:
         return []
     try:
         itens = descrever()
-    except Exception:  # pragma: no cover - defensivo
+    except Exception:  # pragma: no cover
         return []
     out: list[str] = []
     for item in itens if isinstance(itens, list) else []:
@@ -1665,7 +1620,6 @@ def _mesmo_controle(a: str | None, b: str | None) -> bool:
 class MicrofonesNoAr:
     """Quem está com o microfone NO AR agora — por controle, em ordem de chegada."""
 
-    #: e a nova sobe no mesmo nó (`bt_mic._aplicar_a_palavra_dela`). Com o laço
     LEITURAS_SEM_CANAL_ATE_SAIR: int = 2
 
     def __init__(self) -> None:
@@ -1750,10 +1704,6 @@ def _no_ar_da_sessao(daemon: Any) -> MicrofonesNoAr:
         no_ar = MicrofonesNoAr()
         daemon._microfones_no_ar = no_ar
     return no_ar
-
-
-#     ativar e ele ser reconhecido. isso deveria ta  # (noqa-acento: citação literal)
-# `interface/cartao_do_controle.acao_mic` são LEITURA pura do que o `state_full`
 
 
 def _o_firmware_esta_mudo(daemon: DaemonProtocol, uniq: str) -> bool:
@@ -2146,11 +2096,8 @@ async def _conferir_quem_saiu_do_ar(daemon: DaemonProtocol, uniqs: list[str]) ->
         return []
 
 
-# Ciclo do modo, porém para as máscaras: o usuário não precisa fechar o jogo.
-
 CICLO_DE_MASCARAS: tuple[str, ...] = ("dualsense", "xbox", "nintendo")
 
-#: DualSense e Xbox repetem a cor do modo de mesmo nome, para a barra dizer uma
 CORES_DA_MASCARA: dict[str, tuple[int, int, int]] = {
     "dualsense": CORES_DO_MODO[PONTE_DUALSENSE],
     "xbox": CORES_DO_MODO[PONTE_XBOX],
@@ -2355,9 +2302,6 @@ def _mudo_pelo_retrato(fonte: str) -> _sp.CompletedProcess[str] | None:
     return _sp.CompletedProcess(pergunta, 1, stdout="", stderr="")
 
 
-# ---------------------------------------------------------------------------
-# Com pad virtual DualSense, o 0x10 do `common[9]` que o jogo pede cala ou abre
-
 _MUDO_DO_JOGO: dict[str, tuple[float, bool]] = {}
 
 
@@ -2471,8 +2415,6 @@ def _a_mesa_vazia_esquece_o_canal(daemon: Any) -> None:
     with contextlib.suppress(Exception):
         daemon._canal_conferido_em = None
 
-
-# A tabela é `core/acoes_do_gesto.tabela(daemon._maquina)`, lida EM MEMÓRIA a
 
 _NADA_DO_GESTO = "nada"
 
@@ -2749,14 +2691,14 @@ __all__ = [
     "AtoDoMicrofone",
     "MetadeDoAto",
     "MicrofonesNoAr",
-    "acao_do_ps_do_perfil",  # (noqa-acento) nome de função
+    "acao_do_ps_do_perfil",
     "avisar_troca_de_modo",
     "build_next_bridge_callback",
     "build_profile_cycle_callback",
     "build_ps_solo_callback",
     "canal_do_microfone",
     "canal_do_microfone_loop",
-    "definir_acao_do_ps",  # (noqa-acento) nome de função
+    "definir_acao_do_ps",
     "ligar_o_microfone",
     "mic_button_loop",
     "mic_do_jogo_loop",

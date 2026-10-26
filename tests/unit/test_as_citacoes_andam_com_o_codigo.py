@@ -349,8 +349,6 @@ def test_o_script_roda_pela_linha_de_comando(repo: Path) -> None:
     assert _validar(repo).returncode == 0
 
 
-# --- a citação CRUA (sem símbolo prometido) anda pelo histórico do documento -------------------
-
 END = "src/hefesto_dualsense4unix/alvo.py"
 
 

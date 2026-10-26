@@ -7,7 +7,6 @@ import typer
 from rich.console import Console
 from rich.markup import escape
 
-# não podem importar este módulo (typer/rich no topo). A função mudou de casa
 from hefesto_dualsense4unix.integrations.steam_launch_options import nome_do_appid
 
 app = typer.Typer(

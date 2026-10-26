@@ -22,7 +22,7 @@ from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
 from hefesto_dualsense4unix.profiles.schema import MatchCriteria, Profile
 from hefesto_dualsense4unix.profiles.slug import slugify
 
-TIQUES = 120  # dois segundos de laço
+TIQUES = 120
 
 
 @pytest.fixture

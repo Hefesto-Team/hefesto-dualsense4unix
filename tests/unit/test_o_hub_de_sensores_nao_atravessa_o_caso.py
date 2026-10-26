@@ -80,8 +80,6 @@ def test_o_servidor_que_para_leva_o_hub_dele(tmp_path: Path) -> None:
 
     assert not nova.is_alive(), "o servidor parou e a manutenção do hub dele seguiu viva"
 
-    # As tarefas do tique param DEPOIS do IPC (`parar_em` 180 contra 150) e seguem pedindo o
-    # hub: o servidor parado não pode nascer outro, que reabriria os nós do controle na descida.
     antes = set(_manutencoes_vivas())
     servidor._garantir_sensor_hub().vigiar()
     servidor._garantir_sensor_hub().entradas("aa:bb:cc:00:00:01")

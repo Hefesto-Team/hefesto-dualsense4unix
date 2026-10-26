@@ -98,7 +98,6 @@ VIVOS = (PRIMEIRO, SEGUNDO, QUARTO)
 
 BOOT = "boot-teste-quatro-na-mesa-01"
 
-#: A aba Status resolve a 10 Hz (``ipc_handlers``).
 LEITURAS_DE_OITO_SEGUNDOS = 80
 
 

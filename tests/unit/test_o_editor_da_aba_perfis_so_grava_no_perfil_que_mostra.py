@@ -67,7 +67,6 @@ def _memoria_limpa(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(a10_perfis, "_ESCOLHIDO", "", raising=False)
     monkeypatch.setattr(a10_perfis, "_ARMADO", None, raising=False)
     monkeypatch.setattr(a10_perfis, "_PROCURA", "", raising=False)
-    # o «pinta uma vez» (`_uma_vez_so`) omite os campos digitados do mesmo alvo por 2 s
     monkeypatch.setattr(a10_perfis, "_PINTADO_PARA", "", raising=False)
     monkeypatch.setattr(a10_perfis, "_ULTIMO_TIQUE", 0.0, raising=False)
 
@@ -107,8 +106,6 @@ def _aberto_no_editor() -> str:
     return marcadas[0]
 
 
-#: Os gestos do editor e o que cada um recebe da tela. O `remover` fica fora: a
-#: guarda do perfil que vale o recusaria antes de gravar, e ele tem régua própria.
 GESTOS: dict[str, tuple[Any, dict[str, Any]]] = {
     "perfis.renomear": (a10_perfis.perfis_renomear, {"valor": "Corrida 2"}),
     "editor.estilo": (a10_perfis.editor_estilo, {"valor": _estilo_que_grava()}),
@@ -147,7 +144,6 @@ def test_o_gesto_mira_o_perfil_que_o_editor_pinta(gesto: str, alvos: list[str]) 
 
     funcao, o = GESTOS[gesto]
     alvos.clear()
-    # a recusa por outro motivo vale, desde que o alvo seja o pintado
     with contextlib.suppress(RuntimeError):
         funcao(_ctx(), dict(o), PonteDeMentira())
 

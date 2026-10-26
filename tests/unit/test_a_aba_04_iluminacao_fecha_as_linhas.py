@@ -77,7 +77,7 @@ for _p in (str(RAIZ / "src"), str(INTERFACE)):
 
 PAGINA = "04-iluminacao.html"
 
-AUTOMATICO = "automatico"  # (noqa-acento) chave ASCII
+AUTOMATICO = "automatico"  # (noqa-acento)
 UM = "aa:bb:cc:00:00:01"
 DOIS = "aa:bb:cc:00:00:02"
 CHAVE_UM, CHAVE_DOIS = "aabbcc000001", "aabbcc000002"
@@ -89,7 +89,6 @@ MESA = [
      "nome": "Galactic Purple", "via": "BT"},
 ]
 
-#: P2, que são `player_slot_color(1)` e `(2)`.
 P1 = {"uniq": UM, "index": 0, "transport": "usb", "connected": True,
       "player": 1, "player_slot": 1, "is_primary": True,
       "lightbar_rgb": [0, 0, 255], "lightbar_on": True,
@@ -379,8 +378,10 @@ def test_no_automatico_escrito_os_gestos_da_coluna_recusam(pac, a04, gesto):
 
 
 def test_o_hexadecimal_e_dica_da_celula_cor_e_nao_botao():
-    """Desde 16/10/2026 o hexadecimal não aparece: o piloto o escreve na dica da célula Cor."""
-    # D-1610-A-EXPLICACAO-DO-CAMPO-E-DICA
+    """Desde 16/10/2026 o hexadecimal não aparece: o piloto o escreve na dica da célula Cor.
+
+    Prova da D-1610-A-EXPLICACAO-DO-CAMPO-E-DICA.
+    """
     from hefesto_dualsense4unix.interface import onde
 
     texto = onde.pagina(PAGINA).read_text(encoding="utf-8")

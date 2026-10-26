@@ -35,7 +35,7 @@ INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 sys.path.insert(0, str(INTERFACE))
 
 MOCKUP = RAIZ / "mockup" / "03-gatilhos.html"
-PUBLICADA = INTERFACE / "paginas" / "03-gatilhos.html"  # (noqa-acento: nome da pasta)
+PUBLICADA = INTERFACE / "paginas" / "03-gatilhos.html"  # (noqa-acento)
 
 UNIQ = "aa:bb:cc:00:00:01"
 FALSO = {"uniq": UNIQ, "player": 1, "transport": "usb", "is_primary": True,
@@ -43,7 +43,6 @@ FALSO = {"uniq": UNIQ, "player": 1, "transport": "usb", "is_primary": True,
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua", "via": "USB",
          "cor": "starlight-blue", "mascara": "DualSense"}]
 
-#: O que a cura tirou: cada resto com o texto que o denuncia numa página.
 RESTOS = {
     "a chave Avançado": "g2-avtog",
     "o roteiro da chave na sessão": "hef-gatilhos-avancado",
@@ -66,7 +65,7 @@ def _o_que_voltou(doc: str) -> list[str]:
 
 
 def test_o_desenho_nao_traz_de_volta_o_que_saiu() -> None:
-    # D-2210-O-GATILHO-SO-TEM-O-EFEITO
+    """Prova da D-2210-O-GATILHO-SO-TEM-O-EFEITO."""
     doc = MOCKUP.read_text(encoding="utf-8")
     assert _o_que_voltou(doc) == []
     assert "Avançado" not in _sem_estilo(doc)
@@ -100,7 +99,7 @@ def _caches_do_arquivo(a03, monkeypatch, arquivo: pathlib.Path) -> None:
 
 @pytest.fixture
 def a03():
-    import pacotes  # noqa: F401  (registra os dez)
+    import pacotes  # noqa: F401
     from pacotes import a03_gatilhos
 
     a03_gatilhos.esquecer_o_rascunho()

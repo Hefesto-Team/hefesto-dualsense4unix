@@ -35,7 +35,6 @@ DOCTOR = RAIZ / "scripts" / "doctor.sh"
 UCM = RAIZ / "assets" / "ucm" / "DualSense-HiFi.conf"
 FIXTURES = RAIZ / "tests" / "fixtures" / "mic-cabo"
 
-#: O elemento de ganho de captura que a placa do DualSense tem. **Não é um
 ELEMENTO = "Headset"
 
 

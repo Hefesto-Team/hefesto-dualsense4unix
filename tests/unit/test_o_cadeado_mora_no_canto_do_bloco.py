@@ -73,7 +73,7 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
         sys.path.insert(0, _caminho)
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
-JOGAR = INTERFACE / "paginas" / "01-jogar.html"  # (noqa-acento) nome de PASTA
+JOGAR = INTERFACE / "paginas" / "01-jogar.html"  # (noqa-acento)
 DESENHO = RAIZ / "mockup" / "01-jogar.html"
 PAGINAS = {"publicada": JOGAR, "desenho": DESENHO}
 

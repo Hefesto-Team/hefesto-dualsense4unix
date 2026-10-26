@@ -17,19 +17,11 @@ from array import array
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-#: A graduação NÃO age até a prova da bancada: a intensidade se calcula e se expõe no estado do
-#: daemon, mas o fator fica em 1,0. Liga quando ``scripts/ensaios/gravar_a_intensidade_da_cena.py``
-#: mostrar, em três gêneros, a mediana do combate acima da do calmo nos trechos marcados à mão
-#: (sem essa separação a régua vira enfeite). A régua liga por parâmetro (``graduar=True``).
 GRADUACAO_LIGADA = False
 
-#: A constante de tempo da média lenta de cada sinal.
 CONSTANTE_DE_TEMPO_S = 3.0
-#: O tempo mínimo em cada faixa antes de trocar.
 PERMANENCIA_MINIMA_S = 4.0
-#: O RMS do som do jogo (fração da escala cheia) que conta como som cheio de combate.
 ENERGIA_CHEIA = 0.25
-#: As bordas por segundo, num controle, que contam como golpe cheio.
 RUMBLE_CHEIO_POR_S = 3.0
 DEDO_CHEIO_POR_S = 2.0
 
@@ -37,16 +29,11 @@ CALMA = "calma"
 TENSA = "tensa"
 COMBATE = "combate"
 FAIXAS = (CALMA, TENSA, COMBATE)
-#: As divisas entre as faixas (calma | tensa | combate) e a folga de cada lado delas.
 DIVISAS = (0.25, 0.55)
 HISTERESE = 0.05
-#: A força do que o Hefesto soma em cada faixa: a base moderada na calma, a força cheia no combate.
 FATOR_DA_FAIXA: Mapping[str, float] = {CALMA: 0.6, TENSA: 0.8, COMBATE: 1.0}
-#: A faixa em que o jogo começa: a força de antes, até a média dizer outra coisa.
 FAIXA_DO_COMECO = COMBATE
-#: O ritmo da luz que respira na cena calma (o mais lento da escala de 1 a 10).
 RITMO_MAIS_LENTO = 1
-#: O jogo decide sozinho no Nativo; o Personalizado é o que a pessoa montou: nenhum dos dois gradua.
 ESTILOS_SEM_GRADUACAO = frozenset({"nativo", "personalizado"})
 
 TIPO_RUMBLE = "rumble_tiro"
@@ -63,7 +50,7 @@ def rms_do_pcm(pcm: bytes) -> float:
         return 0.0
     if _SOMA_DOS_PRODUTOS is not None:
         soma = float(_SOMA_DOS_PRODUTOS(amostras, amostras))
-    else:  # pragma: no cover - Python sem math.sumprod
+    else:  # pragma: no cover
         soma = float(sum(x * x for x in amostras))
     return math.sqrt(soma / len(amostras)) / 32768.0
 
@@ -112,15 +99,11 @@ class IntensidadeDaCena:
         self.energia = 0.0
         self.som_cru = 0.0
         self._taxas: dict[str, dict[str, float]] = {TIPO_RUMBLE: {}, TIPO_DEDO: {}}
-        #: as bordas que esta sessão já mostrou: o jogo sem rumble, ou em que a mão não usa o
-        #: gatilho, não fica preso na calma por um sinal que ele nunca dá
         self.vistos: set[str] = set()
         with self._trava:
             self._som = (0.0, 0)
         for contagem in self._bordas.values():
             contagem.clear()
-
-    # --- os sinais ---
 
     def contar(self, eventos: Iterable[Any]) -> None:
         """As bordas do rumble e do dedo deste tique, controle a controle."""
@@ -140,8 +123,6 @@ class IntensidadeDaCena:
         with self._trava:
             soma, n = self._som
             self._som = (soma + rms * rms, n + 1)
-
-    # --- o tempo ---
 
     def andar(self, agora: float, *, jogo: bool, ouvido: bool, uniqs: Iterable[str] = ()) -> None:
         """Um tique: as médias lentas andam e a faixa troca, se a média e a permanência deixam."""
@@ -180,13 +161,11 @@ class IntensidadeDaCena:
         atual = self.faixa or FAIXA_DO_COMECO
         valor = self.intensidade
         if valor is None:
-            return  # nenhum sinal na sessão ainda: a cena não se sabe, a faixa fica
+            return
         nova = faixa_de(valor, atual)
         if nova != atual and agora - self._desde >= PERMANENCIA_MINIMA_S:
             self.faixa = nova
             self._desde = agora
-
-    # --- a leitura ---
 
     def por_segundo(self, tipo: str) -> float:
         """As bordas por segundo do controle mais intenso (a cena é a do mais agitado)."""

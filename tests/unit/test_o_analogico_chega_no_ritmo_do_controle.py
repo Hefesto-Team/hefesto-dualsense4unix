@@ -35,13 +35,8 @@ from tests.unit.test_o_aperto_acorda_o_tique import (
     _numa_thread,
 )
 
-#: O teto declarado do orçamento: uma volta por quadro do aparelho (250 Hz no cabo).
 TETO_DE_VOLTAS_POR_S = 250
-#: O teto de CPU do fio do laço com o stick girando, por segundo: 15% de um núcleo para os três
-#: controles. Medido em 16/10: 27,5 ms/s. Uma volta que custa 1 ms passa de 150 ms/s.
 TETO_DE_CPU_DO_LACO_S = 0.150
-#: A folga da chegada, medida em relógio de parede com a máquina dividida por três vagas de
-#: pytest; o defeito que a régua pega espera o tique de 1 s do laço, não 30 ms.
 CHEGADA_MAXIMA_S = 0.030
 
 
@@ -137,11 +132,8 @@ def _daemon_do_primario(
     return daemon
 
 
-# ---------------------------------------------------------------- o leitor acorda no quadro
-
-
 def test_o_eixo_que_anda_acorda_a_entrega_no_fim_do_quadro(despertares: list[float]) -> None:
-    # D-1610-A-ENTREGA-DO-EIXO-ANDA-NO-RITMO-DO-CONTROLE
+    """Prova da D-1610-A-ENTREGA-DO-EIXO-ANDA-NO-RITMO-DO-CONTROLE."""
     leitor = _leitor(1)
     leitor._handle_event(_Evento(ecodes.EV_ABS, ecodes.ABS_X, 168), ecodes)
     assert despertares == [], "acordou antes de o quadro fechar"
@@ -196,9 +188,6 @@ def test_o_botao_segue_acordando_no_proprio_evento(despertares: list[float]) -> 
     assert len(despertares) == 1
 
 
-# ------------------------------------------------------------ a entrega ao jogo, todos os jogadores
-
-
 @pytest.mark.parametrize("transporte", ["usb", "bt"])
 def test_o_p1_recebe_o_eixo_fresco_na_volta_acordada(transporte: str) -> None:
     """Laço de 1 s parado: o stick de 40 contagens chega ao pad do P1 antes do tique."""
@@ -213,7 +202,6 @@ def test_o_p1_recebe_o_eixo_fresco_na_volta_acordada(transporte: str) -> None:
 
     async def cenario() -> None:
         parada = asyncio.Event()
-        # a espera de produção acorda no aperto; registra o despertador no laço
         espera = asyncio.create_task(lc._esperar_o_tique(daemon, parada, 1.0))
         await asyncio.sleep(0.1)
         _numa_thread(girar).join()
@@ -274,9 +262,6 @@ def test_o_p1_le_o_snapshot_do_leitor_e_nao_o_estado_do_ultimo_tique() -> None:
     assert daemon._last_state.raw_lx == 128, "a volta não regrava o estado do tique"
 
 
-# ----------------------------------------------------------------------------- o orçamento
-
-
 def test_orcamento_do_stick_girando_a_250_hz(monkeypatch: pytest.MonkeyPatch) -> None:
     """Stick contínuo a um quadro a cada 4 ms: voltas por segundo e CPU por volta ao relatório."""
     leitores = {n: _leitor(n) for n in (2, 3, 4)}
@@ -312,7 +297,6 @@ def test_orcamento_do_stick_girando_a_250_hz(monkeypatch: pytest.MonkeyPatch) ->
     async def cenario() -> None:
         nonlocal cpu_do_laco
         await asyncio.sleep(0.05)
-        # O fio do laço inteiro: a volta, a espera que acorda e o agendamento que a volta não vê.
         inicio = time.thread_time()
         fio = _numa_thread(girar)
         while fio.is_alive():
@@ -336,9 +320,6 @@ def test_orcamento_do_stick_girando_a_250_hz(monkeypatch: pytest.MonkeyPatch) ->
     )
     menor = min(b - a for a, b in itertools.pairwise(voltas))
     assert menor >= lc.INTERVALO_MINIMO_DA_VOLTA_S, f"{menor * 1000:.2f} ms"
-
-
-# ------------------------------------------------------------------- o quadro de movimento
 
 
 def _motion() -> MotionSensorReader:

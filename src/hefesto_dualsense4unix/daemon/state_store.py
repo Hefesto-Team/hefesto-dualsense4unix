@@ -9,7 +9,6 @@ from hefesto_dualsense4unix.core.controller import ControllerState
 from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 from hefesto_dualsense4unix.daemon.launch_env import steam_appid_from_wm_class
 
-# escolha manual via IPC `profile.switch`. Quando o usuário ativa um perfil
 MANUAL_PROFILE_LOCK_SEC: float = 30.0
 
 WINDOW_DETECT_BLIND_AFTER_SEC: float = 300.0
@@ -34,10 +33,7 @@ class StateStore:
         self._active_profile: str | None = None
         self._last_battery_pct: int | None = None
         self._counters: dict[str, int] = {}
-        # Limpeza: profile.switch explícito limpa TUDO; rumble.passthrough
-        # limpa SÓ "rumble"; trigger.reset limpa SÓ "trigger" (ABAS-05, 25/07 —
         self._freestyle_ligado: bool = False
-        # IPC `profile.switch`; consultado em `AutoSwitcher._activate`.
         self._manual_profile_lock_until: float = 0.0
         self._native_mode_active: bool = False
         self._native_mode_origin: str | None = None
@@ -211,8 +207,6 @@ class StateStore:
             ) is not None:
                 self._game_window_seen_at = moment
 
-
-    # --- lock manual de profile.switch (Bug C) ------------------------
 
     def mark_manual_profile_lock(self, until: float) -> None:
         """Arma o lock de supressão do autoswitch até `until` (monotonic).

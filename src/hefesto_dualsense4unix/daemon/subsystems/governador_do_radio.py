@@ -161,25 +161,10 @@ PERIODO_S = 0.25
 
 LIMIAR_DO_DEFICIT = 20
 
-#: O limiar do déficit em janelas de escrita de UMA ponte (a média das pontes
-#: de pé com escrita, `_Estado.por_ponte`), com :data:`LIMIAR_DO_DEFICIT` de
-#: piso. O-GOVERNADOR-NAO-FAZ-UMA-PONTE-SO-CEDER-01 (03/10/2026): o limiar fixo
-#: de 20 pacotes ficava colado nas ~23 escritas que uma ponte de 93,75/s faz
-#: numa janela, e um engasgo de uma janela abria episódio. Duas janelas dão a
-#: folga de um engasgo inteiro; por ponte, e não pela soma das pontes, para a
-#: rajada de três pontes de vibração seguir cedendo cedo (a média segue a
-#: rajada com atraso, e o piso vale no começo dela).
 JANELAS_DO_LIMIAR = 2.0
 
-#: A janela que pôs no ar pelo menos esta fração do que uma ponte escreve,
-#: mas menos que uma ponte inteira, é ENGASGO, e uma ponte segue de pé. Menos
-#: que isso é o adaptador parado (o ``acl_tx`` conta o adaptador inteiro, e um
-#: pacote alheio na janela não prova que ele escoa), e vale o «cede o
-#: adaptador inteiro», que anda o relógio do teto.
 FRACAO_DO_ENGASGO = 0.5
 
-#: Até quantos limiares de fila o engasgo deixa uma ponte de pé: a fila que
-#: passa disto não é engasgo, é o adaptador que não dá conta de uma ponte.
 FILA_DO_ENGASGO_EM_LIMIARES = 2.0
 
 FOLGA_PARA_VOLTAR = 10
@@ -335,20 +320,11 @@ class Vaga:
     tipo: str
     alem_do_limite: bool = False
     por_escolha_dela: bool = False
-    #: (:data:`TETO_DO_NAO_SEI_S`): o diário diz «não sei», nunca «não há».
     sem_medida: bool = False
     pedida_em: float = 0.0
     escritas: int = 0
-    #: o que a ponte pôs de verdade por segundo, suavizado janela a janela
-    #: (:data:`PESO_DA_JANELA_NA_MEDIA`); ``None`` = sem medida («não sei»). É a taxa que a
-    #: Conexões escreve na caixa da ponte, no lugar do alvo de projeto.
     hz: float | None = None
-    #: cedendo por causa da FILA do adaptador (o déficit do governador). O que a ponte lê é
-    #: :attr:`cedendo`, que também vale quando o controle está :attr:`longe`.
     _cedendo_pela_fila: bool = False
-    #: o enlace deste controle está fraco (:class:`~hefesto_dualsense4unix.integrations.
-    #: radio_da_mesa.PausaPeloSinal`): a ponte cede a vez ao relatório de entrada, que é o que
-    #: perde aperto. Não tem a ver com a fila, e a conta da fila não a vê.
     longe: bool = False
     derrubar: bool = False
     subiu_em: float | None = None
@@ -540,12 +516,8 @@ class GovernadorDoRadio:
         self._bordas_no_diario: dict[str, _BordasNoDiario] = {}
         self._amostra: dict[str, Any] | None = None
         self._lista_lida = True
-        #: O sinal (RSSI) de cada enlace, lido a cada segundo enquanto há ponte de pé; é o MESMO
-        #: leitor que o ``state_full`` usa para mostrar o sinal (um dono, uma pergunta por segundo).
         self.leitor_do_sinal = LeitorDoSinal()
-        #: ``{controle (12 hex): PausaPeloSinal}`` dos controles com ponte de pé.
         self._pausas: dict[str, PausaPeloSinal] = {}
-        #: :data:`TETO_DO_NAO_SEI_S`. Volta a ``None`` quando a medida chega.
         self._nao_sei_desde: float | None = None
         self._esperando_medida: dict[str, _EsperaDaMedida] = {}
         self._thread: threading.Thread | None = None
@@ -657,7 +629,7 @@ class GovernadorDoRadio:
         medidor viu no adaptador, nunca acima de :attr:`n_max`; desligado, é o :attr:`n_max`.
         """
         ar = (self._amostra or {}).get(adaptador)
-        enlaces = getattr(ar, "conexoes", None) or ()  # (noqa-acento): nome do campo
+        enlaces = getattr(ar, "conexoes", None) or ()  # (noqa-acento)
         controles = sum(1 for e in enlaces if getattr(e, "tipo", None) == TIPO_ACL)
         return n_max_do_adaptador(controles, teto=self.n_max)
 
@@ -693,7 +665,7 @@ class GovernadorDoRadio:
 
         controles: dict[str, dict[str, Any]] = {}
         for endereco, ar in (self._amostra or {}).items():
-            enlaces = getattr(ar, "conexoes", None)  # (noqa-acento): nome do campo
+            enlaces = getattr(ar, "conexoes", None)  # (noqa-acento)
             for enlace in enlaces or ():
                 chave = _chave(str(getattr(enlace, "endereco", "") or ""))
                 if chave and getattr(enlace, "tipo", None) == TIPO_ACL:
@@ -761,8 +733,6 @@ class GovernadorDoRadio:
                     )
                 sem_medida = True
             if autorizado or not vagas:
-                # R4: o usuário escolheu «Ligar aqui», ou não há para onde mover —
-                # medido, ou dito «não sei» depois do teto.
                 self._pedidos.pop(chave, None)
                 self._esperando_medida.pop(chave, None)
                 vaga = self._conceder(uniq, adaptador, tipo, alem=True, agora=agora)
@@ -1080,7 +1050,6 @@ class GovernadorDoRadio:
             for vaga in vagas:
                 vaga.longe = depois
                 if depois:
-                    # o sinal já a cala: o flag da fila não fica nela, nem na conta da vez
                     vaga.cedendo = False
             if depois == antes:
                 continue
@@ -1192,8 +1161,6 @@ class GovernadorDoRadio:
         o código de antes a deixava de pé, cedendo em rodízio consigo mesma.
         """
         com_escrita = janela.com_escrita
-        # A ponte longe (pausada pelo sinal) é muda: a fila não tem o que cobrar dela, e as
-        # vizinhas não cedem por ela (A-PONTE-PAUSADA-DIZ-A-VERDADE-NA-CONEXOES-01).
         na_vez = [
             v for v in vagas
             if not v.longe and (v._cedendo_pela_fila or any(v is e for e in com_escrita))
@@ -1243,13 +1210,11 @@ class GovernadorDoRadio:
         if not estado.cedendo and estado.fila > self._limiar(estado, janela):
             self._a_vez(estado, vagas, janela)
             if not any(vaga._cedendo_pela_fila for vaga in vagas):
-                # todas cabem: não há episódio, e o diário não diz «cedeu»
                 return
             estado.cedendo = True
             estado.cedendo_desde = agora
             estado.cedendo_medido_s = 0.0
             diario_das_bordas = self._bordas_no_diario.setdefault(endereco, _BordasNoDiario())
-            # é contada com os calados em vez de escrita.
             estado.episodio_escrito = endereco not in self._episodios and (
                 diario_das_bordas.escrita_em is None
                 or agora - diario_das_bordas.escrita_em >= INTERVALO_DAS_BORDAS_NO_DIARIO_S

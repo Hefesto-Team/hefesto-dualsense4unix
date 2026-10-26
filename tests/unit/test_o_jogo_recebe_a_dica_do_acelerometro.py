@@ -245,7 +245,7 @@ def test_o_so_medir_da_a_cada_biblioteca_um_ambiente_que_nao_abre_hidraw(
         chamadas[papel] = (comando, env)
         carga: dict[str, Any] = {"hid": []}
         if papel == "controles":
-            carga = {"versao": "0", "revisao": "", "controles": []}  # (noqa-acento) chave do ensaio
+            carga = {"versao": "0", "revisao": "", "controles": []}  # (noqa-acento)
         return SimpleNamespace(returncode=0, stdout=json.dumps(carga), stderr="")
 
     monkeypatch.setattr(

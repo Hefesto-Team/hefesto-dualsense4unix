@@ -15,8 +15,6 @@ AUTO_DEBOUNCE_SEC = 5.0
 
 TETO_DO_RUMBLE_FIXADO_S = 3.0
 
-#:
-#: **Por que o DESLIZADOR ainda vai até 200** (``RUMBLE_CUSTOM_MULT_MAX``, em
 RUMBLE_POLICY_MULT: dict[str, float] = {
     "economia": 0.3,
     "balanceado": 1.0,
@@ -144,7 +142,7 @@ def pares_fixados(cfg: Any) -> dict[str | None, tuple[int, int, float | None]]:
         registro = {}
         try:
             cfg.rumble_fixados = registro
-        except Exception:  # pragma: no cover — config imutável/exótica
+        except Exception:  # pragma: no cover
             logger.debug("rumble_fixados_nao_gravado", exc_info=True)
     return registro
 
@@ -186,10 +184,6 @@ def fixar_par(
     """
     registro = pares_fixados(cfg)
     if getattr(cfg, "rumble_active", None) is None:
-        # Quem soltou o resumo direto (a troca de perfil, a devolução ao jogo do
-        # Modo Nativo) soltou a mesa inteira: o registro que sobrou é de antes
-        # e não volta junto com o par novo (o mesmo que :func:`_pares_de_pe` faz
-        # no tique seguinte, só que antes de publicar).
         registro.clear()
     largados: list[str | None] = []
     if not so_este:
@@ -251,7 +245,6 @@ def par_fixado_vale_para(cfg: Any, uniq: str | None) -> bool:
         return True
     registro = getattr(cfg, "rumble_fixados", None)
     donos = set(registro) if isinstance(registro, dict) else set()
-    # o resumo posto direto (as portas antigas) entra como o par do dono dele
     donos.add(getattr(cfg, "rumble_active_uniq", None))
     return None in donos or uniq in donos
 
@@ -313,7 +306,7 @@ def _lembrar_dono_vibrando(cfg: Any, uniq: str | None) -> None:
     """Anota quem está vibrando por nossa conta — ou apaga a anotação."""
     try:
         cfg.rumble_dono_vibrando = uniq
-    except Exception:  # pragma: no cover — config imutável/exótica
+    except Exception:  # pragma: no cover
         logger.debug("rumble_dono_vibrando_nao_gravado", exc_info=True)
 
 
@@ -375,8 +368,6 @@ def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
     if not pares:
         _lembrar_dono_vibrando(cfg, None)
         return
-    # naquele momento isso nao interfere in game (noqa-acento: citação literal). (…) clicar
-    # M2 (`lifecycle.apply_profile_rumble_passthrough`) preserva o silêncio
     vivos = []
     for dono, par, carimbo in pares:
         if isinstance(carimbo, (int, float)) and now - carimbo > TETO_DO_RUMBLE_FIXADO_S:
@@ -397,9 +388,6 @@ def reassert_rumble(daemon: DaemonProtocol, now: float) -> None:
         _lembrar_dono_vibrando(cfg, None)
         return
 
-    # O dono «mesa inteira» escreve primeiro: o par de um controle, que vem
-    # depois, vale sobre o dele. A força é a de cada controle que recebe
-    # (`escrever_com_a_forca`): a bateria dele, a peça dele e o teto da mesa.
     vivos.sort(key=lambda item: item[0] is not None)
     vibrando: str | None = None
     for dono, (weak_raw, strong_raw) in vivos:
@@ -492,7 +480,6 @@ MOTIVO_MODO_NATIVO_SOLTOU_O_PAR = (
     "Modo Nativo sair."
 )
 
-#: nasceu no docstring de `PyDualSenseController.alvo_de_output_ausente`
 MOTIVO_ALVO_FORA_DA_MESA = (
     "O controle escolhido não está na mesa — nada foi enviado."
 )

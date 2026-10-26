@@ -21,9 +21,7 @@ from hefesto_dualsense4unix.utils import maquina as m
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 DONO = SRC / "profiles" / "o_padrao_do_computador.py"
-#: a única função que monta o par
 A_CASA = "o_perfil_sem_perfil_ativo"
-#: quem perguntava montando o par, e agora pergunta ao dono
 QUEM_PERGUNTA = (
     "daemon/subsystems/luz_animada.py",
     "daemon/subsystems/tato_vivo.py",

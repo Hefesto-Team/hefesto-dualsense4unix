@@ -38,7 +38,7 @@ from hefesto_dualsense4unix.interface import onde
 from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
 from hefesto_dualsense4unix.profiles import loader
 
-PAGINA = "10-perfis.html"  # (noqa-acento) nome de arquivo
+PAGINA = "10-perfis.html"
 
 BARRA = "guarda.plastico"
 
@@ -51,7 +51,6 @@ MESA = [
      "alvo": False, "mascara": "DualSense"},
 ]
 
-#: o mapa de canais diz `identidade.cor_do_aparelho = não` — e `mesa_do_estado`
 SEM_COR = {"pref": "p3", "uniq": "aabbcc000003", "jogador": 3, "cor": "",
            "nome": "Não sei", "via": "BT", "transporte": "bluetooth",
            "alvo": False, "mascara": "DualSense"}
@@ -135,8 +134,6 @@ def test_o_pacote_manda_a_cor_do_plastico_de_cada_controle(disco: list[Any]) -> 
     assert BARRA in fora, (
         "o pacote da 10 não manda a cor do plástico: a barra fica com a do "
         "mockup para sempre, e dar endereço sem escritor é maquiagem")
-    # os dois lugares vazios levam a cor de um plástico que ninguém na mesa usa (a tela fala pela
-    # cor do plástico, nunca por P3 e P4): Cosmic Red e Starlight Blue
     assert fora[BARRA] == [monta.cor_da_zona("white"),
                            monta.cor_da_zona("galactic-purple"),
                            monta.cor_da_zona("cosmic-red"),

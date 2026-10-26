@@ -23,9 +23,6 @@ AUTOSUSPEND_PARAM = "usbcore.autosuspend"
 AUTOSUSPEND_TOKEN = "usbcore.autosuspend=-1"
 QUIRKS_PARAM = "usbcore.quirks"
 HEFESTO_QUIRK_IDS: tuple[str, ...] = ("054c:0ce6:gn",)
-#: O que o Hefesto gravou antes e TIRA ao fundir (ADR 018, nota de 14/10/2026):
-#: no ``054c:0df2`` do pad virtual o ``n`` espera 200 ms por pedido de controle,
-#: e com quatro controles o jogo perde os controles. Sai só a entrada exata.
 HEFESTO_QUIRK_IDS_VELHOS: tuple[str, ...] = ("054c:0df2:gn",)
 
 OWNER_HEFESTO = "hefesto"
@@ -135,10 +132,6 @@ def strip_quirks_token(
 def _plan_autosuspend(tokens: Sequence[str], com_bateria: bool = False) -> CmdlineAction:
     present = tokens_for_param(tokens, AUTOSUSPEND_PARAM)
     if com_bateria and AUTOSUSPEND_TOKEN not in present:
-        # O autosuspend=-1 vale para TODO aparelho USB da máquina, e a razão
-        # medida é de desktop (AMD 400): num computador com bateria ele custa
-        # a carga de quem joga fora da tomada. O que já estiver lá (de outra
-        # ferramenta ou da pessoa) não é desfeito: a decisão é só não pôr o nosso.
         return CmdlineAction(
             param=AUTOSUSPEND_PARAM,
             op=OP_PULA,
@@ -273,9 +266,6 @@ def forbidden_reintroductions(actions: Iterable[CmdlineAction]) -> list[str]:
     return violations
 
 
-# ---------------------------------------------------------------------------
-# O carregador de boot: quem lê e quem escreve (um dono só)
-# ---------------------------------------------------------------------------
 BACKEND_KERNELSTUB = "kernelstub"
 BACKEND_GRUB = "grub"
 BACKEND_SYSTEMD_BOOT = "systemd-boot"

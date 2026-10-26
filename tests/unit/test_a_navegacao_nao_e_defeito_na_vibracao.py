@@ -62,7 +62,6 @@ def _alertas(estado: dict[str, Any]) -> list[str]:
     return [f for tom, f in _tela.textos_do_estado(estado) if tom == _tela.ALERTA]
 
 
-# 1 ----------------------------------------------------------------------------
 def test_na_navegacao_a_faixa_cala() -> None:
     """Navegação: emulação desligada, nenhum vpad. O estado é da mesa inteira.
 
@@ -75,7 +74,6 @@ def test_na_navegacao_a_faixa_cala() -> None:
     assert _alertas(estado) == []
 
 
-# 2 ----------------------------------------------------------------------------
 def test_no_vpad_que_nao_subiu_a_faixa_fica() -> None:
     estado = _estado(enabled=True, vpads=0)
     texto = _ra.texto_do_alcance_da_intensidade(estado)
@@ -89,7 +87,6 @@ def test_sem_o_bloco_da_emulacao_a_resposta_e_nao_sei() -> None:
     assert _ra.texto_do_alcance_da_intensidade(_estado(enabled=None, vpads=0)) is None
 
 
-# 3 ----------------------------------------------------------------------------
 class _RegistroDeLog:
     def __init__(self) -> None:
         self.eventos: list[tuple[str, str]] = []
@@ -149,22 +146,18 @@ def test_o_diario_so_acusa_a_falha(
 
     monkeypatch.setattr(le, "_fisicos_na_mesa", lambda daemon: fisicos)
 
-    # a troca para a Navegação: emulação desligada, nenhum vpad
     le.materialize_launch_env(_DaemonFalso(emulacao=False, vpad=False))  # type: ignore[arg-type]
     assert "rumble_sem_dono" not in _avisos(_borda), "a Navegação foi chamada de «sem dono»"
 
-    # o desligar do serviço: a emulação para um instante antes de sair
     daemon = _DaemonFalso(emulacao=True, vpad=True)
     daemon.parar_a_emulacao()
     le.materialize_launch_env(daemon)  # type: ignore[arg-type]
     assert "rumble_sem_dono" not in _avisos(_borda), "o desligar do serviço foi acusado"
 
-    # a falha: emulação ligada e o gamepad virtual não subiu
     le.materialize_launch_env(_DaemonFalso(emulacao=True, vpad=False))  # type: ignore[arg-type]
     assert "rumble_sem_dono" in _avisos(_borda), "a falha do vpad deixou de ser acusada"
 
 
-# 4 ----------------------------------------------------------------------------
 def _chamadas_do_predicado() -> list[tuple[str, ast.Call]]:
     achadas = []
     for arq in sorted(SRC.rglob("*.py")):
@@ -197,8 +190,6 @@ def _conta_a_mao(arvore: ast.AST) -> bool:
 def test_um_dono_so_para_a_pergunta() -> None:
     chamadas = _chamadas_do_predicado()
     arquivos = sorted({a for a, _ in chamadas})
-    # A aba Sistema pergunta ao mesmo predicado na linha do gamepad virtual por jogador
-    # (A-ABA-SISTEMA-DO-TODO-01, `a09_sistema.linha_do_gamepad_por_jogador`).
     assert arquivos == [
         "app/actions/rumble_actions.py", "daemon/launch_env.py",
         "interface/pacotes/a09_sistema.py",
@@ -223,7 +214,6 @@ def test_o_parametro_e_obrigatorio() -> None:
         sem_dono_do_rumble(native=False, backends=())  # type: ignore[call-arg]
 
 
-# 5 ----------------------------------------------------------------------------
 ESTADOS = {
     "navegação": _estado(enabled=False, vpads=0),
     "gamepad de pé": _estado(enabled=True, vpads=1),

@@ -185,28 +185,12 @@ def fechar(nome: str, rc: str, corrida: Path, raiz: Path, contagem: str,
     return 0
 
 
-# --- A MEMÓRIA DO VERDE ---------------------------------------------------------------------------
-#
-# Um portão que passou sobre os mesmos bytes que leu não precisa passar de novo. A chave de um portão é o
-# hash do que ELE lê: por padrão a árvore INTEIRA (o rastreado, como está no disco E no índice, mais o
-# que é novo e não é ignorado, mais o ignorado de `scripts/`: quatro portões abrem lá os dispositivos de
-# trabalho que o git não leva, medido em 06/10/2026 por `strace`), a linha do portão, o arquivo que ele
-# chama, o Python, o PYTHONPATH e o Chrome. Sem a quinta coluna da lista, vale o lado seguro: qualquer byte mudado roda o portão de novo.
-#
-# A quinta coluna estreita (globs, que alcançam também o ignorado) ou declara o que a árvore não guarda:
-#   @sempre  o portão lê a máquina ou a história do git, e nunca é lembrado;
-#   @dia     o portão compara com a data de hoje (prazo que vence), e a data entra na chave;
-#   @head    o portão lê a história a partir do HEAD, e o HEAD entra na chave.
-# Glob que não casa arquivo nenhum é erro de digitação, e erro de digitação não vira memória: o portão roda.
-
 MEMORIA = "hefesto-memoria"
 _VERSAO_DA_CHAVE = "2"
 _GUARDA = 3
 _VALIDADE = 30 * 86400
 _SINAIS = {"@sempre", "@dia", "@head"}
 _IGNORADOS_QUE_ENTRAM = ("scripts",)
-#: o bytecode deriva do `.py` (que entra na chave) e do Python (que entra no ambiente); os próprios portões o
-#: escrevem durante a corrida, e na chave ele a fazia mudar sob o pé deles
 _BYTECODE = re.compile(r"(?:^|/)__pycache__/|\.py[co]$")
 _CHROME = "/usr/bin/google-chrome"
 
@@ -324,8 +308,6 @@ def chave_do_portao(ent: Entradas, ambiente: str, ficha: str, runner: str, argv:
         if (ent.raiz / pedaco).is_file():
             arquivos.add(pedaco)
     h = hashlib.sha256()
-    # o caminho da árvore entra: um portão que confere a PRÓPRIA árvore (o piloto, o `src/`) pode passar numa
-    # e reprovar noutra com os mesmos bytes, e o verde de uma não é o da outra
     h.update(f"{ambiente}\n{ent.raiz}\n{ficha}|{runner}|{argv}\n".encode())
     if runner == "bin" and palavras:
         h.update(f"bin:{palavras[0]}:{_stat_de(palavras[0])}\n".encode())

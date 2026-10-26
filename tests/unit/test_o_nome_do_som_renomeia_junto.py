@@ -137,7 +137,7 @@ class _SinkEspiao:
 
     def __init__(self, **kw: Any) -> None:
         self.uniq = str(kw.get("uniq", ""))
-        self.descricao = kw.get("descricao")  # (noqa-acento) nome de atributo
+        self.descricao = kw.get("descricao")  # (noqa-acento)
         self.rota = kw.get("rota")
         self.parado = False
 

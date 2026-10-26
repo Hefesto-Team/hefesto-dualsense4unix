@@ -25,7 +25,7 @@ from gi.repository import GLib, Gtk
 from hefesto_dualsense4unix.interface.janela import JanelaDaAba
 from hefesto_dualsense4unix.interface import onde
 
-ABA = "10-perfis.html"  # (noqa-acento) nome de arquivo
+ABA = "10-perfis.html"
 TITULO = "Hefesto — aba PERFIS"
 
 ESPALHAMENTO_TOLERADO = 2.0

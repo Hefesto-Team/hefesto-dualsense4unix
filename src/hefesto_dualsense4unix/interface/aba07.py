@@ -7,11 +7,8 @@ from monta import CONECTADOS, CSS_POPUP, cor_da_zona, monta
 
 import desenho_da_experimental as exp
 
-# A régua `identidade_congelada` reprova cor de aparelho cravada na página: nome de
-# colorway no texto, `--plastico:`, apelido de modelo, hexadecimal do mapa.
 _PROSA = re.compile(r"<!--.*?-->|/\*.*?\*/", re.S)
 
-#: A tabela de variáveis do esqueleto; `--plastico:#fff` cai fora daqui e é acusado à parte.
 _TABELA_DO_ESQUELETO = re.compile(r"--([a-z0-9-]+)\s*:\s*(#[0-9a-fA-F]{6})")
 
 _COM_COLORWAY = re.compile(r"<[a-zA-Z][^>]*\bdata-colorway\s*=[^>]*>")
@@ -125,8 +122,6 @@ def _sem_os_tres(fila: str) -> bool:
 
 def _confere_a_forma() -> None:
     """Trava de geração: o que a régua do mockup também afirma, dita antes de gravar."""
-    # 19/10/2026: Steam, Heroic e Flatpak de fábrica, o Lutris como extensão instalada e uma
-    # linha de migração (o lançador que virou extensão, sem os botões, com o endereço).
     if len(exp.LANCADORES) != 5 or sum(1 for f in exp.LANCADORES if f.virou) != 1:
         raise SystemExit(f"ERRO: {len(exp.LANCADORES)} lançadores, e o desenho tem cinco, "
                          "um deles a linha do que virou extensão.")
@@ -140,7 +135,6 @@ def _confere_a_forma() -> None:
 _confere_a_forma()
 
 
-#: O ⋮ de cada linha de extensão; o do «Configurar» já traz o menu dele ao lado e fica de fora.
 _O_MAIS = re.compile(
     r'(<button class="ext-mais"[^>]*data-v="([^"]+)"[^>]*>\u22ee</button>)(?!<div class="ext-menu)')
 

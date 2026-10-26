@@ -175,14 +175,14 @@ class _FluxoParec:
         return self.proc.poll() is None
 
     def parar(self) -> None:
-        with contextlib.suppress(OSError):  # pragma: no cover - defensivo
+        with contextlib.suppress(OSError):  # pragma: no cover
             self.proc.terminate()
         try:
             self.proc.wait(timeout=2.0)
-        except Exception:  # pragma: no cover - defensivo
+        except Exception:  # pragma: no cover
             with contextlib.suppress(OSError):
                 self.proc.kill()
-        with contextlib.suppress(OSError):  # pragma: no cover - defensivo
+        with contextlib.suppress(OSError):  # pragma: no cover
             if self.proc.stdout is not None:
                 self.proc.stdout.close()
 
@@ -204,7 +204,7 @@ def abrir_fluxo(fonte: str, uniq: str = "") -> Fluxo | None:
     except (OSError, ValueError) as exc:
         logger.warning("nivel_do_mic_nao_abriu", fonte=fonte, err=str(exc))
         return None
-    if proc.stdout is None:  # pragma: no cover - defensivo
+    if proc.stdout is None:  # pragma: no cover
         with contextlib.suppress(OSError):
             proc.kill()
         return None
@@ -287,7 +287,7 @@ class NivelDoMicrofone:
             self._desejado = {}
             for uniq in list(self._canais):
                 self._fechar(uniq)
-        with contextlib.suppress(OSError):  # pragma: no cover - defensivo
+        with contextlib.suppress(OSError):  # pragma: no cover
             self._seletor.close()
 
     def __enter__(self) -> NivelDoMicrofone:
@@ -305,7 +305,7 @@ class NivelDoMicrofone:
         for chave, _mascara in eventos:
             self._comer(str(chave.data), agora)
 
-    def _rodar(self) -> None:  # pragma: no cover - exercitado só com thread
+    def _rodar(self) -> None:  # pragma: no cover
         while not self._parar.is_set():
             try:
                 self.bombear()
@@ -391,7 +391,7 @@ class NivelDoMicrofone:
         canal = self._canais.pop(uniq, None)
         if canal is None:
             return
-        with contextlib.suppress(  # pragma: no cover - defensivo
+        with contextlib.suppress(  # pragma: no cover
             KeyError, ValueError, OSError
         ):
             self._seletor.unregister(canal.fluxo.fd)

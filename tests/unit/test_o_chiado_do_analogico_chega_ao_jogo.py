@@ -199,8 +199,6 @@ def test_o_pad_uinput_escreve_cada_troca(mascara: str) -> None:
     assert gravador.syns == 3, "valor repetido não escreve nada"
 
 
-# 4. O pad `uhid`: o DualSense, nos dois relógios
-
 _BYTE_DO_RX = 1 + 2
 
 

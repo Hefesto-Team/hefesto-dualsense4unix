@@ -60,8 +60,6 @@ def versao_do_pyproject(raiz: Path) -> str:
     return m.group(1)
 
 
-# ---------------------------------------------------------------- a proposta
-
 def classificar(mensagem: str) -> tuple[str | None, bool]:
     """(nível, incompatível): `feat`, `fix` ou None para o que não lança nada."""
     assunto = mensagem.splitlines()[0] if mensagem.strip() else ""
@@ -112,8 +110,6 @@ def proposta(raiz: Path, desde: str | None = None) -> dict[str, Any]:
         "seguinte": subir(partida, serie) if nivel else None,
     }
 
-
-# ---------------------------------------------------------------- a gravação
 
 def nova_release_no_metainfo(texto: str, numero: str, data: str, resumo: str | None) -> str:
     corpo = (f"\n      <description>\n        <p>{resumo}</p>\n      </description>\n    </release>" if resumo else "/>")
@@ -208,8 +204,6 @@ def plano_de_gravacao(raiz: Path, numero: str, data: str) -> list[tuple[str, str
         )
     return [(rel, originais[rel], novo) for rel, novo in textos.items() if novo != originais[rel]]
 
-
-# ---------------------------------------------------------------- a linha de comando
 
 def hoje() -> str:
     return dt.date.today().isoformat()

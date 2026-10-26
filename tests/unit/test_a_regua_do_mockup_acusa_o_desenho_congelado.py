@@ -37,10 +37,6 @@ def test_as_dez_paginas_publicadas_tem_endereco_de_campo():
             f"casos a régua do mockup passa a medir o vácuo.")
 
 
-#: o desenho do P1 e do P2 em cada mundo: o antigo mostra os números das barras, o do todo
-#: mostra a imersão (os números moram no `profiles/efeitos_de_imersao.py`). O R2 do P2
-#: sem imersão nasce «Sem efeito» desde a cena dos efeitos por família (7fc26162a,
-#: D-2010-O-EFEITO-DO-GATILHO-SE-AGRUPA-POR-FAMILIA).
 CASO_ANTIGO = {"p1·aj-nome-e-0": "Início do curso", "p1·aj-val-e-0": "2",
                "p1·aj-nome-e-1": "Fim do curso", "p1·aj-val-e-1": "9",
                "p1·aj-nome-e-2": "Força", "p1·aj-val-e-2": "4",
@@ -203,9 +199,6 @@ def test_a_vibracao_publicada_nao_tem_data_gesto_e_a_regua_sabe():
     """A afirmação acima, conferida contra o ARQUIVO e não contra a memória."""
     texto = _texto("05-vibracao.html")
     do_html = {g.nome for g in regua._gestos_cravados(texto)}
-    # `modo-da-vibracao`, `criar-efeito` e os chips (`testar`) são da página do todo
-    # (A-ABA-VIBRACAO-DO-TODO-01), as listas `efeito-haptico` e `efeito-imersao` da publicação de
-    # 16/10 (`b7112369c`); `aplicar`, `salvar`, `importar` e `exportar` são do rodapé.
     assert not (do_html - {"aplicar", "salvar", "importar", "exportar",
                            "lado", "haptica", "modo-da-vibracao", "criar-efeito", "testar",
                            "efeito-haptico", "efeito-imersao"}), (

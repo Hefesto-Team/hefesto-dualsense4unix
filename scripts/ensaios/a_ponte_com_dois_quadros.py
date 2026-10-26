@@ -82,9 +82,6 @@ def _do_ambiente(nome: str, padrao: str) -> str:
     return os.environ.get(nome, "").strip() or padrao
 
 
-# --------------------------------------------------------------- o relatório
-
-
 def onda(haptica_hz: float) -> Callable[[], bytes]:
     """Blocos ``0x12`` de 64 B seguidos de UMA onda: o segundo bloco continua o primeiro."""
     pico = int(FRACAO_DA_HAPTICA * 127)
@@ -143,8 +140,6 @@ def montar(
         pkt[pos] = tag
         pkt[pos + 1] = declarado
         pkt[pos + 2: pos + 2 + len(dados)] = dados
-        # o bloco ocupa o que a tag declara (o 0x10 tem 63 B com o common de 47 no começo);
-        # o duplo, duas vezes isso.
         pos += 2 + declarado * (2 if tag & BLOCO_DUPLO else 1)
     crc = rep.bt_crc32(pkt[: tamanho - af.CRC_BYTES], seed=rep.BT_CRC_SEED)
     pkt[tamanho - af.CRC_BYTES:] = crc.to_bytes(4, "little")
@@ -172,7 +167,6 @@ class Escritor:
             blocos=[self._onda() for _ in range(quantos_blocos)],
             arranjo=self.arranjo_do_bloco,
         )
-        # passo 1: o contador anda um por relatório; passo 2: um por bloco.
         avanco = quantos_blocos if self.passo_do_contador == 2 else 1
         self.contador = (self.contador + avanco) & 0xFF
         self.seq = (self.seq + 1) & 0x0F
@@ -209,9 +203,6 @@ def descrever(relatorio: bytes) -> list[str]:
     linhas.append("CRC " + ("certo" if crc.to_bytes(4, "little") == relatorio[-af.CRC_BYTES:]
                             else "ERRADO"))
     return linhas
-
-
-# --------------------------------------------------------------- o laço
 
 
 @dataclass
@@ -293,9 +284,6 @@ def linhas_curtas(rodadas: Sequence[Rodada]) -> list[str]:
     """Uma linha por rodada, a chave aberta: o arranjo, o ritmo entregue e o que o usuário disse."""
     return [f"rodada {r.numero}: {r.arranjo} bloco(s) por relatório, {r.por_segundo:g}/s "
             f"entregues, ela: {r.resposta or '(nada)'}" for r in rodadas]
-
-
-# --------------------------------------------------------------- a porta
 
 
 def daemon_no_ar() -> bool:

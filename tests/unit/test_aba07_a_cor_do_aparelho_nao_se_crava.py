@@ -125,7 +125,7 @@ def test_a_pagina_de_hoje_esta_limpa() -> None:
 
 def test_a_pagina_publicada_tambem_esta_limpa() -> None:
     """O que ela VÊ hoje, e não só o que está na bancada."""
-    r = _conferir(INTERFACE / "paginas" / PAGINA)  # (noqa-acento): nome de pasta
+    r = _conferir(INTERFACE / "paginas" / PAGINA)  # (noqa-acento)
     assert r.returncode == 0, (
         f"a página PUBLICADA tem cor de aparelho cravada:\n{r.stderr}")
 

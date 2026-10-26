@@ -124,10 +124,6 @@ def test_o_pacote_emite_o_que_a_bancada_enderecou() -> None:
         f"escreva: {sorted(sem_dono)} — endereço mudo é congelado com outro nome")
 
 
-#: As chaves da coluna que são DADO da carga, não texto da linha: quem as lê
-#: é a própria carga (`via` indexa o transporte, `bateria` entra no `nome`), e
-#: nenhuma tem `data-campo` na 08. A lista é fechada e conferida abaixo nos dois
-#: sentidos: chave que ganhar endereço, ou deixar de ser emitida, sai daqui.
 DADOS_DA_COLUNA = frozenset({"via", "bateria", "ponte", "fragil"})
 
 PAGINAS = {
@@ -138,8 +134,10 @@ PAGINAS = {
 
 @pytest.mark.parametrize("qual", sorted(PAGINAS))
 def test_toda_chave_da_coluna_tem_endereco_na_08(qual: str) -> None:
-    # D-2510-A-COLUNA-DA-08-NAO-EMITE-CAMPO-SEM-ENDERECO
-    """Campo da coluna sem `data-campo` na página escreve zero e some calado."""
+    """Campo da coluna sem `data-campo` na página escreve zero e some calado.
+
+    Prova da D-2510-A-COLUNA-DA-08-NAO-EMITE-CAMPO-SEM-ENDERECO.
+    """
     html = PAGINAS[qual].read_text(encoding="utf-8")
     na_pagina = set(re.findall(r'data-campo="([^"]+)"', html))
     pac = _pacote().pacote(_ctx())

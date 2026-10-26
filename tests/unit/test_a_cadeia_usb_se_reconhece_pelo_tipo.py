@@ -78,7 +78,6 @@ def test_sem_container_id_o_par_sai_do_peer(sys_usb: SysDeMentira) -> None:
     sys_usb.montar()
     hubs = hubs_fisicos(_censo(sys_usb))
     grupos = sorted(sorted(Path(n).name for n in h.nos) for h in hubs)
-    # sem o Container ID a cascata interna não se prova: cada lado se amarra ao par dele
     assert grupos == [["3-1", "4-1"], ["3-1.1", "4-1.1"]]
 
 
@@ -110,7 +109,7 @@ def _com_uma_webcam_que_publica_superspeed(sys_usb: SysDeMentira) -> None:
 
 
 def test_a_webcam_nao_recebe_o_aviso_de_superspeed_que_nao_usa(sys_usb: SysDeMentira) -> None:
-    # D-1610-A-WEBCAM-NAO-RECEBE-O-AVISO-DE-SUPERSPEED
+    """Prova da D-1610-A-WEBCAM-NAO-RECEBE-O-AVISO-DE-SUPERSPEED."""
     _com_uma_webcam_que_publica_superspeed(sys_usb)
     censo = _censo(sys_usb)
     nomes = _por_nome(censo)

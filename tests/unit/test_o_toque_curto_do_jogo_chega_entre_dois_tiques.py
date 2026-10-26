@@ -39,7 +39,6 @@ from tests.unit.test_vpad_ff_passthrough import (
     _rumble_effect,
 )
 
-#: O intervalo entre dois tiques do laço (60 Hz).
 TIQUE_S = 1 / 60
 
 
@@ -189,8 +188,6 @@ class _Uinput:
         self.pad.time_fn = lambda: self.agora
         assert self.pad.start() is True
         self.device: _FakeUInput = _FakeUInput.instances[0]
-        # O fio da vibração está de pé: o tique só soma e entrega (`pump_ff`), e o
-        # laço do fio roda aqui por `o_fio_atende`.
         self.pad._ff_fio = cast(
             Any, SimpleNamespace(is_alive=lambda: True, join=lambda timeout=None: None)
         )

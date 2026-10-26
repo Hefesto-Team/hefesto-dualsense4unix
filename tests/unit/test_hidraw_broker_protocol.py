@@ -59,7 +59,7 @@ class FakeOps:
     def is_exposed_to(self, node: str, uid: int) -> bool:
         return self.exposed
 
-    def open_node(self, node: str, base: str) -> int:  # pragma: no cover - open_fd
+    def open_node(self, node: str, base: str) -> int:  # pragma: no cover
         raise AssertionError("open_node não pertence a esta suíte")
 
 

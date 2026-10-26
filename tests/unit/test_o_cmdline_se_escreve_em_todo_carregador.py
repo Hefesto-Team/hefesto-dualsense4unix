@@ -155,7 +155,6 @@ def test_o_plano_escrito_e_revertido_deixa_o_arquivo_como_estava(
 
     maquina.escrever(poe, tira)
     if arvore.startswith("fedora"):
-        # O Fedora não traz a GRUB_CMDLINE_LINUX_DEFAULT: a 1ª escrita a cria; fica vazia.
         antes = f'{antes}GRUB_CMDLINE_LINUX_DEFAULT=""\n'
     assert _conteudo(arquivo) == antes, f"{arvore}: o revertido não voltou ao que estava"
 
@@ -242,9 +241,6 @@ def test_a_linha_de_comando_escreve_no_carregador_que_o_plano_pediu(tmp_path: Pa
     assert kc.main(["escrever", "--backend", kc.BACKEND_SYSTEMD_BOOT, "--poe", QUIRK,
                     *argumentos]) == 2
     assert QUIRK not in grub.read_text(encoding="utf-8")
-
-
-# --- O python REAL do passo 3e, contra cada árvore ----------------------------------------
 
 
 def _heredoc_do_passo_3e() -> str:

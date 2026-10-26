@@ -40,7 +40,6 @@ from hefesto_dualsense4unix.cli.ipc_client import IpcError
 from hefesto_dualsense4unix.daemon.ipc_server import CODE_INVALID_PARAMS
 
 
-#: nada guardado — e a tela dizia "SimpleRigid aplicado".
 TRIGGER_MESA_VAZIA: dict[str, Any] = {
     "status": "ok",
     "aplicado_em": [],

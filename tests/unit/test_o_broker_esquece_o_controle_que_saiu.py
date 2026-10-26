@@ -113,7 +113,7 @@ class Mesa:
         elif tipo == "teclado":
             bus, vendor, produto, topo = "0005", "3554", "FA09", uhid
             extra = f"HID_PHYS={MAC_DO_ADAPTADOR}\nHID_UNIQ=e8:47:3a:00:01:{n:02x}\n"
-        else:  # pragma: no cover - erro de quem escreve o teste
+        else:  # pragma: no cover
             raise ValueError(tipo)
         hid = f"{bus}:{vendor}:{produto}.{seq:04X}"
         hid_dir = topo / hid
@@ -206,7 +206,7 @@ class _StatQueAceitaArquivo(ModuleType):
         return getattr(stat, nome)
 
     @staticmethod
-    def S_ISCHR(modo: int) -> bool:  # noqa: N802 - espelha o nome do stdlib
+    def S_ISCHR(modo: int) -> bool:  # noqa: N802
         return stat.S_ISCHR(modo) or stat.S_ISREG(modo)
 
 
@@ -242,7 +242,7 @@ def mesa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Mesa:
     sonda.write_text("", encoding="ascii")
     try:
         os.setxattr(sonda, ACL, encode_access_acl(UID))
-    except OSError as exc:  # pragma: no cover - depende do fs do CI
+    except OSError as exc:  # pragma: no cover
         pytest.skip(f"o fs de teste não guarda ACL POSIX: {exc}")
     finally:
         sonda.unlink()

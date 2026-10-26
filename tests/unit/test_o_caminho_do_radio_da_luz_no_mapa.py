@@ -18,7 +18,6 @@ AFIRMACAO_DE_OFFSET = re.compile(
 
 COLUNAS_COM_ENDERECO = ("offset", "comando")
 
-#: As linhas de luz do DualSense cujo caminho por rádio é o report ``0x31``
 LINHAS_DO_0X31 = (
     "luz.lightbar.cor@dualsense",
     "luz.led_jogador@dualsense",

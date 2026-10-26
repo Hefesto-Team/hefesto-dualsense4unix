@@ -782,10 +782,10 @@ class TestOServidorDizQuemOSegurou:
             asyncio.run(servidor._dispatch(pedido("teste.lento")))
             asyncio.run(servidor._dispatch(pedido("teste.ligeiro")))
         lentos = [r for r in registros if r.get("event") == "ipc_lento"]
-        assert [r["metodo"] for r in lentos] == ["teste.lento"], (  # (noqa-acento) chave do diário
+        assert [r["metodo"] for r in lentos] == ["teste.lento"], (  # (noqa-acento)
             f"as linhas `ipc_lento`: {lentos}")
         assert 250 <= lentos[0]["ms"] < 2000
-        chaves = {"event", "metodo", "ms", "log_level"}  # (noqa-acento) chave do diário
+        chaves = {"event", "metodo", "ms", "log_level"}  # (noqa-acento)
         assert set(lentos[0]) <= chaves, (
             f"a linha levou mais que o nome e o tempo: {lentos[0]}")
         assert "aa:bb:cc" not in repr(registros)

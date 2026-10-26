@@ -16,7 +16,6 @@ from tests.unit import pactl_json_de_mentira as pj
 UNIQ_CABO = "aa:bb:cc:00:00:ab"
 UNIQ_RADIO = "aa:bb:cc:00:00:f0"
 
-#: do DualSense é a 600; a 599 é o MONITOR da saída dele, que
 SOURCES_SHORT = (
     "598\talsa_output.pci-0000_0a_00.1.hdmi-stereo.monitor\t"
     "PipeWire\ts32le 2ch 48000Hz\tSUSPENDED\n"
@@ -73,7 +72,6 @@ def bloco(
     return "\n".join(linhas) + "\n"
 
 
-#: a fonte padrão desta máquina é justamente o microfone do DualSense. Quem
 ALHEIO_SEM_TARGET = bloco(
     1500,
     600,

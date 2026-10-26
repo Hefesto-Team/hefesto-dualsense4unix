@@ -98,7 +98,6 @@ TIPO_DO_EVENTO: Final[Mapping[str, str]] = {
     "server": "server",
 }
 
-#: os quatro tipos que o servidor entrega em JSON com os campos que o retrato guarda.
 _TIPOS_EM_JSON: Final[tuple[str, ...]] = ("sinks", "sources", "sink-inputs", "source-outputs")
 
 _LEITURA_DO_TIPO: Final[Mapping[str, tuple[str, ...]]] = {
@@ -109,7 +108,6 @@ _LEITURA_DO_TIPO: Final[Mapping[str, tuple[str, ...]]] = {
 
 _SONDA_DO_JSON: Final[tuple[str, ...]] = ("pactl", FORMATO_JSON, "info")
 
-#: sem a porta do JSON (`pactl` anterior ao 16), o caminho curto: índice, nome e estado.
 _LEITURA_CURTA_DO_TIPO: Final[Mapping[str, tuple[str, ...]]] = {
     t: tuple(argv_do_curto(t)) for t in _TIPOS_EM_JSON
 }
@@ -218,8 +216,6 @@ def entender(argv: Sequence[object]) -> Pergunta | None:
             return Pergunta("modules", "curta") if curta and not em_json else None
         if em_json:
             return None if curta else Pergunta(tipo, "json")
-        # o texto longo já não é fotografado: ninguém o lê, e quem ainda o pedir
-        # é atendido pelo leitor do retrato, que pergunta ao servidor e não guarda.
         return Pergunta(tipo, "curta") if curta else None
     if verbo == "info" and not resto:
         return Pergunta("server", "info")

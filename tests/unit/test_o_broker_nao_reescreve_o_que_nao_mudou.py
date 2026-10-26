@@ -220,7 +220,7 @@ class _StatQueAceitaArquivo(ModuleType):
         return getattr(stat, nome)
 
     @staticmethod
-    def S_ISCHR(modo: int) -> bool:  # noqa: N802 - espelha o nome do stdlib
+    def S_ISCHR(modo: int) -> bool:  # noqa: N802
         return stat.S_ISCHR(modo) or stat.S_ISREG(modo)
 
 
@@ -236,7 +236,7 @@ def raiz(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     sonda.write_text("", encoding="ascii")
     try:
         os.setxattr(sonda, ACL, encode_access_acl(UID))
-    except OSError as exc:  # pragma: no cover - depende do fs do CI
+    except OSError as exc:  # pragma: no cover
         pytest.skip(f"o fs de teste não guarda ACL POSIX: {exc}")
     finally:
         sonda.unlink()
@@ -311,7 +311,7 @@ class _Inotify:
     def __init__(self, mesa: Mesa) -> None:
         libc = ctypes.CDLL(ctypes.util.find_library("c"), use_errno=True)
         self._fd = int(libc.inotify_init1(os.O_NONBLOCK | os.O_CLOEXEC))
-        if self._fd < 0:  # pragma: no cover - kernel sem inotify
+        if self._fd < 0:  # pragma: no cover
             raise OSError(ctypes.get_errno(), "inotify_init1")
         self._prefixo: dict[int, str] = {}
         for pasta, prefixo in ((mesa.dev, ""), (mesa.dev_input, "input/")):
@@ -552,7 +552,7 @@ class TestR3OLadoDeAbrir:
         try:
             for caminho in com_dois:
                 os.setxattr(caminho, ACL, _acl_com_dois(UID, UID + 1))
-        except OSError as exc:  # pragma: no cover - uid sem mapeamento no namespace
+        except OSError as exc:  # pragma: no cover
             pytest.skip(f"o fs não aceita a ACL com um segundo uid: {exc}")
         assert all(UID + 1 in decode_acl_user_uids(os.getxattr(c, ACL)) for c in com_dois)
         vigia.drenar()

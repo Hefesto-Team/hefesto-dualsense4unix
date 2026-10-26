@@ -73,7 +73,7 @@ from tests.unit.test_a_marca_da_cor_nao_some import MACS, NOME, UNIQS
 
 from pacotes import a04_iluminacao, rodape
 
-PALAVRAS = {1: "forte", 2: "medio", 3: "forte", 4: "medio"}  # (noqa-acento) chaves ASCII
+PALAVRAS = {1: "forte", 2: "medio", 3: "forte", 4: "medio"}  # (noqa-acento)
 TRILHOS = {1: 90, 2: 70, 3: 60, 4: 50}
 GLOBAL_DAS_LUZES = "fraco"
 FRACO = BRILHOS_DAS_LUZES["fraco"]
@@ -161,8 +161,10 @@ def _o_disco(n: int) -> dict[str, Any]:
 
 
 def test_o_rodape_nao_escreve_no_rascunho_pela_porta_privada() -> None:
-    # A decisão D-0610-O-APLICAR-E-SO-O-REAPLICAR.
-    """Nenhum `_with_*` no rodapé: a regra da cor é do `DraftConfig`."""
+    """Nenhum `_with_*` no rodapé: a regra da cor é do `DraftConfig`.
+
+    Prova da D-0610-O-APLICAR-E-SO-O-REAPLICAR.
+    """
     fonte = pathlib.Path(rodape.__file__).read_text(encoding="utf-8")
     privados = sorted({
         no.attr for no in ast.walk(ast.parse(fonte))

@@ -28,8 +28,6 @@ SUPPORTED_VERSION = 1
 
 DSX_TRIGGER_SIDES = {1: "left", 2: "right"}
 
-#:   - `WujekFoliarz/DualSenseY-v2` `include/udp.hpp`  TriggerThreshold = 4
-#: a maioria de 3 contra 1 — e o desempate real é que o DualSenseY-v2 é um
 DSX_INSTRUCTION_TYPES: dict[int, str] = {
     1: "TriggerUpdate",
     2: "RGBUpdate",
@@ -39,7 +37,6 @@ DSX_INSTRUCTION_TYPES: dict[int, str] = {
     7: "ResetToUserSettings",
 }
 
-#: Os ordinais 20-26 são a extensão do DualSenseY-v2 e usam nomes que são
 DSX_TRIGGER_MODES: dict[int, str] = {
     0: "Off",
     13: "Resistance",
@@ -59,7 +56,6 @@ DSX_TRIGGER_MODES: dict[int, str] = {
 
 DSX_TRIGGER_MODE_CUSTOM_VALUE = 12
 
-#: dessas tabelas que encontrei está no `DualSenseY-v2`, que é um repositório
 DSX_CANNED_TRIGGER_MODES: dict[int, str] = {
     1: "GameCube",
     2: "VerySoft",
@@ -247,8 +243,6 @@ class UdpHandler:
     controller: IController
     store: StateStore
     rate_limiter: RateLimiter = field(default_factory=RateLimiter)
-    #: `{MAC: número do jogador}` da mesa de agora (`CoopManager.numeros_de_jogador`).
-    #: Sem ele, o número vem da posição do controle em `describe_controllers`.
     jogadores: Callable[[], Mapping[str, int]] | None = None
     warn_limit_once_per_sec: float = 1.0
     _last_warn_at: float = 0.0
@@ -264,7 +258,6 @@ class UdpHandler:
                 logger.warning("udp_rate_limited", ip=ip)
                 self._last_warn_at = now
             return
-        # Passou do limitador: é o `hefesto_udp_packets_total{result="accepted"}`.
         self.store.bump("udp.accepted")
 
         if len(data) > MAX_DATAGRAM_BYTES:
@@ -336,7 +329,6 @@ class UdpHandler:
                 return
             self.store.bump(f"udp.applied.{kind}")
         except _IndiceSemJogadorError as exc:
-            # Descartada, nunca «todos»: não é aplicada nem é erro do pacote.
             self.store.bump("udp.indice_sem_jogador")
             if (kind, exc.indice) not in self._indices_avisados:
                 self._indices_avisados.add((kind, exc.indice))
@@ -503,7 +495,6 @@ class UdpHandler:
                 raise ValueError(f"MicLED modo DSX desconhecido: {modo}")
             state = DSX_MIC_LED_MODES[modo]
             if modo == DSX_MIC_LED_PULSE:
-                # O firmware do DualSense tem o modo pulsante, mas o
                 self.store.bump("udp.mic_led.pulse_degradado")
                 logger.warning("udp_mic_led_pulse_degradado")
         else:

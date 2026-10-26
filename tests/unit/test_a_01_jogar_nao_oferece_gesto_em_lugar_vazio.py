@@ -81,7 +81,7 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE), str(RAIZ / "scripts")):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
-import chrome_sem_rede  # o ponto comum dos portões de página, sem a rede
+import chrome_sem_rede
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
@@ -202,7 +202,7 @@ def test_a_pagina_tem_os_quatro_lugares_e_gestos_em_todos(medido: dict) -> None:
     """Quatro lugares, e nenhum deles sem gesto — senão a régua mede o vazio."""
     nasce = medido["como_nasce"]
     assert sorted(nasce) == ["p1", "p2", "p3", "p4"], sorted(nasce)
-    vazios = _lugares(nasce, "nao")  # (noqa-acento) o valor do atributo
+    vazios = _lugares(nasce, "nao")  # (noqa-acento)
     assert len(vazios) == 2, "a mesa do desenho tem 2 lugares vazios"
     assert len(_lugares(nasce, "sim")) == 2, "a mesa do desenho tem 2 cheios"
     for quem, d in nasce.items():
@@ -216,7 +216,7 @@ def test_o_lugar_vazio_nao_oferece_gesto(medido: dict) -> None:
     """Um lugar sem aparelho não oferece gesto nenhum. Nem um."""
     culpados = [
         _acusar(quem, g)
-        for quem, d in _lugares(medido["como_nasce"], "nao").items()  # (noqa-acento) o valor
+        for quem, d in _lugares(medido["como_nasce"], "nao").items()  # (noqa-acento)
         for g in d["gestos"] if g["oferecido"]
     ]
     assert not culpados, (
@@ -229,7 +229,7 @@ def test_o_lugar_vazio_nem_desenha_o_gesto(medido: dict) -> None:
     """E não é só o clique: o chip não se desenha."""
     desenhados = [
         f'{quem} · `{g["gesto"]}` ("{g["rotulo"]}") em {g["largura"]}x{g["altura"]}'
-        for quem, d in _lugares(medido["como_nasce"], "nao").items()  # (noqa-acento) o valor
+        for quem, d in _lugares(medido["como_nasce"], "nao").items()  # (noqa-acento)
         for g in d["gestos"] if g["desenhado"]
     ]
     assert not desenhados, (
@@ -272,7 +272,7 @@ def test_o_passo_1c_do_piloto_devolve_o_gesto_sem_recarregar(medido: dict) -> No
 def test_o_passo_1b_do_piloto_recolhe_o_gesto_sem_recarregar(medido: dict) -> None:
     """E o simétrico: quem SAI da mesa deixa de oferecer, ao vivo."""
     depois = medido["depois_do_1b"]
-    assert depois["p1"]["conectado"] == "nao", depois["p1"]  # (noqa-acento) o valor
+    assert depois["p1"]["conectado"] == "nao", depois["p1"]  # (noqa-acento)
     culpados = [_acusar("p1", g) for g in depois["p1"]["gestos"] if g["oferecido"]]
     assert not culpados, (
         "o P1 perdeu o controle ao vivo e continua oferecendo gesto:\n  - "

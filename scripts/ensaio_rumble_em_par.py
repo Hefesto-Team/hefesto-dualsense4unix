@@ -113,7 +113,6 @@ DUALSENSE_PIDS = (0x0CE6, 0x0DF2)
 RAIZ_SYSFS_INPUT = "/sys/class/input"
 
 
-#: (DualSense Edge). O Edge real existe: no dia em que alguém acrescentar o PID
 VPAD_HID_PHYS = identidade_do_vpad.VPAD_HID_PHYS
 VPAD_UNIQ_PREFIXO = identidade_do_vpad.VPAD_UNIQ_PREFIXO
 VPAD_MARCA_NO_NOME = identidade_do_vpad.VPAD_MARCA_NO_NOME
@@ -181,7 +180,6 @@ def inventario(raiz: str = RAIZ_SYSFS_INPUT) -> list[dict[str, object]]:
         pid = int(_ler(os.path.join(dir_device, "id", "product")) or "0", 16)
         virtual = "/devices/virtual/" in os.path.realpath(no)
         barramento, dir_hid, campos = _hid_pai(dir_device)
-        # ARMADILHA, paga em 11/08/2026: um DualSense POR BLUETOOTH vive sob
         eh_vpad = _e_vpad_do_hefesto(campos, dir_device, nome)
         eh_fisico = (
             not eh_vpad

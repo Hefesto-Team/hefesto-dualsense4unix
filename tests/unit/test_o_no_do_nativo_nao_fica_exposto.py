@@ -39,9 +39,6 @@ CONTROLES = (
 )
 
 
-# A mesa de mentira — quatro DualSense, dois por transporte
-
-
 @dataclass
 class Mesa:
     dev: Path
@@ -74,7 +71,7 @@ class _StatQueAceitaArquivo(ModuleType):
         return getattr(stat, nome)
 
     @staticmethod
-    def S_ISCHR(modo: int) -> bool:  # noqa: N802 - espelha o nome do stdlib
+    def S_ISCHR(modo: int) -> bool:  # noqa: N802
         return stat.S_ISCHR(modo) or stat.S_ISREG(modo)
 
 
@@ -180,7 +177,7 @@ def mesa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Mesa:
     sonda.write_text("", encoding="ascii")
     try:
         os.setxattr(sonda, "system.posix_acl_access", encode_access_acl(UID))
-    except OSError as exc:  # pragma: no cover - depende do fs do CI
+    except OSError as exc:  # pragma: no cover
         pytest.skip(f"o fs de teste não guarda ACL POSIX: {exc}")
     finally:
         sonda.unlink()

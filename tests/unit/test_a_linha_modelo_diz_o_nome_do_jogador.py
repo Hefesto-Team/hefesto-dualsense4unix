@@ -154,7 +154,6 @@ def test_a_08_e_as_duas_abas_dizem_o_mesmo_nome(monkeypatch: pytest.MonkeyPatch)
     """O dono é um: o nome do campo «dono» da Conexões é o que entra na linha da 04 e da 05."""
     _com_aliases({UNIQS[0]: "vitória", UNIQS[1]: "Amiga"})
     ctx = _contexto(2)
-    # o campo «dono» da 08 é `dono_na_linha(nome_do_jogador.nomes_dos_donos(), uniq, jogador)`
     nomes_da_08 = nome_do_jogador.nomes_dos_donos()
     da_08 = {u: monta.dono_na_linha(nomes_da_08, u, n) for n, u in enumerate(UNIQS[:2], start=1)}
     for página, sep in PAGINAS:
@@ -172,18 +171,13 @@ def test_o_leitor_filtra_o_alias_de_fabrica_e_o_endereco() -> None:
     assert nome_do_jogador.nomes_por_endereco(aparelhos) == esperado
 
 
-# ---- O DONO É UM SÓ: a régua mede o FONTE, nunca a saída (O-NOME-DO-JOGADOR-TEM-UM-DONO-SO-01)
-
 PACOTES = RAIZ / "src/hefesto_dualsense4unix/interface/pacotes"
 
-#: o que SAIU da 08 para o `em_fundo` (o cache em fundo e o leitor do BlueZ) e para o
-#: `nome_do_jogador` (o nome e o filtro dele), e como cada um se chama no dono novo
 SAIRAM_DA_08 = frozenset({
     "_mac", "nome_dado", "_e_nome_de_fabrica", "_ALIAS_QUE_E_ENDERECO", "_nomes_por_endereco",
     "_nomes_dos_donos", "_FUNDO", "_FUNDO_EM_VOO", "_TRAVA_DO_FUNDO", "_GERACAO",
     "LER_NA_HORA", "VENCIDA", "_em_fundo", "_esquecer", "_ler_o_bluez", "_e_controle_do_bluez",
 })
-#: os dois donos: remendar o nome neles é o certo
 OS_DONOS = frozenset({"em_fundo", "nome_do_jogador"})
 
 
@@ -272,7 +266,6 @@ def _os_remendos_na_08_que_saiu() -> list[str]:
         for no in ast.walk(arvore):
             ruim = ""
             if isinstance(no, ast.Attribute) and no.attr in SAIRAM_DA_08:
-                # `self._mac` é atributo da classe do próprio teste, não nome de outro módulo
                 if isinstance(no.value, ast.Name) and no.value.id not in OS_DONOS | {"self"}:
                     ruim = f"{no.value.id}.{no.attr}"
             elif (isinstance(no, ast.Call) and len(no.args) >= 2

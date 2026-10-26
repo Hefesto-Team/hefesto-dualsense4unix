@@ -34,9 +34,6 @@ QUATRO = (P1, P2, P3, P4)
 BYTES_POR_SEGUNDO = TAXA * tj.CANAIS * 2
 
 
-# --- O som sintético ----------------------------------------------------------
-
-
 def _som(segundos: float, nivel: float = 0.02, semente: int = 5) -> list[list[float]]:
     sorteio = random.Random(semente)
     return [
@@ -83,9 +80,6 @@ def _ultimo_quadro(pcm: bytes) -> tuple[int, int]:
     return struct.unpack("<2h", pcm[-4:])
 
 
-# --- O recorte -----------------------------------------------------------------
-
-
 def test_o_som_que_nao_acaba_e_cortado_em_80_ms_e_termina_em_silencio() -> None:
     recorte = _um_recorte(dura_s=0.4)
     assert recorte.duracao_s == pytest.approx(tj.RECORTE_MAXIMO_S)
@@ -127,9 +121,6 @@ def test_o_fluxo_que_acaba_no_meio_fecha_o_recorte_em_silencio() -> None:
     detector.fechar_o_recorte()
     assert recorte.pronto and recorte.duracao_s <= tj.RECORTE_MAXIMO_S
     assert _ultimo_quadro(recorte.pcm) == (0, 0)
-
-
-# --- O tocador do estalo: as decisões, bloco a bloco -----------------------------
 
 
 class _Relogio:
@@ -221,9 +212,6 @@ def test_a_guarda_do_jogo_pergunta_uma_vez_por_segundo() -> None:
     tocador.tocar(_um_recorte(dura_s=0.02))
     _drenar(tocador)
     assert servidor.perguntas == 2
-
-
-# --- O tocador de pé: um cano de verdade no lugar do processo de som -------------
 
 
 class _ProcDeMentira:
@@ -333,9 +321,6 @@ def test_o_tocador_ligado_a_outro_no_morre_e_fica_recusado() -> None:
         tocador.parar()
 
 
-# --- O comando e a guarda do jogo -----------------------------------------------
-
-
 def _so(*binarios: str) -> Any:
     return lambda nome: f"/usr/bin/{nome}" if nome in binarios else None
 
@@ -367,9 +352,6 @@ def test_a_guarda_ve_o_jogo_no_no_e_nao_conta_o_proprio_estalo() -> None:
     nos = [_no(40, sink), _no(41, "a_caixa_da_sala")]
     assert not tj.outro_fluxo_no_no(nos, [_fluxo(40, rotulo), _fluxo(41, "jogo")], sink, rotulo)
     assert tj.outro_fluxo_no_no(nos, [_fluxo(40, rotulo), _fluxo(40, "jogo")], sink, rotulo)
-
-
-# --- O alto-falante: o nó de cada controle, e o rádio sem fatia cede --------------
 
 
 class _TocadorAnotando:
@@ -427,9 +409,6 @@ def test_no_radio_com_a_ponte_cedendo_o_estalo_cede(monkeypatch: pytest.MonkeyPa
     vaga.cedendo = False
     assert som.sub.tocar_o_estalo(P1, tj.Recorte(0.0))
     assert som.tocados() == {nome_do_sink(chave): 1}
-
-
-# --- O motor: o recorte vai ao alto-falante de quem atirou -----------------------
 
 
 class _Ouvido:

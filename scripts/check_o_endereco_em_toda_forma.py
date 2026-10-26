@@ -218,10 +218,6 @@ def _nome(p: Path) -> str:
         return str(p)
 
 
-# Uma corrida de seis ou mais dígitos hexadecimais, com no máximo um separador entre dois deles. Todo pedaço que
-# as três agulhas procuram (a janela com separador, a colada e os bytes do virtual) é hexadecimal com separador
-# simples, então cabe inteiro numa corrida dessas, e as bordas das agulhas (nenhum hexadecimal colado) leem o mesmo
-# vizinho dentro da corrida e no texto.
 _CORRIDA_DE_HEX = re.compile(r"(?i)[0-9a-f](?:[:\-_. ]?[0-9a-f]){5,}")
 
 

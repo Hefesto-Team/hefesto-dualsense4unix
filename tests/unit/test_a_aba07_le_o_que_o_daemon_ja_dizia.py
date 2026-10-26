@@ -41,8 +41,6 @@ sys.path.insert(0, str(INTERFACE))
 
 PAGINA = "07-lancadores.html"
 
-#: O `state_full` que o daemon publica quando HÁ jogo aberto e ele **não**
-#: `home_actions.wrapper_banner_text`, que só reage ao `False` LITERAL.
 SEM_WRAPPER: dict[str, Any] = {
     "gamepad_emulation": {"enabled": True, "wrapper_used": False},
     "window_detect_last_class": "steam_app_3357650",

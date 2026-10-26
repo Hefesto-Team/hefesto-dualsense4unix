@@ -34,10 +34,10 @@ COR_ANTES = (40, 80, 180)
 COR_DO_P3 = (200, 30, 90)
 
 MACS = (
-    "AA:BB:CC:00:00:01",  # P1, cabo
-    "AA:BB:CC:00:00:02",  # P2, cabo
-    "AA:BB:CC:00:00:03",  # P3, rádio
-    "AA:BB:CC:00:00:04",  # P4, rádio
+    "AA:BB:CC:00:00:01",
+    "AA:BB:CC:00:00:02",
+    "AA:BB:CC:00:00:03",
+    "AA:BB:CC:00:00:04",
 )
 UNIQS = tuple(m.replace(":", "").lower() for m in MACS)
 

@@ -39,9 +39,7 @@ from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-# ---------------------------------------------------------------------------
 
-#: Report de input do DualSense por BT (o mesmo do espelho de motion).
 INPUT_REPORT_BT = 0x31
 INPUT_REPORT_BT_SIZE = 78
 
@@ -58,19 +56,14 @@ MIC_BYTES_POR_AMOSTRA = 2
 MIC_BYTES_POR_QUADRO = MIC_AMOSTRAS_POR_QUADRO * MIC_CANAIS * MIC_BYTES_POR_AMOSTRA
 
 
-#: DualSense em BT (`85 32 09 32 95 8d 91 02` = 141 bytes de payload + o ID).
 AUDIO_OUTPUT_REPORT_ID = 0x32
 AUDIO_OUTPUT_REPORT_LEN = 142
 
-#: As tags dos blocos TLV do corpo do 0x32; aqui só o AudioControl se escreve.
 BLOCO_SET_STATE = 0x10
 BLOCO_AUDIO_CONTROL = 0x11
 BLOCO_HAPTICS = 0x12
 BLOCO_SPEAKER = 0x13
 
-#: bit7 do byte de tag = "este bloco está presente". (bit6 = "vêm DOIS
-#: sub-blocos do tamanho declarado" — é assim que o 0x39 manda dois blocos de 200 bytes de
-#: Opus para o alto-falante com `len` 200. Não usamos.)
 BLOCO_PRESENTE = 0x80
 BLOCO_DUPLO = 0x40
 
@@ -127,12 +120,8 @@ def status_de_audio(raw: bytes | bytearray) -> int | None:
     return int(raw[INPUT_OFFSET_AUDIO_STATUS])
 
 
-# Descoberta dos DualSense em Bluetooth
-# ---------------------------------------------------------------------------
-
 _BUS_BLUETOOTH = 0x05
 _VENDOR_SONY = 0x054C
-#: DualSense (0x0CE6) e DualSense Edge (0x0DF2). O vpad do próprio hefesto
 _PRODUTOS_DUALSENSE = (0x0CE6, 0x0DF2)
 _PHYS_VPAD = "hefesto-vpad"
 
@@ -215,18 +204,8 @@ def nos_dualsense_bluetooth(raiz: str | None = None) -> list[NoDualSenseBT]:
     return achados
 
 
-# ---------------------------------------------------------------------------
-# Decodificador Opus (ctypes sobre libopus.so.0)
-# ---------------------------------------------------------------------------
-
-#: `libopus` já vem instalada nesta plataforma (dependência de PipeWire,
-#: Firefox, WebRTC...). Preferimos ctypes a um binding pip (`opuslib`/`PyOgg`)
-#: DE PROPÓSITO: o projeto não adiciona dependência Python que precise de pip
-#: ad-hoc quando a .so do sistema resolve — e um binding a menos é um caminho a
-#: menos para quebrar no .deb/flatpak.
 _SONAMES_OPUS = ("libopus.so.0", "libopus.so")
 
-#: Códigos de erro da libopus que nos interessam citar em log.
 OPUS_OK = 0
 
 
@@ -332,13 +311,8 @@ def versao_libopus() -> str | None:
         return None
 
 
-#: `systemctl --user status wireplumber`, não o DualSense.
 _MODULO_PIPE_SOURCE = "module-pipe-source"
 
-#: MEDIDO NA BANCADA EM 03/09/2026, com um DualSense no cabo e a webcam
-#:     alsa_output…DualSense…analog-surround-40.monitor     1109
-#:     alsa_input…DualSense…iec958-stereo   (o CABO)        1500   ← o drop-in 51
-#: O QUE ISTO **NÃO** DECIDE: quem, entre dois DualSense, é o microfone padrão.
 PRIORIDADE_SESSAO_DA_PONTE = 1500
 
 _FIFO_BYTES = 8192
@@ -360,10 +334,6 @@ TAMANHO_DA_MARCA_DO_APARELHO = 6
 _HEX_MINIMOS_DA_MARCA = 6
 
 
-#: A identidade do Hefesto para a chave por aplicativo derivada do
-#: ``/etc/machine-id`` (a receita do ``sd_id128_get_machine_app_specific`` do
-#: systemd: HMAC-SHA-256 com o machine-id como chave e esta identidade como
-#: mensagem). Fixa: mudá-la muda a marca de todo aparelho em toda máquina.
 ID_DO_APLICATIVO_DA_MARCA = hashlib.sha256(
     b"hefesto-dualsense4unix:marca-do-aparelho"
 ).digest()[:16]
@@ -784,7 +754,6 @@ class PonteMicBluetooth:
         self._ultimo_rearme = 0.0
         self._canal_e_nosso = False
         self._mic_pedido: bool | None = None
-        #: Ver :meth:`dizer_o_pedido_dela` e :meth:`_talvez_seguir_a_source`.
         self._pedido_dela: bool | None = None
         self._ultimo_olhar_na_source = 0.0
         self._stats = EstatisticaMic(source=self._nome_source)
@@ -863,7 +832,6 @@ class PonteMicBluetooth:
 
         self._parar_evt.clear()
         self._ultimo_audio = time.monotonic()
-        # O 0x32 NÃO é mais escrito aqui às cegas: quem decide é o ouvinte.
         self._talvez_seguir_a_source()
         self._thread = threading.Thread(
             target=self._loop,
@@ -909,7 +877,7 @@ class PonteMicBluetooth:
         """O nó `hefesto_mic_<marca>` DESTE controle — `None` quando não dá."""
         try:
             from hefesto_dualsense4unix.integrations import canal_do_microfone
-        except Exception:  # pragma: no cover - o pacote está quebrado
+        except Exception:  # pragma: no cover
             logger.warning("bt_mic_canal_indisponivel", exc_info=True)
             return None
         if not canal_do_microfone.nome_do_canal(self.no.uniq):
@@ -1084,7 +1052,7 @@ class PonteMicBluetooth:
         if source is None or not self._canal_e_nosso:
             return False
         de_agora = descricao_do_microfone(self.no.uniq)
-        no_ar = getattr(source, "descricao", "")  # (noqa-acento) nome de atributo
+        no_ar = getattr(source, "descricao", "")  # (noqa-acento)
         if not rotulo_envelheceu(str(no_ar or ""), de_agora):
             return False
         try:
@@ -1100,7 +1068,7 @@ class PonteMicBluetooth:
             self._canal_e_nosso = False
             return False
         self._source = novo
-        do_novo = getattr(novo, "descricao", "")  # (noqa-acento) nome de atributo
+        do_novo = getattr(novo, "descricao", "")  # (noqa-acento)
         if str(do_novo or "") != de_agora:
             logger.warning(
                 "bt_mic_canal_voltou_com_o_rotulo_velho", no=self.no.caminho
@@ -1167,9 +1135,6 @@ class _TitularDaLease:
 
 
 _TITULAR_DA_LEASE = _TitularDaLease()
-
-
-# Orquestração: todos os DualSense em BT de uma vez
 
 
 class GerenciadorMicBluetooth:
@@ -1314,13 +1279,6 @@ def diagnosticar() -> Diagnostico:
     )
 
 
-#: O rótulo que a pessoa lê na lista de ENTRADA do sistema, sem o número.
-#:
-#: **Decisão de produto, 09/09/2026**, `D-0909-OS-NOS-SE-CHAMAM-ALTO-FALANTE-E-
-#: MICROFONE-DO-CONTROLE-N`, opção «4a». As outras duas opções eram
-#: «Jogador 1 — microfone» e «DualSense 1 · mic»; a razão da escolha está escrita
-#: na decisão e manda no código daqui: **o número é o ASSENTO (P1..P4), como na
-#: tela** — um nome por APARELHO mudaria quando o controle trocasse de assento.
 NOME_DO_MICROFONE_DO_CONTROLE = "Microfone do Controle"
 
 _NUMERADOR_DE_ASSENTO: Callable[[str], int | None] | None = None
@@ -1346,7 +1304,7 @@ def o_microfone_esta_no_ar(uniq: str) -> bool:
         return False
     try:
         return bool(ouvinte(uniq))
-    except Exception:  # pragma: no cover - defensivo
+    except Exception:  # pragma: no cover
         logger.debug("ouvinte_do_microfone_ilegivel", uniq=uniq, exc_info=True)
         return False
 
@@ -1368,7 +1326,7 @@ def numero_do_assento(uniq: str) -> int | None:
         return None
     try:
         numero = numerador(uniq)
-    except Exception:  # pragma: no cover - defensivo
+    except Exception:  # pragma: no cover
         logger.debug("assento_do_microfone_ilegivel", uniq=uniq, exc_info=True)
         return None
     if isinstance(numero, bool) or not isinstance(numero, int) or numero <= 0:

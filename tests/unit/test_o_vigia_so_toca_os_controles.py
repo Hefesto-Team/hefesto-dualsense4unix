@@ -30,7 +30,6 @@ from hefesto_dualsense4unix.utils.memoria_dos_controles import e_controle_pelo_i
 RAIZ = Path(__file__).resolve().parents[2]
 WATCHDOG = RAIZ / "scripts" / "bt_health_watchdog.sh"
 
-# (classe, aparência) como o BlueZ os anuncia; None = não anunciou.
 TABELA: list[tuple[int | str | None, int | str | None, str]] = [
     (0x002508, None, "DualSense (gamepad)"),
     (0x002504, None, "joystick"),
@@ -107,8 +106,6 @@ def test_o_gancho_aceita_hexadecimal_como_o_info_do_bluez(tmp_path: Path) -> Non
     assert proc.returncode == 0
 
 
-# --- o comportamento: o tique inteiro com o BlueZ de mentira ------------------
-
 CONTROLE = "AA_BB_CC_00_00_01"
 ACESSORIO = "AA_BB_CC_00_00_02"
 
@@ -155,7 +152,6 @@ case "$1" in
 esac
 ''',
     )
-    # `pair` e `trust` chegam ao bluetoothctl de mentira pela entrada padrão.
     _executavel(
         bin_ / "bluetoothctl",
         f'''while IFS= read -r l; do printf 'btctl %s\\n' "$l" >>"{mentira}/chamadas"; done\n''',
@@ -169,7 +165,6 @@ esac
 esac
 ''',
     )
-    # Oito recusas de dois aparelhos presentes: a doença que a vigia 1 existe para pegar.
     linhas = [
         f"Refusing connection from {mac}: unknown device"
         for mac in ("AA:BB:CC:00:00:01", "AA:BB:CC:00:00:02")
@@ -191,7 +186,6 @@ esac
         "HEFESTO_BT_LOG_DEST": str(tmp_path / "log.txt"),
         "HEFESTO_RADIO_TRAVA": str(tmp_path / "radio.lock"),
         "HEFESTO_RADIO_DIARIO_ROOT": str(tmp_path / "diario.jsonl"),
-        # Os vizinhos que o tique chama, desviados para o vazio: nada da máquina.
         "HEFESTO_SYS_BLUETOOTH": str(vazio / "sys"),
         "HEFESTO_BT_LIB": str(vazio / "lib"),
         "HEFESTO_HID_DEVICES_DIR": str(vazio / "hid"),
@@ -237,7 +231,7 @@ def test_o_bond_temporario_so_e_promovido_no_controle(tmp_path: Path) -> None:
 
 
 def test_o_trust_so_e_aplicado_no_controle(tmp_path: Path) -> None:
-    # D-1710-O-VIGIA-DO-RADIO-SO-TOCA-CONTROLE
+    """Prova da D-1710-O-VIGIA-DO-RADIO-SO-TOCA-CONTROLE."""
     env, mentira = _bancada(tmp_path, bonded=True)
     proc = _tique(env)
     assert proc.returncode == 0, proc.stderr
@@ -251,7 +245,6 @@ def test_o_trust_so_e_aplicado_no_controle(tmp_path: Path) -> None:
 def test_a_vigia_1_ainda_conta_o_aparelho_que_nao_e_controle(tmp_path: Path) -> None:
     """Só o acessório sem classe está conectado: o restart continua adiado."""
     env, mentira = _bancada(tmp_path, bonded=True, recusas=True)
-    # O controle sai do ar; sobra conectado só o aparelho que não é controle.
     _prop(mentira, CONTROLE, "Connected", "b false")
     proc = _tique(env)
     assert proc.returncode == 0, proc.stderr

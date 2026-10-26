@@ -29,8 +29,6 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-#: o que a raiz da linha de comando NÃO pode carregar ao ser importada: cada item é de um
-#: subcomando só (ou de uma chamada) e entra pela função que o usa.
 PROIBIDOS_AO_IMPORTAR = (
     "hefesto_dualsense4unix.mods.instalador",
     "hefesto_dualsense4unix.mods.manifesto",

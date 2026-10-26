@@ -80,8 +80,10 @@ def escolha_limpa(hv: Any) -> Any:
 
 
 def test_1_o_todos_devolve_o_alvo_depois_de_um_so_este(hv: Any) -> None:
-    """«Só este» no P2 (index 1) e depois «Todos»: o serviço recebe `index: null`, uma vez."""
-    # D-2310-O-TODOS-DA-FITA-DEVOLVE-O-ALVO-A-TODOS
+    """«Só este» no P2 (index 1) e depois «Todos»: o serviço recebe `index: null`, uma vez.
+
+    Prova da D-2310-O-TODOS-DA-FITA-DEVOLVE-O-ALVO-A-TODOS.
+    """
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 
     servico = ServicoDeMentira(alvo=None)

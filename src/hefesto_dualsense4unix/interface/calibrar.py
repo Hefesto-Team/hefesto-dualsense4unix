@@ -71,11 +71,8 @@ from hefesto_dualsense4unix.core.roteador_de_movimento import (
     SEGUNDOS_DO_ZERO,
 )
 
-#: O tempo que o «Medindo» diz é o que o daemon mede (`motion.calibrate`), e não uma cópia.
 SEGUNDOS = f"{SEGUNDOS_DO_ZERO:g}"
 
-#: O ZERO DE CADA CONTROLE (08/10/2026): o `zero.estado` do `state_full`, que o selo do
-#: cartão mostra (`data-zero`) e a fita dos três passos resume (`passo-<estado>`).
 ZERO_PARADO = "parado"
 ZERO_MEDINDO = "medindo"
 ZERO_PRONTO = "pronto"
@@ -89,10 +86,6 @@ FAMILIAS = (("giro", "Giroscópio"), ("accel", "Acelerômetro"))
 SEM_CONTROLE = ("Nenhum controle conectado. Ligue um pelo cabo ou pelo rádio "
                 "e ele aparece aqui.")
 
-#: O NOME DA JANELA (todo, 15/10/2026): «Calibrar sensores de movimento» virou «Calibrar giroscópio»,
-#: aqui e no botão da aba Controles (`aba02.ROTULO_DO_CALIBRAR`, o mesmo texto). O liga e o lado do
-#: analógico virtual moram só na aba Controles («Mira virtual», embaixo de cada analógico): a Calibrar
-#: só ajusta (CADA-FEATURE-TEM-UM-DONO-SO-NA-INTERFACE-01).
 TITULO = "Calibrar giroscópio"
 ROTULO_SENSIBILIDADE = "O quanto um gesto anda"
 ROTULO_TREMOR = "Ignorar tremor até"
@@ -100,21 +93,12 @@ UNIDADE_DO_TREMOR = "graus/s"
 SENSIBILIDADE = (1, 12, 6)
 TREMOR = (1, 60, 3)
 
-#: A CALIBRAR COM POUCO TEXTO — 06/10/2026, leva 1.7 (desenho-navegacao, item
-#: 11). Pedido: menos texto, botões no mesmo padrão e a tela bonita de
-#: verdade. O subtítulo, as três frases dos passos, a frase da mira
-#: e o aviso do pé saíram da tela para o `?` do título e para o `title` de cada
-#: passo. E o passo 3 dizia que o zero «fica gravado no controle», o que é
-#: falso: o firmware não aceita escrita de calibração por nós (a família de
-#: fábrica, sem desfazer, `dualsense-referencia-canonica.md`), e quem guarda o
-#: zero é o Hefesto, por controle.
 AJUDA_DA_PAGINA = "Mede o zero de cada controle parado"
 PASSOS = (
     ("e-parado", "Deixe parados", "Numa superfície plana, sem tocar"),
     ("e-medindo", f"Medindo {SEGUNDOS} s", "Encostar recomeça a conta"),
     ("e-pronto", "Pronto", "O zero fica guardado e vale em todo jogo"),
 )
-#: Os lugares vazios mostram até o P4, como as abas: o desenho é para quatro.
 LUGARES = 4
 
 from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
@@ -124,8 +108,6 @@ from hefesto_dualsense4unix.core.remapeamento_de_botao import (  # noqa: E402
 ROTULO_SEGURAR = "Só enquanto eu segurar"
 ROTULO_SEMPRE = "Sempre"
 SEMPRE = "sempre"
-#: «Sempre», e a pausa do controle parado não vale para ele: o controle num suporte
-#: (D-2909-O-CONTROLE-PARADO-NAO-INCLINA, a resposta de 29/09 ~21h30).
 ROTULO_MESMO_PARADO = "Mesmo parado"
 MESMO_PARADO = "mesmo_parado"
 ROTULO_INVERTER = "Inverter"

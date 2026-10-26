@@ -74,7 +74,7 @@ def _cmdline_confirma_appid(
         bruto = (base / str(pid) / "cmdline").read_bytes()
     except OSError:
         return False
-    except Exception:  # defensivo: sondar /proc jamais derruba o tique
+    except Exception:
         logger.debug("cmdline_do_jogo_ilegivel", exc_info=True)
         return False
     texto = bruto.decode("utf-8", "replace").replace("\0", " ")
@@ -150,7 +150,6 @@ class AutoSwitcher:
     modo_jogo_padrao_applier: Callable[..., object] | None = None
     modo_jogo_padrao_reverter: Callable[..., object] | None = None
     jogo_vivo_reader: Callable[[], int | None] | None = None
-    #: O jogo em cena segundo o serviço (`Daemon.appid_em_cena`): a prova que não passa pela janela.
     jogo_em_cena_reader: Callable[[], int | None] | None = None
     exclusao_applier: Callable[..., object] | None = None
     exclusao_reverter: Callable[..., object] | None = None
@@ -167,9 +166,7 @@ class AutoSwitcher:
     _freestyle_log_key: str | None = None
     _fica_log_key: str | None = None
     _lancador_log_key: str | None = None
-    #: O perfil do último jogo (o nome), espelho do `ultimo_jogo.json` enquanto ele vale.
     _perfil_do_ultimo_jogo: str | None = None
-    #: O espelho está em dia? Nasce falso e volta a falso quando outro troca o perfil.
     _ultimo_jogo_lido: bool = False
     _ultimo_jogo_perfil: Profile | None = None
     _estado_modo_jogo_padrao: str = ""
@@ -199,8 +196,6 @@ class AutoSwitcher:
 
         self._stop_event = asyncio.Event()
         loop = asyncio.get_running_loop()
-        # Uma vaga: duas leituras nunca se sobrepõem, e o Xlib fica numa thread só. O laço é o
-        # que leva o pad virtual de P1 a P4; o `wlrctl` e a semeadura não podem rodar nele.
         executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="hefesto-autoswitch")
         try:
             while not self._stop_event.is_set():
@@ -302,7 +297,6 @@ class AutoSwitcher:
             self._current_especifico = True
             if ativo != self._entrou_pelo_jogo:
                 self._entrou_pelo_jogo = None
-            # Outro trocou o perfil (boot, lançamento, gesto do usuário): o último jogo se relê.
             self._ultimo_jogo_lido = False
             logger.info(
                 "autoswitch_crenca_sincronizada",
@@ -380,7 +374,6 @@ class AutoSwitcher:
 
         veio_do_jogo = False
         if sem_informacao:
-            # Sem leitura de janela: só a prova do jogo em cena (ou a saída dela) decide.
             profile, motivo = do_jogo, MOTIVO_SEM_CANDIDATO
             veio_do_jogo = do_jogo is not None
         else:
@@ -411,8 +404,6 @@ class AutoSwitcher:
         if candidate is not None and candidate == self._current_profile:
             self._current_especifico = not bool(getattr(profile, "e_catch_all", True))
             if not veio_da_escolha and (veio_do_jogo or perfil_e_de_jogo(profile)):
-                # O jogo confirma o perfil que outro pôs (o lançamento, o boot com o
-                # jogo aberto): ele também é o do último jogo, e fica quando o jogo fecha.
                 self._o_ultimo_jogo_passa_a(candidate)
 
         self._sincronizar_modo_jogo_padrao(motivo, info)
@@ -434,7 +425,6 @@ class AutoSwitcher:
         if self._saida_para_a_escolha(profile, veio_da_escolha):
             limite = max(self.debounce_sec, self.debounce_saida_sec)
         stable = now - self._candidate_since >= limite
-        # corrente (ex.: trigger.reset com a janela do jogo em foco) deixava a
         if not self._suppression_active():
             self._suppress_log_key = None
         if stable and candidate and candidate != self._current_profile:
@@ -874,8 +864,6 @@ class AutoSwitcher:
                     store, "o_jogo_em_cena_fechou", jogo=jogo or "", candidato=name
                 )
                 return False
-        # O jogo que só está em cena (sem a janela dele em foco) não passa por cima do que o usuário
-        # escolheu à mão: a prova de jogo vivo entra por si, mas não solta a trava.
         e_outro_jogo = (
             not veio_da_escolha
             and not veio_do_jogo
@@ -914,9 +902,6 @@ class AutoSwitcher:
             and getattr(self.store, "native_mode_origin", None) != "profile"
         ):
             return
-        # por trigger.reset ou profile.switch explícito. Sem isso, ao ligar a aba Mouse (que
-        # move o cursor e muda o foco de janela), o autoswitch reaplicaria o fallback e zeraria
-        # o trigger recém-aplicado.
         if self._a_trava_da_mao_segura(name, profile, info, veio_da_escolha, veio_do_jogo):
             self._log_suppressed_once(
                 "autoswitch_suppressed_by_manual_profile_lock", name, info
@@ -933,8 +918,6 @@ class AutoSwitcher:
         self._current_profile = name
         self._entrou_pelo_jogo = name if veio_do_jogo else None
         if not veio_da_escolha:
-            # A escolha nunca grava nem apaga o último jogo: ela só entra sem ele, e a
-            # escolha que é perfil de jogo apagava o jogo de verdade do disco (20h52, 14/10).
             self._o_ultimo_jogo_passa_a(
                 name if veio_do_jogo or veio_do_ultimo_jogo or perfil_e_de_jogo(profile)
                 else None

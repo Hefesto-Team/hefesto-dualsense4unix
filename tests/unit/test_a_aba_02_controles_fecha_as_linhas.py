@@ -767,8 +767,6 @@ def test_a_dica_do_som_nao_manda_para_janela_nenhuma() -> None:
             f"a dica do {nome} voltou a pôr uma linha de comando na tela — "
             f"a língua desta casa a proíbe em texto de tela: {dica!r}")
 
-    # 15/10/2026 (o todo): a dica do 🎙 é UMA frase curta do desenho, sem a ordem de calar o
-    # microfone no plástico; o estado do microfone mora na dica da luz ao lado.
     assert a02_gerador.DICA_MIC_TESTAR.count(".") == 0 and len(a02_gerador.DICA_MIC_TESTAR) < 60
 
 
@@ -780,7 +778,6 @@ def test_nenhum_botao_de_som_promete_botao_nesta_tela() -> None:
             f"fora, com aviso")
 
 
-# A SPRINT PEDIA A LINHA DA VERDADE (`resumo_do_que_chega_ao_jogo`) E A MEDIÇÃO
 from hefesto_dualsense4unix.app.actions.home_actions import (
     palavra_do_transporte,
 )

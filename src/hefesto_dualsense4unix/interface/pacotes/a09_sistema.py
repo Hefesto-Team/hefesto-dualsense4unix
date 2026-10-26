@@ -55,8 +55,6 @@ from hefesto_dualsense4unix.app.actions import ambiente_na_tela as _ambiente
 from hefesto_dualsense4unix.app.actions import atos_da_bandeja as _bandeja
 from hefesto_dualsense4unix.app.actions import daemon_actions as _daemon
 from hefesto_dualsense4unix.app.actions.config import secao_orcamento as _orcamento
-
-# no topo não custa nada aqui: este módulo já traz `interface.sistema` logo abaixo.
 from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
 from hefesto_dualsense4unix.app.fala_do_mapa import formata_pt_br
 from hefesto_dualsense4unix.core import formas_do_endereco as _formas
@@ -83,47 +81,35 @@ from . import (
 )
 from . import confirmacao as _confirmacao
 
-#: CORRIGIDO EM 01/09/2026. "versoes" e "consertos" tinham dono e viraram  # (noqa-acento) id
-#: `interface/sistema.py:68` já a tinha medido e escrito:
 SEM_DONO: dict[str, str] = {
     "plugins": "o IPC `plugin.list` existe e só a CLI o chama — não há botão no "
                "produto de hoje (medido em `interface/sistema.py:68`)",
 }
 
-#: CADUCA — não errada quando foi escrita, caduca. Ela dizia.
-#: `aba_sistema.ENDERECOS` e NÃO EXISTE na página: o gerador nunca emitiu este
 NAO_CHEGA_NA_TELA: dict[str, str] = {}
 
 SEM_ALVO_NA_PAGINA: dict[str, str] = {}
 
-#: cadências. Medido de novo aqui, em 02/09/2026, nesta máquina:
 LENTO_S = 2.0
 
 _LENTO: dict[str, Any] = {}
 
 REGISTRO = "registro-texto"
 
-#: um existe porque a régua da identidade julga o `--plastico` pelo endereço do
 CAMPO_DA_FITA = "fita-chips"
 CAMPO_DO_CHIP = "fita-chip"
 
 CAMPO_DO_MODO_AVULSO = "corrigir-modo-quando"
 
-#: `aba_sistema.linhas_do_status` e a pílula muda de cor com o estado; por isso
 CAMPO_DO_STATUS = "status-lista"
 
 CAMPO_DO_VERDE = "parar-ou-retomar-verde"
 
 MODO_A_CORRIGIR = "sim"
 
-#: O interruptor que junta as correções (A-ABA-SISTEMA-DO-TODO-01): o endereço da pílula e o gesto
-#: têm o mesmo nome, e quem diz se está ligado é o guarda do jogo novo, não o clique.
 CAMPO_DAS_CORRECOES = "correcoes-automaticas"
-#: A pílula «Ícone na bandeja» do canto do quadro: o campo e o gesto têm o mesmo nome.
 CAMPO_DA_BANDEJA = "bandeja"
 
-#: Os três tamanhos da interface, na ordem da tela: percentual, rótulo e dica. O gerador os lê
-#: daqui (o botão nasce deste texto), e o gesto só aceita um destes percentuais.
 TAMANHOS_DA_INTERFACE = (
     (100, "Padrão", "O tamanho de hoje"),
     (125, "Confortável", "Letras e botões maiores"),
@@ -132,7 +118,6 @@ TAMANHOS_DA_INTERFACE = (
 CAMPO_DO_TAMANHO = "tamanho-da-interface"
 if tuple(v for v, _, _ in TAMANHOS_DA_INTERFACE) != _folha.PERCENTUAIS_DO_TAMANHO:
     raise RuntimeError("os tamanhos da 09 divergem dos que a folha da casa aceita")
-#: O arquivo do tamanho, ao lado do interruptor das correções, na pasta de configuração.
 ARQUIVO_DO_TAMANHO = _folha.ARQUIVO_DO_TAMANHO
 _arquivo_do_tamanho = _folha.caminho_do_tamanho
 caminho_do_tamanho = _folha.caminho_do_tamanho
@@ -152,11 +137,8 @@ def guardar_o_tamanho(valor: int) -> None:
             "Não consegui guardar o tamanho na pasta de configuração: "
             f"{erro.strerror or erro}.") from erro
 
-#: O QUE NÃO CHEGA PELO RÁDIO É O SERIAL PUBLICADO NO `state_full` — ver
-
 _PAINEL: list[str | None] = [None]
 
-#: O PREÇO QUE A ENTREGA DE LÁ APONTOU era o censo das camadas sumir junto. Ele
 _PERGUNTA: dict[str, Any] = {}
 
 
@@ -207,7 +189,6 @@ def _limpar_o_painel() -> None:
     _PERGUNTA.clear()
 
 
-#: <!-- noqa-acento: citação literal -->
 RECIBO_QUE_FICA_NA_TELA = (CAMPO_DAS_CORRECOES,)
 
 
@@ -241,7 +222,7 @@ def _dica_do_desenho(gesto_: str) -> str:
             try:
                 doc = _onde.pagina(PAGINA, publicado=publicado).read_text(
                     encoding="utf-8")
-            except Exception:  # pragma: no cover - página fora do disco
+            except Exception:  # pragma: no cover
                 continue
             for tag in re.findall(r"<button\b[^>]*>", doc):
                 nome = re.search(r'data-gesto="([^"]+)"', tag)
@@ -348,7 +329,6 @@ def _achados(state: dict[str, Any] | None,
     E A COERÊNCIA DOS PERFIS, desde 28/09/2026 — ver :func:`linhas_dos_perfis`.
     Ela também só fala quando há problema, e é o bloco que o `doctor` já tinha.
     """
-    # Cada acréscimo leva o tema no terceiro campo (`TEMA_DOS_ACRESCIMOS`).
     try:
         linhas: list[tuple[str, ...]] = list(
             _exame.storm_report(controles_no_cabo=_exame.controles_no_cabo(state)))
@@ -375,7 +355,6 @@ def _achados(state: dict[str, Any] | None,
     return linhas
 
 
-#: A camada do produto traduz os três vereditos (`interface/sistema`), e `INFO`
 SELO_INFORMATIVO = "[INFO]"
 
 
@@ -558,9 +537,6 @@ def _perguntar_o_prontuario() -> None:
 
 ROTULO_DA_IDENTIDADE = "Identidade de fábrica"
 
-#: O QUE SE ESCREVE NO LUGAR DE UM SERIAL QUE O `state_full` NÃO TROUXE. É a
-#:     transporte  state_full.serial  lido DO APARELHO (`ler_identidade_pelo_cabo`)
-#: DAEMON: o `state_full` traz `serial: None` para quem está no rádio.
 SEM_SERIAL_LIDO = "o serial só é lido no cabo"
 
 
@@ -716,7 +692,6 @@ def _repouso_do_painel(state: dict[str, Any] | None,
         partes.append("")
         partes.append(ROTULO_DA_IDENTIDADE)
         partes += [f"  {_linha_de_identidade(c, mesa or [])}" for c in vivos]
-    # O painel rola até o
     partes += ["", ROTULO_DO_DIARIO, _diario()]
     return "\n".join(partes).strip()
 
@@ -724,7 +699,6 @@ def _repouso_do_painel(state: dict[str, Any] | None,
 ROTULO_DO_DIARIO = "Registro do serviço"
 
 
-#: `aba_sistema.ENDERECOS["bateria-frase"]`, declarado como
 CAMPO_DO_ALCANCE = "bateria-frase"
 
 CAMPO_DOS_PENDENTES = f"{CAMPO_DO_ALCANCE}-pendentes"
@@ -757,9 +731,6 @@ def _lista_em_portugues(nomes: list[str]) -> str:
     if len(nomes) == 1:
         return nomes[0]
     return f"{', '.join(nomes[:-1])} e {nomes[-1]}"
-
-
-# a diz inteira em `aba_sistema.frase_do_teto`.
 
 
 def _perfil_da_bateria() -> str | None:
@@ -899,8 +870,6 @@ def _esquecer_a_mesa_de_antes(na_mesa: frozenset[str]) -> None:
     _LENTO_SELO[0] += 1
 
 
-#: custa menos de um milissegundo (um `listdir` em `/sys/class/bluetooth`, o
-#: ambiente do processo, um JSON pequeno), e ainda assim ficam na cadência da
 _BARATO: dict[str, Any] = {}
 
 
@@ -982,8 +951,6 @@ def _leitura(ctx: Contexto) -> Any:
 
     auto, achados, perfil_da_bateria, status, _repouso = _faixa_lenta(
         ctx.state or None, ctx.mesa)
-    # `"online_systemd" if ctx.state else "offline"`, e o comentário que a
-    # camada de estado (`aba_sistema._ESTADO_DO_HEFESTO`) tem os quatro textos
     return _tela.Leitura(
         status=status,
         autostart=auto,
@@ -1010,7 +977,6 @@ def _frase(fn: Any, state: Any) -> str | None:
         return None
 
 
-#
 def _monta() -> Any:
     """O módulo `interface/monta.py`, importável de dentro do pacote.
 
@@ -1109,7 +1075,6 @@ def _html_da_fita(mesa: list[dict[str, Any]]) -> str:
     return "\n      ".join(partes)
 
 
-# texto, largura, `value`, classe, cor, fundo, `--plastico` e `innerHTML`, e não
 def _curto(classe: str) -> str:
     """`com.system76.CosmicTerm` -> `CosmicTerm`. O último pedaço, e nada mais."""
     pedaco = classe.rsplit(".", 1)[-1].strip()
@@ -1172,7 +1137,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     try:
         bruto = _tela.pacote(_leitura(ctx))
     except Exception as erro:
-        # E O BOTÃO DO MODO IMPROVISADO SAI DAQUI TAMBÉM, pelo mesmo argumento
         nada = str(_monta().NADA_A_DIZER)
         return {"sem_dono": {"tela": {"sem_dono": True, "oque": str(erro)}},
                 "blocos": blocos_dos_botoes(_de_pe(ctx)),
@@ -1201,7 +1165,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     fora["bateria-perfil"] = perfil_da_bateria
     fora[REGISTRO] = _no_painel(repouso)
     exame = bruto.get("exame")
-    # D-A-CONTAGEM-DO-EXAME-SAIU — 25/09/2026, 22h13, pedido.
     if isinstance(exame, dict):
         seis = list(_so_o_que_a_tela_mostra(_com_os_avisos(exame, ctx), status,
                                             ctx.state)["linhas"])
@@ -1222,7 +1185,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     return fora
 
 
-#: o traduz em selo, classe e glifo é o dono da tradução (`interface/sistema.
 VEREDITO_DO_AVISO = "[WARN]"
 
 
@@ -1262,26 +1224,16 @@ def _avisos_do_produto(ctx: Contexto) -> list[dict[str, Any]]:
     return linhas
 
 
-#: As fontes do canal que explicam e não pedem nada, e por isso não entram no Status
-#: (O-STATUS-DO-SISTEMA-DIZ-O-QUE-ESTA-BEM-EM-VERDE-E-SO-AVISA-O-QUE-PEDE-ACAO-01, 21/10/2026):
-#: «Quem pôs o Hefesto em «Sony DualSense» foi o perfil ativo» chegava como AVISO, sem gesto.
 FONTES_QUE_NAO_PEDEM_ACAO: dict[str, str] = {
     "painel.aviso_da_origem_do_modo": "diz quem ligou o modo; não há o que fazer",
 }
 
-#: OS SEIS TEMAS DO STATUS, na ordem da tela (O-STATUS-DO-SISTEMA-TEM-SEIS-LINHAS-SEMPRE-01,
-#: 22/10/2026): seis linhas, sempre. Todo aviso pertence a um deles e entra na linha do tema, que
-#: fica com o pior veredito; nada abre uma sétima.
 TEMAS = ("serviço", "troca-de-perfil", "bluetooth", "steam-input", "audio", "gamepad")
 ROTULO_DO_TEMA = {"serviço": "Serviço", "troca-de-perfil": "Troca de perfil ao abrir o jogo",
                   "bluetooth": "Bluetooth", "steam-input": "Steam Input", "audio": "Áudio",
                   "gamepad": "Gamepad virtual"}
-#: Quem não declarou tema cai no Serviço, o tema do Hefesto inteiro; uma régua cobra que nenhuma
-#: fonte conhecida dependa disto.
 TEMA_SEM_DONO = "serviço"
 
-#: O tema de cada fonte da coluna de atenção que chega ao Status. Uma régua cobra os dois sentidos:
-#: toda fonte que não está em `FONTES_QUE_NAO_PEDEM_ACAO` nem tem outra casa tem tema aqui.
 TEMA_DA_FONTE: dict[str, str] = {
     "home_actions.vpad_degradation_text": "gamepad",
     "home_actions.texto_do_radio_fragil": "bluetooth",
@@ -1294,12 +1246,8 @@ TEMA_DA_FONTE: dict[str, str] = {
     "home_actions.mascara_divergente_do_daemon": "gamepad",
 }
 
-#: O tema de cada achado do `storm_report`, na posição do dono (`storm_doctor.storm_report`): a cura
-#: do travamento do USB, o áudio, o quirk anti-storm, o Steam Input, o WirePlumber e a regra
-#: áudio-off.
 TEMA_DO_EXAME = ("audio", "audio", "audio", "steam-input", "audio", "audio")
 
-#: O tema de cada acréscimo que `_achados` junta ao `storm_report`.
 TEMA_DOS_ACRESCIMOS = {"vigia": "steam-input", "prontuario": "steam-input", "som": "audio",
                        "vulkan": "steam-input", "perfis": "troca-de-perfil"}
 
@@ -1316,25 +1264,17 @@ def _com_os_avisos(exame: dict[str, Any], ctx: Contexto) -> dict[str, Any]:
     return {**exame, "linhas": linhas + avisos, "vazio": ""}
 
 
-#: As seis linhas à vista (A-ABA-SISTEMA-DO-TODO-01): o Status leva as duas primeiras, e o exame as
-#: quatro seguintes, uma por tema (:data:`TEMAS`). Um aviso entra na linha do tema dele.
 LINHAS_DO_STATUS = ("hefesto-estado", "hefesto-troca-de-perfil")
 ID_DO_BLUETOOTH = "status-bluetooth"
 ID_DO_GAMEPAD = "gamepad-por-jogador"
 LINHAS_DO_EXAME_COMPLETO = 6
-#: A linha que é a cara de cada tema, pelo `id` que o produto já dá a ela.
 ID_DO_TEMA = {"serviço": "hefesto-estado", "troca-de-perfil": "hefesto-troca-de-perfil",
               "bluetooth": ID_DO_BLUETOOTH, "gamepad": ID_DO_GAMEPAD}
 
-#: Onde, na lista do `storm_report`, mora o achado que a tela mostra de cada tema. A ordem é do
-#: dono (`storm_doctor.storm_report`) e uma régua a compara com os `check_*` dele.
 POSICAO_NO_EXAME = {"steam-input": 3, "audio": 1}
 ROTULO_DO_AUDIO_BEM = "Áudio roteado"
-#: Os temas cuja frase curta é a frase inteira do achado (a do Bluetooth já cabe na linha).
 TEMAS_DE_CURTA_INTEIRA = ("bluetooth",)
 
-#: As classes do selo que pedem ação: a linha fica à vista e a frase inteira quebra em duas linhas
-#: (`.saude.longa`), para o gesto no fim não sair cortado.
 PEDEM_ACAO = ("aviso", "falha")
 
 
@@ -1364,8 +1304,6 @@ def linha_do_gamepad_por_jogador(state: Any) -> dict[str, Any]:
                      "O serviço não respondeu quantos gamepads virtuais existem.")
     conectados = _tela.quantos_controles(state)
     if not conectados:
-        # Sem controle ligado não há gamepad a esperar, em qualquer modo: a linha diz isso e não
-        # some, para o Status seguir com seis (O-STATUS-DO-SISTEMA-TEM-SEIS-LINHAS-SEMPRE-01).
         return linha(nota, "Nenhum controle ligado",
                      "Sem controle ligado não há gamepad virtual a esperar.")
     native = bool(state.get("native_mode"))
@@ -1389,9 +1327,7 @@ def _sem_o_prefixo_da_cura(txt: str) -> str:
     return txt.split(_exame.PREFIXO_DA_CURA, 1)[0].rstrip()
 
 
-#: Do pior ao melhor: na linha do tema vence o pior veredito.
 GRAVIDADE = {"falha": 3, "aviso": 2, "nt": 1, "ok": 0}
-#: O gesto no fim da cabeça da frase («…: confira o perfil dele na aba Perfis») vira o `href`.
 _GESTO_NA_ABA = re.compile(r"^(?P<curta>.+?):\s+(?P<gesto>.*\bna aba (?P<aba>[A-ZÀ-Ú]\w+).*)$")
 SEM_LEITURA_DO_EXAME = "O exame não respondeu — não dá para dizer o que esta máquina tem."
 
@@ -1416,7 +1352,6 @@ def _cabeca_e_destino(achado: dict[str, Any]) -> tuple[str, str]:
     if casou and destino:
         curta = casou.group("curta")
     elif not achado.get("curta"):
-        # A cabeça de «título: explicação» é a frase da linha; a explicação inteira vai à dica.
         curta = curta.split(": ", 1)[0]
     return curta, destino or str(achado.get("href") or "")
 
@@ -1593,7 +1528,6 @@ def cabeca_da_frase(frase: str) -> str:
     return cabeca[:1].upper() + cabeca[1:] if cabeca else ""
 
 
-#: <!-- noqa-acento: citação literal -->, e o jargão não é simples.
 FRASES_CURTAS_DO_EXAME: tuple[tuple[str, str], ...] = (
     ("quirk anti-storm ativo", "Proteção do áudio USB ligada"),
     ("o cinto extra do áudio usb não está posto",
@@ -1624,17 +1558,12 @@ def frase_curta_do_exame(frase: str) -> str:
     return cabeca_da_frase(frase)
 
 
-# ---------------------------------------------------------------------------
 from . import gesto  # noqa: E402
 
 SUFIXO_DA_RAZAO = "-razao"
 
-#: São exatamente os três que `aba_sistema.travas()` alcança E que esta aba
-#: (SISTEMA-BOTOES-01), pela decisão de produto D-OS-PLUGINS-APARECEM-ONDE-AGEM
 BOTOES_CINZAS = ("reiniciar",)
 
-#: O que o pacote escreve e o desenho (`mockup/`) tem, mas a página PUBLICADA ainda não tem; a régua
-#: `test_o_que_espera_a_publicacao_esta_declarado_nos_dois_sentidos` cobra nos dois sentidos.
 ESPERA_A_PUBLICACAO: dict[str, str] = {}
 
 
@@ -1683,9 +1612,6 @@ def _trava(ctx: Contexto, nome: str,
         return None
 
 
-#: `aba_sistema.travas()` tranca o `ver-detalhes` com a frase.
-#: não tem regra de sensibilidade, e `_aplicar_sensibilidade_ligar_desligar` só
-#: `interface/sistema.travas()`, que é a camada do produto e território de outra
 TRAVA_QUE_NAO_VALE_AQUI: dict[str, str] = {
     "parar-ou-retomar": "`travas()` o tranca com o serviço desligado, dizendo *'O "
                 "serviço já está desligado'* — e isso era verdade até 03/09/2026, "
@@ -1717,7 +1643,6 @@ def retomar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     p.chamar("daemon.resume")
 
 
-#: `daemon.reload` **fez o trabalho e a resposta nunca chegou**.
 SEM_RESPOSTA_DO_SERVICO = (
     "Não consegui falar com o serviço: pode não ter reaplicado nada, e pode ter "
     "reaplicado sem me responder. Clique de novo com o serviço de pé.")
@@ -1968,9 +1893,6 @@ def _repor_o_lancador() -> None:
     _relatar_o_recibo("reiniciar", rl.frase_do_recibo(recibo))
 
 
-# na Lançadores"**. E escolheu a palavra do botão armado, entre três:
-# 21/09/2026 (o «Posso fechar a Steam», que saiu com os botões da Steam): o
-
 CONFIRMA = "Confirma?"
 
 _CONFIRMA_DO_GESTO: dict[str, str] = {}
@@ -1984,7 +1906,6 @@ DESTRUTIVOS = (DESLIGAR, "restaurar-de-fabrica")
 
 RETOMAR = "Retomar"
 
-#: `refazer-proton`). O primeiro clique escreve o censo lá e o
 SEM_MOTOR: dict[str, str] = {
 }
 
@@ -2025,7 +1946,7 @@ def _rotulo_do_desenho(gesto: str) -> str:
             try:
                 doc = _onde.pagina(PAGINA, publicado=publicado).read_text(
                     encoding="utf-8")
-            except Exception:  # pragma: no cover - página fora do disco
+            except Exception:  # pragma: no cover
                 continue
             for achado in re.finditer(
                     r'data-gesto="([^"]+)"[^>]*>(?:<span[^>]*></span>)?([^<]*)</button>', doc):
@@ -2166,7 +2087,6 @@ def desligar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
                 "Não liguei o serviço. Ou esta máquina não tem o Hefesto "
                 "instalado pelo sistema, ou já há um Hefesto rodando por fora "
                 "— e subir outro criaria um segundo.")
-        # O serviço que volta traz o ícone que o «Sair» da bandeja levou (S3).
         _bandeja.garantir_a_bandeja()
         return {"blocos": blocos_dos_botoes(_de_pe(ctx))}
     if not _confirmado(o, DESLIGAR):
@@ -2227,9 +2147,6 @@ def ativar_o_servico() -> bool:
     if estado == "active":
         return False
     if estado == "activating":
-        # A unit é `Type=notify`: do `fork` ao `READY=1` ela está subindo, e o processo vivo é o
-        # da unit, não um avulso. O `start` se junta à subida em curso e só volta com o IPC de pé;
-        # quem chama (Jogar, «Ativar», «Corrigir») fala com o serviço logo em seguida, sem espera.
         janela._user_stopped_daemon = False
         lembrar_o_parar(False)
         _systemctl("start")
@@ -2266,7 +2183,6 @@ def _o_avulso_saiu(pid: int) -> bool:
     return not is_alive(pid)
 
 
-#: (`test_o_corrigir_modo_recusa_fora_do_modo_improvisado`), então trocar o
 NADA_A_CORRIGIR = "O serviço já sobe pelo sistema — não há o que corrigir."
 
 
@@ -2403,9 +2319,6 @@ def restaurar_de_fabrica(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
             "recado": _rodape.frase_do_restauro()}
 
 
-# existe) continuam todas em :func:`_porque_o_proton_nao_trava`.
-
-
 def _porque_o_proton_nao_trava(pin: Any, travar: Any) -> str | None:
     """Por que a fixação do Proton não pode acontecer AGORA — ou `None`."""
     sem_o_pin = _daemon.frase_sem_o_proton_pinado()
@@ -2436,8 +2349,6 @@ def _porque_o_proton_nao_trava(pin: Any, travar: Any) -> str | None:
     return None
 
 
-#: antiga usa — `daemon_actions.on_storm_fix_safe`, o laço do `_worker`.
-#: no ramo `install)` de `scripts/fix_wireplumber_default_source.sh`: ele apaga
 CONSERTOS: tuple[tuple[str, list[str]], ...] = (
     ("scripts/disable_steam_input.sh", ["--apply-quiet"]),
 )
@@ -2595,12 +2506,9 @@ def _o_pino() -> tuple[Any, Any]:
     return pin, getattr(pin, "lock_proton_for_all_games", None)
 
 
-#: O segundo clique carimbado antes disto é o duplo clique do interruptor das correções.
 SEGUNDOS_DO_DUPLO_CLIQUE = 0.5
 _ULTIMO_CLIQUE_DAS_CORRECOES: dict[str, float] = {}
 
-#: A fila do guarda do jogo novo, fora da de quem grava: o `garantir` recarrega o systemd, e o
-#: segundo clique esperaria esse recarregar na fila de quem grava antes de voltar.
 FILA_DO_VIGIA = "vigia do jogo novo"
 
 
@@ -2662,8 +2570,6 @@ def _reaplicar_as_correcoes() -> str:
     if motivo:
         partes.append(motivo)
     else:
-        # Sempre trava: a versão nova que passa na ficha leva todo jogo, mesmo com o pino velho já
-        # fixado. O silêncio de «já estava» só vale quando já havia trava.
         fixado_antes = proton_fixado()
         resultado = travar(todos=True)
         if not fixado_antes or resultado.get("status") != "noop":
@@ -2762,22 +2668,17 @@ METODOS = {"daemon.resume", "daemon.reload", "launch_env.refresh",
 PAGINA = "09-sistema.html"
 PISO_DA_ABA = 12
 PROVAS = [
-    {"pagina": PAGINA, "gesto": "atualizar", "clique": {},  # (noqa-acento) chave do contrato
+    {"pagina": PAGINA, "gesto": "atualizar", "clique": {},  # (noqa-acento)
      "chama": [("chamar_detalhado", ["daemon.reload"], {})]},
-    {"pagina": PAGINA, "gesto": "perfil-da-mesa",  # (noqa-acento) id
+    {"pagina": PAGINA, "gesto": "perfil-da-mesa",  # (noqa-acento)
      "clique": {"v": "bateria_longa"},
      "chama": [("machine_declare",
                 [{"orcamento": {"teto": _teto_do_perfil("bateria_longa")}}], {})]},
-    {"pagina": PAGINA, "gesto": "perfil-da-mesa", "clique": {"v": "eu_escolho"},  # (noqa-acento) id
+    {"pagina": PAGINA, "gesto": "perfil-da-mesa", "clique": {"v": "eu_escolho"},  # (noqa-acento)
      "chama": [("machine_declare",
                 [{"orcamento": {"teto": _teto_do_perfil("eu_escolho")}}], {})]},
 ]
 
-#: OS TRÊS CUJO EFEITO O `state_full` NÃO MOSTRA, e cada um por um motivo:
-#:   atualizar       `daemon.reload` relê a configuração — o estado publicado
-#: MUDAM o daemon, LEEM. `state_full` não teria o que ecoar mesmo que tudo
-#: efeito deles está no SYSTEMD, não no `state_full`. O `enable` muda o que
-#: `restart` derruba e sobe a mesma unit, deixando o `state_full` igual ao que
 SEM_ECO = ("atualizar", "autostart", "perfil-da-mesa", "reiniciar",
            "copiar-registro", CAMPO_DAS_CORRECOES, CAMPO_DO_TAMANHO, "salvar-registro",
            CAMPO_DA_BANDEJA)

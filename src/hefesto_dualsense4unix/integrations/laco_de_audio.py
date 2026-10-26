@@ -16,10 +16,6 @@ __all__ = ["LATENCIA_MS", "Lacos", "fechar_tudo"]
 
 LATENCIA_MS = 50
 
-#: Seis ou mais dígitos hexadecimais seguidos: a cara de um pedaço de endereço.
-#: A chave vai ao nome do nó (`--name`), e nome de nó não leva o endereço
-#: (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01): quem chama passa a marca do
-#: aparelho (`dualsense_bt_audio.marca_do_aparelho`).
 _CARA_DE_ENDERECO = re.compile(r"[0-9a-fA-F]{6,}")
 
 _FAMILIAS: list[Lacos] = []

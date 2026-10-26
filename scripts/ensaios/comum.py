@@ -67,28 +67,27 @@ from identidade_do_vpad import campos_do_uevent, e_vpad_do_hefesto
 
 try:
     from hefesto_dualsense4unix.integrations.hidraw_broker_client import (
-        GRAB_DE_TERCEIRO,  # noqa: F401 - reexportado para os instrumentos
-        GRAB_LIVRE,  # noqa: F401 - reexportado para os instrumentos
-        GRAB_SEM_NO,  # noqa: F401 - reexportado para os instrumentos
-        GRAB_SEM_PERMISSAO,  # noqa: F401 - reexportado para os instrumentos
-        PORTA_DIRETA,  # noqa: F401 - reexportado para os instrumentos
+        GRAB_DE_TERCEIRO,  # noqa: F401
+        GRAB_LIVRE,  # noqa: F401
+        GRAB_SEM_NO,  # noqa: F401
+        GRAB_SEM_PERMISSAO,  # noqa: F401
+        PORTA_DIRETA,  # noqa: F401
         NoAberto,
-        PortaFechadaError,  # noqa: F401 - reexportado para os instrumentos
+        PortaFechadaError,  # noqa: F401
         abrir_hidraw,
         estado_do_grab,
-        leitura_de_zero,  # noqa: F401 - reexportado para os instrumentos
+        leitura_de_zero,  # noqa: F401
         linha_da_porta,
         linha_do_grab,
         porta_provavel,
     )
 
     PORTA_IMPORTAVEL = ""
-except ImportError as _erro:  # pragma: no cover - só fora do venv do projeto
+except ImportError as _erro:  # pragma: no cover
     PORTA_IMPORTAVEL = str(_erro)
 
 VERSAO_DOS_INSTRUMENTOS = "2026-08-15"
 
-# O DualSense de fábrica. O `0x0DF2` (DualSense Edge) fica DE FORA de propósito:
 VID_SONY = 0x054C
 PID_DUALSENSE = 0x0CE6
 
@@ -98,7 +97,6 @@ BUS_BLUETOOTH = 0x0005
 CABO = "cabo"
 RADIO = "rádio"
 
-# DualSense Edge no cabo — então a leitura ingênua do barramento o classifica
 VPAD = "vpad (sem transporte)"
 
 

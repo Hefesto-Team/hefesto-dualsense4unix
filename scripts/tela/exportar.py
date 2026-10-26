@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """Exporta o controle como SVG ORGANIZADO, para ela arrumar no editor."""
 import pathlib, re, csv, sys
-# Instrumento de `scripts/tela/` (22/10/2026): o mapa e o monta moram na interface.
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix" / "interface"))
 import mapa
 

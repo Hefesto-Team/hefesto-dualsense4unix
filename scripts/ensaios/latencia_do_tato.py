@@ -67,25 +67,15 @@ _SRC = _RAIZ / "src"
 if _SRC.is_dir() and str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
-#: Quanto giro ANTES da escrita vira a linha de base do ruído.
 JANELA_DO_RUIDO_S = 0.200
-#: Até onde, depois da escrita, um desvio ainda é daquele toque.
 JANELA_DO_TOQUE_S = 0.150
-#: Desvios-padrão do ruído acima do centro que contam como toque.
 FATOR_DO_RUIDO = 6.0
-#: Piso do limiar em graus por segundo: ruído sem dispersão não vira limiar zero.
 PISO_DO_LIMIAR_GRAUS_S = 0.5
-#: Quadros acima do limiar, entre três seguidos, que confirmam o toque.
 CONFIRMAM_DE_TRES = 2
-#: Menos que isto de quadros na base e não há ruído medido: não há medição.
 MINIMO_DE_QUADROS_NA_BASE = 8
-#: Pico do ruído acima disto é o controle na mão, não pousado.
 LIMITE_DE_GIRO_PARADO_GRAUS_S = 5.0
-#: Força do toque de teste (0..255) nos dois motores.
 FORCA_DO_TOQUE = 0xFF
-#: Quanto o toque dura antes do relatório de parar.
 DURACAO_DO_TOQUE_S = 0.060
-#: Silêncio depois de parar, antes do próximo toque (o motor termina de girar).
 SILENCIO_ENTRE_TOQUES_S = 0.450
 
 RC_RECUSADO = 2
@@ -223,9 +213,6 @@ CABECALHO_DA_TABELA = (
 )
 
 
-# --- as recusas ------------------------------------------------------------------------------
-
-
 def lar_e_de_mentira(home: str | None, casa_real: str | None) -> bool:
     """``HOME`` existe e não é o lar real de quem roda."""
     if not home or not casa_real:
@@ -289,9 +276,6 @@ def recusas(env: dict[str, str], uid: int, casa_real: str | None) -> list[str]:
             "há daemon no ar (ou um socket que aceita conexão): ele escreve no mesmo hidraw "
             "e o relatório dele no meio do ensaio mediria outra coisa")
     return motivos
-
-
-# --- o aparelho (bancada) --------------------------------------------------------------------
 
 
 def relatorio_de_vibracao(transporte: str, forca: int, seq: int) -> bytes:
@@ -378,9 +362,6 @@ def rodar_no_aparelho(
                 gravar(no.fd, relatorio_de_vibracao(transporte, 0, seq))
             dev.close()
     return quadros, escritas
-
-
-# --- a linha de comando ----------------------------------------------------------------------
 
 
 @dataclass

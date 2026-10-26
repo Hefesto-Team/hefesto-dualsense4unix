@@ -236,8 +236,6 @@ def _clicar(chave: str, ctx: Contexto, daemon: DaemonDeMentira) -> Any:
         pytest.fail(f"o clique em «{rotulo}» RECUSOU: {recusa}")
 
 
-# NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-MANDA-01, 08/10/2026: o Steam Input
-# saiu do Ligado e virou, com o Nativo, um dos dois botões do Desligado.
 TABELA_DA_SPRINT = {
     "dualsense": ("gamepad", "dualsense", False),
     "xbox": ("gamepad", "xbox", False),

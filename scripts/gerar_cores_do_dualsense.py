@@ -47,11 +47,6 @@ import sys
 RAIZ = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ / "src"))
 
-#: A CONTA DA LEGIBILIDADE É A DO PRODUTO, e não uma segunda escrita aqui.
-#: `tom_para_a_borda` já resolve exatamente este caso — "Midnight Black pintado
-#: cru não é uma borda preta: é a AUSÊNCIA de borda" — com a mistura com branco
-#: (e não a subida de luminosidade em HLS, que devolve azul elétrico para o
-#: quase-preto). Reusar é o que impede a terceira tabela de contraste desta casa.
 from hefesto_dualsense4unix.integrations.cor_do_plastico import (
     FUNDO_DO_CARD,
     RAZAO_DA_BORDA,
@@ -60,64 +55,32 @@ from hefesto_dualsense4unix.integrations.cor_do_plastico import (
 
 CSV_CORES = RAIZ / "docs/data/cores-do-dualsense.csv"
 CSV_PECAS = RAIZ / "docs/data/pecas-do-dualsense.csv"
-#: os dois são o MESMO arquivo (md5 igual, e o `importar.py` grava nos dois).
-#: Gerar num só deixaria o mapa e o produto com desenhos diferentes.
 ALVOS = (
     RAIZ / "assets/control-svg/dualsense.svg",
     RAIZ / "src/hefesto_dualsense4unix/interface/ds_limpo.svg",
 )
 
-#: As zonas do `cores-do-dualsense.csv` que têm SUPERFÍCIE no desenho, na ordem
-#: em que o CSS as escreve. A ordem não é estética: zona que se sobrepõe a outra
-#: tem de vir depois, e `simbolos` é a última porque ela mora POR CIMA dos botões
-#: da face.
 ZONAS_DE_SUPERFICIE = (
     "casca", "painel", "touch", "gatilhos", "dpad", "analogicos",
     "botoes_face", "simbolos",
 )
 
-#: `detalhe` é arte impressa — friso, decalque, a teia do Spider-Man, os olhos do
-#: Astro Bot. Não é uma superfície do desenho, e inventar uma forma para ela
-#: seria inventar geometria. ZONA DECLARADA SEM ALVO, e o portão sabe disso.
 ZONAS_SEM_ALVO = ("detalhe",)
 
-#: As zonas do CSV de cores que a coluna `zona` do CSV de peças NÃO nomeia,
-#: porque a peça é uma só: `#corpo` recebe as duas metades.
 ZONAS_DA_CASCA = ("casca_esq", "casca_dir")
 
-#: A zona `simbolos` é a impressão dos quatro botões da face. Ela não é peça: é o
-#: GLIFO em cima da peça. Derivada, e não uma coluna a mais no CSV de peças.
 GLIFOS_DA_FACE = ("glifo-triangle", "glifo-circle", "glifo-square", "glifo-cross")
 
-#: O fundo contra o qual a legibilidade é medida, e o piso — os dois são do
-#: produto (`integrations/cor_do_plastico.py`), não desta casa de geração:
-#: `FUNDO_DO_CARD` = #282a36 e `RAZAO_DA_BORDA` = 2,2:1. O fundo do mapa
-#: (`--app-bg`, #21222c) é ainda mais escuro, então o piso serve para os dois.
 _FUNDO = FUNDO_DO_CARD
 _PISO = RAZAO_DA_BORDA
 
-#: A cor de quem não foi medido. Não é "mais um cinza": é a marca de ausência, e
-#: existe pelo mesmo princípio da ONDA-CONEXOES-08 — "sem cor conhecida, sem cor
-#: inventada". Quatro modelos (Ghost of Yōtei, Marathon, Genshin, 007) têm o CSV
-#: incompleto por falta de amostragem, e a tela tem de DIZER isso.
 NAO_MEDIDA = "#4A4A52"
 
-#: O que este script escreve, e o que fica fora dele. Um bloco só — pattern,
-#: gradientes e folha juntos — porque duas âncoras num arquivo com vários
-#: `</defs>` é como um gerador passa a inserir no lugar errado sem avisar.
 ABRE = '<defs id="cores-do-dualsense">'
 FECHA = "</defs>"
 
-#: O que pinta dentro de um grupo de zona. `:not([fill="none"])` preserva o botão
-#: PS, que é `sem-tinta` por decisão (27/08: "Remove o circulo e Deixa só o
-#: Glifo do PS pra ser o Botão"), e os quatro glifos da face, que são traço puro.
 PINTAVEL = ':is(path,rect,circle,ellipse,polygon):not([fill="none"])'
 
-#: `!important` NÃO É PREGUIÇA, e há medição: três peças do desenho do DualSense trazem a
-#: cor dentro do `style` inline — `share`, `options` e `mic` (este último em
-#: `rgb(216,216,216)`). Style inline vence qualquer folha; sem `!important` essas
-#: três ficariam CARMIM em todo colorway, inclusive no White. É a mesma cicatriz
-#: que o `mapa.py` já carrega escrita.
 BANG = " !important"
 
 
@@ -188,9 +151,6 @@ def gerar_defs(mods: dict[str, dict[str, dict[str, str]]]) -> str:
     for mid in sorted(mods):
         if not e_split(mods[mid]):
             continue
-        # os stops também passam pela conta da legibilidade: a metade Venom do
-        # Spider-Man 2 é `#1A1A1C`, e crua ela some no fundo escuro igual às
-        # outras zonas — a casca partida ficaria com uma metade só.
         a = legivel(_tinta(mods[mid]["casca_esq"]))
         b = legivel(_tinta(mods[mid]["casca_dir"]))
         partes += [
@@ -222,7 +182,7 @@ def legivel(tinta: str) -> str:
     da cor do plástico e não da cor que se vê.
     """
     if not tinta.startswith("#"):
-        return tinta                       # gradiente, hachura: não são cor
+        return tinta
     return tom_para_a_borda(tinta) or tinta
 
 
@@ -353,8 +313,6 @@ def montar(svg: str) -> tuple[str, list[str]]:
     )
 
     svg = marcar_zonas(svg, por_zona)
-    # O colorway padrão do arquivo: sem ele o SVG abre no navegador sem cor
-    # nenhuma, e quem o abrisse sozinho concluiria que o gerador não rodou.
     cabeca = svg[: svg.index(">", svg.index("<svg ")) + 1]
     if "data-colorway=" not in cabeca:
         svg = svg.replace("<svg ", '<svg data-colorway="cosmic-red" ', 1)
@@ -364,9 +322,6 @@ def montar(svg: str) -> tuple[str, list[str]]:
     if i >= 0:
         j = svg.index(FECHA, i) + len(FECHA)
         return svg[:i] + novo + svg[j:], incompletos
-    # Nasce logo depois do `</defs>` dela — que é o PRIMEIRO do arquivo, e é o
-    # único que existe enquanto este bloco não existe. `str.replace` que não casa
-    # devolve o texto intacto e não avisa; aqui a âncora ausente é erro.
     k = svg.find("</defs>")
     if k < 0:
         raise SystemExit("ERRO: o SVG não tem <defs> — âncora ausente")

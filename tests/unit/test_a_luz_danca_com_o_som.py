@@ -45,7 +45,6 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 MOCKUP = RAIZ / "mockup" / "04-iluminacao.html"
 RGB = tuple[int, int, int]
 LARANJA: RGB = (255, 128, 0)
-#: Faixa forjada (`aa:bb:cc`), nunca endereço de aparelho de verdade.
 JOGADORES = [f"aa:bb:cc:00:00:0{n}" for n in range(1, 5)]
 PASSO_S = 1 / 60
 MICROFONE = "alsa_input.usb-forjado-00.mono-fallback"
@@ -81,9 +80,6 @@ def _tocar(estado: fx.AoSom, nivel_por_passo: list[float], agudos: float = 0.0) 
             for i, n in enumerate(nivel_por_passo)]
 
 
-# ---------------------------------------------------------------- a base existe no perfil
-
-
 def test_ao_som_esta_fora_das_oito_que_se_criam_e_o_perfil_a_le() -> None:
     assert BASES_DO_SOM_DA_LUZ == ("ao-som",)
     assert "ao-som" in TODAS_AS_BASES_DA_LUZ
@@ -92,12 +88,9 @@ def test_ao_som_esta_fora_das_oito_que_se_criam_e_o_perfil_a_le() -> None:
     assert fx.cor_no_instante(EfeitoDaLuz("ao-som", (LARANJA,), 5), 3.0) == LARANJA
 
 
-# ---------------------------------------------------------------- o efeito
-
-
 def test_um_som_em_pulsos_da_brilho_que_sobe_e_desce_e_nunca_preto() -> None:
     estado = fx.AoSom(LARANJA, 5)
-    pulsos = ([1.0] * 30 + [0.0] * 60) * 3  # meio segundo ligado, um e meio desligado
+    pulsos = ([1.0] * 30 + [0.0] * 60) * 3
     quadros = _tocar(estado, pulsos)
     brilho = [max(q) / 255 for q in quadros]
     assert max(brilho) > 0.95, "o pulso leva a barra à cor cheia"
@@ -186,9 +179,6 @@ def test_cada_controle_tem_o_estado_dele() -> None:
     assert max(quieto) / 255 < 0.3, "o som que fez o A subir não acende o B parado"
 
 
-# ---------------------------------------------------------------- o que o som vira em números
-
-
 def _pcm(frequencia: float, amplitude: float, segundos: float, fase: float = 0.0) -> bytes:
     n = int(som.TAXA_HZ * segundos)
     return array.array("f", (
@@ -240,9 +230,6 @@ def test_bytes_em_pedacos_dao_a_mesma_medida_do_bloco_inteiro() -> None:
     assert ultimo[0] == pytest.approx(inteiro[0], abs=1e-6)
 
 
-# ---------------------------------------------------------------- só o monitor, nunca o microfone
-
-
 def test_o_argv_le_o_monitor_da_saida_padrao() -> None:
     argv = som.argv_da_energia()
     assert argv[0] == "parec"
@@ -255,7 +242,7 @@ def test_o_argv_le_o_monitor_da_saida_padrao() -> None:
                                    "", "alsa_output.pci-0000.analog-stereo"])
 def test_uma_fonte_que_nao_e_monitor_e_recusada(
         fonte: str, monkeypatch: pytest.MonkeyPatch) -> None:
-    # D-2210-A-LUZ-AO-SOM-LE-SO-O-MONITOR
+    """Prova da D-2210-A-LUZ-AO-SOM-LE-SO-O-MONITOR."""
     assert not som.e_o_monitor(fonte)
     with pytest.raises(ValueError, match="monitor"):
         som.argv_da_energia(fonte)
@@ -313,13 +300,13 @@ def test_a_leitura_abre_so_o_monitor_entrega_a_medida_e_fecha_o_fluxo() -> None:
     leitura = som.EnergiaDoSom(abrir=abrir)
     assert leitura.nivel() is None and not leitura.aberto
     leitura.abrir()
-    leitura.abrir()  # idempotente
+    leitura.abrir()
     assert _esperar(lambda: leitura.nivel() is not None)
     assert abertas == [som.FONTE_DO_MONITOR], "uma abertura, só do monitor"
     medida = leitura.nivel()
     assert medida is not None and medida[0] > 0.5
     leitura.fechar()
-    leitura.fechar()  # idempotente
+    leitura.fechar()
     assert fluxo.parou.is_set(), "fechar termina o parec"
     assert leitura.nivel() is None and not leitura.aberto
 
@@ -347,9 +334,6 @@ def test_sem_o_servidor_de_som_tenta_de_novo_sem_levantar() -> None:
     leitura.fechar()
     assert set(tentativas) == {som.FONTE_DO_MONITOR}
     assert leitura.nivel() is None
-
-
-# ---------------------------------------------------------------- o laço: abre e fecha com o efeito
 
 
 class _SomDeMentira:
@@ -449,9 +433,6 @@ def test_o_daemon_sobe_o_laco_com_a_leitura_de_producao() -> None:
     laco = asyncio.run(subir())
     assert isinstance(laco._som, som.EnergiaDoSom)
     assert not laco._som.aberto, "sem controle no efeito, o som nem abre"
-
-
-# ---------------------------------------------------------------- a tela
 
 
 def _doc() -> str:

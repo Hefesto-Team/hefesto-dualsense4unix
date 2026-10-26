@@ -57,8 +57,6 @@ if _SRC.is_dir() and str(_SRC) not in sys.path:
 if str(_AQUI) not in sys.path:
     sys.path.insert(0, str(_AQUI))
 
-# --- onde as coisas moram no report 0x02 (espelho do vpad; um teste prende a igualdade) --------
-
 OFFSET_FLAG0 = 0
 OFFSET_FLAG1 = 1
 OFFSET_GATILHO_DIREITO = 10
@@ -76,16 +74,11 @@ OFFSET_FLAG2 = 38
 FLAG2_VIBRACAO_V2 = 0x04
 OFFSETS_DE_VOLUME = (4, 5, 6, 7)
 
-#: Modos que desligam o gatilho: o cru (0x00) e o «desligado» oficial da Sony (0x05).
 MODOS_DESLIGADO = frozenset({0x00, 0x05})
 
-#: As perguntas da sprint: o mesmo efeito de volta depois de um Off em menos disto...
 LIMITE_DO_REARME_S = 0.004
-#: ...e o gatilho escrito nesta janela depois de abrir o controle (a graça do vpad é igual).
 PRIMEIRA_JANELA_S = 0.5
-#: Quanto dura o último tiro (não há outro depois que o feche).
 JANELA_DO_ULTIMO_TIRO_S = 0.5
-#: Energia acima disto é amostra de háptica; silêncio entre duas amostras separa dois tiros.
 LIMIAR_DE_ENERGIA = 0.05
 SILENCIO_ENTRE_TIROS_S = 0.08
 
@@ -107,9 +100,6 @@ class Evento:
     tipo: str
     corpo: bytes = b""
     energia: float = 0.0
-
-
-# --- a gravação --------------------------------------------------------------------------------
 
 
 def ler_gravacao(texto: str) -> list[Evento]:
@@ -141,9 +131,6 @@ def escrever_gravacao(eventos: Sequence[Evento]) -> str:
             dado["energia"] = e.energia
         linhas.append(json.dumps(dado, sort_keys=True))
     return "\n".join(linhas) + ("\n" if linhas else "")
-
-
-# --- o que cada corpo carrega ------------------------------------------------------------------
 
 
 def blocos_de_gatilho(corpo: bytes) -> dict[str, bytes]:
@@ -194,9 +181,6 @@ def tiros_do_audio(
             tiros.append(e.t)
         ultimo_acima = e.t
     return tiros
-
-
-# --- a contagem --------------------------------------------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -347,9 +331,6 @@ def respostas(c: Contagem) -> list[str]:
     ]
 
 
-# --- o gravador (bancada) ----------------------------------------------------------------------
-
-
 def corpo_do_uhid_output(data: bytes) -> bytes | None:
     """O corpo do report 0x02 (sem o id) de um ``UHID_OUTPUT`` cru; ``None`` se não for o 0x02."""
     from hefesto_dualsense4unix.core import ds_output_report as rep
@@ -429,9 +410,6 @@ def gravar_no_aparelho(
         prazo.cancel()
         tirar()
     return list(eventos)
-
-
-# --- a linha de comando ------------------------------------------------------------------------
 
 
 def _parser() -> argparse.ArgumentParser:

@@ -94,48 +94,30 @@ from dataclasses import dataclass, field
 from typing import Any
 
 DEFAULT_SOCKET_PATH = "/run/hefesto-hidraw-broker/broker.sock"
-#: Env com um uid FIXO (opcional). Sem ela, quem o broker atende é a sessão
-#: ativa do seat, perguntada ao logind a cada pedido
-#: (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01): a unit não grava uid nenhum.
 ALLOWED_UID_ENV = "HEFESTO_BROKER_ALLOWED_UID"
-#: Gancho de teste/instalação: o caminho do ``loginctl`` (a porta oficial do
-#: logind). Um caminho que não existe = logind ausente.
 LOGINCTL_ENV = "HEFESTO_BROKER_LOGINCTL"
 SEAT_PADRAO = "seat0"
-#: Quanto tempo a resposta do logind vale: o pedido do jogo não pode custar um
-#: processo cada, e a troca de usuário é gesto de segundos.
 VALIDADE_DA_SESSAO_S = 1.0
-#: Na varredura do físico já entregue (o Hefesto parado, o laço repetindo a cada
-#: segundo), a resposta vale mais: com o prazo de 1 s eram dois ``loginctl`` por
-#: segundo enquanto o Hefesto estivesse desligado. O pedido de quem conecta
-#: segue no prazo curto.
 VALIDADE_NA_VARREDURA_S = 10.0
-#: Quanto esperar o ``loginctl`` responder: parado, ele recusaria todo pedido.
 PRAZO_DO_LOGINCTL_S = 3.0
-#: controller.rules` instalado FECHA o nó do DualSense físico (`TAG-="uaccess"`, 0600
 NO_NASCE_FECHADO_ENV = "HEFESTO_BROKER_NO_NASCE_FECHADO"
 MAX_LINE_BYTES = 4096
 
 PHYS_VENDOR = 0x054C
-PHYS_PRODUCT = 0x0CE6  # DualSense físico
-VPAD_PRODUCT = 0x0DF2  # DualSense Edge: o do NOSSO vpad e o do Edge físico
-#: STEAM-NO-FISICO-01 (24/09/2026) — os PIDs de DualSense FÍSICO que o broker
+PHYS_PRODUCT = 0x0CE6
+VPAD_PRODUCT = 0x0DF2
 PHYS_PRODUCTS = frozenset({PHYS_PRODUCT, VPAD_PRODUCT})
 BUS_USB = 0x0003
 BUS_BT = 0x0005
 ACCEPTED_BUSES = frozenset({BUS_USB, BUS_BT})
 SYS_CLASS_BLUETOOTH = "/sys/class/bluetooth"
-#: Identidade do vpad no HID — espelhada de `core/backend_pydualsense.py`
 VPAD_PHYS_PREFIX = "hefesto-vpad"
 VPAD_UNIQ_PREFIX = "02fe"
-#: O começo do serial USB do pad em USB (``pad_usb.SERIAL_PREFIXO``).
 PAD_USB_SERIAL_PREFIX = "hefesto-pad-"
 _USB_DEVICE_RE = re.compile(r"^\d+-[\d.]+$")
 SYS_CLASS_HIDRAW = "/sys/class/hidraw"
 _HIDRAW_BASE_RE = re.compile(r"^hidraw[0-9]+$")
 DEV_ROOT = "/dev"
-# mesmo DualSense aparece em três superfícies: o hidraw, o evdev
-# (`/dev/input/eventN`: o gamepad, o touchpad, os sensores de movimento e a
 DEV_INPUT_ROOT = "/dev/input"
 _ENTRADA_BASE_RE = re.compile(r"^(event|js)[0-9]+$")
 _EVENT_BASE_RE = re.compile(r"^event[0-9]+$")
@@ -183,9 +165,6 @@ def _log(event: str, **fields: object) -> None:
     """Log estruturado simples no stdout (vai ao journal via systemd)."""
     parts = [event] + [f"{key}={value}" for key, value in fields.items()]
     print("[hidraw-broker] " + " ".join(parts), flush=True)
-
-
-# Validador — SÓ nós filhos do DualSense físico 054c:0ce6/0df2 (BLUEZ-UHID-01)
 
 
 def _raiz(valor: str | None, constante: str) -> str:
@@ -383,7 +362,7 @@ def _pai_hid_e_dualsense_fisico(
     if product not in PHYS_PRODUCTS:
         return False
     if "/vhci_hcd." in hid_parent and _e_o_nosso_vpad(uevent, hid_parent, bus):
-        return False  # o pad em USB: tem pai USB, mas é o que o Hefesto entrega ao jogo
+        return False
     if "/devices/virtual/" in hid_parent:
         if "/misc/uhid/" not in hid_parent:
             return False
@@ -398,7 +377,7 @@ def _pai_hid_e_dualsense_fisico(
         if _MAC_RE.match(uniq) is None:
             return False
         if _MAC_RE.match(phys) is None:
-            return False  # (D3) BT real tem HID_PHYS = MAC do adaptador
+            return False
         adapters = _adapter_addresses(sys_class_bluetooth)
         if adapters is not None and adapters and phys not in adapters:
             return False
@@ -475,17 +454,8 @@ def validate_physical_input_node(
     return base
 
 
-# O ACIONADOR DECLARADO (O-ACIONADOR-LE-O-APARELHO-DECLARADO-SEM-O-GRUPO-INPUT-01, 25/10/2026).
-# O teclado ou o pedal do «Usar como botões de» não ganha a ACL da sessão (o uaccess só cobre o
-# joystick), e o grupo `input` é proibido (item 3.3 de `docs/history/RESPOSTAS_V1.md`): quem
-# está nele lê todo teclado da máquina. O broker serve o fd do nó do aparelho que o pedido nomeia
-# pela identidade, só a quem pede, sem mexer na permissão do nó: o fd morre com quem o recebeu.
-
-#: Os botões que só controle de jogo tem (de ``BTN_JOYSTICK`` a ``BTN_THUMBR`` e os
-#: ``BTN_TRIGGER_HAPPY``): a permissão do controle é do uaccess, e a do DualSense, do broker.
 _MASCARA_DE_CONTROLE = sum(1 << b for b in (*range(0x120, 0x140), *range(0x2C0, 0x2E8)))
 _CHAVE_DO_ACIONADOR_RE = re.compile(r"^[0-9a-f]{4}:[0-9a-f]{4}:[0-9a-f]{8}$")
-#: Onde moram os nós do uinput (o teclado e o mouse virtuais do Hefesto entre eles).
 _RAIZ_DO_UINPUT = "/devices/virtual/input/"
 
 
@@ -617,10 +587,7 @@ def decode_acl_user_uids(blob: bytes) -> set[int]:
     return uids
 
 
-#: Onde o kernel guarda os drivers do barramento HID: ``<driver>/unbind`` e
-#: ``<driver>/bind`` aceitam o id do aparelho (DESLIGAR-COM-A-STEAM-ABERTA-01).
 SYS_BUS_HID_DRIVERS = "/sys/bus/hid/drivers"
-#: O id de um aparelho HID no sysfs: ``BUS:VVVV:PPPP.SEQ`` (``0005:054C:0CE6.006D``).
 _ID_DO_APARELHO_HID_RE = re.compile(
     r"^[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}:[0-9A-Fa-f]{4}\.[0-9A-Fa-f]{4}$"
 )
@@ -716,7 +683,7 @@ class FsAclOps:
             return True
         match = _HID_ID_VALUE_RE.match(uevent.get("HID_ID", ""))
         if match is None:
-            return False  # sem HID_ID (ou malformado) = não é o DualSense validado
+            return False
         if int(match.group(2), 16) != PHYS_VENDOR:
             return False
         if int(match.group(3), 16) not in PHYS_PRODUCTS:
@@ -863,7 +830,6 @@ class FsAclOps:
         ):
             os.close(fd)
             raise StaleNodeError(node)
-        # HIDIOCGRAWINFO prova que o fd É um DualSense 054c:0ce6/0df2 (à prova de
         try:
             buf = bytearray(struct.calcsize(_HIDRAW_DEVINFO_FMT))
             fcntl.ioctl(fd, _HIDIOCGRAWINFO, buf, True)
@@ -1272,29 +1238,6 @@ def reinicio_sem_abrir_pedido(
     return -5.0 <= idade <= REINICIO_SEM_ABRIR_VALIDADE_S
 
 
-# --- O PAD EM USB (O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01, 07/10/2026) ---
-#
-# O pad virtual nascia só por uhid, sem `usb_device` pai, e o jogo com a
-# biblioteca da Sony não casava o som dele pelo contêiner (o engasgo do
-# Sackboy). A cura é um gadget `libcomposite` SÓ HID, preso ao `usbip-vudc` e
-# ligado de volta pelo `vhci_hcd`: o pad ganha um pai USB de verdade. A raiz é
-# deste broker, com o pedido mínimo: montar, ligar, entregar o fd do
-# `/dev/hidgN` e desmontar. Nada aqui é escolhido pelo cliente além do serial
-# (no formato do Hefesto) e do descritor, que só passa se for o do DualSense
-# que o produto já usa (`PAD_USB_DESCRITORES_SHA256`): o broker nunca vira uma
-# fábrica de teclado USB para quem fala com ele.
-#
-# O que a prova mediu e este código honra (rodadas 18 a 22):
-#   - SEM endpoint OUT (`no_out_endpoint=1`): com OUT, o `f_hid` estala o
-#     SET_REPORT e o jogo recusa o pad;
-#   - SEM a função `uac2`: o isócrono pelo `vhci` congela o jogo;
-#   - no máximo oito pads (`PAD_USB_MAX`), as oito portas de alta velocidade do
-#     `vhci_hcd.0`: o pad sem porta fica uhid, sem par, e o HID sem par faz o
-#     jogo da Sony varrer o áudio (12/10/2026). O teto antigo, quatro, era do
-#     produto (o Sackboy só inicializa quatro pads), não do kernel.
-# O `attach` vai pelo sysfs com um par de sockets AF_UNIX (o `usbip_sockfd` do
-# `vudc` e o `attach` do `vhci`), sem o `usbipd` por TCP da prova.
-
 CONFIGFS_GADGETS = "/sys/kernel/config/usb_gadget"
 SYS_PLATFORM = "/sys/devices/platform"
 SYS_CLASS_UDC = "/sys/class/udc"
@@ -1302,25 +1245,13 @@ PAD_USB_MAX = 8
 PAD_USB_NOME = "hefesto-pad-"
 PAD_USB_FUNCAO = "hid.usb0"
 PAD_USB_CONFIG = "c.1"
-#: sha256 do descritor do DualSense que o pad usa
-#: (`integrations/uhid_blueprint.CANONICAL_DESCRIPTOR_USB`); a régua do pad
-#: reprova se o blueprint mudar sem esta linha.
 PAD_USB_DESCRITORES_SHA256 = frozenset(
     {"4f48767516627510521512af13c20a064877465122b7bcc7cac1f3b608d37994"}
 )
-#: os pares (VID, PID) que o gadget pode vestir, com o nome USB de cada um. O
-#: par vem do pad (``uhid_gamepad.UhidDualSense.product``) e o broker só confere
-#: a pertença: nunca vira fábrica de aparelho USB para quem fala com ele. As duas
-#: roupas do pad (``numeros_da_sony.ROUPAS_DO_PAD``): dividir o par com um físico
-#: não o confunde com ele, porque quem separa os dois é a posse (o serial
-#: ``hefesto-pad-`` sob o ``vhci_hcd``, :func:`_e_o_nosso_vpad`), e a regra 73
-#: abre o pad USB pela marca ``HEFESTO_PAD_USB`` nas duas.
 PAD_USB_VESTIDOS: dict[tuple[int, int], str] = {
     (PHYS_VENDOR, VPAD_PRODUCT): "DualSense Edge Wireless Controller",
     (PHYS_VENDOR, PHYS_PRODUCT): "DualSense Wireless Controller",
 }
-#: ``hefesto-pad-<12 hex>`` ou, com o número do jogador à frente para o jogo os
-#: ver na ordem, ``hefesto-pad-<NN>-<12 hex>`` (``pad_usb.serial_do_pad``).
 _SERIAL_DO_PAD_RE = re.compile(r"^hefesto-pad-(?:[0-9]{2}-)?[0-9a-f]{12}$")
 
 
@@ -1336,9 +1267,9 @@ def porta_do_serial(serial: str) -> int | None:
         return None
     return int(cabeca) - 1
 _VUDC_RE = re.compile(r"^usbip-vudc\.[0-9]+$")
-_VHCI_LIVRE = 4  # VDEV_ST_NULL
+_VHCI_LIVRE = 4
 _VELOCIDADES = {"low-speed": 1, "full-speed": 2, "high-speed": 3, "super-speed": 5}
-_VELOCIDADE_PADRAO = 3  # o gadget declara bcdUSB 0x0200 (alta velocidade)
+_VELOCIDADE_PADRAO = 3
 
 
 class PadUsbSemContratoError(OSError):
@@ -1432,8 +1363,6 @@ class PadUsbOps:
             lambda: socket.socketpair(socket.AF_UNIX, socket.SOCK_STREAM)
         )
 
-    # -- leitura -----------------------------------------------------------
-
     def gadgets_nossos(self) -> list[str]:
         try:
             nomes = os.listdir(self.raizes.configfs)
@@ -1482,8 +1411,6 @@ class PadUsbOps:
         if not livres:
             raise OSError(errno.EBUSY, "nenhuma porta livre no vhci_hcd.0")
         return preferida if preferida in livres else livres[0]
-
-    # -- montar, ligar, desmontar -----------------------------------------
 
     def montar(
         self, nome: str, serial: str, descritor: bytes, udc: str, par: tuple[int, int]
@@ -1551,8 +1478,6 @@ class PadUsbOps:
         servidor, cliente = self._par()
         try:
             _escrever_attr(vudc, str(servidor.fileno()))
-            # devid 0: o `usbip` lê busnum/devnum zerados do vudc, e nem o
-            # vudc nem o vhci validam o campo (a bancada confirma no fecho).
             _escrever_attr(attach, f"{porta} {cliente.fileno()} 0 {velocidade}")
         finally:
             servidor.close()
@@ -1648,26 +1573,10 @@ class _ExpostoNode:
     pai: str | None = None
 
 
-#: DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01 (08/10/2026). Quanto o
-#: broker espera, sem NENHUM cliente, antes de entregar o físico ao sistema.
-#: Um reinício do daemon leva até 15 s entre o último EOF e o primeiro pedido
-#: (medido no diário de 05 a 08/10: 1, 2, 6, 9 e 15 s; os outros intervalos
-#: foram 124 s ou mais, que são parada de verdade), e entregar nesse vão
-#: reabriria a janela que a regra 73 fecha. O dobro do pior reinício medido.
 GRACA_DA_ENTREGA_S = 30.0
-#: ``0`` desliga a entrega (o comportamento de antes: sem daemon, o físico fica
-#: fechado até alguém pedir ao broker).
 GRACA_DA_ENTREGA_ENV = "HEFESTO_BROKER_GRACA_DA_ENTREGA_S"
-#: Os pedidos que dizem «o Hefesto voltou»: esconder ou expor um físico, ou
-#: montar o pad dele. ``open`` NÃO entra: o exame da aba Conexões (outro
-#: processo, sem daemon) o usa só para ler, e fechar o físico por causa dele
-#: desfaria a entrega que o usuário pediu ao parar o serviço.
 PEDIDOS_QUE_RETOMAM = frozenset({"hide", "expose", "pad_usb_montar"})
 
-#: A marca de que o físico está ENTREGUE ao sistema (:meth:`BrokerState.entregar_ao_linux`),
-#: gravada pelo próprio broker e apagada quando o Hefesto o retoma. O broker que
-#: reinicia com ela (o ``Restart=``, a reinstalação) herda a entrega em vez de
-#: fechar tudo. ``/run`` é tmpfs: o boot volta ao fechado.
 MARCA_DA_ENTREGA_PATH = "/run/hefesto-hidraw-broker/entregue"
 
 
@@ -1695,8 +1604,6 @@ def _pergunta_ao_logind(loginctl: str, *args: str) -> str | None:
             env={"LC_ALL": "C", "PATH": "/usr/bin:/bin"},
         )
     except (OSError, subprocess.SubprocessError) as exc:
-        # Diz POR QUE ninguém foi atendido: sandbox da unit que barra o
-        # loginctl, binário que sumiu ou logind parado leem-se igual de fora.
         _log("loginctl_falhou", erro=type(exc).__name__)
         return None
     if r.returncode != 0:
@@ -1761,8 +1668,6 @@ class BrokerState:
         dev_input_root = _raiz(dev_input_root, "DEV_INPUT_ROOT")
         sys_class_input = _raiz(sys_class_input, "SYS_CLASS_INPUT")
         sys_bus_hid_drivers = _raiz(sys_bus_hid_drivers, "SYS_BUS_HID_DRIVERS")
-        #: O uid FIXO (a env ou o argumento do belt); ``None`` = quem está na
-        #: frente do seat, perguntado a ``quem_esta_na_frente`` (o logind).
         self.allowed_uid = allowed_uid
         if allowed_uid is None and quem_esta_na_frente is None:
             raise ValueError("sem uid fixo, o broker precisa de quem diga quem está na frente")
@@ -1770,11 +1675,7 @@ class BrokerState:
         self._relogio_da_sessao = relogio
         self._sessao_lida_em: float | None = None
         self._sessao_lida: int | None = None
-        #: O último uid que a sessão ativa deu: serve às varreduras que correm
-        #: sem cliente (entrega, retomada) quando o seat ficou sem ninguém.
         self._ultimo_uid: int | None = None
-        #: Onde gravar a marca da entrega; ``None`` = não grava (o ``main`` passa
-        #: :data:`MARCA_DA_ENTREGA_PATH`).
         self._marca_da_entrega = marca_da_entrega
         self.no_nasce_fechado = bool(no_nasce_fechado)
         self._ops = (
@@ -1790,7 +1691,6 @@ class BrokerState:
         )
         self._validator = validator
         self._validator_entrada = validator_entrada
-        #: O motivo de recusar o acionador (``None`` = serve); o teste troca o ``stat``.
         self._validator_acionador = validator_acionador
         self._dev_root = dev_root
         self._dev_input_root = dev_input_root
@@ -1807,11 +1707,8 @@ class BrokerState:
         self.entradas_by_conn: dict[int, set[str]] = {}
         self.podados_by_conn: dict[int, set[str]] = {}
         self._pad_ops = pad_ops if pad_ops is not None else PadUsbOps()
-        #: {conexão: {gadget: porta do vhci}} — a lease do pad em USB.
         self.pads_by_conn: dict[int, dict[str, int]] = {}
         self._serial_do_gadget: dict[str, str] = {}
-        #: O físico foi ENTREGUE ao sistema (ver :meth:`entregar_ao_linux`) e
-        #: nenhum pedido do Hefesto o recolheu ainda.
         self.entregue = False
         self._servidos_path = servidos_path
         self._pid_da_conn: dict[int, int] = {}
@@ -2275,7 +2172,6 @@ class BrokerState:
             if self._lease_holders(canon) > 0:
                 entry.refcount += 1
             else:
-                # `hidden`, mas nenhuma conexão viva o referencia). Adotar  # (noqa-acento)
                 entry.refcount = 1
                 entry.uid = peer_uid
                 self._log("orphan_adopted", node=canon, conn=conn_id, uid=peer_uid)
@@ -2409,9 +2305,6 @@ class BrokerState:
         nome = livres[0]
         udcs = self._pad_ops.udcs_livres()
         if not udcs:
-            # Sem vudc nenhum, falta o contrato; com todos presos (o módulo
-            # carregou antes com menos de `num=8`), falta só a vaga, e o pad
-            # deste controle fica no uhid sem condenar os outros ao uhid.
             if self._pad_ops.vudcs():
                 self._log("pad_usb_sem_udc_livre", gadget=nome)
                 return ({"ok": False, "cmd": cmd, "error": "pad_usb_sem_udc_livre"}, None)
@@ -2675,15 +2568,10 @@ class BrokerState:
         """
         if not self.no_nasce_fechado or self._alguem_segura_um_no():
             return []
-        # Sem cliente, o que ainda consta é lease órfã de restore que falhou:
-        # entregar é o restore que faltou. Já entregue, esta é a varredura que
-        # repete a cada segundo: a pergunta ao logind vale o prazo longo.
         uid = self.uid_autorizado(
             validade=VALIDADE_NA_VARREDURA_S if self.entregue else VALIDADE_DA_SESSAO_S
         )
         if uid is None:
-            # Ninguém na frente do seat: não há a quem entregar (o nó segue
-            # fechado, e a varredura repete quando alguém entrar).
             return []
         antes = set(self.hidden) | set(self.expostos)
         entregues = restore_all_physical(
@@ -3036,11 +2924,8 @@ class Broker:
         self._state = state
         self._peercred_fn = peercred_fn
         self._log = log
-        #: Segundos sem cliente até entregar o físico ao sistema; ``<= 0`` desliga.
         self._graca_da_entrega_s = graca_da_entrega_s
         self._relogio = relogio
-        #: Desde quando NÃO há conexão nenhuma (``None`` = há, ou nunca houve; a
-        #: conexão nova o zera e o fechamento da última o marca).
         self._sem_cliente_desde: float | None = None
         self._ultima_entrega: float = 0.0
         self._sel = selectors.DefaultSelector()
@@ -3380,7 +3265,6 @@ def main(argv: list[str] | None = None) -> int:
         if allowed_uid == 0:
             _log("allowed_uid_root_recusado", env=ALLOWED_UID_ENV)
             return 1
-        # O pad em USB não sobrevive ao broker que o montou (a lease morreu).
         with contextlib.suppress(OSError):
             desmontados = PadUsbOps().desmontar_todos()
             if desmontados:
@@ -3389,8 +3273,6 @@ def main(argv: list[str] | None = None) -> int:
             if entrega_herdada():
                 _log("entrega_herdada", belt="fechar-tudo-e-sair")
                 return 0
-            # Sem ninguém na frente (o boot), `uid=None` fecha o que estiver
-            # aberto a qualquer usuário.
             fechados = fechar_todo_fisico(uid=allowed_uid)
             _log("fechar_tudo_done", count=len(fechados))
             return 0
@@ -3398,9 +3280,6 @@ def main(argv: list[str] | None = None) -> int:
             _log("reinicio_sem_abrir", belt="restore-all-and-exit")
             return 0
         if allowed_uid is None:
-            # Ninguém na frente do seat: não há a quem devolver o nó. Ele
-            # segue fechado (root) — o fail-safe —, e a entrega do broker que
-            # sobe volta a varrer quando alguém entrar.
             _log("restore_sem_sessao_ativa")
             return 0
         restored = restore_all_physical(uid=allowed_uid)
@@ -3418,7 +3297,6 @@ def main(argv: list[str] | None = None) -> int:
         listen = _manual_listen_socket(args.socket_path)
         _log("listening_manual", path=args.socket_path)
 
-    # Sem uid fixo, o broker atende quem está na frente do seat, a cada pedido.
     state = BrokerState(
         allowed_uid=allowed_uid,
         quem_esta_na_frente=uid_da_sessao_ativa if allowed_uid is None else None,
@@ -3446,5 +3324,5 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-if __name__ == "__main__":  # pragma: no cover - entrypoint real (root)
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(main())

@@ -86,7 +86,7 @@ ESCREVEM = {
     "gravar_pelo_gesto",
     "voltar_ao_do_computador",
     "voltar_o_computador_ao_de_fabrica",
-    "guardar_meus_efeitos",         # a biblioteca de efeitos dela, no `gui_preferences.json`
+    "guardar_meus_efeitos",
     "machine_declare",
     "set_mask",
     "clear_mask",
@@ -112,12 +112,12 @@ ESCREVEM = {
     "rumble_motores_set",
     "rumble_policy_set_checked",
     "set_text",
-    "marcar_jogo_sem_wrapper",     # escreve o `jogos_sem_wrapper.txt` dela
+    "marcar_jogo_sem_wrapper",
     "desmarcar_jogo_sem_wrapper",
     "reparar_ou_adiar",
     "add_appid_to_steam_input_allowlist",
     "remove_appid_from_steam_input_allowlist",
-    "garantir_ponte",                    # escreve `UseSteamControllerConfig=2`
+    "garantir_ponte",
     "garantir_fora_da_lista_desligado",
     "apply_wrapper_to_all_games",
     "with_steam_closed",
@@ -126,19 +126,16 @@ ESCREVEM = {
     "_systemctl",
     "curar_todos",
     "gravar_camadas_da_steam_fora",
-    "escolher_a_bandeja",          # o autostart da bandeja e a bandeja viva (16/10/2026)
-    # por feature (`jogos_sem_wrapper.txt` e a de fora do pino). O
-    # já declara `machine_declare` e continua protegido do mesmo jeito.
+    "escolher_a_bandeja",
     "tirar",
     "criar_para_o_jogo",
-    "_ligar_ou_desligar_a_modificacao",   # liga e desliga uma extensão no registro dela
-    "_instalar_a_modificacao",            # instala (git ou pasta) no código e no registro
-    "_mexer_na_modificacao",              # atualiza ou remove, apagando o código e os dados
-    "_criar_o_css_da_modificacao",        # cria o `meu.css` (com o exemplo) na pasta de dados dela
-    "_guardar_a_opcao_da_modificacao",    # `opcoes.json` na pasta de dados da extensão
-    "_curar_o_impedimento",               # desliga o Steam Input ou fixa o Proton
+    "_ligar_ou_desligar_a_modificacao",
+    "_instalar_a_modificacao",
+    "_mexer_na_modificacao",
+    "_criar_o_css_da_modificacao",
+    "_guardar_a_opcao_da_modificacao",
+    "_curar_o_impedimento",
 
-    # `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`). No dia em que a
 }
 
 METODOS_QUE_ESCREVEM = {
@@ -151,21 +148,14 @@ METODOS_QUE_ESCREVEM = {
     "radio.busca.set",
     "radio.dispensar",
     "desktop.status.set",
-    # A-NAVEGACAO-INTERNA-…-01 (08/10/2026): o ligar e o tipo da Navegação Interna
-    # gravam na configuração da máquina.
     "navegacao.interna.set",
-    # A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-STEAM-NAVEGA-O-BIG-PICTURE-01 (08/10/2026): a
-    # lista «Modo Big Picture na Steam» grava a escolha na configuração da máquina.
     "navegacao.big_picture.set",
-    # O-COMECAR-DA-CALIBRAR-…-01 (08/10/2026): o «Começar» grava o zero de cada controle.
     "motion.calibrate",
 }
 
 _CHAMAM_O_METODO = ("chamar", "chamar_detalhado", "resultado")
 
 
-#: que é o ⊘, e ele ESTÁ protegido.
-#: **A ISENÇÃO É DO PAR, NUNCA DA PORTA.** Isentar `machine_declare` inteiro
 ISENTOS: dict[tuple[str, str], str] = {
     ("08-conexoes.html", "sala-altura"):
         "`machine.declare` idempotente: um dos TRÊS medidos por nome em "
@@ -200,7 +190,6 @@ FORA_DA_ARVORE: dict[tuple[str, str], str] = {
         "(`gravar_pelo_gesto`, A-ABA-CONTROLES-DO-TODO-01, 15/10/2026); a porta da "
         "interface, `sensor_set_detalhado`, é a mesma do giro, que mora em "
         "`GRAVAM_SEM_DECLARAR` e por isso não entra em `ESCREVEM`",
-    # 29/09/2026. Até ali o interruptor e os chips «Sony DualSense» e «Xbox»
     ("01-jogar.html", "hefesto"):
         "grava a seção `mode` do perfil ativo pelo daemon: o `native.mode.set` "
         "e o `gamepad.emulation.set` à mão saem da tabela do plano "
@@ -212,7 +201,6 @@ FORA_DA_ARVORE: dict[tuple[str, str], str] = {
     ("01-jogar.html", "modo-xbox"):
         "grava o caminho `xbox` na seção `mode` do perfil ativo pelo daemon, "
         "pela mesma porta do «Sony DualSense», fora da vista da árvore",
-    # 15/10/2026, A-ABA-SISTEMA-DO-TODO-01.
     ("09-sistema.html", "correcoes-automaticas"):
         "escreve o arquivo do interruptor do guarda do jogo novo (`_guardar_o_interruptor`, "
         "`Path.write_text` sobre o caminho de `vigia_do_jogo_novo`) e, no duplo clique, "
@@ -229,7 +217,6 @@ FORA_DA_ARVORE: dict[tuple[str, str], str] = {
         "põe o texto na área de transferência DELA pelo `Gtk.Clipboard`, dentro "
         "de um `GLib.idle_add` — a chamada mora numa função aninhada, e o perigo "
         "é apagar o que ela tinha copiado, que nenhuma porta de disco nomeia",
-    # 13/10/2026, A-BASE-COMUM-DAS-ABAS-01: o menu do botão direito, em toda página.
     ("*", "menu-desligar"):
         "chama o `parar-ou-retomar` da aba Sistema procurado na hora em "
         "`pacotes.GESTOS` (`hefesto_vivo._gesto_do_menu`); o `_systemctl` dele "
@@ -271,7 +258,7 @@ def _portas(fn, _visto: frozenset[str] = frozenset(),
     try:
         fonte = inspect.getsource(fn)
         arvore = ast.parse(textwrap.dedent(fonte))
-    except (OSError, SyntaxError, TypeError):  # pragma: no cover - defesa
+    except (OSError, SyntaxError, TypeError):  # pragma: no cover
         return set()
 
     modulo = inspect.getmodule(fn)
@@ -372,7 +359,6 @@ def test_a_regua_acha_alguma_escrita() -> None:
         f"`ESCREVEM` provavelmente mudaram no produto: {achados}")
 
 
-#: Os nomes de `ESCREVEM` que não são função do produto: a chamada é de biblioteca.
 DE_FORA_DO_PRODUTO = {"set_text": "`Gtk.TextBuffer.set_text`/`Gtk.Label.set_text`, da GTK"}
 
 

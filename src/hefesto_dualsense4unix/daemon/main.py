@@ -56,7 +56,6 @@ def single_instance_name() -> str:
 def run_daemon(poll_hz: int | None = None) -> int:
     from hefesto_dualsense4unix.utils import sd_notify
 
-    # Antes de qualquer filho: o soquete do systemd é só deste processo (`NotifyAccess=main`).
     sd_notify.guardar_o_soquete()
     configure_logging()
     logger = get_logger(__name__)
@@ -68,27 +67,20 @@ def run_daemon(poll_hz: int | None = None) -> int:
     except chave.PastaIlegivel as exc:
         logger.error("daemon_pasta_ilegivel", pasta=str(exc.pasta), err=str(exc.erro))
         print(exc.recado(), file=sys.stderr)
-        # 1: é falha de permissão, e só a saída diferente de zero aciona o
-        # `Restart=on-failure` e o `OnFailure=` da unit.
         return 1
     if motivo is not None:
         logger.warning("daemon_recusado_pela_chave", motivo=motivo)
         print(chave.recado_da_recusa(motivo), file=sys.stderr)
-        # 0, e não 1: a chave é decisão gravada; saída zero não aciona o
-        # `Restart=on-failure` nem o `OnFailure=` da unit.
         return 0
 
     from hefesto_dualsense4unix.utils.migrate_legacy_paths import migrate_legacy_paths
 
     migrate_legacy_paths()
 
-    # disputando /dev/hidraw* e criando uinput duplicado. Ver armadilha A-10.
     from hefesto_dualsense4unix.utils.single_instance import acquire_or_takeover
 
     acquire_or_takeover(single_instance_name())
 
-    # nice 5 para não disputar CPU de igual com o jogo. Opt-out / ajuste:
-    # «elimina o stutter por starvation». Nunca foi medido — o commit que o
     try:
         nice_level = int(os.getenv("HEFESTO_DUALSENSE4UNIX_NICE", "5"))
         if nice_level > 0:
@@ -106,15 +98,12 @@ def run_daemon(poll_hz: int | None = None) -> int:
         ps_long_press_ms=int(
             os.getenv("HEFESTO_DUALSENSE4UNIX_PS_LONG_PRESS_MS", "0")
         ),
-        # este env < `keyboard_emulation.flag` (a decisão de produto, lida no boot em
         keyboard_emulation_enabled=(
             os.getenv("HEFESTO_DUALSENSE4UNIX_KEYBOARD_EMULATION", "1") != "0"
         ),
         plugins_enabled=session.load_plugins_enabled(),
         metrics_enabled=session.load_metrics_enabled(),
     )
-    # Fora do construtor de propósito: as páginas contam os parâmetros dele
-    # (test_doc_verdade_02), e o servidor DSU vem do maquina.json, não da subida.
     config.dsu_enabled = servidor_dsu.ligado
     config.dsu_port = servidor_dsu.porta
     daemon = Daemon(controller=controller, config=config)

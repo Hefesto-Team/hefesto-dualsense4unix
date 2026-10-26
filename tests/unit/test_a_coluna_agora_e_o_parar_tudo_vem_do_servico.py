@@ -119,9 +119,6 @@ async def _entrar(curto: pathlib.Path, ficha: str, estado: dict[str, Any]) -> _E
     return ext
 
 
-# -- a porta guarda o estado de CADA extensão e manda o «para» só a uma ------------------
-
-
 def test_o_agora_e_de_cada_extensao_e_volta_vazio_quando_a_conexao_cai(curto) -> None:
     async def corrida() -> None:
         porta = await _porta(curto, EventBus())
@@ -212,9 +209,6 @@ def test_o_parar_curto_da_janela_confere_o_estado_da_propria_extensao(curto) -> 
     assert encerrou and sinal, "o «Parar tudo» olhou o estado da outra extensão"
 
 
-# -- o IPC da interface --------------------------------------------------------------------
-
-
 def _servico(supervisor: Any) -> Any:
     return SimpleNamespace(daemon=SimpleNamespace(_mods_supervisor=supervisor),
                            _mod_do_pedido=IpcHandlersMixin._mod_do_pedido)
@@ -223,10 +217,10 @@ def _servico(supervisor: Any) -> Any:
 def _instalada(lugares: Any, **extra: Any) -> None:
     pasta = lugares.codigo / "acessorios"
     pasta.mkdir(parents=True)
-    manifesto = {"id": "acessorios", "nome": "Acessórios", "versao": "0.1",  # (noqa-acento) chave
+    manifesto = {"id": "acessorios", "nome": "Acessórios", "versao": "0.1",  # (noqa-acento)
                  "api": ">=1,<3",
-                 "licenca": "MIT", "tipos": ["tema"], "tema": {},  # (noqa-acento) chave
-                 "permissoes": [GESTO], **extra}  # (noqa-acento) chave do manifesto
+                 "licenca": "MIT", "tipos": ["tema"], "tema": {},
+                 "permissoes": [GESTO], **extra}  # (noqa-acento)
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
 
 
@@ -246,9 +240,6 @@ def test_o_ipc_do_parar_recusa_quem_nao_declara_parar_tudo(lar) -> None:  # noqa
     assert publicados == []
     with pytest.raises(ValueError, match=r"não está instalada|não"):
         asyncio.run(IpcHandlersMixin._handle_mods_parar_tudo(_servico(sup), {"mod": "nenhuma"}))
-
-
-# -- a janela -----------------------------------------------------------------------------
 
 
 class _Ponte:
@@ -386,7 +377,6 @@ def _o_nivel_depois_dos_cliques(miolo: str, script: str) -> tuple[str, int]:
             pg = nav.new_page()
             pg.set_content(f'<div class="tn-cx" id="mod-janela">{miolo}</div>'
                            f'<script>{script}</script>')
-            # Sem a folha da página o degrau não tem tamanho: o clique vai pelo evento do DOM.
             pg.dispatch_event("#mod-janela .ja-degraus i:nth-child(3)", "click")
             pg.dispatch_event("#mod-janela .ja-parar", "click")
             return (pg.inner_text("#mod-janela .ja-nivel b"),

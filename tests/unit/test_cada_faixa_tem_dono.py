@@ -114,7 +114,6 @@ def _cena(n_adaptadores: int = 3, *, ordem: tuple[str, ...] | None = None,
     lugares = [{"id": i, "lugar": i, "nome": nomes[i], "entrada": f"Entrada {i}", "sabido": True,
                 "face": "", "hub": False, "varrendo": False, "junto": "", "usb3": False,
                 "conectando": False, "chegou": [], "quedas": []} for i in ids]
-    # 2, 1 e 1 controles nos três primeiros adaptadores
     aparelhos = [_controle("c1", "L1", CORES_DOS_PLASTICOS[0]),
                  _controle("c2", "L1", CORES_DOS_PLASTICOS[1]),
                  _controle("c3", "L2", CORES_DOS_PLASTICOS[2]),
@@ -170,7 +169,6 @@ def test_uma_linha_por_aparelho_com_os_canais_dele() -> None:
         assert len(_celulas(linhas[ident])) == a08.CANAIS_DO_BT == 79
     grupos = {g.attrs["data-grupo"]: g.dito() for g in _ler(a08.html_dos_canais(_cena())).achar(
         "div", "ar-grupo") if "data-grupo" in g.attrs}
-    # sem a frase «N aparelhos dividem o tempo deste rádio» (desenho aprovado de 05/10/2026)
     assert grupos["L1"].strip() and "dividem o tempo" not in grupos["L1"]
     assert "aparelho neste rádio" not in grupos["L2"]
 
@@ -268,7 +266,6 @@ def test_a_cor_nao_e_o_unico_sinal_toda_linha_tem_glifo_e_palavra() -> None:
     for ident, linha in linhas.items():
         rotulo = linha.achar(None, "ar-rot")[0]
         assert rotulo.achar("use"), ident
-        # a palavra mora no tooltip e no `aria-label` do ícone (desenho aprovado de 05/10/2026)
         assert _fala(rotulo).strip(), ident
         assert linha.achar(None, "ar-faixa")[0].attrs.get("aria-label"), ident
 
@@ -291,8 +288,6 @@ def test_a_antena_e_so_do_adaptador_em_todo_campo_que_a_secao_emite() -> None:
             assert na_cabeca or na_conta, (chave, [q.attrs for q in quem[:3]])
             permitidos += 1
     assert permitidos >= 3 + 3, "a régua ficou cega: faltam as antenas dos adaptadores"
-    # o rádio sem tipo leva o «?» da ajuda; o aparelho `outro` (no ar e desligado), o «?» que abre
-    # a grade «O que é este aparelho?» (O-APARELHO-DO-BLUETOOTH-SEM-TIPO-SE-NOMEIA-PELA-PESSOA-01)
     assert campos["radio-sala"].count("#rd-ajuda") >= 1
     assert campos["radio-sala"].count('class="tipo-qual"') >= 1
 
@@ -332,7 +327,6 @@ def _lab(rgb: tuple[float, float, float]) -> tuple[float, float, float]:
     return 116 * fy - 16, 500 * (fx - fy), 200 * (fy - fz)
 
 
-#: Machado, Oliveira e Fernandes (2009), severidade 1, em RGB linear
 MACHADO = {
     "protanopia": ((0.152286, 1.052583, -0.204868), (0.114503, 0.786281, 0.099216),
                    (-0.003882, -0.048116, 1.051998)),
@@ -347,7 +341,6 @@ def _simulada(hexa: str, modo: str) -> tuple[float, float, float]:
     lin = [_linear(int(hexa[i:i + 2], 16) / 255) for i in (1, 3, 5)]
     mat = MACHADO[modo]
     sim = [min(1.0, max(0.0, sum(m * c for m, c in zip(linha, lin, strict=True)))) for linha in mat]
-    # volta a sRGB para entrar em `_lab`, que lineariza
     return tuple(  # type: ignore[return-value]
         12.92 * c if c <= 0.0031308 else 1.055 * c ** (1 / 2.4) - 0.055 for c in sim)
 
@@ -380,7 +373,6 @@ def test_o_lido_sai_com_o_selo_e_sem_interrogacao_e_o_dela_sem_selo() -> None:
     r_dela = linhas["25a7:fa07"].achar(None, "rotulo")[0]
     assert r_dela.attrs["aria-label"] == "Teclado"
     assert "lido pelo computador" not in r_dela.attrs["title"]
-    # a webcam não é rádio (desenho aprovado de 05/10/2026): não ganha linha entre os sem fio
     assert "0c45:6366" not in linhas
 
 
@@ -403,7 +395,6 @@ def test_o_wifi_do_nm_e_o_vizinho_do_mesmo_no_sao_uma_linha_so() -> None:
                        {"no": "", "mhz": 2437, "largura": 20}])
     linhas = _linhas(cena)
     outros = [i for i in linhas if i not in ("c1", "c2", "c3", "c4")]
-    # o Wi-Fi de 5 GHz fica fora da faixa e tem linha, com o trilho que diz a banda (06/10/2026)
     assert outros == ["2357:012d", "wifi-1"]
     assert _fala(linhas["wifi-1"]).count(a08.NOME_DO_WIFI) >= 1
     banda = {int(m.group(1)) for c in _celulas(linhas["wifi-1"])

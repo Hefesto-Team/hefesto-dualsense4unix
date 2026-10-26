@@ -101,7 +101,7 @@ def _mascaras_por_aparelho(handlers: object) -> dict[str, str]:
             if not uniq:
                 continue
             fora[uniq] = str(mascara_efetiva(uniq, da_sessao))
-    except Exception:  # pragma: no cover - defesa; ver a docstring
+    except Exception:  # pragma: no cover
         return fora
     return fora
 
@@ -136,8 +136,6 @@ def _as_str_or_none(value: Any) -> str | None:
     return value if isinstance(value, str) else None
 
 
-#: TTL (s) das leituras de lightbar no `state_full`; o tique da GUI é 10 Hz
-#: (`LIVE_POLL_INTERVAL_MS=100`).
 _LIGHTBAR_READ_TTL_SEC = 1.0
 
 _IDENTITY_RENUMBER_LOCK_TIMEOUT_SEC = 5.0
@@ -181,16 +179,10 @@ class _NumeroForaDaMesaError(Exception):
         self.maximo = maximo
 
 
-#: `state_full` — leitura de arquivo, mesma justificativa do cache acima.
 _WRAPPER_MARKER_TTL_SEC = 2.0
 
-#: BG-02: TTL (s) das pontes confirmadas no tique do `state_full`; sem teto, cada tique varreria
-#: `profiles_dir()` (`load_all_profiles()` abre cada `.json` sob `FileLock`).
 _PONTES_CONFIRMADAS_TTL_SEC = 5.0
 
-
-# Medido na bancada em 09/08: dois DualSense ligados e pareados ficavam sem driver (órfãos no
-# sysfs).
 
 _HID_DEVICES_DIR = "/sys/bus/hid/devices"
 
@@ -198,7 +190,6 @@ _HID_ORFAO_BUS = "0005"
 
 _HID_ORFAO_VID = "054C"
 
-#: TTL (s) da varredura do sysfs no `state_full` (tique da GUI a 10 Hz).
 _HID_ORFAOS_TTL_SEC = 2.0
 
 _NO_DO_VPAD_TTL_SEC = 2.0
@@ -481,7 +472,6 @@ def _external_inventory(
         hidraw = entry.get("hidraw")
         if holders and isinstance(hidraw, str) and hidraw in holders:
             entry["holders"] = {"steam_pids": holders[hidraw]}
-        # `identity_for_entry` com slot de DualSense reservado.
         identity = identity_for_entry(entry)
         entry[EXTERNAL_IDENTITY_FIELD] = identity
         slot: int | None = None
@@ -509,21 +499,15 @@ class IpcHandlersMixin:
     """Mixin com os 19 métodos `_handle_*` do IpcServer; não instanciável isolado (espera
     `controller`, `store`, `profile_manager`, `daemon`)."""
 
-    # Atributos fornecidos pela classe concreta. Declarados para o mypy.
     controller: IController
     store: StateStore
     profile_manager: Any
     daemon: DaemonProtocol
 
-    #: STATUS-01: cache TTL das leituras sysfs de lightbar (lazy, por instância; ver
-    #: `_lightbar_read_cached`). Default None de propósito: o mixin não é dataclass, então isto
-    #: não vira field do `IpcServer`.
     _lightbar_read_cache: (
         dict[str, tuple[float, tuple[int, int, int] | None, bool]] | None
     ) = None
 
-    #: Cache do marcador do wrapper (leitura de arquivo; o state_full roda a 10-20 Hz) e a
-    #: PRIMEIRA detecção do appid.
     _wrapper_marker_cache: tuple[float, tuple[int, int] | None] | None = None
     _wrapper_first_seen: tuple[int, float] | None = None
 
@@ -531,20 +515,15 @@ class IpcHandlersMixin:
 
     _hid_orfaos_cache: tuple[float, list[str]] | None = None
 
-    #: QUEM-SEGURA-O-NOSSO-NO-01: o nó de cada vpad (`_no_do_vpad_cached`) por `(uniq, nome)`:
-    #: `(quando, ficha do dono, bloco)`.
     _no_do_vpad_cache: (
         dict[tuple[str, str], tuple[float, tuple[int, ...] | None, dict[str, Any]]] | None
     ) = None
 
-    #: MASCARA-01: a task do arming de launch em voo.
     _launch_arm_task: Any = None
 
-    #: Trava de uma pergunta em voo por controle, para o `state_full` não empilhar perguntas.
     _identidade_de_fabrica_cache: dict[str, dict[str, str | None]] | None = None
     _agenda_da_identidade: Any = None
 
-    #: Giroscópio/touchpad só nascem quando alguém pede o `state_full`.
     _sensor_hub: Any = None
 
 
@@ -568,8 +547,6 @@ class IpcHandlersMixin:
                 name, origin="manual", relatorio=relatorio
             )
         except Exception:
-            # Atomicidade: uma ativação que FALHOU não custa ao usuário a trava que ele tinha
-            # armado, nem congela a troca.
             self.store.mark_manual_profile_lock(lock_antes)
             raise
         if self.daemon is not None:
@@ -757,7 +734,6 @@ class IpcHandlersMixin:
                 if brilho_da_cor is None:
                     apply_for(alvo, spec, procedencia_da_cor=DO_BROADCAST)
                 else:
-                    # É o que o `state_full` publica como `brilho_da_barra`.
                     apply_for(
                         alvo, spec, procedencia_da_cor=DO_BROADCAST,
                         brilho_da_cor=brilho_da_cor,
@@ -806,13 +782,11 @@ class IpcHandlersMixin:
             return [], []
         try:
             indice = onde_mira()
-        except Exception as exc:  # observabilidade > silêncio
+        except Exception as exc:
             logger.debug("destinos_do_broadcast_falhou", err=str(exc))
             return [], []
         if indice is None:
             return alvos, []
-        # Seletor mirando UM controle: o `_for_each` do backend escreve só nele; afirmar a mesa
-        # inteira seria a mentira antiga.
         nomear = getattr(self.controller, "get_output_target_uniq", None)
         alvo = nomear() if callable(nomear) else None
         if not isinstance(alvo, str) or not alvo:
@@ -970,7 +944,6 @@ class IpcHandlersMixin:
         bits: tuple[bool, bool, bool, bool, bool] = (
             bits_raw[0], bits_raw[1], bits_raw[2], bits_raw[3], bits_raw[4]
         )
-        # Por-MAC via apply_output_for (só naquele controle).
         resultado = self._apply_por_uniq(params, player_leds=bits)
         guardado_em: list[str] = []
         if resultado is not None:
@@ -979,13 +952,7 @@ class IpcHandlersMixin:
             )
         else:
             self.controller.set_player_leds(bits)
-            # BROADCAST-QUE-NAO-MENTE-01: o mesmo defeito do `led.set`. A numeração automática
-            # (COR-03/D7) entra no merge acima do default, então o broadcast cru era desfeito pelo
-            # reassert; o daemon, que SABE quem está conectado, registra por MAC. A camada do
-            # co-op continua acima (R-13).
             aplicado_em = self._registrar_em_todos(player_leds=bits)
-        # Reassert imediato para o merge de N (jogo vence), como no `_handle_led_set` (fix U x N,
-        # 2026-07-20).
         reassert = getattr(self.controller, "reassert_resolved_outputs", None)
         if callable(reassert):
             reassert()
@@ -1026,9 +993,6 @@ class IpcHandlersMixin:
                 f"led.player_brightness_set: 'brilho' precisa ser um de: {palavras}"
             )
         degrau = degrau_do_brilho_das_luzes(brilho)
-        # BROADCAST-PROIBIDO-01: o «Todos» sem `uniq` pergunta o seletor antes de escrever.
-        # Seletor num controle: vai só nele; alvo fora da mesa: nada vai aos presentes e o valor
-        # fica no override do ausente.
         pedido = params
         if not params.get("uniq"):
             alvo_fn = getattr(self.controller, "get_output_target_uniq", None)
@@ -1234,11 +1198,9 @@ class IpcHandlersMixin:
         if laco_do_daemon is None:
             schedule_external_tick()
             return
-        # dos DualSense acertavam e o defeito passou despercebido.
         try:
             laco_do_daemon.call_soon_threadsafe(schedule_external_tick)
         except RuntimeError as exc:
-            # Laço já fechado (desligamento). Não pode derrubar a repintura:
             logger.warning("tique_externo_nao_agendado", err=str(exc))
 
     async def _handle_identity_number_set(
@@ -1397,7 +1359,6 @@ class IpcHandlersMixin:
 
             presentes = _mesa_presente()
 
-            # pertinência e "o número cabe?" é contagem — e o alinhamento
             if not any(e[2] == alvo and _ligado(e) for e in presentes):
                 raise _NumeroAlvoAusenteError()
             if _fora_da_mesa(presentes, numero):
@@ -1506,14 +1467,11 @@ class IpcHandlersMixin:
     async def _handle_daemon_status(self, params: dict[str, Any]) -> dict[str, Any]:
         self._agendar_arming_do_launch()
         snap = self.store.snapshot()
-        # teste medindo essa divergência aqui (ao contrário do `state_full`,
-        # fonte (store) que `state_full` usa é o que evita as três rotas
         controller = snap.controller
         return {
             "connected": bool(controller and controller.connected),
             "transport": controller.transport if controller else None,
             "active_profile": snap.active_profile,
-            # BG-02 (25/08): a MESMA chave viaja no `state_full` desde hoje, e
             "pontes_confirmadas": _pontes_confirmadas_seguro(),
             "battery_pct": controller.battery_pct if controller else None,
             "paused": bool(self.daemon is not None and self.daemon.is_paused()),
@@ -1525,9 +1483,7 @@ class IpcHandlersMixin:
                 self.daemon is not None
                 and getattr(self.daemon, "_emulation_suppressed", False)
             ),
-            # `state_full` (mesma razão do `window_detect_*`: duas respostas que
             "keyboard_emulation": self._keyboard_emulation_payload(),
-            # `state_full`, para as duas respostas nunca divergirem.
             **self._window_detect_payload(),
         }
 
@@ -1809,7 +1765,6 @@ class IpcHandlersMixin:
                 )
 
         buttons: list[str] = sorted(state.buttons_pressed) if state else []
-        # `battery_pct` para ler `self.controller.describe_controllers()`
         result: dict[str, Any] = {
             "connected": bool(state and state.connected),
             "transport": state.transport if state else None,
@@ -1834,7 +1789,6 @@ class IpcHandlersMixin:
             "mode_from_profile": _as_str_or_none(
                 getattr(self.daemon, "_mode_from_profile", None)
             ),
-            # O-POINT-AND-CLICK-APLICA-O-PERFIL-QUE-A-NAVEGACAO-ESCOLHE-01: o lado do interruptor
             "desktop_arranjo": _as_str_or_none(getattr(self.daemon, "arranjo_do_desktop", None)),
             "primary_grab_state": _as_str_or_none(
                 getattr(
@@ -1845,7 +1799,6 @@ class IpcHandlersMixin:
                 self.daemon is not None
                 and getattr(self.daemon, "_emulation_suppressed", False)
             ),
-            # estar calado. Ver `_keyboard_emulation_payload` (mesmo bloco do
             "keyboard_emulation": self._keyboard_emulation_payload(),
             "steam_input": self._steam_input_payload(),
             **self._window_detect_payload(),
@@ -1879,8 +1832,6 @@ class IpcHandlersMixin:
                         result, [c for c in controllers if isinstance(c, dict)], state
                     )
 
-        # estruturalmente frágil — o SDL pode não enxergar o DualSense BT nem
-        # lista `controllers` já montada e já enriquecida com o `player_slot` —
         entradas_de_controle = result.get("controllers")
         frageis = controles_bt_frageis(
             entradas_de_controle, native_mode=result["native_mode"]
@@ -1895,9 +1846,6 @@ class IpcHandlersMixin:
             else (result["native_mode"] and result["transport"] == "bt")
         )
 
-        # CONTROLE-QUE-NAO-ENTROU-01: AO LADO de `controllers` de propósito. Controle cuja probe
-        # abortou no kernel não tem handle e some daquela lista sem rastro; esta chave responde o
-        # que ela não responde.
         result["controles_sem_driver"] = self._controles_sem_driver_payload()
 
         get_target = getattr(self.controller, "get_output_target_index", None)
@@ -1914,16 +1862,12 @@ class IpcHandlersMixin:
 
         result["som_do_sistema"] = som_do_sistema_payload(self.daemon)
 
-        # A-INTENSIDADE-DA-CENA-REGE-O-QUE-O-HEFESTO-SOMA-01: a bancada lê a cena ao vivo.
-        # O estado da cena só lê atributos e dá ``None`` sem o motor do tato: não levanta, e
-        # um erro nele se vê no IPC em vez de sumir calado.
         from hefesto_dualsense4unix.daemon.subsystems.intensidade_da_cena import (
             estado_do_daemon,
         )
 
         result["intensidade_da_cena"] = estado_do_daemon(self.daemon)
 
-        # `keyboard_emulation` acima, porque é o mesmo gate do poll loop.
         daemon_cfg = getattr(self.daemon, "config", None) if self.daemon else None
         if daemon_cfg is not None:
             result["mouse_emulation"] = self._mouse_emulation_payload()
@@ -1932,11 +1876,8 @@ class IpcHandlersMixin:
                 "enabled": bool(getattr(daemon_cfg, "gamepad_emulation_enabled", False)),
                 "flavor": _flavor_da_sessao,
                 "por_aparelho": _mascaras_por_aparelho(self),
-                # cartão do P1 em Xbox 360 o chip «Sony DualSense» ficava aceso
-                # `backend` abaixo não separa o Xbox escolhido do DualSense que
                 "caminho": _caminho_publicado(self.daemon),
             }
-            # UHID-04: backend do vpad primário VIVO ("uhid" = DualSense Edge real
             gp_dev = getattr(self.daemon, "_gamepad_device", None)
             if gp_dev is not None:
                 with contextlib.suppress(Exception):
@@ -1948,7 +1889,6 @@ class IpcHandlersMixin:
                         getattr(gp_dev, "ff_supported", False)
                     )
                 with contextlib.suppress(Exception):
-                    # MODO-DE-CONEXAO-01: e só quem PEDIU o canal do DualSense
                     from hefesto_dualsense4unix.integrations.virtual_pad import (
                         motivo_da_degradacao,
                     )
@@ -1957,8 +1897,6 @@ class IpcHandlersMixin:
                     result["gamepad_emulation"]["degraded"] = motivo is not None
                     if motivo is not None:
                         result["gamepad_emulation"]["degraded_motivo"] = motivo
-                # A tela diz o que o jogo vê: com o DualSense de pé e o caminho Xbox,
-                # ela diz «Sony DualSense»
                 with contextlib.suppress(Exception):
                     from hefesto_dualsense4unix.integrations import (
                         canal_sem_imu as _sem_imu,
@@ -1970,13 +1908,11 @@ class IpcHandlersMixin:
                         result["gamepad_emulation"]["canal_sem_imu_linhas"] = list(
                             _sem_imu.chaves_fora_do_ar()
                         )
-                # A forma, o canal e as funções que chegam ao jogo (O-ESTADO-DIZ-O-QUE-O-JOGO-VE…)
                 result["gamepad_emulation"]["o_que_o_jogo_ve"] = self._o_que_o_jogo_ve_de(
                     gp_dev,
                     _as_str_or_none(getattr(self.controller, "primary_uniq", None)),
                     result.get("transport"),
                 )
-            # nunca aqui (o state_full roda a 20 Hz — seria flood).
             with contextlib.suppress(Exception):
                 from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
                     dedup_status,
@@ -2003,7 +1939,6 @@ class IpcHandlersMixin:
                         if motivo_atual
                         else "jogo_sem_wrapper"
                     )
-            # handler — o `state_full` roda a 10-20 Hz e ler perfis do disco
             result["gamepad_emulation"]["mascara_divergente"] = None
             result["gamepad_emulation"]["mascara_divergencias"] = []
             with contextlib.suppress(Exception):
@@ -2031,8 +1966,6 @@ class IpcHandlersMixin:
                         result["coop"]["mesa"] = [
                             item for item in mesa if isinstance(item, dict)
                         ]
-            # quem tem vpad do hefesto — com 2 DualSense e 2 Pro vivos ele diz
-            # neste caminho (o state_full roda a 10 Hz).
             registro_ext = getattr(self.daemon, "external_registry", None)
             conectados = getattr(registro_ext, "snapshot_connected", None)
             if callable(conectados):
@@ -2058,11 +1991,8 @@ class IpcHandlersMixin:
                     for uniq, par in _motores_do_perfil_ativo(self.daemon).items()
                 }
 
-            # enxerga o vpad (ex.: máscara DualSense atraindo o hidraw do
             vpads: list[tuple[int, Any, Any, str | None]] = []
             coop_mgr = getattr(self.daemon, "_coop_manager", None)
-            # chegada, ler `player_index` aqui cruzaria os fios — o card de um
-            # controle mostraria a telemetria do vpad de OUTRO. As condições
             numeros_por_mac: dict[str, int] = {}
             if (
                 bool(getattr(getattr(self.daemon, "config", None), "coop_enabled", False))
@@ -2130,8 +2060,6 @@ class IpcHandlersMixin:
                     backend = getattr(vp, "backend", None)
                     streaming = getattr(vp, "motion_streaming", False)
                     hz_raw = getattr(motion_reader, "emit_hz", 0.0)
-                    # do nó — `vpad_uniq` (o `02:fe:…` que sai no `HID_UNIQ` do
-                    # sysfs), `vpad_nome` e `vpad_indice`. O objeto sempre soube
                     identidade = identidade_do_vpad(vp)
                     no_do_vpad = self._no_do_vpad_cached(
                         identidade["vpad_uniq"], identidade["vpad_nome"]
@@ -2139,9 +2067,6 @@ class IpcHandlersMixin:
                     per_vpad.append(
                         {
                             "player": player_num,
-                            # O endereço do controle FÍSICO que este vpad serve:
-                            # a interface casa controle e vpad por ele, nunca
-                            # pelo número, que fora do co-op é 1 para todos.
                             "uniq": uniq_do_fisico,
                             "vpad_uniq": identidade["vpad_uniq"],
                             "vpad_nome": identidade["vpad_nome"],
@@ -2178,8 +2103,6 @@ class IpcHandlersMixin:
                             "ff_ultimos_reports": _anel_de_vibracao(
                                 getattr(vp, "ff_ultimos_reports", None)
                             ),
-                            # O-RUMBLE-DO-JOGO-XBOX-GANHA-O-TIMBRE-DO-ESTILO-01: as classes
-                            # do rumble do pad Xbox e a forma do último FF_PERIODIC.
                             "ff_por_classe": (
                                 {str(k): int(v) for k, v in classes.items()}
                                 if isinstance(
@@ -2218,9 +2141,6 @@ class IpcHandlersMixin:
                                 and not isinstance(hz_raw, bool)
                                 else 0.0
                             ),
-                            # A perda do mesmo leitor: o report que não chegou
-                            # (o salto do contador do report) e o que chegou
-                            # estragado (CRC ruim, só no rádio). `None` sem leitor.
                             "reports_perdidos": (
                                 _contador_do_vpad(motion_reader, "reports_perdidos")
                                 if motion_reader is not None
@@ -2244,7 +2164,6 @@ class IpcHandlersMixin:
                             "jack_forwards": _contador_do_vpad(
                                 vp, "jack_forward_count"
                             ),
-                            # `battery_pct` do controle FÍSICO que a aba Status
                             "bateria_no_jogo": _bateria_do_vpad(vp),
                             "battery_forwards": _contador_do_vpad(
                                 vp, "battery_forward_count"
@@ -2316,11 +2235,8 @@ class IpcHandlersMixin:
                 else None
             )
 
-        # casa: a `audio` sumia do `state_full` no hotplug-out e `bool(None)`
         result["mic_da_mesa"] = recado_do_microfone.publicar(self.daemon)
 
-        # A Navegação Interna (A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01):
-        # sem o dono, o bloco não sai, e a tela não afirma lado nenhum.
         navegacao = self._navegacao_payload()
         if navegacao is not None:
             result["navegacao"] = navegacao
@@ -2334,7 +2250,7 @@ class IpcHandlersMixin:
         rota = getattr(alto_falante, "por_onde_vai_o_rumble", None)
         if backend != "uinput" or not isinstance(uniq, str) or not uniq or not callable(rota):
             return None
-        resposta = rota(uniq)  # nunca levanta: o ilegível volta como ``porque``
+        resposta = rota(uniq)
         return dict(resposta) if isinstance(resposta, dict) else None
 
     def _enrich_controllers_per_controller(
@@ -2516,8 +2432,6 @@ class IpcHandlersMixin:
         pronto = cache.get(uniq)
         if pronto is not None:
             return dict(pronto)
-        # chega, e este `state_full` lê o MESMO cache, sem uma segunda
-        # com um objeto verdadeiro, e ele iria parar no JSON do `state_full`.
         dono = getattr(self, "daemon", None)
         registro: Any = getattr(dono, "identity_registry", None) if dono else None
         if getattr(registro, "pergunta_de_fabrica_armada", False) is True:
@@ -2729,7 +2643,6 @@ class IpcHandlersMixin:
                 status["mic_mudo_desejado"] = (
                     bool(desejado) if isinstance(desejado, bool) else None
                 )
-            # roda no tique do `state_full`, a 20 Hz, dentro do loop do daemon.
             from hefesto_dualsense4unix.daemon.subsystems.hotkey import (
                 canal_do_microfone,
             )
@@ -2768,7 +2681,6 @@ class IpcHandlersMixin:
             "volume": max(0, min(255, volume)),
             "muted": bool(speaker.get("muted")),
         }
-        # "rota": 0}}`) e o `state_full` não a publicava. Quem trocasse a saída
         rota = speaker.get("rota")
         if isinstance(rota, int) and not isinstance(rota, bool):
             bloco["rota"] = rota
@@ -2869,7 +2781,6 @@ class IpcHandlersMixin:
         if not no or self.daemon is None:
             return False
         sentinela = getattr(self.daemon, "_sentinela_de_escritor_cru", None)
-        # `isinstance`, e não pato: o daemon é MagicMock em boa parte da suíte,
         if not isinstance(sentinela, _escritor_cru.SentinelaDeEscritorCru):
             return False
         return bool(sentinela.veredito.segurado_de_fato(no))
@@ -3101,8 +3012,6 @@ class IpcHandlersMixin:
         }
 
 
-    #: Cache de perfil mudo: o `state_full` roda a 10 Hz e `load_all_profiles()` lê o disco
-    #: inteiro.
     _perfil_mudo_cache: tuple[tuple[str, str, str], list[dict[str, str]]] | None = None
 
     def _perfil_que_nao_entrou(self) -> list[dict[str, str]]:
@@ -3317,8 +3226,6 @@ class IpcHandlersMixin:
                 ]
             }
         if external_raw:
-            # 8BIT-02/EXT-04/NUMA-05: os externos numeram CONTINUANDO os DualSense; a fonte do
-            # slot é o registry persistente do daemon.
             ds_count = sum(
                 1
                 for c in result["controllers"]
@@ -3506,8 +3413,6 @@ class IpcHandlersMixin:
                 "passthrough": par_de_pe is None,
             }
         if uniq is not None:
-            # O gesto de UM controle (aba Vibração): o pedido leva o endereço, o seletor global
-            # não é tocado e os pares dos outros seguem.
             eff_weak, eff_strong = apply_rumble_policy(self.daemon, weak, strong, uniq)
             mirar = getattr(self.controller, "set_rumble_for", None)
             if not callable(mirar) or not mirar(uniq, eff_weak, eff_strong):
@@ -3536,7 +3441,6 @@ class IpcHandlersMixin:
         alvo_ausente_fn = getattr(self.controller, "alvo_de_output_ausente", None)
         alvo_ausente = alvo_ausente_fn() if callable(alvo_ausente_fn) else None
         if isinstance(alvo_ausente, str) and alvo_ausente:
-            # Mesma ordem da recusa de Modo Nativo: nada é armado.
             par_de_pe = getattr(daemon_cfg, "rumble_active", None)
             logger.warning(
                 "rumble_set_recusado_alvo_ausente",
@@ -3559,7 +3463,6 @@ class IpcHandlersMixin:
                 daemon_cfg, dono, weak, strong, time.monotonic(), so_este=False
             ):
                 escrever_rumble_no_dono(self.controller, largado, 0, 0)
-        # Cada controle que o pedido alcança, com a força dele (o funil único).
         escrever_com_a_forca(self.daemon, None, weak, strong)
         return {
             "status": "ok",
@@ -3602,7 +3505,6 @@ class IpcHandlersMixin:
                 "passthrough": True,
             }
         if uniq is not None:
-            # O «Parar» de UM controle: o par dele vira (0, 0) e os outros seguem de pé.
             if daemon_cfg is not None:
                 fixar_par(daemon_cfg, uniq, 0, 0, time.monotonic(), so_este=True)
             escrever_rumble_no_dono(self.controller, uniq, 0, 0)
@@ -3844,7 +3746,6 @@ class IpcHandlersMixin:
                 "haptica_pct": haptica,
                 **efeitos,
             }
-        # O `state_full` já paga o `__init__` que importa todos eles.
         if self.daemon is not None:
             from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
                 esquecer_motores_do_perfil,
@@ -4140,11 +4041,6 @@ class IpcHandlersMixin:
         if uniq is not None and not isinstance(uniq, str):
             raise ValueError("speaker.set: 'uniq' precisa ser string ou omitido")
         if fonte is not None:
-            # A `fonte` é a CAMADA 1 e faltava aqui (`O-BOTAO-ENTREGA-O-QUE-PROMETE-01`,
-            # 20/09/2026). A `rota` escolhe por onde o PLÁSTICO toca; a `fonte` escolhe o que
-            # ENTRA no nó (`profiles/schema.SpeakerOverrides.fonte`). Sem ela a escolha ia ao perfil
-            # e o daemon só a lia do perfil ATIVO: sem perfil ativo, ou antes do "Salvar", o
-            # clique não movia uma nota de som.
             from hefesto_dualsense4unix.integrations.alto_falante_bt import (
                 FONTE_MIX,
                 FONTE_SFX,
@@ -4216,7 +4112,7 @@ class IpcHandlersMixin:
             if not escolher(uniq, fonte):
                 return None
             return str(valendo(uniq))
-        except Exception:  # pragma: no cover - defensivo
+        except Exception:  # pragma: no cover
             logger.debug("som_fonte_nao_escolhida", uniq=uniq, exc_info=True)
             return None
 
@@ -4484,8 +4380,6 @@ class IpcHandlersMixin:
             volume_da_captura,
         )
 
-        # Com dois DualSense no cabo há DUAS placas de som, e a rota global (primeira da lista)
-        # seria o microfone errado.
         if uniq:
             fonte = fonte_de_captura_do_uniq(
                 uniq, mesa=recado_do_microfone.mesa_de_agora(self.daemon))
@@ -4504,7 +4398,7 @@ class IpcHandlersMixin:
         if callable(escritor):
             try:
                 aparelho = bool(escritor(volume, uniq=uniq))
-            except Exception as exc:  # pragma: no cover - defensivo
+            except Exception as exc:  # pragma: no cover
                 aparelho = False
                 logger.warning("mic_volume_aparelho_falhou", err=str(exc))
         return {
@@ -4713,8 +4607,6 @@ class IpcHandlersMixin:
         nav = da_navegacao(self.daemon)
         if nav is None:
             raise ValueError("daemon sem suporte à Navegação Interna")
-        # A diferença desde a última leitura conta pelo foco DAQUELE intervalo; só depois o pulso
-        # de agora renova (ou larga) o prazo.
         apertos = self._apertos_de_cada_controle()
         nav.contar(apertos)
         nav.declarar_foco(ativa)
@@ -4910,8 +4802,6 @@ class IpcHandlersMixin:
             raise ValueError("daemon não disponível para alterar o gamepad virtual")
 
         modo: dict[str, Any] = {"caminho": caminho} if caminho is not None else {}
-        # O-FREESTYLE-E-UMA-CAMADA-SO-01 (28/09/2026), CAMINHO-CONTAGIO-01: sem escolha, o modo
-        # sai do perfil ativo (subia DualSense com o perfil ativo em Xbox).
         if enabled and caminho is None:
             do_dono = self._caminho_do_perfil_ativo()
             if do_dono is not None:
@@ -4926,7 +4816,6 @@ class IpcHandlersMixin:
             **modo,
         )
         if enabled and ok:
-            # o P1 que nasce pelo fio: a resposta é o desfecho dele, sem segurar o laço
             from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
                 EMU_APLICADO,
                 depois_do_p1,
@@ -5166,9 +5055,6 @@ class IpcHandlersMixin:
             raise ValueError("o pedido não diz de qual extensão se trata (mod)")
         return mod.strip()
 
-    # AR-MEDIDO-01 (23/09/2026), R10 e R11: o gancho do ar no `state_full` fica neste bloco para
-    # não deslocar as âncoras de baixo.
-
     _medidor_de_ar: Any = None
     _adaptadores_em_cache: tuple[float, frozenset[str], dict[str, str]] | None = None
     _afh_evitados: dict[str, tuple[int, ...] | None] | None = None
@@ -5203,7 +5089,7 @@ class IpcHandlersMixin:
             result["radio_central"] = self._a_central_publica(entries)
         with contextlib.suppress(Exception):
             self._merge_mira(entries)
-        self._merge_acessibilidade(entries)  # total: só lê o `store`, sem I/O
+        self._merge_acessibilidade(entries)
         with contextlib.suppress(Exception):
             self._merge_no_jogo(entries)
         with contextlib.suppress(Exception):
@@ -5391,7 +5277,6 @@ class IpcHandlersMixin:
 
         a_qualidade = self._ler_qualidade
         if a_qualidade is None and self._ler_afh is not None:
-            # quem injeta o AFH (a régua) não pergunta ao rádio de verdade nem a qualidade do enlace
             def a_qualidade(_hci: int, _handle: int) -> int | None:
                 return None
         elif a_qualidade is None:
@@ -5414,7 +5299,7 @@ class IpcHandlersMixin:
                     evitados[endereco] = canais_evitados_pelo_adaptador(lidos)
                 self._afh_evitados = evitados
                 self._enlaces_lidos = enlaces
-            except Exception:  # pragma: no cover - defensivo, jamais derruba o daemon
+            except Exception:  # pragma: no cover
                 logger.debug("radio_afh_nao_lido", exc_info=True)
             finally:
                 self._afh_em_voo = False
@@ -5543,8 +5428,8 @@ class IpcHandlersMixin:
                         or filtro_de_botao.da_peca(store, uniq) is not None)
             tem_curva = curva_do_analogico.da_peca(store, uniq) is not None
             entry["acessibilidade"] = {
-                "ativacao": tem_modo,  # (noqa-acento) chave ASCII
-                "analogicos": tem_curva,  # (noqa-acento) chave ASCII
+                "ativacao": tem_modo,  # (noqa-acento)
+                "analogicos": tem_curva,
             }
 
     def _merge_mira(self, entries: list[dict[str, Any]]) -> None:
@@ -5563,8 +5448,6 @@ class IpcHandlersMixin:
             mira = vale if vale is not None and vale.ligado else None
             entry["mira"] = {
                 "ligada": mira is not None,
-                # O Analógico Virtual (O-ANALOGICO-VIRTUAL-E-UM-SO, 08/10): aceso quando o giro ou
-                # a inclinação move um analógico, e o lado que a tela acende.
                 "virtual": vale is not None and rot.virtual_aceso(vale),
                 "lado": rot.lado_do_virtual(vale if vale is not None else numeros),
                 "destino": mira.destino if mira is not None else rot.DESTINO_NENHUM,
@@ -5575,7 +5458,6 @@ class IpcHandlersMixin:
                 "gatilho": numeros.gatilho,
                 "inverter_horizontal": numeros.inverter_horizontal,
                 "inverter_vertical": numeros.inverter_vertical,
-                # A pausa do controle parado (a regra no último tique) e o «Mesmo parado».
                 "inclinacao_parada": (
                     vale is not None and vale.inclina and not vale.mesmo_parado
                     and rot.inclinacao_parada(store, uniq, agora)
@@ -5723,8 +5605,6 @@ class IpcHandlersMixin:
             mesa = (perfil.movimento if perfil is not None
                     else rot.parametros_da_peca(self.store, chave))
             if o_virtual:
-                # O Analógico Virtual é um só: giro e inclinação no MESMO lado (PERGUNTA 1). O
-                # `lado` sozinho liga; a `inclinacao` explícita vem nos `pedidos` e vence.
                 atual = rot.arranjo_da_peca(
                     mesa, ProfileMovimentoConfig.model_validate(escritos))
                 lado = params.get("lado") or rot.lado_do_virtual(atual)
@@ -5847,8 +5727,6 @@ class IpcHandlersMixin:
         central = self._a_central()
         if central is None:
             return {"status": "sem_central", "dispensado": False}
-        # quem decide o que ainda está em curso é a central: a linha que a tela já diz «Não
-        # conectou» sai pelo fecho da vigia (O-CONTROLE-NOVO-SE-CONECTA-E-SE-TIRA-…-01)
         feito = await asyncio.to_thread(central.dispensar, aparelho)
         atual = central.movimento_de(aparelho)
         if feito is None and atual is not None and atual.em_curso:
@@ -5908,13 +5786,10 @@ class IpcHandlersMixin:
             return None
         return dict(zip(("lx", "ly", "rx", "ry"), eixos, strict=True))
 
-    # O-COMECAR-DA-CALIBRAR-GUARDA-O-ZERO-DE-CADA-CONTROLE-01 (08/10/2026): o «Começar» da
-    # Calibrar. No fim da classe para nenhuma citação `arquivo:linha` deste arquivo andar.
     _ZERO_PARADO = "parado"
     _ZERO_MEDINDO = "medindo"
     _ZERO_PRONTO = "pronto"
     _ZERO_MEXEU = "mexeu"
-    #: Uma amostra a cada 20 ms: 250 na medida de 5 s.
     _INTERVALO_DO_ZERO_S = 0.02
 
     def _estados_do_zero(self) -> dict[str, str]:
@@ -5985,8 +5860,6 @@ class IpcHandlersMixin:
             rot.definir_o_zero(self.store, uniq, zero)
             gravou = await asyncio.to_thread(gravar_os_zeros, rot.zeros_para_gravar(self.store))
             if not gravou:
-                # O zero que não foi ao disco some no próximo início: a memória volta ao que era e
-                # o selo fica em «parado».
                 rot.definir_o_zero(self.store, uniq, anterior)
                 estados[chave] = self._ZERO_PARADO
                 logger.warning("zero_nao_gravado", uniq=uniq)
@@ -6029,8 +5902,8 @@ class IpcHandlersMixin:
         from hefesto_dualsense4unix.profiles import schema
 
         modelo: Any = {
-            "ativacao": schema.ProfileAtivacaoConfig,  # (noqa-acento) chave ASCII
-            "analogicos": schema.ProfileAnalogicosConfig,  # (noqa-acento) chave ASCII
+            "ativacao": schema.ProfileAtivacaoConfig,  # (noqa-acento)
+            "analogicos": schema.ProfileAnalogicosConfig,
             "cursor": schema.ProfileCursorConfig,
         }[secao]
         campos_do_modelo = set(modelo.model_fields)
@@ -6104,12 +5977,12 @@ class IpcHandlersMixin:
     async def _handle_perfil_ativacao_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """`perfil.ativacao.set` — o modo e o filtro do botão, no perfil ou numa peça."""
         return await self._grava_a_acessibilidade(
-            "perfil.ativacao.set", "ativacao", params, por_peca=True)  # (noqa-acento) chave
+            "perfil.ativacao.set", "ativacao", params, por_peca=True)  # (noqa-acento)
 
     async def _handle_perfil_analogicos_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """`perfil.analogicos.set` — a zona morta, a curva e a mão, no perfil ou numa peça."""
         return await self._grava_a_acessibilidade(
-            "perfil.analogicos.set", "analogicos", params, por_peca=True)  # (noqa-acento) chave
+            "perfil.analogicos.set", "analogicos", params, por_peca=True)
 
     async def _handle_perfil_cursor_set(self, params: dict[str, Any]) -> dict[str, Any]:
         """`perfil.cursor.set` — a precisão, a permanência e o clique travado do cursor."""
@@ -6122,10 +5995,10 @@ class IpcHandlersMixin:
 
         from hefesto_dualsense4unix.core import ativacao_de_botao
 
-        acao = str(params.get("acao") or "estado")  # chave do IPC (noqa-acento)
+        acao = str(params.get("acao") or "estado")  # (noqa-acento)
         if acao not in ("iniciar", "parar", "estado"):
             raise ValueError(
-                "sequencia.gravar: 'acao' é iniciar, parar ou estado")  # a chave (noqa-acento)
+                "sequencia.gravar: 'acao' é iniciar, parar ou estado")  # (noqa-acento)
         uniq = params.get("uniq")
         if uniq is not None and not isinstance(uniq, str):
             raise ValueError("sequencia.gravar: 'uniq' precisa ser string ou omitido")
@@ -6175,10 +6048,6 @@ class IpcHandlersMixin:
             return {"status": "failed", "reposto": False}
         return {"status": "ok", "reposto": bool(repor())}
 
-    # A-JANELA-DA-EXTENSAO-GANHA-ACAO-APARELHOS-E-CONTROLE-LIVRE-01 (24/10/2026): os dois pedidos
-    # novos da janela da extensão moram no fim da classe, e não junto do `mods.parar_tudo`, para não
-    # deslocar as âncoras citadas do meio do arquivo.
-
     async def _manifesto_da_janela(self, mod: str) -> tuple[Any, Any] | None:
         """O manifesto instalado de ``mod`` (o da janela aberta) e a porta; ``None`` sem o
         supervisor."""
@@ -6206,7 +6075,7 @@ class IpcHandlersMixin:
         ``{enviada}`` é falso quando a extensão não está conectada à porta.
         """
         mod = self._mod_do_pedido(params)
-        acao = params.get("acao")  # a chave do contrato (noqa-acento)
+        acao = params.get("acao")  # (noqa-acento)
         alvo, valor = params.get("alvo"), params.get("valor")
         if not isinstance(acao, str) or not acao:
             raise ValueError("o pedido não diz qual ação")
@@ -6291,7 +6160,7 @@ def _conferir_o_valor_do_controle(controle: dict[str, Any], valor: Any) -> None:
         if not isinstance(valor, bool):
             raise ValueError("o valor da chave é verdadeiro ou falso")
         return
-    ids = [o["id"] for o in controle.get("opcoes") or []]  # (noqa-acento) contrato
+    ids = [o["id"] for o in controle.get("opcoes") or []]  # (noqa-acento)
     if valor not in ids:
         raise ValueError(f"o valor de «{controle['id']}» é uma de: {', '.join(ids)}")
 
@@ -6408,8 +6277,6 @@ def _sem_os_campos_aposentados(overrides: Any) -> Any:
     return {k: v for k, v in overrides.items() if k not in CAMPOS_APOSENTADOS}
 
 
-# Chaves que o `daemon.reload` já aceitou e que o `DaemonConfig` não tem mais: quem as manda (um
-# cliente ou um script antigo) não leva erro; a chave sai do `overrides`, com um aviso no diário.
 CAMPOS_APOSENTADOS = frozenset({"auto_reconnect", "reconnect_backoff_sec"})
 _APOSENTADOS_AVISADOS: set[str] = set()
 

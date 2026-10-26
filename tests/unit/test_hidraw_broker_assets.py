@@ -52,8 +52,6 @@ class TestSocketUnit:
         d = _directives(socket_text)
         assert d["SocketMode"] == ["0666"]
         assert d["SocketUser"] == ["root"]
-        # Sem grupo por máquina: quem o broker ATENDE sai do logind, a cada
-        # conexão (O-BROKER-SERVE-QUEM-ESTA-NA-FRENTE-01), e não do modo do arquivo.
         assert d["SocketGroup"] == ["root"]
         assert d["DirectoryMode"] == ["0755"]
 
@@ -129,11 +127,7 @@ class TestServiceHardening:
         assert d["ExecStart"] == ["/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker"]
         assert d["ExecStartPre"] == [
             "/usr/local/lib/hefesto-dualsense4unix/hefesto-hidraw-broker --fechar-tudo-e-sair",
-            # O pad em USB (O-PAD-VIRTUAL-E-O-SOM-DELE-NASCEM-NO-MESMO-USB-01):
-            # só o modprobe sai do sandbox (`+`), e a falta dele não derruba (`-`).
             "-+/sbin/modprobe -qa libcomposite usb_f_hid vhci-hcd",
-            # O `num` antigo (o módulo carregado com menos de oito vagas) só
-            # sai sem gadget preso, e o `exit 0` nunca derruba o broker.
             "-+/bin/sh -c 'n=$$(cat /sys/module/usbip_vudc/parameters/num 2>/dev/null)"
             " && [ \"$$n\" -lt 8 ] && ! grep -qs . /sys/kernel/config/usb_gadget/*/UDC"
             " && /sbin/modprobe -qr usbip-vudc; exit 0'",
@@ -269,8 +263,6 @@ class TestPlaceholders:
         d_socket = _directives(socket_text)
         valores_service = [v for vals in d_service.values() for v in vals]
         valores_socket = [v for vals in d_socket.values() for v in vals]
-        # Nada de uid nem de grupo por máquina: a única troca que sobra é o
-        # `__NO_NASCE_FECHADO__`, e só na unit do serviço.
         assert not any("__SESSION_" in v for v in valores_service)
         assert not any("__SESSION_" in v for v in valores_socket)
         assert sum("__NO_NASCE_FECHADO__" in v for v in valores_service) == 1

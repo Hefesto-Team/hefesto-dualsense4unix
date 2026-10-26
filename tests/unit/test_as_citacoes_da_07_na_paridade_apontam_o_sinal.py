@@ -33,7 +33,7 @@ def _linha_do_sinal(sinal: str) -> int:
 
 
 def test_toda_citacao_da_07_na_paridade_cai_perto_do_sinal() -> None:
-    # D-2110-A-CITACAO-DA-07-SE-CONFERE-PELO-SINAL
+    """Prova da D-2110-A-CITACAO-DA-07-SE-CONFERE-PELO-SINAL."""
     feito = _roda()
     assert feito.returncode == 0, feito.stdout + feito.stderr
     conferidas = int(feito.stdout.rsplit(" de ", 1)[1].split()[0])

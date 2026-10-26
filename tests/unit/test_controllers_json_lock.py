@@ -213,7 +213,6 @@ class TestRmwIntercaladoAmbosNamespacesSobrevivem:
         original_read_text = Path.read_text
 
         def read_text_com_barreira(self_path: Path, *a: Any, **kw: Any) -> str:
-            # Pausa a PRIMEIRA leitura de controllers.json (a do DualSense,
             if self_path.name == "controllers.json" and not pausado_uma_vez["sim"]:
                 pausado_uma_vez["sim"] = True
                 ds_entrou_no_read.set()
@@ -227,20 +226,19 @@ class TestRmwIntercaladoAmbosNamespacesSobrevivem:
         def rodar_ds() -> None:
             try:
                 ds.sync_connected({UNIQ_DS_A})
-            except Exception as exc:  # pragma: no cover - defensivo
+            except Exception as exc:  # pragma: no cover
                 erros.append(exc)
 
         def rodar_ext() -> None:
             try:
                 ext.sync_connected([MAC_EXT_A])
-            except Exception as exc:  # pragma: no cover - defensivo
+            except Exception as exc:  # pragma: no cover
                 erros.append(exc)
 
         t_ds = threading.Thread(target=rodar_ds, name="ds-save")
         t_ds.start()
         assert ds_entrou_no_read.wait(timeout=5.0), "ds não entrou no read a tempo"
 
-        # DualSense já está parado dentro da seção crítica — a intercalação
         t_ext = threading.Thread(target=rodar_ext, name="ext-save")
         t_ext.start()
 
@@ -270,7 +268,7 @@ class TestColisaoNoLoad:
             tmp,
             dualsense={UNIQ_DS_A: 1},
             externos={
-                MAC_EXT_A: 1,  # COLIDE com o lugar 1 do DualSense
+                MAC_EXT_A: 1,
                 MAC_EXT_B: 2,
             },
         )
@@ -306,7 +304,6 @@ class TestColisaoNoLoad:
 
         ds = ControllerIdentityRegistry()
         ds.load()
-        # O DualSense nunca sabe da colisão nem muda de comportamento — ele
         assert ds.snapshot() == {UNIQ_DS_A: 1}
 
     def test_colisao_nao_poda_bilateralmente(self, isolated_config: Path) -> None:
@@ -329,7 +326,6 @@ class TestColisaoNoLoad:
 
         ext = ExternalIdentityRegistry()
         ext.load()
-        # espelha `_ds_reserve()` em produção: o DualSense detém o lugar 1).
         assert ext.slot_for("aabbcc001234", reserve=1) == 2
         assert ext.snapshot()["aabbcc001234"] == 3
         ext.sync_connected([MAC_EXT_B, "aabbcc001234"])

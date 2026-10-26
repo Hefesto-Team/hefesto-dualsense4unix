@@ -159,8 +159,6 @@ from hefesto_dualsense4unix.utils.maquina import (
     lugar_do_no,
     partes_do_lugar,
 )
-
-# A GRAFIA DO NOME DA ENTRADA mora em ``utils/rotulo_da_entrada`` desde a
 from hefesto_dualsense4unix.utils.rotulo_da_entrada import (
     FACE_DO_HUB_DECLARADO as FACE_DO_HUB_DECLARADO,
 )
@@ -206,13 +204,7 @@ FACE_QUE_E_ALTO = FACE_HUB
 
 FACE_EM_PE = FACE_ATRAS
 
-# ``utils/rotulo_da_entrada`` e são reexportadas no topo deste arquivo.
-
 LIGACOES_DECLARAVEIS = ("hub",)
-#: O que a pessoa diz de um aparelho que a máquina não identifica sozinha (O-APARELHO-SE-CORRIGE-
-#: ONDE-SE-CLICA-01): as respostas de ``RadioDeclarado.tipo`` (o catálogo da v1 do ``maquina.json``,
-#: que não se alarga sem bump), as mesmas do painel do aparelho no mapa. Controle, celular e
-#: relógio são aparelhos do BlueZ, da aba 08, e não entram no mapa das entradas USB.
 TIPOS_DECLARAVEIS_DO_APARELHO = (
     "teclado", "mouse", "wifi", "webcam", "caixa_de_som", "outro",
 )
@@ -247,7 +239,6 @@ TELAS: Mapping[str, str] = {
 
 MOTIVO_SEM_LUGAR = "sem_lugar"
 
-#: A Sony — a família DualSense da casa. Na fase em pé, só um aparelho do usuário
 _VID_DA_SONY = "054c"
 
 _ENCAIXE_DE_FORA = "hotplug"
@@ -333,7 +324,7 @@ class PortaVista:
             "caminho": self.caminho,
             "vid": self.vid,
             "pid": self.pid,
-            "especie": self.especie,  # (noqa-acento) chave de máquina, ASCII por contrato
+            "especie": self.especie,
             "produto": self.produto,
             "e_dualsense": self.e_dualsense,
             "e_bluetooth": self.e_bluetooth,
@@ -707,7 +698,7 @@ class LacoDaEntrada:
             "face": FACE_EM_PE if fase == EM_PE else None,
             "feitas": self._feitas,
             "gravou": None if self._ultima is None else self._ultima.gravou,
-            "ultima": ultima,  # (noqa-acento) chave de máquina, ASCII por contrato
+            "ultima": ultima,  # (noqa-acento)
         }
 
 
@@ -1201,9 +1192,6 @@ def dar_nome_ao_adaptador(
     return NomeDado(chave, limpo, recibo.gravou, recibo.motivo)
 
 
-# módulo. <!-- noqa-acento: citação literal -->
-
-
 def declarar_a_ligacao(
     numero: str,
     liga: str | None,
@@ -1686,12 +1674,10 @@ def _usb_da_porta(
     return (junta.USB_3 if rapido else junta.USB_2), de_onde
 
 
-# DualSense de porta em porta; a porta que ele acabou de mostrar chega com o
-
 ESPERANDO = "esperando"
 NA_PORTA = "porta"
 
-_CHAVE_DA_ULTIMA = "ultima"  # (noqa-acento) chave de máquina
+_CHAVE_DA_ULTIMA = "ultima"  # (noqa-acento)
 
 RAIZ_BT_PADRAO = "/sys/class/bluetooth"
 
@@ -2252,7 +2238,6 @@ def _gravar_a_porta(
     if porta.numero is None and (not porta.lugar or (face is not None and not no_sys)):
         return Gravacao(porta.lugar, "", face or "", False, MOTIVO_SEM_LUGAR)
     if porta.numero is None or (da_vez and no_sys and face is not None):
-        # (:func:`_lugar_do_furo`) e onde o DualSense enumera — nunca o de um
         caminho = caminho_do_lado_20(porta.nos) or porta.aparelho
         vista = PortaVista(lugar=porta.lugar, caminho=caminho)
         return _gravar_as_portas(

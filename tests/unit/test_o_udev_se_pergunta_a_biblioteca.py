@@ -102,7 +102,7 @@ def test_a_resposta_da_biblioteca_vira_texto(biblioteca) -> None:  # type: ignor
 
 
 def test_propriedade_ou_no_ausente_e_nao_sei(biblioteca) -> None:  # type: ignore[no-untyped-def]
-    # A decisão D-0810-O-UDEV-SE-PERGUNTA-A-LIBUDEV.
+    """Prova da D-0810-O-UDEV-SE-PERGUNTA-A-LIBUDEV."""
     biblioteca({"OUTRA": b"1"})
     assert banco_do_udev.propriedade_do_devnum("c", 1, "LIBINPUT_IGNORE_DEVICE") is None
     biblioteca(None)
@@ -135,7 +135,7 @@ def test_argumento_torto_e_nao_sei_conferido_na_porta(biblioteca) -> None:  # ty
 
 
 def test_sem_a_biblioteca_a_resposta_e_nao_sei(monkeypatch: pytest.MonkeyPatch) -> None:
-    # A decisão D-0810-O-UDEV-SE-PERGUNTA-A-LIBUDEV.
+    """Prova da D-0810-O-UDEV-SE-PERGUNTA-A-LIBUDEV."""
     def falta(*_a: Any, **_k: Any) -> Any:
         raise OSError("libudev.so.1: não achei")
 
@@ -167,10 +167,6 @@ def test_o_curador_de_audio_pergunta_pelo_caminho_do_usb_device(
 
 RAIZ_DO_REPO = RAIZ.parents[1]
 
-#: Quem pode escrever o caminho do banco no código, e a razão. Vazia de propósito:
-#: o Flatpak monta o caminho num manifesto (YAML, fora desta varredura) e o
-#: `test_o_flatpak_alcanca_o_broker.py` o conta em `LIDOS_PELA_BIBLIOTECA`. Quem
-#: precisar entrar aqui escreve a razão ao lado do nome.
 PODE_ESCREVER_O_CAMINHO: dict[str, str] = {}
 
 _COMENTARIO_DO_SHELL = re.compile(r"(^|\s)#.*$")
@@ -206,7 +202,7 @@ def _todo_leitor_de_codigo() -> list[Path]:
 
 
 def test_nenhum_modulo_le_o_arquivo_interno_do_udev() -> None:
-    # A decisão D-0810-O-UDEV-SE-PERGUNTA-A-LIBUDEV.
+    """Prova da D-0810-O-UDEV-SE-PERGUNTA-A-LIBUDEV."""
     arquivos = _todo_leitor_de_codigo()
     assert len(arquivos) > 100, "a varredura não achou o código: o caminho da raiz mudou"
     achados: dict[str, str] = {}

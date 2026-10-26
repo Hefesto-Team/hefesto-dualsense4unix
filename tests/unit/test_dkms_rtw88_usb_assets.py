@@ -597,7 +597,6 @@ class TestOFontePorKernel:
         pacote = _copia_do_pacote(tmp_path)
         resultado = _escolhe(pacote, "7.2.7-76070207-generic")
         assert resultado.returncode != 0
-        # com o `main.h` presente mas sem fonte, também recusa: os dois trincos são independentes
         shutil.copy2(
             ASSET_DIR / "main-por-kernel" / f"main-{KERNEL_726}.h",
             pacote / "main-por-kernel" / "main-7.2.7-76070207.h",

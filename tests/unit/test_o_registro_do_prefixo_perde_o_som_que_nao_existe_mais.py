@@ -52,7 +52,6 @@ def _endpoint(fluxo: str, guid: str, estado: int, nome: str, *, carimbo: int = 1
         "#time=1dd568b1f36bd5e\n"
         f'"DeviceState"=dword:{estado:08x}\n'
         "\n"
-        # as propriedades com o fim do GUID na faixa forjada: o código não as lê.
         f"[{chave}\\\\Properties] {carimbo}\n"
         "#time=1dd5688e7292660\n"
         f'"{{026e516e-b814-414b-83cd-02fe00000001}},2"="{nome}"\n'

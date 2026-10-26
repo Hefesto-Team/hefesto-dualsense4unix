@@ -612,5 +612,5 @@ def test_o_script_da_colisao_nao_engole_a_falha_quando_nao_ha_divida(
     assert any(linha.startswith("FALHA") for linha in texto.splitlines()), texto[:2000]
 
 
-if __name__ == "__main__":  # pragma: no cover — a medição, sem pytest
+if __name__ == "__main__":  # pragma: no cover
     print(relatorio_completo())

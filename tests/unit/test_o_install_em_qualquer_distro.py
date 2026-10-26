@@ -76,9 +76,6 @@ def _familia(tmp_path: Path, os_release: str, *, marca: bool, caminho: str | Non
     return str(proc.stdout).strip()
 
 
-# --- 1. a pergunta da família ------------------------------------------------
-
-
 @pytest.mark.parametrize("os_release", [BAZZITE, SILVERBLUE])
 def test_a_marca_do_ostree_vence_o_id_like(tmp_path: Path, os_release: str) -> None:
     """A MORDIDA: tire a pergunta de `/run/ostree-booted` e o Bazzite volta a ser dnf."""
@@ -144,9 +141,6 @@ def test_o_comando_manual_da_familia_imutavel_nao_manda_um_gerente(tmp_path: Pat
     assert "sudo pacman" not in saida
 
 
-# --- 2. o ensaio inteiro -----------------------------------------------------
-
-
 def _ensaio(tmp_path: Path, os_release: str, *, marca: bool) -> tuple[str, str]:
     _lar, diario, ambiente = _bancada(tmp_path)
     arquivo = tmp_path / "os-release"
@@ -172,14 +166,12 @@ def test_o_ensaio_da_distro_somente_leitura_nao_planeja_pacote_nem_dkms(tmp_path
     plano volta a prometer módulo que a imagem não aceita."""
     saida, chamadas = _ensaio(tmp_path, BAZZITE, marca=True)
     assert "FARIA" in saida
-    # nenhum pacote, nenhum módulo, nenhum initramfs no plano:
     assert "instalar pacote(s) com" not in saida
     assert "compilar e instalar o módulo DKMS" not in saida
     assert "update-initramfs" not in saida
     assert "Os três módulos de kernel do Hefesto precisam compilar" not in saida
     for gerente in ("dnf", "apt-get", "pacman", "dkms", "update-initramfs"):
         assert f"{gerente} " not in chamadas, f"o ensaio chamou {gerente}: {chamadas}"
-    # uma linha por item, com o efeito:
     assert "distro somente leitura" in saida
     assert "não há gerente de pacotes nem DKMS a chamar. O que fica de fora:" in saida
     assert "o microfone do DualSense pelo rádio fica desligado" in saida
@@ -187,7 +179,6 @@ def test_o_ensaio_da_distro_somente_leitura_nao_planeja_pacote_nem_dkms(tmp_path
     assert "o dongle Wi-Fi USB não ganha a cura do fantasma USB" in saida
     assert "módulo DKMS hefesto-usb-f-hid (distro somente leitura)" in saida
     assert "a vibração dos jogos da Sony pelo cabo depende do perfil UCM" in saida
-    # e o resto segue: udev e a casa do usuário continuam no plano.
     assert "regras udev" in saida
 
 
@@ -204,9 +195,6 @@ def test_o_reconhecimento_diz_a_familia_imutavel(tmp_path: Path) -> None:
     saida, _ = _ensaio(tmp_path, SILVERBLUE, marca=True)
     assert "distro somente leitura (Bazzite, Silverblue, SteamOS ou parente)" in saida
     assert "o install usa imutavel" not in saida
-
-
-# --- 3. as funções de host ---------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -255,9 +243,6 @@ def test_a_cura_de_host_de_uma_distro_comum_nao_pula_por_so_leitura(tmp_path: Pa
         [BASH, "-c", corpo], capture_output=True, text=True, timeout=60, check=False
     )
     assert "distro somente leitura" not in proc.stdout
-
-
-# --- 4. o roteiro do UCM na raiz somente leitura -----------------------------
 
 
 def test_o_ucm_em_raiz_somente_leitura_sai_limpo_dizendo_o_efeito(tmp_path: Path) -> None:

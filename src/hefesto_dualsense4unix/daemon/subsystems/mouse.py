@@ -122,9 +122,6 @@ def dispatch_mouse(daemon: DaemonProtocol, state: Any, buttons_pressed: frozense
         )
     except Exception as exc:
         logger.warning("mouse_dispatch_failed", err=str(exc))
-    # B4 (FEAT-DSX-TOUCHPAD-CURSOR-B4): o touchpad é fonte ÚNICA do cursor.
-    # Drena o delta acumulado pelo TouchpadReader desde o tick anterior e o
-    # converte em REL_X/REL_Y. Só roda aqui (dispatch_mouse), que o poll loop
     reader = getattr(daemon, "_touchpad_reader", None)
     consume = getattr(reader, "consume_motion", None)
     if consume is not None:
@@ -134,7 +131,6 @@ def dispatch_mouse(daemon: DaemonProtocol, state: Any, buttons_pressed: frozense
                 device.emit_touchpad_move(dx, dy)
         except Exception as exc:
             logger.warning("touchpad_move_dispatch_failed", err=str(exc))
-    # A-MIRA-NA-NAVEGACAO-01: a Mira de cada controle, no cursor.
     mover_o_cursor_pelo_giro(daemon, buttons_pressed)
 
 
@@ -209,8 +205,6 @@ class TabelaNoJogo:
         self._desistiu = False
         self._store: Any = None
 
-    # -- ciclo de vida ---------------------------------------------------
-
     def _abrir(self, daemon: Any) -> bool:
         if self._mouse is not None and self._teclado is not None:
             return True
@@ -230,10 +224,6 @@ class TabelaNoJogo:
                 poll_hz=cfg.poll_hz,
             )
             teclado = UinputKeyboardDevice()
-            # As linhas do teclado na tela (`__TOGGLE_OSK__` e as duas irmãs) têm o
-            # mesmo atendente do teclado do desktop: sem ele, o L3 de fábrica ficaria
-            # mudo com o jogo aberto, e a tela diz que toda linha age. O atendente é
-            # o do daemon NA HORA do toque: a Função do teclado desligada troca o dele.
             from hefesto_dualsense4unix.daemon.subsystems.keyboard import (
                 atendente_do_teclado_na_tela,
             )
@@ -247,8 +237,6 @@ class TabelaNoJogo:
                 self._desistiu = True
                 logger.warning("tabela_no_jogo_sem_uinput")
                 return False
-            # O teclado é dono do que sai por tecla (o d-pad, o Círculo, o Quadrado
-            # e o que o usuário escolheu): o mouse os cala, para a tecla não sair duas vezes.
             mouse.set_button_actions(
                 self._do_mouse, self._calados | frozenset(self._do_teclado))
             ligacoes = resolve_key_bindings(
@@ -289,8 +277,6 @@ class TabelaNoJogo:
                     dispositivo.stop()
         self._mouse = None
         self._teclado = None
-
-    # -- o tique ---------------------------------------------------------
 
     def tick(self, daemon: Any, state: Any, botoes_do_p1: frozenset[str]) -> None:
         """Um tique COM o jogo: a união dos controles aperta as linhas da tabela."""
@@ -499,7 +485,6 @@ def trocar_a_tabela_no_jogo(daemon: Any, profile: Any) -> None:
     anterior = getattr(daemon, "_tabela_no_jogo", None)
     if anterior is not None:
         anterior.fechar()
-    # O analógico em teclas no desktop nasce do mesmo perfil efetivo, e a troca solta o antigo.
     fechar_as_teclas_do_analogico(daemon)
     do_desktop = TeclasDoAnalogicoNoDesktop(
         getattr(profile, "button_actions", None), getattr(profile, "key_bindings", None))
@@ -539,15 +524,11 @@ def despachar_no_jogo(
       não cala, porque o jogo aberto é justamente onde a chave e o «Só dentro» agem.
     """
     if no_jogo:
-        # Com o pad do jogo despachando, o mouse do desktop para de andar: o clique que o
-        # travador prendeu nele não atravessa o jogo inteiro. Idempotente a cada tique.
         _soltar_o_travado(getattr(daemon, "_mouse_device", None))
-        # E a tecla do analógico: com o pad do jogo despachando, quem a emite é a tabela.
         soltar_as_teclas_do_analogico(daemon)
     if no_jogo and _suspenso_por_ela(daemon):
         no_jogo = False
     tabela = getattr(daemon, "_tabela_no_jogo", None)
-    # «Só dentro do jogo» e «Sempre» digitam com o jogo aberto; o laço do desktop cuida do resto.
     so_dentro = bool(getattr(daemon, "_teclado_so_no_jogo", False)) or bool(
         getattr(daemon, "_teclado_sempre", False))
     estava = bool(getattr(daemon, "_estava_no_jogo", False))

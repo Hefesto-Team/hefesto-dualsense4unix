@@ -16,47 +16,38 @@ FORMATO_LONGO = "dash"
 FORMATO_HORIZON = "horizon"
 FORMATO_MOTORSPORT_2023 = "motorsport_2023"
 
-#: o tamanho do pacote diz o formato
 FORMATO_DO_TAMANHO: dict[int, str] = {
     232: FORMATO_CURTO,
     311: FORMATO_LONGO,
     324: FORMATO_HORIZON,
     331: FORMATO_MOTORSPORT_2023,
 }
-#: onde o bloco do «Dash» começa em cada formato longo (o Horizon põe 12 bytes antes dele)
 INICIO_DO_DASH: dict[str, int] = {
     FORMATO_LONGO: 232,
     FORMATO_HORIZON: 244,
     FORMATO_MOTORSPORT_2023: 232,
 }
 
-# O bloco curto: IsRaceOn (s32), TimestampMS (u32), 51 floats (rotação, aceleração, velocidade,
-# giro do chassi, ângulos, e os blocos de quatro rodas), com o WheelOnRumbleStrip (quatro s32) no
-# meio, e os cinco s32 do carro no fim.
 _TIPOS_DO_SLED = "iI" + "f" * 27 + "iiii" + "f" * 20 + "iiiii"
 _SLED = struct.Struct("<" + _TIPOS_DO_SLED)
-# O bloco do «Dash»: 17 floats, LapNumber (u16), seis u8 (posição, acelerador, freio, embreagem,
-# freio de mão, marcha) e três s8 (direção, linha, diferença de freio da IA).
 _DASH = struct.Struct("<" + "f" * 17 + "H" + "B" * 6 + "bbb")
 
 assert _SLED.size == 232
 assert _DASH.size == 79
 
-# os índices do bloco curto, na ordem do «Data Out»
 _I_CORRIDA_LIGADA = 0
 _I_INSTANTE_MS = 1
 _I_RPM_MAXIMO = 2
 _I_RPM_OCIOSO = 3
 _I_RPM = 4
-_I_ACELERACAO = 5  # X, Y, Z
-_I_VELOCIDADE = 8  # X, Y, Z
-_I_RAZAO_DE_PATINACAO = 21  # FL, FR, RL, RR
-_I_GIRO_DAS_RODAS = 25  # FL, FR, RL, RR, em rad/s
-_I_NA_ZEBRA = 29  # FL, FR, RL, RR (s32)
-_I_PATINACAO_COMBINADA = 45  # FL, FR, RL, RR
-# os índices do bloco do «Dash»
-_D_VELOCIDADE = 3  # m/s
-_D_ACELERADOR = 19  # depois do LapNumber (17) e do RacePosition (18)
+_I_ACELERACAO = 5
+_I_VELOCIDADE = 8
+_I_RAZAO_DE_PATINACAO = 21
+_I_GIRO_DAS_RODAS = 25
+_I_NA_ZEBRA = 29
+_I_PATINACAO_COMBINADA = 45
+_D_VELOCIDADE = 3
+_D_ACELERADOR = 19
 _D_FREIO = 20
 _D_MARCHA = 23
 
@@ -74,19 +65,13 @@ class EstadoDaCorrida:
     rpm: float
     rpm_maximo: float
     rpm_ocioso: float
-    #: m/s² no eixo do carro: X à direita, Y para cima, Z para a frente
     aceleracao: tuple[float, float, float]
-    #: m/s no eixo do carro
     velocidade_vetor: tuple[float, float, float]
-    #: a razão de patinação de cada roda (FL, FR, RL, RR): 0 é aderência toda; |x| > 1, perdida
     razao_de_patinacao: QUATRO
-    #: o giro de cada roda, em rad/s
     giro_das_rodas: QUATRO
     na_zebra: tuple[bool, bool, bool, bool]
-    #: a patinação combinada (longitudinal e lateral) de cada roda: |x| > 1 é aderência perdida
     patinacao_combinada: QUATRO
     velocidade: float | None = None
-    #: de 0 a 1 (o byte do jogo sobre 255)
     acelerador: float | None = None
     freio: float | None = None
     marcha: int | None = None

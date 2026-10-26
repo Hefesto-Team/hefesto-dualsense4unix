@@ -56,7 +56,7 @@ print("HEFESTO_JSON " + json.dumps(marcas))
 
 def _sob_xvfb(corpo: str, tmp_path: Path) -> dict:
     """Roda ``corpo`` com GTK real num display descartável; devolve as marcas."""
-    if shutil.which("xvfb-run") is None:  # pragma: no cover — máquina sem xvfb
+    if shutil.which("xvfb-run") is None:  # pragma: no cover
         pytest.skip("sem `xvfb-run` — este teste exige um display descartável")
 
     script = _PRELUDIO.format(raiz=str(_RAIZ / "src")) + corpo + _EPILOGO

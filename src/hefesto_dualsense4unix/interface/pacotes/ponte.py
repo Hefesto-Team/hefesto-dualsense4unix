@@ -53,7 +53,6 @@ if str(RAIZ / "src") not in sys.path:
 
 from hefesto_dualsense4unix.app import ipc_bridge as _b  # noqa: E402
 
-# de propósito: quem procurar `led_set` acha os dois e vê que são o mesmo.
 led_set = _b.led_set
 led_set_detalhado = _b.led_set_detalhado
 player_leds_set = _b.player_leds_set
@@ -73,8 +72,6 @@ rumble_stop_checked = _b.rumble_stop_checked
 rumble_passthrough = _b.rumble_passthrough
 rumble_policy_set_checked = _b.rumble_policy_set_checked
 rumble_policy_custom = _b.rumble_policy_custom
-#: linha é a travessia, e ela fecha as duas dívidas que a D2 declarou nos
-#: `portao_a_casa_sabe_e_o_produto_nao_faz._SEM_CAMINHO_HOJE`).
 rumble_motores_set = _b.rumble_motores_set
 
 mic_set = _b.mic_set
@@ -82,7 +79,6 @@ mic_set_detalhado = _b.mic_set_detalhado
 mic_canal_set = _b.mic_canal_set
 mic_canal_set_detalhado = _b.mic_canal_set_detalhado
 mic_volume_set = _b.mic_volume_set
-# CHEIA: com dois DualSense no cabo há duas placas de som, e a rota global pega
 mic_volume_set_detalhado = _b.mic_volume_set_detalhado
 speaker_set = _b.speaker_set
 speaker_set_detalhado = _b.speaker_set_detalhado
@@ -100,8 +96,6 @@ daemon_state_full = _b.daemon_state_full
 daemon_status_basic = _b.daemon_status_basic
 
 
-#: Os prazos têm um dono só, o cliente do IPC, que a linha de comando também
-#: usa: a janela os reexporta, sem cópia.
 TETOS = _b.TETOS
 teto = _b.teto
 

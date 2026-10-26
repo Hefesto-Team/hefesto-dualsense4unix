@@ -30,7 +30,7 @@ from tests.unit.ponte_do_rodape import PonteDoRodape
 PALETA = tuple(player_slot_color(n) for n in range(1, 9))
 
 CLIQUE_DA_04 = {"tipo": "button", "evento": "click",
-                "pagina": "04-iluminacao.html"}  # (noqa-acento: chave do clique)
+                "pagina": "04-iluminacao.html"}  # (noqa-acento)
 
 
 def _na(rgb: tuple[int, int, int], brilho: float) -> tuple[int, int, int]:

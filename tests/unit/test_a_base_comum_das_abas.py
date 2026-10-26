@@ -37,24 +37,17 @@ from hefesto_dualsense4unix.interface import hefesto_vivo, monta, pacotes
 from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
 from tests.unit.test_cada_gesto_diz_de_quem_e import _contexto, _perfil, _Ponte
 
-AUTO = "automatico"  # (noqa-acento) valor do contrato, sem acento
+AUTO = "automatico"  # (noqa-acento)
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src/hefesto_dualsense4unix/interface"
 
-#: Os arquivos da posse da base: nenhum `.ajuda`, nenhum «?» de botão.
 SEM_AJUDA = ("topo.html", "fim.html", "monta.py", "janela.py", "hefesto_vivo.py", "calibrar.py",
              "base-comum.css", "base-comum.js")
 
-#: O que ainda tem `.ajuda` e é de OUTRA sprint: `arquivo → quantos`. Cada gerador de
-#: aba (`abaNN.py`) e as páginas que ela monta saem na sprint da aba (`A-ABA-<nome>-DO-TODO-01`),
-#: que troca o «?» pelo `data-dica`. O número só diminui, e a linha sai quando o arquivo zera.
 ISENTOS: dict[str, int] = {}
 
-#: Uma CITAÇÃO que proíbe não é um uso: o guarda do `aba03.py` escreve `'class="ajuda' not in
-#: corpo`, e aí o `ajuda` vem seguido da aspa simples que fecha a string, nunca do atributo.
 _CLASSE_AJUDA = re.compile(r'class=(?:"ajuda\b(?!\')|\'ajuda\b)')
 _CSS_AJUDA = re.compile(r"\.ajuda\b")
-#: um botão cujo texto é só «?»
 _BOTAO_DE_INTERROGACAO = re.compile(r"<button\b[^>]*>\s*(?:<[^>]+>\s*)*\?\s*<", re.IGNORECASE)
 
 
@@ -66,8 +59,6 @@ def _arquivos_da_interface() -> list[pathlib.Path]:
     return sorted(p for p in INTERFACE.iterdir()
                   if p.is_file() and p.suffix in (".py", ".html", ".css", ".js"))
 
-
-# --- 1. a posse da base não tem «?» ---------------------------------------------------------------
 
 @pytest.mark.parametrize("nome", SEM_AJUDA)
 def test_a_posse_da_base_nao_tem_ajuda(nome: str) -> None:
@@ -83,8 +74,9 @@ def test_o_botao_cinza_diz_a_razao_no_proprio_botao() -> None:
     """A razão mora no `data-dica` do botão; não há `<span>` de «?» ao lado.
 
     MORDIDA: devolver o `<span class="ajuda porque">` ao `botao_cinza` reprova.
+
+    Prova da D-1410-A-RAZAO-DO-CINZA-MORA-NO-BOTAO.
     """
-    # A decisão: D-1410-A-RAZAO-DO-CINZA-MORA-NO-BOTAO.
     html = monta.botao_cinza("Parar o serviço", "parar", "parar-razao", "Já está parado.")
     assert "ajuda" not in html, html
     assert ">?<" not in html.replace(" ", ""), html
@@ -107,8 +99,10 @@ def test_a_citacao_que_proibe_o_ajuda_nao_conta_como_uso() -> None:
 
 
 def test_o_que_resta_de_ajuda_e_de_outra_sprint_e_so_diminui() -> None:
-    """Quem ainda escreve `class="ajuda"` está declarado, e o número não cresce."""
-    # A decisão: D-1410-A-RAZAO-DO-CINZA-MORA-NO-BOTAO.
+    """Quem ainda escreve `class="ajuda"` está declarado, e o número não cresce.
+
+    Prova da D-1410-A-RAZAO-DO-CINZA-MORA-NO-BOTAO.
+    """
     achados = {p.name: len(_CLASSE_AJUDA.findall(p.read_text(encoding="utf-8")))
                for p in _arquivos_da_interface()
                if p.name not in SEM_AJUDA}
@@ -123,8 +117,6 @@ def test_o_que_resta_de_ajuda_e_de_outra_sprint_e_so_diminui() -> None:
     zerou = sorted(nome for nome in ISENTOS if not achados.get(nome))
     assert not zerou, f"zerou o `.ajuda`; tire a linha de ISENTOS: {zerou}"
 
-
-# --- 2. a base entra uma vez em toda página -------------------------------------------------------
 
 def test_a_base_dos_arquivos_e_a_que_o_monta_injeta() -> None:
     css = (INTERFACE / "base-comum.css").read_text(encoding="utf-8")
@@ -218,8 +210,6 @@ def test_o_modo_auto_fala_a_lingua_do_piloto() -> None:
     assert f'data-modo="{AUTO}"' in desligado
 
 
-# --- 3. os modos gravam e voltam iguais -----------------------------------------------------------
-
 GESTOS_DO_MODO = [
     ("05-vibracao.html", "modo-da-vibracao", "rumble", "modo"),
     ("02-controles.html", "modo-dos-controles", None, "controles_modo"),
@@ -278,8 +268,9 @@ def test_o_modo_sobrevive_ao_salvar_do_rodape() -> None:
     """O rascunho da tela (`DraftConfig`) leva o modo de volta ao perfil: salvar não o apaga.
 
     MORDIDA: tirar `modo=self.rumble.modo` ou `controles_modo=` do `to_profile` reprova.
+
+    Prova da D-1410-OS-MODOS-SAO-CAMPOS-DO-PERFIL.
     """
-    # A decisão: D-1410-OS-MODOS-SAO-CAMPOS-DO-PERFIL.
     from hefesto_dualsense4unix.app.draft_config import DraftConfig
 
     save_profile(_perfil("Jogo X", controles_modo=AUTO, rumble={"modo": AUTO}))
@@ -294,8 +285,9 @@ def test_o_perfil_sem_modo_escolhido_sai_igual_ao_de_ontem() -> None:
     Um Hefesto anterior a esta sprint lê o `Profile` e o `RumbleConfig` com `extra="forbid"`: uma
     chave `"modo": null` em todo save o faria recusar TODOS os perfis num downgrade
     (QUEM-E-QUEM-02). MORDIDA: tirar o serializador do `RumbleConfig` reprova.
+
+    Prova da D-1410-OS-MODOS-SAO-CAMPOS-DO-PERFIL.
     """
-    # A decisão: D-1410-OS-MODOS-SAO-CAMPOS-DO-PERFIL.
     import json
 
     caminho = save_profile(_perfil("Jogo X"))
@@ -310,8 +302,10 @@ def test_o_perfil_sem_modo_escolhido_sai_igual_ao_de_ontem() -> None:
 
 
 def test_os_modos_nao_se_deduzem_do_perfil() -> None:
-    """Sem nada escrito a aba segue no Personalizado: o Automático nunca nasce por dedução."""
-    # A decisão: D-1410-OS-MODOS-SAO-CAMPOS-DO-PERFIL.
+    """Sem nada escrito a aba segue no Personalizado: o Automático nunca nasce por dedução.
+
+    Prova da D-1410-OS-MODOS-SAO-CAMPOS-DO-PERFIL.
+    """
     from hefesto_dualsense4unix.interface.pacotes import a02_controles, a05_vibracao
 
     vib, ctl = a05_vibracao.modo_da_vibracao_do_perfil, a02_controles.modo_dos_controles_do_perfil
@@ -328,14 +322,13 @@ def test_os_dois_gestos_do_modo_tem_camada() -> None:
         assert camada.CAMADA[(aba, gesto)] == camada.JOGO, f"{aba}·{gesto}"
 
 
-# --- 4. o menu do botão direito -------------------------------------------------------------------
-
 def test_o_webkit_cala_o_menu_dele() -> None:
     """O sinal `context-menu` devolve `True`: o WebKit não abre o Recarregar/Voltar/Inspecionar.
 
     MORDIDA: devolver `False` (ou tirar a ligação do sinal) reprova.
+
+    Prova da D-1410-O-MENU-DO-BOTAO-DIREITO-E-DA-CASA.
     """
-    # A decisão: D-1410-O-MENU-DO-BOTAO-DIREITO-E-DA-CASA.
     from hefesto_dualsense4unix.interface import janela
 
     assert janela.PonteDaTela._calar_o_menu_do_webkit(None, None, None, None) is True
@@ -387,8 +380,9 @@ def test_os_itens_do_menu_que_mexem_na_maquina_estao_nos_perigosos() -> None:
     """Desligar, Reiniciar e Fechar declaram `grava=`: a régua de clique não os aciona sozinha.
 
     MORDIDA: tirar o `grava=` dos itens no `hefesto_vivo._registrar_o_menu` reprova.
+
+    Prova da D-1410-O-MENU-DO-BOTAO-DIREITO-E-DA-CASA.
     """
-    # A decisão: D-1410-O-MENU-DO-BOTAO-DIREITO-E-DA-CASA.
     perigosos = pacotes.perigosos()
     fora = sorted(g for g in ("menu-desligar", "menu-reiniciar", "menu-fechar")
                   if ("*", g) not in perigosos)
@@ -397,16 +391,16 @@ def test_os_itens_do_menu_que_mexem_na_maquina_estao_nos_perigosos() -> None:
 
 
 def test_o_desligar_do_menu_pede_a_confirmacao_da_sistema() -> None:
-    """O item «Desligar» troca o texto para «Confirma?» antes do 2º clique, como na aba Sistema."""
-    # A decisão: D-1410-O-MENU-DO-BOTAO-DIREITO-E-DA-CASA.
+    """O item «Desligar» troca o texto para «Confirma?» antes do 2º clique, como na aba Sistema.
+
+    Prova da D-1410-O-MENU-DO-BOTAO-DIREITO-E-DA-CASA.
+    """
     js = (INTERFACE / "base-comum.js").read_text(encoding="utf-8")
     assert "Confirma?" in js
     from hefesto_dualsense4unix.interface.pacotes import a09_sistema
 
     assert a09_sistema.CONFIRMA == "Confirma?"
 
-
-# --- 4b. a base viva num navegador: o clique direito e o automático ----------------------------
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
@@ -539,7 +533,7 @@ _O_ITEM_DO_SERVICO = """async () => {
 }"""
 
 
-@pytest.mark.parametrize(("servico", "esperado"), [  # (noqa-acento) valor do contrato
+@pytest.mark.parametrize(("servico", "esperado"), [  # (noqa-acento)
     ("de-pe", {"antes": "Desligar", "depois": "Confirma?", "menu_aberto": True}),
     ("parado", {"antes": "Ligar", "depois": "Ligar", "menu_aberto": False}),
     ("pausado", {"antes": "Ligar", "depois": "Ligar", "menu_aberto": False}),
@@ -548,8 +542,9 @@ def test_o_item_do_servico_diz_desligar_ou_ligar(servico: str, esperado: dict[st
     """De pé, «Desligar» pede dois cliques; parado ou pausado, «Ligar» age no primeiro.
 
     MORDIDA: fixar o rótulo «Desligar» no JS da base reprova os casos parado e pausado.
+
+    Prova da D-1410-O-MENU-DO-BOTAO-DIREITO-E-DA-CASA.
     """
-    # A decisão: D-1410-O-MENU-DO-BOTAO-DIREITO-E-DA-CASA.
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema: a régua não tem motor")
     from playwright.sync_api import sync_playwright
@@ -574,10 +569,8 @@ def test_o_cabecalho_leva_o_estado_do_servico() -> None:
     assert pacotes.servico_do_menu({"paused": True, "connected": True}) == "pausado"
     assert pacotes.servico_do_menu({"connected": True}) == "de-pe"
     ctx = pacotes.Contexto(state={"connected": True}, mesa=[], conectados=[], estados={})
-    assert pacotes.topo(ctx)["servico"] == "de-pe"  # (noqa-acento) endereço da página
+    assert pacotes.topo(ctx)["servico"] == "de-pe"  # (noqa-acento)
 
-
-# --- 5. a dica da casa lê o data-dica -------------------------------------------------------------
 
 def test_a_dica_da_casa_le_o_data_dica_ao_vivo() -> None:
     """O piloto lê `data-dica` primeiro; o `data-hef-razao` escreve a razão no botão cinza."""
@@ -600,8 +593,9 @@ def test_a_dica_da_casa_abre_no_foco_do_teclado_e_fecha_ao_sair() -> None:
     """O `data-dica` chega a quem anda pelo teclado ou pelo controle, na camada do produto.
 
     MORDIDA: tirar o ouvinte `focusin` da `DICA_DA_CASA` reprova (a caixa não abre no Tab).
+
+    Prova da D-1410-A-DICA-ABRE-NO-FOCO.
     """
-    # A decisão: D-1410-A-DICA-ABRE-NO-FOCO.
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema: a régua não tem motor")
     from playwright.sync_api import sync_playwright
@@ -622,8 +616,6 @@ def test_a_dica_da_casa_abre_no_foco_do_teclado_e_fecha_ao_sair() -> None:
     assert fora and fora["aberta"] is False, fora
 
 
-# --- 6. os efeitos que ela cria têm um dono só ----------------------------------------------------
-
 CHAVES = {
     "gatilhos": "gatilhos_meus_efeitos",
     "imersao": "imersao_meus_efeitos",
@@ -634,7 +626,7 @@ CHAVES = {
 
 
 def test_uma_chave_por_feature_e_a_dos_gatilhos_fica() -> None:
-    # A decisão: D-1410-OS-EFEITOS-DELA-TEM-UM-DONO.
+    """Prova da D-1410-OS-EFEITOS-DELA-TEM-UM-DONO."""
     from hefesto_dualsense4unix.interface.pacotes import meus_efeitos
 
     assert meus_efeitos.CHAVES == CHAVES
@@ -682,8 +674,10 @@ def test_criar_efeito_recusa_o_que_nao_e_efeito() -> None:
 
 
 def test_a_03_le_a_biblioteca_pelo_dono_novo() -> None:
-    """`a03.meus_efeitos()` e a gravação da 03 passam pelo mesmo dono, na chave que já existia."""
-    # A decisão: D-1410-OS-EFEITOS-DELA-TEM-UM-DONO.
+    """`a03.meus_efeitos()` e a gravação da 03 passam pelo mesmo dono, na chave que já existia.
+
+    Prova da D-1410-OS-EFEITOS-DELA-TEM-UM-DONO.
+    """
     from hefesto_dualsense4unix.interface.pacotes import a03_gatilhos, meus_efeitos
 
     meus_efeitos.guardar_meus_efeitos(

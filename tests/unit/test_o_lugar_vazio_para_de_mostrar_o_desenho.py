@@ -227,7 +227,7 @@ def test_o_molde_escreve_o_travessao_do_desenho(pacotes_mod):
     assert set(molde.values()) == {pacotes_mod.TRAVESSAO}
 
 
-@pytest.mark.parametrize("pagina",  # (noqa-acento): nome do argumento
+@pytest.mark.parametrize("pagina",  # (noqa-acento)
                          ["01-jogar.html", "02-controles.html",
                           "04-iluminacao.html", "05-vibracao.html"])
 def test_os_quatro_lugares_ficam_no_travessao_e_marcados(pacotes_mod, pagina):

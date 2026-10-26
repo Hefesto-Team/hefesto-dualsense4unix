@@ -121,9 +121,6 @@ def hidraw(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
     return estado
 
 
-# --- o montador do report -------------------------------------------------
-
-
 @pytest.mark.parametrize("transporte", ["cabo", "radio"])
 def test_firmware_novo_pede_a_v2_e_tira_a_v1(transporte: str) -> None:
     handle = _handle(bt=transporte == "radio")
@@ -212,9 +209,6 @@ def test_a_v1_de_hoje_e_byte_a_byte_a_mesma_nos_quatro_led_option(led_option: in
     assert common[rep.COMMON_VALID_FLAG2] == (led_option & ~brilho) | brilho
 
 
-# --- o limiar -------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     ("lido", "edge", "esperado"),
     [
@@ -230,9 +224,6 @@ def test_a_v1_de_hoje_e_byte_a_byte_a_mesma_nos_quatro_led_option(led_option: in
 def test_o_limiar_da_v2_e_o_do_sdl(lido: int | None, edge: bool, esperado: bool) -> None:
     assert LIMITE_DA_VIBRACAO_V2 == 0x0224
     assert fala_a_vibracao_v2(lido, edge=edge) is esperado
-
-
-# --- o leitor da 0x20 -----------------------------------------------------
 
 
 def test_a_feature_real_do_blueprint_diz_0x0630() -> None:
@@ -273,9 +264,6 @@ def test_falha_de_leitura_devolve_vazio(hidraw: dict[str, Any]) -> None:
     backend = _backend(aabbcc000001=_handle())
 
     assert backend.read_update_version("aabbcc000001") is None
-
-
-# --- a conexão: cada controle no modo do firmware dele ---------------------
 
 
 def test_dois_controles_no_mesmo_backend_cada_um_na_versao_dele(

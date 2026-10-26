@@ -184,7 +184,6 @@ def test_o_nao_sei_da_mesa_e_o_mesmo_texto_das_duas_bandas() -> None:
     assert pacotes.NOME_SEM_LEITURA == mesa_viva.COR_DESCONHECIDA
 
 
-#: Trocá-la por `player_slot` casaria o vpad errado.
 EXCECOES_DATADAS: dict[str, str] = {
     # fica: nenhuma das duas lê o jogador do controle (medido em 02/09 e 09/09)
     '_jogador_esperando: return "" if c.get("player") is not None else "1"': (
@@ -205,7 +204,6 @@ EXCECOES_DATADAS: dict[str, str] = {
     ),
 }
 
-#: A leitura crua a caçar. `player_slot` está de fora: ele é a chave que a GTK lê
 _CRU = re.compile(r'\.get\(\s*["\']player["\']')
 
 
@@ -218,7 +216,7 @@ def _dono_de_cada_linha(fonte: str) -> dict[int, str]:
     dono: dict[int, str] = {}
     try:
         arvore = ast.parse(fonte)
-    except SyntaxError:  # pragma: no cover — pacote quebrado é outro portão
+    except SyntaxError:  # pragma: no cover
         return dono
     for no in ast.walk(arvore):
         if not isinstance(no, ast.FunctionDef | ast.AsyncFunctionDef):
@@ -261,7 +259,6 @@ def test_a_lista_datada_nao_guarda_fantasma() -> None:
     )
 
 
-# RÉGUA 5 — se a chave sumir do `state_full`, reprova
 class _Vazio:
     """Um daemon sem `maquina.json` declarado."""
 

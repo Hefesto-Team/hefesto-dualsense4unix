@@ -114,7 +114,6 @@ class Modo(NamedTuple):
 
     chave: str
     rotulo: str
-    #: o valor que ``mode_of_state`` devolve para este botão — ``None`` quando
     lido_como: str | None
     porque_nao: str = ""
 
@@ -123,7 +122,6 @@ class Modo(NamedTuple):
         return self.lido_como is not None
 
 
-#:     e não do lado desligado, porque **quem emula teclado e mouse é o próprio
 _ROTULO_DO_MODO: dict[str, str] = dict(home_actions._MODE_ITEMS)
 
 MODOS_DA_TELA: tuple[Modo, ...] = (
@@ -178,9 +176,6 @@ def caminho_vivo(state: dict[str, Any] | None) -> str | None:
     return None
 
 
-# pelo Hefesto" enquanto o `mode_of_state` do daemon dizia `desktop` — o F7
-
-#: nenhum e escritor nenhum, e a **Navegação** é o caso do meio ao contrário —
 ESCRITOR_DOS_MODOS: dict[str, str] = {
     MODE_DESKTOP: "`mode_transition.apply_mode('desktop')` — três IPCs em ordem "
     "(`native.mode.set` off, `gamepad.emulation.set` off, "
@@ -241,7 +236,6 @@ class Lembranca(NamedTuple):
     sei se segue desativado"* — é mais aflita.
     """
 
-    #: decidiu. Os três são estados diferentes, e o do meio é o que a automação
     ligado: bool | None
     mascara: str | None
     frase: str
@@ -283,7 +277,6 @@ class Chip(NamedTuple):
     rotulo: str
     ponte: ponte_escada.Ponte | None
     modo: str | None = None
-    #: «Sony DualSense» e o «Xbox» têm: são os dois degraus ao vivo da escada, e
     caminho: str | None = None
 
     @property
@@ -300,7 +293,6 @@ class Chip(NamedTuple):
         return SEM_ALGARISMO if indice < 0 else str(indice + 1)
 
 
-#:   * o chip chamado **"Hefesto"** virou **Sony DualSense** — ele sempre foi
 CHIPS_DA_ESCADA: tuple[Chip, ...] = (
     Chip(
         "dualsense",
@@ -340,28 +332,11 @@ class Aviso(NamedTuple):
     nome: str
 
 
-#: (``tests/unit/test_a_frase_refutada_da_allowlist.py``) por começar com «O
-#: Hefesto saiu da frente» — a construção que a medição derrubou em
-#: 06/08. Aqui não há verbo de afastamento nenhum: há o que o produto NÃO monta
-#: e quem, em vez dele, conta.
-#:
-#: E ELA NÃO AFIRMA O QUE NINGUÉM MEDIU. «O jogo vê dois jogadores» seria
-#: afirmação forte sem régua — a §4.2 da sprint é **inferido do código**, e a
-#: medição que a fecharia (dois DualSense num jogo de co-op local, no cabo e no
-#: rádio) é bancada, na MESA-DE-QUATRO-01. A frase diz de quem é a conta,
-#: que é o que se sabe.
-#: **ELA ENCOLHEU COM A IRMÃ — 11/09/2026, proposta A3-007, aprovada pelo usuário.**
-#: A oração de quem conta é a mesma de ``aba01.NATIVO_E_OS_JOGADORES``, e as
-#: duas mudaram na mesma linha porque a régua cobra a mesma oração nas duas.
 FRASE_DO_MODO_NATIVO = (
     "Conexão Nativa com {quantos} controles ligados: quem conta os jogadores "
     "passa a ser o jogo."
 )
 
-#: O SELO DA LINHA ACIMA. ``MODO`` é a palavra do glossário
-#: (``docs/A-LINGUA-DESTA-CASA``, §2: «**Modo**: Jogar pelo Hefesto · Conexão
-#: Nativa (Sony) · Controlar o PC»), e a escada de gravidade que o ordena é
-#: ``a01_jogar.ORDEM_DA_GRAVIDADE``.
 SELO_DO_MODO = "MODO"
 
 
@@ -442,9 +417,6 @@ FRASE_DA_ORIGEM_DO_MODO = "Quem pôs o Hefesto em «{modo}» foi o perfil ativo,
 
 SEPARADOR_DA_ORIGEM = " · "
 
-#: O nativo é o lado «Desligado» do interruptor da Jogar (`interface/aba01.INTERRUPTOR`): o chip
-#: aceso ali pode ser o Nativo ou o Steam Input, conforme o jogo da vez, e o perfil liga os dois
-#: pelo mesmo `native_mode`.
 ROTULO_DO_NATIVO_NA_ORIGEM = "Desligado"
 
 
@@ -487,7 +459,6 @@ _NAO_CONFERIU = "Não consegui conferir a numeração dos controles."
 _NAO_COMPACTOU = "Não consegui ajustar a numeração dos controles."
 
 
-#: `integrations/gesto_de_reconexao.reconectar`.
 _VOLTARAM_PELO_RADIO = "{quantos} controle(s) voltaram pelo rádio."
 _ESPERAM_O_PS = (
     "Aperte PS em {quantos} controle(s): o rádio dizia que estavam aqui e o "
@@ -528,17 +499,14 @@ def _sem_noticia(resultado: object) -> bool:
     return True
 
 
-#: aba Conexões, e o ``state_full`` não publica contagem nem texto de aviso.
 AVISOS_DA_TELA: tuple[Aviso, ...] = (
     Aviso("PAUSA", home_actions.texto_da_pausa, "home_actions.texto_da_pausa"),
     Aviso("GAMEPAD", home_actions.vpad_degradation_text, "home_actions.vpad_degradation_text"),
     Aviso("RÁDIO", home_actions.texto_do_radio_fragil, "home_actions.texto_do_radio_fragil"),
-    # `aviso_do_wrapper`, e não `wrapper_banner_text`: o segundo responde "há
     Aviso("JOGO", home_actions.aviso_do_wrapper, "home_actions.aviso_do_wrapper"),
     Aviso("PERFIL", home_actions.autoswitch_lock_text, "home_actions.autoswitch_lock_text"),
     Aviso("PERFIL", home_actions.texto_do_cadeado_cego, "home_actions.texto_do_cadeado_cego"),
     Aviso(SELO_DO_MODO, aviso_do_modo_nativo, "painel.aviso_do_modo_nativo"),
-    # `desktop.arranjo.apply` é o ÚLTIMO dos três IPCs). Uma fonte desta
     Aviso("MODO", home_actions.texto_do_desktop_sem_emulacao,
           "home_actions.texto_do_desktop_sem_emulacao"),
     Aviso("GAMEPAD", aviso_do_grab_dobrado, "painel.aviso_do_grab_dobrado"),
@@ -566,9 +534,6 @@ def avisos_do_estado(state: dict[str, Any] | None) -> list[dict[str, str]]:
         if texto:
             fora.append({"selo": aviso.selo, "texto": str(texto), "fonte": aviso.nome})
     return fora
-
-
-# nome_do_ativo`, que `pacotes.topo()` já chama. Dois leitores do perfil ativo
 
 
 __all__ = [

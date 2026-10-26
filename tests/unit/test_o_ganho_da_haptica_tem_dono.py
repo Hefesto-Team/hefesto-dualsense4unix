@@ -341,9 +341,6 @@ class TestOPedido:
         assert ok and pedidos == [("rumble.motores.set", {"haptica_pct": 175, "uniq": BRANCO})]
 
 
-# 5. O que o `state_full` devolve, por controle
-
-
 class TestOStateFull:
     def test_cada_controle_diz_o_seu_ganho_e_se_o_hefesto_alcanca(
         self, monkeypatch: pytest.MonkeyPatch

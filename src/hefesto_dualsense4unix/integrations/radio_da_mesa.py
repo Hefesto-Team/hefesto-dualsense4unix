@@ -126,32 +126,18 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.texto_do_sysfs import ler_texto
 
 _log = get_logger(__name__)
-#: Fatias de tempo por segundo do Bluetooth Classic — 625 µs cada. É
-#: ESPECIFICAÇÃO, não medição desta máquina; ver o cabeçalho.
 SLOTS_POR_SEGUNDO = 1600
 
-#: Fatias por relatório NA VISTA ADITIVA VELHA (R1 do PO, 22/08). O medido é 2
-#: e o 1 é o lado otimista; «O AR, DESDE 23/09/2026», no fim deste módulo, diz
-#: por que ele fica (o mockup aprovado do arranjo o espelha) e quando sai.
 SLOTS_POR_RELATORIO = 1
 
-#: A chave da linha de ``docs/data/mapa-controles.csv`` de onde as três
-#: constantes de Hz abaixo vieram — T5, CONFIGURAÇÕES-FECHA-01. A célula é a
-#: coluna ``radio_ressalva``, e ``test_radio_da_mesa_bate_com_o_mapa.py`` reabre
-#: o CSV e compara: remedir o A/B sem tocar aqui (ou vice-versa) reprova.
 CHAVE_NO_MAPA_DE_CANAIS = "audio.microfone"
 
-#: Relatórios de entrada por segundo, mic desligado. A/B de 2026-07-25,
-#: medição do projeto, sem endereço de linha. Mesma medição que
-#: :data:`CHAVE_NO_MAPA_DE_CANAIS` registra em ``radio_ressalva``.
 HZ_INPUT_SEM_MIC = 260.4
 
-#: Relatórios de entrada por segundo com a ponte de microfone de pé — o input
 HZ_INPUT_COM_MIC = 170.5
 
 HZ_AUDIO_COM_MIC = 106.2
 
-#: MESMA medição escrita duas vezes, sem nada entre elas: trocar a constante
 NUMEROS_MEDIDOS_NO_MAPA: tuple[Numero, ...] = (
     Numero(constante="HZ_INPUT_SEM_MIC", valor=HZ_INPUT_SEM_MIC,
            chave="audio.microfone@dualsense", coluna="radio_ressalva"),
@@ -363,18 +349,12 @@ N_MAX_PONTES = 2
 
 HZ_DA_PONTE = 93.75
 
-#: Fatias que um relatório da ponte (o ``0x36``, 403 B no ar) ocupa: 3 num 3-DH3, 5 num 2-DH5.
-#: Provisório: o pacote não se vê pelo HCI do host, e o ``k`` sai do deslocamento da entrada
-#: (``scripts/ensaios/a_ponte_em_fatias_no_ar.py``). Gravada a tabela da bancada em
-#: ``tests/fixtures/a_ponte_em_fatias_no_ar/bancada.json``, este número segue o ``k`` dela.
 FATIAS_DA_PONTE = 3
 
 FATIAS_POR_RELATORIO_DE_ENTRADA = 2
 
 MODOS_DA_PONTE = frozenset({"som", "haptica"})
 
-
-# numeros com fontes mudando de cores do vermelho <!-- noqa-acento: citação literal -->
 
 HZ_QUE_ENGASGA = 1000.0 / 8
 HZ_DO_JOGO = MOTION_EMIT_MAX_HZ
@@ -392,23 +372,14 @@ def nivel_do_movimento(hz: object) -> str:
     return NIVEL_ENGASGA
 
 
-#: O sinal (RSSI do enlace, dBm) que o rádio mede de cada controle. Os dois números são da
-#: bancada de 03/10/2026 (dados em `bancada-0310/x-sinal.txt`, um adaptador, a casa do usuário):
-#: abaixo de ~-48 o controle ainda funciona e já atrasa; abaixo de ~-52 perde aperto. São o ponto de
-#: partida, e a sprint mede de novo noutro adaptador antes de fixá-los.
 SINAL_QUE_ATRASA_DBM = -48
 SINAL_QUE_PERDE_APERTO_DBM = -52
 
-#: O Hz de um controle é relativo ao que ELE dava naquele adaptador com aquela gente dividindo
-#: (a referência abaixo): 250 Hz é normal para dois no mesmo adaptador e é queda para um sozinho
-#: que dava 650. Acima de `FRACAO_QUE_AINDA_E_NORMAL` da referência é liso; abaixo de
-#: `FRACAO_QUE_ENGASGA`, engasga.
 FRACAO_QUE_AINDA_E_NORMAL = 0.6
 FRACAO_QUE_ENGASGA = 0.3
 MEIA_VIDA_DA_REFERENCIA_S = 120.0
 
 CAUSA_LONGE = "longe"
-#: «longe» e a ponte deste controle pausada por isso (o enlace fraco protege o botão)
 CAUSA_LONGE_PAUSADA = "longe_pausada"
 CAUSA_INTERFERENCIA = "interferencia"
 CAUSA_ADAPTADOR_CHEIO = "adaptador_cheio"
@@ -506,8 +477,6 @@ def sinais_dos_enlaces(
     return saida
 
 
-#: O sinal se pergunta ao rádio no máximo uma vez por segundo: o enlace é do jogo, e a leitura
-#: não pode atrasá-lo.
 PERIODO_DO_SINAL_S = 1.0
 
 
@@ -560,7 +529,7 @@ class LeitorDoSinal:
                 with self._trava:
                     self._sinais = sinais
                     self._numero += 1
-            except Exception:  # defensivo: jamais derruba o daemon
+            except Exception:
                 _log.debug("radio_sinal_nao_lido", exc_info=True)
             finally:
                 with self._trava:
@@ -583,14 +552,9 @@ class LeitorDoSinal:
         return self.leitura()[1]
 
 
-#: O enlace só volta a valer para o som depois de passar o limiar que atrasa por esta folga, em
-#: duas leituras seguidas: o sinal oscila de uma leitura para outra, e a ponte que liga e desliga
-#: a cada segundo é pior que a que fica pausada um pouco mais. Pausar é na hora; voltar é devagar.
 FOLGA_DO_SINAL_DBM = 3
 LEITURAS_PARA_O_SINAL_VOLTAR = 2
 
-#: Enlace que não responde ao RSSI por tanto tempo deixa de provar que o controle está longe: a
-#: pausa solta. «Não sei» não pausa, e não segura pausa para sempre.
 SEM_SINAL_SOLTA_A_PAUSA_S = 10.0
 
 
@@ -642,26 +606,13 @@ def palavra_das_pontes(pontes: int, n_max: int = N_MAX_PONTES) -> str:
     return PALAVRA_CHEIA
 
 
-#: O ar que um adaptador entrega de fato, em fatias por segundo (o ``C_eff``): 94% das 1.600 no
-#: adaptador de porta direta e 82% no que fica atrás de hub de TT único (linha do teto do
-#: ``docs/data/orcamento-de-ar.csv``). O produto não sabe qual adaptador está atrás de hub, e conta
-#: com o de porta direta; o ensaio ``a_ponte_em_fatias_no_ar.py`` mede o de cada um.
 AR_DO_ADAPTADOR_PORTA_DIRETA = 1504.0
 AR_DO_ADAPTADOR_ATRAS_DO_HUB = 1312.0
 
-#: A-PONTE-SE-OTIMIZA-ATE-QUATRO-NO-ULTRA-NUM-ADAPTADOR-01: o limite de pontes de cada adaptador
-#: sai da capacidade (``n_max_pela_capacidade``), nunca acima de ``N_MAX_PONTES``. Desligado até a
-#: bancada medir o custo da ponte (A-PONTE-SE-CONTA-EM-FATIAS-NO-AR-01): ligado, o adaptador com
-#: mais controles do que a conta deixa passa a recusar a segunda ponte.
 N_MAX_PELA_CAPACIDADE = False
 
-#: O degrau do meio: ceder a TAXA da ponte de vibração (dois blocos de háptica por relatório, a
-#: metade dos relatórios) antes de cortá-la inteira. Desligado até a bancada sensorial
-#: (``scripts/ensaios/a_ponte_com_dois_quadros.py``) dizer que o firmware toca os dois blocos. O som
-#: não tem degrau: dois quadros de som por relatório é o arranjo que já falhou (08/09).
 DEGRAU_DO_MEIO_LIGADO = False
 HZ_DA_PONTE_NO_DEGRAU = HZ_DA_PONTE / 2
-#: o modo de ponte que tem degrau
 MODOS_COM_DEGRAU = frozenset({"haptica"})
 
 ACAO_CEDER_A_TAXA = "taxa"
@@ -719,9 +670,7 @@ class PonteNaFila:
 
     uniq: str
     modo: str
-    #: a posição da vaga no adaptador, contando da primeira (1)
     vaga: int
-    #: há quantos segundos o controle não mexe; ``None`` = mexendo agora
     parado_ha_s: float | None = None
     no_degrau: bool = False
 
@@ -736,8 +685,6 @@ class Degrau:
 
 
 def _vez_de_ceder(ponte: PonteNaFila) -> tuple[float, int]:
-    # Quem está parado há mais tempo cede primeiro; empate, a vaga mais nova (a regra de
-    # sempre: as primeiras vagas ficam). Quem mexe agora fica por último.
     parado = -1.0 if ponte.parado_ha_s is None else float(ponte.parado_ha_s)
     return (-parado, -ponte.vaga)
 
@@ -798,8 +745,6 @@ class ControleNoAr:
     hz_movimento: float | None = None
     hz_voz: float | None = None
     ponte: str | None = None
-    #: o sinal do enlace (dBm) que o rádio mediu; não viaja no ``publicar`` (o ``state_full``
-    #: já o traz por controle em ``sinal_dbm``), é a entrada do «Equilibrar»
     sinal_dbm: int | None = None
 
 
@@ -814,10 +759,6 @@ class OrcamentoDoAdaptador:
     saida_por_s: float | None = None
     canais_evitados: tuple[int, ...] | None = None
     motivo_do_ar: str = ""
-    #: ``{aparelho (12 hex): {le, canais_evitados, qualidade_do_enlace,
-    #: rssi}}`` de TODO enlace lido do
-    #: adaptador, o aparelho que for (celular, relógio, fone, controle): a faixa de cada
-    #: linha da seção «Dispositivos Conectados». ``None`` em campo = não sei.
     enlaces: Mapping[str, Mapping[str, Any]] | None = None
 
     @property

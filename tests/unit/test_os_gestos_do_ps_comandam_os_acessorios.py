@@ -43,8 +43,8 @@ from hefesto_dualsense4unix.mods.supervisor import Supervisor, _Vigiada
 P1 = "aabbcc000001"
 P2 = "aabbcc000002"
 PS_R2 = ("ps", "r2_btn")
-FUNDO = 242  # 95 % de 255
-META = 102  # 40 % de 255
+FUNDO = 242
+META = 102
 PADRAO = Opcoes()
 
 
@@ -94,9 +94,6 @@ class Cena:
     @property
     def gestos(self) -> list[str]:
         return [g for _de, g, _v in self.saiu]
-
-
-# -- os gestos --------------------------------------------------------------------------------
 
 
 def test_ps_mais_r2_de_80_ms_publica_um_sobe() -> None:
@@ -153,7 +150,7 @@ def test_o_l2_leve_solto_desce_um_degrau() -> None:
 def test_o_limiar_do_fundo_e_configuravel() -> None:
     cena = Cena(Opcoes.de({"limiar_fundo": 60}))
     cena.solta()
-    cena.segura(0.1, ("ps", "l2_btn"), l2=170)  # 66 %
+    cena.segura(0.1, ("ps", "l2_btn"), l2=170)
     assert cena.gestos == ["para"]
 
 
@@ -191,8 +188,8 @@ def test_sem_o_ps_o_r2_e_o_do_jogo() -> None:
 def test_o_r2_apertado_muito_antes_do_ps_nao_entra_no_gesto() -> None:
     cena = Cena()
     cena.solta()
-    cena.segura(0.5, ("r2_btn",), r2=255)  # atirando
-    cena.tique(PS_R2, r2=255)  # o PS chega depois
+    cena.segura(0.5, ("r2_btn",), r2=255)
+    cena.tique(PS_R2, r2=255)
     assert cena.gestos == []
     assert cena.mgr.eixos_do_gesto(PS_R2, (0, 255), de=P1) == frozenset()
 
@@ -206,10 +203,12 @@ def test_o_r2_um_instante_antes_do_ps_ainda_e_o_gesto() -> None:
 
 
 def test_o_r2_lido_pelo_eixo_nao_vira_rajada_quando_o_calar_dos_botoes_le_sem_a_pressao() -> None:
-    # D-1610-A-PRESSAO-DO-GATILHO-FICA-NA-MAO-DO-CONTROLE
     """O tique do pad lê o mesmo instante três vezes: o poll e o eixo com a pressão, o calar dos
     botões sem ela. Com o R2 a meio curso e sem o bit digital, a leitura sem pressão soltava o
-    membro e a seguinte o reapertava: um «sobe» (ou um surto) a cada tique."""
+    membro e a seguinte o reapertava: um «sobe» (ou um surto) a cada tique.
+
+    Prova da D-1610-A-PRESSAO-DO-GATILHO-FICA-NA-MAO-DO-CONTROLE.
+    """
     cena = Cena()
     cena.solta()
     for _ in range(round(1.0 * 60)):
@@ -244,7 +243,7 @@ def test_o_gesto_do_p2_sai_com_o_uniq_do_p2_e_nao_cala_o_p1() -> None:
 def test_o_acelerador_publica_a_pressao_do_r2_ate_20_por_segundo() -> None:
     cena = Cena(Opcoes(acelerador=True))
     cena.solta()
-    for passo in range(120):  # 2 s subindo
+    for passo in range(120):
         cena.tique(PS_R2, r2=min(255, 20 + passo * 2))
     ao_vivo = [v for _de, g, v in cena.saiu if g == "nivel_ao_vivo"]
     assert "sobe" not in cena.gestos
@@ -252,9 +251,6 @@ def test_o_acelerador_publica_a_pressao_do_r2_ate_20_por_segundo() -> None:
     assert ao_vivo == sorted(ao_vivo) and ao_vivo[-1] > 0.9
     cena.solta()
     assert cena.saiu[-1][1:] == ("nivel_ao_vivo", 0.0), "soltar zera o nível"
-
-
-# -- a camada de uma mão ------------------------------------------------------------------------
 
 
 def _toque_do_ps(cena: Cena, segundos: float = 0.05) -> None:
@@ -348,9 +344,6 @@ def test_a_camada_do_p1_nao_muda_os_botoes_do_p2() -> None:
     assert [g for de, g, _v in cena.saiu if de == P2] == []
 
 
-# -- o «Lado único» -------------------------------------------------------------------------------
-
-
 def test_lado_unico_r2_sobe_r1_desce_e_segurado_para() -> None:
     cena = Cena(Opcoes(lado_unico=True))
     cena.solta()
@@ -384,9 +377,6 @@ def test_o_ps_que_fez_gesto_nao_abre_a_steam_ao_soltar() -> None:
     cena.segura(0.1, ("ps",))
     cena.solta(0.1)
     assert cena.steam == 1
-
-
-# -- o jogo não vê o gesto (o pad virtual de mentira) ---------------------------------------------
 
 
 class _No:
@@ -544,9 +534,6 @@ def test_os_atalhos_leem_a_pressao_do_posto_e_dos_outros() -> None:
     assert cena.gestos == ["sobe"]
 
 
-# -- quando os gestos valem (o estado da modificação) -------------------------------------
-
-
 def _daemon_com_bus(*, nativo: bool = False) -> Any:
     return SimpleNamespace(bus=EventBus(), _native_mode=nativo, identity_registry=None)
 
@@ -588,9 +575,6 @@ def test_o_gesto_vira_o_evento_com_uniq_jogador_gesto_e_valor_e_nunca_um_botao()
     carga = fila.get_nowait()
     assert set(carga) == {"uniq", "jogador", "gesto", "valor"}
     assert (carga["uniq"], carga["gesto"], carga["valor"]) == (P2, "sobe", 1)
-
-
-# -- a porta: o estado que a modificação devolve -----------------------------------------
 
 
 @pytest.fixture
@@ -687,8 +671,6 @@ def test_o_estado_sem_a_permissao_e_recusado_nomeando_a_permissao(curto: Path) -
 
     asyncio.run(corrida())
 
-
-# -- o PARAR curto -----------------------------------------------------------------------
 
 _FILHO = textwrap.dedent("""
     import os, signal, sys, time

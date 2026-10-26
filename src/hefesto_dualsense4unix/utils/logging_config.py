@@ -30,7 +30,6 @@ else:
 
 _configured = False
 
-#: As cores do terminal que o ``ConsoleRenderer`` põe em volta de cada valor.
 _COR_DO_TERMINAL = re.compile(r"(\x1b\[[0-9;]*m)")
 
 
@@ -114,17 +113,11 @@ def instalar_os_ganchos_do_fio_que_cai() -> None:
     sys.excepthook = _o_processo_que_cai
 
 
-#: Os eventos que se repetem em rajada, e os campos que separam uma rajada da outra.
-#: Contados no syslog de 18/10 a 21/10/2026 (34.837 linhas do daemon): `gatilho_armado`
-#: chegou a 186 por minuto, `ipc_lento` a 79, `som_rotulo_velho_espera_o_silencio` a 21
-#: e `haptics_select_borda` a 19. A primeira de cada janela sai inteira; as outras viram
-#: UMA linha no fim da janela, com `vezes=` e os campos da última.
 EVENTOS_AGREGADOS: dict[str, tuple[str, ...]] = {
     "gatilho_armado": ("nome",),
-    "ipc_lento": ("metodo",),  # (noqa-acento) chave do diário
+    "ipc_lento": ("metodo",),  # (noqa-acento)
     "som_rotulo_velho_espera_o_silencio": ("uniq",),
     "haptics_select_borda": ("uniq",),
-    # A borda de cada peça do som e da háptica que vai e volta: a rajada de um controle.
     "haptica_fina_saiu": ("controle",),
     "haptica_fina_de_pe": ("controle",),
     "som_radio_sem_ponte": ("uniq",),
@@ -132,52 +125,35 @@ EVENTOS_AGREGADOS: dict[str, tuple[str, ...]] = {
     "som_ponte_ganha_a_haptica": (),
     "som_ponte_solta_a_haptica": (),
     "backend_hotplug_reconcile": ("trigger",),
-    # O ambiente do jogo reescrito e o aviso fixo do dispositivo ausente.
     "launch_env_materializado": (),
     "launch_env_rematerializado_no_sossego": (),
     "launch_env_ignore_omitido_sem_cobertura": (),
     "usb_ausente_neste_boot": (),
 }
 JANELA_DO_AGREGADO_S = 60.0
-#: A janela de um evento que não para dobra a cada volta, até aqui: um laço que repete
-#: uma vez por minuto custa duas linhas por quarto de hora, não mil e quatrocentas por dia.
 JANELA_MAXIMA_DO_AGREGADO_S = 900.0
 _MARCA_DO_AGREGADO = "_agregado"
 
-#: O que o daemon só confirma: a escrita de rotina que deu certo, o estado de novo dito
-#: e o inventário da subida. Desce ao debug (22/10/2026, D-2210-O-DIARIO-CABE-EM-MIL-LINHAS):
-#: no syslog de 18/10 a 21/10 eram 34.837 linhas do daemon, 76 subidas. O aviso e o erro
-#: do mesmo nome seguem escritos, e `HEFESTO_DUALSENSE4UNIX_LOG_LEVEL=DEBUG` devolve tudo.
-#: NUNCA entra aqui evento que outro código, um documento de protocolo ou uma bancada lê no
-#: diário (régua: só o emissor conhece o nome): `uhid_motion_streaming` é a prova do degrau 2
-#: do giro pelo rádio, e `game_trigger_provou` é o que a bancada do gatilho conta.
 EVENTOS_DE_ESTADO_NORMAL: frozenset[str] = frozenset({
-    # a janela em foco, dita a cada troca
     "autoswitch_fica_no_ultimo_jogo", "autoswitch_janela_propria_ignorada",
     "autoswitch_window_info_unavailable", "x11_focus_gate_no_x_focus",
-    # a escrita de rotina que deu certo
     "speaker_volume_set", "microphone_volume_set", "microphone_led_set", "microphone_mute_set",
     "profile_speaker_applied", "profile_mic_volume_applied", "profile_mic_mute_applied",
     "profile_speaker_rota_sem_botao", "luz_do_mic_escrita", "luz_do_mic_peca_ligada",
     "gatilho_da_cor_por_numeracao", "gatilho_registrado", "gatilho_disparou",
     "speaker_reaplicado_no_connect", "mic_reaplicado_no_connect", "volume_padrao_na_adocao",
     "som_do_sistema_mudou",
-    # a conta de cada jogo e a ponte do rádio
     "game_session_devolvida", "mascara_do_perfil_convergiu",
     "haptica_do_cabo_portao", "som_gravador_alvo_nao_conferido",
     "som_radio_gravador_colhido", "haptica_radio_gravador_colhido", "som_radio_fonte_secou",
     "som_ponte_ociosa_descida", "som_sink_publicado", "som_sink_removido", "som_no_derrubado",
     "bt_mic_source_publicada", "bt_mic_source_removida",
-    # o encanamento do broker do hidraw
     "hidraw_broker_fd_recebido", "hidraw_broker_lease_open", "hidraw_broker_exposto",
     "hidraw_broker_desexposto", "hidraw_broker_restored",
-    # o inventário de cada controle que liga
     "sensor_hub_reader_iniciado", "evdev_started", "motion_sensors_started",
     "touchpad_reader_started", "touchpad_reader_dono_do_cursor", "motion_reader_spawned",
     "firmware_do_controle_lido", "plastico_do_controle_lido", "lampadas_liberadas",
     "input_settling_started", "sysfs_led_cobertura", "primario_deposto_reservado",
-    # a subida e a descida do daemon: ficam `daemon_main`, `daemon_starting`,
-    # `ipc_server_listening` e `servico_pronto_avisado`; o resto do inventário é debug
     "hotkey_manager_started", "single_instance_adquirido", "game_signal_wired",
     "gamepad_multiplos_controles_adiado", "dsu_servidor_iniciado", "udp_server_listening",
     "mic_da_mesa_iniciado", "mic_do_jogo_iniciado", "mic_hotkey_iniciado", "luz_do_mic_iniciado",
@@ -191,7 +167,6 @@ EVENTOS_DE_ESTADO_NORMAL: frozenset[str] = frozenset({
     "som_subsystem_parado", "conexoes_subsystem_parado", "dsu_servidor_parado",
     "usb_parou_de_ouvir",
 })
-#: O nível mínimo que o diário escreve agora; o `configure_logging` o grava.
 _nivel_minimo = logging.INFO
 
 
@@ -240,11 +215,9 @@ class AgregadoDoDiario:
         self.janela_s = janela_s
         self.janela_max_s = max(janela_s, janela_max_s)
         self.relogio = relogio
-        #: quem escreve a linha do fim da janela; None = o logger do produto.
         self.diario: Any = None
         self._trava = threading.Lock()
         self._janelas: dict[tuple[Any, ...], _Janela] = {}
-        #: por chave, quando a ocorrência veio por último e a largura da janela de então.
         self._ultimas: dict[tuple[Any, ...], tuple[float, float]] = {}
 
     def _largura_da_nova(self, chave: tuple[Any, ...], agora: float) -> float:
@@ -315,8 +288,6 @@ class AgregadoDoDiario:
         try:
             getattr(diario, janela.nivel)(janela.recente.get("event"), **campos)
         except (ValueError, OSError) as erro:
-            # O destino do diário já fechou (o pytest que sai, a unit parada com o journal
-            # fora): a conta aberta se perde, não há quem a leia. Outro erro sobe.
             if not _o_destino_fechou(erro):
                 raise
 
@@ -347,8 +318,6 @@ def cadeia_do_diario(fmt: str = "console", stream: Any = None) -> list[Processor
         renderer: Processor = structlog.processors.JSONRenderer()
     else:
         colors = stream.isatty() if hasattr(stream, "isatty") else False
-        # O traceback puro (D-1310-O-DIARIO-ESCREVE-O-TRACEBACK-SEM-OS-LOCAIS): o padrão
-        # com o rich desenha os locais de cada quadro, e o laço do daemon parava por ele.
         renderer = structlog.dev.ConsoleRenderer(
             colors=colors, exception_formatter=structlog.dev.plain_traceback
         )
@@ -385,8 +354,6 @@ def configure_logging(
         if manipulador not in antes:
             manipulador.addFilter(MascaraDoDiario())
     if any(manipulador not in antes for manipulador in raiz.handlers):
-        # A mesma guarda do filtro: só quando o manipulador é do produto. Sob o pytest ou
-        # dentro de outro programa o raiz já tinha manipulador, e o gancho global não é nosso.
         instalar_os_ganchos_do_fio_que_cai()
 
     structlog.configure(

@@ -52,7 +52,6 @@ for _p in (str(RAIZ / "src"), str(RAIZ / "src" / "hefesto_dualsense4unix" / "int
         sys.path.insert(0, _p)
 
 
-#: A MESA DE 02/09/2026, na forma que `mesa_viva.mesa_do_estado` devolve — e o
 MESA = [
     {"pref": "p1", "uniq": "aa:bb:cc:00:00:01", "jogador": 1, "cor": "cosmic-red",
      "nome": "Cosmic Red", "via": "BT", "transporte": "bt"},
@@ -278,7 +277,6 @@ def test_o_gerador_e_o_produto_desenham_o_mesmo_botao():
     dono = {"nome": "Cosmic Red", "via": "USB", "cor": "cosmic-red"}
     botao = pac.um_botao_de_player("Cosmic Red", 1, 1, dono, quantos=2)
     assert botao.startswith('<button class="on" data-gesto="player" data-player="1"')
-    # ele a régua da identidade acusa o `--plastico` do `<i>`, porque ela julga
     assert (f'<i class="dono" data-hef="{pac.endereco_do_anel(1)}"'
             f' data-hef-alvo="{pac.ALVO_DO_PLASTICO}"'
             f' style="--plastico:#ae335a"></i>1</button>') in botao, (
@@ -395,9 +393,6 @@ def test_o_anel_da_cor_escolhida_tem_endereco_e_e_o_mesmo_do_hex():
     from pacotes import a04_iluminacao as pac
 
     bancada = onde.pagina("04-iluminacao.html").read_text(encoding="utf-8")
-    #: *a régua media o mundo de ontem*.  (noqa-acento: verbo medir, imperfeito)
-    #: **O ENDEREÇO MUDOU — 09/09/2026, COR-X-01.** Era um `data-campo="hex"`
-    #: com `data-hef-alvo="classe"` por BOTÃO, e o alvo `classe` compara por
     assert bancada.count('data-campo="tons" data-hef-alvo="html"') == 4, (
         "a guia de cores voltou a não ter endereço de estado — ou ela deixou "
         "de nascer nos QUATRO lugares, e o P3 que ganha um controle volta a "
@@ -505,7 +500,6 @@ def test_a_luz_pergunta_ao_motor_se_ha_cor_a_afirmar(colunas):
     sem_cor = dict(DO_RADIO, lightbar_rgb=None)
     assert "color:transparent" in colunas([sem_cor])[DO_RADIO["uniq"]]["luz"]
 
-    #: Sem o campo `lightbar_on`, a leitura antiga dizia ACESA por default.
     sem_campo = {k: v for k, v in DO_RADIO.items() if k != "lightbar_on"}
     luz = colunas([sem_campo])[DO_RADIO["uniq"]]["luz"]
     assert "color:transparent" in luz, (
@@ -704,7 +698,6 @@ def test_o_botao_por_controle_do_automatico_saiu_com_o_widget():
         "oferecia — ela mandou tirar os dois botões do automático em "
         "07/09/2026, e a poda acompanha a peça")
 
-    # régua errava aí: com o `DO_CABO` inteiro ela media o SWATCH,  # (noqa-acento) verbo medir
     mudo = {k: v for k, v in DO_CABO.items() if k != "lightbar_rgb"}
     ctx = pacotes.Contexto(state={"active_profile": "regua"}, mesa=list(MESA),
                            conectados=[mudo], estados={})
@@ -876,8 +869,8 @@ def _clicar_mudo(gesto, clique, conectados=None):
     return p
 
 
-QUE_ESCREVEM = [("cor", {"hex": "#FF8000"}),  # (noqa-acento) chave do contrato
-                ("apagar", {})]  # (noqa-acento) idem
+QUE_ESCREVEM = [("cor", {"hex": "#FF8000"}),
+                ("apagar", {})]
 
 
 @pytest.mark.parametrize("gesto,clique", QUE_ESCREVEM)
@@ -925,9 +918,6 @@ def test_a_frase_da_recusa_e_a_do_motor_e_nao_uma_reescrita(monkeypatch):
             f"dia em que a GTK mudar a dela as duas telas divergem.")
 
 
-# Ele media que o botão POR CONTROLE não pintava a cor nova  # (noqa-acento) verbo medir
-
-
 def test_a_coluna_que_esvazia_le_como_a_que_nasce_vazia():
     """`.vazia` e `.off` são o mesmo fato, e tinham duas leituras.
 
@@ -965,20 +955,17 @@ def test_a_coluna_que_esvazia_le_como_a_que_nasce_vazia():
     assert moldura + " !important" in doc, (
         "sem `!important` a regra não vence o `style=` INLINE do gerador, e a "
         "coluna vazia continua com a cor de um controle que não está lá.")
-    # A CHAVE PASSOU DE `.off` PARA `[data-conectado="nao"]` EM 07/09/2026, e a
     for peca in ('.luz-grade .ctrl[data-conectado="nao"] .guia',
                  '.luz-grade .ctrl[data-conectado="nao"] .trilho',
                  '.luz-grade .ctrl[data-conectado="nao"] .g4-efeito'):
         assert peca in doc, (
             f"{peca} voltou à tela num lugar sem controle: botões que "
             f"engolem o toque sem uma letra.")
-    # A caixa do hexadecimal (e o `reenviar` dela) saiu em 16/10/2026: o hexadecimal é dica.
     assert 'class="hex' not in doc and 'data-gesto="reenviar"' not in doc
     grade = doc.split('<div class="luz-grade">', 1)[-1].split('<div class="rodape"', 1)[0]
     for coluna in re.findall(
             r'<div class="ctrl" [^>]*data-conectado="nao"(.*?)(?=<div class="ctrl"|\Z)', grade,
             re.S):
-        # atributos (o `data-campo="plastico"` e, dentro, o bloco dos tons),
         for peca in ('class="guia"', 'class="puxador"',
                      'data-gesto="efeito-da-luz"'):
             assert peca in coluna, (
@@ -988,8 +975,6 @@ def test_a_coluna_que_esvazia_le_como_a_que_nasce_vazia():
     assert doc.count('<span class="nada">—</span>\n          </div>') >= 2, (
         "a célula `Opções` da coluna viva perdeu o travessão escondido: quando "
         "ela esvaziar, a linha fica em BRANCO enquanto o P3 e o P4 mostram —.")
-    # E O SELETOR VIROU `[data-conectado="sim"]` EM 07/09/2026: o
-    # `:not(.vazia):not(.off)` media o NASCIMENTO, e o que  (noqa-acento) medir
     assert '.luz-grade .ctrl[data-conectado="sim"] .cel-acoes .nada{display:none}' in doc, (
         "a regra que esconde o travessão da coluna VIVA sumiu, ou voltou a "
         "medir o NASCIMENTO: sem ela o lugar que ganha um controle mostra o "

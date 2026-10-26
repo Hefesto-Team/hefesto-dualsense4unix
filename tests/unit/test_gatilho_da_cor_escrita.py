@@ -57,7 +57,7 @@ class _Handle:
         self.conType = type("Con", (), {"name": "BT_31" if transporte == "bt" else "USB_01"})()
         self.reports: list[list[int]] = []
 
-    def writeReport(self, dados: list[int]) -> None:  # noqa: N802 (API do upstream)
+    def writeReport(self, dados: list[int]) -> None:  # noqa: N802
         self.reports.append(list(dados))
 
 

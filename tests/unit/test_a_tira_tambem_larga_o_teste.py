@@ -28,7 +28,6 @@ from hefesto_dualsense4unix.interface.pacotes import a05_vibracao as a05
 UNIQ = "aa:bb:cc:00:00:02"
 
 
-#: o IPC leva um tempo: a largada que ainda não terminou quando o teste olha é o que o fio mostra
 LENTIDAO_S = 0.1
 
 
@@ -71,7 +70,6 @@ class _Piloto:
         self.pronto = pronto
         self.visitadas: list[str] = [de]
         self.instalou = 0
-        #: a mesa que a largada lê para pôr cada controle na fila dele (`hefesto_vivo._carregou`)
         self._mesa_de_agora: list[dict[str, Any]] = [{"uniq": UNIQ}]
 
     def _antes_de_instalar(self) -> None:
@@ -91,8 +89,6 @@ def _mesa_limpa():
     a05.parar_o_teste_da_haptica()
 
 
-#: os fios das largadas que a troca de página soltou (O-FIO-DA-JANELA-NUNCA-ESPERA-01: ela anda
-#: na fila de cada controle da mesa e nunca no fio da janela, então o teste espera o fio)
 _LARGADAS: list[threading.Thread | None] = []
 
 

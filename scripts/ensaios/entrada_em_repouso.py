@@ -108,7 +108,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 try:
     import evdev
-except ImportError:  # pragma: no cover - fora do venv do projeto
+except ImportError:  # pragma: no cover
     evdev = None  # type: ignore[assignment]
 
 from comum import (

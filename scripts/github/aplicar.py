@@ -32,11 +32,9 @@ from urllib.parse import quote
 
 import yaml
 
-# A conta e o dono pessoal vão por partes: o higienizador do commit apaga o nome inteiro.
 CONTA_DA_CASA = "vitoria" + "mariadb"
 DONOS_PERMITIDOS = ("Hefesto-Team", CONTA_DA_CASA)
 ARQUIVO_PADRAO = Path(__file__).resolve().parents[2] / ".github" / "repositorio.yml"
-# O papel «administrador do repositório» na API de rulesets.
 PAPEL_ADMIN = 5
 
 FUNCOES_COM_INTERRUPTOR = {
@@ -53,7 +51,6 @@ SEGURANCA = (
     "varredura_de_segredo",
     "protecao_de_push_de_segredo",
 )
-# O que o arquivo pode declarar a mais; a linguagem da varredura é parâmetro dela, não função.
 SEGURANCA_OPCIONAL = ("varredura_de_codigo", "grafo_de_dependencias", "releases_imutaveis")
 PARAMETROS_DA_SEGURANCA = ("linguagens_da_varredura",)
 LINGUAGENS_DA_VARREDURA = (
@@ -61,7 +58,6 @@ LINGUAGENS_DA_VARREDURA = (
     "ruby", "swift",
 )
 FUNCOES_DE_MANTENEDOR = ("admin", "maintain", "write")
-# A chave de cada regra do ruleset, e o tipo que o GitHub chama.
 REGRAS_DE_RULESET = {
     "sem_apagar": "deletion",
     "sem_push_forcado": "non_fast_forward",
@@ -80,9 +76,7 @@ MESCLAGEM = {
     "apagar_ramo": "delete_branch_on_merge",
     "atualizar_ramo": "allow_update_branch",
 }
-# O nome de um ramo que o git aceita sem aspas: sem espaço, sem `..`, sem barra na ponta.
 RAMO_VALIDO = re.compile(r"[A-Za-z0-9._-]+(/[A-Za-z0-9._-]+)*")
-# O ambiente só aceita implantar dos ramos e das tags que o arquivo lista (não dos «protegidos»).
 POLITICA_DE_RAMOS = {"protected_branches": False, "custom_branch_policies": True}
 PERMISSAO_DO_FLUXO = {"leitura": "read", "escrita": "write"}
 APROVACAO_DE_FORK = {
@@ -94,24 +88,17 @@ ACESSO_DA_EQUIPE = ("pull", "triage", "push", "maintain", "admin")
 CORES_DE_TIPO = ("gray", "blue", "green", "yellow", "orange", "red", "pink", "purple")
 CORES_DE_ETAPA = ("BLUE", "GRAY", "GREEN", "ORANGE", "PINK", "PURPLE", "RED", "YELLOW")
 FORMATOS_DE_VISTA = ("table", "board", "roadmap")
-# A ordem é a em que se aplica: as funções ligam antes de o que depende delas.
 GRUPOS = (
     "about", "configuração", "funções", "seguranca", "ações", "mantenedores", "equipes",
     "rotulos", "milestones", "tipos_de_issue", "ambientes", "discussoes", "projetos",
     "rulesets", "comunidade",
 )
 DADOS_SEM_APLICADOR = ("versão", "de_fora", "release")
-# O que a casa decidiu não usar do GitHub, cada coisa com o motivo medido.
 DE_FORA_OBRIGATORIAS = ("lfs", "merge_queue", "codespaces")
 
 
 class ErroDeServidor(Exception):
     """O servidor não respondeu o que a medida precisa (a medida fica «não feita»)."""
-
-
-# ---------------------------------------------------------------------------
-# O arquivo: o esquema e as funções que ele declara.
-# ---------------------------------------------------------------------------
 
 
 def _quer(valor: Any) -> bool:
@@ -130,8 +117,6 @@ def funções_declaradas(dados: dict[str, Any]) -> list[str]:
         if grupo == "funções":
             nomes += [f"funções.{n}" for n in (dados.get("funções") or {})]
         elif grupo == "seguranca":
-            # Na ordem de SEGURANCA, não na do arquivo: as atualizações de segurança só ligam
-            # com os alertas já ligados, e o servidor recusa a ordem inversa.
             seg = dados.get("seguranca") or {}
             ordem = (*SEGURANCA, *SEGURANCA_OPCIONAL)
             nomes += [f"seguranca.{n}" for n in ordem if n in seg]
@@ -303,7 +288,6 @@ def _validar_ruleset(r: Any) -> list[str]:
     if (ramos is None) == (tags is None):
         erros.append(f"ruleset «{nome}»: `ramos` ou `tags`, um dos dois")
     if tags is not None:
-        # a revisão de PR e os checks olham ramo e PR; o servidor recusa as duas num ruleset de tag
         erros += [f"ruleset «{nome}»: `{k}` só vale para ramo" for k in ("revisão", "checks") if k in r]
     alvo = ramos if ramos is not None else tags
     rotulo = "ramos" if ramos is not None else "tags"
@@ -467,7 +451,6 @@ def _validar_ambientes(ambientes: Any) -> list[str]:
             erros.append("ambientes: cada item tem `nome`")
             continue
         n = a["nome"]
-        # Sem revisor é um ambiente que só restringe o ramo (o `github-pages`, que publica a página).
         revisores = a.get("revisores")
         if not isinstance(revisores, list) or len(revisores) > 6 \
                 or not all(isinstance(x, str) and x for x in revisores):
@@ -567,11 +550,6 @@ def carregar(caminho: Path) -> dict[str, Any]:
     return dados
 
 
-# ---------------------------------------------------------------------------
-# O `gh`.
-# ---------------------------------------------------------------------------
-
-
 class Gh:
     """Toda conversa com o GitHub passa por aqui: `gh api -i`, para ver o status.
 
@@ -643,8 +621,6 @@ def _mensagem(dados: Any) -> str:
     return str(dados or "")[:200]
 
 
-# As consultas do GraphQL, cada uma com nome: é por elas que o `gh` de mentira as reconhece, e
-# o esquema público do GitHub as valida (as diferenças de campo aparecem antes da janela).
 CONSULTAS = {
     "Patrocinio": (
         "query Patrocinio($dono:String!,$nome:String!){repository(owner:$dono,name:$nome)"
@@ -680,17 +656,10 @@ CONSULTAS = {
 }
 
 
-# ---------------------------------------------------------------------------
-# O plano: cada grupo devolve as ações que faltam, sem escrever nada.
-# ---------------------------------------------------------------------------
-
-
 @dataclass
 class Acao:
     texto: str
     executar: Callable[[], None]
-    # Só se faz à mão (o GitHub não deixa por API): o `--aplicar` não a executa, e ela aparece em
-    # `sobrou` se continuar depois das outras. O que se escreve aqui é o que fazer.
     a_mao: str = ""
 
 
@@ -807,7 +776,6 @@ def _planejar_pages(c: Contexto, quer: bool) -> list[Acao]:
     status, p = c.gh.ler(f"repos/{c.repo}/pages", aceita=(200, 404))
     if not quer:
         return [] if status == 404 else [Acao("funções.pages: desliga", c.escreve("DELETE", "pages"))]
-    # As páginas saem de um fluxo (`paginas.yml`), não de uma pasta do ramo.
     if status == 404:
         return [Acao("funções.pages: liga (publicada por fluxo)",
                      c.escreve("POST", "pages", {"build_type": "workflow"}))]
@@ -1098,8 +1066,6 @@ def planejar_ambientes(c: Contexto) -> list[Acao]:
                 acoes.append(Acao(f"ambientes.{nome}: falta a regra de {tipo} «{n}»", _escrever_em(
                     c, "POST", f"repos/{c.repo}/{caminho}/deployment-branch-policies",
                     {"name": n, "type": tipo})))
-        # A regra que o arquivo não lista sai: o GitHub cria a do ramo padrão sozinho no `github-pages`,
-        # e com ela o `dev` publicaria a página que só o `main` publica.
         for (n, tipo), ident in sorted(existentes.items()):
             if (n, tipo) not in quer:
                 acoes.append(Acao(f"ambientes.{nome}: sobra a regra de {tipo} «{n}»", _escrever_em(
@@ -1108,8 +1074,6 @@ def planejar_ambientes(c: Contexto) -> list[Acao]:
 
 
 def planejar_discussoes(c: Contexto) -> list[Acao]:
-    # O GitHub não tem mutação que crie ou renomeie categoria (`createDiscussionCategory` não
-    # existe no esquema público): só se mede. As categorias nascem com o recurso.
     d = c.gh.graphql(CONSULTAS["Categorias"], {"dono": c.dono, "nome": c.nome})
     nos = ((d.get("repository") or {}).get("discussionCategories") or {}).get("nodes") or []
     existentes = {x["slug"]: x for x in nos}
@@ -1144,9 +1108,6 @@ def planejar_comunidade(c: Contexto) -> list[Acao]:
         "CODE_OF_CONDUCT, modelos de issue e de PR) e com a descrição do About")]
 
 
-# --- os rulesets -----------------------------------------------------------
-
-
 def corpo_do_ruleset(r: dict[str, Any]) -> dict[str, Any]:
     """O que o GitHub recebe (e, em subconjunto, o que ele devolve) para um ruleset do arquivo."""
     regras: list[dict[str, Any]] = []
@@ -1155,7 +1116,6 @@ def corpo_do_ruleset(r: dict[str, Any]) -> dict[str, Any]:
     if r.get("sem_push_forcado"):
         regras.append({"type": "non_fast_forward"})
     if r.get("sem_atualizar"):
-        # Em tag o GitHub guarda a regra sem o parâmetro (ele só vale para ramo) e a devolve sem ele.
         regras.append({"type": "update"} if "tags" in r
                       else {"type": "update", "parameters": {"update_allows_fetch_and_merge": False}})
     if r.get("historico_linear"):
@@ -1165,8 +1125,6 @@ def corpo_do_ruleset(r: dict[str, Any]) -> dict[str, Any]:
     if "revisão" in r:
         regras.append({"type": "pull_request", "parameters": {
             "required_approving_review_count": r["revisão"]["aprovacoes"],
-            # Quem muda o `.mailmap` no próprio PR não aprova a si: a revisão vale só depois do
-            # último push, e um push novo derruba a aprovação anterior.
             "dismiss_stale_reviews_on_push": True,
             "require_last_push_approval": True,
             "require_code_owner_review": False,
@@ -1176,7 +1134,6 @@ def corpo_do_ruleset(r: dict[str, Any]) -> dict[str, Any]:
         regras.append({"type": "required_status_checks", "parameters": {
             "required_status_checks": [{"context": nome} for nome in r["checks"]],
             "strict_required_status_checks_policy": False,
-            # O primeiro push de um ramo num repositório vazio não tem check para esperar.
             "do_not_enforce_on_create": True,
         }})
     de_tag = "tags" in r
@@ -1210,8 +1167,6 @@ def contem(real: Any, quer: Any) -> bool:
 
 
 def planejar_rulesets(c: Contexto) -> list[Acao]:
-    # Só os do repositório: os da organização vêm na mesma lista por padrão, e um homônimo dela
-    # seria lido como o nosso (e o PUT iria a um id que o repositório não edita).
     _, lista = c.gh.ler(f"repos/{c.repo}/rulesets?includes_parents=false")
     por_nome = {x["name"]: x["id"] for x in lista}
     acoes: list[Acao] = []
@@ -1227,9 +1182,6 @@ def planejar_rulesets(c: Contexto) -> list[Acao]:
             acoes.append(Acao(f"rulesets: «{r['nome']}» difere",
                               c.escreve("PUT", f"rulesets/{ident}", quer)))
     return acoes
-
-
-# --- os projetos -----------------------------------------------------------
 
 
 def _vistas_ids(c: Contexto, numero: int) -> dict[str, int]:
@@ -1330,8 +1282,6 @@ def planejar_projetos(c: Contexto) -> list[Acao]:
     return acoes
 
 
-# Quem aplica cada função declarada. A régua `test_o_repositorio_diz_o_que_o_github_tem` exige
-# uma entrada aqui para tudo o que o arquivo declara, e nenhuma entrada sem declaração.
 APLICADORES: dict[str, Callable[[Contexto], list[Acao]]] = {
     "about": planejar_about,
     "configuração": planejar_configuracao,
@@ -1380,11 +1330,6 @@ def planejar(c: Contexto, grupos: set[str]) -> tuple[list[Acao], list[str]]:
         except ErroDeServidor as e:
             sem_medida.append(f"{função}: {e}")
     return acoes, sem_medida
-
-
-# ---------------------------------------------------------------------------
-# A guarda e a linha de comando.
-# ---------------------------------------------------------------------------
 
 
 def avisos_da_release(c: Contexto) -> list[str]:
@@ -1479,7 +1424,7 @@ def principal(argv: list[str] | None = None, gh: Gh | None = None) -> int:
     acoes, sem_medida = planejar(c, grupos)
     detalhe += [_linha(f"falta: {x.texto}", x) for x in acoes]
     detalhe += [f"sem medida: {m}" for m in sem_medida]
-    if not pedidos:  # só na conferência do todo: o aviso não é de um grupo
+    if not pedidos:
         detalhe += [f"aviso: {x}" for x in avisos_da_release(c)]
 
     if a.conferir:
@@ -1489,9 +1434,6 @@ def principal(argv: list[str] | None = None, gh: Gh | None = None) -> int:
             return encerrar(1, f"{a.repo}: {len(acoes)} diferença(s); `--aplicar` resolve")
         return encerrar(0, f"{a.repo}: sem diferença")
 
-    # Grupo a grupo, na ordem de GRUPOS, e cada um medido de novo logo antes: o que um grupo
-    # aplica muda o que o seguinte encontra (ligar as Pages cria o ambiente `github-pages` com a
-    # regra de fábrica, que o grupo dos ambientes corrige na mesma rodada).
     falhas: list[str] = []
     fazer: list[Acao] = []
     for grupo in (g for g in GRUPOS if g in grupos):

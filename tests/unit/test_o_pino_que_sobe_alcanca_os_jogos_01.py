@@ -155,7 +155,6 @@ class TestOsBaldesSaoContadosSeparados:
             "1599660": PINO_VELHO,
             "2497900": ESCOLHA_DELA,
         }))
-        # `lock_proton_for_all_games` mira os jogos INSTALADOS, lidos dos
         steamapps = pp.default_steam_root(tmp_path) / "steamapps"
         steamapps.mkdir(parents=True, exist_ok=True)
         for appid, nome in (("1599660", "Sackboy"), ("2497900", "DON'T SCREAM")):

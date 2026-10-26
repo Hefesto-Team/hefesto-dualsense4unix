@@ -34,8 +34,6 @@ def _uma_leitura_por_medida(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(rx, "ESPERA_ATE_O_MAPA_MUDAR_S", rx.ESPERA_DA_MEDIDA_S)
 
 
-# --- 1. reconhecer: só pelo que o kernel publica ---------------------------------------------
-
 DUAS = ("030101", "030102")
 
 
@@ -46,9 +44,7 @@ DUAS = ("030101", "030102")
         (("030102", "030101"), 12.0, ("2.4G Dual Mode Mouse", ""), True),
         (DUAS, 12.0, ("USB Receiver", ""), True),
         (DUAS, 12.0, ("", "Acme Wireless"), True),
-        # um mouse com fio tem UMA interface de arranque
         (("030102",), 12.0, ("2.4G Wireless Receiver", ""), False),
-        # teclado de jogo de cabo: duas interfaces, mas rápido demais e sem a palavra
         (DUAS, 480.0, ("Gaming Keyboard", ""), False),
         (DUAS, 480.0, ("2.4G Wireless Receiver", ""), False),
         (DUAS, 12.0, ("Gaming Keyboard", "BY Tech"), False),
@@ -123,7 +119,6 @@ def test_o_censo_reconhece_o_receptor_e_acha_os_nos_de_evento_sob_o_filho_hid(
     assert a.receptor is True
     assert sorted(a.interfaces) == ["030101", "030102"]
     assert sorted(a.eventos, key=lambda e: int(e[5:])) == ["event8", "event9", "event10", "event11"]
-    # a interface 0 já diz «Mouse»: essa palavra (a sugestão de tipo da tela) fica
     assert a.especie == "Mouse"
 
 
@@ -158,10 +153,6 @@ def test_o_controle_hid_se_conhece_pelo_botao_sul_mesmo_sob_o_filho_hid(tmp_path
     assert a.ligado_como == "controle"
 
 
-# O censo passou a achar o BTN_SOUTH sob o filho HID. MEDIDO em fixtures de sysfs (05/10/2026), o
-# que isso muda em cada tipo de controle por cabo é só `ligado_como`; a PALAVRA (`especie`, `grau`)
-# e a classe do motor só mudam onde a interface 0 não dizia nada (`ef`, `ff`, `fe`), e ali a
-# nova é a certa. Esta régua fixa a medida: classe que a tripla JÁ dizia certa não se reescreve.
 BOTAO_SUL = f"{1 << 48:x} 0 0 0 0\n"
 SO_TECLAS = "0 0 0 0 0\n"
 
@@ -184,13 +175,9 @@ def _no_de_controle(raiz: Path, nome: str, classe: tuple[str, str, str], *, sob_
 @pytest.mark.parametrize(
     ("rotulo", "tripla", "sob_o_filho", "especie", "classe_do_motor"),
     [
-        # DualSense com hid-playstation: HID 03/00/00, o input mora no filho HID
         ("dualsense", ("03", "00", "00"), True, "Aparelho de entrada", ""),
-        # 8BitDo / pad genérico em modo HID (D-input)
         ("8bitdo-hid", ("03", "00", "00"), True, "Aparelho de entrada", ""),
-        # Xbox com xpad: classe do fabricante, o input mora na própria interface
         ("xbox", ("ff", "5d", "01"), False, "Controle", ""),
-        # pad composto que a classe do dispositivo chama de «diversos»
         ("composto", ("ef", "00", "00"), True, "Controle", ""),
     ],
 )
@@ -214,8 +201,6 @@ def test_teclado_e_mouse_hid_nao_viram_controle(
     a = _no_de_controle(tmp_path, "1-3", tripla, sob_o_filho=True, teclas=SO_TECLAS)
     assert a.ligado_como == "" and a.especie in ("Teclado", "Mouse")
 
-
-# --- 2. a saúde: tecla presa e buraco no movimento -------------------------------------------
 
 CODIGO_DA_TECLA = 30
 
@@ -245,7 +230,6 @@ def test_o_solta_que_encerra_a_repeticao_nao_desconta_a_presa() -> None:
     c.tecla(0, CODIGO_DA_TECLA, 101.8)
     assert c.saude(102.0).teclas_presas == 1, "o solta encerra a repetição, não a apaga da conta"
     assert not c._apertadas, "e a tecla sai do acompanhamento"
-    # a mesma tecla apertada de novo e solta sem repetir além de 1 s não soma
     c.tecla(1, CODIGO_DA_TECLA, 103.0)
     c.tecla(2, CODIGO_DA_TECLA, 103.5)
     c.tecla(0, CODIGO_DA_TECLA, 103.8)
@@ -278,7 +262,7 @@ def test_o_contador_nunca_guarda_o_codigo_da_tecla() -> None:
     assert CODIGO_DA_TECLA not in c._apertadas, "a identidade é um token, não o código"
     publicado = json.dumps(c.saude(102.0).publicar())
     assert set(json.loads(publicado)) == {"teclas_presas", "buracos", "janela_s", "lendo"}
-    for chave in ("code", "codigo", "tecla", "key"):  # (noqa-acento): nome de campo, ASCII
+    for chave in ("code", "codigo", "tecla", "key"):  # (noqa-acento)
         assert chave not in publicado.replace("teclas_presas", "")
 
 
@@ -293,16 +277,16 @@ def _corrida(c: rx.ContadorDaSaude, ini: float, n: int, passo: float) -> float:
 def test_buraco_so_conta_no_meio_de_movimento_continuo() -> None:
     c = _contador()
     t = _corrida(c, 10.0, 40, 0.001)
-    c.movimento(t + 0.012)  # 12 ms sem report, no meio do movimento
+    c.movimento(t + 0.012)
     assert c.saude(20.0).buracos == 1
 
 
 def test_a_mao_parada_nao_e_buraco() -> None:
     c = _contador()
     t = _corrida(c, 10.0, 40, 0.001)
-    c.movimento(t + 0.3)  # parou e recomeçou: HID só manda report quando algo muda
+    c.movimento(t + 0.3)
     assert c.saude(20.0).buracos == 0
-    c.movimento(t + 0.3 + 0.012)  # a corrida recomeçou do zero: 12 ms logo depois não é buraco
+    c.movimento(t + 0.3 + 0.012)
     assert c.saude(20.0).buracos == 0
 
 
@@ -319,20 +303,17 @@ def test_o_mouse_de_125_hz_nao_tem_buraco_a_cada_report() -> None:
     t = _corrida(c, 10.0, 40, 0.008)
     c.movimento(t + 0.008)
     assert c.saude(20.0).buracos == 0
-    c.movimento(t + 0.008 + 0.040)  # cinco intervalos: aí sim falhou
+    c.movimento(t + 0.008 + 0.040)
     assert c.saude(20.0).buracos == 1
 
 
 def test_o_mesmo_report_nao_e_buraco_nem_intervalo() -> None:
     c = _contador()
-    for k in range(40):  # REL_X e REL_Y do mesmo report chegam com o mesmo instante
+    for k in range(40):
         c.movimento(10.0 + k * 0.001)
         c.movimento(10.0 + k * 0.001)
     c.movimento(10.0 + 39 * 0.001 + 0.002)
     assert c.saude(20.0).buracos == 0
-
-
-# --- 3. o monitor lê o evdev (aqui, um pipe) --------------------------------------------------
 
 
 class Pipes:
@@ -389,7 +370,7 @@ def test_o_monitor_conta_a_tecla_presa_e_o_buraco_lidos_do_evdev(pipes: Pipes) -
     m = _monitor(pipes)
     _volta(m, 1)
     pipes.escrever(TECLADO, (rx.EV_KEY, 30, 1, 100.0), (rx.EV_KEY, 30, 2, 101.5),
-                   (rx.EV_KEY, 30, 0, 101.8))  # o solta que encerra a repetição não a desconta
+                   (rx.EV_KEY, 30, 0, 101.8))
     pipes.escrever(MOUSE, *[(rx.EV_REL, rx.REL_X, 1, 200.0 + k * 0.001) for k in range(40)],
                    (rx.EV_REL, rx.REL_X, 1, 200.0 + 39 * 0.001 + 0.015))
     _volta(m)
@@ -415,7 +396,6 @@ def test_sem_permissao_para_abrir_o_receptor_publica_lendo_falso_e_sem_selo(
     pipes.recusados = {MOUSE, TECLADO}
     m = _monitor(pipes)
     _volta(m)
-    # sem leitura não há número: sai com `lendo` falso e a tela não faz selo dele
     assert m.publicar() == {CHAVE: {"teclas_presas": 0, "buracos": 0, "janela_s": rx.JANELA_S,
                                     "lendo": False}}
     assert rx.selo_da_saude(m.publicar()[CHAVE], "teclado") is None
@@ -439,10 +419,7 @@ def test_o_estado_publicado_nunca_leva_o_codigo_da_tecla(pipes: Pipes) -> None:
     _volta(m)
     texto = json.dumps(m.publicar())
     assert str(codigo) not in texto
-    assert "codigo" not in texto and "code" not in texto  # (noqa-acento): nome de campo, ASCII
-
-
-# --- 4. o IPC: a chave do estado e a guarda da suíte -------------------------------------------
+    assert "codigo" not in texto and "code" not in texto  # (noqa-acento)
 
 
 def test_o_state_full_publica_a_saude_pela_chave_radio_receptores(
@@ -454,7 +431,7 @@ def test_o_state_full_publica_a_saude_pela_chave_radio_receptores(
     handlers._monitor_de_receptores = _monitor(pipes)  # type: ignore[attr-defined]
     handlers._monitor_de_receptores.passo(0.01)  # type: ignore[attr-defined]
     pipes.escrever(TECLADO, (rx.EV_KEY, 30, 1, 100.0), (rx.EV_KEY, 30, 2, 101.5),
-                   (rx.EV_KEY, 30, 0, 101.8))  # o solta que encerra a repetição não a desconta
+                   (rx.EV_KEY, 30, 0, 101.8))
     handlers._monitor_de_receptores.passo(0.01)  # type: ignore[attr-defined]
     publicado = handlers._os_receptores_publicam()  # type: ignore[attr-defined]
     assert publicado[CHAVE]["teclas_presas"] == 1
@@ -484,9 +461,6 @@ def test_sob_a_suite_o_daemon_nao_abre_evdev_nenhum(monkeypatch: pytest.MonkeyPa
     assert chamadas == [] and handlers._monitor_de_receptores is None  # type: ignore[attr-defined]
 
 
-# --- 5. a palavra do selo ---------------------------------------------------------------------
-
-
 def test_o_teclado_fala_em_teclas_presas_e_o_mouse_em_engasgos() -> None:
     lendo = {"lendo": True, "janela_s": 3600}
     assert rx.selo_da_saude({**lendo, "teclas_presas": 3, "buracos": 0}, "teclado") == (
@@ -504,9 +478,6 @@ def test_o_teclado_fala_em_teclas_presas_e_o_mouse_em_engasgos() -> None:
 def test_sem_leitura_nao_ha_selo() -> None:
     assert rx.selo_da_saude({"lendo": False, "teclas_presas": 0, "buracos": 0}, "teclado") is None
     assert rx.selo_da_saude(None, "mouse") is None
-
-
-# --- 6. achar a faixa por eliminação ------------------------------------------------------------
 
 
 def test_a_banda_e_a_diferenca_dos_canais_que_o_adaptador_passou_a_evitar() -> None:

@@ -114,7 +114,6 @@ AGULHAS: dict[Familia, tuple[bytes, ...]] = {
 class Veredito(str, Enum):
     """O que o disco sustenta dizer sobre um jogo — e nada além disso."""
 
-    #: `054c:0df2` do nosso vpad nativamente, então a máscara DualSense chega.
     ENTENDE_DUALSENSE = "entende_dualsense"
     INDECISO = "indeciso"
     SEM_EVIDENCIA = "sem_evidencia"
@@ -290,7 +289,6 @@ def escolher_executavel(raiz: Path) -> Path | None:
     return max(alvos, key=tamanho)
 
 
-#: DualSense, o que faz dele mais uma contraprova da heurística derrubada.
 _RUNTIMES_DE_ENGINE = ("UnityPlayer.dll", "GameAssembly.dll", "fmod.dll")
 
 

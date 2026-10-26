@@ -313,7 +313,7 @@ def test_so_o_x_dela_esquece_um_pareamento_pela_tela() -> None:
     """Na tela, o pareamento sai por UM caminho: o X dela («Esquecer» da"""
     assert _quem_chama("_esquecer_o_pareamento") == {
         ("a08_conexoes.py", "confirmar_esquecer"),
-        ("a08_conexoes.py", "parear_de_novo"),  # o Esquecer + parear, num clique só
+        ("a08_conexoes.py", "parear_de_novo"),
     }
     assert _quem_chama("esquecer_o_pareamento") == {("a08_conexoes.py", "_esquecer_o_pareamento")}
 
@@ -374,7 +374,7 @@ def chip_no_webkit() -> dict[str, Any]:
     def guardou(v: Any, res: Any) -> None:
         try:
             saiu.append(v.evaluate_javascript_finish(res).to_string())
-        except Exception as e:  # pragma: no cover — só quando o roteiro quebra
+        except Exception as e:  # pragma: no cover
             saiu.append(f"ERRO {e}")
         Gtk.main_quit()
 

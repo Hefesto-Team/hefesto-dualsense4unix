@@ -98,7 +98,6 @@ def test_o_esperando_segura_a_tela_pelo_prazo_da_central_e_nao_mais(
         assert linha["aparelho"] == id_da_tela(VERDE)
         assert f'title="{a08.NAO_CONECTOU}"' in sala
         assert f'data-gesto="tentar-de-novo" data-alvo="{id_da_tela(destino)}"' in sala
-        # o X virou o «Tirar esta linha» do «⋮» (desenho aprovado de 05/10/2026)
         assert (f'data-gesto="dispensar-linha" data-alvo="{linha["id"]}" '
                 f'data-lugar="{id_da_tela(destino)}"') in campos["radio-moldes"]
         assert cena["aberto"] == id_da_tela(destino), "a caixa de quem não chegou fechou"
@@ -121,8 +120,6 @@ def test_com_a_janela_aberta_o_esquecer_treme(
             "", QUARTO, cr.ESPERANDO, cr.PASSO_GESTO, quando=time.time()))
         bancada.cena()
         vermelho = {"alvo": rm.uniq(VERMELHO), "lugar": id_da_tela(SALA)}
-        # o «⋮» e a pergunta abrem com a busca ligada (O-CONTROLE-JA-PAREADO-…, 03/10): só o
-        # esquecer de verdade espera o rádio desocupar
         bancada.gesto("aparelho-menu", **vermelho)
         bancada.gesto("esquecer-aparelho", **vermelho)
         with pytest.raises(RuntimeError):
@@ -469,7 +466,6 @@ def test_o_prazo_que_vence_na_conferencia_fecha_na_hora(diario: Path) -> None:
         rm.ela_pareia(relogio, mundo, central, VERDE)
         feito = central.conectar(QUARTO)
         assert (feito.estado, feito.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_PRAZO)
-        # o prazo da chave nova conta do ``Pair`` (O-CONTROLE-NOVO-SE-CONECTA-E-SE-TIRA-…-01)
         assert relogio.agora - feito.prazo_desde <= prazo + cr.PASSO_S, (
             "a conferência passou do prazo")
         assert mundo.objeto(QUARTO, VERDE) is None and mundo.lapides == [(QUARTO, VERDE)]
@@ -659,7 +655,7 @@ def test_todo_menu_na_tela_tem_o_esquecer_e_a_pergunta_dele(
         for alvo, lugar in menus:
             painel = paineis.get(f"{alvo}|{lugar}")
             assert painel is not None, f"o «⋮» de {(alvo, lugar)} não abre menu nenhum"
-            if (alvo, lugar) in xis:  # a linha «Não conectou»: só «Tirar esta linha»
+            if (alvo, lugar) in xis:
                 assert 'data-gesto="esquecer-aparelho"' not in painel, (alvo, lugar)
                 continue
             assert (f'data-gesto="esquecer-aparelho" data-alvo="{alvo}" '

@@ -50,7 +50,6 @@ from tests.unit.test_a_janela_da_extensao_com_modos_nao_diz_que_nao_tem_opcoes i
 )
 
 CAMPO = "mod-livre-fora"
-#: Os estados do supervisor fora da porta, e o que a chave desligada com a janela aberta faz.
 FORA = ["desligada", "parou", "voltando", "recusada", "chave"]
 
 
@@ -79,13 +78,9 @@ def _abrir_na_porta(janela: Any, ctx: Any, lar: Any) -> str:  # noqa: F811
     return str(abrir(_Ponte(VIVO))["blocos"]["#mod-janela"])
 
 
-# -- 1. o tique leva a porta à barra ----------------------------------------------------------
-
-
 @pytest.mark.parametrize("como", FORA)
 def test_o_tique_apaga_a_barra_quando_a_extensao_cai_e_acende_quando_volta(
         janela: Any, ctx: Any, lar: Any, como: str) -> None:  # noqa: F811
-    # D-2510-A-BARRA-FORA-DA-PORTA-NASCE-APAGADA
     montada = _abrir_na_porta(janela, ctx, lar)
     assert 'class="mj-trilho" ' in _trilho(montada)
     na_porta = _tique(janela, ctx)
@@ -153,8 +148,6 @@ def test_o_trilho_tem_o_endereco_nos_dois_estados(janela: Any, ctx: Any, lar: An
     assert f'data-campo="{CAMPO}"' in apagado and 'class="mj-trilho fora"' in apagado
 
 
-# -- 2. no navegador: o piloto troca a classe e a dica, e o dedo continua na barra -------------
-
 _LER = """window.ler = () => { const t = document.querySelector('#mod-janela .mj-trilho');
   return JSON.stringify({fora: t.classList.contains('fora'), dica: t.getAttribute('data-dica'),
     mesmo: t.querySelector('input') === window.r, valor: window.r.value,
@@ -220,9 +213,6 @@ def test_a_barra_apaga_e_acende_no_navegador_sem_perder_o_arrasto(
     assert not acendeu["fora"] and acendeu["dica"] is None, (
         f"a extensão voltou e a barra segue apagada: {acendeu}")
     assert segue == acendeu
-
-
-# -- 3. a dica da barra apagada se vê no produto -----------------------------------------------
 
 
 def test_a_dica_da_barra_apagada_se_ve_com_a_camada_da_janela(

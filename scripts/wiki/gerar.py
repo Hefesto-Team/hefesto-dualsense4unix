@@ -38,7 +38,6 @@ if str(AQUI) not in sys.path:
 import filtros_de_publicacao as filtros
 
 REPO = os.environ.get("WIKI_REPO", "https://github.com/Hefesto-Team/hefesto-dualsense4unix")
-# A Wiki sai do `dev`: os links para arquivo apontam para o ramo de onde ela foi gerada.
 REF = "dev"
 
 LEIAME = "README.md"
@@ -47,21 +46,16 @@ PROTOCOLO = "docs/protocol"
 MAPA = "docs/data/mapa-controles.csv"
 IMAGENS_DO_USO = "docs/usage/assets"
 
-# O que NÃO vai para a Wiki, com o motivo. Tudo o mais de `docs/usage` e `docs/protocol` vai, e passa
-# pelos filtros. O que é do trabalho interno (`docs/process`, `docs/method`, `docs/research`, estudos
-# e relatos) nunca entra: a Wiki é uso, mapa e protocolo.
 FORA: dict[str, str] = {
     "docs/protocol/proton-o-pino-desta-casa-e-a-subida-para-o-11-7.md":
         "decisão interna de versão do Proton, do trabalho da casa e não do que o aparelho faz",
 }
 
-# Links para arquivo que existe e vira link no repositório; o resto vira só o texto do link.
 LINKAVEIS = ("src/", "assets/", "examples/", ".github/", "flatpak/", "docs/data/", "docs/usage/",
              "docs/protocol/")
 LINKAVEIS_NA_RAIZ = ("README.md", "LICENSE", "NOTICE", "CHANGELOG.md")
 SUFIXOS_DE_IMAGEM = (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp")
 
-# O vocabulário do mapa (rótulos de tabela, não frases): a mesma ordem e os mesmos nomes do `specs.html`.
 CONTROLES = (("dualsense", "DualSense"), ("pro", "Nintendo Pro"), ("sn30", "8BitDo SN30 Pro"))
 FAMILIAS = {
     "gatilho": "Gatilhos", "luz": "Luz", "audio": "Som", "vibracao": "Vibração", "movimento": "Movimento",
@@ -73,25 +67,20 @@ ORIGEM = {"medido": "medido", "inferido-do-codigo": "lido no código", "afirmado
           "incerto": "incerto"}
 
 
-# ---------------------------------------------------------------------------
-# O modelo
-# ---------------------------------------------------------------------------
-
-
 @dataclass
 class Pagina:
-    nome: str          # o nome do arquivo na Wiki, sem `.md`
-    titulo: str        # o que a barra lateral mostra
-    fonte: str         # o arquivo do repositório de onde a página nasce
-    grupo: str         # onde ela aparece na navegação
+    nome: str
+    titulo: str
+    fonte: str
+    grupo: str
     corpo: str = ""
-    posicao: int = 0   # a ordem dentro do grupo (as famílias do mapa seguem `FAMILIAS`); empate, pelo nome
+    posicao: int = 0
 
 
 @dataclass
 class Wiki:
     paginas: dict[str, Pagina] = field(default_factory=dict)
-    imagens: dict[str, str] = field(default_factory=dict)   # destino na Wiki → arquivo de origem
+    imagens: dict[str, str] = field(default_factory=dict)
     avisos: list[str] = field(default_factory=list)
 
     def arquivos(self) -> dict[str, str]:
@@ -119,10 +108,6 @@ def url_do(caminho: str, *, pasta: bool = False) -> str:
     return f"{REPO}/{'tree' if pasta else 'blob'}/{REF}/{caminho}"
 
 
-# ---------------------------------------------------------------------------
-# Os links: a Wiki é plana, e cada alvo é uma página, uma imagem, um arquivo do repositório ou só texto
-# ---------------------------------------------------------------------------
-
 _ESQUEMA = re.compile(r"^(?:[a-z][a-z0-9+.-]*:|//)", re.I)
 _LINK = re.compile(
     r'(?P<img>!?)\[(?P<txt>[^\[\]]*)\]\((?P<t>[^)\s]+)(?P<ti>\s+"[^"]*")?\)'
@@ -135,10 +120,10 @@ _DEFINICAO = re.compile(r"^(?P<ini>\s{0,3}\[[^\]]+\]:\s*)(?P<t>\S+)")
 @dataclass
 class Contexto:
     raiz: Path
-    publicados: dict[str, str]          # fonte → nome da página
-    imagens: dict[str, str]             # destino → origem
+    publicados: dict[str, str]
+    imagens: dict[str, str]
     avisos: list[str]
-    titulos: dict[str, str] = field(default_factory=dict)   # nome da página → título
+    titulos: dict[str, str] = field(default_factory=dict)
     origem: str = ""
 
     def destino(self, alvo: str) -> str | None:
@@ -171,11 +156,11 @@ def _sem_link(trecho: str, ctx: Contexto) -> str:
             return f"]({novo if novo is not None else REPO}{m.group('ti2') or ''})"
         novo = ctx.destino(m.group("t"))
         if novo is None:
-            return m.group("txt")           # a imagem ou o link sem destino: só o texto
+            return m.group("txt")
         texto = m.group("txt")
         pagina = novo.partition("#")[0]
         if not m.group("img") and pagina in ctx.titulos and re.search(r"\.md\b|/", texto):
-            texto = ctx.titulos[pagina]     # o texto era o caminho do arquivo: na Wiki vira o título
+            texto = ctx.titulos[pagina]
         return f"{m.group('img')}[{texto}]({novo}{m.group('ti') or ''})"
 
     trecho = _LINK.sub(troca, trecho)
@@ -210,11 +195,6 @@ def reescrever(texto: str, origem: str, ctx: Contexto) -> str:
         partes = re.split(r"(`+[^`]*`+)", linha)
         saida.append("".join(p if i % 2 else _sem_link(p, ctx) for i, p in enumerate(partes)))
     return "\n".join(saida)
-
-
-# ---------------------------------------------------------------------------
-# As páginas
-# ---------------------------------------------------------------------------
 
 
 def _cabeca(fonte: str) -> str:
@@ -281,7 +261,6 @@ def _paginas_do_mapa(raiz: Path, wiki: Wiki, seguradas: set[str]) -> None:
     escada = _escada()
     ordem = {c: i for i, (c, _) in enumerate(CONTROLES)}
     rotulo = dict(CONTROLES)
-    # A ordem de `FAMILIAS` (a de quem lê: gatilhos, luz, som…), e a família que ela não conhece vai ao fim.
     posicao = {f: i for i, f in enumerate(FAMILIAS)}
     familias = sorted({ln["familia"] for ln in linhas}, key=lambda f: (posicao.get(f, len(posicao)), f))
     nomes = {f: f"Mapa-{ascii_minusculo(FAMILIAS.get(f, f))}" for f in familias}
@@ -383,11 +362,6 @@ def _navegacao(wiki: Wiki) -> None:
         "nasce, e a correção se faz lá, não aqui.\n")
 
 
-# ---------------------------------------------------------------------------
-# A régua: toda página tem a fonte no alto, todo link interno resolve
-# ---------------------------------------------------------------------------
-
-
 def links_internos(texto: str) -> list[str]:
     """Os alvos relativos de uma página (os de rede, as âncoras e o que está em código ficam de fora)."""
     achados: list[str] = []
@@ -423,11 +397,6 @@ def links_quebrados(arquivos: dict[str, str], imagens: set[str]) -> list[str]:
 def paginas_sem_fonte(arquivos: dict[str, str]) -> list[str]:
     """As páginas que não abrem com o cabeçalho da fonte (texto escrito à mão não tem)."""
     return [n for n, t in sorted(arquivos.items()) if not t.startswith("<!-- gerado por scripts/wiki/gerar.py")]
-
-
-# ---------------------------------------------------------------------------
-# Gerar, conferir, escrever
-# ---------------------------------------------------------------------------
 
 
 @dataclass
@@ -560,7 +529,7 @@ def principal(argv: list[str] | None = None) -> int:
         a.recibo.mkdir(parents=True, exist_ok=True)
         (a.recibo / f"wiki.{impressao_das_fontes(raiz, r.wiki)}").write_text(marcas + "\n", encoding="utf-8")
     print(f"wiki: {marcas}; escrito em {a.saida}")
-    if not a.detalhe:   # com `--detalhe`, a lista mora no arquivo e o terminal fica no resumo
+    if not a.detalhe:
         for m in (m for ms in r.seguradas.values() for m in ms):
             print(f"  segurada: {m}", file=sys.stderr)
     return 1 if r.seguradas else 0

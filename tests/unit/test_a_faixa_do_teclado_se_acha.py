@@ -62,9 +62,6 @@ def _fim(nome: str, **trocas: float | None) -> Any:
     return ensaio.reproduzir(ensaio.ler_sessao(FIXTURES / f"{nome}.json"), **trocas)
 
 
-# --------------------------------------------------------------- a resposta de cada causa
-
-
 def test_1_o_receptor_que_salta_de_canal_e_resposta_e_nao_nao_achei() -> None:
     fim = _fim("salta")
     assert (fim.passo, fim.banda, fim.causa) == (rx.PASSO_NADA, None, rx.CAUSA_SALTA)
@@ -140,9 +137,6 @@ def test_8b_o_receptor_que_sai_no_meio_zera_a_soma_do_com(monkeypatch: pytest.Mo
     assert (d.passo, d.causa) == (rx.PASSO_MEDINDO_COM, ""), "a soma velha virou um salto falso"
 
 
-# --------------------------------------------------------------- o ensaio
-
-
 def test_9_o_ensaio_recusa_sem_medir_e_grava_sem_endereco(
         tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     saida = tmp_path / "mapas.jsonl"
@@ -179,9 +173,6 @@ def test_9_o_ensaio_recusa_sem_medir_e_grava_sem_endereco(
 def test_10_o_ensaio_classifica_numa_linha_curta(capsys: pytest.CaptureFixture[str]) -> None:
     assert ensaio.main(["classificar", str(FIXTURES / "salta.json")]) == 0
     assert capsys.readouterr().out.strip().startswith(f"nada: {rx.FRASE_DA_CAUSA[rx.CAUSA_SALTA]}")
-
-
-# --------------------------------------------------------------- 19/10: o mapa que demora a soltar
 
 
 def test_11_o_sem_fica_com_o_menor_mapa_e_acha_a_faixa_que_o_afh_segurava() -> None:

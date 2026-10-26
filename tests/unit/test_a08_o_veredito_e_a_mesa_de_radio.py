@@ -89,7 +89,7 @@ def test_o_que_ela_calou_nao_segura_a_cor() -> None:
     """A ordem DISPENSADA sai da conta — senão o ⊘ é botão morto."""
     p = _pacote()
     ordem = _ordem("vizinhanca", "arranjo-de-hoje")
-    itens = [_item("certo"), _item("atencao", chave="o1", ordem=ordem)]  # (dado) noqa-acento
+    itens = [_item("certo"), _item("atencao", chave="o1", ordem=ordem)]  # (noqa-acento)
 
     antes = dict(p._DISPENSADAS)
     try:
@@ -100,8 +100,8 @@ def test_o_que_ela_calou_nao_segura_a_cor() -> None:
     finally:
         p._DISPENSADAS = antes
 
-    assert com_ordem["veredito-atencao"] == "atencao", (  # (noqa-acento) chave e valor de dado
-        "com a ordem aberta o topo tinha de estar em `atencao`")  # (noqa-acento) nome do estado
+    assert com_ordem["veredito-atencao"] == "atencao", (  # (noqa-acento)
+        "com a ordem aberta o topo tinha de estar em `atencao`")  # (noqa-acento)
     assert calada["veredito-atencao"] == "", (
         "a ordem que ela dispensou continuou segurando o topo em laranja — o ⊘ "
         "grava e a tela não muda, que é a definição de botão morto")

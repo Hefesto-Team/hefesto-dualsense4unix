@@ -59,7 +59,6 @@ NOME_DO_LADO = {"left": "Gatilho esquerdo (L2)", "right": "Gatilho direito (R2)"
 
 VAZIO = ""
 
-#: A escada da força do aperto (16/10/2026): quantos degraus, e o endereço de cada gatilho.
 DEGRAUS_DA_FORCA = 8
 CAMPO_DA_FORCA = {"l2": "forca-l2", "r2": "forca-r2"}
 
@@ -81,7 +80,6 @@ _SELECT = re.compile(
     r'<select[^>]*class="(?P<classe>g2-imersao)"[^>]*>'
     r'(?P<dentro>.*?)</select>', re.S)
 
-#: a classe do campo na página → o campo que ele é: o gatilho só tem o efeito (22/10/2026)
 _CAMPO_DA_CLASSE = {"g2-imersao": "imersao"}
 
 _COMENTARIO_CSS = re.compile(r"/\*.*?\*/", re.S)
@@ -165,7 +163,6 @@ def _todos_os_lugares_da_pagina() -> frozenset[str]:
     return frozenset(_QUALQUER_LUGAR.findall(_pagina_publicada()))
 
 
-#: O QUE O DESENHO OFERECE PARA DIZER "NÃO HÁ NADA AQUI" — decisão 13,
 TRAVESSAO = "—"
 
 
@@ -228,19 +225,8 @@ def descricao_do_modo(chave: str) -> str:
     return str(getattr(spec, "description", "") or "")
 
 
-#: O QUE A TELA CHAMA O «DESLIGADO» DO GATILHO — 03/10/2026, decisão de produto: os controles
-#: obedecem quando o jogo manda e, na ausência disso, o perfil ganha.
-#: A chave segue sendo `Off` (o perfil não muda de forma, e o
-#: `trigger.reset` do gesto é o mesmo): o que muda é o NOME, que diz o que o
-#: gesto faz. O dono do rótulo do produto (`trigger_specs`, «Desligado») não
-#: muda: a CLI e o daemon seguem falando dele.
-#:
-#: 06/10/2026: o rótulo da chave `Off` é «Sem efeito» (o jogo que comanda
-#: vence nos dois modos; o rótulo diz o que o Hefesto faz, não quem decide). O
-#: NOME da constante ficou, porque os testes e o desenho a leem por ele.
 ROTULO_DO_JOGO_DECIDE = "Sem efeito"
 
-#: O gesto do par «Modo automático | Modo personalizado» (o mesmo `GESTO_DO_MODO` do desenho).
 GESTO_DO_MODO = "modo-dos-gatilhos"
 
 
@@ -253,7 +239,6 @@ def _rotulo_do_modo(chave: str) -> str:
     return str(getattr(spec, "label", "") or chave)
 
 
-# * TROCA DE PERFIL — o daemon REAPLICA o perfil no `profile.switch`, então o
 _PERFIL_DO_RASCUNHO: str = ""
 _RASCUNHO: dict[tuple[str, str], dict[str, Any]] = {}
 
@@ -472,20 +457,11 @@ def _do_lado(cfg: dict[str, Any], specs: Any) -> dict[str, Any]:
             "cru": (str((cfg or {}).get("mode") or "Off"), _params_inteiros(cfg or {}))}
 
 
-#: o grupo das listas de efeito que leva o que a pessoa criou
 SEUS_EFEITOS = "Seus efeitos"
 
-#: a opção que desfaz a imersão e solta o gatilho
 SEM_IMERSAO = "nenhum"
 ROTULO_DO_SEM_IMERSAO = "Sem efeito"
 
-#: O GATILHO SÓ TEM O EFEITO (22/10/2026, «Sai tudo»): a lista «Efeito do gatilho» é a única do
-#: gatilho, e o acionamento vem dentro de cada efeito. Duas opções levam o acionamento que o perfil
-#: já guardava, sem a linha «Como o gatilho faz»:
-#: `acionamento:<modo>` é o acionamento SEM efeito de família (perfil antigo, ajuste à mão), que a
-#: lista mostra pelo nome dele no grupo «Do perfil» — só quando o gatilho está assim, nunca
-#: «Sem efeito», porque o gatilho resiste; `meu-acionamento:<nome>` é o acionamento que ela guardou
-#: na biblioteca dos gatilhos, e mora no grupo «Seus efeitos» ao lado dos que ela cria agora.
 PREFIXO_DO_ACIONAMENTO = "acionamento:"
 PREFIXO_DO_SEU_ACIONAMENTO = "meu-acionamento:"
 GRUPO_DO_PERFIL = "Do perfil"
@@ -555,19 +531,15 @@ def _metade_da_imersao_criada(item: Any) -> dict[str, Any] | None:
             "params": [int(v) for v in specs.preset_to_positional_params(spec, valores)]}
 
 
-#: o endereço da imersão na coluna, o do estilo no canto, e a dica dela
 CAMPO_DA_IMERSAO = "imersao"
 
 PREFIXO_DA_DICA_DA_IMERSAO = "dica-imersao-"
 
-#: a etiqueta da família («Golpe», «Carga»…) à esquerda da caixa do efeito do gatilho (20/10/2026)
 PREFIXO_DA_FAMILIA_DA_IMERSAO = "familia-imersao-"
-#: a frase de quem não tem efeito: o gatilho livre, de fábrica
 DICA_DO_SEM_IMERSAO = "O gatilho livre, de fábrica."
 
 CAMPO_DO_ESTILO = "estilo-do-perfil"
 
-#: onde pousam os chips do que a pessoa criou, na área «Criar efeitos novos»
 SELETOR_DOS_SEUS = "#criar-gatilhos .meus"
 
 
@@ -635,7 +607,6 @@ def _imersao_que_casa(
     spec = specs.get_spec(modo) if specs else None
     if imer is None or spec is None:
         return SEM_IMERSAO
-    # A regra é uma só, a do motor do tato que toca os momentos (`imersao_dos_numeros`).
     achada = imer.imersao_dos_numeros(modo, params)
     if achada is None and cru is not None and cru[0] != modo:
         achada = imer.imersao_dos_numeros(cru[0], cru[1])
@@ -646,7 +617,7 @@ def _imersao_que_casa(
     if not params or params == _padroes(modo):
         return SEM_IMERSAO
     if cru is not None and not cru[1]:
-        return SEM_IMERSAO  # sem ajuste nenhum no perfil antigo: nada que o campo afirme
+        return SEM_IMERSAO
     return ""
 
 
@@ -702,15 +673,10 @@ def html_das_opcoes_de_imersao(estilo: str = "", disco: str = "", do_perfil: str
     return "".join(partes)
 
 
-# emite o chip sem `--plastico`. Esta aba continua não dependendo disso: ela lê
-
 CLASSE_DO_CHIP = "cabeca"
 
-#: * logo o `--plastico` ficava num elemento cujo alvo era `texto`, e
 CAMPO_DO_CHIP = "chip-do-controle"
 
-#: O ALVO É `plastico`, e ele é o único que escreve `--plastico`: os outros
-#: `.chip.plastico{border-color:var(--plastico, var(--border-forte))}` e a queda
 CAMPO_DO_PLASTICO = "plastico"
 
 ALVO_DO_PLASTICO = "plastico"
@@ -881,7 +847,6 @@ def _cor_do_plastico(slug: str) -> str:
     try:
         import monta
 
-        # dela não têm hexa amostrado e devolvem `url(#hachura-sem-hex)`, que
         return str(monta.cor_de_css(slug))
     except (Exception, SystemExit):
         return ""
@@ -913,8 +878,6 @@ def _identidade_viva(ctx: Contexto, c: dict[str, Any]) -> tuple[int, str, str, s
     casa = _casa_na_mesa(ctx, str(c.get("uniq") or ""))
     via = str(casa.get("via")
               or VIA_DO_TRANSPORTE.get(str(c.get("transport") or "").lower(), ""))
-    # `identidade_de` É O DONO DO NOME NA TELA, e ele já sabe que `"Não sei"`
-    # o transporte já tem lugar próprio, então a queda vira ausência.
     nome = identidade_de(c, ctx.mesa)
     if nome in ("—", via):
         nome = ""
@@ -955,7 +918,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     """Endereço → valor, por controle da mesa. E as listas de acionamento e imersão, em bloco."""
     specs = _specs()
     p = perfil.ativo(ctx.state.get("active_profile"))
-    # a intensidade se lê com o computador por baixo: sem jogo, é lá que o trilho grava
     vale = perfil.ativo_que_vale(ctx.state.get("active_profile"))
     tem_endereco = _enderecos_da_pagina()
 
@@ -990,8 +952,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         }
         for sig, d in deste.items():
             col[f"modo-{sig}"] = d["modo"]
-            # um acionamento sem efeito de família não é «Sem efeito»: o gatilho resiste, e a
-            # lista o mostra pelo nome dele (`_efeito_da_lista`)
             feita = _efeito_da_lista(
                 str(d["modo-chave"]), list(d["params"]), d["cru"], LADOS[sig], cfgs[sig])
             d["feita"] = feita
@@ -1010,19 +970,15 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         vazia.update({f"{CAMPO_DA_IMERSAO}-{sig}": _sem_nada("imersao", SEM_IMERSAO)
                       for sig in LADOS})
         vazia.update({f"{PREFIXO_DA_FAMILIA_DA_IMERSAO}{sig}": "" for sig in LADOS})
-        # colunas` do piloto, e com ela some o `data-conectado="nao"` que segura
         vazia[CAMPO_DO_CHIP] = _chip_do_lugar_vazio(pref)
-        # `--plastico` do embrulho (`escrever` chama `removeProperty`), que é o
         vazia[CAMPO_DO_PLASTICO] = ""
         vazia.update(dict.fromkeys(CAMPO_DA_FORCA.values(), 0))
         colunas[pref] = vazia
         pintados += sum(1 for k in vazia if k in tem_endereco)
 
-    # depende o `data-conectado="nao"` do piloto. Com um controle só na mesa,
     for pref in sorted(_todos_os_lugares_da_pagina() - ocupados):
         blocos.update(_blocos_da_coluna(
             pref, dict.fromkeys(LADOS, sem_ninguem), estilo=estilo))
-        # emitir uma coluna custaria o `data-conectado="nao"` que segura o
         if CAMPO_DO_CHIP not in (colunas.get(pref) or {}):
             blocos[seletor_do_chip(pref)] = _chip_do_lugar_vazio(pref)
 
@@ -1032,12 +988,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "colunas": colunas,
         "blocos": blocos,
         CAMPO_DO_ESTILO: _rotulo_do_estilo(estilo),
-        # O MODO DA ABA: o quadro leva o modo no `data-modo-da-aba` (a folha deixa as colunas
-        # paradas no Automático), e cada botão do par acende pelo modo do perfil.
         GESTO_DO_MODO: modo_da_aba,
         f"{GESTO_DO_MODO}-{MODO_AUTOMATICO}": "sim" if modo_da_aba == MODO_AUTOMATICO else "",
         f"{GESTO_DO_MODO}-personalizado": "sim" if modo_da_aba == "personalizado" else "",
-        # `perfil` saiu em 13/09/2026: o chip é das dez, dono `pacotes.topo()`.
         "sem_dono": {},
         "cobertura": {"pintados": pintados, "sem_dono": len(SEM_DONO),
                       "sem_endereco": sum(1 for col in colunas.values()
@@ -1224,9 +1177,6 @@ def _padroes(nome: str) -> list[int]:
     return list(specs.preset_to_positional_params(spec, {}))
 
 
-#: `reenviar`, que somava com ele os desfechos dos DOIS gatilhos da coluna, e
-#: saiu com o botão. Fica o primeiro, a D-17: o `_aplicar` soma o recibo do
-#: guardou*. A constante fica onde subiu, acima do chamador: quem lê `_aplicar`
 _E_TAMBEM = " · "
 
 
@@ -1473,7 +1423,6 @@ def _como_a_janela_pergunta(ctx: Contexto | None, uniq: str) -> Any:
     rotulo = ""
     for c in conectados:
         if str(c.get("uniq") or "") == uniq:
-            # `player_slot` preenchido. Lendo cru, o secundário do co-op vinha
             rotulo = f"Controle {jogador_de(c) or '?'}"
             break
 
@@ -1739,7 +1688,6 @@ def imersao_escolhida(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     return {"recado": recibo}
 
 
-#: o que cada barra da área «Criar efeitos novos» mexe, pelo NOME do parâmetro, e a faixa dela
 SLOTS_DA_CRIACAO: dict[str, tuple[str, ...]] = {
     "inicio": ("start", "position"),
     "fim": ("end",),
@@ -1750,7 +1698,6 @@ SLOTS_DA_CRIACAO: dict[str, tuple[str, ...]] = {
 FAIXA_DOS_SLOTS: dict[str, tuple[int, int]] = {
     "inicio": (0, 9), "fim": (0, 9), "forca": (0, 8), "freq": (0, 255)}
 
-#: quanto o «Sentir» deixa o efeito tocar antes de devolver ao controle o que ele recebia
 SENTIR_S = 1.5
 
 
@@ -1997,13 +1944,9 @@ def _com_os_gatilhos(prof: Any, uniq: str, dos_lados: dict[str, Any]) -> Any:
     return prof.model_copy(update={"controllers": atuais})
 
 
-#: A «Intensidade do gatilho» (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-
-#: 01): o trilho de 0 a 200%, de 5 em 5, por controle (`aba03.GESTO_DA_INTENSIDADE`).
 GESTO_DA_INTENSIDADE = "intensidade-do-gatilho"
 CAMPO_DA_INTENSIDADE = "intensidade-do-gatilho"
 TETO_DA_INTENSIDADE = 200
-#: O cartão do padrão do computador em que a intensidade mora, como a «Força da vibração» da 05
-#: (A-INTENSIDADE-DO-GATILHO-VALE-NO-PADRAO-DO-COMPUTADOR-01).
 CARTAO_DA_INTENSIDADE = "gatilho"
 
 
@@ -2116,12 +2059,9 @@ def intensidade_do_gatilho(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 
 PONTE = {"trigger_set_detalhado", "trigger_reset_detalhado"}
-#: Vazio: os dois métodos que esta aba usa (`trigger.set` e `trigger.reset`) têm
 METODOS: set[str] = set()
 
 
-#: Os seis gestos da aba do todo: `modo`, `imersao`, `criar-efeito`, `sentir`, o par
-#: «Modo automático | Modo personalizado» (`GESTO_DO_MODO`) e o trilho da intensidade.
 PISO_DA_ABA = 6
 _UNIQ = "aa:bb:cc:00:00:01"
 _GUARDOU: tuple[str, list[str], dict[str, Any]] = (
@@ -2131,29 +2071,24 @@ _IMERSAO_DE_PROVA = _imersoes().imersoes_do_acionamento("Machine")[0]
 
 
 PROVAS = [
-    # calados no dia em que ela mudasse um padrão — e a régua daria verde sobre
-    {"pagina": PAGINA, "gesto": "modo", "clique": {"lado": "e",  # (noqa-acento) id
+    {"pagina": PAGINA, "gesto": "modo", "clique": {"lado": "e",  # (noqa-acento)
      "modo": "Rigid"},
      "chama": [("trigger_set_detalhado", ["left", "Rigid", _padroes("Rigid")],
                 {"uniq": _UNIQ}), _GUARDOU]},
-    # "Desligado" é `trigger.reset` — a R-19. Se alguém trocar por um
-    {"pagina": PAGINA, "gesto": "modo", "clique": {"lado": "d", "modo": "Off"},  # (noqa-acento) id
+    {"pagina": PAGINA, "gesto": "modo", "clique": {"lado": "d", "modo": "Off"},  # (noqa-acento)
      "chama": [("trigger_reset_detalhado", ["right"], {"uniq": _UNIQ}), _GUARDOU]},
-    {"pagina": PAGINA,  # (noqa-acento) chave do contrato
+    {"pagina": PAGINA,  # (noqa-acento)
      "gesto": "modo", "clique": {"lado": "e", "valor": "Vibration"},
      "chama": [("trigger_set_detalhado", ["left", "Vibration", _padroes("Vibration")],
                 {"uniq": _UNIQ}), _GUARDOU]},
-    {"pagina": PAGINA,  # (noqa-acento) chave do contrato
+    {"pagina": PAGINA,  # (noqa-acento)
      "gesto": "imersao", "clique": {"lado": "e", "valor": _IMERSAO_DE_PROVA.chave},
      "chama": [("trigger_set_detalhado",
                 ["left", "Machine", _params_da_imersao(_IMERSAO_DE_PROVA, "Machine", "")],
                 {"uniq": _UNIQ}), _GUARDOU]},
-    {"pagina": PAGINA,  # (noqa-acento) chave do contrato
-     # «Sem efeito» solta o gatilho, qualquer que seja o acionamento da coluna (20/10/2026)
+    {"pagina": PAGINA,  # (noqa-acento)
      "gesto": "imersao", "clique": {"lado": "d", "valor": SEM_IMERSAO},
      "chama": [("trigger_reset_detalhado", ["right"], {"uniq": _UNIQ}), _GUARDOU]},
 ]
 
-#: OS GESTOS QUE O DAEMON ACEITA E NÃO PUBLICA. O `state_full` não traz
-#: `triggers`: o DualSense não devolve o modo em que está — gatilho adaptativo é
 SEM_ECO = ("modo", "imersao")

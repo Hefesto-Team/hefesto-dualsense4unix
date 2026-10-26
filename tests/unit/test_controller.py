@@ -285,7 +285,7 @@ class TestPyDualSenseController:
             LY = 128
             RX = 128
             RY = 128
-            micBtn = True  # noqa: N815 — simula atributo pydualsense (HID-raw bit 2)
+            micBtn = True  # noqa: N815
 
         class FakeBattery:
             Level = 80
@@ -332,7 +332,7 @@ class TestPyDualSenseController:
             LY = 128
             RX = 128
             RY = 128
-            micBtn = False  # noqa: N815 — simula atributo pydualsense
+            micBtn = False  # noqa: N815
 
         class FakeBattery:
             Level = 80

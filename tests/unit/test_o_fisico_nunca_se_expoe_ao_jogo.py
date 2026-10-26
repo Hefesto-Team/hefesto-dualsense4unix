@@ -30,10 +30,8 @@ from hefesto_dualsense4unix.broker.hidraw_broker import Broker, BrokerState
 from hefesto_dualsense4unix.core import backend_pydualsense as backend
 from hefesto_dualsense4unix.integrations import hidraw_broker_client as cli
 
-#: Nós que não existem nesta máquina: o caminho por ``hidapi`` nunca acharia um aparelho do usuário.
 NOS = ("/dev/hidraw90", "/dev/hidraw91", "/dev/hidraw92", "/dev/hidraw93")
 
-#: O primeiro report de cada transporte: o ``determineConnectionType`` decide pelo tamanho.
 REPORT_DO_CABO = bytes([0x01, 0x80, 0x80, 0x80, 0x80, 0, 0, 0, 0x08]) + bytes(55)
 REPORT_DO_RADIO = bytes([0x31, 0x00, 0x80, 0x80, 0x80, 0x80, 0, 0, 0, 0x08]) + bytes(68)
 
@@ -168,8 +166,10 @@ class TestOFisicoAbrePeloFdDoBroker:
         tamanho: int,
         id_da_saida: int,
     ) -> None:
-        """A régua da sprint: nenhum ``expose`` chega ao fs do nó, e o handle vive pelo fd."""
-        # D-2310-O-HANDLE-ABRE-O-FISICO-PELO-FD-DO-BROKER
+        """A régua da sprint: nenhum ``expose`` chega ao fs do nó, e o handle vive pelo fd.
+
+        Prova da D-2310-O-HANDLE-ABRE-O-FISICO-PELO-FD-DO-BROKER.
+        """
         with broker_no_ar(tmp_path) as (estado, fs, cliente):
             no = NOS[0]
             aparelho = fs.ligar(no)
@@ -191,8 +191,6 @@ class TestOFisicoAbrePeloFdDoBroker:
             finally:
                 if handle is not None:
                     backend._fechar_os_handles_juntos([handle])
-            # No cabo a abertura escreve a soltura do motor preso antes do primeiro report;
-            # o que sobra na fila é saída do mesmo id, e o fim dela (EOF) prova o fd fechado.
             while (resto := aparelho.recv(512)) != b"":
                 assert resto[0] == id_da_saida, "o fd do handle ficou aberto depois do close"
 
@@ -275,7 +273,6 @@ class TestOFisicoAbrePeloFdDoBroker:
             with pytest.raises(Exception, match="connection type") as falha:
                 abrir(ctl, no)
             fs.soltar_as_pontas()
-            # ``falha`` segura a pilha (e o handle nela): o ``__del__`` não fecha por acaso.
             assert falha.value is not None
             assert aparelho.recv(512) == b"", "o fd do broker vazou com o init que falhou"
             assert fs.atos_de_acl() == []

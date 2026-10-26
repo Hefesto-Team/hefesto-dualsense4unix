@@ -257,7 +257,7 @@ def _funcao_da_bancada(nome: str) -> Callable[..., list[str]]:
     for no in _arvore().body:
         if isinstance(no, ast.FunctionDef) and no.name == nome:
             espaco: dict[str, object] = {"Iterable": Iterable}
-            exec(  # o fonte é o do próprio repositório, lido por AST
+            exec(
                 compile(ast.Module([no], []), str(BANCADA), "exec"), espaco
             )
             return espaco[nome]  # type: ignore[return-value]

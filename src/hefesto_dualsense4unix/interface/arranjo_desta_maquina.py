@@ -114,7 +114,7 @@ def _ler_a_maquina(
 
     try:
         das_faixas = dict(faixas()) if faixas is not None else {}
-    except Exception:  # a faixa é um extra: sem ela o painel só não a mostra
+    except Exception:
         das_faixas = {}
     mesa = bancada.mesa
     pelo_caminho = {a.nome_do_kernel: a for a in conectados}
@@ -381,7 +381,6 @@ def _o_que_ela_declarou_nas_entradas(
     for numero, entrada in por_numero.items():
         porta = mapa.portas.get(numero)
         if porta is not None and porta.extensor:
-            # a chave da porta (04/10/2026): o aparelho continua dito na entrada, e ela é esticada
             entrada["extensor"] = True
     return hub_lido
 
@@ -422,7 +421,7 @@ def _aparelho(
     if (apelidos or {}).get(modelo):
         corpo["nomeDeclarado"] = (apelidos or {})[modelo]
     if not do_censo.produto.strip() and do_censo.produto_da_base.strip():
-        corpo["nome"] = do_censo.produto_da_base.strip()  # o descritor calou: vale o nome da base
+        corpo["nome"] = do_censo.produto_da_base.strip()
     corpo.update(da_cadeia or {})
     corpo["etiquetas"] = _etiquetas_do_aparelho(do_censo, censo)
     if getattr(do_censo, "receptor", False):
@@ -471,7 +470,6 @@ def _etiquetas_do_aparelho(aparelho: Any, censo: Any) -> list[str]:
 
 SABE_SUPERSPEED = "Sabe 5 Gb/s"
 
-#: O nome da espécie do censo na classe que dá a cor (a do chip e a do registro).
 _CLASSE_DO_TIPO = {
     "Bluetooth": "bt", "Wi-Fi": "wifi", "Câmera": "webcam", "Webcam": "webcam",
     "Teclado": "teclado",
@@ -687,7 +685,6 @@ def _o_registro(
         tipo = str(linha.get("tipo", ""))
         carimbo = float(linha["carimbo"])
         if tipo == "Hub":
-            # um hub de plástico enumera vários nós de uma vez: uma linha só
             chave = (str(linha.get("o_que")), str(linha.get("hub_fisico") or linha.get("no")))
             if chave in hubs_vistos and abs(hubs_vistos[chave] - carimbo) <= _JANELA_DO_HUB_S:
                 continue

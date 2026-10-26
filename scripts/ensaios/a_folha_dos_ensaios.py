@@ -466,7 +466,7 @@ class Aparelho:
         cru = os.path.join(PASTA, f"mic-{self.curto}.raw")
         self.ultimo_wav = os.path.join(PASTA, f"mic-{self.curto}.wav")
         try:
-            saida = open(cru, "wb")  # noqa: SIM115 — fechado em `encerrar`
+            saida = open(cru, "wb")  # noqa: SIM115
             self.gravando = subprocess.Popen(
                 ["parec", f"--device={self.fonte_fisica}", "--rate=48000",
                  "--channels=1", "--format=s16le"],

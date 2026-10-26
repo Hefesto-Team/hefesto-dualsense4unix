@@ -17,7 +17,7 @@ from typing import Any
 
 import pytest
 
-from tests.unit import radio_de_mentira as rm  # noqa: F401  (a guarda do BlueZ da suíte)
+from tests.unit import radio_de_mentira as rm  # noqa: F401
 
 
 from hefesto_dualsense4unix.integrations import receptor_sem_fio as rx
@@ -25,7 +25,6 @@ from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 from hefesto_dualsense4unix.interface.pacotes import em_fundo
 
 ADAPTADOR = "AA:BB:CC:00:00:0A"
-#: o releitor de verdade, antes de a fixture o trocar (a régua de ponta a ponta precisa dele)
 _RELER_DE_VERDADE = a08._reler_a_declaracao
 
 
@@ -79,19 +78,14 @@ def _descoberta_limpa() -> Any:
     a08._DESCOBERTA.cancelar()
 
 
-# --- 1. a linha: a faixa do que ainda não foi descoberto traz o gesto ---------------------------
-
-
 def test_o_receptor_sem_faixa_diz_que_nao_foi_descoberto_e_traz_o_botao_descobrir() -> None:
     html = a08.html_dos_canais(_cena([_receptor("aaaa:bbbb", "mouse")]))
     linha = _linha(html, "aaaa:bbbb")
     assert "ainda não foi descoberta" in linha
-    # a faixa por descobrir É o botão, à vista, e o ponto é só o estado (desenho de 06/10/2026)
     assert re.search(r'<button class="ar-faixa sem descobrir" type="button" '
                      r'data-gesto="receptor-descobrir" data-alvo="aaaa:bbbb" '
                      r'title="Faixa ainda não descoberta · clique para descobrir"', linha)
     assert f"<span>{a08.DESCOBRIR_A_FAIXA}</span>" in linha
-    # o nome acessível contém o rótulo à vista (WCAG 2.5.3): o comando de voz acha o botão
     assert re.search(rf'aria-label="{a08.DESCOBRIR_A_FAIXA} · [^"]+">', linha), linha
     ponto = linha.split('class="ar-estado"')[1]
     assert "<button" not in ponto and "data-gesto" not in ponto, "o ponto voltou a ser o gesto"
@@ -110,7 +104,6 @@ def test_o_selo_do_teclado_diz_as_teclas_presas_e_o_do_mouse_diz_sem_falhas() ->
     teclado, mouse = _linha(html, "aaaa:bbbb"), _linha(html, "cccc:dddd")
     assert '<span class="ar-selo sofrendo"' in teclado and "3 teclas presas" in teclado
     assert "em 1 h" in teclado
-    # o «sem falhas» do mouse é o ponto verde, mesmo com a faixa por descobrir (06/10/2026)
     assert '<span class="ar-selo boa"' in mouse and "Sem falhas" in mouse
     assert "receptor-descobrir" in mouse
 
@@ -126,9 +119,6 @@ def test_sem_leitura_do_evdev_a_linha_nao_inventa_selo() -> None:
 def test_o_receptor_sem_tipo_declarado_tambem_ganha_o_descobrir() -> None:
     html = a08.html_dos_canais(_cena([_receptor("aaaa:bbbb", "")]))
     assert "receptor-descobrir" in _linha(html, "aaaa:bbbb")
-
-
-# --- 2. o gesto guiado --------------------------------------------------------------------------
 
 
 def _clicar(chave: str = "aaaa:bbbb") -> None:
@@ -151,10 +141,8 @@ def test_o_gesto_anda_pelo_censo_e_a_linha_fica_na_tela_com_o_receptor_tirado() 
     html = _linha(a08.html_dos_canais(cena), "aaaa:bbbb")
     assert "Tire o receptor da porta" in html and "Já tirei" not in html
     assert "ar-descobrir" not in html
-    _clicar()  # segundo clique: não anda nada
+    _clicar()
     assert a08._DESCOBERTA.passo == rx.PASSO_TIRE
-    # o receptor SAIU: a linha dele some do censo, e o gesto a mantém para dizer o passo. O
-    # relógio é fixo: o prazo da medida é pergunta da régua de fronteira, não do relógio da máquina
     a08._andar_a_descoberta({}, 1000.0, False)
     assert a08._DESCOBERTA.passo == rx.PASSO_MEDINDO_SEM
     fora = _cena([])
@@ -256,12 +244,12 @@ def test_a_cena_inteira_anda_o_gesto_pelo_censo_e_guarda_a_linha_do_receptor_tir
     a08._DESCOBERTA.iniciar("aaaa:bbbb", time.monotonic())
     cena = _cena_agora()
     assert a08._DESCOBERTA.passo == rx.PASSO_TIRE and cena["descobrindo_ausente"] is None
-    na_mesa["mesa"] = Mesa()  # o receptor saiu da porta
+    na_mesa["mesa"] = Mesa()
     cena = _cena_agora()
     assert a08._DESCOBERTA.passo == rx.PASSO_MEDINDO_SEM, "o censo anda o passo, sem clique"
     assert cena["descobrindo_ausente"]["id"] == "aaaa:bbbb"
     assert [o.id for o, _r in a08._os_outros_radios(cena)] == ["aaaa:bbbb"], "a linha segue na tela"
-    na_mesa["mesa"] = Mesa(radios=(receptor,))  # voltou antes de a medida acabar
+    na_mesa["mesa"] = Mesa(radios=(receptor,))
     cena = _cena_agora()
     assert a08._DESCOBERTA.passo == rx.PASSO_TIRE and cena["descobrindo_ausente"] is None
 
@@ -306,7 +294,7 @@ def test_o_censo_da_porta_se_rele_so_enquanto_o_gesto_anda(
     a08._DESCOBERTA.iniciar("aaaa:bbbb", time.monotonic())
     _cena_agora()
     assert a08._DESCOBERTA.passo == rx.PASSO_TIRE
-    na_porta["mesa"] = Mesa()  # ela tirou o receptor
+    na_porta["mesa"] = Mesa()
     _cena_agora()
     assert a08._DESCOBERTA.passo == rx.PASSO_MEDINDO_SEM, (
         "a porta lida uma vez não viu o receptor sair: o gesto ficaria no «Tire» até se desfazer")
@@ -329,13 +317,13 @@ def _evitados(*canais: int) -> dict[str, Any]:
 
 def test_a_banda_achada_e_guardada_uma_vez_com_o_dia(_descoberta_limpa: list[Any]) -> None:
     _na_tela(_receptor("aaaa:bbbb", "mouse"))
-    _clicar()  # tire
-    a08._andar_a_descoberta({}, 1.0, False)  # o receptor saiu: mede sem ele
+    _clicar()
+    a08._andar_a_descoberta({}, 1.0, False)
     desde = a08._DESCOBERTA.desde
     sem = _evitados(*range(49, 71))
     a08._andar_a_descoberta(sem, desde + rx.ESPERA_DA_MEDIDA_S, False)
     assert a08._DESCOBERTA.passo == rx.PASSO_PONHA
-    a08._andar_a_descoberta(sem, desde + rx.ESPERA_DA_MEDIDA_S + 1, True)  # voltou: mede com ele
+    a08._andar_a_descoberta(sem, desde + rx.ESPERA_DA_MEDIDA_S + 1, True)
     desde = a08._DESCOBERTA.desde
     com = _evitados(*range(49, 71), *range(18, 35))
     a08._andar_a_descoberta(com, desde + rx.ESPERA_DA_MEDIDA_S, True)
@@ -390,16 +378,16 @@ def test_a_faixa_medida_vai_ao_maquina_json_e_volta_pintada_na_linha_do_receptor
 
     def _a_linha_agora() -> str:
         contexto = pacotes.Contexto(state={"controllers": []}, mesa=[], conectados=[])
-        vizinhos = a08.cena_do_radio(contexto)["vizinhos"]  # sem adaptador, a faixa não se desenha
+        vizinhos = a08.cena_do_radio(contexto)["vizinhos"]
         return _linha(a08.html_dos_canais(_cena(vizinhos)), "aaaa:bbbb")
 
     antes = _a_linha_agora()
     assert "receptor-descobrir" in antes and 'class="b"' not in antes
     a08._DESCOBERTA.iniciar("aaaa:bbbb", 0.0)
-    a08._andar_a_descoberta({}, 1.0, False)  # tirou
+    a08._andar_a_descoberta({}, 1.0, False)
     sem = _evitados(*range(49, 71))
     a08._andar_a_descoberta(sem, a08._DESCOBERTA.desde + rx.ESPERA_DA_MEDIDA_S, False)
-    a08._andar_a_descoberta(sem, a08._DESCOBERTA.desde + 1, True)  # pôs de volta
+    a08._andar_a_descoberta(sem, a08._DESCOBERTA.desde + 1, True)
     com = _evitados(*range(49, 71), *range(18, 35))
     a08._andar_a_descoberta(com, a08._DESCOBERTA.desde + rx.ESPERA_DA_MEDIDA_S, True)
     a08._andar_a_descoberta(com, a08._DESCOBERTA.desde + 2, True)
@@ -420,9 +408,6 @@ def test_a_banda_declarada_se_le_do_maquina_json() -> None:
     assert a08._banda_declarada(declaracao, "cccc:dddd") is None
     assert a08._banda_declarada(declaracao, "0000:1111") is None
     assert a08._banda_declarada(None, "aaaa:bbbb") is None
-
-
-# --- 3. o cartão «Teclado errando» ----------------------------------------------------------------
 
 
 def test_o_teclado_que_sofre_vira_o_cartao_teclado_errando_com_um_botao() -> None:
@@ -448,9 +433,6 @@ def test_o_mouse_que_engasga_vira_o_cartao_mouse_engasgando() -> None:
     assert dica.titulo == "Mouse engasgando"
 
 
-# --- 4. o painel do aparelho e o contrato da tela -------------------------------------------------
-
-
 def test_o_painel_diz_receptor_24g_como_primeira_etiqueta() -> None:
     from hefesto_dualsense4unix.integrations.censo_do_barramento import Aparelho
     from hefesto_dualsense4unix.interface import arranjo_desta_maquina as adm
@@ -468,8 +450,6 @@ def test_o_painel_diz_receptor_24g_como_primeira_etiqueta() -> None:
 def test_o_gesto_esta_registrado_e_diz_porque_nao_tem_eco() -> None:
     from hefesto_dualsense4unix.interface.pacotes import gesto_da_pagina
 
-    # pelo nome, e não por identidade: a suíte importa os pacotes também como `pacotes` (o
-    # caminho do piloto), e o registro fica com a função da última importação.
     fn = gesto_da_pagina("08-conexoes.html", "receptor-descobrir")
     assert fn is not None and fn.__name__ == "receptor_descobrir", fn
     assert fn.__module__.rsplit(".", 1)[-1] == "a08_conexoes", fn.__module__
@@ -496,5 +476,3 @@ def test_o_mockup_traz_o_exemplo_do_desenho_do_receptor() -> None:
     raiz = Path(__file__).resolve().parents[2]
     pagina = (raiz / "mockup/08-conexoes.html").read_text(encoding="utf-8")
     assert 'data-gesto="receptor-descobrir"' in pagina and "3 teclas presas" in pagina
-    # o painel único do Mapa (05/10/2026) não traz mais o «Descobrir a faixa»: o ponto vazado
-    # da aba Conexões é o gesto

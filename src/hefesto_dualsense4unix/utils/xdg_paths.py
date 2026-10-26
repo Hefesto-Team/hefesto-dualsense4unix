@@ -12,7 +12,6 @@ from platformdirs import PlatformDirs
 
 from hefesto_dualsense4unix.utils import identidade
 
-# state, perfis e o diretório do socket IPC saem todos daqui. Por isso ele não
 _APP = identidade.atual().slug
 _DIRS = PlatformDirs(_APP)
 
@@ -102,9 +101,6 @@ def profiles_dir(ensure: bool = False) -> Path:
     return p
 
 
-#: A variável que desvia as pastas de sistema do WirePlumber (lista separada por
-#: ``:``). Existe para o teste e para a bancada: o lar de mentira declara um
-#: ``/usr/share/wireplumber`` falso em vez de ler o da máquina.
 WIREPLUMBER_SISTEMA_ENV_VAR = "HEFESTO_WIREPLUMBER_SISTEMA"
 _WIREPLUMBER_SISTEMA = ("/usr/share/wireplumber", "/etc/wireplumber")
 

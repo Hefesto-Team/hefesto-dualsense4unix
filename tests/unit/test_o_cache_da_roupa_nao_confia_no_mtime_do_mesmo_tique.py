@@ -152,10 +152,10 @@ def test_o_arquivo_do_mesmo_tique_aparece_passada_a_margem(
         "o disco de tempo grosso: a chave não viu o arquivo novo"
     )
 
-    relogio.avanca(1)  # dentro da margem: a roupa guardada serve
+    relogio.avanca(1)
     assert rj.roupa_do_jogo(raiz)[0] == "0df2"
 
-    relogio.avanca(2)  # passada: o mtime mais novo + a margem ficou para trás
+    relogio.avanca(2)
     roupa, fonte = rj.roupa_do_jogo(raiz)
     assert roupa == "0ce6", fonte
     assert fonte == f"{_METADATA} declara só o DualSense comum"
@@ -170,7 +170,7 @@ def test_dentro_da_margem_o_laco_serve_a_roupa_guardada_e_o_jogo_nao_sai_de_roup
     """
     raiz = _jogo(tmp_path / "Jogo", _T0 - _SEGUNDO // 2)
     laco, aqueceu = _o_laco_do_servico(monkeypatch, raiz)
-    rj.roupa_do_jogo(raiz)  # a leitura recém-feita e suspeita
+    rj.roupa_do_jogo(raiz)
     lidas = _conta_as_leituras(monkeypatch)
 
     relogio.avanca(1)
@@ -181,7 +181,7 @@ def test_dentro_da_margem_o_laco_serve_a_roupa_guardada_e_o_jogo_nao_sai_de_roup
     assert lidas == []
 
     _chega_o_perfil_no_mesmo_tique(raiz, _T0 - _SEGUNDO // 2)
-    relogio.avanca(2)  # passada a margem: o laço segue servindo o guardado e pede UM aquecimento
+    relogio.avanca(2)
     assert laco()["1"][0] == "0df2"
     assert aqueceu.wait(5), "o aquecimento relê fora do laço e avisa"
     assert lidas == [raiz]
@@ -202,8 +202,8 @@ def test_o_arquivo_que_chega_durante_a_leitura_tambem_e_visto(
 
     def _lenta_com_chegada(pasta: Path) -> Any:
         lido = real(pasta)
-        _chega_o_perfil_no_mesmo_tique(pasta, _T0 + _SEGUNDO // 10)  # depois do começo
-        relogio.avanca(5)  # a instalação em andamento: a leitura demorou
+        _chega_o_perfil_no_mesmo_tique(pasta, _T0 + _SEGUNDO // 10)
+        relogio.avanca(5)
         return lido
 
     monkeypatch.setattr(rj, "_ler_o_disco", _lenta_com_chegada)
@@ -247,7 +247,7 @@ def test_a_chave_diferente_segue_o_caminho_de_sempre(
     lidas = _conta_as_leituras(monkeypatch)
 
     (raiz / _METADATA).write_bytes(_PERFIL_DO_COMUM)
-    _datar(raiz, _T0 + _SEGUNDO // 4)  # a data MUDOU: a chave vê
+    _datar(raiz, _T0 + _SEGUNDO // 4)
 
     assert rj.roupa_do_jogo(raiz)[0] == "0ce6"
     assert lidas == [raiz]

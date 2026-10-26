@@ -55,35 +55,21 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-# Xbox 360 (fallback p/ jogos XInput-only).
 XBOX360_VENDOR = 0x045E
 XBOX360_PRODUCT = 0x028E
 XBOX360_NAME = "Microsoft X-Box 360 pad (Hefesto - Dualsense4Unix virtual)"
 
-# DualSense (Sony) FÍSICO (054c:0ce6). NÃO entra em máscara de vpad nenhuma:
 DUALSENSE_VENDOR = 0x054C
 DUALSENSE_PRODUCT = 0x0CE6
 DUALSENSE_NAME = "Sony Interactive Entertainment DualSense Wireless Controller"
 
-# DualSense **Edge** — a máscara "dualsense" do vpad (VPAD-04). Espelha o
 DUALSENSE_EDGE_PRODUCT = 0x0DF2
 DUALSENSE_EDGE_NAME = (
     "Sony Interactive Entertainment DualSense Edge Wireless Controller"
 )
 
-# É EMULAÇÃO, não suporte a aparelho Nintendo físico: o Hefesto faz o DualSense
-# quatro DualSense (decisão, 06/09/2026).
 NINTENDO_VENDOR = 0x057E
 NINTENDO_PROCON_PRODUCT = 0x2009
-#: MEDIDO com a libSDL2 da bancada, enumerando os quatro vpads sem abrir nenhum.
-#: Os bytes 2-3 do GUID são o **CRC16 do nome** (`SDL_crc16`, refletido, poly
-#: 0xA001), conferido nos quatro, 4 de 4:
-#:
-#:     nome ................................ crc16   bytes[2:4] do GUID
-#:     DualSense ... (Hefesto P1) .......... 0x8076  7680
-#:     DualSense ... (Hefesto P2) .......... 0x7076  7670
-#:     DualSense ... (Hefesto P3) .......... 0xe077  77e0
-#:     DualSense ... (Hefesto P4) .......... 0xd075  75d0
 NINTENDO_PROCON_NAME = (
     "Nintendo Co., Ltd. Pro Controller (Hefesto - Dualsense4Unix virtual)"
 )
@@ -112,7 +98,6 @@ def _uinput_sem_no_proprio(base: type) -> type:
 
 FF_TETO_SEM_DURACAO_S = 30.0
 
-# VPAD-04: a entrada dualsense usa o Edge (0x0df2) — NUNCA o 0x0ce6 do físico.
 FLAVORS: dict[str, dict[str, Any]] = {
     "dualsense": {
         "name": DUALSENSE_EDGE_NAME,
@@ -130,9 +115,6 @@ FLAVORS: dict[str, dict[str, Any]] = {
         "product": NINTENDO_PROCON_PRODUCT,
     },
 }
-#: provado com SDL2 e validado em gameplay. Hoje a máscara DualSense vibra pelo
-#:   config vem `None` ou com valor desconhecido. A primeira escolha do usuário na
-#:   nova o jogo recebe a máscara DualSense;
 DEFAULT_FLAVOR = "xbox"
 
 DEVICE_NAME = XBOX360_NAME
@@ -174,9 +156,6 @@ def normalize_flavor(flavor: str | None) -> str:
         return DEFAULT_FLAVOR
     return resolver_flavor(flavor) or DEFAULT_FLAVOR
 
-# Mapeamento canonico Hefesto - DualSense4Unix (HOTFIX-2) -> evdev constant usado no uinput.
-# É a tabela do `xpad` (máscara Xbox, VID 045e) e o piso de `_resolve_evdev`; as máscaras
-# de VID Sony e Nintendo usam :data:`BOTOES_POSICIONAIS`.
 BUTTON_TO_UINPUT: dict[str, str] = {
     "cross": "BTN_A",
     "circle": "BTN_B",
@@ -191,10 +170,6 @@ BUTTON_TO_UINPUT: dict[str, str] = {
     "r3": "BTN_THUMBR",
 }
 
-#: Os dois botões do físico que o `uinput` NÃO escreve pela tabela dos botões: os
-#: gatilhos digitais. Nas máscaras DualSense e Xbox os gatilhos saem como eixo
-#: (`ABS_Z`/`ABS_RZ`), e na Nintendo o `BTN_TL2`/`BTN_TR2` tem um escritor só, o
-#: `forward_analog` (ver :func:`_capacidades_procon`).
 _GATILHOS_DIGITAIS = frozenset({"l2_btn", "r2_btn"})
 
 
@@ -214,7 +189,6 @@ def botoes_posicionais(mapa: dict[str, str] | None = None) -> dict[str, str]:
     return {nome: codigo for codigo, nome in mapa.items() if nome not in _GATILHOS_DIGITAIS}
 
 
-#: A tabela das máscaras de VID Sony e Nintendo: um dono, duas máscaras que a usam.
 BOTOES_POSICIONAIS: dict[str, str] = botoes_posicionais()
 
 BOTOES_POR_FLAVOR: dict[str, dict[str, str]] = {
@@ -223,7 +197,6 @@ BOTOES_POR_FLAVOR: dict[str, dict[str, str]] = {
     "nintendo": BOTOES_POSICIONAIS,
 }
 
-#: Acima deste valor (0-255) o gatilho analógico do DualSense vira o botão
 LIMIAR_GATILHO_PRESSIONADO = 32
 LIMIAR_GATILHO_SOLTO = 16
 
@@ -434,7 +407,6 @@ class UinputGamepad:
     flavor: str = "xbox"
     rumble_sink: Callable[[int, int], None] | None = None
     time_fn: Callable[[], float] = time.monotonic
-    #: `state_full` (`gamepad_emulation.degraded_motivo`) para GUI/doctor.
     fallback_motivo: str | None = None
     aparelho: str | None = None
 
@@ -445,24 +417,17 @@ class UinputGamepad:
     _ff_supported: bool = False
     _ff_effects: dict[int, EfeitoDoJogo | tuple[int, int, int]] = field(default_factory=dict)
     _ff_playing: dict[int, float] = field(default_factory=dict)
-    #: O instante em que cada efeito tocado começa: agora + o `replay.delay` dele.
     _ff_inicio: dict[int, float] = field(default_factory=dict)
-    #: O `replay.delay` de cada efeito enviado, em segundos.
     _ff_atrasos: dict[int, float] = field(default_factory=dict)
-    #: Os efeitos tocados que nenhum tique somou ainda: contam pelo menos um tique.
     _ff_devidos: set[int] = field(default_factory=set)
     _ff_gain: float = 1.0
     _ff_last_sent: tuple[int, int] = (0, 0)
-    #: state_full para a GUI/doctor confirmarem se o jogo enxerga o vpad.
     _ff_play_count: int = 0
-    #: (`app/actions/rumble_actions.texto_dos_pedidos_de_vibracao`) pergunta
     _ff_nao_nulo_count: int = 0
     _ff_maior_pedido: tuple[int, int] = (0, 0)
     _ff_descartado_count: int = 0
-    #: A onda do ``FF_PERIODIC`` que toca agora (``None`` sem periódico) e a última forma vista.
     _ff_onda: str | None = None
     _ff_ultima_forma: classe_do_rumble.FormaDoPeriodico | None = None
-    #: A linha do tempo do par entregue: conta os efeitos por classe (golpe, contínuo, periódico).
     _ff_linha: classe_do_rumble.LinhaDoTempo = field(default_factory=classe_do_rumble.LinhaDoTempo)
     _ff_fio: threading.Thread | None = None
     _ff_trava: threading.Lock = field(default_factory=threading.Lock)
@@ -618,7 +583,6 @@ class UinputGamepad:
         device = self.__dict__.pop("_device", None)
         if device is None:
             return
-        # mandaria o stop e o DualSense ficaria vibrando).
         if self._ff_last_sent != (0, 0) and self.rumble_sink is not None:
             with contextlib.suppress(Exception):
                 self.rumble_sink(0, 0)
@@ -902,7 +866,6 @@ class UinputGamepad:
         self._ff_playing[effect_id] = deadline
         self._ff_inicio[effect_id] = inicio
         self._ff_devidos.add(effect_id)
-        # o jogo NÃO enxerga o vpad (ex.: máscara DualSense atraindo o hidraw
         self._ff_play_count += 1
 
     def _parar_o_efeito(self, effect_id: int) -> None:

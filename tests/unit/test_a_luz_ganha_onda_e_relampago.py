@@ -43,9 +43,8 @@ RGB = tuple[int, int, int]
 VERMELHO: RGB = (255, 0, 0)
 NOVAS = ("onda", "relampago")
 RITMOS = range(1, 11)
-#: Faixa forjada (`aa:bb:cc`), nunca endereço de aparelho de verdade.
 JOGADORES = [f"aa:bb:cc:00:00:0{n}" for n in range(1, 5)]
-PASSO_S = 1 / 60  # a varredura de 10 s a 60 quadros por segundo
+PASSO_S = 1 / 60
 PISO = {"onda": fx.PISO_DA_ONDA, "relampago": fx.PISO_DO_RELAMPAGO}
 
 
@@ -82,9 +81,6 @@ def _mais_subidas_em_um_segundo(tempos: list[float]) -> int:
     return mais
 
 
-# ---------------------------------------------------------------- as bases existem
-
-
 def test_as_duas_bases_estao_na_tupla_e_o_perfil_as_le_com_cor_e_ritmo() -> None:
     assert set(NOVAS) <= set(BASES_DA_LUZ)
     assert len(set(BASES_DA_LUZ)) == len(BASES_DA_LUZ) == 8
@@ -103,13 +99,10 @@ def test_o_batimento_continua_um_so_e_nao_ganhou_irmao() -> None:
     assert not {"pulso", "estrobo", "batida"} & set(BASES_DA_LUZ)
 
 
-# ---------------------------------------------------------------- o teto de subidas por segundo
-
-
 @pytest.mark.parametrize("base", NOVAS)
 @pytest.mark.parametrize("ritmo", RITMOS)
 def test_nenhuma_das_duas_passa_de_tres_subidas_por_segundo(base: str, ritmo: int) -> None:
-    # D-2210-A-LUZ-GANHA-ONDA-E-RELAMPAGO
+    """Prova da D-2210-A-LUZ-GANHA-ONDA-E-RELAMPAGO."""
     subidas = _quando_sobe(_curva(base, ritmo), PISO[base])
     assert subidas, f"{base} no ritmo {ritmo}: a varredura de 10 s não viu nenhuma subida"
     assert _mais_subidas_em_um_segundo(subidas) <= 3, f"{base} no ritmo {ritmo}"
@@ -121,7 +114,6 @@ def test_o_relampago_no_ritmo_mais_alto_tem_duas_subidas_por_rajada_e_a_rajada_d
     subidas = _quando_sobe(_curva("relampago", 10), fx.PISO_DO_RELAMPAGO)
     assert len(subidas) >= 2 * 7, "duas subidas por rajada em 10 s"
     assert _mais_subidas_em_um_segundo(subidas) == 2
-    # a rajada mais curta do mundo (1,4 s com duas subidas) fica abaixo de 3 por segundo
     assert 2 / fx.periodo_do_relampago_s(10) < 3.0
 
 
@@ -138,9 +130,6 @@ def test_o_ritmo_alto_e_mais_rapido_que_o_baixo_nas_duas() -> None:
     for ritmo in range(1, 10):
         assert fx.periodo_da_onda_s(ritmo + 1) < fx.periodo_da_onda_s(ritmo)
         assert fx.periodo_do_relampago_s(ritmo + 1) < fx.periodo_do_relampago_s(ritmo)
-
-
-# ---------------------------------------------------------------- o piso e a borda
 
 
 @pytest.mark.parametrize("base", NOVAS)
@@ -196,9 +185,6 @@ def test_a_cor_do_relampago_e_da_onda_troca_so_com_a_luz_no_piso() -> None:
         assert {c[0] > 0 for c in vistas} == {True, False}, f"{base}: as duas cores aparecem"
 
 
-# ---------------------------------------------------------------- a Onda anda pelos 5 LEDs
-
-
 @pytest.mark.parametrize("ritmo", RITMOS)
 def test_a_onda_anda_pelos_cinco_leds_da_esquerda_para_a_direita(ritmo: int) -> None:
     periodo = fx.periodo_da_onda_s(ritmo)
@@ -235,9 +221,6 @@ def test_a_onda_passa_e_a_barra_volta_ao_piso_entre_uma_passada_e_outra() -> Non
     assert fx.brilho_da_onda(periodo * 0.999, periodo) < fx.PISO_DA_ONDA + 0.05
 
 
-# ---------------------------------------------------------------- o motor anima no laço real
-
-
 def _quadros(texto: str, segundos: float = 6.0, controles: int = 4) -> dict[str, list[RGB]]:
     """O laço real (``LuzAnimada``) a 60 tiques por segundo: o que sai para cada controle."""
     saiu: dict[str, list[RGB]] = {u: [] for u in JOGADORES[:controles]}
@@ -272,9 +255,6 @@ def test_o_plano_do_perfil_le_a_onda_e_o_relampago_para_todo_controle() -> None:
                                     em_economia=frozenset())
         assert set(plano) == set(JOGADORES)
         assert all(p.efeito.base == base for p in plano.values())
-
-
-# ---------------------------------------------------------------- a tela
 
 
 def _doc() -> str:
@@ -343,8 +323,6 @@ def test_a_dica_de_cada_base_nova_cabe_na_coluna_e_comeca_maiuscula() -> None:
 
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
-#: 940 fica de fora: a janela do produto não desce de 1212 (``LARGURA_DO_DESENHO``), e a 940 a
-#: linha «Criar efeitos novos» já quebrava antes das duas opções (82 px, o miolo com 35 de sobra).
 VISTAS_DA_04 = [(1212, 809), (1272, 860), (1512, 860), (1900, 1000)]
 
 
@@ -372,14 +350,13 @@ def test_a_04_com_as_duas_opcoes_a_mais_nao_rola_na_vertical() -> None:
     }"""
     achados = []
     with sync_playwright() as pw:
-        # com a barra de rolagem de verdade (15 px): é ela que a linha de criar tem de aguentar
         nav = pw.chromium.launch(executable_path=str(CHROME), args=["--no-sandbox"],
                                  ignore_default_args=["--hide-scrollbars"])
         for larg, alt in VISTAS_DA_04:
             pg = nav.new_page(viewport={"width": larg, "height": alt})
             pg.goto(MOCKUP.as_uri())
             pg.wait_for_load_state("networkidle")
-            pg.add_style_tag(content=escondidos)  # o que o piloto esconde, como o `olhar.py`
+            pg.add_style_tag(content=escondidos)
             pg.wait_for_timeout(300)
             m = pg.evaluate(medir)
             if m["rola"] or m["linha"] > 50:

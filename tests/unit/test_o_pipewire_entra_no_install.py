@@ -36,7 +36,6 @@ WP = "0.5.18-0~hefesto24.04.1"
 PW_POP = "1.6.8-1pop1~1787688714~24.04~fdff050"
 WP_POP = "0.5.12-2pop1~1766191027~24.04~d4bf441"
 
-# A entrega: o nome do .deb e a revisão dele.
 ENTREGA = {
     "libpipewire-0.3-modules": (PW, "amd64"),
     "libpipewire-0.3-0t64": (PW, "amd64"),
@@ -50,8 +49,6 @@ ENTREGA = {
     "libwireplumber-0.5-0": (WP, "amd64"),
 }
 
-# A máquina do Pop: o que está `ii`, o que só o dpkg conhece (`un`), o que saiu
-# deixando configuração (`rc`) e o metapacote que o mk-build-deps deixa.
 MAQUINA_DO_POP = {
     "libpipewire-0.3-modules": ("ii ", "libpipewire-0.3-modules:amd64", PW_POP),
     "libpipewire-0.3-0t64": ("ii ", "libpipewire-0.3-0t64:amd64", PW_POP),
@@ -76,9 +73,6 @@ INSTALADOS_DO_POP = {
 }
 
 
-#: As funções do `install.sh` que o passo extraído carrega para o bash de mentira. Função que o
-#: passo chama e não está aqui vira «command not found» e, dentro de um `if`, falso calado: foi
-#: assim que a checagem do pacote a meio ficou fora da régua. O guarda abaixo confere a lista.
 FUNCOES_EXTRAIDAS = (
     "ask_yn",
     "_bz_maior_do_archive",
@@ -93,7 +87,6 @@ FUNCOES_EXTRAIDAS = (
     "install_pipewire_da_casa",
 )
 
-#: O que o script da régua define por conta própria, no lugar do `install.sh` inteiro.
 FUNCOES_DUBLADAS = ("step", "warn", "_faria", "_faria_root")
 
 
@@ -180,14 +173,10 @@ def _correr(
     casos = "\n".join(
         f'  {pkg}) st="{st}"; bp="{bp}"; v="{v}" ;;' for pkg, (st, bp, v) in maquina.items()
     )
-    # A cópia de outra arquitetura (o i386 que a Steam puxa) sai como segunda
-    # linha quando o pacote é pedido sem `:arch`, como no dpkg-query de verdade.
     casos2 = "\n".join(
         f'  {pkg}) st2="{st}"; bp2="{bp}"; v2="{v}" ;;'
         for pkg, (st, bp, v) in (outra_arquitetura or {}).items()
     )
-    # A pergunta de `_pacotes_a_meio` (todos os pacotes, estado de três letras): a máquina de
-    # mentira só tem `ii`, e `a_meio` acrescenta os pacotes quebrados (`iF  nome`).
     lista_do_dpkg = "".join(f"{st}{bp.split(':')[0]}\\n" for st, bp, _v in maquina.values())
     lista_do_dpkg += "".join(f"{linha}\\n" for linha in a_meio)
     _exe(
@@ -295,7 +284,6 @@ def test_o_passo_extraido_leva_toda_funcao_do_install_que_ele_chama() -> None:
         return re.search(rf"(?<![\w-]){re.escape(nome)}(?![\w-])", texto) is not None
 
     chamadas = {nome for nome in definidas if chama(nome, corpo)}
-    # as funções de que as extraídas dependem, uma a uma, fecham o conjunto
     pendentes = list(chamadas)
     while pendentes:
         nome = pendentes.pop()

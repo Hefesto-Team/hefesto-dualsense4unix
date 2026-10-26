@@ -129,11 +129,6 @@ def _correr(
     return bancada
 
 
-# ---------------------------------------------------------------------------------------------
-# Furo 2: a ponte longe não gasta a vez das outras
-# ---------------------------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("capacidade", [47, 24])
 def test_a_ponte_longe_nao_gasta_a_vez_das_vizinhas(capacidade: int) -> None:
     """Três pontes, a A longe: B e C escrevem tanto quanto se a A nem existisse.
@@ -152,7 +147,6 @@ def test_a_ponte_longe_nao_gasta_a_vez_das_vizinhas(capacidade: int) -> None:
     controle = _correr((CONTROLE_2, CONTROLE_3), capacidade)
 
     assert com_a.vagas[CONTROLE_1].longe, "premissa: a A ficou pausada pelo sinal"
-    # o tique que lê o sinal vem depois da janela em que ele ficou fraco: uma janela escapa
     assert com_a.quadros[CONTROLE_1] <= int(POR_JANELA) + 1, "premissa: a A pausada não escreve"
     de_b_e_c = com_a.quadros[CONTROLE_2] + com_a.quadros[CONTROLE_3]
     do_controle = controle.quadros[CONTROLE_2] + controle.quadros[CONTROLE_3]
@@ -180,14 +174,13 @@ def test_o_flag_da_fila_nao_fica_na_vaga_longe() -> None:
     for _ in range(JANELAS_ANTES):
         bancada.passo()
         estado = next(iter(bancada.governador._estados.values()))
-        # a A com o flag e o rodízio na vez do par B+C: com a A na conta, as duas cedem juntas
         na_vez_do_par_b_e_c = a._cedendo_pela_fila and estado.vez % 3 == 1
         if na_vez_do_par_b_e_c:
             break
     assert na_vez_do_par_b_e_c, "premissa: a A leva o flag e a vez cai no par B+C"
     bancada.fraco(CONTROLE_1)
     bancada.contando = True
-    bancada.passo()  # o tique que lê o sinal
+    bancada.passo()
     assert a.longe and a._cedendo_pela_fila is False
     for _ in range(40):
         bancada.passo()
@@ -211,11 +204,6 @@ def test_a_ponte_que_nasce_no_episodio_com_o_controle_longe_nao_leva_o_flag() ->
     vaga = bancada.governador.pedir_vaga(CONTROLE_2, "vibracao")
     assert isinstance(vaga, gov.Vaga)
     assert vaga.longe and vaga._cedendo_pela_fila is False
-
-
-# ---------------------------------------------------------------------------------------------
-# Furo 1: a caixa da ponte diz o que a ponte escreve, não o alvo de projeto
-# ---------------------------------------------------------------------------------------------
 
 
 def _cena(controles: dict[str, dict[str, Any]]) -> dict[str, Any]:
@@ -277,11 +265,11 @@ def test_o_rodizio_da_fila_nao_faz_a_caixa_piscar(monkeypatch: pytest.MonkeyPatc
 
     assert caixa(False) == "62 Hz", "premissa: sem ceder, a caixa diz o número"
     vistas = []
-    for janela in range(12):  # o rodízio: cede uma janela em cada três
+    for janela in range(12):
         relogio[0] += 0.25
         vistas.append(caixa(janela % 3 == 0))
     assert vistas == [""] * 12, f"a caixa piscou no rodízio: {vistas}"
-    relogio[0] += rm.SEGURA_O_NIVEL_S - 1.0  # a última cedida foi meio segundo antes
+    relogio[0] += rm.SEGURA_O_NIVEL_S - 1.0
     assert caixa(False) == "", "o número voltou antes da espera"
     relogio[0] += 1.0
     assert caixa(False) == "62 Hz", "o número não voltou depois da espera"
@@ -368,11 +356,6 @@ def test_do_governador_a_caixa_da_tela_a_ponte_longe_fica_vazia_e_a_vizinha_diz_
     publicado = {ADAPTADOR_A: bancada.governador.publicar()[ADAPTADOR_A]}
     longe = caixas()
     assert longe[0] == "" and longe[1].endswith(" Hz"), longe
-
-
-# ---------------------------------------------------------------------------------------------
-# Furo 3: a proposta do Equilibrar diz que veio do sinal
-# ---------------------------------------------------------------------------------------------
 
 
 def _proposta_pelo_sinal() -> Any:

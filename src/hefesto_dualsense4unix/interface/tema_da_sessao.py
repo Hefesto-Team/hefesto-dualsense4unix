@@ -18,8 +18,6 @@ _CHAVE_DOS_BOTOES = ("org.gnome.desktop.wm.preferences", "button-layout")
 
 LADO_DO_COSMIC = ":minimize,maximize,close"
 
-#: De que lado da barra os botões desta casa ficam. O produto segue o do sistema; uma extensão de
-#: tema pode escolher o outro (22/10/2026, O-TEMA-DA-EXTENSAO-ESCOLHE-O-LADO-DOS-BOTOES).
 ESQUERDA = "esquerda"
 DIREITA = "direita"
 
@@ -38,7 +36,7 @@ def lado_dos_botoes_na_sessao() -> str:
     """O que o ``button-layout`` do dconf responde, ou ``""`` se não der para saber."""
     try:
         from gi.repository import Gio
-    except ImportError:  # pragma: no cover — gi sem Gio não existe na prática
+    except ImportError:  # pragma: no cover
         return ""
     esquema, chave = _CHAVE_DOS_BOTOES
     try:
@@ -98,7 +96,7 @@ def tema_escolhido_na_sessao() -> str:
     """O nome do tema GTK que a sessão escolheu, ou ``""`` se não der para saber."""
     try:
         from gi.repository import Gio
-    except ImportError:  # pragma: no cover — gi sem Gio não existe na prática
+    except ImportError:  # pragma: no cover
         return ""
     esquema, chave = _CHAVE_DO_TEMA
     try:

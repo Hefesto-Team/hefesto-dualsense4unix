@@ -46,7 +46,6 @@ class PonteDeMentira:
     def __getattr__(self, nome: str):
         def registrar(*args, **kwargs):
             self.chamadas.append((nome, args, kwargs))
-            # `identity_number_set` e a família `*_detalhado` devolvem
             duas = (nome.endswith("_set") and "identity" in nome) or nome.endswith(
                 "_detalhado"
             )
@@ -61,12 +60,8 @@ def _perfil_ativo_no_disco() -> None:
     from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
     profiles_dir().mkdir(parents=True, exist_ok=True)
-    # novo a cada prova: o que uma prova grava não decide o que a seguinte chama
     for nome in ("regua", "Bancada"):
         loader.save_profile(Profile(name=nome, match=MatchManual()), origem="regua")
-    # O rascunho da sessão (o que o gesto anterior aplicou ao gatilho) é do módulo e viveria até a
-    # prova seguinte: a Imersão fica no acionamento que o gatilho tem agora (D-2210-O-GATILHO-SO-
-    # TEM-O-EFEITO), e o `Vibration` que a prova do «modo» deixou mudaria o que ela chama.
     for _, mod in _pacotes():
         esquecer = getattr(mod, "esquecer_o_rascunho", None)
         if callable(esquecer):
@@ -158,14 +153,14 @@ def test_o_gesto_chama_a_funcao_certa(pac, ctx, pacote, prova):
     "Automático" larga o claim e então pinta a cor padrão, e invertidas o reset
     apagaria a cor que acabou de ir.
     """
-    fn = pac.gesto_da_pagina(prova["pagina"], prova["gesto"])  # (noqa-acento) chave do contrato
-    assert fn is not None, f"{prova['pagina']}:{prova['gesto']} não tem dono"  # (noqa-acento) id
+    fn = pac.gesto_da_pagina(prova["pagina"], prova["gesto"])  # (noqa-acento)
+    assert fn is not None, f"{prova['pagina']}:{prova['gesto']} não tem dono"  # (noqa-acento)
 
     p = PonteDeMentira()
     fn(ctx, _clique(**prova.get("clique", {})), p)
 
     assert p.chamadas, (
-        f"{prova['pagina']}:{prova['gesto']} não chamou NADA. É o defeito que "  # (noqa-acento) id
+        f"{prova['pagina']}:{prova['gesto']} não chamou NADA. É o defeito que "  # (noqa-acento)
         f"esta régua existe para pegar: o gesto registrado que não faz nada "
         f"passa por qualquer teste de registro, e na tela o clique some sem "
         f"uma linha de erro.")
@@ -173,7 +168,7 @@ def test_o_gesto_chama_a_funcao_certa(pac, ctx, pacote, prova):
     esperado = prova["chama"]
     nomes = [c[0] for c in p.chamadas]
     assert nomes == [e[0] for e in esperado], (
-        f"{prova['pagina']}:{prova['gesto']} chamou {nomes}, esperava "  # (noqa-acento) id
+        f"{prova['pagina']}:{prova['gesto']} chamou {nomes}, esperava "  # (noqa-acento)
         f"{[e[0] for e in esperado]}. A ORDEM importa.")
     for (chamou, a, kw), (_, args, kwargs) in zip(p.chamadas, esperado, strict=True):
         assert a == tuple(args), (
@@ -198,9 +193,6 @@ def test_nenhum_gesto_chama_funcao_que_a_ponte_nao_tem():
                 f"{arq.name} chama `ponte.{nome}()` e a ponte não tem essa função. "
                 f"Ela expõe o `app/ipc_bridge.py` — se o nome não está lá, o "
                 f"produto não faz isso, e o botão precisa RECUSAR dizendo.")
-
-
-# `profile.switch` (`clear_manual_trigger_active()` sem argumento), que é o que
 
 
 def test_o_gesto_recusa_o_clique_sem_controle(pac, ctx):

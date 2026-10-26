@@ -48,7 +48,6 @@ MOCKUP = RAIZ / "mockup" / "04-iluminacao.html"
 RGB = tuple[int, int, int]
 BRANCO: RGB = (255, 255, 255)
 LARANJA: RGB = (255, 128, 0)
-#: Faixa forjada (`aa:bb:cc`), nunca endereço de aparelho de verdade.
 JOGADORES = [f"aa:bb:cc:00:00:0{n}" for n in range(1, 5)]
 PASSO_S = 1 / 60
 SIMBOLOS = {"triangle": (0, 255, 0), "circle": (255, 0, 0), "cross": (0, 0, 255),
@@ -81,9 +80,6 @@ def _mais_em_um_segundo(tempos: list[float]) -> int:
     return mais
 
 
-# ---------------------------------------------------------------- as bases existem no perfil
-
-
 def test_as_tres_bases_novas_estao_fora_das_oito_que_se_criam_e_o_perfil_as_le() -> None:
     assert BASES_DA_MAO_DA_LUZ == ("reage-ao-botao", "inclinacao", "dedo-no-touchpad")
     assert set(TODAS_AS_BASES_DA_LUZ) >= set(BASES_DA_MAO_DA_LUZ)
@@ -95,9 +91,6 @@ def test_as_tres_bases_novas_estao_fora_das_oito_que_se_criam_e_o_perfil_as_le()
     assert ler_o_efeito_da_luz("dedo-no-touchpad;;5") == EfeitoDaLuz("dedo-no-touchpad", (), 5)
     assert ler_o_efeito_da_luz("reage-ao-botao;;5") is None, "leva a cor do botão sem símbolo"
     assert ler_o_efeito_da_luz("invento;FF0000;5") is None
-
-
-# ---------------------------------------------------------------- «Reage ao botão»
 
 
 def _aperta(estado: fx.ReageAoBotao, contagem: dict[str, int], agora: float) -> RGB:
@@ -147,7 +140,6 @@ def test_sem_dado_dos_apertos_a_barra_fica_na_cor_escolhida() -> None:
 
 @pytest.mark.parametrize("apertos_por_segundo", [4, 10, 30])
 def test_apertos_rapidos_nao_passam_de_tres_subidas_por_segundo(apertos_por_segundo: int) -> None:
-    # D-2210-A-LUZ-GANHA-ONDA-E-RELAMPAGO
     estado = fx.ReageAoBotao(LARANJA, 10)
     contagem = {"cross": 0, "circle": 0}
     brilhos: list[float] = []
@@ -177,9 +169,6 @@ def test_a_borda_do_aperto_e_suave_e_o_brilho_nunca_pula() -> None:
         vistos.append(_aperta(estado, contagem, t))
     saltos = [abs(b[2] - a[2]) + abs(b[0] - a[0]) for a, b in pairwise(vistos)]
     assert max(saltos) < 255 * 0.7, "nenhum quadro vai do piso ao cheio de uma vez"
-
-
-# ---------------------------------------------------------------- «Inclinação»
 
 
 def _gravidade(angulo: float) -> tuple[float, float, float]:
@@ -218,7 +207,7 @@ def test_a_inclinacao_nao_salta_quando_passa_da_volta() -> None:
         t = i * PASSO_S
         angulo = 2 * math.pi * voltas * i / n
         matizes.append(_matiz(estado.andar(fx.Entrada(gravidade=_gravidade(angulo)), t)))
-        if i > 30:  # passada a partida, a cor acompanha o ângulo (com o atraso do alisamento)
+        if i > 30:
             erro = abs((matizes[-1] - (angulo / (2 * math.pi)) % 1.0 + 0.5) % 1.0 - 0.5)
             assert erro < 0.05, f"quadro {i}: a cor se perdeu da inclinação ({erro:.3f})"
     for a, b in pairwise(matizes):
@@ -230,11 +219,9 @@ def test_a_roda_de_cores_nao_gira_mais_depressa_que_o_freio() -> None:
     estado = fx.Inclinacao(10)
     estado.andar(fx.Entrada(gravidade=_gravidade(0.0)), 0.0)
     antes = _matiz(estado.andar(fx.Entrada(gravidade=_gravidade(0.0)), PASSO_S))
-    # o controle vira um quarto de volta num quadro: o alisamento sozinho andaria ~0,06 de roda
-    # (3,5 vezes o freio); a roda anda só o que o freio deixa
     depois = _matiz(estado.andar(fx.Entrada(gravidade=_gravidade(math.pi / 2)), 2 * PASSO_S))
     passo = abs((depois - antes + 0.5) % 1.0 - 0.5)
-    assert 0 < passo <= 1.0 * PASSO_S + 0.002  # uma volta por segundo, escrito aqui de propósito
+    assert 0 < passo <= 1.0 * PASSO_S + 0.002
 
 
 def test_sem_leitura_a_inclinacao_fica_branca_e_depois_fica_a_ultima() -> None:
@@ -243,7 +230,6 @@ def test_sem_leitura_a_inclinacao_fica_branca_e_depois_fica_a_ultima() -> None:
     cor = estado.andar(fx.Entrada(gravidade=_gravidade(1.0)), 0.1)
     assert cor != BRANCO
     assert estado.andar(fx.Entrada(), 0.2) == cor, "sem dado, a cor de antes"
-    # gravidade quase nula é leitura solta, não direção
     assert estado.andar(fx.Entrada(gravidade=(0.01, 0.0, 0.02)), 0.3) == cor
 
 
@@ -266,9 +252,6 @@ def test_o_controle_deitado_nao_tem_lado_para_baixo_e_a_cor_nao_segue_o_ruido() 
     deitado = fx.Inclinacao(10)
     assert deitado.andar(fx.Entrada(gravidade=(0.01, 1.0, -0.02)), 0.0) == BRANCO, (
         "deitado desde o começo: sem lado para baixo, a cor de quem nunca inclinou")
-
-
-# ---------------------------------------------------------------- «Dedo no touchpad»
 
 
 def test_o_dedo_da_a_cor_pela_posicao_horizontal_e_o_brilho_pela_vertical() -> None:
@@ -297,19 +280,15 @@ def test_sem_dedo_fica_a_ultima_cor() -> None:
 
 
 def test_o_dedo_balancando_na_vertical_nao_passa_de_tres_vaivens_por_segundo() -> None:
-    # D-2210-A-LUZ-GANHA-ONDA-E-RELAMPAGO
     estado = fx.DedoNoTouchpad()
     brilhos: list[float] = []
     for i in range(int(8.0 / PASSO_S)):
         t = i * PASSO_S
-        y = 0.0 if int(t * 20) % 2 == 0 else 1.0  # 10 vaivéns por segundo
+        y = 0.0 if int(t * 20) % 2 == 0 else 1.0
         brilhos.append(_canal_mais_alto(estado.andar(fx.Entrada(dedo=(0.0, y)), t)))
     assert min(brilhos) >= fx.PISO_DO_ACENDE - 1e-6
     subidas = _subidas(brilhos, fx.PISO_DO_ACENDE)
     assert _mais_em_um_segundo(subidas) <= 3
-
-
-# ---------------------------------------------------------------- o laço real, controle a controle
 
 
 def _laco(mao: Any) -> tuple[luz.LuzAnimada, dict[str, list[RGB]]]:
@@ -334,7 +313,7 @@ def test_o_controle_a_nao_pinta_pela_mao_do_b() -> None:
     plano = _plano("reage-ao-botao;FF8000;5")
     for i in range(30):
         laco.tique(100.0 + i / 60, plano)
-    contagens[JOGADORES[1]]["cross"] = 1  # só o segundo controle aperta ✕
+    contagens[JOGADORES[1]]["cross"] = 1
     for i in range(30, 60):
         laco.tique(100.0 + i / 60, plano)
     assert any(c[2] > c[0] for c in saiu[JOGADORES[1]]), "o B acendeu azul"
@@ -377,9 +356,6 @@ def test_trocar_o_efeito_do_controle_recomeca_o_estado() -> None:
     assert all(b <= g for _, g, b in depois), "estado novo: o aperto velho não acende o azul do ✕"
 
 
-# ---------------------------------------------------------------- o leitor de produção
-
-
 class _Leitor:
     def __init__(self, apertos: dict[str, int]) -> None:
         self._apertos = apertos
@@ -401,7 +377,6 @@ class _Hub:
         return {"touchpad": {"touching": True, "x": 960, "y": 540, "width": 1920, "height": 1080}}
 
     def toque_da_peca(self, uniq: str) -> tuple[Any, bool]:
-        # O do roteador do toque: segura o nó (EVIOCGRAB) e tira o touchpad do cursor.
         self.pediu.append(("segurou o touchpad", uniq))
         return SimpleNamespace(touching=True, x=960, y=540, largura=1920, altura=1080), False
 
@@ -434,9 +409,11 @@ def test_o_leitor_de_producao_le_os_apertos_do_proprio_controle() -> None:
 
 
 def test_o_controle_sem_co_op_le_os_apertos_pelo_leitor_passivo_do_hub() -> None:
-    # D-2210-OS-EFEITOS-QUE-REAGEM-A-MAO
     """O daemon de verdade não tem ``_sensor_hub``: o hub é o do servidor, pelo
-    ``_garantir_sensor_hub``, e o leitor passivo só fica aberto com a demanda do ``entradas``."""
+    ``_garantir_sensor_hub``, e o leitor passivo só fica aberto com a demanda do ``entradas``.
+
+    Prova da D-2210-OS-EFEITOS-QUE-REAGEM-A-MAO.
+    """
     daemon, hub = _daemon()
     assert not hasattr(daemon, "_sensor_hub")
     ler = luz.leitor_da_mao(daemon)
@@ -469,9 +446,6 @@ def test_o_leitor_de_producao_nunca_levanta() -> None:
     ler = luz.leitor_da_mao(_Quebrado())
     for base in BASES_DA_MAO_DA_LUZ:
         assert ler(JOGADORES[0], base) == fx.Entrada()
-
-
-# ---------------------------------------------------------------- a tela
 
 
 def _doc() -> str:

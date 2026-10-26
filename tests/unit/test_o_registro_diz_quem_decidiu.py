@@ -129,9 +129,6 @@ def test_o_lote_de_04_09_so_vira_dela_com_a_prova() -> None:
     )
 
 
-#: As colunas sem as quais uma decisão aberta não se decide vendo: a pergunta,
-#: a recomendação e o preço do outro lado (o pedido de 23/08/2026, «decidir
-#: vendo inclui ver o custo»).
 COLUNAS_QUE_MORDEM = (
     "id",
     "titulo",

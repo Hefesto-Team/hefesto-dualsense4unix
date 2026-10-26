@@ -16,8 +16,6 @@ VAZIAS = frozenset({
     "col", "embed", "track", "wbr",
 })
 
-#: variável ``--plastico``. Só o alvo padrão — o texto — apaga filhos.
-#: ela existe para pegar: pôr ``data-hef-alvo="classe"`` num ``<span>`` com glifo
 ALVOS_SEGUROS = frozenset({"largura", "altura", "fundo", "valor", "html",
                            "classe", "cor", "plastico", "atributo"})
 
@@ -204,8 +202,6 @@ def test_a_tabela_da_guarda_nomeia_os_controles_da_mesa() -> None:
     """`guarda.nome` saía `["", ""]`: o `perfis_web` pede `rotulo` e a
     `mesa_do_estado` não devolve nenhum. É a cura de `_mesa_com_rotulo`."""
     fora = _emitidos()
-    # a tela fala pela cor do plástico, nunca P1 a P4 (A-ABA-PERFIS-DO-TODO-01); os lugares vazios
-    # levam o nome de um plástico que ninguém na mesa usa
     assert fora["guarda.nome"] == ["Cosmic Red • BT", "Starlight Blue • USB",
                                    "Galactic Purple", "White"]
     assert not any(re.search(r"\bP[1-4]\b", n) for n in fora["guarda.nome"])
@@ -229,6 +225,5 @@ def test_o_rotulo_da_guarda_e_o_mesmo_do_monta() -> None:
     do_gerador = monta.rotulo(controle, "curta").replace(
         monta.SEPARADOR, a10_perfis.SEPARADOR_EM_TEXTO
     )
-    # a fita do topo leva o `P2 •` na frente; a guarda fala só pela cor e pela via, na mesma ordem
     assert do_gerador.endswith(a10_perfis._rotulo_curto(controle)), (do_gerador, controle)
     assert a10_perfis._rotulo_curto(controle) == "Starlight Blue • USB"

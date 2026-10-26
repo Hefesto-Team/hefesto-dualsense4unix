@@ -306,9 +306,6 @@ def test_a_vibracao_do_jogo_caida_aparece_na_frase() -> None:
     assert frase.endswith("Aplicado, menos: vibração do jogo."), frase
 
 
-# duas: nenhuma régua ligava o MANAGER à FRASE. `test_aplicar_verdade_02` monta
-
-
 def test_o_applier_que_nao_sabe_nao_carimba_aplicado() -> None:
     """Jogo aberto, tudo adiado: o rodapé diz "Nada foi aplicado ao controle."
 

@@ -165,7 +165,7 @@ def test_os_tres_ramos_que_narravam_viram_rotulo_de_estado(desenho):
 
 @pytest.mark.parametrize("arquivo", [
     RAIZ / "mockup" / PAGINA,
-    INTERFACE / "paginas" / PAGINA,  # (noqa-acento): nome de pasta
+    INTERFACE / "paginas" / PAGINA,  # (noqa-acento)
 ])
 def test_a_fila_nasce_calada(arquivo):
     """17/10/2026: a 07 trocou o cartão pela fila e não tem `steam-diz` (publicada em 18/10);

@@ -122,7 +122,6 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: O rótulo da seção; `ipc_bridge._rotulos_dos_campos` lê esta constante, nunca a copia.
 TITULO = "Conexões"
 
 DICA: str | None = (

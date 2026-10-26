@@ -222,7 +222,6 @@ class TestConcorrenciaTOCTOU:
     ) -> None:
         server, ds, ext = _server_com_registros(isolated_config)
         novo_uniq = "aabbcc009999"
-        # DualSense une os slots dos externos ao `used` — sem isto o teste
         ds.set_external_reserve_provider(lambda: set(ext.snapshot().values()))
 
         resultado_thread: dict[str, int | None] = {}

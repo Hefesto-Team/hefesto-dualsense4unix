@@ -127,7 +127,6 @@ def test_o_gatilho_e_o_inverter_chegam_ao_disco_e_ao_vivo(
     corpo = _mira_set(servidor, uniq=_P4, inverter_horizontal=True)
     assert corpo["inverter_horizontal"] is True and corpo["inverter_vertical"] is False
     dele = load_profile("Bancada").controllers["aabbcc000004"].movimento
-    # O analógico virtual liga o giro e a inclinação no lado (O-ANALOGICO-VIRTUAL-E-UM-SO).
     assert dele.model_fields_set == {"destino", "acelerometro", "lado", "gatilho",
                                      "inverter_horizontal"}
     vivo = rot.da_peca(servidor.store, _P4, rot.ativo(servidor.store))
@@ -397,7 +396,6 @@ def test_a_lista_do_segurar_e_a_do_esquema_e_nasce_sempre() -> None:
         assert len(lista) == 1, coluna
         opcoes = re.findall(r'<option value="([^"]*)"( selected)?>([^<]*)</option>', lista[0])
         assert opcoes[0] == ("sempre", " selected", "Sempre")
-        # 08/10/2026 (O-NEUTRO): o suporte é o segundo valor, antes dos botões.
         assert opcoes[1] == ("mesmo_parado", "", "Mesmo parado")
         assert [(v, r) for v, _, r in opcoes[2:]] == _BOTOES_DA_LISTA
         assert not any(s for _, s, _ in opcoes[1:]), "outro valor nasceu escolhido"
@@ -491,8 +489,6 @@ def test_a_calibrar_pinta_cada_controle_com_o_dele(monkeypatch: pytest.MonkeyPat
 def test_escolher_o_botao_manda_um_campo_so() -> None:
     """A escolha vai ao `mira.set` sozinha; «Sempre» manda o vazio (que a ponte"""
     gesto = _o_gesto("calibrar-sensores.html", "mira-segurar")
-    # 08/10/2026 (O-NEUTRO): a lista é uma só, e cada escolha diz também o
-    # «Mesmo parado» (só ele o liga; o botão e o «Sempre» o desligam).
     for valor, esperado, parado in (("l2", "l2", False), ("sempre", "", False),
                                     ("mesmo_parado", "", True)):
         p = _PonteDaMira(_OK)

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# (`test_perfil_salva_tudo_registrar_nao_e_aplicar.py`), que tranca a fiação
 exigir_gi_real("som 02 o volume dela chega ao perfil")
 
 from typing import Any, Final
@@ -172,7 +171,7 @@ class _CardEspiao:
 class _SlotComAttach:
     """O `GtkGrid` do Glade reduzido: `_sync_status_cards` só exige o `attach`."""
 
-    def attach(self, *_a: Any, **_k: Any) -> None:  # pragma: no cover - inerte
+    def attach(self, *_a: Any, **_k: Any) -> None:  # pragma: no cover
         raise AssertionError("rebuild não devia acontecer com as chaves estáveis")
 
 

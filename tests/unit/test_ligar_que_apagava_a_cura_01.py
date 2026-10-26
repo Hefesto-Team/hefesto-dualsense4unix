@@ -215,8 +215,6 @@ class _RotuloFalso:
         self.tooltip = texto
 
 
-#: QUARTO estado, `MIC_SEM_ALVO`: sem placa ALSA de DualSense em
-#: DualSense no cabo desta máquina. É o vício de bancada da NO-MEU-FUNCIONA-01,
 _CARDS_COM_UM_DUALSENSE = """\
  0 [HDMI           ]: HDA-Intel - HDA ATI HDMI
                       HDA ATI HDMI at 0xfe960000 irq 66

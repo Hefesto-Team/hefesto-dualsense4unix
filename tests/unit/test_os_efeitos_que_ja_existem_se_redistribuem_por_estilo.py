@@ -28,12 +28,9 @@ from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile
 
 OFF = ("Off", None)
 
-#: A tabela S da página, na língua do código: (R2, L2, háptica, motores, base da luz, brilho).
-#: `None` na imersão é o acionamento de partida do modo (o FPS tem a Metralhadora, a Simulação a
-#: Rampa). Os efeitos novos do bloco C (20/10/2026) estão na tabela com o nome deles.
 TABELA: dict[str, tuple[Any, Any, str, str | None, str | None, float]] = {
     "fps": (("Machine", None), ("Resistance", "mira-firme"), "toque", "coice", "respirar", 1.0),
-    "acao": (("Weapon", "golpe-pesado"), ("Resistance", "mira-firme"),  # (noqa-acento) chave
+    "acao": (("Weapon", "golpe-pesado"), ("Resistance", "mira-firme"),  # (noqa-acento)
              "impacto", "tranco", "respirar", 1.0),
     "luta": (("Weapon", "golpe-pesado"), ("Weapon", "golpe-leve"),
              "impacto", "pancada_do_lado", "respirar", 1.0),
@@ -61,12 +58,10 @@ TABELA: dict[str, tuple[Any, Any, str, str | None, str | None, float]] = {
     "visual_novel": (OFF, OFF, "toque", None, "mare", 0.5),
 }
 
-#: A «frente» da página, em imersões que existem (com as três do bloco C de 20/10/2026: Golpe ·
-#: falha, Golpe · aparo e Travar · esgotado).
 FRENTE: dict[str, set[str]] = {
     "fps": {"ferrolho-que-volta", "rajada-que-sobe-sozinha", "recuo-pesado", "clique-no-meio",
             "trava-seca"},
-    "acao": {"golpe-leve", "golpe-carregado", "corda-que-estica",  # (noqa-acento) chave
+    "acao": {"golpe-leve", "golpe-carregado", "corda-que-estica",  # (noqa-acento)
              "energia-que-cresce",
              "escudo-que-aguenta"},
     "luta": {"golpe-carregado", "golpe-falha", "ferrolho-que-volta"},
@@ -122,10 +117,11 @@ def test_a_receita_de_cada_estilo_e_a_da_tabela_da_pagina() -> None:
 
 
 def test_os_dois_lados_chegam_ao_perfil_e_a_imersao_dos_numeros_os_reconhece() -> None:
-    # D-2010-O-R2-E-O-L2-DO-ESTILO-SAO-RECEITAS-SEPARADAS
     """Régua 2: o R2 e o L2 são gravados cada um com a imersão do `Lado` dele.
 
     MORDIDA: `TriggersConfig(left=lado, right=lado)` de volta no `_com_o_estilo` reprova aqui.
+
+    Prova da D-2010-O-R2-E-O-L2-DO-ESTILO-SAO-RECEITAS-SEPARADAS.
     """
     for chave, (r2, l2, *_resto) in TABELA.items():
         prof = _aplicado(chave)
@@ -159,19 +155,20 @@ def test_o_arco_carrega_como_acao_e_nao_esta_no_catalogo() -> None:
     """
     assert "arco" not in {e.chave for e in ej.ESTILOS}
     assert "Arco" not in ej.POR_ROTULO
-    assert ej.POR_CHAVE["arco"] is ej.POR_CHAVE["acao"]  # (noqa-acento) chave
-    assert ej.chave_do_catalogo("arco") == "acao"  # (noqa-acento) chave
+    assert ej.POR_CHAVE["arco"] is ej.POR_CHAVE["acao"]  # (noqa-acento)
+    assert ej.chave_do_catalogo("arco") == "acao"  # (noqa-acento)
     antigo = Profile(name="Arco antigo", match=MatchAny(), estilo="arco")
-    nova = Profile(name="Acao nova", match=MatchAny(), estilo="acao")  # (noqa-acento) chave
+    nova = Profile(name="Acao nova", match=MatchAny(), estilo="acao")  # (noqa-acento)
     assert tv.receita_do_perfil(antigo) == tv.receita_do_perfil(nova)
 
 
 def test_as_cores_seguem_distintas_com_souls_e_furtivo_e_a_luz_base_nao_as_iguala() -> None:
-    # D-2010-NASCEM-O-SOULS-RPG-E-O-FURTIVO
     """Régua 5: nenhuma unidade repete a cor de outra, e a base da luz leva a cor DE CADA UMA.
 
     MORDIDA: tire a linha do `souls` de `ESTILOS` (ou tire a cor do `escrever_o_efeito_da_luz`)
     e isto reprova.
+
+    Prova da D-2010-NASCEM-O-SOULS-RPG-E-O-FURTIVO.
     """
     familias = {e.chave: e.familia for e in ej.DE_FABRICA}
     for novo in ("souls", "furtivo"):
@@ -200,8 +197,10 @@ def test_as_cores_seguem_distintas_com_souls_e_furtivo_e_a_luz_base_nao_as_igual
 
 
 def test_o_terror_troca_o_piscar_pela_batida_e_nada_passa_do_teto() -> None:
-    # D-2010-O-TERROR-TROCA-O-PISCAR-PELA-BATIDA
-    """Régua 6: o Terror não pisca (batimento na luz, Batida nos motores); nada passa de 3/s."""
+    """Régua 6: o Terror não pisca (batimento na luz, Batida nos motores); nada passa de 3/s.
+
+    Prova da D-2010-O-TERROR-TROCA-O-PISCAR-PELA-BATIDA.
+    """
     terror = ej.POR_CHAVE["terror"]
     assert terror.receita_invisivel is not None
     assert terror.receita_invisivel.luz != "pisca"

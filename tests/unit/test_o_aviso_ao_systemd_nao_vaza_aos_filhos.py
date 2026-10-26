@@ -29,7 +29,6 @@ from hefesto_dualsense4unix.utils import sd_notify
 RAIZ = Path(__file__).resolve().parents[2]
 UNIT = RAIZ / "assets" / "hefesto-dualsense4unix.service"
 
-#: O filho que faz o que o `systemctl` faz ao sair: manda um aviso ao `NOTIFY_SOCKET` herdado.
 _FILHO_QUE_AVISA = """
 import os, socket
 alvo = os.environ.get("NOTIFY_SOCKET")
@@ -88,9 +87,6 @@ CAMINHOS: dict[str, Callable[[], None]] = {
 }
 
 
-# -- a cura -----------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("caminho", sorted(CAMINHOS))
 def test_o_filho_nao_alcanca_o_soquete_e_o_pronto_alcanca(
         ouvinte: socket.socket, caminho: str) -> None:
@@ -140,9 +136,6 @@ def test_sem_notify_socket_guardar_nao_levanta_nem_avisa(
     assert sd_notify.parando() is False
 
 
-# -- a entrada do daemon ----------------------------------------------------------------
-
-
 class _ParouNoPrimeiroPassoError(Exception):
     pass
 
@@ -168,9 +161,6 @@ def test_a_entrada_do_daemon_tira_o_soquete_antes_de_tudo(
     assert _recebidas(ouvinte) == ["READY=1"]
 
 
-#: A subida inteira, da linha de comando da unit (`daemon start --foreground`) ao primeiro passo
-#: do `run_daemon`: o `init_locale`, o Typer e TODOS os imports do daemon. Um gancho de auditoria
-#: conta cada filho lançado, e o primeiro passo para a subida antes da chave e de qualquer disco.
 _A_SUBIDA_ATE_O_PRIMEIRO_PASSO = """
 import os, sys
 filhos = []
@@ -201,9 +191,6 @@ def test_nada_se_lanca_na_subida_antes_de_o_soquete_sair(ouvinte: socket.socket)
     ).stdout
     assert "FILHOS [] SOQUETE None" in saida, saida
     assert _recebidas(ouvinte) == []
-
-
-# -- a unit -----------------------------------------------------------------------------
 
 
 def test_o_comentario_da_unit_diz_quem_tira_o_soquete() -> None:

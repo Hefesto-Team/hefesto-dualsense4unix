@@ -137,7 +137,7 @@ def test_cada_build_conferido_tem_um_fonte_e_so_um() -> None:
 def test_o_fonte_de_cada_kernel_e_o_de_fabrica_dele_mais_a_serie(
     build: str, tmp_path: Path
 ) -> None:
-    if shutil.which("patch") is None:  # pragma: no cover - a máquina da casa tem
+    if shutil.which("patch") is None:  # pragma: no cover
         pytest.skip("sem o patch(1) nesta máquina")
     campos = _por_kernel()[build]
     pasta = POR_KERNEL / build
@@ -208,7 +208,7 @@ def test_o_c_da_pasta_e_o_patchado_do_baseline() -> None:
 
 
 def test_a_serie_desfeita_devolve_o_de_fabrica(tmp_path: Path) -> None:
-    if shutil.which("patch") is None:  # pragma: no cover - a máquina da casa tem
+    if shutil.which("patch") is None:  # pragma: no cover
         pytest.skip("sem o patch(1) nesta máquina")
     copia = tmp_path / "hid-playstation.c"
     copia.write_bytes((PASTA / "hid-playstation.c").read_bytes())

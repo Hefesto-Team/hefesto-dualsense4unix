@@ -35,7 +35,6 @@ FATOS_DE_MENTIRA = (
     '"de_onde_sei": "medido", "por_que_nao_aciona": ""}}}\n'
 )
 
-#: até um `set_label`/`set_tooltip_text` em outro módulo — exatamente o que
 ARQUIVO_COM_FALA_ATRAS_DE_CONDICIONAL = '''
 from hefesto_dualsense4unix.app.fala_do_mapa import AFIRMA_NAO_ACIONA, Fala
 

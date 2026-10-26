@@ -38,10 +38,8 @@ DESENHOS = {
 BASE_CSS = (INTERFACE / "base-comum.css").read_text(encoding="utf-8")
 BASE_JS = (INTERFACE / "base-comum.js").read_text(encoding="utf-8")
 
-#: O «?» é um ``<span class="ajuda">``, escrito no HTML ou montado pelo JS da receita.
 O_INTERROGACAO = re.compile(r"""<span\b[^>]*\bclass=["']ajuda\b""")
 
-#: Os botões dos dois mapas que traziam ``title`` longo, com o texto curto que o desenho do todo dá.
 DICAS = {
     "mapa-do-radio.html": {
         "b-conectar": "Pareia um controle ou fone novo",
@@ -55,7 +53,6 @@ DICAS["mapa-das-portas.html"] = DICAS["pagina_do_mapa.pagina()"] = {
     "reexaminar": "Lê de novo e mostra o que mudou de lugar",
 }
 
-#: A peça do movimento do Sugestões como era antes do desenho do todo: o título e, ao lado, o «?».
 RECEITA_COM_O_INTERROGACAO = (
     '                 return "<li><div><h4>" + m.titulo + \'<span class="ajuda" tabindex="0">?'
     '<span class="dica">\'\n'
@@ -97,8 +94,10 @@ def test_o_detector_do_interrogacao_reconhece_o_que_a_sprint_cura() -> None:
 
 @pytest.mark.parametrize("nome", list(PAGINAS))
 def test_nenhum_dos_dois_mapas_tem_o_interrogacao(nome: str) -> None:
-    # D-1610-OS-MAPAS-FALAM-PELA-DICA-CURTA
-    """MORDIDA: devolva o ``<span class="ajuda">`` ao espectro (rádio) ou à receita (portas)."""
+    """MORDIDA: devolva o ``<span class="ajuda">`` ao espectro (rádio) ou à receita (portas).
+
+    Prova da D-1610-OS-MAPAS-FALAM-PELA-DICA-CURTA.
+    """
     achados = O_INTERROGACAO.findall(PAGINAS[nome])
     assert not achados, f"{nome}: ainda monta o «?» ({len(achados)} vez(es))"
 
@@ -251,7 +250,7 @@ def test_o_sugestoes_desenha_o_titulo_com_a_dica_e_nenhum_interrogacao(
     assert lido["base"] == 2, "a base comum não entrou uma vez na página"
     assert json.dumps(lido["modos"], ensure_ascii=False).count("null") == 0, lido["modos"]
     assert [m[0] for m in lido["modos"]] == [
-        "mesa", "ideal", "mao", "registro"]  # (noqa-acento) data-modo
+        "mesa", "ideal", "mao", "registro"]  # (noqa-acento)
 
 
 @pytest.mark.parametrize("nome", list(PAGINAS))

@@ -58,7 +58,6 @@ DESTINOS_DA_INCLINACAO: Final[tuple[str, ...]] = (
     DESTINO_ANALOGICO_ESQUERDO,
     DESTINO_ANALOGICO_DIREITO,
 )
-#: Os lados do Analógico Virtual: o giro e a inclinação movem o analógico deste lado.
 LADOS_DO_VIRTUAL: Final[tuple[str, ...]] = (DESTINO_ANALOGICO_ESQUERDO, DESTINO_ANALOGICO_DIREITO)
 
 EIXO_YAW: Final = "yaw"
@@ -70,7 +69,6 @@ EIXO_MIN: Final = 0
 EIXO_MAX: Final = 255
 DEFLEXAO_MAXIMA: Final = 127
 
-#: A ZONA MORTA, em graus/s. Um DualSense parado numa mesa não marca zero: o
 ZONA_MORTA_PADRAO_GRAUS_S: Final = 3.0
 TETO_PADRAO_GRAUS_S: Final = 220.0
 
@@ -78,7 +76,6 @@ SENSIBILIDADE_MIN: Final = 1
 SENSIBILIDADE_MAX: Final = 12
 SENSIBILIDADE_PADRAO: Final = 6
 
-#: não importa `core/acoes_de_botao`.
 EXPO_DO_GIRO: Final = 1.6
 
 PIXELS_POR_GRAU_PADRAO: Final = 12.0
@@ -105,10 +102,7 @@ class ArranjoDeMovimento:
     gatilho: str | None = None
     toque: str = DESTINO_NENHUM
     acelerometro: str = DESTINO_NENHUM
-    #: O «Mesmo parado» da Calibrar: a inclinação desta peça nunca pausa por parado.
     mesmo_parado: bool = False
-    #: O lado guardado do Analógico Virtual: o `ligada` liga neste lado (no perfil antigo,
-    #: o direito).
     lado: str = DESTINO_ANALOGICO_DIREITO
 
     @property
@@ -314,8 +308,6 @@ def ativo(dono: object) -> ArranjoDeMovimento | None:
     return None
 
 
-# Entrou.
-
 _ATRIBUTO_POR_PECA: Final = "_roteador_de_movimento_por_peca"
 
 SO_NAS_PECAS: Final = ArranjoDeMovimento()
@@ -486,8 +478,6 @@ def angulo_do_tique(
     )
 
 
-# há controle virtual — o modo DualSense e o modo Xbox, do P1 ao P4, no cabo e no
-
 ZONA_MORTA_DA_INCLINACAO_GRAUS: Final = 6.0
 TETO_DA_INCLINACAO_GRAUS: Final = 30.0
 GRAVIDADE_MINIMA_G: Final = 0.2
@@ -573,22 +563,10 @@ def deflexao_da_inclinacao(
     )
 
 
-# O CONTROLE PARADO NÃO INCLINA (D-2909-O-CONTROLE-PARADO-NAO-INCLINA, 29/09/2026):
-# pelo pad virtual, o P2 largado na mesa segurava o esquerdo do jogo em X≈203, Y≈72,
-# porque o neutro era o da mão e a mesa ficava 19° de lado e 14° de frente dele.
-#: O maior pico a pico do giro, entre os três eixos, na janela. Não vê o viés: o ruído
-#: de mesa de 21/09 andou 0,13 °/s acima da média, e o viés muda de controle para controle.
 VARIACAO_DO_PARADO_GRAUS_S: Final = 1.5
-#: O quanto a gravidade pode andar na janela: protege a inclinação lenta e lisa, que tem
-#: pico a pico zero no giro (a 0,7 °/s ela já anda mais que isto em 3 s).
 GRAVIDADE_DO_PARADO_GRAUS: Final = 2.0
-#: A janela quieta de 21/09 (60 amostras a 20 Hz).
 TEMPO_DO_PARADO_S: Final = 3.0
-#: A gravidade que anda isto desde o parado tira do parado. Pico de giro sozinho não tira:
-#: a batida na mesa, o botão no controle deitado e a vibração não mexem a gravidade.
 SAIDA_DO_PARADO_GRAUS: Final = 3.0
-#: O neutro que nasceu na mesa se reaprende quando a mão assenta: o giro (norma) abaixo
-#: disto por `TEMPO_DO_ASSENTO_S`, com a gravidade andando menos que `SAIDA_DO_PARADO_GRAUS`.
 LIMIAR_DO_ASSENTO_GRAUS_S: Final = 20.0
 TEMPO_DO_ASSENTO_S: Final = 0.5
 
@@ -828,16 +806,7 @@ def quer_cursor(dono: object) -> bool:
     )
 
 
-# O ZERO DE CADA CONTROLE (O-COMECAR-DA-CALIBRAR-GUARDA-O-ZERO-DE-CADA-CONTROLE-01, 08/10/2026):
-# um DualSense parado na mesa não marca zero no giro, e com a zona morta baixa a Mira anda
-# sozinha. O «Começar» da Calibrar mede o repouso de cada controle por `SEGUNDOS_DO_ZERO`,
-# com a mesma régua do parado (`_o_tique_da_janela`, sem segunda medida), e o viés medido
-# sai do giro antes da Mira e da inclinação. A chave é a de sensor: o endereço, o mesmo no
-# cabo e no BT. Nada se escreve no controle; o disco é do `utils/session.py`.
-
-#: Os 5 s que a Calibrar diz na tela (`interface/calibrar.SEGUNDOS`).
 SEGUNDOS_DO_ZERO: Final = 5.0
-#: Menos que isto não é medida: a janela de 5 s a 50 Hz dá 250.
 MINIMO_DE_AMOSTRAS_DO_ZERO: Final = 20
 
 _ATRIBUTO_DO_ZERO: Final = "_roteador_de_movimento_zero"

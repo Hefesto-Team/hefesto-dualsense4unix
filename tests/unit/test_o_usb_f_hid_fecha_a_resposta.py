@@ -133,7 +133,7 @@ def _patch(*args: str, entrada: bytes) -> subprocess.CompletedProcess[bytes]:
 
 
 def test_o_patch_desfeito_devolve_o_de_fabrica_e_refeito_o_da_pasta(tmp_path: Path) -> None:
-    if shutil.which("patch") is None:  # pragma: no cover - a máquina da casa tem
+    if shutil.which("patch") is None:  # pragma: no cover
         pytest.skip("sem o patch(1) nesta máquina")
     base = _baseline()
     remendo = (PASTA / "patch" / base["PATCH"]).read_bytes()

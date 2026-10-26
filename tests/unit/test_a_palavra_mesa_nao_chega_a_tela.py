@@ -75,7 +75,7 @@ from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
 RAIZ = Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 BANCADA = RAIZ / "mockup"
-PRODUTO = INTERFACE / "paginas"  # (noqa-acento) nome de pasta
+PRODUTO = INTERFACE / "paginas"  # (noqa-acento)
 PACOTES = INTERFACE / "pacotes"
 
 

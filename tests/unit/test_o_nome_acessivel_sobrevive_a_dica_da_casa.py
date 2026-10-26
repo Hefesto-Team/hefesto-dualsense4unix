@@ -157,7 +157,7 @@ def _censo(pagina: pathlib.Path, camada: str) -> dict[str, Any]:
     gi.require_version("WebKit2", "4.1")
     from gi.repository import GLib, Gtk, WebKit2
 
-    if not Gtk.init_check(None)[0]:  # pragma: no cover — sem sessão gráfica
+    if not Gtk.init_check(None)[0]:  # pragma: no cover
         pytest.skip("sem sessão gráfica — o WebKit não abre")
 
     fora: dict[str, Any] = {"erro": "", "arquivo": pagina.name}

@@ -44,11 +44,10 @@ class _Servidor:
     """O `pactl` de mentira: módulos com estado, e só o que o nó pergunta."""
 
     def __init__(self) -> None:
-        # o servidor de pé sempre tem módulo seu: lista vazia é `pactl` mudo, não resposta
         self.modulos: dict[str, tuple[str, str]] = {"1": ("libpipewire-module-rt", "")}
         self._proximo = 40
         self.mudo = False
-        self.teimoso: set[str] = set()  # `unload-module` destes ids falha uma vez
+        self.teimoso: set[str] = set()
         self.pedidos: list[list[str]] = []
 
     def __call__(self, argv: list[str]) -> str | None:
@@ -140,10 +139,6 @@ def _nomes(*uniqs: str) -> list[str]:
     return sorted(som.nome_do_sink(u) for u in uniqs)
 
 
-# ---------------------------------------------------------------------------
-# (1) o módulo some por fora e a volta seguinte o sobe de novo
-
-
 def test_o_no_que_sumiu_por_fora_sobe_de_novo_no_iniciar(servidor: _Servidor) -> None:
     no = _no(servidor, _P1)
     assert no.iniciar()
@@ -170,8 +165,10 @@ def test_a_volta_do_daemon_ergue_os_quatro_que_foram_tirados_por_fora(
 
 
 def test_servidor_que_nao_responde_nao_derruba_nenhum_no(servidor: _Servidor) -> None:
-    # A decisão D-0810-O-NO-DE-SOM-ORFAO-SE-DERRUBA.
-    """«Não sei» não é «sumiu»: o `pactl` em recuo não pode esvaziar a mesa."""
+    """«Não sei» não é «sumiu»: o `pactl` em recuo não pode esvaziar a mesa.
+
+    Prova da D-0810-O-NO-DE-SOM-ORFAO-SE-DERRUBA.
+    """
     ger = _gerenciador(servidor)
     ger.reconciliar(_mesa())
     antes = sorted(servidor.modulos)
@@ -225,19 +222,14 @@ def test_o_endpoint_com_o_servidor_mudo_segue_de_pe(servidor: _Servidor) -> None
     assert endpoint.iniciar(), "«não sei» virou «caiu»"
 
 
-# ---------------------------------------------------------------------------
-# (2) o `start` com módulos do daemon anterior não duplica
-
-
 def test_o_start_derruba_o_que_o_daemon_anterior_deixou_e_nao_duplica(
     servidor: _Servidor,
 ) -> None:
-    # A decisão D-0810-O-NO-DE-SOM-ORFAO-SE-DERRUBA.
+    """Prova da D-0810-O-NO-DE-SOM-ORFAO-SE-DERRUBA."""
     velho = mod.GerenciadorDeNosDeSom(fabrica=lambda u: _no(servidor, u), runner=servidor)
     velho.reconciliar([*_mesa(), _Controle(_QUINTO)])
     assert len(servidor.sinks_do_som()) == 5
     antes = set(servidor.do_hefesto())
-    # o daemon velho morre SEM `stop`: a memória some, o servidor guarda tudo
 
     novo = _gerenciador(servidor)
     novo.reconciliar(_mesa())
@@ -253,24 +245,20 @@ def test_o_no_novo_nao_carrega_ao_lado_do_que_o_daemon_velho_deixou(
 ) -> None:
     primeiro = _no(servidor, _P2)
     assert primeiro.iniciar()
-    segundo = _no(servidor, _P2)  # outro processo, mesma identidade
+    segundo = _no(servidor, _P2)
     assert segundo.iniciar()
     assert servidor.sinks_do_som() == _nomes(_P2)
     assert len(servidor.loopbacks()) == 1
 
 
 def test_o_endpoint_do_daemon_anterior_e_adotado_e_nao_duplicado(servidor: _Servidor) -> None:
-    # A decisão D-0810-O-NO-DE-SOM-ORFAO-SE-DERRUBA.
+    """Prova da D-0810-O-NO-DE-SOM-ORFAO-SE-DERRUBA."""
     ancora = eh.ancora_da_interface(porta.dar_porta(_P2, 2))
     assert ancora is not None
     assert eh.EndpointDeHaptica(uniq=_P2, ancora=ancora, runner=servidor).iniciar()
     depois = eh.EndpointDeHaptica(uniq=_P2, ancora=ancora, runner=servidor)
     assert depois.iniciar()
     assert [len(v) for v in eh.endpoints_de_pe(servidor).values()] == [1]
-
-
-# ---------------------------------------------------------------------------
-# (3) o `stop` deixa o servidor sem nenhum nó de som do Hefesto
 
 
 def test_o_stop_deixa_o_servidor_sem_no_de_som_nem_rota(servidor: _Servidor) -> None:
@@ -322,7 +310,7 @@ def test_o_stop_derruba_o_no_que_so_o_servidor_conhece(servidor: _Servidor) -> N
 
 
 def test_o_stop_nao_toca_modulo_de_outro_dono(servidor: _Servidor) -> None:
-    # A decisão D-0810-O-NO-DE-SOM-ORFAO-SE-DERRUBA.
+    """Prova da D-0810-O-NO-DE-SOM-ORFAO-SE-DERRUBA."""
     servidor.carregar("module-null-sink", "sink_name=sink_de_outra_gente format=s16le")
     servidor.carregar("module-loopback", "source=outra.monitor sink=outra_saida")
     ger = _gerenciador(servidor)

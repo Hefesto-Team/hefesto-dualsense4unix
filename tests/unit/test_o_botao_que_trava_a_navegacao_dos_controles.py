@@ -80,9 +80,6 @@ def _contexto(pac: Any, **bloco_da_navegacao: Any) -> Any:
     return pac.Contexto(state=estado, mesa=[], conectados=[], estados={})
 
 
-# 1 ─ Travada: nada se conta e nada se rouba ───────────────────────────────────
-
-
 def test_1_travada_com_o_foco_vivo_a_interna_nao_age_e_o_jogo_fica_com_tudo() -> None:
     relogio = _Relogio()
     interna = _interna(relogio, ligada=False)
@@ -110,9 +107,6 @@ def test_3_destravar_devolve_a_interna_e_a_trava_nao_deixa_toque_para_tras() -> 
     assert interna.roubar(frozenset({"r1", "l2_btn"})) == frozenset({"l2_btn"})
     interna.contar({P1: {"r1": 6}})
     assert interna.toques()[P1]["r1"] == 1, "os cinco toques de quando estava travada não voltam"
-
-
-# 2 ─ Um controle navega por vez (o `Navegador` da janela) ─────────────────────
 
 
 def _toq(**contas: int) -> dict[str, int]:
@@ -274,9 +268,6 @@ def test_17_o_daemon_conta_os_toques_de_todos_e_a_regra_nao_mexe_na_ligada() -> 
     assert interna.bloco() == {"interna_ligada": True, "tipo": dono.TIPO_INTERNA, "foco": True}
 
 
-# 3 ─ O botão escreve a MESMA flag ─────────────────────────────────────────────
-
-
 def test_18_o_definir_grava_a_ligada_no_mesmo_arquivo_e_o_tipo_nao_muda() -> None:
     interna = _interna(_Relogio(), ligada=True)
     interna.definir(ligada=False)
@@ -337,9 +328,6 @@ def test_24_no_nativo_o_botao_segue_vivo_porque_a_interna_e_da_janela() -> None:
     for aba in DEZ:
         assert pac.camada.recusa_no_nativo(aba, "travar-navegacao", estado) is None, aba
     assert frozenset({"travar-navegacao"}) == pac.camada.GESTOS_DA_MOLDURA
-
-
-# 4 ─ A tela: o campo pintado e o botão na moldura de toda aba ────────────────────
 
 
 def test_25_o_topo_pinta_o_botao_apertado_so_quando_o_daemon_diz_travada() -> None:

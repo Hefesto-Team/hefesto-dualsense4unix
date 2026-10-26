@@ -16,10 +16,6 @@ HDMI = "alsa_output.pci-0000_0a_00.1.hdmi-stereo"
 HAPTICA = "hefesto_haptica_000003"
 NOME_DA_HAPTICA = "Háptica do Controle (DualSense Wireless Controller)"
 
-#: o que o `pactl --format=json list sinks` devolve nesta máquina (medido em 08/10/2026,
-#: `pactl` 16.1): o campo com acento vem `(null)` — a descrição «Estéreo digital» da
-#: placa HDMI e o `device.description` da háptica, que também tem acento —, e o recuo
-#: da placa é só «HDA NVidia».
 LISTA_MEDIDA = pj.texto(
     pj.no(551, "alsa_output.usb-Sony_..._Controller-00.HiFi__Speaker__sink",
           descricao="DualSense wireless controller (PS5) Controller speaker"),
@@ -28,7 +24,6 @@ LISTA_MEDIDA = pj.texto(
     pj.no(600, HAPTICA, descricao="(null)", props={"device.description": "(null)"}),
 )
 
-#: o `pw-dump` da mesma máquina, no mesmo instante: o UTF-8 inteiro.
 PW_DUMP_MEDIDO = json.dumps([
     {"id": 31, "type": "PipeWire:Interface:Node",
      "info": {"props": {"node.name": HDMI,
@@ -97,8 +92,10 @@ def test_a_descricao_sai_do_formato_longo_medido(monkeypatch: pytest.MonkeyPatch
 
 
 def test_a_descricao_com_acento_volta_pelo_pw_dump(monkeypatch: pytest.MonkeyPatch) -> None:
-    # A decisão D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP.
-    """O nome da tela é o do painel, com acento — e o `pw-dump` roda UMA vez por releitura."""
+    """O nome da tela é o do painel, com acento — e o `pw-dump` roda UMA vez por releitura.
+
+    Prova da D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP.
+    """
     from hefesto_dualsense4unix.integrations import retrato_do_som as rs
 
     lidas: list[tuple[str, ...]] = []
@@ -127,7 +124,7 @@ def test_o_pw_dump_ilegivel_e_nao_sei() -> None:
 
 
 def test_sem_descricao_perdida_o_pw_dump_nao_roda() -> None:
-    # A decisão D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP.
+    """Prova da D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP."""
     lidas: list[tuple[str, ...]] = []
     retrato = _retrato_com(pj.texto(pj.no(1, "a", descricao="A")), lidas=lidas)
     assert retrato.descricoes() == {"a": "A"}
@@ -267,7 +264,6 @@ def test_o_ouvinte_nao_escreve_no_servidor_de_som() -> None:
                 f"o ouvinte escreveu {proibido!r} em código — ele só observa")
 
 
-# 4 — O `state_full` E A LINHA DO EXAME
 def test_o_payload_sem_ouvinte_e_nao_sei_e_nao_nao_ha() -> None:
     """Dois campos vazios. Afirmar "não há" faria a pessoa parar de procurar."""
     assert ods.som_do_sistema_payload(object()) == {

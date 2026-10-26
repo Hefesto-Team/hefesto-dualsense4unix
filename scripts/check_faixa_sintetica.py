@@ -124,7 +124,6 @@ def enderecos(diretorio: Path) -> set[str]:
     return vistos
 
 
-#: ``app/gui_prefs.py``, ``utils/session.py`` e a aba Sistema.
 NOMES_DE_TEMPO_DE_EXECUCAO = (
     "controllers.json",
     "controller_masks.json",

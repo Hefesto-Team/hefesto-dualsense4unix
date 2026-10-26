@@ -38,8 +38,6 @@ def test_target_numero_mapeia_para_indice_zero_based(mock_ipc: dict[str, Any]) -
     mock_ipc["response"] = {"status": "ok", "target_index": 1}
     result = runner.invoke(app, ["controller", "target", "2"])
     assert result.exit_code == 0, result.output
-    # COR-01 (D6): a borda consulta o state_full para mapear slot→índice;
-    # sem `player_slot` em nenhum controle, CLI 1-based "2" → IPC index 1.
     assert mock_ipc["calls"] == [
         ("daemon.state_full", {}),
         ("controller.target.set", {"index": 1}),

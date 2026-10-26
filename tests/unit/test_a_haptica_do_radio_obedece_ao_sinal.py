@@ -13,7 +13,6 @@ from hefesto_dualsense4unix.integrations import alto_falante_bt as af
 from hefesto_dualsense4unix.integrations import haptica_bt
 from tests.unit.porta_de_mentira import todo_pad_tem_porta
 
-#: O ``0x36`` com o ``0x10`` em todo quadro: a háptica em [76], os dados em [78].
 TAMANHO_036 = af.TAMANHO_DO_DEGRAU[af.DEGRAU_COMBINADO]
 BLOCO_036 = slice(78, 78 + af.BYTES_DO_BLOCO_HAPTICO)
 

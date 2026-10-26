@@ -155,7 +155,7 @@ def _ops(mesa: Mesa) -> Religador:
 class CenaReligavel(Cena):
     """A cena do arquivo vizinho com o ``Religador`` no lugar do ``FsAclOps``."""
 
-    def __init__(self, mesa: Mesa, ops: Religador | None = None) -> None:  # troca o ops
+    def __init__(self, mesa: Mesa, ops: Religador | None = None) -> None:
         self.mesa = mesa
         self.relogio = Relogio()
         self.st, self.ops, self.diario = _estado(
@@ -218,10 +218,8 @@ class TestAPrimeiraEntregaReligaODriver:
         ], "cada físico solta e prende, nesta ordem, e o pad e o externo ficam de fora"
         tocados = {id_ for _, id_ in cena.ops.escritas}
         assert pad not in tocados and externo not in tocados
-        # a escrita é a de produção: o arquivo do driver guarda o id (o do último).
         assert (_drivers(mesa) / DRIVER / "unbind").read_text(encoding="ascii") == cabo
         assert (_drivers(mesa) / DRIVER / "bind").read_text(encoding="ascii") == cabo
-        # a entrega em si segue: o nó com a ACL vale mais que o nó fechado.
         for base in ("hidraw5", "hidraw9"):
             assert _aberto_para_a_sessao(mesa.dev / base), base
         assert [c["nodes"] for c in _eventos(cena, "driver_hid_religado")] == [
@@ -387,7 +385,6 @@ class TestAFalhaNaoDerrubaAEntrega:
         assert [(f["node"], f["passo"]) for f in falhas] == [
             (str(cena.mesa.dev / "hidraw5"), "bind")
         ]
-        # o segundo físico ainda é religado.
         assert cena.ops.escritas[-2:] == [
             ("unbind", cena.mesa.aparelhos["hidraw9"].hid),
             ("bind", cena.mesa.aparelhos["hidraw9"].hid),

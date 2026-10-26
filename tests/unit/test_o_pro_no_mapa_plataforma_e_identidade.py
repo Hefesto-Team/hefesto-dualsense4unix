@@ -140,7 +140,6 @@ ENTRADAS_DA_TABELA = (
 CELULAS_DESCOLADAS = ("plataforma.escrita_crua@pro", "plataforma.udev_autosuspend@pro")
 MARCA_DE_FUSAO = "|| (a outra frente escreveu:"
 
-#: que ganham a VIGIA-DO-MUDO-01. Todos são de DualSense, e é isso que faz o
 LEITORES_COM_VIGIA_DE_MUDO = {"EvdevReader", "TouchpadReader", "MotionSensorReader"}
 
 

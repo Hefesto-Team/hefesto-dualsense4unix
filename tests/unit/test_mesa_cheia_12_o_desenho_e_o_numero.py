@@ -71,7 +71,6 @@ FILA2 = "aa:bb:cc:00:00:02"
 FILA3 = "aa:bb:cc:00:00:03"
 FILA4 = "aa:bb:cc:00:00:04"
 
-#: superfícies: a lâmpada, o rótulo e o `state_full`.
 FILA = {FILA1_PRIMARIO: 1, FILA2: 2, FILA3: 3, FILA4: 4}
 
 ORDEM_DE_PROMOCAO = (FILA4, FILA2, FILA3)
@@ -426,7 +425,6 @@ async def test_o_card_acha_o_vpad_do_proprio_controle(
     per_vpad = estado["rumble_ff"]["per_vpad"]
     numeros = {c["uniq"]: c["player"] for c in controles}
     assert numeros == FILA, numeros
-    # cada controle publica o mesmo número que o seu `player_slot` — a fila.
     assert {c["uniq"]: c["player_slot"] for c in controles} == FILA
     dos_vpads = sorted(item["player"] for item in per_vpad)
     assert dos_vpads == sorted(numeros.values()), (

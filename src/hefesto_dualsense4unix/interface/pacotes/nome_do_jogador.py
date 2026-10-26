@@ -21,7 +21,6 @@ from . import em_fundo
 
 NOMES_DE_FABRICA = ("DualSense", "Wireless Controller")
 
-#: um ``Alias`` que é o endereço (``AA-BB-CC-DD-EE-FF``) não é nome de ninguém
 ALIAS_QUE_E_ENDERECO = re.compile(r"[0-9A-Fa-f]{2}([-:_][0-9A-Fa-f]{2}){5}")
 
 

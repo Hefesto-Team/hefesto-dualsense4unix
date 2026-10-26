@@ -11,7 +11,7 @@ from hefesto_dualsense4unix.profiles.schema import (
     ControllerSensoresOverride,
     LedsConfig,
     Profile,
-    ProfileAnalogicosConfig,  # (noqa-acento) identificador ASCII
+    ProfileAnalogicosConfig,
     ProfileAtivacaoConfig,
     ProfileCursorConfig,
     ProfileMouseConfig,
@@ -35,9 +35,7 @@ class Secao(NamedTuple):
     por_controle: tuple[str, ...]
 
 
-#: As seções de necessidade de quem joga: valem em todo perfil, e o jogo só as sobrepõe.
-_DA_ACESSIBILIDADE = ("ativacao", "analogicos")  # (noqa-acento) identificador ASCII
-#: O cursor é só do primeiro controle: vale no computador, não por controle.
+_DA_ACESSIBILIDADE = ("ativacao", "analogicos")  # (noqa-acento)
 _GLOBAIS_DA_ACESSIBILIDADE = (*_DA_ACESSIBILIDADE, "cursor")
 
 _CAMPOS_DO_TECLADO = ("teclado_emulado", "teclado_so_no_jogo", "teclado_sempre", "key_bindings")
@@ -97,8 +95,8 @@ _MODELOS: frozenset[str] = frozenset(
 )
 
 _MODELO_DA_ACESSIBILIDADE: dict[str, Any] = {
-    "ativacao": ProfileAtivacaoConfig,  # (noqa-acento) identificador ASCII
-    "analogicos": ProfileAnalogicosConfig,  # (noqa-acento) identificador ASCII
+    "ativacao": ProfileAtivacaoConfig,  # (noqa-acento)
+    "analogicos": ProfileAnalogicosConfig,
     "cursor": ProfileCursorConfig,
 }
 
@@ -108,8 +106,8 @@ _CAMPOS_DO_CONTROLE: dict[str, tuple[str, ...]] = {
     "mic": tuple(ControllerMicOverride.model_fields),
     "rumble": tuple(ControllerRumbleOverride.model_fields),
     "sensores": tuple(ControllerSensoresOverride.model_fields),
-    "ativacao": tuple(ProfileAtivacaoConfig.model_fields),  # (noqa-acento) identificador ASCII
-    "analogicos": tuple(ProfileAnalogicosConfig.model_fields),  # (noqa-acento) identificador ASCII
+    "ativacao": tuple(ProfileAtivacaoConfig.model_fields),  # (noqa-acento)
+    "analogicos": tuple(ProfileAnalogicosConfig.model_fields),
     **CAMPOS_DO_CONTROLE_NO_COMPUTADOR,
 }
 
@@ -558,9 +556,6 @@ def gravar(
     return onde
 
 
-#: «Nada mudou» numa seção que não é modelo. Não pode ser ``{}``, ``False`` nem
-#: ``0``: o ``teclado_emulado`` desligado e uma lista de teclas vazia são
-#: mudanças de verdade, e um valor «falso» lido como «igual» as perdia no gravar.
 _IGUAL: Any = object()
 
 
@@ -581,12 +576,6 @@ def _diferenca_de_secao(secao: str, antes: Any, depois: Any) -> Any:
     velho = antes.model_dump(mode="json", exclude_unset=True) if antes is not None else {}
     mudou = {c: v for c, v in novo.items() if velho.get(c, object()) != v}
     mudou.update({c: None for c in velho if c not in novo})
-    # O PAR ANDA JUNTO COM O VALOR QUE ELE TEM, e não com «tira o colega»:
-    # mexer só no `custom_mult` de quem já está em `custom` deixava `policy`
-    # de fora do diff, e `_com_os_pares` o completava com `None` — o computador
-    # gravava um `custom_mult` sem `policy` e o `maquina.json` recusava o
-    # documento («custom_mult só é válido com policy='custom'»). Medido em
-    # 03/10/2026: qualquer arraste da barra de intensidade depois do primeiro.
     for par in PARES.get(secao, ()):
         if set(mudou) & set(par):
             for campo in par:
@@ -724,8 +713,6 @@ def gravar_pelo_gesto(
 
 SUFIXO_DA_COPIA = ".antes-do-computador"
 
-#: As seções do computador que são um valor inteiro (e não um modelo): o jogo
-#: tem opinião nelas ou não tem.
 _ESCALARES_DO_COMPUTADOR: tuple[str, ...] = (
     "button_actions", "key_bindings", "teclado_emulado",
     "teclado_so_no_jogo", "teclado_sempre", "tabela_no_jogo",

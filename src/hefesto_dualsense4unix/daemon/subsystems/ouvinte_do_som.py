@@ -17,10 +17,8 @@ logger = get_logger(__name__)
 
 ESPERA_PARA_RELIGAR_S: float = 3.0
 
-#: O teto do recuo quando o `subscribe` morre na hora, volta após volta.
 TETO_DA_ESPERA_S: float = 60.0
 
-#: Quantas voltas seguidas sem vida bastam para dizer «sem servidor».
 VOLTAS_MORTAS_PARA_AVISAR: int = 2
 
 RAJADA_S: float = 0.05

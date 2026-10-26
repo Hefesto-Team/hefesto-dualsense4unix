@@ -48,7 +48,6 @@ PREFIXO_DA_CURA = "O que fazer: "
 
 _ROTULOS_EM_CACHE: dict[str, str] = {}
 
-#: OS RÓTULOS QUE SAÍRAM DA RESERVA — `{id do widget: o rótulo que saiu}`.
 _ROTULOS_DE_RESERVA: dict[str, str] = {}
 
 
@@ -74,7 +73,7 @@ def _rotulo_na_tela_viva(widget_id: str) -> str | None:
         from hefesto_dualsense4unix.interface import onde as _onde
 
         doc = _onde.pagina(pagina, publicado=True).read_text(encoding="utf-8")
-    except Exception:  # pragma: no cover — empacotamento sem a interface nova
+    except Exception:  # pragma: no cover
         return None
     achado = _re.search(
         rf'data-gesto="{_re.escape(gesto)}"[^>]*>(?:<span[^>]*></span>)?([^<]*)</button>', doc)
@@ -124,9 +123,6 @@ def rotulo_do_botao(widget_id: str, se_faltar: str) -> str:
     _ROTULOS_EM_CACHE[widget_id] = alvo
     return alvo
 
-
-# de escrever em arquivo alheio. Fica RELATADO: enquanto ele não descer,
-# sempre sobre ESTE código no disco: quem é o dono dele?
 
 FORMATO_CHECKOUT = "checkout"
 FORMATO_FLATPAK = "flatpak"
@@ -263,18 +259,13 @@ def gesto_de_instalar(
 
 
 _QUIRK_RE = re.compile(r"054c:0ce6")
-# O `n` (DELAY_CTRL_MSG) no PID do pad virtual: o Hefesto o gravava até 14/10/2026
-# (ADR 018, nota datada). Cada pedido de controle ao pad espera 200 ms.
 _QUIRK_DO_PAD_VIRTUAL_RE = re.compile(r"054c:0df2:[a-z]*n")
-# DualSense COM ignore_ctl_error (o que ataca o mixer que martela o EP0).
 _SND_QUIRK_RE = re.compile(r"054c:0ce6:.*ignore_ctl_error")
 _CARD_HEADER_RE = re.compile(r"^\s*\d+\s*\[")
 _STEAM_INPUT_RE = re.compile(
     r'"(SteamController_PSSupport|UseSteamControllerConfig)"\s+"[12]"'
 )
 
-# STEAM-INPUT-ALLOWLIST-01 (22/07): alguns jogos entregam o suporte a DualSense
-# SetDualSenseTriggerEffect, que só funciona com o Steam Input do jogo LIGADO).
 def _allowlist_path() -> Path:
     """Caminho da allowlist, resolvido A CADA CHAMADA."""
     from hefesto_dualsense4unix.integrations.steam_launch_options import (
@@ -347,7 +338,6 @@ def steam_input_fora_da_allowlist(text: str, allow: set[str]) -> tuple[list[str]
         if appid and appid not in appids:
             appids.append(appid)
         elif not appid:
-            # `UseSteamControllerConfig` fora de qualquer bloco `apps/<id>`:
             global_ligado = True
     return appids, global_ligado
 
@@ -424,7 +414,6 @@ def check_steam_input(home: Path | None = None) -> tuple[str, str]:
                 appids.append(appid)
         global_ligado = global_ligado or glob_on
     if appids or global_ligado:
-        # handler `on_storm_fix_safe` em `app/actions/daemon_actions.py`).
         partes: list[str] = []
         if appids:
             jogos = lista_de_jogos(appids, home)
@@ -447,7 +436,6 @@ def check_steam_input(home: Path | None = None) -> tuple[str, str]:
         v for v in vdfs if _STEAM_INPUT_RE.search(_safe_read(v))
     ]
     if excecoes:
-        # TELA, e dizia «jogos cujo DualSense é entregue pela Steam» — o
         return OK, (
             "Steam Input desligado (com exceções por jogo, marcadas por "
             "você — nesses o controle físico fica escondido)"
@@ -470,8 +458,6 @@ def check_wireplumber(dropin_dir: Path | None = None) -> tuple[str, str]:
     present = [n for n in names if (dropin_dir / n).is_file()]
     if present:
         return OK, f"WirePlumber configurado ({', '.join(present)})"
-    # ("Aplicar correções" → `on_storm_fix_safe`, que chama o
-    # `scripts/fix_wireplumber_default_source.sh --install`).
     return INFO, (
         "o ajuste de áudio do Hefesto não está instalado — sem ele o controle "
         "pode virar o microfone padrão do sistema sozinho. "
@@ -518,8 +504,6 @@ def check_snd_quirk(
             f"{PREFIXO_DA_CURA}desconecte e reconecte os controles para ela "
             "valer agora."
         )
-    # isso seria uma mentira NOVA. O "Aplicar correções" (`on_storm_fix_safe`,
-    # `scripts/fix_wireplumber_default_source.sh` — e deixa o quirk de fora DE
     return (
         WARN,
         f"cura do travamento do USB AUSENTE — sem ela os controles podem "

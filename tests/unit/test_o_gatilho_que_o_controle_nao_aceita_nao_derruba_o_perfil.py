@@ -33,7 +33,6 @@ from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import TriggerConfig
 from hefesto_dualsense4unix.testing.fake_controller import FakeController
 
-#: Os três perfis medidos em 09/10: o lado esquerdo que o controle não aceita.
 RECUSADOS: dict[str, dict[str, Any]] = {
     "RigidoUm": {"mode": "Rigid", "params": [5]},
     "RigidoAlto": {"mode": "Rigid", "params": [300, 300]},
@@ -41,7 +40,6 @@ RECUSADOS: dict[str, dict[str, Any]] = {
 }
 BOM = {"mode": "Rigid", "params": [5, 200]}
 COR = [10, 20, 30]
-#: A forma que o perfil e o daemon usam por dentro (o esquema tira os `:`); faixa forjada.
 P1 = "aabbcc000001"
 
 

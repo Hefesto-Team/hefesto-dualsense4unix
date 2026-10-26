@@ -30,7 +30,7 @@ from hefesto_dualsense4unix.interface import onde
 from hefesto_dualsense4unix.interface.conexoes import html_das_dicas
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 from tests.conftest import skip_sem_gi_real
-from tests.unit.test_a_conexoes_cabe_na_tela import (  # noqa: F401 -- a fixture de módulo vem junto
+from tests.unit.test_a_conexoes_cabe_na_tela import (  # noqa: F401
     _no_webkit,
     _pintar_as_dicas,
     um_webview_por_modulo,
@@ -90,7 +90,6 @@ def _medir(pagina: Path) -> list[dict[str, Any]]:
         assert isinstance(leitura, dict), leitura
         assert leitura["ref"], "a régua perdeu a referência: nenhum `.radio svg.i` na página"
         vistos += [dict(ic, ref=leitura["ref"]) for ic in leitura["icones"]]
-    # a régua não passa por vazio: todo símbolo de cartão foi pintado e lido
     assert sorted(ic["nome"] for ic in vistos) == [f"rd-{i}" for i in icones], vistos
     return vistos
 

@@ -35,8 +35,6 @@ def _jogo_sem_declaracao(raiz: Path) -> Path:
     pasta = raiz / _PASTA_DO_PERFIL
     pasta.mkdir(parents=True)
     (raiz / "Jogo.exe").write_bytes(b"MZ")
-    # o `mtime` das pastas vai para o passado: o arquivo novo o traz de volta ao presente
-    # sem depender do relógio de grão grosso do sistema de arquivos
     for p in (pasta, pasta.parent, pasta.parent.parent):
         os.utime(p, ns=(_PASSADO_NS, _PASSADO_NS))
     return raiz

@@ -563,7 +563,6 @@ SUFIXOS_DE_CONTEUDO = (
 COLUNA_DA_PONTE = "ponte_alcanca"
 COLUNA_DA_PONTE_DE_ONDE_SEI = "ponte_de_onde_sei"
 
-#: O canal que SÓ existe sob a máscara DualSense do nosso vpad (`054c:0df2`).
 CANAL_QUE_A_MASCARA_DECIDE = "uhid"
 
 DIRECAO_POR_CANAL: dict[str, str] = {
@@ -754,7 +753,7 @@ def indexar_testes(raiz: Path) -> dict[str, ArquivoDeTeste]:
             continue
         try:
             arvore = ast.parse(caminho.read_text(encoding="utf-8"))
-        except (OSError, SyntaxError, UnicodeDecodeError):  # pragma: no cover - defensivo
+        except (OSError, SyntaxError, UnicodeDecodeError):  # pragma: no cover
             continue
 
         funcoes: set[str] = set()
@@ -1991,7 +1990,7 @@ def ids_do_csv_em(contra: str, csv_relativo: str, raiz: Path) -> tuple[set[str] 
         return None, motivo
     try:
         linhas = list(csv.DictReader(processo.stdout.splitlines()))
-    except csv.Error as exc:  # pragma: no cover - defensivo
+    except csv.Error as exc:  # pragma: no cover
         return None, f"CSV ilegível em {contra}: {exc}"
     return {(linha.get("id") or "").strip() for linha in linhas if linha.get("id")}, ""
 

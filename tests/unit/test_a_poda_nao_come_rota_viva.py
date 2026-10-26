@@ -41,7 +41,7 @@ def _fontes_python() -> list[tuple[Path, str, bool]]:
                 continue
             try:
                 fontes.append((arquivo, arquivo.read_text(encoding="utf-8"), e_producao))
-            except OSError:  # pragma: no cover - disco quebrado
+            except OSError:  # pragma: no cover
                 continue
     for nome in _ROTEIROS_DE_PRODUCAO:
         roteiro = _RAIZ / nome

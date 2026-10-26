@@ -38,10 +38,9 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 FONTES = INTERFACE / "assets" / "fontes"
 MOCKUP = RAIZ / "mockup"
-PUBLICADO = INTERFACE / "paginas"  # (noqa-acento) nome da pasta
+PUBLICADO = INTERFACE / "paginas"  # (noqa-acento)
 TOPO = INTERFACE / "topo.html"
 
-#: a rede que não responde: o endereço engole o pacote, e nada volta.
 REDE_MUDA = "http://10.255.255.1:9"
 
 NUMEROS = tuple(f"{n:02d}" for n in range(1, 11))
@@ -58,10 +57,6 @@ PAGINAS = [TOPO, *_as_dez(MOCKUP), *_as_dez(PUBLICADO)]
 def _id(caminho: pathlib.Path) -> str:
     return str(caminho.relative_to(RAIZ))
 
-
-# ---------------------------------------------------------------------------------------------
-# 1. nenhum recurso fora da máquina
-# ---------------------------------------------------------------------------------------------
 
 _URL_NO_CSS = re.compile(r"""url\(\s*['"]?\s*((?:https?:)?//[^'")\s]+)""", re.I)
 _IMPORT_NO_CSS = re.compile(r"""@import\s+(?:url\(\s*)?['"]?\s*((?:https?:)?//[^'")\s;]+)""", re.I)
@@ -158,10 +153,6 @@ def test_a_regua_deixa_passar_o_que_nao_e_recurso(texto: str) -> None:
     assert recursos_de_fora(texto) == []
 
 
-# ---------------------------------------------------------------------------------------------
-# 2. todo @font-face aponta para uma fonte que mora no pacote
-# ---------------------------------------------------------------------------------------------
-
 _COMENTARIO_CSS = re.compile(r"/\*.*?\*/", re.S)
 _FONT_FACE = re.compile(r"@font-face\s*\{([^}]*)\}")
 _FAMILIA = re.compile(r"font-family\s*:\s*['\"]?([^;'\"]+)['\"]?\s*;")
@@ -201,14 +192,12 @@ def test_todo_font_face_aponta_para_um_arquivo_do_pacote(arq: pathlib.Path) -> N
             assert magia in {b"\x00\x01\x00\x00", b"true"}, f"{alvo.name} não é TrueType"
 
 
-#: o que o `<link>` do Google pedia, e portanto o que a tela já mostrava: declarar mais (o eixo
-#: inteiro da mono, 100 a 800) troca o negrito sintetizado pelo verdadeiro e muda a letra de 4 abas.
 PESOS_DE_ANTES = {"Space Grotesk": "400 700", "JetBrains Mono": "400 500"}
 
 
 @pytest.mark.parametrize("arq", PAGINAS, ids=_id)
 def test_os_pesos_declarados_sao_os_que_o_link_do_google_pedia(arq: pathlib.Path) -> None:
-    # D-2310-AS-FONTES-DA-INTERFACE-MORAM-NO-PRODUTO
+    """Prova da D-2310-AS-FONTES-DA-INTERFACE-MORAM-NO-PRODUTO."""
     texto = _COMENTARIO_CSS.sub("", arq.read_text(encoding="utf-8"))
     achados = {}
     for bloco in _FONT_FACE.findall(texto):
@@ -229,10 +218,6 @@ def test_o_mockup_e_o_publicado_chegam_ao_mesmo_arquivo_pelo_mesmo_endereco() ->
             for e in enderecos:
                 assert (a.parent / e).resolve() == (b.parent / e).resolve()
 
-
-# ---------------------------------------------------------------------------------------------
-# 3. licença, origem e pacote
-# ---------------------------------------------------------------------------------------------
 
 def test_a_licenca_e_a_origem_moram_ao_lado_das_fontes() -> None:
     for licenca in ("OFL-SpaceGrotesk.txt", "OFL-JetBrainsMono.txt"):
@@ -274,8 +259,9 @@ def test_o_deb_nao_leva_o_link_do_mockup_quebrado(tmp_path: pathlib.Path) -> Non
     """O `.deb` copia `assets/` inteiro (`cp -r`, que copia o link como link) e não leva o `src/`:
     sem a limpeza, `/usr/share/.../assets/fontes` apontaria para nada. Roda o bloco do próprio
     `build_deb.sh`, do `cp` até a primeira linha em branco.
+
+    Prova da D-2310-O-PACOTE-NAO-LEVA-LINK-QUE-NAO-RESOLVE.
     """
-    # D-2310-O-PACOTE-NAO-LEVA-LINK-QUE-NAO-RESOLVE
     linhas = (RAIZ / "scripts" / "build_deb.sh").read_text(encoding="utf-8").splitlines()
     (inicio,) = [i for i, ln in enumerate(linhas) if ln.startswith("cp -r assets/. ")]
     fim = linhas.index("", inicio)
@@ -289,12 +275,6 @@ def test_o_deb_nao_leva_o_link_do_mockup_quebrado(tmp_path: pathlib.Path) -> Non
     assert (destino / "71-uinput.rules").is_file(), "o bloco deixou de copiar os assets"
 
 
-# ---------------------------------------------------------------------------------------------
-# 4 e 5. no WebKit, com a rede que não responde
-# ---------------------------------------------------------------------------------------------
-
-#: roda num processo próprio: o proxy de mentira é lido quando o WebKit sobe, e um processo que já
-#: abriu uma página não o releria. A saída é uma linha de JSON.
 _FILHO = r"""
 import json, pathlib, sys
 raiz, alvo, prazo = sys.argv[1], pathlib.Path(sys.argv[2]), float(sys.argv[3])
@@ -377,8 +357,6 @@ def test_a_mordida_com_o_link_do_google_de_volta_a_pagina_nao_abre(tmp_path: pat
     assert recursos_de_fora(mordido.read_text(encoding="utf-8")), "a mordida não pôs o link"
     r = _abrir_sem_rede(mordido, prazo=5.0)
     assert r["abriu"] is False, f"com o link do Google a página abriu com a rede muda: {r}"
-    # O controle: a mesma página copiada para `tmp_path`, sem o link, abre. O que fecha a de cima é
-    # o `<link>`, não a cópia (a fonte local não resolve dali, e isso não segura o `complete`).
     controle = tmp_path / "controle" / original.name
     controle.parent.mkdir()
     controle.write_text(texto, encoding="utf-8")

@@ -42,9 +42,7 @@ from tests.unit.test_o_governador_do_radio import (
 
 CONTROLE_4 = "aa:bb:cc:00:00:04"
 OS_QUATRO = (CONTROLE_1, CONTROLE_2, CONTROLE_3, CONTROLE_4)
-#: o que uma ponte de som escreve numa janela (93,75 quadros/s); acima do piso do limiar
 POR_JANELA = 23
-#: o que o adaptador B põe no ar por janela: folga para as duas pontes dele
 FOLGA_DO_B = 4 * POR_JANELA
 
 
@@ -138,7 +136,6 @@ def test_a_unica_ponte_longe_nao_abre_episodio_no_ramo_inteiro(longe: str) -> No
     a = cena.governador._estados[ADAPTADOR_A]
     assert a.por_ponte and a.por_ponte > 0, "o adaptador A não mediu a ponte"
 
-    # A janela em que o sinal cai: a ponte longe escreveu a janela inteira e A não pôs nada no ar.
     cena.medidor.capacidade[ADAPTADOR_A] = 0
     cena.sinal.dbm[gov._chave(longe)] = rm.SINAL_QUE_ATRASA_DBM - 5
     cena.passo()
@@ -150,7 +147,6 @@ def test_a_unica_ponte_longe_nao_abre_episodio_no_ramo_inteiro(longe: str) -> No
     assert not a.cedendo, "uma ponte só, e longe: não há episódio no adaptador A"
     assert not cena.cedeu(ADAPTADOR_A), "o diário diz «cedeu» por uma ponte que já está muda"
 
-    # As janelas seguintes: A volta a escoar, a ponte segue longe e muda, nada se abre.
     cena.medidor.capacidade[ADAPTADOR_A] = FOLGA_DO_B
     for _ in range(12):
         cena.passo()
@@ -159,12 +155,10 @@ def test_a_unica_ponte_longe_nao_abre_episodio_no_ramo_inteiro(longe: str) -> No
     assert publicado[ADAPTADOR_A]["cedendo"] is False
     assert not cena.cedeu(ADAPTADOR_A)
 
-    # O adaptador B, com as duas pontes de rádio de pé, não cedeu por causa do A.
     assert publicado[ADAPTADOR_B]["cedendo"] is False
     assert not cena.cedeu(ADAPTADOR_B)
     assert all(not v.cedendo for u, v in cena.vagas.items() if cena.onde[u] == ADAPTADOR_B)
 
-    # O cabo não entra na fila: nem estado, nem flag, nem linha no que se publica.
     cabo = cena.vagas[cena.cabo]
     assert cabo.adaptador == ""
     assert "" not in cena.governador._estados and "" not in publicado

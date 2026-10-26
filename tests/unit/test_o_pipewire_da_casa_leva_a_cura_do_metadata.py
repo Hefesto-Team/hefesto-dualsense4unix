@@ -27,8 +27,6 @@ BASELINE = ASSETS / "BASELINE"
 SCRIPT = ROOT / "scripts" / "construir_pipewire_backport.sh"
 DOCTOR = ROOT / "scripts" / "doctor.sh"
 
-# Medidos em 15/10/2026: dois downloads iguais do arquivo da tag no GitLab, e o
-# tarball nativo do Pop pelo hash que o .dsc dele declara.
 MEDIDOS = {
     "PW_FONTE_SHA256": "0cde58c124825bad462b32ab79f9aa286ee7b113cc73a5cda923a4365e752657",
     "PW_EMPACOTAMENTO_SHA256": "5f19cae7f9ad7e6c1206ff7d7f197f71feec97e1919016a5a82eab50a82f405f",
@@ -38,7 +36,6 @@ MEDIDOS = {
     "WP_TAG_COMMIT": "81606cbb32d29df20147d1b68b662c1082654d81",
 }
 
-# O global_unbind da tag 1.6.9 (o 06de0ed) e o da 1.6.8, como estão no fonte.
 UNBIND_169 = """\
 static void global_unbind(void *data)
 {
@@ -203,8 +200,6 @@ class TestACura:
         assert "sem a cura do metadata" in res.stderr
 
     def test_o_remove_pending_fora_do_global_unbind_nao_conta(self, tmp_path: Path) -> None:
-        # O remove_pending(d) da própria função remove_pending, ou de outra
-        # função, não é a cura: a pergunta é pelo corpo do global_unbind.
         res = self._conferir(
             tmp_path, UNBIND_168 + "\nstatic void outra(void)\n{\n\tremove_pending(d);\n}\n"
         )
@@ -220,7 +215,6 @@ def _bin(pasta: Path, nome: str, corpo: str) -> None:
 def _doctor(tmp_path: Path, pipewire: str, wireplumber: str = "", binario: str = "") -> str:
     fake = tmp_path / "fakebin"
     fake.mkdir(exist_ok=True)
-    # O `pipewire --version` desta máquina não entra: o binário é de mentira.
     _bin(fake, "pipewire", f'printf "%s\\n" "{binario}"' if binario else "exit 1")
     _bin(
         fake,

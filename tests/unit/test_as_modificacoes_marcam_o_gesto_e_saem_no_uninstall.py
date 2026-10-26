@@ -88,9 +88,6 @@ def lar(curto: Path, monkeypatch: pytest.MonkeyPatch) -> Lugares:
     return lugares
 
 
-# -- 1. a escrita pela porta marca o gesto ---------------------------------------------
-
-
 class _MarcaEspia:
     """No lugar do ``gesto_de_agora``: anota cada ``set`` e cada ``reset``."""
 
@@ -193,13 +190,10 @@ def test_a_marca_chega_ao_loader_de_verdade(
     assert gesto_de_agora.get() is None
 
 
-# -- 2. o instalar não troca o código debaixo do processo vivo -------------------------
-
-
 def test_a_versao_anterior_que_nao_parou_recusa_e_o_codigo_antigo_fica(
     lar: Lugares, curto: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # D-1610-O-INSTALAR-RECUSA-SE-A-ANTERIOR-NAO-PAROU
+    """Prova da D-1610-O-INSTALAR-RECUSA-SE-A-ANTERIOR-NAO-PAROU."""
     pasta = _pasta_do_mod(curto / "fontes")
     instalar(str(pasta), lugares=lar)
     _ligar_vendo("exemplo", lar)
@@ -233,9 +227,6 @@ def test_a_versao_anterior_que_parou_atualiza_como_antes(
     assert resultado.entrada.versao == "0.2.0" and resultado.entrada.ligada
 
 
-# -- 3. o ligar só liga com o que foi mostrado -----------------------------------------
-
-
 def _trocar_o_pedido_no_disco(lar: Lugares, permissoes: list[str]) -> None:
     caminho = lar.codigo / "exemplo" / "hefesto-mod.json"
     caminho.write_text(json.dumps(_manifesto(permissoes=permissoes)), encoding="utf-8")
@@ -244,7 +235,7 @@ def _trocar_o_pedido_no_disco(lar: Lugares, permissoes: list[str]) -> None:
 def test_o_ligar_recusa_se_o_manifesto_do_disco_pede_outra_lista(
     lar: Lugares, curto: Path
 ) -> None:
-    # D-1610-O-LIGAR-PEDE-O-QUE-FOI-VISTO
+    """Prova da D-1610-O-LIGAR-PEDE-O-QUE-FOI-VISTO."""
     instalar(str(_pasta_do_mod(curto / "fontes")), lugares=lar)
     vistas = list(manifesto_instalado("exemplo", lugares=lar).permissoes)
     _trocar_o_pedido_no_disco(lar, [*vistas, "rede:internet"])
@@ -290,20 +281,16 @@ def test_a_linha_de_comando_liga_com_o_que_mostrou_e_nao_com_o_disco_de_depois(
     def mostra_e_troca(mod_id: str, **k: Any) -> Any:
         chamadas.append(mod_id)
         if len(chamadas) > 1:
-            return manifesto_instalado(mod_id, **k)  # o disco de agora
+            return manifesto_instalado(mod_id, **k)
         _trocar_o_pedido_no_disco(lar, [*mostrado.permissoes, "rede:internet"])
         return mostrado
 
-    # o cmd_mod importa dentro da função: o nome que ele lê mora no instalador
     monkeypatch.setattr(instalador, "manifesto_instalado", mostra_e_troca)
     saiu = CliRunner().invoke(cmd_mod.app, ["ligar", "exemplo", "--sim"])
 
     assert saiu.exit_code == 1, saiu.output
     assert "veja de novo" in saiu.output
     assert not ler_registro(lar.registro)["exemplo"].ligada
-
-
-# -- 4. o uninstall.sh conhece as modificações -----------------------------------------
 
 
 def test_o_uninstall_lido_cita_os_tres_lugares_das_modificacoes() -> None:
@@ -442,7 +429,7 @@ def test_o_ensaio_diz_o_que_faria_e_nao_mata(
 def test_por_padrao_o_codigo_os_dados_e_o_registro_ficam_e_o_uninstall_diz(
     tmp_path: Path, casa: tuple[Any, Path, list[subprocess.Popen[bytes]]]
 ) -> None:
-    # D-1610-AS-EXTENSOES-NO-UNINSTALL-FICAM-E-PARAM
+    """Prova da D-1610-AS-EXTENSOES-NO-UNINSTALL-FICAM-E-PARAM."""
     lugares = _instalar_de_mentira(casa[0], casa[2])
     fora = _rodar(casa, tmp_path, "--yes")
     assert all(p.exists() for p in lugares.values()), lugares

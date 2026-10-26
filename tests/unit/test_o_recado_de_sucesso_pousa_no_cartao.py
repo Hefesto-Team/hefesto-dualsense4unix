@@ -448,7 +448,6 @@ def medido() -> dict:
                 "o 🎙 pousar (o carimbo `data-hef-voo` sair) depois do clique 3, o que recusa")
 
     def o_gesto_lento() -> None:
-        # "durante": o `daemon.reload` do produto leva 9,5 s, e é essa espera que
         def lento(ctx, o, p):
             leu = threading.Event()
 

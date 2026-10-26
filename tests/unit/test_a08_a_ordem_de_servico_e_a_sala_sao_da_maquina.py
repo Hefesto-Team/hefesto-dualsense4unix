@@ -278,7 +278,7 @@ def test_os_tres_botoes_da_sala_tem_o_seu_proprio_quando() -> None:
 class _ItemFalso:
     def __init__(self, chave: str, ordem: object | None) -> None:
         self.chave = chave
-        self.estado = ("atencao" if ordem is not None  # (noqa-acento) chave de estado
+        self.estado = ("atencao" if ordem is not None  # (noqa-acento)
                        else "certo")
         self.rotulo = chave
         self.porque = chave

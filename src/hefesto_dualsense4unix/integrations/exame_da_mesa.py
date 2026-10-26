@@ -47,12 +47,12 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:  # pragma: no cover - só para o verificador de tipos
+if TYPE_CHECKING:  # pragma: no cover
     from hefesto_dualsense4unix.integrations.ordens_da_mesa import Leitura, Ordem
     from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 
 ESTADO_CERTO = "certo"
-ESTADO_ATENCAO = "atencao"  # (noqa-acento): chave de máquina, ASCII por contrato
+ESTADO_ATENCAO = "atencao"  # (noqa-acento)
 ESTADO_PROBLEMA = "problema"
 ESTADO_NAO_SEI = "nao_sei"
 
@@ -514,7 +514,7 @@ def exame(
         argumentos_do_radio["conf"] = conf_do_radio
     argumentos_do_suporte: dict[str, Path] = {}
     if modulos is not None:
-        argumentos_do_suporte["modulos"] = modulos  # (noqa-acento): nome de argumento
+        argumentos_do_suporte["modulos"] = modulos  # (noqa-acento)
     if diretorio_do_modulo is not None:
         argumentos_do_suporte["diretorio_do_modulo"] = diretorio_do_modulo
 
@@ -556,9 +556,6 @@ def censo(itens: Sequence[Item] | None = None) -> dict[str, object]:
     }
 
 
-# porta é a única coisa que separa "o cabo daquele controle" de "aquele hub".
-#    laço de reinícios, e não um DualSense. :attr:`Aparelho.papel` diz qual dos
-
 TAG_DO_STORM = "[USB-71]"
 
 RAIZ_USB = Path("/sys/bus/usb/devices")
@@ -571,7 +568,6 @@ VIDS_DE_CONTROLE = frozenset({"054c", "057e", "045e", "2dc8", "0f0d", "20d6", "2
 
 TRIPLA_DO_ADAPTADOR = ("e0", "01", "01")
 
-#: A classe de interface HID. O DualSense no cabo tem as de áudio (`01`) e a
 CLASSE_HID = "03"
 
 DESFECHO_ENTRADA_LARGADA = "entrada_largada"
@@ -805,7 +801,7 @@ class PortaDoStorm:
             "porta": self.porta,
             "entrada": self.aparelho.onde,
             "quantos": self.quantos,
-            "ultimo": self.ultimo,  # (noqa-acento): chave de máquina, ASCII por contrato
+            "ultimo": self.ultimo,  # (noqa-acento)
             "desfecho": self.desfecho,
             "parada": self.parada,
             "aparelho": self.aparelho.como_dicionario(),
@@ -1164,5 +1160,5 @@ def main(argv: list[str] | None = None) -> int:
     return _imprimir_relatorio(exame(leitura_das_ordens=leitura_do_sistema))
 
 
-if __name__ == "__main__":  # pragma: no cover - entrypoint do doctor
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(main())

@@ -33,21 +33,13 @@ BATERIA = {"p1": 100, "p2": 64, "p3": 41, "p4": 87}
 
 NATIVO_E_OS_JOGADORES = "quem conta os jogadores passa a ser o jogo."
 
-#:   Hefesto se Ligado Abre as seções de Modo, Steam Input, Xbox, Sony DualSense,
-#:   - **Ligado** = `mode_transition.MODE_GAMEPAD`. Lê por `mode_of_state`,
-#: tinha um quarto botão "Desligado" que era um estado INVENTADO: `mode_of_state`
 INTERRUPTOR = [
     ("ligado", "gamepad", "Ligado",
      "Luz, vibração, gatilho e número do jogador pelo Hefesto"),
-    # a fecha é a bancada (dois DualSense num jogo de co-op local, no cabo
     ("desligado", "native", "Desligado",
      "Nenhum jogo recebe controle do Hefesto"),
 ]
 HEFESTO_LIGADO = True
-#: `painel.CHIPS_DA_ESCADA` o declara com `ponte=None`, e `degrau_vivo` acende
-#: mais a **Navegação**, posta aqui dentro
-#:     outros três também são o Hefesto. Vira **Sony DualSense**;
-#: esquecimento — ela é a gramática desta casa. Como o jogo desenha
 MODOS = [
     {"chave": "dualsense", "rot": "Sony DualSense", "modo": "",
      "sem_dono": False,
@@ -62,13 +54,6 @@ MODOS = [
 ]
 MODO_ACESO = "dualsense"
 
-#: OS BOTÕES DO DESLIGADO — NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-MANDA-01,
-#: 08/10/2026, a regra de produto: desligar o Hefesto é Nativo na
-#: origem, e o Steam Input sai de Ligado. O Steam Input deixou de ser um modo do
-#: Hefesto ligado e virou a outra escolha do Desligado, no mesmo estilo dos
-#: botões de cima. A escolha é POR JOGO (`UseSteamControllerConfig`), e o Nativo
-#: é o padrão: o guarda do vdf tira a Steam de todo jogo fora da lista a cada
-#: saída dela (`scripts/disable_steam_input.sh --apply-quiet`).
 DO_DESLIGADO = [
     {"chave": CHIP_DO_NATIVO, "rot": ROTULO_DO_NATIVO, "modo": "",
      "sem_dono": False,
@@ -82,11 +67,9 @@ DO_DESLIGADO = [
 ]
 NATIVO_ACESO = CHIP_DO_NATIVO
 
-#: com **Sony DualSense** marcado, e a faixa anunciava **Modo nativo**, que é a
 PENDENTE = next(m["rot"] for m in MODOS if m["chave"] == MODO_ACESO)
 
 
-# é como as outras nove abas já fazem. A alternativa era editar o `topo.html`, e
 CSS = """
   /* ---------- A ABA JOGAR ---------- */
 
@@ -830,7 +813,6 @@ CSS = """
 """
 
 
-# OS CARTÕES — um por controle da MESA
 _BATERIA_GLIFO = glifo("bateria", tam=13).replace("<title>Bateria</title>", "")
 
 
@@ -875,8 +857,6 @@ _VAZIO = "—"
 
 def _chips_de_mascara(escolhida):
     """Os três chips de máscara de UM cartão — os mesmos nos QUATRO lugares."""
-    # (`DualSense`, `Nintendo Pro`, `Xbox 360`) desde que a Nintendo Pro foi
-    # chega à página. **Ele fica assim mesmo**, e não sai: no dia em que um
     montaveis = mascaras_montaveis()
     razao = ("Esta máscara não está disponível. As que estão: "
              + ", ".join(sorted(montaveis)) + ".")
@@ -893,11 +873,6 @@ def _chips_de_mascara(escolhida):
     return "\n".join(fora)
 
 
-# O QUE O CARTÃO DIZ NO NATIVO (DESLIGAR-O-HEFESTO-01, opção a, 08/10/2026): com
-# o Hefesto desligado o jogo vê o controle como ele é, e a máscara escolhida não
-# vale. Os dois chips de baixo e a escolha somem (a tela não oferece máscara) e
-# entra uma peça FIXA com cadeado, sem gesto. Nasce escondida; quem mostra é
-# `body.nativo` (topo.html).
 VISTO_NO_NATIVO = (
     '<span class="visto-fixo" data-dica="Desligado: o jogo vê o controle como ele é">'
     '<svg class="cad" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
@@ -1009,7 +984,7 @@ def cartao(c, bateria=None):
 
     classe = ("cartao off" if not conectado
               else "cartao alvo" if c["alvo"] else "cartao")
-    marca_de_conexao = "sim" if conectado else "nao"  # (noqa-acento) valores
+    marca_de_conexao = "sim" if conectado else "nao"  # (noqa-acento)
     dica_do_lugar = "" if conectado else (
         '\n                   data-dica="Nenhum controle aqui"')
     jogador = f'Player {c["jogador"]}' if conectado else _VAZIO
@@ -1018,7 +993,6 @@ def cartao(c, bateria=None):
     carga = (f'{bateria if bateria is not None else BATERIA.get(c["pref"], "— ")}%'
              if conectado else _VAZIO)
 
-    # (`mesa_viva.mesa_do_estado`, lendo `gamepad_emulation.por_aparelho`).
     return f'''              <div class="{classe}"
                    data-controle="{c.get("uniq") or c["pref"]}" data-conectado="{marca_de_conexao}"{dica_do_lugar}>
                 <i class="pele" data-campo="plastico" data-hef-alvo="cor" style="color:{monta.cor_da_zona(c["cor"])}"></i>
@@ -1051,8 +1025,6 @@ def frase_das_mascaras():
 
 CARTOES = "\n".join(cartao(c) for c in MESA)
 
-# `gamepad_emulation.enabled false` — logo `mode_of_state` = **desktop** —, esta
-#: O ÍCONE DO «RECONECTAR»: a seta que gira, no mesmo traço do desenho do todo.
 _GIRA = (
     '<svg class="gira" viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
     '<path d="M10 6a4 4 0 1 1-1.2-2.85" fill="none" stroke="currentColor" '
@@ -1111,11 +1083,6 @@ def _chip_do_modo(m, aceso=MODO_ACESO):
               + (" on" if m["chave"] == aceso else "")
               + (" sem-dono" if m["sem_dono"] else ""))
     modo = f' data-modo="{m["modo"]}"' if m["modo"] else ""
-    # gerador. `data-campo="modo-aceso"` com alvo `classe` e `data-hef-quando`
-    # movia. Medido em 03/09 contra o daemon do usuário: `mode_of_state` = `desktop`,
-    # logo o chip vivo é **Navegação**, e a tela mostrava **Sony DualSense**.
-    # O Nativo não é degrau da escada (é o Hefesto FORA do meio), e o
-    # `data-degrau` é o endereço que só os chips de `painel.CHIPS_DA_ESCADA` têm.
     degrau = "" if m["chave"] == CHIP_DO_NATIVO else f' data-degrau="{m["chave"]}"'
     return (f'            <span class="{classe}"{degrau}'
             f' data-gesto="{m.get("gesto") or "modo-" + m["chave"]}"{modo}\n'
@@ -1772,9 +1739,6 @@ def _conferir(doc):
         if not cond:
             falhas.append(oquê)
 
-    # A FILEIRA, POR LADO — A-ABA-JOGAR-DO-TODO-01, 15/10/2026: «Point and click» é do Ligado e
-    # «Navegação» é do Desligado, e cada rótulo só mora no lado dele (os dois são o modo
-    # `desktop`; a tela os põe cada um no seu lado).
     for lado, esperados in (("so-ligado", ["Sony DualSense", "Xbox", "Point and click"]),
                             ("so-desligado", ["Nativo", "Steam Input", "Navegação"])):
         secao = corpo.split(f'class="hef-modo {lado}"', 1)[-1].split("</div>\n        </div>", 1)[0]
@@ -1791,8 +1755,6 @@ def _conferir(doc):
            "a fileira não tem os seis chips (três em cada lado)")
     exigir('class="' 'ajuda"' not in corpo and ">?<" not in corpo,
            "voltou um «?» à aba — as ajudas são dica no mouse (`data-dica`)")
-    # O RODAPÉ É DO ESQUELETO (`_ferramentas/fim.html`, de todas as abas) e fica de fora: os
-    # quatro botões dele passam a `data-dica` quando a base comum o migrar.
     _sem_rodape = re.sub(r"<svg.*?</svg>", "", corpo.split('<div class="rodape"', 1)[0], flags=re.S)
     exigir(' title="' not in _sem_rodape,
            "voltou um `title` à aba — a dica é `data-dica`, a mesma camada das outras nove")
@@ -1813,7 +1775,6 @@ def _conferir(doc):
 
     exigir(corpo.count('data-conectado="sim"') == 2, "não são 2 controles conectados")
     exigir(corpo.count('data-conectado="nao"') == 2, "não são 2 lugares vazios")
-    # saiu do cabeçalho em 22/09/2026 (decisão de produto: ganhar espaço lateral),
     exigir(f"{len(monta.CONECTADOS)} controles:" not in doc,
            "o «N controles:» voltou ao cabeçalho — ela o tirou em 22/09")
     from hefesto_dualsense4unix.interface import mesa_viva as _mesa_viva_
@@ -1827,7 +1788,6 @@ def _conferir(doc):
         exigir('class="chip on"' not in pedaco.split("</div>\n              </div>")[0],
                "um lugar vazio tem máscara marcada")
 
-    #    traz `--plastico`, e ela é do `monta.py` — das dez abas. Acusá-la aqui
     fileira = corpo.split('data-lista="cartoes"', 1)[-1].split('class="faixa-final', 1)[0]
     exigir(len(fileira) > 2000, "a régua não achou a fileira de cartões")
     exigir("--plastico" not in fileira, "o cartão voltou a cravar a cor do plástico")
@@ -1835,7 +1795,6 @@ def _conferir(doc):
            == len(MESA),
            "não há uma pele endereçada por LUGAR da mesa — os quatro, e não só "
            "os conectados: quem chega depois entra num cartão que já existe")
-    #    `<span data-campo="identidade">`, e o pacote o reescreve todo tique —
     for dica in re.findall(r'data-dica="([^"]*)"', fileira):
         for c in monta.CONECTADOS:
             exigir(c["nome"] not in dica,
@@ -1860,7 +1819,6 @@ def _conferir(doc):
     for frase in FRASES_BANIDAS:
         exigir(frase not in corpo, f"um texto voltou a alarmar sem medição: {frase!r}")
 
-    #    Ligado + Sony DualSense e a faixa anunciando modo nativo.
     exigir(f"<b data-campo=\"pendente-alvo\">{PENDENTE}</b>" in corpo,
            "a faixa de pendência não diz o modo marcado")
     exigir(PENDENTE != "Modo nativo",
@@ -1962,9 +1920,6 @@ def _conferir(doc):
     exigir('data-hef-alvo="marcado" checked' not in corpo
            and 'checked data-campo="cadeado"' not in corpo,
            "o cadeado nasce marcado — o desenho afirmaria uma escolha dela")
-    #    mudança porque a de antes media o mundo de ontem.  (noqa-acento: medir)
-    # verdadeiro enquanto ele
-    #    `so-desligado` trocam com o Hefesto, e a troca automática de PERFIL
     if 'class="cadeado"' in corpo:
         familia = _ancestrais(corpo, "cadeado")
         exigir(familia is not None,

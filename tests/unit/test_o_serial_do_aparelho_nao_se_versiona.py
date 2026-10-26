@@ -64,7 +64,7 @@ def _carregar():
 
 PORTA = _carregar()
 
-FORJADO_COM_A_FORMA = "ZZ9Y02Q0000000000"  # serial-de-mentira: o forjado da casa
+FORJADO_COM_A_FORMA = "ZZ9Y02Q0000000000"  # serial-de-mentira
 
 
 def _acusa(texto: str, tmp_path: pathlib.Path) -> list[str]:
@@ -131,7 +131,6 @@ def test_o_que_nao_e_serial_nao_reprova(token: str, porque: str,
 def test_o_hexadecimal_sem_a_fileira_de_zeros_continua_acusado(
         tmp_path: pathlib.Path) -> None:
     """A isenção do endereço de memória exige as DUAS condições."""
-    # serial-de-mentira: o valor abaixo é o caso-limite deste próprio teste
     assert _acusa('X = "ABCDEF1234567890"\n', tmp_path), (  # serial-de-mentira
         "um token só-hexadecimal SEM fileira de zeros foi isentado — a "
         "isenção do endereço de memória virou porta larga")

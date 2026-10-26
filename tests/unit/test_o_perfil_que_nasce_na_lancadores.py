@@ -68,8 +68,6 @@ def test_o_editor_diz_o_jogo_do_emulador_a_cada_tique() -> None:
     perfil = _o_que_nasceu("Metal Slug Anthology")
     assert perfil.nome_do_jogo == "Metal Slug Anthology"
     assert simple_extra(perfil.match) == ""
-    # o campo que ela digita é pintado UMA vez por perfil (`_uma_vez_so`); os tiques seguintes
-    # não o repintam, e nenhum pode apagá-lo
     assert a10_perfis.pacote(_ctx())["editor.jogo"] == "Metal Slug Anthology"
     for tique in range(2):
         assert a10_perfis.pacote(_ctx()).get("editor.jogo", "Metal Slug Anthology") == (

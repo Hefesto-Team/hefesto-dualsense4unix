@@ -82,6 +82,4 @@ def test_o_desplugar_e_o_connect_concorrentes_nunca_deixam_religado() -> None:
             fc.desplugar()
             for f in futuros:
                 f.result(timeout=5.0)
-        # as sondas que rodaram ANTES do desplugar ligaram e o desplugar derrubou; as que
-        # rodaram DEPOIS voltaram sem ligar: o fim é sempre desligado
         assert fc.is_connected() is False

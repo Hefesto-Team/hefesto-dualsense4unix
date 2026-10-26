@@ -8,8 +8,6 @@ from monta import (monta, trava_do_nativo, glifo, rotulo, cabe_o_todos, CSS_GLIF
                    player_slot_color,
                    ressalva as monta_ressalva, tom_da_casa)
 
-# A DIREÇÃO É OBRIGATÓRIA, e não gosto: o `portao_a_casa_sabe_e_o_produto_nao_faz`
-# `texto_motion` monta a LINHA DO GIROSCÓPIO (o desenho pergunta com uma cena,
 from hefesto_dualsense4unix.app.actions.home_actions import palavra_do_transporte
 from hefesto_dualsense4unix.interface.folha_da_casa import com_o_piso
 from hefesto_dualsense4unix.interface.cartao_do_controle import texto_motion
@@ -25,12 +23,9 @@ from pacotes.a02_controles import (DICA_DO_GIRO, DICA_DO_GIRO_COM_A_MIRA,
 from pacotes.a02_controles import GESTO_DO_MODO, INCLINACAO_PARADA, regiao_do_toque
 from pacotes.a02_controles import (ACENDE_O_JOGO, CAMPOS_DO_JOGO,
                                    DICA_DO_PONTO_DO_JOGO)
-# divergem calada — esta casa já pagou isso com o `--plastico`. O `pos` era
 from pacotes.a02_controles import (CAMPOS_DA_POSICAO, MAX_DEDOS,
                                    REGRA_DAS_POSICOES,
                                    pos_do_analogico as pos)
-
-#   1. o `daemon.state_full` da bancada, agora: `inputs` = buttons, gyro,
 
 CSS = CSS_GLIFO + CSS_LUZINHAS + """
   /* ---------- Controles ----------
@@ -1352,9 +1347,6 @@ GL16 = [("cross","✕"),("circle","○"),("square","□"),("triangle","△"),
         ("l1","L1"),("r1","R1"),("l2","L2"),("r2","R2"),
         ("share","<"),("options","≡"),("ps","PS"),("touchpad","···")]
 
-# Nenhum dado desliga `plast`: a peça que nasceu com ela fica pintada para sempre
-# — e o `--plastico` do Cosmic Red é rosa, a mesma cor do `.gb.on`.
-
 
 _POR_EXTENSO = {1: "um", 2: "dois", 3: "três", 4: "quatro", 5: "cinco", 6: "seis"}
 if len(MESA) not in _POR_EXTENSO:
@@ -1376,8 +1368,6 @@ def num(v):
 def grade(apertados):
     def um(n):
         c = " on" if n in apertados else ""
-        # O ENDEREÇO DO GLIFO — 03/09/2026, e ele é o maior buraco desta aba.
-        # ESTA função escreveu — e no card do P1 do desenho são três
         return (f'            <span class="gb{c}" data-glifo="{n}"'
                 f' data-campo="glifo-{n}" data-hef-alvo="classe">'
                 f'{glifo(n, ativo=False, tam=38)}</span>')
@@ -1416,12 +1406,9 @@ def luz_do_jogador(c):
     return tom_da_casa("#%02X%02X%02X" % player_slot_color(c["jogador"]))
 
 
-#: O interruptor do touchpad de cada controle (todo, 15/10/2026): o rótulo diz o estado de agora.
 ROTULO_TOUCHPAD_LIGADO = "Ligado"
 ROTULO_TOUCHPAD_DESLIGADO = "Desligado"
 DICA_DO_TOUCHPAD = "Toque vai ao jogo; sem suporte, move o cursor"
-#: O canto do alto (todo, 15/10/2026): o Calibrar mudou de nome, e o Modo automático governa as três
-#: áreas que o jogo decide (toque, microfone e alto-falante). Ligado, elas esmaecem e não aceitam clique.
 ROTULO_DO_CALIBRAR = "Calibrar giroscópio"
 DICA_DO_CALIBRAR = "Todos parados numa superfície plana"
 GOVERNA_DO_MODO_AUTOMATICO = (".card-corpo .moldura.touchp, .card-corpo [data-bloco=microfone], "
@@ -1435,11 +1422,8 @@ _CENA_GLOBAL_DO_GIRO = {
                                 "motion_streaming": True, "motion_hz": 250.0}]},
 }
 GIRO_NO_JOGO_DO_DESENHO = texto_motion(_CENA_DO_GIRO, _CENA_GLOBAL_DO_GIRO) or ""
-#: Sem frase, o `aria-label` não nasce: o `[aria-label]` da folha acenderia um vão vazio.
 _ARIA_DO_GIRO = f' aria-label="{GIRO_NO_JOGO_DO_DESENHO}"' if GIRO_NO_JOGO_DO_DESENHO else ""
 
-# AS CINCO LÂMPADAS SÃO DERIVADAS, E ISSO PRECISA ESTAR DITO. O `state_full`
-# publica o `player_slot` e NÃO publica `player_leds`: o padrão desenhado sai de
 DICA_LED_JOGADOR = ("As cinco lâmpadas do controle, no padrão do jogador: 1 no "
                     "meio para o P1, as das pontas para o P2, e assim por diante.")
 
@@ -1452,11 +1436,6 @@ ABRE_O_CARD = "Clique para abrir este controle — os outros fecham."
 LUGAR_VAZIO_AQUI = "Lugar vazio: nenhum controle conectado aqui."
 
 
-#: O ANALÓGICO VIRTUAL — 06/10/2026, leva 1.7 (desenho-navegacao, item 12). A
-#: «Mira Virtual» virou «Analógico virtual» e o chip «Inclinação» de cada
-#: analógico virou «Usar como analógico virtual»: o chip do cabeçalho liga, o
-#: chip embaixo do analógico escolhe qual dos dois os movimentos movem. Com o
-#: chip do cabeçalho apagado, os dois de baixo ficam cinza (`.ctl:has(...)`).
 ROTULO_DA_MIRA_VIRTUAL = "Analógico virtual"
 ROTULO_DA_INCLINACAO = "Mira virtual"
 DICA_DA_INCLINACAO = {
@@ -1550,13 +1529,7 @@ def identidade(c, *, bat, carga=None, meio=""):
          vazar **4,3px** e a régua reprovar. Com a curta sobram ~101px, que é o
          que aguenta um plástico de nome mais comprido — e o CSV tem 28.
     """
-    # O NOME DO PLÁSTICO E O TRANSPORTE GANHARAM ENDEREÇO — 03/09/2026, e a lei é
     via_na_tela = palavra_do_transporte(c.get("transporte"))
-    #
-    # QUEM JOGA — D-2909-O-CARTAO-DIZ-QUEM-JOGA (29/09/2026): o título do cartão
-    # ABERTO diz o NOME de quem joga com o controle (o da aba Conexões), e o «Pn» só quando
-    # ele não tem nome. A tira FECHADA segue com o «Pn •» (não tem lâmpada). O número tem
-    # endereço nos dois (`monta.numero_do_jogador`), e o nome é pintado pelo pacote da aba.
     n_com_endereco = numero_do_jogador(c["jogador"])
     com_endereco = {
         **c,
@@ -1671,8 +1644,6 @@ def resumo_fechado(mic_mudo):
             f'{selo_do_microfone(mic_mudo)}</span>')
 
 
-# DualSense no cabo (`scripts/ensaios/o_selo_do_mic_muda_de_cor.py`): o gerador
-
 SELO_ATIVO = mesa_viva.selo_do_mic(False, True)
 SELO_MUDO = mesa_viva.selo_do_mic(True, True)
 SELO_SOM_ATIVO = mesa_viva.selo_do_alto_falante(False, True)
@@ -1683,8 +1654,7 @@ MIC_RETORNO = mesa_viva.BOTAO_MIC_RETORNO
 
 ATRIBUTO_DO_SOM = "data-som"
 
-# mesma (*o número ao lado não vale*), e o que os separa é a palavra do `title`.
-FRASE_DELA = "icone mas no radio ele pode tá carregando tambem"  # (noqa-acento) citação literal
+FRASE_DELA = "icone mas no radio ele pode tá carregando tambem"  # (noqa-acento)
 
 _RAIO = ('<svg class="g-raio" viewBox="0 0 24 24" width="11" height="11"'
          ' aria-hidden="true" focusable="false">'
@@ -1751,43 +1721,25 @@ def selo_do_microfone(mic_mudo, *, estilo=""):
             f'>{SELO_MUDO if mic_mudo else SELO_ATIVO}</span></span>')
 
 
-# decisão de produto (a versão antiga não segue disponível — `pyproject.toml`).
-# digitar nada.
 DICA_MIC_TESTAR = "Ouvir a própria voz como o jogo ouve"
 
-#: As três rotas do alto-falante (todo, 15/10/2026). O «junto» saiu da tela; o gesto segue aceito
-#: no back-end.
 ROTULO_SO_OS_EFEITOS = "Canais sonoros nativos - Padrão"
-#: A marca do botão «Sons do jogo» quando a fonte do controle é `mix` (o Terror, 23/10/2026): o som do
-#: PC também toca no controle e continua no PC. É uma sigla pintada pela folha no botão aceso
-#: (`.fonte-mix.junto button.on::after`), sem nó de texto e sem dica própria: a dica do botão a explica.
 MARCA_SIGLA_JUNTO = "+ PC"
 DICA_SO_OS_EFEITOS = (
     "Efeitos do jogo no controle; o PC segue tocando. "
     f"Com «{MARCA_SIGLA_JUNTO}», o som do PC também toca no controle")
 
-#: (`audio_saida.mandar_o_som_do_pc`, byte `rota=3`) e calava a televisão.
 ROTULO_NADA_NO_CONTROLE = "Canais sonoros apenas no PC"
 
 DICA_NADA_NO_CONTROLE = "Todo o som sai no PC; o controle fica mudo"
 
-#:     <!-- noqa-acento: citação literal -->
-#: sistema mandada para este controle (`audio_saida.mandar_o_som_do_pc`). O
 ROTULO_TUDO_NO_CONTROLE = "Canais sonoros apenas no DualSense"
 
 DICA_TUDO_NO_CONTROLE = "Todo o som sai no controle; o PC fica mudo"
 
-# O BOTÃO «PADRÃO» DO VOLUME — 04/10/2026, desenho aprovado em
-# `docs/process/estudos/2026-10-04-o-jogo-decide/` (item 2). Ligado, o volume do alto-falante é o
-# do jogo, a barra fica verde e travada e a palavra ocupa o lugar do número; desligado, ela ajusta.
-# O microfone fica de fora: o jogo não manda nada ao microfone do controle.
 ROTULO_PADRAO = "Padrão"
 DICA_ALTO_PADRAO = "Volume do jogo, sem ajuste"
 DICA_ALTO_MUDO = "Cala o alto-falante sem perder o volume"
-
-
-# letra: o botão com `data-hef-alvo="classe"` acendendo `apagado`, o
-# `data-hef-atributo="aria-disabled"` derivado da mesma classe, e o `?` com a
 
 
 def linha_de_volume(campo, razao=""):
@@ -1816,7 +1768,6 @@ def linha_de_volume(campo, razao=""):
             f' data-hef-atributo="data-porque"{porque}>')
 
 
-# A primeira
 def sufixo_do_canal(c):
     """O CHIP do canal no rótulo da moldura, na cena aprovada."""
     na_mesa = bool(c.get("conectado", True))
@@ -1835,7 +1786,6 @@ def sufixo_do_canal(c):
 
 
 
-# E O DESLIZANTE DO ALTO-FALANTE DESTRAVA O ♪. O DualSense não devolve o volume,
 ROTULO_VOL_MIC = "Volume do microfone deste controle"
 DICA_VOL_MIC = "Quanto do microfone chega ao PC"
 ROTULO_VOL_ALTO = "Volume do alto-falante deste controle"
@@ -1843,7 +1793,6 @@ DICA_VOL_ALTO = "Volume do alto-falante deste controle"
 
 ROTULO_LINHA_VOLUME = "Volume"
 
-#: O vão vazio que a moldura do microfone pode ter embaixo, em px: a sobra é da onda (C1, 16/10/2026).
 VAO_DO_MIC_MAXIMO = 2
 
 DICA_MIC_VIRTUAL = ("O microfone deste controle passa pelo Hefesto: pelo rádio, "
@@ -1852,12 +1801,9 @@ DICA_MIC_VIRTUAL = ("O microfone deste controle passa pelo Hefesto: pelo rádio,
 DICA_MIC_NATIVO = ("O microfone deste controle entra sozinho, sem o Hefesto no "
                    "meio. É o que vale quando ninguém escolhe nada.")
 
-#   alto-rota        `a02_controles.rota_na_tela`, do `speaker.rota` que o
-
 
 def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
           touch2=None, tocando2=False,
-          # class="mudo" data-campo="alto-estado" hidden>` saiu do desenho, e quem
           giro, mic_v, mic_mudo, mic_vol, alto_v, rota_nada, junto=False,
           alto_mudo=False, alto_pode=True, mic_posse=False, tocando=True,
           accel=None, conectado=True,
@@ -1911,7 +1857,6 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
     rid = f'c-{c["pref"]}'
     marca = "" if conectado else ' data-conectado="nao"'
     classe = "ctl card" if conectado else "ctl card off"
-    # elas, `--plastico` cai no PISO da folha (`PISO_DO_PLASTICO`) e o pontinho
     casca = f' style="--plastico:{plastico}"' if conectado else ""
 
     def onde_esta(x, y, quebra=""):
@@ -1926,14 +1871,12 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                 f'<span class="pj{on}" data-campo="{ACENDE_O_JOGO[alvo]}" data-hef-alvo="classe" '
                 f'title="{DICA_DO_PONTO_DO_JOGO}"></span></span>')
     selo_do_mic = selo_do_microfone(mic_mudo, estilo=' style="margin-left:5px"')
-    # é o que a bancada responde HOJE, medido no `state_full` dos dois
     alto_som = SELO_MUDO if alto_mudo else SELO_ATIVO
     regiao = regiao_do_toque(touch) if tocando else ""
     tercas = "".join(
         f'<span class="todo-terca{" on" if regiao == lado else ""}" data-campo="touch-regiao"'
         f' data-hef-alvo="classe" data-hef-quando="{lado}"></span>'
         for lado in ("esquerda", "meio", "direita"))
-    # alcança (`data-hef-alvo="classe"`) e o que faz o desenho parar de
     ponto_on = " on" if tocando else ""
     ponto2_on = " on" if tocando2 else ""
     touch2 = touch2 or (round(100 - touch[0], 1), round(100 - touch[1], 1))
@@ -1944,7 +1887,6 @@ def bloco(c, *, bat, carga=None, glifos_on, l2, r2, touch, sticks,
                 class="v neg" data-campo="{chave}-neg" data-hef-alvo="largura" style="width:{meias[0]}%"></span><span
                 class="v pos" data-campo="{chave}-pos" data-hef-alvo="largura" style="width:{meias[1]}%"></span></span></div>''')
     giro_html = chr(10).join(gx("giro", e, v, cor) for e, v, cor in giro)
-    # linha, mesma barra. O que muda é a UNIDADE (g, não graus/s) e a
     accel_html = chr(10).join(gx("accel", e, v, cor) for e, v, cor in (accel or []))
     fx = f'''      <label class="faixa" for="{rid}" title="{ABRE_O_CARD if conectado else LUGAR_VAZIO_AQUI}">
 {identidade(c, bat=bat, carga=carga, meio=resumo_fechado(mic_mudo))}
@@ -2332,8 +2274,6 @@ def _so_o_travessao(html_do_card: str) -> str:
         apagar_o_aceso, _TAG_QUE_PINTA_ATRIBUTO.sub(apagar_atributo, saida))
 
 
-# divergiram: medido em 28/08, a Jogar dizia que o P2 era DualSense e o P3
-# As TRÊS aparecem na tela ao mesmo tempo — DualSense (P1 e P3), Xbox 360 (P2) e
 PARADO = [("X", "  +0.0", "left:50%;width:1%;background:var(--border-forte)"),
           ("Y", "  +0.0", "left:50%;width:1%;background:var(--border-forte)"),
           ("Z", "  +0.0", "left:50%;width:1%;background:var(--border-forte)")]
@@ -2342,8 +2282,6 @@ ESTADO = {
   "p1": dict(bat=100, carga="cheio",
     mic_vol=80, glifos_on={"cross", "dpad_up", "l2"},
     l2=200, r2=40, touch=(62, 44), sticks=(60, 200, 180, 90),
-    # a Inclinação no esquerdo: o jogo recebe a mão somada ao acelerômetro (o anel),
-    # e o ponto rosa segue a mão. O P1 é o único cartão aberto do desenho.
     no_jogo=(110, 200),
     giro=[("X", "+143.2", "left:50%;width:22%;background:var(--red)"),
           ("Y", "−412.0", "left:12%;width:38%;background:var(--green)"),
@@ -2397,9 +2335,6 @@ ESTADO = {
     alto_v=[80, 66, 74, 58, 84, 62, 70, 76, 54, 68, 60, 78, 64, 72], rota_nada=False),
 }
 
-# (31/08) → a classe `off` e o `data-conectado="nao"`,
-#     `.ctl.off` / `.ctl[data-conectado="nao"]` da folha, intactas.
-# quatro DualSense na mesa e a tela mostrar dois.
 _VAZIO = "—"
 
 BLOCOS = "\n".join(
@@ -2923,16 +2858,12 @@ def fita_clicavel(doc, mesa=None):
     return "\n".join(linhas)
 
 
-# O QUE ESTAVA NO CAMINHO, e é CSS e não opinião: `--plastico` morava no
 CAIXA_COM_COR = re.compile(
     r'(<div class="ctl card") style="--plastico:(#[0-9a-fA-F]{3,8})"( data-controle="([^"]+)")')
-# afrouxar — 03/09/2026. Ela era `class="chip plastico") style="--plastico:…`,
-# `[^>]*?` É PREGUIÇOSO DE PROPÓSITO: ele para no PRIMEIRO ` style="--plastico:`
 CHIP_COM_COR = re.compile(
     r'(<label for="(c-[^"]+)" class="chip plastico"[^>]*?)'
     r' style="--plastico:(#[0-9a-fA-F]{3,8})"')
 
-#: `.ctl{border:2px solid var(--plastico)}` usa uma `var()`, e uma `var()` sem
 PISO_DO_PLASTICO = ".ctl[data-controle],.fita .chip[for]{--plastico:var(--border-forte)}"
 
 
@@ -2978,9 +2909,6 @@ def cor_do_plastico_por_regra(doc):
     return doc.replace("</head>", folha + "</head>", 1)
 
 
-# A QUEIXA, 04/09/2026, com dois DualSense na mesa.
-
-
 _ABRE_O_CARTAO = re.compile(r'<div class="ctl card[^"]*"[^>]*data-controle="([^"]+)"')
 _UMA_DIV = re.compile(r"<div\b|</div>")
 
@@ -3021,7 +2949,6 @@ def _conferir(doc):
         if not cond:
             falhas.append(oque)
 
-    #     O DEFEITO QUE ELA PEGA, medido na bancada com os QUATRO DualSense
     lugares = campos_de_cada_lugar(corpo)
     exigir(sorted(lugares) == sorted(c["pref"] for c in MESA),
            f"os cartões da mesa são {sorted(lugares)} e a mesa é "
@@ -3048,8 +2975,6 @@ def _conferir(doc):
     exigir(">Dispositivos conectados</span>" in corpo, "o título novo sumiu")
     exigir(">Conectados</span>" not in corpo, "o título antigo voltou")
 
-    # O par «Virtual | Nativo» saiu em 02/10/2026, decisão de produto: um microfone
-    # por controle, sempre (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01).
     exigir('data-mic-modo="' not in corpo and 'data-gesto="mic-modo"' not in corpo,
            "o par «Virtual | Nativo» do microfone voltou — saiu em 02/10/2026")
 
@@ -3084,7 +3009,6 @@ def _conferir(doc):
            "o ícone de carregando ficou sem nome acessível — quem não "
            "reconhece o desenho fica sem o dado")
 
-    #     Ela era `corpo.count('data-hef-alvo="largura"') == len(CONECTADOS)`,
     for campo, alvos in (("bateria-barra", ("largura",)),
                          ("alto-barra", ("largura", "valor")),
                          ("mic-barra", ("largura", "valor")),
@@ -3179,7 +3103,6 @@ def _conferir(doc):
     exigir(len(alvos_do_mudo) == len(MESA),
            "o ♪ perdeu o endereço `alto-mudo` — ele volta a pintar pelo que o "
            "gerador escreveu, nunca pelo que o aparelho diz")
-    # exigia `data-hef-alvo="classe"`, e o estrago que impede é o MESMO por
     exigir(all('data-hef-alvo="atributo"' in t for t in alvos_do_mudo),
            "o `alto-mudo` perdeu o alvo `atributo`: a pintura escreveria a "
            "palavra ATIVO dentro do botão, no lugar do glifo ♪")
@@ -3218,7 +3141,6 @@ def _conferir(doc):
     for u in (">°/s<", "Acelerômetro <span"):
         exigir(u not in corpo, f"uma unidade voltou ao rótulo do sensor: {u!r}")
 
-    #    que o usuário mandou curar: com os quatro DualSense na mesa, dois lugares
     exigir(corpo.count('data-conectado="nao"') == VAZIOS,
            f"os lugares vazios não são {VAZIOS}")
     exigir(corpo.count(f'title="{LUGAR_VAZIO_AQUI}"') == VAZIOS,

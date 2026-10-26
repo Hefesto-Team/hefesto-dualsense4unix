@@ -83,10 +83,8 @@ ROTEIRO = RAIZ / "scripts"
 
 ROTEIRO_PADRAO = "roteiro-da-bancada-de-quatro.md"
 
-#: Só DualSense nesta volta (§8 da especificação). O Nintendo Pro e o 8BitDo são
 CONTROLE = "dualsense"
 
-#: `player_slot` que o daemon publica.
 POSTOS = ("P1", "P2", "P3", "P4")
 
 GRAU_FORTE = ("SAIU NO FIO", "O APARELHO OBEDECEU")
@@ -330,9 +328,8 @@ def _como_da_celula(r: dict[str, str], lado: str) -> list[tuple[str, str]]:
     return [(k, v.strip()) for k, v in pares if v and v.strip()]
 
 
-# (noqa-acento) as chaves abaixo são DOBRADAS (minúsculas, sem acento), que
-_CALADO_DIZ = ("ninguem toca", "nao pode", "fica fora", "fica ligado",  # (noqa-acento) chaves DOBRADAS, sem acento de propósito
-               "fica no", "continua", "nao e este", "e a testemunha",  # (noqa-acento) chave DOBRADA, sem acento de propósito
+_CALADO_DIZ = ("ninguem toca", "nao pode", "fica fora", "fica ligado",  # (noqa-acento)
+               "fica no", "continua", "nao e este", "e a testemunha",  # (noqa-acento)
                "de comparacao")
 _REAGE_DIZ = ("e este", "liga", "poe ", "muda", "troca", "aperta", "anota",
               "desliga", "religa", "recebe", "entra", "deve", "tem de",
@@ -606,7 +603,6 @@ def _mascarar(endereco: str) -> str:
     return pelo_dono(endereco)
 
 
-#: O DualSense por dentro do `hid_playstation`, no VID/PID que o driver casa.
 _VID_PID_DUALSENSE = ("0000054C", "00000CE6")
 _BUS = {"0003": "cabo", "0005": "rádio"}
 
@@ -744,7 +740,7 @@ def ler_a_cor_no_aparelho() -> dict[str, Any]:
         guardar_cor_dela(endereco, slug)
         fora["lidos"][endereco] = {
             "nome": cor.nome, "colorway": slug,
-            "codigo": cor.codigo}  # (noqa-acento) campo publicado pelo dono
+            "codigo": cor.codigo}  # (noqa-acento)
     return fora
 
 
@@ -854,7 +850,6 @@ def quem_esta_na_mesa() -> dict[str, Any]:
     except Exception as erro:
         return _pelo_kernel(f"daemon não respondeu ({erro})")
 
-    # A CARGA SÓ EXISTE NO KERNEL. O daemon publica `battery_pct` e não publica
     carga_do_kernel = {
         re.sub(r"[^0-9a-f]", "", v["uniq_cru"].lower()): v["estado_da_bateria"]
         for v in pelo_sysfs()}

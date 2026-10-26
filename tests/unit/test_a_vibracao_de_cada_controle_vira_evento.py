@@ -122,8 +122,6 @@ def _vibracao(mesa: _Mesa) -> _Escuta:
     return _Escuta(mesa.daemon.bus, EventTopic.JOGO_VIBRACAO)
 
 
-# 1. Cada controle, com o endereço e o número DELE.
-
 def test_o_evento_do_jogador_2_sai_com_o_uniq_dele(mesa: _Mesa) -> None:
     escuta = _vibracao(mesa)
 
@@ -162,8 +160,6 @@ def test_sem_endereco_cada_controle_diz_uma_vez_so(mesa: _Mesa) -> None:
     assert uniqs, "o pedido sem endereço não publicou nada"
 
 
-# 2. O par fixado vence, e o evento sai mesmo assim.
-
 def test_o_par_fixado_tambem_publica(mesa: _Mesa) -> None:
     fixar_par(mesa.config, UNIQS[0], 90, 90, None, so_este=True)
     escuta = _vibracao(mesa)
@@ -178,19 +174,17 @@ def test_o_par_fixado_tambem_publica(mesa: _Mesa) -> None:
     assert eventos[0]["efetivo"] == [0, 0], "o jogo não chegou aos motores: o efetivo é zero"
 
 
-# 3. A batida e o zero.
-
 def test_a_batida_repete_a_cada_250_ms(mesa: _Mesa, relogio: _Relogio) -> None:
     escuta = _vibracao(mesa)
     gp.apply_game_rumble(mesa.daemon, PEDIDO, PEDIDO, target_uniq=UNIQS[1])
     assert len(escuta.tudo()) == 1
 
-    for _ in range(14):  # 14 tiques de 16 ms: 224 ms, antes do período
+    for _ in range(14):
         relogio.avancar(0.016)
         vj.bater_a_vibracao(mesa.daemon)
     assert escuta.tudo() == [], "a batida saiu antes dos 250 ms"
 
-    relogio.avancar(0.030)  # 254 ms
+    relogio.avancar(0.030)
     vj.bater_a_vibracao(mesa.daemon)
     batida = escuta.tudo()
     assert len(batida) == 1
@@ -213,7 +207,7 @@ def test_a_batida_para_quando_o_valor_volta_a_zero(mesa: _Mesa, relogio: _Relogi
     eventos = escuta.tudo()
     assert [e["efetivo"] for e in eventos][-1] == [0, 0], "o zero não chegou a quem escuta"
 
-    for _ in range(40):  # mais de 600 ms de tiques
+    for _ in range(40):
         relogio.avancar(0.016)
         vj.bater_a_vibracao(mesa.daemon)
     assert escuta.tudo() == [], "a batida seguiu depois do zero"
@@ -227,14 +221,12 @@ def test_o_controle_parado_nao_publica_zero_atoa(mesa: _Mesa) -> None:
     assert escuta.tudo() == []
 
 
-# 4. O teto de 60 por segundo por controle.
-
 def test_o_teto_de_60_por_segundo_nao_perde_o_ultimo_valor(
     mesa: _Mesa, relogio: _Relogio
 ) -> None:
     escuta = _vibracao(mesa)
     gp.apply_game_rumble(mesa.daemon, 100, 100, target_uniq=UNIQS[1])
-    for valor in (150, 200, 0):  # três mudanças no mesmo instante
+    for valor in (150, 200, 0):
         relogio.avancar(0.002)
         gp.apply_game_rumble(mesa.daemon, valor, valor, target_uniq=UNIQS[1])
     assert len(escuta.tudo()) == 1, "mais de um evento dentro de 1/60 s no mesmo controle"
@@ -277,7 +269,7 @@ def test_o_zero_que_o_teto_atrasou_chega_no_fim_da_sessao(
     escuta = _vibracao(mesa)
     gp.apply_game_rumble(mesa.daemon, PEDIDO, PEDIDO, target_uniq=UNIQS[2])
     relogio.avancar(0.002)
-    gp.apply_game_rumble(mesa.daemon, 0, 0, target_uniq=UNIQS[2])  # o teto segura
+    gp.apply_game_rumble(mesa.daemon, 0, 0, target_uniq=UNIQS[2])
     dito = escuta.tudo()
     assert len(dito) == 1 and dito[0]["efetivo"] != [0, 0], "o teto não segurou o zero"
 
@@ -289,8 +281,6 @@ def test_o_zero_que_o_teto_atrasou_chega_no_fim_da_sessao(
     )
     assert eventos[-1]["uniq"] == UNIQS[2]
 
-
-# 5. O jogo que fecha, o perfil que muda.
 
 def test_o_jogo_que_fecha_vira_evento_e_cala_a_batida(
     mesa: _Mesa, relogio: _Relogio
@@ -373,7 +363,7 @@ def test_o_estilo_novo_no_perfil_ativo_vira_troca(mesa: _Mesa) -> None:
     arquivo = profiles_dir() / "noite.json"
     antes = arquivo.stat().st_mtime_ns
     save_profile(Profile(name="noite", match=MatchAny(), priority=5, estilo="terror"))
-    os.utime(arquivo, ns=(antes + 10**9, antes + 10**9))  # o relógio do disco andou
+    os.utime(arquivo, ns=(antes + 10**9, antes + 10**9))
     anunciador.ver()
     anunciador.ver()
 
@@ -390,7 +380,7 @@ def test_dois_controles_que_comecam_juntos_ficam_os_dois_na_tabela(mesa: _Mesa) 
     class _Daemon(SimpleNamespace):
         def __setattr__(self, nome: str, valor: Any) -> None:
             if nome == "_vibracao_do_jogo_vista":
-                time.sleep(0.02)  # alarga a janela entre olhar e gravar a tabela
+                time.sleep(0.02)
             super().__setattr__(nome, valor)
 
     daemon = _Daemon(bus=mesa.daemon.bus, controller=mesa.backend, config=mesa.config,
@@ -432,7 +422,7 @@ def test_a_conexao_tardia_recebe_o_perfil_de_agora(mesa: _Mesa) -> None:
     save_profile(Profile(name="noite", match=MatchAny(), priority=5, estilo="terror"))
     mesa.store.set_active_profile("noite")
     bus = mesa.daemon.bus
-    AnunciadorDoJogo(bus, mesa.store, SimpleNamespace()).ver()  # ninguém assinava ainda
+    AnunciadorDoJogo(bus, mesa.store, SimpleNamespace()).ver()
 
     tardia = _Escuta(bus, EventTopic.PERFIL_TROCOU)
 
@@ -482,8 +472,6 @@ def test_a_subida_liga_o_anunciador(
         "o leitor do autoswitch não deixou o anunciador olhar o serviço"
     )
 
-
-# 6. A porta: a permissão e a entrega.
 
 def test_as_permissoes_novas_existem_e_cada_uma_entrega_o_seu() -> None:
     assert permissao_valida("ler:jogo.vibracao") and permissao_valida("ler:perfil.jogo")

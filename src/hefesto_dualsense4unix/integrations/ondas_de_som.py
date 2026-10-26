@@ -127,11 +127,6 @@ BARRAS = 14
 
 PISO_PCT = 16
 
-#: A ESCALA É EM DECIBÉIS (19/10/2026). Era linear, com a barra cheia em 0,5, e a voz não subia a
-#: barra: o PipeWire aplica o volume da captura antes do `parec` ler, e o volume é cúbico. Medido
-#: num sink de teste com um tom de pico 0,500: a 100% o medidor lê 0,500; a 32% (o volume da
-#: captura do microfone naquele dia), 0,0164, que a escala linear punha no piso. Em decibéis, -60
-#: dBFS é o piso e 0 dBFS o topo: os mesmos 0,0164 (-35,7 dB) dão meia barra.
 DB_DO_PISO = -60.0
 
 _TAM_AMOSTRA = 4
@@ -249,7 +244,7 @@ class OndasDeSom:
         for chave, _mascara in self._seletor.select(timeout=timeout_s):
             self._comer(str(chave.data), self._agora())
 
-    def _rodar(self) -> None:  # pragma: no cover - exercitado só com thread
+    def _rodar(self) -> None:  # pragma: no cover
         while not self._parar.is_set():
             try:
                 self.bombear()

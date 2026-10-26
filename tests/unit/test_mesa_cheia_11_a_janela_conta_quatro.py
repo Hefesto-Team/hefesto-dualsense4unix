@@ -77,7 +77,6 @@ class TestBannerDoCoopNomeiaOJogador:
             assert "vibração" in texto
 
 
-#: "DualSense" aparece nas duas — contar ocorrências daria 4 onde há 2 placas.
 CARDS_MESA_CHEIA = """\
  0 [NVidia         ]: HDA-Intel - HDA NVidia
                       HDA NVidia at 0xfc080000 irq 83
@@ -243,11 +242,6 @@ class TestOsCincoVereditosDoAudio:
                     placas_texto, controles_no_cabo=denominador
                 )
                 assert not errado.search(msg), f"plural com 1: {msg!r}"
-
-
-# denominador: arrancando `controles_no_cabo=no_cabo` dos dois, a suíte INTEIRA
-# `_state_full_ou_none` — nunca afirma que o denominador atravessa.
-# testes abaixo percorrem o fio inteiro — `state_full` dublado -> denominador
 
 
 def _dublar_cards(monkeypatch: pytest.MonkeyPatch, texto: str) -> None:

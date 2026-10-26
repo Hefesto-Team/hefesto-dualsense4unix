@@ -78,7 +78,6 @@ from __future__ import annotations
 
 from typing import Any
 
-#: Report descriptor USB do DualSense — 289 bytes, SEM o item `85 31` (o input
 CANONICAL_DESCRIPTOR_USB: bytes = bytes.fromhex(
     "05010905a1018501093009310932093509330934150026ff007508950681020600ff0920"
     "9501810205010939150025073500463b016514750495018142650005091901290f150025"
@@ -91,7 +90,6 @@ CANONICAL_DESCRIPTOR_USB: bytes = bytes.fromhex(
     "c0"
 )
 
-#: DualSense real (o `hid_playstation` usa os campos como divisores/escala em
 CANONICAL_FEATURE_0X05: bytes = bytes.fromhex(
     "051700fdfffcffa32285dd87226fdd882275dd1c021c020420f9df711f76dfe71fdedf0d"
     "0000000000"
@@ -102,7 +100,6 @@ CANONICAL_FEATURE_0X20: bytes = bytes.fromhex(
     "0000000000000000300600003c0001000a0002000600000000000000"
 )
 
-#: (`UhidDualSense.mac`, `02:fe:…`, LE), que é o único campo que o probe USB lê.
 TEMPLATE_FEATURE_0X09: bytes = bytes.fromhex(
     "0900000000000008250000000000000000000000"
 )

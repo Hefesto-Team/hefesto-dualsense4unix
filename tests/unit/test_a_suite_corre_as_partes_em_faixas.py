@@ -142,7 +142,6 @@ def test_a_parte_leve_nasce_em_lar_proprio_e_a_que_toca_no_de_quem_chama(tmp_pat
     homes_leves = {h for n, (_, _, h) in _marcas(tmp_path).items() if "leve" in n}
     homes_toca = {h for n, (_, _, h) in _marcas(tmp_path).items() if "toca" in n}
     assert homes_leves and all("suite-lar-" in h for h in homes_leves), homes_leves
-    # cinco partes, duas para as que tocam: cada leve corre numa parte, e cada parte no seu lar
     assert len(homes_leves) == 3, f"dois filhos leves dividiram o lar: {homes_leves}"
     assert homes_toca == {str(tmp_path / "casa-de-quem-chama")}, homes_toca
     assert not [
@@ -188,8 +187,7 @@ def test_o_auto_liga_a_chave_na_suite_inteira_da_arvore_que_tem_o_semaforo(tmp_p
 
 
 def test_sem_pedir_a_chave_fica_desligada_ate_a_prova(tmp_path: Path) -> None:
-    # D-2110-A-SUITE-EM-FAIXAS-SO-LIGA-COM-O-AUTO
-    # D-0810-AS-PARTES-EM-PARALELO-ESPERAM-A-PROVA: liga sozinha só depois de uma corrida inteira.
+    """Prova da D-2110-A-SUITE-EM-FAIXAS-SO-LIGA-COM-O-AUTO."""
     raiz = tmp_path / "arvore"
     _arvore(raiz, leves=4, tocam=0, com_semaforo=True)
     feito = _rodar(raiz, tmp_path, PARTES="4")

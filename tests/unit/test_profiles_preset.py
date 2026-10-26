@@ -32,7 +32,7 @@ def preset_em_alguma_casa(nome: str) -> bool:
 
 
 EXPECTED_PRESETS = {
-    "acao": {  # slug do arquivo acao.json (noqa-acento)
+    "acao": {  # (noqa-acento)
         "name": "Ação",
         "priority": 65,
         "triggers_left_mode": "Rigid",
@@ -424,8 +424,8 @@ class TestArquivosNaoExistem:
 
     def test_todos_novos_existem(self) -> None:
         nomes = [
-            "navegacao", "fps", "aventura",  # slugs de arquivo (noqa-acento)
-            "acao", "corrida", "esportes",  # slugs de arquivo (noqa-acento)
+            "navegacao", "fps", "aventura",
+            "acao", "corrida", "esportes",  # (noqa-acento)
         ]
         for nome in nomes:
             assert preset_em_alguma_casa(nome), (
@@ -437,7 +437,6 @@ class TestOsPodadosNaoVoltam:
     """A poda de 26/08/2026, presa em régua."""
 
     @pytest.mark.parametrize(
-        # Slugs literais dos arquivos apagados (noqa-acento).
         "nome", ["bow", "coop_local", "sackboy_nativo"]
     )
     def test_o_preset_podado_nao_esta_na_fabrica(self, nome: str) -> None:
@@ -458,12 +457,12 @@ class TestOsPodadosNaoVoltam:
 
         estilos = sorted(p.name for p in ESTILOS_DIR.glob("*.json"))
         assert estilos == [
-            "acao.json",  # (noqa-acento) nome literal de arquivo
+            "acao.json",
             "aventura.json",
             "corrida.json",
             "esportes.json",
             "fallback.json",
             "fps.json",
-            "navegacao.json",  # (noqa-acento) nome literal de arquivo
+            "navegacao.json",
             "point_and_click.json",
         ], f"os Estilos de Jogo mudaram de tamanho sem passar por aqui: {estilos}"

@@ -74,8 +74,6 @@ def test_a_casa_e_o_tom_mais_perto() -> None:
     assert not erradas, erradas
 
 
-# O ciano saiu da fileira (D-1910-A-PRIMEIRA-CASA-DA-COR-E-O-BRANCO): a casa do Starlight Blue
-# é o azul do Player 1, o tom mais perto que ficou.
 @pytest.mark.parametrize(("plastico", "casa"), [
     ("Cosmic Red", "#FF0080"),
     ("Starlight Blue", "#0000FF"),

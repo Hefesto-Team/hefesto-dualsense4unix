@@ -50,9 +50,6 @@ def sp() -> ModuleType:
     return _plastico()
 
 
-# 1. O JOB DO CI
-
-
 def _job() -> dict[str, Any]:
     dados = yaml.safe_load(CI.read_text(encoding="utf-8"))
     assert JOB in dados["jobs"], f"o ci.yml perdeu o job `{JOB}`"
@@ -107,9 +104,6 @@ def test_o_shellcheck_enxerga_a_pasta_da_sonda() -> None:
     diretas = [li for li in texto_ci.splitlines() if "shellcheck -S error" in li]
     assert all("scripts/banco_de_prova/*.sh" in li for li in diretas), (
         "ci.yml: a varredura escrita à mão não inclui scripts/banco_de_prova/*.sh")
-
-
-# 2. AS PEÇAS PURAS DO PLÁSTICO
 
 
 def test_o_crc_dos_features_de_radio_e_o_que_o_produto_calcula(sp: ModuleType) -> None:
@@ -277,8 +271,6 @@ def test_abre_como_quem_roda_diz_o_errno_da_recusa(sp: ModuleType, tmp_path: Pat
         arquivo.chmod(0)
         assert sp.abre_como_quem_roda(str(arquivo)).startswith("não: PermissionError")
 
-
-# 3. O ROTEIRO NUMA ÁRVORE DE MENTIRA
 
 _SUDO = """#!/usr/bin/env bash
 [ "${FAKE_SEM_SUDO:-}" = "1" ] && exit 1

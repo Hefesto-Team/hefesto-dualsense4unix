@@ -40,12 +40,7 @@ WRAPPER = RAIZ / "assets" / "hefesto-launch.sh"
 
 _P1, _P2, _P3, _P4 = (f"aa:bb:cc:00:00:0{n}" for n in (1, 2, 3, 4))
 
-#: O que o GE lê de um DualSense de verdade no proplist, e o que o nosso nó veste.
 _SONY = {"device.bus": "usb", "device.vendor.id": "054c", "device.product.id": "0ce6"}
-
-
-# O /sys de mentira: a porta USB virtual de cada pad (o gadget, sem placa de som)
-# e os DualSense no cabo
 
 
 def _aparelho(
@@ -89,7 +84,6 @@ def _caminho_da_placa(nome_do_aparelho: str) -> str:
     return f"/devices/pci0000:00/usb3/{nome_do_aparelho}/{nome_do_aparelho}:1.0/sound/card2"
 
 
-#: O nome da placa de um DualSense no cabo, como o ALSA a publica; dois no cabo
 _PLACA = (
     "alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_Controller"
     "-00{n}.HiFi__Speaker__sink"
@@ -853,7 +847,7 @@ class _GadgetParado:
 
     def desmontar(self) -> None:
         self.desmontado = True
-        porta.tirar_porta(self.uniq)  # o ``_GadgetDoPad.desmontar`` esquece a porta
+        porta.tirar_porta(self.uniq)
 
 
 @dataclass
@@ -1026,7 +1020,7 @@ def test_com_o_gadget_estacionado_o_endpoint_do_radio_fica_e_a_ponte_renasce(
     gadget = _GadgetParado("hefesto-pad-3", _P4)
     partida.vaga.estacionar(_P4, gadget)
     mesa.assentos.pop(_P4)
-    mesa.servidor.jogo_em.discard(no_do_p4)  # o jogo ocioso: o nó não toca
+    mesa.servidor.jogo_em.discard(no_do_p4)
     mesa.volta()
     assert ponte.desceu, "a ponte até o físico que saiu ficou de pé"
     assert mesa.servidor.quedas == [], "o endpoint do aparelho que caiu desceu debaixo do jogo"

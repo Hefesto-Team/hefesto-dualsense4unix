@@ -37,14 +37,12 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 try:
     from hefesto_dualsense4unix.interface.janela import TAMANHO_OCULTA
-except (ImportError, ValueError) as _erro:  # pragma: no cover — ambiente sem WebKit
+except (ImportError, ValueError) as _erro:  # pragma: no cover
     pytest.skip(f"a biblioteca da janela não importou ({_erro})",
                 allow_module_level=True)
 
 PAGINA = "05-vibracao.html"
 UNIQS = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02")
-# o #c62828, mais fundo que o --red, para a letra branca se ler
-# (O-PARAR-DA-VIBRACAO-SE-LE-NO-VERMELHO-01)
 VERMELHO = "rgb(198, 40, 40)"
 BRANCO = "rgb(255, 255, 255)"
 
@@ -159,8 +157,6 @@ def medido() -> dict[str, Any]:
             v.evaluate_javascript(hefesto_vivo.BOOTSTRAP, -1, None, None, None, instalou)
 
     view.connect("load-changed", carregou)
-    # o PUBLICADO: é a página que o produto renderiza, e o «Testar agora» e o «Parar» estão nela
-    # antes e depois do `--publicar 05` que tira os degraus da Força (20/10/2026)
     view.load_uri(onde.pagina(PAGINA, publicado=True).as_uri())
     guarda = GLib.timeout_add(20000, Gtk.main_quit)
     try:

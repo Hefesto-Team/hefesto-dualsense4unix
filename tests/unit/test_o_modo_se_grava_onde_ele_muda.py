@@ -463,10 +463,6 @@ def test_desligar_o_pad_e_sair_do_nativo_nao_gravam(bancada: _Bancada) -> None:
     assert _modo_no_disco(JOGO) is None
 
 
-#: O perfil que NASCE leva a máscara que o prontuário confirmou para o jogo dele
-#: (D-2010-O-PERFIL-NASCE-COM-O-JOGO-E-A-MASCARA-QUE-O-PRONTUARIO-CONFIRMOU): é o perfil novo
-#: que se escreve, não o modo de um perfil que já existe trocando depois do aparelho. A isenção
-#: é por função, e a função isenta tem de existir (ela não fica valendo para o vazio).
 NASCER_COM_A_MASCARA = ("interface/pacotes/a10_perfis.py", "_o_modo_que_o_jogo_pede")
 
 

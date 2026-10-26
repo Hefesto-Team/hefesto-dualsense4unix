@@ -36,7 +36,6 @@ from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 from hefesto_dualsense4unix.daemon.subsystems import hotkey
 from hefesto_dualsense4unix.integrations import virtual_pad as vp
 from hefesto_dualsense4unix.integrations.uinput_gamepad import normalize_flavor
-# a importação fria do loader (o `_devolver_as_tabelas_do_perfil`) não é custo do tique
 from hefesto_dualsense4unix.profiles import loader as _loader  # noqa: F401
 from hefesto_dualsense4unix.testing import FakeController
 
@@ -45,9 +44,7 @@ _WHITE = "aabbcc000002"
 _CALIB = bytes([0x05]) + bytes([0xAB]) * 40
 _BROKER_S = 2.0
 _TIQUE_S = 1.0 / 60.0
-#: o caminho que sobe o P1 volta antes disto; com o `start` no laço, ele leva os 2 s do broker
 _NA_HORA_S = _BROKER_S / 4
-#: o maior buraco na entrada do White enquanto o P1 nasce: dois tiques e a folga da máquina
 _BURACO_S = 2 * _TIQUE_S + 0.05
 
 
@@ -116,7 +113,6 @@ def mesa(tmp_path: Any, monkeypatch: pytest.MonkeyPatch) -> Iterator[SimpleNames
         monkeypatch.setattr(gp, nome, lambda *a, **k: None)
     monkeypatch.setattr(gp, "read_primary_calibration", lambda _d: None)
     monkeypatch.setattr(gp, "controller_allows_uhid", lambda _d: True)
-    # o jogo em foco se lê das janelas e dos atalhos da máquina: fora da mesa de mentira
     monkeypatch.setattr(gp, "_ha_jogo_em_foco", lambda _d: False)
     monkeypatch.setattr(gp, "make_primary_rumble_sink", lambda _d: None)
     monkeypatch.setattr(gp, "make_primary_replica_sinks", lambda _d: {})
@@ -204,9 +200,6 @@ def _o_gesto_volta_na_hora_e_o_p1_nasce_pelo_fio(
     assert buraco <= _BURACO_S, f"o White parou {buraco * 1000:.0f} ms enquanto o P1 nascia"
     assert m.daemon.config.gamepad_emulation_enabled
     return devolvido
-
-
-# --- os cinco caminhos ---------------------------------------------------------------------
 
 
 def test_o_segundo_controle_que_chega_liga_a_emulacao_pelo_fio(

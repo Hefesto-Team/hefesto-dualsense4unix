@@ -51,7 +51,6 @@ def test_uninstall_nao_cita_regra_que_nao_existe_mais() -> None:
     historicas = {
         "73-ps5-controller-hotplug.rules",
         "74-ps5-controller-hotplug-bt.rules",
-        # A regra do nó do DualSense se chamava assim até 25/09/2026, quando
         "70-ps5-controller.rules",
     }
 

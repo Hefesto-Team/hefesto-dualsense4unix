@@ -60,7 +60,7 @@ def test_o_negrito_e_o_da_entrada_e_o_artigo_fica_fora_como_no_motor() -> None:
 
 
 def test_a_pergunta_do_hub_diz_cada_entrada_pelo_dono() -> None:
-    # D-2110-O-LIGADO-NA-ENTRADA-SE-DIZ-PELO-DONO
+    """Prova da D-2110-O-LIGADO-NA-ENTRADA-SE-DIZ-PELO-DONO."""
     html = _o_mapa({}, {"15": "Meio"}, aberta=True)
     opcoes = re.findall(r'<option value="(\d+)">([^<]*)</option>', html)
     assert opcoes == [("14", "Entrada 14"), ("15", "Meio")]

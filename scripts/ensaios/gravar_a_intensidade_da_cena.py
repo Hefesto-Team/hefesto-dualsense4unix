@@ -53,9 +53,7 @@ CALMO = "calmo"
 TENSO = "tenso"
 COMBATE = "combate"
 TRECHOS = (CALMO, TENSO, COMBATE)
-#: a letra que a pessoa digita e o trecho que ela marca; ``-`` fecha o trecho
 TECLAS = {"c": CALMO, "t": TENSO, "x": COMBATE, "-": None}
-#: os sinais que a análise mede em cada trecho, além da intensidade
 SINAIS = ("intensidade", "energia", "rumble_por_s", "dedo_por_s")
 
 
@@ -174,9 +172,6 @@ def relatorio(gravacoes: Sequence[Gravacao]) -> str:
             linhas.append(f"  {rotulo:<8} " + "  ".join(
                 f"{dele[s]:>12.3f}" if s in dele else f"{'-':>12}" for s in SINAIS))
     return "\n".join(linhas)
-
-
-# --- o gravador (bancada) --------------------------------------------------
 
 
 class _Marcador:

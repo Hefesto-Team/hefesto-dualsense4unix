@@ -43,45 +43,29 @@ logger = get_logger(__name__)
 
 ESPECIE = "Receptor 2.4G"
 
-#: ``classe + subclasse + protocolo`` de uma interface HID de arranque.
 TECLADO_DE_ARRANQUE = "030101"
 MOUSE_DE_ARRANQUE = "030102"
-#: full-speed (USB 1.1), o que estes receptores falam; um aparelho mais rápido não é um.
 VELOCIDADE_MAXIMA_MBPS = 12.0
 _NOME_DE_RECEPTOR = re.compile(r"2[.,]4\s*g|wireless|receiver", re.IGNORECASE)
 
-#: Uma tecla que repete (autorepeat) por mais disto é «presa», solte ela depois ou não.
 PRESA_APOS_S = 1.0
-#: A janela de contagem: a última hora.
 JANELA_S = 3600
-#: Um buraco entre duas posições do mouse: no mínimo isto (o mouse de 1000 Hz entrega a cada 1 ms)…
 BURACO_MINIMO_S = 0.008
-#: …e, para o mouse que entrega mais devagar, quatro vezes o intervalo normal dele.
 BURACO_EM_INTERVALOS = 4.0
-#: acima disto não é buraco, é a mão parada: HID só manda report quando algo muda.
 BURACO_MAXIMO_S = 0.1
-#: quantas posições seguidas fazem um «movimento contínuo».
 CORRIDA_MINIMA = 16
-#: um mouse que entrega mais devagar que isto (50 Hz) não tem movimento contínuo para medir.
 INTERVALO_MAXIMO_DA_CORRIDA_S = 0.02
-#: mesma posição do mesmo report: o evdev os carimba com o mesmo instante.
 MESMO_REPORT_S = 0.0005
-#: quanto o ``parar`` espera a thread do monitor voltar.
 ESPERA_DO_FIO_S = 2.0
-#: teto de memória do que se conta (um enlace morrendo faz milhares por hora).
 TETO_DA_CONTAGEM = 5000
 
-# ``struct input_event`` (``linux/input.h``): ``tv_sec``, ``tv_usec``, ``type``, ``code``,
-# ``value``.
 _EVENTO = struct.Struct("@llHHi")
 EV_KEY = 0x01
 EV_REL = 0x02
 REL_X = 0x00
 REL_Y = 0x01
-#: abaixo disto o código é tecla de teclado; dali em diante são botões (de mouse, de controle).
 FIM_DAS_TECLAS = 0x100
 
-#: a identidade de um aparelho na casa: ``usb:vid:pid`` (a mesma das quedas do Wi-Fi).
 CHAVE = "usb:{vid}:{pid}"
 
 
@@ -105,9 +89,6 @@ def e_receptor(
     if not 0 < velocidade_mbps <= VELOCIDADE_MAXIMA_MBPS:
         return False
     return any(_NOME_DE_RECEPTOR.search(t or "") for t in textos)
-
-
-# ------------------------------------------------------------------------------------- a saúde
 
 
 @dataclass(frozen=True)
@@ -160,10 +141,6 @@ class ContadorDaSaude:
                 aperto.contada = True
                 self._presas.append(t)
         elif valor == 0:
-            # O «solta» NÃO desfaz a conta: o «digita sozinho» num teclado HID termina sempre
-            # num solta (o rádio volta e entrega o key up que perdeu), então descontá-lo faria a
-            # métrica tender a zero justamente no sintoma. A tecla presa mede-se pela REPETIÇÃO
-            # que passou de PRESA_APOS_S; o solta só encerra o acompanhamento dela.
             self._apertadas.pop(token, None)
 
     def movimento(self, t: float) -> None:
@@ -187,8 +164,6 @@ class ContadorDaSaude:
         self._intervalos.append(dt)
 
     def saude(self, agora: float, *, lendo: bool = True) -> Saude:
-        # o prazo se compara na forma de quem o marca (``marca + prazo``): ``agora - marca`` em
-        # ponto flutuante sai menor que o prazo para alguns ``marca`` e o vencido não vence
         for fila in (self._presas, self._buracos):
             while fila and fila[0] + JANELA_S < agora:
                 fila.popleft()
@@ -263,7 +238,7 @@ class MonitorDosReceptores:
     def _reabrir(self) -> None:
         try:
             alvo = {c: tuple(caminhos) for c, caminhos in self._varrer().items()}
-        except Exception:  # pragma: no cover - a varredura nunca derruba o monitor
+        except Exception:  # pragma: no cover
             logger.debug("receptor_varredura_falhou", exc_info=True)
             return
         queremos = {(c, p) for c, ps in alvo.items() for p in ps}
@@ -277,7 +252,6 @@ class MonitorDosReceptores:
             try:
                 fd = self._abrir(caminho)
             except OSError as erro:
-                # sem o grupo `input` o receptor fica publicado com `lendo` falso
                 logger.debug("receptor_nao_abriu", erro=type(erro).__name__)
                 continue
             self._abertos[fd] = (chave, caminho)
@@ -296,7 +270,7 @@ class MonitorDosReceptores:
             dados = self._ler(fd)
         except OSError as erro:
             if not isinstance(erro, BlockingIOError):
-                self._soltar(fd)  # o nó sumiu (o receptor saiu da porta)
+                self._soltar(fd)
             return
         if not dados:
             self._soltar(fd)
@@ -330,7 +304,7 @@ class MonitorDosReceptores:
         while not self._parar.is_set():
             try:
                 self.passo()
-            except Exception:  # pragma: no cover - defensivo: o monitor nunca derruba o daemon
+            except Exception:  # pragma: no cover
                 logger.debug("receptor_passo_falhou", exc_info=True)
                 self._parar.wait(1.0)
 
@@ -342,11 +316,7 @@ class MonitorDosReceptores:
             self._soltar(fd)
 
 
-# --------------------------------------------------------------- a palavra do selo, para a tela
-
-#: a partir de quantas teclas presas na hora o selo fica «sofrendo» (abaixo, «apertada»).
 PRESAS_QUE_SOFREM = 3
-#: a partir de quantos buracos na hora o mouse «engasga».
 BURACOS_QUE_SOFREM = 20
 
 
@@ -373,39 +343,20 @@ def selo_da_saude(saude: Mapping[str, Any] | None, tipo: str) -> tuple[str, str,
     return (nivel, f"{n} {'tecla presa' if n == 1 else 'teclas presas'}", quando)
 
 
-# ------------------------------------------------------------------- achar a faixa dele
-
-
-#: os passos do gesto guiado, na ordem.
 PASSO_TIRE = "tire"
 PASSO_MEDINDO_SEM = "medindo-sem"
 PASSO_PONHA = "ponha"
 PASSO_MEDINDO_COM = "medindo-com"
 PASSO_ACHOU = "achou"
 PASSO_NADA = "nada"
-#: quanto o adaptador leva para reaprender os canais depois de o receptor sair ou voltar: o
-#: daemon relê o AFH a cada 10 s, e o rádio reclassifica em alguns segundos.
 ESPERA_DA_MEDIDA_S = 25.0
-#: a banda mais estreita que vale: uma sobra de um canal só é o AFH mexendo sozinho.
 CANAIS_MINIMOS_DA_BANDA = 3
-#: quanto o gesto espera a pessoa tirar ou pôr o receptor antes de se desfazer sozinho.
 ESPERA_DO_GESTO_S = 300.0
 CANAIS_DA_REGUA = 79
 
-#: A-FAIXA-DO-TECLADO-SE-ACHA-01 (09/10/2026): o «não achei» juntava três medidas diferentes, e a
-#: procura passa a dizer qual delas viu. Cada número abaixo é provisório até a bancada, e o
-#: ensaio ``scripts/ensaios/a_faixa_do_receptor.py`` troca cada um sem editar código.
-#: Canais novos espalhados, sem sequência de :data:`CANAIS_MINIMOS_DA_BANDA`, a partir dos quais
-#: o receptor SALTA de canal (uma faixa espalhada é resposta). Abaixo disso é o AFH mexendo sozinho.
 CANAIS_QUE_PROVAM_O_SALTO = 6
-#: até quando a medida «com ele» continua lendo o mapa se nada mudou ainda (o AFH lento, e o
-#: receptor que só fala quando a pessoa usa o teclado e o mouse). Medido em 19/10/2026 no
-#: 25a7:fa07: com uma leitura só, aos 25 s, o mapa ficou igual (18 canais antes e depois).
 ESPERA_ATE_O_MAPA_MUDAR_S = 120.0
-#: até quando a medida «sem ele» relê o mapa, ficando com o MENOR (o que todas as leituras
-#: evitaram): o AFH demora a soltar os canais que o receptor ocupava antes de sair da porta.
 ESPERA_ATE_O_MAPA_SOLTAR_S = 60.0
-#: a causa do «não achei», na ordem em que se pergunta.
 CAUSA_SEM_MAPA = "sem-mapa"
 CAUSA_SALTA = "salta"
 CAUSA_SEM_MUDANCA = "sem-mudanca"
@@ -509,13 +460,9 @@ class Descoberta:
     sem: dict[str, tuple[int, ...] | None] = field(default_factory=dict)
     com: dict[str, tuple[int, ...] | None] = field(default_factory=dict)
     banda: tuple[int, int] | None = None
-    #: a banda achada já foi para o disco (o tique guarda uma vez só)
     guardada: bool = False
-    #: no «não achei», a causa medida (:data:`CAUSA_SEM_MAPA`, :data:`CAUSA_SALTA` ou
-    #: :data:`CAUSA_SEM_MUDANCA`); e os canais novos, os que a faixa espalhada pinta
     causa: str = ""
     canais: tuple[int, ...] = ()
-    #: quando começou a medida «com ele» (a espera até o mapa mudar conta daqui)
     _com_desde: float = 0.0
 
     @property
@@ -541,7 +488,6 @@ class Descoberta:
         if not self.ativa:
             return
         if self.passo in (PASSO_TIRE, PASSO_PONHA):
-            # tirar espera o receptor SUMIR; pôr espera ele VOLTAR (``None`` não conclui nada)
             esperado = self.passo == PASSO_PONHA
             if presente is not None and presente == esperado:
                 self.passo = PASSO_MEDINDO_COM if esperado else PASSO_MEDINDO_SEM
@@ -553,7 +499,6 @@ class Descoberta:
             elif agora >= self.desde + ESPERA_DO_GESTO_S:
                 self.cancelar()
             return
-        # o receptor mexeu no meio da medida: ela não vale mais, e o passo anterior se refaz
         if self.passo == PASSO_MEDINDO_SEM and presente is True:
             self.passo, self.desde = PASSO_TIRE, agora
             return
@@ -564,8 +509,6 @@ class Descoberta:
             return
         lido = {a: (None if v is None else tuple(sorted(v))) for a, v in evitados().items()}
         if self.passo == PASSO_MEDINDO_SEM:
-            # o «sem» fica com o que TODAS as leituras evitaram: o canal que o AFH ainda segura do
-            # receptor de antes se solta numa delas e não entra como «já evitado sem ele».
             for adaptador, canais in lido.items():
                 antes = self.sem.get(adaptador, canais)
                 self.sem[adaptador] = (None if antes is None or canais is None else tuple(sorted(
@@ -573,7 +516,6 @@ class Descoberta:
             if agora >= self.desde + ESPERA_ATE_O_MAPA_SOLTAR_S:
                 self.passo, self.desde = PASSO_PONHA, agora
             return
-        # o «com» soma as leituras da espera: quem salta deixa canais diferentes em cada uma.
         for adaptador, canais in lido.items():
             antes = self.com.get(adaptador)
             self.com[adaptador] = (canais if antes is None else tuple(sorted(
@@ -581,12 +523,11 @@ class Descoberta:
         resposta = classificar(self.sem, self.com)
         if (resposta.causa == CAUSA_SEM_MUDANCA
                 and agora < self._com_desde + ESPERA_ATE_O_MAPA_MUDAR_S):
-            return  # o mapa ainda não mudou: a próxima leitura decide
+            return
         self.banda, self.causa, self.canais = resposta.banda, resposta.causa, resposta.canais
         self.passo, self.desde = (PASSO_ACHOU if self.banda else PASSO_NADA), agora
         logger.info("faixa_do_receptor_medida", chave=self.chave, banda=self.banda,
                     causa=self.causa or "achou", canais_novos=len(self.canais),
-                    # quantos canais cada adaptador evita, pela ordem: o endereço não vai ao diário
                     sem=[None if v is None else len(v) for v in self.sem.values()],
                     com=[None if v is None else len(v) for v in self.com.values()])
 
@@ -594,7 +535,6 @@ class Descoberta:
         self.chave, self.passo, self.banda = "", "", None
 
 
-#: o texto de cada passo (o que a tela diz); só o começo tem botão.
 FRASE_DO_PASSO = {
     PASSO_TIRE: "Tire o receptor da porta",
     PASSO_MEDINDO_SEM: "Medindo sem ele…",
@@ -603,7 +543,6 @@ FRASE_DO_PASSO = {
     PASSO_NADA: "Não achei a faixa dele",
 }
 BOTAO_DE_COMECAR = "Descobrir"
-#: o que o «não achei» diz, pela causa medida (sem causa, o genérico do passo).
 FRASE_DA_CAUSA = {
     CAUSA_SEM_MAPA: "Precisa de um aparelho no Bluetooth para medir",
     CAUSA_SALTA: "Salta de canal: passa pela faixa toda",

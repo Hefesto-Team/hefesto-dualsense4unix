@@ -504,8 +504,6 @@ class TestAMatrizDeQuatro:
         bancada.mesa.levantar(UNIQS[segundo])
         for _ in range(_ticks(PRAZO - DEPOIS) + 1):
             tique()
-        # D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026): com o jogo
-        # aberto os dois lugares esperam, e é o gesto do usuário que os solta.
         assert len(bancada.reg.guardados()) == 2
         bancada.reg.soltar_os_lugares_guardados(motivo="renumerar")
         tique()

@@ -26,8 +26,6 @@ from hefesto_dualsense4unix.integrations import reposicao_dos_lancadores as repo
 from hefesto_dualsense4unix.interface import desenho_dos_lancadores as desenho
 from hefesto_dualsense4unix.mods.manifesto import ler_manifesto
 
-# --- a lista de antes, copiada do código de 16/10/2026, com a fábrica de 19/10/2026 -------------
-
 _ONDE_DE_ANTES = {
     "Heroic": ("com.heroicgameslauncher.hgl", "heroic"),
 }
@@ -39,7 +37,6 @@ _REPOSICAO_DE_ANTES = (
     ("steam", "Steam", ("steamwebhelper",), None, None),
     ("heroic", "Heroic", ("heroic",), "com.heroicgameslauncher.hgl", "heroic"),
 )
-#: ``(chave, nome, atalhos, comandos, janelas)`` na ordem dos cartões; a Steam vai na frente.
 _EMBUTIDOS_DE_ANTES = (
     ("steam", "Steam", ("steam", "com.valvesoftware.Steam", "steam-native"),
      ("steam", "steam-native"), ()),
@@ -51,9 +48,6 @@ _DE_FABRICA = [chave for chave, *_ in _EMBUTIDOS_DE_ANTES]
 
 def _como_tupla(item: desenho.SemCenso) -> tuple[object, ...]:
     return (item.chave, item.nome, item.atalhos, item.comandos, item.janelas)
-
-
-# --- os manifestos dão a lista de antes --------------------------------------------------------
 
 
 def test_os_manifestos_dao_as_tabelas_do_censo_de_antes() -> None:
@@ -71,7 +65,7 @@ def test_os_manifestos_dao_a_reposicao_de_antes() -> None:
 
 
 def test_os_manifestos_dao_os_cartoes_de_antes_na_mesma_ordem() -> None:
-    # D-1710-OS-LANCADORES-DE-FABRICA-SAO-MODIFICACOES-OFICIAIS
+    """Prova da D-1710-OS-LANCADORES-DE-FABRICA-SAO-MODIFICACOES-OFICIAIS."""
     assert tuple(_como_tupla(x) for x in desenho.EMBUTIDOS) == _EMBUTIDOS_DE_ANTES
     assert tuple(_como_tupla(x) for x in desenho.SEM_FONTE) == _EMBUTIDOS_DE_ANTES[1:]
     assert _como_tupla(desenho.A_STEAM) == _EMBUTIDOS_DE_ANTES[0]
@@ -80,9 +74,6 @@ def test_os_manifestos_dao_os_cartoes_de_antes_na_mesma_ordem() -> None:
 def test_o_censo_acha_o_nativo_pelo_manifesto() -> None:
     assert censo._agulhas_do_nativo("Heroic") == (
         ("com.heroicgameslauncher.hgl", "heroic"), ("heroic",))
-
-
-# --- cada um é uma modificação de verdade ------------------------------------------------------
 
 
 @pytest.mark.parametrize("chave", _DE_FABRICA)
@@ -113,9 +104,6 @@ def test_a_modificacao_de_fora_nao_pede_o_que_e_so_de_fabrica() -> None:
             censo.lancador_da_modificacao("x", {**base, campo: valor}, Path("/nao/existe"))
 
 
-# --- o manifesto de fábrica torto levanta, com o caminho ---------------------------------------
-
-
 def _fabrica_com(tmp_path: Path, **bloco: object) -> Path:
     """Uma pasta de fábrica de mentira com um lançador só, o bloco ajustado."""
     pasta = tmp_path / "x"
@@ -123,9 +111,9 @@ def _fabrica_com(tmp_path: Path, **bloco: object) -> Path:
     corpo: dict[str, object] = {"rotulo": "X", "ordem": 0, "comandos": ["x"]}
     corpo.update(bloco)
     (pasta / "hefesto-mod.json").write_text(json.dumps({
-        "id": "x", "nome": "X", "versao": "1", "api": ">=1,<3",  # (noqa-acento): chave do manifesto
-        "licenca": "MIT", "tipos": ["lancador"],  # (noqa-acento): chave do manifesto
-        "permissoes": ["lancador"], "lancador": corpo}),  # (noqa-acento): chave do manifesto
+        "id": "x", "nome": "X", "versao": "1", "api": ">=1,<3",  # (noqa-acento)
+        "licenca": "MIT", "tipos": ["lancador"],
+        "permissoes": ["lancador"], "lancador": corpo}),  # (noqa-acento)
         encoding="utf-8")
     return tmp_path
 
@@ -163,8 +151,6 @@ def test_o_id_tem_de_ser_o_nome_da_pasta(tmp_path: Path) -> None:
 def test_raiz_que_nao_existe_nao_tem_lancador(tmp_path: Path) -> None:
     assert censo.lancadores_de_fabrica(tmp_path / "nao-existe") == ()
 
-
-# --- a mordida: sem o manifesto, o lançador some de tudo ---------------------------------------
 
 _PROVA = """
 import json

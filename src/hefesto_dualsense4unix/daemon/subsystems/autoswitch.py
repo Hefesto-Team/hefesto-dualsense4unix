@@ -18,8 +18,6 @@ if TYPE_CHECKING:
 logger = get_logger(__name__)
 
 
-#: As variáveis do ambiente gráfico que o serviço precisa ter para o Xlib e o Wayland falarem:
-#: o X recusa o cliente sem o arquivo de autorização (GNOME e KDE), e a cascata Wayland não vê nada.
 _VARIAVEIS_DO_DISPLAY: tuple[str, ...] = ("WAYLAND_DISPLAY", "DISPLAY", "XAUTHORITY")
 
 

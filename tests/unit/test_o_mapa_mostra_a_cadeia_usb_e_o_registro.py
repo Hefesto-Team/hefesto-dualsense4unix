@@ -112,11 +112,8 @@ def _hora(carimbo: float) -> str:
     return _dt.datetime.fromtimestamp(carimbo).astimezone().strftime("%H:%M")
 
 
-# ── a cadeia ────────────────────────────────────────────────────────────────
-
-
 def test_o_hub_de_dois_lados_e_um_chip_de_sete_entradas(sys_usb: SysDeMentira) -> None:
-    # D-1610-A-CADEIA-USB-MOSTRA-O-HUB-COMO-UM-CHIP
+    """Prova da D-1610-A-CADEIA-USB-MOSTRA-O-HUB-COMO-UM-CHIP."""
     dado = _arranjo(sys_usb)
     hubs = [a for a in dado["aparelhos"] if a["classe"] == "hub"]
     assert len(hubs) == 4, "o /sys de mentira enumera quatro nós para o hub de plástico"
@@ -177,9 +174,6 @@ def test_o_nome_da_base_so_entra_quando_o_descritor_calou(sys_usb: SysDeMentira)
     assert depois["nome"] == "Adaptador da Base"
 
 
-# ── o registro ──────────────────────────────────────────────────────────────
-
-
 def _uma_noite(sys_usb: SysDeMentira, tmp_path: Path, relogio: Relogio) -> Path:
     """Um boot com o adaptador Bluetooth fora e, depois, as cinco formas e a volta dele."""
     _ouvido(sys_usb, tmp_path, relogio, "boot-a").comecar(com_netlink=True)
@@ -191,26 +185,26 @@ def _uma_noite(sys_usb: SysDeMentira, tmp_path: Path, relogio: Relogio) -> Path:
     ouvido = _ouvido(sys_usb, tmp_path, relogio, "boot-b")
     ouvido.comecar(com_netlink=True)
     relogio.t = 61.0
-    ouvido.conferir_ausentes()  # Não apareceu
+    ouvido.conferir_ausentes()
     relogio.t = 70.0
     sys_usb.tirar(WIFI)
-    ouvido.reler()  # Saiu
+    ouvido.reler()
     relogio.t = 72.0
     sys_usb.por(WIFI, wifi)
     sys_usb.mudar(WIFI, devnum="31", speed="12")
-    ouvido.reler()  # Voltou, Ficou mais lento
+    ouvido.reler()
     relogio.t = 80.0
     sys_usb.mudar(WIFI, speed="480")
-    ouvido.reler()  # Ficou mais rápido
+    ouvido.reler()
     relogio.t = 90.0
     sys_usb.por(ADAPTADOR, adaptador)
-    ouvido.reler()  # Entrou
+    ouvido.reler()
     return tmp_path / "estado" / du.NOME_DO_DIARIO
 
 
 def test_o_registro_tem_as_seis_formas_de_evento_a_mais_nova_em_cima(
         sys_usb: SysDeMentira, tmp_path: Path, relogio: Relogio) -> None:
-    # D-1610-O-REGISTRO-DO-USB-E-A-QUARTA-ABA-DO-MAPA
+    """Prova da D-1610-O-REGISTRO-DO-USB-E-A-QUARTA-ABA-DO-MAPA."""
     arquivo = _uma_noite(sys_usb, tmp_path, relogio)
     dado = _arranjo(sys_usb, diario=du.ler(arquivo), agora=BASE_DO_RELOGIO + 100)
 
@@ -305,7 +299,7 @@ def test_o_hub_que_sai_e_uma_linha_so(
     ouvido = _ouvido(sys_usb, tmp_path, relogio, "boot-a")
     ouvido.comecar(com_netlink=True)
     relogio.t = 5.0
-    sys_usb.tirar("4-1")  # leva o lado SuperSpeed e a cascata dele: dois nós de hub
+    sys_usb.tirar("4-1")
     ouvido.reler()
 
     saidas = [e for e in du.ler(tmp_path / "estado" / du.NOME_DO_DIARIO)
@@ -315,9 +309,6 @@ def test_o_hub_que_sai_e_uma_linha_so(
         sys_usb, diario=du.ler(tmp_path / "estado" / du.NOME_DO_DIARIO),
         boot="boot-a")["registro"]["linhas"]
     assert [(linha["evento"], linha["tipo"]) for linha in linhas] == [("Saiu", "Hub")]
-
-
-# ── a página ────────────────────────────────────────────────────────────────
 
 
 def test_a_pagina_da_bancada_tem_a_cadeia_e_a_quarta_aba() -> None:

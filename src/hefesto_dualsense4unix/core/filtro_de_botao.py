@@ -28,15 +28,12 @@ from hefesto_dualsense4unix.core.remapeamento_de_botao import (
     REMAPEAVEIS,
 )
 
-#: Os botões que o filtro alcança: os mesmos que a troca de botões alcança.
 FILTRAVEIS: Final[tuple[str, ...]] = REMAPEAVEIS
 
-#: O que a tela propõe ao ligar (a validar pelo usuário); desligado, o número é zero.
 REPIQUE_DE_FABRICA_MS: Final = 120
 APERTO_MINIMO_DE_FABRICA_MS: Final = 50
 PS_TRAVADO_DE_FABRICA_MS: Final = 600
 
-#: As faixas que a tela oferece e o motor aplica; zero desliga.
 FAIXA_DO_REPIQUE_MS: Final = (20, 1000)
 FAIXA_DO_APERTO_MINIMO_MS: Final = (10, 500)
 FAIXA_DO_PS_TRAVADO_MS: Final = (100, 3000)
@@ -162,7 +159,6 @@ class FiltroDoControle:
     ) -> bool:
         """O botão passa neste tique? Atualiza o repique e o mínimo."""
         if toque:
-            # Subiu e desceu entre dois tiques: durou menos que o intervalo.
             ruim = (
                 filtro.aperto_minimo_s > 0 and intervalo < filtro.aperto_minimo_s) or (
                 filtro.repique_s > 0 and fio.soltou_em is not None
@@ -186,7 +182,6 @@ class FiltroDoControle:
         """Os botões que ficam apertados pela trava neste tique (além dos que a mão passa)."""
         if not filtro.travar and not self.travados:
             return set()
-        # Primeiro as travas, depois os parceiros: L1 e Cruz juntos são um par, não um acaso.
         for nome in [*subiram, *sorted(toques)]:
             if nome in filtro.travar:
                 self.travados.symmetric_difference_update({nome})
@@ -194,8 +189,6 @@ class FiltroDoControle:
             if nome not in filtro.travar and self.travados:
                 self.parceiros.add(nome)
         sai = set(self.travados)
-        # O parceiro soltou: a trava solta com ele, no mesmo tique. Um parceiro que foi só um
-        # toque ainda entrega ao jogo os dois juntos NESTE tique, e solta no seguinte.
         segurados = {p for p in self.parceiros if passam.get(p) and p not in toques}
         if self.parceiros and not segurados:
             self.travados.clear()
@@ -313,8 +306,6 @@ def esquecer(dono: object, uniq: object = None, espaco: str | None = None) -> No
     if not isinstance(estados, dict):
         return
     alvo = None if uniq is None else chave(uniq)
-    # O laço do controle cria estado enquanto o IPC esquece: a lista é uma fotografia e o
-    # `pop` tolera quem já saiu.
     for par in list(estados):
         if (alvo is None or par[1] == alvo) and espaco in (None, par[0]):
             estados.pop(par, None)

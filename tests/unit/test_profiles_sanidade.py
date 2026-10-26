@@ -368,7 +368,7 @@ def test_prioridade_fora_da_faixa_e_erro(prioridade: int) -> None:
     )
     assert len(achados) == 1
     assert achados[0].gravidade == "erro"
-    assert "historico" in achados[0].cura  # (noqa-acento): nome de subcomando
+    assert "historico" in achados[0].cura  # (noqa-acento)
 
 
 @pytest.mark.parametrize("prioridade", [0, 100, 191, 200])

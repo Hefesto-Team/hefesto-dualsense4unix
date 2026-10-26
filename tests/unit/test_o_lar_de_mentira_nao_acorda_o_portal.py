@@ -28,7 +28,6 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 PORTOES = RAIZ / "scripts" / "portoes.sh"
 SUITE = RAIZ / "scripts" / "rodar-a-suite.sh"
-#: fora do git (`docs/process/`): num clone limpo a régua dele pula, e as duas outras valem
 FOTOS = RAIZ / "docs" / "process" / "ferramentas-da-leva" / "fecho-fotos.sh"
 
 VARIAVEIS = ("XDG_CURRENT_DESKTOP=", "WAYLAND_DISPLAY=", "GIO_USE_VFS=local")
@@ -79,7 +78,6 @@ def test_o_lar_da_parte_leve_da_suite_nao_acorda_o_portal() -> None:
     _cobra_o_lar(filho.group(0) + _servicos_da_suite(texto), "rodar-a-suite.sh")
 
 
-#: o pytest de mentira: pede o portal ao D-Bus em que nasceu e anota a resposta e o `XDG_DATA_HOME`
 PY_QUE_PEDE_O_PORTAL = """#!/usr/bin/env bash
 [ "$1 $2" = "-m pytest" ] || exec python3 "$@"
 dbus-send --session --print-reply --reply-timeout=10000 --dest=org.freedesktop.DBus \\
@@ -98,7 +96,6 @@ echo "1 passed in 0.01s"
 def test_a_suite_sob_dbus_proprio_nao_acorda_o_portal(
     tmp_path: pathlib.Path, dados: str | None
 ) -> None:
-    # AS-PARTES-QUE-TOCAM-A-MAQUINA-NAO-ACORDAM-O-PORTAL-01
     """O `SUITE_SOB_DBUS_PROPRIO=1` de verdade (o do fecho): o pytest pede o portal e não o acorda.
 
     A pasta dos serviços vai só ao `dbus-daemon`; o pytest vê o `XDG_DATA_HOME` de quem chamou.
@@ -149,7 +146,6 @@ def test_a_suite_sob_dbus_proprio_nao_acorda_o_portal(
     assert not anotado.startswith("rc=0") and "uint32 1" not in resposta, (
         "o D-Bus da suíte acordou o portal da máquina", anotado, resposta
     )
-    # o `/bin/false` do lar respondeu: não foi o bus que faltou
     assert "ChildExited" in resposta, ("o pedido não chegou ao serviço do lar", resposta)
     assert anotado.endswith(f"dados={dados or 'sem'}"), (
         "a pasta dos serviços vazou para o pytest", anotado
@@ -167,8 +163,10 @@ def test_o_lar_das_fotos_nao_acorda_o_portal() -> None:
     reason="sem dbus-run-session ou dbus-send",
 )
 def test_o_bus_do_lar_recusa_acordar_o_portal(tmp_path: pathlib.Path) -> None:
-    # D-2210-O-LAR-DE-MENTIRA-NAO-TEM-PORTAL
-    """O `_lar_sem_portal` de verdade, num bus próprio: pedir o portal falha, e nada sobe."""
+    """O `_lar_sem_portal` de verdade, num bus próprio: pedir o portal falha, e nada sobe.
+
+    Prova da D-2210-O-LAR-DE-MENTIRA-NAO-TEM-PORTAL.
+    """
     texto = PORTOES.read_text(encoding="utf-8")
     funcao = re.search(r"^_lar_sem_portal\(\).*?^}", texto, re.S | re.M)
     assert funcao, "o `_lar_sem_portal` sumiu do portoes.sh"

@@ -21,7 +21,6 @@ PASTAS = ("src", "tests", "scripts")
 AVISO = re.compile(r"Invalid `# noqa` directive on (\S+?:\d+)")
 MARCA = "noqa" + "-acento"
 VELHA = "noqa" + ": acentuacao"
-#: a palavra que o validador aponta, montada para que esta linha não precise de escape
 SEM_ACENTO = "n" + "ao"
 
 
@@ -39,7 +38,6 @@ def _avisos(cwd: Path, *alvos: str) -> list[str]:
     feito = subprocess.run(
         [_ruff(), "check", "--no-cache", "--exit-zero", *alvos],
         cwd=cwd, capture_output=True, text=True, check=False)
-    # com `--exit-zero`, rc≠0 é um ruff que nem leu a árvore: a falta de aviso ali não é zero
     assert feito.returncode == 0, f"o ruff não rodou (rc={feito.returncode}):\n{feito.stderr}"
     return AVISO.findall(feito.stdout + feito.stderr)
 
@@ -54,7 +52,7 @@ def _validador() -> ModuleType:
 
 
 def test_a_casa_nao_tem_noqa_invalido() -> None:
-    # D-2510-A-MARCA-DE-ACENTO-VAI-ENTRE-PARENTESES
+    """Prova da D-2510-A-MARCA-DE-ACENTO-VAI-ENTRE-PARENTESES."""
     avisos = _avisos(RAIZ, *PASTAS)
     assert not avisos, (
         f"{len(avisos)} comentário(s) que o ruff lê como `# noqa` estragado:\n  "

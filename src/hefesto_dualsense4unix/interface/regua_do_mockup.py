@@ -471,8 +471,7 @@ def _cor_css(valor: str) -> str:
 def _ligado(texto: str) -> bool:
     """O que conta como LIGADO no alvo ``classe`` — a mesma lista do ``ligado()`` do JS."""
     b = texto.strip().lower()
-    # (noqa-acento) `nao` sem til é VALOR de máquina, e não prosa: é o que um
-    return b not in ("", TRAVESSAO, "0", "false", "nao", "não", "off",  # (noqa-acento): valor
+    return b not in ("", TRAVESSAO, "0", "false", "nao", "não", "off",  # (noqa-acento)
                      "none", "null")
 
 
@@ -629,7 +628,6 @@ def _declarado_neste_elemento(campo: _Campo, declarado: str,
     if declarado == campo.quando:
         return campo.quando
     if quandos and _ligado(declarado) and declarado not in quandos:
-        # grupo inteiramente APAGADO: medido em 02/09/2026, `'maximo'` no lugar  # (noqa-acento): token de máquina
         return declarado
     return ""
 

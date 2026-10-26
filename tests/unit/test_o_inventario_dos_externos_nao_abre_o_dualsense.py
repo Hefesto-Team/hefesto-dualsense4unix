@@ -308,7 +308,7 @@ def _montar(
     escondidos: bool,
     externos: bool,
 ) -> Iterator[Mesa]:
-    if escondidos and os.geteuid() == 0:  # pragma: no cover - como root o 0000 não fecha
+    if escondidos and os.geteuid() == 0:  # pragma: no cover
         pytest.skip("como root todo nó abre")
     mesa = Mesa(raiz=tmp_path, dev_input=tmp_path / "dev-input",
                 sys_class=tmp_path / "sys-class-input")
@@ -317,7 +317,6 @@ def _montar(
     sombras = tmp_path / "servidos"
     sombras.mkdir()
 
-    # Intercalados, como na máquina do usuário: DualSense, externos e teclado.
     aparelhos: list[list[tuple[str, dict[str, Any]]]] = []
     for k, ds in enumerate(dualsenses, start=1):
         aparelhos.append(_nos_do_dualsense(k, ds))
@@ -535,9 +534,6 @@ _MATRIZ = [
     for escondidos in (True, False)
     for externos in (True, False)
 ]
-
-
-# --- R0, a descoberta acha todos os DualSense sem o broker -------------------
 
 
 @pytest.mark.parametrize(("nome", "escondidos", "externos"), _MATRIZ)
@@ -802,9 +798,6 @@ def test_r3_o_dualsense_de_sysfs_ilegivel_e_tratado_como_hoje(
     assert tentativas_agora == tentativas_de_hoje == (0 if escondidos else 1)
     assert pedidos_de_hoje == 0
     assert mesa.pedidos_de_open().count(p1) == 0
-
-
-# --- R4, quem quer o DualSense continua achando -----------------------------
 
 
 @pytest.mark.parametrize("nome", ["3-misto", "4-misto"])

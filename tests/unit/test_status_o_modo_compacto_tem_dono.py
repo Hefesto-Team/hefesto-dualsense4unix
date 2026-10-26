@@ -14,7 +14,7 @@ def _chamadas_com_compact_verdadeiro() -> list[str]:
     for arquivo in sorted(_SRC.rglob("*.py")):
         try:
             arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
-        except SyntaxError:  # pragma: no cover — arquivo quebrado é outro erro
+        except SyntaxError:  # pragma: no cover
             continue
         for no in ast.walk(arvore):
             if not isinstance(no, ast.Call):

@@ -44,11 +44,7 @@ PUBLICAVEIS_PADRAO = (
     "refs/tags/v*",
     "refs/heads/fecho/*",
 )
-# De onde um push pode PARTIR: ramo, tag, HEAD ou um SHA cru. Qualquer outro espaço de
-# nomes (substituições, instantâneos, esconderijos, salvaguardas) nunca sai da máquina:
-# a lista é de quem PODE, para não ter de nomear quem não.
 ORIGENS = ("refs/heads/", "refs/tags/")
-# O que o servidor pode guardar: ramos, tags e as referências de PR que ele mesmo cria.
 NO_SERVIDOR = ("refs/heads/", "refs/tags/", "refs/pull/")
 ATRIBUICAO = re.compile(
     r"^[ \t]*[A-Za-z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*-(?:by|with|session)[ \t]*:(.*)$",
@@ -61,18 +57,11 @@ ENDERECO = re.compile(r"[^\s<>@,;]+@[^\s<>@,;]+")
 
 
 def git(*args: str, entrada: str | None = None, ok: bool = False) -> str:
-    # UTF-8 com troca do byte que não se lê: um arquivo em Latin-1 no diff derrubava a
-    # régua com um traceback, e o push ficava barrado sem medida nenhuma.
     r = subprocess.run(["git", *args], input=entrada, capture_output=True,
                        encoding="utf-8", errors="replace", env=ambiente_do_git())
     if r.returncode != 0 and not ok:
         sys.exit(f"autoria: git {' '.join(args[:2])} falhou: {r.stderr.strip()[:200]}")
     return r.stdout
-
-
-# ---------------------------------------------------------------------------
-# A lista de termos: fora do repositório, e a régua nunca a imprime.
-# ---------------------------------------------------------------------------
 
 
 def _sem_acento(texto: str) -> str:
@@ -154,11 +143,6 @@ def _lista() -> Lista | None:
     return None if lista.vazia() else lista
 
 
-# ---------------------------------------------------------------------------
-# Quem pode: o `.mailmap`, com todos os `<…>` de cada linha.
-# ---------------------------------------------------------------------------
-
-
 def pessoas() -> tuple[frozenset[str], frozenset[str]]:
     raiz = git("rev-parse", "--show-toplevel", ok=True).strip() or "."
     alvo = Path(raiz) / ".mailmap"
@@ -193,8 +177,6 @@ def _identidade(papel: str, nome: str, email: str, casa: Casa) -> list[str]:
 
 def _identidades_do_commit(an: str, ae: str, cn: str, ce: str, casa: Casa) -> list[str]:
     ruins = _identidade("autor", an, ae, casa)
-    # A edição e o merge pelo botão do GitHub: o committer é o servidor, e só passa
-    # quando o autor é da casa.
     if not ruins and cn == GITHUB_NOME and ce.strip("<>").lower() == GITHUB_ENDERECO:
         return ruins
     return ruins + _identidade("committer", cn, ce, casa)
@@ -217,11 +199,6 @@ def _mensagem(msg: str, casa: Casa, lista: Lista | None, nivel2: bool) -> list[s
         if nivel2 and lista.vedado(msg, 2):
             ruins.append("termo da lista na mensagem (nível 2)")
     return ruins
-
-
-# ---------------------------------------------------------------------------
-# A história que viaja.
-# ---------------------------------------------------------------------------
 
 
 def commits(revs: list[str], nao: list[str] | None = None) -> list[tuple[str, ...]]:
@@ -250,7 +227,6 @@ def auditar(revs: list[str], novos_de: list[str] | None, casa: Casa, lista: List
     for sha, an, ae, cn, ce, msg in commits(revs):
         probs = _identidades_do_commit(an, ae, cn, ce, casa) + _mensagem(msg, casa, lista, nivel2=False)
         ruins += [f"{sha[:9]}: {p}" for p in probs]
-    # Nome de arquivo que um dia existiu: apagar do topo não tira da história.
     if lista is not None:
         primeiro: dict[str, str] = {}
         atual = ""
@@ -312,7 +288,7 @@ def _caminho(nome: str, lista: Lista) -> str:
     """O caminho para o log: cada componente que carrega termo da lista sai mascarado."""
     partes = nome.split("/")
     mascaradas = ["<…>" if lista.vedado(p, 1) else p for p in partes]
-    if mascaradas == partes and lista.vedado(nome, 1):  # o termo atravessa a barra
+    if mascaradas == partes and lista.vedado(nome, 1):
         mascaradas[-1] = "<…>"
     return "/".join(mascaradas)
 
@@ -335,7 +311,7 @@ def modo_pre_push(remoto: str, lista: Lista | None) -> int:
         if len(partes) != 4:
             continue
         lref, lsha, rref, rsha = partes
-        if lsha == ZERO:  # apagar no remoto é permitido
+        if lsha == ZERO:
             continue
         if not (lref.startswith(ORIGENS) or lref == "HEAD" or re.fullmatch(r"[0-9a-f]{40}", lref)):
             ruins.append(f"{_rotulo(lref, lista)} -> {_rotulo(rref, lista)}: esta referência nunca sai da máquina")
@@ -352,9 +328,6 @@ def modo_pre_push(remoto: str, lista: Lista | None) -> int:
         if rsha != ZERO and subprocess.run(["git", "cat-file", "-e", rsha],
                                            capture_output=True, env=ambiente_do_git()).returncode == 0:
             novos_de.append(rsha)
-    # O nível 2 mede só o que o push ACRESCENTA: a base é o que o remoto já tinha (o
-    # valor antigo de cada ref e os ramos de rastreio DESTE remoto). Ramo de rastreio
-    # velho só afrouxa o nível 2; o nível 1 mede a história inteira.
     novos_de += git("for-each-ref", "--format=%(objectname)", f"refs/remotes/{remoto}/").split()
     if _raso():
         ruins.append("clone raso: a história do push não pode ser medida inteira")
@@ -364,13 +337,8 @@ def modo_pre_push(remoto: str, lista: Lista | None) -> int:
     return _veredito(ruins, f"push para {remoto}", lista)
 
 
-# ---------------------------------------------------------------------------
-# A árvore, o diff, o texto e o servidor.
-# ---------------------------------------------------------------------------
-
-
 def _arquivos(rev: str | None) -> list[tuple[str, bytes]]:
-    if rev:  # uma leitura só: `cat-file --batch` em vez de um `git show` por arquivo
+    if rev:
         lista = [ln.split("\t", 1) for ln in git("ls-tree", "-r", "-z", "--full-tree", rev).split("\0") if ln]
         blobs = [(meta.split()[2], nome) for meta, nome in lista if meta.split()[1] == "blob"]
         saida = subprocess.run(["git", "cat-file", "--batch"], capture_output=True, env=ambiente_do_git(),
@@ -415,7 +383,6 @@ def modo_diff(base: str, topo: str, lista: Lista | None) -> int:
                 atual = linha[6:] if linha.startswith("+++ b/") else linha[4:]
             elif linha.startswith("+") and lista.vedado(linha[1:], 1):
                 ruins.append(f"{_caminho(atual, lista)}: linha acrescentada com termo da lista (nível 1)")
-        # O nível 2 mede só a mensagem: no código ele barra o vocabulário legítimo do produto.
         for sha, *_x, msg in commits([topo], [base]):
             if lista.vedado(msg, 2):
                 ruins.append(f"{sha[:9]}: termo da lista na mensagem (nível 2)")
@@ -442,8 +409,6 @@ def modo_remoto(remoto: str, lista: Lista | None) -> int:
 def modo_texto(lista: Lista | None, conteudo: bool = False) -> int:
     ruins: list[str] = []
     if lista is not None:
-        # Quebra só no fim de linha: o número tem de ser o mesmo que o `read` do
-        # gancho de commit-msg conta.
         for i, linha in enumerate(sys.stdin.read().split("\n"), 1):
             if lista.vedado(linha, 1):
                 ruins.append(f"linha {i}: termo da lista (nível 1)")

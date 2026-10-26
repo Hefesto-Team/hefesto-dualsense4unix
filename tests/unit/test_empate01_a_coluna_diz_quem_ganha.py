@@ -35,8 +35,8 @@ def _mesa_dela() -> list[Profile]:
     return [
         _catch_all("fallback", 0),
         _catch_all("meu_perfil", 1),
-        _catch_all("Pragmata", 5),          # pragmata.json
-        _perfil(                            # pragmata2.json — saiu da disputa
+        _catch_all("Pragmata", 5),
+        _perfil(
             "Pragmata2", 85, MatchCriteria(window_class=["steam_app_3357650"])
         ),
         _catch_all("vitoria", 0),

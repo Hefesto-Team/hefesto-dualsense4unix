@@ -14,8 +14,6 @@ ASSET = RAIZ / "assets" / "wireplumber" / NOME
 
 
 def _doctor(casa: Path) -> str:
-    # `wpctl` mudo na frente: o doctor pergunta ao WirePlumber se ele LEU a regra,
-    # e esta régua não pode ler o servidor de som de quem a roda.
     mudo = casa.parent / f"{casa.name}-wpctl-mudo"
     mudo.mkdir(exist_ok=True)
     (mudo / "wpctl").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")

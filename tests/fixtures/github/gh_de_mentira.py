@@ -139,7 +139,6 @@ def release_de_mentira(args):
         rels[tag] = {"draft": bool(flags.get("--draft")), "assets": {}, "travada": False,
                      "title": flags.get("--title") or tag, "notes": open(nf).read() if nf else ""}
         if not rels[tag]["draft"]:
-            # como o `gh`: a release nasce publicada e os arquivos sobem depois
             publica(rels[tag], tag)
         sobe_ = rels[tag]
         if arquivos:
@@ -221,8 +220,6 @@ if mu and metodo == "GET":
     saida(200, {"login": login, "id": conta(login), "type": "User"})
 
 
-# --- o GraphQL, por nome da operação ---------------------------------------------------------
-
 def dono_do_graphql(login):
     return {"__typename": "Organization" if login in st["organizacoes"] else "User",
             "id": f"O_{login}", "login": login}
@@ -267,7 +264,6 @@ if ehgraph:
         if any(p["title"] == variaveis["titulo"] for p in st["projetos"]):
             saida(200, {"errors": [{"message": "título repetido"}]})
         numero = len(st["projetos"]) + 1
-        # como o GitHub: o projeto nasce com os campos de sempre e um Status de três opções
         campos = [
             {"id": f"PVTF_titulo{numero}", "databaseId": novo_id(), "name": "Title", "dataType": "TITLE"},
             {"id": f"PVTSSF_status{numero}", "databaseId": novo_id(), "name": "Status",
@@ -310,7 +306,6 @@ if ehgraph:
                     campo["options"] = [{"id": f"o{k}", **o} for k, o in enumerate(opcoes)]
                     saida(200, {"data": {"updateProjectV2Field": {"projectV2Field": {"id": campo["id"]}}}})
         saida(200, {"errors": [{"message": "campo não encontrado"}]})
-    # --- o quadro: o card de uma issue (o ciclo da sprint) ---------------------------------
     def issue_do_no(no):
         return next((i for i in st["issues"] if i["node_id"] == no), None)
 
@@ -328,7 +323,7 @@ if ehgraph:
         if p is None or i is None:
             saida(200, {"errors": [{"message": "Could not resolve to a node with the global id"}]})
         achado = next((c for c in st["cartoes"] if c["projeto"] == p["id"] and c["alvo"] == i["node_id"]), None)
-        if achado is None:  # como o GitHub: adicionar de novo devolve o card que já existe
+        if achado is None:
             achado = {"id": f"PVTI_{novo_id()}", "projeto": p["id"], "alvo": i["node_id"], "etapa": None}
             st["cartoes"].append(achado)
         saida(200, {"data": {"addProjectV2ItemById": {"item": {"id": achado["id"]}}}})
@@ -354,8 +349,6 @@ if ehgraph:
         saida(200, {"data": {"updateProjectV2ItemFieldValue": {"projectV2Item": {"id": c["id"]}}}})
     saida(200, {"errors": [{"message": f"operação desconhecida: {nome_op}"}]})
 
-
-# --- a organização ---------------------------------------------------------------------------
 
 mo = re.fullmatch(r"orgs/([^/]+)/(.*)", caminho)
 if mo:
@@ -479,7 +472,6 @@ if sub == "":
                     saida(422, msg=f"{k} não é booleano")
                 repo[k] = v
             elif k == "default_branch":
-                # O GitHub recusa mudar o padrão para um ramo que o remoto não tem.
                 if not isinstance(v, str) or (v != st["ramo_padrao"] and v not in st["ramos"]):
                     saida(422, msg="Branch not found")
                 st["ramo_padrao"] = v
@@ -497,7 +489,6 @@ if sub == "":
             saida(422, msg="ao menos um jeito de mesclar fica ligado")
         saida(200, corpo_do_repo())
 if sub.startswith("branches/") and metodo == "GET":
-    # O ramo padrão existe sempre; os outros, só se o estado os tem.
     ramo_ = sub[len("branches/"):]
     if ramo_ != st["ramo_padrao"] and ramo_ not in st["ramos"]:
         saida(404, msg="Branch not found")
@@ -602,8 +593,6 @@ if sub == "pages":
         if corpo["build_type"] == "legacy" and not corpo.get("source"):
             saida(422, msg="legacy pede source")
         st["pages"], st["pages_tipo"] = True, corpo["build_type"]
-        # Medido em 06/10/2026 (GET em repositórios públicos): o GitHub cria o ambiente `github-pages`
-        # com regra própria só para o ramo padrão; quem publica de outro ramo é recusado por ele.
         if corpo["build_type"] == "workflow" and "github-pages" not in st["ambientes"]:
             st["ambientes"]["github-pages"] = {
                 "revisores": [], "autoaprova": False,
@@ -634,8 +623,6 @@ if mc and metodo == "PUT":
     novo = mc.group(1) not in st["colaboradores"]
     st["colaboradores"][mc.group(1)] = corpo["permission"]
     saida(201 if novo else 204)
-
-# --- variáveis do repositório e o avanço de um ramo ------------------------------------------
 
 mv = re.fullmatch(r"actions/variables/([^/]+)", sub)
 if mv and metodo == "GET":
@@ -699,8 +686,6 @@ if mf:
         st["ramos"][ramo] = corpo["sha"]
         saida(200, {"ref": f"refs/heads/{ramo}", "object": {"sha": corpo["sha"], "type": "commit"}})
 
-# --- rótulos, milestones, ambientes ----------------------------------------------------------
-
 if sub == "labels":
     if metodo == "GET":
         saida(200, pagina(st["labels"]))
@@ -713,7 +698,6 @@ if sub == "labels":
         st["labels"].append({"id": novo_id(), "name": corpo["name"], "color": corpo.get("color", "ededed").lower(),
                              "description": corpo.get("description") or None})
         saida(201, st["labels"][-1])
-# o caminho que a API roteia: o nome do rótulo é UM segmento (a barra e o `?` sem escape o partem)
 ml = re.fullmatch(r"labels/([^/]+)", sub)
 if ml:
     nome = unquote(ml.group(1))
@@ -771,7 +755,6 @@ def corpo_da_issue(i):
             "state_reason": i["state_reason"], "labels": [{"name": n} for n in i["rotulos"]],
             "milestone": {"number": m["number"], "title": m["title"]} if m else None,
             "html_url": f"https://github.com/{st['slug']}/issues/{i['number']}",
-            # quem ABRIU a issue (gravado no POST), nunca quem pergunta agora; a semeada pelo teste é de fora
             "user": {"login": i.get("autor", "alguem-de-fora")}}
 
 
@@ -900,15 +883,12 @@ if me:
         env["políticas"] = [p for p in env["políticas"] if p["id"] != int(mp.group(1))]
         saida(204)
 
-# --- os rulesets -----------------------------------------------------------------------------
-
 TIPOS = {"deletion": None, "non_fast_forward": None, "required_linear_history": None,
          "required_signatures": None, "creation": None,
          "update": ["update_allows_fetch_and_merge"],
          "pull_request": ["dismiss_stale_reviews_on_push", "require_code_owner_review", "require_last_push_approval",
                           "required_approving_review_count", "required_review_thread_resolution"],
          "required_status_checks": ["required_status_checks", "strict_required_status_checks_policy"]}
-# Num ruleset de tag, só valem as regras que olham o ref e o commit; PR e check são de ramo.
 TIPOS_DE_TAG = ("deletion", "non_fast_forward", "required_linear_history", "required_signatures",
                 "creation", "update")
 
@@ -936,7 +916,6 @@ def valida(c):
             saida(422, msg=f"regra desconhecida: {r.get('type')}")
         if c["target"] == "tag" and r["type"] not in TIPOS_DE_TAG:
             saida(422, msg=f"{r['type']} não vale num ruleset de tag")
-        # Num ruleset de tag o GitHub aceita o `update` sem o parâmetro, que só vale para ramo (medido em 07/10/2026).
         for p in [] if c["target"] == "tag" and r["type"] == "update" else TIPOS[r["type"]] or []:
             if p not in r.get("parameters", {}):
                 saida(422, msg=f"{r['type']}: falta o parâmetro {p}")
@@ -951,7 +930,7 @@ def detalhe(c, ident):
     d.setdefault("bypass_actors", [])
     for r in d["rules"]:
         if d["target"] == "tag" and r["type"] == "update":
-            r.pop("parameters", None)  # e o guarda e devolve sem ele
+            r.pop("parameters", None)
         if r["type"] == "pull_request":
             r["parameters"].setdefault("allowed_merge_methods", ["merge", "squash", "rebase"])
     return d
@@ -961,7 +940,6 @@ if sub == "rulesets":
     if st["privado"]:
         saida(403, msg="Upgrade to GitHub Pro or make this repository public to enable this feature.")
     if metodo == "GET":
-        # como a API real: sem `includes_parents=false`, os da organização vêm junto
         da_org = [] if "includes_parents=false" in consulta else st.get("rulesets_da_org", [])
         saida(200, [{"id": x["id"], "name": x["name"], "target": x["target"], "enforcement": x["enforcement"],
                      "source_type": x["source_type"], "source": x["source"]}

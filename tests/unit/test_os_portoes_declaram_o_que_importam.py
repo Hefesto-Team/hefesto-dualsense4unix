@@ -54,7 +54,7 @@ def _imports_de_terceiros(caminho: Path) -> set[str]:
     """Os módulos de terceiro que este arquivo importa DE VERDADE."""
     try:
         arvore = ast.parse(caminho.read_text(encoding="utf-8"))
-    except (SyntaxError, UnicodeDecodeError):  # pragma: no cover - outro portão cuida
+    except (SyntaxError, UnicodeDecodeError):  # pragma: no cover
         return set()
 
     dentro_de_try: set[int] = set()

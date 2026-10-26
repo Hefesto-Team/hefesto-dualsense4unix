@@ -161,7 +161,6 @@ MOLDE_DO_NOME = (
     "alsa_output.usb-Sony_Interactive_Entertainment_"
     "DualSense_Wireless_Controller_HEFESTO{marca}-00.HiFi__Speaker__sink"
 )
-#: A MARCA que separa os nós DESTA casa dos de um DualSense por cabo de
 MARCA_DO_NOME = "HEFESTO"
 
 MARCA_DO_ENSAIO = "hefesto.origem=ensaio"
@@ -175,15 +174,8 @@ MAX_NOME = 127
 
 PRIORIDADE_DA_SESSAO = 0
 
-#: O endpoint dá o passo do próprio grafo
-#: (O-ENDPOINT-DO-CABO-TEM-RELOGIO-PROPRIO-COMO-O-DO-RADIO-01). No cabo, o laço junta o
-#: endpoint e a placa USB num grupo só, e o driver do grupo é o de maior ``priority.driver``:
-#: sem este campo era a placa (o WirePlumber dá às placas ALSA de 744 a 2500), e o som do
-#: jogo andava no passo dela. Acima da faixa, a placa segue o endpoint e casa o passo pelo
-#: próprio resampler; no rádio o endpoint já era o único driver do grafo dele.
 PRIORIDADE_DO_RELOGIO = 3000
 
-#: a vibração (a háptica do DualSense viaja como áudio nos traseiros); em zero,
 VOLUME_DOS_MOTORES = "100%"
 
 NOME_DA_HAPTICA_DO_CONTROLE = "Háptica do Controle"
@@ -234,21 +226,12 @@ def a_porta_e_dele(uniq: str, ancora: Ancora) -> bool:
     return bool(ancora.declarado) and pad_usb.interface_do_aparelho(uniq) == ancora.declarado
 
 
-#: O-SOM-DE-CADA-PAD-NA-ORDEM-DO-HIDRAW-01 (09/10/2026): a ordem em que os nós
-#: NASCEM no servidor de som. O par pad → nó já é por identidade
-#: (:func:`ancora_do_gadget`); a ordem é o que o Wine olha primeiro: o primeiro
-#: DualSense da lista leva o identificador canônico (patch 0187), e o nosso nó
-#: não tem ``alsa.card`` para o 0189 reordenar. «assento»: na ordem dos
-#: jogadores (a da luz e a dos pads), e o nó que ficou fora dela renasce atrás
-#: de quem chegou, só sem jogo aberto; «assento-sem-refazer»: a mesma ordem só
-#: no nascimento; «endereco»: a de antes, a ordem do endereço do controle.
 ORDEM_PELO_ASSENTO = "assento"
 ORDEM_PELO_ASSENTO_SEM_REFAZER = "assento-sem-refazer"
 ORDEM_PELO_ENDERECO = "endereco"
 ORDENS_DOS_NOS = (ORDEM_PELO_ASSENTO, ORDEM_PELO_ASSENTO_SEM_REFAZER, ORDEM_PELO_ENDERECO)
 ORDEM_DOS_NOS = ORDEM_PELO_ASSENTO
 
-#: O interruptor de bancada da ordem: troca a constante sem editar código.
 INTERRUPTOR_DA_ORDEM_DOS_NOS = "HEFESTO_DUALSENSE4UNIX_ORDEM_DOS_NOS"
 
 
@@ -379,7 +362,7 @@ def endpoints_de_pe_ou_nada(
     if saida is None or not any(
         linha.split("\t")[0].strip().isdigit() and "\t" in linha for linha in saida.splitlines()
     ):
-        return None  # servidor de pé sempre tem módulo seu: sem nenhuma linha dele é «não sei»
+        return None
     de_pe: dict[str, list[tuple[str, str]]] = {}
     for module_id, nome, caminho, _rotulo in _modulos_desta_casa(saida):
         de_pe.setdefault(nome, []).append((module_id, caminho))
@@ -648,7 +631,7 @@ class EndpointDeHaptica:
         try:
             de_agora = self.rotulo_de_agora()
             return de_agora if rotulo_envelheceu(self.rotulo, de_agora) else ""
-        except Exception:  # pragma: no cover - defensivo: numerador explodindo
+        except Exception:  # pragma: no cover
             logger.debug("haptica_rotulo_de_agora_ilegivel", controle=self.marca, exc_info=True)
             return ""
 
@@ -682,7 +665,7 @@ class EndpointDeHaptica:
         """
         try:
             self.runner(["pactl", "set-sink-volume", self.nome, *[VOLUME_DOS_MOTORES] * 4])
-        except Exception as exc:  # pragma: no cover — pactl é o mundo de fora
+        except Exception as exc:  # pragma: no cover
             logger.warning("haptica_motores_sem_volume", controle=self.marca, err=str(exc))
             return
         logger.info("haptica_motores_ligados", controle=self.marca, volume=VOLUME_DOS_MOTORES)
@@ -771,7 +754,7 @@ def bloco_da_haptica(
     fraco_ = _SENO_DO_FRACO
     quadros[2::4] = array("f", [(a0 + passo_a * i) * forte_[k] for i, k in enumerate(indices)])
     quadros[3::4] = array("f", [(b0 + passo_b * i) * fraco_[k] for i, k in enumerate(indices)])
-    if sys.byteorder != "little":  # pragma: no cover — o formato é little-endian
+    if sys.byteorder != "little":  # pragma: no cover
         quadros.byteswap()
     return quadros.tobytes()
 
@@ -800,7 +783,6 @@ def _canal_que_nao_perde(timbre: list[float], seno: list[float]) -> list[float]:
     return seno
 
 
-#: Quantas vezes o timbre sobe (x1,5 cada) antes de o canal ficar no seno.
 _SUBIDAS_DO_TIMBRE = 8
 
 
@@ -838,18 +820,13 @@ def bloco_com_timbre(
     quadros = array("f", _BLOCO_MUDO)
     quadros[2::4] = array("f", canal_forte)
     quadros[3::4] = array("f", canal_fraco)
-    if sys.byteorder != "little":  # pragma: no cover — o formato é little-endian
+    if sys.byteorder != "little":  # pragma: no cover
         quadros.byteswap()
     return quadros.tobytes()
 
 
-# A-VIBRACAO-FINA-BATE-A-CADA-TIRO-01: o toque do tiro. O seno do rumble segue
-# o NÍVEL; o toque é a BORDA, com forma própria: ataque de 3 ms, queda curta e
-# fim em silêncio, na portadora do motor fino.
 FREQUENCIA_DO_TOQUE_HZ = formas.FORMAS[formas.TOQUE].componentes[0][0]
 ATAQUE_DO_TOQUE_MS = formas.FORMAS[formas.TOQUE].ataque_ms
-#: O que o Som no corpo guarda à espera do bloco: 100 ms. Passou disso, o mais velho cai, e o
-#: tremor não atrasa em relação ao som que o gerou.
 QUADROS_DO_CORPO_NA_FILA = _TAXA // 10
 CANAIS_DO_LADO: dict[str, tuple[int, ...]] = {
     "esquerdo": (2,),
@@ -871,7 +848,7 @@ def misturar_o_toque(
     """Soma o trecho ``inicio`` do toque aos ``canais`` do bloco, sem passar de 1."""
     quadros = array("f")
     quadros.frombytes(bloco)
-    if sys.byteorder != "little":  # pragma: no cover — o formato é little-endian
+    if sys.byteorder != "little":  # pragma: no cover
         quadros.byteswap()
     total = len(quadros) // CANAIS_DA_HAPTICA
     for i in range(max(0, min(total, len(toque) - inicio))):
@@ -879,7 +856,7 @@ def misturar_o_toque(
         for canal in canais:
             k = i * CANAIS_DA_HAPTICA + canal
             quadros[k] = max(-1.0, min(1.0, quadros[k] + amostra))
-    if sys.byteorder != "little":  # pragma: no cover — o formato é little-endian
+    if sys.byteorder != "little":  # pragma: no cover
         quadros.byteswap()
     return quadros.tobytes()
 
@@ -1037,19 +1014,13 @@ class TocadorDoRumble:
         self._fim = threading.Event()
         self._fio: threading.Thread | None = None
         self._memoria: dict[tuple[int, int, int, str | None], bytes] = {}
-        #: a linha do tempo do rumble do dono, que diz a classe (golpe, contínuo, periódico)
         self._linha = classe_do_rumble.LinhaDoTempo()
-        #: o estilo do perfil ativo e a forma deste controle; ``(None, None)`` é o seno de hoje
         self._vestido: tuple[str | None, str | None] = (None, None)
-        #: a onda do ``FF_PERIODIC`` que o jogo pediu, ou ``None``
         self._onda: str | None = None
         self._toque: tuple[array[float], tuple[int, ...]] | None = None
         self._toque_pos = 0
-        #: a forma em curso é longa (Guarda, Aparo): nenhum toque novo a corta
         self._toque_longo = False
-        #: o toque em curso volta do começo ao acabar: o «Háptica» da aba Vibração, até o «Parar»
         self._toque_em_laco = False
-        #: o Som no corpo à espera do bloco, e os canais em que ele toca
         self._corpo: array[float] = array("f")
         self._corpo_canais: tuple[int, ...] = CANAIS_DO_LADO["centro"]
 

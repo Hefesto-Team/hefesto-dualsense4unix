@@ -17,7 +17,6 @@ from hefesto_dualsense4unix.utils import session
 
 NOME = "Régua do Boot"
 
-#: Uma tecla que `core/acoes_de_botao` conhece — o esquema recusa as outras.
 TECLA = "KEY_ESC"
 
 

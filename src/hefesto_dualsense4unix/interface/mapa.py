@@ -36,7 +36,6 @@ def glifo(nome, tam=30, ativo=False):
     return x.replace("<svg ", f'<svg width="{tam}" height="{tam}" ', 1).strip()
 
 
-#: O que a silhueta deixa de fora: o que não se desenha (as features), as letras e as luzes.
 _FORA_DA_SILHUETA = ("grupo-invisiveis", "grupo-glifos", "grupo-luzes", "glifo-stick_r")
 
 
@@ -187,15 +186,8 @@ if _tinta.exists():
 
 SEM_ALVO = {"feat-giroscopio", "feat-acelerometro", "feat-bateria"}
 
-# O CHASSI NÃO É BOTÃO (decisão de produto, 03/10/2026): sem
-# alvo no desenho e sem linha na lista. A linha dele fica no CSV das peças, que
-# é o dono delas; o que sai é só o que se podia apontar e clicar.
 SEM_BOTAO = {"corpo"}
 
-# A HÁPTICA TEM LUGAR NO DESENHO (decisão de produto), e o lugar é
-# o do glifo dela: a área do touchpad, com ondas na borda de cima. O grupo nasce
-# aqui, e não no `ds_limpo.svg`, porque o arquivo do desenho é o original e este
-# gerador já o enriquece com os alvos e as marcas de troca.
 HAPTICA = "feat-haptica"
 
 
@@ -246,8 +238,6 @@ def sobe_a_letra(svg_txt):
 def controle(pecas):
     """O desenho — que É o arquivo dela — com os alvos do ponteiro por cima."""
     x = sobe_a_letra(SVG.read_text())
-    # O grupo do chassi chega vazio do desenho (o `corpo` é SEM_BOTAO); sobraria
-    # só o título dele no mapa, que é o que o leitor de tela anuncia.
     x = re.sub(r'\s*<g id="grupo-chassi">\s*<title>[^<]*</title>\s*</g>', "", x)
     for i in sorted(set(re.findall(r'id="([^"]+)"', x)), key=len, reverse=True):
         x = (x.replace(f'id="{i}"', f'id="mp-{i}"')
@@ -487,8 +477,6 @@ CSS_TELA = """
   .btn2.roxo{border-color:var(--purple);color:var(--purple)}
 """
 
-#: a regra da peça acesa: a cor do tipo quando o botão muda, rosa quando é o escolhido, quando pisca
-#: no controle ou quando o ponteiro passa. O atributo `data-estado` é escrito pelo piloto.
 _PINTA = ":is(.peca, rect, circle, path, ellipse){fill:var(--%s) !important;stroke:var(--%s) !important}"
 
 
@@ -500,7 +488,6 @@ def css_das_pecas(pecas):
         regras.append(f'.mc .mapa:has(.item-{i}[data-estado~="muda"]) {alvo}')
         for gatilho in ('[data-estado~="on"]', '[data-estado~="pisca"]', ":hover"):
             regras.append(f".mc .mapa:has(.item-{i}{gatilho}) {rosa}")
-        # o ponteiro na peça acende a linha dela, e o glifo fica claro nos dois sentidos
         regras.append(f".mc .mapa:has(.a-{i}:hover) {rosa}")
         regras.append(f".mc .mapa:has(.a-{i}:hover) .item-{i}"
                       "{border-color:var(--pink);background:rgba(255,121,198,.12);color:var(--fg)}")
@@ -785,7 +772,7 @@ def main():
     pecas = {p["id"]: p for p in le_csv()}
     ds = controle(list(pecas.values()))
     valores = a13._por_botao({m: (a13.ACAO, t) for m, t in acoes.tabela_efetiva(None, None).items() if t})
-    escolhida = None  # a edição nasce sem linha escolhida: nada aceso sem clique
+    escolhida = None
 
     def coluna(lado):
         return "\n".join(_linha_da_tela(x, pecas, valores, escolhida)

@@ -213,7 +213,7 @@ class _MotionDeMentira:
         self.grab_state = "held" if grab else "off"
         return True
 
-    def snapshot(self) -> Any:  # pragma: no cover - o hub o chama só em `leitura`
+    def snapshot(self) -> Any:  # pragma: no cover
         raise AssertionError("esta régua não lê valor")
 
 
@@ -339,7 +339,7 @@ def test_o_grab_volta_a_pendente_quando_o_no_cai() -> None:
 class _StoreVazia:
     active_profile = None
 
-    def snapshot(self) -> Any:  # pragma: no cover - o applier não a consulta
+    def snapshot(self) -> Any:  # pragma: no cover
         raise AssertionError("o applier de sensor não lê o store")
 
 

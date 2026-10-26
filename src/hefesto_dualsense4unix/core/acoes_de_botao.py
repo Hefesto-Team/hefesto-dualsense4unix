@@ -53,9 +53,6 @@ from hefesto_dualsense4unix.integrations.uinput_mouse import (
     TOKEN_ROLAGEM,
 )
 
-#: OS DOIS EIXOS DOS ANALÓGICOS, que são LINHA na tela e não são botão em lugar
-#: nenhum: `EIXO_ESQUERDO` e `EIXO_DIREITO` moram no device de mouse, que é quem os lê.
-
 BOTAO_PS = "ps"
 
 BOTOES: tuple[str, ...] = (
@@ -72,21 +69,13 @@ TOKEN_SAIR_DO_JOGO = "__SAIR_DO_JOGO__"
 TOKEN_PROGRAMA = "__PROGRAMA__"
 TOKEN_NADA = "__NADA__"
 TOKEN_SEM_TECLA = "__SEM_TECLA__"
-#: A direção de um analógico como TECLAS: a `TabelaNoJogo` (com o jogo) e o laço do desktop as
-#: emitem pelo mesmo limiar de meia deflexão (:func:`direcoes_apertadas`), a diagonal como duas
-#: teclas. Só a linha de um analógico oferece e aceita estes dois (:func:`por_grupo`).
 TOKEN_WASD = "__WASD__"
 TOKEN_SETAS = "__SETAS__"
-#: o que cada token de teclas faz: `(esquerda, direita, cima, baixo)`
 TECLAS_DO_ANALOGICO: dict[str, tuple[str, str, str, str]] = {
     TOKEN_WASD: ("KEY_A", "KEY_D", "KEY_W", "KEY_S"),
     TOKEN_SETAS: ("KEY_LEFT", "KEY_RIGHT", "KEY_UP", "KEY_DOWN"),
 }
 
-#: AS AÇÕES DE EIXO e a(s) linha(s) que cada uma atende: o dono do que cada tipo de linha oferece
-#: (:func:`por_grupo`) e aceita (:func:`resolver`). O cursor é só do analógico esquerdo, a rolagem
-#: só do direito, as teclas dos dois. Ação fora daqui é de botão, e a linha de um analógico não a
-#: oferece: o atendente do eixo não a emite, e a escolha ficaria sem quem a atenda.
 LINHAS_DA_ACAO_DE_EIXO: dict[str, frozenset[str]] = {
     TOKEN_CURSOR: frozenset({EIXO_ESQUERDO}),
     TOKEN_ROLAGEM: frozenset({EIXO_DIREITO}),
@@ -94,7 +83,6 @@ LINHAS_DA_ACAO_DE_EIXO: dict[str, frozenset[str]] = {
     TOKEN_SETAS: frozenset({EIXO_ESQUERDO, EIXO_DIREITO}),
 }
 
-#: Quanto o analógico precisa passar do centro (0 a 1) para a direção virar tecla: meia deflexão.
 LIMIAR_DO_ANALOGICO = 0.5
 CENTRO_DO_ANALOGICO = 128
 DIRECOES_DO_ANALOGICO = ("esquerda", "direita", "cima", "baixo")
@@ -153,7 +141,6 @@ def o_ps_aceita(token: str) -> bool:
     teclado_na_tela = {TOKEN_TOGGLE_OSK, TOKEN_OPEN_OSK, TOKEN_CLOSE_OSK}
     return all(p.startswith("KEY_") or p in teclado_na_tela for p in token.split("+"))
 
-#: de propósito — tirá-los da tela seria apagar uma promessa que o usuário aprovou —,
 SEM_ATENDENTE: frozenset[str] = frozenset(
     {TOKEN_STEAM, TOKEN_SAIR_DO_JOGO, TOKEN_PROGRAMA})
 
@@ -204,7 +191,7 @@ def token_do_rotulo(texto: str) -> str | None:
 
 
 _POR_ROTULO: dict[str, str] = {rotulo: token for token, (_g, rotulo) in ACOES.items()}
-if len(_POR_ROTULO) != len(ACOES):  # pragma: no cover — defeito de escrita
+if len(_POR_ROTULO) != len(ACOES):  # pragma: no cover
     _repetidos = sorted({r for r in (v[1] for v in ACOES.values())
                          if list(v[1] for v in ACOES.values()).count(r) > 1})
     raise SystemExit(
@@ -267,7 +254,6 @@ def padrao() -> dict[str, str]:
             fora[botao] = do_teclado if do_teclado else TOKEN_NADA
     fora[EIXO_ESQUERDO] = TOKEN_CURSOR
     fora[EIXO_DIREITO] = TOKEN_ROLAGEM
-    # nem `DPAD_TO_KEY`, nem `EDGE_KEY_MAP`, nem `DEFAULT_BUTTON_BINDINGS`. A
     fora[BOTAO_PS] = TOKEN_SEM_TECLA
     return fora
 
@@ -400,15 +386,10 @@ def resolver(
     do_teclado: dict[str, tuple[str, ...]] = {}
     sem_dono: list[str] = []
 
-    # `button_actions_sem_atendente`.
     tabela.pop(BOTAO_PS, None)
 
     for botao, token in tabela.items():
         if botao in _TOKEN_DO_EIXO:
-            # A linha do analógico diz o que o eixo faz. O token PRÓPRIO é o de
-            # fábrica e não viaja (ausente = ligado); `— Nada —` chega ao device por
-            # `botoes_calados`; qualquer outro desliga o eixo, viaja para o device
-            # dizer isso, e a linha fica sem dono.
             if token not in (TOKEN_NADA, _TOKEN_DO_EIXO[botao]):
                 do_mouse[botao] = token
                 if botao not in LINHAS_DA_ACAO_DE_EIXO.get(token, frozenset()):
@@ -511,12 +492,12 @@ __all__ = [
     "TOKEN_SETAS",
     "TOKEN_STEAM",
     "TOKEN_WASD",
-    "acao_do_ps",  # (noqa-acento) nome de função
-    "botoes_calados",  # (noqa-acento) nome de função
+    "acao_do_ps",
+    "botoes_calados",
     "direcoes_apertadas",
     "nome_da_direcao",
     "o_ps_aceita",
-    "padrao",  # (noqa-acento) nome de função
+    "padrao",  # (noqa-acento)
     "por_grupo",
     "resolver",
     "rotulo",

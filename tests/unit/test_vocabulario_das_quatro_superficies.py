@@ -94,7 +94,6 @@ def test_as_mascaras_tem_as_mesmas_frases_nas_duas_listas() -> None:
     )
 
 
-#: de continuar medindo o que media  # (noqa-acento: verbo medir, imperfeito)
 _ORDEM_DAS_MASCARAS_MEDIDA_EM_01_08 = {
     "janela/Início (home_actions._FLAVOR_ITEMS)": [
         "Xbox 360",

@@ -42,10 +42,6 @@ RAIZ = Path(__file__).resolve().parents[1]
 DKMS = RAIZ / "assets" / "dkms"
 URL_DO_POP = "https://raw.githubusercontent.com/pop-os/linux/{commit}/{caminho}"
 
-#: Os arquivos do kernel que cada pacote usa e o prefixo das chaves do BASELINE que guardam o
-#: sha256 de fábrica deles (`<prefixo>` e `<prefixo>_<kernel>`, lidos pelo padrão). Chave vazia:
-#: o build lê o arquivo e o patch não o toca (o `rx.h` do rtw88); a base dele é o que a raiz e
-#: as pastas guardam. Pacote novo em `assets/dkms/` entra aqui, e uma régua cobra.
 PACOTES: dict[str, dict[str, tuple[str, ...]]] = {
     "hid-playstation": {"drivers/hid/hid-playstation.c": ("SHA256_VANILLA_C",)},
     "hid-nintendo": {"drivers/hid/hid-nintendo.c": ("SHA256_VANILLA_C",)},
@@ -69,7 +65,7 @@ class Serie:
     nome: str
     pasta: Path
     patches: list[str]
-    base: str = ""  #: a base (de `_bases`) cujos arquivos de fábrica esta série patcha
+    base: str = ""
 
 
 @dataclass
@@ -286,12 +282,8 @@ def conferir(pacote: str, fonte: Path, *, so_a_raiz: bool = False) -> Resposta:
         if all(shas[c] in esperado.get(c, set()) for c in arquivos):
             resposta.veredito, resposta.base = CONFERE, nome
             return resposta
-    # O arquivo que o build lê e o patch não toca (o `rx.h`) tem de ser o da base da série: o
-    # `rx.h` do 7.2.6 mudou a assinatura que o `usb.c` chama, e a série da raiz aplica limpa em cima.
     lidos = [c for c, chaves in PACOTES[pacote].items() if not chaves]
     conhecidas = dict(bases)
-    # Em empate de pedaços, a série da base mais perto do fonte (mais arquivos com o sha dela) é o
-    # ponto de partida do rebase: num 7.2.6 com o `rx.h` mexido, a da pasta, e não a da raiz.
     melhor: tuple[tuple[int, int], Serie, dict[str, str], list[str]] | None = None
     series = _series(pacote)[:1] if so_a_raiz else _series(pacote)
     for serie in series:

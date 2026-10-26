@@ -4,14 +4,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-#: Marcadores no NOME da source que identificam um DualSense. O PipeWire monta
 MARCADORES_DUALSENSE: tuple[str, ...] = (
     "wireless_controller",
     "wireless controller",
     "dualsense",
 )
 
-#: hex do MAC do controle (`PontePyDualSenseBT`, via `NoHidraw.nome_curto`).
 PREFIXO_SOURCE_PONTE_BT = "hefesto_dualsense_bt_"
 
 PREFIXO_SOURCE_CANAL_DO_MIC = "hefesto_mic_"
@@ -247,9 +245,6 @@ def escolher_fonte(
                 sufixo_da_ponte_bt(fonte), uniq, forma_velha=False
             ):
                 return fonte
-        # O nome velho (o rabo hex) do mesmo controle só vem depois de todo nó
-        # que o Hefesto ergue hoje: ele sobra de antes da atualização, e o
-        # varredor de órfãos o derruba.
         for fonte in fontes:
             if identidade_e_do_controle(identidade_no_nome(fonte), uniq) and not (
                 fonte.lower().startswith("bluez")

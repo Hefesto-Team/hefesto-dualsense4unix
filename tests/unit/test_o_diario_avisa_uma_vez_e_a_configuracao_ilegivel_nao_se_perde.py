@@ -27,8 +27,6 @@ so_sem_root = pytest.mark.skipif(
     reason="como root o chmod 000 não nega nada, então a régua não morde",
 )
 
-# -- perfis -----------------------------------------------------------------
-
 
 @pytest.fixture
 def pasta_de_perfis(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
@@ -79,9 +77,6 @@ def test_quem_pergunta_continua_vendo_a_lista_inteira(pasta_de_perfis: Path) -> 
     nomes = sorted(nome for nome, _erro in loader.audit_profiles())
     assert nomes == ["dois.json", "um.json"]
     assert (pasta_de_perfis / "um.json").exists(), "o arquivo não é renomeado"
-
-
-# -- som --------------------------------------------------------------------
 
 
 class _Diario:
@@ -188,8 +183,6 @@ def test_o_recuo_dobra_ate_o_teto(monkeypatch: pytest.MonkeyPatch) -> None:
         asyncio.run(ods.ouvinte_do_som_loop(SimpleNamespace(bus=None, _tasks=[])))
     assert esperas == [3.0, 6.0, 12.0, 24.0, 48.0, 60.0, 60.0, 60.0]
 
-
-# -- máquina ----------------------------------------------------------------
 
 TRUNCADO = '{"version": 1, "computador": {"global": {"modo'
 

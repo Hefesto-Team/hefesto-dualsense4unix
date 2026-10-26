@@ -10,8 +10,6 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: Os nomes do TODO de 15/10/2026 (as três rotas, uma por linha); os de 20/09 caducaram com ele, e
-#: o quarto botão («junto») saiu da tela: o perfil `junto` acende «apenas no DualSense».
 DELA: dict[str, str] = {
     "jogo": "Canais sonoros nativos - Padrão",
     "nada": "Canais sonoros apenas no PC",

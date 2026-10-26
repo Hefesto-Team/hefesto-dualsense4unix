@@ -31,12 +31,8 @@ PRIORIDADE_MAXIMA = _schema.PRIORIDADE_MAXIMA
 _FOLGA_ACIMA_DO_CATCH_ALL = 10
 
 
-# e escolher entre dois botões sem saber o que cada um custa não
-
-
 LABEL_SO_MANUAL = ROTULO_SO_QUANDO_ESCOLHER
 
-#: O `any` nunca entra sozinho desde 01/10/2026 (o gerente): ele é o manual.
 _MATCH_LABELS: dict[str, str] = {
     "any": LABEL_SO_MANUAL,
     "criteria": "Só neste programa",
@@ -72,9 +68,6 @@ def explicacao_da_disputa(
     """Tooltip da linha: vazio desde 01/10/2026 — não há disputa a explicar."""
     del profile, perfis, incumbente
     return ""
-
-
-# O gesto de Ativar, esse, deixa fato em disco: `profile.switch` grava a
 
 
 def perfil_que_ela_ativou() -> str | None:
@@ -146,7 +139,6 @@ def perfil_que_esta_valendo(state: Any = None) -> PerfilQueVale:
     return PerfilQueVale(None, "nenhum" if houve_resposta else "nao_sei")
 
 
-#: na ordem que a casa exige de toda frase de diagnóstico (o quê, por quê, o
 _AVISO_DA_REMOCAO_DO_ATIVO = (
     "Este é o perfil que está valendo agora.\n"
     "Remover o arquivo não desfaz o que já está no controle: a cor, os "
@@ -180,13 +172,6 @@ def ordem_de_exibicao(perfis: list[Any], ativo: str | None) -> list[Any]:
     return primeiro + resto
 
 
-# `confirm_downgrade_match_to_any` cobre "o perfil passou a valer para TUDO".
-
-
-# `profile.switch` responde a verdade desde a R-03 (`secoes`, `mode_aplicado`,
-
-#: Nomes das seções que só o `profile.switch` relata. O mapa do rodapé
-#: "gatilhos" e "luzes" — porque é a mesma seção; o que muda é só a chave.
 _NOMES_DAS_SECOES_DA_ATIVACAO: dict[str, str] = {
     "mode": "modo",
     "suppression": "modo jogo",
@@ -195,15 +180,12 @@ _NOMES_DAS_SECOES_DA_ATIVACAO: dict[str, str] = {
     "trigger": "gatilhos",
     "led": "luzes",
     "rumble_passthrough": "vibração do jogo",
-    # 01/10/2026. Às 19h15 a janela escreveu «menos: button_actions,
     "button_actions": "o que cada botão faz",
     "remapeamento": "a troca de botões",
     "movimento": "a mira",
     "mic:ganho": "ganho do microfone",
 }
 
-#: As seções POR CONTROLE do `profile.switch` (`<prefixo><uniq>`), com a palavra de tela
-#: de cada uma. A ordem importa: `mic:ganho:` antes de `mic:`.
 _PECAS_POR_CONTROLE: tuple[tuple[str, str], ...] = (
     ("mic:ganho:", "ganho do microfone de um controle"),
     ("mic:", "microfone de um controle"),
@@ -213,17 +195,11 @@ _PECAS_POR_CONTROLE: tuple[tuple[str, str], ...] = (
     ("movimento:", "mira de um controle"),
 )
 
-#: O valor destas seções é o DADO que foi escrito (`mascara:<uniq>` → «xbox» ou «padrão»,
-#: `sensores:<uniq>` → «giro=on accel=off»), e não um estado. Ler a palavra «aplicado» nelas
-#: chamava de falta uma máscara que tinha entrado (03/10/2026, o Avatar Legends). A única
-#: palavra de falta delas é a que o dono escreve quando recusa.
 _PECAS_CUJO_VALOR_E_O_DADO: dict[str, frozenset[str]] = {
     "mascara:": frozenset({"recusado"}),
     "sensores:": frozenset(),
 }
 
-#: A peça de um controle que não está ligado agora não é falta: não há o que escrever, e o
-#: produto reaplica quando ele conecta (`reapply_speaker_on_connect` e `reapply_mic_on_connect`).
 _PECAS_QUE_ESPERAM_O_CONTROLE = ("speaker:", "mic:")
 _SEM_CONTROLE = "ignorado_sem_controle"
 
@@ -251,7 +227,6 @@ def _e_falta(chave: str, estado: str) -> bool:
     return estado != "aplicado"
 
 
-#: 01/10 a janela escreveu «menos: button_actions, remapeamento, movimento e
 NAO_E_FALTA = frozenset({"de_fabrica", "do_computador", "desligado", "ignorado_sem_device"})
 
 
@@ -357,19 +332,13 @@ def mensagem_do_salvar(
     return f"{cabeca} — {_mensagem_de_aplicacao(relato)}"
 
 
-#     app/draft_config.py:382:    # `manager.pontes_confirmadas()` …  <- comentário
-
-
 class ProfilesActionsMixin(CaronaDoWrapperMixin):
     """Controla a aba Perfis."""
 
     _profiles_store: Any
     _mode_advanced: bool = False
-    # load_all_profiles() síncrono na thread GTK a cada clique/tecla. Populado
-    # on_profile_selection_changed e _build_profile_from_editor.
     _profiles_cache: list[Profile]
     _suppress_advanced_toggle: bool = False
-    # usado como base em _build_profile_from_editor para copiar triggers/LEDs/etc.
     _duplicate_source: Profile | None = None
     _aplica_a: Any
     _mode_kind_selector: Any = None
@@ -388,9 +357,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
     _active_profile_hint: str | None = None
 
 
-    # entra em `_build_profile_from_editor` nem no `Profile` do disco — o que
-
-
     SEM_NOME_NO_DISCO = "nome não encontrado"
 
     def _nome_do_appid(self, appid: str) -> str | None:
@@ -400,13 +366,6 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
             return None
         nome = mapa.get(appid)
         return nome if isinstance(nome, str) and nome.strip() else None
-
-
-    # perfil na hora (profile.switch sem confirmação), atropelando edição em
-    # andamento (selecionar texto/navegar vira 2 cliques rápidos por
-
-
-    # LEITURA de 250 ms, e o `profile.switch` não cabe nele. Trocar só o texto,
 
 
     def _prioridade_acima_dos_catch_all(self) -> int:
@@ -419,8 +378,3 @@ class ProfilesActionsMixin(CaronaDoWrapperMixin):
 
     def _toast_profile(self, msg: str) -> None:
         self._status_toast("profiles", msg)
-
-
-#     relê o perfil ATIVO — IPC `state_full` +   |  não lê disco nenhum
-#    ativo lá é `rodape._draft_do_ativo`, que monta o `DraftConfig` do disco na
-# pronto é `rodape._draft_do_ativo` — não o carregador da janela. O original

@@ -38,8 +38,6 @@ def arvore(tmp_path: Path) -> Path:
     with caminho_mapa_real.open(encoding="utf-8") as arquivo_real:
         linhas_reais = list(csv.DictReader(arquivo_real))
     cabecalho = linhas_reais[0].keys()
-    # três linhas reais de uma chave só (o bloco cabo/rádio de um controle) —
-    # basta para exercitar o gerador sem carregar as 308 linhas do mapa real.
     recorte = linhas_reais[:1]
     with (tmp_path / "docs" / "data" / "mapa-controles.csv").open(
         "w", encoding="utf-8", newline=""
@@ -47,8 +45,6 @@ def arvore(tmp_path: Path) -> Path:
         escritor = csv.DictWriter(arquivo, fieldnames=list(cabecalho))
         escritor.writeheader()
         escritor.writerows(recorte)
-    # ensaios.csv vazio (só cabeçalho) — eliminacao.py o lê, mesmo que o
-    # gerador de fatos não use o conteúdo.
     caminho_ensaios_real = RAIZ / "docs" / "data" / "ensaios.csv"
     ensaios_cabecalho: list[str] = []
     if caminho_ensaios_real.exists():
@@ -97,7 +93,7 @@ def test_editar_celula_sem_regerar_faz_o_check_reprovar(arvore: Path) -> None:
     checa = _roda(arvore, "--check")
     assert checa.returncode == 1
     assert "DESATUALIZADO" in checa.stderr
-    assert "-" in checa.stderr and "+" in checa.stderr  # tem diff, não só o veredito
+    assert "-" in checa.stderr and "+" in checa.stderr
 
 
 def test_fronteira_reprova_coluna_de_prosa_na_allowlist() -> None:
@@ -107,7 +103,6 @@ def test_fronteira_reprova_coluna_de_prosa_na_allowlist() -> None:
     `monta_fatos` faz este teste passar mesmo com `rotulo` na allowlist — a
     prova de que o guarda é `checar_fronteira`, e não outra coisa.
     """
-    # o nome do arquivo tem hífen; carrega por caminho em vez de `import`.
     import importlib.util
 
     spec = importlib.util.spec_from_file_location("gerar_fatos_de_tela_teste", GERADOR)
@@ -118,5 +113,4 @@ def test_fronteira_reprova_coluna_de_prosa_na_allowlist() -> None:
     with pytest.raises(ValueError, match="PROSA"):
         modulo.checar_fronteira(frozenset({"aciona", "rotulo"}))
 
-    # a allowlist real do gerador nunca contém coluna de prosa:
     modulo.checar_fronteira(modulo.COLUNAS_DERIVAVEIS)

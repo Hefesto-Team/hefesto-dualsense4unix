@@ -62,13 +62,9 @@ def _subidas(saida: list[tuple[float, frozenset[str], int, int]], botao: str) ->
     return n
 
 
-# -- o motor ------------------------------------------------------------------
-
-
 def test_o_tremor_dentro_do_repique_vira_um_aperto_so() -> None:
     filtro = fb.Filtro(repique_s=0.12)
     aperto, solto = ({"cross"}, 0, 0), (set(), 0, 0)
-    # solta aos 50 ms e volta aos 130 ms: 80 ms depois de soltar, dentro dos 120
     quadros = [aperto] * 5 + [solto] * 8 + [aperto] * 5 + [solto] * 30
     saida = _rodar(filtro, quadros)
     assert _subidas(saida, "cross") == 1, "o segundo aperto, 80 ms depois, devia ser tremor"
@@ -150,9 +146,6 @@ def test_os_numeros_do_motor_sao_os_do_perfil() -> None:
     assert fb.REPIQUE_DE_FABRICA_MS == 120
     assert fb.APERTO_MINIMO_DE_FABRICA_MS == 50
     assert fb.PS_TRAVADO_DE_FABRICA_MS == 600
-
-
-# -- os dois caminhos do pad virtual -------------------------------------------
 
 
 class _Device:
@@ -284,7 +277,7 @@ def test_o_perfil_seguinte_solta_a_trava(monkeypatch: pytest.MonkeyPatch) -> Non
         monkeypatch.setattr(m, nome_do_metodo, lambda *a, **k: None)
     com = Profile.model_validate({
         "name": "Com Trava", "match": {"type": "any"},
-        "ativacao": {"travar": ["l1"], "repique_ms": 120}})  # (noqa-acento) identificador ASCII
+        "ativacao": {"travar": ["l1"], "repique_ms": 120}})  # (noqa-acento)
     sem = Profile.model_validate({"name": "Sem Trava", "match": {"type": "any"}})
     monkeypatch.setattr(gerente, "load_profile", lambda nome: com)
     relatorio: dict[str, str] = {}
@@ -335,9 +328,6 @@ def test_a_tabela_com_o_jogo_ignora_o_tremor(monkeypatch: pytest.MonkeyPatch) ->
     assert all("cross" not in b for b in visto), f"a tabela viu {visto} num aperto de 10 ms"
 
 
-# -- o PS travado -------------------------------------------------------------
-
-
 def _gestos(espera_ms: dict[str | None, int] | None = None) -> tuple[HotkeyManager, list[str]]:
     visto: list[str] = []
     gerente = HotkeyManager(
@@ -359,7 +349,7 @@ def _toque_no_ps(gerente: HotkeyManager, de: str | None = None, t: float = 0.0) 
 
 
 def test_o_ps_depois_o_outro_botao_dispara_o_gesto() -> None:
-    # D-1610-O-TREMOR-E-O-APERTO-JUNTO-NAO-DECIDEM-O-BOTAO
+    """Prova da D-1610-O-TREMOR-E-O-APERTO-JUNTO-NAO-DECIDEM-O-BOTAO."""
     gerente, visto = _gestos({None: 600})
     solto = _toque_no_ps(gerente)
     assert gerente.observe({"dpad_up"}, now=solto + 0.25) == "next"
@@ -464,9 +454,6 @@ def test_o_gerente_do_daemon_pergunta_ao_filtro_do_controle(
     assert pergunta("AA:BB:CC:00:00:03") == 0
 
 
-# -- a posição no código e o schema --------------------------------------------
-
-
 def _chama(arquivo: str, funcao: str, nome: str) -> bool:
     caminho = RAIZ / "src/hefesto_dualsense4unix/daemon/subsystems" / arquivo
     arvore = ast.parse(caminho.read_text())
@@ -498,19 +485,19 @@ def test_o_perfil_recusa_o_filtro_que_o_motor_recusa(secao: dict[str, Any]) -> N
     with pytest.raises(ValidationError):
         Profile.model_validate({
             "name": "X", "match": {"type": "any"},
-            "ativacao": secao})  # (noqa-acento) identificador ASCII
+            "ativacao": secao})  # (noqa-acento)
 
 
 def test_o_perfil_sem_os_campos_nao_grava_a_chave_e_com_eles_volta_igual() -> None:
     from hefesto_dualsense4unix.profiles.schema import Profile
 
     vazio = Profile.model_validate({"name": "Vazio", "match": {"type": "any"}})
-    assert "ativacao" not in vazio.model_dump(mode="json")  # (noqa-acento) identificador ASCII
+    assert "ativacao" not in vazio.model_dump(mode="json")  # (noqa-acento)
     cheio = Profile.model_validate({
         "name": "Cheio", "match": {"type": "any"},
-        "ativacao": {"repique_ms": 120, "aperto_minimo_ms": 50,  # (noqa-acento) identificador ASCII
+        "ativacao": {"repique_ms": 120, "aperto_minimo_ms": 50,  # (noqa-acento)
                      "travar": ["l1", "r1"], "ps_travado_ms": 600},
-        "controllers": {P2: {"ativacao": {"repique_ms": 200}}}})  # (noqa-acento) chave ASCII
+        "controllers": {P2: {"ativacao": {"repique_ms": 200}}}})  # (noqa-acento)
     volta = Profile.model_validate(cheio.model_dump(mode="json"))
     assert volta.ativacao is not None and volta.ativacao.travar == ["l1", "r1"]
     assert volta.controllers is not None

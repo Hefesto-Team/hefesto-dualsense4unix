@@ -93,7 +93,6 @@ class EventosDoPerfil:
         self._ler_perfis = ler_perfis
         self._rodar = rodar
         self._relogio = relogio
-        #: O último resultado de cada comando: `(nome do perfil, comando) → (deu certo, porquê)`.
         self._comandos: dict[tuple[str, str], tuple[bool, str]] = {}
 
     def _recusa(self) -> str | None:

@@ -61,12 +61,11 @@ from hefesto_dualsense4unix.core.evdev_reader import (
     discover_gamepads,
 )
 
-# nesta mesa), D-input, X-input, macOS. Nenhum é DualSense.
 _DISFARCES_DO_SN30 = [
     ("switch", 0x057E, 0x2009),
     ("d-input", 0x2DC8, 0x6001),
     ("x-input-cabo", 0x045E, 0x028E),
-    ("macos", 0x054C, 0x05C4),  # mesmo VENDOR do DualSense; PID não é o dele
+    ("macos", 0x054C, 0x05C4),
 ]
 
 

@@ -50,7 +50,7 @@ from gi.repository import GLib, Gtk  # noqa: E402
 
 from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # noqa: E402
 
-PAGINA = RAIZ_DEV / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "08-conexoes.html"  # (noqa-acento) `paginas` e o nome da PASTA; caminho nao leva acento
+PAGINA = RAIZ_DEV / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "08-conexoes.html"  # (noqa-acento)
 TITULO_ESPERADO = "aba CONEXÕES"
 TIQUE_MS = 100
 

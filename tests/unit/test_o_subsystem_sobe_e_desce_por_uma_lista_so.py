@@ -50,9 +50,6 @@ SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 LISTA = SRC / "daemon" / "subsystems" / "__init__.py"
 
 
-# -- a lista em si: o que toda entrada tem de ser --------------------------------
-
-
 def test_os_nomes_da_lista_sao_unicos() -> None:
     nomes = [p.nome for p in SUBSYSTEM_REGISTRY]
     assert len(nomes) == len(set(nomes)), f"nome repetido na lista: {nomes}"
@@ -131,9 +128,6 @@ def test_todo_start_e_stop_que_a_lista_nomeia_existe_no_daemon() -> None:
     assert not faltam, f"a lista nomeia o que o `Daemon` não tem: {faltam}"
 
 
-# -- (3) nenhuma chamada por nome fora da lista -----------------------------------
-
-
 def _chamadas_de_safe_start() -> list[str]:
     achados: list[str] = []
     for arquivo in sorted(SRC.rglob("*.py")):
@@ -186,9 +180,6 @@ def test_o_run_nao_nomeia_start_nem_stop_de_subsystem() -> None:
     assert "_safe_start" not in fonte
     assert not re.findall(r"self\._(?:start|stop)_\w+\(", fonte), "chama start/stop por nome"
     assert "subir(self)" in fonte
-
-
-# -- (1) e (2) o Daemon de verdade ------------------------------------------------
 
 
 def _estado() -> ControllerState:
@@ -318,7 +309,7 @@ async def test_o_daemon_sobe_pela_ordem_da_lista_e_para_pela_ordem_declarada(
     def antes(a: str, b: str) -> None:
         assert paradas.index(a) < paradas.index(b), f"`{a}` tem de parar antes de `{b}`"
 
-    conexoes = "conexoes"  # (noqa-acento): nome do subsystem, a chave do diário
+    conexoes = "conexoes"  # (noqa-acento)
     for som in ("mods", "bt_mic", "alto_falante", conexoes, "central_do_radio", "plugins"):
         antes(som, "ipc")
     antes("ipc", "tarefas")
@@ -331,8 +322,10 @@ async def test_o_daemon_sobe_pela_ordem_da_lista_e_para_pela_ordem_declarada(
 async def test_um_subsystem_de_mentira_acrescentado_so_a_lista_sobe_e_para(
     monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory,
 ) -> None:
-    # D-1610-OS-SUBSYSTEMS-SOBEM-E-DESCEM-POR-UMA-LISTA-SO
-    """A entrada nova não pede outra linha no `run()` nem no `shutdown()`."""
+    """A entrada nova não pede outra linha no `run()` nem no `shutdown()`.
+
+    Prova da D-1610-OS-SUBSYSTEMS-SOBEM-E-DESCEM-POR-UMA-LISTA-SO.
+    """
     daemon, pedidos, partidas, paradas = await _sobe_e_para(
         monkeypatch, tmp_path_factory, mais=True
     )
@@ -344,9 +337,6 @@ async def test_um_subsystem_de_mentira_acrescentado_so_a_lista_sobe_e_para(
     )
     assert paradas[-1] == "controle"
     assert daemon._failed_subsystems == {}
-
-
-# -- a parada que falha não pula a seguinte, e deixa rastro ----------------------
 
 
 @pytest.mark.asyncio

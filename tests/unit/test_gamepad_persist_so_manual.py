@@ -36,7 +36,7 @@ class _DaemonFalso:
         self._gamepad_device: Any = None
         self.controller = None
 
-    def __getattr__(self, nome: str) -> Any:  # pragma: no cover - só p/ tolerar
+    def __getattr__(self, nome: str) -> Any:  # pragma: no cover
         raise AttributeError(nome)
 
 

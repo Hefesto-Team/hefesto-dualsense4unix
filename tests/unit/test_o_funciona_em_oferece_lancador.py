@@ -11,7 +11,7 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
 
-if str(RAIZ / "src") not in sys.path:  # pragma: no cover - trava de caminho
+if str(RAIZ / "src") not in sys.path:  # pragma: no cover
     sys.path.insert(0, str(RAIZ / "src"))
 
 from hefesto_dualsense4unix.integrations import jogos_locais as jl
@@ -35,7 +35,6 @@ HEROIC_ID = "com.heroicgameslauncher.hgl"
 
 UMU_DO_GOTG = "umu-1088850"
 
-#: o erro de forma: quem responde é `identidade_de_janela`, e é a ele que a
 CHAVE_DO_GOTG = classe_do_umu_id(UMU_DO_GOTG)
 
 BAIXADO: dict[str, Any] = {
@@ -195,8 +194,6 @@ def test_a_regra_que_a_tela_nao_sabe_mostrar_continua_travando(
                          process_name=["eldenring.exe"])
     _o_disco_tem(monkeypatch, Profile(name="Fino", priority=90, match=fino))
 
-    # a página nova não tem o «Funciona em» (o pacote não manda mais `editor.ambiente*`); a válvula
-    # mora no editor do produto, que os gestos de gravar ainda consultam
     editor = a10._editor_de(Profile(name="Fino", priority=90, match=fino))
 
     assert editor["ambiente"] is None

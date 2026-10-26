@@ -31,9 +31,6 @@ from hefesto_dualsense4unix.interface import hefesto_vivo, onde
 
 ABA = "08-conexoes.html"
 
-#: Os endereços que a linha fechada TEM hoje: o selo do microfone em cada
-#: controle e a linha da confissão. Endereço que a página não tiver reprova com
-#: o nome dele — nunca um `null` calado.
 POR_CONTROLE = ("nome", "est-mic")
 DA_PAGINA = ("confissao-nada", "confissao-conta")
 

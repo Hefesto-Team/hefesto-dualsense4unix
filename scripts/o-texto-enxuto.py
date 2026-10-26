@@ -8,9 +8,9 @@
     o-texto-enxuto.py --catraca              o volume de comentário e docstring em src/ só desce
 
 As réguas moram nos donos delas e são IMPORTADAS daqui, nunca copiadas: o «dela» em
-``neutralizar-o-texto.py``, a docstring longa em ``check_docstring_longa.py``, o comentário cortado
-em ``check_comentario_cortado.py`` e a citação nova em ``validar-citacoes-de-linha.py``. A fala citada
-mora aqui, e o teste do narrador a importa. Régua ausente é rc 2, nunca verde.
+``neutralizar-o-texto.py``, a docstring longa em ``check_docstring_longa.py``, o comentário em
+``check_codigo_sem_comentario.py`` e a citação nova em ``validar-citacoes-de-linha.py``. Régua ausente
+é rc 2, nunca verde.
 """
 
 from __future__ import annotations
@@ -37,27 +37,17 @@ PACOTE = "src/hefesto_dualsense4unix/"
 CADERNO = Path("docs/data/o-texto-enxuto.json")
 NOME = "texto-em-src"
 TETO_DA_SAIDA = 12
-#: Só o arquivo com este tanto de texto vira item nomeado no caderno: o resto soma no total, e o caderno é versionado.
 PISO_DO_ITEM = 40
 
-#: A fala citada em comentário: aspas dentro de asteriscos. Montada por partes, e só vale em linha ``#``.
-_ASTERISCO = "\\" + "*"
-FALA_CITADA = re.compile(rf"(?<!{_ASTERISCO}){_ASTERISCO}[«\"][^»\"]{{3,}}[»\"]{_ASTERISCO}(?!{_ASTERISCO})")
-#: Onde a fala citada não se mede, e o motivo de cada um.
-FORA_DA_FALA = (
-    "src/hefesto_dualsense4unix/interface/paginas/",  # o publicado: só o ``--publicar`` o escreve
-    "scripts/neutralizar-o-texto.py",  # mostra a forma para trocá-la
-    "scripts/neutralizar-os-nomes.py",
-    "tests/unit/test_o_codigo_nao_tem_narrador.py",  # mostra a forma para provar que a régua morde
-)
-RAIZES_DA_FALA = ("src/", "tests/", "scripts/")
+RAIZES_DO_PYTHON = ("src/", "tests/", "scripts/")
+REFS_DA_BASE = ("dev", "origin/dev")
 
 AJUDA = {
     "dela": "rode `--aplicar`: a troca é mecânica",
     "dela-no-codigo": "mora num texto que o código usa (a AST mudaria): troque à mão e, se vira página, republique",
-    "fala": "a fala vira a regra; a citação literal mora em docs/data/decisoes-de-produto.csv",
+    "comentário": ("o código não tem comentário (D-2610-O-CODIGO-NAO-TEM-COMENTARIO): o porquê vai à docstring "
+                   "ou a docs/research/o-porque-dos-modulos.md, e a diretiva fica nua"),
     "docstring": "a docstring fica com o contrato; a história vai para docs/research/o-porque-dos-modulos.md",
-    "cortado": "termine a frase em até duas linhas ou apague o fragmento",
 }
 
 
@@ -79,7 +69,7 @@ def regua(arquivo: str) -> ModuleType:
         if spec is None or spec.loader is None:
             raise ReguaAusente(f"a régua {arquivo} não carrega")
         modulo = importlib.util.module_from_spec(spec)
-        sys.modules[nome] = modulo  # o @dataclass da régua procura o módulo pelo nome
+        sys.modules[nome] = modulo
         try:
             spec.loader.exec_module(modulo)
         except Exception as erro:
@@ -99,37 +89,6 @@ class Achado:
 
     def __str__(self) -> str:
         return f"{self.arquivo}:{self.linha} [{self.regua}] {self.texto}"
-
-
-# --------------------------------------------------------------------------- a fala citada
-
-
-def falas_em_comentario(textos: dict[str, str]) -> list[tuple[str, int]]:
-    """Cada ``(arquivo, linha)`` de um comentário ``#`` com fala citada, fora das isenções.
-
-    O bloco de linhas ``#`` seguidas é lido inteiro: a fala quebrada em duas linhas conta.
-    """
-    achados = []
-    for caminho, texto in textos.items():
-        if not caminho.endswith(".py") or not caminho.startswith(RAIZES_DA_FALA):
-            continue
-        if caminho.startswith(FORA_DA_FALA):
-            continue
-        bloco: list[str] = []
-        inicio = 0
-        for numero, linha in enumerate([*texto.split("\n"), ""]):
-            if linha.lstrip().startswith("#"):
-                if not bloco:
-                    inicio = numero
-                bloco.append(re.sub(r"^\s*#:?\s?", "", linha))
-                continue
-            if bloco and FALA_CITADA.search("\n".join(bloco)):
-                achados.append((caminho, inicio + 1))
-            bloco = []
-    return achados
-
-
-# --------------------------------------------------------------------------- as perguntas por arquivo
 
 
 def _git(raiz: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -184,24 +143,22 @@ def docstrings_novas(rel: str, texto: str, head: str) -> list[Achado]:
     return achados
 
 
-def cortados_novos(rel: str, texto: str, head: str) -> list[Achado]:
-    """O comentário cortado ou o ``#:`` solto que o arquivo não tinha em ``HEAD``."""
-    cc = regua("check_comentario_cortado.py")
-    achados: list[Achado] = []
-    for nome, pergunta in cc.PERGUNTAS.items():
-        agora = pergunta(texto)
-        if not agora:
-            continue
-        antes = pergunta(head)
-        if len(agora) <= len(antes):
-            continue
-        ja = [t for _, t in antes]
-        for linha, comentario in agora:
-            if comentario in ja:
-                ja.remove(comentario)
-                continue
-            achados.append(Achado(rel, linha, "cortado", f"{nome}: {AJUDA['cortado']}"))
-    return achados
+def comentarios_no_codigo(rel: str, texto: str) -> list[Achado]:
+    """Todo comentário que não é diretiva nua, nos cinco tipos do portão ``codigo-sem-comentario``."""
+    cs = regua("check_codigo_sem_comentario.py")
+    tipo = cs.tipo_do_arquivo(rel, texto.split("\n", 1)[0])
+    if tipo is None:
+        return []
+    return [Achado(rel, a.linha, "comentário", AJUDA["comentário"]) for a in cs.achados_do_texto(texto, tipo, rel)]
+
+
+def base_de_comparacao(raiz: Path) -> str | None:
+    """O ``merge-base`` do ``HEAD`` com o primeiro de ``REFS_DA_BASE`` que existe, ou ``None``."""
+    for ref in REFS_DA_BASE:
+        feito = _git(raiz, "merge-base", ref, "HEAD")
+        if feito.returncode == 0 and feito.stdout.strip():
+            return feito.stdout.strip()
+    return None
 
 
 def citacoes_novas(raiz: Path, documentos: set[str]) -> list[Achado]:
@@ -211,7 +168,7 @@ def citacoes_novas(raiz: Path, documentos: set[str]) -> list[Achado]:
         return []
     pe = vc.pe_comum(raiz, None)
     if pe is None:
-        return []  # sem base não há como saber o que é novo; o portão `citacoes-novas` é quem acusa
+        return []
     achados, _ = vc.varrer_novas(raiz, pe)
     return [Achado(a.documento, a.linha, "citação", a.motivo) for a in achados if a.documento in documentos]
 
@@ -255,23 +212,21 @@ def examinar(raiz: Path, rel: str, texto: str, aplicar: bool) -> tuple[str, list
                 achados.append(Achado(rel, linha, "dela", f"o «dela» que aponta para a pessoa: {dito}", True))
                 if aplicar:
                     texto = novo
-    for arquivo, linha in falas_em_comentario({rel: texto}):
-        achados.append(Achado(arquivo, linha, "fala", f"fala citada em comentário: {AJUDA['fala']}"))
-    if not rel.endswith(".py") or not rel.startswith(RAIZES_DA_FALA):
+    achados += comentarios_no_codigo(rel, texto)
+    if not rel.endswith(".py") or not rel.startswith(RAIZES_DO_PYTHON):
         return texto, achados
     head = no_head(raiz, rel)
     if head == texto:
-        return texto, achados  # o que não mudou desde HEAD não sobe nada (é o caso do `--all-files` no CI)
+        return texto, achados
     if rel.startswith(PACOTE):
         achados += docstrings_novas(rel, texto, head)
-    achados += cortados_novos(rel, texto, head)
     return texto, achados
 
 
 def no_escopo(rel: str) -> bool:
     if regua("neutralizar-o-texto.py").tipo_do_alvo(rel) is not None:
         return True
-    if rel.endswith(".py") and rel.startswith(RAIZES_DA_FALA):
+    if rel.endswith(".py") and rel.startswith(RAIZES_DO_PYTHON):
         return True
     return bool(regua("validar-citacoes-de-linha.py").vigiado(rel))
 
@@ -285,7 +240,7 @@ def versionados(raiz: Path) -> list[str]:
 
 def mudados(raiz: Path) -> list[str]:
     """Os arquivos que mudaram desde o pé comum com o ``dev`` (no CI, ``origin/dev``), mais os novos."""
-    base = regua("check_comentario_cortado.py").base_de_comparacao(raiz)
+    base = base_de_comparacao(raiz)
     if base is None:
         raise ReguaAusente("sem base: nem `dev` nem `origin/dev` alcançável deste HEAD (no CI, `fetch-depth: 0`)")
     feito = _git(raiz, "diff", "--name-only", "--diff-filter=ACMR", "-z", base)
@@ -301,7 +256,7 @@ def relativos(raiz: Path, pedidos: list[str]) -> list[str]:
         try:
             rel = caminho.relative_to(raiz.resolve()).as_posix()
         except ValueError:
-            continue  # fora desta árvore
+            continue
         if caminho.is_file():
             saida.append(rel)
     return saida
@@ -348,9 +303,6 @@ def rodar(raiz: Path, arquivos: list[str], aplicar: bool, restagear: bool) -> in
     for rel in soltos:
         print(f"{rel}: corrigido no disco, mas fora do índice; rode `git add {rel}`")
     return 1 if restantes or soltos else 0
-
-
-# --------------------------------------------------------------------------- a catraca do volume
 
 
 def volume_do_texto(texto: str) -> tuple[int, int]:
@@ -431,9 +383,6 @@ def catraca_do_volume(a: argparse.Namespace, raiz: Path) -> int:
         return 0
     print(f"{NOME}: {delta}, pagas por Origem: {', '.join(pagas)}")
     return 0
-
-
-# --------------------------------------------------------------------------- a linha de comando
 
 
 def main(argv: list[str] | None = None) -> int:

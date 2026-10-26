@@ -32,7 +32,6 @@ QUAL = "bancada" if NA_BANCADA else "publicada"
 
 VISTAS = {"foto-3": (1920, 887), "dela": (1918, 840), "ladrilhada": (1212, 809),
           "estreita": (860, 809),
-          # as três larguras do Sugestões sem rolar (16/10/2026): a mínima da aba e as duas medidas
           "940": (940, 809), "1272": (1272, 809), "1512": (1512, 809)}
 
 SOBRA_NA_LADRILHADA = 60
@@ -267,15 +266,10 @@ def test_na_janela_ladrilhada_sobra_no_maximo_uma_linha_de_chapa() -> None:
 @pytest.mark.parametrize("vista", ["foto-3", "dela", "ladrilhada"])
 def test_atualmente_conectado_acaba_no_fim_do_hub_e_rola(vista: str) -> None:
     atual = _medido(vista)["atual"]
-    # O desenho do todo (D-1610 da cadeia USB, publicado em 16/10) diz «A cadeia».
     assert atual["titulo_da_bandeja"].lower() == "a cadeia"
-    # Desde 05/10 a bandeja não estica até o fim do hub (o desenho aprovado: ela mede o que
-    # tem); o que se cobra é que ela acabe dentro da vista.
     assert atual["bandeja_bottom"] <= atual["corpo_bottom"] + 1, (
         f"({QUAL}) a bandeja acaba em {atual['bandeja_bottom']:.0f}, fora da vista "
         f"({atual['corpo_bottom']:.0f})")
-    # Desde 05/10 é uma linha por aparelho e a lista só rola quando não cabe: a régua cobra
-    # a altura e que nada fique escondido sem rolagem.
     conteudo, altura = atual["lista"]
     assert altura > 0 and conteudo >= altura, f"({QUAL}) a lista sem altura: {atual['lista']}"
 
@@ -323,13 +317,14 @@ def test_nenhum_texto_sem_acento_e_um_so_reexaminar() -> None:
 
 @pytest.mark.parametrize("vista", ["foto-3", "dela"])
 def test_o_sugestoes_fala_menos_e_o_mapa_comeca_na_vista(vista: str) -> None:
-    """MORDIDA: devolva o parágrafo «Eu não presumo» (ou a chamada das variantes)"""
+    """MORDIDA: devolva o parágrafo «Eu não presumo» (ou a chamada das variantes)
+
+    Prova da D-0110-AS-RAZOES-NO-INTERROGACAO.
+    """
     sug = _medido(vista)["sugestoes"]
     assert not sug["nao_presumo"], f"({QUAL}) o parágrafo «Eu não presumo» voltou"
     assert sug["palavras"] <= PALAVRAS_DO_SUGESTOES, (
         f"({QUAL}) o Sugestões tem {sug['palavras']} palavras: {sug['texto']}")
-    # O desenho aprovado de 05/10 tirou a linha solta do Sugestões (texto demais): o
-    # ganho não medido continua dito no «?» da troca (D-0110-AS-RAZOES-NO-INTERROGACAO).
     assert "não foi medido nesta máquina" not in sug["texto"].lower(), (
         f"({QUAL}) a linha solta do ganho não medido voltou ao Sugestões")
     assert sug["primeira_chapa_top"] < sug["corpo_bottom"], (
@@ -361,7 +356,6 @@ def test_a_razao_de_cada_movimento_mora_na_dica_do_titulo() -> None:
     assert dica["texto"] == dica["razao"], dica
     assert dica["cabe"], f"({QUAL}) a dica aberta passa da borda da caixa"
     assert dica["fechada"], f"({QUAL}) a dica não fecha ao tirar o ponteiro"
-    # a dica é curta (a página pede no máximo ~12 palavras) e sem marca de HTML
     assert 0 < len(dica["razao"].split()) <= 12 and "<" not in dica["razao"], dica
 
 
@@ -373,10 +367,7 @@ def test_o_adicionar_e_uma_linha_com_a_pergunta_dela() -> None:
         f"({QUAL}) a pergunta e as escolhas não estão na mesma linha: {mao['pergunta_e_escolhas']}")
 
 
-# ---- O Sugestões na largura mínima da aba (O-SUGESTOES-DO-MAPA-DAS-PORTAS-NAO-ROLAM-A-940-PX-01)
-
 NOME_LONGO = "Adaptador Bluetooth USB de longo alcance com antena externa"
-#: O nome que a pessoa dá é texto livre e vira o título do chip: ele também corta e vai na dica.
 NOME_DADO_LONGO = "Rádio da sala, o que fica atrás da televisão grande"
 
 MEDIR_A_CADEIA = r"""
@@ -409,8 +400,6 @@ def _arranjo_com_nome_longo() -> dict[str, Any]:
     dado = _arranjo()
     aps = dado["aparelhos"]
     hub = aps[0]
-    # a fixture não monta a cadeia USB (o censo é de mentira): ela entra aqui, na ordem de
-    # APARELHOS, com os quatro nós de baixo do hub «9-4» recuados e o enlace no primeiro.
     hub["hubFisico"] = "Hub USB 2 · 4 entradas"
     for i in (1, 2, 6, 8):
         aps[i]["dentroDe"] = hub["id"]
@@ -456,9 +445,11 @@ def test_o_sugestoes_nao_rola_nas_tres_larguras(vista: str, com: str) -> None:
 
 @pytest.mark.parametrize("vista", ["940", "1272", "1512"])
 def test_o_chip_da_cadeia_e_uma_linha_e_o_nome_inteiro_vai_na_dica(vista: str) -> None:
-    # D-1610-O-CHIP-DA-CADEIA-CORTA-NUMA-LINHA-E-O-NOME-INTEIRO-VAI-NA-DICA
     """O tipo e o nome ficam na mesma linha (o enlace segue embaixo); o nome que não cabe corta com
-    reticências e vai inteiro na dica do chip. Cobre o recuado (filho do hub) e o do extensor."""
+    reticências e vai inteiro na dica do chip. Cobre o recuado (filho do hub) e o do extensor.
+
+    Prova da D-1610-O-CHIP-DA-CADEIA-CORTA-NUMA-LINHA-E-O-NOME-INTEIRO-VAI-NA-DICA.
+    """
     for com in ("entregue", "exemplo"):
         chips = [c for c in _cadeia(vista, com)["chips"] if c["nome"] and c["titulo"]]
         assert any(c["recuado"] for c in chips), f"({QUAL}) {com}: a cadeia perdeu o recuado"

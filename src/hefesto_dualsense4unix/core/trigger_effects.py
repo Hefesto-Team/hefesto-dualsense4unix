@@ -13,9 +13,6 @@ AMPLITUDE_SCALE = 32
 
 MULTI_POSITION_MAX_STRENGTH = 7
 
-#: A frequência da Vibração por posição quando o perfil não traz a dele (o
-#: formato aninhado não tem onde guardá-la): o padrão do controle da tela, o
-#: `_frequency(40, lo=1)` de `app/actions/trigger_specs.py`, preso por teste.
 FREQUENCIA_PADRAO_DA_VIBRACAO_POR_POSICAO = 40
 
 
@@ -25,26 +22,20 @@ MODOS_DE_DEPURACAO: frozenset[int] = frozenset({0xFC, 0xFD, 0xFE})
 class TriggerMode(IntEnum):
     """Modos do bloco de gatilho, com os nomes da enum OFICIAL da Sony."""
 
-    # --- oficiais (a enum da Sony) -----------------------------------------
     OFF = 0x00
-    #: O OFF que o firmware entende no bloco de gatilho. Distinto do `0x00`:
-    #: este é o que a enum da Sony chama de `MODE_OFF`.
     DESLIGADO_OFICIAL = 0x05
     FEEDBACK = 0x21
     WEAPON = 0x25
     VIBRATION = 0x26
 
-    # --- não oficiais, vivos no firmware ------------------------------------
     BOW = 0x22
     GALLOPING = 0x23
     MACHINE = 0x27
 
-    # --- legado (aceito, sem validação de parâmetros) -----------------------
     RIGID = 0x01
     PULSE = 0x02
     SIMPLE_VIBRATION = 0x06
 
-    # --- os nomes de 2020, agora ALIAS dos de cima --------------------------
     RIGID_A = 0x21
     RIGID_B = 0x05
     RIGID_AB = 0x25
@@ -55,7 +46,6 @@ class TriggerMode(IntEnum):
 
 ZERO7 = (0, 0, 0, 0, 0, 0, 0)
 
-#: O bloco de um gatilho no report de saída: o modo e os dez parâmetros.
 TAMANHO_DO_BLOCO_DO_GATILHO = 11
 
 
@@ -581,8 +571,6 @@ PRESET_FACTORIES = {
 }
 
 
-#: Os seis valores que a Metralhadora guardava antes de 08/10/2026, na ordem:
-#: início, fim, amplitude A, amplitude B, frequência e período.
 _SEIS_DA_METRALHADORA_ANTIGA = 6
 
 
@@ -636,8 +624,6 @@ def _traduzir_params_nomeados(
     return dict(params)
 
 
-#: As frequências que o relógio de 1 kHz do gatilho entrega exatas acima de
-#: 33 Hz: as que dividem 1000 [comunidade]. Até 33 Hz qualquer valor serve.
 FREQUENCIAS_LIMPAS_ACIMA_DE_33_HZ: tuple[int, ...] = (40, 50, 100, 125, 200, 250)
 
 _LIMITE_DAS_FREQUENCIAS_LIVRES = 33
@@ -653,12 +639,8 @@ def frequencia_limpa(frequencia: int) -> int:
     )
 
 
-#: O padrão do Disparo da tela (início, fim, força em byte), para onde vai o `Pulse`.
 _DISPARO_PADRAO: tuple[int, int, int] = (2, 5, 200)
 
-#: Os nomes e os padrões dos ajustes das chaves que saíram da lista de onze, na
-#: ordem em que o perfil antigo os guardava. É o que lê um perfil gravado com
-#: ajustes nomeados.
 _AJUSTES_DAS_CHAVES_VELHAS: dict[str, tuple[tuple[str, int], ...]] = {
     "Rigid": (("position", 5), ("force", 200)),
     "SimpleRigid": (("strength", 6),),
@@ -728,10 +710,6 @@ def _de_pulso_a_para_a_tela(p: list[int]) -> tuple[str, list[int]]:
     ]
 
 
-#: A tabela fechada: a chave velha → o acionamento da lista de onze, com os ajustes
-#: dele. Perfil gravado com uma chave velha abre pela linha nova, nos quatro
-#: controles e nas duas conexões, porque quem monta o bloco é o `build_from_name`.
-#: `PulseA` NÃO está aqui: a chave segue dando o bloco `0x22` de hoje.
 TRADUCAO_DAS_CHAVES_VELHAS = {
     "Rigid": _de_rigid,
     "SimpleRigid": _de_rigido_simples,

@@ -398,11 +398,6 @@ def medido() -> dict:
             return None
 
         por_gesto(por_controle)
-        # O 🎙 de verdade declara `grava=`, e dois gestos que gravam andam numa
-        # fila só: o p2 nunca entraria no meio do p1, e o p1 esperaria o
-        # `aplicou` dele até o prazo. O dublê não grava nada; fora da fila de
-        # quem grava, os dois controles correm juntos, como qualquer gesto de
-        # leitura, e a corrida que a régua forja volta a existir.
         hv.pacotes.GESTOS_QUE_MEXEM.pop((PAGINA, GESTO_DO_CLIQUE), None)
         piloto.ponte.perguntar(CLICAR_NO_MIC_DE % js("p1"), anotar("corrida-p1"))
         GLib.timeout_add(150, a_corrida_do_p2)

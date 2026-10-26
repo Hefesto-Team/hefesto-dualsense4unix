@@ -702,8 +702,6 @@ class TestOPrazoAtravessaASuspensao:
         bancada.tique()
         assert bancada.dono_do_vpad_do_p1() is None
 
-        # D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026): com o jogo na autoridade
-        # o prazo para, a suspensão inclusive; ele volta a correr quando o jogo solta.
         kernel.dormir(3600.0)
         bancada.tique(0.0)
         assert bancada.dono_do_vpad_do_p1() is None
@@ -731,8 +729,6 @@ class TestOPrazoAtravessaASuspensao:
         bancada.tique()
         assert bancada.a_tela() == {}
 
-        # D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026): o jogo fechou antes
-        # de a máquina dormir; com ele aberto, o P3 retomaria o 3.
         bancada.daemon.display_authority = "daemon"
         bancada.tique(0.0)
         kernel.dormir(3600.0)

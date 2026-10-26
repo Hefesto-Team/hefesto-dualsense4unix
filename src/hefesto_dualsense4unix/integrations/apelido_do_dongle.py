@@ -135,7 +135,6 @@ from hefesto_dualsense4unix.core.linhagem_nintendo import (
 from hefesto_dualsense4unix.integrations import bluez_dbus, usb_pai
 from hefesto_dualsense4unix.utils.texto_do_sysfs import ler_texto
 
-#: de ``scripts/bt_active_mode.sh:142`` — os dois escritores têm de produzir a
 PREFIXO_NINTENDO = "Nintendo"
 
 TETO_DE_BYTES = 247
@@ -144,7 +143,6 @@ QUEM = "apelido-do-dongle"
 
 OUIS_NINTENDO = OUIS_LINHAGEM_COM_DOIS_PONTOS
 
-#: NÃO casa ``"DualSense Wireless Controller"``, e não casa ``"8BitDo Pro 2"``
 NOMES_NINTENDO = NOMES_LINHAGEM
 
 _MAC_RE = re.compile(r"^[0-9a-f]{2}(:[0-9a-f]{2}){5}$")

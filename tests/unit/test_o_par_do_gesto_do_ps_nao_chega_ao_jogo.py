@@ -35,7 +35,6 @@ GESTOS = (
 )
 
 
-#: O direcional chega ao jogo como chapéu (`ABS_HAT0*`), não como tecla.
 DIRECIONAL = {
     "dpad_up": (ecodes.ABS_HAT0Y, -1),
     "dpad_down": (ecodes.ABS_HAT0Y, 1),
@@ -153,7 +152,7 @@ def test_soltar_o_ps_e_apertar_o_r3_sozinho_leva_o_r3(
     mesa = _Mesa(monkeypatch, mascara)
     for jogador in (mesa.p1, mesa.p2):
         jogador("ps", "r3")
-        jogador("r3")  # o PS soltou antes: o R3 ainda é do gesto
+        jogador("r3")
         jogador()
         jogador("r3")
 

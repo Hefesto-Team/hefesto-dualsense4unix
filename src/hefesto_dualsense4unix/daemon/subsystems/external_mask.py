@@ -42,7 +42,6 @@ FLAVOR_FIELD = "flavor"
 
 MASKS_FILE_LOCK = threading.Lock()
 
-#: O sufixo da cópia do arquivo ilegível, guardada ao lado antes da primeira escrita.
 SUFIXO_DO_ILEGIVEL = ".ilegivel-"
 
 

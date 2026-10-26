@@ -125,7 +125,6 @@ def test_a_variante_do_gtk_segue_o_tema(trocas: dict[str, list[object]]) -> None
 def test_e_escuro_diz_escuro_para_a_casa_e_claro_para_o_tema_claro() -> None:
     assert tema.e_escuro({}, CASA)
     assert not tema.e_escuro(tema.tokens_da_folha(CLARO), CASA)
-    # o tema que não diz o fundo fica com o da casa
     assert tema.e_escuro({"--fg": "#1c1e29"}, CASA)
 
 

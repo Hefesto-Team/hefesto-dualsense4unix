@@ -24,9 +24,6 @@ from hefesto_dualsense4unix.interface import onde
 
 PAGINAS = ("08-conexoes.html", "09-sistema.html")
 
-#: Gestos registrados que a página estática não traz, cada um com o motivo. Os dois são
-#: pintados pelo pacote em tempo de execução, para o controle externo conectado
-#: (`_lista_do_externo`): sem externo na mesa não há elemento, e com ele há.
 SEM_ELEMENTO_ESTATICO: dict[tuple[str, str], str] = {
     ("08-conexoes.html", "externo-modo"):
         "pintado em execução pela lista do controle externo (`_lista_do_externo`)",

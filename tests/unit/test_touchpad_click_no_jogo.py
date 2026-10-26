@@ -483,7 +483,6 @@ class TestOCursorNaoAnda:
         regra = (
             _RAIZ / "assets/76-dualsense-touchpad-libinput-ignore.rules"
         ).read_text(encoding="utf-8")
-        # TOUCHPAD-DO-SISTEMA-01 (09/08/2026): o curinga `*DualSense*Touchpad`
         assert 'ATTRS{name}=="*Hefesto*Touchpad"' in regra
         assert 'ATTRS{uniq}=="02:fe:*"' in regra
         assert 'ENV{LIBINPUT_IGNORE_DEVICE}="1"' in regra

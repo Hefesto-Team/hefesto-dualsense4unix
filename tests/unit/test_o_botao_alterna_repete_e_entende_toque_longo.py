@@ -55,9 +55,6 @@ def _bordas(saida: list[tuple[float, frozenset[str], int, int]], botao: str, de:
     return n
 
 
-# -- o motor ------------------------------------------------------------------
-
-
 def test_alternar_segura_no_primeiro_toque_e_solta_no_segundo() -> None:
     ativacao = ab.Ativacao(alternar=F({"l1"}))
     toque, solto = ({"l1"}, 0, 0), (set(), 0, 0)
@@ -177,9 +174,6 @@ def test_os_numeros_do_motor_sao_os_do_cursor_e_os_do_perfil() -> None:
     assert (f["longo_ms"].metadata[0].ge, f["longo_ms"].metadata[1].le) == ab.FAIXA_DO_LONGO_MS
 
 
-# -- os dois caminhos do pad virtual -------------------------------------------
-
-
 class _Device:
     def __init__(self) -> None:
         self.analog: list[dict[str, int]] = []
@@ -268,7 +262,7 @@ def _foto(botoes: set[str], l2: int = 0) -> Any:
 
 
 def test_o_segundo_jogador_alterna_sem_mexer_no_primeiro(monkeypatch: pytest.MonkeyPatch) -> None:
-    # D-1610-O-BOTAO-ALTERNA-REPETE-LONGO-E-DUPLO-COM-OS-NUMEROS-DE-FABRICA
+    """Prova da D-1610-O-BOTAO-ALTERNA-REPETE-LONGO-E-DUPLO-COM-OS-NUMEROS-DE-FABRICA."""
     from hefesto_dualsense4unix.daemon.subsystems import gamepad as gp
 
     store = SimpleNamespace(udp_trigger_thresholds=(0, 0))
@@ -309,7 +303,7 @@ def test_o_perfil_seguinte_solta_o_botao_preso(monkeypatch: pytest.MonkeyPatch) 
         monkeypatch.setattr(m, nome_do_metodo, lambda *a, **k: None)
     com = Profile.model_validate({
         "name": "Com Alternar", "match": {"type": "any"},
-        "ativacao": {"alternar": ["l1"]}})  # (noqa-acento) identificador ASCII
+        "ativacao": {"alternar": ["l1"]}})  # (noqa-acento)
     sem = Profile.model_validate({"name": "Sem Alternar", "match": {"type": "any"}})
     monkeypatch.setattr(gerente, "load_profile", lambda nome: com)
     relatorio: dict[str, str] = {}
@@ -362,9 +356,6 @@ def test_a_tabela_com_o_jogo_alterna_por_controle(monkeypatch: pytest.MonkeyPatc
     assert not ab.preso(store, None), "soltar a tabela deixou o L1 preso"
 
 
-# -- a posição no código e o schema --------------------------------------------
-
-
 def _chama(arquivo: str, funcao: str, nome: str) -> bool:
     caminho = RAIZ / "src/hefesto_dualsense4unix/daemon/subsystems" / arquivo
     arvore = ast.parse(caminho.read_text())
@@ -385,11 +376,11 @@ def test_perfil_sem_a_secao_nao_grava_a_chave_e_com_ela_volta_igual() -> None:
     from hefesto_dualsense4unix.profiles.schema import Profile
 
     vazio = Profile.model_validate({"name": "Vazio", "match": {"type": "any"}})
-    assert "ativacao" not in vazio.model_dump(mode="json")  # (noqa-acento) identificador ASCII
+    assert "ativacao" not in vazio.model_dump(mode="json")  # (noqa-acento)
     cheio = Profile.model_validate({
         "name": "Cheio", "match": {"type": "any"},
-        "ativacao": {"longo": {"cross": "circle"}, "longo_ms": 800},  # (noqa-acento) chave ASCII
-        "controllers": {P2: {"ativacao": {"repetir": ["l1"]}}}})  # (noqa-acento) chave ASCII
+        "ativacao": {"longo": {"cross": "circle"}, "longo_ms": 800},  # (noqa-acento)
+        "controllers": {P2: {"ativacao": {"repetir": ["l1"]}}}})  # (noqa-acento)
     volta = Profile.model_validate(cheio.model_dump(mode="json"))
     assert volta.ativacao is not None and volta.ativacao.longo_ms == 800
     assert volta.controllers is not None and volta.controllers[P2].ativacao is not None
@@ -411,4 +402,4 @@ def test_o_perfil_recusa_a_ativacao_que_o_motor_recusa(secao: dict[str, Any]) ->
     with pytest.raises(ValidationError):
         Profile.model_validate({
             "name": "X", "match": {"type": "any"},
-            "ativacao": secao})  # (noqa-acento) identificador ASCII
+            "ativacao": secao})  # (noqa-acento)

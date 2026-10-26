@@ -30,7 +30,6 @@ NOMES = (
 )
 
 PID_DO_JOGO = 66255
-#: o fluxo do jogo como o grafo o numera: (id do grafo, serial, índice do pactl, sink)
 FLUXOS_DO_JOGO = ((171, 719, 78), (179, 739, 78), (184, 794, 78))
 ID_DO_OUVIDO = 900
 
@@ -120,9 +119,6 @@ class _Bancada:
             self.ouvido.uma_volta()
 
 
-# --- O defeito da bancada: o ouvido liga uma vez e fica --------------------------------
-
-
 @pytest.mark.parametrize("nome", NOMES)
 def test_o_ouvido_liga_uma_vez_e_fica_no_jogo_de_nome_perdido(nome: str) -> None:
     """**A régua do defeito**: 51 voltas de liga-cala em 8 min viram uma ligação só."""
@@ -159,9 +155,6 @@ def test_sem_ligacao_no_grafo_e_nao_sei_e_nao_derruba() -> None:
     assert not bancada.ouvido._conferido
 
 
-# --- A regra da conferência, peça por peça -----------------------------------------------
-
-
 def _fluxo(nome: str = "", *, serial: int | None = 719, ident: int | None = 171,
            perdido: bool = True) -> tj.FluxoDoJogo:
     return tj.FluxoDoJogo(78, serial, nome, PID_DO_JOGO, ident=ident, nome_perdido=perdido)
@@ -189,9 +182,6 @@ def test_o_nome_inteiro_decide_quando_e_o_que_se_tem() -> None:
     ascii_ = _fluxo("jogo", serial=None, ident=None, perdido=False)
     assert tj.e_o_fluxo_pedido("jogo", ascii_) is True
     assert tj.e_o_fluxo_pedido("microfone", ascii_) is False
-
-
-# --- A porta do som: «perdeu o texto» não é «não tem nome» --------------------------------
 
 
 @pytest.mark.parametrize("nome", NOMES)
@@ -233,9 +223,6 @@ def test_o_no_de_nome_perdido_nao_casa_com_o_pedido_vazio() -> None:
     )
     assert ps.volumes_do_no("sinks", "hefesto_som_x", ler) == [50]
     assert set(ps.sysfs_por_no("sinks", ler) or {}) == {"hefesto_som_x"}
-
-
-# --- Cada consumidor que decide por nome, com ™ e com acento ----------------------------
 
 
 @pytest.mark.parametrize("nome", NOMES)
@@ -343,11 +330,6 @@ def test_o_ouvido_do_produto_pede_a_identidade_ao_grafo(monkeypatch: pytest.Monk
     assert tj.OuvidoDoJogo(lambda: False)._conferir_o_alvo is tj.conferir_o_alvo_do_ouvido
 
 
-# --- A matriz: cabo e rádio, P1 a P4 misturados ------------------------------------------
-# O nó de som do controle é ``hefesto_som_<marca>`` nos dois transportes, e o endpoint da
-# háptica tem o nome da marca; o jogo de nome perdido toca no nó de UM assento, e os outros
-# três não podem ver jogo nem perder a conferência do próprio gravador.
-
 MESA = (
     ("P1", "APARELHOGHJKMN", "cabo"),
     ("P2", "APARELHOPQRSTU", "radio"),
@@ -417,7 +399,6 @@ def test_a_mesa_mista_cada_gravador_confere_o_proprio_no_com_o_jogo_no_grafo(
         objetos += [_no(60 + i, 600 + i, no, "Audio/Sink"),
                     _no(80 + i, 800 + i, rotulo, "Stream/Input/Audio"), _link(60 + i, 80 + i)]
         rotulos.append((rotulo, no))
-    # o jogo toca no nó do assento: o fluxo dele liga ao sink, e o grafo traz o nome inteiro
     objetos += [_link(i, 60 + assento) for i, _s, _k in FLUXOS_DO_JOGO]
     _pw_dump(monkeypatch, json.dumps(objetos))
     for rotulo, no in rotulos:

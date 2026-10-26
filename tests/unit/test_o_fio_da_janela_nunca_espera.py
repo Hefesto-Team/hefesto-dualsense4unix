@@ -22,7 +22,7 @@ from typing import Any
 import pytest
 
 from tests.unit.janela_aberta_comum import _args, _Estado, _gtk, _PonteDeMentira
-from tests.unit.test_o_app_responde_na_hora import casa  # noqa: F401 (a casa da régua 1)
+from tests.unit.test_o_app_responde_na_hora import casa  # noqa: F401
 
 RAIZ = Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src/hefesto_dualsense4unix/interface"
@@ -31,31 +31,19 @@ ABAS = ("01-jogar.html", "02-controles.html", "03-gatilhos.html", "04-iluminacao
         "05-vibracao.html", "06-navegacao.html", "07-lancadores.html",
         "08-conexoes.html", "09-sistema.html", "10-perfis.html")
 
-#: Três minutos, no relógio do produto: dez abas de 18 s.
 SEGUNDOS_POR_ABA = 18.0
 
-#: O teto do tique, em tempo de parede. Medido em 21/10/2026 depois da cura, nesta régua:
-#: o pior tique das dez abas foi de 107 ms, na primeira visita à 10 (a 08, 71; as outras,
-#: abaixo de 35). Perto de quatro vezes o pior, e abaixo do `time.sleep(0.5)` da mordida.
 TETO_DO_TIQUE_MS = 400.0
 
-#: Menos tiques que isto numa aba de 18 s (180 no relógio do produto) é tique que parou:
-#: o sinal da leitura que ainda não chegou escapou do `_tique` e matou o temporizador.
 TIQUES_MINIMOS_POR_ABA = 90
 
-#: Os eventos de auditoria que esperam por fora do processo.
 ESPERAM = ("subprocess.Popen", "os.system", "os.posix_spawn", "os.exec", "socket.connect",
            "time.sleep")
 
-#: O que lê arquivo: proibido no fio da janela só no `/sys` e no `/proc`.
 LEEM = ("open", "os.listdir", "os.scandir", "glob.glob")
 
-#: O próprio processo: o procfs dele não depende de aparelho nem de disco, e não espera.
-#: É o `/proc/self/stat` da linha `[abertura]` (`hefesto_vivo._segundos_de_vida`).
 PROC_DO_PROPRIO_PROCESSO = "/proc/self/"
 
-#: Os dois fios com o endereço no nome: a régua 4 de
-#: `test_o_registro_copiado_nao_entrega_o_endereco.py` os lê por `Thread(name=mascarar(…))`.
 FIOS_FORA_DO_DONO = {"mesa_viva.py", "pacotes/a05_vibracao.py", "pacotes/fios.py"}
 
 
@@ -136,15 +124,13 @@ def _tres_minutos(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
 
         def tique() -> bool:
             if fora.acabou:
-                return False  # o temporizador sai com a medida, e o conftest esvazia o laço
+                return False
             t0 = time.perf_counter()
             volta = bool(tique_original())
             custo = (time.perf_counter() - t0) * 1000
             if 0 <= fora.i < len(ABAS) and piloto.pagina == ABAS[fora.i]:
                 fora.tiques[ABAS[fora.i]].append(custo)
             if custo > TETO_DO_TIQUE_MS or time.monotonic() > fora.prazo:
-                # O teto já reprovou, ou passou do prazo: um tique que espera mais que a
-                # cadência ocupa o laço inteiro, e o fim tem de sair daqui, não de um timer.
                 gtk.main_quit()
             return volta
 
@@ -180,8 +166,10 @@ def _tres_minutos(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
 def test_tres_minutos_sem_o_fio_da_janela_esperar(
     casa: SimpleNamespace, monkeypatch: pytest.MonkeyPatch  # noqa: F811
 ) -> None:
-    # D-2210-O-FIO-DA-JANELA-NUNCA-ESPERA
-    """Dez abas, três minutos: nenhum tique acima do teto e nenhuma espera no fio da janela."""
+    """Dez abas, três minutos: nenhum tique acima do teto e nenhuma espera no fio da janela.
+
+    Prova da D-2210-O-FIO-DA-JANELA-NUNCA-ESPERA.
+    """
     assert sys.gettrace() is None, "a cobertura está ligada durante a medida"
     fora = _tres_minutos(monkeypatch)
     assert not fora.achados, (

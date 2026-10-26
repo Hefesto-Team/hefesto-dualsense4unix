@@ -211,7 +211,6 @@ def test_a_faixa_do_titulo_tem_um_morador_so():
             f"o botão de escopo global voltou à faixa do título em "
             f"{caminho.name} — ela mandou tirar os três cantos que falavam de "
             f"automático em 07/09/2026")
-    # O publicado só troca no `--publicar` da costura: o par se mede no desenho.
     topo = onde.pagina(PAGINA).read_text(encoding="utf-8").split(
         '<div class="quadro-topo">', 1)[-1].split("</div>", 1)[0]
     assert topo.count('data-gesto="modo-da-luz"') == 1 and 'class="modo-auto"' in topo, (
@@ -233,7 +232,7 @@ def test_o_botao_por_controle_saiu_e_o_desligar_ficou():
         lugares = len(re.findall(r'<div class="ctrl(?: off)?"', grade))
         assert lugares >= 2, "a régua não achou as colunas — não mediria nada"
         if caminho.parent == onde.PUBLICADO:
-            continue  # o publicado só troca no `--publicar` da costura
+            continue
         assert ">Desligar</button>" not in grade, (
             f"o `Desligar` voltou à célula Efeito de {caminho.name}: «Sem efeito» o substitui")
         assert grade.count('class="g4-efeito"') == lugares, (

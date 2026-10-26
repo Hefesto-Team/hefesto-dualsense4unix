@@ -12,7 +12,6 @@ import re
 from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
-#: o argv que o produto manda para ler a lista completa de um tipo.
 def argv_json(tipo: str) -> list[str]:
     return ["pactl", "--format=json", "list", tipo]
 
@@ -67,9 +66,6 @@ def texto(*objetos: Mapping[str, Any]) -> str:
     """A lista, no texto que o `pactl` imprime."""
     return json.dumps(list(objetos))
 
-
-# ---------------------------------------------------------------------------
-# Fixtures copiadas do `pactl list` longo (a bancada deixou várias): viram o JSON
 
 _BLOCO = re.compile(r"^(Sink Input|Source Output|Sink|Source|Card) #(\d+)\s*$")
 _PORTA = re.compile(r"^(.+?): (.*?) \((.*)\)\s*$")

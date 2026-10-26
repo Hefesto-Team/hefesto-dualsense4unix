@@ -22,7 +22,6 @@ SVGS = (INTERFACE / "ds_limpo.svg", RAIZ / "assets" / "control-svg" / "dualsense
 EXPORTAR = RAIZ / "scripts" / "tela" / "exportar.py"
 
 _TITULO = re.compile(r"<title>([^<]*)</title>")
-#: três letras ou mais, todas maiúsculas: «CHASSI», «INTEIRO». «PS», «L2», «R1» ficam.
 _GRITO = re.compile(r"(?<![^\W\d_])[A-ZÁÉÍÓÚÂÊÔÃÕÇ]{3,}(?![^\W\d_])")
 
 
@@ -54,7 +53,6 @@ def test_a_lista_de_grupos_do_exportador_nao_grita() -> None:
     assert len(titulos) == 9
     for t in titulos:
         assert not _GRITO.search(t), t
-    # O grupo dos glifos é escrito à parte, em texto: a mesma régua.
     assert _gritos(EXPORTAR.read_text(encoding="utf-8")) == []
 
 

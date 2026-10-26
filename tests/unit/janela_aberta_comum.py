@@ -33,21 +33,12 @@ MESAS = {1: (0,), 2: (0, 2), 4: (0, 1, 2, 3)}
 
 TIQUES_POR_FASE = 40
 
-#: O TETO de uma fase é este tanto de vezes o tempo nominal dela, que sai do
-#: `TIQUE_MS` do produto (ver `_teto_da_fase_s`). Bater o teto não é pulo: a
-#: fase anota a fome em `fora.famintas`, e o `_sem_fome` reprova com a causa
-#: medida: a máquina, ou o produto quando o tique para com o laço andando.
 VEZES_O_NOMINAL = 5
 
 ASSENTAR_S = 0.6
 
 ATRASO_NA_VOLTA_S = 0.12
 
-#: A cadência do produto (`hv.TIQUE_MS`) e a ACELERADA que as réguas de contagem usam: contar 120
-#: tiques de 100 ms eram 12 s de relógio por cenário, e a régua conta tiques, não segundos.
-#: Todo tempo absoluto do cenário (o assentar, o atraso do daemon na volta, a pergunta do roteiro)
-#: anda na mesma razão (`_razao`). Cada página guarda UM cenário no tempo de verdade
-#: (`CENARIO_NO_TEMPO_REAL`), porque a regressão de 29/08 só apareceu aos 181 s.
 TIQUE_REAL_MS = 100
 CADENCIA_ACELERADA_MS = 10
 
@@ -237,8 +228,6 @@ def _na_cadencia(mp: pytest.MonkeyPatch, hv: Any, ms: int) -> None:
 
     razao = float(TIQUE_REAL_MS) / float(ms)
     mp.setattr(hv, "TIQUE_MS", ms)
-    # Os períodos do produto que a régua conta em tiques andam na mesma razão: sem isto, a fase
-    # escondida de 40 tiques (0,4 s) não veria o coração (1 s) nem a leitura escondida (1 s).
     leitor = hv.LeitorDoEstado
     for dono, nome in ((leitor, "SEGUNDOS_ENTRE_LEITURAS_ESCONDIDA"),
                        (hv.Piloto, "SEGUNDOS_ENTRE_LEITURAS_DOS_EXTERNOS"),
@@ -519,8 +508,6 @@ def ids_dos_cenarios(cenarios: list[tuple[str, int]]) -> list[str]:
     return [f"{p[:2]}-{n}-controles" for p, n in cenarios]
 
 
-#: Um cenário por página no TEMPO DE VERDADE (a cadência do produto): a regressão de 29/08 só
-#: apareceu aos 181 s, e a aceleração mede tiques, não o relógio. É o de um controle.
 CENARIO_NO_TEMPO_REAL = 1
 
 

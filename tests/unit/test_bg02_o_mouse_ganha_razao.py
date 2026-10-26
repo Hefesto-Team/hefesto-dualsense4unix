@@ -115,7 +115,7 @@ def test_o_interruptor_vence_o_device_na_ordem_dos_motivos() -> None:
     assert _Handlers(d)._bloqueio_do_mouse() == "desligada"
 
 
-def test_o_mouse_e_o_teclado_leem_a_MESMA_conjuncao() -> None:  # noqa: N802  # maiúsculas para destacar o ponto, sem acento (noqa-acento)
+def test_o_mouse_e_o_teclado_leem_a_MESMA_conjuncao() -> None:  # noqa: N802
     """Um dono só para o gate do poll loop — ver `_bloqueio_da_emulacao_de_desktop`."""
     d = _FakeDaemonMouse(enabled=True)
     d.config.keyboard_emulation_enabled = True
@@ -179,7 +179,7 @@ async def test_o_state_full_nao_perdeu_as_tres_chaves_antigas() -> None:
 
 
 @pytest.mark.asyncio
-async def test_sem_config_acessivel_o_bloco_continua_OMITIDO() -> None:  # noqa: N802  # maiúsculas para destacar o ponto, sem acento (noqa-acento)
+async def test_sem_config_acessivel_o_bloco_continua_OMITIDO() -> None:  # noqa: N802
     """Contrato desde o FEAT-CLI-PARITY-01: ausência = "estado indisponível"."""
     daemon = Daemon(controller=FakeController(transport="usb"))
     h = _HandlersCompletos(None, daemon.store, daemon.controller)

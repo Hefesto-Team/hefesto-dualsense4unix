@@ -65,11 +65,6 @@ COMENTADO = """patreon: Conta_Tres
 """
 
 
-# ---------------------------------------------------------------------------
-# A leitura do arquivo
-# ---------------------------------------------------------------------------
-
-
 def test_so_a_chave_ativa_conta(mp: Any) -> None:
     assert mp.chaves_do_funding(COMENTADO) == {"patreon": ["Conta_Tres"]}
     assert mp.chaves_do_funding("github: []\nko_fi:\ncustom:\n") == {}
@@ -93,15 +88,9 @@ def test_as_formas_de_lista_do_yaml(mp: Any) -> None:
 def test_o_funding_de_verdade_le_sem_erro(mp: Any) -> None:
     formas = mp.apoios(RAIZ)
     assert all(f.rotulo for f in formas)
-    # O Patreon fica: a chave que está ativa hoje continua na página.
     texto = (RAIZ / ".github" / "FUNDING.yml").read_text(encoding="utf-8")
     ativas = mp.chaves_do_funding(texto)
     assert ("patreon" in ativas) == any(f.rotulo == "Patreon" for f in formas)
-
-
-# ---------------------------------------------------------------------------
-# A página
-# ---------------------------------------------------------------------------
 
 
 def test_preencher_a_chave_basta_e_cada_forma_leva_o_que_e_dela(
@@ -125,7 +114,7 @@ def test_chave_comentada_nao_aparece_nem_inventa_link_ou_qr(mp: Any, tmp_path: P
 
 
 def test_sem_nenhuma_chave_nao_ha_secao_nem_link_no_menu(mp: Any, tmp_path: Path) -> None:
-    # A decisão D-0610-O-APOIE-SO-COM-CHAVE-ATIVA.
+    """Prova da D-0610-O-APOIE-SO-COM-CHAVE-ATIVA."""
     for funding in ("# github: []\n# ko_fi:\n", None):
         pasta = tmp_path / ("sem" if funding is None else "comentado")
         pagina = _pagina(mp, _raiz(pasta, funding), pasta)
@@ -176,7 +165,7 @@ def test_o_crc_do_codigo_pix_confere_com_o_exemplo_do_manual_e_o_truncado_reprov
 def test_valor_que_nao_e_conta_endereco_nem_codigo_reprova_e_nada_se_adivinha(
     mp: Any, tmp_path: Path, funding: str, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    # A decisão D-0610-O-PIX-ENTRA-COMO-LINK.
+    """Prova da D-0610-O-PIX-ENTRA-COMO-LINK."""
     raiz = _raiz(tmp_path, funding)
     with pytest.raises(ValueError):
         mp.montar(raiz, tmp_path / "site")
@@ -202,12 +191,6 @@ def test_o_fluxo_das_paginas_remonta_quando_a_chave_ou_o_qr_mudam() -> None:
     assert ".github/FUNDING.yml" in texto and "scripts/github/qr_svg.py" in texto
 
 
-# ---------------------------------------------------------------------------
-# O QR
-# ---------------------------------------------------------------------------
-
-# O SHA-256 dos módulos, conferido contra o `qrencode` (nível M, modo byte):
-# as três matrizes saíram idênticas.
 VETORES = {
     "https://exemplo.org/doar": ("11955347ddc1b26e7874139c", 25),
     "x" * 150: ("1336208e161628515a3ac797", 49),

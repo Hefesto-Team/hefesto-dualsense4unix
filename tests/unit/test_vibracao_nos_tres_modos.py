@@ -141,9 +141,6 @@ def test_forca_zero_de_verdade_continua_dizendo_forca_zero(vpad_xbox):
     assert vpad_xbox.ff_maior_pedido == (0, 0)
 
 
-# 3. Máscara DualSense (uhid): os três buracos do painel
-
-
 class _VpadUhidDeBancada(uhid.UhidDualSense):
     """Vpad com o fd desligado — exercita só o caminho de output/rumble."""
 

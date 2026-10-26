@@ -28,11 +28,8 @@ from hefesto_dualsense4unix.profiles.schema import EfeitoDaLuz
 
 P1 = "aa:bb:cc:00:00:01"
 QUATRO = (P1, "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03", "aa:bb:cc:00:00:04")
-_ACAO = "acao"  # (noqa-acento): chave do estilo
+_ACAO = "acao"  # (noqa-acento)
 TIQUE_S = 0.1
-
-
-# --- a régua pura -----------------------------------------------------------------------------
 
 
 def _evento(tipo: str, uniq: str = P1) -> Any:
@@ -55,7 +52,7 @@ def _sessao(cena: ic.IntensidadeDaCena, segundos: float, por_s: float, *, inicio
 
 def test_a_cena_calma_e_o_combate_caem_em_faixas_diferentes() -> None:
     calma = ic.IntensidadeDaCena(graduar=True)
-    calma.contar([_evento(ic.TIPO_RUMBLE)])  # o jogo mostrou que vibra, e a cena acalma
+    calma.contar([_evento(ic.TIPO_RUMBLE)])
     _sessao(calma, 30.0, 0.0)
     combate = ic.IntensidadeDaCena(graduar=True)
     _sessao(combate, 30.0, 4.0)
@@ -130,7 +127,7 @@ def test_o_nativo_e_o_personalizado_nao_graduam(estilo: str | None) -> None:
 
 
 def test_a_graduacao_nasce_desligada_e_a_cena_se_calcula_mesmo_assim() -> None:
-    # D-2210-A-GRADUACAO-DA-CENA-NASCE-DESLIGADA
+    """Prova da D-2210-A-GRADUACAO-DA-CENA-NASCE-DESLIGADA."""
     assert ic.GRADUACAO_LIGADA is False
     cena = ic.IntensidadeDaCena()
     cena.contar([_evento(ic.TIPO_RUMBLE)])
@@ -146,13 +143,10 @@ def test_a_cena_e_a_do_controle_mais_agitado_entre_os_quatro() -> None:
     for i in range(300):
         agora += TIQUE_S
         if i % 2 == 0:
-            cena.contar([_evento(ic.TIPO_RUMBLE, QUATRO[3])])  # só o quarto controle luta
+            cena.contar([_evento(ic.TIPO_RUMBLE, QUATRO[3])])
         cena.andar(agora, jogo=True, ouvido=False, uniqs=QUATRO)
     assert cena.faixa == ic.COMBATE
     assert cena.por_segundo(ic.TIPO_RUMBLE) == pytest.approx(5.0, rel=0.05)
-
-
-# --- o motor de produção --------------------------------------------------------------------
 
 
 class _Pad:
@@ -261,7 +255,7 @@ def _toques_na_calma_e_no_combate(monkeypatch: pytest.MonkeyPatch, graduar: bool
         float, float]:
     mesa = _Mesa(monkeypatch, graduar=graduar)
     mesa.golpe()
-    mesa.tique()  # o jogo mostrou que vibra
+    mesa.tique()
     mesa.calma()
     calmo = mesa.ultimo_toque()
     assert mesa.motor.cena.faixa == ic.CALMA
@@ -316,7 +310,7 @@ def _grave(mesa: _Mesa) -> None:
 
 def test_o_corpo_que_o_hefesto_soma_segue_a_faixa(monkeypatch: pytest.MonkeyPatch) -> None:
     def corpo(faixa: str) -> float:
-        mesa = _Mesa(monkeypatch, "corrida")  # a Corrida veste o Som no corpo inteiro
+        mesa = _Mesa(monkeypatch, "corrida")
         mesa.motor.ouvido = _Ouvido()
         mesa.na_faixa(faixa)
         _grave(mesa)
@@ -327,9 +321,6 @@ def test_o_corpo_que_o_hefesto_soma_segue_a_faixa(monkeypatch: pytest.MonkeyPatc
     cheio = corpo(ic.COMBATE)
     assert cheio > 0.05
     assert corpo(ic.CALMA) == pytest.approx(cheio * ic.FATOR_DA_FAIXA[ic.CALMA], rel=1e-3)
-
-
-# --- o par do jogo não muda -----------------------------------------------------------------
 
 
 def test_o_degrau_do_dedo_e_o_par_cru_do_jogo_em_toda_faixa() -> None:
@@ -355,9 +346,6 @@ def test_o_degrau_do_dedo_e_o_par_cru_do_jogo_em_toda_faixa() -> None:
     assert combate == [tv.bloco_do_dedo(tv.degrau_do_rumble(0, n))
                        for n in (40, 120, 200, 255) for _lado in ("esquerdo", "direito")]
     assert blocos(ic.CALMA) == combate, "o rumble do jogo no dedo não passa pela cena"
-
-
-# --- a luz que respira ----------------------------------------------------------------------
 
 
 def test_a_luz_que_respira_desacelera_na_calma_e_nunca_passa_do_ritmo_do_efeito() -> None:
@@ -411,9 +399,6 @@ def test_sem_a_cena_a_luz_respira_no_relogio_de_sempre() -> None:
     assert sem == com_um
 
 
-# --- a bancada lê a cena ao vivo ------------------------------------------------------------
-
-
 def test_o_estado_do_daemon_traz_a_cena_e_sem_motor_nada(monkeypatch: pytest.MonkeyPatch) -> None:
     assert ic.estado_do_daemon(SimpleNamespace()) is None
     mesa = _Mesa(monkeypatch)
@@ -425,9 +410,6 @@ def test_o_estado_do_daemon_traz_a_cena_e_sem_motor_nada(monkeypatch: pytest.Mon
             "energia", "rumble_por_s", "dedo_por_s", "bordas_do_rumble"} <= set(estado)
     assert estado["bordas_do_rumble"] == 1
     assert mesa.motor.estado()["intensidade_da_cena"]["jogo"] is True
-
-
-# --- o gravador da bancada: a análise é pura -----------------------------------------------
 
 
 def _gravador() -> Any:

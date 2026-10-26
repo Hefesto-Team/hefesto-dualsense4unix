@@ -100,8 +100,6 @@ class TestTrezentosSegundosComOJogo:
         vpads = {u: bancada.vpad_de(u) for u in QUATRO if u != P1}
         bancada.mesa.levantar(sai)
         _volta(bancada)
-        # A saída em si muda a mesa (quem saiu deixa de ter número na tela) e arma uma
-        # vez, como sem jogo; o que a régua mede são os 300 s que vêm depois.
         gatilhos.clear()
         with structlog.testing.capture_logs() as registros:
             for _ in range(int(TREZENTOS / TIQUE)):
@@ -212,8 +210,6 @@ class TestOsExternosSeguemAMesmaRegra:
         antes = ponte == "antes-do-jogo"
         bancada = montar(monkeypatch, 2, relogio=relogio, jogo=not antes)
         externo = ExternalIdentityRegistry(clock=relogio)
-        # «com-o-jogo-aberto»: a ponte chega no meio da partida (o daemon que sobe com
-        # o jogo já na autoridade), e o externo é segurado na hora.
         bancada.reg.set_external_hold_provider(externo.segurar_os_prazos)
         if antes:
             bancada.daemon.display_authority = "game"

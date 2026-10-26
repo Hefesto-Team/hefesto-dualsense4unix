@@ -5,7 +5,6 @@ from __future__ import annotations
 import time
 from typing import Any
 
-#: ``steam_launch_options.with_steam_closed`` EXIGE de quem a chama, na forma
 SEGUNDOS_PARA_CONFIRMAR = 20.0
 
 ARMADO: dict[str, Any] = {}

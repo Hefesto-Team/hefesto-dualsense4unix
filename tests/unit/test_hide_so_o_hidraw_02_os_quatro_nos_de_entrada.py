@@ -415,7 +415,7 @@ def acl_funciona(tmp_path: Path) -> None:
     sonda.write_text("", encoding="ascii")
     try:
         os.setxattr(sonda, "system.posix_acl_access", encode_access_acl(UID))
-    except OSError as exc:  # pragma: no cover - depende do fs do CI
+    except OSError as exc:  # pragma: no cover
         pytest.skip(f"o fs de teste não guarda ACL POSIX: {exc}")
     finally:
         sonda.unlink()

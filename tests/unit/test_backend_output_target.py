@@ -37,7 +37,7 @@ class _FakeLight:
     def __init__(self) -> None:
         self.colors: list[tuple[int, int, int]] = []
 
-    def setColorI(self, r: int, g: int, b: int) -> None:  # noqa: N802 — API pydualsense
+    def setColorI(self, r: int, g: int, b: int) -> None:  # noqa: N802
         self.colors.append((r, g, b))
 
 
@@ -52,10 +52,10 @@ class _FakeHandle:
         self.audio = SimpleNamespace(setMicrophoneLED=self.mic.append)
         self.motors: list[tuple[str, int]] = []
 
-    def setLeftMotor(self, intensity: int) -> None:  # noqa: N802 — API pydualsense
+    def setLeftMotor(self, intensity: int) -> None:  # noqa: N802
         self.motors.append(("left", intensity))
 
-    def setRightMotor(self, intensity: int) -> None:  # noqa: N802 — API pydualsense
+    def setRightMotor(self, intensity: int) -> None:  # noqa: N802
         self.motors.append(("right", intensity))
 
 

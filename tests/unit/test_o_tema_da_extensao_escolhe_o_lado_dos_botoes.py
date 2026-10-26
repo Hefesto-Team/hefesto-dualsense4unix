@@ -36,7 +36,6 @@ from hefesto_dualsense4unix.mods import tema as tm
 from hefesto_dualsense4unix.mods.manifesto import Manifesto
 from tests.conftest import skip_sem_gi_real
 
-#: O tema claro de fundos, textos e acentos, na régua de contraste da casa.
 TEMA_CLARO = (":root{--app-bg:#eef0f5;--panel:#ffffff;--elevated:#f5f6fa;--fg:#1c1e29;"
               "--texto-suave:#383c4c;--texto-mudo:#545a70;--comment:#4a5486;"
               "--fundo-da-pagina:#dde1ea;--green:#1d7a3c;--cyan:#006d85;--purple:#6a3dc2;"
@@ -44,21 +43,21 @@ TEMA_CLARO = (":root{--app-bg:#eef0f5;--panel:#ffffff;--elevated:#f5f6fa;--fg:#1
 
 OPCOES = [
     {"id": "cores_claras", "rotulo": "Cores claras", "tipo": "ligado",
-     "padrao": True},  # (noqa-acento): chave
+     "padrao": True},  # (noqa-acento)
     {"id": "botoes_a_esquerda", "rotulo": "Botões à esquerda", "tipo": "ligado",
-     "padrao": True},  # (noqa-acento): chave
+     "padrao": True},  # (noqa-acento)
 ]
 BLOCO = {"arquivo": "tema.css", "botoes": "esquerda", "cor_pela_opcao": "cores_claras",
          "botoes_pela_opcao": "botoes_a_esquerda"}
 
 BASE = {"id": "tema-x", "nome": "Tema X", "api": ">=2,<3", "licenca": "MIT",
-        "versao": "1.0.0",  # (noqa-acento): chave
+        "versao": "1.0.0",  # (noqa-acento)
         "tipos": ["tema"],
-        "permissoes": ["tema"]}  # (noqa-acento): chave
+        "permissoes": ["tema"]}  # (noqa-acento)
 
 
 def _lugares(raiz: Path) -> instalador.Lugares:
-    return instalador.Lugares(codigo=raiz / "codigo",  # (noqa-acento): argumento
+    return instalador.Lugares(codigo=raiz / "codigo",  # (noqa-acento)
                               dados=raiz / "dados",
                               registro=raiz / "mods.json", estado=raiz / "estado.json")
 
@@ -71,7 +70,7 @@ def _instalada(lg: instalador.Lugares, mod_id: str, bloco: dict[str, Any], *,
     (pasta / "tema.css").write_text(TEMA_CLARO, encoding="utf-8")
     opcoes_dele = OPCOES if opcoes_do_manifesto is None else opcoes_do_manifesto
     manifesto = {**BASE, "id": mod_id, "nome": f"Tema {mod_id}", "tema": bloco,
-                 "opcoes": opcoes_dele}  # (noqa-acento): chave
+                 "opcoes": opcoes_dele}  # (noqa-acento)
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
     registro = instalador.ler_registro(lg.registro)
     registro[mod_id] = instalador.Entrada(
@@ -85,14 +84,11 @@ def _escolher(lg: instalador.Lugares, mod_id: str, opcao: str, valor: bool) -> N
     opcoes.guardar(manifesto, opcao, valor, lg)
 
 
-# --- a régua do manifesto ------------------------------------------------------------------
-
-
 def _manifesto(bloco: dict[str, Any], opcoes_do_manifesto: list[dict[str, Any]] | None = None
                ) -> Manifesto:
     return Manifesto.model_validate({
         **BASE, "tema": bloco,
-        "opcoes": (  # (noqa-acento): chave
+        "opcoes": (  # (noqa-acento)
             OPCOES if opcoes_do_manifesto is None else opcoes_do_manifesto)})
 
 
@@ -121,9 +117,6 @@ def test_a_regua_recusa_lado_invalido_e_vinculo_torto(bloco: dict[str, Any], mot
         _manifesto(bloco, com_gravidade)
 
 
-# --- o tema ligado diz a cor e o lado, cada um pela sua opção ---------------------------------
-
-
 def test_sem_extensao_nao_ha_lado_do_tema(tmp_path: Path) -> None:
     lg = _lugares(tmp_path)
     assert tm.tema_da_casa(lg) == tm.TemaDaCasa()
@@ -139,7 +132,7 @@ def test_o_lado_da_extensao_vale_com_o_tema_ligado(tmp_path: Path) -> None:
 
 
 def test_cada_escolha_se_liga_a_sua_opcao(tmp_path: Path) -> None:
-    # D-2210-O-LADO-DOS-BOTOES-E-DO-TEMA.
+    """Prova da D-2210-O-LADO-DOS-BOTOES-E-DO-TEMA."""
     lg = _lugares(tmp_path)
     _instalada(lg, "claro", BLOCO)
     _escolher(lg, "claro", "botoes_a_esquerda", False)
@@ -158,7 +151,6 @@ def test_o_bloco_so_com_o_lado_liga_sem_cor_nenhuma(tmp_path: Path) -> None:
     _instalada(lg, "so-lado", {"botoes": "esquerda"}, opcoes_do_manifesto=[])
     agora = tm.tema_da_casa(lg)
     assert agora.botoes == "esquerda" and agora.folha == "" and not agora.recusa, agora
-    # o «ligar» não pede folha a quem não traz cor
     _instalada(lg, "so-lado", {"botoes": "esquerda"}, opcoes_do_manifesto=[], ligada=False)
     assert instalador.ligar("so-lado", permissoes_vistas=["tema"], lugares=lg).ligada is True
 
@@ -205,8 +197,6 @@ def test_as_opcoes_vigiadas_sao_as_dos_temas_ligados(tmp_path: Path) -> None:
     _instalada(lg, "desligado", BLOCO, ligada=False)
     assert tm.arquivos_de_opcoes_dos_temas(lg) == [opcoes.caminho("claro", lg)]
 
-
-# --- a barra na tela: o lado do sistema, o da extensão, e a troca sem reabrir -----------------
 
 _SONDA = r"""
 import json, os, pathlib, sys, time, types
@@ -297,7 +287,7 @@ print(json.dumps(fases))
 def fases(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
     raiz = tmp_path_factory.mktemp("lado")
     manifesto = {**BASE, "id": "claro", "nome": "Tema claro", "tema": BLOCO,
-                 "opcoes": OPCOES}  # (noqa-acento): chave
+                 "opcoes": OPCOES}  # (noqa-acento)
     ambiente = dict(
         os.environ, PYTHONDONTWRITEBYTECODE="1", SONDA_RAIZ=str(raiz),
         SONDA_BLOCO=json.dumps(BLOCO), SONDA_TEMA=TEMA_CLARO,
@@ -307,7 +297,6 @@ def fases(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Any]:
     filho = subprocess.run([sys.executable, "-c", _SONDA], env=ambiente,
                            capture_output=True, text=True, timeout=180)
     if filho.returncode != 0:
-        # só a falta de tela pula; qualquer outro erro da sonda é vermelho, e não silêncio
         if "display" not in filho.stderr.lower():
             pytest.fail(f"a sonda quebrou: {filho.stderr.strip()[-600:]}")
         pytest.skip(f"a barra não subiu na tela de mentira: {filho.stderr.strip()[-400:]}")
@@ -375,7 +364,6 @@ def test_o_registro_que_muda_leva_os_botoes_ao_lado_novo(monkeypatch: pytest.Mon
 
     quem = SimpleNamespace(_lado="direita", _barra=None, _botoes_da_barra={})
     quem.trocar_o_lado = lambda lado: janela.JanelaDaAba.trocar_o_lado(quem, lado)  # type: ignore[attr-defined]
-    # o monkeypatch devolve a função: recarregar o módulo trocaria as classes de quem já o importou
     monkeypatch.setattr(janela, "lado_dos_botoes", lambda: "esquerda")
     janela.JanelaDaAba._o_lado_dos_botoes_pode_ter_mudado(quem)  # type: ignore[arg-type]
     assert quem._lado == "esquerda"

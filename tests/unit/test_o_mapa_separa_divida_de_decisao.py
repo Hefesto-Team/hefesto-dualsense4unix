@@ -199,9 +199,6 @@ O_APARELHO_RECUSA = "o-aparelho-recusa"
 
 DOMINIO = _DOMINIO_DO_PORTAO["por_que_nao_aciona"]
 
-#:                    payload_do_degrau dela — todas do DualSense
-#: 15/10/2026: 22 -> 20, a háptica fina (`vibracao.haptics_vcm@dualsense`) pagou as
-#: duas células, cabo e rádio, com o ensaio de cada lado no caderno.
 TETO_DA_DIVIDA = 20
 
 

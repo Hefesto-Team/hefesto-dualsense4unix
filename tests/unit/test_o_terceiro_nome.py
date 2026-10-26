@@ -25,7 +25,6 @@ PACOTE = pathlib.Path(
     "src/hefesto_dualsense4unix/interface/pacotes/a02_controles.py")
 
 MESA = 4
-#: Os nomes do TODO de 15/10/2026; os de 20/09 caducaram com ele.
 NOME_DELA = "Canais sonoros apenas no PC"
 NOME_DO_QUARTO = "Canais sonoros apenas no DualSense"
 NOME_DE_ONTEM = "Tudo na TV e Nada no Controle"

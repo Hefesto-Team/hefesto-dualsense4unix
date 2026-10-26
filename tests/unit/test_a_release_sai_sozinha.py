@@ -39,7 +39,6 @@ REPOSITORIO_YML = RAIZ / ".github" / "repositorio.yml"
 GH_DE_MENTIRA = RAIZ / "tests" / "fixtures" / "github" / "gh_de_mentira.py"
 APLICAR = RAIZ / "scripts" / "github" / "aplicar.py"
 
-# O que o `check_version_consistency.py` confere, copiado do repositório real para o brinquedo.
 ALVOS_DE_VERSAO = (
     "pyproject.toml",
     "README.md",
@@ -147,13 +146,11 @@ def brinquedo(tmp_path: Path) -> Path:
         destino = raiz / rel
         destino.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(RAIZ / rel, destino)
-    # o README real é grande e traz a versão em duas linhas: o que importa aqui são elas
     (raiz / "CHANGELOG.md").write_text(CHANGELOG_DO_BRINQUEDO, encoding="utf-8")
     (raiz / ".github").mkdir()
     (raiz / ".github" / "repositorio.yml").write_text(
         REPOSITORIO_DO_BRINQUEDO.format(serie="0.9"), encoding="utf-8"
     )
-    # os alvos copiados dizem a versão do repositório no dia; a base do brinquedo é sempre a 0.9.4.5
     base = rodar(VERSAO, "gravar", "0.9.4.5", "--data", "2026-08-20", raiz=raiz)
     assert base.returncode == 0, base.stdout + base.stderr
     git(raiz, "add", "-A")
@@ -161,13 +158,8 @@ def brinquedo(tmp_path: Path) -> Path:
     git(raiz, "tag", "v0.9.4.5")
     git(
         raiz, "tag", "v4.0.0"
-    )  # outra numeração, mais alta: a série 0.9 não pode tomá-la por «última»
+    )
     return raiz
-
-
-# ---------------------------------------------------------------------------
-# 1. O dono da versão
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -266,7 +258,6 @@ def test_trocar_a_serie_e_trocar_a_linha_do_arquivo(brinquedo: Path) -> None:
         == "4.1.0"
     )
     commitar(brinquedo, "fix: dois")
-    # feat e fix juntos: o feat manda
     assert (
         rodar(VERSAO, "seguinte", "--so-o-numero", raiz=brinquedo).stdout.splitlines()[-1]
         == "4.1.0"
@@ -300,9 +291,7 @@ def _texto_dos_alvos(raiz: Path) -> dict[str, str]:
 def test_gravar_poe_a_mesma_versao_em_todos_os_alvos_e_a_regua_do_repositorio_concorda(
     brinquedo: Path,
 ) -> None:
-    # o brinquedo parte de um repositório em que a régua JÁ passava
     assert _conferencia(brinquedo).returncode == 0
-    # a seção do CHANGELOG primeiro: o AppStream resume a release a partir dela
     assert (
         rodar(CHANGELOG, "montar", "0.9.5", "--data", "2026-10-07", raiz=brinquedo).returncode == 0
     )
@@ -377,7 +366,6 @@ def test_gravar_recusa_versao_fora_da_serie(brinquedo: Path) -> None:
 
 
 def test_mordida_um_alvo_com_versao_diferente_reprova_e_o_dono_o_acha(brinquedo: Path) -> None:
-    # alguém mexeu num alvo à mão: a régua reprova, e o dono, no --conferir, aponta o arquivo
     pkg = brinquedo / "packaging" / "arch" / "PKGBUILD"
     pkg.write_text(
         pkg.read_text(encoding="utf-8").replace("pkgver=0.9.4.5", "pkgver=0.9.4.4"),
@@ -419,11 +407,6 @@ def test_a_serie_do_repositorio_real_existe_e_a_proposta_roda_nele() -> None:
     assert r.returncode == 0, r.stdout
 
 
-# ---------------------------------------------------------------------------
-# 2. O bloco `publico` e o CHANGELOG que nasce do que foi fechado
-# ---------------------------------------------------------------------------
-
-
 def sprint(
     raiz: Path,
     ident: str,
@@ -459,8 +442,6 @@ def test_o_bloco_publico_e_lido_e_o_resto_da_sprint_fica_em_casa(
     spec = importlib.util.spec_from_file_location("publico_do_teste", PUBLICO)
     assert spec and spec.loader
     modulo = importlib.util.module_from_spec(spec)
-    # o `scripts/release` tem um `pacotes.py`: deixado no sys.path, ele toma o lugar do
-    # `interface/pacotes` nos testes que vêm depois na mesma parte da suíte
     monkeypatch.syspath_prepend(str(RELEASE))
     spec.loader.exec_module(modulo)
     texto = (
@@ -553,7 +534,6 @@ def test_o_changelog_nasce_do_que_estava_escrito_das_sprints_fechadas_e_dos_prs(
     assert secao.index("### Adicionado") < secao.index("### Corrigido"), (
         "a ordem é a do Keep a Changelog"
     )
-    # Unreleased fica vazio e a versão anterior não se mexe
     assert texto.split("## [Unreleased]")[1].split("## [0.9.5]")[0].strip() == ""
     assert "## [0.9.4.5] — 2026-08-20\n\n### Adicionado\n\n- Item antigo." in texto
 
@@ -669,11 +649,6 @@ def test_as_notas_trazem_a_secao_e_como_conferir_o_que_se_baixa(brinquedo: Path)
     assert rodar(CHANGELOG, "notas", "9.9.9", raiz=brinquedo).returncode == 3
 
 
-# ---------------------------------------------------------------------------
-# 3. O que se baixa se confere: o SHA256SUMS
-# ---------------------------------------------------------------------------
-
-
 def _pasta_de_artefatos(tmp_path: Path) -> Path:
     pasta = tmp_path / "dist"
     pasta.mkdir()
@@ -751,12 +726,7 @@ def test_pasta_vazia_nao_gera_sums(tmp_path: Path) -> None:
     assert rodar(SUMS, "gerar", str(tmp_path / "vazia")).returncode == 2
 
 
-# ---------------------------------------------------------------------------
-# 4. A publicação: rascunho, arquivos, publicação, contra o `gh` de mentira
-# ---------------------------------------------------------------------------
-
 SLUG = "Hefesto-Team/ensaio"
-# a conta da casa vai por partes: o higienizador do commit apaga o nome inteiro
 CONTA = "vitoria" + "mariadb"
 
 
@@ -889,7 +859,6 @@ def test_versao_publicada_com_outros_arquivos_e_recusada_e_nada_muda(
     gh.mudar(imutaveis=True)
     pasta, notas = _pronta_para_publicar(tmp_path)
     assert publicar(pasta, notas).returncode == 0
-    # uma reconstrução que não é byte a byte a mesma (o wheel e o AppImage não são reproduzíveis)
     (pasta / "hefesto-0.9.5.tar.gz").write_bytes(b"reconstruido")
     rodar(SUMS, "gerar", str(pasta))
     antes = gh.estado
@@ -903,7 +872,6 @@ def test_versao_publicada_com_outros_arquivos_e_recusada_e_nada_muda(
 def test_o_rascunho_interrompido_e_retomado_sem_recriar(gh: Mentira, tmp_path: Path) -> None:
     gh.mudar(imutaveis=True)
     pasta, notas = _pronta_para_publicar(tmp_path)
-    # a primeira corrida morreu depois de criar o rascunho e subir só um arquivo
     gh.mudar(
         releases={
             "v0.9.5": {
@@ -961,10 +929,8 @@ def test_a_causa_o_fluxo_antigo_apagar_e_recriar_a_imutavel_recusa(
     def g(*args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(["gh", *args], capture_output=True, text=True, check=False)
 
-    # 1. o `create` com arquivos, sem rascunho: nasce pública e travada, e o arquivo não sobe
     criar = g("release", "create", "v0.9.5", "--repo", SLUG, "--title", "t", *arquivos)
     assert criar.returncode == 1 and "immutable" in criar.stderr
-    # 2. a versão existe publicada: o fluxo antigo a apagava e recriava
     assert g("release", "delete", "v0.9.5", *base).returncode == 0
     nova = g("release", "create", "v0.9.5", "--repo", SLUG, "--title", "t", "--draft")
     assert nova.returncode == 1 and "used by an immutable release" in nova.stderr, (
@@ -1024,11 +990,6 @@ def test_a_release_publicada_imutavel_recusa_arquivo_novo_e_edicao(
     assert edita.returncode == 1 and "immutable" in edita.stderr
 
 
-# ---------------------------------------------------------------------------
-# 5. O `release.yml`
-# ---------------------------------------------------------------------------
-
-
 @pytest.fixture(scope="module")
 def wf() -> dict[str, Any]:
     dados = yaml.safe_load(RELEASE_YML.read_text(encoding="utf-8"))
@@ -1085,7 +1046,6 @@ def test_a_integridade_gera_o_sums_e_pede_o_atestado_de_tudo(wf: dict[str, Any])
         "id-token": "write",
         "attestations": "write",
     }
-    # o `act` não tem o token OIDC: só esse passo é pulado, e o resto roda de verdade
     assert atesta[0]["if"] == "${{ !env.ACT }}"
     assert [p["name"] for p in passos if "if" in p] == [atesta[0]["name"]]
 
@@ -1094,8 +1054,6 @@ def test_a_integridade_espera_todos_os_arquivos_e_quem_publica_espera_a_integrid
     wf: dict[str, Any],
 ) -> None:
     assert {"build", "appimage", "deb", "flatpak"} <= set(_needs(wf, "integridade"))
-    # o atestado de repositório público entra no registro público de transparência e não se apaga:
-    # com o ci.yml vermelho, nada sai daqui
     assert "guarda-ci" in _needs(wf, "integridade")
     assert "integridade" in _needs(wf, "github-release") and "integridade" in _needs(wf, "pypi")
     for antigo in ("deb-install-smoke", "guarda-ci"):
@@ -1160,11 +1118,6 @@ def test_todo_job_do_release_tem_decisao_no_ci_de_casa(wf: dict[str, Any]) -> No
     assert {"integridade", "pacotes", "github-release"} <= decididos
 
 
-# ---------------------------------------------------------------------------
-# 6. As notas automáticas do GitHub e o arquivo do repositório
-# ---------------------------------------------------------------------------
-
-
 def _rotulos_do_repositorio() -> list[str]:
     dados = yaml.safe_load(REPOSITORIO_YML.read_text(encoding="utf-8"))
     return [r["nome"] for r in dados["rotulos"]["lista"]]
@@ -1181,7 +1134,6 @@ def test_as_notas_automaticas_agrupam_pelos_rotulos_de_area_do_repositorio() -> 
     )
     assert notas["categories"][-1]["labels"] == ["*"], "o que não casa cai na última"
     assert all(r in existentes for r in notas["exclude"]["labels"])
-    # a mesma frase que o resto do texto público: nada da casa
     saida = subprocess.run(
         [sys.executable, str(RAIZ / "scripts/check_texto_publico.py")],
         cwd=RAIZ,
@@ -1196,11 +1148,6 @@ def test_a_serie_e_o_bloco_release_do_arquivo_do_repositorio() -> None:
     dados = yaml.safe_load(REPOSITORIO_YML.read_text(encoding="utf-8"))
     assert dados["release"] == {"serie": "0.9.5"}
     assert dados["seguranca"]["releases_imutaveis"] == {"ligada": True}
-
-
-# ---------------------------------------------------------------------------
-# 7. O main avança na release: a assinatura com a exceção de quem administra
-# ---------------------------------------------------------------------------
 
 
 def _aplicar_modulo() -> Any:
@@ -1256,7 +1203,6 @@ def test_o_main_avanca_por_quem_administra_e_e_recusado_para_quem_nao_administra
     r = _avancar("main", "c3")
     assert r.stdout.startswith("HTTP/2.0 200"), r.stdout + r.stderr
     assert gh.estado["ramos"]["main"] == "c3"
-    # quem não administra: o mesmo avanço, o mesmo ruleset, e o servidor recusa
     _historia(gh, assinados=False)
     gh.mudar(user="visitante")
     recusado = _avancar("main", "c3")
@@ -1276,7 +1222,6 @@ def test_a_excecao_do_main_vale_so_para_a_assinatura_e_nem_quem_administra_reesc
     gh = repositorio_aplicado
     _historia(gh, assinados=False)
     e = gh.estado
-    # um commit que não descende do main de hoje
     e["commits"]["x1"] = {"pai": "c0", "assinado": False}
     gh.mudar(commits=e["commits"], ramos={"dev": "c3", "main": "c3"})
     r = _avancar("main", "x1", force=True)
@@ -1305,7 +1250,6 @@ def test_no_dev_nem_quem_administra_empurra_commit_sem_assinatura(
         and "A história do dev" in mensagem
         and "verified signatures" in mensagem
     )
-    # com os commits assinados o dev avança: a regra barra o que não está assinado, e só isso
     _historia(gh, assinados=True)
     gh.mudar(ramos={"dev": "c0", "main": "c0"})
     assert _avancar("dev", "c3").stdout.startswith("HTTP/2.0 200")
@@ -1354,11 +1298,6 @@ def test_o_ruleset_do_main_chega_ao_servidor_com_a_excecao_de_administrador(
     assert versoes["bypass_actors"] == [], "as versões publicadas não têm exceção para ninguém"
 
 
-# ---------------------------------------------------------------------------
-# 8. O gesto do PyPI fica escrito: o `aplicar.py --conferir` avisa
-# ---------------------------------------------------------------------------
-
-
 def test_o_conferir_avisa_enquanto_o_publicador_de_confianca_do_pypi_nao_foi_registrado(
     gh: Mentira, tmp_path: Path
 ) -> None:
@@ -1384,7 +1323,6 @@ def test_o_conferir_avisa_enquanto_o_publicador_de_confianca_do_pypi_nao_foi_reg
         and "release.yml" in texto
         and "pypi" in texto
     )
-    # feito o gesto, a variável diz «true» e o aviso some
     gh.mudar(variaveis={"PYPI_PUBLISH": "true"})
     aplicar.principal(
         ["--repo", SLUG, "--arquivo", str(REPOSITORIO_YML), "--conferir", "--detalhe", str(detalhe)]
@@ -1412,11 +1350,6 @@ def test_o_arquivo_recusa_serie_torta() -> None:
         assert any(e.startswith("release.serie") for e in aplicar.validar(dados)), torta
     del dados["release"]["serie"]
     assert any(e.startswith("release.serie") for e in aplicar.validar(dados))
-
-
-# ---------------------------------------------------------------------------
-# 9. Os arquivos de pacote seguem a versão
-# ---------------------------------------------------------------------------
 
 
 def _brinquedo_na_versao(brinquedo: Path, numero: str = "0.9.5") -> None:
@@ -1454,7 +1387,6 @@ def test_os_pacotes_saem_na_versao_da_tag_com_o_hash_do_tarball(
         r"^Version:\s*0\.9\.5$", (saida / "debian" / "control").read_text(encoding="utf-8"), re.M
     )
     assert 'version = "0.9.5";' in (saida / "nix" / "package.nix").read_text(encoding="utf-8")
-    # o PKGBUILD do repositório fica com SKIP: o hash só existe depois da tag
     assert "sha256sums=('SKIP')" in (brinquedo / "packaging/arch/PKGBUILD").read_text(
         encoding="utf-8"
     )
@@ -1541,7 +1473,6 @@ def test_o_pr_de_atualizacao_abre_no_repositorio_de_pacote_com_o_autor_do_commit
         ).returncode
         == 0
     )
-    # o repositório de pacote: um bare local; o `gh` de fachada clona dele e grava o PR que abriria
     remoto = tmp_path / "pacote.git"
     git(tmp_path, "init", "-q", "--bare", "-b", "main", str(remoto))
     semente = tmp_path / "semente"
@@ -1557,7 +1488,6 @@ def test_o_pr_de_atualizacao_abre_no_repositorio_de_pacote_com_o_autor_do_commit
     fachada = bin_ / "gh"
     fachada.write_text(
         "#!/bin/sh\n"
-        # o clone é raso como o do `gh repo clone ... -- --depth 1`: sem o ramo remoto de antes
         'if [ "$1 $2" = "repo clone" ]; then '
         f'exec git clone -q --depth 1 file://{remoto} "$4"; fi\n'
         'if [ "$1 $2" = "pr create" ]; then echo "$@" >> ' + str(prs) + "; exit 0; fi\n"
@@ -1591,8 +1521,6 @@ def test_o_pr_de_atualizacao_abre_no_repositorio_de_pacote_com_o_autor_do_commit
     assert "pkgver=0.9.5" in conteúdo and "sha256sums=('" in conteúdo
     pedido = prs.read_text(encoding="utf-8")
     assert "--repo Hefesto-Team/pacote-arch" in pedido and "--head atualiza-0.9.5" in pedido
-    # o job re-executado (outro dia, outro commit): o ramo remoto já existe e o PR já está aberto;
-    # nada falha nem se duplica
     outro_dia = {"GIT_AUTHOR_DATE": "2026-10-08T12:00:00+00:00"}
     outro_dia["GIT_COMMITTER_DATE"] = outro_dia["GIT_AUTHOR_DATE"]
     de_novo = rodar(
@@ -1610,7 +1538,6 @@ def test_o_pr_de_atualizacao_abre_no_repositorio_de_pacote_com_o_autor_do_commit
     assert de_novo.returncode == 0, de_novo.stdout + de_novo.stderr
     assert "já estava aberto" in de_novo.stdout
     assert len(prs.read_text(encoding="utf-8").splitlines()) == 1, "um PR só"
-    # distro que o artefato não tem: recusa antes de clonar
     ruim = rodar(
         PACOTES,
         "abrir-pr",
@@ -1644,17 +1571,13 @@ def test_o_publicar_nao_importa_o_que_nao_usa() -> None:
                 assert m.group(1) in permitidos, f"{arq.name}: {ln.strip()}"
 
 
-# ---------------------------------------------------------------------------
-# 10. A triagem da issue aceita: o outro lado do ciclo da sprint
-# ---------------------------------------------------------------------------
-
 TRIAGEM_YML = RAIZ / ".github" / "workflows" / "triagem.yml"
 ROTULOS_YML = RAIZ / ".github" / "workflows" / "rotulos.yml"
 
 
 def _eventos(arquivo: Path) -> set[tuple[str, str]]:
     dados = yaml.safe_load(arquivo.read_text(encoding="utf-8"))
-    gatilho = dados.get("on", dados.get(True))  # o YAML 1.1 lê `on` como verdadeiro
+    gatilho = dados.get("on", dados.get(True))
     return {
         (evento, tipo)
         for evento, cfg in gatilho.items()
@@ -1665,8 +1588,6 @@ def _eventos(arquivo: Path) -> set[tuple[str, str]]:
 def test_a_triagem_ouve_so_o_rotulo_aceito_e_o_rotulos_yml_ouve_outros_eventos() -> None:
     triagem = _eventos(TRIAGEM_YML)
     assert triagem == {("issues", "labeled")}
-    # o dono de cada coisa: o que acontece quando a issue ABRE ou é EDITADA é do `rotulos.yml`, e
-    # o que acontece quando ela é ACEITA é da triagem; nenhum evento é dos dois
     assert triagem.isdisjoint(_eventos(ROTULOS_YML))
     job = yaml.safe_load(TRIAGEM_YML.read_text(encoding="utf-8"))["jobs"]["aceita"]
     assert job["if"] == "github.event.label.name == 'aceito'"
@@ -1682,7 +1603,6 @@ def test_a_triagem_nao_refaz_o_que_o_rotulos_yml_ja_faz() -> None:
 
 def test_o_rotulo_aceito_e_um_dos_do_arquivo_do_repositorio_e_a_lista_e_uma_so() -> None:
     assert "aceito" in _rotulos_do_repositorio()
-    # nenhum fluxo cria rótulo: `gh issue create --label` de nome que não existe o cria calado
     for fluxo in (TRIAGEM_YML, ROTULOS_YML):
         assert "gh label create" not in fluxo.read_text(encoding="utf-8")
 

@@ -267,7 +267,6 @@ class TestACapacidadeNaoFoiEnterrada:
 
         sync.tick(now=0.0)
 
-        # Sem DualSense na mesa, o Pro é o primeiro presente -> posição 1.
         assert _retrato(sysfs_de_led) == {
             f"{INST_PRO}:green:player-1/brightness": "1",
             f"{INST_PRO}:green:player-2/brightness": "0",

@@ -294,8 +294,9 @@ def test_o_cadeado_continua_na_tela_com_o_hefesto_desligado() -> None:
     `<div class="hef-modo so-ligado">`, gere de novo e esta régua reprova na
     posição Desligado. Tirar o `.cartao .rotulo b.espera` da `aba01.py` reprova o
     esmaecido; devolver a ele `color:var(--texto-mudo)` reprova o cinza (16/10/2026).
+
+    Prova da D-1610-O-CINZA-SAI-DA-LETRA.
     """
-    # D-1610-O-CINZA-SAI-DA-LETRA
     playwright = pytest.importorskip("playwright.sync_api")
 
     alvo = onde.pagina("01-jogar.html")
@@ -355,7 +356,6 @@ def test_o_cadeado_continua_na_tela_com_o_hefesto_desligado() -> None:
     assert medido["cor"]["depois"] != medido["cor"]["antes"], (
         f"o número do jogador ficou igual com a classe `espera` acesa "
         f"({medido['cor']['depois']}) — a classe pinta e a folha não responde")
-    # Desde 16/10 (T3, sem cinza de letra), o esmaecido é pelo peso, na cor do rótulo.
     assert medido["cor"]["letra"] not in (
         "rgb(136, 150, 196)", "rgb(154, 158, 184)", "rgb(83, 87, 111)"), (
         f"o número que espera voltou ao cinza ({medido['cor']['letra']}): o "
@@ -390,7 +390,6 @@ def test_o_marcador_do_primario_anda_e_o_alvo_da_fita_nao() -> None:
     assert aba._e_o_primario(c1) == "1", "o primário não foi marcado"
     assert aba._e_o_primario(c2) == "", "um cartão que não é o primário acendeu"
 
-    # O PRIMÁRIO ANDA: a MESMA mesa, com o `is_primary` do outro lado.
     assert aba._e_o_primario({**c1, "is_primary": False}) == ""
     assert aba._e_o_primario({**c2, "is_primary": True}) == "1"
 
@@ -410,7 +409,6 @@ def test_so_o_true_literal_acende_o_marcador() -> None:
 
 
 def test_o_servico_calado_para_de_afirmar_e_nao_escreve() -> None:
-    # D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE
     """Passo 5 — com o estado vazio nada é afirmado, e (20/10/2026) nada é escrito: só o Status."""
     ctx = Contexto(state={}, mesa=[], conectados=[], estados={})
     fora = aba.pacote(ctx)
@@ -445,7 +443,6 @@ def test_nenhuma_das_frases_novas_fala_de_maquina() -> None:
     de_maquina = ("uinput", "hidraw", "vpad", "evdev", "uniq")
     minhas = [aba.PRIMARIO_DICA,
               aba.MARCA_DO_PRIMARIO]
-    #: O MARKUP FICA, e não é descuido: quem o tira é `interface.sistema.sem_markup`,
     da_ponte = [
         home_actions.texto_da_ponte(cena)
         for cena in (
@@ -676,13 +673,6 @@ _CLICAR_NO_CADEADO = r"""
 })()
 """
 
-# O VIGIA DA CAIXA (08/10/2026). A leitura da piscada era num relógio fixo: 700 ms depois do
-# clique, contra uma piscada que vive 1,5 s (`MS_DA_PISCADA`). Sob carga a resposta do serviço
-# chega depois dos 700 ms, ou a piscada já passou, e a régua reprovava «o serviço confirmou e
-# a caixa não piscou» sobre uma caixa que piscou (1 em 8 corridas com a CPU saturada, xvfb).
-# Aqui a página INJETADA grava cada transição de classe da caixa NO INSTANTE em que ela
-# acontece (largura do contorno inclusa), e o Python espera a condição com prazo, não o
-# relógio. A página publicada e o `hefesto_vivo.py` não mudam.
 _VIGIAR_O_CADEADO = r"""
 (function(){
   const seletor = '[data-gesto="cadeado"]';
@@ -819,10 +809,6 @@ def no_webkit() -> dict:
     def clicar(rotulo: str) -> None:
         fora[rotulo] = perguntar(_CLICAR_NO_CADEADO, rotulo)
 
-    # O piloto nasce na PRIMEIRA, que é a página desta régua: não há o que abrir. O `_ir` que
-    # morava aqui, num relógio de 400 ms, RECARREGAVA a mesma página quando a importação das
-    # abas passava do relógio (CI frio, 4,2 s): a primeira carga ficava pronta, o vigia entrava,
-    # e a recarga o apagava depois do clique («o vigia da caixa não está na página»).
     assert args.abre == hv.PRIMEIRA, f"o piloto nasce em {hv.PRIMEIRA}, não em {args.abre}"
     try:
         exigir(lambda: piloto.pronto and piloto.pagina == args.abre,
@@ -834,7 +820,6 @@ def no_webkit() -> dict:
         chave = "01-jogar.html:cadeado"
         fora["antes"] = json.loads(perguntar(_LER_O_CADEADO, "ler a caixa antes do clique"))
 
-        # 1) o serviço confirma: a caixa pisca, com contorno, e apaga sozinha
         clicar("clique-1")
         piscou = espera_vigia(
             "verde", 1, "a caixa piscar verde depois do serviço confirmar o clique 1")
@@ -851,7 +836,6 @@ def no_webkit() -> dict:
         exigir(lambda: vigia()["pousou"] >= 1, "o clique 1 pousar (a caixa sair do voo)")
         verdes_antes = vigia()["verde"]
 
-        # 2) o serviço não responde: a tela não pode dizer que guardou
         resposta["como"] = "none"
         piloto.desfechos.pop(chave, None)
         clicar("clique-2")
@@ -862,7 +846,6 @@ def no_webkit() -> dict:
         exigir(lambda: vigia()["recusou_apagou"] >= vigia()["recusou"],
                "a piscada de recusa do clique 2 apagar")
 
-        # 3) a ponte levanta: o mesmo
         resposta["como"] = "levanta"
         clicar("clique-3")
         exigir(lambda: vigia()["pousou"] >= 3, "o clique 3 pousar (a caixa sair do voo)")
@@ -895,8 +878,6 @@ def test_o_verde_do_cadeado_no_webkit_e_do_servico(no_webkit: dict) -> None:
 
     assert not no_webkit["depois-da-piscada"]["verde"], (
         f"a piscada não apagou sozinha: {no_webkit['sem_prazo']}")
-    # ela vive o tempo que o produto diz (`MS_DA_PISCADA`), não menos: o timer da página nunca
-    # dispara antes do prazo, e uma piscada de 100 ms seria uma piscada que o usuário não vê
     assert no_webkit["depois-da-piscada"]["duracao_ms"] >= 0.9 * no_webkit["piscada_ms"], (
         f"a piscada durou {no_webkit['depois-da-piscada']['duracao_ms']} ms, menos que os "
         f"{no_webkit['piscada_ms']} ms do produto")

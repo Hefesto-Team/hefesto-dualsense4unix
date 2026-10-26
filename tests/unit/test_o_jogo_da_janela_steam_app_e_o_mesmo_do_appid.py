@@ -58,7 +58,6 @@ def test_chave_de_janela_fora_da_steam_segue_janela_classe() -> None:
     assert loader._identidade("", "com.libretro.RetroArch") == (
         "janela:com.libretro.retroarch"
     )
-    # O prefixo só vale inteiro: «steam_app_» sem número e «steam_app_1x» não são Steam.
     assert loader._identidade("", "steam_app_").startswith("janela:")
     assert loader._identidade("", "steam_app_12x").startswith("janela:")
 

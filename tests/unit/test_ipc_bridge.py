@@ -299,7 +299,6 @@ _QUEM_FICOU_NO_LUGAR: dict[str, str] = {
     ),
 }
 
-#: `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`, com o endereço do
 _SEM_TRAVESSIA_DECLARADA: dict[str, str] = {
     "alvo_honrado": (
         "MIC-DA-MESA-CHEIA-01: lê o `por_uniq` do daemon. Lápide em "

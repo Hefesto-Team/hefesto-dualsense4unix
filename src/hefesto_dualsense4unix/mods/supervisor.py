@@ -70,45 +70,30 @@ from hefesto_dualsense4unix.utils.xdg_paths import (
 
 logger = get_logger(__name__)
 
-#: O diário de cada modificação (saída e erro do processo), na pasta de dados.
 DIARIO_DA_MODIFICACAO = "diario.log"
 
-#: O diário cresce até isto; a escrita que passaria dele tira antes a metade velha.
 TETO_DO_DIARIO_BYTES = 1 << 20
 
-#: Quanto a cópia do diário espera o cano esvaziar depois que o processo termina.
 ESPERA_DO_DIARIO_S = 1.0
 
-#: As esperas antes de reabrir, uma por queda; a queda seguinte é «parou».
 ESPERAS_PARA_VOLTAR: tuple[float, ...] = (1.0, 2.0, 4.0)
 
-#: Um processo que fica de pé por este tempo zera a contagem de quedas.
 ESTAVEL_DEPOIS_DE_S = 60.0
 
-#: Do ``SIGTERM`` ao ``SIGKILL``.
 PRAZO_PARA_PARAR_S = 3.0
 
-#: De quanto em quanto tempo o supervisor relê o registro.
 INTERVALO_DO_REGISTRO_S = 1.0
 
-#: O PARAR dos acessórios: quanto a modificação tem para devolver ``ligado: false`` depois do gesto
-#: ``para``. Passou, o supervisor a encerra pelo PID (a vibração não pode seguir depois do freio).
 PRAZO_DO_PARAR_CURTO_S = 0.3
 
-#: O menor intervalo da atualização sozinha, qualquer que seja o do registro: um intervalo
-#: zero ou negativo escrito à mão não vira um ``git ls-remote`` por segundo.
 PISO_DA_ATUALIZACAO_S = 60.0
 
-#: Sem rede (ou com o git recusando), a conferência seguinte não espera o intervalo inteiro.
 ESPERA_DEPOIS_DA_FALHA_S = 600.0
 
-#: Depois do ``SIGKILL``, quanto se espera o kernel recolher o grupo.
 ESPERA_DEPOIS_DO_SIGKILL_S = 2.0
 
-#: Depois de parar o processo, quanto se espera a tarefa que o vigiava terminar.
 ESPERA_DA_VIGIA_S = 1.0
 
-#: Sem a permissão da chave, a caixa cobre estes caminhos com um ``tmpfs`` vazio.
 ESCONDIDO_SEM_A_PERMISSAO: dict[str, tuple[str, ...]] = {
     "bluetooth": ("/run/dbus",),
 }
@@ -168,10 +153,8 @@ class _Vigiada:
     mod_id: str
     tarefa: asyncio.Task[None] | None = None
     processo: asyncio.subprocess.Process | None = None
-    #: A tarefa que copia a saída do processo para o diário (o único escritor dele).
     copia: asyncio.Task[None] | None = None
     ficha: str = ""
-    #: O que esta vigia abriu: o commit, a hora da instalação e a do «ligar».
     instalacao: tuple[str, str, str] = ("", "", "")
     quer_parar: asyncio.Event = field(default_factory=asyncio.Event)
 
@@ -204,7 +187,7 @@ def _aparar_o_diario(caminho: Path, chegando: int = 0) -> None:
         return
     corte = tamanho - TETO_DO_DIARIO_BYTES // 2
     if corte <= 0:
-        return  # já é só a metade nova: o que chega é que é grande
+        return
     with caminho.open("rb") as arquivo:
         arquivo.seek(corte)
         resto = arquivo.read()
@@ -375,13 +358,9 @@ class Supervisor:
         self.chaves = tuple(chaves)
         self.piso_da_atualizacao_s = PISO_DA_ATUALIZACAO_S
         self.espera_depois_da_falha_s = ESPERA_DEPOIS_DA_FALHA_S
-        #: A hora (``time.monotonic``) em que cada extensão pode perguntar ao git de novo.
         self._proxima_conferencia: dict[str, float] = {}
-        #: O registro da última volta do ``reconciliar``; o ilegível fica vazio.
         self._registro_lido: dict[str, Entrada] = {}
         self._atualizando: asyncio.Task[bool] | None = None
-
-    # -- o estado ----------------------------------------------------------
 
     def estado_de(self, mod_id: str) -> EstadoDaModificacao | None:
         return self._estados.get(mod_id)
@@ -411,8 +390,6 @@ class Supervisor:
             self._gravou_o_estado = True
         except OSError as exc:
             logger.warning("mods_estado_nao_gravou", err=str(exc))
-
-    # -- ciclo de vida -----------------------------------------------------
 
     async def iniciar(self) -> None:
         await self.reconciliar()
@@ -489,8 +466,6 @@ class Supervisor:
             await asyncio.sleep(self.intervalo_s)
             await self._conferir_o_registro()
             self._talvez_atualizar()
-
-    # -- a atualização sozinha ---------------------------------------------
 
     def _talvez_atualizar(self) -> None:
         """Abre a conferência da primeira extensão do git cujo intervalo passou.
@@ -580,16 +555,10 @@ class Supervisor:
                 self._estados[mod_id] = EstadoDaModificacao("desligada")
         for mod_id, entrada in ligadas.items():
             vigiada = self._vigiadas.get(mod_id)
-            # A que «parou» na quarta queda fica parada: outra linha do registro
-            # que muda não a reabre. Volta quando a pessoa a liga de novo (o
-            # «ligar» carimba a hora) ou a atualiza (outra instalação).
             if vigiada is None or vigiada.instalacao != _instalacao(entrada):
                 await self._comecar(entrada)
-        # Sem modificação instalada, o supervisor não deixa arquivo nenhum.
         if self._estados or self._gravou_o_estado:
             self._gravar_estado()
-
-    # -- uma modificação ---------------------------------------------------
 
     def _o_que_impede(self, entrada: Entrada) -> tuple[str, Manifesto | None]:
         try:

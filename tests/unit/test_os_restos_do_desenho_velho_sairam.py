@@ -28,9 +28,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src/hefesto_dualsense4unix/interface"
 DESENHOS_COM_A_CENA = ("04-iluminacao.html", "05-vibracao.html", "08-conexoes.html")
 NOME_DA_CENA_VELHA = "Vitória"
-#: os nomes de pessoa que o desenho final do todo (14/10/2026, `FINAL.md`, «O nome de pessoa»)
-#: trocou pela cor do plástico, e o «Davi», que a cena do rádio da 08 ainda dava a um dos controles
-#: que não conectaram (o outro era o «Lia»)
 NOMES_DE_PESSOA = ("Vitória", "Pedro", "Ana", "Rafa", "Lia", "Davi")
 
 
@@ -65,7 +62,6 @@ def test_o_codigo_da_cena_nao_tem_nome_de_pessoa() -> None:
         fonte = _fonte(modulo)
         achados = [t for t in _textos_do_codigo(fonte) if NOME_DA_CENA_VELHA in t]
         assert not achados, f"{modulo} publica um nome de pessoa: {achados[:3]}"
-        # os comentários ficam de fora; o resto do código também não o diz
         sem_comentarios = "".join(
             tok.string for tok in tokenize.generate_tokens(io.StringIO(fonte).readline)
             if tok.type != tokenize.COMMENT and tok.type != tokenize.STRING)
@@ -100,7 +96,6 @@ def test_a_cena_do_radio_da_08_nao_le_os_nomes_do_desenho_congelado() -> None:
     doc = _sem_comentarios_de_html(_desenho("08-conexoes.html"))
     vazados = {n: len(re.findall(rf"\b{re.escape(n)}\b", doc)) for n in nomes}
     assert not any(vazados.values()), f"os nomes do desenho congelado chegaram à 08: {vazados}"
-    # o campo do nome de quem joga nasce vazio, e a tela diz o número
     campos = re.findall(r'<input class="gc-dono"[^>]*>', doc)
     assert campos and all('value=""' in c for c in campos), campos[:1]
 
@@ -135,9 +130,11 @@ def test_a_08_nao_define_a_legenda() -> None:
 
 
 def test_nenhum_controle_da_cena_do_radio_tem_nome_de_pessoa() -> None:
-    # D-2410-A-CENA-DE-EXEMPLO-SEM-NOME
     """Todo controle da cena da 08, inclusive os dois que não conectaram, nasce sem nome: a tela
-    o chama como chama o de qualquer pessoa que ainda não deu nome a ele."""
+    o chama como chama o de qualquer pessoa que ainda não deu nome a ele.
+
+    Prova da D-2410-A-CENA-DE-EXEMPLO-SEM-NOME.
+    """
     import sys
 
     sys.path.insert(0, str(INTERFACE))

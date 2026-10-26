@@ -35,7 +35,6 @@ class Identidade:
         return f"{self.entrypoint_cli} daemon start"
 
 
-#:   ``DualSense4Unix``, com o ``S`` do DualSense. Ele carrega o travessão
 HEFESTO = Identidade(
     slug="hefesto-dualsense4unix",
     app_id="hefesto-dualsense4unix",

@@ -96,12 +96,8 @@ def casa(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> _Casa:
         monkeypatch.setattr(modulo, "steam_game_running", lambda: False)
     monkeypatch.setattr(opj, "ler_jogos_sem_wrapper", lambda *_a, **_k: [])
     monkeypatch.setattr(sdw, "ler_jogos_sem_wrapper", lambda *_a, **_k: [])
-    # nenhum teste pede ao systemd real que recarregue as unidades
     monkeypatch.setattr(vigia, "_recarregar_o_systemd", lambda: True)
     return c
-
-
-# -- o vigia ----------------------------------------------------------------
 
 
 def test_o_dropin_vigia_o_arquivo_da_conta_e_o_steamapps_de_cada_biblioteca(casa: _Casa) -> None:
@@ -147,7 +143,7 @@ def test_o_interruptor_e_ligado_por_padrao_e_uma_palavra_de_recusa_o_desliga(cas
     assert vigia.interruptor_ligado(casa.config)
     arquivo = vigia.caminho_do_interruptor(casa.config)
     arquivo.parent.mkdir(parents=True, exist_ok=True)
-    for palavra in ("nao", "não", "0", "off", "desligado"):  # (noqa-acento: as duas grafias)
+    for palavra in ("nao", "não", "0", "off", "desligado"):  # (noqa-acento)
         arquivo.write_text(f"# comentário\n{palavra}\n", encoding="utf-8")
         assert not vigia.interruptor_ligado(casa.config), palavra
     for palavra in ("sim", "1", "ligado", ""):
@@ -192,15 +188,11 @@ def test_o_appid_do_jogo_novo_vem_do_appmanifest_e_a_ferramenta_da_steam_fica_de
     assert sorted(vigia.jogos_novos_a_receber(casa.home, config_home=casa.config)) == [VELHO, NOVO]
 
 
-# -- o bloco do jogo novo ---------------------------------------------------
-
-
 def test_o_jogo_instalado_sem_bloco_ganha_o_bloco_na_arvore_canonica_e_so_nela() -> None:
     novo, criados = slo.garantir_blocos_no_texto(_vdf(), [NOVO, VELHO, "abc"])
     assert criados == [NOVO]
     assert set(slo.read_apps_by_appid(novo)) == {VELHO, NOVO}
     assert slo.read_apps_by_appid(novo)[NOVO] is None
-    # a outra árvore `apps` (a do Steam Input) não ganhou nada
     assert novo.count(f'"{NOVO}"') == 1
     assert slo.garantir_blocos_no_texto(novo, [NOVO]) == (novo, [])
 
@@ -217,7 +209,6 @@ def test_o_wrapper_chega_ao_jogo_novo_so_com_o_appmanifest() -> None:
     novo, aplicados, _ = slo.apply_wrapper_vdf_text(_vdf(), instalados=[NOVO])
     assert NOVO in aplicados
     assert slo.WRAPPER_PREFIX in (slo.read_apps_by_appid(novo)[NOVO] or "")
-    # o recusado por ela nem ganha bloco
     sem_bloco, aplicados, _ = slo.apply_wrapper_vdf_text(
         _vdf(), instalados=[NOVO], excluir=[NOVO])
     assert NOVO not in slo.read_apps_by_appid(sem_bloco) and NOVO not in aplicados
@@ -229,9 +220,6 @@ def test_a_ponte_liga_o_steam_input_do_jogo_novo_e_antes_recusava_como_desconhec
     novo, ligados, pulados = ponte.ligar_no_texto(_vdf(), [NOVO], [NOVO])
     assert ligados == [NOVO] and pulados == []
     assert ponte.conferir_escrita(_vdf(), novo, ligados) is None
-
-
-# -- de ponta a ponta, em disco ---------------------------------------------
 
 
 def test_a_tabela_chega_ao_jogo_novo_com_a_steam_fechada_e_a_releitura_confere(
@@ -261,7 +249,7 @@ def test_o_reparo_poe_o_wrapper_no_jogo_novo(casa: _Casa) -> None:
     casa.instala_o_jogo_novo()
     status, _, resultado = sdw.reparar_ou_adiar(casa.home, registro=casa.home / "visto.json")
     assert status == sdw.REPARO_FEITO and resultado is not None
-    assert [a["appid"] for a in resultado["applied"]] == [NOVO]  # o velho já tinha o atalho
+    assert [a["appid"] for a in resultado["applied"]] == [NOVO]
     assert slo.WRAPPER_PREFIX in (slo.read_apps_by_appid(casa.texto())[NOVO] or "")
 
 

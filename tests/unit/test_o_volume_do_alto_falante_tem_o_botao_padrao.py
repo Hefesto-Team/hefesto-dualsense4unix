@@ -72,9 +72,6 @@ def _grava_o_perfil(secao: dict[str, Any] | None) -> None:
                         origem="regua")
 
 
-# --- o que o perfil diz e o que o gesto faz ---------------------------------------------------
-
-
 def test_perfil_sem_secao_com_o_aparelho_nos_cem_por_cento_e_padrao(casa: Any) -> None:  # noqa: F811
     from pacotes import a02_controles as a02
 
@@ -120,8 +117,8 @@ def test_ida_e_volta_nao_perde_o_volume_dela(casa: Any) -> None:  # noqa: F811
     guardado = volume_do_percentual(40)
     _grava_o_perfil({"volume": guardado, "muted": False})
     p = Ponte()
-    _gesto("volume-padrao")(_ctx(guardado), {"uniq": P1}, p)   # liga
-    _gesto("volume-padrao")(_ctx(CEM), {"uniq": P1}, p)        # desliga
+    _gesto("volume-padrao")(_ctx(guardado), {"uniq": P1}, p)
+    _gesto("volume-padrao")(_ctx(CEM), {"uniq": P1}, p)
     volumes = [k["volume"] for n, k in p.chamadas if n == "speaker_set"]
     assert volumes == [CEM, guardado], volumes
 
@@ -132,9 +129,6 @@ def test_a_recusa_do_daemon_nao_chega_ao_perfil(casa: Any) -> None:  # noqa: F81
     with pytest.raises(RuntimeError, match="não confirmou"):
         _gesto("volume-padrao")(_ctx(CEM), {"uniq": P1}, p)
     assert _bytes_do_perfil() == antes
-
-
-# --- a tela: a palavra, a barra, o botão --------------------------------------------------------
 
 
 def test_o_pacote_diz_padrao_no_lugar_do_numero_e_enche_a_barra(
@@ -149,9 +143,6 @@ def test_o_pacote_diz_padrao_no_lugar_do_numero_e_enche_a_barra(
     card = a02.pacote(_ctx(volume_do_percentual(62)))["cards"][P1]
     assert card["alto-padrao"] == "" and card["alto-num"] == percentual_do_volume(
         volume_do_percentual(62))
-
-
-# --- o perfil: o disco, o «Salvar» e a ativação --------------------------------------------------
 
 
 def test_sem_opiniao_a_chave_nem_aparece_no_arquivo() -> None:
@@ -194,9 +185,6 @@ def test_a_ativacao_aplica_os_cem_so_com_o_botao_ligado(flag: bool | None, esper
                    speaker=ProfileSpeakerConfig(volume=60, volume_padrao=flag))
     gerente.apply_speaker(prof, origin="regua")
     assert chamadas == [esperado]
-
-
-# --- sem perfil ativo: o computador é o dono (O-PADRAO-DO-ALTO-FALANTE-DESLIGA-SEM-PERFIL-01) ---
 
 
 def _ctx_sem_perfil(registrador: int | None = CEM, uniq: str = P1) -> Any:
@@ -263,13 +251,13 @@ def test_sem_perfil_ida_e_volta_guarda_o_volume_que_ela_escolheu(casa: Any) -> N
     """Desliga, arrasta para 40%, liga (100% no aparelho) e desliga: os 40% voltam."""
     guardado = volume_do_percentual(40)
     p = Ponte()
-    _gesto("volume-padrao")(_ctx_sem_perfil(), {"uniq": P1}, p)                     # desliga
+    _gesto("volume-padrao")(_ctx_sem_perfil(), {"uniq": P1}, p)
     _gesto("volume")(_ctx_sem_perfil(CEM), {"uniq": P1, "volume": "alto-falante",
-                                            "valor": "40"}, p)                      # arrasta
-    _gesto("volume-padrao")(_ctx_sem_perfil(guardado), {"uniq": P1}, p)             # liga
+                                            "valor": "40"}, p)
+    _gesto("volume-padrao")(_ctx_sem_perfil(guardado), {"uniq": P1}, p)
     ligado = _do_computador().get("speaker") or {}
     assert ligado.get("volume_padrao") is True and ligado.get("volume") == guardado, ligado
-    _gesto("volume-padrao")(_ctx_sem_perfil(CEM), {"uniq": P1}, p)                  # desliga
+    _gesto("volume-padrao")(_ctx_sem_perfil(CEM), {"uniq": P1}, p)
     volumes = [k["volume"] for n, k in p.chamadas if n == "speaker_set"]
     assert volumes == [CEM, guardado, CEM, guardado], volumes
     assert (_do_computador().get("speaker") or {}).get("volume_padrao") is False
@@ -322,8 +310,6 @@ def test_com_perfil_ativo_o_clique_segue_no_perfil_e_o_computador_nao_muda(casa:
     assert (_do_controle(CHAVE_P1).get("speaker") or {}).get("volume_padrao") is False
     assert _bytes_do_computador() == antes
 
-
-# --- a página (WebKit, bancada) -------------------------------------------------------------------
 
 LER = r"""
 (function(){
@@ -424,8 +410,6 @@ def test_ligado_a_barra_do_alto_falante_fica_verde_travada_e_sem_teclado() -> No
     lidas, _m = _na_pagina([LER, LIGAR, LER])
     antes, _o, depois = lidas
     assert antes["chip"] and antes["barra_visivel"] and not antes["ligado"], antes
-    # O «Padrão» é alvo: desde 20/10 a folha do piso o põe em 24 px (`ALVO_MINIMO_PX`); que
-    # ele não custe linha a mais no cartão, mede-o `test_os_alvos_e_a_letra_crescem`.
     from hefesto_dualsense4unix.interface.folha_da_casa import ALVO_MINIMO_PX
 
     assert antes["chip_h"] == ALVO_MINIMO_PX, "o «Padrão» do volume ficou fora do piso de 24 px"

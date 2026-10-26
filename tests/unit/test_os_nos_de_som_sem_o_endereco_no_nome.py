@@ -37,7 +37,6 @@ from hefesto_dualsense4unix.integrations import som_do_controle_na_tv as na_tv
 RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 
-#: P1 a P4, cabo ou rádio: o nome é do aparelho, não do transporte.
 JOGADORES = ("02:fe:00:12:34:01", "02:fe:00:56:78:02", "02:fe:00:9a:bc:03", "02:fe:00:de:f1:04")
 
 SEIS_HEX = re.compile(r"[0-9a-fA-F]{6,}")
@@ -137,7 +136,6 @@ def test_o_laco_recusa_chave_com_cara_de_endereco(monkeypatch: pytest.MonkeyPatc
     assert not lacos.ligar("hefesto_123401", captura="x.monitor")
 
 
-#: O que, num f-string, faz dele um nome de nó do servidor de som.
 _CARA_DE_NOME_DE_NO = re.compile(
     r"hefesto_(?:som|mic|dualsense_bt|haptica)_|node\.name=|sink_name=|source_name="
 )
@@ -309,7 +307,6 @@ def test_a_saida_gravada_passa_e_a_escolha_que_nao_e_de_controle_fica(wireplumbe
     assert wireplumber.pedidos == [["pactl", "set-default-sink", af.nome_do_sink(p3)]]
 
 
-#: O estado do WirePlumber de um lar de mentira: as linhas nossas e as do usuário.
 _DEFAULT_NODES = (
     "[default-nodes]\n"
     "default.configured.audio.sink=alsa_output.pci-0000_00_1f.3.hdmi-stereo\n"
@@ -331,7 +328,6 @@ _STREAM_PROPERTIES = (
     "Input/Audio:media.name:hefesto-retorno-do-mic-APARELHOKUKTZP\\sinput={\"mute\":false}\n"
     "Output/Audio:media.role:Notification={\"volume\":0.3}\n"
 )
-#: O que é do usuário, e tem de ficar byte a byte.
 _DELA = {
     "default-nodes": [
         "[default-nodes]",

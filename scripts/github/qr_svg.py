@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from itertools import pairwise
 
-# Nível M: (codewords de correção por bloco, [(blocos, codewords de dado por bloco), ...]).
 _NIVEL_M: dict[int, tuple[int, list[tuple[int, int]]]] = {
     1: (10, [(1, 16)]),
     2: (16, [(1, 28)]),
@@ -165,7 +164,7 @@ class _Desenho:
 
     def formato(self, mascara: int) -> None:
         n = self.n
-        dado = (0 << 3) | mascara  # nível M = 00
+        dado = (0 << 3) | mascara
         resto = dado
         for _ in range(10):
             resto = (resto << 1) ^ ((resto >> 9) * 0x537)
@@ -200,7 +199,7 @@ class _Desenho:
         i = 0
         direita = n - 1
         while direita >= 1:
-            if direita == 6:  # a coluna de tempo não leva dado
+            if direita == 6:
                 direita = 5
             for vert in range(n):
                 for j in range(2):

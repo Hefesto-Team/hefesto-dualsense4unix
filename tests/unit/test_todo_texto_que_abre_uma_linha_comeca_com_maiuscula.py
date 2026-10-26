@@ -44,7 +44,7 @@ import pytest
 
 from hefesto_dualsense4unix.interface import onde
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
-from tests.unit.test_a_conexoes_cabe_na_tela import (  # noqa: F401 -- a fixture de módulo vem junto
+from tests.unit.test_a_conexoes_cabe_na_tela import (  # noqa: F401
     _clicar,
     _no_webkit,
     um_webview_por_modulo,
@@ -118,15 +118,11 @@ ABRIR_A_CAIXA = ("(function(){{const l=[...document.querySelectorAll('.lugar .ab
                  "if(!l[{n}]) return 'sem caixa'; l[{n}].click(); return 'clicou';}})()")
 
 
-#: o que ficou para a dona da página, com a razão: ``{aba: (achado, dona e cura)}``
 PENDENTES: dict[str, tuple[str, str]] = {}
 
 
 def _achados(lidas: list[Any]) -> list[str]:
     return sorted({a for x in lidas if isinstance(x, dict) for a in x["achados"]})
-
-
-# ───────────────────────── as páginas paradas ─────────────────────────
 
 
 @pytest.mark.parametrize("aba", ABAS)
@@ -139,9 +135,6 @@ def test_a_pagina_parada_abre_toda_linha_com_maiuscula(aba: str) -> None:
     achados = _achados(_no_webkit(onde.BANCADA / f"{aba}.html", TAMANHO, passos))
     esperados = [PENDENTES[aba][0]] if aba in PENDENTES else []
     assert achados == esperados, f"{aba}: linha que abre em minúscula: {achados}"
-
-
-# ───────────────────────── a 08 pintada pelo pacote ─────────────────────────
 
 
 def _cenas() -> list[dict[str, Any]]:
@@ -181,10 +174,6 @@ def test_a_08_pintada_pelo_pacote_abre_toda_linha_com_maiuscula(qual: str) -> No
     assert not achados, f"a 08 pintada abre linha em minúscula: {achados}"
 
 
-#: As telas da 08 que nascem por âncora (`:target`) e ficam FORA da leitura de cima, que só vê o
-#: que está à mostra: o «Mapear entradas», o «Mapear Entrada a Entrada» (as três da cerimônia) e o
-#: das portas. A régua as ABRE uma a uma (A-08-MOSTRA-O-DESENHO…-01, 08/10/2026:
-#: «maiúscula em tudo»).
 ANCORAS_DA_08 = ("mapear-entradas", "mapear-entrada-a-entrada", "mapear-entrada-a-entrada-em-pe",
                  "mapear-entrada-a-entrada-fim", "mapear-portas", "tipo-do-aparelho",
                  "acionador")
@@ -206,17 +195,11 @@ def test_a_08_com_a_tela_aberta_por_ancora_abre_toda_linha_com_maiuscula(ancora:
     assert not achados, f"a tela #{ancora} abre linha em minúscula: {achados}"
 
 
-#: As telas por âncora das outras abas (a 06 e a 07), abertas uma a uma pelo mesmo caminho da 08:
-#: TODO-TEXTO-QUE-ABRE-UMA-LINHA-COMECA-COM-MAIUSCULA-01, ampliada em 08/10/2026 — «a régua abre
-#: as telas por âncora», em todas as abas.
 ANCORAS_DAS_OUTRAS = (
     ("06-navegacao", "acessibilidade"),
     ("07-lancadores", "novo-lancador"), ("07-lancadores", "escolher-jogo"),
-    # 17/10/2026, acessorios-07-depois: as janelas que a aba Experimental do todo ganhou (as dos
-    # acessórios e a do Kyty saíram em 19/10/2026, com o adulto, para as extensões)
     ("07-lancadores", "impedimentos"), ("07-lancadores", "lanc-conf"),
-    # 18/10/2026, acessorios-07-depois-2: a janela genérica das opções de uma extensão
-    ("07-lancadores", "modificacao"))  # (noqa-acento): contrato ASCII
+    ("07-lancadores", "modificacao"))  # (noqa-acento)
 
 
 @pytest.mark.parametrize(("aba", "ancora"), ANCORAS_DAS_OUTRAS)
@@ -244,9 +227,6 @@ def test_a_lista_das_telas_por_ancora_e_a_que_os_geradores_escrevem() -> None:
         f"declaradas sem tela: {sorted(declaradas - nas_paginas)}")
 
 
-#: As páginas soltas que não são uma das dez abas, e também levam texto à tela. O
-#: ``mapa-do-controle`` fica de fora de propósito: a lista dele são os identificadores do
-#: kernel (``dpad_up``, ``feat-bateria``), que não são frase, e o desenho dele não é desta régua.
 PAGINAS_SOLTAS = ("mapa-do-radio", "calibrar-sensores")
 
 
@@ -273,9 +253,6 @@ def test_o_que_fazer_da_dica_chama_a_ferramenta_pelo_nome_do_botao_e_sem_primeir
 
     assert f"«{aba08.MAPEAR_ENTRADAS}»" in ordens.NAO_DECLARADO
     assert not re.search(r"\b(eu|me|meu|minha)\b", ordens.NAO_DECLARADO, re.I), ordens.NAO_DECLARADO
-
-
-# ───────────────────────── o nome que o usuário dá ─────────────────────────
 
 
 @pytest.mark.parametrize(("digitado", "gravado"), [

@@ -70,7 +70,6 @@ def test_nenhum_preset_shipado_escolhe_a_mascara() -> None:
         if mode.get("gamepad_flavor") is not None:
             ofensores.append(f"{path.name}: {mode.get('gamepad_flavor')!r}")
 
-    # de gênero (`fps`, `aventura`, `acao`, `corrida`, `esportes`). O piso  # (noqa-acento)
     assert len(gamepads) >= 5, (
         "o portão não achou os presets de jogo — filtro errado, não aprovação. "
         f"achados: {gamepads}"
@@ -85,8 +84,7 @@ def test_o_null_do_preset_atravessa_o_esquema_intacto() -> None:
     """`gamepad_flavor: null` sobrevive à carga — não vira default no caminho."""
     from hefesto_dualsense4unix.profiles.schema import Profile
 
-    # Os três eram `acao`, `coop_local` e `sackboy_nativo`; os dois últimos  # (noqa-acento)
-    for nome in ("acao", "aventura", "fps"):  # (noqa-acento) nomes de arquivo
+    for nome in ("acao", "aventura", "fps"):  # (noqa-acento)
         bruto = json.loads(_preset_de_fabrica(nome).read_text(encoding="utf-8"))
         perfil = Profile.model_validate(bruto)
         assert perfil.mode is not None and perfil.mode.kind == "gamepad", nome

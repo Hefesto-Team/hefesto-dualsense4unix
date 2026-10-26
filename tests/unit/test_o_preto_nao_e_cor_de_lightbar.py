@@ -86,7 +86,7 @@ class _ControleDeMentira:
     def apply_output_defaults(self, spec: Any) -> None:
         self.specs.append(spec)
 
-    def __getattr__(self, nome: str) -> Any:  # pragma: no cover - borda
+    def __getattr__(self, nome: str) -> Any:  # pragma: no cover
         def _qualquer(*_a: Any, **_k: Any) -> None:
             return None
 

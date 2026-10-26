@@ -91,7 +91,7 @@ class _DaemonQueAnota(Daemon):
         return bool(value)
 
     async def _run_blocking(self, fn: Any, *args: Any) -> Any:  # type: ignore[override]
-        return fn(*args)  # o executor do boot, sem thread
+        return fn(*args)
 
     def quadrado(self) -> tuple[str, ...] | None:
         """O que o «quadrado» digita no teclado, pela última tabela que chegou."""
@@ -131,8 +131,6 @@ def _pelo_ipc(d: Daemon, params: dict[str, Any]) -> dict[str, Any]:
         IpcHandlersMixin._handle_desktop_arranjo_apply(casca, params))  # type: ignore[arg-type]
     return resposta
 
-
-# 1. O CHIP LEVA O ARRANJO, E O SERVIÇO APLICA A TABELA DELE ------------------------------------
 
 def test_o_point_and_click_aplica_o_molde_que_a_navegacao_escolheu() -> None:
     """A prova da D-2010-O-POINT-AND-CLICK-APLICA-O-PERFIL-ESCOLHIDO."""
@@ -174,13 +172,11 @@ def test_o_mouse_e_as_velocidades_seguem_o_perfil_ativo_nos_dois() -> None:
     assert relatorio.get("keyboard") not in ("falhou", "ignorado_sem_perfil")
 
 
-# 2. A ESCOLHA MORA NO SERVIÇO ------------------------------------------------------------------
-
 def test_o_arranjo_se_guarda_e_o_ps_r3_sem_escolha_usa_o_guardado() -> None:
     d = _daemon()
     _pelo_ipc(d, _arranjo_do_chip(ARRANJO_NAVEGACAO))
     assert load_arranjo_do_desktop() == ARRANJO_NAVEGACAO
-    d.aplicar_o_arranjo_do_desktop(origin="profile")  # o PS + R3 não escolhe arranjo
+    d.aplicar_o_arranjo_do_desktop(origin="profile")
     assert d.quadrado() == ("KEY_SPACE",)
 
 
@@ -210,8 +206,6 @@ def test_o_estado_publica_o_arranjo() -> None:
     assert d.arranjo_do_desktop == ARRANJO_NAVEGACAO
 
 
-# 3. O REINÍCIO, A ATIVAÇÃO E A SAÍDA PARA O GAMEPAD --------------------------------------------
-
 def test_o_servico_reiniciado_volta_no_point_and_click() -> None:
     _pelo_ipc(_daemon(), _arranjo_do_chip(ARRANJO_POINT_AND_CLICK))
     novo = _daemon()
@@ -229,7 +223,7 @@ def test_o_servico_reiniciado_volta_no_point_and_click() -> None:
 def test_a_ativacao_de_um_perfil_no_desktop_repoe_o_point_and_click() -> None:
     d = _daemon()
     d.aplicar_o_arranjo_do_desktop(origin="manual", arranjo=ARRANJO_POINT_AND_CLICK)
-    d._aplicar_as_tabelas(d._perfil_do_arranjo(), None)  # o que a ativação escreve
+    d._aplicar_as_tabelas(d._perfil_do_arranjo(), None)
     assert d.quadrado() == ("KEY_SPACE",)
     d.apply_profile_mode(None, profile=d._perfil_do_arranjo(), origin="autoswitch")
     assert d.quadrado() == ("KEY_LEFTCTRL",)

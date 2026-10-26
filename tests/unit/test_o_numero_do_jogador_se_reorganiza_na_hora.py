@@ -644,9 +644,6 @@ def _tique_lento(bancada: Any) -> None:
     bancada.conferir_invariantes()
 
 
-#: D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026): com o jogo na
-#: autoridade o prazo de quem saiu não vence, e o que solta o lugar no meio da
-#: partida é o «Renumerar agora». O gesto cai três fatias depois do prazo.
 GESTO_EM = PRAZO + 3 * FATIA
 
 
@@ -830,8 +827,6 @@ class TestComOJogoNaAutoridade:
         assert bancada.dono_do_vpad_do_p1() == P2
         assert bancada.o_jogo_ve() == {1: P2, 2: P1, 3: P4}
 
-
-# ``CoopManager._numero_e_indice`` dizendo o ``player_index`` reprova as cinco
 
 CARTA_DO_ROXO = 2
 INDICE_DO_ROXO = 4

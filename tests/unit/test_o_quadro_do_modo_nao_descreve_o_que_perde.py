@@ -9,7 +9,7 @@ import pytest
 
 from hefesto_dualsense4unix.interface import onde
 
-PAGINA = "10-perfis.html"  # (noqa-acento) nome de arquivo
+PAGINA = "10-perfis.html"
 
 _ESTADO_DO_RADIO_FRAGIL = {
     "controllers": [{"uniq": "aabbcc000001", "connected": True, "transport": "bt"}],

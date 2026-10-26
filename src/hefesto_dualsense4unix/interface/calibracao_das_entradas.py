@@ -134,7 +134,6 @@ CONVITE_EM_PE = (
 ROTULO_VOU_MOSTRAR = "Vou mostrar agora"
 ROTULO_DEIXAR_PARA_DEPOIS = "Deixar para quando eu precisar"
 
-#: DualSense": ``state`` é atributo do NÓ, e qualquer coisa que enumere ensina a
 CONVITE_DO_ENCAIXE = (
     "Pegue o DualSense e o cabo e encaixe numa entrada vazia. Qualquer "
     "aparelho que o computador reconheça serve — o DualSense é o melhor porque "

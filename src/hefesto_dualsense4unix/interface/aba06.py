@@ -51,7 +51,6 @@ PECAS = {p["id"]: p for p in csv.DictReader(
 
 LINHA_DE_BOTAO = "linha-de-botao"
 
-#: Quem fala na lista de «Função do teclado»; o pacote lê a mesma ordem.
 OPCOES_TECLADO = [
     "Só dentro do jogo",
     "Só fora do jogo",
@@ -60,7 +59,6 @@ OPCOES_TECLADO = [
 ]
 TECLADO_PADRAO = OPCOES_TECLADO[1]
 
-#: Os três cliques do touchpad, como o desenho os diz. A régua confere contra a nota do mapa.
 _CLIQUES_DO_TOUCHPAD = {
     "touchpad_left_press": "esquerda",
     "touchpad_middle_press": "meio",
@@ -149,9 +147,6 @@ def trilho(valor, minimo, maximo, gesto, dica):
             f'<span class="num" data-campo="{gesto}">{valor}</span></div>')
 
 
-# ---------------------------------------------------------------- os botões
-
-#: (peça do glifo, linha, nome ao lado, qualificador). A ordem é a das duas colunas do desenho.
 COLUNA_1 = [
     ("cross", "cross", True, None),
     ("circle", "circle", True, None),
@@ -180,8 +175,6 @@ COLUNA_2 = [
 ]
 LINHAS = [linha for _, linha, _, _ in COLUNA_1 + COLUNA_2]
 
-#: O toque no touchpad move o cursor e não é um botão: ele mora em «Opções» (N3/N7, 16/10), numa
-#: linha só de leitura, e as duas colunas de «Os botões no computador» ficam com 11 e 11.
 DICA_DO_TOQUE = "O toque no touchpad move o cursor"
 TOQUE_DO_TOUCHPAD = (f'<select class="campo-linha" disabled data-dica="{DICA_DO_TOQUE}"'
                      ' data-linha="touchpad_toque">'
@@ -213,9 +206,6 @@ def _celula_da_acao(linha):
         rotulo = _acoes_do_gesto.rotulo(_acoes_do_gesto.SCRIPT)
         return lista.replace(f"<option>{rotulo}</option>",
                              f'<option data-campo="{PREFIXO_DO_SCRIPT}ps">{rotulo}</option>')
-    # A lista é a da LINHA (`por_grupo(linha)`): cada ação de eixo só aparece na linha que a atende
-    # (`LINHAS_DA_ACAO_DE_EIXO`: «Movimento do cursor» no analógico esquerdo, «Rolagem» no direito,
-    # «Teclas WASD» e «Setas» nos dois), e a linha de botão não oferece nenhuma.
     return drop(por_grupo(linha), _PADRAO_DOS_BOTOES[linha], gesto=LINHA_DE_BOTAO, linha=linha,
                 campo=f"acao-{linha}")
 
@@ -230,10 +220,6 @@ def _tabela(coluna):
             + "\n".join(_linha_de_botao(*x) for x in coluna) + '\n</table>')
 
 
-# ---------------------------------------------------------------- os gestos do PS
-
-#: Os gestos da tabela: os cinco de fábrica (o PS sozinho mora na linha PS de «Os botões») e os
-#: novos, que nascem escondidos e o pacote mostra quando declarados (`data-vale`).
 COMBOS = [(g.numero, g.pecas, _acoes_do_gesto.rotulo(_acoes_do_gesto.PADRAO.get(
     g.chave, _acoes_do_gesto.NADA))) for g in _acoes_do_gesto.TODOS_OS_GESTOS.values()
     if g.chave != _acoes_do_gesto.GESTO_DO_PS]
@@ -252,7 +238,7 @@ def drop_do_gesto(chave, faz):
 
 def linha_combo(n, pecas, faz):
     chave = _GESTO_DA_LINHA[n]
-    vale = "nao" if chave in _acoes_do_gesto.GESTOS_NOVOS else "sim"  # (noqa-acento) valor
+    vale = "nao" if chave in _acoes_do_gesto.GESTOS_NOVOS else "sim"  # (noqa-acento)
     nomes = [glifo(gl_de(p), tam=18) if p == "ps" else _um(p) for p in pecas]
     combo = ' <span class="mais">+</span> '.join(nomes)
     return (f'<tr class="g g{n}" data-vale="{vale}" data-campo="{PREFIXO_DA_VALIDADE}{chave}"'
@@ -272,9 +258,8 @@ def _escolha_do_gesto():
     """
     botoes = []
     for b in _acoes_do_gesto.BOTOES_DA_ESCOLHA:
-        livre = "sim" if b in _acoes_do_gesto.BOTOES_DO_GESTO_NOVO else "nao"  # (noqa-acento) identificador ASCII
+        livre = "sim" if b in _acoes_do_gesto.BOTOES_DO_GESTO_NOVO else "nao"  # (noqa-acento)
         peca = _PECA_DA_ESCOLHA.get(b, b)
-        # O proibido nunca fica livre: nasce desligado e sem endereço, porque nada o pinta.
         endereco = ("" if b in _acoes_do_gesto.BOTOES_PROIBIDOS else
                     f' data-campo="{PREFIXO_DA_LIBERDADE}{b}" data-hef-alvo="atributo"'
                     ' data-hef-atributo="data-livre"')
@@ -286,8 +271,6 @@ def _escolha_do_gesto():
             ' data-dica="Acrescenta um gesto do PS com outro botão">+ Gesto</summary>'
             f'<div class="escolha-gesto">{"".join(botoes)}</div></details>')
 
-
-# ---------------------------------------------------------------- as opções
 
 def _seg(gesto, campo, aria, itens, ligado, classe=""):
     """Um seletor de botões: o clique manda o `value`, a pintura acende o que vale."""
@@ -330,7 +313,7 @@ OPCOES = "\n".join([
     _op("Na Steam", _seg(
         "na-steam", "na-steam", "Na Steam",
         [("big-picture", "Big Picture", ""),
-         ("padrao", "Steam padrão", "")],  # (noqa-acento) valor de contrato do gesto
+         ("padrao", "Steam padrão", "")],  # (noqa-acento)
         "big-picture"),
         " so-steam"),
     _op("Perfil jogo - navegação", _perfil_de_ponto(), " do-hefesto"),
@@ -444,8 +427,6 @@ SCRIPT = """<script>/* o desenho: quem navega troca as linhas; os seletores acen
 })();
 </script>"""
 
-
-# ---------------------------------------------------------------- a janela Acessibilidade
 
 def _ac(rotulo, controle, dica=""):
     d = f' data-dica="{dica}"' if dica else ""

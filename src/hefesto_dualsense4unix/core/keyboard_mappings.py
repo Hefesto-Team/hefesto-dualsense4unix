@@ -33,8 +33,6 @@ KeyBinding = tuple[str, ...]
 
 TOKEN_OPEN_OSK = "__OPEN_OSK__"
 TOKEN_CLOSE_OSK = "__CLOSE_OSK__"
-#: Os dois antigos continuam valendo — o que muda é qual deles o L3 recebe de
-#: fábrica.
 TOKEN_TOGGLE_OSK = "__TOGGLE_OSK__"
 
 DEFAULT_BUTTON_BINDINGS: dict[str, KeyBinding] = {
@@ -42,13 +40,6 @@ DEFAULT_BUTTON_BINDINGS: dict[str, KeyBinding] = {
     "create": ("KEY_SYSRQ",),
     "l1": ("KEY_LEFTALT", "KEY_LEFTSHIFT", "KEY_TAB"),
     "r1": ("KEY_LEFTALT", "KEY_TAB"),
-    # L3 ALTERNA o teclado virtual do sistema (onboard/wvkbd-mobintl) desde
-    # 02/09/2026; R3 continua fechando. O token virtual é interceptado pelo
-    # UinputKeyboardDevice e delegado ao keyboard subsystem — não emite evento
-    # real de tecla. Previne colisão com R3=BTN_MIDDLE do mouse porque este
-    # último só atua quando `mouse_emulation_enabled=True`. Quem habilita
-    # mouse+teclado juntos pode sobrescrever l3/r3 via UI (FEAT-KEYBOARD-UI-01)
-    # removendo o conflito explicitamente.
     "l3": (TOKEN_TOGGLE_OSK,),
     "r3": (TOKEN_CLOSE_OSK,),
     "touchpad_left_press": ("KEY_BACKSPACE",),
@@ -56,9 +47,6 @@ DEFAULT_BUTTON_BINDINGS: dict[str, KeyBinding] = {
     "touchpad_right_press": ("KEY_DELETE",),
 }
 
-#: (2) `acoes_de_botao.padrao()` deriva o padrão das 21 linhas DESTE mapa;
-#: (`acoes_de_botao.resolver` -> `profiles.manager.resolve_key_bindings`):
-#: (`a06_navegacao.padrao_definicoes`) zera `button_actions` e `key_bindings`.
 PADRAO_QUE_A_TELA_PUBLICADA_NAO_DIZ: dict[str, tuple[str, str]] = {}
 
 

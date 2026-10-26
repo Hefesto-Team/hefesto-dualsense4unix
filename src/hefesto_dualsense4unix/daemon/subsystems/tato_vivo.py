@@ -58,18 +58,10 @@ CANAL_LUZ = "luz"
 CANAL_HAPTICA = "haptica"
 CANAL_SOM = "som"
 CANAIS = (CANAL_GATILHO, CANAL_LUZ, CANAL_HAPTICA, CANAL_SOM)
-#: Os motores do rumble (o padrão da lista «Padrão dos motores»). Fora de ``CANAIS`` de propósito:
-#: o jogo é dono deles quando vibra, e a regra é a de ``decidir`` com o carimbo do rumble.
 CANAL_MOTORES = "motores"
 
-# Gatilho e luz são ESTADO: o valor que o jogo pôs fica na camada do jogo pela
-# sessão inteira (a arma troca uma vez, o gatilho fica). Háptica e som são
-# FLUXO: o jogo fala enquanto toca, e calar por 3 s é calar.
 CANAIS_DE_ESTADO = frozenset({CANAL_GATILHO, CANAL_LUZ})
 
-# O carimbo do pad virtual que diz «o jogo escreveu neste canal»
-# (`integrations/uhid_gamepad.py`, `ATIVIDADE_*`). A háptica do jogo DualSense
-# viaja como áudio; o rumble que o jogo pede é SINAL para o motor, não veto.
 _CARIMBO_DO_CANAL: dict[str, str] = {
     CANAL_GATILHO: "trigger",
     CANAL_LUZ: "lightbar",
@@ -85,7 +77,6 @@ TETO_TOTAL = 40
 JANELA_DO_TETO_S = 1.0
 INTERVALO_S = 1.0 / 60.0
 RELEITURA_DA_RECEITA_S = 1.0
-#: O Som no corpo guarda no máximo este tanto de pedaços entre dois tiques (o resto é mais velho)
 CORPO_MAX_PEDACOS = 16
 
 CAMPO_DA_RECEITA = "receita_do_tato"
@@ -93,9 +84,7 @@ CAMPO_DA_RECEITA = "receita_do_tato"
 TIPO_DEDO = "dedo"
 TIPO_RUMBLE = "rumble_tiro"
 TIPO_SOM = "som_tiro"
-#: O dedo largou o gatilho (``energia``: o quanto ele apertou). É o recuo: o Coice toca aqui.
 TIPO_SOLTA = "solta_tiro"
-#: A borda do som do jogo levada a TODOS os controles da mesa: a batida da música é de todos.
 TIPO_BATIDA = "batida_do_som"
 
 LADO_ESQUERDO = "esquerdo"
@@ -113,11 +102,9 @@ class EstadoDoCanal:
     visto_ha_s: Mapping[str, float] = field(default_factory=dict)
     sessao_aberta: bool = False
     ha_jogo: bool = False
-    # Há quanto tempo a sessão de agora abriu; ``None`` quando não se viu abrir.
     sessao_ha_s: float | None = None
 
 
-# O `visto_ha_s` do pad vem arredondado a 0,1 s, e a abertura se vê um tique depois.
 FOLGA_DA_SESSAO_S = 0.25
 
 
@@ -146,13 +133,8 @@ def decidir(canal: str, estado: EstadoDoCanal) -> bool:
     if idade is not None and idade < JANELA_DO_JOGO_S:
         return False
     if canal in CANAIS_DE_ESTADO and estado.sessao_aberta:
-        # Escreveu há mais de 3 s: no fluxo é silêncio; no estado, o valor dele
-        # segue valendo enquanto a sessão do jogo estiver aberta.
-        # O fecho do pad devolve a sessão, mas guarda o carimbo: só o desta conta.
         if _da_sessao(idade, estado):
             return False
-        # A volta do backend é a sessão inteira (`end_game_session_for`): se o
-        # jogo pintou o OUTRO canal de estado, devolver este apagaria o dele.
         for outro in CANAIS_DE_ESTADO - {canal}:
             if _da_sessao(estado.visto_ha_s.get(_CARIMBO_DO_CANAL[outro]), estado):
                 return False
@@ -168,9 +150,7 @@ class Evento:
     tipo: str
     lado: str = LADO_CENTRO
     energia: float = 1.0
-    #: o recorte do estalo (O-SOM-DO-TIRO-SAI-TAMBEM-NO-CONTROLE-01), que se completa depois.
     recorte: Any = field(default=None, compare=False)
-    #: quanto o dedo ficou apertado, na largada (``TIPO_SOLTA``); zero nos demais eventos
     duracao_s: float = 0.0
 
 
@@ -179,7 +159,7 @@ def _limitar(valor: Any, baixo: float, alto: float, padrao: float) -> float:
         numero = float(valor)
     except (TypeError, ValueError):
         return padrao
-    if numero != numero:  # NaN
+    if numero != numero:
         return padrao
     return min(alto, max(baixo, numero))
 
@@ -197,25 +177,14 @@ class Receita:
     cor_do_evento: tuple[int, int, int] | None = None
     lado_do_som: bool = False
     som_no_controle: bool = False
-    #: algum gatilho do perfil tem imersão com momentos (OS-MOMENTOS-DA-IMERSAO-TOCAM-NO-GATILHO-01)
     momentos_da_imersao: bool = False
-    #: algum controle do perfil escolheu uma forma de toque (Impacto, Guarda…): o toque do tiro
-    #: dispara mesmo sem o estilo pedir (A forma é da pessoa, o disparo segue a receita.)
     efeitos_escolhidos: bool = False
-    #: algum controle do perfil escolheu o Som no corpo (o grave do jogo, contínuo)
     som_no_corpo_escolhido: bool = False
-    #: o estilo pede o Grão (os grãos finos da Simulação) e o Motor de época (o zumbido do Retrô):
-    #: contínuos do laço, como o Som no corpo, mas sem som do jogo para ouvir
     grao_escolhido: bool = False
     motor_de_epoca_escolhido: bool = False
-    #: algum controle do perfil escolheu um padrão para os motores (Tranco, Coice…)
     padroes_escolhidos: bool = False
-    #: algum controle escolheu a Pancada do lado: o ouvido do som do jogo precisa subir
     pancada_escolhida: bool = False
-    #: o som do jogo vira háptica onde o jogo cala o rumble, e cede no primeiro rumble dele
     som_quando_o_jogo_cala: bool = False
-    #: o rumble do jogo chega ao dedo que aperta o gatilho
-    #: (O-RUMBLE-DO-JOGO-CHEGA-AO-DEDO-NO-GATILHO-01)
     rumble_no_dedo: bool = False
 
     @property
@@ -288,31 +257,19 @@ class Receita:
 
 DESLIGADA = Receita()
 
-#: As variáveis do motor, na ordem: o vocabulário que o desvio da bancada aceita.
 CAMPOS_DA_RECEITA: tuple[str, ...] = tuple(f.name for f in fields(Receita))
 
-# O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01 (09/10/2026): a receita do estilo
-# (`profiles/estilos_de_jogo.Receita`, a que a tela não mostra) nasceu noutro
-# conjunto, com outro vocabulário. A ponte entre as duas línguas mora aqui, e
-# cada número tem nome, e cada um é valor de partida.
-#: A força do toque pelo degrau de vibração do estilo (`Estilo.vibracao`).
 FORCA_DO_DEGRAU: dict[str, float] = {"max": 1.0, "balanceado": 0.6, "economia": 0.35}
-#: A luz do estilo que respira ou pisca pulsa a cada tiro; a da batida sobe no som do jogo;
-#: a parada não reage.
 REACAO_DA_LUZ_DO_ESTILO: dict[str, str] = {
     "parada": "parada",
     "respira": "pulsa",
     "pisca": "pulsa",
     "batida": "batida",
 }
-#: A duração do toque do motor é a do estilo na escala do toque: os 200 ms de sempre do estilo
-#: são os 40 ms do toque, e o dobro do Terror bate no teto de 60 (o limite de `Receita.de`).
 TOQUE_DE_SEMPRE_MS = 40
 TOQUE_MINIMO_MS = 25
 TOQUE_MAXIMO_MS = 60
-#: Os estilos de arma de rajada: só neles o gatilho acompanha o ritmo do tiro.
 ESTILOS_DE_RAJADA = frozenset({"fps"})
-#: O estalo do tiro no alto-falante do controle nasce desligado em todo estilo.
 SOM_NO_CONTROLE_DO_ESTILO = False
 
 
@@ -338,8 +295,6 @@ def receita_do_estilo(estilo: Any) -> Receita:
         reacao_ao_tiro=REACAO_DA_LUZ_DO_ESTILO.get(invisivel.luz, DESLIGADA.reacao_ao_tiro),
         lado_do_som=bool(invisivel.lado_do_som),
         som_no_controle=SOM_NO_CONTROLE_DO_ESTILO,
-        # o que o estilo pede (19/10/2026): o Som no corpo da Corrida e da Simulação e o padrão dos
-        # motores de cada estilo ligam o motor sem escolha nenhuma do usuário
         som_no_corpo_escolhido=(
             formas_de_haptica.POR_ESTILO.get(estilo.chave) == formas_de_haptica.SOM_NO_CORPO),
         grao_escolhido=formas_de_haptica.POR_ESTILO.get(estilo.chave) == formas_de_haptica.GRAO,
@@ -410,8 +365,6 @@ def receita_do_perfil(perfil: Any) -> Receita:
             som_no_corpo_escolhido=(
                 base.som_no_corpo_escolhido
                 or formas_de_haptica.SOM_NO_CORPO in escolhas.values()),
-            # o Grão e o Motor de época que a pessoa escolhe na lista (20/10/2026) ligam o laço
-            # contínuo como os do estilo
             grao_escolhido=base.grao_escolhido or formas_de_haptica.GRAO in escolhas.values(),
             motor_de_epoca_escolhido=(
                 base.motor_de_epoca_escolhido
@@ -506,37 +459,19 @@ class TatoVivo:
         self.ligado = False
         self.borda_do_rumble = BordaDoRumble()
         self.borda_do_dedo = BordaDoDedo()
-        #: o ouvido do som do jogo (O-TIRO-VEM-DO-LADO-CERTO-01); ``None`` até a receita pedir.
         self.ouvido: Any = None
-        #: as imersões com momentos de cada gatilho do perfil ativo, relidas com a receita.
         self.momentos: MapaDosMomentos = SEM_MOMENTOS
-        #: a forma de toque que cada controle do perfil ativo escolheu (por ``norm_mac``)
         self.escolhas: dict[str, str] = {}
-        #: o padrão dos motores que cada controle escolheu (por ``norm_mac``)
         self.escolhas_de_imersao: dict[str, str] = {}
-        #: onde o gatilho do perfil ativo vibra (o padrão dos motores espera a soltura)
         self.vibra_o_gatilho: VibracaoDoGatilho = SEM_VIBRACAO
-        #: quando o jogo pediu rumble pelo pad ``uinput`` (por ``norm_mac``): esse pad não tem
-        #: ``visto_ha_s``, e sem isto o padrão dos motores tocaria por cima do jogo no modo Xbox.
         self.rumble_visto_em: dict[str, float] = {}
-        #: quando o jogo pediu rumble COM FORÇA (por ``norm_mac``): o ``rumble_visto_em`` conta
-        #: também o par zero, e a fonte do som só cede ao rumble que vibra
         self.rumble_com_forca_em: dict[str, float] = {}
-        #: o último par CRU do jogo (fraco, forte) e o último com força, por ``norm_mac``: o
-        #: degrau do rumble no dedo (O-RUMBLE-DO-JOGO-CHEGA-AO-DEDO-NO-GATILHO-01)
         self.rumble_de_agora: dict[str, tuple[int, int]] = {}
         self.par_com_forca: dict[str, tuple[int, int]] = {}
-        #: os controles em que a fonte do som está acordada neste tique (o jogo cala, a mão joga)
         self.acordados_pelo_som: frozenset[str] = frozenset()
-        #: o status do Disparo de cada gatilho (0 antes, 1 dentro, 2 passou do clique), lido do
-        #: report de entrada; sem entrada é que o aparelho não o disse (o relógio vale).
         self.disparo: dict[tuple[str, str], int] = {}
-        #: a volta dos acessórios (toque, luzinhas e pulso da barra); anda sem receita e sem jogo
         self.volta: Any = None
-        #: os meus toques (a vibração a cada entrada de quem joga); anda sem receita
         self.meus_toques: Any = None
-        #: a intensidade da cena (A-INTENSIDADE-DA-CENA-REGE-O-QUE-O-HEFESTO-SOMA-01): conta as
-        #: bordas de cada tique e gradua só o que o Hefesto soma
         self.cena = IntensidadeDaCena()
 
     def anotar(self, evento: Evento) -> None:
@@ -576,15 +511,12 @@ class TatoVivo:
             self._fila.clear()
         self.cena.contar(eventos)
         for atuador in self.atuadores:
-            # O atuador que olha o tique inteiro (o ritmo do gatilho) ouve antes de
-            # responder: os dois lados de um controle no mesmo tique viram uma escrita.
             ouvir = getattr(atuador, "ouvir", None)
             if callable(ouvir):
                 ouvir(eventos, receita)
         for (uniq, canal), prazo in list(self._pendentes.items()):
             estado = estado_de(uniq)
             if estado is not None and not decidir(canal, estado):
-                # O jogo passou a mandar (ou o modo mudou): o valor agora é dele.
                 del self._pendentes[(uniq, canal)]
                 self.contadores["soltos_ao_jogo"] += 1
                 soltar = getattr(self._atuador(canal), "soltar", None)
@@ -691,9 +623,6 @@ class TatoVivo:
         }
 
 
-# --- As fontes de evento -------------------------------------------------
-
-
 DEDO_DISPARA = 160
 DEDO_SOLTA = 96
 
@@ -706,11 +635,8 @@ class BordaDoDedo:
         self.solta = solta
         self._apertado: dict[tuple[str, str], bool] = {}
         self._apertou_em: dict[str, float] = {}
-        #: o quanto o dedo apertou, por gatilho, até largar
         self._pico: dict[tuple[str, str], int] = {}
-        #: quando cada gatilho foi apertado (a duração do aperto vai no evento da largada)
         self._inicio: dict[tuple[str, str], float] = {}
-        #: as largadas ainda não levadas ao motor (``tirar_as_soltas``); ``ver`` não as devolve
         self._soltas: list[Evento] = []
 
     def ver(self, uniq: str, l2: int, r2: int, agora: float) -> list[Evento]:
@@ -752,14 +678,10 @@ class BordaDoDedo:
         return apertou is not None and -MESMO_TIRO_S <= instante - apertou <= JANELA_DO_DISPARO_S
 
 
-# A-VIBRACAO-FINA-BATE-A-CADA-TIRO-01: a borda do rumble que o jogo pede.
-# Um tiro por BORDA, nunca por nível: o pedido repetido igual (o `cosmic-osk`
-# manda vibração nula a ~20 por segundo por pad) e o nível sustentado não são
-# borda. Os limiares são de partida.
 RUMBLE_DISPARA = 80
 RUMBLE_SUBIDA = 64
 RUMBLE_REARMA = 48
-RUMBLE_JUNTA_S = 0.03  # a rampa de um tiro só (0 → 100 → 200 em 8 ms)
+RUMBLE_JUNTA_S = 0.03
 
 
 class BordaDoRumble:
@@ -798,7 +720,6 @@ class BordaDoRumble:
         nivel = max(0, min(255, max(int(fraco), int(forte))))
         if not self._armado.get(uniq, True):
             pico = self._pico.get(uniq, nivel)
-            # O tiro por cima de um nível já alto: subiu de novo, fora da rampa do anterior.
             if nivel - pico >= self.subida and agora - self._disparo[uniq] >= self.junta_s:
                 return self._disparar(uniq, fraco, forte, nivel, agora, efetivo)
             pico = max(pico, nivel)
@@ -855,7 +776,6 @@ def anotar_o_rumble(
         return
     try:
         instante = time.monotonic() if agora is None else agora
-        # Reatribuído, nunca mutado: escreve a thread do pad e lê a do tique.
         chave = norm_mac(uniq) or uniq
         motor.rumble_visto_em = {**motor.rumble_visto_em, chave: instante}
         motor.rumble_de_agora = {**motor.rumble_de_agora, chave: (int(fraco), int(forte))}
@@ -868,10 +788,7 @@ def anotar_o_rumble(
         logger.debug("tato_vivo_borda_do_rumble_falhou", exc_info=True)
 
 
-# O-TIRO-VEM-DO-LADO-CERTO-01: o estalo do som do jogo dá o lado do toque. O som é
-# um fluxo só para a mesa inteira: com um controle, o estalo é dele; com mais de
-# um, vai só a quem atirou naquela janela (o tiro do inimigo não tem dono).
-JANELA_DO_DISPARO_S = 0.3  # do aperto ao estalo: o quadro do jogo, o buffer e o gravador
+JANELA_DO_DISPARO_S = 0.3
 
 
 def pede_o_ouvido(receita: Receita) -> bool:
@@ -891,23 +808,13 @@ def destinos_do_som(
     return [c.uniq for c in controles if dedo.atirando(c.uniq, instante)]
 
 
-# O-JOGO-SEM-RUMBLE-SE-SENTE-PELO-SOM-DELE-01 (22/10/2026): o som do jogo é a segunda fonte, a
-# que só ocupa o que o jogo cala. Valores de partida, por delegação, a validar pelo usuário.
-#: Sem um rumble com força neste controle há tanto tempo (desde o jogo na frente), o jogo cala.
 SEM_RUMBLE_S = 20.0
-#: A pessoa joga: um botão, um analógico ou um gatilho mudou há menos que isto.
 ENTRADA_VIVA_S = 5.0
-#: Quanto um analógico ou um gatilho (0 a 255) anda para contar como mão: o tremor do centro
-#: não conta.
 PASSO_DA_ENTRADA = 16
-#: Os estilos de golpe (a escolha de 22/10 para o rumble no dedo, a mesma lista aqui).
 ESTILOS_DE_GOLPE = frozenset({
-    "acao", "luta", "souls", "terror", "aventura", "esportes",  # (noqa-acento): chaves
+    "acao", "luta", "souls", "terror", "aventura", "esportes",  # (noqa-acento)
 })
-#: O grave vira corpo discreto nos estilos de golpe que vestem o corpo (sem a Luta e os Esportes,
-#: que o timbre do rumble também deixa sem corpo: ``formas_de_haptica.SEM_CORPO``).
 ESTILOS_DO_CORPO_DISCRETO = ESTILOS_DE_GOLPE - formas_de_haptica.SEM_CORPO
-#: O corpo discreto é a metade da força do Som no corpo.
 FORCA_DO_CORPO_DISCRETO = 0.5
 
 
@@ -960,7 +867,7 @@ class FonteDoSom:
         if self._vibrou(uniq, vpad) or uniq not in self._calado_desde:
             self._calado_desde[uniq] = agora
         if rumble_em is not None and rumble_em > self._calado_desde[uniq]:
-            self._calado_desde[uniq] = rumble_em  # o rumble que o pad anotou entre dois tiques
+            self._calado_desde[uniq] = rumble_em
         if entrada is not None:
             mao = _assinatura_da_mao(entrada)
             antes = self._mao.get(uniq)
@@ -973,7 +880,6 @@ class FonteDoSom:
                 and mexeu is not None and agora - mexeu <= ENTRADA_VIVA_S)
 
 
-#: O Eco só reverbera o golpe forte; o fraco toca o Impacto, sem a cauda grave.
 ECO_A_PARTIR_DE = 0.7
 
 
@@ -999,9 +905,7 @@ class AtuadorDaHaptica:
         fator: Callable[[], float] | None = None,
     ) -> None:
         self._tocar = tocar
-        #: o fator da intensidade da cena sobre o toque que o Hefesto soma (1,0 sem graduar)
         self._fator = fator or (lambda: 1.0)
-        #: a fonte do som acordada neste controle (o jogo cala e a pessoa joga)
         self._acordada = acordada or (lambda uniq: False)
         self._ouvindo = ouvindo or (lambda: False)
         self._escolha_de = escolha_de or (lambda uniq: None)
@@ -1028,23 +932,19 @@ class AtuadorDaHaptica:
         escolha = formas_de_haptica.escolha_valida(self._escolha_de(evento.uniq))
         if escolha == formas_de_haptica.SEM_EFEITO or escolha in formas_de_haptica.CONTINUAS:
             return False
-        # o estilo que não toca ou que toca o corpo inteiro, de forma contínua (a Corrida, a
-        # Simulação, o Retrô): sem toque de tiro
         forma_do_estilo = formas_de_haptica.forma_do_estilo(self._estilo_de())
         if escolha is None and (forma_do_estilo == formas_de_haptica.SEM_EFEITO
                                 or forma_do_estilo in formas_de_haptica.CONTINUAS):
             return False
         if evento.tipo == TIPO_SOM:
             if receita.som_quando_o_jogo_cala:
-                # o som só toca onde o jogo cala: o rumble dele a faz ceder no mesmo tique
                 return self._acordada(evento.uniq)
             return receita.lado_do_som
         quer = receita.vibracao_por_tiro or escolha is not None
         if evento.tipo != TIPO_RUMBLE or not quer:
             return False
         if receita.som_quando_o_jogo_cala:
-            return True  # o rumble do jogo calou a fonte do som: o toque é o dele
-        # Um tiro, um toque: com o ouvido no som do jogo, o toque (e o lado) vem do estalo.
+            return True
         return not (receita.lado_do_som and self._ouvindo())
 
     def escrever(self, evento: Evento, receita: Receita, agora: float) -> float | None:
@@ -1058,21 +958,19 @@ class AtuadorDaHaptica:
             receita.duracao_do_toque_ms,
         )
         if forma == formas_de_haptica.ECO and evento.energia < ECO_A_PARTIR_DE:
-            forma = formas_de_haptica.IMPACTO  # só o golpe forte reverbera
+            forma = formas_de_haptica.IMPACTO
         if forma == formas_de_haptica.TOQUE:
             forma = self._toque_da_unidade(evento.uniq)
         if forma == formas_de_haptica.TOQUE:
             self._tocar(*pedido)
         else:
             self._tocar(*pedido, forma)
-        # O toque acaba em silêncio por construção: não há o que devolver.
         return None
 
     def devolver(self, uniq: str, agora: float) -> None:
         return None
 
 
-# O-SOM-DO-TIRO-SAI-TAMBEM-NO-CONTROLE-01: o estalo recortado vai ao alto-falante de quem atirou.
 class AtuadorDoSom:
     """O estalo do tiro no alto-falante do controle do evento."""
 
@@ -1090,24 +988,18 @@ class AtuadorDoSom:
 
     def escrever(self, evento: Evento, receita: Receita, agora: float) -> float | None:
         self._tocar(evento.uniq, evento.recorte)
-        # O recorte acaba em silêncio por construção: não há o que devolver.
         return None
 
     def devolver(self, uniq: str, agora: float) -> None:
         return None
 
 
-# O-GATILHO-ACOMPANHA-O-RITMO-DO-TIRO-01: o ritmo do tiro troca o bloco do gatilho.
-# O jogo escreve o gatilho uma vez por arma e o firmware rearma sozinho; enquanto
-# `docs/protocol/o-que-o-jogo-manda-por-tiro.md` não mostrar um jogo que rearma
-# por tiro, o motor não escreve nada por tiro: só troca o bloco quando o ritmo
-# muda, com os presets que a tela já tem (nenhum byte novo).
 GATILHO_ARMA = "arma"
 GATILHO_RAJADA = "rajada"
-RITMO_DA_ARMA_S = 0.25  # tiros espaçados: o estalo de cada aperto
-RITMO_DA_RAJADA_S = 0.11  # rajada; entre os dois, o modo fica (a histerese)
-MESMO_TIRO_S = 0.05  # o rumble que chega junto do aperto é o mesmo tiro
-CICLO_DO_GATILHO_S = 0.032  # um ciclo do laço de saída com quatro controles
+RITMO_DA_ARMA_S = 0.25
+RITMO_DA_RAJADA_S = 0.11
+MESMO_TIRO_S = 0.05
+CICLO_DO_GATILHO_S = 0.032
 VOLTA_DO_GATILHO_S = 1.5
 _PRESET_DO_GATILHO = {
     GATILHO_ARMA: "SemiAutoGun",
@@ -1134,7 +1026,6 @@ def _bloco_cru(nome: str, valores: Mapping[str, int]) -> bytes:
 def _bloco_do_efeito(efeito: Any) -> bytes:
     """O bloco cru de 11 bytes de um efeito pronto, no layout que o relatório leva."""
     f = efeito.forces
-    # O relatório leva o `forces[6]` no décimo byte do bloco (`common[19]` do backend).
     return bytes([efeito.mode, f[0], f[1], f[2], f[3], f[4], f[5], 0, 0, f[6], 0])
 
 
@@ -1171,9 +1062,7 @@ class AtuadorDoGatilho:
         self._devolver = devolver
         self.apertado = apertado
         self._largar = largar
-        #: o lado em que a pessoa escolheu uma imersão com momentos é dos momentos
         self._cede = cede
-        #: devolve UM lado ao perfil, sem encerrar a sessão (que um momento pode segurar)
         self._soltar_lado = soltar_lado
         self._bloco_escrito: dict[tuple[str, str], bytes] = {}
         self._ultimo_tiro: dict[tuple[str, str], float] = {}
@@ -1186,7 +1075,6 @@ class AtuadorDoGatilho:
         if evento.tipo == TIPO_DEDO:
             lados = [evento.lado] if evento.lado in _LADO_DO_BACKEND else []
         elif evento.tipo == TIPO_RUMBLE and self.apertado is not None:
-            # A arma automática: um aperto só, e o jogo pede o motor a cada bala.
             lados = [lado for lado in _LADO_DO_BACKEND if self.apertado(evento.uniq, lado)]
         if self._cede is None:
             return lados
@@ -1266,25 +1154,14 @@ class AtuadorDoGatilho:
         blocos = self._esquecer(uniq)
         if self._devolver(uniq) or self._soltar_lado is None:
             return
-        # A sessão não saiu: um momento do OUTRO lado a segura. O lado do ritmo volta ao perfil
-        # sozinho (só se ainda for o bloco do ritmo), em vez de ficar preso junto com a sessão.
         for disco, bloco in blocos.items():
             self._soltar_lado(uniq, disco, bloco)
 
 
-# OS-MOMENTOS-DA-IMERSAO-TOCAM-NO-GATILHO-01 (15/10/2026): o tempo do aperto.
-# A imersão que a pessoa escolhe na aba Gatilhos vai ao perfil só como os números do
-# acionamento, e se reconhece por eles (`imersao_dos_numeros`, a mesma regra da tela).
-# Os `momentos` dela mudam o bloco do gatilho com o tempo: ao apertar, segurando
-# (depois de `apos_ms`, repetindo a cada `a_cada_ms`) e sempre, cada um até `dura_ms`.
-# As regras do motor valem sem exceção: o jogo que escreve o gatilho cala o momento,
-# o Modo Nativo cala, e cada escrita passa pelo teto.
 QUANDO_AO_APERTAR = "ao_apertar"
 QUANDO_SEGURANDO = "segurando"
 QUANDO_SEMPRE = "sempre"
-#: O «sempre» sem `dura_ms` não segura a sessão para sempre: passado o teto, expira e a devolve.
 TETO_DO_SEMPRE_S = 300.0
-#: a chave do momento na sessão do motor; o ritmo do tiro tem a sua, no mesmo gatilho.
 CANAL_DO_MOMENTO = "momento"
 
 
@@ -1293,14 +1170,10 @@ class PlanoDoGatilho:
     """A imersão de um lado de um controle: o acionamento, os números e os momentos dele."""
 
     imersao: Imersao
-    #: o acionamento cujos números o momento ajusta
     modo: str
-    #: o estilo da variante que casou (``""`` na base): é a dele que vale nos outros modos
     estilo: str
     ajustes: Mapping[str, int]
-    #: só os que valem no `modo` (o `valem_em` de cada um)
     momentos: tuple[Momento, ...]
-    #: o Modo automático põe «Sem efeito» no aparelho: a volta à mão é o ``Off``
     automatico: bool = False
 
     def bloco_da_volta(self, economia: bool = False) -> bytes:
@@ -1345,9 +1218,7 @@ def _ajustes_na_economia(modo: str, ajustes: Mapping[str, int]) -> dict[str, int
 class MapaDosMomentos:
     """Os planos do perfil ativo: os dos gatilhos globais e os de cada controle que os escreve."""
 
-    #: lado (`esquerdo`/`direito`) → plano
     geral: Mapping[str, PlanoDoGatilho] = field(default_factory=dict)
-    #: controle (`norm_mac`) → lado escrito → plano, ou ``None`` se o lado dele não tem imersão
     por_controle: Mapping[str, Mapping[str, PlanoDoGatilho | None]] = field(
         default_factory=dict)
 
@@ -1520,8 +1391,6 @@ def planos_do_perfil(perfil: Any) -> MapaDosMomentos:
     return MapaDosMomentos(geral, por_controle)
 
 
-#: Os acionamentos em que o gatilho vibra por conta própria (a Metralhadora e a vibração por
-#: posição): com um deles em ação, o padrão dos motores espera a soltura do tiro.
 MODOS_QUE_VIBRAM = frozenset(FAMILIAS["metralhadora"]) | frozenset(
     FAMILIAS["vibração por posição"])
 
@@ -1531,7 +1400,6 @@ class VibracaoDoGatilho:
     """Em que controles o gatilho do perfil vibra (algum dos dois lados)."""
 
     geral: bool = False
-    #: controle (``norm_mac``) → vibra, quando ele escreve os gatilhos por cima do global
     por_controle: Mapping[str, bool] = field(default_factory=dict)
 
     def de(self, uniq: str) -> bool:
@@ -1668,21 +1536,15 @@ class AtuadorDosMomentos:
         self._devolver = devolver
         self.apertado = apertado
         self._largar = largar
-        #: a Bateria longa vale neste controle? Os momentos param e fica o bloco de economia
         self._na_economia = na_economia
-        #: a telemetria da corrida pede este lado: o momento larga sem escrever e volta depois
         self._cede = cede
-        #: o status do Disparo (0, 1, 2) deste lado, ou ``None`` se o aparelho não o disse
         self._disparo = disparo
         self._aperto: dict[tuple[str, str], float] = {}
         self._clique: dict[tuple[str, str], float] = {}
         self._sempre: dict[tuple[str, str], tuple[PlanoDoGatilho, float]] = {}
-        #: o «sempre» sem fim que passou do teto: fica fora até a imersão mudar ou ser devolvida
         self._expirou: set[tuple[str, str]] = set()
-        #: a marca do que está escrito é o BLOCO, não a volta do relógio em que ele saiu
         self._escrito: dict[tuple[str, str], bytes] = {}
         self._planos: dict[tuple[str, str], PlanoDoGatilho] = {}
-        #: controles cuja sessão o momento segura entre as batidas de um «sempre»
         self._entre_batidas: set[str] = set()
 
     def responde_a(self, evento: Evento, receita: Receita) -> bool:
@@ -1719,16 +1581,13 @@ class AtuadorDosMomentos:
         planos = motor.momentos if receita.momentos_da_imersao else SEM_MOMENTOS
         escritas = 0
         for saiu in ({u for u, _lado in self._escrito} | self._entre_batidas) - set(uniqs):
-            self.soltar(saiu)  # o controle saiu da mesa: não há o que devolver nele
+            self.soltar(saiu)
         for uniq in uniqs:
             estado = estado_de(uniq)
             if estado is None or not decidir(CANAL_GATILHO, estado):
                 if estado is not None and _o_modo_cala_o_motor(estado):
-                    # O motor calou (sem jogo, alt-tab, modo em que o Hefesto não fala): o
-                    # bloco do momento não pode ficar no aparelho.
                     self.devolver(uniq, agora)
                 elif self._na_sessao(uniq):
-                    # O jogo escreve o gatilho: o momento se cala e o valor é dele.
                     motor.contadores["soltos_ao_jogo"] += 1
                     self.soltar(uniq)
                 self._ver_o_dedo(uniq, agora)
@@ -1744,7 +1603,7 @@ class AtuadorDosMomentos:
                 status = self._disparo(uniq, lado) if self._disparo is not None else None
                 if (status is not None and status >= TRIGGER_ESTADO_DISPAROU
                         and chave not in self._clique):
-                    self._clique[chave] = agora  # a primeira vez que o clique passou
+                    self._clique[chave] = agora
             else:
                 self._aperto.pop(chave, None)
                 self._clique.pop(chave, None)
@@ -1758,8 +1617,6 @@ class AtuadorDosMomentos:
         for lado, disco in _LADO_DO_BACKEND.items():
             chave = (uniq, lado)
             if self._cede is not None and self._cede(uniq, lado, agora):
-                # A-TELEMETRIA-DA-CORRIDA-CHEGA-AO-GATILHO-01: o ABS e a patinação do jogo vencem a
-                # resistência do perfil; quem escreve o lado agora é a corrida.
                 if self._escrito.pop(chave, None) is not None:
                     self._planos.pop(chave, None)
                     cedeu = True
@@ -1803,10 +1660,10 @@ class AtuadorDosMomentos:
             self._voltar(uniq, a_voltar)
             motor.contadores["devolucoes"] += 1
         elif uniq in self._entre_batidas and not self._repete(uniq):
-            self._voltar(uniq, ())  # a imersão saiu entre duas batidas: a sessão volta
+            self._voltar(uniq, ())
             motor.contadores["devolucoes"] += 1
         if cedeu and not self._na_sessao(uniq) and self._largar is not None:
-            self._largar(uniq)  # a sessão segue com a corrida, que a devolve ao soltar
+            self._largar(uniq)
         return escritas
 
     def _voltar(self, uniq: str, lados: Sequence[str]) -> None:
@@ -1827,7 +1684,6 @@ class AtuadorDosMomentos:
         self._entre_batidas.discard(uniq)
         if self._devolver(uniq):
             return
-        # Outro canal do motor segura a sessão: o estático vai à mão, e a sessão é dele.
         for lado, bloco in estaticos.items():
             self._escrever(uniq, _LADO_DO_BACKEND[lado], bloco)
         if self._largar is not None:
@@ -1839,7 +1695,7 @@ class AtuadorDosMomentos:
             chave = (uniq, lado)
             self._escrito.pop(chave, None)
             self._planos.pop(chave, None)
-            self._sempre.pop(chave, None)  # o «sempre» recomeça quando o jogo largar
+            self._sempre.pop(chave, None)
             self._expirou.discard(chave)
         self._entre_batidas.discard(uniq)
         if self._largar is not None:
@@ -1853,7 +1709,7 @@ class AtuadorDosMomentos:
         """
         for lado in _LADO_DO_BACKEND:
             chave = (uniq, lado)
-            self._sempre.pop(chave, None)  # antes da volta: sem plano, nenhuma batida segura
+            self._sempre.pop(chave, None)
             self._expirou.discard(chave)
             self._clique.pop(chave, None)
         if self._na_sessao(uniq):
@@ -1866,21 +1722,10 @@ class AtuadorDosMomentos:
             self.devolver(uniq, agora)
 
 
-# O-RUMBLE-DO-JOGO-CHEGA-AO-DEDO-NO-GATILHO-01 (22/10/2026): o rumble do jogo no dedo.
-# O jogo Xbox não tem canal para o gatilho (o `FF_RUMBLE` só tem os dois motores), e o xpadneo
-# faz há anos o gatilho vibrar com o rumble vezes o quanto ele está apertado. Aqui: o lado com o
-# dedo além do disparo vibra no modo `0x26` com a amplitude do par CRU do jogo, em oito degraus;
-# a barra dela não entra (ela só tira, e o jogo manda). Valores de partida, a validar na bancada.
 CANAL_DO_DEDO = "dedo_do_rumble"
-#: a vibração do gatilho tem oito degraus de amplitude (`trigger_effects.vibration`)
 DEGRAUS_DO_DEDO = 8
-#: sem rumble com força por este tanto, o lado volta ao efeito do estilo
 SEM_RUMBLE_NO_DEDO_S = 0.150
-#: a largura da histerese, em degraus: o escrito só muda quando o nível cru sai da faixa dele
-#: alargada em meio degrau de cada lado (a rajada que oscila na divisa não reescreve; o nível que
-#: muda e fica, ainda que um degrau só, chega ao dedo)
 HISTERESE_DO_DEDO = 1
-#: as batidas por segundo da vibração no dedo (byte de frequência do `0x26`)
 FREQUENCIA_DO_DEDO_HZ = 40
 
 
@@ -1933,10 +1778,8 @@ class AtuadorDoDedo:
         self._devolver = devolver
         self.apertado = apertado
         self._largar = largar
-        #: o lado já tem dono (um momento, o gatilho do perfil que vibra, a Bateria longa)
         self._cede = cede
         self._soltar_lado = soltar_lado
-        #: o controle está no rádio sem fatia livre: o degrau novo espera
         self._radio_cede = radio_cede
         self._degrau: dict[tuple[str, str], int] = {}
         self._bloco: dict[tuple[str, str], bytes] = {}
@@ -1962,7 +1805,6 @@ class AtuadorDoDedo:
             forca_em = motor.rumble_com_forca_em.get(chave)
             if forca_em is None or agora - forca_em >= SEM_RUMBLE_NO_DEDO_S:
                 return (0, 0)
-            # A rajada cala entre dois pulsos: o degrau é o do último pulso.
             par = motor.par_com_forca.get(chave, par)
         return par
 
@@ -1975,7 +1817,7 @@ class AtuadorDoDedo:
         receita: Receita,
     ) -> int:
         for saiu in {u for u, _lado in self._degrau} - set(uniqs):
-            self.soltar(saiu)  # o controle saiu da mesa: não há o que devolver nele
+            self.soltar(saiu)
         escritas = 0
         for uniq in uniqs:
             estado = estado_de(uniq)
@@ -1983,12 +1825,11 @@ class AtuadorDoDedo:
                 if self.segura(uniq):
                     if estado is not None and not _o_modo_cala_o_motor(estado):
                         motor.contadores["soltos_ao_jogo"] += 1
-                        self.soltar(uniq)  # o jogo escreve o gatilho: o valor é dele
+                        self.soltar(uniq)
                     else:
                         self.devolver(uniq, agora)
                 continue
             if not receita.rumble_no_dedo or receita.gatilho_no_ritmo:
-                # O estilo não pede, ou o ritmo do tiro (a Metralhadora do FPS) é o dono.
                 if self.segura(uniq):
                     self.devolver(uniq, agora)
                 continue
@@ -2047,7 +1888,6 @@ class AtuadorDoDedo:
             self._escreveu_em.pop(uniq, None)
             if self._devolver(uniq):
                 return
-        # O outro lado segue no dedo, ou outro canal do motor segura a sessão: só este lado volta.
         if self._soltar_lado is not None:
             for disco, bloco in blocos.items():
                 self._soltar_lado(uniq, disco, bloco)
@@ -2072,15 +1912,10 @@ class AtuadorDoDedo:
             self.devolver(uniq, agora)
 
 
-# O-EFEITO-IMERSAO-DOS-MOTORES-GANHA-A-LISTA-NOVA-01 (15/10/2026): o padrão dos motores.
-# O padrão (Tranco, Batida, Onda, Coice, Pancada do lado) toca no mesmo tiro da receita, nos
-# motores do rumble, por escolha da pessoa. O jogo manda: se ele vibra o motor (o carimbo do
-# rumble), o padrão cala. O gatilho que vibra (Metralhadora e vizinhas) só deixa o padrão tocar
-# na soltura do tiro, nunca durante a rajada.
 COICES_POR_S = 3
 JANELA_DO_COICE_S = 1.0
 FORCA_NA_ECONOMIA = FORCA_DO_DEGRAU["economia"]
-FOLGA_DA_VOLTA_S = 0.15  # depois do último passo, a volta zera os motores se o relógio falhou
+FOLGA_DA_VOLTA_S = 0.15
 _MOTOR_DO_LADO = {
     LADO_ESQUERDO: padroes_de_vibracao.ESQUERDO,
     LADO_DIREITO: padroes_de_vibracao.DIREITO,
@@ -2093,7 +1928,6 @@ class _PadraoEmCurso:
     inicio: float
     forca: float
     indice: int = -1
-    #: o último par escrito (fraco, forte): o zero do fim não se escreve duas vezes
     escrito: tuple[int, int] | None = None
 
 
@@ -2113,7 +1947,6 @@ class AtuadorDosMotores:
         forca_de: Callable[[str], float],
         estilo_de: Callable[[], Any] | None = None,
     ) -> None:
-        #: ``escrever(uniq, fraco, forte)``: o motor direito é o fraco, o esquerdo o forte
         self._escrever = escrever
         self._estilo_de = estilo_de or (lambda: None)
         self._padrao_de = padrao_de
@@ -2142,7 +1975,7 @@ class AtuadorDosMotores:
             if regra is not None and (
                     evento.duracao_s < regra.segurado_s
                     or (regra.lado is not None and evento.lado != regra.lado)):
-                return False  # a Onda do Furtivo só sai de quem segurou a mira
+                return False
             return padrao not in padroes_de_vibracao.NA_SOLTURA or self._cabe_o_coice(
                 evento.uniq, evento.instante)
         if padrao in padroes_de_vibracao.DO_LADO_DO_SOM:
@@ -2197,8 +2030,6 @@ class AtuadorDosMotores:
         escritas = 0
         for uniq in list(self._em_curso):
             if uniq not in uniqs or estado_de(uniq) is None:
-                # O controle saiu da mesa. (O jogo que passa a vibrar é do ``tique``: a volta
-                # pendente do padrão pergunta ``decidir`` e chama ``soltar``.)
                 self._em_curso.pop(uniq, None)
                 continue
             antes = self._em_curso[uniq].indice
@@ -2225,18 +2056,13 @@ def _valor(passo: int, forca: float) -> int:
     return max(0, min(255, round(passo * forca)))
 
 
-# A-LUZ-RESPIRA-A-CADA-TIRO-01: a barra pulsa (ou troca de cor) a cada tiro e volta.
-# Teto de 3 subidas por segundo por controle (WCAG 2.3.1, três flashes por
-# segundo), cobrado aqui e não só na tela: o tiro que chega com a luz ainda no
-# pico estende o pico, e a rajada vira um brilho contínuo, nunca um pisca-pisca.
 REACAO_PULSA = "pulsa"
 REACAO_EVENTO = "evento"
-#: a luz sobe na borda do som do jogo (`TIPO_BATIDA`), não no tiro: o Ritmo
 REACAO_BATIDA = "batida"
 TETO_DA_LUZ_POR_S = 3
-JANELA_DA_LUZ_S = 1.0  # a janela do teto: três subidas por segundo
-SEGURA_DA_LUZ_S = 0.12  # o pico; a volta vem no máximo um tique depois
-GANHO_MINIMO_DO_PULSO = 1.3  # abaixo disso a cor já está no máximo e o pulso mergulha
+JANELA_DA_LUZ_S = 1.0
+SEGURA_DA_LUZ_S = 0.12
+GANHO_MINIMO_DO_PULSO = 1.3
 MERGULHO_DO_PULSO = 0.35
 COR_DO_EVENTO_PADRAO = (255, 255, 255)
 _TIPOS_DA_LUZ = frozenset({TIPO_DEDO, TIPO_RUMBLE})
@@ -2311,7 +2137,6 @@ class AtuadorDaLuz:
         self._cor_de = cor_de
         self._devolver = devolver
         self._largar = largar
-        #: a Bateria longa vence o estilo: a barra fica fixa na cor do perfil, sem pulso
         self._na_economia = na_economia or (lambda uniq: False)
         self._base: dict[str, tuple[int, int, int]] = {}
         self._no_pico: set[str] = set()
@@ -2336,13 +2161,10 @@ class AtuadorDaLuz:
             subidas.popleft()
         if len(subidas) >= TETO_DA_LUZ_POR_S:
             return False
-        # Fora do pico não há pulso no ar: a cor se lê de novo a cada tiro. O tiro
-        # que o jogo ou o teto recusam não pode deixar guardada a cor de antes
-        # da troca de perfil, que o pulso seguinte pintaria.
         base = self._cor_de(evento.uniq)
         if base is None or max(base) <= 0:
             self._base.pop(evento.uniq, None)
-            return False  # a barra apagada não tem o que respirar
+            return False
         self._base[evento.uniq] = base
         return True
 
@@ -2374,14 +2196,9 @@ class AtuadorDaLuz:
         base = self._base.pop(uniq, None)
         self._no_pico.discard(uniq)
         if not self._devolver(uniq) and base is not None:
-            # O motor ainda segura outro canal deste controle: a cor volta à mão,
-            # e a luz repintada não prende a sessão (ela sai com o outro canal).
             self._pintar(uniq, base)
             if self._largar is not None:
                 self._largar(uniq)
-
-
-# --- A ligação com o daemon ----------------------------------------------
 
 
 @dataclass(frozen=True)
@@ -2392,7 +2209,6 @@ class Controle:
     vpad: Any
     l2: int = 0
     r2: int = 0
-    #: o status do Disparo de ``(L2, R2)`` que o report de entrada trouxe; ``None`` se não veio
     estado_gatilho: tuple[int, int] | None = None
 
 
@@ -2506,17 +2322,10 @@ def com_o_rumble_anotado(
     return replace(estado, visto_ha_s={**estado.visto_ha_s, carimbo: idade})
 
 
-#: O nome que não achou arquivo com o slug dele e a receita que o `load_profile`
-#: trouxe: o laço só volta a varrer quando o `active_profile` muda.
 _PELO_CARREGADOR: tuple[str, Receita] | None = None
-#: A vista do perfil que a última leitura da receita trouxe: os momentos saem dela,
-#: sem ler o disco de novo.
 _VISTA_LIDA: tuple[str, Any] | None = None
 
 
-#: A vista do computador sem perfil nenhum: ``(o computador lido, a vista)``. O
-#: ``o_computador()`` devolve o MESMO objeto até o ``maquina.json`` mudar, então o
-#: laço de 60 Hz não valida o modelo de novo a cada leitura.
 _VISTA_DO_COMPUTADOR: tuple[Any, Any] | None = None
 
 
@@ -2838,7 +2647,6 @@ def atuadores_de_producao(daemon: Any) -> list[Atuador]:
         return corrida.quer_o_lado(uniq, lado, agora)
 
     def o_lado_tem_dono(uniq: str, lado: str) -> bool:
-        # O momento da imersão, o gatilho do perfil que já vibra e a Bateria longa ficam.
         return do_momento(uniq, lado) or gatilho_vibra(uniq) or na_economia(uniq)
 
     def radio_cede(uniq: str) -> bool:
@@ -2924,18 +2732,13 @@ class Passo:
         self.receita_vigente: Receita = DESLIGADA
         self.jogo = False
         self._lida_em = float("-inf")
-        # Quando o pad de cada controle abriu a sessão de agora (None: já estava aberta).
         self._aberta_em: dict[str, float | None] = {}
-        # O Som no corpo: o grave do jogo, filtrado na thread do ouvido e levado a cada tique.
         self._filtro_do_corpo = formas_de_haptica.FiltroDoCorpo()
         self._corpo: deque[Any] = deque(maxlen=CORPO_MAX_PEDACOS)
-        # O Grão e o Motor de época: um gerador por controle (a semente e a fase são dele) e o
-        # instante do último pedaço levado, por forma; quem deixa de ter dono recomeça do zero.
         self._graos: dict[str, formas_de_haptica.GeradorDoGrao] = {}
         self._motores_de_epoca: dict[str, formas_de_haptica.GeradorDoMotorDeEpoca] = {}
         self._continua_em: dict[str, float] = {}
         self._agora_da_continua = 0.0
-        # A fonte do som onde o jogo cala, e os controles em que o grave vira o corpo discreto.
         self.fonte_do_som = FonteDoSom()
         self._corpo_discreto: frozenset[str] = frozenset()
 
@@ -2969,7 +2772,7 @@ class Passo:
         while self._corpo:
             try:
                 pedacos.append(self._corpo.popleft())
-            except IndexError:  # a thread do ouvido esvaziou a fila entre o teste e a retirada
+            except IndexError:
                 break
         if not pedacos:
             return
@@ -2993,7 +2796,7 @@ class Passo:
         if not callable(levar):
             return
         fator = fator_da_cena(self.daemon)
-        if fator != 1.0:  # a cena gradua o corpo que o Hefesto soma; o grave do jogo fica como é
+        if fator != 1.0:
             amostras = array("f", [x * fator for x in amostras])
         for uniq in donos:
             levar(uniq, amostras)
@@ -3092,10 +2895,10 @@ class Passo:
             nivel = nivel_do_rumble(vpad_de(uniq))
             if gerador is None:
                 if nivel <= 0.0:
-                    continue  # sem rumble do jogo não há zumbido a começar
+                    continue
                 gerador = self._motores_de_epoca[uniq] = formas_de_haptica.GeradorDoMotorDeEpoca()
             elif nivel <= 0.0 and gerador.calado:
-                del self._motores_de_epoca[uniq]  # o zumbido arrastou até o fim: acabou
+                del self._motores_de_epoca[uniq]
                 continue
             self._levar_a_continua(uniq, gerador.gerar(n, nivel))
 

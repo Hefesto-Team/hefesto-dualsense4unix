@@ -29,11 +29,8 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-#: O número inteiro, e não o pedaço de outro: um CSV de medida bruta tem ``5.34928,4957…``
-#: (dois campos colados pela vírgula), que não é o custo de 928,4 por controle.
 PADRAO = re.compile(r"(?<![\d.])(?:232 *%|928,4(?!\d))")
 
-#: Só texto: o resto (imagem, fonte, binário) nunca carrega o número.
 SUFIXOS_DE_TEXTO = frozenset({
     ".md", ".html", ".csv", ".py", ".txt", ".json", ".js", ".sh", ".toml", ".yaml", ".yml",
     ".css", ".svg", ".rs",
@@ -42,8 +39,6 @@ SUFIXOS_DE_TEXTO = frozenset({
 PASTAS_QUE_NAO_SE_ANDA = frozenset(
     {"__pycache__", ".git", ".venv", "node_modules", ".pytest_cache"})
 
-#: Caminho (arquivo ou pasta, relativo à raiz, com «/» no fim se for pasta) -> a razão de ficar.
-#: Cada uma tem de ainda CONTER o número que isenta (``test_nenhuma_isencao_esta_morta``).
 ISENCOES_DE_ARQUIVO: dict[str, str] = {
     "docs/process/sprints/": (
         "a sprint escreve o defeito que cura e cita o número que manda tirar; o texto dela é "
@@ -56,8 +51,6 @@ ISENCOES_DE_ARQUIVO: dict[str, str] = {
         "cópia do desenho que ela aprovou em 23/09, intocável"),
 }
 
-#: Arquivo -> o trecho da LINHA que nega o número («no lugar do 232%»). A linha inteira fica;
-#: qualquer outra linha do mesmo arquivo com o número reprova.
 ISENCOES_DE_LINHA: dict[str, tuple[str, str]] = {
     "mockup/mapa-do-radio.html": (
         "no lugar do «232%»",
@@ -153,7 +146,7 @@ def test_nenhuma_isencao_esta_morta() -> None:
     for chave in ISENCOES_DE_ARQUIVO:
         alvo = RAIZ / chave
         if not alvo.exists():
-            continue  # docs/process não existe num clone limpo
+            continue
         arquivos = ([p for p in alvo.rglob("*") if p.is_file()] if alvo.is_dir() else [alvo])
         if not any(PADRAO.search(a.read_text(encoding="utf-8", errors="ignore"))
                    for a in arquivos if a.suffix in SUFIXOS_DE_TEXTO):
@@ -164,8 +157,6 @@ def test_nenhuma_isencao_esta_morta() -> None:
             mortas.append(rel)
     assert not mortas, f"isenção sem o número que isenta: {mortas}"
 
-
-# --- a segunda régua: a caixa e o fone do mockup caem no intervalo do CSV -------------------
 
 MOCKUP = RAIZ / "mockup" / "mapa-do-radio.html"
 ORCAMENTO = RAIZ / "docs" / "data" / "orcamento-de-ar.csv"
@@ -209,9 +200,6 @@ def test_a_conta_da_caixa_no_mockup_e_a_do_pacote_de_cinco_fatias() -> None:
     for r in linhas:
         assert round(float(r[6]) / int(divisor.group(1))) == 61, (
             "61 pacotes por segundo: SBC a 328 kbit/s, ~672 B por pacote")
-
-
-# --- a terceira régua: o CSV fala do relatório que o produto escreve ------------------------
 
 
 def test_o_csv_da_ponte_fala_do_0x36_e_nao_do_0x35_aposentado() -> None:

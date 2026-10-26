@@ -87,8 +87,10 @@ def test_o_no_vem_por_campo_nomeado_e_a_ordem_dos_campos_nao_conta() -> None:
 
 
 def test_o_acento_que_o_pactl_nao_escreve_vira_vazio_e_a_descricao_recua() -> None:
-    # A decisão D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP.
-    """`pactl` 16.1 imprime `(null)` no campo com acento: vazio, nunca a palavra «(null)»."""
+    """`pactl` 16.1 imprime `(null)` no campo com acento: vazio, nunca a palavra «(null)».
+
+    Prova da D-0810-O-NOME-COM-ACENTO-VEM-DO-PW-DUMP.
+    """
     (hdmi, hap) = pds.ler_nos("sinks", _servidor({_json("sinks"): json.dumps(SINKS)})) or ()
     assert hdmi.descricao == "Navi HDMI"
     assert hap.descricao == "Háptica"
@@ -96,7 +98,7 @@ def test_o_acento_que_o_pactl_nao_escreve_vira_vazio_e_a_descricao_recua() -> No
 
 
 def test_sem_a_porta_do_json_a_resposta_e_nao_sei_e_nunca_o_texto_longo() -> None:
-    # A decisão D-0810-O-SOM-SEM-A-PORTA-DO-JSON-NAO-SABE.
+    """Prova da D-0810-O-SOM-SEM-A-PORTA-DO-JSON-NAO-SABE."""
     longo = "Sink #51\n\tState: SUSPENDED\n\tName: alsa_output.x\n"
     for resposta in (None, "", longo, "pactl: opção desconhecida '--format=json'", "{}"):
         ler = _servidor({_json("sinks"): resposta, _json("sources"): resposta})
@@ -167,10 +169,6 @@ def test_o_curto_e_o_json_dao_os_mesmos_nos_na_parte_que_o_curto_conhece() -> No
         (n.indice, n.nome, n.estado) for n in json_nos]
 
 
-# ---------------------------------------------------------------------------
-# A pasta dos módulos do PipeWire
-
-
 def _esquecer() -> None:
     """A pasta lembrada é do processo; a régua a esquece pelo estado do módulo."""
     with pds._TRAVA_DOS_DIRETORIOS:
@@ -231,10 +229,6 @@ def test_o_produto_lembra_a_pasta_e_a_regua_esquece(monkeypatch: pytest.MonkeyPa
     assert str(tmp_path) not in pds.diretorios_de_modulos()
 
 
-# ---------------------------------------------------------------------------
-# O `pactl` de mentira DE VERDADE: rótulos trocados, ordem trocada, processo de fato
-
-
 def test_o_pactl_de_mentira_com_os_rotulos_trocados_da_o_mesmo(tmp_path: Path) -> None:
     """Um servidor que só fala JSON, com os campos fora de ordem; o texto longo ele recusa."""
     texto = json.dumps([dict(reversed(list(o.items()))) for o in SINKS])
@@ -256,10 +250,6 @@ def test_o_pactl_de_mentira_com_os_rotulos_trocados_da_o_mesmo(tmp_path: Path) -
     assert pds.ler_nos("sources", ler) is None, "servidor que recusou virou lista vazia"
 
 
-# ---------------------------------------------------------------------------
-# A trava: nada em src/ volta a ler o texto longo, e os módulos não têm caminho de distro
-
-
 _LONGO = re.compile(
     r"""["']pactl["']\s*,\s*["']list["']\s*,\s*["'](sinks|sources|sink-inputs|source-outputs)["']\s*[\]\)]""")
 _CAMINHO = re.compile(r"/usr/lib/(x86_64-linux-gnu/)?pipewire-0\.3|/usr/lib64/pipewire")
@@ -270,7 +260,7 @@ def _fontes() -> list[Path]:
 
 
 def test_ninguem_em_src_pede_o_texto_longo_do_pactl() -> None:
-    # A decisão D-0810-O-SOM-SEM-A-PORTA-DO-JSON-NAO-SABE.
+    """Prova da D-0810-O-SOM-SEM-A-PORTA-DO-JSON-NAO-SABE."""
     quem = [f"{p.relative_to(RAIZ)}:{n}"
             for p in _fontes()
             for n, linha in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)
@@ -279,7 +269,7 @@ def test_ninguem_em_src_pede_o_texto_longo_do_pactl() -> None:
 
 
 def test_ninguem_em_src_crava_a_pasta_dos_modulos_do_pipewire() -> None:
-    # A decisão D-0810-O-SOM-SEM-A-PORTA-DO-JSON-NAO-SABE.
+    """Prova da D-0810-O-SOM-SEM-A-PORTA-DO-JSON-NAO-SABE."""
     quem = [f"{p.relative_to(RAIZ)}:{n}"
             for p in _fontes()
             for n, linha in enumerate(p.read_text(encoding="utf-8").splitlines(), 1)

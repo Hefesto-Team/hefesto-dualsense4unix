@@ -290,7 +290,7 @@ def test_o_teto_recusa_dizendo_em_vez_de_gravar(pac, arraste, disco) -> None:
     assert not gravados, "gravou um multiplicador que o produto recusa"
 
 
-@pytest.mark.parametrize("clique", [  # (noqa-acento) nome do argumento
+@pytest.mark.parametrize("clique", [
     {"uniq": UNIQ, "valor": "muito"},
     {"uniq": "", "valor": "150"},
 ])
@@ -360,9 +360,6 @@ def test_o_desenho_tem_a_barra_arrastavel_com_o_teto_do_esquema() -> None:
     from hefesto_dualsense4unix.daemon.subsystems.rumble import RUMBLE_POLICY_MULT
     from hefesto_dualsense4unix.profiles.schema import RUMBLE_CUSTOM_MULT_MAX
 
-    # o PUBLICADO: o trilho de 0 a 200 é o do produto; a bancada de 18/10/2026 também desenha
-    # 0 a 200, sem os degraus (r3b-05-12), e a segunda passagem decide como o porcento vira o
-    # degrau do firmware
     pagina = (RAIZ / "src/hefesto_dualsense4unix/interface/paginas/05-vibracao.html").read_text(
         encoding="utf-8")
     barras = [t for t in re.findall(r'<input class="trilho arrasta"[^>]*>', pagina)

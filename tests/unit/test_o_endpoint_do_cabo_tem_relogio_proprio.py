@@ -34,8 +34,6 @@ import pytest
 from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 from hefesto_dualsense4unix.integrations import pad_usb
 
-#: A faixa que o WirePlumber 0.5 dá às placas ALSA (``monitors/alsa.lua``): 1000 no
-#: device 0, mais 1000 na captura, mais 500 no perfil «pro». O endpoint fica acima.
 _TETO_DAS_PLACAS_ALSA = 1000 + 1000 + 500
 
 _P1, _P2, _P3, _P4 = (f"aa:bb:cc:00:00:{n}{n}" for n in (1, 2, 3, 4))
@@ -115,8 +113,10 @@ def _no(uniq: str, servidor: _Servidor) -> Any:
 
 @pytest.mark.parametrize("mesa", list(MESAS), ids=list(MESAS))
 def test_todo_endpoint_nasce_dando_o_passo_do_grafo(mesa: str) -> None:
-    # D-2410-O-ENDPOINT-DO-CABO-TEM-RELOGIO-PROPRIO
-    """No cabo e no rádio, P1 a P4: o endpoint ganha da placa na eleição do driver."""
+    """No cabo e no rádio, P1 a P4: o endpoint ganha da placa na eleição do driver.
+
+    Prova da D-2410-O-ENDPOINT-DO-CABO-TEM-RELOGIO-PROPRIO.
+    """
     servidor = _Servidor()
     for uniq, _transporte in MESAS[mesa]:
         no = _no(uniq, servidor)

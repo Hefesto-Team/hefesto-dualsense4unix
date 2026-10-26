@@ -179,7 +179,7 @@ def test_metodo_novo_no_dispatcher_faz_o_check_reprovar(arvore: Path) -> None:
             '"rumble.set": self._handle_rumble_set,\n'
             '            "plugin.reload": self._handle_plugin_reload,'),
         encoding="utf-8")
-    envelhece_as_fontes(arvore)   # e ainda assim tem de reprovar
+    envelhece_as_fontes(arvore)
 
     saida = confere(arvore)
     assert saida.returncode == 1, (
@@ -281,7 +281,6 @@ def test_o_portao_esta_ligado_no_ci_e_no_pre_commit() -> None:
         for nome, job in (dados.get("jobs") or {}).items()
         for passo in job.get("steps") or []
     ]
-    # direto, ou pelo nome: `bash scripts/portoes.sh --so <id>` (O-CI-CHAMA-OS-PORTOES-PELO-NOME-01)
     rodam = [p for p in passos if o_passo_chama(COMANDO, p.get("run", ""))]
     assert rodam, f"o CI não chama `{COMANDO}`"
     for passo in rodam:

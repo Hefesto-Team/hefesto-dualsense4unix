@@ -19,7 +19,6 @@ MAQUINA = RAIZ / "src/hefesto_dualsense4unix/utils/maquina.py"
 
 _SIM = {"sim", "1", "true"}
 
-#: deles toca o DualSense: são gestos de TELA (abrir, fechar, voltar ao
 _DO_EXTERNO = ("declara o controle externo (a cor do plástico, a chave de modo, a ordem dos "
                "botões) no `maquina.json` (`ControleDeclarado`) — é da máquina, e nada muda no "
                "aparelho")
@@ -160,7 +159,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                           "`controles_modo` no perfil — o ATO no aparelho é o de cada ajuste da 02",
     "criar-efeito": "guarda no `gui_prefs` um efeito que ela criou, com a chave da feature — é "
                     "da tela; o ATO no aparelho é o do gesto que aplica o efeito",
-    # O desenho aprovado virou a cx8-3. Nenhum destes muda o DualSense:
     "abrir-adaptador": "abre um adaptador no acordeão — é da tela",
     "adaptador-reordenar": "grava a ordem em que ela arrastou as caixas dos adaptadores, "
                            "no `gui_prefs` — é da tela",
@@ -212,8 +210,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "externo-cor": _DO_EXTERNO,
     "externo-modo": _DO_EXTERNO,
     "externo-botoes": _DO_EXTERNO,
-    # Os gestos que só o registro dos pacotes mostra (a página os gera em JS, ou não é
-    # uma das dez): AS-REGUAS-DO-RAMO-INTEIRO-E-DAS-QUATRO-RESPOSTAS-MORDEM-01.
     "selecionar": "abre um perfil no editor — é da tela",
     "ativar": "troca o perfil ativo (`profile.switch`) — é do perfil; o ATO no aparelho é o "
               "de cada feature do perfil, que responde as quatro por conta própria",
@@ -252,9 +248,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
     "voltar-ao-automatico": "tira o que o usuário declarou do aparelho e da entrada — é da "
                             "máquina",
     "reexaminar": "relê as portas da máquina — é leitura do barramento",
-    # OS-ACIONADORES-USB-ENTRAM-COMO-BOTOES-DO-CONTROLE-01: o acionador é um aparelho da
-    # máquina; a tecla dele sai no pad virtual do controle escolhido, igual no cabo e no rádio
-    # (a régua do daemon prova os quatro jogadores), e não entra no perfil.
     "usar-como-botoes": "abre a janela do acionador na linha do aparelho de entrada — é da tela",
     "acionador-nova-tecla": "espera a próxima tecla do acionador, sem prendê-lo — é leitura "
                             "do aparelho da máquina",
@@ -262,8 +255,6 @@ NAO_E_DO_APARELHO: dict[str, str] = {
                        "até o «Guardar»",
     "acionador-guardar": "declara o controle e as teclas do acionador no `maquina.json` — é "
                          "da máquina",
-    # A janela da extensão age (24/10/2026): o pedido vai ao serviço da extensão, que fala
-    # com os aparelhos que a extensão gere; nenhum controle recebe nada.
     "acao-da-modificacao": "um botão que a extensão declarou (Procurar, Testar, a chave de um "
                            "aparelho) — é do serviço da extensão, não de um controle",
     "mover-o-livre-da-modificacao": "o controle livre da extensão, no compasso de 1/20 s — é do "
@@ -298,8 +289,6 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     "modo-da-luz": ("luz.lightbar.cor", "luz.led_jogador.escrita_hefesto"),
     "lado": ("vibracao.rumble.esquerdo", "vibracao.rumble.direito"),
     "custo-mic": ("audio.microfone.mudo",),
-    # O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01: o chip «Inclinação» saiu da
-    # 02, e o lado do Analógico Virtual leva o giro e a inclinação juntos.
     "analogico-lado": ("movimento.giroscopio", "movimento.acelerometro"),
     "touchpad": ("toque.touchpad.cursor", "toque.touchpad.dedos"),
     "haptica": ("vibracao.haptics_vcm",),
@@ -317,12 +306,9 @@ DO_APARELHO: dict[str, tuple[str, ...]] = {
     "mira-segurar": ("movimento.giroscopio",),
     "mira-inverter": ("movimento.giroscopio",),
     "calibrar-comecar": ("movimento.giroscopio",),
-    # A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01: o trilho da 03 escala o
-    # efeito dos dois gatilhos, pelo byte do firmware até 100% e pelas forças do bloco acima
     "intensidade-do-gatilho": ("gatilho.esquerdo.adaptativo", "gatilho.direito.adaptativo"),
 }
 
-#: aplica na troca de perfil é `ProfileManager._aplicar_ganho_do_mic`. O campo
 A_DIVIDA_CONHECIDA: dict[str, tuple[str, str]] = {
 }
 
@@ -356,7 +342,6 @@ NO_PERFIL: dict[str, tuple[str | None, str | None]] = {
     "mira-tremor": ("movimento", "movimento"),
     "mira-segurar": ("movimento", "movimento"),
     "mira-inverter": ("movimento", "movimento"),
-    # só por controle: `controllers[uniq].triggers.intensidade` (o global não tem trilho)
     "intensidade-do-gatilho": (None, "triggers"),
 }
 
@@ -366,9 +351,6 @@ NO_CONTROLE: dict[str, str] = {
     "custo-mic": "microfone_mudo",
 }
 
-#: Gestos cujo valor é de cada controle, pelo `uniq`, num arquivo próprio e fora do perfil por
-#: desenho (o zero do sensor é daquela unidade, não do jogo): `{gesto: (fonte, função que grava)}`.
-#: A régua confere que a função existe no fonte.
 NO_ARQUIVO_DO_CONTROLE: dict[str, tuple[str, str]] = {
     "calibrar-comecar": ("src/hefesto_dualsense4unix/utils/session.py", "gravar_os_zeros"),
 }
@@ -570,16 +552,14 @@ def _campos_do_esquema(classe: str, fonte: pathlib.Path = ESQUEMA) -> set[str]:
     return set(re.findall(r"^    ([a-z_]+):\s", corpo, re.M))
 
 
-#: vez de doze `noqa-acento` espalhados: duas leituras independentes chegaram a
-NAO = "nao"  # (noqa-acento) valor cru do mapa (`*_aciona`), não prosa
+NAO = "nao"  # (noqa-acento)
 _SEM_LINHA = "sem linha"
 _RESSALVA = "com ressalva"
 _SIM_ = "sim"
 
-_NAO_EXISTE = "nao existe no aparelho"  # (noqa-acento) valor cru do mapa
+_NAO_EXISTE = "nao existe no aparelho"  # (noqa-acento)
 _ESCADA = (_SEM_LINHA, NAO, _NAO_EXISTE, _RESSALVA, _SIM_)
 
-#: A tela é dos quatro DualSense (decisão de 06/09).
 _O_APARELHO_DELA = "dualsense"
 
 

@@ -111,7 +111,7 @@ _ESTUDIO = (
 
 _REGUAS = (
     "régua da JANELA, apagada em 06/09/2026 (GTK-3) com a superfície que ela "
-    "media. O veredito de cada uma, uma a uma, está em "  # (noqa-acento: verbo medir, imperfeito)
+    "media. O veredito de cada uma, uma a uma, está em "  # (noqa-acento)
     "`docs/process/agentes/2026-09-06/GTK-3-segunda-volta.md`."
 )
 
@@ -167,7 +167,7 @@ APOSENTADOS: dict[str, str] = {
         "`tests/unit/test_retrato_das_abas_nao_vaza_dado_real.py`."
     ),
     "tests/unit/test_a_foto_do_cabecalho_prova_o_alvo.py": (
-        "media a fita 'Ajustes vão para:' no `header_bar` da JANELA, que ficava "  # (noqa-acento: verbo medir, imperfeito)
+        "media a fita 'Ajustes vão para:' no `header_bar` da JANELA, que ficava "  # (noqa-acento)
         "fora do recorte de toda foto de aba. Apagada em 08/09/2026 — não há "
         "`header_bar` nem `main_notebook`. O que ela cobrava do lado da "
         "documentação (as duas fotos existem e o `interface.md` as publica) é "
@@ -365,7 +365,7 @@ def indexar(raiz: Path) -> set[str]:
         for nome in list(arquivos) + list(subpastas):
             try:
                 relativo = (base / nome).relative_to(raiz).as_posix()
-            except ValueError:  # pragma: no cover - defensivo
+            except ValueError:  # pragma: no cover
                 continue
             partes = relativo.split("/")
             for corte in range(len(partes)):
@@ -377,7 +377,7 @@ def nomes_de_raiz(raiz: Path) -> set[str]:
     """Os nomes de arquivo/pasta que moram NO TOPO do repositório."""
     try:
         return {p.name for p in raiz.iterdir() if p.name not in DIRS_IGNORADOS}
-    except OSError:  # pragma: no cover - defensivo
+    except OSError:  # pragma: no cover
         return set()
 
 
@@ -389,7 +389,7 @@ def indexar_envs(raiz: Path) -> set[str]:
         base = Path(pasta)
         try:
             relativo_pasta = base.relative_to(raiz).as_posix()
-        except ValueError:  # pragma: no cover - defensivo
+        except ValueError:  # pragma: no cover
             continue
         if relativo_pasta.startswith("docs"):
             continue

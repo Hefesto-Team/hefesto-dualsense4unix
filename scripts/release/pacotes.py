@@ -32,7 +32,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _comum
 import sums
 
-# distro -> [(arquivo na árvore, regex da versão dentro dele)]
 ARQUIVOS = {
     "arch": [("packaging/arch/PKGBUILD", r"^pkgver=(\S+)")],
     "fedora": [("packaging/fedora/hefesto-dualsense4unix.spec", r"^Version:\s*(\S+)")],
@@ -123,9 +122,6 @@ def abrir_pr(a: argparse.Namespace) -> int:
                 continue
             _rodar("git", "-c", f"user.name={autor[0]}", "-c", f"user.email={autor[1]}", "commit", "-m",
                    f"Atualiza para a versão {a.numero}", cwd=clone)
-            # O ramo é só desta ferramenta: a corrida de novo (o job re-executado) o substitui. O clone raso não
-            # tem o ramo remoto, e o `--force-with-lease` recusaria por «stale info». A credencial é a do `gh`
-            # (o GH_TOKEN do job), só neste comando, sem mexer na configuração do git de quem roda.
             _rodar("git", "-c", "credential.helper=", "-c", "credential.helper=!gh auth git-credential",
                    "push", "--force", "origin", ramo, cwd=clone)
             ja_aberto = _rodar("gh", "pr", "list", "--repo", repo, "--head", ramo, "--state", "open",

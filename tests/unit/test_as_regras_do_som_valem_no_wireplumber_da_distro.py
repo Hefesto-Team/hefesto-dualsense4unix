@@ -47,9 +47,8 @@ N53 = "53-hefesto-dualsense-disable-output"
 N54 = "54-hefesto-dualsense-alto-falante-nunca-dorme"
 NOMES = (N51, N52, N53, N54)
 
-# O que cada sistema de WirePlumber traz na configuração de sistema.
-SISTEMA_04 = ("wireplumber.conf", "main.lua.d")  # Ubuntu 24.04, Mint 22, Debian 12
-SISTEMA_05 = ("wireplumber.conf", "wireplumber.conf.d")  # o 0.5 em diante
+SISTEMA_04 = ("wireplumber.conf", "main.lua.d")
+SISTEMA_05 = ("wireplumber.conf", "wireplumber.conf.d")
 SISTEMA_SO_LUA = ("main.lua.d",)
 SISTEMA_VAZIO: tuple[str, ...] = ()
 
@@ -77,9 +76,6 @@ def lar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 def _com_sistema(monkeypatch: pytest.MonkeyPatch, raiz: Path) -> None:
     monkeypatch.setenv(WIREPLUMBER_SISTEMA_ENV_VAR, str(raiz))
-
-
-# ------------------------------------------------------------ o dono (Python)
 
 
 @pytest.mark.parametrize(
@@ -136,12 +132,7 @@ def test_o_dropin_mora_na_pasta_e_na_forma_certas(
 
 def test_a_variavel_vazia_cai_no_padrao(lar: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv(WIREPLUMBER_SISTEMA_ENV_VAR, "")
-    # sem a variável a pergunta vai às pastas de sistema de verdade; o que se exige
-    # é que não levante e devolva uma das duas formas
     assert wireplumber_forma() in {xdg_paths.FORMA_CONF, xdg_paths.FORMA_LUA}
-
-
-# ------------------------------------------------------------ o script de instalação
 
 
 def _ambiente(tmp_path: Path, itens: tuple[str, ...]) -> tuple[Path, dict[str, str]]:
@@ -220,7 +211,6 @@ def test_a_troca_de_wireplumber_nao_deixa_a_forma_velha(tmp_path: Path) -> None:
     assert _rodar("install_dropin_acordado", env_04).returncode == 0
     assert (wp / "main.lua.d" / f"{N54}.lua").is_file()
     assert not (wp / "wireplumber.conf.d" / f"{N54}.conf").exists()
-    # e a passada idempotente ("já estava igual") também limpa o que sobrou
     (wp / "wireplumber.conf.d").mkdir(exist_ok=True)
     (wp / "wireplumber.conf.d" / f"{N54}.conf").write_text("# sobra\n", encoding="utf-8")
     assert _rodar("install_dropin_acordado", env_04).returncode == 3
@@ -258,8 +248,6 @@ def test_ligar_o_mic_tira_o_52_e_o_53_das_duas_formas(tmp_path: Path) -> None:
         (wp / "wireplumber.conf.d" / f"{n}.conf").write_text("# x\n", encoding="utf-8")
     res = _rodar("_arma_dropins_do_mic", env)
     assert res.returncode == 0, res.stderr + res.stdout
-    # o padrão do `--enable-mic` GARANTE o 51; o 52 e o 53 (que suprimem o mic) saem
-    # das duas formas, e nenhum `.conf` sobra no 0.4
     assert _arquivos(wp) == {f"main.lua.d/{N51}.lua"}, _arquivos(wp)
 
 
@@ -322,15 +310,10 @@ def _as_tres_formas(env_sistema: str, tmp_path: Path, monkeypatch: pytest.Monkey
 @pytest.mark.parametrize(
     ("usr", "etc", "forma"),
     [
-        # O 0.5 com um `main.lua.d` esquecido em /etc (o Arch que subiu do 0.4):
-        # a pilha Lua não roda, e as regras em Lua seriam ignoradas sem erro.
         (SISTEMA_05, ("main.lua.d",), "conf"),
-        # O 0.4 com um `wireplumber.conf.d` criado à mão em /etc: segue Lua.
         (SISTEMA_04, ("wireplumber.conf.d",), "lua"),
-        # Sem /usr/share/wireplumber (a configuração mora só em /etc): vale /etc.
         (None, SISTEMA_04, "lua"),
         (None, SISTEMA_05, "conf"),
-        # Uma raiz vazia não traz configuração e passa a vez.
         (SISTEMA_VAZIO, SISTEMA_SO_LUA, "lua"),
     ],
 )
@@ -345,9 +328,6 @@ def test_a_primeira_pasta_de_sistema_com_configuracao_decide(
     a = _sistema(tmp_path, usr, "usr") if usr is not None else tmp_path / "usr-ausente"
     b = _sistema(tmp_path, etc, "etc")
     assert _as_tres_formas(f"{a}:{b}", tmp_path, monkeypatch) == {forma}
-
-
-# ------------------------------------------------------------ o doctor: «leu a regra»
 
 
 def _doctor(
@@ -482,8 +462,6 @@ def test_sem_wpctl_nenhum_tambem_nao_reclama_do_que_nao_mede(tmp_path: Path) -> 
         com_arquivo=N54,
         wpctl=None,
     )
-    # o PATH ainda tem /usr/bin: se a máquina tem wpctl real o resultado depende dele;
-    # o que se exige é que NÃO seja o aviso de arquivo faltando
     assert "falta " not in saida, saida
 
 
@@ -505,9 +483,6 @@ def test_o_0_4_com_o_arquivo_na_pasta_do_0_5_e_arquivo_faltando(tmp_path: Path) 
     saida = r.stdout + r.stderr
     assert "[WARN]" in saida and "pode dormir no cabo" in saida, saida
     assert "main.lua.d" in saida, "o aviso tem de dizer a pasta que o WirePlumber lê"
-
-
-# ------------------------------------------------------------ os assets em Lua
 
 
 def _propriedades_conf(texto: str) -> dict[str, str]:
@@ -561,9 +536,6 @@ def test_o_54_em_lua_zera_o_timeout_da_saida() -> None:
     assert "alsa_output" in lua
 
 
-# ------------------------------------------------------------ o uninstall
-
-
 def test_o_uninstall_tira_os_quatro_em_lua_do_lar_e_do_xdg() -> None:
     texto = UNINSTALL.read_text(encoding="utf-8")
     assert "main.lua.d" in texto, "o uninstall não conhece a pasta do 0.4"
@@ -602,9 +574,6 @@ def test_o_uninstall_remove_o_lua_de_verdade(tmp_path: Path) -> None:
     assert sorted(p.name for p in pasta.iterdir()) == [f"{N51}.lua"], (
         "saem os 52, 53 e 54; o 51 marcado como «recriado manualmente» fica"
     )
-
-
-# ------------------------------------------------------------ a memória dos controles
 
 
 def test_a_memoria_acha_o_dropin_nas_duas_formas(tmp_path: Path) -> None:

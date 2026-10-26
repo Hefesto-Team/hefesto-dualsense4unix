@@ -27,7 +27,6 @@ from typing import Any
 
 CHROME = "/usr/bin/google-chrome"
 
-#: esquemas que moram nesta máquina; tudo o mais é rede.
 _LOCAIS = ("file:", "data:", "blob:", "about:")
 
 _ESPERA_O_DESENHO_ASSENTAR = """() => document.fonts.ready.then(

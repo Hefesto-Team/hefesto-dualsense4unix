@@ -50,7 +50,6 @@ FALSO = {
     "speaker": {"volume": 102, "muted": False, "rota": 0},
 }
 
-#: O MESMO controle sem a chave `audio`: o `state_full` antes de o áudio ser lido.
 FALSO_SEM_AUDIO = {k: v for k, v in FALSO.items() if k != "audio"}
 
 MESA_FALSA = [{"pref": "p1", "jogador": 1, "cor": "starlight-blue",
@@ -67,9 +66,8 @@ def do_html(pagina: str) -> tuple[set[str], set[str]]:
     return set(CAMPO.findall(doc)), set(CONTROLE.findall(doc))
 
 
-#: `acao` é o nome do arquivo de perfil.  # (noqa-acento): slug de arquivo
 ESTADO_DA_REGUA = {
-    "active_profile": "acao",  # (noqa-acento): valor ASCII, é nome de arquivo
+    "active_profile": "acao",  # (noqa-acento)
     "rumble_policy": "balanceado",
 }
 
@@ -98,7 +96,7 @@ def medir(pagina: str) -> dict:
     da_mesa, do_controle = do_pacote(pagina)
     emite = da_mesa | do_controle
     return {
-        "pagina": pagina,  # (noqa-acento)  (nome do parâmetro)
+        "pagina": pagina,  # (noqa-acento)
         "html": campos, "controles": controles,
         "emite": emite,
         "casam": campos & emite,

@@ -405,9 +405,6 @@ def test_o_publicado_so_tem_os_tres_estados_e_nenhum_texto_de_tela(
         }
 
 
-# 8. o state_full não espera o rádio
-
-
 class _LeitorLento(bd.LeitorDoBluez):
     """O caminho de reserva (``busctl``): cada foto custa subprocessos."""
 

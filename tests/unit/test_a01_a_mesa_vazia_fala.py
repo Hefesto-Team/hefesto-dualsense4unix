@@ -50,7 +50,6 @@ def test_com_a_mesa_cheia_a_linha_nao_existe() -> None:
 
 
 def test_sem_daemon_a_aba_nao_afirma_que_a_mesa_esta_vazia() -> None:
-    # D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE
     """`conectados` vazio pode ser "não há" ou "ninguém respondeu".
 
     É a mesma guarda do `_estado_da_tela`, e ela é a armadilha desta aba:

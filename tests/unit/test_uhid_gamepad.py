@@ -71,7 +71,6 @@ def _output_event(report: bytes) -> bytes:
     return event
 
 
-#: valid_flag0 que o HARDWARE REAL manda no rumble. Os DualSense da máquina de
 _HAPTICS_SELECT = 0x02
 
 

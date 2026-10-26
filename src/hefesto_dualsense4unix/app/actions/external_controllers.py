@@ -47,8 +47,6 @@ _TYPE_BY_VIDPID: dict[str, str] = {
     "28de:1142": "Steam Controller",
 }
 
-#: As marcas que a interface compara com `brand_of` (o desenho de cada forma na aba 08). Moram
-#: aqui, com o dono da marca, para a tela nunca digitar uma segunda grafia delas.
 MARCA_NINTENDO = "Nintendo"
 MARCA_XBOX = "Xbox"
 MARCA_8BITDO = "8BitDo"
@@ -60,7 +58,7 @@ _VENDOR_BY_VID: dict[str, str] = {
     "0f0d": "HORI",
     "20d6": "PowerA",
     "28de": "Valve",
-    "054c": "Sony",  # não deveria chegar aqui (o inventário exclui DualSense)
+    "054c": "Sony",
 }
 
 _NINTENDO_MODE_VIDS = frozenset({"057e"})

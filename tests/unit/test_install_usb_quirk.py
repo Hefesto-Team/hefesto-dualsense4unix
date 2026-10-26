@@ -103,9 +103,6 @@ def test_modos_de_reversao_e_runtime_existem(script_text: str) -> None:
         assert flag in script_text, f"flag {flag} ausente no dispatch do script"
 
 
-# ---------------------------------------------------------------------------
-# A migração do token velho, num /etc e num /sys de mentira
-# ---------------------------------------------------------------------------
 _KERNELSTUB_DE_MENTIRA = """#!/usr/bin/env python3
 import json, sys
 conf = sys.argv[0].rsplit("/", 2)[0] + "/etc/kernelstub/configuration"

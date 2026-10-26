@@ -116,9 +116,6 @@ def sem_controle(monkeypatch: pytest.MonkeyPatch) -> type[_SemControle]:
     return _SemControle
 
 
-# O serviço que atende e não responde -------------------------------------------------
-
-
 def test_status_com_o_servico_mudo_volta_em_segundos_e_diz_a_causa(
     servico_mudo: _ServicoMudo, sem_controle: type[_SemControle]
 ) -> None:
@@ -127,7 +124,6 @@ def test_status_com_o_servico_mudo_volta_em_segundos_e_diz_a_causa(
     assert time.monotonic() - inicio < 5.0
     assert resultado.exit_code == 1
     assert "não respondeu" in resultado.output
-    # o aparelho não é aberto: o serviço travado ainda o segura
     assert "leitura direta" not in resultado.output
 
 
@@ -167,9 +163,6 @@ def test_o_servico_ausente_segue_sendo_leitura_direta(
     assert "daemon offline" in resultado.output
 
 
-# O aparelho ausente ---------------------------------------------------------------------
-
-
 def test_status_sem_controle_nao_inventa_transporte_nem_bateria(
     monkeypatch: pytest.MonkeyPatch, sem_controle: type[_SemControle]
 ) -> None:
@@ -205,9 +198,6 @@ def test_led_sem_controle_nao_anuncia_a_lightbar(
     assert "lightbar" not in resultado.output.lower()
 
 
-# A cor inválida ----------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("cor", ["roxo", "#zzzzzz", "1,2", "1,2,999", "a,b,c"])
 def test_cor_invalida_e_erro_de_uso_sem_traceback(cor: str) -> None:
     resultado = runner.invoke(app, ["led", "--color", cor])
@@ -219,9 +209,6 @@ def test_cor_invalida_e_erro_de_uso_sem_traceback(cor: str) -> None:
 def test_cor_valida_continua_passando() -> None:
     assert cmd_test._parse_cor("#ff8000") == (255, 128, 0)
     assert cmd_test._parse_cor("255,128,0") == (255, 128, 0)
-
-
-# O diário do terminal ------------------------------------------------------------------------
 
 
 def test_o_nivel_do_terminal_e_warning_e_o_servico_fica_de_fora(
@@ -291,8 +278,6 @@ def _o_script_instalado(pasta: Path) -> Path:
 
 
 def test_o_script_instalado_tambem_nasce_calado(tmp_path: Path) -> None:
-    # `profile list` num lar novo roda as migrações e a semeadura (o conftest as
-    # desliga; aqui elas rodam no lar de mentira), que em INFO escrevem no stderr.
     env = _lar_de_mentira(tmp_path / "casa")
     env.pop("HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED", None)
     r = subprocess.run(
@@ -305,7 +290,6 @@ def test_o_script_instalado_tambem_nasce_calado(tmp_path: Path) -> None:
 
 
 def test_o_i18n_nao_aparece_nem_com_o_diario_em_info(tmp_path: Path) -> None:
-    # O `daemon start` segue em INFO: a linha do idioma não pode entrar no diário dele.
     env = {**_lar_de_mentira(tmp_path / "casa"), "HEFESTO_DUALSENSE4UNIX_LOG_LEVEL": "INFO"}
     r = subprocess.run(
         [str(_o_script_instalado(tmp_path)), "version"],
@@ -313,9 +297,6 @@ def test_o_i18n_nao_aparece_nem_com_o_diario_em_info(tmp_path: Path) -> None:
     )
     assert r.returncode == 0
     assert "i18n_initialized" not in r.stdout + r.stderr
-
-
-# O rc do doctor ------------------------------------------------------------------------------
 
 
 def _doctor_com(

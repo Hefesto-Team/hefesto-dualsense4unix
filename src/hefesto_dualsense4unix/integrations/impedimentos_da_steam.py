@@ -16,7 +16,6 @@ _LOG = logging.getLogger(__name__)
 ENTRADA = "entrada"
 PROTON = "proton"
 
-#: O que a linha diz do impedimento e o rótulo do botão que o resolve, por tipo.
 FRASE = {
     ENTRADA: "O Steam Input está ligado: o jogo vê um controle de Xbox",
     PROTON: "Fora do Proton fixado: a vibração e os gatilhos não chegam",
@@ -128,8 +127,6 @@ def _desligar_o_steam_input(appids: Sequence[str], home: Path | None) -> None:
     from hefesto_dualsense4unix.integrations import steam_input_ponte as sip
 
     lista = sip.ler_allowlist()
-    # A primitiva desliga TODO jogo configurado fora da lista; os outros impedimentos entram como
-    # exceção desta chamada, para a cura de um jogo não desligar o do vizinho.
     outros = [x for x in _com_o_steam_input_ligado(home) if x not in set(appids)]
     status, _detalhe = sip.garantir_fora_da_lista_desligado(
         home, allowlist=[*lista, *outros])

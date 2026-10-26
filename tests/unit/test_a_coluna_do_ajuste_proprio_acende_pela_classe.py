@@ -216,17 +216,14 @@ def test_cada_secao_guardada_acende_a_sua_celula_e_so_a_dela(
     comparam duas listas de nomes, aqui se compara o VALOR com a POSIÇÃO.
     """
     monkeypatch.setattr(a10_perfis, "_SECAO_POR_CLASSE", True, raising=False)
-    # é «campo `None` = sem opinião», e `_secoes_do_controle` pergunta
     menor_corpo: dict[str, Any] = {
         "leds": {}, "triggers": {}, "rumble": {}, "speaker": {"volume": 40},
-        # Para a coluna a diferença não existe: `_secoes_do_controle` pergunta
         "mascara": "xbox",
-        # nasce `None`, e `_secoes_do_controle` pergunta `is not None` sobre a
         "mic": {},
         "sensores": {},
         "movimento": {},
-        "ativacao": {"alternar": ["l1"]},  # (noqa-acento) identificador ASCII
-    "analogicos": {"zona_morta": 20},  # (noqa-acento) identificador ASCII
+        "ativacao": {"alternar": ["l1"]},  # (noqa-acento)
+    "analogicos": {"zona_morta": 20},
         "remapeamento": {"cross": "circle"},
     }
     faltando = set(perfis_web.SECOES_POR_CONTROLE) - set(menor_corpo)
@@ -246,7 +243,6 @@ def test_cada_secao_guardada_acende_a_sua_celula_e_so_a_dela(
             f"{fora['guarda.proprio']!r} em vez de {esperado!r}")
 
 
-# o pacote perguntava à página PUBLICADA se ela trazia `data-hef-alvo="classe"` e
 def test_o_endereco_saiu_de_nao_pintaveis_e_nao_voltou_calado() -> None:
     """``guarda.secao`` não é mais um nome cravado — quem decide é a MEDIÇÃO."""
     assert "guarda.secao" not in a10_perfis.NAO_PINTAVEIS, (

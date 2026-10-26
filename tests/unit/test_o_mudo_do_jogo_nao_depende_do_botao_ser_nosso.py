@@ -33,7 +33,6 @@ from hefesto_dualsense4unix.daemon.subsystems import hotkey, luz_do_mic
 from hefesto_dualsense4unix.testing.fake_controller import FakeController
 from tests.unit.test_hotkey_mic_wire import _config_base, _make_state
 
-#: P1 a P4, a mesma regra no cabo e no rádio: o laço lê o `uniq` do evento.
 JOGADORES = tuple(f"aa:bb:cc:00:00:0{i}" for i in range(1, 5))
 
 

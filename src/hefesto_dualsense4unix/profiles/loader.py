@@ -51,7 +51,7 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 from hefesto_dualsense4unix.utils.repo_files import bases_de_instalacao
 from hefesto_dualsense4unix.utils.xdg_paths import profiles_dir
 
-if TYPE_CHECKING:  # pragma: no cover - só para o verificador de tipos
+if TYPE_CHECKING:  # pragma: no cover
     from hefesto_dualsense4unix.integrations.jogos_locais import JogoLocal
 
 logger = get_logger(__name__)
@@ -84,10 +84,8 @@ def _lock_path(path: Path) -> Path:
     return path.with_suffix(path.suffix + LOCK_SUFFIX)
 
 
-# FIX-PACKAGING-SEED-PARITY-01: semeadura em RUNTIME dos presets default.
 SEED_MARKER_NAME = ".seeded_presets"
 
-# em 05/09: 33 perfis, e SÓ DOIS são catch-all (`fallback` prio 0 e
 NOME_DO_PADRAO = "Freestyle"
 ARQUIVO_DO_PADRAO = "freestyle.json"
 SLUG_DO_PADRAO = "freestyle"
@@ -147,8 +145,6 @@ class MoldeDePerfil:
     rolagem: int = 1
 
 
-#: O que cada molde troca, só em fichas que o motor sabe fazer (`core/acoes_de_botao.ACOES`).
-#: O resto herda o de fábrica, como em todo `button_actions`.
 MOLDES_DE_PERFIL: tuple[MoldeDePerfil, ...] = (
     MoldeDePerfil("point_and_click", "Point and click", {
         "cross": "BTN_LEFT", "circle": "BTN_RIGHT", "triangle": "KEY_ESC",
@@ -156,8 +152,6 @@ MOLDES_DE_PERFIL: tuple[MoldeDePerfil, ...] = (
     MoldeDePerfil("visual_novel", "Visual novel", {
         "cross": "BTN_LEFT", "circle": "BTN_RIGHT", "square": "KEY_LEFTCTRL",
         "triangle": "KEY_ESC", "l3_direcao": "__CURSOR__", "r3_direcao": "__ROLAGEM__"}),
-    # AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01 (N6): o Adulto nasce com o mapa do Visual novel, que é
-    # o jeito de jogar dos dois (decisão por delegação, a validar pelo usuário).
     MoldeDePerfil("adulto", "Adulto", {
         "cross": "BTN_LEFT", "circle": "BTN_RIGHT", "square": "KEY_LEFTCTRL",
         "triangle": "KEY_ESC", "l3_direcao": "__CURSOR__", "r3_direcao": "__ROLAGEM__"}),
@@ -193,7 +187,6 @@ _ESTILOS_MIGRATION_MARKER = ".generos_viraram_estilo_de_jogo"
 
 _seed_attempted: bool = False
 
-# Uma vez por processo: a falta da fábrica não pode ser muda, nem inundar o diário.
 _sem_fonte_avisada: bool = False
 
 
@@ -261,9 +254,6 @@ def seed_default_presets(
     if copied:
         logger.info("presets_seeded", copied=copied, source=str(source))
     return copied
-
-
-# justificada pela H1 da auditoria pré-release ("a máscara DualSense faz o jogo
 
 
 def _repontar_a_sessao_para_o_padrao_novo() -> None:
@@ -825,7 +815,6 @@ CHAVES_DO_PERFIL_DE_JOGO: tuple[str, ...] = ("name", "match", "priority")
 
 CHAVES_DAS_DATAS: tuple[str, ...] = ("criado_em", "modificado_em")
 
-# Quem salva por conta própria, sem ela ter pedido: não mexe na data da última mudança.
 ORIGENS_SEM_GESTO: frozenset[str] = frozenset({"lancador_agnostico", "migracao-do-computador"})
 
 _JOGOS_ENXUTOS_MARKER = ".perfis_de_jogo_so_nome_e_id"
@@ -1089,8 +1078,6 @@ def _maybe_seed_presets() -> None:
         )
 
 
-#   `load_all_profiles()` é chamado a cada troca de janela pelo
-
 MARCA_DE_SEMEADURA_DE_JOGOS = ".perfis_de_jogo_semeados"
 
 PREFIXO_DA_CHAVE_DE_JANELA = "janela:"
@@ -1188,8 +1175,6 @@ def _linhas_da_marca(marca: Path) -> list[tuple[str, str]]:
         if not _identidade_valida(identidade):
             continue
         if identidade.startswith(PREFIXO_DA_CHAVE_DE_JANELA):
-            # A marca de antes de 03/10 gravou o jogo da janela `steam_app_<N>`
-            # na forma da janela; lida pelo mesmo dono, é a identidade `<N>`.
             identidade = _identidade("", identidade[len(PREFIXO_DA_CHAVE_DE_JANELA) :])
         lidas.append((identidade, arquivo.strip()))
     return lidas
@@ -1370,7 +1355,7 @@ def _gravar_sem_pisar(alvo: Path, payload: object) -> bool:
             os.link(tmp, alvo)
         except FileExistsError:
             return False
-        except OSError:  # pragma: no cover - fs sem hardlink
+        except OSError:  # pragma: no cover
             try:
                 fd_excl = os.open(alvo, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
             except FileExistsError:
@@ -1420,9 +1405,6 @@ def semear_perfis_dos_jogos(
             jogos_da_biblioteca_steam,
         )
 
-        # As três origens: a biblioteca da Steam, os lançadores e o jogo
-        # instalado aqui (o `.desktop`). Com um `home` dado, os atalhos são
-        # os DELE, nunca os desta máquina.
         pastas = None if home is None else [Path(home) / ".local/share/applications"]
         jogos = [*jogos_da_biblioteca_steam(home), *jogos_com_janela(home, pastas)]
         jogos = _so_os_de_lancador_com_perfil(jogos)
@@ -1648,7 +1630,7 @@ def reapontar_perfis_com_chave_de_executavel(
     try:
         lista = (list(catalogo) if catalogo is not None
                  else list(jogos_com_chave_de_janela()))
-    except Exception:  # pragma: no cover - disco hostil
+    except Exception:  # pragma: no cover
         return ()
     por_exe: dict[str, str] = {}
     for _lancador, jogo in lista:
@@ -1661,7 +1643,7 @@ def reapontar_perfis_com_chave_de_executavel(
         return ()
     try:
         arquivos = sorted(profiles_dir(ensure=False).glob("*.json"))
-    except Exception:  # pragma: no cover - disco hostil
+    except Exception:  # pragma: no cover
         return ()
     perfis: list[Profile] = []
     for caminho in arquivos:
@@ -1686,7 +1668,7 @@ def reapontar_perfis_com_chave_de_executavel(
                 update={"match": prof.match.model_copy(
                     update={"window_class": [nova]})})
             save_profile(novo, origem="lancador_agnostico")
-        except Exception as exc:  # pragma: no cover - disco hostil
+        except Exception as exc:  # pragma: no cover
             logger.warning(
                 "reaponte_de_chave_falhou", profile=prof.name, err=str(exc))
             continue
@@ -1705,11 +1687,6 @@ def _profile_path(identifier: str | Profile) -> Path:
     return profiles_dir(ensure=True) / f"{identifier}.json"
 
 
-#: ``caminho -> (mtime, tamanho)`` do perfil inválido que já foi avisado. O gerente
-#: relê a pasta no laço; sem esta memória cada arquivo ruim gerava um aviso a cada
-#: leitura (~43 mil linhas por dia). O arquivo não é renomeado nem isolado: pode
-#: estar no meio de uma edição à mão. Quem pergunta (`audit_profiles`, o `doctor`)
-#: continua vendo a lista inteira.
 _INVALIDOS_JA_AVISADOS: dict[str, tuple[int, int]] = {}
 _INVALIDOS_TRAVA = threading.Lock()
 
@@ -1904,8 +1881,6 @@ def audit_profiles() -> list[tuple[str, str]]:
     return invalid
 
 
-#: vezes em cinco semanas (``teclado_emulado`` em 24/08, ``button_actions`` em
-#: 01/09, e o próprio comentário de ``button_actions`` diz "a terceira vez que
 _SECOES_OPCIONAIS_OMITIDAS_QUANDO_NONE: tuple[str, ...] = (
     "speaker",
     "mouse",
@@ -1916,7 +1891,6 @@ _SECOES_OPCIONAIS_OMITIDAS_QUANDO_NONE: tuple[str, ...] = (
     "teclado_so_no_jogo",
     "teclado_sempre",
     "tabela_no_jogo",
-    # gravar `"button_actions": null` e um binário anterior a esta feature
     "button_actions",
 )
 
@@ -1944,16 +1918,10 @@ HISTORICO_MAX_VERSOES = 10
 
 HISTORICO_DIAS = 14
 
-# Uma semana inteira, versão por versão — a pergunta «quem mudou este campo
-# entre as 14h e as 19h» não se responde com um ponto por dia. O teto de
-# versões por perfil (~2,3 KB cada, ~1 MB no pior caso) segura a rajada.
 HISTORICO_SEMANA_DIAS = 7
 
 HISTORICO_TETO_POR_PERFIL = 500
 
-# O gesto em curso, posto por quem sabe (o `trabalhar` da janela, o `_dispatch`
-# do IPC) e lido por `save_profile`: um `ContextVar` atravessa `asyncio.to_thread`,
-# e quem não o põe (CLI, migração) deixa o campo vazio no `profile_salvo`.
 gesto_de_agora: ContextVar[str | None] = ContextVar("hefesto_gesto_de_agora", default=None)
 
 
@@ -2135,7 +2103,7 @@ def _origem_do_processo() -> str:
     """Quem é o processo que está gravando — ``hefesto-gui``, ``pytest``..."""
     try:
         nome = Path(sys.argv[0]).name
-    except (IndexError, ValueError):  # pragma: no cover — argv sempre tem [0]
+    except (IndexError, ValueError):  # pragma: no cover
         nome = ""
     return nome or "desconhecida"
 
@@ -2147,7 +2115,7 @@ def _payload_do_perfil(profile: Profile) -> dict[str, object]:
         payload.pop(secao, None)
     mouse = payload.get("mouse")
     if isinstance(mouse, dict) and mouse.get("point_and_click") is None:
-        mouse.pop("point_and_click", None)  # campo aditivo: sem escolha, o arquivo não o diz
+        mouse.pop("point_and_click", None)
     if not payload.get("controllers"):
         payload.pop("controllers", None)
     else:
@@ -2204,9 +2172,6 @@ def _as_folhas_que_diferem(
                 antes.get(chave, ausente), depois.get(chave, ausente), (*caminho, str(chave))
             )
         return achadas
-    # A seção que NASCE (ou some) inteira desce até as folhas dela: o primeiro
-    # brilho de um controle no perfil é `controllers` de nada a um dicionário, e
-    # a linha tem de dizer qual campo, não só «controllers».
     if isinstance(depois, dict) and (antes is None or antes is ausente):
         return _as_folhas_que_diferem({}, depois, caminho) or [(caminho, antes, depois)]
     if isinstance(antes, dict) and (depois is None or depois is ausente):

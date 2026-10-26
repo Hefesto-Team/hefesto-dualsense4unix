@@ -131,9 +131,6 @@ def _adicionar_na_trava(
     return "adicionado"
 
 
-# -- o que só o «Excluir» chamava, tirado de cura_por_estrada com ele (19/10/2026) --
-
-
 def jogos_do_heroic_pela_janela(classe: str, lar: Path | None = None) -> list[Path]:
     """As cópias (`GamesConfig/<app>.json`) dos jogos do Heroic com esta janela."""
     alvo = classe.strip()
@@ -181,7 +178,7 @@ def tirar_o_nosso_da_caixa(
     lar = Path.home() if lar is None else lar
     try:
         registro = cpe.ler_registro(pasta_do_ambiente)
-    except Exception:  # pragma: no cover - ler_registro já não levanta
+    except Exception:  # pragma: no cover
         return "erro"
     mexeu_no_registro = False
     status = "nada"

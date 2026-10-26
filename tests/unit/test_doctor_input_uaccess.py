@@ -77,7 +77,6 @@ def _sem_comentarios(texto: str) -> str:
 
 FISICO = "/sys/devices/pci0000:00/0000:00:14.0/usb3/3-3/3-3:1.0/0003:054C:0CE6.0042"
 VIRTUAL = "/sys/devices/virtual/misc/uhid/0003:054C:0DF2.008F"
-#: o pad em USB: o gadget só HID pelo `vhci_hcd`, com pai USB de verdade.
 GADGET = "/sys/devices/platform/vhci_hcd.0/usb3/3-1/3-1:1.0/0003:054C:0DF2.0010"
 
 

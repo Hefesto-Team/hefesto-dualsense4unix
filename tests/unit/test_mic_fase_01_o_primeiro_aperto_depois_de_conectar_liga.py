@@ -118,7 +118,6 @@ class _BackendComOKernelDentro:
         if uniq not in self._firmware_mudo:
             return False
         if muted is None:
-            # campo não muda de valor — ver `_PinnedPyDualSense.
             return True
         self._firmware_mudo[uniq] = bool(muted)
         return True

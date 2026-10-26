@@ -14,7 +14,6 @@ BANCADA = RAIZ / "mockup/08-conexoes.html"
 
 FOLHA = re.compile(r'<style id="([^"]*cores-do-dualsense-folha)">(.*?)</style>', re.S)
 
-#: A tinta que a folha pede por referência: `fill:url(#hachura-sem-hex)`.
 TINTA_POR_REFERENCIA = re.compile(r"url\(\s*['\"]?#([^)'\"\s]+)")
 
 REGRA_DE_COLORWAY = re.compile(r'svg\[data-colorway="([^"]+)"\]')

@@ -61,9 +61,9 @@ import pacotes
 from pacotes import a04_iluminacao, rodape
 
 CLIQUE = {"tipo": "button", "evento": "click",
-          "pagina": "04-iluminacao.html"}  # (noqa-acento: chave do clique)
+          "pagina": "04-iluminacao.html"}  # (noqa-acento)
 
-OUTRA = {"fraco": "forte", "medio": "fraco", "forte": "medio"}  # (noqa-acento) chaves ASCII
+OUTRA = {"fraco": "forte", "medio": "fraco", "forte": "medio"}  # (noqa-acento)
 
 
 class _PonteDaAba(viva._Ponte):

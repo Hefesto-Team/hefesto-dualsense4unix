@@ -65,7 +65,6 @@ ESPERAS = _esperas()
 POLL = float(RECONNECT_HOTPLUG_POLL_INTERVAL_SEC)
 TIQUE = _tique_do_watchdog()
 
-#: HID é a ÚLTIMA interface do DualSense a subir: o áudio vem antes, e só ele
 ATRASO_DO_KERNEL = 23.0
 
 CADEIA = 1.0

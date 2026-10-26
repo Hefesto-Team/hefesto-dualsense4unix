@@ -20,7 +20,6 @@ from hefesto_dualsense4unix.integrations.steam_launch_options import (
 )
 
 _SACKBOY = "1599660"
-#: Mullet Mad Jack: o caso legítimo de allowlist (a via oficial de DualSense
 _MMJ = "2111190"
 
 

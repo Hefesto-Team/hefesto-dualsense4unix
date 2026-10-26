@@ -48,45 +48,33 @@ logger = get_logger(__name__)
 
 RGB = tuple[int, int, int]
 
-#: os estilos em que a porta abre
 ESTILOS_DA_TELEMETRIA = frozenset({"corrida", "simulacao"})
-#: só o localhost: o pacote do jogo na mesma máquina, nunca da rede
 ENDERECO = "127.0.0.1"
-#: a porta que a pessoa digita no jogo; valor de partida, a validar pelo usuário
 PORTA_DE_PARTIDA = 5300
-#: sem pacote há meio segundo, a corrida calou (menu, pausa, jogo fechado): os lados voltam
 VALIDADE_DO_PACOTE_S = 0.5
-#: no máximo tantos pacotes lidos por volta do laço (o jogo manda 60 por segundo)
 PACOTES_POR_VOLTA = 64
 INTERVALO_DO_LACO_S = 1.0 / 60.0
 
-# O portão de parado: sem ele, a roda travada com o carro parado vibra para sempre.
 VELOCIDADE_DE_PARADO_M_S = 0.1
 GIRO_DE_PARADO_RAD_S = 1.0
-# |x| > 1 é a aderência perdida, nos comentários do próprio formato
 ADERENCIA_PERDIDA = 1.0
 FREIO_MINIMO = 0.1
 ACELERADOR_MINIMO = 0.2
 
 EFEITO_ABS = "abs"
-EFEITO_PATINACAO = "patinacao"  # (noqa-acento): chave
+EFEITO_PATINACAO = "patinacao"
 EFEITO_ZEBRA = "zebra"
-#: a ordem de quem vence, da maior à menor: a colisão e a marcha são toques no corpo (uma por
-#: tique, a colisão primeiro); o ABS e a patinação vencem a resistência do perfil, que vence a
-#: superfície (a zebra só toca no R2 sem patinação)
 PRIORIDADE = (
-    "colisao", "marcha", EFEITO_ABS, EFEITO_PATINACAO,  # (noqa-acento): chave
-    "resistencia", "superficie")  # (noqa-acento): chaves
+    "colisao", "marcha", EFEITO_ABS, EFEITO_PATINACAO,  # (noqa-acento)
+    "resistencia", "superficie")  # (noqa-acento)
 
 FREQUENCIA_DO_ABS_HZ = 15
 AMPLITUDE_DO_ABS = 6
 FREQUENCIA_DA_PATINACAO_HZ = 30
 FREQUENCIA_DA_ZEBRA_HZ = 25
 AMPLITUDE_DA_ZEBRA = 2
-#: a patinação reescreve o R2 só quando o degrau anda dois ou mais (a oscilação não reescreve)
 HISTERESE_DA_PATINACAO = 2
 
-#: a batida: a aceleração horizontal do chassi acima de 3 g, na borda; 6 g é a força cheia
 BATIDA_M_S2 = 30.0
 BATIDA_CHEIA_M_S2 = 60.0
 REFRATARIO_DA_BATIDA_S = 0.5
@@ -94,21 +82,16 @@ ENERGIA_DA_MARCHA = 0.5
 DURACAO_DA_MARCHA_MS = 30
 DURACAO_DA_BATIDA_MS = 60
 
-#: a luz da rotação: cinco degraus, do verde ao vermelho, entre metade e 95% do giro
 CORES_DA_ROTACAO: tuple[RGB, ...] = (
     (0, 200, 60), (120, 220, 0), (255, 200, 0), (255, 110, 0), (255, 0, 0))
 ROTACAO_DO_PRIMEIRO_DEGRAU = 0.5
 ROTACAO_DO_CORTE = 0.95
-#: o degrau só desce depois de segurar este tanto (o limitador balança o giro dez vezes por segundo)
 SEGURA_DA_ROTACAO_S = 1.0 / TETO_DA_LUZ_POR_S
 JANELA_DA_ROTACAO_S = 1.0
 
 _LADO_DO_BACKEND = {LADO_ESQUERDO: "left", LADO_DIREITO: "right"}
 
 CANAL_DA_TELEMETRIA = "telemetria_da_corrida"
-
-
-# --- A tradução, pura ----------------------------------------------------------------------
 
 
 def em_movimento(estado: EstadoDaCorrida) -> bool:
@@ -200,7 +183,7 @@ class LeitorDosToques:
         if self._acima and not acima and agora - self._batida_em >= REFRATARIO_DA_BATIDA_S:
             self._batida_em = agora
             return ToqueDaCorrida(
-                "colisao", min(1.0, horizontal / BATIDA_CHEIA_M_S2),  # (noqa-acento): chave
+                "colisao", min(1.0, horizontal / BATIDA_CHEIA_M_S2),  # (noqa-acento)
                 formas_de_haptica.IMPACTO, DURACAO_DA_BATIDA_MS)
         if marcha_antes is not None and estado.marcha is not None and estado.marcha != marcha_antes:
             return ToqueDaCorrida("marcha", ENERGIA_DA_MARCHA, formas_de_haptica.TOQUE,
@@ -248,9 +231,6 @@ class LuzDaRotacao:
         return CORES_DA_ROTACAO[self.andar(fracao, agora)]
 
 
-# --- A porta -------------------------------------------------------------------------------
-
-
 class TelemetriaDoJogo:
     """A porta UDP do localhost, o último estado da corrida e o que ele pede."""
 
@@ -261,11 +241,9 @@ class TelemetriaDoJogo:
         self.ultimo: EstadoDaCorrida | None = None
         self.recebido_em = float("-inf")
         self._toques = LeitorDosToques()
-        #: os toques à espera do motor do tato, com o instante do pacote que os trouxe
         self._a_tocar: list[tuple[float, ToqueDaCorrida]] = []
         self.luz = LuzDaRotacao()
         self.contadores: dict[str, int] = {"pacotes": 0, "ignorados": 0, "toques": 0}
-        #: os tamanhos estranhos já ditos no diário (cada um uma vez) e se o formato já foi dito
         self._tamanhos_ditos: set[int] = set()
         self._formato_dito = False
 
@@ -321,11 +299,9 @@ class TelemetriaDoJogo:
             return False
         self.contadores["pacotes"] += 1
         if not self._formato_dito:
-            # a bancada lê no diário a chegada do pacote e o formato dele
             self._formato_dito = True
             logger.info("telemetria_primeiro_pacote", formato=estado.formato, tamanho=len(dados))
         self.ultimo, self.recebido_em = estado, agora
-        # o toque que o motor não levou a tempo (a receita desligada) caduca: não sai em rajada
         self._a_tocar = [(em, t) for em, t in self._a_tocar if agora - em <= VALIDADE_DO_PACOTE_S]
         toque = self._toques.ver(estado, agora)
         if toque is not None:
@@ -398,9 +374,6 @@ class TelemetriaDoJogo:
 def telemetria_do(daemon: Any) -> TelemetriaDoJogo | None:
     tel = getattr(daemon, "_telemetria_do_jogo", None)
     return tel if isinstance(tel, TelemetriaDoJogo) else None
-
-
-# --- O atuador do tato ---------------------------------------------------------------------
 
 
 class AtuadorDaTelemetria:
@@ -476,7 +449,7 @@ class AtuadorDaTelemetria:
                 if self.segura(uniq):
                     if estado is not None and not _o_modo_cala_o_motor(estado):
                         motor.contadores["soltos_ao_jogo"] += 1
-                        self.soltar(uniq)  # o jogo escreve o gatilho: o valor é dele
+                        self.soltar(uniq)
                     else:
                         self.devolver(uniq, agora)
             else:
@@ -574,14 +547,10 @@ class AtuadorDaTelemetria:
             self.devolver(uniq, agora)
 
 
-# --- O laço --------------------------------------------------------------------------------
-
-
 async def telemetria_loop(daemon: Any, tel: TelemetriaDoJogo) -> None:
     try:
         while not daemon._is_stopping():
             await asyncio.sleep(INTERVALO_DO_LACO_S)
-            # a porta ocupada e a leitura que falha já se tratam no ``andar``, como erro de rede
             tel.andar(time.monotonic(), _tv.estilo_ativo(daemon))
     finally:
         tel.fechar()

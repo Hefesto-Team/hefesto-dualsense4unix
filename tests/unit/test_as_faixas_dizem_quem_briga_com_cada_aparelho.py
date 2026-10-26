@@ -23,12 +23,10 @@ import pytest
 from hefesto_dualsense4unix.integrations import ar_do_adaptador as ar
 from hefesto_dualsense4unix.integrations import faixas_do_ar as fx
 from hefesto_dualsense4unix.integrations import radio_da_mesa
-from tests.unit import radio_de_mentira as rm  # noqa: F401  (a guarda do BlueZ da suíte)
+from tests.unit import radio_de_mentira as rm  # noqa: F401
 
 RAIZ = Path(__file__).resolve().parents[2]
 MOCKUP = RAIZ / "mockup/08-conexoes.html"
-
-# --- o modelo puro ----------------------------------------------------------------------
 
 
 def _aparelho(ident: str, tipo: str = "controle", *, perdidos: set[int] | None = None,
@@ -94,9 +92,6 @@ def test_o_mapa_do_enlace_vale_mais_que_o_do_adaptador() -> None:
     (celular, p1), = [linhas for _a, linhas in regua.grupos]
     assert [c.canal for c in celular.celulas if c.estado == fx.PERDIDO] == [10]
     assert [c.canal for c in p1.celulas if c.estado == fx.PERDIDO] == [20, 21]
-
-
-# --- o que o enlace entrega -------------------------------------------------------------
 
 
 def _evento_de_qualidade(handle: int, qualidade: int, *, status: int = 0,
@@ -167,9 +162,6 @@ async def test_o_daemon_le_todo_enlace_numa_thread_e_publica(monkeypatch: object
     assert publicado["aa:bb:cc:00:00:11"] == ar.EnlaceLido(False, (40, 41), None)
     assert publicado["aa:bb:cc:00:00:12"] == ar.EnlaceLido(True)
     assert handlers._afh_evitados == {ADAPTADOR_A: (40, 41)}  # type: ignore[attr-defined]
-
-
-# --- a tela: a cena vira HTML ------------------------------------------------------------
 
 
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
@@ -288,8 +280,6 @@ def test_a_legenda_tem_os_oito_tipos_e_a_faixa_nao_tem_as_portas() -> None:
     assert not hasattr(a08, "html_das_portas")
 
 
-# --- a tela no WebKit: a geometria e o hover ---------------------------------------------
-
 SONDA = r"""
 (function(){
   document.getElementById('cx8-3').checked = true;
@@ -350,7 +340,7 @@ def _no_webkit(pagina: Path, antes: str = "") -> dict[str, Any]:
     def guardou(v: Any, res: Any) -> None:
         try:
             saiu.append(v.evaluate_javascript_finish(res).to_string())
-        except Exception as e:  # pragma: no cover — só quando o roteiro quebra
+        except Exception as e:  # pragma: no cover
             saiu.append(f"ERRO {e}")
         Gtk.main_quit()
 
@@ -381,8 +371,6 @@ def test_toda_faixa_tem_79_canais_do_mesmo_tamanho_e_a_legenda_esta_no_titulo(
         na_pagina: dict[str, Any]) -> None:
     assert na_pagina["faixas"] >= 6
     assert set(na_pagina["celulas"]) == {79}
-    # a entrada com mais de três aparelhos vai em duas colunas (desenho aprovado de 05/10/2026):
-    # a faixa inteira e a meia, e nada entre as duas
     assert len(set(na_pagina["larguras"])) <= 2, na_pagina["larguras"]
     assert na_pagina["legenda_na_linha"] is True
 

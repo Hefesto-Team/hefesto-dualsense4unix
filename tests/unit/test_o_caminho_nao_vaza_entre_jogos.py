@@ -103,7 +103,7 @@ class _EvdevFalso:
 
     def stop(self) -> None: ...
 
-    def snapshot(self) -> Any:  # pragma: no cover - `forward_all` não roda aqui
+    def snapshot(self) -> Any:  # pragma: no cover
         raise NotImplementedError
 
 
@@ -201,9 +201,6 @@ def _guardar_sem_limpar(
     if escolhido is None:
         return
     daemon.config.gamepad_caminho = escolhido
-
-
-# R1 — O P1: o jogo que não opina abre no caminho DualSense
 
 
 class TestOJogoSeguinteNaoHerdaOCanal:

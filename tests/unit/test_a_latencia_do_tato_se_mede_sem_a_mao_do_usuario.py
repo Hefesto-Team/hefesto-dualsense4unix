@@ -68,9 +68,6 @@ def giro(n: int, degraus: list[tuple[int, int]] | None = None, *, sigma: float =
 ESCRITA = _t(100)
 
 
-# --- a medida --------------------------------------------------------------------------------
-
-
 def test_o_degrau_a_14_ms_da_escrita_devolve_14_ms() -> None:
     quadros = giro(200, [(107, 140)])
     assert ens.latencia_de_um_toque(quadros, ESCRITA) == pytest.approx(14.0, abs=0.01)
@@ -132,9 +129,6 @@ def test_o_limiar_nunca_e_zero() -> None:
     assert base.limiar == ens.PISO_DO_LIMIAR_GRAUS_S > 0
 
 
-# --- o giro que não está parado, e o que não há ----------------------------------------------
-
-
 def test_o_giro_em_movimento_na_linha_de_base_e_recusado() -> None:
     quadros = giro(200, [(107, 140)], balanco=20.0)
     with pytest.raises(ens.GiroEmMovimento):
@@ -157,9 +151,6 @@ def test_o_resumo_tem_mediana_p95_e_maximo_dos_toques_lidos() -> None:
     assert resumo.p95_ms == 100.0
     vazio = ens.resumir([None])
     assert (vazio.lidos, vazio.mediana_ms, vazio.p95_ms, vazio.maximo_ms) == (0, None, None, None)
-
-
-# --- as recusas ------------------------------------------------------------------------------
 
 
 def test_o_lar_real_nao_e_lar_de_mentira(tmp_path: Path) -> None:
@@ -194,7 +185,6 @@ def test_ha_daemon_distingue_socket_vivo_socket_morto_e_ausente(tmp_path: Path) 
         assert ens.ha_daemon([ausente, vivo]) is True
     finally:
         servidor.close()
-    # o arquivo ficou, mas ninguém ouve mais: daemon morto, não vivo
     assert vivo.exists()
     assert ens.ha_daemon([vivo]) is False
 
@@ -272,9 +262,6 @@ def test_com_giro_parado_a_linha_de_comando_imprime_a_tabela(
     assert "| radio | P2 | 1 de 1 | 14.0 ms |" in saida
 
 
-# --- o relatório que o ensaio escreve --------------------------------------------------------
-
-
 def test_o_relatorio_de_vibracao_liga_e_desliga_os_dois_motores_nos_dois_transportes() -> None:
     from hefesto_dualsense4unix.core import ds_output_report as rep
 
@@ -305,9 +292,6 @@ def test_o_toque_de_teste_leva_as_flags_do_rumble_que_o_produto_escreve() -> Non
         common = ens.relatorio_de_vibracao(transporte, 0xFF, 0)[inicio:]
         assert common[0] & rumble == rumble, f"{transporte}: o flag0 do rumble do produto"
         assert common[rep.COMMON_VALID_FLAG2] & rep.VALID_FLAG2_COMPATIBLE_VIBRATION2
-
-
-# --- o protocolo e a tabela ------------------------------------------------------------------
 
 
 def test_o_protocolo_existe_e_traz_o_cabecalho_da_tabela_do_ensaio() -> None:

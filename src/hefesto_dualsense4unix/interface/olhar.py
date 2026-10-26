@@ -86,8 +86,6 @@ def _meu_endereco() -> str:
 
 
 def _navegador(pw):
-    # DEFEITO GRAVE um comentário do gerador que estava certo. A régua não media  # (noqa-acento: verbo medir, imperfeito)
-    # a tela — media o próprio flag.  # (noqa-acento: verbo medir, imperfeito) verbo medir
     return pw.chromium.launch(
         executable_path="/usr/bin/google-chrome",
         args=["--no-sandbox"],
@@ -288,7 +286,7 @@ def _tema_pedido(caminho: str) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="fotografa a interface nova")
-    p.add_argument("pagina", nargs="?",  # (noqa-acento)  (nome do argumento)
+    p.add_argument("pagina", nargs="?",  # (noqa-acento)
                    help="uma página, com extensão: 05-vibracao.html")
     p.add_argument("--publicado", action="store_true", help="o que o produto renderiza")
     p.add_argument("--todas", action="store_true", help="as dez abas de uma vez")
@@ -310,11 +308,11 @@ def main(argv: list[str] | None = None) -> int:
         return _palavra(a.palavra, a.publicado)
     if a.todas:
         return _todas(a.publicado, a.doc, a.vista, tema)
-    if not a.pagina:  # (noqa-acento)  (nome do argumento)
+    if not a.pagina:
         p.error("diga a página, ou peça --todas")
     if a.doc:
         p.error("--doc é do modo --todas")
-    return _uma(a.pagina, a.publicado, a.vista, tema)  # (noqa-acento)  (nome do argumento)
+    return _uma(a.pagina, a.publicado, a.vista, tema)
 
 
 if __name__ == "__main__":

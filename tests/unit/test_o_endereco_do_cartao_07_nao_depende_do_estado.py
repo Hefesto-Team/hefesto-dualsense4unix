@@ -77,7 +77,7 @@ def test_a_regua_morde_o_span_ajuda_que_volta():
 
 def test_esta_aba_nao_tem_cartao_por_controle():
     """A evidência de por que a régua daqui não é a das abas 01-06 e 08."""
-    pasta = INTERFACE / "paginas"  # (noqa-acento) a PASTA
+    pasta = INTERFACE / "paginas"  # (noqa-acento)
     pagina = (pasta / "07-lancadores.html").read_text(encoding="utf-8")
     assert 'data-controle="p' not in pagina, (
         "a página 07 ganhou cartão por controle — ver o docstring")

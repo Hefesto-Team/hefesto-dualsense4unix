@@ -19,7 +19,6 @@ REGUA = RAIZ / "scripts" / "check_autoria.py"
 CANARIO = "zqcanario" + "autoria"
 FORNECEDOR = "fornecedor" + "-x"
 ZERO = "0" * 40
-# O sanitizador de coautoria do pre-commit apaga a linha que traz o literal: monta-se por partes.
 COAUTORIA = "Co-Authored" + "-By"
 
 LISTA = "\n".join([
@@ -112,11 +111,6 @@ def rodar(
 
 def saida(p: subprocess.CompletedProcess[str]) -> str:
     return p.stdout + p.stderr
-
-
-# ---------------------------------------------------------------------------
-# Quem pode assinar
-# ---------------------------------------------------------------------------
 
 
 def test_commit_limpo_de_quem_esta_no_mailmap_passa(repo: Path) -> None:
@@ -251,7 +245,6 @@ def test_refs_replace_que_mascara_um_trailer_reprova_s4(repo: Path) -> None:
     limpo = commitar(repo, "feat: limpo")
     sujo = commitar(repo, f"feat: sujo\n\n{COAUTORIA}: Fornecedor X <x@fora.test>")
     git(repo, "replace", sujo, limpo)
-    # o dublê é real: o log comum, com as substituições valendo, mente
     visto = git(repo, "log", "-1", "--format=%B", sujo)
     assert COAUTORIA not in visto, "o dublê não mascarou nada: o caso não prova S4"
     p = rodar(repo, "historia", sujo)
@@ -270,11 +263,6 @@ def test_historia_de_clone_raso_reprova(repo: Path, tmp_path: Path) -> None:
     p = rodar(raso, "historia", "HEAD")
     assert p.returncode == 1
     assert "clone raso" in p.stdout
-
-
-# ---------------------------------------------------------------------------
-# O vocabulário: a lista, os dois níveis, e o que nunca se imprime
-# ---------------------------------------------------------------------------
 
 
 def test_sem_a_lista_a_parte_de_vocabulario_sai_nao_medido(repo: Path) -> None:
@@ -443,7 +431,6 @@ def test_mensagem_nova_com_vocabulario_de_processo_reprova(repo: Path) -> None:
 
 def test_o_nivel_2_preserva_a_caixa(repo: Path) -> None:
     base = git(repo, "rev-parse", "HEAD")
-    # `SIGLAX` está na lista em maiúscula: a forma minúscula é outra palavra
     assert rodar(repo, "diff", base, commitar(repo, "feat: o siglax")).returncode == 0
     base2 = git(repo, "rev-parse", "HEAD")
     assert rodar(repo, "diff", base2, commitar(repo, "feat: o SIGLAX")).returncode == 1
@@ -462,20 +449,11 @@ def test_texto_do_pr_mede_os_dois_niveis(repo: Path) -> None:
 
 
 def test_linha_de_arquivo_mede_so_o_nivel_1_como_o_diff(repo: Path) -> None:
-    # O gancho do ato mede a linha acrescentada com `texto --conteudo`: o nível 2 é de
-    # mensagem, e um nome de teste com o termo (o Agent1 do BlueZ no specs.html) barrava o
-    # commit que o CI aceita.
-    # O termo montado: a linha acrescentada deste arquivo passa pelo mesmo gancho.
     nivel_2 = "o subag" + "ente refez\n"
     assert rodar(repo, "texto", "--conteudo", entrada=nivel_2).returncode == 0
     assert rodar(repo, "texto", entrada=nivel_2).returncode == 1
     assert rodar(repo, "texto", "--conteudo", entrada=f"{CANARIO}\n").returncode == 1
     assert rodar(repo, "texto", "--outra", entrada="limpo\n").returncode == 2
-
-
-# ---------------------------------------------------------------------------
-# O que pode sair num push, e o que o servidor guarda
-# ---------------------------------------------------------------------------
 
 
 def _linha_de_push(origem: str, sha: str, destino: str) -> str:
@@ -581,11 +559,6 @@ def test_uso_errado_sai_2(repo: Path) -> None:
     assert rodar(repo).returncode == 2
     assert rodar(repo, "diff", "so-um").returncode == 2
     assert rodar(repo, "inexistente").returncode == 2
-
-
-# ---------------------------------------------------------------------------
-# O instalador e o gancho de pre-push, de ponta a ponta
-# ---------------------------------------------------------------------------
 
 
 @pytest.fixture()
@@ -718,11 +691,6 @@ def test_o_gancho_sem_a_regua_na_arvore_reprova_e_nao_passa(casa: Path, tmp_path
     p = git_vivo(casa, "push", "origin", "dev:refs/heads/fecho/x")
     assert p.returncode != 0
     assert "política não medida" in saida(p)
-
-
-# ---------------------------------------------------------------------------
-# O gancho de commit-msg: o vocabulário vem da mesma lista, nunca de um literal
-# ---------------------------------------------------------------------------
 
 
 def commit_msg(

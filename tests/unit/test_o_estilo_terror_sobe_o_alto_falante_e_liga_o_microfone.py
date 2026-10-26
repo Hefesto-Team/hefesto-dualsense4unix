@@ -39,7 +39,6 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.testing import FakeController
 
-# a faixa forjada das fixtures (nunca endereço real mascarado)
 QUATRO = ["aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03", "aa:bb:cc:00:00:04"]
 
 
@@ -129,7 +128,6 @@ def test_a_receita_do_terror_usa_o_ouvir_junto_da_aba_sem_numero_novo() -> None:
     af = POR_CHAVE["terror"].receita_invisivel.alto_falante
     assert af is not None
     assert (af.fonte, af.rota) == ("mix", SAIDA_L_FONE_R_ALTO_FALANTE)
-    # a rota do nascimento: ao sair do Terror nada fica no «apenas no DualSense» (a 3)
     assert af.rota == ROTA_PADRAO_DO_SOM != SAIDA_SO_NO_ALTO_FALANTE
     assert POR_CHAVE["terror"].receita_invisivel.microfone_ligado is True
 
@@ -271,7 +269,7 @@ def test_o_replug_devolve_o_som_do_estilo_so_ao_controle_que_voltou(
     assert estado == "aplicado"
     assert [e["uniq"] for e in g.som] == [QUATRO[2]]
     assert mesa.fontes == [(QUATRO[2], "mix")]
-    assert mesa.abertos == []  # o microfone nasce no (re)connect, que já roda ali
+    assert mesa.abertos == []
 
 
 def test_perfil_sem_estilo_e_sem_secao_nao_escreve_no_replug(perfis_no_disco: Path) -> None:
@@ -326,9 +324,6 @@ def test_a_fonte_que_nao_entrou_aparece_como_o_alto_falante_daquele_controle(
     g.manager.activate("terror-de-teste", relatorio=relatorio)
     assert relatorio[f"speaker:{QUATRO[0]}"] == "fonte_nao_escrita"
     assert list(_faltas_no_rodape(relatorio)) == [f"alto-falante de um controle ({QUATRO[0]})"]
-
-
-# --- as pontes de verdade, sobre um daemon de mentira ---------------------
 
 
 class _PadVirtual:

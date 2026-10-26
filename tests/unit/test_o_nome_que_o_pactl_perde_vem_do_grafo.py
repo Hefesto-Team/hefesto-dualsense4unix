@@ -31,7 +31,6 @@ NOMES = (
     "Café 🎮 Party",
 )
 
-#: quatro controles, cabo e rádio: (id do grafo, serial, alvo, nome do jogo)
 MESA_MISTA = (
     (171, 719, 76, NOMES[0]),
     (179, 739, 77, NOMES[1]),

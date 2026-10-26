@@ -24,9 +24,6 @@ O_QUE_VAI_A_QUEM_USA = (
     "src", "scripts", "install.sh", "uninstall.sh",
 )
 
-#: O HOME de quem roda (pela tabela de usuários) e as pastas da bancada, montados sem o caminho
-#: literal, que a régua `test_nenhum_caminho_desta_maquina_no_codigo` proíbe em `tests/`. O ponto
-#: de montagem seguido de reticências é citação de medida, não caminho: só a barra conta.
 CAMINHO_DA_BANCADA = re.compile("|".join([
     re.escape(f"/home/{pwd.getpwuid(os.getuid()).pw_name}") + r"\b",
     re.escape("~/Desenvolvimento/"),

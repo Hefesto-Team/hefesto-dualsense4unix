@@ -37,7 +37,6 @@ from tests.unit.test_o_pad_que_nasce_pede_o_gadget_fora_do_tique import (
 )
 from tests.unit.test_o_pad_recusado_pelo_broker_tenta_de_novo import Mesa
 
-#: o pior caso do cliente preso: duas tentativas de ``_TIMEOUT_S`` cada.
 PRESO_S = 2 * hbc._TIMEOUT_S
 
 
@@ -83,7 +82,6 @@ def _ate_a_queda(m: Mesa, jogadores: tuple[int, ...], quem_volta: int, queda: st
         m.ug._o_gadget_caiu(volta, gadget)
         assert volta._gadget_caiu
     else:
-        # o prazo da enumeração conta a fila: quem nasceu atrás espera mais
         m.relogio[0] = volta._gadget_prazo + 1.0
         assert m.b.esperar(lambda: volta._gadget_falhou)
     return pads
@@ -116,11 +114,12 @@ def test_o_tique_em_que_o_gadget_cai_nao_espera_o_broker_preso(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, jogadores: tuple[int, ...],
     quem_volta: int, queda: str,
 ) -> None:
-    # D-2510-A-DESCIDA-DO-GADGET-FALA-COM-O-BROKER-FORA-DO-TIQUE
     """O broker aceita e não responde: o tique da queda, e os seguintes, abaixo de 50 ms.
 
     Mordida: devolva o ``gadget.desmontar()`` ao ``_soltar_o_gadget`` (a descida
     no tique), e o tique da queda leva as duas tentativas do cliente, ~4 s.
+
+    Prova da D-2510-A-DESCIDA-DO-GADGET-FALA-COM-O-BROKER-FORA-DO-TIQUE.
     """
     m = _mesa(monkeypatch, tmp_path)
     pads: list[Any] = []
@@ -142,7 +141,6 @@ def test_o_tique_em_que_o_gadget_cai_nao_espera_o_broker_preso(
         assert m.b.esperar(lambda: m.broker.conexoes > conexoes), (
             "a descida não chegou ao broker"
         )
-        # a parte da casa desce no tique: a fila da enumeração e a âncora do som
         assert gadget.serial not in m.ug._FILA_DA_ENUMERACAO
         assert pad_usb.interface_do_aparelho(volta.identity) != INTERFACE_DO_GADGET
     finally:
@@ -167,7 +165,6 @@ def test_a_sobra_do_refazer_desce_fora_do_tique(
         m.passar(0.1, pads, assentar=False)
         assert volta._gadget is None and volta._gadget_outra_vez
         assert _a_descida(m).esperar_tudo(2.0)
-        # o estacionado do aparelho, que o refazer retoma antes do gadget na mão
         nosso, jogo = socket.socketpair(socket.AF_UNIX, socket.SOCK_SEQPACKET)
         os.set_blocking(nosso.fileno(), False)
         m.__dict__.setdefault("lados_do_jogo", []).append(jogo)

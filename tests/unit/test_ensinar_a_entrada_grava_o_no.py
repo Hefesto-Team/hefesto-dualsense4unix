@@ -258,7 +258,7 @@ def test_o_clique_no_plugue_ensina_pelo_disco(disco: Path) -> None:
     pedidos = [m for m in mensagens if m.get("gesto") == "entrada-ensinar"]
     assert [(m.get("entrada"), m.get("caminho")) for m in pedidos] == [("2", _PENDRIVE)], (
         f"o clique no plugue não chegou ao piloto: {mensagens}")
-    dono = pacotes.gesto_da_pagina(pedidos[0]["pagina"], "entrada-ensinar")  # (noqa-acento) chave
+    dono = pacotes.gesto_da_pagina(pedidos[0]["pagina"], "entrada-ensinar")  # (noqa-acento)
     assert dono is not None
     dono(None, pedidos[0], None)
 

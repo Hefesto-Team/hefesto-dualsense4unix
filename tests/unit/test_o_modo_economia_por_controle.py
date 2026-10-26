@@ -241,7 +241,6 @@ def _o_que_cada_um_recebe(
     from hefesto_dualsense4unix.daemon.subsystems.rumble import escrever_com_a_forca
 
     ProfileManager(controller=inst).apply(perfil)
-    # O fator da peça chega ao motor pelo funil do daemon, não pelo backend.
     daemon = SimpleNamespace(controller=inst, config=DaemonConfig(), store=None)
     escrever_com_a_forca(daemon, None, 200, 200, agora=0.0)
     return [
@@ -469,8 +468,6 @@ def test_a_economia_atravessa_o_disco() -> None:
 
     from hefesto_dualsense4unix.utils import maquina as maquina_mod
 
-    # O `HOME` REAL de quem roda, pela tabela de usuários: o desvio de `HOME` da suíte não o
-    # alcança, e ele vale em qualquer máquina (um nome literal só guardava a casa de uma).
     config_real = Path(pwd.getpwuid(os.getuid()).pw_dir) / ".config"
     assert not maquina_mod.caminho_da_maquina().is_relative_to(config_real), (
         "a suíte ia escrever no maquina.json do usuário que roda"

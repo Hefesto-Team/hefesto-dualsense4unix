@@ -30,8 +30,6 @@ from hefesto_dualsense4unix.integrations.cor_do_plastico import cor_do_nome
 from hefesto_dualsense4unix.profiles import estilos_de_jogo as ej
 from hefesto_dualsense4unix.profiles import formas_de_haptica as fh
 
-#: Os quatro controles pela cor do plástico (Starlight Blue, White, Cosmic Red, Galactic Purple),
-#: com endereços de faixa forjada (`aa:bb:cc`), nunca de aparelho de verdade.
 AZUL, BRANCO, VERMELHO, ROXO = (f"aa:bb:cc:00:00:{n:02x}" for n in (0x11, 0x12, 0x13, 0x14))
 COR_DE = {AZUL: "Starlight Blue", BRANCO: "White", VERMELHO: "Cosmic Red", ROXO: "Galactic Purple"}
 NOTA_DE = {AZUL: 150, BRANCO: 165, VERMELHO: 180, ROXO: 195}
@@ -48,7 +46,6 @@ class _Mesa:
         self.do_jogo: set[tuple[str, str]] = set()
         self.registro: list[tuple[str, str, Any]] = []
         self.dormiu: list[float] = []
-        # a nota vem da cor de fábrica, pela mesma função da produção
         self.daemon = SimpleNamespace(identity_registry=SimpleNamespace(
             identidade_de_fabrica=lambda uniq: SimpleNamespace(cor=cor_do_nome(COR_DE[uniq]))))
 
@@ -99,9 +96,6 @@ def _disparar(daemon: Any) -> None:
         gatilho.tarefa()
 
 
-# --- 1. Uma Chegada por conexão; Nativo e Personalizado não tocam -----------------------
-
-
 def test_uma_chegada_por_conexao_e_reconectar_toca_de_novo() -> None:
     """A Chegada é da conexão: uma por controle que entra, e reconectar toca de novo."""
     mesa = _Mesa()
@@ -112,9 +106,9 @@ def test_uma_chegada_por_conexao_e_reconectar_toca_de_novo() -> None:
         assert mesa.canais(uniq) == {"luz", "toque", "gatilho"}, uniq
     assert sum(1 for c, *_ in mesa.registro if c == "toque") == 4
     mesa.registro.clear()
-    _disparar(daemon)  # nada novo chegou: não toca outra vez
+    _disparar(daemon)
     assert mesa.registro == []
-    assert _chegar(daemon, VERMELHO) == 1  # reconectou
+    assert _chegar(daemon, VERMELHO) == 1
     _disparar(daemon)
     assert mesa.canais(VERMELHO) == {"luz", "toque", "gatilho"}
     assert mesa.canais(AZUL) == set()
@@ -123,7 +117,7 @@ def test_uma_chegada_por_conexao_e_reconectar_toca_de_novo() -> None:
 @pytest.mark.parametrize("estilo", [e.chave for e in ej.ESTILOS])
 def test_a_chegada_vale_em_todo_estilo_menos_o_nativo_e_o_personalizado(estilo: str) -> None:
     assert ch.a_chegada_vale(estilo, False) is (estilo not in {"nativo", "personalizado"})
-    assert ch.a_chegada_vale(estilo, True) is False  # o Modo Nativo devolve o controle à Steam
+    assert ch.a_chegada_vale(estilo, True) is False
 
 
 def test_sem_estilo_a_chegada_nao_toca() -> None:
@@ -144,15 +138,12 @@ def test_o_controle_que_saiu_antes_da_hora_nao_ganha_chegada() -> None:
     assert mesa.canais(AZUL) and not mesa.canais(ROXO)
 
 
-# --- 2. A Chegada espera a Steam ----------------------------------------------------------
-
-
 def test_a_chegada_espera_a_rajada_da_steam_e_depois_toca_os_tres_canais() -> None:
     """D-2010-A-CHEGADA-ESPERA-A-RAJADA-DA-STEAM."""
     mesa = _Mesa(na_mesa=(AZUL,))
     daemon = _daemon(mesa)
     _chegar(daemon, AZUL)
-    assert ch.ESPERA_S >= 3.9  # a rajada medida vai a 3,9 s (ensaio btmon-a-rajada-tem-hora)
+    assert ch.ESPERA_S >= 3.9
     assert _devidos(daemon, ch.ESPERA_S - 0.5) == []
     assert mesa.registro == []
     registro = conn.registro_de_gatilhos_de(daemon)
@@ -186,11 +177,7 @@ def test_a_luz_sobe_em_degraus_e_nunca_pisca() -> None:
     assert all(a[0] <= b[0] and a[1] <= b[1] and a[2] <= b[2] for a, b in pairwise(quadros))
     assert mesa.registro[-1][0] in ("luz-devolvida", "gatilho-solto")
     assert any(c == "luz-devolvida" for c, *_ in mesa.registro)
-    # um quadro a cada 0,12 s: a subida inteira cabe em 0,6 s, uma só, sem voltar atrás
     assert sum(mesa.dormiu) <= 1.0
-
-
-# --- 3. A nota é da unidade ---------------------------------------------------------------
 
 
 def _potencia(onda: Any, hz: int) -> float:
@@ -215,7 +202,7 @@ def test_trocar_o_jogador_de_lugar_nao_muda_a_nota(ordem: tuple[str, ...]) -> No
     """D-2010-A-ASSINATURA-E-A-NOTA-DA-COR-DO-PLASTICO."""
     mesa = _Mesa()
     daemon = _daemon(mesa)
-    _chegar(daemon, *ordem)  # a ordem de chegada é a do número de jogador
+    _chegar(daemon, *ordem)
     _disparar(daemon)
     formas = {u: resto[-1] for c, u, resto in mesa.registro if c == "toque"}
     assert formas == {u: fh.forma_da_nota(NOTA_DE[u]) for u in ordem}
@@ -234,9 +221,6 @@ def test_cor_sem_nota_toca_o_toque_de_sempre() -> None:
 def test_a_assinatura_nao_vira_escolha_da_tela() -> None:
     assert not set(fh.ASSINATURAS) & set(fh.ESCOLHAS)
     assert not set(fh.ASSINATURAS) & set(fh.FORMAS)
-
-
-# --- 4. O jogo vence ----------------------------------------------------------------------
 
 
 def test_com_o_gatilho_escrito_pelo_jogo_a_chegada_nao_escreve_o_gatilho() -> None:
@@ -271,9 +255,6 @@ def test_o_clique_do_gatilho_e_o_clique_mouse_e_sai_na_hora() -> None:
     _disparar(daemon)
     ordem = [c for c, u, _ in mesa.registro if c.startswith("gatilho")]
     assert ordem == ["gatilho", "gatilho-solto"]
-
-
-# --- 5. O laço de reconexão chama a Chegada (o primeiro controle e os que chegam depois) ----
 
 
 class _Controlador:
@@ -343,7 +324,7 @@ async def test_o_laco_anuncia_o_primeiro_controle_e_os_que_chegam_depois(
     monkeypatch.setattr(conn, "RECONNECT_HOTPLUG_POLL_INTERVAL_SEC", 0.01)
     monkeypatch.setattr(conn, "RECONNECT_ONLINE_CHECK_INTERVAL_SEC", 30.0)
     monkeypatch.setattr(conn, "PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC", 0.01)
-    monkeypatch.setattr(ch, "ESPERA_S", 0.05)  # o laço registra o gatilho com o prazo de agora
+    monkeypatch.setattr(ch, "ESPERA_S", 0.05)
     mesa = _Mesa(na_mesa=(AZUL, BRANCO))
     controle = _Controlador()
     daemon: Any = _DaemonDoLaco(mesa, controle)
@@ -398,7 +379,6 @@ async def test_a_subida_do_daemon_toca_todos_que_ja_estavam(
         await _ate(lambda: all(mesa.canais(u) == {"luz", "toque", "gatilho"} for u in quatro))
         assert sorted(u for c, u, _ in mesa.registro if c == "toque") == sorted(quatro)
         mesa.registro.clear()
-        # o AZUL troca de fio: o mesmo controle numa chave nova
         controle.alvos = {**{f"k{n}": u for n, u in enumerate(quatro) if u != AZUL}, "k9": AZUL}
         vigia.acordar()
         await asyncio.sleep(0.3)
@@ -407,9 +387,6 @@ async def test_a_subida_do_daemon_toca_todos_que_ja_estavam(
     finally:
         daemon._stop_event.set()
         await laco
-
-
-# --- 6. A subida da barra tem um dono só (o laço da luz animada espera) --------------------
 
 
 def test_durante_a_subida_o_laco_da_luz_animada_nao_pinta_a_barra() -> None:
@@ -437,15 +414,15 @@ def test_durante_a_subida_o_laco_da_luz_animada_nao_pinta_a_barra() -> None:
         animada.tique(relogio[0], plano, frozenset(), passo._quem_tem_outro_dono())
 
     daemon._chegada._pontas.dormir = um_quadro_do_laco
-    assert animada.tique(0.0, plano) == 1  # antes da Chegada, o laço é o dono da barra
+    assert animada.tique(0.0, plano) == 1
     do_laco.clear()
     _chegar(daemon, AZUL)
     _disparar(daemon)
     assert len(segurados) == len(ch.BRILHOS_DA_SUBIDA)
     assert all(s == frozenset({AZUL}) for s in segurados), segurados
     assert do_laco == [], "o laço pintou a barra no meio da subida"
-    assert ch.segurando_a_luz(daemon) == frozenset()  # a subida acabou: a barra volta ao laço
-    assert animada.tique(relogio[0] + 0.2, plano) == 1  # e o primeiro quadro sai, mesmo igual
+    assert ch.segurando_a_luz(daemon) == frozenset()
+    assert animada.tique(relogio[0] + 0.2, plano) == 1
 
 
 def test_a_subida_que_falha_no_meio_devolve_a_barra_ao_laco() -> None:
@@ -464,9 +441,6 @@ def test_a_subida_que_falha_no_meio_devolve_a_barra_ao_laco() -> None:
 
 def test_sem_chegada_montada_ninguem_segura_a_luz() -> None:
     assert ch.segurando_a_luz(SimpleNamespace()) == frozenset()
-
-
-# --- 7. A Assinatura vale no Toque de todo tiro, não só no da Chegada ---------------------
 
 
 def _toque_do_tiro(estilo: str | None, escolha: str | None = None,
@@ -502,7 +476,7 @@ def test_no_personalizado_no_nativo_e_sem_estilo_o_toque_e_o_de_sempre(estilo: s
 
 def test_a_forma_que_nao_e_o_toque_nao_ganha_nota() -> None:
     assert set(_toque_do_tiro("fps", fh.IMPACTO).values()) == {fh.IMPACTO}
-    assert set(_toque_do_tiro("luta").values()) == {fh.IMPACTO}  # a forma do estilo manda
+    assert set(_toque_do_tiro("luta").values()) == {fh.IMPACTO}
 
 
 def test_a_producao_liga_a_nota_da_unidade_ao_toque_do_tiro(
@@ -522,9 +496,6 @@ def test_a_producao_liga_a_nota_da_unidade_ao_toque_do_tiro(
     atuador.escrever(tv.Evento(0.0, ROXO, tv.TIPO_RUMBLE, tv.LADO_ESQUERDO, 1.0),
                      tv.Receita(vibracao_por_tiro=True), 0.0)
     assert [(a[0], a[4]) for a in tocados] == [(ROXO, "toque-195")]
-
-
-# --- 8. As pontas de produção falam a língua do backend -------------------------------------
 
 
 class _Backend:
@@ -580,7 +551,7 @@ def test_as_pontas_de_producao_chegam_ao_backend_e_ao_tocador(
     bloco = tv.bloco_do_clique()
     assert backend.feito[0][1] == (AZUL, "right", bloco)
     assert backend.feito[-1][1] == (AZUL, "right", bloco)
-    assert backend.feito[-3][1] == (AZUL, LUZ_DE[AZUL])  # o último degrau é a cor cheia
+    assert backend.feito[-3][1] == (AZUL, LUZ_DE[AZUL])
 
 
 def test_as_pontas_de_producao_cedem_ao_que_o_jogo_escreveu(
@@ -588,7 +559,7 @@ def test_as_pontas_de_producao_cedem_ao_que_o_jogo_escreveu(
     from hefesto_dualsense4unix.daemon.subsystems import tato_vivo as tv
 
     backend = _Backend()
-    chave = AZUL.replace(":", "")  # a camada do jogo mora pelo `norm_mac`, como no backend
+    chave = AZUL.replace(":", "")
     backend._game_output_by_uniq[chave] = SimpleNamespace(
         led=(1, 2, 3), trigger_left=None, trigger_right=None)
     backend._game_triggers_by_uniq[chave] = {"right": b"\x21"}

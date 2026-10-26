@@ -21,7 +21,7 @@ MAX_CATCH_ALL_TOLERADOS = 1
 VOCABULARIO_GENERICO: frozenset[str] = frozenset(
     {
         "fallback",
-        "padrao",  # (noqa-acento): slug, sempre ASCII
+        "padrao",  # (noqa-acento)
         "default",
         "geral",
         "generico",
@@ -34,7 +34,7 @@ VOCABULARIO_GENERICO: frozenset[str] = frozenset(
         "leitura",
         "video",
         "filme",
-        "musica",  # (noqa-acento): slug, sempre ASCII
+        "musica",  # (noqa-acento)
         "meu_perfil",
         "personalizado", "freestyle",
         "perfil_padrao",
@@ -61,7 +61,7 @@ class Achado:
 def _slug(profile: Profile) -> str:
     try:
         return slugify(profile.name)
-    except ValueError:  # pragma: no cover — o schema já recusa nome sem slug
+    except ValueError:  # pragma: no cover
         return profile.name.strip().lower()
 
 

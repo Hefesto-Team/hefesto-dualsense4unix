@@ -27,7 +27,7 @@ def _carregar_irmao(nome: str, arquivo: Path) -> ModuleType:
     if ja is not None:
         return ja
     spec = importlib.util.spec_from_file_location(nome, arquivo)
-    if spec is None or spec.loader is None:  # pragma: no cover - caminho quebrado
+    if spec is None or spec.loader is None:  # pragma: no cover
         raise ImportError(f"não consegui carregar {arquivo}")
     modulo = importlib.util.module_from_spec(spec)
     sys.modules[nome] = modulo
@@ -1704,8 +1704,6 @@ def _rastros_do_lar(raizes: Raizes) -> list[Rastro]:
                     rastros.append(Rastro(str(achado), "a casa do Flatpak do Hefesto"))
                 continue
             rastros.append(Rastro(str(achado), o_que))
-    # As duas formas: SPA-JSON (WirePlumber 0.5 em diante) e Lua (0.4). Uma troca
-    # de versão do WirePlumber deixa a forma velha no disco, e o rastro da forma velha também conta.
     for sub_wp in ("wireplumber.conf.d", "main.lua.d"):
         wp = raizes.config / "wireplumber" / sub_wp
         if not wp.is_dir():
@@ -1722,10 +1720,6 @@ def _rastros_do_lar(raizes: Raizes) -> list[Rastro]:
     return rastros
 
 
-#: Os arquivos do estado do WirePlumber que lembram nó pelo NOME
-#: (OS-NOS-DE-SOM-SEM-O-ENDERECO-NO-NOME-01, medido em 02/10/2026: 9 chaves
-#: nossas no ``default-nodes`` e 55 no ``stream-properties``, e o WirePlumber
-#: nunca esquece uma chave).
 ARQUIVOS_DO_ESTADO_DO_WIREPLUMBER = ("default-nodes", "stream-properties")
 _INICIOS_DE_NOME_NOSSO = ("hefesto", "br.com.hefesto", "br.dev.hefesto")
 

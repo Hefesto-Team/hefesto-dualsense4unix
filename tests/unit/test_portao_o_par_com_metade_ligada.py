@@ -132,11 +132,8 @@ _SRC = _RAIZ / "src" / "hefesto_dualsense4unix"
 _TERRITORIO = "daemon"
 
 
-#: Vazio desde 02/10/2026: a única entrada (`_steam_input_vpad_suspenso`) saiu com
-#: a suspensão do vpad, na O-CODIGO-SEM-CHAMADOR-LIGA-OU-SAI-01.
 _PAR_ACEITO: dict[str, str] = {}
 
-#: do irmão (`portao_a_casa_sabe_e_o_produto_nao_faz._confere_razoes`).
 _DATA = re.compile(r"\b\d{2}/\d{2}/\d{4}\b")
 
 _RAZAO_MINIMA = 120
@@ -259,7 +256,7 @@ def _fatos_do_texto(
     """
     try:
         arvore = _arvore_do_texto(texto)
-    except SyntaxError:  # pragma: no cover - árvore em movimento
+    except SyntaxError:  # pragma: no cover
         return None
     fora = _prosa(arvore)
     corpos: list[tuple[str, int, int]] = []
@@ -289,7 +286,7 @@ def _indexar(raiz: Path) -> _Indice:
     palavras: set[str] = set()
     for caminho in _modulos(raiz):
         fatos = _fatos_do_texto(caminho.read_text(encoding="utf-8"))
-        if fatos is None:  # pragma: no cover - árvore em movimento
+        if fatos is None:  # pragma: no cover
             continue
         for nome, inicio, fim in fatos[0]:
             corpos.setdefault(nome, []).append((caminho, inicio, fim))
@@ -338,7 +335,7 @@ def _acessores(flag: str, raiz: Path) -> set[str]:
             continue
         try:
             arvore = _arvore_do_texto(texto)
-        except SyntaxError:  # pragma: no cover - árvore em movimento
+        except SyntaxError:  # pragma: no cover
             continue
         for no in ast.walk(arvore):
             if not isinstance(no, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -374,7 +371,7 @@ def _leituras(flag: str, raiz: Path) -> list[str]:
             continue
         try:
             arvore = _arvore_do_texto(texto)
-        except SyntaxError:  # pragma: no cover - árvore em movimento
+        except SyntaxError:  # pragma: no cover
             continue
         fora = _prosa(arvore)
         corpos = {
@@ -403,14 +400,14 @@ def pares_com_metade_ligada(raiz: Path | None = None) -> dict[str, Par]:
     """As flags de ``daemon/`` que o produto lê e só consegue escrever de um lado."""
     alvo = raiz or _SRC
     territorio = alvo / _TERRITORIO
-    if not territorio.is_dir():  # pragma: no cover - cópia mutilada
+    if not territorio.is_dir():  # pragma: no cover
         return {}
 
     escritas: dict[str, dict[bool, set[str]]] = {}
     for caminho in _modulos(territorio):
         try:
             arvore = _arvore_do_texto(caminho.read_text(encoding="utf-8"))
-        except SyntaxError:  # pragma: no cover - árvore em movimento
+        except SyntaxError:  # pragma: no cover
             continue
         visitante = _Escritas()
         visitante.visit(arvore)
@@ -666,7 +663,6 @@ _EM_CRASE = re.compile(r"``?([^`\n]+?)``?")
 
 _JANELA = 3
 
-#: Vazia: nenhuma citação de linha em `src/` está pendente (a catraca `DIVIDAS` mede 0).
 _CITACOES_PENDENTES: frozenset[str] = frozenset()
 
 
@@ -703,7 +699,6 @@ def _resolver_alvo(alvo: str, raiz: Path) -> Path | None:
     return achados[0] if len(achados) == 1 else None
 
 
-#: reprovava só nas pernas 3.10 e 3.11 do `lint-test`, verde na bancada e no
 _TOKENS_DE_PROSA: tuple[int, ...] = tuple(
     tipo
     for tipo in (tokenize.COMMENT, tokenize.STRING, getattr(tokenize, "FSTRING_MIDDLE", None))

@@ -92,8 +92,6 @@ def test_dois_ciclos_com_o_load_module_estourando_fazem_um_load_module(
     assert bt.pactl_mudo() is True
     recuo.agora += 1.0
     assert af.SinkVirtualPipeWire(uniq=DELE, runner=pactl).iniciar() is False
-    # a primeira pergunta do ciclo (os módulos que um daemon anterior deixou) é a que
-    # estoura o prazo; o `load-module` não sai atrás dela
     assert pactl.verbos() == ["list"], pactl.verbos()
 
     recuo.agora += 10.0

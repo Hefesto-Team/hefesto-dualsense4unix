@@ -394,7 +394,7 @@ def renomear(
         fonte = _FONTE_PEDIDA.get(uniq) or None
     if ja is None:
         return None
-    no_ar = str(getattr(ja, "descricao", "") or "")  # (noqa-acento) nome de atributo
+    no_ar = str(getattr(ja, "descricao", "") or "")  # (noqa-acento)
     if not rotulo_envelheceu(no_ar, descricao):
         return ja
     logger.info(

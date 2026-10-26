@@ -63,7 +63,6 @@ async def test_os_dois_pares_ficam_no_servico(mesa: _Mesa) -> None:
     assert {u: (w, s) for u, (w, s, _em) in fixados.items()} == {
         p1: (160, 220), p2: (100, 50),
     }, "o par do P1 saiu do serviço quando o P2 fixou o dele"
-    # o seletor global não foi tocado: nenhum dos dois gestos mirou o serviço
     assert mesa.backend.get_output_target_uniq() is None
 
 
@@ -108,9 +107,9 @@ async def test_a_ociosidade_solta_so_o_controle_que_ninguem_rebate(mesa: _Mesa) 
     await _testar(mesa, p2, 100, 50)
     fixados = pares_fixados(mesa.config)
     w, s, _em = fixados[p1]
-    fixados[p1] = (w, s, 0.0)         # o P1 deixou de ser rebatido há muito tempo
+    fixados[p1] = (w, s, 0.0)
     w, s, _em = fixados[p2]
-    fixados[p2] = (w, s, 1000.0)      # o P2 acaba de ser rebatido
+    fixados[p2] = (w, s, 1000.0)
     reassert_rumble(mesa.daemon, 1001.0)
     assert set(pares_fixados(mesa.config)) == {p2}
 
@@ -175,7 +174,6 @@ async def test_o_par_da_mesa_inteira_cala_o_jogo_em_todos(mesa: _Mesa) -> None:
         assert apply_game_rumble(daemon, 80, 120, target_uniq=uniq) is None
 
 
-# --- a aba -------------------------------------------------------------------
 P1 = "aa:bb:cc:00:00:01"
 P2 = "aa:bb:cc:00:00:02"
 
@@ -305,9 +303,9 @@ async def test_o_resumo_solto_de_fora_nao_ressuscita_o_par_velho(mesa: _Mesa) ->
     p1, p2 = mesa.uniqs[0], mesa.uniqs[1]
     await _testar(mesa, p1, 160, 220)
     await _testar(mesa, p2, 100, 50)
-    mesa.config.rumble_active = None          # o que o lifecycle faz
+    mesa.config.rumble_active = None
     mesa.config.rumble_active_uniq = None
-    await _testar(mesa, p1, 30, 40)           # o batimento do P1, antes do tique
+    await _testar(mesa, p1, 30, 40)
 
     assert set(pares_fixados(mesa.config)) == {p1}, (
         "o par do P2, solto pela troca de perfil, voltou junto com o do P1"

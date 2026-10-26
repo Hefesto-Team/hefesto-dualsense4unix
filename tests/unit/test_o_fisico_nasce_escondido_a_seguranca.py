@@ -243,7 +243,6 @@ def test_a_regra_fechada_que_fica_vira_a_aberta(tmp_path: Path, nome: str) -> No
     texto = (etc / nome).read_text(encoding="utf-8")
     assert not _fechada(texto), texto
     abertas = [linha for linha in _efetivas(texto) if 'TAG+="uaccess"' in linha]
-    # os quatro físicos, o vpad uhid nas duas roupas e o pad em USB
     assert len(abertas) == 7, abertas
 
 

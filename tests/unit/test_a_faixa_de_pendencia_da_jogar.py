@@ -53,7 +53,6 @@ from hefesto_dualsense4unix.interface import onde
 from pacotes import Contexto
 from pacotes import a01_jogar as aba
 
-#: DualSense degradado, e por isso o estado Xbox traz o campo.
 VIVO_DUALSENSE: dict[str, Any] = {
     "connected": True,
     "native_mode": False,

@@ -94,9 +94,6 @@ def _voltas(sala: Mesa, n: int = 3) -> None:
         time.sleep(0.05)
 
 
-# --------------------------------------------------------------------------- a ponte
-
-
 @pytest.mark.parametrize("n", [1, 2, 3, 4], ids=["P1", "P1-P2", "P1-P3", "P1-P4"])
 def test_no_nativo_o_fluxo_mudo_nao_sobe_ponte_nem_pede_vaga(sala: Mesa, n: int) -> None:
     """A MORDIDA: o jogo abre o alto-falante e a háptica de todos e não toca nada."""
@@ -164,9 +161,6 @@ def test_fora_do_nativo_a_ponte_segue_subindo_pelo_fluxo(sala: Mesa) -> None:
     _voltas(sala, 1)
     assert MESA[0] in sala.sub._pontes
     assert dict(sala.sub._ouvidos_do_radio) == {}
-
-
-# --------------------------------------------------------------------------- a barra
 
 
 def _vigiar(daemon: Any, *agoras: float) -> list[dict[str, Any]]:
@@ -301,7 +295,6 @@ def test_o_ouvido_sem_fonte_espera_o_recuo_antes_de_abrir_outro_gravador(
     saida._casar_os_ouvidos_do_radio(escutar)
     assert len(pedidos) == 8, "vencido o recuo, cada nó tenta de novo"
 
-    # Outro controle no mesmo nó não herda o recuo do anterior.
     outro = dict(escutar)
     outro["no-0"] = (UNIQS[1], af.CANAIS_DO_ENCODER, "ouvido-som")
     saida._casar_os_ouvidos_do_radio(outro)

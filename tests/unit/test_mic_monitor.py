@@ -34,7 +34,6 @@ from hefesto_dualsense4unix.app.mic_monitor import (
     rms_de_pcm_s16le,
 )
 
-# estado — separados por TAB), com um DualSense no meio.
 _PACTL = (
     "645\talsa_output.pci-0000_0c_00.4.iec958-stereo.monitor\tPipeWire\ts32le 2ch\tIDLE\n"
     "646\talsa_input.pci-0000_0c_00.4.analog-stereo\tPipeWire\ts32le 2ch\tSUSPENDED\n"

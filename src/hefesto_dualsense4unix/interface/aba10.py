@@ -15,7 +15,6 @@ from hefesto_dualsense4unix.profiles.simple_match import (
 )
 
 
-# eles. Medido com o disco do usuário: `_secoes_do_controle` devolvia SEIS chaves e a
 SECOES = [
     ("leds", ("lightbar", "led-jogador")),
     ("triggers", ("l2", "r2")),
@@ -25,8 +24,8 @@ SECOES = [
     ("sensores", ("giroscopio", "acelerometro")),
     ("mascara", ("ps",)),
     ("movimento", ("stick_r",)),
-    ("ativacao", ("cross",)),  # (noqa-acento) identificador ASCII
-    ("analogicos", ("stick_l",)),  # (noqa-acento) identificador ASCII
+    ("ativacao", ("cross",)),  # (noqa-acento)
+    ("analogicos", ("stick_l",)),
 ]
 
 NOME_DA_SECAO = {
@@ -38,8 +37,8 @@ NOME_DA_SECAO = {
     "sensores": "sensores",
     "mascara": "máscara",
     "movimento": "comandos virtuais",
-    "ativacao": "ativação dos botões",  # (noqa-acento) identificador ASCII
-    "analogicos": "curva dos analógicos",  # (noqa-acento) identificador ASCII
+    "ativacao": "ativação dos botões",  # (noqa-acento)
+    "analogicos": "curva dos analógicos",
 }
 
 
@@ -74,7 +73,6 @@ DICA_DA_MASCARA = "Máscara: {mascara}"
 MASCARA_QUE_ACENDE = "DualSense"
 DICA_DO_STATUS = "Aceso: ligado agora; o ponto: só deste controle"
 
-# DualSense — medido nesta casa e escrito no esquema (`:1002`).
 ID_DA_PECA = {"p1": "AA:BB:CC:00:00:01", "p2": "AA:BB:CC:00:00:02",
               "p3": "AA:BB:CC:00:00:03", "p4": "AA:BB:CC:00:00:04"}
 
@@ -899,10 +897,6 @@ CADEADO = ('<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
            'fill="currentColor"/></svg>')
 
 
-#     "Na tabela do perfil tem que terum svg dde lupa no titulo da tabela.  # (noqa-acento) citação literal
-#      Temos que remover esse botão voltar a de ontem ??? e o botão  # (noqa-acento) citação literal
-#      recarregar vira um svg clicável ao lado de Perfis Salvos que irá  # (noqa-acento) citação literal
-#      fazer essa função. Temos que deixar o layout mais limpo.."  # (noqa-acento) citação literal
 LUPA = ('<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true">'
         '<circle cx="5.2" cy="5.2" r="3.4" fill="none" stroke="currentColor" '
         'stroke-width="1.3"/>'
@@ -915,8 +909,6 @@ RECARREGA = ('<svg viewBox="0 0 12 12" width="11" height="11" aria-hidden="true"
              '<path d="M9.4 1.3v2.6H6.8" fill="none" stroke="currentColor" '
              'stroke-width="1.3" stroke-linecap="round" '
              'stroke-linejoin="round"/></svg>')
-
-#     "e o botao atualizar tá aparecendo duplicado na interface"  # (noqa-acento) citação literal
 
 
 def icone_do_rotulo(gesto: str, desenho: str, dica: str, aria: str = "") -> str:
@@ -969,7 +961,6 @@ def marca_com_dica(classe: str, campo_estado: str, campo_frase: str,
 
 
 ESTILOS = [e.rotulo for e in ESTILOS_DO_MOTOR]
-#: (foto 9): aparece o nome e o código, não só o código, e não aparece o nome do programa.
 PERFIS = [("Mortal Kombat", 90, "Steam · Mortal Kombat 1 · 1971870", True),
           ("Mortal Kombat online", 88, "Steam · Mortal Kombat 1 · 1971870", False),
           ("Elden Ring", 85, "Steam · Elden Ring · 1245620", False),
@@ -988,7 +979,6 @@ PERFIS = [("Mortal Kombat", 90, "Steam · Mortal Kombat 1 · 1971870", True),
 
 PROCEDENCIA_DO_DESENHO = PERFIS[0][2].split(SEPARADOR_DA_PROCEDENCIA)[0]
 
-# As datas do desenho: (criado, modificado). Perfil de antes das datas mostra «—» nas duas.
 SEM_DATA = ("—", "—")
 DATAS_DO_DESENHO = {
     "Mortal Kombat": ("03/09/2026", "11/10/2026"),
@@ -1002,7 +992,6 @@ DATAS_DO_DESENHO = {
 }
 ORDEM_DO_DESENHO = ["Mortal Kombat", "Mortal Kombat online"]
 
-# «Aplicar em» e «Quando»: os valores são os do esquema (`AlvoDoPerfil`, `EventoDoPerfil`).
 ALVOS_DO_DESENHO = [
     ("jogos", "Jogos", "Vale quando o jogo abre"),
     ("navegacao", "Navegação", "Vale fora do jogo, no computador"),
@@ -1060,7 +1049,6 @@ def _celula_de_agora(c, campo, agora):
     valor = agora.get(campo, "sim")
     if valor == NAO_DIZ:
         return False, True, DICA_DO_NAO_DIZ
-    # os «comandos virtuais» dizem os ajustes da Mira na dica: a cena leva os de nascença da Calibrar
     return valor == "sim", False, (_RESUMO_DA_MIRA_NA_CENA
                              if campo == "movimento" and c.get("conectado", True) else "")
 
@@ -1073,7 +1061,6 @@ def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None, agora=None):
     id_visivel = ID_DA_PECA[c["pref"]] if id_da_peca is None else id_da_peca
     endereco = uniq if uniq is not None else c["pref"]
     grupos = []
-    # `SECOES`. O `data-hef-alvo="classe"` é o que deixa o PRODUTO acender e
     for campo, pecas in SECOES:
         on, nao_diz, dica_da_celula = _celula_de_agora(c, campo, agora)
         gs = "".join(glifo(p, ativo=on, tam=15) for p in pecas)
@@ -1087,8 +1074,6 @@ def linha_do_controle(c, tem=None, id_da_peca=None, uniq=None, agora=None):
             f' data-hef-alvo="classe" data-hef-classe="nd">{gs}</span></span>'
             f'<span class="gp{" on" if campo in tem else ""}" data-hef="guarda.proprio"'
             f' data-hef-alvo="classe"></span></span>')
-    # (IDENTIDADE-VEM-DE-CIMA): o `--plastico` estava no `<tr>`, sem endereço, e
-    # a cor do plástico fala no lugar de «P3»: o vazio traz a cor do controle que ficou guardado
     nome = SEPARADOR.join([c["nome"], c["via"]]) if na_mesa else c["nome"]
     plastico = cor_da_zona(c['cor'])
     dica = ("" if na_mesa else
@@ -1150,10 +1135,6 @@ def item_da_ordem(nome, posicao, ativo):
 
 
 
-#: O Ativar sabe ficar cinza: o campo que o acende escreve a razão na dica dele (`monta.botao_cinza`).
-#: Ele nasce verde, inclusive com o serviço parado: o clique religa o serviço e troca o perfil
-#: (O-ATIVAR-DO-PERFIL-VALE-OU-A-TELA-DIZ-POR-QUE-01). Só fica cinza quando o serviço não subiu, e
-#: a razão é a recusa que o produto escreve (`a10_perfis`).
 CAMPO_DA_RAZAO_DO_ATIVAR = "perfis.ativar-razao"
 DICA_DO_ATIVAR = "Passa a usar este perfil agora"
 ATIVAR = botao_cinza("Ativar", CAMPO_DA_RAZAO_DO_ATIVAR, tom="verde",
@@ -1571,7 +1552,6 @@ MIOLO = f'''
 {ROTEIRO}
 '''
 
-# máscara existe e o perfil a guarda — com TRÊS opções (DualSense · Xbox 360 ·
 LEGENDA = '''<div class="nota">
   <h2>O que mudou na Perfis do todo (15/10/2026)</h2>
   <ul>
@@ -1703,7 +1683,6 @@ def _conferir(html: str) -> None:
     exigir(html.count('class="fora"') == len(fora),
            "os lugares desconectados perderam a classe que os apaga")
 
-    # o alvo é o idempotente, e nenhum `--plastico` cravado voltou ao miolo.
     exigir(html.count('data-hef="guarda.plastico"') == len(MESA),
            f"não são {len(MESA)} barras com endereço `guarda.plastico` na tabela por controle")
     exigir(html.count('data-hef-alvo="cor"') == len(MESA),
@@ -1726,7 +1705,6 @@ def _conferir(html: str) -> None:
            f"o lugar vazio {fora_sem_dica} perdeu a dica que explica por que ele "
            f"continua na tabela — ela não fala de aparelho nenhum")
 
-    # O QUE ACONTECEU LÁ, com os quatro DualSense do usuário na mesa: o daemon publica
     blocos_por_lugar = {
         m.group(1): re.findall(r'data-(?:campo|papel|hef)="([^"]+)"', m.group(0))
         for m in re.finditer(r'<tr data-hef-uniq="(p\d)".*?</tr>', html, re.S)
@@ -1863,7 +1841,6 @@ def _conferir(html: str) -> None:
            "quem abrir a aba depois de 11/09 procuraria um quadro que a versão "
            "anterior tinha, sem nada na tela que o mande à Jogar")
 
-    # `Daemon.gravar_o_modo_escolhido`, que resolve o alvo por
     exigir("no perfil que está valendo" in LEGENDA,
            "a legenda perdeu o ALCANCE do que a aba Jogar escreve — sem ele a "
            "frase promete que a Jogar escolhe o modo de QUALQUER perfil, e o "
@@ -2081,7 +2058,7 @@ def _conferir(html: str) -> None:
            "a tabela voltou a `table-layout:auto` — nele a `width` é SUGESTÃO, "
            "e a largura que ela arrastar é reescrita pelo navegador no próximo "
            "repinte. Está medido neste arquivo desde 31/08: `.tab .pri` dizia "
-           "46px e o Chrome media 86px")  # (noqa-acento) verbo medir
+           "46px e o Chrome media 86px")  # (noqa-acento)
     exigir(html.count('<col data-coluna=') == 6,
            "não são 6 `<col>` nas duas tabelas — o `<colgroup>` é quem carrega "
            "a largura, e é o único elemento da tabela que o `blocos` do piloto "
@@ -2142,8 +2119,6 @@ if __name__ == "__main__":
     n = monta("10-perfis", "Perfis", MIOLO, CSS)
     _conferir(onde.pagina("10-perfis.html").read_text(encoding="utf-8"))
     if len(sys.argv) == 3 and sys.argv[1] == "--servico-parado":
-        # A cena do serviço parado vai para a pasta pedida, nunca para o `mockup/`: ali ela seria
-        # lida como a aba e o `--publicar 10` a levaria ao produto.
         _cena = pathlib.Path(sys.argv[2])
         _cena.mkdir(parents=True, exist_ok=True)
         (_cena / "10-perfis.html").write_text(

@@ -96,7 +96,6 @@ class _GtkDeMentira:
         return _Radio(label, group)
 
 
-#: dono lê (`mode_transition.mode_of_state`): `native_mode.enabled` verdadeiro
 _MODO_DESLIGADO = {"native_mode": {"enabled": True}}
 _MODO_LIGADO = {"gamepad_emulation": {"enabled": True}}
 

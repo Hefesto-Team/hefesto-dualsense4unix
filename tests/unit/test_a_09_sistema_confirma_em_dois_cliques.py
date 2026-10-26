@@ -114,8 +114,6 @@ def test_o_botao_armado_veste_a_palavra_dela(a09, ctx):
     carga = a09.desligar(ctx, _clique("Parar o serviço"), None)
 
     assert carga["blocos"]['[data-gesto="parar-ou-retomar"]'] == a09.CONFIRMA
-    # Os botões que o interruptor das correções juntou (D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES)
-    # não estão mais na página: o `blocos:` só veste os que ela tem.
     na_pagina = {nome for nome in a09.DESTRUTIVOS
                  if f'data-gesto="{nome}"' in PAGINA.read_text(encoding="utf-8")}
     assert na_pagina == {a09.DESLIGAR, "restaurar-de-fabrica"}
@@ -184,7 +182,6 @@ def test_fora_do_prazo_ele_recusa_dizendo_e_nao_age(a09, ctx, janela, monkeypatc
     clique de dez minutos depois parou o serviço.
     """
     a09.desligar(ctx, _clique(a09._rotulo_do_desenho(a09.DESLIGAR)), None)
-    # diz quanto dura o consentimento é `confirmacao.SEGUNDOS_PARA_CONFIRMAR`.
     a09._ARMADO["ate"] -= a09.segundos_para_confirmar() + 1
 
     with pytest.raises(RuntimeError, match="segundos"):
@@ -238,8 +235,6 @@ def test_os_rotulos_saem_da_pagina_e_nao_de_uma_lista_aqui(a09):
             com_botao += 1
             assert a09._rotulo_do_desenho(nome) == achado.group(1).strip()
         else:
-            # O interruptor das correções juntou estes botões (D-1610-UM-INTERRUPTOR-SO-PARA-AS-
-            # CORRECOES): sem botão na página, o dono do rótulo não inventa um.
             assert f'data-gesto="{nome}"' not in doc
             assert a09._rotulo_do_desenho(nome) == ""
     assert com_botao == 2, "a página tem de manter os botões de parar e de restaurar"
@@ -336,7 +331,6 @@ def test_o_interruptor_da_jogar_liga_o_servico_so_no_ligado(monkeypatch, modo, l
                         lambda *_a, **_k: (ordem.append("plano"), [])[1])
     monkeypatch.setattr(a01_jogar, "_lembrar", lambda *_a, **_k: None)
 
-    # O serviço que acabou de subir responde de cara: o Ligado espera a resposta antes do plano.
     responde = type("Ponte", (), {"daemon_state_full": staticmethod(lambda: {"connected": True})})
     a01_jogar.hefesto(None, {"modo": modo, "texto": "x"}, responde)
 

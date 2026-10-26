@@ -75,7 +75,6 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
 from hefesto_dualsense4unix.integrations.uhid_gamepad import UhidDualSense
 
 
-#: Os dois DualSense (o de `rank=1` estava DESLIGADO na medição das 22h40).
 DS_DESLIGADO = "aa:bb:cc:00:00:01"
 DS_LIGADO = "aa:bb:cc:00:00:02"
 PRO = "aa:bb:cc:00:00:11"
@@ -121,7 +120,7 @@ class Lampada:
                 alvo = leds / f"{self.prefixo}:{cor}" / "brightness"
                 alvo.parent.mkdir()
                 alvo.write_text("0", encoding="ascii")
-        else:  # pragma: no cover - erro de escrita do teste
+        else:  # pragma: no cover
             raise AssertionError(f"espécie de lâmpada desconhecida: {self.especie}")
 
 
@@ -394,7 +393,6 @@ class TestOVpadEntraNaConta:
         assert vpad.mac == f"02:fe:00:00:00:{jogador:02x}"
 
 
-#: `player_indexes()` — o número que a GUI, a CLI e o `state_full` publicam —
 RAZAO_XFAIL = (
     "LUGAR-À-MESA-01: o NOME do vpad é congelado na criação e a colocação na "
     "fila é dinâmica — casá-los exigiria recriar o vpad no meio da sessão. "
@@ -551,7 +549,6 @@ class TestOTesteMorde:
 
     def test_dois_fisicos_no_mesmo_numero_reprovam(self, raiz_leds: Path) -> None:
         mesa = _mesa_de_06_08(raiz_leds, com_vpad=True)
-        # O Pro passa a acender o mesmo número do DualSense presente.
         pro = next(a for a in mesa.aparelhos if a.nome == "Pro Controller")
         assert pro.lampada is not None
         pro.lampada.acender(1)

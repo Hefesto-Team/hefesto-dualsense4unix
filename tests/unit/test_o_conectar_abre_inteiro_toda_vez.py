@@ -185,7 +185,6 @@ def test_a_busca_e_a_varredura_nao_trocam_a_sala(
     assert [t["radio-conectando"] for t in tiques] == [
         ["", "", ""], ["", "", ""], ["", "", ""], ["sim", "", ""], ["", "", ""]]
     assert [t["radio-ocupado"] for t in tiques] == ["", "", "", "sim", ""]
-    # o «Arraste outro para cá» saiu no desenho aprovado de 05/10/2026: a sala não traz o botão
     assert 'class="soltar' not in sala
 
 
@@ -342,7 +341,7 @@ def painel_no_webkit() -> list[dict[str, Any]]:
     def guardou(v: Any, res: Any) -> None:
         try:
             saiu.append(v.evaluate_javascript_finish(res).to_string())
-        except Exception as e:  # pragma: no cover — só quando o roteiro quebra
+        except Exception as e:  # pragma: no cover
             saiu.append(f"ERRO {e}")
             Gtk.main_quit()
             return

@@ -48,10 +48,6 @@ PROVAVEL = "provavel"
 FORA = "fora"
 
 ESPERA_DE_CADA_PERGUNTA_S = 1.5
-#: Por quanto tempo o último valor BOM de uma rede se segura quando a leitura de agora falha: a
-#: placa que cai e volta passa uns segundos sem ponto ativo (``ActiveAccessPoint`` vira ``/``) ou
-#: some do NetworkManager e reaparece com outro nome (``wlan0`` → ``wlx…``) em outro nó. Mais
-#: que isto a linha some de verdade (ausência é resposta). O refresco da tela é de 10 s.
 SEGURA_O_ULTIMO_VALOR_S = 25.0
 
 _NO_DA_INTERFACE_USB = re.compile(r"\d+-[\d.]+:\d+\.\d+")
@@ -184,12 +180,9 @@ def _chave_do_aparelho(
     dispositivo = os.path.basename(real(os.path.join(raiz_net, interface, "device")))
     if re.fullmatch(r"[0-9a-f]{4}:[0-9a-f]{2}:[0-9a-f]{2}\.[0-9a-f]", dispositivo):
         return f"pci:{dispositivo}"
-    # Sem vid:pid nem PCI, o nome é a última identidade — e ele carrega o endereço (``wlx…``):
-    # só o resumo dele serve de chave, e o nome nunca sai.
     return "if:" + hashlib.sha1(interface.encode()).hexdigest()[:8]
 
 
-#: ``{chave: (instante, rede)}`` — a última leitura boa de cada aparelho, e só dentro do módulo.
 _ULTIMAS: dict[str, tuple[float, RedeSemFio]] = {}
 
 
@@ -229,8 +222,6 @@ def ler_as_redes(
     placa que cai do barramento e volta some do NetworkManager ou fica sem ponto ativo por
     instantes, e a linha dela na tela não pode sumir e voltar por isso.
     """
-    # A memória do módulo é do produto (barramento do sistema); um dublê injetado nasce limpo,
-    # para um teste nunca herdar a rede de outro.
     guarda = memoria if memoria is not None else _ULTIMAS if barramento is None else {}
     agora_s = agora()
     vistas: set[str] = set()

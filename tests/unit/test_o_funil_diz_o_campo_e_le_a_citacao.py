@@ -189,7 +189,7 @@ def test_todo_chamador_do_piloto_passa_a_pagina() -> None:
                 if isinstance(no, ast.Call) and isinstance(no.func, ast.Name)
                 and no.func.id == "_json"]
     assert len(chamadas) >= 7, f"o Piloto chama `_json` {len(chamadas)} vezes"
-    argumento = "pagina"  # (noqa-acento) nome do argumento do `_json`
+    argumento = "pagina"  # (noqa-acento)
     sem_pagina = [no.lineno for no in chamadas
                   if not any(k.arg == argumento for k in no.keywords)]
     assert sem_pagina == [], (

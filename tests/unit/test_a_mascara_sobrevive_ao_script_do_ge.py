@@ -26,7 +26,6 @@ _WRAPPER = _RAIZ / "assets" / "hefesto-launch.sh"
 
 FISICO = "0x054C/0x0CE6"
 
-#: Os appids em que o 11-7 liga o `PROTON_STEAMINPUT_FALLBACK` (`proton:1953-1962`).
 _APPIDS_DO_FALLBACK = ("2246340", "1151640", "2322010", "1034860", "330390", "3255380")
 
 
@@ -133,8 +132,10 @@ def test_a_ficha_do_proton_exige_o_barramento_sdl_que_ignora_o_sony() -> None:
 
 
 def test_o_hefesto_nao_compoe_o_auto_xinput() -> None:
-    # D-1610-O-AUTO-XINPUT-FICA-FORA-DA-ALLOWLIST
-    """O padrão do GE fica: nenhuma máscara compõe a env, e ela não está na allowlist."""
+    """O padrão do GE fica: nenhuma máscara compõe a env, e ela não está na allowlist.
+
+    Prova da D-1610-O-AUTO-XINPUT-FICA-FORA-DA-ALLOWLIST.
+    """
     for mascara, backend in _MASCARAS:
         assert "PROTON_SONY_AUTO_XINPUT" not in _env_da_mascara(mascara, backend)
     assert "PROTON_SONY_AUTO_XINPUT" not in le.ENV_ALLOWLIST

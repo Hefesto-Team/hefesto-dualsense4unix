@@ -60,7 +60,6 @@ PLACA = "alsa_input.pci-0000_0c_00.4.analog-stereo"
 MONITOR_SPDIF = "alsa_output.pci-0000_0c_00.4.iec958-stereo.monitor"
 MONITOR_HDMI = "alsa_output.pci-0000_0a_00.1.hdmi-stereo.monitor"
 HEADSET = "alsa_input.usb-Fabricante_Headset_USB-00.mono-fallback"
-#: A fonte que o KERNEL publica para o DualSense no cabo.
 NO_DO_KERNEL = (
     "alsa_input.usb-Sony_Interactive_Entertainment_"
     "DualSense_Wireless_Controller-00.HiFi__Mic__source"

@@ -32,7 +32,6 @@ from hefesto_dualsense4unix.mods.supervisor import Supervisor
 
 TETO = 64 * 1024
 
-#: O filho falador: 512 KiB em linhas numeradas, a linha final e depois fica de pé (ou cai).
 _O_FILHO = textwrap.dedent('''
     import os, sys, time
     modo = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "modo")).read().strip()
@@ -80,12 +79,12 @@ def _instalar_e_ligar(lar: Lugares, curto: Path, modo: str) -> Path:
     manifesto = {
         "id": "falador",
         "nome": "Falador",
-        "versao": "0.1.0",  # (noqa-acento): contrato ASCII
+        "versao": "0.1.0",  # (noqa-acento)
         "api": ">=1,<3",
         "licenca": "MIT",
         "tipos": ["processo"],
         "processo": {"executar": ["python3", "mod.py"]},
-        "permissoes": ["ler:estado"],  # (noqa-acento): contrato ASCII
+        "permissoes": ["ler:estado"],  # (noqa-acento)
     }
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
     (pasta / "mod.py").write_text(_O_FILHO, encoding="utf-8")

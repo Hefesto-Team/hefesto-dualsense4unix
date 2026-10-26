@@ -72,7 +72,7 @@ class ControllerProxy:
 
         daemon: Any = SimpleNamespace(controller=self._ctrl)
         alvos = alvos_conectados_de(daemon)
-        if alvos is None:  # o backend de um controle só: o primário é a mesa
+        if alvos is None:
             primario = getattr(self._ctrl, "primary_uniq", None)
             return self._ctrl.get_transport() if primario and uniq == primario else None
         transportes = transportes_dos_alvos_de(daemon) or {}

@@ -408,7 +408,6 @@ class Arranjo:
         return bytes(pkt)
 
 
-#: ``src/audio.cpp:30-33`` e ``:118-173``. O áudio vem DEPOIS do háptico.
 ARRANJO_DS5DONGLE = Arranjo(
     nome="ds5dongle",
     fonte=(
@@ -427,7 +426,6 @@ ARRANJO_DS5DONGLE = Arranjo(
     quadros_de_audio=2,
 )
 
-#: ``…/settings/DualSenseBtReportBuilder.kt:959-1014``. O MESMO id, o MESMO
 ARRANJO_SENSHI = Arranjo(
     nome="senshi",
     fonte=(
@@ -515,7 +513,6 @@ def controle_de_audio_035(
     )
 
 
-#: segundos contínuos pelo alto-falante do DualSense, por rádio, sem um corte, e
 ARRANJO_035 = Arranjo(
     nome="0x35",
     fonte=(
@@ -543,16 +540,6 @@ ARRANJO_035 = Arranjo(
     controle_conta_quadros=True,
 )
 
-#: O RELATÓRIO COMBINADO — O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01 (03/10/2026).
-#: O ``0x36`` de 398 B com os quatro blocos num quadro só: ``0x11`` (o controle
-#: de áudio, com O contador) em [2], ``0x10`` (o estado, 63 B, o ``common`` de
-#: 47 B nos primeiros) em [11], ``0x12`` (a háptica, 64 B) em [76] e
-#: ``0x13``/``0x16`` (o som, um quadro Opus de 200 B) em [142], CRC nos quatro
-#: últimos. Layout do fork loteran do DS5Dongle (``src/audio.cpp``, a função
-#: que monta o ``REPORT_ID 0x36``), lido no código; NÃO medido nesta bancada: o
-#: ensaio ``scripts/ensaios/o_som_e_a_haptica_num_relatorio.py`` o provou na
-#: bancada em 03/10/2026 (som e háptica juntos; sem o ``0x10`` a háptica
-#: cala), e a :class:`PonteDeSomPorRadio` escreve só ele.
 DEGRAU_COMBINADO = 0x36
 POS_TAG_CONTROLE_COMBINADO = 2
 POS_TAG_ESTADO_COMBINADO = 11
@@ -733,24 +720,16 @@ PREFIXO_SINK_DO_SOM = "hefesto_som_"
 
 HEX_DO_SUFIXO = 6
 
-#: DualSense no cabo::
-#:     alsa_output.usb-…DualSense…analog-surround-40       1109
-#:     alsa_output.usb-…DualSense…-00.2.analog-surround-40 1109
 PRIORIDADE_SESSAO_DO_SOM = 10
 
 NOME_DO_ALTO_FALANTE_DO_CONTROLE = "Alto-falante do Controle"
 
 _TIMEOUT_PACTL_S = 5.0
 
-#: O orçamento do stop do som (O-STOP-DO-SOM-TEM-ORCAMENTO-E-NAO-PERGUNTA-AO-SERVIDOR-MUDO-01):
-#: todo ``pactl`` do stop cabe nele, cada um com ``timeout=min(5 s, restante)``;
-#: vencido, o que sobrou é da varredura de órfãos do próximo início. O
-#: ``TimeoutStopSec`` da unit do daemon tem de caber este, os ``join`` e um estouro do microfone.
 ORCAMENTO_DO_STOP_S = 10.0
 _FIM_DO_ORCAMENTO: contextvars.ContextVar[float | None] = contextvars.ContextVar(
     "fim_do_orcamento_do_stop", default=None
 )
-#: O relógio do orçamento (as réguas o trocam pelo de mentira).
 relogio_do_orcamento: Callable[[], float] = time.monotonic
 
 
@@ -870,7 +849,6 @@ def rodar_pactl(argv: list[str]) -> str | None:
 
 _MODULO_LOOPBACK = "module-loopback"
 
-#: ``(module_id, módulo, argumentos)`` de um módulo carregado no servidor.
 ModuloDeSom = tuple[str, str, str]
 
 
@@ -1020,7 +998,7 @@ class SinkVirtualPipeWire:
         if not _o_servidor_atende(self.runner, self.nome):
             return False
         self._derrubar_o_que_sobrou()
-        if _o_recuo().mudo():  # a pergunta acima estourou o prazo: o load-module não sai atrás dela
+        if _o_recuo().mudo():
             logger.debug("som_pactl_mudo_nao_carrego", sink=self.nome)
             return False
         saida = self.runner(
@@ -1256,7 +1234,6 @@ MS_POR_QUADRO = 10
 
 VOLTA_DA_SEQUENCIA = 16
 
-#: **O `--raw` DO `pw-record` É O QUE FAZ O `stdout` SER SÓ PCM** — 02/10/2026,
 GRAVADORES_DO_MONITOR: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "pw-record",
@@ -1460,8 +1437,6 @@ class ContagemDaBomba:
     pico_haptico: int = 0
     hapticos_no_fio: int = 0
     reports_calados: int = 0
-    #: Quadros em que a frente do endpoint (o som que o jogo manda ao controle) tinha
-    #: sinal e foi somada ao som do alto-falante.
     quadros_com_frente: int = 0
 
     @property
@@ -1567,7 +1542,7 @@ class BombaDeSomPeloRadio:
             return bool(quer)
         try:
             return bool(quer())
-        except Exception:  # pragma: no cover - defensivo
+        except Exception:  # pragma: no cover
             logger.debug("som_radio_oraculo_do_mic_ilegivel", exc_info=True)
             return False
 
@@ -1578,7 +1553,7 @@ class BombaDeSomPeloRadio:
             return bool(leva)
         try:
             return bool(leva())
-        except Exception:  # pragma: no cover - defensivo
+        except Exception:  # pragma: no cover
             logger.debug("som_radio_oraculo_da_haptica_ilegivel", exc_info=True)
             return False
 
@@ -1973,7 +1948,6 @@ def diagnosticar(uniqs: Sequence[str] | None = None) -> Diagnostico:
     )
 
 
-#: **POR QUE UM GANCHO E NÃO UMA LEITURA:** quem PERGUNTA é o `state_full`, que
 _DIZEDOR_DA_FONTE: Callable[[str], str] | None = None
 
 
@@ -2001,7 +1975,7 @@ def fonte_publicada(uniq: str) -> str:
         return ""
     try:
         fonte = dizedor(uniq)
-    except Exception:  # pragma: no cover - defensivo
+    except Exception:  # pragma: no cover
         logger.debug("fonte_do_controle_ilegivel", uniq=uniq, exc_info=True)
         return ""
     return fonte if fonte in (FONTE_MIX, FONTE_SFX) else ""
@@ -2274,18 +2248,8 @@ class OuvidoDaPlaca(OuvidoDoNo):
         self.placa = placa
 
 
-#: A PLACA CHEIA: os quatro canais do sink de 4 canais do DualSense ficam em 100 %.
-#: OS-QUATRO-EM-HARMONIA-01, item 1 (14/10/2026), medido no fio: o nó ALSA aplica o
-#: volume da FRENTE aos quatro canais (`40/40/126/126` → pico 1024 de 16000 nos motores;
-#: `100/100/100/100` → pico 20526). Volume por canal neste nó não vale; cada volume
-#: tem nó próprio: o alto-falante no ``speaker_volume`` do firmware, a háptica no
-#: fluxo do laço do cabo (``haptica_do_cabo``) e na ponte do rádio.
 PISO_DOS_MOTORES = 100
 
-#: O que o sistema tinha em cada placa FÍSICA antes de o Hefesto enchê-la, em por cento por
-#: canal. O ``stop`` devolve (`devolver_as_placas`): sem isso o WirePlumber guarda os 100 % e o
-#: som da máquina sai alto com o daemon parado. O endpoint do produto fica de fora: nasce e
-#: morre com ele.
 _PLACAS_COMO_ESTAVAM: dict[str, list[int]] = {}
 _TRAVA_DAS_PLACAS = threading.Lock()
 
@@ -2522,7 +2486,6 @@ class PonteDeSomPorRadio:
     derrubar a ponte.
     """
 
-    #: O relatório que a ponte escreve, como o diário e o relato o nomeiam.
     RELATORIO = f"0x{DEGRAU_COMBINADO:02x}"
 
     def __init__(
@@ -2820,8 +2783,6 @@ POR_RADIO = "radio"
 TRANSPORTE_CABO = "usb"
 TRANSPORTE_RADIO = "bt"
 
-#: com os quatro DualSense do usuário na mesa. ``daemon/subsystems/alto_falante
-#: acento); ``app/audio_saida`` diz ``"bt"`` (a palavra do ``state_full``). O
 _PALAVRAS_DE_RADIO = frozenset({"bt", "radio", "rádio", "bluetooth"})
 
 
@@ -2841,8 +2802,6 @@ class RotaDoNo:
     por_onde: str = ""
     motivo: str = ""
     fonte: str = FONTE_PADRAO
-    #: ``""`` = sem mix (``sfx``, ou laço recusado); ``None`` = a saída padrão
-    #: não se soube agora, e o mix que está de pé fica como está.
     monitor_do_mix: str | None = ""
 
 

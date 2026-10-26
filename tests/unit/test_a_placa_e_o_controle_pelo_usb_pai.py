@@ -222,8 +222,6 @@ def test_a_subida_para_no_dispositivo_e_nao_na_interface_nem_no_barramento() -> 
     achado_som = dispositivo_usb_pai(som, existe=_existe, real=lambda c: c)
     assert achado_hid == _USB_DO_CABO_A
     assert achado_som == _USB_DO_CABO_A
-    # E o do vizinho é OUTRO nó — se a subida fosse até o barramento (`usb3`),
-    # estes dois seriam iguais e o casamento inteiro seria uma coincidência.
     outro = dispositivo_usb_pai(
         f"{_USB_DO_CABO_B}/3-3:1.0/sound/card2", existe=_existe, real=lambda c: c
     )
@@ -249,7 +247,6 @@ def test_a_porta_acha_o_sysfs_de_cada_no() -> None:
     assert mapa is not None
     assert mapa[_SINK_A].endswith("/3-2/3-2:1.0/sound/card3")
     assert mapa[_SINK_B].endswith("/3-3/3-3:1.0/sound/card2")
-    # O nó que não é DualSense entra igual: quem filtra é o `sinks_dualsense`.
     assert "alsa_output.pci-0000_0c_00.4.iec958-stereo" in mapa
 
 

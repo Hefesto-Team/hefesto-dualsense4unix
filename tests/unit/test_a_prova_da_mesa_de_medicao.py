@@ -100,7 +100,6 @@ class _Servidor:
         self.morrer()
 
 
-#: O que a página escreve em `#desenhos` enquanto o servidor monta os quatro desenhos.
 _MONTANDO = "montando os quatro desenhos"
 
 _DOIS_QUADROS = "() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))"
@@ -583,7 +582,6 @@ def test_a_capa_explica_o_teste_e_ela_sobrevive_aos_tres_tempos(
         pg.close()
 
 
-# O QUE O USUÁRIO PEDIU EM 07/09/2026, com quatro DualSense na mesa e o daemon parado
 def test_os_quatro_aparecem_sem_daemon_lidos_do_kernel() -> None:
     """*"não estamos usando o nosso mapa? pq até agora ele não entendeu qual
     player deveria aparecer, nem qual controle (…) nem o modo de conexão (qual
@@ -596,7 +594,6 @@ def test_os_quatro_aparecem_sem_daemon_lidos_do_kernel() -> None:
     A RÉGUA RODA NA MÁQUINA REAL e pula quando não há DualSense — ela mede o
     que o kernel publica, e um dublê de `sysfs` mediria o dublê.
     """
-    # VIVO existe um segundo nó chamado "DualSense Wireless Controller
     def _e_dualsense(no: pathlib.Path) -> bool:
         texto = (no / "device" / "uevent").read_text(
             encoding="utf-8", errors="replace")

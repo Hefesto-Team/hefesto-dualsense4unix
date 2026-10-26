@@ -68,8 +68,7 @@ from tests.unit.test_haptica_por_radio_01_a_ponte_troca_de_modo import (
 
 NUMERO_DO_JOGADOR = {u: i + 1 for i, u in enumerate(UNIQS)}
 TAXA = 48_000
-JANELA = 960  # 20 ms a 48 kHz
-# Meia escala: o RMS dá 0,5 (a senoide de fundo de escala vale 1).
+JANELA = 960
 MEIA = 11585
 
 
@@ -117,8 +116,6 @@ def mesa(tmp_path: Path, relogio: _Relogio) -> _Mesa:
     return m
 
 
-# Os blocos de 11 bytes, como a referência canônica os empacota.
-
 def _mascara(*zonas: int) -> bytes:
     m = sum(1 << z for z in zonas)
     return bytes([m & 0xFF, m >> 8])
@@ -164,12 +161,10 @@ def _eventos(mesa: _Mesa) -> _Escuta:
     return _Escuta(mesa.daemon.bus, EventTopic.JOGO_GATILHO)
 
 
-# 1. A decodificação do bloco.
-
 @pytest.mark.parametrize(
     ("bloco", "esperado"),
     [
-        (_resistencia(3, 6), ("resistencia", 0.75, 0.3333)),  # (noqa-acento): contrato ASCII
+        (_resistencia(3, 6), ("resistencia", 0.75, 0.3333)),  # (noqa-acento)
         (_arma(2, 5, 4), ("arma", 0.5, 0.2222)),
         (_arco(1, 4, 2), ("arco", 0.5, 0.1111)),
         (_galope(4, 3, 5), ("galope", 1.0, 0.4444)),
@@ -182,7 +177,7 @@ def _eventos(mesa: _Mesa) -> _Escuta:
         (b"\x21\x01", ("desligado", 0.0, 0.0)),
     ],
     ids=[
-        "resistencia",  # (noqa-acento): contrato ASCII
+        "resistencia",  # (noqa-acento)
         "arma", "arco", "galope", "vibracao", "metralhadora",
         "off-0", "off-5", "mascara-vazia", "legado", "curto",
     ],
@@ -192,8 +187,6 @@ def test_o_bloco_vira_modo_forca_e_posicao(
 ) -> None:
     assert gj.decodificar_o_bloco(bloco) == esperado
 
-
-# 2. Cada jogador, com o uniq e o número dele, no cabo e no Bluetooth.
 
 def test_cada_jogador_publica_o_gatilho_dele(mesa: _Mesa) -> None:
     escuta = _eventos(mesa)
@@ -208,7 +201,7 @@ def test_cada_jogador_publica_o_gatilho_dele(mesa: _Mesa) -> None:
     assert [e["uniq"] for e in eventos] == list(UNIQS), "o evento saiu com o endereço de outro"
     assert [e["jogador"] for e in eventos] == [1, 2, 3, 4]
     assert [e["lado"] for e in eventos] == ["esquerdo", "direito", "esquerdo", "direito"]
-    assert {e["modo"] for e in eventos} == {"resistencia"}  # (noqa-acento): contrato ASCII
+    assert {e["modo"] for e in eventos} == {"resistencia"}  # (noqa-acento)
     assert [e["forca"] for e in eventos] == [0.625] * 4
     assert [e["posicao"] for e in eventos] == [round((i + 1) / 9, 4) for i in range(4)]
     assert all(isinstance(e["t"], float) for e in eventos)
@@ -217,7 +210,7 @@ def test_cada_jogador_publica_o_gatilho_dele(mesa: _Mesa) -> None:
 def test_o_gatilho_do_jogo_sai_mesmo_quando_a_replica_ao_fisico_e_descartada(
     mesa: _Mesa,
 ) -> None:
-    mesa.daemon.controller = SimpleNamespace()  # sem a API por-uniq: a réplica cai
+    mesa.daemon.controller = SimpleNamespace()
     escuta = _eventos(mesa)
 
     gp.apply_game_trigger(mesa.daemon, "left", _arma(2, 5, 4), target_uniq=UNIQS[2])
@@ -253,7 +246,7 @@ def test_o_gatilho_que_nunca_ligou_nao_diz_desligado(mesa: _Mesa) -> None:
 def test_o_teto_do_gatilho_segura_a_rajada(mesa: _Mesa, relogio: _Relogio) -> None:
     escuta = _eventos(mesa)
 
-    for forca in range(1, 9):  # 8 blocos em 8 ms
+    for forca in range(1, 9):
         gp.apply_game_trigger(mesa.daemon, "left", _resistencia(3, forca), target_uniq=UNIQS[0])
         relogio.avancar(0.001)
     assert len(escuta.tudo()) == 1, "a rajada passou do teto de 50 por segundo"
@@ -263,8 +256,6 @@ def test_o_teto_do_gatilho_segura_a_rajada(mesa: _Mesa, relogio: _Relogio) -> No
     depois = escuta.tudo()
     assert [e["forca"] for e in depois] == [1.0], "o último valor da rajada não chegou"
 
-
-# 3. O fim: sessão do pad, jogo fechado.
 
 def test_o_fim_da_sessao_desliga_so_o_controle_dele(mesa: _Mesa) -> None:
     for uniq in UNIQS[:2]:
@@ -286,7 +277,7 @@ def test_o_zero_que_o_teto_atrasou_chega_no_fim_da_sessao(
     mesa: _Mesa, relogio: _Relogio
 ) -> None:
     gp.apply_game_trigger(mesa.daemon, "left", _arma(2, 5, 4), target_uniq=UNIQS[0])
-    gp.apply_game_trigger(mesa.daemon, "left", DESLIGADO, target_uniq=UNIQS[0])  # atrasado
+    gp.apply_game_trigger(mesa.daemon, "left", DESLIGADO, target_uniq=UNIQS[0])
     escuta = _eventos(mesa)
 
     gp.end_game_output_session(mesa.daemon, target_uniq=UNIQS[0])
@@ -315,7 +306,7 @@ def test_o_jogo_que_fecha_zera_o_gatilho_e_o_envelope(mesa: _Mesa, relogio: _Rel
     gatilhos, hapticas = _eventos(mesa), _Escuta(mesa.daemon.bus, EventTopic.JOGO_HAPTICA)
     relogio.avancar(0.1)
 
-    mesa.daemon.appid_em_cena = None  # o jogo fechou
+    mesa.daemon.appid_em_cena = None
     _tique(mesa.daemon)
 
     assert [(e["uniq"], e["modo"]) for e in gatilhos.tudo()] == [(UNIQS[0], "desligado")]
@@ -323,8 +314,6 @@ def test_o_jogo_que_fecha_zera_o_gatilho_e_o_envelope(mesa: _Mesa, relogio: _Rel
     _tique(mesa.daemon)
     assert gatilhos.tudo() == [] and hapticas.tudo() == [], "o zero saiu de novo no tique seguinte"
 
-
-# 4. O envelope: o PCM de quatro canais.
 
 def _envelope(relogio: _Relogio) -> tuple[eh.EnvelopeDaHaptica, list[tuple[eh.Nivel, float]]]:
     saiu: list[tuple[eh.Nivel, float]] = []
@@ -337,10 +326,10 @@ def _envelope(relogio: _Relogio) -> tuple[eh.EnvelopeDaHaptica, list[tuple[eh.Ni
 def test_o_envelope_le_os_canais_3_e_4_e_nao_os_1_e_2(relogio: _Relogio) -> None:
     env, saiu = _envelope(relogio)
 
-    env.alimentar(_pcm_de((0, 1), 30000, JANELA * 3))  # só o som da frente
+    env.alimentar(_pcm_de((0, 1), 30000, JANELA * 3))
     assert saiu == [], "a voz do jogo (canais 1-2) virou intensidade"
 
-    env.alimentar(_pcm_de((2, 3), MEIA, JANELA * 3))  # os motores
+    env.alimentar(_pcm_de((2, 3), MEIA, JANELA * 3))
     assert saiu and saiu[0][0] == (0.5, 0.5)
 
 
@@ -375,7 +364,6 @@ def test_o_ruido_abaixo_do_passo_nao_vira_evento(relogio: _Relogio) -> None:
 def test_o_teto_do_envelope_segura_a_rajada(relogio: _Relogio) -> None:
     env, saiu = _envelope(relogio)
 
-    # 100 janelas que alternam o nível, chegando a 5 ms uma da outra (o dobro do tempo real).
     for i in range(100):
         env.alimentar(_pcm_de((2, 3), MEIA if i % 2 == 0 else 3000, JANELA))
         relogio.avancar(0.005)
@@ -390,7 +378,7 @@ def test_o_teto_do_envelope_segura_a_rajada(relogio: _Relogio) -> None:
 def test_a_batida_repete_a_cada_250_ms_enquanto_nao_e_zero(relogio: _Relogio) -> None:
     env, saiu = _envelope(relogio)
 
-    for _ in range(100):  # um segundo de motor constante, em tempo real
+    for _ in range(100):
         env.alimentar(_pcm_de((2, 3), MEIA, JANELA))
         relogio.avancar(0.01)
         env.alimentar(_pcm_de((2, 3), MEIA, JANELA))
@@ -471,8 +459,6 @@ def test_o_fim_da_sessao_zera_o_envelope_dele(mesa: _Mesa, relogio: _Relogio) ->
     assert [e["intensidade"] for e in escuta.tudo()] == [[0.0, 0.0]]
 
 
-# 5. As duas pontas do PCM: o rádio (Bluetooth) e o ouvido da placa (cabo). Um leitor só.
-
 @pytest.fixture
 def bancada(monkeypatch: pytest.MonkeyPatch, mesa: _Mesa) -> Any:
     from hefesto_dualsense4unix.integrations import endpoint_de_haptica as ep
@@ -527,7 +513,6 @@ def test_a_ponte_do_radio_diz_o_envelope_da_fonte_que_ela_le(
 ) -> None:
     from hefesto_dualsense4unix.daemon.ganho_da_haptica import GANHO
 
-    # O controle leva 60 % por cima do PCM que a ponte lê: o envelope diz o mesmo.
     monkeypatch.setattr(GANHO, "fator", lambda uniq: 0.6 if uniq == UNIQS[0] else 1.0)
     escuta = _Escuta(mesa.daemon.bus, EventTopic.JOGO_HAPTICA)
     bancada.tocando[f"endpoint::{UNIQS[0]}"] = True
@@ -537,7 +522,7 @@ def test_a_ponte_do_radio_diz_o_envelope_da_fonte_que_ela_le(
     assert ponte.fonte_de_haptica is not None
     assert escuta.tudo() == []
 
-    assert ponte.fonte_de_haptica(1024)  # a ponte lê a fonte dela, e o envelope espia o bloco
+    assert ponte.fonte_de_haptica(1024)
 
     eventos = escuta.tudo()
     assert [(e["uniq"], e["jogador"], e["intensidade"]) for e in eventos] == [
@@ -557,7 +542,6 @@ def test_o_ouvido_do_cabo_diz_o_envelope_sem_segundo_gravador(
     ouvido._fio.join(timeout=3)
 
     assert isinstance(ouvido, afb.OuvidoDaPlaca), "o ouvido do cabo deixou de ser o do produto"
-    # A fonte de mentira seca depois de dois blocos: o zero sai sem tique nenhum.
     assert [e["intensidade"] for e in escuta.tudo()] == [[0.5, 0.5], [0.0, 0.0]]
     assert len(bancada.pedidos) == 1, "o envelope abriu um segundo gravador na placa"
     assert bancada.pedidos[0]["no"] == "alsa_output.placa-de-mentira"
@@ -573,8 +557,6 @@ def test_o_ouvido_dublado_entra_como_veio() -> None:
 
     assert type(ouvido) is _Dubla
 
-
-# 6. A porta: a permissão e a entrega.
 
 def test_as_permissoes_novas_existem_e_cada_uma_entrega_o_seu() -> None:
     assert permissao_valida("ler:jogo.gatilho") and permissao_valida("ler:jogo.haptica")
@@ -690,8 +672,6 @@ def test_a_tabela_do_gatilho_nasce_uma_so_com_dois_controles_juntos(mesa: _Mesa)
     assert sorted(e["uniq"] for e in escuta.tudo()) == sorted(UNIQS[:2])
 
 
-# 7. A conferência: os dois transportes dizem o mesmo, o zero não depende do tique do P1.
-
 def test_no_radio_o_envelope_leva_o_ganho_e_o_portao_que_o_controle_leva(
     mesa: _Mesa, relogio: _Relogio
 ) -> None:
@@ -707,7 +687,7 @@ def test_no_radio_o_envelope_leva_o_ganho_e_o_portao_que_o_controle_leva(
         "no rádio o envelope ignorou o ganho que o controle leva (o cabo já o traz da placa)"
     )
 
-    estado["vai"] = False  # o jogo largou este controle, ou a háptica dele foi a zero
+    estado["vai"] = False
     relogio.avancar(0.05)
     fonte(0)
     assert [e["intensidade"] for e in escuta.tudo()] == [[0.0, 0.0]], (
@@ -739,7 +719,7 @@ def test_a_fonte_que_seca_zera_sem_esperar_o_tique(mesa: _Mesa, relogio: _Relogi
     fonte = eh.espiar_a_haptica(mesa.daemon, UNIQS[2], lambda _n: next(entregues, b""), taxa=TAXA)
 
     assert fonte(0)
-    relogio.avancar(0.001)  # dentro do teto: o zero não espera por ele
+    relogio.avancar(0.001)
     assert fonte(0) == b""
 
     assert [e["intensidade"] for e in escuta.tudo()] == [[0.5, 0.5], [0.0, 0.0]]
@@ -753,9 +733,9 @@ def test_o_gatilho_que_volta_ao_dito_descarta_o_atrasado(
 
     gp.apply_game_trigger(mesa.daemon, "left", a, target_uniq=UNIQS[3])
     relogio.avancar(0.005)
-    gp.apply_game_trigger(mesa.daemon, "left", b, target_uniq=UNIQS[3])  # o teto atrasa
+    gp.apply_game_trigger(mesa.daemon, "left", b, target_uniq=UNIQS[3])
     relogio.avancar(0.005)
-    gp.apply_game_trigger(mesa.daemon, "left", a, target_uniq=UNIQS[3])  # e o jogo volta
+    gp.apply_game_trigger(mesa.daemon, "left", a, target_uniq=UNIQS[3])
     relogio.avancar(0.05)
     gj.bater_o_gatilho(mesa.daemon)
 

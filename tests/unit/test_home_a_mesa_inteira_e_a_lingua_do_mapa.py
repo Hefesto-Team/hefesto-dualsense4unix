@@ -212,7 +212,6 @@ class TestAContaDaMesaContaQuemEstaNaMesa:
         )
 
 
-#: A língua do mapa é «cabo» e «rádio», e não «bt».
 _LINGUA_DO_MAPA = ("cabo", "rádio")
 
 

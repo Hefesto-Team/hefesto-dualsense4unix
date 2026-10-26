@@ -58,7 +58,6 @@ from hefesto_dualsense4unix.interface import onde
 from pacotes import Contexto
 from pacotes import a01_jogar as aba
 
-#: O `--plastico` escrito à mão, na forma que a régua nova procura. Ele é a
 PLASTICO_CRAVADO = re.compile(r"--plastico\s*:\s*#[0-9a-fA-F]{3,8}")
 
 INICIO_DA_FILEIRA = '<div class="pecas" data-lista="cartoes">'

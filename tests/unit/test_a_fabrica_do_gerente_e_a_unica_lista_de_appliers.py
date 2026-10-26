@@ -100,7 +100,6 @@ _PACOTE = "hefesto_dualsense4unix"
 
 _NOMES_DE_APPLIER = frozenset(parametro for parametro, _ in APPLIERS_DO_DAEMON)
 
-#: fingindo ser decisão. Mesmo número do `portao_a_casa_sabe_e_o_produto_nao_faz`.
 _RAZAO_MINIMA = 80
 
 _DATA = re.compile(r"\b\d{2}/\d{2}/\d{4}\b")

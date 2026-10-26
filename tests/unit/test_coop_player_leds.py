@@ -41,7 +41,6 @@ class _FakeReader:
     """Reader evdev falso (mesmo contrato do usado em test_subsystem_coop)."""
 
     grab_ok: bool = True
-    #: O `uinput_gamepad` lê a tabela do leitor ao ser importado; o falso a herda do real.
     BUTTON_MAP: ClassVar[Any] = EvdevReader.BUTTON_MAP
 
     def __init__(self, device_path: Any = None, target_uniq: str | None = None) -> None:
@@ -120,7 +119,6 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "hefesto_dualsense4unix.core.evdev_reader.EvdevReader", _FakeReader
     )
-    # Nunca criar vpad REAL (uhid registraria um DualSense Edge no kernel da
     monkeypatch.setattr(
         "hefesto_dualsense4unix.integrations.virtual_pad.make_virtual_pad",
         lambda flavor, *, rumble_sink=None, player=1, allow_uhid=True, **_sinks: (
@@ -131,7 +129,6 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> None:
         "hefesto_dualsense4unix.daemon.launch_env.materialize_launch_env",
         lambda daemon: None,
     )
-    # há um DualSense de verdade plugado). Cada teste sobrepõe com nós falsos.
     monkeypatch.setattr(
         "hefesto_dualsense4unix.core.sysfs_leds.discover", lambda: {}
     )
@@ -260,7 +257,6 @@ def test_jogador_desconectado_tem_o_por_uniq_dele_restaurado(
 
     assert MAC2 not in mgr._players
     assert nodes[MAC2].patterns[-1] == OVERRIDE_BITS
-    # CO-OP... deixa o primário preso em P1"): um único DualSense com o Pro
     assert nodes[MAC1].patterns[-1] == DEFAULT_BITS
 
 

@@ -58,7 +58,7 @@ try:
         steam_game_running,
         steam_running,
     )
-except ImportError:  # pragma: no cover - executado como script avulso pelo install/uninstall
+except ImportError:  # pragma: no cover
     from steam_launch_options import (  # type: ignore[no-redef]
         add_appid_to_steam_input_allowlist,
         parse_steam_input_allowlist,
@@ -104,7 +104,6 @@ RC_EXTRACAO_FALHOU = 5
 RC_CONF_ILEGIVEL = 6
 RC_STEAM_NA_CAIXA = 7
 
-#: A EXCEÇÃO NOMEADA ao pino — gêmea do `jogos_sem_wrapper.txt` (mesmo formato:
 FORA_DO_PINO_RELPATH = "hefesto-dualsense4unix/jogos_fora_do_pino.txt"
 
 _FORA_DO_PINO_HEADER = """\
@@ -319,7 +318,7 @@ def baixar_a_release(url: str, dest: Path) -> None:
             with dest.open("ab" if retomou else "wb") as saida:
                 shutil.copyfileobj(resposta, saida, 1024 * 1024)
     except urllib.error.HTTPError as exc:
-        if exc.code == 416 and parado:  # já tinha tudo: o sha256 diz se é o certo
+        if exc.code == 416 and parado:
             return
         raise OSError(f"download falhou (HTTP {exc.code}) baixando {url}") from exc
     except (urllib.error.URLError, TimeoutError) as exc:
@@ -956,10 +955,6 @@ def lock_games_to_pinned_proton(
         return result
 
 
-#: que isto está preso, e esperar para sempre prenderia junto quem espera: o
-#: vigia é um oneshot sem prazo (o `.timer` e o `.path` não o disparam de novo
-#: enquanto ele não sai, e com ele param o Steam Input e a sentinela), e o
-#: install ficaria parado no 11c com a Steam fechada.
 _PACIENCIA_DA_TRAVA_S = 30.0
 
 
@@ -975,7 +970,7 @@ def _uma_trava_por_vez(state: Path, *, ativa: bool) -> Iterator[None]:
         return
     try:
         import fcntl
-    except ImportError:  # pragma: no cover - só Linux roda isto
+    except ImportError:  # pragma: no cover
         yield
         return
     alvo = state.with_name(state.name + ".trava")
@@ -1578,8 +1573,6 @@ def jogos_sem_entrada_nova(
     return nativos
 
 
-# desinstalar as outras versoes nao usadas». (noqa-acento: citação literal)
-
 _NOME_INTERNO_RE = re.compile(r'"(?P<nome>(?:\\.|[^"\\])+)"[^\n{]*\n\s*\{')
 
 
@@ -1660,7 +1653,7 @@ def pino_que_vale(conf: dict[str, str], compat_dir: Path | None = None) -> str:
                 continue
             melhor, ordem_do_melhor = pasta.name, ordem
         return melhor
-    except Exception:  # leitura que falha vale «sem candidata»: fica o pino do conf
+    except Exception:
         return nome
 
 
@@ -1744,14 +1737,11 @@ def versoes_que_sobram(
     except (OSError, ValueError, KeyError):
         return []
     usadas = {nome_do_pino, *mapa.values()}
-    # Steam não é o único lançador que aponta para uma pasta daqui: o Lutris e o Heroic também.
-    # Na dúvida (arquivo deles que existe e não se lê) nada sai: uma versão a mais custa disco,
-    # uma a menos custa um jogo de outro lançador.
     try:
         from hefesto_dualsense4unix.integrations.censo_dos_lancadores import proton_em_uso
 
         dos_outros = proton_em_uso(home)
-    except Exception:  # leitura que falha vale «não sei»: a pasta fica
+    except Exception:
         return []
     if dos_outros.duvida:
         return []
@@ -1857,7 +1847,6 @@ def proton_pin_report(
     name = conf["name"]
     present = pinned_proton_installed(name, compat_dir)
     manifesto = _read_manifest_sha256(name, compat_dir)
-    # A versão instalada à mão (``instalada``) não tem manifesto do Hefesto: passou na ficha.
     manifest_ok = manifesto == conf["sha256"].lower() or (
         bool(conf.get("instalada")) and manifesto is None)
     mapping = extract_compat_tool_mapping(config_vdf_text)
@@ -2308,5 +2297,5 @@ def main(argv: list[str] | None = None) -> int:
         return RC_EXTRACAO_FALHOU
 
 
-if __name__ == "__main__":  # pragma: no cover - entrypoint do install/uninstall
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(main())

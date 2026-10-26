@@ -36,7 +36,6 @@ from hefesto_dualsense4unix.integrations.ar_do_adaptador import (
     nivel_dos_canais,
 )
 
-#: O dono dos canais que ninguém reivindica.
 RUIDO = "ruido"
 NOME_DO_RUIDO = "ruído"
 
@@ -44,18 +43,13 @@ BOM = "bom"
 PERDIDO = "perdido"
 OCUPADO = "ocupado"
 LIVRE = "livre"
-#: As duas células de um canal LE que ninguém mede sem root, e as do canal de anúncio.
 NAO_MEDIDO = "nao_medido"
 ANUNCIO = "anuncio"
 
-#: Os canais LE (por frequência: o ``k`` de 2402 + 2k MHz) e os três de anúncio, em 2402, 2426
-#: e 2480 MHz (os índices 37, 38 e 39 da especificação).
 CANAIS_LE = 40
 CANAIS_DE_ANUNCIO_LE = frozenset({0, 12, 39})
-#: O nível do selo que só diz o sinal medido: nem bom nem ruim, o número.
 SINAL = "sinal"
 
-#: O selo em palavra, pelo MESMO piso do «N/79» do adaptador (``nivel_dos_canais``).
 PALAVRA_DO_NIVEL = {NIVEL_LISO: "boa", NIVEL_ENGASGA: "sofrendo"}
 PALAVRA_DO_MEIO = "apertada"
 NIVEL_DA_PALAVRA = {"boa": "boa", "apertada": "apertada", "sofrendo": "sofrendo"}
@@ -216,7 +210,6 @@ def _linha_do_aparelho(
     outros = tuple(i.id for i in irmaos if i.id != ap.id)
     if ap.le:
         selo = selo_do_sinal(ap.rssi)
-        # sem o número, o ponto já diz a frase pela faixa; a dica só a leva ao lado do sinal
         return linha(celulas=_celulas_do_le(), sem_faixa=DIVIDE_O_RADIO, selo=selo, briga=outros,
                      dica=DIVIDE_O_RADIO if selo is not None else "")
     perdidos = ap.evitados if ap.evitados is not None else adaptador.evitados

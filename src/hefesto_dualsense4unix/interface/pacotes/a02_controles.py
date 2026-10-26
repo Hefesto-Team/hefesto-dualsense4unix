@@ -138,24 +138,6 @@ from . import (
     registrar,
 )
 
-# provou —, e a interface nova alcançava **duas** (`rotulo_lightbar`, pela aba
-#   `rotulo_lightbar`    cor de fonte DESCONHECIDA não é `#000000`.
-#   `touchpad_do_inputs` os TRÊS estados do touchpad numa função só, e a
-#   `acao_mic`           sem leitura de `audio` o botão do 🎙 CHUTAVA:
-# O IMPORT É POR SÍMBOLO, e isso importa para o `portao_a_casa_sabe_e_o_produto_
-
-# medição, não por gosto: o `portao_a_casa_sabe_e_o_produto_nao_faz` PODA os
-
-# ---------------------------------------------------------------------------
-#     dados = touchpad_do_inputs(inputs)
-# aqui era que `touchpad_do_inputs`.
-# controles do usuário na mesa (um `usb`, um `bt`), 60 leituras de `daemon.state_full`
-#     touchpad presente ......... 36 amostras
-#     `inputs` SEM a chave ...... 24 (o aquecimento: o reader do touchpad nasce
-#     `inputs` não-dict ......... 60 (o controle que não é `is_primary`)
-# `touchpad_do_inputs` é o dono de `fx`/`fy` — a POSIÇÃO do dedo, normalizada
-# "2 TOQUES" NÃO SE INVENTA AQUI: `texto_toques` conta DEDOS e o `state_full`
-
 
 def dedos_do_controle(
     inputs: Any,
@@ -193,18 +175,11 @@ def dedos_do_controle(
     return (texto_toques(len(dedos)), tuple(saida))
 
 
-# PARADO (`daemon.state_full`, 03/09/2026):
-# `inputs` (o daemon só publica leitura para o `is_primary`), e mostrava os
-#   `ALL_BUTTONS` + `L2_R2_THRESHOLD`  os 16 nomes e o limiar de L2/R2, do
-#   `_markup_xy`                       os dois eixos do analógico
-# O `_markup_xy` COMEÇA COM UNDERSCORE E MESMO ASSIM SE IMPORTA: ele é função de
-
-
 def meias_da_barra(estilo: Any) -> tuple[str, str, str]:
     """`(negativa%, positiva%, cor)` de uma barrinha de eixo."""
     if isinstance(estilo, str):
         estilo = dict(
-            p.split(":", 1) for p in estilo.split(";") if ":" in p  # (noqa-acento) CSS
+            p.split(":", 1) for p in estilo.split(";") if ":" in p
         )
     largura = str(estilo.get("width", "0%")).strip().removesuffix("%")
     esquerda = str(estilo.get("left", "50%")).strip().removesuffix("%")
@@ -223,12 +198,6 @@ def texto_do_xy(x: Any, y: Any) -> str:
     return _markup_xy(int(x), int(y)).replace("\n", "<br>")
 
 
-# A QUEIXA, com dois DualSense na mesa (um no cabo, um no rádio).
-# `touchpad_do_inputs` devolve `(tocando, fx, fy)` em 0..1, e
-# para ACENDER (`data-hef-alvo="classe"`) e os dois `<span class="p">` dos
-
-#: DualSense do usuário (`ABS_X/ABS_Y/ABS_RX/ABS_RY min=0 max=255`), o mesmo 255 que
-#: os gatilhos já escrevem em `leitura_viva`.
 CURSO_DO_ANALOGICO = 255
 REPOUSO_DO_ANALOGICO = 128
 
@@ -238,7 +207,6 @@ def pos_do_analogico(v: Any) -> float:
     return round(int(v) / CURSO_DO_ANALOGICO * 100, 1)
 
 
-#: DualSense declara `ABS_MT_SLOT min=0 max=1` — medido nos quatro controles
 MAX_DEDOS: int = 2
 
 CAMPOS_DA_POSICAO: dict[str, str] = {
@@ -288,12 +256,7 @@ def posicoes_do_controle(
     }
 
 
-#: O ANEL DO JOGO, um por analógico — O-CIRCULO-DO-ANALOGICO-MOSTRA-O-QUE-O-JOGO-VE-01
-#: (29/09/2026). Com a Inclinação ou a Mira num analógico, o jogo recebe outra coisa
-#: que a mão; o `state_full` diz o que o pad mandou (`no_jogo`). Os endereços ficam
-#: fora do `CAMPOS_DA_POSICAO`: os quatro pontinhos da mão não mudam de sentido.
 CAMPOS_DO_JOGO: dict[str, str] = {"ana-e": "pos-ana-e-jogo", "ana-d": "pos-ana-d-jogo"}
-#: O anel acende pela classe `on` (alvo `classe`, como o `touch-ponto`).
 ACENDE_O_JOGO: dict[str, str] = {"ana-e": "ana-e-jogo", "ana-d": "ana-d-jogo"}
 DICA_DO_PONTO_DO_JOGO = "O que o jogo recebe."
 _O_ANALOGICO_DO_ANEL: dict[str, tuple[str, tuple[str, str]]] = {
@@ -379,13 +342,8 @@ def leitura_viva(
     return campos
 
 
-#   `portao_a_casa_sabe_e_o_produto_nao_faz` fecha VERDE (42 passed) — medido
-# A CHAVE PASSA A SER O SLUG, e não o nome. `mesa_viva.mesa_do_estado` já põe
-# serve de peneira: um `url(#hachura-sem-hex)` sai como `""`.
-
 BORDA_SEM_COR = "var(--border-forte)"
 
-#: E ELE NÃO PODE SER AUSÊNCIA: `.ctl{border:2px solid var(--plastico)}`, e uma
 PISO_DA_FOLHA = ".ctl[data-controle],.fita .chip[for]{--plastico:var(--border-forte)}"
 
 
@@ -477,13 +435,6 @@ def folha_do_plastico(mesa: list[dict[str, Any]]) -> str:
 ROTULO_DO_CLIQUE = {"l": "L3", "r": "R3"}
 CLICADO = "[%s]"
 
-# `rotulo_lightbar` devolve `(rótulo, base_do_accent)`, e O DISCRIMINADOR É O
-#   (sem rótulo) — conhecida e acesa   a cor   #0000FF         #0000FF
-# NA DA STEAM A BASE É O `rgb` CRU (`controller_card.rotulo_lightbar`), e com a
-# E O ÚLTIMO É UM FATO, NÃO UMA AUSÊNCIA: `lightbar_on` falso com fonte NOSSA é
-
-#: Das quatro frases que `rotulo_lightbar` devolve, só uma é constante exportada
-#: que a LEI 0 proíbe, e uma cópia MUDA: no dia em que o motor trocasse a frase,
 ROTULO_DA_LUZ_APAGADA = rotulo_lightbar(
     {"lightbar_rgb": [0, 0, 255], "lightbar_source": "sysfs", "lightbar_on": False}, {}
 )[0]
@@ -511,9 +462,6 @@ def _cor_da_barra(rotulo: str | None, base: tuple[int, ...] | None) -> str:
     hex_ = luz_hex(rotulo, base)
     return hex_ if hex_.startswith("#") else ""
 
-
-# frase não — e é por isso que a frase mora no `title`, que não paga pixel.
-# que `rotulo_lightbar` trocar uma frase, a tabela abaixo deixa de casar e a
 
 ROTULO_DA_LUZ_SEGURADA = rotulo_lightbar({"lightbar_disputada": True}, {})[0]
 
@@ -592,7 +540,6 @@ def _bloco_do_speaker(entry: Any) -> dict[str, Any] | None:
     return bloco if isinstance(bloco, dict) else None
 
 
-#: `core/ds_output_report.py:106-107`. Digitar `2` e `3` aqui seria a régua que
 NOME_DO_BOTAO_DA_ROTA: dict[int, str] = {
     ROTA_DO_CANAL[CANAL_SONS_DO_JOGO]: "jogo",
     ROTA_DO_CANAL[CANAL_TODO_O_PC]: "pc",
@@ -677,7 +624,6 @@ def _ler_a_camada_1(entradas: tuple[tuple[str, int | None], ...],
     return lido
 
 
-#: DualSense não publica placa ALSA nenhuma (medido em 15/08/2026 — a placa
 _SONO: dict[str, str] = {}
 
 _REGRA_DO_SONO: list[bool | None] = [None]
@@ -884,7 +830,7 @@ def _seguir_as_ondas(alvos: dict[str, str]) -> None:
         from hefesto_dualsense4unix.integrations import ondas_de_som
 
         ondas_de_som.o_de_sempre().seguir(alvos)
-    except Exception:  # pragma: no cover - defensivo
+    except Exception:  # pragma: no cover
         return
 
 
@@ -896,7 +842,7 @@ def alturas_do_no(no: str) -> tuple[int, ...] | None:
         from hefesto_dualsense4unix.integrations import ondas_de_som
 
         return ondas_de_som.o_de_sempre().alturas(no)
-    except Exception:  # pragma: no cover - defensivo
+    except Exception:  # pragma: no cover
         return None
 
 
@@ -912,7 +858,7 @@ def campos_da_onda(lado: str, alturas: tuple[int, ...] | None,
         alturas = tuple([_piso_da_onda()] * len(alturas))
     piso = _piso_da_onda()
     fora: dict[str, Any] = {
-        f"{lado}-onda-lida": "sim" if alturas else "nao"}  # (noqa-acento) valor
+        f"{lado}-onda-lida": "sim" if alturas else "nao"}  # (noqa-acento)
     for i in range(ondas_barras()):
         fora[f"{lado}-onda-{i}"] = (
             alturas[i] if alturas and i < len(alturas) else piso
@@ -926,7 +872,7 @@ def _piso_da_onda() -> int:
         from hefesto_dualsense4unix.integrations import ondas_de_som
 
         return int(ondas_de_som.PISO_PCT)
-    except Exception:  # pragma: no cover - defensivo
+    except Exception:  # pragma: no cover
         return 16
 
 
@@ -936,7 +882,7 @@ def ondas_barras() -> int:
         from hefesto_dualsense4unix.integrations import ondas_de_som
 
         return int(ondas_de_som.BARRAS)
-    except Exception:  # pragma: no cover - defensivo
+    except Exception:  # pragma: no cover
         return 14
 
 
@@ -950,7 +896,6 @@ def aceso_da_rota(uniq: str, entry: Any) -> str:
 
 ROTA_NADA_NO_CONTROLE = "nada"
 
-#: É o `"pc"` de sempre — a rota 3
 ROTA_TUDO_NO_CONTROLE = "pc"
 
 BOTOES_DA_FILEIRA_DO_SOM = ("jogo", ROTA_NADA_NO_CONTROLE, ROTA_TUDO_NO_CONTROLE)
@@ -988,9 +933,6 @@ def junto_na_tela(uniq: str, entry: Any) -> str:
         return ""
     return "sim" if fonte_do_controle(entry) == "mix" else ""
 
-
-# AS QUATRO FACES, e cada uma tem chave própria no `state_full.audio` desde a
-# com o canal trocado por fora (`pactl set-default-source`), o `state_full`
 
 def _faces_do_microfone(a: dict[str, Any]) -> tuple[bool, bool]:
     """`(alguma_diz_calado, alguma_nao_foi_lida)` das quatro faces.
@@ -1041,14 +983,9 @@ def selo_composto(a: dict[str, Any]) -> str:
     return str(mesa_viva.selo_do_mic(False, True))
 
 
-# ---------------------------------------------------------------------------
-# levantar, e é do motor: `acao_mic` e `acao_speaker_mudo`
-
-
 DICA_ALTO_SEM_POSSE = ("O ♪ só funciona depois de o volume ser ajustado uma "
                        "vez. Arraste o volume ao lado.")
 
-#: `portao_a_casa_sabe_e_o_produto_nao_faz` já reprovou exatamente isso em
 NADA_A_DIZER = '<i class="nada"></i>'
 
 
@@ -1081,9 +1018,6 @@ def porques_do_som(entry: Any) -> dict[str, str]:
         "mic-porque": "" if do_mic.sensivel else str(do_mic.dica),
         "alto-porque": "" if do_alto.sensivel else DICA_ALTO_SEM_POSSE,
     }
-
-
-# sob demanda da RADIO-AFOGADO-01 não o lê parado): era um alarme aceso em todo
 
 
 def selo_do_som(saida_muda: bool | None) -> str:
@@ -1143,9 +1077,6 @@ def texto_da_bateria(pct: int | None) -> str:
         {} if pct is None else {"battery_pct": pct})[1]
 
 
-#     "icone mas no radio ele pode tá carregando tambem."  # (noqa-acento) citação literal
-#
-# coisa do cabo e o rádio fosse sempre descarregar. **Não é**: um DualSense
 _NA_TELA_POR_CARGA: dict[str, str] = {
     "descarregando": "",
     "carregando": "Carregando",
@@ -1324,54 +1255,32 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     nomes = nomes_de_quem_joga()
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
-        # `is_primary` traz `inputs`; o outro vem `None`
         tem_leitor = isinstance(c.get("inputs"), dict)
         e = c.get("inputs") or {}
         a = c.get("audio") or {}
         mic_volume = volume_do_microfone(a)
         estado = mesa_viva.estado_do_card(c, mic_vol=mic_volume)
-        # (`controller_card.py:1121`). Medido na mesa
         sp_lido = speaker_do_entry(c)
         alto_em_padrao = volume_em_padrao(ctx, uniq, sp_lido)
-        # `# type: ignore[arg-type]` na chamada). Sem esta guarda, a primeira
-        # `rotulo_lightbar` já trata.
+        # type: ignore[arg-type]
         rotulo_da_luz, base_da_luz = rotulo_lightbar(c, getattr(ctx, "state", None) or {})
         casa = next((m for m in ctx.mesa if str(m.get("uniq") or "") == uniq), {})
 
-        # E TEM UMA QUARTA, QUE É "NÃO SEI" (MIC-DA-MESA-ELEICAO-01). O byte de
-        # morre, o novo nasce sem leitura e a chave `audio` SOME do `state_full`.
-        # o selo sem montar um `state_full` inteiro.
         pct = c.get("battery_pct")
-        # O clique dos analógicos (L3, R3) é botão, e o botão é do dono.
         apertados = estado["glifos_on"]
-        # dentro de `touchpad_do_inputs`, e a razão de a recusa anterior ter
         _, dedos = dedos_do_controle(e)
         toque_ponto, onde_o_dedo = dedos[0]
         toque_ponto2, onde_o_dedo2 = dedos[1]
         posicoes = posicoes_do_controle(e, tem_leitor, onde_o_dedo, onde_o_dedo2)
-        # `identidade_de`, e a tradução do transporte é a MESMA que a mesa usa.
-        # Esta linha era `VIA_DO_TRANSPORTE.get(…)`, a SIGLA DE MÁQUINA, e o
-        # transporte DUAS VEZES no mesmo cabeçalho. Hoje `identidade_de` passou a
-        #   transport='bt'   identidade_de='rádio'   via_na_tela='BT'
-        # O comentário do bloco do `peca` já nomeava o defeito.
-        # A PERGUNTA É AO PRÓPRIO `identidade_de`, e não a uma palavra escrita:
         via_na_tela = palavra_do_transporte(c.get("transport"))
         nome_na_tela = identidade_de(c, ctx.mesa)
         ultimo_degrau = identidade_de({"transport": c.get("transport")})
         cards[uniq] = {
-            # `texto_da_bateria`, que PERGUNTA à GTK as duas frases.
             "bateria": texto_da_bateria(pct),
-            # `data-hef-alvo="largura"` monta `width: <t>%`, e um "95%" ali
             "bateria-barra": estado["bat"],
-            # Não é perda de dado: os três continuam a UM `.get` do `state_full`
-            #
-            # uhid para saída Xbox (`home_actions.mascara_viva:914`). E `uinput`
-            # é AMBÍGUO de propósito — Xbox normal e DualSense degradado usam o
             "mascara": casa.get("mascara") or mesa_viva.NOME_DA_MASCARA.get(
                 mascara_viva({"gamepad_emulation": {"backend": c.get("vpad_backend")}})
                 or "", "—"),
-            # base do accent. As cinco situações e o que cada uma mostra estão
-            # quatro estados que dividiam um `—` só. Ver `luz_palavra`, e a
             "luz-hex": luz_palavra(rotulo_da_luz, base_da_luz),
             "mic-selo": selo_composto(a),
             "mic-retorno": (mesa_viva.BOTAO_MIC_RETORNO
@@ -1397,8 +1306,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                     mesa_viva.frase_de_quem_te_ouve(a.get("ouvintes_do_mic"))
                     or NADA_A_DIZER
                 ),
-                # 06/09/2026. O dado chegou à tela na BATERIA-PARADA-01 (o
-                # `battery_state` viaja no mesmo dicionário do `battery_pct`,
                 "bateria-carga": carga_na_tela(c.get("battery_state")),
                 "touch-ponto": toque_ponto,
                 "touch-ponto-2": toque_ponto2,
@@ -1413,7 +1320,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                     for campo, valor in ((CAMPOS_DO_JOGO[alvo], texto_da_posicao(xy)),
                                          (ACENDE_O_JOGO[alvo], "sim" if xy else ""))
                 }),
-                # class="mudo" data-campo="alto-estado" hidden>` que o piloto
                 "alto-estado": (
                     texto_volume(*sp_lido) if sp_lido is not None
                     else mesa_viva.SEM_LEITOR
@@ -1435,7 +1341,7 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 **campos_da_onda(LADO_MIC, alturas_do_no(no_do_microfone(c))),
                 **_so_se_a_pagina_tiver({
                     campo_da_onda_calada(LADO_MIC): (
-                        "sim" if _faces_do_microfone(a)[0] else "nao"  # (noqa-acento) valor
+                        "sim" if _faces_do_microfone(a)[0] else "nao"  # (noqa-acento)
                     ),
                 }),
                 **campos_da_onda(
@@ -1450,42 +1356,23 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                 },
                 "giro-dica": dica_do_giro(c, _nativo(ctx), _na_navegacao(ctx)),
                 "mira-fora": mira_fora(_nativo(ctx)),
-                # OS CHIPS DO TOQUE E DA INCLINAÇÃO — 29/09/2026, NO-MODO-XBOX-
                 **_so_se_a_pagina_tiver({
                     "mira-lado": lado_aceso(c),
                     "inclinacao-parada": _pausa_da_inclinacao(c),
                 }),
-                # dizia `#0000FF` (a cor viva do P1) e o retângulo logo abaixo
-                # return 1 }`, e o CSSOM NORMALIZA na atribuição (`#0000FF`
                 "luz-cor": _cor_da_barra(rotulo_da_luz, base_da_luz),
-                # (`mesa_viva.mesa_do_estado` → `daemon.subsystems.identity`), e
-                # não uma leitura do aparelho. O `state_full` publica o
-                # `player_slot` e não os `player_leds`; um perfil que escreva as
                 "lampadas": luzinhas(int(casa.get("jogador") or 0) or 1),
-                # O NÚMERO E QUEM JOGA, do mesmo dono das lâmpadas (`casa["jogador"]`, lido uma
-                # vez): sem número vivo ele não sai (o `or 1` de cima inventaria um P1).
                 **_so_se_a_pagina_tiver(_quem_joga(nomes, uniq, casa.get("jogador"))),
-                # O NOME É DE `identidade_de`, que é o dono da ordem das quatro
                 "peca": "" if nome_na_tela == ultimo_degrau else nome_na_tela,
                 "via": via_na_tela,
-                # dos quatro degraus da Vibração, e é ela que faz "ligar um
-                # [09].** Era `rota_na_tela(c)`, o byte e mais nada, e foi
                 "alto-rota": aceso_da_fileira(uniq, c),
                 **_so_se_a_pagina_tiver({"alto-junto": junto_na_tela(uniq, c)}),
-                # O `getattr` É O MESMO DO `rotulo_lightbar` VINTE LINHAS ACIMA,
                 "giro-no-jogo": texto_motion(
                     c, getattr(ctx, "state", None) or {}) or "",
-                # endereço até 03/09/2026. Ver `leitura_viva`, que traz a mesa
                 **leitura_viva(c, estado),
-                # A FAMÍLIA DOS BOTÕES DE FACE que o usuário declarou (`controles.botoes`
-                # ou o modo da chave física): vazia é o desenho do DualSense, e o
-                # alvo `atributo` apaga o `data-botoes` quando chega vazia.
                 **_so_se_a_pagina_tiver({"botoes": str(casa.get("botoes") or "")}),
-                # devolve. Ver `luz_porque`: com a cor conhecida ele volta a
                 "luz-porque": luz_porque(rotulo_da_luz, base_da_luz),
-                # o clique chega assim mesmo: `acao_mic` e `acao_speaker_mudo`
                 **porques_do_som(c),
-                # ELE NÃO REUSA `alto-porque`, e a diferença é medida: aquele
                 "alto-apagado": (
                     "" if uniq_do_entry(c) is not None else MIC_SEM_ALVO
                 ),
@@ -1634,7 +1521,6 @@ DICA_DO_GIRO = "Ligado: o jogo recebe o giro deste controle."
 
 DICA_DO_GIRO_COM_A_MIRA = ("Com o analógico virtual aceso, o giro deste controle vai "
                            "ao jogo pelo analógico direito.")
-#: o lado vem do «Usar como analógico virtual» de cada analógico; o cursor só do perfil
 DICA_DO_GIRO_NO_ESQUERDO = ("Com o analógico virtual aceso, o giro deste controle vai "
                             "ao jogo pelo analógico esquerdo.")
 DICA_DO_GIRO_NO_CURSOR = "Com o analógico virtual aceso, o giro deste controle move o cursor."
@@ -1678,8 +1564,6 @@ def dica_do_giro(dele: dict[str, Any], nativo: bool, navegacao: bool = False) ->
 
 
 MIRA_NO_NATIVO = "NATIVO"
-#: O valor do `inclinacao-parada` quando o daemon diz a pausa do controle parado
-#: (`aba02.chip_da_inclinacao`, o invólucro que deixa o chip aceso meio apagado).
 INCLINACAO_PARADA = "parada"
 
 
@@ -1718,10 +1602,8 @@ def _volume_conhecido(dele: dict[str, Any]) -> dict[str, Any]:
 
 _NAO_GRAVA_POR_PECA = ("button_toggles_system",)
 
-#: cartão daquele controle (`Piloto._recusou_dizendo`, 30 s).
 _PERFIL_E_ESTADO_NAO_E_AVISO = "Perfil ativo"
 
-#: em que a primeira mudar.
 SOM_SEM_ENDERECO = (
     "o ajuste chegou ao controle, mas o perfil não consegue guardá-lo só "
     "para este controle: "
@@ -1731,9 +1613,6 @@ SOM_SEM_VOLUME_PARA_GUARDAR = (
     "A escolha chegou ao controle, mas o perfil só a lembra junto com o "
     "volume. Arraste o volume deste alto-falante uma vez."
 )
-
-
-# O MOTOR É DO PRODUTO E NÃO SE REESCREVE: `app/audio_saida.tocar_confirmacao`
 
 
 def _sink_para_o_som(uniq: str, na_mesa: tuple[str, ...]) -> str:
@@ -1918,9 +1797,6 @@ def _lembrar_do_som(
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import gravar_pelo_gesto
 
     if not nome:
-        # SEM PERFIL ATIVO o escritor é o computador (nome vazio → `_no_computador`), o mesmo
-        # que já grava com o Freestyle. O computador é por controle: sem identidade estável
-        # (um `path:`) não há onde guardar, e o gesto segue calado como sempre.
         if identidade_do_computador(chave or uniq) is None:
             return
     else:
@@ -1980,7 +1856,6 @@ def _o_som_lembrado(ctx: Contexto, uniq: str, chave: str, prof: Any,
         raise
     except Exception as erro:
         raise RuntimeError(f"{SOM_SEM_ENDERECO}{erro}") from erro
-    # SÓ O DISCO — ver a docstring de `_lembrar_do_som`. O aparelho já está no
     return adiante
 
 
@@ -2055,23 +1930,18 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     dele = ctx.por_uniq(uniq)
 
     if qual == "microfone":
-        # (`controller_card.acao_mic`). Sem a chave `audio`
-        # A FRASE É A DO PRODUTO, e a condição também: `acao_mic(...)` é o dono
         acao = acao_mic(dele)
         if not acao.sensivel:
             raise RuntimeError(acao.dica)
         agora = bool((dele.get("audio") or {}).get("mic_mudo"))
         corpo = _corpo(p.mic_canal_set_detalhado(agora, uniq=uniq))
         if corpo is None:
-            # o mapa, não o cartão dela.
             raise RuntimeError(
                 "o Hefesto não confirmou o mudo do microfone: ou ele parou, "
                 "ou este controle se desligou")
         frase = frase_do_ato_do_microfone(corpo)
         if frase:
             raise RuntimeError(frase)
-        # sprint existir HOJE, com quatro DualSense na mesa.
-        # A FRASE É DO PRODUTO, e nenhuma nasce aqui: `frase_do_alvo_do_mic`
         confissao = frase_do_alvo_do_mic(alvo_honrado(corpo))
         if confissao:
             raise RuntimeError(confissao)
@@ -2093,7 +1963,6 @@ def mudo(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                 "deste controle ainda é desconhecido, ele recusa de propósito: "
                 "calar antes de saber o volume tranca o alto-falante em zero")
         _confirmar_com_som(ctx, uniq)
-        # quem o preenche é o `_lembrar_do_som`, com a leitura viva — a mesma
         _lembrar_do_som(ctx, uniq, speaker={"muted": pedido_mudo})
         return
 
@@ -2189,7 +2058,6 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if qual not in BOTOES_DA_FILEIRA_DO_SOM:
         raise ValueError(f"rota: não conheço a rota {qual!r} — a página manda "
                          f"'jogo', 'nada' ou 'pc'")
-    # (com dois DualSense no cabo, sem a lista o `escolher_sink` não tem como),
     na_mesa = [str(c.get("uniq") or "") for c in ctx.conectados if c.get("uniq")]
 
     if qual == ROTA_NADA_NO_CONTROLE:
@@ -2234,7 +2102,6 @@ def rota(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
 
 VOLUME_MIN, VOLUME_MAX = 0, 100
 
-#: fonte de DualSense nenhuma. **Com a queda fechada ele passa a ser a resposta
 TEXTO_MIC_SEM_FONTE = (
     "O sistema não vê um microfone neste controle. Nada foi mudado."
 )
@@ -2347,9 +2214,6 @@ def touchpad(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if corpo is None:
         raise RuntimeError(
             "o Hefesto não confirmou o touchpad: ou ele parou, ou este controle se desligou")
-    # A `ressalva` do `sensor.set` é do GIRO e do acelerômetro (o nó de movimento sem grab, com
-    # algum dos dois desligado): no clique do touchpad ela seria um erro falso sobre outro sensor.
-    # O que este clique confere é o `status` e o `touchpad` que o daemon devolve.
     frase = frase_do_interruptor_de_sensor({**corpo, "ressalva": None})
     if frase:
         raise RuntimeError(frase)
@@ -2366,8 +2230,7 @@ MIRA_SEM_O_CONTROLE = (
     "este controle não respondeu à mira: conecte-o de novo e tente outra vez."
 )
 
-#: (`hefesto_vivo.Piloto._recusou_dizendo`); na tela não entra recado nenhum.
-MIRA_CINZA_NO_NATIVO = _camada.MIRA_CINZA_NO_NATIVO  # a frase mora na camada, que é quem recusa
+MIRA_CINZA_NO_NATIVO = _camada.MIRA_CINZA_NO_NATIVO
 
 
 def mira(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
@@ -2522,7 +2385,6 @@ def volume(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             raise RuntimeError(
                 "o Hefesto não confirmou o volume do microfone: ou ele parou, "
                 "ou este controle se desligou")
-        # A CONFISSÃO, NA FRASE DO PRODUTO. `frase_do_alvo_do_mic` é a dona dos
         confissao = frase_do_alvo_do_mic(alvo_honrado(corpo))
         if confissao:
             raise RuntimeError(confissao)
@@ -2571,7 +2433,6 @@ def volume_padrao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
                 and secao.get("volume") is not None
                 else lido[0] if lido is not None else padrao)
     if estava:
-        # desliga: o aparelho volta ao que o usuário tinha escolhido
         alvo, lembrar = guardado, {"volume_padrao": False, "volume": guardado}
     else:
         alvo, lembrar = padrao, {"volume_padrao": True, "volume": guardado}
@@ -2631,15 +2492,14 @@ METODOS: set[str] = set()
 
 
 PISO_DA_ABA = 8
-#: estado o motor manda o botão ficar INSENSÍVEL (`acao_mic`,
 PROVAS = [
-    {"pagina": PAGINA, "gesto": "rota", "clique": {"rota": "jogo"},  # (noqa-acento) id
+    {"pagina": PAGINA, "gesto": "rota", "clique": {"rota": "jogo"},  # (noqa-acento)
      "chama": [("speaker_set", [],
                 {"rota": SAIDA_L_FONE_R_ALTO_FALANTE, "uniq": "aa:bb:cc:00:00:01"})]},
-    {"pagina": PAGINA, "gesto": "volume",  # (noqa-acento) id
+    {"pagina": PAGINA, "gesto": "volume",  # (noqa-acento)
      "clique": {"volume": "microfone", "v": "80"},
      "chama": [("mic_volume_set_detalhado", [80], {"uniq": "aa:bb:cc:00:00:01"})]},
-    {"pagina": PAGINA, "gesto": "volume",  # (noqa-acento) id
+    {"pagina": PAGINA, "gesto": "volume",  # (noqa-acento)
      "clique": {"volume": "alto-falante", "v": "80"},
      "chama": [("speaker_set", [],
                 {"volume": volume_do_percentual(80),

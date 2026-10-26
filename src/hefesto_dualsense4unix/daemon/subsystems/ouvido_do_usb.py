@@ -27,9 +27,7 @@ logger = get_logger(__name__)
 NETLINK_KOBJECT_UEVENT = 15
 GRUPO_DO_KERNEL = 1
 RELEITURA_SEM_NETLINK_S = 2.0
-#: depois do ``add``, o tempo para os drivers se ligarem às interfaces antes da releitura
 ACOMODAR_S = 0.5
-#: sem evento, o laço acorda neste prazo para conferir os ausentes
 PRAZO_DA_ESPERA_S = 5.0
 _TAMANHO_DA_MENSAGEM = 1 << 16
 _ACOES = frozenset({"add", "remove"})

@@ -184,8 +184,6 @@ def _avisos(registros: list[MutableMapping[str, Any]]) -> list[str]:
 QUATRO = {P1: "/dev/input/event5", P2: "/dev/input/event7",
           P3: "/dev/input/event9", P4: "/dev/input/event11"}
 
-#: (rótulo da mesa, os nós, quem espera). O laço do co-op não tem ramo de
-#: transporte; o rótulo diz a mesa, e a régua prova que a cura não ganha um.
 MATRIZ = [
     ("p1-usb,p2-bt,p3-usb,p4-bt", QUATRO, (P2,)),
     ("tres-adaptadores-e-um-no-cabo", QUATRO, (P4,)),
@@ -298,7 +296,6 @@ def test_o_vpad_de_quem_espera_nunca_e_recriado_pela_ordem(
     _a_lampada_do_registro(m)
     m.sai(P2)
     vpad = m.mgr._players[P2].vpad
-    # a carta do P4 menor que a de quem espera: fora dos fixos, o P2 entraria no recriar
     m.registro.slots[P4] = 1
     feitos = _planos(monkeypatch)
     m.mgr._ordenar(None)

@@ -84,7 +84,7 @@ def test_o_nativo_nao_tem_receita_nenhuma() -> None:
 def test_aplicar_o_nativo_poe_o_gatilho_a_luz_e_a_vibracao_no_automatico(
     disco: dict[str, Any],
 ) -> None:
-    # D-1510-OS-ESTILOS-NATIVO-VISUAL-NOVEL-E-ADULTO
+    """Prova da D-1510-OS-ESTILOS-NATIVO-VISUAL-NOVEL-E-ADULTO."""
     _aplicar("Ação")
     com_gatilho = disco["perfil"]
     assert com_gatilho.triggers.left.mode != "Off", "o Ação traz gatilho; sem isso a prova é vazia"

@@ -55,7 +55,7 @@ def _recusar_raw_com_daemon_vivo() -> None:
     try:
         vivo = daemon_status_basic() is not None
     except Exception:
-        vivo = False  # sem socket, sem daemon: o --raw tem o hidraw só para ele
+        vivo = False
     if vivo:
         console.print(f"[red]--raw recusado:[/red] {MSG_RAW_COM_DAEMON}")
         raise typer.Exit(code=1)
@@ -97,7 +97,6 @@ def cmd_trigger(
         )
     else:
         effect = build_from_name(mode, params_list)
-        # cmd_led) para NÃO abrir um 2º PyDualSenseController e brigar pelo hidraw
         from hefesto_dualsense4unix.app.ipc_bridge import trigger_set
 
         if trigger_set(side_literal, mode, params_list):
@@ -225,8 +224,6 @@ def _apply_on_hardware(action: Callable[[IController], Any]) -> None:
     try:
         controller.connect()
         if not controller.is_connected():
-            # Sem controle aberto o backend aceita o comando e descarta: o verde que
-            # viria depois seria mentira.
             console.print("[red]nenhum controle ao alcance[/red]")
             raise typer.Exit(code=1)
         action(controller)

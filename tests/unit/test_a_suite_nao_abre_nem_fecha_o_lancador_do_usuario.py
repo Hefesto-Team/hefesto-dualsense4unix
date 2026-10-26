@@ -184,8 +184,6 @@ def test_o_reiniciar_chega_aos_dois_atos_so_pelo_duble(
     monkeypatch.setattr(rl, "abertos", lambda: [rl.LANCADORES[0]])
     monkeypatch.setattr(slo, "time", _TempoSemEspera())
     monkeypatch.setattr(slo, "steam_running", _steam_aberta_ate_o_shutdown)
-    # O «de outro lar?» do PS lê o /proc: sem o dublê, a Steam real da máquina (de outro
-    # HOME, visto daqui) recusa o reabrir, e o teste mede a máquina, não o caminho.
     monkeypatch.setattr(slo, "processos_da_steam", lambda *_a, **_k: [])
     olho = espiao()
 

@@ -182,7 +182,7 @@ def _chamadores(nome: str) -> list[str]:
             continue
         try:
             arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
-        except SyntaxError:  # pragma: no cover — arquivo quebrado é outro erro
+        except SyntaxError:  # pragma: no cover
             continue
         for no in ast.walk(arvore):
             if not isinstance(no, ast.Call):
@@ -228,7 +228,6 @@ def test_a_varredura_de_chamador_sabe_dizer_nao() -> None:
     """A régua recusa: um nome que ninguém chama tem de sair sem chamador."""
     assert _chamadores("funcao_que_nao_existe_em_lugar_nenhum_desta_arvore") == []
     assert _escritores_com_valor("_campo_que_ninguem_jamais_escreveu") == []
-    # `home_actions`... que está excluído. Mas `mode_of_state`, de
     assert _chamadores("mode_of_state"), (
         "a varredura não acha nem `mode_of_state`, que meia GUI chama — o "
         "instrumento está cego, e o vermelho dos outros testes não seria do "

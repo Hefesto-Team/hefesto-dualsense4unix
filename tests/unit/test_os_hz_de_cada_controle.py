@@ -143,8 +143,6 @@ def test_o_hub_sem_leitor_ou_com_resposta_torta_diz_nao_sei() -> None:
     assert hub.hz_do_movimento("aabbcc000011") is None
 
 
-# ---------------------------------------------------------------- o state_full
-
 UNIQ_1 = "aabbcc000001"
 UNIQ_2 = "aabbcc000002"
 UNIQ_CABO = "aabbcc000003"
@@ -204,7 +202,6 @@ def _handlers(monkeypatch: object) -> tuple[object, object]:
 
     handlers = _Handlers(daemon)
     handlers._sensor_hub = _Hub({UNIQ_1: 402.3, UNIQ_2: 395.0, UNIQ_CABO: 250.0})
-    # A identidade de fábrica já «respondida»: sem isto o `state_full` sai
     handlers._identidade_de_fabrica_cache = {
         u: {"serial": None, "modelo": None} for u in (UNIQ_1, UNIQ_2, UNIQ_CABO)
     }

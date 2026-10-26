@@ -44,7 +44,6 @@ from hefesto_dualsense4unix.app.mic_monitor import (
 )
 from hefesto_dualsense4unix.interface.cartao_do_controle import saida_muda_do_entry
 
-#: `pactl list sinks short` desta máquina em 01/08/2026 (LC_ALL=C). O DualSense
 _SINKS = (
     "59\talsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
     "Controller-00.analog-surround-40\tPipeWire\ts16le 4ch 48000Hz\tSUSPENDED\n"
@@ -69,7 +68,6 @@ _SOURCES = (
 _UNIQ = "aabbcc010203"
 _OUTRO_UNIQ = "aabbcc010204"
 
-#: Uma entrada de ``state_full.controllers`` SEM a chave `speaker` — o estado
 _ENTRY_SEM_POSSE: dict[str, Any] = {"index": 0, "uniq": _UNIQ, "inputs": {}}
 
 

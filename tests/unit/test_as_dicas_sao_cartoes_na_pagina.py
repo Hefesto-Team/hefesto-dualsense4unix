@@ -32,9 +32,6 @@ BANCADA = RAIZ / "mockup/08-conexoes.html"
 PALAVRAS = re.compile(r"\w+", re.UNICODE)
 
 
-# ───────────────────────── a tabela e o painel (sem página) ─────────────────────────
-
-
 def _palavras(texto: str) -> int:
     """A conta da régua dos títulos (o produto não conta palavras: ele corta no limite)."""
     return len(texto.split())
@@ -76,9 +73,6 @@ def test_o_painel_poe_o_grave_primeiro_corta_em_quatro_e_deixa_a_calada_por_ulti
     assert len(painel.visiveis) == dicas.CARTOES_VISIVEIS == 4
 
 
-# ───────────────────────── a página (WebKit, bancada) ─────────────────────────
-
-
 def _html_de_cinco() -> str:
     """Duas ordens, duas conferências e a proposta da central: cinco cartões e o que está certo."""
     from hefesto_dualsense4unix.integrations.exame_da_mesa import (
@@ -101,7 +95,7 @@ def _html_de_cinco() -> str:
     def ordem(chave: str, destino: str = "") -> Any:
         return Ordem(
             chave=chave,
-            acao="Mova o adaptador Bluetooth para a Entrada 9",  # (noqa-acento) campo
+            acao="Mova o adaptador Bluetooth para a Entrada 9",
             o_que_eu_vi=frase, por_que_importa=frase, ganho_esperado=frase,
             alvo=Identidade(caminho="3-1.2"), destino=destino, arranjo="a1")
 

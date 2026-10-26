@@ -221,7 +221,6 @@ def test_sem_brilho_no_perfil_o_campo_nao_viaja(a04, ctx, monkeypatch):
     assert p.chamadas[0][2].get("brightness") is None
 
 
-#: um `("auto", {}, ["chamar", "led_set_detalhado"])`, e o gesto por coluna que
 @pytest.mark.parametrize(("nome", "clique", "espera"), [
     ("cor", {"hex": "#FF8000"}, ["led_set_detalhado"]),
     ("apagar", {}, ["led_set_detalhado"]),

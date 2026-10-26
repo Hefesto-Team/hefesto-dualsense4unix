@@ -134,7 +134,6 @@ def test_a_mordida_do_alvo_plastico(portao: object,
         "a 05-vibracao deixou de estar curada — a mordida não mede mais nada")
 
     sem_cura, quantos = re.subn(r' data-hef-alvo="plastico"', "", pagina)
-    # são quatro DualSense), e as duas vazias já nascem com o alvo posto para o
     molduras = pagina.count('data-campo="plastico"')
     assert quantos == molduras, (
         f"a 05 tem {molduras} molduras e só {quantos} trazem "

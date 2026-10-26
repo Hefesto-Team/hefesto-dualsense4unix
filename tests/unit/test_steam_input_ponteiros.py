@@ -35,7 +35,7 @@ _TAGS = re.compile(r"<[^>]+>")
 
 def _publicadas() -> list[Path]:
     """As dez páginas que o produto renderiza, na ordem do nome."""
-    pasta = _PACOTE / "interface" / "paginas"  # (noqa-acento) nome de pasta
+    pasta = _PACOTE / "interface" / "paginas"  # (noqa-acento)
     return sorted(pasta.glob("[0-9][0-9]-*.html"))
 
 

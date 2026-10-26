@@ -13,7 +13,6 @@ from pathlib import Path
 
 from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
 
-#: O Parar da aba Sistema deixa esta marca no runtime da sessão, e abrir a janela a respeita.
 MARCA_DO_PARAR = "servico-parado-pela-aba-sistema"
 
 

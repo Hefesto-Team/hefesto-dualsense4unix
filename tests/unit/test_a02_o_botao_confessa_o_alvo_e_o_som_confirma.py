@@ -79,7 +79,6 @@ CHAVE_P1 = "aabbcc000001"
 
 NOME = "Regua da confissao"
 
-#: Um nome de sink de DualSense na forma que o PipeWire usa nesta bancada. Ele
 SINK = ("alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
         "Controller-00.analog-surround-40")
 

@@ -175,11 +175,6 @@ def test_morde_o_mudo_arrancado_do_controle(regua, monkeypatch, capsys):
 
 
 
-# AS-REGUAS-DO-RAMO-INTEIRO-E-DAS-QUATRO-RESPOSTAS-MORDEM-01: a régua lê as páginas SEM o
-# estilo e o registro dos `@gesto` do fonte. Antes, um gesto que só aparecia num seletor de CSS
-# entrava, e os que a página gera em JS (ou que moram fora das dez) ficavam invisíveis.
-
-
 def test_o_gesto_so_no_estilo_nao_conta(regua, tmp_path):
     """MORDIDA: tirar o `_SEM_ESTILO.sub` de `gestos_das_paginas` conta o seletor de CSS."""
     (tmp_path / "01-x.html").write_text(

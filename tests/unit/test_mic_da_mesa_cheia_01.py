@@ -34,7 +34,6 @@ import pytest
 from hefesto_dualsense4unix.integrations import audio_control
 from tests.unit import pactl_json_de_mentira as pj
 
-#: Duas placas de DualSense, uma por aparelho, como o `pactl list sources` as
 _P1 = "alsa_input.usb-Sony_Interactive_Entertainment_Wireless_Controller-00.mono-fallback"
 _P2 = "alsa_input.usb-Sony_Interactive_Entertainment_Wireless_Controller-00.2.mono-fallback"
 

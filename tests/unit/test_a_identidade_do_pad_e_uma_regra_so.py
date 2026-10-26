@@ -42,7 +42,6 @@ def _jogo(raiz: Path, arquivos: dict[str, bytes]) -> Path:
     return raiz
 
 
-#: Onde o jogo pode nomear cada modelo: nada, um arquivo do leitor (o InControl), o executável.
 _EDGE = {"nada": {}, "arquivo": {"edge": _PERFIL_DO_EDGE}, "exe": {"exe": _PID_DO_EDGE}}
 _COMUM = {"nada": {}, "arquivo": {"comum": _PERFIL_DO_COMUM}, "exe": {"exe": _PID_DO_COMUM}}
 _SONY = {"nada": b"", "libScePad": b"", "WinDualShock": "WinDualShock".encode("utf-16-le")}
@@ -83,7 +82,6 @@ def test_a_regra_em_toda_combinacao(
     assert fonte, "toda roupa diz de onde veio"
 
 
-#: Os três jogos da bancada de 22/10/2026, com os sinais que a `ficha_declarada` mediu.
 _OS_TRES = {
     "sackboy": (
         {"Jogo.exe": b"MZ" + "WinDualSense".encode("utf-16-le") + _SEPARA + _PID_DO_COMUM

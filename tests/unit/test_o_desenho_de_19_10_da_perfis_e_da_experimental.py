@@ -78,11 +78,6 @@ def _no_chrome(arquivo: pathlib.Path, vista: tuple[int, int], script: str,
             navegador.close()
 
 
-# ---------------------------------------------------------------------------------------------
-# Perfis 1 · O-EDITOR-DE-PERFIS-MOSTRA-O-ESTILO-RECUSA-O-FREESTYLE-E-PERDE-O-QUE-O-DESENHO-TIROU-01
-# ---------------------------------------------------------------------------------------------
-
-
 def _estilos_da_pagina(html: str) -> list[str]:
     trecho = html.split('data-hef="editor.estilo"', 1)[1].split("</select>", 1)[0]
     return re.findall(r"<option[^>]*>([^<]*)</option>", trecho)
@@ -96,7 +91,6 @@ def test_a_lista_de_estilos_tem_as_duas_marcas_e_nao_tem_freestyle() -> None:
     assert "Visual novel" in opcoes and "Adulto" in opcoes, opcoes
     assert not [o for o in opcoes if "freestyle" in o.lower()], (
         "o Freestyle é o botão do Ultra, nunca um estilo nem um perfil da aba Perfis")
-    # o select abre sem escolha: quem afirma o estilo do perfil é a pintura do produto
     trecho = html.split('data-hef="editor.estilo"', 1)[1].split("</select>", 1)[0]
     assert len(re.findall(r"<option[^>]*\bselected\b", trecho)) == 1
 
@@ -126,10 +120,6 @@ def test_a_variante_nunca_entra_na_pagina_publicada() -> None:
     publicado = _ler(onde.pagina("10-perfis.html", publicado=True))
     assert "Nome reservado" not in publicado and "Freestyle é o botão" not in publicado
 
-
-# ---------------------------------------------------------------------------------------------
-# Perfis 2 · OS-EVENTOS-DO-PERFIL-ENTRAM-PELO-QUE-O-DAEMON-JA-SABE-01
-# ---------------------------------------------------------------------------------------------
 
 _ESCOLHE_EVENTO = """(function(){
   document.querySelector('[data-v="eventos"]').click();
@@ -181,12 +171,8 @@ def test_a_aba_jogos_continua_com_a_ordem_do_que_vale() -> None:
     assert m["ordem_visivel"] and not m["visivel"], m
 
 
-# ---------------------------------------------------------------------------------------------
-# Perfis 3 · AS-TRES-SECOES-DA-ACESSIBILIDADE-GANHAM-IPC-E-O-TOQUE-SEGUE-A-MAO-01
-# ---------------------------------------------------------------------------------------------
-
 _SECOES_DE_UMA_LINHA = ("leds", "triggers", "rumble", "speaker", "mic", "sensores", "mascara",
-                        "movimento", "ativacao", "analogicos")  # (noqa-acento) identificador ASCII
+                        "movimento", "ativacao", "analogicos")  # (noqa-acento)
 _MEDE_A_FILEIRA = """() => {
   const linhas = [...document.querySelectorAll('.guarda tbody tr')].filter(
     tr => tr.querySelector('.gls') && tr.querySelector('.gls').children.length);
@@ -229,11 +215,7 @@ def test_a_07_nao_guarda_variante_nem_gerador_de_variante() -> None:
     assert not hasattr(aba07, "variantes")
 
 
-# ---------------------------------------------------------------------------------------------
-# Perfis 5 · AS-JANELAS-DA-07-ALCANCAM-O-DESENHO-APROVADO-01
-# ---------------------------------------------------------------------------------------------
-
-_ID = "modificacao"  # (noqa-acento) identificador ASCII da janela
+_ID = "modificacao"  # (noqa-acento)
 _ABRE_A_GENERICA = f"(function(){{location.hash='#{_ID}';}})()"
 _CLICA_O_MAIS = ("(function(){const b = document.querySelector('.ext-mais');"
                  " b.focus(); b.click();})()")
@@ -242,7 +224,6 @@ _CLICA_O_MAIS = ("(function(){const b = document.querySelector('.ext-mais');"
 def _janela(html: str, ident: str) -> str:
     sem = _sem_estilo_nem_script(html)
     inicio = sem.index(f'id="{ident}"')
-    # A janela vai até a seguinte; a última da página, até o fim dela.
     fim = sem.find('<div class="tela-nova"', inicio + 1)
     return sem[inicio:fim if fim > 0 else len(sem)]
 
@@ -255,7 +236,6 @@ def test_a_janela_generica_da_extensao_tem_um_cartao_por_grupo_e_cancelar_guarda
     titulos = re.findall(r'<span class="ac-tit">([^<]*)</span>', janela)
     assert titulos == ["Geral", "Luz e vibração", "Avançado"], titulos
     assert "mj-abas" not in janela and 'type="radio"' not in janela
-    # seis opções do exemplo e a do CSS de quem usa (22/10/2026: «Usar o meu CSS», em «Avançado»)
     assert janela.count('<div class="ky-linha">') == 7
     assert ('<a class="btn" href="#" data-gesto="cancelar-modificacao" data-v="exemplo">'
             'Cancelar</a>') in janela

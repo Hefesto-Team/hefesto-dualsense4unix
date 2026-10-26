@@ -33,14 +33,10 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: A batida: de quanto em quanto o evento se repete enquanto o par efetivo não é zero.
 PERIODO_DA_BATIDA_S = 0.25
-#: O teto de eventos por controle: 60 por segundo.
 INTERVALO_MINIMO_S = 1.0 / 60.0
 
 _ATRIBUTO = "_vibracao_do_jogo_vista"
-#: A trava de quem cria a tabela: dois controles que vibram pela primeira vez no mesmo
-#: instante (cada pad virtual escreve na thread dele) não criam duas, e nenhum se perde.
 _TRAVA_DA_CRIACAO = threading.Lock()
 
 Par = tuple[int, int]
@@ -55,10 +51,8 @@ class _Linha:
     efetivo: Par
     enviado_em: float
     pendente: bool
-    #: o pedido do jogo e os meus toques, cada um como ``(esquerdo, direito)``
     jogo: Par = (0, 0)
     toques: Par = (0, 0)
-    #: o ``(fraco, forte)`` que ficou nos motores do HID (zero quando a háptica vai por áudio)
     motores: Par = (0, 0)
 
 
@@ -83,7 +77,7 @@ def _vista_do(daemon: Any, *, criar: bool) -> _Vista | None:
         vista = _Vista()
         try:
             setattr(daemon, _ATRIBUTO, vista)
-        except AttributeError as exc:  # um dublê sem lugar para a tabela: sem batida, sem erro
+        except AttributeError as exc:
             logger.debug("jogo_vibracao_sem_tabela", err=str(exc))
             return None
     return vista
@@ -194,11 +188,8 @@ def _dizer(
     with vista.trava:
         linha = vista.linhas.get(chave)
         if linha is None and pedido == (0, 0) and efetivo == (0, 0):
-            return  # nada vibrava e nada vibra: não há o que dizer
+            return
         if linha is None:
-            # `agora - 1.0`: o primeiro de um controle nunca espera o teto (com `agora -
-            # INTERVALO_MINIMO_S` a conta de ponto flutuante dava um pouco abaixo do
-            # intervalo e o primeiro evento ficava pendente).
             linha = vista.linhas[chave] = _Linha(
                 jogador, pedido, efetivo, enviado_em=agora - 1.0, pendente=True,
                 jogo=lados, toques=dos_toques, motores=nos_motores,
@@ -209,7 +200,7 @@ def _dizer(
             )
             linha.jogo, linha.toques, linha.motores = lados, dos_toques, nos_motores
         if agora - linha.enviado_em < INTERVALO_MINIMO_S:
-            return  # o tique seguinte diz (`bater`)
+            return
         linha.enviado_em, linha.pendente = agora, False
         a_dizer = _Linha(**vars(linha))
         if efetivo == (0, 0):

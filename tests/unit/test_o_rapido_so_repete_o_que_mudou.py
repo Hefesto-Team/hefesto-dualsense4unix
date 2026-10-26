@@ -14,8 +14,6 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 PORTOES = RAIZ / "scripts" / "portoes.sh"
 
-#: os dez `rapido` mais caros medidos em 09/10/2026 que leem uma parte da árvore (os que
-#: leem a árvore inteira ou a história do git ficam sem a coluna ou com `@sempre`)
 DEZ = (
     "paridade-gtk-html", "portoes-lentos-rapidos", "pecas-do-dualsense", "so-a-primeira-letra",
     "paridade-transporte", "tela-nao-confessa", "cores-do-dualsense", "quatro-respostas-morde",
@@ -50,9 +48,6 @@ def _linhas_da_tabela() -> dict[str, list[str]]:
 
 
 TABELA = _linhas_da_tabela()
-
-
-# --- a quinta coluna dos dez ----------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("ficha", DEZ)
@@ -127,14 +122,6 @@ def test_morde_o_glob_que_nao_casa_nada_faz_o_portao_rodar_sempre(tmp_path: Path
     assert _chave(raiz, "tela-nao-confessa", ["pasta-que-nao-existe/**"]) is None
 
 
-# --- o que o portão lê sem dizer ------------------------------------------------------------------
-#
-# Medido em 13/10/2026 com um gancho de auditoria do Python (`open`, contando o `.pyc` como o `.py`
-# dele) sobre os dez: o `tests/conftest.py` importa `scripts/check_faixa_sintetica.py` em todo
-# `pytest`, e o gerador das páginas lê os glifos de `assets/glyphs/` quando o teste monta a aba.
-# Fora da quinta coluna, mudar um deles deixava o portão lembrado sobre bytes que ele lê.
-
-#: o que cada portão abre fora do `src/`, do `tests/` e do `mockup/`, medido no dia
 LIDO_DE_FORA = {
     "gesto-em-lugar-vazio": ("assets/glyphs/bateria.svg",),
     "portoes-lentos-rapidos": ("assets/glyphs/bateria.svg", "assets/glyphs/cross.svg"),
@@ -177,9 +164,6 @@ def test_o_que_o_gerador_le_fora_do_src_entra_na_chave(ficha: str) -> None:
     assert not faltam, f"{ficha}: abre {faltam} e a quinta coluna não o lê"
 
 
-# --- a paridade pergunta pelo literal antes da regex ----------------------------------------------
-
-
 _TEXTOS = (
     "player_slot_color = 1",
     "x = player_slot\n",
@@ -209,8 +193,6 @@ def test_morde_o_simbolo_dentro_de_outro_maior_continua_sem_casar(tmp_path: Path
     assert PROSA.cita(arquivo, "player_slot") is False
     assert PROSA.usa(arquivo, "player_slot") is False
 
-
-# --- o endereço filtra por arquivo antes de descer às linhas --------------------------------------
 
 _OCTETOS = ("aa", "bb", "cc", "4c", "5d", "6e")
 

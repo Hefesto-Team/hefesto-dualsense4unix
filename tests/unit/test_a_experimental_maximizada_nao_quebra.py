@@ -46,8 +46,6 @@ from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 DESENHO = RAIZ / "mockup" / "07-lancadores.html"
-#: A janela maximizada no monitor do usuário e o piso da janela
-#: (`LARGURA_DO_DESENHO` x `PISO_DA_VISTA`).
 VISTAS = ((1918, 840), (1212, 809))
 
 _DICA = ("O {n} na aba Experimental do Hefesto, com os jogos das pastas e das listas dele, "

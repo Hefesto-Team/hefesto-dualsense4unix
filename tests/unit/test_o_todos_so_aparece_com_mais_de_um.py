@@ -43,7 +43,7 @@ from typing import Any
 import pytest
 
 
-from hefesto_dualsense4unix.interface import pacotes  # noqa: F401  isort:skip
+from hefesto_dualsense4unix.interface import pacotes  # noqa: F401  # isort:skip
 from hefesto_dualsense4unix.interface import monta
 from hefesto_dualsense4unix.interface.pacotes import a06_navegacao, a09_sistema
 
@@ -72,7 +72,7 @@ def _tem_todos(html: str) -> bool:
 
 
 def _acesos(html: str) -> int:
-    """Quantos chips estão acesos. Nunca pode ser zero com a mesa cheia."""  # (o «Todos» conta)
+    """Quantos chips estão acesos. Nunca pode ser zero com a mesa cheia."""
     return len(re.findall(r'<label class="chip[^"]*\bon"', html))
 
 
@@ -101,7 +101,6 @@ def test_a_fita_esconde_o_todos_com_um_controle_e_o_devolve_com_dois() -> None:
     """A mordida DOS DOIS SENTIDOS, na função que as dez páginas usam."""
     com_dois = monta.fita(ativo="todos", mesa=DOIS)
     assert _tem_todos(com_dois), com_dois
-    # O «Todos» escolhe os dois e acende os dois com ele (09/10/2026): três acesos.
     assert _acesos(com_dois) == 3, com_dois
 
     com_um = monta.fita(ativo="todos", mesa=UM)
@@ -131,7 +130,6 @@ def test_as_abas_que_escrevem_a_propria_fita_seguem_a_mesma_regra(quem: str) -> 
 
     com_dois = emitir(DOIS)
     assert _tem_todos(com_dois), com_dois
-    # Aba que não escolhe: vale para todos, e o «Todos» e os dois estão acesos.
     assert _acesos(com_dois) == 3, com_dois
 
     com_um = emitir(UM)

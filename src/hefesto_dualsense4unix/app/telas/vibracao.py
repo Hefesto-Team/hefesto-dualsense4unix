@@ -46,13 +46,6 @@ LADO_PARA_MOTOR: dict[str, str] = {"e": "strong", "d": "weak"}
 
 MOTOR_PARA_BARRA: dict[str, str] = {"strong": "forte_pct", "weak": "fraco_pct"}
 
-#: para — a palavra é do comentário de ``rumble_actions._POLICY_MULT:67-69``.
-#:
-#: FICA ESCRITO porque ele é o degrau da escada que NÃO é botão da tela: o
-#: ``Auto`` saiu da aba em 05/09/2026, pela palavra de produto («segue os três modos
-#: sempre»), e :func:`degraus_da_forca` o deixa de fora por este nome. A
-#: escada continua com ele — a mesa em ``Auto`` é estado que o produto ainda
-#: sabe dizer (:func:`_pedido_da_politica`).
 FORCA_SEM_MULTIPLICADOR = "auto"
 
 
@@ -96,10 +89,6 @@ def degraus_da_forca() -> tuple[str, ...]:
     ))
 
 
-# botão "Devolver ao jogo" que não existia (``rumble_actions.
-# BTN_GIVE_BACK_TO_GAME``, RUM-01). **O que muda é só o DONO**, e a razão é
-
-#: quando o teto já cortou, e por isso nunca ensinou que o teto existe.
 DICA_DO_TETO_DA_MESA = (
     "O perfil de bateria pode impor um teto: a escolha continua valendo, "
     "só não passa dele."
@@ -121,8 +110,6 @@ SEM_FONTE: dict[str, str] = {
     "no `gui/main.glade`); o desenho aprovado não tem onde pô-los. "
     "Fecha: MIGRA-VIBRACAO-08.",
 }
-
-# própria recusa), e a tabela ficou descrevendo um estado que a cura desfez.
 
 NAO_SEI = "—"
 
@@ -218,7 +205,6 @@ def pacote_da_mesa(
     }
 
 
-#: mesma promessa sem caminho, e o ``portao_a_casa_sabe_e_o_produto_nao_faz``
 ALERTA = "alerta"
 INFO = "info"
 
@@ -348,11 +334,6 @@ def textos_do_estado(
     return linhas
 
 
-# linha (`app/actions/rumble_actions.py`), com as suas próprias
-# promessa pública sem caminho — é o que o `portao_a_casa_sabe_e_o_produto_
-# ESTADO`: os dois gestos da aba terminam em `rumble_passthrough(True)`, de
-
-
 def html_do_estado(linhas: list[tuple[str, str]]) -> str:
     """O miolo da linha de estado, em HTML. Lista vazia → string vazia.
 
@@ -416,6 +397,3 @@ def html_do_estado(linhas: list[tuple[str, str]]) -> str:
         f"<span>{_html.escape(frase, quote=False)}</span></div>"
         for tom, frase in linhas
     )
-
-
-# junto (ver a nota acima de `NAO_SEI`).

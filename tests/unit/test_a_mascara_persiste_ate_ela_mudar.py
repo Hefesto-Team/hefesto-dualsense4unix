@@ -74,7 +74,7 @@ class _Vpad:
         self.flavor = flavor
         self.backend = "uhid"
 
-    def stop(self) -> None:  # pragma: no cover - simetria
+    def stop(self) -> None:  # pragma: no cover
         return
 
 

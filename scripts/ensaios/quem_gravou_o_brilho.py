@@ -51,20 +51,11 @@ _GESTO = re.compile(r"^\[gesto(?: falhou)?\] (\S+) · ([^:→]+)")
 _DIARIO = re.compile(
     r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})[^ ]* \S+ [^ ]+\[\d+\]: (.*)$")
 
-#: Duas gravações a menos de tantos segundos uma da outra são o mesmo arraste.
 SEGUNDOS_DA_RAJADA = 60.0
-#: O `load_profile` semeia os perfis de jogo na PRIMEIRA leitura do processo; a
-#: gravação que vem logo depois é o primeiro gesto que lê o perfil.
 SEMEADURA = ("perfis_de_jogo_semeados", "perfil_de_jogo_recusado")
 SEGUNDOS_DA_SEMEADURA = 2.0
-#: A linha `profile_salvo` sai DEPOIS da escrita: a cópia que guardou a hora do
-#: arquivo (a `freestyle.json.antes-*`, a da casa) é anterior à linha da gravação
-#: que a escreveu, por milissegundos.
 SEGUNDOS_DO_LOG = 1.0
-#: O trilho «Brilho» da Iluminação: o gesto que grava o brilho de UM controle.
 TRILHO_DO_BRILHO = "04-iluminacao.html · brilho"
-#: O «Salvar» do rodapé (o mesmo nome em toda página) regrava o perfil inteiro;
-#: até 28/09/2026 (a5da60f3d) ele gravava o que estava valendo, e não o disco.
 SALVAR = "salvar"
 
 
@@ -401,9 +392,6 @@ def relatorio(copias: list[Copia], gravacoes: list[Gravacao], aberturas: list[dt
                     + " (os outros controles moveram junto: não é prova de um gesto "
                     "só, nem de que a seção foi reescrita inteira).")
             folga = dt.timedelta(seconds=SEGUNDOS_DO_LOG)
-            # A cópia do histórico leva a hora em que a gravação SEGUINTE a tirou
-            # do lugar (a linha dela vem logo depois, e é candidata); a que guardou
-            # a hora do arquivo leva a hora da gravação que a ESCREVEU, que não é.
             do_historico = m.depois_de.rotulo.startswith("histórico")
             nele = [g for g in gravacoes if g.hora <= m.ate.hora + folga and (
                 g.hora >= m.depois_de.hora if do_historico

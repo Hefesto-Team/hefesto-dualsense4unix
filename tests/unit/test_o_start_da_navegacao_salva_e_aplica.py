@@ -80,6 +80,6 @@ def test_o_start_da_janela_chama_o_gesto(ctx: Contexto) -> None:
     leiaute = {"largura": 800, "altura": 600, "popup": False, "caixas": []}
     hv.Piloto._agir(piloto, [nav.Ato("salvar")], leiaute, ctx,  # type: ignore[arg-type]
                     {}, {})
-    assert [(g["gesto"], g["pagina"]) for g in gestos] == [  # (noqa-acento: chave)
+    assert [(g["gesto"], g["pagina"]) for g in gestos] == [  # (noqa-acento)
         (hv.GESTO_DO_START, "04-iluminacao.html")], gestos
     assert not any('"salvar"' in linha for linha in js), "o Start ainda clica o «Salvar»"

@@ -30,7 +30,7 @@ def _install_gi_stubs() -> None:
             from gi.repository import Gtk  # noqa: F401
 
             return
-        except Exception:  # pragma: no cover - ambientes sem GTK
+        except Exception:  # pragma: no cover
             pass
 
     gi_mod = sys.modules.get("gi") or types.ModuleType("gi")
@@ -94,7 +94,7 @@ DONO = (
 )
 PAGINA_SERVIDA = (
     RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
-    / "paginas" / PAGINA  # (noqa-acento) nome da PASTA no disco, não leva acento
+    / "paginas" / PAGINA  # (noqa-acento)
 )
 
 
@@ -167,9 +167,6 @@ def test_a_dica_nao_promete_cura_de_engasgo() -> None:
     for pagina in _as_duas_paginas():
         linhas = pagina.read_text(encoding="utf-8").splitlines()
         linha = next((ln for ln in linhas if f'data-gesto="{GESTO}"' in ln), "")
-        # A-ABA-SISTEMA-DO-TODO-01 (15/10/2026): no desenho do todo o botão «Corrigir Vulkan»
-        # virou parte do interruptor «Permitir correções automáticas»; a dica dele carrega o
-        # mesmo compromisso (não promete cura de engasgo) e é a que esta régua passa a ler.
         if not linha:
             linha = next((ln for ln in linhas if 'data-gesto="correcoes-automaticas"' in ln), "")
             achado = re.search(r'data-dica="([^"]*)"', linha)
@@ -211,8 +208,6 @@ def test_o_exame_do_desenho_diz_a_frase_que_o_produto_pinta() -> None:
                      if html.unescape(m.group("frase")).startswith("Sobreposição Vulkan:")]
         botao = next((ln for ln in texto.splitlines() if f'data-gesto="{GESTO}"' in ln), "")
         if not botao:
-            # No desenho do todo a linha da sobreposição saiu do exame e o botão virou parte do
-            # interruptor (A-ABA-SISTEMA-DO-TODO-01): sobra a frase do produto, que não picota.
             assert not do_vulkan, f"{pagina.name}: a linha do Vulkan voltou sem o botão"
             for ligada in (True, False):
                 assert "picot" not in cv.frase_do_estado(ligada).lower()

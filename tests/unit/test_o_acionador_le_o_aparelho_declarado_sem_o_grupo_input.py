@@ -29,7 +29,6 @@ from hefesto_dualsense4unix.integrations.hidraw_broker_client import HidrawBroke
 from hefesto_dualsense4unix.utils import maquina
 
 UID = 1000
-#: O ``capabilities/key`` de um teclado, o de um controle (com ``BTN_SOUTH``) e o de nenhuma tecla.
 TECLAS_DE_TECLADO = "fffffffffffffffe"
 TECLAS_DE_CONTROLE = "7fff000000000000 0 0 0 0"
 NOME = "Pedal de mentira ação"
@@ -69,7 +68,6 @@ class _Mesa:
 
     def ops(self) -> hb.FsAclOps:
         ops = hb.FsAclOps(dev_input_root=str(self.dev), sys_class_input=str(self.sys))
-        # O arquivo comum faz o papel do char device: o resto da revalidação é a de verdade.
         ops._e_char_device = staticmethod(lambda _modo: True)
         return ops
 
@@ -97,9 +95,6 @@ def _pedir(broker: hb.BrokerState, no: str, chave: str) -> tuple[dict[str, Any],
     return dict(resposta), fd
 
 
-# --- o broker ------------------------------------------------------------------------------------
-
-
 def test_a_chave_do_broker_e_a_que_o_daemon_declara(tmp_path: Path) -> None:
     """O broker não importa o pacote: a conta dele tem de dar a mesma chave da declaração."""
     mesa = _Mesa(tmp_path)
@@ -111,9 +106,11 @@ def test_a_chave_do_broker_e_a_que_o_daemon_declara(tmp_path: Path) -> None:
 
 
 def test_o_broker_serve_so_o_no_do_aparelho_declarado(tmp_path: Path) -> None:
-    # D-2510-O-ACIONADOR-SE-LE-PELO-FD-DO-BROKER
     """O fd é só de leitura e é o do nó pedido; o nó de outro aparelho com a mesma chave pedida é
-    recusado pela identidade, não pelo número do ``event``. A permissão do nó não muda."""
+    recusado pela identidade, não pelo número do ``event``. A permissão do nó não muda.
+
+    Prova da D-2510-O-ACIONADOR-SE-LE-PELO-FD-DO-BROKER.
+    """
     mesa = _Mesa(tmp_path)
     declarado = mesa.no("event3")
     outro = mesa.no("event5", nome="Teclado da casa", fisico="usb-0000:00:14.0-1/input0")
@@ -195,9 +192,6 @@ def test_o_cliente_pede_o_acionador_pela_chave(monkeypatch: pytest.MonkeyPatch) 
     assert fd == leitura
     os.close(leitura)
     assert pedidos == [{"cmd": "open", "node": "/dev/input/event3", "acionador": CHAVE}]
-
-
-# --- o dono da abertura --------------------------------------------------------------------------
 
 
 def _recusar(caminho: str, *_: Any, **__: Any) -> Any:
@@ -301,7 +295,6 @@ def test_o_recusado_nao_se_pede_ao_broker_a_cada_procura(sem_permissao: dict[str
     assert 1 < pedidos <= 7 + hora / gp.REPEDIR_O_RECUSADO_ATE_S, pedidos
     assert all(p == ("/dev/input/event3", CHAVE) for p in sem_permissao["pedidos"])
 
-    # o aparelho sai e volta à porta noutro nó: o pedido sai no tique seguinte
     mesa = sem_permissao["mesa"]
     (mesa.sys / "event3").unlink()
     mesa.no("event7")
@@ -309,8 +302,6 @@ def test_o_recusado_nao_se_pede_ao_broker_a_cada_procura(sem_permissao: dict[str
     assert sem_permissao["pedidos"][pedidos:] == [("/dev/input/event7", CHAVE)]
     ponte.parar()
 
-
-# --- a frase -------------------------------------------------------------------------------------
 
 _GRUPO = "usermod -aG " + "input"
 
@@ -333,17 +324,16 @@ def test_nenhum_codigo_nem_teste_ensina_a_entrar_no_grupo_input() -> None:
     assert achados == []
 
 
-# --- o doctor ------------------------------------------------------------------------------------
-
-
 def _declaracao() -> dict[str, Any]:
     return dict(maquina.MaquinaConfig.model_validate({"acionadores": {CHAVE: {
         "nome": NOME, "controle": CONTROLE, "teclas": {"28": "cross"}}}}).acionadores)
 
 
 def test_sem_declaracao_o_doctor_da_info_e_nao_abre_nada(tmp_path: Path) -> None:
-    # D-2510-O-DOCTOR-MEDE-SO-O-ACIONADOR-DECLARADO
-    """O teclado da casa que recusa não é pergunta de ninguém: sem declaração, nada se abre."""
+    """O teclado da casa que recusa não é pergunta de ninguém: sem declaração, nada se abre.
+
+    Prova da D-2510-O-DOCTOR-MEDE-SO-O-ACIONADOR-DECLARADO.
+    """
     mesa = _Mesa(tmp_path)
     mesa.no("event5", nome="Teclado da casa")
 

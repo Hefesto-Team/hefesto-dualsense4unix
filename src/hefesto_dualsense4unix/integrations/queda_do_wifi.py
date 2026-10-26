@@ -33,9 +33,7 @@ logger = get_logger(__name__)
 REENUMERA_EM_S = 10.0
 DEBOUNCE_S = 5.0
 ESPERA_DO_DIARIO_S = 4.0
-#: A partir de quantas quedas a conexão «sofre» (abaixo disso só «aperta»).
 QUEDAS_QUE_SOFREM = 3
-#: ``≥`` isto, o tempo se diz em horas.
 MINUTOS_EM_HORAS = 120
 
 COMANDO = ["journalctl", "-k", "-b", "-o", "short-monotonic", "--no-pager"]

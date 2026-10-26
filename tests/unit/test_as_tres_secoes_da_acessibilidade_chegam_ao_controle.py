@@ -47,9 +47,6 @@ _RAIZ = Path(__file__).resolve().parents[2]
 _SRC = _RAIZ / "src" / "hefesto_dualsense4unix"
 
 
-# ---------------------------------------------------------------- 1. o IPC
-
-
 @pytest.fixture
 def perfis(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Diretório de perfis isolado: nada toca o `~/.config` de ninguém."""
@@ -119,7 +116,7 @@ def test_a_ativacao_grava_na_peca_e_vale_ao_vivo(perfis: Path, tmp_path: Path) -
     assert ativacao_de_botao.da_peca(servidor.store, _P1) is None
     entradas = [{"uniq": _P1}, {"uniq": _P2}]
     servidor._merge_acessibilidade(entradas)
-    dizem = [e["acessibilidade"]["ativacao"] for e in entradas]  # (noqa-acento) chave
+    dizem = [e["acessibilidade"]["ativacao"] for e in entradas]  # (noqa-acento)
     assert dizem == [False, True]
 
 
@@ -150,7 +147,7 @@ def test_o_pedido_que_o_modelo_recusa_nao_grava(perfis: Path, tmp_path: Path) ->
 def test_os_analogicos_e_o_cursor_valem_ao_vivo(perfis: Path, tmp_path: Path) -> None:
     servidor = _servidor(tmp_path)
     corpo = _chama(servidor, "perfil.analogicos.set", uniq=_P1, zona_morta=12, mao="direita")
-    mao = corpo["analogicos"]["mao"]  # (noqa-acento) chave
+    mao = corpo["analogicos"]["mao"]  # (noqa-acento)
     assert corpo["status"] == "ok" and mao == "direita"
     curva = curva_do_analogico.da_peca(servidor.store, _P1)
     assert curva is not None and curva.mao == "direita"
@@ -169,9 +166,6 @@ def test_sem_perfil_a_resposta_diz_e_nada_grava(perfis: Path, tmp_path: Path) ->
     servidor._perfil_que_grava = lambda: None
     corpo = _chama(servidor, "perfil.cursor.set", precisao=50)
     assert corpo["status"] == "sem_perfil"
-
-
-# ---------------------------------------------------------------- 2. o toque segue o ajuste
 
 
 class _NoDeMentira:
@@ -325,9 +319,6 @@ def test_o_aplicar_o_toque_entrega_o_ajuste_ao_cursor(
         f"a precisão de 25% não chegou ao toque: {apertado} contra {solto}")
 
 
-# ---------------------------------------------------------------- 3. o teclado
-
-
 def test_o_botao_do_cursor_nao_vira_tecla(monkeypatch: pytest.MonkeyPatch) -> None:
     """Com o mouse virtual de pé, a precisão e o clique travado saem do que o teclado recebe."""
     from hefesto_dualsense4unix.daemon.subsystems import keyboard
@@ -350,9 +341,6 @@ def test_o_botao_do_cursor_nao_vira_tecla(monkeypatch: pytest.MonkeyPatch) -> No
 def test_a_tabela_do_jogo_tambem_cala_o_teclado() -> None:
     fonte = (_SRC / "daemon" / "subsystems" / "mouse.py").read_text(encoding="utf-8")
     assert "botoes_do_cursor(store)" in fonte, "a tabela do jogo entrega tudo ao teclado"
-
-
-# ---------------------------------------------------------------- 4. a inclinação e a mão
 
 
 def _inclina(mao: str | None, destino: str) -> tuple[int, int, int, int]:
@@ -394,9 +382,6 @@ def test_a_mao_manda_a_inclinacao_para_o_mesmo_lado_do_giro(
         "a mão direita troca os lados DEPOIS: a inclinação entra no esquerdo, como o giro")
     assert curva_do_analogico.lado_do_giro(
         SimpleNamespace(), _P1, dire) == dire, "sem curva o destino não muda"
-
-
-# ---------------------------------------------------------------- 5. o co-op e o jogador sozinho
 
 
 def _ordem(arquivo: str, funcao: str) -> list[str]:

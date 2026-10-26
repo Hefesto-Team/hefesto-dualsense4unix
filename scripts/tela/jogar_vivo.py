@@ -67,7 +67,7 @@ from hefesto_dualsense4unix.utils.tela_de_mentira import (  # noqa: E402
 
 garantir_tela_de_mentira()
 
-from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # noqa: E402  isort:skip
+from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # noqa: E402  # isort:skip
 
 from gi.repository import GLib, Gtk  # noqa: E402
 
@@ -95,10 +95,10 @@ def _perfil_ativo(state: dict | None) -> str:
     from pacotes import perfil
 
     return perfil.nome_do_ativo(state) or "—"
-import monta  # noqa: E402  (o gerador do mockup, usado como BIBLIOTECA)
-import onde  # noqa: E402  (o DONO do caminho das páginas publicadas)
+import monta  # noqa: E402
+import onde  # noqa: E402
 
-import aba01  # noqa: E402  isort:skip
+import aba01  # noqa: E402  # isort:skip
 
 PAGINA = onde.PUBLICADO / "01-jogar.html"
 
@@ -661,7 +661,6 @@ class Janela:
             self.voltas += 1
             return True
 
-        # A CHAVE DA REMONTAGEM é o que está ASSADO no HTML do cartão: sem a cor
         avisos = painel.avisos_do_estado(state)
         chaves = (
             tuple((c["uniq"], c["cor"], c["nome"], c["via"], c["jogador"]) for c in mesa),

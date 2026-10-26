@@ -35,7 +35,7 @@ class _Handle:
         self.light.setColorI = lambda *_a: None  # type: ignore[method-assign]
         self.audio = type("Audio", (), {})()
 
-    def writeReport(self, dados: list[int]) -> None:  # noqa: N802 (API do upstream)
+    def writeReport(self, dados: list[int]) -> None:  # noqa: N802
         self.reports.append(list(dados))
 
 

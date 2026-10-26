@@ -32,7 +32,7 @@ import pytest
 from hefesto_dualsense4unix.interface import onde
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 from tests.conftest import skip_sem_gi_real
-from tests.unit.test_a_conexoes_cabe_na_tela import (  # noqa: F401 -- a fixture de módulo vem junto
+from tests.unit.test_a_conexoes_cabe_na_tela import (  # noqa: F401
     _clicar,
     _no_webkit,
     um_webview_por_modulo,
@@ -41,7 +41,6 @@ from tests.unit.test_a_conexoes_cabe_na_tela import (  # noqa: F401 -- a fixture
 RAIZ = Path(__file__).resolve().parents[2]
 DESENHO = RAIZ / "mockup" / "08-conexoes.html"
 PUBLICADA = onde.pagina("08-conexoes.html", publicado=True)
-#: a marca da cura no CSS da página; o publicado a ganha no `--publicar` da costura
 MARCA_DA_CURA = "minmax(116px,max-content)"
 TAMANHOS = ((1212, 809), (1280, 860), (1920, 1000))
 QUEDA = {"carimbo": 0.0, "quando": "18:47", "porque": "Som além do limite"}
@@ -107,7 +106,6 @@ def _pintar_a_sala(cena: dict[str, Any]) -> str:
     return f"String(window.__hef.pintar({json.dumps({'mesa': {'radio-sala': html}})}))"
 
 
-#: Mede cada linha de adaptador e devolve os defeitos, com o que foi visto para o recado.
 _MEDIR = r"""(function(){
 const vis = e => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
 const R = e => e.getBoundingClientRect();
@@ -175,7 +173,6 @@ def _conferir(pagina: Path, tamanho: tuple[int, int], nome: str) -> None:
     medida = _medir_a_sala(pagina, tamanho, cena)
     visto = medida["visto"]
     esperando = sum(1 for a in cena["aparelhos"] if a.get("esperando"))
-    # a régua não passa por vazio: as peças da foto estão na linha
     assert visto["linhas"] == len(cena["lugares"]), visto
     assert visto["esperas"] == esperando and visto["sinos"] >= 1, visto
     assert visto["ensinas"] >= (0 if nome == "dentro-da-maquina" else 1), visto
@@ -186,7 +183,7 @@ def _conferir(pagina: Path, tamanho: tuple[int, int], nome: str) -> None:
 @pytest.mark.parametrize("tamanho", TAMANHOS, ids=lambda t: f"{t[0]}px")
 @pytest.mark.parametrize("nome", sorted(CENAS))
 def test_a_linha_do_adaptador_cabe_no_desenho(nome: str, tamanho: tuple[int, int]) -> None:
-    # D-2410-A-COLUNA-DO-ONDE-CRESCE-PARA-TODOS
+    """Prova da D-2410-A-COLUNA-DO-ONDE-CRESCE-PARA-TODOS."""
     _conferir(DESENHO, tamanho, nome)
 
 

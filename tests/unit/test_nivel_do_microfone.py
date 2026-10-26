@@ -40,7 +40,6 @@ def e_stream_do_medidor(propriedades: dict[str, str]) -> bool:
     fluxo = StreamDeCaptura(indice=0, fonte=0, corked=False, props=dict(propriedades))
     return e_stream_do_hefesto(fluxo, raiz_proc="/nao-existe")
 
-#: Piso de silêncio MEDIDO no mic do DualSense pelo cabo, **605 s** (15.120
 PISO_MEDIDO_P50 = 0.008713
 PISO_MEDIDO_P90 = 0.011978
 PISO_MEDIDO_P99 = 0.017502
@@ -463,7 +462,7 @@ def test_o_cano_mata_o_filho_e_o_devnull_o_deixa_vazar() -> None:
             os.kill(neto, signal.SIGKILL)
             return True
         finally:
-            if proc.poll() is None:  # pragma: no cover - defensivo
+            if proc.poll() is None:  # pragma: no cover
                 proc.kill()
 
     assert _sobreviveu("cano") is False, (

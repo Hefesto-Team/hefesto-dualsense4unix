@@ -27,8 +27,6 @@ from tests.unit.test_a_haptica_chega_a_quem_entra_depois import (  # noqa: F401
 _QUATRO = (_P1, _P2, _P3, _P4)
 _APARELHOS = (("3-8", 28), ("3-7", 29), ("3-6", 30), ("3-5", 31))
 
-# Os motores abertos levam o ganho em fator linear, o do degrau Padrão, que é o do
-# ``DaemonConfig`` de fábrica (OS-QUATRO-EM-HARMONIA-01).
 _ABERTO = [VOLUME_ABERTO, VOLUME_ABERTO, *[f"{HAPTICA_PCT_PADRAO / 100:.4f}"] * 2]
 
 

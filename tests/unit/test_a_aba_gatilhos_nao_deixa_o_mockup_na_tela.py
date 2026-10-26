@@ -44,10 +44,8 @@ sys.path.insert(0, str(INTERFACE))
 
 PAGINA = "03-gatilhos.html"
 
-#: `pacotes.topo()` — cobrá-los do pacote da aba faria a régua reprovar o
-#: no instante em que o rodapé ganhou endereço: `pacotes.topo()` passou a emitir
 def _do_cabecalho() -> set[str]:
-    import pacotes  # noqa: F401  (registra os dez)
+    import pacotes  # noqa: F401
     from pacotes import Contexto, topo
 
     ctx = Contexto(state={}, mesa=[], conectados=[], estados={})
@@ -56,7 +54,7 @@ def _do_cabecalho() -> set[str]:
 
 @pytest.fixture(scope="module")
 def a03():
-    import pacotes  # noqa: F401  (registra os dez)
+    import pacotes  # noqa: F401
     from pacotes import a03_gatilhos
 
     return a03_gatilhos
@@ -305,9 +303,6 @@ def test_o_lugar_vazio_apaga_o_efeito_de_quem_saiu(a03):
         "travessão desde a decisão dela de 02/09")
 
 
-# `app/actions/triggers_actions.humanizar_erro_gatilho` é a HARM-19, escrita e
-
-
 class _PonteQueRecusa:
     """Uma ponte que diz não com a frase CRUA do daemon, e conta as chamadas."""
 
@@ -326,7 +321,7 @@ class _PonteQueRecusa:
 @pytest.mark.parametrize(
     ("gesto_", "clique", "cru", "esperado"),
     [
-        ("modo", {"lado": "d", "modo": "SemiAutoGun"},  # (noqa-acento) id
+        ("modo", {"lado": "d", "modo": "SemiAutoGun"},
          "end (3) deve ser > start (5)",
          "Fim (3) precisa ser maior que Início (5)"),
     ],
@@ -393,7 +388,6 @@ def test_o_travessao_esta_no_desenho_de_hoje(a03):
     miolo = bancada.split('<div class="miolo">', 1)[-1].split('<div class="nota">', 1)[0]
     quantos = len(re.findall(
         rf'<option value="{a03.TRAVESSAO}"[^>]*\bdisabled\b', miolo))
-    # o «Partir de» da área de criar (`data-linha`) não pinta lugar nenhum: não leva `—`
     campos = len(re.findall(r"<select(?![^>]*data-linha)", miolo))
     assert quantos == campos, (
         f"{quantos} campos oferecem `—` e há {campos} campos de "

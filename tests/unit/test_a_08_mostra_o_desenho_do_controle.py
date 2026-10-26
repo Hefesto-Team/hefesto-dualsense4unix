@@ -44,7 +44,6 @@ from pacotes import a08_conexoes as conexoes
 
 from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 
-# Faixas forjadas (`aa:bb:cc`), nunca endereço real mascarado.
 PRO = {"name": "Pro Controller", "vid": "057e", "pid": "2009", "driver": "hid-nintendo"}
 XBOX = {"name": "Xbox 360 Controller", "vid": "045e", "pid": "028e", "driver": "xpad"}
 SN30 = {"name": "8BitDo SN30 Pro", "vid": "2dc8", "pid": "6003", "driver": "hid-generic"}
@@ -88,7 +87,6 @@ def test_cada_modelo_tem_o_seu_desenho_no_quadrado_no_cabo_e_no_radio(
     assert len(quadrados) == 1, linha
     simbolo = SIMBOLO[f"{base['vid']}:{base['pid']}"]
     assert f'<svg aria-hidden="true"><use href="#{simbolo}"/></svg>' in quadrados[0]
-    # o quadrado é o PRIMEIRO filho da linha: o desenho abre a linha, o nome vem depois
     assert re.match(r'<div class="ext-linha"[^>]*><span class="ext-desenho"', linha), linha
 
 
@@ -140,12 +138,9 @@ def test_os_desenhos_sao_nossos_sem_nada_de_fora_e_sao_eles_que_a_pagina_leva(no
             assert texto.count("http://") == texto.count("http://www.w3.org/2000/svg"), texto
         else:
             assert fora not in texto, f"o desenho nosso cita `{fora}`"
-    # o corpo do desenho (o primeiro traçado) é o que o sprite da página leva
     (corpo,) = re.findall(r'<path d="([^"]+)"/>', texto)[:1]
     assert f'<path d="{corpo}"/>' in _a_pagina(), f"{nome}: a página não leva este desenho"
 
-
-# ---------------------------------------------------------------- item 2: o hub pergunta a entrada
 
 GABINETE = {
     "faces": [{"nome": "Traseira", "portas": ["1", "2"], "perto": False, "alto": False},
@@ -196,7 +191,6 @@ def _o_mapa_vivo() -> str:
 def test_o_hub_acrescentado_nasce_filha_da_entrada_escolhida_com_o_nome(logica) -> None:
     assert logica.acrescentar_hub("2", "Hub da mesa") == "2a"
     assert logica.portas["2a"] == {"caminho": None, "filha_de": "2", "nome": "Hub da mesa"}
-    # sem nome é hub sem nome; o nome que é só o número da entrada não vale
     assert logica.acrescentar_hub("3", "") == "3a" and "nome" not in logica.portas["3a"]
     assert logica.acrescentar_hub("1", "Entrada 1") == "1a" and "nome" not in logica.portas["1a"]
 
@@ -289,9 +283,6 @@ def test_o_desenho_da_pergunta_tem_os_quatro_elementos_e_o_limite_do_nome() -> N
     assert 'data-gesto="novo-hub-cancelar"' in texto
 
 
-# ───────────────────── item 3: a maiúscula e o texto que vira dica ─────────────────────
-
-
 def test_o_quadrado_do_mapa_abre_cada_frase_com_maiuscula() -> None:
     """O motor devolve «ocupada», «vale evitar»: quem desenha sobe só a primeira letra."""
     from hefesto_dualsense4unix.interface.conexoes import html_do_mapa
@@ -347,9 +338,6 @@ def test_o_texto_explicativo_das_telas_de_mapear_mora_no_titulo_da_janela() -> N
     assert "Nomeie a entrada" not in portas, "a explicação longa da porta voltou à tela"
     assert ('data-campo="mapear-diz">Conecte um DualSense em cada entrada USB do seu '
             'dispositivo.</span>') in portas
-
-
-# ───────────────────── item 4: o mouse sem faixa pede o aparelho no Bluetooth ─────────────────────
 
 
 def test_o_mouse_que_nao_achou_a_faixa_pede_um_aparelho_no_bluetooth(

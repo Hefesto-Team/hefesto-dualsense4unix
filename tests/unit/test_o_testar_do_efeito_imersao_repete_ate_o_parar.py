@@ -27,7 +27,6 @@ from tests.unit.test_a_aba_vibracao_tem_o_sensor_haptico_e_dois_testes import (
     _sem_teste_ligado,  # noqa: F401
 )
 
-#: o Coice: (60 ms, 200, 120) e (60 ms, 0, 0) — uma volta em 120 ms
 VOLTA_S = 0.12
 
 
@@ -138,7 +137,7 @@ def test_o_chip_ainda_toca_uma_volta_so(coice: None) -> None:
     ponte = _Ponte()
     gesto = pacotes.gesto_da_pagina(PAGINA, "testar")
     assert gesto is not None
-    clique = {"uniq": UNIQ, "padrao": "coice", "motores": "ambos"}  # (noqa-acento: chave)
+    clique = {"uniq": UNIQ, "padrao": "coice", "motores": "ambos"}  # (noqa-acento)
     gesto(_ctx({"rumble_policy": "balanceado"}), clique, ponte)
     time.sleep(VOLTA_S * 2)
     assert _pares(ponte).count((120, 200)) == 1

@@ -19,7 +19,6 @@ def isolated_systemd_user(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Pa
     xdg_config = tmp_path / "config"
     xdg_config.mkdir()
     monkeypatch.setenv("XDG_CONFIG_HOME", str(xdg_config))
-    # A unit é vestida com o executável em uso; o dublê não depende de haver um instalado.
     monkeypatch.setattr(
         si, "executavel_do_produto", lambda: Path("/opt/hefesto/bin/hefesto-dualsense4unix")
     )

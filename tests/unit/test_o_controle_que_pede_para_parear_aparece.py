@@ -36,8 +36,6 @@ from tests.unit import radio_de_mentira as rm
 from tests.unit import test_o_parear_espera_o_clique as _base
 from tests.unit.radio_de_mentira import AZUL, QUARTO, ROXO, SALA, VARANDA, VERDE, VERMELHO
 
-#: as fixtures do dublê da escolha do usuário (o dono vivo e a central reais sobre o mundo de
-#: mentira)
 diario, relogio, mesa = _base.diario, _base.relogio, _base.mesa
 
 ADAPTADORES = {SALA: "/org/bluez/hci7", QUARTO: "/org/bluez/hci8", VARANDA: "/org/bluez/hci9"}
@@ -58,9 +56,6 @@ def _objeto(adaptador: str, aparelho: str, *, pareado: bool = False, conectado: 
         caminho=f"{caminho}/dev_{aparelho.upper().replace(':', '_')}", adaptador=caminho,
         endereco=aparelho, nome=nome, conectado=conectado, pareado=pareado,
         rssi=rssi, classe=classe, icone=icone)
-
-
-# ───────────────────────── o sinal, na central ─────────────────────────
 
 
 @pytest.mark.parametrize("controle", QUATRO)
@@ -154,7 +149,6 @@ def test_com_a_janela_aberta_a_central_refaz_o_par_sozinha(
             _ouvir(mundo, destino, VERMELHO)
 
     relogio.agendar(2.0, ela_segura)
-    # o controle segue anunciando: o BlueZ volta a achá-lo quando o objeto velho sai
     relogio.durante = lambda: (mundo.segurar_ps_create(VERMELHO)
                                if mundo.fisicos[VERMELHO].pareando else None)
 
@@ -180,9 +174,6 @@ def test_com_a_janela_aberta_o_conhecido_desligado_nao_e_escolhido(
 
     assert mundo.metodos("Pair") == []
     assert (feito.estado, feito.motivo) == (cr.NAO_CHEGOU, cr.MOTIVO_SEM_GESTO)
-
-
-# ───────────────────────── a tela ─────────────────────────
 
 
 def _cena(nomes: tuple[str, ...] = ("Roxo",)) -> dict[str, Any]:

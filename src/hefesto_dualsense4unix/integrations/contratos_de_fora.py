@@ -100,19 +100,10 @@ class Contrato:
     promessa: str
     conferir: str
     sonda: Callable[[Ambiente], Resultado]
-    #: os alvos de porta interna (ou de pergunta por versão) que a sonda pergunta DE FATO. Uma
-    #: linha frágil do censo só cita este contrato se o alvo dela estiver aqui: a sonda da porta
-    #: oficial não vê a interna quebrar, e dizer que vê é dar [ OK ] sobre o que mudou.
     cobre: tuple[str, ...] = ()
 
 
-# ---------------------------------------------------------------------------
-# As sondas. Cada uma pergunta uma capacidade e devolve o que faltou, com nome.
-
-
 def _sonda_bluez(amb: Ambiente) -> Resultado:
-    # A pergunta é do dono do D-Bus do BlueZ (BLUEZ-UM-DONO-01); aqui só se troca o executor,
-    # para a sonda separar a ferramenta ausente da que não respondeu.
     faltas: list[Falta] = []
 
     def executar(argumentos: Sequence[str]) -> str | None:
@@ -320,25 +311,16 @@ def _sonda_proton(amb: Ambiente) -> Resultado:
     return Resultado(OK)
 
 
-#: A EXCEÇÃO À REGRA DA CAPACIDADE (14/10/2026): o GE e o SDL mudam o que o jogo vê do controle sem
-#: mudar porta nenhuma (a lista por appid do GE que virou PROTON_SONY_AUTO_XINPUT=1; o 054c:0df2 que
-#: o SDL 3.4 passou a tratar como Edge). Para esses dois a única pergunta possível é a versão, e a
-#: linha do censo diz `pergunta=versão`. O Proton da Valve e o UCM não são por versão.
-#: A faixa do GE-Proton em que o Hefesto MEDIU o que o controle vê (o estudo do pino, 13/10/2026).
-GE_COM_A_PILHA_DO_CONTROLE = (11, 4)  # o 11-4 trouxe o alto-falante e a vibração pelo som
-GE_ULTIMO_COM_LISTA_POR_APPID = (11, 7)  # até aqui, PROTON_SONY_HIDRAW_XINPUT por appid
-GE_ULTIMO_MEDIDO = (11, 8)  # lido no script; sem rodada de jogo (o recibo da qualificação)
+GE_COM_A_PILHA_DO_CONTROLE = (11, 4)
+GE_ULTIMO_COM_LISTA_POR_APPID = (11, 7)
+GE_ULTIMO_MEDIDO = (11, 8)
 _GE_RX = re.compile(r"GE-Proton(\d+)-(\d+)")
 
-#: A env que só o Proton com a pilha de som do controle traz no script `proton`.
 ENV_DA_PILHA_DE_SOM = "PROTON_ENABLE_MHWILDS_USB_AUDIO"
 
-#: O SDL em que o Hefesto MEDIU o 054c:0df2 do controle virtual (a 3.4.x, lida em 09/10/2026).
 SDL_DO_EDGE = (3, 4)
 _SDL_RX = re.compile(r"libSDL3\.so\.0\.(\d+)\.(\d+)$")
 
-#: As envs que o script do GE liga POR APPID e que trocam o controle que o jogo vê por cima da
-#: máscara DualSense (as listas do `proton`, lidas no 11-7 e no 11-8 em 13/10/2026).
 TROCAS_DO_GE_POR_APPID = {
     "PROTON_SONY_HIDRAW_XINPUT": "XInput",
     "PROTON_SONY_DUALSENSE_AS_DUALSHOCK4": "DualShock 4",
@@ -348,8 +330,6 @@ _LISTA_POR_APPID_RX = re.compile(
 )
 _ENV_LIGADA_RX = re.compile(r'self\.env(?:\[\s*"(\w+)"\s*\]\s*=|\.setdefault\(\s*"(\w+)")')
 
-#: O arquivo que o alsa-ucm-conf 1.2.15 traz para o DualSense (o commit `36a111ad` do
-#: alsa-ucm-conf), e o verbo que o Hefesto grava.
 UCM_DO_UPSTREAM = "USB-Audio/Sony/DualSense-PS5-HiFi.conf"
 UCM_DO_HEFESTO = "USB-Audio/Hefesto/DualSense-HiFi.conf"
 
@@ -508,7 +488,7 @@ def _sonda_proton_da_valve(amb: Ambiente) -> Resultado:
         for pasta in sorted((biblioteca / "common").glob("Proton*")):
             script = pasta / "proton"
             if not script.is_file():
-                continue  # resíduo sem o script (`dist.lock` e `files`): não é um Proton instalado
+                continue
             com_script = True
             texto = _texto_do_arquivo(script)
             if texto and ENV_DA_PILHA_DE_SOM not in texto:
@@ -544,7 +524,7 @@ def _versoes_do_sdl(amb: Ambiente) -> list[tuple[str, tuple[int, int, int]]]:
     for biblioteca in pastas_steamapps(amb.home) if _raizes_da_steam(amb) else []:
         for runtime in sorted((biblioteca / "common").glob("SteamLinuxRuntime_*")):
             plataformas = sorted(runtime.glob("steamrt*_platform_*"))
-            if plataformas:  # a mais nova: é a que o jogo carrega
+            if plataformas:
                 pastas.append(plataformas[-1] / "files" / "lib" / "x86_64-linux-gnu")
     achados: list[tuple[str, tuple[int, int, int]]] = []
     for pasta in pastas:

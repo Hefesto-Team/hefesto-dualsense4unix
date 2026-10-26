@@ -210,8 +210,6 @@ def test_o_cli_lista_define_e_tira(tmp_path: Path, monkeypatch: pytest.MonkeyPat
     assert opj.ler(tmp_path) == {}
 
 
-# --- A-OPCAO-POR-JOGO-CHEGA-AO-LANCAMENTO-01 (08/10/2026) -------------------
-
 BASE_DO_STEAMID64 = 76561197960265728
 
 
@@ -261,7 +259,6 @@ def test_a_opcao_entra_na_linha_do_jogo_e_nao_no_bloco_filho(tmp_path: Path) -> 
     assert relato["status"] == opj.APLICADO, relato
     assert lido[APPID] == opj.linha_desejada(OPCOES, com_atalho=True), lido
     assert lido["990000022"] == opj.linha_desejada("MANGOHUD=1 %command%", com_atalho=True)
-    # o bloco filho segue só com o que a Steam pôs nele
     assert opj.opcoes_lidas_do_jogo(texto, APPID) == [_valor_escapado(OPCOES)]
     assert opj.opcoes_lidas_do_jogo(texto, "990000022") == [
         _valor_escapado("MANGOHUD=1 %command%")]
@@ -301,7 +298,6 @@ def _duas_contas(home: Path, com_marca: bool) -> tuple[Path, Path]:
         vdf.parent.mkdir(parents=True)
         vdf.write_text(_vdf_texto(), encoding="utf-8")
         pastas.append(vdf)
-    # com a marca, a logada é a de Timestamp MENOR: só a marca a distingue
     marca = '\t\t"MostRecent"\t\t"1"\n' if com_marca else ""
     quando = "1600000000" if com_marca else "1790000000"
     (raiz / "config").mkdir()
@@ -348,7 +344,6 @@ def test_sem_resposta_do_loginusers_duas_contas_nao_se_adivinha(tmp_path: Path) 
     relato = opj.aplicar(home=tmp_path, config_home=tmp_path)
 
     assert [velha.read_text(encoding="utf-8"), logada.read_text(encoding="utf-8")] == antes
-    # «não sei a conta» nunca é «nada a fazer»: a tabela não chegou à Steam
     assert relato["status"] == opj.ERRO, relato
     assert sorted(e["reason"].split(":")[0] for e in relato["erros"]) == [
         "conta_logada_desconhecida"] * 2

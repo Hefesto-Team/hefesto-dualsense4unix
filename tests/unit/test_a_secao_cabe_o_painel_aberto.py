@@ -122,7 +122,7 @@ def _no_webkit(pagina: Path, achados: int, *, prepara: str = PREPARA, mede: str 
     def mediu(v: Any, res: Any) -> None:
         try:
             saiu.append(v.evaluate_javascript_finish(res).to_string())
-        except Exception as e:  # pragma: no cover — só quando o roteiro quebra
+        except Exception as e:  # pragma: no cover
             saiu.append(f"ERRO {e}")
         Gtk.main_quit()
 
@@ -133,7 +133,6 @@ def _no_webkit(pagina: Path, achados: int, *, prepara: str = PREPARA, mede: str 
             saiu.append(f"ERRO {e}")
             Gtk.main_quit()
             return
-        # a lista cresceu depois de aberto: quem refaz a conta é o observador de tamanho
         GLib.timeout_add(600, lambda: (v.evaluate_javascript(
             mede, -1, None, None, None, mediu), False)[1])
 
@@ -182,8 +181,6 @@ def test_mordida_sem_a_conta_a_lista_volta_a_ser_cortada(tmp_path: Path) -> None
     assert f["painel_rola"] > 0 and f["ultimo_visivel"] is False, f
 
 
-#: Desde a rodada 2 do todo (mudança 9, 13/10/2026) a Rádio aberta cabe sem rolagem a 1212 por 809
-#: com a linha do 5 GHz na faixa; a troca pelo selo do título é para a janela mais baixa (790).
 BAIXA = (1212, 790)
 
 

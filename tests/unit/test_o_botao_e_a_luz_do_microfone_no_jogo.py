@@ -571,9 +571,6 @@ class TestQuatroJogadoresNoTempo:
             p.stop()
 
 
-# 7. O `state_full` publica as duas contas, com o vpad de produção
-
-
 @pytest.fixture
 async def servidor(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, uhid: _UhidPorFd

@@ -86,7 +86,7 @@ from hefesto_dualsense4unix.interface.frases_que_ela_baniu import sem_o_mudo
 
 RAIZ = Path(__file__).resolve().parents[2]
 PAGINAS = (
-    RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento) nome de pasta
+    RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento)
 )
 FONTES = (
     RAIZ / "src/hefesto_dualsense4unix/app/actions/rumble_actions.py",

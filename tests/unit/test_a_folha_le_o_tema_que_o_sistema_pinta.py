@@ -35,7 +35,7 @@ def test_a_deteccao_nao_acredita_so_no_sinalizador(monkeypatch: pytest.MonkeyPat
     from gi.repository import Gtk
 
     ajustes = Gtk.Settings.get_default()
-    if ajustes is None:  # pragma: no cover — sem tela nem Xvfb não há Settings
+    if ajustes is None:  # pragma: no cover
         pytest.skip("sem Gtk.Settings nesta máquina")
 
     monkeypatch.setattr(

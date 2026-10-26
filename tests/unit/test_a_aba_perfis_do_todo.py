@@ -63,9 +63,6 @@ def _desenho() -> str:
     return re.sub(r"<(style|script)\b.*?</\1>", "", html, flags=re.S)
 
 
-# --- o desenho ---------------------------------------------------------------------------------
-
-
 def test_o_desenho_perde_o_que_a_tela_nova_nao_tem() -> None:
     """MORDIDA: devolver o `.um-so` (ou a ajuda, ou o botão de jogo de clicar) reprova aqui."""
     html = _desenho()
@@ -99,9 +96,6 @@ def test_o_aplicar_em_tem_os_quatro_alvos_e_o_quando_so_aparece_nos_eventos() ->
         assert f">{momento}<" in html, f"falta o momento {momento!r}"
 
 
-# --- a cor do Adulto ---------------------------------------------------------------------------
-
-
 def test_o_adulto_tem_uma_cor_que_nenhum_outro_estilo_tem() -> None:
     """MORDIDA: dar ao Adulto a família rosa da Luta (255, 40, 180) reprova aqui."""
     adulto = estilos_de_jogo.POR_CHAVE["adulto"]
@@ -117,9 +111,6 @@ def test_o_adulto_tem_uma_cor_que_nenhum_outro_estilo_tem() -> None:
 def test_o_adulto_traz_gatilho_desligado_e_vibracao_maxima() -> None:
     adulto = estilos_de_jogo.POR_CHAVE["adulto"]
     assert adulto.gatilho == "Off" and adulto.vibracao == "max"
-
-
-# --- o clique que ativa ------------------------------------------------------------------------
 
 
 class Ponte:
@@ -194,9 +185,6 @@ def test_o_clique_deixa_o_cabecalho_e_o_editor_no_mesmo_perfil(lar: Path) -> Non
     assert 'data-hef-perfil="Pragmata"' in abertas[0]
 
 
-# --- «Aplicar em» e «Quando» -------------------------------------------------------------------
-
-
 def _aberto(nome: str) -> None:
     a10_perfis._ESCOLHIDO = nome
 
@@ -225,8 +213,10 @@ def test_um_alvo_que_nao_existe_recusa_sem_gravar(lar: Path) -> None:
 
 
 def test_sair_de_eventos_leva_o_momento_e_o_comando(lar: Path) -> None:
-    # D-1510-O-APLICAR-EM-E-O-QUANDO-SO-GRAVAM
-    """MORDIDA: deixar o `evento` ao sair de «Eventos» guarda um momento que ninguém vê."""
+    """MORDIDA: deixar o `evento` ao sair de «Eventos» guarda um momento que ninguém vê.
+
+    Prova da D-1510-O-APLICAR-EM-E-O-QUANDO-SO-GRAVAM.
+    """
     _guardar("Ao pausar")
     _aberto("Ao pausar")
     ctx, ponte = _ctx("Ao pausar"), Ponte({})
@@ -306,9 +296,6 @@ def test_o_nome_do_jogo_mostra_o_nome_e_grava_o_numero(
     assert a10_perfis.pacote(_ctx("Meu jogo"))["editor.jogo"] == "Pragmata"
 
 
-# --- «Qual vale primeiro» -------------------------------------------------------------------------
-
-
 def test_qual_vale_primeiro_aparece_so_com_dois_perfis_do_jogo(lar: Path) -> None:
     """A classe `on` vem do pacote; o `:has(ol:empty)` não se recalcula no WebKitGTK.
 
@@ -338,8 +325,10 @@ def test_os_valores_da_nova_ordem_nunca_empatam_e_respeitam_o_teto() -> None:
 
 
 def test_arrastar_regrava_a_ordem_do_mesmo_jogo(lar: Path) -> None:
-    # D-1510-A-ORDEM-DOS-PERFIS-SE-ARRASTA
-    """MORDIDA: sem regravar a `priority` o arrasto só mexe na tela e o manager não muda."""
+    """MORDIDA: sem regravar a `priority` o arrasto só mexe na tela e o manager não muda.
+
+    Prova da D-1510-A-ORDEM-DOS-PERFIS-SE-ARRASTA.
+    """
     for nome, prioridade in (("Souls A", 30), ("Souls B", 20), ("Souls C", 10)):
         _guardar(nome, prioridade, "steam_app_1245620")
     _guardar("Outro jogo", 99, "steam_app_3357650")
@@ -398,9 +387,6 @@ def test_arrastar_para_lugar_nenhum_recusa_sem_gravar(lar: Path, pedido: dict[st
         a10_perfis.editor_ordem(_ctx("Souls A"), pedido, Ponte({}))
     assert {p.name: p.priority for p in loader.load_all_profiles()} == {
         "Souls A": 30, "Souls B": 20, "Outro jogo": 99}
-
-
-# --- a tela no WebKit --------------------------------------------------------------------------
 
 
 MEDIR = r"""

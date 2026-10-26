@@ -143,7 +143,6 @@ def montar_versao(server_id: int) -> bytes:
     return _fechar(corpo, server_id)
 
 
-#: O byte 23 de cada transporte que o backend publica; o que não está aqui é 0.
 _CONEXAO_POR_TRANSPORTE: Final = {"usb": CONEXAO_USB, "bt": CONEXAO_BLUETOOTH}
 
 
@@ -235,9 +234,7 @@ def montar_dados(
     )
     corpo[31] = 1 if conectado else 0
     struct.pack_into("<I", corpo, 32, _u("contador", contador, 32))
-    # 36..39: botões, home e botão do touchpad, todos soltos.
     corpo[40:44] = bytes([_ANALOGICO_NEUTRO] * 4)
-    # 44..55: direcional e botões analógicos, zerados.
     for indice, toque in enumerate(toques):
         base = 56 + 6 * indice
         corpo[base] = 1 if toque.ativo else 0

@@ -61,11 +61,6 @@ def _bancada(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setitem(sys.modules, caminho, types.ModuleType(caminho))
 
 
-# ---------------------------------------------------------------------------------------------
-# 1. A decisão
-# ---------------------------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(
     ("mudo", "captando", "bateria", "esperado"),
     [
@@ -82,8 +77,10 @@ def _bancada(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_a_luz_e_zero_no_mudo_um_no_silencio_e_dois_com_som(
     mudo: bool | None, captando: bool | None, bateria: int | None, esperado: int | None
 ) -> None:
-    # D-1610-A-LUZ-DO-MIC-PISCA-COM-O-SOM
-    """A régua da sprint: 0 no mudo, 1 no silêncio, 2 com som; ninguém pergunta quem ouve."""
+    """A régua da sprint: 0 no mudo, 1 no silêncio, 2 com som; ninguém pergunta quem ouve.
+
+    Prova da D-1610-A-LUZ-DO-MIC-PISCA-COM-O-SOM.
+    """
     assert mod.decidir(mudo=mudo, captando=captando, bateria_pct=bateria) == esperado
 
 
@@ -96,11 +93,6 @@ def test_a_decisao_nao_pergunta_o_modo_nem_quem_ouve() -> None:
         "captando",
         "bateria_pct",
     }
-
-
-# ---------------------------------------------------------------------------------------------
-# 1. O laço: quem é medido
-# ---------------------------------------------------------------------------------------------
 
 
 class _ControleComTransporte(_Controle):
@@ -226,11 +218,6 @@ async def test_no_radio_sem_ouvinte_nao_se_liga_a_ponte_so_para_medir(
     assert finais[STARLIGHT] == mod.PISCANDO
     assert finais[COSMIC] == mod.PISCANDO
     assert finais[WHITE] == mod.ACESA
-
-
-# ---------------------------------------------------------------------------------------------
-# 2. O fio, em cada modo
-# ---------------------------------------------------------------------------------------------
 
 
 class _DeviceFalso:

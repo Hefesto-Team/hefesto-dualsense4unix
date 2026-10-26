@@ -29,14 +29,10 @@ from pathlib import Path, PurePosixPath
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-#: o teto de qualquer arquivo versionado. Medido em 21/10/2026: o maior fora de `GRANDES` tem
-#: 858 KB; passar de 1 MB é dado ou imagem que pede decisão, não acidente.
 TETO_BYTES = 1_000_000
-#: o teto de imagem. Medido: a maior fotografia versionada tem 229 KB depois da recompressão.
 TETO_DE_IMAGEM = 400_000
 IMAGENS = frozenset({".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".tif", ".tiff"})
 
-# arquivo (relativo à raiz) -> por que ele passa do teto e fica. Só dado gerado ou lastro citado.
 GRANDES: dict[str, str] = {
     "docs/specs.html": "gerado do mapa-controles.csv; é a página que o mapa publica",
     "docs/data/mapa-controles.csv": "o mapa de canais; é portão (check_paridade_transporte)",
@@ -45,8 +41,6 @@ GRANDES: dict[str, str] = {
         "a captura do btmon em texto que o estudo PAREADO cita por «Handle» e por pacote",
 }
 
-# variante de desenho que ainda ESPERA a escolha do usuário (nome do arquivo -> o que ela decide).
-# Em 21/10/2026 toda variante tinha escolha gravada e saiu; a que entra aqui sai com a escolha.
 ESPERAM_A_ESCOLHA: dict[str, str] = {}
 
 
@@ -84,7 +78,7 @@ def variantes_paradas(arquivos: list[str]) -> list[str]:
 
 
 def test_nada_versionado_passa_do_teto() -> None:
-    # D-2110-O-REPOSITORIO-PESA-SO-O-QUE-SERVE
+    """Prova da D-2110-O-REPOSITORIO-PESA-SO-O-QUE-SERVE."""
     achados = acima_do_teto(RAIZ, _versionados())
     assert not achados, (
         "arquivo versionado acima do teto: comprima sem perda (optipng), corte no que o documento "

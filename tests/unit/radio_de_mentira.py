@@ -94,7 +94,6 @@ CLASSE_DE_TECLADO = 0x002540
 
 NOME_DE_FABRICA: dict[int | None, str] = {CLASSE_DE_CONTROLE: "DualSense Wireless Controller",
                    CLASSE_DE_FONE: "Fone de mentira", CLASSE_DE_TECLADO: "BT5.0 Keyboard"}
-#: O ``Modalias`` do DualSense (Sony 054C, produto 0CE6), como o BlueZ publica.
 MODALIAS_DO_DUALSENSE = "bluetooth:v054Cp0CE6d0100"
 
 
@@ -117,7 +116,6 @@ class Fisico:
     pareando: bool = False
     hz: float = 250.0
     antigos: list[str] = field(default_factory=list)
-    #: O ``Modalias`` que o BlueZ publica; ``None`` = o da classe (o DualSense
     modalias: str | None = None
     icone: str = ""
     hid: bool | None = None

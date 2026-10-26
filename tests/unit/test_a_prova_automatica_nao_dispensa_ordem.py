@@ -85,7 +85,7 @@ def test_os_outros_gestos_da_aba_continuam_sendo_provados() -> None:
     assert set(clicar) == outros - protegidos, (
         f"a volta perdeu gesto sem razão: clicar={sorted(clicar)!r} "
         f"pulados={pulados!r} protegidos={sorted(protegidos)!r}")
-    assert len(clicar) >= 6, (  # eram 8 de 10; `todos` e `mic-existe` saíram do registro em 20/10
+    assert len(clicar) >= 6, (
         f"sobraram só {len(clicar)} gestos a clicar nesta aba — se a lista de "
         "PERIGOSOS crescer a este ponto, a prova da 08 virou volta em branco e "
         "a cobertura precisa de outro caminho, não de mais isenção")

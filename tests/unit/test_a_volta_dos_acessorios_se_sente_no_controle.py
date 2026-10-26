@@ -41,8 +41,8 @@ from hefesto_dualsense4unix.mods.porta import (
 
 P1 = "aabbcc000001"
 P2 = "aabbcc000002"
-ORIGINAL = (False, False, True, False, False)  # o número do jogador que o controle acende
-COOP = (False, True, False, True, False)  # o número que a camada do co-op põe por cima
+ORIGINAL = (False, False, True, False, False)
+COOP = (False, True, False, True, False)
 VERMELHO = [122, 0, 16]
 
 
@@ -57,7 +57,7 @@ class Mesa:
     soltas: list[str] = field(default_factory=list)
     pode: bool = True
     pinta: bool = False
-    numero: tuple[bool, ...] = ORIGINAL  # o número que o controle mostra AGORA
+    numero: tuple[bool, ...] = ORIGINAL
     estilo: str | None = "adulto"
 
     def ligacoes(self) -> Ligacoes:
@@ -104,9 +104,6 @@ def _com_o_pulso(sem_pisca: bool = False, nivel: int = 3) -> tuple[VoltaDosAcess
 
 def _brilhos(mesa: Mesa, uniq: str = P1) -> list[tuple[float, int]]:
     return [(t, max(rgb)) for t, u, rgb in mesa.barra if u == uniq]
-
-
-# -- as luzinhas medidor ---------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -163,7 +160,6 @@ def test_na_camada_de_uma_mao_o_medidor_fica_enquanto_ela_vale() -> None:
 
 
 def test_o_medidor_que_fecha_devolve_o_numero_de_agora_e_nao_o_da_abertura() -> None:
-    # A troca automática renumera o controle no meio do medidor: a volta é o número novo.
     volta, mesa = _volta()
     volta.ao_estado(_estado(4), mesa.agora)
     volta.ao_gesto(_gesto(P1, "sobe"), mesa.agora)
@@ -177,9 +173,6 @@ def test_o_medidor_so_mexe_nas_luzinhas_do_controle_do_gesto() -> None:
     volta.ao_estado(_estado(5), mesa.agora)
     volta.ao_gesto(_gesto(P2, "sobe"), mesa.agora)
     assert {u for u, _, _ in mesa.luzinhas} == {P2}
-
-
-# -- o toque de resposta ---------------------------------------------------------------------
 
 
 def test_o_sobe_toca_o_motor_direito_fino_e_o_desce_o_esquerdo_grosso() -> None:
@@ -266,7 +259,7 @@ def _producao_com_o_jogo(motores: tuple[int, int] | None) -> tuple[Any, _Control
 
 
 def test_em_producao_o_toque_soma_ao_jogo_e_o_zero_devolve_o_par_dele() -> None:
-    # D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO
+    """Prova da D-1610-O-TOQUE-DO-GESTO-SOMA-AO-PAR-DO-JOGO."""
     volta, controle = _producao_com_o_jogo(None)
     volta._l.motores(P1, 200, 0)
     volta._l.motores(P1, 0, 0)
@@ -279,7 +272,6 @@ def test_em_producao_o_toque_soma_ao_jogo_e_o_zero_devolve_o_par_dele() -> None:
 def test_com_o_par_fixado_pela_tela_o_toque_soma_a_ele_e_o_zero_o_devolve(
     dono: str | None,
 ) -> None:
-    # O par fixado vence o FF do jogo: é ele que está nos motores, e é ele que o zero devolve.
     from hefesto_dualsense4unix.daemon.lifecycle import DaemonConfig
     from hefesto_dualsense4unix.daemon.subsystems.rumble import fixar_par
 
@@ -378,9 +370,6 @@ def test_no_modo_nativo_nada_se_escreve() -> None:
     resposta = volta.pulsar(P1, {"cor": VERMELHO, "periodo_s": 2}, mesa.agora)
     assert resposta == {"aplicado": False, "motivo": "modo_nativo"}
     assert (mesa.motores, mesa.luzinhas, mesa.barra) == ([], [], [])
-
-
-# -- o pulso da barra ------------------------------------------------------------------------
 
 
 def test_o_periodo_de_02_s_sai_como_1_s_e_nunca_passa_de_um_ciclo_por_segundo() -> None:
@@ -514,9 +503,6 @@ def test_o_parar_solta_a_barra() -> None:
     assert volta.pulsar(P1, {"parar": True}, mesa.agora)["aplicado"] is False
 
 
-# -- o laço do tato vivo ----------------------------------------------------------------------
-
-
 def test_o_passo_anda_a_volta_mesmo_sem_receita_e_sem_jogo() -> None:
     volta, mesa = _volta()
     motor = tv.TatoVivo()
@@ -552,9 +538,6 @@ def test_a_fila_traz_os_gestos_antes_do_estado_que_vem_depois() -> None:
         assert [m[2] for m in mesa.motores].count(200) == 2, "o 10 valia quando o gesto chegou"
 
     asyncio.run(corrida())
-
-
-# -- a porta -----------------------------------------------------------------------------------
 
 
 @pytest.fixture

@@ -20,15 +20,10 @@ logger = get_logger(__name__)
 
 RGB = tuple[int, int, int]
 
-#: O nome do gatilho no registro do daemon.
 NOME_DO_GATILHO = "chegada"
 
-#: Quanto a mesa sossega antes da Chegada: a rajada da Steam dura ~3,9 s (ensaio
-#: ``btmon-a-rajada-tem-hora``), e o gatilho da lightbar fecha a sequência 1,6 a 2,9 s depois da
-#: conexão (diário do daemon de 19/10/2026).
 ESPERA_S = 4.0
 
-#: A nota de cada unidade, pela cor do plástico (o ``id`` da linha de ``cores-do-dualsense.csv``).
 NOTA_DA_COR: dict[str, int] = {
     "starlight-blue": 150,
     "white": 165,
@@ -36,10 +31,8 @@ NOTA_DA_COR: dict[str, int] = {
     "galactic-purple": 195,
 }
 
-#: O Toque da Chegada: a energia e o tamanho (o Toque do tiro tem de 25 a 60 ms).
 ENERGIA_DO_TOQUE = 0.9
 DURACAO_DO_TOQUE_MS = 120
-#: A subida da barra: de um quinto à cor cheia em cinco quadros (uma subida, nunca um lampejo).
 BRILHOS_DA_SUBIDA: tuple[float, ...] = (0.2, 0.4, 0.6, 0.8, 1.0)
 PASSO_DA_SUBIDA_S = 0.12
 
@@ -131,7 +124,6 @@ class Chegada:
             if livre_gatilho:
                 self._pontas.clicar(uniq)
         self._subir_a_luz(luz)
-        # o clique fica armado durante a subida da barra e sai no fim dela
         for uniq, canais in feito.items():
             if canais["gatilho"]:
                 self._pontas.soltar_o_clique(uniq)
@@ -142,8 +134,6 @@ class Chegada:
         """A barra sobe até a cor cheia em todos de uma vez, e o backend a devolve ao desejado."""
         if not luz:
             return
-        # O laço da luz animada pinta a mesma barra a até 30 quadros/s: sem a pausa, os dois se
-        # alternam e a subida vira um pisca de 8 Hz entre a rampa e o efeito do estilo.
         self._subindo = frozenset(luz)
         try:
             for brilho in BRILHOS_DA_SUBIDA:

@@ -12,7 +12,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[2]
 PUBLICADA = (
     RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
-    / "paginas"  # (noqa-acento): nome da pasta
+    / "paginas"  # (noqa-acento)
     / "01-jogar.html"
 )
 

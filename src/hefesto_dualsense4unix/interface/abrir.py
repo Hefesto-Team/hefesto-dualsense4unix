@@ -235,7 +235,6 @@ def abrir(argv: list[str] | None = None, *, na_tela_por_padrao: bool = False) ->
     if vez:
         armar_a_volta_a_frente(vez)
     if a_janela_vai_para_a_tela(args):
-        # A bandeja que o «Sair» dela fechou volta com a janela, se a escolha está ligada.
         from hefesto_dualsense4unix.app.actions.atos_da_bandeja import garantir_a_bandeja
 
         garantir_a_bandeja()

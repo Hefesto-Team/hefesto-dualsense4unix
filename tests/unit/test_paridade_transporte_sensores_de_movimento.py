@@ -20,7 +20,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 MAPA = RAIZ / "docs" / "data" / "mapa-controles.csv"
 IPC = RAIZ / "src" / "hefesto_dualsense4unix" / "daemon" / "ipc_handlers.py"
 
-#: sensor do DualSense nascem nos DOIS — é o que a bancada de 03/09 mediu.
 BUS_USB = 0x03
 BUS_BLUETOOTH = 0x05
 

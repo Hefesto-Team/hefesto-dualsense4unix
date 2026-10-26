@@ -57,7 +57,6 @@ def test_o_cartao_que_nao_achou_nao_conta():
 def test_o_numero_de_cada_cartao_e_o_do_disco_dele():
     """Cada cartão mostra o SEU número — e a Steam, o da `Leitura`."""
     do_disco = desenho.DoDisco(pontes=(("heroic", 2), ("lutris", 1)))
-    # o Lutris virou extensão (19/10/2026): o cartão dele é o da extensão declarada
     extensao = (desenho.SemCenso("lutris", "Lutris", ("net.lutris.Lutris",),
                                  modificacao="lutris"),)
     leitura = _todos_localizados(pontes=3, do_disco=do_disco, declarados=extensao)

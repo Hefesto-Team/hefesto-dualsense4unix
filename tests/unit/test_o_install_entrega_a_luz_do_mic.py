@@ -349,7 +349,7 @@ def test_nenhum_modulo_do_src_importa_biblioteca_de_audio_nao_declarada() -> Non
     for caminho in sorted((RAIZ / "src").rglob("*.py")):
         try:
             terceiros = _imports_de_terceiros(caminho)
-        except SyntaxError:  # pragma: no cover - módulo quebrado é outro portão
+        except SyntaxError:  # pragma: no cover
             continue
         for nome in sorted(terceiros & set(BIBLIOTECAS_NAO_DECLARADAS)):
             achados.append(f"{caminho.relative_to(RAIZ)}: {nome}")

@@ -349,9 +349,6 @@ class TestCompoeComOTeto:
             "o teto por controle sumiu do mapa — a barra APAGOU o teto, que é "
             "exatamente o que a sprint proíbe"
         )
-        # Desde 09/10/2026 o teto da peça entra no funil (`forca_para`), e o
-        # backend escreve o par que recebe: a mesma chamada, agora no backend
-        # real, com o mapa de escalas que a ativação registra.
         real = PyDualSenseController(evdev_reader=_null_evdev())
         h1, h2 = _FakeHandle(), _FakeHandle()
         real._handles = {KEY_1: h1, KEY_2: h2}
@@ -634,8 +631,6 @@ class TestOMetodoQueGrava:
 
         _grava_ipc(h, uniq=BRANCO, forte_pct=100)
 
-        # O jogo guarda só o que mudou (D-0610-O-ESCOPO-SAI-DAS-ABAS): sem a seção
-        # `rumble`, a entrada do controle fica vazia e some do disco com ela.
         dele = (o_que_vale(loader_module.load_profile("Bancada")).controllers or {}).get(BRANCO)
         assert dele is None or dele.rumble is None
 
@@ -733,9 +728,6 @@ class TestOMetodoQueGrava:
 
         fonte = inspect.getsource(ipc_server)
         assert '"rumble.motores.set": self._handle_rumble_motores_set' in fonte
-
-
-# 9. O `state_full` DEVOLVE OS DOIS NÚMEROS
 
 
 class TestOEstadoDevolveAsBarras:
@@ -839,8 +831,6 @@ def test_o_norm_mac_nao_devolve_none_para_caminho() -> None:
     assert sysfs_leds.norm_mac("AA:BB:CC:00:00:01") == "aabbcc000001"
 
 
-#:      esquerdo × força de vibração (ou personalizado), motor direito ×  # noqa: RUF003
-#: o marcador noqa dentro de uma docstring é texto, não diretiva. Trocar o símbolo
 _QUEIXA = "os slicers não estão se multiplicando"
 
 

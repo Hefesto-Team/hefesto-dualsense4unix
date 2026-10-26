@@ -54,7 +54,7 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-PAGINA = "06-navegacao.html"  # (noqa-acento) nome de arquivo
+PAGINA = "06-navegacao.html"
 
 UM = "aa:bb:cc:00:00:01"
 DOIS = "aa:bb:cc:00:00:02"
@@ -66,7 +66,6 @@ CONTROLES = [
      "player": 2, "is_primary": False},
 ]
 
-#: VAZIO — é o que `mesa_viva.mesa_do_estado` devolve quando o leitor de cor não
 MESA = [
     {"pref": "p1", "uniq": UM, "jogador": 1, "cor": "white", "nome": "White",
      "via": "USB", "transporte": "usb", "alvo": True, "mascara": "DualSense"},

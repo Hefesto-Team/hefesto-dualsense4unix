@@ -342,7 +342,7 @@ def test_a_imu_e_a_chave_sao_contexto(mod: Any, comum: Any) -> None:
 
 def _sem_permissao(tmp_path: Path, nome: str) -> Path:
     """Um arquivo `0000` no lugar do nó escondido: `os.open` dá `EACCES`."""
-    if os.geteuid() == 0:  # pragma: no cover - a raiz abre tudo
+    if os.geteuid() == 0:  # pragma: no cover
         pytest.skip("a raiz não recebe EACCES")
     no = tmp_path / nome
     no.write_bytes(b"")

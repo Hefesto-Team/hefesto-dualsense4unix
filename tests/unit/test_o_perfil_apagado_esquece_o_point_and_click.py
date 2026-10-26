@@ -110,11 +110,12 @@ def test_a_escolha_do_computador_que_aponta_para_outro_nao_muda() -> None:
 
 
 def test_o_perfil_que_apontava_o_apagado_volta_a_seguir_o_computador() -> None:
-    # D-2310-O-PERFIL-APAGADO-TIRA-A-ESCOLHA-DO-POINT-AND-CLICK
     """O computador aponta Y e o perfil apontava X: apagado X, o perfil vale Y, não o molde.
 
     MORDIDA: gravar o molde no perfil (em vez de tirar a escolha) faz valer o molde por cima da
     escolha do computador.
+
+    Prova da D-2310-O-PERFIL-APAGADO-TIRA-A-ESCOLHA-DO-POINT-AND-CLICK.
     """
     _montar("perfil:Mullet")
     loader.delete_profile("Sackboy")

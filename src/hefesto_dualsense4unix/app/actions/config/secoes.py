@@ -11,7 +11,6 @@ from hefesto_dualsense4unix.app.actions.config import (
     secao_orcamento,
 )
 
-#: As cinco, na ordem do desenho aprovado. Cada módulo declara `TITULO`,
 SECOES_DA_ABA: tuple[ModuleType, ...] = (
     secao_exame,
     secao_controles,

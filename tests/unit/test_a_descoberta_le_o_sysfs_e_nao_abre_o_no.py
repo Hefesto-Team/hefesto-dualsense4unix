@@ -51,8 +51,6 @@ class Mesa:
         self.moradas: dict[str, str] = {}
         self.aberturas: list[str] = []
         self.pedidos_ao_broker: list[str] = []
-        #: A trava que une «marcar a volta» e «criar o nó» do lado do teste, e cada volta do
-        #: aviso do lado do leitor: nenhuma volta cai entre a marca e o nascimento.
         self.nascimento = threading.Lock()
         self.ao_nascer: Callable[[], None] | None = None
         numero = 9101
@@ -125,7 +123,7 @@ class Mesa:
 
 @pytest.fixture
 def mesa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Mesa:
-    if os.geteuid() == 0:  # pragma: no cover - como root o 0000 não fecha nada
+    if os.geteuid() == 0:  # pragma: no cover
         pytest.skip("como root todo nó abre")
     m = Mesa(tmp_path)
     monkeypatch.setattr(er, "SYS_CLASS_INPUT", str(m.sys))
@@ -319,9 +317,6 @@ class _Cena:
         self.mesa = mesa
         self.marcador = marcador
         self.buscas: list[float] = []
-        #: Quantas buscas TERMINARAM. Uma busca que começou ainda está lendo o sysfs, e o nó que
-        #: a mesa publica nesse intervalo pode ser achado por ELA: o que o leitor fez depois de
-        #: uma busca vazia só se mede depois de a busca vazia ter acabado.
         self.buscas_concluidas = 0
         self.abertos: list[_NoDoLeitor] = []
         self.avisos: list[_AvisoContado] = []
@@ -419,8 +414,6 @@ def test_com_o_aviso_o_leitor_descobre_e_abre_na_hora(cena: _Cena) -> None:
     assert _esperar(lambda: len(cena.abertos) == 2, prazo=5.0), "o leitor não reabriu"
     assert cena.abertos[1].path == caminho
     assert len(cena.buscas) == 2
-    # As voltas valem DEPOIS de o nó existir no disco (`nasceu_em`), e a conta fecha na volta que
-    # o viu (`vista_em`): o que o relógio da máquina atrasou antes do nascimento não é do leitor.
     voltas = aviso.voltas_ate_ver()
     assert voltas is not None, "o aviso nunca viu o nó que nasceu"
     assert voltas <= 3, f"o leitor levou {voltas} voltas para ver o nó que voltou"

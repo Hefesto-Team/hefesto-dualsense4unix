@@ -219,7 +219,6 @@ class TestDoctorCheckContrato:
         assert "CAP_DAC_OVERRIDE" in DOCTOR
 
     def test_sem_candidato_e_skip_informativo_nunca_falso_verde(self) -> None:
-        # Sem DualSense físico visível o teste é PULADO com info (nunca
         assert "reject_not_physical_dualsense" in DOCTOR
         assert "cmd open não testado" in DOCTOR
 

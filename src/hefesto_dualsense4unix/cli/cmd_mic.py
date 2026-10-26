@@ -61,7 +61,6 @@ _ACTION_FLAG = {
     "on": "--enable-mic",
     "off": "--disable-source",
     "status": "--status",
-    # para o DualSense não ser eleito sozinho — o que é correto e nunca foi o
     "promote": "--promote-source",
     "demote": "--install",
 }
@@ -78,11 +77,8 @@ _ACOES_LED: dict[str, bool | None] = {
     "led-release": None,
 }
 
-#: As que levam um segundo argumento e falam com o serviço: o ato inteiro do
-#: microfone (`mic.canal.set`) e o volume da captura (`mic.volume.set`).
 _ACOES_DE_VALOR = ("canal", "volume")
 
-#: Ações que NÃO passam pelo script do WirePlumber (são a ponte por BT).
 _ACOES_BT = ("bt", "bt-status")
 
 _RECONCILIA_S = 5.0
@@ -141,7 +137,6 @@ def mic_cmd(
         raise typer.Exit(code=1)
 
     rc = subprocess.run(["bash", str(script), flag], check=False).returncode
-    # disable-source devolve 2 quando o DualSense é a única fonte (aviso, não falha).
     if action == "off" and rc == 2:
         rc = 0
     raise typer.Exit(code=rc)
@@ -287,10 +282,6 @@ def _mic_firmware(muted: bool | None, *, uniq: str | None = None) -> int:
             "aparece no próximo tick.[/dim]"
         )
     return 0
-
-
-# O estudo «O-PS-PRESO» de 16/08/2026 mediu um DualSense
-# desde 23/08: `daemon.state_full` → `bt_mic.uniqs`, os `uniq` cuja ponte SUBIU.
 
 
 _SEM_DAEMON = "sem-daemon"

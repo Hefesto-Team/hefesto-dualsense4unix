@@ -19,10 +19,6 @@ TOPO = (_F / "topo.html").read_text()
 FIM  = (_F / "fim.html").read_text()
 DS   = (_F / "ds_limpo.svg").read_text()
 
-#: A BASE COMUM DAS ABAS (13/10/2026, A-BASE-COMUM-DAS-ABAS-01): a dica no hover, o Modo
-#: automático e o menu do botão direito. Dois arquivos, UMA vez por página, iguais em todas: o
-#: `<style id="base-comum">` entra no fim do `<head>` e o `<script id="base-comum">` antes do
-#: `</body>`. A página que não passa por `monta()` (a Calibrar) chama `com_a_base()` ela mesma.
 BASE_CSS = (_F / "base-comum.css").read_text(encoding="utf-8")
 BASE_JS = (_F / "base-comum.js").read_text(encoding="utf-8")
 
@@ -64,9 +60,6 @@ from hefesto_dualsense4unix.core.led_control import (  # noqa: E402
     player_led_pattern,
 )
 
-# `player_slot_color` É REEXPORTADA, e a linha leva `noqa: F401` porque este
-# FOI ASSIM QUE OS QUATRO QUEBRARAM, e a causa é mecânica: sem o `noqa`, o
-# em `ImportError: cannot import name 'player_slot_color' from 'monta'`.
 from hefesto_dualsense4unix.core.led_control import (  # noqa: E402, F401
     player_slot_color,
 )
@@ -99,11 +92,8 @@ def nome_do_glifo(nome: str) -> str:
             f"inventa aqui, escreva a linha lá")
     return NOME_DA_PECA[nome]
 
-#: "Automático" (decisão de produto): DualSense · Xbox 360 · Nintendo Pro.
-#: era DualSense e o P3 Xbox 360; a Controles e a Conexões diziam o contrário, na
 MASCARAS = ("DualSense", "Xbox 360", "Nintendo Pro")
 
-# (`"usb"`/`"bt"`), que é a chave que `mesa_viva.mesa_do_estado` publica, e
 MESA = [
     {"pref": "p1", "jogador": 1, "cor": "cosmic-red",     "nome": "Cosmic Red",
      "via": "USB", "transporte": "usb",
@@ -183,23 +173,16 @@ def partes_do_modelo(c: dict[str, Any]) -> list[str]:
 def rotulo(c: dict[str, Any], forma: str = "completa") -> str:
     """O rótulo de um controle, e ele tem UMA ordem só."""
     if forma == "modelo":
-        # a linha «Modelo» das abas 04 e 05 leva o nome do jogador (o `Alias` que a aba Conexões dá
-        # ao controle) antes do modelo: pedido de 06/10/2026. O nome é texto DO USUÁRIO: escapado.
         return SEPARADOR.join(html.escape(p) for p in partes_do_modelo(c))
     if forma == "curta":
         return SEPARADOR.join(p for p in [f'P{c["jogador"]}', c["nome"], c["via"]] if p)
     if forma == "peca":
         corpo = SEPARADOR.join([c["nome"], c["via"]])
         quem = c.get("quem")
-        # `<quem>` vai na frente e só aparece no cartão ABERTO (a tira fechada tem o «Pn •»)
         return f'<span class="so-aberto">{quem}{SEPARADOR}</span>{corpo}' if quem else corpo
     return SEPARADOR.join(["Sony", f'Player {c["jogador"]}', c["nome"], c["via"]])
 
 
-#: `core/led_control.player_slot_color` devolve
-#: primárias cruas (#0000FF, #FF0000, #00FF00…) — cor de monitor de teste ao lado
-#: na 04, e a medição mostrou o resultado: a 02 continuou pintando #0000FF na barra
-#: tem azul próprio, e mapear o azul do player 1 para o ciano fazia DUAS casas da
 TOM_DA_CASA = {
     "#0000FF": "#7EB8D4",
     "#FF0000": "#FF5555",
@@ -209,7 +192,6 @@ TOM_DA_CASA = {
     "#00FFFF": "#8BE9FD",
     "#FF8000": "#FFB86C",
     "#8000FF": "#BD93F9",
-    # Os oito de cima são `player_slot_color(1..8)` — a cor AUTOMÁTICA de cada
     "#80FF00": "#B8F976",
     "#00FF80": "#76F9B8",
     "#0080FF": "#76B8F9",
@@ -309,7 +291,6 @@ VAO_DO_GLIFO = 10
 ROTULO_DA_FITA = "Selecionar:"
 
 
-# `jogar_vivo._indice_na_fita`, para quem o `Todos` é o zero). Curar só o
 def cabe_o_todos(mesa: Sequence[Any] | None = None) -> bool:
     """Se o chip `Todos` entra na fita: só com MAIS DE UM controle na mesa.
 
@@ -357,7 +338,6 @@ def acesos_da_fita(ativo: str, mesa: list[dict[str, Any]] | None = None, *,
     return frozenset({ativo})
 
 
-#   * as abas 06 e 09 perdiam `data-campo="fita-chips"`, e com ele o endereço
 TAG_DO_CHIP = "label"
 
 CAMPO_DA_FITA = "fita-chips"
@@ -393,12 +373,7 @@ def _endereco_do_chip(pref: str, inerte: bool) -> str:
             f' data-controle=""')
 
 
-#: OS DOIS MODOS DE UMA ABA — pedido de 06/10/2026, nas abas Iluminação e
-#: Gatilhos, que falam igual: Modo automático (o player não interage com os
-#: botões da página) e Modo personalizado (que permite alterar as cores). Um par de botões na faixa do
-#: título, com a mesma largura; o escolhido acende. No Automático, a folha da aba
-#: deixa as colunas paradas pelo `data-modo-da-aba` do quadro (o pacote o escreve).
-MODO_AUTOMATICO = "automatico"  # (noqa-acento: valor de atributo)
+MODO_AUTOMATICO = "automatico"  # (noqa-acento)
 MODO_PERSONALIZADO = "personalizado"
 ROTULO_DO_MODO = {MODO_AUTOMATICO: "Modo automático",
                   MODO_PERSONALIZADO: "Modo personalizado"}
@@ -429,7 +404,6 @@ def par_de_modos(gesto: str, modo: str) -> str:
             + "".join(botoes) + "</span>")
 
 
-#: A dica do botão do Modo automático: o que ele faz, curto, sem nenhum número do estilo.
 DICA_DO_MODO_AUTO = "O jogo manda; o estilo do perfil ajusta o resto"
 
 
@@ -462,9 +436,6 @@ def rotulo_do_chip(c: dict[str, Any]) -> str:
     return texto
 
 
-# NO MODO NATIVO A FITA FICA CINZA E MUDA (DESLIGAR-O-HEFESTO-01, opção a): quem
-# manda é o jogo, e a fita só mostra quem está conectado. Esta camada cobre a
-# fita inteira, não aceita clique e carrega a dica; fora do Nativo nasce escondida.
 DICA_DA_FITA_NO_NATIVO = (
     '<span class="so-no-nativo" title="Com o Hefesto desligado, o jogo manda: '
     'aqui só se vê quem está conectado."></span>')
@@ -539,7 +510,6 @@ def fita(ativo: str = "todos", inerte: bool = False,
     for c in lista:
         on = " on" if str(c["pref"]) in acesos else ""
         nome = c["nome"] if mesa is None else identidade_do_chip(c, mesa)
-        # `identidade_de` é «o transporte sozinho» — honesto num card, que só
         if mesa is not None and nome in (_degrau_do_transporte(c), c["via"],
                                          TRAVESSAO):
             nome = ""
@@ -553,7 +523,6 @@ def fita(ativo: str = "todos", inerte: bool = False,
             + _endereco_do_chip(str(c["pref"]), inerte)
             + f'{pintado}{com_dica}>'
             + rotulo_do_chip({**c, "nome": nome}) + "</label>")
-    #
     rotulo = f"<span>{ROTULO_DA_FITA}</span>" if lista else ""
     return (f'<div class="fita{" inerte" if inerte else ""}"{balao}>\n'
             f"      {rotulo}\n      " + "\n      ".join(chips)
@@ -1022,14 +991,6 @@ MARCA_DA_FITA = '    <div class="fita'
 RECUO_DA_FITA = "    "
 
 
-# O QUE UMA ABA POR CONTROLE FAZ NO NATIVO (DESLIGAR-O-HEFESTO-01, opção a, 09/10):
-# tudo o que a aba grava vira CINZA e não aceita clique (a recusa de verdade é da
-# camada, `pacotes.camada`; isto é só o rosto dela), e o que é ATO sem o que
-# fazer (Aplicar, Salvar e Importar do rodapé, o `.guardar` de cada coluna) fica invisível, e o Exportar, que só grava um arquivo, segue. Ficam vivos os cinco gestos de `VIVOS_NO_NATIVO`
-# (o cadeado, o liga/desliga, os dois modos e o reconectar), e o menu do botão direito
-# (`.menu-hefesto`), que é da janela e não da aba. Os seletores usam o
-# atributo SEM ASPAS de propósito: réguas contam o endereço com aspas, e o
-# `topo.html` é compartilhado, então isto só entra nas cinco páginas.
 CSS_DO_NATIVO = """
   body.nativo.por-controle :is([data-gesto],[data-modo],[data-hef-gesto],[data-papel],[data-forca],[data-player],[data-sensor],[data-rota],[data-mudo],[data-mic-modo],[data-v]):not(:is([data-gesto=cadeado],[data-gesto=hefesto],[data-gesto=modo-nativo],[data-gesto=modo-steam],[data-gesto=modo-navegacao],[data-gesto=reconectar],.menu-hefesto *)){
     pointer-events:none;cursor:default;-webkit-appearance:none;appearance:none;
@@ -1064,7 +1025,6 @@ def corpo_da_pagina(arq: str) -> str:
     comum, `pacotes.topo`, o escreve), e a classe `por-controle` só nas cinco
     abas de `camada.ABAS_POR_CONTROLE` (a mesma lista que a recusa usa): é ela
     que o CSS do Nativo usa para travar o que a aba grava. Quem pinta `body.nativo` é o piloto, a cada tique."""
-    # Import LAZY: `pacotes` importa este módulo (ordem própria de import).
     from hefesto_dualsense4unix.interface.pacotes.camada import ABAS_POR_CONTROLE
     classe = "por-controle" if f"{arq}.html" in ABAS_POR_CONTROLE else ""
     marca = f' class="{classe}"' if classe else ""
@@ -1090,7 +1050,6 @@ def monta(arq: str, titulo_aba: str, miolo: str, css_extra: str = "",
         t = re.sub(rf"--{nome}:#[0-9a-fA-F]{{6}}",
                    f"--{nome}:{cor_da_zona(colorway)}", t, count=1)
 
-    # Import LAZY porque este módulo tem ordem de import própria (os `noqa:
     from hefesto_dualsense4unix.interface import mesa_viva as _mesa_viva
 
     usb = sum(1 for c in CONECTADOS if str(c.get("transporte") or "").lower() == "usb")

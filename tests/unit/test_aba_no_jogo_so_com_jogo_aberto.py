@@ -184,9 +184,6 @@ def test_a_sonda_nao_empilha_a_cada_tique() -> None:
     assert daemon.chamadas == 1
 
 
-# 4. O `state_full`: o fato viaja até a janela
-
-
 @pytest.fixture
 def ipc_server(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> IpcServer:
     """IpcServer mínimo (sem socket no ar), no molde de `test_state_full_game_signal`."""

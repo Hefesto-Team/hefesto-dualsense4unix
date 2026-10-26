@@ -108,7 +108,7 @@ def test_a_anotacao_que_falha_deixa_o_yml_como_estava(
     assert linhas[0]["arquivos"] == 1 and linhas[0]["quem"] == cpe.QUEM_SERVICO, linhas
     assert _o_registro() == registro_antes
 
-    _carona(_lar)  # o disco volta ao normal: a passada seguinte põe o par e anota
+    _carona(_lar)
     assert _o_xalia_do(yml) == {_XALIA: "1", _SO_SUPORTADAS: "1"}, yml.read_text()
     assert {k for k, _ in _o_registro().pares} >= {_XALIA, _SO_SUPORTADAS}
 
@@ -215,9 +215,6 @@ def test_o_xalia_posto_por_ela_com_outro_valor_nao_vira_nosso(
     env = _env_do_yml(yml)
     assert env.get(_XALIA) == "0", f"a volta apagou o valor dela:\n{yml.read_text()}"
     assert "SDL_GAMECONTROLLER_IGNORE_DEVICES" not in env
-
-
-# D-1309-A-RECUSA-SO-PISCA-E-A-FRASE-VAI-AO-DIARIO
 
 
 def _o_que_a_recusa_faz(fonte: str) -> list[str]:

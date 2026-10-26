@@ -75,7 +75,7 @@ def modulo_do_censo() -> Any:
     sys.modules[spec.name] = modulo
     try:
         spec.loader.exec_module(modulo)
-    except Exception:  # pragma: no cover - defensivo
+    except Exception:  # pragma: no cover
         sys.modules.pop(spec.name, None)
         raise
     return modulo

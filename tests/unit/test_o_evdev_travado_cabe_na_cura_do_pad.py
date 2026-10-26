@@ -77,7 +77,6 @@ class _NoDeMentira:
 def lado_c(monkeypatch: pytest.MonkeyPatch) -> Iterator[_LadoCDeMentira]:
     falso = _LadoCDeMentira(uinput_mod._uinput.__file__)
     monkeypatch.setattr(uinput_mod, "_uinput", falso)
-    # O 1.7 chama `device.InputDevice(...)`; do 1.8 em diante o `uinput` importa o nome: as duas.
     monkeypatch.setattr(evdev.device, "InputDevice", _NoDeMentira)
     monkeypatch.setattr(uinput_mod, "InputDevice", _NoDeMentira, raising=False)
     monkeypatch.setattr(uinput_mod.util, "list_devices", lambda *_a, **_k: ["/dev/input/event999"])

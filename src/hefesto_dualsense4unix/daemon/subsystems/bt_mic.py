@@ -32,9 +32,6 @@ ENV_HABILITA = "HEFESTO_DUALSENSE4UNIX_BT_MIC"
 
 RECONCILIA_S = 5.0
 
-#: Quanto o stop espera a volta terminar. Passado o prazo, a volta segue
-#: sozinha, e a porta do gerenciador e o `_parar` do canal do cabo garantem
-#: que nada do que ela erguer depois fique no ar.
 ESPERA_DA_VOLTA_S = 2.0
 
 _VALORES_LIGADOS = ("1", "true", "yes", "on")
@@ -48,9 +45,6 @@ def habilitado_por_env(ambiente: dict[str, str] | None = None) -> bool:
     return env.get(ENV_HABILITA, "").strip().lower() in _VALORES_LIGADOS
 
 
-# carregado na máquina do usuário até o próximo boot. Ele se reconhece pelo
-
-#: O nome do driver HID do DualSense no sysfs (`.../drivers/playstation`).
 DRIVER_QUE_LE_O_DUALSENSE = "playstation"
 
 RAIZ_DO_MODULO_DO_DRIVER = "/sys/module/hid_playstation"
@@ -59,7 +53,6 @@ PARAMETRO_DA_MARCA = "mic_frames_ignored"
 
 SRCVERSION_DO_0003_SEM_A_MARCA: frozenset[str] = frozenset({"CFB81A3D4C7FAA41489CCBD"})
 
-#: O que o `state_full` e o log dizem quando a guarda falta.
 MOTIVO_SEM_A_GUARDA = "driver_sem_a_guarda_do_audio"
 
 
@@ -266,10 +259,6 @@ def uniqs_pedidos(config: DaemonConfig | Any) -> frozenset[str]:
     if not isinstance(pedidos, (set, frozenset, list, tuple)):
         return frozenset()
     return frozenset(norm_mac(str(u)) or "" for u in pedidos) - {""}
-
-
-# A queixa, de 16/09, com o DualSense no rádio.
-# acessibilidade — quem usa o microfone do DualSense como único microfone (o
 
 
 _NADA_DO_PIPEWIRE = ("auto_null", "@")
@@ -655,7 +644,7 @@ class BtMicSubsystem:
             return frozenset()
         try:
             pontes = gerenciador.pontes
-        except Exception:  # best-effort: o relato nunca derruba o state_full
+        except Exception:
             logger.debug("bt_mic_pontes_ilegiveis", exc_info=True)
             return frozenset()
         if not isinstance(pontes, dict):
@@ -675,7 +664,7 @@ class BtMicSubsystem:
             return []
         try:
             itens = descrever()
-        except Exception:  # pragma: no cover - defensivo
+        except Exception:  # pragma: no cover
             logger.debug("bt_mic_mesa_ilegivel", exc_info=True)
             return []
         if not isinstance(itens, list):
@@ -841,7 +830,6 @@ class BtMicSubsystem:
                 self._soltar_os_que_ela_desmarcou()
                 self._reconciliar_o_cabo(nos)
                 gerenciador.reconciliar(self.alvos(nos))
-                # reconexão. Ver `_aplicar_a_palavra_dela`.
                 self._aplicar_a_palavra_dela()
                 self._varrer_os_orfaos(nos)
                 self._renomear_os_canais_velhos()
@@ -949,7 +937,7 @@ class BtMicSubsystem:
             from hefesto_dualsense4unix.integrations import canal_do_microfone
 
             canal_do_microfone.fechar(uniq)
-        except Exception:  # pragma: no cover - defensivo
+        except Exception:  # pragma: no cover
             logger.warning("bt_mic_canal_do_cabo_nao_fechou", uniq=uniq, exc_info=True)
             return
         logger.info("bt_mic_canal_do_cabo_fora", uniq=uniq)
@@ -990,7 +978,7 @@ class BtMicSubsystem:
         gerenciador = self._gerenciador
         try:
             pontes = gerenciador.pontes if gerenciador is not None else None
-        except Exception:  # pragma: no cover - defensivo
+        except Exception:  # pragma: no cover
             logger.debug("bt_mic_pontes_ilegiveis", exc_info=True)
             pontes = None
         if isinstance(pontes, dict):
@@ -1000,7 +988,7 @@ class BtMicSubsystem:
                     continue
                 try:
                     mexeu = bool(renomear())
-                except Exception:  # pragma: no cover - defensivo
+                except Exception:  # pragma: no cover
                     logger.debug("bt_mic_ponte_nao_renomeou", exc_info=True)
                     continue
                 proprio = (
@@ -1013,17 +1001,17 @@ class BtMicSubsystem:
         for uniq in sorted(set(canal_do_microfone.de_pe()) - das_pontes):
             try:
                 antes = canal_do_microfone.canal_de_pe(uniq)
-                no_ar = getattr(antes, "descricao", "")  # (noqa-acento) atributo
+                no_ar = getattr(antes, "descricao", "")  # (noqa-acento)
                 no_ar = str(no_ar or "")
                 depois = canal_do_microfone.renomear(uniq, descricao_do_microfone(uniq))
-            except Exception:  # pragma: no cover - defensivo
+            except Exception:  # pragma: no cover
                 logger.debug("bt_mic_canal_do_cabo_nao_renomeou", uniq=uniq, exc_info=True)
                 continue
             if depois is None:
                 logger.warning("bt_mic_canal_sumiu_ao_renomear", uniq=uniq)
                 self._canais_do_cabo.pop(uniq, None)
                 continue
-            agora = getattr(depois, "descricao", "")  # (noqa-acento) atributo
+            agora = getattr(depois, "descricao", "")  # (noqa-acento)
             if str(agora or "") != no_ar:
                 renomeados.append(uniq)
         return [u for u in renomeados if u]

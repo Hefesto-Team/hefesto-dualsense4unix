@@ -41,7 +41,7 @@ for _caminho in (str(SRC), str(INTERFACE)):
 
 from hefesto_dualsense4unix.core import remapeamento_de_botao as remap
 
-PAGINA = "06-navegacao.html"  # (noqa-acento) nome de arquivo
+PAGINA = "06-navegacao.html"
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 NOME = "Régua da Troca"
 

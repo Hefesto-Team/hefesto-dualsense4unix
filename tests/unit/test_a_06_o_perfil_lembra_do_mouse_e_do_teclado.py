@@ -101,7 +101,7 @@ class PonteDeMentira:
         self.chamadas.append(("profile.reaplicar", {"nome": nome}))
         return {"status": "ok"}
 
-    def profile_switch(self, nome: str):  # pragma: no cover - existe para ser visto
+    def profile_switch(self, nome: str):  # pragma: no cover
         self.chamadas.append(("profile.switch", {"nome": nome}))
         return True
 

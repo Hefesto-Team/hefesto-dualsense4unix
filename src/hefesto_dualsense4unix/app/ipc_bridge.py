@@ -27,71 +27,36 @@ _IPC_TRANSPORT_ERRORS: tuple[type[BaseException], ...] = (
     OSError,
 )
 
-#: ATIVAR-NAO-MENTE-01 (leva 2, 05/08): quanto esperar por um `profile.switch`.
-#: `daemon.state_full`, e é curto de propósito para a janela não pendurar
-#: esperando um daemon morto. Só que `profile.switch` não é leitura: o handler
 PROFILE_SWITCH_TIMEOUT_S: float = 3.0
 
-#: O ato de áudio leva o que o serviço leva para achar a fonte e escrever nela.
 _TETO_DO_ATO_DE_AUDIO = 6.0
 
-#: Quanto esperar por cada método: um dono só, para a janela e para a linha de
-#: comando. Leitura espera o padrão de 0,25 s, curto para a janela não pendurar
-#: num serviço morto; o método que muda estado espera o que o serviço leva para
-#: aplicar, porque o prazo vencido com o modo JÁ aplicado vira «falhou» na tela
-#: e «nada foi ativado» no terminal. A ponte da janela reexporta esta tabela.
 TETOS: dict[str, float] = {
-    # O gesto que pede o P1 espera o desfecho dele (o prazo do daemon), com folga.
     "gamepad.emulation.set": TETO_DO_GESTO_QUE_PEDE_O_P1_S, "native.mode.set": 2.0,
     "mouse.emulation.set": 2.0, "keyboard.emulation.set": 2.0,
     "desktop.status.set": 2.0,
-    # A Navegação Interna: o interruptor e a lista gravam uma flag; o foco é o
-    # pulso de cada tique da janela, e um teto curto não segura a linha de fundo.
     "navegacao.interna.set": 2.0, "navegacao.foco": 0.5,
     "mouse.emulation.restore": 2.0, "daemon.emulation.suppress": 2.0,
-    # O arranjo da área de trabalho regrava os atalhos do perfil e pode criar o
-    # teclado virtual: a família do `profile.switch`.
     "desktop.arranjo.apply": 3.0, "desktop.arranjo.repor": 3.0,
     "profile.switch": PROFILE_SWITCH_TIMEOUT_S,
-    # Ligar o Freestyle roda o `profile.switch` do perfil dele; desligar devolve
-    # o jogo ou a escolha pelo mesmo caminho.
     "freestyle.set": PROFILE_SWITCH_TIMEOUT_S,
-    # O-APLICAR-E-A-ATIVACAO-SAO-UMA-SO-01 (01/10/2026): o «Aplicar» roda a
-    # cadeia da ativação, e por isso o teto é o do `profile.switch`.
     "profile.reaplicar": PROFILE_SWITCH_TIMEOUT_S,
     "coop.set": 2.0, "coop.sync": 2.0, "identity.renumber": 2.0,
     "gamepad.mask.set": TETO_DO_GESTO_QUE_PEDE_O_P1_S,
     "identity.number.set": 2.0,
-    # O pedido do «Procurar» espera a busca SUBIR no serviço (o BlueZ abre a janela:
-    # 107 a 366 ms medidos no diário da bancada em 03/10), e o serviço espera, no pior caso,
-    # o prazo da trava mais 1 s. O prazo de tela de 0,25 s dava «não respondeu» sobre
-    # uma busca que subia.
     "radio.busca.set": PRAZO_DA_TRAVA_DO_GESTO_S + 2.0,
-    # Medido no daemon do usuário em 01/09: `daemon.reload` leva 9,5 SEGUNDOS.
     "daemon.reload": 15.0,
-    # O `machine.declare` grava em disco; o gesto é raro e já congela a janela.
     "machine.declare": 1.0,
-    # O reset da barra reenvia o 0x08 a cada controle aberto, e o comutador do
-    # LED de jogador repinta todos: os dois prazos que a linha de comando já usava.
     "lightbar.reset": 2.0,
     "debug.player_leds": 3.0,
-    # O ato do microfone e o volume da captura: o prazo que a janela já usa, que
-    # o terminal herda em vez de dizer «sem resposta» sobre um ato em andamento.
     "mic.canal.set": _TETO_DO_ATO_DE_AUDIO, "mic.volume.set": _TETO_DO_ATO_DE_AUDIO,
-    # O volume e o mudo do alto-falante: o prazo que a janela já passa à mão e que o
-    # terminal, sem prazo nenhum até aqui, herda da tabela.
     "speaker.set": _TETO_DO_ATO_DE_AUDIO,
 }
 
-#: O padrão de um método fora da tabela: o de uma leitura.
 TETO_PADRAO_S: float = 0.25
 
-#: A linha de comando espera ao menos isto por qualquer método. Quem digitou
-#: espera a resposta, e não há janela para pendurar.
 PISO_DA_LINHA_DE_COMANDO_S: float = 1.0
 
-#: O que o terminal diz quando o prazo de um método que muda estado vence: o
-#: serviço pode ter aplicado logo depois, e dizer «nada foi ativado» mentiria.
 FRASE_DO_PRAZO_VENCIDO = (
     "sem resposta a tempo; confira com `hefesto-dualsense4unix status`"
 )
@@ -112,8 +77,6 @@ def _prazo(metodo: str, timeout: float | None) -> float:
     return teto(metodo) if timeout is None else timeout
 
 
-#: O prazo vencido do `asyncio.wait_for`: no 3.10 ele levanta o
-#: `asyncio.TimeoutError`, que só vira o `TimeoutError` embutido a partir do 3.11.
 PRAZO_VENCIDO = (TimeoutError, asyncio.TimeoutError)
 
 
@@ -1244,8 +1207,6 @@ def haptica_testar(uniq: str, ligado: bool) -> tuple[bool, dict[str, Any] | None
     corpo = _corpo_do_daemon("haptica.testar", {"uniq": uniq, "ligado": bool(ligado)})
     return corpo is not None, corpo
 
-
-# A medição é esta: a aba Mouse fala `mouse.emulation.set` por `call_async`
 
 __all__ = [
     "PROFILE_SWITCH_TIMEOUT_S",

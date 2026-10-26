@@ -26,10 +26,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 MOCKUP = RAIZ / "mockup/08-conexoes.html"
 TOPO = RAIZ / "src/hefesto_dualsense4unix/interface/topo.html"
 
-#: um tema de exemplo que passa: o teclado ciano na régua, a sala do fone em verde
 TEMA_VALIDO = ":root{ --c-teclado:#00e5ff; --sala-fone:#00c853; --panel:#1e1f29 }"
-
-# --- a recusa: o tema só troca cores, e o texto continua legível --------------------------
 
 
 @pytest.mark.parametrize(("folha", "pedaco"), [
@@ -52,7 +49,6 @@ def test_o_tema_que_nao_e_so_cor_e_recusado_com_a_frase(folha: str, pedaco: str)
 
 def test_o_tema_de_tres_para_um_e_recusado_com_o_par_e_o_numero() -> None:
     casa = tm.tokens_da_casa(TOPO)
-    # um cinza que dá 3:1 sobre o fundo mais claro da casa, o pior par dele
     alvo = next(f"#{v:02x}{v:02x}{v:02x}" for v in range(0x30, 0x100)
                 if tm.contraste(f"#{v:02x}{v:02x}{v:02x}", casa["--elevated"]) >= 3.0)
     assert 3.0 <= tm.contraste(alvo, casa["--elevated"]) < 3.1
@@ -60,7 +56,6 @@ def test_o_tema_de_tres_para_um_e_recusado_com_o_par_e_o_numero() -> None:
         tm.validar(f":root{{--texto-mudo:{alvo}}}", casa=casa)
     frase = recusa.value.frase
     assert "«--texto-mudo» sobre «--elevated» dá 3,0" in frase and "4,50:1" in frase, frase
-    # o fundo trocado sozinho é medido contra os textos da casa
     with pytest.raises(tm.TemaRecusadoError, match="sobre «--app-bg»"):
         tm.validar(":root{--app-bg:#9a9eb8}", casa=casa)
     with pytest.raises(tm.TemaRecusadoError, match="opaca"):
@@ -86,16 +81,9 @@ def test_a_casa_de_hoje_passa_na_propria_regua_e_o_tema_valido_sai_importante() 
     assert set(tm.tokens_da_casa(TOPO)) >= tm.PLASTICOS, "o plástico da casa mudou de nome"
 
 
-# --- o rótulo e os acentos: O-ROTULO-E-OS-ACENTOS-ENTRAM-NA-REGUA-DO-TEMA-01 ---------------
-
-#: O tema claro de fundos e textos, sem dizer os acentos: na casa de 20/10 ele passava, com o
-#: rótulo verde #50fa7b a 1,20:1 sobre o fundo claro.
 CLARO_SEM_ACENTOS = (":root{--app-bg:#eef0f5;--panel:#ffffff;--elevated:#f5f6fa;--fg:#1c1e29;"
                      "--texto-suave:#383c4c;--texto-mudo:#545a70;--comment:#4a5486"
-                     # a moldura clara (A-MOLDURA-DA-PAGINA-SEGUE-O-TEMA-01): o texto escuro do
-                     # `body` sumiria no `#11121a` da casa
                      ";--fundo-da-pagina:#dde1ea")
-#: Os acentos escuros do tema claro, sem o rótulo: ele segue o verde pelo apelido da casa.
 ACENTOS_ESCUROS = (";--green:#1d7a3c;--cyan:#006d85;--purple:#6a3dc2;--orange:#a35200;"
                    "--pink:#ad2f6c;--red:#c01f2e;--yellow:#7a6400")
 
@@ -108,7 +96,6 @@ def test_o_tema_claro_sem_os_acentos_e_recusado_pelo_rotulo() -> None:
 
 def test_o_acento_claro_sobre_o_fundo_claro_e_recusado_com_o_piso_do_acento() -> None:
     """A prova da D-2010-O-DESTAQUE-DO-TEMA-PASSA-DE-3-PARA-1."""
-    # o rótulo e o verde escuros passam; o amarelo da casa fica, e é ele o pior par
     with pytest.raises(tm.TemaRecusadoError) as recusa:
         tm.validar(CLARO_SEM_ACENTOS + ";--green:#1d7a3c}")
     frase = recusa.value.frase
@@ -124,12 +111,9 @@ def test_o_tema_claro_com_os_acentos_escuros_liga_e_o_rotulo_segue_o_verde() -> 
         "--a": "--b", "--d": "--e"}
 
 
-# --- do manifesto ao tema ligado ----------------------------------------------------------
-
-
 def _lugares(tmp_path: Path) -> instalador.Lugares:
     return instalador.Lugares(
-        codigo=tmp_path / "codigo",  # (noqa-acento): campo ASCII do contrato
+        codigo=tmp_path / "codigo",  # (noqa-acento)
         dados=tmp_path / "dados",
         registro=tmp_path / "mods.json", estado=tmp_path / "estado.json")
 
@@ -140,10 +124,10 @@ def _instalada(lg: instalador.Lugares, mod_id: str, tema: dict[str, Any], *,
     pasta = lg.codigo / mod_id
     pasta.mkdir(parents=True)
     (pasta / "hefesto-mod.json").write_text(json.dumps({
-        "id": mod_id, "nome": f"Tema {mod_id}", "versao": "1.0",  # (noqa-acento): chave ASCII
+        "id": mod_id, "nome": f"Tema {mod_id}", "versao": "1.0",  # (noqa-acento)
         "api": ">=1,<3",
         "licenca": "MIT", "tipos": ["tema"],
-        "permissoes": ["tema"], "tema": tema}),  # (noqa-acento): chave ASCII
+        "permissoes": ["tema"], "tema": tema}),  # (noqa-acento)
         encoding="utf-8")
     registro = instalador.ler_registro(lg.registro)
     registro[mod_id] = instalador.Entrada(
@@ -218,9 +202,6 @@ def test_o_manifesto_que_nao_abre_vai_aos_avisos_e_o_outro_tema_liga(tmp_path: P
     assert agora.avisos == sozinha.avisos
 
 
-# --- a régua do token: o Python diz o nome, a folha diz a cor -----------------------------
-
-
 from hefesto_dualsense4unix.interface import aba08
 from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 
@@ -273,8 +254,6 @@ def test_o_veu_da_vaga_mistura_o_token_sem_saber_o_hex() -> None:
     assert a08._veu("#7eb8d4", .5) == "rgba(126,184,212,0.5)"
 
 
-# --- no WebKit: a segunda folha da janela troca a cor da linha ----------------------------
-
 SONDA = r"""
 (function(){
   const marcado = document.getElementById('cx8-3');
@@ -322,7 +301,7 @@ def _no_webkit(tema: str | None) -> dict[str, Any]:
     def guardou(v: Any, res: Any) -> None:
         try:
             saiu.append(v.evaluate_javascript_finish(res).to_string())
-        except Exception as e:  # pragma: no cover — só quando o roteiro quebra
+        except Exception as e:  # pragma: no cover
             saiu.append(f"ERRO {e}")
         Gtk.main_quit()
 
@@ -351,7 +330,6 @@ def test_no_webkit_o_tema_troca_a_regua_a_sala_e_o_painel_e_a_folha_da_casa_cont
     assert com["teclado"] == "rgb(0, 229, 255)", com
     assert sem["fone"] == "rgb(126, 154, 168)" and com["fone"] == "rgb(0, 200, 83)", (sem, com)
     assert sem["painel"] == "#282a36" and com["painel"] == "#1e1f29", (sem, com)
-    # A mini-faixa do painel leva o padrão dentro do var(): sem tema ela continua com o hex.
     assert sem["faixa_do_mapa"] == "rgb(255, 184, 108)", sem
     assert com["faixa_do_mapa"] == "rgb(255, 0, 170)", com
     assert sem["esconde_a_nota"] is True and com["esconde_a_nota"] is True
@@ -376,15 +354,10 @@ def test_a_janela_pede_o_tema_ligado_quando_ninguem_diz_qual(
     assert _no_webkit(janela.TEMA_LIGADO)["teclado"] == "rgb(0, 229, 255)"
 
 
-# --- o retratista fotografa com o tema --------------------------------------------------
-
-
 def test_o_retratista_le_o_tema_pela_mesma_regua(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from hefesto_dualsense4unix.interface import olhar
 
-    # Sem a recusa do `--tema` com o `--doc`, o retratista fotografaria as dez abas COM o tema
-    # para dentro de docs/usage/assets/: o lugar das fotos vira um erro, e nada se grava.
     def _sem_foto(*_a: Any, **_k: Any) -> int:
         raise AssertionError("o --tema com o --doc chegou a fotografar")
 

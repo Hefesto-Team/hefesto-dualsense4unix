@@ -108,20 +108,19 @@ sys.path.insert(0, str(AQUI))
 RAIZ = AQUI.parents[2]
 
 import mesa_viva  # noqa: E402
-import monta  # noqa: E402  (o gerador do mockup, usado como BIBLIOTECA)
+import monta  # noqa: E402
 
 from hefesto_dualsense4unix.interface.pacotes import fios  # noqa: E402
 
 
-import aba02  # noqa: E402  isort:skip
+import aba02  # noqa: E402  # isort:skip
 
-PAGINA = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "02-controles.html"  # (noqa-acento) `paginas` e o nome da PASTA; caminho nao leva acento
+PAGINA = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "02-controles.html"  # (noqa-acento)
 TITULO_ESPERADO = "Hefesto — aba CONTROLES"
 
 TIQUE_MS = 100
 TIQUE_LENTO_MS = 2000
 
-#: `state_full` (a mesma leitura do tique rápido) e pinta quatro botões — a 10 Hz
 TIQUE_DO_INTERRUPTOR_MS = 500
 
 PRAZO_DO_MODO_S = 4.0
@@ -200,7 +199,6 @@ SEM_DONO = ("SEM LINHA na tabela de donos — este gesto chegou de um endereço 
             "o gerador não escreve. Nada foi aplicado.")
 
 
-#: para `--plastico`; a borda neutra do tema é o "não sei" desta linha, e é a
 PLASTICO_DESCONHECIDO = "var(--border-forte)"
 
 _cor_da_zona_real = aba02.cor_da_zona
@@ -664,7 +662,6 @@ class Janela:
         self.valores: list[int] = []
         self.eco_sensor: dict[str, dict[str, str]] = {}
         self.eco_rota: dict[str, str] = {}
-        #: O eco dos três botões de som, por controle. Ele é o que sobrevive à
         self.eco_mudo: dict[str, dict[str, Any]] = {}
         self.ondas: dict[str, deque] = {}
         self.lento: dict[str, dict[str, Any]] = {}
@@ -682,7 +679,6 @@ class Janela:
         self.pinturas_do_interruptor = 0
         self.lados_do_interruptor: list[str] = []
         self.recusas_de_modo: list[str] = []
-        #: verde sobre dois botões mortos em 29/08.
         self.cliques_do_roteiro = 0
         self.alvos_mortos_do_roteiro: list[str] = []
         self.alvos_vivos_do_roteiro = 0
@@ -734,7 +730,7 @@ class Janela:
 
         self.ponte.perguntar(
             "document.querySelector('[data-modo]')"
-            " ? (window.HEFSW ? 'ja' : 'sim') : 'nao'",  # (noqa-acento): sentinela comparada no JS
+            " ? (window.HEFSW ? 'ja' : 'sim') : 'nao'",  # (noqa-acento)
             respondeu,
         )
         return False
@@ -1088,9 +1084,6 @@ class Janela:
             )
         alto_pct = e["alto_pct"]
         eco = self.eco_mudo.get(c["uniq"], {})
-        # O SELO É DO PACOTE DA ABA: as quatro faces (firmware, desejado, canal ativo e mudo do
-        # canal), e não o byte do firmware sozinho. O eco do clique ainda manda até o daemon
-        # confirmar; sem ele, quem diz é `selo_composto`.
         from hefesto_dualsense4unix.interface.pacotes import a02_controles as a02
 
         selo_do_mic = (mesa_viva.selo_do_mic(eco["microfone"] == "on", True)

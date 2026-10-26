@@ -68,8 +68,8 @@ from tests.unit.busctl_de_verdade import escrever_impressor
 
 RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
-PAGINA = SRC / "interface" / "paginas" / "08-conexoes.html"  # (noqa-acento) nome de PASTA
-ULTIMA = "ultima"  # (noqa-acento) chave de máquina
+PAGINA = SRC / "interface" / "paginas" / "08-conexoes.html"  # (noqa-acento)
+ULTIMA = "ultima"  # (noqa-acento)
 
 PCI_A = "0000:0a:00.0"
 PCI_B = "0000:0b:00.0"
@@ -736,9 +736,6 @@ def test_as_tres_telas_clicadas_cada_botao_chega_ao_motor(
     assert radio.chamadas[chamadas:] == [], "a cerimônia chamou o BlueZ"
 
 
-# 2. só o DualSense marca uma porta
-
-
 def test_so_o_dualsense_marca_uma_porta(vazia: Gabinete, disco: Path) -> None:
     """Palavra de produto na R9: *«usarmos um dualsense e o USB pra sairmos de porta"""
     laco = _em_pe(vazia)
@@ -828,8 +825,6 @@ def test_as_quatro_faces_sao_as_do_produto_e_da_tela_aprovada() -> None:
         r for r in _botoes(telas[ee.TELAS[ee.SENTADA]]) if GESTO_DO_BOTAO[r][0] == "responder"
     ]
     assert tuple(faces_da_tela) == ee.FACES
-    # De pé a face não se pergunta (toda entrada vai a `FACE_EM_PE`): a tela não tem botão de
-    # face. O «?» que dizia isso saiu com a Conexões do todo (15/10/2026).
     em_pe = [r for r in _botoes(telas[ee.TELAS[ee.EM_PE]]) if r in GESTO_DO_BOTAO]
     assert em_pe and not [r for r in em_pe if GESTO_DO_BOTAO[r][0] == "responder"], em_pe
     assert "Traseira" not in ee.FACES

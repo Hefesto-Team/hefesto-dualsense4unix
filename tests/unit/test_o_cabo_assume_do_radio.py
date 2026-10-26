@@ -175,7 +175,6 @@ class Kernel:
         if ap["uniq"] in self.presos:
             mac = MAC_DE[ap["uniq"]]
             if self.uevent_legivel:
-                # o driver leu o endereço (`hdev->uniq`) e só depois recusou por -EEXIST
                 (self.raiz / inst / "uevent").write_text(
                     f"HID_ID=0003:0000054C:00000CE6\nHID_UNIQ={mac}\nMODALIAS=hid:b0003g0001\n",
                     encoding="utf-8",
@@ -1020,7 +1019,7 @@ class TestOCaboEmEspera:
         assert oce.cabos_em_espera(raiz) == [oce.CaboEmEspera("0003:054C:0DF2.0015")]
 
     def test_o_hid_recusado_mostra_o_endereco_do_gemeo_no_uevent(self, tmp_path: Path) -> None:
-        # A decisão D-0810-O-GEMEO-DO-CABO-VEM-DO-HID-UNIQ.
+        """Prova da D-0810-O-GEMEO-DO-CABO-VEM-DO-HID-UNIQ."""
         raiz = tmp_path / "hid"
         hid = raiz / "0003:054C:0CE6.001B"
         hid.mkdir(parents=True)
@@ -1108,7 +1107,7 @@ class TestOCaboEmEspera:
         assert chamadas == ["/org/bluez/hci1/dev_X"]
 
     def test_a_vigia_espera_a_probe_e_desiste_de_quem_nao_e_gemeo(self) -> None:
-        # A decisão D-0810-O-GEMEO-DO-CABO-VEM-DO-HID-UNIQ.
+        """Prova da D-0810-O-GEMEO-DO-CABO-VEM-DO-HID-UNIQ."""
         vigia = oce.VigiaDoCabo()
         cabo = oce.CaboEmEspera("0003:054C:0CE6.0030", uniq="")
         vigia.observar_os_cabos([cabo], 100.0)

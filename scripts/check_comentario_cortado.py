@@ -58,13 +58,11 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
 
-#: de onde se mede «a mudança de agora», na ordem: o `dev` local e, no CI, o `origin/dev`
 REFS_DA_BASE = ("dev", "origin/dev")
 
 COMMIT_DO_CORTE = "8002c142c"
 PASTAS = ("src", "tests", "scripts")
 
-# as palavras com que uma frase NÃO acaba: artigos, preposições, conjunções e pronomes relativos
 CONECTIVOS = frozenset({
     "a", "o", "as", "os", "um", "uma", "uns", "umas", "de", "da", "do", "das", "dos", "em", "no",
     "na", "nos", "nas", "ao", "aos", "à", "às", "por", "pelo", "pela", "pelos", "pelas", "para",
@@ -79,9 +77,8 @@ _LETRA = re.compile(r"[^\W\d_]")
 _COMENTARIO_CRU = re.compile(r"^\s*#")
 _FIM_DE_FRASE = ".!?…"
 _FECHOS = ")]}»\"'*_` "
-_MARCA_NO_FIM = re.compile(r"\s{2,}#.*$")  # a marca depois de dois espaços (a do acento, a do E501)
+_MARCA_NO_FIM = re.compile(r"\s{2,}#.*$")
 
-#: `{arquivo: textos}`: a última linha viva de cada bloco que o corte deixou pela metade
 Deixadas = Mapping[str, frozenset[str]]
 
 
@@ -124,7 +121,7 @@ def _comentarios_soltos(texto: str) -> dict[int, str]:
             if tok.type == tokenize.COMMENT and not tok.line[: tok.start[1]].strip():
                 soltos[tok.start[0]] = tok.string
     except (tokenize.TokenError, IndentationError, SyntaxError):
-        pass  # o que o tokenizador leu até a quebra vale; arquivo quebrado não some da conta
+        pass
     return soltos
 
 
@@ -234,7 +231,7 @@ def _linhas_de_atribuicao(texto: str) -> set[int]:
     except (SyntaxError, ValueError):
         return {n for n, linha in enumerate(texto.splitlines(), 1) if _ATRIBUICAO_CRUA.match(linha)}
     tipos: tuple[type[ast.stmt], ...] = (ast.Assign, ast.AnnAssign)
-    if hasattr(ast, "TypeAlias"):  # o `type X = ...` nasceu no 3.12
+    if hasattr(ast, "TypeAlias"):
         tipos += (ast.TypeAlias,)
     return {n.lineno for n in ast.walk(arvore) if isinstance(n, tipos)}
 

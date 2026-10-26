@@ -26,70 +26,42 @@ from hefesto_dualsense4unix.profiles.schema import (
 
 RGB = tuple[int, int, int]
 
-#: O fundo do respirar: a barra nunca apaga de todo, só abaixa.
 PISO_DO_RESPIRAR = 0.08
-#: O fundo do piscar: o vermelho saturado nunca alterna com o apagado.
 PISO_DO_PISCAR = 0.15
-#: O fundo da batida do coração.
 PISO_DA_BATIDA = 0.25
-#: A borda do piscar: a luz leva isto para subir ou descer (a onda quadrada tinha zero).
 BORDA_DO_PISCAR_S = 0.150
-#: Teto do piscar, em lampejos por segundo (WCAG 2.3.1).
 TETO_DO_PISCAR_HZ = 3.0
 PISO_DO_PISCAR_HZ = 0.3
-#: O fundo da Onda: a barra nunca apaga de todo enquanto a crista não chega.
 PISO_DA_ONDA = 0.20
-#: Os LEDs de número do jogador, de um lado ao outro: a crista da Onda corre por eles e a barra
-#: acompanha o do meio.
 LEDS_DA_ONDA = 5
 LED_DO_MEIO_DA_ONDA = LEDS_DA_ONDA // 2
-#: A meia-largura da crista, em LEDs: ela acende o LED que passa e esmaece nos vizinhos.
 MEIA_LARGURA_DA_ONDA = 1.5
-#: A luzinha do jogador é liga/desliga: acende quando a crista a leva acima do meio do passeio.
 LIMIAR_DA_LUZINHA_DA_ONDA = 0.5
-#: O fundo do Relâmpago: o clarão nunca vem do apagado (nem o vermelho alterna com o preto).
 PISO_DO_RELAMPAGO = 0.20
-#: O clarão sobe em cosseno e desce mais devagar; o eco vem logo depois, mais fraco. Duas subidas
-#: por rajada, e a rajada mais curta dura 1,4 s: nunca passa de 3 subidas por segundo (WCAG 2.3.1).
 SUBIDA_DO_RELAMPAGO_S = 0.12
 DESCIDA_DO_RELAMPAGO_S = 0.30
 ECO_DO_RELAMPAGO_S = 0.50
 FORCA_DO_ECO = 0.7
 DESCIDA_DO_ECO_S = 0.25
-#: A chama passeia entre estes dois brilhos.
 PISO_DA_CHAMA = 0.6
 TETO_DA_CHAMA = 1.0
-#: A Maré desloca o matiz até 30 graus.
 DESLOCAMENTO_DA_MARE = 30.0 / 360.0
-#: Uma volta do arco-íris dura no mínimo isto.
 VOLTA_MINIMA_DO_ARCO_IRIS_S = 8.0
-#: Defasagem do arco-íris entre dois controles vizinhos: um quarto de volta.
 DEFASAGEM_DO_ARCO_IRIS = 0.25
-#: O Acende da Corrida (20/10/2026): a barra segue o curso do gatilho, do piso à cor cheia, e o
-#: brilho nunca anda mais depressa que três vaivéns (subir e descer) por segundo.
 PISO_DO_ACENDE = 0.25
 VAIVENS_DO_ACENDE_POR_S = 3.0
 TETO_DO_ACENDE_POR_S = 2.0 * (1.0 - PISO_DO_ACENDE) * VAIVENS_DO_ACENDE_POR_S
 MEIO_VAIVEM_DO_ACENDE_S = 1.0 / (2.0 * VAIVENS_DO_ACENDE_POR_S)
-#: A Bateria da Maratona: abaixo disto, fora da carga, a barra respira (5 s por respiração, o
-#: ritmo 2) e nunca pisca; acima, segue fixa.
 LIMIAR_DE_BATERIA_PCT = 30
 RITMO_DA_BATERIA = 2
 ESTADOS_DE_CARGA_EM_DIA = frozenset({"carregando", "cheio"})
-#: Os efeitos cujo desenho é ENTRE os controles (a defasagem do arco-íris, o mesmo ângulo da
-#: Maré): o laço os conta num relógio só, o da mesa, e não do instante em que cada um entrou.
 BASES_DO_RELOGIO_COMUM = frozenset(
-    {"arco-iris", "mare", "aurora", "respira-em-cores"})  # (noqa-acento) chave ASCII
+    {"arco-iris", "mare", "aurora", "respira-em-cores"})
 
-#: Os efeitos que leem um dado vivo ou guardam estado (a mão, o som, a carga, o calor e o acaso das
-#: Estrelas: 22/10/2026): têm estado por controle e por isso não são função só do tempo. A Aurora
-#: é função só do tempo e fica de fora.
 BASES_DE_DADO_VIVO = frozenset(
     BASES_DA_MAO_DA_LUZ + BASES_DO_SOM_DA_LUZ
     + tuple(b for b in BASES_DE_AMBIENTE_DA_LUZ if b != "aurora") + ("ondulacao",))
-#: Os efeitos que pintam também as luzinhas do jogador: o quadro leva barra e luzinhas juntas.
 BASES_COM_LUZINHAS = frozenset({"estrelas", "onda", "ondulacao", "vaivem", "enche"})
-#: A cor do símbolo apertado no «Reage ao botão» (△ verde, ○ vermelho, ✕ azul, □ rosa).
 COR_DO_TRIANGULO: RGB = (0, 255, 0)
 COR_DO_CIRCULO: RGB = (255, 0, 0)
 COR_DO_XIS: RGB = (0, 0, 255)
@@ -100,22 +72,12 @@ CORES_DOS_SIMBOLOS: Mapping[str, RGB] = {
     "cross": COR_DO_XIS,
     "square": COR_DO_QUADRADO,
 }
-#: O fundo do «Reage ao botão»: sem aperto a barra fica na cor escolhida, nunca apaga.
 PISO_DO_REAGE = PISO_DO_ACENDE
-#: O clarão do aperto sobe em meio cosseno nisto e desce devagar (de 2 s no ritmo 1 a 0,5 s no 10).
 SUBIDA_DO_REAGE_S = 0.12
-#: No máximo isto de subidas em qualquer janela de 1 s (WCAG 2.3.1): aperto a mais NÃO sobe.
 SUBIDAS_DO_REAGE_POR_S = 3
-#: A roda de cores não gira mais depressa que isto, em voltas por segundo: uma volta inteira passa
-#: por duas luminâncias altas (verde e ciano/amarelo), então 1 volta/s fica abaixo dos 3 clarões.
 VOLTAS_DO_MATIZ_POR_S = 1.0
-#: A inclinação com menos que isto de gravidade (em g) é leitura solta, não direção: ignora.
 GRAVIDADE_MINIMA_G = 0.3
-#: O controle deitado (a gravidade toda no eixo y) não tem lado para baixo: com menos que isto da
-#: gravidade no plano x-z (~10 graus de inclinação), a cor fica onde está em vez de seguir o ruído.
 INCLINACAO_MINIMA_G = 0.17
-#: O toque cobre o matiz de 0 a 300 graus (do vermelho ao magenta): a ponta direita não volta
-#: ao vermelho da esquerda.
 VOLTA_DO_TOQUE = 300.0 / 360.0
 
 _RITMO_MAXIMO = 10
@@ -287,8 +249,6 @@ def brilho_do_vaivem(t: float, periodo_s: float) -> float:
     return brilhos_do_vaivem(t, periodo_s)[LED_DO_MEIO_DA_ONDA]
 
 
-#: O Enche: as luzinhas acendem uma por passo (cinco passos), as cinco ficam um passo e o número
-#: volta um passo. Uma subida da barra e de cada luzinha por ciclo.
 PASSOS_DO_ENCHE = LEDS_DA_ONDA + 2
 
 
@@ -325,7 +285,6 @@ def brilho_do_enche(t: float, passo_s: float) -> float:
         brilho = 1.0
     else:
         brilho = 1.0 - (1.0 - PISO_DA_ONDA) * u
-    # Em degraus, como a barra das Estrelas: não gasta um report a cada tique.
     em_degraus = round(brilho * DEGRAUS_DA_BARRA_DAS_ESTRELAS) / DEGRAUS_DA_BARRA_DAS_ESTRELAS
     return max(PISO_DA_ONDA, min(1.0, em_degraus))
 
@@ -461,7 +420,7 @@ class BrilhoDoAcende:
             return self.brilho
         if sentido != self._sentido:
             if self._sentido and agora - self._virou_em < MEIO_VAIVEM_DO_ACENDE_S:
-                return self.brilho  # virar agora seria passar do teto: segura o brilho
+                return self.brilho
             self._sentido, self._virou_em = sentido, agora
         passo = TETO_DO_ACENDE_POR_S * decorrido
         self.brilho = min(alvo, self.brilho + passo) if sentido > 0 else max(
@@ -581,8 +540,6 @@ class ReageAoBotao:
         return _escalar(cor, brilho)
 
 
-#: De onde o anel da Ondulação parte: os botões da esquerda da luzinha 0, os da direita da 4, e
-#: qualquer outro (o PS) da do meio, abrindo para os dois lados.
 BOTOES_DA_ESQUERDA = frozenset(
     {"dpad_up", "dpad_down", "dpad_left", "dpad_right", "l1", "l2_btn", "l3", "create"})
 BOTOES_DA_DIREITA = frozenset(
@@ -708,11 +665,8 @@ class DedoNoTouchpad:
         return _escalar(_matiz_na_cor(self._matiz), brilho)
 
 
-#: O «Ao som» sobe depressa e desce devagar (cauda de 1 s no ritmo 1, 0,2 s no 10).
 SUBIDA_DO_SOM_S = 0.03
-#: Os agudos mudam a cor devagar: a barra não pisca de cor a cada pancada de prato.
 TEMPO_DOS_AGUDOS_S = 0.3
-#: O máximo de branco que os agudos misturam na cor escolhida (a barra nunca vira só branca).
 BRANCO_DOS_AGUDOS = 0.8
 
 
@@ -755,8 +709,6 @@ class AoSom:
         return _escalar(cor, self._brilho.andar(self._nivel, agora))
 
 
-#: A Aurora: um ciclo inteiro pelas cores dura de 60 s (ritmo 1) a 20 s (ritmo 10).
-#: Com uma cor só, ela vai até os vizinhos dessa cor na roda (40 graus para cada lado).
 VIZINHANCA_DA_AURORA = 40.0 / 360.0
 TETO_DE_CORES_DA_AURORA = 3
 
@@ -780,7 +732,6 @@ def cores_da_aurora(cores: Sequence[RGB]) -> tuple[RGB, ...]:
             _com_o_matiz_andado(base, -VIZINHANCA_DA_AURORA))
 
 
-#: Cada controle da mesa anda esta fração de ciclo atrás do anterior, como o arco-íris.
 DEFASAGEM_DA_AURORA = 1.0 / 8.0
 
 
@@ -798,8 +749,6 @@ def cor_da_aurora(efeito: EfeitoDaLuz, t: float, lugar: int = 0) -> RGB:
     return _nunca_preta(cor)
 
 
-#: A «Cor da bateria»: vermelha até 10%, amarela em 50%, verde em 100%, e entre os pontos a cor
-#: anda em linha reta pelo matiz.
 CARGA_DO_VERMELHO_PCT = 10
 CARGA_DO_AMARELO_PCT = 50
 MATIZ_DO_AMARELO = 60.0 / 360.0
@@ -822,7 +771,6 @@ def cor_da_carga(pct: float) -> RGB:
     return _matiz_na_cor(matiz_da_carga(pct))
 
 
-#: Sem leitura (sem controle lido, sem sensor): o branco no piso, que não é nenhuma cor de dado.
 COR_SEM_LEITURA: RGB = _escalar((255, 255, 255), PISO_DO_ACENDE)
 
 
@@ -856,9 +804,7 @@ class CorDaBateria:
         return _escalar(cor, PISO_DO_ACENDE + (1.0 - PISO_DO_ACENDE) * fase)
 
 
-#: A «Cor da temperatura»: o calor anda para a leitura nova nisto, e a luz nunca salta.
 TEMPO_DO_CALOR_S = 2.0
-#: O matiz do azul frio; o quente é o vermelho, em 0.
 MATIZ_DO_FRIO = 240.0 / 360.0
 
 
@@ -910,14 +856,9 @@ class Quadro:
     luzinhas: tuple[bool, bool, bool, bool, bool] | None = None
 
 
-#: As Estrelas: cada cintilada e cada volta do número duram isto (sorteado), esticado pelo
-#: ritmo. Uma cintilada e o número que a segue somam ao menos 0,86 s, então uma luzinha acende no
-#: máximo duas vezes por segundo, abaixo do teto de três (WCAG 2.3.1).
 CINTILADA_S = (0.36, 0.8)
 NUMERO_S = (0.5, 1.4)
-#: Quantas luzinhas uma cintilada acende, no mínimo e no máximo (nunca as cinco: isso é o número).
 ESTRELAS_POR_CINTILADA = (1, 3)
-#: A barra das Estrelas fica baixa e acompanha as luzinhas por cima disto, alisada.
 NIVEL_DA_BARRA_DAS_ESTRELAS = 0.3
 SOBE_A_BARRA_POR_ESTRELA = 0.1
 TEMPO_DA_BARRA_DAS_ESTRELAS_S = 0.4
@@ -949,7 +890,7 @@ class Estrelas:
 
     def _proxima_fase(self, agora: float) -> None:
         """Passa da cintilada ao número e do número à cintilada, num tempo sorteado."""
-        if self._acesas is None:  # estava no número (ou no começo): cintila
+        if self._acesas is None:
             a = set(self._rng.sample(range(5), self._rng.randint(*ESTRELAS_POR_CINTILADA)))
             self._acesas = (0 in a, 1 in a, 2 in a, 3 in a, 4 in a)
             tempo = self._rng.uniform(*CINTILADA_S)
@@ -1015,8 +956,6 @@ def matiz_do_arco_iris(t: float, ritmo: int, posicao: int = 0) -> float:
     return (t / periodo_do_arco_iris_s(ritmo) + DEFASAGEM_DO_ARCO_IRIS * posicao) % 1.0
 
 
-#: O Respira em cores: cada respiração anda 0,618 de volta na roda (137 graus da anterior), e cada
-#: lugar da mesa um quarto de volta, no relógio comum: os quatro nunca na mesma cor.
 PASSO_DO_RESPIRA_EM_CORES = 0.618
 DEFASAGEM_DO_RESPIRA_EM_CORES = 0.25
 
@@ -1044,7 +983,7 @@ def cor_no_instante(
     vaivém a barra é o LED do meio; as cinco luzinhas do jogador saem de
     :func:`luzinhas_no_instante`, no mesmo quadro.
     """
-    if efeito.base == "arco-iris":  # (noqa-acento) chave ASCII
+    if efeito.base == "arco-iris":
         r, g, b = colorsys.hsv_to_rgb(matiz_do_arco_iris(t, efeito.ritmo, posicao), 1.0, 1.0)
         return (_inteiro(r * 255), _inteiro(g * 255), _inteiro(b * 255))
     if efeito.base == "aurora":
@@ -1053,9 +992,9 @@ def cor_no_instante(
         cor = _matiz_na_cor(matiz_do_respira_em_cores(t, efeito.ritmo, posicao))
         return _escalar(cor, brilho_do_respirar(t, periodo_do_respirar_s(efeito.ritmo)))
     cores = efeito.cores or ((255, 255, 255),)
-    if efeito.base in BASES_DE_DADO_VIVO:  # sem o dado vivo: a cor escolhida, parada
+    if efeito.base in BASES_DE_DADO_VIVO:
         return cores[0]
-    if efeito.base == "fixa":  # a cor parada: o Acende varia o brilho, não a cor
+    if efeito.base == "fixa":
         return cores[0]
     if efeito.base == "chama":
         brilho = brilho_da_chama(t, troca_da_chama_s(efeito.ritmo), semente)
@@ -1064,7 +1003,7 @@ def cor_no_instante(
         return _com_o_matiz_andado(
             cores[0], amplitude * deslocamento_da_mare(t, periodo_da_mare_s(efeito.ritmo))
         )
-    if efeito.base == "batimento":  # (noqa-acento) chave ASCII
+    if efeito.base == "batimento":
         periodo = periodo_da_batida_s(efeito.ritmo)
         cor = cores[int(t / periodo) % len(cores)]
         return _escalar(cor, brilho_da_batida(t, periodo))
@@ -1088,7 +1027,6 @@ def cor_no_instante(
         hz = frequencia_do_piscar_hz(efeito.ritmo)
         periodo = 1.0 / hz
         borda = min(BORDA_DO_PISCAR_S, periodo / 2)
-        # A cor troca no meio do baixo, onde a luz está no piso, e nunca no alto.
         meio_do_baixo = 0.75 * periodo - borda / 2
         cor = cores[max(0, math.floor((t + periodo - meio_do_baixo) / periodo)) % len(cores)]
         return _escalar(cor, brilho_do_piscar(t, hz))

@@ -60,7 +60,6 @@ import monta
 BANCADA = RAIZ / "mockup/04-iluminacao.html"
 PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 
-#: `""` NÃO é descuido: é o que `mesa_viva.mesa_do_estado` põe quando o mapa de
 LIDO = "white"
 SEM_LEITURA = ""
 
@@ -143,7 +142,6 @@ def test_o_desenho_de_cada_coluna_conectada_pede_o_alvo_do_atributo() -> None:
 
     assert conectadas, "a bancada da 04 não tem uma coluna de controle sequer"
 
-    # a desenhar as QUATRO colunas (o foco são quatro DualSense), com as
     assert declarados, "nenhum `<svg>` da bancada declara `data-campo=desenho`"
     assert len(vestidos) == len(declarados), (
         f"{len(declarados)} desenhos declarados e só {len(vestidos)} com o "

@@ -103,7 +103,6 @@ def test_o_jogo_que_abre_na_navegacao_ja_esconde_o_fisico(
     assert _DISABLE in env
     assert _HIDAPI not in env, "a env é a da máscara do cartão (DualSense), não a padrão"
     assert "divergente=" not in _estado(pasta / f"steam_app_{APPID}.env")
-    # abria vendo o DualSense de plástico. Ver
     assert _IGNORE in _env(pasta / "default.env")
 
 

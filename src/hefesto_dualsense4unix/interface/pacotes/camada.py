@@ -184,17 +184,11 @@ CAMADA: dict[tuple[str, str], str] = {
     ("10-perfis.html", "selecionar"): _W,
 }
 
-#: as abas que falam de controle: no Nativo elas mostram quem está conectado e não deixam mexer
 ABAS_POR_CONTROLE: frozenset[str] = frozenset({
     "01-jogar.html", "02-controles.html", "03-gatilhos.html", "04-iluminacao.html",
     "05-vibracao.html",
 })
 
-#: o que segue vivo no Nativo, dentro das cinco abas: o interruptor «Ligado | Desligado» (o caminho
-#: de volta), os três botões do Desligado (a Navegação mora ali desde o todo de 15/10/2026, e é
-#: com o Nativo ligado que ela se escolhe), o Modo Freestyle (é do computador) e o
-#: Reconectar controles (um ato sobre o aparelho, não uma escolha do Hefesto). O gesto da camada
-#: `janela` nem chega ao daemon e fica de fora da conta.
 VIVOS_NO_NATIVO: frozenset[tuple[str, str]] = frozenset({
     ("01-jogar.html", "cadeado"),
     ("01-jogar.html", "hefesto"),
@@ -204,27 +198,17 @@ VIVOS_NO_NATIVO: frozenset[tuple[str, str]] = frozenset({
     ("01-jogar.html", "reconectar"),
 })
 
-#: O rodapé é de TODA página (`("*", gesto)`), e na tabela não entra: o Aplicar, o
-#: Salvar e o Importar mandam o perfil ao controle e recusam no Nativo, nas cinco
-#: abas por controle; o Exportar só grava um arquivo e segue vivo.
 RODAPE_VIVO_NO_NATIVO = frozenset({"exportar"})
 
-#: O menu do botão direito é de TODA página (`("*", gesto)`) e vive no Nativo: Atualizar,
-#: Desligar, Reiniciar, Reconectar controles e Fechar são atos do computador, do aparelho e da
-#: janela, não escolhas do Hefesto.
 GESTOS_DO_MENU = frozenset({"menu-atualizar", "menu-desligar", "menu-reiniciar", "menu-reconectar",
                             "menu-fechar"})
 
-#: O botão que trava a navegação dos controles é de TODA página (``("*", gesto)``) e vive no Nativo:
-#: a Interna é da janela, não do jogo (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01).
 GESTOS_DA_MOLDURA = frozenset({"travar-navegacao"})
 FRASE_NO_NATIVO = "Em modo nativo o jogo lê este controle direto, e o Hefesto não grava aqui."
 MIRA_CINZA_NO_NATIVO = (
     "Em modo nativo o jogo lê este controle direto, e o analógico virtual não grava."
 )
 
-#: a frase própria de um gesto, quando ele nomeia o que o chip deixou de fazer. O analógico
-#: virtual se liga e troca de lado só na aba Controles (a Calibrar só ajusta).
 FRASES_NO_NATIVO: dict[tuple[str, str], str] = {
     ("02-controles.html", "analogico-lado"): MIRA_CINZA_NO_NATIVO,
 }

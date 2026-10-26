@@ -34,7 +34,6 @@ def test_o_atalho_de_jogo_sem_startupwmclass_aparece(tmp_path: Path) -> None:
     assert [(j.chave, j.nome, j.lancador) for j in diretos] == [
         ("forja", "FORJA", jl.LANCADOR_DIRETO)
     ]
-    # a janela real do jogo (`FORJA`, em XWayland) o reconhece
     assert jl.jogo_da_janela("FORJA", diretos) is diretos[0]
 
 
@@ -57,15 +56,11 @@ def test_o_que_nao_e_jogo_com_janela_propria_fica_fora_sem_a_classe(
 ) -> None:
     corpo = "[Desktop Entry]\nName={n}\nExec={e}\nCategories={c}\n"
     casos = {
-        # ferramenta que se diz de jogo
         "pupgui2.desktop": ("ProtonUp", "/usr/bin/flatpak run pupgui2", "Game;Utility;"),
-        # emulador/lançador: tem a aba dele
         "dolphin.desktop": ("Dolphin", "/usr/bin/flatpak run dolphin", "Game;Emulator;"),
-        # só manda OUTRO programa abrir o jogo
         "meow-heroic-legendary-abc.desktop": (
             "GOTG", 'xdg-open "heroic://launch?appName=abc"', "Game;"),
         "atalho-de-esquema.desktop": ("Outro", "/usr/bin/lancador steam://run/9", "Game;"),
-        # cliente de loja
         "steam.desktop": ("Steam", "/usr/games/steam %U", "Game;"),
         "net.lutris.Lutris.desktop": ("Lutris", "lutris %U", "Game;"),
     }
@@ -93,7 +88,6 @@ def test_a_semeadura_le_a_terceira_origem_e_o_perfil_nasce_padrao(tmp_path: Path
 
     assert resultado.criados == ("forja.json",)
     dados = json.loads((destino / "forja.json").read_text(encoding="utf-8"))
-    # o perfil padrão: nome, o que casa e a prioridade — e NADA mais
     assert set(dados) <= {*loader.CHAVES_DO_PERFIL_DE_JOGO, "criado_em"}
     perfil = Profile.model_validate(dados)
     assert perfil.name == "FORJA"
@@ -146,7 +140,6 @@ def test_a_varredura_automatica_acorda_com_o_atalho_novo(
     assert list(destino.glob("*.json")) == []
 
     _atalho(atalhos, "forja.desktop", FORJA)
-    # a pasta mudou de data (arquivo novo), e o piso de tempo já passou
     st = atalhos.stat()
     os.utime(atalhos, ns=(st.st_atime_ns, st.st_mtime_ns + 5_000_000_000))
     monkeypatch.setattr(loader, "_ultima_varredura_de_jogos", None, raising=False)

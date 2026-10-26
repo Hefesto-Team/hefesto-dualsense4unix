@@ -8,7 +8,7 @@ import pytest
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
-DESENHO = RAIZ / "mockup"  # o desenho; o publicado é cópia dele depois do --publicar
+DESENHO = RAIZ / "mockup"
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 

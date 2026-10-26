@@ -54,9 +54,7 @@ ALTURA_FIXA = "fixa"
 DEDO_VIBRA = "vibra"
 DEDO_SO_O_TOQUE = "so_o_toque"
 
-#: a faixa central do touchpad, em que os dois motores vibram (10 % da largura)
 FAIXA_CENTRAL = (0.45, 0.55)
-#: o piso da força pela altura: o dedo embaixo ainda se sente
 PISO_DA_ALTURA = 0.15
 SUAVIZACAO_S = 0.08
 SOLTAR_S = 0.15
@@ -66,7 +64,6 @@ VELOCIDADE_DO_SURTO = 1500.0
 MOVIMENTO_DO_DEDO = 2
 AMOSTRA_DO_DEDO_S = 0.02
 
-#: O motor esquerdo é o grosso (o ``forte`` do rumble); o direito é o fino (o ``fraco``).
 ESQUERDO = "esquerdo"
 DIREITO = "direito"
 BOTOES_DO_LADO: dict[str, str] = {
@@ -75,9 +72,7 @@ BOTOES_DO_LADO: dict[str, str] = {
         ("dpad_up", "dpad_down", "dpad_left", "dpad_right", "l1", "l3"), ESQUERDO),
 }
 
-#: Um par como ``(esquerdo, direito)``: o esquerdo é o forte e o direito o fraco do rumble.
 Par = tuple[int, int]
-#: Um par como o rumble o escreve: ``(fraco, forte)``.
 ParDoRumble = tuple[int, int]
 
 
@@ -184,7 +179,6 @@ class Entrada:
     ry: int = 128
     l2: int = 0
     r2: int = 0
-    #: a velocidade angular total, em graus por segundo
     giro: float = 0.0
 
 
@@ -211,21 +205,13 @@ class Toque:
 class Ligacoes:
     """As pontas de fora: o que escreve e o que pergunta. Em produção, o backend e o daemon."""
 
-    #: ``motores(uniq, fraco, forte)``: já com a força de quem recebe, como o pedido do jogo
     motores: Callable[[str, int, int], object]
-    #: o jogo está aberto neste controle e o modo dele deixa o Hefesto falar (o Nativo cala)
     pode_falar: Callable[[str], bool]
-    #: o jogo fala por háptica de áudio neste controle (o rumble dos motores a calaria)
     haptica_do_jogo: Callable[[str], bool]
-    #: o jogo escreve um efeito nos gatilhos deste controle
     gatilho_do_jogo: Callable[[str], bool]
-    #: ``dizer(uniq, pedido, efetivo, jogo, toques)``: o ``jogo.vibracao`` dos acessórios
     dizer: Callable[[str, ParDoRumble, ParDoRumble, Par, Par], object]
-    #: a força de cada motor, ``(mult_fraco, mult_forte)``, a mesma do pedido do jogo
     forca: Callable[[str], tuple[float, float]] = lambda uniq: (1.0, 1.0)
-    #: o dedo no touchpad deste controle; só é perguntado com a leitura do touchpad ligada
     toque: Callable[[str], Toque | None] = lambda uniq: None
-    #: o modo deste controle deixa o Hefesto escrever (fora do Nativo), haja jogo ou não
     pode_calar: Callable[[str], bool] = lambda uniq: False
 
 
@@ -286,8 +272,6 @@ class MeusToques:
         with self._trava:
             return self._ajuste.liga or any(c.ativo for c in self._por_uniq.values())
 
-    # -- o tique ------------------------------------------------------------------------
-
     def tique(self, entradas: Sequence[Entrada], agora: float) -> int:
         """Anda os toques de cada controle; devolve quantas escritas saíram."""
         antes = self.escritas
@@ -304,7 +288,7 @@ class MeusToques:
         estado = self._por_uniq.setdefault(uniq, _Estado())
         if not self._l.pode_falar(uniq):
             if estado.escrito not in (None, (0, 0)) and self._l.pode_calar(uniq):
-                self._l.motores(uniq, 0, 0)  # o jogo saiu do foco com o toque no ar: não fica preso
+                self._l.motores(uniq, 0, 0)
             self._esquecer(estado, entrada)
             return
         if not self._ajuste.liga:
@@ -390,8 +374,6 @@ class MeusToques:
         parado_ha = agora - estado.mexeu.get(lado, float("-inf"))
         return nivel if parado_ha < CALA_PARADO_S else 0.0
 
-    # -- o touchpad ---------------------------------------------------------------------
-
     def _acento(self, uniq: str, estado: _Estado, agora: float, duracao: float) -> None:
         """Um surto nos dois lados, pelo teto dos toques."""
         if not self._teto.cabe(uniq, agora):
@@ -464,7 +446,7 @@ class MeusToques:
         if andou >= MOVIMENTO_DO_DEDO:
             dedo.mexeu_em = agora
         rapido = andou / passou > VELOCIDADE_DO_SURTO
-        pelos_lados = cfg.leitura == TOUCHPAD_PELOS_LADOS  # na mistura o deslize já é o balanço
+        pelos_lados = cfg.leitura == TOUCHPAD_PELOS_LADOS
         if cfg.deslize_rapido and pelos_lados and rapido and agora >= dedo.surto_ate:
             dedo.surto_ate = agora + SURTO_S
             self._acento(uniq, estado, agora, SURTO_S)
@@ -481,8 +463,6 @@ class MeusToques:
             dedo.solto_em, dedo.ultimo = None, (0.0, 0.0)
             return (0.0, 0.0)
         return (dedo.ultimo[0] * resto, dedo.ultimo[1] * resto)
-
-    # -- o par que chega aos motores -----------------------------------------------------
 
     def _juntar(self, estado: _Estado) -> ParDoRumble:
         """O par do rumble (fraco, forte): o jogo e os toques, pela mistura do perfil."""

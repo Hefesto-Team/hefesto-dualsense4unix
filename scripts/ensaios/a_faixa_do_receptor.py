@@ -71,9 +71,6 @@ def _do_ambiente(nome: str, padrao: str) -> str:
     return os.environ.get(nome, "").strip() or padrao
 
 
-# --------------------------------------------------------------- a gravação
-
-
 def mapas_de_agora(
     adaptadores: Callable[[], list[int] | None],
     conexoes: Callable[[int], Sequence[object] | None],
@@ -90,7 +87,6 @@ def mapas_de_agora(
                 continue
             mapa = ler_mapa(hci, int(getattr(conexao, "handle", 0)))
             evitados = getattr(mapa, "evitados", None)
-            # a chave é só a ordem: o endereço do aparelho não sai daqui
             lidos[str(n)] = ar.EnlaceLido(le=False, canais_evitados=evitados)
         canais = ar.canais_evitados_pelo_adaptador(lidos)
         saida[f"hci{hci}"] = list(canais) if canais is not None else None
@@ -123,9 +119,6 @@ def ler_sessao(caminho: Path) -> list[dict[str, object]]:
         dados = json.loads(texto)
         return list(dados["leituras"])
     return [json.loads(li) for li in texto.splitlines() if li.strip()]
-
-
-# --------------------------------------------------------------- a procura, reproduzida
 
 
 @dataclass(frozen=True)
@@ -174,7 +167,6 @@ def reproduzir(
                 break
             inicio = relogio + CADA_S
             d.andar(inicio, lambda: {}, presente=presente)
-            # depois da última leitura guardada o mapa fica como estava, até a medida fechar
             fim = max(float(str(dele[-1]["t"])), rx.ESPERA_ATE_O_MAPA_SOLTAR_S if momento == "sem"
                       else rx.ESPERA_ATE_O_MAPA_MUDAR_S)
             t = 0.0
@@ -199,9 +191,6 @@ def _como_mapas(bruto: object) -> dict[str, tuple[int, ...] | None]:
 def linha_curta(fim: Fim) -> str:
     canais = ", ".join(str(c) for c in fim.canais) or "nenhum"
     return f"{fim.passo or 'em curso'}: {fim.frase} (canais novos: {canais})"
-
-
-# --------------------------------------------------------------- a linha de comando
 
 
 def main(argv: Sequence[str] | None = None, ler: Callable[[], Mapas] | None = None) -> int:
@@ -237,7 +226,7 @@ def main(argv: Sequence[str] | None = None, ler: Callable[[], Mapas] | None = No
         print("RECUSO: " + RECUSA_SEM_MEDIR)
         print(f"o plano: momento {args.momento}, {args.segundos:g} s, uma leitura a cada {args.cada:g} s")
         return 2
-    if ler is None:  # pragma: no cover - a bancada
+    if ler is None:  # pragma: no cover
         from hefesto_dualsense4unix.integrations import ar_do_adaptador as ar
 
         kernel = ar.LeitorDoKernel()

@@ -25,8 +25,6 @@ FIXTURE_DEVICE_C = {
     "5.86": FIXTURES / "bluez-5.86" / "device.c",
     "5.87": FIXTURES / "bluez-5.87" / "device.c",
 }
-# Os outros arquivos que a série R5 toca, recortados em volta de cada pedaço
-# (o fonte inteiro passaria de 600 kB): a série aplica neles com fuzz zero.
 RECORTE_587 = FIXTURES / "bluez-5.87" / "recorte"
 UPSTREAM_DA_REVISAO = {"3": "5.86", "4": "5.86", "5": "5.87"}
 ALVO = "5.87-0ubuntu0.1~hefesto24.04.5"

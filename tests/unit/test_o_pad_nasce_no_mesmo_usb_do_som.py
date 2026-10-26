@@ -29,7 +29,6 @@ from hefesto_dualsense4unix.integrations import pad_usb
 from tests.unit import pactl_json_de_mentira as pj
 from tests.unit.udev_de_mentira import usec_pela_pasta
 
-# Faixas forjadas da casa: ``aa:bb:cc`` e ``02:fe:00``; nunca um endereço real.
 MAC_DO_PAD = "02:fe:00:8a:00:01"
 SERIAL_DO_PAD = "hefesto-pad-02fe008a0001"
 MAC_DO_EDGE = "aa:bb:cc:00:00:11"
@@ -95,8 +94,6 @@ class Mesa:
             self.cabo_hid / "uevent",
             _uevent("0003:0000054C:00000DF2", "usb-0000:00:14.0-2/input3", MAC_DO_EDGE),
         )
-        # Um Edge de plástico emprestado por um ``usbip`` de verdade: mora sob o
-        # ``vhci_hcd`` como o gadget, sem nenhuma marca do Hefesto.
         usbip = _usb_device(sys, "devices/platform/vhci_hcd.0/usb3/3-2", serial="")
         self.usbip_hid = usbip / "3-2:1.3" / "0003:054C:0DF2.0014"
         _escrever(
@@ -174,7 +171,7 @@ class TestEPadNossoTemUmDono:
         nao_ha_radio = str(mesa.raiz / "sem-bluetooth")
         for nome, hid, nosso in mesa.casos():
             if nome == "edge-pelo-radio":
-                continue  # o D3/D4 do rádio tem régua própria (test_hidraw_broker_validator)
+                continue
             fisico = broker._pai_hid_e_dualsense_fisico(
                 str(hid), _campos(hid), sys_class_bluetooth=nao_ha_radio
             )
@@ -233,9 +230,6 @@ class TestOsSeisLugaresPerguntamAoDono:
         assert (achada.instancia, achada.transporte) == ("0012", "bt")
 
 
-# --- 2. O broker monta o gadget só HID, liga ao vhci e desmonta no EOF --------
-
-
 _ATTRS_DO_GRUPO = {
     "gadget": ("idVendor", "idProduct", "bcdDevice", "bcdUSB", "UDC"),
     "0x409": ("manufacturer", "product", "serialnumber"),
@@ -273,8 +267,6 @@ class KernelDeMentira:
         if "vhci_hcd" not in sem:
             vhci = Path(self.raizes.plataforma) / "vhci_hcd.0"
             linhas = ["hub port sta spd dev      sockfd local_busid"]
-            # As oito de alta velocidade e as oito super do `vhci_hcd.0` do kernel
-            # medido (`nports=16`, `CONFIG_USBIP_VHCI_HC_PORTS=8`); 006 = em uso.
             linhas += [
                 f"hs  {p:04d} {'006' if p < hs_ocupadas else '004'} 000 00000000 000000 0-0"
                 for p in range(8)
@@ -288,7 +280,6 @@ class KernelDeMentira:
         self.desligadas: list[str] = []
         self.proximo_menor = 0
         self.concedidos: list[tuple[str, int]] = []
-        #: os grupos que o configfs cria sozinho e some com o pai.
         self.padrao: set[str] = set()
 
     def povoar(self, grupo: str) -> None:
@@ -359,7 +350,6 @@ def _descritor() -> bytes:
     return CANONICAL_DESCRIPTOR_USB
 
 
-#: o par que o pad do produto pede (``uhid_gamepad.VPAD_PRODUCT``).
 PAR_DO_PAD = (0x054C, 0x0DF2)
 
 
@@ -526,10 +516,6 @@ class TestOBrokerMontaOGadgetSoHid:
     def test_com_o_vudc_preso_o_pad_fica_sem_vaga_e_nao_sem_contrato(
         self, tmp_path: Path
     ) -> None:
-        # O `usbip-vudc` carregado antes do broker com uma instância só: o
-        # `modprobe num=8` dele não troca o que já está no kernel. O segundo
-        # pad fica sem vaga, e isso não pode virar «falta o usbip_vudc», que o
-        # daemon guarda e com que manda todo pad seguinte ao uhid.
         kernel = KernelDeMentira(tmp_path, udcs=1)
         estado = kernel.estado()
         _, fd = estado.handle_line(7, 1000, _pedido(_serial(0)))
@@ -583,9 +569,6 @@ class TestOBrokerMontaOGadgetSoHid:
             assert os.listdir(kernel.raizes.configfs) == []
 
     def test_o_broker_sem_raizes_da_suite_nao_ve_o_configfs_da_maquina(self) -> None:
-        # Todo `BrokerState()` das outras réguas nasce sem `pad_ops`: o EOF e o
-        # `restore_all` delas listariam os gadgets do usuário e tentariam
-        # desmontá-los. O `conftest` desvia as raízes para uma pasta vazia.
         raizes = broker.BrokerState(allowed_uid=1000, log=lambda *_a, **_k: None)._pad_ops.raizes
         for raiz in (raizes.configfs, raizes.plataforma, raizes.classe_udc):
             assert not raiz.startswith("/sys"), raizes
@@ -640,9 +623,6 @@ def fcntl_acesso(fd: int) -> int:
     return fcntl.fcntl(fd, fcntl.F_GETFL) & os.O_ACCMODE
 
 
-# --- 3. O vpad nasce no gadget, fala pelo /dev/hidgN e volta ao uhid ----------
-
-
 IDENTIDADE = "aa:bb:cc:00:00:11"
 INTERFACE_DO_GADGET = "/devices/platform/vhci_hcd.0/usb3/3-1/3-1:1.0"
 
@@ -675,7 +655,6 @@ class BancadaDoGadget:
         self.guardadas: dict[int, bytes] = {}
         self.enumerado: tuple[str, str] | None = None
         self.jogo_aberto = False
-        #: o aparelho físico na máquina; False = ele CAIU (o caso do estacionar).
         self.aparelho_presente = False
         self.falta: list[str] = []
         self.jogo: socket.socket | None = None
@@ -801,11 +780,11 @@ class TestOVpadNasceNoGadget:
             assert len(report) == 64 and report[0] == 0x01
             saida = bytearray(48)
             saida[0] = 0x02
-            saida[1] = 0x03  # valid_flag0: as duas vibrações
+            saida[1] = 0x03
             saida[3], saida[4] = 0x40, 0x80
             import time
 
-            time.sleep(0.6)  # a graça do bind (`_GAME_REPLICA_GRACE_S`)
+            time.sleep(0.6)
             bancada.jogo.send(bytes([0x08]) + bytes(46))
             bancada.jogo.send(bytes(saida))
             assert bancada.esperar(lambda: pad.output_count == 1)
@@ -816,7 +795,6 @@ class TestOVpadNasceNoGadget:
                 time.sleep(0.02)
             assert pedidos and pedidos[-1] != (0, 0)
             assert pad.ff_report_estranho_count == 0
-            # A fila do f_hid vazia (EAGAIN) é o fim da drenagem, não falha.
             assert ("warning", "pad_usb_leitura_falhou") not in espiao.eventos
         finally:
             pad.stop()
@@ -857,10 +835,7 @@ class TestOVpadNasceNoGadget:
             assert bancada.esperar(lambda: pad._gadget_falhou)
             pad.pump_ff()
             assert pad._gadget is None and pad.is_active
-            # a devolução ao broker sai fora do tique (`_DescidaAoBroker`)
             assert bancada.esperar(lambda: bancada.clientes[0].desmontados == ["hefesto-pad-0"])
-            # A falha é da porta dele, não um contrato do processo
-            # (UM-GADGET-QUE-NAO-ENUMERA-NAO-CONDENA-OS-OUTROS-01).
             assert pad_usb.contrato_que_faltou_ao_montar() == []
         finally:
             pad.stop()
@@ -888,7 +863,7 @@ class TestOVpadNasceNoGadget:
         pad.stop()
         neutro = bancada.jogo.recv(512)
         assert neutro[0] == 0x01 and neutro[1:5] == bytes([0x80] * 4)
-        assert neutro[8] == 0x08  # o d-pad no neutro, e nenhum botão
+        assert neutro[8] == 0x08
         assert bancada.clientes[0].desmontados == []
         assert pad_usb.interface_do_aparelho(IDENTIDADE) == INTERFACE_DO_GADGET
         de_volta = bancada.pad()
@@ -937,7 +912,6 @@ class TestOPadEmUsbNaoQuebraOResto:
             assert vpad_vivo(pad) is False
         finally:
             pad.stop()
-        # O dublê de sempre (um MagicMock morto) continua morto.
         assert vpad_vivo(MagicMock(_started=False)) is False
 
     def test_o_estacionado_do_aparelho_que_ficou_sem_adocao_desce_pelo_prazo_da_volta(
@@ -1060,7 +1034,6 @@ class TestOPadEmUsbNaoQuebraOResto:
             assert bancada.esperar(lambda: pad.is_bound)
             assert bancada.jogo is not None
             bancada.jogo.close()
-            # A escrita falha com o hidraw ainda de pé: não caiu, só falhou.
             pad.forward_buttons(frozenset({"cross"}))
             assert pad._gadget_caiu is False
             bancada.enumerado = None
@@ -1133,8 +1106,8 @@ class TestOAparelhoPresente:
 class TestOGetReportEOHidrawDoGadget:
     def test_a_struct_do_get_report_e_a_do_kernel(self) -> None:
         pacote = pad_usb.pacote_do_get_report(0x09, b"\x09" + bytes(19))
-        assert len(pacote) == 72  # sizeof(struct usb_hidg_report)
-        assert pacote[0] == 0x09 and pacote[1] == 0  # 0 = vale para todo pedido futuro
+        assert len(pacote) == 72
+        assert pacote[0] == 0x09 and pacote[1] == 0
         assert int.from_bytes(pacote[2:4], "little") == 20
         with pytest.raises(ValueError):
             pad_usb.pacote_do_get_report(0x20, bytes(65))
@@ -1187,9 +1160,6 @@ class TestOGetReportEOHidrawDoGadget:
             "hefesto-pad-02fe00800009", raiz_class_hidraw=str(classe), ler=ler
         ) is None
         assert pad_usb.hidraw_do_gadget("teclado", raiz_class_hidraw=str(classe), ler=ler) is None
-
-
-# --- 4. O som se ancora no gadget do próprio aparelho -------------------------
 
 
 def _usb_da_mesa(
@@ -1270,7 +1240,6 @@ class TestOSomSeAncoraNoGadget:
             mesa_do_som, usec_pela_pasta(udev), runner=lambda _a: em_json)
         assert len(controles) == 1
         c = controles[0]
-        # o que o winebus lê do usb_device do pad: 054c:0df2, o bus 3, o devnum 2
         assert (c.container_vid, c.container_pid, c.bus, c.dev, c.usec) == (
             0x054C, 0x0DF2, 3, 2, 1234567,
         )
@@ -1296,9 +1265,6 @@ def test_o_alto_falante_ancora_o_no_do_aparelho_no_gadget_dele(
     assert mesa.servidor.do_nome(eh.nome_do_endpoint(h._P4)) == [], "sem porta, sem endpoint"
     do_gadget = [c for c in mesa.registro() if c.container_pid == 0x0DF2]
     assert [(c.bus, c.dev) for c in do_gadget] == [(5, 2)]
-
-
-# --- 5. A regra 73 abre o pad em USB ao jogo, e o Edge físico segue fechado ---
 
 
 def _pelo_vhci(serial: str | None) -> Any:
@@ -1361,9 +1327,6 @@ def test_a_marca_da_regra_73_e_o_serial_que_o_broker_escreve() -> None:
     assert f'ATTRS{{serial}}=="{pad_usb.SERIAL_PREFIXO}*"' in texto
     assert hidraw_broker.PAD_USB_NOME == pad_usb.SERIAL_PREFIXO
     assert 'KERNEL=="hidg*", SUBSYSTEM=="hidg", MODE="0660"' in texto
-
-
-# --- 6. Sem o kernel, o pad é uhid, e o doctor diz o contrato que falta ------
 
 
 def _modulos(tmp_path: Path, carregados: tuple[str, ...]) -> tuple[Path, Path]:

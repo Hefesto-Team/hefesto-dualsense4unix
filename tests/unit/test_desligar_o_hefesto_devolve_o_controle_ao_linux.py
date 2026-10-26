@@ -40,12 +40,10 @@ from tests.unit.test_o_broker_esquece_o_controle_que_saiu import (
     _retrato,
 )
 
-#: A fixture da mesa de mentira é a do arquivo vizinho (um dono só).
 mesa = _mesa_de_mentira.mesa
 
 GRACA = hb.GRACA_DA_ENTREGA_S
 
-#: Os seis físicos de uma bancada completa: quatro no rádio, um no cabo, um Edge no cabo.
 OS_SEIS = (
     ("hidraw5", "radio"),
     ("hidraw6", "radio"),
@@ -162,8 +160,10 @@ class TestPararODaemonEntregaOFisico:
         self, seis: Cena
     ) -> None:
         """MORDIDA: tire a chamada de `tique_da_entrega` (ou o `entregar_ao_linux`
-        dele) e os seis ficam `0600` para sempre, que é a bancada de 03/10."""
-        # A decisão: D-0810-PARAR-O-HEFESTO-DEVOLVE-O-FISICO.
+        dele) e os seis ficam `0600` para sempre, que é a bancada de 03/10.
+
+        Prova da D-0810-PARAR-O-HEFESTO-DEVOLVE-O-FISICO.
+        """
         _o_daemon_sobe_e_para(seis)
 
         seis.tique(GRACA - 1)

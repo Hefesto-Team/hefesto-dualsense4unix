@@ -188,8 +188,6 @@ def test_destravar_o_que_nao_e_nosso_e_noop(tmp_path: Path, _steam_fechada: None
     assert vdf.read_text(encoding="utf-8") == antes
 
 
-# A lista `jogos_sem_wrapper.txt` só fazia o jogo ser PULADO: o que ele já
-
 _DELA = "VKD3D_CONFIG=no_upload_hvv %command%"
 
 
@@ -768,7 +766,7 @@ def test_a_carona_nao_repoe_o_ambiente_na_caixa_excluida(
     """ARRANQUE o filtro das caixas do `curar_todas_as_estradas` e este teste"""
     from tests.unit.as_caixas_das_extensoes import ligar
 
-    ligar(monkeypatch)  # a extensão do RetroArch ligada: só ela põe a caixa na carona
+    ligar(monkeypatch)
     override = _caixa_do_retroarch(tmp_path)
     antiga.adicionar("emulador:retroarch", lancador="retroarch",
                      nome="RetroArch — todos os jogos", janelas=_JANELAS_DO_RETROARCH)

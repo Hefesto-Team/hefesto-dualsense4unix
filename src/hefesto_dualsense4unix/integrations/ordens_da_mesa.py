@@ -139,11 +139,6 @@ _CLASSE_TECLADO = ("03", "01", "01")
 
 ENCAIXE_DE_GENTE = "hotplug"
 
-# ---------------------------------------------------------------------------
-# As chaves das regras. São a chave de DISPENSA e a chave de teste, e por isso
-# são ASCII com sublinhado — nunca o texto de tela, que muda de dono.
-# ---------------------------------------------------------------------------
-
 R1_RADIO_LARGO_NO_MESMO_HUB = "radio_largo_no_mesmo_hub"
 R2_DOIS_RADIOS_COLADOS = "dois_radios_colados"
 R3_DONGLE_ATRAS_DE_HUB = "dongle_atras_de_hub"
@@ -202,7 +197,7 @@ class Ordem:
         """Forma JSON — é o que o ``doctor.sh --censo`` consome."""
         return {
             "chave": self.chave,
-            "acao": self.acao,  # (noqa-acento): chave de máquina, ASCII por contrato
+            "acao": self.acao,  # (noqa-acento)
             "o_que_eu_vi": self.o_que_eu_vi.como_dicionario(),
             "por_que_importa": self.por_que_importa.como_dicionario(),
             "ganho_esperado": self.ganho_esperado.como_dicionario(),
@@ -222,7 +217,6 @@ class Leitura:
     entradas_livres_declaradas: tuple[str, ...] = ()
     nomes_declarados: Mapping[str, str] = field(default_factory=dict)
     tipos_declarados: Mapping[str, str] = field(default_factory=dict)
-    #: da grafia (``utils/rotulo_da_entrada``): «para a entrada Meio».
     nomes_das_entradas: Mapping[str, str] = field(default_factory=dict)
 
 
@@ -645,7 +639,7 @@ def cabecalho(
             + _plural(
                 len(ordens), "mudança recomendada", "mudanças recomendadas"
             ),
-            estado="atencao",  # (noqa-acento): chave de máquina, ASCII por contrato
+            estado="atencao",  # (noqa-acento)
         )
     if sem_resposta:
         return Cabecalho(

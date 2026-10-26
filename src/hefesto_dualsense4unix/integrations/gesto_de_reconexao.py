@@ -92,13 +92,12 @@ logger = get_logger(__name__)
 QUEM = "reconectar"
 
 ESTADO_DESCONECTOU = "desconectou"
-ESTADO_JA_ESTAVA_FORA = "ja_estava_fora"  # (noqa-acento): chave de máquina
+ESTADO_JA_ESTAVA_FORA = "ja_estava_fora"
 ESTADO_SEM_ALVO = "sem_alvo"
-ESTADO_NAO_DEU = "nao_deu"  # (noqa-acento): chave de máquina
+ESTADO_NAO_DEU = "nao_deu"
 ESTADO_VOLTOU = "voltou"
-#: O elo morto caiu, e o resto é do usuário: um DualSense dormindo não atende
-ESTADO_SO_O_PS = "so_o_ps"  # (noqa-acento): chave de máquina
-ESTADO_JA_NO_AR = "ja_no_ar"  # (noqa-acento): chave de máquina
+ESTADO_SO_O_PS = "so_o_ps"
+ESTADO_JA_NO_AR = "ja_no_ar"
 
 FRASE_DESCONECTOU = "Desconectei o controle. Aperte PS nele para ele voltar."
 FRASE_JA_ESTAVA_FORA = (

@@ -194,7 +194,7 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
             "de ativação passam, inclusive a do boot."
         )
     ),
-    "ativacao": SecaoDireta(  # (noqa-acento) identificador ASCII
+    "ativacao": SecaoDireta(  # (noqa-acento)
         razao=(
             "O-BOTAO-ALTERNA-REPETE-E-ENTENDE-TOQUE-LONGO-E-DUPLO-01 (16/10/2026). "
             "`apply_acessibilidade` monta o modo (`core/ativacao_de_botao.montar`) e o "
@@ -206,7 +206,7 @@ _CLASSIFICACAO: dict[str, SecaoPorApplier | SecaoDireta] = {
             "`remapeamento`: o `store` é o que TODAS as rotas de ativação passam."
         )
     ),
-    "analogicos": SecaoDireta(  # (noqa-acento) identificador ASCII
+    "analogicos": SecaoDireta(
         razao=(
             "OS-ANALOGICOS-DO-JOGO-GANHAM-ZONA-MORTA-CURVA-E-UMA-MAO-01 (16/10/2026). "
             "`apply_acessibilidade` monta a curva (`core/curva_do_analogico.montar`) e a "

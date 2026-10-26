@@ -39,8 +39,6 @@ from hefesto_dualsense4unix.mods.instalador import (
 )
 from hefesto_dualsense4unix.mods.manifesto import ManifestoRecusadoError, ler_manifesto
 
-#: O preparo de mentira: faz o que o arquivo ``modo`` da pasta manda, e grava na pasta de dados
-#: a casa, a pasta de trabalho e o ambiente que recebeu.
 _O_PREPARO = """#!/bin/sh
 modo=$(cat modo)
 echo "preparando"
@@ -77,10 +75,10 @@ def _fonte(base: Path, versao: str = "0.1.0", modo: str = "fica", **mais: Any) -
     pasta = base / "fonte-exemplo"
     pasta.mkdir(parents=True, exist_ok=True)
     corpo: dict[str, Any] = {
-        "id": "exemplo", "nome": "Exemplo", "versao": versao,  # (noqa-acento): contrato ASCII
+        "id": "exemplo", "nome": "Exemplo", "versao": versao,  # (noqa-acento)
         "api": ">=1,<3", "licenca": "MIT", "tipos": ["processo"],
         "processo": {"executar": ["python3", "mod.py"]},
-        "permissoes": [],  # (noqa-acento): contrato ASCII
+        "permissoes": [],  # (noqa-acento)
         "preparar": _PREPARAR,
     }
     corpo.update(mais)
@@ -105,9 +103,6 @@ def _ligar(lar: Lugares, aviso: str = "") -> instalador.Entrada:
     return ligar("exemplo", permissoes_vistas=vistas, aviso_visto=aviso, lugares=lar)
 
 
-# -- o manifesto ---------------------------------------------------------------
-
-
 @pytest.mark.parametrize(("preparar", "pedaco"), [
     ([], "lista vazia"),
     (["/bin/sh", "x"], "fora da pasta"),
@@ -123,9 +118,6 @@ def test_o_preparar_fora_da_pasta_e_recusado(
 
 def test_o_manifesto_sem_preparar_segue_valendo(tmp_path: Path) -> None:
     assert ler_manifesto(_fonte(tmp_path, preparar=None)).preparar is None
-
-
-# -- os quatro casos da sprint ----------------------------------------------------
 
 
 def test_o_preparo_roda_fora_da_caixa_como_quem_usa(lar: Lugares, tmp_path: Path) -> None:
@@ -158,8 +150,10 @@ def test_a_primeira_instalacao_deixa_o_preparo_para_o_ligar(lar: Lugares, tmp_pa
 def test_atualizar_para_a_versao_nova_roda_o_preparo_de_novo(
     lar: Lugares, tmp_path: Path
 ) -> None:
-    # D-2410-A-EXTENSAO-SE-PREPARA-AO-INSTALAR-E-AO-ATUALIZAR
-    """O defeito da 2.2.0: a cópia na pasta de dados sumiu, e atualizar a devolve."""
+    """O defeito da 2.2.0: a cópia na pasta de dados sumiu, e atualizar a devolve.
+
+    Prova da D-2410-A-EXTENSAO-SE-PREPARA-AO-INSTALAR-E-AO-ATUALIZAR.
+    """
     fonte = _fonte(tmp_path)
     instalar(str(fonte), lugares=lar)
     _ligar(lar)
@@ -192,7 +186,6 @@ def test_o_preparo_que_falha_deixa_a_extensao_desligada_com_o_motivo(
     assert not entrada.ligada, "a extensão nunca liga sem o que precisa"
     assert "código 3" in entrada.motivo_do_preparo and entrada.preparada_em == ""
 
-    # A chave tenta de novo: o preparo que falhou roda no «ligar», e a falha recusa o ligar.
     with pytest.raises(InstalacaoRecusadaError, match="faltou a rede"):
         _ligar(lar)
     assert not _entrada(lar).ligada
@@ -205,7 +198,7 @@ def test_o_preparo_que_falha_deixa_a_extensao_desligada_com_o_motivo(
 def test_o_preparo_novo_numa_atualizacao_sozinha_espera_o_atualizar(
     lar: Lugares, tmp_path: Path
 ) -> None:
-    # D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR
+    """Prova da D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR."""
     fonte = _fonte(tmp_path, preparar=None)
     instalar(str(fonte), lugares=lar)
     _ligar(lar)
@@ -220,26 +213,23 @@ def test_o_preparo_novo_numa_atualizacao_sozinha_espera_o_atualizar(
     assert entrada.motivo_da_espera == "A versão 0.2.0 traz um preparo novo."
     assert not _preparado(lar).exists(), "o preparo novo rodou sem o «sim»"
 
-    # O «Atualizar» é o «sim»: o preparo roda e a extensão segue ligada.
     atualizar("exemplo", lugares=lar)
     entrada = _entrada(lar)
     assert _preparado(lar).is_file() and entrada.ligada and entrada.versao == "0.2.0"
 
-    # A versão seguinte com o mesmo preparo já não espera: atualiza sozinha e prepara de novo.
     _preparado(lar).unlink()
     _fonte(tmp_path, versao="0.3.0")
     assert instalar(str(fonte), lugares=lar, sozinha=True).trocou
     assert _preparado(lar).is_file() and _entrada(lar).versao_esperando == ""
 
 
-# -- o «sim» antes do preparo -------------------------------------------------------
-
-
 def test_o_preparo_espera_o_aviso_e_as_permissoes_e_roda_no_ligar(
     lar: Lugares, tmp_path: Path
 ) -> None:
-    # D-2410-O-PREPARO-RODA-SO-DEPOIS-DO-SIM
-    """Nada da extensão roda fora da caixa antes do «sim» ao aviso e às permissões."""
+    """Nada da extensão roda fora da caixa antes do «sim» ao aviso e às permissões.
+
+    Prova da D-2410-O-PREPARO-RODA-SO-DEPOIS-DO-SIM.
+    """
     aviso = "Conteúdo de teste."
     instalar(str(_fonte(tmp_path, aviso=aviso, permissoes=["ler:estado"])), lugares=lar)
 
@@ -255,7 +245,7 @@ def test_o_preparo_espera_o_aviso_e_as_permissoes_e_roda_no_ligar(
 def test_o_preparo_que_passa_do_prazo_e_parado_pelo_pid(
     lar: Lugares, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    # D-2410-O-PREPARO-DA-EXTENSAO-TEM-DEZ-MINUTOS
+    """Prova da D-2410-O-PREPARO-DA-EXTENSAO-TEM-DEZ-MINUTOS."""
     monkeypatch.setattr(instalador, "PRAZO_DO_PREPARO_S", 0.5)
     instalar(str(_fonte(tmp_path, modo="demora")), lugares=lar)
     with pytest.raises(InstalacaoRecusadaError, match="passou de"):

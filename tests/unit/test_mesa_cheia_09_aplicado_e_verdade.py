@@ -61,7 +61,7 @@ class _FakeTrigger:
         self.mode = 0
         self.forces = [0] * 7
 
-    def setForce(self, idx: int, value: int) -> None:  # noqa: N802 — API pydualsense
+    def setForce(self, idx: int, value: int) -> None:  # noqa: N802
         self.forces[idx] = value
 
 
@@ -73,10 +73,10 @@ class _FakeHandle:
         self.triggerL = _FakeTrigger()
         self.triggerR = _FakeTrigger()
 
-    def setLeftMotor(self, intensity: int) -> None:  # noqa: N802 — API pydualsense
+    def setLeftMotor(self, intensity: int) -> None:  # noqa: N802
         return
 
-    def setRightMotor(self, intensity: int) -> None:  # noqa: N802 — API pydualsense
+    def setRightMotor(self, intensity: int) -> None:  # noqa: N802
         return
 
 

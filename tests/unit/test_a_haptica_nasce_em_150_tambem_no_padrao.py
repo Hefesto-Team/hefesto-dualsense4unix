@@ -25,7 +25,6 @@ from hefesto_dualsense4unix.profiles.schema import (
 from tests.unit.test_cada_motor_tem_o_seu_multiplicador import BRANCO, PRETO
 from tests.unit.test_o_ganho_da_haptica_tem_dono import _bloco, _CaboDeMentira
 
-# Os quatro jogadores: faixa forjada, nunca endereço da bancada.
 _QUATRO = tuple(f"aa:bb:cc:00:00:0{n}" for n in (1, 2, 3, 4))
 
 

@@ -145,8 +145,8 @@ class TestOPretoNaoSome:
         assert tom_para_a_borda("#nope") == ""
 
 
-_SERIAL_05 = "AB1C05D1234567890"  # serial-de-mentira: prefixo forjado
-_SERIAL_02 = "AB1C02D1234567890"  # serial-de-mentira: prefixo forjado
+_SERIAL_05 = "AB1C05D1234567890"  # serial-de-mentira
+_SERIAL_02 = "AB1C02D1234567890"  # serial-de-mentira
 
 
 class TestARespostaDoAparelho:

@@ -75,7 +75,7 @@ class _Handle(bp._PinnedPyDualSense):
         self._mic_mute_desejado = None
         self.zerar_estado_da_borda_do_mic()
 
-    def readInput(self, in_report: Any) -> None:  # noqa: N802 - nome da pydualsense
+    def readInput(self, in_report: Any) -> None:  # noqa: N802
         del in_report
 
 

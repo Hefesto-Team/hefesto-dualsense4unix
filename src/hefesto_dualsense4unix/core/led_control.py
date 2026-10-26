@@ -104,7 +104,6 @@ def player_bitmask(leds: tuple[bool, bool, bool, bool, bool]) -> int:
     return value
 
 
-#: FEAT-COOP-PLAYER-LED-01 / COR-03 — padrões canônicos do DualSense para os 5
 _PLAYER_LED_PATTERNS: dict[int, tuple[bool, bool, bool, bool, bool]] = {
     1: (False, False, True, False, False),
     2: (False, True, False, True, False),
@@ -119,8 +118,7 @@ _PLAYER_LED_PATTERNS: dict[int, tuple[bool, bool, bool, bool, bool]] = {
 _PLAYER_LED_OVERFLOW = (True, False, True, True, False)
 
 
-#: O BRILHO DAS LUZES DE NÚMERO — `D-2409-AS-LUZES-DE-NUMERO-TEM-TRES-BRILHOS`,
-BRILHOS_DAS_LUZES: dict[str, int] = {"fraco": 2, "medio": 1, "forte": 0}  # (noqa-acento) chave
+BRILHOS_DAS_LUZES: dict[str, int] = {"fraco": 2, "medio": 1, "forte": 0}  # (noqa-acento)
 
 BRILHO_DAS_LUZES_PADRAO = "fraco"
 
@@ -149,7 +147,6 @@ def player_led_pattern(index: int) -> tuple[bool, bool, bool, bool, bool]:
     return _PLAYER_LED_PATTERNS.get(index, _PLAYER_LED_OVERFLOW)
 
 
-#: `lightbar_brightness` do perfil é o provider (D11), pelo mesmo caminho do
 _PLAYER_SLOT_COLORS: dict[int, RGB] = {
     1: (0, 0, 255),
     2: (255, 0, 0),
@@ -177,7 +174,7 @@ def player_slot_color(slot: int) -> RGB:
 DA_PALETA = "paleta"
 DO_BROADCAST = "todos"
 DO_GLOBAL = "global"
-DA_MAO = "mao"  # (noqa-acento) VALOR de carimbo, legível por máquina, como `sim`/`nao`
+DA_MAO = "mao"  # (noqa-acento)
 LEGADO = "legado"
 
 _APAGADA: RGB = (0, 0, 0)

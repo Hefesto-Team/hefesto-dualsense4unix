@@ -28,10 +28,8 @@ from hefesto_dualsense4unix.profiles.schema import (
 
 RGB = tuple[int, int, int]
 VERMELHO: RGB = (255, 0, 0)
-#: Quatro jogadores: faixa forjada (`aa:bb:cc`), nunca endereço de aparelho de verdade.
 JOGADORES = [f"aa:bb:cc:00:00:0{n}" for n in range(1, 5)]
 RITMOS = range(1, 11)
-#: O piso de cada base: o meio do passeio dele é onde se contam as subidas.
 PISO = {
     "respirar": fx.PISO_DO_RESPIRAR,
     "piscar": fx.PISO_DO_PISCAR,
@@ -83,22 +81,16 @@ def _curva(base: str, ritmo: int, semente: int = 0, segundos: float = 24.0):
     ]
 
 
-# ---------------------------------------------------------------- a lista
-
-
 def test_a_lista_tem_as_tres_novas_e_o_motor_sabe_desenhar_cada_uma() -> None:
-    # Prova da D-1510-A-BATIDA-DO-CORACAO-SE-GRAVA-BATIMENTO.
+    """Prova da D-1510-A-BATIDA-DO-CORACAO-SE-GRAVA-BATIMENTO."""
     assert set(BASES_DA_LUZ) == {"respirar", "piscar", "arco-iris", "batimento", "chama", "mare",
-                                 "onda", "relampago"}  # as duas últimas: 22/10/2026
+                                 "onda", "relampago"}
     for base in BASES_DA_LUZ:
         texto = f"{base};FF0000;4" if base != "arco-iris" else f"{base};;4"
         efeito = ler_o_efeito_da_luz(texto)
         assert efeito is not None, f"{base}: o perfil tem de aceitar a base"
         cor = fx.cor_no_instante(efeito, 1.234)
         assert len(cor) == 3 and all(0 <= c <= 255 for c in cor)
-
-
-# ---------------------------------------------------------------- o teto de trocas por segundo
 
 
 @pytest.mark.parametrize("base", sorted(PISO))
@@ -118,7 +110,7 @@ def test_todo_efeito_tem_piso_e_nunca_apaga_a_barra(base: str) -> None:
 
 
 def test_o_piscar_no_ritmo_mais_alto_chega_aos_tres_por_segundo_e_nao_passa() -> None:
-    # Prova da D-1510-O-VALOR-DA-TABELA-E-O-DO-RITMO-10.
+    """Prova da D-1510-O-VALOR-DA-TABELA-E-O-DO-RITMO-10."""
     subidas = _subidas(_quando_sobe(_curva("piscar", 10), fx.PISO_DO_PISCAR))
     assert subidas == 3
 
@@ -127,9 +119,6 @@ def test_a_batida_do_coracao_tem_duas_subidas_por_segundo() -> None:
     normal = _subidas(_quando_sobe(_curva("batimento", 10), fx.PISO_DA_BATIDA))
     assert normal == 2
     assert fx.periodo_da_batida_s(10) == pytest.approx(1.0)
-
-
-# ---------------------------------------------------------------- o piscar curado
 
 
 def test_o_piscar_tem_borda_suave_de_150_ms() -> None:
@@ -166,13 +155,10 @@ def test_o_piscar_troca_de_cor_so_com_a_luz_no_piso() -> None:
     assert {c[0] > 0 for c in vistas} == {True, False}, "as duas cores aparecem"
 
 
-# ---------------------------------------------------------------- o arco-íris curado
-
-
 @pytest.mark.parametrize("ritmo", RITMOS)
 def test_as_quatro_cores_do_arco_iris_no_mesmo_instante_ficam_a_mais_de_90(ritmo: int) -> None:
-    # Prova da D-1510-O-ARCO-IRIS-E-A-MARE-TEM-UM-RELOGIO-SO.
-    efeito = _efeito("arco-iris", ritmo)  # (noqa-acento) chave ASCII
+    """Prova da D-1510-O-ARCO-IRIS-E-A-MARE-TEM-UM-RELOGIO-SO."""
+    efeito = _efeito("arco-iris", ritmo)
     for i in range(0, 400):
         t = i * 0.1
         quatro = [fx.cor_no_instante(efeito, t, posicao) for posicao in range(4)]
@@ -183,21 +169,18 @@ def test_as_quatro_cores_do_arco_iris_no_mesmo_instante_ficam_a_mais_de_90(ritmo
 
 
 def test_a_volta_do_arco_iris_dura_ao_menos_8_s_em_todo_ritmo() -> None:
-    # Prova da D-1510-O-VALOR-DA-TABELA-E-O-DO-RITMO-10.
+    """Prova da D-1510-O-VALOR-DA-TABELA-E-O-DO-RITMO-10."""
     assert all(fx.periodo_do_arco_iris_s(r) >= 8.0 for r in RITMOS)
     assert fx.periodo_do_arco_iris_s(10) < fx.periodo_do_arco_iris_s(1)
 
 
 def test_o_arco_iris_defasa_um_quarto_de_volta_por_controle() -> None:
-    efeito = _efeito("arco-iris", 5)  # (noqa-acento) chave ASCII
+    efeito = _efeito("arco-iris", 5)
     volta = fx.periodo_do_arco_iris_s(5)
     for posicao in range(1, 4):
         a = fx.cor_no_instante(efeito, 0.0, posicao)
         b = fx.cor_no_instante(efeito, posicao * volta / 4, 0)
         assert all(abs(x - y) <= 1 for x, y in zip(a, b, strict=True)), (posicao, a, b)
-
-
-# ---------------------------------------------------------------- a chama e a maré
 
 
 def test_a_chama_com_a_mesma_semente_da_a_mesma_curva() -> None:
@@ -259,12 +242,9 @@ def test_a_mare_inteira_aproximaria_os_controles_de_algum_estilo() -> None:
 
 
 def test_um_controle_so_em_mare_anda_os_30_graus_inteiros() -> None:
-    # Prova da D-1510-A-MARE-SE-AFASTA-SO-DE-QUEM-ESTA-EM-MARE.
+    """Prova da D-1510-A-MARE-SE-AFASTA-SO-DE-QUEM-ESTA-EM-MARE."""
     assert fx.amplitude_da_mare([VERMELHO]) == 1.0
     assert fx.amplitude_da_mare([]) == 1.0
-
-
-# ---------------------------------------------------------------- o plano: lugar, semente e maré
 
 
 def _perfil(efeitos: dict[str, str] | str | None) -> Profile:
@@ -290,7 +270,7 @@ def test_o_plano_da_o_lugar_e_uma_semente_estavel_a_cada_controle() -> None:
 
 
 def test_o_plano_encurta_a_mare_de_quem_se_aproximaria_dos_outros() -> None:
-    # Prova da D-1510-A-MARE-SE-AFASTA-SO-DE-QUEM-ESTA-EM-MARE.
+    """Prova da D-1510-A-MARE-SE-AFASTA-SO-DE-QUEM-ESTA-EM-MARE."""
     base = estilos_de_jogo.as_quatro("point_and_click")
     efeitos = {
         u: "mare;{:02X}{:02X}{:02X};10".format(*cor) for u, cor in zip(JOGADORES, base, strict=True)
@@ -301,9 +281,6 @@ def test_o_plano_encurta_a_mare_de_quem_se_aproximaria_dos_outros() -> None:
     assert len(plano) == 4
     assert all(p.amplitude < 1.0 for p in plano.values())
     assert len({p.amplitude for p in plano.values()}) == 1, "os quatro andam o mesmo ângulo"
-
-
-# ---------------------------------------------------------------- o motor no laço real
 
 
 def _tocar(
@@ -364,8 +341,9 @@ def test_o_arco_iris_do_motor_mostra_uma_cor_por_controle() -> None:
 def test_quem_entra_depois_segue_o_relogio_da_mesa(base: str, atraso: float) -> None:
     """O controle que entra depois (conectou, ou o jogo soltou a barra dele) não desfaz a
     defasagem do arco-íris nem o ângulo comum da Maré: os dois contam pelo mesmo relógio.
+
+    Prova da D-1510-O-ARCO-IRIS-E-A-MARE-TEM-UM-RELOGIO-SO.
     """
-    # Prova da D-1510-O-ARCO-IRIS-E-A-MARE-TEM-UM-RELOGIO-SO.
     texto = "arco-iris;;10" if base == "arco-iris" else "mare;FF0000,0000FF;10"
     plano = luz.plano_do_perfil(
         _perfil(texto), JOGADORES[:2], mesa_em_economia=False, em_economia=frozenset()

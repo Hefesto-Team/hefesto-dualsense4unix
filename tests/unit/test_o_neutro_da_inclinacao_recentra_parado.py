@@ -56,7 +56,6 @@ def _g(direita: float, para_tras: float = 0.0) -> tuple[float, float, float]:
 
 
 _MAO = _g(0.0)
-#: A mesa de 29/09: 19° de lado e 14° de frente do neutro da mão.
 _MESA = _g(19.0, -14.0)
 
 

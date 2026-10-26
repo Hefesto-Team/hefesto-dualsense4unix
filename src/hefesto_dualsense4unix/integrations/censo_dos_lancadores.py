@@ -38,22 +38,13 @@ class JogoDoLancador:
     instalado: bool = False
     caminho: Path | None = None
     executavel: str = ""
-    #: `integrations/identidade_de_janela.py` para a medição que a estabeleceu.
     umu_id: str = ""
     appid_da_steam: str = ""
     dlc: bool = False
     configuracao: Path | None = None
     pelo_proton: bool = False
-    #: O pedaço do título da janela que é só deste jogo (o ID que o emulador
-    #: escreve ali, como ``PPSA21567``), devolvido pelo leitor de uma
-    #: modificação. É por ele que o perfil casa quando a janela é a do emulador
-    #: para todos os jogos e o resto do título muda a cada segundo.
     titulo_do_jogo: str = ""
-    #: A classe de janela que a EXTENSÃO dá ao jogo (``steam_app_1088850`` de um jogo pelo
-    #: ``umu``). Quem sabe derivá-la é o leitor dela, que lê o lançador; vazia, a regra de
-    #: `identidade_de_janela` responde.
     janela: str = ""
-    #: A versão do Proton (ou do Wine) que o lançador grava para este jogo, como ele grava.
     proton: str = ""
 
     @property
@@ -135,11 +126,6 @@ class BibliotecaDoLancador:
             return "A biblioteca está vazia."
         return (f"{n} {'jogo' if n == 1 else 'jogos'} na biblioteca · "
                 f"{k} {'instalado' if k == 1 else 'instalados'}")
-
-
-# `_ONDE` (o app id do Flatpak e a pasta de cada programa), `_CONFIG_CAI_NOS_DADOS`, `_LEITORES`
-# e `_DO_CARTAO` NÃO são listas daqui: vêm dos manifestos dos lançadores de fábrica, lidos no fim
-# do arquivo (OS-SEIS-LANCADORES-VIRAM-MODIFICACOES-OFICIAIS-01).
 
 
 @dataclass(frozen=True)
@@ -745,37 +731,20 @@ def biblioteca_do_cartao(chave: str, lar: Path | None = None, *,
         erros=[e for b in partes for e in b.erros])
 
 
-# -- o lançador que vem de uma modificação --------------------------------------
-#
-# O bloco ``lancador`` do ``hefesto-mod.json`` (``mods/manifesto.py`` só confere a
-# forma de dicionário; o conteúdo é daqui). Ele é lido sem pydantic, como o resto
-# deste módulo, porque o gerador da aba 07 o importa rodando solto.
-
-#: As chaves que o bloco aceita. Outra qualquer recusa o bloco inteiro, como o
-#: ``extra="forbid"`` do manifesto: um erro de digitação nunca vira campo calado.
 CAMPOS_DO_LANCADOR = frozenset(
     {"rotulo", "atalhos", "comandos", "janelas", "titulo_do_jogo", "leitor"})
 
-#: O prazo do leitor quando o bloco não diz, e o teto do que ele pode pedir. O
-#: leitor roda na vigia da aba e no clique da escolha: passar disso é a escolha
-#: do jogo esperando a modificação.
 PRAZO_DO_LEITOR_S = 5.0
 PRAZO_MAXIMO_DO_LEITOR_S = 10.0
 
-#: O teto da saída do leitor e da lista que ela traz. Passou, o leitor é parado
-#: e a biblioteca fica «não pôde ser lida»: a memória da janela não é da modificação.
 SAIDA_MAXIMA_DO_LEITOR = 1 << 20
 JOGOS_MAXIMOS_DO_LEITOR = 5000
-#: As pastas de jogos que um leitor declara por leitura (as que a pessoa escolheu no emulador).
 PASTAS_MAXIMAS_DO_LEITOR = 64
 _TAMANHO_MAXIMO_DA_PASTA = 4096
-#: As pastas que a última leitura de cada extensão percorreu, pela chave da modificação.
 _PASTAS_DA_ULTIMA_LEITURA: dict[str, tuple[str, ...]] = {}
 
 _MAXIMO_DE_AGULHAS = 16
 _CHAVE_DO_JOGO = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
-#: A chave de um jogo que chegou pela porta: a régua é a da porta (``mods/porta._texto``, até 120
-#: caracteres, como ``lutris:12``), sem caractere de controle.
 _CHAVE_DA_PORTA = re.compile(r"^(?=.*\S)[^\x00-\x1f\x7f]{1,120}$")
 
 
@@ -794,12 +763,7 @@ class LeitorPorProcesso:
     comando: tuple[str, ...]
     pasta: Path
     prazo_s: float = PRAZO_DO_LEITOR_S
-    #: A forma que o ``titulo_do_jogo`` de cada jogo tem de ter (``re.search``).
-    #: Vazia, qualquer texto curto serve.
     molde_do_titulo: str = ""
-    #: Os arquivos que o leitor lê, relativos à ``HOME`` (``.config/Emulador/emulador.ini``; o ``*``
-    #: vale no último pedaço). É por eles que a vigia sabe que a biblioteca mudou
-    #: (:func:`assinatura_das_bibliotecas`) sem abrir o leitor a cada volta.
     fontes: tuple[str, ...] = ()
 
 
@@ -811,8 +775,6 @@ class LancadorDaModificacao:
     rotulo: str
     atalhos: tuple[str, ...] = ()
     comandos: tuple[str, ...] = ()
-    #: As classes de janela (``app_id``) que o emulador anuncia, para o perfil
-    #: «todos os jogos» e para a lista de exclusão.
     janelas: tuple[str, ...] = ()
     titulo_do_jogo: str = ""
     leitor: LeitorPorProcesso | None = None
@@ -994,7 +956,6 @@ def _saida_do_leitor(processo: subprocess.Popen[bytes], prazo_s: float
     return bytes(lido), ""
 
 
-#: A forma da ``janela`` que o leitor (ou a porta) dá a um jogo: a de uma classe de janela.
 _JANELA_DO_JOGO = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$")
 
 
@@ -1222,7 +1183,7 @@ def _impressoes_do_padrao(base: Path, padrao: str) -> list[tuple[str, int, int]]
     alvo = base / sub if sub else base
     try:
         achados = sorted(alvo.glob(molde))
-    except OSError:  # pragma: no cover - pasta ilegível
+    except OSError:  # pragma: no cover
         achados = []
     return [_impressao(alvo), *(_impressao(a) for a in achados)]
 
@@ -1240,30 +1201,14 @@ def sabe_ler(lancador: str) -> bool:
     return lancador in _LEITORES
 
 
-# -- os lançadores de fábrica: seis modificações oficiais -----------------------
-#
-# O que o censo, a reposição e a aba Lançadores sabem dos lançadores que vêm no pacote mora em
-# `mods/de_fabrica/<chave>/hefesto-mod.json`, no MESMO bloco ``lancador`` de qualquer modificação
-# (OS-SEIS-LANCADORES-VIRAM-MODIFICACOES-OFICIAIS-01). Tirar a pasta de um deles tira o lançador
-# do censo, da reposição e do desenho; pôr uma pasta com outro bloco o acrescenta.
-#
-# Quatro campos só existem aqui e a modificação de fora não os tem (o conferidor dela os recusa
-# como qualquer campo estranho): ``ordem`` (a ordem dos cartões), ``interior_lido`` (a Steam, cuja
-# biblioteca o produto lê por conta própria), ``programas`` (os programas cuja biblioteca o censo
-# lê, e onde) e ``reposicao`` (os processos que o reinício fecha e reabre). Os dois últimos mexem
-# com arquivo do usuário e com processo dele: modificação de terceiro não escolhe isso.
-
 NOME_DO_MANIFESTO = "hefesto-mod.json"
 
-#: Onde moram os manifestos de fábrica; a variável existe para as réguas apontarem outra pasta.
 PASTA_DE_FABRICA = Path(
     os.environ.get("HEFESTO_LANCADORES_DE_FABRICA")
     or Path(__file__).resolve().parent.parent / "mods" / "de_fabrica")
 
 CAMPOS_SO_DE_FABRICA = frozenset({"ordem", "interior_lido", "programas", "reposicao"})
 
-#: Os leitores de biblioteca que o censo sabe (código, não lista de lançadores): o manifesto
-#: escolhe um pelo nome.
 _FUNCOES_DE_LEITURA = {"heroic": _heroic}
 
 
@@ -1275,7 +1220,6 @@ class ProgramaDeFabrica:
     flatpak: str
     pasta: str
     leitor: str
-    #: A configuração dele cai nos dados do XDG quando não há pasta de configuração.
     config_nos_dados: bool = False
 
 
@@ -1392,24 +1336,19 @@ def lancadores_de_fabrica(raiz: Path | None = None) -> tuple[LancadorDeFabrica, 
     return tuple(sorted(achados, key=lambda f: (f.ordem, f.bloco.chave)))
 
 
-#: Os lançadores de fábrica deste processo, lidos uma vez. Quem precisa de outra pasta usa
-#: :func:`lancadores_de_fabrica` com ela.
 DE_FABRICA: tuple[LancadorDeFabrica, ...] = lancadores_de_fabrica()
 
 _PROGRAMAS = tuple(p for f in DE_FABRICA for p in f.programas)
 
-#: ``{programa: (app id do Flatpak, pasta)}``.
 _ONDE: dict[str, tuple[str, str]] = {p.nome: (p.flatpak, p.pasta) for p in _PROGRAMAS}
 
 _CONFIG_CAI_NOS_DADOS = frozenset(p.nome for p in _PROGRAMAS if p.config_nos_dados)
 
 _LEITORES = {p.nome: _FUNCOES_DE_LEITURA[p.leitor] for p in _PROGRAMAS}
 
-#: ``{programa em minúsculas (o ``fonte`` do ``JogoLocal``): cartão da aba 07}``.
 _CARTAO_DO_PROGRAMA: dict[str, str] = {
     p.nome.casefold(): f.bloco.chave for f in DE_FABRICA for p in f.programas}
 
-#: Os cartões que entregam jogos: a Steam, que lê a própria biblioteca, e os que têm programa.
 LANCADORES_COM_JOGOS: frozenset[str] = frozenset({_SERVICO_DA_STEAM, *_CARTAO_DO_PROGRAMA.values()})
 
 
@@ -1445,18 +1384,8 @@ def lancadores_com_jogos() -> frozenset[str]:
     return LANCADORES_COM_JOGOS | frozenset(_cartoes_das_extensoes().values())
 
 
-#: ``{cartão da aba 07: os programas que ele junta}``. A Steam não entra: o interior dela o
-#: produto lê por outro caminho.
 _DO_CARTAO: dict[str, tuple[str, ...]] = {
     f.bloco.chave: tuple(p.nome for p in f.programas) for f in DE_FABRICA if not f.interior_lido}
-
-
-# -- os lançadores das extensões ------------------------------------------------
-#
-# Desde OS-LANCADORES-ALEM-DA-STEAM-E-DO-HEROIC-VIRAM-EXTENSOES-01 (19/10/2026) só a Steam, o Heroic
-# e o Flatpak são de fábrica; o Lutris, o RetroArch, o Dolphin, o mGBA, o Azahar e o KytyPS5 são
-# extensões, cada uma no seu repositório, com o leitor da biblioteca DENTRO dela. O censo as acha
-# pelo registro das extensões, com o mesmo conferidor do bloco ``lancador`` de qualquer extensão.
 
 
 @dataclass(frozen=True)
@@ -1464,8 +1393,6 @@ class LancadorDaExtensao:
     """Um lançador que uma extensão LIGADA traz."""
 
     bloco: LancadorDaModificacao
-    #: A extensão tem o tipo ``processo``: os jogos chegam pela porta (``lancador.jogos``), e a
-    #: interface os pede ao serviço (``mods.jogos``).
     pela_porta: bool = False
 
 
@@ -1507,7 +1434,6 @@ def lancadores_das_extensoes(lugares: Any = None) -> tuple[LancadorDaExtensao, .
     return tuple(fora)
 
 
-#: Os lançadores que eram de fábrica e viraram extensão, com o endereço de cada uma.
 ARQUIVO_DOS_QUE_VIRARAM_EXTENSAO = (
     Path(__file__).resolve().parent.parent / "mods" / "viraram_extensao.json")
 
@@ -1519,7 +1445,6 @@ class ViradoExtensao:
     chave: str
     nome: str
     endereco: str
-    #: O lançador grava a versão do Proton de cada jogo (o Lutris): sem a extensão, ninguém a lê.
     proton: bool = False
 
 

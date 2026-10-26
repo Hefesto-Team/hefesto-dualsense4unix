@@ -541,14 +541,12 @@ class TestModprobeConf:
         )
 
     def test_conf_avisa_que_nunca_se_recarrega_o_modulo(self) -> None:
-        # Recarregar hid_playstation derruba TODOS os DualSense (os por BT
         cabecalho = MODPROBE_CONF.split("options ")[0]
         assert "reload" in cabecalho.lower()
 
 
 class TestReadmeHonesto:
     def test_readme_separa_fato_medido_de_hipotese(self) -> None:
-        # ser validado ao vivo (exigiria derrubar os DualSense em uso), e o
         assert "NÃO medido (hipótese)" in README
         assert "Medido (fato)" in README
         assert "próximo boot" in README, "tem que dizer QUANDO a validação acontece"

@@ -102,8 +102,6 @@ def _o_perfil_que_recebeu_o_coop() -> tuple[pathlib.Path, bytes, Profile]:
     loader.save_profile(antes)
     com_o_coop, pintados = a10_perfis._com_o_estilo(antes, RECEITA_QUE_SAIU, MESA)
     assert pintados == len(MESA)
-    # Até 09/10 (O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01) o estilo não se
-    # guardava: o perfil que recebeu o co-op em 25/09 tem só os três ajustes.
     com_o_coop = com_o_coop.model_copy(update={"estilo": None})
     arquivo = loader.save_profile(com_o_coop)
     return arquivo, arquivo.read_bytes(), com_o_coop

@@ -40,9 +40,9 @@ def _pasta(raiz: Path, mod_id: str, *, versao: str = "1.0.0",
     pasta = raiz / "fontes" / mod_id
     pasta.mkdir(parents=True, exist_ok=True)
     manifesto: dict[str, Any] = {
-        "id": mod_id, "nome": NOMES[mod_id], "versao": versao,  # (noqa-acento): chave
-        "api": ">=2,<3", "licenca": "MIT", "tipos": ["tema"], "tema": {},  # (noqa-acento): chave
-        "permissoes": [], "descricao": "Muda um detalhe.", "opcoes": [],  # (noqa-acento): chave
+        "id": mod_id, "nome": NOMES[mod_id], "versao": versao,  # (noqa-acento)
+        "api": ">=2,<3", "licenca": "MIT", "tipos": ["tema"], "tema": {},
+        "permissoes": [], "descricao": "Muda um detalhe.", "opcoes": [],  # (noqa-acento)
     }
     if substitui:
         manifesto["substitui"] = list(substitui)
@@ -53,7 +53,7 @@ def _pasta(raiz: Path, mod_id: str, *, versao: str = "1.0.0",
 @pytest.fixture
 def lg(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Lugares:
     """O lar de mentira, que a CLI e a aba acham pelo ``Lugares.do_xdg``."""
-    lugares = Lugares(codigo=tmp_path / "codigo",  # (noqa-acento): argumento
+    lugares = Lugares(codigo=tmp_path / "codigo",  # (noqa-acento)
                       dados=tmp_path / "dados",
                       registro=tmp_path / "config" / "mods.json",
                       estado=tmp_path / "run" / "mods-estado.json")
@@ -65,18 +65,12 @@ def _instalar(lg: Lugares, pasta: Path) -> None:
     instalador.instalar(str(pasta), lugares=lg)
 
 
-# -- A frase ---------------------------------------------------------------------------------------
-
-
 def test_a_frase_diz_o_nome_e_cai_no_id_quando_nao_o_sabe() -> None:
     assert cmd_mod.frase_das_substituidas([ANTIGA], NOMES) == "Saiu a «Ponte velha»."
     assert cmd_mod.frase_das_substituidas([ANTIGA, OUTRA_ANTIGA], NOMES) == (
         "Saíram a «Ponte velha» e a «Ponte gasta».")
     assert cmd_mod.frase_das_substituidas(["sumida"], {}) == "Saiu a «sumida»."
     assert cmd_mod.frase_das_substituidas([], NOMES) == ""
-
-
-# -- A CLI -----------------------------------------------------------------------------------------
 
 
 def test_a_cli_diz_que_saiu_ao_instalar(lg: Lugares, tmp_path: Path) -> None:
@@ -104,9 +98,6 @@ def test_a_cli_nao_fala_de_saida_quando_nenhuma_saiu(lg: Lugares, tmp_path: Path
     saiu = CliRunner().invoke(cmd_mod.app, ["instalar", str(_pasta(tmp_path, NOVA))])
     assert saiu.exit_code == 0, saiu.output
     assert "Saiu" not in saiu.output and "Saíram" not in saiu.output
-
-
-# -- A aba -----------------------------------------------------------------------------------------
 
 
 @pytest.fixture

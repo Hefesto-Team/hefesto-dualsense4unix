@@ -140,7 +140,7 @@ def test_caminho_rapido_usa_o_marker(monkeypatch):
     )
     monkeypatch.setattr(slo, "_cmdline_of", lambda pid: REAPER if pid == 62720 else "")
 
-    def _nao_deve_varrer(path):  # pragma: no cover - só falha se for chamado
+    def _nao_deve_varrer(path):  # pragma: no cover
         raise AssertionError("varreu /proc apesar do marker válido")
 
     monkeypatch.setattr(slo.os, "listdir", _nao_deve_varrer)

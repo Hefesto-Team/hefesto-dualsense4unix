@@ -66,7 +66,6 @@ def test_o_add_forcado_reprova_nomeando_o_arquivo_e_a_regra(repo: Path) -> None:
     feito = _roda(repo)
     assert feito.returncode == 1, feito.stdout + feito.stderr
     assert "docs/process/x.md" in feito.stdout
-    # a regra sai com a origem e a linha: `.gitignore:2:docs/process/`
     assert ".gitignore:2:docs/process/" in feito.stdout, feito.stdout
 
 
@@ -91,7 +90,6 @@ def test_o_ignore_pessoal_de_quem_roda_nao_reprova_o_versionado(repo: Path, tmp_
     feito = _roda(repo)
     assert feito.returncode == 0, feito.stdout + feito.stderr
     assert "README.md" not in feito.stdout
-    # e o ignorado do `.gitignore` continua reprovando com a regra dele, não com a pessoal
     _git(repo, "add", "-f", "docs/process/x.md")
     feito = _roda(repo)
     assert feito.returncode == 1, feito.stdout

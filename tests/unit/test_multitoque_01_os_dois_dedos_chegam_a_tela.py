@@ -62,7 +62,6 @@ def _evento(tipo: int, code: int, value: int) -> Any:
 
 
 def _reader() -> TouchpadReader:
-    # haver (ou não haver) um DualSense na mesa de quem roda.
     return TouchpadReader(
         device_path=Path("/dev/input/event-que-nao-existe"),
         acumular_movimento=False,
@@ -287,7 +286,7 @@ def test_a_pagina_tem_uma_bolinha_por_dedo_em_todo_card() -> None:
         Path(__file__).resolve().parents[2]
         / "src/hefesto_dualsense4unix/interface/paginas/02-controles.html"
     )
-    if not pagina.exists():  # pragma: no cover - árvore sem a página publicada
+    if not pagina.exists():  # pragma: no cover
         return
     html = pagina.read_text(encoding="utf-8")
     primeiras = html.count('data-campo="touch-ponto"')

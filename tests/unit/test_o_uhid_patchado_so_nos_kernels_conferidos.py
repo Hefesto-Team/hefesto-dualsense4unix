@@ -78,7 +78,7 @@ def test_o_uhid_da_pasta_e_o_patchado_do_baseline() -> None:
 
 
 def test_o_patch_desfeito_devolve_o_de_fabrica(tmp_path: Path) -> None:
-    if shutil.which("patch") is None:  # pragma: no cover - a máquina da casa tem
+    if shutil.which("patch") is None:  # pragma: no cover
         pytest.skip("sem o patch(1) nesta máquina")
     base = _baseline()
     copia = tmp_path / "uhid.c"

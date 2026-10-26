@@ -31,7 +31,7 @@ def test_o_padrao_sai_dos_mapas_do_produto() -> None:
         assert p[botao] == tecla, f"{botao}: o padrão diz {p[botao]!r}, o tap diz {tecla!r}"
     for botao, ligacao in DEFAULT_BUTTON_BINDINGS.items():
         if botao in BUTTON_TO_UINPUT:
-            continue  # (noqa-acento) o mouse tem precedência — ver o docstring da função
+            continue
         assert p[botao] == "+".join(ligacao), (
             f"{botao}: o padrão diz {p[botao]!r}, o teclado diz {'+'.join(ligacao)!r}")
 
@@ -170,8 +170,6 @@ def test_o_perfil_empurra_ao_ativar() -> None:
         def __init__(self) -> None:
             self.recebeu: dict[str, str] | None = None
 
-        # `set_button_actions` ganhou a sacola dos botões CALADOS (sem ela, seis
-        # `apply_button_actions` engole e relata como "falhou". O verde seria
         def set_button_actions(
             self,
             do_mouse: dict[str, str] | None,

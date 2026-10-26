@@ -129,7 +129,7 @@ try:
     )
 
     _CRC_IMPORTAVEL = ""
-except ImportError as _erro:  # pragma: no cover - só fora do venv do projeto
+except ImportError as _erro:  # pragma: no cover
     BT_INPUT_CRC_SEED = 0xA1
     BT_REPORT_ID = 0x31
     _CRC_IMPORTAVEL = str(_erro)

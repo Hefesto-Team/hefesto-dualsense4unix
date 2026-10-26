@@ -13,7 +13,6 @@ from hefesto_dualsense4unix.profiles.schema import (
     MatchCriteria,
 )
 
-# continuam morando onde estão — a sprint MIGRA-PERFIS-03 diz isso com todas as
 from hefesto_dualsense4unix.app.actions.profiles_actions import (  # isort:skip
     explicacao_da_disputa,
     ordem_de_exibicao,
@@ -75,20 +74,14 @@ SEM_DONO = (
     "gerador não escreve. Nada foi aplicado."
 )
 
-#:   publicada** — medido em 01/09 contra o `state_full`, e a substituição já
 GESTOS_SEM_MOTOR: dict[str, str] = {}
 
-#: :data:`AMBIENTE_QUE_A_TELA_NAO_MOSTRA` e de :data:`LISTA_VAZIA`.
-#: estilo**, e não porque a escolha se perdeu.
 ESTILO_APLICA_E_SAI = (
     "Escolher um estilo ajusta o gatilho, a vibração e a cor de cada controle "
     "de uma vez. O perfil guarda os três e o estilo escolhido, e mexer numa aba "
     "depois não apaga o estilo."
 )
 
-#: produto sabe guardá-la (``simple_match.from_simple_choice("janela", …)``) e a
-#: tela sabe MOSTRÁ-LA — que é a ordem certa: gravar uma forma que o seletor não
-#: conhece empurraria o perfil para fora da tela.
 AMBIENTE_DO_PRESET: dict[str, str] = {
     "any": "Todos",
     "steam": "Steam",
@@ -96,9 +89,6 @@ AMBIENTE_DO_PRESET: dict[str, str] = {
     "steam_game": "Jogo da Steam",
     "janela": "Jogo (pela janela)",
 }
-
-#: régua nova varre toda chave que ``from_simple_choice`` sabe escrever e exige
-#: rótulo em :data:`AMBIENTE_DO_PRESET` **ou** uma linha aqui.
 
 MODO_SEM_OPINIAO = "none"
 
@@ -108,13 +98,11 @@ FORA_DO_DESENHO: dict[str, str] = {
     "editor": "o preset “Editor” existe no produto e não no desenho dela",
 }
 
-#:
 AMBIENTE_QUE_A_TELA_NAO_MOSTRA = (
     "Este perfil casa por uma regra que esta tela não sabe mostrar — o seletor "
     "fica travado para que salvar não a rebaixe."
 )
 
-#: sozinho.
 LISTA_VAZIA = (
     "Nenhum perfil no disco ainda. Ajuste o que quiser nas outras abas e clique "
     "em “Salvar perfil” no rodapé — o primeiro perfil nasce daí."
@@ -131,10 +119,6 @@ GUARDA_SEM_DAEMON = (
     "ligados; o que o perfil guarda para cada peça continua no disco, intacto."
 )
 
-#: (merge por campo, PERFIL-01).
-#: a tupla ``("leds", "triggers", "rumble", "speaker")``, digitada, com a
-#: O merge levou os dois, e o que sobrou foi a pior das combinações:
-#: o daemon aplicando o mudo só daquele controle (``apply_controller_mics``), a
 SECOES_POR_CONTROLE: tuple[str, ...] = tuple(ControllerOverrides.model_fields)
 
 
@@ -267,7 +251,6 @@ def _pacote_do_editor(
         "evento": str(getattr(profile, "evento", None) or ""),
         "evento_comando": str(getattr(profile, "evento_comando", None) or ""),
         "ordem": _ordem_do_jogo(profile, perfis or [], ativo),
-        # SEM SEÇÃO É "none", E ISSO NÃO É UM DEFAULT: um perfil sem `mode` NÃO
         "modo": str(getattr(getattr(profile, "mode", None), "kind", "")
                     or MODO_SEM_OPINIAO),
     }
@@ -304,14 +287,8 @@ def _linhas_da_lista(
     ]
 
 
-#: O ajuste guardado por controle que a tela mostra no MAPA DO CONTROLE e não numa célula desta
-#: coluna: a troca de botões (O-REMAPEAMENTO-VALE-POR-JOGADOR-01, 20/10/2026). O «Vale para» do
-#: mapa escolhe o controle pela cor do plástico e ali ele aparece; uma 11ª célula nesta fileira é
-#: desenho (a de dez já pede 271 px e a tabela rola na horizontal a 1212), e a decisão é de produto.
 SECOES_QUE_MORAM_NO_MAPA: frozenset[str] = frozenset({"remapeamento"})
 
-#: Sem célula na página publicada hoje: o que mora no mapa e o que o desenho já tem e o produto
-#: ainda espera. A lista vazia de antes era a do desenho inteiro publicado.
 SECOES_ESPERANDO_A_SESSAO_DELA: frozenset[str] = SECOES_QUE_MORAM_NO_MAPA
 
 SECOES_NA_TELA: tuple[str, ...] = tuple(

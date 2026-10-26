@@ -103,144 +103,22 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-#: Mesmo arquivo do registro dos DualSense — namespace separado (``externals``).
 _CONTROLLERS_FILE = "controllers.json"
 
-#: MAC "de verdade" (mesma regra estrita do registro DualSense): 12 hex, com
-#: ou sem ``:``/``-``. Qualquer outra key é identidade VOLÁTIL de sessão.
 _MAC_RE = re.compile(
     r"^(?:[0-9a-fA-F]{12}|(?:[0-9a-fA-F]{2}[:-]){5}[0-9a-fA-F]{2})$"
 )
 
-#: MODO-01 (25/07): primeiro octeto dos endereços que NÓS MESMOS sintetizamos
-#: — unicast administrado LOCALMENTE (bit 0x02 do 1º octeto, IEEE 802). Duas
-#: fontes do projeto escrevem exatamente aqui:
-#:
-#: - o vpad uhid, que forja ``02:fe:...`` por jogador (``uhid_gamepad``);
-#: - o ``usb_probe_degrade`` do nosso DKMS do ``hid-nintendo``: com o
-#:   ``REQ_DEV_INFO`` mudo no cabo, o driver SINTETIZA a identidade em vez de
-#:   perder o device — ``mac_addr[0] = 0x02``, depois VID (2 bytes), PID (2
-#:   bytes) e bus (1 byte), ver ``patch/0003-*``.
-#:
-#: A segunda é a raiz do bug desta frente. Esse "MAC" não carrega NENHUM bit
-#: do aparelho: é a tupla (VID, PID, bus) fantasiada de endereço. O 8BitDo Pro
-#: ligado em modo Switch no cabo nasce com essa identidade sintética; o MESMO
-#: plástico em modo PS4 por Bluetooth nasce com o MAC de verdade. O registro
-#: guardava as DUAS como se fossem dois aparelhos, e a AUSENTE segurava um
-#: slot: com 4 jogadores na mesa, o controle CONECTADO foi empurrado para o
-#: slot 5 (medido ao vivo em 25/07, e o DualSense só tem 5 LEDs de player).
-#: Pior que o fantasma: como o valor sai de (VID, PID, bus), dois controles
-#: Nintendo-class DIFERENTES degradados no cabo recebem o MESMO endereço — o
-#: próprio comentário do patch admite ("two identical clones plugged at once
-#: would share it"). Persistir isso é gravar em disco uma FUSÃO de aparelhos.
-#:
-#: Por isso um endereço destes vale como identidade de SESSÃO (o controle
-#: precisa de número enquanto está na mesa) e NUNCA como identidade
-#: persistida. O critério é o octeto ``02`` EXATO, não "qualquer bit 0x02
-#: ligado": a faixa forjada das fixtures (``aa:bb:cc:*``) e os endereços BLE
-#: random-static (1º octeto ≥ 0xC0) também têm o bit ligado sem serem síntese
-#: nossa, e um MAC de hardware com OUI atribuído nunca começa com ``02``.
 _SYNTHESIZED_MAC_FIRST_OCTET = "02"
 
-#: MODO-01: quantos ``sync_connected`` CONSECUTIVOS sem ver uma identidade
-#: VOLÁTIL antes de soltar o slot dela. Uma ausência bastaria para o caso real
-#: (trocar o 8BitDo de modo leva segundos), mas ``discover_external_gamepads``
-#: engole exceção POR DEVICE (``except Exception: continue``) — um ``open`` que
-#: falhe faz o controle sumir do inventário por um ciclo só. Exigir DUAS
-#: ausências seguidas (~4 s no poll lento) troca "o fantasma some um tick
-#: depois" por "um hiccup de enumeração não renumera ninguém".
 VOLATILE_ABSENCE_LIMIT = 2
 
-#: (``joycon_enforce_subcmd_rate``) e firmware clone estoura fácil — 2s por
-#: matou o 8BitDo ao vivo.
 LED_MIN_INTERVAL_SEC = 2.0
 
-#: LUGAR-À-MESA-01 / E0 — **DECISÃO, 07/08/2026: "calar a luz até a
-#: entrega existir"** (resposta 12 do painel, em
-#: o registro «DECISOES-DELA-as-onze-respostas-do-painel» de 07/08/2026).
-#: Enquanto o controle externo NÃO for jogador de verdade dentro do jogo, o
-#: Hefesto **não acende número de jogador nele**.
-#:
-#: **O que "calar" é, e por que não é "apagar".** Com este interruptor em
-#: ``False`` o tick faz ZERO escritas — não apaga a barra do Pro nem a lightbar
-#: do 8BitDo. O critério é que o produto não pode AFIRMAR jogador, e apagar
-#: também é afirmar: seria a nossa mão, no mesmo nó, dizendo "este controle não
-#: tem jogador", destruindo o padrão que o firmware/kernel põe ali sozinho (na
-#: lightbar do 8BitDo em modo DS4, acesa é o sinal de "ligado"; apagá-la trocaria
-#: uma mentira por outra, "sem bateria"). Zero escritas deixa o plástico
-#: EXATAMENTE como ficaria com o Hefesto desinstalado — e isso é falseável:
-#: pare o daemon e a luz não muda. Três razões a mais: o rádio fica sem tráfego
-#: de LED na direção do firmware mais frágil da mesa (o clone do 8BitDo morre
-#: sob bombardeio — `daemon/ipc_handlers.py:462-468`); o precedente MEDIDO desta
-#: casa já traduz "parar de afirmar" como «zero escritas, sem apagar
-#: ativamente» (o gate ``auto_numbers`` logo abaixo, R-14/NUMA-03c), e ter duas
-#: doutrinas para a mesma frase é como se perde uma; e o custo de voltar é uma
-#: linha.
-#:
-#: **O caminho de volta é UMA LINHA: trocar para ``True``.** A capacidade não
-#: foi enterrada — ``core/external_leds.py`` continua inteiro e testado, e o
-#: gate limpa os caches ao passar, então o primeiro tick com a luz de volta
-#: reescreve todos os slots. A ATRIBUIÇÃO de slot NÃO é afetada (numerar é
-#: identidade; este interruptor governa só a APARÊNCIA).
-#:
-#: **Condição de volta, objetiva:** quando o externo virar jogador de verdade —
-#: a `E3` da LUGAR-À-MESA-01, que o usuário autorizou **só depois da MASCARA-01**.
-#: Não é "quando alguém achar que já dá".
-#:
-#: **Custo declarado (GRAU: SUSPEITA COM MECANISMO).** O nó de LED guarda o
-#: último valor escrito enquanto o device segue vinculado: num daemon que
-#: REINICIA com o controle já conectado, o número que a versão anterior acendeu
-#: FICA aceso — resíduo nosso, não afirmação nova. Reconectar o controle (ou
-#: religá-lo) devolve o padrão do firmware. Apagar uma vez na transição foi
-#: recusado de propósito: é exatamente a escrita que o critério proíbe.
 EXTERNAL_PLAYER_LED_ENABLED = False
 
-#: GYRO-02: faixa Nintendo que ESTA bancada tem. **Não é mais o gatilho do
-#: enable-IMU** — quem decide é :func:`~hefesto_dualsense4unix.core.
-#: linhagem_nintendo.e_pro_genuino`, por NEGATIVA.
-#:
-#: UMA-FAIXA-NÃO-É-UM-FABRICANTE-01 (22/08/2026): até hoje esta constante era
-#: o único gatilho, e a docstring dela chamava a si mesma de "a fonte da
-#: verdade". A Nintendo tem 82 faixas MA-L registradas (medido contra
-#: ``/usr/share/ieee-data/oui.csv``); comparar com UMA delas deixava o
-#: giroscópio de todo Pro de outra safra em STANDBY para sempre, sem log e sem
-#: aviso. Continua exportada porque testes e telas antigas a importam, e
-#: porque ela ainda é o fato verdadeiro que ela sempre foi — o que caducou é a
-#: quantificação que estava escrita em cima dela.
 NINTENDO_REAL_OUI = OUI_PRO_DESTA_BANCADA
 
-#: Só USB — e o porteiro é NOSSO, não do aparelho.
-#:
-#: **FATO ERRADO, SUBSTITUÍDO em 03/09/2026 (ONDA-TRANSPORTE-IDENTIDADE).**
-#: Esta nota dizia «FASE 1 (GYRO-02): só USB. BT é o MESMO território de
-#: subcomando que matou o 8BitDo — falta medição de campo com o kernel-watch
-#: `[JOYCON]` limpo antes de liberar por rádio», e isso lia como *território
-#: não medido*: quem chegasse aqui procurando o que falta iria medir o rádio.
-#: A leitura do fonte derrubou a premissa, e o que falta é OUTRA coisa.
-#:
-#: **O QUE O FONTE DIZ, e o endereço está aqui para ser conferido:** o
-#: `ENABLE_IMU` (subcomando `0x40`) é disparado pelo PRÓPRIO `hid-nintendo`
-#: dentro do `joycon_init`, **em todo barramento**. O único porteiro daquela
-#: chamada é `joycon_has_imu()`, que olha o TIPO do controle e nunca o
-#: `hdev->bus` (`assets/dkms/hid-nintendo/hid-nintendo.c:144` o define,
-#: `:839-844` é o porteiro, `:1568-1579` é quem monta, `:2924-2937` é a
-#: chamada). **O aparelho aceita pelos DOIS transportes** — não é ele que
-#: recusa aqui, é este `if`.
-#:
-#: **O GATE FICA, COM A RAZÃO TROCADA — e são três, nenhuma delas "não sei":**
-#:
-#: 1. **por rádio não há o que ganhar**: o kernel já mandou o MESMO pacote lá,
-#:    e a canônica classifica o nosso envio como *provável código morto*;
-#: 2. **o rádio custa 3x**: `JC_SUBCMD_RATE_LIMITER_BT_MS` são 60 ms entre
-#:    subcomandos contra 20 ms no cabo (`hid-nintendo.c:978-980`);
-#: 3. **é o território do EXT-04**, o bombardeio de subcomando por rádio que
-#:    fez o `hid-nintendo` DESREGISTRAR o 8BitDo — ver o topo deste módulo.
-#:
-#: **A DÍVIDA QUE SOBRA, escrita para quem for pagá-la:** ninguém mediu se
-#: algum Pro genuíno fica em STANDBY **depois** do `joycon_init` — que é a
-#: única hipótese em que o nosso envio deixaria de ser redundante. Enquanto
-#: essa medição não existir, economizar subcomando no lado frágil é o
-#: comportamento certo, e liberar o rádio seria comprar risco por nada.
 _IMU_ENABLE_ALLOWED_BUS = "usb"
 
 IMU_ENABLE_MAX_ATTEMPTS = 2
@@ -409,11 +287,8 @@ class ExternalIdentityRegistry:
     def __init__(self, *, clock: Callable[[], float] | None = None) -> None:
         self._lock = threading.RLock()
         self._clock: Callable[[], float] = clock or relogio_do_lugar_guardado
-        #: prazo dos DualSense (``identity.prazo_do_lugar_guardado``): a mesa
         self._guardados: dict[str, float] = {}
-        #: solta o lugar guardado dos DualSense quando um externo novo chega.
         self._soltar_os_dualsense: Callable[[], object] | None = None
-        #: D-3009: o instante em que o jogo tomou a autoridade (None = o prazo corre).
         self._prazos_seguros_desde: float | None = None
         self._ordem: dict[str, int] = {}
         self._volatile: set[str] = set()
@@ -421,7 +296,6 @@ class ExternalIdentityRegistry:
         self._volatile_absences: dict[str, int] = {}
         self._dirty = False
         self._loaded = False
-        #: NUM-01: provider OPCIONAL dos lugares dos DualSense PRESENTES —
         self._ds_presence: Callable[[], set[int]] | None = None
         self._ultimo_piso = 0
 
@@ -587,8 +461,6 @@ class ExternalIdentityRegistry:
         rank = self._ordem.get(key)
         if rank is None:
             return None
-        # O-ASSENTO-GUARDADO-NAO-ANDA-01: quem saiu dentro do prazo segura o
-        # lugar — conta como se estivesse na mesa.
         antes = sum(
             1
             for outra in self._connected | self._guardados_locked()
@@ -618,7 +490,6 @@ class ExternalIdentityRegistry:
         key, persistable = self._canonical(uniq)
         if not key:
             return None
-        # Hierarquia de locks: o lado DualSense é consultado ANTES de tomar
         ds_presentes = self._ds_present_ranks(reserve)
         with self._lock:
             if key not in self._ordem:
@@ -792,8 +663,6 @@ class ExternalIdentityRegistry:
             if self._loaded:
                 return
             self._loaded = True
-            # O arquivo que existe e não se lê não vale como ausente: avisa e começa
-            # vazia, e a primeira escrita o guarda ao lado antes da fila nova.
             try:
                 with CONTROLLERS_FILE_LOCK:
                     data = ler_a_fila(self._path())
@@ -869,16 +738,13 @@ class ExternalIdentityRegistry:
                 path = self._path()
                 data: dict[str, Any] = {}
                 existente: Any = None
-                # O ilegível vai para o lado antes; se não puder, a escrita não segue.
                 loaded = ler_a_fila_para_gravar(path)
-                # R-23 (espelho do lado DualSense): arquivo de OUTRO
                 if (
                     loaded is not None
                     and loaded.get("version") == CONTROLLERS_SCHEMA_VERSION
                 ):
                     data = loaded
                     existente = loaded
-                # DualSense — os dois escrevem os MESMOS dois campos.
                 data["version"] = CONTROLLERS_SCHEMA_VERSION
                 data["boot_id"] = _session_anchor()
                 data[ORDER_FIELD] = merged_order_payload(
@@ -939,13 +805,10 @@ class ExternalImuEnabler:
                     continue
                 bus = str(entry.get("bus") or "").lower()
                 if bus != _IMU_ENABLE_ALLOWED_BUS:
-                    # O PORTEIRO É NOSSO, e o aparelho aceita nos dois — a
-                    # razão de ele ficar está em `_IMU_ENABLE_ALLOWED_BUS`,
-                    # e não é mais "o rádio não foi medido".
                     continue
                 tentativas = self._attempts.get(key, 0)
                 if tentativas >= IMU_ENABLE_MAX_ATTEMPTS:
-                    continue  # esgotado nesta adoção — nunca loop
+                    continue
                 ultima = self._last_attempt_at.get(key)
                 if ultima is not None and (agora - ultima) < IMU_ENABLE_BACKOFF_SEC:
                     continue
@@ -1142,7 +1005,6 @@ class ExternalLedSync:
             from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
 
             coop = get_coop_manager(self._daemon)
-            # de verdade (com um DualSense só, o co-op não acende nada — R-13
             if coop is not None and coop.should_be_active():
                 jogadores = int(coop.player_count())
                 if jogadores >= 2:
@@ -1197,27 +1059,14 @@ class ExternalLedSync:
 
         try:
             inventory = discover_external_gamepads()
-        except Exception as exc:  # nunca derruba o poll loop
+        except Exception as exc:
             logger.debug("external_led_tick_enumeracao_falhou", err=str(exc))
             return
         agora = time.monotonic() if now is None else now
         reserve = self._ds_reserve()
-        # CLONE-01: UMA resolução por entrada, reusada pelos dois consumidores
-        # abaixo. Resolver duas vezes não seria só desperdício de um `realpath`:
-        # o degrau `dev:<instância HID>` lê o sysfs VIVO, então um aparelho que
-        # se despedisse ENTRE as duas chamadas entraria no `sync_connected` com
-        # uma chave e receberia slot com outra — exatamente o buraco de
-        # divergência que esta função existe para fechar.
         identidades = [identity_for_entry(entry) for entry in inventory]
         self._registry.sync_connected(identidades)
 
-        # R-14 §1 (auditoria 23/07): ATRIBUIÇÃO antes de qualquer flag. O
-        # `slot_for` morava lá embaixo, DEPOIS do early-return do automático —
-        # com o auto desligado o externo não recebia sequer um número no
-        # registro. Ele voltava a nascer sem slot no tick seguinte a religar o
-        # flag, e enquanto isso o espaço de numeração global tinha um buraco
-        # (o `used` do lado DualSense também consulta estas reservas). Numerar
-        # é identidade; o flag governa APARÊNCIA (escrever no LED).
         atribuidos: list[tuple[str | None, str | None, int]] = []
         for entry, identity in zip(inventory, identidades, strict=True):
             uniq_raw = entry.get("uniq")
@@ -1232,27 +1081,11 @@ class ExternalLedSync:
         try:
             autoridade = self._display_authority()
             if autoridade == "daemon" and self._last_authority in ("game", "unknown"):
-                # para que ESTE tick reacenda os slots do daemon incondicional-
-                # mente (não dá pra confiar no que ficou aceso sem disputa).
                 self._last_value.clear()
                 self._last_write_at.clear()
             self._last_authority = autoridade
 
             if not EXTERNAL_PLAYER_LED_ENABLED:
-                # E0 da LUGAR-À-MESA-01 — DECISÃO de 07/08/2026: "calar a
-                # luz até a entrega existir". Enquanto o externo não for jogador
-                # dentro do jogo, o Hefesto não acende número nele: ZERO
-                # escritas, sem apagar (ver a docstring de
-                # `EXTERNAL_PLAYER_LED_ENABLED`, que diz por que apagar também
-                # seria afirmar). O caminho de volta é aquela constante.
-                #
-                # A leitura da constante mora AQUI, e não em `apply_player_number`,
-                # de propósito: a capacidade tem de continuar viva e testável no
-                # `core/external_leds.py` esperando a E3 — um "calar" que apagasse
-                # o código custaria a leva inteira para desfazer.
-                #
-                # Cache limpo pelo mesmo motivo do gate de automático abaixo:
-                # OFF→ON reescreve tudo no primeiro tick seguinte.
                 if self._last_value or self._last_write_at:
                     self._last_value.clear()
                     self._last_write_at.clear()
@@ -1310,7 +1143,6 @@ class ExternalLedSync:
                 self._imu_enabler.tick(inventory, now=agora)
 
 
-# guardado dos DualSense, que pergunta ao dono único dos prazos. O import mora
 from hefesto_dualsense4unix.daemon.subsystems.identity import (  # noqa: E402
     ArquivoDaFilaIlegivelError,
     avisar_a_fila_ilegivel,

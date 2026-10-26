@@ -59,7 +59,7 @@ AFIRMA_A_COR = "a borda é a cor do plástico"
 
 @pytest.fixture(scope="module")
 def a03():
-    import pacotes  # noqa: F401  (registra os dez)
+    import pacotes  # noqa: F401
     from pacotes import a03_gatilhos
 
     return a03_gatilhos

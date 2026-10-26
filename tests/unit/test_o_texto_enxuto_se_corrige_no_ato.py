@@ -1,7 +1,7 @@
 """O-TEXTO-ENXUTO-SE-CORRIGE-NO-ATO-01: a pergunta do texto enxuto tem um dono só, e ela morde.
 
-O ``scripts/o-texto-enxuto.py`` reúne o que as réguas do texto reprovariam (o «dela» de pessoa, a
-fala citada, a docstring longa, o comentário cortado e a citação de linha nova), corrige o
+O ``scripts/o-texto-enxuto.py`` reúne o que as réguas do texto reprovariam (o «dela» de pessoa, o
+comentário, a docstring longa e a citação de linha nova), corrige o
 mecânico e aponta o resto. Estas provas devolvem cada defeito num repositório de mentira em
 ``tmp_path`` e conferem que o mesmo gancho do ``.pre-commit-config.yaml`` roda em casa e no CI,
 que o gancho da escrita fala só quando há o que dizer e falha ABERTO, e que a catraca do volume
@@ -30,12 +30,11 @@ PRE_COMMIT_YAML = RAIZ / ".pre-commit-config.yaml"
 CI_YML = RAIZ / ".github" / "workflows" / "ci.yml"
 PORTOES_SH = SCRIPTS / "portoes.sh"
 
-#: O que o repositório de mentira leva da árvore real: a pergunta e as réguas que ela importa.
 COPIAR = (
     "o-texto-enxuto.py",
     "neutralizar-o-texto.py",
     "check_docstring_longa.py",
-    "check_comentario_cortado.py",
+    "check_codigo_sem_comentario.py",
     "validar-citacoes-de-linha.py",
     "prosa_do_codigo.py",
     "check_a_origem.py",
@@ -43,11 +42,9 @@ COPIAR = (
 )
 PACOTE = "src/hefesto_dualsense4unix"
 
-#: Os defeitos, montados por partes: o texto deste arquivo é versionado e as réguas o leem.
-DELA = "# a ordem " + "dela" + " de 19/09 manda\n"
-DELA_TROCADO = "# a ordem de 19/09 manda\n"
-FALA = "# a regra *" + "«" + "isso não faz sentido mais" + "»" + "*\n"
-CORTADO = "# o rádio reinicia porque o\n"
+DELA = '"""A ordem ' + "dela" + ' de 19/09 manda."""\n'
+DELA_TROCADO = '"""A ordem de 19/09 manda."""\n'
+COMENTARIO = "# o rádio reinicia porque o laço para\n"
 LIMPO = '"""Um módulo limpo."""\n\n\ndef f() -> int:\n    return 1\n'
 
 
@@ -56,7 +53,6 @@ def _docstring_de(linhas: int, recuo: str = "") -> str:
     return "\n".join(recuo + ln for ln in ['"""Resumo.', *miolo, '"""']) + "\n"
 
 
-# A base da leva que o fecho exporta aponta para um commit que o repositório de mentira não tem.
 AMBIENTE = {
     **{k: v for k, v in os.environ.items() if k != "HEFESTO_BASE_DA_LEVA"},
     "GIT_CONFIG_GLOBAL": "/dev/null",
@@ -133,16 +129,12 @@ def o_script(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-# --------------------------------------------------------------------------- as cinco mordidas
-
-
 class TestAsReguasMordem:
-    def test_o_script_aponta_as_cinco_e_so_o_dela_se_corrige(self, tmp_path: Path) -> None:
+    def test_o_script_aponta_as_quatro_e_so_o_dela_se_corrige(self, tmp_path: Path) -> None:
         repo = repo_de_mentira(tmp_path)
         (repo / PACOTE / "x.py").write_text(
             DELA
-            + FALA
-            + CORTADO
+            + COMENTARIO
             + "VALOR = 1\n\n\ndef g() -> int:\n"
             + _docstring_de(11, "    ")
             + "    return 2\n",
@@ -151,7 +143,7 @@ class TestAsReguasMordem:
         (repo / "docs/protocol/p.md").write_text("# p\n\nveja `mod.py:3`\n", encoding="utf-8")
         apontou = o_script(repo, PACOTE + "/x.py", "docs/protocol/p.md")
         assert apontou.returncode == 1, apontou.stdout + apontou.stderr
-        for regua in ("[dela]", "[fala]", "[docstring]", "[cortado]", "[citação]"):
+        for regua in ("[dela]", "[comentário]", "[docstring]", "[citação]"):
             assert regua in apontou.stdout, regua + "\n" + apontou.stdout
         assert (repo / PACOTE / "x.py").read_text(encoding="utf-8").startswith(DELA), (
             "apontar não escreve"
@@ -159,10 +151,10 @@ class TestAsReguasMordem:
 
         corrigiu = o_script(repo, "--aplicar", PACOTE + "/x.py", "docs/protocol/p.md")
         depois = (repo / PACOTE / "x.py").read_text(encoding="utf-8")
-        assert depois.startswith(DELA_TROCADO + FALA), "só o «dela» é mecânico"
+        assert depois.startswith(DELA_TROCADO + COMENTARIO), "só o «dela» é mecânico"
         assert corrigiu.returncode == 1, "o resto continua reprovando"
         assert "[dela]" in corrigiu.stdout and "corrigido" in corrigiu.stdout
-        for regua in ("[fala]", "[docstring]", "[cortado]", "[citação]"):
+        for regua in ("[comentário]", "[docstring]", "[citação]"):
             assert regua in corrigiu.stdout
         assert "[dela]" not in o_script(repo, PACOTE + "/x.py").stdout
 
@@ -229,10 +221,9 @@ class TestAsReguasMordem:
         [
             ("dela", DELA + "X = 1\n"),
             ("dela", "# a cor " + "dela" + " vem do aparelho\nX = 1\n"),
-            ("fala", FALA + "X = 1\n"),
-            ("fala", "# a regra é curta\nX = 1\n"),
-            ("cortado", CORTADO + "X = 1\n"),
-            ("cortado", "# o rádio reinicia porque o laço para.\nX = 1\n"),
+            ("comentário", COMENTARIO + "X = 1\n"),
+            ("comentário", "X = 1  # noqa: E501\n"),
+            ("comentário", 'X = "# não é comentário"\n'),
             ("docstring", "def g() -> int:\n" + _docstring_de(11, "    ") + "    return 2\n"),
             ("docstring", "def g() -> int:\n" + _docstring_de(10, "    ") + "    return 2\n"),
         ],
@@ -245,12 +236,10 @@ class TestAsReguasMordem:
         (repo / PACOTE / "n.py").write_text(fonte, encoding="utf-8")
         nz = _a_regua("neutralizar-o-texto.py")
         dl = _a_regua("check_docstring_longa.py")
-        cc = _a_regua("check_comentario_cortado.py")
-        falas = _a_regua("o-texto-enxuto.py").falas_em_comentario
+        cs = _a_regua("check_codigo_sem_comentario.py")
         reprova = {
             "dela": nz.reescrever_arquivo(fonte, "py") != fonte,
-            "fala": bool(falas({PACOTE + "/n.py": fonte})),
-            "cortado": any(pergunta(fonte) for pergunta in cc.PERGUNTAS.values()),
+            "comentário": bool(cs.achados_do_texto(fonte, "py", PACOTE + "/n.py")),
             "docstring": bool(dl.docstrings_longas(fonte)),
         }[regua]
         assert (f"[{regua}]" in o_script(repo, PACOTE + "/n.py").stdout) == reprova
@@ -260,7 +249,7 @@ class TestAsReguasMordem:
         [
             "neutralizar-o-texto.py",
             "check_docstring_longa.py",
-            "check_comentario_cortado.py",
+            "check_codigo_sem_comentario.py",
             "validar-citacoes-de-linha.py",
         ],
     )
@@ -276,9 +265,6 @@ class TestAsReguasMordem:
         corrida = o_script(repo, PACOTE + "/x.py", "docs/protocol/p.md")
         assert corrida.returncode == 2, corrida.stdout + corrida.stderr
         assert ausente in corrida.stderr
-
-
-# ------------------------------------------------------------ o mesmo gancho, em casa e no CI
 
 
 def _rodar_o_gancho(repo: Path, arquivos: list[str]) -> subprocess.CompletedProcess[str]:
@@ -340,12 +326,12 @@ class TestOMesmoGanchoEmCasaENoCI:
         assert git(repo, "diff") == "", "o que ele corrigiu voltou ao índice"
         assert "ordem de 19/09" in git(repo, "diff", "--cached")
 
-    def test_em_casa_a_fala_citada_reprova_o_commit(self, tmp_path: Path) -> None:
+    def test_em_casa_o_comentario_reprova_o_commit(self, tmp_path: Path) -> None:
         repo = repo_de_mentira(tmp_path)
-        (repo / PACOTE / "x.py").write_text(FALA + "X = 1\n", encoding="utf-8")
+        (repo / PACOTE / "x.py").write_text(COMENTARIO + "X = 1\n", encoding="utf-8")
         git(repo, "add", PACOTE + "/x.py")
         feito = _rodar_o_gancho(repo, [PACOTE + "/x.py"])
-        assert feito.returncode == 1 and "[fala]" in feito.stdout
+        assert feito.returncode == 1 and "[comentário]" in feito.stdout
 
     def test_no_ci_o_que_em_casa_se_corrige_reprova(self, tmp_path: Path) -> None:
         """``pre-commit run --all-files`` commitada: o gancho modificaria, então reprova."""
@@ -373,10 +359,10 @@ class TestOMesmoGanchoEmCasaENoCI:
         git(repo, "commit", "-q", "-m", "com o dela de pessoa")
         no_ci = _rodar_o_pre_commit_real(repo, "--all-files")
         assert no_ci.returncode == 1, no_ci.stdout + no_ci.stderr
-        (repo / PACOTE / "w.py").write_text(FALA + "X = 1\n", encoding="utf-8")
+        (repo / PACOTE / "w.py").write_text(COMENTARIO + "X = 1\n", encoding="utf-8")
         git(repo, "add", PACOTE + "/w.py")
-        fala = _rodar_o_pre_commit_real(repo)
-        assert fala.returncode == 1 and "[fala]" in fala.stdout
+        comentado = _rodar_o_pre_commit_real(repo)
+        assert comentado.returncode == 1 and "[comentário]" in comentado.stdout
         git(repo, "reset", "-q", "--hard")
         for i in range(40):
             (repo / PACOTE / f"m{i}.py").write_text(DELA + f"X = {i}\n", encoding="utf-8")
@@ -432,7 +418,7 @@ class TestOGanchoDoGitRodaOYaml:
         _o_pre_commit_real() is None,
         reason="sem o `pre-commit` instalado (defina HEFESTO_PRE_COMMIT)",
     )
-    def test_o_commit_de_verdade_corrige_o_dela_e_barra_a_fala(self, tmp_path: Path) -> None:
+    def test_o_commit_de_verdade_corrige_o_dela_e_barra_o_comentario(self, tmp_path: Path) -> None:
         repo = self._com_o_gancho_do_git(tmp_path)
         [comando] = _o_pre_commit_real() or [""]
         (repo / PACOTE / "x.py").write_text(DELA + "X = 1\n", encoding="utf-8")
@@ -440,13 +426,10 @@ class TestOGanchoDoGitRodaOYaml:
         passou = self._commit(repo, HEFESTO_PRE_COMMIT=comando)
         assert passou.returncode == 0, passou.stdout + passou.stderr
         assert git(repo, "show", f"HEAD:{PACOTE}/x.py") == DELA_TROCADO + "X = 1\n"
-        (repo / PACOTE / "x.py").write_text(FALA + "X = 1\n", encoding="utf-8")
+        (repo / PACOTE / "x.py").write_text(COMENTARIO + "X = 1\n", encoding="utf-8")
         git(repo, "add", PACOTE + "/x.py")
         barrou = self._commit(repo, HEFESTO_PRE_COMMIT=comando)
-        assert barrou.returncode != 0 and "[fala]" in barrou.stdout + barrou.stderr
-
-
-# --------------------------------------------------------------------------- o portão e o CI
+        assert barrou.returncode != 0 and "[comentário]" in barrou.stdout + barrou.stderr
 
 
 class TestOPortao:
@@ -465,16 +448,13 @@ class TestOPortao:
     def test_o_portao_acusa_o_arquivo_mudado_do_ramo(self, tmp_path: Path) -> None:
         repo = repo_de_mentira(tmp_path)
         git(repo, "checkout", "-q", "-b", "leva")
-        (repo / PACOTE / "x.py").write_text(FALA + "X = 1\n", encoding="utf-8")
+        (repo / PACOTE / "x.py").write_text(COMENTARIO + "X = 1\n", encoding="utf-8")
         git(repo, "add", PACOTE + "/x.py")
-        git(repo, "commit", "-q", "-m", "a fala volta")
+        git(repo, "commit", "-q", "-m", "o comentário volta")
         corrida = o_script(repo, "--conferir", "--mudados")
-        assert corrida.returncode == 1 and "[fala]" in corrida.stdout
+        assert corrida.returncode == 1 and "[comentário]" in corrida.stdout
         (repo / PACOTE / "x.py").write_text("X = 1\n", encoding="utf-8")
         assert o_script(repo, "--conferir", "--mudados").returncode == 0
-
-
-# --------------------------------------------------------------------------- a catraca do volume
 
 
 def _comentarios(quantos: int) -> str:
@@ -544,14 +524,10 @@ class TestACatracaDoVolume:
         assert "texto-em-src" in caderno
 
 
-# --------------------------------------------------------------------------- o gancho da escrita
-
-
 def _casa_real() -> Path:
     return Path(pwd.getpwuid(os.getuid()).pw_dir)
 
 
-#: A pasta dos ganchos da sessão, fora do git; o nome dela é montado por partes.
 PASTA_DOS_GANCHOS = Path(
     os.environ.get("HEFESTO_GANCHOS_DIR") or _casa_real() / ("." + "cla" + "ude") / "hooks"
 )
@@ -579,7 +555,6 @@ def _gancho(
 ) -> tuple[subprocess.CompletedProcess[str], float]:
     lar = tmp_path / "lar"
     lar.mkdir(exist_ok=True)
-    # o repositório de mentira é `<tmp_path>/hefesto-mentira`: a raiz de mentira o põe no corte
     env = {
         **os.environ,
         "HOME": str(lar),
@@ -619,11 +594,11 @@ class TestOGanchoDaEscrita:
 
     def test_arquivo_com_defeito_devolve_o_que_corrigiu_e_o_que_falta(self, tmp_path: Path) -> None:
         repo = repo_de_mentira(tmp_path, com_gancho=False)
-        (repo / PACOTE / "x.py").write_text(DELA + FALA + "X = 1\n", encoding="utf-8")
+        (repo / PACOTE / "x.py").write_text(DELA + COMENTARIO + "X = 1\n", encoding="utf-8")
         saida, _ = _gancho(repo, _gesto(repo, PACOTE + "/x.py", "Edit"), tmp_path)
         assert saida.returncode == 0
         contexto = json.loads(saida.stdout)["hookSpecificOutput"]["additionalContext"]
-        assert "[fala]" in contexto and "corrigiu" in contexto and "Releia" in contexto
+        assert "[comentário]" in contexto and "corrigiu" in contexto and "Releia" in contexto
         assert (repo / PACOTE / "x.py").read_text(encoding="utf-8").startswith(DELA_TROCADO)
 
     def test_so_o_mecanico_tambem_avisa_para_reler(self, tmp_path: Path) -> None:
@@ -639,7 +614,7 @@ class TestOGanchoDaEscrita:
     def test_sem_o_script_o_gesto_segue_e_o_diario_ganha_uma_linha(self, tmp_path: Path) -> None:
         repo = repo_de_mentira(tmp_path, com_gancho=False)
         (repo / "scripts" / "o-texto-enxuto.py").unlink()
-        (repo / PACOTE / "x.py").write_text(FALA + "X = 1\n", encoding="utf-8")
+        (repo / PACOTE / "x.py").write_text(COMENTARIO + "X = 1\n", encoding="utf-8")
         saida, _ = _gancho(repo, _gesto(repo, PACOTE + "/x.py"), tmp_path)
         assert (saida.returncode, saida.stdout) == (0, "")
         assert "texto-enxuto" in _diario(tmp_path)
@@ -671,9 +646,9 @@ class TestOGanchoDaEscrita:
 
     def test_fora_do_python_ou_do_hefesto_nao_age(self, tmp_path: Path) -> None:
         repo = repo_de_mentira(tmp_path, com_gancho=False)
-        (repo / "docs" / "n.md").write_text(FALA, encoding="utf-8")
+        (repo / "docs" / "n.md").write_text(COMENTARIO, encoding="utf-8")
         assert _gancho(repo, _gesto(repo, "docs/n.md"), tmp_path)[0].stdout == ""
-        (repo / PACOTE / "x.py").write_text(FALA + "X = 1\n", encoding="utf-8")
+        (repo / PACOTE / "x.py").write_text(COMENTARIO + "X = 1\n", encoding="utf-8")
         fora = _gancho(
             repo,
             _gesto(repo, PACOTE + "/x.py"),

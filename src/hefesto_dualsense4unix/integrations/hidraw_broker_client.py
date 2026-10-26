@@ -18,7 +18,6 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 DEFAULT_SOCKET_PATH = "/run/hefesto-hidraw-broker/broker.sock"
-#: caminho inexistente (conftest) — na máquina da mantenedora o broker REAL
 SOCKET_PATH_ENV = "HEFESTO_BROKER_SOCKET"
 _TIMEOUT_S = 2.0
 _MAX_RESPONSE_BYTES = 65536
@@ -48,9 +47,6 @@ class HidrawBrokerClient:
         self._lock = threading.Lock()
         self._sock: socket.socket | None = None
         self._indisponivel_logado = False
-        #: a linha da lease já dita, e nenhuma resposta ``ok`` desde então: a
-        #: lease que o broker fecha sem atender (o peer recusado antes do login)
-        #: e que se reabre na nova tentativa não é motivo novo, e não se diz.
         self._lease_dita = False
         self._estado_por_no: dict[str, str] = {}
         self._estado_lock = threading.Lock()
@@ -195,9 +191,6 @@ class HidrawBrokerClient:
                  "vendor": par[0], "product": par[1]}
             )
         if response is not None and response.get("ok") and len(fds) == 1:
-            # O broker cede o nó por ``O_PATH`` (o cgroup de device dele não
-            # alcança o grupo ``hidg``); a leitura e a escrita se abrem AQUI,
-            # no mesmo inode, pelo ``/proc/self/fd``.
             try:
                 return reabrir_o_no_cedido(fds[0]), response
             except OSError as exc:
@@ -255,7 +248,7 @@ class HidrawBrokerClient:
                     self._close_locked()
                     if tentativa == 2:
                         return None
-            else:  # pragma: no cover - inalcançável (o for sempre break/return)
+            else:  # pragma: no cover
                 return None
         try:
             response = json.loads(raw.decode("utf-8"))
@@ -513,41 +506,15 @@ def make_abridor_do_handle(daemon: Any) -> Callable[[str], int | None]:
     return _abrir
 
 
-# ---------------------------------------------------------------------------
-# A PORTA, DECLARADA — o que os INSTRUMENTOS usam (A-PORTA-QUE-A-CASA-CONSTRUIU-01)
-# ---------------------------------------------------------------------------
-#
-# Defeito medido em 15/08/2026: com a mesa 2+2 montada, NENHUM dos quatro
-# DualSense físicos abre por `open()` — o próprio Hefesto os esconde de
-# propósito (`broker/hidraw_broker.py:374` — `setfacl -b` + `chmod 0600`), para
-# que o jogo veja só o vpad. Os instrumentos batiam nessa porta fechada e
-# imprimiam `[Errno 13] Permission denied` (ou, pior, silêncio), quando a casa
-# já tinha construído a porta certa: o `cmd open` do broker, que devolve um fd
-# `O_RDWR` do nó ESCONDIDO por SCM_RIGHTS.
-#
-# A regra desta casa é «todo instrumento tem de declarar qual biblioteca está
-# usando», porque medir contra a biblioteca errada produz alarme convincente e
-# falso. **O mesmo vale para a porta:** medir no nó escondido produz zero
-# convincente e falso. Por isso `abrir_hidraw` nunca devolve só um fd — devolve
-# um `NoAberto`, que carrega por onde entrou e por quê.
-
-#: As duas portas, com o nome que aparece NO RELATÓRIO (é este texto que a
-#: mordida 2 procura — se o fallback ficar mudo, ele some da tela).
 PORTA_BROKER = "broker (SCM_RIGHTS)"
 PORTA_DIRETA = "open() direto"
 
-#: Estados do `EVIOCGRAB` de um nó evdev, na frase que vai ao relatório.
-#: "o controle não emitiu" e "eu não posso ler" são coisas diferentes, e hoje
-#: as duas saem como zero — é o que a mordida 3 cobra.
 GRAB_LIVRE = "livre"
 GRAB_DE_TERCEIRO = "PEGO por outro processo (EVIOCGRAB exclusivo)"
 GRAB_SEM_PERMISSAO = "não posso ler (sem permissão no nó)"
 GRAB_SEM_NO = "o nó não existe"
 GRAB_DESCONHECIDO = "não sei dizer"
 
-#: `EVIOCGRAB` = `_IOW('E', 0x90, int)`. O grab é EXCLUSIVO: se outro processo
-#: (o co-op do daemon) já o tem, o nosso volta `EBUSY` — e é exatamente esse
-#: `EBUSY` que separa "calado" de "escondido".
 _EVIOCGRAB = 0x40044590
 
 

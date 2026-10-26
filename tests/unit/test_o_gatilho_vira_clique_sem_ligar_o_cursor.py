@@ -34,7 +34,6 @@ from hefesto_dualsense4unix.testing import FakeController
 
 CENTRO = dict(lx=128, ly=128, rx=128, ry=128)
 
-# Curso do gatilho em 0-255. 80 = 31%, 100 = 39%: um de cada lado de 0,35.
 ENCOSTADO = 80
 APERTADO = 100
 
@@ -57,7 +56,7 @@ class _UinputGravador(types.ModuleType):
             return _Ev(nome)
         raise AttributeError(nome)
 
-    def Device(self, caps: Any, name: str = "") -> Any:  # noqa: N802 - é o nome do uinput
+    def Device(self, caps: Any, name: str = "") -> Any:  # noqa: N802
         self.capacidades = [c.nome for c in caps]
         mod = self
 
@@ -99,9 +98,6 @@ def _nomes(uinput: _UinputGravador) -> list[str]:
     return [n for n, _v in uinput.saiu]
 
 
-# -- o analógico: a linha dele liga o cursor e a rolagem ---------------------------
-
-
 def test_o_de_fabrica_move_o_cursor_e_rola(uinput: _UinputGravador) -> None:
     dev = _mouse(uinput, None)
     _dispatch(dev, lx=255, ly=255, rx=128, ry=255, now=1.0)
@@ -138,9 +134,6 @@ def test_o_device_continua_declarando_cursor_e_roda(uinput: _UinputGravador) -> 
     _mouse(uinput, {acoes.EIXO_ESQUERDO: acoes.TOKEN_NADA})
     for cap in ("REL_X", "REL_Y", "REL_WHEEL", "BTN_LEFT", "BTN_RIGHT"):
         assert cap in uinput.capacidades, f"o device deixou de declarar {cap}"
-
-
-# -- o gatilho: linha própria, com o limiar da ponte -------------------------------
 
 
 def test_o_gatilho_segue_a_propria_linha_e_nao_a_do_cruz(uinput: _UinputGravador) -> None:
@@ -190,9 +183,6 @@ def test_trocar_a_tabela_solta_o_que_a_anterior_segurava(uinput: _UinputGravador
     assert ("BTN_LEFT", 0) in uinput.saiu, "o clique do L2 ficou preso na troca da tabela"
 
 
-# -- a tecla E no R2 (a ação ganha TECLAS) -----------------------------------------
-
-
 def test_a_ação_e_do_teclado_vai_para_o_teclado_e_nao_para_o_mouse() -> None:
     do_mouse, do_teclado, sem_dono = acoes.resolver({"r2": "KEY_E"})
     assert do_teclado["r2"] == ("KEY_E",)
@@ -209,9 +199,6 @@ def test_os_dois_gatilhos_sao_linhas_com_dono_no_de_fabrica() -> None:
     do_mouse, _t, sem_dono = acoes.resolver(None)
     assert do_mouse["l2"] == "BTN_LEFT" and do_mouse["r2"] == "BTN_RIGHT"
     assert "l2" not in sem_dono and "r2" not in sem_dono
-
-
-# -- o laço: com o gamepad virtual despachando, a tabela age -----------------------
 
 
 class _Gravador:
@@ -361,9 +348,6 @@ async def test_o_laco_real_chama_a_tabela_com_o_vpad_despachando(
     assert any("l2" in b for b in vistos), "o L2 apertado não chegou à tabela"
 
 
-# -- os dois devices privados, de verdade, sobre o uinput de mentira ---------------
-
-
 class _UinputPorDevice(types.ModuleType):
     """O `uinput` com um gravador POR device (o mouse e o teclado da tabela)."""
 
@@ -376,7 +360,7 @@ class _UinputPorDevice(types.ModuleType):
             return _Ev(nome)
         raise AttributeError(nome)
 
-    def Device(self, caps: Any, name: str = "") -> Any:  # noqa: N802 - é o nome do uinput
+    def Device(self, caps: Any, name: str = "") -> Any:  # noqa: N802
         gravado = self.saiu.setdefault(name, [])
 
         class _Dev:
@@ -475,7 +459,6 @@ def test_o_l3_no_jogo_segue_o_atendente_do_daemon_depois_da_funcao_do_teclado(
     tabela.tick(daemon, _estado(), frozenset())
     assert ("__TOGGLE_OSK__", "press") in primeiro.toques
 
-    # A Função do teclado desligada: `stop_keyboard_emulation` fecha e esquece.
     daemon._osk_controller = None
     novos: list[_OskDeMentira] = []
 
@@ -605,7 +588,6 @@ async def test_no_nativo_a_tabela_nao_age(monkeypatch: pytest.MonkeyPatch) -> No
     daemon._gamepad_device = MagicMock()
     daemon._dispatch_gamepad_emulation = lambda estado, botoes: None  # type: ignore[method-assign]
     daemon._native_mode = True
-    # A sessão do teste não guarda Nativo: o `run` o leria de volta como desligado.
     daemon._carregar_o_modo_nativo = lambda: None  # type: ignore[method-assign]
     tabela, mouse, _teclado = _tabela_com_gravadores(None)
     daemon._tabela_no_jogo = tabela

@@ -361,7 +361,6 @@ class TestASuiteNaoAbreUnidade:
         assert "a suíte está no ar" in ab.tentativas[0]
 
 
-#: Os ``Popen`` de cada módulo; o ``steam_launcher`` não abre nada, pede ao ``reopen_steam``.
 _DONOS = {
     _INTEGRACOES / "steam_launcher.py": 0,
     _INTEGRACOES / "steam_launch_options.py": 1,

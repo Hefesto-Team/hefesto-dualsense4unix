@@ -389,9 +389,6 @@ class TestWrapperGameRunning:
         )
 
 
-# --- state_full: wrapper_used + dedup_ok refletido ----------------------------
-
-
 @pytest.fixture()
 def server(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> IpcServer:
     target = tmp_path / "profiles"

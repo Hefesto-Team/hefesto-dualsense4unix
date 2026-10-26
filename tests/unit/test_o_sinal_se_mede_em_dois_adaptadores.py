@@ -77,9 +77,6 @@ class _Mundo:
         self.fechou = True
 
 
-# --------------------------------------------------------------- as recusas
-
-
 def test_1_recusa_com_o_daemon_no_ar_sem_medir_e_sem_enlace(tmp_path: Path) -> None:
     saida = tmp_path / "s.jsonl"
     mundo = _Mundo(daemon=True)
@@ -107,9 +104,6 @@ def test_1b_sem_medir_a_linha_de_comando_nao_abre_nada(capsys: pytest.CaptureFix
     rc = sinal.main(["gravar", "--fase", "1", "--distancia", "1 m", "--saida",
                      str(tmp_path / "s.jsonl")])
     assert rc == 2 and sinal.RECUSA_SEM_MEDIR in capsys.readouterr().out
-
-
-# --------------------------------------------------------------- o que se grava
 
 
 def _formas(endereco: str) -> list[str]:
@@ -154,9 +148,6 @@ def test_2b_o_modelo_do_adaptador_vem_do_modalias_sem_endereco(
     monkeypatch.setattr(Path, "read_text", ler)
     assert sinal.modelo_do_adaptador("hci0") == "usb 0a12:0001"
     assert sinal.modelo_do_adaptador("hci9") == "não sei"
-
-
-# --------------------------------------------------------------- a conta, sobre as sessões gravadas
 
 
 def _sessao(nome: str) -> list[object]:

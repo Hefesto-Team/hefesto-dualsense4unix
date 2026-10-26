@@ -33,7 +33,7 @@ def pastas_de_atalhos() -> list[Path]:
     def real(caminho: Path) -> Path:
         try:
             return caminho.resolve()
-        except OSError:  # pragma: no cover - link quebrado ou permissão
+        except OSError:  # pragma: no cover
             return caminho
 
     candidatos: list[Path] = []
@@ -223,7 +223,7 @@ def lancadores_por_conteudo(
     for pasta in (pastas if pastas is not None else pastas_de_atalhos()):
         try:
             arquivos = sorted(pasta.glob("*.desktop"))
-        except OSError:  # pragma: no cover - pasta some entre o listar e o ler
+        except OSError:  # pragma: no cover
             continue
         for arq in arquivos:
             if arq.stem in achados:
@@ -320,12 +320,8 @@ _PROGRAMAS_QUE_ABREM_OUTRO = frozenset(
 _LOJAS_SEM_CLASSE = JANELAS_DE_LANCADOR
 
 
-#: Os programas de loja que um atalho chama para abrir o jogo por eles
-#: (`env … lutris lutris:rungameid/12`, `flatpak run --command=bottles-cli …`).
 _PROGRAMAS_DE_LOJA = _LOJAS_SEM_CLASSE | {"bottles-cli", "legendary", "gogdl"}
 
-#: Um endereço com esquema (`heroic://…`, `steam://…`, `lutris:rungameid/12`).
-#: Duas letras no mínimo antes do `:`, para `C:` (o disco do Wine) não contar.
 _ENDERECO_COM_ESQUEMA = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]+:")
 
 
@@ -485,7 +481,7 @@ def _caderno_das_janelas(
         if _NOMES_DAS_JANELAS is not None and _NOMES_DAS_JANELAS[0] == assinatura:
             return _NOMES_DAS_JANELAS[1], _NOMES_DAS_JANELAS[2]
         jogos = list(jogos_com_janela(lar, pastas))
-    except Exception:  # pragma: no cover - disco hostil; ver o contrato acima
+    except Exception:  # pragma: no cover
         return [], {}
     nomes = {j.chave.casefold(): j.nome for j in jogos if j.chave}
     for jogo in jogos:
@@ -529,7 +525,6 @@ def nomes_por_appid(jogos: Iterable[JogoLocal]) -> dict[str, str]:
     return {jogo.appid: jogo.nome for jogo in jogos}
 
 
-#: testável sem GTK — mesmo molde de `texto_do_processo_que_nao_casa`.
 MSG_NAO_RECONHECI = "Não reconheci este endereço."
 
 MSG_FORA_DA_MAQUINA = "Não instalado aqui (o número vale)."

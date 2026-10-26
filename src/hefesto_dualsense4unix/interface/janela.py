@@ -38,15 +38,9 @@ class _TemaLigado(str):
     """O padrão de quem não diz o tema: o da modificação ligada, lido do registro."""
 
 
-#: ``tema_de_cores=TEMA_LIGADO`` (o padrão) pede o tema da modificação ligada; ``None`` ou ``""``
-#: abre sem tema; outra folha é usada como veio (quem a passa já a conferiu por
-#: ``mods.tema.validar``).
 TEMA_LIGADO = _TemaLigado("")
 
 
-#: A última frase que cada leitor disse ao diário. O vigia lê as folhas a cada gravação de
-#: qualquer arquivo vigiado, e a mesma recusa não se repete: só a frase que muda volta a ser
-#: dita (ela leva a linha e o motivo), e a que some deixa de ser lembrada.
 _DITO: dict[str, tuple[str, ...]] = {}
 
 
@@ -113,12 +107,6 @@ SEGUNDOS_PARA_ESQUECER_O_CRASH = 60.0
 
 CANAL_PADRAO = "hefesto"
 
-#: No vídeo gravado na bancada a pintura chega em 1 a 2 quadros (33 a 66 ms) depois de a
-#: página aparecer. O prazo é a rede de segurança do caso em que o piloto NÃO
-#: pinta — travado, ou sem o bootstrap: aí a tela mostra o arquivo como está
-#: (o desenho), que é o comportamento de antes, em vez de ficar sem miolo.
-#: O relógio começa no `load`, o instante em que o piloto pode pintar: do início do documento, a
-#: primeira carga do processo (1,8 a 2,9 s num lar novo, 23/10/2026) gastava o prazo antes dele.
 PRAZO_DA_ESPERA_MS = 1500
 
 ROTEIRO_DA_ESPERA = (
@@ -190,7 +178,6 @@ def _tokens_da_casa_ou_nada() -> dict[str, str]:
         return {}
 
 
-#: O par (escuro, claro) que o tema claro trocou, para a casa escura voltar ao escuro da sessão.
 _O_ESCURO_TROCADO: list[tuple[str, str]] = []
 
 
@@ -243,18 +230,12 @@ APARENCIA_DO_MAXIMIZAR: dict[bool, tuple[str, str]] = {
     True: ("window-restore-symbolic", "Restaurar"),
 }
 
-#: Os botões na ORDEM DA TELA quando vão à esquerda do título: fechar, maximizar, minimizar
-#: (20/10/2026, OS-BOTOES-DA-JANELA-VAO-PARA-A-ESQUERDA-01). À direita a ordem é a inversa, a do
-#: sistema (:data:`ORDEM_DA_DIREITA`). O lado vem do sistema, ou da extensão de tema ligada
-#: (22/10/2026, O-TEMA-DA-EXTENSAO-ESCOLHE-O-LADO-DOS-BOTOES-DA-JANELA-01); os botões são desta
-#: casa, e o `gtk-decoration-layout` da sessão não os alcança.
 BOTOES_DA_BARRA = (
     ("window-close-symbolic", "fechar", "Fechar"),
     (APARENCIA_DO_MAXIMIZAR[False][0], "maximizar", APARENCIA_DO_MAXIMIZAR[False][1]),
     ("window-minimize-symbolic", "minimizar", "Minimizar"),
 )
 
-#: Os mesmos botões na ordem da tela quando vão à direita: minimizar, maximizar, fechar.
 ORDEM_DA_DIREITA = tuple(reversed(BOTOES_DA_BARRA))
 
 
@@ -274,7 +255,6 @@ def por_os_botoes_no_lado(barra: Any, botoes: dict[str, Any], lado: str) -> None
         for gesto in ordem:
             barra.pack_start(botoes[gesto])
     else:
-        # o `pack_end` conta de fora para dentro: o primeiro empacotado fica na ponta direita
         for gesto in reversed(ordem):
             barra.pack_end(botoes[gesto])
     barra.show_all()
@@ -291,12 +271,8 @@ MIOLO_NO_PISO = PISO_DA_VISTA - 2 * RECUO_DO_CORPO - CROMO_DA_JANELA
 
 SEM_JANELA_NA_TELA = "HEFESTO_SEM_JANELA"
 
-#: No máximo uma linha `[janela] tamanho:` por intervalo desta duração; o que cair no meio
-#: de uma rajada (arrastar a borda dispara dezenas de `configure-event` por segundo) vira UMA
-#: linha no fim do intervalo, com o último valor, para a rajada não esconder onde ela parou.
 SEGUNDOS_ENTRE_LINHAS_DE_TAMANHO = 1.0
 
-#: Os sinais que encerram a janela por fora, e que antes a matavam sem uma linha.
 SINAIS_DE_FIM = (signal.SIGTERM, signal.SIGHUP)
 
 
@@ -382,12 +358,8 @@ def vestir_o_nome_acessivel(botao: Any, dica: str) -> None:
         acessivel.set_name(dica)
 
 
-#: O tamanho da interface que a 09 grava (100, 125 ou 150) vale por padrão quando o arquivo não diz.
 TAMANHO_PADRAO = 100
 
-#: A 09 diz o tamanho em uso na dica do botão escolhido, quando a janela cede (23/10/2026, a
-#: validar pelo usuário): a dica do desenho fica guardada no próprio botão e volta quando cabe.
-#: Página sem os botões do tamanho não tem o que trocar.
 ROTEIRO_DO_TAMANHO_EM_USO = (
     "(function(escolhido,uso){document.querySelectorAll("
     "'[data-id=\"tamanho-da-interface\"] button[data-v]').forEach(function(b){"
@@ -408,7 +380,7 @@ def tamanho_da_interface() -> int:
     """
     try:
         return int(tamanho_guardado())
-    except Exception as erro:  # a janela segue aberta no tamanho de hoje, e o diário conta
+    except Exception as erro:
         print(
             f"[janela] tamanho da interface: não li o arquivo ({erro!r}); fico em "
             f"{TAMANHO_PADRAO} %",
@@ -506,13 +478,8 @@ class PonteDaTela:
         ucm = WebKit2.UserContentManager()
         ucm.register_script_message_handler(canal)
         ucm.connect(f"script-message-received::{canal}", self._da_tela)
-        # O tema de cores (O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01) é a SEGUNDA folha de
-        # usuário, depois da da casa: só redefine tokens do `:root`, com `!important`, que no nível
-        # USER vence o `:root` da página sem mudar um byte dela.
         self.folha_da_casa = folha or ""
         self.tema_de_cores = _a_folha_do_tema(tema_de_cores)
-        #: A TERCEIRA folha: o CSS de quem usa, por cima do tema. Só no tema do registro; quem
-        #: passa a folha do tema passa, se quiser, o CSS junto.
         self.meu_css = (css_de_quem_usa() if meu_css is None and isinstance(
             tema_de_cores, _TemaLigado) else meu_css or "")
         self.ucm = ucm
@@ -528,8 +495,6 @@ class PonteDaTela:
                 )
             )
         self.view = WebKit2.WebView.new_with_user_content_manager(ucm)
-        # O botão direito é da casa: o menu do WebKit não abre, e quem responde é o
-        # menu HTML da base comum, que aciona gestos.
         self.view.connect("context-menu", self._calar_o_menu_do_webkit)
 
     def _por_as_folhas(self) -> None:
@@ -659,7 +624,6 @@ class JanelaDaAba:
         self._nasceu = time.monotonic()
         self._fim_dito = False
         self._motivo_pedido: str | None = None
-        #: Quantas vezes o tamanho, o monitor, a escala ou o estado mudou. Vai ao `[tique lento]`.
         self.mudancas_de_tamanho = 0
         self._tamanho_visto: tuple[int, int, str, int, str] | None = None
         self._tamanho_por_dizer: tuple[int, int, str, int, str] | None = None
@@ -671,15 +635,11 @@ class JanelaDaAba:
             esperar_a_pintura=esperar_a_pintura, tema_de_cores=tema_de_cores,
         )
         self.view = self.ponte.view
-        # A moldura que nasce entrega a área de transferência à lógica (o «Copiar» da aba Sistema).
         _area.receber(por_na_area_de_transferencia)
-        #: O lado dos botões da barra; o dos temas é relido junto com a cor (só no padrão).
         self._lado = (lado_dos_botoes() if isinstance(tema_de_cores, _TemaLigado)
                       else tema.lado_do_sistema())
         self._barra: Any = None
         self._vigias_das_opcoes: list[Any] = []
-        #: O tema ligado se relê quando o registro das extensões muda (só no padrão: a folha
-        #: passada por quem abre a janela fica como veio).
         self._vigia_do_tema = (self._vigiar_o_tema()
                                if isinstance(tema_de_cores, _TemaLigado) else None)
         if self._vigia_do_tema is not None:
@@ -687,11 +647,8 @@ class JanelaDaAba:
         self._cor_da_barra = Gtk.CssProvider()
         self._cor_da_barra.load_from_data(
             css_da_cor_da_barra(self.ponte.tema_de_cores).encode("utf-8"))
-        #: O percentual de zoom que a página está usando AGORA (`None` até o primeiro aplicar), e
-        #: o que a 09 guardou: o em uso é o escolhido, ou o que cabe na vista (`tamanho_que_cabe`).
         self.tamanho_aplicado: int | None = None
         self.tamanho_escolhido = TAMANHO_PADRAO
-        #: O par (escolhido, em uso) que a dica da página mostra; `None` = a dica do desenho.
         self._dica_cedida: tuple[int, int] | None = None
         self._pagina_no_ar = False
         self._vigia_do_tamanho = self._vigiar_o_tamanho()
@@ -958,7 +915,7 @@ class JanelaDaAba:
     def _chegou_o_sinal(self, numero: int) -> bool:
         """O sinal fecha pelo `fechar`, que destrói a janela (e o GL do WebView) dentro do laço."""
         self.fechar(f"sinal {signal.Signals(numero).name}")
-        return False  # GLib.SOURCE_REMOVE: a fonte sai depois do primeiro sinal
+        return False
 
     def _o_tamanho_mudou(self, *_args: Any) -> bool:
         """`configure-event` e `window-state-event`: lê a janela como ela está agora."""
@@ -1063,7 +1020,6 @@ class JanelaDaAba:
     def _carregou(self, _view: Any, evento: Any) -> None:
         if evento != WebKit2.LoadEvent.FINISHED:
             return
-        # a página nova nasce com a dica do desenho: o tamanho em uso vai a ela de novo
         self._dizer_o_tamanho_em_uso(pagina_nova=True)
         self._confirmar_a_pagina()
 
@@ -1101,7 +1057,6 @@ class JanelaDaAba:
         if self.recargas >= RECARGAS_SEGUIDAS:
             print(f"[página morreu] {self.recargas} recargas seguidas sem a "
                   f"página parar de pé — não recarrego de novo.", file=sys.stderr)
-            # A janela segue aberta, sem página: não é um fim, e a linha diz isso com a idade.
             print(
                 f"[janela] sem recarga: o processo web terminou ({nome}) · aberta há "
                 f"{time.monotonic() - self._nasceu:.0f} s",

@@ -47,9 +47,7 @@ from tests.unit.test_o_p1_que_nasce_fora_do_tique_nasce_no_fio_de_nascimento imp
 __all__ = ["mesa"]
 
 _P1 = "aabbcc000001"
-#: as máscaras que o P1 pede, de uma que ele não veste (o pad velho é DualSense)
 _PEDIDAS = ("xbox", "nintendo")
-#: a máscara de antes, no registro: nenhuma escolha, ou uma escolha gravada
 _ANTES = (None, "dualsense")
 
 
@@ -137,9 +135,6 @@ def _mascara_pela_ipc(b: SimpleNamespace, flavor: str) -> tuple[Any, float]:
     return _no_laco(b, lambda: ipc._handle_gamepad_mask_set({"uniq": _P1, "flavor": flavor}))
 
 
-# --- 1. a máscara do P1 responde o desfecho ------------------------------------------------
-
-
 @pytest.mark.parametrize("antes", _ANTES, ids=["sem-escolha", "escolhida"])
 @pytest.mark.parametrize("pedida", _PEDIDAS)
 def test_a_mascara_pela_ipc_diz_falhou_e_volta_a_de_antes(
@@ -224,12 +219,8 @@ def test_a_mascara_escolhida_com_outro_p1_nascendo_fica_e_o_pad_a_veste(
     assert em.registro_de_mascaras().mask_for(_P1) == "xbox", "a escolha saiu do registro"
     assert [m for m, _pad in bancada.gravadas] == ["xbox"], bancada.gravadas
     _ate(bancada.m, lambda: _o_p1_novo(bancada) is not None)
-    # o pad de antes leu a máscara antes da escolha (ou depois, e já a veste)
     gp.reconciliar_as_mascaras(bancada.m.daemon)
     _ate(bancada.m, lambda: getattr(_o_p1_novo(bancada), "flavor", None) == "xbox")
-
-
-# --- 2. o pedido igual em voo se junta ao primeiro -----------------------------------------
 
 
 @pytest.mark.parametrize("ponte", [hotkey.PONTE_XBOX, hotkey.PONTE_DUALSENSE])
@@ -275,9 +266,6 @@ def test_dois_pedidos_iguais_pela_ipc_esperam_o_mesmo_pad(bancada: SimpleNamespa
     assert all(r["status"] == "ok" and r["enabled"] is True for r in respostas), respostas
     assert bancada.m.gravados == [("gamepad", novo)], bancada.m.gravados
     assert bancada.tabelas == [novo], bancada.tabelas
-
-
-# --- 3. o teto da interface sai do prazo do daemon -----------------------------------------
 
 
 @pytest.mark.parametrize("rota", ["gamepad.emulation.set", "gamepad.mask.set"])

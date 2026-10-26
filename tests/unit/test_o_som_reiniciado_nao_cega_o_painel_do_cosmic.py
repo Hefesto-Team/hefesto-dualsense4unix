@@ -34,7 +34,6 @@ DOCTOR = RAIZ / "scripts" / "doctor.sh"
 INSTALL = RAIZ / "install.sh"
 UNINSTALL = RAIZ / "uninstall.sh"
 
-#: Um endereço de faixa forjada nas propriedades de um cliente: nunca pode chegar à saída.
 ENDERECO_FORJADO = "aa:bb:cc:00:00:01"
 
 CLIENTES_BASE = (
@@ -48,7 +47,6 @@ CLIENTE_DO_PAINEL = (
 )
 
 
-#: O que o produto procura no programa do daemon para saber que ele é cliente do PipeWire.
 LEVA_O_PIPEWIRE = "# NEEDED libpipewire-0.3.so.0\nexit 0\n"
 
 
@@ -130,8 +128,6 @@ def bancada(tmp_path: Path) -> Iterator[Bancada]:
     estado = tmp_path / "estado"
     estado.mkdir()
     diario = tmp_path / "chamadas.log"
-    # `pgrep -u UID -x NOME`: os PIDs do arquivo do nome. Uma linha `PID se-morto ANTIGO`
-    # só aparece depois que ANTIGO morreu (a sessão que ressuscita o daemon).
     _exe(
         fakes,
         "pgrep",
@@ -163,8 +159,6 @@ def bancada(tmp_path: Path) -> Iterator[Bancada]:
         f'[ -f "{estado}/cliente-do-painel" ] && cat "{estado}/cliente-do-painel-texto"\n'
         "exit 0\n",
     )
-    # O systemd-run de mentira anota os argumentos e põe o daemon nos clientes
-    # (a menos que o teste peça que ele não volte).
     _exe(
         fakes,
         "systemd-run",
@@ -175,7 +169,6 @@ def bancada(tmp_path: Path) -> Iterator[Bancada]:
     )
     (estado / "clientes").write_text(CLIENTES_BASE, encoding="utf-8")
     (estado / "cliente-do-painel-texto").write_text(CLIENTE_DO_PAINEL, encoding="utf-8")
-    # O programa de mentira traz o nome da biblioteca, como o do COSMIC 1.10 no NEEDED do ELF.
     daemon_bin = _exe(tmp_path / "usr-bin", "cosmic-settings-daemon", LEVA_O_PIPEWIRE)
     b = Bancada(tmp_path, fakes, estado, diario, daemon_bin)
     try:
@@ -234,14 +227,13 @@ def _reiniciar(b: Bancada, *, dry_run: bool = False) -> tuple[str, str, str]:
     return campos["rc"], campos["painel"], campos.get("cura", "") + "\n" + r.stdout
 
 
-# ------------------------------------------------------------------ o reinício
-
-
 def test_no_cosmic_o_daemon_conferido_sai_e_volta_com_o_ambiente_da_sessao(
     bancada: Bancada,
 ) -> None:
-    """MORDIDA: sem a volta do daemon no reinício, ele segue vivo e nada sobe pelo systemd-run."""
-    # Prova da D-1510-O-SOM-REINICIADO-RELIGA-O-PAINEL-DO-COSMIC.
+    """MORDIDA: sem a volta do daemon no reinício, ele segue vivo e nada sobe pelo systemd-run.
+
+    Prova da D-1510-O-SOM-REINICIADO-RELIGA-O-PAINEL-DO-COSMIC.
+    """
     p = _sessao_cosmic(bancada)
     rc, painel, _ = _reiniciar(bancada)
     assert rc == "0"
@@ -335,8 +327,10 @@ def test_se_nao_volta_o_aviso_diz_o_comando(bancada: Bancada) -> None:
 
 
 def test_o_daemon_que_nao_le_o_pipewire_fica_quieto(bancada: Bancada) -> None:
-    """MORDIDA: outra versão do COSMIC, com o daemon sem a libpipewire, não perde o daemon."""
-    # Prova da D-1510-O-SOM-REINICIADO-RELIGA-O-PAINEL-DO-COSMIC.
+    """MORDIDA: outra versão do COSMIC, com o daemon sem a libpipewire, não perde o daemon.
+
+    Prova da D-1510-O-SOM-REINICIADO-RELIGA-O-PAINEL-DO-COSMIC.
+    """
     p = _sessao_cosmic(bancada)
     bancada.daemon_bin.write_text("#!/bin/bash\nexit 0\n", encoding="utf-8")
     rc, painel, resto = _reiniciar(bancada)
@@ -361,9 +355,6 @@ def test_o_ensaio_so_diz_o_que_faria(bancada: Bancada) -> None:
     assert "FARIA religar o cosmic-settings-daemon" in resto, resto
     assert _vivo(p["daemon"])
     assert not bancada.systemd_run()
-
-
-# ------------------------------------------------------------------ o ponto só
 
 
 def _sem_comentario(texto: str) -> list[str]:
@@ -395,9 +386,6 @@ def test_o_ensaio_do_uninstall_dubla_o_systemd_run() -> None:
     bloco = texto[texto.index("for _ens_cmd in rm ") :]
     bloco = bloco[: bloco.index("; do")]
     assert "systemd-run" in bloco.split()
-
-
-# ------------------------------------------------------------------ o doctor
 
 
 def _doctor(b: Bancada) -> str:
@@ -441,7 +429,7 @@ def test_o_doctor_avisa_com_o_daemon_vivo_e_fora_dos_clientes(bancada: Bancada) 
 
 
 def test_o_doctor_avisa_com_o_daemon_morto(bancada: Bancada) -> None:
-    # Prova da D-1510-O-SOM-REINICIADO-RELIGA-O-PAINEL-DO-COSMIC.
+    """Prova da D-1510-O-SOM-REINICIADO-RELIGA-O-PAINEL-DO-COSMIC."""
     p = _sessao_cosmic(bancada)
     bancada.lista("cosmic-settings", str(p["janela"]))
     saida = _doctor(bancada)

@@ -45,7 +45,7 @@ try:
     from hefesto_dualsense4unix.integrations.hidraw_broker_client import PORTA_BROKER
 
     DONOS_IMPORTAVEIS = ""
-except ImportError as _erro:  # pragma: no cover - só fora do venv do projeto
+except ImportError as _erro:  # pragma: no cover
     DONOS_IMPORTAVEIS = str(_erro)
 
 INTERESSA = ("hefesto", "dualsense", "virtual", "wireless controller")

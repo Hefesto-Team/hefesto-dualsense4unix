@@ -286,7 +286,6 @@ def test_a_ativacao_aplica_o_computador_no_que_o_jogo_nao_escolheu() -> None:
     assert _ultima_cor(fc) == esperada
 
 
-#: AS QUATRO PORTAS DA TROCA. O «Ativar» da aba Perfis (`profile.switch`) e o
 PORTAS = ("manual", "autoswitch", "launch")
 P4 = "aabbcc000004"
 
@@ -360,7 +359,7 @@ def test_os_motores_do_computador_chegam_ao_jogo() -> None:
     _computador({"controles": {P2: {"rumble": {"motor_forte_pct": 40, "motor_fraco_pct": 70}}}})
 
     class _Daemon:
-        class store:  # noqa: N801 - a forma do dublê é a do daemon
+        class store:  # noqa: N801
             active_profile = "Jogo X"
 
     assert gamepad._motores_do_perfil_ativo(_Daemon())[P2] == (40, 70)
@@ -515,7 +514,7 @@ def test_o_clique_grava_no_perfil_que_sobrepoe_o_cartao() -> None:
     """O mesmo clique, com o jogo que já escolheu a luz do P1: vai ao perfil."""
     pac = _pacotes()
     save_profile(_perfil("Jogo X", controllers={
-        P1: {"leds": {"player_led_brightness": "medio"}}}))  # (noqa-acento) chave ASCII
+        P1: {"leds": {"player_led_brightness": "medio"}}}))  # (noqa-acento)
     fn = pac.gesto_da_pagina("04-iluminacao.html", "brilho-luzes")
     fn(_contexto(pac, "Jogo X"), {"uniq": UM, "controle": "p1", "luzes": "forte"}, _Ponte())
     assert load_profile("Jogo X").controllers[P1].leds.player_led_brightness == "forte"

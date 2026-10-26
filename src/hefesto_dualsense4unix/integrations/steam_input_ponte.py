@@ -122,7 +122,7 @@ try:
         steam_running,
     )
     from .vigia_do_jogo_novo import jogos_novos_a_receber
-except ImportError:  # pragma: no cover - executado como script avulso
+except ImportError:  # pragma: no cover
     from steam_launch_options import (  # type: ignore[no-redef]
         discover_vdfs,
         is_sandboxed_layout,
@@ -139,7 +139,6 @@ _CHAVE_MIN = CHAVE.lower()
 LIGADO = "2"
 DESLIGADO = "0"
 
-#: (mora no mesmo bloco que o `apps` que guarda o `UseSteamControllerConfig`),
 _PS_SUPPORT_GLOBAL = "steamcontroller_pssupport"
 
 _PAR_RE = re.compile(r'^\s*"(?P<chave>[^"]*)"\s+"(?P<valor>.*)"\s*$')
@@ -312,7 +311,7 @@ def conferir_reguas(texto: str, arvores: Sequence[ArvoreApps]) -> str | None:
 def _linha_com_valor(cru: str, valor: str) -> str:
     """A mesma linha, com o valor trocado para `valor`."""
     m = _LINHA_CHAVE_RE.match(cru)
-    if m is None:  # pragma: no cover - só chega aqui linha que o parser casou
+    if m is None:  # pragma: no cover
         return cru
     return m.group("prefixo") + valor + m.group("sufixo")
 

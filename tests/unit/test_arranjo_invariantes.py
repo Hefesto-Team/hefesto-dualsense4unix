@@ -442,7 +442,7 @@ def test_o_mockup_carrega_os_mesmos_numeros_que_o_python() -> None:
     medidas = 0
     for caminho in _CAMINHOS_DO_MOCKUP_DO_ARRANJO:
         mockup = raiz / caminho
-        if not mockup.exists():  # pragma: no cover - árvore sem o `novo-layout/`
+        if not mockup.exists():  # pragma: no cover
             continue
         texto = mockup.read_text(encoding="utf-8")
         medidas += 1
@@ -607,7 +607,7 @@ def test_nenhum_botao_do_mockup_vai_a_lugar_nenhum() -> None:
     links = 0
     for caminho in _CAMINHOS_DO_MOCKUP_DO_ARRANJO:
         mockup = raiz / caminho
-        if not mockup.exists():  # pragma: no cover - árvore sem o `novo-layout/`
+        if not mockup.exists():  # pragma: no cover
             continue
         for alvo in _LINK_RELATIVO_DO_MOCKUP.findall(mockup.read_text(encoding="utf-8")):
             links += 1
@@ -702,7 +702,7 @@ def quem_recalcula_a_nota(fonte: str) -> list[tuple[str, list[int], list[str]]]:
     classes = set(motor.REGRAS)
     try:
         arvore = ast.parse(fonte)
-    except SyntaxError:  # pragma: no cover — fonte quebrado é outro portão
+    except SyntaxError:  # pragma: no cover
         return []
     acusadas: list[tuple[str, list[int], list[str]]] = []
     for no in ast.walk(arvore):

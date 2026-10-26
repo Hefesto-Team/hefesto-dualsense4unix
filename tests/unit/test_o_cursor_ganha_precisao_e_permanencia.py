@@ -127,9 +127,6 @@ def _esperado(lx: int, ly: int, ticks: int, zona: int = um.MOVE_DEADZONE,
     return total_x, total_y
 
 
-# -- o cursor sem ajuste é o de hoje --------------------------------------------------------
-
-
 def test_o_perfil_sem_ajuste_anda_o_cursor_de_hoje(monkeypatch: pytest.MonkeyPatch) -> None:
     assert um.montar_o_ajuste(None) is None
     assert um.montar_o_ajuste(_cursor()) is None, "o padrão da seção é o cursor de hoje"
@@ -163,9 +160,6 @@ def test_a_zona_morta_e_a_curva_do_perfil_mudam_o_deslocamento(
     assert no2.soma("REL_X") < no.soma("REL_X"), "a curva fechada afina o meio do curso"
 
 
-# -- a precisão ---------------------------------------------------------------------------
-
-
 def test_a_precisao_reduz_o_stick_a_30_por_cento(monkeypatch: pytest.MonkeyPatch) -> None:
     dev, no = _mouse(monkeypatch, _cursor(precisao_botao="l1", precisao=30))
     _anda(dev, 255, 255, 120, botoes=F({"l1"}))
@@ -195,7 +189,6 @@ def test_a_precisao_vale_para_o_toque_o_giro_e_a_rolagem(monkeypatch: pytest.Mon
     do_giro = int(100 * 2.0 * 0.3)
     assert abs(no.soma("REL_X") - (do_toque + do_giro)) <= 2
     assert cheio._fator == 1.0
-    # a rolagem: o intervalo de 50 ms vira 50/0,3 ms
     rapida, a = _mouse(monkeypatch, _cursor(clique_travado="l1"))
     devagar, b = _mouse(monkeypatch, _cursor(precisao_botao="l1", precisao=30))
     for i in range(100):
@@ -231,9 +224,6 @@ def test_o_gatilho_como_precisao_vale_da_metade_do_curso(monkeypatch: pytest.Mon
     dev.emit_gyro_move(10.0, 0.0, now=0.1)
     assert no.soma("REL_X") - antes == 3, "da metade do curso em diante, a 30 %"
     assert no.conta("BTN_LEFT", 1) == 0, "o gatilho da precisão também não clica"
-
-
-# -- a permanência ---------------------------------------------------------------------------
 
 
 def test_a_permanencia_clica_uma_vez_aos_800_ms(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -273,9 +263,6 @@ def test_a_permanencia_nao_clica_por_cima_do_clique_apertado(
     _parado(dev, parou, parou + 3.0, botoes=F({"cross"}))
     assert no.conta("BTN_LEFT", 1) == 1, "só o clique real, com a Cruz segurada"
     assert no.conta("BTN_LEFT", 0) == 0
-
-
-# -- o clique travado ------------------------------------------------------------------------
 
 
 def _tique(dev: um.UinputMouseDevice, agora: float, botoes: frozenset[str] = F()) -> None:
@@ -340,7 +327,7 @@ def test_o_clique_travado_solta_ao_trocar_a_tabela_e_ao_parar(
 def test_o_clique_travado_solta_apos_silencio_do_controle(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # D-1610-O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO
+    """Prova da D-1610-O-CURSOR-GANHA-PRECISAO-PERMANENCIA-E-CLIQUE-TRAVADO."""
     dev, no = _mouse(monkeypatch, _cursor(clique_travado="triangle"))
     _tique(dev, 0.0, F({"triangle"}))
     _tique(dev, 0.5)
@@ -364,16 +351,13 @@ def test_soltar_o_cursor_solta_o_mouse_do_desktop_e_o_da_tabela(
     mouse.soltar_o_cursor(SimpleNamespace())
 
 
-# -- o esquema --------------------------------------------------------------------------------
-
-
 def test_o_esquema_aceita_a_faixa_e_recusa_o_resto() -> None:
     _cursor(zona_morta=0, curva=1.0, precisao=10, permanencia_ms=0)
     _cursor(zona_morta=60, curva=3.0, precisao=100, permanencia_ms=3000)
     _cursor(permanencia_ms=300)
     for ruim in (
         {"zona_morta": 61}, {"zona_morta": -1}, {"curva": 0.9}, {"curva": 3.1},
-        {"precisao": 9}, {"precisao": 101},  # (noqa-acento) identificador ASCII
+        {"precisao": 9}, {"precisao": 101},  # (noqa-acento)
         {"permanencia_ms": 100},
         {"permanencia_ms": 3001}, {"nao_existe": 1},
     ):
@@ -400,9 +384,6 @@ def test_o_perfil_guarda_a_secao_e_o_controle_nao_tem_cursor() -> None:
     assert Profile.model_validate({"name": "Q", "match": {"type": "any"}}).cursor is None
     with pytest.raises(ValidationError):
         ControllerOverrides.model_validate({"cursor": {"permanencia_ms": 800}})
-
-
-# -- o depósito pelo perfil e o computador por baixo ----------------------------------------
 
 
 def test_o_perfil_seguinte_larga_o_ajuste_do_anterior(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -443,8 +424,8 @@ def test_apagar_o_freestyle_sem_perfil_que_volte_larga_toda_a_acessibilidade() -
     m = gerente.ProfileManager(controller=SimpleNamespace(), store=store)  # type: ignore[arg-type]
     m.apply_acessibilidade(Profile.model_validate({
         "name": "Freestyle", "match": {"type": "any"},
-        "ativacao": {"alternar": ["l1"], "repique_ms": 120},  # (noqa-acento) identificador ASCII
-        "analogicos": {"zona_morta": 20},  # (noqa-acento) identificador ASCII
+        "ativacao": {"alternar": ["l1"], "repique_ms": 120},  # (noqa-acento)
+        "analogicos": {"zona_morta": 20},
         "cursor": {"clique_travado": "triangle"}}))
     _, epoca = um.ajuste_ativo(store)
     assert ab.alguma(store) and fb.alguma(store) and cv.alguma(store)
@@ -474,9 +455,6 @@ def test_o_computador_vale_por_baixo_e_o_conflito_fica_com_o_jogo() -> None:
         "o mesmo botão em dois ofícios: fica o que o jogo escreveu")
 
 
-# -- a entrega ao device ----------------------------------------------------------------------
-
-
 def _estado() -> Any:
     return SimpleNamespace(
         raw_lx=255, raw_ly=128, raw_rx=128, raw_ry=128, l2_raw=0, r2_raw=0)
@@ -492,7 +470,6 @@ def test_o_dispatch_do_desktop_entrega_o_ajuste(monkeypatch: pytest.MonkeyPatch)
     for _ in range(60):
         mouse.dispatch_mouse(daemon, _estado(), F({"l1"}))
     assert no.soma("REL_X") < _esperado(255, 128, 60)[0] * 0.5, "o ajuste não chegou ao device"
-    # o perfil seguinte (sem ajuste) devolve o cursor inteiro
     um.definir_ajuste_ativo(store, None)
     antes = no.soma("REL_X")
     mouse.dispatch_mouse(daemon, _estado(), F({"l1"}))

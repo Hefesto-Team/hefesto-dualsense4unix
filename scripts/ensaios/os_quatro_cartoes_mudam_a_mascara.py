@@ -74,8 +74,6 @@ from hefesto_dualsense4unix.interface.pacotes import ponte
 
 ABA = "01-jogar.html"
 
-#: O CHIP CLICADO. **Xbox 360** e não DualSense, e a escolha é medida: o cartão
-#: do P1 já nasce com o DualSense aceso no desenho, então clicar nele deixaria o
 CHIP = "Xbox 360"
 
 def _lugares() -> list[str]:
@@ -126,7 +124,6 @@ def main() -> int:
     if not opcoes.publicado:
         _desviar_para_a_bancada(lixo)
 
-    # `gamepad.mask.set` no daemon do usuário, que está vivo e com controle na mesa.
     ipcs: list[tuple[str, dict]] = []
     ponte.chamar = lambda metodo, timeout=None, **params: (  # type: ignore[assignment]
         ipcs.append((metodo, dict(params))) or True)

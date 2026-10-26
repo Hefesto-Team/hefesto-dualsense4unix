@@ -31,7 +31,7 @@ from tests.unit.test_no_modo_xbox_a_haptica_fina import (  # noqa: F401
 )
 
 _RAIZ = Path(__file__).resolve().parents[2]
-_ACAO = "acao"  # (noqa-acento): chave do estilo
+_ACAO = "acao"  # (noqa-acento)
 _QUATRO = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03", "aa:bb:cc:00:00:04")
 
 
@@ -64,13 +64,10 @@ def _rms(valores: list[float]) -> float:
     return math.sqrt(sum(v * v for v in valores) / len(valores))
 
 
-# --- a classe, pela linha do tempo -------------------------------------------------------------
-
-
 def test_pulsos_curtos_saem_golpe_e_um_segundo_de_forte_sai_continuo_grave() -> None:
     linha = classes.LinhaDoTempo()
     t = 0.0
-    for _ in range(5):  # cinco pulsos de 40 ms com 60 ms de silêncio: tiros
+    for _ in range(5):
         linha.anotar(t, 120, 200)
         linha.anotar(t + 0.040, 0, 0)
         t += 0.100
@@ -83,9 +80,6 @@ def test_pulsos_curtos_saem_golpe_e_um_segundo_de_forte_sai_continuo_grave() -> 
     linha.anotar(t + 2.0, 230, 30)
     assert linha.anotar(t + 3.0, 0, 0) == classes.CONTINUO_FINO
     assert [x[0] for x in linha.ultimos][-2:] == [classes.CONTINUO_GRAVE, classes.CONTINUO_FINO]
-
-
-# --- o pad guarda a onda do FF_PERIODIC --------------------------------------------------------
 
 
 class _Periodico:
@@ -173,9 +167,6 @@ def test_o_pad_conta_as_classes_e_guarda_a_forma_no_upload(vpad_xbox: UinputGame
     vpad_xbox._device = None
 
 
-# --- a energia nunca cai, e sem estilo nada muda ---------------------------------------------
-
-
 def _timbres_possiveis() -> set[str]:
     chaves: set[str] = set()
     for estilo in [e.chave for e in ESTILOS]:
@@ -190,8 +181,10 @@ def _timbres_possiveis() -> set[str]:
 
 
 def test_para_cada_timbre_e_cada_par_a_energia_nao_cai_abaixo_do_seno() -> None:
-    # D-2210-O-RUMBLE-DO-JOGO-XBOX-TEM-CLASSE-E-TIMBRE
-    """MORDE: o timbre a meia amplitude, sem a guarda, fica abaixo do seno e reprova."""
+    """MORDE: o timbre a meia amplitude, sem a guarda, fica abaixo do seno e reprova.
+
+    Prova da D-2210-O-RUMBLE-DO-JOGO-XBOX-TEM-CLASSE-E-TIMBRE.
+    """
     timbres = _timbres_possiveis()
     assert {"corpo", "grao", "golpe:impacto", "golpe:eco", "periodico:quadrada"} <= timbres
     abaixo: list[tuple[str, tuple[int, int], int]] = []
@@ -243,7 +236,7 @@ def test_cada_classe_toca_o_timbre_do_estilo() -> None:
     tocador.levar(0, 0, sink="", dono="prova", estilo=_ACAO, forma=formas.IMPACTO)
     tocador.levar(230, 20, sink="", dono="prova", estilo=_ACAO, forma=formas.IMPACTO)
     relogio.agora += 0.6
-    assert tocador.timbre_de_agora() == "grao"  # (noqa-acento): chave
+    assert tocador.timbre_de_agora() == "grao"
     tocador.parar()
     assert formas.timbre_do_rumble("souls", formas.ECO, classes.GOLPE) == "golpe:eco"
     assert formas.timbre_do_rumble("luta", formas.IMPACTO, classes.CONTINUO_GRAVE) is None
@@ -256,9 +249,6 @@ def test_o_grao_do_timbre_nao_muda_o_grao_da_simulacao() -> None:
         assert {len(g) for g in formas._graos_prontos(formas.TAXA)} == {formas.TAXA * 6 // 1000}
     finally:
         formas._graos_prontos.cache_clear()
-
-
-# --- os quatro controles, cada um com a forma dele ---------------------------------------------
 
 
 def test_quatro_controles_recebem_timbres_diferentes_no_mesmo_tique(
@@ -289,9 +279,6 @@ def test_quatro_controles_recebem_timbres_diferentes_no_mesmo_tique(
         tocador.parar()
     assert timbres == ["golpe:toque", "golpe:impacto", "golpe:estalo", "golpe:eco"]
     assert len(set(blocos)) == 4
-
-
-# --- o instrumento -----------------------------------------------------------------------------
 
 
 def test_o_instrumento_conta_classes_ondas_duracoes_e_rota(tmp_path: Path, capsys: Any) -> None:
@@ -345,9 +332,6 @@ def test_o_instrumento_deixa_fora_da_rota_as_perguntas_sem_rumble(
     saida = capsys.readouterr().out
     assert "haptica_fina (leva) 100% (fora 9 perguntas sem rumble)" in saida
     assert "caminho_caido" not in saida
-
-
-# --- a rota que o estado diz -------------------------------------------------------------------
 
 
 def test_a_rota_diz_leva_no_rumble_vivo_e_sem_rumble_no_ocioso(

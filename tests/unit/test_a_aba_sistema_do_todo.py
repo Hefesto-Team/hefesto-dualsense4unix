@@ -59,9 +59,6 @@ def _entre(doc: str, abre: str, fecha: str) -> str:
     return doc[i: doc.index(fecha, i)]
 
 
-# --- o desenho ------------------------------------------------------------------------------
-
-
 def test_o_status_tem_seis_linhas_em_tres_colunas() -> None:
     """Duas linhas no Status e quatro no exame (duas colunas de duas): seis ao todo."""
     status3 = _entre(_desenho(), '<div class="status3">', "<!-- ---------- 2.")
@@ -76,8 +73,10 @@ def test_o_status_tem_seis_linhas_em_tres_colunas() -> None:
 
 
 def test_as_quatro_colunas_estao_na_ordem_dela() -> None:
-    # D-1610-O-PERFIL-DE-BATERIA-E-SO-O-GLOBAL-NA-SISTEMA
-    """Funcionamento do app, Interface, Perfil global de bateria e Saúde do app."""
+    """Funcionamento do app, Interface, Perfil global de bateria e Saúde do app.
+
+    Prova da D-1610-O-PERFIL-DE-BATERIA-E-SO-O-GLOBAL-NA-SISTEMA.
+    """
     doc = _desenho()
     rotulos = re.findall(r"<span[^>]*>([^<]+)</span>",
                          _entre(doc, '<div class="sec-rot sr-avancadas">', "</div>"))
@@ -143,9 +142,6 @@ def test_os_enderecos_da_pagina_tem_dono_no_pacote() -> None:
         assert gesto in a09.SEM_ECO, f"`{gesto}` não tem eco no state_full e precisa dizer"
 
 
-# --- o que o pacote põe nas linhas ----------------------------------------------------------
-
-
 def _linha(cls: str, txt: str) -> dict[str, Any]:
     selo = {"ok": "OK", "aviso": "AVISO", "nt": "NOTA"}[cls]
     return {"selo": selo, "cls": cls, "g": "x", "txt": txt}
@@ -209,8 +205,6 @@ def test_o_aviso_fica_laranja_no_tema_e_fora_dele() -> None:
                             p4=("aviso", "o ajuste de áudio do hefesto não está instalado"),
                             p2=("nt", "quirk não aplicável"))
     saida = _do_exame(a09._so_o_que_a_tela_mostra(exame, _status(estado), estado))
-    # o aviso de fora da linha do tema entra nela (O-STATUS-DO-SISTEMA-TEM-SEIS-LINHAS-SEMPRE-01):
-    # o WirePlumber é do Áudio, que fica laranja
     cls = [a["cls"] for a in saida["linhas"]]
     assert cls == ["ok", "aviso", "aviso", "ok"], cls
     textos = [a.get("curta") or a["txt"] for a in saida["linhas"]]
@@ -235,7 +229,6 @@ def test_exame_incompleto_mostra_o_que_nao_esta_bem_sem_adivinhar_a_posicao() ->
     exame = {"linhas": [_linha("ok", "alguma coisa"), _linha("aviso", "algo falhou"),
                         _linha("nt", "uma nota")], "vazio": ""}
     saida = a09._so_o_que_a_tela_mostra(exame, _status(estado), estado)
-    # sem posição sabida, o aviso vai à linha do Serviço e os temas do exame dizem «sem leitura»
     assert _textos(saida)[3:] == [("nt", "Steam Input: sem leitura"),
                                   ("nt", "Áudio: sem leitura"),
                                   ("ok", "Um gamepad virtual por jogador")]
@@ -300,9 +293,6 @@ def test_linha_do_status_e_do_exame_falam_pela_dica_curta() -> None:
     assert "title=" not in saida
 
 
-# --- o pacote -------------------------------------------------------------------------------
-
-
 @pytest.fixture
 def casa(monkeypatch: pytest.MonkeyPatch, tmp_path: pathlib.Path) -> pathlib.Path:
     """Um HOME e uma pasta de configuração de mentira; nada fala com o systemd."""
@@ -354,7 +344,7 @@ def test_o_pacote_pinta_duas_linhas_de_status_quatro_de_exame_e_os_dois_campos_n
 
 def test_o_interruptor_alterna_e_o_duplo_clique_reaplica(
         monkeypatch: pytest.MonkeyPatch, casa: pathlib.Path) -> None:
-    # D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES
+    """Prova da D-1610-UM-INTERRUPTOR-SO-PARA-AS-CORRECOES."""
     clique = [100_000.0]
     reaplicou: list[str] = []
     monkeypatch.setattr(a09, "_reaplicar_as_correcoes",
@@ -445,7 +435,7 @@ def test_reaplicar_roda_o_doctor_os_lancadores_o_vulkan_e_o_proton(
 
 
 def test_o_tamanho_so_aceita_os_tres_da_lista(casa: pathlib.Path) -> None:
-    # D-1610-O-TAMANHO-DA-INTERFACE-SE-GRAVA-EM-INTERFACE-ESCALA
+    """Prova da D-1610-O-TAMANHO-DA-INTERFACE-SE-GRAVA-EM-INTERFACE-ESCALA."""
     assert a09.tamanho_da_interface() == 100, "sem arquivo, o tamanho é o de hoje"
     for v in (125, 150, 100):
         a09.tamanho_da_interface_gesto(_ctx(), {"v": str(v)}, None)
@@ -498,8 +488,6 @@ def test_salvar_o_registro_cancelado_nao_grava_nada(casa: pathlib.Path) -> None:
         a09._limpar_o_painel()
     assert list(casa.glob("*.txt")) == []
 
-
-# --- a tela viva ----------------------------------------------------------------------------
 
 MEDIR = r"""
 (function () {

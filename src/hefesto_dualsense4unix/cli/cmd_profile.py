@@ -231,7 +231,7 @@ def _estado_do_daemon() -> dict[str, object] | None:
     return estado if ok and isinstance(estado, dict) else None
 
 
-@app.command("historico")  # (noqa-acento): nome de subcomando e ASCII
+@app.command("historico")  # (noqa-acento)
 def cmd_historico(
     name: str = typer.Argument(..., help="Nome ou slug do perfil."),
 ) -> None:
@@ -355,7 +355,6 @@ def cmd_apply(
         path = save_profile(profile)
         console.print(f"[green]perfil salvo:[/green] {path}")
     else:
-        # Sem gravar: só garante que existe no XDG para o profile.switch pegar.
         try:
             load_profile(profile.name)
         except FileNotFoundError:
@@ -449,7 +448,6 @@ def _activate_via_ipc_or_fallback(name: str) -> None:
         return
     except IpcError as exc:
         if prazo_vencido(exc):
-            # O serviço pode ativar logo depois: dizer «nada foi ativado» mentiria.
             console.print(f"[yellow]{FRASE_DO_PRAZO_VENCIDO}[/yellow]")
             return
         console.print(f"[yellow]daemon recusou profile.switch:[/yellow] {exc.message}")

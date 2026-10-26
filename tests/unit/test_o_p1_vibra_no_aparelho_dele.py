@@ -216,8 +216,6 @@ def test_o_p1_que_volta_depois_do_prazo_vibra_pelo_pad_dele(jogo: Jogo) -> None:
 def test_o_pad_2_cedido_nao_vibra_o_aparelho_que_agora_e_o_p1(jogo: Jogo) -> None:
     jogo.mesa.sai(P1)
     jogo.mesa.passa_o_posto(P2)
-    # Entre o aviso da troca e o recolhimento no tique seguinte, o pad 2 segue
-    # aberto no jogo; ninguém o dirige mais, e o pedido dele não tem dono.
     jogo.confere(2)
 
 

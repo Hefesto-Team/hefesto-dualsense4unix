@@ -172,7 +172,7 @@ def test_as_tres_pedem_a_caixa_ao_mesmo_dono() -> None:
         "o mapa das portas não traz a caixa que o dono escreve hoje")
 
 
-@skip_sem_gi_real  # o gerador do mapa do controle importa o pacote das abas, que é do lado GTK
+@skip_sem_gi_real
 def test_a_bancada_e_o_que_os_geradores_escrevem(tmp_path: pathlib.Path) -> None:
     """Os dois mockups são o que `mapa.py` e `pagina_do_mapa.py` escrevem hoje."""
     import onde

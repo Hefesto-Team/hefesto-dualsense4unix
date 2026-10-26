@@ -108,7 +108,7 @@ def processo_vivo(pid: int) -> bool:
     """Ainda existe processo com este PID?"""
     try:
         return os.path.exists(f"/proc/{int(pid)}")
-    except Exception:  # pragma: no cover - `int()` de lixo, `/proc` ausente
+    except Exception:  # pragma: no cover
         return True
 
 
@@ -329,7 +329,7 @@ def escritores_crus_alheios(
     eu = os.getpid() if meu_pid is None else int(meu_pid)
     try:
         pai = os.getppid()
-    except OSError:  # pragma: no cover - não acontece em Linux
+    except OSError:  # pragma: no cover
         pai = -1
     nossos = {eu, pai}
     bruto = holders_de_hidraw_de_qualquer_um(nos)
@@ -495,7 +495,7 @@ def no_alcancavel(no: str) -> bool:
     """Um processo DESTE usuário consegue abrir este nó agora?"""
     try:
         return os.access(no, os.R_OK | os.W_OK)
-    except Exception:  # pragma: no cover - caminho malformado
+    except Exception:  # pragma: no cover
         return True
 
 

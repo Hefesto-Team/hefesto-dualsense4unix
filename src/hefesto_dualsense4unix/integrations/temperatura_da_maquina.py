@@ -19,19 +19,12 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 RAIZ_DO_HWMON = Path("/sys/class/hwmon")
-#: Os chips que são o processador ou a placa de vídeo, pelo nome do driver do kernel.
 CHIPS_DO_PROCESSADOR = frozenset({"k10temp", "coretemp", "zenpower", "cpu_thermal"})
 CHIPS_DA_PLACA_DE_VIDEO = frozenset({"amdgpu", "radeon", "nouveau", "nvidia", "i915", "xe"})
 CHIPS_DE_CALOR = CHIPS_DO_PROCESSADOR | CHIPS_DA_PLACA_DE_VIDEO
-#: O azul: a temperatura de um quarto, igual para qualquer máquina.
 FRIO_C = 30.0
-#: Um limite que não passa disto acima do frio não é limite (a escala viraria um degrau).
 FOLGA_MINIMA_C = 10.0
-#: Os chips que não exportam ``crit`` nem ``max``: os do processador AMD (o ``k10temp`` dos Ryzen
-#: e o ``zenpower``) só dão o ``Tctl``. Para eles vale o Tctl máximo que a AMD documenta para os
-#: Ryzen de mesa, que é do chip e não de uma máquina; o limite declarado, quando há, sempre vence.
 LIMITE_DOCUMENTADO_DO_CHIP_C = {"k10temp": 95.0, "zenpower": 95.0}
-#: A leitura vale por tanto tempo; a descoberta dos sensores se refaz de tempos em tempos.
 VALIDADE_S = 2.0
 REDESCOBRIR_A_CADA_S = 30.0
 
@@ -123,8 +116,6 @@ class LeitorDoCalor:
         agora = self._agora()
         if agora - self._lido_em < VALIDADE_S:
             return self._calor
-        # Sem sensor, ou com os de antes sem leitura (o hwmon renumera quando um driver volta),
-        # descobre de novo.
         sem_leitura = not self._sensores or self._calor is None
         if sem_leitura and agora - self._descoberto_em >= REDESCOBRIR_A_CADA_S:
             self._sensores = descobrir(self._raiz)

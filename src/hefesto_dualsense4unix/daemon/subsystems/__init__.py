@@ -65,9 +65,6 @@ class Passo:
     essencial: Callable[[Daemon, Exception], Exception] | None = None
 
 
-# -- as partidas: o ``run()`` as chama pelo ``_safe_start``, que isola a falha ---------
-
-
 def _ipc_indisponivel(daemon: Any, exc: Exception) -> Exception:
     """O IPC é essencial: sem socket a janela, a bandeja e a CLI dizem «offline» com o
     processo no ar. A falha encerra o ``run()``; o systemd tenta de novo e, no limite,
@@ -135,9 +132,6 @@ def _ouvinte_do_som(daemon: Any) -> Any:
     )
 
     return start_ouvinte_do_som(daemon)
-
-
-# -- as paradas: cada uma é idempotente e não levanta para fora ---------------------
 
 
 async def _chamar_se_existe(daemon: Any, verbo: str) -> None:
@@ -313,8 +307,6 @@ async def _soltar_o_controle(daemon: Any) -> None:
     await soltar_o_controle(daemon)
 
 
-# -- A LISTA. A ordem das entradas é a de partida; ``parar_em`` é a de parada. -------
-
 SUBSYSTEM_REGISTRY: tuple[Passo, ...] = (
     Passo(
         "ipc",
@@ -374,41 +366,28 @@ SUBSYSTEM_REGISTRY: tuple[Passo, ...] = (
         quando=lambda c: c.mic_button_toggles_system,
     ),
     Passo("luz_do_mic", partida=_luz_do_mic),
-    # O motor do tiro, desligado pela receita (O-TATO-VIVO-SO-FALA-ONDE-O-JOGO-CALA-01).
     Passo("tato_vivo", partida=_tato_vivo),
     Passo("luz_animada", partida=_luz_animada),
-    # A porta do «Data Out» só abre no localhost e com a Corrida ou a Simulação no perfil.
     Passo("telemetria_do_jogo", partida=_telemetria_do_jogo),
-    # O ouvinte do som não é dono de nenhum nó, só observa. Sobe AQUI e não antes: cedo
-    # demais, a primeira leitura pegaria o servidor de som antes de o ``bt_mic`` e o
-    # ``alto_falante`` publicarem os nós, e a primeira resposta da tela seria um mundo
-    # sem o controle do usuário.
     Passo("ouvinte_do_som", partida=_ouvinte_do_som),
-    # O microfone por Bluetooth é opt-in: o gate vive DENTRO da partida
-    # (``BtMicSubsystem.is_enabled``). Sobe antes dos plugins (código de usuário).
     Passo(
         "bt_mic",
         partida=lambda d: d._start_bt_mic(),
         parada=_parar_bt_mic,
         parar_em=20,
     ),
-    # O nó de som por controle sobe logo depois do microfone: as duas metades leem a
-    # mesma lista de sysfs. Os dois param ANTES do IPC.
     Passo(
         "alto_falante",
         partida=lambda d: d._start_alto_falante(),
         parada=_parar_alto_falante,
         parar_em=30,
     ),
-    # O vigia do link que conecta e NÃO vira controle (CONEXAO-ZUMBI-01) lê o sysfs e o
-    # BlueZ por conta própria; sem a parada, a thread chamaria ``sudo`` com o daemon morto.
     Passo(
-        "conexoes",  # (noqa-acento): nome do subsystem, a chave do diário
+        "conexoes",  # (noqa-acento)
         partida=lambda d: d._start_conexoes(),
         parada=_parar_conexoes,
         parar_em=50,
     ),
-    # A central do rádio abre o dono do BlueZ (MOVER-UM-POR-VEZ-01).
     Passo(
         "central_do_radio",
         partida=lambda d: d._start_central_do_radio(),
@@ -422,18 +401,13 @@ SUBSYSTEM_REGISTRY: tuple[Passo, ...] = (
         parada=_parar_plugins,
         parar_em=60,
     ),
-    # O gate (``metrics_enabled``) vive DENTRO da partida.
     Passo(
         "metrics",
         partida=lambda d: d._start_metrics(),
         parada=_parar_metrics,
         parar_em=70,
     ),
-    # Depois do controle: a conexão do boot é a sessão restaurada, não o «Controle conectado».
     Passo("eventos_do_perfil", partida=_eventos_do_perfil, depois_do_controle=True),
-    # ADR-021: as modificações rodam FORA do serviço, como processos filhos, e sobem
-    # DEPOIS do controle: o supervisor nunca atrasa a primeira conexão. Param PRIMEIRO,
-    # cada filho recebe o SIGTERM pelo PID criado e a porta própria fecha.
     Passo(
         "mods",
         partida=lambda d: d._start_mods(),
@@ -441,17 +415,11 @@ SUBSYSTEM_REGISTRY: tuple[Passo, ...] = (
         parar_em=10,
         depois_do_controle=True,
     ),
-    # Passos que só PARAM (não há partida): o co-op e o broker caem junto dos devices
-    # que eles servem; as tarefas (o laço, a reconexão) caem depois dos servidores; e o
-    # controle é a ÚLTIMA coisa a ir, com os executores.
     Passo("coop", parada=_parar_coop, parar_em=90),
     Passo("broker", parada=_parar_o_broker, parar_em=120),
     Passo("tarefas", parada=_parar_as_tarefas, parar_em=180),
     Passo("controle", parada=_soltar_o_controle, parar_em=190),
 )
-
-
-# -- o motor: percorre a lista -------------------------------------------------------
 
 
 async def subir(daemon: Any, *, depois_do_controle: bool = False) -> None:

@@ -67,16 +67,12 @@ Leitor = Callable[[list[str]], "str | None"]
 
 FORMATO_JSON: Final[str] = "--format=json"
 
-#: quanto esperar pelo `pkg-config`/`ldconfig` antes de dizer «não sei».
 PRAZO_DA_PERGUNTA_S: Final[int] = 5
 
-#: o que o `pactl` imprime no lugar de um texto que o JSON não conseguiu escrever.
 NULO_DO_PACTL: Final[str] = "(null)"
 
-#: a marca do objeto já conferido contra o grafo: o que ainda falta nele, o grafo não tem.
 CHAVE_DO_GRAFO: Final[str] = "hefesto.grafo"
 
-#: quem lê o grafo do PipeWire: o texto do ``pw-dump``, ou ``None`` («não sei»).
 Grafo = Callable[[], "str | None"]
 
 TIPOS_DE_NO: Final[tuple[str, ...]] = ("sinks", "sources")
@@ -159,9 +155,7 @@ class NoDeSom:
     canais: tuple[Canal, ...] = ()
     balanco: str = ""
     propriedades: Mapping[str, str] = field(default_factory=dict)
-    #: o servidor perdeu a descrição (``null`` ou ``(null)``): a de cima é o recuo
     descricao_nula: bool = False
-    #: as propriedades cujo texto o ``pactl`` perdeu (``(null)``): vazias aqui, não ausentes
     perdidos: frozenset[str] = frozenset()
 
     def perdeu(self, chave: str) -> bool:
@@ -191,7 +185,6 @@ class Fluxo:
     corked: bool | None = None
     mudo: bool | None = None
     propriedades: Mapping[str, str] = field(default_factory=dict)
-    #: as propriedades cujo texto o ``pactl`` perdeu (``(null)``): vazias aqui, não ausentes
     perdidos: frozenset[str] = frozenset()
 
     def perdeu(self, chave: str) -> bool:
@@ -532,9 +525,6 @@ def volumes_do_no(tipo: str, nome: str, ler: Leitor) -> list[int] | None:
             return no.porcentos or None
     return None
 
-
-# ---------------------------------------------------------------------------
-# O diretório dos módulos do PipeWire
 
 AMBIENTE_DO_DIRETORIO: Final[str] = "PIPEWIRE_MODULE_DIR"
 

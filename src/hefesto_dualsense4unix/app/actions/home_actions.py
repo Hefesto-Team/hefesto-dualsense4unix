@@ -41,14 +41,12 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 
-# DualSense físico, sem intermediário (docs/usage/modos.md).
 _MODE_ITEMS = [
     ("desktop", "Controlar o PC"),
     ("gamepad", "Jogar pelo Hefesto"),
     ("native", "Conexão Nativa (Sony)"),
 ]
 
-# LEIGO-02: "(vibra)"/"(sem vibrar)" eram verdade enquanto a máscara DualSense
 _FLAVOR_ITEMS = [
     ("xbox", "Xbox 360"),
     ("dualsense", "DualSense (botões PlayStation)"),
@@ -157,7 +155,6 @@ def texto_coop_degradado(jogadores: Sequence[int]) -> str:
     return molde.format(quem=quem)
 
 
-# estruturalmente frágil — o SDL pode não enxergar o DualSense BT nem sem
 NATIVE_BT_FRAGIL_TEXT = (
     "Modo Nativo com o controle em Bluetooth: alguns jogos não enxergam o "
     "DualSense por BT (limite do SDL). Se o jogo não vir o controle, use o "
@@ -214,7 +211,6 @@ def texto_native_bt_fragil(numeros: Sequence[int]) -> str:
     return molde.format(quem=quem)
 
 
-# `interface/pacotes/perfil.com_a_carona`, que o rodapé das dez abas chama no
 WRAPPER_MISSING_TEXT = (
     "O jogo está rodando sem o atalho de inicialização — controles podem "
     "duplicar. Reponho o atalho no próximo Aplicar ou Salvar perfil, com a "
@@ -404,7 +400,6 @@ def vpad_degradation_text(state: dict[str, Any] | None) -> str | None:
     return None
 
 
-# explicação do que NÃO vai acontecer, com o botão de pé.
 RECONCILIAR_JOGO_ABERTO_TEXT = (
     "Com o jogo aberto os jogadores voltam, mas a numeração não muda — "
     "evita repintar o controle em uso no meio da partida."
@@ -446,11 +441,6 @@ def _reconciliar_gate_text(state: dict[str, Any] | None) -> str | None:
     return RECONCILIAR_JOGO_ABERTO_TEXT if jogo_com_autoridade(state) else None
 
 
-#: Os nomes são os da fileira da aba Jogar (`interface/aba01.MODOS` e `DO_DESLIGADO`): o modo
-#: `desktop` aparece como «Point and click» no Ligado e como «Navegação» no Desligado, e esta função
-#: pura não sabe de qual lado a tela o pôs. O fato vem primeiro porque a coluna da aba Sistema corta
-#: a linha e põe o resto na dica. O mouse volta escolhendo o modo de novo (o
-#: `desktop.arranjo.apply` liga o mouse); o teclado, pela «Função do teclado» da aba Navegação.
 _NO_DESKTOP: Final[str] = "no «Point and click» e na «Navegação» o controle"
 
 TEXTO_DESKTOP_SEM_MOUSE: Final[str] = (
@@ -528,16 +518,11 @@ def texto_do_desktop_sem_emulacao(
     return None
 
 
-#    DualSense. O gate R-04 do daemon (`_recriacao_bloqueada_por_jogo`) tinha
-#    cai para False e `mode_of_state` chama isso de Controlar o PC — a aba
-
 _COR_OK = "#50fa7b"
 _COR_AVISO = "#ffb86c"
 
-#: features do DualSense".
 PONTE_PREFIXO = "Ponte com o jogo: "
 
-#: explicação") do `PONTE_PREFIXO` e do detector de janela da aba Sistema.
 DIVERGENCIA_PREFIXO = "Sua escolha: "
 
 
@@ -731,7 +716,6 @@ def texto_da_ponte(state: dict[str, Any] | None) -> str:
         )
     gamepad = state.get("gamepad_emulation")
     if isinstance(gamepad, dict) and gamepad.get("enabled"):
-        # atravesse. MEDIDO na bancada de 23/08 com ZERO DualSense na casa: o
         if not controles_na_mesa(state):
             return (
                 PONTE_PREFIXO
@@ -757,7 +741,6 @@ def texto_da_ponte(state: dict[str, Any] | None) -> str:
     )
 
 
-#: existia para escolher uma. O usuário escolheu.
 _PALAVRA_DO_TRANSPORTE: Final[dict[str, str]] = {
     "usb": "USB",
     "cabo": "USB",
@@ -778,8 +761,6 @@ def palavra_do_transporte(transporte: object) -> str:
     return _PALAVRA_DO_TRANSPORTE.get(bruto.lower(), bruto)
 
 
-#:    bancada em 25/08/2026: o `hide` do broker age em UMA superfície
-#: CLASSE DE TELA: ESTRUTURAL — frase reescrita, e um hover onde não havia.
 AVISO_DE_GRAB_LINHA: Final[str] = "O jogo pode receber cada botão duas vezes"
 
 AVISO_DE_GRAB_PORQUE: Final[str] = (
@@ -861,12 +842,6 @@ def externos_na_mesa(
     return [e for e in lista if isinstance(e, dict) and slot_of(e, 0, 0) is not None]
 
 
-# acima, e a contagem vem do `daemon.state_full` (campo `player` por controle,
-
-
-# `tests/unit/test_perfil_salva_tudo_registrar_nao_e_aplicar.py`, por AST, para
-
-
 def reconciliar_pendente(janela: Any) -> dict[str, str]:
     """A escolha do usuário MENOS o que o daemon já alcançou. Devolve o que sobra."""
     pendente = dict(getattr(janela, "_escolha_pendente", None) or {})
@@ -874,7 +849,6 @@ def reconciliar_pendente(janela: Any) -> dict[str, str]:
         janela, "_modo_vigente_do_daemon", None
     ):
         pendente.pop("modo")
-    # máscara, o chip «Xbox» com o cartão em DualSense deixava na linha um
     if "caminho" in pendente and pendente["caminho"] == getattr(
         janela, "_caminho_vigente_do_daemon", None
     ):

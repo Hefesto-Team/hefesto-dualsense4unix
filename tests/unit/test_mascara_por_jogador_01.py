@@ -140,11 +140,6 @@ def test_duas_instancias_do_registro_divergem_e_por_isso_existe_o_singleton() ->
     assert mascara_efetiva(MAC_P3, "xbox") == "dualsense"
 
 
-# A-MASCARA-DO-PAD-SE-DECIDE-SO-NA-FABRICA-01 (10/10/2026): a máscara de cada pad
-# se decide uma vez, em `make_virtual_pad`. Os construtores recebem a chave já
-# resolvida; as réguas abaixo passam pela fábrica e conferem o VID e o PID que o
-# jogo vê, sem `/dev/uinput` nem `/dev/uhid`.
-
 _INTEGRACOES = _SRC / "integrations"
 _LEITURAS_DO_REGISTRO = frozenset({"mascara_efetiva", "registro_de_mascaras"})
 

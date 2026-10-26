@@ -339,8 +339,7 @@ def test_as_listas_de_hz_caem_nos_elementos_certos(mesa: Any) -> None:
                  if a.get("data-campo") == campo]
         assert alvos == ordem, (campo, alvos)
         assert len(campos[campo]) == 3, campos[campo]
-    # o 200 é a primeira leitura do U3 sozinho no adaptador: ele é a referência dele, logo liso
-    assert campos["hz-nivel"] == ["liso", "engasga", "liso"], (  # (noqa-acento): de máquina
+    assert campos["hz-nivel"] == ["liso", "engasga", "liso"], (
         campos["hz-nivel"])
     voz = [a["data-alvo"] for _t, a in _ler(campos["radio-sala"]).elementos
            if a.get("data-campo") == "hz-voz"]
@@ -492,11 +491,6 @@ def test_o_pedido_do_governador_vira_a_janela_de_duas_saidas(mesa: Any) -> None:
     assert pedido[0]["data-alvo"] == U2 and pedido[0]["data-destino"] == I2
 
 
-#: o selo «sofrendo» da faixa de cada aparelho é o do desenho 1 que o usuário aprovou em 04/10
-#: (`docs/process/estudos/2026-10-04-o-desenho-das-conexoes/fotos/d1.png`), com a palavra junto.
-#: E o da gaveta do «⋮» (O-CONTROLE-NOVO-SE-CONECTA-E-SE-TIRA-PELA-CONEXOES-01, 06/10): o que
-#: apaga é vermelho com letra branca. O «Não conectou» escrito na gaveta não é vermelho: texto
-#: nunca é vermelho, e o selo da linha ao lado já diz.
 _O_VERMELHO_PEDIDO = ('.parte.movimento[data-nivel="engasga"]',
                       '.canais-do-lugar[data-nivel="engasga"]',
                       '.ar-selo.sofrendo',

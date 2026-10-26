@@ -45,10 +45,10 @@ def _manifesto(lancador: dict[str, object] | None) -> str:
     dado: dict[str, object] = {
         "id": "novo",
         "nome": "Novo",
-        "versao": "1",  # (noqa-acento): contrato ASCII
+        "versao": "1",  # (noqa-acento)
         "api": ">=1,<3",
         "tipos": ["lancador"],
-        "permissoes": ["lancador"],  # (noqa-acento): contrato ASCII
+        "permissoes": ["lancador"],  # (noqa-acento)
     }
     if lancador is not None:
         dado["lancador"] = lancador
@@ -86,9 +86,6 @@ def _linha(arquivo: str, alvo: str) -> dict[str, str]:
     }
 
 
-# --- 1. comando de manifesto sem linha reprova; com a linha, passa -----------------------
-
-
 def test_comando_de_manifesto_sem_linha_reprova(tmp_path: Path) -> None:
     """MORDIDA: sem a leitura dos manifestos o ``varrer`` não vê o comando e a lista vem vazia."""
     manifesto = _manifesto({"rotulo": "Novo", "comandos": ["rodaje"]})
@@ -111,9 +108,6 @@ def test_o_manifesto_fora_de_src_tambem_e_varrido(tmp_path: Path) -> None:
     fora = "exemplos/uma-mod/hefesto-mod.json"
     raiz = _arvore(tmp_path, {fora: _manifesto({"rotulo": "Novo", "comandos": ["rodaje"]})}, [])
     assert any("SEM LINHA" in q and fora in q for q in regua.julgar(raiz))
-
-
-# --- 2. o que o conferidor aceita no bloco conta -----------------------------------------
 
 
 def test_reposicao_nativo_e_leitor_do_path_contam_e_o_script_da_pasta_nao(tmp_path: Path) -> None:
@@ -157,9 +151,6 @@ def test_manifesto_que_nao_e_json_estoura() -> None:
         regua.contatos_do_manifesto("{ isto não é json", MANIFESTO)
 
 
-# --- 3. a linha de um comando que o manifesto largou sai como morta ----------------------
-
-
 def test_linha_de_comando_que_o_manifesto_largou_e_morta(tmp_path: Path) -> None:
     raiz = _arvore(
         tmp_path,
@@ -169,9 +160,6 @@ def test_linha_de_comando_que_o_manifesto_largou_e_morta(tmp_path: Path) -> None
     queixas = regua.julgar(raiz)
     assert any("MORTA" in q and "cmd:antigo" in q for q in queixas), queixas
     assert not any("cmd:rodaje" in q for q in queixas)
-
-
-# --- 4. os manifestos reais de fábrica entram na varredura -------------------------------
 
 
 def _comandos_declarados() -> dict[str, set[str]]:

@@ -59,7 +59,7 @@ def _main_pid() -> str:
              a09_sistema._unidade()],
             capture_output=True, text=True, timeout=5)
         return (r.stdout or "").strip()
-    except Exception as erro:  # pragma: no cover - sem sessão systemd
+    except Exception as erro:  # pragma: no cover
         return f"?({erro})"
 
 

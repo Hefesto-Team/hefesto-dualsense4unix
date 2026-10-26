@@ -69,12 +69,8 @@ VERBOS_QUE_MUDAM = (
 
 PEDIDOS_DE_SENHA = ("-v", "-A")
 
-#: O que o `dpkg-query` de mentira responde à pergunta do `_pacotes_a_meio` (todos os pacotes, o
-#: estado em três letras): só estados que NÃO são pacote a meio (`hi` retido, `rc` removido com
-#: configuração, `un` desconhecido). O ensaio mede o install, não o banco do dpkg de quem roda.
 DPKG_TUDO_EM_ORDEM = "ii  bash\nhi  linux-libc-dev\nrc  pacote-removido\nun  pacote-que-nao-veio\n"
 
-#: Um pacote a meio de uma atualização, como o kernel baixado e não configurado (`iF`/`iU`).
 DPKG_COM_PACOTE_A_MEIO = DPKG_TUDO_EM_ORDEM + "iF  linux-image-7.2.6-76070206-generic\n"
 
 DPKG_QUERY_DE_VERDADE = shutil.which("dpkg-query")
@@ -244,9 +240,6 @@ class TestOEnsaioExiste:
         )
 
 
-#: Um kernel que não tem os cabeçalhos instalados: com o `uname -r` de mentira o passo dos módulos
-#: DKMS não acha `/lib/modules/<versão>/build` e pede o pacote dos cabeçalhos ao `run_pkg`, o passo
-#: do plano que chama o gerenciador de pacotes numa máquina de desenvolvimento com tudo instalado.
 UNAME_SEM_CABECALHOS = (
     '#!/bin/sh\nif [ "$1" = "-r" ]; then echo 0.0.0-mentira; exit 0; fi\n'
     f'exec "{shutil.which("uname")}" "$@"\n'

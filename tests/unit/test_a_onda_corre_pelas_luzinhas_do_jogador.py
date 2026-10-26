@@ -35,9 +35,7 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 RGB = tuple[int, int, int]
 Luzinhas = tuple[bool, bool, bool, bool, bool]
-#: Faixa forjada (`aa:bb:cc`), nunca endereço de aparelho de verdade.
 JOGADORES = [f"aa:bb:cc:00:00:0{n}" for n in range(1, 5)]
-#: O número de cada jogador nas cinco luzinhas, como o DualSense o mostra.
 NUMEROS: list[Luzinhas] = [
     (False, False, True, False, False),
     (False, True, False, True, False),
@@ -52,9 +50,6 @@ def _onda(ritmo: int = 5) -> Any:
     efeito = ler_o_efeito_da_luz(f"onda;FF0000;{ritmo}")
     assert efeito is not None
     return efeito
-
-
-# ---------------------------------------------------------------- o desenho das luzinhas
 
 
 def test_a_onda_e_uma_base_com_luzinhas() -> None:
@@ -110,7 +105,6 @@ def _o_que_se_ve(efeito: Any, numero: Luzinhas, segundos: float) -> list[Luzinha
 def test_nenhuma_luzinha_acende_mais_de_tres_vezes_por_segundo_contando_o_numero(
     ritmo: int, jogador: int
 ) -> None:
-    # D-2210-A-ONDA-CORRE-PELAS-LUZINHAS-DO-JOGADOR (a validar pelo usuário)
     vistos = _o_que_se_ve(_onda(ritmo), NUMEROS[jogador], 10.0)
     for led in range(5):
         subidas = [i * PASSO_S for i in range(1, len(vistos))
@@ -125,9 +119,6 @@ def test_os_outros_efeitos_de_tempo_nao_mexem_nas_luzinhas() -> None:
         efeito = ler_o_efeito_da_luz(texto)
         assert efeito is not None
         assert all(fx.luzinhas_no_instante(efeito, i * 0.1) is None for i in range(100)), texto
-
-
-# ---------------------------------------------------------------- o laço leva o quadro único
 
 
 def _laco() -> tuple[luz.LuzAnimada, list[tuple[str, RGB]], list[tuple[str, RGB, Any]]]:
@@ -235,9 +226,6 @@ def test_o_passo_pergunta_ao_medidor_do_tato_vivo_quem_mostra_as_luzinhas() -> N
     assert "luzinhas_com_dono=self._quem_mostra_as_luzinhas()" in inspect.getsource(luz.Passo)
 
 
-# ---------------------------------------------------------------- um report por quadro
-
-
 class _NoDeLed:
     def __init__(self) -> None:
         self.cores: list[RGB] = []
@@ -317,18 +305,15 @@ def test_a_onda_e_um_report_por_quadro_no_radio_e_o_numero_volta_nos_dois_transp
         assert NUMEROS[indice] in no.numeros, f"{uniq}: o número do jogador não voltou"
         assert (True, False, False, False, False) in no.numeros, f"{uniq}: a onda não correu"
         escritos = handles[indice].escritos
-        if indice >= 2:  # rádio: UM report 0x31 por quadro, com a barra e as luzinhas
+        if indice >= 2:
             radio = [r for r in escritos if r[0] == 0x31]
             assert len(radio) == len(escritos) == contados[uniq], (
                 f"{uniq}: {len(escritos)} reports para {contados[uniq]} quadros")
             mascaras = {r[3 + COMMON_PLAYER_LEDS] & 0x1F for r in radio}
             assert len(mascaras) >= 5, f"{uniq}: as luzinhas não andaram no report: {mascaras}"
-        else:  # cabo: a cor e o número pelo nó; o degrau não se repete a cada quadro
+        else:
             assert len(escritos) <= 1, f"{uniq}: o cabo escreveu {len(escritos)} reports"
     assert not ctl._desired_by_uniq, "o quadro da onda não entra no estado desejado"
-
-
-# ---------------------------------------------------------------- a tela diz o que o aparelho faz
 
 
 def test_a_dica_da_onda_diz_que_ela_corre_pelas_luzinhas_e_pela_barra() -> None:

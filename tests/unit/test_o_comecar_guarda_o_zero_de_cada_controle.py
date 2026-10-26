@@ -50,9 +50,6 @@ def _parado(n: int = 100, vies: tuple[float, float, float] = _VIES) -> list[Any]
             for i in range(n)]
 
 
-# ---------------------------------------------------------------- 1. o roteador
-
-
 def test_a_peca_parada_guarda_o_vies_e_a_gravidade() -> None:
     zero = rot.medir_o_zero(_parado())
     assert zero is not None
@@ -113,9 +110,6 @@ def test_o_arquivo_vai_e_volta_e_a_entrada_torta_fica_de_fora() -> None:
     assert zero is not None and zero.giro == pytest.approx(_VIES)
 
 
-# ---------------------------------------------------------------- 2. o motor, P1 a P3
-
-
 class _Hub:
     """O `SensorHub` mínimo: o giro de cada controle, e a gravidade de pé."""
 
@@ -156,9 +150,6 @@ def test_o_motor_desconta_o_vies_so_de_quem_tem_zero(monkeypatch: pytest.MonkeyP
                                        botoes=frozenset()) for u in (_P1, _P2, _P3)}
     assert saida[_P2] == (128, 128, 128, 128), saida
     assert saida[_P1][2:] != (128, 128) and saida[_P3][2:] != (128, 128), saida
-
-
-# ---------------------------------------------------------------- 3. o daemon de verdade
 
 
 def _servidor(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, hub: Any) -> Any:
@@ -261,9 +252,6 @@ def test_o_pedido_sem_endereco_e_recusado(tmp_path: Path, monkeypatch: pytest.Mo
     for torto in ({}, {"uniq": ""}, {"uniq": "::"}, {"uniq": 3}):
         with pytest.raises(ValueError):
             asyncio.run(servidor._handlers["motion.calibrate"](torto))
-
-
-# ---------------------------------------------------------------- 4. a tela
 
 
 def _ctx(zeros: dict[str, Any]) -> Any:

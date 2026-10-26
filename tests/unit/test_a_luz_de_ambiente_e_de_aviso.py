@@ -50,12 +50,8 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 MOCKUP = RAIZ / "mockup" / "04-iluminacao.html"
 RGB = tuple[int, int, int]
 LARANJA: RGB = (255, 128, 0)
-#: Faixa forjada (`aa:bb:cc`), nunca endereço de aparelho de verdade.
 JOGADORES = [f"aa:bb:cc:00:00:0{n}" for n in range(1, 5)]
 PASSO_S = 1 / 30
-
-
-# ---------------------------------------------------------------- as bases existem no perfil
 
 
 def test_as_quatro_bases_de_ambiente_estao_no_perfil_e_as_de_dado_puro_nao_levam_cor() -> None:
@@ -78,9 +74,6 @@ def test_sem_o_dado_vivo_cada_base_cai_numa_cor_que_nao_e_preta() -> None:
         efeito = ler_o_efeito_da_luz(texto)
         assert efeito is not None
         assert max(fx.cor_no_instante(efeito, 3.0)) > 0, texto
-
-
-# ---------------------------------------------------------------- a Aurora
 
 
 def test_a_aurora_com_uma_cor_vai_aos_vizinhos_dela_e_volta() -> None:
@@ -131,9 +124,6 @@ def test_cada_controle_anda_um_oitavo_de_ciclo_atras_do_anterior() -> None:
     assert "aurora" in fx.BASES_DO_RELOGIO_COMUM, "a mesa conta pelo mesmo relógio"
 
 
-# ---------------------------------------------------------------- a «Cor da bateria»
-
-
 def test_a_escala_da_bateria_e_verde_cheia_amarela_na_metade_e_vermelha_no_fim() -> None:
     assert fx.cor_da_carga(100) == (0, 255, 0)
     assert fx.cor_da_carga(50) == (255, 255, 0)
@@ -178,9 +168,6 @@ def test_carregando_a_bateria_respira_devagar_sem_apagar_e_sem_passar_de_tres_po
     assert len(fixas) == 1, "descarregando a cor fica parada"
 
 
-# ---------------------------------------------------------------- a «Cor da temperatura»
-
-
 def test_a_escala_do_calor_vai_do_azul_ao_vermelho() -> None:
     assert fx.cor_do_calor(0.0) == (0, 0, 255)
     assert fx.cor_do_calor(1.0) == (255, 0, 0)
@@ -208,9 +195,6 @@ def test_sem_sensor_a_temperatura_nao_inventa_um_numero() -> None:
     assert estado.andar(fx.Entrada(), 2.0) != fx.COR_SEM_LEITURA, "a que falha segura a última"
 
 
-# ---------------------------------------------------------------- o hwmon, com os limites do sensor
-
-
 def _hwmon(raiz: pathlib.Path, pasta: str, chip: str, **temps: dict[str, int]) -> None:
     d = raiz / pasta
     d.mkdir(parents=True)
@@ -232,7 +216,7 @@ def test_descobre_o_processador_e_a_placa_de_video_pelo_nome_do_chip(
 
 def test_o_limite_vem_do_proprio_sensor_e_muda_de_maquina_para_maquina(
         tmp_path: pathlib.Path) -> None:
-    # D-2210-A-LUZ-DE-AMBIENTE-E-DE-AVISO
+    """Prova da D-2210-A-LUZ-DE-AMBIENTE-E-DE-AVISO."""
     uma, outra = tmp_path / "uma", tmp_path / "outra"
     _hwmon(uma, "hwmon0", "k10temp", temp1={"input": 70000, "crit": 90000})
     _hwmon(outra, "hwmon0", "k10temp", temp1={"input": 70000, "crit": 110000})
@@ -254,9 +238,11 @@ def test_sem_crit_vale_o_max_e_sem_nenhum_dos_dois_o_sensor_e_ignorado(
 
 def test_o_ryzen_que_nao_declara_limite_usa_o_tctl_maximo_documentado_do_chip(
         tmp_path: pathlib.Path) -> None:
-    # D-2210-O-RYZEN-USA-O-TCTL-MAXIMO-DOCUMENTADO
     """O ``k10temp`` dos Ryzen exporta só o ``Tctl`` e os ``Tccd``, sem ``crit`` nem ``max`` (é a
-    forma do hwmon de um Ryzen de verdade): a cor da temperatura não pode morrer branca por isso."""
+    forma do hwmon de um Ryzen de verdade): a cor da temperatura não pode morrer branca por isso.
+
+    Prova da D-2210-O-RYZEN-USA-O-TCTL-MAXIMO-DOCUMENTADO.
+    """
     _hwmon(tmp_path, "hwmon2", "k10temp", temp1={"input": 73625, "label": "Tctl"},
            temp3={"input": 64500, "label": "Tccd1"})
     achados = calor.descobrir(tmp_path)
@@ -289,7 +275,7 @@ def test_vale_o_sensor_mais_perto_do_limite_e_o_ilegivel_nao_derruba(
     (tmp_path / "hwmon1" / "temp2_input").write_text("lixo\n")
     esperado = (90 - calor.FRIO_C) / (100 - calor.FRIO_C)
     assert calor.calor_da_maquina(tmp_path) == pytest.approx(esperado)
-    (tmp_path / "hwmon1" / "temp1_input").write_text("5000\n")  # abaixo do frio: fração 0
+    (tmp_path / "hwmon1" / "temp1_input").write_text("5000\n")
     assert calor.calor_da_maquina(tmp_path) == pytest.approx((40 - calor.FRIO_C) / 70)
 
 
@@ -303,9 +289,6 @@ def test_o_leitor_do_calor_guarda_a_leitura_por_dois_segundos(tmp_path: pathlib.
     assert leitor.calor() == primeiro, "ainda vale a leitura guardada"
     relogio[0] += calor.VALIDADE_S
     assert leitor.calor() != primeiro and leitor.calor() is not None
-
-
-# ---------------------------------------------------------------- as Estrelas
 
 
 def _estrelas(ritmo: int, semente: int = 0, segundos: int = 40) -> list[fx.Quadro]:
@@ -354,9 +337,6 @@ def test_o_ritmo_das_estrelas_estica_os_tempos() -> None:
         fases = [q.luzinhas is None for q in _estrelas(ritmo, segundos=60)]
         return sum(1 for a, b in pairwise(fases) if a != b)
     assert trocas(1) < trocas(10)
-
-
-# ---------------------------------------------------------------- o laço de luz
 
 
 class _Mao:
@@ -435,7 +415,7 @@ def test_sair_das_estrelas_no_meio_da_cintilada_devolve_o_numero_do_jogador() ->
     laco, barra, quadros = _laco(_Mao())
     estrelas = _plano("estrelas;FF8000;5")
     agora = 100.0
-    while not (quadros and quadros[-1][2] is not None):  # até a cintilada estar acesa
+    while not (quadros and quadros[-1][2] is not None):
         agora += PASSO_S
         laco.tique(agora, estrelas)
         assert agora < 130.0, "as Estrelas nunca cintilaram"
@@ -472,9 +452,6 @@ def test_o_daemon_sobe_o_laco_com_o_escritor_do_quadro() -> None:
     assert laco._escrever_quadro is not None
 
 
-# ---------------------------------------------------------------- o leitor de produção
-
-
 def _daemon(controles: list[dict[str, Any]]) -> Any:
     return SimpleNamespace(controller=SimpleNamespace(describe_controllers=lambda: controles))
 
@@ -500,9 +477,6 @@ def test_o_leitor_de_producao_le_o_calor_do_hwmon(monkeypatch: pytest.MonkeyPatc
 
 def test_o_leitor_de_producao_nao_pede_nada_ao_aparelho_para_as_estrelas() -> None:
     assert luz.leitor_da_mao(_daemon([]))(JOGADORES[0], "estrelas") == fx.Entrada()
-
-
-# ---------------------------------------------------------------- o quadro chega ao controle
 
 
 class _NoDeLed:
@@ -582,7 +556,7 @@ def test_o_quadro_das_estrelas_leva_barra_e_luzinhas_juntas_no_cabo_e_no_radio(i
     assert ctl.pintar_o_quadro_da_luz_sem_lembrar(mac, (10, 20, 30), luzes) is True
     assert nos[mac.upper()].cores[-1] == (10, 20, 30)
     assert nos[mac.upper()].numeros[-1] == luzes
-    if indice >= 2:  # rádio: UM report 0x31 com a cor e o número
+    if indice >= 2:
         quadros = [r for r in handles[indice].escritos if r[0] == 0x31]
         assert len(quadros) == 1, "dois reports custariam quatro fatias de rádio"
         cor, bits = _no_0x31(quadros[0])
@@ -622,9 +596,6 @@ def test_o_escritor_de_producao_chama_o_quadro_do_backend() -> None:
     assert chamadas == [(JOGADORES[0], (1, 2, 3), (True,) * 5)]
     sem_backend = luz.escritor_do_quadro(SimpleNamespace(controller=None))
     assert sem_backend(JOGADORES[0], (1, 2, 3), None) is False
-
-
-# ---------------------------------------------------------------- a tela
 
 
 def _doc() -> str:

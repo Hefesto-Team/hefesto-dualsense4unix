@@ -26,7 +26,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
 VELHA = re.compile(r"prioridade", re.IGNORECASE)
 
-#: o `closest('…' + '…')` do ouvinte: cada `+` é obrigatório, então o espaço só se casa de um jeito
 _RE_CLOSEST = re.compile(r"ev\.target\.closest\(\s*('[^']*'(?:\s*\+\s*'[^']*')*)\s*\)")
 
 

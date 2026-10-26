@@ -90,9 +90,6 @@ def _nivel_info(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(lc, "_nivel_minimo", logging.INFO)
 
 
-# 1 ─ O estado normal só vale no DEBUG ───────────────────────────────────────
-
-
 @pytest.mark.parametrize("evento", sorted(lc.EVENTOS_DE_ESTADO_NORMAL))
 def test_o_estado_normal_desce_ao_debug_e_o_aviso_do_mesmo_nome_fica(evento: str) -> None:
     mesa = _Mesa(logging.DEBUG)
@@ -126,9 +123,6 @@ def test_o_configure_logging_grava_o_nivel_que_a_cadeia_le(monkeypatch: pytest.M
     lc.configure_logging(level="debug", stream=io.StringIO())
     assert lc._nivel_minimo == logging.DEBUG and chamadas
     assert chamadas[0]["processors"][0] is lc.desce_o_estado_normal
-
-
-# 2 ─ Só o emissor conhece o nome ────────────────────────────────────────────
 
 
 def _fontes() -> Iterator[tuple[Path, str]]:
@@ -174,9 +168,6 @@ def test_o_estado_normal_e_a_rajada_nao_se_misturam() -> None:
     for mantido in ("daemon_main", "daemon_starting", "ipc_server_listening",
                     "servico_pronto_avisado", "bateria_amostra", "mods_aberta"):
         assert mantido not in lc.EVENTOS_DE_ESTADO_NORMAL, mantido
-
-
-# 3 ─ A janela dobra no laço lento ───────────────────────────────────────────
 
 
 def _laco(
@@ -237,8 +228,6 @@ def test_o_evento_fora_da_tabela_e_o_aviso_nunca_se_perdem() -> None:
     assert len(mesa.linhas("ipc_handler_error")) == 5
 
 
-# 4 ─ Um dia inteiro cabe em mil linhas ──────────────────────────────────────
-
 _CONVERSA = ("autoswitch_fica_no_ultimo_jogo", "speaker_volume_set", "microphone_led_set",
              "hidraw_broker_fd_recebido", "hidraw_broker_lease_open", "x11_focus_gate_no_x_focus")
 _MANTIDOS = {"profile_activated": 40, "usb_saiu": 10, "controller_connected": 12}
@@ -284,9 +273,6 @@ def test_sem_a_tabela_do_estado_normal_o_dia_estoura(monkeypatch: pytest.MonkeyP
     mesa = _Mesa()
     _um_dia(mesa)
     assert len(mesa.linhas()) >= 1000
-
-
-# 5 ─ A tabela da rajada nasce do syslog ─────────────────────────────────────
 
 
 @pytest.mark.parametrize("evento", [

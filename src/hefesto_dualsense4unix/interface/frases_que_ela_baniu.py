@@ -108,7 +108,6 @@ PALAVRAS_BANIDAS: tuple[str, ...] = (
     "compactada",
 )
 
-#: `-` e `_` estão aqui porque `mesa-frase`, `radio-mesa` e `NADA_ACONTECEU_MESA_VAZIA` são
 _COLADO = r"0-9A-Za-zÀ-ÖØ-öø-ÿ_\-"
 
 

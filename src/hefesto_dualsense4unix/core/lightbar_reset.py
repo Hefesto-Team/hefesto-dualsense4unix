@@ -59,7 +59,7 @@ def build_bt_release_leds_report(seq: int = 0) -> bytes:
     Envelope/CRC vêm do builder comum (BTREPORT-02: `core/ds_output_report`).
     """
     common = bytearray(COMMON_LEN)
-    common[1] = VALID_FLAG1_RELEASE_LEDS  # common.valid_flag1 ([0] é o flag0)
+    common[1] = VALID_FLAG1_RELEASE_LEDS
     return bytes(build_bt_report(common, seq=seq))
 
 

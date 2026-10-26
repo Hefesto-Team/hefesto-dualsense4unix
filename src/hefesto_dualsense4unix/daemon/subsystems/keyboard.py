@@ -72,7 +72,6 @@ _OSK_SPAWN_ARGS: dict[str, list[str]] = {
     _OSK_BIN_MALIIT: [_OSK_BIN_MALIIT],
 }
 
-#: loop) e no `disponivel()` que o `state_full` consulta.
 _OSK_RESOLVE_TTL_SEG = 10.0
 
 _OSK_SESSAO_ARQUIVO = "teclado-na-tela.json"
@@ -177,7 +176,7 @@ def _adotar_orfao() -> int | None:
         comm_gravado = str(dados["comm"])
     except (FileNotFoundError, json.JSONDecodeError, OSError, KeyError, TypeError, ValueError):
         return None
-    except Exception as exc:  # pragma: no cover - defesa de borda
+    except Exception as exc:  # pragma: no cover
         logger.debug("osk_sessao_ler_falhou", err=str(exc))
         return None
 

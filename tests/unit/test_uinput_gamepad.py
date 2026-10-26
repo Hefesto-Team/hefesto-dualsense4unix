@@ -107,7 +107,6 @@ def _install_fake_evdev(monkeypatch: pytest.MonkeyPatch) -> type[_FakeUInput]:
 def test_constantes_xbox360() -> None:
     assert XBOX360_VENDOR == 0x045E
     assert XBOX360_PRODUCT == 0x028E
-    # O nome do produto em TEXTO virou `DualSense4Unix`, com o `S` do DualSense;
     assert "(Hefesto - Dualsense4Unix virtual)" in DEVICE_NAME
 
 

@@ -114,10 +114,8 @@ class TestChave:
 
 class TestSlotGlobalDosBotoes:
     def test_external_slot_continua_dos_dualsense(self) -> None:
-        # 2 DualSense (slots 1,2) -> 1º externo = 3, 2º = 4.
         assert external_slot(2, 0) == 3
         assert external_slot(2, 1) == 4
-        # sem DualSense -> 1, 2.
         assert external_slot(0, 0) == 1
 
 

@@ -108,9 +108,6 @@ def _draft_do_ativo(nome: str) -> Any:
         return None
 
 
-# dos três lê `ctx.state["active_profile"]` cru. A-PERNA-QUE-FALTA-01,
-# deste lado `perfil.nome_do_ativo`). O estado cru só tem a primeira.
-# E A SEGUNDA PERNA NÃO É HIPÓTESE: `nome_do_ativo` documenta, medido em
 @gesto("*", "aplicar")
 def aplicar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     """O botão verde. Manda o perfil ativo INTEIRO aos controles, sem gravar."""

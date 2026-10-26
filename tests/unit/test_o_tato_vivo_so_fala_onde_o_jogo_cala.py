@@ -46,8 +46,6 @@ def _estado(modo: str, visto: dict[str, float] | None = None, *,
                             sessao_aberta=sessao, ha_jogo=jogo)
 
 
-# --- A tabela-verdade ------------------------------------------------------
-
 _CARIMBO = {
     tv.CANAL_GATILHO: "trigger",
     tv.CANAL_LUZ: "lightbar",
@@ -55,9 +53,7 @@ _CARIMBO = {
     tv.CANAL_SOM: "audio_do_jogo",
 }
 
-# (situação do jogo, sessão aberta) → o motor escreve? Por canal de estado e de fluxo.
 _TABELA = [
-    # situação     sessão  estado(gatilho/luz)  fluxo(háptica/som)
     ("nunca",      True,   True,                True),
     ("nunca",      False,  True,                True),
     ("agora",      True,   False,               False),
@@ -87,7 +83,6 @@ def test_no_modo_nativo_o_motor_fica_calado(canal: str, idade: float | None) -> 
 
 @pytest.mark.parametrize("canal", tv.CANAIS)
 def test_no_modo_xbox_o_jogo_nao_escreve_estes_canais_e_o_motor_vale(canal: str) -> None:
-    # O pad Xbox não tem carimbo de gatilho, luz nem áudio: o jogo cala nos quatro.
     assert tv.decidir(canal, _estado(tv.MODO_XBOX, {})) is True
 
 
@@ -101,14 +96,13 @@ def test_o_rumble_que_o_jogo_pede_e_sinal_e_nao_veto() -> None:
     assert tv.decidir(tv.CANAL_HAPTICA, estado) is True
 
 
-# O pad guarda o carimbo depois do UHID_CLOSE: só o da sessão de agora cala o estado.
 @pytest.mark.parametrize("canal", sorted(tv.CANAIS_DE_ESTADO))
 @pytest.mark.parametrize(
     ("carimbo_ha_s", "sessao_ha_s", "escreve"),
     [
-        (10.0, 2.0, True),    # o jogo pintou na sessão que fechou
-        (5.0, 8.0, False),    # pintou nesta sessão, há mais de 3 s: o valor dele vale
-        (10.0, None, False),  # não se viu a sessão abrir: na dúvida, o jogo manda
+        (10.0, 2.0, True),
+        (5.0, 8.0, False),
+        (10.0, None, False),
     ],
 )
 @pytest.mark.parametrize("de_quem", ["este", "outro"])
@@ -131,8 +125,6 @@ def test_o_modo_vem_do_pad_virtual() -> None:
     assert tv.modo_do_pad(SimpleNamespace(backend="uhid")) == tv.MODO_DUALSENSE
     assert tv.modo_do_pad(SimpleNamespace(backend="uinput")) == tv.MODO_XBOX
 
-
-# --- O motor: fila, teto, volta, P1 a P4 -----------------------------------
 
 _LIGADA = tv.Receita(reacao_ao_tiro="pulsa")
 
@@ -277,9 +269,6 @@ def test_n_eventos_geram_no_maximo_2n_mudancas_de_relatorio() -> None:
     assert all(v == b"\x31\x40" for v in hidraw.relatorio.values())
 
 
-# --- A receita e o laço ----------------------------------------------------
-
-
 def test_a_receita_nasce_desligada() -> None:
     assert tv.DESLIGADA.ligada is False
     assert tv.receita_do_perfil(SimpleNamespace(name="x")) == tv.DESLIGADA
@@ -297,9 +286,6 @@ def test_a_receita_vem_do_campo_do_perfil_com_os_limites() -> None:
 
 
 def test_a_receita_vem_do_estilo_que_o_perfil_guarda() -> None:
-    # O estilo guardado no perfil é traduzido (O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01):
-    # a luz que respira na Luta pulsa a cada golpe; o Terror, desde 19/10/2026, tem o coração na
-    # base da luz e não reage ao tiro.
     receita = tv.receita_do_perfil(SimpleNamespace(estilo="luta"))
     assert receita.reacao_ao_tiro == "pulsa"
     terror = tv.receita_do_perfil(SimpleNamespace(estilo="terror"))
@@ -382,7 +368,6 @@ def test_o_passo_ve_a_sessao_abrir_e_esquece_o_carimbo_da_anterior(
     monkeypatch.setattr(tv, "receita_ativa", lambda daemon: _LIGADA)
     daemon, leitores = _mesa(backend="uhid")
     for pad in _pads(daemon):
-        # A barra foi do jogo na sessão de antes; o pad fechou e guardou o carimbo.
         pad.visto_ha_s = {"lightbar": 10.0}
         pad.game_open = not vista_abrir
     luz = AtuadorDeMentira(tv.CANAL_LUZ)
@@ -413,7 +398,7 @@ def test_receita_desligada_o_passo_nao_le_controle_nenhum(
 def test_o_dedo_tem_histerese() -> None:
     borda = tv.BordaDoDedo()
     assert borda.ver(P1, 0, 200, 0.0)
-    assert borda.ver(P1, 0, 120, 0.1) == []  # não soltou abaixo de 96
+    assert borda.ver(P1, 0, 120, 0.1) == []
     assert borda.ver(P1, 0, 200, 0.2) == []
     assert borda.ver(P1, 0, 50, 0.3) == []
     [evento] = borda.ver(P1, 0, 200, 0.4)

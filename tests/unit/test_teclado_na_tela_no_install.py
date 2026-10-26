@@ -111,7 +111,7 @@ class TestEscolhaPelaSessao:
         assert sent["pacote"] == "wvkbd", (
             "em Wayland o teclado escolhido tem de ser o que DIGITA"
         )
-        assert sent["binario"] == "wvkbd-mobintl"  # (noqa-acento): chave da sentinela
+        assert sent["binario"] == "wvkbd-mobintl"  # (noqa-acento)
 
     def test_x11_escolhe_onboard(self, tmp_path: Path) -> None:
         sent = _roda_dono(tmp_path, "x11")
@@ -123,7 +123,7 @@ class TestEscolhaPelaSessao:
         """Install headless (ssh, CI) tem de decidir alguma coisa, e declarar."""
         sent = _roda_dono(tmp_path, "desconhecida")
         assert sent["pacote"] == "wvkbd"
-        assert sent["sessao"] == "desconhecida", (  # (noqa-acento): chave da sentinela
+        assert sent["sessao"] == "desconhecida", (  # (noqa-acento)
             "a aposta tem de ficar registrada como aposta, não virar certeza"
         )
 
@@ -208,7 +208,6 @@ class TestOrdemDosCandidatosNoDaemon:
             "which",
             lambda n: "/usr/bin/wvkbd-mobintl" if n == "wvkbd-mobintl" else None,
         )
-        # com o state_full a 20 Hz).
         assert ctrl._resolve() is None
         relogio["t"] += keyboard._OSK_RESOLVE_TTL_SEG + 1
         assert ctrl._resolve() == "wvkbd-mobintl", (

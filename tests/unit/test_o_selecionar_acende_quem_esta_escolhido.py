@@ -57,7 +57,6 @@ from hefesto_dualsense4unix.interface.pacotes import a06_navegacao, a09_sistema
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 DESENHO = RAIZ / "mockup"
 
-#: O CENÁRIO do desenho (`monta.CONECTADOS`: P1 Cosmic Red USB, P2 Starlight Blue BT).
 ABAS = [f"{a}.html" for _, a in monta.ABAS]
 ESCOLHEM = ["01-jogar.html", "02-controles.html", "08-conexoes.html"]
 NAO_ESCOLHEM = [a for a in ABAS if a not in ESCOLHEM]
@@ -118,9 +117,6 @@ def dez(navegador) -> dict[str, dict[str, Any]]:
     return fora
 
 
-# ---------------------------------------------------------------- régua 1: as dez no motor
-
-
 @pytest.mark.parametrize("nome", NAO_ESCOLHEM)
 def test_nas_sete_que_nao_escolhem_todo_chip_esta_aceso(dez: dict, nome: str) -> None:
     r = dez[nome]
@@ -163,9 +159,6 @@ def test_a_fita_de_leitura_nao_tem_balao(dez: dict, nome: str) -> None:
     assert dez[nome]["balao"] == "", f"{nome}: a fita de leitura voltou a ter balão"
 
 
-# ---------------------------------------------------------------- régua 2: o clique na 02
-
-
 def test_o_clique_no_todos_acende_os_tres_e_o_clique_no_p2_so_o_p2(navegador) -> None:
     pg = navegador.new_page(viewport={"width": 1600, "height": 900})
     pg.goto((DESENHO / "02-controles.html").as_uri())
@@ -184,9 +177,6 @@ def test_o_clique_no_todos_acende_os_tres_e_o_clique_no_p2_so_o_p2(navegador) ->
     assert sorted(acesos()) == ["P1", "P2", "Todos"], (
         f"o «Todos» de volta acendeu {acesos()}")
     pg.close()
-
-
-# ---------------------------------------------------------------- régua 3: o piloto
 
 
 CORES = ["cosmic-red", "starlight-blue", "white", "galactic-purple"]
@@ -263,17 +253,12 @@ def test_com_um_controle_o_unico_chip_acende_nas_dez() -> None:
         assert len(chips) == 1 and chips[0][1], (pagina, chips)
 
 
-# ---------------------------------------------------------------- régua 4: o dono é um só
-
-
 def test_os_tres_escritores_perguntam_ao_dono(monkeypatch: pytest.MonkeyPatch) -> None:
     """Com um dublê que só devolve o P2, a fita de cada escritor acende só o P2.
 
     O esperado é o que o dublê devolve, e não o que a função real devolveria.
     """
     mesa = _mesa(2)
-    # A 09 importa o `monta` por um apelido de `sys.modules`: são DOIS objetos de módulo,
-    # e o dublê vai nos dois (cada escritor pergunta pelo módulo que tem, nunca por cópia).
     for modulo in {id(m): m for m in (monta, a09_sistema._monta())}.values():
         monkeypatch.setattr(modulo, "acesos_da_fita", lambda *a, **k: frozenset({"p2"}))
     for nome, html in (("monta.fita", monta.fita(ativo="todos", mesa=mesa)),

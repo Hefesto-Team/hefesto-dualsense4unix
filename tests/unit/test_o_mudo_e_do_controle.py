@@ -63,12 +63,11 @@ from tests.unit.test_o_botao_do_mic_grava_no_perfil import (
     _ativar,
     _derrubar,
     _reconectar,
-    casa,  # noqa: F401 — a fixture da cena, a mesma da régua irmã
+    casa,  # noqa: F401
 )
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
-#: Os dois transportes, na ordem de P1 a P4: cabo e rádio intercalados, para
 TRANSPORTES = {
     "cabo-primeiro": ("usb", "bt", "usb", "bt"),
     "radio-primeiro": ("bt", "usb", "bt", "usb"),

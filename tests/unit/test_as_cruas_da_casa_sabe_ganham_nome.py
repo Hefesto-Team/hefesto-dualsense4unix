@@ -40,7 +40,7 @@ def cruas_do_codigo(codigo: Path, raiz: Path) -> list[str]:
     for trecho in VAL.trechos_do_codigo(codigo.read_text(encoding="utf-8")):
         for achado in VAL.ENDERECO_CSV.finditer(trecho.texto):
             if not (raiz / achado.group("arq")).is_file():
-                continue  # o exemplo fabricado de um teste não é desta árvore
+                continue
             if not VAL.nomes_prometidos(
                     trecho.texto, achado.start(), achado.end(), VAL.SEPARADORES_DE_BLOCO):
                 cruas.append(f"{trecho.linha_de(achado.start())}: {achado.group(0)}")

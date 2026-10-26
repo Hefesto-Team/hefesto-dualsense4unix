@@ -91,9 +91,6 @@ def tres_tiros(*, apagar: int | None = None) -> list[Any]:
     return eventos
 
 
-# --- a contagem --------------------------------------------------------------------------------
-
-
 def test_tres_tiros_dao_tres_blocos_de_gatilho_tres_cores_e_um_bloco_por_tiro() -> None:
     c = ens.contar(tres_tiros())
     assert c.categorias["gatilho_direito"].total == 3
@@ -151,13 +148,10 @@ def test_por_segundo_e_pico_em_um_segundo() -> None:
     assert cat.por_segundo == pytest.approx(7 / 4.0)
 
 
-# --- por tiro ----------------------------------------------------------------------------------
-
-
 def test_o_bloco_pertence_ao_tiro_cuja_janela_o_contem() -> None:
     eventos = rajada_de_audio(1.0) + rajada_de_audio(1.5)
-    eventos += [saida(1.01 + i * 0.01, direito=ARMA) for i in range(4)]  # 4 no primeiro
-    eventos += [saida(1.51, direito=ARMA)]                                # 1 no segundo
+    eventos += [saida(1.01 + i * 0.01, direito=ARMA) for i in range(4)]
+    eventos += [saida(1.51, direito=ARMA)]
     c = ens.contar(eventos)
     assert c.tiros == 2
     assert c.blocos_de_gatilho_por_tiro_maximo == 4
@@ -184,9 +178,6 @@ def test_tiros_do_audio_separa_rajadas_pelo_silencio_e_ignora_o_abaixo_do_limiar
     assert ens.tiros_do_audio(duas) == [1.0, 1.3]
     baixo = [Evento(t / 100, "audio", energia=0.01) for t in range(100, 120)]
     assert ens.tiros_do_audio(baixo) == []
-
-
-# --- Off e o mesmo efeito em menos de 4 ms -----------------------------------------------------
 
 
 def _off_e_volta(intervalo: float, volta: bytes = ARMA) -> list[Any]:
@@ -226,9 +217,6 @@ def test_o_modo_cru_zero_tambem_e_off() -> None:
     cru = bytes(11)
     eventos = [saida(1.0, esquerdo=ARMA), saida(1.1, esquerdo=cru), saida(1.102, esquerdo=ARMA)]
     assert ens.contar(eventos).off_e_o_mesmo_em_menos_de_4ms == 1
-
-
-# --- o gatilho nos primeiros 0,5 s -------------------------------------------------------------
 
 
 def test_gatilho_em_meio_segundo_depois_de_abrir_e_sim() -> None:
@@ -271,9 +259,6 @@ def test_gravacao_vazia_nao_tem_o_que_contar() -> None:
         ens.contar([])
 
 
-# --- a gravação em arquivo ---------------------------------------------------------------------
-
-
 def test_a_gravacao_vai_e_volta_sem_perder_nada() -> None:
     eventos = sorted(tres_tiros(), key=lambda e: e.t)
     de_volta = ens.ler_gravacao(ens.escrever_gravacao(eventos))
@@ -289,9 +274,6 @@ def test_linha_torta_da_gravacao_diz_o_numero_da_linha() -> None:
         ens.ler_gravacao('{"t": 1.0, "tipo": "inventado"}\n')
     with pytest.raises(ValueError, match="linha 1"):
         ens.ler_gravacao('{"tipo": "abriu"}\n')
-
-
-# --- o gravador: o vpad que só ouve ------------------------------------------------------------
 
 
 def _output_event(report: bytes) -> bytes:
@@ -367,7 +349,7 @@ def _tres_iguais_no_vpad_do_produto(fake_uhid: _FakeFd) -> tuple[Any, list[tuple
     relogio.t = 1.0
     c = corpo(direito=ARMA)
     fake_uhid.reads += [_output_event(bytes([0x02]) + c)] * 3
-    fake_uhid.reads.append(_output_event(bytes([0x31]) + c))  # outro id: não é saída do jogo
+    fake_uhid.reads.append(_output_event(bytes([0x31]) + c))
     pad.pump_ff()
     return pad, entregues
 
@@ -415,9 +397,6 @@ def test_a_gravacao_roda_o_daemon_com_a_escuta_e_a_tira_mesmo_se_ele_cai(
         60.0, rodar_o_daemon=lambda: (_tres_iguais_no_vpad_do_produto(fake_uhid), 0)[1])
     assert [e.tipo for e in eventos] == ["abriu", "saida", "saida", "saida"]
     assert ug.UhidDualSense.__dict__["_handle_event"] is original
-
-
-# --- a linha de comando ------------------------------------------------------------------------
 
 
 def test_ler_imprime_a_tabela_e_as_tres_respostas(
@@ -485,9 +464,6 @@ def test_gravar_guarda_a_gravacao_e_conta(
     assert ens.CABECALHO_DA_TABELA in capsys.readouterr().out
 
 
-# --- o espelho do vpad -------------------------------------------------------------------------
-
-
 def test_os_offsets_e_as_flags_sao_os_do_vpad() -> None:
     """O contador lê o report como o produto o lê: se o vpad mudar um offset, esta régua reprova."""
     assert ens.OFFSET_FLAG0 == ug._VALID_FLAG0_OFFSET
@@ -531,9 +507,6 @@ def test_o_contador_concorda_com_o_vpad_sobre_quais_blocos_o_jogo_escreveu(
         esperados = sorted(lados[lado] for lado in ens.blocos_de_gatilho(corpo(**kw)))
         assert sorted(entregues) == esperados
         pad.stop()
-
-
-# --- o protocolo -------------------------------------------------------------------------------
 
 
 def test_o_protocolo_traz_o_cabecalho_da_tabela_e_as_tres_perguntas() -> None:

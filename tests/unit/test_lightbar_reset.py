@@ -120,9 +120,6 @@ class TestOndaLFiadaNoBackend:
         assert chamadas, "o backend deixou de chamar should_reclaim_on_wake"
 
     def test_o_wake_nao_manda_o_0x08_em_modo_nenhum(self) -> None:
-        # 16/10/2026: o laço do wake deixou de olhar o `_output_mute` porque só LÊ o nó e esquece
-        # a memória; quem escreve é o reassert, que respeita o mudo. O 0x08 não sai de lá em modo
-        # nenhum (LIGHTBAR-BT-CULPADO-01); o comportamento está em TestReset02WakeSobModoNativo.
         import ast
         from pathlib import Path
 
@@ -152,7 +149,7 @@ class _FakeBtHandle:
             self.mode: object = None
             self.forces: list[int] = [0] * 7
 
-        def setForce(self, idx: int, value: int) -> None:  # noqa: N802 — API pydualsense
+        def setForce(self, idx: int, value: int) -> None:  # noqa: N802
             self.forces[idx] = value
 
     class _Light:
@@ -160,11 +157,11 @@ class _FakeBtHandle:
             self.colors: list[tuple[int, int, int]] = []
             self.playerNumber: object = None
 
-        def setColorI(self, r: int, g: int, b: int) -> None:  # noqa: N802 — API pydualsense
+        def setColorI(self, r: int, g: int, b: int) -> None:  # noqa: N802
             self.colors.append((r, g, b))
 
     class _Audio:
-        def setMicrophoneLED(self, flag: bool) -> None:  # noqa: N802 — API pydualsense
+        def setMicrophoneLED(self, flag: bool) -> None:  # noqa: N802
             pass
 
     def __init__(self) -> None:
@@ -177,10 +174,10 @@ class _FakeBtHandle:
         self.device = _FakeDevice()
         self.closed = False
 
-    def setLeftMotor(self, intensity: int) -> None:  # noqa: N802 — API pydualsense
+    def setLeftMotor(self, intensity: int) -> None:  # noqa: N802
         pass
 
-    def setRightMotor(self, intensity: int) -> None:  # noqa: N802 — API pydualsense
+    def setRightMotor(self, intensity: int) -> None:  # noqa: N802
         pass
 
     def close(self) -> None:

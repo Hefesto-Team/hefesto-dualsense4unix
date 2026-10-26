@@ -66,7 +66,6 @@ from tests.unit.udev_de_mentira import BancoDeMentira
 REPO_ROOT = Path(__file__).resolve().parents[2]
 REGRA = REPO_ROOT / "assets" / "76-dualsense-touchpad-libinput-ignore.rules"
 
-#: DualSense plugado; o segundo é como o BlueZ nomeia o mesmo aparelho (sem o
 NOMES_FISICOS = (
     "Sony Interactive Entertainment DualSense Wireless Controller Touchpad",
     "DualSense Wireless Controller Touchpad",
@@ -211,7 +210,7 @@ class TestLibinputIgnoraDevice:
         no = tmp_path / "event0"
         no.write_text("", encoding="utf-8")
         if props is not None:
-            banco.por_devnum[0] = props  # um arquivo comum tem `st_rdev` 0
+            banco.por_devnum[0] = props
         return no
 
     def test_marcado_com_1(

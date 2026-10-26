@@ -181,7 +181,7 @@ def todas_as_faltas(jobs: dict[str, Any], partes: int) -> list[str]:
 
 
 def test_o_ci_roda_a_suite_em_partes_e_as_pernas_cobrem_as_24() -> None:
-    # D-2110-O-CI-RODA-A-SUITE-EM-PARTES-E-A-SAIDA-PASSA-PELO-FECHAR
+    """Prova da D-2110-O-CI-RODA-A-SUITE-EM-PARTES-E-A-SAIDA-PASSA-PELO-FECHAR."""
     assert todas_as_faltas(_jobs(), _partes_do_script()) == []
 
 
@@ -189,9 +189,6 @@ def test_a_regua_le_as_24_partes_e_as_quatro_faixas() -> None:
     """Sem isto a régua de cima passaria sobre uma matriz que ela não leu."""
     assert _partes_do_script() == 24
     assert len(_faixas(_jobs()["gtk-real"])) == 4
-
-
-# --- as mordidas: cada cura arrancada, numa cópia, tem de reprovar --------------------------------
 
 
 def _copia() -> dict[str, Any]:
@@ -295,8 +292,6 @@ def test_mordida_lint_test_de_volta_ao_processo_unico() -> None:
     assert any("num processo só" in f for f in achados)
     assert any("nenhum passo roda scripts/rodar-a-suite.sh" in f for f in achados)
 
-
-# --- 5. o id do teste cabe numa linha ---------------------------------------------------------
 
 TESTES = RAIZ / "tests"
 LEITURAS_DE_ARQUIVO = {"read_text", "read_bytes"}

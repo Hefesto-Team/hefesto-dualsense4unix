@@ -23,20 +23,14 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Os motores são os canais 3 e 4 do endpoint (índices 2 e 3): o 1 e o 2 são o som da frente.
 CANAL_ESQUERDO = 2
 CANAL_DIREITO = 3
 CANAIS_DO_ENDPOINT = 4
 
-#: A janela do RMS: 20 ms, e por isso 50 intensidades por segundo no máximo.
 JANELA_S = 0.02
-#: O degrau: a intensidade só muda de nível em passos de 0,02.
 PASSO = 0.02
-#: O teto de eventos por controle: 50 por segundo.
 INTERVALO_MINIMO_S = 1.0 / 50.0
-#: A batida: de quanto em quanto o evento se repete enquanto a intensidade não é zero.
 PERIODO_DA_BATIDA_S = 0.25
-#: Sem PCM por tanto tempo, a fonte secou: o zero sai.
 SILENCIO_S = 0.5
 
 _ATRIBUTO = "_envelopes_da_haptica_vistos"
@@ -174,7 +168,7 @@ def _entradas_de(daemon: Any, *, criar: bool) -> dict[str, _Entrada] | None:
         atual = {}
         try:
             setattr(daemon, _ATRIBUTO, atual)
-        except AttributeError as exc:  # um dublê sem lugar para a tabela: sem evento, sem erro
+        except AttributeError as exc:
             logger.debug("jogo_haptica_sem_tabela", err=str(exc))
             return None
     return atual
@@ -236,7 +230,7 @@ def espiar_a_haptica(
                 envelope.zerar()
             else:
                 envelope.alimentar(pcm, 1.0 if ganho is None else float(ganho()))
-        except Exception as exc:  # o som do controle não espera por quem escuta
+        except Exception as exc:
             logger.debug("jogo_haptica_envelope_falhou", uniq=uniq, err=str(exc))
         return pcm
 

@@ -11,7 +11,7 @@ from pathlib import Path
 try:
     import pandas as pd
     import streamlit as st
-except ModuleNotFoundError as e:      # pragma: no cover - caminho de ajuda
+except ModuleNotFoundError as e:      # pragma: no cover
     raise SystemExit(
         f"falta {e.name}. A bancada NÃO é dependência do produto — instale só nela:\n"
         "    .venv/bin/pip install -e \".[bancada]\"\n"
@@ -213,8 +213,6 @@ else:
                  "medido a VOLTA (aparelho -> vpad -> JOGO): sem esta palavra o "
                  "ensaio não sustenta `O JOGO RECEBEU` nem `O JOGO REAGIU`.",
         )
-        # A ponte é o modo por onde o jogo recebeu: máscara DualSense, máscara Xbox, nativo
-        # ou Steam Input.
         ponte_medida = st.selectbox(
             "Por qual ponte este ensaio mediu?",
             PONTES,

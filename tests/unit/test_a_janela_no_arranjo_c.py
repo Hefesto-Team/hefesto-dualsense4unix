@@ -46,12 +46,12 @@ FORMAS = {"Nada": [], "Toque": [[1.0, 0.2]], "Duplo": [[1.0, 0.1], [0.0, 0.1], [
 OPCOES = [
     {"id": "toques", "rotulo": "Toques", "tipo": "por_botao", "grupo": "Toques",
      "formas": FORMAS, "botoes": ["cross", "circle", "r1"],
-     "padrao": {"cross": "Toque"}},  # (noqa-acento): chave do manifesto
+     "padrao": {"cross": "Toque"}},  # (noqa-acento)
     {"id": "onde", "rotulo": "Endereço", "tipo": "endereco", "grupo": "Ligação"},
     {"id": "avisar", "rotulo": "Avisar", "tipo": "ligado", "grupo": "Geral"},
 ]
 VIVO = {"ligado": True,
-        "conexoes": [  # (noqa-acento): a chave do estado
+        "conexoes": [  # (noqa-acento)
             {"id": "cabo", "tipo": "Adaptador", "transporte": "usb", "estado": "ligado",
              "motivo": None}],
         "aparelhos": [{"nome": "Motor", "tipo": "vibrador", "estado": "ligado",
@@ -86,7 +86,7 @@ def _aberta(html: str) -> str:
 def test_com_agora_a_janela_e_o_arranjo_c_com_os_grupos_em_abas(janela) -> None:
     """Prova da D-2210-A-JANELA-QUE-DECLARA-O-AGORA-ABRE-NO-ARRANJO-C."""
     _, abrir = janela
-    agora = ["conexoes", "aparelhos"]  # (noqa-acento): chave
+    agora = ["conexoes", "aparelhos"]  # (noqa-acento)
     html = abrir(agora=agora, parar_tudo=True)["blocos"]["#mod-janela"]
     assert 'class="ja-agora" id="mod-agora"' in html and "ja-opcoes" in html
     assert 'class="ja-parar"' in html and "Para</span>Todos" not in html
@@ -145,9 +145,6 @@ def test_o_endereco_torto_e_recusado_dizendo(janela, ctx) -> None:  # noqa: F811
     assert "onde" not in a07._MEXIDA.rascunho
 
 
-# -- a aba Conexões -----------------------------------------------------------------------
-
-
 def _a08():
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
 
@@ -161,7 +158,7 @@ def test_a_conexoes_diz_cada_peca_via_a_extensao() -> None:
               "motivo": "Sem resposta"}
     desligada = {"id": "radio", "tipo": "Bluetooth", "transporte": "bluetooth",
                  "estado": "desligado", "motivo": None}
-    vivo = {**VIVO, "conexoes": [*VIVO["conexoes"], falhou, desligada]}  # (noqa-acento): chave
+    vivo = {**VIVO, "conexoes": [*VIVO["conexoes"], falhou, desligada]}  # (noqa-acento)
     html = a08.html_do_agora_das_extensoes([
         ("Minha <extensão>", vivo)])
     linhas = re.findall(r'<div class="ext-linha ext-acessorio"[^>]*>.*?</div>', html)
@@ -211,10 +208,10 @@ def test_a_extensao_parada_pelo_parar_tudo_segue_mostrando_o_que_esta_ligado(
 
     parada = {**VIVO, "ligado": False, "nivel": 3,
               "aparelhos": [{**VIVO["aparelhos"][0], "forca": 0.0}]}
-    coluna = exp.agora_html(["conexoes", "aparelhos", "nivel"], parada)  # (noqa-acento): chave
+    coluna = exp.agora_html(["conexoes", "aparelhos", "nivel"], parada)  # (noqa-acento)
     assert "Parada" in coluna and "Adaptador" in coluna and "Motor" in coluna
     assert '<div class="ap vazio">' not in coluna and "<b>—</b>" in coluna, "o nível segue vazio"
-    pedacos = ["conexoes", "aparelhos"]  # (noqa-acento): chave
+    pedacos = ["conexoes", "aparelhos"]  # (noqa-acento)
     vazia = exp.agora_html(pedacos, estado_vazio_dos_acessorios("x"))
     assert "Adaptador" not in vazia and '<div class="ap vazio">' in vazia
 
@@ -249,9 +246,6 @@ def test_a_vaga_da_conexoes_pinta_o_que_a_leitura_em_fundo_trouxe(monkeypatch) -
     assert html.count("via Toque") == 2 and "Adaptador" in html and "Motor" in html
 
 
-# -- os toques cabem nos dois arranjos ------------------------------------------------------
-
-
 @pytest.mark.parametrize(("larg", "alt"), [(1212, 809), (1600, 840), (1918, 840)])
 @pytest.mark.parametrize("com_agora", [True, False], ids=["arranjo-c", "cartoes"])
 def test_os_toques_cabem_sem_corte_nos_dois_arranjos(navegador, larg, alt, com_agora) -> None:  # noqa: F811
@@ -268,7 +262,7 @@ def test_os_toques_cabem_sem_corte_nos_dois_arranjos(navegador, larg, alt, com_a
     janela = exp.modificacao_miolo_html("Minha extensão", todos, mod="exemplo", **extra)
     pg = navegador.new_page(viewport={"width": larg, "height": alt})
     try:
-        pg.goto(f"{MOCKUP.as_uri()}#modificacao")  # (noqa-acento: âncora do HTML)
+        pg.goto(f"{MOCKUP.as_uri()}#modificacao")  # (noqa-acento)
         pg.evaluate("h => { document.getElementById('mod-janela').innerHTML = h; }", janela)
         m = pg.evaluate("""() => { const j = document.getElementById('mod-janela');
           const linhas = [...j.querySelectorAll('.tql')];
@@ -300,7 +294,7 @@ def test_a_janela_nao_muda_de_tamanho_ao_trocar_de_aba(navegador, larg, alt) -> 
                                         estado=exp.ESTADO_DO_DESENHO, parar_tudo=True)
     pg = navegador.new_page(viewport={"width": larg, "height": alt})
     try:
-        pg.goto(f"{MOCKUP.as_uri()}#modificacao")  # (noqa-acento: âncora do HTML)
+        pg.goto(f"{MOCKUP.as_uri()}#modificacao")  # (noqa-acento)
         pg.evaluate("h => { document.getElementById('mod-janela').innerHTML = h; }", janela)
         caixas = pg.evaluate("""() => {
           const j = document.getElementById('mod-janela');

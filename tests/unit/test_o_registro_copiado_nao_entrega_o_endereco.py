@@ -566,7 +566,6 @@ _OS_QUE_CHAMAM_O_DONO = {
         "src/hefesto_dualsense4unix/interface/pacotes/a09_sistema.py", "mascarar_o_diario"),
     "perfis_web._id_visivel": (
         "src/hefesto_dualsense4unix/app/actions/perfis_web.py", "_id_visivel"),
-    # O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-02: os dois mascaradores do daemon.
     "backend._endereco_mascarado": (
         "src/hefesto_dualsense4unix/core/backend_pydualsense.py", "_endereco_mascarado"),
     "connection._endereco_mascarado": (
@@ -582,7 +581,6 @@ def _o_corpo_chama_o_dono(fonte: str, nome: str) -> tuple[bool, list[str]]:
     arvore = ast.parse(fonte)
     apelidos: set[str] = set()
     nomes: set[str] = set()
-    # no topo do módulo, ou dentro da função (o estilo dos ensaios, que acertam o `sys.path` antes)
     for no in ast.walk(arvore):
         if isinstance(no, ast.ImportFrom) and no.module == "hefesto_dualsense4unix.core":
             apelidos |= {a.asname or a.name for a in no.names if a.name == "formas_do_endereco"}
@@ -663,7 +661,6 @@ _A_GRAFIA_DE_CADA_UM: dict[str, Callable[[str], str]] = {
     "ar_do_adaptador._mascarar": lambda grafia: dono.mascarar(grafia),
     "perfis_web._id_visivel": lambda _grafia: ":".join(MASCARADO).upper(),
     "backend._endereco_mascarado": lambda grafia: dono.mascarar(grafia),
-    # o diário do `connection` fala com dois-pontos em toda grafia que é UM endereço
     "connection._endereco_mascarado": lambda grafia: (
         dono.mascarar_endereco(grafia) or dono.mascarar(grafia)
     ),
@@ -1323,11 +1320,6 @@ def test_o_portao_de_oui_ve_o_despejo_invertido() -> None:
     ]
 
 
-# ---------------------------------------------------------------------------
-# O-REGISTRO-COPIADO-NAO-ENTREGA-O-ENDERECO-02: a máscara não tem cópia.
-# ---------------------------------------------------------------------------
-
-# Régua 2, parte AST: as funções de scripts/ que mascaram chamam o dono.
 _AS_DE_SCRIPTS: dict[str, tuple[str, str]] = {
     "bancada_do_radio": ("scripts/bancada_do_radio.py", "_mascarar"),
     "mesa_de_medicao": ("scripts/mesa_de_medicao.py", "_mascarar"),
@@ -1398,12 +1390,10 @@ def test_a_funcao_de_scripts_mascara_toda_grafia_e_tira_o_hash(
         assert _hash_que_sobra(str(mascarar(virtual)), virtual) == [], nome
 
 
-# Régua 2, parte varredura: nenhuma linha do produto ou dos scripts com a forma da conta.
 _A_FORMA_DA_CONTA = re.compile(
     r'"00",\s*"00"|(?<![=!<>])=\s*"00"|\+\s*"0000"\s*\+|:00:00:\{|\\{1,2}1:00:00'
 )
 
-#: Quem tem a forma por ofício, e a razão. A varredura exige que a entrada ainda case.
 _DONOS_DA_FORMA_DA_CONTA = {
     "src/hefesto_dualsense4unix/core/formas_do_endereco.py": "o dono",
     "src/hefesto_dualsense4unix/integrations/uhid_gamepad.py":
@@ -1450,7 +1440,6 @@ def test_mordida_a_varredura_acha_a_conta_do_corpo_de_antes() -> None:
     assert not _A_FORMA_DA_CONTA.search('return o4 == "00" and o5 == "00"')
 
 
-# Régua 3: o retrato mascara pelo dono, em toda grafia, e sem o Python do produto não escreve.
 _RETRATO = RAIZ / "scripts/retrato_do_estado.sh"
 _LINHA_DO_RETRATO = (
     "card aa:bb:cc:34:56:7e e aa_bb_cc_34_56_7e e aabbcc34567e e AA-BB-CC-34-56-7E"
@@ -1524,10 +1513,8 @@ def test_mordida_o_sed_de_antes_deixa_o_quinto_octeto() -> None:
     assert dono.mascarar("aa:bb:cc:34:56:7e") == ":".join(MASCARADO)
 
 
-# Régua 4: o nome de um fio não fatia o endereço.
 _QUE_LEEM_O_ENDERECO = {"uniq", "mac", "endereco", "nome_curto"}
 
-#: O nome que lê um campo de endereço sem levar o endereço, e a razão.
 _NOME_DE_FIO_SEM_ENDERECO = {
     ("src/hefesto_dualsense4unix/integrations/dualsense_bt_audio.py", "nome_curto"):
         "a marca HMAC do aparelho (`marca_do_aparelho`): letras, sem octeto do endereço",
@@ -1544,7 +1531,6 @@ def _os_fios_que_leem_o_endereco() -> list[tuple[str, int, str, bool]]:
         if not arquivo.endswith(".py"):
             continue
         arvore = ast.parse((RAIZ / arquivo).read_text(encoding="utf-8"))
-        # o dono pode vir com outro nome: o caminho do microfone é cego à palavra «mascarar»
         nomes_do_dono = {
             a.asname or a.name
             for no in ast.walk(arvore)
@@ -1615,7 +1601,6 @@ def test_mordida_o_nome_de_antes_do_mesa_viva_reprova(monkeypatch: pytest.Monkey
     assert any("[-6:]" in t for t in reprovados), reprovados
 
 
-# Régua 5: o fio que cai escreve pelo dono. Num processo à parte: o gancho é global.
 def _um_processo_com_o_fio_que_cai(tmp_path: Path, corpo: str) -> str:
     codigo = textwrap.dedent(f"""
         import sys, threading

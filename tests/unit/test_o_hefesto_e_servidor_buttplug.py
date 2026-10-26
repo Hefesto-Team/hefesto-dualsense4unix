@@ -25,7 +25,6 @@ from tests.unit import test_as_modificacoes_rodam_fora_do_daemon as _base
 _Cliente, curto = _base._Cliente, _base.curto
 RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
-#: As mensagens do protocolo Buttplug que só um servidor dele trata.
 MENSAGENS = re.compile(r"RequestServerInfo|ScalarCmd|VibrateCmd|StopAllDevices|RequestDeviceList")
 UM, DOIS = "aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02"
 
@@ -60,7 +59,7 @@ def test_a_porta_da_ao_servidor_a_lista_e_a_vibracao_do_controle_pedido(curto: P
                       controles=lambda: [{"uniq": UM, "jogador": 1}, {"uniq": DOIS, "jogador": 2}])
         await porta.iniciar()
         porta.registrar("ficha", "intiface", os.getpid(),
-                        ["ler:conexao", "escrever:vibracao", "rede:local"])  # (noqa-acento) chave
+                        ["ler:conexao", "escrever:vibracao", "rede:local"])  # (noqa-acento)
         cliente = _Cliente(curto / "mods.sock")
         try:
             await asyncio.to_thread(cliente.pedir, "mod.ola", {"ficha": "ficha"})

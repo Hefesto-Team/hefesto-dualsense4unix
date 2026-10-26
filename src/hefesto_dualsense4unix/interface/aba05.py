@@ -40,7 +40,6 @@ from hefesto_dualsense4unix.profiles.schema import (
     RUMBLE_CUSTOM_MULT_MAX,
 )
 
-# pinta a linha dela pelo seu próprio método (`app/actions/rumble_actions.py`,
 from hefesto_dualsense4unix.app.telas.vibracao import (
     DICA_DO_TETO_DA_MESA,
     DICA_DOS_VALORES_QUE_PASSAM,
@@ -56,8 +55,6 @@ _LINHAS = [
     l for l in csv.DictReader(
         x for x in (DADOS_DO_REPO / "pecas-do-dualsense.csv").read_text().splitlines()
          if not x.startswith("#"))
-    # os MOTORES: as peças de vibração que o desenho do controle tem corpo para destacar; a háptica
-    # mora na mesma seção (04/10/2026) mas é marcador de região, sem caixa, e não é um motor
     if l["regiao"] == "vibracao" and l["no_svg"] != "falta"
 ]
 if len(_LINHAS) != 2:
@@ -77,11 +74,6 @@ MOTORES = [
 ]
 ESQ, DIR = MOTORES
 
-#      entao a vibração dos 2 será 150%, mas se so a do motor fraco tiver 100 e  # (noqa-acento) citação literal
-# (`daemon/subsystems/rumble.py:20`). O `data-forca` do HTML carrega a CHAVE,
-# (`a05_vibracao._aplicar_a_forca`, desfecho 3, medido em 04/09). Um botão a
-# bem. `a05_vibracao._pct_da_coluna` chama `_pedido_da_politica`, que faz
-# (`rumble_actions:414`, silêncio 3), e é mais honesto que acender um botão que
 FORCA = [("Economia", "economia"), ("Padrão", "balanceado"),
          ("Máximo", "max")]
 
@@ -92,16 +84,10 @@ if tuple(chave for _, chave in FORCA) != degraus_da_forca():
         "degraus_da_forca). O `data-forca` é o endereço por onde a pintura acha "
         "o botão — divergir aqui faz a tela acender o degrau errado, em silêncio.")
 
-#: passa a ser o do multiplicador personalizado — `RUMBLE_CUSTOM_MULT_MAX`, que
 TETO = round(RUMBLE_CUSTOM_MULT_MAX * 100)
 
 PASSO = math.gcd(*(round(m * 100) for m in RUMBLE_POLICY_MULT.values()), TETO)
 
-#: O DESENHO DE 18/10/2026 (r3b-05-12, e o pedido do mesmo dia): a «Força da vibração» é só o
-#: trilho de 0 a 200%, de 5 em 5, sem os três botões. O teto é o do produto (`TETO`, o
-#: `RUMBLE_CUSTOM_MULT_MAX` do esquema): o controle não tem um nível de 150%, e os 200% do trilho
-#: já existiam. Os três degraus (`PASSO`, `FORCA`) são do produto de hoje; a segunda passagem decide
-#: como o porcento vira o byte de atenuação do firmware. O desenho não os desenha.
 TETO_DA_FORCA = TETO
 PASSO_DA_FORCA = 5
 
@@ -109,20 +95,12 @@ TETO_DO_MOTOR = MOTOR_PCT_MAX
 
 TETO_DA_HAPTICA = HAPTICA_PCT_MAX
 
-#: regra é que a barra tenha uma parada em cima de **todo valor que a borda
-#: aceita**. O esquema aceita `int` de 0 a 100 (`motor_forte_pct`), logo o passo
 PASSO_DO_MOTOR = 1
 
-#: que a peça sem opinião vale no motor, e o `state_full` o publica ao lado do
 BARRA_DO_MOTOR_PADRAO = MOTOR_PCT_PADRAO
 
-# Dois textos de tela existiam no `gui/main.glade` há semanas e não
-# (`rumble_actions.BTN_GIVE_BACK_TO_GAME`, RUM-01).
-
-#: `rumble_passthrough(True)` — `a05_vibracao.testar` (passos 3 e 4) e
 SEM_A_FAIXA_DE_ESTADO = True
 
-#: A cena de cada coluna: a força em porcento (0 a 200), os dois motores e a háptica.
 ESTADO = {
     "p1": {"pct": 120,
            "esq": (True, 50),   "dir": (True, 100),
@@ -138,24 +116,19 @@ ESTADO = {
            "hap": (False, 0)},
 }
 
-#: o que o Modo automático esmaece: a força e os motores de cada coluna. O Testar e o Parar ficam livres.
 GOVERNA = ".vib .ctrl > :is(.forca,.motor)"
 DICA_DO_AUTOMATICO = "O jogo decide a força; o estilo do perfil ajusta"
 
-#: o glifo da linha da Força: o DualSense do mapa (19/10/2026, o pedido: «usa o svg do dualsense»),
-#: o controle inteiro, porque ela vale para tudo o que vibra.
 GLIFO_DO_CONTROLE = glifo_do_controle()
 DICA_DA_FORCA = ("Abaixo de 100% a vibração fica mais fraca; acima, a fraca é reforçada, "
                "até o máximo do motor")
 BOTAO_DA_FORCA = ('<span class="lado glifo-forca on" role="img" aria-label="O controle inteiro" '
                   'data-dica="Os dois motores e a háptica: tudo o que vibra">' + GLIFO_DO_CONTROLE + '</span>')
 
-#: os efeitos criados que o desenho mostra: nome, forma e motor.
 CENA_DOS_TOQUES = {"Coração": {"nome": "Coração", "base": "batida",
                                "parametros": {"motores": padroes.AMBOS}}}
 
-#: os motores na língua da tela, na ordem dos rádios.
-CHAVE_DO_PADRAO = "padrao"  # (noqa-acento) chave do clique
+CHAVE_DO_PADRAO = "padrao"  # (noqa-acento)
 ROTULO_DOS_MOTORES = (("esquerdo", "Esquerdo"), ("direito", "Direito"), ("ambos", "Os dois"))
 
 CSS = """
@@ -852,8 +825,6 @@ CSS = """
      mesma lição das quatro regras da `.vib .ressalva`, logo acima. */
 """
 
-# que já esteve digitado no mockup). Ele não é desenhado aqui; segue desenhado
-
 PAPEIS_QUE_SAO_GESTO = ("testar", "parar",
                         "intensidade", "motor", "haptica", "testar-haptica")
 
@@ -1015,7 +986,6 @@ def _linha_da_haptica(valor, ligado, vazio=False):
             f' title="Aceso: há háptica chegando a este controle agora.">%</span></div>')
 
 
-#: Os rótulos da lista dos motores: os dos padrões, mais as duas escolhas de sempre.
 _ROTULOS_DA_IMERSAO = {
     padroes.DO_ESTILO: "Do estilo", padroes.SEM_EFEITO: "Sem efeito", **padroes.ROTULOS}
 
@@ -1064,8 +1034,6 @@ def _endereca_o_tremor(desenho, pref):
 
 FOLHA_DOS_28 = re.sub(r"</?style[^>]*>", "", monta_.folha_das_cores())
 
-#: `monta.svg()` PREFIXA todo id por controle (`vb-p1-hachura-sem-hex`): uma
-#: folha de página que diga `url(#hachura-sem-hex)` não acharia nada, e os doze
 _ABRE_A_TINTA = '<defs id="cores-do-dualsense">'
 if _ABRE_A_TINTA not in monta_.DS:
     raise SystemExit(
@@ -1122,8 +1090,6 @@ def _endereca_a_cor(desenho, pref, cor, com_dono=True):
     return _FOLHA_PODADA.sub("", desenho, count=1)
 
 
-#: travessão, posto pela folha (`.ctrl[data-conectado="nao"] … ::after`).
-#: botão acende de qualquer jeito, e uma chave real aqui seria o desenho
 ESTADO_DO_LUGAR_VAZIO = {"pct": 0,
                          "esq": (False, 0), "dir": (False, 0), "hap": (False, 0)}
 
@@ -1199,8 +1165,6 @@ def _coluna(c, e=None, conectado=None):
     linhas = []
     for sigla, m, k in LADOS:
         ligado, valor = e[k]
-        # 03/09/2026. O que a régua lê aqui é o `<title>` do glifo, que é o NOME
-        # troca: `data-hef="lado"` mais a classe `on` CRAVADA pelo desenho. As
         botao = (f'<button class="lado{" on" if ligado else ""}" '
                  f'data-gesto="lado" data-lado="{sigla}" '
                  f'data-campo="lado-{sigla}" data-hef-alvo="classe" '
@@ -1210,10 +1174,6 @@ def _coluna(c, e=None, conectado=None):
         linhas.append(_barra_de_motor(valor, sigla, m, ligado, botao,
                                       vazio=not conectado))
 
-    # Ela era `style="--plastico:…"`
-    # `var(--plastico)` nesta aba moram nela ou dentro dela — a borda da própria
-    # O `style="--plastico:…"` SÓ VAI EM QUEM TEM APARELHO, e o par de
-    # folha cai no `var(--plastico, …)` de sempre — e o alvo `plastico` do
     classe = "ctrl" if conectado else "ctrl off"
     marca = ("" if conectado else
              ' data-conectado="nao" title="Nenhum controle neste lugar."')
@@ -1435,11 +1395,10 @@ def _conferir(doc):
 
     vazios = [c for c in MESA if not c.get("conectado", True)]
     blocos = _colunas_do_corpo(corpo)
-    #    `data-conectado="nao"`). A classe `vazia` morreu em 07/09/2026: o
     exigir(corpo.count('class="ctrl off"') == len(vazios),
            f"os lugares vazios marcados `ctrl off` não são {len(vazios)}")
     exigir(corpo.count('data-conectado="nao"') == len(vazios),
-           f"os lugares vazios marcados `data-conectado=\"nao\"` não são "  # (noqa-acento) valor do atributo
+           f"os lugares vazios marcados `data-conectado=\"nao\"` não são "  # (noqa-acento)
            f"{len(vazios)}")
     exigir("ctrl vazia" not in corpo,
            "a classe `vazia` voltou ao cartão — o piloto tira a `off` e o "
@@ -1447,7 +1406,6 @@ def _conferir(doc):
            "para sempre com o dado dela chegando por baixo")
     exigir(len(blocos) == len(MESA),
            f"a régua não achou as {len(MESA)} colunas: {sorted(blocos)}")
-    #    O `data-colorway` E O `--plastico` ENTRARAM NESTA RÉGUA EM 07/09/2026,
     for c in vazios:
         exigir(f'P{c["jogador"]} <span class="pt">•</span> Desconectado' in corpo,
                f"a coluna do P{c['jogador']} não diz Desconectado")
@@ -1461,14 +1419,13 @@ def _conferir(doc):
         exigir("--plastico:" not in bloco,
                f"o lugar vazio {c['pref']} afirma uma cor de plástico — mesma "
                f"regra do `data-colorway` logo acima")
-    #    medido com os quatro DualSense do usuário na mesa. Até aqui ela proibia os
     for alvo in (".motor > *", ".efeito-lista > *", ".acoes-col > *"):
         exigir(f'.vib .ctrl[data-conectado="nao"] {alvo}' in doc,
                f"a folha deixou de esconder `{alvo}` num lugar sem controle — "
                f"os trilhos e o `Testar` voltam a ficar clicáveis "
                f"para um aparelho que não está na mesa")
     exigir('.vib .ctrl[data-conectado="nao"]:not(' not in doc,
-           "voltou uma exceção ao `[data-conectado=\"nao\"]` na folha desta "  # (noqa-acento) valor do atributo
+           "voltou uma exceção ao `[data-conectado=\"nao\"]` na folha desta "  # (noqa-acento)
            "aba — ela separa o lugar que NASCE vazio do que esvazia ao vivo, e "
            "duas caras para o mesmo estado na mesma tela é o que esta aba mais "
            "persegue")
@@ -1522,8 +1479,6 @@ def _conferir(doc):
     for frase, nome in ((DICA_DO_TETO_DA_MESA, "o teto da mesa"),
                         (DICA_DOS_VALORES_QUE_PASSAM, "os valores que passam pela intensidade")):
         exigir(frase in corpo, f"a dica perdeu a frase da janela estável: {nome}")
-    # A-TELA-PERGUNTA-AO-DONO-01 (opção a, 08/10/2026): o «?» da sensor háptico também diz o teto,
-    # logo depois do 100% e antes do «Cinza quando». A Força já dizia; a háptica, desde 02/10, também corta.
     _achou = _re.search(r'data-dica="([^"]*)">Sensor háptico</span>', corpo)
     _haptica = _achou.group(1) if _achou else ""
     exigir(_haptica and DICA_DO_TETO_DA_MESA in _haptica
@@ -1537,7 +1492,6 @@ def _conferir(doc):
            f"nenhum pacote registra vira clique que não responde. Use "
            f"`data-hef` para endereço que é só pintura")
 
-    #        `RUMBLE_CUSTOM_MULT_MAX` do esquema. Um `max` menor esconderia
     arrastaveis = _re.findall(r'<input class="trilho arrasta"[^>]*>', corpo)
     por_papel = {}
     for tag in arrastaveis:
@@ -1601,7 +1555,6 @@ def _conferir(doc):
            "a grade da aba 05 deixou de terminar no `--r-acoes` em fração, depois da faixa do "
            "efeito imersão — a oitava faixa saiu em 05/09/2026 e as duas listas entraram em "
            "15/10/2026")
-    # as nove faixas, na ordem do desenho A (15/10/2026): as duas listas moram ao lado de quem elas governam
     _ordem = _re.findall(r'<span class="sec-rot"[^>]*>([^<]+)</span>',
                          corpo.split('<div class="rotulos">', 1)[-1].split('<div class="ctrl', 1)[0])
     exigir(_ordem == ["Controle", "Modelo", "Força da vibração", "Sensor háptico", "Efeito háptico",
@@ -1622,7 +1575,6 @@ def _conferir(doc):
                    f"as opções de {gesto!r} não são as da lista do produto, na ordem dela")
             exigir(_valores[:2] == [("do_estilo", "Do estilo"), ("sem_efeito", "Sem efeito")],
                    f"a lista {gesto!r} não abre com «Do estilo» e «Sem efeito»")
-    # as faixas são frações com piso: altura fixa de volta deixa vão embaixo (A-ABA-VIBRACAO-DO-TODO-01)
     exigir("grid-template-rows:minmax(var(--r-des),3fr) var(--r-nome) minmax(var(--r-forca),1fr)" in doc
            and "grid-template-rows:minmax(0,1fr)" in doc,
            "as faixas da grade da aba 05 voltaram a ter altura fixa: a coluna deixa de encher o quadro")
@@ -1652,7 +1604,6 @@ def _conferir(doc):
            "o recibo da faixa ficou laranja — laranja é o `alerta`, e alerta "
            "sobre um clique que gravou ensina que o botão falha")
 
-    #     MEDIDO com os quatro DualSense do usuário na mesa: o daemon publicava os
     _marcas = _re.compile(
         r'data-campo="([^"]+)"'
         r'|data-hef-alvo="([^"]+)"'
@@ -1687,9 +1638,6 @@ def _conferir(doc):
         raise SystemExit("ERRO em 05-vibracao — decisão dela desfeita:\n  "
                          + "\n  ".join(f"- {f}" for f in falhas))
 
-
-# .ctrl[data-conectado="nao"] .ds-svg rect:not([fill="none"])` (0,5,1) ganha de
-# `.vazia` que saiu valia uma classe e o `[data-conectado="nao"]` que entrou
 
 if __name__ == "__main__":
     import os

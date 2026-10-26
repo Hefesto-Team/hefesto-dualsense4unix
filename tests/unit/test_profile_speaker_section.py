@@ -211,7 +211,6 @@ class _ProfileDeBinarioAntigo(BaseModel):
     mode: dict[str, Any] | None = None
     suppress_desktop_emulation: bool = False
     controllers: dict[str, Any] | None = None
-    # 15/10/2026: o perfil novo nasce com a data (O-PERFIL-GUARDA-A-DATA-EM-QUE-NASCEU-...-01).
     criado_em: str | None = None
     modificado_em: str | None = None
     alvo: str | None = None

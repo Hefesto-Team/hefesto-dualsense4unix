@@ -208,8 +208,6 @@ FIM_ESCADA_ACABOU = "escada_acabou"
 FIM_DEGRAU_CARO = "degrau_caro"
 FIM_OUTRA_TENTATIVA = "outra_tentativa"
 
-#: entre a `ESCADA` e o que `hotkey._aplicar_ponte` sabe construir — e a
-#: caminhos da tela («Sony DualSense» e «Xbox»), e é caminho que o gesto aplica.
 CAMINHOS_AO_VIVO = frozenset({CAMINHO_DUALSENSE, CAMINHO_XBOX})
 
 

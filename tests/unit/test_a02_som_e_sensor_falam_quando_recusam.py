@@ -18,7 +18,6 @@ from hefesto_dualsense4unix.core.speaker_scale import (
 
 UNIQ = "aa:bb:cc:00:00:01"
 
-#: O nome real de um sink de DualSense nesta máquina — é o que
 SINK = ("alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
         "Controller-00.analog-surround-40")
 OUTRO = "alsa_output.pci-0000_00_1f.3.analog-stereo"

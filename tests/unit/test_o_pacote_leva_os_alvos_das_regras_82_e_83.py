@@ -29,10 +29,6 @@ GANCHOS_DE_REMOCAO = {
     "fedora": Path("packaging/fedora/hefesto-dualsense4unix.spec"),
 }
 
-#: Nenhuma lacuna. A do `nix` (22/08/2026) saiu em 06/10/2026, com a
-#: O-NIX-LEVA-AS-REGRAS-DO-HOST-01: o `package.nix` leva os alvos no `$out` e
-#: reescreve o caminho das regras, e o módulo NixOS (`packaging/nix/module.nix`)
-#: os liga na máquina. Lacuna nova entra aqui com data e motivo.
 LACUNA_HOJE: dict[str, str] = {}
 
 NIX = Path("packaging/nix/package.nix")
@@ -138,8 +134,6 @@ class TestOAlvoViajaComARegra:
         faltando: list[str] = []
         for nome, texto in receitas.items():
             if nome in LACUNA_HOJE or nome == "nix":
-                # O Nix não grava no host: não usa o helper, e o caminho dele é o
-                # da classe `TestONixLevaOsAlvosPeloStore`.
                 continue
             for familia in ("scripts", "systemd"):
                 if not any(destino in texto for destino in candidatos[familia]):

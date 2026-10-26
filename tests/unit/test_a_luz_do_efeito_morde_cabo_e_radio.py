@@ -24,12 +24,11 @@ from hefesto_dualsense4unix.daemon.subsystems.luz_animada import escritor_de_pro
 from hefesto_dualsense4unix.profiles.efeitos_de_luz import cor_no_instante
 from hefesto_dualsense4unix.profiles.schema import ler_o_efeito_da_luz
 
-#: Faixa forjada (`aa:bb:cc`), nunca endereço de aparelho de verdade.
 MACS = tuple(f"AA:BB:CC:00:00:0{n}" for n in range(1, 5))
 TRANSPORTES = ("usb", "usb", "bt", "bt")
 POS_FLAG1 = 3 + 1
 FLAG1_LIGHTBAR = 0x04
-EFEITOS = (  # (noqa-acento) o texto que o perfil guarda
+EFEITOS = (
     "arco-iris;;7", "respirar;FF0000;2", "piscar;00FF00;3", "mare;0000FF;10")
 
 
@@ -135,7 +134,7 @@ def test_o_arco_iris_defasa_cada_controle_e_cada_um_leva_o_seu_quadro() -> None:
     """Quatro quadros diferentes no mesmo instante: o rádio não repete o do vizinho."""
     ctl, handles, nos = _mesa()
     quadros = _pintar_a_mesa(ctl, 2.0)
-    cores_do_arco = [  # (noqa-acento) chave ASCII
+    cores_do_arco = [
         _quadro_do_efeito("arco-iris;;7", 2.0, p) for p in range(4)]
     assert len(set(cores_do_arco)) == 4, "o arco-íris devia defasar os quatro controles"
     _confere_a_mesa(handles, nos, quadros)

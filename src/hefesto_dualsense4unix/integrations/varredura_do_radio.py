@@ -65,7 +65,6 @@ from dataclasses import dataclass, field
 from hefesto_dualsense4unix.integrations import bluez_dbus
 from hefesto_dualsense4unix.integrations.conexao_zumbi import mac_limpo
 
-#: um DualSense no rádio do adaptador medido, instrumentadas pelo evdev de
 QUEDA_MINIMA_MEDIDA = 32.5
 QUEDA_MAXIMA_MEDIDA = 43.4
 
@@ -80,7 +79,6 @@ SEM_RESPOSTA_A_TEMPO = (
     "o `org.bluez` não respondeu dentro do orçamento — não sei quem varre"
 )
 
-#: do GTK. :func:`varredura_recente` é chamada de ``_aplicar_estado``, que o
 ORCAMENTO_DA_LEITURA = 0.5
 
 _MINIMO_POR_PERGUNTA = 0.02

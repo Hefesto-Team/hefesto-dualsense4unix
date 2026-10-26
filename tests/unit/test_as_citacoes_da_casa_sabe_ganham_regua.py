@@ -78,8 +78,6 @@ def _validar(raiz: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
-# --- 1. a casa-sabe: o validador a lê, e o reapontar a leva -------------------------------------
-
 ALVO = '''"""O alvo de mentira."""
 
 VALOR = 1
@@ -94,7 +92,6 @@ def segunda():
     return x
 '''
 
-# A promessa fica no pedaço de BAIXO da cadeia emendada, como o arquivo da casa-sabe escreve.
 CASA = (
     '"""A casa-sabe de mentira."""\n'
     "\n"
@@ -198,10 +195,7 @@ def test_a_cadeia_emendada_e_uma_so_e_cada_pedaco_guarda_a_sua_linha(val: Module
     assert "# fala" in cadeias, cadeias
 
 
-# --- 2. a de linha única promete o nome que só a linha tem -------------------------------------
-
 OITO = [
-    # (aba, começo da feature, arquivo citado, nome de hoje, nome velho)
     ("02-controles", "Clique dos analógicos",
      "src/hefesto_dualsense4unix/interface/pacotes/a02_controles.py", "ROTULO_DO_CLIQUE", None),
     ("02-controles", "Microfone — o controle deslizante de volume",
@@ -280,7 +274,6 @@ def test_a_promessa_velha_das_oito_reprova_pelo_vizinho(
     """O nome velho casava na citada E na vizinha: a costura de uma linha o deixaria verde."""
     linha = _linha_da_celula(aba, feature, arquivo, nome)
     if velho is None:
-        # o `ROTULO_DO_CLIQUE` era citado no uso (`:1392` em 25/10), que o repete na de baixo
         corpo = (RAIZ / arquivo).read_text(encoding="utf-8").split("\n")
         velho, linha = nome, next(
             n for n in range(1, len(corpo))
@@ -292,8 +285,6 @@ def test_a_promessa_velha_das_oito_reprova_pelo_vizinho(
 
 
 AS_CINCO_LIGACOES = [
-    # (aba, começo da feature, arquivo citado, nome): as cinco da lista da sprint que citam o
-    # `def`, cujo `@gesto` repete o nome na linha de cima: a regra do vizinho as guarda
     ("04-iluminacao", "Botão de reenvio explícito da cor",
      "src/hefesto_dualsense4unix/interface/pacotes/a04_iluminacao.py", "cor"),
     ("08-conexoes", 'Alvo de saída ("só este"',
@@ -389,9 +380,6 @@ def test_a_faixa_nao_passa_pela_regra_do_vizinho(val: ModuleType, tmp_path: Path
     assert [str(a) for a in val.varrer_planilha(planilha, tmp_path, {})[0]] == []
 
 
-# --- 3. o reapontar não leva a casa-sabe pelo caminho que só a mão confere ----------------------
-
-
 def _casa_crua(um: int, dois: int, quatro: int) -> str:
     end = "src/hefesto_dualsense4unix/alvo.py"
     return (f'RAZAO = (\n    "Um, {end}:{um}. Dois, {end}:{dois}. "\n'
@@ -448,9 +436,6 @@ def test_a_queixa_de_forma_nao_move_a_citacao(repo: Path) -> None:
 
     assert planilha.read_text(encoding="utf-8") == antes, (feitos, a_mao)
     assert any("é de forma, e se cura à mão" in f and "x.csv" in f for f in a_mao), a_mao
-
-
-# --- o `--novas` lê as cadeias da casa-sabe ------------------------------------------------------
 
 
 def _casa_sabe_com(razao: str) -> str:

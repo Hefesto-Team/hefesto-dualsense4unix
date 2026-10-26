@@ -236,8 +236,6 @@ def test_o_gesto_reexaminar_devolve_o_arranjo_na_chave_da_entrega(
     dado = resposta[arranjo_desta_maquina.CHAVE_DA_ENTREGA]
     assert dado["aparelhos"] and dado["leituras"]["agora"]["caminho"]
 
-    # o mapa SUMIU do disco: com entrada numerada o arranjo vale mesmo sem face (04/10/2026,
-    # A-ENTRADA-SEM-LUGAR-APARECE-NO-MAPA-01), então a régua apaga o mapa INTEIRO
     assert gravar_maquina_com_descartes({"mapa": {}}, substituir=("mapa",)).gravou
     with pytest.raises(RuntimeError):
         reexaminar(None, {}, None)
@@ -351,8 +349,8 @@ def test_a_primeira_entrega_nao_le_no_fio_da_janela(monkeypatch: pytest.MonkeyPa
 
 
 _A_VOLTA_DO_GESTO = re.compile(
-    r"_deu_certo_dizendo\(\s*pagina, nome, alvo, "  # (noqa-acento) código do piloto
-    r"self\._o_arranjo_relido\(pagina, r\)\)")  # (noqa-acento) código do piloto
+    r"_deu_certo_dizendo\(\s*pagina, nome, alvo, "  # (noqa-acento)
+    r"self\._o_arranjo_relido\(pagina, r\)\)")  # (noqa-acento)
 
 
 def test_o_extensor_grava_como_a_chave_da_entrada(disco: Path) -> None:
@@ -621,7 +619,7 @@ def test_o_reexame_guarda_o_que_ela_ensinou_na_tela(
     pedidos = [m for m in mensagens if m.get("gesto") == "entrada-ensinar"]
     assert [(m.get("entrada"), m.get("caminho")) for m in pedidos] == [("4", "9-4")], (
         f"o clique no plugue não levou o ensinar ao piloto: {mensagens}")
-    dono = pacotes.gesto_da_pagina(pedidos[0]["pagina"], "entrada-ensinar")  # (noqa-acento) chave
+    dono = pacotes.gesto_da_pagina(pedidos[0]["pagina"], "entrada-ensinar")  # (noqa-acento)
     assert dono is not None
     dono(None, pedidos[0], None)
     assert carregar_maquina().mapa.portas["4"].nos == ["usb9-port4"]
@@ -684,7 +682,7 @@ def test_declarar_o_hub_lido_nao_cria_outra_face(disco: Path) -> None:
     assert editor["apertados"][:1] == ["hub"], editor
     pedidos = [m for m in mensagens if m.get("gesto") == "entrada-o-que-tem"]
     assert [m.get("liga") for m in pedidos] == ["hub"], mensagens
-    dono = pacotes.gesto_da_pagina(pedidos[0]["pagina"], "entrada-o-que-tem")  # (noqa-acento) chave
+    dono = pacotes.gesto_da_pagina(pedidos[0]["pagina"], "entrada-o-que-tem")  # (noqa-acento)
     assert dono is not None
     dono(None, pedidos[0], None)
     assert carregar_maquina().mapa.portas["3"].liga == "hub"
@@ -775,7 +773,7 @@ def test_o_hub_grava_pela_pagina_e_a_entrada_do_hub_nao_abre(disco: Path) -> Non
         """O que o piloto faz com cada clique do editor: o gesto do pacote."""
         pedidos = [m for m in mensagens if m.get("gesto", "").startswith("entrada-")]
         for m in pedidos:
-            de_onde = m["pagina"]  # (noqa-acento) chave ASCII da mensagem do piloto
+            de_onde = m["pagina"]  # (noqa-acento)
             dono = pacotes.gesto_da_pagina(de_onde, m["gesto"])
             assert dono is not None
             dono(None, m, None)

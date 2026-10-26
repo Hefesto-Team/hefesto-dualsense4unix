@@ -82,14 +82,10 @@ def _sem_atalho_de_sistema(tabela: dict[str, str]) -> list[str]:
             if "KEY_LEFTMETA" in t.split("+") or {"KEY_LEFTALT", "KEY_TAB"} <= set(t.split("+"))]
 
 
-# -- o estilo e os moldes ---------------------------------------------------------------
-
-
 def test_o_visual_novel_e_estilo_com_a_receita_do_point_and_click() -> None:
     vn = ej.POR_CHAVE["visual_novel"]
     pc = ej.POR_CHAVE["point_and_click"]
     assert vn.rotulo == "Visual novel"
-    # o gatilho do Point and click é o clique do mouse (Golpe · fraco); o da Visual novel é livre
     assert (vn.vibracao, vn.familia) == (pc.vibracao, pc.familia)
     assert (pc.gatilho, vn.gatilho) == ("Weapon", "Off")
     assert vn.brilho == 0.5
@@ -125,9 +121,6 @@ def test_a_lista_de_acoes_ganha_as_teclas_do_jogo_de_clicar() -> None:
     do_ps = {t for _g, rotulos in acoes.por_grupo(acoes.BOTAO_PS) for t in rotulos}
     assert "Teclas WASD" not in do_ps and "Setas" not in do_ps, (
         "as teclas do analógico não cabem na linha do PS")
-
-
-# -- aplicar o estilo grava a tabela -----------------------------------------------------
 
 
 @pytest.mark.parametrize("rotulo", ["Point and click", "Visual novel"])
@@ -195,9 +188,6 @@ def test_visual_novel_depois_de_point_and_click_troca_o_molde(disco: dict[str, A
     _aplicar("Point and click")
     _aplicar("Visual novel")
     assert disco["perfil"].button_actions == ej.MOLDES["visual_novel"]
-
-
-# -- o analógico como teclas -------------------------------------------------------------
 
 
 def test_o_resolver_da_dono_as_teclas_do_analogico_so_na_linha_dele() -> None:

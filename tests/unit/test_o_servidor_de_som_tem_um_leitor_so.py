@@ -605,15 +605,13 @@ def _executores() -> dict[str, Callable[[list[str]], Any]]:
 def _e_leitura(elementos: list[str | None]) -> bool:
     """`["pactl", verbo, ...]` ou `[<variável>, verbo, ...]` com verbo de leitura."""
     if len(elementos) >= 3 and elementos[1] == FORMATO and elementos[2] == "list":
-        return elementos[0] in ("pactl", None)  # a lista em JSON escrita por extenso
+        return elementos[0] in ("pactl", None)
     if len(elementos) < 2 or elementos[1] not in rs.LEITURAS:
         return False
     return elementos[0] in ("pactl", None)
 
 
 FORMATO = "--format=json"
-#: as funções da porta que recebem o EXECUTOR e perguntam por ele (o executor é o último argumento,
-#: ou o primeiro em `placa_de_cada_fonte`); o tipo é o primeiro argumento de texto.
 _LEITORES_DA_PORTA = {
     "ler_nos", "ler_fluxos", "sysfs_por_no", "volumes_do_no", "placa_de_cada_fonte"}
 _MONTADORES_DO_ARGV = {"argv_da_lista", "argv_do_curto"}
@@ -650,7 +648,7 @@ def _censo() -> list[tuple[str, int, str, list[str | None]]]:
     for arquivo in sorted(SRC.rglob("*.py")):
         relativo = arquivo.relative_to(SRC).as_posix()
         if relativo in ("integrations/retrato_do_som.py", "integrations/porta_do_som.py"):
-            continue  # o retrato e a porta MONTAM o argv; quem pergunta é o `ler` de cada um
+            continue
         arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
         pais: dict[int, ast.AST] = {}
         funcao: dict[int, str] = {}
@@ -782,7 +780,7 @@ def test_o_fluxo_diz_de_quem_e_para_quem_o_pedir() -> None:
     (["pactl", "list", "short", "sink-inputs"], rs.Pergunta("sink-inputs", "curta")),
     (["pactl", "--format=json", "list", "sources"], rs.Pergunta("sources", "json")),
     (["pactl", "-f", "json", "list", "sinks"], rs.Pergunta("sinks", "json")),
-    (["pactl", "list", "sources"], None),  # o longo deixou de ser promessa
+    (["pactl", "list", "sources"], None),
     (["pactl", "--format=json", "list", "modules"], None),
     (["pactl", "list", "modules", "short"], rs.Pergunta("modules", "curta")),
     (["/usr/bin/pactl", "get-default-source"], rs.Pergunta("server", "padrão", "source")),

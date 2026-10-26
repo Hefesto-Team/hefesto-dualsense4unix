@@ -204,7 +204,6 @@ def _soltar_o_pad_do_lancamento(daemon: Daemon, motivo: str) -> None:
         daemon._pad_travado_pelo_lancamento = None
     logger.info("pad_do_lancamento_destravado", motivo=motivo,
                 appid=travado[0] if isinstance(travado, tuple) and travado else None)
-    # O fim do jogo devolve o Edge (D-2210-A-ROUPA-VALE-PARA-O-JOGO-E-VOLTA-NO-FIM).
     if roupa_normalizada(getattr(daemon, "roupa_do_pad", None)) != ROUPA_PADRAO:
         try:
             vestir_a_roupa(daemon, ROUPA_PADRAO)
@@ -343,7 +342,7 @@ def _canal_mudaria(daemon: Any, caminho: str | None) -> bool:
     return quer_uhid(caminho_do_vpad(device), mascara) != quer_uhid(caminho, mascara)
 
 
-class IpcIndisponivel(RuntimeError):  # noqa: N818 — o projeto é em português
+class IpcIndisponivel(RuntimeError):  # noqa: N818
     """O socket de conversa não abriu: o daemon não deve ficar no ar sem ele."""
 
     def __init__(self, caminho: Path, erro: BaseException) -> None:
@@ -373,8 +372,6 @@ class DaemonConfig:
     udp_enabled: bool = True
     udp_host: str = "127.0.0.1"
     udp_port: int = 6969
-    # O servidor DSU (cemuhook) para o emulador. `False` aqui mantém a suíte fora
-    # da porta; quem liga o servidor da usuária é o `main.py`, pelo `maquina.json`.
     dsu_enabled: bool = False
     dsu_port: int = 26760
     autoswitch_enabled: bool = True
@@ -382,72 +379,20 @@ class DaemonConfig:
     mouse_speed: int = 6
     mouse_scroll_speed: int = 1
     gamepad_emulation_enabled: bool = False
-    # vpad é DualSense Edge por arquitetura (UHID-04) e a máscara dualsense
     gamepad_flavor: str = "dualsense"
-    # MODO-DE-CONEXAO-01 (13/09/2026) — O CAMINHO, ao lado da máscara e separado
-    # dela: `"dualsense"` (o canal próprio do DualSense, vpad uhid) ou `"xbox"`
-    # (o canal comum, vpad uinput). `None` = ninguém escolheu, e o caminho sai da
-    # máscara como saía antes (`virtual_pad.caminho_resolvido`). Quem escreve é
-    # `gamepad._guardar_o_caminho`, depois de o aparelho alcançar o pedido; o
-    # boot relê a escolha de `gamepad_caminho.flag`.
     gamepad_caminho: str | None = None
     gamepad_caminho_global: str | None = None
     coop_enabled: bool = True
-    # do DualSense.
-    # `keyboard_emulation.flag` persiste a escolha do usuário (lida no boot, abaixo em
     keyboard_emulation_enabled: bool = True
     ps_button_action: Literal["steam", "none", "custom"] = "steam"
     ps_button_command: list[str] = field(default_factory=list)
     ps_long_press_ms: int = 0
     rumble_active: tuple[int, int] | None = None
-    #: MESA-CHEIA-05 (E0) — o DONO do par acima: o MAC do controle em que ele
-    #: foi fixado, ou None para "a mesa inteira" (o alvo era "Todos", ou o
-    #: alvo não tem MAC estável).
-    #:
-    #: **Por que o par não bastava.** `rumble_active` é um valor só para o
-    #: daemon inteiro e o destino dele era o `_output_target_key` do backend —
-    #: um ponteiro MUTÁVEL. Ela fixava 160/220 no Controle 2, trocava o seletor
-    #: para o 3 por outro motivo qualquer e, 200 ms depois, o `reassert_rumble`
-    #: marretava o Controle 3 com o valor do 2: o par fixado MIGRAVA de dono
-    #: por um gesto que não fala de vibração.
-    #:
-    #: Guardar o endereço junto do valor é o que faz o reassert reescrever
-    #: NAQUELE controle (via `set_rumble_for`, a rota por MAC que já existia e
-    #: só o co-op e o force-feedback usavam). Isto NÃO é a D-4: a intensidade
-    #: continua sendo uma só para a máquina — o que deixa de acontecer é a
-    #: migração de dono.
     rumble_active_uniq: str | None = None
-    #: QUANDO ALGUÉM DISSE "AINDA ESTOU SEGURANDO" — A-TELA-QUE-TRAVA-02,
-    #: 15/09/2026. `monotonic` do último `rumble.set`/`rumble.stop`, ou `None`.
-    #:
-    #: Passado `subsystems/rumble.TETO_DO_RUMBLE_FIXADO_S` sem um carimbo novo, o
-    #: `reassert_rumble` devolve os motores ao JOGO. É a rede para a janela que
-    #: MORRE com o "Testar" ligado — até 15/09 isso deixava o jogo sem vibração
-    #: até o usuário reabrir a aba Vibração e clicar em "Parar", e nada na tela dizia
-    #: por quê, porque a tela já não estava lá.
-    #:
-    #: Quem rebate é `interface/pacotes/a05_vibracao._rebater_o_teste`, na fila
-    #: do controle, a cada 1 s enquanto a janela vive. A regra de produto: o testar e parar
-    #: só valem para o teste daquele momento e não interferem no jogo.
     rumble_active_em: float | None = None
-    #: O par fixado de CADA controle, `{dono: (weak, strong, carimbo)}` (o `None` é a mesa
-    #: inteira). `rumble_active`, `rumble_active_uniq` e `rumble_active_em` são o resumo
-    #: dele (o par mais recente); quem escreve é `subsystems/rumble.pares_fixados`.
     rumble_fixados: dict[str | None, tuple[int, int, float | None]] = field(
         default_factory=dict
     )
-    #: MESA-CHEIA-05 (E0, terceira rodada) — o controle que está vibrando POR
-    #: NOSSA CONTA neste instante, ou None quando nenhum está.
-    #:
-    #: **Por que o dono não bastava.** Guardar o endereço fez o par parar de
-    #: migrar — mas a mudança de dono passou a ABANDONAR quem vibrava. Medido
-    #: em 14/08 contra `git archive HEAD`, com os quatro controles: ela fixa
-    #: 160/220 no Controle 2, move o seletor para o 3 e clica «Parar» (ou
-    #: aplica outro par). Nos dois mundos os zeros vão para o 3 e o 2 continua
-    #: em 220/160 — mas no HEAD o reassert seguia o seletor, e **voltar o
-    #: seletor ao 2 o silenciava**; com o dono congelado, voltar o seletor
-    #: deixou de significar coisa alguma e o 2 vibra para sempre.
-    #:
     rumble_dono_vibrando: str | None = None
     rumble_policy: RumblePolicy = "balanceado"
     rumble_policy_custom_mult: float = 0.7
@@ -460,7 +405,6 @@ class DaemonConfig:
     plugins_enabled: bool = False
 
 
-#: `profile.switch` conta a verdade para a GUI.
 APLICADO = "aplicado"
 ADIADO_LOCK_MANUAL = "adiado_lock_manual"
 IGNORADO_CATCH_ALL = "ignorado_catch_all"
@@ -623,9 +567,6 @@ class ModoJogoPadrao:
     wm_class: str
 
 
-# O modo que o jogo vê, pelo pad virtual de cada controle. O dono do eixo «modo» é
-# este módulo (`donos-de-comportamento.csv`, `eixo.modo/daemon`): quem precisa
-# decidir pelo modo pergunta aqui, sem ramificar pelo nome dele.
 MODO_NATIVO: Final = "nativo"
 MODO_DUALSENSE: Final = "dualsense"
 MODO_XBOX: Final = "xbox"
@@ -712,8 +653,6 @@ class Daemon:
     _fio_de_nascimento: Any = None
     _hotkey_manager: Any = None
     _emulation_suppressed: bool = False
-    # A tabela que age COM o jogo e o teclado «Só dentro do jogo»: travados do perfil
-    # efetivo a cada ativação (`apply_profile_suppression`), lidos pelo laço do tique.
     _tabela_no_jogo: Any = None
     _teclado_so_no_jogo: bool = False
     _teclado_sempre: bool = False
@@ -728,7 +667,6 @@ class Daemon:
     _modo_jogo_padrao_log: str = ""
     _gamepad_multi_log: str = ""
     _profile_selector: Any = None
-    # FEAT-NATIVE-MODE-01: Modo Nativo ativo ("release total" do controle). Não
     _native_mode: bool = False
     _native_emu_stash: dict[str, Any] = field(default_factory=dict)
     _nos_do_modo_nativo: set[str] = field(default_factory=set)
@@ -749,14 +687,11 @@ class Daemon:
     _last_auto_change_at: float = field(default=0.0)
     _last_rebackend_ts: float = field(default=float("-inf"))
     _input_ready_at: float = field(default=0.0)
-    # _poll_loop. Permite que `daemon.state_full` reflita o tick atual em vez
     _last_state: ControllerState | None = None
-    # FEAT-KEYBOARD-EMULATOR-01: criados em runtime por start_keyboard_emulation
     _osk_controller: Any = None
     _touchpad_reader: Any = None
     _paused: bool = field(default=False)
     _maquina: MaquinaConfig = field(default_factory=MaquinaConfig)
-    # (nome -> erro). Um subsystem quebrado é isolado aqui em vez de derrubar o
     _failed_subsystems: dict[str, str] = field(default_factory=dict)
     identity_registry: Any = None
     external_registry: Any = None
@@ -772,8 +707,6 @@ class Daemon:
     _registro_de_gatilhos: Any = None
     _sentinela_de_escritor_cru: Any = None
     _cartorio_do_nascimento: Any = None
-    # A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01: o dono da
-    # Interna (ligada, tipo, o foco com prazo e os toques); nasce no boot.
     _navegacao_interna: Any = None
     _big_picture: Any = None
     _vigia_do_sequestro: Any = None
@@ -815,9 +748,6 @@ class Daemon:
         with contextlib.suppress(Exception):
             migrar_uma_vez()
         self._maquina = carregar_maquina()
-        # teto de orçamento. A config leva a FONTE, não o valor — o `lambda`
-        # fecha sobre `self`, então o rebind de `_maquina` que o
-        # `machine.declare` faz no "Aplicar" já vale no cálculo seguinte. Ver o
         self.config.orcamento_da_mesa = lambda: self._maquina.orcamento.teto
         from hefesto_dualsense4unix.profiles.schema import (
             registrar_declaracao_da_mesa,
@@ -875,75 +805,46 @@ class Daemon:
                 logger.info("modo_do_boot_pelo_perfil", perfil=perfil_do_boot,
                             caminho=caminho_do_boot, mascara=mascara_do_boot)
         self.config.gamepad_caminho = self._caminho_do_boot
-        # teclado era o único dos três sem flag em disco, e por isso o único que
-        # não tinha como ser desligado). Três valores: `None` = nunca configurada
-        # e o default da config vale (compat: continua ligado); `True`/`False` =
-        # decisão de produto e vence o default, inclusive um default vindo do env.
-        # Best-effort por construção (o load nunca levanta).
         from hefesto_dualsense4unix.utils.session import load_keyboard_preference
         kbd_pref = load_keyboard_preference()
         if kbd_pref is not None:
             self.config.keyboard_emulation_enabled = kbd_pref
-        # A Navegação Interna guarda a última escolha, como o mouse (a flag de
-        # sessão `navegacao_interna.flag`); na primeira vez nasce ligada (19/10/2026).
         from hefesto_dualsense4unix.daemon.subsystems.navegacao_interna import (
             NavegacaoInterna,
         )
 
         if self._navegacao_interna is None:
             self._navegacao_interna = NavegacaoInterna.da_sessao()
-        # O Modo Big Picture na Steam guarda a última escolha na flag de sessão
-        # `big_picture.flag`; na primeira vez nasce desligado.
         if self._big_picture is None:
             self._big_picture = BigPicture.da_sessao()
-        # O zero de cada controle, que o «Começar» da Calibrar gravou, volta ao roteador.
         from hefesto_dualsense4unix.core import roteador_de_movimento as _roteador
         from hefesto_dualsense4unix.utils.session import ler_os_zeros
 
         _roteador.carregar_os_zeros(self.store, ler_os_zeros())
-        # FEAT-DSX-COOP-LOCAL-01 / LEIGO-01: apaga o opt-out gravado por versão
-        # antiga (`coop_disabled.flag`) — one-shot, com marker próprio.
-        #
-        # COOP-SEM-INTERRUPTOR-01 (06/08/2026): aqui havia também
-        # `if load_coop_enabled(): self.config.coop_enabled = True`. Saiu, e a
-        # remoção é a entrega, não faxina: com ela, o piso do co-op passa a ter
-        # UM dono só (`DaemonConfig.coop_enabled`, agora `True`). Enquanto o
         from hefesto_dualsense4unix.utils.session import migrate_coop_optout
 
         migrate_coop_optout()
         logger.info("daemon_starting", poll_hz=self.config.poll_hz, paused=self._paused)
         try:
-            # O-PAD-QUE-NASCE-NAO-PARA-O-TIQUE-DOS-OUTROS-01: o pad que o laço do tique
-            # pede nasce neste fio, fora do tique; sem ele (o dublê), na hora.
             from hefesto_dualsense4unix.integrations.virtual_pad import FioDeNascimento
 
             self._fio_de_nascimento = FioDeNascimento()
             self._tasks = [asyncio.create_task(self._poll_loop(), name="poll_loop")]
             await subir(self)
-            if not self.config.ipc_enabled:  # sem soquete a esperar: pronto é o fim da 1ª fase
+            if not self.config.ipc_enabled:
                 _dizer_pronto()
-            # FEAT-CONFIG-AUDIT-BOOT-01: valida os perfis no boot e avisa se houver
-            # corrompidos (em vez de só pulá-los silenciosamente no fallback).
             self._audit_config_on_boot()
-            # FEAT-SYSTEM-AUTOREPAIR-BOOT-01: detecta infra quebrada (udev/WirePlumber)
-            # e AVISA o comando de reparo — nunca roda sudo sozinho.
             self._check_system_on_boot()
-            # COR-01/COR-03: fiação do registro de identidade + provider de
-            # cor automática ANTES do connect inicial — o 1º reconcile do
-            # backend (`_reapply_desired`) já resolve com o provider e os
-            # slots restaurados do disco (a cor nasce certa no mesmo tick de
-            # hotplug, D1). Fora do caminho quente (o load é um read único).
             self._wire_identity_registry()
             self._wire_external_registry()
             self._wire_feature_opener()
             self._wire_abridor_do_handle()
-            # PyDualSenseController.connect() trata "No device detected" em
             try:
                 await self._run_blocking(self.controller.connect)
                 if self.controller.is_connected():
                     from hefesto_dualsense4unix.daemon import connection as _conexao
 
-                    _conexao.publicar_a_borda_do_primario(self, {}, None)  # o controller_connected
+                    _conexao.publicar_a_borda_do_primario(self, {}, None)
                     with contextlib.suppress(Exception):
                         from hefesto_dualsense4unix.daemon.subsystems.gamepad import (
                             upgrade_primary_vpad_to_uhid,
@@ -957,7 +858,6 @@ class Daemon:
 
                     with contextlib.suppress(Exception):
                         await restore_last_profile(self)
-                    # máquina nova é o primeiro caso: o `install.sh` reinicia o
                     with contextlib.suppress(Exception):
                         await reaplicar_som_em_todos_os_alvos(self)
             except Exception as exc:
@@ -972,7 +872,6 @@ class Daemon:
                 )
 
                 materialize_launch_env(self)
-            # As modificações sobem DEPOIS do controle (a fase `depois_do_controle` da lista).
             await subir(self, depois_do_controle=True)
             self._reconnect_task = asyncio.create_task(
                 reconnect_loop(self), name="reconnect_loop"
@@ -980,15 +879,11 @@ class Daemon:
             self._tasks.append(self._reconnect_task)
             await self._stop_event.wait()
         finally:
-            # A tabela que age com o jogo solta o que segura e destrói os dois
-            # devices privados ANTES da parada dos outros.
             tabela_no_jogo = self._tabela_no_jogo
             if tabela_no_jogo is not None:
                 with contextlib.suppress(Exception):
                     tabela_no_jogo.fechar()
                 self._tabela_no_jogo = None
-            # O teclado do Big Picture é device privado do mesmo jeito: a seta que o
-            # dono segura sai solta, e o device fecha antes da parada dos outros.
             big_picture = self._big_picture
             if big_picture is not None:
                 with contextlib.suppress(Exception):
@@ -1182,8 +1077,6 @@ class Daemon:
             a_escolha_dela(freestyle_ligado=manda))
         if not name:
             return
-        # `rumble_passthrough_applier`, e applier ausente NÃO levanta: a seção
-        # `rumble.passthrough` era ignorada em silêncio, com a ativação
         manager = gerente_do_daemon(
             self,
             store=self.store,
@@ -1290,7 +1183,6 @@ class Daemon:
                 _um.SCROLL_SPEED_MIN, min(_um.SCROLL_SPEED_MAX, int(scroll_speed)))
         with self._emu_lock:
             if enabled:
-                # FEAT-DSX-GAMEPAD-FLAVOR-01: mútua exclusão — ligar o mouse
                 if self._gamepad_device is not None:
                     self._stop_gamepad_emulation()
                 ok = start_mouse_emulation(self)
@@ -1717,7 +1609,6 @@ class Daemon:
                 device_ativo=ativo,
                 persistido=bool(persist),
             )
-            # pedido (`stop_keyboard_emulation` é idempotente e best-effort).
             return ativo if enabled else True
 
     def set_gamepad_emulation(
@@ -1777,7 +1668,6 @@ class Daemon:
             return desfecho in DESFECHOS_EMULACAO_ATIVA
         return desfecho in (EMU_DESLIGADO, EMU_JA_ESTAVA)
 
-    # acima fechou: um chamador distraído promovido a gesto do usuário, com o jogo da
     def set_gamepad_emulation_desfecho(
         self,
         enabled: bool,
@@ -1862,9 +1752,6 @@ class Daemon:
                 )
                 nascendo = depois_do_p1(self)
                 if nascendo is not None:
-                    # O-P1-QUE-NASCE-FORA-DO-TIQUE-NASCE-NO-FIO-DE-NASCIMENTO-01: o pad
-                    # nasce pelo fio, e o que segue vai ao tique em que ele se instala,
-                    # com o desfecho de verdade; o pedido igual em voo não o repete.
                     seguir_o_p1_uma_vez(nascendo, ("ligar", grava_o_modo),
                                         lambda feito: depois_de_ligar(feito, recriou=True))
                     return desfecho
@@ -1981,7 +1868,6 @@ class Daemon:
         ):
             return ""
         if mesma_identidade(uniq, primary_identity(self)):
-            # caminho limpava o slot, e o Xbox da sessão voltava DualSense com
             return self.set_gamepad_emulation_desfecho(
                 True,
                 origin="manual",
@@ -2229,8 +2115,6 @@ class Daemon:
         )
         from hefesto_dualsense4unix.daemon.subsystems.mouse import trocar_a_tabela_no_jogo
 
-        # ANTES de qualquer saída por lock manual: a chave «Também no jogo» e o
-        # teclado «Só dentro do jogo» são do perfil, e não da supressão.
         with contextlib.suppress(Exception):
             trocar_a_tabela_no_jogo(self, profile)
 
@@ -2450,7 +2334,7 @@ class Daemon:
             )
 
             return jogo_da_janela(wm_class, jogos_de_janela()) is not None
-        except Exception as exc:  # pragma: no cover - disco hostil
+        except Exception as exc:  # pragma: no cover
             logger.debug("catalogo_de_janelas_indisponivel", err=str(exc))
             return False
 
@@ -3114,7 +2998,6 @@ class Daemon:
         if not callable(setter):
             logger.debug("profile_speaker_backend_sem_suporte", origin=origin)
             return IGNORADO_SEM_CONTROLE
-        # cartão dele sem botão aceso ao lado do P1 em «Sons do jogo». O 2 é o
         if rota == SAIDA_SO_NO_ALTO_FALANTE:
             logger.info("profile_speaker_rota_sem_botao", de=rota,
                         para=SAIDA_L_FONE_R_ALTO_FALANTE, uniq=uniq, origin=origin)
@@ -3217,7 +3100,6 @@ class Daemon:
                     fonte_de_captura_do_uniq,
                 )
 
-                # com dois DualSense no cabo há DUAS placas de som
                 fonte = (fonte_de_captura_do_uniq(uniq) if uniq
                          else fonte_de_captura_do_controle())
                 if not fonte:
@@ -3490,7 +3372,6 @@ class Daemon:
         from hefesto_dualsense4unix.daemon.context import DaemonContext
         from hefesto_dualsense4unix.daemon.subsystems.bt_mic import BtMicSubsystem
 
-        # pede o `player_slot` ao `identity_registry` — e quem tem o registro é
         bm = BtMicSubsystem(daemon=self)
         if not bm.is_enabled(self.config):
             return
@@ -3691,10 +3572,6 @@ class Daemon:
 
         dispatch_mouse(self, state, buttons_pressed)
 
-    # ------------------------------------------------------------------
-    # Identidade dos controles (COR-01/COR-03)
-    # ------------------------------------------------------------------
-
     def _wire_identity_registry(self) -> None:
         """Cria o registro de identidade e injeta o provider de cor no backend.
 
@@ -3799,9 +3676,6 @@ class Daemon:
             registry.load()
             self.external_registry = registry
             self._external_led_sync = ExternalLedSync(self, registry)
-            # EXT-04: numeração global ÚNICA — o registro dos DualSense passa a
-            # DualSense novo (evita duas frentes acenderem o mesmo "Controle
-            # leem do lado DualSense; ninguém renumera quem já tem slot.
             self.identity_registry.set_external_reserve_provider(
                 lambda: set(registry.snapshot().values())
             )
@@ -4184,8 +4058,6 @@ class Daemon:
         novo = signal.authority
         if anterior == "game" and novo == "daemon":
             _soltar_o_pad_do_lancamento(self, MOTIVO_DA_AUTORIDADE)
-        # O lançamento que caiu não muda a autoridade (fica `daemon`): esta soltura
-        # roda ANTES do retorno de «sem borda», senão nunca rodaria.
         if (
             inputs is not None
             and novo != "game"
@@ -4212,7 +4084,6 @@ class Daemon:
 
 
     _steam_jogo_task: asyncio.Task[Any] | None = None
-    #: A tarefa do tique do sinal de jogo (`_agendar_o_sinal_de_jogo`), irmã da sonda da Steam.
     _game_signal_task: asyncio.Task[Any] | None = None
 
     def _schedule_steam_jogo_tick(self) -> None:
@@ -4304,7 +4175,6 @@ class Daemon:
                         ancorar_o_p1_no_aparelho(self)
                     except Exception as exc:
                         logger.warning("pad_do_p1_ancorar_falhou", err=str(exc))
-                    # sem ela o co-op não existe e os quatro DualSense viram um
                     passos.passo("coop_gamepad", self.aplicar_gamepad_para_multiplos_controles)
                 elif nome == "bateria":
                     self._amostrar_bateria(tick_started)
@@ -4334,21 +4204,16 @@ class Daemon:
 
         while not self._is_stopping():
             tick_started = loop.time()
-            # A entrada vem primeiro: o que o co-op já tem pronto vai ao jogo antes
-            # de qualquer manutenção do tique.
             grace_passed = tick_started >= self._input_ready_at
             if grace_passed:
                 get_coop_manager(self).forward_all()
                 fechar_o_p1_que_nasceu(self)
             if not self.controller.is_connected():
-                # que `daemon.state_full` prioriza, CLUSTER-IPC-STATE-PROFILE-01)
-                # três handlers de estado (`daemon.status`, `state_full`,
                 if was_connected:
                     esquecer_a_leitura_publicada()
                     soltar_o_que_o_controle_segurava(self)
                 was_connected = False
                 previous_buttons = frozenset()
-                # Sem o controle, a tecla do Big Picture que ele segurava se solta.
                 levar_o_big_picture(self, None, frozenset())
                 terminar_o_tique(tick_started)
                 stop_event = self._stop_event
@@ -4360,19 +4225,13 @@ class Daemon:
             try:
                 state = await self._run_blocking(self.controller.read_state)
             except Exception as exc:
-                # O `read_state` real não faz E/S (lê o que as threads mantêm): uma
-                # leitura que levanta é defeito de código, e nenhum handle sai da
-                # mesa por isso. A borda é uma por episódio; a volta espera o
-                # próximo tique (a queda de verdade entra pelo `reconnect_loop`, que
-                # reconecta sempre). O assentamento não recomeça: nenhum
-                # handle foi reaberto, e o co-op (`forward_all`) segue andando.
                 if passos.falhou("leitura", exc):
                     registrar_queda_da_bateria(self, "poll_read_failed", tick_started)
                     if was_connected:
                         esquecer_a_leitura_publicada()
                     quem = primary_identity(self)
                     soltar_o_que_o_controle_segurava(self, quem)
-                    queda = {"reason": str(exc), "uniq": quem}  # a queda diz de quem é
+                    queda = {"reason": str(exc), "uniq": quem}
                     self.bus.publish(EventTopic.CONTROLLER_DISCONNECTED, queda)
                     levar_o_big_picture(self, None, frozenset())
                 terminar_o_tique(tick_started)
@@ -4394,7 +4253,6 @@ class Daemon:
                 )
 
             self.store.update_controller_state(state)
-            # no slot `_last_state` para `daemon.state_full` consumir
             self._last_state = state
             self.bus.publish(EventTopic.STATE_UPDATE, state)
             self.store.bump("poll.tick")
@@ -4445,7 +4303,6 @@ class Daemon:
                 from hefesto_dualsense4unix.daemon.subsystems.mouse import soltar_o_cursor
 
                 _largar_a_tabela(self, state, frozenset(), no_jogo=False)
-                # A pausa e o Modo Nativo não despacham o mouse: o clique travado se solta.
                 soltar_o_cursor(self)
                 if self._touchpad_reader is not None:
                     from hefesto_dualsense4unix.daemon.subsystems.mouse import (
@@ -4466,7 +4323,7 @@ class Daemon:
                     if self._plugins_subsystem is not None:
                         self._plugins_subsystem.dispatch_battery_change(state.battery_pct)
                 from hefesto_dualsense4unix.mods.porta import movimento_de_todo_controle_no_servico
-                movimento_de_todo_controle_no_servico(self, state)  # em todo modo: só lê
+                movimento_de_todo_controle_no_servico(self, state)
                 terminar_o_tique(tick_started)
                 elapsed = loop.time() - tick_started
                 sleep_for = period - elapsed
@@ -4488,14 +4345,10 @@ class Daemon:
                 )
                 if blocked:
                     emu_buttons = buttons_pressed - blocked
-                # O gesto dos acessórios (PS + R2): o gatilho dele não vira clique no desktop.
                 emu_l2, emu_r2 = sem_o_eixo_do_gesto(
                     self, primary_identity(self), buttons_pressed,
                     (state.l2_raw, state.r2_raw), emu_l2, emu_r2,
                 )
-            # A Navegação Interna com a janela do Hefesto na frente: o R1 e o L1
-            # andam as abas e não saem como Alt+Tab (D-20); fora dela, saem. Com o
-            # mouse desligado o primário navega a Interna: o Start também fica com ela.
             navegacao = getattr(self, "_navegacao_interna", None)
             if navegacao is not None:
                 emu_buttons = navegacao.calar_o_alt_tab(
@@ -4508,12 +4361,8 @@ class Daemon:
                 despachar_no_jogo,
             )
 
-            # Os gatilhos entram pelo NOME (`l2`/`r2`): são linhas da tabela como
-            # qualquer botão, e o teclado só os conhece assim.
             emu_buttons = botoes_com_os_gatilhos(emu_buttons, emu_l2, emu_r2)
             if not gamepad_dispatched:
-                # O Modo Big Picture com a Steam na frente: o direcional, a Cruz e o
-                # Círculo viram as teclas do Big Picture e não chegam ao mouse virtual.
                 emu_buttons = levar_o_big_picture(self, None, emu_buttons)[0]
                 if self._mouse_device is not None and emu_active:
                     self._dispatch_mouse_emulation(state, emu_buttons)
@@ -4524,8 +4373,6 @@ class Daemon:
                         soltar_o_mouse,
                     )
 
-                    # Sem mouse despachando o clique travado se solta. A emulação SUSPENSA
-                    # solta também a tecla do analógico; a desligada deixa a tecla a ele.
                     if emu_active:
                         soltar_o_mouse(self)
                     else:
@@ -4538,19 +4385,16 @@ class Daemon:
                         teclas_do_analogico_no_desktop,
                     )
 
-                    # «Teclas WASD» e «Setas» do analógico: da escolha dele, não da emulação.
                     teclas_do_analogico_no_desktop(self, state)
 
                 if self._keyboard_device is not None and emu_active:
                     if self._teclado_so_no_jogo:
-                        # «Só dentro do jogo»: fora dele o teclado fica calado.
                         self._prime_keyboard_emulation(emu_buttons)
                     else:
                         self._dispatch_keyboard_emulation(emu_buttons)
 
             despachar_no_jogo(self, state, emu_buttons, no_jogo=gamepad_dispatched)
 
-            # `buttons_pressed` lá em cima, e só ele.
             from hefesto_dualsense4unix.daemon.subsystems.poll import observar_os_atalhos
 
             observar_os_atalhos(
@@ -4573,7 +4417,6 @@ class Daemon:
                 self.bus.publish(EventTopic.BUTTON_UP, {"button": name, "pressed": False})
                 self.store.bump("button.up.emitted")
             previous_buttons = current_buttons
-            # Os tópicos `botoes` e `entradas` das extensões: TODO controle, cada um com o dele.
             from hefesto_dualsense4unix.mods.porta import topicos_de_todo_controle_no_servico
 
             topicos_de_todo_controle_no_servico(self, state, current_buttons, buttons_pressed)
@@ -4584,7 +4427,6 @@ class Daemon:
                 self.store.bump("battery.change.emitted")
                 if self._plugins_subsystem is not None:
                     self._plugins_subsystem.dispatch_battery_change(state.battery_pct)
-            # O tópico `movimento` das extensões: o giro e o acelerômetro de TODO controle.
             from hefesto_dualsense4unix.mods.porta import movimento_de_todo_controle_no_servico
 
             movimento_de_todo_controle_no_servico(self, state)
@@ -4690,8 +4532,6 @@ class Daemon:
 
         start_ouvido_do_usb(self)
 
-    # -- os dois arranjos do `desktop`: O-POINT-AND-CLICK-APLICA-O-PERFIL-QUE-A-NAVEGACAO-ESCOLHE-01
-
     @property
     def arranjo_do_desktop(self) -> str:
         """O arranjo do modo `desktop`: ``navegacao`` ou ``point_and_click``, guardado na sessão.
@@ -4738,7 +4578,7 @@ class Daemon:
         )
 
         escolha = getattr(getattr(base, "mouse", None), "point_and_click", None)
-        if not escolha:  # o `carregar_maquina` nunca levanta; a seção `mouse` pode faltar
+        if not escolha:
             mouse_do_computador = getattr(o_computador().global_, "mouse", None)
             escolha = getattr(mouse_do_computador, "point_and_click", None)
         quem, _, resto = str(escolha or "molde:point_and_click").partition(":")
@@ -4868,16 +4708,10 @@ HUB_AUSENTE = _HubAusente()
 INTERVALO_MINIMO_DA_VOLTA_S = 0.004
 
 
-#: O orçamento de um tique a 60 Hz (16,7 ms): acima disso o tique estourou.
 ORCAMENTO_DO_TIQUE_S: Final[float] = 0.0167
 
-#: Quantos tiques medidos formam a janela do p99 e do pior tique.
 JANELA_DO_MEDIDOR_DO_TIQUE: Final[int] = 512
 
-#: Os relógios lentos do tique: ``(nome, período em s, fase em s)``. A fase põe cada
-#: relógio num ponto próprio do período, e dois relógios do mesmo período não caem
-#: mais no mesmo tique: um tique carrega no máximo dois (a identidade e a sonda da
-#: Steam dividem a fase 0, a mais leve das duas é tarefa).
 RELOGIOS_LENTOS: Final[tuple[tuple[str, float, float], ...]] = (
     ("identidade", 2.0, 0.00),
     ("steam_jogo", 2.0, 0.00),
@@ -4890,7 +4724,6 @@ RELOGIOS_LENTOS: Final[tuple[tuple[str, float, float], ...]] = (
     ("bateria", INTERVALO_SONDA_S, 1.50),
 )
 
-#: O co-op só anda depois do assentamento (a entrada do co-op também só).
 _RETIDOS_NO_ASSENTAMENTO: Final[frozenset[str]] = frozenset({"coop"})
 
 
@@ -5085,7 +4918,6 @@ class _OAperto:
         evento = self.evento
 
         def acordar() -> None:
-            # Evento já armado: a volta ainda não o comeu, e outra chamada ao laço não muda nada.
             if not evento.is_set() and not laco.is_closed():
                 laco.call_soon_threadsafe(evento.set)
 

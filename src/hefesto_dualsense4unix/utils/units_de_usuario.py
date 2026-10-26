@@ -24,9 +24,6 @@ from pathlib import Path
 
 NOME_DO_PRODUTO = "hefesto-dualsense4unix"
 
-# As units que funcionam num pacote. As outras de `assets/` (storm-watch,
-# steam-input-guard) dependem de um script e de marcadores (`__SCRIPT__`,
-# `__SENTINELA__`...) que só o `install.sh` nativo resolve.
 UNITS_DE_PACOTE: tuple[str, ...] = (
     f"{NOME_DO_PRODUTO}.service",
     f"{NOME_DO_PRODUTO}-gui-hotplug.service",

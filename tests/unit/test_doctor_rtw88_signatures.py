@@ -55,8 +55,6 @@ def _roda_check(
     stub = stubs / "journalctl"
     stub.write_text(f'#!/bin/sh\ncat "{fixture}"\n', encoding="utf-8")
     stub.chmod(0o755)
-    # `iw` de mentira: sem `wifi`, a máquina não tem interface (e o `iw` real,
-    # se houver, não vaza para o teste); com ele, {interface: "on"|"off"}.
     if ferramenta == "iw":
         iw = stubs / "iw"
         interfaces = "".join(f"\\tInterface {i}\\n" for i in (wifi or {}))
@@ -70,8 +68,6 @@ def _roda_check(
         )
         iw.chmod(0o755)
     elif ferramenta == "iwconfig":
-        # Só o `iwconfig`, no `/usr/sbin` de mentira (fora do PATH, como no
-        # usuário comum do Debian 12).
         sbin = tmp_path / "sbin"
         sbin.mkdir(exist_ok=True)
         iwconfig = sbin / "iwconfig"
@@ -86,7 +82,6 @@ def _roda_check(
         )
         iwconfig.chmod(0o755)
     funcao = _extrai_funcao_bash(DOCTOR, nome).replace(raiz_original, str(raiz_fixture))
-    # O `/usr/sbin /sbin` real não vaza: aponta para o de mentira.
     funcao = funcao.replace(
         "for dir in /usr/sbin /sbin; do", f"for dir in {tmp_path / 'sbin'}; do"
     )

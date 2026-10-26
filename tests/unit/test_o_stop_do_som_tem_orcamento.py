@@ -27,9 +27,7 @@ from hefesto_dualsense4unix.integrations.dualsense_bt_audio import RecuoDoPactl
 RAIZ = Path(__file__).resolve().parents[2]
 UNIT_DAEMON = RAIZ / "assets" / "hefesto-dualsense4unix.service"
 NOS = 4
-#: Os dois ``join`` de 2,0 s do ``stop`` do som (a volta e o ouvinte).
 JOINS_DO_SOM_S = 2 * 2.0
-#: O ``join`` do ``bt_mic`` e o único estouro que ele paga (o piso do recuo).
 BT_MIC_S = 2.0 + afb._TIMEOUT_PACTL_S
 _SISTEMA = ("1", "module-native-protocol-unix", "")
 _REAL_RUN = subprocess.run
@@ -150,9 +148,6 @@ def _timeout_stop_da_unit() -> float:
     return float(casou.group(1))
 
 
-# --- 1. O servidor travado ---------------------------------------------------------
-
-
 def test_o_servidor_travado_paga_um_estouro_e_nada_mais(
     monkeypatch: pytest.MonkeyPatch, relogio: Relogio
 ) -> None:
@@ -171,9 +166,6 @@ def test_o_servidor_travado_paga_um_estouro_e_nada_mais(
     assert len(servidor.do_hefesto()) == NOS * 3, "o travado não descarrega: fica para a varredura"
 
 
-# --- 2. O servidor lento, que nunca estoura --------------------------------------
-
-
 def test_o_servidor_lento_cabe_no_orcamento(
     monkeypatch: pytest.MonkeyPatch, relogio: Relogio
 ) -> None:
@@ -189,9 +181,6 @@ def test_o_orcamento_e_o_join_cabem_no_prazo_da_unit() -> None:
     """MORDIDA: tirar o ``TimeoutStopSec`` da unit."""
     gasto = afb.ORCAMENTO_DO_STOP_S + JOINS_DO_SOM_S + BT_MIC_S
     assert gasto < _timeout_stop_da_unit()
-
-
-# --- 3. O servidor saudável não muda ----------------------------------------------
 
 
 def test_o_servidor_saudavel_derruba_tudo_na_mesma_ordem(
@@ -227,9 +216,6 @@ def test_fora_do_stop_o_prazo_e_o_de_sempre(relogio: Relogio) -> None:
     afb.no_orcamento_do_stop(fim, lambda: vistos.append(afb._prazo_do_pactl()))
     assert vistos == [3.0, None]
     assert afb._prazo_do_pactl() == afb._TIMEOUT_PACTL_S
-
-
-# --- 4. O laço não espera o servidor -------------------------------------------------
 
 
 class _GerenciadorDemorado:

@@ -35,7 +35,7 @@ def _versao_canonica() -> str:
     """Lê pyproject.toml — a mesma fonte de verdade que o portão usa."""
     try:
         import tomllib
-    except ImportError:  # pragma: no cover — 3.10
+    except ImportError:  # pragma: no cover
         import tomli as tomllib
     dados = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))
     return str(dados["project"]["version"])

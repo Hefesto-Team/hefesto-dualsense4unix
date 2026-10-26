@@ -14,7 +14,6 @@ from tests.conftest import skip_sem_gi_real
 
 RAIZ = Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
-#: Os instrumentos que saíram de `src/` em 22/10/2026 moram aqui.
 TELA = RAIZ / "scripts" / "tela"
 
 

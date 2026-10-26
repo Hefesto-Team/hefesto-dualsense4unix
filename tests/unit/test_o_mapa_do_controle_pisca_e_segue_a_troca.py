@@ -262,8 +262,6 @@ def test_o_pisca_e_a_troca_aparecem_no_desenho(com_troca: dict[str, Any]) -> Non
     destino = _nome_da_peca(com_troca["remapeamento"]["triangle"])
     assert com_p3["texto_tri"] == destino, com_p3
     assert "pisca" in com_p3["estado_tri"].split() and "pisca" not in com_p3["estado_cruz"].split()
-    # a Cruz é a linha escolhida ao abrir (`on`), e a escolhida também pinta rosa: o que muda
-    # com o controle é a peça do Triângulo, que só pisca quando o P3 o aperta
     assert com_p3["peca_tri"] == ROSA, com_p3
     assert com_p1["peca_tri"] != ROSA and com_p1["peca_cruz"] == ROSA, com_p1
 
@@ -338,8 +336,10 @@ def _chips_na_vista(largura: int, altura: int) -> list[dict[str, Any]]:
 
 @pytest.mark.parametrize("vista", sorted(VISTAS_DO_MAPA))
 def test_o_nome_do_controle_cabe_no_chip_em_toda_janela(vista: str) -> None:
-    """8 (conferência final, 02/10/2026): os chips levam o nome do controle"""
-    # D-1810-O-CHIP-DO-MAPA-EM-UMA-LINHA-COMPACTA-NA-VISTA-ESTREITA
+    """8 (conferência final, 02/10/2026): os chips levam o nome do controle
+
+    Prova da D-1810-O-CHIP-DO-MAPA-EM-UMA-LINHA-COMPACTA-NA-VISTA-ESTREITA.
+    """
     chips = _chips_na_vista(*VISTAS_DO_MAPA[vista])
     assert len(chips) >= 3, f"a página não tem os chips do «Controle»: {chips}"
     ruins = [c for c in chips if c["vaza"] or c["fora"]]
@@ -423,7 +423,6 @@ def test_o_nome_comprido_do_controle_corta_no_chip_e_leva_o_nome_na_dica(
     sem_corte = [c["texto"] for c in chips if not c["reticencia"]]
     assert sem_corte == [], f"o chip não corta com reticências: {sem_corte}"
     if vista != "dela":
-        # na vista larga os quatro cabem; nas outras duas a barra não tem de onde tirar
         assert all(c["corta"] for c in chips), (
             f"na janela {vista} nenhum nome devia caber inteiro: {chips}")
     cortados = [c for c in chips if c["corta"]]
@@ -477,9 +476,11 @@ ACOES = r"""
 
 @pytest.mark.parametrize("vista", sorted(VISTAS_DO_MAPA))
 def test_a_acao_de_cada_linha_se_le_em_toda_janela(vista: str) -> None:
-    # D-2310-A-ACAO-DO-MAPA-SE-LE-INTEIRA-NA-VISTA-ESTREITA
     """O-CHIP-DO-MAPA-CABE-A-860-PX-01: dar o centro ao controle não pode tirar a ação das colunas
-    dos lados. Com as laterais a 200 px, a 860 px dezessete ações saíam cortadas a seco."""
+    dos lados. Com as laterais a 200 px, a 860 px dezessete ações saíam cortadas a seco.
+
+    Prova da D-2310-A-ACAO-DO-MAPA-SE-LE-INTEIRA-NA-VISTA-ESTREITA.
+    """
     linhas = list(_mede_na_vista(ACOES, *VISTAS_DO_MAPA[vista]))
     assert len(linhas) == 23, linhas
     do_lado = [x["texto"] for x in linhas if x["lado"] and x["corta"]]

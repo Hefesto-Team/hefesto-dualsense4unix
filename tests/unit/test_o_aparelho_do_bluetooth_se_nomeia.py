@@ -77,8 +77,6 @@ def _escolher(monkeypatch: pytest.MonkeyPatch, valor: str) -> _Ponte:
     return ponte
 
 
-# --- a linha --------------------------------------------------------------------------------
-
 def test_o_aparelho_sem_tipo_leva_o_ponto_de_interrogacao_que_abre_a_grade() -> None:
     ap = {"id": ENDERECO, "tipo": "outro", "lugar": LUGAR, "nome": "", "rotulo": "",
           "esperando": False, "fixo": False}
@@ -98,14 +96,12 @@ def test_o_aparelho_com_tipo_nao_pergunta(tipo: str) -> None:
 
 
 def test_o_outro_que_ela_escolheu_nao_pergunta_de_novo() -> None:
-    # Prova da D-1510-O-TIPO-DITO-PELA-PESSOA-SE-GUARDA-PELO-ENDERECO.
+    """Prova da D-1510-O-TIPO-DITO-PELA-PESSOA-SE-GUARDA-PELO-ENDERECO."""
     ap = {"id": ENDERECO, "tipo": "outro", "tipo_dela": True, "lugar": LUGAR, "nome": "X",
           "rotulo": "X", "esperando": False, "fixo": False}
     linha = a08.html_da_linha(ap, {"aparelhos": [ap], "lugares": [{"id": LUGAR}]})
     assert "tipo-qual" not in linha and "Sem tipo" not in linha
 
-
-# --- a grade --------------------------------------------------------------------------------
 
 def test_a_grade_tem_as_nove_palavras_e_cada_uma_grava_um_valor_que_o_schema_aceita() -> None:
     html = a08.html_da_grade_de_tipos()
@@ -118,8 +114,6 @@ def test_a_grade_tem_as_nove_palavras_e_cada_uma_grava_um_valor_que_o_schema_ace
         assert declarado.aparelhos["aabbcc0000e2"].tipo == valor
     assert 'class="tn-x" href="#" data-dica="Fechar"' in html
 
-
-# --- a escolha: pelo endereço, vence a adivinhação, sobrevive à releitura --------------------
 
 def test_sem_escolha_o_aparelho_fica_outro_e_pergunta() -> None:
     ap = _conectado()
@@ -135,8 +129,9 @@ def test_o_controle_que_a_class_ou_o_icon_dizem_nao_pergunta(icone: str,
     O Bluetooth DISSE o que eles são: a linha leva o glifo de controle, não o «?» nem o «Sem tipo».
     MORDIDA: tirar o ``e_controle`` de :func:`a08._tipo_pela_classe` (ou o ``input-gaming`` do
     ``TIPO_PELO_ICONE``) devolve o «?» a um controle que se anunciou.
+
+    Prova da D-1510-O-CONTROLE-QUE-A-CLASS-ANUNCIA-NAO-PERGUNTA.
     """
-    # Prova da D-1510-O-CONTROLE-QUE-A-CLASS-ANUNCIA-NAO-PERGUNTA.
     ctx = a08.Contexto(state={"controllers": []}, mesa=[], conectados=[], estados={})
     (ap,) = a08._aparelhos_da_cena(ctx, ctx.state, {}, [],
                                    (_bluez(icone=icone, classe=classe),), {ADAPTADOR: LUGAR},
@@ -144,18 +139,16 @@ def test_o_controle_que_a_class_ou_o_icon_dizem_nao_pergunta(icone: str,
     assert (ap["tipo"], ap["tipo_dela"]) == ("gamepad", False)
     linha = a08.html_da_linha(ap, {"aparelhos": [ap], "lugares": [{"id": LUGAR}]})
     assert "tipo-qual" not in linha and "Sem tipo" not in linha
-    # o leitor de tela ouve a palavra da tela, nunca a chave interna
     assert ", controle — " in linha and ", gamepad" not in linha
 
 
 def test_a_escolha_se_guarda_pelo_endereco_e_vence_a_adivinhacao(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    # Prova da D-1510-O-TIPO-DITO-PELA-PESSOA-SE-GUARDA-PELO-ENDERECO.
+    """Prova da D-1510-O-TIPO-DITO-PELA-PESSOA-SE-GUARDA-PELO-ENDERECO."""
     ponte = _escolher(monkeypatch, "fone")
     assert ponte.chamadas == [{"aparelhos": {"aabbcc0000e2": {"tipo": "fone"}}}]
     ap = _conectado()
     assert (ap["tipo"], ap["tipo_dela"]) == ("fone", True)
-    # vence até o que o BlueZ diz: o ``Icon`` de teclado não desfaz a palavra de produto.
     ctx = a08.Contexto(state={"controllers": []}, mesa=[], conectados=[], estados={})
     (com_icone,) = a08._aparelhos_da_cena(
         ctx, ctx.state, {}, [], (_bluez(icone="input-keyboard"),), {ADAPTADOR: LUGAR}, [LUGAR])
@@ -180,7 +173,7 @@ def test_o_desligado_guarda_a_escolha(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_controle_vira_o_aparelho_de_glifo_de_controle_e_nao_o_controle_do_hefesto(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    # Prova da D-1510-O-CONTROLE-QUE-A-CLASS-ANUNCIA-NAO-PERGUNTA.
+    """Prova da D-1510-O-CONTROLE-QUE-A-CLASS-ANUNCIA-NAO-PERGUNTA."""
     _escolher(monkeypatch, "controle")
     ap = _conectado()
     assert ap["tipo"] == "gamepad"
@@ -222,8 +215,6 @@ def test_com_o_hefesto_desligado_a_escolha_desce_ao_disco(
     a08.aparelho_tipo(None, {"alvo": ENDERECO, "valor": "mouse"}, _Sem())
     assert maquina.carregar_maquina().aparelhos["aabbcc0000e2"].tipo == "mouse"
 
-
-# --- o desenho -------------------------------------------------------------------------------
 
 @pytest.mark.parametrize("arquivo", ARQUIVOS)
 def test_o_desenho_tem_a_grade_e_a_linha_que_a_abre(arquivo: pathlib.Path) -> None:

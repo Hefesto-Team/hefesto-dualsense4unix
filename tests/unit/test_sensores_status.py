@@ -278,7 +278,6 @@ def test_hub_abre_sob_demanda_e_entrega_os_dois_sensores() -> None:
         "y": 540,
         "width": 1920,
         "height": 1080,
-        # de verdade, os dois dedos do DualSense saem aqui.
         "pontos": [],
     }
 

@@ -18,13 +18,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
-# O título do campo nos formulários `bug.yml` e `jogo.yml`: o GitHub o escreve como `### Título` no corpo.
 CAMPO = "Saída do doctor"
 ROTULO = "precisa do doctor"
-# Os formulários que pedem a saída: o rótulo de cada um (o `labels:` do formulário).
 ROTULOS_QUE_PEDEM = ("bug", "jogo ou emulador")
 SEM_RESPOSTA = {"", "_no response_", "n/a", "na", "nada", "-"}
-# O mínimo para uma saída de `doctor` não ser só uma palavra solta.
 MINIMO_DE_LETRAS = 20
 COMENTARIO = (
     "Obrigado pelo relato. Para a gente conseguir repetir o problema, falta a saída do comando abaixo. "
@@ -39,7 +36,6 @@ def saida_do_campo(corpo: str) -> str | None:
         rf"^### {re.escape(CAMPO)}[ \t]*\n(.*?)(?=^### |\Z)", corpo or "", re.DOTALL | re.MULTILINE)
     if achou is None:
         return None
-    # o formulário embrulha o texto de um campo `render: shell` em uma cerca de código
     texto = re.sub(r"^```\w*\n?|\n?```\s*$", "", achou.group(1).strip())
     return texto.strip()
 

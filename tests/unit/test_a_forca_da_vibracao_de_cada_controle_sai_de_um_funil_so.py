@@ -49,10 +49,10 @@ class _Handle:
         self.battery = SimpleNamespace(Level=bateria, State=None)
         self.motores: list[tuple[str, int]] = []
 
-    def setLeftMotor(self, intensidade: int) -> None:  # noqa: N802 — API pydualsense
+    def setLeftMotor(self, intensidade: int) -> None:  # noqa: N802
         self.motores.append(("forte", intensidade))
 
-    def setRightMotor(self, intensidade: int) -> None:  # noqa: N802 — API pydualsense
+    def setRightMotor(self, intensidade: int) -> None:  # noqa: N802
         self.motores.append(("fraco", intensidade))
 
     def par(self) -> tuple[int, int]:
@@ -72,7 +72,6 @@ class _Mesa:
         self.backend._handles = dict(zip(MACS, self.handles, strict=True))
         self.backend._primary_key = MACS[0]
         self.store = StateStore()
-        # O estado publicado é o do P1, e é o que as três cópias liam para os quatro.
         self.store.update_controller_state(
             ControllerState(battery_pct=BATERIAS[0], l2_raw=0, r2_raw=0,
                             connected=True, transport="usb")
@@ -107,8 +106,6 @@ def _esperado(forca: float) -> tuple[int, int]:
     v = max(0, min(255, round(PEDIDO * forca)))
     return v, v
 
-
-# 1. O `auto` de cada um, nos três caminhos.
 
 def test_o_jogo_mirado_em_cada_um_sai_com_a_bateria_dele(tmp_path: Path) -> None:
     mesa = _Mesa(tmp_path)
@@ -204,8 +201,6 @@ def test_o_debounce_e_de_cada_um(tmp_path: Path) -> None:
     )
 
 
-# 2. O teto do orçamento vence a peça.
-
 @pytest.mark.parametrize("global_do_perfil", ["balanceado", "economia"])
 def test_a_peca_em_maximo_nao_fura_o_teto(tmp_path: Path, global_do_perfil: str,
                                          monkeypatch: pytest.MonkeyPatch) -> None:
@@ -243,8 +238,6 @@ def test_a_peca_em_maximo_nao_fura_o_teto(tmp_path: Path, global_do_perfil: str,
     )
 
 
-# 3. No modo Xbox, a háptica fina recebe o par com a peça.
-
 def test_a_haptica_fina_recebe_o_par_com_a_forca_da_peca(
         tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from hefesto_dualsense4unix.profiles.manager import _controllers_to_rumble_scales
@@ -276,15 +269,12 @@ def test_a_haptica_fina_recebe_o_par_com_a_forca_da_peca(
     assert mesa.handles[2].par() == (0, 0), "com a háptica levando, os motores do HID calam"
 
 
-# 4. Sem peça nem orçamento, nada muda.
-
 @pytest.mark.asyncio
 async def test_em_balanceado_o_par_e_o_de_antes(tmp_path: Path) -> None:
     mesa = _Mesa(tmp_path, politica="balanceado")
 
     for u in UNIQS[:3]:
         await mesa.server._handle_rumble_set({"weak": 160, "strong": 220, "uniq": u})
-    # O P4 fica sem par fixado: o par fixado vence o jogo, e aqui a régua é o jogo.
     gp.apply_game_rumble(mesa.daemon, 33, 7, target_uniq=UNIQS[3])
 
     assert [h.par() for h in mesa.handles[:3]] == [(160, 220)] * 3

@@ -27,11 +27,6 @@ CONSUMIDOR_DE_PRODUCAO: dict[str, str] = {
     "controles.botoes": "interface/mesa_viva.py:def familia_dos_botoes",
 }
 
-#: Nenhuma isenção. As cinco que esperavam a palavra de produto saíram em 06/10/2026
-#: (AS-ISENCOES-QUE-ESPERAM-A-PALAVRA-DELA-01): `mesa.radios` e
-#: `mesa.ordens_dispensadas` já tinham leitor na Conexões, e as respostas de produto
-#: ligaram o resto (os glifos e a cor seguem o controle). Campo novo sem leitor
-#: não entra aqui: ou ganha consumidor, ou sai do esquema.
 ISENTOS: dict[str, str] = {}
 
 

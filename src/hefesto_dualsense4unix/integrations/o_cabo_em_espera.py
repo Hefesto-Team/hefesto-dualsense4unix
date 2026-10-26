@@ -24,11 +24,8 @@ REGRAS_QUE_RELIGAM: tuple[str, ...] = (
     f"/lib/udev/rules.d/{NOME_DA_REGRA}",
 )
 
-#: O HID de um DualSense (comum ou Edge) NO CABO: barramento 0003, Sony 054C.
 _FORMA_DO_CABO = re.compile(r"^0003:054C:(0CE6|0DF2)\.[0-9A-F]{4,}$")
 
-#: ``HID_UNIQ=<mac>`` no ``uevent`` do HID: o endereço que o ``hid-playstation`` leu
-#: do controle ANTES de recusar a probe (ver :func:`cabos_em_espera`).
 _RE_HID_UNIQ = re.compile(r"^HID_UNIQ=(.*)$", re.MULTILINE)
 
 CARGA_DE_FORA = frozenset({"carregando", "cheio", "fora_de_faixa", "erro"})
@@ -334,7 +331,7 @@ __all__ = [
     "REGRAS_QUE_RELIGAM",
     "TETO_POR_CONTROLE_S",
     "CaboEmEspera",
-    "Decisao",  # (noqa-acento): nome de classe, identificador Python
+    "Decisao",  # (noqa-acento)
     "VigiaDoCabo",
     "cabos_em_espera",
     "derrubar_o_radio",

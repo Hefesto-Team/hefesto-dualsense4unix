@@ -21,7 +21,6 @@ from hefesto_dualsense4unix.core.backend_pydualsense import (
 )
 from tests.unit.test_backend_multi_controller import _FakeHandle, _null_evdev
 
-# A faixa forjada da casa (aa:bb:cc), nunca endereço de aparelho.
 STARLIGHT = "AA:BB:CC:00:00:01"
 WHITE = "AA:BB:CC:00:00:02"
 COSMIC = "AA:BB:CC:00:00:03"
@@ -52,7 +51,7 @@ class _Handle(_FakeHandle):
         super().__init__(transport_name=transporte)
         self.reports: list[bytes] = []
 
-    def writeReport(self, report: list[int]) -> int:  # noqa: N802 — API pydualsense
+    def writeReport(self, report: list[int]) -> int:  # noqa: N802
         self.reports.append(bytes(report))
         return len(report)
 
@@ -167,8 +166,10 @@ def test_o_primeiro_tique_pinta_os_quatro(mesa: Any) -> None:
 
 
 def test_o_segundo_tique_sem_mudanca_nao_escreve_nada(mesa: Any) -> None:
-    # D-1610-O-TIQUE-DE-30-S-SO-REPINTA-A-LUZ-PERDIDA
-    """Dois `connect()` seguidos sem mudança: o segundo não manda um report sequer."""
+    """Dois `connect()` seguidos sem mudança: o segundo não manda um report sequer.
+
+    Prova da D-1610-O-TIQUE-DE-30-S-SO-REPINTA-A-LUZ-PERDIDA.
+    """
     inst, handles, espiao, _raiz = mesa
     _connect(inst)
     _limpar(handles, espiao)

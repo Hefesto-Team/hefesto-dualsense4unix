@@ -32,8 +32,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 BANCADA = RAIZ / "mockup"
 PUBLICADAS = RAIZ / "src/hefesto_dualsense4unix/interface/paginas"
 
-#: (feature, papel) -> (aba dona, gestos de escrita). O papel separa quem define, quem escolhe e
-#: quem ativa: a MESMA feature pode ter donos diferentes por papel, nunca dois donos no mesmo.
 FEATURES: dict[tuple[str, str], tuple[str, frozenset[str]]] = {
     ("point and click", "definir o estilo"): (
         "06-navegacao.html", frozenset({"point-and-click-perfil"})),
@@ -105,8 +103,6 @@ def _pacotes() -> Any:
     return pacotes
 
 
-# --- o mapa ------------------------------------------------------------------------------------
-
 def test_o_mapa_tem_um_dono_por_gesto() -> None:
     """Um gesto de escrita com duas donas é o defeito que a régua existe para matar."""
     repetidos = {g: d for g, d in _donos_do_gesto().items() if len(d) != 1}
@@ -114,8 +110,6 @@ def test_o_mapa_tem_um_dono_por_gesto() -> None:
     assert {dona for dona, _ in FEATURES.values()} <= set(PAGINAS), (
         "o mapa cita uma aba que a bancada não tem")
 
-
-# --- as páginas --------------------------------------------------------------------------------
 
 @pytest.mark.parametrize(("pasta", "nome"), ARQUIVOS)
 def test_nenhuma_pagina_emite_o_gesto_de_escrita_de_outra_aba(pasta: Path, nome: str) -> None:
@@ -141,8 +135,6 @@ def test_a_bancada_da_dona_emite_o_que_o_mapa_diz() -> None:
     assert not sem_nenhum, f"a dona não emite nem atende o gesto do papel: {sem_nenhum}"
 
 
-# --- o registro dos pacotes ----------------------------------------------------------------------
-
 def test_nenhum_pacote_atende_o_gesto_de_escrita_de_outra_aba() -> None:
     pacotes = _pacotes()
     donos = _donos_do_gesto()
@@ -150,8 +142,6 @@ def test_nenhum_pacote_atende_o_gesto_de_escrita_de_outra_aba() -> None:
                   if gesto in donos and pagina not in donos[gesto])
     assert not fora, f"gesto de escrita atendido por outra aba: {fora}"
 
-
-# --- a própria régua morde ---------------------------------------------------------------------
 
 def test_o_detector_ve_o_botao_e_ignora_o_selo_a_dica_e_o_estilo() -> None:
     """O botão conta; o selo com a mesma palavra, a dica, o comentário e o CSS não."""
@@ -166,8 +156,10 @@ def test_o_detector_ve_o_botao_e_ignora_o_selo_a_dica_e_o_estilo() -> None:
 
 
 def test_a_regua_reprova_o_botao_que_volta_para_a_calibrar() -> None:
-    """A mordida em miniatura: a mesma conta da régua das páginas, com o botão de volta."""
-    # Prova da D-1510-O-ANALOGICO-VIRTUAL-SO-NA-ABA-CONTROLES.
+    """A mordida em miniatura: a mesma conta da régua das páginas, com o botão de volta.
+
+    Prova da D-1510-O-ANALOGICO-VIRTUAL-SO-NA-ABA-CONTROLES.
+    """
     emitidos = gestos_da_pagina(
         '<button data-gesto="analogico-lado" data-lado="analogico_esquerdo">Esquerdo</button>')
     fora = {g: d for g, d in _donos_do_gesto().items()

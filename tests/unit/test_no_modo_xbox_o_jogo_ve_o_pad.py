@@ -238,7 +238,6 @@ class TestForaDoModoXboxNadaMuda:
     @pytest.mark.parametrize("caminho", [None, CAMINHO_DUALSENSE])
     @pytest.mark.parametrize(
         ("mascara", "vendor", "no_jogo"),
-        # o DualSense sem `uhid` (aqui fora do ar) cai no Xbox 360 até o canal voltar
         [("dualsense", XBOX360_VENDOR, "xbox"), ("xbox", XBOX360_VENDOR, "xbox"),
          ("nintendo", NINTENDO_VENDOR, "nintendo")],
     )
@@ -454,7 +453,6 @@ class TestATrocaDeModoComOPadDePe:
     def test_o_cartao_dualsense_vai_ao_xbox_360_e_volta(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # o canal próprio de pé: sem ele, o modo DualSense já é o Xbox 360
         monkeypatch.setattr(uhid_gamepad, "uhid_available", lambda: True)
         for nome, feito in (("start", lambda self: True), ("stop", lambda self: None),
                             ("wait_for_bind", lambda self, timeout_s=2.0: True)):

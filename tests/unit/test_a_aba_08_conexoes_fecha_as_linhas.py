@@ -172,7 +172,7 @@ def test_o_rodape_do_mapa_vem_do_dono() -> None:
         pagina = onde.pagina("08-conexoes.html", publicado=publicado)
         html = pagina.read_text(encoding="utf-8")
         if publicado and 'class="tn-frase mm-aplicar"' in html:
-            continue  # a publicada só acompanha o desenho no `--publicar` do fecho
+            continue
         assert _a_dica_do_mapa(html)
 
     fonte = pathlib.Path(aba08.__file__).read_text(encoding="utf-8")
@@ -524,8 +524,6 @@ def _ctx_de_alvo(pacote, indice, quantos=2):
     from hefesto_dualsense4unix.interface import mesa_viva
     from hefesto_dualsense4unix.interface.pacotes import Contexto
 
-    # O `player_slot` DESCE com a posição e o `index` SOBE: é o cruzamento que
-    # errada. **O CAMPO É `player_slot`, e não `player`** — quem decide a
     controles = [
         {"uniq": f"aa:bb:cc:00:00:{n:02x}", "connected": True, "index": n,
          "transport": "usb", "player_slot": quantos - n}

@@ -160,7 +160,7 @@ def _perfil_no_disco(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def _clique_do_salvar(aba: str) -> dict[str, str]:
     """O clique do «Salvar» como o piloto o manda: com a aba de onde veio."""
-    return {"gesto": "salvar", "pagina": aba}  # (noqa-acento: chave do clique)
+    return {"gesto": "salvar", "pagina": aba}  # (noqa-acento)
 
 
 def _ctx(vivo: dict[str, Any], mesa: dict[str, Any]) -> Contexto:

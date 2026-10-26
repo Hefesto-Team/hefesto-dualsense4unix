@@ -227,7 +227,6 @@ def test_o_censo_dos_leitores_do_store_no_ipc_handlers() -> None:
     ).read_text(encoding="utf-8")
 
     declarados = {
-        # (`gamepad.mask.set`, `rumble.motores.set`, `sensor.set`) passam por
         "_perfil_que_grava": "grava",
         "_handle_profile_switch": "so-le",
         "_handle_profile_reaplicar": "so-le",

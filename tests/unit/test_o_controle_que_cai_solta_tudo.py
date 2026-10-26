@@ -85,9 +85,6 @@ class _Travado:
         self.soltou += 1
 
 
-# -- o ajudante -----------------------------------------------------------------------------
-
-
 def test_o_ajudante_solta_a_ativacao_os_dois_mouses_e_o_pad_do_p1() -> None:
     store = SimpleNamespace()
     estados = {("", ativacao_de_botao.chave(PRIMARIO)): object(), ("", "ff"): object()}
@@ -116,9 +113,6 @@ def test_o_ajudante_sem_nada_no_ar_nao_levanta() -> None:
     gamepad.soltar_o_que_o_controle_segurava(SimpleNamespace(_gamepad_device=pad))
 
 
-# -- as duas bordas do laço ------------------------------------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_o_controle_que_some_solta_tudo(monkeypatch: pytest.MonkeyPatch) -> None:
     chamadas: list[tuple[Any, ...]] = []
@@ -133,8 +127,6 @@ async def test_o_controle_que_some_solta_tudo(monkeypatch: pytest.MonkeyPatch) -
         fc.desplugar()
         await _esperar(lambda: () in chamadas, "a queda soltar o que o controle segurava")
         await asyncio.sleep(0.05)
-        # A leitura já na fila pode levantar antes (a borda dela solta o primário); a do
-        # controle que some solta todos, uma vez.
         assert chamadas.count(()) == 1 and len(chamadas) <= 2, chamadas
     finally:
         daemon.stop()
@@ -170,9 +162,6 @@ async def test_a_leitura_que_levanta_solta_o_primario(monkeypatch: pytest.Monkey
         await tarefa
 
 
-# -- a saída do jogo, a pausa e a emulação suspensa -------------------------------------------
-
-
 def test_a_saida_do_jogo_solta_o_clique_travado() -> None:
     do_desktop, da_tabela = _Travado(), _Travado()
     daemon = SimpleNamespace(
@@ -198,7 +187,6 @@ async def _laco_com_o_espiao(
             laco.call_soon_threadsafe(soltou.set)
         original(daemon)
 
-    # O `run()` lê a pausa do arquivo da sessão: a pausa do teste entra por ele.
     monkeypatch.setattr(session, "load_paused_state", lambda: pausado)
 
     monkeypatch.setattr(lifecycle, "INPUT_GRACE_SEC", 0.0)
@@ -226,14 +214,10 @@ async def test_a_emulacao_suspensa_solta_o_clique_travado(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     def _suspender(daemon: Daemon) -> None:
-        # Com o mouse do desktop de pé, só a supressão leva ao `else` que solta.
         daemon._mouse_device = MagicMock()
         daemon._emulation_suppressed = True
 
     await _laco_com_o_espiao(monkeypatch, _suspender, pausado=False)
-
-
-# -- a corrida do esquecer() -------------------------------------------------------------------
 
 
 class _QuemMexe:

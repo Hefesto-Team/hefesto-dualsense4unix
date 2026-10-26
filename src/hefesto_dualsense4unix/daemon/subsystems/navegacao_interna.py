@@ -33,13 +33,8 @@ TIPO_INTERNA = "interna"
 TIPO_COMPUTADOR = "computador"
 TIPOS = (TIPO_INTERNA, TIPO_COMPUTADOR)
 
-#: Sem renovação por mais que isto, o foco cai e os botões voltam ao jogo.
 PRAZO_DO_FOCO_S = 1.0
 
-#: Os botões que navegam, no nome do leitor evdev, e o nome do toque na
-#: resposta do ``navegacao.foco``. Os analógicos e os gatilhos nunca (D-22).
-#: O Start (``options``) entra pelo desenho de 03/10: com a Interna ele
-#: guarda as escolhas de todos no perfil, e não pausa o jogo atrás.
 TOQUES: dict[str, str] = {
     "r1": "r1",
     "l1": "l1",
@@ -55,12 +50,8 @@ TOQUES: dict[str, str] = {
 }
 BOTOES_QUE_NAVEGAM = frozenset(TOQUES)
 
-#: O R1 e o L1 são o Alt+Tab do teclado emulado (D-20): com o foco vivo, calam.
-#: Com o mouse desligado calam todos os ``BOTOES_QUE_NAVEGAM``.
 BOTOES_DO_ALT_TAB = frozenset({"r1", "l1"})
 
-#: O que a Interna guarda de quem navega o PC com o mouse ligado: o Alt+Tab e o Start
-#: (22/10/2026: o Start sempre guarda; ele não sai como Super por cima da janela).
 BOTOES_DE_QUEM_NAVEGA_O_PC = BOTOES_DO_ALT_TAB | frozenset({"options"})
 
 

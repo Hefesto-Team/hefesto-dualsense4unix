@@ -205,7 +205,6 @@ def ler(manifesto: Manifesto, lugares: Lugares) -> dict[str, Valor]:
     """O valor de agora de cada opção: o guardado, se o manifesto o aceita; senão o padrão."""
     guardados = _guardados(manifesto.id, lugares)
     saida: dict[str, Valor] = {}
-    # O ``livre`` primeiro: as formas dele valem nos ``por_botao``.
     for opcao in sorted(manifesto.opcoes, key=lambda o: o.tipo != "livre"):
         bruto = guardados.get(opcao.id)
         extras = tuple(formas_do_livre(manifesto, saida))
@@ -266,7 +265,6 @@ def herdar(manifesto: Manifesto, antigas: Sequence[str], lugares: Lugares) -> di
     """
     feitas = _guardados(manifesto.id, lugares)
     herdadas: dict[str, Valor] = {}
-    # O ``livre`` primeiro: a forma gravada nele vale no ``por_botao`` que a escolheu.
     for opcao in sorted(manifesto.opcoes, key=lambda o: o.tipo != "livre"):
         extras = tuple(formas_do_livre(manifesto, {**feitas, **herdadas}))
         if _escolhida(opcao, feitas, extras):
@@ -298,7 +296,6 @@ def aparecem(manifesto: Manifesto, valores: dict[str, Any]) -> frozenset[str]:
 
     def aparece(opcao: Opcao) -> bool:
         if opcao.id not in vistas:
-            # O manifesto recusa o ciclo; a marca falsa só segura um manifesto sem validação.
             vistas[opcao.id] = False
             vistas[opcao.id] = all(
                 alvo in por_id and aparece(por_id[alvo]) and _vale(valores.get(alvo), pedido)

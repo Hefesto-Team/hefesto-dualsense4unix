@@ -119,9 +119,6 @@ class TestPlayerLedsSetRespeitaOSeletor:
         assert resposta["aplicado_em"] == [tres], resposta
 
 
-# Z3-4 — `_destinos_do_broadcast` (trigger.set / trigger.reset SEM uniq)
-
-
 class TestTriggerSetParaDeNomearQuemNaoRecebeu:
     """Reproduz o §2.1(c): a resposta honesta estava no log e era"""
 

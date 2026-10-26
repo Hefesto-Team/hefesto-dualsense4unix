@@ -44,7 +44,7 @@ def plantacoes_de_gi_falso(fonte: str) -> list[int]:
 def _arvore(fonte: str) -> ast.Module | None:
     try:
         return ast.parse(fonte)
-    except SyntaxError:  # pragma: no cover — arquivo quebrado é problema de outro portão
+    except SyntaxError:  # pragma: no cover
         return None
 
 
@@ -308,7 +308,7 @@ class TestODetectorMorde:
 
     def test_arquivo_real_que_so_cita_em_comentario_nao_e_acusado(self) -> None:
         alvo = TESTS_UNIT / "test_input_actions_gtk.py"
-        if not alvo.exists():  # pragma: no cover — arquivo pode ser renomeado
+        if not alvo.exists():  # pragma: no cover
             pytest.skip("test_input_actions_gtk.py não está mais aqui")
         assert alvo.name not in arquivos_em_falta()
 

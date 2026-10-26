@@ -41,8 +41,6 @@ PROVAS = (
     "terminate_espera",
 )
 
-#: Cada mordida: (arquivo, trecho da cura, trecho quebrado) e a prova que tem de reprovar.
-#: Um trecho vazio quer dizer que a mordida é no ambiente da corrida, não no fonte.
 MORDIDAS: dict[str, tuple[str, str, str, str]] = {
     "V1": (
         "xgameruntime.c",
@@ -143,7 +141,6 @@ def construir(trabalho: Path, mordida: str | None, cc: str | None) -> Path:
 
 
 def rodar(wine: Path, prefixo: Path, trabalho: Path, saida: Path, mordida: str | None) -> list[str]:
-    # O mesmo arranjo do install: a peça em <pasta>/x86_64-windows/, o WINEDLLPATH na <pasta>.
     pasta = trabalho / "wine"
     (pasta / "x86_64-windows").mkdir(parents=True)
     shutil.copy2(saida / "xgameruntime.dll", pasta / "x86_64-windows" / "xgameruntime.dll")

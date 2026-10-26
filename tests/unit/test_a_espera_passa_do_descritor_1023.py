@@ -16,7 +16,7 @@ from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
 from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from tests.unit.test_o_pad_virtual_atende_a_vibracao_desde_que_nasce import (
     _UInputComoOPythonEvdev,
-    evdev_de_mentira,  # noqa: F401 — a fixture do evdev de mentira
+    evdev_de_mentira,  # noqa: F401
 )
 from tests.unit.test_vpad_ff_passthrough import _rumble_effect
 

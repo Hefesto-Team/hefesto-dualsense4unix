@@ -319,9 +319,6 @@ class TestInputsPorControle:
         assert result["controllers"][1]["inputs"] is None
 
 
-# --- player_slot (registro de identidade, defensivo) --------------------------
-
-
 class TestPlayerSlot:
     @pytest.mark.asyncio
     async def test_registry_presente_devolve_o_slot(self, running_server: Any) -> None:

@@ -74,9 +74,6 @@ def _copia_da_arvore(destino: Path) -> Path:
     return destino
 
 
-# --- 1. o wheel declara os dois -------------------------------------------------------
-
-
 @pytest.mark.parametrize("origem", OS_DOIS)
 def test_o_wheel_declara_o_pino_e_o_recibo_no_share(origem: str) -> None:
     """MORDIDA: tirar a linha do `shared-data` — o wheel sai sem o arquivo."""
@@ -85,16 +82,10 @@ def test_o_wheel_declara_o_pino_e_o_recibo_no_share(origem: str) -> None:
     assert (RAIZ / origem).is_file(), origem
 
 
-# --- 2. o sdist leva os dois ----------------------------------------------------------
-
-
 @pytest.mark.parametrize("origem", OS_DOIS)
 def test_o_sdist_lista_o_pino_e_o_recibo(origem: str) -> None:
     """MORDIDA: tirar o caminho do `only-include` — um wheel feito do sdist sai sem ele."""
     assert origem in _alvos()["sdist"]["only-include"]
-
-
-# --- 3. o wheel de verdade, aberto num prefixo, deixa o doctor conferir ----------------
 
 
 def test_o_wheel_de_verdade_deixa_o_doctor_achar_e_conferir_o_proton(tmp_path: Path) -> None:
@@ -184,9 +175,6 @@ def test_o_wheel_de_verdade_deixa_o_doctor_achar_e_conferir_o_proton(tmp_path: P
     assert achado["recibo"].startswith(str(prefixo)), achado
     assert achado["linhas"] > 0, "o recibo chegou vazio"
     assert achado["problemas"] == [], achado["problemas"]
-
-
-# --- 4. cada formato instala o wheel, sem filtrar o share/ ------------------------------
 
 
 def _le(relativo: str) -> str:

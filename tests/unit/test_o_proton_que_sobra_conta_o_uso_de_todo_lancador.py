@@ -151,8 +151,10 @@ def test_a_caixa_da_letra_nao_decide(steam: Path, monkeypatch: pytest.MonkeyPatc
 
 def test_os_tres_lancadores_juntos_so_um_sai(steam: Path,
                                             monkeypatch: pytest.MonkeyPatch) -> None:
-    # D-1610-O-PROTON-QUE-SOBRA-CONTA-O-USO-DE-TODO-LANCADOR
-    """Um usado só pela extensão, outro só pelo Heroic, um pela Steam: o sem uso é o único."""
+    """Um usado só pela extensão, outro só pelo Heroic, um pela Steam: o sem uso é o único.
+
+    Prova da D-1610-O-PROTON-QUE-SOBRA-CONTA-O-USO-DE-TODO-LANCADOR.
+    """
     _jogo_do_lutris(steam, "GE-Proton11-1")
     _extensao_que_le(monkeypatch, "GE-Proton11-1")
     _jogo_do_heroic(steam, "GE-Proton10-34")
@@ -169,8 +171,6 @@ def test_o_censo_responde_o_que_cada_lancador_usa(steam: Path,
     assert {"GE-Proton11-1", "GE-Proton10-34"} <= uso.versoes
     assert uso.duvida == ()
 
-
-# --- na dúvida a pasta fica ---------------------------------------------------------------------
 
 def test_o_json_do_heroic_ilegivel_mantem_tudo(steam: Path) -> None:
     """MORDIDA: troque «não sei» por «ilegível = vazio» e as quatro saem."""

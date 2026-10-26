@@ -91,26 +91,15 @@ def test_todo_gesto_das_dez_tem_camada() -> None:
     assert not faltam, f"gesto sem camada: {faltam}"
 
 
-#: O gesto nasceu com a base comum (A-BASE-COMUM-DAS-ABAS-01) e o botão «Modo automático» que o
-#: aciona entra na página com a sprint da própria aba (A-ABA-CONTROLES-DO-TODO-01). Sai desta
-#: lista no dia em que a página o trouxer.
-#: O «Desligar» saiu do desenho da 04 (a lista Efeito tem «Sem efeito»), mas a página publicada o
-#: traz até o `--publicar 04`; no dia em que ela perder o botão, sai o gesto `apagar` do pacote, a
-#: linha dele da `CAMADA` e esta entrada (o `apagar` vira o miolo do `efeito-da-luz`).
 A_ABA_AINDA_TRAZ = {
     ("02-controles.html", "modo-dos-controles"),
     ("04-iluminacao.html", "apagar"),
 }
 
 
-#: O gesto que a Perfis do todo atende sem botão na página (o duplo clique na linha renomeia).
 SEM_BOTAO_NA_PAGINA = {
     ("10-perfis.html", "perfis.renomear"),
-    # O «Parar tudo» só existe na janela da extensão que o declara no manifesto; a do desenho não
-    # declara (a dos acessórios, que o trazia, saiu em 19/10/2026).
     ("07-lancadores.html", "parar-tudo-da-modificacao"),
-    # D-2210-O-GATILHO-SO-TEM-O-EFEITO (21/10/2026): a linha «Como o gatilho faz» saiu da 03, e o
-    # gesto `modo` e o perfil gravado ficam (a prova do pacote o chama pela ponte).
     ("03-gatilhos.html", "modo"),
 }
 

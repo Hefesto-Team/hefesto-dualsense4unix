@@ -105,7 +105,7 @@ class Caixa(NamedTuple):
     def centro(self) -> tuple[float, float]:
         return (self.x + self.largura / 2, self.y + self.altura / 2)
 
-    def __str__(self) -> str:  # pragma: no cover — conforto de relatório
+    def __str__(self) -> str:  # pragma: no cover
         return (
             f"x={self.x:g} y={self.y:g} {self.largura:g}x{self.altura:g} "
             f"(centro {self.centro[0]:g},{self.centro[1]:g})"
@@ -336,7 +336,7 @@ class Tela:
 
         if oculta:
             self.janela: Any = Gtk.OffscreenWindow()
-        else:  # pragma: no cover — ela tem UMA tela; o padrão é oculta
+        else:  # pragma: no cover
             self.janela = Gtk.Window(title=f"régua — {pagina.name}")
             self.janela.connect("destroy", Gtk.main_quit)
         self.janela.set_default_size(largura, altura)
@@ -479,7 +479,7 @@ class Tela:
         self._por_o_ajudante()
         crus = ", ".join(json.dumps(a) for a in args)
         resposta = self._cru(f"window.__REGUA.{funcao}({crus})")
-        if not isinstance(resposta, dict):  # pragma: no cover — defesa
+        if not isinstance(resposta, dict):  # pragma: no cover
             raise ErroDeJS(f"__REGUA.{funcao} devolveu {resposta!r}")
         if resposta.get("erro"):
             raise ErroDeJS(f"__REGUA.{funcao}({crus}): {resposta['erro']}")

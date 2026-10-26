@@ -60,7 +60,6 @@ class LightbarRainbowPlugin(Plugin):
     name = "lightbar_rainbow"
     profile_match: ClassVar[list[str]] = []
 
-    # Duracao de um ciclo completo em segundos.
     CYCLE_SEC: float = 6.0
 
     def on_load(self, ctx: PluginContext) -> None:

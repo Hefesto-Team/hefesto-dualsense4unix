@@ -219,7 +219,6 @@ _IOC_TIPO_HID = ord("H")
 _IOC_NR_GETFEATURE = 0x07
 _IOC_NR_SETFEATURE = 0x06
 
-#: Quanto se espera por um report de entrada na prova de vida. O DualSense no
 SEGUNDOS_DE_ESPERA = 1.0
 
 REPORTS_QUE_PROVAM_VIDA = 3

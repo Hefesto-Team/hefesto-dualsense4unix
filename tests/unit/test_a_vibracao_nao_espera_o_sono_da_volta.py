@@ -33,7 +33,6 @@ import pytest
 from hefesto_dualsense4unix.core import backend_pydualsense as bp
 from hefesto_dualsense4unix.integrations import radio_da_mesa
 
-# Faixa forjada, nunca endereço real.
 UNIQS = ["02fe00000001", "02fe00000002", "02fe00000003", "02fe00000004"]
 
 
@@ -61,7 +60,6 @@ class _Relogio:
         self.t = max(self.t, ate)
 
     def sleep(self, segundos: float) -> None:
-        # O relógio real sempre anda; o de float, com 1e-14 s, não sairia do lugar.
         self.avancar(self.t + max(segundos, 1e-6))
 
 
@@ -162,11 +160,6 @@ class _Bancada:
         return quando[0] - 100.0
 
 
-# --------------------------------------------------------------------------
-# 1. A volta acorda na mudança: a escrita sai na hora, no cabo e no rádio
-# --------------------------------------------------------------------------
-
-
 def test_a_vibracao_no_cabo_sai_na_hora_com_quatro_controles(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -211,11 +204,6 @@ def test_sem_mudanca_o_keepalive_segue_no_ritmo_de_sempre(
     ), intervalos
 
 
-# --------------------------------------------------------------------------
-# 2. O piso por transporte: a escrita adiada não se perde e não fura o mínimo
-# --------------------------------------------------------------------------
-
-
 def test_no_radio_o_intervalo_entre_escritas_continua_o_de_hoje(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -231,7 +219,6 @@ def test_no_radio_o_intervalo_entre_escritas_continua_o_de_hoje(
     assert len(janela) >= 2, banca.escritas
     for a, b in itertools.pairwise(janela):
         assert b - a >= 0.032 - 1e-9, f"escritas a {(b - a) * 1000:.1f} ms uma da outra"
-    # A mudança adiada não se perde: o último valor pedido é o que chega.
     assert [v for _, v in banca.escritas if v >= 200][-1] == 202
 
 
@@ -269,11 +256,6 @@ def test_handle_sem_evento_dorme_o_prazo_de_antes(
 
     assert dormidos
     assert set(dormidos) == {0.032}
-
-
-# --------------------------------------------------------------------------
-# 3. Quem arma o evento
-# --------------------------------------------------------------------------
 
 
 def _handle_sem_laco() -> bp._PinnedPyDualSense:
@@ -368,11 +350,6 @@ def test_handle_sem_a_api_de_acordar_nao_quebra() -> None:
     object.__setattr__(handle, "_acordar", evento)
     bp._acordar_a_volta_de(handle)
     assert evento.is_set()
-
-
-# --------------------------------------------------------------------------
-# 4. O piso por transporte e por adaptador
-# --------------------------------------------------------------------------
 
 
 def _controlador(

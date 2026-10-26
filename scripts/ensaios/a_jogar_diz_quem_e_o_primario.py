@@ -384,10 +384,10 @@ def _relatar(saida: dict[str, object], onde_: str) -> None:
             continue
         for c in bloco.get("cartoes") or []:
             print(f"   {c['lugar']:>3} · {str(c['identidade'])[:28]:<28} "
-                  f"primário={c['primario']!s:<5} "  # (noqa-acento) chave de JSON
-                  f"visível={c['primarioVisivel']!s:<5} "  # (noqa-acento) chave de JSON
+                  f"primário={c['primario']!s:<5} "  # (noqa-acento)
+                  f"visível={c['primarioVisivel']!s:<5} "
                   f"alvo-da-fita={c['alvoDaFita']!s}")
-        at = bloco.get("atencao") or {}  # (noqa-acento) chave de JSON
+        at = bloco.get("atencao") or {}  # (noqa-acento)
         print(f"   Atenção: conta={at.get('conta')!r}")
         pares = zip(at.get("selos") or [], at.get("textos") or [], strict=False)
         for selo, texto in pares:

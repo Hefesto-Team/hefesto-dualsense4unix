@@ -19,7 +19,6 @@ CURVAS: Final[tuple[str, ...]] = ("linear", "precisa", "estavel", "digital")
 EIXOS: Final[tuple[str, ...]] = ("lx", "ly", "rx", "ry")
 MAOS: Final[tuple[str, ...]] = ("esquerda", "direita")
 
-#: As faixas que a tela oferece e o motor aplica (em %).
 FAIXA_DA_ZONA_MORTA: Final = (0, 50)
 FAIXA_DA_ZONA_EXTERNA: Final = (0, 30)
 FAIXA_DA_SENSIBILIDADE: Final = (50, 150)
@@ -27,7 +26,7 @@ FAIXA_DO_GATILHO: Final = (0, 40)
 
 CAMPOS: Final[tuple[str, ...]] = (
     "zona_morta", "zona_externa", "curva", "sensibilidade", "inverter", "trocar",
-    "mao",  # (noqa-acento) identificador ASCII
+    "mao",  # (noqa-acento)
     "gatilho_inicio", "gatilho_fim",
 )
 
@@ -90,7 +89,7 @@ def campos_juntos(secao: object, secao_da_peca: object = None) -> dict[str, Any]
     """A seção do perfil com a da peça por cima campo a campo; se a soma recusa, só a da peça."""
     da_peca_ = escritos(secao_da_peca)
     campos = {**escritos(secao), **da_peca_}
-    if recusar(campos.get("trocar"), campos.get("mao")):  # (noqa-acento) identificador ASCII
+    if recusar(campos.get("trocar"), campos.get("mao")):  # (noqa-acento)
         return da_peca_
     return campos
 
@@ -107,7 +106,7 @@ def montar(secao: object, secao_da_peca: object = None) -> Curva | None:
     if not campos:
         return None
     forma = str(campos.get("curva") or "linear")
-    mao = campos.get("mao")  # (noqa-acento) identificador ASCII
+    mao = campos.get("mao")  # (noqa-acento)
     curva = Curva(
         zona_interna=_pct(campos.get("zona_morta"), FAIXA_DA_ZONA_MORTA),
         zona_externa=_pct(campos.get("zona_externa"), FAIXA_DA_ZONA_EXTERNA),

@@ -555,9 +555,6 @@ def test_a_peca_que_apagou_o_chip_ainda_drena_o_angulo(
         f"a peça de chip apagado não descartou o ângulo: {drenagens}")
 
 
-# 5. O IPC — `mira.set` e a leitura de volta no `state_full`
-
-
 @pytest.fixture
 def perfis(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """Diretório de perfis isolado — o molde do `test_o_sensor_desliga_de_verdade`."""
@@ -603,8 +600,6 @@ def test_o_que_ela_escolhe_chega_ao_disco(perfis: Path, tmp_path: Path) -> None:
     assert corpo["status"] == "ok" and corpo["gravado"] is True and corpo["ligada"]
     dele = load_profile("Bancada").controllers["aabbcc000003"].movimento
     assert dele is not None and dele.destino == "analogico_direito"
-    # O analógico virtual é o giro e a inclinação no MESMO lado, guardado com eles
-    # (O-ANALOGICO-VIRTUAL-E-UM-SO-COM-O-LADO-ESCOLHIDO-01, 08/10/2026).
     assert dele.acelerometro == "analogico_direito" and dele.lado == "analogico_direito"
     assert dele.model_fields_set == {"destino", "acelerometro", "lado"}, (
         "o chip gravou campos que ela não mexeu — a peça deixaria de herdar do "

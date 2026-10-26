@@ -36,8 +36,6 @@ from hefesto_dualsense4unix.profiles.schema import EfeitoDaLuz, LedsConfig, Matc
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
-#: Os quatro controles, pela cor do plástico: Starlight Blue, White, Cosmic Red e Galactic
-#: Purple. Endereços de faixa forjada (`aa:bb:cc`), nunca de aparelho de verdade.
 AZUL, BRANCO, VERMELHO, ROXO = (f"aa:bb:cc:00:00:{n:02x}" for n in (0x11, 0x12, 0x13, 0x14))
 QUATRO = (AZUL, BRANCO, VERMELHO, ROXO)
 COR_DE = {AZUL: (40, 80, 255), BRANCO: (240, 240, 240), VERMELHO: (255, 30, 30),
@@ -45,10 +43,6 @@ COR_DE = {AZUL: (40, 80, 255), BRANCO: (240, 240, 240), VERMELHO: (255, 30, 30),
 JOGO_LIVRE = tv.EstadoDoCanal(modo=tv.MODO_XBOX, ha_jogo=True)
 
 
-# --- 1. A receita da página, sem a marca -------------------------------------------------
-
-
-#: Os sete estilos da tabela e o que a página pede de cada um (a chave do estilo mora no código).
 TABELA = {
     "souls": {"haptica": fh.ECO},
     "simulacao": {"haptica": fh.GRAO},
@@ -86,9 +80,6 @@ def test_a_receita_dos_sete_estilos_e_a_da_pagina_e_nenhuma_marca_sobrou() -> No
     assert not sobras, sobras
 
 
-# --- 2. O Clique · mouse não é o Golpe · fraco -------------------------------------------
-
-
 def _numeros(chave: str, modo: str = "Weapon") -> dict[str, int]:
     imersao = next(i for i in ei.IMERSOES if i.chave == chave)
     achados = ei.ajustes_da_imersao(imersao, modo)
@@ -110,9 +101,6 @@ def test_o_clique_do_mouse_nao_e_o_golpe_fraco_e_comeca_antes() -> None:
     assert (pc.r2.imersao, pc.l2.imersao) == ("clique-mouse", "clique-mouse")
     achada = ei.imersao_dos_numeros("Weapon", [clique[k] for k in ("start", "end", "force")])
     assert achada is not None and achada[0].chave == "clique-mouse"
-
-
-# --- 3. O Motor de época é mudo sem o jogo -----------------------------------------------
 
 
 class _AltoFalante:
@@ -166,7 +154,6 @@ def test_o_motor_de_epoca_e_mudo_sem_rumble_e_toca_com_rumble_nos_quatro(
     assert max(abs(x) for _, a in alto.corpo for x in a) > 0.02, "o zumbido soa"
     assert max(abs(x) for _, a in alto.corpo for x in a) <= fh.TETO_DO_CORPO + 1e-9
 
-    # o jogo para: a parada arrasta e depois cala; de novo mudo, e o gerador morre
     t = _rodar_o_motor_de_epoca(passo, (0, 0), 2.0, desde=t)
     assert not passo._motores_de_epoca, "o zumbido acabou e ninguém ficou tocando"
     antes = len(alto.corpo)
@@ -175,12 +162,9 @@ def test_o_motor_de_epoca_e_mudo_sem_rumble_e_toca_com_rumble_nos_quatro(
 
 
 def test_o_motor_de_epoca_so_toca_no_estilo_que_o_pede(monkeypatch: pytest.MonkeyPatch) -> None:
-    passo, alto = _passo(monkeypatch, "acao")  # (noqa-acento) chave
+    passo, alto = _passo(monkeypatch, "acao")  # (noqa-acento)
     _rodar_o_motor_de_epoca(passo, (0, 255), 0.5)
     assert alto.corpo == []
-
-
-# --- 4. O Grão é contínuo e o Eco não ----------------------------------------------------
 
 
 def test_o_grao_toca_sem_aperto_e_sem_parar_nos_quatro(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -201,7 +185,6 @@ def test_o_grao_toca_sem_aperto_e_sem_parar_nos_quatro(monkeypatch: pytest.Monke
     assert len(amostras) >= fh.TAXA * 0.9, "sem parar: o segundo inteiro de amostras"
     pico = max(abs(x) for x in amostras)
     assert 0.05 < pico <= fh.TETO_DO_CORPO
-    # grãos finos e rápidos: entre um grão e outro há silêncio (não é um tom contínuo)
     assert sum(1 for x in amostras if abs(x) < 1e-6) > len(amostras) * 0.2
 
 
@@ -247,9 +230,6 @@ def test_o_eco_tem_a_cauda_grave_e_o_impacto_nao() -> None:
     impacto = fh.amostras(fh.IMPACTO, 1.0, 40)
     assert len(eco) - len(impacto) >= fh.TAXA * 0.25, "a cauda de 300 ms vem depois do Impacto"
     assert eco[-1] == 0.0
-
-
-# --- 5. O Eco e a Onda: a Onda do Furtivo sai ao soltar ----------------------------------
 
 
 def _onda_do_furtivo(eventos: list[tv.Evento]) -> list[tuple[float, int, int]]:
@@ -306,12 +286,9 @@ def test_a_onda_do_furtivo_toca_ao_soltar_o_l2_segurado_e_nao_ao_apertar(uniq: s
 
 def test_a_regra_da_soltura_e_so_do_furtivo_e_so_da_onda() -> None:
     assert pv.na_soltura_do_estilo("onda", "furtivo") == pv.NaSoltura(2.0, "esquerdo")
-    assert pv.na_soltura_do_estilo("onda", "aventura") is None  # a Aventura segue tocando no aperto
+    assert pv.na_soltura_do_estilo("onda", "aventura") is None
     assert pv.na_soltura_do_estilo("batida", "furtivo") is None
     assert pv.na_soltura_do_estilo("onda", None) is None
-
-
-# --- 6. A luz nova segue a regra ---------------------------------------------------------
 
 
 def _perfil() -> Profile:
@@ -363,7 +340,7 @@ class _Mesa:
             controller=controller, _gamepad_device=pad, display_authority="unknown",
             _coop_manager=SimpleNamespace(_players=jogadores),
             store=SimpleNamespace(active_profile="regua"))
-        daemon._last_state = None  # trocado a cada tique, por `_girar`
+        daemon._last_state = None
         return daemon
 
 
@@ -419,7 +396,6 @@ def test_o_acende_segue_o_curso_do_gatilho_na_cor_de_cada_um_dos_quatro(
             quadro = barra.de(u)[-1][1]
             esperado = 1.0 if u == apertado else el.PISO_DO_ACENDE
             assert quadro == _quadro(COR_DE[u], esperado), (apertado, u)
-            # a cor é a do controle: o canal mais forte é o dele
             assert max(range(3), key=lambda i: quadro[i]) == max(
                 range(3), key=lambda i: COR_DE[u][i])
         mesa.r2[apertado] = 0
@@ -446,7 +422,7 @@ def test_o_acende_nunca_passa_de_tres_vaivens_por_segundo_por_mais_que_o_dedo_ba
     MORDIDA: `MEIO_VAIVEM_DO_ACENDE_S = 0.0` (o brilho virando a cada tique) e isto reprova.
     """
     passo_s = 1.0 / 60.0
-    for fase in (0, 1):  # o dedo começa apertando ou solto
+    for fase in (0, 1):
         acende, brilhos = el.BrilhoDoAcende(float(fase)), []
         for tique in range(600):
             curso = 1.0 if (tique + fase) % 2 == 0 else 0.0
@@ -495,7 +471,7 @@ def test_a_bateria_so_respira_com_a_carga_baixa_e_fora_do_cabo(
     assert barra.escritos == [], "com 80% a barra não anima (a luz fixa a 25% é do perfil)"
 
     mesa.carga[VERMELHO] = (20, "descarregando")
-    mesa.carga[ROXO] = (20, "carregando")   # no cabo: a carga não acaba
+    mesa.carga[ROXO] = (20, "carregando")
     mesa.carga[BRANCO] = (100, "cheio")
     t0 = t
     t = _girar(passo, barra, mesa, daemon, t, 12.0, passo_s=0.1)
@@ -508,14 +484,11 @@ def test_a_bateria_so_respira_com_a_carga_baixa_e_fora_do_cabo(
     assert max(brilhos) - min(brilhos) > 0.3, "respira de verdade"
     assert _lampejos_por_segundo(brilhos, t - t0) <= el.TETO_DO_PISCAR_HZ
     assert _lampejos_por_segundo(brilhos, t - t0) < 1.0, "devagar: nunca pisca"
-    # a curva é a do Respirar quadro a quadro: o Piscar no mesmo ritmo também fica abaixo de um
-    # lampejo por segundo (0,6 Hz no ritmo 2), e só a forma o separa
     inicio = quadros[0][0]
     respirar = EfeitoDaLuz("respirar", (COR_DE[VERMELHO],), el.RITMO_DA_BATERIA)
     assert all(c == _quadro(el.cor_no_instante(respirar, t_ - inicio), 1.0)
                for t_, c in quadros), "a Bateria respira, nunca pisca"
 
-    # o cabo entrou: a barra volta ao perfil
     mesa.carga[VERMELHO] = (20, "carregando")
     _girar(passo, barra, mesa, daemon, t, 6.0, passo_s=0.1)
     assert barra.soltos[-1:] == [VERMELHO], "no cabo, a barra volta ao perfil"
@@ -544,9 +517,6 @@ def test_o_perfil_que_pede_luz_vence_a_do_estilo(monkeypatch: pytest.MonkeyPatch
     assert all(c in ((255, 0, 0), (0, 0, 0)) or c[0] >= 0 for _t, _u, c in barra.escritos)
     assert all(c[1] == 0 and c[2] == 0 for _t, _u, c in barra.escritos), (
         "só o vermelho do perfil, nunca a cor do controle")
-
-
-# --- 7. As três imersões novas na frente da lista ----------------------------------------
 
 
 FRENTE_NOVA = {

@@ -43,10 +43,8 @@ PROVAS_DA_SONDA = ("preload", "qi_v2", "aparelhos", "motores", "device_id", "lei
 PROVAS_DOS_BYTES = ("bytes_usb", "bytes_bt", "reenvio", "zero_no_fim")
 PROVAS = PROVAS_DA_SONDA + PROVAS_DOS_BYTES + ("sem_aparelho",)
 
-#: O HRESULT do GameInputCreate do Proton fora do KCD2 (E_NOTIMPL): o que o jogo recebe hoje.
 E_NOTIMPL = "80004001"
 
-#: Cada mordida: (arquivo, trecho da cura, trecho quebrado) e a prova que tem de reprovar.
 MORDIDAS: dict[str, tuple[str, str, str, str]] = {
     "qi-v2": (
         "gameinput.c",
@@ -110,19 +108,15 @@ MORDIDAS: dict[str, tuple[str, str, str, str]] = {
     ),
 }
 
-#: O que a sonda manda: o cabo a 1,0 no forte e 0,5 no fraco; o rádio a 0,25 e 0,75.
 USB_FRACO, USB_FORTE = 0x80, 0xFF
 BT_FRACO, BT_FORTE = 0xBF, 0x40
 
-#: A xgameruntime que o jogo traz ao lado do exe; o Wine a troca pela builtin da peça.
 FORJADA_C = r"""
 #include <windows.h>
 __declspec(dllexport) const char *WINAPI HefestoPecaGdk(void) { return "forjada-ao-lado"; }
 BOOL WINAPI DllMain(HINSTANCE h, DWORD r, LPVOID p) { (void)h; (void)r; (void)p; return TRUE; }
 """
 
-#: Os reports de entrada do dublê. O cabo: direcional esquerdo à direita, R2 no fundo e a cruz.
-#: O rádio: direcional esquerdo à esquerda, o hat para cima e o triângulo.
 ENTRADA_USB = bytes([0x01, 0xFF, 0x80, 0x80, 0x80, 0x00, 0xFF, 0x01, 0x08 | 0x20, 0x00, 0x00]) + bytes(53)
 ENTRADA_BT = bytes([0x31, 0x00, 0x00, 0x80, 0x80, 0x80, 0x00, 0x00, 0x01, 0x00 | 0x80, 0x00, 0x00]) + bytes(66)
 
@@ -261,9 +255,6 @@ def caminho_dos(p: Path) -> str:
 def rodar(
     wine: Path, prefixo: Path, trabalho: Path, saida: Path, *, com_aparelhos: bool = True
 ) -> tuple[list[str], bytes, bytes]:
-    # O mesmo arranjo do install: a xgameruntime em <pasta>/x86_64-windows/, o gameinput em
-    # <pasta>/nativa/, o WINEDLLPATH na <pasta>. Sem aparelhos, o dublê aponta para um arquivo
-    # que não existe: a peça não lista nada, como numa máquina sem DualSense.
     trabalho = trabalho / ("com" if com_aparelhos else "sem")
     pasta = trabalho / "wine"
     (pasta / "x86_64-windows").mkdir(parents=True)

@@ -62,7 +62,7 @@ DRIVER = (
 
 @pytest.fixture(scope="module")
 def fonte_do_driver() -> str:
-    if not DRIVER.exists():  # pragma: no cover - a árvore sem o DKMS
+    if not DRIVER.exists():  # pragma: no cover
         pytest.skip(f"o driver não está nesta árvore: {DRIVER}")
     return DRIVER.read_text(encoding="utf-8", errors="replace")
 

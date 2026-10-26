@@ -60,7 +60,7 @@ def test_a_lista_vem_do_secret_e_o_clone_traz_a_historia_inteira() -> None:
 
 
 def test_os_gatilhos_cobrem_todo_ramo_as_tags_o_pr_e_o_agendamento() -> None:
-    gatilhos = _workflow()[True]  # `on:` vira True no YAML 1.1
+    gatilhos = _workflow()[True]
     assert gatilhos["push"]["branches"] == ["**"], "o ramo de fecho precisa do check antes do dev"
     assert gatilhos["push"]["tags"] == ["v*"]
     assert "pull_request" in gatilhos and "schedule" in gatilhos and "workflow_dispatch" in gatilhos
@@ -79,11 +79,6 @@ def test_todo_passo_de_conteudo_chama_a_regua_unica_e_nenhum_engole_o_codigo_de_
 def test_o_passo_do_pr_so_pula_o_texto_de_robo() -> None:
     passo = _passo("Título e corpo do PR")
     assert "Bot" in str(passo["if"])
-
-
-# ---------------------------------------------------------------------------
-# Os passos de verdade, num repositório de brinquedo
-# ---------------------------------------------------------------------------
 
 
 def _ambiente(extra: dict[str, str] | None = None) -> dict[str, str]:

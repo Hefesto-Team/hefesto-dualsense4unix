@@ -41,9 +41,6 @@ TELA = shutil.which("xvfb-run") is not None
 _STATUS = re.compile(r"^  (\S+)\s+(ok|VERMELHO|lembrado|NÃO MEDIDO|AUSENTE)")
 
 
-# --- a árvore de mentira ------------------------------------------------------------------------
-
-
 def _ambiente(extra: dict[str, str] | None = None) -> dict[str, str]:
     env = {
         k: v
@@ -120,7 +117,6 @@ ARQUIVOS_BASE = {
     "tests/test_tela.py": _TESTE_TELA,
 }
 
-#: uma linha por classe, na ordem de propósito: `py`, `pytest` (de tela) e `bin`.
 TABELA_DAS_TRES = """
 rapido|py-marca|py|scripts/g_marca.py
 completo|pytest-tela|pytest|tests/test_tela.py
@@ -184,8 +180,6 @@ def _recibos(repo: Path) -> set[str]:
     pasta = repo / ".git" / "hefesto-recibos"
     return {p.name for p in pasta.iterdir()} if pasta.is_dir() else set()
 
-
-# --- 1. O veredito é o da série -----------------------------------------------------------------
 
 _MORDIDAS = {
     "a-arvore-verde": {},
@@ -252,8 +246,6 @@ def test_morde_o_paralelo_que_engole_vermelho(tmp_path: Path) -> None:
     )
     assert serie["py-marca"] == "VERMELHO" and paralela["py-marca"] == "ok"
 
-
-# --- 2. Dois portões não se pisam ---------------------------------------------------------------
 
 _TESTE_DE_PAR = textwrap.dedent("""\
     import os
@@ -354,13 +346,9 @@ def test_em_serie_os_dois_pytest_nao_se_encontram(tmp_path: Path) -> None:
     assert _status(r.stdout)["par-a"] == "VERMELHO", r.stdout
 
 
-# --- 3. A ordem, a parede e a vaga --------------------------------------------------------------
-
-
 def _tabela_de_sonos(n: int) -> tuple[str, dict[str, str]]:
     linhas, arquivos = [], {}
     for i in range(n):
-        # o primeiro é o mais lento: se a impressão seguisse a conclusão, ele sairia por último
         segundos = 2.0 if i == 0 else 0.5
         arquivos[f"scripts/dorme{i}.py"] = f"import time\ntime.sleep({segundos})\n"
         linhas.append(f"rapido|dorme{i}|py|scripts/dorme{i}.py")
@@ -447,8 +435,6 @@ def test_morde_o_pedido_de_vaga_dentro_da_vaga(tmp_path: Path) -> None:
     _corre_dentro_de_uma_vaga(repo, tmp_path, env)
     assert anota.exists(), "sem a detecção da vaga o pedido continua: a régua de cima não morde"
 
-
-# --- 4. A memória não esconde nada --------------------------------------------------------------
 
 TABELA_DA_MEMORIA = """
 rapido|inteiro|py|scripts/g_ok.py
@@ -580,10 +566,6 @@ def test_morde_a_memoria_que_ignora_o_proprio_portao(tmp_path: Path) -> None:
     )
 
 
-# O PORTÃO QUE LÊ O ÍNDICE (`git ls-files`, `git show :caminho`) é cego ao arquivo novo antes
-# do `git add`, e a memória não pode piorar isso: o mesmo arquivo, com os mesmos bytes, agora no
-# índice, é outra pergunta. A chave tem de ver o índice, não só o disco.
-
 _PY_INDICE = textwrap.dedent("""\
     import subprocess, sys
     rastreados = subprocess.run(["git", "ls-files"], capture_output=True, text=True).stdout
@@ -647,11 +629,6 @@ def test_morde_a_memoria_que_ignora_o_indice(tmp_path: Path) -> None:
         "a mordida não pegou: a régua não distingue o índice do disco"
     )
 
-
-# A ÁRVORE QUE MUDA DURANTE A CORRIDA: a chave é a do começo, e o portão mede os bytes do meio.
-# O portão abaixo faz, na primeira vez, o papel de quem salva um arquivo enquanto os portões
-# rodam: troca a marca mordida pela limpa antes de ler. O verde dele é dos bytes limpos, e não
-# pode ficar lembrado sob a chave dos mordidos.
 
 _PY_QUEM_SALVA_NO_MEIO = textwrap.dedent("""\
     import pathlib, sys
@@ -844,9 +821,6 @@ def test_o_head_na_chave_acompanha_a_historia(tmp_path: Path) -> None:
     assert antes[1] != depois[1], "o @head não entrou na chave"
 
 
-# --- 5. O recibo do push ------------------------------------------------------------------------
-
-
 def _repo_do_recibo(tmp_path: Path, **kw: str) -> Path:
     return _monta(tmp_path, TABELA_DAS_TRES, **kw)
 
@@ -857,7 +831,7 @@ def test_o_recibo_continua_pedindo_a_camada_completa_da_mesma_arvore(tmp_path: P
     _corre(repo, "--rapido")
     assert _recibos(repo) == set(), "o --rapido deixou recibo"
 
-    r = _corre(repo)  # a camada completa, com os verdes do rápido na memória
+    r = _corre(repo)
     assert r.returncode == 0, r.stdout
     assert _recibos(repo) == {f"{arvore}.portoes-completo"}, r.stdout
     texto = (repo / ".git" / "hefesto-recibos" / f"{arvore}.portoes-completo").read_text(
@@ -866,7 +840,6 @@ def test_o_recibo_continua_pedindo_a_camada_completa_da_mesma_arvore(tmp_path: P
     assert "lembrados: py-marca" in texto, texto
     assert "arvore: " + arvore in texto
 
-    # outra árvore (um arquivo novo no índice): os portões rodam e o recibo é de OUTRA árvore
     (repo / "dados" / "novo.txt").write_text("novo\n", encoding="utf-8")
     _git(repo, "add", "--", "dados/novo.txt")
     nova = _git(repo, "write-tree")
@@ -887,9 +860,6 @@ def test_o_vermelho_de_antes_nao_vira_recibo_pela_memoria(tmp_path: Path) -> Non
     assert _recibos(repo) == set()
 
 
-# --- 6. A quinta coluna não quebra quem lê as quatro --------------------------------------------
-
-
 def test_a_tabela_real_so_acrescenta_uma_quinta_coluna_conhecida() -> None:
     saida = subprocess.run(
         ["bash", str(PORTOES), "--listar"], capture_output=True, text=True, check=True, cwd=RAIZ
@@ -901,7 +871,6 @@ def test_a_tabela_real_so_acrescenta_uma_quinta_coluna_conhecida() -> None:
         campos = linha.split("|")
         assert campos[1] in {"rapido", "completo", "suite"}, linha
         assert len(campos) in (5, 6), f"a tabela tem de ter 4 ou 5 colunas: {linha}"
-        # quem lê as quatro (o `ci-local.sh`, o portão do portão) acha o comando na quarta
         assert campos[3] in {"py", "bash", "bin", "pytest"}, linha
         if len(campos) == 6:
             quantas += 1
@@ -915,12 +884,6 @@ def test_o_portoes_sh_nao_usa_o_pytest_sem_lar_proprio() -> None:
     assert "-p no:cacheprovider" in texto
     assert "//$LAR_DE_MENTIRA/$LAR_DE_MENTIRA/$i" in texto
 
-
-# --- 7. O que a árvore não guarda, o portão declara ----------------------------------------------
-#
-# Medido em 06/10/2026 com `strace -f -e trace=execve` sobre os 66 portões: estes leem a história do
-# git, a máquina ou a data, que a chave por conteúdo não alcança. Sem a declaração, o verde de ontem
-# valeria hoje.
 
 _DECLARADOS = {
     "a-origem": ("@sempre", "git log base..HEAD, merge-base com o dev, rev-parse HEAD"),

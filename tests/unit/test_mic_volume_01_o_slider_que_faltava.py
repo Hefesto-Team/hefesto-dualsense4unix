@@ -48,7 +48,6 @@ from hefesto_dualsense4unix.integrations import audio_control as ac
 from hefesto_dualsense4unix.profiles.schema import ProfileMicConfig
 
 
-#: `Sony_Interactive_Entertainment_Wireless_Controller`, sem "DualSense",
 _SOURCES_COM_CABO = (
     "42\talsa_input.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
     "Controller-00.analog-stereo\tPipeWire\ts16le 1ch 48000Hz\tSUSPENDED\n"

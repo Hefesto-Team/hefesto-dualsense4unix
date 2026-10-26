@@ -107,7 +107,6 @@ TAMANHO_035 = 334
 
 ROTAS = {"alto-falante": 0x13, "fone": 0x16}
 
-#: `DualSenseClient` e o `DS5Dongle-OLED` escrevem `40` nos cinco. O autor de um
 BUFFERS = {"ff": bytes([0x00, 0x00, 0x00, 0x00, 0xFF]), "40": bytes([0x40] * 5)}
 
 ENABLES_SEM_MIC = 0xFE

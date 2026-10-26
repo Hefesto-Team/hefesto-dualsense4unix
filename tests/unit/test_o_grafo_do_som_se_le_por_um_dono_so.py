@@ -28,8 +28,6 @@ from hefesto_dualsense4unix.integrations import transiente_do_jogo as td
 SRC = Path(rs.__file__).resolve().parents[1]
 FERRAMENTA = "pw-dump"
 
-#: (arquivo relativo a ``src/hefesto_dualsense4unix``, função) onde o nome da ferramenta pode
-#: aparecer: o dono, e a chave com que o retrato pede o grafo ao leitor INJETADO das réguas.
 DONO: frozenset[tuple[str, str]] = frozenset({
     ("integrations/retrato_do_som.py", "ler_o_pw_dump"),
     ("integrations/retrato_do_som.py", "_ler_o_grafo"),
@@ -41,9 +39,6 @@ MESA = (
     ("P3", "APARELHOVWXYZG", "cabo"),
     ("P4", "APARELHOHJKMNP", "radio"),
 )
-
-
-# --- a varredura ----------------------------------------------------------------------
 
 
 def _docstrings(arvore: ast.AST) -> set[int]:
@@ -124,9 +119,6 @@ def test_a_varredura_nao_conta_docstring() -> None:
     assert leitores_do_grafo(trecho, "integrations/outro.py") == []
 
 
-# --- o grafo de mentira -----------------------------------------------------------------
-
-
 def _no(ident: int, serial: int, nome: str) -> dict[str, Any]:
     return {"id": ident, "type": "PipeWire:Interface:Node",
             "info": {"props": {"node.name": nome, "object.serial": serial}}}
@@ -164,7 +156,6 @@ def _grafo_da_mesa() -> tuple[str, dict[str, afb.OrigemDoGravador], dict[str, st
         objetos += [_no(base + 3, base + 10, tocador), _link(base + 3, id_endpoint)]
         origens[rotulo] = afb.OrigemDoGravador(base, base + 7, alvo)
         destinos[tocador] = endpoint
-    # o jogo, com o nome que o pactl perde, toca no endpoint de P2: não confunde ninguém
     objetos += [_no(171, 719, "Sackboy™: A Big Adventure"), _link(171, 202)]
     return json.dumps(objetos, ensure_ascii=False), origens, destinos
 
@@ -208,9 +199,6 @@ def dono(monkeypatch: pytest.MonkeyPatch) -> _Dono:
     duble = _Dono()
     monkeypatch.setattr(rs, "ler_o_pw_dump", duble)
     return duble
-
-
-# --- pelo dono: serial, id, nome, e «não sei» --------------------------------------------
 
 
 def test_a_mesa_mista_le_o_grafo_so_pelo_dono(
@@ -302,9 +290,6 @@ def test_o_leitor_injetado_vence_o_dono(dono: _Dono) -> None:
     assert eh.conferir_o_destino_do_tocador(tocador, ler_o_grafo=lambda: grafo) == (
         destinos[tocador])
     assert dono.chamadas == 0
-
-
-# --- a guarda da suíte é a do dono ----------------------------------------------------------
 
 
 @pytest.fixture

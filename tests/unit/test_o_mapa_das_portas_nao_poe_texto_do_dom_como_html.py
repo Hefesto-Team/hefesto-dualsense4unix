@@ -79,10 +79,7 @@ def test_toda_edicao_do_codeql_esta_na_lista_do_gerador() -> None:
         assert edicao in gerador.EDICOES
 
 
-#: O gesto de quem usa, no exemplo: dá à entrada um nome com marca, declara um hub nela, e a
-#: face nova leva o nome no título; depois abre «Sugestões» e lê a dica de cada troca.
 _NOME_COM_MARCA = "<b>Z9</b> & Co"
-#: uma linha de troca com tag e entidade: a dica tem de ler só a letra (o `<4` é letra, não tag)
 _SUJO = "<b>Hub</b> &amp; dock <i>novo</i> 3 <4"
 _JS_DO_NOME_COM_MARCA = r"""
 (function(){

@@ -28,7 +28,7 @@ from comum import (
 try:
     import evdev
     from evdev import ecodes
-except ImportError:  # pragma: no cover - só quando falta a dep do projeto
+except ImportError:  # pragma: no cover
     print("ERRO: python-evdev não encontrado. Rode com o interpretador do venv:")
     print("    .venv/bin/python scripts/ensaios/taxa_de_entrada.py")
     raise SystemExit(3) from None

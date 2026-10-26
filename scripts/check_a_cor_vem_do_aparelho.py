@@ -117,14 +117,12 @@ ENDERECOS = ("data-campo", "data-papel", "data-hef")
 
 COMENTARIO = re.compile(r"<!--.*?-->|/\*.*?\*/", re.S)
 
-#: Só o HEXADECIMAL conta. Um ``--plastico:var(--border-forte)`` é o tom NEUTRO
 PLASTICO = re.compile(r"--plastico\s*:\s*(#[0-9a-fA-F]{3,8})")
 
 ZONA = re.compile(r"--z-[a-z0-9_-]+\s*:\s*#[0-9a-fA-F]{3,8}")
 
 REGRA_DE_COLORWAY = re.compile(r'svg\[data-colorway="([^"]+)"\]')
 
-#: com ``--plastico:#ae335a`` ali é o que o PRODUTO acabou de escrever, não o
 TROCADOS_INTEIROS = ("fita",)
 
 ALVO_DA_FAMILIA = {
@@ -190,7 +188,6 @@ class _Varredor(HTMLParser):
         herdado = self._alvo_vivo()
         coberto = self._trocado() or trocado
 
-        # O `--plastico` mora no `style` do PRÓPRIO elemento, e é ele quem tem
         if not coberto and alvo not in ALVO_DA_FAMILIA["plastico"]:
             for m in PLASTICO.finditer(d.get("style", "")):
                 self._registrar(linha, "plastico", m.group(0),
@@ -230,7 +227,6 @@ class _Varredor(HTMLParser):
         """Julga uma folha de cores: tabela publicada, ou escolha cravada?"""
         declarados = set(REGRA_DE_COLORWAY.findall(css))
         if not declarados:
-            # Um `--plastico` de REGRA CSS (`.ctl[data-controle="p1"]{…}`) não
             if not self._folha_viva:
                 for m in PLASTICO.finditer(css):
                     self._registrar(self._folha_linha, "plastico", m.group(0),

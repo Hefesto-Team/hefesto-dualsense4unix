@@ -28,7 +28,7 @@ DRIVER = RAIZ / "assets" / "dkms" / "hid-playstation" / "hid-playstation.c"
 
 @pytest.fixture(scope="module")
 def fonte_do_driver() -> str:
-    if not DRIVER.exists():  # pragma: no cover - a cópia DKMS é versionada
+    if not DRIVER.exists():  # pragma: no cover
         pytest.skip(f"cópia DKMS ausente: {DRIVER}")
     return DRIVER.read_text(encoding="utf-8", errors="replace")
 
@@ -37,7 +37,7 @@ def fonte_do_driver() -> str:
 def fonte_da_pydualsense() -> str:
     try:
         import pydualsense
-    except Exception:  # pragma: no cover - venv sem a biblioteca
+    except Exception:  # pragma: no cover
         pytest.skip("pydualsense não está importável nesta venv")
     alvo = Path(os.path.dirname(pydualsense.__file__)) / "pydualsense.py"
     if not alvo.exists():  # pragma: no cover

@@ -97,11 +97,6 @@ def _gera(raiz: Path, **kw: Any) -> Any:
     return G.gerar(raiz, fora=FORA_DA_FIXTURE, lar=raiz / "_lar", **kw)
 
 
-# ---------------------------------------------------------------------------
-# A árvore de hoje
-# ---------------------------------------------------------------------------
-
-
 def test_toda_fonte_declarada_existe_e_tem_motivo() -> None:
     assert (RAIZ / G.LEIAME).is_file() and (RAIZ / G.MAPA).is_file()
     assert any((RAIZ / G.USO).glob("*.md")) and any((RAIZ / G.PROTOCOLO).glob("*.md"))
@@ -166,11 +161,6 @@ def test_os_filtros_atravessam_a_wiki_de_hoje_e_dizem_o_que_seguraram(tmp_path: 
     for nome in r.seguradas:
         assert nome not in r.wiki.paginas, f"{nome} está segurada e foi para a Wiki"
     assert G.links_quebrados(r.wiki.arquivos(), set(r.wiki.imagens)) == []
-
-
-# ---------------------------------------------------------------------------
-# O desenho, numa árvore pequena
-# ---------------------------------------------------------------------------
 
 
 def test_os_links_viram_pagina_imagem_arquivo_ou_so_o_texto(tmp_path: Path) -> None:
@@ -241,7 +231,6 @@ def test_endereco_real_numa_fonte_reprova_a_geracao(tmp_path: Path) -> None:
     assert any("endereço [MAC real]" in m for m in r.seguradas["Protocolo-c"])
     assert "Protocolo-c" not in r.wiki.paginas
     assert _endereco_real() not in "".join(r.seguradas["Protocolo-c"]), "o log não repete o endereço"
-    # a máscara da casa passa
     _escreve(raiz, "docs/protocol/c.md", f"# Protocolo C\n\nO adaptador {_endereco_real(True)} respondeu.\n")
     assert "Protocolo-c" in _gera(raiz).wiki.paginas
 
@@ -299,7 +288,6 @@ def test_toda_pagina_diz_de_qual_arquivo_nasce_e_o_rodape_manda_corrigir_la(tmp_
 
 
 def test_o_mapa_segue_a_ordem_das_familias_no_indice_e_na_barra(tmp_path: Path) -> None:
-    # Pela chave, «audio» abriria o mapa; na ordem de quem lê, os gatilhos abrem e o som vem depois da luz.
     som = "som.c,dualsense,audio,Som C,tem,sim,sim,sim,sim,medido,medido,MONTOU,MONTOU"
     r = _gera(_arvore(tmp_path, linhas=[*LINHAS_PADRAO, som]))
     indice = r.wiki.paginas["Mapa-dos-controles"].corpo
@@ -312,16 +300,13 @@ def test_o_mapa_segue_a_ordem_das_familias_no_indice_e_na_barra(tmp_path: Path) 
 def test_a_saida_que_nao_e_wiki_e_recusada_e_nada_se_apaga(tmp_path: Path) -> None:
     raiz = _arvore(tmp_path / "r")
     lar = str(tmp_path / "lar")
-    # a própria árvore de origem: a escrita apagaria o repositório
     assert G.principal(["--saida", str(raiz), "--raiz", str(raiz), "--lar", lar]) == 2
     assert G.principal(["--saida", str(tmp_path), "--raiz", str(raiz), "--lar", lar]) == 2
     assert (raiz / "docs/process/x.md").is_file() and (raiz / "LICENSE").is_file()
-    # uma pasta com arquivos que não é Wiki
     outra = tmp_path / "outra"
     _escreve(outra, "notas.txt", "minhas\n")
     assert G.principal(["--saida", str(outra), "--raiz", str(raiz), "--lar", lar]) == 2
     assert (outra / "notas.txt").read_text(encoding="utf-8") == "minhas\n"
-    # a Wiki de verdade: a página escrita à mão sai, e o `.git` (pasta ou arquivo) fica
     wiki = tmp_path / "wiki"
     _escreve(wiki, "Home.md", "à mão\n")
     _escreve(wiki, "Escrita-a-mao.md", "à mão\n")
@@ -334,19 +319,14 @@ def test_a_saida_que_nao_e_wiki_e_recusada_e_nada_se_apaga(tmp_path: Path) -> No
 def test_o_pedaco_escondido_do_endereco_da_maquina_segura_a_pagina(tmp_path: Path) -> None:
     raiz = _arvore(tmp_path / "r")
     lar = tmp_path / "lar"
-    octetos = ("e8", "47", "3a", "5c", "6d", "09")      # faixa forjada, montada em tempo de execução
+    octetos = ("e8", "47", "3a", "5c", "6d", "09")
     _escreve(lar, ".config/hefesto-dualsense4unix/maquina.json", '{"radio": "' + ":".join(octetos) + '"}\n')
-    pedaco = ":".join(octetos[2:5])                      # a janela com os dois octetos que a máscara esconde
+    pedaco = ":".join(octetos[2:5])
     _escreve(raiz, "docs/protocol/c.md", f"# Protocolo C\n\nO trecho {pedaco} apareceu.\n")
     r = G.gerar(raiz, fora=FORA_DA_FIXTURE, lar=lar)
     assert any("endereço da máquina" in m for m in r.seguradas.get("Protocolo-c", [])), r.seguradas
     assert "Protocolo-c" not in r.wiki.paginas
     assert pedaco not in "".join(r.seguradas["Protocolo-c"]), "o log não repete o pedaço"
-
-
-# ---------------------------------------------------------------------------
-# O workflow
-# ---------------------------------------------------------------------------
 
 
 def test_o_workflow_dispara_com_toda_fonte_que_o_gerador_le(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

@@ -42,13 +42,10 @@ from tests.unit.test_o_pad_que_nasce_pede_o_gadget_fora_do_tique import (
 )
 from tests.unit.test_o_pad_recusado_pelo_broker_tenta_de_novo import Mesa
 
-#: P1 e P3 no cabo, P2 e P4 no rádio (``MESA_MISTA``); o último é quem sai. O P1 é
-#: o vpad do primário, que o co-op não derruba: ele só segue lendo.
 MESAS = [((1, 2), 2), ((1, 2, 3, 4), 4), ((1, 2, 3, 4), 2), ((2,), 2), ((2, 4), 4),
          ((1, 3), 3)]
 IDS = ["p2-bt-sai", "quatro-p4-sai", "quatro-p2-sai", "um-so", "todos-bt", "todos-usb"]
-#: os caminhos do ``sync`` que param o vpad de um jogador no laço do tique.
-CAMINHOS = ("saida", "troca_de_roupa", "coop_desliga")  # (noqa-acento): chave de máquina
+CAMINHOS = ("saida", "troca_de_roupa", "coop_desliga")
 
 
 class _Controle(FakeController):
@@ -141,12 +138,13 @@ def test_o_jogador_que_sai_nao_prende_o_tique_no_broker_preso(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, jogadores: tuple[int, ...],
     quem_sai: int, caminho: str,
 ) -> None:
-    # D-2510-O-JOGADOR-QUE-SAI-DESCE-O-GADGET-FORA-DO-TIQUE
     """O broker aceita e não responde: o tique em que o jogador sai fica abaixo de 50 ms.
 
     Mordida: devolva o ``player.vpad.stop()`` ao ``_teardown_player`` (ou o
     ``jogador.vpad.stop()`` ao ``_derrubar_para_renascer``), e o tique da saída leva
     as duas tentativas do cliente preso, ~4 s.
+
+    Prova da D-2510-O-JOGADOR-QUE-SAI-DESCE-O-GADGET-FORA-DO-TIQUE.
     """
     m = _mesa(monkeypatch, tmp_path)
     pads: list[Any] = []

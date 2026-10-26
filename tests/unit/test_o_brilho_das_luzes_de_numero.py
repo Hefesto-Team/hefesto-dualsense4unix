@@ -190,7 +190,7 @@ def test_as_tres_palavras_tem_um_dono_so() -> None:
     assert typing.get_args(campo.annotation) == tuple(BRILHOS_DAS_LUZES)
     assert campo.default == BRILHO_DAS_LUZES_PADRAO == "fraco", (
         "todo perfil e todo controle nascem no Fraco — é a decisão dela")
-    esperado = {"fraco": FRACO, "medio": MEDIO, "forte": FORTE}  # (noqa-acento) chave ASCII
+    esperado = {"fraco": FRACO, "medio": MEDIO, "forte": FORTE}  # (noqa-acento)
     assert esperado == BRILHOS_DAS_LUZES, (
         "o degrau do firmware é invertido: 0 é o forte e 2 o fraco (medido em "
         "09/09/2026)")
@@ -225,7 +225,7 @@ def test_o_todos_do_perfil_chega_ao_bit_de_p1_a_p4(transporte: str, com_no: bool
 def test_o_override_de_um_controle_so_muda_so_ele(transporte: str, com_no: bool) -> None:
     """Um controle só: o override do P3 no perfil vence o global SÓ no P3."""
     ctl, controles = _mesa(transporte, com_no=com_no)
-    _aplicar(ctl, _perfil("medio", P3="forte"))  # (noqa-acento) chave ASCII
+    _aplicar(ctl, _perfil("medio", P3="forte"))  # (noqa-acento)
     fica = [_o_aparelho_fica_em(h) for h in controles]
     assert fica == [MEDIO, MEDIO, FORTE, MEDIO], (
         f"[{transporte}, {'com' if com_no else 'sem'} nó] os quatro ficaram em "
@@ -264,7 +264,7 @@ def test_o_controle_que_chega_depois_recebe_o_brilho_dele(
         transporte: str, com_no: bool) -> None:
     """O perfil foi aplicado com três na mesa; o P4 chega depois, pelo hotplug."""
     ctl, controles = _mesa(transporte, com_no=com_no, quantos=3)
-    _aplicar(ctl, _perfil("medio", P4="forte"))  # (noqa-acento) chave ASCII
+    _aplicar(ctl, _perfil("medio", P4="forte"))  # (noqa-acento)
     chegou = _controle(transporte)
     chegou._suppress_leds = com_no or transporte == "bt"
     ctl._handles[MACS[3]] = chegou
@@ -306,7 +306,7 @@ def test_a_vigia_do_sequestro_devolve_o_brilho_so_de_quem_foi_sequestrado(
         transporte: str, com_no: bool) -> None:
     """A vigia do sequestro repinta o número do P3 — e o brilho dele volta junto."""
     ctl, controles = _mesa(transporte, com_no=com_no)
-    _aplicar(ctl, _perfil("medio", P3="forte"))  # (noqa-acento) chave ASCII
+    _aplicar(ctl, _perfil("medio", P3="forte"))  # (noqa-acento)
     antes = [len(h.quadros) for h in controles]
     ctl.reafirmar_barra_e_numero([UNIQS[2]])
     assert _brilhos_novos(controles[2], antes[2]) == [FORTE], (
@@ -321,7 +321,7 @@ def test_a_vigia_do_sequestro_devolve_o_brilho_so_de_quem_foi_sequestrado(
 def test_o_gatilho_da_cor_pelo_radio_leva_o_brilho_de_cada_um(com_no: bool) -> None:
     """O gatilho do fim da rajada repinta os quatro do rádio num quadro só cada."""
     ctl, controles = _mesa("bt", com_no=com_no)
-    _aplicar(ctl, _perfil("medio", P3="forte"))  # (noqa-acento) chave ASCII
+    _aplicar(ctl, _perfil("medio", P3="forte"))  # (noqa-acento)
     antes = [len(h.quadros) for h in controles]
     ctl.reescrever_lightbar_por_hidraw()
     for n, h in enumerate(controles):
@@ -339,7 +339,7 @@ def test_o_reassert_leva_o_brilho_pelo_cabo_e_nao_gasta_quadro_no_radio() -> Non
     handle do cabo já levou não sai de novo no reassert; a defesa de exibição o esquece e o leva.
     """
     ctl, cabo = _mesa("usb", com_no=True)
-    _aplicar(ctl, _perfil("medio", P3="forte"))  # (noqa-acento) chave ASCII
+    _aplicar(ctl, _perfil("medio", P3="forte"))  # (noqa-acento)
     antes = [len(h.quadros) for h in cabo]
     ctl.reassert_resolved_outputs()
     assert [_brilhos_novos(h, antes[n]) for n, h in enumerate(cabo)] == [[], [], [], []], (
@@ -349,7 +349,7 @@ def test_o_reassert_leva_o_brilho_pelo_cabo_e_nao_gasta_quadro_no_radio() -> Non
         [MEDIO], [MEDIO], [FORTE], [MEDIO]]
 
     ctl, radio = _mesa("bt", com_no=True)
-    _aplicar(ctl, _perfil("medio", P3="forte"))  # (noqa-acento) chave ASCII
+    _aplicar(ctl, _perfil("medio", P3="forte"))  # (noqa-acento)
     antes = [len(h.quadros) for h in radio]
     ctl.reassert_resolved_outputs()
     assert [len(h.quadros) for h in radio] == antes, (
@@ -390,7 +390,7 @@ async def test_o_ipc_sem_uniq_e_o_todos_e_vence_o_override(
     ctl, controles = _mesa(transporte, com_no=com_no)
     _aplicar(ctl, _perfil("fraco", P2="forte"))
     resposta = await _servidor(ctl, tmp_path)._handle_led_player_brightness_set(
-        {"brilho": "medio"})  # (noqa-acento) chave ASCII
+        {"brilho": "medio"})  # (noqa-acento)
     assert sorted(resposta["aplicado_em"]) == sorted(UNIQS)
     assert [_o_aparelho_fica_em(h) for h in controles] == [MEDIO] * 4
     assert ctl._desired_default.player_led_brightness == MEDIO
@@ -400,7 +400,7 @@ async def test_o_ipc_sem_uniq_e_o_todos_e_vence_o_override(
 async def test_o_ipc_recusa_a_palavra_que_nao_existe(tmp_path: pathlib.Path) -> None:
     """Uma palavra fora das três é recusada DIZENDO quais são — nada sai."""
     ctl, controles = _mesa("usb", com_no=True, quantos=1)
-    with pytest.raises(ValueError, match="fraco, medio, forte"):  # (noqa-acento) chave ASCII
+    with pytest.raises(ValueError, match="fraco, medio, forte"):  # (noqa-acento)
         await _servidor(ctl, tmp_path)._handle_led_player_brightness_set(
             {"brilho": "máximo", "uniq": MACS[0]})
     assert controles[0].quadros == []
@@ -491,10 +491,10 @@ def test_a_pilula_acesa_e_a_do_perfil_de_cada_controle() -> None:
     """A fileira de cada coluna acende a palavra do override dela, ou a do global."""
     from pacotes import a04_iluminacao as a04
 
-    p = {"leds": {"player_led_brightness": "medio"},  # (noqa-acento) chave ASCII
+    p = {"leds": {"player_led_brightness": "medio"},  # (noqa-acento)
          "controllers": {UNIQS[2]: {"leds": {"player_led_brightness": "forte"}}}}
     assert a04.brilho_das_luzes_do_controle(p, MACS[2]) == "forte"
-    assert a04.brilho_das_luzes_do_controle(p, MACS[0]) == "medio"  # (noqa-acento) chave ASCII
+    assert a04.brilho_das_luzes_do_controle(p, MACS[0]) == "medio"  # (noqa-acento)
     assert a04.brilho_das_luzes_do_controle({}, MACS[0]) == "fraco"
     fileira = a04.fileira_de_brilhos_das_luzes("forte")
     assert fileira.count('class="on"') == 1
@@ -509,7 +509,7 @@ def test_o_salvar_do_rodape_nao_apaga_o_brilho_das_luzes() -> None:
 
     from hefesto_dualsense4unix.profiles.loader import load_profile, save_profile
 
-    save_profile(_perfil("forte", P3="medio"), origem="regua")  # (noqa-acento) chave ASCII
+    save_profile(_perfil("forte", P3="medio"), origem="regua")  # (noqa-acento)
     nome = "Régua do brilho das luzes"
     ctx = SimpleNamespace(state={"active_profile": nome}, conectados=[
         {"uniq": UNIQS[2], "lightbar_rgb": [0, 0, 255], "lightbar_on": True,
@@ -519,7 +519,7 @@ def test_o_salvar_do_rodape_nao_apaga_o_brilho_das_luzes() -> None:
     dele = gravado.controllers[UNIQS[2]].leds
     assert "lightbar" not in dele.model_fields_set, (
         f"o Salvar gravou a cor acesa {dele.lightbar} no P3, que não tinha cor")
-    assert dele.player_led_brightness == "medio" and (  # (noqa-acento) chave ASCII
+    assert dele.player_led_brightness == "medio" and (  # (noqa-acento)
         "player_led_brightness" in dele.model_fields_set), (
         f"o Salvar deixou o P3 em {dele.player_led_brightness!r} "
         f"(escrito: {sorted(dele.model_fields_set)}) — a pílula tinha gravado o Médio")
@@ -534,7 +534,7 @@ def test_o_estilo_de_jogo_nao_apaga_o_brilho_das_luzes() -> None:
 
     from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
 
-    perfil = _perfil("medio", P3="forte")  # (noqa-acento) chave ASCII
+    perfil = _perfil("medio", P3="forte")  # (noqa-acento)
     mesa = [{"uniq": MACS[0], "jogador": 1}, {"uniq": MACS[2], "jogador": 3}]
     novo, pintados = a10._com_o_estilo(perfil, POR_CHAVE["fps"], mesa)
     assert pintados == 2

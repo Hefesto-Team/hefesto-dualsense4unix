@@ -1,14 +1,15 @@
 """O-CODIGO-SEM-NARRADOR-01: o código e a prosa do produto não têm narrador.
 
-Comentário, docstring e documento falam do que o código faz e do porquê técnico. Não
-dizem quem conduziu o trabalho, não chamam o usuário de «ela» e não contam a conversa em
-que a decisão nasceu. Quatro réguas, e todas mordem:
+Docstring e documento falam do que o código faz e do porquê técnico. Não dizem quem
+conduziu o trabalho, não chamam o usuário de «ela» e não contam a conversa em que a decisão
+nasceu. Três réguas, e todas mordem:
 
 1. nenhum nome de arquivo versionado leva a palavra «dela»;
 2. nenhuma colocação de narrador ou de processo volta a texto versionado;
-3. as regras do ``scripts/neutralizar-o-texto.py`` já não acham nada para trocar;
-4. nenhum comentário ``#`` de ``src/``, ``tests/`` ou ``scripts/`` traz fala citada entre
-   asteriscos e aspas: o comentário diz a regra, e a citação literal mora no CSV de decisões.
+3. as regras do ``scripts/neutralizar-o-texto.py`` já não acham nada para trocar.
+
+A quarta, a fala citada em comentário, saiu com a D-2610-O-CODIGO-NAO-TEM-COMENTARIO: o código
+não tem comentário, e o portão ``codigo-sem-comentario`` reprova qualquer um.
 """
 
 from __future__ import annotations
@@ -26,9 +27,6 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ / "scripts" / "neutralizar-o-texto.py"
 
-#: As colocações são montadas por partes de propósito: o texto deste arquivo é versionado e
-#: a própria régua o leria. O «agente» do BlueZ não entra: é do produto
-#: (``integrations/agente_de_pareamento.py``); o nome técnico do ``lifecycle`` também não.
 _QUEM = "quem " + "coorden" + "a"
 _COORD = "coorden" + "ador"
 _DUVIDA = "cét" + "ico"
@@ -45,11 +43,6 @@ NARRADOR = re.compile(
     r"|\(mockup \d{2}/"
 )
 
-#: Uma isca por alternativa de ``NARRADOR``: o pedaço literal que o texto TEM de conter para a
-#: alternativa casar. O ``in`` de uma isca custa uma varredura de memória, e a expressão regular,
-#: sobre os 79 MB do texto versionado, custava 8 s dos 13 do arquivo: só o arquivo que traz alguma
-#: isca passa pela expressão. O ``test_cada_alternativa_do_narrador_tem_a_sua_isca`` morde: isca
-#: que falta deixa a alternativa muda.
 _ISCAS = (
     _QUEM[1:],
     _COORD[1:],
@@ -63,37 +56,21 @@ _ISCAS = (
     "(mockup ",
 )
 
-#: O que não se mede aqui, e o motivo de cada um.
 FORA = (
-    "docs/process/",  # o caderno da casa: cada sprint guarda o texto do dia
-    "src/hefesto_dualsense4unix/interface/paginas/",  # o publicado: só o ``--publicar`` o escreve
-    "docs/data/decisoes-de-produto.csv",  # dados que a costura reescreve
+    "docs/process/",
+    "src/hefesto_dualsense4unix/interface/paginas/",
+    "docs/data/decisoes-de-produto.csv",
     "docs/data/mapa-controles.csv",
     "docs/data/paridade-gtk-html.csv",
-    "docs/specs.html",  # gerado do mapa
-    "docs/usage/assets/CONFERIDO-EM.txt",  # o razão das fotos: o texto de cada dia
-    "scripts/neutralizar-o-texto.py",  # cita as colocações para trocá-las
+    "docs/specs.html",
+    "docs/usage/assets/CONFERIDO-EM.txt",
+    "scripts/neutralizar-o-texto.py",
     "scripts/neutralizar-os-nomes.py",
-    "tests/unit/test_o_codigo_nao_tem_narrador.py",  # este arquivo
-    "tests/unit/test_check_autoria.py",  # a régua de autoria cita o vocabulário que veda
+    "tests/unit/test_o_codigo_nao_tem_narrador.py",
+    "tests/unit/test_check_autoria.py",
     "tests/unit/test_anonimato_workflow_fail_closed.py",
     "scripts/check_texto_publico.py",
 )
-
-#: A fala citada em comentário mora no ``scripts/o-texto-enxuto.py``, que é o dono da pergunta
-#: (o mesmo gancho roda no commit, no CI e na escrita); este teste a importa, nunca a copia.
-_ESPEC = importlib.util.spec_from_file_location(
-    "o_texto_enxuto", RAIZ / "scripts" / "o-texto-enxuto.py"
-)
-assert _ESPEC is not None and _ESPEC.loader is not None
-_ENXUTO = importlib.util.module_from_spec(_ESPEC)
-sys.modules["o_texto_enxuto"] = _ENXUTO
-_ESPEC.loader.exec_module(_ENXUTO)
-FALA_CITADA = _ENXUTO.FALA_CITADA
-FORA_DA_FALA = _ENXUTO.FORA_DA_FALA
-_RAIZES_DA_FALA = _ENXUTO.RAIZES_DA_FALA
-falas_em_comentario = _ENXUTO.falas_em_comentario
-
 
 @functools.cache
 def _versionados_em_cache() -> tuple[str, ...]:
@@ -151,19 +128,6 @@ def test_o_vocabulario_de_narrador_nao_volta_ao_texto_versionado() -> None:
     assert achados == [], (
         "narrador ou vocabulário de processo em texto versionado (diga o porquê técnico, "
         f"não quem conduziu): {achados[:8]}"
-    )
-
-
-def test_nenhum_comentario_do_codigo_traz_fala_citada() -> None:
-    textos = {
-        caminho: texto
-        for caminho, texto in _texto_de_todos().items()
-        if caminho.startswith(_RAIZES_DA_FALA) and caminho.endswith(".py")
-    }
-    achados = falas_em_comentario(textos)
-    assert achados == [], (
-        "fala citada em comentário de código (escreva a regra que ela contém; a citação "
-        f"literal só mora no CSV de decisões): {achados[:8]}"
     )
 
 
@@ -234,29 +198,6 @@ class TestMorde:
         texto = {"src/a.py": "# o agente de pareamento do BlueZ responde ao RequestConfirmation\n"}
         assert achados_de_narrador(texto) == []
 
-    def test_a_fala_devolvida_a_um_comentario_e_achada(self) -> None:
-        fala = "*" + "«" + "isso não faz sentido mais" + "»" + "*"
-        limpo = {"src/x.py": "# a regra: o rádio reinicia por conta própria\n"}
-        assert falas_em_comentario(limpo) == []
-        dita = {"src/x.py": f"x = 1\n# a regra\n# {fala}\n"}
-        assert falas_em_comentario(dita) == [("src/x.py", 2)]
-        aspas = "*" + '"' + "isso não faz sentido mais" + '"' + "*"
-        assert falas_em_comentario({"tests/y.py": f"    # {aspas}\n"}) == [("tests/y.py", 1)]
-
-    def test_a_fala_quebrada_em_duas_linhas_de_comentario_tambem_e_achada(self) -> None:
-        abre, fecha = "*" + "«", "»" + "*"
-        quebrada = f"# a regra {abre}isso não faz\n# sentido mais{fecha} segue\n"
-        assert falas_em_comentario({"scripts/z.py": quebrada}) == [("scripts/z.py", 1)]
-
-    def test_a_fala_fora_de_comentario_ou_de_codigo_nao_entra(self) -> None:
-        fala = "*" + "«" + "isso não faz sentido mais" + "»" + "*"
-        assert falas_em_comentario({"src/x.py": f'TEXTO = "{fala}"\n'}) == []
-        assert falas_em_comentario({"docs/x.md": f"# {fala}\n"}) == []
-        publicado = "src/hefesto_dualsense4unix/interface/paginas/a.html"
-        assert falas_em_comentario({publicado: fala}) == []
-        negrito = "**" + "«" + "isso não faz sentido mais" + "»" + "**"
-        assert falas_em_comentario({"src/x.py": f"# {negrito}\n"}) == []
-
     def test_o_nome_com_dela_e_achado(self) -> None:
         assert nomes_com_dela(["tests/unit/test_a_regra_dela.py"]) == [
             "tests/unit/test_a_regra_dela.py"
@@ -289,7 +230,7 @@ def test_o_script_acha_o_dela_em_comentario_e_em_docstring_e_deixa_o_codigo() ->
         "    return janela\n"
     )
     novo = modulo.reescrever_arquivo(fonte, "py")
-    assert novo.count(dela) == 1, novo  # sobra só a string de código, que não é prosa
+    assert novo.count(dela) == 1, novo
     assert f'janela = "a ordem {dela} de 19/09"' in novo
     sem = "def g() -> int:\n    # a janela abre pela tela\n    return 1\n"
     assert modulo.reescrever_arquivo(sem, "py") == sem

@@ -36,11 +36,6 @@ REGRA_HOSTS = RAIZ / "assets" / "81-hefesto-usb-host-power.rules"
 BASH = shutil.which("bash") or "/bin/bash"
 
 
-# ---------------------------------------------------------------------------
-# Um casador mínimo de regra udev: o mesmo casamento do `udevadm test` para as
-# chaves que estas regras usam (ACTION, SUBSYSTEM, ENV{}, ATTR{}, TEST), contra
-# um sysfs de mentira. Não é o udev: é a leitura da regra com o mesmo casamento.
-# ---------------------------------------------------------------------------
 def _chaves(linha: str) -> list[str]:
     """Separa por vírgula FORA de aspas."""
     return [c.strip() for c in re.findall(r'(?:[^,"]|"[^"]*")+', linha) if c.strip()]
@@ -80,7 +75,7 @@ def _casa(
                 bate = (sys_falso / v[len("/sys/") :]).exists()
             else:
                 bate = (pasta_do_aparelho / v).exists()
-        else:  # pragma: no cover - chave nova numa regra: a régua tem de ser ampliada
+        else:  # pragma: no cover
             raise AssertionError(f"chave {k} fora do que o casador conhece")
         if (op == "==") != bate:
             return False
@@ -279,9 +274,6 @@ class TestOPassoDoInstallPergunta:
         assert "_desempenho_tem_bateria" not in REGRA_HOSTS.read_text(encoding="utf-8")
 
 
-# ---------------------------------------------------------------------------
-# A rede: o DKMS do rtw88 e o vigia do Wi-Fi USB.
-# ---------------------------------------------------------------------------
 _MODPROBE_FALSO = """#!/bin/sh
 # modprobe -R <alias>: o módulo que o kernel escolheria para o alias.
 case "$2" in
@@ -303,7 +295,6 @@ def _usb(sysfs: Path, nome: str, vid: str, pid: str, classe: str = "ff") -> None
         f"usb:v{vid.upper()}p{pid.upper()}d0210dc00dsc00dp00ic{classe.upper()}iscFFipFFin00\n",
         encoding="utf-8",
     )
-    # A interface mora ao lado do aparelho: o glob `*:*` do dono a enxerga.
     (sysfs / "bus" / "usb" / "devices" / f"{nome}:1.0").symlink_to(ifc)
 
 
@@ -353,7 +344,7 @@ def _sysfs(tmp_path: Path) -> Path:
 class TestRtw88SoComAdaptador:
     def test_sem_adaptador_a_pergunta_diz_nenhum(self, tmp_path: Path) -> None:
         s = _sysfs(tmp_path)
-        _usb(s, "1-1", "054c", "0ce6")  # o DualSense não é Wi-Fi
+        _usb(s, "1-1", "054c", "0ce6")
         r = _roda_lib(
             tmp_path, "_rtw88_adaptadores_presentes", {"HEFESTO_USB_SYS": str(s)}, _bin(tmp_path)
         )
@@ -370,7 +361,7 @@ class TestRtw88SoComAdaptador:
 
     def test_interface_de_outra_classe_nao_e_perguntada(self, tmp_path: Path) -> None:
         s = _sysfs(tmp_path)
-        _usb(s, "3-1.4", "2357", "012d", classe="e0")  # o Bluetooth do TP-Link
+        _usb(s, "3-1.4", "2357", "012d", classe="e0")
         r = _roda_lib(
             tmp_path, "_rtw88_adaptadores_presentes", {"HEFESTO_USB_SYS": str(s)}, _bin(tmp_path)
         )
@@ -439,9 +430,6 @@ class TestVigiaSoComWifiUsb:
         assert corpo.index("_wifi_usb_agora") < corpo.index("command -v sudo")
 
 
-# ---------------------------------------------------------------------------
-# A primeira instalação: o extra dev só com --dev.
-# ---------------------------------------------------------------------------
 def _extras_para(with_dev: str) -> str:
     texto = INSTALL.read_text(encoding="utf-8")
     ini = texto.index('_extras="emulation,cosmic"')
@@ -481,9 +469,6 @@ class TestExtraDev:
         assert "| `--no-dev` |" not in doc
 
 
-# ---------------------------------------------------------------------------
-# O doctor não cobra o que o install decidiu não fazer.
-# ---------------------------------------------------------------------------
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
 
 

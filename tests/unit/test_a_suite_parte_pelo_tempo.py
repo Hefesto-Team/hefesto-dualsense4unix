@@ -27,9 +27,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 SUITE = RAIZ / "scripts" / "rodar-a-suite.sh"
 CSV_DE_VERDADE = RAIZ / "docs" / "data" / "tempos-da-suite.csv"
 
-# Dez arquivos, em segundos. Os nomes seguem a ordem do tempo, do maior para o menor: o `split` por
-# linha põe os pesados juntos na primeira parte (280 s contra 40 s na última), e a diferença passa
-# do maior arquivo (90 s).
 TEMPOS_S = {
     "test_a00.py": 90,
     "test_a01.py": 80,
@@ -118,7 +115,7 @@ def mentira(tmp_path: Path) -> Path:
 def test_dez_arquivos_de_tempo_conhecido_dao_partes_com_diferenca_menor_que_o_maior(
     mentira: Path, tmp_path: Path
 ) -> None:
-    # A decisão: D-0810-A-SUITE-PARTE-PELO-TEMPO-MEDIDO.
+    """Prova da D-0810-A-SUITE-PARTE-PELO-TEMPO-MEDIDO."""
     saida = tmp_path / "saida"
     feito = _rodar(mentira, saida, PARTES=str(PARTES), A_SECO="1")
     assert feito.returncode == 0, feito.stdout + feito.stderr
@@ -168,8 +165,6 @@ def test_cada_parte_guarda_os_arquivos_em_ordem_de_nome(mentira: Path, tmp_path:
         assert arquivos == sorted(arquivos), f"a parte {numero} saiu fora da ordem do LC_ALL=C"
 
 
-# Nomes que o pt_BR ordena ao contrário do C (ele ignora o `_`), todos de mesmo tempo: o desempate é
-# a posição na lista, e uma lista ordenada no idioma de quem roda muda a divisão.
 NOMES_DO_IDIOMA = ["test_a.py", "test_a_b.py", "test_a_c.py", "test_aa_z.py", "test_ab.py"]
 
 
@@ -221,7 +216,7 @@ def test_a_chave_desligada_nao_separa_quem_toca_a_maquina(tmp_path: Path) -> Non
 
 
 def test_a_chave_pede_o_semaforo(tmp_path: Path) -> None:
-    # A decisão: D-0810-AS-PARTES-EM-PARALELO-ESPERAM-A-PROVA.
+    """Prova da D-0810-AS-PARTES-EM-PARALELO-ESPERAM-A-PROVA."""
     raiz = tmp_path / "arvore"
     _arvore(raiz, None, nomes=["test_00.py", "test_01.py"])
     feito = _rodar(raiz, tmp_path / "saida", PARTES="2", PARTES_EM_PARALELO="2")

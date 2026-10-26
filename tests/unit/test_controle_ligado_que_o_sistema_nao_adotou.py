@@ -60,7 +60,7 @@ TIMER = (
     REPO_ROOT / "assets" / "systemd" / "hefesto-bt-health-watchdog.timer"
 )
 
-ORFAO_NO_ESCOPO = "0005:054C:0CE6.000F"       # DualSense por Bluetooth
+ORFAO_NO_ESCOPO = "0005:054C:0CE6.000F"
 ORFAO_NO_ESCOPO_2 = "0005:054C:0CE6.0011"
 ORFAO_FORA_ESCOPO = "0003:057E:2009.0001"
 VPAD_COM_DRIVER = "0003:054C:0DF2.0010"
@@ -109,7 +109,6 @@ class TestLeituraDoSistema:
         assert dualsense_sem_driver(dir_) == [ORFAO_NO_ESCOPO, ORFAO_NO_ESCOPO_2]
 
     def test_sysfs_ausente_nao_derruba_a_aba(self, tmp_path: Path) -> None:
-        # Este caminho roda dentro do `state_full`: um OSError aqui derrubaria
         assert dualsense_sem_driver(str(tmp_path / "nao-existe")) == []
 
     def test_nome_de_device_torto_nao_explode(self, tmp_path: Path) -> None:

@@ -46,7 +46,7 @@ def _copia_da_arvore(destino: Path) -> Path:
 
 
 def test_o_marcador_mora_no_pacote_e_e_vazio() -> None:
-    # D-2510-O-PACOTE-DECLARA-OS-TIPOS
+    """Prova da D-2510-O-PACOTE-DECLARA-OS-TIPOS."""
     marcador = RAIZ / "src" / MARCADOR
     assert marcador.is_file(), f"o pacote veio sem {MARCADOR}"
     assert marcador.read_text(encoding="utf-8").strip() == "", (

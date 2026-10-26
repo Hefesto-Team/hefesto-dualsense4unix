@@ -562,7 +562,7 @@ class TestReservaExternaCompartilhada:
         reg.set_external_reserve_provider(lambda: set(externos))
         assert reg.slot_for(UNIQ_A) == 1
         assert reg.slot_for(UNIQ_B) == 2
-        externos.add(3)  # o externo entrou na fila depois dos dois DualSense
+        externos.add(3)
         assert reg.snapshot()[UNIQ_A] == 1
         assert reg.slot_for(UNIQ_C) == 4
         assert reg.snapshot()[UNIQ_C] == 4

@@ -72,7 +72,7 @@ from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
-if TYPE_CHECKING:  # pragma: no cover - só para tipo
+if TYPE_CHECKING:  # pragma: no cover
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 
 logger = get_logger(__name__)
@@ -87,7 +87,7 @@ def _bordas(backend: Any) -> dict[str, tuple[Any, ...]]:
         return {}
     try:
         valor = ler()
-    except Exception as exc:  # pragma: no cover - defensivo
+    except Exception as exc:  # pragma: no cover
         logger.warning("mic_da_mesa_leitura_falhou", err=str(exc))
         return {}
     return valor if isinstance(valor, dict) else {}
@@ -122,23 +122,16 @@ async def mic_da_mesa_loop(daemon: DaemonProtocol) -> None:
             continue
         agora = relogio()
         atual = _bordas(backend)
-        # Controle que saiu da mesa perde a memória do contador: quando voltar,
-        # o handle é NOVO e o `seq` dele recomeça do zero. Guardar o número
-        # velho faria a primeira borda depois da reconexão parecer um retrocesso
-        # (e a próxima, um salto) — dois erros pelo preço de um.
         for uniq in list(visto):
             if uniq not in atual:
                 visto.pop(uniq, None)
                 ultimo_por_uniq.pop(uniq, None)
         for uniq, borda in atual.items():
-            # `(seq, mudo, quando)` e, desde o fim do eco do ato, `em_voo`: o
-            # backend que não o diz (dublê, versão velha) é «sem escrita em voo».
             seq, mudo, quando = borda[:3]
             em_voo = bool(borda[3]) if len(borda) > 3 else False
             anterior = visto.get(uniq)
             visto[uniq] = seq
             if anterior is None or seq == anterior:
-                # Primeira vez que vemos este controle: só adotamos o número.
                 continue
             if (agora - nasceu_em) < INPUT_GRACE_SEC:
                 logger.debug("mic_da_mesa_carencia", uniq=uniq)

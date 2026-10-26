@@ -28,15 +28,13 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 DUALSENSE_VENDOR = 0x054C
-DUALSENSE_PIDS = {0x0CE6, 0x0DF2}  # DualSense + DualSense Edge
+DUALSENSE_PIDS = {0x0CE6, 0x0DF2}
 
 DUALSENSE_GYRO_RES_PER_DEG_S = 1024
 
-#: DualSense no cabo — `EVIOCGABS` devolveu `res=8192` nos três eixos dos dois.
 DUALSENSE_ACC_RES_PER_G = 8192
 
 
-#: é o que o DualSense já entrega CRU, e é a escala em que todo o resto do
 EIXO_MAX_HEFESTO = 255
 
 
@@ -252,9 +250,6 @@ def _is_virtual_evdev(event_path: str) -> bool:
     except Exception:
         return False
     if "/devices/virtual/" not in link:
-        # O PAD EM USB (07/10/2026): o gadget mora sob o `vhci_hcd`, com pai USB
-        # como um controle no cabo. Quem diz se é nosso é o `pad_usb`, o dono
-        # único da pergunta; o físico fora do `vhci` não lê nada a mais.
         if not pad_usb.sob_o_vhci(link):
             return False
         return pad_usb.e_pad_nosso(
@@ -298,9 +293,6 @@ def libinput_ignora_device(event_path: Path | str | None) -> bool:
     valor = banco_do_udev.propriedade_do_devnum("c", st.st_rdev, "LIBINPUT_IGNORE_DEVICE")
     return valor is not None and valor not in ("", "0")
 
-
-# A palavra de 23/09, «Esconder tudo»: os nós de entrada do DualSense
-# DualSense. Nó de teclado, de mouse, de outro controle, nunca vai ao broker.
 
 _ABRIDOR_DO_BROKER: Any = None
 _ABRIDOR_LOCK = threading.Lock()
@@ -607,10 +599,8 @@ def find_dualsense_evdev() -> Path | None:
     return paths[0] if paths else None
 
 
-#: Nomes de barramento (linux/input.h). Hardcoded de propósito: python-evdev
 _BUS_NAMES: dict[int, str] = {0x03: "usb", 0x05: "bluetooth"}
 
-#: níveis cobrem USB e Bluetooth com folga sem risco de varrer /sys inteiro.
 _SYSFS_WALK_MAX_LEVELS = 10
 
 
@@ -729,10 +719,7 @@ def _evdev_owner_dir(event_path: str) -> str | None:
         return None
     parent = os.path.dirname(device_dir)
     if os.path.basename(parent) == "input":
-        # Layout canônico `<dono>/input/inputN`: sobe os dois níveis.
         return os.path.dirname(parent) or None
-    # Layout inesperado: fica no dir do próprio input device, que ainda é
-    # por-aparelho (só que mais fino — pode não colapsar nodes irmãos).
     return device_dir
 
 
@@ -791,8 +778,6 @@ class GamepadDescoberto:
     uniq: str | None
     driver: str | None
     hidraw: str | None
-    #: Vazio no DualSense classificado pelo sysfs, que não publica o `absinfo`:
-    #: nenhum código do produto o lê da descoberta, e o leitor lê a faixa do nó
     eixos: dict[int, EixoAbsoluto] = field(default_factory=dict)
 
     def como_entrada_de_inventario(self) -> dict[str, Any]:
@@ -928,7 +913,6 @@ def discover_gamepads(
         return []
     from hefesto_dualsense4unix.core.sysfs_leds import norm_mac
 
-    # O-REPOUSO-ESPERA-O-EVENTO-01, família 3: com o dono do evento armado, a
     ficha = _ficha_da_descoberta(com_sysfs)
     chave = (com_sysfs, especie, ficha is not None and _ha_broker_para_pedir())
     if ficha is not None:
@@ -942,12 +926,10 @@ def discover_gamepads(
     for path in sorted(_nos_de_evento(list_devices), key=lambda p: _event_num(Path(p))):
         if _is_virtual_evdev(path):
             continue
-        # externos não abre o nó do DualSense. O sysfs responde sem abrir; o
         if especie == ESPECIE_EXTERNAL and _no_de_dualsense_no_sysfs(path):
             continue
         if not _sysfs_tem_tecla(path, _BTN_GAMEPAD):
             continue
-        # DualSense se classifica pelo sysfs, sem abrir e sem pedido ao
         lido = _gamepad_do_dualsense_no_sysfs(path)
         if lido is not None:
             if especie is not None and especie != ESPECIE_DUALSENSE:
@@ -999,8 +981,6 @@ def discover_gamepads(
                 driver, hidraw = (
                     _external_device_sysfs(path) if com_sysfs else (None, None)
                 )
-                # portas antigas divergiam: a do DualSense nunca os tocava, a
-                # estrita reprovaria os nodes que a porta do DualSense sempre
                 encontrados.setdefault(
                     (especie_do_no, identidade),
                     GamepadDescoberto(
@@ -1115,29 +1095,10 @@ class _EvdevReconnectLoop:
     _wake_w: int
     _active_dev: Any = None
     _stale_watch: Any = None
-    # A espera sem nó (`_esperar_o_no`, no fim do módulo); nasce na 1ª procura.
     _espera_sem_no: Any = None
     _THREAD_NAME: ClassVar[str] = "hefesto-evdev-base"
-    #: HANG-01: teto de latência do select por iteração do loop de leitura —
-    #: sem isto, `_stop_flag`/`_reopen_flag` só seriam vistos quando o
-    #: self-pipe acordasse; com o timeout, mesmo um wake perdido/atrasado é
-    #: recuperado em ≤ este intervalo (mesma constante do PhysicalReportReader,
-    #: `_SELECT_TIMEOUT_S`).
     _SELECT_TIMEOUT_S: ClassVar[float] = 0.5
 
-    #: VIGIA-DO-MUDO-01 (17/08/2026). De quanto em quanto tempo de SILÊNCIO
-    #: perguntar ao kernel se o nó ainda concorda com o nosso snapshot.
-    #:
-    #: O irmão `PhysicalReportReader` resolve o mesmo problema com um teto de
-    #: silêncio puro (`_SILENCE_REOPEN_USB_S = 1.0`), e **copiar aquilo aqui
-    #: seria defeito**: o hidraw entrega ~250 Hz mesmo com o controle parado
-    #: na mesa, então lá silêncio É link morto. O evdev só emite quando algo
-    #: MUDA — um controle em repouso fica legitimamente mudo para sempre, e um
-    #: teto de tempo o reabriria em laço.
-    #:
-    #: Por isso a régua aqui não é o relógio, é a DISCORDÂNCIA: o `EVIOCGABS`
-    #: do kernel contra o que publicamos. Controle parado, os dois concordam e
-    #: nada acontece; leitor mudo, o kernel andou e nós não.
     _CONFERIR_MUDO_S: ClassVar[float] = 2.0
 
     _CONFIRMAR_MUDO: ClassVar[int] = 2
@@ -1189,13 +1150,13 @@ class _EvdevReconnectLoop:
         """Espera o fd do `dev` OU o self-pipe de wake ficarem prontos."""
         return prontos_para_ler([dev.fd, self._wake_r], self._SELECT_TIMEOUT_S)
 
-    def _find_device(self) -> Path | None:  # pragma: no cover - abstract
+    def _find_device(self) -> Path | None:  # pragma: no cover
         raise NotImplementedError
 
     def _handle_event(self, event: Any, ecodes: Any) -> None:  # pragma: no cover
         raise NotImplementedError
 
-    def _reset_on_disconnect(self) -> None:  # pragma: no cover - abstract
+    def _reset_on_disconnect(self) -> None:  # pragma: no cover
         raise NotImplementedError
 
     @property
@@ -1266,7 +1227,7 @@ class _EvdevReconnectLoop:
     def _on_device_opened(self, dev: Any) -> None:
         """Hook genérico "o device acabou de abrir". No-op na base."""
 
-    def _log_prefix(self) -> str:  # pragma: no cover - abstract
+    def _log_prefix(self) -> str:  # pragma: no cover
         raise NotImplementedError
 
     def is_available(self) -> bool:
@@ -1352,7 +1313,6 @@ class _EvdevReconnectLoop:
                 self._drain_wake()
                 continue
             if not ready:
-                # abre a janela para perguntar ao kernel.
                 silencio += self._SELECT_TIMEOUT_S
                 if silencio < self._CONFERIR_MUDO_S:
                     continue
@@ -1439,9 +1399,6 @@ class _EvdevReconnectLoop:
                 time.sleep(0.1)
 
 
-#: O vocabulário dos botões do leitor: o keycode do evdev -> o nome canônico do Hefesto. Mora no
-#: módulo, e não só na classe, porque a tabela posicional dos pads virtuais nasce dela no import
-#: (`uinput_gamepad.botoes_posicionais`), e um dublê do `EvdevReader` não leva a tabela junto.
 BOTOES_DO_LEITOR: dict[str, str] = {
     "BTN_SOUTH": "cross",
     "BTN_EAST": "circle",
@@ -1466,8 +1423,6 @@ class EvdevReader(_EvdevReconnectLoop):
     atual (thread-safe). `stop()` encerra limpo.
     """
 
-    # Mapeamento de evdev keycode -> nome canônico no domínio Hefesto - DualSense4Unix.
-    #   Injetado em `PyDualSenseController.read_state()`. Ver INFRA-MIC-HID-01.
     BUTTON_MAP: ClassVar[dict[str, str]] = BOTOES_DO_LEITOR
 
     _THREAD_NAME: ClassVar[str] = "hefesto-evdev"
@@ -1485,12 +1440,9 @@ class EvdevReader(_EvdevReconnectLoop):
         self._pressed: set[str] = set()
         self._apertos: dict[str, int] = {}
         self._active_dev: Any = None
-        # e aí o `_handle_abs` cai no `& 0xFF` histórico: o DualSense continua
         self._eixos: dict[int, EixoAbsoluto] = {}
-        # DualSense — lá o eixo existe, e sobrescrevê-lo mataria o analógico.
         self._sintetizar_l2: bool = False
         self._sintetizar_r2: bool = False
-        # Os seis eixos como estavam no último despertar: a âncora do `EV_SYN`.
         self._ancora: tuple[int, ...] = self._eixos_do_quadro()
 
     def retarget(self, uniq: str | None) -> None:
@@ -1503,7 +1455,7 @@ class EvdevReader(_EvdevReconnectLoop):
         self._target_uniq = norm
         current = self._locate()
         if current is not None and current == self._device_path:
-            return  # o node aberto já é o do alvo — nada a fazer
+            return
         self.request_reopen(reason="retarget")
 
     def snapshot(self) -> EvdevSnapshot:
@@ -1541,7 +1493,7 @@ class EvdevReader(_EvdevReconnectLoop):
         """Monta o normalizador DESTE aparelho e SEMEIA a posição de repouso."""
         try:
             from evdev import ecodes
-        except ImportError:  # pragma: no cover - sem evdev não há loop
+        except ImportError:  # pragma: no cover
             return
         caps: Any = {}
         with contextlib.suppress(Exception):
@@ -1553,7 +1505,6 @@ class EvdevReader(_EvdevReconnectLoop):
         rz = getattr(ecodes, "ABS_RZ", None)
         with self._lock:
             self._eixos = eixos
-            # chutar "não tem" num DualSense mataria o gatilho analógico dele.
             self._sintetizar_l2 = bool(eixos) and z is not None and z not in eixos
             self._sintetizar_r2 = bool(eixos) and rz is not None and rz not in eixos
             self._semear_posicao_de_repouso(posicoes, ecodes)
@@ -1724,8 +1675,6 @@ class EvdevReader(_EvdevReconnectLoop):
         if depois is not antes and depois != antes:
             _acordar_quem_entrega_ao_jogo()
 
-    #: Quantas contagens um eixo anda desde o último despertar para acordar a entrega: o ruído de
-    #: ±1 do stick parado fica abaixo, o movimento da mão fica acima.
     _CONTAGENS_QUE_ACORDAM: ClassVar[int] = 2
 
     def _eixos_do_quadro(self) -> tuple[int, ...]:
@@ -2036,7 +1985,6 @@ class TouchpadReader(_EvdevReconnectLoop):
     Threadsafe via RLock.
     """
 
-    # (empírico, DualSense USB 054c:0ce6 com kernel 6.x):
     _TOUCHPAD_WIDTH: ClassVar[int] = 1920
     _TOUCHPAD_HEIGHT: ClassVar[int] = 1080
     _REGION_LEFT_LIMIT: ClassVar[int] = 640
@@ -2068,8 +2016,6 @@ class TouchpadReader(_EvdevReconnectLoop):
         self._accum_dy: int = 0
         self._mt_slot: int = 0
         self._mt_slots: dict[int, dict[str, int | None]] = {}
-        #: Os dedos do último quadro FECHADO (``SYN_REPORT``). ``None`` até o
-        #: primeiro quadro: antes dele vale o que os eventos já disseram.
         self._mt_publicado: tuple[PontoDeToque, ...] | None = None
         self._ponteiro_do_sistema: bool = False
 
@@ -2187,10 +2133,6 @@ class TouchpadReader(_EvdevReconnectLoop):
                 self._mt_slot, {"identidade": -1, "x": None, "y": None}
             )
             if codigo == cod_id:
-                # Levantar o dedo só troca a identidade por -1; o X e o Y ficam
-                # como o kernel os guarda. O kernel NÃO reenvia a coordenada
-                # que não mudou (``input.c``), então o dedo seguinte que cai no
-                # mesmo X chega sem ele: apagar aqui fazia o toque sumir.
                 slot["identidade"] = int(event.value)
             elif codigo == cod_x:
                 slot["x"] = int(event.value)
@@ -2500,7 +2442,7 @@ class MotionSensorReader(_EvdevReconnectLoop):
         resolucoes_accel: dict[str, int] = {}
         try:
             from evdev import ecodes
-        except ImportError:  # pragma: no cover - sem evdev não há loop
+        except ImportError:  # pragma: no cover
             return
         for destino, eixos in (
             (resolucoes, (("x", "ABS_RX"), ("y", "ABS_RY"), ("z", "ABS_RZ"))),

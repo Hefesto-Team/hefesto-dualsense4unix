@@ -75,7 +75,6 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src"))
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
-#: o `state_full` publicou o valor novo em **547 ms** e **548 ms** nas duas
 ASSENTAR_S: float = 1.5
 
 

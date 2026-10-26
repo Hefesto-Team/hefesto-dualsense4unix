@@ -72,7 +72,7 @@ import re
 import sys
 
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
-PUBLICADO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento) nome de PASTA, e caminho nao leva acento
+PUBLICADO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento)
 E_ABA = re.compile(r"^\d\d-[a-z]+\.html$")
 
 sys.path.insert(0, str(RAIZ / "src"))
@@ -105,7 +105,6 @@ def _folha(pagina: str) -> list[tuple[int, str, str]]:
 
 SELO = ("selo", "lanc-selo", "selo-som", "selo-ativo")
 
-#: **SÓ O DO DOCUMENTO, e o recorte é o `<body>`**: o desenho do DualSense traz
 _TITULO = re.compile(r"<title>.*?</title>", re.S | re.I)
 _CORPO = re.compile(r"<body\b", re.I)
 
@@ -165,12 +164,8 @@ SIGLA = frozenset({
     "HID", "A2DP", "HFP", "GOG", "GBA", "DKMS", "CPU", "SVG", "CSV", "JSON",
     "HDMI", "COSMIC", "LE", "WASD",
     "PS", "L1", "L2", "L3", "R1", "R2", "R3", "ZL", "ZR", "LB", "RB", "LT", "RT",
-    # a aba Experimental (18/10): o endereço do menu Lovense do jogo, o console da pasta do Kyty e o
-    # numeral romano do nome do jogo («Hades II»)
     "HTTP", "IP", "PS5", "II",
-    # o estilo «Souls/RPG» da aba Perfis (20/10): RPG é a sigla de «role-playing game»
     "RPG",
-    # «Usar o meu CSS» da janela Configurar do tema (22/10): CSS é a sigla de «Cascading Style Sheets»
     "CSS",
 })
 

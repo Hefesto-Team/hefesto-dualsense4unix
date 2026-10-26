@@ -91,9 +91,6 @@ def _no_maximo_tres_por_segundo(instantes: list[float]) -> bool:
     )
 
 
-# --- O pulso ---------------------------------------------------------------
-
-
 def test_o_pico_e_a_cor_do_perfil_no_brilho_maximo() -> None:
     assert tv.pico_do_pulso((0, 0, 160)) == (0, 0, 255)
     assert tv.pico_do_pulso((100, 40, 0)) == (255, 102, 0)
@@ -146,9 +143,6 @@ def test_a_opcao_parada_nunca_escreve() -> None:
     assert backend.sessoes == []
 
 
-# --- O teto de 3 Hz --------------------------------------------------------
-
-
 def test_a_rajada_de_20_por_segundo_funde_num_brilho_continuo() -> None:
     backend = Backend()
     tiros = [round(0.1 + i * 0.05, 3) for i in range(40)]
@@ -165,9 +159,6 @@ def test_tiros_espacados_nao_passam_de_3_subidas_por_segundo() -> None:
     subidas = _subidas(backend)
     assert _no_maximo_tres_por_segundo(subidas), subidas
     assert len(subidas) >= 6, "o teto engoliu mais do que três por segundo"
-
-
-# --- O jogo manda ----------------------------------------------------------
 
 
 def test_o_jogo_que_manda_a_barra_gera_zero_escrita() -> None:
@@ -209,7 +200,7 @@ def test_a_cor_trocada_enquanto_o_jogo_segurava_a_barra_e_a_que_pulsa() -> None:
 
     _tiros(tv.TatoVivo([luz]), backend, [0.1], estado_de=pintando)
     assert backend.pintadas == []
-    backend.cores[P1] = (160, 0, 0)  # o perfil trocou de cor
+    backend.cores[P1] = (160, 0, 0)
     _tiros(tv.TatoVivo([luz]), backend, [0.1], fim=0.6)
     assert [cor for _t, _u, cor in backend.pintadas] == [(255, 0, 0)]
 
@@ -239,9 +230,6 @@ def test_o_jogo_que_toma_a_barra_no_meio_do_pulso_fica_com_ela() -> None:
     motor.tique(0.5, tomou, _PULSA)
     assert backend.sessoes == [], "a volta apagou a cor que o jogo acabou de pintar"
     assert len(backend.pintadas) == 1
-
-
-# --- A sessão é uma só por controle ----------------------------------------
 
 
 def test_a_sessao_so_volta_quando_o_motor_solta_o_ultimo_canal() -> None:
@@ -280,9 +268,6 @@ def test_a_luz_que_volta_com_o_gatilho_ainda_seguro_repinta_a_cor_do_perfil() ->
     assert sessao.segura(P1) == frozenset({tv.CANAL_GATILHO}), "a luz repintada prendeu a sessão"
     assert sessao.soltar(P1, tv.CANAL_GATILHO) is True
     assert encerradas == [P1]
-
-
-# --- P1 a P4, cada um com a sua cor ----------------------------------------
 
 
 class _Pad:
@@ -325,8 +310,6 @@ class _Controller:
 
 
 def test_cada_controle_pulsa_a_sua_cor(monkeypatch: pytest.MonkeyPatch) -> None:
-    # O caminho não lê o transporte: `set_game_output_for` é por uniq, e o backend
-    # leva a cor pelo cabo ou pelo rádio como leva a cor do perfil.
     receita = tv.Receita(reacao_ao_tiro="pulsa", gatilho_no_ritmo=True)
     monkeypatch.setattr(tv, "receita_ativa", lambda _d: receita)
     controller = _Controller()
@@ -361,8 +344,6 @@ def test_cada_controle_pulsa_a_sua_cor(monkeypatch: pytest.MonkeyPatch) -> None:
     while t < 2.0:
         t += tv.INTERVALO_S
         passo(t)
-    # A luz volta primeiro e repinta a cor (o gatilho ainda segura a sessão);
-    # quando o gatilho volta, a sessão inteira de cada controle volta, uma vez.
     for uniq in QUATRO:
         assert [cor for u, cor in controller.leds if u == uniq] == [
             tv.pico_do_pulso(CORES[uniq]), CORES[uniq]

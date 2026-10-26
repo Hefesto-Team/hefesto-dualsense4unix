@@ -83,7 +83,7 @@ def test_a_ordem_passa_a_frente_de_tudo() -> None:
         ordens=[uma_ordem()], conferidas=5, sem_resposta=3, dispensadas=2
     )
     assert topo.chave == ordens.TOPO_HA_ORDENS
-    assert topo.estado == "atencao"  # (noqa-acento): chave de máquina
+    assert topo.estado == "atencao"  # (noqa-acento)
 
 
 def test_o_estado_bom_diz_quanta_coisa_conferiu() -> None:
@@ -132,4 +132,4 @@ def test_o_estado_de_cada_cabecalho_e_o_vocabulario_do_exame() -> None:
     """As três palavras são as de `exame_da_mesa`, e vêm de UM lugar só."""
     for campos in AS_QUATRO.values():
         topo = ordens.cabecalho(**campos)  # type: ignore[arg-type]
-        assert topo.estado in {"certo", "atencao", "nao_sei"}  # (noqa-acento) estado do daemon
+        assert topo.estado in {"certo", "atencao", "nao_sei"}  # (noqa-acento)

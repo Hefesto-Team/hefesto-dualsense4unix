@@ -48,9 +48,6 @@ def _gravar_mapa(caminho: Path, pares: dict[str, str]) -> Path:
 A, B, C, D = sha(1), sha(2), sha(3), sha(4)
 
 
-# --- o texto ----------
-
-
 def test_um_salto_troca_o_curto_e_o_inteiro_mantendo_o_comprimento() -> None:
     cadeia = R.Cadeia([{A: B}])
     res = R.remapear_texto(f"desde `{A[:7]}` e {A[:9]} e {A}.\n", cadeia)
@@ -131,7 +128,7 @@ def test_o_curto_novo_que_nasce_ambiguo_fica() -> None:
 
 
 def test_sequencia_mais_longa_que_um_sha_nao_e_cortada() -> None:
-    comprida = A + "0" * 24  # 64 dígitos, como um sha256
+    comprida = A + "0" * 24
     assert R.remapear_texto(comprida, R.Cadeia([{A: B}])).texto == comprida
 
 
@@ -177,9 +174,6 @@ def test_git_que_falha_ao_listar_os_commits_e_erro(
         R._commits_do_repositorio(tmp_path)
 
 
-# --- os mapas ----------
-
-
 def test_ler_mapa_aceita_o_cabecalho_e_recusa_o_que_nao_e_sha(tmp_path: Path) -> None:
     assert R.ler_mapa(_gravar_mapa(tmp_path / "ok.txt", {A: B})) == {A: B}
     ruim = tmp_path / "ruim.txt"
@@ -205,9 +199,6 @@ def test_so_os_ultimos_mapas_da_casa_podem_faltar(
     monkeypatch.setattr(R, "MAPAS_DA_CASA", (m1, tmp_path / "falta.txt", m3))
     with pytest.raises(FileNotFoundError):
         R.escolher_mapas([])
-
-
-# --- o repositório ----------
 
 
 def _git(raiz: Path, *args: str, data: str | None = None) -> str:
@@ -256,7 +247,7 @@ def _commit(raiz: Path, conteudo: str, assunto: str, data: str, arquivo: str = "
 
 
 def test_a_ponte_liga_pela_data_e_pelo_assunto_e_so_quando_o_par_e_unico(tmp_path: Path) -> None:
-    # D-2110-AS-CITACOES-SEGUEM-A-PONTE-ATE-O-DEV
+    """Prova da D-2110-AS-CITACOES-SEGUEM-A-PONTE-ATE-O-DEV."""
     origem = _repositorio(tmp_path / "origem")
     destino = _repositorio(tmp_path / "destino")
     o1 = _commit(origem, "um\n", "feat: um", "2026-08-01T10:00:00-03:00")
@@ -271,7 +262,7 @@ def test_a_ponte_liga_pela_data_e_pelo_assunto_e_so_quando_o_par_e_unico(tmp_pat
     mapa = {sha(90): o1, sha(91): o2, sha(92): o3, sha(93): o4, sha(94): ZERO}
     ponte, sem_par = R.gerar_ponte(mapa, origem, destino, "dev")
     assert ponte == {o1: d1, o3: d3}
-    assert sem_par == 2  # o2 (dois no destino) e o4 (nenhum)
+    assert sem_par == 2
 
 
 def test_a_ponte_aceita_copias_do_mesmo_commit_na_origem(tmp_path: Path) -> None:
@@ -300,17 +291,16 @@ def test_de_ponta_a_ponta_a_citacao_morta_chega_ao_commit_vivo(
         R.main(["--raiz", str(repo), "--gerar-ponte", str(setembro), str(origem), str(ponte)]) == 0
     )
     (repo / "doc.md").write_text(f"o commit `{velho[:9]}` e `{velho[:7]}`.\n")
-    (repo / "fora.md").write_text(f"{velho[:9]}\n")  # sem `git add`: não é versionado
+    (repo / "fora.md").write_text(f"{velho[:9]}\n")
     _git(repo, "add", "doc.md")
     base = ["--raiz", str(repo), "--mapa", str(agosto), "--mapa", str(setembro)]
 
-    # sem a ponte a cadeia termina num SHA que o repositório não tem: nada se troca
     assert R.main([*base, "doc.md"]) == 0
     assert "sem o commit novo no repositório (ficam): 2" in capsys.readouterr().out
     assert velho[:9] in (repo / "doc.md").read_text()
 
     com_ponte = [*base, "--mapa", str(ponte)]
-    assert R.main([*com_ponte, "doc.md"]) == 0  # sem --escrever só mostra
+    assert R.main([*com_ponte, "doc.md"]) == 0
     assert (repo / "doc.md").read_text() == f"o commit `{velho[:9]}` e `{velho[:7]}`.\n"
     capsys.readouterr()
 

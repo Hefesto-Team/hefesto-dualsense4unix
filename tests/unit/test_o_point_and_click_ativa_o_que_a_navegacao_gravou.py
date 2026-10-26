@@ -314,7 +314,6 @@ def test_as_teclas_do_perfil_chegam_ao_device_virtual() -> None:
     """Os `key_bindings` que o usuário escreveu na aba Navegação sobem no device."""
     _gravar_flag_do_mouse(FLAG_DA_SESSAO)
     d = _daemon_com(PERFIL_DA_NAVEGACAO)
-    # A Navegação lê as linhas do perfil; o Point and click, as do «Perfil jogo - navegação».
     d.aplicar_o_arranjo_do_desktop(origin="manual", arranjo="navegacao")
 
     teclado = d._keyboard_device

@@ -52,7 +52,6 @@ MAC_2 = "AA:BB:CC:00:00:02"
 UNIQ_1 = "aabbcc000001"
 UNIQ_2 = "aabbcc000002"
 
-#: A paleta que o usuário viu: slot 1 azul, slot 2 vermelho (`player_slot_color`).
 AZUL = player_slot_color(1)
 VERMELHO = player_slot_color(2)
 VERDE = (0, 255, 0)

@@ -45,7 +45,7 @@ def _carregar_o_gravador():
     sys.modules["record_hid_capture"] = modulo
     try:
         spec.loader.exec_module(modulo)
-    except Exception:  # pragma: no cover - só em árvore quebrada
+    except Exception:  # pragma: no cover
         del sys.modules["record_hid_capture"]
         raise
     return modulo

@@ -70,7 +70,6 @@ DEFAULT_COMBO_NEXT = ("ps", "dpad_up")
 DEFAULT_COMBO_PREV = ("ps", "dpad_down")
 PS_BUTTON = "ps"
 DEFAULT_PS_LONG_PRESS_MS = 0
-# um DualSense que caiu no rádio abria a Steam** — duas vezes em 45 s na sessão
 DEFAULT_PS_TOQUE_CURTO_TETO_MS = 700
 ENV_PS_TOQUE_CURTO_TETO_MS = "HEFESTO_DUALSENSE4UNIX_PS_TOQUE_CURTO_TETO_MS"
 
@@ -92,8 +91,6 @@ def _teto_do_toque_curto_do_ambiente() -> int:
 
 
 DEFAULT_COMBO_GAMEMODE = ("ps", "options")
-# jogo enxerga o controle (máscara DualSense, máscara Xbox, mouse+teclado).
-# outros donos fora do combo — clique do meio na emulação de mouse
 DEFAULT_COMBO_PONTE = ("ps", "r3")
 DEFAULT_COMBO_MASCARA = ("ps", "l3")
 
@@ -121,18 +118,12 @@ class _Aperto:
     last_fired: frozenset[str] | None = None
     ps_pressed_at: float | None = None
     ps_combo_fired: bool = False
-    #: Outro botão foi apertado com o PS segurado: o toque não vale como PS sozinho.
     ps_outro_botao: bool = False
-    #: Os botões do tique anterior, para ver a BORDA do que se aperta com o PS segurado.
     vistos: frozenset[str] = frozenset()
     ps_long_press_fired: bool = False
-    #: Os membros do combo do PS que este controle segura: calados até soltar.
     latch: set[str] = field(default_factory=set)
-    #: O PS travado: o toque curto do PS vira um PS «virtual» até este instante, para o segundo
-    #: botão do gesto vir depois, sem apertar junto. ``usou`` = a janela já disparou um gesto.
     ps_virtual_ate: float | None = None
     ps_virtual_usou: bool = False
-    #: O PS sozinho que espera o 2º toque da camada: abre a Steam neste instante, salvo cancelar.
     ps_solo_ate: float | None = None
 
 
@@ -162,18 +153,10 @@ class HotkeyManager:
     on_next_bridge: Any | None = None
     on_next_mask: Any | None = None
     config: HotkeyConfig = field(default_factory=HotkeyConfig)
-    #: Quanto o PS espera pelo segundo botão, em ms, no controle ``de`` (zero = desligado, o
-    #: padrão): quem tem tremor ou uma mão só toca o PS e depois o outro botão.
     ps_travado_de: Callable[[str | None], int] | None = None
-    #: Os gestos que comandam os acessórios: ``gestos_valem(de)`` devolve as opções (ou None) e
-    #: ``on_gesto(de, gesto, valor)`` leva o gesto a quem o executa. Sem os dois, nada muda.
     gestos_valem: Callable[[str | None], Opcoes | None] | None = None
     on_gesto: Callable[[str | None, str, float], None] | None = None
-    #: Os gestos do PS que valem agora, pela chave da tabela (`acoes_do_gesto.combos_ativos`):
-    #: os de fábrica não removidos e os novos que o usuário acrescentou. Sem ele, os cinco de
-    #: fábrica do `config` valem sempre, como antes de a tabela se editar.
     combos_da_maquina: Callable[[], Mapping[str, tuple[str, ...]]] | None = None
-    #: Quem faz o gesto novo (``ps_<botão>``): recebe a chave e lê a tabela.
     on_gesto_da_maquina: Callable[[str], Any] | None = None
     relogio: Callable[[], float] = time.monotonic
 
@@ -208,11 +191,8 @@ class HotkeyManager:
         bruto: dict[str, tuple[str, ...]] = {
             "next": self.config.next_profile,
             "prev": self.config.prev_profile,
-            # FEAT-EMULATION-GAMEMODE-COMBO-01: default PS+Options.
             "gamemode": self.config.gamemode_toggle,
-            # FEAT-HOTKEY-PONTE-CYCLE-01: default PS+R3.
             "ponte": self.config.next_bridge,
-            # PS-L3-MASCARA-01: default PS+L3.
             "mascara": self.config.next_mask,
         }
         if self.combos_da_maquina is not None:
@@ -295,7 +275,6 @@ class HotkeyManager:
         ps_now = PS_BUTTON in buttons
         reais = buttons
 
-        # O PS sozinho que esperava o segundo toque da camada: venceu o prazo, abre a Steam.
         espera_vencida: str | None = None
         if aperto.ps_solo_ate is not None and t >= aperto.ps_solo_ate:
             aperto.ps_solo_ate = None
@@ -333,8 +312,6 @@ class HotkeyManager:
         if combo_fired is not None and PS_BUTTON in combos[combo_fired]:
             aperto.ps_combo_fired = True
             if virtual:
-                # O gesto saiu pela janela do PS travado: ela vale só enquanto o outro botão
-                # estiver segurado, e o toque do PS não vira PS sozinho depois.
                 aperto.ps_virtual_usou = True
                 aperto.ps_virtual_ate = t
 
@@ -481,7 +458,6 @@ class HotkeyManager:
             return None
 
         if outro_botao:
-            # Combo removido ou botão que nunca foi combo: o PS com outro botão não é o PS sozinho.
             logger.debug(
                 "ps_solo_suppressed_by_outro_botao",
                 held_ms=round((t - pressed_at) * 1000, 1),
@@ -507,8 +483,6 @@ class HotkeyManager:
 
         espera = self._ps_travado_s(de)
         if espera > 0:
-            # O PS travado: o toque espera o segundo botão do gesto (O-TREMOR-E-O-APERTO-JUNTO-
-            # NAO-DECIDEM-O-BOTAO-01). Sem ele na janela, vale como PS sozinho.
             aperto.ps_virtual_ate = t + espera
             aperto.ps_virtual_usou = False
             logger.info(
@@ -544,7 +518,6 @@ class HotkeyManager:
         gestos = self._gestos
         if gestos is None:
             return frozenset(latch)
-        # Os gestos dos acessórios: R2, L2, R1, L1 e o direcional que a máquina calou aqui.
         gestos.avaliar(
             buttons, gatilhos, now=now, de=de, ps_virtual=aperto.ps_virtual_ate is not None
         )

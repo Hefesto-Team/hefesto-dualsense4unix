@@ -121,7 +121,6 @@ def test_o_report_de_audio_nao_e_estragado_nem_perdido() -> None:
     _ler(reader, [_bt(10), _bt(11, audio=True), _bt(12)])
     assert reader.reports_estragados == 0
     assert reader.reports_perdidos == 0
-    # O `bt_drops` continua o que era: todo 0x31 que o portão recusou.
     assert reader.bt_drops == 1
 
 
@@ -129,9 +128,6 @@ def test_o_contador_que_anda_para_tras_semeia_de_novo() -> None:
     reader = _leitor()
     _ler(reader, [_usb(500), _usb(3), _usb(4)])
     assert reader.reports_perdidos == 0
-
-
-# O serviço: os dois números em cada pad, ao lado do `motion_hz`.
 
 
 def _vpad_ns() -> SimpleNamespace:

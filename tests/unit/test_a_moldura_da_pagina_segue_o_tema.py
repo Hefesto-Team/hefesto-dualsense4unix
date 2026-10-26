@@ -25,7 +25,7 @@ from hefesto_dualsense4unix.mods import tema
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 DEZ = sorted((RAIZ / "mockup").glob("[01][0-9]-*.html"))
-PUBLICADAS = sorted((INTERFACE / "paginas").glob("*.html"))  # (noqa-acento): nome da pasta
+PUBLICADAS = sorted((INTERFACE / "paginas").glob("*.html"))  # (noqa-acento)
 COR = "#11121a"
 COMENTARIO = re.compile(r"/\*.*?\*/", re.S)
 ROOT = re.compile(r":root\s*\{[^{}]*\}")
@@ -72,6 +72,5 @@ def test_a_regua_mede_o_texto_do_body_sobre_a_moldura() -> None:
     casa = tema.tokens_do_root(DEZ[0].read_text(encoding="utf-8"))
     with pytest.raises(tema.TemaRecusadoError, match="--fundo-da-pagina"):
         tema.validar(FOLHA_CLARA.replace("#dde1ea", "#2a2c38"), casa=casa)
-    # o tema claro que não diz a moldura fica com a da casa, e o texto escuro some nela
     with pytest.raises(tema.TemaRecusadoError, match="--fundo-da-pagina"):
         tema.validar(FOLHA_CLARA.replace(";--fundo-da-pagina:#dde1ea", ""), casa=casa)

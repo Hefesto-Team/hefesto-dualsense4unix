@@ -26,7 +26,7 @@ try:
         raizes_de_jogos,
         steam_input_allowlist_path,
     )
-except ImportError:  # pragma: no cover - executado como script avulso
+except ImportError:  # pragma: no cover
     from steam_launch_options import (  # type: ignore[no-redef]
         _real,
         caminho_do_localconfig,
@@ -39,7 +39,6 @@ INTERRUPTOR = "aplicar_a_cada_jogo_novo"
 UNIDADE = "hefesto-steam-input-guard"
 DROPIN_DOS_CAMINHOS = "caminhos.conf"
 DROPIN_DO_RITMO = "ritmo.conf"
-#: Teto de cada chamada ao systemd: o guarda não pode ficar preso num `systemctl` que não responde.
 PRAZO_DO_SYSTEMCTL_S = 20
 
 LIGADO = "ligado"
@@ -51,7 +50,7 @@ ESCRITO = "escrito"
 ERRO = "erro"
 
 _RECUSAS = frozenset(
-    {"0", "nao", "não", "off", "false", "desligado", "desliga"}  # (noqa-acento: as duas grafias)
+    {"0", "nao", "não", "off", "false", "desligado", "desliga"}  # (noqa-acento)
 )
 
 _CABECALHO = (
@@ -90,7 +89,7 @@ def _contas_da_raiz(raiz: Path) -> list[str]:
         contas.update(p.name for p in (raiz / "userdata").iterdir() if p.name.isdigit())
     try:
         from .opcoes_por_jogo import conta_logada
-    except ImportError:  # pragma: no cover - executado como script avulso
+    except ImportError:  # pragma: no cover
         from opcoes_por_jogo import conta_logada  # type: ignore[no-redef]
     with contextlib.suppress(OSError):
         logada = conta_logada(raiz)
@@ -248,11 +247,11 @@ def jogos_novos_a_receber(
         return []
     try:
         from .prontuario_dos_jogos import jogos_instalados
-    except ImportError:  # pragma: no cover - executado como script avulso
+    except ImportError:  # pragma: no cover
         from prontuario_dos_jogos import jogos_instalados  # type: ignore[no-redef]
     try:
         return [appid for appid, _, _ in jogos_instalados(home) if appid.isdigit()]
-    except OSError:  # pragma: no cover - biblioteca sumiu entre o listar e o ler
+    except OSError:  # pragma: no cover
         return []
 
 
@@ -273,5 +272,5 @@ def main(argv: list[str] | None = None) -> int:
     return 1 if desfecho == ERRO else 0
 
 
-if __name__ == "__main__":  # pragma: no cover - entrypoint do guarda
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(main())

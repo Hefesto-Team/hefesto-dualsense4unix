@@ -461,7 +461,6 @@ class TestFiacao:
             ),
         )
         run_task = asyncio.create_task(daemon.run())
-        # O relógio da bateria tem fase própria no tique: espera-se a CONDIÇÃO.
         limite = time.monotonic() + 5.0
         while not chamadas and time.monotonic() < limite:
             await asyncio.sleep(0.01)

@@ -39,8 +39,6 @@ class AindaNaoChegou(BaseException):
     """
 
 
-#: Ligado só pelo processo da janela (`hefesto_vivo._o_processo_da_janela`). Desligado, a
-#: primeira leitura cara continua na hora, no fio de quem chama: é o contrato das réguas.
 _NA_JANELA = [False]
 
 

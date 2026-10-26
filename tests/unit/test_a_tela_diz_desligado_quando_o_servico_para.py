@@ -64,7 +64,6 @@ def _de_pe_sem_controle() -> Contexto:
 
 
 def test_o_status_marca_desligado_com_o_servico_parado() -> None:
-    # D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE
     """Posição vazia caía no rádio que o gerador marcou (Ligado): o interruptor mentia."""
     fora = aba.pacote(_parado())
     assert fora["hef-posicao"] == aba.POSICAO_COM_O_SERVICO_PARADO == "desligado", (
@@ -89,19 +88,20 @@ FRASES_QUE_SAIRAM = ("O Hefesto está desligado", "Esta tela parou de ler o serv
 
 
 def test_com_o_servico_parado_nenhuma_frase_e_escrita() -> None:
-    # D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE
     """A mesa, o topo e a coluna de avisos calam; só o Status diz Desligado.
 
     A MORDIDA: devolva `return "SERVICO_CALADO"` no `if not ctx.state` de `_frase_da_mesa`, o
     `"conta-b"` de `_o_que_o_topo_diz_da_mesa_vazia` ou a linha do selo SERVIÇO em `_avisos`, e
     este teste reprova.
+
+    Prova da D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE.
     """
     ctx = _parado()
     pacote = aba.pacote(ctx)
     assert pacote["mesa-frase"] == "", f"a mesa disse {pacote['mesa-frase']!r}"
     topo = pacotes.topo(ctx)
     assert topo["conta-b"] == "", f"o topo disse {topo['conta-b']!r}"
-    assert topo["servico"] == "parado"  # (noqa-acento) chave da página
+    assert topo["servico"] == "parado"  # (noqa-acento)
     textos = _textos(pacote) + _textos(topo) + _textos(aba.coluna_de_atencao(ctx))
     for frase in FRASES_QUE_SAIRAM:
         achou = [t for t in textos if frase in t]
@@ -109,13 +109,11 @@ def test_com_o_servico_parado_nenhuma_frase_e_escrita() -> None:
 
 
 def test_o_simbolo_das_duas_frases_saiu_do_gerador() -> None:
-    # D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE
     """Sem leitor, a constante sai: o nome que sobrasse chamaria o próximo a usá-la."""
     assert not hasattr(aba, "SERVICO_CALADO") and not hasattr(aba, "SERVICO_DESLIGADO")
     for caminho in (INTERFACE / "aba01.py", RAIZ / "mockup" / "01-jogar.html",
                     INTERFACE / "pacotes" / "a01_jogar.py", INTERFACE / "pacotes" / "__init__.py"):
         corpo = caminho.read_text(encoding="utf-8")
-        # «O Hefesto está desligado: a trava…» é a recusa do cadeado (gesto da pessoa), e fica
         for frase in ("O Hefesto está desligado.\"", "Esta tela parou de ler o serviço",
                       "Ela volta sozinha quando ele responder"):
             assert frase not in corpo, f"{caminho.name} ainda escreve {frase!r}"
@@ -130,11 +128,10 @@ def test_com_dois_controles_no_radio_volta_ao_ligado_e_aos_cartoes() -> None:
     assert set(fora["cartoes"]) == {UNIQ_ROXO, UNIQ_VERMELHO}
     topo = pacotes.topo(ctx)
     assert topo["conta-b"] == "2 BT"
-    assert topo["servico"] == "de-pe"  # (noqa-acento) chave da página
+    assert topo["servico"] == "de-pe"  # (noqa-acento)
 
 
 def test_servico_de_pe_sem_controle_continua_dizendo_que_nao_ha_controle() -> None:
-    # D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE
     """O serviço respondeu e a mesa está vazia: aí «Nenhum controle» é verdade, e só o topo diz."""
     ctx = _de_pe_sem_controle()
     assert aba.pacote(ctx)["mesa-frase"] == ""
@@ -157,13 +154,10 @@ class _ServicoNotify:
         self.pedidos: list[tuple[str, bool]] = []
         self._user_stopped_daemon = True
 
-    # -- a janela antiga (`a09_sistema._matriz`)
     def _is_service_active(self) -> str:
         return self.estado
 
     def _daemon_pid_alive(self) -> bool:
-        # No `activating` o processo já vive: é o da unit subindo, e o portão do pid avulso
-        # o confundiria com um daemon improvisado.
         return self.estado == "activating"
 
     def _invoke_systemctl(self, args: list[str], **_kw: Any) -> Any:
@@ -173,7 +167,6 @@ class _ServicoNotify:
             self.de_pe = self.volta_pronto
         return types.SimpleNamespace(returncode=self.rc, stderr="Job failed" if self.rc else "")
 
-    # -- a ponte (`p`)
     def daemon_state_full(self) -> dict[str, Any] | None:
         return dict(NO_RADIO) if self.de_pe else None
 
@@ -213,11 +206,13 @@ def test_clicar_em_ligado_com_o_servico_parado_liga_o_servico(monkeypatch: Any) 
 
 
 def test_o_modo_do_ligado_espera_o_servico_que_acabou_de_subir(unit_instalada: Any) -> None:
-    # D-1610-O-LIGADO-ESPERA-O-SERVICO-RESPONDER
     """O `start` da unit `Type=notify` só volta com o soquete de pé, então o Ligado manda o modo
     logo depois, SEM espera própria: o modo chega ao serviço que acabou de subir.
     MORDIDA: com o `systemctl` de mentira voltando antes do soquete (`volta_pronto=False`, o
-    `Type=simple` de antes), o modo cai e isto reprova."""
+    `Type=simple` de antes), o modo cai e isto reprova.
+
+    Prova da D-1610-O-LIGADO-ESPERA-O-SERVICO-RESPONDER.
+    """
     servico = unit_instalada(_ServicoNotify("inactive"))
     aba.hefesto(_parado(), {"modo": "gamepad"}, servico)
     assert "start" in servico.verbos, "o Ligado não ligou o serviço"
@@ -262,9 +257,6 @@ def test_servico_subindo_o_ligado_se_junta_a_subida(unit_instalada: Any) -> None
     aba.hefesto(_parado(), {"modo": "gamepad"}, servico)
     assert servico.pedidos
     assert all(de_pe for _m, de_pe in servico.pedidos)
-
-
-# -- a janela antiga e o prazo do systemctl ---------------------------------------------
 
 
 def test_o_estado_activating_e_iniciando_com_ou_sem_processo(monkeypatch: Any) -> None:
@@ -368,7 +360,7 @@ def _no_webkit(roteiro: str, arquivo: str = "01-jogar.html") -> dict[str, Any]:
     def guardou(v: Any, res: Any) -> None:
         try:
             saiu.append(v.evaluate_javascript_finish(res).to_string())
-        except Exception as erro:  # pragma: no cover — só quando o roteiro quebra
+        except Exception as erro:  # pragma: no cover
             saiu.append(f"ERRO {erro}")
         Gtk.main_quit()
 
@@ -410,7 +402,6 @@ def na_tela() -> dict[str, Any]:
 
 def test_no_webkit_o_servico_parado_marca_desligado_e_nao_escreve_nada(
         na_tela: dict[str, Any]) -> None:
-    # D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE
     """O que a pessoa vê: Desligado aceso, o topo sem texto e sem ponto, e a mesa sem frase.
 
     A MORDIDA: tire o `display:none` da regra `.fita-linha:has(i[data-servico="parado"]) .conectado`
@@ -475,7 +466,6 @@ def o_topo_das_dez() -> dict[str, dict[str, Any]]:
 @pytest.mark.parametrize("aba_html", AS_DEZ)
 def test_no_webkit_o_topo_das_dez_some_com_o_servico_parado(
         o_topo_das_dez: dict[str, dict[str, Any]], aba_html: str) -> None:
-    # D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE
     """O topo é o mesmo nas dez abas: com o serviço parado ele some em todas, não só na Jogar.
 
     A regra morou só na `aba01.py` e as outras nove mostravam «● —» em verde com o serviço fora.
@@ -494,12 +484,13 @@ def test_no_webkit_o_topo_das_dez_some_com_o_servico_parado(
 @pytest.mark.parametrize("aba_html", AS_DEZ)
 def test_no_webkit_o_perfil_ativo_fica_a_direita_com_o_servico_parado(
         o_topo_das_dez: dict[str, dict[str, Any]], aba_html: str) -> None:
-    # D-2110-O-PERFIL-ATIVO-FICA-A-DIREITA-COM-O-SERVICO-PARADO
     """Com o topo fora, o «Perfil ativo» continua encostado na direita, onde ele mora de pé.
 
     Quem empurrava era a `.conectado`; com ela em `display:none` o chip caía ao lado da marca.
     A MORDIDA: tire a regra `.fita-linha:has(i[data-servico="parado"]) .perfil-ativo` do
     `topo.html`, rode o `regerar.py`, e a folga do chip vira a largura da faixa inteira.
+
+    Prova da D-2110-O-PERFIL-ATIVO-FICA-A-DIREITA-COM-O-SERVICO-PARADO.
     """
     fora = o_topo_das_dez[aba_html]
     de_pe = fora["no_radio"]["folga_do_chip"]

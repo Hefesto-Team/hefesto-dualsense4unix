@@ -13,10 +13,6 @@ logger = get_logger(__name__)
 
 _ORCAMENTO_COM_TETO = "economia"
 
-#: O degrau que a tela chama de «Padrão» (decisão de produto de 04/10/2026: o
-#: Balanceado é o original, então o degrau «Original» não tem razão de
-#: existir): a chave, a CLI e o perfil seguem
-#: `balanceado`, e o multiplicador dele é 1,0 em `RUMBLE_POLICY_MULT`.
 POLITICA_PADRAO = "balanceado"
 
 
@@ -223,7 +219,6 @@ def _degrau_da_politica(
     return fallback, fallback, last_auto_change_at
 
 
-#: A bateria de quem o backend ainda não leu: o degrau do meio do `auto`.
 BATERIA_SEM_LEITURA = 50
 
 

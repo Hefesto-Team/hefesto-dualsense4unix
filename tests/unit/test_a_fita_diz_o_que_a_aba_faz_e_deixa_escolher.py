@@ -51,7 +51,7 @@ def _paginas() -> list[str]:
     return [f"{a}.html" for _, a in _monta().ABAS]
 
 
-@pytest.mark.parametrize("pagina", _paginas())  # (noqa-acento) nome de parâmetro
+@pytest.mark.parametrize("pagina", _paginas())  # (noqa-acento)
 def test_a_fita_de_leitura_nasce_e_continua_esmaecida(hv, pagina):
     """O que o piloto REPINTA tem de concordar com o que o arquivo publica."""
     monta = _monta()
@@ -73,7 +73,7 @@ def test_a_fita_de_leitura_nasce_e_continua_esmaecida(hv, pagina):
         f"repinta o contrário — é a tela mudando de opinião no primeiro tique")
 
 
-@pytest.mark.parametrize("pagina", _paginas())  # (noqa-acento) nome de parâmetro
+@pytest.mark.parametrize("pagina", _paginas())  # (noqa-acento)
 def test_o_titulo_da_fita_nao_promete_o_que_a_aba_nao_faz(hv, pagina):
     """O `title` é a frase que ela lê ao passar o rato. Ele segue o `inerte`."""
     vivo = hv._fita(MESA, pagina)
@@ -84,7 +84,7 @@ def test_o_titulo_da_fita_nao_promete_o_que_a_aba_nao_faz(hv, pagina):
         f"escolha e a aba escolhe={escolhe}")
 
 
-@pytest.mark.parametrize("pagina", _paginas())  # (noqa-acento) nome de parâmetro
+@pytest.mark.parametrize("pagina", _paginas())  # (noqa-acento)
 def test_o_chip_e_um_controle(hv, pagina):
     """`<label>` nas dez, e `data-gesto` só nas que escolhem."""
     monta = _monta()

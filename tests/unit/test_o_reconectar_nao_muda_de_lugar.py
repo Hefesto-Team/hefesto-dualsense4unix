@@ -34,8 +34,6 @@ VIVO_DUALSENSE: dict[str, Any] = {
     "connected": True, "native_mode": False, "paused": False,
     "gamepad_emulation": {"enabled": True, "flavor": "dualsense", "backend": "uhid"},
 }
-#: DualSense já responde por si; o `uinput` sozinho não separa o Xbox escolhido
-#: do DualSense degradado, e por isso o estado Xbox traz o campo.
 VIVO_XBOX: dict[str, Any] = {
     "connected": True, "native_mode": False, "paused": False,
     "gamepad_emulation": {"enabled": True, "flavor": "xbox", "backend": "uinput",
@@ -87,9 +85,6 @@ def test_a_faixa_final_nao_declara_lugar_de_recado(publicado: bool) -> None:
     assert 'class="recibo-do-reconectar"' not in corpo
 
 
-#: Desde a aba Jogar do todo (15/10/2026) o botão mora no canto do quadro, e não mais na
-#: `.faixa-final`: a borda é a do pai dele, e as linhas se contam só no texto (o ícone
-#: que gira é outra caixa, e não uma linha).
 ONDE_O_BOTAO_ESTA = """
   const b = document.querySelector('[data-gesto="reconectar"]');
   const f = b && b.parentElement;
@@ -181,7 +176,7 @@ def test_o_botao_nao_muda_de_lugar_em_cena_nenhuma(largura: int) -> None:
             f"y {base['y']:.1f} → {m['y']:.1f}")
 
 
-LUGAR_VAZIO = "nao"  # (noqa-acento) valor do atributo `data-conectado`, não a palavra
+LUGAR_VAZIO = "nao"  # (noqa-acento)
 
 APAGAR_OS_QUATRO = ("for (const el of document.querySelectorAll('[data-controle]'))"
                     " { el.dataset.conectado = a.vazio; el.classList.add('off'); }")
@@ -630,7 +625,6 @@ def test_no_webkit_o_botao_nao_anda_com_os_lugares_apagados(
     assert repouso and apagados and vazia, (
         "a régua não viu o repouso, os lugares apagados ou a lista vazia — "
         "ficaria verde sobre nada")
-    # o primeiro apagado ainda pode chegar com a frase pintada pela fase anterior
     acesos = [a for a in apagados[1:] if a["frase"]]
     assert not acesos, (
         f"o serviço calou e a frase da mesa acendeu em {len(acesos)} de {len(apagados)} amostras")

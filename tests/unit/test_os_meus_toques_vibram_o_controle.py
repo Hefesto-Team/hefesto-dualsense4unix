@@ -44,7 +44,7 @@ from tests.unit.test_a_forca_da_vibracao_de_cada_controle_sai_de_um_funil_so imp
 
 P1, P2, P3, P4 = UNIQS
 Par = tuple[int, int]
-BASE = 76  # round(255 * 30 / 100): a força de fábrica no fundo do curso
+BASE = 76
 
 
 @dataclass
@@ -103,8 +103,6 @@ def _parado(uniq: str = P1, **campos: Any) -> Callable[[float], Entrada]:
     return lambda t: Entrada(uniq, **campos)
 
 
-# 1. O que vale de fábrica: nada.
-
 def test_sem_o_bloco_o_controle_vibra_so_pelo_jogo() -> None:
     mesa = Mesa()
     meus = MeusToques(mesa.ligacoes())
@@ -120,8 +118,6 @@ def test_o_modo_so_o_jogo_com_o_bloco_escrito_tambem_nao_escreve() -> None:
     _andar(meus, mesa, _parado(lx=255), mesa.agora + 0.5)
     assert mesa.motores == []
 
-
-# 2. A mistura com o jogo.
 
 def test_o_maior_nunca_deixa_o_jogo_mais_fraco() -> None:
     mesa = Mesa()
@@ -171,8 +167,6 @@ def test_so_meus_toques_tira_o_jogo() -> None:
     mistura = meus.misturar_o_jogo(P1, (200, 200))
     assert mistura is not None and mistura.motores == (0, BASE)
 
-
-# 3. O analógico.
 
 def test_o_movimento_cala_em_0_3_s_parado() -> None:
     mesa = Mesa()
@@ -226,8 +220,6 @@ def test_soltar_o_analogico_zera_o_motor() -> None:
     _andar(meus, mesa, _parado(lx=128), mesa.agora + 0.1)
     assert mesa.de(P1)[-1][1:] == (0, 0)
 
-
-# 4. Os botões.
 
 def test_cada_botao_toca_no_motor_do_seu_lado() -> None:
     mesa = Mesa()
@@ -323,8 +315,6 @@ def test_o_zero_passa_mesmo_dentro_dos_33_ms_da_escrita_anterior() -> None:
     assert mesa.motores[-1][2:] == (0, 0), "soltar não espera a vez: o motor não fica ligado"
 
 
-# 5. Os gatilhos e o chacoalhar.
-
 def test_o_gatilho_vibra_pelo_fundo_do_curso_no_motor_do_lado() -> None:
     mesa = Mesa()
     meus = _meus(mesa, analogicos="desligado", chacoalhar=False)
@@ -367,8 +357,6 @@ def test_a_forca_de_quem_recebe_vale_para_o_toque() -> None:
     assert mesa.de(P1)[-1][1:] == (128, 128), "a política de intensidade vale como no jogo"
 
 
-# 6. As guardas.
-
 def test_a_haptica_por_audio_cala_os_toques() -> None:
     mesa = Mesa(haptica=True)
     meus = _meus(mesa)
@@ -395,7 +383,7 @@ def test_no_modo_nativo_nada_se_escreve() -> None:
 
 
 def test_o_jogo_que_sai_do_foco_com_o_toque_no_ar_devolve_o_zero_e_o_nativo_nao() -> None:
-    # D-1610-OS-MEUS-TOQUES-DEVOLVEM-O-ZERO-QUANDO-O-JOGO-SAI
+    """Prova da D-1610-OS-MEUS-TOQUES-DEVOLVEM-O-ZERO-QUANDO-O-JOGO-SAI."""
     mesa = Mesa()
     meus = _meus(mesa)
     _andar(meus, mesa, _parado(lx=255), mesa.agora + 0.1)
@@ -462,8 +450,6 @@ def test_o_par_continuo_escreve_no_maximo_30_vezes_por_segundo() -> None:
     _andar(meus, mesa, varrendo, mesa.agora + 1.0, passo=0.002)
     assert len(mesa.de(P1)) <= 31, f"{len(mesa.de(P1))} escritas em 1 s"
 
-
-# 7. O que os acessórios recebem.
 
 def test_o_evento_dos_toques_leva_o_par_e_nenhum_nome_de_botao() -> None:
     mesa = Mesa()
@@ -537,8 +523,6 @@ def test_sem_os_meus_toques_o_pedido_do_jogo_chega_como_sempre(tmp_path: Path) -
     evento = fila.get_nowait()
     assert evento["toques"] == [0, 0] and evento["jogo"] == [120, 200]
 
-
-# 8. O laço, o perfil e o que o daemon sabe.
 
 def test_o_passo_anda_os_meus_toques_sem_receita(monkeypatch: pytest.MonkeyPatch) -> None:
     mesa = Mesa()

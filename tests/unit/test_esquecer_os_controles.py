@@ -282,7 +282,8 @@ def nomes_que_o_codigo_grava() -> dict[str, str]:
 
 
 def test_todo_arquivo_que_o_produto_grava_esta_classificado() -> None:
-    # D-1610-A-MEMORIA-DOS-CONTROLES-CLASSIFICA-O-ULTIMO-JOGO-E-O-DIARIO-DO-USB-COMO-CASA
+    """Prova da D-1610-A-MEMORIA-DOS-CONTROLES-CLASSIFICA-O-ULTIMO-JOGO-E-O-DIARIO-DO-USB-COMO-CASA.
+    """
     faltando = {n: onde for n, onde in nomes_que_o_codigo_grava().items()
                 if n not in m.CLASSIFICACAO}
     assert not faltando, (
@@ -314,7 +315,7 @@ def test_a_memoria_de_controle_classificada_tem_lugar_no_inventario() -> None:
 @pytest.mark.parametrize(
     ("info", "e_controle"),
     [
-        ("[General]\nClass=0x002508\n", True),       # DualSense, DS4, Pro, 8BitDo
+        ("[General]\nClass=0x002508\n", True),
         ("[General]\nClass=0x002504\n", True),
         ("[General]\nClass=0x240404\n", False),
         ("[General]\nClass=0x002540\n", False),

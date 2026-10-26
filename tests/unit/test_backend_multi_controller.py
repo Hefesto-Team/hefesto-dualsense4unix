@@ -43,7 +43,7 @@ class _FakeTrigger:
         self.mode: object = None
         self.forces: list[int] = [0] * 7
 
-    def setForce(self, idx: int, value: int) -> None:  # noqa: N802 — API pydualsense
+    def setForce(self, idx: int, value: int) -> None:  # noqa: N802
         self.forces[idx] = value
 
 
@@ -52,7 +52,7 @@ class _FakeLight:
         self.colors: list[tuple[int, int, int]] = []
         self.playerNumber: object = None
 
-    def setColorI(self, r: int, g: int, b: int) -> None:  # noqa: N802 — API pydualsense
+    def setColorI(self, r: int, g: int, b: int) -> None:  # noqa: N802
         self.colors.append((r, g, b))
 
 
@@ -60,7 +60,7 @@ class _FakeAudio:
     def __init__(self) -> None:
         self.mic_led_history: list[bool] = []
 
-    def setMicrophoneLED(self, flag: bool) -> None:  # noqa: N802 — API pydualsense
+    def setMicrophoneLED(self, flag: bool) -> None:  # noqa: N802
         self.mic_led_history.append(flag)
 
 
@@ -78,10 +78,10 @@ class _FakeHandle:
         self.closed = False
         self.conType = type("CT", (), {"name": transport_name})()
 
-    def setLeftMotor(self, intensity: int) -> None:  # noqa: N802 — API pydualsense
+    def setLeftMotor(self, intensity: int) -> None:  # noqa: N802
         self.left_motor.append(intensity)
 
-    def setRightMotor(self, intensity: int) -> None:  # noqa: N802 — API pydualsense
+    def setRightMotor(self, intensity: int) -> None:  # noqa: N802
         self.right_motor.append(intensity)
 
     def close(self) -> None:
@@ -164,7 +164,7 @@ class TestEnumerate:
             _DI(0x0CE6, b"/dev/hidraw0", "AA:BB"),
             _DI(0x0CE6, b"/dev/hidraw1", "AA:BB"),
             _DI(0x0DF2, b"/dev/hidraw2", "CC:DD"),
-            _DI(0x9999, b"/dev/hidraw3", "EE:FF"),  # não-DualSense -> filtra
+            _DI(0x9999, b"/dev/hidraw3", "EE:FF"),
             _DI(0x0CE6, b"/dev/hidraw4", None),
             _DI(0x0CE6, b"/dev/hidraw9", "02:fe:00:00:00:01"),
         ]
@@ -181,7 +181,7 @@ class TestEnumerate:
         assert len(keys) == 3
         assert got["AA:BB"] == (b"/dev/hidraw0", False)
         assert got["CC:DD"] == (b"/dev/hidraw2", True)
-        assert "EE:FF" not in got  # PID não-DualSense filtrado
+        assert "EE:FF" not in got
         assert got["/dev/hidraw4"] == (b"/dev/hidraw4", False)
         assert "02:fe:00:00:00:01" not in got
 

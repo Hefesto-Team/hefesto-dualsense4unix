@@ -3,9 +3,7 @@
 from __future__ import annotations
 
 import ast
-import io
 import re
-import tokenize
 from pathlib import Path
 
 from hefesto_dualsense4unix.interface.frases_que_ela_baniu import (
@@ -28,22 +26,18 @@ ISENTOS_INTEIROS: dict[str, str] = {
     ),
 }
 
-ISENTOS_EM_COMENTARIO: dict[str, str] = {}
-
 
 def _ocorrencias_no_fonte(
     frases: tuple[str, ...] = FRASES_BANIDAS,
     isentos_inteiros: dict[str, str] | None = None,
-    isentos_em_comentario: dict[str, str] | None = None,
 ) -> list[str]:
-    """Toda ocorrência de ``frases`` no fonte das pastas que escrevem tela."""
+    """Toda ocorrência de ``frases`` num literal do fonte das pastas que escrevem tela.
+
+    O comentário saiu do código (D-2610-O-CODIGO-NAO-TEM-COMENTARIO), e o portão
+    ``codigo-sem-comentario`` reprova o que voltar: a pergunta é só a do literal.
+    """
     isentos_inteiros = (
         ISENTOS_INTEIROS if isentos_inteiros is None else isentos_inteiros
-    )
-    isentos_em_comentario = (
-        ISENTOS_EM_COMENTARIO
-        if isentos_em_comentario is None
-        else isentos_em_comentario
     )
 
     def achada_em(texto: str) -> str | None:
@@ -64,16 +58,6 @@ def _ocorrencias_no_fonte(
                     frase = achada_em(no.value)
                     if frase:
                         achados.append(f"{rel}:{no.lineno} literal {frase!r}")
-            if rel in isentos_em_comentario:
-                continue
-            fita = tokenize.generate_tokens(io.StringIO(texto).readline)
-            for tok in fita:
-                if tok.type == tokenize.COMMENT:
-                    frase = achada_em(tok.string)
-                    if frase:
-                        achados.append(
-                            f"{rel}:{tok.start[0]} comentário {frase!r}"
-                        )
     return sorted(achados)
 
 
@@ -148,7 +132,7 @@ def test_a_guarda_estatica_continua_de_pe_e_le_a_lista() -> None:
 def test_nenhuma_aba_publicada_carrega_a_frase() -> None:
     """E o estático de verdade: as dez páginas do produto e as dez do mockup."""
     sujas = []
-    for pasta in (INTERFACE / "paginas", RAIZ / "mockup"):  # (noqa-acento) diretório
+    for pasta in (INTERFACE / "paginas", RAIZ / "mockup"):  # (noqa-acento)
         for pagina in sorted(pasta.glob("*.html")):
             achada = frase_banida_em(pagina.read_text(encoding="utf-8"))
             if achada:

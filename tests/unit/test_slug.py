@@ -6,8 +6,8 @@ import pytest
 from hefesto_dualsense4unix.profiles.slug import slugify
 
 
-def test_slug_acao_acentuado():  # slug literal ASCII (noqa-acento)
-    assert slugify("Ação") == "acao"  # slug literal ASCII (noqa-acento)
+def test_slug_acao_acentuado():
+    assert slugify("Ação") == "acao"  # (noqa-acento)
 
 
 def test_slug_navegacao():

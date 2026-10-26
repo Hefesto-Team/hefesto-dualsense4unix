@@ -57,7 +57,6 @@ _PARTE = re.compile(r"^\s*parte-(\d+) \(\d+ arq\): .* in ([\d.]+)s")
 _PROCESSO_PROPRIO = re.compile(r"^\s+\S+, em processo próprio: .* in ([\d.]+)s")
 _MARCA = re.compile(r"^\s*corrida árvore=(\S+) arquivos=(\d+) partição=(\S+)\s*$", re.M)
 _CABECALHO = re.compile(r"^suíte — (\d+) arquivos em (\d+) partes", re.M)
-#: as partes que o último fecho NÃO rodou (o recibo delas era de antes); o `fecho.sh` escreve
 REAPROVEITADAS = "reaproveitadas.txt"
 _PAREDE = re.compile(r"^tempo: (\d+) s de parede", re.M)
 _CAMADAS = re.compile(r"^\s*camadas .*\bcompleto\b", re.M)

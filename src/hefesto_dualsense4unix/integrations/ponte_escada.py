@@ -175,7 +175,6 @@ SUBIR_SO_COM_GESTO = "so_com_gesto"
 SUBIR_REABRINDO_O_JOGO = "reabrindo_o_jogo"
 SUBIR_FECHANDO_A_STEAM = "fechando_a_steam"
 
-#:   - salvar o perfil continua sem LIMPAR nada: `carimbo_que_o_save_leva`
 SILENCIO_CONFIRMA_SEC = 180.0
 
 

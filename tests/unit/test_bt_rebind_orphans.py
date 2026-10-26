@@ -34,7 +34,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = REPO_ROOT / "scripts" / "bt_rebind_orphans.sh"
 SCRIPT_TEXT = SCRIPT.read_text(encoding="utf-8")
 
-ORFAO_NO_ESCOPO = "0005:054C:0CE6.000F"       # DualSense por Bluetooth
+ORFAO_NO_ESCOPO = "0005:054C:0CE6.000F"
 ORFAO_FORA_ESCOPO = "0003:057E:2009.0001"
 VPAD_COM_DRIVER = "0003:054C:0DF2.0010"
 
@@ -142,7 +142,6 @@ class TestGuardaContraLaco:
 
 class TestContratoDeSeguranca:
     def test_nunca_carrega_ou_descarrega_modulo(self) -> None:
-        # Recarregar hid_playstation derrubaria TODOS os DualSense, inclusive
         codigo = "\n".join(
             linha for linha in SCRIPT_TEXT.splitlines() if not linha.strip().startswith("#")
         )

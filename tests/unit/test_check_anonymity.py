@@ -15,7 +15,6 @@ import pytest
 SCRIPT_REL_PATH = "scripts/check_anonymity.sh"
 CANARIO = "zqcanario" + "autoria"
 
-# Forma de série de fábrica, num prefixo FORJADO: o portão mede pela forma.
 SERIAL_FORJADO = "Z99Z99" + "ABCDEFGHIJK"
 
 

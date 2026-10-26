@@ -3,7 +3,6 @@ from __future__ import annotations
 
 from tests.conftest import exigir_gi_real
 
-# módulo sob teste (`app.actions.rumble_actions`) importa `gi` na primeira
 exigir_gi_real("aba Rumble: a voz do deslizador e o aviso de alcance")
 
 from typing import Any
@@ -92,9 +91,7 @@ def test_vpad_que_nao_subiu_a_tela_diz_que_a_intensidade_nao_alcanca() -> None:
         "silêncio: a tela seguia oferecendo os quatro botões"
     )
     assert "não está chegando" in texto
-    # a régua media o mundo de ontem.  # (noqa-acento: verbo medir, imperfeito)
     assert "gamepad virtual" in texto, "a frase tem de dizer o que falta"
-    # e com ele falso `mode_of_state` só devolve `gamepad` ou `desktop` — os
     assert "aqui embaixo" in texto.lower(), (
         "sem dizer o que a intensidade AINDA faz, o aviso vira 'não serve para "
         "nada' — que é falso: ela vale para a vibração fixada"

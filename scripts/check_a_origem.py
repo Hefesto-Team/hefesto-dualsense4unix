@@ -70,11 +70,6 @@ CASOS = "casos-especiais-fora-do-dono"
 REMENDOS = "remendos-de-sintoma"
 TAMANHO = "tamanho"
 
-# ---------------------------------------------------------------------------
-# Os eixos: o NOME que o código dá ao eixo e o VOCABULÁRIO da constante do outro
-# lado da comparação. Nome sem constante do eixo não conta (``modo != 432`` é
-# permissão de arquivo), e constante sem nome só conta onde ela não é ambígua.
-
 _NOMES = {
     "transporte": r"_*(transporte|transport|via)",
     "modo": r"_*(modo|modo_atual|mode)",
@@ -91,7 +86,6 @@ _VOCABULARIO: dict[str, frozenset[str | int]] = {
     "jogador": frozenset({0, 1, 2, 3, 4}),
     "modelo": frozenset({0x054C, 0x0CE6, 0x0DF2, 0x045E, 0x028E, 0x057E}),
 }
-#: constantes tão específicas do eixo que valem sem o nome (``x == "bt"``).
 _SEM_NOME = {
     "transporte": frozenset({"usb", "bt", "bluetooth"}),
     "modelo": frozenset({0x054C, 0x0CE6, 0x0DF2, 0x045E, 0x028E, 0x057E}),
@@ -199,9 +193,6 @@ def ramos_de_eixo(fonte: str) -> list[tuple[int, str]]:
     return sorted(achados)
 
 
-# ---------------------------------------------------------------------------
-# Os remendos de sintoma.
-
 _PRAZOS = frozenset({"timeout", "prazo", "deadline", "timeout_s", "timeout_sec"})
 
 
@@ -281,10 +272,6 @@ def remendos(fonte: str) -> list[tuple[int, str]]:
     return sorted(achados)
 
 
-# ---------------------------------------------------------------------------
-# Os donos: um registro só, o CSV que já existe.
-
-
 def donos_dos_eixos(raiz: Path) -> dict[str, set[str]]:
     """``eixo -> arquivos dono`` (relativos ao pacote), das linhas ``EIXO`` do CSV."""
     caminho = raiz / DONOS
@@ -310,7 +297,7 @@ def _arquivos_do_pacote(raiz: Path) -> list[Path]:
     base = raiz / PACOTE
     return sorted(
         p for p in base.rglob("*.py")
-        if not {"paginas", "__pycache__"} & set(p.relative_to(base).parts))  # (noqa-acento) PASTA
+        if not {"paginas", "__pycache__"} & set(p.relative_to(base).parts))  # (noqa-acento)
 
 
 def censo_dos_casos(raiz: Path) -> Censo:
@@ -368,9 +355,6 @@ class CatracaDaOrigem(Catraca):
             entrou=subiram)
 
 
-# ---------------------------------------------------------------------------
-# O tamanho.
-
 _EXTENSOES = frozenset({".py", ".sh", ".md", ".csv", ".json", ".html", ".toml", ".yml",
                         ".yaml", ".txt", ".css", ".js", ".po", ".pot", ".service", ".rules",
                         ".conf", ".desktop", ".svg", ".xml", ".cfg", ".ini"})
@@ -411,9 +395,6 @@ MEDIDAS = (
            censo_do_tamanho, "linhas"),
 )
 
-# ---------------------------------------------------------------------------
-# A origem: o que paga o crescimento.
-
 _TRAILER = re.compile(r"^Origem:[ \t]*(\S+)[ \t]*$", re.M)
 
 
@@ -437,7 +418,7 @@ def origens_da_faixa(raiz: Path, base: str | None, extra: str | None = None) -> 
         base = (os.environ.get("HEFESTO_BASE_DA_LEVA") or _base_da_leva(raiz)
                 or _ultimo_commit_do_teto(raiz))
     if base and set(base) == {"0"}:
-        base = _ultimo_commit_do_teto(raiz)  # push que cria branch: o `before` é só zeros
+        base = _ultimo_commit_do_teto(raiz)
     if base:
         saida = subprocess.run(
             ["git", "log", "--format=%B%x00", f"{base}..HEAD"], cwd=raiz,
@@ -513,9 +494,6 @@ def registrar_subida(catraca: Catraca, raiz: Path, base: str | None, origem: str
         return 1, f"registraria: {razao}"
     catraca.forcar_piso(TAMANHO, razao)
     return 0, f"registrada: {razao}"
-
-
-# ---------------------------------------------------------------------------
 
 
 def _desce_sozinho(catraca: Catraca, vereditos: list[Veredito]) -> list[str]:

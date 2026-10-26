@@ -27,7 +27,6 @@ from hefesto_dualsense4unix.integrations import conexao_zumbi, diario_do_radio
 from hefesto_dualsense4unix.integrations import gesto_de_reconexao as radio
 from tests.unit import bluez_de_mentira as bm
 
-#: O segundo DualSense da bancada de mentira (a faixa sintética da casa).
 SEGUNDO = "aa:bb:cc:00:00:44"
 
 

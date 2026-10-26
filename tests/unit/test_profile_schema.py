@@ -95,7 +95,7 @@ class TestTriggerConfig:
             t = TriggerConfig(mode=mode)
             if t.motivo_da_recusa is None:
                 assert t.mode == mode
-            else:  # o modo que pede parâmetros, sem eles, carrega desligado e diz por quê
+            else:
                 assert t.mode == "Off"
                 assert t.motivo_da_recusa.startswith(f"{mode} ")
 

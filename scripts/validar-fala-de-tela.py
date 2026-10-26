@@ -30,7 +30,7 @@ _MODULOS_QUE_ESTE_PORTAO_IMPORTA = (FALA_DO_MAPA_RELATIVO, FATOS_DO_MAPA_RELATIV
 
 def _carrega_modulo(caminho: Path, nome: str) -> ModuleType:
     spec = importlib.util.spec_from_file_location(nome, caminho)
-    if spec is None or spec.loader is None:  # pragma: no cover - defensivo
+    if spec is None or spec.loader is None:  # pragma: no cover
         raise ImportError(f"não consegui montar o spec de {caminho}")
     modulo = importlib.util.module_from_spec(spec)
     sys.modules[nome] = modulo
@@ -495,7 +495,6 @@ ABAS_COM_FALA_DECLARADA: frozenset[str] = frozenset()
 
 ARQUIVOS_DA_ABA: dict[str, tuple[str, ...]] = {}
 
-#: `portao_a_casa_sabe_e_o_produto_nao_faz`, onde duas notas datadas seguiram
 FRASES_SEM_FALA: dict[str, str] = {}
 
 PALAVRAS_DE_TRANSPORTE: frozenset[str] = frozenset(
@@ -668,10 +667,6 @@ def valida_abas_promovidas(raiz: Path) -> list[str]:
     return problemas
 
 
-# atrasada.  <!-- noqa-acento: citação literal -->
-
-# `falas` é 0: a única `Fala` da tela era a dica da cor no rádio do cartão GTK,
-# que saiu do pacote com a janela GTK; a interface nova não declara nenhuma.
 PISO_DA_REGUA: dict[str, int] = {"raizes": 2, "falas": 0, "numeros": 3, "abas": 0}
 
 _O_QUE_O_PISO_MEDE: dict[str, str] = {

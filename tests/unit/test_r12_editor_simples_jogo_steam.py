@@ -125,6 +125,3 @@ class TestColunaQuandoUsar:
         assert _match_label("any") == LABEL_SO_MANUAL
         assert _match_label("criteria") == "Só neste programa"
         assert _match_label("regex_do_futuro") == "regex_do_futuro"
-
-
-#     classe media;  # verbo medir, sem acento (noqa-acento)

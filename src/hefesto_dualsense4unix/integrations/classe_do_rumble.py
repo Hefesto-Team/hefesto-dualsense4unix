@@ -13,21 +13,16 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 GOLPE = "golpe"
-MEDIO = "medio"  # (noqa-acento): chave
+MEDIO = "medio"  # (noqa-acento)
 CONTINUO_GRAVE = "continuo_grave"
 CONTINUO_FINO = "continuo_fino"
 PERIODICO = "periodico"
 
-#: As classes, na ordem em que o instrumento as conta.
 CLASSES: tuple[str, ...] = (GOLPE, MEDIO, CONTINUO_GRAVE, CONTINUO_FINO, PERIODICO)
 
-#: Sobe e cai em até 150 ms: um golpe (o tiro, a pancada).
 GOLPE_ATE_S = 0.150
-#: Dura mais que 400 ms: um contínuo (o motor, a chuva, o terremoto). Entre os dois, o médio.
 CONTINUO_DESDE_S = 0.400
-#: Abaixo deste nível (0 a 255) nos dois motores, o jogo está calado.
 NIVEL_MINIMO = 8
-#: Quantos trechos a linha do tempo guarda para o instrumento (a classe, a duração e o pico).
 TRECHOS_GUARDADOS = 32
 
 SENO = "seno"
@@ -114,7 +109,6 @@ class LinhaDoTempo:
         self._pico = (0, 0)
         self._onda: str | None = None
         self.contagem: dict[str, int] = dict.fromkeys(CLASSES, 0)
-        #: os últimos trechos que caíram: ``(classe, duração em ms, fraco, forte)``
         self.ultimos: deque[tuple[str, int, int, int]] = deque(maxlen=TRECHOS_GUARDADOS)
 
     @property

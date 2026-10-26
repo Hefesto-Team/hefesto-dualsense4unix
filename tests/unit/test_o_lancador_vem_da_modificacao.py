@@ -64,16 +64,16 @@ def _plantar(tmp_path: Path, *, mod_id: str = "kytyps5", ligada: bool = True,
              aceitas: tuple[str, ...] = ("lancador",), bloco: object = None,
              leitor: str = _LEITOR_BOM) -> Lugares:
     """Uma modificação instalada no lar de mentira, e o registro dela."""
-    lg = Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # (noqa-acento) campo
+    lg = Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # (noqa-acento)
                  registro=tmp_path / "config" / "mods.json",
                  estado=tmp_path / "run" / "mods-estado.json")
     pasta = lg.codigo / mod_id
     pasta.mkdir(parents=True, exist_ok=True)
     (pasta / "ler.py").write_text(leitor, encoding="utf-8")
     manifesto = {
-        "id": mod_id, "nome": "KytyPS5", "versao": "0.1", "api": ">=1,<3",  # (noqa-acento) chave
+        "id": mod_id, "nome": "KytyPS5", "versao": "0.1", "api": ">=1,<3",  # (noqa-acento)
         "licenca": "GPL-2.0-only", "tipos": ["lancador"],
-        "permissoes": ["lancador"],  # (noqa-acento) chave do manifesto
+        "permissoes": ["lancador"],  # (noqa-acento)
         "lancador": _bloco() if bloco is None else bloco,
     }
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")

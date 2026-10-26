@@ -120,13 +120,6 @@ def test_sair_sem_teste_ligado_nao_fala_com_o_servico(
     assert ponte.chamadas == []
 
 
-# A LARGADA ANDA NA FILA DE CADA CONTROLE (10/10/2026, conferência do conjunto):
-# ela é o «Parar» de todos, e o que ainda está no ar naquele controle termina
-# antes dela. Medido antes desta cura, com o `rumble.set` da ponte levando 0,3 s:
-# o «Testar» deixado na troca de página marcava o controle em teste DEPOIS da
-# largada (o coração o rebatia na aba seguinte, até o usuário voltar e clicar), e o
-# batimento já conferido mandava o par depois do `rumble.stop` da largada.
-
 DEMORA_DO_SET_S = 0.3
 
 
@@ -193,8 +186,6 @@ def test_a_saida_da_janela_espera_o_testar_que_ainda_estava_no_ar(
     with hv._o_processo_da_janela():
         testar = _testar_pela_porta_do_clique(ponte)
         time.sleep(0.05)
-    # Lido na SAÍDA, antes de esperar qualquer fio: depois do `finally` o
-    # processo acaba, e um fio de largada que ainda não rodou morre com ele.
     nomes = [n for n, _ in ponte.chamadas]
     assert nomes[-2:] == ["rumble_stop", "rumble_passthrough"], (
         f"a saída da janela não esperou a largada atrás do «Testar»: {nomes}")

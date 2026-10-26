@@ -126,8 +126,6 @@ def test_a_ativacao_do_boot_repoe_uma_vez_so(monkeypatch) -> None:
     assert vezes == [True] and d.quadrado() == ("KEY_LEFTCTRL",)
 
 
-# A TROCA DA ESCOLHA NA ABA NAVEGAÇÃO -----------------------------------------------------------
-
 class _PonteDoDaemon:
     """A ponte da tela com o handler de verdade do `desktop.arranjo.repor` atrás."""
 
@@ -160,7 +158,7 @@ def _trocar_a_escolha(d: _DaemonQueAnota, valor: str) -> _PonteDoDaemon:
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
-    import pacotes  # noqa: F401  (registra os dez)
+    import pacotes  # noqa: F401
     from pacotes import Contexto, gesto_da_pagina
 
     fn = gesto_da_pagina("06-navegacao.html", "point-and-click-perfil")

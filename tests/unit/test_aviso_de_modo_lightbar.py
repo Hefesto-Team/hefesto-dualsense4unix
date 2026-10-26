@@ -42,7 +42,7 @@ class _FakeLight:
     def __init__(self) -> None:
         self.colors: list[tuple[int, int, int]] = []
 
-    def setColorI(self, r: int, g: int, b: int) -> None:  # noqa: N802 — API pydualsense
+    def setColorI(self, r: int, g: int, b: int) -> None:  # noqa: N802
         self.colors.append((r, g, b))
 
 
@@ -54,7 +54,7 @@ class _FakeHandle:
         self.audio = SimpleNamespace(setMicrophoneLED=lambda _v: None)
         self.reports: list[list[int]] = []
 
-    def writeReport(self, out: list[int]) -> None:  # noqa: N802 — API pydualsense
+    def writeReport(self, out: list[int]) -> None:  # noqa: N802
         self.reports.append(list(out))
 
 
@@ -267,7 +267,7 @@ def test_o_boot_nao_pisca(monkeypatch: Any) -> None:
 def test_a_troca_pisca_na_cor_do_modo_novo(monkeypatch: Any) -> None:
     _sem_thread(monkeypatch)
     d = _Daemon(flavor=PONTE_DUALSENSE)
-    avisar_troca_de_modo(d)  # type: ignore[arg-type]  — primeira leitura
+    avisar_troca_de_modo(d)  # type: ignore[arg-type]
     d._gamepad_device = SimpleNamespace(flavor=PONTE_XBOX)
 
     assert avisar_troca_de_modo(d) == PONTE_XBOX  # type: ignore[arg-type]

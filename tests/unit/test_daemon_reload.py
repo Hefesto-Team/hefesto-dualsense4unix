@@ -177,9 +177,6 @@ def test_reload_config_mouse_sem_mudanca_nao_chama_set_mouse_emulation(monkeypat
     assert chamadas == [], "set_mouse_emulation não deve ser chamado se estado não mudou"
 
 
-# IPC daemon.reload
-
-
 @pytest.mark.asyncio
 async def test_ipc_daemon_reload_retorna_config_atualizado():
     """Handler IPC daemon.reload retorna config completo apos override."""

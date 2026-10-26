@@ -113,7 +113,7 @@ def test_o_ativar_troca_o_que_as_outras_abas_mostram(
     antes = perfil.ativo(ctx.state.get("active_profile"))
     assert (antes.get("leds") or {}).get("lightbar_brightness") == 20
 
-    marcador["nome"] = ATIVADO  # <- o que o `profile.switch` acabou de gravar
+    marcador["nome"] = ATIVADO
 
     depois = perfil.ativo(ctx.state.get("active_profile"))
     assert depois.get("name") == ATIVADO, (

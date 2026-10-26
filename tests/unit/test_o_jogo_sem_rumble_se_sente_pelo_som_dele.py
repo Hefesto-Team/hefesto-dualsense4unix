@@ -22,7 +22,7 @@ from hefesto_dualsense4unix.profiles.estilos_de_jogo import POR_CHAVE
 
 P1 = "aa:bb:cc:00:00:01"
 QUATRO = (P1, "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03", "aa:bb:cc:00:00:04")
-_ACAO = "acao"  # (noqa-acento): chave do estilo
+_ACAO = "acao"  # (noqa-acento)
 
 
 class _Ouvido:
@@ -146,9 +146,6 @@ class _Mesa:
         self.passo.alimentar_o_corpo(quadros)
 
 
-# --- o estalo vira toque onde o jogo cala ---------------------------------------------------
-
-
 def test_vinte_segundos_sem_rumble_e_a_mao_viva_o_estalo_vira_toque_na_forma_do_estilo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -172,20 +169,16 @@ def test_com_a_mao_parada_o_estalo_nao_toca(monkeypatch: pytest.MonkeyPatch) -> 
     assert mesa.alto_falante.toques == []
 
 
-# --- o primeiro rumble do jogo a faz ceder no mesmo tique -----------------------------------
-
-
 def test_um_rumble_no_meio_cala_a_fonte_no_mesmo_tique_e_o_toque_e_o_do_rumble(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # D-2210-O-SOM-DO-JOGO-ACORDA-ONDE-O-JOGO-CALA
+    """Prova da D-2210-O-SOM-DO-JOGO-ACORDA-ONDE-O-JOGO-CALA."""
     mesa = _Mesa(monkeypatch, _ACAO)
     mesa.jogar(21)
     mesa.grave()
     mesa.tique()
     assert mesa.alto_falante.corpos, "acordada, o grave vira o corpo discreto"
     corpos = len(mesa.alto_falante.corpos)
-    # No mesmo tique: o jogo vibra (o forte, à esquerda) e o som estala à direita.
     tv.anotar_o_rumble(mesa.daemon, P1, 0, 200, mesa.agora)
     mesa.estalo("direito")
     mesa.grave()
@@ -222,7 +215,7 @@ def test_nos_quatro_controles_o_rumble_de_um_so_cala_a_fonte_dele(
     mesa.jogar(21)
     assert mesa.motor.acordados_pelo_som == frozenset(QUATRO)
     tv.anotar_o_rumble(mesa.daemon, QUATRO[1], 0, 180, mesa.agora)
-    for uniq in QUATRO[:2]:  # o estalo vai a quem atirou na janela, como hoje
+    for uniq in QUATRO[:2]:
         mesa.gatilho(uniq, 255)
     mesa.tique()
     mesa.estalo()
@@ -230,9 +223,6 @@ def test_nos_quatro_controles_o_rumble_de_um_so_cala_a_fonte_dele(
     tocados = [t for t in mesa.alto_falante.toques if t[1] == "direito"]
     assert tocados == [(QUATRO[0], "direito", formas.IMPACTO)]
     assert mesa.motor.acordados_pelo_som == frozenset(QUATRO) - {QUATRO[1]}
-
-
-# --- onde o silêncio é o desenho ------------------------------------------------------------
 
 
 @pytest.mark.parametrize("estilo", ["retro", "nativo"])
@@ -259,9 +249,6 @@ def test_a_receita_do_estilo_diz_quem_liga_a_fonte(estilo: str) -> None:
     assert tv.Receita.de({"som_quando_o_jogo_cala": True}).som_quando_o_jogo_cala
 
 
-# --- o grave vira o corpo discreto ----------------------------------------------------------
-
-
 @pytest.mark.parametrize(("estilo", "veste"), [
     ("terror", True), (_ACAO, True), ("souls", True), ("aventura", True),
     ("luta", False), ("esportes", False), ("fps", False), ("plataforma", False),
@@ -281,16 +268,13 @@ def test_o_corpo_discreto_e_a_metade_do_som_no_corpo(monkeypatch: pytest.MonkeyP
     mesa.jogar(21)
     mesa.grave()
     mesa.tique()
-    inteiro = _Mesa(monkeypatch, "corrida")  # a Corrida veste o Som no corpo inteiro
+    inteiro = _Mesa(monkeypatch, "corrida")
     inteiro.grave()
     inteiro.tique()
     (_, discreto), = mesa.alto_falante.corpos
     (_, cheio), = inteiro.alto_falante.corpos
     assert cheio > 0.05
     assert discreto == pytest.approx(cheio * tv.FORCA_DO_CORPO_DISCRETO, rel=1e-3)
-
-
-# --- contra a música do jogo ----------------------------------------------------------------
 
 
 def _pcm(segundos: float, nivel_de: Any) -> bytes:

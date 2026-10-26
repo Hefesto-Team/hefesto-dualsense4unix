@@ -148,9 +148,6 @@ def test_from_profile_mouse_default() -> None:
     assert draft.mouse.enabled is False
 
 
-# (c) to_profile — round-trip via Profile.model_validate
-
-
 def test_to_profile_nome_preservado() -> None:
     draft = DraftConfig.default()
     profile = draft.to_profile("meu_perfil")

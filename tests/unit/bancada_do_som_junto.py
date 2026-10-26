@@ -8,7 +8,6 @@ from typing import Any
 
 from hefesto_dualsense4unix.daemon.subsystems import alto_falante as mod
 
-#: destes é um controle desta bancada: régua que só passa com os DualSense do usuário
 P1 = "aa:bb:cc:00:00:c1"
 P2 = "aa:bb:cc:00:00:c2"
 

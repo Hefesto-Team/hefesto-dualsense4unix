@@ -113,7 +113,7 @@ def test_a_frase_da_linha_e_a_medicao_e_nao_o_rotulo():
     ("estado", "palavra", "classe"),
     [
         ("certo", "CERTO", "ok"),
-        ("atencao", "AJUSTAR", "warn"),  # (noqa-acento) chave de máquina
+        ("atencao", "AJUSTAR", "warn"),  # (noqa-acento)
         ("problema", "AJUSTAR", "warn"),
         ("nao_sei", "NOTA", "info"),
     ],
@@ -137,9 +137,6 @@ def test_um_estado_que_a_tela_nao_conhece_nao_vira_verde():
     assert linha["classe"] == "info"
 
 
-# --- o QUARTO selo: `problema` deixa de parecer `atencao` ---  # (noqa-acento): nome de estado
-
-
 def test_o_problema_e_o_atencao_chegam_a_tela_como_estados_diferentes():
     """A cor sai do ESTADO, e é ele que separa os dois — não a palavra.
 
@@ -148,9 +145,9 @@ def test_o_problema_e_o_atencao_chegam_a_tela_como_estados_diferentes():
     agora parecia igual ao que só podia estar melhor"*, que é a frase de produto.
     """
     quebrado = a08._linha(_item(estado="problema"))
-    so_podia_melhorar = a08._linha(_item(estado="atencao"))  # (noqa-acento) id
+    so_podia_melhorar = a08._linha(_item(estado="atencao"))  # (noqa-acento)
     assert quebrado["estado"] != so_podia_melhorar["estado"], (
-        "o pacote parou de distinguir `problema` de `atencao` no que manda "  # (noqa-acento) chave
+        "o pacote parou de distinguir `problema` de `atencao` no que manda "  # (noqa-acento)
         "para a tela — sem isso a cor do quarto selo não tem em que se apoiar"
     )
     assert quebrado["selo"] == so_podia_melhorar["selo"] == "AJUSTAR"
@@ -163,7 +160,7 @@ def test_a_dica_da_linha_traz_as_duas_metades_do_produto():
         PREFIXO_DA_CURA,
     )
 
-    it = _item(estado="atencao", cura="Troque o cabo de entrada.")  # (noqa-acento): nome de estado
+    it = _item(estado="atencao", cura="Troque o cabo de entrada.")  # (noqa-acento)
     dica = a08._linha(it)["dica"]
     assert DICAS_DAS_LINHAS["energia_das_portas"] in dica
     assert PREFIXO_DA_CURA + it.cura in dica
@@ -171,7 +168,7 @@ def test_a_dica_da_linha_traz_as_duas_metades_do_produto():
 
 def test_a_dica_nao_repete_a_medicao_que_a_linha_ja_mostra():
     """Decisão, 02/09/2026 — e é a metade do meio que sai."""
-    it = _item(estado="atencao", cura="Troque o cabo de entrada.")  # (noqa-acento) id
+    it = _item(estado="atencao", cura="Troque o cabo de entrada.")  # (noqa-acento)
     linha = a08._linha(it)
     assert linha["porque"] == it.porque, "a linha continua mostrando a medição"
     assert it.porque not in linha["dica"], (

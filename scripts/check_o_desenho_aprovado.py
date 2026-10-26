@@ -34,7 +34,6 @@ INVISIVEIS = re.compile(
     r'|data-degrau|data-modo|data-gatilho|data-entrada|data-clique'
     r'|data-hef-gesto|data-hef|data-ajuste|data-player'
         r'|data-hex|data-v|data-hef-alvo|data-hef-rolar'
-    # elemento: `data-campo` (o endereço), `data-hef-alvo="classe"` (o alvo) e
     r'|data-hef-quando|data-hef-classe'
     r'|data-linha|data-hef-forma|data-face'
     r')="[^"]*"'
@@ -159,7 +158,6 @@ def publicar_enderecos(argv: list[str]) -> int:
     for nome in alvos:
         if not (PUBLICADO / nome).exists():
             recusadas.append((nome, "a página não existe no produto — é desenho novo"))
-        # Medido no `10-perfis.html` com o `data-hef-alvo="classe"` novo:
         elif (BANCADA / nome).read_bytes() == (PUBLICADO / nome).read_bytes():
             ja_iguais.append(nome)
         elif so_mudou_endereco(nome):

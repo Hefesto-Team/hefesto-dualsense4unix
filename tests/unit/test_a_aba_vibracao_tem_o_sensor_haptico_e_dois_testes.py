@@ -94,7 +94,6 @@ def _faixas_da_grade() -> list[str]:
     """As faixas do ``grid-template-rows`` das colunas, lidas da folha do gerador."""
     regra = aba05.CSS.split(".vib > div{", 1)[1].split("}", 1)[0]
     linhas = regra.split("grid-template-rows:", 1)[1].split(";", 1)[0]
-    # cada faixa é `var(--r-x)` ou `minmax(var(--r-x),Nfr)`: vale o nome da variável do piso
     return [f"var({v})" for v in re.findall(r"var\((--r-[\w-]+)\)", linhas)]
 
 
@@ -557,13 +556,7 @@ MEDIDA = r"""
 })()
 """
 
-#: 15/10/2026, as duas listas de efeito (+116 px de faixas): o desenho de 124 px voltou a ceder, por
-#: pedido (desenho A, «uma lista suspensa em cada escolha»). O quadro sem pintura mede 72 px
-#: (o piso do CSS, e o «Criar» quebra em duas linhas porque ainda não leu a mesa); na janela do
-#: piloto, com a mesa pintada, mede 100 px. O que MORDE é a grade não estourar o quadro (abaixo).
 DESENHO_DE_ANTES = 72
-#: Com o aviso do gamepad virtual aceso, a linha dele toma 17 px do quadro «Criar efeitos novos»
-#: (A-ABA-VIBRACAO-DO-TODO-01), que enche a folga de baixo; o desenho cede o que o aviso pede.
 DESENHO_COM_AVISO = 80
 
 CENAS = ("quieta", "vpad-nao-subiu")

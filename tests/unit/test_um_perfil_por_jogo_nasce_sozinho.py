@@ -404,8 +404,6 @@ def gatilho_armado(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         loader, "_assinatura_da_biblioteca_vista", None, raising=False
     )
-    # O jogo instalado aqui (o `.desktop`) é a terceira origem da semeadura: sem
-    # isto o teste leria os atalhos REAIS da máquina que o roda.
     monkeypatch.setattr(jogos_locais, "pastas_de_atalhos", lambda: [])
 
 

@@ -31,9 +31,6 @@ RAIZ_REAL = Path(__file__).resolve().parents[2]
 SCRIPT = RAIZ_REAL / "scripts" / "validar-fala-de-tela.py"
 FALA_DO_MAPA_REAL = RAIZ_REAL / "src" / "hefesto_dualsense4unix" / "app" / "fala_do_mapa.py"
 
-#: A linha exata de ``app/fala_do_mapa.py`` que este teste troca. Se ela mudar
-#: de forma, a troca não casa e ``_com_formato`` FALHA em voz alta em vez de
-#: rodar uma mordida que não morde.
 _FORMATO_DE_UMA_CASA = 'return f"{valor:.1f}".replace(".", ",")'
 
 RADIO_DA_MESA_MENTIROSA = '''\

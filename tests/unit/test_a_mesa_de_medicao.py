@@ -642,12 +642,6 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
             pg.fill("#gesto", "aba 03 > efeito Arma no P3 · report 0x02")
             pg.fill('textarea[name="n-P3"]', "só o P3 endureceu")
 
-            # O SALVAR É ASSÍNCRONO (dois `fetch` antes de avançar), e a régua
-            # esperava o avanço por um tempo fixo: sob carga o servidor
-            # respondia depois do tempo e ela reprovava sem defeito nenhum.
-            # Agora o gravar fica SEGURADO na rede, a página tem de continuar
-            # onde está, e o avanço é esperado pela condição do DOM (o hash
-            # mudar), que é o comportamento, e não pelo relógio da máquina.
             seguradas: list[Any] = []
             solto = {"sim": False}
 
@@ -658,10 +652,6 @@ def test_a_pagina_dirigida_pelo_navegador(mesa_no_ar, mentira, monkeypatch) -> N
                     seguradas.append(rota)
 
             pg.route("**/registro", segura)
-            # A pergunta «avançou antes de gravar?» se faz quando o pedido de
-            # gravar JÁ SAIU, e não logo depois do clique: antes dele há o
-            # `fetch('/mesa')`, e uma página que avançasse entre os dois
-            # passaria calada se a régua perguntasse cedo demais.
             with pg.expect_request("**/registro"):
                 pg.click("#salvar")
             assert pg.evaluate("location.hash") == "#" + alvo.id, (

@@ -240,7 +240,6 @@ def test_o_daemon_calado_nao_acende_nada() -> None:
 
 def test_a_leitura_e_do_produto_e_nao_uma_copia(monkeypatch: Any) -> None:
     """Troca os dois leitores do produto e cobra que o pacote os siga."""
-    # DualSense» acendia. AGORA troca `painel.caminho_vivo` e cobra que o chip
     from hefesto_dualsense4unix.app.actions import home_actions
 
     monkeypatch.setattr(painel, "hefesto_ligado", lambda _s: False)
@@ -248,8 +247,6 @@ def test_a_leitura_e_do_produto_e_nao_uma_copia(monkeypatch: Any) -> None:
     assert fora["hef-posicao"] == "desligado", (
         "o pacote deixou de usar `painel.hefesto_ligado` — a posição virou cópia")
 
-    # NO DESLIGADO os botões são o Nativo e o Steam Input (08/10/2026); o chip de
-    # caminho se mede com o interruptor em Ligado.
     monkeypatch.setattr(painel, "hefesto_ligado", lambda _s: True)
     monkeypatch.setattr(painel, "modo_vivo", lambda _s: "gamepad")
     monkeypatch.setattr(painel, "caminho_vivo", lambda _s: "xbox")
@@ -515,7 +512,7 @@ def _atras_so_por_endereco() -> bool:
 
     alvo = RAIZ / "scripts" / "check_o_desenho_aprovado.py"
     spec = importlib.util.spec_from_file_location("_desenho_aprovado", alvo)
-    if spec is None or spec.loader is None:  # pragma: no cover - defesa
+    if spec is None or spec.loader is None:  # pragma: no cover
         return False
     modulo = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(modulo)
@@ -537,7 +534,6 @@ def test_a_pagina_publica_os_enderecos_na_quantidade_certa(publicado: bool) -> N
                     "pixel mudou. Fecha com: scripts/check_o_desenho_aprovado.py "
                     "--publicar-enderecos 01")
     corpo = onde.pagina("01-jogar.html", publicado=publicado).read_text(encoding="utf-8")
-    # exclusivo dos outros — «Sony DualSense» e «Steam Input» são verdade ao
     por_campo = collections.Counter(
         aba01._campo_do_chip(m) for m in aba01.MODOS + aba01.DO_DESLIGADO)
     esperado = {
@@ -590,12 +586,6 @@ def test_os_metodos_da_troca_de_modo_tem_a_folga_do_produto() -> None:
     from hefesto_dualsense4unix.app.actions.mode_transition import MODE_IPC_TIMEOUT_S
     from pacotes import ponte
 
-    # `gamepad.mask.set` entrou em `METODOS` junto com a cura da chamada dele, e
-    # `mouse.emulation.restore` saiu do conjunto porque saiu do PLANO, e o passo
-    # razão do `gamepad.mask.set`, com o sinal trocado: ele abre um `.json` de
-    # perfil do disco e tem teto PRÓPRIO de 3,0 s, a família do `profile.switch`.
-    # O-GESTO-QUE-PEDE-O-P1-RESPONDE-QUANDO-ELE-EXISTE-01: o que pede o P1 espera o
-    # prazo do daemon, com folga (`protocolo_do_ipc.TETO_DO_GESTO_QUE_PEDE_O_P1_S`).
     from hefesto_dualsense4unix.daemon.protocolo_do_ipc import TETO_DO_GESTO_QUE_PEDE_O_P1_S
 
     for metodo in aba.METODOS_DA_TROCA_DE_MODO:

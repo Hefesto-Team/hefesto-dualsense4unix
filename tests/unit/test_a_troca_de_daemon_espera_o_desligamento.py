@@ -22,7 +22,6 @@ from hefesto_dualsense4unix.utils import single_instance
 
 UNIT = Path(__file__).resolve().parents[2] / "assets" / "hefesto-dualsense4unix.service"
 
-#: O desligamento lento: o SIGTERM só é atendido 3 s depois, e a saída é limpa (código 0).
 DESLIGAMENTO_LENTO_S = 3.0
 
 _FILHO_QUE_DESLIGA_DEVAGAR = (

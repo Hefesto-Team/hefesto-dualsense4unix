@@ -28,8 +28,6 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Os botões que navegam o Big Picture e a tecla que cada um vira. O Big Picture
-#: lê as setas, o Enter (confirma) e o Esc (volta) do teclado.
 TECLAS: dict[str, tuple[str, ...]] = {
     "dpad_up": ("KEY_UP",),
     "dpad_down": ("KEY_DOWN",),
@@ -42,11 +40,8 @@ BOTOES_QUE_NAVEGAM = frozenset(TECLAS)
 
 NOME_DO_TECLADO = "Hefesto - DualSense4Unix Big Picture Keyboard"
 
-#: Fonte que não renova por mais que isto some do conjunto: um controle que
-#: sai no meio do aperto não deixa a tecla presa.
 VALIDADE_DA_FONTE_S = 0.5
 
-#: Quem chama sem dizer a fonte é o controle primário.
 FONTE_PRIMARIA = "P1"
 
 

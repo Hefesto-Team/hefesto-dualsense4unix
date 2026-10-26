@@ -26,7 +26,6 @@ from hefesto_dualsense4unix.profiles.schema import (
     ProfileMovimentoConfig,
 )
 
-#: P1 a P4, dois no cabo e dois no rádio (faixa forjada `aa:bb:cc`)
 QUATRO = [
     {"pref": f"p{n}", "uniq": f"aabbcc00000{n}", "jogador": n, "cor": cor,
      "nome": cor, "via": via.upper(), "transporte": via, "alvo": n == 1}
@@ -87,9 +86,9 @@ def test_toda_variavel_da_receita_tem_destino() -> None:
 
 
 def test_o_arco_saiu_do_catalogo_e_carrega_como_acao() -> None:
-    # D-2010-O-ARCO-VIRA-ESCOLHA-DA-ACAO: o perfil salvo com a chave velha segue funcionando
+    """Prova da D-2010-O-ARCO-VIRA-ESCOLHA-DA-ACAO."""
     assert "arco" not in {e.chave for e in ej.ESTILOS}
-    assert ej.POR_CHAVE["arco"] is ej.POR_CHAVE["acao"]  # (noqa-acento) chave
+    assert ej.POR_CHAVE["arco"] is ej.POR_CHAVE["acao"]  # (noqa-acento)
     assert "Arco" not in ej.POR_ROTULO
 
 

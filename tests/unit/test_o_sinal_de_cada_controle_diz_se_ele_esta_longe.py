@@ -22,7 +22,6 @@ from hefesto_dualsense4unix.interface.pacotes import a08_conexoes as a08
 from tests.unit.test_o_ar_do_adaptador import _SocketDeMentira
 from hefesto_dualsense4unix.interface.pacotes import nome_do_jogador
 
-#: faixa forjada (`aa:bb:cc`)
 APARELHO_A = "aa:bb:cc:00:00:11"
 APARELHO_B = "aa:bb:cc:00:00:12"
 ADAPTADOR = "aa:bb:cc:00:00:0a"
@@ -33,8 +32,6 @@ def _resposta_rssi(handle: int, rssi: int, *, status: int = 0) -> bytes:
     corpo = bytes([0x01]) + struct.pack("<H", ar.OPCODE_LER_RSSI) + params
     return bytes([0x04, 0x0E, len(corpo)]) + corpo
 
-
-# --- 1. o serviço lê o sinal, sem root -----------------------------------------------------
 
 def test_o_read_rssi_e_o_que_o_filtro_do_kernel_deixa_sem_root() -> None:
     """``hci_sec_filter``: ``OGF_STATUS_PARAM`` = ``0x000000ea``, bit do OCF."""
@@ -144,8 +141,6 @@ def test_o_state_full_publica_o_sinal_do_controle_no_radio_e_nada_no_cabo(
     assert [e["sinal_dbm"] for e in entradas] == [-53, None]
 
 
-# --- 2. a cor e a frase vêm dos dois números juntos ----------------------------------------
-
 REFERENCIA_DE_DOIS = 280.0
 
 
@@ -156,7 +151,6 @@ def test_sinal_fraco_com_hz_caindo_e_longe_e_sinal_bom_com_hz_caindo_e_interfere
     assert (longe.causa, interferencia.causa, liso.causa) == (rm.CAUSA_LONGE,
                                                               rm.CAUSA_INTERFERENCIA, "")
     assert longe.nivel == interferencia.nivel == rm.NIVEL_ENGASGA and liso.nivel == rm.NIVEL_LISO
-    # com a cura arrancada (a cor só pelo Hz absoluto) o 1º e o 2º saem iguais:
     assert rm.nivel_do_movimento(21) == rm.nivel_do_movimento(30)
 
 
@@ -181,8 +175,6 @@ def test_o_x_perdido_mora_abaixo_do_limiar_que_perde_aperto() -> None:
     d = rm.diagnosticar_o_movimento(10, sinal_dbm=-55, referencia_hz=REFERENCIA_DE_DOIS)
     assert (d.nivel, d.causa) == (rm.NIVEL_ENGASGA, rm.CAUSA_LONGE)
 
-
-# --- 3. o limiar do Hz é relativo ao adaptador ---------------------------------------------
 
 @pytest.fixture()
 def tela_limpa(monkeypatch: pytest.MonkeyPatch) -> list[float]:
@@ -248,8 +240,6 @@ def test_o_controle_que_muda_de_adaptador_recomeca_a_referencia(tela_limpa: list
     assert nivel == rm.NIVEL_LISO, "o 650 do L1 não é a referência dele no L2"
 
 
-# --- 4. sem o sinal a linha diz «sinal desconhecido», e não verde ---------------------------
-
 def test_pelo_radio_sem_sinal_a_linha_nao_e_verde_e_diz_que_nao_sabe(
     tela_limpa: list[float],
 ) -> None:
@@ -264,8 +254,6 @@ def test_pelo_cabo_nao_ha_sinal_a_pedir(tela_limpa: list[float]) -> None:
     nivel, dica = _nivel_e_dica(_cena({"a": {"hz_mov": 900.0, "sinal": None, "usb": True}}))
     assert nivel == rm.NIVEL_LISO and dica == a08.DICA_DO_MOVIMENTO[rm.NIVEL_LISO]
 
-
-# --- 5. a cor piora na hora e melhora devagar, com a frase junto ----------------------------
 
 def test_o_mergulho_de_um_segundo_fica_na_tela_com_a_frase_dele(tela_limpa: list[float]) -> None:
     for _ in range(3):
@@ -307,13 +295,11 @@ def test_a_tela_le_o_sinal_que_o_servico_publica() -> None:
     assert [a["sinal"] for a in aparelhos] == [-53]
 
 
-# --- 6. o enlace fraco protege o botão: a ponte do controle longe cede a vez ---------------
-
 LIMIAR = rm.SINAL_QUE_ATRASA_DBM
 
 
 def test_a_pausa_comeca_na_primeira_leitura_fraca_e_so_acaba_com_folga_e_duas_leituras() -> None:
-    # A decisão: D-0810-O-ENLACE-FRACO-PAUSA-A-PONTE-DO-CONTROLE-LONGE.
+    """Prova da D-0810-O-ENLACE-FRACO-PAUSA-A-PONTE-DO-CONTROLE-LONGE."""
     pausa = rm.PausaPeloSinal()
     assert pausa.ver(-31, 1.0, 1) is False
     assert pausa.ver(LIMIAR, 2.0, 2) is True, "no limiar que atrasa a ponte já cede"
@@ -570,8 +556,6 @@ def test_a_tela_le_a_pausa_que_o_governador_publica() -> None:
     assert [a["ponte_pausada"] for a in aparelhos] == [True]
 
 
-# --- 7. o «Equilibrar» lê o sinal: o fraco vai para onde um outro adaptador o ouve melhor ---
-
 SALA = "aa:bb:cc:00:00:a1"
 QUARTO = "aa:bb:cc:00:00:b2"
 FRACO, FORTE, OUTRO, ULTIMO = (f"aabbcc0000{n:02x}" for n in (1, 2, 3, 4))
@@ -616,7 +600,7 @@ def test_sem_ninguem_que_ouca_o_fraco_a_conta_por_contagem_segue_como_era() -> N
 
 
 def test_o_fraco_que_o_outro_adaptador_ouve_bem_melhor_e_o_que_se_propoe_mover() -> None:
-    # A decisão: D-0810-O-EQUILIBRAR-MOVE-O-FRACO-PELO-SINAL.
+    """Prova da D-0810-O-EQUILIBRAR-MOVE-O-FRACO-PELO-SINAL."""
     ordem = _ordem(_mesa_equilibrada(), {FRACO: {QUARTO.replace(":", ""): -40}})
     assert ordem is not None
     assert (ordem.controle, ordem.origem, ordem.destino, ordem.modo) == (

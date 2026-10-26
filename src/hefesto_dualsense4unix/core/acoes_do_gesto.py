@@ -70,9 +70,6 @@ GESTOS: dict[str, Gesto] = {
     )
 }
 
-#: OS GESTOS QUE SE ACRESCENTAM (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, N8, 16/10/2026): o PS com
-#: um botão que nenhum gesto de fábrica usa. A chave é `ps_<botão>`, e o gesto só existe enquanto
-#: está declarado no `maquina.json`; sem declaração, ele não dispara nem cala o botão.
 BOTOES_DO_GESTO_NOVO: tuple[str, ...] = ("cross", "circle", "square", "triangle", "create")
 _PECA_DO_BOTAO: dict[str, str] = {"create": "share"}
 
@@ -83,11 +80,8 @@ GESTOS_NOVOS: dict[str, Gesto] = {
 
 TODOS_OS_GESTOS: dict[str, Gesto] = {**GESTOS, **GESTOS_NOVOS}
 
-#: Os botões que o PS não pode ganhar como gesto: os seis dos gestos dos acessórios
-#: (`integrations/gestos_dos_acessorios.BOTAO_DO_MEMBRO`, que a régua compara com esta lista).
 BOTOES_PROIBIDOS: tuple[str, ...] = ("l1", "r1", "l2", "r2", "dpad_left", "dpad_right")
 
-#: Os botões da escolha «+ Gesto», na ordem da tela: os livres, os de fábrica e os proibidos.
 BOTOES_DA_ESCOLHA: tuple[str, ...] = (
     *BOTOES_DO_GESTO_NOVO,
     *(g.botoes[1] for g in GESTOS.values() if g.chave != GESTO_DO_PS),
@@ -107,7 +101,6 @@ PARAR_O_SERVICO = "parar_o_servico"
 SCRIPT = "script"
 NADA = "nada"
 
-#: o sentido de andar pelas abas. <!-- noqa-acento: citação literal -->
 GRUPO_PERFIL = "Perfil"
 GRUPO_MOUSE_E_TECLADO = "Mouse e teclado"
 GRUPO_MODO = "Modo"
@@ -258,7 +251,7 @@ def rotulo_da_escolha(escolha: EscolhaDoGesto) -> str:
 
 
 _POR_ROTULO: dict[str, str] = {r: t for t, (_g, r) in ACOES.items()}
-if len(_POR_ROTULO) != len(ACOES):  # pragma: no cover - defeito de escrita
+if len(_POR_ROTULO) != len(ACOES):  # pragma: no cover
     raise SystemExit("ERRO em acoes_do_gesto: dois tokens com o mesmo rótulo.")
 
 

@@ -72,7 +72,7 @@ def migrate_legacy_paths() -> dict[str, list[str]]:
                     dst=str(target),
                     count=len(copied),
                 )
-        except OSError as exc:  # pragma: no cover - defensivo
+        except OSError as exc:  # pragma: no cover
             logger.warning("legacy_paths_migrate_failed", area=name, error=str(exc))
     return results
 

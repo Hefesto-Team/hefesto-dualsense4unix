@@ -63,11 +63,6 @@ def _dados() -> dict[str, Any]:
     return d
 
 
-# ---------------------------------------------------------------------------
-# 1. O esquema e os aplicadores
-# ---------------------------------------------------------------------------
-
-
 def test_o_arquivo_do_repositorio_vale() -> None:
     assert aplicar.validar(_dados()) == []
 
@@ -78,7 +73,6 @@ def test_tudo_o_que_o_github_oferece_esta_ligado() -> None:
         funcoes[n]["ligada"] is True
         for n in ("issues", "wiki", "pages", "projects", "discussions", "sponsor")
     )
-    # O botão Sponsor ligado mostra o que o FUNDING.yml lista: sem chave ativa, nada a mostrar.
     assert _yaml(GH_DIR / "FUNDING.yml"), "o botão Sponsor pede ao menos uma chave no FUNDING.yml"
 
 
@@ -125,7 +119,6 @@ def funcoes_sem_aplicador(dados: dict[str, Any], aplicadores: dict[str, Any]) ->
 def test_toda_funcao_declarada_tem_quem_a_aplique() -> None:
     dados = _dados()
     assert funcoes_sem_aplicador(dados, aplicar.APLICADORES) == []
-    # e o inverso: aplicador sem declaração é código morto
     assert sorted(set(aplicar.APLICADORES) - set(aplicar.funções_declaradas(dados))) == []
 
 
@@ -148,7 +141,6 @@ def test_mordida_funcao_sem_aplicador_reprova(monkeypatch: pytest.MonkeyPatch) -
     incompleto = dict(aplicar.APLICADORES)
     del incompleto["seguranca.relato_privado"]
     assert funcoes_sem_aplicador(dados, incompleto) == ["seguranca.relato_privado"]
-    # uma função nova no arquivo, sem lugar no esquema, também reprova
     dados["seguranca"]["radar_novo"] = True
     assert any("radar_novo" in e for e in aplicar.validar(dados))
     assert "seguranca.radar_novo" in funcoes_sem_aplicador(dados, aplicar.APLICADORES)
@@ -201,11 +193,6 @@ def test_mordida_o_esquema_reprova_o_arquivo_estragado(estraga: Any) -> None:
     assert aplicar.validar(dados), "o esquema aceitou um arquivo estragado"
 
 
-# ---------------------------------------------------------------------------
-# 2. O nome de cada check obrigatório é um job que existe
-# ---------------------------------------------------------------------------
-
-
 def _combinacoes(job: dict[str, Any]) -> list[dict[str, Any]]:
     """Cada combinação da matriz do job (as dimensões cruzadas, mais as do `include`)."""
     matriz = (job.get("strategy") or {}).get("matrix") or {}
@@ -214,7 +201,6 @@ def _combinacoes(job: dict[str, Any]) -> list[dict[str, Any]]:
     if not dims:
         combos = []
     for extra in matriz.get("include") or []:
-        # sem dimensões, cada `include` é uma combinação própria
         casou = [
             c for c in combos if dims and all(c[k] == v for k, v in extra.items() if k in dims)
         ]
@@ -242,7 +228,6 @@ def test_o_nome_do_check_segue_a_regra_do_github() -> None:
         "lint-test (3.10)",
         "lint-test (3.12)",
     ]
-    # com `name` e sem a matriz nele, o GitHub acrescenta os valores do mesmo jeito
     com_nome = {"strategy": {"matrix": {"os": ["a"]}}}
     assert [_nome_do_check("Smoke", v) for v in _combinacoes(com_nome)] == ["Smoke (a)"]
     so_include = {"strategy": {"matrix": {"include": [{"distro": "fedora"}, {"distro": "arch"}]}}}
@@ -257,7 +242,7 @@ def contextos(raiz: Path) -> dict[str, dict[str, Any]]:
     achados: dict[str, dict[str, Any]] = {}
     for arq in sorted((raiz / ".github" / "workflows").glob("*.y*ml")):
         wf = yaml.safe_load(arq.read_text(encoding="utf-8")) or {}
-        gatilhos = wf.get(True, wf.get("on")) or {}  # o PyYAML lê `on:` como True
+        gatilhos = wf.get(True, wf.get("on")) or {}
         em_pr = "pull_request" in (gatilhos if isinstance(gatilhos, (dict, list)) else [gatilhos])
         for ident, job in (wf.get("jobs") or {}).items():
             nome = str(job.get("name", ident))
@@ -324,10 +309,6 @@ def test_mordida_workflow_que_nao_roda_em_pr_reprova(copia_dos_workflows: Path) 
     _trocar(wf / "autoria.yml", gatilho, "")
     assert any("não roda em PR" in f for f in checks_sem_job(_dados(), copia_dos_workflows))
 
-
-# ---------------------------------------------------------------------------
-# 3. O aplicador contra o `gh` de mentira
-# ---------------------------------------------------------------------------
 
 GH_DE_MENTIRA = RAIZ / "tests" / "fixtures" / "github" / "gh_de_mentira.py"
 
@@ -416,7 +397,6 @@ def _gh_em_processo(
                 codigo = fim.code if isinstance(fim.code, int) else (0 if fim.code is None else 1)
     finally:
         sys.argv, sys.stdin = argv, entrada
-    # `text=True` do subprocess lê com quebra de linha universal: o `\r\n` do cabeçalho vira `\n`
     return subprocess.CompletedProcess(
         cmd, codigo, saida.getvalue().replace("\r\n", "\n"), erro.getvalue()
     )
@@ -497,8 +477,6 @@ def test_aplicar_deixa_o_repositorio_como_o_arquivo_diz(gh: Mentira) -> None:
         for c in x["parameters"]["required_status_checks"]
     ]
     assert "autoria" in contextos_
-    # O `.mailmap` é lido do topo do PR, e o próprio PR pode acrescentar quem o fez: a aprovação
-    # só vale depois do último push, e um push novo a derruba.
     revisao = next(x["parameters"] for x in porta["rules"] if x["type"] == "pull_request")
     assert revisao["require_last_push_approval"] is True
     assert revisao["dismiss_stale_reviews_on_push"] is True
@@ -584,14 +562,11 @@ def test_a_deriva_de_valor_do_ruleset_volta_ao_arquivo(gh_aplicado: Mentira, der
 
 def test_o_que_o_servidor_acrescenta_nao_e_deriva(gh_aplicado: Mentira) -> None:
     e = gh_aplicado.estado
-    # o servidor devolve campos que nunca mandamos; e o campo mandado tem de ser lido de volta
     assert "allowed_merge_methods" in json.dumps(e["rulesets"])
     assert rodar("--conferir") == 0
 
 
 def test_o_ruleset_homonimo_da_organizacao_nao_se_confunde_com_o_nosso(gh: Mentira) -> None:
-    # A lista da API traz os da organização junto, por padrão; o id deles não se edita pelo
-    # repositório. O aplicador lê só os do repositório.
     nome = _dados()["rulesets"][0]["nome"]
     gh.mudar(
         rulesets_da_org=[
@@ -611,7 +586,6 @@ def test_o_ruleset_homonimo_da_organizacao_nao_se_confunde_com_o_nosso(gh: Menti
 
 
 def test_a_ordem_da_seguranca_no_arquivo_nao_muda_o_resultado(gh: Mentira, tmp_path: Path) -> None:
-    # As atualizações de segurança só ligam depois dos alertas; o arquivo pode listar ao contrário.
     dados = _dados()
     dados["seguranca"]["atualizacoes_de_seguranca"] = True
     dados["seguranca"] = dict(reversed(list(dados["seguranca"].items())))
@@ -630,7 +604,6 @@ def test_a_guarda_recusa_conta_errada_e_nao_escreve(gh: Mentira, capsys: Capsys)
     assert rodar("--aplicar") == 2
     assert "recusado" in capsys.readouterr().out
     assert gh.escritas() == []
-    # o conferir só lê: não precisa da guarda
     assert rodar("--conferir") == 1
 
 
@@ -644,7 +617,7 @@ def test_a_guarda_recusa_dono_de_fora(gh: Mentira, capsys: Capsys) -> None:
 
 
 def test_o_que_nao_se_mediu_nao_sai_como_verde(gh: Mentira, capsys: Capsys) -> None:
-    gh.mudar(privado=True)  # o plano gratuito devolve 403 para ruleset
+    gh.mudar(privado=True)
     assert rodar("--conferir") == 2
     assert "sem medida" in capsys.readouterr().out
     assert gh.escritas() == []
@@ -654,7 +627,7 @@ def test_sem_rulesets_deixa_os_rulesets_para_depois_do_push(gh: Mentira) -> None
     assert rodar("--aplicar", "--sem", "rulesets") == 0
     assert all("rulesets" not in c["p"] for c in gh.chamadas())
     assert gh.estado["rulesets"] == []
-    assert rodar("--conferir") == 1  # o todo ainda tem diferença
+    assert rodar("--conferir") == 1
     assert rodar("--aplicar") == 0
     assert len(gh.estado["rulesets"]) == 5
 
@@ -668,7 +641,7 @@ def test_falha_de_escrita_aparece_e_nao_vira_verde(gh: Mentira, capsys: Capsys) 
 
 def test_o_arquivo_estragado_nao_chega_ao_servidor(gh: Mentira, tmp_path: Path) -> None:
     dados = _dados()
-    dados["funções"]["wiki"]["ligada"] = False  # desligada sem `depois`
+    dados["funções"]["wiki"]["ligada"] = False
     ruim = tmp_path / "ruim.yml"
     ruim.write_text(yaml.safe_dump(dados, allow_unicode=True), encoding="utf-8")
     assert rodar("--aplicar", arquivo=ruim) == 2
@@ -735,12 +708,7 @@ def test_o_script_roda_como_comando(gh: Mentira) -> None:
         check=False,
         env=os.environ.copy(),
     )
-    assert r.returncode == 2  # argparse: falta --conferir ou --aplicar
-
-
-# ---------------------------------------------------------------------------
-# 4. Cada grupo que o arquivo declara, contra o `gh` de mentira
-# ---------------------------------------------------------------------------
+    assert r.returncode == 2
 
 
 def _arquivo(tmp_path: Path, ajusta: Any) -> Path:
@@ -880,7 +848,6 @@ def test_o_grafo_de_dependencias_que_o_github_nao_liga_por_api_so_se_mede(
 
 
 def test_a_release_imutavel_liga_e_desliga_pelo_arquivo(gh: Mentira, tmp_path: Path) -> None:
-    # o arquivo a quer ligada: o `release.yml` publica como rascunho e não recria a versão
     assert _dados()["seguranca"]["releases_imutaveis"] == {"ligada": True}
     desligada = _arquivo(
         tmp_path,
@@ -1031,8 +998,6 @@ def test_os_ambientes_chegam_com_revisores_e_so_implantam_de_tag(gh: Mentira) ->
 
 
 def test_a_pagina_publica_do_main_e_a_regra_do_ramo_padrao_sai(gh: Mentira) -> None:
-    # O GitHub cria o `github-pages` com a regra do ramo padrão (o `dev`) quando as Pages ligam
-    # por fluxo; o `paginas.yml` publica do `main`, e com a regra de fábrica seria recusado.
     assert rodar("--aplicar", "--so", "funções") == 0
     criado = gh.estado["ambientes"]["github-pages"]
     assert [(p["name"], p["type"]) for p in criado["políticas"]] == [("dev", "branch")]
@@ -1204,13 +1169,7 @@ def test_o_arquivo_de_um_repositorio_so_com_o_minimo_continua_valendo() -> None:
     minimo["seguranca"].pop("linguagens_da_varredura", None)
     for n in aplicar.SEGURANCA_OPCIONAL:
         minimo["seguranca"].pop(n, None)
-    # A configuração não é opcional desde 07/10/2026: sem ela ninguém declara o ramo padrão.
     assert aplicar.validar(minimo) == [], "cada grupo novo é opcional: o arquivo antigo não quebra"
-
-
-# ---------------------------------------------------------------------------
-# 5. Os rulesets que o arquivo ganhou: a assinatura e as tags
-# ---------------------------------------------------------------------------
 
 
 def assinatura_anulada_por_excecao(dados: dict[str, Any]) -> list[str]:
@@ -1243,7 +1202,6 @@ def test_mordida_assinatura_do_dev_com_excecao_reprova() -> None:
     do_dev = next(r for r in dados["rulesets"] if r.get("assinatura") and r["ramos"] == ["dev"])
     do_dev["excecao"] = "administradores"
     assert assinatura_anulada_por_excecao(dados) == [do_dev["nome"]]
-    # e a regra que junta o dev e o main num ruleset com exceção também reprova
     dados = _dados()
     do_main = next(r for r in dados["rulesets"] if r.get("assinatura") and r["ramos"] == ["main"])
     do_main["ramos"] = ["dev", "main"]
@@ -1289,8 +1247,6 @@ def test_o_gh_de_mentira_recusa_o_que_o_servidor_recusa_no_ruleset_de_tag(
     )
     assert r.returncode != 0 and "422" in r.stdout
     assert "não vale num ruleset de tag" in json.loads(r.stdout.split("\n\n", 1)[1])["message"]
-    # Em tag, o `update` vai sem o parâmetro (ele só vale para ramo): o GitHub aceita, e o
-    # devolve assim (medido no repositório recriado em 07/10/2026).
     corpo["rules"] = [{"type": "update"}]
     r = subprocess.run(
         ["gh", "api", "-i", "-X", "POST", f"repos/{REPO}/rulesets", "--input", "-"],
@@ -1318,10 +1274,6 @@ def test_o_de_fora_diz_o_motivo_de_cada_coisa_que_a_casa_nao_usa() -> None:
     dados["de_fora"]["lfs"] = "  "
     assert any("de_fora.lfs" in e for e in aplicar.validar(dados))
 
-
-# ---------------------------------------------------------------------------
-# 6. Os arquivos do repositório e o que o arquivo declara
-# ---------------------------------------------------------------------------
 
 GH_DIR = RAIZ / ".github"
 ISSUES = GH_DIR / "ISSUE_TEMPLATE"
@@ -1518,8 +1470,6 @@ def test_o_casador_de_caminho_distingue_estrela_de_estrela_estrela() -> None:
     assert not _casa("docs/usage/bluetooth*.md", "docs/usage/x/bluetooth.md")
 
 
-# --- os fluxos novos ---------------------------------------------------------------------------
-
 WORKFLOWS_NOVOS = ("rotulos.yml", "paginas.yml", "imagens-de-teste.yml", "dependencias.yml")
 SHA = re.compile(r"[0-9a-f]{40}")
 
@@ -1676,11 +1626,6 @@ def test_mordida_imagem_que_instala_outra_coisa_reprova(tmp_path: Path) -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# 7. A triagem das issues e a página do produto
-# ---------------------------------------------------------------------------
-
-
 def _corpo_de_issue(doctor: str | None) -> str:
     base = "### O que aconteceu\n\nO gatilho trava.\n\n### Como repetir\n\n1. liga\n\n"
     if doctor is None:
@@ -1694,8 +1639,6 @@ def test_a_issue_sem_a_saida_do_doctor_ganha_o_rotulo_e_o_comando() -> None:
         d = t.decidir(_corpo_de_issue(doctor), ["bug"], "opened")
         assert d == {"adicionar": [t.ROTULO], "remover": [], "comentar": True}, doctor
     assert "hefesto-dualsense4unix doctor" in t.COMENTARIO
-    # Só a issue editada passa pela triagem de novo (o fluxo não escuta comentário): o recado pede a
-    # edição, no campo que a régua lê, e nunca promete que um comentário tira o rótulo.
     assert f"«{t.CAMPO}»" in t.COMENTARIO and "comentário" not in t.COMENTARIO
     gatilhos = _gatilhos(_workflow("rotulos.yml"))
     assert "issue_comment" not in gatilhos and gatilhos["issues"]["types"] == ["opened", "edited"]
@@ -1807,10 +1750,6 @@ def test_mordida_o_readme_que_cita_foto_que_nao_existe_reprova(tmp_path: Path) -
     assert "blob/main/docs/usage/x.md" in pagina and mp.links_relativos(pagina) == []
     assert mp.principal(["--raiz", str(raiz), "--saida", str(tmp_path / "s2")]) == 1
 
-
-# ---------------------------------------------------------------------------
-# 8. A máquina que assina commit, e o aviso do instalador de ganchos
-# ---------------------------------------------------------------------------
 
 ASSINAR = RAIZ / "scripts" / "github" / "assinar-commits.sh"
 INSTALAR = RAIZ / "scripts" / "instalar-hooks.sh"
@@ -1933,7 +1872,7 @@ def test_a_chave_gravada_que_sumiu_do_disco_volta_a_reprovar(lar: Path) -> None:
 
 def test_o_provar_reprova_quando_o_commit_nao_sai_assinado(lar: Path) -> None:
     assert assinar(lar, "--aplicar").returncode == 0
-    (lar / ".ssh" / "id_ed25519").unlink()  # sobra a pública, e o git não tem com o que assinar
+    (lar / ".ssh" / "id_ed25519").unlink()
     r = assinar(lar, "--conferir", "--provar")
     assert r.returncode == 1 and "NÃO saiu assinado" in r.stdout
 
@@ -1981,7 +1920,7 @@ def test_o_conferir_do_instalador_avisa_da_maquina_que_nao_assina_e_nao_muda_a_s
     assert "scripts/github/assinar-commits.sh --aplicar" in sem.stdout
     assert (
         sem.returncode == 1
-    )  # o que o instalador faria (a política e o gancho) ainda não está feito
+    )
     assert _instalar(casa_dos_ganchos).returncode == 0
     depois = _instalar(casa_dos_ganchos, "--conferir")
     assert depois.returncode == 0 and "nada a fazer" in depois.stdout

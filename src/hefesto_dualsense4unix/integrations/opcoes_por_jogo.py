@@ -91,7 +91,7 @@ try:
         steam_running,
     )
     from .vigia_do_jogo_novo import jogos_novos_a_receber
-except ImportError:  # pragma: no cover - executado como script avulso pelo vigia
+except ImportError:  # pragma: no cover
     from steam_launch_options import (  # type: ignore[no-redef]
         WRAPPER_PREFIX,
         _vdf_unescape,
@@ -106,7 +106,6 @@ except ImportError:  # pragma: no cover - executado como script avulso pelo vigi
     )
     from vigia_do_jogo_novo import jogos_novos_a_receber  # type: ignore[no-redef]
 
-#: Onde a tabela mora, no molde do `jogos_sem_wrapper.txt`.
 TABELA_RELPATH = "hefesto-dualsense4unix/opcoes_por_jogo.txt"
 
 CABECALHO = """\
@@ -132,17 +131,14 @@ ERRO = "erro"
 SEM_CONTA = "conta_logada_desconhecida"
 LINHA_DELA_DIVERGE = "linha_dela_diverge"
 
-#: O que ``conferir`` diz de cada jogo da tabela (só leitura).
 OK = "ok"
 NOVO = "novo"
 DESFEITO_NA_ESCRITA = "desfeito_na_escrita"
 DESFEITO_DEPOIS = "desfeito"
 FORA_DO_LUGAR = "fora_do_lugar"
 
-#: Os estados que o doctor e a sonda do contrato nomeiam; ``ok`` e ``novo`` não são defeito.
 DEFEITOS = (DESFEITO_NA_ESCRITA, DESFEITO_DEPOIS, FORA_DO_LUGAR, SEM_CONTA)
 
-#: O aviso de cada defeito, com o que fazer. Um dono só: o doctor e a sonda só o repetem.
 AVISO_DO_DEFEITO = {
     DESFEITO_NA_ESCRITA: (
         "a Steam não guardou a opção que o Hefesto escreveu; ele tenta de novo quando a Steam "
@@ -162,20 +158,17 @@ AVISO_DO_DEFEITO = {
     ),
 }
 
-#: O que o registro anota do ``aplicar`` depois da releitura.
 REGISTRO_BASENAME = "opcoes-escritas.json"
 ESCRITO_E_CONFERIDO = "aplicado"
 ESCRITO_E_DESFEITO = "desfeito"
 
 _APPID = re.compile(r"^[0-9]{1,10}$")
 
-#: O contrato que o relato nomeia quando o vdf não guarda o que o dono escreveu.
 CONTRATO_DA_LINHA = (
     "contrato:steam-localconfig — a Steam lê a opção de cada jogo na LaunchOptions "
     "filha direta de Software/Valve/Steam/apps/<appid>, no localconfig.vdf da conta logada"
 )
 
-#: SteamID64 = esta base + o número da pasta ``userdata/<conta>``.
 _BASE_DO_STEAMID64 = 76561197960265728
 
 _PAR_DO_VDF = re.compile(r'^\s*"((?:[^"\\]|\\.)*)"\s+"((?:[^"\\]|\\.)*)"\s*$')
@@ -358,7 +351,6 @@ def _sem(tokens: list[str], tirar: list[str]) -> list[str]:
     return resto
 
 
-#: O que separa um comando do outro na linha: o atalho entra no trecho que roda o jogo.
 _OPERADORES = frozenset({"&&", "||", ";", "|", "&"})
 _ATRIBUICAO = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 
@@ -428,7 +420,6 @@ def compor_linha(vivo: str, desejada: str, anterior: str = "") -> str | None:
     novo = list(antes_do_atalho)
     if com_atalho:
         novo += atalho
-    # As variáveis antes de qualquer comando: `gamemoderun A=1 %command%` rodaria `A=1`.
     var_dele, cmd_dele = _atribuicoes_e_resto(pre_dele)
     var_nossa, cmd_nosso = _atribuicoes_e_resto(nosso[0])
     novo += var_dele + var_nossa + cmd_dele + cmd_nosso
@@ -708,8 +699,6 @@ def aplicar(
     todos = list(vdfs) if vdfs is not None else discover_vdfs(home)
     alvos, de_outra_conta = so_a_conta_logada(todos)
     aplicados: list[dict[str, str]] = []
-    # Sem saber a conta logada, a tabela não chega à Steam: é erro, nunca
-    # «nada a fazer» (o ensaio do engasgo leria rc 0 como «pronto»).
     pulados = [p for p in de_outra_conta if p["reason"] != SEM_CONTA]
     erros = [
         {**p, "reason": f"{SEM_CONTA}: o config/loginusers.vdf não diz qual das contas "
@@ -717,7 +706,7 @@ def aplicar(
         for p in de_outra_conta if p["reason"] == SEM_CONTA
     ]
     desfeitos: list[dict[str, str]] = []
-    anotar: list[tuple[str, str, str]] = []  # (appid, vdf, resultado)
+    anotar: list[tuple[str, str, str]] = []
     escritas = {a: e.get("valor", "") for a, e in ler_registro(estado_home).items()}
     instalados = jogos_novos_a_receber(home, config_home=config_home)
     for vdf in alvos:
@@ -848,8 +837,6 @@ def conferir(
                     estado = FORA_DO_LUGAR
                 else:
                     anotado = registro.get(appid, {})
-                    # o registro é da conta em que o `aplicar` escreveu: noutra conta
-                    # (a Steam trocou de usuário) a opção nunca foi escrita, é `novo`
                     escrito = anotado.get("valor") == linha_desejada(
                         opcoes, com_atalho=appid not in sem_atalho
                     ) and anotado.get("conta") == _conta_do_vdf(str(vdf))
@@ -863,7 +850,7 @@ def conferir(
                 resultado["jogos"].append(item)
                 if estado in DEFEITOS:
                     resultado["defeitos"].append(item)
-    except OSError:  # o vdf sumiu entre a descoberta e a leitura: nada a conferir
+    except OSError:
         return {"jogos": [], "defeitos": []}
     return resultado
 
@@ -958,5 +945,5 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-if __name__ == "__main__":  # pragma: no cover - entrypoint do vigia
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(main())

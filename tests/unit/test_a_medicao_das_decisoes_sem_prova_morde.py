@@ -470,35 +470,6 @@ def test_o_laudo_sem_bandeira_recusa_csv_de_forma_errada(mi, tmp_path, capsys):
 def test_a_medicao_de_hoje_bate_com_o_csv_de_hoje(mi):
     """O censo da sprint conferido contra o arquivo, não contra a lembrança."""
     medida = mi.medir()
-    # Seis desde 04/10/2026: as duas do modo da ponte do rádio (o 0x36) e a do
-    # microfone da máquina (um por controle).
-    # Desde 08/10/2026 a decisão nova de produto nasce `implementada`, com a
-    # prova: os degraus depois de `decidida` saem da conta, as `caduca` não.
-    # Dez desde 08/10/2026: as quatro do chip «Só neste jogo / Voltar ao do PC»
-    # caducaram com a D-0610-O-ESCOPO-SAI-DAS-ABAS. Treze desde 15/10/2026, com a
-    # D-1510-A-CALIBRAR-GUARDA-O-SELO-DA-MIRA e a D-0110-O-STATUS-DO-MODO-GRAVA-SO-O-LIGA-NO-JOGO;
-    # a conta de dez já estava atrás do CSV, que tinha onze. Dezessete desde 16/10/2026: a
-    # D-0609-UM-NO-DE-SOM-POR-CONTROLE-CONECTADO, e as três que a D-1610-O-SEM-PISCAR-SAI e a
-    # D-1610-PERMITIR-NAVEGACAO-EM-TRES fizeram caducar (o estado delas chegou em 17/10).
-    # Vinte e três desde 20/10/2026: a D-1510-CADA-ESTILO-TEM-A-SUA-IMERSAO-NO-AUTOMATICO e a
-    # D-1610-O-CONTINUO-SO-TOCA-POR-ESCOLHA-MANUAL (a redistribuição dos efeitos), e as quatro
-    # que a D-1910-OS-LANCADORES-DE-FORA-VIRAM-EXTENSOES e a D-1910-O-HEFESTO-E-PARA-TODA-IDADE
-    # fizeram caducar. Vinte e cinco desde 20/10/2026, à noite: a
-    # D-1610-A-JOGAR-DIZ-DESLIGADO-COM-O-SERVICO-PARADO, que a
-    # D-2010-O-SERVICO-PARADO-NAO-GANHA-FRASE revogou, e a
-    # D-1310-AS-MARCAS-DO-PERFIL-SAO-NONE-POR-PADRAO-E-O-VOCABULARIO-E-FECHADO, que a
-    # D-2010-A-MARCA-DE-ANTES-VIRA-O-ESTILO revogou. Vinte e oito desde 21/10/2026: a
-    # D-2010-O-EXTERNO-SEM-NUMERO-TEM-UM-TRAVESSAO e a D-2010-A-CHEGADA-NAO-TOCA-QUEM-JA-ESTAVA,
-    # que ela revogou no fora-da-tela, e a D-2010-A-INTENSIDADE-DO-GATILHO-MORA-NO-PERFIL-DO-JOGO,
-    # que a
-    # D-2110-A-INTENSIDADE-DO-GATILHO-VALE-NO-PADRAO-DO-COMPUTADOR revogou. Vinte e nove desde
-    # 22/10/2026: a D-2010-OS-ACIONAMENTOS-FICAM-ATRAS-DO-AVANCADO, que a
-    # D-2210-O-GATILHO-SO-TEM-O-EFEITO revogou («Sai tudo», 21/10). Trinta e duas no fim de
-    # 22/10/2026: a D-0510-EM-PADRAO-A-HAPTICA-CHEGA-A-100, a D-0810-PAD-USB-VESTIDOS e a
-    # D-1510-O-REPOSITORIO-DA-EXTENSAO-B-E-HEFESTO-MOD-LOVENSE-REMOTE, revogadas pela háptica a 150,
-    # pelo pad que veste o DualSense comum e pela Lovense numa extensão só. Trinta e três desde
-    # 25/10/2026: a D-2510-A-FALTA-DE-PERMISSAO-DE-LER-DIZ-O-GRUPO, que a
-    # D-2510-O-ACIONADOR-SE-LE-PELO-FD-DO-BROKER revogou (o grupo input é proibido).
     estados = [linha["estado"] for linha in mi._linhas()]
     adiante = sum(estado in ("implementada", "feita", "no ar") for estado in estados)
     assert estados.count("caduca") == 33, (

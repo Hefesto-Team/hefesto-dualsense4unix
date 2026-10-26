@@ -24,8 +24,6 @@ def _modulo() -> Any:
     return modulo
 
 
-# A forma da frase de `cura_por_estrada.py`: o substantivo e o «ela» na mesma frase, com
-# dois-pontos no meio (eles não fecham a frase).
 DA_CARONA = '''def lancadores():
     """O que a carona devolve: os lançadores em que ela escreveu.
 
@@ -33,7 +31,6 @@ DA_CARONA = '''def lancadores():
     """
 '''
 
-# A forma da frase de `quem_gravou_o_brilho.py`: a pessoa dizendo, sem substantivo técnico antes.
 DA_PESSOA = '''"""Lê as cópias do perfil e diz quem gravou o brilho.
 
 Nasceu da queixa do brilho baixo (ela disse «Não fui eu» sobre o 8%).
@@ -75,7 +72,6 @@ def test_a_frase_que_continua_na_linha_de_comentario_de_baixo_tambem_fica() -> N
     assert modulo.reescrever_arquivo(em_py, "py") == em_py
     em_sh = "# a cura roda uma vez, e depois\n# ela escreveu no arquivo\n"
     assert modulo.reescrever_arquivo(em_sh, "sh") == em_sh
-    # o bloco acaba no código ou na linha em branco, e a guarda acaba com ele
     com_codigo = "# a carona devolve os lançadores\nx = 1\n# ela pediu o contrário\n"
     trocado = com_codigo.replace("ela pediu", "o usuário pediu")
     assert modulo.reescrever_arquivo(com_codigo, "py") == trocado
@@ -120,7 +116,6 @@ def test_o_que_ela_declarou_vira_o_que_o_usuario_declarou() -> None:
     assert modulo.reescrever_prosa("# o que ela declarou da entrada") == (
         "# o que o usuário declarou da entrada"
     )
-    # a carona da mesma frase é o antecedente do «ela»: fica
     da_carona = "# a carona devolve o que ela declarou da entrada"
     assert modulo.reescrever_prosa(da_carona) == da_carona
 

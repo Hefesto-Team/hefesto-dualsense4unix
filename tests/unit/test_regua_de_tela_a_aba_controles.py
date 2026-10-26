@@ -28,7 +28,7 @@ if not (os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY")):
 
 try:
     regua_de_tela = importlib.import_module("regua_de_tela")
-except (ImportError, ValueError) as _erro:  # pragma: no cover — ambiente sem WebKit
+except (ImportError, ValueError) as _erro:  # pragma: no cover
     pytest.skip(
         f"RÉGUA-DE-TELA-01: o instrumento não importou ({_erro}). Falta "
         "gir1.2-webkit2-4.1?",
@@ -54,7 +54,7 @@ try:
     mesa_viva = importlib.import_module("mesa_viva")
     aba02 = importlib.import_module("aba02")
     controles_vivos = importlib.import_module("controles_vivos")
-except ImportError as _erro:  # pragma: no cover — árvore sem o piloto
+except ImportError as _erro:  # pragma: no cover
     pytest.skip(
         f"RÉGUA-DE-TELA-01: o piloto da aba não importou de {FERRAMENTAS} "
         f"({type(_erro).__name__}: {_erro})",

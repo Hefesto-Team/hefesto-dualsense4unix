@@ -112,12 +112,10 @@ from pathlib import Path
 
 KS = "{6994AD04-93EF-11D0-A3CC-00A0C9223196}"
 
-#: todo caminho de DualSense (`remove_dualsense_media_devices`).
 CLASSE_USB = "{36FC9E60-C465-11CF-8056-444553540000}"
 
 VID_SONY = 0x054C
 
-#: Os DualSense que têm placa USB Audio de 4 canais, e o nome que cada um usa.
 MODELOS: dict[int, str] = {
     0x0CE6: "DualSense Wireless Controller",
     0x0DF2: "DualSense Edge Wireless Controller",
@@ -125,10 +123,6 @@ MODELOS: dict[int, str] = {
 
 MARCADOR = "HEFESTOKS"
 
-#: A classe MEDIA do Windows: a do device que o GE-Proton11-8 registra para os
-#: caminhos Sony (patch 0206), na chave `Enum\\USB\\VID_054C&PID_…`. Com o
-#: MEDIA vivo do Proton para o `ContainerId` de um controle, o dono é ele, e o
-#: nosso não se escreve (:func:`containers_do_proton`).
 CLASSE_MEDIA = "{4D36E96C-E325-11CE-BFC1-08002BE10318}"
 
 _LEGADO_DA_PROVA = re.compile(r"^\d+&[0-9A-F]{8}$", re.I)
@@ -226,8 +220,6 @@ def _usec_do_udev(dev_sysfs: Path) -> int | None:
         lib.udev_unref(contexto)
 
 
-#: quem responde o `USEC_INITIALIZED` de um `usb_device` (injetável: a suíte
-#: nunca pergunta ao udev da máquina).
 LeitorDoUsec = Callable[[Path], "int | None"]
 
 
@@ -267,7 +259,6 @@ def controles_no_cabo(
     return achados
 
 
-#: dizer "isto é um DualSense" (`fill_device_info`, `pulse.c:668`).
 _PROP_VID = "device.vendor.id"
 _PROP_PID = "device.product.id"
 _PROP_SYSFS = "sysfs.path"
@@ -420,8 +411,6 @@ def controles_no_radio(
         ancora = pai_usb_device(caminho, sysfs)
         if ancora is None:
             continue
-        # um DualSense ligado por USB sobe ao PRÓPRIO controle, e o
-        # `controles_no_cabo` já o conhece. Sem esta linha, o mesmo aparelho
         if any(ancora.glob("*/sound/card*")):
             continue
         vendor, produto = _ler(ancora / "idVendor"), _ler(ancora / "idProduct")
@@ -740,9 +729,6 @@ def _mesmos_blocos(a: str, b: str) -> bool:
     return normal(a) == normal(b)
 
 
-# A poda (O-REGISTRO-DO-PREFIXO-PERDE-O-SOM-QUE-NAO-EXISTE-MAIS-01, 15/10/2026):
-# o Wine guarda toda saída e entrada de som que já viu, e o jogo com a biblioteca
-# da Sony varre todas. Só o caminho `MMDevices\Audio\{Render,Capture}` entra.
 _CHAVE_DO_SOM = re.compile(
     r"^\[Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\MMDevices\\\\Audio\\\\"
     r"(?:Render|Capture)\\\\(\{[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}\})(\\\\[^\]]*)?\]$",
@@ -751,16 +737,13 @@ _CHAVE_DO_SOM = re.compile(
 _RAIZ_DO_SOM = "[Software\\\\Microsoft\\\\Windows\\\\CurrentVersion\\\\MMDevices\\\\Audio"
 _ESTADO = re.compile(r'^"DeviceState"=dword:([0-9a-f]{8})$', re.I | re.M)
 
-#: `DEVICE_STATE_NOTPRESENT`: o endpoint que o Wine já viu e que não está mais lá.
 AUSENTE = 0x4
 
-#: o mapa nó → GUID do `winepulse`, no `user.reg` (o fluxo 0 é Render, o 1 é Capture).
 _MAPA_DO_PULSE = re.compile(
     r"^\[Software\\\\Wine\\\\Drivers\\\\winepulse\.drv\\\\devices\\\\\d+,([^\]]*)\]$", re.I
 )
 _GUID_DO_MAPA = re.compile(r'^"guid"=hex:((?:[0-9a-f]{2},){15}[0-9a-f]{2})$', re.I | re.M)
 
-#: onde o `mmdevapi` guarda a saída e a entrada padrão escolhidas.
 _CHAVES_DO_PADRAO = (
     "[Software\\\\Wine\\\\Drivers]",
     "[Software\\\\Wine\\\\Drivers\\\\winepulse.drv]",
@@ -853,9 +836,6 @@ def podar_o_som(sistema: str, usuario: str | None, vivos: set[str] | None) -> Po
     return Poda("\n".join(fica_sistema), usuario_novo, len(removidos))
 
 
-# O controle que o prefixo guardou (22/10/2026). O InControl pula, no DirectInput, o
-# VID:PID que o WMI do Wine marca com `&IG_`, e o `wbemprox` lista toda chave de `Enum`,
-# presente ou não: o gêmeo XInput de um controle de meses atrás esconde o DualSense de hoje.
 _ENUM_XINPUT = re.compile(
     r"^\[System\\\\(?:ControlSet\d+|CurrentControlSet)\\\\Enum\\\\WINEXINPUT"
     r"(?:\\\\([^\\\]]*))?(?:\\\\[^\]]*)?\]$",
@@ -874,8 +854,6 @@ _INTERFACE_COM_IG = re.compile(
 
 
 _VID_PID = re.compile(r"VID_[0-9A-F]{4}&PID_[0-9A-F]{4}", re.I)
-# A chave do driver de cada aparelho (`"Driver"="{classe}\\NNNN"`): o Wine numera uma nova
-# a cada aparelho que nasce, e a do aparelho esquecido ficaria órfã a cada lançamento.
 _DRIVER = re.compile(r'^"Driver"="(\{[^"]+\}\\\\\d{4})"$', re.M)
 _CLASSE = re.compile(
     r"^\[System\\\\(?:ControlSet\d+|CurrentControlSet)\\\\Control\\\\Class\\\\"
@@ -1037,7 +1015,7 @@ def prefixos_de_todas_as_bibliotecas() -> list[Path] | None:
     """Todo prefixo wine com registro, ou None se esta cópia não sabe listar."""
     try:
         from . import camadas_vulkan as cv
-    except ImportError:  # pragma: no cover - rodando como script da pasta
+    except ImportError:  # pragma: no cover
         try:
             import camadas_vulkan as cv  # type: ignore[no-redef]
         except ImportError:
@@ -1108,5 +1086,5 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-if __name__ == "__main__":  # pragma: no cover - entrada de script avulso
+if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())

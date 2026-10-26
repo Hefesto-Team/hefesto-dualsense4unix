@@ -21,23 +21,17 @@ from hefesto_dualsense4unix.core.remapeamento_de_botao import (
     REMAPEAVEIS,
 )
 
-#: Os botões que o modo alcança: os mesmos que a troca de botões alcança.
 ATIVAVEIS: Final[tuple[str, ...]] = REMAPEAVEIS
 
 NOME_DO_GATILHO: Final[Mapping[str, str]] = MappingProxyType(
     {botao: nome for nome, botao in GATILHOS.items()})
 
-#: A partir de quanto curso o gatilho conta como apertado (`uinput_mouse.TRIGGER_PRESS_THRESHOLD`;
-#: a régua confere que os dois são o mesmo número).
 LIMIAR_DO_GATILHO: Final = 90
 
-#: Quanto dura o aperto que o produto fabrica quando o toque é curto demais para ser segurado.
 PULSO_S: Final = 0.06
 
-#: O laço parado por mais que isto esquece o estado: um toque não atravessa um tropeço.
 PARADA_S: Final = 1.0
 
-#: Os tempos de fábrica (proposta, a validar pelo usuário) e as faixas que a tela oferece.
 LONGO_S: Final = 0.5
 DUPLO_S: Final = 0.3
 REPETE_APOS_S: Final = 0.5
@@ -53,9 +47,6 @@ _ATRIBUTO_DOS_ESTADOS: Final = "_ativacao_de_botao_estados"
 _ATRIBUTO_DA_GRAVACAO: Final = "_ativacao_de_botao_gravacao"
 _ATRIBUTO_DO_TESTE: Final = "_ativacao_de_botao_teste"
 
-#: A sequência: quanto cada botão fica apertado, o menor intervalo entre dois passos (zero
-#: continua zero: os dois botões saem juntos), a pausa entre uma volta e a seguinte, o teto de
-#: passos e de tempo de uma gravação.
 SEGURA_S: Final = 0.04
 INTERVALO_MINIMO_S: Final = 0.05
 PAUSA_DA_VOLTA_S: Final = 0.1
@@ -63,7 +54,6 @@ MAXIMO_DE_PASSOS: Final = 32
 MAXIMO_DA_GRAVACAO_S: Final = 30.0
 MAXIMO_DO_INTERVALO_MS: Final = 5000
 
-#: Como a sequência toca ao apertar o botão, e a pressa dela (multiplica os intervalos gravados).
 JEITOS: Final[tuple[str, ...]] = ("uma_vez", "repete", "alterna")
 RITMOS: Final[Mapping[str, float]] = MappingProxyType(
     {"gravado": 1.0, "rapido": 0.5, "devagar": 2.0})
@@ -120,8 +110,6 @@ CAMPOS: Final[tuple[str, ...]] = (
 )
 
 
-#: Os campos da mesma seção que são do filtro (``core/filtro_de_botao``): o botão que trava
-#: também conta na regra de um modo só, e as duas camadas juntam a seção do mesmo jeito.
 CAMPOS_DO_FILTRO: Final[tuple[str, ...]] = (
     "repique_ms", "aperto_minimo_ms", "travar", "ps_travado_ms")
 
@@ -533,7 +521,7 @@ def gravar_estado(dono: object) -> tuple[bool, list[dict[str, Any]]]:
 class Teste:
     """Uma sequência tocada uma vez, sem estar no perfil (o «Tocar para ouvir»)."""
 
-    __slots__ = ("alvo", "desde", "proximo", "segurando", "seq")  # nomes de atributo (noqa-acento)
+    __slots__ = ("alvo", "desde", "proximo", "segurando", "seq")  # (noqa-acento)
 
     def __init__(self, alvo: str, seq: Sequencia, agora: float) -> None:
         self.alvo, self.seq, self.desde = alvo, seq, agora
@@ -662,8 +650,6 @@ def esquecer(dono: object, uniq: object = None, espaco: str | None = None) -> No
     if not isinstance(estados, dict):
         return
     alvo = None if uniq is None else chave(uniq)
-    # O laço do controle cria estado enquanto o IPC esquece: a lista é uma fotografia e o
-    # `pop` tolera quem já saiu.
     for par in list(estados):
         if (alvo is None or par[1] == alvo) and espaco in (None, par[0]):
             estados.pop(par, None)
@@ -688,7 +674,7 @@ __all__ = [
     "REPETE_APOS_S",
     "REPETE_POR_SEGUNDO",
     "RITMOS",
-    "Ativacao",  # nome da classe (noqa-acento)
+    "Ativacao",  # (noqa-acento)
     "AtivacaoDoControle",
     "Gravacao",
     "Sequencia",

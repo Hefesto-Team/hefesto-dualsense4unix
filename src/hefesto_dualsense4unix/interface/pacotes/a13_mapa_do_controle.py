@@ -60,21 +60,19 @@ PAGINA = "mapa-do-controle.html"
 BLOCO_DOS_CONTROLES = '[data-bloco="controles-do-mapa"]'
 BLOCO_DO_PERFIL = "#perfil"
 
-ACESO = "aceso-"  # (noqa-acento) prefixo de endereço, não é prosa
+ACESO = "aceso-"
 LUZ = "luz-cor"
 
-#: o mesmo prazo da Navegação: se o tique para (outra aba, janela fechada), a edição some.
 PAUSA_DE_OUTRA_ABA = 5.0
 
 NAV, NOVO = "nav", "novo"
-ACAO = "acao"  # (noqa-acento): a ficha do desenho (`data-v="acao:<token>"`), não é texto da tela
+ACAO = "acao"  # (noqa-acento)
 MOLDE, PERFIL = "molde:", "perfil:"
 
 ROTULO_DO_TIPO = {"nav": "Navegação", "pac": "Point and click", "troca": "Trocar os botões"}
 
 NOME_DA_NAVEGACAO = "Navegar no computador"
 
-#: o que a tela diz de quem usa o perfil que não é de jogo nenhum.
 FORA_DO_JOGO = "Fora do jogo"
 
 
@@ -82,13 +80,10 @@ class Botao(NamedTuple):
     """Uma linha da tela: o botão que o usuário vê e o que o motor chama de botão."""
 
     b: str
-    #: a peça do desenho que acende com ele (`#mp-<peça>`)
     peca: str
     nome: str
     lado: str
-    #: o id no motor de ações (`acoes.BOTOES`); `None` onde o motor não tem linha
     motor: str | None
-    #: `True` onde nada se escolhe: o PS e o toque no touchpad
     fixo: bool = False
 
 
@@ -120,15 +115,11 @@ BOTOES_DA_PAGINA: tuple[Botao, ...] = (
 
 POR_BOTAO: dict[str, Botao] = {x.b: x for x in BOTOES_DA_PAGINA}
 
-#: o toque no touchpad move o cursor e não se troca: a linha diz o que ele faz, como na Navegação.
 TOQUE = "tp_toque"
 
-#: o botão que a troca de botões conhece por este mesmo nome (o motor da troca só tem os 16).
 PODE_TROCAR: frozenset[str] = frozenset(
     x.b for x in BOTOES_DA_PAGINA if x.motor in remap.REMAPEAVEIS)
 
-#: o destino de uma troca, com o texto da tela e a peça cujo glifo a ilustra. O PS e o touchpad
-#: ficam de fora: o motor os recusa (`remap.MOTIVO_PS`, `remap.MOTIVO_FORA`).
 OPCOES_DE_CONTROLE: tuple[tuple[str, str, str], ...] = (
     ("cross", "Cruz", "cross"), ("circle", "Círculo", "circle"),
     ("square", "Quadrado", "square"), ("triangle", "Triângulo", "triangle"),
@@ -141,7 +132,6 @@ OPCOES_DE_CONTROLE: tuple[tuple[str, str, str], ...] = (
 
 ROTULO_DO_DESTINO: dict[str, str] = {d: r for d, r, _ in OPCOES_DE_CONTROLE}
 
-#: só o que o motor executa: não há «Rolagem para cima», «Voltar» nem «Avançar».
 OPCOES_DE_MOUSE: tuple[tuple[str, str], ...] = (
     ("BTN_LEFT", "Botão esquerdo"), ("BTN_RIGHT", "Botão direito"),
     ("BTN_MIDDLE", "Botão do meio"), ("__CURSOR__", "Movimento do cursor"),
@@ -158,9 +148,8 @@ OPCOES_DE_TECLADO: tuple[tuple[str, str], ...] = (
 
 ROTULO_DA_ACAO: dict[str, str] = dict(OPCOES_DE_MOUSE + OPCOES_DE_TECLADO)
 
-#: o quarto tipo do «vira»: a ficha `sequencia` e o texto da edição (`sequencia_em_texto`)
-SEQUENCIA = "sequencia"  # (noqa-acento): a ficha do desenho, não é texto da tela
-ATIVACAO = "ativacao"  # (noqa-acento): a chave da seção do perfil, não é texto da tela
+SEQUENCIA = "sequencia"
+ATIVACAO = "ativacao"  # (noqa-acento)
 
 JEITOS_DA_SEQUENCIA: tuple[tuple[str, str], ...] = (
     ("uma_vez", "Toca uma vez"), ("repete", "Repete enquanto eu segurar"),
@@ -169,23 +158,16 @@ JEITOS_DA_SEQUENCIA: tuple[tuple[str, str], ...] = (
 RITMOS_DA_SEQUENCIA: tuple[tuple[str, str], ...] = (
     ("gravado", "O gravado"), ("rapido", "Mais rápido"), ("devagar", "Mais devagar"))
 
-#: o que é do mouse, para o tipo «Point and click» de um perfil do disco.
 FICHAS_DO_MOUSE: frozenset[str] = frozenset(t for t, _ in OPCOES_DE_MOUSE)
 
-#: a peça do desenho → o botão físico que ela é, para o pisca. Só os botões que se apertam.
 NOME_NO_LEITOR = {"stick_l": "l3", "stick_r": "r3"}
 PISCAM: tuple[str, ...] = (*ALL_BUTTONS, *NOME_NO_LEITOR)
 
-#: o botão físico (peça do leitor) → o destino que a captura grava quando ele é apertado.
 DESTINO_DA_PECA = {"stick_l": "l3", "stick_r": "r3", "share": "create"}
 
 _EDITANDO: dict[str, Any] = {}
 _VISTO: list[float] = [0.0]
 
-
-# ---------------------------------------------------------------------------
-# A edição: o que a pessoa já mexeu e ainda não guardou
-# ---------------------------------------------------------------------------
 
 def _estado() -> dict[str, Any]:
     """A edição em curso, ou a de partida; some se o tique parou."""
@@ -241,7 +223,7 @@ def _peca_do_vale_para(ctx: Contexto) -> str | None:
     """
     chave = str(_estado()["chave"])
     if len(ctx.mesa or ()) < 2 or not (chave == NAV or chave.startswith(PERFIL)):
-        return None  # o molde e o perfil novo ainda não têm controle: a troca é do perfil
+        return None
     _, itens = _escolhidos(ctx)
     if len(itens) != 1:
         return None
@@ -368,10 +350,6 @@ def _tipo_de(ctx: Contexto, estado: dict[str, Any], valores: dict[str, tuple[str
         return "pac"
     return "troca" if tipos & {"troca", SEQUENCIA} else "nav"
 
-
-# ---------------------------------------------------------------------------
-# A pintura
-# ---------------------------------------------------------------------------
 
 def _escolhidos(ctx: Contexto) -> tuple[str, list[dict[str, Any]]]:
     """Quem a fita escolheu, e os itens da mesa que isso alcança."""
@@ -512,7 +490,6 @@ def _mesa_da_edicao(ctx: Contexto) -> dict[str, Any]:
         "nome": _nome_mostrado(ctx, estado),
         "usar-em": _usar_em(ctx, estado),
         "cursor-mover": _cursor(valores),
-        # o que as âncoras `#point-and-click` e `#trocar` pedem: a página abre o seletor nelas
         "ancora-pac": _chave_do_point_and_click(ctx),
         "ancora-trocar": _chave_das_trocas(ctx),
     }
@@ -621,10 +598,6 @@ def _repinta(ctx: Contexto) -> dict[str, Any]:
     return {"mesa": {**_mesa_da_edicao(ctx), **_linhas(ctx, _acesos(ctx, itens)),
                      **_campos_da_sequencia(ctx)}}
 
-
-# ---------------------------------------------------------------------------
-# Os gestos: a edição
-# ---------------------------------------------------------------------------
 
 def _chave_valida(ctx: Contexto, chave: str) -> bool:
     if chave in (NAV, NOVO):
@@ -806,10 +779,6 @@ def mapa_cancelar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _largar()
 
 
-# ---------------------------------------------------------------------------
-# A sequência: gravar, ajustar e tocar
-# ---------------------------------------------------------------------------
-
 def passos_em_html(passos: Any) -> str:
     """Os botões da sequência e o intervalo entre eles, como a faixa do desenho os mostra."""
     lista = list(passos)
@@ -843,12 +812,8 @@ def _guarda_o_rascunho(estado: dict[str, Any], b: str) -> None:
         del estado["edicoes"][b]
 
 
-#: A pergunta do tique ao serviço («o que você ouviu?») corre em fundo, com esta chave.
 ESCUTA_EM_FUNDO = "a13-sequencia-gravar"
-#: Cada gravação ganha a sua vez; a resposta de uma vez anterior não vale para a de agora.
 _VEZES = itertools.count(1)
-#: A parada que o tique manda num fio e o «Gravar» seguinte passam por aqui, um de cada vez:
-#: o iniciar nunca chega ao daemon antes da parada da gravação anterior.
 _UMA_ESCUTA_POR_VEZ = threading.Lock()
 
 
@@ -917,7 +882,7 @@ def _parar_de_ouvir(estado: dict[str, Any], *, ja_parou: bool = False) -> None:
         try:
             r = ponte.resultado("sequencia.gravar", acao="parar")
         except Exception:
-            r = None  # sem o serviço, fica o que o último tique mostrou
+            r = None
     seq = estado["seq"].setdefault(b, {"passos": [], "jeito": "uma_vez", "ritmo": "gravado"})
     if isinstance(r, dict):
         seq["passos"] = list(r.get("passos") or [])
@@ -1018,10 +983,6 @@ def mapa_sequencia_tocar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
     return _repinta(ctx)
 
 
-# ---------------------------------------------------------------------------
-# Guardar
-# ---------------------------------------------------------------------------
-
 def _aplicar_as_edicoes(prof: Any, edicoes: dict[str, tuple[str, str]],
                         padrao_de_base: dict[str, str], mac: str | None = None) -> Any:
     """O perfil com as edições: troca limpa a ação do botão e a ação limpa a troca.
@@ -1118,7 +1079,6 @@ def _com_as_sequencias(prof: Any, mac: str | None, sequencias: dict[str, Any]) -
         todos = dict(prof.controllers or {})
         dela = todos.get(mac) or ControllerOverrides()
         propria = None if sequencias == do_perfil else sequencias
-        # o controle sem sequência própria diante de um perfil que tem: `{}` diz «nenhuma aqui»
         dela = dela.model_copy(update={ATIVACAO: refeita(dela.ativacao, propria)})
         if all(getattr(dela, campo) is None for campo in ControllerOverrides.model_fields):
             todos.pop(mac, None)
@@ -1224,4 +1184,4 @@ def mapa_guardar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return _repinta(ctx)
 
 
-from . import a10_perfis as a10  # noqa: E402  (depois dos gestos: a10 não importa a13)
+from . import a10_perfis as a10  # noqa: E402

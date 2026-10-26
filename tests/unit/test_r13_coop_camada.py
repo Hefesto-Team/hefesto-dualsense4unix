@@ -16,7 +16,7 @@ from tests.unit.test_coop_player_leds import (
     _daemon_com_backend,
     _set_evdevs,
     _set_led_nodes,
-    patched,  # noqa: F401 — fixture usada pelos testes
+    patched,  # noqa: F401
 )
 
 

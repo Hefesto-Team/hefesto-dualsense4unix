@@ -108,9 +108,6 @@ async def test_sem_daemon_erro() -> None:
         await _Handlers(None)._handle_mouse_emulation_set({"speed": 9})
 
 
-# Daemon.set_mouse_speed (lifecycle)
-
-
 def _make_daemon() -> Daemon:
     """Daemon mínimo sem IPC/UDP/autoswitch para exercitar set_mouse_speed."""
     return Daemon(

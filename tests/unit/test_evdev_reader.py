@@ -228,8 +228,8 @@ def test_ungrab_de_device_solto_e_noop():
 
 
 def test_pids_contemplam_edge():
-    assert 0x0CE6 in DUALSENSE_PIDS  # DualSense
-    assert 0x0DF2 in DUALSENSE_PIDS  # DualSense Edge
+    assert 0x0CE6 in DUALSENSE_PIDS
+    assert 0x0DF2 in DUALSENSE_PIDS
     assert DUALSENSE_VENDOR == 0x054C
 
 

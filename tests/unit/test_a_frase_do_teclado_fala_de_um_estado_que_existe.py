@@ -56,7 +56,6 @@ _IPC = _SRC / "daemon" / "ipc_handlers.py"
 _LIFECYCLE = _SRC / "daemon" / "lifecycle.py"
 _GAMEPAD = _SRC / "daemon" / "subsystems" / "gamepad.py"
 
-#: BG-02 quem montava o `bloqueio` por ramos era `_keyboard_emulation_payload`,
 _MONTADOR = "_bloqueio_da_emulacao_de_desktop"
 
 _PAYLOAD = "_keyboard_emulation_payload"
@@ -149,7 +148,7 @@ def _tem_chamador_de_producao(funcao: str) -> bool:
             continue
         try:
             arvore = ast.parse(caminho.read_text(encoding="utf-8"), filename=str(caminho))
-        except (OSError, SyntaxError):  # pragma: no cover - defensivo
+        except (OSError, SyntaxError):  # pragma: no cover
             continue
         for no in ast.walk(arvore):
             if not isinstance(no, ast.Call):

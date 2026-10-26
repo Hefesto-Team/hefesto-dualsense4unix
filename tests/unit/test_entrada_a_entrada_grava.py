@@ -421,7 +421,7 @@ def test_o_estado_do_laco_e_o_que_o_piloto_pinta(boot_1: SysfsDeMentira, disco: 
     laco.responder(ee.FACE_ATRAS)
     foto = laco.estado()
     assert foto["estado"] == ee.FIM and foto["gravou"] is True
-    ultima = foto["ultima"]  # (noqa-acento) chave de máquina, ASCII por contrato
+    ultima = foto["ultima"]  # (noqa-acento)
     assert ultima["entrada"] == "1" and ultima["face"] == ee.FACE_ATRAS
     json.dumps(foto)
     laco.parar()

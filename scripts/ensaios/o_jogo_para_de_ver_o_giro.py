@@ -641,7 +641,7 @@ def _processo_de_uma_biblioteca(args: argparse.Namespace) -> int:
         return 2
     sdl = _carregar(bib)
     versao, revisao = _versao_e_revisao(sdl, bib.api)
-    fora: dict[str, Any] = {"versao": versao, "revisao": revisao}  # (noqa-acento) chave de dado, não prosa
+    fora: dict[str, Any] = {"versao": versao, "revisao": revisao}  # (noqa-acento)
     if args.processo == "enumerar":
         fora["hid"] = o_hidapi_da_biblioteca_enumera(sdl, bib.api)
     else:
@@ -730,8 +730,8 @@ def medir_uma_biblioteca(
         medida["erro"] = controles["erro"]
         medida["stderr"] = controles.get("stderr")
         return medida
-    medida["versao"] = controles["versao"]  # (noqa-acento) chave de dado, não prosa
-    medida["revisao"] = controles["revisao"]  # (noqa-acento) chave de dado, não prosa
+    medida["versao"] = controles["versao"]  # (noqa-acento)
+    medida["revisao"] = controles["revisao"]  # (noqa-acento)
     medida["controles"] = controles["controles"]
     return medida
 
@@ -767,7 +767,7 @@ def _rotulo(medida: dict[str, Any]) -> str:
     caminho = str(medida["biblioteca"]).replace(str(pathlib.Path.home()), "~", 1)
     compat = " sdl2-compat" if medida.get("sdl2_compat") else ""
     return (
-        f"libSDL {medida.get('versao', '?')}{compat} «{medida.get('revisao', '?')}» "  # (noqa-acento) chave de dado
+        f"libSDL {medida.get('versao', '?')}{compat} «{medida.get('revisao', '?')}» "  # (noqa-acento)
         f"em {caminho}, {DICA_DO_ACELEROMETRO}={medida['dicas'][DICA_DO_ACELEROMETRO]}"
     )
 
@@ -863,25 +863,20 @@ def _sem_o_endereco(valor: Any) -> Any:
     return valor
 
 
-# ---------------------------------------------------------------------------
-# O JOGADOR (O-VITA3K-RECEBE-O-DUALSENSE-INTEIRO-01, degraus 1 e 2): o SDL3 com o HIDAPI
-# LIGADO abre UM vpad, escolhido pelo serial, e conta o que um jogo contaria.
-# ---------------------------------------------------------------------------
 JOGADORES = ("P1", "P2", "P3", "P4")
 NOME_DO_PS5 = "DualSense Edge Wireless Controller"
 
-#: Os tipos de evento do SDL3, lidos nas libs reais com um joystick VIRTUAL (3.4.14 e 3.4.16).
 EV_BOTAO_BAIXO = 0x651
 EV_BOTAO_CIMA = 0x652
 EV_TOQUE_BAIXO = 0x656
 EV_TOQUE_MOVE = 0x657
 EV_TOQUE_CIMA = 0x658
 EV_SENSOR = 0x659
-BOTAO_DO_TOUCHPAD = 20  # SDL_GAMEPAD_BUTTON_TOUCHPAD
+BOTAO_DO_TOUCHPAD = 20
 
 GRAVIDADE = 9.8
 GRAVIDADE_TOLERANCIA = 0.5
-SALTO_MAXIMO_NS = 100_000_000  # 0,1 s entre dois `sensor_timestamp`
+SALTO_MAXIMO_NS = 100_000_000
 _ESCRITAS = ("output_count", "lightbar_replicas", "player_led_replicas")
 _CONTADORES = (*_ESCRITAS, "visto_ha_s", "game_open")
 
@@ -1355,7 +1350,7 @@ def _processo_do_vpad(args: argparse.Namespace) -> int:
         fotografar=lambda: contadores_dos_vpads(_estado_do_daemon()),
         fase_segundos=args.fase_segundos, avisar=_avisar_a_fase)
     jogo.encerrar()
-    medida.update({"versao": versao, "revisao": revisao, "hidapi": args.hidapi,  # (noqa-acento) chave de dado, não prosa
+    medida.update({"versao": versao, "revisao": revisao, "hidapi": args.hidapi,  # (noqa-acento)
                    "jogador": args.jogador})
     medida["laudo"] = laudo(medida)
     print(json.dumps(_para_a_saida(medida), ensure_ascii=False, default=str))
@@ -1409,13 +1404,11 @@ def _o_jogador(args: argparse.Namespace) -> int:
                "--fase-segundos", str(args.fase_segundos),
                "--dica-do-acelerometro", args.dica_do_acelerometro]
     prazo = args.fase_segundos * 2 + 90
-    # O stderr passa direto ao terminal: é por ele que chega o aviso de cada fase.
     processo = subprocess.Popen(comando, env=_ambiente_do_vpad(
         hidapi=args.hidapi, dica=args.dica_do_acelerometro), stdout=subprocess.PIPE, text=True)
     try:
         saida, _ = processo.communicate(timeout=prazo)
     except subprocess.TimeoutExpired:
-        # A sonda que trava junto com o alvo reprova, e leva a pilha de onde travou.
         pilha = _pilha_do_processo(processo.pid)
         processo.kill()
         processo.communicate()

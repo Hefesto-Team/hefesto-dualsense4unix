@@ -118,7 +118,6 @@ CONFIG = Path(
     os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")
 ) / "azahar-emu" / "qt-config.ini"
 
-#: rotulada «Use controller touchpad» na tela.
 CHAVE_DO_RECURSO = "use_touchpad"
 CHAVE_DO_APARELHO_DE_TOQUE = "controller_touch_device"
 CHAVE_DA_FONTE_DE_TOQUE = "touch_device"

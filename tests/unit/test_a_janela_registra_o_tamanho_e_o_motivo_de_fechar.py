@@ -101,7 +101,6 @@ def abrir(pagina: pathlib.Path, monkeypatch: pytest.MonkeyPatch, **kwargs: Any) 
     )
 
 
-#: O começo de todo filho de janela de verdade: a página, a janela com barra e a bomba do laço.
 PRELUDIO_DO_FILHO = textwrap.dedent(
     """
     import pathlib, sys, time
@@ -132,7 +131,7 @@ def na_janela_de_verdade(corpo: str, pagina: pathlib.Path) -> str:
     compositor de quem roda, e a janela com barra nasceria na tela da pessoa, que é uma só.
     Devolve a saída do filho, onde está o diário da janela (o `xvfb-run` junta o `stderr` do
     comando ao `stdout`)."""
-    if shutil.which("xvfb-run") is None:  # pragma: no cover — máquina sem xvfb
+    if shutil.which("xvfb-run") is None:  # pragma: no cover
         pytest.skip("sem `xvfb-run` a janela de verdade nasceria na tela de quem roda")
     script = pagina.parent / "filho_de_janela.py"
     script.write_text(PRELUDIO_DO_FILHO + textwrap.dedent(corpo), encoding="utf-8")
@@ -148,12 +147,11 @@ def na_janela_de_verdade(corpo: str, pagina: pathlib.Path) -> str:
     return proc.stdout + proc.stderr
 
 
-# --- 1. o fim ------------------------------------------------------------------------
-
-
 def test_o_x_da_janela_deixa_a_linha_de_fim(pagina: pathlib.Path) -> None:
-    # D-1510-O-FIM-DA-JANELA-NUNCA-SAI-CALADO
-    """MORDIDA: ligar o `destroy` direto a `Gtk.main_quit` — a janela fecha calada."""
+    """MORDIDA: ligar o `destroy` direto a `Gtk.main_quit` — a janela fecha calada.
+
+    Prova da D-1510-O-FIM-DA-JANELA-NUNCA-SAI-CALADO.
+    """
     erro = na_janela_de_verdade(
         """
         tela.janela.destroy()
@@ -304,11 +302,13 @@ SCRIPT_DO_NOHUP = textwrap.dedent(
 def test_o_sighup_que_o_nohup_ignorou_continua_ignorado(
     pagina: pathlib.Path, tmp_path: pathlib.Path
 ) -> None:
-    # D-1510-O-SIGHUP-QUE-O-NOHUP-IGNOROU-FICA-IGNORADO
     """O lançador nasce com `nohup`: o SIGHUP chega ignorado e a janela tem de seguir de pé.
 
     MORDIDA: ligar todo sinal de `SINAIS_DE_FIM` sem olhar o que o processo herdou — o
-    SIGHUP passa a fechar a janela que o `nohup` pediu de pé."""
+    SIGHUP passa a fechar a janela que o `nohup` pediu de pé.
+
+    Prova da D-1510-O-SIGHUP-QUE-O-NOHUP-IGNOROU-FICA-IGNORADO.
+    """
     script = tmp_path / "nohup.py"
     script.write_text(SCRIPT_DO_NOHUP, encoding="utf-8")
     ambiente = dict(os.environ, PYTHONPATH=str(RAIZ / "src"), PYTHONUNBUFFERED="1")
@@ -335,9 +335,6 @@ def test_o_piloto_liga_os_sinais_e_a_rede_do_fim_em_volta_do_laco() -> None:
     ]
     assert "fechar_por_sinal" in chamadas, "o main() não liga o SIGTERM à linha de fim"
     assert "anotar_o_fim" in chamadas, "o main() perdeu a rede do fim do laço"
-
-
-# --- 2. o tamanho --------------------------------------------------------------------
 
 
 def test_o_tamanho_real_da_janela_vira_linha_pelo_configure_event(pagina: pathlib.Path) -> None:
@@ -405,9 +402,6 @@ def test_o_contador_de_mudancas_vai_ao_tique_lento() -> None:
     assert "mudancas_de_tamanho" in trecho
 
 
-# --- 3. a folga do serviço mudo (o instrumento do «cache fantasma») ---------------------
-
-
 ESTADO_BOM = {"controles": [{"slot": "a"}]}
 
 
@@ -442,9 +436,6 @@ def test_o_servico_fora_do_ar_vai_direto_ao_vazio_e_a_linha_sai_no_diario(
     folga.mudo(FileNotFoundError(2, "sem socket"))
     folga.mudo(FileNotFoundError(2, "sem socket"))
     assert [linha for linha in diario.linhas() if linha.startswith("[tela]")] == ["[tela] vazio"]
-
-
-# --- 4. escondida e à vista ----------------------------------------------------------
 
 
 def test_a_janela_escondida_diz_quanto_tempo_ficou(

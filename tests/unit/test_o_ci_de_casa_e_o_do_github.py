@@ -29,8 +29,6 @@ WORKFLOWS = RAIZ / ".github" / "workflows"
 TABELA = RAIZ / "scripts" / "ci-local" / "jobs.txt"
 SCRIPT = RAIZ / "scripts" / "ci-local.sh"
 
-# O que o script usa. O PATH da árvore de mentira só tem isto (mais o `act` e o `docker` de
-# mentira), e é por isso que «sem act» e «sem docker» são medidas de verdade.
 FERRAMENTAS = (
     "awk",
     "basename",
@@ -57,9 +55,6 @@ FERRAMENTAS = (
     "wc",
 )
 RUNNERS_QUE_O_ACT_MAPEIA = {"ubuntu-latest", "ubuntu-24.04"}
-
-
-# --- a tabela contra os workflows ------------------------------------------------------------
 
 
 def _jobs_dos_workflows() -> dict[str, dict[str, Any]]:
@@ -125,7 +120,7 @@ def test_a_linha_rola_diz_o_modo_e_a_imagem_do_runner_que_o_act_nao_tem() -> Non
         runs_on = str(jobs[job].get("runs-on", ""))
         alvos = set(jobs[job]["strategy"]["matrix"]["os"]) if "matrix.os" in runs_on else {runs_on}
         if "container" in jobs[job]:
-            continue  # o container do job manda; o runner é só o hospedeiro
+            continue
         for alvo in alvos - RUNNERS_QUE_O_ACT_MAPEIA:
             if not (alvo == "ubuntu-22.04" and len(campos) >= 4 and campos[3] == "ubuntu-22.04"):
                 ruins.append(
@@ -169,9 +164,6 @@ def test_os_checks_que_o_ruleset_exige_pelo_nome_rodam_no_rapido() -> None:
     rapidos = {c[1] for c in _linhas() if c[0] == "ROLA" and c[2] == "rapido"}
     assert "lint-test" in rapidos
     assert "acentuacao" in rapidos
-
-
-# --- o script, numa árvore de mentira ----------------------------------------------------------
 
 
 def _git(arvore: Path, *args: str) -> None:
@@ -347,24 +339,20 @@ def _sem_linha(tabela: str, prefixo: str) -> str:
 def test_o_script_confere_a_tabela_com_os_workflows_na_propria_corrida(tmp_path: Path) -> None:
     ok = Mundo(tmp_path / "a").rodar("--listar")
     assert ok.returncode == 0, ok.stderr
-    # job do workflow sem decisão: reprova e nomeia
     sem = Mundo(
         tmp_path / "b", tabela=_sem_linha(TABELA.read_text(encoding="utf-8"), "ROLA|glifos|")
     )
     r = sem.rodar("--rapido", "--conferir")
     assert r.returncode == 2 and "glifos" in r.stderr, r.stderr
-    # linha que cita job que não existe
     sobra = Mundo(
         tmp_path / "c",
         tabela=TABELA.read_text(encoding="utf-8") + "ROLA|job-que-nao-existe|rapido\n",
     )
     r = sobra.rodar("--listar")
     assert r.returncode == 2 and "job-que-nao-existe" in r.stderr, r.stderr
-    # fora de casa sem motivo
     tabela = TABELA.read_text(encoding="utf-8").replace("FORA-DE-CASA|pypi|", "FORA-DE-CASA|pypi")
     r = Mundo(tmp_path / "d", tabela=tabela).rodar("--listar")
     assert r.returncode == 2 and "pypi" in r.stderr, r.stderr
-    # PULA-NO-RAPIDO de passo que o YAML não tem
     r = Mundo(
         tmp_path / "e",
         tabela=TABELA.read_text(encoding="utf-8")
@@ -557,7 +545,6 @@ def test_sem_needs_tira_so_a_dependencia_que_a_tabela_manda(mundo: Mundo) -> Non
     assert release["deb-install-smoke"]["needs"] == ["deb"], (
         "o artefato do .deb vem do `deb`: esse needs fica"
     )
-    # e o que a tabela não manda tirar continua como o YAML escreveu
     original = yaml.safe_load((WORKFLOWS / "release.yml").read_text(encoding="utf-8"))["jobs"]
     assert release["github-release"]["needs"] == original["github-release"]["needs"]
 
@@ -611,7 +598,6 @@ def test_cada_chamada_trabalha_numa_copia_do_cache_das_actions(mundo: Mundo) -> 
 def test_com_as_actions_em_cache_o_act_nao_baixa_de_novo(mundo: Mundo) -> None:
     mundo.rodar("--job", "glifos")
     assert "--action-offline-mode" not in mundo.log("glifos"), "sem a cópia local ele tem de baixar"
-    # As pastas saem do próprio `ci.yml`: versão nova de action não deixa este teste na velha.
     texto = (WORKFLOWS / "ci.yml").read_text(encoding="utf-8")
     usos = re.findall(r"uses:\s*(actions/[A-Za-z0-9_.-]+)@(\S+)", texto)
     pastas = {f"{a.replace('/', '-')}@{ref}" for a, ref in usos if a != "actions/checkout"}
@@ -646,7 +632,6 @@ def test_o_job_que_e_plano_de_outro_nao_roda_sozinho_ao_lado_dele(mundo: Mundo) 
     )
     chamadas = [ln for ln in mundo.log("deb-install-smoke").splitlines() if ln.startswith("ARGS:")]
     assert len(chamadas) == 2, "o deb-install-smoke roda as duas pernas, e o deb vai dentro delas"
-    # falhando o que cobre, o coberto leva o mesmo código: não fica verde por ter sido «só um plano»
     r = mundo.rodar("--job", "deb,deb-install-smoke", FAKE_FALHA="deb-install-smoke")
     assert r.returncode == 1 and "2 vermelho(s)" in r.stdout.strip().splitlines()[-1]
 

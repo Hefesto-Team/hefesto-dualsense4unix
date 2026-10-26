@@ -16,7 +16,6 @@ import threading
 import time
 
 AQUI = pathlib.Path(__file__).resolve().parent
-# A RAIZ É `parents[2]`, e o `[1]` custou dois instrumentos calados.
 RAIZ = AQUI.parents[2]
 for _p in (str(AQUI), str(RAIZ / "src")):
     if _p not in sys.path:
@@ -29,8 +28,6 @@ def _pede_a_tela_de_mentira(argv: list[str], ambiente: Any) -> bool:
     return conta and "--oculta" not in argv and ambiente.get("HEFESTO_NA_TELA") != "1"
 
 
-# O GTK abre a tela NA IMPORTAÇÃO: o desvio para o Xvfb tem de vir antes dele, ou a janela com
-# barra do `--conta-tamanho` nasce na sessão de quem chamou (o `main()` recusa esse caso).
 if __name__ == "__main__" and _pede_a_tela_de_mentira(sys.argv[1:], os.environ):
     from hefesto_dualsense4unix.utils.tela_de_mentira import garantir_tela_de_mentira
 
@@ -42,9 +39,6 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
 from gi.repository import GLib, Gtk  # noqa: E402
 
-# `portao_a_casa_sabe_e_o_produto_nao_faz` chegava a **zero** módulos da interface
-# A JANELA PEDE A PÁGINA ANTES DAS DEZ ABAS — O-APP-RESPONDE-NA-HORA-01, cura 3
-# a página. Medido no lar de mentira: os dois custam ~0,3 s, e importados no
 from hefesto_dualsense4unix.interface import (  # noqa: E402
     monta,
     navegacao_interna,
@@ -60,51 +54,16 @@ from hefesto_dualsense4unix.core.sysfs_leds import norm_mac  # noqa: E402
 from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # noqa: E402
 from hefesto_dualsense4unix.profiles.loader import gesto_de_agora  # noqa: E402
 
-#: A PRIMEIRA PÁGINA é a Jogar, que é a primeira da tira. Não é escolha de
-#: gosto: é a aba que o `.desktop` abre.
 PRIMEIRA = "01-jogar.html"
 
-#: O tique da pintura. **100 ms — o mesmo da janela GTK**
-#: (`app/constants.LIVE_POLL_INTERVAL_MS`) e o mesmo do `controles_vivos`
-#: (`controles_vivos.TIQUE_MS`). As três leituras ao vivo do produto batem.
-#:
-#: FATO ERRADO, SUBSTITUÍDO EM 04/09/2026: esta linha dizia `500` e o comentário
-#: justificava o número afirmando que «500 ms é o mesmo do `controles_vivos`».
-#: Não era: o `controles_vivos.py:121` sempre teve `TIQUE_MS = 100`. O número
-#: errado tinha consequência medida — um «delay absurdo em controles»
-#: visto na aba 02, onde meio segundo de atraso separa o dedo do desenho.
-#:
-#: O CUSTO FOI MEDIDO ANTES DE BAIXAR, com o daemon do usuário vivo e dois DualSense
-#:
 TIQUE_MS = 100
 
 
-#: Fato errado se substitui, e sai de todos os lugares onde aparece: os três
-
-#: que caducou não foi o número: foi o CANAL cuja vida ele contava.
-#: SEM DEPÓSITO NÃO HÁ PRAZO: a piscada se apaga sozinha no JS, e nenhum relógio
-
-#: palavra: é o piloto FALAR quando não tem o que dizer.** Quem responde agora é
-#: a piscada (`MS_DA_PISCADA`), e a palavra do GTK segue viva no dono dela.
-#: gesto que devolva `{"recado": "…"}` manda a própria frase, e ela vai ao diário
-
-#: (`hef-recusou`) quando ele levantou ou não tinha dono. O relógio é um só
-#: **E O TEXTO DESTE COMENTÁRIO É PARTE DO PROBLEMA**, o que se descobriu na
 MS_DA_PISCADA = 1500
 
 
-#: O CONTRATO TEM DUAS PONTAS: o pacote devolve `{"armou": True, …}` (o lado da
 CHAVE_DO_CLIQUE_QUE_SO_ARMOU = "armou"
 
-#: O QUE A GUARDA DE CARGA ACEITA. Os pilotos de uma aba só passavam o nome
-#: Aqui as DEZ são legítimas, então o esperado é o que as dez compartilham:
-#:
-#:     Hefesto — aba JOGAR
-#:     Hefesto — aba GATILHOS
-#:
-#: A guarda casa por SUBSTRING, e `"Jogar"` não casa com `"aba JOGAR"` — foi o
-#: que matou a primeira execução deste piloto. Continua servindo para o que ela
-#: existe: uma página que NÃO é do mockup (um erro de carga, um `about:blank`)
 TITULO_DE_QUALQUER_ABA = "Hefesto — aba "
 
 
@@ -137,44 +96,10 @@ def _a_pagina_pedida(pedido: str) -> str:
     return pedido
 
 
-#: `a04_iluminacao.banco_de_luzes` — «nenhum `data-controle` nasce aqui» —, e
-#: A LISTA É DE PERMITIDOS, e o dono dos assentos é `pacotes.TODOS_OS_LUGARES`.
-#: `test_o_seletor_do_dono_pergunta_ao_dono` exige que os três digam o mesmo.
-#:
-#: Ele se monta em `_ligar_as_abas`, porque os assentos moram nos pacotes e a
-#: janela do produto só os importa depois de pedir a página.
 SELETOR_DO_DONO: str
 
-#: O QUE UM GESTO **VIVO** NÃO PODE DEVOLVER — a quarta porta é de LEITURA.
-#:
-#: As três primeiras são o mesmo fato de forma diferente: um `input` dispara a
-#: cada TECLA, e o que estas chaves fazem custa caro dez vezes por segundo.
-#:
-#: * `blocos` e `fita` TROCAM HTML INTEIRO — `innerHTML` no container, `outerHTML`
-#:   no nó. É o defeito que a `A-TELA-SAMBA-01` mediu em 06/09/2026: quem clicou
-#:   fica com o `mousedown` num nó que já não existe. Aqui seria pior, porque o
-#:   nó arrancado é o campo em que o usuário está DIGITANDO;
-#: * `recado` e `recados` eram o canal de AVISO na tela. **Desde 13/09/2026
-#:   nenhum dos dois chega a ela** (TELA-CALADA-01 e FRASES-E-DICAS-01): o
-#:   `recado` vai ao diário e o `recados` ninguém mais pinta. A recusa fica pelo
-#:   custo que sobrou — uma linha de diário por tecla afogaria quem depura, e um
-#:   gesto vivo que devolve frase é defeito de quem o ligou.
-#:
-#: O QUE SOBRA É A CARGA DE PINTURA — `mesa`, `colunas`, `alvo`. É o vocabulário
-#: que o `_deu_certo` já usa, e nenhum segundo nasce aqui.
 CHAVES_QUE_O_VIVO_RECUSA = ("blocos", "fita", "recado", "recados")
 
-#: O BOOTSTRAP: uma função de pintura, genérica, para as dez.
-#:
-#: Ela NÃO sabe nada de nenhuma aba — recebe endereço e valor e escreve. Toda a
-#: inteligência está do lado Python, nos pacotes, que são puros e testáveis sem
-#: abrir janela. Foi assim que 143 valores puderam ser medidos antes de existir
-#: esta janela.
-#:
-#: O CONTADOR É O QUE IMPEDE O VERDE SOBRE NADA. `pintar()` devolve quantos
-#: valores escreveu, e o piloto imprime. Uma aba que devolve 0 com pacote não
-#: vazio é endereço que não existe na página — e é o defeito que fez a
-#: `06-navegacao` publicar zero endereços em 01/09 sem ninguém ver.
 BOOTSTRAP = r"""
 (function(){
   window.__hef = window.__hef || {};
@@ -1606,7 +1531,6 @@ BOOTSTRAP = r"""
 """
 
 
-#: Medido em 11/09/2026 nesta árvore, com o daemon vivo, um DualSense no cabo,
 DICA_DA_CASA = r"""
 (function(){
   if(window.__hefDica && window.__hefDica.instalada) return 'ja';
@@ -2087,7 +2011,6 @@ def _com_dono(ctx: pacotes.Contexto) -> list[str]:
     return prefs
 
 
-#: casa: `pref` é POSIÇÃO (`mesa_viva.mesa_do_estado` reenumera de 1 a cada
 class _EscolhaDaFita:
     """O único estado que o chip muda. Nada de perfil, nada de daemon."""
 
@@ -2159,25 +2082,18 @@ def _registrar_a_fita() -> None:
         pacotes.gesto("*", monta.GESTO_DA_FITA)(_escolher_na_fita)
 
 
-#: Quem fecha a janela: o `Fechar` do menu do botão direito. O piloto o põe aqui ao nascer.
 _FECHAR_A_JANELA: list[Callable[[], None]] = []
 
-#: Os itens do menu do botão direito (`base-comum.js`) que já têm gesto na aba Sistema: o do menu
-#: é o MESMO gesto, despachado de qualquer página. Desligar pede os dois cliques de lá.
 ITENS_DO_MENU_NA_SISTEMA = {
     "menu-atualizar": "atualizar",
     "menu-desligar": "parar-ou-retomar",
     "menu-reiniciar": "reiniciar",
 }
 
-#: Os itens do menu que chamam um gesto da aba Jogar: «Reconectar controles» (19/10/2026) é o mesmo
-#: «Reconectar» de lá, e não grava nada (`coop.sync` e `identity.renumber`).
 ITENS_DO_MENU_NA_JOGAR = {
     "menu-reconectar": "reconectar",
 }
 
-#: O que o item do menu mexe na máquina do usuário (`grava=` por frase: a árvore do `agir` não enxerga
-#: o `_systemctl` da aba Sistema). Sem isto, a régua de clique acionaria o item sozinha.
 O_QUE_O_MENU_MEXE = {
     "menu-desligar": "para ou liga o serviço do Hefesto pela aba Sistema",
     "menu-reiniciar": "reinicia o serviço do Hefesto pela aba Sistema",
@@ -2237,9 +2153,6 @@ def _pref_escolhido(mesa: list[dict[str, Any]]) -> str:
 
 def _fita(mesa: list[dict[str, Any]], pagina: str) -> str:
     """A fita de chips com a mesa VIVA, pelo mesmo gerador do desenho."""
-    #              chip nasce sem `--plastico` e cai no tom neutro do esqueleto.
-    # veio é o `monta.fita`: o chip nasce sem `--plastico`, e o `.chip` cai
-    #
     try:
         return monta.fita(ativo=_pref_escolhido(mesa),
                           inerte=not _a_fita_desta_pagina_escolhe(pagina),
@@ -2280,15 +2193,8 @@ CLIQUE_COM_ALVO = r"""
 })(%s, %s)
 """
 
-#: O gesto do rodapé que o Start da Navegação Interna dispara: grava e aplica o perfil.
 GESTO_DO_START = "salvar-e-aplicar"
 
-#: A Navegação Interna na página (A-NAVEGACAO-INTERNA-…-01). Instala uma vez por
-#: carga o `window.__hefNav`: ele MEDE o que se seleciona e EXECUTA o que o
-#: Python decidiu (`navegacao_interna.Selecoes`). A geometria mora no Python, que
-#: a régua mede sem WebKit; aqui só se lê o DOM e se aciona o que já existe.
-#: O que se seleciona é o mesmo vocabulário que o ouvinte clica (`manda_do_alvo`),
-#: menos os chips da fita: o X de quem apertou já escolhe o controle dele.
 NAV_INSTALAR = r"""
 (function(){
   if(window.__hefNav) return;
@@ -2523,10 +2429,8 @@ LER_CAMPOS = r"""
 
 VOLTAS_ATE_ASSENTAR = 20
 
-#: quantos estados da janela o cenário `rajada` do `--conta-tamanho` dispara, um por tique.
 RAJADA_DE_ESTADOS = 20
 
-#: que já existe (`window.__hef.pintar` devolve quantos valores escreveu) também
 OBSERVAR_MUTACOES = r"""
 (function(){
   window.__hef = window.__hef || {};
@@ -2594,10 +2498,6 @@ LER_MUTACOES = r"""
 })()
 """
 
-#: O `--conta-tamanho`: quantas vezes a caixa de cada peça da moldura MUDOU de tamanho. Um
-#: `ResizeObserver` por alvo; a chamada de abertura (a primeira, que só diz o tamanho de partida)
-#: não conta. Cada tamanho distinto sai com quantas vezes apareceu, para a pulsação se ler
-#: como «a altura foi de 809 a 777 e voltou N vezes».
 ALVOS_DO_TAMANHO = (".janela", ".miolo", ".registro")
 
 OBSERVAR_TAMANHO = r"""
@@ -2735,7 +2635,6 @@ class FolgaDoServicoMudo:
         self.seguidos = 0
         self._ultimo_bom: dict[str, Any] | None = None
         self._anotar = anotar or self._ao_diario
-        #: O que a tela mostra agora: None (nada ainda), "novo", "velho" ou "vazio".
         self._mostrando: str | None = None
 
     @staticmethod
@@ -2827,11 +2726,7 @@ class LeitorDoEstado:
         avisar: Callable[[], Any] | None = None,
     ) -> None:
         self._ler = ler if ler is not None else mesa_viva.estado_do_daemon
-        #: Chamado UMA vez, no fio do leitor, depois da primeira resposta.
         self._avisar = avisar
-        #: A Navegação Interna (A-NAVEGACAO-INTERNA-…-01): com ela ligada, cada
-        #: leitura declara ao daemon se a janela está na frente (a renovação do
-        #: prazo dele) e guarda os toques que ele devolve.
         self._declarar_foco = (declarar_foco if declarar_foco is not None
                                else _declarar_o_foco)
         self._ativa = False
@@ -2907,7 +2802,7 @@ class LeitorDoEstado:
         t0 = time.perf_counter()
         try:
             st = self._ler()
-        except Exception as erro:  # o motivo viaja para a folga
+        except Exception as erro:
             with self._trava:
                 self._estado, self._erro = None, erro
                 self._geracao += 1
@@ -2930,7 +2825,7 @@ class LeitorDoEstado:
             return
         with self._trava:
             ativa = self._ativa
-        resposta = self._declarar_foco(ativa)  # o daemon mudo responde None: sem toques novos
+        resposta = self._declarar_foco(ativa)
         toques = resposta.get("toques") if isinstance(resposta, dict) else None
         if isinstance(toques, dict):
             with self._trava:
@@ -2942,7 +2837,7 @@ class LeitorDoEstado:
         if self._avisar is not None:
             try:
                 self._avisar()
-            except Exception as erro:  # o aviso não derruba o leitor
+            except Exception as erro:
                 print(f"[estado] o aviso da primeira leitura falhou: {erro}", file=sys.stderr)
         while not self._parar.is_set():
             if self._a_vista.is_set():
@@ -2958,8 +2853,6 @@ class LeitorDoEstado:
 
 
 class Piloto:
-    #: foi por isso que o daemon a deixou FORA do `state_full` e atrás de um
-    #: do `TIQUE_MS`** — o portão `citacoes-no-codigo` foi quem mostrou: QUATRO
     SEGUNDOS_ENTRE_LEITURAS_DOS_EXTERNOS = 4.0
     SEGUNDOS_DE_ESPERA_DOS_EXTERNOS = 3.0
 
@@ -2987,7 +2880,6 @@ class Piloto:
         self.provas: list[dict[str, Any]] = []
         self.desfechos: dict[str, tuple[str, str]] = {}
         self._onde_clicou: dict[str, str] = {}
-        #: botão e vai ao diário (`_recusou_dizendo`).
         self._vivos: dict[str, str] = {}
         self.vivos_atendidos: list[str] = []
         self.vivos_recusados: list[str] = []
@@ -3005,7 +2897,6 @@ class Piloto:
         self._voltas_do_contador = 0
         self._mutacoes_lidas = False
         self.mutacoes: dict[str, Any] = {}
-        #: O `--conta-tamanho`: a conta de voltas, a tabela lida e o que o cenário já fez.
         self._voltas_do_tamanho = 0
         self._tamanho_lido = False
         self.tamanhos: dict[str, Any] = {}
@@ -3017,18 +2908,15 @@ class Piloto:
         self._pintura_no_ar = False
         self._pular = 0
         self._folga = FolgaDoServicoMudo()
-        #: repinta o estado que já tinha e NÃO mexe na folga — ver a classe.
-        self._geracao_vista = 0  # a geração 0 do leitor é «nenhuma resposta ainda»
+        self._geracao_vista = 0
         self._st_de_agora: dict[str, Any] = {}
         self.custo_do_ipc: deque[float] = deque(maxlen=self.CUSTOS_GUARDADOS)
         self._escondida = False
         self._escondida_desde = 0.0
-        self._geracao_na_volta: int | None = 0  # o tique espera a primeira resposta
+        self._geracao_na_volta: int | None = 0
         self._pintada: dict[tuple[str, ...], tuple[Any, Any]] | None = None
         self._ate_a_inteira = 0
         self._moldes: dict[str, frozenset[str]] = {}
-        #: EXTERNOS-01, 06/09/2026. A lista é a ÚLTIMA resposta boa; o carimbo
-        #: A LISTA NÃO SE APAGA ENTRE LEITURAS, e é escolha: entre um tique e o
         self._externos: list[dict[str, Any]] = []
         self._externos_lidos_em = 0.0
         self._externos_no_ar = False
@@ -3042,7 +2930,6 @@ class Piloto:
             ao_morrer_a_pagina=self._a_pagina_morreu,
             oculta=args.oculta,
             esperar_a_pintura=True,
-            # `scripts/check_a_janela_nao_confessa.py`, que nasceu com esta
         )
         self.view = self.tela.view
         self.ponte = self.tela.ponte
@@ -3051,14 +2938,10 @@ class Piloto:
         self._abertura["janela"] = time.monotonic()
         _importar_as_abas(self.tela)
         self._ctx_de_agora = pacotes.Contexto(state={})
-        #: O `state_full` lido FORA do laço do GTK — A-TELA-QUE-TRAVA-01. O fio
         self._estado_vivo = LeitorDoEstado(avisar=self._a_primeira_resposta_chegou)
         if getattr(args, "cenario", "parado") == "mudo":
             self._tornar_o_servico_mudavel()
         self.leitor = mesa_viva.LeitorDeCor(ligado=not args.sem_cor)
-        #: A Navegação Interna (A-NAVEGACAO-INTERNA-…-01): os toques viram atos
-        #: (`Navegador`), cada controle tem a sua seleção (`navegacao_interna.Selecoes`), e a
-        #: página mede o leiaute uma vez por tique, só com ela agindo.
         self._navegador = navegacao_interna.Navegador()
         self._selecoes = navegacao_interna.Selecoes()
         self._leiaute_no_ar = False
@@ -3193,7 +3076,7 @@ class Piloto:
         _esquecer_a_pintura(self)
         self.gestos.append(o)
         nome = str(o.get("gesto") or "")
-        pagina = str(o.get("pagina") or self.pagina)  # (noqa-acento: verbo)  (nome de variável)
+        pagina = str(o.get("pagina") or self.pagina)  # (noqa-acento)
         if str(o.get("vivo") or ""):
             self._gesto_vivo(o, pagina, nome)
             return
@@ -3206,23 +3089,17 @@ class Piloto:
             self._pousou(voo, False)
             return
         o = self._com_uniq(o)
-        # O `uniq` DO CLIQUE vai aos dois relatos (`_recusou_dizendo` e
         alvo = norm_mac(str(o.get("uniq") or "")) or ""
 
-        # `daemon.reload` leva **9,5 segundos** — `daemon.resume` leva 1
         def trabalhar() -> None:
             desta_vez: tuple[str, str] = ("", "")
             so_armou = False
-            # O gesto vai ao `profile_salvo` de quem grava no meio dele; a thread
-            # nasce com contexto vazio, então a marca é posta aqui.
             marca_do_gesto = gesto_de_agora.set(f"{pagina} · {nome}")
             try:
                 resposta = acao(self._ctx_de_agora, o, ponte)
             except Exception as erro:
                 desta_vez = ("recusou dizendo", f"{type(erro).__name__}: {erro}")
                 self.desfechos[f"{pagina}:{nome}"] = desta_vez
-                # relatos. Ela ia à tela de 02/09 a 13/09/2026 — ver
-                # `_recusou_dizendo`, que guarda a história.
                 GLib.idle_add(
                     lambda x=erro: self._recusou_dizendo(pagina, nome, alvo, x))
             else:
@@ -3703,7 +3580,7 @@ class Piloto:
         try:
             pacote = pacotes.pacote_da_pagina(self.pagina, ctx)
         except pacotes.fios.AindaNaoChegou:
-            return True  # a leitura cara da aba foi ao fundo: um tique seguinte a pinta
+            return True
         except Exception as e:
             print(f"[{self.pagina}] o pacote levantou: {e}", file=sys.stderr)
             return True
@@ -3757,7 +3634,6 @@ class Piloto:
         custo = (time.perf_counter() - t0) * 1000
         self.custos.append(custo)
         self.custo_do_ipc.append(t_ipc)
-        # tique que custa mais que `TIQUE_MS` já entregou dado atrasado; mandar
         if custo > TIQUE_MS:
             self._pular += 1
             viagem = getattr(getattr(self, "_estado_vivo", None), "ultima_viagem_ms", None)
@@ -4205,7 +4081,6 @@ class Piloto:
             print(f"[prova] {self.pagina} não tem gesto seguro a clicar")
             return False
         print(f"[prova] {len(alvos)} gesto(s) em {self.pagina}: {', '.join(alvos)}")
-        # constante os gestos se ATROPELAM: `daemon.reload` leva 9,5 s e o
         self._fila = list(alvos)
         GLib.timeout_add(400, self._proximo_da_fila)
         return False
@@ -4234,7 +4109,6 @@ class Piloto:
 
         self.ponte.perguntar(CLIQUE_COM_ALVO % (_json(nome, pagina=self.pagina),
                                                 _json(prefs, pagina=self.pagina)), anotou)
-        # E ELA É POR GESTO: o `TETOS` da ponte diz que `daemon.reload` leva 15 s
         from pacotes import ponte as _p
 
         espera = max(self.args.espera, int(_p.teto(_METODO_DO_GESTO.get(nome, "")) * 1000) + 800)
@@ -4254,8 +4128,6 @@ class Piloto:
         mudou = {k: (antes_do_daemon.get(k), v) for k, v in depois.items()
                  if antes_do_daemon.get(k) != v
                  and not any(r in k for r in RUIDO)}
-        # acusar um botão que funciona. O `state_full` do daemon não publica
-        # gatilho — o DualSense não devolve o modo em que está, é comando de ida
         sem_eco = nome in self._sem_eco_da_pagina()
         desfecho, frase = self.desfechos.get(f"{self.pagina}:{nome}", ("aplicou", ""))
         onde_ = self._onde_clicou.get(nome, "")
@@ -4354,12 +4226,10 @@ class Piloto:
             lambda uniq: navegacao_interna.caixas_do_leiaute(leiaute, pref_de.get(uniq, "")),
             pref_de=pref_de, popup=popup)
         if any(a.tipo == "salvar" for a in atos):
-            # O Start grava e aplica o perfil (pedido de 19/10/2026), pela porta dos cliques.
-            self._gesto({"gesto": GESTO_DO_START, "pagina": self.pagina, "texto": "Start"})  # (noqa-acento: chave do clique)
+            self._gesto({"gesto": GESTO_DO_START, "pagina": self.pagina, "texto": "Start"})  # (noqa-acento)
         for op in ops:
             if op.get("op") == "clicar" and op.get("pref") and \
                     _a_fita_desta_pagina_escolhe(self.pagina):
-                # D-CADA-JOGADOR-NAVEGA-COM-O-SEU: o X do irmão grava no dele.
                 with contextlib.suppress(Exception):
                     _escolher_na_fita(ctx, {"pref": op["pref"]}, ponte)
         molduras = self._selecoes.molduras(pref_de, cor_de)
@@ -4458,7 +4328,6 @@ class Piloto:
         return False
 
 
-#: a folha de estilo os esconde num lugar vazio (`.ctl[data-conectado="nao"]
 _ALVOS_QUE_O_LUGAR_VAZIO_COBRA = frozenset(
     {"texto", "html", "cor", "atributo", "plastico"})
 
@@ -4474,7 +4343,7 @@ def _o_lugar_no_arquivo(texto: str) -> tuple[frozenset[str], frozenset[tuple[str
     proprios: set[tuple[str, str]] = set()
     for m in re.finditer(_TAG_DO_LUGAR, texto):
         tag, pref = m.group(0), m.group(1)
-        if 'data-conectado="nao"' in tag:  # (noqa-acento) valor do atributo
+        if 'data-conectado="nao"' in tag:
             vazios.add(pref)
         proprios |= {(pref, chave) for chave in re.findall(_ENDERECO_NA_TAG, tag)}
     return frozenset(vazios), frozenset(proprios)
@@ -4646,8 +4515,6 @@ TEXTOS_QUE_O_FUNIL_LEMBRA = 4096
 _TEXTOS_LIDOS_PELO_FUNIL: dict[str, tuple[str, ...]] = {}
 
 
-#: Quanto a saída da janela espera a largada atrás do que ainda está no ar na
-#: fila de cada controle (um gesto da aba 05 faz até três chamadas de 0,25 s).
 SEGUNDOS_DA_LARGADA_NA_SAIDA = 2.0
 
 
@@ -4781,7 +4648,6 @@ def main() -> None:
         print("[conta-tamanho] ligando `--oculta`: a tela é UMA e não é do instrumento.")
         args.oculta = True
     if args.conta_tamanho and not args.oculta:
-        # A janela tem barra e é de verdade: nasce no Xvfb próprio, nunca na sessão do usuário.
         from hefesto_dualsense4unix.utils.tela_de_mentira import garantir_tela_de_mentira
 
         _recusar_a_tela_que_nao_foi_desviada(garantir_tela_de_mentira(anunciar=False))
@@ -4827,7 +4693,6 @@ def main() -> None:
     with _o_processo_da_janela():
         piloto.tela.fechar_por_sinal()
         Gtk.main()
-        # Rede do fim: o laço terminou por um caminho que não deixou motivo.
         piloto.tela.anotar_o_fim("o laço do GTK terminou sem motivo registrado")
 
     if piloto.tela.morreu is not None:

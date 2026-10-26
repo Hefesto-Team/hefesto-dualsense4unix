@@ -117,7 +117,7 @@ def test_a_escolha_copia_so_o_perfil_escolhido(
         return copiar_de_verdade(self, *a, **kw)
 
     sw = AutoSwitcher(manager=_gerente(), window_reader=lambda: dict(JANELA), debounce_sec=1e9)
-    sw._tick(dict(JANELA), 0.0)  # a primeira leitura decodifica e guarda
+    sw._tick(dict(JANELA), 0.0)
     monkeypatch.setattr(Profile, "model_copy", _contar)
 
     for tique in range(10):

@@ -6,7 +6,6 @@ from typing import Final
 RGB = tuple[float, float, float]
 
 
-#: Fundo de escala das barras de giroscópio, em graus/s. O DualSense reporta
 ESCALA_GYRO_GRAUS_S: Final[float] = 500.0
 
 
@@ -15,7 +14,6 @@ def texto_eixo(graus_por_s: float) -> str:
     return f"{graus_por_s:>+7.1f}"
 
 
-#: `ESCALA_GYRO_GRAUS_S`, e o mesmo raciocínio: o sensor vai a ±4 g
 ESCALA_ACCEL_G: Final[float] = 2.0
 
 

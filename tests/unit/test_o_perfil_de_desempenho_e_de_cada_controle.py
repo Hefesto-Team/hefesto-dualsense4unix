@@ -73,15 +73,9 @@ def test_a_sistema_diz_personalizado_e_a_relacao_com_o_cartao(arquivo: pathlib.P
     assert [(v, r) for v, _t, r in botoes] == [
         (p, orc.ROTULOS_DOS_PERFIS[p]) for p in orc.PERFIS], botoes
     dicas = {v: t for v, t, _r in botoes}
-    # O desenho do todo (A-ABA-SISTEMA-DO-TODO-01, publicado em 16/10/2026) trocou as três dicas
-    # longas pelas curtas aprovadas, e o «vale para todos» passou para a dica do rótulo (a
-    # D-1610-O-PERFIL-DE-BATERIA-E-SO-O-GLOBAL-NA-SISTEMA): o mockup e a publicada dizem o mesmo.
     assert dicas == {"tudo_ligado": "Nada é limitado",
                      "bateria_longa": "Vibração em 30% da força",
                      "eu_escolho": "Você escolhe em cada aba"}, dicas
-    # O-PERFIL-DE-BATERIA-POR-CONTROLE-QUE-NINGUEM-CHAMA-SAI-01 (17/10/2026): o desenho diz
-    # «Vale para todos os controles» (a Conexões perdeu o perfil por controle); a publicada guarda
-    # a frase velha até o `--publicar 09` do fecho, e a velha só vale até lá.
     velha = ('data-dica="Vale para todos; cada controle pode ter o seu em Conexões">'
              "Perfil global de bateria")
     nova = 'data-dica="Vale para todos os controles">Perfil global de bateria'
@@ -98,7 +92,6 @@ def test_a_conexoes_nao_tem_o_perfil_por_controle() -> None:
     for saiu in ("perfil_do_controle_gesto", "perfil_na_linha", "economia_do_controle"):
         assert not hasattr(a08, saiu), f"`{saiu}` voltou à Conexões"
     html = PAGINAS[0].read_text(encoding="utf-8")
-    # `data-campo="perfil"` segue no «Perfil ativo» do cabeçalho (`pa-nome`); o cartão não o tem
     assert html.count('data-campo="perfil"') == html.count('class="pa-nome" data-campo="perfil"')
     for saiu in ('data-gesto="perfil-do-controle"', 'class="gc-perfil"',
                  "economia-do-controle", "eco-luz"):

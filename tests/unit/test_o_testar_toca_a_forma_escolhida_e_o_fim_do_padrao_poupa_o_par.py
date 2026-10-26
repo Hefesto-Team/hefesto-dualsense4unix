@@ -55,8 +55,10 @@ def _toques(m: _Mundo, uniq: str) -> list[str]:
 def test_o_haptica_toca_a_forma_escolhida_e_so_a_daquele_controle(
     com_toque: _Mundo, monkeypatch: pytest.MonkeyPatch, escolha: str  # noqa: F811
 ) -> None:
-    # D-1610-O-TESTAR-DA-HAPTICA-TOCA-A-FORMA-ESCOLHIDA
-    """Cada escolha: a forma vai ao tocador do controle do usuário, e os outros ficam quietos."""
+    """Cada escolha: a forma vai ao tocador do controle do usuário, e os outros ficam quietos.
+
+    Prova da D-1610-O-TESTAR-DA-HAPTICA-TOCA-A-FORMA-ESCOLHIDA.
+    """
     controles = _no_cabo_os_quatro(com_toque)
     com_toque.mesa.volta(*controles)
     outras = {u: formas.ESTALO for u in _QUATRO[1:]}
@@ -214,17 +216,13 @@ def test_a_forma_curta_toca_no_radio_mesmo_sem_fatia(
     uniq = _QUATRO[0]
     _escolher(monkeypatch, {uniq: formas.ESTALO})
     com_toque.sub._esperando_vaga = [(uniq, "haptica")]
-    # o estalo curto não cede (``FORMAS_LONGAS``), embora a vaga esteja pedida
     assert com_toque.sub.testar_a_haptica(uniq, True)["forma"] == formas.ESTALO
     assert _toques(com_toque, uniq) == [formas.ESTALO]
 
 
-# --- B. o padrão sem `uniq` entra na fila do controle ---------------------------------------
-
-
 def _clique_sem_controle() -> dict[str, Any]:
     """O «Sentir» da área de criar: a forma e o motor, e nenhum `uniq`."""
-    forma = {"padrao": next(iter(padroes.PADROES)), "motores": padroes.AMBOS}  # (noqa-acento) chave
+    forma = {"padrao": next(iter(padroes.PADROES)), "motores": padroes.AMBOS}  # (noqa-acento)
     return {"forma": forma}
 
 

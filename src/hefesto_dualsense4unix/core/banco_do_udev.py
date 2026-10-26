@@ -25,7 +25,7 @@ from typing import Any
 __all__ = ["propriedade_do_devnum", "propriedade_do_syspath"]
 
 _TRAVA = threading.Lock()
-_BIBLIOTECA: Any = None  # None = ainda não tentou; False = não há
+_BIBLIOTECA: Any = None
 
 
 def _biblioteca() -> Any:

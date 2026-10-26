@@ -209,9 +209,6 @@ def test_o_marcador_orfao_nao_vira_alvo_de_gesto(
     _o_disco_tem(monkeypatch, "Pragmata", "Sackboy")
     _o_marcador_diz(monkeypatch, "Perfil Que Ela Apagou")
     ctx = _ctx()
-    # Desde O-EDITOR-DA-ABA-PERFIS-SO-GRAVA-NO-PERFIL-QUE-MOSTRA-01 (09/10/2026) o
-    # alvo do gesto é o perfil que o editor PINTA (sem escolha, o primeiro da lista),
-    # e não mais uma recusa: o órfão segue fora, e o gesto mira o que está na tela.
     alvo = a10_perfis._perfil_do_editor(ctx)
     assert alvo != "Perfil Que Ela Apagou", "o marcador órfão virou alvo de gesto"
     assert [alvo] == _aberto_no_editor(a10_perfis.pacote(ctx)), (
@@ -294,7 +291,6 @@ def test_lista_vazia_nao_desarma_a_guarda_do_perfil_que_vale(
     assert ponte.chamadas == []
 
 
-# procura a SUBSTRING `ctx.state.get("active_profile")` no fonte. Ela mede
 def test_o_editor_abre_no_perfil_que_o_disco_diz_estar_valendo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

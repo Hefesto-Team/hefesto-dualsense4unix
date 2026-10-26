@@ -5,7 +5,6 @@ from collections.abc import Mapping
 from types import MappingProxyType
 from typing import Final, cast
 
-#: `core/acoes_de_botao.BOTAO_PS` — a régua confere.
 BOTAO_PS: Final = "ps"
 
 GATILHOS: Final[Mapping[str, str]] = MappingProxyType({"l2": "l2_btn", "r2": "r2_btn"})
@@ -13,8 +12,6 @@ GATILHOS: Final[Mapping[str, str]] = MappingProxyType({"l2": "l2_btn", "r2": "r2
 _ID_DO_NOME: Final[Mapping[str, str]] = MappingProxyType(
     {nome: botao for botao, nome in GATILHOS.items()})
 
-#: O QUE A TROCA ALCANÇA, na ordem de `core/acoes_de_botao.BOTOES`: os botões
-#: não é importada daqui porque `acoes_de_botao` arrasta
 REMAPEAVEIS: Final[tuple[str, ...]] = (
     "cross", "circle", "square", "triangle",
     "l1", "r1", "l2", "r2",
@@ -23,7 +20,6 @@ REMAPEAVEIS: Final[tuple[str, ...]] = (
     "options", "create",
 )
 
-#: regiões são invenção do modo mouse, e o DualSense só reporta um clique.
 DESTINO_TOUCHPAD: Final = "touchpad"
 
 FORA_DO_ALCANCE: Final[Mapping[str, str]] = MappingProxyType({
@@ -38,7 +34,7 @@ FORA_DO_ALCANCE: Final[Mapping[str, str]] = MappingProxyType({
 MOTIVO_DESCONHECIDO: Final = "desconhecido"
 MOTIVO_PS: Final = "ps"
 MOTIVO_FORA: Final = "fora"
-MOTIVO_COLISAO: Final = "colisao"  # (noqa-acento) código de motivo, não é prosa
+MOTIVO_COLISAO: Final = "colisao"  # (noqa-acento)
 
 FORCA_CHEIA: Final = 255
 

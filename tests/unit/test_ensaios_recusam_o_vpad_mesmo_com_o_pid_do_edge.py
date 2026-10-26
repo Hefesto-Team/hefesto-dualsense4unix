@@ -298,7 +298,7 @@ def test_a_regua_nao_olha_vid_pid_nem_barramento():
     disfarce_perfeito = identidade_do_vpad.campos_do_uevent(
         _uevent(
             barramento="0003",
-            pid="0ce6",  # o PID do DualSense comum, não o do Edge
+            pid="0ce6",
             nome="Sony Interactive Entertainment DualSense Wireless Controller",
             phys="hefesto-vpad",
             uniq="02:fe:00:00:00:02",

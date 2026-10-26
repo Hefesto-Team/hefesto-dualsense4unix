@@ -16,7 +16,7 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 sys.path.insert(0, str(INTERFACE))
 
-PAGINA_PUBLICADA = INTERFACE / "paginas" / "07-lancadores.html"  # (noqa-acento): o nome da pasta
+PAGINA_PUBLICADA = INTERFACE / "paginas" / "07-lancadores.html"  # (noqa-acento)
 ENTRE_ASPAS = re.compile(r"«([^»]+)»")
 
 

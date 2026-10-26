@@ -28,7 +28,7 @@ try:
         is_sandboxed_layout,
         read_launch_options_by_appid,
     )
-except ImportError:  # pragma: no cover - executado como script avulso
+except ImportError:  # pragma: no cover
     from api_de_entrada import escolher_executavel  # type: ignore[no-redef]
     from ficha_declarada import (  # type: ignore[no-redef]
         _bibliotecas_e_manifesto,
@@ -44,7 +44,6 @@ except ImportError:  # pragma: no cover - executado como script avulso
 
 logger = logging.getLogger(__name__)
 
-#: As duas roupas, como o `numeros_da_sony` as nomeia (aqui em texto: o módulo roda avulso).
 ROUPA_DO_EDGE = "0df2"
 ROUPA_DO_COMUM = "0ce6"
 
@@ -65,16 +64,12 @@ class _Declarado:
 
     edge: str | None = None
     comum: str | None = None
-    #: a biblioteca Sony que abre o HID direto e procura o contêiner USB do pad
     sony: str | None = None
 
 
 _Chave = tuple[tuple[str, int, int], ...]
 _CACHE: dict[str, tuple[_Chave, _Declarado]] = {}
-#: O instante (ns) em que a leitura guardada em `_CACHE` COMEÇOU, tirado antes de ler o disco.
 _LIDO_EM: dict[str, int] = {}
-#: O grão do pior relógio de disco que se conhece (o FAT guarda o `mtime` em 2 s): um arquivo que
-#: muda a menos de uma margem da leitura pode ter mudado de novo no mesmo tique, sem mexer na chave.
 _MARGEM_NS = 2 * 10**9
 _TRAVA_DO_CACHE = threading.Lock()
 _AQUECENDO = threading.Event()
@@ -321,7 +316,7 @@ def roupas_dos_jogos(
     """
     try:
         from .prontuario_dos_jogos import jogos_instalados
-    except ImportError:  # pragma: no cover - executado como script avulso
+    except ImportError:  # pragma: no cover
         from prontuario_dos_jogos import jogos_instalados  # type: ignore[no-redef]
     na_lista = {str(a) for a in steam_input}
     opcoes = _opcoes_de_lancamento(home)

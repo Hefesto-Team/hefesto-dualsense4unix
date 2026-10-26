@@ -31,8 +31,7 @@ Cobertura, toda pelo caminho PÚBLICO:
 
 MACs fake (regra da casa).
 """
-# ruff: noqa: E501 — as amostras de `pactl` e do `default-routes` são cópias
-# FIÉIS da saída desta máquina, e o nome do card do DualSense sozinho já passa
+# ruff: noqa: E501
 from __future__ import annotations
 
 import subprocess
@@ -461,7 +460,6 @@ def _rodar_doctor(func: str, *args: str, entrada: str | None = None) -> str:
     return res.stdout.strip("\n")
 
 
-#: o DualSense MUDO (o estado do relato) e o restante intacto.
 _ROTAS_MUDAS = """\
 [default-routes]
 alsa_card.pci-0000_0a_00.1:output:hdmi-output-0={"channelMap":["FL", "FR"], "mute":false}
@@ -537,7 +535,6 @@ class TestNomeDaSource:
         assert _rodar_doctor("_dualsense_source_nome", entrada=so_onboard + "\n") == ""
 
 
-#: Recorte fiel de `LC_ALL=C pactl list cards` desta máquina, com o DualSense no
 _CARDS_SPDIF = """\
 Card #52
 \tName: alsa_card.pci-0000_0c_00.4

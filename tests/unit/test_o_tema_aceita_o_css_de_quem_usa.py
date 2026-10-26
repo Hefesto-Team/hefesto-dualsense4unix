@@ -42,16 +42,16 @@ TEMA_CLARO = (":root{--app-bg:#eef0f5;--panel:#ffffff;--elevated:#f5f6fa;--fg:#1
               "--fundo-da-pagina:#dde1ea;--green:#1d7a3c;--cyan:#006d85;--purple:#6a3dc2;"
               "--orange:#a35200;--pink:#ad2f6c;--red:#c01f2e;--yellow:#7a6400}")
 OPCAO_DO_CSS = {"id": "meu_css", "rotulo": "Usar o meu CSS", "tipo": "css",
-                "padrao": False}  # (noqa-acento): chave
+                "padrao": False}  # (noqa-acento)
 BASE = {"id": "tema-x", "nome": "Tema X", "api": ">=2,<3", "licenca": "MIT",
-        "versao": "1.0.0",  # (noqa-acento): chave
+        "versao": "1.0.0",  # (noqa-acento)
         "tipos": ["tema"], "tema": {"arquivo": "tema.css"},
-        "permissoes": ["tema"],  # (noqa-acento): chave
-        "opcoes": [OPCAO_DO_CSS]}  # (noqa-acento): chave
+        "permissoes": ["tema"],  # (noqa-acento)
+        "opcoes": [OPCAO_DO_CSS]}  # (noqa-acento)
 
 
 def _lugares(raiz: Path) -> instalador.Lugares:
-    return instalador.Lugares(codigo=raiz / "codigo",  # (noqa-acento): argumento
+    return instalador.Lugares(codigo=raiz / "codigo",  # (noqa-acento)
                               dados=raiz / "dados",
                               registro=raiz / "mods.json", estado=raiz / "estado.json")
 
@@ -63,7 +63,7 @@ def _instalada(lg: instalador.Lugares, mod_id: str = "tema-x", *, com_opcao: boo
     pasta.mkdir(parents=True, exist_ok=True)
     (pasta / "tema.css").write_text(TEMA_CLARO, encoding="utf-8")
     manifesto = {**BASE, "id": mod_id, "nome": f"Tema {mod_id}",
-                 "opcoes": [OPCAO_DO_CSS] if com_opcao else []}  # (noqa-acento): chave
+                 "opcoes": [OPCAO_DO_CSS] if com_opcao else []}  # (noqa-acento)
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
     registro = instalador.ler_registro(lg.registro)
     registro[mod_id] = instalador.Entrada(
@@ -86,9 +86,6 @@ def _ligar_a_opcao(lg: instalador.Lugares, valor: bool = True, mod_id: str = "te
 @pytest.fixture
 def lg(tmp_path: Path) -> instalador.Lugares:
     return _lugares(tmp_path)
-
-
-# --- a folha: o que entra, e como ---------------------------------------------------------
 
 
 def test_toda_declaracao_ganha_o_important_para_vencer_a_pagina() -> None:
@@ -158,9 +155,6 @@ def test_passar_de_16_kb_recusa_sem_ler() -> None:
     assert achado.value.curta == "Passa de 16 KB"
 
 
-# --- o arquivo ----------------------------------------------------------------------------
-
-
 def test_garantir_cria_o_exemplo_uma_vez_e_nunca_reescreve(lg: instalador.Lugares) -> None:
     alvo = meu_css.garantir("tema-x", lg)
     assert alvo == lg.dados / "tema-x" / "meu.css"
@@ -198,16 +192,13 @@ def test_ler_diz_quando_nao_e_utf8(lg: instalador.Lugares) -> None:
     assert "não pôde ser lido" in ilegivel.recusa and ilegivel.recusa_curta == "Não abriu"
 
 
-# --- o manifesto e a opção ----------------------------------------------------------------
-
-
 def test_a_opcao_css_so_cabe_em_tema_e_so_uma() -> None:
     assert Manifesto.model_validate(BASE).opcao_do_css is not None
-    sem_tema = {**BASE, "tipos": ["processo"], "tema": {}, "permissoes": [],  # (noqa-acento): chave
+    sem_tema = {**BASE, "tipos": ["processo"], "tema": {}, "permissoes": [],  # (noqa-acento)
                 "processo": {"executar": ["python3", "m.py"]}}
     with pytest.raises(ValueError, match="css"):
         Manifesto.model_validate(sem_tema)
-    duas = {**BASE, "opcoes": [OPCAO_DO_CSS,  # (noqa-acento): chave
+    duas = {**BASE, "opcoes": [OPCAO_DO_CSS,  # (noqa-acento)
                                {**OPCAO_DO_CSS, "id": "outro"}]}
     with pytest.raises(ValueError, match="css"):
         Manifesto.model_validate(duas)
@@ -220,9 +211,6 @@ def test_a_opcao_css_nasce_desligada_e_so_aceita_ligado_ou_desligado(
     assert opcoes.ler(manifesto, lg)["meu_css"] is False
     with pytest.raises(instalador.InstalacaoRecusadaError, match="ligado ou desligado"):
         opcoes.guardar(manifesto, "meu_css", "talvez", lg)
-
-
-# --- o tema da casa -----------------------------------------------------------------------
 
 
 def test_a_opcao_desligada_tira_o_css_e_ligada_o_poe(lg: instalador.Lugares) -> None:
@@ -291,13 +279,11 @@ def test_o_meu_css_sobrevive_a_instalar_de_novo(lg: instalador.Lugares, tmp_path
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
     instalador.instalar(str(pasta), lugares=lg)
     meu = _escrever(lg, ".a{color:red}", "tema-y")
-    manifesto["versao"] = "1.0.1"  # (noqa-acento): chave
+    manifesto["versao"] = "1.0.1"  # (noqa-acento)
     (pasta / "hefesto-mod.json").write_text(json.dumps(manifesto), encoding="utf-8")
     instalador.instalar(str(pasta), lugares=lg)
     assert meu.read_text(encoding="utf-8") == ".a{color:red}", "a atualização apagou o meu.css"
 
-
-# --- a janela de configurar e o gesto -----------------------------------------------------
 
 INTERFACE = (pathlib.Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
              / "interface")
@@ -354,8 +340,10 @@ def test_a_janela_traz_o_botao_a_chave_e_a_nota_da_recusa(lar: Any, ctx: Any) ->
 def test_a_recusa_e_curta_e_vermelha_na_tela_e_longa_so_no_log(
         lar: Any, ctx: Any, capsys: pytest.CaptureFixture[str]) -> None:
     """A tela diz «Linha 2: url()» na cor de erro da casa (``--red``); a frase longa vai ao
-    stderr da janela, com o nome da extensão."""
-    # D-2210-O-CSS-DE-QUEM-USA-ENTRA-POR-CIMA-DO-TEMA.
+    stderr da janela, com o nome da extensão.
+
+    Prova da D-2210-O-CSS-DE-QUEM-USA-ENTRA-POR-CIMA-DO-TEMA.
+    """
     from hefesto_dualsense4unix.interface import janela as janela_gtk
 
     _instalada(lar)
@@ -416,8 +404,6 @@ def test_a_chave_do_css_liga_e_desliga_pelo_guardar(lar: Any, ctx: Any) -> None:
     manifesto = instalador.manifesto_instalado("tema-x", lugares=lar)
     assert opcoes.ler(manifesto, lar)["meu_css"] is True
 
-
-# --- a página: o que o WebKit pinta -------------------------------------------------------
 
 _SONDA = r"""
 import json

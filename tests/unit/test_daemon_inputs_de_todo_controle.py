@@ -98,7 +98,7 @@ class _ReaderDeGamepadFalso:
     def stop(self) -> None:
         self.parado = True
 
-    def set_grab(self, grab: bool) -> bool:  # pragma: no cover - nunca chamado
+    def set_grab(self, grab: bool) -> bool:  # pragma: no cover
         self.grabs.append(grab)
         return True
 

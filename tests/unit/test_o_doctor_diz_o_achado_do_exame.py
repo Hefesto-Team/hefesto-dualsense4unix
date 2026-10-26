@@ -34,8 +34,8 @@ def _rodar(censo: dict) -> str:
 
 def _censo(*porques: str) -> dict:
     """Um censo de mentira com N ordens — todas com o MESMO rótulo."""
-    return {"veredito": "atencao",  # (noqa-acento): valor do JSON, ASCII
-            "itens": [{"chave": f"r{i}", "estado": "atencao",  # (noqa-acento): valor do JSON
+    return {"veredito": "atencao",  # (noqa-acento)
+            "itens": [{"chave": f"r{i}", "estado": "atencao",  # (noqa-acento)
                        "rotulo": "Mudança recomendada", "porque": p}
                       for i, p in enumerate(porques)]}
 

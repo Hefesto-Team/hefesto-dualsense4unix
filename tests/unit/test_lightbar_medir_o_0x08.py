@@ -76,7 +76,7 @@ class _HandleFalso:
     def __init__(self) -> None:
         self.reports: list[list[int]] = []
 
-    def writeReport(self, dados: list[int]) -> None:  # noqa: N802 (API do upstream)
+    def writeReport(self, dados: list[int]) -> None:  # noqa: N802
         self.reports.append(list(dados))
 
 

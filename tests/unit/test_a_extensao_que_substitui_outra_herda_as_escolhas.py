@@ -32,7 +32,7 @@ NOVA = "ponte-unica"
 
 def _opcao(opcao_id: str, tipo: str, valor: Any, **mais: Any) -> dict[str, Any]:
     return {"id": opcao_id, "rotulo": opcao_id, "tipo": tipo,
-            "padrao": valor, **mais}  # (noqa-acento): chave
+            "padrao": valor, **mais}  # (noqa-acento)
 
 
 OPCOES_DA_ANTIGA = [
@@ -48,7 +48,7 @@ OPCOES_DA_NOVA = [
 
 
 def _lugares(raiz: Path) -> Lugares:
-    return Lugares(codigo=raiz / "codigo", dados=raiz / "dados",  # (noqa-acento): argumento
+    return Lugares(codigo=raiz / "codigo", dados=raiz / "dados",  # (noqa-acento)
                    registro=raiz / "mods.json", estado=raiz / "estado.json")
 
 
@@ -61,11 +61,11 @@ def _pasta(raiz: Path, mod_id: str, *, versao: str = "1.0.0",
     pasta.mkdir(parents=True, exist_ok=True)
     (pasta / "mod.py").write_text("import time\nwhile True:\n    time.sleep(1)\n", encoding="utf-8")
     manifesto: dict[str, Any] = {
-        "id": mod_id, "nome": f"Extensão {mod_id}", "versao": versao,  # (noqa-acento): chave
+        "id": mod_id, "nome": f"Extensão {mod_id}", "versao": versao,  # (noqa-acento)
         "api": ">=2,<3", "licenca": "MIT", "tipos": ["processo"],
         "processo": {"executar": ["python3", "mod.py"]},
-        "permissoes": list(permissoes),  # (noqa-acento): chave
-        "opcoes": opcoes_ or [],  # (noqa-acento): chave
+        "permissoes": list(permissoes),  # (noqa-acento)
+        "opcoes": opcoes_ or [],  # (noqa-acento)
     }
     if substitui:
         manifesto["substitui"] = list(substitui)
@@ -114,12 +114,9 @@ def _publicar_a_nova(tmp_path: Path, **mais: Any) -> Path:
     return _pasta(tmp_path, NOVA, versao="2.0.0", substitui=(ANTIGA,), **mais)
 
 
-# --- as escolhas -------------------------------------------------------------------------
-
-
 def test_a_escolha_que_a_nova_aceita_passa_e_a_que_nao_aceita_fica_no_padrao(
         lg: Lugares, tmp_path: Path, antiga_com_escolhas: None) -> None:
-    # D-2210-A-LOVENSE-E-UMA-EXTENSAO-SO.
+    """Prova da D-2210-A-LOVENSE-E-UMA-EXTENSAO-SO."""
     _nova_que_ja_estava(lg, tmp_path, ligada=False)
     instalador.instalar(str(_publicar_a_nova(tmp_path)), lugares=lg)
     nova = instalador.manifesto_instalado(NOVA, lugares=lg)
@@ -162,9 +159,6 @@ def test_a_instalacao_nova_sem_a_antiga_instalada_segue_sem_erro(lg: Lugares,
     assert _guardado(lg, NOVA) == {}
 
 
-# --- a antiga sai --------------------------------------------------------------------------
-
-
 def test_a_antiga_sai_com_codigo_dados_e_registro(
         lg: Lugares, tmp_path: Path, antiga_com_escolhas: None) -> None:
     assert (lg.codigo / ANTIGA).is_dir() and (lg.dados / ANTIGA).is_dir()
@@ -190,9 +184,6 @@ def test_a_antiga_que_nao_para_segura_a_troca_inteira(
     assert registro[ANTIGA].ligada, "a antiga volta a seguir ligada"
     assert NOVA not in registro
     assert (lg.codigo / ANTIGA).is_dir()
-
-
-# --- ligada, desligada e o «sim» -------------------------------------------------------------
 
 
 def test_a_antiga_ligada_liga_a_nova_que_ja_tinha_o_sim(
@@ -243,17 +234,13 @@ def test_a_atualizacao_sozinha_nao_leva_embora_a_extensao_de_ninguem(
     assert (lg.codigo / ANTIGA).is_dir()
     nova = instalador.ler_registro(lg.registro)[NOVA]
     assert nova.versao_esperando == "2.0.0"
-    # a frase vai à dica do «Atualizar»: quem usa conhece a extensão pelo nome
     assert nova.motivo_da_espera == f"A versão 2.0.0 toma o lugar de «Extensão {ANTIGA}».", (
         nova.motivo_da_espera)
 
 
-# --- a régua do manifesto ------------------------------------------------------------------
-
-
 def _manifesto(**mais: Any) -> dict[str, Any]:
-    base = {"id": NOVA, "nome": "Nova", "versao": "2.0.0", "api": ">=2,<3",  # (noqa-acento): chave
-            "licenca": "MIT", "tipos": ["tema"], "permissoes": ["tema"]}  # (noqa-acento): chave
+    base = {"id": NOVA, "nome": "Nova", "versao": "2.0.0", "api": ">=2,<3",  # (noqa-acento)
+            "licenca": "MIT", "tipos": ["tema"], "permissoes": ["tema"]}  # (noqa-acento)
     return {**base, **mais}
 
 

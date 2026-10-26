@@ -64,7 +64,7 @@ class _FakeTrigger:
         self.mode: object = None
         self.forces: list[int] = [0] * 7
 
-    def setForce(self, idx: int, value: int) -> None:  # noqa: N802 — API pydualsense
+    def setForce(self, idx: int, value: int) -> None:  # noqa: N802
         self.forces[idx] = value
 
 
@@ -73,7 +73,7 @@ class _FakeLight:
         self.colors: list[tuple[int, int, int]] = []
         self.playerNumber: object = None
 
-    def setColorI(self, r: int, g: int, b: int) -> None:  # noqa: N802 — API pydualsense
+    def setColorI(self, r: int, g: int, b: int) -> None:  # noqa: N802
         self.colors.append((r, g, b))
 
 
@@ -81,7 +81,7 @@ class _FakeAudio:
     def __init__(self) -> None:
         self.mic_led_history: list[bool] = []
 
-    def setMicrophoneLED(self, flag: bool) -> None:  # noqa: N802 — API pydualsense
+    def setMicrophoneLED(self, flag: bool) -> None:  # noqa: N802
         self.mic_led_history.append(flag)
 
 
@@ -100,10 +100,10 @@ class _FakeHandle:
         self.conType = type("CT", (), {"name": transporte})()
         self._throttle_sec = REPORT_THREAD_THROTTLE_SEC
 
-    def setLeftMotor(self, intensity: int) -> None:  # noqa: N802 — API pydualsense
+    def setLeftMotor(self, intensity: int) -> None:  # noqa: N802
         self.left_motor.append(intensity)
 
-    def setRightMotor(self, intensity: int) -> None:  # noqa: N802 — API pydualsense
+    def setRightMotor(self, intensity: int) -> None:  # noqa: N802
         self.right_motor.append(intensity)
 
     def close(self) -> None:

@@ -17,11 +17,8 @@ from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[2]
 
-# `rm` (qualquer flag) numa linha que fala de /var/lib/bluetooth/.../cache.
 _RM_NO_CACHE = re.compile(r"\brm\b[^\n]*?/var/lib/bluetooth[^\n]*?/cache")
 
-# O que o BlueZ não expõe e a ponte privilegiada paga: a remoção do cache da ORIGEM, em disco,
-# dentro de `_apagar` (que recusa tudo fora da forma esperada). Nada mais.
 _ISENTOS = {"scripts/bt_ponte_privilegiada.sh"}
 
 
@@ -61,11 +58,6 @@ def test_a_regua_enxerga_o_conselho_antigo() -> None:
     assert _acha("busctl call org.bluez /org/bluez/hci0 org.bluez.Adapter1 RemoveDevice o /x") == []
 
 
-# A premissa em prosa: o cache SDP «sai junto», «é apagado», «envenena o pareamento seguinte», ou,
-# sem ele apagado, «o pareamento novo nasce com SDP vazio» (a forma do comentário da camada de
-# máquina até 07/10). A frase pode quebrar a linha, e a quebra traz o `#` do comentário, o `*`
-# do bloco ou o `print("` seguinte: a régua tira esse começo e esse fim de cada linha, junta tudo
-# e casa com `\s+` entre as palavras.
 _PREMISSA = re.compile(
     r"apagar\s+o\s+cache\s+SDP"
     r"|cache\s+SDP\s+(?:tem\s+de\s+sair|sai)\s+junto"
@@ -75,12 +67,6 @@ _PREMISSA = re.compile(
     re.IGNORECASE,
 )
 
-# O desenho congelado de 24/08 é a especificação executável do motor e guarda a frase velha de
-# propósito; o desenho vivo (a bancada) é varrido. A cópia publicada nasce dele pelo `--publicar`
-# e a régua da igualdade (`test_arranjo_invariantes`) as mantém iguais, então varrer a bancada
-# basta. O gerador carrega a frase velha como âncora da edição que a troca (`antes`) e como o
-# motivo dela (`porque`): é onde a frase PRECISA estar. Todo desenho vivo da bancada é varrido,
-# não só o do mapa: a premissa num desenho vizinho engana igual.
 _DESENHOS = tuple(sorted(str(p.relative_to(RAIZ)) for p in (RAIZ / "mockup").glob("*.html")))
 _ISENTOS_DA_PREMISSA = _ISENTOS | {"src/hefesto_dualsense4unix/interface/pagina_do_mapa.py"}
 

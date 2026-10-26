@@ -64,9 +64,6 @@ class TestPresets:
         assert mult == pytest.approx(0.55)
 
 
-# do state_full). Políticas fixas o deixavam INTOCADO, preso no default 0.7:
-
-
 class TestMultEfetivoObservavel:
     """Toda política sincroniza o estado observável com o mult efetivo."""
 

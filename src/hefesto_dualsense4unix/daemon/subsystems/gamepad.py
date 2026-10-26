@@ -80,7 +80,6 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-#: "botão de força" da GUI (re-selecionar DualSense). O precheck
 REBACKEND_COOLDOWN_SEC = 30.0
 
 LAUNCH_RECONCILE_INTERVAL_SEC = 1.0
@@ -93,14 +92,12 @@ EMU_RECUSADO_STEAM_INPUT = "recusado_steam_input"
 EMU_FALHOU = "falhou"
 EMU_DESLIGADO = "desligado"
 
-#: o `PRAZO_DO_P1_QUE_NASCE_S` mora no protocolo do IPC, ao lado do teto da interface
 _PASSO_DA_ESPERA_DO_P1_S = 0.01
 
 DESFECHOS_EMULACAO_ATIVA = frozenset(
     {EMU_APLICADO, EMU_JA_ESTAVA, EMU_BLOQUEADO_POR_JOGO}
 )
 
-#:   - ``"gesto_de_perfil"`` — o usuário ATIVOU um perfil na mão (`profile.switch` da
 ORIGENS_GESTO_DELA = frozenset({"manual", "gesto_de_perfil"})
 
 ORIGENS_QUE_PASSAM_COM_O_JOGO: dict[str, str] = {
@@ -163,7 +160,6 @@ def _broker_sync_grab(daemon: DaemonProtocol, grab: bool) -> None:
         if grab:
             if daemon.is_native_mode():
                 return
-            # O raciocínio
             node = hidraw_fn()
             if isinstance(node, str) and node:
                 broker_call_nonblocking(daemon, lambda: client.hide(node))
@@ -352,8 +348,6 @@ def vpad_vivo(device: Any) -> bool:
         return False
     if getattr(device, "_started", None) is not False:
         return True
-    # O pad em USB nasce com `_started` False e só o ganha quando o gadget
-    # enumera (~9 s): em enumeração ele está vivo, não morto.
     return getattr(device, "gadget_enumerando", False) is True
 
 
@@ -654,9 +648,6 @@ def apply_game_rumble(
 
         destinos = quem_recebe_sem_dono(controller)
         if destinos:
-            # Sem endereço, numa mesa que se escreve por controle: cada um
-            # recebe o pedido com a força DELE (a bateria, a peça e o teto), e
-            # não a do primário em todos. Devolve o par do primeiro.
             pares = [
                 apply_game_rumble(daemon, weak, strong, target_uniq=uniq)
                 for uniq in destinos
@@ -686,7 +677,7 @@ def apply_game_rumble(
         motores = chegou = mistura.motores
 
     efetivo = _entregar_o_rumble(controller, target_uniq, motores, chegou)
-    dizer_a_vibracao(  # `motores`: o que ficou no HID, a que o toque do gesto soma
+    dizer_a_vibracao(
         daemon, target_uniq, (weak, strong), efetivo, motores=motores if target_uniq else efetivo,
         jogo=None if mistura is None else mistura.jogo,
         toques=None if mistura is None else mistura.toques,
@@ -718,7 +709,6 @@ def _entregar_o_rumble(
     efetivo: tuple[int, int],
 ) -> tuple[int, int] | None:
     """Escreve o par no controle (por endereço, quando pedido). ``None`` = nada foi escrito."""
-    # Any: o targeting por-uniq é opcional no backend (só o PyDualSense o
     rumble_for: Any = getattr(controller, "set_rumble_for", None)
     if target_uniq is not None:
         if callable(rumble_for):
@@ -763,7 +753,6 @@ def _levar_a_haptica_fina(
         return False
     e_xbox = getattr(vpad, "backend", None) == "uinput"
     converte = e_xbox or _a_vibracao_vai_pelo_audio(alto_falante, target_uniq)
-    # O-RUMBLE-DO-JOGO-XBOX-GANHA-O-TIMBRE-DO-ESTILO-01: a onda do periódico que o jogo pediu.
     onda = getattr(vpad, "onda_do_periodico", None) if e_xbox else None
     extra: dict[str, Any] = {"onda": onda} if isinstance(onda, str) else {}
     vivo = bool(weak or strong) and not e_xbox
@@ -780,7 +769,7 @@ def _levar_a_haptica_fina(
     except Exception as exc:
         logger.debug("haptica_fina_do_rumble_falhou", err=str(exc))
         return False
-    if e_xbox:  # A-VIBRACAO-FINA-BATE-A-CADA-TIRO-01: a borda do rumble vira tiro.
+    if e_xbox:
         from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import anotar_o_rumble
         fraco_cru, forte_cru = cru if cru is not None else (weak, strong)
         anotar_o_rumble(daemon, target_uniq, fraco_cru, forte_cru, efetivo=(weak, strong))
@@ -863,12 +852,10 @@ def end_game_output_session(daemon: DaemonProtocol, *, target_uniq: str | None =
     _esquecer_o_numero_do_jogo(daemon, target_uniq)
     if target_uniq is not None:
         soltar_a_ativacao(daemon, target_uniq)
-        # O clique travado não sobrevive ao jogo que fechou.
         from hefesto_dualsense4unix.daemon.subsystems.mouse import soltar_o_cursor
 
         soltar_o_cursor(daemon)
         esquecer_a_vibracao(daemon, target_uniq)
-        # O gatilho e o envelope do jogo zeram com a sessão: quem ouve recebe o zero.
         _esquecer_os_eventos_do_jogo(daemon, target_uniq)
     fn: Any = getattr(daemon.controller, "end_game_session_for", None)
     if target_uniq is None or not callable(fn):
@@ -948,7 +935,6 @@ def notify_vpad_degradado(
     secundários em `CoopManager._promote_player`) — nunca no `state_full` a
     10 Hz (seria flood, a mesma regra do `dedup_broken` do DEDUP-06).
     """
-    # O-NUMERO-DO-JOGADOR-SE-REORGANIZA-NA-HORA-E-O-JOGO-VE-01, cura 2: ``player``
     campos = {"indice": indice} if indice is not None else {}
     logger.warning("vpad_degradado", player=player, motivo=motivo, **campos)
     bus = getattr(daemon, "bus", None)
@@ -1007,9 +993,6 @@ def dedup_status(daemon: DaemonProtocol) -> tuple[bool, list[str]]:
     efetiva: list[int] = []
 
     def _sem_o_dono(vpad: Any) -> bool:
-        # D-2210-O-FISICO-SE-ESCONDE-PELO-DONO: o pad vestido de DualSense comum só
-        # conta como coberto com o dono escondendo o físico (`a_roupa_que_o_pad_veste`);
-        # sem isso, o motivo é `roupa_sem_o_dono` (`jogador_<N>_roupa_sem_o_dono` no co-op).
         if not a_roupa_mudou(vpad, ROUPA_PADRAO):
             return False
         if not efetiva:
@@ -1047,8 +1030,6 @@ def controller_allows_uhid(daemon: DaemonProtocol) -> bool:
     return callable(getattr(daemon.controller, "hidraw_path", None))
 
 
-#: Por quanto tempo vale a resposta do broker à pergunta da roupa: os juízes de
-#: recriação perguntam a cada ciclo, e o ``ping`` é uma ida e volta pelo socket.
 BROKER_ATENDE_VALE_S = 2.0
 
 
@@ -1062,7 +1043,7 @@ def _o_broker_atende(daemon: Any) -> bool:
         return bool(visto[1])
     try:
         atende = bool(broker_client_for(daemon).is_available())
-    except Exception as exc:  # o broker que não responde não esconde nada
+    except Exception as exc:
         logger.debug("roupa_o_broker_nao_respondeu", err=str(exc))
         atende = False
     try:
@@ -1081,7 +1062,7 @@ def _o_fisico_esta_exposto(daemon: Any) -> bool:
         return False
     try:
         return bool(pergunta())
-    except Exception as exc:  # na dúvida, exposto: o pad veste o Edge
+    except Exception as exc:
         logger.debug("roupa_o_modo_nativo_nao_respondeu", err=str(exc))
         return True
 
@@ -1302,8 +1283,6 @@ def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
     if not controller_allows_uhid(daemon):
         return False
     if device is None:
-        # VPAD-09: sem device NENHUM. Se a emulação está desligada por escolha,
-        # não há o que reviver; se está ligada na config, o start do boot
         if not getattr(daemon.config, "gamepad_emulation_enabled", False):
             return False
         now = time.monotonic()
@@ -1315,7 +1294,6 @@ def upgrade_primary_vpad_to_uhid(daemon: DaemonProtocol) -> bool:
             "vpad_revivendo_pos_falha_total",
             flavor=getattr(daemon.config, "gamepad_flavor", None),
         )
-        # o start não opina, e o modo que o perfil escolheu voltava ao DualSense.
         return start_gamepad_emulation(
             daemon,
             origin="profile",
@@ -1401,7 +1379,7 @@ def start_motion_reader(daemon: DaemonProtocol, device: Any) -> None:
     reader = PhysicalReportReader(
         path_provider=_primary_hidraw, vpad=device, opener=make_broker_opener(daemon)
     )
-    if not reader.start():  # pragma: no cover - start() atual nunca falha
+    if not reader.start():  # pragma: no cover
         return
     daemon._motion_reader = reader
     attach: Any = getattr(daemon.controller, "attach_motion_reader", None)
@@ -1440,9 +1418,6 @@ def anotar_rumble_no_vpad(vpad: Any, efetivo: tuple[int, int] | None) -> None:
 def make_primary_rumble_sink(daemon: DaemonProtocol) -> Callable[[int, int], None]:
     """Sink de FF do vpad do P1 → rumble físico do controle PRIMÁRIO."""
 
-    # O-P1-VIBRA-NO-APARELHO-DELE-COMO-OS-OUTROS-01: o dono se lê a cada pedido, como
-    # a entrada do pad 1 (o dono do posto), porque o pad 1 sobrevive à troca do
-    # primário; na vaga, o MAC do ausente não casa e o pedido cai com log.
     def _sink(weak: int, strong: int) -> None:
         uniq = getattr(daemon.controller, "primary_uniq", None)
         vpad = getattr(daemon, "_gamepad_device", None)
@@ -1586,7 +1561,7 @@ def _ha_jogo_em_foco(daemon: DaemonProtocol) -> bool:
         return False
     try:
         return bool(olhar())
-    except Exception as exc:  # pragma: no cover — detector de janela é frágil
+    except Exception as exc:  # pragma: no cover
         logger.debug("jogo_em_foco_indisponivel", err=str(exc))
         return False
 
@@ -1912,18 +1887,15 @@ def start_gamepad_emulation_desfecho(
             )
         )
     ):
-        # o mesmo pedido de novo (o relógio da identidade, o duplo clique): o que nasce vale
         return EMU_APLICADO
     _largar_o_p1_que_nasce(daemon)
 
     existing = daemon._gamepad_device
     if existing is not None:
-        # DualSense caía aqui: a máscara efetiva não muda, a função voltava
         mesmo_aparelho = (
             quer_uhid(caminho_do_vpad(existing), mascara_do_p1) == uhid_pedido
             and not o_aparelho_mudou(existing, caminho_pedido, mascara_do_p1)
         )
-        # o terceiro termo do juiz: a roupa (D-2210-O-PAD-SE-RECONHECE-PELA-POSSE)
         roupa_mudou = a_roupa_mudou(existing, roupa)
         mesmo_canal = mesmo_aparelho and not roupa_mudou
         if (
@@ -1962,10 +1934,6 @@ def start_gamepad_emulation_desfecho(
 
         stop_mouse_emulation(daemon, persist=False)
 
-    # (DualSense com hidraw de verdade = vibração in-game na máscara DualSense)
-    # O-PAD-DEGRADADO-DO-P1-DIZ-A-CARTA-01: a carta se pergunta UMA vez e vale para o
-    # nome do pad (o uhid e o gadget em USB levam o mesmo `player`) e para a linha
-    # da degradação; sem mesa, o 1 nos dois.
     carta = numero_do_nome_do_primario(daemon)
     contexto = OP1QueNasce(
         key=key,
@@ -1998,18 +1966,12 @@ def start_gamepad_emulation_desfecho(
                     save_gamepad_emulation,
                 )
 
-                # medido na bancada: o gesto com que o usuário diz «Sony DualSense»
-                # `gamepad.mask.set`, que grava no registro por aparelho.
                 if flavor is not None:
                     save_gamepad_emulation(True, key)
                 else:
                     _preferencia, gravada = load_gamepad_preference()
                     save_gamepad_emulation(True, gravada)
 
-    # No laço do asyncio (`o_p1_nasce_pelo_fio`), com o fio de nascimento no ar, o pad
-    # é pedido na fila do coop e se instala no tique seguinte à entrega: o desfecho é
-    # «aplicado» já no pedido, e o de verdade fica no contexto (a IPC o espera, e o
-    # que vem depois dele vai a `contexto.depois`). Fora do laço, nasce na hora.
     if o_p1_nasce_pelo_fio(daemon, no_tique=no_tique):
         from hefesto_dualsense4unix.daemon.subsystems.coop import get_coop_manager
 
@@ -2069,7 +2031,6 @@ def _instalar_o_p1(
     daemon._gamepad_device = device
     motivo_da_queda = motivo_da_degradacao(device)
     if motivo_da_queda is not None:
-        # logou, o degrau vira contador no store (doctor) e o `state_full` expõe
         store = getattr(daemon, "store", None)
         if store is not None:
             with contextlib.suppress(Exception):
@@ -2280,7 +2241,6 @@ def aplicar_o_movimento(
             return lx, ly, rx, ry
         arranjo = peca
 
-        # A mão escolhida manda o giro feito analógico para o lado que sobra do olhar.
         destino = curva_do_analogico.lado_do_giro(store, uniq, arranjo.destino)
         if destino != arranjo.destino:
             arranjo = replace(arranjo, destino=destino)
@@ -2500,7 +2460,7 @@ def _bater_os_eventos_do_jogo(daemon: Any) -> None:
         daemon._appid_dos_eventos_do_jogo = appid
         if anterior is not None:
             _esquecer_os_eventos_do_jogo(daemon)
-    except Exception as exc:  # o tique do gamepad não cai por causa de quem escuta
+    except Exception as exc:
         logger.debug("eventos_do_jogo_no_tique_falharam", err=str(exc))
 
 
@@ -2515,20 +2475,15 @@ def dispatch_gamepad(
     if device is None:
         return
     buttons_pressed, soltos = _apertos_do_primario(daemon, device, buttons_pressed)
-    # As teclas dos acionadores do P1 entram como a mão: o resto da cadeia as trata como botão.
     andar_os_acionadores(daemon)
     buttons_pressed = com_os_acionadores(daemon, primary_identity(daemon), buttons_pressed)
-    # O gesto do PS fica com o Hefesto: o R3 do PS + R3 não chega ao jogo.
     com_o_ps = buttons_pressed
     buttons_pressed = sem_o_gesto_do_ps(daemon, primary_identity(daemon), buttons_pressed)
-    # A Navegação Interna com a janela na frente: o que navega não vai ao jogo (D-22).
     buttons_pressed, soltos = roubar_o_que_navega(daemon, buttons_pressed, soltos)
-    # O Modo Big Picture com a Steam na frente: o que navega vira tecla e não vai ao pad.
     buttons_pressed, soltos = levar_o_big_picture(daemon, None, buttons_pressed, soltos)
     store = getattr(daemon, "store", None)
     try:
         l2, r2 = cortar_pelo_limiar(store, primary_identity(daemon), state.l2_raw, state.r2_raw)
-        # O gesto dos acessórios (PS + R2 e companhia): o eixo do gatilho dele também não chega.
         l2, r2 = sem_o_eixo_do_gesto(
             daemon, primary_identity(daemon), com_o_ps, (state.l2_raw, state.r2_raw), l2, r2
         )
@@ -2610,7 +2565,6 @@ def _a_inclinacao(
         return lx, ly, rx, ry
     ler = getattr(hub, "velocidade_do_movimento", None)
     giro = roteador.descontar_o_vies(store, uniq, ler(uniq)) if callable(ler) else None
-    # Sem giro e sem o «Mesmo parado», a chamada é a de antes: ninguém para.
     extra: dict[str, Any] = {}
     if giro is not None:
         extra["giro"] = giro
@@ -2621,7 +2575,6 @@ def _a_inclinacao(
     dh, dv = roteador.deflexao_da_inclinacao(acel, neutro, arranjo, parada=parada)
     if dh == 0 and dv == 0:
         return lx, ly, rx, ry
-    # A mão manda a inclinação ao mesmo lado que manda o giro: o analógico virtual é um só.
     destino = curva_do_analogico.lado_do_giro(store, uniq, arranjo.acelerometro)
     if destino == roteador.DESTINO_ANALOGICO_DIREITO:
         rx, ry = roteador.misturar(rx, ry, dh, dv)
@@ -2728,8 +2681,6 @@ def _conferir_o_cursor_do_toque(daemon: Any, store: Any) -> None:
     except Exception as exc:
         logger.warning("cursor_do_toque_conferir_falhou", err=str(exc))
 
-
-# Com pad virtual DualSense, a luz e o mudo do microfone que o jogo pede vão
 
 _RETIDO_JA_DITO: set[str] = set()
 
@@ -2985,25 +2936,8 @@ def _selo_do_que_vale(nome: str | None) -> Any:
     return (maquina, selo)
 
 
-# --- Os acionadores: um aparelho de entrada qualquer vira botões de um controle -----------------
-#
-# OS-ACIONADORES-USB-ENTRAM-COMO-BOTOES-DO-CONTROLE-01. A pessoa escolhe, na linha do aparelho da
-# aba Conexões, de qual controle as teclas dele viram botões (``maquina.json``, ``acionadores``).
-# A ponte acha o aparelho pelo que o kernel diz dele em ``/sys/class/input`` (vendor, product,
-# nome e caminho físico, pela ``utils/maquina.chave_do_acionador``), lê as teclas sem bloquear a
-# cada tique e as soma aos botões que a mão aperta naquele controle, no P1 e no co-op, antes de
-# todo o resto da cadeia (o filtro, a troca e a ativação tratam a tecla como tratam o botão).
-# Fora do jogo o aparelho continua sendo o que é para o resto do sistema; com um jogo em foco ele
-# fica preso (EVIOCGRAB), para a tecla não chegar duas vezes ao jogo (a tecla e o botão).
-
-#: De quanto em quanto tempo a ponte procura o aparelho declarado que ainda não está aberto.
 PROCURAR_O_ACIONADOR_A_CADA_S = 3.0
-#: O teto da espera entre os pedidos do aparelho que o sistema não deixa ler. Cada recusa no
-#: mesmo nó dobra a espera, de ``PROCURAR_O_ACIONADOR_A_CADA_S`` até aqui: cada pedido abre uma
-#: conexão com o broker, e a recusa que não muda não enche o diário dele nem o do daemon. O
-#: aparelho que volta à porta (outro nó) ou a declaração refeita se pedem na hora.
 REPEDIR_O_RECUSADO_ATE_S = 300.0
-#: De quanto em quanto tempo a ponte pergunta se há jogo em foco (prende ou solta o aparelho).
 OLHAR_O_FOCO_A_CADA_S = 1.0
 _EV_KEY = 1
 
@@ -3028,9 +2962,7 @@ class PonteDosAcionadores:
         self._relogio = relogio or time.monotonic
         self._abertos: dict[str, _AcionadorAberto] = {}
         self._declarados: dict[str, Any] = {}
-        # Os aparelhos cuja falta de permissão já foi dita no diário (uma vez por aparelho).
         self._sem_permissao: set[str] = set()
-        # chave -> (o nó que recusou, quantas recusas seguidas nele, quando foi a última)
         self._recusas: dict[str, tuple[str, int, float]] = {}
         self._procurou_em: float | None = None
         self._olhou_o_foco_em: float | None = None
@@ -3125,7 +3057,6 @@ class PonteDosAcionadores:
     def _ler(self, chave: str) -> None:
         aberto = self._abertos[chave]
         try:
-            # `read_one` devolve None quando a fila do nó está vazia (o nó não bloqueia).
             while (ev := aberto.dispositivo.read_one()) is not None:
                 if getattr(ev, "type", None) != _EV_KEY:
                     continue
@@ -3134,7 +3065,6 @@ class PonteDosAcionadores:
                 else:
                     aberto.apertadas.add(int(ev.code))
         except OSError as exc:
-            # O aparelho saiu da porta: a tecla que ele segurava solta com ele.
             logger.info("acionador_saiu", evento=aberto.evento, err=str(exc))
             self._fechar(chave)
 
@@ -3152,7 +3082,6 @@ class PonteDosAcionadores:
         aberto = self._abertos.pop(chave, None)
         if aberto is None:
             return
-        # O nó que já saiu da porta recusa o `ungrab` e o `close` com OSError: nada a soltar.
         if aberto.preso:
             with contextlib.suppress(OSError):
                 aberto.dispositivo.ungrab()

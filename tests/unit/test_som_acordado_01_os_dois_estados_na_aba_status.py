@@ -41,7 +41,6 @@ def _gtk_pronto() -> bool:
 
 pytestmark = pytest.mark.skipif(not _gtk_pronto(), reason="sem GTK/display utilizável")
 
-#: Os nomes REAIS dos dois sinks de DualSense desta bancada, copiados de
 SINK_P1 = (
     "alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_"
     "Controller-00.analog-surround-40"
@@ -286,7 +285,7 @@ class _MonitorDeMentira:
 
 
 class _SlotComAttach:
-    def attach(self, *_a: Any, **_k: Any) -> None:  # pragma: no cover - inerte
+    def attach(self, *_a: Any, **_k: Any) -> None:  # pragma: no cover
         raise AssertionError("rebuild não devia acontecer com as chaves estáveis")
 
 

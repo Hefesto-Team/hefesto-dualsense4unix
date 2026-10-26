@@ -41,12 +41,8 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 JANELA = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "janela.py"
 FIM = re.compile(r"\[janela\] fechou: (?P<motivo>.+) · aberta há (?P<s>\d+) s")
-# Quem pode encerrar o laço: o `fechar` (o caminho) e o `_ao_destruir` (o destroy que ele dispara).
 PODEM_ENCERRAR_O_LACO = {"fechar", "_ao_destruir"}
 PRAZO_DO_FILHO_S = 90
-
-
-# --- 1. a estrutura: um lugar só encerra o laço (sem GTK) ------------------------------------
 
 
 def quem_encerra_o_laco(fonte: str) -> set[str]:
@@ -117,8 +113,6 @@ def test_mordida_main_quit_solto_de_volta_reprova_a_estrutura(quem: str) -> None
 
 
 INTERFACE = JANELA.parent
-# Fora da `JanelaDaAba`, só o laço ANINHADO que espera o WebKit começar (ele devolve o controle ao
-# `main`, que roda o laço de verdade depois): não é saída da interface.
 PODEM_ENCERRAR_UM_LACO_FORA_DA_JANELA = {"hefesto_vivo.py:_esperar_o_webkit_comecar"}
 
 
@@ -166,9 +160,6 @@ def test_mordida_o_sair_do_piloto_sem_o_fechar_reprova() -> None:
     assert "hefesto_vivo.py:Piloto._sair" in quem_encerra_o_laco_fora_da_janela(
         mordida, "hefesto_vivo.py"
     )
-
-
-# --- 2. o comportamento: o prazo e a carga morta destroem a janela dentro do laço -------------
 
 
 def _sem_gi_real() -> bool:

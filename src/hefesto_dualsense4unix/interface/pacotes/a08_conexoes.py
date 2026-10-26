@@ -32,17 +32,14 @@ from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 
 from . import TODOS_OS_LUGARES, Contexto, em_fundo, fios, nome_do_jogador, perfil, registrar
 
-#: `state_full` (`radio_ar`, `radio_governador`), que o daemon publica.
 SEM_DONO: dict[str, str] = {}
 
 
-#: que a mudam — ler o disco duas vezes por segundo para pintar dois `<select>`
 _DECLARACAO: object | None = None
 
 _MESA_DO_RADIO: object | None = None
 
 
-#: O que só o exame COMPLETO traz: `pareamentos`, `vizinhanca_das_portas` e as
 _EXTRAS: tuple[object, ...] = ()
 
 _ORDENS_NA_TELA: tuple[Any | None, ...] = ()
@@ -61,7 +58,6 @@ DICA_DO_DESFAZER = "Traz esta recomendação de volta para a lista."
 
 _EXAME_PEDIDO: bool = False
 
-#: O ``state_full`` do último tique desta aba. O exame completo roda numa
 _ULTIMO_ESTADO: dict[str, Any] = {}
 
 _DONGLES: Any = None
@@ -178,8 +174,6 @@ def _a_pergunta() -> str:
         return ""
 
 
-#: ela produz vira uma PERGUNTA na tela (`— Webcam? —`), nunca uma resposta.
-#: continua em "— O que é? —", que é a verdade. Sugerir "Wi-Fi" a partir da
 _SUGESTAO_DO_KERNEL: dict[str, str] = {
     "Câmera": "Webcam",
     "Áudio": "Caixa de som",
@@ -276,8 +270,6 @@ def _mesa_declarada(declaracao: Any) -> dict[str, Any]:
         return {}
 
 
-#: janela estável tem `("nao_sei", "Não sei")` nas duas perguntas
-#: no `machine_declare` — a string `"nao_sei"` faria o pydantic recusar o
 _ID_NAO_SEI = "nao_sei"
 
 
@@ -431,7 +423,7 @@ _SELO_DESCONHECIDO = ("info", "NOTA")
 
 ENDERECO_DO_VEREDITO = {
     "certo": "veredito-certo",
-    "atencao": "veredito-atencao",  # (noqa-acento) chave de máquina, ASCII por contrato
+    "atencao": "veredito-atencao",  # (noqa-acento)
     "problema": "veredito-problema",
     "nao_sei": "veredito-nao-sei",
 }
@@ -769,7 +761,7 @@ def _o_painel_das_dicas(vivos: list[Any], cena: dict[str, Any] | None) -> Any:
             de, para = _a_ordem_na_tela(ordem)
             cartoes.append(dicas.dica_da_ordem(
                 ordem, estado, slot=slot, calada=_ordem_calada(ordem), de=de, para=para,
-                cura=_a_cura(str(getattr(ordem, "acao", "") or "")),  # (noqa-acento): campo
+                cura=_a_cura(str(getattr(ordem, "acao", "") or "")),  # (noqa-acento)
                 dica_de_ignorar=DICA_DO_IGNORAR, dica_de_voltar=DICA_DO_DESFAZER))
         else:
             cartoes.append(dicas.dica_da_conferencia(
@@ -796,7 +788,7 @@ class _ItemDeOrdem:
     """Uma ordem sozinha na forma de ``Item`` — o que a bancada e as réguas entregam."""
 
     ordem: Any
-    estado: str = "atencao"  # (noqa-acento): chave de máquina do exame
+    estado: str = "atencao"  # (noqa-acento)
     chave: str = ""
     rotulo: str = ""
     porque: str = ""
@@ -853,7 +845,6 @@ def _linha(item: Any) -> dict[str, Any]:
         "selo": _selo_do_estado(estado)[1],
         "classe": _selo_do_estado(estado)[0],
         "dica": _dica_da_linha(item),
-        # (`ajustar`, `atencao`) são achados de verdade.  # (noqa-acento) id
         "grave": estado.lower() not in {"certo", ""},
         "ordem": "" if ordem is None else str(ordem.chave),
         "arranjo": "" if ordem is None else str(ordem.arranjo),
@@ -1028,8 +1019,6 @@ def _html_dos_aparelhos() -> str:
     return "\n".join(fora)
 
 
-#: A ordem em que a família dos botões se escreve: sul, leste, oeste, norte, a
-#: mesma de ``mesa_viva.LETRAS_DA_FACE`` (e do ✕ ○ □ △ do DualSense).
 _FACE_DO_EXTERNO = ("cross", "circle", "square", "triangle")
 
 
@@ -1095,16 +1084,10 @@ def marcas_do_externo(entrada: dict[str, Any], elemento: str) -> tuple[str, str]
     return atributos, botoes
 
 
-#: O que o controle externo pode DECLARAR na Conexões, e o gesto de cada campo. A chave
-#: física (`modo`) e o desenho dos botões vêm do `ControleDeclarado`; a cor, dos nomes de
-#: fábrica. Vazio na lista = «não sei», e grava `None` (apaga o campo).
 _MODOS_DO_EXTERNO = (("xinput", "XInput"), ("dinput", "DInput"), ("switch", "Switch"))
 _FAMILIAS_DO_EXTERNO = ("xbox", "nintendo")
 GESTOS_DO_EXTERNO = {"modo": "externo-modo", "botoes": "externo-botoes",
                      "cor": "externo-cor"}
-#: O rótulo da lista da chave física. NÃO é «Modo»: na casa, Modo é como o controle chega ao
-#: jogo (Jogar pelo Hefesto, Conexão Nativa…), e a mesma palavra para o XInput/DInput/Switch do
-#: externo faria as duas coisas parecerem uma (o glossário, `docs/A-LINGUA-DESTA-CASA-…`).
 ROTULO_DA_CHAVE_DO_EXTERNO = "Chave"
 
 
@@ -1170,11 +1153,6 @@ def declaracao_do_externo_para_editar(entrada: dict[str, Any]) -> str:
         + "</span>")
 
 
-#: O símbolo do sprite (`aba08.SPRITE_DOS_EXTERNOS`) de cada forma que tem desenho, pela marca de
-#: `external_controllers.brand_of` (o dono único; o OUI do 8BitDo vence o VID do modo Switch). O
-#: desenho do Pro Controller só vale para o Pro Controller: o Joy-Con, também da Nintendo, não tem
-#: aquela forma. O que não tem desenho próprio (Joy-Con, HORI, PowerA, Valve, o genérico) leva o
-#: contorno genérico, que não afirma modelo nenhum, e o nome do modelo fica na dica.
 SIMBOLO_DO_EXTERNO = {_marcas.MARCA_XBOX: "ext-xbox", _marcas.MARCA_8BITDO: "ext-8bitdo"}
 SIMBOLO_DO_PRO = "ext-pro"
 SIMBOLO_GENERICO = "ext-generico"
@@ -1207,7 +1185,6 @@ def desenho_do_externo(entrada: dict[str, Any]) -> str:
             f'<svg aria-hidden="true"><use href="#{simbolo_do_externo(entrada)}"/></svg></span>')
 
 
-#: O prazo de cada ``mods.agora`` da Conexões, e de quanto em quanto a lista se relê.
 PRAZO_DO_AGORA_DAS_EXTENSOES_S = 1.0
 VALIDADE_DO_AGORA_DAS_EXTENSOES_S = 2.0
 
@@ -1252,8 +1229,6 @@ def _ler_o_agora_das_extensoes() -> list[tuple[str, dict[str, Any]]]:
             continue
         corpo = ipc_bridge._corpo_do_daemon(
             "mods.agora", {"mod": mod_id}, timeout=PRAZO_DO_AGORA_DAS_EXTENSOES_S)
-        # Parada pelo «Parar tudo» (``ligado`` falso), ela segue com o adaptador e o aparelho
-        # ligados: a linha fica. A que não está conectada volta o estado vazio, sem item.
         if isinstance(corpo, dict):
             saida.append((manifesto.nome, corpo))
     return saida
@@ -1273,7 +1248,7 @@ def html_do_agora_das_extensoes(lidos: list[tuple[str, dict[str, Any]]]) -> str:
     linhas: list[str] = []
     for nome, estado in lidos:
         via = f'<span class="ext-via">via {html.escape(nome)}</span>'
-        for c in exp.itens_do_estado(estado, "conexoes"):  # (noqa-acento): a chave do estado
+        for c in exp.itens_do_estado(estado, "conexoes"):  # (noqa-acento)
             est = str(c.get("estado") or "ligado")
             if est == "desligado":
                 continue
@@ -1348,7 +1323,6 @@ def _html_dos_externos(ctx: Contexto) -> str:
         return html.escape(str(x), quote=True)
 
     fora = []
-    # O teto de quatro (A-TELA-MOSTRA-NO-MAXIMO-QUATRO-CONTROLES-01): sem número, sem cartão.
     for entrada in externos_na_mesa(None, ctx.externos):
         aviso = nintendo_bt_warning(entrada)
         linha_do_aviso = (f'<span class="ext-aviso">{_e(aviso)}</span>'
@@ -1373,8 +1347,6 @@ RENOMEAR_DICA = (
 )
 
 
-# AS TRÊS FUNÇÕES ABAIXO TÊM DOIS CHAMADORES E UM DONO, e é o molde que a
-# `a04_iluminacao.um_botao_de_player` já provou: o gerador `aba08.py` as chama
 def _cor_desconhecida() -> str:
     from hefesto_dualsense4unix.interface import mesa_viva
 
@@ -1399,11 +1371,9 @@ def rotulo_curto_do_controle(c: Any) -> str:
     return f'{plastico}{c.get("via") or ""}'
 
 
-#: porque a folha dela pinta o ponto mais apagado que o texto em volta. As duas
 _PONTO = ' <span class="pt">•</span> '
 
 
-#: A recusa estava registrada em `SEM_GESTO` e só aparecia no terminal, a cada
 FALA_DO_BOTAO_DO_MIC = {
     True: "O computador inteiro",
     False: "Só este controle",
@@ -1455,13 +1425,6 @@ def colorway_do_controle(m: Any) -> str:
     return str(m.get("cor") or "")
 
 
-# de 2»), e o que não cabe vira o pedido do governador (`radio_governador`).
-
-# A CADEIA JÁ EXISTIA INTEIRA, e nada dela é desta leva. O que faltava era a
-
-
-# `controller.target.set`, o daemon obedece, e no tique seguinte a tela
-# aba. Substituído no lugar, e não guardado ao lado.
 TODOS_NA_TELA = "todos"
 
 
@@ -1520,7 +1483,6 @@ def _alvo_de_saida(ctx: Contexto) -> list[str]:
     return ["sim" if onde and lugar == onde else "" for lugar in lugares]
 
 
-# primeiros vêm do `state_full` pelos donos de `app/actions/`, e os dois
 def _sem_valor() -> str:
     """`monta.NADA_A_DIZER` — o marcador que faz a `.ressalva` SUMIR."""
     return str(_monta().NADA_A_DIZER)
@@ -1699,8 +1661,6 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
         eu = da_mesa.get(uniq) or {}
         colunas[uniq] = {
             "via": (c.get("transport") or "").upper(),
-            # A BATERIA COMO A TELA A ESCREVE — `Controle.texto_da_bateria`, o
-            # ninguém leu em vez de um número herdado. Ela era o `battery_pct`
             "bateria": _texto_da_bateria(c.get("battery_pct")),
             "nome": (nome_com_a_bateria(rotulo_curto_do_controle(eu), c.get("battery_pct"))
                      if eu else ""),
@@ -1726,19 +1686,15 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
         "aparelhos": _html_dos_aparelhos(),
         **confissao,
         "dicas": _html_das_dicas(vivos, _CENA_NA_TELA),
-        # pelo «Examinar Entradas». (noqa-acento: citação literal)
         **_sala_na_tela(declaracao),
         "externos-lista": _html_dos_externos(ctx),
         "extensoes-lista": _html_do_agora_das_extensoes(),
         "mic-escopo": escopo_do_botao_do_mic(st),
         **radio,
         "alvo-aberto": _alvo_de_saida(ctx),
-        #
-        # (`status_actions.texto_de_controle_nao_adotado`).
         "sem-driver": _frase_do_sem_driver(st),
         "radio-fragil": _frase_do_radio_fragil(st),
         "sem_dono": {},
-        # que o `alvo-aberto` marca — as ressalvas contam mesmo caladas, porque
         "cobertura": {"pintados": 1 + 2 + 5 + len(confissao)
                       + 1 + 13
                       + sum(len(v) for v in colunas.values()),
@@ -1746,26 +1702,9 @@ def _o_pacote(ctx: Contexto, medida: _MedidaDoTique) -> dict[str, Any]:
     }
 
 
-#      a trava de `vizinho-o-que-e`, que está ligado.
-#      (`Disconnect` do BlueZ por D-Bus, `integrations/gesto_de_reconexao.py`).
-#      **Foi exatamente essa a cura de `vizinho-o-que-e`**: em vez de ligar o
 from . import gesto  # noqa: E402
 from .a02_controles import mudo as _o_mudo_da_aba_02  # noqa: E402
 
-# `integrations/gesto_de_reconexao.py`, que roda `busctl` e não passa pelo
-# de quem faça. O `gesto_de_reconexao` faz, é puro, mascara o endereço e devolve
-#: Vazio desde 08/10/2026 (AS-QUATRO-LINHAS-DA-08-SEM-DONO-GANHAM-DONO-OU-SAEM-DO-DESENHO-01):
-#: nenhum botão do desenho da 08 fica sem atendente. Os quatro que ficavam saíram do gerador, pela
-#: razão que cada um já trazia, e o que o produto sabe fica como marca, sem botão:
-#: * `novo-hub` («Acrescentar hub»): a `LogicaDoMapa` não tem `acrescentar_hub` e a pergunta
-#:   «ligado em que entrada» não tinha onde ser feita; o botão saiu, e a face «Hubs e extensões»
-#:   continua a mostrar o que há;
-#: * `custo-som` e `custo-vibracao`: a ponte de rádio sobe quando o JOGO manda som ou vibração ao
-#:   controle (`radio_governador`) e não há interruptor por controle; um botão que a desligasse
-#:   brigaria com o jogo no tique seguinte. Viraram marcas (`<span data-ligada>`) que mostram qual
-#:   das duas a ponte carrega, com a dica de sempre;
-#: * `custo-luz`: a barra de luz não custa rádio que se meça (viaja no relatório de saída que o
-#:   controle já recebe), e o interruptor dela mora na aba Iluminação. Virou marca.
 SEM_GESTO: dict[str, str] = {}
 
 
@@ -1950,11 +1889,6 @@ def _slot(o: dict[str, Any], quantos: int, quem: str) -> int:
     return posicao
 
 
-# A ponte do microfone POR CONTROLE (`ControleDeclarado.microfone` no `maquina.json`, decisão de
-# 22/08/2026) saiu da aba em 20/10/2026 (o gesto não tinha botão): vale só pela configuração da
-# máquina (`machine.declare`). Só o `False` desliga (a inversão de 18/09, `bt_mic.uniqs_recusados`).
-
-
 def _declarar_do_externo(ctx: Contexto, o: dict[str, Any], p: Any, campo: str,
                          validos: set[str]) -> None:
     """Grava ``controles[chave].<campo>`` de um controle externo, pelo `machine.declare`.
@@ -2006,8 +1940,6 @@ def externo_cor(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _declarar_do_externo(ctx, o, p, "cor", set(_nomes_de_cor_do_externo()))
 
 
-# `entrada_a_entrada.dar_nome_ao_adaptador`, e é o mesmo da janela estável
-
 GESTO_DO_APELIDO = "adaptador-renomear"
 
 
@@ -2058,7 +1990,6 @@ def aparelho_tipo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     declaracao = {"aparelhos": {chave: {"tipo": escolha}}}
     ok, motivo = _resposta(p.machine_declare(declaracao))
     if not ok and not motivo:
-        # Hefesto desligado: a escolha desce ao disco, que o daemon lê ao ligar (como `_declarar`).
         perfil._com_o_src()
         from hefesto_dualsense4unix.integrations.lugar_declarado import declarar_a_maquina
 
@@ -2096,8 +2027,6 @@ def acionador_nova_tecla(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, 
         frase_da_recusa_de_ler,
     )
 
-    # O nó se abre aqui, não na thread: o que o sistema não deixa ler falha o clique, em vez de
-    # a espera morrer calada e o botão parecer morto. A frase de cada recusa é do dono da abertura.
     try:
         dispositivo = (_ABRIR_O_EVENTO or abrir_o_aparelho_de_entrada)(evento)
     except OSError as exc:
@@ -2241,10 +2170,8 @@ def _correr_o_exame_completo() -> None:
 
     mesa = _mesa_declarada(declaracao)
     itens = exame_da_mesa.exame(
-        # linha `vizinhanca_das_portas` do próprio Check-up. É o que fecha o
         altura_da_antena=mesa.get("altura_da_antena"),
         linha_de_visada=mesa.get("linha_de_visada"),
-        # `exame_da_mesa.exame` explica que o catálogo varre o barramento
         leitura_das_ordens=_leitura_das_ordens_da_maquina(declaracao),
     )
     if not itens:
@@ -2362,7 +2289,7 @@ def _conferencia_da_leitura(state: dict[str, Any] | None, *,
               f"{broker.linha_do_grab('o nó do controle principal', broker.GRAB_SEM_NO)}",
               file=sys.stderr)
     return Item(chave=CHAVE_DA_LEITURA, rotulo=ROTULO_DA_LEITURA,
-                estado="atencao",  # (noqa-acento): chave de máquina do exame
+                estado="atencao",  # (noqa-acento)
                 porque=f"{linha}.", cura=_o_porque_e_a_cura_do_dono()[1] or None)
 
 
@@ -2411,7 +2338,6 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
             "Esta linha é uma conferência, não um conselho — não há o que "
             "dispensar. Só as mudanças recomendadas se calam.")
     chave, arranjo = str(ordem.chave), str(ordem.arranjo)
-    # :func:`_ordem_calada`.
     desfazendo = _ordem_calada(ordem)
     quando = "" if desfazendo else date.today().isoformat()
     guardar = "" if desfazendo else arranjo
@@ -2419,11 +2345,6 @@ def ignorar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         chave: {"quando": quando, "arranjo": guardar}}})
     _DISPENSADAS[chave] = guardar
     _reler_a_declaracao()
-
-
-# deduzido: as chaves de topo do `state_full` do daemon vivo são 47, e nenhuma
-# delas é `mapa` nem `maquina`. O caminho é `machine_declare` →
-# `_handle_machine_declare` (`daemon/ipc_handlers.py:5021`) → `maquina.json`, e
 
 
 def _gravar_o_mapa(p: Any) -> None:
@@ -2557,7 +2478,6 @@ def nova_face(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     _gravar_o_mapa(p)
 
 
-#
 import threading  # noqa: E402
 from collections.abc import Callable  # noqa: E402
 
@@ -2629,7 +2549,6 @@ _LARGURA_DA_PONTE = round((FATIAS_DA_PONTE + 1) * HZ_DA_PONTE, 1)
 
 SEGURE = "Segure PS + Create"
 NOMEAR = "Nomear"
-#: o nome do adaptador na faixa quando ele não tem nome nem entrada lida.
 ADAPTADOR_SEM_NOME = "Adaptador"
 ONDE_FICA = "Onde fica?"
 MARCA_VARRENDO = ("Outro programa está procurando aparelhos por aqui. "
@@ -2653,25 +2572,15 @@ CONECTADO = "Conectado"
 USB = "USB"
 ESQUECER = "Esquecer"
 MENU_DA_LINHA = "\u22ee"
-#: os dois o «Tentar de Novo» aparecia aceso e tremia.
 ESPERA_NA_TELA_S = _central_do_radio.PRAZO_DO_PENDENTE_S
 LEMBRA_O_NAO_CONECTOU_S = _central_do_radio.LEMBRA_O_NAO_CONECTOU_S
 VOLTAS_DO_VIGIA_NA_TELA = 3
 
-#: A CATEGORIA DO APARELHO DE BAIXA ENERGIA QUE NÃO DIZ O TIPO
-#: (O-ACESSORIO-SEM-TIPO-GANHA-CATEGORIA-E-SINAL-NA-CONEXOES-01): o nome «Acessório» é do
-#: usuário (09/10/2026, 16h). O glifo, a palavra, a cor e a legenda dela moram nesta tabela só,
-#: e as tabelas por tipo abaixo a leem. Quem dá a categoria é a cena, onde o tipo e o enlace se
-#: encontram (:func:`_com_a_categoria_do_enlace`), nunca o nome ou a marca do aparelho. As cores
-#: são os tokens da raiz da aba (O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01): o valor mora em
-#: `aba08.CORES_NA_SALA` e `aba08.CORES_NA_REGUA`, onde um tema também os alcança.
 TIPO_ACESSORIO = "acessorio"
 CATEGORIA_ACESSORIO = {"glifo": "acessorio", "palavra": "acessório", "legenda": "Acessório",
                        "cor": f"var(--sala-{TIPO_ACESSORIO})",
                        "cor_na_regua": f"var(--c-{TIPO_ACESSORIO})"}
 
-#: O glifo de cada tipo, numa tabela só: a antena (`radio`) é do adaptador e de
-#: mais ninguém, e o tipo sem desenho (`outro`, `nao_sei`, o que ninguém nomeou) é o «?».
 GLIFO_DO_TIPO = {
     "teclado": "teclado", "mouse": "mouse", "caixa": "caixa", "caixa_de_som": "caixa",
     "fone": "fone", "webcam": "webcam", "wifi": "wifi", "celular": "celular",
@@ -2696,17 +2605,12 @@ PALAVRA_DO_TIPO = {"teclado": "teclado", "mouse": "mouse", "fone": "fone",
                    TIPO_ACESSORIO: CATEGORIA_ACESSORIO["palavra"], "gamepad": "controle",
                    "entrada": "aparelho de entrada"}
 
-#: A grade «O que é este aparelho?» (desenho do todo, 13/10/2026): `(rótulo, guardado, glifo)`.
-#: O que se guarda é o ``AparelhoDeclarado.tipo`` do ``maquina.json``; «Controle» desenha-se na
-#: linha com o glifo do DualSense, mas o aparelho NÃO vira o controle do Hefesto (sem ponte, sem
-#: perfil): quem a pessoa diz que é controle de outra marca é só um aparelho com nome.
 TIPOS_DA_GRADE: tuple[tuple[str, str, str], ...] = (
     ("Controle", "controle", "ds"), ("Fone", "fone", "fone"), ("Caixa de som", "caixa", "caixa"),
     ("Teclado", "teclado", "teclado"), ("Mouse", "mouse", "mouse"),
     ("Celular", "celular", "celular"), ("Relógio", "relogio", "relogio"),
     ("Acessório", TIPO_ACESSORIO, "acessorio"), ("Outro", "outro", "ajuda"),
 )
-#: O que se guarda → o tipo que a linha usa (só «controle» muda de nome).
 TIPO_DA_LINHA_PELA_ESCOLHA = {"controle": "gamepad"}
 SEM_TIPO = "Sem tipo"
 SEM_TIPO_DICA = "O Bluetooth não disse o que ele é"
@@ -2727,17 +2631,8 @@ def html_da_grade_de_tipos() -> str:
         '<a class="tn-x" href="#" data-dica="Fechar">\u00d7</a></div>'
         f'<div class="tn-corpo"><div class="tipo-grade">{opcoes}</div></div>'
         '</div></div>')
-# --- Os acionadores: um aparelho de entrada vira botões de um controle -----------------------
-#
-# OS-ACIONADORES-USB-ENTRAM-COMO-BOTOES-DO-CONTROLE-01 (desenho r3-08-14). A linha do aparelho de
-# entrada leva «Usar como botões de…», que abre a janela `#acionador`: a lista das teclas, o
-# controle que as recebe (pelo plástico) e o desenho real do DualSense, onde cada tecla escolhe o
-# botão em que cai. O «Guardar» grava no `maquina.json` pelo `machine.declare` que já existe
-# (`acionadores`, `utils/maquina.AcionadorDeclarado`); o daemon acha o aparelho pelo `/sys` e
-# soma a tecla ao pad virtual (`daemon/subsystems/gamepad.PonteDosAcionadores`).
 
 TIPO_ENTRADA = "entrada"
-#: o que não fala pelo ar e só ocupa a porta: sem «⋮», sem mover e fora da régua do ar.
 SO_OCUPA_A_PORTA = frozenset({"webcam", TIPO_ENTRADA})
 USAR_COMO_BOTOES = "Usar como botões de…"
 DICA_DO_USAR_COMO = "As teclas dele viram botões de um controle"
@@ -2746,7 +2641,6 @@ TITULO_DO_ACIONADOR = "{nome} · usar como botões de"
 DICA_DO_ACIONADOR = "Aperte uma tecla do acionador e clique no botão do controle onde ela cai"
 ESPERAR_A_TECLA = "Esperar a próxima tecla"
 ROTULO_DA_TECLA = "Tecla {n}"
-#: quanto tempo o «Esperar a próxima tecla» espera, em segundos, numa thread (nunca no tique).
 ESPERA_DA_TECLA_S = 10.0
 _BRILHO_DO_DESTINO = "{{filter:drop-shadow(0 0 1.2px #bd93f9) drop-shadow(0 0 2.4px #bd93f9)}}"
 _CODIGO_DE_TECLA = re.compile(r"^[0-9]{1,3}$")
@@ -2791,7 +2685,6 @@ class _Rascunho:
     chave: str
     nome: str
     controle: str
-    #: ``[código evdev, rótulo, botão do pad ou None]``, na ordem em que a tecla chegou
     teclas: list[list[Any]] = _dataclasses.field(default_factory=list)
     sel: int | None = None
     esperando: bool = False
@@ -2865,7 +2758,6 @@ def campos_do_acionador(cena: dict[str, Any]) -> dict[str, Any]:
         "acionador-quem": html_de_quem_recebe(r, _quem_recebe(cena)),
         "acionador-teclas": html_das_teclas(r),
         "acionador-brilho": css_do_brilho(r),
-        # O desenho veste o plástico do controle escolhido (`data-colorway`, a folha da página).
         "acionador-desenho": (cena.get("colorway_de") or {}).get(r.controle, "") if r else "",
     }
 
@@ -2946,7 +2838,6 @@ def _colorways_da_mesa(ctx: Contexto) -> dict[str, str]:
     return {_so_hex(str(m.get("uniq") or "")).lower(): colorway_do_controle(m) for m in ctx.mesa}
 
 
-#: Onde a espera da tecla acha e abre o aparelho; a régua troca os dois por dublês.
 _RAIZ_DAS_ENTRADAS: Any = None
 
 
@@ -2965,7 +2856,6 @@ def _esperar_a_tecla(r: _Rascunho, dispositivo: Any, prazo_s: float = ESPERA_DA_
     """Lê o aparelho já aberto (sem prender) e guarda a primeira tecla apertada; fecha no fim."""
     try:
         fim = time.monotonic() + prazo_s
-        # A espera dorme no nó até ter evento ou o prazo vencer, sem o teto 1023 do `select`.
         while (restante := fim - time.monotonic()) > 0:
             if not prontos_para_ler([dispositivo.fd], restante):
                 return
@@ -2995,21 +2885,16 @@ def _o_rascunho() -> _Rascunho:
     return r
 
 
-#: ``054C``): o DualSense e o Edge seguram PS + Create; o DualShock 4, PS +
 BOTOES_DE_PAREAR = {"0ce6": "PS + Create", "0df2": "PS + Create",
                     "05c4": "PS + Share", "09cc": "PS + Share"}
 ICONE_DO_CUSTO = {"mic": "mic", "som": "som", "haptica": "vibra"}
 NOME_DO_CUSTO = {"mic": "microfone", "som": "som", "haptica": "vibração"}
-#: A cor de cada tipo na sala é o NOME do token (``--sala-<tipo>``), nunca o hex: o valor mora na
-#: raiz da folha da aba (`aba08.CORES_NA_SALA`), e é ali que um tema de cores o troca.
 COR_DO_TIPO = {
     tipo: f"var(--sala-{tipo})"
     for tipo in ("teclado", "mouse", "webcam", "caixa", "fone", "outro", "celular", "relogio",
                  "gamepad")
 }
 COR_DO_TIPO[TIPO_ACESSORIO] = CATEGORIA_ACESSORIO["cor"]
-#: o aparelho de entrada (o acionador) pinta com o token da webcam, como no desenho aprovado
-#: (r3-08-14): ele não é tipo com cor própria, e nenhum `--sala-entrada` nasce no tema
 COR_EMPRESTADA = {"entrada": "webcam"}
 ARTIGO_DO_TIPO = {"caixa": "a", "webcam": "a"}
 PASSAGEIROS = (("giro", "Giroscópio e acelerômetro"), ("touch", "Touchpad"),
@@ -3032,9 +2917,7 @@ def _ic(nome: str, classe: str = "") -> str:
     return f'<svg class="i{extra}" aria-hidden="true"><use href="#rd-{nome}"/></svg>'
 
 
-#: o tooltip do ponto que pulsa (desenho aprovado de 05/10/2026)
 PEDINDO_PARA_PAREAR = "Pedindo para parear"
-#: o nome do controle que pede para parear quando ele só anuncia o nome de fábrica
 CONTROLE_SEM_NOME = "Controle"
 
 
@@ -3206,14 +3089,13 @@ def _dica_do_movimento_da_linha(ap: dict[str, Any], cena: dict[str, Any], nivel:
 def _hz_da_ponte(ap: dict[str, Any]) -> str:
     """A taxa que a ponte escreve AGORA: vazio quando ela cede (pela fila ou pelo sinal) ou
     sem medida (o piloto põe o travessão); `HZ_DA_PONTE` é só o alvo de projeto, do desenho."""
-    if "hz_ponte" not in ap:  # o desenho: sem governador, a taxa de projeto
+    if "hz_ponte" not in ap:
         return _hz(HZ_DA_PONTE)
     if ap.get("ponte_pausada") or ap.get("ponte_cedendo"):
         return ""
     return _hz(ap.get("hz_ponte"))
 
 
-#: A última vez em que a ponte de cada controle foi vista cedendo (pela fila ou pelo sinal).
 _PONTE_CEDEU_EM: dict[str, float] = {}
 
 
@@ -3562,9 +3444,6 @@ def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any], com_hz: bool = Fals
         lampada = (f'<button class="lampada{apagado}" title="Quem funciona melhor aqui" '
                    f'aria-label="Quem funciona melhor aqui" data-gesto="sugerir-alocacao" '
                    f'data-alvo="{lid}">{_ic("lampada")}</button>')
-    # O adaptador sem nada dentro não abre (19/10/2026, a foto da aba Conexões): a seta fica
-    # apagada e o corpo vazio não ocupa a linha. O escolhido para o Conectar abre mesmo vazio:
-    # é nele que o aparelho novo vai chegar.
     vazio = (not moradores and not lampada
              and cena.get("destino_do_conectar") != lug["id"])
     aberto = cena.get("aberto") == lug["id"] and not vazio
@@ -3606,8 +3485,6 @@ def html_do_lugar(lug: dict[str, Any], cena: dict[str, Any], com_hz: bool = Fals
         + _marcas_de_onde(lug, cena) + sino + _barra_do_lugar(lug, cena)
         + _conta_do_lugar(lug, cena) + "</div>")
     linhas = "".join(html_da_linha(ap, cena, com_hz) for ap in moradores)
-    # sem «Arraste outro para cá» (desenho aprovado de 05/10/2026): a linha se arrasta, e o
-    # Enter nela abre «Para onde vai»
     fila = f'<div class="soltar-fila">{lampada}</div>' if lampada else ""
     corpo = f'<div class="aparelhos" data-alvo="{lid}">{linhas}{fila}</div>'
 
@@ -3927,11 +3804,8 @@ def _canais_do_lugar_html(lug: dict[str, Any], cena: dict[str, Any]) -> str:
             f'{_ic("radio")}{canais}/{CANAIS_DO_BT}</span>')
 
 
-#: O tipo que tem cor própria na régua (a folha da seção define ``--c-<tipo>``); o resto cai
-#: em ``outro``. O controle leva o plástico dele, lido do aparelho.
 TIPOS_COM_COR_NA_REGUA = frozenset({
     "celular", "relogio", TIPO_ACESSORIO, "fone", "caixa", "teclado", "mouse", "wifi", "ruido"})
-#: A legenda do título: quem é o tipo e como ele se chama na tela.
 LEGENDA_DAS_FAIXAS = (
     ("controle", "Controles"), ("celular", "Celular"), ("relogio", "Relógio"),
     (TIPO_ACESSORIO, CATEGORIA_ACESSORIO["legenda"]),
@@ -4039,14 +3913,9 @@ def _a_saude_do_wifi(rede: dict[str, Any], usb3: bool) -> tuple[Any, str, str]:
 
 
 _DESCOBERTA = receptor_sem_fio.Descoberta()
-#: de quanto em quanto a porta se relê enquanto o «Descobrir a faixa» anda (só então).
 RELER_A_PORTA_NO_GESTO_S = 2.0
-#: De quanto em quanto as três conferências do tique se releem no fundo.
 CONFERENCIAS_S = 1.0
-#: o último vizinho que o gesto viu na porta: com o receptor TIRADO a linha dele some do censo, e
-#: é nela que o passo («Medindo sem ele…», «Ponha o receptor de volta») se diz.
 _VISTO_NO_GESTO: dict[str, dict[str, Any]] = {}
-#: quem guarda a banda achada em disco (a régua injeta o dela: nenhum teste escreve no config).
 _GRAVAR_A_BANDA: Callable[[Any], Any] | None = None
 
 
@@ -4119,7 +3988,6 @@ def _o_botao_da_descoberta(linha: Any) -> tuple[str, str]:
     if passo in (receptor_sem_fio.PASSO_TIRE, receptor_sem_fio.PASSO_PONHA,
                  receptor_sem_fio.PASSO_MEDINDO_SEM, receptor_sem_fio.PASSO_MEDINDO_COM):
         return receptor_sem_fio.FRASE_DO_PASSO[passo], ""
-    # a frase do passo que não achou é da descoberta («Não achei…»); a tela diz sem primeira pessoa
     frase = FAIXA_NAO_ENCONTRADA if passo == receptor_sem_fio.PASSO_NADA else linha.sem_faixa
     return frase, receptor_sem_fio.BOTAO_DE_COMECAR
 
@@ -4170,7 +4038,6 @@ def _os_outros_radios(cena: dict[str, Any]) -> list[tuple[Any, str]]:
     return saida
 
 
-#: o que é aparelho USB e não fala pelo ar: não ganha linha entre os sem fio (05/10/2026).
 NAO_SAO_SEM_FIO = frozenset({"webcam", "caixa_de_som", "caixa"})
 
 
@@ -4242,22 +4109,14 @@ def _o_selo(selo: Any, titulo: str = "") -> str:
     return f'<span class="ar-selo {nivel}"{dica}>{_x(selo.texto)}</span>'
 
 
-#: o tooltip do ponto verde e do vazado (desenho aprovado de 05/10/2026: o verde já diz «bom»).
 TUDO_CERTO = "Tudo certo"
 FAIXA_NAO_DESCOBERTA = "Faixa ainda não descoberta · clique para descobrir"
-#: A medida da faixa lê o mapa de canais que o adaptador evita, e esse mapa só existe com algum
-#: aparelho conectado pelo Bluetooth (não só o controle). Por isso a frase pede o aparelho
-#: (08/10/2026).
 FAIXA_NAO_ENCONTRADA = "Precisa de um aparelho no Bluetooth"
 FAIXA_NAO_ACHADA = (
     f"{FAIXA_NAO_ENCONTRADA} · A faixa se mede pelo mapa de canais que o adaptador evita, e esse "
     "mapa só existe com algum aparelho conectado pelo Bluetooth, não só o controle. Clique para "
     "tentar de novo.")
-#: o rótulo do botão que a faixa vazia do receptor vira (desenho de 06/10/2026, item 1): o gesto
-#: mora à vista, no lugar dos canais que faltam, e não num ponto de 10 px explicado só no tooltip.
 DESCOBRIR_A_FAIXA = "Descobrir a faixa"
-#: O que a faixa de um enlace de baixa energia diz ao leitor de tela (a opção 1 do usuário, de
-#: 09/10/2026: os 40 canais LE, «não medido», e os três de anúncio marcados).
 LE_NAO_MEDIDO = f"{faixas_do_ar.CANAIS_LE} canais de baixa energia, não medidos"
 TENTAR_DE_NOVO = f"{FAIXA_NAO_ENCONTRADA} · Tentar de novo"
 
@@ -4276,7 +4135,6 @@ def _o_ponto(linha: Any) -> str:
     junta = " " if linha.nota.startswith("em ") else " · "
     dito = (_maiuscula(junta.join(t for t in (selo.texto, linha.nota) if t)) if selo is not None
             else _maiuscula(linha.sem_faixa))
-    # o que se leu do enlace continua no tooltip, depois do estado
     ja_dito = selo is not None and "tira canais" in selo.texto
     so_o_sinal = selo is not None and selo.nivel == faixas_do_ar.SINAL
     extras = [t for t in (
@@ -4322,24 +4180,19 @@ def _a_linha_do_ar(linha: Any, rot: str, cores: dict[str, str], nomes: dict[str,
         faixa = (f'<div class="{classe}" role="img" aria-label="{_x(resumo)}">'
                  + "".join(_o_canal(c, cores, nomes) for c in linha.celulas) + "</div>")
     elif linha.sem_faixa == faixas_do_ar.FORA_DA_FAIXA:
-        # o Wi-Fi em 5 GHz: a linha fica, e o trilho diz onde ele está (desenho de 06/10/2026)
         faixa = (f'<div class="ar-faixa fora" role="img" title="{_x(linha.sem_faixa)}" '
                  f'aria-label="{_x(f"{linha.sub}: {linha.sem_faixa}")}">'
                  f'<span>{_x(linha.sub)}</span></div>')
     else:
         frase, descobrir = _o_botao_da_descoberta(linha)
         if descobrir:
-            # a faixa por descobrir É o botão «Descobrir a faixa», à vista (desenho de 06/10/2026)
             dica = FAIXA_NAO_ACHADA if nada else FAIXA_NAO_DESCOBERTA
             rotulo = TENTAR_DE_NOVO if nada else DESCOBRIR_A_FAIXA
-            # o nome que o leitor de tela e o comando de voz ouvem CONTÉM o rótulo à vista
-            # (WCAG 2.5.3): quem diz «Descobrir a faixa» acha o botão; o porquê fica no title
             faixa = (f'<button class="ar-faixa sem descobrir" type="button" '
                      f'data-gesto="receptor-descobrir" data-alvo="{_x(linha.id)}" '
                      f'title="{_x(dica)}" aria-label="{_x(f"{rotulo} · {nomes[linha.id]}")}">'
                      f'<span>{rotulo}</span></button>')
         else:
-            # o passo do gesto guiado («Tire o receptor da porta») é a única frase que a faixa diz
             passo = f"<span>{_x(frase)}</span>" if frase else ""
             faixa = (f'<div class="ar-faixa sem" role="img" '
                      f'aria-label="{_x(frase or linha.sem_faixa)}">{passo}</div>')
@@ -4358,7 +4211,6 @@ def _o_rotulo_do_aparelho(linha: Any) -> str:
             f'aria-label="{_x(linha.nome)}">{glifo}</div>')
 
 
-#: uma entrada com mais aparelhos que isto põe as linhas em duas colunas.
 LINHAS_NUMA_COLUNA = 3
 OUTROS_SEM_FIO = "Outros dispositivos sem fio"
 
@@ -4416,9 +4268,6 @@ def html_dos_canais(cena: dict[str, Any]) -> str:
 
 
 
-#: O padrão de cada tipo na mini-faixa do painel do aparelho, que aparece na aba 08 e na página do
-#: mapa das portas. Essa página não define token de tipo na raiz, então o padrão vai DENTRO do
-#: ``var()``: sem tema, vale o hex; com um tema que defina ``--mapa-<tipo>``, vale o do tema.
 PADRAO_DA_FAIXA_NO_MAPA = {
     "controle": "#f8f8f2", "celular": "#ff9a8b", "relogio": "#8fa8ff", "fone": "#8be9fd",
     "caixa": "#bd93f9", "teclado": "#ffb86c", "mouse": "#f1fa8c", "wifi": "#d4d7e0",
@@ -4446,8 +4295,6 @@ def _a_faixa_do_painel(linha: Any, cor_do: dict[str, str], nomes: dict[str, str]
     outro = COR_DA_FAIXA_NO_MAPA["outro"]
     perde = [(n, COR_DA_FAIXA_NO_MAPA.get(t, outro)) for t, n in linha.quem]
     briga = [(nomes[i], cor_do.get(i, outro)) for i in linha.briga if i in nomes]
-    # `pedacos`: a frase em `[texto, cor]`, e cada nome leva antes a marca da cor dele, a mesma da
-    # célula (o desenho 2: «perde para ■ Wi-Fi · ■ teclado»); a cor nunca vai sozinha, o nome fica
     pedacos: list[list[str]] = []
 
     def _nomeados(prefixo: str, quem: list[tuple[str, str]], sufixo: str = "") -> None:
@@ -4466,7 +4313,6 @@ def _a_faixa_do_painel(linha: Any, cor_do: dict[str, str], nomes: dict[str, str]
                   f" nos canais {min(ocupados)}-{max(ocupados)}" if ocupados else "")
     if linha.selo is not None:
         selo = " ".join(t for t in (linha.selo.texto, linha.nota) if t)
-        # o selo genérico de quem ocupa («briga com N») repetiria a frase que já diz com quem
         if selo and not (briga and linha.bons is None and selo.startswith("briga com")):
             pedacos.append([(" · " if pedacos else "") + selo, ""])
     return {"celulas": celulas, "texto": "".join(t for t, _c in pedacos), "partes": pedacos,
@@ -4539,8 +4385,6 @@ def _nivel_seguro(uniq: str, nivel: str, agora: float) -> str:
     return antes[0]
 
 
-#: A referência do Hz é do controle NAQUELE adaptador: a chave é `(controle, adaptador)`, e
-#: o controle que muda de adaptador recomeça a dele.
 _REFERENCIA_DO_HZ: dict[tuple[str, str], tuple[int, float, float]] = {}
 _CAUSA_NA_TELA: dict[str, tuple[str, str]] = {}
 
@@ -4738,8 +4582,6 @@ def _tipo_pela_classe(classe: int | None) -> str:
     from hefesto_dualsense4unix.integrations.gesto_de_pareamento import e_controle
 
     if e_controle(classe):
-        # O controle que não é o DualSense (o Pro Controller, o 8BitDo, o do Xbox): a ``Class``
-        # já diz que é controle, e a linha não pergunta à pessoa o que ele é.
         return "gamepad"
     maior, menor = (classe >> 8) & 0x1F, (classe >> 2) & 0x3F
     if maior == 0x02:
@@ -4755,8 +4597,6 @@ def _tipo_pela_classe(classe: int | None) -> str:
     return "outro"
 
 
-#: A categoria ``0x0F`` (HID) do GAP diz o aparelho pelos 6 bits de baixo, a subcategoria; o que não
-#: está aqui (``0x03C0``, o HID genérico, e as outras) fica «outro», sem inventar.
 _SUBCATEGORIA_HID = {0x01: "teclado", 0x02: "mouse", 0x03: "controle", 0x04: "controle"}
 
 
@@ -4871,9 +4711,6 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
                                  em_fundo.em_fundo("wifi-quedas", _ler_as_quedas, 30.0))
     maquina, controladores = lida if lida else (None, {})
     if _DESCOBERTA.ativa:
-        # o «Descobrir a faixa» anda pelo censo, e o censo da porta é lido uma vez e no
-        # «Examinar»: com o gesto em curso ele se relê no fundo, senão o receptor tirado
-        # continuaria «na porta» até o gesto se desfazer sozinho
         em_fundo.em_fundo("mesa-do-gesto", lambda: _mesa_do_radio(recarregar=True),
                   RELER_A_PORTA_NO_GESTO_S)
     mesa = _mesa_do_radio()
@@ -5022,14 +4859,12 @@ def cena_do_radio(ctx: Contexto) -> dict[str, Any]:
     pedindo = _quem_pede_para_parear(central, lugares, aparelhos_bz)
     proposta = _a_proposta_da_cena(central.get("proposta"), aparelhos)
     lugares = _na_ordem_dela(lugares)
-    # O acionador declarado no `maquina.json` mora no primeiro adaptador, como no desenho r3-08-14.
     aparelhos += _os_acionadores_declarados(declaracao_viva, lugares)
     buscas: dict[str, object] = {
         nome_do_jogador.mac(m.get("destino")): (
             str(m.get("aparelho") or ""), float(m.get("quando") or 0.0))
         for m in esperando if nome_do_jogador.mac(m.get("destino"))}
     cena = {
-        # `radio_ar`/`radio_governador`. Sem isso a sala não diz «nenhum».
         "lido": bluez is not None or bool(ar) or bool(governador),
         "lugares": lugares, "aparelhos": aparelhos, "evitados": evitados,
         "canais_medidos": canais_medidos, "enlaces": enlaces, "vizinhos": vizinhos,
@@ -5067,8 +4902,6 @@ def _o_aberto(lugares: list[dict[str, Any]], aparelhos: list[dict[str, Any]],
     espera = _onde_espera(lugares, aparelhos)
     if espera:
         return espera
-    # as caixas nascem fechadas (desenho aprovado de 05/10/2026): abre a que o usuário clicar, ou a
-    # que pede atenção (o controle esperando, o que não conectou)
     return next((str(lug["id"]) for lug in lugares if lug.get("nao_conectou")), None)
 
 
@@ -5160,7 +4993,7 @@ def _prazo_desde(m: dict[str, Any]) -> float:
     return float(m.get("prazo_desde") or m.get("quando") or 0.0)
 
 
-_NAO_CHEGOU_NA_CENTRAL = "nao_chegou"  # (noqa-acento): chave de máquina da central
+_NAO_CHEGOU_NA_CENTRAL = "nao_chegou"
 _RECUSA_DA_CENTRAL = "ocupado"
 _DISPENSADOS: set[str] = set()
 
@@ -5451,7 +5284,6 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
             ja.update(lugar=nome_do_jogador.mac(m.get("destino")), esperando=True)
             continue
         eu = next((m2 for u, m2 in da_mesa.items() if _so_hex(u) == quem), {})
-        # «outro» — e o controle, um DualSense sem nome. O `Icon` vem junto: é o
         classe = m.get("classe")
         tipo = ("controle" if m.get("e_controle")
                 else _tipo_do_aparelho(str(m.get("icone") or ""),
@@ -5467,7 +5299,6 @@ def _aparelhos_da_cena(ctx: Contexto, st: dict[str, Any], governador: dict[str, 
     for a in aparelhos_bz:
         endereco = nome_do_jogador.mac(a.endereco)
         adaptador = endereco_do_caminho.get(str(a.adaptador), "")
-        # Um DualSense que o daemon não publica não vira «outro aparelho».
         if (not a.conectado or not adaptador or _so_hex(endereco) in vistos
                 or "V054C" in str(getattr(a, "modalias", "")).upper()):
             continue
@@ -5609,7 +5440,6 @@ def _campos_da_cerimonia() -> dict[str, Any]:
     from hefesto_dualsense4unix.integrations import entrada_a_entrada as ee
     from hefesto_dualsense4unix.interface import calibracao_das_entradas as calib
 
-    # `/sys`, e com ela encaixando o DualSense o kernel o segura por segundos.
     foto = _laco().foto_sem_esperar()
     contador, quem = "", ""
     if foto.get("estado") == ee.SENTADA:
@@ -5621,7 +5451,6 @@ def _campos_da_cerimonia() -> dict[str, Any]:
     elif foto.get("estado") == ee.EM_PE:
         contador = contador_da_cerimonia(foto.get("passo"), foto.get("total"))
         quem = calib.PROCURANDO
-    # No fim, o convite mora no «?» da tela: o corpo fica sem frase explicativa.
     nada = _monta().NADA_A_DIZER
     return {"entrada-tela": foto.get("tela") or "", "entrada-contador": contador or nada,
             "entrada-quem": quem or nada}
@@ -5635,7 +5464,6 @@ def campos_do_radio(ctx: Contexto) -> dict[str, Any]:
     campos = campos_da_secao(cena, segurar=True)
     with contextlib.suppress(Exception):
         campos.update(_campos_da_cerimonia())
-    # A janela do acionador mora fora da `#rd-secao`, mas pinta da mesma cena.
     campos.update(campos_do_acionador(cena))
     return campos
 
@@ -5758,7 +5586,6 @@ def aparelho_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
     ap = _aparelho_na_tela(str(o.get("alvo") or ""))
     novo = str(o.get("valor") or "").strip()
     if ap.get("tipo") == TIPO_ENTRADA:
-        # O acionador não é do Bluetooth: o nome mora na declaração dele (a chave do kernel).
         if novo != str(ap.get("nome") or ""):
             _declarar_o_acionador(p, {"acionadores": {str(ap["chave"]): {"nome": novo or None}}})
         return None
@@ -5925,8 +5752,6 @@ def parear_de_novo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     with contextlib.suppress(Exception):
         _tirar_a_linha(p, linha)
     _ligar_a_busca(p, True, lid)
-    # O mesmo clique é a escolha do usuário: a central pareia ESTE endereço quando a janela o
-    # ver. Se não aceitar agora, a busca segue aberta e o «Parear» da lista fecha.
     with contextlib.suppress(Exception):
         _pedir_ao_radio(p, str(linha["aparelho"]), lid)
     _abrir_na_tela(lid)
@@ -6163,22 +5988,21 @@ METODOS = {"controller.target.set", "radio.mover", "radio.ponte.ligar_aqui",
 PAGINA = "08-conexoes.html"
 PISO_DA_ABA = 52
 PROVAS = [
-    # e o `_indice` cai na posição quando o daemon não publicou `index`.
-    {"pagina": PAGINA, "gesto": "alvo", "clique": {},  # (noqa-acento) chave do contrato
+    {"pagina": PAGINA, "gesto": "alvo", "clique": {},  # (noqa-acento)
      "chama": [("chamar", ["controller.target.set"], {"index": 0})]},
-    {"pagina": PAGINA, "gesto": "sala-altura", "clique": {"modo": "acima"},  # (noqa-acento) id
+    {"pagina": PAGINA, "gesto": "sala-altura", "clique": {"modo": "acima"},  # (noqa-acento)
      "chama": [("machine_declare", [{"mesa": {"altura_da_antena": "acima"}}], {})]},
-    {"pagina": PAGINA, "gesto": "sala-visada", "clique": {"modo": ""},  # (noqa-acento) id
+    {"pagina": PAGINA, "gesto": "sala-visada", "clique": {"modo": ""},  # (noqa-acento)
      "chama": [("machine_declare", [{"mesa": {"linha_de_visada": None}}], {})]},
-    {"pagina": PAGINA, "gesto": "externo-modo",  # (noqa-acento) id
+    {"pagina": PAGINA, "gesto": "externo-modo",  # (noqa-acento)
      "clique": {"externo": "aa:bb:cc:00:00:01", "valor": "switch"},
      "chama": [("machine_declare",
                 [{"controles": {"aabbcc000001": {"modo": "switch"}}}], {})]},
-    {"pagina": PAGINA, "gesto": "externo-botoes",  # (noqa-acento) id
+    {"pagina": PAGINA, "gesto": "externo-botoes",  # (noqa-acento)
      "clique": {"externo": "aa:bb:cc:00:00:01", "valor": "nintendo"},
      "chama": [("machine_declare",
                 [{"controles": {"aabbcc000001": {"botoes": "nintendo"}}}], {})]},
-    {"pagina": PAGINA, "gesto": "externo-cor",  # (noqa-acento) id
+    {"pagina": PAGINA, "gesto": "externo-cor",  # (noqa-acento)
      "clique": {"externo": "aa:bb:cc:00:00:01", "valor": "Cosmic Red"},
      "chama": [("machine_declare",
                 [{"controles": {"aabbcc000001": {"cor": "Cosmic Red"}}}], {})]},
@@ -6188,7 +6012,6 @@ _NO_MAQUINA = "grava no `maquina.json`; o `state_full` não o republica"
 _NO_BLUEZ = "grava o `Alias` no BlueZ; o `state_full` não o publica"
 _O_MAPA = "grava o desenho do gabinete (`_gravar_o_mapa`); o `state_full` não publica o mapa"
 
-#: Cada gesto sem eco no `state_full`, e a razão: sem ela a declaração é lápide.
 RAZAO_DO_SEM_ECO: dict[str, str] = {
     "sala-altura": _NO_MAQUINA,
     "sala-visada": _NO_MAQUINA,
@@ -6227,9 +6050,7 @@ RAZAO_DO_SEM_ECO: dict[str, str] = {
 SEM_ECO = tuple(RAZAO_DO_SEM_ECO)
 
 
-# só leitura, com o ✓ de «tudo certo». <!-- noqa-acento: citação literal -->
 CERTO = "✓"
-#: `native_mode` é do daemon (o jogo lê o DualSense de verdade); fora dele, o
 MODO_NATIVO = "Nativo"
 MODO_PELO_HEFESTO = "Pelo Hefesto"
 
@@ -6277,7 +6098,6 @@ def modo_da_fileira(st: dict[str, Any]) -> str:
     return MODO_PELO_HEFESTO
 
 
-# D-O-ESCOPO-DO-MIC-SAIU-DA-08 — 25/09/2026, pedido (A-08-O-CHECKUP-ABSORVE-
 def estado_do_controle(c: dict[str, Any], eu: dict[str, Any], st: dict[str, Any],
                        declaracao: Any, modo: str | None = None) -> dict[str, str]:
     """Os selos de UM controle, lidos do daemon vivo e da declaração.
@@ -6313,8 +6133,6 @@ def estado_do_controle(c: dict[str, Any], eu: dict[str, Any], st: dict[str, Any]
                                    modo if modo is not None else modo_da_fileira(st), "")
     visto = selo_do_estado("Visto como", str(eu.get("mascara") or TRAVESSAO_DA_LINHA), "")
 
-    # (:func:`nome_com_a_bateria`); a queda do rádio aparece no exame e em
-    # Rádio e adaptadores. (noqa-acento: citação literal)
     return {"est-mic": mic, "est-som": som, "est-modo": modo_da_linha, "est-visto": visto}
 
 
@@ -6328,9 +6146,6 @@ def nome_com_a_bateria(rotulo: str, pct: object) -> str:
 
 TRAVESSAO_DA_LINHA = "—"
 
-
-# `dono_na_linha` (importada no topo) é a regra «o nome, ou o Pn», que mora em `monta` desde
-# 07/10/2026: a 02 e a Calibrar dizem quem joga pela mesma regra, e o nome daqui é o alias.
 
 _SO_O_NUMERO = re.compile(r"\s*p\s*\d+\s*", re.IGNORECASE)
 
@@ -6355,7 +6170,6 @@ def dono_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         raise RuntimeError("o Bluetooth do sistema não gravou o nome novo")
 
 
-# é o estado, e o tique a pinta. <!-- noqa-acento: citação literal -->
 MAPEAR_DIZ = {
     "parado": "Conecte o DualSense por USB numa entrada do computador.",
     "esperando": "Conecte o DualSense por USB numa entrada do computador.",

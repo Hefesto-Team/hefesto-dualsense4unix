@@ -4,7 +4,7 @@ Só desenho. O que o produto pinta por cima (nomes dos controles, contagens,
 jogos de cada lançador) entra pelos endereços `data-campo`; aqui moram os dados
 de exemplo e a forma de cada peça.
 """
-# ruff: noqa: E501  (o gerador emite markup em f-string: a linha longa é o HTML legível no diff)
+# ruff: noqa: E501
 from __future__ import annotations
 
 import json
@@ -28,7 +28,6 @@ CSS = (_PASTA / "experimental.css").read_text(encoding="utf-8")
 SCRIPT = (_PASTA / "comportamento.js").read_text(encoding="utf-8")
 _ICONES: dict[str, str] = json.loads((_PASTA / "icones.json").read_text(encoding="utf-8"))
 
-#: Os três botões de todo lançador, na ordem em que aparecem.
 BOTOES = (
     ("identificar-lancador", IDENTIFICAR_ROTULO, "#"),
     ("criar-perfil-para-um-jogo", "Criar perfis", "#escolher-jogo"),
@@ -42,13 +41,9 @@ class Fila(NamedTuple):
     jogos: str
     achado: bool
     configurar: str
-    #: O endereço da extensão em que o lançador virou (``mods/viraram_extensao.json``): a linha
-    #: deixa de ter os três botões e diz onde instalar. Nada se instala sozinho.
     virou: str = ""
 
 
-#: A fila do desenho: os três de fábrica (Steam, Heroic, Flatpak), um lançador de extensão
-#: instalada e a linha da migração de um que virou extensão (19/10/2026).
 LANCADORES = (
     Fila("steam", "Steam", "48 jogos", True, "#lanc-conf"),
     Fila("lutris", "Lutris", "12 jogos", True, "#lanc-conf"),
@@ -58,8 +53,6 @@ LANCADORES = (
          virou="https://github.com/Hefesto-Team/hefesto-mod-retroarch"),
 )
 
-#: A linha da migração mostra a frase e o nome do repositório; o endereço inteiro, que se copia
-#: para o «Instalar», vai na dica (no tamanho do desenho, a frase longa com o endereço cortava).
 FRASE_DO_QUE_VIROU = "Virou extensão:"
 DICA_DO_QUE_VIROU = "Para seguir com ele, instale de"
 
@@ -70,30 +63,19 @@ class Extensao(NamedTuple):
     dica: str
     janela: str
     cor: str = "purple"
-    #: O que o produto pinta por cima do exemplo: a versão e a origem do registro, a chave e o «⋮» aberto.
     versao: str = "0.1.0"
     selo: str = "Oficial"
     ligada: bool = True
     menu: str = ""
-    #: O processo dela pelo supervisor (``mods-estado.json``), uma chave de ``PROCESSO``; o vazio
-    #: (rodando, declarativa ou sem serviço) é a chave verde de sempre.
     processo: str = ""
-    #: O porquê do processo que não roda (o motivo e a última linha do diário): a dica da chave.
     porque: str = ""
-    #: O que a extensão desligada pede antes do «sim» (o aviso e as permissões): com ele, a chave
-    #: diz «Aceitar e ligar» e o pedido vai na dica; o próximo clique nela liga.
     pede: str = ""
 
 
-#: O processo de uma extensão que não está rodando: a palavra e a cor da chave da linha e do topo
-#: da coluna «Agora». Ligada no registro e calada no supervisor não pode parecer verde.
 PROCESSO = {"ligando": ("Ligando", "amarelo"), "voltando": ("Voltando", "amarelo"),
             "parou": ("Caiu", "vermelho"), "recusada": ("Recusada", "vermelho"),
             "desligada": ("Desligada", "mudo")}
-#: O que a dica da chave vermelha acrescenta ao porquê: o caminho de volta.
 DICA_DE_TENTAR = "Desligue e ligue para tentar de novo."
-#: A chave da extensão que pede o «sim»: o primeiro clique só a arma, sem abrir nada no cartão
-#: (24/10/2026, O-CARTAO-DA-EXTENSAO-NAO-ABRE-PAINEL-01). As três ações moram só no ⋮.
 ROTULO_DO_SIM = "Aceitar e ligar"
 
 
@@ -107,13 +89,11 @@ def processo_de(ligada: bool, estado: str) -> str:
     return "ligando" if estado == "desligada" else (estado if estado in PROCESSO else "")
 
 
-#: As extensões de exemplo do desenho: uma de lançador e uma que só tem opções. As cores são do
-#: desenho; no produto, toda extensão ganha o roxo.
 EXTENSOES = (
     Extensao("kytyps5", "KytyPS5", "Os jogos do KytyPS5 na fila dos lançadores, com o perfil de cada um",
-             "#modificacao", "cyan"),  # (noqa-acento: âncora do HTML)
+             "#modificacao", "cyan"),  # (noqa-acento)
     Extensao("exemplo", "Minha extensão", "Uma extensão com opções em três grupos",
-             "#modificacao"),  # (noqa-acento: âncora do HTML)
+             "#modificacao"),  # (noqa-acento)
 )
 
 
@@ -121,7 +101,7 @@ def _icone(chave: str, tamanho: int = 16) -> str:
     """O ícone da chave; extensão que o desenho não conhece ganha o genérico, nunca um erro."""
     return (f'<svg viewBox="0 0 24 24" width="{tamanho}" height="{tamanho}" fill="none" '
             f'stroke="currentColor" stroke-width="1.7" stroke-linecap="round" '
-            f'stroke-linejoin="round">{_ICONES.get(chave) or _ICONES["extensao"]}</svg>')  # (noqa-acento): contrato ASCII
+            f'stroke-linejoin="round">{_ICONES.get(chave) or _ICONES["extensao"]}</svg>')  # (noqa-acento)
 
 
 def _engrenagem() -> str:
@@ -200,11 +180,9 @@ def _chave_html(ext: Extensao) -> str:
 
 
 SELO_DA_ORIGEM = {"oficial": "Oficial", "comunidade": "Comunidade", "local": "Local"}
-ACOES_DO_MENU = (("atualizar", "Atualizar"), ("permissoes", "Ver permissões"), ("remover", "Remover"))  # (noqa-acento): contrato ASCII
+ACOES_DO_MENU = (("atualizar", "Atualizar"), ("permissoes", "Ver permissões"), ("remover", "Remover"))  # (noqa-acento)
 
-#: O Remover depois do primeiro clique: apagar o código e os dados pede o segundo.
 ROTULO_DA_CONFIRMACAO = "Confirmar remoção"
-#: O ⋮ da janela «Configurar» diz de onde veio: o menu dele não se desenha também na linha atrás.
 ONDE_DA_CONF = "conf"
 
 
@@ -327,21 +305,13 @@ class OpcaoDaJanela(NamedTuple):
     valor: str | bool | float | Sequence[str] | Mapping[str, Any]
     escolhas: tuple[str, ...] = ()
     grupo: str = ""
-    # O ``deslizante`` desenha a faixa do manifesto; o ``jogos`` desenha uma caixa por jogo,
-    # cada um como (chave, nome), marcada se a chave está no valor.
     minimo: float = 0
     maximo: float = 0
     passo: float = 1
     jogos: tuple[tuple[str, str], ...] = ()
-    # A linha que a aba diz sob o rótulo, em vermelho (hoje, a forma curta da recusa do CSS de quem
-    # usa: «Linha 2: url()»).
     nota: str = ""
-    # O ``por_botao``: as formas pelo nome, cada uma com os passos (força, segundos), e os botões
-    # da janela; o valor é ``{botão: forma}``.
     formas: tuple[tuple[str, tuple[tuple[float, float], ...]], ...] = ()
     botoes: tuple[str, ...] = ()
-    # O ``livre`` com ``modos``: o modo de agora (``soltar``, ``segurar`` ou ``repetir``); vazio,
-    # a faixa não desenha os três.
     modo: str = ""
 
 
@@ -349,9 +319,6 @@ GESTO_DO_CSS = "editar-o-css-da-modificacao"
 ROTULO_DO_CSS = "Editar o meu CSS"
 
 
-# O manifesto de exemplo do DESENHO de 19/10/2026: uma extensão que declara três grupos (Geral, Luz
-# e vibração, Avançado). O produto desenha o que o manifesto da pessoa trouxer; o exemplo só mostra a
-# janela com mais de um grupo.
 OPCOES_DO_DESENHO = (
     OpcaoDaJanela("exemplo", "quando", "Quando", "escolha", "Os jogos que eu escolher",
                   ("Os jogos que eu escolher", "Qualquer jogo", "Só quando eu ligar"), "Geral"),
@@ -367,9 +334,6 @@ OPCOES_DO_DESENHO = (
                   nota="Linha 2: url()"),
 )
 
-# O arranjo C do DESENHO de 22/10/2026: a mesma extensão de exemplo, agora com a coluna «Agora» (as
-# conexões e os aparelhos), o «Parar tudo», os toques por botão e o endereço. Os nomes são genéricos:
-# o produto desenha o que o manifesto e o ``acessorios.estado`` de cada extensão trouxerem.
 FORMAS_DO_DESENHO = (
     ("Toque", ((1.0, 0.3),)),
     ("Duplo", ((1.0, 0.15), (0.0, 0.15), (1.0, 0.15))),
@@ -385,13 +349,13 @@ OPCOES_DO_DESENHO_C = (
                    "touchpad_right_press": "Nada"}, (), "Toques",
                   formas=FORMAS_DO_DESENHO, botoes=BOTOES_DO_DESENHO),
     OpcaoDaJanela("exemplo", "endereco", "Endereço do aparelho na rede", "endereco", "", (),
-                  "Ligação"),  # (noqa-acento): o id é a chave do manifesto
+                  "Ligação"),
     *OPCOES_DO_DESENHO,
 )
-AGORA_DO_DESENHO = ("conexoes", "aparelhos")  # (noqa-acento): as chaves do estado
+AGORA_DO_DESENHO = ("conexoes", "aparelhos")  # (noqa-acento)
 ESTADO_DO_DESENHO: dict[str, Any] = {
     "ligado": True,
-    "conexoes": [  # (noqa-acento): a chave do estado
+    "conexoes": [  # (noqa-acento)
         {"id": "usb", "tipo": "Adaptador", "transporte": "usb", "estado": "ligado"},
         {"id": "bt", "tipo": "Bluetooth", "transporte": "bluetooth", "estado": "desligado"},
         {"id": "rede", "tipo": "Telefone", "transporte": "rede", "estado": "procurando",
@@ -453,16 +417,12 @@ def _jogos_da_opcao(o: OpcaoDaJanela) -> str:
     return f'<div class="jg-lista ext-jogos" aria-label="{_a(o.rotulo)}">{caixas}</div>'
 
 
-#: O que o campo do ``endereco`` mostra vazio: o vazio é o endereço que ainda não se escolheu.
 DICA_DO_ENDERECO = "IP:porta"
-#: O desenho de cada botão do ``por_botao`` é o glifo da casa (``assets/glyphs``), num ``<symbol>``
-#: da página (:func:`sprite_dos_botoes`); as três terças do touchpad levam a terça que aperta.
 GLIFO_DO_BOTAO = {"l3": "stick_l", "r3": "stick_r", "create": "share",
                   "touchpad_left_press": "touchpad", "touchpad_middle_press": "touchpad",
                   "touchpad_right_press": "touchpad"}
 _TERCA_DO_TOUCHPAD = {"touchpad_left_press": 3.0, "touchpad_middle_press": 11.67,
                       "touchpad_right_press": 20.33}
-#: A largura e a altura da onda de uma forma, em unidades do ``viewBox``.
 _ONDA_L, _ONDA_A = 48.0, 12.0
 
 
@@ -564,7 +524,6 @@ def _cartoes_das_opcoes(opcoes: Sequence[OpcaoDaJanela]) -> str:
     return f'<div class="ky-grade">{"".join(cartoes)}</div>'
 
 
-#: As opções que põem o rótulo em cima e a lista embaixo, na largura do cartão.
 _EMPILHADAS = ("jogos", "por_botao")
 
 
@@ -598,21 +557,17 @@ def _abas_das_opcoes(opcoes: Sequence[OpcaoDaJanela], aba: str) -> str:
     return f'<div class="ac-card mj-abas" style="--n:{len(grupos)}">{partes}</div>'
 
 
-#: Os pedaços da coluna «Agora» que um manifesto pode declarar, na ordem do desenho.
-PEDACOS_DO_AGORA = ("conexoes", "nivel", "perfil", "aparelhos")  # (noqa-acento): a chave do estado
+PEDACOS_DO_AGORA = ("conexoes", "nivel", "perfil", "aparelhos")  # (noqa-acento)
 NIVEL_MAXIMO = 10
-#: O que um pedaço mostra quando a extensão não deu valor (parada, ou ainda sem estado).
 SEM_VALOR = "—"
 DICA_DO_PARAR = "Todos os aparelhos a zero na hora. O nível e o perfil ficam guardados."
 GESTO_DO_PARAR = "parar-tudo-da-modificacao"
-#: A palavra e a cor de cada estado de uma conexão ou de um aparelho (``acessorios.estado``).
 PALAVRA_DO_ESTADO = {"ligado": "Ligado", "procurando": "Procurando", "desligado": "Desligado",
                      "falhou": "Falhou"}
 COR_DO_ESTADO = {"ligado": "verde", "procurando": "amarelo", "desligado": "mudo",
                  "falhou": "laranja"}
 _TRACO_DO_ICONE = ('viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" '
                    'stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"')
-#: O desenho de cada transporte de uma conexão, e o do aparelho.
 ICONE_DO_TRANSPORTE = {
     "usb": ('<rect x="4" y="8" width="11" height="8" rx="1.5"/><rect x="15" y="9.5" width="5" '
             'height="5" rx=".6"/><line x1="17" y1="11" x2="17" y2="13"/>'
@@ -710,7 +665,7 @@ def agora_html(pedacos: Sequence[str], estado: Mapping[str, Any] | None, *, proc
               f"{_topo_do_agora(vivo, processo, porque)}</div>"]
     declarados = [x for x in PEDACOS_DO_AGORA if x in pedacos]
     for pedaco in declarados:
-        if pedaco == "conexoes":  # (noqa-acento): a chave do estado
+        if pedaco == "conexoes":  # (noqa-acento)
             itens = "".join(_conexao_html(c) for c in itens_do_estado(estado, pedaco))
             linhas.append(f'<div class="ja-cxs" data-agora="{pedaco}">'
                           f'{itens or f"""<div class="cx-linha vazia"><span class="cx-rot">{SEM_VALOR}</span></div>"""}'
@@ -780,10 +735,7 @@ def _arranjo_c(nome: str, ajustes: str, *, mod: str, agora: Sequence[str],
 
 
 GESTO_DO_GUARDAR = "guardar-modificacao"
-#: A frase da janela em que nada se ajusta nem se guarda.
 VAZIO_DA_JANELA = '<div class="ext-vazia">Esta extensão não tem opções para ajustar.</div>'
-#: O Cancelar e o X da janela da extensão (o Esc clica o X): o modo do controle livre que já valeu
-#: volta ao guardado, e o rascunho sai.
 GESTO_DO_CANCELAR = "cancelar-modificacao"
 
 
@@ -812,8 +764,6 @@ def modificacao_miolo_html(nome: str, opcoes: Sequence[OpcaoDaJanela], *, mod: s
     parar = parar_tudo_html(mod) if parar_tudo and mod else ""
     agora = agora if mod else ()
     livre_op = next((o for o in opcoes if o.tipo == "livre"), None) if mod else None
-    # O vazio sai só quando nada na janela se ajusta e se guarda: nem opção, nem o controle livre
-    # (os modos e as formas dele vão ao Guardar), nem os controles dos aparelhos (a aba deles).
     vazio = "" if livre_op else VAZIO_DA_JANELA
     opcoes = [o for o in opcoes if o.tipo != "livre"]
     acoes = tuple(acoes) if mod else ()
@@ -898,16 +848,10 @@ class Conf(NamedTuple):
     entrou: str
     onde: str
     jogos: str
-    #: Quantos jogos têm impedimento; `None` quando o lançador não tem essa leitura.
     impedimentos: int | None = None
-    #: As pastas em que os jogos dele moram; sem elas, a linha diz só quantos jogos.
     pastas: tuple[str, ...] = ()
-    #: A chave «Cada jogo ganha o seu perfil»; `None` no lançador que não entrega jogos.
     perfil_por_jogo: bool | None = None
-    #: O lançador que vem de uma extensão: o ⋮ age nela, e onde ele está é ela quem diz.
     modificacao: str = ""
-    #: O ⋮ aberto pelo produto: o miolo de `menu_html` na extensão, qualquer texto no que vem com o
-    #: Hefesto (o menu dele é sempre o apagado); vazio, ele abre só com o foco.
     menu: str = ""
 
 
@@ -1051,7 +995,7 @@ def _fragmento(nome: str) -> str:
 
 
 JANELAS = ("novo-lancador", "escolher-jogo", "impedimentos", "lanc-conf",
-           "modificacao")  # (noqa-acento): contrato ASCII
+           "modificacao")  # (noqa-acento)
 
 
 def telas() -> str:
@@ -1071,12 +1015,6 @@ def telas() -> str:
     return ("\n".join(partes) + f"\n{sprite_dos_botoes()}"
             f"\n<script data-aba=\"experimental\">\n{SCRIPT}</script>\n")
 
-
-# AS TRÊS PEÇAS QUE AGEM — 24/10/2026, A-JANELA-DA-EXTENSAO-GANHA-ACAO-APARELHOS-E-CONTROLE-LIVRE-01, o
-# arranjo C escolhido no desenho da janela nova. A janela de QUALQUER extensão ganha o botão que age na
-# hora (as ações do manifesto), a lista dos aparelhos que ela gere (uma chave e um botão por ação em
-# cada um) e o controle livre (a faixa fixa embaixo, à vista em toda aba). Nada aqui é de uma extensão:
-# os nomes, as abas e as ações vêm do manifesto e do ``acessorios.estado`` de cada uma.
 
 class AcaoDaJanela(NamedTuple):
     """Uma ação do manifesto: o botão que age na hora, sem rascunho e sem «Guardar»."""
@@ -1119,20 +1057,14 @@ GESTO_DE_SOLTAR = "soltar-o-livre-da-modificacao"
 GESTO_DE_GRAVAR = "gravar-o-livre-da-modificacao"
 GESTO_DE_ESQUECER_A_FORMA = "esquecer-a-forma-do-livre"
 GESTO_DO_MODO = "modo-do-livre-da-modificacao"
-#: Os modos do ``livre`` com ``modos``: o valor, o rótulo e a dica, na ordem da faixa.
 MODOS_DA_FAIXA = (("soltar", "Soltar", "Ao soltar, volta a zero"),
                   ("segurar", "Segurar", "Ao soltar, fica onde parou"),
                   ("repetir", "Repetir", "Ao soltar, repete o que você desenhou"))
-#: A ação que é a chave do cartão do aparelho (o ``ligado`` dele), e não um botão.
 ACAO_DE_LIGAR = "ligar"
 EM_CURSO = "Em curso"
 DICA_DA_CHAVE = "Liga ou desliga este aparelho"
 DICA_DO_GRAVAR = "Grava o que você arrastar como uma forma nova, para os botões do controle"
-#: A dica da barra do controle livre com a extensão fora da porta (o ``processo`` não é o de quem
-#: roda): a barra ainda arrasta e grava formas, mas o que ela faz não chega à extensão.
 DICA_DA_BARRA_FORA = "{nome} não está rodando: a barra não chega a ela."
-#: O endereço da barra do livre: o alvo ``classe`` com a razão (``fora`` e a dica, ou nenhum dos
-#: dois), que o tique da janela aberta pinta sem tocar no ``input`` que o dedo arrasta.
 CAMPO_DA_BARRA_FORA = "mod-livre-fora"
 
 
@@ -1140,11 +1072,9 @@ def dica_da_barra_fora(nome: str, processo: str) -> str:
     """A dica da barra do livre fora da porta, ou vazio na porta: a regra da montagem e do tique."""
     return DICA_DA_BARRA_FORA.format(nome=nome) if processo in PROCESSO else ""
 
-#: Os segundos de rastro que a faixa mostra.
 RASTRO_S = 10.0
 _TRACO_DA_ACAO = ('viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" '
                   'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"')
-#: O desenho de cada ``icone`` que o manifesto pode pedir para uma ação.
 ICONE_DA_ACAO = {
     "procurar": '<circle cx="7" cy="7" r="4.5"/><line x1="10.5" y1="10.5" x2="14" y2="14"/>',
     "testar": '<path d="M1 8 Q3 3 5 8 T9 8 T13 8 T15 8"/>',
@@ -1264,13 +1194,6 @@ def aparelhos_na_coluna_html(g: Gestao) -> str:
     return "".join(linhas)
 
 
-# OS CONTROLES DE CADA APARELHO — 24/10/2026, O-APARELHO-DA-EXTENSAO-DIZ-OS-CONTROLES-DELE-NA-JANELA-01,
-# a aba «Luz» do arranjo C. O aparelho do ``acessorios.estado`` declara os ``controles`` que só ele
-# tem (uma chave, uma paleta, uma escolha), e a aba ``aparelhos_controles.grupo`` desenha um cartão
-# por aparelho que os tem. O cartão mostra o valor do ESTADO, nunca o do clique: o clique pede, e o
-# ponto só acende quando a extensão devolve o estado novo (até lá, «em curso»).
-
-#: O rótulo da linha da paleta quando o controle não traz o dele.
 ROTULO_DA_PALETA = "Cor"
 
 
@@ -1301,7 +1224,7 @@ def _pedido_do_controle(mod: str, alvo: str, c: Mapping[str, Any], quer: str) ->
 def _chave_do_controle(mod: str, alvo: str, c: Mapping[str, Any], em_curso: bool) -> str:
     ligada = c.get("valor") is True
     classe = "mj-chave" + (" on" if ligada else "") + (" em-curso" if em_curso else "")
-    dica = str(c.get("dica") or c.get("rotulo") or "")  # (noqa-acento) contrato
+    dica = str(c.get("dica") or c.get("rotulo") or "")
     atributo = f' data-dica="{_a(dica)}"' if dica else ""
     return (f'<span class="{classe}" role="switch" aria-checked="{str(ligada).lower()}" '
             f'{_pedido_do_controle(mod, alvo, c, "0" if ligada else "1")}{atributo}></span>')
@@ -1313,9 +1236,9 @@ def _botoes_do_controle(mod: str, alvo: str, c: Mapping[str, Any], opcoes: Seque
         aceso = op["id"] == c.get("valor")
         if c["tipo"] == "paleta":
             miolo = f'<i style="background:{_fundo_do_ponto(op.get("cor"))}"></i>'
-            dica = str(op.get("rotulo") or op["id"])  # (noqa-acento) contrato
+            dica = str(op.get("rotulo") or op["id"])
         else:
-            miolo, dica = _e(op.get("rotulo") or op["id"]), ""  # (noqa-acento) contrato
+            miolo, dica = _e(op.get("rotulo") or op["id"]), ""
         atributo = f' data-dica="{_a(dica)}"' if dica else ""
         classe = ' class="on"' if aceso else ""
         botoes.append(f'<button{classe} aria-pressed="{str(aceso).lower()}" '
@@ -1326,12 +1249,12 @@ def _botoes_do_controle(mod: str, alvo: str, c: Mapping[str, Any], opcoes: Seque
 def _linha_do_controle(mod: str, alvo: str, c: Mapping[str, Any], em_curso: bool) -> str:
     """Uma linha do cartão: o rótulo e o controle. A paleta põe as cores de um ponto numa fileira
     e as de dois ou três noutra, como no arranjo C."""
-    rotulo = str(c.get("rotulo")  # (noqa-acento) contrato
+    rotulo = str(c.get("rotulo")
                  or (ROTULO_DA_PALETA if c["tipo"] == "paleta" else ""))
     if c["tipo"] == "chave":
         miolo = _chave_do_controle(mod, alvo, c, em_curso)
     else:
-        opcoes = list(c.get("opcoes") or [])  # (noqa-acento) contrato
+        opcoes = list(c.get("opcoes") or [])  # (noqa-acento)
         fileiras = ([[o for o in opcoes if not isinstance(o.get("cor"), list)],
                      [o for o in opcoes if isinstance(o.get("cor"), list)]]
                     if c["tipo"] == "paleta" else [opcoes])
@@ -1528,9 +1451,6 @@ def faixa_do_livre_html(o: OpcaoDaJanela, vivo: LivreAoVivo, gestao: Gestao | No
     </div>'''
 
 
-# O exemplo das três peças no desenho (24/10/2026): a mesma extensão de exemplo, agora com uma ação
-# («Parear», na aba dos aparelhos), quatro aparelhos geridos com id (um desligado) e o controle livre
-# com duas formas gravadas, que entram na escolha de cada botão dos toques.
 ACOES_DO_DESENHO = (AcaoDaJanela("parear", "Parear", "Aparelhos", "procurar"),)
 APARELHOS_DO_DESENHO = AparelhosDaJanela((
     AcaoDaJanela(ACAO_DE_LIGAR, "Ligar", icone="ligar"),
@@ -1541,7 +1461,6 @@ FORMAS_GRAVADAS_DO_DESENHO = {
     "Meu 1": ((0.2, 0.4), (0.6, 0.4), (1.0, 0.6), (0.4, 0.4)),
     "Meu 2": ((0.8, 0.2), (0.0, 0.2), (0.8, 0.2), (0.0, 0.2)),
 }
-#: As cores da paleta do exemplo, as do arranjo C: sete de um ponto e três de três cores.
 CORES_DO_DESENHO: tuple[tuple[str, Any, str], ...] = (
     ("vermelho", "#ff5555", "Vermelho"), ("verde", "#50fa7b", "Verde"), ("azul", "#6c8cff", "Azul"),
     ("outono", "#ffb86c", "Outono"), ("magenta", "#ff79c6", "Magenta"), ("agua", "#8be9fd", "Água"),
@@ -1549,7 +1468,6 @@ CORES_DO_DESENHO: tuple[tuple[str, Any, str], ...] = (
     ("fantasia", ["#8be9fd", "#ff79c6", "#ffb86c"], "Fantasia"),
     ("brasa", ["#bd93f9", "#ffb86c", "#ff5555"], "Brasa"),
     ("neon", ["#8be9fd", "#6c8cff", "#ff5555"], "Neon"))
-#: A aba em que o exemplo põe os cartões dos controles.
 CONTROLES_DO_DESENHO = "Luz e vibração"
 ESTADO_DOS_GERIDOS_DO_DESENHO: dict[str, Any] = {
     **ESTADO_DO_DESENHO,
@@ -1558,7 +1476,7 @@ ESTADO_DOS_GERIDOS_DO_DESENHO: dict[str, Any] = {
          "forca": 0.7, "controles": [
              {"id": "luz", "tipo": "chave", "valor": True, "dica": "Acesa"},
              {"id": "cor", "tipo": "paleta", "valor": "magenta",
-              "opcoes": [{"id": i, "cor": c, "rotulo": r}  # (noqa-acento) contrato
+              "opcoes": [{"id": i, "cor": c, "rotulo": r}  # (noqa-acento)
                          for i, c, r in CORES_DO_DESENHO]}]},
         {"id": "ap-2", "nome": "Aparelho 2", "estado": "ligado", "ligado": True, "bateria": 45,
          "forca": 0.3, "controles": [{"id": "luz", "tipo": "chave", "valor": False,

@@ -98,7 +98,6 @@ class TestSalvarSemTocarPreservaAFormaDoArquivo:
         perfil = Profile.model_validate(original)
         draft = DraftConfig.from_profile(perfil)
 
-        # usa de verdade: TriggerDraft novo, sem `model_copy`.
         editado = draft.model_copy(
             update={
                 "triggers": draft.triggers.model_copy(

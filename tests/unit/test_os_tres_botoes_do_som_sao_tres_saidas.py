@@ -6,7 +6,6 @@ import pathlib
 
 PACOTE = pathlib.Path(
     "src/hefesto_dualsense4unix/interface/pacotes/a02_controles.py")
-#: O ramo «Tudo na TV» termina no `return` dele; o que vem depois é dos outros dois botões.
 FIM_DO_RAMO_NADA = "\n        return\n"
 
 

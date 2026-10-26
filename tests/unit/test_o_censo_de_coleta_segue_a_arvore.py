@@ -91,8 +91,8 @@ def test_o_pulo_sem_motivo_reprova() -> None:
 def test_o_erro_de_coleta_continua_reprovando_e_nao_vira_modulo_sumido() -> None:
     causa = "ModuleNotFoundError: No module named 'gi'"
     for saida in (
-        _saida({A: 1}, erros_do_censo={B: causa}),  # a linha do plugin, que não depende do `-r`
-        _saida({A: 1}, erros=(f"ERROR {B} - {causa}",)),  # o resumo do pytest, quando o `-r` o pede
+        _saida({A: 1}, erros_do_censo={B: causa}),
+        _saida({A: 1}, erros=(f"ERROR {B} - {causa}",)),
     ):
         queixas, _, _ = censo.julgar(saida, [A, B])
         assert any("não coletam sem o GTK" in q for q in queixas)
@@ -127,9 +127,6 @@ def test_o_julgamento_so_olha_o_que_o_git_versiona() -> None:
     assert (RAIZ / versionados[0]).is_file()
 
 
-# --- o passo do ci.yml ---------------------------------------------------------------------------
-
-
 def _passo_do_censo() -> dict[str, Any]:
     jobs = yaml.safe_load(CI_YML.read_text(encoding="utf-8"))["jobs"]
     achados = [p for p in jobs["lint-test"]["steps"] if "Censo de coleta" in str(p.get("name", ""))]
@@ -154,9 +151,6 @@ def test_o_ci_ainda_reprova_o_erro_de_coleta_pelo_dono() -> None:
     assert "check_a_coleta_sem_gtk.py --julgar" in ultima and "||" not in ultima
 
 
-# --- de ponta a ponta, num projeto de verdade ---------------------------------------------
-
-
 def _projeto(
     base: Path, *, ignorar_no_conftest: str | None = None, quebrado: bool = False
 ) -> list[str]:
@@ -174,8 +168,6 @@ def _projeto(
     (tests / "unit" / "test_que_vai_sumir.py").write_text(
         "def test_s():\n    assert True\n", encoding="utf-8"
     )
-    # o pulo de módulo inteiro pela guarda do conftest, como o `exigir_gi_real()`:
-    # o `-rs` o aponta para o conftest
     (tests / "unit" / "test_guardado.py").write_text(
         "from tests.conftest import guarda\nguarda()\ndef test_g():\n    assert True\n",
         encoding="utf-8",
@@ -188,7 +180,7 @@ def _projeto(
         + "    pytest.skip('a interface não roda sem o GTK real', allow_module_level=True)\n",
         encoding="utf-8",
     )
-    if quebrado:  # o `import gi` sem guarda: o furo que o CI vê e a máquina do usuário não
+    if quebrado:
         (tests / "unit" / "test_quebrado.py").write_text(
             "import modulo_de_interface_que_o_runner_nao_tem\n\n\ndef test_q():\n    assert True\n",
             encoding="utf-8",
@@ -211,7 +203,7 @@ def _coletar(base: Path) -> str:
             "tests",
             "--collect-only",
             "-q",
-            "-rs",  # o `-r` com só o `s` tira o resumo padrão `fE`: o erro tem de vir do plugin
+            "-rs",
             "--continue-on-collection-errors",
             "-p",
             "no:cacheprovider",
@@ -234,8 +226,6 @@ def test_de_ponta_a_ponta_o_pulo_passa_e_o_modulo_no_collect_ignore_e_nomeado(
     saida = _coletar(tmp_path / "limpo")
     queixas, total, pulados = censo.julgar(saida, modulos)
     assert queixas == [] and total == 2 and pulados == 2, saida
-    # o pulo da guarda do conftest volta ao módulo certo, com a razão
-    # (o `-rs` sozinho o apontaria para o conftest)
     assert (
         "CENSO pulado tests/unit/test_guardado.py :: a interface não roda sem o GTK real" in saida
     )

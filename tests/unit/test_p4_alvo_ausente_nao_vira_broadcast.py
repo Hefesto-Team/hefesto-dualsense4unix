@@ -81,9 +81,9 @@ class _FakeLight:
     def __init__(self) -> None:
         self.colors: list[tuple[int, int, int]] = []
 
-    def setColorI(self, r: int, g: int, b: int) -> None:  # noqa: N802 — API pydualsense
+    def setColorI(self, r: int, g: int, b: int) -> None:  # noqa: N802
         self.colors.append((r, g, b))
-        self.TouchpadColor = (r, g, b)  # o estado que o `DSLight` guarda
+        self.TouchpadColor = (r, g, b)
 
 
 class _FakeTrigger:
@@ -93,7 +93,7 @@ class _FakeTrigger:
         self.mode: object | None = None
         self.forces: list[int] = []
 
-    def setForce(self, idx: int, value: int) -> None:  # noqa: N802 — API pydualsense
+    def setForce(self, idx: int, value: int) -> None:  # noqa: N802
         self.forces.append(value)
 
 
@@ -110,10 +110,10 @@ class _FakeHandle:
         self.triggerL = _FakeTrigger()
         self.triggerR = _FakeTrigger()
 
-    def setLeftMotor(self, intensity: int) -> None:  # noqa: N802 — API pydualsense
+    def setLeftMotor(self, intensity: int) -> None:  # noqa: N802
         self.motors.append(("left", intensity))
 
-    def setRightMotor(self, intensity: int) -> None:  # noqa: N802 — API pydualsense
+    def setRightMotor(self, intensity: int) -> None:  # noqa: N802
         self.motors.append(("right", intensity))
 
 

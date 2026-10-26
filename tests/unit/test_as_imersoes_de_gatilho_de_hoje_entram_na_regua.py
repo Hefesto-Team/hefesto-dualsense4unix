@@ -37,7 +37,6 @@ from tests.unit.test_os_momentos_da_imersao_tocam_no_gatilho import (
     _perfil,
 )
 
-#: (imersão, acionamento, estilo da variante) → os 8 primeiros bytes do bloco (modo + 7 forças)
 BLOCOS: dict[tuple[str, str, str], str] = {
     ("ferrolho-que-volta", "Weapon", ""): "2544000600000000",
     ("trava-seca", "Weapon", ""): "250c000700000000",
@@ -59,7 +58,6 @@ BLOCOS: dict[tuple[str, str, str], str] = {
     ("terreno-que-muda", "Galloping", ""): "2601080406100000",
 }
 
-#: o que se sente, como o catálogo diz (a dica vai à tela)
 DICAS = {
     "ferrolho-que-volta": "O gatilho rearma sozinho a cada tiro, firme e curto.",
     "trava-seca": "Pouco curso e muita resistência, como arma sem munição.",
@@ -132,7 +130,6 @@ def test_nenhuma_imersao_repete_o_bloco_por_a_cada_ms() -> None:
     for imersao in ei.IMERSOES:
         for m in imersao.momentos:
             assert m.a_cada_ms is None, (imersao.chave, m)
-    # A Rajada sobe por degrau: uma escrita por degrau, 5, 6 e 7.
     degraus = [m.ajustes["strength"] for m in ei.POR_CHAVE["rajada-que-sobe-sozinha"].momentos
                if m.modo == "Machine"]
     assert degraus == [5, 6, 7]

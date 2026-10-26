@@ -122,16 +122,15 @@ ESPERA_DO_PAREAR_S = 60.0
 
 CLASSE_MAIOR_PERIFERICO = 0x05
 
-#: entram — o Pro Controller e o 8BitDo desta casa não são DualSense, e o
 CLASSES_MENORES_DE_CONTROLE = (0x01, 0x02)
 
 ESTADO_ACHOU = "achou"
-ESTADO_NINGUEM = "ninguem"  # (noqa-acento): chave de máquina
+ESTADO_NINGUEM = "ninguem"
 ESTADO_SEM_PORTA = "sem_porta"
-ESTADO_NAO_DEU = "nao_deu"  # (noqa-acento): chave de máquina
+ESTADO_NAO_DEU = "nao_deu"
 
 ESTADO_PAREOU = "pareou"
-ESTADO_JA_PAREADO = "ja_pareado"  # (noqa-acento): chave de máquina
+ESTADO_JA_PAREADO = "ja_pareado"
 ESTADO_JANELA_FECHADA = "janela_fechada"
 
 FRASE_NINGUEM = (

@@ -38,7 +38,7 @@ for _caminho in (str(RAIZ / "src"), str(RAIZ / "scripts")):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
-import chrome_sem_rede  # o ponto comum dos portões de página, sem a rede
+import chrome_sem_rede
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 LARGURA, ALTURA = 1212, 809
@@ -46,7 +46,6 @@ LARGURA, ALTURA = 1212, 809
 JS_DA_BASE = (INTERFACE / "base-comum.js").read_text(encoding="utf-8")
 CSS_DA_BASE = (INTERFACE / "base-comum.css").read_text(encoding="utf-8")
 
-#: As dez abas, a calibração e os dois mapas das portas e do controle.
 PAGINAS = sorted(
     p.name for p in MOCKUP.glob("*.html")
     if re.match(r"(0\d|10)-", p.name) or p.name in (
@@ -153,7 +152,7 @@ def _tab_ate(pg: Any, id_: str, limite: int = 120) -> bool:
     return False
 
 
-@pytest.mark.parametrize("pagina,seletor", [  # (noqa-acento) nome do parâmetro
+@pytest.mark.parametrize("pagina,seletor", [  # (noqa-acento)
     ("mapa-das-portas.html", "h3[data-dica],h4[data-dica],span[data-dica]"),
     ("08-conexoes.html", "h4[data-dica]"),
     ("01-jogar.html", "[data-dica]"),
@@ -241,9 +240,6 @@ def test_quem_tem_campo_dentro_nao_ganha_parada_dobrada(
         pg.close()
 
 
-# ---- as mordidas: tirar UMA cura da base e ver a régua reprovar ------------------------------
-
-
 def _reprova_sem(navegador: Any, tmp_path: pathlib.Path, cura: str, trocado: str) -> list[str]:
     """As duas provas sobre a base SEM a cura; devolve o que cada uma disse ao reprovar."""
     assert JS_DA_BASE.count(cura) == 1, cura
@@ -275,8 +271,6 @@ def test_morde_sem_olhar_o_atributo_posto_depois(navegador: Any, tmp_path: pathl
         navegador, tmp_path, "if (m.type === 'attributes') marcar(m.target);\n      else ", "")
     assert any("data-dica posto depois" in e for e in erros), erros
 
-
-# ---- o WebKit do produto: a camada da dica da casa abre no foco do título ----------------------
 
 _JS_DO_FOCO_NO_WEBKIT = """(function(){
   const h = document.createElement('h4');
@@ -370,7 +364,7 @@ def _foco_no_webkit(tmp_path: pathlib.Path, js: str = JS_DA_BASE) -> dict[str, A
 
 
 def test_no_webkit_do_produto_o_foco_no_titulo_abre_a_dica_da_casa(tmp_path: pathlib.Path) -> None:
-    # D-1610-O-TITULO-COM-DICA-ENTRA-NO-TAB-E-ABRE-A-DICA-PELO-FOCO
+    """Prova da D-1610-O-TITULO-COM-DICA-ENTRA-NO-TAB-E-ABRE-A-DICA-PELO-FOCO."""
     m = _foco_no_webkit(tmp_path)
     assert not m.get("erro"), m
     assert m["parada"] == 0 and m["papel"] is None, f"o título não ganhou a parada: {m}"

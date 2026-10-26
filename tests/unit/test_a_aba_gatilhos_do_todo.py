@@ -31,8 +31,6 @@ CHROME = pathlib.Path("/usr/bin/google-chrome")
 FAIXAS = {s.name: {p.name: (p.min_value, p.max_value) for p in s.params} for s in PRESETS}
 PADROES = {s.name: {p.name: p.default for p in s.params} for s in PRESETS}
 
-#: quantas imersões cada acionamento oferece (as 30 de 19/10 e as 5 do bloco C de 20/10, 35 ao
-#: todo; a Metralhadora e a Vibração dividem as mesmas três)
 QUANTAS = {"Weapon": 12, "Machine": 3, "Vibration": 3, "Bow": 3, "Resistance": 7,
            "MultiPositionFeedback": 3, "Galloping": 3, "SlopeFeedback": 2,
            "MultiPositionVibration": 2}
@@ -82,7 +80,6 @@ def test_nenhum_momento_passa_do_teto_de_escritas_do_motor() -> None:
             assert m.apos_ms >= 0 and (m.dura_ms is None or m.dura_ms > 0), i.chave
 
 
-#: o que só um `momento` faz (mudar com o tempo de aperto), e o `tato_vivo` os toca
 _PROMESSA_DE_TEMPO = re.compile(
     r"depois de|de vez em quando|conforme|alterna|acelera|minuto|segundo|instante|\bHz\b"
     r"|\d+(?:,\d+)? ?s\b", re.I)
@@ -115,13 +112,10 @@ def test_a_ordem_com_estilo_poe_as_dele_na_frente() -> None:
     sem = [i.chave for i in imersao.imersoes_do_acionamento("Weapon")]
     com = [i.chave for i in imersao.imersoes_do_acionamento("Weapon", "terror")]
     assert sem[:3] == ["ferrolho-que-volta", "trava-seca", "pino-que-falha"]
-    # a frente do Terror (tabela S de 19/10/2026): Trava seca, Batida, Golpe pesado
     assert com[:3] == ["trava-seca", "batida-do-coracao", "golpe-pesado"]
     assert sorted(com) == sorted(sem)
     assert imersao.imersoes_do_acionamento("Off") == ()
 
-
-# ---------------------------------------------------------------- a tela
 
 def _desenho() -> str:
     """O desenho (`mockup/`), que é o que o gerador escreve e ela aprova."""
@@ -136,7 +130,7 @@ def _o_que_se_le() -> str:
 @pytest.fixture
 def a03():
     """O pacote da aba Gatilhos do todo, com o rascunho limpo."""
-    import pacotes  # noqa: F401  (registra os dez)
+    import pacotes  # noqa: F401
     from pacotes import a03_gatilhos
 
     a03_gatilhos.esquecer_o_rascunho()
@@ -277,8 +271,6 @@ def test_escolher_a_imersao_manda_ao_controle_os_numeros_dela(a03, monkeypatch) 
     assert ponte2.chamadas[0][0] == "reset", "«Sem efeito» solta o gatilho"
     with pytest.raises(ValueError, match="não é uma imersão"):
         a03.imersao_escolhida(_ctx(), {**o, "valor": "inventada"}, _Ponte())
-    # o gatilho sem perfil está em `Off`, que não é de família nenhuma: o efeito leva o gatilho
-    # ao acionamento de nascença dele
     ponte3 = _Ponte()
     a03.imersao_escolhida(_ctx(), o, ponte3)
     assert ponte3.chamadas[0][0] == "set" and "Machine" in ponte3.chamadas[0][1]
@@ -344,12 +336,11 @@ def test_o_nome_do_controle_tem_a_largura_da_coluna_e_a_tela_nao_rola() -> None:
     assert len(m["chip"]) >= 2 and len(m["imer"]) >= 4
     for i, (esq, larg) in enumerate(m["chip"]):
         if m["imer"][i][1] == 0:
-            continue  # o lugar sem controle não abre campo: só o nome tracejado
+            continue
         assert abs(larg - m["imer"][i][1]) < 1.5 and abs(esq - m["imer"][i][0]) < 1.5, (
             f"o nome do controle {i} não tem a largura e o lugar da coluna: "
             f"{(esq, larg)} contra {m['imer'][i]}")
     assert not m["rola"] and not m["lateral"], m
-    # o lugar vazio diz que ali cabe um controle, como no desenho do todo
     assert m["vazios"] and all(
         v[0].endswith("Desconectado") and v[1] == "visible" and v[2] > 0 for v in m["vazios"]), (
         m["vazios"])

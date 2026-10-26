@@ -29,7 +29,7 @@ from pathlib import Path
 from typing import Any
 
 VERSAO = 1001
-ID_DO_CLIENTE = 0x44535545  # qualquer número; o servidor só o devolve
+ID_DO_CLIENTE = 0x44535545
 PACOTES_POR_SEGUNDO_MINIMO = 8.0
 GRAVIDADE_MIN, GRAVIDADE_MAX = 0.9, 1.1
 
@@ -114,7 +114,6 @@ def ensaiar(args: argparse.Namespace) -> dict[str, Any]:
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.bind(("127.0.0.1", 0))
 
-        # 1 · a versão
         sock.sendto(_pedido(0x100000, b""), host)
         resposta = _receber(sock, 2.0)
         if resposta is None:
@@ -126,7 +125,6 @@ def ensaiar(args: argparse.Namespace) -> dict[str, Any]:
         if lida != VERSAO:
             raise Falha(f"a versão é {lida}, o emulador espera {VERSAO}")
 
-        # 2 · as portas
         sock.sendto(_pedido(0x100001, struct.pack("<i", 4) + bytes([0, 1, 2, 3])), host)
         portas: dict[int, dict[str, Any]] = {}
         fim = time.monotonic() + 1.5
@@ -152,7 +150,6 @@ def ensaiar(args: argparse.Namespace) -> dict[str, Any]:
                 f"({escolhida['mac']}): o emulador veria o físico"
             )
 
-        # 3 · os dados
         sock.sendto(_pedido(0x100002, bytes([1, args.slot]) + bytes(6)), host)
         inicio = time.monotonic()
         contadores: list[int] = []
@@ -178,7 +175,7 @@ def ensaiar(args: argparse.Namespace) -> dict[str, Any]:
             ax, ay, az = struct.unpack_from("<fff", pacote, 76)
             modulos.append((ax * ax + ay * ay + az * az) ** 0.5)
             giros.append(struct.unpack_from("<fff", pacote, 88))
-            for base in (56, 62):  # os dois toques: ativo, id, x, y
+            for base in (56, 62):
                 if pacote[base]:
                     x, y = struct.unpack_from("<HH", pacote, base + 2)
                     xs.append(x)

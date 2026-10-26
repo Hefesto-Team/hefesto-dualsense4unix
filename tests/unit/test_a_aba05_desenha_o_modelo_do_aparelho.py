@@ -23,7 +23,6 @@ BANCADA = RAIZ / "mockup/05-vibracao.html"
 CORES_CSV = RAIZ / "docs/data/cores-do-dualsense.csv"
 PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 
-#: descuido: é o que `mesa_viva.mesa_do_estado` põe quando o mapa de canais diz
 LIDO = "white"
 SEM_LEITURA = ""
 
@@ -45,9 +44,8 @@ def modelos_do_mapa() -> set[str]:
     }
 
 
-SEM_CONTROLE = "nao"  # (noqa-acento) valor de atributo
+SEM_CONTROLE = "nao"  # (noqa-acento)
 
-#: `data-conectado="nao"` — a mesma que o piloto põe e tira.
 MARCA_DO_LUGAR_VAZIO = "lugar-sem-controle"
 
 
@@ -76,7 +74,6 @@ class _Pagina(HTMLParser):
         d = {k: (v or "") for k, v in attrs}
         heranca = [c for pai in self.pilha
                    for c in (pai.get("class") or "").split()]
-        # classe: é o `data-conectado="nao"`, que é o que o piloto escreve e
         heranca += [MARCA_DO_LUGAR_VAZIO for pai in self.pilha
                     if (pai.get("data-conectado") or "") == SEM_CONTROLE]
         self.elementos.append((tag, d, heranca))

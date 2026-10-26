@@ -119,8 +119,6 @@ class TestOQueEstaFraseNaoAlcancaNoStateFullDeVerdade:
     sem decidir o que fazer com a duplicata, ele reprova e obriga a decisão.
     """
 
-    #: O `state_full` como o daemon o publica: a chave mora DENTRO do bloco.
-    #: `tests/fixtures/state_full_quatro_controles.json` traz, e a que
     PAYLOAD_REAL: ClassVar[dict[str, dict[str, bool]]] = {
         "keyboard_emulation": {"osk_disponivel": True}
     }

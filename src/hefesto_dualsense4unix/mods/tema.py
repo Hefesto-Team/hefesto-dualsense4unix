@@ -16,14 +16,11 @@ from typing import Any
 
 from hefesto_dualsense4unix.mods import meu_css
 
-#: A página publicada de onde saem os valores da casa (todas as dez têm o mesmo ``:root``).
 PAGINA_DOS_TOKENS = (Path(__file__).resolve().parent.parent / "interface"
-                     / "paginas"  # (noqa-acento): nome da pasta
+                     / "paginas"  # (noqa-acento)
                      / "01-jogar.html")
 
-#: Os lados em que uma extensão de tema pode pôr os botões da janela.
 LADOS_DOS_BOTOES = ("esquerda", "direita")
-#: As chaves do bloco ``tema``: a cor (uma das duas), o lado, e a opção que liga cada um.
 CHAVES_DA_COR = ("folha", "arquivo")
 CHAVE_DO_LADO = "botoes"
 CHAVE_DA_OPCAO_DA_COR = "cor_pela_opcao"
@@ -32,33 +29,20 @@ CHAVES_DO_BLOCO = frozenset({*CHAVES_DA_COR, CHAVE_DO_LADO, CHAVE_DA_OPCAO_DA_CO
                              CHAVE_DA_OPCAO_DO_LADO})
 
 LIMIAR_DO_CONTRASTE = 4.5
-#: O tema maior que isto não é um tema de cores.
 TAMANHO_MAXIMO = 16 * 1024
 
 TEXTOS = ("--fg", "--texto-suave", "--texto-mudo", "--comment", "--rot-campo")
 FUNDOS = ("--app-bg", "--panel", "--elevated")
-#: O fundo em volta da janela (o ``body``), um tom abaixo do ``--app-bg`` (21/10/2026,
-#: A-MOLDURA-DA-PAGINA-SEGUE-O-TEMA-01). Sobre ele só cai o texto do ``body``, o ``--fg``: é esse
-#: par que a régua mede, e não os cinco textos de dentro da janela, que nunca pintam ali.
 FUNDO_DA_PAGINA = "--fundo-da-pagina"
-#: As cores de destaque, que as páginas também usam como cor de texto (título, estado, botão).
 ACENTOS = ("--green", "--cyan", "--purple", "--orange", "--pink", "--red", "--yellow")
-#: O piso do acento: o da WCAG para componente e texto em negrito. A palavra ao lado do acento
-#: diz o mesmo que a cor, e na casa o pior acento (``--red`` sobre ``--elevated``) dá 4,34:1.
 LIMIAR_DO_ACENTO = 3.0
 
-#: Os tokens de cor do ``:root`` da casa que um tema pode trocar.
 TOKENS_DA_CASA = frozenset({
     *TEXTOS, *FUNDOS, *ACENTOS, "--border-sutil", "--border-forte", "--sel-bg", "--linha",
     "--rot-linha", "--logo-aro", FUNDO_DA_PAGINA,
 })
-#: O fundo da logo (``none`` na casa): o tema claro diz o disco escuro, para a logo de sempre
-#: pintar sobre ele (20/10/2026, O-TEMA-CLARO-NASCE-COMO-EXTENSAO-01). Aceita ``none``, uma cor ou
-#: um ``radial-gradient`` só de cores; o aro (``--logo-aro``) é uma cor como as outras.
 FUNDO_DA_LOGO = "--logo-fundo"
-#: As categorias da aba Conexões: a cor de cada tipo na régua, na sala e na faixa do mapa.
 _TOKEN_DE_CATEGORIA = re.compile(r"--(?:c|sala|mapa)-[a-z][a-z_]{0,23}")
-#: Os plásticos: a cor de cada controle é a do aparelho, e tema nenhum a troca.
 PLASTICOS = frozenset({"--cosmic-red", "--nova-pink", "--starlight-blue", "--galactic-purple",
                        "--midnight-black"})
 
@@ -127,7 +111,6 @@ def fundo_da_logo(valor: str) -> bool:
     partes = [p.strip() for p in _VIRGULA_DE_FORA.split(m.group(1))]
     primeira = _PARADA.fullmatch(partes[0])
     if primeira is None or cor(primeira.group(1)) is None:
-        # a primeira parte não é cor: é a forma («circle at 35% 30%»), ou o valor não serve
         if not partes[0] or not _FORMA.fullmatch(partes[0]):
             return False
         partes = partes[1:]
@@ -293,8 +276,6 @@ def validar(folha: str, *, casa: dict[str, str] | None = None,
 def _conferir_o_contraste(tokens: dict[str, str], casa: dict[str, str],
                           apelidos: dict[str, str]) -> None:
     valores = valores_pintados(casa, tokens, apelidos)
-    # a página publicada antes do token não o tem: lá o fundo é cor por extenso, e tema nenhum o
-    # troca
     moldura = (FUNDO_DA_PAGINA,) if FUNDO_DA_PAGINA in valores else ()
     for nome in (*TEXTOS, *FUNDOS, *ACENTOS, *moldura):
         c = cor(valores.get(nome, ""))
@@ -303,7 +284,6 @@ def _conferir_o_contraste(tokens: dict[str, str], casa: dict[str, str],
         if c[3] < 1:
             raise TemaRecusadoError(f"«{nome}» precisa ser uma cor opaca: o contraste do texto "
                                     "se mede sobre ela.")
-    # a frase diz o PIOR par: é ele que a pessoa precisa consertar primeiro
     for nomes, limiar in ((TEXTOS, LIMIAR_DO_CONTRASTE), (ACENTOS, LIMIAR_DO_ACENTO)):
         razao, texto, fundo = min((contraste(valores[t], valores[f]), t, f)
                                   for t in nomes for f in FUNDOS)
@@ -413,7 +393,6 @@ def tema_da_casa(lugares: Any = None) -> TemaDaCasa:
         try:
             manifesto = ler_manifesto(pasta)
         except ManifestoRecusadoError as exc:
-            # o manifesto que não abre não liga tema nenhum, e a frase dele vai aos avisos
             sem_manifesto.append(f"O manifesto de «{entrada.nome}» não abriu: {exc.frase}")
             continue
         bloco = manifesto.tema
@@ -424,7 +403,6 @@ def tema_da_casa(lugares: Any = None) -> TemaDaCasa:
             com_css.append((*chave, manifesto))
         if not bloco:
             continue
-        # o bloco que não diz cor nem lado também entra pela cor: é a régua dela que o recusa
         if (any(c in bloco for c in CHAVES_DA_COR) or CHAVE_DO_LADO not in bloco) and _opcao_ligada(
                 manifesto, bloco.get(CHAVE_DA_OPCAO_DA_COR), lg):
             com_cor.append((*chave, manifesto, pasta))

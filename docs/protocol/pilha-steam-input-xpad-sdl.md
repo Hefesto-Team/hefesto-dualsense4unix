@@ -223,7 +223,7 @@ fuzz 16 e flat 128; gatilhos `0..255` (`0..1023` no Xbox One); direcional
 `xpad.c:1743`). Um aparelho, um nó, sete eixos.
 
 **A consequência para este projeto, e é ela que custa:** a máscara Xbox 360
-(`045e:028e`, `integrations/uinput_gamepad.py:59-61`) **não tem onde pôr**
+(`045e:028e`, `integrations/uinput_gamepad.py:58-60`) **não tem onde pôr**
 giroscópio, touchpad, lightbar RGB, gatilhos adaptativos ou bateria. Não é bug
 nosso nem falta de trabalho: é o formato do aparelho que estamos imitando.
 Quem escolhe a máscara Xbox escolhe **rumble por evdev que funciona em tudo** e
@@ -330,7 +330,7 @@ Três funções, todas em `libsdl-org/SDL` branch `main`:
 
   ATENÇÃO: **no macOS o critério é `045e:028e` com `version == 0`** — que é
   exatamente o par da máscara Xbox 360 deste projeto
-  (`integrations/uinput_gamepad.py:59-60`). No Linux isso **não** acontece, e
+  (`integrations/uinput_gamepad.py:58-59`). No Linux isso **não** acontece, e
   esta página só se responsabiliza pelo Linux; mas quem um dia portar o projeto
   precisa saber que a colisão existe. **GRAU: ALTA.**
 
@@ -375,7 +375,7 @@ Leia a ordem: **para o par `28de:11ff`, a função retorna antes de consultar
 
 - com `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD` **ausente ou 0**, o SDL
   já ignora os espelhos sozinho — e o par `0x28de/0x11ff` que este projeto
-  acrescentou ao `_IGNORE_VALUE` (`daemon/launch_env.py:107`, emitido em `:179-181`) é
+  acrescentou ao `_IGNORE_VALUE` (`daemon/launch_env.py:103`, emitido em `:165-167`) é
   **redundante**, não errado;
 - com a variável **em 1**, o SDL usa os espelhos — e aquele par **não os
   esconde**, porque a lista de ignorados nunca é consultada para ele.
@@ -491,7 +491,7 @@ formato documentado do hint, é o que o próprio Proton escreve na variável irm
 lado a lado; a diferença é só de nomes (`controllers` virou `gamepads`,
 `SDL_bool` virou `bool`). **GRAU: ALTA.**
 
-> Isto **promove** a nota de `daemon/launch_env.py:126-135`, que registrava
+> Isto **promove** a nota de `daemon/launch_env.py:114-123`, que registrava
 > honestamente "SUSPEITA COM MECANISMO (forte; nenhum parser do SDL foi
 > executado)". O parser continua não executado — mas o **caminho de decisão**
 > agora está lido linha a linha, nas duas gerações. O que falta para virar
@@ -555,7 +555,7 @@ afirmava por medição indireta; agora está lido no fonte.
 4. A variável é consultada **antes** da lista de registro e antes de
    `PROTON_ENABLE_HIDRAW` (`main.c:571-578`), então negar vence.
 
-**Isto CONFIRMA, por leitura de fonte, o que `daemon/launch_env.py:129-137`
+**Isto CONFIRMA, por leitura de fonte, o que `daemon/launch_env.py:117-125`
 (a docstring de `compor_lista_vidpid`) registrava como MEDIDO por `strings(1)`.** As mesmas cadeias estão no binário
 da máquina de teste: `strings -a -el` no
 `Proton 10.0/files/lib/wine/x86_64-windows/winebus.sys` devolve
@@ -593,7 +593,7 @@ Três leituras, e a terceira é a que importa:
    wrapper exportou.
 2. A lista inclui `0x054C/0x0DF2` — o PID do nosso vpad. Se disparar, o vpad
    perde `hidraw`, e com ele rumble, gatilhos e lightbar do jogo. É precisamente
-   o que `daemon/launch_env.py:170` proíbe em letras maiúsculas
+   o que `daemon/launch_env.py:158` proíbe em letras maiúsculas
    (*"NUNCA incluir 0x0DF2"*).
 3. **Ela não pode disparar nesta máquina**: exige `SteamDeck == "1"`, e este PC
    não é um Deck. **GRAU: ALTA** — a condição está no fonte, lida.
@@ -605,7 +605,7 @@ ambiente, não hardware.
 ### 3.5 A escolha do PID `0x0DF2` — os efeitos colaterais que EXISTEM
 
 O vpad se declara **DualSense Edge** (`VPAD_PRODUCT = 0x0DF2`,
-`integrations/uhid_gamepad.py:111`) para se distinguir do físico `0x0CE6` e
+`integrations/uhid_gamepad.py:102`) para se distinguir do físico `0x0CE6` e
 poder ser separado por VID/PID. A pergunta é: **o SDL trata o Edge diferente do
 DualSense comum?**
 
@@ -634,7 +634,7 @@ enquanto o DualSense comum tem cinco (`030000004c050000e60c...` para USB e
 banco**. Isso não é defeito enquanto o caminho for HIDAPI (o driver PS5
 sintetiza o mapeamento), mas passa a importar se algum dia o vpad DualSense for
 lido pelo caminho evdev — que é o que `SDL_JOYSTICK_HIDAPI=0` faz, e é o que
-este projeto já emite na máscara **Xbox** (`daemon/launch_env.py:1223`,
+este projeto já emite na máscara **Xbox** (`daemon/launch_env.py:1192`,
 declarado em `:1511`).
 **GRAU: MEDIDO AQUI** para o conteúdo do banco; **BAIXA** para a consequência,
 que não foi exercitada.
@@ -669,7 +669,7 @@ o degrau anterior deixou passar.
 **Quem ganha o ambiente.** O degrau 4 vem **depois** do 3: a Steam monta o
 ambiente do processo e o wrapper roda dentro dele, sobrescrevendo com `env(1)`
 as variáveis que exporta. Logo, para as **sete** variáveis da
-`ENV_ALLOWLIST` em `daemon/launch_env.py:90-98`, **o wrapper vence a Steam**. Para qualquer
+`ENV_ALLOWLIST` em `daemon/launch_env.py:90-94`, **o wrapper vence a Steam**. Para qualquer
 outra — e `SDL_GAMECONTROLLER_ALLOW_STEAM_VIRTUAL_GAMEPAD` é uma delas, porque
 **não está na allowlist** — vale o que a Steam pôs. **GRAU: ALTA** para o
 mecanismo (`env(1)` e a allowlist por NOME de variável em
@@ -683,8 +683,8 @@ por appid, `#` comenta. Três leitores, e cada um faz uma coisa diferente:
 | leitor | o que a marca faz ali |
 |---|---|
 | o guard do Steam Input | **não** reverte o `UseSteamControllerConfig` daquele appid no `localconfig.vdf` — ou seja, o degrau 3 fica ligado para aquele jogo |
-| `integrations/storm_doctor.py:46` e `:306` | o diagnóstico deixa de acusar aquele appid como conflito |
-| `daemon/launch_env.py:299-330` | decide a **sessão da exceção** e **pula o arming** da máscara para aquele appid |
+| `integrations/storm_doctor.py:46` e `:297` | o diagnóstico deixa de acusar aquele appid como conflito |
+| `daemon/launch_env.py:285-316` | decide a **sessão da exceção** e **pula o arming** da máscara para aquele appid |
 
 **O que ela NÃO muda mais, e isto é decisão de produto, datada.** Até 09/08 a marca
 tinha um ramo próprio no arquivo de envs: o jogo marcado recebia um ambiente
@@ -1376,12 +1376,12 @@ que ele espera (`0x01`) nunca vem?*
     )
 ```
 
-`integrations/uhid_gamepad.py:543-572` (`_fala_de_vibracao`). O report do SDL
+`integrations/uhid_gamepad.py:469-498` (`_fala_de_vibracao`). O report do SDL
 Edge liga `0x02` no `valid_flag0` — passa pelo **primeiro** teste — e ainda
 ligaria `0x04` no `valid_flag2`, que é o segundo. **Passa duas vezes.**
 
 E a parada do SDL tem discriminador próprio, `_e_a_parada_do_sdl`
-(`integrations/uhid_gamepad.py:341-366`), que exige `valid_flag0 == 0`,
+(`integrations/uhid_gamepad.py:271-293`), que exige `valid_flag0 == 0`,
 `valid_flag1 == 0` e motores zerados — exatamente o report que 6.3 descreve.
 
 **Conclusão desta subseção: o formato que o SDL emite para um Edge atravessa o
@@ -1404,7 +1404,7 @@ Escrito como lista de portas, não como hipótese preferida. Nenhuma foi medida.
 3. **Escreve pelo caminho errado.** Sob Proton, o pedido do jogo Windows pode
    sair pelo `winebus` no `hidraw` do **físico** em vez do vpad — e o físico é
    quem o daemon controla. `PROTON_DISABLE_HIDRAW` existe para fechar essa
-   porta, e ele só sai com `cobertura_total` (`daemon/launch_env.py:556-567`).
+   porta, e ele só sai com `cobertura_total` (`daemon/launch_env.py:541-552`).
 4. **A quantidade de bits de autorização.** Sabe-se que o **conjunto**
    funciona; **nunca** se ensaiou de quantos o firmware precisa, um a um. São
    quatro na mesa: `COMPATIBLE_VIBRATION`, `HAPTICS_SELECT`, `MOTOR_POWER` e
@@ -1609,7 +1609,7 @@ do `winedevice`. Prova direta: `HIDIOCGFEATURE` por Python no hidraw de cada pad
   o master de 14/10) responde com `min(wLength, report_length, 64)` e
   `req->zero = 0`. Ele ignora o `length` que o Hefesto grava pelo
   `GADGET_HID_WRITE_GET_REPORT`
-  (`pacote_do_get_report` em `src/hefesto_dualsense4unix/integrations/pad_usb.py:323`). Toda resposta sai com 64 bytes, sem o pacote vazio, e
+  (`pacote_do_get_report` em `src/hefesto_dualsense4unix/integrations/pad_usb.py:300`). Toda resposta sai com 64 bytes, sem o pacote vazio, e
   todo pedido de 128 volta `-110` aos ~5,1 s. Com 4 pads e várias features por
   pad, o `winebus` estoura o prazo de 10 s do `services.exe` (`1053`) e o jogo sobe
   sem controle nenhum.

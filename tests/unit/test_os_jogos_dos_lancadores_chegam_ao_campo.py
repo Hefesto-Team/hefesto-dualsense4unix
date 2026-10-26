@@ -206,7 +206,6 @@ def test_nenhum_lancador_instalado_e_lista_so_da_steam(
     assert jl.jogos_com_janela(lar=tmp_path, pastas=[tmp_path]) == []
 
 
-# (noqa-acento: citação literal, com a digitação original)
 def _extensao(monkeypatch: pytest.MonkeyPatch, *jogos: censo.JogoDoLancador,
               fontes: tuple[str, ...] = ()) -> None:
     """A extensão `lutris` ligada (o Lutris virou extensão em 19/10/2026), com estes jogos."""
@@ -380,7 +379,6 @@ def test_a_aba_perfis_responde_o_nome_do_jogo_do_heroic(
     from hefesto_dualsense4unix.profiles.simple_match import from_simple_choice
 
     jl._NOMES_DAS_JANELAS = None
-    #: `identidade_de_janela`: sem umu-id e sem appid, um binário que NÃO é
     nativo = dict(BAIXADO, app_name="nativo", title="Celeste",
                   install={"executable": "Celeste.x86_64", "is_dlc": False})
     _heroic(tmp_path, [BAIXADO, nativo])
@@ -405,7 +403,6 @@ def test_a_aba_perfis_responde_o_nome_do_jogo_do_heroic(
             'label="Marvel\'s Guardians of the Galaxy"></option>') in html
     assert '<option value="3357650" label="PRAGMATA · 3357650">' in html
 
-    # `steam_game`; e `from_simple_choice("steam_game", "1088850")` produz
     assert a10._forma_do_que_ela_escolheu("steam_app_1088850") == "steam_game"
     assert a10._forma_do_que_ela_escolheu("Celeste.x86_64") == "janela"
     assert a10._forma_do_que_ela_escolheu("3357650") == "steam_game"

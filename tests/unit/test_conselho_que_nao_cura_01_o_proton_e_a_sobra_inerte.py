@@ -70,7 +70,7 @@ def _lar_do_proton(
         )
     elif manifesto == "corrompido":
         dentro.write_text('{"name": "GE-Proton10-34", "sha256"', encoding="utf-8")
-    elif manifesto != "ausente":  # pragma: no cover - erro de quem escreve teste
+    elif manifesto != "ausente":  # pragma: no cover
         raise ValueError(manifesto)
 
     for appid, nome in (("2497900", "DON'T SCREAM"), ("316790", "Grim Fandango")):

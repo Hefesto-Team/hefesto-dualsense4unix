@@ -61,9 +61,6 @@ def lar(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return biblioteca
 
 
-# --- a tabela -------------------------------------------------------------------------------
-
-
 def test_a_tabela_traz_a_receita_do_kit_sem_appid_embarcado() -> None:
     (ble,) = [r for r in rda.carregar_tabela() if r.id == "lovense-ble-winrt"]
     assert ble.variavel == "WINEDLLOVERRIDES" and ble.valor == _ESPERADO
@@ -75,13 +72,10 @@ def test_a_tabela_traz_a_receita_do_kit_sem_appid_embarcado() -> None:
     assert not [ln for ln in dados if re.search(r"\b\d{5,}\b", ln)], "appid embarcado na tabela"
 
 
-# --- o disco do jogo ------------------------------------------------------------------------
-
-
 def test_o_jogo_com_a_dll_do_kit_recebe_o_override_mesmo_com_o_nome_da_pasta_diferente(
     lar: Path,
 ) -> None:
-    # D-1610-A-DLL-DO-KIT-DA-LOVENSE-SE-DESLIGA-PELA-PASTA
+    """Prova da D-1610-A-DLL-DO-KIT-DA-LOVENSE-SE-DESLIGA-PELA-PASTA."""
     raiz = _jogo_unity(lar, "710001", produto="Third Crisis Neon Nights")
     assert rda.ambiente_do_jogo(raiz) == {"WINEDLLOVERRIDES": _ESPERADO}
     assert rda.pecas_que_faltam(raiz) == (), "a DLL do sinal é a própria peça: nada falta"
@@ -130,9 +124,6 @@ def test_a_linha_com_caminho_perigoso_ou_peca_com_barra_nao_entra(tmp_path: Path
     assert [r.id for r in rda.carregar_tabela(csv)] == ["ok"]
 
 
-# --- o arquivo de ambiente que o daemon escreve ---------------------------------------------
-
-
 def test_o_daemon_escreve_o_override_no_env_do_jogo_com_o_kit_e_so_dele(
     lar: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -147,9 +138,6 @@ def test_o_daemon_escreve_o_override_no_env_do_jogo_com_o_kit_e_so_dele(
     assert com["SDL_ACCELEROMETER_AS_JOYSTICK"] == "0", "a receita não pode tirar o resto"
     assert not (pasta / "steam_app_710008.env").exists(), "jogo sem a DLL ganhou arquivo"
     assert "WINEDLLOVERRIDES" not in base._env(pasta / "default.env")
-
-
-# --- o wrapper ------------------------------------------------------------------------------
 
 
 def test_o_override_de_desligar_atravessa_o_arquivo_e_o_wrapper_ate_o_processo_do_jogo(

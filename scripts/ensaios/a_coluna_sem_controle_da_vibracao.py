@@ -30,7 +30,6 @@ from hefesto_dualsense4unix.interface import hefesto_vivo
 
 ABA = "05-vibracao.html"
 
-#: O TRAVESSÃO É DO PRODUTO, e não se digita aqui: ``app/telas/vibracao.NAO_SEI``
 from hefesto_dualsense4unix.app.telas.vibracao import NAO_SEI
 
 import monta

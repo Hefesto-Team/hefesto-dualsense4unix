@@ -57,7 +57,6 @@ GABINETE = {
 
 UNIQ_RADIO = "aabbcc000001"
 UNIQ_CABO = "aabbcc000002"
-#: que volta `player: None` — a assinatura é `is_primary`, não o transporte.
 CONECTADOS = [
     {"uniq": UNIQ_RADIO, "index": 0, "transport": "bt", "connected": True,
      "player": 1, "player_slot": 1, "is_primary": True, "battery_pct": 95},

@@ -83,7 +83,7 @@ def test_a_primeira_leitura_so_diz_desde_quando_ouve(
 
 
 def test_entrou_saiu_e_voltou(sys_usb: SysDeMentira, tmp_path: Path, relogio: Relogio) -> None:
-    # D-1510-A-CADEIA-USB-SE-RECONHECE-PELO-TIPO-E-CADA-MUDANCA-VAI-AO-DIARIO
+    """Prova da D-1510-A-CADEIA-USB-SE-RECONHECE-PELO-TIPO-E-CADA-MUDANCA-VAI-AO-DIARIO."""
     ouvido = _ouvido(sys_usb, tmp_path, relogio)
     ouvido.comecar(com_netlink=True)
     adaptador = dict(sys_usb.nos[ADAPTADOR])
@@ -140,7 +140,7 @@ def test_nao_apareceu_neste_inicio_uma_vez_por_boot(
         sys_usb: SysDeMentira, tmp_path: Path, relogio: Relogio) -> None:
     _ouvido(sys_usb, tmp_path, relogio, "boot-a").comecar(com_netlink=True)
     sys_usb.tirar(ADAPTADOR)
-    sys_usb.tirar("3-1.1.2")  # o receptor também falta, mas não é dos que se esperam
+    sys_usb.tirar("3-1.1.2")
 
     relogio.t = 0.0
     segundo = _ouvido(sys_usb, tmp_path, relogio, "boot-b")

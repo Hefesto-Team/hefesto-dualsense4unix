@@ -238,7 +238,6 @@ class TestWriteLightbarSlot:
             external_leds.write_lightbar_slot("input111", 3, leds_root=str(tmp_path))
             is True
         )
-        # player_slot_color(3) = verde (0, 255, 0); 'global' mestre = 1.
         assert _read_lb(tmp_path, "input111", "red") == "0"
         assert _read_lb(tmp_path, "input111", "green") == "255"
         assert _read_lb(tmp_path, "input111", "blue") == "0"
@@ -247,7 +246,6 @@ class TestWriteLightbarSlot:
     def test_slot_1_pinta_azul(self, tmp_path: Path) -> None:
         _mk_lightbar_nodes(tmp_path, "input111")
         external_leds.write_lightbar_slot("input111", 1, leds_root=str(tmp_path))
-        # slot 1 = azul (0, 0, 255) — mesma paleta dos DualSense.
         assert _read_lb(tmp_path, "input111", "blue") == "255"
         assert _read_lb(tmp_path, "input111", "red") == "0"
         assert _read_lb(tmp_path, "input111", "green") == "0"

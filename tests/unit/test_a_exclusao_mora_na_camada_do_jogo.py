@@ -595,8 +595,10 @@ def test_o_par_e_o_padrao_do_script_do_proton(_lar: Path) -> None:
 
 
 def test_o_jogo_pelo_wine_fica_com_o_da_caixa(_lar: Path) -> None:
-    """Uma versão do Wine que não é Proton não passa pelo script: sem a"""
-    # D-1910-A-CAMADA-DO-YML-LE-O-PROTON-NO-PROPRIO-YML
+    """Uma versão do Wine que não é Proton não passa pelo script: sem a
+
+    Prova da D-1910-A-CAMADA-DO-YML-LE-O-PROTON-NO-PROPRIO-YML.
+    """
     yml = _lutris_flatpak_pelo_wine(_lar)
     assert not cpe._pelo_proton_do_yml(yml, _lar)
     _carona(_lar)

@@ -80,7 +80,6 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
 from tests.unit.test_backend_multi_controller import _FakeHandle, _null_evdev
 
 
-#: Os quatro DualSense, na ordem da FILA GRAVADA do `controllers.json` da bancada
 KEYS = (
     "AA:BB:CC:00:00:01",
     "AA:BB:CC:00:00:02",

@@ -23,23 +23,15 @@ from pathlib import Path
 
 from hefesto_dualsense4unix.utils.repo_files import encontrar_arquivo_do_repo
 
-#: As envs que o Hefesto pede do Proton, além da allowlist do lançamento.
 ENVS_ALEM_DA_ALLOWLIST = ("PROTON_USE_XALIA", "PROTON_SONY_AUTO_XINPUT")
 
-#: As pastas de bibliotecas do Wine, na ordem: a do GE e da Valve nova, e a
-#: da Valve antiga.
 _PASTAS_DO_WINE = ("files/lib/wine", "files/lib64/wine")
 
-#: `(componente, arquivos dentro da pasta do Wine, string)`. Um componente
-#: passa quando QUALQUER dos seus arquivos traz a string, em ASCII ou UTF-16LE
-#: (os PE do Wine guardam os nomes de env em UTF-16).
 CONTRATO_DE_STRINGS: tuple[tuple[str, tuple[str, ...], str], ...] = (
     ("winebus", ("x86_64-unix/winebus.so", "x86_64-windows/winebus.sys"),
      "PROTON_DISABLE_HIDRAW"),
     ("winebus", ("x86_64-unix/winebus.so", "x86_64-windows/winebus.sys"),
      "SDL_GAMECONTROLLER_IGNORE_DEVICES"),
-    # o barramento SDL ignora o Sony (patches 0014 e 0177 do GE): sem o IGNORE,
-    # que o ramo Wayland apaga, é isto que esconde o físico do jogo
     ("winebus", ("x86_64-unix/winebus.so",), "hidraw handles native reports"),
     ("winepulse", ("x86_64-unix/winepulse.so",), "Speaker__sink"),
     ("winepulse", ("x86_64-unix/winepulse.so",), "Wireless_Controller"),
@@ -57,12 +49,8 @@ ACAO_PADRAO = "padrão"
 
 VEREDITO_PASSOU = "passou"
 VEREDITO_REPROVOU = "reprovou"
-#: A rodada da versão fixada antes de o instrumento existir; a primeira rodada
-#: na VM a confirma ou a derruba.
 RODADA_HERDADA = "herdada"
 
-#: Onde o recibo e o pino moram em QUALQUER instalação (o `share/` do Hefesto ou o
-#: checkout): o mesmo resolvedor dos scripts que o doctor chama.
 CAMINHO_DO_RECIBO = "docs/data/proton-qualificacao.csv"
 
 TAG_OK = "[ OK ]"
@@ -271,16 +259,11 @@ def ficha(
     if isinstance(da_fixada, str):
         resultado.faltas.append(f"a fixada não se lê: {da_fixada}")
         return resultado
-    # O padrão novo também marca: o lançamento vence um `setdefault`, mas só
-    # quando põe a env, e o `PROTON_SONY_AUTO_XINPUT` do 11-8 é um que não põe.
     conhecidos = {t.chave() for t in da_fixada}
     for toque in toques:
         if toque.chave() not in conhecidos:
             resultado.mudancas.append(toque.legivel())
     return resultado
-
-
-# ── o recibo ──────────────────────────────────────────────────────────────
 
 
 def caminho_do_recibo(raiz_do_repo: Path | None = None) -> Path:
@@ -441,7 +424,7 @@ def linhas_do_doctor(
         elif not pinned_proton_installed(nome, compat_dir):
             linhas.append((TAG_WARN, f"o Proton fixado ({nome}) não está em {compat_dir}"))
         if nome != pino.get("name", ""):
-            pass  # o pino que vale passou na ficha de hoje; o recibo confere só o do conf
+            pass
         elif recibo is None:
             linhas.append(
                 (

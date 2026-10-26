@@ -40,12 +40,11 @@ def _curva(**campos: Any) -> cv.Curva:
     return montada
 
 
-# -- o motor puro ----------------------------------------------------------------
-
-
 def test_o_padrao_e_a_identidade_byte_a_byte() -> None:
-    # D-1610-OS-ANALOGICOS-DO-JOGO-GANHAM-ZONA-MORTA-CURVA-E-UMA-MAO
-    """Sem ajuste não há curva, e o que há de neutro devolve cada byte de 0 a 255."""
+    """Sem ajuste não há curva, e o que há de neutro devolve cada byte de 0 a 255.
+
+    Prova da D-1610-OS-ANALOGICOS-DO-JOGO-GANHAM-ZONA-MORTA-CURVA-E-UMA-MAO.
+    """
     assert cv.montar(None) is None
     assert cv.montar(SimpleNamespace()) is None
     assert cv.montar(SimpleNamespace(zona_morta=0, curva="linear", sensibilidade=100)) is None
@@ -66,10 +65,8 @@ def test_a_zona_morta_de_20_zera_10_e_nao_zera_30() -> None:
     assert cv.moldar(curva, dez, 128) == (128, 128), "10 % do curso devia cair na zona morta"
     x, _ = cv.moldar(curva, trinta, 128)
     assert x > 128, "30 % do curso está fora da zona morta de 20 % e devia passar"
-    # a zona é RADIAL: 15 % em cada eixo dá módulo 21 %, fora dela
     diag = 128 + round(0.15 * 127)
     assert cv.moldar(curva, diag, diag) != (128, 128)
-    # o curso inteiro continua inteiro
     assert cv.moldar(curva, 255, 128)[0] == 255
     assert cv.moldar(curva, 0, 128)[0] == 0
 
@@ -142,7 +139,7 @@ def test_a_peca_sobrepoe_o_perfil_campo_a_campo() -> None:
 def test_a_mao_e_a_troca_nao_se_pedem_juntas() -> None:
     with pytest.raises(ValidationError):
         ProfileAnalogicosConfig(mao="direita", trocar=True)
-    perfil = SimpleNamespace(mao="direita", model_fields_set={"mao"})  # (noqa-acento) chave ASCII
+    perfil = SimpleNamespace(mao="direita", model_fields_set={"mao"})  # (noqa-acento)
     peca = SimpleNamespace(trocar=True, model_fields_set={"trocar"})
     junta = cv.montar(perfil, peca)
     assert junta is not None and junta.mao is None and junta.trocar, (
@@ -159,9 +156,6 @@ def test_a_faixa_do_esquema_e_a_do_motor() -> None:
     with pytest.raises(ValidationError):
         ProfileAnalogicosConfig(inverter=["lz"])  # type: ignore[list-item]
     assert ProfileAnalogicosConfig().model_dump(exclude_unset=True) == {}
-
-
-# -- os dois caminhos do pad virtual ----------------------------------------------
 
 
 class _Device:
@@ -257,9 +251,6 @@ def test_o_segundo_jogador_sem_curva_passa_o_curso() -> None:
     assert (saida["lx"], saida["ly"], saida["rx"], saida["ry"]) == (130, 131, 132, 133)
 
 
-# -- o giro feito analógico e as duas mãos ---------------------------------------
-
-
 class _Hub:
     def velocidade_do_movimento(self, _u: str) -> tuple[float, float, float]:
         return (0.0, 120.0, 0.0)
@@ -342,9 +333,6 @@ def test_o_giro_feito_analogico_passa_pela_mesma_curva(monkeypatch: pytest.Monke
     assert moldado[:4] != cru, "o giro feito analógico ganha a curva do analógico"
 
 
-# -- o perfil e o computador ------------------------------------------------------
-
-
 def test_o_perfil_seguinte_larga_a_curva_do_anterior(monkeypatch: pytest.MonkeyPatch) -> None:
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.profiles import manager as gerente
@@ -356,8 +344,8 @@ def test_o_perfil_seguinte_larga_a_curva_do_anterior(monkeypatch: pytest.MonkeyP
         monkeypatch.setattr(m, nome_do_metodo, lambda *a, **k: None)
     com = Profile.model_validate({
         "name": "Com Curva", "match": {"type": "any"},
-        "analogicos": {"zona_morta": 20, "mao": "direita"},  # (noqa-acento) identificador ASCII
-        "controllers": {P2: {"analogicos": {"zona_morta": 5}}},  # (noqa-acento) identificador ASCII
+        "analogicos": {"zona_morta": 20, "mao": "direita"},  # (noqa-acento)
+        "controllers": {P2: {"analogicos": {"zona_morta": 5}}},
     })
     sem = Profile.model_validate({"name": "Sem Curva", "match": {"type": "any"}})
     monkeypatch.setattr(gerente, "load_profile", lambda nome: com)
@@ -382,16 +370,16 @@ def test_o_computador_vale_por_baixo_e_o_conflito_fica_com_o_jogo() -> None:
     from hefesto_dualsense4unix.utils.maquina import ComputadorDeclarado
 
     computador = ComputadorDeclarado.model_validate({
-        "global": {"analogicos": {"zona_morta": 15, "mao": "direita"}}})  # (noqa-acento) chave
+        "global": {"analogicos": {"zona_morta": 15, "mao": "direita"}}})  # (noqa-acento)
     sem_nada = Profile.model_validate({"name": "Jogo", "match": {"type": "any"}})
     vale = perfil_que_vale(sem_nada, computador)
-    assert vale.analogicos is not None  # (noqa-acento) identificador ASCII
-    assert (vale.analogicos.zona_morta, vale.analogicos.mao) == (  # (noqa-acento) chave ASCII
+    assert vale.analogicos is not None
+    assert (vale.analogicos.zona_morta, vale.analogicos.mao) == (
         15, "direita")
     do_jogo = Profile.model_validate({
         "name": "Jogo", "match": {"type": "any"},
-        "analogicos": {"zona_morta": 30, "trocar": True}})  # (noqa-acento) identificador ASCII
+        "analogicos": {"zona_morta": 30, "trocar": True}})
     vale = perfil_que_vale(do_jogo, computador)
-    assert vale.analogicos is not None  # (noqa-acento) identificador ASCII
-    assert vale.analogicos.zona_morta == 30 and vale.analogicos.trocar  # (noqa-acento) chave ASCII
+    assert vale.analogicos is not None
+    assert vale.analogicos.zona_morta == 30 and vale.analogicos.trocar
     assert vale.analogicos.mao is None, "a mão do computador quebra a troca e cai"

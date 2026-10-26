@@ -21,12 +21,10 @@ _TOAST_COR_ENVIADA = "Cor enviada ao controle ({pct}% de brilho)"
 
 _ASSUNTO_COR = "Cor ({pct}% de brilho)"
 
-#: por-MAC do "Aplicar no controle" logo ao lado (`led_set((0, 0, 0),
 _TOAST_LIGHTBAR_APAGADA = "Lightbar apagada"
 _ASSUNTO_APAGAR = "Apagar a lightbar"
 
 
-#: escolha do usuário, e estão no §8 da sprint. Enquanto a resposta não vem, o
 _AVISO_MESMO_DESENHO_NOS_QUATRO = (
     "O mesmo desenho foi para os {n} controles ligados."
 )

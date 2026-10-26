@@ -23,7 +23,6 @@ from pathlib import Path
 BROKER = (Path(__file__).resolve().parents[2]
           / "src" / "hefesto_dualsense4unix" / "broker" / "hidraw_broker.py")
 
-#: cada raiz do sistema que o broker lê, e a constante que a crava.
 RAIZES = {
     "DEV_ROOT": "/dev",
     "DEV_INPUT_ROOT": "/dev/input",
@@ -36,8 +35,6 @@ RAIZES = {
     "CONFIGFS_GADGETS": "/sys/kernel/config/usb_gadget",
 }
 
-#: a raiz começa o caminho (no começo do texto ou depois de um separador) e termina nele ou numa
-#: barra: `/devices` não é `/dev`, e `/dev/input/event3` é da raiz mais longa, a `DEV_INPUT_ROOT`.
 _CAMINHO = re.compile(
     r"(?:^|(?<=[\s'\"(=:,]))("
     + "|".join(re.escape(r) for r in sorted(RAIZES.values(), key=len, reverse=True))

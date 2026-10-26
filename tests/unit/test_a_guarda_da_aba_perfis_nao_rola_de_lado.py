@@ -21,7 +21,6 @@ CHROME = pathlib.Path("/usr/bin/google-chrome")
 pytestmark = pytest.mark.skipif(
     not CHROME.exists(), reason="sem o Chrome do sistema: a régua não tem motor")
 
-#: (largura, altura): o menor tamanho que o produto abre e o da vista do usuário.
 ESTREITA = (1212, 809)
 LARGA = (1918, 840)
 
@@ -99,7 +98,6 @@ def test_a_mordida_sem_a_regra_de_largura_a_1212_reprova(tmp_path: pathlib.Path)
     assert marca in texto, "a regra do corte sumiu da aba 10: a guarda volta a rolar de lado"
     ini = texto.index(marca)
     fim = texto.index("*/", ini) + 2
-    # remove o bloco @media seguinte ao comentário
     abre = texto.index("@media", fim)
     n, i = 0, texto.index("{", abre)
     for j in range(i, len(texto)):

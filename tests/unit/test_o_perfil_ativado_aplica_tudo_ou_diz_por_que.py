@@ -21,7 +21,6 @@ from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import Profile
 from hefesto_dualsense4unix.testing.fake_controller import FakeController
 
-#: A forma que o perfil e o daemon usam por dentro (o esquema tira os `:`).
 P1 = "aabbcc000001"
 P2 = "aabbcc000002"
 P3 = "aabbcc000003"
@@ -41,7 +40,7 @@ def registro_de_mentira(monkeypatch: pytest.MonkeyPatch):
 
 def _ativacao_do_avatar(registro: Any, estado_do_speaker_de_p3: str) -> dict[str, str]:
     """O que o `profile.switch` relata: máscara em P1, P2 devolvido ao padrão, 3 alto-falantes."""
-    registro.set_mask(P2, "xbox")  # tinha máscara própria; o perfil não a declara
+    registro.set_mask(P2, "xbox")
     estados = {P1: "aplicado", P2: "aplicado", P3: estado_do_speaker_de_p3}
     gerente = ProfileManager(
         controller=FakeController(),
@@ -67,7 +66,6 @@ def _ativacao_do_avatar(registro: Any, estado_do_speaker_de_p3: str) -> dict[str
 
 def test_mascara_aplicada_e_devolvida_ao_padrao_nao_e_falta(registro_de_mentira) -> None:
     relatorio = _ativacao_do_avatar(registro_de_mentira, "aplicado")
-    # o que o produto de fato escreve: o DADO, nunca a palavra «aplicado»
     assert relatorio[f"mascara:{P1}"] == "xbox"
     assert relatorio[f"mascara:{P2}"] == "padrão"
 

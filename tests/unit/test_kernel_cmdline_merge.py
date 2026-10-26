@@ -10,7 +10,6 @@ CMDLINE_AURORA = (
     "pcie_aspm=off nvidia-drm.fbdev=1 usbcore.quirks=054c:0ce6:gn"
 )
 
-#: O token que o Hefesto gravava até 14/10/2026, com o ``n`` no pad virtual.
 TOKEN_VELHO = "usbcore.quirks=054c:0ce6:gn,054c:0df2:gn"
 
 CMDLINE_VIRGEM = "quiet splash loglevel=0"

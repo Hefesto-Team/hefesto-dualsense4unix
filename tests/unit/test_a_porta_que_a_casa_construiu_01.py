@@ -126,7 +126,7 @@ def _aberturas_diretas_em_python(caminho: Path) -> list[tuple[int, str]]:
     """`(linha, expressão)` de cada `open()` cujo caminho é um nó de aparelho."""
     try:
         arvore = ast.parse(caminho.read_text(encoding="utf-8"), filename=str(caminho))
-    except (OSError, SyntaxError):  # pragma: no cover - script quebrado é outro teste
+    except (OSError, SyntaxError):  # pragma: no cover
         return []
     achados: list[tuple[int, str]] = []
     for no in ast.walk(arvore):
@@ -259,7 +259,7 @@ def test_mordida_2_com_broker_a_porta_declarada_e_a_do_broker(tmp_path: Path) ->
         def abrir_no(self, no: str) -> tuple[int, str]:
             return fd, f"o broker serviu o fd (nó hidden) para {no}"
 
-        def close(self) -> None:  # pragma: no cover - o dublê não abre socket
+        def close(self) -> None:  # pragma: no cover
             pass
 
     aberto = abrir_hidraw(str(alvo), cliente=ClienteDeMentira())
@@ -487,7 +487,7 @@ def test_o_exame_da_08_diz_a_causa_do_controle_que_o_hefesto_nao_segura(
     item = a08_conexoes._conferencia_da_leitura(_estado_do_daemon("failed"), **dubles)
     assert item is not None
     assert item.chave == a08_conexoes.CHAVE_DA_LEITURA
-    assert item.estado == "atencao"  # (noqa-acento): chave de máquina do exame
+    assert item.estado == "atencao"  # (noqa-acento)
     assert item.porque == f"{AVISO_DE_GRAB_LINHA}."
     assert feitas["porta"] and feitas["grab"] == [("/dev/input/event-de-mentira", True)]
     diario = capsys.readouterr().err
@@ -533,7 +533,7 @@ def test_a_linha_da_leitura_entra_no_check_up_e_nao_na_aba_jogar(
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
 
     leitura = Item(chave=a08_conexoes.CHAVE_DA_LEITURA, rotulo="x",
-                   estado="atencao",  # (noqa-acento): chave de máquina do exame
+                   estado="atencao",  # (noqa-acento)
                    porque="y.")
     monkeypatch.setattr(a08_conexoes, "_conferencias", lambda: [])
     monkeypatch.setattr(a08_conexoes, "_EXTRAS", (leitura,))
@@ -577,7 +577,7 @@ def test_a_linha_da_leitura_sai_quando_o_daemon_volta_a_segurar(
     from hefesto_dualsense4unix.interface.pacotes import a08_conexoes
 
     leitura = Item(chave=a08_conexoes.CHAVE_DA_LEITURA, rotulo="x",
-                   estado="atencao",  # (noqa-acento): chave de máquina do exame
+                   estado="atencao",  # (noqa-acento)
                    porque="y.")
     monkeypatch.setattr(a08_conexoes, "_conferencias", lambda: [])
     monkeypatch.setattr(a08_conexoes, "_EXTRAS", (leitura,))

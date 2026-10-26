@@ -22,7 +22,6 @@ from hefesto_dualsense4unix.integrations.exame_da_mesa import (
 RAIZ = Path(__file__).resolve().parents[2]
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
 
-# (conf, parâmetro) -> (estado do exame, linha do doctor)
 CASOS = {
     (True, "Y"): (ESTADO_ATENCAO, "WARN"),
     (True, "N"): (ESTADO_CERTO, "PASS"),

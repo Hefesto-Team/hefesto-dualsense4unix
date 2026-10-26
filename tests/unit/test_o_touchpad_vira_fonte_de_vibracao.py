@@ -3,9 +3,6 @@
 Hub de mentira (o dedo que a mesa mostra a cada tique) e relógio injetado. O motor esquerdo é o
 forte e o direito o fraco do rumble.
 """
-# Mordidas feitas: lado invertido (direita/esquerda), soltar sem zero, posição sem suavizar,
-# sem faixa central, dois dedos, teto do surto e do clique, clique por nível, hub consultado
-# com o touchpad desligado, «só o toque» sem cala, altura trocada, surto na mistura.
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -31,7 +28,7 @@ from hefesto_dualsense4unix.profiles.schema import Profile
 
 P1, P2 = "aabbcc000001", "aabbcc000002"
 L, A = 1920, 1080
-BASE = 76  # round(255 * 30 / 100)
+BASE = 76
 
 
 @dataclass
@@ -100,8 +97,6 @@ def _ultimo(mesa: Mesa, uniq: str = P1) -> tuple[int, int]:
     return esq, dir_
 
 
-# 1. De fábrica, nada.
-
 def test_desligado_nao_pergunta_nada() -> None:
     mesa = Mesa()
     meus = _meus(mesa, leitura="desligado")
@@ -128,8 +123,6 @@ def test_no_modo_nativo_nao_pergunta_nem_escreve() -> None:
     assert mesa.perguntas == 0 and mesa.motores == []
 
 
-# 2. Pelos lados.
-
 def test_o_dedo_a_direita_vibra_so_o_motor_direito() -> None:
     mesa = Mesa()
     meus = _meus(mesa)
@@ -155,7 +148,7 @@ def test_o_dedo_no_centro_vibra_os_dois() -> None:
 
 
 def test_dois_dedos_vibram_os_dois_lados() -> None:
-    # D-1610-O-TOUCHPAD-VIBRA-O-LADO-TOCADO
+    """Prova da D-1610-O-TOUCHPAD-VIBRA-O-LADO-TOCADO."""
     mesa = Mesa()
     meus = _meus(mesa)
     mesa.dedos[P1] = ((round(0.9 * L), round(0.1 * A)), (round(0.95 * L), round(0.5 * A)))
@@ -193,8 +186,6 @@ def test_a_altura_fixa_nao_muda_a_forca() -> None:
     em_cima = _ultimo(mesa)[1]
     assert embaixo == em_cima == BASE
 
-
-# 3. Mistura.
 
 def test_a_mistura_atravessa_sem_degrau() -> None:
     mesa = Mesa()
@@ -236,8 +227,6 @@ def test_na_mistura_o_centro_vibra_os_dois_na_forca_cheia() -> None:
     _apoiar(meus, mesa, 0.5, 0.5)
     assert _ultimo(mesa) == (BASE, BASE)
 
-
-# 4. Soltar, dedo parado, deslize e clique.
 
 def test_soltar_o_dedo_zera_em_150_ms() -> None:
     mesa = Mesa()
@@ -284,7 +273,7 @@ def test_o_deslize_rapido_da_um_surto_nos_dois_lados() -> None:
     inicio = mesa.agora
 
     def correr(t: float) -> None:
-        _dedo(mesa, min(0.1 + (t - inicio) * 2.0, 0.9), 0.5)  # 3840 px/s
+        _dedo(mesa, min(0.1 + (t - inicio) * 2.0, 0.9), 0.5)
 
     _andar(meus, mesa, inicio + 0.1, antes=correr)
     assert meus.toques_dados == 1, "um surto só, mesmo com o dedo rápido o tempo todo"
@@ -339,7 +328,7 @@ def test_o_clique_respeita_o_teto() -> None:
 
     def bater(t: float) -> None:
         estado["n"] += 1
-        mesa.clicado[P1] = (estado["n"] // 8) % 2 == 1  # um clique novo a cada 40 ms
+        mesa.clicado[P1] = (estado["n"] // 8) % 2 == 1
 
     _andar(meus, mesa, mesa.agora + 1.0, antes=bater, passo=0.005)
     assert 0 < meus.toques_dados <= 12, f"{meus.toques_dados} cliques em 1 s"
@@ -368,8 +357,6 @@ def test_sem_o_clique_o_touchpad_nao_acentua() -> None:
     assert _ultimo(mesa)[1] == 0 and meus.toques_dados == 0
 
 
-# 5. Cada controle, o jogo e os acessórios.
-
 def test_o_dedo_do_jogador_2_nao_vibra_o_jogador_1() -> None:
     mesa = Mesa()
     meus = _meus(mesa)
@@ -396,8 +383,6 @@ def test_o_dedo_se_junta_ao_jogo_pela_mistura_do_perfil() -> None:
     assert mistura.motores == (BASE, 20), "o dedo à direita é o fraco; o jogo, 20 em cada"
     assert mistura.toques == (0, BASE)
 
-
-# 6. O perfil e o hub de verdade.
 
 def _perfil(bloco: dict[str, Any]) -> Profile:
     return Profile.model_validate({"name": "Jogo", "match": {"type": "any"}, "meus_toques": bloco})

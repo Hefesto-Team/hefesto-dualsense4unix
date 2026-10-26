@@ -71,7 +71,7 @@ def _constantes_congeladas(caminho: Path) -> list[str]:
     """`NOME (linha N)` para cada constante de módulo que congela o `$HOME`."""
     try:
         arvore = ast.parse(caminho.read_text(encoding="utf-8"))
-    except (OSError, SyntaxError):  # pragma: no cover — árvore quebrada é outro portão
+    except (OSError, SyntaxError):  # pragma: no cover
         return []
     achados: list[str] = []
     for no in arvore.body:

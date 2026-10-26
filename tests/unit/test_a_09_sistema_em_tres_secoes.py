@@ -310,9 +310,6 @@ def test_a_dica_da_bateria_nao_conta_os_controles_da_cena() -> None:
     """A dica é estática na página publicada: ela não pode contar controles."""
     pagina = PUBLICADA.read_text(encoding="utf-8")
     assert not re.search(r"Vale para os \d+ controles", pagina)
-    # O-PERFIL-DE-BATERIA-POR-CONTROLE-QUE-NINGUEM-CHAMA-SAI-01 (17/10/2026): o gerador e o
-    # desenho já dizem «Vale para todos os controles»; a publicada guarda a velha até o
-    # `--publicar 09`.
     frases = ("Vale para todos; cada controle pode ter o seu em Conexões",
               "Vale para todos os controles")
     assert any(f'<span data-dica="{f}">Perfil global de bateria</span>' in pagina for f in frases)
@@ -352,7 +349,6 @@ def test_as_linhas_do_status_nao_tem_o_ajuda_e_a_frase_vai_no_title(a09) -> None
     pagina = PUBLICADA.read_text(encoding="utf-8")
     lista = re.search(r'data-campo="status-lista"[^>]*>(.*?)\n\s*</div>\n', pagina, re.S)
     assert lista, "a lista do Status sumiu da página publicada"
-    # O Status leva só as duas primeiras linhas; o resto mora no exame e só sobe se falhar.
     assert lista.group(1).count('class="saude') == 2, lista.group(1)
     assert 'class="ajuda"' not in lista.group(1), lista.group(1)
     assert lista.group(1).count(' data-dica="') == 2, lista.group(1)

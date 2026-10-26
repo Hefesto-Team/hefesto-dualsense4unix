@@ -221,13 +221,14 @@ def test_o_prazo_da_chave_nova_conta_do_pair_e_nao_da_janela(
 
 
 def test_a_chave_que_nunca_atende_sai_aos_sessenta_segundos_do_pair(diario: Path) -> None:
-    # A decisão D-0610-CHAVE-NOVA-PRAZO-DO-PAIR.
     """O outro lado do contrato, que continua: a chave que o controle nunca atende sai como
     meia chave — mas só aos 60 s do ``Pair``, depois de chamada de novo a cada
     :data:`~central_do_radio.REPROVOCAR_S`. E nenhum ``Connect`` da volta espera além do prazo:
     o veredito da central não passa do instante em que a tela diz «Não conectou».
 
     MORDIDA do teto: chame ``dono.conectar`` sem o ``espera`` em ``_provocar_a_chave_nova``.
+
+    Prova da D-0610-CHAVE-NOVA-PRAZO-DO-PAIR.
     """
     mundo, relogio = mundo_da_madrugada(), rm.Relogio()
     visto = o_controle_do_diario(mundo, relogio, VERDE, acorda_em=1e9)
@@ -289,7 +290,6 @@ def _linhas_de(cena: dict[str, Any], aparelho: str, lugar: str) -> list[dict[str
 def test_o_tirar_esta_linha_tira_e_a_linha_nao_volta(
     diario: Path, a08: Any, monkeypatch: pytest.MonkeyPatch, destino: str, mundo_de: Any,
 ) -> None:
-    # A decisão D-0610-TIRAR-LINHA-FECHA-O-VENCIDO.
     """A cura 2: o «Tirar esta linha» da gaveta tira a linha, e ela não volta em 10 s de tique.
 
     O caso medido: a tela e a central contam o mesmo prazo, mas quem fala primeiro é a tela (a
@@ -301,6 +301,8 @@ def test_o_tirar_esta_linha_tira_e_a_linha_nao_volta(
 
     MORDIDA: tire o bloco do ``vencido`` de ``CentralDoRadio.dispensar`` (o ``ocupado`` volta),
     ou devolva o ``ocupado`` do ``_handle_radio_dispensar`` antes de perguntar à central.
+
+    Prova da D-0610-TIRAR-LINHA-FECHA-O-VENCIDO.
     """
     mundo, relogio = mundo_de(), rm.Relogio()
     mundo.pareado(destino, VERDE, conectado=False, host=False)
@@ -334,8 +336,6 @@ def test_o_tirar_esta_linha_tira_e_a_linha_nao_volta(
     finally:
         bancada.fechar()
 
-
-# ---- a página: as curas 3 e 4, no WebKit, na janela do piloto (1212 por 809) ----
 
 MOCKUP_08 = Path(__file__).resolve().parents[2] / "mockup/08-conexoes.html"
 A_CAIXA_ESCOLHE = "      if(aCaixaEscolhe(ev)) return;\n"
@@ -468,7 +468,7 @@ def test_com_o_conectar_aberto_a_caixa_de_outro_adaptador_muda_o_alvo(tmp_path: 
 
 
 def test_mordida_com_o_painel_na_borda_o_menu_da_linha_fica_por_baixo(tmp_path: Path) -> None:
-    # A decisão D-0610-O-CONECTAR-NAO-COBRE-OS-PONTOS.
+    """Prova da D-0610-O-CONECTAR-NAO-COBRE-OS-PONTOS."""
     f = _no_webkit_08(_a_pagina(tmp_path, O_PAINEL_DEIXA_OS_MENUS), O_CONECTAR_E_OUTRA_CAIXA,
                       MEDE_O_ALVO)
     assert f["outra_linha"][0] == "conectar" and f["no_ponto_do_menu"] is False, f

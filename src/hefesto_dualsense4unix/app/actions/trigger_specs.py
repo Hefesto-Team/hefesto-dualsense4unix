@@ -54,7 +54,6 @@ def _frequency(default: int = 10, lo: int = 0) -> TriggerParamSpec:
     return TriggerParamSpec("frequency", "Frequência", lo, 255, default)
 
 
-# GATILHO-PALAVRA-01 (29/07/2026): dois campos, dois donos.
 PRESETS: tuple[TriggerPresetSpec, ...] = (
     TriggerPresetSpec(
         "Off", "Desligado", params=(),
@@ -161,10 +160,6 @@ PRESETS: tuple[TriggerPresetSpec, ...] = (
     ),
 )
 
-#: As chaves que saíram da lista de onze. Seguem LIDAS (perfil gravado, estilo de jogo, DSX e
-#: linha de comando) com os ajustes de antes; quem monta o bloco é `build_from_name`, que as
-#: traduz para a linha nova (`core/trigger_effects.TRADUCAO_DAS_CHAVES_VELHAS`). Nenhuma delas
-#: aparece na tela.
 PRESETS_ANTIGOS: tuple[TriggerPresetSpec, ...] = (
     TriggerPresetSpec(
         "Rigid", "Rígido",
@@ -234,7 +229,6 @@ def na_lista_de_onze(name: str, params: list[int]) -> tuple[str, list[int]]:
 
     traduzida = traduzir_chave_velha(name, params, para_a_tela=True)
     if traduzida is None and not params:
-        # Gatilho sem ajustes no perfil (o que nasce na tela): os padrões do modo antigo.
         spec = get_spec(name)
         if spec is not None and spec.params:
             padroes = [int(p.default) for p in spec.params]

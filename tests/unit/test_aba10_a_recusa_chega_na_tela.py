@@ -53,7 +53,6 @@ MESA = [
      "mascara": "DualSense"},
 ]
 
-#: exige ``RuntimeError`` em todas — é a única classe que ``_recusou_dizendo``
 DELA = ("já é o perfil que está valendo",
         "escolha um perfil na lista primeiro",
         "o perfil precisa de um nome",

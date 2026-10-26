@@ -22,20 +22,13 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-#: As abas por controle do perfil do jogo, onde o R1 e o L1 dão a volta (o
-#: desenho de 03/10: Jogar, Controles, Gatilhos, Iluminação e Vibração).
 PREFIXOS_DA_VOLTA = ("01", "02", "03", "04", "05")
 
-#: O analógico esquerdo anda um passo ao cruzar meia deflexão (o repouso é 128),
-#: e repete enquanto segurado. É valor de partida (a sprint, item 2).
 LIMIAR_DO_ANALOGICO = 64
 REPETICAO_DO_ANALOGICO_S = 0.25
 
 DIRECOES = ("cima", "baixo", "esquerda", "direita")
 
-#: Um controle navega por vez (O-BOTAO-QUE-TRAVA-A-NAVEGACAO-DOS-CONTROLES-01): quem mexe primeiro
-#: fica com a navegação até passar isto sem mexer, pelo botão, pelo analógico ou pelo touchpad.
-#: O Start fica de fora: ele guarda o perfil de todos, de qualquer controle (22/10/2026).
 PRAZO_DO_DONO_S = 3.0
 
 
@@ -59,9 +52,7 @@ class Caixa:
     y: float
     largura: float
     altura: float
-    #: ``lista`` (um ``<select>``), ``trilho`` (um ``range``) ou vazio.
     tipo: str = ""
-    #: O assento do bloco em que ele mora (``p1``…``p4``), ou vazio fora deles.
     dono: str = ""
 
     @property
@@ -220,8 +211,6 @@ class Navegador:
             return []
         fora = set(sem_selecao)
         agora = self.relogio()
-        # O Start de todo controle guarda, também o de quem navega o PC com o mouse
-        # ligado (22/10/2026); a seleção e o cursor, esses, não são dele.
         salvar = any(d.get("start", 0) > 0 for d in novos.values())
         dono = self._o_dono(sorted(set(novos) | set(inputs or {})), novos, inputs or {}, fora,
                             agora)

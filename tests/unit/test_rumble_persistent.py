@@ -93,8 +93,6 @@ async def test_poll_loop_reafirma_rumble() -> None:
     daemon.config.rumble_policy = "balanceado"  # type: ignore[assignment]
 
     task = asyncio.create_task(daemon.run())
-    # Ociosa, a reafirmação chega aos 0,07 s; com a suíte em vagas, 0,35 s fixos não bastaram
-    # (fecho de 17/10/2026, parte 03). Espera a chamada, com teto.
     prazo = asyncio.get_running_loop().time() + 5.0
     while (80, 150) not in chamadas and asyncio.get_running_loop().time() < prazo:
         await asyncio.sleep(0.02)

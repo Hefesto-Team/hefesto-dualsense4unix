@@ -46,7 +46,6 @@ JANELA_DO_JOGO = {"wm_class": CLASSE_DO_JOGO, "wm_name": "DON'T SCREAM"}
 
 JANELA_DO_CLIENTE_STEAM = {"wm_class": "steam", "wm_name": ""}
 
-#: Uma janela com perfil próprio que não é de jogo nem de lançador.
 JANELA_DA_NAVEGACAO = {"wm_class": "kodi", "wm_name": "Kodi"}
 
 OUTRO_APPID = 1599660

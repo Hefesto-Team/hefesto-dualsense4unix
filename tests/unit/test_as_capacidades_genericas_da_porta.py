@@ -59,7 +59,7 @@ from tests.unit.test_os_atalhos_na_espera import (  # noqa: F401
 )
 
 GESTO = "ler:acessorios.gesto"
-CONEXOES = "conexoes"  # (noqa-acento): a chave do estado
+CONEXOES = "conexoes"  # (noqa-acento)
 ESTADO = "publicar:acessorios.estado"
 APARELHO = {"nome": "Motor", "tipo": "vibrador", "estado": "ligado", "bateria": 80, "forca": 0.5}
 CONEXAO = {"id": "cabo", "tipo": "Adaptador", "transporte": "usb", "estado": "procurando",
@@ -69,8 +69,8 @@ CONEXAO = {"id": "cabo", "tipo": "Adaptador", "transporte": "usb", "estado": "pr
 def _manifesto(**extra: Any) -> Manifesto:
     return Manifesto.model_validate({
         "id": "exemplo", "nome": "Exemplo", "api": ">=2,<3",
-        "versao": "1.0",  # (noqa-acento): chave
-        "licenca": "MIT", "tipos": ["tema"], "tema": {}, **extra,  # (noqa-acento): chave
+        "versao": "1.0",  # (noqa-acento)
+        "licenca": "MIT", "tipos": ["tema"], "tema": {}, **extra,
     })
 
 
@@ -102,9 +102,6 @@ async def _esperar(condicao: Any) -> bool:
     return False
 
 
-# -- 1 e 3: o estado leva os aparelhos e as conexões como objetos ------------------------
-
-
 def test_1_o_aparelho_e_um_objeto_e_o_texto_solto_e_so_o_nome() -> None:
     estado = estado_dos_acessorios("x", {"aparelhos": [APARELHO, "Outro"]})
     assert estado["aparelhos"] == [
@@ -125,9 +122,6 @@ def test_3_a_conexao_diz_o_transporte_o_estado_e_o_motivo() -> None:
         with pytest.raises(RecusaError):
             estado_dos_acessorios("x", {CONEXOES: [torto]})
     assert estado_dos_acessorios("x", {})[CONEXOES] == []
-
-
-# -- 2: só mostrar o estado não toma os gestos do PS -------------------------------------
 
 
 def test_2_o_estado_sem_o_gesto_se_guarda_e_nao_vai_ao_barramento(curto) -> None:  # noqa: F811
@@ -191,9 +185,6 @@ def test_2_a_permissao_tem_a_frase_que_a_tela_mostra() -> None:
     assert o_que_a_permissao_deixa(ESTADO) != ESTADO
 
 
-# -- 4 e 5: as opções novas ---------------------------------------------------------------
-
-
 def test_4_o_endereco_e_o_ip_e_a_porta_num_campo_so() -> None:
     opcao = Opcao(id="onde", rotulo="Onde", tipo="endereco", padrao="192.168.0.40:34567")
     assert opcoes.padrao_de(opcao) == "192.168.0.40:34567"
@@ -231,7 +222,7 @@ def test_5_o_por_botao_da_a_forma_de_cada_botao() -> None:
     {"formas": {"Forte": [[2.0, 0.1]]}},
     {"formas": {"Lento": [[1.0, 0.0]]}},
     {"formas": FORMAS, "botoes": ["ps"]},
-    {"formas": FORMAS, "padrao": {"cross": "Longo"}},  # (noqa-acento): chave
+    {"formas": FORMAS, "padrao": {"cross": "Longo"}},  # (noqa-acento)
 ], ids=["sem-forma", "forca-fora", "passo-sem-tempo", "botao-da-casa", "padrao-sem-forma"])
 def test_5_o_manifesto_recusa_o_por_botao_torto(torto: dict[str, Any]) -> None:
     with pytest.raises(ValueError):
@@ -241,9 +232,6 @@ def test_5_o_manifesto_recusa_o_por_botao_torto(torto: dict[str, Any]) -> None:
 def test_5_formas_so_no_por_botao() -> None:
     with pytest.raises(ValueError):
         Opcao(id="t", rotulo="T", tipo="ligado", formas=FORMAS)
-
-
-# -- 7 e 8: o manifesto da janela ---------------------------------------------------------
 
 
 def test_7_o_agora_declara_as_conexoes_e_os_aparelhos_com_a_permissao_do_estado() -> None:
@@ -302,9 +290,6 @@ def test_8_quem_le_o_gesto_recebe_o_para_e_nao_o_evento(curto) -> None:  # noqa:
     assert nomes == [EventTopic.ACESSORIOS_GESTO], nomes
 
 
-# -- 6: o tópico ``botoes`` de todo controle ---------------------------------------------
-
-
 def _drenar(ext: _Extensao) -> list[dict[str, Any]]:
     saida: list[dict[str, Any]] = []
     while (evento := ext.esperar_evento(0.3)) is not None:
@@ -347,7 +332,6 @@ def test_6_o_aperto_de_cada_controle_chega_com_o_uniq_e_o_jogador_dele(
 
     eventos = asyncio.run(corrida())
     for nome, apertado in ((EventTopic.BUTTON_DOWN, True), (EventTopic.BUTTON_UP, False)):
-        # cada tópico tem a fila dele: a ordem vale dentro do tópico, não entre os dois
         visto = [(e["uniq"], e["dados"]["jogador"], e["dados"]["pressed"])
                  for e in eventos if e["nome"] == nome]
         esperado = [(uniq, numeros[uniq], apertado) for uniq in UNIQS[:quantos]]
@@ -444,8 +428,6 @@ async def test_6_o_laco_do_servico_entrega_a_borda_do_posto_com_o_uniq(curto, mo
     daemon._mods_supervisor = SimpleNamespace(porta=porta, parar=_nada)
     rodando = asyncio.create_task(daemon.run())
     try:
-        # O laço lê os seis estados no ritmo dele: um prazo fixo reprovava com a máquina ocupada
-        # (o arranque do daemon passava dos 0,2 s antes do primeiro tique).
         prazo = asyncio.get_running_loop().time() + 5.0
         while controle._idx < len(estados) and asyncio.get_running_loop().time() < prazo:
             await asyncio.sleep(0.02)

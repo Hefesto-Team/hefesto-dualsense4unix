@@ -39,7 +39,6 @@ from hefesto_dualsense4unix.profiles.schema import (
     escrever_o_efeito_da_luz,
 )
 
-#: Os campos que o carregador escreve na gravação, nunca o rascunho.
 DO_CARREGADOR = {"version", "criado_em", "modificado_em"}
 
 PERFIL = {
@@ -80,7 +79,6 @@ def test_todo_campo_do_perfil_tem_quem_o_devolva() -> None:
     assert not sem_dono, f"campos do perfil que o Salvar apagaria: {sem_dono}"
 
 
-#: Os campos de cada seção que o rascunho EDITA (e por isso devolve pelo próprio sub-draft).
 EDITADOS_PELO_RASCUNHO = {
     "triggers": {"left", "right"},
     "leds": {"lightbar", "player_leds", "lightbar_brightness", "auto_player_colors",
@@ -94,13 +92,13 @@ def test_os_campos_de_secao_que_o_rascunho_nao_edita_voltam_do_salvar() -> None:
     origem = Profile.model_validate({
         "name": "Sackboy",
         "match": {"type": "any"},
-        "triggers": {"modo": "automatico", "intensidade": 1.5},  # (noqa-acento) chave ASCII
+        "triggers": {"modo": "automatico", "intensidade": 1.5},  # (noqa-acento)
         "leds": {
-            "modo": "automatico",  # (noqa-acento) chave ASCII
+            "modo": "automatico",  # (noqa-acento)
             "efeito": escrever_o_efeito_da_luz(TODAS_AS_BASES_DA_LUZ[0], ["FF0000"], 3),
             "lightbar_para_o_numero": 2,
         },
-        "rumble": {"modo": "automatico"},  # (noqa-acento) chave ASCII
+        "rumble": {"modo": "automatico"},  # (noqa-acento)
     })
     assert origem.leds.efeito is not None, "o efeito de exemplo não é válido"
     salvo = DraftConfig.from_profile(origem).to_profile(origem.name)
@@ -109,7 +107,7 @@ def test_os_campos_de_secao_que_o_rascunho_nao_edita_voltam_do_salvar() -> None:
             antes = getattr(getattr(origem, secao), campo)
             assert getattr(getattr(salvo, secao), campo) == antes, (
                 f"o Salvar apagou `{secao}.{campo}`")
-    assert salvo.rumble.modo == "automatico"  # (noqa-acento) chave ASCII
+    assert salvo.rumble.modo == "automatico"  # (noqa-acento)
 
 
 def test_a_secao_sem_os_campos_segue_sem_eles() -> None:

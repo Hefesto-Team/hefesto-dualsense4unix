@@ -12,13 +12,8 @@ from __future__ import annotations
 import os
 import socket
 
-#: O prazo que a unit dá à subida (``TimeoutStartSec``). Estourado, o systemd derruba o daemon
-#: que travou antes do pronto; o ``start`` de quem chama tem de caber nele (um teste confere os
-#: dois, como o ``PRAZO_DO_DESLIGAMENTO_S`` confere o ``TimeoutStopSec``).
 PRAZO_DA_PARTIDA_S = 30.0
 
-#: As variáveis da unit que só o processo principal pode usar: saem de ``os.environ`` na
-#: entrada do daemon e ficam guardadas aqui.
 VARIAVEIS_DO_PRINCIPAL: tuple[str, ...] = ("NOTIFY_SOCKET", "WATCHDOG_PID", "WATCHDOG_USEC")
 
 _guardadas: dict[str, str] = {}

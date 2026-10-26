@@ -331,9 +331,6 @@ async def test_stop_preserva_socket_recriado_por_outro(
     server.socket_path.unlink()
 
 
-# AUDIT-FINDING-PROFILE-PATH-TRAVERSAL-01 — boundary do handler profile.switch
-
-
 @pytest.mark.asyncio
 async def test_profile_switch_rejeita_path_traversal_sem_leak(running_server):
     """`profile.switch` com identifier malicioso retorna CODE_INVALID_PARAMS

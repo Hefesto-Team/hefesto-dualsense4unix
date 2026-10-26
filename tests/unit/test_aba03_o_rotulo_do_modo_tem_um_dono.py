@@ -43,7 +43,7 @@ def _o_perfil_de_mentira_nao_vaza():
 
 @pytest.fixture
 def a03():
-    import pacotes  # noqa: F401  (registra os dez)
+    import pacotes  # noqa: F401
     from pacotes import a03_gatilhos
 
     a03_gatilhos.esquecer_o_rascunho()

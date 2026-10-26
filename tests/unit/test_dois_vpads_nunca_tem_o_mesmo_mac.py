@@ -32,10 +32,8 @@ from hefesto_dualsense4unix.integrations.uhid_gamepad import (
     UHID_STOP,
 )
 
-#: Os ids de produto em que o ``hid_playstation`` faz bind no DualSense — o
 _PIDS_DUALSENSE = (0x0CE6, 0x0DF2)
 
-#: Os três feature reports do probe do DualSense e o tamanho que o
 _PAREAMENTO, _PAREAMENTO_TAMANHO = 0x09, 20
 _FIRMWARE, _FIRMWARE_TAMANHO = 0x20, 64
 _CALIBRACAO, _CALIBRACAO_TAMANHO = 0x05, 41
@@ -285,7 +283,6 @@ class _UinputDeMentira:
         return None
 
 
-#: DualSense que estão na mesa.
 FISICOS_DAS_BANCADAS = tuple(f"aa:bb:cc:00:00:0{n}" for n in range(1, 6))
 
 

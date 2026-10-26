@@ -19,7 +19,6 @@ def _palavras(vizinhos: list[dict[str, str]]) -> list[str]:
     cena = {"lugares": [{"id": "L1", "nome": "Sala"}], "aparelhos": [], "vizinhos": vizinhos}
     html = a08.html_dos_canais(cena)
     botoes = re.findall(r'<button class="rotulo vizinho".*?</button>', html)
-    # só o ícone na linha (desenho aprovado de 05/10/2026): a palavra é o nome do botão
     return [re.search(r'aria-label="([^"]*)"', b).group(1) for b in botoes]
 
 

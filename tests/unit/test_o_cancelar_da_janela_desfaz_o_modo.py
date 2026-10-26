@@ -83,13 +83,10 @@ def _cancelar(a07: Any, ctx: Any, ponte: _Ponte) -> dict[str, Any]:  # noqa: F81
     return dict(a07.cancelar_modificacao(ctx, {"v": "toque"}, ponte))
 
 
-# -- 1. o Cancelar devolve o modo guardado ------------------------------------------------------
-
-
 @pytest.mark.parametrize("modo", ["segurar", "repetir"])
 def test_trocar_o_modo_e_cancelar_devolve_a_extensao_ao_modo_guardado(
         janela: Any, ctx: Any, relogio: list[float], modo: str) -> None:  # noqa: F811
-    # D-2510-O-CANCELAR-DA-JANELA-DESFAZ-O-MODO
+    """Prova da D-2510-O-CANCELAR-DA-JANELA-DESFAZ-O-MODO."""
     a07, instalar, abrir = janela
     instalar(**_com(COM_MODOS))
     ponte = _Ponte(VIVO)
@@ -142,12 +139,9 @@ def test_reabrir_a_janela_que_fechou_sem_cancelar_devolve_o_modo_guardado(
     assert _modos_na_faixa(html) == _acesos("soltar")
 
 
-# -- 2. a recusa aparece e o modo volta -------------------------------------------------------
-
-
 def test_o_modo_recusado_volta_na_janela_e_na_barra_e_a_recusa_aparece(
         janela: Any, ctx: Any, relogio: list[float]) -> None:  # noqa: F811
-    # D-2510-A-RECUSA-DO-MODO-DEVOLVE-A-BARRA
+    """Prova da D-2510-A-RECUSA-DO-MODO-DEVOLVE-A-BARRA."""
     frase = "A extensão recusou o modo."
     a07, instalar, abrir = janela
     instalar(**_com(COM_MODOS))
@@ -189,9 +183,11 @@ def test_o_cancelar_recusado_diz_por_que_e_o_reabrir_desfaz_quando_ela_volta(
 @pytest.mark.parametrize("como", ["cancelar", "reabrir"])
 def test_a_extensao_fora_da_porta_nao_tem_modo_a_desfazer(
         janela: Any, ctx: Any, relogio: list[float], como: str) -> None:  # noqa: F811
-    # D-2510-A-EXTENSAO-FORA-DA-PORTA-NAO-TEM-MODO-A-DESFAZER
     """A extensão que saiu da porta depois da troca volta lendo o guardado: o Cancelar e o reabrir
-    não acusam recusa, e a janela e a barra mostram o guardado, não o modo que ela largou."""
+    não acusam recusa, e a janela e a barra mostram o guardado, não o modo que ela largou.
+
+    Prova da D-2510-A-EXTENSAO-FORA-DA-PORTA-NAO-TEM-MODO-A-DESFAZER.
+    """
     a07, instalar, abrir = janela
     instalar(**_com(COM_MODOS))
     ponte = _PonteQueRecusa(VIVO)
@@ -225,9 +221,6 @@ def test_o_reabrir_recusado_mostra_o_modo_que_vale_na_extensao(
     assert a07._MEXIDA.rascunho.get("ao-vivo:modo") == "repetir"
 
 
-# -- 3. o Cancelar e o X levam o gesto ---------------------------------------------------------
-
-
 def _fechos(html: str) -> list[str]:
     """As etiquetas do Cancelar e do X da janela."""
     return re.findall(r'<a class="(?:btn|tn-x)" href="#"[^>]*>(?:Cancelar|\u00d7)</a>', html)
@@ -238,9 +231,9 @@ def test_o_cancelar_e_o_x_da_janela_levam_o_gesto(
         janela: Any, ctx: Any, arranjo: str) -> None:  # noqa: F811
     _a07, instalar, abrir = janela
     opcao = {"id": "telefone", "rotulo": "Telefone", "tipo": "ligado",
-             "padrao": False}  # (noqa-acento) chave
+             "padrao": False}  # (noqa-acento)
     instalar(**(_com(COM_MODOS) if arranjo == "com o livre" else {
-        "opcoes": [opcao]}))  # (noqa-acento) chave
+        "opcoes": [opcao]}))  # (noqa-acento)
     html = abrir(_Ponte(VIVO))["blocos"]["#mod-janela"]
     fechos = _fechos(html)
     assert len(fechos) == 2, fechos
@@ -291,8 +284,6 @@ def test_no_webkit_o_esc_e_o_cancelar_mandam_o_gesto_e_fecham(
         assert lido["aberta"] is False, f"{como}: a janela ficou aberta"
 
 
-# -- 4. na porta, o controle com o id de uma ação dos aparelhos --------------------------------
-
 ACOES = frozenset(a["id"] for a in ACOES_DOS_APARELHOS)
 
 
@@ -304,7 +295,7 @@ def _com_o_controle(controle_id: str) -> dict[str, Any]:
 @pytest.mark.parametrize("controle_id", sorted(ACOES))
 def test_o_controle_com_o_id_de_uma_acao_dos_aparelhos_e_recusado_nomeando_o_id(
         controle_id: str) -> None:
-    # D-2510-O-CONTROLE-NAO-REPETE-O-ID-DE-UMA-ACAO
+    """Prova da D-2510-O-CONTROLE-NAO-REPETE-O-ID-DE-UMA-ACAO."""
     with pytest.raises(RecusaError) as recusa:
         estado_dos_acessorios("toque", _com_o_controle(controle_id), acoes_dos_aparelhos=ACOES)
     assert recusa.value.codigo == CODE_INVALID_PARAMS
@@ -353,16 +344,16 @@ def test_o_supervisor_passa_a_porta_as_acoes_dos_aparelhos(
     from hefesto_dualsense4unix.mods import supervisor as sup
     from hefesto_dualsense4unix.mods.instalador import Lugares
 
-    lugares = Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # (noqa-acento) campo
+    lugares = Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # (noqa-acento)
                       registro=tmp_path / "mods.json", estado=tmp_path / "estado.json")
     (lugares.codigo / "toque").mkdir(parents=True)
     manifesto = Manifesto.model_validate({
-        "id": "toque", "nome": "Toque", "versao": "0.1", "api": ">=1,<3",  # (noqa-acento) chave
-        "licenca": "MIT", "tipos": ["processo"],  # (noqa-acento) chave
+        "id": "toque", "nome": "Toque", "versao": "0.1", "api": ">=1,<3",  # (noqa-acento)
+        "licenca": "MIT", "tipos": ["processo"],
         "processo": {"executar": ["python3", "mod.py"]},
-        "permissoes": [ESTADO],  # (noqa-acento) chave
+        "permissoes": [ESTADO],  # (noqa-acento)
         "agora": ["aparelhos"],
-        "aparelhos_acoes": {"acoes": ACOES_DOS_APARELHOS}})  # (noqa-acento) chave
+        "aparelhos_acoes": {"acoes": ACOES_DOS_APARELHOS}})  # (noqa-acento)
 
     async def abrir_de_mentira(*_argv: Any, **_kw: Any) -> Any:
         saida = asyncio.StreamReader()

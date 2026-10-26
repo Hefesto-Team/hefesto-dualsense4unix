@@ -103,13 +103,10 @@ SEGUNDOS_PARA_ZUMBI = 20.0
 
 JANELA_DO_TETO_S = 600.0
 
-#: árvore de mentira — a de verdade é a bancada, com quatro DualSense de pé.
 RAIZ_ADAPTADORES = "/sys/class/bluetooth"
 
 PONTE_INSTALADA = "/usr/local/lib/hefesto-dualsense4unix/bt_ponte_privilegiada.sh"
 
-#: onde o instalador grava a regra da ponte (``49-hefesto-bt-ponte``). O
-#: arquivo é 0440 de root, então a firma lê a pasta, que muda quando ele entra.
 PASTA_DA_REGRA = "/etc/sudoers.d"
 
 _FORMA_MAC = re.compile(r"^[0-9a-f]{2}(:[0-9a-f]{2}){5}$")

@@ -795,7 +795,7 @@ def _install_gi_stubs() -> None:
             from gi.repository import Gtk  # noqa: F401
 
             return
-        except Exception:  # pragma: no cover — ambientes sem GTK
+        except Exception:  # pragma: no cover
             pass
 
     gi_mod = types.ModuleType("gi")
@@ -953,7 +953,7 @@ class TestPresetsDeJogoNascemComModo:
         [
             "fps",
             "aventura",
-            "acao",  # slug do arquivo acao.json (noqa-acento)
+            "acao",  # (noqa-acento)
             "corrida",
             "esportes",
         ],

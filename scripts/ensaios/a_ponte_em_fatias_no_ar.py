@@ -98,14 +98,10 @@ VERSAO = 1
 JANELA_S = 30.0
 DESCARTE_S = 5.0
 PONTES_PEDIDAS = (0, 1, 2)
-#: os níveis tentados, do mais baixo ao mais alto, para achar o sinal que mantém a
-#: ponte de pé; ``None`` é o silêncio digital.
 SINAIS_TENTADOS: tuple[float | None, ...] = (None, -60.0, -40.0, -20.0)
 ESPERA_DA_PONTE_S = 4.0
-#: a janela vale se a ponte pedida esteve de pé em pelo menos esta fração dos segundos
 FRACAO_DE_PE = 0.9
 
-#: a tabela da bancada, sem endereço, versionada: é ela que manda no ``FATIAS_DA_PONTE``
 TABELA_GRAVADA = _RAIZ / "tests" / "fixtures" / "a_ponte_em_fatias_no_ar" / "bancada.json"
 ORCAMENTO = _RAIZ / "docs" / "data" / "orcamento-de-ar.csv"
 DESENHO = _RAIZ / "mockup" / "mapa-do-radio.html"
@@ -139,9 +135,6 @@ def sinal_do_texto(texto: str) -> float | str | None:
     if limpo in ("silencio", "silêncio", "0"):
         return None
     return float(limpo)
-
-
-# --------------------------------------------------------------------- a conta
 
 
 @dataclass(frozen=True)
@@ -332,9 +325,6 @@ def pontes_que_cabem(linhas: Sequence[LinhaDaTabela], controles: int) -> dict[st
     return saida
 
 
-# --------------------------------------------------------------- as recusas
-
-
 @dataclass(frozen=True)
 class Pedido:
     medir: bool
@@ -400,13 +390,7 @@ def recusas(pedido: Pedido, estado: Mapping[str, Any] | None) -> list[str]:
     return motivos
 
 
-# --------------------------------------------------- a constante segue a medida
-
-
-#: os ``k`` de pacote que carregam o relatório de 403 B: 3-DH3 (3 fatias) e 2-DH5 (5 fatias).
-#: Um ``k`` medido longe dos dois diz que o modelo da conta não é o do ar.
 PACOTES_DA_PONTE: tuple[int, ...] = (3, 5)
-#: quão longe de um pacote o ``k`` medido ainda é aquele pacote
 FOLGA_DO_K = 0.5
 
 
@@ -474,9 +458,6 @@ def gravada(caminho: Path | None = None) -> list[Janela] | None:
     """A tabela que a bancada gravou nas fixtures, ou ``None`` enquanto não houver."""
     alvo = caminho or TABELA_GRAVADA
     return ler_janelas(alvo) if alvo.exists() else None
-
-
-# ------------------------------------------------------------- a bancada viva
 
 
 @dataclass

@@ -43,7 +43,6 @@ def _emits_for(fake_device: MagicMock, code: Any) -> list:
 
 
 def test_device_name_identifica_hefesto() -> None:
-    # O nome do produto em TEXTO virou `DualSense4Unix`, com o `S` do DualSense;
     assert DEVICE_NAME == "Hefesto - Dualsense4Unix Virtual Keyboard"
     assert "Keyboard" in DEVICE_NAME
 

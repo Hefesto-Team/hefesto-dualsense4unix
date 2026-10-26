@@ -320,8 +320,6 @@ def test_a_grade_da_vibracao_tem_sete_faixas(bancada: str) -> None:
     """A `grid-template-rows` perdeu a oitava, e a variável do piso foi junto."""
     assert "--r-estado" not in bancada, (
         "a variável do piso da faixa de estado voltou à folha da aba 05")
-    # As duas listas de efeito (15/10/2026) entraram ANTES do Testar/Parar: a grade segue
-    # terminando no `--r-acoes`, sem a faixa de estado que saiu em 05/09/2026.
     assert bancada.count("minmax(var(--r-efeito),1fr) minmax(var(--r-acoes),1fr);") == 1, (
         "a grade da aba 05 deixou de terminar no `--r-acoes` — a oitava faixa "
         "saiu em 05/09/2026 e a `grid-template-rows` foi junto")
@@ -478,7 +476,6 @@ def test_a_nota_do_testar_mora_na_dica(bancada: str) -> None:
     """
     import aba05
 
-    # a dica é o `data-dica` do rótulo (base comum das abas: nenhum «?» na tela)
     import re
 
     dica = re.search(r'data-dica="([^"]*)">Testar agora</span>', bancada)
@@ -519,7 +516,6 @@ def test_o_aviso_do_que_a_coluna_mostra_e_sucesso_e_nao_recusa(
     ramo por `raise RuntimeError(…)` — este caso reprova pelo `pytest.raises`,
     e o piloto volta a anotar `("recusou dizendo", …)` sobre um disco que mudou.
     """
-    # o global do PERFIL já é 50%, então `with_controller_rumble` APAGA o override
     estado, gravados = disco
     estado["regua"] = _perfil_do_esquema(
         rumble={"policy": "custom", "custom_mult": 0.5},

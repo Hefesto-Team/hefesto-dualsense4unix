@@ -39,9 +39,6 @@ def _doc() -> str:
     return re.sub(r"<(style|script)\b[^>]*>.*?</\1>", "", sem_comentario, flags=re.S)
 
 
-# ---------------------------------------------------------------- o desenho
-
-
 def test_o_mapa_nao_tem_sensor_nem_chip_de_todos_ou_nenhum() -> None:
     doc = _doc()
     assert 'id="cw"' not in doc, "o painel dos sensores e das luzes saiu desta página"
@@ -60,12 +57,12 @@ def test_cada_linha_tem_a_peca_dela_no_desenho() -> None:
 
 
 def test_o_perfil_tem_tres_grupos_e_os_moldes_com_o_nome_da_navegacao() -> None:
-    # D-1610-O-PERFIL-JOGO-NAVEGACAO-E-O-ADULTO
+    """Prova da D-1610-O-PERFIL-JOGO-NAVEGACAO-E-O-ADULTO."""
     doc = _doc()
     seletor = re.search(r'<select[^>]*id="perfil".*?</select>', doc, flags=re.S)
     assert seletor, "sem o seletor de perfil"
     grupos = re.findall(r'<optgroup label="([^"]+)"', seletor.group(0))
-    assert grupos == ["Navegação", "Moldes"], grupos  # «Meus perfis» nasce do disco, no gesto
+    assert grupos == ["Navegação", "Moldes"], grupos
     moldes = re.search(r'<optgroup label="Moldes">(.*?)</optgroup>', seletor.group(0), flags=re.S)
     assert moldes
     assert re.findall(r">([^<]+)</option>", moldes.group(1)) == NOMES_DOS_MOLDES
@@ -82,16 +79,16 @@ def test_o_voltar_leva_a_navegacao_e_a_tela_nao_confessa_mesa_nem_jogador() -> N
     assert 'class="ajuda"' not in doc, "o «?» saiu: a explicação mora na dica (`data-dica`)"
 
 
-#: a linha do mapa → a linha da Navegação que fala do MESMO botão, e a palavra do desenho do todo.
 O_MESMO_BOTAO = {"tp_toque": ("touchpad_toque", "Movimento do cursor"),
                  "l3": ("l3", "Teclado na tela"),
                  "r3_direcao": ("r3_direcao", "Rolagem")}
 
 
 def test_o_mapa_e_a_navegacao_dizem_a_mesma_palavra_para_o_mesmo_botao() -> None:
-    """O Toque, o L3 clique e a direção do R3 dizem nas duas telas o que o desenho diz."""
-    # D-1510-AS-PALAVRAS-DOS-BOTOES-SAO-AS-DO-DESENHO
-    # Prova da D-1510-AS-PALAVRAS-DOS-BOTOES-SAO-AS-DO-DESENHO.
+    """O Toque, o L3 clique e a direção do R3 dizem nas duas telas o que o desenho diz.
+
+    Prova da D-1510-AS-PALAVRAS-DOS-BOTOES-SAO-AS-DO-DESENHO.
+    """
     navegacao = (RAIZ / "mockup" / "06-navegacao.html").read_text(encoding="utf-8")
     for b, (linha, palavra) in O_MESMO_BOTAO.items():
         no_mapa = re.search(rf'data-b="{b}".*?<span class="b2-val"[^>]*>([^<]*)</span>', _doc(),
@@ -121,9 +118,6 @@ def test_a_tela_cabe_sem_rolagem_vertical() -> None:
     assert m["alto"] <= m["cabe"] + 1 and not m["largo"], m
 
 
-# ---------------------------------------------------------------- os moldes
-
-
 @pytest.mark.parametrize("molde", loader.MOLDES_DE_PERFIL, ids=lambda m: m.chave)
 def test_cada_molde_nasce_um_perfil_valido_so_manual_com_o_mouse_ligado(molde: Any) -> None:
     prof = loader.perfil_do_molde(molde.chave, molde.nome)
@@ -134,7 +128,7 @@ def test_cada_molde_nasce_um_perfil_valido_so_manual_com_o_mouse_ligado(molde: A
 
 
 def test_o_molde_so_usa_ficha_que_o_motor_executa() -> None:
-    # Prova da D-1510-O-MAPA-SO-OFERECE-O-QUE-O-MOTOR-EXECUTA.
+    """Prova da D-1510-O-MAPA-SO-OFERECE-O-QUE-O-MOTOR-EXECUTA."""
     from hefesto_dualsense4unix.core import acoes_de_botao as acoes
 
     for molde in loader.MOLDES_DE_PERFIL:
@@ -144,18 +138,12 @@ def test_o_molde_so_usa_ficha_que_o_motor_executa() -> None:
                 assert token in SUPPORTED_KEYS, (molde.chave, motor, token)
 
 
-# ---------------------------------------------------------------- o schema aceita o atalho gravado
-
-
 def test_o_schema_aceita_combinacao_de_teclas_do_motor_e_recusa_o_resto() -> None:
     aceito = Profile(name="x", match=_MATCH, button_actions={"l1": "KEY_LEFTCTRL+KEY_W"})
     assert aceito.button_actions == {"l1": "KEY_LEFTCTRL+KEY_W"}
     for ruim in ("KEY_PAUSE", "KEY_LEFTCTRL+KEY_PAUSE", "CTRL+W", "KEY_W+", "KEY_W++KEY_E"):
         with pytest.raises(ValueError, match="não é uma ação conhecida"):
             Profile(name="x", match=_MATCH, button_actions={"l1": ruim})
-
-
-# ---------------------------------------------------------------- os gestos
 
 
 def _ctx() -> Any:
@@ -178,7 +166,7 @@ def mapa() -> Any:
 
 
 def test_o_molde_mais_guardar_cria_o_perfil_em_meus_perfis_e_nao_toca_o_ativo(mapa: Any) -> None:
-    # Prova da D-1510-O-MOLDE-MAIS-GUARDAR-CRIA-UMA-COPIA.
+    """Prova da D-1510-O-MOLDE-MAIS-GUARDAR-CRIA-UMA-COPIA."""
     ctx = _ctx()
     mapa.mapa_perfil(ctx, {"valor": "molde:visual_novel"}, None)
     resposta = mapa.mapa_guardar(ctx, {}, MagicMock())
@@ -190,7 +178,7 @@ def test_o_molde_mais_guardar_cria_o_perfil_em_meus_perfis_e_nao_toca_o_ativo(ma
 
 
 def test_voltar_ao_padrao_de_um_molde_devolve_o_molde_e_nao_o_esvazia(mapa: Any) -> None:
-    # Prova da D-1510-O-MOLDE-MAIS-GUARDAR-CRIA-UMA-COPIA.
+    """Prova da D-1510-O-MOLDE-MAIS-GUARDAR-CRIA-UMA-COPIA."""
     ctx = _ctx()
     mapa.mapa_perfil(ctx, {"valor": "molde:mouse"}, None)
     mapa.mapa_botao(ctx, {"b": "cross"}, None)
@@ -211,7 +199,7 @@ def test_gravar_a_tecla_na_navegacao_guarda_o_atalho_e_recusa_a_que_o_motor_nao_
 
 
 def test_a_troca_de_botao_se_confere_antes_de_valer_e_o_ps_nao_se_troca(mapa: Any) -> None:
-    # Prova da D-1510-O-MAPA-SO-OFERECE-O-QUE-O-MOTOR-EXECUTA.
+    """Prova da D-1510-O-MAPA-SO-OFERECE-O-QUE-O-MOTOR-EXECUTA."""
     ctx = _ctx()
     mapa.mapa_botao(ctx, {"b": "cross"}, None)
     assert mapa.mapa_escolher(ctx, {"v": "troca:circle"}, None)["mesa"]["val-cross"] == "Círculo"

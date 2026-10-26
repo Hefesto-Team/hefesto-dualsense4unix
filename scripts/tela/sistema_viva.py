@@ -60,18 +60,18 @@ from hefesto_dualsense4unix.utils.tela_de_mentira import (  # noqa: E402
 
 garantir_tela_de_mentira()
 
-from hefesto_dualsense4unix.interface import sistema as aba_sistema  # noqa: E402  isort:skip
-from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # noqa: E402  isort:skip
+from hefesto_dualsense4unix.interface import sistema as aba_sistema  # noqa: E402  # isort:skip
+from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # noqa: E402  # isort:skip
 
 from gi.repository import GLib, Gtk  # noqa: E402
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
 sys.path.insert(0, str(INTERFACE))
-PAGINA = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "09-sistema.html"  # (noqa-acento) `paginas` e o nome da PASTA; caminho nao leva acento
+PAGINA = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas" / "09-sistema.html"  # (noqa-acento)
 TITULO_ESPERADO = "Hefesto — aba SISTEMA"
 
-import mesa_viva  # noqa: E402  (só pelo `estado_do_daemon`, que é leitura pura)
+import mesa_viva  # noqa: E402
 
 TIQUE_MS = 100
 TIQUE_LENTO_MS = 2000
@@ -178,7 +178,6 @@ def _em_colunas(pacote: dict[str, Any]) -> list[list[dict[str, Any]]]:
     return [list(c) for c in a09.em_tres_colunas(status + achados)]
 
 
-#: O último `state_full` visto, para o exame poder usar o denominador honesto
 _ULTIMO_STATE: list[dict[str, Any] | None] = [None]
 
 

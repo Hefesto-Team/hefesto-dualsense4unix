@@ -26,7 +26,6 @@ def _linha_do_exit_da_bifurcacao() -> int:
     raise AssertionError("não achei o `exit 0` da bifurcação de formato")
 
 
-#: A lista é a do `case` de `scripts/fix_wireplumber_default_source.sh`.
 _MODOS_DO_MIC = (
     "--install",
     "--disable-source",
@@ -165,7 +164,6 @@ def test_nenhum_formato_empacota_os_dropins_do_wireplumber() -> None:
             continue
         conferidas += 1
         texto = caminho.read_text(encoding="utf-8", errors="ignore").lower()
-        # SCRIPT `fix_wireplumber_default_source.sh` nos cinco formatos — e o
         if any(marca in texto for marca in ("wireplumber.conf.d", ".conf.d/wireplumber")):
             achados.append(str(caminho.relative_to(RAIZ)))
             continue

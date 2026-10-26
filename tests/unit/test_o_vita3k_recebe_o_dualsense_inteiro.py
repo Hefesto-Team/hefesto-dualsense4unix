@@ -53,10 +53,6 @@ def test_lancador_desconhecido_nao_ganha_janela_inventada(
     assert cartao.atalhos == ("com.usebottles.bottles",)
 
 
-# ---------------------------------------------------------------------------
-# Degraus 1 e 2: a sonda do jogador (`o_jogo_para_de_ver_o_giro.py --jogador`)
-# ---------------------------------------------------------------------------
-
 _ENSAIO = RAIZ / "scripts" / "ensaios" / "o_jogo_para_de_ver_o_giro.py"
 _SERIAIS = {1: "02:fe:00:00:00:01", 2: "02:fe:00:00:00:02",
             3: "02:fe:00:00:00:03", 4: "02:fe:00:00:00:04"}
@@ -124,7 +120,6 @@ class _JogoDeMentira:
 
     def descrever(self, h: int) -> dict[str, Any]:
         v = self.estado["rumble_ff"]["per_vpad"][h - 101]
-        # Como o driver PS5 do SDL3 o devolve: o feature 0x09 reescrito com hífen.
         serial = v["vpad_uniq"].replace(":", "-") if self.hidapi else v["vpad_uniq"]
         return {"nome": _NOME, "serial": serial, "caminho": v["hidraw"],
                 "touchpads": 1 if self.hidapi else 0, "dedos": 2 if self.hidapi else 0,
@@ -233,8 +228,10 @@ def test_o_serial_vem_do_hid_uniq_do_hidraw_e_do_uniq_do_evdev(tmp_path: pathlib
 
 def test_a_sonda_abre_so_o_vpad_pedido_pelo_serial_e_mede_o_aceite(
         tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    # D-1610-A-SONDA-DO-JOGADOR-ESCOLHE-O-VPAD-PELO-SERIAL
-    """Quatro gamepads de mesmo nome e GUID: abre o P3 pelo serial, e o laudo fecha verde."""
+    """Quatro gamepads de mesmo nome e GUID: abre o P3 pelo serial, e o laudo fecha verde.
+
+    Prova da D-1610-A-SONDA-DO-JOGADOR-ESCOLHE-O-VPAD-PELO-SERIAL.
+    """
     medida, jogo, ensaio = _roda(tmp_path, monkeypatch, jogador=3)
     assert jogo.abertos == [103]
     assert medida["escolhido"]["jogador"] == 3

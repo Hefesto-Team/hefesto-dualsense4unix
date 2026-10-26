@@ -44,9 +44,6 @@ def recording_manager(monkeypatch: pytest.MonkeyPatch) -> type[_RecordingManager
     return _RecordingManager
 
 
-# 1) IPC profile.switch (GUI/CLI) → origin="manual"
-
-
 @pytest.mark.asyncio
 async def test_ipc_profile_switch_ativa_com_origin_manual(
     monkeypatch: pytest.MonkeyPatch,

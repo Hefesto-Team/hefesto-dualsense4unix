@@ -53,7 +53,6 @@ INSTALL_UDEV = RAIZ / "scripts" / "install_udev.sh"
 
 UID = 1000
 
-#: Os casamentos do DualSense FÍSICO — o standard (054c:0ce6) e, desde a
 CASAMENTOS_DO_FISICO = (
     'ATTRS{idProduct}=="0ce6"',
     'KERNELS=="0005:054C:0CE6.*"',

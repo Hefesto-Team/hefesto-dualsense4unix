@@ -16,7 +16,7 @@ _RE_EMBLEMA_VERSAO = re.compile(r"img\.shields\.io/badge/vers%C3%A3o-([0-9][^%-]
 def _versao_canonica() -> str:
     try:
         import tomllib
-    except ImportError:  # pragma: no cover — 3.10
+    except ImportError:  # pragma: no cover
         import tomli as tomllib  # type: ignore[no-redef]
     dados = tomllib.loads((REPO / "pyproject.toml").read_text(encoding="utf-8"))
     return str(dados["project"]["version"])

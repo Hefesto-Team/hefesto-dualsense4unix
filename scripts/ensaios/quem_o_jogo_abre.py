@@ -140,7 +140,7 @@ def retrato(padrao: str) -> dict:
     ambiente = ambiente_de(pid_do_jogo)
     ign = ambiente.get("SDL_GAMECONTROLLER_IGNORE_DEVICES", "")
     return {
-        "padrao": padrao,  # (noqa-acento): chave de dado, não prosa
+        "padrao": padrao,  # (noqa-acento)
         "processos": len(pids),
         "eventos": {e: nomes.get(e, "?") for e in sorted(eventos)},
         "hidraws": sorted(hidraws),

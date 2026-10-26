@@ -150,10 +150,6 @@ def test_o_botao_do_desenho_tem_letra_e_altura_maiores(
 ) -> None:
     """O pedido, em pixels: maior que hoje, e ainda um botão de canto."""
     desenho, hoje = as_duas_paginas["desenho"], as_duas_paginas["publicada"]
-    # RODADA 4 (15/10/2026, A-ABA-JOGAR-DO-TODO-01): o «Modo Freestyle» é a pílula de 34 px com a
-    # letra de 13,5 px do «Reconectar». Enquanto a 01-jogar está à frente do publicado
-    # (`mockup/DIVERGENCIAS.md`), a medida do desenho é a do alvo; depois do `--publicar`, volta
-    # a ser igual à publicada.
     arquivo = Path(__file__).resolve().parents[2] / "mockup" / "DIVERGENCIAS.md"
     em_trabalho = arquivo.exists() and "\n## 01-jogar.html" in (
         "\n" + arquivo.read_text(encoding="utf-8").split("\n---\n", 1)[-1])

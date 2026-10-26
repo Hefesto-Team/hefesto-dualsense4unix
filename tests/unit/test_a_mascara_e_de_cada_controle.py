@@ -142,7 +142,7 @@ class _Ponte:
     def __init__(self) -> None:
         self.chamadas: list[tuple[str, dict]] = []
 
-    def chamar(self, metodo: str, timeout: float | None = None, **p):  # (parâmetro) noqa-acento
+    def chamar(self, metodo: str, timeout: float | None = None, **p):
         self.chamadas.append((metodo, p))
 
     def chamar_detalhado(self, metodo: str, **p) -> tuple[bool, str | None]:

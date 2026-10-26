@@ -36,8 +36,6 @@ END = "src/hefesto_dualsense4unix/alvo.py"
 PAG = "src/hefesto_dualsense4unix/pagina.html"
 CURTO = "src/hefesto_dualsense4unix/curto.py"
 
-#: 1 ``<html>``, 2 ``<body>``, 3 ``<div id="x">``, 4 ``<p>texto</p>``, 5 ``</span>``, 6 ``</div>``,
-#: 7 ``<br>``, 8 ``</body>``, 9 ``</html>``.
 PAGINA = '<html>\n<body>\n<div id="x">\n<p>texto</p>\n</span>\n</div>\n<br>\n</body>\n</html>\n'
 
 
@@ -64,9 +62,6 @@ def _empurrar_a_pagina(raiz: Path, linhas: int) -> None:
 def _varrer(raiz: Path, arquivos: int) -> None:
     for i in range(arquivos):
         (raiz / "docs" / f"outro{i}.txt").write_text("varrido\n", encoding="utf-8")
-
-
-# --- 1. a linha tem de ter conteúdo ---------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
@@ -125,9 +120,6 @@ def test_a_linha_de_codigo_com_conteudo_segue_a_regra_e_anda(repo: Path) -> None
 
     assert a_mao == [], a_mao
     assert doc.read_text(encoding="utf-8") == f"# Regra\n\nO retorno, `{END}:24`.\n"
-
-
-# --- 2. a segunda chance --------------------------------------------------------------------------
 
 
 def test_a_varredura_de_duzentos_arquivos_anda_pelo_endereco_de_antes(repo: Path) -> None:
@@ -310,9 +302,6 @@ def test_tres_voltas_atras_ja_nao_e_prova_e_o_motivo_diz_por_que(
     mao = [f for f in a_mao if "cadeia.md" in f]
     assert len(mao) == 3, a_mao
     assert all("2 voltas atrás" in f for f in mao), mao
-
-
-# --- 3. o rc diz o que FALTA ----------------------------------------------------------------------
 
 
 def _main(mod: ModuleType, raiz: Path, *args: str) -> int:

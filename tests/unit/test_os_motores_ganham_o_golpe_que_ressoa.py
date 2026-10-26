@@ -29,20 +29,16 @@ from tests.unit.test_a_aba_vibracao_ganha_os_botoes_de_efeito import (
     _ctx,
     _PonteQueGrava,
     _rumble_do_disco,
-    perfis,  # noqa: F401  (a fixture do disco de prova)
+    perfis,  # noqa: F401
 )
 from tests.unit.test_cada_motor_tem_o_seu_multiplicador import BRANCO, _Handlers
 
 RAIZ = Path(__file__).resolve().parents[2]
 MOCKUP = RAIZ / "mockup/05-vibracao.html"
 NOVOS = ("ressoar", "ricochete")
-# Os quatro controles, um por cor do plástico; a faixa é forjada.
 QUATRO = ("aa:bb:cc:00:00:21", "aa:bb:cc:00:00:22", "aa:bb:cc:00:00:23", "aa:bb:cc:00:00:24")
 _MODO_DUALSENSE = tv.EstadoDoCanal(modo=tv.MODO_DUALSENSE, ha_jogo=True, sessao_aberta=False)
 _MODO_XBOX = tv.EstadoDoCanal(modo=tv.MODO_XBOX, ha_jogo=True, sessao_aberta=False)
-
-
-# --- a forma de cada um -----------------------------------------------------------------------
 
 
 def test_os_dois_entram_depois_da_pancada_do_lado_no_produto_e_no_esquema() -> None:
@@ -52,7 +48,7 @@ def test_os_dois_entram_depois_da_pancada_do_lado_no_produto_e_no_esquema() -> N
     for chave in NOVOS:
         assert 0 < len(pv.DICAS[chave]) <= 36, chave
         assert ControllerRumbleOverride(efeito_imersao=chave).efeito_imersao == chave
-        assert chave not in pv.FORMAS_DE_CRIAR  # a forma é o desenho entre os dois motores
+        assert chave not in pv.FORMAS_DE_CRIAR
 
 
 @pytest.mark.parametrize("chave", NOVOS)
@@ -64,8 +60,10 @@ def test_cabem_no_teto_tem_passos_de_60_ms_e_acabam_em_zero(chave: str) -> None:
 
 
 def test_o_ressoar_bate_nos_dois_e_a_cauda_do_grave_cai_em_degraus_ate_zero() -> None:
-    # D-2210-O-RESSOAR-E-O-RICOCHETE-DOS-MOTORES
-    """MORDIDA: a cauda sem decaimento (o mesmo degrau até o fim) reprova aqui."""
+    """MORDIDA: a cauda sem decaimento (o mesmo degrau até o fim) reprova aqui.
+
+    Prova da D-2210-O-RESSOAR-E-O-RICOCHETE-DOS-MOTORES.
+    """
     golpe, *cauda = pv.PADROES["ressoar"]
     assert golpe[1:] == (255, 255)
     assert all(direito == 0 for _ms, _e, direito in cauda), "a cauda é só do esquerdo"
@@ -87,9 +85,6 @@ def test_o_ricochete_alterna_o_lado_e_cada_resposta_e_mais_fraca() -> None:
     assert forcas[0] == 255 and all(a > b for a, b in pairwise(forcas)), forcas
     passos = pv.PADROES["ricochete"]
     assert all(passos[i + 1][1:] == (0, 0) for i, p in enumerate(passos[:-1]) if p[1:] != (0, 0))
-
-
-# --- o funil da força, nos quatro controles ---------------------------------------------------
 
 
 class _Motores:
@@ -146,9 +141,6 @@ def test_a_bateria_longa_baixa_a_cauda_inteira_e_ela_continua_caindo() -> None:
     assert all(a > b for a, b in pairwise(cauda)) and cauda[-1] == 0
 
 
-# --- a tela: dois itens na lista, a dica em tooltip, o clique grava -------------------------
-
-
 def test_as_quatro_colunas_ganham_os_dois_itens_e_criar_nao_muda() -> None:
     html = MOCKUP.read_text(encoding="utf-8")
     listas = re.findall(
@@ -183,5 +175,5 @@ def test_criar_efeito_recusa_os_dois_que_moram_nos_dois_motores(perfis: Path) ->
     gesto = pacotes.gesto_da_pagina("05-vibracao.html", "criar-efeito")
     assert gesto is not None
     with pytest.raises(RuntimeError, match="Escolha a forma"):
-        forma = {"padrao": "ressoar", "motores": pv.ESQUERDO, "nome": "x"}  # (noqa-acento) chave
+        forma = {"padrao": "ressoar", "motores": pv.ESQUERDO, "nome": "x"}  # (noqa-acento)
         gesto(_ctx(), {"forma": forma}, None)

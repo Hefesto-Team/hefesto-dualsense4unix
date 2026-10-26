@@ -82,8 +82,6 @@ def test_a_varredura_da_arvore_de_verdade_nao_esta_cega() -> None:
     )
 
 
-# --- o piso por arquivo (A-DIVIDA-DA-BASE-DESCE-POR-ARQUIVO-E-POR-QUEM-TOCA-01) -------------
-
 CORTADO = "# a frase acaba no\nx = 1\n"
 INTEIRO = "# a frase fecha aqui.\nx = 1\n"
 
@@ -192,16 +190,13 @@ def test_o_de_lista_os_candidatos_dos_arquivos_dados(tmp_path: Path) -> None:
         [sys.executable, str(SCRIPT), "--de", "scripts/check_comentario_cortado.py"],
         cwd=RAIZ, capture_output=True, text=True, check=False,
     )
-    if cortado.linhas_que_o_corte_deixou(RAIZ) is None:  # clone raso: o `--de` diz que não vê
+    if cortado.linhas_que_o_corte_deixou(RAIZ) is None:
         assert feito.returncode == 1 and "sem o histórico" in feito.stderr, feito.stderr
         return
     assert feito.returncode == 0, feito.stdout + feito.stderr
     assert feito.stdout.strip() == "nenhum candidato.", feito.stdout
 
 
-# --- o corte pelo histórico (A-REGUA-DO-COMENTARIO-CORTADO-VE-O-CORTE-PELO-HISTORICO-01) -----
-
-#: a forma do `hidraw_broker.py:122`: o bloco perdeu a segunda linha e acaba em substantivo
 O_QUE_FICOU = "#: STEAM-NO-FISICO-01 (24/09/2026) — os PIDs de DualSense FÍSICO que o broker"
 PAI = (
     "VPAD = 0x0DF2\n"
@@ -222,8 +217,6 @@ def test_o_bloco_que_o_corte_deixou_conta_seja_qual_for_a_ultima_palavra() -> No
     )
     curado = CORTE.replace("o broker\n", "o broker aceita.\n")
     assert cortado.cortados_do_texto(curado, deixadas | {O_QUE_FICOU + " aceita."}) == []
-    # A marca do acento se monta em dois pedaços: inteira, o varredor dos escapes
-    # a lê como escape sem razão.
     marca = "  # (noqa" + "-acento)"
     for fim in (".", "!", "?", "…", ".)", ".»", "." + marca):
         assert not cortado.termina_sem_ponto(f"# a frase fecha{fim}"), fim
@@ -288,7 +281,7 @@ def test_sem_o_historico_do_corte_a_regua_falha_e_diz(tmp_path: Path) -> None:
     assert rc == 1 and any("sem o histórico" in linha for linha in linhas), linhas
     with pytest.raises(cortado.SemHistorico):
         cortado.candidatos_de(["src/x.py"], tmp_path)
-    _git(tmp_path, "tag", "corte", "dev~1")  # a raiz: o corte sem pai
+    _git(tmp_path, "tag", "corte", "dev~1")
     rc, linhas = cortado.verificar(tmp_path)
     assert rc == 1 and any("sem o histórico" in linha for linha in linhas), (
         f"o corte sem o pai também não se lê: {linhas}"
@@ -297,7 +290,7 @@ def test_sem_o_historico_do_corte_a_regua_falha_e_diz(tmp_path: Path) -> None:
 
 def test_o_historico_da_arvore_de_verdade_traz_o_corte_do_broker() -> None:
     deixadas = cortado.linhas_que_o_corte_deixou(RAIZ)
-    if deixadas is None:  # clone raso (o checkout sem `fetch-depth: 0`): a régua diz, não cala
+    if deixadas is None:
         with pytest.raises(cortado.SemHistorico):
             cortado.varrer(RAIZ)
         return

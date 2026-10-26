@@ -7,13 +7,8 @@ from hefesto_dualsense4unix.utils.repo_files import como_atualizar_esta_instalac
 logger = get_logger(__name__)
 
 
-#: Mesmo vocabulário do bloco `keyboard_emulation` do daemon
-#: (`ipc_handlers._keyboard_emulation_payload`), porque é a MESMA conjunção: a
-#: **Alcançada desde 25/08/2026 (BG-02):** `mouse.emulation.set` devolve
 BLOQUEIO_DO_MOUSE_EM_PORTUGUES: dict[str, str] = {
     "desligada": "a emulação de mouse está desligada no Hefesto",
-    # o `disable_steam_input.sh` e o `fix_wireplumber_default_source.sh` — nem
-    # `{gesto}` é trocado em `frase_da_recusa_do_mouse` pela frase única de
     "sem_device": "o mouse virtual não subiu — {gesto}",
     "modo_jogo": "o modo jogo está suspendendo mouse e teclado",
 }

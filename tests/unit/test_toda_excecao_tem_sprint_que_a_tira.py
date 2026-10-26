@@ -212,7 +212,6 @@ DIVIDAS: dict[str, int] = {
     "tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py::_SEM_MAO_HOJE": 0,
     "tests/unit/test_a_base_comum_das_abas.py::ISENTOS": 0,
     "tests/unit/test_a_costura_da_onda_2.py::_OS_QUE_PODEM": 4,
-    # 21/10/2026: a frase da extensão na 07, que fica (D-2110-A-FRASE-DA-EXTENSAO-CORTA-COM-A-DICA)
     "tests/unit/test_a_janela_estreita_nao_engole_o_desenho.py::CORTE_CONHECIDO_NO_DESENHO": 1,
     "tests/unit/test_guarda_gi_falso_precisa_de_exigir_gi_real.py::DIVIDA_GI_FALSO": 0,
     "tests/unit/test_mic_volume_01_o_slider_que_faltava.py::_SEM_MIC_HOJE": 0,
@@ -376,8 +375,6 @@ NAO_SAO_DIVIDA: dict[str, str] = {
 }
 
 PENDENTES: dict[str, tuple[str, str]] = {
-    # vazia desde 08/10/2026: os quatro gestos sem dono da 08 saíram do desenho
-    # (AS-QUATRO-LINHAS-DA-08, sprint 01).
 }
 
 

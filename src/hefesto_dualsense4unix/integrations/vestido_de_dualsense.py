@@ -39,7 +39,6 @@ from __future__ import annotations
 VID_SONY = "054c"
 PID_DUALSENSE = "0ce6"
 
-#: As strings USB da Sony, lidas no sysfs de um DualSense no cabo em
 NOME_USB_DA_SONY = "DualSense Wireless Controller"
 FABRICANTE_USB = "Sony Interactive Entertainment"
 

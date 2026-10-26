@@ -118,8 +118,6 @@ class Redistribuicao:
     pontes_na_origem_depois: int
     pontes_no_destino_depois: int
     n_max: int
-    #: a proposta nasceu do SINAL do controle (e não da contagem de pontes): o dBm dele aqui e o
-    #: que o outro adaptador ouve. A Conexões lê isto para dizer «sinal fraco».
     pelo_sinal: bool = False
     sinal_aqui: int | None = None
     sinal_la: int | None = None
@@ -147,9 +145,6 @@ POR_QUE_IMPORTA_O_NUMERO = (
 
 DIFERENCA_QUE_EQUILIBRA = 2
 
-#: O sinal que o OUTRO adaptador ouve (RSSI da varredura do BlueZ) tem de ser melhor que o do
-#: enlace de agora por esta margem, em dB, para o movimento compensar: o RSSI do enlace e o da
-#: varredura vêm de leituras diferentes, e uma diferença pequena é ruído, não lugar melhor.
 MARGEM_DO_SINAL_QUE_COMPENSA_DBM = 8
 
 POR_QUE_IMPORTA_O_SINAL = (

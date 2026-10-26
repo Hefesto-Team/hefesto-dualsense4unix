@@ -60,8 +60,6 @@ def _todos(no: dict):
 def arvore():
     import onde
 
-    # o PUBLICADO: é a página que o produto renderiza; os botões de degrau saem dela no
-    # `--publicar 05` da costura, e o pacote já não os pinta (20/10/2026)
     arq = onde.pagina(PAGINA, publicado=True)
     assert arq.exists(), f"o publicado não tem {PAGINA}"
     p = _Arvore()
@@ -148,7 +146,6 @@ def test_o_cursor_da_forca_cai_nos_quatro_trilhos_pelo_alvo_valor(arvore, emitid
             "o trilho da Força vai de 0 a 200%", n["attrs"])
 
 
-#: O CASO QUE A OBRIGOU: a moldura de cada coluna é `data-campo="plastico"` com
 ALVOS_QUE_APAGAM_OS_FILHOS = ("", "html")
 
 

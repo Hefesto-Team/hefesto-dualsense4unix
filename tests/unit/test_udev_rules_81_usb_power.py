@@ -11,9 +11,6 @@ HOSTS_RULE = REPO_ROOT / "assets" / "81-hefesto-usb-host-power.rules"
 
 VENDORS = ("054c", "057e", "2dc8", "045e")
 
-# A bateria do COMPUTADOR chama-se BAT0 ou BAT1 no ACPI; as linhas largas (todo
-# host USB, todo Bluetooth USB) só valem sem ela (O-QUE-E-DA-BANCADA-FICA-NA-
-# BANCADA-01). A bateria de um controle (ps-controller-battery-*) não conta.
 GUARDAS_DE_BATERIA = (
     'TEST!="/sys/class/power_supply/BAT0"',
     'TEST!="/sys/class/power_supply/BAT1"',

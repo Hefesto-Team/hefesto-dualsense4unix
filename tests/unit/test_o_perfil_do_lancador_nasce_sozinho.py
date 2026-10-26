@@ -559,8 +559,6 @@ def _chamados_por(alvo: str) -> set[str]:
 def test_a_semeadura_le_os_lancadores_e_declara_as_classes() -> None:
     chamados = _chamados_por("semear_perfis_dos_jogos")
 
-    # `jogos_com_janela` é a segunda origem (os lançadores) MAIS o jogo
-    # instalado aqui, com a duplicata já tirada: um dono só.
     assert "jogos_com_janela" in chamados, (
         "a semeadura voltou a ler SÓ a Steam. A decisão dela é que todo jogo "
         "instalado de um lançador que o produto lê ganhe perfil sozinho."

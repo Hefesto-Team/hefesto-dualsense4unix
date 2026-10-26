@@ -39,7 +39,7 @@ AS_QUE_SAIRAM = (
 )
 
 
-@pytest.mark.parametrize(("pagina", "frase"), AS_QUE_SAIRAM)  # (noqa-acento) nome de parametro
+@pytest.mark.parametrize(("pagina", "frase"), AS_QUE_SAIRAM)  # (noqa-acento)
 def test_a_frase_que_ela_marcou_saiu_dos_dois_lados(pagina: str, frase: str) -> None:
     from hefesto_dualsense4unix.interface import onde
 

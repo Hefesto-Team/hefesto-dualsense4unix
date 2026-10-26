@@ -26,7 +26,7 @@ from hefesto_dualsense4unix.utils import maquina as m
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 MOCKUP = RAIZ / "mockup" / "06-navegacao.html"
-PUBLICADAS = RAIZ / "src/hefesto_dualsense4unix/interface/paginas"  # (noqa-acento) pasta
+PUBLICADAS = RAIZ / "src/hefesto_dualsense4unix/interface/paginas"
 PUBLICADA = PUBLICADAS / "06-navegacao.html"
 
 
@@ -116,7 +116,7 @@ def test_a_escolha_recusa_molde_que_nao_existe_e_valor_solto() -> None:
 
 
 def test_a_velocidade_grava_o_valor_absoluto_no_computador_e_o_disco_diz_o_mesmo() -> None:
-    # Prova da D-1510-O-TECLADO-GANHA-O-SEMPRE-E-A-VELOCIDADE-E-ABSOLUTA.
+    """Prova da D-1510-O-TECLADO-GANHA-O-SEMPRE-E-A-VELOCIDADE-E-ABSOLUTA."""
     from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
 
     pacotes, _a06 = _pacote()
@@ -125,7 +125,6 @@ def test_a_velocidade_grava_o_valor_absoluto_no_computador_e_o_disco_diz_o_mesmo
     ponte = _Ponte()
     pacotes.gesto_da_pagina("06-navegacao.html", "vel-cursor")(ctx, {"valor": "9"}, ponte)
     assert opc.velocidades_do_computador()[0] == 9
-    # o tique seguinte já traz o que o daemon aplicou
     depois = {"mouse_emulation": {"enabled": True, "speed": 9, "scroll_speed": 1}}
     ctx = pacotes.Contexto(state=depois, mesa=[], conectados=[], estados={})
     pacotes.gesto_da_pagina("06-navegacao.html", "vel-rolagem")(ctx, {"valor": "3"}, ponte)
@@ -148,9 +147,6 @@ def test_com_escolha_propria_no_perfil_a_velocidade_vai_para_o_perfil() -> None:
 
 
 def test_com_jogo_ativo_a_escolha_vai_ao_perfil_e_a_lista_mostra_a_que_o_servico_aplica() -> None:
-    # Com um perfil de jogo ativo, a escolha grava no perfil (`onde_grava`), e o serviço aplica a
-    # do perfil com o computador por baixo (`Daemon._tabelas_do_arranjo`). A lista mostra a mesma.
-    # MORDIDA: `_o_point_and_click_de_hoje` lendo só o `maquina.json` mostra o Point and click.
     pacotes, a06 = _pacote()
     loader.save_profile(Profile.model_validate({
         "name": "regua", "match": {"type": "manual"},

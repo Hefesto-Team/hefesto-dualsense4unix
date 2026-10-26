@@ -42,7 +42,6 @@ class Lar:
         self.casa = base / "casa"
         self.casa.mkdir()
         self.anotacao = base / "chamadas"
-        #: A hora em que o WirePlumber de mentira «subiu»; o reinício a reescreve.
         self.subiu = base / "subiu"
         binario = base / "bin"
         binario.mkdir()
@@ -123,8 +122,9 @@ def test_a_segunda_volta_nao_reinicia(lar: Lar, modo: str, vivo: bool) -> None:
 
     ``com-a-hora-da-subida``: o `systemctl` de mentira sabe quando o WirePlumber subiu (o
     reinício da primeira volta a reescreve), e o drop-in recém-gravado não é mais novo que ele.
+
+    Prova da D-1410-O-APLICAR-SEGURA.
     """
-    # Prova da D-1410-O-APLICAR-SEGURA.
     if vivo:
         lar.wireplumber_subiu_ha(3600)
     primeira = lar.rodar(modo)
@@ -143,8 +143,10 @@ def test_a_segunda_volta_nao_reinicia(lar: Lar, modo: str, vivo: bool) -> None:
 
 
 def test_o_dropin_mexido_a_mao_faz_reiniciar_de_novo(lar: Lar) -> None:
-    """O outro lado: se o 51 instalado diverge do asset, a volta o repõe E reinicia."""
-    # Prova da D-1410-O-APLICAR-SEGURA.
+    """O outro lado: se o 51 instalado diverge do asset, a volta o repõe E reinicia.
+
+    Prova da D-1410-O-APLICAR-SEGURA.
+    """
     lar.rodar("--install")
     antes = lar.reinicios()
     (lar.dropins / NOME_51).write_text("# mexido a mão\n", encoding="utf-8")
@@ -158,8 +160,10 @@ def test_o_dropin_mexido_a_mao_faz_reiniciar_de_novo(lar: Lar) -> None:
 
 
 def test_o_nunca_dorme_mudou_reinicia_no_install(lar: Lar) -> None:
-    """O 54 também conta: quem o instala de novo no meio do `--install` pede o reinício."""
-    # Prova da D-1410-O-APLICAR-SEGURA.
+    """O 54 também conta: quem o instala de novo no meio do `--install` pede o reinício.
+
+    Prova da D-1410-O-APLICAR-SEGURA.
+    """
     lar.rodar("--install")
     antes = lar.reinicios()
     (lar.dropins / NOME_54).unlink()
@@ -170,8 +174,10 @@ def test_o_nunca_dorme_mudou_reinicia_no_install(lar: Lar) -> None:
 
 
 def test_a_forma_velha_do_dropin_tirada_faz_reiniciar(lar: Lar) -> None:
-    """Uma troca de WirePlumber deixa a outra forma no disco; tirá-la muda o que ele lê."""
-    # Prova da D-1410-O-APLICAR-SEGURA.
+    """Uma troca de WirePlumber deixa a outra forma no disco; tirá-la muda o que ele lê.
+
+    Prova da D-1410-O-APLICAR-SEGURA.
+    """
     lar.rodar("--install")
     antes = lar.reinicios()
     velha = lar.casa / ".config" / "wireplumber" / "main.lua.d"
@@ -191,8 +197,9 @@ def test_o_ucm_gravado_depois_da_subida_faz_reiniciar(lar: Lar, modo: str) -> No
     podem calar isso: o gancho mais novo que o WirePlumber vivo reinicia; o mais velho, não.
 
     MORDIDA: tire o ``|| _wp_nao_leu_o_disco`` do ``restart_wireplumber_se_alterou``.
+
+    Prova da D-1410-O-APLICAR-SEGURA.
     """
-    # Prova da D-1410-O-APLICAR-SEGURA.
     lar.rodar(modo)
     lar.envelhecer_os_dropins(7200)
     lar.wireplumber_subiu_ha(3600)
@@ -214,8 +221,10 @@ def test_o_ucm_gravado_depois_da_subida_faz_reiniciar(lar: Lar, modo: str) -> No
 
 
 def test_o_install_e_o_disable_nao_reiniciam_por_conta_propria() -> None:
-    """Estrutura: os ramos `install)` e `disable)` perguntam ao dono, não chamam o reinício nu."""
-    # Prova da D-1410-O-APLICAR-SEGURA.
+    """Estrutura: os ramos `install)` e `disable)` perguntam ao dono, não chamam o reinício nu.
+
+    Prova da D-1410-O-APLICAR-SEGURA.
+    """
     texto = WP_FIX.read_text(encoding="utf-8")
     for ramo in ("install", "disable"):
         achado = re.search(rf"^    {ramo}\)\n(.*?)^        exit \"\$\{{rc\}}\"", texto, re.M | re.S)

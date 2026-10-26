@@ -49,7 +49,6 @@ from hefesto_dualsense4unix.integrations import dualsense_bt_audio as bt
 RAIZ = Path(__file__).resolve().parents[2]
 DROPIN = RAIZ / "assets" / "wireplumber" / "51-hefesto-dualsense-no-default-source.conf"
 
-#: mais alto que existe lá é o do alto-falante do próprio DualSense. É o piso
 MONITOR_MAIS_ALTO_MEDIDO = 1109
 
 CAPTURA_REAL_MEDIDA = 2009

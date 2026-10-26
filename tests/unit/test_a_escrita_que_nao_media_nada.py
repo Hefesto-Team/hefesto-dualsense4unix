@@ -141,7 +141,7 @@ class _HandleDoRadio:
         self.resposta = resposta
         self.reports: list[list[int]] = []
 
-    def writeReport(self, dados: list[int]) -> Any:  # noqa: N802 (API do upstream)
+    def writeReport(self, dados: list[int]) -> Any:  # noqa: N802
         self.reports.append(list(dados))
         return self.resposta
 

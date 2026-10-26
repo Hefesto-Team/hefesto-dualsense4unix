@@ -174,7 +174,6 @@ class TestAAclQueAMascaraAnula:
         assert self._alcancavel(tmp_path, "user:ela:rw-", 0o660)
 
 
-#: O DualSense do usuário pelo RÁDIO: o BlueZ ≥5.73 o põe sob `/misc/uhid/`.
 RADIO = "/sys/devices/virtual/misc/uhid/0005:054C:0CE6.0006"
 CABO = "/sys/devices/pci0000:00/0000:00:14.0/usb3/3-3/3-3:1.0/0003:054C:0CE6.0042"
 VPAD = "/sys/devices/virtual/misc/uhid/0003:054C:0DF2.008F"
@@ -253,7 +252,7 @@ class TestOTouchpadDoFisicoFechadoEACura:
     @pytest.mark.parametrize("pai", [RADIO, CABO], ids=["radio", "cabo"])
     def test_fechados_com_o_broker_de_pe_passam(self, tmp_path: Path, pai: str) -> None:
         """A MORDIDA: tire o ramo `fechados_pelo_hefesto` e o nó fechado cai"""
-        if os.geteuid() == 0:  # pragma: no cover - como root tudo é legível
+        if os.geteuid() == 0:  # pragma: no cover
             pytest.skip("como root o 0000 não fecha nada")
         _cena(tmp_path, _fisico(pai, 0o000), com_broker=True)
         saida = _check(tmp_path)

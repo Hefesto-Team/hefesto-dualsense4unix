@@ -28,7 +28,6 @@ _PELO_PERFIL = (
 )
 _GESTO_DA_TELA = "gesto da tela, sem sentido fora dela"
 
-#: Método que a janela chama e a linha de comando não, com a razão de cada um.
 ISENTOS: dict[str, str] = {
     "trigger.set": _PELO_PERFIL + "; o instrumento é `test trigger`",
     "trigger.reset": _PELO_PERFIL,

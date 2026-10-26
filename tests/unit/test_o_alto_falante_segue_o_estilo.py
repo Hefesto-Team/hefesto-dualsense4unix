@@ -26,7 +26,6 @@ from hefesto_dualsense4unix.profiles.schema import (
 )
 from hefesto_dualsense4unix.testing import FakeController
 
-# a faixa forjada das fixtures (nunca endereço real mascarado)
 QUATRO = ["aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03", "aa:bb:cc:00:00:04"]
 
 
@@ -116,8 +115,8 @@ def test_ritmo_no_automatico_escreve_sfx_nos_quatro_e_nao_toca_no_volume() -> No
     g = Gerente(mesa)
     relatorio = g.manager.apply_som_do_estilo(_perfil("ritmo"))
     assert mesa.fontes == [(u, "sfx") for u in QUATRO]
-    assert g.som == []  # nem volume, nem mudo, nem rota: o controle fica com o que já tem
-    assert mesa.abertos == []  # o Ritmo não opina no microfone
+    assert g.som == []
+    assert mesa.abertos == []
     assert all(relatorio[f"som_estilo:{u}"] == "aplicado" for u in QUATRO)
 
 

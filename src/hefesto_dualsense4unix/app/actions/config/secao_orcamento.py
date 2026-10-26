@@ -91,7 +91,6 @@ PERFIS: tuple[str, ...] = (
     PERFIL_EU_ESCOLHO,
 )
 
-#: Global de Bateria da Sistema leem daqui.
 ROTULOS_DOS_PERFIS: dict[str, str] = {
     PERFIL_TUDO_LIGADO: "Perfil máximo",
     PERFIL_BATERIA_LONGA: "Perfil econômico",
@@ -145,8 +144,6 @@ LINHAS_DO_TETO: tuple[LinhaDoTeto, ...] = (
     LinhaDoTeto("Giroscópio", "Perfis"),
 )
 
-#: que a tabela mostra, e o dia em que a barra de luz ganhar esse ponto ela
-#: a luz fica mais fraca e não apaga.
 def _dica_da_bateria_longa() -> str:
     """O que o perfil de bateria faz HOJE, e o que fica como está."""
     chave = TETO_POR_PERFIL[PERFIL_BATERIA_LONGA]
@@ -160,8 +157,6 @@ def _dica_da_bateria_longa() -> str:
     ]
     if mais_fracos:
         frase += f"; {_lista(mais_fracos)} mais fracos, sem apagar"
-    # Só a primeira letra da frase é maiúscula (09/10/2026): o nome que vem
-    # depois do primeiro perde a inicial, e a sigla dentro dele («BT») fica.
     pendentes = [linha.nome if i == 0 else linha.nome[0].lower() + linha.nome[1:]
                  for i, linha in enumerate(x for x in LINHAS_DO_TETO if not x.tem_ponto)]
     if not pendentes:
@@ -175,7 +170,6 @@ DICAS: dict[str, str] = {
         "giroscópio e touchpad."
     ),
     PERFIL_BATERIA_LONGA: _dica_da_bateria_longa(),
-    # 05/09 já tinha trocado a mesma ideia por "o teto geral" em `aba_sistema`.
     PERFIL_EU_ESCOLHO: (
         "Nenhum teto geral: os ajustes de cada aba mandam, um por um."
     ),

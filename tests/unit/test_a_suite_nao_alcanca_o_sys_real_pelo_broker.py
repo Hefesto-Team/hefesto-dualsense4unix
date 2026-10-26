@@ -28,7 +28,6 @@ import pytest
 from hefesto_dualsense4unix.broker import hidraw_broker as hb
 from tests.unit.test_o_broker_crava_cada_raiz_uma_vez_so import BROKER, RAIZES
 
-#: as raízes que um parâmetro de função recebe (as do gadget moram no ``RaizesDoPad``).
 RAIZES_DE_PARAMETRO = (
     "DEV_ROOT", "DEV_INPUT_ROOT", "SYS_CLASS_HIDRAW", "SYS_CLASS_INPUT",
     "SYS_CLASS_BLUETOOTH", "SYS_BUS_HID_DRIVERS", "PROC_ROOT",
@@ -126,12 +125,12 @@ _DO_FS = {
 }
 
 
-def _FsAclOps(c: _Cena) -> None:  # noqa: N802 - o nome do caso é o da classe
+def _FsAclOps(c: _Cena) -> None:  # noqa: N802
     ops = hb.FsAclOps()
     assert {a: getattr(ops, a) for a in _DO_FS} == {a: c.raiz[n] for a, n in _DO_FS.items()}
 
 
-def _BrokerState(c: _Cena) -> None:  # noqa: N802 - o nome do caso é o da classe
+def _BrokerState(c: _Cena) -> None:  # noqa: N802
     st = hb.BrokerState(allowed_uid=1000, log=lambda *_a, **_k: None)
     do_estado = {"_dev_root": "DEV_ROOT", **_DO_FS}
     do_estado.pop("_sys_bus_hid_drivers")
@@ -142,7 +141,7 @@ def _BrokerState(c: _Cena) -> None:  # noqa: N802 - o nome do caso é o da class
         a: c.raiz[n] for a, n in _DO_FS.items()}
 
 
-def _RaizesDoPad(c: _Cena) -> None:  # noqa: N802 - o nome do caso é o da classe
+def _RaizesDoPad(c: _Cena) -> None:  # noqa: N802
     assert hb.RaizesDoPad().dev == c.raiz["DEV_ROOT"]
 
 

@@ -187,7 +187,6 @@ def test_cenario_journal_policy_max_reporta_o_mult_da_politica(
     daemon.config.rumble_active = None
     daemon.apply_profile_rumble_policy("max", None)
 
-    # Fonte do `rumble_mult_applied` do state_full.
     assert daemon._last_auto_mult == pytest.approx(RUMBLE_POLICY_MULT["max"])
 
     aplicados = [
@@ -246,7 +245,6 @@ def test_manager_repassa_politica_ao_applier() -> None:
         profile: object | None = None,
         origin: str = "autoswitch",
     ) -> None:
-        # ativação — "manual" (profile.switch/hotkey) fura o lock de gesto
         received.append((policy, custom_mult))
         quem_mandou.append(getattr(profile, "name", None))
 

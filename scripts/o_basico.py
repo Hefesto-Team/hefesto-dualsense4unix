@@ -135,7 +135,7 @@ VOLTA_FORA_DA_CONFIG: tuple[str, ...] = (
 )
 
 ORDEM: tuple[str, ...] = (
-    "retrato", "sessao", "eixos", "entrada", "saidas", "som", "haptica",  # (noqa-acento: o nome do subcomando é o do protocolo)
+    "retrato", "sessao", "eixos", "entrada", "saidas", "som", "haptica",  # (noqa-acento)
     "movimento", "tudo-junto",
 )
 ESCREVEM: frozenset[str] = frozenset({"saidas", "som", "haptica", "tudo-junto"})
@@ -2681,7 +2681,7 @@ def veredito(pasta: Path | None) -> int:
 
 SUBCOMANDOS: dict[str, Callable[[Sessao, argparse.Namespace], None]] = {
     "retrato": sub_retrato,
-    "sessao": sub_sessao,  # (noqa-acento: o nome do subcomando é o do protocolo)
+    "sessao": sub_sessao,  # (noqa-acento)
     "eixos": sub_eixos,
     "entrada": sub_entrada,
     "saidas": sub_saidas,
@@ -2703,7 +2703,7 @@ def analisador() -> argparse.ArgumentParser:
     sub = ap.add_subparsers(dest="sub")
     for nome in ORDEM:
         p = sub.add_parser(nome)
-        if nome == "sessao":  # (noqa-acento: o nome do subcomando é o do protocolo)
+        if nome == "sessao":  # (noqa-acento)
             p.add_argument("--segundos", type=float, default=60.0)
             p.add_argument("--boot", action="store_true", help="reinicia o daemon (mexe; nunca com jogo)")
             p.add_argument("--bpftrace", action="store_true", help="as sondas de scripts/sondas/ (sudo)")

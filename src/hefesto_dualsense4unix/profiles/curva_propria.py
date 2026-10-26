@@ -50,7 +50,6 @@ from pydantic import (
     model_validator,
 )
 
-#: campo no report de saída do DualSense.
 CURVA_BYTES = 7
 
 DATA_MINIMA_DE_MEDICAO = date(2026, 7, 25)

@@ -88,7 +88,6 @@ def test_uma_parte_so_nao_traz_o_vermelho_do_log_de_outra_parte(tmp_path: Path) 
     assert feito.returncode == 0, feito.stdout
     assert "testes vermelhos: 0" in feito.stdout, feito.stdout
     assert (saida / "falhas.txt").read_text(encoding="utf-8") == ""
-    # nada se apaga: o log da outra corrida continua onde estava, para quem tria
     assert (saida / "parte-03.log").read_text(encoding="utf-8") == VELHO
     assert (saida / "parte-03-test_de_webkit.log").read_text(encoding="utf-8") == VELHO
 
@@ -125,9 +124,6 @@ def test_com_a_chave_ligada_o_resumo_tambem_le_so_a_corrida_dele(tmp_path: Path)
     raiz, saida = tmp_path / "arvore", tmp_path / "saida"
     _arvore(raiz, reprova="test_a04.py")
     _deixar_corrida_velha(saida, range(4, 8))
-    # o log velho de uma parte QUE ESTA DIVISÃO RODA, com um nome que esta corrida não reescreve
-    # (o arquivo do WebKit de então mudou de parte): o pai junta os `parte-NN-*.log` dos filhos
-    # por glob, e só o que é mais novo que o começo da corrida é deles
     velho_de_dentro = saida / "parte-01-test_de_webkit.log"
     velho_de_dentro.write_text(VELHO, encoding="utf-8")
     uma_hora_antes = time.time() - 3600
@@ -151,5 +147,4 @@ def test_pedir_uma_parte_que_a_divisao_nao_tem_e_erro_e_nao_verde(tmp_path: Path
     feito = _rodar(raiz, saida, "05", PARTES="3")
     assert feito.returncode == 2, feito.stdout
     assert "a parte «05» não existe nesta divisão (00 a 02)" in feito.stdout, feito.stdout
-    # o `parte-05` velho não rodou: o log dele é o de antes
     assert (saida / "parte-05.log").read_text(encoding="utf-8") == VELHO

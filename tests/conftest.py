@@ -39,21 +39,10 @@ os.environ.pop("FORCE_COLOR", None)
 os.environ.setdefault("NO_COLOR", "1")
 
 
-# A-SUITE-NAO-ACORDA-A-PLACA-DE-VERDADE-01: o `assets/hefesto-launch.sh` chama
-# `sudo -n /usr/local/lib/…/hefesto_placa_acordada.sh acordar` quando o script
-# instalado existe, e o script de root trava o clock da placa da máquina. Medido
-# em 09/10: dezenas de `sudo … hefesto_placa_acordada.sh acordar/devolver` no
-# journal, com o PWD nas árvores `valida-*`, um par por teste que roda o
-# lançador. O desvio é a terceira tabela do embrulho único do `Popen.__init__`
-# (`_instalar_popen_da_sessao`), sempre armada: a variável que o lançador lê vai
-# a um caminho que nunca existe, também no `env={…}` montado do zero, onde um
-# `setenv` não chega. O teste que aponta a variável para um dublê dele continua
-# com o dublê; só o caminho instalado é trocado.
 PLACA_ACORDADA_ENV = "HEFESTO_PLACA_ACORDADA"
 PLACA_ACORDADA_INSTALADA = (
     "/usr/local/lib/hefesto-dualsense4unix/hefesto_placa_acordada.sh"
 )
-# Debaixo de `/dev/null` nada nasce: o `[ -x ]` do lançador falha sempre.
 PLACA_ACORDADA_DESVIADA = "/dev/null/a-suite-nao-acorda-a-placa"
 os.environ[PLACA_ACORDADA_ENV] = PLACA_ACORDADA_DESVIADA
 
@@ -209,7 +198,7 @@ def _carregar_gi_real() -> None:
         gi.require_version("Gtk", "3.0")
         repositorio = __import__("gi.repository", fromlist=["Gtk"])
         _ = repositorio.Gtk
-    except Exception:  # pragma: no cover — ambiente degradado ou sem GTK
+    except Exception:  # pragma: no cover
         pass
 
 
@@ -357,8 +346,6 @@ def pytest_terminal_summary(terminalreporter: Any, exitstatus: int, config: Any)
         )
 
 
-# algo?". A fixture `_hefesto_fake_env` isola os diretórios XDG — mas NÃO isola
-
 _CANARIO_ALVOS: tuple[str, ...] = (
     ".config/hefesto-dualsense4unix",
     ".config/wireplumber",
@@ -377,10 +364,6 @@ _CANARIO_ARMADO = False
 
 _CANARIO_LIMITE_RESUMO = 4 * 1024 * 1024
 
-# O teto é de TAMANHO, por filho de primeiro nível, e não de nome. Medido em
-# 06/10/2026, o maior filho vigiado tem 286 entradas e 1,7 MB; o teto fica a 7x
-# e a 19x disso. Em 28/09 uma pasta da casa tinha 278 mil arquivos e 7,1 GB de
-# sha256 por foto: sem o teto, a foto custava isso.
 _CANARIO_TETO_ENTRADAS = 2_000
 
 _CANARIO_TETO_BYTES = 32 * 1024 * 1024
@@ -397,8 +380,6 @@ _CANARIO_LIMITE_AVISO = 10
 def _canario_ligado() -> bool:
     return os.environ.get(_CANARIO_DESLIGADO_ENV) != "1"
 
-
-# DualSense REAIS; depois, só os quatro forjados.
 
 _FAIXA_DESLIGADA_ENV = "HEFESTO_SEM_FAIXA_SINTETICA"
 
@@ -510,8 +491,6 @@ def _caminhar_com_teto(raiz: str, foto: _Foto) -> bool:
     while pilha:
         atual = pilha.pop()
         try:
-            # Só até o teto: listar inteira uma pasta de 278 mil nomes antes de
-            # contar já seria pagar o disco.
             with os.scandir(atual) as lista:
                 varridas = list(itertools.islice(lista, _CANARIO_TETO_ENTRADAS - entradas + 1))
         except OSError:
@@ -734,7 +713,7 @@ def _pid_vivo(pid: int) -> bool:
         return False
     except PermissionError:
         return True
-    except OSError:  # pragma: no cover — pid inválido não chega aqui
+    except OSError:  # pragma: no cover
         return True
     return True
 
@@ -782,7 +761,7 @@ def _armar_berco(session: Any) -> None:
         shutil.rmtree(destino, ignore_errors=True)
     try:
         destino.mkdir(mode=0o700)
-    except OSError:  # pragma: no cover — /tmp sem escrita derruba a suíte antes
+    except OSError:  # pragma: no cover
         return
     _BERCO.append(destino)
     _SESSAO_REAL.append(id(session))
@@ -796,7 +775,7 @@ def _armar_berco(session: Any) -> None:
 def _fixar_basetemp_do_pytest(session: Any) -> None:
     """Resolve (e cacheia) o `basetemp` do pytest ANTES do desvio do `TMPDIR`."""
     fabrica = getattr(getattr(session, "config", None), "_tmp_path_factory", None)
-    if fabrica is None:  # pragma: no cover — pytest sempre publica a fábrica
+    if fabrica is None:  # pragma: no cover
         return
     with contextlib.suppress(Exception):
         fabrica.getbasetemp()
@@ -880,8 +859,6 @@ def _varrer_berco(session: Any, exitstatus: int) -> None:
             "TMPDIR do berço.",
         ])
 
-
-# postos 2 a 5 e empurrando os DualSense REAIS da bancada para 6, 7 e 8 — e
 
 _LAR_DESLIGADO_ENV = "HEFESTO_SEM_LAR_DE_SESSAO"
 
@@ -1021,7 +998,7 @@ def _armar_lar_de_sessao(session: Any) -> None:
     shutil.rmtree(destino, ignore_errors=True)
     try:
         _espelhar_o_lar(lar_real(), destino)
-    except OSError:  # pragma: no cover — /tmp sem escrita derruba a suíte antes
+    except OSError:  # pragma: no cover
         shutil.rmtree(destino, ignore_errors=True)
         return
     _LAR_DE_SESSAO.append(destino)
@@ -1115,7 +1092,7 @@ def _escrever_no_terminal(session: Any, linhas: list[str]) -> None:
     for linha in linhas:
         if relator is not None:
             relator.write_line(linha)
-        else:  # pragma: no cover — pytest sempre tem terminalreporter
+        else:  # pragma: no cover
             print(linha)
 
 
@@ -1580,8 +1557,6 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         target = xdg_root / sub
         target.mkdir(parents=True, exist_ok=True)
         monkeypatch.setenv(var, str(target))
-    # continuavam resolvendo o `$HOME` REAL do dev em qualquer chamada que não
-    # e um WirePlumber real com o DualSense fixado como mic faz todo teste que
     real_home = lar_real()
     monkeypatch.setenv("RUSTUP_HOME", str(real_home / ".rustup"))
     monkeypatch.setenv("CARGO_HOME", str(real_home / ".cargo"))
@@ -1590,17 +1565,10 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setenv("HOME", str(home_dir))
     monkeypatch.setenv("HEFESTO_DUALSENSE4UNIX_SKIP_PRESET_SEED", "1")
     monkeypatch.setenv("HEFESTO_BROKER_SOCKET", str(xdg_root / "no-broker.sock"))
-    # A forma do WirePlumber (SPA-JSON ou Lua) sai da configuração de sistema da
-    # máquina que roda o teste: num Ubuntu 24.04 ou num Mint 22 (o 0.4, com
-    # `main.lua.d`) os drop-ins `.conf` que os testes plantam deixavam de ser os
-    # que o produto procura, e nove testes reprovavam só ali. Uma pasta vazia
-    # responde a forma de hoje (SPA-JSON); quem testa a forma desvia por cima.
     monkeypatch.setenv("HEFESTO_WIREPLUMBER_SISTEMA", str(xdg_root / "wireplumber-de-sistema"))
-    # todo teste. A vista dos externos pula pelo sysfs o nó de DualSense antes
-    # dela, e só com os controles ligados. Vazio é «não achei DualSense nenhum», a resposta de
     try:
         from hefesto_dualsense4unix.core import evdev_reader
-    except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
+    except ModuleNotFoundError as erro:  # pragma: no cover
         if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
     else:
@@ -1611,7 +1579,7 @@ def _hefesto_fake_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     hidraw_vazio.mkdir(parents=True, exist_ok=True)
     try:
         from hefesto_dualsense4unix.integrations import conexao_zumbi
-    except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
+    except ModuleNotFoundError as erro:  # pragma: no cover
         if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
     else:
@@ -1842,7 +1810,6 @@ def pytest_itemcollected(item: Any) -> None:
         return
 
 
-#: Os dois transportes que o DualSense fala, nos nomes que a casa usa (são os
 TRANSPORTES: tuple[str, ...] = ("usb", "bt")
 
 
@@ -2155,7 +2122,7 @@ def _nenhum_sysfs_vivo_na_varredura_de_vpad(
     vazio = tmp_path_factory.mktemp("sysfs-sem-vpad")
     try:
         from hefesto_dualsense4unix.integrations import no_do_vpad
-    except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
+    except ModuleNotFoundError as erro:  # pragma: no cover
         if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
         yield
@@ -2221,7 +2188,7 @@ def _nenhum_hidraw_vivo_na_varredura_de_som(
     (vazio / "hidraw").mkdir()
     try:
         from hefesto_dualsense4unix.integrations import dualsense_bt_audio
-    except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
+    except ModuleNotFoundError as erro:  # pragma: no cover
         if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
         yield
@@ -2230,7 +2197,7 @@ def _nenhum_hidraw_vivo_na_varredura_de_som(
     backend_pydualsense: Any = None
     try:
         from hefesto_dualsense4unix.core import backend_pydualsense
-    except ModuleNotFoundError as erro:  # pragma: no cover - só sem o pydualsense
+    except ModuleNotFoundError as erro:  # pragma: no cover
         if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
 
@@ -2265,7 +2232,7 @@ def _nenhuma_placa_de_som_viva_no_aviso_do_ucm(
     (vazio / "cards").write_text("--- no soundcards ---\n", encoding="utf-8")
     try:
         from hefesto_dualsense4unix.core import system_check
-    except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
+    except ModuleNotFoundError as erro:  # pragma: no cover
         if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
         yield
@@ -2279,7 +2246,6 @@ def _nenhuma_placa_de_som_viva_no_aviso_do_ucm(
         system_check._PROC_CARDS = antes
 
 
-#: cada raiz da máquina que o broker lê, e a pasta vazia da sessão que a cega na suíte.
 RAIZES_DO_BROKER = {
     "CONFIGFS_GADGETS": "usb_gadget",
     "SYS_PLATFORM": "platform",
@@ -2324,7 +2290,7 @@ def _nenhum_pad_em_usb_na_suite(
     try:
         from hefesto_dualsense4unix.broker import hidraw_broker
         from hefesto_dualsense4unix.integrations import uhid_gamepad
-    except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
+    except ModuleNotFoundError as erro:  # pragma: no cover
         if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
         yield
@@ -2352,7 +2318,7 @@ def _nenhum_cabo_em_espera_vivo_na_suite(
     vazio = tmp_path_factory.mktemp("sysfs-sem-barramento-hid")
     try:
         from hefesto_dualsense4unix.integrations import o_cabo_em_espera
-    except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
+    except ModuleNotFoundError as erro:  # pragma: no cover
         if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
         yield
@@ -2502,7 +2468,7 @@ def _armar_som_de_mentira() -> None:
             duble = destino / nome
             duble.write_text(_texto_do_duble(nome, registro), encoding="utf-8")
             duble.chmod(0o755)
-    except OSError:  # pragma: no cover — /tmp sem escrita derruba a suíte antes
+    except OSError:  # pragma: no cover
         shutil.rmtree(destino, ignore_errors=True)
         return
     antes = os.environ.get("PATH", os.defpath)
@@ -2588,8 +2554,6 @@ def _instalar_popen_sem_som() -> None:
     _instalar_popen_da_sessao()
 
 
-# "Alto-falante do controle", ao lado das duas placas de DualSense de verdade.
-# usando. Lá era a tela; aqui é o som — e a bancada tem quatro DualSense na mesa.
 _VERBOS_QUE_ESCREVEM_NO_SOM = ("load-module", "unload-module")
 
 
@@ -2601,7 +2565,7 @@ def _nenhum_modulo_de_som_de_verdade() -> Iterator[None]:
             alto_falante_bt,
             dualsense_bt_audio,
         )
-    except ModuleNotFoundError as erro:  # pragma: no cover — job leve do CI
+    except ModuleNotFoundError as erro:  # pragma: no cover
         if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
         yield
@@ -2639,7 +2603,7 @@ def _recuo_do_pactl_zerado() -> Iterator[None]:
     """O recuo do `pactl` nasce ZERADO em cada teste (SOM-RECUO-01, 13/09/2026)."""
     try:
         from hefesto_dualsense4unix.integrations import dualsense_bt_audio
-    except ModuleNotFoundError as erro:  # pragma: no cover — job leve do CI
+    except ModuleNotFoundError as erro:  # pragma: no cover
         if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
         yield
@@ -3077,7 +3041,7 @@ def _armar_lancador_de_mentira(session: Any) -> None:
         escrever_os_dubles_dos_lancadores(
             destino, destino / _LANCADOR_LIVRO, _reais_dos_lancadores(antes)
         )
-    except OSError:  # pragma: no cover — /tmp sem escrita derruba a suíte antes
+    except OSError:  # pragma: no cover
         shutil.rmtree(destino, ignore_errors=True)
         return
     temporarios = [berco()]
@@ -3343,8 +3307,6 @@ def _lancador_no_fim_da_sessao(session: Any) -> None:
     session.exitstatus = 1
 
 
-# jogo, o `jogo_aberto` do «reiniciar», a recusa do `with_steam_closed`)
-
 _MODULO_DO_JOGO = "hefesto_dualsense4unix.integrations.steam_launch_options"
 
 _LEITOR_DO_JOGO_REAL: list[Callable[[Any], str]] = []
@@ -3406,7 +3368,7 @@ def _armar_jogo_so_da_sessao() -> None:
             import importlib
 
             modulo = importlib.import_module(_MODULO_DO_JOGO)
-        except Exception:  # pragma: no cover — sem o pacote não há o que vigiar
+        except Exception:  # pragma: no cover
             return
     atual = getattr(modulo, "_cmdline_of", None)
     if atual is None or getattr(atual, "_so_da_sessao", False):
@@ -3439,7 +3401,7 @@ def _nenhum_teclado_vivo_na_pergunta_da_permissao(
     vazio = tmp_path_factory.mktemp("input-sem-no")
     try:
         from hefesto_dualsense4unix.utils import maquina
-    except ModuleNotFoundError as erro:  # pragma: no cover - só no job leve do CI
+    except ModuleNotFoundError as erro:  # pragma: no cover
         if not _o_produto_nao_roda_neste_ambiente(erro):
             raise
         yield

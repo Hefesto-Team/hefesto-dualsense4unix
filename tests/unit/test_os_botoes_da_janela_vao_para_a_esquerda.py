@@ -85,7 +85,6 @@ def medida(tmp_path_factory: pytest.TempPathFactory) -> dict[str, object]:
     filho = subprocess.run([sys.executable, "-c", _SONDA], env=ambiente,
                            capture_output=True, text=True, timeout=120)
     if filho.returncode != 0:
-        # só a falta de tela pula; qualquer outro erro da sonda é vermelho, e não silêncio
         if "display" not in filho.stderr.lower():
             pytest.fail(f"a sonda quebrou: {filho.stderr.strip()[-600:]}")
         pytest.skip(f"a barra não subiu na tela de mentira: {filho.stderr.strip()[-300:]}")

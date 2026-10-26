@@ -78,7 +78,6 @@ class Lido:
     frequencia: int | None = None
     periodo: int | None = None
     posicao: int | None = None
-    #: força (1 a 8) de cada zona ativa, nos modos que a guardam por zona
     forca_por_zona: dict[int, int] = field(default_factory=dict)
 
     @property
@@ -120,11 +119,8 @@ def decodificar(bloco: bytes) -> Lido:
             frequencia=bloco[4],
             periodo=bloco[5],
         )
-    # 0x22 (arco) e 0x25 (arma): início e fim viram bits, a força vem do byte 3
     return Lido(modo=modo, mascara=mascara, amplitude_bruta=bloco[3] | bloco[4] << 8)
 
-
-# --- as regras: cada uma devolve o NOME da regra quebrada, ou nada ------------
 
 BIT_FORA_DO_CURSO = "bit_de_zona_fora_do_curso"
 SEM_ZONA_ATIVA = "efeito_sem_zona_ativa"
@@ -138,13 +134,8 @@ VALOR_FORA_DOS_BITS = "valor_que_passa_dos_bits_do_modo"
 PONTO_FORA_DO_DOMINIO = "inicio_ou_fim_fora_do_dominio_do_modo"
 PATAS_FORA_DE_ORDEM = "galope_com_a_primeira_pata_depois_da_segunda"
 
-#: O domínio do início e do fim de cada modo de dois pontos, no gerador do
-#: Nielk1: a arma, início de 2 a 7 e fim até 8; o arco, fim até 8 (a zona 9
-#: é do galope, que vai até ela).
 DOMINIO_DOS_PONTOS = {0x25: (2, 7, 8), 0x22: (0, 7, 8)}
 
-#: Quantos bits o campo de valor de cada modo tem: a arma, três (força - 1); o
-#: arco, seis (força - 1 e estalo - 1); o galope, seis (as duas patas).
 BITS_DO_VALOR = {0x25: 3, 0x22: 6, 0x23: 6}
 
 
@@ -174,8 +165,6 @@ def violacoes(
         if not (menor <= inicio <= maior_inicio and fim <= maior_fim):
             achadas.add(PONTO_FORA_DO_DOMINIO)
     if lido.modo == 0x23:
-        # o byte 3 leva a segunda pata nos bits 0-2 e a primeira nos bits 3-5;
-        # a primeira vai de 0 a 6 e a segunda vem depois dela, até 7
         primeira, segunda = lido.amplitude_bruta >> 3 & 0x07, lido.amplitude_bruta & 0x07
         if primeira >= segunda:
             achadas.add(PATAS_FORA_DE_ORDEM)
@@ -192,26 +181,18 @@ def violacoes(
     return frozenset(achadas)
 
 
-# --- os efeitos, com os padrões da tela ---------------------------------------
-
-#: as dezenove chaves: as onze da tela e as oito que saíram dela e o perfil gravado ainda cita
 _SPEC_POR_NOME = {p.name: p for p in (*PRESETS, *PRESETS_ANTIGOS)}
 
-#: Fora da régua: o Montar do zero manda o que a pessoa digitar.
 FORA_DA_REGUA = frozenset({"Custom"})
 
-#: O efeito que carrega uma firmeza que, uma vez começada, vai até o fundo do curso.
 SEGUEM_ATE_O_FUNDO = frozenset(
     {"Rigid", "SimpleRigid", "Resistance", "Feedback", "SlopeFeedback"}
 )
 
-#: Os efeitos cuja palavra, na tela, é repetição: o gatilho tem de bater.
 REPETEM = frozenset(
     {"Galloping", "AutoGun", "Machine", "Vibration", "MultiPositionVibration"}
 )
 
-#: O perfil salvo da Vibração por posição em lista de listas (`[[v], …]`), o
-#: formato aninhado que a aba antiga gravava. É um caso à parte da mesma fábrica.
 VIBRACAO_ANINHADA = "MultiPositionVibration (perfil em lista de listas)"
 
 
@@ -221,7 +202,6 @@ def _efeito_com_os_padroes(nome: str) -> TriggerEffect:
 
 
 def _efeito_aninhado() -> TriggerEffect:
-    # A curva «Vibra em degraus», como a aba antiga a gravava no perfil.
     forcas = [0, 8, 0, 8, 0, 8, 0, 8, 0, 8]
     return build_from_name("MultiPositionVibration", [[v] for v in forcas])
 
@@ -255,14 +235,9 @@ def _violacoes_do_caso(caso: str) -> frozenset[str]:
     )
 
 
-#: efeito -> (a sprint que o cura, as regras que ele ainda quebra). Só encolhe.
 _ARCO = "O-ARCO-E-O-GALOPE-MANDAM-O-MODO-QUE-O-CONTROLE-LE-01"
 
 ISENCOES: dict[str, tuple[str, frozenset[str]]] = {
-    # A Arma automática, a Semi-automática e a Vibração saíram desta tabela com a fusão dos
-    # acionamentos (a Arma automática e a Vibração mandam a Metralhadora; a Semi-automática, o
-    # Disparo). O Arco e o Galope têm a sensação que a mão do usuário aprovou em 01/08 e ficam
-    # como estão até a sessão às cegas: os bytes só mudam se o usuário escolher o modo próprio.
     # sai com: A-SESSAO-AS-CEGAS-DO-GATILHO-ESCOLHE-OS-BYTES-DE-01-08-01
     "Bow": (_ARCO, frozenset({BIT_FORA_DO_CURSO, FORCA_EM_ZONA_INATIVA})),
     # sai com: A-SESSAO-AS-CEGAS-DO-GATILHO-ESCOLHE-OS-BYTES-DE-01-08-01
@@ -270,9 +245,6 @@ ISENCOES: dict[str, tuple[str, frozenset[str]]] = {
         BIT_FORA_DO_CURSO, FORCA_EM_ZONA_INATIVA, REPETE_SEM_FREQUENCIA,
     })),
 }
-
-
-# --- a tabela de isenção: o que ainda está errado, e quem cura -----------------
 
 
 def test_todo_efeito_da_fabrica_passa_pela_regua_menos_o_montar_do_zero() -> None:
@@ -305,9 +277,6 @@ def test_a_tabela_de_isencao_so_cita_efeito_que_existe() -> None:
     assert set(ISENCOES) <= set(_nomes_dos_casos())
 
 
-# --- o decodificador, com fixtures sintéticas ---------------------------------
-
-
 def _hex(texto: str) -> bytes:
     return bytes.fromhex(texto)
 
@@ -322,7 +291,6 @@ class TestDecodificador:
         assert violacoes(lido, repete=True) == frozenset()
 
     def test_vibracao_oficial_le_a_forca_de_cada_zona_menos_um(self) -> None:
-        # as dez forças 0,1,2,…,7,8,8 do preset «rampa crescente»: zona z = força z
         lido = decodificar(_hex("26 FE 03 40 34 D6 3F 00 00 64 00"))
         assert lido.forca_por_zona == {z: z for z in range(1, 9)} | {9: 8}
         assert lido.frequencia == 100
@@ -373,7 +341,6 @@ class TestDecodificador:
             assert violacoes(lido, repete=True) == {PATAS_FORA_DE_ORDEM}, byte3
 
     def test_a_arma_e_o_arco_fora_do_dominio_dos_pontos_sao_denunciados(self) -> None:
-        # arma com início 1, arma com fim 9, arco com fim 9
         for bloco in ("25 82 00 05", "25 04 02 05", "22 01 02 2D"):
             lido = decodificar(_hex(bloco + " 00 00 00 00 00 00 00"))
             assert violacoes(lido) == {PONTO_FORA_DO_DOMINIO}, bloco
@@ -409,14 +376,11 @@ class TestDecodificador:
             assert violacoes(decodificar(bytes([modo]) + bytes(10))) == frozenset()
 
     def test_bit_de_zona_fora_do_curso_e_denunciado(self) -> None:
-        # a máscara 0x0702 liga o bit 10, que o curso de dez zonas não tem
-        # o bloco antigo do Pulso (curva A), com os parâmetros em ordem
         lido = decodificar(_hex("22 02 07 B4 00 00 00 00 00 00 00"))
         assert lido.zonas == (1, 8, 9)
         assert violacoes(lido) == {
             BIT_FORA_DO_CURSO, ARMA_SEM_DOIS_PONTOS, VALOR_FORA_DOS_BITS,
         }
-        # e a zona 12 também
         assert BIT_FORA_DO_CURSO in violacoes(
             decodificar(_hex("21 00 10 00 00 00 00 00 00 00 00"))
         )
@@ -425,7 +389,6 @@ class TestDecodificador:
         assert SEM_ZONA_ATIVA in violacoes(decodificar(_hex("21 00 00 00 00 00 00 00 00 00 00")))
 
     def test_forca_em_zona_inativa_e_denunciada(self) -> None:
-        # a zona 0 está ativa; a força da zona 1 (bits 3 a 5) não tem zona que a use
         lido = decodificar(_hex("21 01 00 08 00 00 00 00 00 00 00"))
         assert violacoes(lido) == {FORCA_EM_ZONA_INATIVA}
 
@@ -482,13 +445,6 @@ def test_a_regua_le_o_bloco_que_o_relatorio_manda(caso: str) -> None:
     assert bloco_de(efeito) == _bloco_do_relatorio(efeito)
 
 
-# --- os blocos da sessão às cegas: o que o usuário digita no Montar do zero ---------
-
-#: O modo próprio de cada efeito de 01/08 que a sessão às cegas compara com o
-#: bloco de hoje (`docs/process/sprints/*-O-DISPARO-E-A-ARMA-*` e
-#: `*-O-ARCO-E-O-GALOPE-*`), com os padrões da tela: modo e as sete forças como
-#: o Montar do zero as recebe. A régua os lê como o controle lê; o byte errado
-#: no roteiro, digitado pelo usuário, não vai ao gatilho.
 BLOCOS_DA_SESSAO_AS_CEGAS: dict[str, tuple[int, tuple[int, ...]]] = {
     "SemiAutoGun (arma 0x25)": (0x25, (0x48, 0x00, 0x04, 0, 0, 0, 0)),
     "Bow (arco 0x22)": (0x22, (0x82, 0x00, 0x35, 0, 0, 0, 0)),
@@ -523,8 +479,6 @@ def test_os_blocos_do_roteiro_sao_os_dos_padroes_da_tela_no_modo_proprio() -> No
     inicio, fim, pata1, pata2, frequencia = (
         p.default for p in _SPEC_POR_NOME["Galloping"].params
     )
-    # as patas da tela encostam no domínio do galope: a primeira até 6, a
-    # segunda depois dela
     pata1 = min(pata1, 6)
     pata2 = max(pata1 + 1, min(pata2, 7))
     mascara = (1 << inicio) | (1 << fim)
@@ -534,10 +488,6 @@ def test_os_blocos_do_roteiro_sao_os_dos_padroes_da_tela_no_modo_proprio() -> No
     )
 
 
-# --- o curso inteiro da tela, não só os padrões --------------------------------
-
-#: Os efeitos de dois pontos curados em 08/10/2026: a tela deixa início e fim
-#: de 0 a 9, e o bloco tem de caber no domínio do modo em toda combinação.
 DOIS_PONTOS_CURADOS = ("Weapon", "PulseA", "PulseB")
 
 
@@ -553,8 +503,6 @@ def test_todo_inicio_e_fim_da_tela_cabe_no_modo(nome: str) -> None:
                     nome, inicio, fim, forca,
                 )
 
-
-# --- a promessa da tela: quem diz «enquanto apertado» tem de bater ------------
 
 _PROMETE = re.compile(r"enquanto|contínu|continu", re.IGNORECASE)
 

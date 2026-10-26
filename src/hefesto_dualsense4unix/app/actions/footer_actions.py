@@ -56,9 +56,6 @@ _NOMES_DE_SECAO: dict[str, str] = {
 _MAX_SECOES_NO_TEXTO = 3
 
 
-# (`_aplicar_escolha_pendente`) para medir a paridade de IPC entre a Início e a
-
-
 def _rotulo_do_modo(escolha: dict[str, str]) -> str:
     """"Jogar pelo Hefesto (Xbox 360)" a partir de ``{"modo","mascara"}``."""
     from hefesto_dualsense4unix.app.actions.home_actions import (

@@ -12,12 +12,11 @@ _PREFIXOS_FORJADOS = (
     "e8473a",
     "ffffff",
     "000000",
-    # DualSense real para o oitavo posto. A partir daí, um controle de prova
     "02001a",
     "3c9d07",
     "d0f1a2",
     "f7e6d5",
-    "a1b2c3",  # o DualSense físico por rádio (`…marca_do_vpad_no_nome…`)
+    "a1b2c3",
     "d2c1b0",
 )
 

@@ -62,7 +62,6 @@ PACOTE = Path("src") / "hefesto_dualsense4unix"
 CENSO = Path("docs/data/contratos-de-fora.csv")
 CADERNO = Path("docs/data/os-contratos-de-fora.json")
 SPRINTS = Path("docs/process/sprints")
-#: A feita desce para cá (`mover-sprints-fechadas.py`) e continua sendo a filha da linha.
 ARQUIVADAS = SPRINTS / "arquivados"
 MODULO_DO_DOCTOR = Path("src/hefesto_dualsense4unix/integrations/contratos_de_fora.py")
 
@@ -76,9 +75,6 @@ FORMAS = {"converge", "comando"}
 SEM_DOCTOR = "-"
 FRAGEIS = "linhas-frageis"
 
-# ---------------------------------------------------------------------------
-# O vocabulário do outro lado.
-
 FERRAMENTAS = (
     "pactl", "wpctl", "pw-dump", "pw-cli", "pw-cat", "pw-play", "pw-record", "pw-loopback",
     "pw-top", "parec", "parecord", "paplay", "amixer", "aplay", "arecord",
@@ -89,14 +85,11 @@ FERRAMENTAS = (
     "cosmic-comp", "gdbus", "dbus-send", "upower", "uname", "ffmpeg", "wlrctl", "systemd-run",
     "xdg-desktop-portal",
 )
-#: nomes que também são palavras do domínio (a loja ``steam``, o ``gio`` do GLib, o ``flatpak`` do
-#: pacote): só contam como ferramenta quando são o argv[0] de uma lista ou o argumento do ``which``.
 _AMBIGUAS = frozenset({"steam", "gio", "flatpak", "sudo", "apt", "curl", "dpkg", "iw", "uname"})
 _FERRAMENTA_RX = re.compile(
     r"^(" + "|".join(re.escape(f) for f in FERRAMENTAS) + r")(\s+[\w\-./=@:%{}\[\]*]+)*$"
 )
 _CAMINHO_RX = re.compile(r"^/(sys|proc|var|etc|run|dev|lib)/|^/usr/lib/")
-#: caminho que é do próprio Hefesto ou do lugar onde ele se instala não é contrato de fora.
 _CAMINHO_PROPRIO_RX = re.compile(r"hefesto|^/usr/(local|share|bin)/|/tmp/|^/sys/usb/|^/var/lib/?$")
 _DBUS_RX = re.compile(r"^(org\.(bluez|freedesktop|gnome|kde)|com\.system76|net\.hadess)(\.[A-Za-z0-9_]+)*$")
 _CFG_RX = re.compile(
@@ -116,7 +109,6 @@ _PROCESSO_ATRIBUTOS = {
 }
 _LISTAGENS_DO_PACTL = frozenset({"sources", "cards", "sinks", "source-outputs", "sink-inputs"})
 
-# Fora de src/: só o que já quebrou.
 _PASTAS_DE_TEXTO = ("scripts", "assets", "packaging", "flatpak")
 _SOLTOS_DE_TEXTO = ("install.sh", "uninstall.sh", "run.sh")
 _NAO_SE_VARRE = {
@@ -176,8 +168,6 @@ def _referencia_a_processo(no: ast.AST) -> bool:
             and no.attr in _PROCESSO_ATRIBUTOS.get(no.value.id, ()))
 
 
-#: a raiz nua (``Path("/sys")`` como parâmetro injetável) também é contato: o resto do caminho vem
-#: de variável, e a régua não pode enxergar só a forma escrita por inteiro.
 _RAIZ_NUA_RX = re.compile(r"^/(sys|proc|dev|run)/?$")
 _CONSTRUTORES_DE_CAMINHO = frozenset({"Path", "PurePath", "PosixPath", "PurePosixPath"})
 
@@ -216,7 +206,6 @@ class _Percorredor(ast.NodeVisitor):
         self.pilha: list[str] = []
         self.achados: dict[str, list[str]] = {}
         self.lanca_processo = False
-        #: as subexpressões de um caminho já dobrado por inteiro: o pedaço não é outro contato.
         self._dentro_do_dobrado: set[int] = set()
 
     def _caminho_dobrado(self, no: ast.BinOp | ast.Call) -> None:
@@ -336,7 +325,6 @@ def contatos_do_codigo(fonte: str, arquivo: str) -> list[Contato]:
 def contatos_do_texto(texto: str, arquivo: str) -> list[Contato]:
     """Fora de ``src/``: a lista curta das formas que já quebraram, por texto."""
     achados: list[Contato] = []
-    # comentário não é contato: a linha que começa em `#` fica de fora.
     texto = "\n".join(li for li in texto.splitlines() if not li.lstrip().startswith("#"))
     for alvo, rx in _TEXTO_RX.items():
         if rx.search(texto):
@@ -413,10 +401,6 @@ def varrer(raiz: Path) -> list[Contato]:
                 continue
             achados.extend(contatos_do_texto(texto, rel))
     return achados
-
-
-# ---------------------------------------------------------------------------
-# O censo (o CSV).
 
 
 def ler_censo(raiz: Path) -> list[dict[str, str]]:
@@ -529,8 +513,6 @@ def _julgar_a_linha(raiz: Path, linha: dict[str, str]) -> list[str]:
         if not linha["motivo"]:
             q.append(f"{rotulo}: linha frágil (interna, versão ou comando) sem `motivo`")
         filha = linha["sprint_filha"]
-        # `docs/process/` é ignorado pelo git: num clone limpo (o CI) a pasta não existe, e a
-        # filha só se confere onde ela mora. A coluna vazia reprova em toda parte.
         tem_sprints = any((raiz / SPRINTS).glob("*.md")) if (raiz / SPRINTS).is_dir() else False
         if not filha or (tem_sprints and not _a_filha_existe(raiz, filha)):
             q.append(f"{rotulo}: linha frágil sem `sprint_filha` que exista em {SPRINTS} nem em {ARQUIVADAS} ({filha!r})")
@@ -542,17 +524,11 @@ def _julgar_a_linha(raiz: Path, linha: dict[str, str]) -> list[str]:
             q.append(f"{rotulo}: o doctor não declara {doctor!r} em {MODULO_DO_DOCTOR}")
         elif (linha["porta"] == "interna" or linha["pergunta"] == "versão") \
                 and linha["alvo"] not in contratos[nome]:
-            # A sonda pergunta a porta oficial; a interna pode mudar com ela verde. Medido em
-            # 07/10/2026: 48 linhas frágeis citavam um contrato que nunca as olhava.
             q.append(
                 f"{rotulo}: linha frágil cita {doctor!r}, mas a sonda dele não pergunta "
                 f"`{linha['alvo']}` (o `cobre` do contrato): o doctor daria [ OK ] com ela "
                 "quebrada. Use `-` ou faça a sonda perguntar.")
     return q
-
-
-# ---------------------------------------------------------------------------
-# A catraca: as linhas frágeis só descem.
 
 
 def censo_das_frageis(raiz: Path) -> Censo:

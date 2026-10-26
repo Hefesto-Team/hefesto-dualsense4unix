@@ -35,9 +35,8 @@ MOCKUP = RAIZ / "mockup" / "08-conexoes.html"
 
 ADAPTADOR = "/org/bluez/hci0"
 LUGAR = "aa:bb:cc:00:00:f0"
-CLASSE_DE_CONTROLE = 9480  # 0x2508, a class of device de um gamepad
+CLASSE_DE_CONTROLE = 9480
 
-#: o jogador, o MAC forjado, o slug do plástico e o nome dele (o que a mesa do daemon diz)
 PLASTICOS = {
     1: ("aa:bb:cc:00:00:01", "cosmic-red", "Cosmic Red"),
     2: ("aa:bb:cc:00:00:02", "starlight-blue", "Starlight Blue"),
@@ -90,8 +89,6 @@ def _a_linha_do_radio(jogador: int) -> dict[str, Any]:
     return dict(ap)
 
 
-# --- a linha do cabo ----------------------------------------------------------------------------
-
 def test_1_o_controle_no_cabo_leva_a_cor_o_nome_dela_e_o_jogador() -> None:
     (ap,) = _no_cabo([1])
     assert ap["usb"] is True and ap["desligado"] is True
@@ -136,8 +133,6 @@ def test_5_de_p1_a_p4_com_qualquer_mistura(cabo: list[int]) -> None:
         assert _cor_da_silhueta(html) == ap["cor"] != ""
 
 
-# --- a paridade com o rádio -----------------------------------------------------------------------
-
 @pytest.mark.parametrize("jogador", [1, 2, 3, 4])
 def test_6_o_cabo_tem_a_mesma_cor_e_o_mesmo_selo_do_radio(jogador: int) -> None:
     (cabo,) = _no_cabo([jogador])
@@ -164,8 +159,6 @@ def test_8_sem_a_mesa_o_cabo_fica_sem_cor_e_nao_quebra() -> None:
     assert ap["usb"] is True and ap["cor"] == "" and ap["cor_nome"] == ""
     assert _cor_da_silhueta(_html(ap)) == "var(--texto-mudo)"
 
-
-# --- o desenho ------------------------------------------------------------------------------------
 
 def test_9_o_mockup_da_08_desenha_a_linha_do_cabo_com_cor_e_selo() -> None:
     mockup = MOCKUP.read_text(encoding="utf-8")

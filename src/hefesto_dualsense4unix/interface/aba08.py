@@ -1,4 +1,3 @@
-# A PASTA, não /tmp: estas três liam um `monta` de /tmp — o de 26/08 23:50 —
 import ast
 import importlib.util
 import pathlib
@@ -13,7 +12,6 @@ from monta import (DS, MESA, CONECTADOS, CSS_GLIFO, CSS_POPUP, TRAVESSAO,
                    cor_da_zona, monta, player_slot_color,
                    ressalva as monta_ressalva, svg)
 
-# geradores 08 e 09 pararam de RODAR por isso, calados até alguém tentar:
 from onde import RAIZ as R
 
 from hefesto_dualsense4unix.interface import conexoes as _aba_conexoes
@@ -98,7 +96,6 @@ def num(valor):
     return milhar if decimal == "0" and float(valor).is_integer() else f"{milhar},{decimal}"
 
 
-# `DualSense` aqui sem ninguém ver.
 def _estado_da_aba_controles(campos):
     arq = pathlib.Path(__file__).resolve().parent / "aba02.py"
     for no in ast.parse(arq.read_text()).body:
@@ -119,7 +116,6 @@ def _estado_da_aba_controles(campos):
                      "desta aba (máscara · microfone · bateria) sai de lá.")
 
 
-#: divergia (a Jogar dizia que o P2 era DualSense e o P3 Xbox 360; a Controles e
 DA_CONTROLES = _estado_da_aba_controles({"bat"})
 if faltam := {c["pref"] for c in MESA} - set(DA_CONTROLES):
     raise SystemExit(f"ERRO: a MESA tem {sorted(faltam)} e o ESTADO da aba02 não.")
@@ -196,8 +192,6 @@ NO_RADIO = [c for c in CONECTADOS if e_radio(c)]
 CAMPO_DAS_DICAS = "dicas"
 
 
-#: o controle conhecido que pede para parear no desenho (O-CONTROLE-QUE-PEDE-PARA-PAREAR-…-01):
-#: o «Roxo», ouvido pelo primeiro adaptador do desenho
 PEDIDO_DO_DESENHO = {"aparelho": "AABBCC0000F7", "lugar": "L1", "nome": "Galactic Purple"}
 
 
@@ -227,18 +221,17 @@ def _dicas_da_cena():
                 controle="p2", jogador=2, nome_do_controle="Starlight Blue", de_id="meio",
                 de_nome="Meio", para_id="direita", para_nome="Direita", controles_no_de=3,
                 bons=20, sufocado=True)),
-            _dicas.dica_da_ordem(wifi, "atencao", slot=0, dica_de_ignorar=_pacote08.DICA_DO_IGNORAR),  # (noqa-acento): chave de máquina
-            _dicas.dica_da_ordem(teclado, "atencao", slot=1, de="Entrada 4", para="Entrada 9",  # (noqa-acento): chave de máquina
+            _dicas.dica_da_ordem(wifi, "atencao", slot=0, dica_de_ignorar=_pacote08.DICA_DO_IGNORAR),  # (noqa-acento)
+            _dicas.dica_da_ordem(teclado, "atencao", slot=1, de="Entrada 4", para="Entrada 9",  # (noqa-acento)
                                  dica_de_ignorar=_pacote08.DICA_DO_IGNORAR),
             _dicas.dica_da_conferencia(
-                "energia_das_portas", "Energia das entradas", "atencao",  # (noqa-acento): chave de máquina
+                "energia_das_portas", "Energia das entradas", "atencao",  # (noqa-acento)
                 "A entrada 12 entrega menos corrente do que o aparelho pede."),
         ],
         ["Suporte ao controle", "Pareamentos salvos"])
     return _aba_conexoes.html_das_dicas(painel, _pacote08.icone_da_dica)
 
 
-# `a04_iluminacao.um_botao_de_player`.
 rotulo = _pacote08.rotulo_do_controle
 
 
@@ -945,8 +938,6 @@ _regras = [
 ]
 for estado in ESTADOS:
     marcado = f"body:has(#gc-{estado}:checked)"
-    # QUEM ACENDE É A PERGUNTA DA FITA (O-SELECIONAR-ACENDE-QUEM-ESTA-ESCOLHIDO-01): o cartão
-    # de um controle acende só o chip dele; o «Todos» acende o «Todos» e os quatro com ele.
     chips = [f'{marcado} .fita .chip[data-pref="{aceso}"]'
              for aceso in sorted(_acesos_da_fita(estado, MESA), key=ESTADOS.index)]
     if estado == "todos":
@@ -982,7 +973,6 @@ EXAMINAR_PORTAS = "Examinar entradas"
 RENOMEAR_DICA = _pacote08.RENOMEAR_DICA
 
 
-#: contrato. O `validar-acentuacao.py` isenta a LINHA que traga `noqa-acento`, e
 BORDA_LIDA = ("A borda é a cor do plástico que o Hefesto <b>leu do aparelho</b>: este controle "
               "está no cabo, e pelo cabo ele pergunta e o aparelho responde.")
 BORDA_NEUTRA = ("A borda é <b>neutra</b> porque a cor deste controle <b>não foi lida</b>. "
@@ -998,14 +988,10 @@ BOTAO_DICA_CURTA = (
     "O que o botão físico do microfone cala. É um ajuste do computador, um só "
     "para todos os controles.")
 
-#: mirar só este controle (`controller.target.set`).
 SO_ESTE_DICA = ("Escolhe só este controle: a luz, os gatilhos e a vibração "
                 "passam a mirar nele.")
 
 
-# `url(#hachura-sem-hex)`, uma hachura; outros dois usam gradiente
-# unprefixada, apontaria para `#hachura-sem-hex` enquanto os desenhos definiriam
-# `#p1-hachura-sem-hex`: oito modelos ficariam SEM TINTA, e só na máquina de
 _CORES_NO_DESENHO = re.compile(
     r'\n?[ \t]*<defs id="[^"]*cores-do-dualsense">.*?</defs>', re.S)
 
@@ -1050,14 +1036,12 @@ def desenho_do_controle(c, luz):
     return limpo
 
 
-#: `<span data-campo="nome" data-hef-alvo="html">` que no lugar cheio traz o
 def nome_do_lugar_vazio(c):
     """O rótulo do lugar sem aparelho: «P3 • Desconectado» (conserto de 14/10/2026, q4B)."""
     return (f'<b>P{c["jogador"]}</b><span class="sep">{_pacote_base.PONTO_DO_ROTULO}</span>'
             f'{_pacote_base.SEM_NINGUEM_AQUI}')
 
 
-#: 26/09/2026; a bateria foi para o nome (`nome_com_a_bateria`).
 ESTADOS_DA_LINHA = ("est-mic", "est-som", "est-modo", "est-visto")
 DONO_DICA = ("Escreva o nome de quem joga com este controle. O nome fica no controle: "
              "vale em qualquer entrada e adaptador. Apague para voltar a «P N».")
@@ -1077,7 +1061,6 @@ def _estado_da_bancada(c):
                                         _DECLARACAO_DA_BANCADA, _MODO_DA_CENA)
 
 
-#: O «Modo de conexão» da cena: o chip «Sony DualSense», que é o aceso no
 def _modo_da_cena():
     from hefesto_dualsense4unix.app.actions.jogar import painel as _painel
 
@@ -1137,7 +1120,6 @@ def linha_do_controle(c):
     estado = _estado_da_bancada(c) if conectado else {}
     marca = "" if conectado else ' off'
     diz = "" if conectado else ' data-conectado="nao"'
-    # `[data-controle][data-conectado="nao"]:not(.vazia){border-color:…}`, e ela
 
     dica_linha = (f"{SO_ESTE_DICA} A fita do topo passa a apontar para ele."
                   if conectado else "Nenhum controle neste lugar.")
@@ -1171,8 +1153,6 @@ JOGADORES_NO_CABO = " e o ".join(f"Player {c['jogador']}" for c in NO_CABO)
 def _plural(n, um, muitos):
     return um if n == 1 else muitos
 
-
-#   – "O que só você sabe" saiu, e ele NÃO paga nada: a coluna media 110px de  # (noqa-acento: verbo medir, imperfeito)
 
 ALTURA = 828
 VISIVEL = 542
@@ -1241,12 +1221,10 @@ _confere_no_produto(_JULGAR, [
     f'"{V_EVITAR}", colada', f'"{V_MELHOR}"', f'"{P_MELHOR}"',
 ])
 
-#: O que o título de cada janela de mapear diz ao passar o mouse (o «?» saiu, 13/10/2026).
 DICA_DO_MAPEAR = "Clique no aparelho, depois na entrada em que ele está"
 DICA_DO_MAPEAR_PORTAS = "Use o mesmo DualSense em todas as entradas"
 
 
-# todas as letras que o DualSense por cabo é `03/00/00` — classe de entrada sem
 CENSO = [
     ("Aparelho de entrada", "1-2", "1",   f'o P{CONECTADOS[0]["jogador"]} {CONECTADOS[0]["nome"]}, no {"BT" if e_radio(CONECTADOS[0]) else "USB"}'),
     ("Mouse",               "1-3", "7",   "o receptor do mouse"),
@@ -1298,7 +1276,6 @@ def veredito(n, esticada=False):
     return "serve", V_SERVE, P_SERVE
 
 
-#:   · `especie`   — os dois DualSense por cabo saem sem classe no motor.
 LACUNAS = ["LACUNA_POSICAO", "LACUNA_VELOCIDADE", "LACUNA_ESPECIE"]
 
 
@@ -1307,7 +1284,6 @@ if len(LACUNAS) not in _POR_EXTENSO:
     raise SystemExit(f"ERRO: a cena tem {len(LACUNAS)} lacunas e esta tela só "
                      f"sabe dizer {sorted(_POR_EXTENSO)} por extenso.")
 
-#:     GTK — lá a linha não é desenhada quando `confissao_do_desenho` devolve
 CONFISSAO_NA_TELA = (
     f'<div class="mm-conf-linha" data-campo="confissao-nada" '
     f'data-hef-alvo="classe" data-hef-classe="sumido" data-hef-quando="sim">'
@@ -1332,7 +1308,6 @@ _confere_no_produto(_MAPA_PY, [
 
 def ap_botao(esp, no, em, quem):
     """Um aparelho da lista — o `Gtk.ToggleButton` de `_desenhar_aparelhos`."""
-    # (`mapa_da_mesa._desenhar_aparelhos` só chama `set_tooltip_text` sob `if onde:`).
     dica = DICA_JA_COLOCADO.format(onde=com_artigo(na_frase(em), em=True)) if em else ""
     return (f'<button class="mm-ap{" on" if no == ESCOLHIDO else ""}" '
             f'data-gesto="escolher-aparelho" '
@@ -1369,7 +1344,6 @@ def celula(n):
 FACE_DA_ENTRADA = {n: nome for nome, numeros in FACES for n in numeros}
 
 
-#: O DESENHO É DO PRODUTO desde 01/09/2026 — `interface/conexoes.html_do_mapa`.
 MAPA_DESENHADO = _aba_conexoes.html_do_mapa(
     [{"nome": nome, "portas": numeros} for nome, numeros in FACES],
     quem_esta=QUEM_ESTA,
@@ -1381,7 +1355,6 @@ MAPA_DESENHADO = _aba_conexoes.html_do_mapa(
     dicas={"esticada": DICA_EXTENSAO,
            "enumera": DICA_ENUMERA,
            "nova_entrada": _aba_conexoes.DICA_NOVA_ENTRADA},
-    #: A pergunta do «Acrescentar hub» nasce ABERTA no desenho: é a face que o usuário escolheu (B-hub).
     pergunta={"aberta": True, "entradas": [n for _nome, ns in FACES for n in ns]})
 
 
@@ -1533,8 +1506,6 @@ def _sem_os_tokens_da_casa(miolo: str) -> str:
     return ";".join(fica)
 
 
-#: Os dois cinzas de letra da casa (`--comment` e `--texto-mudo`) como cor de TEXTO numa regra:
-#: `color:` sem prefixo, logo nem `border-color` nem `background-color`.
 _LETRA_CINZA = re.compile(r"(?<![\w-])color:\s*var\(--(?:texto-mudo|comment)\)")
 
 
@@ -1594,17 +1565,11 @@ def _css_do_radio() -> str:
     return "\n  ".join(saida)
 
 
-#: A COR DE CADA TIPO É UM TOKEN DA RAIZ (O-TEMA-DE-CORES-ENTRA-PELA-FOLHA-DE-USUARIO-01): o Python
-#: escreve `var(--c-<tipo>)` na régua e `var(--sala-<tipo>)` na sala, e o valor mora só aqui. Na
-#: raiz, e não no escopo da seção: um valor posto em `.radio .espectro{…}` venceria o que um tema
-#: põe no `:root`, e o tema não chegaria à régua. O controle leva o plástico dele, lido do aparelho;
-#: o `--c-controle` é só a cor do desenho de exemplo.
 CORES_NA_REGUA = {
     "controle": "#7eb8d4", "wifi": "#d4d7e0", "teclado": "#ffb86c", "mouse": "#f1fa8c",
     "celular": "#f78c6c", "relogio": "#82aaff", "ruido": "#8a8fa8", "fone": "#8be9fd",
     "caixa": "#bd93f9", "outro": "#9a9eb8", _pacote08.TIPO_ACESSORIO: "#ff79c6",
 }
-#: A cor calma de cada tipo na sala (o ícone e a vaga da ponte), a de antes em `COR_DO_TIPO`.
 CORES_NA_SALA = {
     "teclado": "#8b8fa8", "mouse": "#6d7186", "webcam": "#a8a08c", "caixa": "#8c8299",
     "fone": "#7e9aa8", "outro": "#606062", "celular": "#a89a96", "relogio": "#8a9aa8",
@@ -1926,8 +1891,6 @@ CSS_DA_SECAO_DO_RADIO = _css_do_radio() + """
 """ + f"  :root{{{_RAIZ_DAS_CORES_DOS_TIPOS}}}\n"
 
 
-#: Os tipos que a régua ganhou e o desenho do rádio não tinha: o celular, o relógio e o
-#: acessório (o aparelho de baixa energia que não diz o tipo).
 SIMBOLOS_DAS_FAIXAS = (
     '  <symbol id="rd-celular" viewBox="0 0 24 24"><rect x="7" y="2" width="10" height="20" '
     'rx="2"/><path d="M11 18h2"/></symbol>\n'
@@ -1975,12 +1938,9 @@ def _csv_do_desenho(ident: str) -> list[dict[str, str]]:
 _FACES_DO_DESENHO = ("Frente do gabinete", "Traseira", "Num hub ou extensão", "Na escrivaninha")
 
 
-#: «caiu 12× em 24 min»: o que o diário do kernel contou na bancada de 04/10 (desenho 5).
 QUEDAS_DO_DESENHO_5 = {"n": 12, "min": 24}
 
 
-#: os controles que o «Usar como botões de» do desenho oferece, pelo plástico (r3-08-14); a chave
-#: é da faixa forjada da casa, nunca um endereço de verdade.
 QUEM_RECEBE_NO_DESENHO = (("aabbcc0000c1", "Cosmic Red"), ("aabbcc0000c2", "Starlight Blue"),
                           ("aabbcc0000c3", "White"), ("aabbcc0000c4", "Galactic Purple"))
 COLORWAY_NO_DESENHO = dict(zip((k for k, _ in QUEM_RECEBE_NO_DESENHO),
@@ -2050,8 +2010,6 @@ def _cena_do_desenho() -> dict:
         ligado = linha.get("h", "")
         aparelhos.append({
             "id": linha["id"], "tipo": linha["a"], "lugar": linha["c"],
-            # O controle da cena não tem nome de quem joga: a tela diz «Player N», como faz
-            # com o controle de qualquer pessoa que ainda não deu nome a ele.
             "nome": "" if linha["a"] == "controle" else linha["nome"],
             "rotulo": f"Player {i + 1}" if linha["a"] == "controle" else linha["nome"],
             "cor": linha["b"], "cor_nome": linha["g"],
@@ -2059,8 +2017,6 @@ def _cena_do_desenho() -> dict:
             "ponte": ("haptica" if "vib" in ligado else "som" if "ponte" in ligado else None),
             "som": float(linha["d"] or 0), "esperando": False, "alem": False,
         })
-    # O acionador do desenho r3-08-14, logo abaixo da webcam: Tecla 1 na Cruz, Tecla 2 no
-    # Círculo e o pedal no L2 do Cosmic Red (`pacotes.a08_conexoes`, o bloco dos acionadores).
     webcam = next(i for i, a in enumerate(aparelhos) if a["tipo"] == "webcam")
     aparelhos.insert(webcam + 1, {
         "id": "A1", "chave": "1234:abcd:00000000", "tipo": _pacote08.TIPO_ENTRADA,
@@ -2095,13 +2051,9 @@ def _cena_do_desenho() -> dict:
     vizinhos = [{"id": x["id"], "tipo": tipo_do_desenho.get(x["a"], ""), "nome": x["nome"],
                  "sugestao": "", "no": f"/sys/usb/{x['id']}"}
                 for x in linhas if x["tabela"] == "espectro"]
-    # O que o CSV do desenho não tem: o L1 também evita canais (disjuntos dos outros dois), o
-    # Wi-Fi do desenho está em 5 GHz e há outro, interno, em 2,4 GHz.
     evitados.append({"lugar": lugares[0]["id"], "ini": 8, "fim": 16})
     wifi = [{"no": f"/sys/usb/{x['id']}", "mhz": 5805, "largura": 80}
             for x in linhas if x["tabela"] == "espectro" and x["a"] == "wifi"]
-    # O mesmo aparelho do desenho 5 na outra banda: 2,4 GHz, em USB 3.0, e as quedas que o diário
-    # do kernel contou (a placa que sai do barramento e volta; a «chave» é o vid:pid dela).
     wifi.append({"no": "", "mhz": 2437, "largura": 20, "chave": "usb:2357:012d",
                  "quedas": QUEDAS_DO_DESENHO_5})
     portas = [{"id": x["id"], "caminho": x["a"], "usb": x["b"], "ocupa": x["c"],
@@ -2118,14 +2070,11 @@ def _cena_do_desenho() -> dict:
               "forca": int(x["forca"]), "conhecido": x["conhecido"] == "sim"}
              for x in _csv_do_desenho("perto")]
     quem_sai = [a for a in aparelhos if a["lugar"] == cheio["id"] and a["ponte"]][-1]
-    # desenhava um «DualSense · Não Conectou» sem aparelho — a busca que
-    # de um controle de verdade, com nome e cor. <!-- noqa-acento: citação literal -->
     aparelhos.append({"id": f"nao-conectou-{cheio['id']}-P5", "aparelho": "P5",
                       "tipo": "controle", "lugar": cheio["id"], "nome": "",
                       "rotulo": "DualSense", "cor": "#7eb8d4", "cor_nome": "Starlight Blue",
                       "nao_conectou": True, "esperando": False, "fixo": True,
                       "pareado_aqui": True})
-    # o par que não ficou guardado: a mesma linha oferece «Tentar de Novo», e o desenho mostra as duas
     aparelhos.append({"id": f"nao-conectou-{vazio['id']}-P6", "aparelho": "P6",
                       "tipo": "controle", "lugar": vazio["id"], "nome": "",
                       "rotulo": "DualSense", "cor": "#b5232e", "cor_nome": "Cosmic Red",
@@ -2134,8 +2083,6 @@ def _cena_do_desenho() -> dict:
     aparelhos.append({"id": "D9", "aparelho": "D9", "tipo": "controle", "lugar": cheio["id"],
                       "nome": "", "rotulo": "DualSense", "desligado": True,
                       "esperando": False, "fixo": True})
-    # O controle da mesa que está no CABO (A-LINHA-DO-CABO-NAS-CONEXOES-TEM-A-COR-DO-CONTROLE-01): pareado
-    # neste adaptador e ligado no USB, a linha leva a cor e o jogador dele, como a do rádio.
     for no_cabo in NO_CABO[:1]:
         aparelhos.append({"id": f"cabo-{no_cabo['pref']}", "aparelho": f"cabo-{no_cabo['pref']}",
                           "tipo": "controle", "lugar": vazio["id"], "nome": "",
@@ -2143,20 +2090,9 @@ def _cena_do_desenho() -> dict:
                           **_pacote08._a_cara_do_controle(no_cabo),
                           "esperando": False, "fixo": True})
     cheio["nao_conectou"] = True
-    # O aparelho do Bluetooth que nenhuma leitura nomeia, nem o enlace (O-APARELHO-DO-BLUETOOTH-SEM-
-    # TIPO-SE-NOMEIA-PELA-PESSOA-01): a linha leva o «?» e a grade «O que é este aparelho?» o nomeia.
-    # Ele ocupa a linha que era do celular do desenho 1 (uma linha a mais no adaptador cheio custa
-    # a linha do 5 GHz a 809 px); o celular continua na grade, na legenda e na régua. O teclado que
-    # o «Descobrir» já mediu (o mouse ainda não): as duas formas de um receptor.
     aparelhos.append({"id": "aa:bb:cc:00:00:e2", "tipo": "outro", "lugar": cheio["id"],
                       "nome": "", "rotulo": "", "pareado": True, "esperando": False,
                       "fixo": False})
-    # O aparelho de baixa energia que não diz o tipo (O-ACESSORIO-SEM-TIPO-GANHA-CATEGORIA-E-
-    # SINAL-NA-CONEXOES-01): chega «outro», como o BlueZ o dá, e a regra da cena o faz
-    # «Acessório» pelo enlace LE; a faixa são os 40 canais «não medido», e o ponto, o sinal.
-    # Ele ocupa a linha que era do relógio do desenho 1: uma linha a mais no adaptador cheio
-    # (sete aparelhos em duas colunas) custava 29 px, e a seção aberta passava a rolar 13 px na
-    # janela maximizada (1918 por 840). O relógio continua na legenda e na régua.
     acessorio = "aa:bb:cc:00:00:e1"
     aparelhos.append({"id": acessorio, "tipo": "outro", "lugar": cheio["id"],
                       "nome": "Acessório", "rotulo": "Acessório", "pareado": True,
@@ -2192,7 +2128,6 @@ def _cena_do_desenho() -> dict:
 CENA_DO_RADIO = _cena_do_desenho()
 CAMPOS_DO_RADIO = _pacote08.campos_da_secao(CENA_DO_RADIO)
 SALA_DO_DESENHO = _pacote08.html_da_sala(CENA_DO_RADIO, com_hz=True)
-#: pintor acende os dois. <!-- noqa-acento: citação literal -->
 INTERRUPTOR_PROCURAR = (
     '<button class="cadeado'
     + (" ligada" if CAMPOS_DO_RADIO["radio-procurando"] == _pacote08.PROCURAR_LIGADO else "")
@@ -2203,17 +2138,11 @@ INTERRUPTOR_PROCURAR = (
 SPRITE_DO_RADIO = _sprite_do_radio()
 
 
-#: Os desenhos do modelo de cada controle de fora: o arquivo de `assets/control-svg/` e o símbolo
-#: que a linha do externo usa (`pacotes.a08_conexoes.simbolo_do_externo` é o dono da escolha). Os
-#: quatro são desenho nosso, só traçado: a arte que a casa já trazia (`Nintendo-pro_controller.svg`,
-#: `8bitdo-sn30pro.svg`) não tem origem nem licença registradas, e o contrato da sprint só aceita
-#: desenho próprio ou de licença compatível com MIT.
 ARTE_DOS_EXTERNOS = {"ext-pro": "pro-controller.svg",
                      "ext-xbox": "xbox.svg",
                      "ext-8bitdo": "8bitdo.svg",
                      "ext-generico": "generico.svg"}
 
-#: os atributos de pintura que o `<svg>` do arquivo declara e que o `<symbol>` não herda
 _PINTURA = ("fill", "stroke", "stroke-width", "stroke-linejoin", "stroke-linecap")
 
 
@@ -2933,10 +2862,8 @@ SCRIPT_DA_SECAO_DO_RADIO = r"""
 
 
 
-# campos_do_mapear`), e o Salvar grava pelo dono. <!-- noqa-acento: citação literal -->
 from hefesto_dualsense4unix.integrations import entrada_a_entrada as _ee  # noqa: E402
 
-#: A CENA DO DESENHO é a do meio do fluxo: o DualSense acabou de chegar à
 _MP_CENA = _pacote08.campos_do_mapear({
     "estado": "porta",
     "porta": {"rotulo": "Entrada 3", "usb": "3.0", "hub": False, "storm": 0,
@@ -3003,8 +2930,6 @@ VAGAS_NO_DESENHO = (sum(len(ns) for _n, ns in FACES) + len(EXTENSAO)
 CONECTORES_QUE_NINGUEM_ALCANCA = 2
 EM_PE_TOTAL = VAGAS_NO_DESENHO + CONECTORES_QUE_NINGUEM_ALCANCA
 
-#: A frase volta à tela quando a peneira do controle (a posse tomada no `focus-in`)
-#: ganhar chamador; até lá, nada a mostra.
 PENEIRA_QUANDO_ELA_EXISTIR = (
     "Enquanto esta janela estiver na frente, o que você apertar no "
     "controle fica <b>aqui</b> — não chega ao jogo aberto atrás.")
@@ -3428,7 +3353,6 @@ if __name__ == "__main__":
             "os controles que o Hefesto só vê ficaram sem endereço — o dono da "
             "frase existe no produto (`home_actions._format_external_title` e as "
             "duas irmãs) e a tela volta a não ter onde escrevê-la")
-    #     porque cada linha de controle traz meia dúzia de `<div>` dentro — um
     _exigir('data-campo="externos-lista"' in _dentro_do_acordeao(_HTML),
             "o bloco dos externos saiu de dentro do acordeão dos controles — "
             "ela escolheu o MESMO frame em 06/09/2026, e a ressalva à parte é "

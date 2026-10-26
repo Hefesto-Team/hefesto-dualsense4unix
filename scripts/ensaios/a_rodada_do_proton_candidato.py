@@ -31,7 +31,6 @@ from hefesto_dualsense4unix.integrations import qualificar_proton as qp
 RC_FORA_DA_VM = 3
 RC_SONDA_SEM_PINO = 4
 
-#: O mínimo que a rodada aceita de cada prova.
 ECO_MINIMO_DA_HAPTICA = 0.5
 FRACAO_MINIMA_DO_TOM = 0.5
 

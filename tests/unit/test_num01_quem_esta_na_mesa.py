@@ -17,7 +17,6 @@ from hefesto_dualsense4unix.daemon.subsystems.identity import (
     ControllerIdentityRegistry,
 )
 
-#: Os dois DualSense da casa (MACs forjados — faixa aa:bb:cc).
 UNIQ_A = "aabbcc000001"
 UNIQ_B = "aabbcc000002"
 MAC_EXTERNO = "aabbcc0000fe"
@@ -222,7 +221,6 @@ class TestNuncaJogador2SemJogador1:
         ds.set_external_reserve_provider(lambda: set(ext.snapshot().values()))
         ExternalLedSync(SimpleNamespace(identity_registry=ds), ext)
 
-        # Estado inicial: os dois DualSense e o externo, todos na mesa.
         assert self._numeros(ds, ext, [UNIQ_A, UNIQ_B], [MAC_EXTERNO]) == [1, 2, 3]
 
         combinacoes = [
@@ -253,7 +251,7 @@ class TestNuncaJogador2SemJogador1:
         piso = max(ds.snapshot().values())
         assert ext.slot_for(MAC_EXTERNO, reserve=piso) == 3
 
-        ds.sync_connected([])  # os dois DualSense saíram
+        ds.sync_connected([])
         ext.sync_connected([MAC_EXTERNO])
         _passar_o_prazo(ds, ext)
         assert ext.peek(MAC_EXTERNO) == 1

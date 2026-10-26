@@ -22,7 +22,6 @@ from hefesto_dualsense4unix.core.events import EventBus
 from hefesto_dualsense4unix.daemon import connection as conn
 from hefesto_dualsense4unix.daemon.subsystems import chegada as ch
 
-#: Os quatro controles pela cor do plástico, com endereços de faixa forjada (`aa:bb:cc`).
 AZUL, BRANCO, VERMELHO, ROXO = (f"aa:bb:cc:00:00:{n:02x}" for n in (0x21, 0x22, 0x23, 0x24))
 QUATRO = (AZUL, BRANCO, VERMELHO, ROXO)
 SENTIDOS = (("bt", "usb"), ("usb", "bt"))
@@ -83,9 +82,6 @@ def _sem_som(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(conn, "nascer_o_microfone_ao_conectar", lambda *_a, **_k: None)
 
 
-# --- 1. O cabo que assume do rádio (e o contrário) não é Chegada --------------------------
-
-
 @pytest.mark.parametrize(("de", "para"), SENTIDOS)
 @pytest.mark.parametrize("quem", QUATRO)
 def test_o_controle_que_troca_de_fio_entre_dois_tiques_nao_ganha_chegada(
@@ -103,25 +99,17 @@ def test_o_controle_que_troca_de_fio_entre_dois_tiques_nao_ganha_chegada(
         "toca e o gatilho clica no meio do jogo, sem conexão nova")
 
 
-# --- 2. O controle que volta pelo outro fio não é Chegada --------------------------------
-
-
 @pytest.mark.parametrize("quem", QUATRO)
 def test_o_controle_que_volta_pelo_outro_fio_nao_ganha_chegada(quem: str) -> None:
     outros = {u: u for u in QUATRO if u != quem}
     daemon, tocou = _daemon({u: "usb" for u in QUATRO})
-    # o mesmo uniq numa chave nova (o nó hidraw do rádio vira o MAC do cabo)
     assert conn.anunciar_a_chegada(daemon, outros | {"/dev/hidraw9": quem},
                                    outros | {quem: quem}) == 0
-    # a chave sumiu num tique e voltou no seguinte, com o backend dizendo que é troca
     daemon.controller.trocando.add(quem)
     assert conn.anunciar_a_chegada(daemon, outros, outros | {quem: quem}) == 0
     asyncio.run(conn.anunciar_bordas_por_alvo(daemon, outros, outros | {quem: quem}))
     _disparar(daemon)
     assert tocou == [], "a volta de uma troca de fio tocou a Chegada como se fosse conexão nova"
-
-
-# --- 3. A queda de verdade continua tocando ao voltar ------------------------------------
 
 
 @pytest.mark.parametrize("fio", ["usb", "bt"])

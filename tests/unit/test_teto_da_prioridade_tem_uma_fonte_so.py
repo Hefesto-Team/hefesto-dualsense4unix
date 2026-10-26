@@ -12,7 +12,7 @@ from hefesto_dualsense4unix.profiles import sanidade, schema
 _RAIZ = Path(__file__).resolve().parents[2]
 _PACOTE = _RAIZ / "src" / "hefesto_dualsense4unix"
 _PAGINA_PERFIS = (
-    _PACOTE / "interface" / "paginas" / "10-perfis.html"  # (noqa-acento) pasta
+    _PACOTE / "interface" / "paginas" / "10-perfis.html"  # (noqa-acento)
 )
 _PROFILES_ACTIONS = _PACOTE / "app" / "actions" / "profiles_actions.py"
 

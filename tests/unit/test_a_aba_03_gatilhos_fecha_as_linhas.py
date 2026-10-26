@@ -28,14 +28,13 @@ FALSO = {"uniq": UNIQ, "player": 1, "transport": "usb", "is_primary": True,
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
          "via": "USB", "cor": "starlight-blue", "mascara": "DualSense"}]
 
-#: contrato de `ipc_bridge.trigger_set_detalhado`.
 APLICOU = {"status": "ok", "aplicado_em": [UNIQ], "guardado_em": []}
 
 
 @pytest.fixture
 def a03():
     """O pacote, com o rascunho LIMPO nas duas pontas."""
-    import pacotes  # noqa: F401  (registra os dez)
+    import pacotes  # noqa: F401
     from pacotes import a03_gatilhos
 
     a03_gatilhos.esquecer_o_rascunho()
@@ -77,7 +76,6 @@ class _Ponte:
         falha que ela mesma fabricou. Três dos vermelhos de 05/09 foram dublê
         mais frouxo que o real.
         """
-        # Somar o `launch_env.refresh` ali faria a régua da R-19 reprovar por
         self.avulsas.append(metodo)
         return True
 
@@ -147,7 +145,7 @@ def _rotulo(chave: str) -> str:
     from hefesto_dualsense4unix.app.actions.trigger_specs import get_spec
     from pacotes.a03_gatilhos import ROTULO_DO_JOGO_DECIDE
 
-    if chave == "Off":  # o «Desligado» do produto é, na tela, «Sem efeito»
+    if chave == "Off":
         return ROTULO_DO_JOGO_DECIDE
     return str(get_spec(chave).label)
 
@@ -199,8 +197,6 @@ def test_o_lugar_vazio_nao_explica_modo_nenhum(a03, ctx):
         for sigla in ("e", "d"):
             assert fora[pref][f"dica-imersao-{sigla}"] == a03.SEM_APARELHO_AQUI
 
-
-# Elas exercitavam `a03_gatilhos.reenviar`, que foi apagado no dia em que a
 
 def test_o_reenvio_saiu_do_desenho():
     """O `↻` SAIU da bancada — 06/09/2026, decisão de produto.

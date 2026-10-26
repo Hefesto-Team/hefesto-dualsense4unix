@@ -238,7 +238,6 @@ def test_o_lugar_vazio_nao_afirma_tremor(bancada) -> None:
 
 def test_o_pacote_emite_o_tremor_que_o_produto_calculou() -> None:
     """O lado que recebeu força acende; o outro APAGA — e o produto é quem diz."""
-    # O vpad diz de quem é pelo `uniq` do controle que ele serve (D-1010).
     vpad = {"player": 1, "uniq": UNIQS[0], "rumble_no_fisico": list(PAR_NO_FISICO),
             "rumble_no_fisico_ha_s": 0.1, "last_weak": PAR_NO_FISICO[0],
             "last_strong": PAR_NO_FISICO[1]}
@@ -422,7 +421,6 @@ def no_webkit() -> dict:
 
     import pacotes
 
-    # O vpad diz de quem é pelo `uniq` do controle que ele serve (D-1010).
     vpad = {"player": 1, "uniq": UNIQS[0], "rumble_no_fisico": list(PAR_NO_FISICO),
             "rumble_no_fisico_ha_s": 0.1}
     carga = pacotes.normalizar(_pacote(per_vpad=[vpad]),

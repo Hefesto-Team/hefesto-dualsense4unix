@@ -20,7 +20,6 @@ from hefesto_dualsense4unix.daemon.subsystems import tato_vivo as tv
 from hefesto_dualsense4unix.profiles import schema
 from hefesto_dualsense4unix.profiles.schema import ControllerRumbleOverride
 
-# Os quatro controles, um por cor do plástico (Starlight Blue, White, Cosmic Red, Galactic Purple).
 AZUL = "aa:bb:cc:00:00:11"
 BRANCO = "aa:bb:cc:00:00:12"
 VERMELHO = "aa:bb:cc:00:00:13"
@@ -28,20 +27,15 @@ ROXO = "aa:bb:cc:00:00:14"
 QUATRO = (AZUL, BRANCO, VERMELHO, ROXO)
 
 _LIVRE = tv.EstadoDoCanal(modo=tv.MODO_XBOX, ha_jogo=True)
-# O mesmo controle visto por cabo e pelo rádio: o motor só enxerga o estado do pad, não o fio.
 _CABO = tv.EstadoDoCanal(modo=tv.MODO_DUALSENSE, ha_jogo=True, sessao_aberta=False)
 _RADIO = tv.EstadoDoCanal(modo=tv.MODO_XBOX, ha_jogo=True, sessao_aberta=False)
 _JOGO_VIBRA = tv.EstadoDoCanal(
     modo=tv.MODO_DUALSENSE, ha_jogo=True, sessao_aberta=True, visto_ha_s={"rumble": 0.2})
-MODO_AUTO = "automatico"  # (noqa-acento) chave de contrato do perfil
-ESTILO_ACAO = "acao"  # (noqa-acento) chave de contrato do perfil
-
-
-# --- A lista e a conta de cada padrão ---------------------------------------------------------
+MODO_AUTO = "automatico"  # (noqa-acento)
+ESTILO_ACAO = "acao"  # (noqa-acento)
 
 
 def test_a_lista_final_e_a_da_sprint_sem_o_ronco() -> None:
-    # o Ressoar e o Ricochete (OS-MOTORES-GANHAM-O-GOLPE-QUE-RESSOA-01) entram depois da Pancada
     assert tuple(pv.PADROES) == ("batida", "onda", "tranco", "coice", "pancada_do_lado",
                                  "ressoar", "ricochete")
     assert pv.ESCOLHAS == (pv.DO_ESTILO, pv.SEM_EFEITO, "tranco", "batida", "onda", "coice",
@@ -79,20 +73,16 @@ def test_a_pancada_respeita_o_motor_escolhido(motores: str, esperado: tuple[int,
 def test_padrao_que_vale_segue_a_escolha_e_o_estilo_que_nao_pede_nenhum_fica_mudo(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # desde 19/10/2026 o FPS pede o Coice; o Retrô, o Ritmo e a Corrida deixam os motores ao jogo
     assert pv.padrao_que_vale(None, "fps") == "coice"
     assert pv.padrao_que_vale(pv.DO_ESTILO, "retro") is None
     assert pv.padrao_que_vale(None, "corrida") is None
     assert pv.padrao_que_vale(pv.SEM_EFEITO, "fps") is None
-    assert pv.padrao_que_vale("onda", "fps") == "onda"  # a escolha vence o estilo
+    assert pv.padrao_que_vale("onda", "fps") == "onda"
     assert pv.padrao_que_vale("trovao", "retro") is None
     monkeypatch.setitem(pv.POR_ESTILO, "retro", "tranco")
     assert pv.padrao_que_vale(None, "retro") == "tranco"
     assert pv.padrao_que_vale("onda", "retro") == "onda"
     assert pv.padrao_que_vale(pv.SEM_EFEITO, "retro") is None
-
-
-# --- O motor em cena --------------------------------------------------------------------------
 
 
 class Motores:
@@ -150,9 +140,8 @@ def test_o_padrao_toca_no_tiro_acaba_em_zero_e_cabe_em_2000_ms(forma: str) -> No
     assert escritas[-1][1:] == (0, 0), "o padrão termina em silêncio"
     assert escritas[-1][0] <= 2.0 + tv.INTERVALO_S
     tocados = [(f, s) for _t, f, s in escritas]
-    assert tocados[0] == pv.PADROES[forma][0][1:][::-1]  # fraco = direito, forte = esquerdo
+    assert tocados[0] == pv.PADROES[forma][0][1:][::-1]
     assert max(max(f, s) for f, s in tocados) <= 255
-    # nenhum passo dura menos de 60 ms: o motor só escreve na troca de passo
     tempos = [t for t, _f, _s in escritas]
     assert all(b - a >= 0.06 - tv.INTERVALO_S for a, b in pairwise(tempos))
 
@@ -165,7 +154,7 @@ def test_o_padrao_nao_reinicia_enquanto_toca() -> None:
     motor.anotar(_tiro(AZUL, 0.1))
     _correr(motor, motores, (AZUL,), 2.0, desde_s=0.11)
     inicios = [e for e in motores.de(AZUL) if (e[1], e[2]) == (255, 255)]
-    assert len(inicios) == 1  # a primeira pancada; a segunda é de outra altura (190)
+    assert len(inicios) == 1
 
 
 def test_sem_efeito_e_sem_escolha_nao_tocam_nada() -> None:
@@ -189,11 +178,11 @@ def test_os_quatro_controles_tocam_cada_um_o_seu_pelo_cabo_e_pelo_radio(
         tocado = [(f, s) for _t, f, s in motores.de(uniq)]
         assert tocado[0] == pv.PADROES[padrao][0][1:][::-1], uniq
         assert tocado[-1] == (0, 0), uniq
-    assert motores.de(ROXO) == []  # «Sem efeito» só cala o controle dele
+    assert motores.de(ROXO) == []
 
 
 def test_o_jogo_que_vibra_o_motor_vence_e_o_padrao_cala() -> None:
-    # D-1610-O-PADRAO-DOS-MOTORES-CALA-ONDE-O-JOGO-VIBRA
+    """Prova da D-1610-O-PADRAO-DOS-MOTORES-CALA-ONDE-O-JOGO-VIBRA."""
     motor, motores = _montar({AZUL: "tranco"})
     motor.anotar(_tiro(AZUL, 0.0))
     _correr(motor, motores, (AZUL,), 0.5, estado=_JOGO_VIBRA)
@@ -207,16 +196,13 @@ def test_o_jogo_que_passa_a_vibrar_no_meio_solta_o_padrao_sem_escrever_por_cima(
     antes = len(motores.escritas)
     assert antes >= 1
     _correr(motor, motores, (AZUL,), 2.5, estado=_JOGO_VIBRA, desde_s=0.21)
-    assert len(motores.escritas) == antes  # o motor é dele agora; o padrão não escreve mais
-
-
-# --- O gatilho que vibra: o padrão espera a soltura -------------------------------------------
+    assert len(motores.escritas) == antes
 
 
 @pytest.mark.parametrize("forma", ["tranco", "batida", "onda", "pancada_do_lado"])
 def test_com_o_gatilho_vibrando_o_padrao_nao_toca_na_rajada(forma: str) -> None:
     motor, motores = _montar({AZUL: forma}, vibra=True)
-    for i in range(10):  # a rajada: aperto, som e rumble a cada bala
+    for i in range(10):
         for tipo in (tv.TIPO_DEDO, tv.TIPO_SOM, tv.TIPO_RUMBLE):
             motor.anotar(_tiro(AZUL, i * 0.05, tipo))
     _correr(motor, motores, (AZUL,), 0.6)
@@ -246,9 +232,6 @@ def test_o_ritmo_do_estilo_de_rajada_tambem_segura_o_padrao() -> None:
     assert motores.escritas
 
 
-# --- O Coice e a Pancada do lado --------------------------------------------------------------
-
-
 def test_o_coice_toca_na_soltura_e_nunca_no_aperto() -> None:
     motor, motores = _montar({AZUL: "coice"})
     motor.anotar(_tiro(AZUL, 0.0, tv.TIPO_DEDO))
@@ -261,9 +244,9 @@ def test_o_coice_toca_na_soltura_e_nunca_no_aperto() -> None:
 
 
 def test_o_coice_toca_no_maximo_tres_por_segundo() -> None:
-    # D-1610-O-COICE-E-A-PANCADA-DO-LADO
+    """Prova da D-1610-O-COICE-E-A-PANCADA-DO-LADO."""
     motor, motores = _montar({AZUL: "coice"})
-    for i in range(8):  # oito soltas em um segundo, mais de uma a cada 130 ms
+    for i in range(8):
         motor.anotar(_tiro(AZUL, i * 0.125, tv.TIPO_SOLTA))
         _correr(motor, motores, (AZUL,), i * 0.125 + 0.124, desde_s=i * 0.125)
     inicios = [e for e in motores.de(AZUL) if (e[1], e[2]) == (120, 200)]
@@ -271,11 +254,11 @@ def test_o_coice_toca_no_maximo_tres_por_segundo() -> None:
     _correr(motor, motores, (AZUL,), 1.3, desde_s=1.0)
     motor.anotar(_tiro(AZUL, 1.2, tv.TIPO_SOLTA))
     _correr(motor, motores, (AZUL,), 1.5, desde_s=1.2)
-    assert len([e for e in motores.de(AZUL) if (e[1], e[2]) == (120, 200)]) == 4  # a janela correu
+    assert len([e for e in motores.de(AZUL) if (e[1], e[2]) == (120, 200)]) == 4
 
 
 @pytest.mark.parametrize(("lado", "esperado"), [
-    (tv.LADO_ESQUERDO, (0, 255)),  # fraco, forte: o golpe é no motor esquerdo (o forte)
+    (tv.LADO_ESQUERDO, (0, 255)),
     (tv.LADO_DIREITO, (255, 0)),
     (tv.LADO_CENTRO, (255, 255)),
 ])
@@ -296,9 +279,6 @@ def test_a_pancada_do_lado_nao_responde_ao_dedo_nem_ao_rumble() -> None:
     motor.anotar(_tiro(AZUL, 0.0, tv.TIPO_RUMBLE))
     _correr(motor, motores, (AZUL,), 0.5)
     assert motores.escritas == []
-
-
-# --- A força do estilo e a Bateria longa ------------------------------------------------------
 
 
 @pytest.mark.parametrize(("forca", "esperado"), [(1.0, 255), (0.6, 153), (0.35, 89)])
@@ -357,7 +337,7 @@ def test_na_producao_o_padrao_para_no_motor_parado(monkeypatch: pytest.MonkeyPat
     motor.tique(0.0, lambda _u: _LIVRE, tv.Receita(padroes_escolhidos=True), uniqs=(AZUL,))
     assert controller.rumble and controller.rumble[-1][1:] != (0, 0)
     motor.parar(0.1)
-    assert controller.rumble[-1] == (AZUL, 0, 0)  # o motor parado devolve a mão: zero
+    assert controller.rumble[-1] == (AZUL, 0, 0)
 
 
 def test_na_producao_o_gatilho_que_vibra_segura_o_padrao(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -410,11 +390,11 @@ def test_no_modo_xbox_o_rumble_do_jogo_pelo_pad_uinput_cala_o_padrao(
     tv.anotar_o_rumble(daemon, AZUL.upper(), 0, 200, agora=1.0)
     motor.anotar(_tiro(AZUL, 1.1))
     passo(1.1)
-    assert motores.escritas == []  # o jogo vibra: o motor é dele
+    assert motores.escritas == []
     depois = 1.0 + tv.JANELA_DO_JOGO_S + 0.5
     motor.anotar(_tiro(AZUL, depois))
     passo(depois)
-    assert motores.escritas  # passada a janela do jogo, o padrão volta a tocar
+    assert motores.escritas
 
 
 def test_o_rumble_anotado_vale_a_idade_menor_entre_o_pad_e_o_motor() -> None:
@@ -427,19 +407,16 @@ def test_o_rumble_anotado_vale_a_idade_menor_entre_o_pad_e_o_motor() -> None:
     assert tv.decidir(tv.CANAL_MOTORES, tv.com_o_rumble_anotado(sem, 6.0, 10.0))
 
 
-# --- A soltura do dedo ------------------------------------------------------------------------
-
-
 def test_a_borda_do_dedo_anota_a_soltura_com_o_pico_sem_mudar_o_que_ver_devolve() -> None:
     borda = tv.BordaDoDedo()
     assert [e.tipo for e in borda.ver(AZUL, 0, 255, 0.0)] == [tv.TIPO_DEDO]
     assert borda.ver(AZUL, 0, 200, 0.1) == []
-    assert borda.ver(AZUL, 0, 60, 0.2) == []  # soltou: nada novo em ``ver``
+    assert borda.ver(AZUL, 0, 60, 0.2) == []
     (solta,) = borda.tirar_as_soltas()
     assert (solta.tipo, solta.lado, solta.uniq, solta.instante) == (
         tv.TIPO_SOLTA, tv.LADO_DIREITO, AZUL, 0.2)
     assert solta.energia == pytest.approx(1.0)
-    assert borda.tirar_as_soltas() == []  # cada soltura sai uma vez
+    assert borda.tirar_as_soltas() == []
 
 
 def test_a_soltura_leva_o_pico_do_aperto() -> None:
@@ -459,10 +436,7 @@ def test_o_passo_leva_a_soltura_ao_motor() -> None:
     passo.dedo.ver(AZUL, 0, 0, 0.1)
     for solta in passo.dedo.tirar_as_soltas():
         motor.anotar(solta)
-    assert motor.contadores["eventos"] == 1  # o caminho de produção usa o mesmo par
-
-
-# --- O perfil: o campo, a receita e o gatilho -------------------------------------------------
+    assert motor.contadores["eventos"] == 1
 
 
 def test_o_campo_do_perfil_so_aceita_padrao_conhecido() -> None:
@@ -537,8 +511,8 @@ def test_o_gatilho_de_um_controle_escrito_por_cima_vale_so_para_ele() -> None:
 def test_no_automatico_vale_o_acionamento_do_estilo() -> None:
     fps = {**_gatilhos("Weapon", "Weapon", MODO_AUTO), "estilo": "fps"}
     acao = {**_gatilhos("Machine", "Machine", MODO_AUTO), "estilo": ESTILO_ACAO}
-    assert tv.vibracao_do_gatilho_do_perfil(fps).de(AZUL)  # o FPS põe a Metralhadora
-    assert not tv.vibracao_do_gatilho_do_perfil(acao).de(AZUL)  # a Ação põe a Weapon
+    assert tv.vibracao_do_gatilho_do_perfil(fps).de(AZUL)
+    assert not tv.vibracao_do_gatilho_do_perfil(acao).de(AZUL)
 
 
 def test_o_passo_rele_o_padrao_e_o_gatilho_junto_da_receita(

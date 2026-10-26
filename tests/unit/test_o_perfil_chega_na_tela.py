@@ -43,7 +43,6 @@ PERFIL = {
     "rumble": {"passthrough": True},
 }
 
-#: primeira execução: `MultiPositionFeedback` grava `[[1], [2], ...]`, dez
 PERFIL_CURVA = {
     **PERFIL, "name": "Curva",
     "triggers": {
@@ -117,8 +116,6 @@ def test_o_gatilho_do_perfil_chega_traduzido(ctx_com):
     assert col["modo-d"] == "Vibração"
 
     if "imersao-e" in col:
-        # Números próprios do perfil: nenhuma imersão da lista é esta, e o campo abre com o
-        # acionamento pelo nome (grupo «Do perfil»), nunca em branco nem em «Sem efeito».
         assert col["imersao-e"] == "acionamento:Resistance", col["imersao-e"]
         assert col["imersao-d"] == "acionamento:Vibration", col["imersao-d"]
         return

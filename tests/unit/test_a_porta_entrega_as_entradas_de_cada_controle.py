@@ -45,11 +45,9 @@ from hefesto_dualsense4unix.mods.porta import (
 )
 from tests.unit.test_a_coluna_agora_e_o_parar_tudo_vem_do_servico import curto  # noqa: F401
 
-#: A faixa forjada da casa: nenhum endereço de verdade.
 UNIQS = ("aabbcc000001", "aabbcc000002", "aabbcc000003", "aabbcc000004")
 P1, P2, P3, P4 = UNIQS
 
-#: As mesas que a casa prova: sempre mista, e os quatro de cada jeito.
 MESAS = {
     "mista": ("usb", "bt", "usb", "bt"),
     "tres-adaptadores-e-um-cabo": ("bt", "bt", "bt", "usb"),
@@ -58,7 +56,6 @@ MESAS = {
     "um-so-no-cabo": ("usb",),
     "um-so-no-bt": ("bt",),
 }
-#: De onde vêm as mãos dos que não são o P1: o co-op (o nó grabado) ou o leitor passivo do hub.
 FONTES = ("coop", "hub")
 
 TIQUE = 1.0 / 120
@@ -267,9 +264,6 @@ def test_o_topico_e_a_permissao_existem_e_dizem_o_que_entregam() -> None:
         "o estado é o do controle do posto: a frase não promete os quatro")
 
 
-# -- 1: cada controle sai com o dele --------------------------------------------------------
-
-
 @pytest.mark.parametrize("fonte", FONTES)
 @pytest.mark.parametrize("mesa", list(MESAS))
 def test_cada_controle_sai_com_o_uniq_o_jogador_e_o_transporte_dele(
@@ -306,9 +300,6 @@ def test_cada_controle_sai_com_o_uniq_o_jogador_e_o_transporte_dele(
                for d in dados)
 
 
-# -- 2: o dedo sai de 0 a 1, e o levantar sai vazio -----------------------------------------
-
-
 @pytest.mark.parametrize("mesa", ["mista", "um-so-no-bt"])
 def test_o_dedo_sai_normalizado_e_o_levantar_sai_como_nenhum_dedo(
     curto: pathlib.Path, mesa: str,  # noqa: F811
@@ -333,7 +324,6 @@ def test_o_dedo_sai_normalizado_e_o_levantar_sai_como_nenhum_dedo(
             await porta.parar()
 
     bancada, dados = asyncio.run(corrida())
-    # o meio da área prova a divisão; as pontas, o teto e o chão (só elas passam com a área errada)
     um, dois = [{"x": 0.5, "y": 0.5}], [{"x": 1.0, "y": 0.0}, {"x": 0.0, "y": 1.0}]
     esperado = [(uniq, dedos) for uniq in bancada.uniqs for dedos in (um, dois, [])]
     assert [(d["uniq"], d["dedos"]) for d in dados] == esperado
@@ -363,9 +353,6 @@ def test_o_dedo_vem_da_leitura_que_so_ve_e_nunca_do_toque_que_segura_o_no(
     assert hub._demanda == {}, "a leitura do dedo segurou o leitor de movimento e o de toque"
 
 
-# -- 3: sem quem assine, ninguém é lido -----------------------------------------------------
-
-
 def test_sem_assinante_nenhum_leitor_e_consultado(
     curto: pathlib.Path, monkeypatch: pytest.MonkeyPatch,  # noqa: F811
 ) -> None:
@@ -382,7 +369,7 @@ def test_sem_assinante_nenhum_leitor_e_consultado(
     async def corrida() -> _Mesa:
         porta = await _porta(curto, relogio)
         bancada = _Mesa(porta, MESAS["mista"], "hub")
-        ext = await _entrar(curto, ["botoes"])  # assinou outro tópico, não as entradas
+        ext = await _entrar(curto, ["botoes"])
         try:
             bancada.mexer(P2, r2=200)
             bancada.tique(relogio)
@@ -394,9 +381,6 @@ def test_sem_assinante_nenhum_leitor_e_consultado(
     bancada = asyncio.run(corrida())
     assert lidos == []
     assert bancada.hub._demanda == {} and bancada.hub._demanda_entradas == {}
-
-
-# -- 4: o ritmo -----------------------------------------------------------------------------
 
 
 def test_o_eixo_parado_nao_sai_o_ritmo_tem_teto_e_o_ultimo_valor_chega(
@@ -411,7 +395,7 @@ def test_o_eixo_parado_nao_sai_o_ritmo_tem_teto_e_o_ultimo_valor_chega(
         bancada = _Mesa(porta, MESAS["mista"], "hub")
         ext = await _entrar(curto, ["entradas"])
         try:
-            for n in range(200):  # o ruído de um analógico de verdade, parado na mesa
+            for n in range(200):
                 bancada.mexer(P1, lx=127 + n % 3, ry=129 - n % 2)
                 bancada.mexer(P2, rx=126 + n % 3)
                 bancada.tique(relogio, TIQUE)
@@ -424,7 +408,7 @@ def test_o_eixo_parado_nao_sai_o_ritmo_tem_teto_e_o_ultimo_valor_chega(
                         await asyncio.to_thread(_drenar, ext, 0.002)):
                     instantes.append((relogio.t, dados))
             bancada.mexer(P2, r2=0)
-            for _ in range(6):  # mais que 1/30 s: o teto segura e o tique seguinte entrega
+            for _ in range(6):
                 bancada.tique(relogio, TIQUE)
             instantes += [(relogio.t, d) for d in
                           _sem_o_que_nao_e_entrada(await asyncio.to_thread(_drenar, ext))]
@@ -483,7 +467,7 @@ def test_a_queda_leva_o_repouso_mesmo_sem_tique(curto: pathlib.Path, quem: str) 
                               {"reason": "alvo_sumiu", "uniq": quem})
             await asyncio.sleep(0.05)
             porta.bus.publish(EventTopic.CONTROLLER_DISCONNECTED,
-                              {"reason": "alvo_sumiu", "uniq": quem})  # a segunda não repete
+                              {"reason": "alvo_sumiu", "uniq": quem})
             return _sem_o_que_nao_e_entrada(await asyncio.to_thread(_drenar, ext))
         finally:
             ext.fechar()
@@ -502,7 +486,7 @@ def test_quem_assina_depois_recebe_o_gatilho_que_ja_estava_apertado(
         porta = await _porta(curto, relogio)
         bancada = _Mesa(porta, MESAS["mista"], "hub")
         bancada.mexer(P2, l2=90)
-        bancada.tique(relogio)  # ninguém lê ainda
+        bancada.tique(relogio)
         ext = await _entrar(curto, ["entradas"])
         try:
             bancada.tique(relogio)
@@ -515,15 +499,14 @@ def test_quem_assina_depois_recebe_o_gatilho_que_ja_estava_apertado(
     assert [(d["uniq"], d["l2"]) for d in asyncio.run(corrida())] == [(P2, 90)]
 
 
-# -- 5: no Modo Nativo, o laço do serviço entrega igual -------------------------------------
-
-
 @pytest.mark.asyncio
 async def test_no_modo_nativo_o_gatilho_do_posto_e_o_do_hub_passivo_ainda_saem(
     curto: pathlib.Path, monkeypatch: pytest.MonkeyPatch,  # noqa: F811
 ) -> None:
-    # D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO
-    """O ``_poll_loop`` de verdade, com o tique congelado do Nativo: as entradas saem."""
+    """O ``_poll_loop`` de verdade, com o tique congelado do Nativo: as entradas saem.
+
+    Prova da D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO.
+    """
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
     from hefesto_dualsense4unix.daemon.state_store import StateStore
     from hefesto_dualsense4unix.testing import FakeController
@@ -535,7 +518,6 @@ async def test_no_modo_nativo_o_gatilho_do_posto_e_o_do_hub_passivo_ainda_saem(
     passivo = _LeitorDoHub()
     hub._gamepad[P2] = passivo
     monkeypatch.setattr(Daemon, "_garantir_sensor_hub", lambda self: hub)
-    # Quem está na mesa, só para a leitura das mãos: o resto do serviço vê o controle de mentira.
     monkeypatch.setattr("hefesto_dualsense4unix.daemon.subsystems.poll._na_mesa",
                         lambda controller: [P2])
     repouso = ControllerState(battery_pct=80, l2_raw=0, r2_raw=0, connected=True,

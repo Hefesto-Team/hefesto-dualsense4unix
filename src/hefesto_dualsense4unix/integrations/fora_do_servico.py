@@ -18,7 +18,7 @@ from typing import Any
 
 try:
     from .ambiente_do_jogo import VARIAVEIS_DO_INTERPRETADOR
-except ImportError:  # pragma: no cover - executado como script avulso pelo install/uninstall
+except ImportError:  # pragma: no cover
     from ambiente_do_jogo import VARIAVEIS_DO_INTERPRETADOR  # type: ignore[no-redef]
 
 VARIAVEIS_DA_UNIDADE: tuple[str, ...] = (
@@ -60,7 +60,6 @@ VARIAVEIS_DA_UNIDADE: tuple[str, ...] = (
     "TRIGGER_TIMER_MONOTONIC_USEC",
 )
 
-#: As duas formas de o serviço deixar o lançador viver depois de o principal
 FORMAS_DE_VIVER: tuple[str, ...] = ("ExitType=cgroup", "KillMode=process")
 
 PREFIXO_DA_UNIDADE = "app-hefesto-"
@@ -299,7 +298,6 @@ def abrir(
     popen: Callable[..., Any] | None = None,
 ) -> Abertura:
     """Abre ``argv`` com o ambiente ``env``, fora do serviço quando é preciso."""
-    # `ps_button_command` chega assim de um `daemon.reload` com texto;
     argv = [argv] if isinstance(argv, str) else list(argv)
     ctx = contexto if contexto is not None else contexto_atual()
     abrir_direto = popen if popen is not None else subprocess.Popen

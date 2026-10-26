@@ -19,7 +19,6 @@ FALSO = {"uniq": UNIQ, "player": 1, "connected": True, "transport": "bt",
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
          "via": "BT", "cor": "starlight-blue", "mascara": "DualSense"}]
 
-#: O estado do daemon como a aba o consome. Sem `keyboard_emulation` o pacote
 ESTADO = {
     "active_profile": "regua",
     "mouse_emulation": {"enabled": False, "speed": 6, "scroll_speed": 1,
@@ -28,7 +27,7 @@ ESTADO = {
     "controllers": [FALSO],
 }
 
-PAGINA = "06-navegacao.html"  # (noqa-acento) nome de arquivo
+PAGINA = "06-navegacao.html"
 CAMPO = re.compile(r'data-(?:campo|papel|hef)="([^"]+)"')
 
 
@@ -73,7 +72,6 @@ def test_toda_chave_emitida_tem_endereco_ou_esta_declarada(aba):
     for campos in pronto["colunas"].values():
         emitidas |= {k for k, v in campos.items() if not isinstance(v, (dict, list))}
     emitidas |= {k for k, v in pronto["mesa"].items() if isinstance(v, (dict, list))}
-    # O CABEÇALHO É DAS DEZ ABAS (`pacotes.topo`) e não é desta: cobrar dele
     import pacotes
 
     ctx, _, _ = aba
@@ -115,7 +113,6 @@ def test_as_vinte_e_uma_linhas_saem_do_perfil(monkeypatch, tmp_path):
         "a linha do X saiu do de fábrica, e o perfil manda `KEY_ESC` — a tela "
         "estaria mostrando o desenho no lugar da escolha dela.")
     assert mesa["acao-square"] == "Esc"
-    # `core/keyboard_mappings.DEFAULT_BUTTON_BINDINGS["l3"]` é o `__TOGGLE_OSK__`.
     assert mesa["acao-l3"] == "Teclado na tela"
 
 

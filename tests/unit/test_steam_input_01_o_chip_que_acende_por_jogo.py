@@ -28,7 +28,6 @@ from hefesto_dualsense4unix.interface.pacotes.a07_lancadores import METODO_DA_RE
 
 from tests.unit.test_ponte_steam_input_01_a_lista_que_so_preservava import _vdf
 
-#: O `with_steam_closed` DE VERDADE, guardado antes de qualquer dublê: é ele que
 _WITH_STEAM_CLOSED_DE_VERDADE = slo.with_steam_closed
 
 APPID = "999000001"
@@ -228,7 +227,6 @@ def test_o_clique_escreve_a_vontade_e_constroi_a_ponte(lar) -> None:
     assert recado is None, (
         f"o clique que deu certo mandou uma caixa de recado: {recado!r}. A "
         f"piscada verde do botão é como esta casa diz «deu certo»")
-    # o mesmo que o gesto importa. Aqui se digitava `"launch_env.refresh"` num
     assert METODO_DA_RECARGA in p.chamadas, (
         f"a marca não foi feita valer AGORA: {p.chamadas}. Sem a recarga ela "
         f"só vale no próximo arranque do serviço, e ela clicaria de novo")
@@ -678,7 +676,7 @@ def _alcance_do_gesto(fn: Any, _visto: frozenset[str] = frozenset(),
         return achados
     try:
         arvore = ast.parse(textwrap.dedent(inspect.getsource(fn)))
-    except (OSError, SyntaxError, TypeError):  # pragma: no cover - defesa
+    except (OSError, SyntaxError, TypeError):  # pragma: no cover
         return achados
     visto = _visto | set(achados)
     a_descer = []

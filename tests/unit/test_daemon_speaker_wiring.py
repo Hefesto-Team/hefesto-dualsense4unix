@@ -292,7 +292,7 @@ class _AutoSwitcherFalso:
     def disabled(self) -> bool:
         return True
 
-    def start(self) -> None:  # pragma: no cover - nunca chamado (disabled)
+    def start(self) -> None:  # pragma: no cover
         return None
 
     def stop(self) -> None:

@@ -32,19 +32,16 @@ _FONTE = _RAIZ / "assets" / "gdk-runtime" / "xgameruntime.c"
 _ENSAIO = _RAIZ / "scripts" / "ensaios" / "o_contrato_da_peca_gdk.py"
 _CC = "x86_64-w64-mingw32-gcc-posix"
 
-#: As funções da ABI do XTaskQueue/XAsync que recebem uma fila ou uma porta do chamador.
 _RECEBEM_FILA = (
     "thr_GetPort", "thr_Duplicate", "thr_Dispatch", "thr_Close", "thr_Submit",
     "thr_SubmitDelayed", "thr_Terminate", "thr_RegMon", "thr_UnregMon",
     "thr_SetProcessQueue", "thr_QueueCreateComposite", "thr_Begin",
 )
 
-#: Funções que recebem fila e não a leem (o contrato não é implementado nelas).
 _NAO_LEEM = ("thr_RegWaiter", "thr_UnregWaiter")
 
 _ALCAS = ("menos_um", "valor_do_crash", "pilha_zerada", "forjada_com_magic", "destruida")
 
-#: A mordida: o queue_live volta a decidir pelo magic lido no endereço que chegou.
 _CURA = "static int queue_live(queue_obj *q)\n{\n"
 _QUEBRADO = "static int queue_live(queue_obj *q)\n{\n    return q && q->magic == QUEUE_MAGIC;\n"
 
@@ -344,7 +341,6 @@ _CASOS_POR_ALCA = (
     "UnregMon", "SetProcessQueue", "QueueCreateComposite", "Begin",
 )
 
-#: O nome com que cada caso da prova assina a recusa no xgr.log: a bancada conta estas linhas.
 _NO_LOG = {
     "Duplicate": "XTaskQueueDuplicateHandle", "Close": "XTaskQueueCloseHandle",
     "Submit": "XTaskQueueSubmitCallback", "SubmitDelayed": "XTaskQueueSubmitDelayedCallback",
@@ -371,7 +367,6 @@ def _achar_wine() -> Path | None:
     return caminho if caminho.exists() else None
 
 
-# Resolvido uma vez, na coleta: o conftest desvia o HOME de cada teste para um lar de mentira.
 _WINE = _achar_wine()
 
 
@@ -380,9 +375,6 @@ def _corpo(texto: str, nome: str) -> str:
     m = re.search(rf"^static [^\n]*\b{nome}\([^)]*\)\n\{{\n(.*?)^\}}\n", texto, re.S | re.M)
     assert m, f"{nome} sumiu do fonte"
     return m.group(1)
-
-
-# --- o fonte: nenhuma função decide pelo magic do endereço que chegou -------------------
 
 
 def test_queue_live_decide_pela_tabela_e_nao_pelo_magic() -> None:
@@ -404,7 +396,7 @@ def test_toda_funcao_que_recebe_fila_esta_na_prova() -> None:
     texto = _FONTE.read_text(encoding="utf-8")
     padrao = r"^static [^\n(]*\bWINAPI (thr_\w+)\(void \*self, (?:queue_obj|port_obj) \*\w"
     recebem = set(re.findall(padrao, texto, re.M))
-    recebem.add("thr_Begin")  # a fila vem dentro do XAsyncBlock
+    recebem.add("thr_Begin")
     assert recebem - set(_NAO_LEEM) == set(_RECEBEM_FILA), recebem ^ set(_RECEBEM_FILA)
     for api in _CASOS_POR_ALCA:
         assert f'CASO("{api}")' in _PROVA_C, api
@@ -415,8 +407,6 @@ def test_a_mordida_acha_o_trecho_da_cura_uma_vez() -> None:
     texto = _FONTE.read_text(encoding="utf-8")
     assert texto.count(_CURA) == 1
 
-
-# --- a peça compilada, no Wine ----------------------------------------------------------
 
 _precisa = pytest.mark.skipif(
     shutil.which(_CC) is None or _WINE is None, reason="sem o mingw-w64 no PATH ou sem um Wine"
@@ -455,7 +445,6 @@ def _rodar(
     pasta = raiz / nome
     pasta.mkdir()
     (pasta / "xgameruntime.c").write_text(fonte, encoding="utf-8")
-    # As mesmas bandeiras do construir.sh; sem a marca builtin, carregada pelo caminho.
     cmd = [_CC, "-shared", "-O2", "-s", "-Wall", "-fno-ident",
            "-o", str(pasta / "peca.dll"), "xgameruntime.c"]
     subprocess.run(cmd, cwd=pasta, check=True, capture_output=True, timeout=300)
@@ -475,7 +464,7 @@ def _rodar(
 
 @_precisa
 def test_a_peca_recusa_a_fila_que_nao_criou_sem_cair(_bancada: tuple[Path, Path]) -> None:
-    # D-1710-A-PECA-GDK-SO-ACEITA-A-FILA-QUE-CRIOU
+    """Prova da D-1710-A-PECA-GDK-SO-ACEITA-A-FILA-QUE-CRIOU."""
     linhas, log = _rodar(_bancada, _FONTE.read_text(encoding="utf-8"), "cura")
     caiu = [ln for ln in linhas if "caiu" in ln]
     assert not caiu, f"a peça caiu: {caiu}"
@@ -486,8 +475,6 @@ def test_a_peca_recusa_a_fila_que_nao_criou_sem_cair(_bancada: tuple[Path, Path]
     assert set(casos) == esperados, set(casos) ^ esperados
     reprovados = {k: v.get("det") for k, v in casos.items() if v["ok"] is not True}
     assert not reprovados, reprovados
-    # Toda recusa deixa a linha que a bancada conta, com o teto de 64: as 12 funções vezes as
-    # 5 alças cabem nele, e o vaivém (que recusa milhares) não passa dele.
     recusas = re.findall(r"\] (\w+) recusou a fila ", log)
     faltam = {
         api: recusas.count(nome) for api, nome in _NO_LOG.items()

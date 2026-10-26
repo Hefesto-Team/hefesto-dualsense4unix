@@ -48,7 +48,7 @@ def _escolhe(uniq: str, haptico: str | None = None, imersao: str | None = None) 
 
 
 def test_sem_perfil_a_forma_e_o_padrao_do_computador_chegam_ao_tato() -> None:
-    # D-1610-O-TATO-LE-O-COMPUTADOR-SEM-PERFIL-ATIVO
+    """Prova da D-1610-O-TATO-LE-O-COMPUTADOR-SEM-PERFIL-ATIVO."""
     _escolhe(STARLIGHT, "impacto", "batida")
     _escolhe(BRANCO, "estalo")
     daemon = _daemon(None)
@@ -60,8 +60,6 @@ def test_sem_perfil_a_forma_e_o_padrao_do_computador_chegam_ao_tato() -> None:
     assert tv.escolhas_ativas(daemon) == {
         tv.norm_mac(STARLIGHT): "impacto", tv.norm_mac(BRANCO): "estalo"}
     assert tv.escolhas_de_imersao_ativas(daemon) == {tv.norm_mac(STARLIGHT): "batida"}
-    # O computador não guarda gatilho: a vista do perfil vazio não acorda momento nem vibração
-    # do gatilho que ninguém escolheu.
     assert tv.momentos_ativos(daemon) == tv.SEM_MOMENTOS
     assert tv.vibracao_do_gatilho_ativa(daemon) == tv.SEM_VIBRACAO
 

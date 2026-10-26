@@ -97,7 +97,6 @@ _MONITOR_DE = "Monitor of "
 _P1, _P2, _P3, _P4 = (f"aa:bb:cc:5e:a3:c{n}" for n in (1, 2, 3, 4))
 _ASSENTO = {_P1: 1, _P2: 2, _P3: 3, _P4: 4}
 
-#: A placa de som de um DualSense no USB, como o servidor a descreve — medido
 _PLACA_DESCRICAO = "DualSense wireless controller (PS5) Controller speaker and haptic motors"
 _PLACAS = (
     "alsa_output.usb-Sony_Interactive_Entertainment_DualSense_Wireless_Controller-00.HiFi__Speaker__sink",
@@ -349,9 +348,6 @@ def test_o_rotulo_do_no_adotado_se_le_do_argumento_do_modulo() -> None:
     assert eh.rotulo_no_ar("536870913", lambda _a: None) == ""
 
 
-# `find_product_name_override` troca o nome por «Speakers (DualSense Wireless
-
-
 def _ge_dualsense(n: str) -> bool:
     return any(s in n for s in ("DualSense", "DualShock", "Wireless Controller"))
 
@@ -564,7 +560,7 @@ def test_com_o_jogo_tocando_no_no_o_rotulo_espera(mesa: _Mesa, assentos: _Assent
     mesa.volta()
     assert mesa.rotulo(_P4) == f"{_HAPTICA} 4{_SONY}"
     mesa.servidor.jogo_em.clear()
-    mesa.volta()  # a ponte que o fluxo levantou desce nesta volta; o rótulo vem na seguinte
+    mesa.volta()
     mesa.volta()
     assert mesa.rotulo(_P4) == f"{_HAPTICA} 2{_SONY}"
 

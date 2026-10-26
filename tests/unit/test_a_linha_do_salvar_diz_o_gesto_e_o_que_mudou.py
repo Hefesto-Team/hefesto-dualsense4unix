@@ -43,9 +43,8 @@ from hefesto_dualsense4unix.profiles.schema import (
 
 RAIZ = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
 
-# Faixa forjada (aa:bb:cc): a máscara zera os octetos 4 e 5.
 CONTROLE = "aa:bb:cc:d1:e2:ff"
-CONTROLE_MASCARADO = "aabbcc0000ff"  # o esquema guarda a chave colada
+CONTROLE_MASCARADO = "aabbcc0000ff"
 
 
 @pytest.fixture
@@ -121,9 +120,6 @@ def _prioridades() -> list[int]:
     ]
 
 
-# --- o que mudou -----------------------------------------------------------
-
-
 def test_mudou_traz_a_folha_exata_e_a_chave_na_mascara(
     dir_perfis: Path, espiao: _Espiao
 ) -> None:
@@ -135,7 +131,6 @@ def test_mudou_traz_a_folha_exata_e_a_chave_na_mascara(
         f"controllers.{CONTROLE_MASCARADO}.leds.lightbar_brightness:0.49->0.08"
     )
     assert linha["igual"] is False
-    # Os octetos 4 e 5 do endereço de mentira não vão ao diário, em forma nenhuma.
     for forma in ("d1:e2", "d1e2", "D1:E2"):
         assert forma not in str(linha), forma
 
@@ -143,8 +138,6 @@ def test_mudou_traz_a_folha_exata_e_a_chave_na_mascara(
 def test_a_secao_que_nasce_ou_some_inteira_diz_a_folha(
     dir_perfis: Path, espiao: _Espiao
 ) -> None:
-    # O primeiro brilho de um controle no perfil: `controllers` vai de nada a um
-    # dicionário. A linha diz o campo, não só «controllers».
     save_profile(_perfil())
     save_profile(_perfil(0.37))
     save_profile(_perfil())
@@ -159,7 +152,6 @@ def test_nome_e_texto_livre_entram_so_como_caminho(
     dir_perfis: Path, espiao: _Espiao
 ) -> None:
     save_profile(_perfil(nome="freestyle"))
-    # O arquivo é o mesmo (slug), o nome de exibição é outro.
     antigo = _perfil(nome="freestyle")
     novo = antigo.model_copy(update={"name": "Freestyle", "priority": 11})
     save_profile(novo)
@@ -196,9 +188,6 @@ def test_o_arquivo_ilegivel_diz_ilegivel(dir_perfis: Path, espiao: _Espiao) -> N
     (dir_perfis / "freestyle.json").write_text("{ isto não é json", encoding="utf-8")
     save_profile(_perfil())
     assert espiao.salvos()[-1]["mudou"] == "ilegivel"
-
-
-# --- o gesto ---------------------------------------------------------------
 
 
 def test_o_gesto_posto_aparece_na_linha_e_sem_ele_o_campo_e_vazio(
@@ -257,8 +246,7 @@ def test_o_gesto_e_posto_no_dispatch_e_no_trabalhar_de_gesto_e_em_nenhum_gesto_d
     vivo = _arvore(RAIZ / "interface/hefesto_vivo.py")
     gesto = _funcao(vivo, "_gesto")
     trabalhar = _funcao(gesto, "trabalhar")
-    assert _poe_o_gesto(trabalhar, com=("pagina", "nome"))  # (noqa-acento) nomes de variável
-    # A quarta porta só LÊ: ela não põe gesto.
+    assert _poe_o_gesto(trabalhar, com=("pagina", "nome"))  # (noqa-acento)
     assert not _poe_o_gesto(_funcao(vivo, "_gesto_vivo"))
 
     donos = [
@@ -304,14 +292,10 @@ async def test_o_dispatch_poe_ipc_metodo_e_o_gesto_atravessa_o_to_thread(
     assert gesto_de_agora.get() is None, "o gesto do pedido não pode vazar para o próximo"
 
 
-# --- a corrente das gravações ---------------------------------------------
-
-
 def test_o_sha_antes_acusa_quem_escreveu_fora_do_funil(
     dir_perfis: Path, espiao: _Espiao
 ) -> None:
     save_profile(_perfil(0.08))
-    # Alguém escreve fora do funil: o brilho vai a 1.0 sem nenhuma linha no diário.
     alvo = dir_perfis / "freestyle.json"
     de_fora = alvo.read_text(encoding="utf-8").replace("0.08", "1.0")
     assert de_fora != alvo.read_text(encoding="utf-8")
@@ -322,7 +306,6 @@ def test_o_sha_antes_acusa_quem_escreveu_fora_do_funil(
     assert primeira["sha_antes"] is None
     assert segunda["sha_antes"] != primeira["sha_depois"], "alguém escreveu fora"
     assert len(str(primeira["sha_depois"])) == 16
-    # A versão arquivada guarda os bytes de quem escreveu de fora.
     assert listar_historico("freestyle")[-1].read_text(encoding="utf-8") == de_fora
     assert "1.0" in de_fora
 
@@ -335,9 +318,6 @@ def test_a_corrente_fecha_quando_ninguem_escreve_fora(
     a, b, c = espiao.salvos()
     assert b["sha_antes"] == a["sha_depois"]
     assert c["sha_antes"] == b["sha_depois"]
-
-
-# --- o histórico cobre uma semana -----------------------------------------
 
 
 def test_uma_semana_fica_inteira_e_fora_dela_so_as_dez_ultimas_e_a_primeira_do_dia(
@@ -354,8 +334,6 @@ def test_uma_semana_fica_inteira_e_fora_dela_so_as_dez_ultimas_e_a_primeira_do_d
 
     relogio.dia = "20260914"
     save_profile(_perfil(priority=41))
-    # a primeira versão de cada um dos seis dias (0, 6, 13, 20, 27, 34), a do dia 14 (40)
-    # e as dez últimas (31 a 40).
     assert _prioridades() == [0, 6, 13, 20, 27, *range(31, 41)]
 
 
@@ -370,7 +348,6 @@ def test_o_teto_por_perfil_derruba_as_mais_velhas_da_semana(
 
     restam = sorted(p.name for p in destino.glob("*.json"))
     assert len(restam) == 15
-    # a primeira do dia, as dez últimas e as quatro mais novas das que sobravam
     assert restam[0] == "20260901T000000_000000.json"
     assert restam[-1] == "20260901T000029_000000.json"
 

@@ -29,7 +29,6 @@ def _carregar_o_instrumento() -> Any:
 
 E8 = _carregar_o_instrumento()
 
-#: Os números MEDIDOS no feature 0x05 dos quatro DualSense da mesa 2+2, em
 SPEED_2X_MEDIDO = 1080
 DENOM_MEDIDO = 17694
 

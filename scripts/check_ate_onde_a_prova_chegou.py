@@ -26,7 +26,6 @@ from check_paridade_transporte import (
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
 MAPA = RAIZ / "docs/data/mapa-controles.csv"
 
-#: `não` em quase tudo. A tela é dos quatro DualSense (decisão de 06/09).
 _O_APARELHO_DELA = "dualsense"
 
 SEM_REGISTRO = "—"
@@ -247,7 +246,7 @@ def _nada_a_acionar(linha: dict[str, str], lado: str) -> bool:
     """
     aciona = (linha.get(f"{lado}_aciona") or "").strip().lower()
     causa = (linha.get(f"{lado}_por_que_nao_aciona") or "").strip().lower()
-    sem_acento = "n" + "ao"  # (noqa-acento) é VALOR de coluna, não texto de tela
+    sem_acento = "n" + "ao"
     return aciona in ("não", sem_acento) and causa == "nada-a-acionar"
 
 

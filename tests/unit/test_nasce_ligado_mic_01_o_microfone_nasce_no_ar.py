@@ -720,7 +720,6 @@ def _gravar_a_escolha(fonte: str) -> None:
     )
 
 
-#: O nó ALSA do DualSense no cabo: NENHUMA identidade no nome — o `-00.2` é o
 NO_DO_CABO_SEM_NOME = (
     "alsa_input.usb-Sony_Interactive_Entertainment_"
     "DualSense_Wireless_Controller-00.2.mono-fallback"

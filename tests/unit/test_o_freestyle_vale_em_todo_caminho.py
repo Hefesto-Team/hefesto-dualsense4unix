@@ -418,7 +418,7 @@ def _copias(pasta: Path) -> list[bytes]:
     return [c.read_bytes() for c in sorted(historico.glob("*.json"))]
 
 
-@pytest.mark.parametrize("versao", range(6), ids=[  # (noqa-acento): nome de parâmetro
+@pytest.mark.parametrize("versao", range(6), ids=[  # (noqa-acento)
     "22-04-fe27e7b2a", "22-04-d08b5995d", "23-04-34503c512",
     "28-06-425429a7e", "20-07-c81846696", "24-09-o-modo-freestyle-03"])
 def test_a_copia_de_fabrica_antiga_vira_a_de_hoje_e_tem_volta(
@@ -624,7 +624,7 @@ def test_o_rodape_congelado_diz_o_mesmo_que_a_tela_pinta_sem_perfil() -> None:
 DEZ = [f"{n:02d}-" for n in range(1, 11)]
 
 
-@pytest.mark.parametrize("pagina", DEZ)  # (noqa-acento): nome de parâmetro
+@pytest.mark.parametrize("pagina", DEZ)  # (noqa-acento)
 def test_a_bancada_das_dez_traz_o_rodape_novo(pagina: str) -> None:
     """O desenho de HOJE das dez abas: o rodapé regerado, sem a promessa do jogo."""
     from hefesto_dualsense4unix.interface import onde

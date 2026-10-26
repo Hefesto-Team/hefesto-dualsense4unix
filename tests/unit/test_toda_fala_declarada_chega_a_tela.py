@@ -58,7 +58,6 @@ PORTAO_REAL = RAIZ_REAL / "scripts" / "validar-fala-de-tela.py"
 
 _DONO_DO_CAMPO = "fala_do_mapa.py"
 
-#: `portao_a_casa_sabe_e_o_produto_nao_faz`, onde duas notas datadas seguiram
 _FALA_SEM_TELA_HOJE: dict[str, str] = {}
 
 
@@ -100,7 +99,7 @@ def declaradas_e_exibidas(
     for caminho in _arquivos_de(app_dir):
         try:
             arvore = ast.parse(caminho.read_text(encoding="utf-8"), filename=str(caminho))
-        except (OSError, SyntaxError):  # pragma: no cover - defensivo
+        except (OSError, SyntaxError):  # pragma: no cover
             continue
         relativo = str(caminho.relative_to(raiz))
         for no in arvore.body:
@@ -143,7 +142,7 @@ def leituras_cruas_do_texto(app_dir: Path, raiz: Path) -> list[str]:
             continue
         try:
             arvore = ast.parse(caminho.read_text(encoding="utf-8"), filename=str(caminho))
-        except (OSError, SyntaxError):  # pragma: no cover - defensivo
+        except (OSError, SyntaxError):  # pragma: no cover
             continue
         relativo = str(caminho.relative_to(raiz))
         for no in ast.walk(arvore):
@@ -219,7 +218,7 @@ def test_toda_checagem_do_portao_e_chamada_pelo_main() -> None:
     assert not soltas, (
         f"estas checagens de {PORTAO_REAL.name} não são chamadas por `main()`: "
         f"{soltas}. Ligue-as ou apague-as: uma checagem que ninguém roda deixa o "
-        "portão verde sobre exatamente o que ela media."  # (noqa-acento: verbo medir, imperfeito)
+        "portão verde sobre exatamente o que ela media."  # (noqa-acento)
     )
 
 

@@ -113,7 +113,7 @@ def _montar_report_neutro(transporte: str, weak: int, strong: int) -> bytes:
         value = 0x00
 
     class _Luz:
-        ledOption = pulseOptions = brightness = playerNumber = _Valor()  # noqa: N815 — nomes do contrato da pydualsense, não nossos
+        ledOption = pulseOptions = brightness = playerNumber = _Valor()  # noqa: N815
         TouchpadColor = (0, 0, 0)
 
     class _Gatilho:

@@ -197,7 +197,6 @@ class TestSobreviveAReplug:
 
         atos: list[tuple[str, str]] = []
 
-        # Um daemon que não responde pergunta nenhuma: o abridor só pede o fd ao broker.
         daemon_vazio = types.SimpleNamespace()
 
         cliente = cli.HidrawBrokerClient(socket_path="/dev/null/nao-existe")
@@ -357,7 +356,6 @@ class TestOCapturadorEntraPelaPorta:
         from hefesto_dualsense4unix.integrations import hidraw_broker_client as cli
         from hefesto_dualsense4unix.integrations import uhid_gamepad as ug
 
-        # sysfs de mentira: descriptor válido e identidade de DualSense.
         classe = tmp_path / "sys" / "class" / "hidraw" / "hidraw3" / "device"
         classe.mkdir(parents=True)
         (classe / "report_descriptor").write_bytes(b"\x05\x01\x09\x05")

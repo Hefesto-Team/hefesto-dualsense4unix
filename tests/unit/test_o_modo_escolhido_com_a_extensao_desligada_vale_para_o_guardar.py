@@ -50,12 +50,12 @@ def _guardado(lar: Any) -> Any:  # noqa: F811
 @pytest.mark.parametrize("modo", MODOS_DO_LIVRE)
 def test_fora_da_porta_o_modo_trocado_depois_do_arrastar_vale_para_o_guardar(
         janela: Any, ctx: Any, lar: Any, relogio: list[float], modo: str) -> None:  # noqa: F811
-    # D-2510-O-MODO-FORA-DA-PORTA-VALE-PARA-O-GUARDAR
+    """Prova da D-2510-O-MODO-FORA-DA-PORTA-VALE-PARA-O-GUARDAR."""
     a07, instalar, abrir = janela
     instalar(**_com(COM_MODOS))
     ponte = _Ponte(VIVO)
     abrir(ponte)
-    if modo == "soltar":  # o «Soltar» é o padrão: a troca para ele parte de outro guardado
+    if modo == "soltar":
         a07.modo_do_livre_da_modificacao(ctx, {"v": "toque:ao-vivo:segurar"}, ponte)
         a07.guardar_modificacao(ctx, {"v": "toque"}, ponte)
     _arrastar_e_soltar(a07, ctx, ponte, relogio)
@@ -66,14 +66,11 @@ def test_fora_da_porta_o_modo_trocado_depois_do_arrastar_vale_para_o_guardar(
     assert a07._MEXIDA.rascunho.get("ao-vivo:modo") == modo, "a troca fora da porta não ficou"
     assert _modos_na_faixa(carga["blocos"]["#mod-janela"]) == _acesos(modo)
     assert a07._VIVA.modo == modo, "a barra seguiu no modo de antes"
-    # Nada chega à extensão: o único soltar é a pergunta ao serviço, que diz «fora da porta».
     assert len(_livres(ponte)[antes:]) <= 1
     vistos: set[float] = set()
     for _ in range(8):
         relogio[0] += 0.05
         vistos.add(a07._VIVA.ao_vivo("toque").valor)
-    # O «Soltar» leva a 0 a barra que o «Segurar» deixou em 1,0; o «Segurar» a deixa no 0 do
-    # «Soltar» padrão.
     if modo == "repetir":
         assert len(vistos) > 1, f"a barra não tocou o trecho em laço: {vistos}"
     else:
@@ -87,7 +84,6 @@ def test_fora_da_porta_o_modo_trocado_depois_do_arrastar_vale_para_o_guardar(
 
 def test_na_porta_a_recusa_da_troca_continua_piscando(
         janela: Any, ctx: Any, lar: Any, relogio: list[float]) -> None:  # noqa: F811
-    # D-2510-A-RECUSA-DO-MODO-DEVOLVE-A-BARRA
     a07, instalar, abrir = janela
     instalar(**_com(COM_MODOS))
     ponte = _PonteQueRecusa(VIVO)
@@ -102,8 +98,6 @@ def test_na_porta_a_recusa_da_troca_continua_piscando(
     assert _guardado(lar) == "soltar", "o Guardar gravou o modo que a extensão recusou"
 
 
-#: A janela posta no desenho, num WebKit de verdade: o modo aceso na faixa e o gesto que o clique
-#: no Guardar leva.
 _GUARDAR = """(function(h){
   const j = document.getElementById('mod-janela');
   j.innerHTML = h;

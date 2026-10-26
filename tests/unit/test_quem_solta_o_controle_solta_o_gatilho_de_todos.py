@@ -29,7 +29,6 @@ GALACTIC_PURPLE = "AA:BB:CC:00:00:04"
 MESA = (STARLIGHT_BLUE, WHITE, COSMIC_RED, GALACTIC_PURPLE)
 NO_RADIO = (COSMIC_RED, GALACTIC_PURPLE)
 
-#: Um bloco do jogo (modo 0x21, forças quaisquer) no gatilho direito do Cosmic Red.
 BLOCO_DO_JOGO = bytes([0x21, 0x05, 0x40, 0, 0, 0, 0, 0, 0, 0, 0])
 BLOCO_OFF = bytes(11)
 RIGIDO = build_from_name("Rigid", [3, 8])
@@ -213,7 +212,7 @@ class TestAParada:
         assert a_ordem_de_parada()[-1].nome == "controle"
 
     def test_a_parada_solta_os_quatro_antes_do_disconnect(self) -> None:
-        # D-1610-QUEM-SOLTA-O-CONTROLE-SOLTA-OS-GATILHOS-DOS-QUATRO
+        """Prova da D-1610-QUEM-SOLTA-O-CONTROLE-SOLTA-OS-GATILHOS-DOS-QUATRO."""
         from hefesto_dualsense4unix.daemon.connection import soltar_o_controle
 
         diario = _Diario()
@@ -252,7 +251,6 @@ def _daemon_que_entra_no_nativo(ctl: bp.PyDualSenseController, diario: _Diario) 
         diario.eventos.append(("mouse", "", b""))
 
     def sem_vpad(*_a: Any, **_k: Any) -> None:
-        # A queda do vpad fecha a sessão do jogo, que devolve o efeito do perfil.
         diario.eventos.append(("vpad", "", b""))
         ctl.end_game_session_for(COSMIC_RED)
 
@@ -293,7 +291,6 @@ class TestOModoNativo:
         _daemon_que_entra_no_nativo(ctl, diario)._release_controller_to_game()
 
         _o_desejo_e_o_do_perfil(ctl)
-        # A volta: o mudo sai e a ativação do perfil escreve o padrão em todos.
         ctl.set_output_mute(False)
         ctl.apply_output_defaults(OutputSpec(trigger_left=RIGIDO, trigger_right=RIGIDO))
         for mac in MESA:

@@ -162,7 +162,7 @@ def test_onde_falta_mede_a_caixa_do_emulador(tmp_path: Path,
     """A caixa do Flatpak sem uma variável da ponte acusa falta; a carona a"""
     from tests.unit.as_caixas_das_extensoes import ligar
 
-    ligar(monkeypatch)  # o RetroArch virou extensão (19/10/2026): aqui ela está ligada
+    ligar(monkeypatch)
     ativo = Path.home() / ".local/share/flatpak/app/org.libretro.RetroArch/current/active"
     ativo.mkdir(parents=True)
     (ativo / "metadata").write_text("[Application]\nname=org.libretro.RetroArch\n")

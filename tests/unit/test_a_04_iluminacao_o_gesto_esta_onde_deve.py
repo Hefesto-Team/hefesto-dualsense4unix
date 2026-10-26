@@ -91,13 +91,12 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE), str(RAIZ / "scripts")):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
-import chrome_sem_rede  # o ponto comum dos portões de página, sem a rede
+import chrome_sem_rede
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
 PAGINA = "04-iluminacao.html"
 
-#: Vazio desde 16/10/2026: o `reenviar` (a caixa `#RRGGBB`) saiu com a caixa.
 GESTOS_QUE_FICAM_A_VISTA: frozenset[str] = frozenset()
 
 CELULA_DE_LEDS = "cel-leds"
@@ -230,7 +229,7 @@ def test_a_pagina_tem_os_quatro_lugares_e_gestos_em_todos(medido: dict) -> None:
         f"a grade não tem os quatro lugares endereçados: {sorted(nasce)}")
     assert sorted(_lugares(nasce, "sim")) == ["p1", "p2"], (
         f"a mesa desta bancada tem dois conectados: {nasce}")
-    assert sorted(_lugares(nasce, "nao")) == ["p3", "p4"], (  # (noqa-acento) valor
+    assert sorted(_lugares(nasce, "nao")) == ["p3", "p4"], (  # (noqa-acento)
         f"a mesa desta bancada tem dois lugares vazios: {nasce}")
     for quem, dado in nasce.items():
         assert dado["gestos"], (
@@ -250,16 +249,18 @@ def test_o_lugar_vazio_nao_oferece_gesto(medido: dict) -> None:
     a guia, o trilho e os dois botões por `.off`, e esta régua reprova — a
     coluna que NASCE vazia carrega `.vazia` e nunca ganha `.off`.
     """
-    for quem, dado in _lugares(medido["como_nasce"], "nao").items():  # (noqa-acento) valor
+    for quem, dado in _lugares(medido["como_nasce"], "nao").items():  # (noqa-acento)
         for g in _oferecidos(dado):
             assert g["gesto"] in GESTOS_QUE_FICAM_A_VISTA, _acusar(
                 quem, g, "um lugar SEM aparelho está oferecendo este clique")
 
 
 def test_a_caixa_do_hexadecimal_saiu_de_todo_lugar(medido: dict) -> None:
-    """Desde 16/10/2026 nenhum lugar, cheio ou vazio, tem o gesto `reenviar` na página."""
-    # D-1610-A-EXPLICACAO-DO-CAMPO-E-DICA
-    for estado in ("sim", "nao"):  # (noqa-acento) valor
+    """Desde 16/10/2026 nenhum lugar, cheio ou vazio, tem o gesto `reenviar` na página.
+
+    Prova da D-1610-A-EXPLICACAO-DO-CAMPO-E-DICA.
+    """
+    for estado in ("sim", "nao"):  # (noqa-acento)
         for quem, dado in _lugares(medido["como_nasce"], estado).items():
             caixas = [g for g in dado["gestos"] if g["gesto"] == "reenviar"]
             assert not caixas, f"{quem} voltou a ter a caixa do hexadecimal"
@@ -297,7 +298,7 @@ def test_o_passo_1b_do_piloto_recolhe_o_gesto_sem_recarregar(
         medido: dict) -> None:
     """E o simétrico: o P1 que ESVAZIA para de oferecer, no mesmo tique."""
     dado = medido["depois_do_1b"]["p1"]
-    assert dado["conectado"] == "nao", "o p1 não recebeu a marca"  # (noqa-acento) valor
+    assert dado["conectado"] == "nao", "o p1 não recebeu a marca"  # (noqa-acento)
     for g in _oferecidos(dado):
         assert g["gesto"] in GESTOS_QUE_FICAM_A_VISTA, _acusar(
             "p1", g, "o lugar esvaziou e o clique continua sendo entregue")

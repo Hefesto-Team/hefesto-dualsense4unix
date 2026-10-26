@@ -293,13 +293,11 @@ import shutil
 import subprocess
 import sys
 
-#: que identifica é ser uma source ALSA de um dispositivo Sony/DualSense, e quem
 _PREFIXO_ALSA_INPUT = "alsa_input."
 _MARCA_NO_NOME = "dualsense"
 
 _BYTES_POR_AMOSTRA = 2
 
-#: O DualSense e o DualSense Edge — os mesmos dois do quirk de áudio desta casa
 _APARELHOS_UAC = {
     ("054c", "0ce6"): "DualSense",
     ("054c", "0df2"): "DualSense Edge",

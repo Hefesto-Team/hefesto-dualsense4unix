@@ -255,7 +255,7 @@ from tests.unit.test_cada_motor_tem_o_seu_multiplicador import (
     _daemon,
     _degrau,
     _grava,
-    perfis,  # noqa: F401 — fixture, e é a fixture que isola o disco de perfis
+    perfis,  # noqa: F401
 )
 
 

@@ -24,11 +24,10 @@ import monta
 BANCADA = RAIZ / "mockup/05-vibracao.html"
 PILOTO = RAIZ / "src/hefesto_dualsense4unix/interface/hefesto_vivo.py"
 
-#: `""` NÃO é descuido: é o que `mesa_viva.mesa_do_estado` põe quando o mapa de
 LIDO = "white"
 SEM_LEITURA = ""
 
-SEM_CONTROLE = "nao"  # (noqa-acento) valor de atributo
+SEM_CONTROLE = "nao"  # (noqa-acento)
 
 
 class _Elementos(HTMLParser):

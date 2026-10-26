@@ -54,7 +54,6 @@ import subprocess
 
 import pytest
 
-#: O nome REAL do nó do mic do DualSense no PipeWire, quebrado só para caber na
 NO_DO_MIC = (
     "alsa_input.usb-Sony_Interactive_Entertainment_"
     "DualSense_Wireless_Controller-00.iec958-stereo"

@@ -45,9 +45,6 @@ def _perfil(nome: str = "pragmata", *, match: Match | None = None, priority: int
     )
 
 
-# `profile historico` / `profile restore`  (noqa-acento: nomes de subcomando)
-
-
 def test_historico_lista_as_versoes_com_match_e_prioridade(dir_perfis: Path) -> None:
     """A tabela mostra o que mudou entre as versões, não só nomes de arquivo."""
     save_profile(_perfil(priority=10))

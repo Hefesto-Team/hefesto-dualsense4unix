@@ -63,7 +63,7 @@ class PonteQueResponde:
 
 @pytest.fixture
 def a09():
-    import pacotes  # noqa: F401  (registra os gestos das dez abas)
+    import pacotes  # noqa: F401
     from pacotes import a09_sistema
 
     return a09_sistema

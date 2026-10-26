@@ -447,9 +447,6 @@ class TestARumbleQueChegaAosMotores:
         assert pad.rumble_no_fisico_ha_s is None
 
 
-# 5. O `state_full` carrega os quatro
-
-
 def _vpad_completo(**extra: Any) -> SimpleNamespace:
     base: dict[str, Any] = {
         "backend": "uhid",

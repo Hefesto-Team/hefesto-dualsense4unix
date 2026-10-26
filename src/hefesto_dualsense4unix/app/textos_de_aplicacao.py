@@ -168,7 +168,6 @@ def frase_de_guardado(
     )
 
 
-#: Modo Nativo ligado COM controle na mesa (:1183), `get_output_target_index`
 NADA_ACONTECEU = "nenhum controle recebeu"
 NADA_ACONTECEU_MESA_VAZIA = "nenhum controle recebeu — não há controle ligado"
 NADA_ACONTECEU_NATIVO = f"nenhum controle recebeu — {_MOTIVO_NATIVO}"

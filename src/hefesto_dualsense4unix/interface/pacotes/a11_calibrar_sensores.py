@@ -95,7 +95,6 @@ SENSORES = (
 
 BLOCO_DAS_MIRAS = '[data-bloco="miras"]'
 
-#: O separador de uma frase só, o da casa («BT • Navega o PC»).
 PONTO = " • "
 
 _TEM_A_MIRA: bool | None = None
@@ -148,8 +147,6 @@ def _campos_da_mira(entrada: dict[str, Any]) -> dict[str, Any]:
     return campos
 
 
-#: O QUE O DAEMON DIZ DA MIRA, em cinco chaves (`ipc_handlers._merge_mira`): se nenhuma vem, o bloco
-#: não é o da mira e o resumo não existe.
 CHAVES_DOS_AJUSTES = ("sensibilidade", "zona_morta_graus_s", "gatilho",
                       "inverter_horizontal", "inverter_vertical")
 
@@ -244,7 +241,6 @@ def _eixos_do_controle(entrada: dict[str, Any]) -> dict[str, Any]:
     return campos
 
 
-#: O selo de cada cartão: o `data-zero` que o CSS lê (`calibrar.ESTADOS_DO_ZERO`).
 CAMPO_DO_ZERO = "zero-estado"
 
 
@@ -292,8 +288,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         colunas[pref][CAMPO_DO_ZERO] = estado_do_zero(dele)
         if tem_a_mira:
             colunas[pref].update(_campos_da_mira(dele))
-    # QUEM JOGA, pela regra única de `monta` e pelo leitor da 08: o cartão e a coluna da mira
-    # dizem `<nome> • P<n>`, ou só `P<n>` sem nome. O número é o vivo (`item["jogador"]`).
     nomes = nomes_de_quem_joga()
     com_quem = [{**item, "quem": quem_joga_com_o_numero(
         nomes, str(item.get("uniq") or ""), item.get("jogador"))} for item in ctx.mesa]
@@ -371,7 +365,6 @@ def mira_segurar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | N
     if str(o.get("evento") or "").lower() == "click":
         return {"armou": True}
     escolha = str(o.get("valor") or "").strip()
-    # «Mesmo parado» é «Sempre» sem a pausa do parado; «Sempre» e um botão a devolvem.
     if escolha in (calibrar.SEMPRE, calibrar.MESMO_PARADO):
         _pedir_a_mira(p, uniq, gatilho="", mesmo_parado=escolha == calibrar.MESMO_PARADO)
         return None

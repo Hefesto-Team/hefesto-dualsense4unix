@@ -281,7 +281,6 @@ def test_o_x_dispensado_nao_volta_numa_janela_nova(
     casa = Casa(a08, monkeypatch, os_quatro_no_ar())
     try:
         o_mover_que_nao_chega(casa, JOHNATHAN, VARANDA)
-        # o X virou item do «⋮» (desenho aprovado de 05/10/2026): mora no molde do menu
         moldes = casa.tique()["radio-moldes"]
         x = re.search(r'data-gesto="dispensar-linha" data-alvo="([^"]+)" '
                       r'data-lugar="([^"]+)"', moldes)
@@ -759,9 +758,6 @@ def test_o_desenho_nao_tem_linha_sem_aparelho() -> None:
     linhas = [a for a in aba08.CENA_DO_RADIO["aparelhos"] if a.get("nao_conectou")]
     assert linhas, "o desenho perdeu o «Não Conectou»"
     assert [a["id"] for a in linhas if not a.get("aparelho")] == []
-    # o nome que a linha diz («DualSense ● Cosmic Red»), como no produto: o campo do nome de quem
-    # joga nasce vazio na cena, sem nome de pessoa
-    # (OS-RESTOS-DO-DESENHO-VELHO-SAEM-DAS-ABAS-03-05-08-01)
     assert all(nome_na_conexoes(a) and a.get("cor") and a.get("cor_nome") for a in linhas), linhas
     mockup = (RAIZ / "mockup" / "08-conexoes.html").read_text(encoding="utf-8")
     assert "Não Conectou" in mockup

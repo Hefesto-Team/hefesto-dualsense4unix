@@ -120,7 +120,7 @@ def test_cada_build_conferido_tem_um_fonte_e_so_um() -> None:
 def test_o_fonte_de_cada_kernel_e_o_de_fabrica_dele_mais_a_serie(
     build: str, tmp_path: Path
 ) -> None:
-    if shutil.which("patch") is None:  # pragma: no cover - a máquina da casa tem
+    if shutil.which("patch") is None:  # pragma: no cover
         pytest.skip("sem o patch(1) nesta máquina")
     campos = _por_kernel()[build]
     pasta = POR_KERNEL / build

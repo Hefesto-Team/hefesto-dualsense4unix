@@ -14,7 +14,6 @@ VIDS_NINTENDO = frozenset({"057e"})
 
 VIDPID_PRO = frozenset({"057e:2009"})
 
-#: NÃO casa ``"DualSense Wireless Controller"`` e NÃO casa ``"8BitDo Pro 2"``
 NOMES_PRO = ("pro controller",)
 
 NOMES_LINHAGEM = ("pro controller", "nintendo")

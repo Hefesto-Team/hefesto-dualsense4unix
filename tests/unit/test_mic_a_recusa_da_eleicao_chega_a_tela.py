@@ -270,9 +270,6 @@ async def _tique_async(daemon: _Daemon) -> dict[str, Any]:
     return await _Handlers(daemon)._handle_daemon_state_full({})
 
 
-# 1. A RECUSA DA ELEIÇÃO CHEGA AO `state_full`
-
-
 @pytest.mark.asyncio
 async def test_a_recusa_da_eleicao_chega_ao_state_full() -> None:
     """A frase que só existia no `logger.info` agora sai no tique."""
@@ -1233,8 +1230,6 @@ async def test_o_toque_do_botao_le_a_mesa_uma_vez_so() -> None:
         f"Perguntou {backend_c.perguntas}"
     )
 
-
-# ninguém ficou com o canal. O `state_full` seguia publicando `eleito: …011` e
 
 _CANAL_DO_J2 = "alsa_input.o_canal_do_j2"
 

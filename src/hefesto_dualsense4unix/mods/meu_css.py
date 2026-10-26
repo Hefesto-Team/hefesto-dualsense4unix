@@ -15,17 +15,12 @@ from pathlib import Path
 from typing import Any
 
 NOME_DO_ARQUIVO = "meu.css"
-#: O mesmo teto do tema.
 TAMANHO_MAXIMO = 16 * 1024
 
-#: As regras que se aplicam: as que agrupam regras (``@media``, ``@supports``, ``@container`` e o
-#: ``@layer`` com bloco) e os quadros. O ``@layer a, b;`` sem bloco não agrupa: fica fora de regra.
-_AGRUPAM = frozenset(  # (noqa-acento) nomes de at-rule do CSS
-    {"media", "supports", "container", "layer"})  # (noqa-acento) nomes de at-rule do CSS
+_AGRUPAM = frozenset(
+    {"media", "supports", "container", "layer"})  # (noqa-acento)
 _QUADROS = frozenset({"keyframes", "-webkit-keyframes"})
 
-#: O que o CSS de quem usa nunca pode ter, com a frase de cada um (a linha vem na frente) e a forma
-#: curta que a tela diz no lugar dela (a frase longa vai ao log).
 _PROIBIDOS: tuple[tuple[re.Pattern[str], str, str], ...] = (
     (re.compile(r"url\s*\(", re.I), "usa url(), e nada busca arquivo nem endereço", "url()"),
     (re.compile(r"@import", re.I), "usa @import, e nada busca arquivo nem endereço", "@import"),

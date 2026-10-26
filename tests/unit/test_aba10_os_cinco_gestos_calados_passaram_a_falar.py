@@ -128,7 +128,6 @@ def _o_disco_tem(monkeypatch: pytest.MonkeyPatch, *nomes: str) -> list[Any]:
 
 def _ctx(ativo: str | None = None) -> Contexto:
     return Contexto(
-        # `freestyle_ligado`: o clique na linha só ABRE o perfil, sem ativá-lo (o gesto agora ativa)
         state={"active_profile": ativo, "freestyle_ligado": True},
         mesa=list(MESA), conectados=list(MESA), estados={})
 
@@ -293,7 +292,6 @@ def test_o_remover_pinta_no_ato_e_nao_no_tique_seguinte(
 
     assert _frase(fora) == "Perfil removido: Pragmata", (
         f"o Remover não devolveu a frase da janela estável: {_frase(fora)!r}")
-    # E A ORDEM CONTINUA: o `launch_env.refresh` é o que impede o
     assert ("launch_env.refresh", ()) in ponte.chamadas
 
 

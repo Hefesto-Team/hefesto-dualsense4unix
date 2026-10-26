@@ -253,7 +253,7 @@ def test_a_tecla_do_acionador_sai_como_o_botao_escolhido_no_pad_daquele_controle
     esperado = [n == jogador for n in range(4)]
     assert mesa.com_a_cruz() == esperado
 
-    mesa.acionador.apertar(TECLA_1, 2)  # a repetição do teclado não solta nada
+    mesa.acionador.apertar(TECLA_1, 2)
     mesa.tique()
     assert mesa.com_a_cruz() == esperado
 
@@ -317,7 +317,6 @@ def test_fora_do_jogo_o_aparelho_e_do_sistema_e_no_jogo_fica_preso(
     mesa.em_jogo, mesa.agora = True, 3 * gp.OLHAR_O_FOCO_A_CADA_S
     mesa.tique()
     assert mesa.acionador.preso
-    # O modo que sai do pad virtual devolve o aparelho ao sistema (o resto da parada fica mudo).
     from hefesto_dualsense4unix.daemon.subsystems import rumble
 
     for nome in ("_largar_o_p1_que_nasce", "stop_motion_reader", "soltar_a_ativacao",
@@ -393,8 +392,6 @@ def test_dois_acionadores_iguais_em_portas_diferentes_sao_dois() -> None:
     assert outro != CHAVE and outro.split(":")[:2] == CHAVE.split(":")[:2]
     assert chave_do_acionador(VENDOR, PRODUCT, NOME, FISICO) == CHAVE
 
-
-# --- a tela: a linha, a janela e os gestos (desenho r3-08-14) ----------------------------------
 
 RAIZ = Path(__file__).resolve().parents[2]
 BANCADA = RAIZ / "mockup" / "08-conexoes.html"
@@ -475,7 +472,6 @@ def test_a_janela_diz_as_teclas_o_plastico_e_acende_os_botoes_escolhidos(
     assert ">Tecla 1<" in campos["acionador-teclas"] and ">Cruz<" in campos["acionador-teclas"]
     assert ">Tecla 2<" in campos["acionador-teclas"] and ">L2<" in campos["acionador-teclas"]
     assert campos["acionador-brilho"].startswith("#acionador #ac-cross,#acionador #ac-l2{")
-    # o desenho veste o plástico do controle escolhido (o Starlight Blue), pelo endereço da cor
     assert campos["acionador-desenho"] == "starlight-blue"
     janela = BANCADA.read_text().split('id="acionador">', 1)[1].split('<div class="tela-nova"')[0]
     for campo in campos:
@@ -494,7 +490,6 @@ def test_o_desenho_da_janela_e_o_dualsense_real_e_cada_botao_que_troca_e_um_gest
     assert {"ps", "mic", "touchpad"}.isdisjoint(pecas)
     desenho = re.search(r'<svg class="ac-svg".*?</svg>', DESENHO.read_text(), re.S)
     assert desenho is not None
-    # A janela usa a tabela e a folha das cores da página (uma só) e endereça o `data-colorway`.
     endereco = (' data-campo="acionador-desenho" data-hef-alvo="atributo" '
                 'data-hef-atributo="data-colorway"')
     assert endereco in svg.group(0) and "cores-do-dualsense" not in svg.group(0)

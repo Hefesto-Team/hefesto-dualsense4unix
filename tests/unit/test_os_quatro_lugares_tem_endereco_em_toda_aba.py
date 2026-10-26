@@ -16,13 +16,10 @@ COM_LUGAR = (
     "01-jogar", "02-controles", "03-gatilhos", "04-iluminacao",
     "05-vibracao", "08-conexoes",
 )
-#: A 06 saiu da lista em 15/10/2026: a Navegação do todo escolhe «Navega com» por chip, sem cartão
-#: por controle, e o mapa dos botões é de um controle por vez.
 SEM_LUGAR = ("06-navegacao", "07-lancadores", "09-sistema", "10-perfis")
 
 CASAS = ("p1", "p2", "p3", "p4")
 
-#: (`.ctl[data-controle="p1"]{--plastico:…}`) e um COMENTÁRIO. Contar a palavra
 ENDERECO = re.compile(r'<[a-zA-Z][^>]*?data-controle="(p[1-4])"')
 
 

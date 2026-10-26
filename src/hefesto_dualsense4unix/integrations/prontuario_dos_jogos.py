@@ -94,7 +94,7 @@ try:
         read_apps_by_appid,
         steam_input_allowlist_path,
     )
-except ImportError:  # pragma: no cover - executado como script avulso
+except ImportError:  # pragma: no cover
     from a_roupa_do_jogo import roupa_do_jogo  # type: ignore[no-redef]
     from api_de_entrada import Evidencia, Veredito, examinar_pasta  # type: ignore[no-redef]
     from ficha_declarada import (  # type: ignore[no-redef]
@@ -141,9 +141,6 @@ PONTE_DIVERGENTE = "ponte_divergente"
 FALTA_A_PECA = "falta_a_peca"
 SEM_CONTA = "sem_conta"
 
-#: Cada estorvo é (o que é, a cura, o produto cura sozinho?, impede o jogo?). `impede` é
-#: a NATUREZA, e mora aqui: o que não impede é aviso, aparece ao lado do veredito e nunca
-#: o muda (SEM_CONTA: o jogo abre e joga, só sem conta, amigos e online).
 _ESTORVOS: dict[str, tuple[str, str, bool, bool]] = {
     SEM_WRAPPER: (
         "A linha de Opções de Inicialização não chama o hefesto-launch, "
@@ -216,7 +213,6 @@ _ESTORVOS: dict[str, tuple[str, str, bool, bool]] = {
     ),
 }
 
-#: `UseSteamControllerConfig` mora no bloco do jogo, dentro da árvore `apps`
 _PS_SUPPORT_GLOBAL = "steamcontroller_pssupport"
 
 _SO_CHAVE_RE = re.compile(r'^\s*"([^"]+)"\s*$')
@@ -267,7 +263,7 @@ def pontes_confirmadas(config_home: Path | None = None) -> dict[str, Ponte]:
     pasta = pasta_de_perfis(config_home)
     try:
         arquivos = sorted(pasta.glob("*.json"))
-    except OSError:  # pragma: no cover - pasta sumiu entre o listar e o ler
+    except OSError:  # pragma: no cover
         return {}
     melhor: dict[str, tuple[int, str, Ponte]] = {}
     for arquivo in arquivos:
@@ -318,7 +314,7 @@ def classes_com_ponte(config_home: Path | None = None) -> set[str]:
     pasta = pasta_de_perfis(config_home)
     try:
         arquivos = sorted(pasta.glob("*.json"))
-    except OSError:  # pragma: no cover - pasta sumiu entre o listar e o ler
+    except OSError:  # pragma: no cover
         return set()
     achadas: set[str] = set()
     for arquivo in arquivos:
@@ -364,7 +360,6 @@ class Estorvo:
     """Um impedimento nomeado, e o que fazer com ele."""
 
     chave: str
-    #: O que só este jogo sabe (a peça que falta); entra no fim do texto, se houver.
     detalhe: str = ""
 
     @property
@@ -396,18 +391,13 @@ class Prontuario:
     raiz: Path | None = None
     linha: str | None = None
     evidencia: Evidencia | None = None
-    #: `UseSteamControllerConfig` do bloco do jogo. `None` = herda o global.
     steam_input: str | None = None
     steam_input_global: str | None = None
     na_allowlist: bool = False
     ponte: Ponte | None = None
-    #: As peças que uma receita de ambiente pede ao lado do executável e o disco não tem.
     pecas_que_faltam: tuple[str, ...] = ()
-    #: O jogo recebe a peça GDK do Hefesto e o ajudante de login dela não está instalado.
     sem_conta: bool = False
-    #: O que a Steam e o binário dizem sobre controle. Informa; nunca entra no veredito.
     declarado: FichaDeclarada | None = None
-    #: `(roupa, fonte)` do pad para este jogo (`a_roupa_do_jogo`); `None` = não examinado.
     roupa: tuple[str, str] | None = None
 
     @property
@@ -547,7 +537,7 @@ class Prontuario:
             "capa_da_steam": self.capa_da_steam,
             "estorvos": [
                 {"chave": e.chave, "o_que": e.o_que, "cura": e.a_cura,
-                 "automatica": e.automatica, "impede": e.impede}  # (noqa-acento): chave de JSON
+                 "automatica": e.automatica, "impede": e.impede}  # (noqa-acento)
                 for e in self.estorvos
             ],
         }
@@ -647,7 +637,7 @@ def jogos_instalados(home: Path | None = None) -> list[tuple[str, str, Path | No
     for pasta in pastas_steamapps(home):
         try:
             manifestos = sorted(pasta.glob("appmanifest_*.acf"))
-        except OSError:  # pragma: no cover - pasta sumiu entre o listar e o ler
+        except OSError:  # pragma: no cover
             continue
         for acf in manifestos:
             try:
@@ -763,7 +753,7 @@ def levantar_censo(
         if raiz is not None and examinar:
             try:
                 evidencia = examinar_pasta(raiz)
-            except OSError as exc:  # pragma: no cover - permissão no meio da varredura
+            except OSError as exc:  # pragma: no cover
                 erros.append(f"{nome}: {exc}")
         evidencias[appid] = evidencia
     declaradas = fichas_dos_jogos(
@@ -856,7 +846,7 @@ def _curar_sem_wrapper(home: Path | None, *, dry_run: bool) -> tuple[str, list[s
     """
     try:
         from .sentinela_do_wrapper import reparar_ou_adiar
-    except ImportError:  # pragma: no cover - executado como script avulso
+    except ImportError:  # pragma: no cover
         from sentinela_do_wrapper import reparar_ou_adiar  # type: ignore[no-redef]
     status, _censo, resultado = reparar_ou_adiar(home, dry_run=dry_run)
     tocados = (
@@ -975,7 +965,7 @@ def _tabela(censo: Censo) -> str:
         linhas.append("O que cada jogo declara sobre controle:")
         for jogo in declarados:
             ficha = jogo.declarado
-            if ficha is None:  # pragma: no cover - o filtro acima já garante
+            if ficha is None:  # pragma: no cover
                 continue
             linhas.append(f"  {jogo.nome}: {ficha.veredito}")
             linhas.extend(f"    - {fonte}" for fonte in ficha.fontes)

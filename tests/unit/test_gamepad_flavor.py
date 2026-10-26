@@ -48,7 +48,6 @@ class TestForFlavor:
         assert gp.flavor == "xbox"
 
     def test_default_e_xbox(self) -> None:
-        # SPRINT-GAME-RUMBLE-01: o default é xbox — a máscara DualSense faz o jogo
         assert ug.DEFAULT_FLAVOR == "xbox"
         gp = ug.UinputGamepad.for_flavor()
         assert gp.flavor == "xbox"

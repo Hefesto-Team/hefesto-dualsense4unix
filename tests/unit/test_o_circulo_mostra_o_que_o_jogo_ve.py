@@ -37,7 +37,6 @@ from hefesto_dualsense4unix.profiles.manager import ProfileManager
 from hefesto_dualsense4unix.profiles.schema import MatchAny, Profile, ProfileMovimentoConfig
 from hefesto_dualsense4unix.testing import FakeController
 
-# As receitas do pad que grava (o `evdev` sem kernel) são as da régua do modo Xbox.
 from tests.unit.test_no_modo_xbox_o_toque_e_o_acelerometro import (
     _DEITADO,
     _EC,
@@ -158,9 +157,6 @@ def _o_p1(servidor: IpcServer) -> dict[str, Any]:
     return p1
 
 
-# 1, 4. O P1 no modo Xbox: o `state_full` diz o que o nó recebeu
-
-
 def test_1_o_p1_inclina_e_o_state_full_diz_o_que_o_no_recebeu(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, _evdev_que_grava: None
 ) -> None:
@@ -217,9 +213,7 @@ def test_4_a_mira_no_direito_move_o_rx_do_jogo(
         pad.stop()
 
 
-# 2. O mesmo no uhid (modo DualSense)
-
-_BYTE_DO_LX = 1  # o report 0x01: o id, e o corpo começa no lx
+_BYTE_DO_LX = 1
 
 
 @pytest.fixture
@@ -262,9 +256,6 @@ def test_2_o_uhid_diz_o_byte_do_report(
     p1 = _o_p1(servidor)
     assert p1["no_jogo"]["lx"] == lx_do_report, (p1["no_jogo"], lx_do_report)
     assert p1["inputs"]["lx"] == 128
-
-
-# 3, 5. Os jogadores 2 a 4, cada um o seu; e quem não tem pad diz `None`
 
 
 def _o_coop(monkeypatch: pytest.MonkeyPatch, acel: dict[str, tuple[float, float, float]],
@@ -318,7 +309,6 @@ def _o_coop(monkeypatch: pytest.MonkeyPatch, acel: dict[str, tuple[float, float,
             player_index=n, vpad=pad,
         )
     gerente.forward_all()
-    # o cedido mandou antes de ceder: o pad dele guarda um valor que já não vale
     for uniq in cedidos:
         gerente._players[uniq].cedido_ao_primario = True  # type: ignore[attr-defined]
     daemon._coop_manager = gerente
@@ -364,7 +354,7 @@ def test_5_quem_nao_tem_pad_diz_none(
         monkeypatch, {_P2: _inclinado(0.0, 25.0), _P3: _DEITADO, _P4: _DEITADO},
         cedidos=frozenset({_P2}))
     try:
-        servidor.daemon._coop_manager._players[_P4].vpad = None  # o pendente de grab
+        servidor.daemon._coop_manager._players[_P4].vpad = None
         entradas = [*_entradas(), {"uniq": _P1, "is_primary": True}]
         servidor._merge_no_jogo(entradas)
         lido = {e["uniq"]: e["no_jogo"] for e in entradas}
@@ -388,8 +378,6 @@ def test_5b_o_uhid_parado_diz_none(_uhid: tuple[Any, list[bytes]]) -> None:
     pad.stop()
     assert pad.eixos_no_jogo is None
 
-
-# 6. O cartão pinta o jogo, e só onde a rota aponta
 
 UNIQ = _P1
 MESA = [{"uniq": UNIQ, "pref": "p1", "nome": "White", "via": "USB", "cor": "white"}]
@@ -481,8 +469,6 @@ def test_6_sem_o_endereco_na_pagina_o_pacote_cala(a02: Any,
     assert not ({*a02.CAMPOS_DO_JOGO.values(), *a02.ACENDE_O_JOGO.values()} & set(card))
 
 
-# 7. O gerador
-
 @pytest.fixture(scope="module")
 def pagina() -> str:
     from hefesto_dualsense4unix.interface import onde
@@ -503,8 +489,6 @@ def test_7_o_anel_mora_nos_quatro_lugares_e_o_exemplo_so_no_p1(a02: Any, pagina:
     assert pagina.count('class="pj on"') == 1
     assert 'data-campo="pos-ana-d-jogo" data-hef-alvo="posicao" style=' not in pagina
 
-
-# 8. A página no WebKit (roda no `xvfb-run`; sem display, pula)
 
 _MEDIR = r"""
 (function(){
@@ -549,7 +533,7 @@ def _no_webkit(roteiro: str) -> dict[str, Any]:
     def guardou(v: Any, res: Any) -> None:
         try:
             saiu.append(v.evaluate_javascript_finish(res).to_string())
-        except Exception as e:  # pragma: no cover — só quando o roteiro quebra
+        except Exception as e:  # pragma: no cover
             saiu.append(f"ERRO {e}")
         Gtk.main_quit()
 

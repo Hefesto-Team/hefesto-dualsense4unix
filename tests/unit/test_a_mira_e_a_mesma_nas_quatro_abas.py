@@ -68,7 +68,6 @@ import calibrar
 
 UNIQS = (_P1, _P2, _P3, _P4)
 CHAVE = {u: u.replace(":", "") for u in UNIQS}
-#: As entradas chegam do daemon em outra ordem que a da mesa (a mesa é por jogador).
 ORDEM_DO_DAEMON = (_P3, _P1, _P4, _P2)
 
 
@@ -125,8 +124,6 @@ def _gestos_para_o_p3(servidor: IpcServer, uniq: str = _P3, *, anda: int = 9, tr
         a11_calibrar_sensores.mira_inverter(ctx, {"uniq": uniq, "inverter": lado}, ponte)
     return ponte
 
-
-# O QUE CADA ABA DIZ, lido pelo pacote dela sobre o MESMO contexto.
 
 def _lado_a_lado(ctx: Contexto, uniq: str) -> dict[str, Any]:
     pref = next(m["pref"] for m in ctx.mesa if m["uniq"] == uniq)
@@ -249,7 +246,6 @@ def test_o_endereco_existe_dos_dois_lados(perfis: Path, tmp_path: Path) -> None:
         faltam = campos - _enderecos(pagina)
         assert not faltam, f"{pagina}: o pacote emite e a página não tem onde pintar: {faltam}"
     assert set(lido) == {"calibrar"}
-    # o giroscópio não mora na Conexões: nem o pacote o emite, nem a bancada tem onde pintá-lo
     assert "est-mira" not in a08_conexoes.pacote(ctx)["colunas"][_P3]
     assert "est-mira" not in _enderecos("08-conexoes.html")
 
@@ -328,4 +324,4 @@ def test_a_cena_dos_geradores_diz_o_mesmo_que_o_produto() -> None:
     assert bloco["zona_morta_graus_s"] == calibrar.TREMOR[2]
     assert a11_calibrar_sensores.resumo_da_mira({}) is None
     assert a11_calibrar_sensores.resumo_da_mira({"ligada": True}) is None
-    assert rot.DESTINO_NENHUM  # o dono do «apagado» existe e é o que a 02 lê
+    assert rot.DESTINO_NENHUM

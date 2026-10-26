@@ -465,7 +465,6 @@ class TestIpcProfileSwitch:
         assert resposta["active_profile"] == "sackboy_nativo"
         assert resposta["mode_aplicado"] is True
         assert resposta["secoes"]["mode"] == "aplicado"
-        # VERDADE-01: o `profile.switch` do IPC é gesto do usuário (ver acima).
         assert setters.gamepad == [(True, "dualsense", "gesto_de_perfil")]
 
 

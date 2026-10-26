@@ -69,8 +69,6 @@ def repor_o_lancador() -> None:
         console.print(f"[yellow]não consegui repor o lançador:[/] {erro}")
 
 
-# --------------------------------------------------------------------- a bandeja
-
 CHAVE_DO_AUTOSTART = "X-GNOME-Autostart-enabled"
 _LINHA_DA_CHAVE = re.compile(rf"^{CHAVE_DO_AUTOSTART}=.*$", re.M)
 
@@ -109,7 +107,6 @@ def bandeja_viva() -> int | None:
     pid = _pid_anotado()
     linha = Path(f"/proc/{pid}/cmdline")
     argv = linha.read_bytes().split(b"\0") if pid > 0 and linha.is_file() else []
-    # Um argumento inteiro: «tray» no Python, «--tray» no `run.sh` antes do `exec`.
     return pid if {b"tray", b"--tray"} & set(argv) else None
 
 
@@ -151,7 +148,6 @@ def garantir_a_bandeja() -> bool:
     except OSError as erro:
         console.print(f"[yellow]não consegui subir a bandeja:[/] {erro}")
         return False
-    # O PID entra já: dois pedidos seguidos não sobem duas. A bandeja o reescreve ao subir.
     with contextlib.suppress(OSError):
         caminho_do_pid().parent.mkdir(parents=True, exist_ok=True)
         caminho_do_pid().write_text(f"{filho.pid}\n", encoding="ascii")
@@ -228,5 +224,5 @@ __all__ = [
 ]
 
 
-if __name__ == "__main__":  # pragma: no cover - o gesto do controle
+if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())

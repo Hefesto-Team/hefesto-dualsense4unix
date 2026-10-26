@@ -79,7 +79,6 @@ def test_o_tique_sem_resposta_nao_pinta_a_mesa_vazia(monkeypatch: pytest.MonkeyP
     piloto._estado_do_tique = lambda: contou.append("pintou") or {}
 
     def montar(*_a: Any, **_k: Any) -> Any:
-        # O tique que passou da espera chega aqui; a recusa ele mesmo engole, e a régua lê `contou`.
         contou.append("montou")
         raise RuntimeError("a régua não monta mesa")
 

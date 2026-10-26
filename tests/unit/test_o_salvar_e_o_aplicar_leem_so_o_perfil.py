@@ -136,7 +136,7 @@ def _ctx() -> Contexto:
 
 def _clique(aba: str, gesto: str) -> dict[str, str]:
     """O clique como o piloto o manda: com a aba de onde veio."""
-    return {"gesto": gesto, "pagina": aba}  # (noqa-acento: chave do clique)
+    return {"gesto": gesto, "pagina": aba}  # (noqa-acento)
 
 
 def _o_arquivo() -> bytes:

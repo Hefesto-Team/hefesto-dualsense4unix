@@ -69,7 +69,7 @@ from hefesto_dualsense4unix.interface.pacotes.a02_controles import (
     estados_de_carga,
 )
 
-PAGINA = "02-controles.html"  # (noqa-acento) nome de arquivo
+PAGINA = "02-controles.html"
 
 UNIQ = "aa:bb:cc:00:00:02"
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
@@ -194,7 +194,7 @@ def test_o_card_do_radio_carregando_diz_o_icone() -> None:
     assert card["bateria-carga"] == "Carregando", (
         "um controle NO RÁDIO e carregando não anunciou o estado no card — é "
         "exatamente a premissa que ela corrigiu: 'no radio ele pode tá "
-        "carregando tambem'"  # (noqa-acento) citação literal
+        "carregando tambem'"  # (noqa-acento)
     )
 
 

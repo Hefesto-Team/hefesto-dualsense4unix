@@ -88,7 +88,7 @@ MESA_DE_UM = [MESA_DELA[0]]
 
 @pytest.fixture(scope="module")
 def a03():
-    import pacotes  # noqa: F401  (registra os dez)
+    import pacotes  # noqa: F401
     from pacotes import a03_gatilhos
 
     return a03_gatilhos

@@ -89,7 +89,6 @@ def cmd_target(
         if n < 1:
             console.print("[red]alvo inválido:[/red] o número do controle começa em 1.")
             raise typer.Exit(code=2)
-        # `player_slot` em nenhum controle) cai no mapeamento posicional
         conectados = _conectados()
         com_slot = [c for c in conectados if _slot_of(c) is not None]
         if com_slot:
@@ -155,7 +154,6 @@ def cmd_list(
         if not external:
             raise typer.Exit(code=1)
     else:
-        # COR-01 (D6): o rótulo "Controle N" é o slot de sessão (`player_slot`),
         alvo_label = "todos (broadcast)"
         if target_index is not None:
             alvo_label = f"Controle {int(target_index) + 1}"

@@ -36,7 +36,7 @@ MESA_DE_UM = [MESA_DELA[0]]
 
 @pytest.fixture(scope="module")
 def a03():
-    import pacotes  # noqa: F401  (registra os dez)
+    import pacotes  # noqa: F401
     from pacotes import a03_gatilhos
 
     return a03_gatilhos
@@ -146,7 +146,6 @@ def test_todo_chip_da_bancada_tem_endereco(a03, bancada):
         f"o endereço do MIOLO está em {miolos} colunas, e não em 4. É por ele "
         f"que o nome e a dica do chip trocam quando a mesa muda.")
 
-    # E A COR CRAVADA SÓ MORA NO EMBRULHO ENDEREÇADO. Um `--plastico` solto em
     for casa in re.finditer(r"--plastico\s*:", bancada[_depois_da_fita(bancada):]):
         posicao = casa.start() + _depois_da_fita(bancada)
         inicio = bancada.rfind("<", 0, posicao)
@@ -258,8 +257,6 @@ def test_o_lugar_sem_aparelho_perde_o_nome(a03):
         assert "--plastico" not in chips[pref], (
             f"{pref} está vazio e o chip dele traz cor: {chips[pref]!r}. A cor "
             f"mora no embrulho, e o chip de um lugar vazio não a carrega.")
-    # conectado) e o bloco escreve HTML, não estilo. Ali o `--plastico` do
-    # `vazio` e `.chip.vazio` declara a borda inteira sem `var(--plastico)`.
     for pref in ("p3", "p4"):
         assert cores.get(pref) == "", (
             f"{pref} está vazio e a coluna não apaga a cor: {cores.get(pref)!r}. "

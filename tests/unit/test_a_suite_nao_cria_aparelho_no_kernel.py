@@ -94,7 +94,7 @@ def _quantos_event() -> int:
     """A régua (a) da lista lá em cima: quantos `/dev/input/event*` existem."""
     try:
         return len([n for n in os.listdir("/dev/input") if n.startswith("event")])
-    except OSError:  # pragma: no cover — /dev/input sempre existe no Linux
+    except OSError:  # pragma: no cover
         return -1
 
 

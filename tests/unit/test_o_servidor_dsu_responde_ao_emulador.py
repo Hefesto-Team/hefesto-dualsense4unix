@@ -41,9 +41,6 @@ UNIQ_3 = "aa:bb:cc:00:00:03"
 ID_DO_AZAHAR = 24872
 
 
-# -- os pedidos, montados sem o codec do produto -------------------------------
-
-
 def _pedido(
     tipo: int, corpo: bytes, *, client_id: int = ID_DO_AZAHAR, crc_ruim: bool = False
 ) -> bytes:
@@ -67,9 +64,6 @@ def _pede_dados(slot: int | None = None, mac: bytes | None = None, **kw: Any) ->
     flags = (1 if slot is not None else 0) | (2 if mac is not None else 0)
     corpo = bytes([flags, slot or 0]) + (mac or bytes(6))
     return _pedido(0x100002, corpo, **kw)
-
-
-# -- as respostas ------------------------------------------------------------------
 
 
 def _dados(pacote: bytes) -> SimpleNamespace:
@@ -138,9 +132,6 @@ def _ate(
     raise AssertionError("o pacote esperado não chegou no prazo")
 
 
-# -- os dublês que recusam -----------------------------------------------------------
-
-
 class _Hub:
     """Só atende ``amostra_do_dsu`` e ``segurar_o_dedo``; qualquer outra coisa é anotada."""
 
@@ -204,7 +195,6 @@ class _Relogio:
 
 
 def _slot(uniq: str, jogador: int) -> SlotDsu:
-    # O transporte é dito aqui: o byte 23 = 1 do teste 2 vem do teste, não do servidor.
     return SlotDsu(uniq=uniq, mac=vpad_mac(uniq, jogador), transport="usb")
 
 
@@ -253,9 +243,6 @@ def montar() -> Iterator[Callable[..., SimpleNamespace]]:
         sock.close()
 
 
-# -- 1 · a versão -------------------------------------------------------------------
-
-
 def test_1_a_versao_responde_1001(montar: Callable[..., SimpleNamespace]) -> None:
     mundo = montar()
     sock = mundo.cliente()
@@ -268,9 +255,6 @@ def test_1_a_versao_responde_1001(montar: Callable[..., SimpleNamespace]) -> Non
     assert mundo.hub.recusadas == []
 
 
-# -- 2 · as portas ------------------------------------------------------------------
-
-
 def test_2_portas_zero_e_tres_com_um_controle_no_primeiro(
     montar: Callable[..., SimpleNamespace],
 ) -> None:
@@ -281,7 +265,7 @@ def test_2_portas_zero_e_tres_com_um_controle_no_primeiro(
     assert [len(r) for r in respostas] == [32, 32]
     ocupada, vazia = respostas
     assert struct.unpack_from("<I", ocupada, 16)[0] == 0x100001
-    assert tuple(ocupada[20:24]) == (0, 2, 2, 1)  # slot, conectado, modelo 2, conexão 1
+    assert tuple(ocupada[20:24]) == (0, 2, 2, 1)
     assert ocupada[24:26] == bytes([0x02, 0xFE])
     assert tuple(vazia[20:24]) == (3, 0, 0, 0)
     assert vazia[24:31] == bytes(7)
@@ -297,14 +281,11 @@ def test_2b_slot_sem_transporte_diz_conexao_zero_na_porta_e_nos_dados(
     sock = mundo.cliente()
     mundo.envia(sock, _pede_portas(0))
     porta = _juntar(sock, 0.5)[0]
-    assert tuple(porta[20:24]) == (0, 2, 2, 0)  # slot, conectado, modelo 2, conexão 0
+    assert tuple(porta[20:24]) == (0, 2, 2, 0)
     mundo.envia(sock, _pede_dados(slot=0))
     pacotes = [_dados(p) for p in _juntar(sock, 0.4)]
     assert pacotes and {p.conexao for p in pacotes} == {0}
     assert mundo.hub.recusadas == []
-
-
-# -- 3 · o cliente só recebe o slot que pediu -----------------------------------------
 
 
 def test_3_a_inscricao_no_slot_zero_nao_recebe_o_slot_dois(
@@ -336,9 +317,6 @@ def test_3b_a_inscricao_pelo_mac_so_recebe_o_slot_daquele_mac(
     assert {_dados(p).slot for p in _juntar(sock, 0.4)} == {2}
 
 
-# -- 4 · o cliente é o endereço, não o id --------------------------------------------
-
-
 def test_4_dois_clientes_com_o_mesmo_id_recebem_os_dois(
     montar: Callable[..., SimpleNamespace],
 ) -> None:
@@ -350,9 +328,6 @@ def test_4_dois_clientes_com_o_mesmo_id_recebem_os_dois(
     time.sleep(0.2)
     assert len(_juntar(um, 0.4)) >= 3
     assert len(_juntar(outro, 0.4)) >= 3
-
-
-# -- 5 · cinco segundos sem renovar ----------------------------------------------------
 
 
 def test_5_sem_renovar_o_envio_para_e_o_ultimo_pacote_e_o_neutro(
@@ -389,9 +364,6 @@ def test_5b_parar_o_servidor_manda_o_pacote_neutro_antes_de_fechar(
     assert ultimo.toque1[0] == 0
 
 
-# -- 6 · os slots seguem os números, sem compactar ----------------------------------------
-
-
 def test_6_primeiro_e_terceiro_dao_os_slots_zero_e_dois_e_o_um_responde_desconectado(
     montar: Callable[..., SimpleNamespace],
 ) -> None:
@@ -405,9 +377,6 @@ def test_6_primeiro_e_terceiro_dao_os_slots_zero_e_dois_e_o_um_responde_desconec
     assert [(p[20], p[21]) for p in portas] == [(0, 2), (1, 0), (2, 2), (3, 0)]
     mundo.envia(sock, _pede_dados())
     assert {_dados(p).slot for p in _juntar(sock, 0.4)} == {0, 2}
-
-
-# -- 7 · o interruptor do usuário vale -----------------------------------------------------------
 
 
 def test_7_giroscopio_desligado_zera_o_giro_e_o_toque_segue(
@@ -459,9 +428,6 @@ def test_7d_os_sinais_do_protocolo(montar: Callable[..., SimpleNamespace]) -> No
     assert lido.giro == pytest.approx((10.0, -20.0, -30.0))
 
 
-# -- 8 · o toque 1 é o contato mais antigo --------------------------------------------------
-
-
 def test_8_quando_o_primeiro_dedo_sai_o_toque_um_passa_a_ser_o_segundo(
     montar: Callable[..., SimpleNamespace],
 ) -> None:
@@ -474,7 +440,6 @@ def test_8_quando_o_primeiro_dedo_sai_o_toque_um_passa_a_ser_o_segundo(
     sock = mundo.cliente()
     mundo.envia(sock, _pede_dados(slot=0))
     _ate(sock, lambda p: p.toque1[:2] == (1, 5) and p.toque2[0] == 0)
-    # O dedo novo cai no slot 0 do kernel e vem primeiro na tupla, mas é o mais NOVO.
     amostras["toques"] = (_dedo(0, 6, 200, 200), _dedo(1, 5, 100, 100))
     dois = _ate(sock, lambda p: p.toque2[0] == 1)
     assert dois.toque1[:2] == (1, 5) and dois.toque2[:2] == (1, 6)
@@ -517,9 +482,6 @@ def test_8b_o_cliente_que_sai_nao_troca_os_toques_de_quem_fica(
     )
 
 
-# -- 9 · o contador ---------------------------------------------------------------------------
-
-
 def test_9_o_contador_nao_recua_quando_o_servidor_reinicia(
     montar: Callable[..., SimpleNamespace],
 ) -> None:
@@ -552,9 +514,6 @@ def test_9b_na_virada_dos_32_bits_nao_ha_struct_error_e_o_cliente_novo_cresce(
     assert all(b > a for a, b in itertools.pairwise(contadores))
 
 
-# -- 10 · o pedido ruim ------------------------------------------------------------------------
-
-
 def test_10_vinte_e_oito_bytes_com_crc_errado_ficam_sem_resposta(
     montar: Callable[..., SimpleNamespace],
 ) -> None:
@@ -568,9 +527,6 @@ def test_10_vinte_e_oito_bytes_com_crc_errado_ficam_sem_resposta(
     assert mundo.store.counter("dsu.pacotes") == 0
 
 
-# -- 11 · o carimbo ----------------------------------------------------------------------------
-
-
 def test_11_o_carimbo_nao_recua_quando_o_no_reabre_com_carimbo_menor(
     montar: Callable[..., SimpleNamespace],
 ) -> None:
@@ -582,7 +538,6 @@ def test_11_o_carimbo_nao_recua_quando_o_no_reabre_com_carimbo_menor(
     mundo.envia(sock, _pede_dados(slot=0))
     carimbos = [_dados(p).timestamp for p in _juntar(sock, 0.3)]
     assert len(carimbos) >= 3
-    # O nó reabriu: época nova, carimbo recomeçando perto de zero.
     corrente["fonte"] = _andando(epoca=2, base_us=1_000)
     carimbos += [_dados(p).timestamp for p in _juntar(sock, 0.4)]
     assert len(carimbos) >= 6
@@ -600,9 +555,6 @@ def test_11b_na_mesma_epoca_o_carimbo_parado_ou_para_tras_nao_se_repete(
         carimbos = [_dados(p).timestamp for p in _juntar(sock, 0.5)]
         assert len(carimbos) >= 3, passo
         assert all(b > a for a, b in itertools.pairwise(carimbos)), (passo, carimbos)
-
-
-# -- 12 · o hub que não responde ---------------------------------------------------------------
 
 
 def test_12_o_hub_sem_amostra_rende_conectado_e_o_pacote_neutro(
@@ -632,9 +584,6 @@ def test_12b_o_hub_que_levanta_excecao_tambem_rende_o_neutro(
     mundo.envia(sock, _pede_dados(slot=0))
     pacotes = [_dados(p) for p in _juntar(sock, 0.4)]
     assert len(pacotes) >= 3 and all(p.aceleracao == (0.0, 0.0, 0.0) for p in pacotes)
-
-
-# -- a porta e o ritmo --------------------------------------------------------------------------
 
 
 def test_porta_ocupada_levanta_e_conta(montar: Callable[..., SimpleNamespace]) -> None:
@@ -668,9 +617,6 @@ def test_a_thread_nao_morre_com_lixo_na_porta(montar: Callable[..., SimpleNamesp
     mundo.envia(sock, _pede_versao())
     assert len(_juntar(sock, 0.4)) == 1
     assert threading.active_count() >= 1
-
-
-# -- 13 · o ensaio que o confere vivo --------------------------------------------------------
 
 
 def _ensaio(porta: int, *extra: str) -> subprocess.CompletedProcess[str]:

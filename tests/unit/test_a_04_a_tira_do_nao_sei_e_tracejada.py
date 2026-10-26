@@ -37,13 +37,11 @@ for _p in (str(RAIZ / "src"), str(RAIZ / "src" / "hefesto_dualsense4unix" / "int
         sys.path.insert(0, _p)
 
 
-#: A MESA, na forma que `mesa_viva.mesa_do_estado` devolve. MAC da faixa
 MESA = [
     {"pref": "p1", "uniq": "aa:bb:cc:00:00:01", "jogador": 1, "cor": "white",
      "nome": "White", "via": "USB", "transporte": "usb"},
 ]
 
-#: O MESMO CONTROLE em cada um dos cinco ramos de `rotulo_lightbar`. A diferença
 ACESO = {"uniq": "aa:bb:cc:00:00:01", "transport": "usb", "connected": True,
          "player": 1, "player_slot": 1, "is_primary": True,
          "lightbar_rgb": [0, 0, 255], "lightbar_on": True,

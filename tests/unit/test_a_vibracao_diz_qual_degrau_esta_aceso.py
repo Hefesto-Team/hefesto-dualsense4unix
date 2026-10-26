@@ -74,8 +74,6 @@ def pacote():
     return pacotes.pacote_da_pagina(PAGINA, _ctx())
 
 
-#: o número que o trilho mostra em cada política do produto (o `RUMBLE_POLICY_MULT` em porcento,
-#: e o multiplicador aplicado de 0,7 do tique de mentira no personalizado)
 NO_TRILHO = {"economia": "30", "balanceado": "100", "max": "150", "custom": "70"}
 
 

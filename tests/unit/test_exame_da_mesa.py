@@ -392,7 +392,7 @@ def _radio_e_portas(tmp_path: Path) -> dict:
         "parametro_do_radio": bancada["parametro"],
         "conf_do_radio": bancada["conf"],
         "raiz_usb": portas,
-        "modulos": tmp_path / "modules-vazio",  # (noqa-acento): nome de argumento
+        "modulos": tmp_path / "modules-vazio",  # (noqa-acento)
         "diretorio_do_modulo": tmp_path / "sem-modulo",
     }
 

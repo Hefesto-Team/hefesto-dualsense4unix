@@ -21,7 +21,7 @@ RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 MOCKUP = RAIZ / "mockup" / "05-vibracao.html"
-PADRAO = "padrao"  # (noqa-acento) chave do contrato do clique
+PADRAO = "padrao"  # (noqa-acento)
 UNIQ = "aa:bb:cc:00:00:01"
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 
@@ -30,9 +30,6 @@ def _doc() -> str:
     """O desenho sem o estilo e sem o script: o que a pessoa vê e o que ela aciona."""
     bruto = MOCKUP.read_text(encoding="utf-8")
     return re.sub(r"<(style|script)>.*?</\1>", "", bruto, flags=re.S)
-
-
-# ---------------------------------------------------------------- os padrões, como dado
 
 
 def test_cada_padrao_tem_passos_de_ate_255_e_dura_menos_que_o_teto() -> None:
@@ -62,7 +59,7 @@ def test_padrao_ou_motor_desconhecido_recusa_dizendo_os_que_existem() -> None:
     with pytest.raises(ValueError, match="batida, onda, tranco"):
         padroes.sequencia("inventado", "ambos")
     with pytest.raises(ValueError, match="esquerdo, direito, ambos"):
-        padroes.sequencia("onda", "tres")  # (noqa-acento) motor que não existe
+        padroes.sequencia("onda", "tres")  # (noqa-acento)
 
 
 def test_tocar_percorre_os_passos_na_ordem_com_o_tempo_de_cada_um_e_reduz_pela_barra() -> None:
@@ -73,9 +70,6 @@ def test_tocar_percorre_os_passos_na_ordem_com_o_tempo_de_cada_um_e_reduz_pela_b
     passos = padroes.PADROES["tranco"]
     assert esperas == [ms / 1000 for ms, _, _ in passos]
     assert enviados == [(round(e / 2), d) for _, e, d in passos]
-
-
-# ---------------------------------------------------------------- o desenho
 
 
 def test_a_tela_nao_tem_interrogacao_nem_meus_toques_nem_texto_de_dica_na_linha() -> None:
@@ -98,7 +92,7 @@ def test_o_automatico_governa_a_forca_e_os_motores_e_nao_o_testar() -> None:
     assert governa
     assert ".forca" in governa.group(1) and ".motor" in governa.group(1)
     cl = governa.group(1)
-    assert "acoes" not in cl and "btn" not in cl, (  # (noqa-acento) classe
+    assert "acoes" not in cl and "btn" not in cl, (  # (noqa-acento)
         "o Testar e o Parar não são escolha do jogo: o automático não os trava")
 
 
@@ -112,9 +106,6 @@ def test_o_criar_e_o_sentir_apontam_para_o_quadro_que_eles_leem() -> None:
         assert all('data-hef-forma="criar-vibracao"' in b for b in botoes), (gesto, botoes)
     assert doc.count('data-linha="padrao"') == len(padroes.FORMAS_DE_CRIAR), "uma linha por forma"
     assert doc.count('data-linha="motores"') == 3, "são três escolhas de motor"
-
-
-# ---------------------------------------------------------------- o pacote
 
 
 class _Ponte:
@@ -264,9 +255,6 @@ def test_o_chip_toca_no_controle_escolhido_na_fita_e_sem_escolha_no_primeiro(a05
         bloco = (pacotes.pacote_da_pagina("05-vibracao.html", ctx) or {})["blocos"][
             a05.SELETOR_DOS_TOQUES]
         assert f'data-uniq="{uniq}"' in bloco, (escolhido, bloco)
-
-
-# ---------------------------------------------------------------- a medida, num Chrome headless
 
 
 def test_a_aba_cabe_sem_rolar_sem_vao_e_o_nome_tem_a_largura_da_coluna() -> None:

@@ -23,14 +23,12 @@ import pytest
 from tests.unit.test_o_pad_nasce_no_mesmo_usb_do_som import INTERFACE_DO_GADGET
 from tests.unit.test_o_pad_recusado_pelo_broker_tenta_de_novo import Mesa
 
-#: o teto de um tique inteiro (o ``pump_ff`` e o report de cada pad).
 TETO_DO_TIQUE_S = 0.05
-#: P1 e P3 no cabo, P2 e P4 no rádio (``MESA_MISTA``); o último da tupla é o que cai.
 MESAS = [((1, 2), 2), ((1, 2), 1), ((1, 2, 3, 4), 4), ((1, 2, 3, 4), 3), ((1,), 1),
          ((2, 4), 2), ((1, 3), 3)]
 IDS = ["p2-bt-volta", "p1-usb-volta", "quatro-p4-volta", "quatro-p3-volta", "um-so",
        "todos-bt", "todos-usb"]
-QUEDAS = ("caiu", "nao_enumerou")  # (noqa-acento): chave de máquina
+QUEDAS = ("caiu", "nao_enumerou")
 
 
 def _guardar_o_lado_do_jogo(m: Mesa) -> None:
@@ -60,7 +58,6 @@ def _de_pe(m: Mesa, jogadores: tuple[int, ...], quem_volta: int, queda: str) -> 
         m.ug._o_gadget_caiu(volta, gadget)
         assert volta._gadget_caiu
     else:
-        # o prazo da enumeração conta a fila: quem nasceu atrás espera mais
         m.relogio[0] = volta._gadget_prazo + 1.0
         assert m.b.esperar(lambda: volta._gadget_falhou)
     m.passar(0.1, pads, assentar=False)
@@ -112,11 +109,12 @@ def test_o_broker_preso_nao_prende_o_tique_da_volta(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, jogadores: tuple[int, ...],
     quem_volta: int, queda: str,
 ) -> None:
-    # D-2510-A-VOLTA-DO-GADGET-PEDE-FORA-DO-TIQUE
     """O broker aceita e não responde: o tique da volta, e o dos outros, abaixo de 50 ms.
 
     Mordida: refaça o device no tique (``_refazer_o_device`` no lugar do
     ``_PedidoAoBroker``), e o tique da volta leva os 2 s do cliente.
+
+    Prova da D-2510-A-VOLTA-DO-GADGET-PEDE-FORA-DO-TIQUE.
     """
     m = Mesa(monkeypatch, tmp_path, "sem_sessao_ativa")
     pads: list[Any] = []
@@ -267,7 +265,6 @@ def test_a_volta_sem_gadget_deixa_o_uhid_intacto(
         assert m.eventos("uhid_device_created") == criados, (
             "a volta sem gadget desfez e refez o uhid"
         )
-        # a recusa da sessão rearma a volta; o contrato que falta, não
         assert volta._gadget_outra_vez is (sem_gadget == "sem_sessao")
     finally:
         _fechar(m, pads)

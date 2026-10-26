@@ -28,7 +28,6 @@ from pathlib import Path
 
 RAIZ_PADRAO = Path(__file__).resolve().parents[1]
 
-# A isenção é datada e nasce vazia: caminho -> «DD/MM/AAAA, quem pediu: por que este ignorado mora no índice».
 ISENTOS: dict[str, str] = {}
 
 

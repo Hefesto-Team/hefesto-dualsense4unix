@@ -8,8 +8,6 @@ _STEAM_APP_WC_RE = re.compile(r"^steam_app_(\d+)$", re.IGNORECASE)
 
 _WC_CLIENTE_STEAM = frozenset({"steam", "steamwebhelper"})
 
-#: As janelas dos LANÇADORES e das lojas (o cliente, nunca o jogo que ele abre),
-#: sem caixa: a classe nativa e o id do Flatpak de cada um.
 JANELAS_DE_LANCADOR = frozenset(
     {
         "steam", "steamwebhelper", "com.valvesoftware.steam",

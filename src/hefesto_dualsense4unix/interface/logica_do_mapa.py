@@ -107,7 +107,6 @@ class LogicaDoMapa:
             numero: dict(valor) for numero, valor in bruto.get("portas", {}).items()
         }
         self.escolhido: str = ""
-        #: A pergunta curta do «Acrescentar hub» está aberta? É estado de tela, não vai ao disco.
         self.perguntando_o_hub: bool = False
 
 

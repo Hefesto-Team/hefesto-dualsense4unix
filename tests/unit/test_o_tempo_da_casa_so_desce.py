@@ -29,9 +29,6 @@ def _carregar(rel: str, nome: str) -> ModuleType:
 RECIBO = _carregar("scripts/recibo_da_medida.py", "_recibo_do_tempo")
 
 
-# --- a memória do rápido: o bytecode que os portões escrevem não muda a chave ---------------------
-
-
 def _git(raiz: Path, *args: str) -> None:
     subprocess.run(["git", "-C", str(raiz), *args], check=True, capture_output=True)
 
@@ -101,8 +98,6 @@ def test_mordida_com_o_bytecode_devolvido_a_chave_a_chave_muda(
         "a mordida não mordeu: com o bytecode na chave, o `.pyc` novo tinha de mudá-la")
 
 
-# --- o ci-local lê a tabela e os workflows UMA vez ------------------------------------------------
-
 CI_LOCAL = RAIZ / "scripts" / "ci-local.sh"
 
 
@@ -127,8 +122,6 @@ def _awks_da_corrida(tmp_path: Path, *args: str, script: Path = CI_LOCAL) -> int
     return len(registro.read_text().splitlines())
 
 
-# A tabela da casa tem dezenas de jobs. Lida uma vez, a conferência gasta ~23 `awk` e o preço não
-# cresce com a tabela; relida a cada pergunta, eram 749 (0,8 s só para listar) e crescia com ela.
 TETO_DE_AWK = 60
 
 
@@ -157,7 +150,7 @@ def test_mordida_o_ci_de_casa_que_rele_a_cada_pergunta_estoura_o_teto(tmp_path: 
     for antes, depois in trocas:
         assert antes in torto, antes
         torto = torto.replace(antes, depois)
-    raiz = tmp_path / "raiz"  # o script acha a raiz pelo próprio caminho: uma raiz de mentira
+    raiz = tmp_path / "raiz"
     (raiz / "scripts").mkdir(parents=True)
     (raiz / ".github").symlink_to(RAIZ / ".github")
     (raiz / "scripts" / "ci-local").symlink_to(RAIZ / "scripts" / "ci-local")
@@ -166,8 +159,6 @@ def test_mordida_o_ci_de_casa_que_rele_a_cada_pergunta_estoura_o_teto(tmp_path: 
     quantos = _awks_da_corrida(tmp_path, "--listar", script=copia)
     assert quantos > TETO_DE_AWK, f"a mordida não mordeu: só {quantos} `awk` sem a cura"
 
-
-# --- a catraca do tempo: tempo é ruído, então o piso tem folga; sobe pago, desce sozinho -------
 
 TEMPO = _carregar("scripts/o-tempo-da-casa.py", "_o_tempo_da_casa")
 CADERNO_DO_TEMPO = TEMPO.CADERNO
@@ -248,10 +239,10 @@ def _roda(raiz: Path, casa: Path, *args: str, base: str | None = None) -> int:
 
 def test_dentro_da_folga_nada_muda(
         mundo: tuple[Path, Path], capsys: pytest.CaptureFixture[str]) -> None:
-    # D-1610-O-TEMPO-DA-CASA-SO-DESCE
+    """Prova da D-1610-O-TEMPO-DA-CASA-SO-DESCE."""
     raiz, casa = mundo
     antes = (raiz / CADERNO_DO_TEMPO).read_bytes()
-    _escreve_casa(casa, suite_s=2600.0, rapido_s=44, completo_s=70)  # +8% / +10% / +17%: ruído
+    _escreve_casa(casa, suite_s=2600.0, rapido_s=44, completo_s=70)
     assert _roda(raiz, casa) == 0
     assert _roda(raiz, casa, "--fechar") == 0
     assert (raiz / CADERNO_DO_TEMPO).read_bytes() == antes, "o ruído mexeu no piso"
@@ -261,7 +252,7 @@ def test_dentro_da_folga_nada_muda(
 def test_subir_alem_da_folga_sem_tempo_reprova_e_diz_a_medida(
         mundo: tuple[Path, Path], capsys: pytest.CaptureFixture[str]) -> None:
     raiz, casa = mundo
-    _escreve_casa(casa, suite_s=2800.0)  # +16,7%, folga de 10%
+    _escreve_casa(casa, suite_s=2800.0)
     assert _roda(raiz, casa) == 1
     saida = capsys.readouterr().out
     assert "suite-pytest-s" in saida and "folga de 10%" in saida
@@ -296,7 +287,7 @@ def test_tempo_sem_razao_ou_de_outra_medida_nao_paga(mundo: tuple[Path, Path]) -
 
 def test_descer_alem_da_folga_baixa_o_piso_e_so_o_dele(mundo: tuple[Path, Path]) -> None:
     raiz, casa = mundo
-    _escreve_casa(casa, suite_s=1800.0, rapido_s=40)  # a suíte desce 25%; o rápido não se mexe
+    _escreve_casa(casa, suite_s=1800.0, rapido_s=40)
     antes_rapido = _piso(raiz, TEMPO.RAPIDO)
     assert _roda(raiz, casa, "--fechar", "--conferir") == 0
     assert _piso(raiz, TEMPO.SUITE)["piso"] == 2400, "--conferir gravou"
@@ -309,7 +300,7 @@ def test_descer_alem_da_folga_baixa_o_piso_e_so_o_dele(mundo: tuple[Path, Path])
 def test_descer_dentro_da_folga_nao_regrava(mundo: tuple[Path, Path]) -> None:
     raiz, casa = mundo
     antes = (raiz / CADERNO_DO_TEMPO).read_bytes()
-    _escreve_casa(casa, suite_s=2250.0)  # -6%: dentro de 10%
+    _escreve_casa(casa, suite_s=2250.0)
     assert _roda(raiz, casa, "--fechar") == 0
     assert (raiz / CADERNO_DO_TEMPO).read_bytes() == antes
 
@@ -400,11 +391,8 @@ def test_mordida_sem_o_pagamento_a_subida_com_tempo_reprova(
     assert _roda(raiz, casa, "--fechar", base=base) == 1, "sem o trailer a subida não passa"
 
 
-# --- a suíte só soma uma corrida (O-TEMPO-DA-SUITE-SO-SOMA-UMA-CORRIDA-01) ------------------------
-
-
 def test_uma_parte_de_outra_corrida_deixa_a_suite_indisponivel(tmp_path: Path) -> None:
-    # D-2310-O-PISO-DA-SUITE-E-O-PYTEST-DAS-PARTES-EM-SERIE
+    """Prova da D-2310-O-PISO-DA-SUITE-E-O-PYTEST-DAS-PARTES-EM-SERIE."""
     _escreve_casa(tmp_path)
     assert TEMPO.censo_da_suite(tmp_path).numero == 2400
     parte = tmp_path / "fecho" / "suite" / "parte-05.txt"
@@ -444,7 +432,7 @@ def test_o_fecho_que_reaproveitou_recibo_nao_alimenta_o_piso(tmp_path: Path) -> 
 def test_a_parte_trocada_vira_aviso_no_fecho_e_o_piso_fica(
         mundo: tuple[Path, Path], capsys: pytest.CaptureFixture[str]) -> None:
     raiz, casa = mundo
-    _escreve_casa(casa, suite_s=4800.0)  # o dobro: sem a conferência, reprovaria
+    _escreve_casa(casa, suite_s=4800.0)
     (casa / "fecho" / "suite" / "parte-23.txt").write_text(
         _parte(23, 200.0, "        corrida árvore=t9 arquivos=72 partição=p9\n"), encoding="utf-8")
     assert _roda(raiz, casa, "--fechar") == 0

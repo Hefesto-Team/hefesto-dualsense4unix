@@ -126,9 +126,6 @@ def _o_duplo_clique() -> None:
     a09._relatar_o_recibo(a09.CAMPO_DAS_CORRECOES, a09._reaplicar_as_correcoes())
 
 
-# 1. O duplo clique das correções espera o prazo da janela
-
-
 def test_o_duplo_clique_espera_a_trava_e_diz_heroic(
         tmp_path: Path, _lar: Path, monkeypatch: pytest.MonkeyPatch,
         capsys: pytest.CaptureFixture[str]) -> None:
@@ -170,9 +167,6 @@ def test_o_duplo_clique_com_a_trava_presa_alem_do_prazo_nao_diz_que_nao_havia_la
     assert [x.get("quem") for x in esperou] == [cpe.QUEM_JANELA], esperou
 
 
-# 2. A carona diz que a trava não veio
-
-
 def test_a_carona_sem_a_trava_diz_que_ela_nao_veio(
         _lar: Path, _trava_presa: subprocess.Popen[str]) -> None:
     escritos = cpe.curar_todas_as_estradas(espera=0.4)
@@ -199,9 +193,6 @@ def test_a_carona_com_a_trava_escreve_e_diz_onde(_lar: Path) -> None:
     assert cpe.frase_das_estradas(escritos) == "O ambiente do Hefesto está em: Heroic."
 
 
-# 3. O serviço não muda
-
-
 def test_o_servico_le_a_carona_como_sequencia(
         _lar: Path, _trava_presa: subprocess.Popen[str]) -> None:
     """O `list(estradas)` do diário do serviço segue valendo, com a trava e sem ela."""
@@ -223,9 +214,6 @@ def test_o_servico_segue_com_o_prazo_dele_e_o_diario_diz_quem(
     esperou = [x for x in diario if x.get("event") == "carona_esperou_a_janela"]
     assert [(x.get("quem"), x.get("espera_s")) for x in esperou] == [
         (cpe.QUEM_SERVICO, cpe.ESPERA_DO_SERVICO_S)], esperou
-
-
-# 4. O anotar do `.yml`
 
 
 def test_o_anotar_sem_a_trava_diz_ocupada(

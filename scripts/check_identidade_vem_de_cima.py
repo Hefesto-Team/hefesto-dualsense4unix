@@ -111,7 +111,6 @@ class _Varredor(HTMLParser):
         tem = any(a in dicio for a in ENDERECOS)
         linha = self.getpos()[0]
 
-        # O `--plastico` mora no atributo `style` do PRÓPRIO elemento, então ele
         estilo = dicio.get("style", "")
         if not tem:
             for m in PLASTICO.finditer(estilo):

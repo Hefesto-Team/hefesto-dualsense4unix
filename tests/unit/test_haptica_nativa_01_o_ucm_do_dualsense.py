@@ -28,7 +28,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 ROTEIRO = RAIZ / "scripts" / "install_ucm_dualsense.sh"
 ASSETS = RAIZ / "assets" / "ucm"
 
-#: O nome longo da placa do DualSense da bancada, lido em /proc/asound/cards
 NOME_MEDIDO = "Sony Interactive Entertainment DualSense Wireless Controller at usb-0000:0c:00."
 
 PADRAO = f"{NOME_MEDIDO}.conf"

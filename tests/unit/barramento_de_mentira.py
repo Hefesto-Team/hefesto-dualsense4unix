@@ -30,7 +30,6 @@ ADAPTADOR = "aa:bb:cc:00:00:11"
 CONTROLE = "aa:bb:cc:00:00:22"
 VIZINHO = "aa:bb:cc:00:00:44"
 
-#: O que os seis objetos de DualSense do BlueZ responderam na bancada em
 CLASSE_DO_DUALSENSE = 9480
 ICONE_DO_DUALSENSE = "input-gaming"
 

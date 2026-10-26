@@ -70,7 +70,7 @@ from hefesto_dualsense4unix.utils.tela_de_mentira import (  # noqa: E402
 
 garantir_tela_de_mentira()
 
-from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # noqa: E402  isort:skip
+from hefesto_dualsense4unix.interface.janela import JanelaDaAba  # noqa: E402  # isort:skip
 
 from gi.repository import GLib, Gtk  # noqa: E402
 
@@ -82,15 +82,14 @@ INTERFACE = pathlib.Path(__file__).resolve().parents[2] / "src" / "hefesto_duals
 sys.path.insert(0, str(INTERFACE))
 
 import mesa_viva  # noqa: E402
-import monta  # noqa: E402  (o gerador do mockup, usado como BIBLIOTECA)
-import onde  # noqa: E402  (o dono das duas pastas: bancada e publicado)
+import monta  # noqa: E402
+import onde  # noqa: E402
 
-import aba10  # noqa: E402  isort:skip
+import aba10  # noqa: E402  # isort:skip
 
 PAGINA = onde.PUBLICADO / "10-perfis.html"
 TITULO_ESPERADO = "Hefesto — aba PERFIS"
 
-#: O tique desta aba. A Controles lê o `state_full` a 10 Hz porque desenha
 TIQUE_MS = 500
 
 TIQUE_RAPIDO_MS = 100

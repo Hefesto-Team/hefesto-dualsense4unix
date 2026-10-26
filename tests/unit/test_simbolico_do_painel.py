@@ -61,7 +61,7 @@ def test_o_simbolico_e_xml_valido():
     for arq in (SIMBOLICO, SIMBOLICO_APPLET, *OPCOES):
         try:
             ET.parse(arq)
-        except ET.ParseError as erro:  # pragma: no cover - só quando quebra
+        except ET.ParseError as erro:  # pragma: no cover
             pytest.fail(f"{arq.name} não é XML válido: {erro}")
 
 

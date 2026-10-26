@@ -22,7 +22,7 @@ _PORTAS_DO_DAEMON = (
 )
 
 _DONO_DA_PAGINA = "onde"
-_PERGUNTAS_AO_DONO = ("pagina", "paginas")  # (noqa-acento) nome de função do `onde`
+_PERGUNTAS_AO_DONO = ("pagina", "paginas")  # (noqa-acento)
 
 _ESQUEMA_PERMITIDO = "file://"
 

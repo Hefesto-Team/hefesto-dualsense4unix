@@ -38,9 +38,6 @@ NO_DA_PLACA = f"{USB4}/4-1"
 INTERFACE_DA_PLACA = f"{NO_DA_PLACA}/4-1:1.0"
 
 
-# ---------- o censo lê o que o kernel ligou ------------------------------------------------
-
-
 def _censo_com(filhos: dict[str, list[str]], conteudo: dict[str, str] | None = None) -> Any:
     banca = Bancada(listar=lambda raiz: (
         Bancada().listagem if raiz == RAIZ_USB else list(filhos.get(raiz, ()))))
@@ -76,7 +73,6 @@ def test_o_controle_se_conhece_pelo_botao_sul_do_input() -> None:
     caps = f"{entrada}/input9/capabilities/key"
     com = _censo_com({INTERFACE_DA_PLACA: ["input"], entrada: ["input9"]},
                      {caps: "1 0 0 0 0 0 0 0 0 0\n"})
-    # BTN_SOUTH = 0x130 = bit 304 = palavra 4 (de 64 bits), bit 48
     assert com.ligado_como == ""
     com = _censo_com({INTERFACE_DA_PLACA: ["input"], entrada: ["input9"]},
                      {caps: f"{1 << 48:x} 0 0 0 0\n"})
@@ -106,9 +102,6 @@ def test_o_wifi_lido_pelo_kernel_conta_como_irradiando_na_ordem_da_mesa() -> Non
 
     assert om._irradia(_leitura_do_censo({INTERFACE_DA_PLACA: ["ieee80211"]}), "1") is True
     assert om._irradia(_leitura_do_censo({}), "1") is False
-
-
-# ---------- o NetworkManager: duas bandas, a mesma placa -----------------------------------
 
 
 def _sys_com_usb(raiz: Path, vid: str = "2357", pid: str = "012d",
@@ -178,12 +171,10 @@ def test_a_placa_que_some_do_networkmanager_e_volta_em_outro_no_e_a_mesma(
     memoria: dict[str, Any] = {}
     relogio = Relogio()
     antes = fw.ler_as_redes(nm, raiz_net=raiz_net, memoria=memoria, agora=relogio)
-    # a placa cai: o NM não lista nada
     vazio = NetworkManagerDeMentira({"/outro": {}})
     relogio.t += 3.0
     segurada = fw.ler_as_redes(vazio, raiz_net=raiz_net, memoria=memoria, agora=relogio)
     assert segurada == antes
-    # volta no outro barramento, com outro nome, sem ponto ativo ainda
     raiz_net2, no_novo = _sys_com_usb(tmp_path / "b", interface="wlan0", porta="3-1.2")
     r2 = _rede("wlan0", 2462, 20)
     r2["dispositivo"][fw.INTERFACE_SEM_FIO]["ActiveAccessPoint"] = fw.SEM_PONTO_ATIVO
@@ -202,9 +193,6 @@ def test_um_dubl_injetado_nunca_herda_a_rede_de_outro(tmp_path: Path) -> None:
     nm = NetworkManagerDeMentira({"/dev/0": r["dispositivo"], "/ponto": r["ponto"]})
     assert fw.ler_as_redes(nm, raiz_net=raiz_net)
     assert fw.ler_as_redes(NetworkManagerDeMentira({}), raiz_net=raiz_net) is None
-
-
-# ---------- as quedas: o diário do kernel ---------------------------------------------------
 
 
 def _diario(*eventos: tuple[float, str, str, str]) -> str:
@@ -235,7 +223,7 @@ def test_tirar_da_porta_e_nunca_voltar_nao_e_queda() -> None:
     texto = _diario((10.0, "nasceu", "4-1.2", PLACA), (100.0, "sumiu", "4-1.2", PLACA))
     assert qw.quedas_do_diario(texto, 200.0) == {}
     texto += _diario((200.0, "nasceu", "4-1.2", PLACA))
-    assert qw.quedas_do_diario(texto, 300.0) == {}  # voltou 100 s depois: replug dela
+    assert qw.quedas_do_diario(texto, 300.0) == {}
 
 
 def test_quedas_coladas_valem_uma_e_a_outra_placa_nao_entra_na_conta() -> None:
@@ -276,9 +264,6 @@ def test_o_diario_vem_por_executor_e_sob_a_suite_sem_executor_nada_roda(
     assert qw.ler_as_quedas(lambda _c: None) is None
 
 
-# ---------- a tela: 5 GHz, 2.4 GHz e as quedas ---------------------------------------------
-
-
 def _cena(rede: dict[str, Any], usb: str = "3.0", viz: bool = True) -> dict[str, Any]:
     vid_pid = "2357:012d"
     return {
@@ -302,12 +287,11 @@ def _linhas(cena: dict[str, Any]) -> dict[str, Any]:
 def test_em_5_ghz_a_linha_diz_fora_da_faixa_e_nunca_nao_identificado() -> None:
     rede = {"no": "/sys/novo/3-1.2", "mhz": 5805, "largura": 80, "chave": "usb:2357:012d"}
     linhas = _linhas(_cena(rede))
-    assert list(linhas) == ["2357:012d"]  # a MESMA linha, mesmo com o nó trocado
+    assert list(linhas) == ["2357:012d"]
     ln = linhas["2357:012d"]
     assert ln.sem_faixa == fa.FORA_DA_FAIXA and ln.sub.startswith("5 GHz · canal 161")
     html = a08.html_dos_canais(_cena(rede))
     assert ESPECIE_DESCONHECIDA not in html and "Não identificado" not in html
-    # fora da faixa dos controles, a linha fica e o trilho diz a banda (desenho de 06/10/2026)
     linha = html.split('data-id="2357:012d"')[1].split('class="ar-estado"')[0]
     assert 'class="ar-faixa fora"' in linha and "<span>5 GHz · canal 161</span>" in linha
 
@@ -357,5 +341,5 @@ def test_o_leitor_das_quedas_roda_em_fundo_e_junta_na_rede(monkeypatch: pytest.M
     juntas = a08._o_wifi_com_as_quedas(redes, {"usb:2357:012d": qw.Quedas(3, 7)})
     assert juntas[0]["quedas"] == {"n": 3, "min": 7} and "quedas" not in juntas[1]
     assert a08._o_wifi_com_as_quedas(redes, None) == redes
-    assert os.environ.get("PYTEST_CURRENT_TEST")  # a guarda da suíte está de pé
+    assert os.environ.get("PYTEST_CURRENT_TEST")
     assert a08._ler_as_quedas() is None

@@ -229,7 +229,6 @@ class TestOGestoDelaNoMeioDoJogo:
 
 SEM_EFEITO = bytes(11)
 SEM_EFEITO_OFICIAL = bytes([0x05] + [0] * 10)
-#: Um modo de efeito com os parâmetros em zero: no gatilho, nenhuma resistência.
 RIGIDO_SEM_FORCA = bytes([0x01] + [0] * 10)
 EFEITO_DO_PERFIL = bp.TriggerEffect(mode=1, forces=(5, 200, 0, 0, 0, 0, 0))
 

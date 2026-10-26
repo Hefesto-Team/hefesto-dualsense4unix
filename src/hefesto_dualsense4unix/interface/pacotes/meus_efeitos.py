@@ -14,14 +14,12 @@ from typing import Any
 
 from . import Contexto, gesto
 
-#: A opção `meu:<nome>` das listas de efeito pronto é um efeito da biblioteca.
 PREFIXO_DO_MEU = "meu:"
 
 SEPARADOR_DOS_MEUS = "Meus efeitos"
 
 GESTO_DE_CRIAR = "criar-efeito"
 
-#: feature → chave na caixa de preferências. A dos gatilhos fica como era.
 CHAVES: dict[str, str] = {
     "gatilhos": "gatilhos_meus_efeitos",
     "imersao": "imersao_meus_efeitos",
@@ -30,7 +28,6 @@ CHAVES: dict[str, str] = {
     "controles": "controles_meus_efeitos",
 }
 
-#: As features que criam pelo gesto `criar-efeito`; os gatilhos guardam pelo «Guardar» da aba.
 CRIAM_PELO_GESTO = ("imersao", "luz", "vibracao", "controles")
 
 TETO_DO_NOME = 40

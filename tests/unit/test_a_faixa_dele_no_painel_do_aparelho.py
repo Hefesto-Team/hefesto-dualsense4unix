@@ -19,7 +19,7 @@ from typing import Any
 import pytest
 
 from tests.unit import test_o_aparelho_se_corrige_onde_se_clica as base
-from tests.unit.test_o_aparelho_se_corrige_onde_se_clica import (  # noqa: F401  (a fixture)
+from tests.unit.test_o_aparelho_se_corrige_onde_se_clica import (  # noqa: F401
     _clicar,
     _js,
     _ler,
@@ -103,8 +103,6 @@ def test_o_painel_unico_nao_repete_a_faixa_que_a_aba_08_desenha(disco: Any) -> N
     assert f["celulas"] == -1 and not f["rotulo"] and f["texto"] == "", f
 
 
-# --- a conta: a mesma da aba 08 ---------------------------------------------------------------
-
 ADAPTADOR = "AA:BB:CC:00:00:0A"
 
 
@@ -140,7 +138,7 @@ def test_a_faixa_do_radio_e_a_do_receptor_saem_da_conta_da_aba_08(
     assert ["Teclado", a08.COR_DA_FAIXA_NO_MAPA["teclado"]] in radio["partes"], radio["partes"]
     for faixa in (radio, teclado):
         assert "".join(t for t, _c in faixa["partes"]) == faixa["texto"], faixa
-    json.dumps(faixas)  # vai à página: tem de ser JSON
+    json.dumps(faixas)
 
 
 def test_a_marca_de_quem_perde_aparece_no_canal_ocupado_do_receptor(
@@ -159,7 +157,6 @@ def test_a_marca_de_quem_perde_aparece_no_canal_ocupado_do_receptor(
     texto = faixas["1111:0001"]["texto"]
     assert texto.startswith("briga com Controle"), texto
     assert ["Controle", a08.COR_DA_FAIXA_NO_MAPA["controle"]] in faixas["1111:0001"]["partes"]
-    # sem a saúde lida, o selo é o genérico de quem ocupa («briga com 1»): a frase não se repete
     cena["vizinhos"][0].pop("saude")
     texto = a08.faixas_para_o_mapa(object())["1111:0001"]["texto"]  # type: ignore[arg-type]
     assert texto.count("briga com") == 1, texto

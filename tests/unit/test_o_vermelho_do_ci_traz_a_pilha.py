@@ -140,8 +140,6 @@ def test_o_passo_imprime_so_a_parte_vermelha(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     (tmp_path / "parte-02.log").write_text("........\n8 passed in 1.00s\n", encoding="utf-8")
-    # As duas mortes que o script conta como vermelho e que não têm FAILURES:
-    # sem sumário, e por sinal depois do sumário (o WebKit ao sair).
     (tmp_path / "parte-03.log").write_text(
         "....\nFatal Python error: Segmentation fault\n"
         "  File \"x.py\", line 9 in morre_sem_sumario\n",

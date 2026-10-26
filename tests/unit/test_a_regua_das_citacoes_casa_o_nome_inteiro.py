@@ -77,8 +77,6 @@ def test_a_quebra_de_linha_do_comentario_fica_no_lugar(val: ModuleType) -> None:
     assert _casa(val, "alvo", html, ".html", 4), "o comentário de duas linhas não desloca nada"
 
 
-# --- o validador e o reapontar, num repositório de mentira -----------------------------------
-
 ANTES = (
     '"""O alvo."""\n# o acao_mic mora logo abaixo\ndef acao_mic():\n    return 1\n'
     "todas_as_cores = (1, 2)\ncor = 1\n"

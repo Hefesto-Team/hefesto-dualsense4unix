@@ -41,18 +41,14 @@ from tests.unit.test_o_pad_que_nasce_pede_o_gadget_fora_do_tique import (
 )
 from tests.unit.test_o_pad_recusado_pelo_broker_tenta_de_novo import Mesa
 
-#: de um a quatro pads, o P1 sempre de pé; P1 e P3 no cabo, P2 e P4 no rádio.
 MESAS_DO_P1 = [(1,), (1, 2), (1, 2, 3), (1, 2, 3, 4), (1, 3)]
 IDS_DO_P1 = ["so-o-p1", "p1-e-p2", "p1-p2-p3", "quatro", "todos-usb"]
-#: o aparelho do P1: o do cabo (o da ``MESA_MISTA``) ou o do rádio (trocado com o P2).
-TRANSPORTES_DO_P1 = ("cabo", "radio")  # (noqa-acento): chave de máquina
-#: quem cai e volta a pedir o gadget; o pedido dele é largado pelo ``stop``.
+TRANSPORTES_DO_P1 = ("cabo", "radio")
 MESAS_DO_TARDIO = [((1, 2), 2), ((1, 2), 1), ((1, 2, 3, 4), 4), ((1, 2, 3, 4), 1),
                    ((1,), 1), ((2, 4), 2), ((1, 3), 3)]
 IDS_DO_TARDIO = ["p2-bt", "p1-usb", "quatro-p4", "quatro-p1", "um-so", "todos-bt",
                  "todos-usb"]
-#: o ``stop`` que não espera (o do tique) e o que espera (o da parada do daemon).
-PARADAS = ("no_tique", "que_espera")  # (noqa-acento): chave de máquina
+PARADAS = ("no_tique", "que_espera")
 
 
 def _o_p1_no(monkeypatch: pytest.MonkeyPatch, transporte: str) -> None:
@@ -88,7 +84,6 @@ def test_a_troca_de_ordem_com_o_p1_vivo_nao_prende_o_tique_no_broker_preso(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, jogadores: tuple[int, ...],
     transporte: str,
 ) -> None:
-    # D-2510-O-P1-DA-TROCA-DE-ORDEM-DESCE-PELA-FILA
     """O broker aceita e não responde: o tique em que o co-op derruba o P1 para a troca
     de ordem fica abaixo de 50 ms, e a descida do gadget dele chega ao broker depois.
 
@@ -194,7 +189,6 @@ def test_o_gadget_que_chega_para_o_pad_parado_desce_pela_fila(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, jogadores: tuple[int, ...],
     quem_cai: int, parada: str,
 ) -> None:
-    # D-2510-O-GADGET-TARDIO-DESCE-PELA-FILA
     """O pad perdeu o gadget e pede outro; ele para com o pedido em voo, e o gadget chega
     depois: ele desce pela fila, fora do fio do pedido, e o MAC, o ``stop_all`` e o pad
     novo do mesmo aparelho só seguem com a descida feita.

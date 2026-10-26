@@ -49,8 +49,7 @@ def test_a_lupa_acha_o_nome_do_jogo_sem_acento_e_sem_caixa(
     monkeypatch.setattr(a10_perfis, "_PROCURA", "MORTAL")
     assert [x["nome"] for x in a10_perfis._filtrada(LISTA)] == ["Mortal Kombat"]
 
-    # sem acento: `acao` tem de achar `Ação`  (noqa-acento) o termo SEM acento
-    monkeypatch.setattr(a10_perfis, "_PROCURA", "acao")  # (noqa-acento) dado
+    monkeypatch.setattr(a10_perfis, "_PROCURA", "acao")  # (noqa-acento)
     assert [x["nome"] for x in a10_perfis._filtrada(LISTA)] == ["Ação"]
 
     monkeypatch.setattr(a10_perfis, "_PROCURA", "1245620")

@@ -22,8 +22,6 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 MOCKUP = RAIZ / "mockup" / "07-lancadores.html"
 CHROME = pathlib.Path("/usr/bin/google-chrome")
-# 19/10/2026: Steam, Heroic e Flatpak de fábrica e o Lutris como extensão instalada; o RetroArch é a
-# linha da migração (sem botões), medida em `test_os_lancadores_de_fora_viram_extensoes.py`.
 ACHADOS = {"steam", "lutris"}
 NAO_ACHADOS = {"heroic", "flatpak"}
 GESTOS = ["identificar-lancador", "criar-perfil-para-um-jogo", "configurar-lancador"]
@@ -60,7 +58,6 @@ def _problemas(doc: str) -> list[str]:
                 falta.append(f"{chave}: {gesto} {'apagado' if apagado else 'aceso'} fora do estado")
             if bool(apagado) != ('aria-disabled="true"' in resto):
                 falta.append(f"{chave}: {gesto} apagado sem aria-disabled (ou o inverso)")
-            # O apagado não leva gesto, destino nem chave: o Enter e o `click()` o disparavam.
             if apagado and re.search(r'data-gesto=|href=|data-v=', resto):
                 falta.append(f"{chave}: {gesto} apagado ainda dispara o gesto")
             if not apagado and f'data-gesto="{gesto}"' not in resto:
@@ -79,7 +76,7 @@ def test_as_filas_tem_os_tres_botoes_e_o_estado_certo() -> None:
 
 
 def test_a_tira_chama_a_aba_de_experimental() -> None:
-    # D-1810-A-ABA-EXPERIMENTAL-SE-PUBLICA-COMO-FICOU
+    """Prova da D-1810-A-ABA-EXPERIMENTAL-SE-PUBLICA-COMO-FICOU."""
     tira = re.search(r'<div class="tira">(.*?)</div>', _doc(), flags=re.S).group(1)
     ativa = re.findall(r'<a class="aba ativa" href="07-lancadores.html">([^<]+)</a>', tira)
     assert ativa == ["Experimental"], ativa

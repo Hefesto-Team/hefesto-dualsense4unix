@@ -221,12 +221,9 @@ def test_a_gestao_mora_dentro_do_check_up(arquivo: pathlib.Path) -> None:
     for gesto in ("dono-renomear",
                   "mapear-comecar", "mapear-gravar", "mapear-parar", "examinar-portas"):
         assert f'data-gesto="{gesto}"' in html, f"o gesto `{gesto}` não tem botão"
-    # O perfil de desempenho mora só na aba Sistema (mudança 12 do todo, 13/10): o cartão não o
-    # tem. A publicada acompanha na costura (`--publicar`), e até lá guarda o desenho velho.
     if arquivo == BANCADA or "data-dica-id" in html:
         for saiu in ("perfil-do-controle", "economia-do-controle", "est-mira"):
             assert f'data-gesto="{saiu}"' not in html and f'data-campo="{saiu}"' not in html
-        # `data-campo="perfil"` segue no «Perfil ativo» do cabeçalho (`pa-nome`); o cartão não o tem
         assert (html.count('data-campo="perfil"')
                 == html.count('class="pa-nome" data-campo="perfil"'))
         assert 'class="gc-perfil"' not in html
@@ -295,7 +292,7 @@ def test_o_cartao_da_ordem_diz_o_que_e_e_o_que_mover() -> None:
     frase = Linha(texto="Tudo que passa pelo hub divide o caminho.", selo="")
     ordem = Ordem(
         chave=R3_DONGLE_ATRAS_DE_HUB,
-        acao="Mova o adaptador Bluetooth para a Entrada 9",  # (noqa-acento) campo da Ordem
+        acao="Mova o adaptador Bluetooth para a Entrada 9",
         o_que_eu_vi=frase, por_que_importa=frase, ganho_esperado=frase,
         alvo=Identidade(caminho="3-1"), destino="9")
     antes = pac._ORDENS_NA_TELA

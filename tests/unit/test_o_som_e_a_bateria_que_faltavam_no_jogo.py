@@ -468,9 +468,6 @@ class TestOReaderNaoInventaBateria:
         assert recebidos == [95, 95]
 
 
-# 5. O `state_full` carrega a bateria que o vpad ANUNCIA
-
-
 def _vpad_completo(**extra: Any) -> SimpleNamespace:
     base: dict[str, Any] = {
         "backend": "uhid",

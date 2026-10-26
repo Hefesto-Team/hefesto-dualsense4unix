@@ -114,7 +114,6 @@ sys.path.insert(0, str(INTERFACE))
 UNIQ_P1 = "aa:bb:cc:00:00:01"
 UNIQ_P2 = "aa:bb:cc:00:00:02"
 
-#: O ESTADO DUBLÊ. Ele é o mínimo que `mesa_viva.mesa_do_estado` precisa para
 def _ctl(uniq: str, transporte: str, jogador: int) -> dict:
     return {"uniq": uniq, "connected": True, "transport": transporte,
             "player": jogador, "audio": {"mic_mudo": False}}
@@ -126,7 +125,6 @@ ESTADO = {
     "controllers": [_ctl(UNIQ_P1, "usb", 1), _ctl(UNIQ_P2, "bt", 2)],
 }
 
-#: rádio) HERDA A POSIÇÃO 1: `mesa_viva.mesa_do_estado` enumera os conectados de
 SEM_O_DO_CABO = {
     "active_profile": "regua",
     "gamepad_emulation": {"flavor": "dualsense"},
@@ -267,7 +265,6 @@ def medido() -> dict:
         return False
 
     def com_o_tique_parado() -> bool:
-        # o `_recusou_dizendo` pode repor a frase.
         piloto.pronto = False
         piloto.ponte.perguntar(APAGAR_OS_RECADOS, anotar("apaguei-os-recados"))
         piloto.ponte.perguntar(CLICAR_NO_MIC, anotar("terceiro-clique"))

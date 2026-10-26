@@ -18,8 +18,6 @@ from collections.abc import Sequence
 
 import typer
 
-#: Onde o terminal sobe o nível do diário: quem digitou lê a resposta, não o
-#: diário do processo (`i18n_initialized`, as migrações de cada abertura).
 _NIVEL_DO_TERMINAL = "WARNING"
 _VARIAVEL_DO_NIVEL = "HEFESTO_DUALSENSE4UNIX_LOG_LEVEL"
 
@@ -347,9 +345,6 @@ def daemon_start(
 ) -> None:
     """Inicia o daemon no processo atual."""
     if reconnect is not None:
-        # A opção saiu: o daemon sempre reconecta (o `reconnect_loop` é o único dono da
-        # reconexão). Ela segue ACEITA, fora da ajuda e sem efeito, para que uma unit,
-        # um script ou um atalho antigo com `--no-reconnect` não deixe o daemon sem subir.
         typer.echo(
             "aviso: --reconnect/--no-reconnect saiu e foi ignorada; "
             "o daemon sempre reconecta o controle que cai.",
@@ -491,7 +486,7 @@ def daemon_enable() -> None:
 
 
 @app.command(
-    "basico",  # (noqa-acento: o nome do subcomando é o do protocolo)
+    "basico",  # (noqa-acento)
     context_settings={
         "allow_extra_args": True,
         "ignore_unknown_options": True,

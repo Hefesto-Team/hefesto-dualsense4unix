@@ -132,7 +132,7 @@ def test_o_cartao_diz_as_duas_pontas_pelo_nome(
     vazio = ordens.Linha(texto="", selo="")
     ordem = ordens.Ordem(
         chave="teste",
-        acao="Mova o adaptador Bluetooth para a Entrada 2",  # (noqa-acento) campo da Ordem
+        acao="Mova o adaptador Bluetooth para a Entrada 2",
         o_que_eu_vi=vazio, por_que_importa=vazio, ganho_esperado=vazio,
         alvo=ordens.Identidade(caminho="1-4"), destino="2")
     de, para = a08_conexoes._a_ordem_na_tela(ordem)

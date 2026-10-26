@@ -15,7 +15,7 @@ def caminho_da_chave(config_dir: Path | None = None) -> Path:
     return Path(config_dir) / NOME_DO_ARQUIVO
 
 
-class PastaIlegivel(Exception):  # noqa: N818 — o projeto é em português
+class PastaIlegivel(Exception):  # noqa: N818
     """A pasta da chave não deixa o Hefesto olhar: não se sabe se há chave."""
 
     def __init__(self, pasta: Path, erro: OSError) -> None:

@@ -38,21 +38,8 @@ LEDS_ROOT: str = os.environ.get(
     "HEFESTO_DUALSENSE4UNIX_LEDS_ROOT", "/sys/class/leds"
 )
 
-#: LEDs VERDES de player expostos pelo hid-nintendo (``:green:player-1..4``).
 _MAX_PLAYER_LEDS = 4
 
-#: R-25 (auditoria 25/07): o 5º LED (AZUL, ``:blue:player-5``) deixou de ser
-#: "sempre apagado" e virou o bit "+5" da numeração.
-#:
-#: Antes, `write_player_number` capava o slot em 4: com 5+ controles na mesa
-#: (2 DualSense + Pro Nintendo + 8BitDo + …) o slot 7 acendia EXATAMENTE o
-#: mesmo padrão do slot 4 e a numeração única (R-24) morria na última
-#: polegada — no LED. O hardware medido nesta máquina (`/sys/class/leds/
-#: 0003:057E:2009.*`) tem os 4 verdes MAIS o azul player-5, então o azul dá
-#: 5 slots a mais de graça: azul aceso = "some 5 aos verdes acesos".
-#:
-#: 1..4 = N verdes à esquerda (padrão Nintendo, INTOCADO — é o que a usuária
-#: já reconhece); 5 = só o azul; 6..9 = azul + 1..4 verdes.
 _BLUE_PLAYER_LED = 5
 _MAX_SLOT_WITH_BLUE = _MAX_PLAYER_LEDS + _BLUE_PLAYER_LED
 
@@ -123,23 +110,13 @@ def write_player_number(
     for i in range(1, _MAX_PLAYER_LEDS + 1):
         alvo = f"{root}/{hid_instance}:green:player-{i}/brightness"
         escreveu = _set_brightness(alvo, 1 if i <= verdes else 0) or escreveu
-    # Slot ≤4 apaga o azul (é o "sem bit +5"); slot ≥5 o acende.
     escreveu = _set_brightness(azul_path, 1 if azul else 0) or escreveu
     return escreveu
 
 
-#: GYRO-02: cabeçalho do output report "rumble + subcomando" do protocolo
-#: Switch (hid-nintendo.c: ``JC_OUTPUT_RUMBLE_AND_SUBCMD``) — o MESMO envelope
-#: que o kernel usa tanto para o subcomando de LED de player (0x30, que aqui
-#: ``write_player_number`` evita e resolve via sysfs) quanto para o Enable-IMU
-#: (0x40): ``output_id(1B) + packet_num(1B) + rumble_data(8B) + subcmd_id(1B)
-#: + dados do subcomando``. ``packet_num`` é um contador 0..0xF que o firmware
-#: só usa p/ deduplicar; 0x00 é aceito num envio isolado (não há sequência
-#: anterior a continuar). ``rumble_data`` NEUTRO é o valor "sem vibração" que
 _JC_OUTPUT_RUMBLE_AND_SUBCMD = 0x01
 _JC_RUMBLE_NEUTRAL = bytes((0x00, 0x01, 0x40, 0x40, 0x00, 0x01, 0x40, 0x40))
 
-#: Subcomando Enable-IMU + argumento "ligar" (GYRO-02 — Nintendo Pro REAL tem
 _JC_SUBCMD_ENABLE_IMU = 0x40
 _JC_ENABLE_IMU_ARG_ON = 0x01
 

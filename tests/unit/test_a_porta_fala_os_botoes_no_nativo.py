@@ -64,9 +64,6 @@ async def _nada() -> None:
     return None
 
 
-# -- 1: o ``botoes`` sai no tique congelado -------------------------------------------------
-
-
 class _Passivo:
     """O leitor passivo do hub de um controle que não é o posto: o snapshot de agora."""
 
@@ -87,7 +84,6 @@ class _Passivo:
 async def test_o_aperto_de_cada_controle_chega_no_nativo_e_fora_dele(
     curto: pathlib.Path, monkeypatch: pytest.MonkeyPatch, mesa: str, nativo: bool,  # noqa: F811
 ) -> None:
-    # D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO
     """O ``_poll_loop`` de verdade: o posto e os do hub apertam o ✕, e a borda chega à extensão."""
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
     from hefesto_dualsense4unix.daemon.state_store import StateStore
@@ -152,11 +148,7 @@ async def test_o_aperto_de_cada_controle_chega_no_nativo_e_fora_dele(
     for nome in (EventTopic.BUTTON_DOWN, EventTopic.BUTTON_UP):
         visto = [e["dados"]["uniq"] for e in eventos
                  if e["nome"] == nome and e["dados"]["botao"] == "cross"]
-        # o posto do FakeController não tem MAC: entra pela chave ``None``
         assert visto == [None, *outros], f"{mesa}/{'nativo' if nativo else 'comum'} {nome}: {visto}"
-
-
-# -- 2: quem lê as entradas não segura o leitor de movimento nem o de toque --------------------
 
 
 class _Leitor:
@@ -275,7 +267,7 @@ def test_o_dedo_que_o_hub_ja_le_pela_tela_chega_sem_segurar_nada(
 def test_quem_pede_os_dedos_segura_so_o_leitor_de_toque_e_sem_grab(
     curto: pathlib.Path,  # noqa: F811
 ) -> None:
-    # D-2510-OS-DEDOS-SO-PARA-QUEM-PEDE
+    """Prova da D-2510-OS-DEDOS-SO-PARA-QUEM-PEDE."""
     hub, dados = _vivos(curto, {"topicos": ["entradas"], "dedos": True}, tocar=True)
     assert set(hub._touch) == set(UNIQS), "quem pediu os dedos não segurou o leitor de toque"
     assert hub._motion == {}, "pedir os dedos não segura o leitor de movimento"

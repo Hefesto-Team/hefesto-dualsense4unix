@@ -95,8 +95,6 @@ def _esperar(condicao: Callable[[], bool], prazo: float) -> bool:
     return condicao()
 
 
-# --- 1. o caminho: o sinal fecha pelo `fechar` ------------------------------------------
-
 _FILHO_DO_CAMINHO = textwrap.dedent(
     """
     import pathlib, signal, sys
@@ -168,8 +166,6 @@ def test_o_sinal_destroi_a_janela_dentro_do_laco_como_o_fechar(
     motivos = [m["motivo"] for linha in linhas if (m := FIM.search(linha))]
     assert motivos == [f"sinal {sinal.name}"], saida[-1500:]
 
-
-# --- 2. o prazo: o processo da interface inteiro sai em menos de 3 s -----------------------
 
 _FILHO_DA_INTERFACE = textwrap.dedent(
     """

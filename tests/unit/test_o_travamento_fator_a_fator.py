@@ -125,7 +125,6 @@ def test_1_nao_sei_nao_e_colapso(inst: Any) -> None:
     antes = _estado(_controle(VERMELHO, 198), _controle(AZUL, 34, modelo="Starlight Blue"),
                     _controle(BRANCO, 600, modelo="White", adaptador=ADAPTADOR_2))
     _janela(inst, _dez(inst, antes), rotulos)
-    # 02:18: o branco desligado (some do state_full), o azul de leitor perdido
     depois = _estado(_controle(VERMELHO, 550),
                      _controle(AZUL, None, modelo="Starlight Blue"))
     linha = _janela(inst, _dez(inst, depois), rotulos)
@@ -159,7 +158,6 @@ def test_2_o_fator_sai_do_que_a_janela_mediu(inst: Any) -> None:
     da_steam = [g for g in grupos if g["fatores"]["steam_dela"] == 1]
     assert len(da_steam) == 1 and da_steam[0]["janelas"] == 1
     assert da_steam[0]["passos"] == ["base"]
-    # DualSense (``uhid``) são dois grupos, pelo pad que o estado disse.
     xbox = _janela(inst, _dez(inst, _estado(_controle(VERMELHO, 300,
                                                        extra={"vpad_backend": "uinput"}))),
                    rotulos, inst.ContextoDaJanela(passo="base"))
@@ -339,7 +337,6 @@ def test_9_o_daemon_mudo_sai_da_janela_e_nao_para_o_instrumento(inst: Any) -> No
     assert mudo["colapso"] == []
     assert mudo["fora_do_veredito"] == ["o daemon não respondeu na janela"]
 
-    # O soquete que aceita e não responde (o laço parado): o state_full volta
     pasta = Path(tempfile.mkdtemp(prefix="tff-"))
     caminho = pasta / "s.sock"
     servidor = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)

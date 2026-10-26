@@ -762,8 +762,6 @@ def test_a_sonda_do_bluez_nao_aceita_caminho_que_so_contem_a_raiz(arvore: str | 
     assert _sonda_com(arvore).estado == cf.QUEBROU
 
 
-# --- o caminho ``/org/bluez`` em código também é conhecimento do dono ---
-
 _ISENTOS_DO_CAMINHO: dict[str, str] = {}
 
 

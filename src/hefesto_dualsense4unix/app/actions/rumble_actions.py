@@ -54,11 +54,6 @@ _ALCANCE_O_QUE_ACONTECE = "A intensidade não está chegando a jogo nenhum: "
 
 _ALCANCE_O_QUE_SOBRA = " Aqui embaixo ela ainda vale."
 
-#: A única causa que sobra do aviso: com a emulação ligada e nenhum gamepad
-#: virtual, o jogo ainda enxerga o físico. O sujeito é o sistema, não o Hefesto
-#: (a régua é `scripts/check_a_tela_nao_confessa.py`). A Navegação saiu daqui em
-#: `D-2909-A-NAVEGACAO-NAO-E-AVISO-NA-VIBRACAO`: lá nenhum jogo recebe gamepad
-#: por decisão de produto (`D-1409`), e a intensidade guardada vale quando ele chega.
 _CAUSA_O_GAMEPAD_VIRTUAL_NAO_SUBIU = (
     "o Status já está em “Ligado”, e o sistema não deixou o Hefesto criar o "
     "gamepad virtual."

@@ -100,8 +100,10 @@ def _sair(tray: Any) -> Any:
 
 def test_sair_para_o_servico_e_depois_fecha_o_icone(
         gtk_de_mentira: Any, sincrono: None, monkeypatch: pytest.MonkeyPatch) -> None:
-    """MORDIDA: volte o item a `lambda _w: self.on_quit()` e o `stop` nunca sai."""
-    # A decisão: D-0810-O-SAIR-DO-TRAY-PARA-O-SERVICO.
+    """MORDIDA: volte o item a `lambda _w: self.on_quit()` e o `stop` nunca sai.
+
+    Prova da D-0810-O-SAIR-DO-TRAY-PARA-O-SERVICO.
+    """
     pedidos: list[str] = []
     tray = _tray_montado(gtk_de_mentira, monkeypatch,
                          on_servico=lambda verbo: _anota(pedidos, verbo))
@@ -159,8 +161,10 @@ def test_o_sair_e_o_parar_chamam_o_mesmo_ato(
 
 def test_o_menu_segue_a_ordem_dela(
         gtk_de_mentira: Any, monkeypatch: pytest.MonkeyPatch) -> None:
-    """A ordem de 14/10/2026: o nome, Perfis, Abrir programa, o jogo, o serviço e Sair."""
-    # A decisão: D-1410-O-MENU-DA-BANDEJA-NA-ORDEM-DELA.
+    """A ordem de 14/10/2026: o nome, Perfis, Abrir programa, o jogo, o serviço e Sair.
+
+    Prova da D-1410-O-MENU-DA-BANDEJA-NA-ORDEM-DELA.
+    """
     tray = _tray_montado(gtk_de_mentira, monkeypatch,
                          on_servico=lambda _v: True, on_set_modo=lambda _l: True,
                          on_reconectar=lambda: True)

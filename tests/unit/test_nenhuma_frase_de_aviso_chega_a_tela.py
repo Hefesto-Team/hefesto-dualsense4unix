@@ -99,7 +99,7 @@ def test_a_dica_do_canal_nao_chega_a_tela() -> None:
 
 
 def _paginas() -> list[pathlib.Path]:
-    publicadas = sorted((INTERFACE / "paginas").glob("??-*.html"))  # (noqa-acento) nome de pasta
+    publicadas = sorted((INTERFACE / "paginas").glob("??-*.html"))  # (noqa-acento)
     bancada = sorted((RAIZ / "mockup").glob("??-*.html"))
     assert len(publicadas) == 10 and len(bancada) == 10, (
         "a régua não achou as dez abas — o caminho mudou, e uma régua que não "

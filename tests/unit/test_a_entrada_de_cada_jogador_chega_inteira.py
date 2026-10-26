@@ -38,12 +38,12 @@ from hefesto_dualsense4unix.integrations.uhid_gamepad import (
 from hefesto_dualsense4unix.integrations.uinput_gamepad import UinputGamepad
 from tests.unit.test_o_jogo_espera_a_carta_do_lugar_guardado import (
     TIQUE,
-    config_isolado,  # noqa: F401 — o lar de mentira da bancada do item 3
+    config_isolado,  # noqa: F401
 )
 from tests.unit.test_o_modo_tem_um_dono import FILA_DELA, TRANSPORTES, _a_mesa_do_boot
 from tests.unit.test_o_pad_virtual_atende_a_vibracao_desde_que_nasce import (
     _UInputComoOPythonEvdev,
-    evdev_de_mentira,  # noqa: F401 — o evdev de mentira da régua do pad Xbox
+    evdev_de_mentira,  # noqa: F401
 )
 from tests.unit.test_vpad_ff_passthrough import _rumble_effect
 
@@ -569,9 +569,6 @@ def test_o_pad_xbox_responde_o_efeito_antes_de_5_ms() -> None:
     mediana = statistics.median(esperas)
     assert mediana < 0.005, f"o pad Xbox respondeu em {mediana * 1000:.1f} ms (mediana)"
 
-
-# `vpad_indice`). O alarme que a régua lê é o do PRODUTO: o `nome_divergente`
-# da `CoopManager.mesa()`, o mesmo que o `state_full` publica.
 
 _PASSA_O_PRAZO = 3 + int(prazo_do_lugar_guardado() // TIQUE)
 

@@ -17,7 +17,6 @@ BASH = shutil.which("bash") or "/bin/bash"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DOCTOR = REPO_ROOT / "scripts" / "doctor.sh"
 
-#: do DualSense com o analógico indisponível e o digital disponível.
 _P_ANALOG = (
     "\t\toutput:analog-surround-40+input:analog-stereo: Surround + Analog In"
     " (sinks: 1, sources: 1, priority: 1265, available: no)\n"

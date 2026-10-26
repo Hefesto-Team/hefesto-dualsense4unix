@@ -244,10 +244,6 @@ def test_o_install_em_dois_passos_nao_prende_a_resposta_velha(
     assert subsystem.uma_volta(100.0).impedimentos
     alvo.write_text("#!/bin/bash\n", encoding="utf-8")
     assert subsystem.uma_volta(105.0).impedimentos
-    # A volta de verdade é de 5 s; aqui as duas voltas cabem em meio
-    # milissegundo. Sem tempo marcado por grão fino (kernel antes do 6.13,
-    # o do CI), o ``ctime`` da pasta anda em tiques de 1 a 10 ms: o ``mkdir``
-    # e a regra cairiam no mesmo tique, com a mesma firma.
     time.sleep(0.05)
     (pasta / "49-hefesto-bt-ponte").write_text("regra\n", encoding="utf-8")
     veredito = subsystem.uma_volta(110.0)

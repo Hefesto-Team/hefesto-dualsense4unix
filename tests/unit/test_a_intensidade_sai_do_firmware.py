@@ -80,7 +80,7 @@ def test_a_forca_da_vibracao_vai_de_0_a_200_sem_degraus(d05: str) -> None:
 
 
 def test_o_gatilho_ganha_o_trilho_de_0_a_200_por_controle(d03: str) -> None:
-    # D-1810-O-GATILHO-E-A-VIBRACAO-TEM-O-TRILHO-DE-0-A-200
+    """Prova da D-1810-O-GATILHO-E-A-VIBRACAO-TEM-O-TRILHO-DE-0-A-200."""
     from hefesto_dualsense4unix.interface import aba03, aba05
 
     trilhos = _trilhos(d03, f'data-campo="{aba03.CAMPO_DA_INTENSIDADE}"')
@@ -91,9 +91,7 @@ def test_o_gatilho_ganha_o_trilho_de_0_a_200_por_controle(d03: str) -> None:
     assert (aba03.TETO_DA_INTENSIDADE, aba03.PASSO_DA_INTENSIDADE) == (
         aba05.TETO_DA_FORCA, aba05.PASSO_DA_FORCA), "os dois trilhos têm de ter o mesmo alcance"
     assert "Intensidade do gatilho" in d03
-    # o mesmo formato da 05: ícone do controle, trilho, número e `%`
     assert d03.count('class="teto">%</span>') >= len(aba03.MESA)
-    # o ícone tem um dono comum de desenho, e as duas abas o conferem contra ele
     from hefesto_dualsense4unix.interface.mapa import glifo_do_controle
 
     dono = glifo_do_controle()
@@ -122,8 +120,6 @@ def test_a_linha_da_03_fica_antes_do_l2_e_o_estilo_continua_escolhendo_o_efeito(
     primeiro_trilho = d03.index(f'data-campo="{aba03.CAMPO_DA_INTENSIDADE}"')
     primeiro_efeito = d03.index('data-gesto="imersao"')
     assert primeiro_trilho < primeiro_efeito, "a intensidade entra sob o chip, antes do L2"
-    # o L2/R2 do estilo (r3b-03-15) fica como está: um campo de efeito por gatilho e por controle
-    # (o acionamento saiu da página em 22/10/2026: o gatilho só tem o efeito)
     n = len(aba03.MESA)
     assert d03.count('data-gesto="modo"') == 0 and d03.count('data-gesto="imersao"') == 2 * n
 
@@ -154,7 +150,7 @@ def a03(monkeypatch):
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
-    import pacotes  # noqa: F401  (registra os dez)
+    import pacotes  # noqa: F401
     from pacotes import a03_gatilhos, perfil
 
     from hefesto_dualsense4unix.profiles import loader
@@ -248,7 +244,6 @@ def test_a_coluna_pinta_a_intensidade_lida_do_perfil(a03) -> None:
         perfil.ativo = guardado  # type: ignore[assignment]
     c = mod.CAMPO_DA_INTENSIDADE
     assert r["colunas"][uniq][c] == 150 and r["colunas"][uniq][f"{c}-pct"] == 150
-    # o lugar vazio fica como o gerador o desenha: cursor no zero e travessão no número
     assert not [k for pref, col in r["colunas"].items() if pref != uniq for k in col if c in k]
 
 
@@ -329,8 +324,6 @@ def test_a_linha_da_03_tem_a_altura_e_as_colunas_da_linha_da_forca_da_05() -> No
     assert m03 == m05, f"a linha da 03 não tem o formato da Força da 05: {m03} ≠ {m05}"
     assert m03["altura"] == 36 and m03["fixas"] == ["36px", "44px", "8px"], m03
 
-
-# --- O PRODUTO: o report montado em memória ------------------------------------------------------
 
 _MAC = ("aabbcc000001", "aabbcc000002", "aabbcc000003", "aabbcc000004")
 
@@ -559,9 +552,6 @@ def test_o_firmware_recebe_a_forca_absoluta_e_nao_o_fator_relativo_da_peca() -> 
         "o automático muda com a bateria: o firmware fica cheio e o software segue")
 
 
-# --- O PERFIL: onde a intensidade do gatilho mora e quem a lê ------------------------------------
-
-
 def _perfil(**campos: object):
     from hefesto_dualsense4unix.profiles.schema import Profile
 
@@ -593,7 +583,7 @@ def test_a_economia_e_o_automatico_nao_perdem_a_intensidade() -> None:
     dele = TriggersConfig.model_validate({"right": {"mode": "Rigid", "params": [2, 200]},
                                           "intensidade": 1.5})
     assert gatilhos_na_economia(dele, TriggersConfig()).intensidade == 1.5
-    auto = _perfil(triggers={"modo": "automatico"},  # (noqa-acento) chave ASCII
+    auto = _perfil(triggers={"modo": "automatico"},  # (noqa-acento)
                    controllers={_MAC[2]: {"triggers": {"right": {"mode": "Rigid"},
                                                        "intensidade": 0.3}}})
     vista = perfil_no_modo(auto)
@@ -653,10 +643,6 @@ def test_o_gerente_publica_a_base_do_global_para_o_firmware() -> None:
         assert fc.bases == [esperado], (rumble, fc.bases)
 
 
-# --- O PADRÃO DO COMPUTADOR: sem jogo, a intensidade do gatilho mora no `maquina.json` ------------
-# A-INTENSIDADE-DO-GATILHO-VALE-NO-PADRAO-DO-COMPUTADOR-01 (21/10/2026). O disco é o de verdade, no
-# lar isolado da suíte: o perfil por `save_profile` e o computador pelo `maquina.json`.
-
 _UM = "aa:bb:cc:00:00:01"
 
 
@@ -666,7 +652,7 @@ def a03_no_disco(monkeypatch):
     from tests.conftest import exigir_gi_real
 
     exigir_gi_real("importa `interface.pacotes`, que carrega o GTK")
-    import pacotes  # noqa: F401  (registra os dez)
+    import pacotes  # noqa: F401
     from pacotes import a03_gatilhos, perfil
 
     reaplicados: list[str] = []

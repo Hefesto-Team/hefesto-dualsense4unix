@@ -62,7 +62,6 @@ def _sysfs(raiz: Path, no: str, *, vendor: str, product: str, nome: str, teclas:
     (dev / "capabilities" / "key").write_text(teclas + "\n", encoding="ascii")
 
 
-#: O bitmap `capabilities/key` de um gamepad DualSense (BTN_SOUTH..BTN_THUMBR
 _TECLAS_DO_GAMEPAD = "7fdb000000000000 0 0 0 0"
 _TECLAS_DO_TOUCHPAD = "e520 10000 0 0 0 0"
 
@@ -190,7 +189,7 @@ def _list_devices_da_biblioteca(pasta: Path) -> list[str]:
 @pytest.fixture
 def dev_input(mesa: Any, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> dict[str, str]:
     """O `/dev/input` de mentira: o gamepad e o touchpad do físico FECHADOS"""
-    if os.geteuid() == 0:  # pragma: no cover - como root o 0000 não fecha nada
+    if os.geteuid() == 0:  # pragma: no cover
         pytest.skip("como root todo nó abre")
     broker, recusa = mesa
     pasta = tmp_path / "dev-input"
@@ -416,7 +415,7 @@ class TestONativoPedeOsQuatro:
         assert mod.Daemon._no_de_fisico_esta_aberto(str(hidraw)) is True
         entrada.chmod(0o000)
         try:
-            if os.access(entrada, os.R_OK):  # pragma: no cover - rodando como root
+            if os.access(entrada, os.R_OK):  # pragma: no cover
                 pytest.skip("como root o chmod não fecha nada")
             assert mod.Daemon._no_de_fisico_esta_aberto(str(hidraw)) is False
         finally:

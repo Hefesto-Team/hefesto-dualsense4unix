@@ -29,8 +29,6 @@ regua = importlib.util.module_from_spec(_spec)
 sys.modules["_regua_das_quatro_do_registro"] = regua
 _spec.loader.exec_module(regua)
 
-#: o pacote cujos módulos registram os gestos; o piloto registra um gesto seu (`escolher-na-fita`)
-#: no mesmo dicionário quando roda no processo, e esse não é do fonte dos pacotes
 _DOS_PACOTES = "hefesto_dualsense4unix.interface.pacotes"
 
 

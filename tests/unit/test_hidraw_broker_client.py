@@ -426,7 +426,7 @@ class TestOpenFdAnomalias:
 
         def _lixo(conn: socket.socket, _req: dict[str, Any]) -> None:
             packed = struct.pack("i", escrita)
-            lixo = b"isto nao e json\n"  # (noqa-acento: malformado de propósito)
+            lixo = b"isto nao e json\n"  # (noqa-acento)
             conn.sendmsg(
                 [lixo], [(socket.SOL_SOCKET, socket.SCM_RIGHTS, packed)]
             )

@@ -154,7 +154,7 @@ from typing import TYPE_CHECKING, Any
 from hefesto_dualsense4unix.core.backend_pydualsense import microfone_chega_sem_ponte
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
-if TYPE_CHECKING:  # pragma: no cover - só para tipo
+if TYPE_CHECKING:  # pragma: no cover
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 
 logger = get_logger(__name__)
@@ -220,7 +220,6 @@ def _lembrar_quem_ouve(uniq: str, ouvintes: list[str] | None) -> None:
 
 INTERVALO_S: float = 0.25
 
-#: guardada entre uma pergunta e outra, então a decisão continua a 4 Hz.
 INTERVALO_DE_QUEM_OUVE_S: float = 1.0
 
 _O_QUE_A_LUZ_LE: tuple[str, ...] = ("source-outputs", "sources")
@@ -318,7 +317,7 @@ def _posse_do_mudo(backend: Any, uniq: str) -> bool | None:
         return None
     try:
         valor = ler(uniq)
-    except Exception as exc:  # pragma: no cover - defensivo
+    except Exception as exc:  # pragma: no cover
         logger.warning("luz_do_mic_posse_falhou", uniq=uniq, err=str(exc))
         return None
     return valor if isinstance(valor, bool) else None
@@ -347,7 +346,7 @@ def _mudo(backend: Any, uniq: str) -> bool | None:
         return None
     try:
         estado = ler(uniq)
-    except Exception as exc:  # pragma: no cover - defensivo
+    except Exception as exc:  # pragma: no cover
         logger.warning("luz_do_mic_mudo_falhou", uniq=uniq, err=str(exc))
         return None
     if not isinstance(estado, dict):
@@ -373,7 +372,7 @@ def _baterias(backend: Any) -> dict[str, int]:
         return {}
     try:
         itens = descrever()
-    except Exception as exc:  # pragma: no cover - defensivo
+    except Exception as exc:  # pragma: no cover
         logger.warning("luz_do_mic_bateria_falhou", err=str(exc))
         return {}
     if not isinstance(itens, list):
@@ -399,7 +398,7 @@ def _transportes(backend: Any) -> dict[str, str]:
         return {}
     try:
         itens = descrever()
-    except Exception as exc:  # pragma: no cover - defensivo
+    except Exception as exc:  # pragma: no cover
         logger.warning("luz_do_mic_transporte_falhou", err=str(exc))
         return {}
     if not isinstance(itens, list):
@@ -500,7 +499,7 @@ def _fontes_para(uniqs: list[str], mesa: list[str]) -> dict[str, str]:
             fontes_de_captura_agora,
         )
         from hefesto_dualsense4unix.integrations.fontes_de_captura import escolher_fonte
-    except Exception as exc:  # pragma: no cover - defensivo
+    except Exception as exc:  # pragma: no cover
         logger.warning("luz_do_mic_sem_reguas_de_fonte", err=str(exc))
         return {}
     try:
@@ -571,7 +570,7 @@ def _parar_medidor(medidor: Any) -> None:
         return
     try:
         parar()
-    except Exception as exc:  # pragma: no cover - defensivo
+    except Exception as exc:  # pragma: no cover
         logger.warning("luz_do_mic_medidor_nao_parou", err=str(exc))
 
 
@@ -594,7 +593,6 @@ def _escrever(backend: Any, uniq: str, valor: int | None) -> bool:
     """
     escrever = getattr(backend, "set_microphone_led", None)
     if not callable(escrever):
-        # `PyDualSenseController`. Sair calado daqui seria o log dizendo que a
         logger.warning("luz_do_mic_sem_backend", uniq=uniq)
         return False
     try:
@@ -603,7 +601,7 @@ def _escrever(backend: Any, uniq: str, valor: int | None) -> bool:
         logger.warning("luz_do_mic_sem_endereco", uniq=uniq)
         with contextlib.suppress(Exception):
             escrever(valor)
-    except Exception as exc:  # pragma: no cover - defensivo
+    except Exception as exc:  # pragma: no cover
         logger.warning("luz_do_mic_escrita_falhou", uniq=uniq, err=str(exc))
         return False
     return True
@@ -673,7 +671,7 @@ async def luz_do_mic_loop(daemon: DaemonProtocol) -> None:
                         evento = fila.get_nowait()
                     except asyncio.QueueEmpty:
                         break
-                    except Exception:  # pragma: no cover - defensivo
+                    except Exception:  # pragma: no cover
                         break
                     alvo = evento.get("uniq") if isinstance(evento, dict) else None
                     if isinstance(alvo, str) and alvo:
@@ -809,8 +807,6 @@ def mesa_de_agora(daemon: Any) -> list[str] | None:
     return _mesa(daemon)
 
 
-# Com pad virtual DualSense, o `common[8]` que o jogo pede vai ao plástico do
-
 _LUZ_DO_JOGO: dict[str, tuple[int, float]] = {}
 
 _A_PESSOA_MANDOU_EM: dict[str, float] = {}
@@ -884,7 +880,7 @@ def _drenar_o_jogo(fila: Any) -> list[str]:
             evento = fila.get_nowait()
         except asyncio.QueueEmpty:
             break
-        except Exception:  # pragma: no cover - defensivo
+        except Exception:  # pragma: no cover
             break
         if not isinstance(evento, dict):
             continue

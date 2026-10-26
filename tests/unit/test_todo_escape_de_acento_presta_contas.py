@@ -1,13 +1,22 @@
-"""O escape do portão de acentuação tem de prestar contas — todo escape NOVO."""
+"""O escape do portão de acentuação tem de prestar contas — todo escape NOVO.
+
+Fora do código (Markdown, CSV, YAML), a razão vai na mesma anotação da marca. No código
+(``.py`` e ``.sh``), a D-2610-O-CODIGO-NAO-TEM-COMENTARIO não deixa a razão ficar, e a marca
+nua só vale onde o validador a pede.
+"""
 from __future__ import annotations
 
+import functools
 import importlib.util
 import re
+import sys
 from pathlib import Path
 from types import ModuleType
 
 RAIZ = Path(__file__).resolve().parents[2]
 VALIDADOR = RAIZ / "scripts" / "validar-acentuacao.py"
+PORTAO = RAIZ / "scripts" / "check_codigo_sem_comentario.py"
+REMOVEDOR = RAIZ / "scripts" / "tirar-os-comentarios.py"
 
 ESTE_ARQUIVO = "tests/unit/test_todo_escape_de_acento_presta_contas.py"
 
@@ -15,24 +24,8 @@ PISO_DE_ESCAPES = 140
 
 SEM_RAZAO_PINADOS: dict[str, int] = {
     ".github/workflows/ci.yml": 2,
-    "scripts/gerar-mapa.py": 2,
-    "scripts/generate_glyph_active.py": 1,
-    "scripts/install_osk.sh": 2,
-    "src/hefesto_dualsense4unix/broker/hidraw_broker.py": 2,
-    "src/hefesto_dualsense4unix/cli/cmd_profile.py": 2,
-    "src/hefesto_dualsense4unix/profiles/loader.py": 1,
-    "src/hefesto_dualsense4unix/profiles/sanidade.py": 1,
-    "tests/unit/test_cli_profile_historico.py": 3,
-    "tests/unit/test_hidraw_broker_open_fd.py": 1,
-    "tests/unit/test_ipc_server.py": 1,
-    "tests/unit/test_modo01_o_modo_jogo_liga_sozinho.py": 1,
-    "tests/unit/test_o_gesto_da_ponte_e_universal.py": 2,
-    "tests/unit/test_o_preset_nao_escolhe_a_mascara.py": 2,
-    "tests/unit/test_state_full_game_signal.py": 1,
-    "tests/unit/test_validar_acentuacao_multiplos_arquivos.py": 2,
 }
 
-#: `# (noqa-acento)` não deixe um `)` órfão contando como razão.
 _MARCA = re.compile(r"\(?noqa-acento\)?|\(?noqa:\s*acentuacao\)?")
 
 _ABRE_ANOTACAO = ("<!--", "/*", "#", "//")
@@ -40,13 +33,28 @@ _ABRE_ANOTACAO = ("<!--", "/*", "#", "//")
 _SO_DELIMITADOR = ("<!--", "-->", "/*", "*/", "#", "//")
 
 
-def _carrega_validador() -> ModuleType:
-    """O validador é um script com hífen no nome: `import` não o alcança."""
-    spec = importlib.util.spec_from_file_location("_validador_acento", VALIDADOR)
+@functools.cache
+def _carrega(caminho: Path, nome: str) -> ModuleType:
+    """Os scripts têm hífen no nome: `import` não os alcança."""
+    spec = importlib.util.spec_from_file_location(nome, caminho)
     assert spec and spec.loader
     mod = importlib.util.module_from_spec(spec)
+    sys.modules[nome] = mod
     spec.loader.exec_module(mod)
     return mod
+
+
+def _carrega_validador() -> ModuleType:
+    return _carrega(VALIDADOR, "_validador_acento")
+
+
+def _tipo_de_codigo(rel: str, primeira: str) -> str | None:
+    """``py`` ou ``sh`` quando o portão sem comentário cobre o arquivo; senão ``None``."""
+    portao = _carrega(PORTAO, "_portao_sem_comentario")
+    if rel.startswith(portao.FORA):
+        return None
+    tipo = portao.tipo_do_arquivo(rel, primeira)
+    return tipo if tipo in ("py", "sh") else None
 
 
 def tem_razao(linha: str) -> bool:
@@ -65,23 +73,41 @@ def tem_razao(linha: str) -> bool:
 
 
 def escapes() -> tuple[list[tuple[str, int, str]], list[tuple[str, int, str]]]:
-    """Todos os escapes do repo, separados em (com razão, sem razão)."""
+    """Os escapes de fora do código, separados em (com razão, sem razão)."""
+    com, sem, _codigo = _censo()
+    return com, sem
+
+
+def escapes_no_codigo() -> dict[str, str]:
+    """Os arquivos de código com escape, e o tipo de cada um."""
+    return _censo()[2]
+
+
+def _censo() -> tuple[list[tuple[str, int, str]], list[tuple[str, int, str]], dict[str, str]]:
     val = _carrega_validador()
     com: list[tuple[str, int, str]] = []
     sem: list[tuple[str, int, str]] = []
+    codigo: dict[str, str] = {}
     for arq in val.listar_arquivos_git(RAIZ):
         rel = str(arq.resolve().relative_to(RAIZ))
         if val.is_whitelisted(rel) or rel == ESTE_ARQUIVO:
             continue
         try:
-            linhas = arq.read_text(encoding="utf-8").splitlines()
+            texto = arq.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
+            continue
+        if not _MARCA.search(texto):
+            continue
+        linhas = texto.splitlines()
+        tipo = _tipo_de_codigo(rel, linhas[0] if linhas else "")
+        if tipo is not None:
+            codigo[rel] = tipo
             continue
         for n, linha in enumerate(linhas, 1):
             if _MARCA.search(linha):
                 alvo = com if tem_razao(linha) else sem
                 alvo.append((rel, n, linha.strip()[:120]))
-    return com, sem
+    return com, sem, codigo
 
 
 def _por_arquivo(achados: list[tuple[str, int, str]]) -> dict[str, int]:
@@ -94,7 +120,9 @@ def _por_arquivo(achados: list[tuple[str, int, str]]) -> dict[str, int]:
 def test_o_varredor_de_escapes_nao_ficou_cego() -> None:
     """Um leitor que devolve zero faz os testes abaixo passarem por vacuidade."""
     com, sem = escapes()
-    total = len(com) + len(sem)
+    total = len(com) + len(sem) + sum(
+        len(_MARCA.findall((RAIZ / rel).read_text(encoding="utf-8")))
+        for rel in escapes_no_codigo())
     assert total >= PISO_DE_ESCAPES, (
         f"achei {total} escapes de acentuação no repositório, piso "
         f"{PISO_DE_ESCAPES}.\n"
@@ -189,6 +217,30 @@ def test_tem_razao_reconhece_as_duas_formas_da_casa() -> None:
 def test_a_razao_da_anotacao_vizinha_nao_conta() -> None:
     """Prosa de OUTRO comentário na mesma linha não é razão do escape."""
     marca = "noqa" + "-acento"
-    exemplo = "# o glade não os referencia"  # (noqa-acento: verbo referenciar)
+    exemplo = "# o glade não os referencia"  # (noqa-acento)
     assert not tem_razao(f"{exemplo}  # ({marca})")
     assert tem_razao(f"{exemplo}  # ({marca}: verbo, não substantivo)")
+
+
+def _escapes_a_mais(texto: str, tipo: str, rel: str) -> int:
+    removedor = _carrega(REMOVEDOR, "_removedor_de_comentario")
+    return removedor._escapes_a_mais(texto, tipo, rel)[1]
+
+
+def test_o_escape_no_codigo_e_so_o_que_o_validador_pede() -> None:
+    """No código a marca não tem razão: só fica onde, sem ela, o validador reprova a linha."""
+    codigo = escapes_no_codigo()
+    assert codigo, "nenhum arquivo de código com escape: o censo ficou cego"
+    sobrando = [rel for rel, tipo in sorted(codigo.items())
+                if _escapes_a_mais((RAIZ / rel).read_text(encoding="utf-8"), tipo, rel)]
+    assert not sobrando, (
+        "escape de acentuação que o validador não pede, no código:\n  " + "\n  ".join(sobrando)
+        + "\n\nRode `scripts/tirar-os-comentarios.py --aplicar` no arquivo: ele tira a marca "
+        "que não escapa nada."
+    )
+
+
+def test_a_mordida_o_escape_que_nao_escapa_nada_e_achado() -> None:
+    marca = "# (noqa" + "-acento)"
+    assert _escapes_a_mais(f"x = 1  {marca}\n", "py", "src/x.py") == 1
+    assert _escapes_a_mais(f'x = "{"na" + "o"}"  {marca}\n', "py", "src/x.py") == 0

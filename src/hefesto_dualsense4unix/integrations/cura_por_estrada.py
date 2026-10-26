@@ -151,8 +151,7 @@ from typing import cast
 
 try:
     from hefesto_dualsense4unix.integrations import sandbox_dos_lancadores as _caixa
-except ImportError:  # pragma: no cover - script avulso do uninstall, sem a .venv
-    # `identidade_de_janela`) é só biblioteca padrão.
+except ImportError:  # pragma: no cover
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     from hefesto_dualsense4unix.integrations import sandbox_dos_lancadores as _caixa
 
@@ -298,7 +297,7 @@ def _modo_de_nascimento(pasta: Path) -> int:
     """O modo de um arquivo que NASCE nesta pasta — herdado dela."""
     try:
         return stat.S_IMODE(pasta.stat().st_mode) & 0o666
-    except OSError:  # pragma: no cover - a pasta acabou de ser criada
+    except OSError:  # pragma: no cover
         return 0o644
 
 
@@ -599,7 +598,7 @@ def _override_fundido(alvo: Path, ambiente: dict[str, str],
     """O override com o ambiente em `[Environment]`, e o registro dele. Não escreve."""
     nova = _entrada_para(alvo, FLATPAK_OVERRIDE, entrada)
     cfg = _ler_override(alvo)
-    if cfg is None:  # pragma: no cover - `escrever_a_estrada` já recusou antes
+    if cfg is None:  # pragma: no cover
         raise RuntimeError(ILEGIVEL.format(arquivo=alvo.name))
     if not cfg.has_section("Environment"):
         cfg.add_section("Environment")
@@ -734,8 +733,7 @@ def _soltar_as_caixas_que_sairam(pasta_do_ambiente: Path | None,
     return soltas
 
 
-#: Quem desistiu da trava, como o diário diz (`quem=` na linha `carona_esperou_a_janela`).
-QUEM_SERVICO = "servico"  # (noqa-acento) valor do diário que a régua de 02/10 lê
+QUEM_SERVICO = "servico"  # (noqa-acento)
 QUEM_JANELA = "janela"
 
 
@@ -812,7 +810,7 @@ def _curar_na_trava(
                         estrada.arquivo.parent, plano.ambiente, pasta_do_ambiente,
                         frozenset(c.arquivo for c in fora.copias),
                         registro_antes.get(str(estrada.arquivo)))
-        except Exception:  # pragma: no cover - disco hostil; ver a docstring
+        except Exception:  # pragma: no cover
             continue
         escritos.append(chave)
     for copia in fora.copias:
@@ -986,8 +984,6 @@ def estradas_possiveis(lar: Path) -> list[tuple[Path, str]]:
     raiz = lar / _PASTA_DOS_OVERRIDES
     app_ids = [a for chave, atalhos in cartoes_com_estrada() if chave != "heroic"
                for a in atalhos if "." in a]
-    # A caixa do lançador que virou extensão: a carona de antes escreveu nela.
-    # Na grafia do Flatpak: em minúsculas, `net.lutris.lutris` não é o arquivo do disco.
     app_ids += sorted(_app_ids_que_viraram_extensao())
     vistos: set[str] = set()
     for app_id in app_ids:
@@ -1196,7 +1192,7 @@ def _travar_o_arquivo(alvo: Path, prazo: float, criar: bool) -> int | None:
     """O descritor com o `flock` exclusivo; ``-1`` = segue sem; ``None`` = o prazo passou."""
     try:
         import fcntl
-    except ImportError:  # pragma: no cover - só Linux roda isto
+    except ImportError:  # pragma: no cover
         return -1
     if not criar and not alvo.parent.is_dir():
         return -1
@@ -1826,8 +1822,8 @@ class _PlanoDoYml:
     """O que a carona fará no `.yml` de um excluído: o registro e o texto, ainda sem gravar."""
 
     registro: YmlDoJogo
-    texto: str | None  # ``None`` = o disco já está assim; só o registro muda
-    velho: YmlDoJogo  # o registro de antes, que volta se a gravação falhar
+    texto: str | None
+    velho: YmlDoJogo
     tirou_o_xalia: bool = False
     pos_o_xalia: bool = False
 
@@ -2112,5 +2108,5 @@ def main(argv: Sequence[str] | None = None) -> int:
     return 0 if completo else 1
 
 
-if __name__ == "__main__":  # pragma: no cover - passo do uninstall.sh
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(main())

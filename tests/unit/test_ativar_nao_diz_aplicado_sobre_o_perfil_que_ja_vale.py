@@ -63,7 +63,6 @@ class PonteDeMentira:
         self.chamadas.append((metodo, args))
         return True
 
-    # daemon antigo e faz `mensagem_de_ativacao` cair na frase de sempre.
     def resultado(self, metodo: str, *args: Any, **kw: Any) -> Any:
         self.chamadas.append((metodo, tuple(kw.values())))
         return {}

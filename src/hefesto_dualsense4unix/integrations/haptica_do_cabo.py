@@ -27,11 +27,6 @@ logger = get_logger(__name__)
 CANAIS = 4
 MAPA = "[ FL FR RL RR ]"
 
-#: Os quatro canais do fluxo do laço vão em FATOR LINEAR, e nunca em ``%``: os
-#: motores levam o ganho em fator, e o ``pactl`` recusa o comando que mistura as
-#: duas unidades (``Inconsistent volume specification.``, antes de falar com o
-#: servidor). Com a frente em ``100%`` o volume só fechava: do ``d61af1907``
-#: (14/10, 12h51) à rodada 1 da bancada, nenhum motor do laço abriu no cabo.
 VOLUME_ABERTO = "1.0000"
 
 _LACOS = Lacos(FAMILIA_DO_LACO_DO_CABO)

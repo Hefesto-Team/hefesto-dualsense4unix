@@ -271,7 +271,6 @@ class TestCoop:
 
         achados = er.discover_dualsense_evdevs()
 
-        # Só o DualSense vira chave — e é de `achados` que `_players` nasce.
         assert set(achados) == {"aabbccddee02"}
         assert "aabbcc000042" not in achados
         assert "aabbcc000043" not in achados

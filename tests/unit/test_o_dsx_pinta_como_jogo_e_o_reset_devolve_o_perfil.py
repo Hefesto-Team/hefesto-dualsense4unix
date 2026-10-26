@@ -33,8 +33,6 @@ TRANSPORTES = (ConnectionType.USB, ConnectionType.BT)
 PERFIL_P1 = te.rigid(2, 100)
 PERFIL_P2 = te.rigid(6, 250)
 GESTO = te.weapon(3, 6, 8)
-#: `TriggerUpdate` no layout canônico do DSX: índice 0, lado 2 (R2), modo 21
-#: (Feedback, extensão do DualSenseY-v2) com posição 3 e força 8.
 DSX_FEEDBACK = {"type": 1, "parameters": [0, 2, 21, 3, 8]}
 DSX_RESET = {"type": 7, "parameters": [0]}
 R2 = slice(10, 21)
@@ -106,7 +104,6 @@ def test_o_trigger_update_pinta_como_jogo_e_nao_apaga_o_perfil(destino: int | No
     _mandar(handler, DSX_FEEDBACK)
 
     assert _r2(backend, MACS[0]) == BLOCO_DSX
-    # O índice 0 do mod é o jogador 1: o seletor em «Todos» não o espalha.
     assert _r2(backend, MACS[1]) == te.bloco_do_efeito(PERFIL_P2)
     for uniq, perfil in zip(UNIQS, (PERFIL_P1, PERFIL_P2), strict=True):
         assert _gatilho_do_perfil(backend, uniq) == perfil, "o mod apagou o perfil"

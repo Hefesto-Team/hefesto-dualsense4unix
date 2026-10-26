@@ -55,7 +55,7 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 SCRIPTS = RAIZ / "scripts"
 
-SUB_DA_SESSAO = "sessao"  # (noqa-acento: o nome do subcomando é o do protocolo)
+SUB_DA_SESSAO = "sessao"  # (noqa-acento)
 
 UNIQS = tuple(f"02:00:1a:4b:5c:0{n}" for n in range(1, 5))
 
@@ -1193,12 +1193,6 @@ def test_sem_a_chave_do_controle_o_endpoint_e_nao_sei(ob: ModuleType, tmp_path: 
     assert vereditos == {ob.NAO_SEI}
 
 
-# ---------------------------------------------------------------------------
-# O ``doctor.sh --basico`` (O-BASICO-MEDIDO-01, o resto): chama SÓ o ``retrato``, o
-# ``sessão`` (janela curta) e o ``eixos``, e o código de saída do protocolo vira o veredito.
-# O doctor roda numa cópia, ao lado de um protocolo de mentira que anota o que lhe pediram.
-# ---------------------------------------------------------------------------
-
 PROTOCOLO_DE_MENTIRA = '''\
 import os, sys
 from pathlib import Path
@@ -1276,7 +1270,7 @@ def _doctor_basico(
 def test_o_doctor_basico_chama_so_os_tres_que_leem_e_a_sessao_curta(tmp_path: Path) -> None:
     casa, ambiente = _casa_do_doctor(tmp_path)
     rc, saida, pedidos = _doctor_basico(casa, ambiente)
-    assert pedidos == ["retrato", "sessao --segundos 5", "eixos"]  # (noqa-acento) subcomando
+    assert pedidos == ["retrato", "sessao --segundos 5", "eixos"]  # (noqa-acento)
     assert rc == 0
     assert saida.count("[ OK ] o básico, ") == 3
     assert "== daemon ==" not in saida, "o --basico não roda o resto do diagnóstico"

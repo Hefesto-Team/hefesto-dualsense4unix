@@ -60,7 +60,7 @@ NOS = {
 
 DO_GESTO = "D-A-MASCARA-POR-CONTROLE-VALE-NO-APLICAR"
 DA_ORDEM = "D-2309-FORA-DE-ORDEM-SE-RECRIA-NA-HORA"
-CAMPO_DA_DECISAO = "decisao"  # (noqa-acento) nome do campo no diário
+CAMPO_DA_DECISAO = "decisao"  # (noqa-acento)
 
 
 class _Pad:
@@ -330,8 +330,6 @@ SYNC_FORCADO: dict[tuple[str, str], bool] = {
     ("daemon/ipc_handlers.py", "_repintar_apos_renumeracao"): False,
     ("daemon/ipc_handlers.py", "_handle_coop_sync"): False,
     ("daemon/lifecycle.py", "set_gamepad_emulation_desfecho"): True,
-    # o passo de depois do pad de pé, aninhado no dono: roda na hora ou no tique em que
-    # o P1 que nasceu pelo fio se instalou (O-P1-QUE-NASCE-FORA-DO-TIQUE-...-01)
     ("daemon/lifecycle.py", "depois_de_ligar"): True,
     ("daemon/lifecycle.py", "vestir_a_mascara_do_aparelho"): True,
     ("daemon/lifecycle.py", "set_coop_enabled"): False,
@@ -527,10 +525,6 @@ def test_o_appid_em_cena_so_vale_com_o_jogo_na_autoridade() -> None:
     assert (d.display_authority, d.appid_em_cena) == ("daemon", None)
 
 
-# A-TRAVA-DO-LANCAMENTO-SOLTA-QUANDO-O-LANCAMENTO-ACABA-01 (08/10/2026): o lançamento
-# que acaba sem a autoridade nunca ter dito `game` não tem borda, e a trava soltava só
-# no lançamento seguinte. O esperado sai das entradas plantadas (o marcador, a saída, o
-# PID, a varredura), nunca da saída da função.
 _TRAVA = (4235410, 1000)
 _MARCADOR_DA_TRAVA = dict(
     _SEM_JOGO, marker=_TRAVA, marker_pid=4321, marker_pid_alive=False, now=1010.0,
@@ -649,7 +643,6 @@ def test_o_marcador_velho_com_o_pid_vivo_e_sem_saida_segura_a_trava() -> None:
     assert _o_lancamento_da_trava_acabou(d, velho) is False
     assert _diario_da_soltura(d, "daemon", velho) == []
     assert d._pad_travado_pelo_lancamento == _TRAVA
-    # O mesmo marcador velho com o PID morto, ou com a saída do mesmo PID: acabou.
     assert _o_lancamento_da_trava_acabou(d, dict(velho, marker_pid_alive=False)) is True
     assert _o_lancamento_da_trava_acabou(
         d, dict(velho, exit_marker=_TRAVA[1] + 5, exit_pid=4321)) is True

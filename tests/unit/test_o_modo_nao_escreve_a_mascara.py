@@ -107,7 +107,7 @@ class _Daemon:
         self.set_gamepad_emulation_desfecho = functools.partial(
             lifecycle.Daemon.set_gamepad_emulation_desfecho, self
         )
-        self._devolver_as_tabelas_do_perfil = lambda: None  # o teclado não é deste teste
+        self._devolver_as_tabelas_do_perfil = lambda: None
         self.gravar_o_modo_escolhido = functools.partial(
             lifecycle.Daemon.gravar_o_modo_escolhido, self
         )
@@ -296,8 +296,6 @@ def test_com_o_cartao_em_xbox_360_o_chip_acende_o_escolhido_e_nao_a_mascara() ->
     assert _mascara_do_cartao_no_disco() == "xbox"
 
 
-# REAL, do bloco `gamepad_emulation` do `state_full` ou de `apply_profile_mode`
-
 _FABRICA_REAL = vp.make_virtual_pad
 
 
@@ -327,7 +325,6 @@ def test_a_fabrica_real_decide_o_canal_pelo_caminho(
     assert pad is not None and pad.flavor == "dualsense", "a máscara não é do caminho"
     assert bool(pedidos) is tenta_uhid, f"caminho {caminho!r}: `_try_uhid` recebeu {pedidos}"
     assert vp.caminho_do_vpad(pad) == caminho, "o pad não diz em que caminho nasceu"
-    # O canal comum ESCOLHIDO não é degradação; o DualSense que caiu nele é.
     assert (getattr(pad, "fallback_motivo", None) is not None) is tenta_uhid
 
 
@@ -352,7 +349,7 @@ def _daemon_do_perfil(vpad: Any) -> tuple[Any, list[dict[str, Any]]]:
     d._reavaliar_mascara_adiada = lambda f: None
     d.set_native_mode = lambda *a, **k: None
     d._o_modo_do_perfil = functools.partial(lifecycle.Daemon._o_modo_do_perfil, d)
-    d._repor_o_point_and_click = lambda: False  # o teclado não é deste teste
+    d._repor_o_point_and_click = lambda: False
     return d, pedidos
 
 

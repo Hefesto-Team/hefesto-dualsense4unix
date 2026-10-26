@@ -48,76 +48,45 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Erros próprios da porta, ao lado dos do IPC (``protocolo_do_ipc``).
 CODE_SEM_PERMISSAO = -32010
 CODE_O_JOGO_ESCREVE = -32011
 CODE_QUEM_E_VOCE = -32012
 CODE_NAO_ESCREVEU = -32013
 
-#: Quanto tempo a vibração que o jogo mandou ao vpad de um controle segura o
-#: canal: dentro dele, a modificação não escreve vibração naquele controle.
 JANELA_DA_VIBRACAO_DO_JOGO_S = 2.0
 
-#: Quantos ``eventos.publicar`` aceitos por segundo de cada extensão; a 21ª é recusada.
 PUBLICACOES_POR_SEGUNDO = 20
 
-#: Ao parar, quanto a porta espera as conexões abertas fecharem.
 PRAZO_PARA_FECHAR_S = 2.0
 
-#: Quantos jogos um ``lancador.jogos`` entrega, no máximo.
 JOGOS_POR_LANCADOR = 5000
 
-#: O ``estado`` de uma conexão e de um aparelho em ``acessorios.estado``: a cor da janela.
 ESTADOS_DO_ACESSORIO = ("ligado", "procurando", "desligado", "falhou")
-#: Por onde uma conexão fala: o ícone da janela e da aba Conexões.
 TRANSPORTES_DA_CONEXAO = ("usb", "bluetooth", "rede", "local")
-#: Quantas conexões e quantos aparelhos um ``acessorios.estado`` leva, no máximo.
 ITENS_DO_ESTADO = 32
-#: Os controles próprios de um aparelho do ``acessorios.estado``: no máximo
-#: ``CONTROLES_DO_APARELHO``, de um dos ``TIPOS_DO_CONTROLE`` (a chave é verdadeiro ou falso, a
-#: paleta e a escolha são o ``id`` de uma das opções delas).
 CONTROLES_DO_APARELHO = 6
 TIPOS_DO_CONTROLE = ("chave", "paleta", "escolha")
-#: Quantas opções uma paleta ou uma escolha leva, e quantas cores mistura um ponto da paleta.
 OPCOES_DO_CONTROLE = 16
 CORES_DO_PONTO = 3
 _COR_DO_PONTO = re.compile(r"#[0-9a-fA-F]{6}")
-#: O evento que o «Parar tudo» da janela entrega à extensão que não lê o gesto ``para``.
 EVENTO_DO_PARAR = "extensao.parar"
-#: O clique num botão de ação da janela e o arrastar do ``livre``, só para a extensão dona.
 EVENTO_DA_ACAO = "extensao.acao"
 EVENTO_DO_LIVRE = "extensao.livre"
-#: O arrastar do ``livre`` sai no compasso de ``1 / LIVRE_POR_SEGUNDO`` s, com o valor mais novo ao
-#: fim de cada compasso; o soltar sai na hora, fora do compasso, e leva o valor final.
 LIVRE_POR_SEGUNDO = 20
-#: O tópico ``botoes``: o serviço entrega o aperto de TODO controle, cada um com o dele.
 TOPICO_DOS_BOTOES = "botoes"
-#: O tópico ``entradas``: os analógicos, os gatilhos e o touchpad de TODO controle.
 TOPICO_DAS_ENTRADAS = "entradas"
-#: Quantas ``entradas`` de um controle saem por segundo, no máximo.
 ENTRADAS_POR_SEGUNDO = 30
-#: Quanto um analógico ou um gatilho (de 0 a 255) anda antes de sair; as pontas saem sempre.
 FAIXA_MORTA_DO_EIXO = 2
-#: Quanto um dedo (de 0 a 1) anda antes de sair; o dedo que chega ou levanta sai sempre.
 FAIXA_MORTA_DO_DEDO = 0.01
-#: O tópico ``movimento``: o giroscópio e o acelerômetro de TODO controle.
 TOPICO_DO_MOVIMENTO = "movimento"
-#: Quantos ``movimento`` de um controle saem por segundo, no máximo.
 MOVIMENTO_POR_SEGUNDO = 30
-#: Quanto um eixo do giro (°/s) anda antes de sair. O controle parado treme menos de 1,5 °/s
-#: de pico a pico por eixo (a janela quieta do roteador de movimento, de 21/09), e o viés de cada
-#: unidade (até 1,6 °/s, E-8 de 15/08) não anda: só passa daqui a mão que mexe.
 FAIXA_MORTA_DO_GIRO = 2.0
-#: Quanto um eixo da aceleração (g) anda antes de sair: ~1,1° de inclinação, abaixo dos 2° que o
-#: roteador ainda chama de parado e acima do degrau de 0,01 g que o hub arredonda.
 FAIXA_MORTA_DA_ACEL = 0.02
 
 Escritor = Callable[[str, dict[str, Any]], Awaitable[Any]]
 OJogoEscreve = Callable[[str, str], bool]
 UniqDoPosto = Callable[[], str | None]
-#: ``controles()``: os controles ligados agora, cada um ``{uniq, jogador}``.
 Controles = Callable[[], list[dict[str, Any]]]
-#: ``pulsador(uniq, pedido)``: o motor da luz começa, retoca ou solta o pulso da barra do controle.
 Pulsador = Callable[[str, dict[str, Any]], dict[str, Any]]
 
 
@@ -137,9 +106,7 @@ class _Credencial:
     mod_id: str
     pid: int
     permissoes: frozenset[str]
-    #: Os ``lancador.comandos`` do manifesto: o primeiro termo de todo ``abrir``.
     comandos: frozenset[str] = frozenset()
-    #: Os ids das ``aparelhos_acoes.acoes`` do manifesto: nenhum controle de aparelho os repete.
     acoes_dos_aparelhos: frozenset[str] = frozenset()
 
 
@@ -147,9 +114,7 @@ class _Credencial:
 class _Assinatura:
     """O que um tópico assinado abriu na conexão: o ``eventos.desassinar`` fecha tudo isto."""
 
-    #: As filas do barramento (a do tópico e a das quedas, nas ``entradas`` e no ``movimento``).
     barramento: list[tuple[str, asyncio.Queue[Any]]] = field(default_factory=list)
-    #: As filas que o serviço enche (``botoes``, ``entradas``, ``movimento``).
     filas: list[asyncio.Queue[Any]] = field(default_factory=list)
     tarefas: list[asyncio.Task[None]] = field(default_factory=list)
 
@@ -157,29 +122,17 @@ class _Assinatura:
 @dataclass(eq=False)
 class _Conexao:
     sessao: _Credencial | None = None
-    #: A modificação desta conexão devolveu o estado dos acessórios: ao cair, o estado se apaga.
     deu_o_estado: bool = False
-    #: O último valor de cada função que esta conexão publicou em ``jogo.acessorio``. Uma
-    #: publicação pode trazer só parte delas, e a que ela não traz segue com o valor de antes.
     funcoes_do_acessorio: dict[str, float] = field(default_factory=dict)
-    #: Os controles em que o último ``vibracao.set`` desta conexão deixou motor ligado.
     vibrando: set[str] = field(default_factory=set)
     assinaturas: list[tuple[str, asyncio.Queue[Any]]] = field(default_factory=list)
     tarefas: list[asyncio.Task[None]] = field(default_factory=list)
     trava: asyncio.Lock = field(default_factory=asyncio.Lock)
-    #: As filas do tópico ``botoes`` (``button.down``, ``button.up``): o serviço as enche com o
-    #: aperto de cada controle (:meth:`Porta.botoes_do_tique`), não pelo barramento.
     filas_dos_botoes: list[tuple[str, asyncio.Queue[Any]]] = field(default_factory=list)
-    #: As filas do tópico ``entradas``, cheias pelo serviço (:meth:`Porta.entradas_do_tique`).
     filas_das_entradas: list[asyncio.Queue[Any]] = field(default_factory=list)
-    #: O ``eventos.assinar`` das ``entradas`` pediu os dedos (``dedos: true``): o serviço mantém
-    #: o leitor de toque de cada controle vivo enquanto esta conexão durar.
     quer_os_dedos: bool = False
-    #: O socket desta conexão: o «Parar tudo» fala por ele sem assinatura nenhuma.
     escritor: asyncio.StreamWriter | None = None
-    #: As filas do tópico ``movimento``, cheias pelo serviço (:meth:`Porta.movimento_do_tique`).
     filas_do_movimento: list[asyncio.Queue[Any]] = field(default_factory=list)
-    #: O que cada tópico público assinado abriu, para o ``eventos.desassinar``.
     assinados: dict[str, _Assinatura] = field(default_factory=dict)
 
     def no_barramento(self, feito: _Assinatura, topico: str, fila: asyncio.Queue[Any]) -> None:
@@ -232,8 +185,6 @@ def _pai_de(pid: int) -> int | None:
     stat = Path(f"/proc/{pid}/stat")
     if not stat.is_file():
         return None
-    # O nome do processo vem entre parênteses e pode ter espaço: o campo do pai
-    # é o segundo depois do ÚLTIMO «)».
     return int(stat.read_text(encoding="ascii", errors="replace").rsplit(")", 1)[-1].split()[1])
 
 
@@ -334,7 +285,7 @@ def _numero(valor: Any) -> bool:
 def _funcoes_do_acessorio(dados: Any) -> dict[str, float]:
     """O campo de funções do ``jogo.acessorio`` validado: nome curto, minúsculo, valor de 0 a 1."""
     corpo = dados if isinstance(dados, dict) else {}
-    pedidas = corpo.get("funcoes")  # (noqa-acento) chave do contrato
+    pedidas = corpo.get("funcoes")  # (noqa-acento)
     if not isinstance(pedidas, dict) or not pedidas:
         raise RecusaError(
             CODE_INVALID_PARAMS, "eventos.publicar pede dados.funcoes com ao menos uma função."
@@ -426,7 +377,6 @@ def jogos_do_lancador(params: dict[str, Any], comandos: frozenset[str]) -> list[
     return saida
 
 
-#: método da porta → (canal, método do serviço que aplica, tradutor do pedido)
 _ESCRITAS: dict[str, tuple[str, str, Callable[[dict[str, Any], str], dict[str, Any]]]] = {
     "luz.set": ("luz", "led.set", _pedido_da_luz),
     "vibracao.set": ("vibracao", "rumble.set", _pedido_da_vibracao),
@@ -440,7 +390,7 @@ def estado_vazio_dos_acessorios(mod_id: str) -> dict[str, Any]:
     """O estado de quem não tem acessório nem conexão: os gestos do PS voltam a ser os de sempre."""
     return {
         "mod": mod_id, "ligado": False, "nivel": 0, "perfil": None, "aparelhos": [],
-        "conexoes": [], "ajustes": {},  # (noqa-acento): a chave do estado
+        "conexoes": [], "ajustes": {},  # (noqa-acento)
     }
 
 
@@ -524,7 +474,7 @@ def _controle(bruto: Any) -> dict[str, Any]:
     as opções e, no valor, o ``id`` de uma delas (ou nulo). O rótulo e a dica são opcionais."""
     if not isinstance(bruto, dict):
         raise _recusa_do_estado(
-            "cada controle é um objeto {id, tipo, valor, opcoes, dica}.")  # (noqa-acento) contrato
+            "cada controle é um objeto {id, tipo, valor, opcoes, dica}.")  # (noqa-acento)
     tipo = bruto.get("tipo")
     if tipo not in TIPOS_DO_CONTROLE:
         raise _recusa_do_estado(f"o tipo de um controle é um de {', '.join(TIPOS_DO_CONTROLE)}.")
@@ -534,13 +484,13 @@ def _controle(bruto: Any) -> dict[str, Any]:
         if not isinstance(valor, bool):
             raise _recusa_do_estado("o valor da chave é verdadeiro ou falso.")
     else:
-        saida["opcoes"] = _opcoes_do_controle(bruto.get("opcoes"), tipo)  # (noqa-acento) contrato
+        saida["opcoes"] = _opcoes_do_controle(bruto.get("opcoes"), tipo)  # (noqa-acento)
         if valor is not None and valor not in {
-            o["id"] for o in saida["opcoes"]}:  # (noqa-acento) contrato
+            o["id"] for o in saida["opcoes"]}:  # (noqa-acento)
             raise _recusa_do_estado(f"o valor da {tipo} é o id de uma das opções dela, ou nulo.")
     saida["valor"] = valor
-    if bruto.get("rotulo") is not None:  # (noqa-acento) contrato
-        saida["rotulo"] = _curto(bruto["rotulo"],  # (noqa-acento) contrato
+    if bruto.get("rotulo") is not None:
+        saida["rotulo"] = _curto(bruto["rotulo"],
                                  "o rótulo de um controle", 30)
     if bruto.get("dica") is not None:
         saida["dica"] = _curto(bruto["dica"], "a dica de um controle", 120)
@@ -559,11 +509,11 @@ def _opcoes_do_controle(bruto: Any, tipo: str) -> list[dict[str, Any]]:
         certo: dict[str, Any] = {"id": _curto(item.get("id"), "o id de uma opção", 40)}
         if tipo == "paleta":
             certo["cor"] = _cor_do_ponto(item.get("cor"))
-            if item.get("rotulo") is not None:  # (noqa-acento) contrato
-                certo["rotulo"] = _curto(item["rotulo"],  # (noqa-acento) contrato
+            if item.get("rotulo") is not None:
+                certo["rotulo"] = _curto(item["rotulo"],
                                          "o rótulo de uma cor", 30)
         else:
-            certo["rotulo"] = _curto(item.get("rotulo"),  # (noqa-acento) contrato
+            certo["rotulo"] = _curto(item.get("rotulo"),
                                      "o rótulo de uma opção", 30)
         saida.append(certo)
     if len({o["id"] for o in saida}) != len(saida):
@@ -612,7 +562,7 @@ def estado_dos_acessorios(mod_id: str, params: dict[str, Any], *,
     nivel = params.get("nivel", 0)
     perfil = params.get("perfil")
     aparelhos = params.get("aparelhos", [])
-    conexoes = params.get("conexoes", [])  # (noqa-acento): a chave do estado
+    conexoes = params.get("conexoes", [])  # (noqa-acento)
     opcoes = params.get("ajustes", {})
     if not isinstance(ligado, bool):
         raise RecusaError(CODE_INVALID_PARAMS, "acessorios.estado pede ligado verdadeiro ou falso.")
@@ -633,23 +583,19 @@ def estado_dos_acessorios(mod_id: str, params: dict[str, Any], *,
         "nivel": nivel,
         "perfil": perfil,
         "aparelhos": [_aparelho(a, acoes_dos_aparelhos) for a in aparelhos[:ITENS_DO_ESTADO]],
-        "conexoes": as_conexoes,  # (noqa-acento): a chave do estado
+        "conexoes": as_conexoes,  # (noqa-acento)
         "ajustes": {k: v for k, v in opcoes.items() if k in OPCOES_DOS_GESTOS},
     }
 
 
-#: As opções da modificação que o Hefesto lê (as que mexem nos gestos do PS e na confirmação).
 OPCOES_DOS_GESTOS = frozenset({
     "limiar_fundo", "acelerador", "camada", "camada_s", "lado_unico", "gestos_no_nativo",
     "toque_de_confirmacao", "pulso_da_barra", "sem_pisca",
 })
 
 
-#: As ``entradas`` de um controle: ``lx, ly, rx, ry, l2, r2`` (0 a 255) e os dedos ``(x, y)``.
 _Valores = tuple[int, int, int, int, int, int, tuple[tuple[float, float], ...]]
-#: O controle parado: os analógicos no centro, os gatilhos soltos e nenhum dedo.
 REPOUSO_DAS_ENTRADAS: _Valores = (128, 128, 128, 128, 0, 0, ())
-#: As pontas de cada eixo (os analógicos e os gatilhos): chegar a uma delas sai sempre.
 _PONTAS = ((0, 128, 255),) * 4 + ((0, 255),) * 2
 
 
@@ -677,10 +623,7 @@ def _carga_das_entradas(uniq: str | None, jogador: Any, via: Any, valores: _Valo
             "dedos": [{"x": x, "y": y} for x, y in dedos]}
 
 
-#: O ``movimento`` de um controle: o giro (°/s) e a aceleração (g), cada um ``(x, y, z)``.
 _Movimento = tuple[tuple[float, float, float], tuple[float, float, float]]
-#: O controle que saiu (ou que nunca foi lido): giro e aceleração zerados. A aceleração zerada é
-#: «sem leitura», não um controle parado (que mede ~1 g).
 REPOUSO_DO_MOVIMENTO: _Movimento = ((0.0, 0.0, 0.0), (0.0, 0.0, 0.0))
 
 
@@ -746,27 +689,14 @@ class Porta:
         self._inode: int | None = None
         self._conexoes: set[_Conexao] = set()
         self._relogio = relogio
-        #: Os instantes dos últimos ``eventos.publicar`` aceitos de cada extensão (a janela de 1 s).
         self._publicacoes: dict[str, deque[float]] = {}
-        #: O último ``acessorios.estado`` de cada extensão: a coluna «Agora» da janela dela.
         self._estados_dos_acessorios: dict[str, dict[str, Any]] = {}
-        #: O último ``lancador.jogos`` de cada extensão de lançador.
         self._jogos_dos_lancadores: dict[str, list[dict[str, Any]]] = {}
-        #: Os botões de cada controle no último tique entregue ao tópico ``botoes``; ``None``
-        #: enquanto ninguém o lê (o primeiro tique com leitor só guarda, sem borda inventada).
         self._botoes_antes: dict[str | None, frozenset[str]] | None = None
-        #: O que saiu por último no tópico ``entradas``, por controle: ``(valores, instante,
-        #: jogador, transporte)``. Quem nunca saiu do repouso não está aqui.
         self._entradas_enviadas: dict[str | None, tuple[_Valores | None, float, Any, Any]] = {}
-        #: Quantos ``acessorios.estado`` cada extensão já devolveu: a janela vê a resposta à ação.
         self._series: dict[str, int] = {}
-        #: O arrastar do ``livre`` de cada ``(mod, opção)``: o valor que espera o fim do compasso.
         self._livres: dict[tuple[str, str], _Compasso] = {}
-        #: O que saiu por último no tópico ``movimento``, por controle: ``(valores, instante,
-        #: jogador, transporte)``, como o das ``entradas``.
         self._movimento_enviado: dict[str | None, tuple[_Movimento | None, float, Any, Any]] = {}
-
-    # -- quem pode entrar -------------------------------------------------
 
     def registrar(self, ficha: str, mod_id: str, pid: int, permissoes: list[str],
                   *, comandos: tuple[str, ...] = (),
@@ -787,8 +717,6 @@ class Porta:
             if con.sessao is not None and con.sessao.mod_id == mod_id
             for _topico, fila in con.assinaturas
         ]
-
-    # -- ciclo de vida ----------------------------------------------------
 
     @property
     def aberta(self) -> bool:
@@ -824,8 +752,6 @@ class Porta:
                 if self.caminho.stat().st_ino == self._inode:
                     self.caminho.unlink()
             self._inode = None
-
-    # -- uma conexão ------------------------------------------------------
 
     async def _atender(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter) -> None:
         con = _Conexao(escritor=writer)
@@ -902,7 +828,7 @@ class Porta:
                 return _resposta(req_id, {
                     "id": con.sessao.mod_id,
                     "api": API_DAS_MODIFICACOES,
-                    "permissoes": sorted(con.sessao.permissoes),  # (noqa-acento): contrato ASCII
+                    "permissoes": sorted(con.sessao.permissoes),  # (noqa-acento)
                 })
             if metodo == "eventos.assinar":
                 return _resposta(req_id, self._assinar(con, writer, params))
@@ -917,12 +843,9 @@ class Porta:
             if metodo == "lancador.jogos":
                 return _resposta(req_id, self._jogos_do_lancador(con.sessao, params))
             if metodo == "controles.lista":
-                # Fora do laço: a descrição dos controles toma a trava de E/S do backend.
                 return _resposta(req_id, await asyncio.to_thread(
                     self._lista_dos_controles, con.sessao))
             if metodo in _ESCRITAS:
-                # Como o IPC (``ipc:<método>``): quem grava no meio da escrita sabe de
-                # onde ela veio, e a modificação deixa de escrever como «ninguém».
                 marca_do_gesto = gesto_de_agora.set(f"mod:{con.sessao.mod_id}:{metodo}")
                 try:
                     feito = await self._escrever(con.sessao, metodo, params)
@@ -976,15 +899,11 @@ class Porta:
             for topico in TOPICOS_DE_LEITURA[publico]:
                 if publico == TOPICO_DOS_BOTOES:
                     if not self.le_os_botoes():
-                        # O primeiro leitor começa do zero: o retrato do último tique com leitor
-                        # (o laço não chama ninguém sem ele) inventaria a borda de um aperto velho.
                         self._botoes_antes = None
                     fila: asyncio.Queue[Any] = asyncio.Queue(maxsize=DEFAULT_QUEUE_MAXSIZE)
                     con.filas_dos_botoes.append((topico, fila))
                     feito.filas.append(fila)
                 elif publico == TOPICO_DAS_ENTRADAS:
-                    # Quem chega começa do repouso: o controle fora dele sai de novo no tique
-                    # seguinte, a todos (o valor repetido não muda nada a quem já o tinha).
                     self._entradas_enviadas = {
                         uniq: (None, quando, jogador, via)
                         for uniq, (_valores, quando, jogador, via)
@@ -993,7 +912,6 @@ class Porta:
                     fila = asyncio.Queue(maxsize=DEFAULT_QUEUE_MAXSIZE)
                     con.filas_das_entradas.append(fila)
                     feito.filas.append(fila)
-                    # A mesa que cai inteira não tem tique que leia: a queda leva o repouso.
                     saidas = self.bus.subscribe(EventTopic.CONTROLLER_DISCONNECTED)
                     con.no_barramento(feito, EventTopic.CONTROLLER_DISCONNECTED, saidas)
                     con.tarefa(feito, self._repousar_quem_sai(saidas),
@@ -1026,9 +944,9 @@ class Porta:
 
         Sem a lista do serviço, vale o controle do posto. Nunca levanta: a lista que falha é vazia.
         """
-        if "ler:conexao" not in sessao.permissoes:  # (noqa-acento): contrato ASCII
+        if "ler:conexao" not in sessao.permissoes:  # (noqa-acento)
             raise RecusaError(CODE_SEM_PERMISSAO,
-                              "falta a permissão ler:conexao")  # (noqa-acento) contrato
+                              "falta a permissão ler:conexao")  # (noqa-acento)
         try:
             if self._controles is not None:
                 brutos = self._controles()
@@ -1073,7 +991,7 @@ class Porta:
                 f"eventos.publicar aceita até {PUBLICACOES_POR_SEGUNDO} por segundo por extensão.",
             )
         janela.append(agora)
-        evento = {"funcoes": pedidas, "origem": mod_id, "t": agora}  # (noqa-acento) contrato
+        evento = {"funcoes": pedidas, "origem": mod_id, "t": agora}  # (noqa-acento)
         self.bus.publish(TOPICOS_DE_PUBLICACAO[topico], evento)
         con.funcoes_do_acessorio.update(pedidas)
         return {"publicado": True}
@@ -1081,7 +999,7 @@ class Porta:
     def _soltar_o_acessorio(self, mod_id: str, funcoes: dict[str, float]) -> None:
         """Quem publicou saiu: o serviço publica, em nome dele, o zero de cada função usada."""
         self.bus.publish(EventTopic.JOGO_ACESSORIO, {
-            "funcoes": dict.fromkeys(funcoes, 0.0),  # (noqa-acento) chave do contrato
+            "funcoes": dict.fromkeys(funcoes, 0.0),  # (noqa-acento)
             "origem": mod_id,
             "t": self._relogio(),
         })
@@ -1128,8 +1046,6 @@ class Porta:
             except Exception as exc:
                 logger.warning("mods_porta_vibracao_nao_soltou", mod=sessao.mod_id,
                                err=type(exc).__name__)
-
-    # -- a janela da extensão, pelo IPC principal ---------------------------
 
     def jogos_de(self, mod_id: str) -> list[dict[str, Any]]:
         """O último ``lancador.jogos`` de ``mod_id``; sem conexão viva, a lista vazia."""
@@ -1208,7 +1124,7 @@ class Porta:
         é a chave ``ligar`` ou a de um controle (``True`` liga), ou o ``id`` da opção escolhida
         numa paleta ou numa escolha. ``False`` quando a extensão não está conectada à porta.
         """
-        dados: dict[str, Any] = {"mod": mod_id, "acao": acao, "alvo": alvo}  # (noqa-acento) chave
+        dados: dict[str, Any] = {"mod": mod_id, "acao": acao, "alvo": alvo}  # (noqa-acento)
         if valor is not None:
             dados["valor"] = valor
         return self._avisar_a(mod_id, EVENTO_DA_ACAO, dados)
@@ -1248,8 +1164,6 @@ class Porta:
         if dados is not None:
             self._avisar_a(chave[0], EVENTO_DO_LIVRE, dados)
 
-    # -- o tópico ``botoes``, de todo controle ------------------------------
-
     def le_os_botoes(self) -> bool:
         """Alguma extensão assinou o tópico ``botoes``? Sem ela, o tique não lê controle nenhum."""
         return any(con.filas_dos_botoes for con in self._conexoes)
@@ -1284,8 +1198,6 @@ class Porta:
                     for topico, fila in filas:
                         if topico == nome:
                             _por_na_fila(fila, carga)
-
-    # -- o tópico ``entradas``, de todo controle -----------------------------
 
     def le_as_entradas(self) -> bool:
         """Alguma extensão assinou o tópico ``entradas``? Sem ela, o tique não lê controle."""
@@ -1343,8 +1255,6 @@ class Porta:
             uniq = carga.get("uniq") if isinstance(carga, dict) else None
             self._repouso_de(uniq if isinstance(uniq, str) and uniq else None)
 
-    # -- o tópico ``movimento``, de todo controle ----------------------------
-
     def le_o_movimento(self) -> bool:
         """Alguma extensão assinou o tópico ``movimento``? Sem ela, ninguém pede o leitor."""
         return any(con.filas_do_movimento for con in self._conexoes)
@@ -1352,7 +1262,6 @@ class Porta:
     def _assinar_o_movimento(self, con: _Conexao, feito: _Assinatura) -> asyncio.Queue[Any]:
         """A fila do ``movimento`` desta conexão, e a queda de um controle levando o repouso."""
         assert con.sessao is not None
-        # Quem chega começa do repouso: o controle que já saiu sai de novo no tique seguinte.
         self._movimento_enviado = {
             uniq: (None, quando, jogador, via)
             for uniq, (_valores, quando, jogador, via) in self._movimento_enviado.items()
@@ -1448,14 +1357,14 @@ class Porta:
                 and con.sessao is not None
                 and carga.get("origem") == con.sessao.mod_id
             ):
-                continue  # quem publicou nunca recebe o próprio evento
+                continue
             if (
                 topico == EventTopic.ACESSORIOS_GESTO
                 and isinstance(carga, dict)
                 and con.sessao is not None
                 and carga.get("mod") not in (None, con.sessao.mod_id)
             ):
-                continue  # o «Parar tudo» de uma janela vai só à extensão dela
+                continue
             uniq = carga.get("uniq") if isinstance(carga, dict) else None
             if not isinstance(uniq, str) or not uniq:
                 uniq = self._uniq_do_posto()
@@ -1491,9 +1400,6 @@ class Porta:
         except Exception as exc:
             logger.warning("mods_porta_escrita_falhou", metodo=metodo, err=str(exc))
             raise RecusaError(CODE_NAO_ESCREVEU, f"não escreveu: {type(exc).__name__}") from exc
-
-
-# -- as ligações com o serviço vivo ----------------------------------------
 
 
 def escritor_do_servico(daemon: Any) -> Escritor:
@@ -1702,7 +1608,6 @@ def entradas_de_todo_controle_no_servico(daemon: Any, estado_do_posto: Any) -> N
         logger.debug("mods_porta_entradas_do_tique_falhou", err=type(exc).__name__)
 
 
-#: Os eixos do ``ControllerState`` do posto, na ordem das ``entradas``, com o valor do repouso.
 _EIXOS_DO_POSTO = (("raw_lx", 128), ("raw_ly", 128), ("raw_rx", 128), ("raw_ry", 128),
                    ("l2_raw", 0), ("r2_raw", 0))
 

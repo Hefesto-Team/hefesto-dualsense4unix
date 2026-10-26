@@ -74,7 +74,7 @@ class Firmware:
             return
         numero = saida[1] >> 4
         if self.descarta and self.ultimo is not None and not 1 <= (numero - self.ultimo) % 16 <= 7:
-            return  # o repetido e o que anda para trás
+            return
         self.ultimo = numero
         if saida[3] & 0x04:
             self.efeito = 0x2 if saida[3 + 10] == TriggerMode.WEAPON else 0x0
@@ -155,16 +155,12 @@ def test_a_linha_do_veredito_vai_ao_caderno(ens: ModuleType) -> None:
     assert veredito[11] == ens.FONTE
 
 
-# ---- a régua de texto: as duas afirmações não convivem -------------------------------------
-
-#: a casa afirma que o firmware descarta o número repetido ou fora de ordem
 DESCARTE = (
     re.compile(r"fazem o firmware descartar"),
     re.compile(r"firmware descarta o (?:report|quadro|segundo)"),
     re.compile(r"o que o firmware joga fora"),
     re.compile(r"descartad[oa] pelo firmware"),
 )
-#: a casa afirma que o número não importa ao firmware
 NAO_IMPORTA = (
     re.compile(r"(?:firmware|controle) aceita(?: o)? 0 fixo"),
     re.compile(r"desde sempre e o controle aceita"),
@@ -203,7 +199,7 @@ def _src() -> dict[str, str]:
 
 
 def test_src_nao_afirma_o_que_o_caderno_nao_diz() -> None:
-    # D-1510-O-DESCARTE-PELO-NUMERO-NAO-SE-AFIRMA-SEM-O-ENSAIO
+    """Prova da D-1510-O-DESCARTE-PELO-NUMERO-NAO-SE-AFIRMA-SEM-O-ENSAIO."""
     veredito = veredito_do_caderno()
     assert afirmacoes_que_o_caderno_nao_sustenta(veredito, _src()) == [], veredito
 

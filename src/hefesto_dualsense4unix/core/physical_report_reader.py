@@ -136,98 +136,55 @@ from hefesto_dualsense4unix.utils.espera import prontos_para_ler
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
-#: Report de input do DualSense por transporte (hid-playstation.c):
-#: USB = 0x01 (64 B, payload começa em data[1]); BT = 0x31 (78 B, payload em
-#: data[2] — 0x31 + 1 byte de header — e CRC-32 nos 4 últimos bytes).
 INPUT_REPORT_USB = 0x01
 INPUT_REPORT_BT = 0x31
 INPUT_REPORT_BT_SIZE = 78
 _USB_STRUCT_BASE = 1
 _BT_STRUCT_BASE = 2
 
-#: Bit 1 do byte 1 de um `0x31` de BT: **este report carrega ÁUDIO**, não
-#: estado de input. Mesmo id, mesmo tamanho, mesmo CRC válido — só este bit
-#: separa um do outro. Ver `_struct_base` e o PS-PRESO-01 de 16/08/2026.
-#: Espelha `integrations/dualsense_bt_audio.INPUT_FLAG_AUDIO`; os dois estão
-#: travados por teste, e a duplicação é para o caminho quente não importar
-#: ctypes/libopus.
 INPUT_FLAG_AUDIO = 0x02
 
-#: Janela de motion DENTRO do payload (offsets do `struct dualsense_input_
-#: report`): gyro[3] 15-20, accel[3] 21-26, sensor_timestamp 27-30, reserved2
-#: 31, touch points 32-39. Mesmos números do `_MOTION_WINDOW` do vpad
-#: (`integrations/uhid_gamepad.py`) — travados um no outro por teste.
 MOTION_WINDOW_OFFSET = 15
-#: O contador de reports do aparelho: um `__le32` no `reserved[4]` do corpo
-#: (11 a 14), que o driver não lê e que anda de 1 em 1 por report, no cabo e
-#: no rádio (medido em 15/08/2026). O `seq_number` do corpo 6 não serve: fica
-#: parado em 1 no rádio.
 CONTADOR_DE_REPORT_OFFSET = 11
 MOTION_WINDOW_LEN = 25
 
-#: TOUCH-CLICK-01 — o CLIQUE do touchpad dentro do payload: `buttons[2]` do
 BUTTONS2_OFFSET = 9
 TOUCHPAD_CLICK_BIT = 0x02
 
 MIC_BUTTON_BIT = 0x04
 
-#: microfone mudo no firmware (bit 2). Mesmo número do `_STATUS1_OFFSET` do
-#: mora fora da janela de motion (15..39), chega de graça no mesmo report cru,
 JACK_STATUS_OFFSET = 53
 
-#:
 BATTERY_STATUS_OFFSET = 52
 
-#: O ESTADO DO GATILHO (08/10/2026, O-GATILHO-DIZ-QUANDO-DISPAROU-01): o NIBBLE
-#: ALTO de `trigger_right_status` (payload 41) e de `trigger_left_status`
-#: (payload 42) diz o que o gatilho está sentindo. Com a arma oficial (`0x25`):
-#: 0 antes do início, 1 entre o início e o fim, 2 depois (disparou), até o dedo
-#: voltar para antes do início; com a vibração oficial: 0 antes, 1 dentro. Só os
-#: modos oficiais mexem no nibble (o arco `0x22` e o galope `0x23` não). O
-#: nibble baixo é outro campo (o ponto de parada). Os endereços vêm de fontes de
-#: terceiros que concordam; aqui só há relatórios sintéticos no teste, e a prova
-#: no aparelho é da bancada. Cabo: report[42] e [43]; rádio: report[43] e [44].
 TRIGGER_R2_STATUS_OFFSET = 41
 TRIGGER_L2_STATUS_OFFSET = 42
 TRIGGER_STATE_SHIFT = 4
-#: O estado «disparou» da arma oficial (`weaponFired`).
 TRIGGER_ESTADO_DISPAROU = 2
 
 _CARGA_DESCARREGANDO = 0x0
 _CARGA_CARREGANDO = 0x1
 _CARGA_CHEIO = 0x2
 
-#: contagem antiga isso jogava fora 36% das amostras justamente no transporte em
 MOTION_EMIT_MAX_HZ = 250.0
 
 _READ_LEN = 128
 
 _SELECT_TIMEOUT_S = 0.25
 
-#: DualSense vivo emite SEMPRE" só vale NO CABO, onde os 250 Hz são
-#: DualSense parado em BT caía num ciclo eterno a ~1 Hz: silêncio -> larga o
-#: segundo, piscava o motion do vpad na mesma cadência e enchia o journal
-#: cada meio minuto no pior caso, contra 30 no arranjo anterior.
 _SILENCE_REOPEN_USB_S = 1.0
 _SILENCE_REOPEN_BT_S = 30.0
 
-#: Bus HID do `HID_ID` no sysfs (`BUS_USB` / `BUS_BLUETOOTH` do kernel).
 _BUS_USB = 0x03
 _BUS_BLUETOOTH = 0x05
 
-#: Backoff de reconexão (mesma curva do `_EvdevReconnectLoop`).
 _BACKOFF_START_S = 0.5
 _BACKOFF_MAX_S = 5.0
 
-#: Telemetria GYRO-03 — taxa de emissão (`emit_hz`) por EMA dos intervalos
-#: entre entregas. Alpha 0.25 ≈ estabiliza em ~1 s a 250 Hz sem congelar em
-#: transientes; acima de `_HZ_STALE_S` sem entrega a taxa reportada é 0.0
-#: (uma EMA "congelada" de um fluxo morto mentiria 250 Hz para sempre).
 _HZ_EMA_ALPHA = 0.25
 _HZ_STALE_S = 1.0
 
 
-#: Raiz do sysfs onde cada nó `hidraw` declara de quem é (`HID_UNIQ`); o dono é o `usb_pai`.
 _RAIZ_HIDRAW = usb_pai.RAIZ_HIDRAW
 
 
@@ -339,9 +296,6 @@ def _struct_base(report: bytes) -> int | None:
     if not report:
         return None
     if report[0] == INPUT_REPORT_USB:
-        #: BATERIA-QUE-PULA-01 (16/09/2026) — o tamanho passou a ser conferido
-        #: TAMBÉM no cabo. Esta linha era um `return` seco, e um `0x01` de dez
-        #: bytes atravessava: medido, `_struct_base(bytes([0x01]) + bytes(9))`
         if len(report) <= _USB_STRUCT_BASE + JACK_STATUS_OFFSET:
             return None
         return _USB_STRUCT_BASE
@@ -355,10 +309,6 @@ def _struct_base(report: bytes) -> int | None:
             return None
         return _BT_STRUCT_BASE
     return None
-
-
-# Na bancada — quatro DualSense por rádio, ~2.400 relatórios/s no total
-# aparelho do usuário. O portão que trava a economia é
 
 
 def _janela_com_base(report: bytes, base: int) -> bytes | None:
@@ -522,7 +472,6 @@ class PhysicalReportReader:
         self._vpad = vpad
         self._min_interval = 1.0 / float(max_hz) if max_hz > 0 else 0.0
         self._time_fn = time_fn
-        # falha (o loop já trata com o backoff). Default = comportamento de
         self._opener: Callable[[str], int] = (
             opener if opener is not None else _open_por_caminho
         )

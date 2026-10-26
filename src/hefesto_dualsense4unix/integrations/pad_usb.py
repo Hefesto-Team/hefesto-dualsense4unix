@@ -64,36 +64,20 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 VENDOR_SONY = 0x054C
 
-#: O ``HID_PHYS`` que o uhid do pad declara (``uhid_gamepad.VPAD_HID_PHYS``).
 VPAD_HID_PHYS = "hefesto-vpad"
 
-#: Os dígitos hex do começo do MAC forjado (``uhid_gamepad.VPAD_MAC_PREFIXO``).
 VPAD_UNIQ_PREFIXO = "02fe"
 
-#: O começo do serial USB do gadget. O resto são os 12 hex do MAC do pad.
 SERIAL_PREFIXO = "hefesto-pad-"
 
-#: Quantos pads ganham porta USB própria: as oito portas de alta velocidade do
-#: ``vhci_hcd.0`` (``CONFIG_USBIP_VHCI_HC_PORTS``, 8 no kernel das distros) e os
-#: oito ``vudc`` que o broker carrega (``usbip-vudc num=8``). O teto de quatro
-#: era do produto, não do kernel: o Sackboy só inicializa quatro pads, mas o
-#: quinto sem porta fica uhid, sem par, e é o HID sem par que faz o jogo varrer
-#: o áudio. O dono do teto no broker é ``hidraw_broker.PAD_USB_MAX``.
 MAX_PADS_USB = 8
 
-#: Quantas vagas o ``usbip_vudc`` carregado oferece, ou None sem o módulo. O
-#: ``modprobe num=8`` não troca o que já está no kernel.
 _VAGAS_DO_VUDC = "/sys/module/usbip_vudc/parameters/num"
 
-#: Os módulos do kernel sem os quais o pad continua uhid (a cura 6).
 MODULOS_DO_GADGET = ("libcomposite", "usb_f_hid", "usbip_vudc", "vhci_hcd")
 
-#: O ioctl do ``f_hid`` que pré-carrega as features 0x05, 0x09 e 0x20.
 CONTRATO_DO_IOCTL = "GADGET_HID_WRITE_GET_REPORT"
 
-#: A marca do ``usb_f_hid`` curado (``assets/dkms/usb-f-hid``). O de fábrica
-#: responde o GET_REPORT com 64 bytes e sem o pacote vazio, e o jogo no Proton
-#: espera 5 s por pedido de feature. Sem a marca o pad sobe igual, mais lento.
 MARCA_DO_F_HID = "/sys/module/usb_f_hid/parameters/get_report_sized"
 
 BUS_USB = 0x0003
@@ -245,8 +229,6 @@ def hidraw_do_gadget(
     try:
         nomes = sorted(os.listdir(raiz_class_hidraw))
     except OSError as exc:
-        # Sem a classe hidraw o pad não enumera: o vigia da enumeração vence
-        # o prazo e devolve o pad ao uhid; a linha diz por quê.
         logger.debug("pad_usb_classe_hidraw_ilegivel", raiz=raiz_class_hidraw, errno=exc.errno)
         return None
     for nome in nomes:
@@ -309,13 +291,8 @@ def aparelho_presente(
     return False
 
 
-# --- o GET_REPORT do f_hid (linux/usb/g_hid.h) -------------------------------
-
-#: ``_IOR('g', 0x41, __u8)``: o id do GET_REPORT que o jogo pediu e espera.
 GADGET_HID_READ_GET_REPORT_ID = 0x80016741
-#: ``_IOW('g', 0x42, struct usb_hidg_report)``: a resposta de um GET_REPORT.
 GADGET_HID_WRITE_GET_REPORT = 0x40486742
-#: ``struct usb_hidg_report`` = id, userspace_req, length, data[64], padding[4].
 _USB_HIDG_REPORT = struct.Struct("<BBH64s4x")
 _MAX_REPORT_LENGTH = 64
 
@@ -368,36 +345,16 @@ def bus_do_hid_id(hid_id: str) -> int | None:
     return int(cabeca, 16)
 
 
-# --- o registro dos gadgets vivos (o som se ancora nele) ---------------------
-
 _TRAVA = threading.Lock()
 _INTERFACE_DO_APARELHO: dict[str, str] = {}
-#: ``{12 hex do aparelho: motivo}``: por que o pad dele ficou sem a porta USB
-#: própria (o broker recusou, faltou contrato, não enumerou). O pad escreve, e o
-#: som lê quando o aparelho fica sem endpoint (``haptica_sem_porta_propria``).
 _SEM_PORTA: dict[str, str] = {}
-#: o motivo de quem nunca disse nada: o pad do aparelho não pediu gadget.
 SEM_GADGET = "sem_gadget"
 _CONTRATO_QUE_FALTOU: list[str] = []
-#: a marca do ``usb_f_hid`` medida ao montar o último gadget (None = não medida).
 _MARCA_DO_F_HID: list[bool | None] = [None]
-#: ``{serial do gadget: (12 hex do aparelho ou "", prazo monotônico)}``: o gadget
-#: montado que ainda não deu a âncora. "" é o pad que montou antes de saber de
-#: quem é (o P1 do boot, com o ``primary_uniq`` ainda vazio).
 _A_CAMINHO: dict[str, tuple[str, float]] = {}
-#: a chave de :data:`_A_CAMINHO` do aparelho que o co-op já pôs na mesa e cujo
-#: pad ainda não nasceu (o grab, a calibração e a ordem levam segundos).
 _CHAVE_DO_APARELHO = "aparelho:"
-#: ``(12 hex de cada aparelho que o co-op viu, prazo monotônico)``: o co-op
-#: renova a cada ``sync``; vencido (ou None) = o co-op fora do ar, e nenhum
-#: aparelho espera por ele.
 _A_MESA_VIU: tuple[frozenset[str], float] | None = None
-#: quando o som perguntou pela primeira vez por um aparelho que o co-op ainda
-#: não viu: a espera por ele dura no máximo :data:`_POR_DECIDIR_S`.
 _PRIMEIRA_PERGUNTA: dict[str, float] = {}
-#: uma volta do ``coop.sync`` (2 s) e folga: depois disso, o aparelho que o
-#: co-op não viu não é dele (o primário sem MAC, um aparelho que o evdev não
-#: lista) e o som decide sem esperar: com a porta própria, o endpoint; sem ela, nenhum.
 _POR_DECIDIR_S = 5.0
 
 
@@ -494,7 +451,7 @@ def a_mesa_viu(identidades: Iterable[str] | None, validade_s: float) -> None:
     with _TRAVA:
         if identidades is None:
             if _A_MESA_VIU is None:
-                return  # renovar o que nunca foi lido faria todo aparelho esperar
+                return
             vistos = _A_MESA_VIU[0]
         else:
             vistos = frozenset(h for h in (_so_hex(i) for i in identidades) if h)
@@ -595,15 +552,6 @@ def contrato_que_faltou_ao_montar() -> list[str]:
         return list(_CONTRATO_QUE_FALTOU)
 
 
-# --- a porta que não enumera (UM-GADGET-QUE-NAO-ENUMERA-NAO-CONDENA-OS-OUTROS-01) --
-#
-# A enumeração pelo ``vhci_hcd`` é um fato de cada porta e de cada vez, e não um
-# contrato do kernel: guardada em :data:`_CONTRATO_QUE_FALTOU`, a falha do P3
-# em 12/10/2026 mandou todo pad seguinte ao uhid até o daemon reiniciar. A
-# porta do ``vhci`` é a do número do jogador (o broker usa ``porta_do_serial``),
-# e é ela que se conta aqui.
-
-#: duas falhas seguidas da mesma porta a tiram do rodízio até o daemon reiniciar.
 FALHAS_ATE_A_PORTA_SAIR = 2
 _FALHAS_DA_PORTA: dict[int, int] = {}
 
@@ -627,13 +575,12 @@ def porta_fora(porta: int) -> bool:
         return _FALHAS_DA_PORTA.get(porta, 0) >= FALHAS_ATE_A_PORTA_SAIR
 
 
-#: o evento do daemon que diz por que o pad do jogador ficou no uhid.
 _POR_QUE_NO_UHID = {
-    "pad_usb_nao_enumerou_fica_o_uhid": "nao_enumerou",  # (noqa-acento): chave de máquina
+    "pad_usb_nao_enumerou_fica_o_uhid": "nao_enumerou",
     "pad_usb_caiu_fica_o_uhid": "caiu",
     "pad_usb_porta_fora": "porta_fora",
     "pad_usb_features_recusadas_fica_o_uhid": "features_recusadas",
-    "pad_usb_fica_o_uhid": "quirk_do_par",  # o único motivo dele: o par tem a quirk ``n``
+    "pad_usb_fica_o_uhid": "quirk_do_par",
 }
 _LINHA_DO_DAEMON = re.compile(
     r"\[\s*(?:debug|info|warning|error|critical)\s*\]\s+(\w+)(.*)$"
@@ -708,15 +655,8 @@ def marca_do_f_hid_medida() -> bool | None:
         return _MARCA_DO_F_HID[0]
 
 
-# --- a quirk do usbcore, que casa pelo par -----------------------------------
-
-#: As quirks vivas do ``usbcore`` (``usbcore.quirks=`` da linha do kernel, ou
-#: escritas depois): entradas ``vvvv:pppp:flags`` separadas por vírgula.
 QUIRKS_DO_USBCORE = "/sys/module/usbcore/parameters/quirks"
 
-#: ``USB_QUIRK_DELAY_CTRL_MSG``: o kernel dorme 200 ms antes de cada pedido de
-#: controle de todo aparelho com o par, o gadget pelo ``vhci_hcd`` incluído.
-#: Com quatro pads, o ``SDL_Init`` do winebus levou ~23 s (14/10/2026).
 _QUIRK_QUE_ATRASA = "n"
 _ENTRADA_DA_QUIRK = re.compile(r"([0-9a-f]{1,4}):([0-9a-f]{1,4}):([a-z]*)")
 
@@ -742,9 +682,6 @@ def o_par_tem_a_quirk_que_atrasa(
         if achado == alvo and _QUIRK_QUE_ATRASA in casou.group(3):
             return True
     return False
-
-
-# --- o contrato do kernel (a cura 6) ----------------------------------------
 
 
 def _modulo_disponivel(

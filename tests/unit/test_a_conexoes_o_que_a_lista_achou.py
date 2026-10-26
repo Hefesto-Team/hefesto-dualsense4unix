@@ -497,8 +497,8 @@ def test_o_teclado_esperando_nao_pede_ps_create_nem_veste_dualsense(
 
 
 @pytest.mark.parametrize(("modalias", "gesto"), [
-    ("bluetooth:v054Cp0CE6d0100", "Segure PS + Create"),   # DualSense
-    ("bluetooth:v054Cp0DF2d0100", "Segure PS + Create"),   # DualSense Edge
+    ("bluetooth:v054Cp0CE6d0100", "Segure PS + Create"),
+    ("bluetooth:v054Cp0DF2d0100", "Segure PS + Create"),
     ("bluetooth:v054Cp09CCd0100", "Segure PS + Share"),
     ("bluetooth:v2DC8p6002d0100", ""),
     ("", "Segure PS + Create"),
@@ -781,11 +781,6 @@ def test_a_caixa_de_quem_espera_o_gesto_abre_sozinha(
     assert _cena(a08, _estado({AZUL: 0}))["aberto"] is None
 
 
-# O QUE O CONFERENTE ACHOU (25/09/2026) — a cura que só valia para o DualSense
-# O rádio de mentira respondia o `HID_PHYS` só pelo DualSense e dava movimento a
-# que o daemon (ele só mede o movimento do DualSense). Com ele fiel, três curas
-# desta sprint caíam fora do DualSense de classe publicada.
-
 TECLADO_LE = "aa:bb:cc:00:00:7d"
 OUTRO_CONTROLE = "aa:bb:cc:00:00:8b"
 
@@ -901,8 +896,6 @@ def test_a_lampada_aparece_sem_ela_abrir_caixa_nenhuma(
     cena = _cena(a08, estado)
 
     destino = _id(ordem.destino)
-    # as caixas nascem fechadas (desenho aprovado de 05/10/2026): a proposta é o cartão
-    # «Mover» da Gestão, que o usuário vê sem abrir caixa nenhuma; a lâmpada continua na caixa
     assert cena["aberto"] is None
     cartao = a08.html_do_lugar(next(lug for lug in cena["lugares"] if lug["id"] == destino),
                                cena)

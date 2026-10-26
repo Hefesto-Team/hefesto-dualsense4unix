@@ -43,9 +43,6 @@ from hefesto_dualsense4unix.utils import maquina
 UNIQ = "aabbcc000001"
 
 
-# -- o daemon de verdade ---------------------------------------------------------------------
-
-
 def _state() -> ControllerState:
     return ControllerState(
         battery_pct=80,
@@ -139,9 +136,6 @@ async def _roda(daemon: Daemon) -> asyncio.Task[None]:
     return tarefa
 
 
-# -- 1 · o run sobe, o shutdown fecha --------
-
-
 @pytest.mark.asyncio
 async def test_o_run_sobe_o_servidor_e_o_shutdown_fecha_a_porta() -> None:
     daemon = _daemon()
@@ -154,7 +148,6 @@ async def test_o_run_sobe_o_servidor_e_o_shutdown_fecha_a_porta() -> None:
     versao = await _pergunta(porta, _pedido(0x100000, b""))
     assert len(versao) == 1 and struct.unpack_from("<H", versao[0], 20)[0] == 1001
 
-    # A tabela nasce no laço do daemon: o controle 1 aparece no slot 0, com MAC de vpad.
     assert await _espera(lambda: 0 in servidor._estado[0])
     portas = await _pergunta(porta, _pedido(0x100001, struct.pack("<i", 1) + bytes([0])))
     assert tuple(portas[0][20:24]) == (0, 2, 2, 1)
@@ -165,9 +158,6 @@ async def test_o_run_sobe_o_servidor_e_o_shutdown_fecha_a_porta() -> None:
     await tarefa
     assert daemon._servidor_dsu is None and daemon._tarefa_dsu is None
     assert _bind_livre(porta), "o shutdown deixou a porta presa"
-
-
-# -- 2 · desligado, nem socket --------
 
 
 @pytest.mark.asyncio
@@ -183,9 +173,6 @@ async def test_dsu_desligado_nao_abre_socket(monkeypatch: pytest.MonkeyPatch) ->
     assert "dsu" not in daemon._failed_subsystems
 
 
-# -- 3 · porta ocupada --------
-
-
 @pytest.mark.asyncio
 async def test_porta_ocupada_registra_a_falha_e_o_daemon_segue_de_pe() -> None:
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as dono:
@@ -199,9 +186,6 @@ async def test_porta_ocupada_registra_a_falha_e_o_daemon_segue_de_pe() -> None:
         assert await _espera(lambda: daemon.store.counter("poll.tick") >= 2), "o daemon caiu"
         daemon.stop()
         await tarefa
-
-
-# -- 4 · o hub é um só --------
 
 
 @pytest.mark.asyncio
@@ -252,9 +236,6 @@ async def test_o_hub_criado_pelo_servidor_e_o_do_ipc(
     await tarefa
 
 
-# -- 5 · a lista sobe e para o dsu --------
-
-
 def test_a_lista_sobe_e_para_o_dsu() -> None:
     nomes = [p.nome for p in SUBSYSTEM_REGISTRY]
     assert nomes.index("ipc") < nomes.index("dsu"), "o dsu sobe DEPOIS do ipc"
@@ -273,9 +254,6 @@ def test_o_daemon_config_nasce_com_o_dsu_desligado() -> None:
     assert DaemonConfig().dsu_port == 26760
 
 
-# -- 6 · a tabela de slots --------
-
-
 def _entrada(uniq: str, *, primario: bool = False, conectado: bool = True) -> dict[str, object]:
     return {"connected": conectado, "is_primary": primario, "uniq": uniq, "transport": "usb"}
 
@@ -283,7 +261,7 @@ def _entrada(uniq: str, *, primario: bool = False, conectado: bool = True) -> di
 def test_a_tabela_do_coop_desligado_poe_o_primario_no_slot_zero(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.undo()  # a função de verdade, não a do autouse
+    monkeypatch.undo()
     daemon = SimpleNamespace(
         _gamepad_device=object(), config=SimpleNamespace(coop_enabled=False), _coop_manager=None
     )
@@ -305,7 +283,7 @@ def test_a_tabela_do_coop_segue_os_numeros_do_jogo(monkeypatch: pytest.MonkeyPat
     entradas = [
         _entrada("aabbcc000001", primario=True),
         _entrada("aabbcc000003"),
-        _entrada("aabbcc000009"),  # sem número: «Controlar o PC», fica sem slot
+        _entrada("aabbcc000009"),
     ]
     tabela = montar_a_tabela(daemon, entradas)
     assert {n: s.uniq for n, s in tabela.items()} == {0: "aabbcc000001", 2: "aabbcc000003"}
@@ -352,9 +330,6 @@ def test_a_tabela_ignora_desconectado_sem_mac_e_numero_fora_de_faixa(
     assert set(montar_a_tabela(SimpleNamespace(), entradas)) == {1}
 
 
-# -- 7 · o maquina.json --------
-
-
 def _com_o_arquivo(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, documento: Any | None) -> None:
     arquivo = tmp_path / "maquina.json"
     if documento is not None:
@@ -367,11 +342,11 @@ def _com_o_arquivo(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, documento: A
 @pytest.mark.parametrize(
     ("documento", "ligado", "porta"),
     [
-        (None, True, 26760),  # arquivo que não existe
+        (None, True, 26760),
         ("{não é json", True, 26760),
         ({}, True, 26760),
         ({"version": 1}, True, 26760),
-        ({"version": 1, "orcamento": {"teto": "max"}}, True, 26760),  # o arquivo de ontem
+        ({"version": 1, "orcamento": {"teto": "max"}}, True, 26760),
         ({"version": 1, "servidor_dsu": None}, True, 26760),
         ({"version": 1, "servidor_dsu": "desligado"}, True, 26760),
         ({"version": 1, "servidor_dsu": {}}, True, 26760),
@@ -413,9 +388,6 @@ def test_a_chave_nova_nao_derruba_o_documento_nem_se_perde_ao_gravar(
     assert depois["servidor_dsu"] == {"ligado": False, "porta": 27004}
     assert depois["orcamento"]["teto"] == "max" and depois["version"] == 1
     assert maquina.servidor_dsu_declarado() == (False, 27004)
-
-
-# -- 8 · o main liga o config pelo maquina.json --------
 
 
 @pytest.mark.parametrize(

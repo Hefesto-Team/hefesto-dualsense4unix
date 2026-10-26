@@ -134,8 +134,6 @@ SIMPLE_MATCH_PRESETS: dict[str, MatchCriteria | MatchAny] = {
     "editor": MatchCriteria(window_class=list(_EDITORES)),
 }
 
-#: `ESCONDER-EM-VEZ-DE-SAIR-01` mediu pelo outro lado.
-#: **Só a LEITURA é tolerante.** A escrita (`from_simple_choice`) grava sempre
 _PRESETS_HISTORICOS: dict[str, tuple[list[str], ...]] = {
     "browser": (["firefox", "chromium", "brave", "google-chrome"],),
     "terminal": (["gnome-terminal", "alacritty", "kitty", "konsole"],),
@@ -454,15 +452,12 @@ PROCEDENCIA_DA_NAVEGACAO = "Navegação"
 
 PROCEDENCIA_DE_QUALQUER_JOGO = "Qualquer jogo"
 
-#: O rótulo da coluna «Funciona em» do perfil que nunca entra sozinho (`manual` e `any`).
 ROTULO_SO_QUANDO_ESCOLHER = "Só quando eu escolher"
 
 PROCEDENCIA_DA_STEAM = "Steam"
 
 SEPARADOR_DA_PROCEDENCIA = " · "
 
-#: 11/09/2026: todas as features funcionam para qualquer usuário, não só para
-#: a máquina de quem desenvolve.
 _FORMA_FIXA: dict[str, str] = {
     PROCEDENCIA_DA_NAVEGACAO: "browser",
     PROCEDENCIA_DE_QUALQUER_JOGO: "any",

@@ -113,7 +113,7 @@ class _Espiao(_PinnedPyDualSense):
         self.viu_readinput: list[bytes] = []
         self.viu_audio: list[bytes] = []
 
-    def readInput(self, r) -> None:  # noqa: N802 — nome da pydualsense
+    def readInput(self, r) -> None:  # noqa: N802
         self.viu_readinput.append(bytes(r))
 
     def _captura_status_audio(self, r) -> bool:
@@ -257,7 +257,6 @@ class TestOZeroPorCentoTemDonoProprio:
 
     def test_um_valor_de_verdade_passa(self) -> None:
         assert PyDualSenseController._read_battery_opt(self._DS(75)) == 75
-        #: O mínimo que um DualSense reporta é 5 (`nibble 0 -> 0*10+5`).
         assert PyDualSenseController._read_battery_opt(self._DS(5)) == 5
 
     def test_sem_objeto_de_bateria_continua_none(self) -> None:

@@ -101,9 +101,6 @@ def _ler(*aparelhos: Aparelho, reexame: bool = False) -> dict[str, Any]:
     return dado
 
 
-# ───────────────────────── o dado que a página recebe ─────────────────────────
-
-
 def test_o_aparelho_chega_a_pagina_com_o_modelo_e_o_que_a_maquina_ve(disco: Path) -> None:
     dado = _ler(_teclado(), _placa())
     por_tipo = {a["nome"]: a for a in dado["aparelhos"]}
@@ -180,15 +177,10 @@ def test_a_leitura_diz_o_wifi_em_usb3_encostado_no_bluetooth(disco: Path) -> Non
     bt = _aparelho("9-2", "2222", "0002", "Bluetooth", ("e0", "01", "01"), "Dongle de prova")
     frases = mapa_das_portas.leitura_da_maquina(mapa, _censo(wifi, bt))
     assert frases == ["Wi-Fi em USB 3.0 encostado na Entrada 2"], frases
-    # o Wi-Fi a 480M não ocupa o SuperSpeed: nada a dizer
     lento = replace(wifi, velocidade_mbps=480.0)
     assert mapa_das_portas.leitura_da_maquina(mapa, _censo(lento, bt)) == []
-    # dois bluetooths lado a lado não formam o par
     outro = _aparelho("9-1", "2223", "0002", "Bluetooth", ("e0", "01", "01"), "Outro dongle")
     assert mapa_das_portas.leitura_da_maquina(mapa, _censo(outro, bt)) == []
-
-
-# ───────────────────────── os gestos gravam ─────────────────────────
 
 
 def test_os_gestos_do_painel_gravam_no_disco_dela(disco: Path) -> None:
@@ -228,9 +220,6 @@ def test_os_gestos_do_painel_gravam_no_disco_dela(disco: Path) -> None:
         gesto("entrada-extensor")(None, {"entrada": "2", "ligado": ""}, None)
     with pytest.raises(ValueError):
         gesto("entrada-lugar")(None, {"entrada": "2", "valor": "Cozinha"}, None)
-
-
-# ───────────────────────── a página (WebKit, bancada) ─────────────────────────
 
 
 def _clicar(seletor: str) -> str:

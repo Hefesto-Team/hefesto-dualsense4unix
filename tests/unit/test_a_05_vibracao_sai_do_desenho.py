@@ -224,8 +224,9 @@ def test_a_forca_nao_diz_max_e_o_sinal_fica_na_casa_do_lado() -> None:
     """A linha da Força sem o «Máx», e o «%» na casa dele, alinhado com as de baixo (19/10/2026).
 
     MORDIDA: devolver o ``%`` ao campo ``mult`` do pacote, ou o ``Máx`` ao desenho.
+
+    Prova da D-1910-A-FORCA-DA-VIBRACAO-PERDE-O-MAX.
     """
-    # A decisão: D-1910-A-FORCA-DA-VIBRACAO-PERDE-O-MAX.
     import onde
 
     from hefesto_dualsense4unix.interface import aba05

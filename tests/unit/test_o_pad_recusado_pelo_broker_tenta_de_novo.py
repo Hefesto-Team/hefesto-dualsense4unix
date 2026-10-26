@@ -36,7 +36,6 @@ from tests.unit.test_o_pad_nasce_no_mesmo_usb_do_som import (
     _EspiaoDoDiario,
 )
 
-#: P1 e P3 no cabo, P2 e P4 no rádio: a identidade é do plástico, nunca do transporte.
 MESA_MISTA = {
     1: ("aa:bb:cc:00:00:11", "usb"),
     2: ("aa:bb:cc:00:00:22", "bt"),
@@ -44,8 +43,6 @@ MESA_MISTA = {
     4: ("aa:bb:cc:00:00:44", "bt"),
 }
 RECUSAS = ("broker_ausente", "peer_recusado", "sem_sessao_ativa")
-#: o motivo que o pad anota em cada recusa: o socket que não existe e o peer
-#: recusado não respondem, e o cliente lê os dois como broker fora do ar.
 MOTIVO_DA_RECUSA = {"broker_ausente": "broker_fora_do_ar", "peer_recusado": "broker_fora_do_ar",
                     "sem_sessao_ativa": "sem_sessao_ativa"}
 
@@ -121,15 +118,12 @@ class Mesa:
         self.relogio = [100.0]
         self.sessao_aberta = False
         self.pedidos_ao_broker = 0
-        #: ``{serial: (hidraw, interface)}``: quem enumerou pelo vhci.
         self.enumerados: dict[str, tuple[str, str]] = {}
         self.broker = BrokerAntesDoLogin(tmp_path / "broker.sock", modo)
         monkeypatch.setenv(SOCKET_PATH_ENV, str(self.broker.caminho))
         monkeypatch.setattr(self.ug, "HIDRAW_DO_GADGET", self.enumerados.get)
         monkeypatch.setattr(self.ug, "QUIRK_DO_PAR", lambda _par: False)
         monkeypatch.setattr(self.ug, "_RECUSAS_DO_BROKER", {}, raising=False)
-        # o cliente recusado guarda o socket da mesa em que nasceu: sem esta
-        # troca, a mesa seguinte do mesmo serial pede ao socket da anterior.
         monkeypatch.setattr(self.ug, "_CLIENTES_RECUSADOS", {}, raising=False)
         monkeypatch.setattr(pad_usb, "_SEM_PORTA", {})
         do_gadget = self.ug.PEDIR_O_PAD_USB
@@ -147,7 +141,6 @@ class Mesa:
         self.espiao_do_cliente = _EspiaoDoDiario(hbc.logger)
         monkeypatch.setattr(hbc, "logger", self.espiao_do_cliente)
         self.pads: list[Any] = []
-        #: todo pedido em voo que um tique deixou: a mesa o espera ao se desfazer.
         self.pedidos_vistos: list[Any] = []
 
     def pad(self, jogador: int) -> Any:
@@ -202,7 +195,6 @@ def mesa(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch,
         yield m
     finally:
         m.broker.fechar()
-        # o pedido largado pelo ``stop`` termina antes de a mesa se desfazer
         for pedido in m.pedidos_vistos:
             pedido.esperar(5.0)
 
@@ -213,8 +205,10 @@ class TestARecusaDoBrokerTentaDeNovo:
     def test_sem_jogo_cada_pad_acaba_no_gadget_quando_a_sessao_abre(
         self, mesa: Mesa, jogadores: tuple[int, ...]
     ) -> None:
-        # D-2410-O-PAD-RECUSADO-PELA-SESSAO-PEDE-DE-NOVO
-        """Mordida: tire o ``_gadget_outra_vez = True`` do ramo da recusa, e o pad fica no uhid."""
+        """Mordida: tire o ``_gadget_outra_vez = True`` do ramo da recusa, e o pad fica no uhid.
+
+        Prova da D-2410-O-PAD-RECUSADO-PELA-SESSAO-PEDE-DE-NOVO.
+        """
         pads = [mesa.pad(j) for j in jogadores]
         try:
             for pad in pads:
@@ -270,8 +264,10 @@ class TestARecusaDoBrokerTentaDeNovo:
     def test_120_tiques_recusados_dao_uma_linha_por_pad_tambem_no_cliente(
         self, mesa: Mesa, jogadores: tuple[int, ...]
     ) -> None:
-        # D-2410-O-PAD-RECUSADO-NAO-ENCHE-O-DIARIO
-        """Mordida: grave a linha da lease em toda conexão, e o cliente dá três por pad."""
+        """Mordida: grave a linha da lease em toda conexão, e o cliente dá três por pad.
+
+        Prova da D-2410-O-PAD-RECUSADO-NAO-ENCHE-O-DIARIO.
+        """
         pads = [mesa.pad(j) for j in jogadores]
         try:
             for pad in pads:
@@ -332,7 +328,6 @@ class TestARecusaDoBrokerTentaDeNovo:
                 pad.stop()
 
 
-#: o teto de um tique do ``pump_ff``: o laço de entrada não espera o broker.
 TETO_DO_TIQUE_S = 0.05
 
 
@@ -341,12 +336,13 @@ TETO_DO_TIQUE_S = 0.05
 def test_o_broker_preso_nao_prende_o_tique(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, jogadores: tuple[int, ...]
 ) -> None:
-    # D-2410-O-PEDIDO-DE-NOVO-SAI-DO-TIQUE
     """O broker aceita e não responde: nenhum tique passa de 50 ms.
 
     O pad nasce recusado pela sessão; depois o broker fica preso, e cada nova
     tentativa esperaria o ``_TIMEOUT_S`` do cliente (2 s) dentro do tique de
     entrada. Mordida: peça ao broker de dentro do tique, e o tique leva 2 s.
+
+    Prova da D-2410-O-PEDIDO-DE-NOVO-SAI-DO-TIQUE.
     """
     m = Mesa(monkeypatch, tmp_path, "sem_sessao_ativa")
     pads = [m.pad(j) for j in jogadores]
@@ -512,7 +508,7 @@ def test_o_que_o_jogo_ve_diz_a_haptica_pela_porta_do_pad(
         visto = oqv.o_que_o_jogo_ve(pad, transporte=transporte)
         assert visto is not None
         assert visto["forma"] == "dualsense" and visto["canal"] == "uhid"
-        assert visto["funcoes"]["haptica"] != oqv.NATIVO  # (noqa-acento): chave ASCII
+        assert visto["funcoes"]["haptica"] != oqv.NATIVO  # (noqa-acento)
         assert visto["porta_motivo"] == "broker_fora_do_ar"
         assert visto["porta_motivo"] == pad_usb.porque_sem_porta(identidade)
 
@@ -523,7 +519,7 @@ def test_o_que_o_jogo_ve_diz_a_haptica_pela_porta_do_pad(
         assert m.b.esperar(lambda: pad.is_bound)
         visto = oqv.o_que_o_jogo_ve(pad, transporte=transporte)
         assert visto is not None
-        assert visto["funcoes"]["haptica"] == oqv.NATIVO  # (noqa-acento): chave ASCII
+        assert visto["funcoes"]["haptica"] == oqv.NATIVO  # (noqa-acento)
         assert visto["porta_motivo"] is None
     finally:
         pad.stop()

@@ -28,7 +28,6 @@ from hefesto_dualsense4unix.profiles.schema import (
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: Quatro jogadores: faixa forjada (`aa:bb:cc`), nunca endereço de aparelho de verdade.
 JOGADORES = [f"aa:bb:cc:00:00:0{n}" for n in range(1, 5)]
 EFEITO = "piscar;FF0000;4"
 
@@ -95,9 +94,6 @@ def test_a_vista_injetada_vale_sem_declaracao_viva() -> None:
     assert JOGADORES[0] not in so_um and len(so_um) == 3
 
 
-# ---------------------------------------------------------------- o laço inteiro
-
-
 class _Barra:
     def __init__(self) -> None:
         self.escritos: list[tuple[str, tuple[int, int, int]]] = []
@@ -145,9 +141,6 @@ def test_o_laco_para_na_bateria_longa_solta_a_barra_e_volta_ao_sair(
     assert passo(11.7) == 1, "saiu da economia: o efeito volta sem gesto"
 
 
-# ---------------------------------------------------------------- o reassert de fora
-
-
 def test_depois_de_um_reassert_de_fora_o_quadro_corrente_sai_mesmo_igual(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """O piscar de ritmo 1 fica 1,67 s no mesmo quadro: sem o repinte, a cor base do reassert
@@ -193,9 +186,6 @@ def test_o_backend_conta_cada_repintura_e_o_quadro_do_efeito_nao_conta(
     uniqs = [u for u in backend.alvos_conectados().values() if u]
     backend.reafirmar_barra_e_numero(uniqs)
     assert backend.repinturas_da_luz > meio
-
-
-# ---------------------------------------------------------------- a aba 04 sem perfil ativo
 
 
 def _ctx() -> Any:

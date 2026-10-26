@@ -186,7 +186,7 @@ def lembrar_o_ultimo_jogo(nome: str) -> None:
     com o gamepad desligado, por cima do perfil do jogo que valia. Quem grava é
     o autoswitch e o lançamento; quem apaga é o gesto do usuário
     (:func:`gravar_a_escolha`) e o perfil apagado (`manager.esquecer_o_perfil_apagado`).
-    """  # (noqa-acento) citação literal
+    """
     if not isinstance(nome, str) or not nome.strip() or _e_o_freestyle(nome):
         return
     path = _ultimo_jogo_path()
@@ -480,9 +480,6 @@ def load_mouse_emulation() -> tuple[bool, int | None, int | None]:
     return bool(enabled), speed, scroll_speed
 
 
-# `save_mouse_emulation`), ou seja, não neutralizavam nada.
-
-
 _KEYBOARD_EMULATION_FLAG_FILE = "keyboard_emulation.flag"
 
 
@@ -541,12 +538,7 @@ def load_keyboard_preference() -> bool | None:
     return True
 
 
-# `load_keyboard_emulation_enabled` MOROU AQUI, e foi PODADA em 26/08/2026.
-# `DaemonConfig.keyboard_emulation_enabled = True`, e o boot só o sobrescreve
-
-
 _NAVEGACAO_INTERNA_FLAG_FILE = "navegacao_interna.flag"
-#: Os dois tipos que «Permitir navegação» da aba 06 grava («Interna» e «Uso geral»).
 TIPOS_DE_NAVEGACAO = ("interna", "computador")
 
 
@@ -836,8 +828,6 @@ def migrate_coop_optout() -> bool:
         return False
 
 
-# O zero de cada controle (O-COMECAR-DA-CALIBRAR-GUARDA-O-ZERO-DE-CADA-CONTROLE-01): o
-# «Começar» da Calibrar grava; o boot devolve ao roteador. Chave = o endereço do controle.
 _ZEROS_DOS_SENSORES_FILE = "zeros-dos-sensores.json"
 
 
@@ -870,15 +860,10 @@ def gravar_os_zeros(dados: dict[str, Any]) -> bool:
         return False
 
 
-# O-POINT-AND-CLICK-APLICA-O-PERFIL-QUE-A-NAVEGACAO-ESCOLHE-01 (21/10/2026): o modo `desktop`
-# tem dois arranjos, e o serviço guarda qual está de pé. A «Navegação» usa as linhas da aba
-# Navegação do perfil ativo; o «Point and click», a tabela do «Perfil jogo - navegação».
 ARRANJO_NAVEGACAO = "navegacao"
 ARRANJO_POINT_AND_CLICK = "point_and_click"
 ARRANJOS_DO_DESKTOP = (ARRANJO_NAVEGACAO, ARRANJO_POINT_AND_CLICK)
 _ARRANJO_DO_DESKTOP_FILE = "arranjo_do_desktop.json"
-# A lembrança que a janela guardava até 21/10 (`gui_preferences.json`): é o último clique do usuário
-# enquanto o serviço ainda não gravou o seu, e só se lê.
 _PREF_ANTIGA_DA_NAVEGACAO = "jogar_navegacao_no_desligado"
 
 

@@ -78,9 +78,6 @@ def test_a_ponte_da_janela_reexporta_a_tabela_sem_copia() -> None:
         ipc_bridge.PISO_DA_LINHA_DE_COMANDO_S)
 
 
-# O serviço de mentira: um socket que responde ao `profile.switch` com demora.
-
-
 class _ServicoLento:
     def __init__(self, caminho: Path, demora_s: float | None) -> None:
         self.caminho = caminho

@@ -71,7 +71,7 @@ def _tags(linhas: list[tuple[str, str]]) -> list[str]:
 
 
 def test_o_fixado_com_recibo_passou_e_ok(tmp_path: Path) -> None:
-    # D-1710-O-DOCTOR-MOSTRA-O-PROTON-FIXADO-E-O-DE-CADA-JOGO
+    """Prova da D-1710-O-DOCTOR-MOSTRA-O-PROTON-FIXADO-E-O-DE-CADA-JOGO."""
     _proton_de_mentira(tmp_path, FIXADA)
     linhas = _linhas(tmp_path, recibo=RECIBO_PASSOU)
     assert linhas[0] == (
@@ -157,7 +157,6 @@ def test_o_jogo_cujo_proton_de_terceiros_sumiu_do_disco_avisa_pelo_nome(tmp_path
     )
     avisos = [m for t, m in linhas if t == qp.TAG_WARN]
     assert avisos == ["Jogo 10 usa(m) o GE-Proton10-34, que sumiu de " + str(tmp_path)], linhas
-    # o Proton da Valve mora fora do compatibilitytools.d: não é dele que se avisa.
     assert any(m == "proton_10: Jogo 20" for _, m in linhas)
 
 
@@ -170,9 +169,6 @@ def test_o_nome_interno_da_pasta_conta_como_presente(tmp_path: Path) -> None:
     )
     linhas = _linhas(tmp_path, recibo=RECIBO_PASSOU, mapa={"10": "GE-Proton-apelido"})
     assert qp.TAG_WARN not in _tags(linhas), linhas
-
-
-# --- o doctor chama o bloco --------------------------------------------------
 
 
 @pytest.fixture
@@ -214,9 +210,6 @@ def test_o_aviso_do_proton_fixado_sobe_o_codigo_de_saida(
     doctor_sem_o_resto: Callable[[list[tuple[str, str]]], int],
 ) -> None:
     assert doctor_sem_o_resto([(qp.TAG_WARN, "o pino não tem linha no recibo")]) == 1
-
-
-# --- o recibo viaja com a instalação, e o doctor o acha ----------------------
 
 
 def test_o_recibo_e_achado_onde_a_instalacao_o_pos(

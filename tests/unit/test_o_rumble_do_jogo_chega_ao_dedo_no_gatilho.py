@@ -20,7 +20,7 @@ from hefesto_dualsense4unix.profiles.estilos_de_jogo import ESTILOS, POR_CHAVE
 
 P1 = "aa:bb:cc:00:00:01"
 QUATRO = (P1, "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03", "aa:bb:cc:00:00:04")
-_ACAO = "acao"  # (noqa-acento): chave do estilo
+_ACAO = "acao"  # (noqa-acento)
 _GOLPE = {_ACAO, "luta", "souls", "terror", "aventura", "esportes"}
 DIREITO, ESQUERDO = tv.LADO_DIREITO, tv.LADO_ESQUERDO
 TIQUE_S = 1.0 / 60.0
@@ -73,9 +73,9 @@ class _Mesa:
 
 def test_o_degrau_e_o_par_cru_em_oito_degraus() -> None:
     assert tv.degrau_do_rumble(0, 0) == 0
-    assert tv.degrau_do_rumble(7, 7) == 0  # abaixo do mínimo: o jogo calado
+    assert tv.degrau_do_rumble(7, 7) == 0
     assert tv.degrau_do_rumble(0, 200) == 7
-    assert tv.degrau_do_rumble(200, 0) == 7  # o maior dos dois motores
+    assert tv.degrau_do_rumble(200, 0) == 7
     assert tv.degrau_do_rumble(8, 0) == 1
     assert tv.degrau_do_rumble(255, 255) == 8
 
@@ -95,7 +95,7 @@ def test_rumble_200_com_o_r2_em_220_da_o_bloco_0x26_no_r2_com_o_degrau_certo() -
 
 def test_o_mesmo_rumble_com_o_r2_solto_nao_escreve_nada() -> None:
     mesa = _Mesa()
-    mesa.motor.borda_do_dedo.ver(P1, 0, 150, mesa.t)  # abaixo do disparo (160)
+    mesa.motor.borda_do_dedo.ver(P1, 0, 150, mesa.t)
     mesa.dedo[(P1, DIREITO)] = mesa.motor.borda_do_dedo.apertado(P1, DIREITO)
     mesa.rumble(0, 200)
     for _ in range(30):
@@ -107,8 +107,6 @@ def test_o_mesmo_rumble_com_o_r2_solto_nao_escreve_nada() -> None:
 def test_a_rajada_de_vinte_pulsos_com_o_nivel_num_degrau_da_uma_escrita_so() -> None:
     mesa = _Mesa()
     mesa.dedo[(P1, DIREITO)] = True
-    # Um segundo de rajada: um pulso a cada 50 ms, 10 ms de força entre 150 e 170 (os
-    # degraus 5 e 6 se encostam), e o zero no meio; o tique é o do laço, 60 por segundo.
     inicio = mesa.t
     pulsos = [inicio + 0.05 * i for i in range(20)]
     acontecimentos = sorted(
@@ -123,12 +121,12 @@ def test_a_rajada_de_vinte_pulsos_com_o_nivel_num_degrau_da_uma_escrita_so() -> 
     assert not acontecimentos
     assert len(mesa.escritas) == 1
     assert mesa.escritas[0][2] in (tv.bloco_do_dedo(5), tv.bloco_do_dedo(6))
-    assert mesa.devolvidos == []  # o zero entre dois pulsos não devolve o lado
+    assert mesa.devolvidos == []
 
 
 @pytest.mark.parametrize(("antes", "depois", "degraus"), [
-    (255, 200, (8, 7)),  # o jogo baixa um degrau e fica: o dedo não segue no máximo
-    (200, 250, (7, 8)),  # o jogo sobe um degrau e fica: o dedo não fica um abaixo
+    (255, 200, (8, 7)),
+    (200, 250, (7, 8)),
     (40, 90, (2, 3)),
 ])
 def test_o_nivel_que_muda_um_degrau_e_fica_chega_ao_dedo(
@@ -138,14 +136,14 @@ def test_o_nivel_que_muda_um_degrau_e_fica_chega_ao_dedo(
     mesa.dedo[(P1, DIREITO)] = True
     mesa.rumble(0, antes)
     mesa.tique()
-    for _ in range(12):  # 200 ms com o nível novo parado
+    for _ in range(12):
         mesa.rumble(0, depois)
         mesa.tique()
     assert [b for _u, _d, b in mesa.escritas] == [tv.bloco_do_dedo(d) for d in degraus]
 
 
 def test_a_histerese_e_meio_degrau_em_volta_do_escrito() -> None:
-    assert tv.fica_no_degrau(150, 6) and tv.fica_no_degrau(170, 5)  # a divisa 5|6 não reescreve
+    assert tv.fica_no_degrau(150, 6) and tv.fica_no_degrau(170, 5)
     assert not tv.fica_no_degrau(200, 8) and not tv.fica_no_degrau(250, 7)
     assert not tv.fica_no_degrau(120, 6) and not tv.fica_no_degrau(200, 5)
 
@@ -156,7 +154,7 @@ def test_o_degrau_que_sobe_espera_o_ciclo_do_gatilho() -> None:
     mesa.rumble(0, 40)
     mesa.tique()
     mesa.rumble(0, 255)
-    mesa.tique(0.010)  # 10 ms depois da escrita: o ciclo do gatilho (32 ms) ainda não passou
+    mesa.tique(0.010)
     assert len(mesa.escritas) == 1
     mesa.tique(tv.CICLO_DO_GATILHO_S)
     assert [b for _u, _d, b in mesa.escritas] == [tv.bloco_do_dedo(2), tv.bloco_do_dedo(8)]
@@ -209,7 +207,7 @@ def test_o_lado_com_momento_da_imersao_nao_recebe_nada() -> None:
 def test_o_fps_nao_recebe_nada_o_ritmo_do_tiro_e_o_dono() -> None:
     mesa = _Mesa(estilo="fps")
     assert mesa.receita.gatilho_no_ritmo
-    mesa.receita = replace(mesa.receita, rumble_no_dedo=True)  # nem com o campo ligado
+    mesa.receita = replace(mesa.receita, rumble_no_dedo=True)
     mesa.dedo[(P1, DIREITO)] = True
     mesa.rumble(0, 200)
     for _ in range(10):
@@ -218,7 +216,7 @@ def test_o_fps_nao_recebe_nada_o_ritmo_do_tiro_e_o_dono() -> None:
 
 
 def test_o_jogo_que_escreveu_o_gatilho_ha_menos_de_3_s_nao_recebe_nada() -> None:
-    # D-2210-O-RUMBLE-NO-DEDO-NOS-ESTILOS-DE-GOLPE
+    """Prova da D-2210-O-RUMBLE-NO-DEDO-NOS-ESTILOS-DE-GOLPE."""
     mesa = _Mesa()
     mesa.estado[P1] = tv.EstadoDoCanal(tv.MODO_DUALSENSE, {"trigger": 1.0}, ha_jogo=True)
     mesa.dedo[(P1, DIREITO)] = True
@@ -235,7 +233,7 @@ def test_o_jogo_que_toma_o_gatilho_no_meio_fica_com_ele() -> None:
     mesa.estado[P1] = tv.EstadoDoCanal(tv.MODO_DUALSENSE, {"trigger": 0.2}, ha_jogo=True)
     mesa.tique()
     assert mesa.largados == [P1]
-    assert mesa.devolvidos == []  # o valor agora é do jogo: devolver apagaria o dele
+    assert mesa.devolvidos == []
     assert mesa.motor.contadores["soltos_ao_jogo"] == 1
 
 
@@ -276,7 +274,7 @@ def test_no_radio_sem_fatia_livre_o_degrau_espera() -> None:
 def test_a_rajada_longa_fica_no_teto_do_tato() -> None:
     mesa = _Mesa()
     mesa.dedo[(P1, DIREITO)] = True
-    for i in range(120):  # dois segundos com o degrau saltando de 1 a 8 a cada tique
+    for i in range(120):
         mesa.rumble(0, 255 if i % 2 else 8)
         mesa.tique()
     por_segundo = len(mesa.escritas) / 2.0

@@ -102,7 +102,6 @@ DISCORDA_ABSOLUTO = 50.0
 
 VOZ_NO_AR = 1.0
 
-#: O prazo de cada ``state_full``: o segundo inteiro não cabe, porque o resto
 PRAZO_DO_ESTADO_S = 0.8
 
 CONTAGENS_DO_KERNEL: dict[str, re.Pattern[str]] = {
@@ -470,7 +469,6 @@ def _controles_do_estado(estado: Mapping[str, Any]) -> dict[str, dict[str, Any]]
             "adaptador": str(entrada.get("adaptador") or "").lower() or None,
             "jogador": entrada.get("player"),
             "modelo": entrada.get("modelo") if isinstance(entrada.get("modelo"), str) else None,
-            # O caminho do pad (``uinput`` no Xbox, ``uhid`` no DualSense): a MATRIZ.
             "pad": entrada.get("vpad_backend") if isinstance(entrada.get("vpad_backend"), str)
             else None,
             "bateria": _numero(entrada.get("battery_pct")),

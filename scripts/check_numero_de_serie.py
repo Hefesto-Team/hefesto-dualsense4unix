@@ -88,7 +88,6 @@ EXCLUIR_SUFIXO = {
 
 def _e_endereco_de_memoria(token: str) -> bool:
     """``0000000000C2CEF2`` — o ponteiro de um log, e não um serial."""
-    # serial-de-mentira: o literal abaixo é o ALFABETO hexadecimal, não um
     so_hex = all(c in "0123456789ABCDEF" for c in token)  # serial-de-mentira
     return so_hex and "000000" in token
 
@@ -147,7 +146,7 @@ def _mascara_de_exemplo() -> str:
         from cor_do_plastico import mascarar_serial
     except Exception:
         return "os SEIS primeiros ficam, o resto vira `#`"
-    return mascarar_serial("AB1C05D1234567890")  # serial-de-mentira: prefixo forjado
+    return mascarar_serial("AB1C05D1234567890")  # serial-de-mentira
 
 
 def main() -> int:

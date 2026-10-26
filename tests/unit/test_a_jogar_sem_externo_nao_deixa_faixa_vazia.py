@@ -35,12 +35,10 @@ TAMANHOS = [(1212, 809), (1920, 1080)]
 VIVO: dict[str, Any] = {"connected": True, "native_mode": False, "paused": False,
                         "gamepad_emulation": {"enabled": True, "flavor": "dualsense"}}
 
-#: Um externo de faixa forjada, com o número 3 do co-op (dois DualSense na mesa).
 UM_EXTERNO: dict[str, Any] = {"name": "8BitDo Pro 2", "vid": "2dc8", "pid": "6003",
                               "bus": "usb", "uniq": "aa:bb:cc:00:00:e1",
                               "driver": "hid-generic", "player_slot": 3}
 
-#: Pinta como o piloto (frase, classe `ha`, o HTML dos externos) e lê o que fica sob os cartões.
 MEDIR = r"""
 (function(){
   const A = __A__;

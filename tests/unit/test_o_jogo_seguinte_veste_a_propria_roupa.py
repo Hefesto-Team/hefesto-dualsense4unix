@@ -64,8 +64,8 @@ NOS = {
 EDGE = ROUPA_PADRAO
 COMUM = ROUPA_COMUM
 
-JOGO_A = 1118010  # o jogo que fechou
-JOGO_B = 1627720  # o jogo aberto logo depois
+JOGO_A = 1118010
+JOGO_B = 1627720
 EPOCH_A = 900
 EPOCH_B = 1000
 
@@ -604,7 +604,7 @@ def test_o_tique_que_cruza_o_encerramento_reenvia_as_saidas_retidas(
     mesa.lancar(tmp_path, JOGO_B, EPOCH_B)
 
     async def _no_meio_da_varredura(_leitura: Any) -> dict[str, Any]:
-        _arme(mesa, tmp_path)  # o ping do wrapper chega enquanto a varredura corre
+        _arme(mesa, tmp_path)
         mesa.varredura = {
             "marker": (JOGO_B, EPOCH_B), "marker_pid": 4242, "marker_pid_alive": True,
             "now": float(EPOCH_B) + 2,

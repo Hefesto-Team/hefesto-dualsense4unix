@@ -91,8 +91,6 @@ def test_o_medidor_traduz_o_pico_em_altura(medidor: Any) -> None:
     m.bombear(timeout_s=0.2)
     meio = m.alturas("no")
     assert meio is not None
-    # A voz com o volume da captura a 32%: o pico 0,500 chega como 0,0164 (medido em 19/10/2026).
-    # A MORDIDA: a escala linear de antes, com o cheio em 0,5, punha isso em 17% — o piso.
     assert 40 <= meio[0] <= 60, meio
 
 
@@ -187,7 +185,7 @@ def test_altura_esta_entre_os_alvos_que_o_travessao_nao_atende() -> None:
 def test_sem_leitura_emite_o_piso_e_nunca_o_vazio() -> None:
     """Sem medição as catorze saem no PISO, e o selo diz que não leu."""
     campos = a02.campos_da_onda(a02.LADO_MIC, None)
-    assert campos["mic-onda-lida"] == "nao"  # (noqa-acento) valor de atributo
+    assert campos["mic-onda-lida"] == "nao"  # (noqa-acento)
     for i in range(ondas_de_som.BARRAS):
         valor = campos[f"mic-onda-{i}"]
         assert valor == ondas_de_som.PISO_PCT, (

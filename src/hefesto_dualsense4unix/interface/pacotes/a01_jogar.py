@@ -20,22 +20,13 @@ from . import TRAVESSAO, Contexto, confirmacao, fios, jogador_de, registrar
 
 CADEADO_CEGO = "cadeado-cego"
 
-#: `cobertura` é a promessa que a régua confere: uma chave nova que não entre
 DA_PAGINA: tuple[str, ...] = (
-    # `aviso-texto` e `aviso-vivo`.
-    # ELES SAEM PORQUE A PÁGINA SAIU, e não por escolha: um endereço emitido sem
-    #
-    # `autoswitch_lock_text` e `texto_do_cadeado_cego`.
-    # onde ligar o cadeado sem explicar por que ele importa.
     "cadeado",
     CADEADO_CEGO,
     "hef-posicao",
-    # `data-hef-alvo="classe"` (existe / não existe) e o de dentro sem alvo (o
     "mascara-ressalva",
     "mesa-frase",
     "modo-aceso",
-    # O CHIP DO STEAM INPUT TEM CAMPO PRÓPRIO — STEAM-INPUT-01, 20/09/2026, e o
-    # — ele senta EM CIMA do caminho DualSense em vez de substituí-lo.
     "steam-input-aceso",
     "pendente",
     "pendente-alvo",
@@ -43,15 +34,11 @@ DA_PAGINA: tuple[str, ...] = (
     "externos",
 )
 
-#: ser verdade no mesmo dia:** `gamepad.mask.set` nasceu recebendo `uniq`, o
-#: o que o desenho mostra — os dois cartões acendiam o MESMO chip. A
 POR_CARTAO: tuple[str, ...] = ("plastico", "desenho", "jogador", "jogador-espera",
                                "bateria", "identidade", "mascara-cartao",
                                "marcador-principal")
 
 
-#: (`a08_conexoes._exame`). Uma lista que tentasse ranqueá-los aqui seria a
-#: cheia de esconder um atrás do ``+N`` enquanto mostra o outro.
 ORDEM_DA_GRAVIDADE: tuple[str, ...] = (
     "PAUSA", "ERRO", "GAMEPAD", "MODO", "PONTE", "JOGO", "CONTROLE", "RÁDIO",
     "PERFIL",
@@ -59,11 +46,8 @@ ORDEM_DA_GRAVIDADE: tuple[str, ...] = (
 
 SELO_DA_PONTE = "PONTE"
 
-#: (o mixer UAC do DualSense martelando o EP0, `storm_doctor._SND_QUIRK_RE`), e
 SELO_DA_CURA = "CONTROLE"
 
-#: A posição do interruptor Status com o serviço parado (estado vazio): a que o gerador chama
-#: ``desligado``. Quem lê é :func:`_estado_da_tela`.
 POSICAO_COM_O_SERVICO_PARADO = "desligado"
 
 
@@ -72,29 +56,16 @@ def lugares_da_mesa() -> int:
     return len(_monta().MESA)
 
 
-#: O QUE FOI MEDIDO, e decide a forma desta cura: `gamepad.mask.set` grava
 RESSALVA_DA_MASCARA = (
     "Guardada neste controle. Ela passa a valer quando o Hefesto voltar a "
     "entregá-lo ao jogo."
 )
 
-#: O QUE FOI MEDIDO E DECIDE A FORMA DESTA DICA (23/07/2026): a razão do esmaecido, no ponteiro do
-#: mouse, é a segunda metade da decisão [02] (o número perde a cor forte enquanto o daemon não
-#: confirmar o jogador). É `title`, logo CRAVADA, e isso é seguro pela razão que `aba01.cartao`
-#: escreve: o piloto **não tem alvo de pintura para atributo de texto**, então toda dica congela no
-#: que o gerador soube; esta é honesta porque não afirma nada sobre um controle em particular, é a
-#: razão do ESTADO, igual para os quatro cartões, e quem diz o estado é a classe. A palavra é a que
-#: o usuário já leu na janela antiga (decisão de produto). A frase gêmea da GTK exigiria montar a
-#: GTK dentro do pacote das dez abas, o que `_painel()` existe para evitar; **a divergência morre
-#: pela régua** `test_a_aba_01_jogar_fecha_as_linhas`, que lê o fonte da GTK.
-#: PROVISÓRIO: texto de tela é palavra de produto (PROVA-DE-TELA-01).
 ESPERA_DICA = "O número acende quando o jogo receber o controle"
 
 CADEADO_ROTULO = "Modo Freestyle"
 CADEADO_DICA = "O perfil ativo vale em qualquer jogo"
 
-#: e `None` quer dizer *não houve resposta* — serviço parado, socket recusado,
-#: `test_a_palavra_do_cadeado_e_a_que_ela_ja_leu` confere as TRÊS contra o fonte
 CADEADO_RECUSA = "O Hefesto está desligado: a trava não foi aplicada."
 
 
@@ -112,12 +83,8 @@ def _cadeado(state: dict[str, Any]) -> str:
     return TRAVESSAO
 
 
-#: acrescenta exatamente ``"primário"`` quando ``is_primary``. O CSV nomeia esta
-#: pedaço da frase seria mais frágil que a régua. **A DIVERGÊNCIA MORRE PELA
 MARCA_DO_PRIMARIO = "primário"
 
-#: e é dele que o daemon publica a
-#: As duas coisas são medidas, e é isso que a dica diz.
 PRIMARIO_DICA = "Este controle navega o computador"
 
 
@@ -183,22 +150,18 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     cartoes = {}
     for c in ctx.conectados:
         uniq = str(c.get("uniq") or "")
-        # A IDENTIDADE É `nome · transporte`, como o desenho a escreve
         casa = next((m for m in ctx.mesa if str(m.get("uniq") or "") == uniq), {})
         nome = casa.get("nome") or "—"
         via = palavra_do_transporte(casa.get("transporte") or c.get("transport"))
         cartoes[uniq] = {
             "plastico": _cor_do_plastico(str(casa.get("cor") or "")),
-            # `""` QUANDO A COR NÃO É PINTÁVEL, pela mesma régua da borda: o
             "desenho": _colorway_do_desenho(str(casa.get("cor") or "")),
-            # abaixo, mostrava com o botão 2 ACESO. O dono lê `player_slot`
             "jogador": f"Player {jogador_de(c) or '—'}",
             "jogador-espera": _jogador_esperando(c),
             "bateria": f"{c.get('battery_pct')}%" if c.get("battery_pct") is not None else "—",
             "identidade": f"{nome} · {via}",
             "mascara-cartao": _mascara_do_cartao(casa, da_sessao),
             "marcador-principal": _e_o_primario(c),
-            # `title` que o WebKit nunca deixou acender.
         }
 
 
@@ -223,7 +186,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "pintados": len(DA_PAGINA) + len(cartoes) * len(POR_CARTAO),
         "sem_dono": 0,
     }
-    # dez abas, e o dono deles é `pacotes.topo()`. Emiti-los aqui criava um
     return fora
 
 
@@ -234,7 +196,6 @@ def _cor_do_plastico(slug: str) -> str:
     try:
         import monta
 
-        # dela não têm hexa amostrado e devolvem `url(#hachura-sem-hex)`, que
         return str(monta.cor_de_css(slug))
     except BaseException:
         return ""
@@ -619,7 +580,6 @@ def _html_dos_externos(ctx: Contexto) -> str:
     from . import a08_conexoes
 
     fora = []
-    # O teto de quatro (A-TELA-MOSTRA-NO-MAXIMO-QUATRO-CONTROLES-01): sem número, sem cartão.
     for entrada in externos_na_mesa(None, ctx.externos):
         aviso = nintendo_bt_warning(entrada)
         linha_do_aviso = (f'<div class="ext-aviso">{_e(aviso)}</div>'
@@ -686,33 +646,15 @@ def _ressalva_da_mascara(state: dict[str, Any]) -> str:
     return ""
 
 
-# `TIQUE_MS = 100` e `pacote_da_pagina` roda SÍNCRONO no laço do GTK
-#     _qual_jogo()        0,11 ms    os dois markers, só com a lista cheia
 TTL_DO_STEAM_INPUT_S = 20.0
 
-#: O VALOR QUE ACENDE O CHIP. É a `chave` do chip em `painel.CHIPS_DA_ESCADA`,
 CHIP_DO_STEAM_INPUT = "steam"
 
-#: O OUTRO BOTÃO DO DESLIGADO — NO-DESLIGADO-A-STEAM-NAO-SE-METE-E-O-JOGO-MANDA-01,
-#: 08/10/2026. Não é degrau da escada (o Nativo é o Hefesto FORA do meio), por
-#: isso a chave e o rótulo moram aqui, e o gerador (`aba01.DO_DESLIGADO`) os lê.
 CHIP_DO_NATIVO = "nativo"
 ROTULO_DO_NATIVO = "Nativo"
 
-#: OS DOIS BOTÕES DO DESLIGADO, e o que cada um faz com a lista do Steam Input.
-#: Regra de produto de 08/10/2026: desligar o Hefesto é Nativo na origem, e o
-#: Steam Input sai de Ligado. Os dois são o modo `native`; o que os separa é o jogo da vez
-#: entrar (Steam Input) ou sair (Nativo) da lista. O Steam Input continua lendo
-#: o `steam_input` da ponte dele em `painel.CHIPS_DA_ESCADA`.
 CHIPS_DO_DESLIGADO: tuple[str, ...] = (CHIP_DO_NATIVO, CHIP_DO_STEAM_INPUT, "navegacao")
 
-#: POINT AND CLICK NO LIGADO, NAVEGAÇÃO NO DESLIGADO — A-ABA-JOGAR-DO-TODO-01, 15/10/2026, a
-#: opção A do BRIEF-T2: os dois são o MESMO modo `desktop` do daemon (o controle vira mouse e
-#: teclado e o Hefesto segue lendo; sem gamepad virtual); o que os separa é o lado do interruptor
-#: em que a TELA os põe. `painel.CHIPS_DA_ESCADA` só conhece o chip «Navegação» (a chave dele é
-#: :data:`CHIP_DA_NAVEGACAO`), e `painel.hefesto_ligado` chama `desktop` de Ligado; por isso o
-#: lado é o ARRANJO do `desktop` que o serviço publica (:func:`_navegacao_no_desligado`), e não um
-#: quarto valor do modo vivo, que `mode_of_state` mantém em três.
 CHIP_DO_POINT_AND_CLICK = "pointclick"
 ROTULO_DO_POINT_AND_CLICK = "Point and click"
 CHIP_DA_NAVEGACAO = "navegacao"
@@ -740,7 +682,6 @@ def o_que_o_chip_faz(chave: str) -> LinhaDaFileira:
 
     if chave == CHIP_DO_NATIVO:
         return LinhaDaFileira(MODE_NATIVE, None, False)
-    # O «Point and click» é o modo do chip «Navegação» do produto, sem segunda cópia dele.
     achar = CHIP_DA_NAVEGACAO if chave == CHIP_DO_POINT_AND_CLICK else chave
     chip = next((c for c in _painel().CHIPS_DA_ESCADA if c.chave == achar), None)
     if chip is None or chip.ponte is None:
@@ -824,7 +765,6 @@ class _VigiaDoSteamInput:
         ponte = _ponte_do_steam_input()
         lista = ponte.ler_allowlist()
         if not lista:
-            # precisa ser aberto para dizer isso. A frase continua sendo a do
             dado = _DoSteamInput(frase=ponte.Estado().frase())
         else:
             estado = ponte.estado_da_ponte(allowlist=lista)
@@ -971,12 +911,6 @@ def _a_fileira_com_a_mesa(tela: dict[str, str], mesa: list[dict[str, Any]]) -> d
     return {**tela, "modo-aceso": "", "steam-input-aceso": ""}
 
 
-#: O LADO EM QUE O `desktop` FICA é o ARRANJO que o serviço guarda na sessão e publica no
-#: `state_full` (``desktop_arranjo``): «Navegação» no Desligado, «Point and click» no Ligado
-#: (O-POINT-AND-CLICK-APLICA-O-PERFIL-QUE-A-NAVEGACAO-ESCOLHE-01, 21/10/2026). Os dois aplicam
-#: tabelas de botões diferentes, e por isso a escolha mora no serviço, e não na janela: o PS + R3,
-#: o boot e a reconexão a acham lá. A lembrança velha da janela (`jogar_navegacao_no_desligado`,
-#: em `gui_preferences.json`) só dá o valor inicial (`utils.session.load_arranjo_do_desktop`).
 ARRANJO_DO_CHIP: dict[str, str] = {
     CHIP_DA_NAVEGACAO: "navegacao",
     CHIP_DO_POINT_AND_CLICK: "point_and_click",
@@ -1026,18 +960,11 @@ def _estado_da_tela(state: dict[str, Any]) -> dict[str, str]:
     ligado = _painel().hefesto_ligado(state)
     aceso = _chip_do_caminho(state)
 
-    # NO DESLIGADO, O NATIVO OU O STEAM INPUT — NO-DESLIGADO-A-STEAM-NAO-SE-METE-
-    # E-O-JOGO-MANDA-01, 08/10/2026. Os dois são o modo `native`; acende o Steam
-    # Input quando o jogo da vez está na lista do usuário, e o Nativo nos outros casos.
-    # No Ligado o Steam Input não é mais botão, e a lista não acende nada.
     steam = ""
     if ligado is False:
         steam = _steam_input_da_tela(state)
         aceso = "" if steam else CHIP_DO_NATIVO
     elif aceso == CHIP_DA_NAVEGACAO:
-        # O MESMO MODO `desktop` TEM DOIS LUGARES NA TELA (:data:`CHIP_DO_POINT_AND_CLICK`): o
-        # que o último clique escolheu diz qual. «Navegação» vive do lado Desligado, e o
-        # «Point and click» do Ligado.
         if _navegacao_no_desligado(state):
             ligado = False
         else:
@@ -1102,7 +1029,7 @@ def _mascara_do_cartao(casa: dict[str, Any], da_sessao: str) -> str:
     return da_sessao if not rotulo or rotulo not in _MASCARAS_DESENHADAS() else ""
 
 
-def _MASCARAS_DESENHADAS() -> set[str]:  # noqa: N802  (é uma constante lida tarde)
+def _MASCARAS_DESENHADAS() -> set[str]:  # noqa: N802
     """Os rótulos que o DESENHO tem, do dono deles (`monta.MASCARAS`).
 
     Separa duas ausências que se pareciam: rótulo que ESTÁ na tela e o produto não sabe montar
@@ -1126,13 +1053,7 @@ def _rotulo_da_mascara(mascara: str | None) -> str:
     }.get(str(mascara or ""), "")
 
 
-#:     ● Vai mudar para **Sony DualSense** quando você clicar em **Aplicar**
-#: e, na MESMA foto, o chip **Sony DualSense** já estava aceso na fileira Modo.
-#: 1. **"Vai mudar para Sony DualSense"** é tautologia. O gerador deriva a
-#:    SEGUNDO ramo (`_aplicar_escolha_pendente` → `apply_mode`), que guarda a
-#: que o usuário pediu — e é justamente aí que a tela estava MUDA. `_aplicar` não
 _ESCOLHA: dict[str, str] = {}
-#: o desenho. O `painel.CHIPS_DA_ESCADA` é a rede de segurança, e a chave crua é
 _ROTULO: dict[str, str] = {}
 
 
@@ -1275,9 +1196,6 @@ def _relatar_a_pendencia(frase: str) -> None:
         print(f"[relato] {PAGINA} · pendente: {frase}", file=sys.stderr)
 
 
-# tela. Quem a possui é `app/actions/mode_transition.plan_mode_transition`,
-#     painel.plano_do_modo(chave, mascara) -> [(metodo, params), ...]  # (noqa-acento) id
-# digitada: sai de `painel.CHIPS_DA_ESCADA`, que é onde a casa guarda qual ponte
 from . import gesto  # noqa: E402
 
 BOTOES_SEM_DONO: dict[str, str] = {}
@@ -1323,8 +1241,6 @@ def _dizer_se_nao_confirmou(confirmou: bool) -> None:
         raise RuntimeError(MODO_SEM_CONFIRMACAO)
 
 
-#: daquele conjunto têm teto próprio e declarado: `gamepad.mask.set` (o do P1, e
-#: «Xbox» no `interface.log` de 22/09 — `modo-xbox → aplicado`, depois
 ACHADO_DO_TIMEOUT = (
     "ponte.TETOS dá 2,0 s à troca de modo, o mesmo valor de mode_transition."
     "MODE_IPC_TIMEOUT_S, e ao gesto que pede o P1 o prazo do daemon com folga; "
@@ -1359,7 +1275,6 @@ def hefesto(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     if str(o.get("modo") or "") in _painel().MODOS_LIGADOS:
         from . import a09_sistema
 
-        # Sem espera própria: a unit é `Type=notify`, o `start` só volta com o IPC de pé.
         a09_sistema.ativar_o_servico()
     return _hefesto_o_modo(ctx, o, p)
 
@@ -1398,7 +1313,6 @@ def _plano_do_chip(chave: str) -> list[tuple[str, dict[str, Any]]]:
 
     linha = o_que_o_chip_faz(chave)
     if linha.modo == MODE_DESKTOP and chave in ARRANJO_DO_CHIP:
-        # Os dois chips do `desktop` levam o arranjo deles ao serviço (:data:`ARRANJO_DO_CHIP`).
         return plan_mode_transition(MODE_DESKTOP, arranjo=ARRANJO_DO_CHIP[chave])
     if linha.modo != MODE_GAMEPAD:
         return _plano(linha.modo)
@@ -1423,7 +1337,6 @@ def _lembrar_do_chip(chave: str, o: dict[str, Any]) -> None:
         linha = o_que_o_chip_faz(chave)
     except ValueError:
         return
-    # «Sony DualSense», e a rede de `_rotulo_de` nomearia o vizinho na faixa.
     rotulo = str(o.get("texto") or "") or _rotulo_do_chip(chave)
     if linha.modo != MODE_GAMEPAD:
         _lembrar("modo", linha.modo, rotulo)
@@ -1468,7 +1381,6 @@ def _o_clique_da_fileira(ctx: Contexto, o: dict[str, Any], p: Any,
                 VIGIA_DO_STEAM_INPUT.renovar()
 
     _dizer_se_nao_confirmou(confirmou)
-    # `{"recado": ""}` pousaria uma caixa verde VAZIA sobre a fileira.
     return {"recado": recado} if recado else None
 
 
@@ -1521,8 +1433,6 @@ def modo_nativo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
     return _o_clique_da_fileira(ctx, o, p, CHIP_DO_NATIVO)
 
 
-#     steam_launch_options.add_appid_to_steam_input_allowlist  a vontade do usuário
-#     steam_launch_options.with_steam_closed                 fechar e reabrir
 NOTA_DA_ESCOLHA = "escolhido na aba Jogar: usar os controles da própria Steam"
 
 def _o_que_o_vdf_diz(alvo: str) -> str | None:
@@ -1874,15 +1784,8 @@ def mascara_do_controle(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, A
         raise RuntimeError(
             f"“{rotulo}” não é uma máscara que exista. As que existem: {tem}.")
 
-    # Ela estava escrita `p.chamar("gamepad.mask.set", {"uniq": …, "flavor": …})`,
-    # `ponte.chamar(metodo, timeout=None, **params)`: o 2º posicional é o  # (parâmetro) noqa-acento
-    # TIMEOUT. O dicionário virava o prazo, `teto(metodo)` o  # (parâmetro) noqa-acento
-    # o chip DualSense do P1 não criava o `controller_masks.json` e não mexia em
-    # POR QUE NINGUÉM VIU: `gamepad.mask.set` não estava em `METODOS` (a régua
-    # `gamepad.mask.set` responde `{"gravado": false, "motivo": …}`
     ok, motivo = p.chamar_detalhado("gamepad.mask.set", uniq=uniq, flavor=flavor)
     if not ok:
-        # `gamepad.mask.set` recusa em voz alta com o catálogo do que aceita.
         if motivo:
             raise RuntimeError(motivo)
         return None
@@ -2045,17 +1948,12 @@ def reconectar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     except Exception as erro:
         raise RuntimeError(_painel().RECONECTAR_SEM_SERVICO) from erro
     jogadores = sync.get("players") if isinstance(sync, dict) else None
-    #: quando não houve o que contar, e um `{"recado": ""}` não é o mesmo que
     recibo = _painel().recibo_do_reconectar(jogadores, renumerou)
     do_radio = _painel().recado_do_radio(voltaram, esperam_o_ps)
     junto = " ".join(parte for parte in (do_radio, recibo) if parte)
     return {"recado": junto} if junto else None
 
 
-#: que o DualSense não devolve). Os dois daqui o daemon publica — os cinco
-#: `controllers[].player`, e as quatro chaves estão no `state_full`. Declará-los
-#: separá-la porque ela lê só o `state_full` ANTES e DEPOIS; separar exigiria
-#: clique que não pegava não deixava rastro nenhum, porque `_aplicar` engole o
 OS_DOIS_DA_LISTA_DOS_DEZESSEIS: dict[str, str] = {
     "hefesto": (
         "aplicou e não havia o que mudar: a prova clica a posição Ligado e o "
@@ -2069,23 +1967,15 @@ OS_DOIS_DA_LISTA_DOS_DEZESSEIS: dict[str, str] = {
     ),
 }
 
-#: dele porque `gamepad.mask.set` responde `{"gravado": false, "motivo": …}`
 PONTE = {"chamar", "chamar_detalhado", "freestyle_set", "resultado"}
-#: 04/09/2026 junto com o `gamepad.mask.set`: a folga de 2,0 s existe porque
 METODOS_DA_TROCA_DE_MODO = {
     "native.mode.set",
     "gamepad.emulation.set",
     "coop.sync",
     "identity.renumber",
-    # O `mouse.emulation.restore` SAIU DAQUI em 17/09/2026 (POINT-AND-CLICK-01)
-    # a régua verde sobre uma ponte que ninguém atravessa.
 }
 METODOS = METODOS_DA_TROCA_DE_MODO | {
-    # é a família do `profile.switch`, e a razão está escrita em `ponte.TETOS`.
-    # É o mesmo arranjo declarado do `gamepad.mask.set` logo abaixo, pelo
     "desktop.arranjo.apply",
-    # de ficar ao lado do certo. Ela dizia que `gamepad.mask.set` não estava em
-    #   * o teto entrou em 04/09/2026 — `ponte.TETOS["gamepad.mask.set"] = 2.0`,
     "gamepad.mask.set",
     "launch_env.refresh",
 }
@@ -2098,39 +1988,38 @@ _MANUAL_ON = {"enabled": True, "origin": "manual"}
 _MANUAL_OFF = {"enabled": False, "origin": "manual"}
 
 PROVAS = [
-    {"pagina": PAGINA, "gesto": "hefesto", "clique": {"modo": "gamepad"},  # (noqa-acento) id
+    {"pagina": PAGINA, "gesto": "hefesto", "clique": {"modo": "gamepad"},  # (noqa-acento)
      "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
                ("chamar", ["gamepad.emulation.set"], _MANUAL_ON)]},
-    {"pagina": PAGINA, "gesto": "hefesto", "clique": {"modo": "native"},  # (noqa-acento) id
+    {"pagina": PAGINA, "gesto": "hefesto", "clique": {"modo": "native"},  # (noqa-acento)
      "chama": [("chamar", ["native.mode.set"], _MANUAL_ON)]},
-    # de `painel.CHIPS_DA_ESCADA` — o que está digitado aqui é a EXPECTATIVA.
-    {"pagina": PAGINA, "gesto": "modo-dualsense", "clique": {},  # (noqa-acento) chave do contrato
+    {"pagina": PAGINA, "gesto": "modo-dualsense", "clique": {},  # (noqa-acento)
      "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
                ("chamar", ["gamepad.emulation.set"],
                 {**_MANUAL_ON, "caminho": "dualsense"})]},
-    {"pagina": PAGINA, "gesto": "modo-xbox", "clique": {},  # (noqa-acento) chave do contrato
+    {"pagina": PAGINA, "gesto": "modo-xbox", "clique": {},  # (noqa-acento)
      "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
                ("chamar", ["gamepad.emulation.set"],
                 {**_MANUAL_ON, "caminho": "xbox"})]},
-    {"pagina": PAGINA, "gesto": "modo-navegacao", "clique": {},  # (noqa-acento) chave do contrato
+    {"pagina": PAGINA, "gesto": "modo-navegacao", "clique": {},  # (noqa-acento)
      "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
                ("chamar", ["gamepad.emulation.set"], _MANUAL_OFF),
                ("chamar", ["desktop.arranjo.apply"],
                 {"origin": "manual", "arranjo": "navegacao"})]},
-    {"pagina": PAGINA, "gesto": "modo-point-and-click",  # (noqa-acento) chave do contrato
+    {"pagina": PAGINA, "gesto": "modo-point-and-click",  # (noqa-acento)
      "clique": {},
      "chama": [("chamar", ["native.mode.set"], _MANUAL_OFF),
                ("chamar", ["gamepad.emulation.set"], _MANUAL_OFF),
                ("chamar", ["desktop.arranjo.apply"],
                 {"origin": "manual", "arranjo": "point_and_click"})]},
-    {"pagina": PAGINA, "gesto": "reconectar", "clique": {},  # (noqa-acento) chave do contrato
+    {"pagina": PAGINA, "gesto": "reconectar", "clique": {},  # (noqa-acento)
      "chama": [("resultado", ["coop.sync"], {}),
                ("resultado", ["identity.renumber"], {})]},
-    {"pagina": PAGINA, "gesto": "mascara",  # (noqa-acento) chave do contrato
+    {"pagina": PAGINA, "gesto": "mascara",  # (noqa-acento)
      "clique": {"uniq": "aa:bb:cc:00:00:01", "mascara": "Xbox 360"},
      "chama": [("chamar_detalhado", ["gamepad.mask.set"],
                 {"uniq": "aa:bb:cc:00:00:01", "flavor": "xbox"})]},
-    {"pagina": PAGINA,  # (noqa-acento) chave do contrato
+    {"pagina": PAGINA,  # (noqa-acento)
      "gesto": "cadeado", "clique": {"evento": "click"},
      "chama": [("freestyle_set", [], {"ligado": True})]},
 ]

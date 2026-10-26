@@ -48,12 +48,9 @@ def _doc() -> str:
     return re.sub(r"<(style|script)\b[^>]*>.*?</\1>", "", sem_comentario, flags=re.S)
 
 
-# ---------------------------------------------------------------- o texto que o perfil guarda
-
-
 @pytest.mark.parametrize("base", BASES_DA_LUZ)
 def test_o_efeito_escrito_volta_igual_lido(base: str) -> None:
-    cores = [] if base == "arco-iris" else ["#ff0000", "#00FF80"]  # (noqa-acento) chave ASCII
+    cores = [] if base == "arco-iris" else ["#ff0000", "#00FF80"]
     texto = escrever_o_efeito_da_luz(base, cores, 7)
     lido = ler_o_efeito_da_luz(texto)
     assert lido == EfeitoDaLuz(base, tuple(
@@ -78,11 +75,8 @@ def test_o_teto_de_cores_do_efeito_e_oito() -> None:
 
 
 def test_o_arco_iris_nao_precisa_de_cor_e_o_resto_precisa() -> None:
-    assert ler_o_efeito_da_luz("arco-iris;;4") is not None  # (noqa-acento) chave ASCII
+    assert ler_o_efeito_da_luz("arco-iris;;4") is not None
     assert ler_o_efeito_da_luz("piscar;;4") is None
-
-
-# ---------------------------------------------------------------- a cor em cada instante
 
 
 def test_o_respirar_abaixa_ate_o_fundo_e_sobe_ate_a_cor_cheia() -> None:
@@ -113,7 +107,7 @@ def test_o_piscar_acende_e_abaixa_ate_o_piso_na_cor_dele() -> None:
 
 
 def test_o_arco_iris_gira_o_matiz_e_fecha_a_volta() -> None:
-    efeito = EfeitoDaLuz("arco-iris", (), 5)  # (noqa-acento) chave ASCII
+    efeito = EfeitoDaLuz("arco-iris", (), 5)
     volta = luz.periodo_do_arco_iris_s(5)
     assert luz.cor_no_instante(efeito, 0.0) == VERMELHO
     assert luz.cor_no_instante(efeito, volta / 3) == (0, 255, 0)
@@ -137,9 +131,6 @@ def test_o_piscar_nunca_passa_de_tres_lampejos_por_segundo() -> None:
     assert subidas <= 3, f"{subidas} lampejos em um segundo"
 
 
-# ---------------------------------------------------------------- o laço, com tudo injetado
-
-
 class _Barra:
     def __init__(self) -> None:
         self.escritos: list[tuple[str, tuple[int, int, int]]] = []
@@ -157,7 +148,7 @@ def test_no_maximo_trinta_quadros_por_segundo_por_controle() -> None:
     """MORDIDA: tirar o corte do intervalo mínimo."""
     barra = _Barra()
     laco = barra.laco()
-    plano = _plano(EfeitoDaLuz("arco-iris", (), 10))  # (noqa-acento) chave ASCII
+    plano = _plano(EfeitoDaLuz("arco-iris", (), 10))
     for ms in range(1000):
         laco.tique(ms / 1000, plano)
     assert 0 < len(barra.escritos) <= 31, len(barra.escritos)
@@ -195,7 +186,7 @@ def test_parar_solta_a_barra_uma_vez_so() -> None:
 def test_controle_calado_para_de_escrever_e_solta() -> None:
     barra = _Barra()
     laco = barra.laco()
-    plano = _plano(EfeitoDaLuz("arco-iris", (), 10))  # (noqa-acento) chave ASCII
+    plano = _plano(EfeitoDaLuz("arco-iris", (), 10))
     laco.tique(0.0, plano)
     laco.tique(0.1, plano, calados=frozenset({UNIQ}))
     laco.tique(0.2, plano, calados=frozenset({UNIQ}))
@@ -211,9 +202,6 @@ def test_um_controle_nao_atrasa_o_outro() -> None:
              OUTRO: luz.PlanoDoControle(EfeitoDaLuz("piscar", ((0, 0, 255),), 4), 1.0)}
     assert laco.tique(0.0, plano) == 2
     assert {u for u, _c in barra.escritos} == {UNIQ, OUTRO}
-
-
-# ---------------------------------------------------------------- o plano que o perfil manda
 
 
 def _perfil(global_: str | None = None, dele: Any = "ausente", modo: str | None = None,
@@ -248,15 +236,12 @@ def test_sem_efeito_no_perfil_nao_ha_plano_e_o_laco_nao_escreve() -> None:
 def test_no_modo_automatico_nada_anima() -> None:
     """MORDIDA: tirar a guarda do `plano_do_perfil`."""
     assert luz.plano_do_perfil(
-        _perfil("piscar;FF0000;4", modo="automatico"), [UNIQ]) == {}  # (noqa-acento) chave
+        _perfil("piscar;FF0000;4", modo="automatico"), [UNIQ]) == {}  # (noqa-acento)
     assert luz.plano_do_perfil(_perfil("piscar;FF0000;4", modo="personalizado"), [UNIQ])
 
 
 def test_barra_apagada_no_brilho_zero_nao_anima() -> None:
     assert luz.plano_do_perfil(_perfil("piscar;FF0000;4", brilho=0.0), [UNIQ]) == {}
-
-
-# ---------------------------------------------------------------- calar quando o jogo pinta
 
 
 def _daemon(visto: dict[str, float], backend: str = "uhid", jogo: bool = True,
@@ -337,7 +322,7 @@ def test_o_pulso_do_tiro_segura_a_barra_e_o_efeito_espera(
     """MORDIDA: tirar a pausa: o quadro seguinte apaga o pulso do tiro 33 ms depois."""
     from hefesto_dualsense4unix.daemon.subsystems.tato_vivo import CANAL_LUZ
 
-    passo, motor, barra = _passo_com_o_tato(monkeypatch, "arco-iris;;10")  # (noqa-acento) chave
+    passo, motor, barra = _passo_com_o_tato(monkeypatch, "arco-iris;;10")
     assert passo(10.0) == 1
     motor._pendentes[(UNIQ, CANAL_LUZ)] = 99.0
     assert motor.segurando(CANAL_LUZ) == {UNIQ}
@@ -431,16 +416,12 @@ def test_backend_sem_a_ponte_nao_escreve() -> None:
     assert soltar(UNIQ) is None
 
 
-# ---------------------------------------------------------------- o pacote da aba
-
-
 def test_a_lista_de_efeitos_tem_sem_efeito_luz_fixa_e_os_seus() -> None:
     import pacotes  # noqa: F401
     from pacotes import a04_iluminacao as a04
 
     sozinha = a04.opcoes_do_efeito({})
     assert f'value="{a04.SEM_EFEITO}"' in sozinha and f'value="{a04.LUZ_FIXA}"' in sozinha
-    # Desde 15/10/2026 a lista traz as bases em grupos; o grupo «Seus efeitos» só nasce com efeitos.
     assert 'optgroup label="Seus efeitos"' not in sozinha
     biblioteca = {"Alerta": {"nome": "Alerta", "base": "piscar",
                              "parametros": {"cores": "#FF0000", "ritmo": 6}}}
@@ -555,7 +536,7 @@ def test_criar_efeito_guarda_so_na_biblioteca_da_luz() -> None:
 def test_o_arco_iris_criado_nao_guarda_cor() -> None:
     from pacotes import a04_iluminacao as a04
 
-    _criar(  # (noqa-acento) chave ASCII
+    _criar(
         {"base": "arco-iris", "cores": "#ff0000", "ritmo": "3", "nome": "Giro"})
     assert a04.meus_efeitos("luz")["Giro"]["parametros"]["cores"] == ""
 
@@ -580,12 +561,11 @@ def test_criar_sem_o_que_falta_recusa_dizendo_e_nao_guarda(forma: dict[str, Any]
     assert a04.meus_efeitos("luz") == {}
 
 
-# ---------------------------------------------------------------- a guia: oito casas, as de jogador
-
-
 def test_a_guia_tem_o_branco_e_as_cores_de_jogador_e_nenhuma_das_de_fora() -> None:
-    """MORDIDA: devolver uma cor ao `FORA_DA_GUIA`, ou o ciano do Player 6 à fileira."""
-    # A decisão: D-1910-A-PRIMEIRA-CASA-DA-COR-E-O-BRANCO.
+    """MORDIDA: devolver uma cor ao `FORA_DA_GUIA`, ou o ciano do Player 6 à fileira.
+
+    Prova da D-1910-A-PRIMEIRA-CASA-DA-COR-E-O-BRANCO.
+    """
     from hefesto_dualsense4unix.core.led_control import player_slot_color
     from pacotes import a04_iluminacao as a04
 
@@ -594,9 +574,6 @@ def test_a_guia_tem_o_branco_e_as_cores_de_jogador_e_nenhuma_das_de_fora() -> No
     assert len(a04.FORA_DA_GUIA) == 5
     hexes = {"#{:02X}{:02X}{:02X}".format(*t) for t in a04.tons_da_guia()}
     assert not hexes & {h.upper() for h in a04.FORA_DA_GUIA}
-
-
-# ---------------------------------------------------------------- o desenho
 
 
 def test_o_desenho_nao_tem_interrogacao_nem_desligar() -> None:
@@ -635,7 +612,6 @@ def test_cada_coluna_viva_tem_a_lista_de_efeitos_e_o_gesto_dela() -> None:
 def test_a_vaga_sem_controle_diz_desconectado_e_nao_tem_gesto() -> None:
     doc = _doc()
     assert doc.count("Desconectado") == 2
-    # desde 16/10/2026 o P3 e o P4 leem como o P1 e o P2: o número sem negrito, mesmo «•»
     assert re.search(r">P3 <span class=\"pt\">•</span> Desconectado<", doc)
     assert "<b>P3</b>" not in doc and "<b>P4</b>" not in doc
 
@@ -663,7 +639,6 @@ def test_a_aba_cabe_sem_rolar_a_guia_tem_oito_casas_e_o_nome_tem_a_largura_da_co
         pg.goto(MOCKUP.as_uri())
         m = pg.evaluate(medir)
         nav.close()
-    # O miolo é quem rola: medir contra 809 deixava passar um pixel de barra (619 em 618).
     assert m["altura"] <= m["cabe"] and not m["lateral"], m
     assert m["casas"] == [8, 8, 8, 8], f"a guia é UMA fileira de oito: {m['casas']}"
     assert max(m["larguras"]) - min(m["larguras"]) <= 1, f"as quatro colunas são iguais: {m}"

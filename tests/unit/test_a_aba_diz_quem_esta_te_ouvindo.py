@@ -220,7 +220,7 @@ class TestOGeradorTemOEndereco:
     def test_a_pagina_da_bancada_carrega_o_endereco(self) -> None:
         """MORDIDA: gere a página sem rodar `aba02.py` de novo."""
         pagina = RAIZ / "mockup" / "02-controles.html"
-        if not pagina.exists():  # pragma: no cover - árvore sem a bancada
+        if not pagina.exists():  # pragma: no cover
             import pytest
 
             pytest.skip("a bancada não está nesta árvore")

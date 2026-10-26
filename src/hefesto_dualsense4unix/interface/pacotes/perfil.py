@@ -621,6 +621,3 @@ def a_volta_do_perfil(ctx: Any, p: Any) -> None:
         os_jogadores_de_volta(p)
     except Exception as erro:
         _relatar_a_volta("coop.sync", erro)
-
-
-#: é o daemon, que aplicou (`Daemon.gravar_o_modo_escolhido`), pela regra do

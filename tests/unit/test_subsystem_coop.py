@@ -152,7 +152,6 @@ def patched(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         "hefesto_dualsense4unix.integrations.uinput_gamepad.UinputGamepad", _FakeVpad
     )
-    # há um DualSense de verdade plugado). Testes de LED sobrescrevem com nós
     monkeypatch.setattr(
         "hefesto_dualsense4unix.core.sysfs_leds.discover", lambda: {}
     )
@@ -544,7 +543,6 @@ def test_primario_nao_crava_1_quando_o_registro_diz_outro_numero(
     _set_evdevs(
         monkeypatch, {MAC_P1: "/dev/input/event5", MAC_P2: "/dev/input/event7"}
     )
-    # Externo (fora do co-op) detém o 1; os DualSense ficaram com 2 e 3.
     mgr = CoopManager(_make_daemon(slots={MAC_P1: 2, MAC_P2: 3}))
     mgr.sync()
 
@@ -757,9 +755,6 @@ class TestResolvePlayerNumbers:
         assert resolve_player_numbers(
             daemon, [self._ctrl(MAC_P1), self._ctrl(None)]
         ) == [1, None]
-
-
-# perfil sem nenhum teste quebrando). Estes testes usam o PyDualSenseController
 
 
 def _backend_real_com_handle() -> tuple[Any, Any]:

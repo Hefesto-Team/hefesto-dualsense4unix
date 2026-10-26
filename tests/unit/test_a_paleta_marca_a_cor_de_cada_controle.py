@@ -419,7 +419,7 @@ def test_o_gesto_e_o_que_a_recusa_aceita(
 
 
 def _o_plastico_do_dono(modelo: str) -> str:
-    from hefesto_dualsense4unix.interface import pacotes  # noqa: F401 — põe `interface/` no path
+    from hefesto_dualsense4unix.interface import pacotes  # noqa: F401
     import monta
 
     from hefesto_dualsense4unix.integrations.cor_do_plastico import tom_para_a_borda
@@ -812,7 +812,7 @@ def test_a_regua_mede_as_vistas_que_pediu(na_tela) -> None:
 
 def _os_modelos_da_folha() -> list[str]:
     """Os modelos que a folha do desenho publica — lidos, não digitados."""
-    from hefesto_dualsense4unix.interface import pacotes  # noqa: F401 — põe `interface/` no path
+    from hefesto_dualsense4unix.interface import pacotes  # noqa: F401
     import monta
 
     return sorted(set(re.findall(r'svg\[data-colorway="([^"]+)"\]', monta.DS)))

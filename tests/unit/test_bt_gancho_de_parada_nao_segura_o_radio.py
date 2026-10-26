@@ -68,7 +68,7 @@ def lock_ocupado(tmp_path: Path):  # type: ignore[no-untyped-def]
         if livre.returncode != 0:
             break
         time.sleep(0.05)
-    else:  # pragma: no cover — só numa máquina onde o flock(1) não tranca
+    else:  # pragma: no cover
         dono.kill()
         pytest.skip("não consegui segurar o .lock com flock(1)")
     yield acervo

@@ -28,7 +28,6 @@ import pytest
 from hefesto_dualsense4unix.interface.pacotes import Contexto
 from hefesto_dualsense4unix.interface.pacotes import a09_sistema as a09
 
-#: O atraso do laço entre os dois gestos, maior que a janela do duplo clique.
 ATRASO_DO_LACO_S = 0.8
 
 

@@ -90,12 +90,12 @@ def mundo() -> Iterator[SimpleNamespace]:
 
 
 def test_a_porta_diz_cabo_radio_e_desconhecido(mundo: SimpleNamespace) -> None:
-    # D-2310-O-DSU-DIZ-A-CONEXAO-DO-CONTROLE
+    """Prova da D-2310-O-DSU-DIZ-A-CONEXAO-DO-CONTROLE."""
     mundo.envia(_pede_portas(0, 1, 2, 3))
     respostas = mundo.recebe(0.5)
     assert [r[20] for r in respostas] == [0, 1, 2, 3]
     assert [r[23] for r in respostas] == [1, 2, 0, 0]
-    assert [r[21] for r in respostas] == [2, 2, 2, 0]  # o estado segue conectado nos três
+    assert [r[21] for r in respostas] == [2, 2, 2, 0]
 
 
 def test_os_dados_dizem_cabo_radio_e_desconhecido(mundo: SimpleNamespace) -> None:

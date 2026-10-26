@@ -41,9 +41,6 @@ def _bordas(sequencia: list[tuple[float, int, int]], uniq: str = P1) -> list[tv.
     return eventos
 
 
-# --- A borda --------------------------------------------------------------
-
-
 def test_a_subida_de_0_a_200_em_8_ms_gera_um_toque() -> None:
     eventos = _bordas([(0.000, 0, 0), (0.004, 0, 100), (0.008, 0, 200)])
     assert len(eventos) == 1
@@ -56,7 +53,6 @@ def test_o_nivel_sustentado_de_200_nao_gera_dois() -> None:
 
 
 def test_o_pedido_do_cosmic_osk_gera_zero() -> None:
-    # A forma medida: vibração NULA a cada 50 ms, por pad, sem jogo nenhum.
     sequencia = [(i * 0.05, 0, 0) for i in range(200)]
     assert _bordas(sequencia) == []
 
@@ -76,9 +72,6 @@ def test_a_rajada_que_solta_entre_tiros_da_um_toque_por_tiro() -> None:
 def test_o_tiro_por_cima_do_motor_ligado_tambem_e_borda() -> None:
     sequencia = [(0.0, 0, 120), (0.2, 0, 220), (0.25, 0, 120), (0.4, 0, 220)]
     assert len(_bordas(sequencia)) == 3
-
-
-# --- O motor e a guarda do jogo -------------------------------------------
 
 
 class Toques:
@@ -147,9 +140,6 @@ def test_o_motor_desligado_nao_anota_o_rumble() -> None:
     assert motor.contadores["eventos"] == 1
 
 
-# --- A forma do toque -----------------------------------------------------
-
-
 def _rms(amostras: Any) -> float:
     return math.sqrt(sum(x * x for x in amostras) / max(1, len(amostras)))
 
@@ -198,9 +188,6 @@ def test_o_toque_por_cima_do_seno_nao_passa_de_um() -> None:
     base = eh.bloco_da_haptica(255, 255)
     misturado = eh.misturar_o_toque(base, eh.forma_do_toque(1.0, 40), 0, (2, 3))
     assert max(abs(x) for c in _canais(misturado) for x in c) <= 1.0
-
-
-# --- P1 a P4, cabo e rádio, pelo caminho do produto ----------------------
 
 
 @pytest.fixture
@@ -253,15 +240,10 @@ def test_o_pad_uhid_nao_leva_a_borda_ao_motor(com_toque: _Mundo) -> None:
     assert m.daemon._tato_vivo.contadores["eventos"] == 0
 
 
-# --- A barra do usuário não apaga o tiro (o jogo manda, o ajuste só potencializa) ---
-
-
 @pytest.mark.parametrize(
     ("mults", "par", "lado", "energia"),
     [
-        # Barra do forte a 50 %: o tiro de 150 vira 75 no motor, abaixo do limiar 80.
         ((1.0, 0.5), (0, 150), tv.LADO_ESQUERDO, 75),
-        # Barra do fraco a 0 %: o tiro dos dois motores não vira «esquerdo».
         ((0.0, 1.0), (200, 200), tv.LADO_CENTRO, 200),
     ],
 )

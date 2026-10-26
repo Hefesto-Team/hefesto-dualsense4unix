@@ -28,7 +28,6 @@ from hefesto_dualsense4unix.integrations.uinput_keyboard import UinputKeyboardDe
 from hefesto_dualsense4unix.testing import FakeController
 from hefesto_dualsense4unix.utils.session import ARRANJO_NAVEGACAO
 
-#: Um botão da Interna que o perfil ligou a uma tecla (``key_bindings``).
 BOTAO_LIGADO_A_TECLA = "cross"
 TECLA_DO_PERFIL = ("KEY_ENTER",)
 
@@ -44,9 +43,6 @@ def _interna(*, agindo: bool) -> dono.NavegacaoInterna:
     n = dono.NavegacaoInterna(ligada=True, tipo=dono.TIPO_INTERNA, relogio=_Relogio())
     n.declarar_foco(agindo)
     return n
-
-
-# 1 ─ O dono: as combinações de mouse com a Interna agindo e parada ─────────────
 
 
 @pytest.mark.parametrize(
@@ -79,9 +75,6 @@ def test_1_o_start_de_todo_controle_fica_com_a_interna() -> None:
         assert "options" not in n.calar_o_alt_tab(
             frozenset({"options"}), mouse_ligado=mouse_ligado), (
             f"o Start saiu como tecla com a Interna agindo (mouse ligado={mouse_ligado})")
-
-
-# 2 ─ O teclado de verdade, no laço de verdade ─────────────────────────────────
 
 
 class _Snap:
@@ -135,8 +128,6 @@ async def _teclas_do_laco(
         ),
     )
     daemon._navegacao_interna = _interna(agindo=agindo)
-    # A tecla do perfil é a tabela da Navegação; no Point and click (o padrão sem nada guardado)
-    # o boot repõe a do molde por cima (O-POINT-AND-CLICK-SE-REPOE-EM-TODO-CAMINHO-01).
     daemon._arranjo_do_desktop = ARRANJO_NAVEGACAO
     uinput, emitidas = _uinput_de_mentira()
     teclado = UinputKeyboardDevice(
@@ -150,7 +141,6 @@ async def _teclas_do_laco(
     prazo = time.monotonic() + 5.0
     while daemon.store.counter("poll.tick") < 2 and time.monotonic() < prazo:
         await asyncio.sleep(0.005)
-    # O estado do mouse e os botões entram com o laço já vivo, sem abrir o mouse virtual.
     daemon.config.mouse_emulation_enabled = mouse_ligado
     snap.buttons_pressed = ["options", "r1", BOTAO_LIGADO_A_TECLA]
     base = daemon.store.counter("poll.tick")

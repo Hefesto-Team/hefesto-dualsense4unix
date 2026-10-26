@@ -328,8 +328,6 @@ class TestODoctorFalaDoBtFragilDeVerdade:
         assert "BLUETOOTH" not in saida, saida
 
 
-#: `tests/fixtures/state_full_quatro_controles.json`: payload REAL, com quatro
-#: É a única mesa desta casa em que `player_slot` NÃO é `index + 1` — o handle
 MESA_REAL: dict[str, Any] = json.loads(
     (
         Path(__file__).resolve().parents[1]

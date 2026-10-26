@@ -25,7 +25,6 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: O teto de eventos por lado de cada controle: 50 por segundo.
 INTERVALO_MINIMO_S = 1.0 / 50.0
 
 TAMANHO_DO_BLOCO = TAMANHO_DO_BLOCO_DO_GATILHO
@@ -33,7 +32,6 @@ ZONAS_DO_CURSO = 10
 
 DESLIGADO = "desligado"
 
-#: O lado como o evento o diz; o gatilho do jogo chega como `left`/`right`.
 _LADO = {"left": "esquerdo", "right": "direito"}
 
 _ATRIBUTO = "_gatilho_do_jogo_visto"
@@ -67,7 +65,7 @@ def _forca_das_duas_amplitudes(bloco: bytes, _zonas: list[int]) -> float:
 
 
 def _forca_do_galope(_bloco: bytes, _zonas: list[int]) -> float:
-    return 1.0  # o bloco carrega os pés e a frequência, não uma força
+    return 1.0
 
 
 def _leitor(
@@ -92,12 +90,10 @@ def _legado(bloco: bytes) -> Decodificado:
     return ("outro", 1.0 if any(bloco[1:]) else 0.0, 0.0)
 
 
-#: O leitor de cada modo pelo primeiro byte do bloco (os bytes são os da ``TriggerMode``); o
-#: que não está aqui é ``outro``.
 _LEITOR_POR_BYTE: dict[int, Callable[[bytes], Decodificado]] = {
     TriggerMode.OFF: _desligado,
     TriggerMode.DESLIGADO_OFICIAL: _desligado,
-    TriggerMode.FEEDBACK: _leitor("resistencia", _forca_do_maior),  # (noqa-acento): contrato ASCII
+    TriggerMode.FEEDBACK: _leitor("resistencia", _forca_do_maior),  # (noqa-acento)
     TriggerMode.BOW: _leitor("arco", _forca_do_byte_3),
     TriggerMode.GALLOPING: _leitor("galope", _forca_do_galope),
     TriggerMode.WEAPON: _leitor("arma", _forca_do_byte_3),
@@ -145,7 +141,7 @@ def _vista_do(daemon: Any, *, criar: bool) -> _Vista | None:
         vista = _Vista()
         try:
             setattr(daemon, _ATRIBUTO, vista)
-        except AttributeError as exc:  # um dublê sem lugar para a tabela: sem evento, sem erro
+        except AttributeError as exc:
             logger.debug("jogo_gatilho_sem_tabela", err=str(exc))
             return None
     return vista
@@ -213,16 +209,15 @@ def _dizer(
         linha = vista.linhas.get(chave)
         if linha is None:
             if decodificar_o_bloco(bloco)[0] == DESLIGADO:
-                return  # nada ligado e nada se liga: não há o que dizer
-            # `agora - 1.0`: o primeiro de um lado nunca espera o teto.
+                return
             linha = vista.linhas[chave] = _Linha(
                 b"", False, enviado_em=agora - 1.0, pendente=None
             )
         if bloco == linha.bloco:
-            linha.pendente = None  # o jogo voltou ao gatilho já dito: o atrasado não vale mais
+            linha.pendente = None
             return
         if agora - linha.enviado_em < INTERVALO_MINIMO_S:
-            linha.pendente = bloco  # o tique seguinte diz (`bater_o_gatilho`)
+            linha.pendente = bloco
             return
         linha.bloco, linha.pendente, linha.enviado_em = bloco, None, agora
         linha.ligada = decodificar_o_bloco(bloco)[0] != DESLIGADO

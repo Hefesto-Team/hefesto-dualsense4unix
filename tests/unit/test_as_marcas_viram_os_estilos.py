@@ -28,7 +28,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 NOME = "Maid Life"
 
-#: Os arquivos do editor da aba 10, relativos à raiz: nenhum deles lê, monta ou manda `marcas`.
 DO_EDITOR = (
     "src/hefesto_dualsense4unix/app/actions/perfis_web.py",
     "src/hefesto_dualsense4unix/interface/aba10.py",

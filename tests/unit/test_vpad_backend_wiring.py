@@ -77,7 +77,7 @@ class _FakeReader:
 
     def stop(self) -> None: ...
 
-    def snapshot(self) -> Any:  # pragma: no cover - forward_all não roda aqui
+    def snapshot(self) -> Any:  # pragma: no cover
         raise NotImplementedError
 
 

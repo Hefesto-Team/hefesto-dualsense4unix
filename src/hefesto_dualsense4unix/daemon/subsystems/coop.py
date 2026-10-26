@@ -25,16 +25,9 @@ logger = get_logger(__name__)
 _CALIB_PRAZO_S = 2.0
 
 ESPERA_PELA_ORDEM_S = 4.0
-#: quanto o som espera o pad do jogador que o co-op acabou de assentar: a
-#: calibração, a ordem e folga para o grab (``pad_usb.anotar_pad_a_caminho``).
 _PAD_A_CAMINHO_S = _CALIB_PRAZO_S + ESPERA_PELA_ORDEM_S + 4.0
-#: quanto vale o retrato da mesa que o ``sync`` publica (duas voltas e folga).
 _A_MESA_VALE_S = 5.0
 
-# O jogador que cedeu o aparelho ao posto de P1 (09/10/2026):
-# «calado»: o pad dele para de falar com o aparelho na cessão (o motor que ele
-# deixou ligado para ali, uma vez) e o recolhimento não manda parada nem zero;
-# «com-parada» é o de antes. O interruptor mora no ambiente do daemon.
 RECOLHER_CALADO = "calado"
 RECOLHER_COM_PARADA = "com-parada"
 RECOLHIMENTO_DO_CEDIDO = RECOLHER_CALADO
@@ -141,9 +134,8 @@ class _SecondaryPlayer:
     player_index: int
     vpad: VirtualPad | None = None
     cedido_ao_primario: bool = False
-    # vpad é uhid E o backend resolve hidraw por-uniq (DualSense); None para
     motion_reader: Any = None
-    a_espera: bool = False  # fora da mesa, o vpad parado espera a volta
+    a_espera: bool = False
 
 
 class CoopManager:
@@ -151,10 +143,6 @@ class CoopManager:
 
     _fio_do_laco: int | None = None
     _ordem_pendente: bool = False
-    # O-PAD-QUE-NASCE-NAO-PARA-O-TIQUE-DOS-OUTROS-01: os pads pedidos ao fio de
-    # nascimento, em ordem (uma tupla, que só se troca inteira); um por vez no
-    # fio, e o próximo só depois do anterior instalado. `_p1_que_nasce` é o
-    # contexto do P1 reerguido no tique.
     _fila_do_nascimento: tuple[str, ...] = ()
     _nascendo: tuple[str, _SecondaryPlayer | None, Any] | None = None
     _p1_que_nasce: Any = None
@@ -188,8 +176,6 @@ class CoopManager:
         cfg = getattr(self._daemon, "config", None)
         if not bool(getattr(cfg, "coop_enabled", False)):
             return False
-        # co-op exige o caminho de gamepad virtual ligado (o P1 já é um vpad, ou
-        # está nascendo pelo fio).
         return (
             getattr(self._daemon, "_gamepad_device", None) is not None
             or self._p1_que_nasce is not None
@@ -468,11 +454,6 @@ class CoopManager:
         from hefesto_dualsense4unix.integrations.virtual_pad import a_roupa_mudou
 
         primary = self._primary_identity()
-        # primário ainda não resolveu o MAC (`primary_uniq` None no boot/restart
-        # com controles já plugados → fallback "path:"), não há como excluí-lo de
-        # `want` e um secundário nasceria para o PRÓPRIO controle do P1 (input
-        # DOBRADO até o próximo sync ~2s). Adia enquanto não há MAC do primário;
-        # `_retry_spawn` garante o re-teste no tick seguinte, sem depender do
         if primary is None or primary.startswith("path:"):
             logger.debug("coop_sync_defer_primary_sem_mac", primary=primary)
             self._retry_spawn = True
@@ -532,10 +513,6 @@ class CoopManager:
                 self._spawn_player(mac, want[mac])
         self._publicar_a_mesa({*want, primary})
 
-        # todo ciclo cheio — cobre ativação, spawn, node novo e o replug (o
-        # backend re-afirma o padrão broadcast do perfil no nó que reaparece;
-        # como o replug também dispara o watch, este reassert devolve o padrão
-        # do jogador logo em seguida).
         self._apply_coop_player_leds()
 
     def _adotar_o_numero_do_jogo(self) -> None:
@@ -572,9 +549,6 @@ class CoopManager:
                 trocou = True
         if not trocou:
             return
-        # As lâmpadas congeladas seguem o registro JÁ: a carta de ``_ordenar`` sai
-        # de ``numero_da_lampada``, e uma lâmpada velha com a mesa nova recriaria o
-        # pad que esta troca existe para não recriar. O jogo já acende esse número.
         soltar = getattr(registro, "liberar_as_lampadas", None)
         if callable(soltar):
             with contextlib.suppress(Exception):
@@ -933,14 +907,11 @@ class CoopManager:
         """
         from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
 
-        # target_uniq: reconexões do loop re-localizam ESTE controle pelo MAC,
-        # nunca "o primeiro node da lista" (identidade estável por jogador).
         target = None if identity.startswith("path:") else identity
         reader = EvdevReader(device_path=Path(path), target_uniq=target)
         if not reader.start():
             logger.debug("coop_player_reader_unavailable", identity=identity, evdev=path)
             return
-        # Grab: o jogo deve ver SÓ o gamepad virtual deste jogador, não o cru.
         if not reader.set_grab(True):
             logger.warning("coop_player_grab_refused", identity=identity, evdev=path)
             reader.stop()
@@ -955,12 +926,7 @@ class CoopManager:
         if not identity.startswith("path:"):
             from hefesto_dualsense4unix.integrations import pad_usb
 
-            # O dono único de «este aparelho vai ganhar pad»: o som espera o pad
-            # dele nascer antes de criar o endpoint (a Parte 3 do par do pad).
             pad_usb.anotar_pad_a_caminho(identity, _PAD_A_CAMINHO_S)
-        # R-22: esquenta o cache do 0x05 assim que o jogador é registrado —
-        # normalmente o grab só confirma um tick depois, então a leitura (que
-        # roda fora do loop) já terminou quando a promoção precisar dela e o
         self._prefetch_calibration(identity)
         if reader.grab_state == "held" and self._pode_nascer_na_ordem(player):
             self._nascer_na_ordem(player)
@@ -1024,16 +990,11 @@ class CoopManager:
 
             target = None if identity.startswith("path:") else identity
             if self._o_pad_sem_dono(identity, dono):
-                # O aparelho dele dirige o pad 1 agora: o pad dele não tem dono.
                 logger.debug(
                     "coop_rumble_do_cedido_descartado", identity=identity,
                     weak=weak, strong=strong,
                 )
                 return
-            # MOTOR-QUE-NAO-SE-VE-01: o vpad é procurado AQUI, na hora do rumble
-            # (o sink nasce antes dele, e o `_players[identity]` é recriado a
-            # cada respawn), e vai junto: o pad `uinput` deste jogador leva a
-            # háptica fina ao lugar DELE (NO-MODO-XBOX-TUDO-FUNCIONA-01).
             vpad = getattr(self._players.get(identity), "vpad", None)
             efetivo = apply_game_rumble(daemon, weak, strong, target_uniq=target, vpad=vpad)
             anotar_rumble_no_vpad(vpad, efetivo)
@@ -1096,7 +1057,6 @@ class CoopManager:
             "lightbar_sink": _lightbar,
             "player_led_sink": _player_leds,
             "session_end_sink": _session_end,
-            # A luz e o mudo do microfone que o jogo pede, ao controle DESTE jogador.
             **ralos_do_mic(daemon, lambda: target),
         }
         dono = self._players.get(identity)
@@ -1150,7 +1110,6 @@ class CoopManager:
         """Os argumentos do `make_virtual_pad` deste jogador, de agora, fora a identidade."""
         from hefesto_dualsense4unix.daemon.subsystems.gamepad import controller_allows_uhid
 
-        # controle não-DualSense (8BitDo, Pro Controller) também ganha vpad uhid
         return self._flavor(), {
             "rumble_sink": self._make_player_rumble_sink(player.identity),
             "player": self.numero_para_o_nome(player.identity, player.player_index),
@@ -1262,7 +1221,6 @@ class CoopManager:
         anotar_o_nascimento(self._daemon, ms)
         from hefesto_dualsense4unix.integrations import pad_usb
 
-        # Decidido: o gadget que montou já está anotado pelo serial dele.
         pad_usb.pad_decidido(player.identity)
         if vpad is None:
             logger.warning(
@@ -1428,9 +1386,6 @@ class CoopManager:
             make_broker_opener,
         )
 
-        # BROKER-01 §6.3: o reader deste jogador nasce com o opener
-        # broker-aware — reabre o hidraw via fd do broker root mesmo com o nó
-        # escondido; sem broker, os.open por caminho (comportamento de hoje).
         reader = PhysicalReportReader(
             path_provider=_player_hidraw,
             vpad=vpad,
@@ -1523,11 +1478,9 @@ class CoopManager:
         self._pronto_desde.pop(identity, None)
         self._tirar_da_fila(identity)
         if self._nascendo is not None and self._nascendo[0] == identity:
-            # O pad que nasce para quem saiu para no fio, quando chegar.
             self._nascendo[2].descartar()
             self._nascendo = None
         if not player.cedido_ao_primario:
-            # O nó do cedido é do P1 agora: quem o devolve é o caminho do P1.
             self._broker_restore_player(identity)
         with contextlib.suppress(Exception):
             player.reader.set_grab(False)
@@ -1539,7 +1492,6 @@ class CoopManager:
             player.motion_reader = None
         calado = player.cedido_ao_primario and recolher_calado()
         if calado:
-            # O aparelho segue na mesa como P1: nem a parada nem o zero do vpad.
             logger.info("coop_cedido_recolhido_sem_parada", identity=identity)
         else:
             self._zerar_rumble_do_jogador(identity)
@@ -1551,7 +1503,6 @@ class CoopManager:
                 _parar_fora_do_tique(player.vpad)
         self._levantar(identity)
         if not calado:
-            # O LED do aparelho que cedeu é do P1 agora: não se devolve ao perfil do P2.
             self._revert_single_player_led(identity)
         self._materialize_launch_env()
         logger.info("coop_player_removed", identity=identity, players=self.player_count())
@@ -1573,8 +1524,6 @@ class CoopManager:
 
     def _apply_coop_player_leds(self) -> None:
         """Acende em cada controle o padrão canônico do SEU jogador."""
-        # "2+ controles" que nunca existiu. Resultado: com um único DualSense,
-        # slot 1 no registry de externos e o DualSense primário recebia 1 do
         if not self._players:
             logger.debug("coop_sem_secundario_nao_escreve_player_led")
             if self._camada_coop:
@@ -1588,14 +1537,10 @@ class CoopManager:
             return
         from hefesto_dualsense4unix.core import sysfs_leds
 
-        # o `discover` que falha se diz uma vez por borda (`_os_nos_do_sysfs`, no
-        # fim da classe), e não a cada ciclo cheio da espera no lugar guardado
         nodes = self._os_nos_do_sysfs(sysfs_leds.discover)
         if nodes is None:
             return
         for mac, bits in padroes.items():
-            # o lugar que espera não tem lâmpada; o nó que falta se diz uma vez
-            # por borda (`_o_led_acendeu`, no fim da classe)
             if self._o_led_acendeu(mac, nodes.get(mac), bits):
                 self._leds_overridden = True
         self._led_indisponivel &= frozenset(padroes)
@@ -1614,8 +1559,6 @@ class CoopManager:
             alvos.append((primary, 1))
         for mac, player in self._players.items():
             if mac.startswith("path:"):
-                # Sem MAC não há como casar o controle — segue com o padrão
-                # broadcast (não deveria acontecer com DualSense real).
                 logger.debug(
                     "coop_player_led_sem_mac",
                     identity=mac,
@@ -1677,12 +1620,6 @@ class CoopManager:
         cai no seu `fallback` histórico — primário 1, secundários pelo
         `player_index` —, então nada muda para quem não tem fila.
         """
-        # G6 (27/09, a troca de cabo do branco: um 5 no azul, um 4 no branco).
-        # A passada única deixava o `fallback` de quem estava FORA da mesa (na
-        # troca de transporte, sem lâmpada) tomar a carta de quem estava nela.
-        # Agora são duas: quem tem carta fica com ela, e só depois quem não tem
-        # — O-MODO-XBOX-NAO-E-QUEDA-02, item 6, em `_numeros_em_duas_passadas`
-        # (no fim da classe: o mapa de canais cita esta por linha).
         return self._numeros_em_duas_passadas()
 
     def _numero_exibido(self, identity: str, fallback: int, usados: set[int]) -> int:
@@ -1904,8 +1841,6 @@ class CoopManager:
             return
         from hefesto_dualsense4unix.core import sysfs_leds
 
-        # o mesmo dono da borda do aviso do `discover` (`_os_nos_do_sysfs`, no fim
-        # da classe)
         nodes = self._os_nos_do_sysfs(sysfs_leds.discover)
         if nodes is None:
             return
@@ -1934,14 +1869,11 @@ class CoopManager:
             if player.vpad is None or self._espera(player):
                 continue
             if player.cedido_ao_primario:
-                # do `_recolher_os_cedidos` acima — este `continue` é o que
                 continue
             try:
                 snap = player.reader.snapshot()
-                # As teclas dos acionadores deste jogador entram como a mão (o mesmo dono do P1).
                 andar_os_acionadores(self._daemon)
                 botoes = com_os_acionadores(self._daemon, player.identity, snap.buttons_pressed)
-                # O `TriggerThreshold` do DSX deste jogador, pelo mesmo dono do P1.
                 l2, r2 = cortar_pelo_limiar(store, player.identity, snap.l2_raw, snap.r2_raw)
                 lx, ly, rx, ry = snap.lx, snap.ly, snap.rx, snap.ry
                 soltos = self._apertos_vistos_de(player.identity).soltos(
@@ -1951,17 +1883,13 @@ class CoopManager:
                     apertos=getattr(snap, "apertos", None),
                     apertados=botoes,
                 )
-                # O gesto do PS deste jogador fica com o Hefesto, no latch DELE.
                 com_o_ps = botoes
                 botoes = sem_o_gesto_do_ps(self._daemon, player.identity, botoes)
-                # E o eixo do gatilho do gesto dos acessórios (PS + R2) também não chega ao jogo.
                 l2, r2 = sem_o_eixo_do_gesto(
                     self._daemon, player.identity, com_o_ps, (snap.l2_raw, snap.r2_raw), l2, r2
                 )
                 l2, r2 = gatilhos_dos_acionadores(self._daemon, player.identity, l2, r2)
-                # A Navegação Interna com a janela na frente: o que navega não vai ao jogo (D-22).
                 botoes, soltos = roubar_o_que_navega(self._daemon, botoes, soltos)
-                # O Modo Big Picture com a Steam na frente: o que navega vira tecla (P2 a P4).
                 botoes, soltos = levar_o_big_picture(
                     self._daemon, player.identity, botoes, soltos
                 )
@@ -1975,7 +1903,6 @@ class CoopManager:
                         r2=r2,
                     )
                 if com_filtro:
-                    # O tremor, o aperto mínimo e a trava deste jogador, pelo mesmo dono do P1.
                     botoes, l2, r2, soltos = filtrar_o_botao(
                         store, player.identity, botoes, l2, r2, soltos)
                 if arranjo_de_movimento is not None:
@@ -1998,7 +1925,6 @@ class CoopManager:
                     botoes, l2, r2, tocados = ativar_o_botao(
                         store, player.identity, botoes, l2, r2, tocados)
                 if com_curva:
-                    # A zona morta, a curva e a mão deste jogador, pelo mesmo dono do P1.
                     lx, ly, rx, ry, l2, r2 = moldar_os_analogicos(
                         store, player.identity, lx, ly, rx, ry, l2, r2)
                 player.vpad.forward_analog(
@@ -2076,7 +2002,6 @@ class CoopManager:
                 del self._mesa_do_jogo[lugar]
         self._nascido_em.pop(chave, None)
         if chave != _CHAVE_DO_P1:
-            # O vpad morreu: o botão que o modo segurava para ele solta com ele.
             soltar_a_ativacao(self._daemon, chave)
 
     def _compactar(self) -> None:
@@ -2253,7 +2178,6 @@ class CoopManager:
             reerguer_o_p1,
         )
 
-        # sem o dono, a mesa no Modo Xbox via o P1 voltar DualSense e a tela e
         desfecho = reerguer_o_p1(self._daemon, motivo="ordem_do_coop")
         if desfecho not in DESFECHOS_EMULACAO_ATIVA:
             logger.warning("coop_ordem_o_p1_nao_voltou", desfecho=desfecho)
@@ -2265,7 +2189,6 @@ class CoopManager:
         for key in list(self._players):
             self._teardown_player(key)
         self._revert_player_leds()
-        # religado o co-op, o nó que segue faltando e o `discover` que falha se dizem de novo
         self._led_indisponivel = frozenset()
         self._discover_falhou = False
 
@@ -2333,10 +2256,6 @@ class CoopManager:
             return True
         cfg = getattr(self._daemon, "config", None)
         return self._was_active and bool(getattr(cfg, "coop_enabled", False))
-
-    # D-2410-O-LUGAR-GUARDADO-ESPERA-NOS-QUATRO: o P2 ao P4 que caem com o lugar
-    # guardado esperam no vpad deles. Os métodos moram no fim da classe para não
-    # deslocar as faixas `coop.py:N` que o mapa de canais cita.
 
     @staticmethod
     def _espera(player: Any) -> bool:
@@ -2408,7 +2327,7 @@ class CoopManager:
         for parar in paradas:
             try:
                 parar()
-            except Exception as exc:  # o leitor que não para se diz no diário
+            except Exception as exc:
                 logger.warning("coop_leitor_nao_parou", identity=player.identity, err=str(exc))
         player.motion_reader = None
         self._zerar_rumble_do_jogador(player.identity)
@@ -2482,7 +2401,7 @@ class CoopManager:
         ]
         renascidos: set[str] = self.__dict__.setdefault("_renasceu_da_promocao", set())
         sem_volta: set[str] = self.__dict__.setdefault("_promocao_sem_volta", set())
-        sem_volta &= set(self._players)  # quem saiu da mesa tenta de novo na volta
+        sem_volta &= set(self._players)
         renascidos -= {m for m, p in self._players.items() if p.vpad is not None} - {
             m for m, _ in degradados
         }
@@ -2715,7 +2634,6 @@ class CoopManager:
             vistos = self._apertos_vistos[identity] = ApertosVistos()
         return vistos
 
-    #: Quem já ouviu, nesta borda, que o nó de LED dele falta.
     _led_indisponivel: frozenset[str] = frozenset()
 
     def _o_led_acendeu(
@@ -2737,7 +2655,6 @@ class CoopManager:
             logger.warning("coop_player_led_indisponivel", identity=mac)
         return False
 
-    #: O `discover` do sysfs já se disse falhando, nesta borda.
     _discover_falhou = False
 
     def _os_nos_do_sysfs(
@@ -2938,7 +2855,6 @@ def resolve_player_numbers(
     for ctrl, ok in zip(controllers, connected, strict=True):
         uniq = ctrl.get("uniq")
         number = index_by_mac.get(uniq) if ok and isinstance(uniq, str) else None
-        # Blindagem de serialização (mesma do `_as_str_or_none` do state_full):
         out.append(
             number if isinstance(number, int) and not isinstance(number, bool) else None
         )

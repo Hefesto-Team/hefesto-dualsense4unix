@@ -37,7 +37,7 @@ def plantar_o_registro(casa: Path, jogos: Iterable[str] | Mapping[str, Mapping[s
         alvo = casa / "nile_config/nile/installed.json"
         atual = json.loads(alvo.read_text(encoding="utf-8")) if alvo.is_file() else []
         atual += [{"id": app, "version": "1", **extra} for app, extra in extras.items()]
-    else:  # pragma: no cover - erro de quem escreve a régua
+    else:  # pragma: no cover
         raise ValueError(loja)
     alvo.parent.mkdir(parents=True, exist_ok=True)
     alvo.write_text(json.dumps(atual), encoding="utf-8")

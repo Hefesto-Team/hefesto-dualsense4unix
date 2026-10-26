@@ -36,10 +36,6 @@ ERRO_REJEITADO = "org.bluez.Error.Rejected"
 ERRO_CANCELADO = "org.bluez.Error.Canceled"
 ERRO_JA_EXISTE = "org.bluez.Error.AlreadyExists"
 
-#: O ``Pair`` que ficou sem resposta: o tempo estourou (o Gio diz «Timeout was
-#: reached» sem nome de erro, e o ``busctl`` só diz que não deu) ou o barramento
-#: respondeu por ele. O bluetoothd 5.86 deixa o ``Pair`` assim quando o bond
-#: já está feito e a busca de SDP não começa (curado na 5.87, ``622a46ebc``).
 _PAIR_SEM_RESPOSTA = frozenset({
     "",
     "org.freedesktop.DBus.Error.NoReply",
@@ -66,16 +62,11 @@ AVISO_DESLIGOU = "desligou"
 AVISO_SAIU_PAREADO = "saiu_pareado"
 Ouvinte = Callable[[str, Mapping[str, Any]], None]
 
-#: Por que o enlace caiu: o ``Device1.Disconnected(nome, mensagem)``, que o
-#: bluetoothd emite logo ANTES do ``Connected`` virar falso (``device.c``,
-#: ``device_remove_connection``, na tag 5.86). O kernel junta o «encerrado pelo
-#: outro lado», o «pouco recurso» e o «desligou» do HCI num ``Remote`` só.
 RAZAO_TIMEOUT = "org.bluez.Reason.Timeout"
 RAZAO_DAQUI = "org.bluez.Reason.Local"
 RAZAO_DO_CONTROLE = "org.bluez.Reason.Remote"
 RAZAO_SUSPENSAO = "org.bluez.Reason.Suspend"
 
-#: Como o controle saiu, no aviso :data:`AVISO_DESLIGOU` (``saida``).
 SAIDA_OUTRO_APARELHO = "foi_para_outro_aparelho"
 SAIDA_CAIU = "caiu"
 SAIDA_O_CONTROLE_ENCERROU = "o_controle_encerrou"
@@ -84,15 +75,10 @@ SAIDA_SEM_RAZAO = "sem_razao"
 
 FRASE_OUTRO_APARELHO = "O controle foi para outro aparelho"
 
-#: O DualSense guarda até quatro aparelhos (o firmware de 17/09/2025) e troca
-#: de vaga com o PS e um botão de face segurados: 3 s para trocar, 5 s para
-#: registrar um aparelho novo. 2 s segurados já separam o gesto de um atalho, e
-#: o enlace cai em até 3 s depois do último tique em que ele valia.
 BOTOES_DA_VAGA = frozenset({"cross", "circle", "square", "triangle"})
 SEGURADO_DA_VAGA_S = 2.0
 JANELA_DA_VAGA_S = 3.0
 
-#: ``apelido_do_dongle`` e ``gesto_de_reconexao`` repetiam, cada um no seu.
 ESPERA_DO_BUSCTL_S = 5.0
 
 ESPERA_DO_CONNECT_S = 12.0
@@ -188,7 +174,7 @@ class Escrita:
         return self.erro in (RECUSA_DA_SUITE, SEM_BARRAMENTO, SEM_AGENTE, TRAVA_OCUPADA)
 
 
-class RecusaNoBarramento(Exception):  # noqa: N818 — nome de domínio, não de erro
+class RecusaNoBarramento(Exception):  # noqa: N818
     """Levantada por quem atende um objeto exportado: vira erro D-Bus na resposta."""
 
     def __init__(self, nome: str, mensagem: str = "") -> None:
@@ -520,12 +506,7 @@ class AparelhoDoBluez:
     classe: int | None = None
     modalias: str = ""
     icone: str = ""
-    #: ``Appearance`` (GAP, 16 bits) do aparelho LE: é por ela que um relógio ou uma
-    #: pulseira sem ``Icon`` e sem ``Class`` ganha o tipo dele.
     aparencia: int | None = None
-    #: ``UUIDs`` (os serviços que o aparelho declara, em minúsculas): a mesma leitura de
-    #: propriedade, nenhum comando ao rádio. É por ela que uma modificação reconhece, pelo
-    #: serviço, um aparelho que não diz o tipo.
     uuids: tuple[str, ...] = ()
 
 

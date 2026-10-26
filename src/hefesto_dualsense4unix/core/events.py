@@ -38,18 +38,12 @@ class EventTopic:
     JOGO_FECHOU = "jogo.fechou"
     JOGO_GATILHO = "jogo.gatilho"
     JOGO_HAPTICA = "jogo.haptica"
-    #: `{perfil, jogo, estilo, controles: [{jogador, perfil, jogo, estilo}], t}`: `jogo` é
-    #: `steam_app_<N>` ou `None` fora de jogo, e nenhuma marca sai aqui.
     PERFIL_TROCOU = "perfil.trocou"
-    #: `{funcoes: {<função>: 0..1}, origem, t}`: o que o jogo pede a um acessório, passado de uma
-    #: extensão a outra (`eventos.publicar`); `origem` é o `id` de quem publicou.
-    JOGO_ACESSORIO = "jogo.acessorio"  # (noqa-acento) contrato ASCII do tópico
+    JOGO_ACESSORIO = "jogo.acessorio"
     ACESSORIOS_GESTO = "acessorios.gesto"
     ACESSORIOS_ESTADO = "acessorios.estado"
 
 
-#: Nomes reservados SEM fonte (momento do jogo, app que abre, hora): ninguém publica nem assina
-#: até a fonte existir; o nome fica guardado para as extensões não inventarem outro.
 TOPICOS_RESERVADOS: frozenset[str] = frozenset({
     "jogo.momento",
     "sistema.app_abriu",
@@ -57,9 +51,6 @@ TOPICOS_RESERVADOS: frozenset[str] = frozenset({
 })
 
 
-#: Os tópicos de ESTADO: o último valor publicado fica guardado e vai a quem assina depois,
-#: porque o estado vale até a próxima troca e quem conecta com o jogo já aberto não tem
-#: de esperá-la. Evento (a vibração, o jogo que fechou) não entra aqui: repeti-lo seria mentir.
 TOPICOS_DE_ESTADO: frozenset[str] = frozenset(
     {EventTopic.PERFIL_TROCOU, EventTopic.ACESSORIOS_ESTADO}
 )
@@ -79,8 +70,6 @@ class EventBus:
     _subs: dict[str, list[_Subscriber]] = field(default_factory=dict)
     _loop: asyncio.AbstractEventLoop | None = None
     _estado: dict[str, Any] = field(default_factory=dict)
-    #: Quantos eventos cada tópico já publicou (com ou sem assinante): é o que o
-    #: `hefesto_events_dispatched_total{topic}` das métricas lê.
     _publicados: dict[str, int] = field(default_factory=dict)
     _trava_da_contagem: threading.Lock = field(default_factory=threading.Lock)
 

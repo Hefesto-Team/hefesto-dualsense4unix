@@ -11,9 +11,6 @@ import time
 
 import pytest
 
-#: O relógio do vigia, na escala em que o teste corre: o limite é a quinta parte do segundo do
-#: produto e o passo também (a razão entre os dois, e a do tempo de CPU de cada tarefa para o
-#: limite, são as de antes). Em tempo curto a parada que o vigia denuncia cabe em meio segundo.
 LIMITE_S = 0.2
 PASSO_S = 0.04
 SEGUNDOS_DO_LACO_SAO = 6.0

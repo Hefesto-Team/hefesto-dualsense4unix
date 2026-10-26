@@ -49,11 +49,11 @@ def _ve(pad: Any, movimento: object = MIRA_DESLIGADA, **kw: Any) -> dict[str, An
 
 
 def _eixos(visto: dict[str, Any]) -> tuple[str, str, str]:
-    return (visto["forma"], visto["canal"], visto["conexao"])  # (noqa-acento): chave ASCII
+    return (visto["forma"], visto["canal"], visto["conexao"])  # (noqa-acento)
 
 
 def _chega(visto: dict[str, Any]) -> dict[str, str]:
-    return dict(visto["funcoes"])  # (noqa-acento): chave ASCII
+    return dict(visto["funcoes"])  # (noqa-acento)
 
 
 def test_o_dualsense_no_uhid_e_nativo_em_tudo() -> None:
@@ -133,11 +133,12 @@ def test_as_chaves_do_controle_calam_o_giro_e_o_toque() -> None:
 
 
 def test_no_dualsense_a_mira_e_o_cursor_tiram_o_giro_e_o_toque_do_pad() -> None:
-    # D-1610-O-ESTADO-DIZ-O-QUE-O-JOGO-VE
     """O que o filtro do pad faz (`REGISTRO.filtrar`): a rota leva o sensor ao Hefesto.
 
     MORDIDA: com o giro e o toque do DualSense lidos só das chaves, a Mira ligada e o
     dedo no cursor saem `nativo`, e o estado diz ao jogo um giro que o pad não leva.
+
+    Prova da D-1610-O-ESTADO-DIZ-O-QUE-O-JOGO-VE.
     """
     funcoes = _chega(_ve(EDGE_NO_UHID, MIRA_LIGADA))
     assert (funcoes["giroscopio"], funcoes["touchpad"]) == (oqv.PELO_HEFESTO, oqv.NATIVO)

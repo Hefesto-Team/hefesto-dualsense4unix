@@ -48,7 +48,6 @@ class Mesa:
         self.b = BancadaDoGadget(monkeypatch, tmp_path)
         self.ug = self.b.ug
         self.relogio = [100.0]
-        #: ``{serial: (hidraw, interface)}``: quem enumerou pelo vhci.
         self.enumerados: dict[str, tuple[str, str]] = {}
         raiz = tmp_path / "module"
         raiz.mkdir()
@@ -105,7 +104,6 @@ class TestAFalhaDeUmNaoViraAFalhaDeTodos:
         try:
             assert p3.start() and p3._gadget is not None
             mesa.nao_enumera(p3)
-            # (noqa-acento): chave de máquina
             assert pad_usb.porque_sem_porta(IDENTIDADE_P3) == "nao_enumerou"
 
             assert p4.start()
@@ -146,7 +144,7 @@ class TestAFalhaDeUmNaoViraAFalhaDeTodos:
             mesa.nao_enumera(p3)
             assert mesa.eventos("pad_usb_porta_fora") == 0
             mesa.relogio[0] += 10.0
-            mesa.tentar(p3)  # sem jogo: a nova tentativa
+            mesa.tentar(p3)
             assert len(mesa.b.pedidos) == 2
             mesa.nao_enumera(p3)
             assert mesa.eventos("pad_usb_porta_fora") == 1
@@ -157,7 +155,6 @@ class TestAFalhaDeUmNaoViraAFalhaDeTodos:
             assert len(mesa.b.pedidos) == 2, "a porta fora não volta ao rodízio"
         finally:
             p3.stop()
-        # O lançamento seguinte: o P3 renasce uhid, e o P4 segue em USB.
         p3 = mesa.pad(3, IDENTIDADE_P3)
         p4 = mesa.pad(4, IDENTIDADE_P4)
         try:
@@ -184,7 +181,6 @@ class TestAFalhaDeUmNaoViraAFalhaDeTodos:
             assert mesa.b.esperar(lambda: p3.is_bound)
             mesa.relogio[0] += 20.0
             p3.pump_ff()
-            # enumerou: a conta da porta zera, e uma falha futura não a tira de uma vez
             assert pad_usb.anotar_falha_da_porta(3) == 1
         finally:
             p3.stop()
@@ -269,7 +265,6 @@ class TestALeituraQueFalhaPerguntaEDorme:
     def test_a_leitura_que_falha_com_o_gadget_sumido_derruba_o_pad(
         self, mesa: Mesa, monkeypatch: pytest.MonkeyPatch, erro: int, linhas: int
     ) -> None:
-        # D-2210-O-ENOMEM-DA-QUEDA-E-O-HOST
         """Mordida: tirar a pergunta da leitura deixa o pad mudo num gadget que não existe.
 
         O ENOMEM da queda é o host que desligou a função do f_hid (medido em 22/10/2026:
@@ -278,6 +273,8 @@ class TestALeituraQueFalhaPerguntaEDorme:
         notícia. Mordida: devolver o `_fechar_a_rajada` incondicional volta a linha. Um
         errno que a queda não explica (o EIO) continua escrevendo a dele: mordida, tirar
         o teste do errno cala o EIO.
+
+        Prova da D-2210-O-ENOMEM-DA-QUEDA-E-O-HOST.
         """
         achado: dict[str, tuple[str, str]] = {"*": ("hidraw9", INTERFACE_DO_GADGET)}
         monkeypatch.setattr(mesa.ug, "HIDRAW_DO_GADGET", lambda _s: achado.get("*"))
@@ -330,7 +327,7 @@ class TestQuemFicouNoUhid:
             _linha("pad_usb_porta_fora", "falhas=2 player=4", "warning"),
         ]
         assert pad_usb.quem_ficou_no_uhid(linhas) == {
-            2: "caiu", 3: "nao_enumerou", 4: "porta_fora",  # (noqa-acento): chave de máquina
+            2: "caiu", 3: "nao_enumerou", 4: "porta_fora",
         }
 
     def test_o_que_enumerou_depois_sai_da_lista(self) -> None:
@@ -349,14 +346,14 @@ class TestQuemFicouNoUhid:
             _linha("pad_usb_nao_enumerou_fica_o_uhid", "player=4 prazo_s=15.0", "warning"),
             _linha("vpad_parou", "player=3"),
         ]
-        so_o_p4 = {4: "nao_enumerou"}  # (noqa-acento): chave de máquina
+        so_o_p4 = {4: "nao_enumerou"}
         assert pad_usb.quem_ficou_no_uhid(linhas) == so_o_p4
         linhas += [
             _linha("pad_usb_porta_fora", "falhas=2 player=3"),
             _linha("uhid_device_created", "mac=02:fe:00:00:00:03 name=x player=3"),
         ]
         assert pad_usb.quem_ficou_no_uhid(linhas) == {
-            3: "porta_fora", 4: "nao_enumerou",  # (noqa-acento): chave de máquina
+            3: "porta_fora", 4: "nao_enumerou",
         }
 
     def test_sem_contrato_vale_para_quem_nasce_depois(self) -> None:

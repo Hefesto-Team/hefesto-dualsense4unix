@@ -175,7 +175,6 @@ def _evento(tipo: int, code: int, *, t: float = 0.0, value: int = 0) -> SimpleNa
 
 
 def _leitor() -> MotionSensorReader:
-    # (ou não) um DualSense na bancada. É a TELA-DELA-01 aplicada ao sensor.
     return MotionSensorReader(device_path=Path("/dev/hefesto-nao-existe"))
 
 

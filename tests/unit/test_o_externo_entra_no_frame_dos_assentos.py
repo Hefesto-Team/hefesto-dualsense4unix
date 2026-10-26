@@ -143,7 +143,6 @@ def test_apagar_os_lugares_sem_dono_continua_com_quatro() -> None:
     pac.apagar_os_lugares_sem_dono(carga, ["p1"])
     assert set(carga["vazios"]) == {"p2", "p3", "p4"}
     assert set(carga["colunas"]) == pac.TODOS_OS_LUGARES
-    # E O `player_slot` DO EXTERNO NÃO É UM ASSENTO: o 8BitDo desta régua é o
     assert "p3" in carga["vazios"]
 
 

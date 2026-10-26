@@ -53,7 +53,6 @@ def _cache(apps: dict[str, dict[str, object]]) -> bytes:
 
 def _declaracoes() -> dict[str, dict[str, object]]:
     return {
-        # categorias 57/58: declara o DualSense
         _DUALSENSE: {
             "common": {
                 "controller_support": "full",
@@ -61,7 +60,6 @@ def _declaracoes() -> dict[str, dict[str, object]]:
                 "category": {"category_28": 1, "category_57": 1, "category_58": 1},
             }
         },
-        # só 28: Xbox completo
         _XBOX: {
             "common": {
                 "controller_support": "full",
@@ -69,7 +67,6 @@ def _declaracoes() -> dict[str, dict[str, object]]:
                 "category": {"category_28": 1},
             }
         },
-        # 59 e um layout do Steam Input para o DualSense
         _TRADUCAO: {
             "common": {"category": {"category_28": 1, "category_59": 1}},
             "config": {
@@ -79,7 +76,6 @@ def _declaracoes() -> dict[str, dict[str, object]]:
                 }
             },
         },
-        # só o rótulo antigo, sem categoria
         _SO_SUPORTE: {"common": {"controller_support": "partial"}},
         _SEM_NADA: {"common": {"name": "Sem declaração"}},
     }
@@ -243,7 +239,6 @@ class TestOProntuarioMostraAFicha:
                 _DUALSENSE: {"Jogo.exe": b"MZ"},
                 _XBOX: {"Jogo.exe": b"MZ"},
                 _TRADUCAO: {"Jogo.exe": b"MZ"},
-                # declara só Xbox, mas o executável traz o plugin Sony
                 _SO_SUPORTE: {
                     "Jogo.exe": b"MZ" + b"WinDualShock" + _VID + _PID_0CE6 + b"\0" * 8
                 },
@@ -258,7 +253,6 @@ class TestOProntuarioMostraAFicha:
             _DUALSENSE: fd.ENTENDE_DUALSENSE,
             _XBOX: fd.SO_XBOX_DECLARADO,
             _TRADUCAO: fd.PREVE_TRADUCAO,
-            # o plugin Sony no binário vence o «só Xbox» da Steam
             _SO_SUPORTE: fd.ENTENDE_DUALSENSE,
         }
         saida = por_appid[_SO_SUPORTE].como_dicionario()

@@ -445,9 +445,6 @@ def test_sem_o_mouse_emulado_o_tique_da_navegacao_nao_drena(
     assert all(leitor.drenagens == 0 for leitor in nav.mesa.movimento.values())
 
 
-# 5. A FRASE DA XBOX COM O GIROSCÓPIO DESLIGADO — `controller_card.texto_motion`
-
-
 def _com_espelho(jogador: int) -> dict[str, Any]:
     return {"rumble_ff": {"per_vpad": [
         {"player": jogador, "uniq": "aa:bb:cc:00:00:01", "motion_streaming": True,
@@ -524,7 +521,6 @@ _DICA_NO_ESQUERDO = ("Com o analógico virtual aceso, o giro deste controle vai 
                      "pelo analógico esquerdo.")
 _DICA_NO_CURSOR = "Com o analógico virtual aceso, o giro deste controle move o cursor."
 
-#: Os três modos vivos, na forma do `state_full` que `mode_of_state` lê.
 _NAVEGACAO = {"native_mode": False, "gamepad_emulation": {"enabled": False}}
 _VIRTUAL = {"native_mode": False, "gamepad_emulation": {"enabled": True}}
 _NATIVO = {"native_mode": True, "gamepad_emulation": {"enabled": False}}

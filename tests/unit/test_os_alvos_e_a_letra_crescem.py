@@ -48,7 +48,6 @@ if TYPE_CHECKING:
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 MOCKUP = RAIZ / "mockup"
 CHROME = pathlib.Path("/usr/bin/google-chrome")
-#: as três vistas da casa e uma abaixo do desenho (1280x720), onde o piso de 24 e 12 px também vale
 VISTAS = ((1212, 809), (1918, 840), (1212, 740), (1280, 720))
 ESTADOS_02 = ("c-p1", "c-p2", "c-p3", "c-todos")
 ABAS = (
@@ -56,9 +55,6 @@ ABAS = (
     "06-navegacao", "07-lancadores", "08-conexoes", "09-sistema", "10-perfis",
 )
 NO_PISO = ("02-controles", "09-sistema")
-#: Quanto cada aba que a escolha de 20/10 não cobriu ainda fica abaixo do piso (vista 1212x809):
-#: (alvos que agem, títulos que abrem dica, textos abaixo de 12 px). SÓ DESCE: quem zera tira
-#: a linha daqui e põe a aba em NO_PISO; quem faz nascer um alvo pequeno reprova.
 TETO_DAS_OUTRAS: dict[str, tuple[int, int, int]] = {
     "01-jogar": (0, 6, 43),
     "03-gatilhos": (2, 7, 22),
@@ -150,7 +146,6 @@ def _medir(navegador: Browser, arquivo: pathlib.Path, vista: tuple[int, int] = V
            estado: str = "") -> dict[str, Any]:
     pg = navegador.new_page(viewport={"width": vista[0], "height": vista[1]})
     try:
-        # fonte e imagem de fora não entram: a régua mede a página, e a rede não é do usuário
         pg.route("**/*", _so_o_arquivo)
         pg.goto(arquivo.as_uri())
         pg.wait_for_timeout(300)
@@ -248,11 +243,6 @@ def test_o_piso_e_uma_folha_so() -> None:
         )
 
 
-# ---------------------------------------------------------------------------------------------
-# O tamanho cede onde não cabe (O-TAMANHO-DE-150-NAO-CABE-NA-VISTA-DE-840-PX-01)
-# ---------------------------------------------------------------------------------------------
-
-#: As vistas da janela em pixels da tela (a de quem usa e a menor) e os tamanhos acima de 100.
 VISTAS_DA_JANELA = ((1918, 840), (1212, 809))
 TAMANHOS_GRANDES = (125, 150)
 
@@ -331,9 +321,11 @@ def test_o_tamanho_grande_cabe_na_janela(
 
 
 def test_o_que_cabe_e_o_menor_entre_o_escolhido_e_a_vista() -> None:
-    # D-2310-O-TAMANHO-CEDE-ONDE-NAO-CABE
     """A conta da janela: 840 px de altura comportam 103 %; a vista alta, o escolhido; e nunca
-    abaixo de 100, que é o tamanho de hoje."""
+    abaixo de 100, que é o tamanho de hoje.
+
+    Prova da D-2310-O-TAMANHO-CEDE-ONDE-NAO-CABE.
+    """
     from hefesto_dualsense4unix.interface.folha_da_casa import VISTA_DO_DESENHO, tamanho_que_cabe
     from hefesto_dualsense4unix.interface.janela import LARGURA_DO_DESENHO, PISO_DA_VISTA
 
@@ -359,10 +351,6 @@ def test_a_regua_morde_o_tamanho_que_nao_cede(
     achado = _rolagens(navegador, geradas / "04-iluminacao.html", sem_ceder)
     assert "o documento rola" in achado, achado
 
-
-# ---------------------------------------------------------------------------------------------
-# A vaga: só o nome e «Desconectado»
-# ---------------------------------------------------------------------------------------------
 
 def _texto_da_vaga(navegador: Browser, arquivo: pathlib.Path, numero: int) -> str:
     pg = navegador.new_page(viewport={"width": VISTAS[0][0], "height": VISTAS[0][1]})
@@ -396,10 +384,6 @@ def test_a_vaga_diz_so_player_n_desconectado(
     alvo.write_text(mordido, encoding="utf-8")
     assert _texto_da_vaga(navegador, alvo, numero) != esperado
 
-
-# ---------------------------------------------------------------------------------------------
-# As mordidas da régua
-# ---------------------------------------------------------------------------------------------
 
 def _escreve(tmp_path: pathlib.Path, nome: str, doc: str) -> pathlib.Path:
     arquivo = tmp_path / f"{nome}.html"
@@ -456,10 +440,6 @@ def test_a_regua_morde_o_teto(
     medida = _medir(navegador, _escreve(tmp_path, "oito-mais", _com_no_corpo(doc, botao)))
     assert _acima_do_teto("08-conexoes", medida) != []
 
-
-# ---------------------------------------------------------------------------------------------
-# A janela lê o tamanho da interface
-# ---------------------------------------------------------------------------------------------
 
 _FILHO = textwrap.dedent(
     """
@@ -531,7 +511,7 @@ _LEITURAS = ("ao-abrir", "ao-gravar", "na-vista-baixa", "recarregada", "de-volta
 
 
 def _roda_o_filho(modo: str, tmp_path: pathlib.Path) -> dict[str, tuple[float, dict[str, str]]]:
-    if shutil.which("xvfb-run") is None:  # pragma: no cover - máquina sem xvfb
+    if shutil.which("xvfb-run") is None:  # pragma: no cover
         pytest.skip("sem `xvfb-run` a janela nasceria na tela de quem roda")
     html = tmp_path / "zoom.html"
     html.write_text(_PROVA_DO_ZOOM, encoding="utf-8")
@@ -556,7 +536,6 @@ def _roda_o_filho(modo: str, tmp_path: pathlib.Path) -> dict[str, tuple[float, d
     return achado
 
 
-# O filho importa o `gi` e abre a janela: sem o PyGObject real (o job leve do CI) não mede nada.
 @skip_sem_gi_real
 def test_a_janela_le_o_tamanho_da_interface(tmp_path: pathlib.Path) -> None:
     """150 % guardado: a janela alta abre com zoom 1,5; a 09 grava 125: o zoom vai a 1,25.

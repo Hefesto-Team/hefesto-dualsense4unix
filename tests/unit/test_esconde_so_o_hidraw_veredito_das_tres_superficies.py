@@ -71,7 +71,6 @@ FUNCOES = (
 
 FRASE_ANTIGA = "o jogo só vê o vpad"
 
-#: O pai HID do DualSense FÍSICO desta bancada (USB, 25/08/2026).
 HID_FISICO = "sys/devices/pci0000:00/0000:00:08.1/usb3/3-1/0003:054C:0CE6.0009"
 
 

@@ -89,7 +89,7 @@ def _assinado_a_mao(pedido: bytes) -> bytes:
     return pedido[:corte] + crc.to_bytes(4, "little")
 
 
-_SERIAL_FORJADO = "ZZ9Y05Q0000000000"  # serial-de-mentira: prefixo forjado
+_SERIAL_FORJADO = "ZZ9Y05Q0000000000"  # serial-de-mentira
 
 _DUALSENSE_NO_CABO = {
     "HID_ID": "0003:0000054C:00000CE6",

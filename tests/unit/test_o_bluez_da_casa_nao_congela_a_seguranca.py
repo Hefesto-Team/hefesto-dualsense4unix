@@ -74,7 +74,6 @@ def _ambiente(
         "PATH": f"{fake}:/usr/bin:/bin",
         "DOCTOR_SH": str(DOCTOR),
         "HEFESTO_DOCTOR_DPKG_LOG": str(alvo),
-        # sem a linha do changelog (as revisões até a 4), a base é a do dpkg.log
         "HEFESTO_DOCTOR_BLUEZ_CHANGELOG": str(tmp_path / "sem-changelog.gz"),
     }
 
@@ -99,9 +98,6 @@ def _linha_do_dpkg(velha: str = BASE, nova: str = BACKPORT) -> str:
     )
 
 
-# ---------------------------------------------------------------- 1. a severidade
-
-
 @pytest.mark.parametrize("vers", ["5.72-0ubuntu5.5", "5.66-1+deb12u2", "5.64-0ubuntu1.4"])
 def test_abaixo_do_piso_e_aviso_com_o_efeito_e_nunca_falha(tmp_path: Path, vers: str) -> None:
     saida = _rodar("check_bluez_backport_version", _ambiente(tmp_path, instalado=vers))
@@ -116,9 +112,6 @@ def test_abaixo_do_piso_e_aviso_com_o_efeito_e_nunca_falha(tmp_path: Path, vers:
 def test_no_piso_nada_muda(tmp_path: Path) -> None:
     saida = _rodar("check_bluez_backport_version", _ambiente(tmp_path, instalado="5.79"))
     assert "[ OK ]" in saida and "[WARN]" not in saida and "[FAIL]" not in saida
-
-
-# -------------------------------------------------- 2. a distro depois do backport
 
 
 def test_a_distro_publicou_depois_do_backport_avisa_nomeando_as_duas_versoes(

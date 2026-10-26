@@ -51,9 +51,8 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
         sys.path.insert(0, _caminho)
 
 CHROME = pathlib.Path("/usr/bin/google-chrome")
-PUBLICADO = INTERFACE / "paginas"  # (noqa-acento) nome de PASTA; caminho não leva acento
+PUBLICADO = INTERFACE / "paginas"  # (noqa-acento)
 
-#: `1600 + 32`, e ela media o TETO duas vezes  (noqa-acento: verbo medir)
 PISO, MEIO, ACIMA_DO_TETO = 1212, 1450, 1932
 RESPIRO = 32
 

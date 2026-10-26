@@ -557,7 +557,7 @@ def mesa_de_entrada(
     raizes: tuple[Path, Path], tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> _MesaDeEntrada:
     pytest.importorskip("evdev")
-    if os.geteuid() == 0:  # pragma: no cover - como root o 0000 não fecha nada
+    if os.geteuid() == 0:  # pragma: no cover
         pytest.skip("como root todo nó abre")
     from hefesto_dualsense4unix.core import evdev_reader as er
 
@@ -1357,8 +1357,6 @@ class TestAVoltaPeloEvento:
         volta.rodar()
         assert len(volta.connects) == 10
 
-
-# Régua 2 — o nó do vpad pela geração (a família 1, o `state_full`)
 
 import time
 

@@ -20,7 +20,7 @@ from pathlib import Path
 
 try:
     import tomllib
-except ImportError:  # pragma: no cover — 3.10
+except ImportError:  # pragma: no cover
     import tomli as tomllib  # type: ignore[no-redef]
 
 from hefesto_dualsense4unix.app.actions.trigger_specs import PRESETS
@@ -29,7 +29,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 PACOTE = RAIZ / "src/hefesto_dualsense4unix/interface/pacotes/a03_gatilhos.py"
 INSTALL = RAIZ / "install.sh"
 PYPROJECT = RAIZ / "pyproject.toml"
-#: onde a casa escreve os números dos modos: o pacote da aba e a paridade com a GTK
 FONTES = (
     PACOTE,
     RAIZ / "docs/data/paridade-gtk-html.csv",
@@ -64,8 +63,6 @@ def test_as_barras_de_cada_modo_citado_sao_as_do_presets() -> None:
     citados = re.findall(r"`?(\w+)`? pede (\d+) barras", texto)
     citados += re.findall(r"\b(Rigid|Machine|MultiPositionFeedback|"
                           r"MultiPositionVibration) (\d+)\b", texto)
-    # Sem `assert citados`: o «pede N barras» morava nas alavancas da página antiga, que
-    # saíram em 15/10/2026, e hoje nenhuma fonte o escreve. A trava vale para quando voltar.
     for nome, n in citados:
         assert nome in POR_MODO, f"{nome} não é modo do PRESETS"
         assert POR_MODO[nome] == int(n), (

@@ -70,7 +70,6 @@ def _ctx(barra_e: int, barra_d: int) -> pacotes.Contexto:
                                            "fraco_pct": barra_d}},
         "rumble_policy": "balanceado",
     }
-    # O ITEM DE MESA tem a forma que `mesa_viva.mesa_do_estado` monta — as nove
     item = {"uniq": UNIQ, "pref": "p1", "jogador": 1, "nome": "Prova",
             "cor": "", "transporte": "usb", "via": "cabo",
             "alvo": True, "mascara": "dualsense"}

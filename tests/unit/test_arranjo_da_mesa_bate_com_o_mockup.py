@@ -194,14 +194,13 @@ def test_a_receita_do_mapa_vazio_e_do_mapa_torto() -> None:
     for na_mao in ("bt", "wifi", "teclado", "mouse", "webcam", None)
     for n in ("1", "2", "3", "7", "9", "10", "13", "15", "15a")])
 def test_o_julgamento_de_cada_entrada_e_o_mesmo(n: str, na_mao: str | None) -> None:
-    # D-2410-O-PORTE-DIZ-O-TEXTO-DA-PAGINA
+    """Prova da D-2410-O-PORTE-DIZ-O-TEXTO-DA-PAGINA."""
     mesa = _mesa()
     entrada = motor.por_num(mesa.faces, n)
     assert entrada is not None
     assert _veredito(motor.julgar(entrada, na_mao, mesa)) == ouro(f"julgar/{n}/{_js(na_mao)}")
 
 
-#: O mapa do exemplo com a ponta do extensor LIVRE: só assim a regra da entrada esticada é julgada.
 _MAPA_COM_A_PONTA_LIVRE = {n: c for n, c in mock.MAPA.items() if n != "15a"}
 
 
@@ -284,8 +283,6 @@ def test_sem_adaptador_nenhum_controle_cabe_e_o_motor_diz_isso() -> None:
     assert plano.destino == {}
 
 
-#: As entradas com nome, como o mapa dela as guarda (o ``nome`` da porta declarada). São as mesmas
-#: que o oráculo dá à página viva nos cenários ``nomes/...``.
 _NOMES = {"9": "Atrás", "15a": "Ponta", "13": "Alto", "5": "Meio"}
 
 
@@ -376,9 +373,6 @@ def test_o_oraculo_nao_remenda_a_grafia_da_pagina() -> None:
     assert "function naFraseDe" in PAGINA_VIVA.read_text(encoding="utf-8")
 
 
-# A régua da REGRA, sem o texto (o veredito, o plano, o selo de cada razão, a entrada de destino):
-# o texto já bate com a página viva nas réguas de cima, e estas separam o defeito de regra do de
-# frase — um erro de regra no porte aparece aqui com o nome certo, não como «a frase diverge».
 def _entrada(titulo: str) -> str | None:
     achou = re.findall(r"[Ee]ntrada (\w+)", titulo)
     return achou[-1] if achou else None
@@ -472,11 +466,12 @@ def test_sem_o_hub_a_regra_bate_sem_o_texto() -> None:
 
 
 def test_o_quadrado_cheio_sem_aparelho_nao_diz_vazia() -> None:
-    # D-2410-A-ENTRADA-MAE-DO-EXTENSOR-DIZ-COM-O-EXTENSOR
     """A entrada-mãe do extensor é «Ocupada» sem aparelho direto: o quadrado da 08 diz o porquê.
 
     MORDIDA: devolva `corpo = … rotulos["vazia"]` sem o caso `tomada` em `conexoes.quadrado`, e o
     quadrado volta a dizer «Vazia» em cima de «Ocupada».
+
+    Prova da D-2410-A-ENTRADA-MAE-DO-EXTENSOR-DIZ-COM-O-EXTENSOR.
     """
     from hefesto_dualsense4unix.interface.conexoes import html_do_mapa
 

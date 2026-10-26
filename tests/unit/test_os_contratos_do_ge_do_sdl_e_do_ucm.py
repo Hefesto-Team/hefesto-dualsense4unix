@@ -128,10 +128,6 @@ def casa(tmp_path: Path) -> _Casa:
     return _Casa(tmp_path)
 
 
-# ---------------------------------------------------------------------------
-# O GE-Proton por versão.
-
-
 @pytest.mark.parametrize("pasta", ["GE-Proton11-4-x86_64", "GE-Proton11-7-x86_64"])
 def test_ge_dentro_da_faixa_calada(casa: _Casa, pasta: str) -> None:
     casa.ge(pasta)
@@ -244,10 +240,6 @@ def test_sem_ge_ou_sem_steam_e_informacao(casa: _Casa, tmp_path: Path) -> None:
     assert _linha(vazia, "ge-por-versao")[0] == "[INFO]"
 
 
-# ---------------------------------------------------------------------------
-# O Proton da Valve, que não traz a pilha de som do controle.
-
-
 def test_jogo_no_proton_da_valve_sem_a_env_avisa_o_nome_e_o_que_se_perde(casa: _Casa) -> None:
     casa.valve("Proton 10.0", com_env=False)
     casa.jogo("111", "Jogo Um", "proton_10")
@@ -302,10 +294,6 @@ def test_residuo_sem_o_script_nao_e_proton_instalado(casa: _Casa) -> None:
     assert _linha(casa.amb, "proton-da-valve-sem-som")[0] == "[INFO]"
 
 
-# ---------------------------------------------------------------------------
-# O SDL por versão.
-
-
 def test_sdl_3_4_no_runtime_da_steam_e_o_medido(casa: _Casa) -> None:
     casa.sdl("steam:steamrt4_platform_4.0.20260928.262390", "4.16")
     assert _linha(casa.amb, "sdl-por-versao")[0] == "[ OK ]"
@@ -336,10 +324,6 @@ def test_so_o_runtime_mais_novo_vale(casa: _Casa) -> None:
 
 def test_sem_libsdl3_e_informacao(casa: _Casa) -> None:
     assert _linha(casa.amb, "sdl-por-versao")[0] == "[INFO]"
-
-
-# ---------------------------------------------------------------------------
-# O UCM de um dono só.
 
 
 def _ucm(casa: _Casa, *, upstream: bool, hefesto: bool) -> None:
@@ -406,10 +390,6 @@ def test_sem_o_upstream_o_roteiro_grava_como_sempre(tmp_path: Path) -> None:
     assert feito.returncode == 0, feito.stderr
     assert (ucm / "USB-Audio" / "Hefesto" / "DualSense-HiFi.conf").is_file()
     assert list((ucm / "conf.d" / "USB-Audio").glob("*.conf"))
-
-
-# ---------------------------------------------------------------------------
-# O censo e o doctor.
 
 
 def test_o_censo_tem_a_linha_de_cada_contrato() -> None:

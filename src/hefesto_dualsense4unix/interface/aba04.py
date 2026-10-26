@@ -9,21 +9,15 @@ from pacotes.meus_efeitos import TETO_DO_NOME
 from hefesto_dualsense4unix.profiles.schema import (
     RITMO_MAXIMO_DA_LUZ, RITMO_MINIMO_DA_LUZ, RITMO_PADRAO_DA_LUZ)
 
-#
-
 
 def luz(jogador):
     """A cor automática da barra do controle de número `jogador`, dita pelo produto."""
     return "#%02X%02X%02X" % player_slot_color(jogador)
 
 
-# ESTA ABA JÁ TINHA VESTIDO A MOLDURA (`data-campo="plastico"`, alvo `cor`) e a
-# MOCKUP era o maior objeto da tela: o próprio DualSense desenhado, 146 px de
-
 ENDERECO_DO_DESENHO = ('data-campo="desenho" data-hef-alvo="atributo" '
                        'data-hef-atributo="data-colorway"')
 
-#: modelos pintando com `url(#…)`: `hachura-sem-hex` (a trama de "zona sem hex
 _BLOCO_DAS_CORES = re.compile(
     r'[ \t]*<defs id="[^"]*cores-do-dualsense">.*?</defs>\n?', re.S)
 
@@ -80,9 +74,6 @@ NUMEROS = sorted(c["jogador"] for c in MESA)
 _b = cycle((82, 100, 70, 45))
 BRILHO = {c["pref"]: next(_b) for c in MESA}
 
-#: O QUE ELAS ERAM: as primárias cruas que `player_slot_color` devolve —
-#: #0000FF, #FF0000, #00FF00, #FF0080, #FFFF00… Cor de monitor de teste, com
-#: `core/led_control.player_slot_color` continua devolvendo as primárias, e
 CRUS_DA_GUIA = ["#%02X%02X%02X" % rgb for rgb in _pacote04.tons_da_guia()]
 TONS = [tom_da_casa(h) for h in CRUS_DA_GUIA]
 
@@ -924,13 +915,8 @@ CSS = """
 DONOS_NA_MESA = {n: d for n, d in DONO.items() if d.get("conectado", True)}
 
 
-#: O dono único é `pacotes/a04_iluminacao.um_botao_de_player`, e este gerador é
-
-
 VAZIO = "—"
 
-#: Os dois efeitos do desenho (a biblioteca de mentira do mockup): a página viva troca a lista pela
-#: dos efeitos que a pessoa criou.
 CENA_DOS_EFEITOS = {
     "Alerta vermelho": {"nome": "Alerta vermelho", "base": "piscar",
                         "parametros": {"cores": "#FF0000", "ritmo": 6}},
@@ -1012,13 +998,11 @@ def coluna(c):
     fechar seria régua medindo a própria saída. A auto-checagem §14 desconta os
     blocos de alvo `html` dos dois lados, e é por isso.
     """
-    # controle (#0000FF); `tom_da_casa()` traduz para o tom desta janela, que é
     p, j = c["pref"], c["jogador"]
     ligado = c.get("conectado", True)
     cor = luz(j)
     tinta = tom_da_casa(cor)
     b = BRILHO[c["pref"]]
-    # comparação era contra `cor`, que é o hex cru. `#0000FF` nunca é igual ao
     casas = _pacote04.as_casas_da_mesa(
         {"quem": d["pref"], "cor": player_slot_color(d["jogador"]),
          "nome": f'P{d["jogador"]}', "numero": d["jogador"],
@@ -1035,13 +1019,7 @@ def coluna(c):
         if ligado else "")
     rotulo = (monta_.rotulo(c, "modelo") if ligado else
               f'P{j} <span class="pt">•</span> {SEM_NINGUEM_AQUI}')
-    #: o nome inteiro na dica, para a janela estreita que o corta; o lugar vazio fica com a do lugar
     dica_do_nome = f' data-dica="{re.sub(r"<[^>]+>", "", rotulo)}"' if ligado else ""
-    # `opcoes` eram `... if ligado else ""`, e o preço foi MEDIDO nas  (noqa-acento: nome de variável)
-    # DualSense do usuário na mesa e o daemon de pé, a foto ao vivo mostrava o P3 e o
-    # bloco `[data-conectado="nao"]` desta folha esconde a guia, o trilho e os
-    # instante do passo `1c` e some no `1b`, sem ninguém injetar HTML.
-    # DONO. Ela carregava o `data-campo="plastico"` (alvo `cor`) só para dar
     guia = f'''<span class="guia">
               <span class="tons" data-campo="tons" data-hef-alvo="html">
 {tons}
@@ -1069,8 +1047,6 @@ def coluna(c):
     from hefesto_dualsense4unix.core.led_control import BRILHO_DAS_LUZES_PADRAO
     brilhos = (_pacote04.fileira_de_brilhos_das_luzes(
         BRILHO_DAS_LUZES_PADRAO, "              ") if ligado else "")
-    #: a lista nasce igual nos quatro lugares (a do vazio some pela folha): o pacote reescreve as
-    #: opções da coluna viva, e o valor escolhido volta pelo `data-campo`.
     opcoes = (f'<span class="g4-efeito-dica" data-campo="{_pacote04.CAMPO_DA_DICA_DO_EFEITO}" '
               f'data-hef-alvo="atributo" data-hef-atributo="data-dica" '
               f'data-dica="{_pacote04.DICA_LUZ_FIXA}">'
@@ -1082,11 +1058,7 @@ def coluna(c):
                   f'<option value="{_pacote04.LUZ_FIXA}" selected>', 1)
               + '</select></span>\n            ')
 
-    # `nao` da régua de acentuação é um `#`, e dentro de uma f-string de  (noqa-acento: o próprio valor que a nota explica)
-    conectado = "sim" if ligado else "nao"  # (noqa-acento) valor de atributo
-    #: `off` acompanha o `data-conectado="nao"` porque é o par que o piloto escreve no lugar que esvazia
-    #: (passo `1b`): o P2 que sai na frente do usuário e o P3 que nasce vazio ficam com a MESMA classe.
-    #: A folha lê só o `data-conectado`.
+    conectado = "sim" if ligado else "nao"  # (noqa-acento)
     classe = "ctrl" if ligado else "ctrl off"
     return f'''        <div class="{classe}" data-controle="{c.get("uniq") or p}" data-conectado="{conectado}"{titulo_do_lugar}>
           <div class="moldura" data-campo="plastico" data-hef-alvo="cor"{plastico_de_partida}{dica_da_moldura}>
@@ -1147,11 +1119,6 @@ def coluna(c):
           </div>
         </div>'''
 
-# `noqa-acento` num comentário HTML aninhado — e **comentário HTML NÃO
-# A REGRA QUE SOBRA: o marcador noqa só comenta em Python. Prosa de projeto que
-# precise de um `noqa` sai do HTML e vem para cá.
-
-#: o gesto do par dos modos; o pintor (`data-modo-da-aba` do quadro) é do pacote
 GESTO_DO_MODO = "modo-da-luz"
 
 def _radios(grupo, opcoes):
@@ -1162,7 +1129,6 @@ def _radios(grupo, opcoes):
         for i, (valor, rotulo) in enumerate(opcoes))
 
 
-#: As cores com que a área de criar nasce: a do jogador 2 e a do 7, as que o desenho mostra.
 CORES_DE_PARTIDA = (CRUS_DA_GUIA[1], CRUS_DA_GUIA[6])
 
 
@@ -1172,8 +1138,6 @@ def _cor_do_efeito(cru):
             f'style="background:{tom_da_casa(cru)}" data-dica="Tirar esta cor"></button>')
 
 
-#: Mantém as cores do efeito: «+» põe a próxima da guia que ainda não está, a cor tirada sai (fica
-#: uma, no mínimo), e o campo escondido leva as cruas ao gesto.
 SCRIPT_DO_CRIAR = f'''<script data-aba="criar">
 (function(){{
   var raiz = document.getElementById('criar-luz'); if(!raiz) return;
@@ -1303,7 +1267,6 @@ _MIOLO_DO_ALVO_HTML = re.compile(
     re.S)
 
 
-#: `Cor` — o mesmo elemento que mostra `#0000FF` na coluna viva. O que se apaga
 _COBERTURA_SEM_DONO = {
     "tom": '.luz-grade .ctrl[data-conectado="nao"] .guia',
     "puxador": '.luz-grade .ctrl[data-conectado="nao"] .trilho',
@@ -1317,7 +1280,7 @@ def _cada_coluna(colunas):
     """As colunas da grade, separadas em (vazias, conectadas)."""
     vazias, cheias = [], []
     for atributos, miolo in _UMA_COLUNA.findall(colunas):
-        (vazias if 'data-conectado="nao"' in atributos else cheias).append(  # (noqa-acento) identificador ASCII
+        (vazias if 'data-conectado="nao"' in atributos else cheias).append(
             atributos + ">" + miolo)
     return vazias, cheias
 
@@ -1346,7 +1309,7 @@ def _conferir(doc):
            "a classe do lugar vazio não é a que o piloto escreve (`ctrl off`)")
     exigir(not re.search(r"\.ctrl\.(?:off|vazia)\b", doc),
            "a folha voltou a ler uma segunda marca do lugar vazio")
-    exigir(corpo.count('data-conectado="nao"') == len(vazios),  # (noqa-acento) identificador ASCII
+    exigir(corpo.count('data-conectado="nao"') == len(vazios),
            f"as colunas vazias não são {len(vazios)}")
 
     for c in vazios:
@@ -1355,11 +1318,8 @@ def _conferir(doc):
         exigir(c["nome"] not in corpo,
                f"o nome do plástico {c['nome']!r} voltou a uma coluna vazia")
 
-    #    as outras. Com os quatro DualSense do usuário na mesa, ela não conseguia
     grade = (corpo.split('<div class="luz-grade">', 1)[-1].split('<div class="rodape"', 1)[0]
              .split('<div class="quadro criar"', 1)[0])
-    #    `luzes`, `desenho-de` e `reenviar-desenho` —, e eles JÁ chegavam aos
-    #    `apagar` — são os do cartão, e são estes que a régua conta.
     gestos_por_lugar = {}
     vazias, cheias = _cada_coluna(grade)
     for coluna_html in vazias + cheias:
@@ -1383,7 +1343,6 @@ def _conferir(doc):
                f"o lugar {pref} oferece {sobram}, que o lugar cheio não tem — "
                f"o conjunto tem de ser IGUAL, não maior")
 
-    #    por uma regra desta folha que o esconde enquanto `data-conectado="nao"`
     for coluna_html in _cada_coluna(grade)[0]:
         exigir("cel-brilho" in coluna_html,
                "a régua do lugar vazio não alcança as células da coluna — ela "
@@ -1444,8 +1403,6 @@ def _conferir(doc):
         exigir(f'id="{alvo}"' in doc,
                f"a folha aponta para `url(#{alvo})` e a página não tem esse id "
                f"— o modelo que usa esse fundo pinta nada")
-    #    cobrava o endereço só nas colunas CONECTADAS, e com isso media o  # (noqa-acento) verbo medir, imperfeito
-    #    `[data-conectado="nao"] .ds-svg{display:none}`, e o piloto vira essa
     exigir(corpo.count(ENDERECO_DO_DESENHO) == len(MESA),
            "algum desenho da grade não pede o alvo do atributo — sem ele o "
            "pintor escreve o colorway como TEXTO e apaga o desenho, e o lugar "
@@ -1511,15 +1468,12 @@ def _conferir(doc):
                "a barra de luz deixou de ter as DUAS tiras — elas são o "
                "desenho original, e ela mandou que ficassem")
 
-    #     deixava o P3 que GANHA um controle com a única maneira de reenviar a
-    #     a borda de botão enquanto `data-conectado="nao"`, e é a §4 que cobra
     exigir('class="hex' not in colunas and 'data-gesto="reenviar"' not in colunas,
            "o hexadecimal voltou à tela: ele é a dica da célula Cor (16/10)")
     exigir(len(re.findall(r'<div class="cel-cor" data-campo="hex" data-hef-alvo="atributo" '
                           r'data-hef-atributo="data-dica"', colunas)) == len(MESA),
            "a célula Cor não leva o hexadecimal na dica em todas as colunas")
 
-    #     de `core/led_control.player_led_pattern` — o MESMO que o daemon
     for coluna_html in _cada_coluna(grade)[1]:
         jogador = re.search(r'data-campo="identidade">P(\d)', coluna_html)
         exigir(bool(jogador), "uma coluna conectada perdeu o número no rótulo")
@@ -1568,7 +1522,6 @@ def _conferir(doc):
            and 'id="seus-efeitos"' in criar,
            "a linha «Criar efeitos novos» não está inteira (título, botão e a lista dos criados)")
 
-    #     `p3: 0 (0)`, `p4: 0 (0)`. Com os quatro DualSense do usuário na mesa, o
     campos_por_lugar = {}
     vazias, cheias = _cada_coluna(grade)
     for coluna_html in vazias + cheias:
@@ -1597,9 +1550,6 @@ def _conferir(doc):
                f"o lugar {pref} tem endereço que o lugar cheio não tem "
                f"({sobram}) — o conjunto tem de ser IGUAL, não maior")
 
-    # 15. A PODA DA FILEIRA — 11/09/2026, ordem de produto: sai o botão que abre outras cores, e saem
-    #     um tom de azul, um de rosa e o preto das cores dos 4 controles. Desde 19/10/2026 a primeira
-    #     casa é o branco, e o ciano do Player 6 sai.
     fora = ("#0080FF", "#FF00FF", "#000000", "#80FF00", "#00FF80", "#00FFFF")
     exigir((*_pacote04.FORA_DA_GUIA, "#00FFFF") == fora,
            f"a poda da guia mudou sem esta régua saber: o pacote tira "

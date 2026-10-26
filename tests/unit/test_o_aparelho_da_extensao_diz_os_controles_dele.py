@@ -58,12 +58,12 @@ from tests.unit.test_a_janela_da_extensao_age_e_gere_os_aparelhos import (  # no
 
 ABA = "Luz"
 CORES: list[dict[str, Any]] = [
-    {"id": "vermelho", "cor": "#ff5555", "rotulo": "Vermelho"},  # (noqa-acento) contrato
-    {"id": "verde", "cor": "#50fa7b", "rotulo": "Verde"},  # (noqa-acento) contrato
-    {"id": "azul", "cor": "#6c8cff", "rotulo": "Azul"},  # (noqa-acento) contrato
+    {"id": "vermelho", "cor": "#ff5555", "rotulo": "Vermelho"},
+    {"id": "verde", "cor": "#50fa7b", "rotulo": "Verde"},
+    {"id": "azul", "cor": "#6c8cff", "rotulo": "Azul"},
     {"id": "brasa", "cor": ["#bd93f9", "#ffb86c", "#ff5555"],
-     "rotulo": "Brasa"}]  # (noqa-acento) contrato
-ESCOLHA = [{"id": "fixa", "rotulo": "Fixa"},  # (noqa-acento) contrato
+     "rotulo": "Brasa"}]
+ESCOLHA = [{"id": "fixa", "rotulo": "Fixa"},
            {"id": "pisca", "rotulo": "Pisca"}]
 
 
@@ -73,10 +73,10 @@ def _aparelhos() -> list[dict[str, Any]]:
         {"id": "ap-1", "nome": "Aparelho 1", "estado": "ligado", "ligado": True, "controles": [
             {"id": "luz", "tipo": "chave", "valor": True, "dica": "Acesa"},
             {"id": "cor", "tipo": "paleta", "valor": "verde",
-             "opcoes": copy.deepcopy(CORES)},  # (noqa-acento) contrato
-            {"id": "jeito", "tipo": "escolha", "valor": "fixa",  # (noqa-acento) contrato
+             "opcoes": copy.deepcopy(CORES)},  # (noqa-acento)
+            {"id": "jeito", "tipo": "escolha", "valor": "fixa",
              "rotulo": "Jeito",
-             "opcoes": copy.deepcopy(ESCOLHA)}]},  # (noqa-acento) contrato
+             "opcoes": copy.deepcopy(ESCOLHA)}]},  # (noqa-acento)
         {"id": "ap-2", "nome": "Aparelho 2", "estado": "ligado", "ligado": True, "controles": [
             {"id": "luz", "tipo": "chave", "valor": False}]},
         {"id": "ap-3", "nome": "Aparelho 3", "estado": "ligado", "ligado": True},
@@ -90,7 +90,7 @@ def _estado(aparelhos: list[dict[str, Any]] | None = None, serie: int = 1) -> di
 
 
 def _pecas() -> dict[str, Any]:
-    return {"aparelhos_controles": {"grupo": ABA}}  # (noqa-acento) contrato
+    return {"aparelhos_controles": {"grupo": ABA}}
 
 
 def _cartoes(html: str) -> dict[str, str]:
@@ -117,11 +117,8 @@ def _pedido(cartao: str, controle: str, quer: str) -> dict[str, str]:
     return {"v": achado.group(1), "quer": quer}
 
 
-# -- 1. os cartões --------------------------------------------------------------------------
-
-
 def test_tres_aparelhos_dao_dois_cartoes_cada_um_com_os_seus(janela: Any, ctx: Any) -> None:  # noqa: F811
-    # D-2510-OS-CONTROLES-DO-APARELHO-NA-JANELA
+    """Prova da D-2510-OS-CONTROLES-DO-APARELHO-NA-JANELA."""
     _a07, instalar, abrir = janela
     instalar(**_pecas())
     html = abrir(_Ponte(_estado()))["blocos"]["#mod-janela"]
@@ -177,9 +174,6 @@ def test_a_aba_dos_controles_vem_por_ultimo_ou_no_lugar_da_opcao(
     assert set(_cartoes(html)) == {"ap-1", "ap-2"}
 
 
-# -- 2. o clique ----------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize(("alvo", "controle", "quer", "valor"), [
     ("ap-1", "luz", "0", False),
     ("ap-2", "luz", "1", True),
@@ -196,7 +190,7 @@ def test_cada_tipo_de_controle_pede_o_valor_do_tipo_dele(
     cartao = _cartoes(abrir(ponte)["blocos"]["#mod-janela"])[alvo]
     a07.acao_da_modificacao(ctx, _pedido(cartao, controle, quer), ponte)
     feitas = [p for m, p in ponte.chamadas if m == "mods.acao"]
-    assert feitas == [{"mod": "toque", "acao": controle, "alvo": alvo,  # (noqa-acento) contrato
+    assert feitas == [{"mod": "toque", "acao": controle, "alvo": alvo,  # (noqa-acento)
                        "valor": valor}], feitas
 
 
@@ -209,7 +203,6 @@ def _instalada_como(lugares: Any, mod_id: str) -> None:
 
 def test_a_paleta_clicada_no_terceiro_ponto_chega_so_a_extensao_dona(
         janela: Any, ctx: Any, lar: Any, curto: pathlib.Path) -> None:  # noqa: F811
-    # D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA
     """A cadeia inteira: a extensão publica o estado pela porta, a janela desenha, o terceiro ponto
     da paleta do primeiro aparelho é clicado, o serviço confere e a porta entrega só à dona."""
     a07, instalar, abrir = janela
@@ -233,7 +226,7 @@ def test_a_paleta_clicada_no_terceiro_ponto_chega_so_a_extensao_dona(
             assert chegou is not None, "a extensão dona não recebeu o clique"
             assert chegou["params"]["nome"] == "extensao.acao"
             assert chegou["params"]["dados"] == {"mod": "acessorios",
-                                                 "acao": "cor",  # (noqa-acento) contrato
+                                                 "acao": "cor",  # (noqa-acento)
                                                  "alvo": "ap-1", "valor": terceira}
             vazou = await asyncio.to_thread(b.esperar_evento, 0.4)
             assert vazou is None, f"a outra extensão recebeu o clique: {vazou}"
@@ -246,7 +239,6 @@ def test_a_paleta_clicada_no_terceiro_ponto_chega_so_a_extensao_dona(
 
 
 def test_o_cartao_mostra_o_valor_do_estado_e_espera_em_curso(janela: Any, ctx: Any) -> None:  # noqa: F811
-    # D-2410-O-BOTAO-DA-ACAO-DIZ-EM-CURSO-ATE-A-SERIE-SUBIR
     a07, instalar, abrir = janela
     instalar(**_pecas())
     ponte = _Ponte(_estado())
@@ -267,9 +259,6 @@ def test_o_cartao_mostra_o_valor_do_estado_e_espera_em_curso(janela: Any, ctx: A
     assert not re.search(r'class="on"[^>]*data-quer="verde"', um)
 
 
-# -- 3. o que se recusa ---------------------------------------------------------------------
-
-
 def _com(mexer: Callable[[list[dict[str, Any]]], Any]) -> dict[str, Any]:
     aparelhos = _aparelhos()
     mexer(aparelhos)
@@ -283,9 +272,9 @@ def _com(mexer: Callable[[list[dict[str, Any]]], Any]) -> dict[str, Any]:
     pytest.param(lambda a: a[1]["controles"][0].update(tipo="deslizante"),
                  "o tipo de um controle é um de chave, paleta, escolha", id="tipo-desconhecido"),
     pytest.param(
-        lambda a: a[0]["controles"][1]["opcoes"][0].update(cor="vermelho"),  # (noqa-acento) chave
+        lambda a: a[0]["controles"][1]["opcoes"][0].update(cor="vermelho"),  # (noqa-acento)
                  "a cor de uma paleta é #rrggbb", id="cor-torta"),
-    pytest.param(lambda a: a[0]["controles"][1]["opcoes"][3].update(  # (noqa-acento) contrato
+    pytest.param(lambda a: a[0]["controles"][1]["opcoes"][3].update(  # (noqa-acento)
         cor=["#000000", "#111111", "#222222", "#333333"]),
         "lista de até 3", id="quatro-cores"),
     pytest.param(lambda a: a[0]["controles"][1].update(valor="roxo"),
@@ -309,7 +298,7 @@ def test_seis_controles_e_tres_cores_ainda_passam() -> None:
 
     certo = estado_dos_acessorios("toque", _com(seis))
     assert len(certo["aparelhos"][1]["controles"]) == 6
-    assert certo["aparelhos"][0]["controles"][1]["opcoes"][3]["cor"] == [  # (noqa-acento) contrato
+    assert certo["aparelhos"][0]["controles"][1]["opcoes"][3]["cor"] == [  # (noqa-acento)
         "#bd93f9", "#ffb86c",
                                                                          "#ff5555"]
     assert "controles" not in certo["aparelhos"][2], "o aparelho sem controles ganhou a chave"
@@ -354,12 +343,12 @@ def test_sem_aparelhos_controles_no_manifesto_o_controle_nao_passa(lar: Any) -> 
     servico = _servico(SimpleNamespace(lugares=lar, porta=porta))
     with pytest.raises(ValueError, match="não declara a ação «cor» nos aparelhos"):
         asyncio.run(IpcHandlersMixin._handle_mods_acao(
-            servico, {"mod": "toque", "acao": "cor", "alvo": "ap-1",  # (noqa-acento) contrato
+            servico, {"mod": "toque", "acao": "cor", "alvo": "ap-1",  # (noqa-acento)
                       "valor": "azul"}))
 
 
 @pytest.mark.parametrize(("mexer", "frase"), [
-    (lambda d: d.update(permissoes=[]),  # (noqa-acento) chave do manifesto
+    (lambda d: d.update(permissoes=[]),
      "aparelhos_controles pede a permissão publicar:acessorios.estado"),
     (lambda d: d["aparelhos_controles"].pop("grupo"), "aparelhos_controles.grupo"),
     (lambda d: d["aparelhos_controles"].update(cor="#fff"), "aparelhos_controles.cor"),
@@ -374,15 +363,9 @@ def test_o_manifesto_dos_controles_torto_e_recusado(
     assert frase in recusa.value.frase, recusa.value.frase
 
 
-# -- 5. o cartão inteiro no WebKit ------------------------------------------------------------
-
 DESENHO = pathlib.Path(__file__).resolve().parents[2] / "mockup" / "07-lancadores.html"
-#: A janela maximizada no monitor do usuário e o piso da janela.
 VISTAS = ((1918, 840), (1212, 809))
 
-#: A sonda abre o desenho num WebKit de verdade, sob a tela de mentira, e roda os passos de cada
-#: caso: ``["js", código]`` devolve o que o código devolve, ``["espera", segundos]`` deixa o laço
-#: do GTK andar (os ``setInterval`` da página andam junto).
 SONDA = r"""
 import json, pathlib, sys
 from hefesto_dualsense4unix.utils.tela_de_mentira import garantir_tela_de_mentira
@@ -438,13 +421,11 @@ def rodar_no_webkit(casos: dict[str, tuple[int, int, list[list[Any]]]]) -> dict[
     return dict(json.loads(filho.stdout.strip().splitlines()[-1]))
 
 
-#: O cartão na borda do contrato: dezesseis pontos (treze de uma cor e três de três), uma escolha
-#: de seis opções compridas e um rótulo de 28 letras (o teto é 30).
 _PONTOS = [{"id": f"c{n}", "cor": f"#{40 + n * 12:02x}{200 - n * 9:02x}{90 + n * 10:02x}",
-            "rotulo": f"Cor {n + 1}"} for n in range(13)] + [  # (noqa-acento) contrato
+            "rotulo": f"Cor {n + 1}"} for n in range(13)] + [
     {"id": f"t{n}", "cor": ["#ff5555", "#50fa7b", "#6c8cff"][n:] + ["#ff5555", "#50fa7b"][:n],
-     "rotulo": f"Mistura {n + 1}"} for n in range(3)]  # (noqa-acento) contrato
-_JEITOS = [{"id": f"j{n}", "rotulo": r} for n, r in enumerate(  # (noqa-acento) contrato
+     "rotulo": f"Mistura {n + 1}"} for n in range(3)]
+_JEITOS = [{"id": f"j{n}", "rotulo": r} for n, r in enumerate(
     ("Fixa", "Pisca devagar", "Pisca depressa", "Respira", "Onda de cores", "Segue o jogo"))]
 _ROTULO_LONGO = "Como a luz se comporta agora"
 
@@ -456,10 +437,10 @@ def _cartoes_na_borda() -> str:
         {"id": "ap-1", "nome": "Aparelho 1", "estado": "ligado", "ligado": True, "controles": [
             {"id": "luz", "tipo": "chave", "valor": True},
             {"id": "cor", "tipo": "paleta", "valor": "c2",
-             "opcoes": _PONTOS},  # (noqa-acento) contrato
-            {"id": "jeito", "tipo": "escolha", "valor": "j0",  # (noqa-acento) contrato
+             "opcoes": _PONTOS},  # (noqa-acento)
+            {"id": "jeito", "tipo": "escolha", "valor": "j0",
              "rotulo": _ROTULO_LONGO,
-             "opcoes": _JEITOS}]},  # (noqa-acento) contrato
+             "opcoes": _JEITOS}]},  # (noqa-acento)
         {"id": "ap-2", "nome": "Aparelho 2", "estado": "ligado", "ligado": True, "controles": [
             {"id": "luz", "tipo": "chave", "valor": False}]}]
     return str(exp.controles_dos_aparelhos_html("toque", _estado(aparelhos)))
@@ -502,7 +483,6 @@ def na_borda() -> dict[str, dict[str, Any]]:
 @pytest.mark.parametrize("vista", [f"{w}x{h}" for w, h in VISTAS])
 def test_toda_opcao_do_contrato_fica_inteira_e_o_rotulo_nao_invade(
         na_borda: dict[str, dict[str, Any]], vista: str) -> None:
-    # D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA
     """Na borda do contrato, cada ponto e cada opção ficam inteiros dentro do grupo (nenhum some
     atrás da borda), o rótulo longo cabe em duas linhas sem invadir o controle, e a aba não rola."""
     m = na_borda[vista]

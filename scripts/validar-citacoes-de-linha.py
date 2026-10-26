@@ -395,7 +395,7 @@ def varrer_planilha(
                 for curta in CURTA_CSV.finditer(celula):
                     ancora = ancora_da_curta(celula, inteiras, curta.start("vao"))
                     if ancora is None or resolve(ancora.group("arq"), raiz) is None:
-                        continue  # sem inteira que a prenda, ou presa a arquivo de fora: não se lê
+                        continue
                     seus, conferido, fora = confere_endereco(
                         relativo, inicio, contexto, celula, curta,
                         ancora.group("arq"), corpos, raiz, SEPARADORES_DE_BLOCO, curta=True)
@@ -533,15 +533,6 @@ def codigos_de(raiz: Path) -> list[Path]:
     """Os arquivos de CODIGO_COM_CITACOES que existem nesta árvore."""
     return [raiz / r for r in sorted(CODIGO_COM_CITACOES) if (raiz / r).is_file()]
 
-
-# --- a citação NOVA promete o nome (A-CITACAO-NOVA-DE-LINHA-PROMETE-O-NOME-01, 10/10/2026) ------
-#
-# A crua (`x.py:3` sem nome) só o histórico leva quando o código anda, e cada uma vira trabalho à
-# mão do fecho. A antiga é das sprints das cruas; aqui se fecha a porta da NOVA: endereço que
-# aparece em linha acrescentada desde o pé comum com o `dev`. A crua que só mudou de número ou de
-# prosa em volta não é nova: cada crua removida do MESMO documento, para o mesmo arquivo citado,
-# paga uma acrescentada (é o que o `reapontar --escrever` faz: o número muda, o nome não). As
-# cadeias de CODIGO_COM_CITACOES entram pela mesma porta (25/10/2026), lidas como o `--all` as lê.
 
 BASES_DAS_NOVAS = ("dev", "origin/dev")
 """Onde se procura o pé comum, nesta ordem: na árvore da casa o `dev`; no CI, o `origin/dev`."""
@@ -726,7 +717,7 @@ def varrer_novas(raiz: Path, pe: str) -> tuple[list[Achado], int]:
                 alvo = resolve(arquivo, raiz)
                 nome = nome_na_linha(alvo, primeira) if alvo else None
                 if nome is not None and not NOME_ANTES.search(f"`{nome}` em "):
-                    nome = None  # curto demais para a gramática do nome prometido
+                    nome = None
                 certa = f"`{nome or '<nome>'}` em `{faixa}`"
                 achados.append(Achado(
                     documento, numero, f"`{faixa}`",

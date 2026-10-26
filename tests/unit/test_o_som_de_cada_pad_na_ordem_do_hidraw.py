@@ -35,9 +35,7 @@ from hefesto_dualsense4unix.integrations import endpoint_de_haptica as eh
 from hefesto_dualsense4unix.integrations import pad_usb
 from hefesto_dualsense4unix.integrations.haptica_do_cabo import HapticaDoCabo
 
-#: Os quatro controles, da faixa sintética, NA ORDEM DO ENDEREÇO.
 _U = ("aa:bb:cc:00:00:01", "aa:bb:cc:00:00:02", "aa:bb:cc:00:00:03", "aa:bb:cc:00:00:04")
-#: O assento de cada um: o contrário do endereço, para a ordem velha reprovar.
 _ASSENTO = {_U[0]: 4, _U[1]: 3, _U[2]: 2, _U[3]: 1}
 
 
@@ -214,9 +212,6 @@ def _por_assento(uniqs: tuple[str, ...], assentos: dict[str, int]) -> list[str]:
     return sorted(uniqs, key=lambda u: assentos[u])
 
 
-# A conta pura
-
-
 def _assento_de(tabela: dict[str, int]) -> Any:
     return lambda marca: tabela.get(marca)
 
@@ -266,9 +261,6 @@ def test_o_interruptor_escolhe_entre_as_tres_e_ignora_o_resto() -> None:
     assert eh.ordem_dos_nos({chave: "endereco"}) == eh.ORDEM_PELO_ENDERECO
     assert eh.ordem_dos_nos({chave: " Assento-Sem-Refazer "}) == eh.ORDEM_PELO_ASSENTO_SEM_REFAZER
     assert eh.ordem_dos_nos({chave: "qualquer"}) == eh.ORDEM_DOS_NOS
-
-
-# A volta do daemon, com dois e com quatro pads, no cabo e no rádio
 
 
 @pytest.mark.parametrize("transporte", ["usb", "bluetooth"])
@@ -397,9 +389,6 @@ def test_o_no_do_meio_que_nao_nasce_nao_faz_os_de_tras_renascerem_a_cada_volta(
     assert mesa.ordem_no_servidor() == list(uniqs), "o P2 que nasceu depois ficou no fim"
 
 
-# O interruptor de bancada
-
-
 def test_o_interruptor_devolve_a_ordem_do_endereco(
     mesa: _Mesa, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -420,9 +409,6 @@ def test_o_interruptor_sem_refazer_nasce_na_ordem_e_nao_recria(
     assert depois == [_U[0], _U[2], _U[3], _U[1]]
 
 
-# O ensaio da bancada (só leitura): a conta dele, sem servidor de som
-
-
 def _ensaio() -> Any:
     import importlib.util
 
@@ -430,7 +416,7 @@ def _ensaio() -> Any:
     spec = importlib.util.spec_from_file_location("o_som_de_cada_pad_no_wine", caminho)
     assert spec is not None and spec.loader is not None
     modulo = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = modulo  # o @dataclass procura o módulo aqui
+    sys.modules[spec.name] = modulo
     spec.loader.exec_module(modulo)
     return modulo
 

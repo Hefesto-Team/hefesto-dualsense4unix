@@ -53,13 +53,11 @@ def ocupacao_por_adaptador(controles, **kw):
     return {end: plano.agora for end, plano in plano_por_adaptador(controles, **kw).items()}
 
 
-#: como os dois DualSense reais desta bancada com a máscara da casa (octetos 4
 UNIQ_A = "aa:bb:cc:00:00:03"
 UNIQ_B = "aa:bb:cc:00:00:d8"
 ADAPTADOR_1 = "aa:bb:cc:00:00:33"
 ADAPTADOR_2 = "aa:bb:cc:00:00:66"
 
-#: O `HID_PHYS` REAL de um DualSense no cabo nesta máquina, lido do uevent em
 PHYS_DO_CABO = "usb-0000:0c:00.3-1/input3"
 
 

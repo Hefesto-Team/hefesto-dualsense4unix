@@ -27,7 +27,7 @@ from gi.repository import GLib, Gtk
 from hefesto_dualsense4unix.interface import hefesto_vivo
 from hefesto_dualsense4unix.interface.pacotes import ponte
 
-ABA = "04-iluminacao.html"  # (noqa-acento) nome de arquivo
+ABA = "04-iluminacao.html"
 
 MEU_VALOR = "37"
 

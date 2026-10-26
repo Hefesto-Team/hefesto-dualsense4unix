@@ -146,8 +146,6 @@ def test_dois_controles_com_mascaras_diferentes_nascem_com_flavors_diferentes() 
         "dois controles com máscaras DIFERENTES gravadas nasceram com o MESMO "
         "flavor — a identidade não chegou ao `mascara_efetiva`"
     )
-    # sem o canal próprio (`allow_uhid=False`), o cartão DualSense veste o Xbox 360
-    # até o canal voltar (a pergunta 6 da NO-MODO-XBOX-TUDO-FUNCIONA-01)
     assert (pad1.vendor, pad2.vendor) == (XBOX360_VENDOR, XBOX360_VENDOR)
     assert pad2.troca_motivo == vp.MOTIVO_SEM_CANAL_PROPRIO
     assert getattr(pad1, "troca_motivo", None) is None

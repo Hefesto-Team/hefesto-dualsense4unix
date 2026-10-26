@@ -198,7 +198,7 @@ def test_a_mesa_e_a_procedencia_leem_as_mesmas_colunas(
     ensaios: dict[tuple[str, str], list[dict]] | None,
 ) -> None:
     """A mesa de medição e o dono da procedência não podem divergir."""
-    if not MESA.is_file():  # pragma: no cover - a mesa é de 06/09/2026
+    if not MESA.is_file():  # pragma: no cover
         pytest.skip("scripts/mesa_de_medicao.py não existe nesta árvore")
 
     import mesa_de_medicao

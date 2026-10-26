@@ -50,7 +50,7 @@ executadas por ``source``, com um ``pactl`` dublê num PATH temporário).
 Nenhum teste deste arquivo toca o áudio da máquina.
 """
 
-# ruff: noqa: E501  (saída literal do `pactl` — quebrar a linha mudaria o dado)
+# ruff: noqa: E501
 
 from __future__ import annotations
 

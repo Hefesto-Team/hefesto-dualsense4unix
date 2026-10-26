@@ -18,8 +18,6 @@ from hefesto_dualsense4unix.app.actions.base import (
 from hefesto_dualsense4unix.app.alvo_de_edicao import (
     AlvoDeEdicao,
 )
-
-# GRID_BOTOES/ALL_BUTTONS/L2_R2_THRESHOLD moraram aqui até o STATUS-02;
 from hefesto_dualsense4unix.interface.cartao_do_controle import (
     ALL_BUTTONS,
     GRID_BOTOES,
@@ -97,7 +95,6 @@ class StatusActionsMixin(WidgetAccessMixin):
     _consecutive_failures: int = 0
     _first_poll_succeeded: bool = False
     _live_inflight: bool = False
-    # 1 worker que os 3 pollers de `daemon.state_full` compartilham.
     _profile_inflight: bool = False
     _reconnect_inflight: bool = False
     _profile_falhas_seguidas: int = 0
@@ -109,14 +106,11 @@ class StatusActionsMixin(WidgetAccessMixin):
     _target_combo_visible: bool
     _target_combo_active: int
     _target_buttons: list[Any]
-    # 8BIT-02: controles externos (não-DualSense) no seletor do topo + a ficha
-    # botões próprios (fora do grupo de rádio dos DualSense).
     _external_buttons: list[Any]
     _externals: list[dict[str, Any]]
     _externals_fetch_ts: float = 0.0
     _externals_inflight: bool = False
     _externals_sig: tuple[str, ...] | None = None
-    # sync com o `output_target_index` do daemon a 2 Hz e é atualizado NA
     _alvo_de_edicao: AlvoDeEdicao
     _target_uniq_by_index: dict[int, str | None]
     _target_label_by_index: dict[int, str]
@@ -130,9 +124,7 @@ class StatusActionsMixin(WidgetAccessMixin):
     _numero_visivel: bool = False
     _edit_target_slot: int | None = None
     _target_slot_by_index: dict[int, int | None]
-    #: luzes, ACIMA da escolha manual. Lido do `state_full` aqui e consumido
     _coop_ligado: bool = False
-    #: fica guardado até o modo sair. Lido do `state_full` aqui (mesmo tique do
     _modo_nativo_ligado: bool = False
     _rumble_badge: Any = None
     _mic_monitor: Any = None
@@ -151,7 +143,6 @@ class StatusActionsMixin(WidgetAccessMixin):
     _rota_de_som: Any = None
     _rota_inflight: bool = False
     _rota_sink: str = ""
-    #: Dicionário VAZIO é "ainda não li", e é o que mantém os cards calados
     _canais_de_som: Mapping[str, str] = {}
     _regra_do_sono: bool | None = None
     _ultimo_estado_global: dict[str, str] = {}  # noqa: RUF012

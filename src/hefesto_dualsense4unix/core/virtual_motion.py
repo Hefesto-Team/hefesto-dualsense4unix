@@ -96,8 +96,6 @@ TOQUE_INATIVO = 0x80
 
 TAMANHO_DA_JANELA = 25
 
-#: O que o Desligado faz com o touchpad FORA do jogo. «cursor» deixa o nó com o sistema
-#: (o dedo move o cursor); «mudo» cala o toque também fora do jogo. A escolha espera o mockup da T1.
 DESLIGADO_FORA_DO_JOGO = "cursor"
 
 

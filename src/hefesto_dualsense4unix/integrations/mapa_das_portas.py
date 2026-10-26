@@ -155,10 +155,10 @@ def vizinhas_de_verdade(
 
 
 LACUNA_PAR = "par"
-LACUNA_POSICAO = "posicao"  # (noqa-acento) chave de contrato ASCII, não texto de tela
+LACUNA_POSICAO = "posicao"
 LACUNA_VELOCIDADE = "velocidade"
-LACUNA_REGIAO = "regiao"  # (noqa-acento) chave de contrato ASCII, não texto de tela
-LACUNA_ESPECIE = "especie"  # (noqa-acento) chave de contrato ASCII, não texto de tela
+LACUNA_REGIAO = "regiao"
+LACUNA_ESPECIE = "especie"
 
 _CLASSE_DO_MOTOR_POR_TRIPLA: dict[tuple[str, str, str], str] = {
     ("e0", "01", "01"): "bt",
@@ -214,12 +214,6 @@ def mesa_do_motor(
     if any(not aparelho.classe for aparelho in aparelhos):
         lacunas.add(LACUNA_ESPECIE)
     if mapa.faces:
-        # NÃO é condicional, e por isso não olha entrada nenhuma: `Entrada.pos`
-        # é a posição do buraco na fileira do metal, e ela não existe em fonte
-        # alguma — nem no `MapaDaMesa`, nem no censo, nem no `/sys`. Sem ela o
-        # `_bonus_separacao` (+6 por posição de folga, teto 6) nunca dispara, e
-        # dois adaptadores de rádio nas pontas opostas da fileira do hub
-        # recebem o mesmo juízo de dois colados.
         lacunas.add(LACUNA_POSICAO)
 
     faces: list[motor.Face] = []
@@ -314,13 +308,10 @@ def entradas_sem_lugar(
     )
 
 
-#: as classes do motor (``arranjo_da_mesa``), não o transporte do controle
 CLASSE_WIFI = "wifi"
 CLASSE_BT = "bt"
 _RADIOS_DO_MOTOR = frozenset({CLASSE_BT, CLASSE_WIFI, "teclado", "mouse"})
-#: o par de vizinhas que briga: um Wi-Fi em USB 3.0 colado num BT
 _PAR_QUE_BRIGA = frozenset({CLASSE_WIFI, CLASSE_BT})
-#: Quantos rádios colados em fileira a leitura da máquina já chama de «colados».
 RADIOS_COLADOS_A_PARTIR_DE = 3
 
 
@@ -417,9 +408,7 @@ def _aparelho_do_motor(
     )
 
 
-#: O que o kernel LIGOU na interface do aparelho (``censo.ligado_como``) na classe do motor.
 _CLASSE_DO_QUE_O_KERNEL_LIGOU = {"wifi": "wifi", "bluetooth": "bt", "camera": "webcam"}
-#: O tipo declarado, na classe do motor — os que o motor não julga ficam sem classe.
 _CLASSE_DO_TIPO_DECLARADO = {
     "wifi": "wifi", "teclado": "teclado", "mouse": "mouse", "webcam": "webcam",
 }
@@ -445,7 +434,6 @@ def _classe_do_motor(aparelho: Aparelho, tipos: Mapping[str, str] | None = None)
         return do_kernel
     if aparelho.classe == _CLASSE_DE_VIDEO:
         return "webcam"
-    # a máquina não mediu: vale o que o usuário disse (QUEM VENCE: a máquina no que mede)
     declarado = (tipos or {}).get(f"{aparelho.vid}:{aparelho.pid}", "")
     return _CLASSE_DO_TIPO_DECLARADO.get(declarado, "")
 
@@ -471,9 +459,6 @@ def _entrada_do_motor(
     if par is None and not esticada:
         lacunas.add(LACUNA_PAR)
     declarada = mapa.portas.get(numero)
-    # QUEM VENCE (04/10/2026): a máquina no que mede. Com aparelho na entrada, a velocidade é a
-    # medida (o aparelho, depois a placa); a declarada só vale na entrada VAZIA, onde a
-    # máquina não tem como saber.
     dita = None if declarada is None or ocupada else declarada.usb
     rapido, origem = _velocidade_do_no(
         () if declarada is None else declarada.nos,
@@ -618,11 +603,6 @@ def _entradas_da_face(mapa: MapaDaMesa, numeros: Sequence[str]) -> tuple[str, ..
     return tuple(achadas)
 
 
-# ---------------------------------------------------------------------------
-# O QUE O METAL DE UMA PORTA É — A-08-UM-MAPEAR-SO-01 (25/09/2026)
-# ---------------------------------------------------------------------------
-#
-
 USB_3 = "3.0"
 USB_2 = "2.0"
 
@@ -674,7 +654,6 @@ def fatos_do_buraco(
     else:
         usb = ""
 
-    # O lado 2.0 primeiro: é onde o DualSense e os dongles enumeram.
     ordenados = sorted(
         (no for no in nos if caminho_do_no(no)),
         key=lambda no: int(caminho_do_no(no).partition("-")[0]),

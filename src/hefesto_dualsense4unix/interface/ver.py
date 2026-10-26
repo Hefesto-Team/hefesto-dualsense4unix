@@ -111,8 +111,6 @@ def main() -> int:
 
     barra = Gtk.HeaderBar()
     barra.set_show_close_button(True)
-    # janela não conseguimos deixar Hefesto - DualSense4Unix ao invés de só
-    # `utils/identidade.py` escrevia o `S` do DualSense em minúscula, em 427
     from hefesto_dualsense4unix.utils import identidade
 
     barra.set_title(identidade.atual().nome_longo)

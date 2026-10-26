@@ -33,8 +33,6 @@ def _config(**over: object) -> DaemonConfig:
 async def test_failing_subsystem_does_not_kill_daemon(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # O IPC saiu deste caso em 13/10/2026: ele é essencial e a falha dele encerra o
-    # `run()` (A-CHAVE-E-A-PERMISSAO-DIZEM-O-QUE-SAO-01). O opcional é o UDP.
     monkeypatch.setattr(
         "hefesto_dualsense4unix.utils.session.load_paused_state", lambda: False
     )

@@ -182,7 +182,7 @@ def ler_camadas(registro: Path, *, prefixo: Path | None = None) -> tuple[Camada,
         arquivo = caminho_no_prefixo(base, caminho)
         try:
             presente = arquivo is not None and arquivo.exists()
-        except OSError:  # pragma: no cover - permissão negada no meio do caminho
+        except OSError:  # pragma: no cover
             presente = False
         achadas.append(
             Camada(
@@ -216,7 +216,7 @@ def _pastas_steamapps_do_irmao() -> Callable[[Path | None], list[Path]] | None:
     """O `pastas_steamapps` do irmão, ou `None` quando ele não está alcançável."""
     try:
         from .steam_launch_options import pastas_steamapps
-    except ImportError:  # pragma: no cover - cópia avulsa, sem o pacote
+    except ImportError:  # pragma: no cover
         try:
             from steam_launch_options import pastas_steamapps  # type: ignore[no-redef]
         except ImportError:
@@ -346,14 +346,14 @@ def _nome_do_appid(appid: str, home: Path | None = None) -> str | None:
     """Nome do jogo pelo `appmanifest`, reusando o dono do formato."""
     try:
         from .steam_launch_options import nome_do_appid
-    except ImportError:  # pragma: no cover - cópia avulsa, sem o pacote
+    except ImportError:  # pragma: no cover
         try:
             from steam_launch_options import nome_do_appid  # type: ignore[no-redef]
         except ImportError:
             return None
     try:
         return nome_do_appid(appid, home)
-    except Exception:  # pragma: no cover - tradução é conveniência, nunca gate
+    except Exception:  # pragma: no cover
         return None
 
 
@@ -691,7 +691,7 @@ def curar_todos(
     def pulado(p: PrefixoDeJogo) -> bool:
         try:
             pai, raiz = p.raiz.parent.resolve(), p.raiz.resolve()
-        except OSError:  # pragma: no cover - caminho impossível
+        except OSError:  # pragma: no cover
             return False
         return p.appid in fora if pai in da_steam else str(raiz) in fora
 
@@ -806,5 +806,5 @@ def main(argv: list[str] | None = None) -> int:
     return 0
 
 
-if __name__ == "__main__":  # pragma: no cover - entrada de script avulso
+if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())

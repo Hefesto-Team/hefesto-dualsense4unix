@@ -124,9 +124,6 @@ def test_o_p1_que_nasce_no_meio_do_jogo_veste_o_comum(
         gp.stop_gamepad_emulation(d, persist=False)
 
 
-# --- o report do `0ce6` em repouso ------------------------------------------------------
-
-
 @pytest.mark.parametrize("jogador", [1, 2, 3, 4])
 def test_o_comum_em_repouso_nao_aperta_nada(jogador: int) -> None:
     """MORDIDA: o d-pad neutro como 0 (o «cima» do hat) ou os eixos em 0 e a régua reprova."""

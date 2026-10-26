@@ -25,7 +25,7 @@ if not (os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY")):
 
 try:
     from hefesto_dualsense4unix.interface import janela as ponte_da_tela
-except (ImportError, ValueError) as _erro:  # pragma: no cover — sem WebKit
+except (ImportError, ValueError) as _erro:  # pragma: no cover
     pytest.skip(
         f"PONTE-DA-TELA-01: a biblioteca não importou ({_erro}). Falta "
         "gir1.2-webkit2-4.1?",

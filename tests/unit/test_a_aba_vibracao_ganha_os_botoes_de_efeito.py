@@ -73,7 +73,6 @@ class _PonteQueGrava:
     def __getattr__(self, nome: str) -> Any:
         def registrar(*a: Any, **k: Any) -> Any:
             self.chamadas.append((nome, a, k))
-            # a ponte de verdade devolve o par `(ok, corpo)` nestes; a escolha já toca (23/10)
             com_corpo = nome.endswith("_checked") or nome == "haptica_testar"
             return (True, None) if com_corpo else True
         return registrar
@@ -90,7 +89,6 @@ def perfis(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         return alvo
 
     monkeypatch.setattr(loader_module, "profiles_dir", _dir)
-    # A tela acha a pasta pelo dono dela (`utils.xdg_paths`), não pelo nome importado no loader.
     monkeypatch.setattr(xdg_paths, "profiles_dir", _dir)
     return alvo
 
@@ -100,15 +98,13 @@ def _rumble_do_disco() -> ControllerRumbleOverride | None:
     return dele.rumble if dele is not None else None
 
 
-# ------------------------------------------------------------------ a tela
-
-
 class TestAsLinhas:
     def test_as_nove_faixas_na_ordem_do_desenho_a(self) -> None:
-        # D-1610-AS-LISTAS-DE-EFEITO-POR-CONTROLE-NA-ABA-VIBRACAO
         """Controle, Modelo, Força, Sensor háptico, Efeito háptico, motores, Padrão, Testar.
 
         MORDIDA: trocar a ordem das duas linhas no gerador reprova.
+
+        Prova da D-1610-AS-LISTAS-DE-EFEITO-POR-CONTROLE-NA-ABA-VIBRACAO.
         """
         html = MOCKUP.read_text(encoding="utf-8")
         rotulos = re.findall(r'<span class="sec-rot"[^>]*>([^<]+)</span>',
@@ -169,9 +165,6 @@ class TestAsLinhas:
         assert len(campos) == 4
 
 
-# ------------------------------------------------------------------ a pintura
-
-
 class TestAPintura:
     def test_sem_escolha_vale_do_estilo_e_nunca_sem_efeito(self) -> None:
         coluna = next(iter(a05.pacote(_ctx()).get("colunas", {}).values()))
@@ -200,9 +193,6 @@ class TestAPintura:
         assert sem_rumble == "do_estilo"
 
 
-# ------------------------------------------------------------------ o gesto
-
-
 class TestOGesto:
     @pytest.mark.parametrize(("campo", "valor"), [
         ("efeito_haptico", "estalo"), ("efeito_haptico", "sem_efeito"),
@@ -222,8 +212,10 @@ class TestOGesto:
     @pytest.mark.parametrize("campo", sorted(GESTOS))
     def test_do_estilo_apaga_a_chave_e_nao_vira_sem_efeito(
             self, perfis: Path, campo: str) -> None:
-        # D-1610-DO-ESTILO-APAGA-A-CHAVE-E-SEM-EFEITO-CALA
-        """MORDIDA: gravar o texto `do_estilo` em vez de apagar a chave reprova."""
+        """MORDIDA: gravar o texto `do_estilo` em vez de apagar a chave reprova.
+
+        Prova da D-1610-DO-ESTILO-APAGA-A-CHAVE-E-SEM-EFEITO-CALA.
+        """
         save_profile(Profile(
             name="Bancada", match=MatchAny(),
             controllers={BRANCO: ControllerOverrides(rumble=ControllerRumbleOverride(
@@ -297,9 +289,6 @@ class TestOGesto:
             assert ("05-vibracao.html", gesto) in CAMADA
 
 
-# ------------------------------------------------------------------ o Testar
-
-
 class TestOTestar:
     @pytest.fixture(autouse=True)
     def _sem_espera(self, monkeypatch: pytest.MonkeyPatch) -> Any:
@@ -309,13 +298,13 @@ class TestOTestar:
         a05.parar_o_teste()
 
     def test_com_um_padrao_escolhido_o_testar_toca_o_padrao(self, perfis: Path) -> None:
-        # D-1610-O-TESTAR-TOCA-O-PADRAO-ESCOLHIDO, com a volta contínua da
-        # D-1910-O-TESTE-DA-VIBRACAO-E-CONTINUO (o padrão repete até o «Parar»)
         """MORDIDA: tirar o desvio do `testar` volta ao sustentado e reprova.
 
         O padrão vem do perfil no disco (o `efeito_imersao` do controle), sem dublê no
         `_padrao_escolhido`: a repetição e o «Parar» têm a régua deles em
         `test_o_testar_do_efeito_imersao_repete_ate_o_parar`.
+
+        Prova da D-1610-O-TESTAR-TOCA-O-PADRAO-ESCOLHIDO.
         """
         save_profile(Profile(
             name="Bancada", match=MatchAny(),
@@ -360,7 +349,7 @@ class TestOTestar:
         gesto = pacotes.gesto_da_pagina("05-vibracao.html", "criar-efeito")
         assert gesto is not None
         with pytest.raises(RuntimeError) as erro:
-            pedido = {"forma": {"padrao": "", "motores": "ambos"},  # (noqa-acento) chave
+            pedido = {"forma": {"padrao": "", "motores": "ambos"},  # (noqa-acento)
                       "nome": "x"}
             gesto(_ctx(), pedido, _PonteQueGrava(_Handlers(ativo=None, primario=None)))
         for chave in padroes.FORMAS_DE_CRIAR:

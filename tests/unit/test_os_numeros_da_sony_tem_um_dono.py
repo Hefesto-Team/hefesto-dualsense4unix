@@ -42,11 +42,6 @@ def _carregar_catraca() -> Any:
 catraca = _carregar_catraca()
 
 
-# ------------------------------------------------------------
-# 1. O dono dos números e a catraca
-# ------------------------------------------------------------
-
-
 def test_o_dono_diz_os_numeros_do_dualsense() -> None:
     assert dono.VENDOR_SONY == 0x054C
     assert dono.PID_DUALSENSE == 0x0CE6
@@ -78,8 +73,6 @@ def test_o_launch_env_monta_as_envs_com_o_par_do_dono(monkeypatch: pytest.Monkey
 
     assert launch_env.PAR_DUALSENSE_FISICO is dono.PAR_DUALSENSE_FISICO
 
-    # Uma cópia do módulo, carregada com o dono trocado: se o par morasse dentro do `launch_env`,
-    # a troca não chegaria às envs.
     monkeypatch.setattr(dono, "PAR_DUALSENSE_FISICO", (0x1234, 0x5678))
     nome = "launch_env_com_o_dono_trocado"
     spec = importlib.util.spec_from_file_location(nome, launch_env.__file__)
@@ -157,22 +150,15 @@ def test_a_catraca_esta_verde_na_arvore_de_verdade() -> None:
     assert feito.returncode == 0, feito.stdout
 
 
-# ------------------------------------------------------------
-# 2. O leitor de texto do /sys
-# ------------------------------------------------------------
-
-
 def test_o_leitor_unico_devolve_o_texto_e_vazio_em_qualquer_erro(tmp_path: Path) -> None:
     arquivo = tmp_path / "uevent"
     arquivo.write_bytes(b"HID_ID=0003\xff\n")
 
-    assert ler_texto(str(arquivo)).startswith("HID_ID=0003")  # byte inválido vira «�», não erro
+    assert ler_texto(str(arquivo)).startswith("HID_ID=0003")
     assert ler_texto(str(tmp_path / "sumiu")) == ""
-    assert ler_texto(str(tmp_path)) == ""  # diretório: OSError (EISDIR)
+    assert ler_texto(str(tmp_path)) == ""
 
 
-#: As variantes que NÃO são o corpo do leitor único e ficam, cada uma com o motivo numa linha.
-#: As de `.strip()` migram quando a sprint do módulo dela o tocar (`ler_texto(p).strip()`).
 VARIANTES_DO_LEITOR = {
     "integrations/censo_do_gabinete.py::_ler_texto": "abre com errors='ignore'",
     "daemon/battery_journal.py::_ler_texto": "recebe Path e devolve None: «sumiu» não é «vazio»",
@@ -248,11 +234,6 @@ def test_as_variantes_declaradas_existem_e_nao_sao_a_copia() -> None:
         assert nome in nomes, f"a variante {chave} saiu: tire-a da lista"
 
 
-# ------------------------------------------------------------
-# 3. A chamada ao daemon dos comandos
-# ------------------------------------------------------------
-
-#: As cópias do corpo de `chamar_o_daemon` que ficam, cada uma com o motivo numa linha.
 COPIAS_DA_CHAMADA = {
     "cli/cmd_native.py::_call_sync": "é de outra sprint: migra quando ela tocar o `cmd_native`",
 }
@@ -336,11 +317,6 @@ def test_o_dono_da_chamada_responde_o_prazo_a_recusa_e_o_daemon_fora(
     assert "daemon offline" in saida.getvalue()
 
 
-# ------------------------------------------------------------
-# 4. A regra do custom_mult e o multiplicador da política
-# ------------------------------------------------------------
-
-
 def test_as_duas_bordas_do_custom_mult_chamam_a_mesma_regra() -> None:
     from pydantic import ValidationError
 
@@ -381,10 +357,6 @@ def test_o_manager_importa_o_multiplicador_do_schema() -> None:
     assert schema._mult_da_vibracao("max", None) is not None
 
 
-# ------------------------------------------------------------
-# 5. Os invólucros sem chamador
-# ------------------------------------------------------------
-
 INVOLUCROS_MORTOS = (
     "_stop_hotkey_manager", "_stop_mouse_emulation", "_start_mic_hotkey", "_stop_plugins",
 )
@@ -399,5 +371,4 @@ def test_o_invólucro_sem_chamador_nao_volta_ao_lifecycle(nome: str) -> None:
         ["git", "grep", "-l", "-w", nome, "--", "src", "tests", "scripts"],
         capture_output=True, text=True, check=False, cwd=RAIZ,
     )
-    # o próprio teste cita o nome: só ele pode aparecer
     assert achados.stdout.split() in ([], ["tests/unit/test_os_numeros_da_sony_tem_um_dono.py"])

@@ -38,8 +38,6 @@ P2 = "aa:bb:cc:00:00:02"
 CHAVE_P1 = "aabbcc000001"
 CHAVE_P2 = "aabbcc000002"
 
-#: O tempo do `rumble.set` na ponte de mentira: o teto de tela da ponte de
-#: verdade é 0,25 s, e o serviço com o laço ocupado gasta o teto inteiro.
 DEMORA_DO_SET_S = 0.3
 
 

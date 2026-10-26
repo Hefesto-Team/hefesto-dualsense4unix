@@ -46,7 +46,7 @@ AS RÉGUAS, E A MORDIDA DE CADA UMA (arranque a cura e veja reprovar):
 Nenhum teste deste arquivo toca o áudio da máquina.
 """
 
-# ruff: noqa: E501 — os dublês imprimem linhas de `pactl list` inteiras, e
+# ruff: noqa: E501
 
 from __future__ import annotations
 
@@ -76,7 +76,6 @@ DS_SAIDA = (
 WEBCAM = "alsa_input.usb-046d_HD_Pro_Webcam_C920-02.analog-stereo"
 ONBOARD = "alsa_input.pci-0000_0c_00.4.analog-stereo"
 
-#: porta de captura do DualSense no cabo nem se chama mais assim.
 _FIXTURES_MIC_CABO = RAIZ / "tests" / "fixtures" / "mic-cabo"
 _SOURCES_GRAVADA = _FIXTURES_MIC_CABO / "sources-cabo-2026-09-20.json"
 
@@ -559,7 +558,6 @@ def rodar_o_veredito(bancada: Bancada) -> subprocess.CompletedProcess[str]:
 
 CENARIOS = {
     "radio": {"aparelhos": ("radio",), "a": 1, "b": 8},
-    # O relógio do log das 22:58: o doctor lia o monitor e gravava o DualSense.
     "cabo": {"aparelhos": ("cabo",), "a": 1, "b": 8},
     "cabo-lento": {"aparelhos": ("cabo",), "a": 1, "b": 1_000_000},
     "cabo-webcam": {"aparelhos": ("cabo", "webcam"), "a": 4, "b": 8},
@@ -651,7 +649,6 @@ def test_r3_quando_o_monitor_nao_passa_o_passo_nao_da_dois_vereditos(tmp_path: P
     assert f"o microfone padrão do sistema é um MONITOR ({MONITOR_DO_SOM})" in saida, saida
     assert "(entrada de verdade)" not in saida, saida
     assert f"pactl set-default-source {DS_ENTRADA}" not in bancada.argv(), bancada.argv()
-    # A VALIDAÇÃO (14/09): o fim mandava «conecte o DualSense (no cabo)» com a
     assert "DualSense (no cabo)" not in saida, saida
     assert f"Há uma entrada com porta usável no ar ({DS_ENTRADA})" in saida, saida
 

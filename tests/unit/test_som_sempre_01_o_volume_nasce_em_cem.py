@@ -71,7 +71,6 @@ class _Handle:
         audio_path: int | None = None,
         preamp: int | None = None,
     ) -> None:
-        # Mesma disciplina de posse por byte do `_PinnedPyDualSense`: campo
         for pos, valor in enumerate((headphone, speaker, microphone, audio_path)):
             if valor is not None:
                 self._volumes_audio[pos] = int(valor)

@@ -142,7 +142,7 @@ def _a_linha_casa(ap: Aparelho, termos: list[tuple[str, str, str]], existentes: 
             ok = _casa(valor, ap.env.get(chave[4:-1], ""))
         elif chave.startswith("ATTR{"):
             ok = False
-        else:  # pragma: no cover — chave nova numa regra: tem de ser ensinada
+        else:  # pragma: no cover
             raise AssertionError(f"o udev de bolso não conhece a chave {chave}{op}")
         falhou = (not ok) if op == "==" else ok
         if falhou:

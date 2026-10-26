@@ -33,7 +33,7 @@ def _atributo_do_trilho(nome: str) -> float:
     pagina = (
         Path(__file__).resolve().parents[2]
         / "src" / "hefesto_dualsense4unix"
-        / "interface" / "paginas" / "05-vibracao.html"  # (noqa-acento) pasta
+        / "interface" / "paginas" / "05-vibracao.html"  # (noqa-acento)
     ).read_text(encoding="utf-8")
     trilho = re.search(
         r'<input[^>]*type="range"[^>]*data-campo="mult-pos"[^>]*>', pagina

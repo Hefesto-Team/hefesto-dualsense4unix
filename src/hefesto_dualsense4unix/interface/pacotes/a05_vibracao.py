@@ -32,7 +32,6 @@ from time import monotonic as _monotonic
 from time import sleep as _dormir
 from typing import Any
 
-# `portao_a_casa_sabe_e_o_produto_nao_faz` segue o fecho de IMPORT a partir do
 from hefesto_dualsense4unix.app.telas import vibracao as _tela
 from hefesto_dualsense4unix.core.formas_do_endereco import mascarar
 from hefesto_dualsense4unix.core.rumble import vale_o_padrao
@@ -45,17 +44,7 @@ from . import perfil as _perfil
 from .meus_efeitos import TETO_DO_NOME, guardar_meus_efeitos, meus_efeitos
 from .nome_do_jogador import nomes_dos_donos, o_nome_de
 
-#: era o ENDEREÇO no desenho mais a EMISSÃO aqui. As duas metades entraram
-#: fantasma — a próxima pessoa esperaria por uma cura que já chegou.
 SEM_DONO: dict[str, str] = {}
-
-#
-# **O USUÁRIO DECIDIU, E FORA DAS OPÇÕES QUE ESTAVAM POSTAS:** as duas barras (forte e fraca) se
-# multiplicam com os degraus economia, moderado e máximo; com 150% do perfil e as duas linhas a
-# 100, a vibração dos dois motores é 150%, e uma barra a 100% com a outra a 50% dá 150% e 75%.
-
-# (`_aplicar_a_forca`, que leva a frase ao cartão daquele controle) e no TEMPO
-# uma dela é uma linha em `FRASE_DA_MESA_EM_AUTO` e outra em
 
 
 def _plastico_do_item(controle: dict[str, Any]) -> str:
@@ -264,7 +253,6 @@ def _ressalva_da_mesa(perfil: dict[str, Any], mesa: list[dict[str, Any]]) -> str
             quantos += 1
     if not quantos:
         return ""
-    # (:data:`FRASE_DA_MESA_EM_AUTO`), que mora numa caixa que CRESCE. Esta
     return (f"a força geral está no automático, e por isso a força própria de "
             f"{quantos} controle(s) fica guardada sem chegar ao motor. Escolha "
             f"Economia, Padrão ou Máximo e elas voltam a valer.")
@@ -485,10 +473,6 @@ def _pct_da_coluna(policy: str, custom: Any) -> dict[str, str]:
     )
 
 
-# fixo fizesse o usuário o que fizesse com as barras. A prosa da VIBRA-MULT-01 em
-# `state_full` e a busca por `player` cabe em três linhas.
-
-
 @registrar("05-vibracao.html")
 def pacote(ctx: Contexto) -> dict[str, Any]:
     """DELEGA para `app/telas/vibracao.pacote_da_mesa` — a camada do PRODUTO.
@@ -538,7 +522,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     import mesa_viva
 
 
-    # NINGUÉM a punha: `mesa_viva.mesa_do_estado` monta o item com `cor` (o slug)
     mesa = [dict(c, plastico=_plastico_do_item(c)) for c in ctx.mesa]
     bruto = _tela.pacote_da_mesa(ctx.state, mesa, ctx.conectados,
                                  contagem=mesa_viva.texto_da_contagem(ctx.mesa))
@@ -548,8 +531,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     colunas: dict[str, dict[str, Any]] = {}
     nomes_dela = nomes_dos_donos()
     da_mesa = {str(c.get("uniq") or ""): c for c in ctx.mesa}
-    # `col["forca"]`, porque `pacote_da_coluna` só conhece o `state_full`; quem
-    # UMA LEITURA POR TIQUE, e não uma por coluna: `perfil.ativo` abre o JSON,
     perfil_ativo = _perfil_ativo(ctx)
     bloco_dos_controles = perfil_ativo.get("controllers")
     overrides = bloco_dos_controles if isinstance(bloco_dos_controles, dict) else {}
@@ -562,40 +543,31 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
                                            _sem_marcacao(col.get("identidade", "")))
         plano = {
             "identidade": identidade,
-            # o nome inteiro também vai ao `title`: a caixa estreita corta com reticências
             "identidade-titulo": identidade,
-            # variável em vez de inventar um tom.
             "plastico": str(col.get("plastico") or ""),
             "colorway": modelo_por_uniq.get(uniq, ""),
-            # o número sem o «%»: o sinal mora na casa ao lado (19/10/2026)
             "mult": str(pct.get("n", "—")).rstrip("%"),
             "mult-pos": (str(pct.get("n", "")).rstrip("%")
                          if pct.get("sabe") else ""),
             "forca-pct": str(pct.get("w", "")).rstrip("%"),
-            # a «Força» é o trilho de 0 a 200%, sem degraus (A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-
-            # SAI-DO-FIRMWARE-COMO-NO-PS5-01): o `degrau` e o `degrau-herdado` saíram da pintura
             "em-teste": "1" if uniq and uniq in em_teste() else "",
-            "padrao": "1" if padrao else "",  # (noqa-acento) campo
+            "padrao": "1" if padrao else "",  # (noqa-acento)
         }
         for lado, m in (col.get("motores") or {}).items():
             plano[f"motor-{lado}"] = m.get("n", "—")
             plano[f"motor-{lado}-pct"] = str(m.get("w", "")).rstrip("%")
-            # O PEDIDO DO JOGO VIRA `title` — 04/09/2026, e é onde a LEITURA foi
-            # `state_full.rumble_motores`, o MESMO mapa que
             plano[f"motor-{lado}-pedido"] = (
                 f'O jogo pediu {m.get("n")} de 255 neste motor agora.'
                 if m.get("sabe") else FRASE_DO_PADRAO if padrao
                 else _quanto_multiplica(pct, barras.get(lado)))
             plano[f"barra-{lado}"] = str(barras[lado])
             plano[f"barra-{lado}-pct"] = _texto_da_barra(barras[lado], padrao)
-            # ELE NÃO TEM VALOR PRÓPRIO, e é isso que o deixa nascer sem campo
             plano[f"lado-{lado}"] = "1" if barras[lado] > 0 else ""
         haptica, alcanca = _haptica_do_controle(ctx.state, uniq)
         plano["barra-h"] = str(haptica)
         plano["barra-h-pct"] = _texto_da_barra(haptica, padrao)
         plano["lado-h"] = "1" if haptica > 0 else ""
         plano["haptica-fora"] = "" if alcanca else "1"
-        # chegando a ESTE controle agora, do `state_full` (`haptica_no_ar`).
         plano["haptica-no-ar"] = "1" if _haptica_no_ar(ctx.state, uniq) else ""
         plano["em-teste-h"] = "1" if uniq and uniq in em_teste_da_haptica() else ""
         for campo, dica, lista, textos in (
@@ -607,8 +579,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             plano[dica] = textos[escolha]
         for lado, treme in (col.get("treme") or {}).items():
             plano[f"treme-{lado}"] = "1" if treme else ""
-        # sempre vai ser o jogo mandando os input pro controle e a gnt
-        # aba terminam em `rumble_passthrough(True)` — :func:`testar` (passos 3
         colunas[uniq] = plano
     linhas_do_estado = _tela.textos_do_estado(ctx.state)
     ressalva = _ressalva_da_mesa(perfil_ativo, ctx.mesa)
@@ -621,7 +591,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         "mesa": {},
         "blocos": {"#vib-estado": estado,
                    SELETOR_DOS_TOQUES: html_dos_toques(_controle_dos_chips(ctx))},
-        # O MODO DA ABA: o botão «Modo automático» acende pelo modo do perfil.
         GESTO_DO_MODO: modo,
         f"{GESTO_DO_MODO}-automatico": "sim" if modo == MODO_AUTOMATICO else "",
         "sem_dono": dict(SEM_DONO),
@@ -630,7 +599,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     }
 
 
-#: O bloco dos efeitos criados («Criar efeitos novos»): os chips que tocam no clique.
 SELETOR_DOS_TOQUES = "#seus-toques"
 
 
@@ -685,7 +653,6 @@ def _identidade_do_modelo(item: dict[str, Any] | None, nomes: dict[str, str], pr
     quem = o_nome_de(nomes, (item or {}).get("uniq"))
     if not item or not quem:
         return pronta
-    # texto dela, nunca marcação: não passa pelo `_sem_marcacao`, que arrancaria um `<...>` do nome
     return " · ".join(partes_do_modelo(dict(item, dono=quem)))
 
 
@@ -697,18 +664,12 @@ def _sem_marcacao(texto: str) -> str:
     return _re.sub(r"\s*•\s*", " · ", sem_tags).strip()
 
 
-# disso — `app/actions/rumble_actions.py` escreve.
 from . import Batimento, coracao, gesto, largada  # noqa: E402
 
-#: estável (`app/actions/rumble_actions.py`, `weak = 160` / `strong =
 PAR_DE_TESTE = (160, 220)
 
 _O_PULSO_SAIU = "07/09/2026 — o Testar virou estado; ver `_EM_TESTE`"
 
-#: Os controles com o «Testar» da vibração LIGADO agora. UM POR CONTROLE: o
-#: teste de um não toca no do outro (03/10/2026, decisão de produto: vibração e háptico são
-#: por controle e funcionam de forma independente). Era um `uniq` só,
-#: e ligar o do P2 calava o do P1.
 _EM_TESTE: set[str] = set()
 
 
@@ -717,7 +678,6 @@ def em_teste() -> frozenset[str]:
     return frozenset(_EM_TESTE)
 
 
-#: O mesmo para o «Háptica» (botões lado a lado, a resposta [24]).
 _EM_TESTE_DA_HAPTICA: set[str] = set()
 
 
@@ -760,9 +720,6 @@ def parar_o_teste(uniq: str | None = None) -> None:
     _O_GESTO_MANDOU_O_PAR_EM.pop(uniq, None)
 
 
-#: O «Testar» com um Padrão dos motores escolhido REPETE o padrão até o «Parar» (19/10/2026:
-#: ajustar ao vivo). O fio de cada controle roda FORA da fila dele, para o «Parar» cortar na hora,
-#: e cada passo lê as barras de `_PONTOS_AO_VIVO`, que o arraste atualiza.
 _REPIQUE_DO_PADRAO: dict[str, tuple[threading.Event, threading.Thread]] = {}
 _PONTOS_AO_VIVO: dict[str, tuple[int, int]] = {}
 
@@ -776,8 +733,6 @@ def _cortar_o_repique(uniq: str) -> None:
     fim, fio = repique
     fim.set()
     if fio is not threading.current_thread():
-        # Sem prazo próprio: depois do `fim`, a única espera do fio é o pedido em curso ao
-        # daemon, que já tem o prazo da ponte.
         fio.join()
 
 
@@ -789,7 +744,6 @@ def _repetir_o_padrao(ctx: Contexto, p: Any, uniq: str, padrao: str, motores: st
     _PONTOS_AO_VIVO[uniq] = _pontos_das_barras(ctx, uniq)
 
     def enviar(esq: int, dir_: int) -> None:
-        # Depois do «Parar», o resto da volta corre sem tocar: as esperas voltam na hora.
         if fim.is_set():
             return
         ok, motivo = _resposta(p.rumble_set_checked(dir_, esq, uniq=uniq))
@@ -866,7 +820,6 @@ def _rebater_o_teste(p: Any, uniq: str, weak: int, strong: int, lido_em: float) 
     return "" if ok else (motivo or "o serviço não respondeu ao rumble.set")
 
 
-#: Quando o gesto de cada controle em teste mandou o par por último (`_refrescar_o_teste`).
 _O_GESTO_MANDOU_O_PAR_EM: dict[str, float] = {}
 
 _BATEU_A_HAPTICA_EM: dict[str, float] = {}
@@ -1000,7 +953,6 @@ def _par_das_barras(
     perfil = _perfil_ativo(ctx).get("controllers")
     politica, _, _ = _forca_em_vigor(perfil if isinstance(perfil, dict) else {}, uniq, ctx.state)
     if vale_o_padrao(politica):
-        # Em Padrão as barras não se aplicam, e o Testar sente o mesmo que o jogo.
         return (weak, strong)
     barras = dict(_barras_dos_motores(ctx.state, uniq))
     if acabou_de_gravar is not None:
@@ -1037,8 +989,6 @@ def _refrescar_o_teste(
     _O_GESTO_MANDOU_O_PAR_EM[uniq] = _monotonic()
 
 
-#: caminho DO USUÁRIO, pelo piloto) e :func:`_indice` (a guarda contra o broadcast,
-#: ELA NÃO CITA ENDEREÇO DE RÁDIO, e é contrato: os dois portões de anonimato
 FRASE_DO_CONTROLE_QUE_SAIU = (
     "este controle se desligou. Espere ele voltar e clique de novo.")
 
@@ -1099,7 +1049,6 @@ SEPARADOR_DA_FAIXA = " · "
 
 TOM_DO_RECIBO = "recibo"
 
-#: (`rumble_actions.TEXTO_A_PECA_VOLTOU_AO_AJUSTE_GERAL`), sem a metade do
 FATO_DO_AJUSTE_GERAL = "voltou ao ajuste geral"
 
 FRASE_DA_MESA_EM_AUTO = (
@@ -1210,11 +1159,7 @@ def _aplicar_a_forca(ctx: Contexto, p: Any, uniq: str,
     disco.
     """
     global_do_perfil, depois, _mudou = _gravar_a_forca(ctx, p, uniq, policy, custom)
-    # de `profiles/manager._controllers_to_rumble_scales` no `profile.switch`
-    # que o :func:`_gravar_a_forca` acabou de fazer. Reenviar o mesmo par já
     _refrescar_o_teste(ctx, p, uniq)
-    # `with_controller_rumble`, que envelheceria na quarta regra que o produto
-    # acrescentasse.
     mostra, _, _ = _forca_em_vigor(depois, uniq, ctx.state)
     if mostra != policy:
         modelo = (FRASE_DO_AJUSTE_GERAL if policy == "auto"
@@ -1363,12 +1308,10 @@ def _gravar_a_forca(ctx: Contexto, p: Any, uniq: str, policy: str | None,
         draft = DraftConfig.from_profile(prof)
         resultado["global"] = draft.rumble
         try:
-            # com o nome dele (`custom_mult`, com o `le=RUMBLE_CUSTOM_MULT_MAX`
             pedido = RumbleDraft.model_validate(
                 {**draft.rumble.model_dump(), "policy": policy, "custom_mult": custom})
             novo = draft.with_controller_rumble(chave, pedido)
             if novo.source_controllers == draft.source_controllers:
-                # "não havia o que gravar" por ele. Ver :func:`_aplicar_a_forca`.
                 resultado["depois"] = _como_a_tela_le(draft.source_controllers)
                 resultado["mudou"] = False
                 return None
@@ -1472,17 +1415,12 @@ BARRA_CHEIA = 100
 
 CAMPO_DA_HAPTICA = "haptica_pct"
 
-#: As duas listas suspensas de cada coluna (15/10/2026): o gesto do `<select>`, o campo que a
-#: pintura escreve nele (o valor escolhido) e o da frase de uma linha embaixo. Gesto e campo têm
-#: nomes distintos de propósito: o pintor acha o valor por `data-campo`, e o clique por
-#: `data-gesto`.
 GESTO_DO_EFEITO_HAPTICO = "efeito-haptico"
 GESTO_DO_EFEITO_IMERSAO = "efeito-imersao"
 CAMPO_DO_EFEITO_HAPTICO = "haptico-escolha"
 CAMPO_DO_EFEITO_IMERSAO = "imersao-escolha"
 CAMPO_DA_DICA_DO_HAPTICO = "haptico-dica"
 CAMPO_DA_DICA_DA_IMERSAO = "imersao-dica"
-#: O campo do perfil (`controllers.<mac>.rumble.<campo>`) que cada lista guarda.
 CHAVE_DO_PERFIL = {
     CAMPO_DO_EFEITO_HAPTICO: "efeito_haptico",
     CAMPO_DO_EFEITO_IMERSAO: "efeito_imersao",
@@ -1613,7 +1551,6 @@ def efeito_imersao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
         _padrao_neste_controle(ctx, p, uniq, padrao, _padroes.AMBOS)
 
 
-#: A forma mais longa que se escolhe (a Guarda) tem 850 ms; a volta do tocador cabe nisto.
 SEGUNDOS_DA_FORMA_UNICA = 1.0
 
 
@@ -1634,7 +1571,7 @@ def _tocar_a_forma_uma_vez(p: Any, uniq: str) -> None:
     try:
         _segurar(SEGUNDOS_DA_FORMA_UNICA)
     finally:
-        p.haptica_testar(uniq, False)  # a ponte não levanta: o daemon fora do ar volta `False`
+        p.haptica_testar(uniq, False)
 
 
 def _padrao_escolhido(ctx: Contexto, uniq: str) -> str:
@@ -1658,7 +1595,6 @@ def testar(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     jogo; o Padrão dos motores da coluna repete o padrão até o «Parar», com as barras ao vivo. O
     porquê está em docs/research/o-porque-dos-modulos.md, «o Testar da aba Vibração».
     """
-    # a área de criar manda a `forma`; sem ela escolhida recusa, em vez de ligar o Testar
     if _o_padrao_do_clique(o)[0] or o.get("forma"):
         _tocar_o_padrao(ctx, o, p)
         return
@@ -1698,7 +1634,7 @@ def _o_padrao_do_clique(o: dict[str, Any]) -> tuple[str, str]:
     """`(padrão, motores)` do clique: do chip (`data-padrao`) ou da área de criar (`forma`)."""
     bruta = o.get("forma")
     forma: dict[str, Any] = bruta if isinstance(bruta, dict) else {}
-    padrao = str(o.get("padrao") or forma.get("padrao") or "").strip()  # (noqa-acento) chave
+    padrao = str(o.get("padrao") or forma.get("padrao") or "").strip()  # (noqa-acento)
     motores = str(o.get("motores") or forma.get("motores") or _padroes.AMBOS).strip()
     return padrao, motores
 
@@ -1774,7 +1710,7 @@ def criar_efeito_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     forma = o.get("forma")
     if not isinstance(forma, dict) or not forma:
         raise RuntimeError("não consegui ler a área de criar efeitos. Nada foi guardado.")
-    padrao = str(forma.get("padrao") or "").strip()  # (noqa-acento) chave do contrato
+    padrao = str(forma.get("padrao") or "").strip()  # (noqa-acento)
     if padrao not in _padroes.FORMAS_DE_CRIAR:
         nomes = [_padroes.ROTULOS[chave].lower() for chave in _padroes.FORMAS_DE_CRIAR]
         raise RuntimeError(f"Escolha a forma: {', '.join(nomes[:-1])} ou {nomes[-1]}.")
@@ -1893,7 +1829,6 @@ def modo_da_vibracao(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     loader.save_profile(novo, origem="interface-nova")
 
 
-#: `perfil.gravar_e_reaplicar` grava e manda o daemon reaplicar. É a decisão
 PONTE = {"chamar", "profile_switch", "rumble_set_checked",
          "rumble_stop", "rumble_stop_checked", "rumble_passthrough",
          "rumble_motores_set", "rumble_policy_set_checked", "haptica_testar"}
@@ -1902,24 +1837,13 @@ METODOS: set[str] = set()
 
 PAGINA = "05-vibracao.html"
 PISO_DA_ABA = 5
-#: DISCO; o `profile.switch` vem depois. Uma prova que só olhasse a ponte diria
 PROVAS = [
-    # não pode ficar ligado — o `rumble_stop` e o `rumble_passthrough` mudaram
-    {"pagina": PAGINA, "gesto": "testar", "clique": {},  # (noqa-acento) chave do contrato
+    {"pagina": PAGINA, "gesto": "testar", "clique": {},  # (noqa-acento)
      "chama": [("rumble_set_checked", [160, 220], {"uniq": "aa:bb:cc:00:00:01"})]},
-    {"pagina": PAGINA, "gesto": "parar", "clique": {},  # (noqa-acento) chave do contrato
+    {"pagina": PAGINA, "gesto": "parar", "clique": {},  # (noqa-acento)
      "chama": [("rumble_stop_checked", [], {"uniq": "aa:bb:cc:00:00:01"}),
                ("rumble_passthrough", [True], {"uniq": "aa:bb:cc:00:00:01"})]},
 ]
 
-#: tremor não deixa rastro no `state_full`. O `rumble_ff` conta os pedidos do
-#: passaram a escrever no PERFIL, e o `state_full` **não publica override por
-#: controle nenhum**. Eles TÊM efeito vivo — o `profile.switch` de
-#: `state_full` do DAEMON antes e depois do clique (`hefesto_vivo._depois_do_gesto`).
-#:   `rumble_passthrough` já voltaram ao que eram. Não há campo a comparar;
-#:   faltava passou a morar DENTRO do gesto**: :func:`_aplicar_a_forca` LÊ DE
-#: virada do avesso: ele TEM eco, e o eco é honesto.** `state_full.rumble_motores`
-#: daemon do usuário com o DualSense azul no cabo.** O interruptor de punho escreve a
-#:     daemon.state_full.rumble_motores  ->  {}
 SEM_ECO = ("testar", "parar", "intensidade", "motor", "lado",
            "testar-haptica", GESTO_DO_EFEITO_HAPTICO, GESTO_DO_EFEITO_IMERSAO)

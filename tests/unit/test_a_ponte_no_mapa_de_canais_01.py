@@ -54,7 +54,6 @@ sys.path.insert(0, str(RAIZ / "src"))
 from check_paridade_transporte import pares_de_transporte
 from hefesto_dualsense4unix.integrations.ponte_escada import ESCADA
 
-#: A ponte do PRIMEIRO degrau — a nossa máscara DualSense. Vem da `ESCADA`
 PONTE_DA_DUALSENSE = ESCADA[0].ponte.chave
 
 NAO_E_FEATURE = {"plataforma.vpad"}

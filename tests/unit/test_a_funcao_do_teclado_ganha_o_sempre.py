@@ -100,9 +100,6 @@ def _digitou(teclado: _TecladoDeMentira) -> bool:
     return any("cross" in d for d in teclado.dispatches)
 
 
-# ---------------------------------------------------------------- o laço do daemon
-
-
 @pytest.mark.asyncio
 async def test_sempre_digita_fora_do_jogo(monkeypatch: pytest.MonkeyPatch) -> None:
     """MORDIDA: ligar o `_teclado_so_no_jogo` junto com o «Sempre» cala o teclado fora do jogo."""
@@ -162,9 +159,6 @@ def test_o_campo_chega_ao_daemon_na_ativacao_do_perfil() -> None:
     assert daemon._teclado_sempre is False
 
 
-# ---------------------------------------------------------------- o perfil
-
-
 def test_o_perfil_de_ontem_nao_ganha_o_campo_e_le_o_mesmo_estado() -> None:
     """Sem `teclado_sempre` no disco ele fica ausente, e as três palavras de antes não mudam."""
     from pacotes import a06_navegacao as mod
@@ -213,8 +207,9 @@ def test_o_gesto_sempre_liga_o_teclado_e_grava_so_o_sempre(ativo: Any) -> None:
     """«Sempre» liga o teclado, grava `teclado_sempre` e deixa o «Só dentro» desligado.
 
     MORDIDA: gravar também `teclado_so_no_jogo=True` no «Sempre» (o teclado calaria fora do jogo).
+
+    Prova da D-1510-O-TECLADO-GANHA-O-SEMPRE-E-A-VELOCIDADE-E-ABSOLUTA.
     """
-    # Prova da D-1510-O-TECLADO-GANHA-O-SEMPRE-E-A-VELOCIDADE-E-ABSOLUTA.
     from pacotes import a06_navegacao as mod
 
     ponte = _Ponte()

@@ -132,7 +132,7 @@ class Aparelhos:
                 return None
         elif assinado:
             return None
-        serial = f"AB1C{codigo}Q0000000000"  # serial-de-mentira: prefixo forjado
+        serial = f"AB1C{codigo}Q0000000000"  # serial-de-mentira
         resposta = bytearray(cp.TAMANHO_DO_FEATURE)
         resposta[0:4] = bytes([cp.FEATURE_RESPOSTA, 1, 19, 2])
         resposta[4:4 + 17] = serial.encode("ascii")
@@ -315,7 +315,6 @@ def test_sem_o_mapa_nada_cai_e_o_nome_e_o_do_modelo(
     assert [m["nome"] for m in mesa] == ["DualSense", "DualSense Edge"]
 
 
-# 4 · O EDGE — perguntado como o DualSense, sem confundir com o vpad
 def test_os_modelos_sao_os_pids_que_o_daemon_adota() -> None:
     from hefesto_dualsense4unix.broker.hidraw_broker import PHYS_PRODUCTS
     from hefesto_dualsense4unix.core.evdev_reader import DUALSENSE_PIDS
@@ -425,8 +424,6 @@ def test_o_edge_fisico_nasce_escondido_do_jogo_pela_topologia() -> None:
                and 'TAG-="uaccess"' in ln for ln in linhas)
 
 
-#: O `cor_do_plastico` também é o dono da assinatura do que sai pelo rádio; quem leva só ela
-#: (o desligar pelo rádio, 16/10) não lê a cor.
 SO_A_ASSINATURA_DO_RADIO = frozenset({"envelope_de_radio"})
 
 
@@ -457,7 +454,6 @@ def test_nenhuma_funcao_do_controle_depende_da_cor() -> None:
     assert quem == ["daemon/ipc_handlers.py", "daemon/subsystems/identity.py"], quem
 
 
-#: Um DualSense, um Edge e um receptor qualquer, como o BlueZ os entrega.
 _NO_BLUEZ = {
     "/org/bluez/hci0/dev_AA_BB_CC_00_00_01": "usb:v054Cp0CE6d0100",
     "/org/bluez/hci0/dev_AA_BB_CC_00_00_02": "usb:v054Cp0DF2d0100",
@@ -578,7 +574,6 @@ def test_um_mapa_ilegivel_nao_derruba_ninguem(tmp_path: pathlib.Path) -> None:
 
 
 SO_O_0CE6_POR_ESCOLHA = {
-    # o IGNORE antigo do jogo: o 0DF2 é o vpad, e o Edge físico sai pelo udev e pelo broker
     "integrations/steam_launch_options.py": "a assinatura do IGNORE antigo do jogo",
     "app/actions/emulation_actions.py": "marcador do quirk, que sai com os dois PIDs",
     "integrations/vestido_de_dualsense.py": "a identidade forjada para o jogo",

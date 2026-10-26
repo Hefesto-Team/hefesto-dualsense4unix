@@ -63,7 +63,6 @@ from hefesto_dualsense4unix.profiles.schema import ProfileSpeakerConfig
 
 _SONY = " (DualSense Wireless Controller)"
 
-#: régua que só passa com os quatro DualSense do usuário mede a bancada, não a cura.
 _UNIQ_P1 = "02fe0011a1b2"
 _UNIQ_P2 = "02fe0011a1b3"
 
@@ -362,7 +361,7 @@ def test_o_gerenciador_batiza_e_roteia_cada_um(monkeypatch: pytest.MonkeyPatch) 
     )
 
     assert len(construidos) == 2
-    rotulos = [c["descricao"] for c in construidos]  # (noqa-acento) nome de parâmetro
+    rotulos = [c["descricao"] for c in construidos]  # (noqa-acento)
     assert rotulos == ["rotulo:11a1b2", "rotulo:11a1b3"]
     assert [c["rota"].sink for c in construidos] == [
         f"sink:{_UNIQ_P1}",

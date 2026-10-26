@@ -36,7 +36,6 @@ _DS = "VID_054C&PID_0CE6&IG_00"
 _DS_INST = "33024&FANTASMA-DS&0&0&1"
 _ENUM = "[System\\\\ControlSet001\\\\Enum\\\\"
 _CLASSES = f"[System\\\\ControlSet001\\\\Control\\\\DeviceClasses\\\\{_HID}\\\\"
-#: a chave do driver: a do aparelho esquecido sai junto, a de quem fica, fica
 _CLASSE_HID = "[System\\\\ControlSet001\\\\Control\\\\Class\\\\{classe-hid}\\\\"
 _DRIVER = '"Driver"="{CLASSE-HID}\\\\%s"'
 
@@ -54,7 +53,6 @@ def _interface(vid_pid: str, inst: str) -> list[str]:
     ]
 
 
-#: o que a lembrança de controle XInput deixa, e a cura tira
 SAEM = [
     _chave(f"{_ENUM}WINEXINPUT\\\\{_DS}\\\\{_DS_INST}", '"Class"="HIDClass"', _DRIVER % "0101"),
     _chave(f"{_CLASSE_HID}0101", '"InfPath"="winehid.inf"'),
@@ -70,7 +68,6 @@ SAEM = [
     *_interface(_XB, _XB_INST),
 ]
 
-#: o que parece e FICA: o mesmo VID:PID sem `IG_`, o USB, o nosso, o instalador
 FICAM = [
     _chave(
         f"{_ENUM}HID\\\\VID_054C&PID_0CE6\\\\0&02:FE:00:00:00:0D&0&0&0",
@@ -97,7 +94,6 @@ FICAM = [
     _chave("[Software\\\\Wine\\\\IG_Qualquer", '"Valor"="1"'),
 ]
 
-#: o que um lançamento anterior gravou, e o `--remover` tira
 NOSSO = ks.blocos_do_controle(PADRAO, [bytes(8)], 1)
 
 
@@ -116,7 +112,7 @@ def _ler(compat: Path) -> str:
 
 
 def test_a_lembranca_sai_e_o_resto_fica_byte_a_byte() -> None:
-    # D-2210-O-PREFIXO-ESQUECE-O-CONTROLE-XINPUT-QUE-SE-FOI.
+    """Prova da D-2210-O-PREFIXO-ESQUECE-O-CONTROLE-XINPUT-QUE-SE-FOI."""
     meio = len(FICAM) // 2
     esperado = _texto(*FICAM[:meio], *NOSSO, *FICAM[meio:])
     novo, contados = ks.esquecer_os_controles_que_se_foram(_misturado())
@@ -182,8 +178,6 @@ def test_a_cli_remover_esquece_e_o_remover_de_todos_tambem(
     assert "Enum\\\\WINEXINPUT" not in _ler(outro)
     assert "&IG_" not in _ler(outro)
 
-
-# --- o lançador: o gatilho do `curar_audio_ks` ---------------------------------------
 
 _SEM_A_OPCAO = "PROTON_ENABLE_MHWILDS_USB_AUDIO=0\n"
 

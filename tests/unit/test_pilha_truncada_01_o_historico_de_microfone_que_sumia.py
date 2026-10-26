@@ -118,7 +118,6 @@ default.configured.audio.source.0={DS_MIC}
 default.configured.audio.source.1={DS_SINK}
 """
 
-#: O outro caso: a base É o DualSense. É aqui que o `sed` antigo destruía.
 STATE_BASE_E_O_CONTROLE = f"""\
 [default-nodes]
 default.configured.audio.source={DS_MIC}

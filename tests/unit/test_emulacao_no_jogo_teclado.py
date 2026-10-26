@@ -66,7 +66,6 @@ def test_flag_roundtrip_liga_desliga(tmp_config: Path) -> None:
 def test_flag_ausente_e_nunca_configurada(tmp_config: Path) -> None:
     """Sem arquivo = "nunca decidiu": o default histórico (LIGADO) vale."""
     assert session.load_keyboard_preference() is None
-    # `load_keyboard_emulation_enabled`, que ninguém em produção chamava. O
     assert DaemonConfig().keyboard_emulation_enabled is True
 
 

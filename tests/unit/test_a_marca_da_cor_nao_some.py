@@ -169,7 +169,6 @@ class Mesa:
         registro = get_identity_registry()
         registro.sync_connected(UNIQS)
         registro.liberar_as_lampadas()
-        # DualSense abrindo cada `event*` da máquina, e a luz não passa por ali.
         from hefesto_dualsense4unix.core.evdev_reader import EvdevReader
 
         leitor = EvdevReader(device_path=raiz / "sem-evdev")

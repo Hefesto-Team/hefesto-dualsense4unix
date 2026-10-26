@@ -291,7 +291,7 @@ def _passos_no_webkit(montagem: str, passos: list[dict[str, Any]]) -> list[Any]:
     def guardou(v: Any, res: Any) -> None:
         try:
             saiu.append(v.evaluate_javascript_finish(res).to_string())
-        except Exception as e:  # pragma: no cover — só quando o roteiro quebra
+        except Exception as e:  # pragma: no cover
             saiu.append(f"ERRO {e}")
         gtk.main_quit()
 
@@ -643,8 +643,6 @@ def test_r5_a_prova_do_mockup_le_o_alvo_nos_dois_lados() -> None:
     arquivo = [(c.chave, c.dono, c.valor)
                for c in regua_do_mockup._campos_cravados(pagina.read_text(encoding="utf-8"))
                if c.alvo == "posicao"]
-    # 24 = os 16 de antes e o anel do que o jogo recebe em cada analógico dos quatro
-    # cartões (O-CIRCULO-DO-ANALOGICO-MOSTRA-O-QUE-O-JOGO-VE-01).
     assert len(tela) == 24, f"a tela tem {len(tela)} pontinhos com o alvo `posicao`"
     assert tela == arquivo, f"a tela e o arquivo discordam:\n{tela}\n{arquivo}"
     assert ("pos-ana-e", "p1", "23.5,78.4") in tela

@@ -13,11 +13,8 @@ from hefesto_dualsense4unix.core.trigger_effects import (
     custom,
 )
 
-#: as dezenove chaves: as onze da tela e as oito que saíram dela (o perfil gravado ainda as cita)
 _SPEC_POR_NOME = {p.name: p for p in (*PRESETS, *PRESETS_ANTIGOS)}
 
-#: as chaves cujo `build_from_name` já não manda os bytes da fábrica antiga (a fusão dos
-#: acionamentos as traduz para a linha nova); a sensação de 01/08 segue guardada na fábrica
 FABRICAS_DE_01_08 = frozenset({"SemiAutoGun", "AutoGun", "Pulse"})
 
 
@@ -34,10 +31,6 @@ def _efeito_com_os_padroes(nome: str, *, pela_fabrica: bool = False):
     return build_from_name(nome, padroes)
 
 
-#: A Metralhadora saiu desta tabela de 01/08 e entrou pela escolha do usuário de
-#: 08/10/2026 na página dos desenhos (opção b, `ESCOLHAS.md`): a vibração da
-#: lista oficial, que bate enquanto o dedo aperta. Os bytes de 01/08 eram
-#: `26 00 09 03 03 32 08`, com a frequência em zero.
 SENSACAO_APROVADA: dict[str, tuple[int, tuple[int, ...]]] = {
     "Bow": (0x26, (1, 7, 192, 224, 0, 0, 0)),
     "Galloping": (0x26, (0, 9, 7, 7, 10, 0, 0)),
@@ -65,10 +58,6 @@ def test_a_sensacao_que_ela_aprovou_nao_muda_um_byte(nome: str) -> None:
     )
 
 
-#: O Disparo e os dois Pulsos não estavam na tabela de 01/08. Saem do layout
-#: antigo (o `0x06` da vibração simples e o `0x22` com parâmetros em ordem) para
-#: o modo que o controle lê, em 08/10/2026, com os padrões da tela, no cabo e no
-#: rádio.
 BLOCOS_DE_08_10: dict[str, tuple[int, tuple[int, ...]]] = {
     "Weapon": (0x25, (0x24, 0x00, 0x05, 0, 0, 0, 0)),
     "PulseB": (0x25, (0x84, 0x00, 0x05, 0, 0, 0, 0)),
@@ -274,7 +263,6 @@ def test_a_metralhadora_antiga_de_seis_valores_continua_abrindo() -> None:
     assert build_from_name("Machine", [0, 9, 3, 3, 50, 8]) == esperado
     nomeado = {"start": 0, "end": 9, "amp_a": 3, "amp_b": 3, "frequency": 50, "period": 8}
     assert build_from_name("Machine", nomeado) == esperado
-    # o que passa da faixa nova encosta no limite, sem recusar
     assert build_from_name("Machine", [1, 8, 200, 150, 20, 10]) == build_from_name(
         "Machine", [1, 8, 8, 20]
     )

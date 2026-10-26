@@ -71,7 +71,7 @@ class _HandleQueGuarda(_FakeHandle):
         super().__init__(transporte)
         self.reports: list[tuple[int, bytes]] = []
 
-    def writeReport(self, report: list[int]) -> int:  # noqa: N802 — API pydualsense
+    def writeReport(self, report: list[int]) -> int:  # noqa: N802
         self.reports.append((threading.get_ident(), bytes(report)))
         return len(report)
 
@@ -223,9 +223,6 @@ def _sai_e_o_prazo_passa(bancada: MesaDaLuz, sai: str) -> dict[str, int]:
     for _ in range(math.ceil(PRAZO / TIQUE) + 1):
         bancada.tique()
     if bancada.daemon.display_authority == "game":
-        # D-3009-COM-O-JOGO-O-LUGAR-GUARDADO-ESPERA (02/10/2026): com o jogo
-        # na autoridade o prazo para, e a fatia arma quando o jogo solta e o
-        # prazo que sobrou passa.
         assert bancada.reg.numeros_da_mesa() == {
             u: n + 1 for n, u in enumerate(ordem) if u != sai
         }, "com o jogo aberto ninguém renumera por quem saiu (D-3009)"
@@ -461,7 +458,7 @@ class _Luz:
     def __init__(self) -> None:
         self.playerNumber: int | None = None
 
-    def setColorI(self, *_rgb: int) -> None:  # noqa: N802 — API pydualsense
+    def setColorI(self, *_rgb: int) -> None:  # noqa: N802
         pass
 
 

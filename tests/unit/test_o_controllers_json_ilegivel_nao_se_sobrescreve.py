@@ -97,7 +97,6 @@ def _externo_grava(uniq: str) -> ExternalIdentityRegistry:
     return r
 
 
-#: (rótulo, quem grava, o tipo que ele guarda na fila, o primeiro e o segundo controle)
 DONOS: list[tuple[str, Callable[[str], Any], str, str, str]] = [
     ("dualsense", _dualsense_grava, id_mod.KIND_DUALSENSE, DS_1, DS_2),
     ("externos", _externo_grava, id_mod.KIND_EXTERNAL, EXT_1, EXT_2),
@@ -117,7 +116,7 @@ def _a_escrita_seguinte(
 def test_o_arquivo_truncado_avisa_e_o_original_fica_guardado_ao_lado(
     casa: Path, dono: tuple[str, Callable[[str], Any], str, str, str]
 ) -> None:
-    # D-1610-O-CONTROLLERS-JSON-ILEGIVEL-VAI-PARA-O-LADO
+    """Prova da D-1610-O-CONTROLLERS-JSON-ILEGIVEL-VAI-PARA-O-LADO."""
     rotulo, grava, kind, primeiro, segundo = dono
     grava(primeiro)
     inteiro = _arquivo(casa).read_text(encoding="utf-8")

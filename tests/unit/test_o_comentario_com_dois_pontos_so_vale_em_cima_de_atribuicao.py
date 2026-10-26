@@ -24,7 +24,6 @@ cortado = importlib.util.module_from_spec(_spec)
 sys.modules["_cortado_dois_pontos"] = cortado
 _spec.loader.exec_module(cortado)
 
-#: os cinco arquivos que a sprint limpou à mão; neles a régua não acha mais nada
 OS_CINCO = tuple(
     f"src/hefesto_dualsense4unix/interface/pacotes/{nome}.py"
     for nome in ("a01_jogar", "a03_gatilhos", "a06_navegacao", "a07_lancadores",
@@ -93,7 +92,7 @@ def test_o_piso_por_arquivo_vale_tambem_para_o_dois_pontos(
     """O `#:` solto que nasce num arquivo do ramo reprova pelo nome, como o cortado."""
     monkeypatch.setenv("GIT_CONFIG_GLOBAL", "/dev/null")
     monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
-    monkeypatch.setattr(cortado, "COMMIT_DO_CORTE", "corte")  # a régua lê o histórico do corte
+    monkeypatch.setattr(cortado, "COMMIT_DO_CORTE", "corte")
 
     def git(*args: str) -> None:
         subprocess.run(

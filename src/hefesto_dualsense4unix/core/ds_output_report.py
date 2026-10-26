@@ -32,7 +32,6 @@ from __future__ import annotations
 
 import zlib
 
-#: Report IDs de output do DualSense.
 USB_REPORT_ID = 0x02
 BT_REPORT_ID = 0x31
 
@@ -52,37 +51,6 @@ VALID_FLAG0_COMPATIBLE_VIBRATION = 0x01
 VALID_FLAG0_HAPTICS_SELECT = 0x02
 VALID_FLAG0_RIGHT_TRIGGER_FFB = 0x04
 VALID_FLAG0_LEFT_TRIGGER_FFB = 0x08
-#:
-#: TEXTO DE 01/08/2026, preservado porque proveniência não se apaga: «O
-#: kernel (`hid-playstation`) declara common[4..7] como `reserved[4]` e NUNCA
-#: os escreve; a nomenclatura por bit vem da documentação de comunidade do
-#: report 0x02 (Nielk1 / DS5 wiki), que é a única fonte que os descreve — por
-#: isso o mapeamento bitbyte está documentado como PROVÁVEL, não como
-#: medido.»
-#:
-#: NOTA DATADA DE 11/08/2026 — o parágrafo acima CADUCOU, e caducou contra
-#: este mesmo arquivo: os TETOS logo abaixo (`TETO_HEADPHONE_VOLUME`,
-#: `TETO_MIC_VOLUME`) são atribuídos ali ao kernel 6.18, enquanto este
-#: comentário dizia que o kernel não conhecia os campos. Um dos dois estava
-#: errado, e é este. O Linux 6.18 (patches do jack de áudio, Collabora)
-#: NOMEIA os campos. Grau novo: **ALTA** para o alto-falante (5), o microfone
-#: (6) e o caminho de áudio (7).
-#:
-#: O fone (4) fica em DUAS partes, e a distinção é o que importa aqui: o
-#: CAMPO é nomeado pelo kernel, mas o BIT DE AUTORIZAÇÃO `0x10` logo abaixo
-#: **não** — o kernel define enable para alto-falante, microfone e
-#: audio_control, e nenhum para o fone. O `0x10` segue sendo de fonte de
-#: COMUNIDADE, grau MÉDIA, e ninguém mediu o que ele faz neste firmware.
-#:
-#: Fonte, desde 11/08/2026: o fonte do driver DESTA máquina foi lido linha a
-#: linha — `assets/dkms/hid-playstation/hid-playstation.c:209-211` define os
-#: bits de autorização, e **não define o bit4**. É isso que sustenta o MÉDIA
-#: do fone: o kernel não conhece o `0x10`, então quem o afirma é a comunidade.
-#: A leitura completa está em `docs/protocol/driver-hid-playstation.md`.
-#:
-#: (Até 11/08 esta nota dizia que o fonte "NÃO foi relido nesta passagem" e se
-#: apoiava só no comentário dos tetos. Foi relido; a conclusão não mudou, mas
-#: o grau deixou de ser herdado.)
 VALID_FLAG0_HEADPHONE_VOLUME = 0x10
 VALID_FLAG0_SPEAKER_VOLUME = 0x20
 VALID_FLAG0_MIC_VOLUME = 0x40
@@ -236,15 +204,6 @@ __all__ = [
 ]
 
 
-#: O BYTE DA ATENUAÇÃO DO FIRMWARE (`reduce_motor_power`, `common[36]`, autorizado pelo flag1
-#: `0x40`): é o que o PS5 usa para Forte, Média, Fraca e Desligada, e vale sobre o que o jogo
-#: manda por qualquer caminho. Cada nibble tira passos de 12,5% (0 = força cheia, 7 = 12,5%: o
-#: firmware atenua e não cala). O GRAU, conferido no driver e na canônica em 20/10/2026: a POSIÇÃO
-#: é ALTA (o `hid-playstation` nomeia o campo no offset 36 da struct de 47 bytes, canônica §2); o
-#: bit `0x40` do flag1 é MÉDIA (de comunidade: o driver não o define, `driver-hid-playstation.md`);
-#: QUEM É QUEM nos nibbles é BAIXA, contestada (`dualsense-energia-e-vibracao.md` §4.2: SpecialK e
-#: dualsense-go põem a vibração no alto; a família DS5Dongle e o `dualsensectl`, no baixo). A
-#: escolha desta casa é a do `dualsensectl`, decidida em 18/10/2026, e se prova na bancada.
 COMMON_REDUCE_MOTOR_POWER = 36
 REDUCAO_DA_VIBRACAO_MASK = 0x07
 REDUCAO_DO_GATILHO_SHIFT = 4
@@ -252,10 +211,6 @@ REDUCAO_DO_GATILHO_MASK = 0x70
 PASSOS_DO_FIRMWARE = 8
 REDUCAO_MAXIMA = 7
 
-#: Os modos do bloco de gatilho cuja força este arquivo sabe ler (os oficiais da Sony e os dois
-#: vivos no firmware). O de layout próprio de 01/08 que reaproveita o `0x26` não passa na
-#: conferência de forma e fica intacto: o que não se lê com certeza não se reescreve, e o nibble
-#: do firmware o atenua do mesmo jeito.
 _MODO_FEEDBACK = 0x21
 _MODO_ARCO = 0x22
 _MODO_ARMA = 0x25

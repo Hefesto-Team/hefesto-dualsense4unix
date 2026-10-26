@@ -38,7 +38,6 @@ from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 DESENHO = RAIZ / "mockup" / "07-lancadores.html"
 LARGURAS = (1272, 1512, 1900)
-#: Cinco fileiras de 53 px e quatro vãos de 6 px: o teto do desenho escolhido.
 TETO = 289
 
 _SONDA = r"""

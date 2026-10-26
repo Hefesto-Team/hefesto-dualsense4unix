@@ -227,8 +227,9 @@ def test_a_escolha_do_gesto_mostra_so_o_glifo_dentro_da_casa(tamanho: tuple[int,
     dentro da caixa. MORDIDA (16/10/2026): devolver o nome ao lado do glifo (`_um(peca)`) ou a
     coluna `auto` com `padding:0 10px` faz o «Share» vazar por cima do «Options» e o «R1» sair da
     caixa, e este teste reprova.
+
+    Prova da D-1610-O-GESTO-SE-ESCOLHE-PELO-GLIFO.
     """
-    # D-1610-O-GESTO-SE-ESCOLHE-PELO-GLIFO
     uri = onde.pagina("06-navegacao.html", publicado=False).as_uri()
     lido = _no_webkit(uri, tamanho, [MEDIR_ESCOLHA])[0]
     assert lido["n"] >= 10, lido

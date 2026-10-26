@@ -102,8 +102,6 @@ def test_a_guarda_le_o_home_da_chamada_e_nao_um_caminho_cravado(
 ) -> None:
     """O caminho do promotor sai do `HOME` vivo, não de um literal de instalação."""
     fonte = _fonte_da_funcao()
-    # a pasta mora no helper `_wp_dropin_dir` (a forma que o WirePlumber lê é
-    # escolhida ali), e a função só pergunta por ele
     assert "_wp_dropin " in fonte, "o promotor não é pedido ao helper da pasta"
     doctor = DOCTOR.read_text(encoding="utf-8")
     helper = re.search(r"\n_wp_dropin_dir\(\) \{.*?\n\}\n", doctor, re.S)

@@ -74,7 +74,6 @@ def _mandar(handler: UdpHandler, *instrucoes: dict[str, Any]) -> None:
     handler.handle_datagram(pacote, ENDERECO)
 
 
-# `TriggerUpdate` no layout do DSX: [indice, lado, modo, ...]; lado 2 = R2, modo 21 = Feedback.
 def _gatilho(indice: int) -> dict[str, Any]:
     return {"type": 1, "parameters": [indice, 2, 21, 3, 8]}
 

@@ -58,8 +58,6 @@ from hefesto_dualsense4unix.utils.texto_do_sysfs import ler_texto
 
 RAIZ_SYSFS = "/sys"
 
-#: A raiz do sysfs onde cada nó `hidraw` declara de quem é (`HID_UNIQ`). O dono é este; o
-#: `conexao_zumbi` e o `physical_report_reader` a importam daqui.
 RAIZ_HIDRAW = "/sys/class/hidraw"
 
 
@@ -158,9 +156,6 @@ def usb_pai_por_uniq(
         original = procurados.get(hex_uniq)
         if original is None or saida[original]:
             continue
-        # O pad em USB (07/10/2026) tem pai USB de verdade, o do `vhci_hcd`, e
-        # não placa de som: quem diz que é nosso é o `pad_usb`, e a resposta
-        # continua "", a do pad que não empresta placa a ninguém.
         if pad_usb.e_pad_nosso(
             real(dispositivo),
             phys=campos.get("HID_PHYS", ""),

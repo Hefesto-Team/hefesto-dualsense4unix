@@ -93,9 +93,6 @@ def _casa(biblioteca: Path) -> Path:
     return biblioteca.parents[2]
 
 
-# --- a tabela -------------------------------------------------------------------------------
-
-
 def test_a_tabela_traz_a_familia_gdk_sem_appid_embarcado() -> None:
     tabela = {r.id: r for r in rda.carregar_tabela()}
     gdk, pasta = tabela["gdk-xgameruntime"], tabela["gdk-xgameruntime-pasta"]
@@ -127,9 +124,6 @@ def test_a_linha_fora_da_regra_nao_entra(tmp_path: Path) -> None:
     )
     assert [r.id for r in rda.carregar_tabela(csv)] == ["ok", "ok-b", "ok-pasta"]
     assert rda.carregar_tabela(tmp_path / "nao-existe.csv") == ()
-
-
-# --- o disco do jogo ------------------------------------------------------------------------
 
 
 def test_o_jogo_com_o_sinal_e_a_peca_recebe_a_receita(lar: Path) -> None:
@@ -165,7 +159,7 @@ def test_a_peca_que_nao_bate_com_o_pino_nao_conta(lar: Path) -> None:
 
 
 def test_a_dll_do_usuario_ao_lado_do_exe_nao_e_a_peca_do_hefesto(lar: Path) -> None:
-    # D-1710-A-PECA-GDK-DO-HEFESTO-VAI-PELO-PAR-B-E-WINEDLLPATH
+    """Prova da D-1710-A-PECA-GDK-DO-HEFESTO-VAI-PELO-PAR-B-E-WINEDLLPATH."""
     (rda.pasta_da_peca(_casa(lar)) / "x86_64-windows" / _DLL).unlink()
     raiz = _jogo(lar, "700012", dll_ao_lado_do_exe=True)
     assert rda.ambiente_do_jogo(raiz) == {}
@@ -200,9 +194,6 @@ def test_o_censo_acha_o_jogo_pelo_manifesto_sem_lista_embarcada(lar: Path) -> No
     _jogo(lar, "700006")
     _jogo(lar, "700007", sinal=None)
     assert rda.ambientes_dos_jogos() == {"700006": _PAR}
-
-
-# --- o arquivo de ambiente que o daemon escreve ---------------------------------------------
 
 
 def _daemon_de_mentira() -> SimpleNamespace:
@@ -253,9 +244,6 @@ def test_o_jogo_que_deixa_de_ter_a_receita_perde_o_arquivo(
     (rda.pasta_da_peca(_casa(lar)) / "x86_64-windows" / _DLL).unlink()
     materialize_launch_env(_daemon_de_mentira())
     assert not (pasta / "steam_app_700010.env").exists()
-
-
-# --- o wrapper ------------------------------------------------------------------------------
 
 
 class _SocketQueResponde:
@@ -363,7 +351,7 @@ def _pasta_real(tmp_path: Path) -> str:
 
 
 def test_o_par_atravessa_o_arquivo_e_o_wrapper_ate_o_processo_do_jogo(tmp_path: Path) -> None:
-    # D-1710-A-PECA-GDK-DO-HEFESTO-VAI-PELO-PAR-B-E-WINEDLLPATH
+    """Prova da D-1710-A-PECA-GDK-DO-HEFESTO-VAI-PELO-PAR-B-E-WINEDLLPATH."""
     saida = _lancar_par(
         tmp_path, [f"WINEDLLOVERRIDES={_ESPERADO}", f"WINEDLLPATH={_PASTA}"], com_peca=True
     )

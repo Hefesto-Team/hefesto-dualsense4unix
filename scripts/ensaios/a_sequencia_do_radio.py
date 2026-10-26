@@ -67,15 +67,11 @@ from hefesto_dualsense4unix.core.trigger_effects import bloco_do_efeito, off, we
 
 LINHA_DO_MAPA = "plataforma.escrita_crua@dualsense"
 FONTE = "scripts/ensaios/a_sequencia_do_radio.py"
-#: o id da linha do veredito no caderno; a régua de texto lê o ``resultado`` dela
 ID_DO_VEREDITO = "sequencia-do-radio-veredito"
 
-#: o bloco do R2 no ``common`` (``bloco_do_gatilho``)
 COMMON_R2 = 10
-#: o corpo do ``0x31`` de entrada começa no byte 2; o byte 47 do corpo é o efeito ativo
 OFFSET_DO_EFEITO = 2 + 47
 MASCARA_DO_R2 = 0x0F
-#: o tempo para o aparelho devolver o efeito no report de entrada
 ESPERA_S = 0.25
 
 ACEITO = "aceito"

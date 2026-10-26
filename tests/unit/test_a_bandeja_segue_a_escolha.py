@@ -83,7 +83,7 @@ def _gesto_da_bandeja() -> Any:
 
 
 def test_a_pilula_liga_e_desliga_a_bandeja(lar: pathlib.Path, subidas: Any) -> None:
-    # D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO
+    """Prova da D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO."""
     feitas, filhos = subidas
     clicar = _gesto_da_bandeja()
     assert not ab.bandeja_ligada()
@@ -113,8 +113,6 @@ def test_garantir_nao_sobe_a_segunda_e_sobe_com_o_pid_morto(
     assert ab.bandeja_viva() is None
     assert ab.garantir_a_bandeja() is True
     assert len(feitas) == 2
-    # Um PID reciclado por outro processo não conta como bandeja, nem o que só tem «tray» dentro
-    # de um argumento maior (o pytest que roda `test_cmd_tray.py` caiu nisso em 16/10/2026).
     ab.caminho_do_pid().write_text(f"{os.getpid()}\n", encoding="ascii")
     assert ab.bandeja_viva() is None
     outro = _POPEN(["sh", "-c", "sleep 30; :", "tests/unit/test_cmd_tray.py"])
@@ -136,7 +134,7 @@ def test_com_a_escolha_desligada_nada_sobe(lar: pathlib.Path, subidas: Any) -> N
 
 def test_o_retomar_o_ativar_e_o_start_trazem_a_bandeja(
         lar: pathlib.Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    # D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO
+    """Prova da D-1610-A-BANDEJA-TEM-INTERRUPTOR-E-VOLTA-COM-O-SERVICO."""
     import pacotes
     from pacotes import a09_sistema as a09
 

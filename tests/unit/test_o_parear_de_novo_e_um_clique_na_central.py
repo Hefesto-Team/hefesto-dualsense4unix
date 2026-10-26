@@ -19,7 +19,6 @@ from tests.unit import radio_de_mentira as rm
 from tests.unit.radio_de_mentira import AZUL, QUARTO, ROXO, SALA, VERDE, VERMELHO
 from tests.unit import test_o_parear_espera_o_clique as _base
 
-#: as mesmas fixtures do dublê da escolha do usuário (o dono vivo e a central reais)
 diario, relogio, mesa = _base.diario, _base.relogio, _base.mesa
 
 

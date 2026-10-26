@@ -77,7 +77,6 @@ def encerrar(passo: str, raiz: Path, codigo: int, resumo: str, detalhe: list[str
     if arquivo is not None:
         arquivo.write_text(texto + ("\n" if texto else ""), encoding="utf-8")
     elif detalhe:
-        # o terminal nunca recebe a lista inteira: o resto mora em `--detalhe`
         print("\n".join(detalhe[:5]) + (f"\n(mais {len(detalhe) - 5} em --detalhe ARQ)" if len(detalhe) > 5 else ""))
     pasta = os.environ.get("HEFESTO_RECIBOS")
     if pasta and codigo == 0:

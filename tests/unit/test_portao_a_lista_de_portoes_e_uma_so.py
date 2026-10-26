@@ -25,8 +25,6 @@ import pytest
 RAIZ = Path(__file__).resolve().parents[2]
 PORTOES_SH = RAIZ / "scripts" / "portoes.sh"
 CI_YML = RAIZ / ".github" / "workflows" / "ci.yml"
-# O CI tem dois arquivos que rodam portão da lista: o `ci.yml` e o `autoria.yml`, que
-# carrega a régua única de autoria (`scripts/check_autoria.py`).
 AUTORIA_YML = RAIZ / ".github" / "workflows" / "autoria.yml"
 
 _FERRAMENTAS = ("ruff", "mypy", "shellcheck", "pytest", "pre-commit")
@@ -35,7 +33,6 @@ _O_MOTOR = "scripts/portoes.sh"
 
 _RE_SCRIPT = re.compile(r"scripts/[A-Za-z0-9_./-]+\.(?:py|sh)")
 
-#: o `portoes.sh --so <ids>` num comando de shell; os ids vão até a próxima opção ou operador
 _RE_SO = re.compile(
     r"(?:^|[\s;&|(])(?:bash\s+)?(?:\./)?scripts/portoes\.sh\s+--so((?:\s+[a-z0-9][a-z0-9-]*)+)"
 )
@@ -221,13 +218,11 @@ def confere(texto_sh: str, texto_ci: str) -> list[str]:
     pedidos = [id_ for comando in comandos for id_ in ids_do_so(comando)]
 
     queixas: list[str] = []
-    # 1. todo id de `--so` existe na tabela (o script recusa com rc 2, mas só na hora de rodar)
     for id_ in sorted(set(pedidos) - set(portoes)):
         queixas.append(
             f"{id_}: o CI pede `portoes.sh --so {id_}` e a tabela não tem esse id. "
             "Ou o id voltou à tabela, ou sai do `--so`."
         )
-    # 2. todo id da tabela roda no CI pelo nome, ou está declarado
     for id_, (camada, runner, argv) in portoes.items():
         if camada == "suite" or id_ in pedidos:
             continue
@@ -240,7 +235,6 @@ def confere(texto_sh: str, texto_ci: str) -> list[str]:
             f"{id_}: está na tabela de portoes.sh e nenhum `portoes.sh --so` do CI o nomeia. "
             "Ou entra no `--so` de um job, ou vira uma linha FORA-DO-CI com o motivo."
         )
-    # 3. nenhum `run:` relista um comando da tabela
     for comando in comandos:
         for id_, (camada, runner, argv) in portoes.items():
             if camada == "suite" or not _chama_direto(comando, runner, argv):
@@ -253,11 +247,9 @@ def confere(texto_sh: str, texto_ci: str) -> list[str]:
                 f"Troque por `bash scripts/portoes.sh --so {id_}`; se o CI precisa de um "
                 "argumento que só o evento sabe, declare o script ARGUMENTO-DO-EVENTO."
             )
-    # 4. o que o CI roda pelo próprio comando e a tabela não tem é FORA-DO-LOCAL declarado
     locais: set[str] = set()
     for _, _, argv in portoes.values():
         locais |= _fichas(argv)
-    # o próprio `portoes.sh` é o motor do `--so`, não um portão
     so_no_ci = fichas_do_ci(texto_ci) - locais - set(fora_do_local) - set(do_evento) - {_O_MOTOR}
     for ficha in sorted(so_no_ci):
         queixas.append(
@@ -461,9 +453,6 @@ def test_a_regua_de_autoria_roda_nos_dois_lados_e_o_portao_velho_saiu() -> None:
     do_ci = fichas_do_ci(_texto_do_ci())
     assert "scripts/check_autoria.py" in do_ci
     assert "scripts/check_a_historia_nao_tem_ia.py" not in do_ci
-
-
-# --- o `--so` do próprio script, numa cópia com três portões de mentira ----------------------
 
 
 @pytest.fixture

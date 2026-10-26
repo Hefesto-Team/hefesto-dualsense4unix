@@ -59,17 +59,14 @@ def _pela_formula(controles: int, ar_: float, custo: float) -> int:
     return max(0, min(rm.N_MAX_PONTES, math.floor((ar_ - 250 * controles) / custo)))
 
 
-# --------------------------------------------------------------- a fórmula
-
-
 @pytest.mark.parametrize(
     ("controles", "c_eff", "custo", "esperado"),
     [
-        (4, rm.AR_DO_ADAPTADOR_PORTA_DIRETA, 187.5, 2),  # 504 / 187,5 = 2,7
-        (4, rm.AR_DO_ADAPTADOR_ATRAS_DO_HUB, 187.5, 1),  # 312 / 187,5 = 1,7
-        (4, rm.AR_DO_ADAPTADOR_PORTA_DIRETA, 375.0, 1),  # k = 5: 504 / 375
-        (2, 849.0, 187.5, 1),  # a Entrada que varre, do desenho
-        (1, rm.AR_DO_ADAPTADOR_PORTA_DIRETA, 187.5, 2),  # cabem 6; o teto segura em 2
+        (4, rm.AR_DO_ADAPTADOR_PORTA_DIRETA, 187.5, 2),
+        (4, rm.AR_DO_ADAPTADOR_ATRAS_DO_HUB, 187.5, 1),
+        (4, rm.AR_DO_ADAPTADOR_PORTA_DIRETA, 375.0, 1),
+        (2, 849.0, 187.5, 1),
+        (1, rm.AR_DO_ADAPTADOR_PORTA_DIRETA, 187.5, 2),
         (4, 1000.0, 187.5, 0),
     ],
 )
@@ -86,16 +83,13 @@ def test_1b_a_tabela_sintetica_e_a_gravada_dao_o_m_da_formula() -> None:
     assert fatias.pontes_que_cabem(linhas, 2) == {"1": 2, "2": 2}
     gravada = fatias.gravada()
     if gravada is None:
-        return  # a bancada ainda não gravou: a sintética é a régua
+        return
     gravadas = fatias.tabela(gravada)
     for adaptador, m in fatias.pontes_que_cabem(gravadas, 4).items():
         dele = [li for li in gravadas if li.adaptador == adaptador]
         c_eff = sum(li.entrada_saturada for li in dele) / len(dele)
         custos = [li.custo_por_ponte for li in dele if li.pontes and li.custo_por_ponte]
         assert m == _pela_formula(4, c_eff, sum(custos) / len(custos))
-
-
-# --------------------------------------------------------------- o interruptor
 
 
 def test_2_o_interruptor_desligado_devolve_o_teto(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -121,9 +115,6 @@ def test_3_o_orcamento_publica_o_m_de_cada_adaptador(monkeypatch: pytest.MonkeyP
     monkeypatch.setattr(rm, "N_MAX_PELA_CAPACIDADE", True)
     monkeypatch.setattr(rm, "AR_DO_ADAPTADOR_PORTA_DIRETA", rm.AR_DO_ADAPTADOR_ATRAS_DO_HUB)
     assert _orcamento() == {ADAPTADOR_A: 1, ADAPTADOR_B: 2}
-
-
-# --------------------------------------------------------------- o governador
 
 
 @dataclass
@@ -210,11 +201,7 @@ def test_4b_a_recusa_so_aponta_o_adaptador_onde_a_conta_deixa(
     if b_tem_vaga:
         assert isinstance(resposta, gov.Recusa) and ADAPTADOR_B in resposta.vagas, resposta
     else:
-        # sem vaga em lugar nenhum, a ponte sobe além do limite (a R4: degrada e avisa)
         assert isinstance(resposta, gov.Vaga) and resposta.alem_do_limite, resposta
-
-
-# --------------------------------------------------------------- o degrau do meio
 
 
 def _pontes(modos: tuple[str, ...], parados: tuple[float | None, ...]) -> list[rm.PonteNaFila]:
@@ -277,9 +264,6 @@ def test_7_ninguem_cai_abaixo_de_125_enquanto_cabe(c_eff: float) -> None:
         assert acima < rm.HZ_QUE_ENGASGA or m == rm.N_MAX_PONTES, "o M não é o maior que cabe"
 
 
-# --------------------------------------------------------------- o espelho do desenho
-
-
 def _const(html: str, nome: str) -> float:
     achado = re.search(rf"const {nome} = ([0-9.]+);", html)
     assert achado, f"{nome} sumiu do mapa"
@@ -301,9 +285,6 @@ def test_8_o_chip_do_mapa_diz_n_sobre_m_com_a_mesma_conta() -> None:
     assert "const cabem = pontesQueCabem(lug.id)" in html
     assert "n + '/' + cabem" in html, "o chip voltou ao N/2 fixo"
     assert "n + '/' + PONTES_POR_ADAPTADOR" not in html
-
-
-# --------------------------------------------------------------- o ensaio dos dois quadros
 
 
 def _controle() -> bytes:

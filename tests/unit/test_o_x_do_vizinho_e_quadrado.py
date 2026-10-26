@@ -18,7 +18,7 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 try:
     from hefesto_dualsense4unix.interface.janela import TAMANHO_OCULTA
-except (ImportError, ValueError) as _erro:  # pragma: no cover — ambiente sem WebKit
+except (ImportError, ValueError) as _erro:  # pragma: no cover
     pytest.skip(
         f"DICA-DA-COR-01: a biblioteca da janela não importou ({_erro}). "
         "Falta gir1.2-webkit2-4.1?",

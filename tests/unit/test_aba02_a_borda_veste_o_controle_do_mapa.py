@@ -113,14 +113,14 @@ def _rodar_no_webkit(folhas: dict[str, str]) -> dict:
     def guardou(v: object, res: object) -> None:
         try:
             saiu.append(v.evaluate_javascript_finish(res).to_string())
-        except Exception as e:  # pragma: no cover — só quando o roteiro quebra
+        except Exception as e:  # pragma: no cover
             saiu.append(f"ERRO {e}")
         Gtk.main_quit()
 
     def instalou(v: object, res: object) -> None:
         try:
             v.evaluate_javascript_finish(res)
-        except Exception as e:  # pragma: no cover — só quando o bootstrap quebra
+        except Exception as e:  # pragma: no cover
             saiu.append(f"ERRO no bootstrap: {e}")
             Gtk.main_quit()
             return

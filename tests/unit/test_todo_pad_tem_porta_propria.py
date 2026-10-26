@@ -40,9 +40,7 @@ from tests.unit import test_a_haptica_chega_a_quem_entra_depois as h
 
 _TODOS = (h._P1, h._P2, h._P3, h._P4)
 _LUGAR = {u: n for n, u in enumerate(_TODOS, start=1)}
-#: Dois no cabo e dois no rádio: o caso obrigatório da tarefa.
 _NO_CABO = {h._P1: ("3-8", 28), h._P3: ("3-7", 29)}
-#: A âncora que a distribuição de antes emprestava (o receptor da bancada).
 _EMPRESTADA = "/devices/pci0000:00/0000:00:14.0/usb1/1-3/1-3:1.0"
 
 
@@ -129,12 +127,12 @@ def test_sem_porta_nenhum_endpoint_e_o_log_diz_por_que_uma_vez(mesa: Any, uniq: 
     with structlog.testing.capture_logs() as registros:
         for _ in range(3):
             mesa.volta(controle)
-        pad_usb.anotar_sem_porta(uniq, "nao_enumerou")  # (noqa-acento): chave de máquina
+        pad_usb.anotar_sem_porta(uniq, "nao_enumerou")
         mesa.volta(controle)
     assert mesa.servidor.do_nome(eh.nome_do_endpoint(uniq)) == []
     assert [(r["uniq"], r["motivo"]) for r in _ditos(registros, "haptica_sem_porta_propria")] == [
         (uniq, "sem_contrato:vhci_hcd"),
-        (uniq, "nao_enumerou"),  # (noqa-acento): chave de máquina
+        (uniq, "nao_enumerou"),
     ]
 
 

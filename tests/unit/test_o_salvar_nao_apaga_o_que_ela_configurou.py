@@ -47,7 +47,6 @@ from hefesto_dualsense4unix.interface.pacotes import rodape
 
 UNIQ = "aabbcc0000ff"
 
-#: elas: o esquema do disco guarda 0,0-1,0 (`LedsConfig.lightbar_brightness`) e
 BRILHO_DELA_NO_DISCO = 0.25
 LAMPADAS_DELAS = (True, True, False, False, False)
 COR_DELA = (0, 0, 255)

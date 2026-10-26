@@ -49,9 +49,8 @@ def _escreve(sandbox: Path, nome: str, conteudo: str) -> Path:
     return alvo
 
 
-# desta casa. Cada linha carrega o `noqa` para não acusar o próprio arquivo.
-_LINHA_FSTRING = 'msg = f"a configuracao nao tem acao"\n'  # fixture errada (noqa-acento)
-_LINHA_STRING = 'msg =  "a configuracao nao tem acao"\n'  # fixture errada (noqa-acento)
+_LINHA_FSTRING = 'msg = f"a configuracao nao tem acao"\n'  # (noqa-acento)
+_LINHA_STRING = 'msg =  "a configuracao nao tem acao"\n'  # (noqa-acento)
 
 
 def test_fstring_com_erro_de_acento_reprova(sandbox: Path) -> None:
@@ -65,7 +64,7 @@ def test_fstring_com_erro_de_acento_reprova(sandbox: Path) -> None:
         + res.stdout
         + res.stderr
     )
-    for errada in ("configuracao", "nao", "acao"):  # fixture errada (noqa-acento)
+    for errada in ("configuracao", "nao", "acao"):  # (noqa-acento)
         assert f":{errada} " in res.stdout, (
             f"o gate não apontou {errada!r} dentro da f-string:\n" + res.stdout
         )
@@ -94,11 +93,11 @@ def test_nome_de_variavel_dentro_das_chaves_nao_vira_apontamento(
 ) -> None:
     """A correção não pode ser larga demais."""
     fonte = (
-        "producao = 1\n"  # fixture errada (noqa-acento)
-        "acao = 2\n"  # fixture errada (noqa-acento)
-        "sessao = 3\n"  # fixture errada (noqa-acento)
-        'msg = f"{producao} {acao} {sessao}"\n'  # fixture errada (noqa-acento)
-        'esp = f"{sessao!r:>{producao}}"\n'  # fixture errada (noqa-acento)
+        "producao = 1\n"  # (noqa-acento)
+        "acao = 2\n"  # (noqa-acento)
+        "sessao = 3\n"  # (noqa-acento)
+        'msg = f"{producao} {acao} {sessao}"\n'
+        'esp = f"{sessao!r:>{producao}}"\n'
     )
     alvo = _escreve(sandbox, "src/nomes.py", fonte)
 
@@ -122,7 +121,7 @@ def test_mascara_sobrevive_a_tokenize_sem_fstring_middle(
 
     mascarado = validador._mascara_codigo_python(conteudo, linhas)
 
-    assert "configuracao" in mascarado[0], (  # fixture errada (noqa-acento)
+    assert "configuracao" in mascarado[0], (  # (noqa-acento)
         "sem FSTRING_MIDDLE o mascaramento parou de devolver a string normal: "
         f"{mascarado!r}"
     )
@@ -147,10 +146,10 @@ def test_o_codigo_longe_da_chave_tem_a_mesma_resposta_nas_tres_versoes(
 ) -> None:
     """25/09/2026: o 3.10, o 3.11 e o 3.12 dizem a mesma coisa."""
     fonte = (
-        'a = f"o total de {len(unicos)} textos"\n'  # fixture errada (noqa-acento)
-        "b = f\"{', '.join(paginas)}\"\n"  # fixture errada (noqa-acento)
-        'c = f"{len(x)} nao tem"\n'  # fixture errada (noqa-acento)
-        "d = f\"{'acao' if x else y}\"\n"  # fixture errada (noqa-acento)
+        'a = f"o total de {len(unicos)} textos"\n'  # (noqa-acento)
+        "b = f\"{', '.join(paginas)}\"\n"  # (noqa-acento)
+        'c = f"{len(x)} nao tem"\n'  # (noqa-acento)
+        "d = f\"{'acao' if x else y}\"\n"  # (noqa-acento)
     )
     alvo = _escreve(sandbox, "src/chaves.py", fonte)
 
@@ -161,7 +160,7 @@ def test_o_codigo_longe_da_chave_tem_a_mesma_resposta_nas_tres_versoes(
         for li in res.stdout.splitlines()
         if " -> " in li
     )
-    assert achados == ["3:nao", "4:acao"], (  # fixture errada (noqa-acento)
+    assert achados == ["3:nao", "4:acao"], (  # (noqa-acento)
         f"Python {sys.version.split()[0]}: o gate leu código das chaves ou "
         f"perdeu texto da f-string.\n{res.stdout}{res.stderr}"
     )

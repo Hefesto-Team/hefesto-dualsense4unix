@@ -604,7 +604,6 @@ class TestOP1RenasceNoMesmoCaminho:
         daemon._mouse_device = None
         daemon._motion_reader = None
         daemon.controller.hidraw_path = lambda uniq=None: "/dev/hidraw4"
-        # O caminho DA SESSÃO em Xbox, com a máscara DualSense de sempre — o
         gamepad_mod.start_gamepad_emulation_desfecho(
             daemon, origin="profile", caminho="xbox"
         )

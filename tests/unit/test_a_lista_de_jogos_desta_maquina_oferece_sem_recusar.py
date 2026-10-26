@@ -11,7 +11,7 @@ from hefesto_dualsense4unix.integrations.jogos_locais import JogoLocal
 from hefesto_dualsense4unix.interface import onde
 from hefesto_dualsense4unix.interface.pacotes import a10_perfis
 
-PAGINA = "10-perfis.html"  # (noqa-acento) nome de arquivo
+PAGINA = "10-perfis.html"
 
 CATALOGO = [
     JogoLocal(appid="851100", nome="Sea of Stars", fonte="steam"),

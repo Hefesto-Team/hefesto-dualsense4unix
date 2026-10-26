@@ -66,9 +66,7 @@ def backend_ve_nome_do_processo(backend: str | None) -> bool | None:
     return None
 
 
-#: O Wine a partir do 9.8 usa o nome do processo como `app_id` no driver Wayland: «jogo.exe».
 _SUFIXO_DO_EXE = ".exe"
-#: o carregador do Wine é o `exe` do processo do jogo (`wine64-preloader`, `wine-preloader`...).
 _PREFIXO_DO_CARREGADOR = "wine"
 _TETO_DA_LINHA_DE_COMANDO = 64 * 1024
 _PASSOS_ATE_O_WINESERVER = 8

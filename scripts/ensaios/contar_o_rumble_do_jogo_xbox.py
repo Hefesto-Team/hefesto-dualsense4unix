@@ -57,7 +57,6 @@ class Contagem:
     ondas: Counter[str] = field(default_factory=Counter)
     duracoes_ms: dict[str, list[int]] = field(default_factory=dict)
     rotas: Counter[str] = field(default_factory=Counter)
-    #: perguntas em que o jogo não vibrava: a rota ociosa fica fora da conta
     parado: int = 0
     timbres: Counter[str] = field(default_factory=Counter)
 

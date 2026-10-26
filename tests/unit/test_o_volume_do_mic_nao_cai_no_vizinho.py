@@ -48,8 +48,6 @@ from hefesto_dualsense4unix.integrations import audio_control
 from tests.unit import pactl_json_de_mentira as pj
 
 
-#: Duas placas de DualSense no cabo, uma por aparelho. Os nomes são
-#: PipeWire e a string de serial USB do DualSense é a mesma em todos.
 _P1 = "alsa_input.usb-Sony_Interactive_Entertainment_Wireless_Controller-00.mono-fallback"
 _P2 = "alsa_input.usb-Sony_Interactive_Entertainment_Wireless_Controller-00.2.mono-fallback"
 

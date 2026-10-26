@@ -107,9 +107,6 @@ def test_o_nome_da_serie_nos_manifestos_e_o_do_janela() -> None:
         )
 
 
-# ---------------------------------------------------------------- o doctor
-
-
 def _funcao_do_doctor(nome: str) -> str:
     m = re.search(rf"\n{nome}\(\) \{{.*?\n\}}\n", DOCTOR_TEXTO, re.S)
     assert m is not None, f"`{nome}` não existe no doctor.sh"

@@ -272,7 +272,7 @@ _DIVIDIDOS_DITOS: set[tuple[str, int, bool]] = set()
 def _resolvido(caminho: str | Path) -> Path | None:
     try:
         return Path(caminho).expanduser().resolve()
-    except (OSError, RuntimeError):  # pragma: no cover - caminho impossível
+    except (OSError, RuntimeError):  # pragma: no cover
         return None
 
 

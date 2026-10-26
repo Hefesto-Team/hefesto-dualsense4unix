@@ -99,9 +99,6 @@ class _Bancada:
         monkeypatch.setattr(REGISTRO, "estado", lambda _u: SimpleNamespace(
             giroscopio=True, acelerometro=True))
         self.store = SimpleNamespace()
-        # O perfil grava o cursor como `analogico_direito` (o destino «mouse» só existe no
-        # arranjo montado): o primário recebe o arranjo já em «mouse», e a Navegação e o Modo
-        # mouse o recebem do perfil e o levam ao cursor por `na_navegacao`.
         base = rot.montar(ProfileMovimentoConfig.model_validate(
             {"destino": rot.DESTINO_ANALOGICO_DIREITO}))
         self.na_navegacao = na_navegacao

@@ -35,7 +35,6 @@ from hefesto_dualsense4unix.interface import desenho_da_experimental as exp
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 DESENHO = RAIZ / "mockup" / "07-lancadores.html"
-#: O piso da janela, a foto da documentação e a janela mais alta (o teto da vista).
 VISTAS = ((1212, 809), (1600, 855), (1900, 887))
 QUANTAS = (2, 4, 8)
 _NOMES = ("Azahar", "Dolphin", "Buttplug", "KytyPS5", "Lutris", "mGBA", "RetroArch", "Cemu")
@@ -142,7 +141,6 @@ def test_a_sobra_fica_fora_do_quadro(
     lanc, fim, rola, miolo = m["lanc"], m["fim"], m["rola"], m["miolo"]
     assert rola[0] <= rola[1] + 1, f"a fila dos lançadores rola com duas extensões: {m}"
     assert miolo[0] <= miolo[1] + 1, f"a aba rola: {m}"
-    # Embaixo do último cartão, só o respiro do `.quadro-corpo` (14 px) e a borda.
     assert lanc[1] - fim[1] <= 20, f"o quadro estica além da fila, com a sobra dentro dele: {m}"
 
 

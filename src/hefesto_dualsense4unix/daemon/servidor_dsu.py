@@ -46,8 +46,8 @@ ENDERECO: Final = "127.0.0.1"
 
 PRAZO_DA_INSCRICAO_S: Final = 5.0
 LIMPEZA_S: Final = 1.0
-INTERVALO_MINIMO_S: Final = 0.004  # 250 pacotes por segundo por slot
-INTERVALO_MAXIMO_S: Final = 0.100  # nunca mais de 100 ms sem pacote
+INTERVALO_MINIMO_S: Final = 0.004
+INTERVALO_MAXIMO_S: Final = 0.100
 MAXIMO_DE_CLIENTES: Final = 32
 SALTO_MAXIMO_DO_RELOGIO_US: Final = 1_000_000
 _MASCARA_DO_CONTADOR: Final = 0xFFFFFFFF
@@ -69,7 +69,7 @@ class SlotDsu:
     transport: str | None = None
 
 
-Inscricao = tuple[int | None, bytes | None]  # (slot, mac); (None, None) = todos
+Inscricao = tuple[int | None, bytes | None]
 
 
 @dataclass
@@ -131,8 +131,6 @@ class ServidorDsu:
         self._parar = threading.Event()
         self._ultima_limpeza = 0.0
 
-    # -- vida ---------------------------------------------------------------
-
     @property
     def porta(self) -> int:
         """A porta em que o socket escuta (a real, mesmo quando se pediu a 0)."""
@@ -181,8 +179,6 @@ class ServidorDsu:
         """Troca (tabela, hub) por atribuição: a thread lê um par sempre inteiro."""
         self._estado = (dict(tabela), hub)
 
-    # -- contadores ----------------------------------------------------------
-
     def _bump(self, nome: str, delta: int = 1) -> None:
         if self._store is not None:
             try:
@@ -192,8 +188,6 @@ class ServidorDsu:
 
     def _agora(self) -> float:
         return float(self._relogio())
-
-    # -- a thread --------------------------------------------------------------
 
     def _laco(self) -> None:
         sock = self._sock
@@ -215,10 +209,8 @@ class ServidorDsu:
                 if dados:
                     self._atender(sock, dados, endereco, agora)
                 self._tique(sock, agora)
-            except Exception as exc:  # a thread nunca morre por um pacote
+            except Exception as exc:
                 logger.warning("dsu_laco_falhou", err=str(exc))
-
-    # -- os pedidos ------------------------------------------------------------
 
     def _atender(
         self, sock: socket.socket, dados: bytes, endereco: tuple[str, int], agora: float
@@ -261,8 +253,6 @@ class ServidorDsu:
         hub: Any,
         agora: float,
     ) -> None:
-        # Cliente é (IP, porta de origem), nunca o client_id: o Azahar usa o
-        # mesmo id no cliente, no botão Test e na calibração.
         cliente_id = endereco
         slot = pedido.slot if pedido.por_slot else None
         mac = pedido.mac if pedido.por_mac else None
@@ -285,8 +275,6 @@ class ServidorDsu:
                 hub.segurar_o_dedo(tabela[numero].uniq)
             except Exception as exc:
                 logger.debug("dsu_segurar_o_dedo_falhou", err=str(exc))
-
-    # -- o envio ---------------------------------------------------------------
 
     def _tique(self, sock: socket.socket, agora: float) -> None:
         tabela, hub = self._estado
@@ -392,7 +380,6 @@ class ServidorDsu:
             sock.sendto(pacote, cliente.endereco)
             self._bump("dsu.pacotes")
         except OSError:
-            # O cliente sumiu (ICMP): a inscrição vence sozinha, e nada mais a fazer.
             cliente.inscricoes.clear()
 
     @staticmethod
@@ -458,8 +445,6 @@ class ServidorDsu:
             est.carimbo_do_hub = proprio
         est.mono_us = mono_us
         return est.carimbo_us
-
-    # -- o pacote neutro ---------------------------------------------------------
 
     def _pacote_final(
         self,

@@ -16,16 +16,11 @@ from hefesto_dualsense4unix.utils.xdg_paths import runtime_dir
 
 logger = get_logger(__name__)
 
-#: O prazo que o desligamento do daemon tem, e o único que a troca de instância espera
-#: antes do SIGKILL. É o `TimeoutStopSec` de `assets/hefesto-dualsense4unix.service`
-#: (o orçamento do som, o broker e o microfone cabem nele); um teste confere os dois.
 PRAZO_DO_DESLIGAMENTO_S = 45.0
 
-#: A espera da GUI pelo lock (`acquire_or_bring_to_front`): a GUI não tem desligamento longo.
 SIGTERM_GRACE_SEC = 2.0
 SIGTERM_POLL_INTERVAL_SEC = 0.05
 
-# ainda pertence ao Hefesto - DualSense4Unix (daemon ou GUI). Cobrimos dois padrões canônicos:
 _HEFESTO_DUALSENSE4UNIX_PROC_MARKERS: tuple[str, ...] = ("hefesto",)
 
 _HELD_LOCKS: dict[str, int] = {}
@@ -186,7 +181,6 @@ def acquire_or_takeover(name: str) -> int:
         if is_alive(predecessor):
             logger.info("single_instance_takeover_iniciado",
                         name=name, predecessor_pid=predecessor)
-            # do Hefesto - DualSense4Unix via `_is_hefesto_dualsense4unix_process`; PIDs reciclados viram no-op  # noqa: E501
             _terminate_predecessor(predecessor)
         else:
             logger.debug("single_instance_pid_orfao", name=name, pid_antigo=predecessor)

@@ -10,7 +10,7 @@ Parte 3 (respostas, 14/10/2026): **só o «Aplicar» prende**. O ajuste numa aba
 o perfil que já vale pelo mesmo `profile.reaplicar`, mas sem o ``prender``: a trava não arma e o
 autoswitch segue trocando por janela. O gesto leva o ``prender`` por parâmetro do IPC, com o padrão
 sem trava, e as réguas daqui mordem para os dois lados.
-"""  # (noqa-acento) citação literal
+"""
 
 from __future__ import annotations
 
@@ -35,7 +35,6 @@ from tests.unit.test_foco_errante_01_a_janela_da_steam_nao_tira_o_perfil import 
 
 JANELA_DO_TERMINAL = {"wm_class": "com.system76.CosmicTerm", "wm_name": "Terminal"}
 
-#: Uma segunda janela com perfil próprio que não é jogo: o navegador.
 JANELA_DO_NAVEGADOR = {"wm_class": "firefox", "wm_name": "Mozilla Firefox"}
 
 
@@ -135,8 +134,9 @@ def test_o_ajuste_de_aba_nao_prende_e_o_autoswitch_segue_trocando() -> None:
     É o outro lado da régua do «Aplicar»: o ajuste numa aba (``prender`` ausente) deixa o
     autoswitch livre, e o terminal devolve o último jogo. MORDIDA: arme a trava em todo
     reaplicar (``elif reaplicacao:`` sem o ``and prender``) e o perfil fica preso em «fliperama».
+
+    Prova da D-1410-O-APLICAR-SEGURA.
     """
-    # Prova da D-1410-O-APLICAR-SEGURA.
     _manager, store, sw = _a_montagem(prender=False)
     assert not store.manual_profile_lock_active(time.monotonic()), "o ajuste armou a trava"
     _terminal(sw, 2.0, 2.0 + 13.0)
@@ -150,8 +150,9 @@ def test_depois_do_ajuste_de_aba_a_janela_com_perfil_troca() -> None:
 
     MORDIDA: arme a trava em todo reaplicar (``elif reaplicacao:`` sem o ``and prender``) e o
     Kodi em foco não tira o «fliperama».
+
+    Prova da D-1410-O-APLICAR-SEGURA.
     """
-    # Prova da D-1410-O-APLICAR-SEGURA.
     _manager, store, sw = _a_montagem(prender=False)
     _terminal(sw, 2.0, 6.0, JANELA_DA_NAVEGACAO)
     assert store.active_profile == "navegacao", "o Kodi em foco não trocou depois do ajuste"
@@ -192,8 +193,10 @@ class _PonteQueAnota:
 
 
 def test_a_ponte_so_manda_o_prender_quando_o_gesto_pede(monkeypatch: pytest.MonkeyPatch) -> None:
-    """A ponte real leva ``prender: true`` no IPC só com o gesto, e o padrão não leva nada."""
-    # Prova da D-1410-O-APLICAR-SEGURA.
+    """A ponte real leva ``prender: true`` no IPC só com o gesto, e o padrão não leva nada.
+
+    Prova da D-1410-O-APLICAR-SEGURA.
+    """
     from hefesto_dualsense4unix.interface.pacotes import ponte
 
     enviados: list[dict[str, Any]] = []
@@ -214,8 +217,9 @@ def test_o_aplicar_do_rodape_prende(monkeypatch: pytest.MonkeyPatch) -> None:
     """O «Aplicar» do rodapé pede ``prender``.
 
     MORDIDA: tire o ``prender=True`` do ``rodape.aplicar``.
+
+    Prova da D-1410-O-APLICAR-SEGURA.
     """
-    # Prova da D-1410-O-APLICAR-SEGURA.
     from hefesto_dualsense4unix.interface.pacotes import Contexto, perfil, rodape
 
     monkeypatch.setattr(rodape, "perfil_do_rodape", lambda _state: "Sackboy")
@@ -227,8 +231,10 @@ def test_o_aplicar_do_rodape_prende(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_o_voltar_a_de_ontem_prende(monkeypatch: pytest.MonkeyPatch) -> None:
-    """O «Voltar à de ontem» segue a mesma regra do «Aplicar»: pede ``prender``."""
-    # Prova da D-1410-O-APLICAR-SEGURA.
+    """O «Voltar à de ontem» segue a mesma regra do «Aplicar»: pede ``prender``.
+
+    Prova da D-1410-O-APLICAR-SEGURA.
+    """
     from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
     from hefesto_dualsense4unix.profiles import loader
 
@@ -247,8 +253,9 @@ def test_o_reaplicar_do_ajuste_de_aba_nao_prende(monkeypatch: pytest.MonkeyPatch
     """O funil dos ajustes das abas (``perfil.reaplicar``) NÃO pede ``prender``.
 
     MORDIDA: ponha ``prender=True`` no ``p.profile_reaplicar`` de ``perfil.reaplicar``.
+
+    Prova da D-1410-O-APLICAR-SEGURA.
     """
-    # Prova da D-1410-O-APLICAR-SEGURA.
     from hefesto_dualsense4unix.interface.pacotes import Contexto, perfil
 
     ponte = _PonteQueAnota()

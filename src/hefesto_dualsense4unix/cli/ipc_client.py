@@ -17,9 +17,6 @@ _LOG = logging.getLogger(__name__)
 
 _CLOSE_TIMEOUT_S = 2.0
 
-#: Quanto o `connect` espera o socket aceitar. Quem digitou não espera para
-#: sempre: um serviço parado (SIGSTOP, travado) aceita a conexão pelo kernel e
-#: nunca responde, e o diagnóstico é justamente o comando que não pode travar.
 _CONNECT_TIMEOUT_S = 1.0
 
 

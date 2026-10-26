@@ -307,7 +307,6 @@ class TestValidateRejeitaUhidForjado:
         assert _valida(node, kwargs) is None
 
     def test_virtual_puro_nao_uhid(self, tmp_path: Path) -> None:
-        # uevent perfeito de DualSense BT.
         node, kwargs = _make_tree(tmp_path, parent="virtual", uevent=_uevent_bt_uhid())
         assert _valida(node, kwargs) is None
 

@@ -76,7 +76,6 @@ DS_DOIS = "aa:bb:cc:00:00:b2"
 DS_TRES = "aa:bb:cc:00:00:b3"
 DS_QUATRO = "aa:bb:cc:00:00:b4"
 
-#: O `HID_PHYS` REAL de um DualSense no CABO nesta máquina, lido do uevent em
 PHYS_DO_CABO = "usb-0000:0c:00.3-1/input3"
 
 TETO_MEDIDO_NO_BLUEZ = 247
@@ -99,8 +98,6 @@ def _uevent(*, nome: str, phys: str, uniq: str) -> str:
     )
 
 
-#: A mesa medida: 1 DualSense em UM, 1 DualSense + o Pro em DOIS, 2 em TRES,
-#: mais um DualSense no cabo que não pertence a adaptador nenhum.
 UEVENTS = {
     "hidraw0": _uevent(
         nome="DualSense Wireless Controller", phys=UM, uniq=DS_UM

@@ -43,8 +43,6 @@ import pytest
 
 from tests.conftest import exigir_gi_real
 
-# O filho (`sys.executable -c _AJUDANTE`) importa o GTK e o WebKit2 de verdade: sem o PyGObject
-# real o módulo pula, e sob `HEFESTO_EXIGE_GTK_REAL=1` reprova.
 exigir_gi_real("o filho importa `gi` com o GTK 3 e o WebKit2 4.1 de verdade")
 
 RAIZ = Path(__file__).resolve().parents[2]
@@ -56,7 +54,6 @@ pytestmark = pytest.mark.skipif(
     reason="sem `xvfb-run` a janela com barra nasceria na tela dela",
 )
 
-#: O processo filho. Ele só roda sob o `xvfb-run` que o teste monta, com o lar de mentira.
 _AJUDANTE = r"""
 import argparse, json, sys
 
@@ -164,15 +161,8 @@ def _mudancas(tabela: dict[str, Any], alvo: str) -> int:
     raise AssertionError(f"o alvo {alvo} não está na tabela: {tabela['fichas']}")
 
 
-#: Os quatro cenários (os três de medir e a mordida) são independentes: cada um tem Xvfb, lar e
-#: processo próprios, e a espera de cada um é de relógio de verdade (cem tiques de 100 ms para o
-#: `ResizeObserver` ver se a caixa mexe). Em série eram 4 x 15 s; juntos, a parede é a do mais lento
-#: (21/10/2026, A-SUITE-INTEIRA-CABE-EM-VINTE-MINUTOS-01). O teto de tiques NÃO encolheu: o tempo
-#: que o instrumento observa é o mesmo, só deixou de ser esperado quatro vezes seguidas.
 _CENARIOS = (("parado", ""), ("mudo", ""), ("rajada", ""), ("rajada", "barra-solta-a-altura"))
 
-#: O `xvfb-run -a` escolhe o número da tela olhando os travões; duas escolhas no mesmo instante
-#: dão o mesmo número e a segunda morre. A saída escalonada tira essa janela.
 _ESCALONA_S = 0.6
 
 
@@ -244,10 +234,12 @@ def test_a_rajada_de_estados_da_janela_nao_passa_de_uma_mudanca_de_altura(
 def test_o_instrumento_acusa_a_barra_que_solta_a_altura(
     rajada_com_a_barra_solta: tuple[dict[str, Any], str],
 ) -> None:
-    # D-1510-A-JANELA-NAO-PULSOU-E-FICA-O-INSTRUMENTO
     """MORDIDA: com um repinte que muda a altura da janela de verdade, a mesma rajada sai do zero.
 
-    Sem esta prova os zeros acima valeriam também para um contador que nunca vê nada."""
+    Sem esta prova os zeros acima valeriam também para um contador que nunca vê nada.
+
+    Prova da D-1510-A-JANELA-NAO-PULSOU-E-FICA-O-INSTRUMENTO.
+    """
     tabela, _ = rajada_com_a_barra_solta
     assert tabela["estados_simulados"] == 20
     assert _mudancas(tabela, ".miolo") >= 2, (
@@ -255,12 +247,8 @@ def test_o_instrumento_acusa_a_barra_que_solta_a_altura(
     assert tabela["janela_gtk"] >= 2, "o GTK nem registrou a mudança que a mordida causou"
 
 
-# --- a janela com barra do instrumento nunca nasce na tela de quem chama ----------------------
-
 VIVO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "hefesto_vivo.py"
 
-#: O `--help` sai no `parse_args`, antes de qualquer janela: o que sobra é a tela que o GTK
-#: abriu ao ser importado pelo piloto chamado como programa.
 _TELA_DO_PROGRAMA = r"""
 import os, runpy, sys
 de_fora = os.environ["DISPLAY"]
@@ -273,8 +261,6 @@ from gi.repository import Gdk
 print("TELA", Gdk.Display.get_default().get_name(), "DE-FORA", de_fora)
 """
 
-#: Quem importa o piloto ANTES do desvio (o GTK já abriu a tela de quem chamou) e pede o
-#: `--conta-tamanho`: o `main()` tem de recusar antes de existir janela.
 _IMPORTOU_ANTES = r"""
 import sys
 sys.path.insert(0, sys.argv[1])

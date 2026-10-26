@@ -48,14 +48,12 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 
-#: Intervalo entre probes de hot-reconnect quando o controle está desconectado
 RECONNECT_PROBE_INTERVAL_SEC: float = 5.0
 
 RECONNECT_ONLINE_CHECK_INTERVAL_SEC: float = 30.0
 
 TETO_DA_VOLTA_PELO_EVENTO_SEC: float = 300.0
 
-#: DualSense novo passa de "até 30s" para ~2s até o backend abrir o handle
 RECONNECT_HOTPLUG_POLL_INTERVAL_SEC: float = 2.0
 
 PASSO_ENQUANTO_O_GATILHO_ESTA_ARMADO_SEC: float = 0.25
@@ -287,7 +285,7 @@ def vigia_do_cabo_de(daemon: DaemonProtocol) -> Any:
         return vigia
     vigia = VigiaDoCabo()
     with contextlib.suppress(Exception):
-        setattr(daemon, "_vigia_do_cabo_em_espera", vigia)  # noqa: B010 — fora do protocolo
+        setattr(daemon, "_vigia_do_cabo_em_espera", vigia)  # noqa: B010
     return vigia
 
 
@@ -524,7 +522,6 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
             controller=daemon.controller,
             store=daemon.store,
             keyboard_device_provider=lambda: getattr(daemon, "_keyboard_device", None),
-            # `button_actions` não tem flag persistido próprio, então o perfil é a
             mouse_device_provider=lambda: getattr(daemon, "_mouse_device", None),
             mouse_applier=None,
             suppression_applier=getattr(daemon, "apply_profile_suppression", None),
@@ -533,7 +530,6 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
             rumble_passthrough_applier=getattr(
                 daemon, "apply_profile_rumble_passthrough", None
             ),
-            # flag persistido próprio — o DualSense não devolve o valor que o
             speaker_applier=getattr(daemon, "apply_profile_speaker", None),
             mic_applier=getattr(daemon, "apply_profile_mic", None),
             ps_action_sink=_canal_do_ps(daemon), som_do_estilo=pontes_do_som_do_daemon(daemon),
@@ -547,7 +543,7 @@ async def restore_last_profile(daemon: DaemonProtocol) -> None:
         logger.info("last_profile_restored", name=name)
     finally:
         if (repor := getattr(daemon, "_repor_o_point_and_click", None)) is not None:
-            repor()  # os retornos cedo inclusive (O-POINT-AND-CLICK-SE-REPOE-EM-TODO-CAMINHO-01)
+            repor()
 
 
 def _broker_restore_for_recovery(daemon: DaemonProtocol) -> list[str]:
@@ -629,7 +625,7 @@ async def reconnect_loop(
             watch = InputDirWatch()
         nos = InputDirWatch(root=dono.raiz_dos_nos) if dono is not None else None
         with contextlib.suppress(Exception):
-            setattr(daemon, "_watch_dos_hidraw", nos)  # noqa: B010 — fora do protocolo
+            setattr(daemon, "_watch_dos_hidraw", nos)  # noqa: B010
         registrar_gatilho_da_lightbar(daemon)
         registrar_a_chegada(daemon)
         watch.poll()
@@ -640,7 +636,7 @@ async def reconnect_loop(
         restored = was_connected = initial_connected
         alvos_antes = alvos_conectados_de(daemon) or {}
         transportes_antes = transportes_dos_alvos_de(daemon) or {}
-        anunciar_a_chegada(daemon, {}, alvos_antes)  # a subida do daemon: quem já estava toca
+        anunciar_a_chegada(daemon, {}, alvos_antes)
         while not daemon._is_stopping():
             try:
                 await daemon._run_blocking(daemon.controller.connect)
@@ -662,9 +658,6 @@ async def reconnect_loop(
             trocando = trocas_de_transporte_pendentes(daemon)
             if is_connected and not was_connected:
                 daemon._arm_input_grace()
-                # um `controller.connected` por controle, com o `uniq` e o transporte dele;
-                # o backend que não enumera alvos publica um só, o do primário
-                # (A-CONEXAO-DIZ-QUAL-CONTROLE-E-POR-ONDE-01)
                 publicar_a_borda_do_primario(daemon, alvos_antes, alvos_agora)
 
                 with contextlib.suppress(Exception):
@@ -690,8 +683,6 @@ async def reconnect_loop(
                 registrar_queda_da_bateria(
                     daemon, "probe_offline", asyncio.get_running_loop().time()
                 )
-                # a queda diz quem saiu: um `controller.disconnected` por controle
-                # (A-CONEXAO-DIZ-QUAL-CONTROLE-E-POR-ONDE-01)
                 publicar_a_queda_de_cada_alvo(daemon, alvos_antes, alvos_agora, "probe_offline")
                 logger.info("controller_disconnected", reason="probe_offline")
                 was_connected = False
@@ -1228,12 +1219,11 @@ async def carimbar_o_nascimento(
     except Exception as exc:
         logger.debug("carimbo_do_nascimento_sysfs_falhou", err=str(exc))
         return 0
-    # DualSense da máquina, e carimbar um que o produto não segura seria falar
     vivas = [alvo for alvo in vivas if endereco_normalizado(alvo.uniq) in nossos]
     agora = time.monotonic() if agora is None else float(agora)
     try:
         faltam = cartorio.observar(vivas, agora)
-    except Exception as exc:  # pragma: no cover — cartório é puro
+    except Exception as exc:  # pragma: no cover
         logger.debug("carimbo_do_nascimento_cartorio_falhou", err=str(exc))
         return 0
     if not faltam:
@@ -1257,7 +1247,7 @@ async def carimbar_o_nascimento(
     nos = frozenset() if nativo else _nos_segurados_agora(daemon)
     try:
         gravados = cartorio.carimbar(leituras, agora, nos_segurados=nos)
-    except Exception as exc:  # pragma: no cover — cartório é puro
+    except Exception as exc:  # pragma: no cover
         logger.debug("carimbo_do_nascimento_gravacao_falhou", err=str(exc))
         return 0
     for carimbo in gravados:

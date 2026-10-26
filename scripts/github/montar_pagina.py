@@ -28,7 +28,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from qr_svg import svg_do_qr
 
 RAIZ = Path(__file__).resolve().parents[2]
-# Onde moram as imagens do README, relativas à raiz do repositório.
 PASTAS_DE_IMAGEM = ("docs/usage/assets", "assets/appimage")
 REPO = "https://github.com/Hefesto-Team/hefesto-dualsense4unix"
 FUNDING = ".github/FUNDING.yml"
@@ -193,7 +192,6 @@ def secao_de_apoio(formas: list[Apoio]) -> str:
         else:
             itens.append(f"<li>{e(f.rotulo)}: leia o QR code abaixo ou copie o código.</li>")
         if f.qr:
-            # O código PIX se lê pelo aplicativo do banco; o QR de um endereço, pela câmera do celular.
             leitor = "do aplicativo do banco" if f.codigo else "do celular"
             legenda = f"{e(f.rotulo)}: aponte a câmera {leitor}"
             qrs.append(f"<figure>{f.qr}<figcaption>{legenda}</figcaption></figure>")

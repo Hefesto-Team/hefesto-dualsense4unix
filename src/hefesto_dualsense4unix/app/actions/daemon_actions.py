@@ -28,12 +28,8 @@ MIGRAR_NAO_DEU = (
     "Não consegui corrigir o modo de execução — veja os 'Detalhes "
     "técnicos' aqui embaixo."
 )
-#: Quanto o `systemctl` de consulta espera.
 PRAZO_DA_CONSULTA_S = 5.0
 
-#: A folga do `start`/`restart` sobre o `TimeoutStartSec` da unit. A unit é `Type=notify`: o
-#: `start` só volta com o IPC de pé, então o prazo de quem chama vem do prazo da unit. Mais curto
-#: que ele, o chamador desiste de um `start` que ainda ia dar certo.
 FOLGA_DO_START_S = 5.0
 
 
@@ -296,7 +292,7 @@ def medir_jogos_com_steam_input() -> list[str] | None:
             rotulo_do_jogo(appid)
             for appid in EmulationActionsMixin._steam_input_appids_ligados()
         ]
-    except Exception as exc:  # pragma: no cover - defesa; nunca derruba o botão
+    except Exception as exc:  # pragma: no cover
         logger.warning("steam_input_medicao_falhou", erro=str(exc))
         return None
 
@@ -345,7 +341,6 @@ def interpretar_guarda_do_steam_input(saida: object) -> tuple[str, str] | None:
         motivo = "está habilitada, mas não está rodando"
     else:
         motivo = "consta ligada, mas não tem próximo disparo"
-    # dois defeitos das outras doze juntos — dizia "Conserto:" onde as outras
     return (
         storm_doctor.WARN,
         "Steam Input: a rede de segurança "
@@ -412,9 +407,6 @@ def interpretar_prontuario_dos_jogos(censo: object) -> tuple[str, str] | None:
         return None
     nomes = ", ".join(str(getattr(j, "nome", "?")) for j in divergentes[:3])
     resto = f" e mais {len(divergentes) - 3}" if len(divergentes) > 3 else ""
-    # A cabeça da frase (até o primeiro ponto) é o que a aba Sistema escreve, e o gesto mora
-    # nela; o resto vai na dica. Era «Ponte confirmada que não bate com a lista de hoje», sem
-    # gesto e cortado no nome do jogo (21/10/2026).
     dele = "dele" if len(divergentes) == 1 else "de cada um"
     return (
         "[WARN]",
@@ -495,8 +487,6 @@ def format_game_broken_result(*, status: str, appid: object = None) -> str:
         return (
             "Não consegui anotar este jogo — veja os 'Detalhes técnicos'."
         )
-    # DUPLO-REGISTRO-01 mediu o Pragmata com `UseSteamControllerConfig "2"` no
-    # enxergar o DualSense físico direto. A saída — cor, gatilhos, vibração —
     resto = (
         " Feche e abra o jogo de novo: nele os controles físicos ficam "
         "escondidos e o jogo passa a ver só os do Hefesto — você não precisa "
@@ -632,10 +622,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
         return encontrar_arquivo_do_repo(relpath, bases=BASES_DE_INSTALACAO)
 
 
-    # --- Modo simples: dois botões que escondem os conceitos --------------
-    # continuam existindo; o que sai da tela é a ESCOLHA entre eles.
-    #                               (e só ela — ver `format_game_broken_result`).
-
     _STEAM_READY_CORPO = (
         "Eu ajusto de uma vez as duas coisas que costumam brigar com o "
         "controle: quem entrega o controle para o jogo e como cada jogo é "
@@ -681,9 +667,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
         return (result.stdout or "").strip()
 
 
-    # que trata erro com diálogo não-bloqueante e tem regra de sensibilidade própria.
-
-
     def _read_daemon_pid(self) -> int | None:
         """Lê o PID do arquivo de pid do daemon; retorna None se ausente/inválido."""
         try:
@@ -717,8 +700,6 @@ class DaemonActionsMixin(WidgetAccessMixin):
         """
         estado_da_unit = self._systemctl_oneline(["is-active", SERVICE_NORMAL])
         if estado_da_unit == "activating":
-            # `Type=notify`: do `fork` ao `READY=1` a unit está subindo; com o processo já vivo
-            # isso NÃO é o improvisado (`online_avulso`) nem parada.
             return "iniciando"
         systemd_active = estado_da_unit == "active"
         pid = self._read_daemon_pid()

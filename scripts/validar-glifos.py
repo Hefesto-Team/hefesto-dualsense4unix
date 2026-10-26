@@ -41,7 +41,6 @@ import sys
 import unicodedata
 from pathlib import Path
 
-#     for ln in open("emoji-data.txt", encoding="utf-8"):
 FAIXAS_EMOJI_PRESENTATION: tuple[tuple[int, int], ...] = (
     (0x231A, 0x231B),
     (0x23E9, 0x23EC),

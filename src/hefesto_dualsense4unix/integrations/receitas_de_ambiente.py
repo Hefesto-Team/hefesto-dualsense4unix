@@ -20,35 +20,27 @@ from pathlib import Path
 
 try:
     from .api_de_entrada import escolher_executavel
-except ImportError:  # pragma: no cover - executado como script avulso
+except ImportError:  # pragma: no cover
     from api_de_entrada import escolher_executavel  # type: ignore[no-redef]
 
 _RAIZ = Path(__file__).resolve().parents[3]
 TABELA = _RAIZ / "docs" / "data" / "receitas-de-ambiente.csv"
 PINO_DA_PECA = _RAIZ / "assets" / "gdk-runtime" / "pino.txt"
 
-#: As variáveis que o wrapper deixa passar com forma conferida. Espelho de `receita_do_jogo`.
 VARIAVEIS_DO_WRAPPER = frozenset({"WINEDLLOVERRIDES", "WINEDLLPATH"})
 
 _NOME_DE_DLL = re.compile(r"^[A-Za-z0-9_.-]+$")
 
-#: Os modos que o wrapper deixa passar: nativa, nativa-depois-da-embutida, só a embutida e
-#: desligada.
 MODOS_DO_OVERRIDE = ("n", "n,b", "b", "d")
 
-#: A peça que é o próprio arquivo do sinal (a DLL que se desliga já está no disco).
 PECA_E_O_SINAL = "@sinal"
 
-#: A peça GDK do Hefesto, na pasta que o install escreve; conta só com o sha256 do pino.
 PECA_DO_HEFESTO = "@hefesto"
 
-#: O GameInput do Hefesto: o `gameinput.dll` que a peça GDK carrega pelo caminho inteiro.
 PECA_GAMEINPUT_DO_HEFESTO = "@hefesto-gameinput"
 
-#: O único `WINEDLLPATH` que a tabela escreve: o wrapper o troca pela pasta da peça.
 PASTA_DA_PECA = "@hefesto-wine"
 
-#: O nome que o prontuário mostra quando a peça do Hefesto falta.
 NOME_DA_PECA_DO_HEFESTO = "a peça GDK do Hefesto (xgameruntime.dll)"
 
 
@@ -58,9 +50,6 @@ def pasta_da_peca(home: Path | None = None) -> Path:
     return base / ".local" / "share" / "hefesto-dualsense4unix" / "wine"
 
 
-#: Onde a peça GDK procura o ajudante de login, em relação à casa: o login do Xbox Live é dele, a
-#: peça não fabrica token. O dono do caminho é o fonte C (`compat_paths` em
-#: `assets/gdk-runtime/xgameruntime.c`); uma régua lê o C e reprova se o Python divergir.
 PASTA_DO_AJUDANTE = (".local", "share", "dungeons2-compat")
 NOME_DO_AJUDANTE = "xauth.py"
 
@@ -88,7 +77,7 @@ def _sha256_do_pino(pino: Path | None = None, chave: str = "sha256") -> str | No
     try:
         texto = (pino if pino is not None else PINO_DA_PECA).read_text(encoding="utf-8")
     except OSError:
-        texto = ""  # sem pino, nenhuma peça bate: o jogo GDK abre como sempre abriu
+        texto = ""
     for linha in texto.splitlines():
         nome, igual, valor = linha.partition("=")
         if igual and nome.strip() == chave and re.fullmatch(r"[0-9a-f]{64}", valor.strip()):
@@ -168,7 +157,6 @@ class Leitura:
 
     receita: Receita
     sinal: str
-    #: ``True``/``False``; ``None`` quando nenhum executável se lê (não dá para saber).
     peca_presente: bool | None
 
 
@@ -281,8 +269,6 @@ def ler_jogo(
             achadas.append(Leitura(receita, sinal, instalada))
             continue
         if receita.peca == PECA_GAMEINPUT_DO_HEFESTO:
-            # O GameInput só vale com a peça GDK que o carrega: sem ela, o `gameinput.dll` da
-            # pasta da peça nunca entra no processo.
             if instalada is None:
                 instalada = peca_do_hefesto_instalada(home)
             if gameinput is None:
@@ -349,7 +335,7 @@ def ambientes_dos_jogos(home: Path | None = None) -> dict[str, dict[str, str]]:
         return {}
     try:
         from .prontuario_dos_jogos import jogos_instalados
-    except ImportError:  # pragma: no cover - executado como script avulso
+    except ImportError:  # pragma: no cover
         from prontuario_dos_jogos import jogos_instalados  # type: ignore[no-redef]
     fora: dict[str, dict[str, str]] = {}
     for appid, _nome, raiz in jogos_instalados(home):

@@ -170,8 +170,6 @@ def test_diag_reader_recupera_no_poll(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.delenv("DISPLAY", raising=False)
     monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
-    # O resgate completa o ambiente pelo `systemctl`: sem ele aqui, o teste não pergunta
-    # à sessão real de quem o roda (que traria o Wayland da sessão e mudaria o backend).
     monkeypatch.setattr("shutil.which", lambda _nome: None)
     store = _FakeStore()
     read = _build_diag_window_reader(store)  # type: ignore[arg-type]

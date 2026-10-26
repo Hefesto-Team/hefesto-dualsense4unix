@@ -88,7 +88,6 @@ class TestSysfsHidIdentity:
         assert ops._sysfs_hid_identity_ok(base) is False
 
     def test_teclado_bt_rejeitado(self, tmp_path: Path) -> None:
-        # O device reciclado no minor (o alvo do ataque) não é o DualSense.
         ops, base = self._ops(tmp_path, "0005:00001234:00005678")
         assert ops._sysfs_hid_identity_ok(base) is False
 

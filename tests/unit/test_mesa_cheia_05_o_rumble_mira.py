@@ -71,10 +71,10 @@ class _FakeHandle:
         self.conType = type("CT", (), {"name": "USB"})()
         self.motors: list[tuple[str, int]] = []
 
-    def setLeftMotor(self, intensity: int) -> None:  # noqa: N802 — API pydualsense
+    def setLeftMotor(self, intensity: int) -> None:  # noqa: N802
         self.motors.append(("left", intensity))
 
-    def setRightMotor(self, intensity: int) -> None:  # noqa: N802 — API pydualsense
+    def setRightMotor(self, intensity: int) -> None:  # noqa: N802
         self.motors.append(("right", intensity))
 
 

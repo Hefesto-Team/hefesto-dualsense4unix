@@ -36,12 +36,10 @@ from typing import Any
 
 RAIZ = Path(__file__).resolve().parent.parent
 
-#: A posse do texto: o que esta passada reescreve.
 PREFIXOS = (
     "src/", "tests/unit/", "tests/fixtures/", "scripts/",
     "docs/protocol/", "docs/method/", "docs/adr/",
 )
-#: Dentro dela, o que é da costura (publicado, gerado ou dado).
 FORA = (
     "src/hefesto_dualsense4unix/interface/paginas/",
     "tests/fixtures/",
@@ -51,11 +49,8 @@ FORA = (
 EXT_CODIGO = {".py": "py", ".sh": "sh", ".html": "html", ".css": "css", ".js": "js"}
 EXT_PROSA = {".md", ".txt"}
 
-# --------------------------------------------------------------------------
-# As regras. O padrão é minúsculo e sem acento de caixa; a troca herda a caixa.
-# --------------------------------------------------------------------------
-_E = r"(?<![\w-])"          # borda esquerda de palavra (hífen e sublinhado são palavra)
-_D = r"(?![\w-])"           # borda direita
+_E = r"(?<![\w-])"
+_D = r"(?![\w-])"
 
 _DATA = r"(?=,? (?:de |em |do dia )?\(?\d{1,2}/\d{1,2})"
 _NOMES_DE_DECISAO = (
@@ -70,7 +65,6 @@ _DO_USUARIO = (
     "monitor|monitores|desktop|área de trabalho|lista de jogos|escolha|escolhas|fala|falas|voz|palavra de ordem"
 )
 
-#: O espaço entre duas palavras pode ser uma quebra de linha de comentário (``# `` ou ``#: ``).
 _SEP = r"(?:[ \t]+|[ \t]*\n[ \t]*(?:#:?[ \t]*|\*[ \t]*)?)"
 _QUEBRA = re.compile(r"[ \t]*\n[ \t]*(?:#:?[ \t]*|\*[ \t]*)?")
 
@@ -80,17 +74,9 @@ def _c(padrao: str, flags: int = 0) -> re.Pattern[str]:
     return re.compile(padrao.replace(" ", _SEP), flags)
 
 
-#: «ela VERBO» é a pessoa, salvo quando a frase já pôs antes um substantivo feminino técnico: aí o
-#: «ela» é o pronome dele («a carona devolve os lançadores em que ela escreveu»). A lista é curta
-#: de propósito e medida no corpus (`alvos()`): a regra acha 3 trechos, e só a carona é pronome.
 _ELA_VERBO = _c(_E + r"ela (pediu|mandou|aprovou|decidiu|ordenou|definiu|determinou|autorizou|liberou|aceitou|validou|confirmou|corrigiu|escreveu|disse|nomeou|perguntou|queixou-se|reclamou|falou|contou|apertou|apontou|digitou|clicou|olhou|viu|mexeu|escolheu|colou)" + _D, re.I)
-#: «o nome QUE ELA deu», «o que ela declarou»: na oração relativa o sujeito é quem dá, declara,
-#: ensina ou tira, e uma tabela ou uma régua não faz nenhum dos quatro (medido: 100 trechos em
-#: `src/`, `tests/` e `scripts/`). Fica com a mesma guarda do substantivo técnico antes dela.
 _QUE_ELA_VERBO = _c(_E + r"que ela (declarou|deu|ensinou|tirou|dispensou)" + _D, re.I)
 _SUBSTANTIVO_TECNICO = re.compile(r"(?<![\w-])(?:carona|cura)(?![\w-])", re.I)
-#: o fim da frase: ponto, exclamação ou interrogação seguidos de espaço, ou a linha em branco
-#: (os dois-pontos e o ponto e vírgula NÃO fecham a frase: «a carona devolve: os lançadores em que ela...»)
 _FIM_DE_FRASE = re.compile(r"[.!?](?=\s)|\n[ \t]*(?:#:?[ \t]*|\*[ \t]*)?\n")
 
 
@@ -107,46 +93,32 @@ def _pronome_de_substantivo_tecnico(m: re.Match[str], contexto: str = "") -> boo
 
 
 REGRAS: list[tuple[re.Pattern[str], str]] = [
-    # «(dela, 02/10/2026)»: a data já diz de quando, e o «dela» não diz nada a mais
     (re.compile(r"\(dela, (\d{1,2}/\d{1,2}(?:/\d{4})?)\)", re.I), r"(\1)"),
-    # a data já diz de quando: «ordem dela de 19/09» -> «ordem de 19/09»
     (_c(_E + r"(" + _NOMES_DE_DECISAO + r") dela" + _DATA, re.I), r"\1"),
-    # a bancada é a bancada
     (_c(_E + r"(?:mesa|bancada) dela" + _D, re.I), "bancada"),
-    # a medição foi na bancada: a máquina, a TV e o diário em que se mediu são da bancada
     (_c(_E + r"(medid[oa]s?|conferid[oa]s?|rodad[oa]s?|testad[oa]s?|observad[oa]s?|vist[oa]s?) na máquina dela" + _D, re.I), r"\1 na bancada"),
     (_c(_E + r"na máquina dela(?=,? (?:em|às|de|no dia) \d)", re.I), "na bancada"),
     (_c(_E + r"máquina dela(?=,? (?:em|às) \d)", re.I), "máquina da bancada"),
     (_c(_E + r"(tv|journal) dela" + _D, re.I), r"\1 da bancada"),
-    # quem recebe a pergunta é o usuário
     (_c(_E + r"(levad[oa]s?|mostrad[oa]s?|perguntad[oa]s?|explicad[oa]s?|apresentad[oa]s?|entregues?) a ela" + _D, re.I), r"\1 ao usuário"),
     (_c(_E + r"(nas|com as|pelas) palavras dela" + _D, re.I), r"\1 palavras do usuário"),
-    # o olho de quem confere
     (_c(_E + r"olho dela" + _D, re.I), "olho de quem confere"),
-    # citação e literal: o «dela» some e a palavra fica
     (_c(_E + r"(cita[çc][ãa]o|literal|literais) dela" + _D, re.I), r"\1"),
     (_c(_E + r"(cita[çc][õo]es) delas" + _D, re.I), r"\1"),
-    # o que é decisão vira decisão de produto
     (_c(_E + r"(decis[ãa]o|ordem|palavra|regra|aceite|delega[çc][ãa]o|resposta|ressalva|frase|pergunta|padr[ãa]o|lei) dela" + _D, re.I), r"\1 de produto"),
     (_c(_E + r"(decis[õo]es|ordens|palavras|regras|respostas|ressalvas|frases|perguntas) delas?" + _D, re.I), r"\1 de produto"),
     (_c(_E + r"(escolha) dela" + _D, re.I), r"\1 do usuário"),
     (_c(_E + r"(pedido|pedidos) dela" + _D, re.I), r"\1"),
     (_c(_E + r"(queixa|queixas) dela" + _D, re.I), r"\1 de uso"),
-    # «a decisão é dela» / «a palavra é dela»
     (_c(_E + r"(decis[ãa]o|palavra|ordem|regra|escolha|pedido) é dela" + _D, re.I), r"\1 é de produto"),
-    # o que é do usuário
     (_c(_E + r"(" + _DO_USUARIO + r") dela" + _D, re.I), r"\1 do usuário"),
     (_c(_E + r"(na frente) dela" + _D, re.I), r"\1 do usuário"),
-    # quem diz e quem faz
     (_c(_E + r"(a validar|validad[oa]s?|aprovad[oa]s?|decidid[oa]s?|escolhid[oa]s?|pedid[oa]s?|confirmad[oa]s?|ditad[oa]s?|corrigid[oa]s?|delegad[oa]s?) por ela" + _D, re.I), r"\1 pelo usuário"),
-    # só os verbos que uma função, uma tela ou um arquivo não têm como fazer
     (_ELA_VERBO, r"o usuário \1"),
     (_QUE_ELA_VERBO, r"que o usuário \1"),
-    # ênfase em maiúsculas: no corpus, «DELA» sozinho é sempre a pessoa
     (_c(r"(?<![\w-])ELA É DELA(?![\w-])"), "É DO USUÁRIO"),
     (_c(r"(?<![\w-])DELA(?![\w-])"), "DO USUÁRIO"),
     (_c(_E + r"ela é dela" + _D, re.I), "é do usuário"),
-    # «é dela» no fim da oração, quando o sujeito não é um nome técnico feminino
     (_c(
         r"(?<![\w-])(?P<cab>(?:(?!\b(?:régua|função|classe|tabela|lista|chave|fila|linha|camada|rota|porta|variável|"
         r"constante|ponte|aba|pasta|biblioteca|thread|string|lápide|ferramenta|sprint|página|imagem|foto|marca|cor|"
@@ -165,13 +137,8 @@ def _adaptar(achado: str, troca: str) -> str:
 
 
 
-#: Toda regra de ``REGRAS`` casa com um «ela», «dela» ou «delas» que começa palavra (``tela``, ``janela`` e
-#: ``pela`` não contam). Texto sem um deles não muda, e a pergunta custa um ``search`` onde as regras custam
-#: uma varredura por regra: o arquivo inteiro sem um deles dispensa até o ``ast`` dos trechos de prosa.
 _TEM_ELA = re.compile(r"(?<![\w-])d?ela", re.I)
 _TEM_DELA = re.compile(r"(?<![\w-])dela", re.I)
-#: As regras que citam «dela» no padrão só casam em texto que o tenha; as de «ela» (``por ela``, ``a ela``,
-#: ``ela VERBO``) casam sem ele. Com a separação, o texto sem «dela» roda quatro regras e não vinte e seis.
 _PEDEM_DELA = frozenset(i for i, (padrao, _) in enumerate(REGRAS) if "dela" in padrao.pattern.lower())
 
 
@@ -198,9 +165,6 @@ def reescrever_prosa(texto: str, contexto: str = "") -> str:
     return texto
 
 
-# --------------------------------------------------------------------------
-# Onde está a prosa em cada tipo de arquivo.
-# --------------------------------------------------------------------------
 _MARCACAO = re.compile(r"<!--.*?-->|(?<![\w/*\"'])/\*(?!/).*?\*/", re.S)
 _JS = re.compile(r"(?:(?<=\s)|^)//(?=\s)[^\n]*", re.M)
 _SH = re.compile(r"(?:(?<=\s)|^)#(?!!)[^\n]*", re.M)
@@ -253,13 +217,10 @@ def _spans_py(texto: str) -> list[tuple[int, int]]:
                 v = no.body[0].value
                 if isinstance(v, ast.Constant) and isinstance(v.value, str) and v.end_lineno:
                     spans.append((linhas[v.lineno - 1] + v.col_offset, linhas[v.end_lineno - 1] + v.end_col_offset))
-    # comentário de HTML, CSS e JS só conta quando mora DENTRO de uma string do gerador
     strings: list[tuple[int, int]] = []
     candidatos = [m for rx in (_MARCACAO, _JS) for m in rx.finditer(texto)]
-    if arvore is not None and candidatos:  # sem candidato, a árvore inteira não tem o que dizer
+    if arvore is not None and candidatos:
         for no in ast.walk(arvore):
-            # a f-string conta inteira: do 3.12 em diante cada pedaço tem a posição exata, e um comentário
-            # com `{CAMPO}` no meio cruzava dois pedaços e escapava (no 3.10 e no 3.11, não)
             string = isinstance(no, ast.JoinedStr) or (isinstance(no, ast.Constant) and isinstance(no.value, str))
             if string and no.end_lineno:
                 strings.append((linhas[no.lineno - 1] + no.col_offset, linhas[no.end_lineno - 1] + no.end_col_offset))
@@ -318,12 +279,11 @@ _LINHA_SEGUINTE = re.compile(r"[ \t]*\n[ \t]*")
 
 def _reescrever_arquivo(texto: str, tipo: str) -> str:
     if _TEM_ELA.search(texto) is None:
-        return texto  # nenhum trecho do arquivo tem o que trocar: nem se procuram os trechos de prosa
+        return texto
     partes: list[str] = []
     cursor = 0
     contexto = ""
     for ini, fim in _fundir(_spans_de(texto, tipo)):
-        # o comentário da linha de cima, sem código no meio, é a mesma frase que continua
         if not (partes and _LINHA_SEGUINTE.fullmatch(texto[cursor:ini])):
             contexto = ""
         partes.append(texto[cursor:ini])
@@ -347,7 +307,7 @@ def _reescrever_arquivo(texto: str, tipo: str) -> str:
             continue
         n = _aparar(n)
         if n.strip() in ("#", "#:", "*", "<!--"[:0]):
-            continue  # a linha era só a fala tirada
+            continue
         if not n.strip() and final and not final[-1].strip():
             continue
         final.append(n)
@@ -410,8 +370,6 @@ def main(argv: list[str] | None = None) -> int:
     mudados: list[str] = []
     sobra = 0
     linhas_da_sobra: list[str] = []
-    # Cada arquivo é independente e a conta é só de CPU: reparte entre os núcleos, na ordem da lista
-    # (``map`` devolve na ordem, e a saída é a mesma da corrida em série).
     alvos_todos = alvos()
     trabalhadores = min(os.cpu_count() or 1, 8, max(1, len(alvos_todos) // 200))
     if trabalhadores > 1:

@@ -139,11 +139,10 @@ def dizer(texto: str = "") -> None:
 try:
     import evdev
     from evdev import ecodes
-except ImportError:  # pragma: no cover - só quando falta a dep do projeto
+except ImportError:  # pragma: no cover
     evdev = None  # type: ignore[assignment]
     ecodes = None  # type: ignore[assignment]
 
-# Os padrões de player LED do DualSense: cinco luzes, e só quatro desenhos
 DESENHOS_DO_LED = {
     (0, 0, 1, 0, 0): 1,
     (0, 1, 0, 1, 0): 2,
@@ -342,8 +341,6 @@ def tabela_dos_vpads(saidas: list[Aparelho]) -> None:
     dizer()
     dizer(tabela(cabecalho, linhas))
 
-
-# Em 29/09/2026 um laço de 0,1 s leu 1.767 vezes o `state_full` com os botões
 
 ACENDEU = "acendeu"
 FALHA = "falha"

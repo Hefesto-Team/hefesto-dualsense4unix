@@ -445,7 +445,7 @@ def _linha_para_o_doctor() -> str:
     )
 
 
-if __name__ == "__main__":  # pragma: no cover - caminho de diagnóstico
+if __name__ == "__main__":  # pragma: no cover
     print(_linha_para_o_doctor())
 
 

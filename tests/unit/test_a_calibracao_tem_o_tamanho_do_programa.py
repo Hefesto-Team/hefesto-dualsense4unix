@@ -24,17 +24,11 @@ FOLGA = 2
 
 PISO = (1212, 809)
 
-#: A largura da FOTO DO USUÁRIO de 04/09/2026
-#: (`test_a_janela_estreita_nao_engole_o_desenho`): 272 px a
-#: menos que o piso. A queixa de 08/10: o segundo «Inverter» saía 32 px do cartão aqui.
 ESTREITA = (940, PISO[1])
 
 VISTAS = {"piso": PISO, "estreita": ESTREITA, "dela": olhar.VISTA_DELA,
           "ladrilhada": (PISO[0], 700), "baixa": (PISO[0], 480)}
 
-#: As vistas em que a janela tem a altura do desenho: ali o miolo NÃO rola na
-#: vertical (regra de produto de 05/10: toda interface funciona sem a barra de
-#: rolagem vertical).
 SEM_ROLAGEM_VERTICAL = ("piso", "estreita", "dela")
 
 

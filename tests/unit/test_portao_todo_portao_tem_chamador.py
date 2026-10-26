@@ -60,7 +60,6 @@ _FORMAS_DE_PORTAO = ("check_", "validar-", "portao_")
 
 _DATA = re.compile(r"\b\d{2}/\d{2}/\d{4}\b")
 
-#: O mesmo piso do `portao_a_casa_sabe_e_o_produto_nao_faz`: abaixo disto a
 _RAZAO_MINIMA = 120
 
 _CAMADAS = ("rapido|", "completo|", "suite|")
@@ -394,5 +393,5 @@ def test_o_registro_e_a_varredura_nao_se_contradizem() -> None:
     )
 
 
-if __name__ == "__main__":  # pragma: no cover - conveniência de bancada
+if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(pytest.main([__file__, "-q"]))

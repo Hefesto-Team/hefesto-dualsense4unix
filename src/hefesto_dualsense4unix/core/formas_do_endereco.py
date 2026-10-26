@@ -60,7 +60,6 @@ from dataclasses import dataclass
 
 CARACTERES_PUBLICOS_DO_SERIAL = 6
 
-#: A forma do serial de fábrica do DualSense, MEDIDA nos aparelhos da bancada
 PADRAO_DE_SERIAL = (
     r"(?<![A-Z0-9])"
     r"[A-Z][0-9]{2}[A-Z0-9][0-9]{2}"

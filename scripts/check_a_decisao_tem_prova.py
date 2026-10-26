@@ -58,10 +58,6 @@ PISO = Path("docs/data/decisoes-sem-prova.txt")
 
 ESTADOS = ("aberta", "decidida", "implementada", "feita", "no ar", "caduca")
 DEGRAUS_QUE_EXIGEM_PROVA = ("implementada", "feita", "no ar")
-#: Os degraus em que o USUÁRIO JÁ RESPONDEU. O resto da escada diz até onde o código chegou, e
-#: a decisão que sobe a `feita` continua decidida pelo usuário: quem pergunta «o usuário decidiu?»
-#: (as réguas do registro, do mapa e da trava do jogo aberto) lê este conjunto, nunca a
-#: palavra `decidida` sozinha. Senão a primeira decisão promovida some dessas réguas.
 RESPONDIDAS = ("decidida", *DEGRAUS_QUE_EXIGEM_PROVA)
 MARCAS = ("", "processo")
 COLUNAS_NOVAS = ("prova", "marca")
@@ -236,7 +232,6 @@ def aceitar(raiz: Path, m: dict[str, Any], semear: bool = False) -> int:
         _imprimir_ids(m["novas_sem_prova"])
         return 2
     if semear:
-        # o primeiro censo GERA o arquivo; é o único caso em que ele nasce do zero
         cabecalho = (
             "# PISO das decisões decididas e sem prova (scripts/check_a_decisao_tem_prova.py).\n"
             "# Um id por linha. Desce sozinho: `--aceitar` tira o que ganhou prova ou a marca\n"
@@ -246,8 +241,6 @@ def aceitar(raiz: Path, m: dict[str, Any], semear: bool = False) -> int:
         (raiz / PISO).write_text(cabecalho + corpo, encoding="utf-8")
         print(f"piso gravado: {len(m['sem_prova'])} decisões sem prova")
         return 0
-    # O piso é editado por pessoas (comentário datado, bloco fora de ordem): o `--aceitar`
-    # só TIRA a linha do id que já não está sem prova, e o resto fica byte a byte onde estava.
     sem_prova = set(m["sem_prova"])
     vistos: set[str] = set()
     mantidas: list[str] = []

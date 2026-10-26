@@ -19,14 +19,14 @@ from hefesto_dualsense4unix.integrations import virtual_pad as vp
 
 @pytest.mark.parametrize("caminho", [None, "dualsense", "xbox"])
 def test_a_pro_nao_pede_o_uhid_em_modo_nenhum(caminho: str | None) -> None:
-    # D-1610-A-PRO-FICA-NO-UINPUT
+    """Prova da D-1610-A-PRO-FICA-NO-UINPUT."""
     assert not vp.quer_uhid(caminho, "nintendo")
 
 
 def test_o_jogo_ve_a_pro_so_fora_do_modo_xbox() -> None:
     assert vp.o_jogo_ve_a_pro("dualsense", ["dualsense", "nintendo"])
     assert vp.o_jogo_ve_a_pro(None, ["nintendo"])
-    assert not vp.o_jogo_ve_a_pro("xbox", ["nintendo"])  # no modo Xbox o jogo vê o Xbox 360
+    assert not vp.o_jogo_ve_a_pro("xbox", ["nintendo"])
     assert not vp.o_jogo_ve_a_pro("dualsense", ["dualsense", "xbox"])
     assert not vp.o_jogo_ve_a_pro("dualsense", "nintendo")
 
@@ -52,7 +52,6 @@ def test_a_linha_sai_quando_um_controle_mostra_a_pro() -> None:
     [
         _estado("nintendo", "xbox", {}),
         _estado("dualsense", "dualsense", {"aa:bb:cc:00:00:01": "dualsense"}),
-        # a da sessão é Pro, mas o controle conectado veste o DualSense
         _estado("nintendo", "dualsense", {"aa:bb:cc:00:00:01": "dualsense"}),
         {"gamepad_emulation": {"enabled": False, "flavor": "nintendo"}},
         None,

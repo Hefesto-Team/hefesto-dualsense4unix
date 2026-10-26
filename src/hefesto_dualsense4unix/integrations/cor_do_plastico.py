@@ -122,9 +122,6 @@ SEMENTE_SET_FEATURE_BT = 0x53
 
 TAMANHO_DO_FEATURE = 64
 
-#: Os pares da MESMA família ``0x80`` que destroem o controle. Não estão aqui
-#: para serem usados: estão para que a trava tenha o que reconhecer, e para que
-#: quem ler este arquivo veja o tamanho do precipício ao lado da trilha.
 PARES_QUE_DESTROEM: dict[tuple[int, int], str] = {
     (1, 1): "RESETA o controle",
     (3, 2): "destrava a NVS para escrita",
@@ -135,19 +132,15 @@ FAMILIA_DO_FIRMWARE = range(0xF0, 0xF8)
 
 _RAIZ = pathlib.Path(__file__).resolve().parents[3]
 
-#: cabeçalho, «UMA TABELA SÓ».
 TABELA_DAS_CORES = _RAIZ / "docs" / "data" / "cores-do-dualsense.csv"
 
 _ZONAS_DO_TOM = ("casca_esq", "casca_dir")
 
-#: O produto não pode estar ajustado só para a máquina de quem desenvolve: outro usuário pluga o
-#: controle dele e o app tem de funcionar.
 MODELOS: dict[int, str] = {
     0x0CE6: "DualSense",
     0x0DF2: "DualSense Edge",
 }
 
-#: família DualSense (``core/evdev_reader.DUALSENSE_PIDS``).
 MODELO_GENERICO = MODELOS[0x0CE6]
 
 _GRAFIAS_DE_ANTES: dict[str, str] = {
@@ -167,10 +160,7 @@ _BUS_BLUETOOTH = 0x0005
 CABO = "cabo"
 RADIO = "rádio"
 
-#: O VID do DualSense. Os PIDs são as chaves de :data:`MODELOS`. Um par errado
 _VID_SONY = 0x054C
-
-# VID/PID/bus de DualSense Edge no cabo (``0003:054C:0DF2``) — o mesmo par do
 
 
 class PedidoRecusadoError(Exception):
@@ -302,10 +292,6 @@ NOMES_DE_FABRICA: dict[str, str] = {codigo: cor.nome for codigo, cor in TABELA.i
 TONS: dict[str, str] = {codigo: cor.tom for codigo, cor in TABELA.items() if cor.tom}
 
 
-# Tradução — pura, sem aparelho nenhum
-# ---------------------------------------------------------------------------
-
-
 def cor_do_codigo(codigo: str) -> CorDoPlastico | None:
     """A cor de um código de dois caracteres, ou ``None`` para código estranho.
 
@@ -364,12 +350,6 @@ def cor_do_serial(serial: str) -> CorDoPlastico | None:
     return cor_do_codigo(serial[FATIA_DA_COR])
 
 
-#: Casca neutra (branco, preto, cinzas) não tem matiz: a clara acende branco, e a
-#: escura não tem tom e cai no número. Os dois limiares abaixo saíram por
-#: delegação, sem a sessão com a luz na mão: a saturação de 15% separa as cascas
-#: neutras do mapa (White 5%, Sterling Silver 3%, Midnight Black 7%) das coloridas
-#: (a menor é a do Starlight Blue, 41%), e o valor de 50% separa o preto (12%) dos
-#: cinzas claros (30th Anniversary, 69%).
 SATURACAO_NEUTRA = 0.15
 VALOR_CLARO = 0.5
 
@@ -431,11 +411,6 @@ def tom_para_a_borda(tom: str, *, minimo: float = RAZAO_DA_BORDA) -> str:
         if razao_contraste(misto, FUNDO_DO_CARD) >= minimo:
             return rgb_para_hex(misto)
     return rgb_para_hex((255, 255, 255))
-
-
-# ---------------------------------------------------------------------------
-# A trava — tudo que escreve passa por aqui
-# ---------------------------------------------------------------------------
 
 
 def montar_pedido(tamanho: int = TAMANHO_DO_FEATURE) -> bytes:

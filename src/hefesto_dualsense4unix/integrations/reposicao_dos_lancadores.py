@@ -72,8 +72,6 @@ class Lancador:
     nativo: str | None = None
 
 
-#: Os lançadores de fábrica que dizem como se fecham e se reabrem: o bloco ``reposicao`` do
-#: manifesto de cada um (`mods/de_fabrica/`, lido por `censo_dos_lancadores`), na ordem dos cartões.
 LANCADORES: tuple[Lancador, ...] = tuple(
     Lancador(f.bloco.chave, f.reposicao.nome, f.reposicao.processos,
              flatpak=f.reposicao.flatpak, nativo=f.reposicao.nativo)

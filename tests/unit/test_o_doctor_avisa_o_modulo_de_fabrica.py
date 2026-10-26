@@ -27,8 +27,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 BASELINE = RAIZ / "assets" / "dkms" / "hid-playstation" / "patch" / "BASELINE"
 DE_FABRICA = "A74F93FE20FF36683AF7614"
 
-#: O próximo build do Pop, o estável de 11/10 e o mainline: nenhum está no pino. O 7.2.6 do
-#: Pop (ramo `linux_noble`) entrou nele em 15/10/2026, com o fonte dele em `fonte-por-kernel/`.
 KERNELS_NOVOS = [
     "7.2.7-76070207-generic",
     "7.2.10-76070210-generic",

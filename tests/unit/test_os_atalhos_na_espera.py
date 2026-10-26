@@ -273,7 +273,7 @@ def armar_o_ato_do_daemon(
     d.set_gamepad_emulation_desfecho = functools.partial(
         Daemon.set_gamepad_emulation_desfecho, d
     )
-    d._devolver_as_tabelas_do_perfil = lambda: None  # o teclado não é deste teste
+    d._devolver_as_tabelas_do_perfil = lambda: None
     d.vestir_a_mascara_do_aparelho = Daemon.vestir_a_mascara_do_aparelho.__get__(d)
     d.config.gamepad_emulation_enabled = True
     dubles: dict[str, Any] = {
@@ -961,7 +961,7 @@ class TestOLacoDeProducao:
         tarefa = asyncio.create_task(daemon.run())
         try:
             await asyncio.wait_for(cobriu.wait(), PRAZO_DO_LACO)
-        except asyncio.TimeoutError:  # no 3.10 não é o TimeoutError embutido
+        except asyncio.TimeoutError:
             chegou = sorted(set(observados), key=str)
             falta = sorted(esperados - set(observados), key=str)
             pytest.fail(
@@ -977,7 +977,7 @@ class TestOLacoDeProducao:
     async def test_na_vaga_o_laco_entrega_os_botoes_do_p2_e_do_p3(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Espera pela condição, não pelo relógio: D-1310-O-TESTE-DO-LACO-ESPERA-PELA-CONDICAO.
+        """Prova da D-1310-O-TESTE-DO-LACO-ESPERA-PELA-CONDICAO."""
         esperados = frozenset(
             {
                 (P1, frozenset()),
@@ -995,7 +995,7 @@ class TestOLacoDeProducao:
     async def test_fora_da_vaga_o_laco_entrega_o_posto_e_os_outros(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        # Espera pela condição, não pelo relógio: D-1310-O-TESTE-DO-LACO-ESPERA-PELA-CONDICAO.
+        """Prova da D-1310-O-TESTE-DO-LACO-ESPERA-PELA-CONDICAO."""
         esperados = frozenset(
             {
                 (P1, frozenset({"cross"})),

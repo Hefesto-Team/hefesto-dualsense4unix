@@ -41,7 +41,7 @@ COR, COMUM = _carregar_o_instrumento()
 MAC_DO_ALVO = "aa:bb:cc:dd:ee:03"
 MAC_DO_OUTRO_NO = "aa:bb:cc:dd:ee:09"
 
-SERIAL_FORJADO = "ZZ9Y02Q0000000000"  # serial-de-mentira: prefixo forjado
+SERIAL_FORJADO = "ZZ9Y02Q0000000000"  # serial-de-mentira
 COR_DO_SERIAL_FORJADO = "Cosmic Red"
 
 FIRMWARE_FORJADO = b"FIRMWARE FORJADO"

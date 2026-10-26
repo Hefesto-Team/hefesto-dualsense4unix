@@ -207,8 +207,6 @@ def test_o_help_diz_onde_a_curta_vale() -> None:
     assert "A forma curta" in ajuda and ".csv" in ajuda and "MAIS PRÓXIMA" in ajuda, ajuda
 
 
-# --- o recorte do CSV cru: o mesmo que o `csv.reader` lê, com o lugar de cada letra ---------------
-
 TEXTOS_DE_CSV = [
     "a,b,c\n",
     'a,"b,c",d\n',

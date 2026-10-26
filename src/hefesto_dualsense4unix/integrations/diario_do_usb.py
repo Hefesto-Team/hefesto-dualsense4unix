@@ -36,7 +36,6 @@ NAO_APARECEU = "não apareceu neste início"
 COMECOU_A_OUVIR = "começou a ouvir"
 PAROU_DE_OUVIR = "parou de ouvir"
 
-#: o evento no log do daemon, em nome ASCII
 _NO_LOG = {
     ENTROU: "usb_entrou",
     SAIU: "usb_saiu",
@@ -47,9 +46,7 @@ _NO_LOG = {
     PAROU_DE_OUVIR: "usb_parou_de_ouvir",
 }
 
-#: quanto depois da subida um adaptador ou hub de um boot anterior conta como «não apareceu»
 AUSENTE_DEPOIS_DE_S = 60.0
-#: os tipos cuja falta se diz: o que a pessoa não tira e põe a toda hora
 TIPOS_QUE_SE_ESPERAM = frozenset({"Bluetooth", "Wi-Fi", "Hub"})
 MAXIMO_DE_VISTOS = 256
 
@@ -113,7 +110,6 @@ def fotos_do_censo(censo: Censo) -> dict[str, Foto]:
     return fotos
 
 
-#: os campos da :class:`Foto` sem padrão; um visto sem eles não vira aviso
 _OBRIGATORIOS = frozenset({"no", "vid", "pid", "tipo"})
 
 

@@ -69,7 +69,6 @@ from hefesto_dualsense4unix.integrations.virtual_pad import (
 
 EVENTO = "canal_sem_imu"
 
-#: A máscara que o produto promete quando o jogo vê um DualSense — o primeiro
 MASCARA_QUE_PROMETE = ESCADA[0].ponte.mascara
 
 PONTE_DAS_DEZ = ESCADA[0].ponte.chave
@@ -126,7 +125,6 @@ def chaves_fora_do_ar() -> tuple[str, ...]:
     return _DO_DISCO or DEZ_LINHAS_CONGELADAS
 
 
-#: Lido UMA vez, no import. O `state_full` roda a 20 Hz e o launch materializa
 _DO_DISCO: tuple[str, ...] = linhas_do_mapa()
 
 
@@ -178,7 +176,6 @@ def canal_sem_imu_do_vpad(vpad: object) -> bool:
             backend=getattr(vpad, "backend", None),
         )
     except Exception:
-        # dentro do `state_full` e da materialização do launch, e os dois são
         return False
 
 

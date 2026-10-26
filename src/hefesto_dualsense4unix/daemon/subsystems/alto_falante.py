@@ -138,31 +138,20 @@ def _mesmo_controle(a: object, b: object) -> bool:
 
 RECONCILIA_S = 5.0
 
-#: quanto o ``stop`` espera a volta e o ouvinte juntarem. Passado o prazo ele
-#: segue, e a porta (``_parar`` sob ``_porta``, e a do gerenciador) é o que
-#: impede a volta atrasada de deixar nó, ponte, tocador ou ouvido de pé.
 ESPERA_DA_VOLTA_S = 2.0
 
 _O_QUE_A_VOLTA_OUVE: tuple[str, ...] = ("sinks", "sink-inputs")
 
 RECUSA_DA_PONTE_S = 60.0
 
-#: o nó do rádio sem fonte de monitor espera isto antes de o ouvido tentar de novo:
-#: cada tentativa abre um subprocesso, e a volta roda a cada evento do servidor de som.
 RECUO_DO_OUVIDO_SEM_FONTE_S = RECONCILIA_S
 
 PAR_DO_TESTE_DA_HAPTICA: tuple[int, int] = (127, 127)
 
-#: O toque do teste da háptica: a força cheia (o Sensor háptico regula adiante), no centro, e a
-#: duração curta do Toque do estilo; as outras formas trazem a duração delas.
 ENERGIA_DO_TESTE = 1.0
 DURACAO_DO_TOQUE_DO_TESTE_MS = 40
-#: O grave fixo do Som no corpo no teste: o jogo não toca, então o trecho vem daqui. Os 50 ms
-#: são quatro ondas inteiras de 80 Hz, e o laço do tocador os emenda sem estalo.
 HZ_DO_GRAVE_DO_TESTE = 80
 MS_DO_GRAVE_DO_TESTE = 50
-#: O silêncio entre duas voltas da forma curta no teste: Toque, Impacto e Estalo viram um trem
-#: de batidas, e não um zumbido sem forma (pedido de 19/10/2026: contínuo até o «Parar»).
 MS_ENTRE_VOLTAS_DO_TESTE = 60
 FRASE_SEM_EFEITO_NO_TESTE = (
     "O efeito háptico deste controle está em "
@@ -234,7 +223,6 @@ class GerenciadorDeNosDeSom:
         self._fonte_por_controle = fonte_por_controle
         self._ponte_do_radio_por_controle = ponte_do_radio_por_controle
         self._nos: dict[str, Any] = {}
-        #: o último transporte visto de cada nó: o motivo da rota sem destino o diz
         self._transportes: dict[str, str] = {}
         self._acordar = threading.Event()
         self._trava = threading.RLock()
@@ -405,7 +393,7 @@ class GerenciadorDeNosDeSom:
             rotulo_envelheceu,
         )
 
-        no_ar = getattr(no, "descricao", None)  # (noqa-acento) nome de atributo
+        no_ar = getattr(no, "descricao", None)  # (noqa-acento)
         if not isinstance(no_ar, str) or not no_ar:
             return False
         try:
@@ -435,7 +423,7 @@ class GerenciadorDeNosDeSom:
             return False
         try:
             atual = estado()
-        except Exception:  # pragma: no cover - defensivo
+        except Exception:  # pragma: no cover
             return True
         if atual is None:
             return True
@@ -447,7 +435,7 @@ class GerenciadorDeNosDeSom:
             return None
         try:
             return self._ponte_do_radio_por_controle(uniq)
-        except Exception:  # pragma: no cover - defensivo
+        except Exception:  # pragma: no cover
             logger.debug("som_ponte_do_radio_ilegivel", uniq=uniq, exc_info=True)
             return None
 
@@ -459,7 +447,7 @@ class GerenciadorDeNosDeSom:
             return FONTE_PADRAO
         try:
             return self._fonte_por_controle(uniq) or FONTE_PADRAO
-        except Exception:  # pragma: no cover - defensivo
+        except Exception:  # pragma: no cover
             logger.debug("som_fonte_ilegivel", uniq=uniq, exc_info=True)
             return FONTE_PADRAO
 
@@ -517,7 +505,6 @@ class GerenciadorDeNosDeSom:
         if self._acordar.is_set():
             return None
         no = self._construir(uniq, transporte, mesa, descricao=descricao)
-        # aqui poria uma entrada MUDA por DualSense na lista de som do usuário;
         rota = getattr(no, "rota", None)
         if rota is not None and not getattr(rota, "tem_rota", True):
             logger.info(
@@ -541,7 +528,7 @@ class GerenciadorDeNosDeSom:
         velho = self._nos.get(uniq)
         if velho is None:
             return False
-        no_ar = getattr(velho, "descricao", None)  # (noqa-acento) nome de atributo
+        no_ar = getattr(velho, "descricao", None)  # (noqa-acento)
         try:
             novo = self._construir(uniq, transporte, mesa)
         except Exception:
@@ -756,21 +743,14 @@ class AltoFalanteSubsystem:
     _no_radio: frozenset[str] = frozenset()
     _o_que_a_volta_viu: frozenset[str] | None = None
     _volta_pedida: bool = False
-    #: ``{uniq: marca do aparelho}`` de cada DualSense da mesa na última volta
     _aparelho_de: Mapping[str, str] = MappingProxyType({})
     _endpoint_da_ponte: Mapping[str, str] = MappingProxyType({})
-    #: ``{uniq: o bloco da háptica vai ao fio}`` de cada ponte do rádio, relido
-    #: a cada volta e lido pela ponte a cada quadro (sem derrubá-la).
     _leva_da_ponte: Mapping[str, bool] = MappingProxyType({})
     _cabo: Any = None
     _ouvidos_das_placas: Mapping[str, Any] = MappingProxyType({})
-    #: ``{nó: OuvidoDoNo}`` de cada controle no rádio que, no Modo Nativo, tem
-    #: fluxo aberto e ainda não tem ponte: a ponte só sobe com o som do jogo.
     _ouvidos_do_radio: Mapping[str, Any] = MappingProxyType({})
     _tocadores: Mapping[str, Any] = MappingProxyType({})
-    #: ``{nó de som: TocadorDoEstalo}``, o estalo do tiro no alto-falante de cada controle.
     _estalos: Mapping[str, Any] = MappingProxyType({})
-    #: ``{uniq: vaga}`` da ponte do rádio de pé: o estalo lê dela se o rádio está cedendo.
     _vaga_da_ponte: Mapping[str, Any] = MappingProxyType({})
     _rumble_vivo: Mapping[str, tuple[Any, tuple[str | None, bool, bool, bool]]] = (
         MappingProxyType({})
@@ -779,19 +759,14 @@ class AltoFalanteSubsystem:
     _aparelhos_com_jogo: frozenset[str] = frozenset()
     _sem_registro_no_jogo: frozenset[str] = frozenset()
     _teste_da_haptica: Mapping[str, float] = MappingProxyType({})
-    #: ``{uniq: forma}`` do teste que está em laço no tocador do controle.
     _forma_em_laco: Mapping[str, str] = MappingProxyType({})
-    #: os controles cujo último rebate do teste caiu no par fixo (a forma não pôde tocar).
     _teste_no_par: frozenset[str] = frozenset()
     _com_haptica_de_audio: frozenset[str] = frozenset()
     _trava_do_rumble = threading.Lock()
 
-    #: O ``state_full`` lê a amostra de ar DELE — um medidor só no daemon.
     governador: Any = None
     _esperando_vaga: frozenset[tuple[str, str]] = frozenset()
-    #: Por que cada controle pelo rádio está SEM ponte agora (só a borda vai ao log).
     _sem_ponte_porque: Mapping[str, str] = MappingProxyType({})
-    #: O ganho da háptica que cada controle no rádio leva, o último dito no log (item 6).
     _ganho_do_radio_dito: Mapping[str, int] = MappingProxyType({})
 
     def __init__(
@@ -807,13 +782,10 @@ class AltoFalanteSubsystem:
         self._gerenciador_injetado = gerenciador
         self._gerenciador: Any = None
         self._pontes: dict[str, Any] = {}
-        #: DualSense da mesa, nos dois transportes, desde a
         self._endpoints: dict[str, Any] = {}
         self._modo_da_ponte: dict[str, str] = {}
         self._ponte_recusada: dict[str, float] = {}
-        #: ``{nó: (uniq, quando)}`` do ouvido que não achou fonte, até o recuo vencer.
         self._ouvido_sem_fonte: dict[str, tuple[str, float]] = {}
-        #: ``{marca: motivo}`` do aparelho sem a porta USB própria, já dito no log.
         self._sem_porta: dict[str, str] = {}
         self._fontes_em_cache: tuple[dict[str, str], Any] = ({}, None)
         self._fonte_viva: dict[str, str] = {}
@@ -821,7 +793,6 @@ class AltoFalanteSubsystem:
         self._fonte = fonte_de_controles or controles_na_lista
         self._thread: threading.Thread | None = None
         self._parar = threading.Event()
-        #: quem guarda o que a volta subiu e quem põe o ``_parar`` passam por ela.
         self._porta = threading.Lock()
         self._backend: Any = None
         self._numerador_anterior: Any = Ellipsis
@@ -859,7 +830,7 @@ class AltoFalanteSubsystem:
             return []
         try:
             itens = descrever()
-        except Exception:  # pragma: no cover - defensivo
+        except Exception:  # pragma: no cover
             logger.debug("som_mesa_ilegivel", exc_info=True)
             return []
         if not isinstance(itens, list):
@@ -908,7 +879,7 @@ class AltoFalanteSubsystem:
             return frozenset()
         try:
             return frozenset(gerenciador.nos)
-        except Exception:  # best-effort: o relato nunca derruba o state_full
+        except Exception:
             logger.debug("som_nos_ilegiveis", exc_info=True)
             return frozenset()
 
@@ -926,7 +897,7 @@ class AltoFalanteSubsystem:
                 continue
             try:
                 de_pe = bool(ponte.esta_de_pe())
-            except Exception:  # best-effort: o relato nunca derruba o state_full
+            except Exception:
                 continue
             if de_pe:
                 saida[uniq] = modo
@@ -969,7 +940,7 @@ class AltoFalanteSubsystem:
                 getattr(getattr(self, "_store", None), "active_profile", None)
                 or load_last_profile()
             )
-        except Exception:  # pragma: no cover - defensivo
+        except Exception:  # pragma: no cover
             nome = None
         if not nome:
             self._fontes_em_cache = ({}, None)
@@ -1047,7 +1018,7 @@ class AltoFalanteSubsystem:
 
         try:
             return bool(pids_de_jogo())
-        except Exception:  # pragma: no cover - defensivo: na dúvida, há jogo
+        except Exception:  # pragma: no cover
             return True
 
     def _aparelhos_da_mesa(self, controles: list[Any]) -> dict[str, str]:
@@ -1142,8 +1113,6 @@ class AltoFalanteSubsystem:
             no_servidor if de_pe is not None else None,
             refazer=ordem == ORDEM_PELO_ASSENTO,
         )
-        # O plano já refeito uma vez não se refaz: o nó do meio que não nasce
-        # (sem porta própria, ou o servidor recusa) faria os de trás renascerem a cada volta.
         plano = (tuple(na_ordem), tuple(refazer))
         if not refazer or plano == getattr(self, "_ordem_ja_refeita", None):
             self._ordem_ja_refeita = plano if refazer else None
@@ -2004,17 +1973,11 @@ class AltoFalanteSubsystem:
         with contextlib.suppress(Exception):
             de_pe = endpoints_de_pe_ou_nada()
         if de_pe is not None:
-            # O servidor de som é a verdade: endpoint que ele não tem mais (tirado por fora)
-            # sai da memória, e o código abaixo o cria ou adota de novo. Sem resposta
-            # (``None``), nada cai: «não sei» não é «sumiu».
             for marca in [m for m, e in self._endpoints.items() if e.no_ar(de_pe) is False]:
                 logger.warning("haptica_endpoint_sumiu_por_fora_na_volta", controle=marca)
                 self._o_cabo().soltar(marca)
                 self._parar_o_tocador(marca)
                 self._endpoints.pop(marca, None)
-            # TODO-PAD-TEM-PORTA-PROPRIA-01: no servidor fica só o endpoint de quem tem a
-            # porta própria (ou o que esta casa já segura); o resto, inclusive o de âncora
-            # emprestada que um processo anterior deixou, cai.
             com_porta = [
                 m for m, u in de_pe_agora.items()
                 if m in self._endpoints or ancora_do_gadget(u) is not None
@@ -2052,11 +2015,6 @@ class AltoFalanteSubsystem:
                     )
             if not uniq:
                 continue
-            # O-PAR-DO-PAD e TODO-PAD-TEM-PORTA-PROPRIA-01: o endpoint NASCE na porta
-            # própria, e só nela. Com o gadget a caminho, espera; sem gadget, fica
-            # sem endpoint e o log diz por quê. A pergunta é UMA, na hora de nascer
-            # (OS-QUATRO-EM-HARMONIA-01, item 2): uma foto do começo da volta
-            # envelhece no meio dela.
             interface, espera = a_ancora_ou_a_espera(uniq)
             propria = ancora_da_interface(interface)
             if propria is None:
@@ -2088,14 +2046,12 @@ class AltoFalanteSubsystem:
             GANHO.ler_do_daemon(getattr(self, "_daemon", None))
             for sink_com_motor in lidos:
                 if self._parar.is_set():
-                    break  # o stop devolve as placas: a volta atrasada não as enche de novo
+                    break
                 garantir_a_placa_cheia(sink_com_motor)
 
-        # PRAGMATA de 26/09 ficou sem ninguém), e em 21/09 o evdev pôs os QUATRO
         self._ver_quem_toca_nos_endpoints()
         self._donos_da_volta = self._donos_dos_fluxos()
 
-        # um laço por DualSense no cabo, do endpoint dele à placa, com os
         try:
             self._casar_o_cabo(controles, motores)
         except Exception:
@@ -2116,9 +2072,6 @@ class AltoFalanteSubsystem:
                 logger.info("som_ponte_terminou_sozinha", uniq=uniq, motivo=morta.motivo)
             endpoint = self._endpoint_de(uniq)
             endpoint_aberto = endpoint is not None and sink_esta_tocando(endpoint.nome)
-            # O-SOM-E-A-HAPTICA-NUM-RELATORIO-SO-01: a háptica vai ao fio com o som
-            # de pé ou sem ele; o fluxo do jogo no endpoint e o ganho dela decidem
-            # (A-HAPTICA-E-DO-JOGO-SEM-PORTAO-DE-QUEM-MEXE-01), e nunca o alto-falante.
             leva = bool(endpoint_aberto and GANHO.pct(uniq) > 0)
             leva_de[uniq] = leva
             self._leva_da_ponte = MappingProxyType({**self._leva_da_ponte, uniq: leva})
@@ -2126,9 +2079,6 @@ class AltoFalanteSubsystem:
                 nome_do_sink(uniq), na_duvida=uniq in self._pontes
             )
             lendo = endpoint.nome if (endpoint_aberto and endpoint is not None) else ""
-            # O-SOM-QUE-O-JOGO-MANDA-AO-CONTROLE-TOCA-TAMBEM-PELO-RADIO-01: a
-            # FRENTE do endpoint (canais 1-2) com sinal é som do jogo, e conta
-            # como som mesmo com a vibração em 0 e o alto-falante calado.
             frente_toca = self._a_frente_toca(lendo)
             if (
                 lendo
@@ -2138,9 +2088,6 @@ class AltoFalanteSubsystem:
                 and not frente_toca
                 and uniq not in self._pontes
             ):
-                # Com o endpoint aberto e a vibração em 0 (é o que
-                # tira a `leva`): ninguém lê a frente, e o ouvido é quem avisa
-                # que o jogo mandou som ao controle.
                 escutar[lendo] = (uniq, CANAIS_DA_HAPTICA, "ouvido-haptica")
             if not som_toca and not leva and not frente_toca:
                 self._descer_ponte_ociosa(uniq)
@@ -2151,13 +2098,6 @@ class AltoFalanteSubsystem:
                 continue
             tipo = "som" if (som_toca or frente_toca) else "haptica"
             if o_jogo_manda and caminho and uniq not in self._pontes:
-                # DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01, item 3: no
-                # Nativo o jogo abre o alto-falante e a háptica de todos, toque ou
-                # não. Fluxo aberto não é som: a ponte (a vaga do rádio e o
-                # hidraw) só sobe quando um nó dela tem sinal, e até lá quem
-                # escuta é o ouvido, que acorda a volta quando o jogo toca. O
-                # ouvido só desce quando a ponte SOBE (abaixo): quem espera a
-                # vaga segue ouvindo, sem gravador novo a cada volta.
                 abertos = {
                     **({nome_do_sink(uniq): (uniq, CANAIS_DO_ENCODER, "ouvido-som")}
                        if som_toca else {}),
@@ -2173,10 +2113,6 @@ class AltoFalanteSubsystem:
                     )
                     continue
             if uniq in self._pontes:
-                # A ponte só sobe de novo quando o endpoint que ela LÊ muda: para
-                # ganhar a háptica, trocar de endpoint ou soltá-lo quando o jogo o
-                # fecha (o gravador preso nele seguraria o endpoint, que não
-                # se reancora com leitor). Ligar e desligar o bloco é `leva`.
                 lia = self._endpoint_da_ponte.get(uniq, "")
                 if lia == lendo:
                     self._modo_da_ponte[uniq] = tipo
@@ -2244,8 +2180,6 @@ class AltoFalanteSubsystem:
                         self._descer_ponte_ociosa(uniq)
                         continue
                 else:
-                    # O-GATILHO-E-A-HAPTICA-DO-JOGO-VIRAM-EVENTOS-PARA-AS-EXTENSOES-01: o
-                    # envelope espia o PCM que a ponte já lê, com o ganho e o portão dela.
                     fonte_h = espiar_a_haptica(
                         self._daemon, uniq, fonte_h, taxa=taxa_da_fonte("haptica"),
                         ganho=functools.partial(GANHO.fator, uniq),
@@ -2555,8 +2489,6 @@ class AltoFalanteSubsystem:
             registrar_dizedor_da_fonte,
         )
 
-        # O-STOP-DO-SOM-TEM-ORCAMENTO-E-NAO-PERGUNTA-AO-SERVIDOR-MUDO-01: daqui em
-        # diante todo `pactl` divide um orçamento só, e roda fora do laço.
         fim = fim_do_orcamento_do_stop()
         try:
             await asyncio.to_thread(no_orcamento_do_stop, fim, devolver_as_placas)
@@ -2575,7 +2507,6 @@ class AltoFalanteSubsystem:
         self._desinstalar_o_numerador()
         registrar_dizedor_da_fonte(self._dizedor_anterior)
         self._dizedor_anterior = None
-        # as pontes e os laços desceram: a háptica parou de tocar em todos
         self._dizer_a_haptica_aos_controles([])
         self._backend = None
         logger.info("som_subsystem_parado")

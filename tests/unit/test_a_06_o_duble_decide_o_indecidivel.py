@@ -66,14 +66,8 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-PAGINA = "06-navegacao.html"  # (noqa-acento) nome de arquivo
+PAGINA = "06-navegacao.html"
 
-#: O `player_slot` NÃO É ENFEITE: é ele que ordena a mesa. E ele é de 2 a 5, e não de 1 a 4,
-#: desde que o cartão diz o número VIVO (O-CARTAO-ABERTO-DIZ-O-NUMERO-DO-JOGADOR-01, o endereço
-#: `jogador` de cada cartão): com 1 a 4, cada número cai no assento de mesmo número e concorda
-#: com o que o gerador crava. De 2 a 5 é o caso real de um externo na mesa empurrando os
-#: DualSense para cima (`mesa_viva._lugares_da_mesa`): o assento volta à posição e o número
-#: vivo discorda do cravado nos quatro cartões.
 CONTROLES = [
     {"uniq": "aa:bb:cc:00:00:01", "connected": True, "transport": "bt",
      "player_slot": 2, "is_primary": False},
@@ -95,7 +89,7 @@ class _CorLida:
     """
 
     def __init__(self, codigo: str, nome: str) -> None:
-        self.codigo = codigo  # (noqa-acento) nome de atributo do produto
+        self.codigo = codigo
         self.nome = nome
 
 
@@ -112,18 +106,9 @@ ESTADO = {
                         "bloqueio": "", "despachando": True},
     "keyboard_emulation": {"enabled": False, "osk_disponivel": False},
     "controllers": CONTROLES,
-    # O tipo DIFERENTE do que o desenho crava (a Interna), e a Interna ligada: é com
-    # ela que o «Só a janela» dos cartões é verdade (A-NAVEGACAO-INTERNA-…-01).
-    # O Modo Big Picture LIGADO (o desenho crava «Desligado»): é a lista que o daemon
-    # passou a dar dono (A-ABA-NAVEGACAO-FAZ-O-QUE-DIZ-E-O-MODO-STEAM-NAVEGA-O-BIG-PICTURE-01).
     "navegacao": {"interna_ligada": True, "tipo": "computador", "foco": False,
                   "big_picture": {"ligado": True, "agindo": False, "quem_le": "hefesto"}},
-    # O Modo Freestyle LIGADO: o balão do Aplicar ganha a cauda «Vale em todo jogo…»,
-    # e o desenho crava o Aplicar sem ela. Sem isto o endereço `rodape.aplicar`
-    # (SO-O-FREESTYLE-VALE-EM-TODO-JOGO-01, 09/10/2026) concordaria com o desenho.
     "freestyle_ligado": True,
-    # O serviço PAUSADO: o desenho crava `de-pe` no selo do topo (A-BASE-COMUM-DAS-ABAS-01),
-    # e sem isto o selo concordaria com o desenho sob o dublê.
     "paused": True,
 }
 
@@ -141,7 +126,6 @@ def _button_actions() -> dict[str, str]:
     de_fabrica = acoes.padrao()
     fora: dict[str, str] = {}
     for botao in acoes.BOTOES:
-        # A lista é a da LINHA (`por_grupo(botao)`): o dublê só escolhe o que a linha oferece.
         oferece = [acoes.token_do_rotulo(r) for _grupo, rotulos in acoes.por_grupo(botao)
                    for r in rotulos]
         for token in oferece:
@@ -153,7 +137,6 @@ def _button_actions() -> dict[str, str]:
 
 PERFIL = {"name": "Dublê da Navegação", "button_actions": _button_actions()}
 
-#: o que nenhum dublê move: a Steam só tem UMA escolha com dono (o Big Picture)
 SEM_VARIACAO = {"na-steam"}
 
 

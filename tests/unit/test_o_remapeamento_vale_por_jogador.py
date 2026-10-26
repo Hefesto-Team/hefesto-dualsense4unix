@@ -44,9 +44,6 @@ P2 = "aabbcc000002"
 P3 = "aabbcc000003"
 
 
-# -- o motor -------------------------------------------------------------------
-
-
 def test_sem_troca_propria_o_controle_segue_a_do_perfil() -> None:
     store = SimpleNamespace()
     remap.definir_ativo(store, {"cross": "circle"}, {P2: {"l1": "r1"}})
@@ -76,7 +73,6 @@ def test_botao_igual_a_si_cancela_a_troca_do_perfil_so_nesta_peca() -> None:
 
 
 def test_se_a_soma_recusa_vale_so_a_da_peca() -> None:
-    # o perfil manda o Cruz para o Círculo; a peça manda o Quadrado também: dois no mesmo destino
     assert remap.juntar({"cross": "circle"}, {"square": "circle"}) == {"square": "circle"}
 
 
@@ -93,9 +89,6 @@ def test_a_troca_da_peca_recusa_o_que_o_motor_recusa() -> None:
     with pytest.raises(remap.RemapeamentoRecusadoError) as nome:
         remap.resolver_da_peca({"botao_que_nao_existe": "botao_que_nao_existe"})
     assert nome.value.motivo == remap.MOTIVO_DESCONHECIDO
-
-
-# -- o perfil ------------------------------------------------------------------
 
 
 def _perfil(**campos: Any) -> Any:
@@ -178,9 +171,6 @@ def test_o_perfil_seguinte_larga_a_troca_da_peca(monkeypatch: pytest.MonkeyPatch
     monkeypatch.setattr(gerente, "load_profile", lambda nome: _perfil())
     m.activate("Dois Jogadores", origin="system")
     assert remap.da_peca(store, P2) is None, "a troca do White ficou para o perfil seguinte"
-
-
-# -- os dois caminhos do pad virtual ---------------------------------------------
 
 
 class _Device:
@@ -294,9 +284,6 @@ def test_os_dois_caminhos_perguntam_pelo_controle() -> None:
                     and isinstance(n.func, ast.Name) and n.func.id == "remapeamento_da_peca"]
         assert chamadas, f"{quem} não pergunta a troca pelo controle"
         assert all(len(c.args) == 2 for c in chamadas)
-
-
-# -- a tela: o «Vale para» escolhe o dono da troca -----------------------------
 
 
 def _ctx_de_dois(escolhido: str) -> Any:

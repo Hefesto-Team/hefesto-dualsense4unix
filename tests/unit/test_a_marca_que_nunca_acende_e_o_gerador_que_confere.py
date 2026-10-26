@@ -45,11 +45,8 @@ for _caminho in (str(RAIZ / "src"), str(INTERFACE)):
 from hefesto_dualsense4unix.interface import onde
 from pacotes import Contexto, a01_jogar, a02_controles
 
-#: AS DUAS PÁGINAS QUE TINHAM A MARCA, e o endereço que cada uma carregava.
 MARCADAS = {"01-jogar.html": "degradou-cartao", "02-controles.html": "mascara-degradou"}
 
-#: UM CONTROLE QUE DEGRADA DE VERDADE: backend `uinput` E motivo. Era a única
-#: combinação em que a marca acendia. Faixa forjada da casa (`aa:bb:cc`).
 DEGRADADO: dict[str, Any] = {
     "uniq": "aa:bb:cc:00:00:01", "connected": True, "player_slot": 1, "player": 1,
     "transport": "usb", "battery_pct": 50, "is_primary": True,
@@ -57,7 +54,6 @@ DEGRADADO: dict[str, Any] = {
     "vpad_backend": "uinput", "vpad_motivo": "uhid_indisponivel",
 }
 
-#: OS GERADORES, DERIVADOS DO DISCO — o gerador número onze nasce coberto.
 GERADORES = sorted(p.name for p in INTERFACE.glob("aba[0-9][0-9].py"))
 
 
@@ -135,13 +131,6 @@ def test_nenhuma_folha_das_dez_decide_pintura_por_title(publicado: bool) -> None
         "pelo alvo `atributo`, como o `data-apagado`")
 
 
-# ===========================================================================
-# 2. O GERADOR CONFERE ANTES DE ESCREVER — nos dez
-# ===========================================================================
-#: A SABOTAGEM: a primeira escrita de página grava um documento DIFERENTE e
-#: logo recusa, que é exatamente o que um gerador na forma antiga fazia quando a
-#: autoconferência reprovava. Os dois nomes do módulo são trocados porque o
-#: `monta.py` o importa por `import onde`.
 SABOTAGEM = """
 import pathlib, runpy, sys
 gerador = pathlib.Path(sys.argv[1])
@@ -207,7 +196,6 @@ def test_a_recusa_nao_chega_a_bancada(gerador: str, tmp_path: pathlib.Path) -> N
     assert _md5(bancada) == antes, (
         f"`{gerador}` recusou a página e a bancada MUDOU: a escrita veio antes "
         "da conferência, e o `--publicar` seguinte levaria a página recusada")
-    # E A SAÍDA RECUSADA FICA NO PROVISÓRIO, para quem quiser olhar.
     recusadas = list(provisorio.glob(f"hefesto-prova-*/{_pagina_do(gerador)}"))
     assert any("escrita sabotada" in p.read_text(encoding="utf-8") for p in recusadas), (
         f"`{gerador}` recusou e a saída não ficou em `$TMPDIR/hefesto-prova-*`")

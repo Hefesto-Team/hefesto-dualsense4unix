@@ -106,7 +106,6 @@ def test_o_disco_antigo_com_liga_extensor_e_a_ponta_vira_a_chave(disco: Path) ->
     assert "1a" not in portas, "a ponta do desenho antigo ficou no disco"
     assert portas["1"].nos == _NOS["1"], "a migração trocou os nós que o Mapear tinha gravado"
     assert portas["1"].usb == 3, "a velocidade que só a ponta tinha se perdeu"
-    # idempotente: ler de novo não muda nada
     assert carregar_maquina().mapa.portas["1"].extensor is True
 
 

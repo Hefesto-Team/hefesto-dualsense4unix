@@ -45,7 +45,6 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: O `state_full` de mentira — o suficiente para a camada do produto responder
 ESTADO = {
     "active_profile": "meu_perfil",
     "paused": False,
@@ -60,7 +59,6 @@ ESTADO = {
 }
 
 
-#: As duas linhas do Status desde 15/10/2026, escritas aqui e não lidas do pacote que se mede.
 DO_STATUS = ("hefesto-estado", "hefesto-troca-de-perfil")
 
 
@@ -126,11 +124,8 @@ def test_as_seis_linhas_deixam_de_ser_o_travessao(a09, ctx, monkeypatch, avisos)
     p = a09.pacote(ctx)
     lista = p[a09.CAMPO_DO_STATUS]
     ids = re.findall(r'data-id="([^"]+)"', lista)
-    # Desde 15/10/2026 o Status tem DUAS linhas; o Bluetooth, o Steam Input, o Áudio e o gamepad
-    # virtual são do exame (`exame-lista`), e o ambiente saiu da aba.
     assert tuple(ids[:2]) == DO_STATUS, lista
     assert not set(ids[2:]) & set(DO_STATUS), lista
-    # A linha que voltasse do exame ao Status sairia duas vezes nas três colunas.
     todos = ids + re.findall(r'data-id="([^"]+)"', str(p.get("exame-lista") or ""))
     assert len(todos) == len(set(todos)), todos
     for ident in ("hefesto-estado", "hefesto-troca-de-perfil"):
@@ -246,7 +241,6 @@ def test_a_contagem_do_exame_saiu_dos_dois_lados(a09, ctx):
     teste reprova pelo pacote; devolva a chave em `aba_sistema.ENDERECOS` e
     ele reprova pelo contrato.
     """
-    # o `interface.sistema` pelo apelido que o próprio pacote já traz: um segundo
     tela = a09._tela
 
     assert "exame-contagem" not in tela.ENDERECOS
@@ -346,8 +340,6 @@ def test_nenhuma_faixa_desta_aba_volta_ao_1fr_cru():
     """`.bloco2` e `.saude-cols` medem `minmax(0,1fr)`, e a régua do gerador cobra."""
     fonte = (RAIZ / "src/hefesto_dualsense4unix/interface/aba09.py").read_text(
         encoding="utf-8")
-    # `.saude-cols` virou `display:contents` em 15/10/2026: as colunas do exame são as da grade do
-    # `.status3`, e quem mede a largura é ele.
     assert re.search(r"\.saude-cols\{display:contents\}", fonte), (
         "o exame saiu da grade do `.status3`")
     for faixa in (".status3", ".avancadas"):

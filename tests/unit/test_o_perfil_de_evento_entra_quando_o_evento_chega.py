@@ -151,7 +151,7 @@ def test_o_comando_nao_passa_por_shell(tmp_path: Path) -> None:
 
 def test_o_sh_de_caminho_absoluto_roda_por_bash(tmp_path: Path) -> None:
     script = tmp_path / "pronto.sh"
-    script.write_text("exit 0\n", encoding="utf-8")  # sem bit de execução: só o bash o roda
+    script.write_text("exit 0\n", encoding="utf-8")
     assert argv_do_comando(str(script)) == ["bash", str(script)]
     assert asyncio.run(rodar_o_comando(str(script)))[0] is True
 

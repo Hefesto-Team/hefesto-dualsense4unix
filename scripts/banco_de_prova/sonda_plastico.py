@@ -59,18 +59,12 @@ VENDOR_SONY = 0x054C
 PRODUTO_DUALSENSE = 0x0CE6
 HID_MAX = 4096
 
-#: A semente do CRC dos feature reports de rádio (`PS_FEATURE_CRC32_SEED` do
-#: `hid-playstation.c`): ver `core/ds_output_report.py::BT_FEATURE_CRC_SEED`.
 SEMENTE_DO_FEATURE = 0xA3
 
-#: O `phys` do vpad do Hefesto (`uhid_gamepad.VPAD_HID_PHYS`): é por ele que o job
-#: acha o nó do pad do produto entre os do plástico.
 PHYS_DO_VPAD_DO_HEFESTO = "hefesto-vpad"
 
 TAMANHO_DOS_FEATURES = {0x05: 41, 0x09: 20, 0x20: 64}
 
-#: `struct usb_hidg_report` do `<linux/usb/g_hid.h>`: report_id, userspace_req,
-#: length, data[64] e 4 de padding, 72 bytes. `_IOW('g', 0x42, ...)`.
 _HIDG_REPORT = struct.Struct("<BBH64s4s")
 GADGET_HID_WRITE_GET_REPORT = (1 << 30) | (_HIDG_REPORT.size << 16) | (ord("g") << 8) | 0x42
 
@@ -136,7 +130,7 @@ def resposta_de_get_report(pedido: bytes, features: dict[int, bytes]) -> bytes:
     identificador = struct.unpack("<I", pedido[4:8])[0]
     numero = pedido[8]
     carga = features.get(numero, b"")
-    erro = 0 if carga else 5  # EIO: o report que o aparelho de mentira não tem
+    erro = 0 if carga else 5
     resposta = struct.pack("<IIH", UHID_GET_REPORT_REPLY, identificador, erro)
     resposta += struct.pack("<H", len(carga))
     return resposta + carga.ljust(HID_MAX, b"\0")[:HID_MAX]

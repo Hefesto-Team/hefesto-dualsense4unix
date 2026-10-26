@@ -65,11 +65,8 @@ from collections.abc import Callable
 from datetime import datetime
 from typing import Any, NamedTuple
 
-# `portao_a_casa_sabe_e_o_produto_nao_faz` segue o fecho de IMPORT a partir do
 from hefesto_dualsense4unix.app import gui_prefs as _prefs
 from hefesto_dualsense4unix.app.actions import perfis_web as _tela
-
-# `from_simple_choice`.
 from hefesto_dualsense4unix.integrations.jogos_locais import LANCADOR_DIRETO
 from hefesto_dualsense4unix.profiles.simple_match import (
     PROCEDENCIA_DA_NAVEGACAO,
@@ -86,16 +83,13 @@ from . import (
     registrar,
 )
 
-#: `profiles_dir()`. Ter outro dono que não o `state_full` não é não ter dono.
 SEM_DONO: dict[str, str] = {}
 
 
-#: disco do usuário, `_secoes_do_controle` devolvia seis chaves, esta lista lia cinco,
 SECOES_DA_COLUNA: tuple[str, ...] = (
     "leds", "triggers", "rumble", "speaker", "mic", "sensores", "mascara",
-    "movimento", "ativacao", "analogicos")  # (noqa-acento) identificadores ASCII
+    "movimento", "ativacao", "analogicos")  # (noqa-acento)
 
-#: não chega, `perfis_web._secoes_do_controle` não devolve a chave, o pacote lê
 ESPERANDO_O_ESQUEMA: frozenset[str] = frozenset()
 
 
@@ -125,14 +119,8 @@ def _escolhido(todos: list[dict[str, Any]], ativo: str) -> str:
     return _ESCOLHIDO or ativo
 
 
-# Ordem de produto: a tabela do perfil leva uma lupa no título, procura por nome de perfil e demais
-# configs, e ordena por duplo clique no nome das colunas.
-
 _PROCURA: str = ""
 
-#: O «Nome do jogo» recusou o nome do botão: (perfil, frase). O nome recusado não grava, então o
-#: tique, que lê a exigência do disco, apagaria o ponto laranja no décimo de segundo seguinte; a
-#: recusa vale até o campo mudar de novo ou outro perfil abrir no editor.
 _RECUSA_DO_JOGO: tuple[str, str] = ("", "")
 
 FRASE_DO_FREESTYLE = "Freestyle é o botão do controle, não um jogo"
@@ -151,7 +139,6 @@ COLUNAS_DA_LISTA = ("nome", "criado", "modificado")
 
 _NOME_DA_COLUNA = {"nome": "Nome", "criado": "Criado em", "modificado": "Modificado em"}
 
-#: as colunas de data: «mais novo primeiro» é o sentido `asc`, e o perfil sem data fica embaixo.
 COLUNAS_DE_DATA = ("criado", "modificado")
 
 
@@ -220,9 +207,6 @@ def _ordenada(lista: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 SEGUNDOS_PARA_CONFIRMAR = 8.0
 
-#: (`profiles_actions.py`) — "Perfil removido: X", "Lista recarregada",
-#: `mensagem_do_salvar`, `mensagem_de_ativacao`. Aqui só a RECUSA falava:
-#: `RuntimeError` vira tarja (`hefesto_vivo._recusou_dizendo`) e o SUCESSO era
 _DESFECHO: tuple[str, float] | None = None
 
 SEGUNDOS_DO_DESFECHO = 30.0
@@ -266,13 +250,10 @@ def _dizer(frase: str, **campos: Any) -> dict[str, Any]:
     por lá e põe o seu.
     """
     global _CARONA_PENDENTE
-    # registro de chamada que `perfil.com_a_carona` documenta para quem já tem
-    # `_com_a_carona(frase)` direto e este campo continua vazio — dois `·` para
     if _CARONA_PENDENTE:
         frase = f"{frase} · {_CARONA_PENDENTE}" if frase else _CARONA_PENDENTE
         _CARONA_PENDENTE = ""
     _anotar(frase)
-    #  nao devia aparecer nunca"  # (noqa-acento) citação literal
     return {"mesa": {"perfis.desfecho": "", **campos}, "relato": frase}
 
 
@@ -296,22 +277,15 @@ def _desfecho_para_a_tela() -> str:
     return frase
 
 
-#: `data-hef-alvo="largura"` estaria.
-#:                       desta frente; está no relatório.
-#: `data-hef-alvo="classe"`, e o produto passou a acender e apagar cada uma.
 NAO_PINTAVEIS = ("guarda.linhas",)
 
-#: Os escalares do editor que a página tem onde pôr (15/10/2026: a página perdeu o Nome, a
-#: Preferência, o Funciona em e o rótulo do jogo; o produto deixou de emiti-los).
 CAMPOS_DO_EDITOR_NA_PAGINA = ("jogo", "estilo", "evento", "evento_comando")
 
-#: os valores que a página NÃO TEM — eles caem no vazio, sem estrago e sem
 SEM_ENDERECO = {
     "quantos": "a tela nova não desenha contagem de perfis",
     "travado": "a trava da troca automática não é desenhada nesta aba",
 }
 
-#: baixa. As datas: `perfis.desfecho` (03/09)
 ESPERANDO_A_PUBLICACAO: dict[str, str] = {
 }
 
@@ -375,7 +349,6 @@ def _rotulo_curto(controle: dict[str, Any]) -> str:
     ])
 
 
-#: as quatro cores do plástico, na ordem em que o desenho as oferece nos lugares vazios.
 CORES_DO_PLASTICO = (("cosmic-red", "Cosmic Red"), ("starlight-blue", "Starlight Blue"),
                      ("galactic-purple", "Galactic Purple"), ("white", "White"))
 
@@ -447,12 +420,8 @@ SELETOR_DA_LISTA = 'tbody[data-hef="perfis.lista"]'
 
 SELETOR_DOS_JOGOS = 'datalist[data-hef="editor.jogo.lista"]'
 
-#: «Qual vale primeiro»: os perfis do mesmo jogo, em ordem. Número de filhos que muda com o dado,
-#: então vai por `blocos`, como a lista. O `data-hef` mora NO `<ol>`: um seletor de descendente
-#: (`… ol`) não acha nada, e a página ficava com os dois perfis do desenho.
 SELETOR_DA_ORDEM = 'ol[data-hef="editor.ordem"]'
 
-#: QUANTOS JOGOS A LISTA OFERECE, no máximo. **É teto de SEGURANÇA, não de
 TETO_DA_LISTA_DE_JOGOS = 500
 
 _RECUO = " " * 16
@@ -982,7 +951,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         **{f"perfis.ordem.{c}": (_seta_da_coluna(c)) for c in COLUNAS_DA_LISTA},
         "perfis.larguras": _larguras_em_texto(TABELA_DA_LISTA),
         "guarda.larguras": _larguras_em_texto(TABELA_DA_GUARDA),
-        # quem o pinta é `pacotes.topo()` — o dono das dez abas.
         "quantos": len(lista),
         "travado": bool(ctx.state.get("freestyle_ligado")),
         "sem_dono": {},
@@ -998,7 +966,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     alvo_do_editor = str(editor.get("alvo") or "")
     for valor in ALVOS_DO_PERFIL:
         fora[f"editor.alvo.{valor}"] = "sim" if valor == alvo_do_editor else ""
-    # «Qual vale primeiro» só aparece com dois perfis do mesmo jogo (a lista vem em `blocos`).
     fora["editor.ordem.ha"] = "sim" if len(editor.get("ordem") or []) >= 2 else ""
 
     exigencia = _exigencia_para_esta_tela(getattr(alvo, "match", None))
@@ -1021,7 +988,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
 
     guarda = bruto.get("guarda") or []
     if isinstance(guarda, list):
-        # ela decide as duas metades de uma vez: o pacote passa a mandar as
         nomes_da_mesa = [g.get("nome", "") for g in guarda]
         fora["guarda.nome"] = _com_os_lugares_vazios(
             nomes_da_mesa, lambda n: _lugar_vazio(n, nomes_da_mesa)[0])
@@ -1029,12 +995,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             ["" for _ in guarda], lambda _n: "sim")
         fora["guarda.id"] = _com_os_lugares_vazios(
             [g.get("id", "") for g in guarda], lambda _n: "")
-        # barra de 3px que diz de quem é a linha, e ela era o `--plastico` do
         fora["guarda.plastico"] = _com_os_lugares_vazios(
             [g.get("plastico", "") for g in guarda],
             lambda n: _lugar_vazio(n, nomes_da_mesa)[1])
-        # FATO DERRUBADO, e ele estava aqui: a linha era
-        # **dicionário** (`perfis_web._secoes_do_controle` devolve
         estado = getattr(ctx, "state", None) or {}
         agora = [o_agora_da_linha(g, estado) for g in guarda]
         vazio = [("", "") for _ in SECOES_DA_COLUNA]
@@ -1057,14 +1020,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         ]
         fora["guarda.linhas"] = str(len(guarda))
 
-    # linha com a medição. (Este comentário dizia "OS QUATRO" quando a lista
     for chave in NAO_PINTAVEIS:
         fora.pop(chave, None)
 
-    # achar o `<tbody>`; numa página que mude o seletor, a pintura campo a campo
     escolhido_na_lista = str(getattr(alvo, "name", "") or escolhido)
 
-    # e é uma sobrescrita de propósito: `perfis_web` continua servindo o
     procedencia, _recado = _procedencia_e_recado(
         getattr(alvo, "match", None), editor.get("ambiente_recado"), foto)
     sem_jogo = procedencia == PROCEDENCIA_DE_QUALQUER_JOGO
@@ -1107,9 +1067,7 @@ def selecionar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | Non
     return _ativar_o(nome, p, ctx)
 
 
-#: O campo que apaga o Ativar e escreve a razão na dica dele (`aba10.CAMPO_DA_RAZAO_DO_ATIVAR`).
 CAMPO_DA_RAZAO_DO_ATIVAR = "perfis.ativar-razao"
-#: A recusa do último Ativar com o serviço parado; some quando o serviço volta a responder.
 _RECUSA_DO_ATIVAR: list[str] = [""]
 SERVICO_NAO_SUBIU = "O serviço não subiu"
 SERVICO_NAO_RESPONDEU = ("O serviço subiu e não respondeu à troca. Veja a aba Sistema e clique "
@@ -1250,10 +1208,6 @@ def voltar_a_de_ontem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any
         f"Perfil restaurado: {nome} · versão {versao.stem}"))
 
 
-#     2. reaplica, se for o ativo   `profile.switch` — o daemon NÃO relê JSON de
-#     3. avisa a antecipação    `launch_env.refresh` — a regra pode ter mudado,
-
-
 def _alvo_do_editor(ctx: Contexto, todos: list[Any] | None = None) -> Any:
     """O perfil aberto no editor: o DONO ÚNICO de quem pinta e de quem grava.
 
@@ -1302,8 +1256,6 @@ def _o_perfil_no_disco(nome: str) -> Any:
     return load_profile(nome)
 
 
-#: INVERSÃO de `perfis_web.AMBIENTE_DO_PRESET`, e não uma segunda tabela: o
-#: `from_simple_choice` faz com chave desconhecida (`simple_match.py:167`), e
 PRESET_DO_ROTULO = {v: k for k, v in _tela.AMBIENTE_DO_PRESET.items()}
 
 
@@ -1516,7 +1468,7 @@ def perfis_renomear(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] 
     _gravar(prof.model_copy(update={"name": novo}), ctx, p, era=era)
     if troca_de_arquivo:
         delete_profile(era)
-    levar_o_perfil_renomeado(prof.name, novo)  # a escolha, o último jogo e o Point and click
+    levar_o_perfil_renomeado(prof.name, novo)
     if era == do_editor:
         _ESCOLHIDO = novo
     return _dizer(mensagem_do_salvar(novo, renomeado_de=prof.name))
@@ -1617,7 +1569,7 @@ def _gatilho_do_lado(specs: Any, estilo: Any, lado: Any, ajustes: dict[str, int]
     from hefesto_dualsense4unix.profiles.schema import TriggerConfig
 
     spec = specs.get_spec(lado.modo)
-    if spec is None:  # pragma: no cover — o motor só nomeia modo do produto
+    if spec is None:  # pragma: no cover
         raise RuntimeError(
             f"o estilo “{estilo.rotulo}” pede o gatilho {lado.modo!r}, "
             f"que não é um dos modos do produto. Nada foi salvo.")
@@ -1696,7 +1648,6 @@ def _com_o_estilo(prof: Any, estilo: Any, mesa: list[dict[str, Any]]) -> tuple[A
         esquerdo = _gatilho_do_lado(specs, estilo, estilo.l2, ajustes)
         mudanca["triggers"] = TriggersConfig(left=esquerdo, right=direito)
     if estilo.vibracao:
-        # CONSTRUÍDO, e não `model_copy`: o `custom_mult` do perfil antigo é
         mudanca["rumble"] = RumbleConfig(
             passthrough=bool(getattr(prof.rumble, "passthrough", True)),
             policy=estilo.vibracao)
@@ -1769,7 +1720,7 @@ def _com_o_nativo(prof: Any, estilo: Any) -> tuple[Any, int]:
         "leds": prof.leds.model_copy(update={"modo": MODO_AUTOMATICO}),
         "rumble": RumbleConfig(
             passthrough=bool(getattr(prof.rumble, "passthrough", True)),
-            policy=None, modo="automatico"),  # (noqa-acento) chave ASCII
+            policy=None, modo="automatico"),  # (noqa-acento)
         "controles_modo": MODO_AUTOMATICO,
         "receita_do_tato": None,
     }
@@ -1818,7 +1769,6 @@ def editor_estilo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | 
     """
     from hefesto_dualsense4unix.profiles import estilos_de_jogo as receitas
 
-    # primeira escolha do usuário passar calada, que foi o defeito de manhã.
     escolhido = str(o.get("valor") or o.get("rotulo") or "").strip()
     if escolhido == "—":
         escolhido = ""
@@ -1932,12 +1882,10 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
         getattr(prof, "match", None), editor.get("ambiente_recado"))
     if not _procedencia:
         raise RuntimeError(recado)
-    # (`process_name` contra `wm_class`), e quem a nomeia é `AMBIENTE_DO_PRESET`.
     chave = PRESET_DO_ROTULO.get(str(editor.get("ambiente") or ""))
     if chave not in ("game", "steam_game", "janela"):
         chave = _forma_do_que_ela_escolheu(texto)
     prof.match = from_simple_choice(chave, texto, regra_do_disco=prof.match)
-    # a regra foi reescrita por ela: o nome de quando o perfil nasceu já não diz esta regra
     prof.nome_do_jogo = None
     _gravar(prof, ctx, p)
     return _dizer(_agora_vale_em(prof, texto),
@@ -1948,7 +1896,6 @@ def editor_jogo(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | No
 ALVOS_DO_PERFIL = ("jogos", "navegacao", "programas", "eventos")
 EVENTOS_DO_PERFIL = ("cena", "menu", "pausa", "controle_conectado", "programa_aberto",
                      "hora_marcada", "meu_comando")
-#: O que a frase da tela diz de cada valor: o rótulo do botão e da opção, nunca o valor gravado.
 ROTULO_DO_ALVO = {"jogos": "Jogos", "navegacao": "Navegação", "programas": "Programas",
                   "eventos": "Eventos"}
 ROTULO_DO_MOMENTO = {"cena": "Cena", "menu": "Menu", "pausa": "Pausa",
@@ -2030,8 +1977,6 @@ def editor_ordem(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | N
     from hefesto_dualsense4unix.profiles.schema import PRIORIDADE_MAXIMA
 
     movido = str(o.get("hefPerfil") or "").strip()
-    # O item tem `tabindex` e recebe clique solto (e o Enter do teclado): só o `dragend` põe a
-    # `posNova`, então sem ela não houve arrasto, e não há o que ordenar nem o que recusar.
     if not str(o.get("posNova") or "").strip():
         return None
     try:
@@ -2247,7 +2192,6 @@ def remover(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     from hefesto_dualsense4unix.profiles.manager import esquecer_o_perfil_apagado
 
     nome = _perfil_do_editor(ctx)
-    # E ELA DECIDE MELHOR QUE UM `mesmo_slug` LOCAL: recebe o `PerfilQueVale`
     from hefesto_dualsense4unix.app.actions.profiles_actions import (
         frase_da_remocao_do_perfil_ativo,
         perfil_que_esta_valendo,
@@ -2266,11 +2210,9 @@ def remover(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
             f"confirmar — o botão espera oito segundos.")
     _ARMADO = None
     delete_profile(nome)
-    esquecer_o_perfil_apagado(nome)  # o dono do `profile delete`: a escolha e o último jogo
+    esquecer_o_perfil_apagado(nome)
     _ESCOLHIDO = ""
-    # SEM `profile.switch` AQUI, de propósito: o perfil apagado não é o ativo
     p.chamar("launch_env.refresh")
-    # `_dizer` E NÃO `_anotar` — 03/09/2026. Os dois guardam a frase; só o
     return _dizer(f"Perfil removido: {nome}")
 
 
@@ -2322,7 +2264,6 @@ def procurar(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any]:
     return {}
 
 
-#: a frase do primeiro e a do segundo duplo clique: texto (de A a Z) e data (do mais novo).
 _SENTIDO_DA_FRASE = {False: ("de A a Z", "de Z a A"),
                      True: ("do mais novo ao mais antigo", "do mais antigo ao mais novo")}
 
@@ -2385,35 +2326,26 @@ def _editor_de(prof: Any) -> dict[str, Any]:
     return editor
 
 
-#: `profile.switch` em vez do booleano (ELO-MUDO-01). O `profile_reaplicar`
 PONTE = {"profile_reaplicar", "chamar", "resultado"}
-#: `profile.switch` ENTROU com o `resultado`: quem chama por nome de método
 METODOS = {"launch_env.refresh", "profile.switch"}
 
 
 PAGINA = "10-perfis.html"
 PISO_DA_ABA = 16
-#: mentira que o `conftest.py` monta", `load_all_profiles()` devolve **9
 PROVAS: list[dict[str, Any]] = [
-    # O clique na linha ATIVA o perfil e o abre; o botão «Ativar» lê o editor e tem teste próprio
-    # (`test_o_ativar_age_sobre_o_perfil_do_editor`), pois a régua não abre uma linha antes.
-    {"pagina": PAGINA, "gesto": "selecionar",  # (noqa-acento) id
+    {"pagina": PAGINA, "gesto": "selecionar",  # (noqa-acento)
      "clique": {"hefPerfil": "Bancada"},
      "chama": [("resultado", ["profile.switch"], {"name": "Bancada"})]},
 ]
 
-#: O QUE NÃO ECOA NO `state_full`. A razão é uma só e está
 SEM_ECO = ("perfis.renomear", "editor.jogo", "editor.estilo",
            "editor.alvo", "editor.quando", "editor.ordem", "novo", "duplicar", "remover",
            "voltar-a-de-ontem", "recarregar",
-           # `state_full` muda quando o usuário arrasta uma divisa.
            "procurar", "ordenar", "largura-da-coluna")
 
 
 AGORA_NAO_DIZ = TRAVESSAO
 
-#: A dica da célula neutra, e a da máscara que não é a DualSense (decisão de produto
-#: de 29/09, pergunta [40]: «Aceso no DualSense», com a dica dizendo qual).
 DICA_DO_NAO_DIZ = "O controle não diz"
 DICA_DA_MASCARA = "Máscara: {mascara}"
 
@@ -2538,13 +2470,13 @@ def _da_acessibilidade(entrada: dict[str, Any], secao: str) -> bool | None:
 def _ativacao_agora(entrada: dict[str, Any], _state: dict[str, Any],
                     _linha: dict[str, Any]) -> bool | None:
     """Um modo de botão ou um filtro vale neste controle agora."""
-    return _da_acessibilidade(entrada, "ativacao")  # (noqa-acento) chave ASCII
+    return _da_acessibilidade(entrada, "ativacao")  # (noqa-acento)
 
 
 def _analogicos_agora(entrada: dict[str, Any], _state: dict[str, Any],
                       _linha: dict[str, Any]) -> bool | None:
     """Uma curva, zona morta ou mão vale nos analógicos deste controle agora."""
-    return _da_acessibilidade(entrada, "analogicos")  # (noqa-acento) chave ASCII
+    return _da_acessibilidade(entrada, "analogicos")
 
 
 QUEM_DIZ_O_AGORA: dict[str, Callable[[dict[str, Any], dict[str, Any], dict[str, Any]],
@@ -2557,8 +2489,8 @@ QUEM_DIZ_O_AGORA: dict[str, Callable[[dict[str, Any], dict[str, Any], dict[str, 
     "sensores": _sensores_agora,
     "mascara": _mascara_agora,
     "movimento": _comandos_virtuais_agora,
-    "ativacao": _ativacao_agora,  # (noqa-acento) chave ASCII
-    "analogicos": _analogicos_agora,  # (noqa-acento) chave ASCII
+    "ativacao": _ativacao_agora,  # (noqa-acento)
+    "analogicos": _analogicos_agora,
 }
 
 

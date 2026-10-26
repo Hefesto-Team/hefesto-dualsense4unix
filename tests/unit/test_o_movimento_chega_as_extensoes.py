@@ -51,11 +51,9 @@ from tests.unit.test_a_porta_entrega_as_entradas_de_cada_controle import (
     _Relogio,
 )
 
-#: A faixa forjada da casa: nenhum endereço de verdade.
 UNIQS = ("aabbcc000011", "aabbcc000012", "aabbcc000013", "aabbcc000014")
 P1, P2, P3, P4 = UNIQS
 
-#: As mesas da casa: sempre mista (p1-usb, p2-bt, p3-usb, p4-bt), e os quatro de cada jeito.
 MESAS: dict[str, tuple[Transport, ...]] = {
     "mista": ("usb", "bt", "usb", "bt"),
     "todos-no-cabo": ("usb", "usb", "usb", "usb"),
@@ -63,7 +61,6 @@ MESAS: dict[str, tuple[Transport, ...]] = {
     "um-so-no-cabo": ("usb",),
     "um-so-no-bt": ("bt",),
 }
-#: O controle parado na mesa: o viés da unidade no giro e a gravidade no eixo de cima.
 PARADO = ((0.5, -0.4, 0.2), (0.0, 0.98, 0.1))
 TIQUE = 1.0 / 120
 
@@ -192,9 +189,6 @@ def test_sem_a_permissao_a_assinatura_e_recusada(curto: pathlib.Path) -> None:  
     assert "ler:movimento" in resposta["error"]["message"]
 
 
-# -- 1: cada controle sai com o dele, no tique comum e no congelado -------------------------
-
-
 @pytest.mark.parametrize("mesa", list(MESAS))
 def test_cada_controle_sai_com_o_uniq_o_jogador_e_o_transporte_dele(
     curto: pathlib.Path, mesa: str,  # noqa: F811
@@ -238,7 +232,6 @@ async def test_o_laco_do_servico_entrega_o_movimento_em_todo_modo(
     curto: pathlib.Path, monkeypatch: pytest.MonkeyPatch, mesa: str,  # noqa: F811
     modo: str,
 ) -> None:
-    # D-2410-A-PORTA-ENTREGA-AS-ENTRADAS-DE-CADA-CONTROLE-EM-TODO-MODO
     """O ``_poll_loop`` de verdade: cada controle da mesa gira, e o movimento sai com o dele."""
     from hefesto_dualsense4unix.daemon.lifecycle import Daemon, DaemonConfig
     from hefesto_dualsense4unix.daemon.state_store import StateStore
@@ -253,8 +246,6 @@ async def test_o_laco_do_servico_entrega_o_movimento_em_todo_modo(
     leitores = {u: _LeitorDoMovimento() for u in uniqs}
     hub._motion.update(leitores)
     monkeypatch.setattr(Daemon, "_garantir_sensor_hub", lambda self: hub)
-    # Quem está na mesa e por onde, só para a leitura do movimento: o resto do serviço vê o
-    # controle de mentira.
     monkeypatch.setattr("hefesto_dualsense4unix.daemon.subsystems.poll._na_mesa",
                         lambda controller: list(uniqs))
     monkeypatch.setattr("hefesto_dualsense4unix.mods.porta._transportes_por_controle",
@@ -272,7 +263,6 @@ async def test_o_laco_do_servico_entrega_o_movimento_em_todo_modo(
         return None
 
     daemon._mods_supervisor = SimpleNamespace(porta=porta, parar=_nada)
-    # O Nativo e a pausa correm pelo tique congelado; fora deles, pelo comum.
     contador = "poll.tick" if modo == "fora-do-nativo" else "input.settling.tick"
     rodando = asyncio.create_task(daemon.run())
     laco = asyncio.get_running_loop()
@@ -298,9 +288,6 @@ async def test_o_laco_do_servico_entrega_o_movimento_em_todo_modo(
     esperado = {(u, v, 200.0 + n) for n, (u, v) in enumerate(zip(uniqs, vias, strict=True))}
     assert esperado <= vistos, f"{mesa}/{modo}: {sorted(vistos)}"
     assert not any(leitor.parado for leitor in leitores.values())
-
-
-# -- 2: o leitor de movimento vive só por quem o pede ---------------------------------------
 
 
 class _VigiaParada:
@@ -376,7 +363,7 @@ def test_o_leitor_de_movimento_morre_quando_o_ultimo_assinante_sai(
         while porta.le_o_movimento() and asyncio.get_running_loop().time() < prazo:
             await asyncio.sleep(0.02)
         try:
-            for _ in range(3):  # os tiques seguem, e ninguém mais pede
+            for _ in range(3):
                 bancada.tique(relogio, SensorHub._DEMANDA_TTL_S)
             bancada.hub.reconciliar()
             return abertos, set(bancada.hub._motion), leitores
@@ -446,7 +433,7 @@ def test_sem_assinante_nenhum_leitor_e_pedido(curto: pathlib.Path) -> None:  # n
     async def corrida() -> _Mesa:
         porta = await _porta(curto, relogio)
         bancada = _Mesa(porta, MESAS["mista"])
-        ext = await _entrar(curto, ["entradas"])  # assinou outro tópico, não o movimento
+        ext = await _entrar(curto, ["entradas"])
         try:
             bancada.mexer(P2, (300.0, 0.0, 0.0))
             bancada.tique(relogio)
@@ -470,9 +457,6 @@ def test_o_movimento_visto_nao_registra_demanda_nem_drena() -> None:
     assert set(hub._demanda_do_movimento) == {P1} and hub._demanda == {}
 
 
-# -- 3: o ritmo, a faixa morta e o repouso --------------------------------------------------
-
-
 def test_o_parado_nao_sai_de_novo_o_ritmo_tem_teto_e_o_ultimo_valor_chega(
     curto: pathlib.Path,  # noqa: F811
 ) -> None:
@@ -486,7 +470,7 @@ def test_o_parado_nao_sai_de_novo_o_ritmo_tem_teto_e_o_ultimo_valor_chega(
         ext = await _entrar(curto, ["movimento"])
         try:
             tremor = FAIXA_MORTA_DO_GIRO * 0.7
-            for n in range(200):  # o ruído do controle parado: abaixo das duas faixas
+            for n in range(200):
                 sinal = 1 if n % 2 else -1
                 bancada.mexer(P2, (0.5 + sinal * tremor / 2, -0.4, 0.2),
                               (0.0, 0.98 + sinal * FAIXA_MORTA_DA_ACEL * 0.4, 0.1))
@@ -499,7 +483,7 @@ def test_o_parado_nao_sai_de_novo_o_ritmo_tem_teto_e_o_ultimo_valor_chega(
                 for dados in _so_o_movimento(await asyncio.to_thread(_drenar, ext, 0.002)):
                     instantes.append((relogio.t, dados))
             bancada.mexer(P2, PARADO[0])
-            for _ in range(6):  # mais que 1/30 s: o teto segura e o tique seguinte entrega
+            for _ in range(6):
                 bancada.tique(relogio, TIQUE)
             instantes += [(relogio.t, d) for d in
                           _so_o_movimento(await asyncio.to_thread(_drenar, ext))]
@@ -522,7 +506,7 @@ def test_o_parado_nao_sai_de_novo_o_ritmo_tem_teto_e_o_ultimo_valor_chega(
 def test_um_eixo_que_passa_da_faixa_sai_e_o_que_nao_passa_nao(
     curto: pathlib.Path,  # noqa: F811
 ) -> None:
-    # D-2510-O-MOVIMENTO-CHEGA-AS-EXTENSOES-COM-FAIXA-MORTA
+    """Prova da D-2510-O-MOVIMENTO-CHEGA-AS-EXTENSOES-COM-FAIXA-MORTA."""
     relogio = _Relogio()
 
     async def corrida() -> list[dict[str, Any]]:
@@ -593,7 +577,7 @@ def test_a_queda_leva_o_repouso_mesmo_sem_tique(curto: pathlib.Path, quem: str) 
                               {"reason": "alvo_sumiu", "uniq": quem})
             await asyncio.sleep(0.05)
             porta.bus.publish(EventTopic.CONTROLLER_DISCONNECTED,
-                              {"reason": "alvo_sumiu", "uniq": quem})  # a segunda não repete
+                              {"reason": "alvo_sumiu", "uniq": quem})
             return _so_o_movimento(await asyncio.to_thread(_drenar, ext))
         finally:
             ext.fechar()

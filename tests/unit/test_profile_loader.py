@@ -163,11 +163,11 @@ def test_load_profile_por_slug(isolated_profiles_dir: Path):
     """load_profile por slug literal ASCII retorna Profile com name acentuado."""
     profile = Profile(
         name="Ação",
-        match=MatchCriteria(window_class=["acao_class"]),  # slug literal ASCII (noqa-acento)
+        match=MatchCriteria(window_class=["acao_class"]),
         priority=5,
     )
     save_profile(profile)
-    restored = load_profile("acao")  # slug literal ASCII (noqa-acento)
+    restored = load_profile("acao")  # (noqa-acento)
     assert restored.name == "Ação"
 
 
@@ -537,7 +537,7 @@ class TestAMigracaoAposentadaNaoEMuda:
             f"{sorted({str(r.get('event')) for r in registros})}"
         )
         assert relatos[0].get("arquivo") == "coop_local.json"
-        assert relatos[0].get("migracao") == "coop_local_match"  # slug, sem acento (noqa-acento)
+        assert relatos[0].get("migracao") == "coop_local_match"  # (noqa-acento)
 
     def test_o_ramo_do_modo_jogo_tambem_relata(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -559,7 +559,7 @@ class TestAMigracaoAposentadaNaoEMuda:
         relatos = [
             r for r in registros
             if r.get("event") == "migracao_aposentada_sem_asset"
-            and r.get("migracao") == "modo_jogo_nos_presets"  # slug, sem acento (noqa-acento)
+            and r.get("migracao") == "modo_jogo_nos_presets"  # (noqa-acento)
         ]
         assert relatos, (
             "o ramo `coop_local` de `migrate_modo_jogo_nos_presets` virou "

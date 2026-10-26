@@ -60,7 +60,7 @@ class _VpadGravador:
     def forward_motion(self, window: bytes) -> None:
         self.janelas.append(window)
 
-    def set_motion_streaming(self, on: bool) -> None:  # pragma: no cover - n/u
+    def set_motion_streaming(self, on: bool) -> None:  # pragma: no cover
         pass
 
 
@@ -123,9 +123,6 @@ class TestEmitHz:
         relogio.avancar(0.02)
         reader._maybe_emit(_janela(201))
         assert reader.emit_hz == pytest.approx(50.0, rel=0.05)
-
-
-# state_full → rumble_ff.per_vpad[*].motion_streaming/motion_hz
 
 
 def _vpad_ns(
@@ -271,15 +268,10 @@ async def test_state_full_ff_play_count_e_motion_hz_sao_por_vpad(
     assert result["rumble_ff"]["plays"] == 10
 
 
-# texto_motion — a linha discreta do card (função pura, sem GTK)
-
-
 def _state(per_vpad: list[dict[str, Any]]) -> dict[str, Any]:
     return {"rumble_ff": {"per_vpad": per_vpad}}
 
 
-#: O endereço do controle físico, que o serviço publica em cada item do
-#: `per_vpad`: o casamento controle→vpad é por ele, nunca pelo número.
 _U1 = "aabbcc000001"
 _U2 = "aabbcc000002"
 

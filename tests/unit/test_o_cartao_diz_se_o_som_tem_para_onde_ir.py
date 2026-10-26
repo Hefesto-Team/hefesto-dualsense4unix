@@ -27,7 +27,7 @@ from hefesto_dualsense4unix.interface.cartao_do_controle import (
 from hefesto_dualsense4unix.interface import onde
 from hefesto_dualsense4unix.interface.pacotes import a02_controles as mod
 
-PAGINA = "02-controles.html"  # (noqa-acento) nome de arquivo
+PAGINA = "02-controles.html"
 
 UNIQ = "aa:bb:cc:00:00:02"
 SINK = "alsa_output.pci-0000_00_1f.3.analog-stereo"
@@ -280,8 +280,6 @@ class TestOsSelosNoCartao:
         for campo in ("alto-selo", "alto-canal"):
             assert card[campo] == mod.NADA_A_DIZER, campo
         assert card["alto-canal-porque"] == ""
-
-    # `test_o_estado_e_o_porque_apagam_juntos` SAIU EM 23/09/2026: o porquê
 
 
 class TestOQuartoSeloSaiuDaTela:

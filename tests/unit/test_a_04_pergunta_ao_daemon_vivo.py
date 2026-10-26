@@ -50,7 +50,7 @@ IDS = ["P1", "P2", "P3", "P4"]
 ROXO = player_slot_color(8)
 
 CLIQUE_DA_04 = {"tipo": "button", "evento": "click",
-                "pagina": "04-iluminacao.html"}  # (noqa-acento: chave do clique)
+                "pagina": "04-iluminacao.html"}  # (noqa-acento)
 
 
 def _na(rgb: tuple[int, int, int], brilho: float) -> tuple[int, int, int]:
@@ -235,9 +235,9 @@ def test_o_clique_depois_do_autoswitch_age_so_naquele_controle(mesa_de, n, via, 
     mesa.clicar_na_pilula(n, "forte")
     mesa.soltar(n, 60)
     mesa.trocar(NOME_B, "autoswitch")
-    mesa.clicar_na_pilula(n, "medio")  # (noqa-acento) chave ASCII do perfil
-    assert mesa.degrau(n)[0] == BRILHOS_DAS_LUZES["medio"]  # (noqa-acento) chave ASCII
-    assert mesa.pilula(n) == ["medio"]  # (noqa-acento) chave ASCII
+    mesa.clicar_na_pilula(n, "medio")  # (noqa-acento)
+    assert mesa.degrau(n)[0] == BRILHOS_DAS_LUZES["medio"]  # (noqa-acento)
+    assert mesa.pilula(n) == ["medio"]  # (noqa-acento)
     for outro in {1, 2, 3, 4} - {n}:
         assert mesa.pilula(outro) == ["fraco"]
     mesa.soltar(n, 40)

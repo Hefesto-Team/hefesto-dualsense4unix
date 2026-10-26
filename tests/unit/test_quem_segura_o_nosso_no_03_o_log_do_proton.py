@@ -225,7 +225,6 @@ def test_o_log_saudavel_diz_que_o_nosso_no_atravessou(tmp_path: Path) -> None:
     assert nossos[0].processou == 3
     assert nossos[0].entregou == 5
     assert nossos[0].threads == {"00b4", "00bc"}
-    # E o primeiro report, com o id 0x01 do DualSense no primeiro byte.
     assert nossos[0].primeiro_report[0].startswith("01 80 81 80")
 
 

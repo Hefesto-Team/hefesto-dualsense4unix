@@ -6,7 +6,6 @@ Os rótulos, na língua de quem usa, dos botões do controle e das teclas (`huma
 """
 from __future__ import annotations
 
-# Nomes na língua da usuária, não do kernel.
 _BUTTON_LABELS: dict[str, str] = {
     "cross": "X (Cruz)",
     "circle": "Círculo",
@@ -49,8 +48,6 @@ _KEY_LABELS: dict[str, str] = {
     "KEY_DOWN": "Seta ↓",
     "KEY_LEFT": "Seta ←",
     "KEY_RIGHT": "Seta →",
-    # O ALTERNADOR é o preset do L3 desde 02/09/2026 (decisão de produto). Sem esta linha, a
-    # linha do L3 mostraria `__TOGGLE_OSK__` cru na tela.
     "__TOGGLE_OSK__": "Abrir e fechar teclado na tela",
     "__OPEN_OSK__": "Abrir teclado na tela",
     "__CLOSE_OSK__": "Fechar teclado na tela",

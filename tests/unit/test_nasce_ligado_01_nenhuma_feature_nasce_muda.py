@@ -45,7 +45,7 @@ def _valor_de_nascimento(modelo: type[BaseModel], campo: str) -> Any:
 
 
 class _SemDefault:
-    def __repr__(self) -> str:  # pragma: no cover - só aparece em mensagem de erro
+    def __repr__(self) -> str:  # pragma: no cover
         return "<sem default>"
 
 

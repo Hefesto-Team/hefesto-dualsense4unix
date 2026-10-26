@@ -73,7 +73,7 @@ def _listas_da_bancada() -> list[str]:
 
 
 def _listas_do_pacote() -> list[str]:
-    import pacotes  # noqa: F401  (registra os dez)
+    import pacotes  # noqa: F401
     from pacotes import a03_gatilhos
 
     return [a03_gatilhos.html_das_opcoes_de_imersao()]
@@ -116,10 +116,6 @@ def test_o_gesto_e_o_rotulo_falam_a_mesma_coisa() -> None:
     assert "Desligado" not in a03_gatilhos.DICA_DO_MODO["Off"]
     assert a03_gatilhos._rotulo_do_modo("Rigid") == "Rígido"
 
-
-
-# O fim a fim (A-GRACA-DO-JOGO-NAO-JOGA-FORA-O-PRIMEIRO-EFEITO-01, 09/10/2026):
-# o jogo escreve no vpad, o físico tem o bloco; o jogo cala, o perfil não o apaga.
 
 
 def _vpad_ligado_ao_fisico(

@@ -10,7 +10,7 @@ import pytest
 
 RAIZ = Path(__file__).resolve().parents[2]
 FONTE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "controles_vivos.py"
-PAGINAS = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento) pasta
+PAGINAS = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento)
 PUBLICADO = PAGINAS / "02-controles.html"
 BANCADA = RAIZ / "mockup" / "02-controles.html"
 

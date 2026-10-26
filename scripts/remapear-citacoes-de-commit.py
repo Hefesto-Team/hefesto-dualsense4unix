@@ -283,7 +283,6 @@ def escolher_mapas(pedidos: Sequence[str]) -> tuple[list[Path], list[Path]]:
         return caminhos, []
     existem = [p for p in MAPAS_DA_CASA if p.is_file()]
     ausentes = [p for p in MAPAS_DA_CASA if not p.is_file()]
-    # só os ÚLTIMOS elos podem faltar (nascem depois); falta no meio da cadeia é erro.
     if existem != list(MAPAS_DA_CASA[: len(existem)]):
         raise FileNotFoundError(f"elo no meio da cadeia ausente: {', '.join(map(str, ausentes))}")
     if not existem:

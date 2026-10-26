@@ -85,7 +85,7 @@ class _OpsQueAbre:
     def __init__(self, alvo: str) -> None:
         self.alvo = alvo
 
-    def hide(self, node: str, base: str) -> None:  # pragma: no cover - não usado
+    def hide(self, node: str, base: str) -> None:  # pragma: no cover
         pass
 
     def restore(self, node: str, base: str, uid: int) -> None:  # pragma: no cover
@@ -165,7 +165,7 @@ def _portas_de(raiz: Path) -> dict[str, set[str]]:
     for arquivo in sorted(raiz.rglob("*.py")):
         try:
             arvore = ast.parse(arquivo.read_text(encoding="utf-8"), filename=str(arquivo))
-        except SyntaxError:  # pragma: no cover - árvore quebrada é outro portão
+        except SyntaxError:  # pragma: no cover
             continue
         nomes: set[str] = set()
         for no in ast.walk(arvore):

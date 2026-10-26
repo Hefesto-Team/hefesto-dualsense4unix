@@ -92,7 +92,7 @@ def linha_e_pacotes():
 @pytest.mark.parametrize("botao", ["cross", "l1", "ps"])
 def test_escolher_o_teclado_sem_ele_instalado_guarda_e_responde(
         linha_e_pacotes, botao: str, rotulo: str) -> None:
-    # D-1710-O-TECLADO-NA-TELA-AUSENTE-RESPONDE-NA-LINHA
+    """Prova da D-1710-O-TECLADO-NA-TELA-AUSENTE-RESPONDE-NA-LINHA."""
     fn, pacotes = linha_e_pacotes
     _semear("regua")
     ctx = _ctx(pacotes, keyboard_emulation=SEM_TECLADO)

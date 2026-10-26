@@ -55,7 +55,7 @@ from typing import TYPE_CHECKING, Any
 
 from hefesto_dualsense4unix.utils.logging_config import get_logger
 
-if TYPE_CHECKING:  # pragma: no cover - só para tipo
+if TYPE_CHECKING:  # pragma: no cover
     from hefesto_dualsense4unix.daemon.protocols import DaemonProtocol
 
 logger = get_logger(__name__)
@@ -147,7 +147,7 @@ def mesa_de_agora(daemon: Any) -> list[str] | None:
         return None
     try:
         itens = descrever()
-    except Exception:  # pragma: no cover - defensivo, igual ao do hotkey
+    except Exception:  # pragma: no cover
         return None
     if not isinstance(itens, list):
         return None

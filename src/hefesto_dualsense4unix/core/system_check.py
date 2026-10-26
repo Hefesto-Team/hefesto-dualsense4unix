@@ -201,9 +201,6 @@ def system_warnings() -> list[str]:
 LINHA_LE_A_ENTRADA = "o Hefesto lê o teclado e o pedal declarados em «Usar como botões de»"
 LINHA_SEM_ACIONADOR_DECLARADO = "nenhum teclado ou pedal declarado em «Usar como botões de»"
 LINHA_ACIONADOR_FORA = "o teclado ou o pedal declarado não está ligado nesta máquina"
-#: A recusa dita DENTRO do doctor: a frase do dono manda rodar o doctor, e aqui ela mandaria a
-#: pessoa ao lugar onde ela já está. O que sobra quando nem o broker serve é ele (fora do ar, ou o
-#: da memória ainda é o de antes), e as linhas dele saem no começo deste diagnóstico.
 LINHA_ACIONADOR_RECUSADO = (
     "o sistema não deixa ler este aparelho, nem pelo serviço do Hefesto: confira as linhas do "
     "hefesto-hidraw-broker no começo deste diagnóstico")
@@ -237,7 +234,6 @@ def permissao_de_ler_a_entrada(
         try:
             dispositivo = abrir(aparelho.evento)
         except OSError as erro:
-            # O nó que some entre o ``/sys`` e o ``/dev`` não mede nada; o que recusa, mede.
             if isinstance(erro, PermissionError):
                 nome = aparelho.nome or aparelho.evento
                 return ("[WARN]", f"«{nome}»: {LINHA_ACIONADOR_RECUSADO}")

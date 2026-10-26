@@ -18,7 +18,6 @@ import pytest
 from hefesto_dualsense4unix.interface import conexoes as tela
 from hefesto_dualsense4unix.interface.pacotes import GESTOS, a06_navegacao, a08_conexoes, camada
 
-# as fixtures e os ajudantes da régua vizinha: a mesa declarada da seção do rádio
 from tests.unit.test_a_secao_do_radio_transplantada import (  # noqa: F401
     U1,
     U2,

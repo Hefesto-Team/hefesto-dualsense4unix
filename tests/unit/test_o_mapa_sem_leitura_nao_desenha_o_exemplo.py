@@ -22,7 +22,6 @@ from tests.conftest import skip_sem_gi_real
 
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 
-# O que só o gabinete de exemplo da página diz (a leitura congelada de 24/08/2026).
 _DO_EXEMPLO = ("Leitura de exemplo", "coisas para mudar de lugar", "8 de 16 entradas mapeadas")
 
 _LER_O_MAPA = r"""
@@ -133,7 +132,6 @@ def tela() -> Any:
     sys.path.insert(0, str(RAIZ / "scripts"))
     import regua_de_tela
 
-    # O título prova que é o mapa, e não o about:blank de antes da carga.
     t = regua_de_tela.Tela(onde.BANCADA / arranjo_desta_maquina.PAGINA,
                            titulo_esperado="o mapa das entradas", largura=1280, altura=900)
     t.esperar_ate("document.querySelectorAll('#faces .face-cab').length > 0",
@@ -155,7 +153,7 @@ def test_a_pagina_sem_leitura_nao_mostra_o_exemplo(tela: Any, porque: str) -> No
         "a página não abriu no exemplo, e a régua não mede nada")
     assert tela.executar(arranjo_desta_maquina.js_sem_leitura(porque)) == "ok"
     frase = pagina_do_mapa.FRASES_SEM_LEITURA[porque]
-    for modo in ("mesa", "ideal", "mao"):  # (noqa-acento) o data-modo da página
+    for modo in ("mesa", "ideal", "mao"):  # (noqa-acento)
         assert tela.executar(_modo(modo)) == "ok", modo
         lido = _ler(tela)
         mostra = [f for f in _DO_EXEMPLO if f.lower() in lido["corpo"].lower()]
@@ -164,7 +162,6 @@ def test_a_pagina_sem_leitura_nao_mostra_o_exemplo(tela: Any, porque: str) -> No
         assert lido["quando"] == frase and not lido["examinar"], (modo, lido["quando"])
         esperado = "" if modo == "mesa" else pagina_do_mapa.NADA_A_SUGERIR
         assert lido["painel"] == esperado, (modo, lido["painel"])
-        # o verde do «nada a fazer» diria «está tudo certo», e sem leitura não se sabe
         assert not lido["verde"], f"{modo}: sem leitura o painel se pinta de tudo certo"
     assert tela.executar(_modo("registro")) == "ok"
     assert not _ler(tela)["copiar"], "sem leitura o Registro oferece copiar um registro vazio"

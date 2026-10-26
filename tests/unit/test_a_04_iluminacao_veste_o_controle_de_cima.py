@@ -48,7 +48,6 @@ for _p in (str(RAIZ / "src"), str(RAIZ / "src" / "hefesto_dualsense4unix" / "int
         sys.path.insert(0, _p)
 
 
-#: A BANCADA DE 03/09/2026, na forma que `mesa_viva.mesa_do_estado` devolve: um
 MESA_DELA = [
     {"pref": "p1", "uniq": "aa:bb:cc:00:00:01", "jogador": 1, "cor": "white",
      "nome": "White", "via": "USB", "transporte": "usb"},
@@ -157,8 +156,10 @@ def test_o_pacote_manda_a_cor_da_casca_do_controle_da_mesa(carga):
 
 
 def test_o_nome_inteiro_vai_a_dica_da_caixa_que_o_corta(carga, bancada):
-    """A janela estreita corta o nome com reticência; a dica viva o devolve inteiro (D-1710)."""
-    # D-1710-A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO
+    """A janela estreita corta o nome com reticência; a dica viva o devolve inteiro (D-1710).
+
+    Prova da D-1710-A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO.
+    """
     from pacotes import a04_iluminacao as a04
 
     campo = a04.CAMPO_DA_DICA_DA_IDENTIDADE

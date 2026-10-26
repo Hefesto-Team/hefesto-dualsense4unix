@@ -365,7 +365,6 @@ class EleitorDeMicrofone:
 
     eleito: str | None = None
 
-    #: e o `state_full` publicava `eleito: …011` com `ativo: mic_de_um_terceiro`
     fonte_do_eleito: str | None = None
 
     def guardar_anterior(self) -> str | None:
@@ -787,7 +786,6 @@ def casamento_usb_agora(uniqs: list[str]) -> CasamentoUSB | None:
         return None
 
 
-#: As chaves do `default-nodes` do WirePlumber que guardam a escolha do usuário.
 CHAVE_DA_FONTE_GRAVADA = "default.configured.audio.source"
 CHAVE_DA_SAIDA_GRAVADA = "default.configured.audio.sink"
 

@@ -117,8 +117,6 @@ async def _plugar_e_tirar(
     return _drenar(entrou), _drenar(saiu)
 
 
-#: (rótulo, a mesa {uniq: transporte}, o primário). O primário muda de lugar de propósito:
-#: o transporte de cada evento é o do controle dele, nunca o do P1.
 MATRIZ = [
     ("p1-usb,p2-bt,p3-usb,p4-bt", {P1: "usb", P2: "bt", P3: "usb", P4: "bt"}, P1),
     ("3-adaptadores-e-1-no-cabo,posto-no-radio", {P1: "bt", P2: "bt", P3: "bt", P4: "usb"}, P1),
@@ -164,8 +162,10 @@ def test_backend_sem_mesa_por_alvo_publica_um_so_com_o_primario() -> None:
 
 
 def test_a_borda_do_boot_publica_um_por_controle() -> None:
-    # D-2410-A-CONEXAO-E-UM-EVENTO-POR-CONTROLE
-    """O boot (`lifecycle`) usa a mesma borda: a mesa já de pé ganha um evento por controle."""
+    """O boot (`lifecycle`) usa a mesma borda: a mesa já de pé ganha um evento por controle.
+
+    Prova da D-2410-A-CONEXAO-E-UM-EVENTO-POR-CONTROLE.
+    """
     controle = _Mesa({P1: "usb", P2: "bt"}, P1)
     controle.na_tomada = True
     daemon = _Daemon(controle)

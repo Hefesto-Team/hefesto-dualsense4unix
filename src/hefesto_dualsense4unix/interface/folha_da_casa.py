@@ -1,5 +1,5 @@
 """A FOLHA DE USUÁRIO DA CASA — o CSS que o produto põe por cima das dez abas."""
-# ruff: noqa: E501  (o CSS do piso é regra em f-string: uma regra por linha é o que o diff lê)
+# ruff: noqa: E501
 
 from __future__ import annotations
 
@@ -8,8 +8,6 @@ from pathlib import Path
 
 from hefesto_dualsense4unix.integrations import vigia_do_jogo_novo as _vigia
 
-#: Os percentuais que a 09 oferece, e o arquivo onde ela os guarda. Moram aqui, e não na 09, porque a
-#: janela precisa ler o tamanho ANTES de pedir a página, e importar o pacote da 09 traz as dez abas.
 PERCENTUAIS_DO_TAMANHO = (100, 125, 150)
 ARQUIVO_DO_TAMANHO = "interface_escala"
 
@@ -34,8 +32,6 @@ def tamanho_guardado() -> int:
     return padrao
 
 
-#: A menor vista, em CSS, em que o desenho das dez abas cabe sem rolar nem cortar (a janela não
-#: encolhe abaixo dela: `janela.LARGURA_DO_DESENHO` x `janela.PISO_DA_VISTA`).
 VISTA_DO_DESENHO = (1212, 809)
 
 
@@ -52,9 +48,6 @@ def tamanho_que_cabe(escolhido: int, largura: int, altura: int) -> int:
     cabe = min(largura * 100 // piso_l, altura * 100 // piso_a)
     return max(PERCENTUAIS_DO_TAMANHO[0], min(int(escolhido), cabe))
 
-#: (``daemon.reload``, medido em 01/09) e nenhuma das dez abas tinha estado "em
-#: ``.hef-sem-item`` É O BLOCO DO DESENHO QUE HOJE NÃO TEM ITEM — 19/09/2026,
-#:
 CLASSE_DA_ESPERA = "hef-esperando"
 
 FOLHA_DA_CASA = (
@@ -108,19 +101,12 @@ def seletores_escondidos(folha: str | None = None) -> tuple[str, ...]:
     return tuple(achados)
 
 
-#: O PISO DOS ALVOS E DA LETRA (20/10/2026, OS-ALVOS-E-A-LETRA-CRESCEM-E-A-INTERFACE-GANHA-TAMANHO-01).
-#: O usuário decidiu em 13/10: todo alvo com no mínimo 24 px (o piso do WCAG 2.2, critério 2.5.8) e nenhuma
-#: letra abaixo de 12 px. Em 20/10 escolheu o arranjo A na Controles e na Sistema: tudo onde está,
-#: só maior, com o respiro apertado. Os dois números moram AQUI, e a régua
-#: (`tests/unit/test_os_alvos_e_a_letra_crescem.py`) mede contra eles.
 ALVO_MINIMO_PX = 24
 LETRA_MINIMA_PX = 12
 
 _A = ALVO_MINIMO_PX
 _L = LETRA_MINIMA_PX
 
-#: O CSS do piso, por página: o gerador da aba o põe na cabeça (`com_o_piso`), e a página publicada
-#: o leva ao produto. Uma folha só, nesta casa; nenhuma aba escreve a regra do piso por conta própria.
 PISO_POR_PAGINA: dict[str, str] = {
     "02-controles": f"""
 /* o piso: alvo de {_A} px e letra de {_L} px; só os tamanhos sobem e o respiro aperta onde precisa */

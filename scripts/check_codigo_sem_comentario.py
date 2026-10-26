@@ -47,11 +47,12 @@ class Diretiva:
     leitor: str
     pastas: tuple[str, ...] = ()
     de_linha: bool = False
+    nua: str = ""
 
 
 def _d(nome: str, forma: str, tipos: tuple[str, ...], leitor: str, pastas: tuple[str, ...] = (),
-       de_linha: bool = False) -> Diretiva:
-    return Diretiva(nome, re.compile(forma), tipos, leitor, pastas, de_linha)
+       de_linha: bool = False, nua: str = "") -> Diretiva:
+    return Diretiva(nome, re.compile(forma), tipos, leitor, pastas, de_linha, nua or nome)
 
 
 _CODIGOS = r"[A-Z]+[0-9]+(?:\s*,\s*[A-Z]+[0-9]+)*"
@@ -72,7 +73,8 @@ DIRETIVAS: tuple[Diretiva, ...] = (
        "tests/unit/test_toda_excecao_tem_sprint_que_a_tira.py", ("tests/", "scripts/")),
     _d("fica", r"fica:\s*\S.{19,}", ("py",),
        "tests/unit/test_toda_excecao_tem_sprint_que_a_tira.py", ("tests/", "scripts/")),
-    _d("noqa-acento", r"noqa-acento", TIPOS, "scripts/validar-acentuacao.py", de_linha=True),
+    _d("noqa-acento", r"noqa-acento|noqa: acentuacao", ("py", "sh"), "scripts/validar-acentuacao.py", de_linha=True,
+       nua="(noqa-acento)"),
     _d("serial-de-mentira", r"serial-de-mentira", TIPOS, "scripts/check_numero_de_serie.py", de_linha=True),
 )
 
@@ -164,8 +166,8 @@ def forma_da_diretiva(c: Comentario, tipo: str, rel: str = "", texto: str | None
         partes += _ancoradas(trecho, tipo, rel)
     if texto is None or _colado_em_codigo(c, texto):
         for d in DIRETIVAS:
-            if d.de_linha and tipo in d.tipos and d.forma.search(miolo) and d.nome not in partes:
-                partes.append(d.nome)
+            if d.de_linha and tipo in d.tipos and d.forma.search(miolo) and d.nua not in partes:
+                partes.append(d.nua)
     if not partes:
         return None
     return _embrulhar(c.abre, partes)

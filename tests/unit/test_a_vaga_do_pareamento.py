@@ -221,9 +221,6 @@ def test_o_laco_dos_atalhos_entrega_os_botoes_ao_vigia(monkeypatch: pytest.Monke
     assert vigia.tomar(bm.CONTROLE)
 
 
-# --- de ponta a ponta, por um dbus-daemon particular --------------------------
-
-
 @pytest.mark.skipif(not bm.ha_dbus_daemon(), reason="sem dbus-daemon ou sem Gio nesta máquina")
 def test_pelo_gio_o_disconnected_do_bluez_chega_com_a_razao(tmp_path: Path) -> None:
     """MORDIDA: sem a assinatura do ``Disconnected`` no ``BarramentoGio``, a razão some."""

@@ -96,11 +96,12 @@ class TestPartidaEParadaDoMouse:
     async def test_o_stop_do_subsystem_nao_esquece_a_preferencia_salva(
         self, no_de_mentira: type[_NoDeMentira], monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        # D-1510-O-STOP-DO-MOUSE-NAO-ESQUECE-A-PREFERENCIA
         """Desligar o daemon desce o nó, mas o mouse ligado volta ligado no próximo início.
 
         MORDIDA: trocar a parada por `stop_mouse_emulation(daemon)` sem `persist=False`
         grava o desligado.
+
+        Prova da D-1510-O-STOP-DO-MOUSE-NAO-ESQUECE-A-PREFERENCIA.
         """
         gravados: list[bool] = []
         monkeypatch.setattr("hefesto_dualsense4unix.utils.session.save_mouse_emulation",
@@ -111,7 +112,6 @@ class TestPartidaEParadaDoMouse:
         start_mouse_emulation(daemon)
         await passo.parada(daemon)
         assert daemon._mouse_device is None
-        # O start grava o ligado (é o `start_mouse_emulation` de sempre); a parada não grava nada.
         assert gravados == [True], "a parada da lista gravou o mouse desligado na sessão"
 
 

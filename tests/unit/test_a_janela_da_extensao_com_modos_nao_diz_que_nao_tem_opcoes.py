@@ -68,12 +68,9 @@ def _ligar_e_o_supervisor_diz(janela: Any, ctx: Any, lar: Any, estado: str) -> N
     a07.VIGIA.esquecer()
 
 
-# -- 1. o vazio -------------------------------------------------------------------------------
-
-
 @pytest.mark.parametrize("livre", [LIVRE, COM_MODOS], ids=["sem-modos", "com-modos"])
 def test_o_livre_com_ou_sem_modos_nao_diz_que_nao_tem_opcoes(janela: Any, livre: Any) -> None:  # noqa: F811
-    # D-2510-A-JANELA-COM-O-LIVRE-NAO-DIZ-O-VAZIO
+    """Prova da D-2510-A-JANELA-COM-O-LIVRE-NAO-DIZ-O-VAZIO."""
     _, instalar, _ = janela
     instalar(opcoes=[dict(livre)])
     html = _miolo(janela)
@@ -102,14 +99,11 @@ def test_a_coluna_agora_sozinha_nao_se_guarda_e_o_vazio_fica(janela: Any) -> Non
     assert VAZIO in html and 'id="mod-agora"' in html
 
 
-# -- 2. a barra fora da porta -----------------------------------------------------------------
-
-
 @pytest.mark.parametrize("estado", [None, "desligada", "parou", "voltando", "recusada"],
                          ids=["desligada-na-chave", "ligando", "parou", "voltando", "recusada"])
 def test_fora_da_porta_a_barra_nasce_apagada_com_a_dica(janela: Any, ctx: Any, lar: Any,  # noqa: F811
                                                        estado: str | None) -> None:
-    # D-2510-A-BARRA-FORA-DA-PORTA-NASCE-APAGADA
+    """Prova da D-2510-A-BARRA-FORA-DA-PORTA-NASCE-APAGADA."""
     _, instalar, _ = janela
     instalar(opcoes=[dict(COM_MODOS)])
     if estado is not None:

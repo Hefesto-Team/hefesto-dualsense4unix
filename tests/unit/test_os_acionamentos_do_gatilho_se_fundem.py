@@ -35,25 +35,15 @@ ONZE = (
     "SlopeFeedback", "MultiPositionFeedback", "MultiPositionVibration", "Custom",
 )
 
-#: chave velha, ajustes de um perfil antigo → o bloco de 11 bytes que sai (em hex).
-#: Quem diz o bloco é esta tabela; o que a tradução faz está escrito ao lado.
 BLOCO_ESPERADO_POR_CHAVE_VELHA: dict[tuple[str, tuple[int, ...]], str] = {
-    # Resistência, início na posição, força de byte posta em 0 a 8
     ("Rigid", (5, 200)): "21e0030080b62d00000000",
     ("Rigid", (0, 255)): "21ff03ffffff3f00000000",
-    # Resistência, início 0
     ("SimpleRigid", (6,)): "21ff036ddbb62d00000000",
-    # Resistência, início na posição
     ("Feedback", (5, 4)): "21e00300806d1b00000000",
-    # Disparo (a arma oficial 0x25)
     ("PulseB", (2, 7, 180)): "2584000500000000000000",
-    # Disparo, a força de 0 a 8 posta em byte (5 de 8 vira 5 do Disparo)
     ("SemiAutoGun", (3, 6, 5)): "2548000400000000000000",
-    # Metralhadora do início ao fim do curso; 60 Hz vai para o divisor limpo, 50
     ("AutoGun", (2, 6, 60)): "26fc0340dbb62d00003200",
-    # Disparo no padrão (2, 5, 200)
     ("Pulse", ()): "2524000500000000000000",
-    # a única que NÃO muda de bloco: o arco do firmware (0x22) de hoje
     ("PulseA", (2, 7, 180)): "2284002d00000000000000",
 }
 
@@ -74,8 +64,10 @@ def test_a_lista_da_tela_tem_onze_acionamentos() -> None:
 
 
 def test_as_chaves_que_sairam_da_lista_seguem_lidas_pelo_spec() -> None:
-    # D-1510-OS-ONZE-ACIONAMENTOS-LEEM-A-CHAVE-VELHA
-    # D-1510-AS-ARMAS-SEMI-E-AUTOMATICA-NAO-VOLTAM-COMO-IMERSAO
+    """Prova de:
+    D-1510-AS-ARMAS-SEMI-E-AUTOMATICA-NAO-VOLTAM-COMO-IMERSAO,
+    D-1510-OS-ONZE-ACIONAMENTOS-LEEM-A-CHAVE-VELHA.
+    """
     saidas = {"Rigid", "SimpleRigid", "Feedback", "Pulse", "PulseA", "PulseB",
               "SemiAutoGun", "AutoGun"}
     assert {p.name for p in PRESETS_ANTIGOS} == saidas
@@ -126,7 +118,7 @@ def test_a_frequencia_vai_para_o_divisor_limpo_mais_proximo() -> None:
 
 
 def test_a_vibracao_comeca_em_0x26_e_amplitude_zero_apaga() -> None:
-    # D-1510-A-VIBRACAO-DO-GATILHO-SAI-NO-MODO-DA-METRALHADORA
+    """Prova da D-1510-A-VIBRACAO-DO-GATILHO-SAI-NO-MODO-DA-METRALHADORA."""
     assert vibration(3, 4, 40).mode == 0x26
     assert _hex("Vibration", [3, 4, 40]) == "26f80300b66d1b00002800"
     assert _hex("Vibration", [0, 8, 10])[:2] == "26"
@@ -192,8 +184,6 @@ def test_o_mesmo_bloco_entra_no_report_do_cabo_e_no_do_radio(
     assert _relatorio(efeito, ConnectionType.USB) == esperado
     assert _relatorio(efeito, ConnectionType.BT) == esperado
 
-
-# --- a aba: onze opções, e o perfil antigo abre com o acionamento certo ----------------------
 
 INTERFACE = pathlib.Path(__file__).resolve().parents[2] / "src/hefesto_dualsense4unix/interface"
 sys.path.insert(0, str(INTERFACE))

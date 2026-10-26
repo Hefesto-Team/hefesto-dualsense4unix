@@ -146,8 +146,6 @@ class IController(ABC):
     @abstractmethod
     def get_transport(self) -> Transport: ...
 
-    # multi-controle (PyDualSenseController) sobrescreve os quatro com o
-
     def apply_output_defaults(self, spec: OutputSpec) -> ResultadoDeSaida | None:
         """Aplica `spec` como PADRÃO do perfil em TODOS os controles."""
         if spec.trigger_left is not None:

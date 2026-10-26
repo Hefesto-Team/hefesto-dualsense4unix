@@ -44,14 +44,10 @@ LIGADORES = {
     "nix": REPO / "packaging" / "nix" / "module.nix",
 }
 
-# Dois uids de conta comum; nenhum é o da máquina que roda o teste.
 ELA = 4001
 OUTRA = 4000
 
 
-# ---------------------------------------------------------------------------
-# O logind de mentira
-# ---------------------------------------------------------------------------
 class LogindFalso:
     """Um ``loginctl`` de shell que lê a sessão ativa de um arquivo de estado."""
 
@@ -90,9 +86,6 @@ def logind(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> LogindFalso:
     return falso
 
 
-# ---------------------------------------------------------------------------
-# Quem está na frente
-# ---------------------------------------------------------------------------
 class TestUidDaSessaoAtiva:
     def test_devolve_o_uid_da_sessao_ativa(self, logind: LogindFalso) -> None:
         logind.na_frente("c2", ELA)
@@ -207,9 +200,7 @@ class TestUidAutorizado:
         for _ in range(30):
             agora[0] += 1.0
             estado.entregar_ao_linux()
-        # 31 varreduras em 30 s: a primeira e uma a cada VALIDADE_NA_VARREDURA_S.
         assert len(perguntas) <= 1 + 30 / hb.VALIDADE_NA_VARREDURA_S, perguntas
-        # Quem conecta segue no prazo curto.
         agora[0] += hb.VALIDADE_DA_SESSAO_S
         antes = len(perguntas)
         estado.uid_autorizado()
@@ -224,9 +215,6 @@ class TestUidAutorizado:
             hb.BrokerState(allowed_uid=None, ops=object())
 
 
-# ---------------------------------------------------------------------------
-# A conexão: quem chega, quem fica atrás
-# ---------------------------------------------------------------------------
 def _broker(
     logind: LogindFalso, agora: list[float], eventos: list[tuple[str, dict[str, object]]]
 ) -> tuple[hb.Broker, Callable[[int], socket.socket]]:
@@ -314,9 +302,6 @@ class TestRegisterClient:
         del broker
 
 
-# ---------------------------------------------------------------------------
-# O processo de verdade (belts) com o logind de mentira
-# ---------------------------------------------------------------------------
 def _rodar(
     tmp_path: Path, *args: str, env_extra: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
@@ -366,9 +351,6 @@ class TestOsBelts:
         assert r.returncode == 0, r.stdout + r.stderr
 
 
-# ---------------------------------------------------------------------------
-# As units: nada por máquina
-# ---------------------------------------------------------------------------
 class TestAsUnitsNaoGravamNinguem:
     def test_a_unit_nao_tem_uid(self) -> None:
         texto = SERVICE.read_text(encoding="utf-8")
@@ -395,9 +377,6 @@ class TestAsUnitsNaoGravamNinguem:
         assert "_broker_grupo" not in corpo
 
 
-# ---------------------------------------------------------------------------
-# Os pacotes
-# ---------------------------------------------------------------------------
 def _renderizar_pacote(destino: Path, binario: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         ["bash", str(BROKER_DO_PACOTE), str(destino), binario],
@@ -481,9 +460,6 @@ def test_o_nix_aponta_o_loginctl_do_store() -> None:
     assert "HEFESTO_BROKER_LOGINCTL=${systemd}/bin/loginctl" in texto
 
 
-# ---------------------------------------------------------------------------
-# A regra de sudo da ponte vale para o grupo
-# ---------------------------------------------------------------------------
 class TestRegraSudoPorGrupo:
     def _regra(self, tmp_path: Path, principal: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(

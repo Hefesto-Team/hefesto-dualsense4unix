@@ -60,7 +60,6 @@ from tests.unit.test_a_coluna_agora_e_o_parar_tudo_vem_do_servico import (  # no
 
 ESTADO = "publicar:acessorios.estado"
 
-#: O pacote da aba 07 (o ``_a07`` do vizinho, sem anotação), com o tipo que o mypy aceita.
 _o_pacote: Callable[[], Any] = _a07
 APARELHOS = [
     {"id": f"ap-{n}", "nome": f"Aparelho {n}", "estado": "ligado", "ligado": n != 4,
@@ -77,25 +76,22 @@ LIVRE = {"id": "ao-vivo", "rotulo": "Ao vivo", "tipo": "livre"}
 
 
 def _manifesto(**extra: Any) -> dict[str, Any]:
-    return {"id": "toque", "nome": "Toque", "versao": "0.1", "api": ">=1,<3",  # (noqa-acento) chave
-            "licenca": "MIT", "tipos": ["tema"], "tema": {},  # (noqa-acento) chave
-            "permissoes": [ESTADO], **extra}  # (noqa-acento) chave do manifesto
+    return {"id": "toque", "nome": "Toque", "versao": "0.1", "api": ">=1,<3",  # (noqa-acento)
+            "licenca": "MIT", "tipos": ["tema"], "tema": {},
+            "permissoes": [ESTADO], **extra}  # (noqa-acento)
 
 
 def _pecas(grupo: str | None = "Aparelhos") -> dict[str, Any]:
-    geridos: dict[str, Any] = {"acoes": copy.deepcopy(ACOES_DOS_APARELHOS)}  # (noqa-acento) chave
-    extra: dict[str, Any] = {"acoes": [{"id": "parear", "rotulo": "Parear",  # (noqa-acento) chave
+    geridos: dict[str, Any] = {"acoes": copy.deepcopy(ACOES_DOS_APARELHOS)}  # (noqa-acento)
+    extra: dict[str, Any] = {"acoes": [{"id": "parear", "rotulo": "Parear",  # (noqa-acento)
                                         "grupo": "Aparelhos", "icone": "procurar"}],
-                             "opcoes": copy.deepcopy([TOQUES, LIVRE])}  # (noqa-acento) chave
+                             "opcoes": copy.deepcopy([TOQUES, LIVRE])}  # (noqa-acento)
     if grupo:
         geridos["grupo"] = grupo
     else:
         extra["agora"] = ["nivel", "aparelhos"]
-    extra["aparelhos_acoes"] = geridos  # (noqa-acento) contrato
+    extra["aparelhos_acoes"] = geridos
     return extra
-
-
-# -- 1. o manifesto ---------------------------------------------------------------------------
 
 
 def test_o_manifesto_com_as_tres_pecas_valida() -> None:
@@ -108,18 +104,18 @@ def test_o_manifesto_com_as_tres_pecas_valida() -> None:
 
 
 @pytest.mark.parametrize(("mexer", "frase"), [
-    (lambda d: d.update(permissoes=[]),  # (noqa-acento) chave do manifesto
+    (lambda d: d.update(permissoes=[]),
      "pede a permissão publicar:acessorios.estado"),
-    (lambda d: d["aparelhos_acoes"]["acoes"].append(  # (noqa-acento) contrato
+    (lambda d: d["aparelhos_acoes"]["acoes"].append(  # (noqa-acento)
         {"id": "x", "rotulo": "X", "grupo": "Outra"}),
      "a ação do aparelho mora no cartão dele e não declara grupo"),
-    (lambda d: d["opcoes"].append({**LIVRE, "id": "outro"}),  # (noqa-acento) chave
+    (lambda d: d["opcoes"].append({**LIVRE, "id": "outro"}),  # (noqa-acento)
      "mais de uma opção livre"),
-    (lambda d: d["acoes"].append({"id": "parear", "rotulo": "De novo"}),  # (noqa-acento) contrato
+    (lambda d: d["acoes"].append({"id": "parear", "rotulo": "De novo"}),  # (noqa-acento)
      "ação repetida"),
-    (lambda d: d["aparelhos_acoes"].pop("grupo"),  # (noqa-acento) contrato
+    (lambda d: d["aparelhos_acoes"].pop("grupo"),
      "agora não lista aparelhos"),
-    (lambda d: d["acoes"][0].update(icone="foguete"),  # (noqa-acento) contrato
+    (lambda d: d["acoes"][0].update(icone="foguete"),  # (noqa-acento)
      "acoes.0.icone"),
 ])
 def test_o_manifesto_torto_e_recusado_com_a_frase(
@@ -132,11 +128,8 @@ def test_o_manifesto_torto_e_recusado_com_a_frase(
     assert frase in recusa.value.frase, recusa.value.frase
 
 
-# -- 2. a ação chega só à extensão dela -------------------------------------------------------
-
-
 def test_a_acao_chega_so_a_extensao_dela(curto: pathlib.Path) -> None:  # noqa: F811
-    # D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA
+    """Prova da D-2410-A-EXTENSAO-DECLARA-ACOES-E-O-CLIQUE-VAI-SO-A-ELA."""
     async def corrida() -> None:
         porta = await _porta(curto, EventBus())
         a = await _entrar(curto, "ficha-a", {"ligado": True})
@@ -147,7 +140,7 @@ def test_a_acao_chega_so_a_extensao_dela(curto: pathlib.Path) -> None:  # noqa: 
             assert chegou is not None, "a extensão dona não recebeu a ação"
             assert chegou["params"]["nome"] == "extensao.acao"
             assert chegou["params"]["dados"] == {"mod": "acessorios",
-                                                 "acao": "parear",  # (noqa-acento) contrato
+                                                 "acao": "parear",  # (noqa-acento)
                                                  "alvo": None}
             assert porta.acao("acessorios", "ligar", alvo="ap-2", valor=False) is True
             chave = await asyncio.to_thread(a.esperar_evento, 2.0)
@@ -221,11 +214,8 @@ def test_o_ipc_da_acao_so_leva_o_que_o_manifesto_declara(lar: Any) -> None:  # n
         arrastar(id="ao-vivo", valor=1.5)
     assert arrastou == [("toque", "ao-vivo", 0.5, False)]
     sem = asyncio.run(IpcHandlersMixin._handle_mods_acao(
-        _servico(None), {"mod": "toque", "acao": "parear"}))  # (noqa-acento) contrato
+        _servico(None), {"mod": "toque", "acao": "parear"}))  # (noqa-acento)
     assert sem == {"enviada": False}
-
-
-# -- a janela -----------------------------------------------------------------------------
 
 
 class _Ponte:
@@ -244,7 +234,7 @@ class _Ponte:
 
     def chamar_com_o_corpo(self, metodo: str, **params: Any) -> tuple[bool, str | None, Any]:
         self.chamadas.append((metodo, params))
-        chave = "enviada" if metodo == "mods.acao" else "enviado"  # (noqa-acento) contrato
+        chave = "enviada" if metodo == "mods.acao" else "enviado"
         return True, None, {chave: self.rodando}
 
     def escolher_arquivo(self, *_: Any, **__: Any) -> str | None:
@@ -305,7 +295,7 @@ def test_quatro_aparelhos_viram_quatro_linhas_e_o_testar_leva_o_alvo(
     a07.acao_da_modificacao(ctx, {"v": data_v}, ponte)
     feitas = [p for m, p in ponte.chamadas if m == "mods.acao"]
     assert feitas == [
-        {"mod": "toque", "acao": "testar", "alvo": f"ap-{n}"}], feitas  # (noqa-acento) contrato
+        {"mod": "toque", "acao": "testar", "alvo": f"ap-{n}"}], feitas  # (noqa-acento)
 
 
 def test_a_chave_do_aparelho_pede_o_contrario_e_o_botao_diz_em_curso(janela: Any, ctx: Any) -> None:  # noqa: F811
@@ -342,8 +332,10 @@ def test_a_chave_do_aparelho_pede_o_contrario_e_o_botao_diz_em_curso(janela: Any
 
 def test_o_em_curso_sai_no_teto_mesmo_sem_a_serie_subir(
         janela: Any, ctx: Any, monkeypatch: pytest.MonkeyPatch) -> None:  # noqa: F811
-    # D-2410-O-BOTAO-DA-ACAO-DIZ-EM-CURSO-ATE-A-SERIE-SUBIR
-    """A extensão que não devolve estado nenhum não deixa o botão preso em «Em curso»."""
+    """A extensão que não devolve estado nenhum não deixa o botão preso em «Em curso».
+
+    Prova da D-2410-O-BOTAO-DA-ACAO-DIZ-EM-CURSO-ATE-A-SERIE-SUBIR.
+    """
     a07, instalar, abrir = janela
     instalar(**_pecas())
     ponte = _Ponte(VIVO)
@@ -368,12 +360,9 @@ def test_a_acao_da_extensao_parada_recusa_dizendo(janela: Any, ctx: Any) -> None
         a07.acao_da_modificacao(ctx, {"v": "toque:parear"}, ponte)
 
 
-# -- 4. o arrastar ----------------------------------------------------------------------------
-
-
 def test_arrastar_um_segundo_sai_em_no_maximo_vinte_e_o_ultimo_e_o_soltar(
         curto: pathlib.Path) -> None:  # noqa: F811
-    # D-2410-O-CONTROLE-LIVRE-SAI-A-VINTE-POR-SEGUNDO-E-O-SOLTAR-NA-HORA
+    """Prova da D-2410-O-CONTROLE-LIVRE-SAI-A-VINTE-POR-SEGUNDO-E-O-SOLTAR-NA-HORA."""
     async def corrida() -> list[dict[str, Any]]:
         porta = await _porta(curto, EventBus())
         a = await _entrar(curto, "ficha-a", {"ligado": True})
@@ -425,9 +414,6 @@ def test_o_arrastar_fora_de_ordem_cai_e_o_soltar_sempre_sai(janela: Any, ctx: An
     assert feitas == [(0.3, False), (0.4, True)], feitas
 
 
-# -- 5. a forma gravada -----------------------------------------------------------------------
-
-
 def _gravar(a07: Any, ctx: Any, ponte: _Ponte, mod_id: str = "toque") -> dict[str, Any]:  # noqa: F811
     a07.gravar_o_livre_da_modificacao(ctx, {"v": f"{mod_id}:ao-vivo"}, ponte)
     for n, valor in enumerate((20, 80, 50)):
@@ -439,7 +425,7 @@ def _gravar(a07: Any, ctx: Any, ponte: _Ponte, mod_id: str = "toque") -> dict[st
 
 def test_a_forma_gravada_entra_nos_botoes_da_mesma_extensao_e_nao_na_outra(
         janela: Any, ctx: Any, lar: Any) -> None:  # noqa: F811
-    # D-2410-A-FORMA-GRAVADA-VALE-SO-NA-MESMA-EXTENSAO
+    """Prova da D-2410-A-FORMA-GRAVADA-VALE-SO-NA-MESMA-EXTENSAO."""
     from hefesto_dualsense4unix.mods import opcoes
     from hefesto_dualsense4unix.mods.instalador import manifesto_instalado
 
@@ -490,7 +476,7 @@ def test_esquecer_a_forma_devolve_o_botao_ao_padrao(
 def _lugares_de(tmp_path: pathlib.Path) -> Any:
     from hefesto_dualsense4unix.mods.instalador import Lugares
 
-    return Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # (noqa-acento) campo
+    return Lugares(codigo=tmp_path / "codigo", dados=tmp_path / "dados",  # (noqa-acento)
                    registro=tmp_path / "registro.json", estado=tmp_path / "estado.json")
 
 
@@ -504,9 +490,11 @@ def _guardar_a_mao(lugares: Any, mod_id: str, valores: dict[str, Any]) -> None:
 
 def test_o_botao_editado_a_mao_com_forma_que_nao_e_texto_cai_no_padrao_sem_levantar(
         tmp_path: pathlib.Path) -> None:
-    # D-2410-A-FORMA-DO-BOTAO-QUE-NAO-E-TEXTO-VOLTA-AO-PADRAO
     """O ``ler`` nunca levanta: a forma de um botão que não é texto (o ``opcoes.json`` editado a
-    mão) volta ao padrão daquele botão, e os outros ficam."""
+    mão) volta ao padrão daquele botão, e os outros ficam.
+
+    Prova da D-2410-A-FORMA-DO-BOTAO-QUE-NAO-E-TEXTO-VOLTA-AO-PADRAO.
+    """
     from hefesto_dualsense4unix.mods import opcoes
 
     manifesto = Manifesto.model_validate(_manifesto(**_pecas()))
@@ -519,8 +507,10 @@ def test_o_botao_editado_a_mao_com_forma_que_nao_e_texto_cai_no_padrao_sem_levan
 
 def test_a_extensao_que_substitui_herda_o_botao_com_a_forma_gravada(
         tmp_path: pathlib.Path) -> None:
-    # D-2410-A-EXTENSAO-QUE-SUBSTITUI-HERDA-A-FORMA-GRAVADA
-    """A extensão nova herda a forma gravada no ``livre`` da antiga E o botão que a escolheu."""
+    """A extensão nova herda a forma gravada no ``livre`` da antiga E o botão que a escolheu.
+
+    Prova da D-2410-A-EXTENSAO-QUE-SUBSTITUI-HERDA-A-FORMA-GRAVADA.
+    """
     from hefesto_dualsense4unix.mods import opcoes
 
     manifesto = Manifesto.model_validate(_manifesto(**_pecas()))
@@ -584,7 +574,7 @@ def test_os_gestos_e_os_metodos_estao_declarados() -> None:
     import sys
 
     a07 = _o_pacote()
-    assert {"mods.acao", "mods.livre"} <= a07.METODOS  # (noqa-acento) contrato
+    assert {"mods.acao", "mods.livre"} <= a07.METODOS
     novos = ("acao-da-modificacao", "mover-o-livre-da-modificacao",
              "soltar-o-livre-da-modificacao", "gravar-o-livre-da-modificacao",
              "esquecer-a-forma-do-livre")

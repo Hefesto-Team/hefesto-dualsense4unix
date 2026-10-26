@@ -67,7 +67,7 @@ def _item_de_ordem(acao: str = "") -> Item:
     return Item(
         chave=ordem.chave,
         rotulo="Mudança recomendada",
-        estado="atencao",  # (noqa-acento) chave de máquina do exame
+        estado="atencao",  # (noqa-acento)
         porque=ordem.o_que_eu_vi.texto,
         cura=ordem.acao or None,
         ordem=ordem,
@@ -136,7 +136,7 @@ def test_uma_linha_de_regra_nao_ganhou_frase_nenhuma_a_mais() -> None:
     item = Item(
         chave="energia_das_portas",
         rotulo="Energia das portas",
-        estado="certo",  # (noqa-acento) chave de máquina do exame
+        estado="certo",
         porque="Conferido agora: nenhuma das 16 portas USB está em economia.",
         cura=None,
     )

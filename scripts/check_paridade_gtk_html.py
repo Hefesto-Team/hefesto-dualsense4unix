@@ -48,7 +48,6 @@ SO_HTML = (
     "mockup/",
 )
 
-#: pasta: ``scripts/tela/sistema_viva.py`` importa ``interface.sistema``,
 COMPARTILHADOS = frozenset({
     "src/hefesto_dualsense4unix/interface/sistema.py",
     "src/hefesto_dualsense4unix/interface/conexoes.py",
@@ -86,8 +85,6 @@ def aposentado(caminho: str) -> str | None:
     return None
 
 ENDERECO_DE_TELA = re.compile(r'data-[a-z-]+="[^"]+"')
-
-# paridade é um símbolo do código (``rumble_ff``, ``data-volume="microfone"``);
 
 PONTES: dict[tuple[str, str], str] = {
     ("02-controles", "Alto-falante — o controle deslizante de volume"):
@@ -332,8 +329,6 @@ def conferir(linhas: list[dict[str, str]], arvore: Arvore) -> list[str]:
         onde = f"{CSV.name}:{n}  [{l['aba']}] {l['feature'][:64]}"
         gtk, html = enderecos(l["gtk_onde"]), enderecos(l["html_onde"])
 
-        # O lado GTK é registro desde 02/10/2026: a sobra da janela saiu do pacote, e
-        # `gtk_onde` diz onde a capacidade morava, não onde ela abre hoje.
         for coluna, lista, esperado in (("html_onde", html, "html"),):
             for e in lista:
                 caminho, _, numero = e.partition(":")

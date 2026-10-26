@@ -50,7 +50,7 @@ QUATRO = (P1, P2, P3, P4)
 TIQUE = 1.0 / 60.0
 FOLGA = 2 * TIQUE + 1e-6
 
-PINO = {"mode": "Weapon", "params": [3, 7, 230]}  # o Pino que falha: só liga a receita dos momentos
+PINO = {"mode": "Weapon", "params": [3, 7, 230]}
 FPS_MACHINE = {"mode": "Machine", "params": [0, 9, 5, 24]}
 
 
@@ -230,11 +230,8 @@ def _mesa(
     motor = tv.TatoVivo(tv.atuadores_de_producao(daemon))
     daemon._tato_vivo = motor
     mesa = Mesa(daemon, backend, motor, tv.Passo(daemon, motor), leitores, fisicos)
-    mesa.rodar(0.1)  # o motor lê a receita e a mesa assenta antes do aperto
+    mesa.rodar(0.1)
     return mesa
-
-
-# ------------------------------------------------------------ 1. a marca é o bloco
 
 
 @pytest.mark.parametrize("uniq", QUATRO)
@@ -266,9 +263,6 @@ def test_o_bloco_que_muda_escreve_uma_vez_por_mudanca(monkeypatch: pytest.Monkey
         _bloco("Machine", start=0, end=9, strength=8, frequency=8)]
 
 
-# ------------------------------------------------------------ 2. o clique do Disparo
-
-
 def _plano_do_clique() -> tv.PlanoDoGatilho:
     return _plano(ei.Momento(ei.QUANDO_PASSOU_DO_CLIQUE, 150, "Resistance",
                              {"start": 7, "force": 6}))
@@ -292,7 +286,6 @@ def test_o_status_2_do_disparo_dispara_o_passou_do_clique(
     [(t, bloco)] = mesa.backend.de(uniq, "right")
     assert bloco == _bloco("Resistance", start=7, force=6)
     assert 0 <= t - passou <= FOLGA, "o momento sai no tique em que o status chega a 2"
-    # O bloco novo não mexe no nibble: o status volta a 0 e o momento segue valendo.
     mesa.disparo(uniq, 0, via)
     mesa.rodar(0.5)
     assert len(mesa.backend.de(uniq, "right")) == 1
@@ -307,7 +300,7 @@ def test_sem_o_status_o_passou_do_clique_cai_no_relogio_do_aperto(
     mesa = _mesa(monkeypatch, _plano_do_clique())
     apertou = mesa.t
     mesa.apertar(P1)
-    mesa.rodar(1.0)  # nenhum report: o aparelho não disse o status
+    mesa.rodar(1.0)
     [(t, bloco)] = mesa.backend.de(P1, "right")
     assert bloco == _bloco("Resistance", start=7, force=6)
     assert 0.15 <= t - apertou <= 0.15 + FOLGA, "sem status, o `apos_ms` conta do aperto"
@@ -331,9 +324,6 @@ def test_o_status_nao_escreve_nada_no_aparelho(monkeypatch: pytest.MonkeyPatch) 
     mesa.disparo(P1, 2)
     mesa.rodar(1.0)
     assert [b for _t, b in mesa.backend.de(P1)] == [_bloco("Resistance", start=7, force=6)]
-
-
-# ------------------------------------------------------------ 3. o «pronto»
 
 
 def test_o_pronto_dura_de_60_a_150_ms() -> None:
@@ -379,7 +369,6 @@ def test_o_pronto_conta_no_teto_de_escritas(monkeypatch: pytest.MonkeyPatch) -> 
     escritas = mesa.backend.de(P1, "right")
     assert mesa.motor.contadores["recusas_do_teto"] > 0, "o pronto gastou a vaga da janela"
     assert [round(t - apertou, 1) for t, _b in escritas][:2] == [0.0, 0.5]
-    # A volta do pronto espera a primeira vaga (a do aperto sai da janela de 1 s).
     assert escritas[2][0] - apertou >= 1.0 - 1e-9
 
 
@@ -387,12 +376,9 @@ def test_o_pronto_vai_por_cima_de_qualquer_outro_momento() -> None:
     pronto = ei.Momento(ei.QUANDO_PRONTO, 0, "Machine",
                         {"start": 4, "end": 9, "strength": 3, "frequency": 40}, dura_ms=100)
     por_baixo = ei.Momento("segurando", 0, "Resistance", {"start": 4, "force": 7})
-    plano = _plano(pronto, por_baixo)  # o «pronto» vem ANTES na lista
+    plano = _plano(pronto, por_baixo)
     assert tv.bloco_do_momento(plano, (0, 1)) == _bloco(
         "Machine", start=4, end=9, strength=3, frequency=40)
-
-
-# ------------------------------------------------------------ 4. as quatro pendências
 
 
 def test_o_ritmo_do_outro_lado_nao_fica_preso(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -400,7 +386,7 @@ def test_o_ritmo_do_outro_lado_nao_fica_preso(monkeypatch: pytest.MonkeyPatch) -
     perfil = _perfil(estilo="fps", triggers={"right": FPS_MACHINE})
     mesa = _mesa(monkeypatch, perfil=perfil)
     assert mesa.passo.receita_vigente.gatilho_no_ritmo
-    mesa.apertar(P1, "direito")  # a rajada do direito segura a sessão
+    mesa.apertar(P1, "direito")
     for _ in range(3):
         mesa.apertar(P1, "esquerdo")
         mesa.rodar(0.1)
@@ -408,7 +394,7 @@ def test_o_ritmo_do_outro_lado_nao_fica_preso(monkeypatch: pytest.MonkeyPatch) -
         mesa.rodar(0.1)
     ritmo = [b for _t, b in mesa.backend.de(P1, "left")]
     assert ritmo, "o ritmo do tiro escreveu no lado que não tem imersão"
-    mesa.rodar(3.0)  # passa o prazo de 1,5 s do ritmo, com o direito ainda apertado
+    mesa.rodar(3.0)
     assert [(u, s, b) for _t, u, s, b in mesa.backend.soltos] == [(P1, "left", ritmo[-1])], (
         "o ritmo do esquerdo ficou preso: só a sessão inteira o soltaria")
     assert mesa.backend.sessoes == [], "a sessão segue com o momento do direito"
@@ -430,7 +416,7 @@ def test_a_bateria_longa_para_os_momentos(monkeypatch: pytest.MonkeyPatch) -> No
     mesa.apertar(P1)
     mesa.rodar(0.5)
     assert len(mesa.backend.de(P1, "right")) == 1 and mesa.backend.voltou(P1) == []
-    ligada[0] = True  # a pessoa liga a Bateria longa no meio do aperto
+    ligada[0] = True
     ligou = mesa.t
     mesa.rodar(1.0)
     [voltou] = mesa.backend.voltou(P1)
@@ -441,7 +427,7 @@ def test_a_bateria_longa_para_os_momentos(monkeypatch: pytest.MonkeyPatch) -> No
     mesa.apertar(P1)
     mesa.rodar(0.5)
     assert len(mesa.backend.de(P1, "right")) == 1
-    ligada[0] = False  # sai da Bateria longa: os momentos voltam
+    ligada[0] = False
     mesa.rodar(0.5)
     assert len(mesa.backend.de(P1, "right")) == 2
 
@@ -461,7 +447,7 @@ def test_o_sempre_sem_fim_expira_e_devolve_a_sessao(monkeypatch: pytest.MonkeyPa
             _bloco("Weapon", start=4, end=6, force=255)]
     mesa.pular(250.0)
     assert mesa.backend.sessoes == [], "antes do teto o momento segue com a sessão"
-    mesa.pular(60.0)  # passados 5 minutos
+    mesa.pular(60.0)
     assert sorted(u for _t, u in mesa.backend.sessoes) == sorted(QUATRO)
     escritos = len(mesa.backend.blocos)
     mesa.rodar(5.0)
@@ -486,7 +472,7 @@ def test_o_motor_calado_devolve_o_bloco_ao_aparelho(
     mesa.apertar(uniq)
     mesa.rodar(0.5)
     assert len(mesa.backend.de(uniq, "right")) == 1 and mesa.backend.voltou(uniq) == []
-    mesa.daemon.display_authority = "none"  # o jogo saiu de cena (alt-tab, fechou)
+    mesa.daemon.display_authority = "none"
     calou = mesa.t
     mesa.rodar(1.0)
     [voltou] = mesa.backend.voltou(uniq)
@@ -508,7 +494,6 @@ def test_o_jogo_que_toma_o_gatilho_continua_sem_devolucao(
     assert mesa.motor.contadores["soltos_ao_jogo"] == 1
 
 
-# O perfil salvo com a chave que saiu da lista de onze: a tela, o aparelho e o motor dizem o mesmo.
 def _linhas_de_ontem() -> list[tuple[str, str, list[int]]]:
     linhas = []
     for chave, velha, ajustes in ei.NUMEROS_DE_ONTEM:
@@ -536,7 +521,6 @@ def test_o_perfil_de_chave_velha_toca_a_imersao_que_a_tela_mostra(
 
     lado = aba._do_lado({"mode": velha, "params": posicionais}, trigger_specs)
     na_tela = aba._imersao_que_casa(lado["modo-chave"], lado["params"], lado["cru"])
-    # a lista junta «Arma pesada» e «Golpe pesado» no «Golpe · forte» (D-2010, a página aprovada)
     assert na_tela == ei.IGUAL_A.get(chave, chave), (velha, posicionais, na_tela)
     imersao = ei.POR_CHAVE[chave]
     plano = tv._plano_do_lado(SimpleNamespace(mode=velha, params=posicionais))
@@ -555,7 +539,6 @@ def test_a_volta_a_mao_e_o_bloco_do_perfil_e_nao_o_da_imersao(
 ) -> None:
     plano = tv._plano_do_lado(SimpleNamespace(mode=velha, params=posicionais))
     if plano is None:
-        # Sem momento no acionamento de hoje, nada a devolver; pulo não seria verde.
         from hefesto_dualsense4unix.app.actions import trigger_specs
 
         modo, _ = trigger_specs.na_lista_de_onze(velha, posicionais)
@@ -609,7 +592,6 @@ def test_o_perfil_de_chave_velha_por_controle_toca_em_cada_um_dos_quatro(numero:
 def test_o_automatico_toca_a_da_frente_do_estilo_no_acionamento_de_hoje(
     estilo: str, lado: str, chave: str, modo: str,
 ) -> None:
-    # D-2010-O-R2-E-O-L2-DO-ESTILO-SAO-RECEITAS-SEPARADAS (antes D-1510, uma imersão para os dois)
     """O R2 e o L2 do estilo tocam, cada um, a imersão do `Lado` dele (tabela S de 19/10/2026).
 
     O nome é o da prova da D-1510-CADA-ESTILO-TEM-A-SUA-IMERSAO-NO-AUTOMATICO, que segue de pé.
@@ -621,7 +603,7 @@ def test_o_automatico_toca_a_da_frente_do_estilo_no_acionamento_de_hoje(
 
 
 @pytest.mark.parametrize(("estilo", "lado"), [
-    ("acao", "direito"), ("acao", "esquerdo"), ("arco", "direito"),  # (noqa-acento): chave
+    ("acao", "direito"), ("acao", "esquerdo"), ("arco", "direito"),  # (noqa-acento)
     ("corrida", "direito"), ("aventura", "esquerdo"), ("retro", "direito"),
     ("fps", "direito"), ("simulacao", "direito"),
 ])

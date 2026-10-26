@@ -112,7 +112,7 @@ def test_no_nativo_nenhum_gesto_das_cinco_abas_chega_ao_daemon() -> None:
         if (pagina, nome) in camada.VIVOS_NO_NATIVO:
             continue
         ipc = _Dubla()
-        with contextlib.suppress(Exception):  # o que importa é o daemon não ter ouvido
+        with contextlib.suppress(Exception):
             pacotes.GESTOS[(pagina, nome)](_ctx(True), dict(ENTRADA), ipc)
         if ipc.chamadas:
             chegaram.append(f"{pagina} · {nome} → {ipc.chamadas[:2]}")
@@ -181,7 +181,7 @@ def test_o_rodape_despachado_pelas_cinco_abas_recusa_no_nativo() -> None:
 def test_o_topo_manda_o_nativo_para_o_corpo() -> None:
     pacotes = _pacotes()
     assert pacotes.topo(_ctx(True))["nativo"] == "sim"
-    assert pacotes.topo(_ctx(False))["nativo"] == "nao"  # (noqa-acento) valor que a página lê
+    assert pacotes.topo(_ctx(False))["nativo"] == "nao"  # (noqa-acento)
 
 
 def test_os_vivos_do_css_sao_os_da_camada() -> None:
@@ -197,9 +197,6 @@ def test_os_vivos_do_css_sao_os_da_camada() -> None:
     assert do_css == da_tabela, f"CSS {sorted(do_css)} ≠ camada {sorted(da_tabela)}"
     assert len(da_tabela) >= 4
 
-
-# ---------------------------------------------------------------------------
-# A tela, no Chrome de verdade
 
 O_QUE_O_MOTOR_DESENHA = r"""
 (nativo) => {
@@ -258,7 +255,6 @@ def paginas(tmp_path_factory: pytest.TempPathFactory) -> dict[str, Path]:
     if not CHROME.exists():
         pytest.skip("sem o Chrome do sistema — a régua não tem motor")
     if not GI_REAL_DISPONIVEL:
-        # os geradores importam o pacote das abas, que carrega o GTK (`pacotes/a09_sistema`)
         pytest.skip("sem o PyGObject real — os geradores das abas são do lado GTK")
     destino = tmp_path_factory.mktemp("nativo")
     for arq in (RAIZ / "mockup").glob("*.html"):

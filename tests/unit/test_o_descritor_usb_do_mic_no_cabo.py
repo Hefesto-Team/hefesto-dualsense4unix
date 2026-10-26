@@ -43,7 +43,7 @@ FIXTURE = (
 def _carregar() -> ModuleType:
     """Importa o ensaio pelo caminho — ele mora em `scripts/`, fora do pacote."""
     spec = importlib.util.spec_from_file_location("ensaio_mic_no_cabo", ENSAIO)
-    if spec is None or spec.loader is None:  # pragma: no cover - ambiente quebrado
+    if spec is None or spec.loader is None:  # pragma: no cover
         pytest.skip(f"não deu para carregar {ENSAIO}")
     modulo = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = modulo

@@ -38,7 +38,6 @@ from pacotes import a08_conexoes as conexoes
 from hefesto_dualsense4unix.integrations.cor_do_plastico import cor_do_nome
 from hefesto_dualsense4unix.utils.maquina import MaquinaConfig
 
-# Faixa forjada (`aa:bb:cc`), nunca endereço real mascarado.
 CHAVE = "aabbcc000031"
 
 
@@ -92,7 +91,6 @@ def test_os_dois_cartoes_pintam_a_borda_com_a_cor_que_ela_declarou(
     _ela(monkeypatch, cor="Cosmic Red")
     cor = cor_do_nome("Cosmic Red")
     assert cor is not None
-    # a mesma cor que a mesa daria a um DualSense declarado com ela
     slug, _ = mesa_viva.CORES[cor.codigo]
     hexa = conexoes._hex_do_plastico(slug)
     assert re.fullmatch(r"#[0-9a-fA-F]{6}", hexa)
@@ -168,11 +166,6 @@ def test_o_cartao_e_a_mesa_leem_a_mesma_fonte(monkeypatch: pytest.MonkeyPatch) -
     assert ela["cor_nome"] == item["nome"]
 
 
-# O ITEM 3, DECIDIDO PELO PADRÃO DE PRODUTO (08/10/2026): a família declarada vale também para o
-# DualSense. Razão: a interface é soberana (o que o usuário declara é o que a tela mostra),
-# `controles.botoes` é «só o desenho da tela», o PS continua no logo, e é o mais reversível.
-
-
 def test_a_familia_declarada_vale_tambem_para_o_dualsense(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """Letras Nintendo declaradas num DualSense desenham as letras; o logo segue PS.
@@ -195,9 +188,6 @@ def test_o_cartao_nao_chama_o_externo_de_assento(monkeypatch: pytest.MonkeyPatch
         assert 'class="cartao' not in html and "data-controle" not in html
         assert "data-colorway" not in html and "--plastico" not in html
 
-
-# O ITEM 2: a Conexões tem as três listas (modo, botões, cor) e elas gravam pelo
-# `machine.declare`, o mesmo caminho do `sala-altura`. O cartão da Jogar só mostra.
 
 GESTOS = ("externo-modo", "externo-botoes", "externo-cor")
 
@@ -243,7 +233,7 @@ def test_sem_declaracao_a_primeira_opcao_e_nao_sei(monkeypatch: pytest.MonkeyPat
     html = conexoes._html_dos_externos(_ctx(_externo()))
     for gesto in GESTOS:
         lista = _lista(html, gesto)
-        assert lista.count(" selected") == 1  # só a vazia vem marcada
+        assert lista.count(" selected") == 1
         assert '<option value="" selected>' in lista
 
 
@@ -311,7 +301,7 @@ def test_clique_solto_ou_controle_que_sumiu_recusa_sem_gravar(gesto: str) -> Non
         fn(_ctx(_externo()), {"valor": "xbox"}, ponte)
     with pytest.raises(RuntimeError):
         fn(_ctx(_externo()), {"externo": "aa:bb:cc:00:00:77", "valor": "xbox"}, ponte)
-    with pytest.raises(RuntimeError):  # MAC forjado não tem chave
+    with pytest.raises(RuntimeError):
         fn(_ctx(_externo(uniq="02:fe:00:00:00:31")),
            {"externo": "02:fe:00:00:00:31", "valor": "xbox"}, ponte)
     assert ponte.chamadas == []

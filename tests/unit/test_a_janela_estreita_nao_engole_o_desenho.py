@@ -31,7 +31,7 @@ try:
         LARGURA_DO_DESENHO,
     )
     from hefesto_dualsense4unix.interface import onde
-except (ImportError, ValueError) as _erro:  # pragma: no cover — ambiente sem WebKit
+except (ImportError, ValueError) as _erro:  # pragma: no cover
     pytest.skip(
         f"JANELA-ESTREITA-01: a biblioteca da janela não importou ({_erro}). "
         "Falta gir1.2-webkit2-4.1?",
@@ -40,7 +40,7 @@ except (ImportError, ValueError) as _erro:  # pragma: no cover — ambiente sem 
 
 try:
     import regua_de_tela
-except (ImportError, ValueError) as _erro:  # pragma: no cover — ambiente sem WebKit
+except (ImportError, ValueError) as _erro:  # pragma: no cover
     pytest.skip(
         f"JANELA-ESTREITA-01: a régua de tela não importou ({_erro}).",
         allow_module_level=True,
@@ -384,8 +384,6 @@ ESPERADO_VERMELHO_SELECT: dict[tuple[str, str], str] = {
         "fim'), que é o que sumiu. CURA: o `title` do campo passar a carregar a "
         "opção escolhida, como a aba Conexões faz nos dez `<select>` dela"
     ),
-    # 06/10/2026 (leva 1.7, item 10): a entrada da 06 saiu. As opções novas de
-    # «Tipo de navegação» cabem a 940 px, e a régua deu XPASS estrito.
 }
 
 
@@ -420,7 +418,7 @@ def test_a_pagina_abriu_inteira_e_no_tamanho_pedido(medido, aba, rotulo):
     assert lido["viewport"] == {"larg": tamanho.largura, "alt": tamanho.altura}, (
         f"{aba}: pedi {tamanho.largura}x{tamanho.altura} e a janela oculta deu "
         f"{lido['viewport']} — a medida inteira seria de outro tamanho")
-    assert lido["folha_posta"] is not False, (  # None: a página não traz `.nota`
+    assert lido["folha_posta"] is not False, (
         f"{aba}: a folha do produto (`FOLHA_DA_CASA`) não pegou, e as legendas "
         "`.nota` do mockup entram na conta. O produto as esconde")
     faltando = [n for n, v in lido["faixas"].items() if not v]
@@ -470,8 +468,10 @@ def test_no_tamanho_do_desenho_nada_e_cortado(medido, aba):
 
 @pytest.mark.parametrize(("aba", "rotulo"), CASOS)
 def test_nada_some_sem_afordancia(medido, aba, rotulo):
-    """O CORAÇÃO DA RÉGUA. Rolar é aceitável; reticências com `title` também."""
-    # D-1710-A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO
+    """O CORAÇÃO DA RÉGUA. Rolar é aceitável; reticências com `title` também.
+
+    Prova da D-1710-A-JANELA-ESTREITA-NAO-ENGOLE-O-DESENHO.
+    """
     lido = medido[(aba, rotulo)]
     fora = engolidos(lido)
     tamanho = next(t for t in TAMANHOS if t.rotulo == rotulo)
@@ -527,8 +527,6 @@ def test_o_que_fica_fora_da_tela_se_alcanca_rolando(medido, aba, rotulo):
     assert not queixas, f"{aba} em janela {rotulo}: " + " · ".join(queixas)
 
 
-# a 09 saiu em 21/10/2026: a linha que pede ação cresce em vez de cortar, e ela ficou sem corte com
-# afordância a 940 px; a 07 tem os dois (o nome e a frase da extensão, com a dica)
 ABA_DA_MORDIDA = "07-lancadores.html"
 
 

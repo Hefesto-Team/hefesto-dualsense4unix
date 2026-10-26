@@ -84,8 +84,6 @@ NUMEROS = (1, 2, 3, 4)
 
 ANEL_DO_DONO = "players.dono"
 
-#: O alvo da cor do plástico (desde 03/09/2026): `escrever()` faz
-#: `el.style.setProperty('--plastico', …)`.
 ALVO_DO_PLASTICO = "plastico"
 
 
@@ -138,8 +136,6 @@ def colorway_do_aparelho(casa: dict[str, Any]) -> str:
     traduziu o código de fábrica do broker para o slug do desenho, e a mesa o carrega em `cor`.
     """
     return str(casa.get("cor") or "")
-#: Anel do dono sem cor: `.players .dono{…border:2px solid var(--plastico)}` precisa de
-#: `--plastico`; sem ele, tracejado.
 ANEL_INCERTO = "border:2px dashed var(--comment)"
 
 
@@ -192,7 +188,6 @@ def brilho_do_controle(p: dict[str, Any] | None, uniq: str) -> float | None:
         return None
     leds = p.get("leds")
     global_ = leds.get("lightbar_brightness") if isinstance(leds, dict) else None
-    #: Bancada: o `state_full` publica `uniq='143a9a0000ab'`, já normalizado.
     alvo = chave_do_override(uniq)
     meu = next((v for k, v in (p.get("controllers") or {}).items()
                 if chave_do_override(str(k)) == alvo), None)
@@ -226,10 +221,6 @@ def brilho_aceso(c: dict[str, Any] | None, p: dict[str, Any] | None,
     return brilho_do_controle(p, uniq)
 
 
-#: O GESTO DO PAR DOS MODOS (A-O-MODO-AUTOMATICO-E-O-PERSONALIZADO-01, 08/10/2026), no lugar do
-#: interruptor `auto-cores` (D-13): automático = interruptor ligado; personalizado = desligado
-#: com a cor de cada controle guardada. É também o endereço do quadro, que carrega o modo no
-#: `data-modo-da-aba`.
 GESTO_DO_MODO = "modo-da-luz"
 
 
@@ -331,14 +322,8 @@ def _com_o_brilho(rgb: tuple[int, int, int], brilho: float) -> tuple[int, int, i
     return LedSettings(lightbar=rgb).apply_brightness(brilho).lightbar
 
 
-#: Fora da guia: os três de 11/09 (um azul, um rosa e o preto) e, desde 14/10/2026, mais dois (verde
-#: limão e verde água): a fileira do desenho do todo é a das cores de jogador,
-#: `player_slot_color(1..8)`, com o branco na frente e sem :data:`SAI_DA_GUIA`.
 FORA_DA_GUIA = ("#0080FF", "#FF00FF", "#000000", "#80FF00", "#00FF80")
 
-#: A primeira casa da guia é o branco (19/10/2026), e o ciano do Player 6 sai: eram dois azuis na
-#: fileira. O Player 6 nunca acende sozinho (a mesa é de quatro); a cor automática dele segue no
-#: daemon. Os Players 1 a 4 continuam com casa, e por isso o azul que fica é o do Player 1.
 PRIMEIRA_CASA = (255, 255, 255)
 SAI_DA_GUIA = 6
 
@@ -814,7 +799,6 @@ def _cor_do_plastico(slug: str) -> str:
     try:
         import monta
 
-        # dela não têm hexa amostrado e devolvem `url(#hachura-sem-hex)`, que
         return str(monta.cor_de_css(slug))
     except Exception:
         return ""
@@ -847,7 +831,6 @@ def um_botao_de_player(nome: str, meu: int, n: int,
     voltaria calado a um dos estados acima.
     """
     cor = _cor_do_plastico(str(dono.get("cor") or "")) if dono else ""
-    #: O endereço e o alvo andam juntos: endereço sem alvo é meia fechadura.
     onde = (f'data-hef="{endereco_do_anel(n)}" '
             f'data-hef-alvo="{ALVO_DO_PLASTICO}"')
     if dono is None:
@@ -892,7 +875,7 @@ ENDERECO_DO_BRILHO_DAS_LUZES = "brilho-luzes"
 GESTO_DO_BRILHO_DAS_LUZES = "brilho-luzes"
 ROTULO_DO_BRILHO_DAS_LUZES = {
     "fraco": "Fraco",
-    "medio": "Médio",  # (noqa-acento) chave ASCII, o rótulo ao lado
+    "medio": "Médio",  # (noqa-acento)
     "forte": "Forte",
 }
 
@@ -1011,8 +994,6 @@ def desenho_da_luz(tinta: str, brilho: float, jogador: int, dica: str = "",
     try:
         lampadas = monta.luzinhas(jogador)
     except KeyError:
-        # O dono (`player_led_pattern`) sabe o overflow e o atalho da bancada não:
-        # `monta.luzinhas(9)` levanta `KeyError` (medido em 02/09/2026).
         lampadas = ""
     return "\n".join(recuo + linha for linha in (
         tira % "esq",
@@ -1021,7 +1002,6 @@ def desenho_da_luz(tinta: str, brilho: float, jogador: int, dica: str = "",
     ))
 
 
-#: filho que ainda não existe.
 SECAO_DA_TROCA = ".nota-troca"
 
 TITULO_DA_TROCA = "Trocar o número: o antes e o depois"
@@ -1298,30 +1278,21 @@ def o_lugar_vazio() -> dict[str, str]:
     }
 
 
-#: A REGRA `.ctrl.vazia[data-conectado="nao"] .nada` da folha, letra por letra —
 ESTILO_DO_TRACO_VAZIO = ("display:flex;align-items:center;justify-content:center;"
                          "height:100%;width:100%;color:var(--linha)")
 
 
-#: O EFEITO DA BARRA (A-ABA-ILUMINACAO-DO-TODO-01). A lista da coluna tem «Sem efeito» (a barra
-#: apagada), «Luz fixa» (a cor de sempre), as oito bases em grupos pelo que se vê (o desenho A de
-#: 15/10/2026, a escolha do usuário: «uma lista suspensa em cada escolha») e os efeitos que a pessoa
-#: criou.
-#: O valor de um efeito criado é o texto que o perfil guarda (`schema.escrever_o_efeito_da_luz`): o
-#: perfil anima sozinho, sem apontar para a biblioteca da interface. O valor de uma base da lista é
-#: um token `base:<nome>`, que o gesto resolve em `base;cor do controle;ritmo` no ato de escolher.
 GESTO_DO_EFEITO = "efeito-da-luz"
 GESTO_DE_CRIAR_EFEITO = "criar-efeito"
 CAMPO_DO_EFEITO = "efeito"
 CAMPO_DA_DICA_DO_EFEITO = "efeito-dica"
-#: O nome do controle inteiro, na dica da caixa: a janela estreita o corta com reticência.
 CAMPO_DA_DICA_DA_IDENTIDADE = "identidade-dica"
 SEM_EFEITO = "sem-efeito"
 LUZ_FIXA = "luz-fixa"
 PREFIXO_DA_BASE = "base:"
 SELETOR_DOS_EFEITOS = "#seus-efeitos"
 ROTULO_DA_BASE = {"respirar": "Respirar", "piscar": "Piscar",
-                  "arco-iris": "Arco-íris",  # (noqa-acento) chave ASCII
+                  "arco-iris": "Arco-íris",
                   "batimento": "Batida", "chama": "Chama", "mare": "Maré", "onda": "Onda",
                   "relampago": "Relâmpago", "reage-ao-botao": "Reage ao botão",
                   "inclinacao": "Inclinação", "dedo-no-touchpad": "Dedo no touchpad",
@@ -1329,10 +1300,7 @@ ROTULO_DA_BASE = {"respirar": "Respirar", "piscar": "Piscar",
                   "cor-da-bateria": "Cor da bateria", "cor-da-temperatura": "Cor da temperatura",
                   "ondulacao": "Ondulação", "vaivem": "Vaivém", "enche": "Enche",
                   "respira-em-cores": "Respira em cores"}
-#: O ritmo com que cada base nasce na lista (o do desenho A): respirar 5 s, piscar 0,9 Hz, uma volta
-#: do arco-íris em 12 s, batida de 1 s, a chama troca de alvo a cada ~2 s, a Maré vai e volta em
-#: 8 s.
-RITMO_DA_BASE = {"respirar": 2, "piscar": 3, "arco-iris": 7,  # (noqa-acento) chave ASCII
+RITMO_DA_BASE = {"respirar": 2, "piscar": 3, "arco-iris": 7,
                  "batimento": 10, "chama": 5, "mare": 10, "onda": 5, "relampago": 5,
                  "reage-ao-botao": 5, "inclinacao": 5, "dedo-no-touchpad": 5, "ao-som": 5,
                  "aurora": 5, "estrelas": 5, "cor-da-bateria": 5, "cor-da-temperatura": 5,
@@ -1346,7 +1314,7 @@ DICA_DA_BASE = {
     "chama": "O brilho oscila, sem padrão.",
     "mare": "Vai e volta para uma cor vizinha.",
     "piscar": "Lampejos da cor, de borda suave.",
-    "arco-iris": "As cores giram em cada controle.",  # (noqa-acento) identificador ASCII
+    "arco-iris": "As cores giram em cada controle.",
     "onda": "Corre pelas luzinhas e pela barra.",
     "relampago": "Clarões curtos, de borda suave.",
     "reage-ao-botao": "A cor do botão que você aperta.",
@@ -1362,11 +1330,10 @@ DICA_DA_BASE = {
     "enche": "As luzinhas acendem uma a uma.",
     "respira-em-cores": "Cada respiração numa cor.",
 }
-#: Os grupos da lista, na ordem do desenho: o que a pessoa vê, não o nome técnico do efeito.
 GRUPOS_DA_LISTA = (
     ("Parado", (SEM_EFEITO, LUZ_FIXA)),
     ("Que respira", ("respirar", "batimento", "chama", "mare", "respira-em-cores")),
-    ("Que se move", ("piscar", "arco-iris",  # (noqa-acento) chave ASCII
+    ("Que se move", ("piscar", "arco-iris",
                      "onda", "relampago", "vaivem", "enche")),
     ("Que reage", ("reage-ao-botao", "inclinacao", "dedo-no-touchpad", "ao-som", "ondulacao")),
     ("De ambiente", ("aurora", "estrelas", "cor-da-bateria", "cor-da-temperatura")),
@@ -1573,8 +1540,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     p = perfil.ativo_que_vale(ctx.state.get("active_profile"))
     modo_da_aba = modo_da_luz_do_perfil(p)
 
-    # `interface/cartao_do_controle.rotulo_lightbar` é a mesma que os cards da
-    # (`recado, _base = …`) e decidia de novo, com `c.get("lightbar_on", True)`
     from hefesto_dualsense4unix.interface.cartao_do_controle import (
         cor_do_swatch,
         rotulo_lightbar,
@@ -1586,15 +1551,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         if casa_dele:
             donos[_numero(ctx, c)] = casa_dele
 
-    #: o nome que o usuário deu a cada controle (o `Alias`), pelo leitor único; a «Modelo» o diz
     nomes_dela = nomes_dos_donos()
     pecas = _as_pecas_da_mesa(ctx, p)
     cor_de = [peca["cor"] for peca in pecas]
     casas = as_casas_da_mesa(pecas)
 
     colunas: dict[str, dict[str, Any]] = {}
-    #: A LUZ DO DESENHO GRANDE, por LUGAR — ver `folha_da_luz`. Ela nasce vazia
-    #: e só recebe quem tem controle: `folha_da_luz` APAGA todo lugar que não
     luz_do_desenho: dict[str, tuple[str, int | None]] = {}
     biblioteca = meus_efeitos("luz")
     criados = valores_da_biblioteca(biblioteca)
@@ -1610,14 +1572,9 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         nome = str(casa.get("nome") or "—")
         via = str(casa.get("via") or (c.get("transport") or "").upper() or "—")
         recado, base = rotulo_lightbar(c, ctx.state)
-        #: `rotulo_lightbar` devolve `(ressalva, COR BASE DO ACCENT)`, e a base
-        #: Ali a base volta preenchida **com `lightbar_on` falso**, porque a
-        #: QUEM RESPONDE A PERGUNTA DA TIRA É O PRIMEIRO RETORNO: `rotulo_lightbar`
         acesa = base if recado is None else None
-        #: E ELA É A DO DONO DA MARCA — `_a_cor_de_agora`, a mesma do X nas
         pedida = cor_dele if crua else None
         estado = estado_da_tira(recado)
-        #: folha de estilo (`folha_da_luz`), e um seletor CSS endereça o `p1`,
         if casa.get("pref"):
             luz_do_desenho[str(casa["pref"])] = (_hex(acesa) if acesa else "", n)
             listas_de_efeito[f'[data-controle="{casa["pref"]}"] select.g4-efeito'] = (
@@ -1630,19 +1587,12 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             "brilho": "—" if pct is None else f"{pct}%",
             CAMPO_DO_EFEITO: na_lista,
             CAMPO_DA_DICA_DO_EFEITO: dica_do_efeito(na_lista),
-            #: trazer `data-hef-alvo="largura"` — as abas 02 e 05 têm, esta não
             "brilho-pct": pct,
-            #: `on` por `data-hef-quando="#0000FF"` — os oito CHEIOS. Com o
             "hex": _hex(pedida),
             "tons": fileira_de_tons(uniq, casas, "              "),
-            #: (`D-A-BORDA-E-A-IDENTIDADE-DA-PECA`).
-            #: nenhum deles escreve um `--plastico`. A folha desta aba passou a
             "plastico": _cor_do_plastico(str(casa.get("cor") or "")),
-            #: DualSense Cosmic Red desenhado a três centímetros dele.
             **({CAMPO_DO_DESENHO: colorway_do_aparelho(casa)}
                if a_pintura_alcanca_o_desenho() else {}),
-            #: HTML publicado ainda diz `data-campo="aceso"`, e publicar é ato
-            #: antes de 02/09 (`c.get("lightbar_on", True)`) era uma segunda
             "luz": desenho_da_luz(_tinta(cor_escolhida(acesa, b)),
                                   1.0 if b is None else float(b), n,
                                   dica_da_luz(nome, via, recado or ""),
@@ -1650,10 +1600,8 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
             ENDERECO_DA_INCERTA: "sim" if estado == INCERTA else "",
             "identidade": identidade,
             CAMPO_DA_DICA_DA_IDENTIDADE: identidade,
-            #: recusar — ver `um_botao_de_player`. Não é `len(donos)`: quem não
             "players": fileira_de_players(nome, n, donos,
                                           quantos=len(ctx.conectados)),
-            #: não diz (`brilho_das_luzes_acesas`, A-04-PERGUNTA-AO-DAEMON-VIVO-01):
             **({ENDERECO_DO_BRILHO_DAS_LUZES: fileira_de_brilhos_das_luzes(
                 brilho_das_luzes_acesas(c, p, uniq), "              ")}
                if a_pagina_tem_as_pilulas() else {}),
@@ -1664,15 +1612,11 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
     return {
         "colunas": colunas,
         LUGAR_VAZIO: o_lugar_vazio(),
-        #: JavaScript, e o que se lê no HTML é um `--plastico` com endereço sem
         ITEM_DA_TROCA: cores_da_troca(ctx.mesa),
-        #: O MODO DA ABA: o quadro leva o modo no `data-modo-da-aba` (a folha deixa as colunas
-        #: paradas no Automático), e cada botão do par acende pelo modo do perfil.
         GESTO_DO_MODO: modo_da_aba,
         f"{GESTO_DO_MODO}-{MODO_AUTOMATICO}": "sim" if modo_da_aba == MODO_AUTOMATICO else "",
         f"{GESTO_DO_MODO}-{MODO_PERSONALIZADO}":
             "sim" if modo_da_aba == MODO_PERSONALIZADO else "",
-        #: `perfil` saiu em 13/09/2026: o chip é das dez, dono `pacotes.topo()`.
         "sem_dono": {},
         "blocos": {SECAO_DA_TROCA: secao_da_troca(ctx.mesa),
                    SELETOR_DOS_EFEITOS: html_dos_efeitos(biblioteca),
@@ -1873,7 +1817,6 @@ def _escrever_a_cor(ctx: Contexto, p: Any, uniq: str,
     if brilho is _DO_PERFIL:
         cru = perfil.ativo_que_vale(ctx.state.get("active_profile"))
         brilho = brilho_aceso(ctx.por_uniq(uniq), cru, uniq)
-    #: 0% do controle sai do disco junto (`_guardar_a_cor_no_perfil`).
     religar = bool(escolha and brilho is not None and float(brilho) <= 0.0)
     if religar:
         brilho = _o_brilho_de_religar(
@@ -2158,7 +2101,6 @@ def _sem_repetir_a_cor_do_vizinho(
 ) -> tuple[tuple[int, int, int], str | None]:
     """A cor que ESTE controle recebe, e a frase quando ela não é a pedida."""
 
-    # vazio é o DONO (`perfil.ativo` pergunta ao `nome_do_ativo` quando o
     cru = perfil.ativo_que_vale(ctx.state.get("active_profile"))
     casas = as_casas_da_mesa(_as_pecas_da_mesa(ctx, cru))
     outros = os_outros_donos(casas, a_chave_da_cor(rgb), uniq)
@@ -2364,9 +2306,6 @@ def brilho(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
     gravar_pelo_gesto("luz", nome, lambda prof: _com_o_brilho_gravado(prof, uniq, pct),
                       uniq=uniq, origem="interface-nova")
 
-    # {"recado": …}`: com o motor sem afirmar a cor — a Steam com o `fd`, ou
-    # Duas funções do mesmo arquivo, o mesmo
-    # grava a escolha do usuário; ver `_guardar_a_cor_no_perfil`.
     alvo = _a_cor_guardada_que_vale(ctx, antes, dele) or _a_cor_de_agora(ctx, antes, dele)
     _escrever_a_cor(ctx, p, uniq, alvo, brilho=_fracao_do_disco(pct))
     if recado is not None:
@@ -2466,8 +2405,6 @@ def _a_cor_de_agora(ctx: Contexto, cru: dict[str, Any],
     if tom is not None:
         return tom
     if modo_da_luz_do_perfil(cru) == MODO_AUTOMATICO:
-        #: No modo automático a cor guardada fica no disco e NÃO vale: o hex e o X dizem a
-        #: cor do plástico, que é a que o controle acende.
         return cor_automatica(_numero(ctx, c), _tom_do_plastico(c))
     guardada = _a_cor_guardada_que_vale(ctx, cru, c)
     if guardada is not None:
@@ -2513,7 +2450,7 @@ def _com_a_cor_gravada(prof: Any, uniq: str, rgb: tuple[int, int, int],
     dele = atuais.get(chave) or ControllerOverrides()
     antes = dele.leds
     campos: dict[str, Any] = {"lightbar": rgb}
-    if efeito is not None:  # a base da lista na cor nova (`_a_base_na_cor_nova`)
+    if efeito is not None:
         campos[CAMPO_DO_EFEITO] = efeito
     if numero is not None:
         campos["lightbar_para_o_numero"] = int(numero)
@@ -2705,7 +2642,7 @@ def criar_efeito_da_luz(ctx: Contexto, o: dict[str, Any], p: Any) -> None:
     cores = [c.strip().upper() for c in str(forma.get("cores") or "").split(",") if c.strip()]
     if not all(re.fullmatch(r"#[0-9A-F]{6}", c) for c in cores):
         raise RuntimeError("Alguma cor do efeito não é válida. Nada foi guardado.")
-    if base == "arco-iris":  # (noqa-acento) chave do contrato
+    if base == "arco-iris":
         cores = []
     elif not cores:
         raise RuntimeError("Escolha ao menos uma cor para o efeito.")
@@ -2960,10 +2897,6 @@ def player(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str, Any] | None:
 
 
 
-# `lightbar_brightness` de TODOS os overrides por controle e religava
-
-
-#: A PORTA DA COR É A `_detalhado` DESDE 03/09/2026, e `led_set` saiu daqui: o
 PONTE = {"led_set_detalhado", "identity_number_set",
          "player_leds_set_detalhado", "player_led_brightness_set_detalhado",
          "chamar", "profile_switch"}
@@ -2971,25 +2904,20 @@ METODOS = {"coop.sync"}
 
 
 PAGINA = "04-iluminacao.html"
-#: o indicador virou o botão de reenvio (`reenviar-desenho`) e a faixa do título
-#: `luzes`, `desenho-de` e `reenviar-desenho` —, e saíram com o widget que os
-#: Desceu de 10 para 8 em 16/10/2026, pedido: o «Sem piscar» e a caixa do hexadecimal
-#: (`reenviar`) saíram da tela, e o gesto saiu com o widget.
 PISO_DA_ABA = 8
 PROVAS = [
-    {"pagina": PAGINA, "gesto": "cor", "clique": {"hex": "#FF8000"},  # (noqa-acento) id
+    {"pagina": PAGINA, "gesto": "cor", "clique": {"hex": "#FF8000"},  # (noqa-acento)
      "chama": [("led_set_detalhado", [(255, 128, 0)],
                 {"uniq": "aa:bb:cc:00:00:01"})]},
-    {"pagina": PAGINA, "gesto": "apagar", "clique": {},  # (noqa-acento) chave do contrato
+    {"pagina": PAGINA, "gesto": "apagar", "clique": {},  # (noqa-acento)
      "chama": [("led_set_detalhado", [(0, 0, 0)],
                 {"uniq": "aa:bb:cc:00:00:01"})]},
-    {"pagina": PAGINA, "gesto": GESTO_DO_EFEITO,  # (noqa-acento) id
+    {"pagina": PAGINA, "gesto": GESTO_DO_EFEITO,  # (noqa-acento)
      "clique": {"valor": SEM_EFEITO},
      "chama": [("led_set_detalhado", [(0, 0, 0)],
                 {"uniq": "aa:bb:cc:00:00:01"})]},
-    {"pagina": PAGINA, "gesto": "player", "clique": {"player": "2"},  # (noqa-acento) id
+    {"pagina": PAGINA, "gesto": "player", "clique": {"player": "2"},  # (noqa-acento)
      "chama": [("identity_number_set", ["aa:bb:cc:00:00:01", 2], {}),
                ("player_leds_set_detalhado", [(False, True, False, True, False)],
                 {"uniq": "aa:bb:cc:00:00:01"})]},
-    # Ele provava o `reenviar-desenho`, que era o clique na moldura das cinco
 ]

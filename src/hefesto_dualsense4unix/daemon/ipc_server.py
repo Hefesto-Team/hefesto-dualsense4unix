@@ -133,13 +133,8 @@ from hefesto_dualsense4unix.utils.xdg_paths import ipc_socket_path
 
 logger = get_logger(__name__)
 
-# A versão do protocolo, os códigos de erro e o teto do payload moram em
-
-#: O-APP-RESPONDE-NA-HORA-01 (02/10/2026): o pedido que passa deste teto vai ao
-#: do laço (10 s): a materialização segurava o laço de 0,4 a 2,8 s por gesto, e
 TETO_DO_PEDIDO_MS = 100.0
 
-#: (02/10/2026): o `state_full` e o `controller.list` só leem (contadores e
 PERGUNTAS_QUE_NAO_RODAM_ABANDONADAS = frozenset(
     {"daemon.state_full", "controller.list", "profile.list"}
 )
@@ -148,7 +143,6 @@ PERGUNTAS_QUE_NAO_RODAM_ABANDONADAS = frozenset(
 Handler = Callable[[dict[str, Any]], Awaitable[Any]]
 
 
-# legadas que ainda façam `from hefesto_dualsense4unix.daemon.ipc_server import _apply_rumble_policy`.  # noqa: E501
 _apply_rumble_policy = apply_rumble_policy
 
 
@@ -158,7 +152,6 @@ class IpcServer(IpcHandlersMixin):
     store: StateStore
     profile_manager: ProfileManager
     socket_path: Path = field(default_factory=ipc_socket_path)
-    # import circular; o Daemon faz o binding em _start_ipc.
     daemon: Any = None
 
     _handlers: dict[str, Handler] = field(default_factory=dict)
@@ -174,7 +167,6 @@ class IpcServer(IpcHandlersMixin):
             "trigger.set": self._handle_trigger_set,
             "trigger.reset": self._handle_trigger_reset,
             "led.set": self._handle_led_set,
-            # janela. `trigger` tinha o `trigger.reset`, `rumble` tinha o
             "led.auto_release": self._handle_led_auto_release,
             "rumble.set": self._handle_rumble_set,
             "rumble.stop": self._handle_rumble_stop,
@@ -193,10 +185,8 @@ class IpcServer(IpcHandlersMixin):
             "controller.target.set": self._handle_controller_target_set,
             "daemon.reload": self._handle_daemon_reload,
             "launch_env.refresh": self._handle_launch_env_refresh,
-            # de ~3,4 s, e o controle negativo, fora dela, não travou.
             "lightbar.reset": self._handle_lightbar_reset,
             "debug.player_leds": self._handle_debug_player_leds,
-            # D4: volume/mudo do alto-falante do DualSense (assume a posse dos
             "speaker.set": self._handle_speaker_set,
             "mic.set": self._handle_mic_set,
             "mic.canal.set": self._handle_mic_canal_set,
@@ -204,7 +194,6 @@ class IpcServer(IpcHandlersMixin):
             "mic.volume.set": self._handle_mic_volume_set,
             "mouse.emulation.set": self._handle_mouse_emulation_set,
             "mouse.emulation.restore": self._handle_mouse_emulation_restore,
-            # modo Navegação. Ele SUBSTITUI o `mouse.emulation.restore` no
             "desktop.arranjo.apply": self._handle_desktop_arranjo_apply,
             "desktop.arranjo.repor": self._handle_desktop_arranjo_repor,
             "keyboard.emulation.set": self._handle_keyboard_emulation_set,
@@ -221,7 +210,6 @@ class IpcServer(IpcHandlersMixin):
             "led.player_brightness_set": self._handle_led_player_brightness_set,
             "identity.renumber": self._handle_identity_renumber,
             "identity.number.set": self._handle_identity_number_set,
-            # `daemon.reload` LEVANTA em chave que não é campo do `DaemonConfig`.
             "machine.declare": self._handle_machine_declare,
             "plugin.list": self._handle_plugin_list,
             "plugin.reload": self._handle_plugin_reload,
@@ -237,8 +225,8 @@ class IpcServer(IpcHandlersMixin):
             "radio.busca.set": self._handle_radio_busca_set,
             "radio.dispensar": self._handle_radio_dispensar,
             "motion.calibrate": self._handle_motion_calibrate,
-            "perfil.ativacao.set": self._handle_perfil_ativacao_set,  # (noqa-acento) método
-            "perfil.analogicos.set": self._handle_perfil_analogicos_set,  # (noqa-acento) método
+            "perfil.ativacao.set": self._handle_perfil_ativacao_set,
+            "perfil.analogicos.set": self._handle_perfil_analogicos_set,
             "perfil.cursor.set": self._handle_perfil_cursor_set,
             "sequencia.gravar": self._handle_sequencia_gravar,
             "sequencia.tocar": self._handle_sequencia_tocar,
@@ -309,12 +297,6 @@ class IpcServer(IpcHandlersMixin):
         if escrevente is not None:
             with contextlib.suppress(Exception):
                 await asyncio.to_thread(launch_env.desarmar_o_escrevente, escrevente)
-        # O hub de sensores nasce do `_garantir_sensor_hub` deste servidor e desce com ele: a
-        # thread de manutenção e os leitores abertos não sobrevivem à sessão que os criou. O
-        # `stop_all` já engole a falha de cada leitor, e não há o que engolir em volta dele.
-        # O hub parado FICA no servidor: as tarefas do tique param depois do IPC e ainda pedem
-        # o hub, e um `None` aqui faria o `_garantir_sensor_hub` criar outro, que reabriria os
-        # nós do controle na descida. O parado nunca religa a manutenção.
         hub = self._sensor_hub
         if hub is not None:
             await asyncio.to_thread(hub.stop_all)
@@ -404,8 +386,6 @@ class IpcServer(IpcHandlersMixin):
             return None
 
         t0 = time.perf_counter()
-        # O gesto do pedido, para o `profile_salvo` de quem grava no meio dele:
-        # `asyncio.to_thread` leva o contexto junto.
         marca_do_gesto = gesto_de_agora.set(f"ipc:{method}")
         status = "erro"
         try:
@@ -424,9 +404,6 @@ class IpcServer(IpcHandlersMixin):
             )
         finally:
             gesto_de_agora.reset(marca_do_gesto)
-            # Um pedido, uma contagem: é o `hefesto_ipc_requests_total{method,status}`
-            # das métricas. Só método CONHECIDO chega aqui, então o rótulo não cresce
-            # com o que um cliente inventar.
             self.store.bump(f"ipc.{method}.{status}")
             ms = (time.perf_counter() - t0) * 1000
             if ms > TETO_DO_PEDIDO_MS:

@@ -45,21 +45,12 @@ from hefesto_dualsense4unix.utils.maquina import _CHAVE_DE_LANCADOR
 
 Origem = Literal["oficial", "comunidade", "local"]
 
-#: As chaves públicas do time, no formato ``allowed_signers`` do ``ssh-keygen``
-#: (``<principal> <tipo> <chave>``). Vazia enquanto o time não publica a chave
-#: de assinatura: até lá, nada instala como «oficial».
 CHAVES_OFICIAIS: tuple[str, ...] = ()
 
-#: Quanto a remoção espera o serviço parar o processo antes de ela mesma
-#: mandar o sinal ao PID conferido.
 PRAZO_PARA_PARAR_S = 5.0
 
-#: A linha de comando não fala com o serviço: ela relê o estado que o supervisor
-#: grava, nesta cadência, até o processo sair.
 CADENCIA_DA_ESPERA_S = 0.05
 
-#: Quando o serviço não para a tempo: o ``SIGTERM`` e, depois, o ``SIGKILL``, cada
-#: um com a sua espera.
 SINAIS_DO_FIM: tuple[tuple[signal.Signals, float], ...] = (
     (signal.SIGTERM, 2.0),
     (signal.SIGKILL, 1.0),
@@ -67,27 +58,17 @@ SINAIS_DO_FIM: tuple[tuple[signal.Signals, float], ...] = (
 
 _PRAZO_DO_GIT_S = 300.0
 
-#: O ``git ls-remote`` da atualização sozinha só pergunta o commit: sem rede, ele
-#: desiste antes de segurar a volta seguinte.
 _PRAZO_DO_LS_REMOTE_S = 60.0
 
-#: De quanto em quanto tempo a extensão instalada pelo git pergunta ao endereço dela se há
-#: commit novo (decisão D-1910-A-EXTENSAO-DO-GIT-CONFERE-A-CADA-SEIS-HORAS, por delegação, a
-#: validar por ela). Cada extensão guarda o seu no registro.
 INTERVALO_DA_ATUALIZACAO_S = 6 * 3600.0
 
 _ESTADOS_VIVOS = frozenset({"ligando", "rodando", "voltando"})
 
-#: O prazo do ``preparar`` de uma extensão: baixar e conferir um binário cabe nele. O que passa
-#: dele é parado pelo grupo de processos que o próprio instalador abriu (decisão
-#: D-2410-O-PREPARO-DA-EXTENSAO-TEM-DEZ-MINUTOS, por delegação, a validar pelo usuário).
 PRAZO_DO_PREPARO_S = 600.0
 
-#: O diário do preparo, na pasta de dados da extensão: a saída da última vez, até o teto.
 DIARIO_DO_PREPARO = "preparo.log"
 TETO_DO_DIARIO_DO_PREPARO_BYTES = 256 * 1024
 
-#: O que o preparo herda da sessão de quem usa: a casa, as pastas XDG e o proxy, e mais nada.
 _DA_SESSAO_NO_PREPARO = (
     "PATH", "LANG", "HOME", "USER", "LOGNAME",
     "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME", "XDG_RUNTIME_DIR",
@@ -153,20 +134,13 @@ class Entrada(BaseModel):
     permissoes_aceitas: list[str] = []
     ligada: bool = False
     instalada_em: str = ""
-    #: A hora do último «ligar»: ligar de novo a que parou reabre o processo.
     ligada_em: str = ""
-    #: A chave e o intervalo da atualização sozinha; a origem «local» nunca se atualiza.
     atualiza_sozinha: bool = True
     intervalo_da_atualizacao_s: float = INTERVALO_DA_ATUALIZACAO_S
-    #: A versão nova que a atualização sozinha baixou e não instalou (pede permissão nova,
-    #: ou a tag deixou de ser a oficial): espera o «Atualizar». Vazio quando nada espera.
     versao_esperando: str = ""
     commit_esperando: str = ""
     motivo_da_espera: str = ""
-    #: O ``aviso`` do manifesto que teve o «sim» (no instalar ou no ligar).
     aviso_aceito: str = ""
-    #: O ``preparar`` que teve o «sim»; a instalação (``instalada_em``) que ele preparou; e o
-    #: motivo da última falha, que deixa a extensão desligada até o «ligar» o rodar de novo.
     preparo_aceito: list[str] = []
     preparada_em: str = ""
     motivo_do_preparo: str = ""
@@ -179,9 +153,7 @@ class Resultado:
     entrada: Entrada
     manifesto: Manifesto
     permissoes_novas: list[str]
-    #: ``False`` quando a atualização sozinha deixou a versão nova esperando o «Atualizar».
     trocou: bool = True
-    #: Os ids que o ``substitui`` do manifesto mandou embora nesta instalação.
     substituidas: list[str] = field(default_factory=list)
 
 
@@ -189,9 +161,6 @@ def _conferir_id(mod_id: str) -> str:
     if not _CHAVE_DE_LANCADOR.match(mod_id or ""):
         raise InstalacaoRecusadaError(f"«{mod_id}» não é um id de modificação.")
     return mod_id
-
-
-# -- o registro --------------------------------------------------------------
 
 
 def ler_registro(caminho: Path) -> dict[str, Entrada]:
@@ -241,9 +210,6 @@ def ler_estado(caminho: Path) -> dict[str, dict[str, Any]]:
     mods = bruto.get("mods") if isinstance(bruto, dict) else None
     return {str(k): v for k, v in mods.items() if isinstance(v, dict)} if isinstance(
         mods, dict) else {}
-
-
-# -- o git -------------------------------------------------------------------
 
 
 def _ambiente_do_git(extra: dict[str, str] | None = None) -> dict[str, str]:
@@ -326,7 +292,6 @@ def commit_remoto(endereco: str, ref: str | None) -> str | None:
             achados[partes[1]] = partes[0]
     if not ref:
         return achados.get("HEAD")
-    # A tag anotada aponta para o objeto da tag; o commit é o «descascado» (``^{}``).
     for nome in (f"refs/tags/{ref}^{{}}", f"refs/tags/{ref}", f"refs/heads/{ref}"):
         if nome in achados:
             return achados[nome]
@@ -343,8 +308,6 @@ def origem_da_tag(pasta: Path, ref: str | None, chaves: Sequence[str]) -> Origem
     with tempfile.TemporaryDirectory(prefix="hefesto-chaves-") as tmp:
         lista = Path(tmp) / "allowed_signers"
         lista.write_text("\n".join(chaves) + "\n", encoding="utf-8")
-        # Um chaveiro GPG vazio: assinatura GPG nunca confere aqui, porque a
-        # lista que vale é a do produto, e não o chaveiro de quem instala.
         gnupg = Path(tmp) / "gnupg"
         gnupg.mkdir(mode=0o700)
         conferida = _git(
@@ -365,9 +328,6 @@ def _commit_da_pasta(pasta: Path) -> str:
         if feito.returncode == 0:
             return feito.stdout.strip()
     return ""
-
-
-# -- instalar e atualizar ----------------------------------------------------
 
 
 def _conferir_o_lancador(manifesto: Manifesto, pasta: Path) -> None:
@@ -563,8 +523,6 @@ def instalar(
         if seguia_ligada:
             desligar(manifesto.id, lugares=lg)
             if not esperar_parar(manifesto.id, lugares=lg):
-                # Trocar o código debaixo do processo vivo não é atualizar. O código
-                # antigo fica como está, e a que seguia ligada segue ligada.
                 _religar_a_que_seguia(lg, manifesto.id)
                 for mod_id in antigas_ligadas:
                     _religar_a_que_seguia(lg, mod_id)
@@ -574,10 +532,6 @@ def instalar(
                 )
         _trocar_o_codigo(baixada, lg.codigo / manifesto.id)
         pronta = not novas and manifesto.aviso in ("", aviso_aceito)
-        # O preparo é código fora da caixa: roda agora só na que segue ligada, com o «sim» já dado
-        # a ele (o «Atualizar», ou a atualização sozinha do preparo aceito); a primeira instalação,
-        # a desligada e a que espera o «sim» o deixam para o «ligar»
-        # (D-2410-O-PREPARO-RODA-SO-DEPOIS-DO-SIM).
         prepara_agora = bool(manifesto.preparar) and pronta and anterior is not None and (
             anterior.ligada and (not sozinha or anterior.preparo_aceito == manifesto.preparar))
         entrada = Entrada(
@@ -666,14 +620,10 @@ def _o_que_segura_a_atualizacao(
     if aviso_por_ver(anterior, manifesto):
         return f"A versão {manifesto.versao} traz outro aviso."
     if _preparo_novo(lg, anterior, manifesto):
-        # Rodar um comando fora da caixa é permissão nova (decisão
-        # D-2410-O-PREPARO-NOVO-ESPERA-O-ATUALIZAR, por delegação, a validar pelo usuário).
         return f"A versão {manifesto.versao} traz um preparo novo."
     if anterior.origem == "oficial" and tipo != "oficial":
         return f"A tag da versão {manifesto.versao} não confere com a chave oficial."
     if a_substituir:
-        # Tirar uma extensão do ar é gesto de quem usa, não de quem atualiza sozinho. A frase vai
-        # à dica do «Atualizar», e quem usa conhece a extensão pelo nome, não pelo id.
         registro = ler_registro(lg.registro)
         nomes = ", ".join(f"«{registro[i].nome if i in registro else i}»" for i in a_substituir)
         return f"A versão {manifesto.versao} toma o lugar de {nomes}."
@@ -755,9 +705,6 @@ def commit_novo(entrada: Entrada) -> str | None:
     return remoto
 
 
-# -- ligar e desligar --------------------------------------------------------
-
-
 def manifesto_instalado(mod_id: str, *, lugares: Lugares | None = None) -> Manifesto:
     """O manifesto da cópia instalada (o que a tela mostra antes do «sim»)."""
     lg = lugares or Lugares.do_xdg()
@@ -801,7 +748,6 @@ def ligar(
     entrada.permissoes_aceitas = list(manifesto.permissoes)
     entrada.aviso_aceito = manifesto.aviso
     if manifesto.preparar and entrada.preparada_em != entrada.instalada_em:
-        # O preparo que esperava o «sim», ou o que falhou: roda agora, antes de ligar.
         _rodar_o_preparo(lg, manifesto, entrada)
         if entrada.motivo_do_preparo:
             gravar_registro(lg.registro, registro)
@@ -835,9 +781,6 @@ def desligar(mod_id: str, *, lugares: Lugares | None = None) -> Entrada:
         entrada.ligada = False
         gravar_registro(lg.registro, registro)
     return entrada
-
-
-# -- parar e remover ---------------------------------------------------------
 
 
 def _pid_vivo(pid: int) -> bool:

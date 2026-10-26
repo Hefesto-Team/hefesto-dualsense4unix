@@ -78,7 +78,7 @@ exigir_gi_real("importa `interface.hefesto_vivo`, que carrega o GTK")
 
 from hefesto_dualsense4unix.interface import hefesto_vivo, mesa_viva, monta, onde
 
-PAGINA = "10-perfis.html"  # (noqa-acento) nome de arquivo
+PAGINA = "10-perfis.html"
 
 ABRE = re.compile(r'<table[^>]*class="tab miuda"[^>]*>')
 
@@ -133,7 +133,6 @@ def test_a_publicada_nao_fica_curada_em_silencio() -> None:
 def test_o_lugar_vazio_continua_com_a_dica() -> None:
     """`P3` é um LUGAR, não uma peça: aquela frase não afirma nada sobre"""
     assert VAZIOS, "o desenho não tem lugar vazio — esta régua perdeu o objeto"
-    # 15/10/2026: o canal da dica é o `data-dica` do molde, não mais o `title`.
     sem_dica = [c["pref"] for c, t in zip(monta.MESA, _linhas(_bancada()), strict=True)
                 if not c.get("conectado", True) and "data-dica=" not in t]
     assert not sem_dica, (

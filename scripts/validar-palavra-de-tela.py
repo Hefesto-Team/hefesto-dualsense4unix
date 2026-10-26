@@ -172,7 +172,7 @@ from html.parser import HTMLParser
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parents[1]
-PAGINAS = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento)  (nome de pasta no disco)
+PAGINAS = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento)
 APP = RAIZ / "src" / "hefesto_dualsense4unix" / "app"
 
 ETIQUETAS_MUDAS = frozenset({"script", "style", "template"})
@@ -208,7 +208,7 @@ class Rotulo:
         self.propriedade = propriedade
         self.texto = " ".join(texto.split())
 
-    def __repr__(self) -> str:  # pragma: no cover - conveniência de depuração
+    def __repr__(self) -> str:  # pragma: no cover
         return f"Rotulo({self.arquivo.name}:{self.linha} {self.texto!r})"
 
 

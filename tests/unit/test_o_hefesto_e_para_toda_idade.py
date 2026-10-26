@@ -19,15 +19,10 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 MOCKUP_07 = RAIZ / "mockup" / "07-lancadores.html"
-#: O publicado segue o mockup pelo ``--publicar`` do fecho, e não se edita à mão.
 _FORA = ("interface/paginas/",)
 _SUFIXOS = {".py", ".json", ".html", ".css", ".js", ".sh", ".csv", ".svg"}
-#: O que é da extensão e nunca mora no produto, em lugar nenhum.
 DA_EXTENSAO = re.compile(r"lovense|buttplug|intiface|brinquedo", re.I)
 ADULTO = re.compile(r"adulto", re.I)
-#: Onde «Adulto» é o estilo do perfil (a aba Perfis e quem a lê). O ``manifesto.py``
-#: nomeia o estilo no texto da permissão ``luz.pulso``, que só vale nos perfis com ele, e o
-#: ``formas_de_haptica.py`` o põe entre os estilos que tocam o rumble sem timbre.
 DO_ESTILO = frozenset({
     "profiles/estilos_de_jogo.py", "profiles/loader.py",
     "profiles/schema.py", "interface/aba10.py", "mods/manifesto.py",

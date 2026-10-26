@@ -39,9 +39,8 @@ CAMPO = re.compile(r"^([a-z]+):[ \t]*(.*)$")
 CAMPOS = ("titulo", "tipo", "area", "muda", "pronto", "marco")
 OBRIGATORIOS = ("titulo", "tipo", "muda", "pronto")
 TIPOS = ("adicionado", "mudado", "removido", "corrigido")
-MARCADOR = "A-PREENCHER"  # o do molde da sprint: o bloco que ainda o traz não vai a ninguém
+MARCADOR = "A-PREENCHER"
 LIMITES = {"titulo": 80, "muda": 400, "pronto": 400}
-# O que o texto de quem usa não diz, além do que o `check_texto_publico.py` já barra.
 DA_CASA = (
     ("mesa", re.compile(r"\bmesa\b", re.IGNORECASE)),
     ("agente", re.compile(r"\bagentes?\b", re.IGNORECASE)),
@@ -87,7 +86,7 @@ def _expressoes_da_casa(raiz: Path) -> list[tuple[str, re.Pattern[str]]]:
         spec = importlib.util.spec_from_file_location("check_texto_publico_do_publico", arq)
         if spec and spec.loader:
             modulo = importlib.util.module_from_spec(spec)
-            sys.modules[spec.name] = modulo  # o @dataclass dele procura o próprio módulo aqui
+            sys.modules[spec.name] = modulo
             spec.loader.exec_module(modulo)
             lista += list(modulo.EXPRESSOES)
     return lista

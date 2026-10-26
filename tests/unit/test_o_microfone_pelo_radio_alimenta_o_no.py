@@ -21,7 +21,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 
 P1 = "aa:bb:cc:00:00:01"
-#: O nó do P1 pelo dono do nome: a marca do aparelho, nunca o endereço.
 NO_DO_P1 = f"hefesto_mic_{bt.marca_do_aparelho(P1)}"
 P2 = "aa:bb:cc:00:00:02"
 P3 = "aa:bb:cc:00:00:03"
@@ -544,7 +543,7 @@ def _quem_chama_escolher_fonte() -> set[str]:
     for arquivo in sorted(SRC.rglob("*.py")):
         try:
             arvore = ast.parse(arquivo.read_text(encoding="utf-8"))
-        except SyntaxError:  # pragma: no cover - o portão de sintaxe pega antes
+        except SyntaxError:  # pragma: no cover
             continue
         for no in ast.walk(arvore):
             if not isinstance(no, ast.Call):
@@ -655,8 +654,6 @@ def test_a_regra_0_alcanca_o_medidor_da_janela(pactl, monkeypatch) -> None:  # t
     from hefesto_dualsense4unix.app import mic_monitor as mm
 
     canais = _dois_canais()
-    # sem a supervisora: o teste reconcilia à mão, e uma thread viva depois do
-    # desfazer dos monkeypatch pediria o `pactl list` longo no teste seguinte
     monitor = mm.MicMonitor(auto_supervisao=False)
     capturas: dict[str, str] = {}
     monkeypatch.setattr(monitor, "_descobrir_fontes", lambda: sorted(canais.values()))

@@ -61,29 +61,19 @@ QUADROS_POR_JANELA = int(TAXA * JANELA_S)
 BYTES_POR_JANELA = QUADROS_POR_JANELA * CANAIS * 2
 ESCALA = 32768.0
 
-#: a média do fundo segue o som em ~0,1 s; o desvio, em ~0,5 s.
 TAU_DA_MEDIA_S = 0.1
 TAU_DO_DESVIO_S = 0.5
-#: o estalo tem de saltar sobre o fundo: N vezes a média E a média mais K desvios.
 SALTO = 3.0
 DESVIOS = 4.0
-#: a histerese: rearma quando o envelope volta para perto do fundo.
 REARMA_SALTO = 1.5
-#: abaixo disto (-34 dBFS) é silêncio, e silêncio não dispara.
 PISO = 0.02
-#: um tiro é um evento: o eco e o rabo do mesmo estalo não disparam de novo.
 REFRATARIO_S = 0.04
-#: o começo do fluxo só ensina o fundo.
 AQUECIMENTO_S = 0.1
-#: |razão| abaixo disto é «centro».
 CENTRO = 0.25
-#: o envelope (RMS) que vale o toque inteiro (-6 dBFS).
 ENERGIA_CHEIA = 0.5
 
-#: o recorte do estalo: no mínimo isto, e nunca mais que o máximo.
 RECORTE_MINIMO_S = 0.03
 RECORTE_MAXIMO_S = 0.08
-#: passado o mínimo, o recorte fecha quando o envelope cai abaixo desta fração do pico.
 QUEDA_DO_RECORTE = 0.25
 
 LADO_ESQUERDO = "esquerdo"
@@ -188,7 +178,6 @@ class Transiente:
     instante: float
     lado: str
     energia: float
-    #: o recorte do estalo, quando o detector recorta; ele se completa depois do disparo.
     recorte: Recorte | None = field(default=None, compare=False)
 
 
@@ -234,7 +223,6 @@ class DetectorDeTransiente:
             janela = amostras[i * por_janela:(i + 1) * por_janela]
             esquerda = _energia(janela[0::2])
             direita = _energia(janela[1::2])
-            # A janela i acabou (inteiras - 1 - i) janelas antes do fim do pedaço.
             instante = agora - (inteiras - 1 - i) * JANELA_S
             achado = self._janela(esquerda, direita, instante)
             if achado is not None:
@@ -286,15 +274,11 @@ class DetectorDeTransiente:
                 )
         elif nivel <= REARMA_SALTO * media or nivel < PISO:
             self._armado = True
-        # O fundo aprende depois da decisão: o estalo não sobe o próprio limiar.
         self._media += self._alfa_media * (nivel - self._media)
         self._desvio += self._alfa_desvio * (abs(nivel - self._media) - self._desvio)
         return achado
 
 
-# --- O fluxo do jogo -------------------------------------------------------
-
-#: o nome do NOSSO nó de gravação: único na máquina, e é o que a conferência procura.
 ROTULO_DO_OUVIDO = "hefesto-tato-ouvido-do-jogo"
 
 
@@ -380,7 +364,6 @@ def e_o_fluxo_pedido(origem: OrigemDoGravador | str | None, fluxo: FluxoDoJogo) 
     return None
 
 
-#: os dois gravadores, na ordem da ponte do rádio; o alvo é o FLUXO do jogo.
 GRAVADORES_DO_FLUXO: tuple[tuple[str, tuple[str, ...]], ...] = (
     (
         "pw-record",
@@ -424,12 +407,9 @@ def argv_do_ouvido(
     return []
 
 
-# --- O ouvido: um gravador só para a máquina ---------------------------------
-
 PROCURA_S = 5.0
-#: o ouvido está vivo enquanto o PCM chega; sem PCM há mais disto, o jogo calou.
 VIVO_S = 1.0
-PRAZO_DA_VOLTA_DO_OUVIDO_S = 1.5  # a volta de procura acorda do `_parar` e cala
+PRAZO_DA_VOLTA_DO_OUVIDO_S = 1.5
 LEITURA = BYTES_POR_JANELA * 4
 
 
@@ -451,7 +431,6 @@ class OuvidoDoJogo:
         ao_pcm: Callable[[bytes], object] | None = None,
     ) -> None:
         self._querer = querer
-        #: quem quer o PCM cru do jogo, pedaço a pedaço (o Som no corpo), além dos estalos
         self._ao_pcm = ao_pcm
         self._recortar = recortar or (lambda: False)
         self._achar_o_fluxo = achar_o_fluxo or achar_o_fluxo_do_jogo
@@ -472,8 +451,6 @@ class OuvidoDoJogo:
         self._ultimo_pcm = float("-inf")
         self.detector = DetectorDeTransiente()
         self.contadores = {"gravacoes": 0, "transientes": 0, "alvo_errado": 0}
-
-    # A volta de procura -------------------------------------------------
 
     def comecar(self) -> None:
         """Sobe a volta de procura (idempotente). Ela dorme enquanto ninguém quer."""
@@ -509,7 +486,7 @@ class OuvidoDoJogo:
             origem = self._conferir_o_alvo(ROTULO_DO_OUVIDO)
             certo = e_o_fluxo_pedido(origem, self._fluxo)
             if certo is None:
-                return  # «não sei» não derruba; pergunta de novo na próxima volta
+                return
             if not certo:
                 self.contadores["alvo_errado"] += 1
                 identidade = origem if isinstance(origem, OrigemDoGravador) else None
@@ -560,7 +537,6 @@ class OuvidoDoJogo:
             try:
                 pedaco = saida.read(LEITURA)
             except (OSError, ValueError):
-                # O `_calar` fecha o cano no meio da leitura: é o fim do gravador.
                 logger.debug("tato_ouvido_leitura_fechou", exc_info=True)
                 return
             if not pedaco:
@@ -607,8 +583,6 @@ class OuvidoDoJogo:
             volta.join(timeout=PRAZO_DA_VOLTA_DO_OUVIDO_S)
         self._calar()
 
-    # O que o motor lê ------------------------------------------------------
-
     @property
     def ouvindo(self) -> bool:
         """O PCM do jogo está chegando agora."""
@@ -646,32 +620,21 @@ def conferir_o_alvo_do_ouvido(rotulo: str) -> OrigemDoGravador | None:
     return origem_do_gravador(rotulo)
 
 
-# --- O estalo no alto-falante do controle -------------------------------------
-# O-SOM-DO-TIRO-SAI-TAMBEM-NO-CONTROLE-01. Um tocador por nó de som do controle
-# (`hefesto_som_<marca>`, o mesmo nos dois transportes: o cabo leva à placa USB,
-# o rádio à ponte do `0x36` sob o governador). Ele fica de pé enquanto há tiro,
-# alimentado de silêncio entre um estalo e outro, e sai depois da folga: um
-# fluxo por tiroteio, não um por tiro.
-
 MARCA_DO_ESTALO = "hefesto-tato-estalo-"
 QUADROS_DO_BLOCO = 480
 BYTES_DO_BLOCO = QUADROS_DO_BLOCO * CANAIS * 2
 _BLOCO_MUDO = bytes(BYTES_DO_BLOCO)
 FOLGA_DO_ESTALO_S = 3.0
 LATENCIA_DO_ESTALO_MS = 20
-#: o cano curto (~21 ms) é o que segura a latência: o silêncio não se adianta.
 CANO_DO_ESTALO = 4096
-#: o recorte que não fecha nisto não toca: atrasado, ele seria eco.
 PRAZO_DO_RECORTE_S = 0.2
-#: a resposta «o jogo toca neste nó?» vale isto; perguntar a cada tiro custaria um processo.
 VALIDADE_DA_GUARDA_S = 1.0
 RECUSA_DO_ESTALO_S = 60.0
 PRAZO_DA_ESCRITA_S = 1.0
-PRAZO_DO_FIO_DO_ESTALO_S = 2.0  # o fio sai do poll em 100 ms e do `_matar`
-VIGIA_DO_ESTALO_S = 1.0  # o fio acorda sozinho para ver o fim, sem pedido
-PRAZO_DA_MORTE_DO_ESTALO_S = 2.0  # o tocador morto pelo kill some do processo
+PRAZO_DO_FIO_DO_ESTALO_S = 2.0
+VIGIA_DO_ESTALO_S = 1.0
+PRAZO_DA_MORTE_DO_ESTALO_S = 2.0
 ESPERAS_DA_CONFERENCIA_S: tuple[float, ...] = (0.3, 0.7, 1.0)
-#: o nó do estalo nunca muda de alvo nem cai na saída padrão (a caixa ou o fone).
 RECUO_PROIBIDO_DO_ESTALO: tuple[str, ...] = (
     *RECUO_PROIBIDO_DO_OUVIDO,
     "state.restore-target=false",
@@ -978,7 +941,7 @@ class TocadorDoEstalo:
             try:
                 escritos = os.write(fd, vista)
             except BlockingIOError:
-                escritos = 0  # o poll disse pronto e o cano encheu: volta ao poll
+                escritos = 0
             except OSError:
                 return False
             vista = vista[escritos:]

@@ -179,7 +179,6 @@ def test_linha_fragil_que_cita_contrato_que_nao_a_pergunta_reprova(tmp_path):
     frag = _linha(arq, "path:/var/lib/bluetooth", porta="interna", motivo="m", sprint_filha="X-01")
     raiz = _arvore(tmp_path, {arq: LE_O_BOND}, [frag])
     assert any("não pergunta" in q and "cobre" in q for q in regua.julgar(raiz))
-    # a sonda que pergunta DE FATO pelo alvo (o `cobre`) pode ser citada.
     doctor = 'Contrato(id="bluez-dbus", dono="bluez", cobre=("path:/var/lib/bluetooth",))\n'
     (raiz / f"{PACOTE}/contratos_de_fora.py").write_text(doctor, encoding="utf-8")
     assert regua.julgar(raiz) == []
@@ -203,10 +202,8 @@ def test_a_catraca_so_desce(tmp_path, capsys):
         como_o_doctor_ve="-",
     )
     raiz = _arvore(tmp_path, {arq: LE_O_BOND}, [frag])
-    # sem sprints no tmp, a filha não se confere (clone limpo); o piso nasce em 1.
     assert regua.main(["--raiz", str(raiz), "--aceitar", regua.FRAGEIS]) == 0
     assert regua.main(["--raiz", str(raiz)]) == 0
-    # uma segunda leitura frágil SOBE o número: reprova.
     outro = f"{PACOTE}/outro.py"
     (raiz / outro).write_text(LE_O_BOND, encoding="utf-8")
     frag2 = _linha(
@@ -220,7 +217,6 @@ def test_a_catraca_so_desce(tmp_path, capsys):
     _arvore(raiz, {outro: LE_O_BOND}, [frag, frag2])
     capsys.readouterr()
     assert regua.main(["--raiz", str(raiz)]) == 1
-    # a cura (a leitura vira porta oficial) faz o piso descer sozinho.
     ok = _linha(arq, "path:/var/lib/bluetooth", motivo="", sprint_filha="")
     _arvore(raiz, {outro: "X = 1\n"}, [ok])
     assert regua.main(["--raiz", str(raiz)]) == 0

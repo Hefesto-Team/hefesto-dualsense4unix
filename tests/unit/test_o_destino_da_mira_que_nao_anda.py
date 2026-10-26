@@ -138,9 +138,6 @@ def test_os_outros_destinos_nao_mudam(destino: str) -> None:
     assert ProfileMovimentoConfig(destino=destino).destino == destino  # type: ignore[arg-type]
 
 
-# 2. O MOTOR FORA DA NAVEGAÇÃO — Sony DualSense e Xbox, P1 a P4, USB e BT
-
-
 class _NoDoUinput:
     """O nó `uinput` de mentira do `UinputGamepad`: guarda cada `write`, na"""
 
@@ -157,7 +154,6 @@ class _NoDoUinput:
         return None
 
 
-#: O blueprint mínimo do `UhidDualSense` — o molde de `test_uhid_gamepad.py`,
 _BLUEPRINT = {
     "descriptor": bytes([0x05, 0x01, 0x09, 0x05, 0xA1, 0x01]),
     "features": {
@@ -373,8 +369,6 @@ _RATO_ANDANDO = {"enabled": True, "device_ativo": True, "despachando": True, "bl
 _RATO_DESLIGADO = {"enabled": False, "device_ativo": False, "despachando": False,
                    "bloqueio": "desligada"}
 
-#: Os modos vivos, na forma do `state_full` que `mode_of_state` lê. O Sony
-#: DualSense e o Xbox são o mesmo modo para a dica (a máscara não muda o destino).
 _NAVEGACAO = {"native_mode": False, "gamepad_emulation": {"enabled": False},
               "mouse_emulation": _RATO_ANDANDO}
 _DUALSENSE = {"native_mode": False, "gamepad_emulation": {"enabled": True, "flavor": "dualsense"},

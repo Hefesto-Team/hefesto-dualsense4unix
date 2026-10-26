@@ -557,8 +557,6 @@ def test_sem_no_do_radio_nem_cabo_nada_muda(tmp_path: Path) -> None:
     assert "HEFESTOKS" not in registro
 
 
-# e sem DualSense no cabo. Nasceu sem teto de tempo e com o ambiente do runtime
-
 def _lancar_com_o_pactl(
     tmp_path: Path,
     *,

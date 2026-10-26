@@ -75,7 +75,6 @@ def como_o_backend_escreve(uniq: str) -> str:
     return "".join(ch for ch in uniq.lower() if ch in "0123456789abcdef")
 
 
-#: portão que separa "todo DualSense da máquina" de "os controles que o produto
 _MAPA_DA_BANCADA: dict[str, str] = {
     como_o_backend_escreve(uniq): no for _i, uniq, _hw, no, _q, _s in _BANCADA
 }

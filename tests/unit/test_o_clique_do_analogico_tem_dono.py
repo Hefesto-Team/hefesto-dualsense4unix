@@ -46,7 +46,6 @@ sys.path.insert(0, str(RAIZ / "scripts/tela"))
 
 UNIQ = "aa:bb:cc:00:00:01"
 
-#: O controle da régua. `is_primary` e `inputs` são o par que decide o terceiro
 BASE = {
     "uniq": UNIQ, "player": 1, "connected": True, "transport": "usb",
     "battery_pct": 95, "lightbar_rgb": [0, 0, 255], "is_primary": True,
@@ -127,8 +126,6 @@ def test_dicionario_de_inputs_vazio_nao_e_falta_de_leitor(pac, a02, desenho):
     assert d["l3"] == desenho.ROTULO_DO_CLIQUE["l"]
 
 
-#: 02/09/2026 às 19h, 60 leituras de `daemon.state_full` com os dois controles
-#: `touchpad_do_inputs` nesta aba — e a recusa custou a POSIÇÃO do dedo.
 TOUCHPAD_PUBLICADO = {
     "touching": False, "x": 960, "y": 540, "width": 1920, "height": 1080,
 }
@@ -180,7 +177,6 @@ def test_a_aba_controles_nao_deixa_endereco_da_pagina_sem_pintor():
 
     do_piloto = set(_re.findall(r'data-campo="([^"]+)"', monta.fita("todos")))
 
-    # (`aba02.py`, no `<input class="radio-mesa">`): os quatro rádios são um
     so_de_leitura = {
         "card-aberto": "grupo de rádio: pintar reabriria o card que ela fechou",
     }
@@ -203,7 +199,6 @@ def test_o_gerador_le_o_texto_de_tela_do_pacote(a02):
     """O `aba02.py` não pode ter uma SEGUNDA cópia das mesmas palavras."""
     import aba02
 
-    # O «1 toque» saiu da tela no desenho de 15/10/2026 (o touchpad ganhou o interruptor).
     donos = {"ROTULO_DO_CLIQUE": a02, "CLICADO": a02}
     achados = [n for n in donos if hasattr(aba02, n)]
     assert len(achados) >= 1, (

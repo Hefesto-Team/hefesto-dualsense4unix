@@ -10,7 +10,6 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-# (`utils.migrate_legacy_paths`) traz preferências antigas para cá.
 _PREFS_NOME = "gui_preferences.json"
 
 
@@ -83,7 +82,6 @@ def set_pref(key: str, value: Any) -> None:
     save_gui_prefs(prefs)
 
 
-# nota de `ordens_dispensadas`). Largura de coluna e ordem de listagem não
 _TABELAS = "tabelas"
 
 PISO_DA_COLUNA = 48

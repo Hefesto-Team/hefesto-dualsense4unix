@@ -18,7 +18,6 @@ from hefesto_dualsense4unix.utils.repo_files import (
 
 console = Console()
 
-#: O rc do `doctor` é o pior veredito: 0 tudo OK, 1 algum aviso, 2 alguma falha.
 _GRAVIDADE_WARN = 1
 _GRAVIDADE_FAIL = 2
 
@@ -131,7 +130,6 @@ def _linha_da_mascara_pro(estado: Any) -> tuple[str, str] | None:
     emulacao = estado.get("gamepad_emulation") if isinstance(estado, dict) else None
     if not isinstance(emulacao, dict) or not emulacao.get("enabled"):
         return None
-    # a de cada controle conectado; sem nenhum, a da sessão (a que o próximo veste)
     por_aparelho = emulacao.get("por_aparelho")
     if isinstance(por_aparelho, dict) and por_aparelho:
         mascaras = list(por_aparelho.values())
@@ -233,7 +231,6 @@ async def _daemon_checks() -> list[tuple[str, str]]:
         from hefesto_dualsense4unix.app.ipc_bridge import prazo_vencido
 
         if prazo_vencido(exc):
-            # Atende a conexão e não responde: parado ou travado. Não é «offline».
             rows.append(("[FAIL]", f"{exc.message} — o serviço está parado ou travado"))
         else:
             rows.append(("[WARN]", "daemon offline — checks de runtime pulados"))
@@ -268,7 +265,6 @@ def _print_storm_block() -> int:
     """Diagnóstico storm (FEAT-DSX-UNIFY-01) — read-only, sem sudo. Devolve a gravidade."""
     from hefesto_dualsense4unix.integrations import storm_doctor
 
-    # MESA-CHEIA-11/E3: o check de áudio conta as placas DualSense contra os
     no_cabo = storm_doctor.controles_no_cabo(asyncio.run(_state_full_ou_none()))
     console.print("\n== anti-storm / sistema ==")
     linhas = storm_doctor.storm_report(controles_no_cabo=no_cabo)
@@ -355,14 +351,12 @@ def doctor_cmd(
             args.append("--fix")
         if quiet:
             args.append("--quiet")
-        # O doctor.sh sai com rc != 0 só quando reprova (FAIL); aviso não o muda.
         rc = _GRAVIDADE_FAIL if subprocess.run(args, check=False).returncode else 0
     else:
         _avisar_ausente("scripts/doctor.sh", "só os checks do daemon")
 
     rc = max(rc, _print_storm_block())
 
-    # PERFIL-NASCE-CERTO-01/E4: o detector também roda no doctor COMPLETO — a
     if _print_bloco_perfis():
         rc = _GRAVIDADE_FAIL
 
@@ -381,7 +375,6 @@ def doctor_cmd(
     if fix_safe:
         console.print("\n== fix-safe (sem sudo) ==")
         _run_script("scripts/disable_steam_input.sh", "--apply-quiet")
-        # --install: DualSense não-default, microfone preservado.
         _run_script("scripts/fix_wireplumber_default_source.sh", "--install")
         _run_script("scripts/install_snd_quirk.sh", "--runtime")
         rc = max(rc, _print_storm_block())

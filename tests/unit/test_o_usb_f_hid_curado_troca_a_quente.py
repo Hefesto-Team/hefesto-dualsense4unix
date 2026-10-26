@@ -217,7 +217,6 @@ def test_o_install_chama_a_troca_depois_do_dkms(tmp_path: Path) -> None:
     assert dkms[0].startswith("dkms hefesto-usb-f-hid 1.0.0 "), chamadas
     assert dkms[0].endswith("/assets/dkms/usb-f-hid usb_f_hid"), chamadas
     assert chamadas.index(dkms[0]) < chamadas.index("sudo modprobe -r usb_f_hid"), chamadas
-    # a segunda volta acha a marca e não recarrega nada
     assert chamadas.count("sudo modprobe usb_f_hid") == 1, chamadas
     assert "nada a trocar" in r.stdout, r.stdout
 
@@ -291,8 +290,6 @@ def _doctor(tmp_path: Path, *, carregado: bool, marca: bool, staged: bool,
         else "/lib/modules/k/kernel/drivers/usb/gadget/function/usb_f_hid.ko.zst"
     )
     (bin_ / "modinfo").write_text(f'#!/bin/sh\necho "{arquivo}"\n', encoding="utf-8")
-    # o dkms presente e o Secure Boot desligado (efivars vazia): a frase é a do
-    # install, a mesma em qualquer máquina que rode a régua
     (bin_ / "dkms").write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
     for nome in ("modinfo", "dkms"):
         (bin_ / nome).chmod(0o755)
@@ -374,7 +371,7 @@ def test_o_pad_anota_a_marca_ao_montar(
 
     class _Gadget:
         fd = -1
-        interface = None  # sem a interface, o pad entra na fila do vudc
+        interface = None
         serial = "hefesto-pad-02fe00000001"
         identidade = "02fe00000001"
         a_caminho_s = 0.0

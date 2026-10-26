@@ -29,7 +29,6 @@ from hefesto_dualsense4unix.interface import aba05, onde
 
 PAGINA = "05-vibracao.html"
 
-#: lê a coluna do P1: o estado das três barras (arrasto, trava, palavra), o do degrau e a foto
 LER = r"""
 (function(){
   const forca = document.querySelector('[data-campo="padrao"]');
@@ -66,7 +65,7 @@ LER = r"""
 
 
 def _pintar(padrao: bool, numeros: dict[str, str]) -> str:
-    plano = {"padrao": "1" if padrao else "", **numeros}  # (noqa-acento) campo
+    plano = {"padrao": "1" if padrao else "", **numeros}  # (noqa-acento)
     return ("window.__hef.pintar(" + json.dumps({"colunas": {"p1": plano}, "mesa": {}}) + ")")
 
 
@@ -145,9 +144,9 @@ def test_em_padrao_as_tres_barras_ficam_verdes_travadas_e_sem_teclado() -> None:
         LER,
     ])
     antes, _n, depois = lidas
-    assert "padrao" not in antes["classe_forca"]  # (noqa-acento) campo
+    assert "padrao" not in antes["classe_forca"]  # (noqa-acento)
     assert all(x["arrasto_visivel"] and not x["trava_visivel"] for x in antes["linhas"]), antes
-    acesa = "padrao" in depois["classe_forca"].split()  # (noqa-acento) campo
+    acesa = "padrao" in depois["classe_forca"].split()  # (noqa-acento)
     assert acesa, "o pintor não acendeu o Padrão"
     assert len(depois["linhas"]) == 3, "o Sensor Háptico e os dois motores"
     for linha in depois["linhas"]:
@@ -166,13 +165,12 @@ def test_economia_e_maximo_destravam_e_o_numero_guardado_volta() -> None:
         LER,
     ])
     depois = lidas[-1]
-    assert "padrao" not in depois["classe_forca"].split()  # (noqa-acento) campo
+    assert "padrao" not in depois["classe_forca"].split()  # (noqa-acento)
     esquerdo = next(x for x in depois["linhas"] if x["campo"] == "barra-e")
     assert esquerdo["arrasto_visivel"] and not esquerdo["trava_visivel"], esquerdo
     assert esquerdo["num"] == "50", "o 50% que ela guardou volta ao destravar"
 
 
-#: quantas barras travadas aparecem em cada lugar
 TRAVAS_POR_LUGAR = r"""
 (function(){
   const fora = {};
@@ -194,10 +192,10 @@ def test_o_controle_em_padrao_que_sai_nao_deixa_barra_verde_no_lugar_vazio() -> 
         return "window.__hef.pintar(" + json.dumps({"mesa": {}, **carga}) + ")"
 
     lidas = _na_pagina([
-        pinta({"colunas": {"p1": {"padrao": ""}, "p2": {"padrao": "1"}},  # (noqa-acento) campo
+        pinta({"colunas": {"p1": {"padrao": ""}, "p2": {"padrao": "1"}},  # (noqa-acento)
                "ocupados": ["p1", "p2"]}),
         TRAVAS_POR_LUGAR,
-        pinta({"colunas": {"p1": {"padrao": ""}}, "ocupados": ["p1"],  # (noqa-acento) campo
+        pinta({"colunas": {"p1": {"padrao": ""}}, "ocupados": ["p1"],  # (noqa-acento)
                "vazios": ["p2", "p3", "p4"]}),
         TRAVAS_POR_LUGAR,
     ])

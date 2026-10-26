@@ -39,18 +39,18 @@ TEMA_CLARO = (":root{--app-bg:#eef0f5;--panel:#ffffff;--elevated:#f5f6fa;--fg:#1
               "--fundo-da-pagina:#dde1ea;--green:#1d7a3c;--cyan:#006d85;--purple:#6a3dc2;"
               "--orange:#a35200;--pink:#ad2f6c;--red:#c01f2e;--yellow:#7a6400}")
 MANIFESTO = {"id": "tema-z", "nome": "Tema Z", "api": ">=2,<3", "licenca": "MIT",
-             "versao": "1.0.0",  # (noqa-acento): chave
+             "versao": "1.0.0",  # (noqa-acento)
              "tipos": ["tema"], "tema": {"arquivo": "tema.css"},
-             "permissoes": ["tema"],  # (noqa-acento): chave
-             "opcoes": [{"id": "meu_css",  # (noqa-acento): chave
+             "permissoes": ["tema"],  # (noqa-acento)
+             "opcoes": [{"id": "meu_css",  # (noqa-acento)
                          "rotulo": "Usar o meu CSS", "tipo": "css",
-                         "padrao": False}]}  # (noqa-acento): chave
+                         "padrao": False}]}  # (noqa-acento)
 ESCRITO = "/* o meu */\n.a{color:red}\n"
 
 
 @pytest.fixture
 def lg(tmp_path: Path) -> instalador.Lugares:
-    return instalador.Lugares(codigo=tmp_path / "codigo",  # (noqa-acento): argumento
+    return instalador.Lugares(codigo=tmp_path / "codigo",  # (noqa-acento)
                               dados=tmp_path / "dados",
                               registro=tmp_path / "mods.json", estado=tmp_path / "estado.json")
 
@@ -71,9 +71,6 @@ def _instalada_com_o_css(lg: instalador.Lugares, tmp_path: Path) -> Path:
     (lg.dados / "tema-z" / "cache").mkdir()
     (lg.dados / "tema-z" / "cache" / "x.bin").write_bytes(b"x")
     return alvo
-
-
-# --- as at-rules que agrupam --------------------------------------------------------------
 
 
 @pytest.mark.parametrize(("texto", "saida"), [
@@ -104,11 +101,8 @@ def test_import_e_layer_sem_bloco_seguem_recusados_com_o_motivo(
     assert frase in erro.value.frase and erro.value.curta == curta
 
 
-# --- a remoção: o meu.css é da pessoa -----------------------------------------------------
-
-
 def test_remover_deixa_o_meu_css_e_apaga_o_resto(lg: instalador.Lugares, tmp_path: Path) -> None:
-    # D-2310-O-MEU-CSS-E-DA-PESSOA-E-FICA-NO-REMOVER
+    """Prova da D-2310-O-MEU-CSS-E-DA-PESSOA-E-FICA-NO-REMOVER."""
     alvo = _instalada_com_o_css(lg, tmp_path)
     assert instalador.remover("tema-z", lugares=lg, prazo=0.1) == []
     assert alvo.read_text(encoding="utf-8") == ESCRITO, "a remoção apagou o CSS da pessoa"
@@ -163,9 +157,6 @@ def test_a_frase_do_mod_remover_diz_onde_o_css_ficou(
     alvo.unlink()
     saida = CliRunner().invoke(cmd_mod.app, ["remover", "tema-z"])
     assert saida.exit_code == 0 and "CSS" not in saida.output, saida.output
-
-
-# --- o diário: a recusa fala uma vez ------------------------------------------------------
 
 
 def _janela(monkeypatch: pytest.MonkeyPatch) -> Any:
@@ -237,8 +228,6 @@ def test_a_folha_que_muda_ainda_troca_o_tema(
                       monkeypatch, 3)
     assert trocas == [(":root{--fg:#fff}", "")] * 3
 
-
-# --- o WebKit pinta o que a régua deixa passar --------------------------------------------
 
 _SONDA = r"""
 import json

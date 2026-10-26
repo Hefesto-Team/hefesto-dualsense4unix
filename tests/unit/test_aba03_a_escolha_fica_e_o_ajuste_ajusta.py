@@ -41,7 +41,6 @@ FALSO = {"uniq": UNIQ, "player": 1, "transport": "usb", "is_primary": True,
 MESA = [{"pref": "p1", "jogador": 1, "uniq": UNIQ, "nome": "Régua",
          "via": "USB", "cor": "starlight-blue", "mascara": "DualSense"}]
 
-#: contrato de `ipc_bridge.trigger_set_detalhado`.
 APLICOU = {"status": "ok", "aplicado_em": [UNIQ], "guardado_em": []}
 
 
@@ -63,7 +62,7 @@ def _o_perfil_de_mentira_nao_vaza():
 @pytest.fixture
 def a03():
     """O pacote, com o rascunho LIMPO — ele é estado de módulo."""
-    import pacotes  # noqa: F401  (registra os dez)
+    import pacotes  # noqa: F401
     from pacotes import a03_gatilhos
 
     a03_gatilhos.esquecer_o_rascunho()

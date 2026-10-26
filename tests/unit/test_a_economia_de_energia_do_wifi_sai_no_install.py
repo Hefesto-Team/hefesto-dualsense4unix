@@ -31,7 +31,6 @@ FUNCOES = (
     "_wifi_desliga_economia",
     "aplicar_wifi_powersave_off",
 )
-# O que um passo que não pode derrubar a conexão jamais chama.
 PROIBIDOS = (
     "nmcli",
     "rfkill",
@@ -77,7 +76,6 @@ class Cena:
         bin_ = base / "bin"
         bin_.mkdir()
         self.bin = bin_
-        # O `/usr/sbin` de mentira: fora do PATH, como no usuário comum do Debian.
         self.sbin = base / "sbin"
         self.sbin.mkdir()
         for nome in FERRAMENTAS:
@@ -131,9 +129,7 @@ class Cena:
 
     def roda(self, *, dry_run: int = 0, skip_udev: int = 0) -> subprocess.CompletedProcess[str]:
         funcoes = "\n".join(_extrai_funcao(n) for n in FUNCOES)
-        # O `/etc` do passo aponta para o de mentira; o resto do texto é o do install.
         funcoes = funcoes.replace("/etc/NetworkManager", str(self.nm))
-        # O `/usr/sbin /sbin` do passo aponta para o de mentira: o real não vaza.
         assert "for dir in /usr/sbin /sbin; do" in funcoes
         funcoes = funcoes.replace("for dir in /usr/sbin /sbin; do", f"for dir in {self.sbin}; do")
         cena = (
@@ -173,7 +169,7 @@ def cena(tmp_path: Path) -> Cena:
 
 class TestPrimeiraCorrida:
     def test_sem_opcao_grava_o_conf_e_desliga_so_a_interface_ligada(self, cena: Cena) -> None:
-        # D-2310-A-ECONOMIA-DE-ENERGIA-DO-WIFI-SAI-NO-INSTALL
+        """Prova da D-2310-A-ECONOMIA-DE-ENERGIA-DO-WIFI-SAI-NO-INSTALL."""
         cena.interface("wlan0", "on")
         cena.interface("wlan1", "off")
         r = cena.roda()
@@ -186,8 +182,6 @@ class TestPrimeiraCorrida:
         )
         assert (cena.estado / "wlan0").read_text(encoding="utf-8").strip() == "off"
         assert "desligada agora" in r.stdout
-        # O NetworkManager só lê o conf.d no início: até o boot, uma reconexão
-        # volta com o powersave=3 que ele já leu. O fecho diz «reinicie».
         assert "REINICIO-PENDENTE: a economia de energia do Wi-Fi" in r.stdout
 
     def test_sem_o_iw_usa_o_iwconfig(self, tmp_path: Path) -> None:
@@ -265,7 +259,7 @@ class TestSegundaCorrida:
     def test_conf_igual_mas_interface_religada_so_desliga_a_interface(self, cena: Cena) -> None:
         cena.interface("wlan0", "on")
         assert "RC=0" in cena.roda().stdout
-        (cena.estado / "wlan0").write_text("on\n", encoding="utf-8")  # o NM religou
+        (cena.estado / "wlan0").write_text("on\n", encoding="utf-8")
         antes = cena.alvo.stat().st_mtime_ns
         cena.chamadas.write_text("", encoding="utf-8")
         assert "RC=0" in cena.roda().stdout

@@ -28,28 +28,22 @@ from hefesto_dualsense4unix.integrations import ordens_da_mesa as ordens
 
 PALAVRAS_NO_TITULO = 5
 CARTOES_VISIVEIS = 4
-#: o gesto do cartão, em até duas palavras fora os conectivos («Ver no mapa», «Mover P2»).
 PALAVRAS_NO_GESTO = 2
-#: a frase do ⓘ, em caracteres — o resto é o que a ordem já diz na tela de detalhe.
 LIMITE_DA_FRASE = 160
 
 GRAVE = "grave"
 AJUSTE = "ajuste"
 NOTA = "nota"
 PESO_DO_NIVEL = {GRAVE: 3, AJUSTE: 2, NOTA: 1}
-#: a palavra de cada nível, para quem não vê a cor (o cartão nunca fala só em cor).
 PALAVRA_DO_NIVEL = {GRAVE: "Urgente", AJUSTE: "Ajuste", NOTA: "Nota"}
 
-#: o desenho de cada tipo de dica (símbolos do sprite da aba 08).
 ICONE_RADIO = "radio"
 ICONE_WIFI = "wifi"
 ICONE_TECLADO = "teclado"
 ICONE_ENTRADA = "hub"
 ICONE_AJUDA = "ajuda"
-#: o controle que pede para parear: um ponto verde que pulsa no lugar do ícone
 ICONE_PULSO = "pulso"
 
-# O que o botão faz.
 MOVER = "mover"
 MAPA = "mapa"
 PAREAR = "parear"
@@ -70,7 +64,6 @@ ROTULO_PAREAR = "Parear"
 NADA_A_MUDAR = "Tudo certo"
 SEM_CAUSA_DA_QUEDA = "A placa saiu do barramento e voltou; o diário do kernel não diz a causa."
 
-#: título, ícone e rótulo do botão de cada ordem do catálogo (``ordens_da_mesa``).
 DA_ORDEM: dict[str, tuple[str, str, str]] = {
     ordens.R1_RADIO_LARGO_NO_MESMO_HUB: (
         ICONE_WIFI, "Wi-Fi colado nos rádios", ROTULO_VER_NO_MAPA),
@@ -86,7 +79,6 @@ DA_ORDEM: dict[str, tuple[str, str, str]] = {
         ICONE_ENTRADA, "Entrada com pouca energia", ROTULO_VER_NO_MAPA),
 }
 
-#: título, ícone e a palavra do «certo» de cada conferência do exame (``exame_da_mesa``).
 DA_CONFERENCIA: dict[str, tuple[str, str, str]] = {
     "energia_do_radio": (ICONE_RADIO, "Rádio pode desligar", "Energia do rádio"),
     "energia_das_portas": (ICONE_ENTRADA, "Entrada com pouca energia", "Energia das entradas"),
@@ -95,7 +87,6 @@ DA_CONFERENCIA: dict[str, tuple[str, str, str]] = {
     "vizinhanca_das_portas": (
         ICONE_WIFI, "Wi-Fi colado no Bluetooth", "Rádios longe um do outro"),
 }
-#: a conferência sem verbete (a leitura que falhou, o exame que não correu).
 TITULO_SEM_VERBETE = "Não deu para olhar"
 
 _FIM_DA_FRASE = re.compile(r"(?<=[.!?])\s+(?=[A-ZÁÉÍÓÚÂÊÔÃÕÇ«\"])")
@@ -111,7 +102,6 @@ class Acao:
     gesto: str = ""
     href: str = ""
     dados: tuple[tuple[str, str], ...] = ()
-    #: o `title` do botão (o que ele faz, em uma frase do dono).
     titulo: str = ""
 
 
@@ -125,16 +115,14 @@ class Dica:
     nivel: str
     acao: Acao
     porque: str = ""
-    #: «O que fazer: …», só para o cartão cujo botão não diz o que fazer (a conferência sem mapa).
     cura: str = ""
     de: str = ""
     para: str = ""
     detalhe: str = ""
     ignorar: Acao | None = None
     calada: bool = False
-    #: vem antes de todos os que falam (o controle que pede para parear: alguém está esperando)
     primeiro: bool = False
-    assunto: str = ""  # de que conferência é o «não sei» (vai ao nome da região, depois do título)
+    assunto: str = ""
 
     @property
     def peso(self) -> int:
@@ -170,7 +158,7 @@ def uma_frase(texto: str, limite: int = LIMITE_DA_FRASE) -> str:
 
 
 def _nivel_do_estado(estado: str) -> str:
-    por_estado = {"problema": GRAVE, "atencao": AJUSTE}  # (noqa-acento): chave
+    por_estado = {"problema": GRAVE, "atencao": AJUSTE}  # (noqa-acento)
     return por_estado.get(estado, NOTA)
 
 
@@ -193,7 +181,7 @@ def dica_da_ordem(
     chave = str(getattr(ordem, "chave", ""))
     destino = str(getattr(ordem, "destino", "") or "")
     icone, titulo, rotulo = DA_ORDEM.get(chave, (
-        ICONE_AJUDA, str(getattr(ordem, "acao", "") or ""),  # (noqa-acento): campo
+        ICONE_AJUDA, str(getattr(ordem, "acao", "") or ""),  # (noqa-acento)
         ROTULO_VER_NO_MAPA))
     por_que = getattr(getattr(ordem, "por_que_importa", None), "texto", "")
     return Dica(
@@ -214,8 +202,6 @@ def _acao_de_ignorar_de_volta(slot: int, titulo: str = "") -> Acao:
                 dados=(("v", str(slot)),), titulo=titulo)
 
 
-#: o assunto de cada conferência, sem veredito, para o nome da região do «não sei»: o rótulo do
-#: exame («Economia de energia desligada») e o «certo» do Wi-Fi afirmam um estado que não se leu.
 ASSUNTO_DA_CONFERENCIA: dict[str, str] = {
     "energia_do_radio": "Energia do rádio",
     "energia_das_portas": "Energia das entradas",
@@ -261,7 +247,6 @@ class Movimento:
     controles_no_de: int
     bons: int | None = None
     sufocado: bool = False
-    #: a proposta veio do sinal do controle (o dBm dele aqui e o que o outro adaptador ouve)
     pelo_sinal: bool = False
     sinal_aqui: int | None = None
     sinal_la: int | None = None
@@ -271,7 +256,6 @@ def dica_do_movimento(m: Movimento) -> Dica:
     """«Meio sufocado», «Esquerda dividido em 4» ou «Cosmic Red com sinal fraco», com o de→para."""
     quem = m.nome_do_controle or "O controle"
     if m.pelo_sinal:
-        # o sinal fraco é do CONTROLE naquele adaptador, não do adaptador: o título diz quem
         titulo, nivel = f"{quem} com sinal fraco", AJUSTE
         porque = (f"O sinal dele está em {m.sinal_aqui} dBm aqui; em {m.para_nome}, "
                   f"chegaria a {m.sinal_la} dBm."
@@ -303,7 +287,6 @@ def dica_do_wifi(em_palavras: str, usb3_no_2_4: bool, causa_conhecida: str, nive
         detalhe=em_palavras)
 
 
-#: o título e o porquê do cartão do receptor 2.4G que sofre; a causa é «possível», nunca confirmada.
 TITULO_DO_RECEPTOR = {"teclado": "Teclado errando", "mouse": "Mouse engasgando"}
 TITULO_DO_RECEPTOR_SEM_TIPO = "Receptor sofrendo"
 PORQUE_DO_RECEPTOR = {
@@ -370,7 +353,7 @@ __all__ = [
     "NADA_A_MUDAR",
     "NOTA",
     "PALAVRAS_NO_TITULO",
-    "Acao",  # (noqa-acento): chave de máquina
+    "Acao",  # (noqa-acento)
     "Dica",
     "Movimento",
     "Painel",

@@ -179,7 +179,7 @@ logger = get_logger(__name__)
 CARONA_ENV = "HEFESTO_CARONA_WRAPPER"
 
 VALORES_DESLIGADOS = frozenset(
-    {"0", "off", "false", "no", "não", "nao"}  # (noqa-acento): valor de ambiente
+    {"0", "off", "false", "no", "não", "nao"}  # (noqa-acento)
 )
 
 

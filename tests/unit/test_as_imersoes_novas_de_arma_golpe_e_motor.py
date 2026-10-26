@@ -28,7 +28,6 @@ from tests.unit.test_o_motor_dos_momentos_nao_reescreve_e_le_o_clique import (
     _mesa,
 )
 
-#: (imersão, acionamento, estilo) → os 8 primeiros bytes do bloco (modo + 7 forças)
 BLOCOS: dict[tuple[str, str, str], str] = {
     ("golpe-leve", "Weapon", ""): "2528000000000000",
     ("golpe-pesado", "Weapon", ""): "2504010500000000",
@@ -45,7 +44,6 @@ BLOCOS: dict[tuple[str, str, str], str] = {
     ("pique-que-cansa", "Resistance", ""): "21ff034992240900",
 }
 
-#: o que se sente, com o tempo dito onde o motor o toca
 DICAS = {
     "golpe-leve": "Um clique curto e macio no meio do curso.",
     "golpe-pesado": "Parede longa e dura que estala no fundo.",
@@ -96,7 +94,7 @@ def test_as_doze_entram_pelo_nome_novo_e_so_nos_onze_acionamentos() -> None:
 
 
 def test_cada_nova_sai_com_o_bloco_da_tabela() -> None:
-    # D-1510-OS-NUMEROS-DAS-IMERSOES-DO-GATILHO
+    """Prova da D-1510-OS-NUMEROS-DAS-IMERSOES-DO-GATILHO."""
     vistas = set()
     for imersao, modo, estilo, ajustes in ei.todos_os_ajustes():
         chave = (imersao.chave, modo, estilo)
@@ -196,7 +194,6 @@ def test_as_que_nao_tem_momento_nao_escrevem_nada_no_aperto(
 ) -> None:
     for chave in ("golpe-leve", "mira-firme", "besta", "motor-no-acelerador", "duas-travas"):
         assert not ei.POR_CHAVE[chave].momentos, chave
-    # A Energia que cresce só escreve o degrau da carga cheia, uma vez.
     mesa = _mesa(monkeypatch, _plano("energia-que-cresce"))
     mesa.apertar(P1)
     mesa.rodar(3.0)

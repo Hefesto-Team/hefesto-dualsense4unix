@@ -50,15 +50,12 @@ P02 = "02-controles.html"
 PCAL = "calibrar-sensores.html"
 UNIQS = tuple(f"aa:bb:cc:00:00:0{n}" for n in (1, 2, 3, 4))
 MAC_NORM = "AABBCC000001"
-NOME_LONGO = "ABCDEFGHIJKLMNOPQRSTUVWX"  # 24 letras
-PLASTICO_LONGO = "007 First Light Limited Edition"  # o mais longo de `cor_do_plastico.TABELA`
+NOME_LONGO = "ABCDEFGHIJKLMNOPQRSTUVWX"
+PLASTICO_LONGO = "007 First Light Limited Edition"
 
 
 def _bancada(pagina: str) -> str:
     return onde.pagina(pagina, publicado=False).read_text(encoding="utf-8")
-
-
-# ---------------------------------------------------------------- 1. o endereço
 
 
 def test_o_cartao_aberto_tem_o_endereco_de_quem_joga_e_do_numero() -> None:
@@ -68,7 +65,6 @@ def test_o_cartao_aberto_tem_o_endereco_de_quem_joga_e_do_numero() -> None:
     assert len(cartoes) == 4
     assert len(re.findall(r'data-campo="quem-joga"', html)) == 4, (
         "cada um dos quatro assentos precisa do endereço do nome no título aberto")
-    # o número aparece na tira fechada E no título aberto: dois destinos do mesmo campo
     assert len(re.findall(r'data-campo="jogador" data-hef-alvo="html"', html)) >= 8
 
 
@@ -88,9 +84,6 @@ def test_o_lugar_vazio_do_desenho_da_o_numero_do_assento(
     molde = pacotes.o_que_o_desenho_diz_do_lugar_vazio(aba)
     assert {p: c.get("jogador") for p, c in molde.items()} == {
         "p1": "1", "p2": "2", "p3": "3", "p4": "4"}, molde
-
-
-# ---------------------------------------------------------------- 2/3/5. no WebKit
 
 
 def _pior_caso() -> str:
@@ -186,7 +179,6 @@ def test_em_todos_os_conectados_dizem_quem_joga_e_os_vazios_nao(medido: dict[str
     p1, p2, p3, p4 = (t.split(" ")[0] for t in medido["todos"])
     assert (p1, p2) == ("P1", "Vitória"), medido["todos"]
     assert (p3, p4) == ("Player", "Player"), medido["todos"]
-    # r4-02-18, aprovado em 20/10: o lugar vazio diz só o número e «Desconectado»
     assert [t.strip() for t in medido["todos"][2:]] == [
         "Player 3 • Desconectado", "Player 4 • Desconectado"], medido["todos"]
 
@@ -206,8 +198,6 @@ def test_o_nome_de_24_letras_nao_quebra_a_faixa(medido: dict[str, Any]) -> None:
     normal, pior = medido["normal"], medido["pior"]
     assert pior["alt"] == normal["alt"], f"a faixa cresceu: {normal['alt']} -> {pior['alt']}"
     visiveis = [i for i in pior["itens"] if i["d"] != "none"]
-    # o piso de 24 px deixa os itens com alturas diferentes na MESMA linha: o que separa uma linha
-    # da outra é o centro, não o topo
     centros = [i["top"] + i["alt"] / 2 for i in visiveis]
     assert max(centros) - min(centros) <= 2, f"itens em linhas diferentes: {visiveis}"
 
@@ -219,9 +209,6 @@ def test_o_nome_cortado_leva_a_linha_inteira_no_title(medido: dict[str, Any]) ->
         r'<span class="card-nome" data-campo="card-vpad" data-hef-alvo="atributo"'
         r' data-hef-atributo="title"', html)
     assert medido["pior_titulo"].startswith("ABCDEFGHIJ")
-
-
-# ---------------------------------------------------------------- 4. o número é o vivo
 
 
 def _ctx(jogadores: tuple[int, ...]) -> pacotes.Contexto:
@@ -266,7 +253,7 @@ def test_o_nome_dela_chega_escapado_ao_cartao(
     monkeypatch.setattr(a02, "nomes_de_quem_joga", lambda: {MAC_NORM: "Vi <b>&"})
     cards = a02.pacote(_ctx((1, 2)))["cards"]
     assert cards[UNIQS[0]]["quem-joga"] == "Vi &lt;b&gt;&amp;"
-    assert "quem-joga" in cards[UNIQS[1]]  # o outro, sem nome, fica no «Pn»
+    assert "quem-joga" in cards[UNIQS[1]]
 
 
 def test_o_lugar_vazio_nao_recebe_quem_joga(
@@ -300,9 +287,6 @@ def test_o_nome_chega_a_02_pelo_alias_que_a_08_le(
     assert cards[UNIQS[1]]["quem-joga"].startswith("P<span")
 
 
-# ---------------------------------------------------------------- 6. a regra é uma só
-
-
 def test_a_08_e_a_02_usam_a_mesma_regra_de_quem_joga() -> None:
     """MORDIDA: a 08 voltar a ter a `dono_na_linha` dela — o nome diria uma coisa em cada aba."""
     assert vars(a08)["dono_na_linha"] is monta.dono_na_linha
@@ -322,14 +306,11 @@ def test_a_regra_do_nome_ou_do_pn() -> None:
         'P<span data-campo="jogador" data-hef-alvo="html">3</span>')
 
 
-# ---------------------------------------------------------------- 7. a Calibrar
-
-
 def test_a_calibrar_nao_diz_mais_player_nem_sony() -> None:
     """MORDIDA: voltar o «Player {jogador}» e o «Sony •» ao `calibrar.py`."""
     html = _bancada(PCAL)
     assert "Player " not in html and "Sony <span" not in html and "Sony •" not in html
-    assert len(re.findall(r'data-campo="quem-joga"', html)) == 4  # 2 cartões + 2 miras
+    assert len(re.findall(r'data-campo="quem-joga"', html)) == 4
 
 
 def test_a_calibrar_diz_o_nome_e_o_numero_ou_so_o_numero(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -347,7 +328,7 @@ def test_a_calibrar_diz_o_nome_e_o_numero_ou_so_o_numero(monkeypatch: pytest.Mon
         blocos), blocos[:400]
     assert f">P{num2}<" in blocos or f"P{num2}</b>" in blocos
     assert "Player " not in blocos and "Sony <span" not in blocos
-    assert mesa and doc  # a bancada e a mesa existem; o resto é do que o pacote devolveu
+    assert mesa and doc
 
 
 def test_o_texto_de_quem_joga_com_o_numero() -> None:
@@ -396,8 +377,6 @@ def calibrar_medida() -> dict[str, Any]:
     with regua_de_tela.Tela(onde.pagina(PCAL, publicado=False), titulo_esperado="Hefesto",
                             largura=LARGURA_DO_DESENHO, altura=ALTURA_DO_DESENHO) as tela:
         tela.executar(por_a_folha)
-        # A cena do desenho tem dois cartões; com quatro controles cada um tem 1/4 da fila, e é
-        # aí que o nome comum já não cabe. Os dois que faltam são cópias do segundo.
         tela.executar(
             "(function(){var cs=document.querySelectorAll('.ctr');var u=cs[cs.length-1];"
             "for(var i=cs.length;i<4;i++){u.parentNode.appendChild(u.cloneNode(true))}})()")

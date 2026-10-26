@@ -83,7 +83,6 @@ def test_store_lock_renovado_escolha_mais_recente_vence() -> None:
     store.mark_manual_profile_lock(until=200.0)
     assert store.manual_profile_lock_active(now=150.0) is True
 
-    # Renovação para um valor menor (ex: profile.switch chamado de novo
     store.mark_manual_profile_lock(until=160.0)
     assert store.manual_profile_lock_active(now=150.0) is True
     assert store.manual_profile_lock_active(now=170.0) is False

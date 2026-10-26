@@ -12,7 +12,6 @@ from monta import (
     CSS_GLIFO,
 )
 
-# geradores 08 e 09 pararam de RODAR por isso, calados até alguém tentar:
 import onde
 from onde import RAIZ as R
 
@@ -23,7 +22,6 @@ N = len(CONECTADOS)
 LUGARES = len(MESA)
 USB = [c for c in CONECTADOS if c["via"] == "USB"]
 BT = [c for c in CONECTADOS if c["via"] == "BT"]
-#: era `2 * N + N` (cada DualSense publica DOIS — o gamepad e os sensores de
 
 
 MIOLO_H, ALTURA = _ponte.MIOLO_NO_PISO, 530
@@ -81,7 +79,6 @@ def _constantes(caminho, nomes):
 ORC = _constantes(R / "src/hefesto_dualsense4unix/app/actions/config/secao_orcamento.py",
                   {"PERFIS", "ROTULOS_DOS_PERFIS", "TETO_POR_PERFIL", "LINHAS_DO_TETO"})
 
-#: `src/hefesto_dualsense4unix/interface/sistema.py` — que é versionado, viaja em
 _CONTRATO = _constantes(R / "src/hefesto_dualsense4unix/interface/sistema.py",
                         {"ENDERECOS", "GESTOS"})
 ENDERECOS = _CONTRATO["ENDERECOS"]
@@ -118,10 +115,6 @@ def _gesto(nome):
     return nome
 
 
-#: POR QUE NÃO UMA ENTRADA EM `aba_sistema.ENDERECOS`: aquele dicionário é o
-#: a fonte do dado (`state_full["paused"]`, `storm_report:755`). A razão do
-#: cinza não é um valor novo do produto: é a MESMA `aba_sistema.travas()` que a
-#: `interface/sistema.py` está FORA da posse desta frente, e por isso a derivação
 SUFIXO_DA_RAZAO = "-razao"
 
 
@@ -130,7 +123,6 @@ def _razao(nome):
     return f"{_gesto(nome)}{SUFIXO_DA_RAZAO}"
 
 
-#: AS DUAS LINHAS DO TETO («Com limite», «Sem limite») SAÍRAM EM 25/09/2026,
 MULT = _constantes(R / "src/hefesto_dualsense4unix/daemon/subsystems/rumble.py",
                    {"RUMBLE_POLICY_MULT"})["RUMBLE_POLICY_MULT"]
 COM_TETO = _constantes(R / "src/hefesto_dualsense4unix/core/rumble.py",
@@ -343,7 +335,6 @@ LIGAVEIS = (
 )
 
 
-#: A pílula do canto do quadro (S4): o molde é o «Modo Freestyle» da aba Jogar, no mesmo lugar.
 BANDEJA = ("Ícone na bandeja", CAMPO_DA_BANDEJA, CAMPO_DA_BANDEJA, True,
            "Mostra o Hefesto na barra do sistema e o traz de volta ao entrar")
 
@@ -420,7 +411,6 @@ def _botoes_tamanho():
         for v, rotulo, dica in TAMANHOS_DA_INTERFACE)
 
 
-# (`interface/sistema.status_do_*`) — o teste da forma compara as duas.
 _NO_RADIO = len(BT)
 STATUS = [
     linha("LIGADO", "ok", "✓", "Serviço", ident="hefesto-estado", tema="serviço",
@@ -430,11 +420,6 @@ STATUS = [
           dica="O perfil do jogo entra sozinho quando ele abre."),
 ]
 
-#: As quatro linhas do exame que ficam à vista, na ordem do pacote (`a09_sistema._so_o_que_a_tela_mostra`):
-#: Bluetooth, Steam Input, Áudio e o gamepad virtual. Com o Status, são SEIS temas, sempre
-#: (O-STATUS-DO-SISTEMA-TEM-SEIS-LINHAS-SEMPRE-01): um aviso entra na linha do tema dele, que fica
-#: laranja, em vez de abrir uma sétima. A cena é a da foto de 22/10/2026: nenhum controle no cabo e
-#: um jogo cujo Steam Input mudou, que é a linha do Steam Input em AVISO, levando à aba Perfis.
 ACHADOS = [
     linha("OK", "ok", "✓",
           f"Bluetooth: 1 adaptador · {_NO_RADIO} "
@@ -450,9 +435,6 @@ ACHADOS = [
     linha("OK", "ok", "✓", "Um gamepad virtual por jogador", tema="gamepad",
           dica="Cada controle ligado tem o seu gamepad virtual"),
 ]
-#: AS NOTAS EM TERÇOS (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, S1): o Status e o exame são UMA lista,
-#: na ordem, por igual, com a sobra nas primeiras: 8 viram 3, 3 e 2, e 7 viram 3, 2 e 2. O
-#: pacote (`a09_sistema.em_tres_colunas`) divide do mesmo jeito no produto.
 NOTAS = STATUS + ACHADOS
 _BASE, _SOBRA = divmod(len(NOTAS), 3)
 _CORTES = [0]
@@ -460,7 +442,6 @@ for _i in range(3):
     _CORTES.append(_CORTES[-1] + _BASE + (1 if _i < _SOBRA else 0))
 COLUNAS_DAS_NOTAS = [NOTAS[_CORTES[i]:_CORTES[i + 1]] for i in range(3)]
 
-#: Os rótulos de cada coluna e a dica curta de cada um (o desenho do todo): nenhum «?».
 DICA_DO_TITULO = "Esta aba é do computador, não de um controle"
 DICA_DO_STATUS = "Linha que falha fica vermelha até se curar"
 DICA_DO_FUNCIONAMENTO = "Parar desliga o serviço inteiro, não só o jogo"
@@ -723,7 +704,6 @@ if not re.search(r"\.registro\{[^}]*min-height:0", CSS):
     raise SystemExit("ERRO: o registro deixou de poder encolher até zero — em 1212x700 o "
                      "fundo dele passaria do quadro.")
 
-# 9. O BOTÃO DO `daemon.reload` SE CHAMA "ATUALIZAR" PORQUE O USUÁRIO MANDOU (09-Q1),
 _RELOAD = re.search(r'<button class="btn"([^>]*)>([^<]*)</button>', "".join(
     linha_ for linha_ in _ACOES_DO_SERVICO.splitlines()
     if 'data-gesto="atualizar"' in linha_))

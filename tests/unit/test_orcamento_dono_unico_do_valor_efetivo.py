@@ -167,8 +167,6 @@ def test_o_clique_nao_grava_nada() -> None:
             "dono, e é o 'Aplicar' do rodapé"
         )
 
-    # `daemon.state_full`. Banir a palavra inteira empurraria essa leitura para
-    # abaixo mede: toda chamada assíncrona desta seção nomeia `daemon.state_full`
     arvore = ast.parse(fonte)
     metodos = sorted(
         {

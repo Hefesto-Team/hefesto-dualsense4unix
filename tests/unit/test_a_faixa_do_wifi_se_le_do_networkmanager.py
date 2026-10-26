@@ -11,7 +11,6 @@ import pytest
 from hefesto_dualsense4unix.integrations import bluez_dbus as bd
 from hefesto_dualsense4unix.integrations import faixa_do_wifi as fw
 
-#: faixa forjada (`aa:bb:cc`): o nome do Wi-Fi USB carrega o endereço do adaptador
 INTERFACE_USB = "wlxaabbcc000102"
 INTERFACE_PCI = "wlp3s0"
 

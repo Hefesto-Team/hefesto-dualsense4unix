@@ -63,7 +63,6 @@ MESA_DELA = [
      "nome": "Não sei", "via": "BT", "transporte": "bt"},
 ]
 
-#: A COR CONHECIDA E ACESA — o único ramo em que `rotulo_lightbar` não tem
 NO_CABO = {"uniq": "aa:bb:cc:00:00:01", "transport": "usb", "connected": True,
            "player": 1, "player_slot": 1, "is_primary": True,
            "lightbar_rgb": [0, 0, 255], "lightbar_on": True,

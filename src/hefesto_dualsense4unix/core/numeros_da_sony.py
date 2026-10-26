@@ -11,37 +11,26 @@ com um físico nas duas. Quem separa o físico do nosso nunca é o PID: é a pos
 
 from __future__ import annotations
 
-#: O fabricante (USB-IF): Sony Interactive Entertainment.
 VENDOR_SONY = 0x054C
 
-#: O DualSense de linha.
 PID_DUALSENSE = 0x0CE6
 
-#: O DualSense Edge físico, e também a roupa padrão do nosso pad virtual.
 PID_DUALSENSE_EDGE = 0x0DF2
 
-#: Os produtos de DualSense físico que o produto reconhece (o Edge entra).
 PIDS_DUALSENSE = frozenset({PID_DUALSENSE, PID_DUALSENSE_EDGE})
 
-#: O PID do pad virtual do Hefesto quando ninguém pede outra roupa (a máscara DualSense do uhid).
 PID_DO_PAD_VIRTUAL = PID_DUALSENSE_EDGE
 
-#: A roupa Edge: o pad se apresenta como DualSense Edge. É a de todo jogo que não pede outra.
 ROUPA_EDGE = PID_DUALSENSE_EDGE
 
-#: A roupa comum: o pad se apresenta como DualSense de linha, para o jogo que só conhece esse.
 ROUPA_COMUM = PID_DUALSENSE
 
-#: As roupas que o pad pode vestir, no uhid e no pad USB. O uinput não veste nenhuma delas.
 ROUPAS_DO_PAD = frozenset({ROUPA_EDGE, ROUPA_COMUM})
 
-#: A roupa de quem não escolheu.
 ROUPA_PADRAO = ROUPA_EDGE
 
-#: O par (VID, PID) do DualSense de linha, como as listas de ignorar do SDL e do Proton pedem.
 PAR_DUALSENSE_FISICO = (VENDOR_SONY, PID_DUALSENSE)
 
-#: O começo do ``HID_PHYS`` que o uhid do pad declara. É a identidade do nosso pad, não o PID.
 HID_PHYS_DO_PAD = "hefesto-vpad"
 
 

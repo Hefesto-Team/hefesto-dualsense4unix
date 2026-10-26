@@ -196,7 +196,7 @@ def test_a_amostra_mantem_o_leitor_vivo_e_cinco_segundos_sem_pedido_o_matam() ->
     hub.reconciliar()
     assert not criados["motion"].parado
 
-    for _ in range(12):  # 6 s de pedidos, a cada meio segundo
+    for _ in range(12):
         relogio.agora += 0.5
         assert hub.amostra_do_dsu("aa") is not None
         hub.reconciliar()
@@ -226,7 +226,7 @@ def test_o_carimbo_atravessa_a_volta_do_u32_e_a_epoca_sobe_na_reabertura() -> No
     assert leitor.amostra_do_movimento().carimbo_us is None
     primeira = leitor.amostra_do_movimento().epoca
 
-    for valor in (0xFFFFFFF0, 0xFFFFFFF8, 0x00000008):  # a volta do u32
+    for valor in (0xFFFFFFF0, 0xFFFFFFF8, 0x00000008):
         leitor._handle_event(_ev(_Ecodes.EV_MSC, _Ecodes.MSC_TIMESTAMP, valor), _Ecodes)
     assert leitor.amostra_do_movimento().carimbo_us == 0xFFFFFFF0 + 8 + 16
 
@@ -254,7 +254,7 @@ def test_segurar_o_dedo_grava_o_nó_do_touchpad_e_solta_ao_vencer_o_prazo() -> N
     hub, criados = _hub(relogio)
 
     hub.segurar_o_dedo("aa")
-    hub.reconciliar()  # sem nenhuma outra demanda: o segurado abre o leitor do toque
+    hub.reconciliar()
     assert criados["touchpad"].grabs == [True]
     assert "motion" not in criados
 
@@ -277,7 +277,7 @@ def test_o_prazo_vencido_solta_o_grab_com_o_leitor_vivo() -> None:
     hub.reconciliar()
     assert criados["touchpad"].grabs == [True]
 
-    for _ in range(4):  # a amostra segue pedindo, o dedo não é mais renovado
+    for _ in range(4):
         relogio.agora += 2.0
         hub.amostra_do_dsu("aa")
         hub.reconciliar()

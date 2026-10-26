@@ -8,8 +8,8 @@ from collections.abc import Callable
 from pathlib import Path
 
 try:
-    import tomllib  # stdlib Python 3.11+
-except ImportError:  # pragma: no cover — fallback para 3.10
+    import tomllib
+except ImportError:  # pragma: no cover
     import tomli as tomllib  # type: ignore[no-redef]
 
 

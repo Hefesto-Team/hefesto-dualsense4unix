@@ -264,7 +264,6 @@ class TestONoNaoViraASaidaPadraoSozinho:
     """A MORDIDA: arranque a ``priority.session`` baixa e veja reprovar."""
 
     def test_a_prioridade_e_menor_que_a_do_menor_sink_real_medido(self) -> None:
-        # DualSense no cabo 1109. O menor sink REAL é 696.
         menor_real_medido = 696
         assert menor_real_medido > af.PRIORIDADE_SESSAO_DO_SOM
 

@@ -43,9 +43,7 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
 RGB = tuple[int, int, int]
 Luzinhas = tuple[bool, bool, bool, bool, bool]
-#: Faixa forjada (`aa:bb:cc`), nunca endereço de aparelho de verdade.
 JOGADORES = [f"aa:bb:cc:00:00:0{n}" for n in range(1, 5)]
-#: O número de cada jogador nas cinco luzinhas, como o DualSense o mostra.
 NUMEROS: list[Luzinhas] = [
     (False, False, True, False, False),
     (False, True, False, True, False),
@@ -96,9 +94,6 @@ def _brilho(cor: RGB) -> float:
     return max(cor) / 255
 
 
-# ---------------------------------------------------------------- as quatro bases
-
-
 def test_as_quatro_bases_novas_entram_so_na_lista() -> None:
     """Prova da D-2210-OS-EFEITOS-DE-LUZ-DOS-PERIFERICOS-RGB."""
     assert BASES_DOS_PERIFERICOS_DA_LUZ == ("ondulacao", "vaivem", "enche", "respira-em-cores")
@@ -124,9 +119,6 @@ def test_a_que_nao_tem_cor_exige_cor_e_a_sem_cor_nasce_sem() -> None:
     assert ler_o_efeito_da_luz("respira-em-cores;;2") is not None
 
 
-# ---------------------------------------------------------------- as de tempo, na varredura
-
-
 def _o_que_as_luzinhas_mostram(efeito: EfeitoDaLuz, numero: Luzinhas) -> list[Luzinhas]:
     vistos = []
     for i in range(int(SEGUNDOS / PASSO_S)):
@@ -141,7 +133,6 @@ def _o_que_as_luzinhas_mostram(efeito: EfeitoDaLuz, numero: Luzinhas) -> list[Lu
 def test_nenhuma_luzinha_sobe_mais_de_tres_vezes_por_segundo_contando_o_numero(
     base: str, ritmo: int, jogador: int
 ) -> None:
-    # D-2210-OS-EFEITOS-DE-LUZ-DOS-PERIFERICOS-RGB (a validar pelo usuário)
     vistos = _o_que_as_luzinhas_mostram(_efeito(f"{base};FF0000;{ritmo}"), NUMEROS[jogador])
     for led in range(5):
         subidas = _quando_a_luzinha_sobe(vistos, led)
@@ -222,9 +213,6 @@ def test_o_enche_acende_uma_por_passo_fica_cheio_e_devolve_o_numero(ritmo: int) 
     assert all(d == int(d) or d == pytest.approx(fx.PISO_DA_ONDA * 16) for d in degraus), degraus
 
 
-# ---------------------------------------------------------------- a Ondulação
-
-
 def _apertos(**contagem: int) -> fx.Entrada:
     return fx.Entrada(apertos=contagem)
 
@@ -242,7 +230,6 @@ def test_o_anel_parte_do_lado_do_botao_e_o_quarto_aperto_nao_ondula() -> None:
     assert apertar("cross", 1.0) == (False, False, False, False, True), "o ✕ parte da 4"
     assert apertar("dpad_left", 1.15) == (True, False, False, False, False), "a seta parte da 0"
     assert apertar("ps", 1.30) == (False, False, True, False, False), "o PS parte do meio"
-    # Os três de 1,45 a 1,75 caem na janela das três subidas: o anel do PS segue o dele.
     assert apertar("cross", 1.45) == (False, True, True, True, False), "o quarto não ondula"
     assert apertar("cross", 1.60) == (True, True, True, True, True), "nem o quinto"
     assert apertar("square", 1.75) is None, "nem o sexto: o anel do PS fechou e o número voltou"
@@ -295,7 +282,7 @@ def test_a_ondulacao_nunca_sobe_uma_luzinha_mais_de_tres_vezes_por_segundo(
     for led in range(5):
         subidas = _quando_a_luzinha_sobe(vistos, led)
         assert _subidas_num_segundo(subidas) <= 3, f"P{jogador + 1}, ritmo {ritmo}, luzinha {led}"
-    if nome == "dpad_left":  # sem símbolo: a cor do efeito, e o brilho é o vermelho
+    if nome == "dpad_left":
         assert _subidas_num_segundo(_quando_a_barra_sobe(brilhos, fx.PISO_DO_REAGE)) <= 3
         assert min(brilhos) >= fx.PISO_DO_REAGE - 1 / 255
 
@@ -311,16 +298,13 @@ def test_o_leitor_da_mao_entrega_os_apertos_a_ondulacao() -> None:
     assert ler(JOGADORES[0], "ondulacao").apertos == {"cross": 4}
 
 
-# ---------------------------------------------------------------- o Respira em cores
-
-
 @pytest.mark.parametrize("ritmo", RITMOS)
 @pytest.mark.parametrize("posicao", POSICOES)
 def test_a_cor_do_respira_em_cores_so_troca_no_piso(ritmo: int, posicao: int) -> None:
     efeito = _efeito(f"respira-em-cores;;{ritmo}")
     antes = fx.matiz_do_respira_em_cores(0.0, ritmo, posicao)
     trocas = 0
-    duracao = max(SEGUNDOS, 2.5 * fx.periodo_do_respirar_s(ritmo))  # o ritmo 1 respira em 10 s
+    duracao = max(SEGUNDOS, 2.5 * fx.periodo_do_respirar_s(ritmo))
     for i in range(1, int(duracao / PASSO_S)):
         t = i * PASSO_S
         matiz = fx.matiz_do_respira_em_cores(t, ritmo, posicao)
@@ -355,9 +339,6 @@ def test_o_respira_em_cores_pinta_o_matiz_que_diz() -> None:
         r, g, b = fx.cor_no_instante(efeito, topo, 1)
         matiz = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)[0]
         assert abs((matiz - fx.matiz_do_respira_em_cores(topo, 2, 1) + 0.5) % 1.0 - 0.5) < 0.01
-
-
-# ---------------------------------------------------------------- o laço
 
 
 def _laco(
@@ -405,9 +386,9 @@ def test_o_respira_em_cores_conta_no_relogio_comum_e_nao_toca_as_luzinhas() -> N
     laco = luz.LuzAnimada(
         lambda u, c: ultimas.__setitem__(u, (c, agora[0])), lambda u: None,
         quadro=lambda u, c, lz: quadros.append((u, c, lz)))
-    for i in range(572):  # termina perto do alto da respiração, onde o matiz se lê bem
+    for i in range(572):
         agora[0] = 100.0 + i / 60
-        entraram = JOGADORES[: 1 + min(3, i // 37)]  # cada um entra num instante
+        entraram = JOGADORES[: 1 + min(3, i // 37)]
         plano = {u: luz.PlanoDoControle(efeito, 1.0, JOGADORES.index(u), 1) for u in entraram}
         laco.tique(agora[0], plano)
     assert not quadros, "o Respira em cores é só a barra"
@@ -417,9 +398,6 @@ def test_o_respira_em_cores_conta_no_relogio_comum_e_nao_toca_as_luzinhas() -> N
         matiz = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)[0]
         esperado = fx.matiz_do_respira_em_cores(quando - 100.0, 10, posicao)
         assert abs((matiz - esperado + 0.5) % 1.0 - 0.5) < 0.01, f"{uniq} saiu do relógio comum"
-
-
-# ---------------------------------------------------------------- a aba
 
 
 GRUPO_DE = {"ondulacao": "Que reage", "vaivem": "Que se move", "enche": "Que se move",
@@ -514,7 +492,7 @@ def test_escolher_cada_uma_na_lista_grava_o_texto_que_o_perfil_le(n: int, base: 
     gesto(_ctx(n), {"uniq": uniq, "valor": f"base:{base}"}, None)
     guardado = o_computador().controles[uniq.replace(":", "")].leds.efeito
     ritmo = a04.RITMO_DA_BASE[base]
-    sem_cor = base == "respira-em-cores"  # a régua diz por si, sem ler a tabela que ela mede
+    sem_cor = base == "respira-em-cores"
     assert guardado == (f"{base};;{ritmo}" if sem_cor else f"{base};{cor};{ritmo}")
     assert _efeito(guardado).base == base
     coluna = a04.pacote(_ctx(n))["colunas"][uniq]

@@ -78,9 +78,6 @@ _RESULTADO_PARA_RELATORIO: dict[str, str] = {
 }
 
 
-# O Freestyle não se comporta como jogo.
-
-
 class OFreestyleMandaError(RuntimeError):
     """Um caminho automático pediu outro perfil com o Freestyle ligado."""
 
@@ -240,19 +237,11 @@ class PontesDoSom:
     ponte responde por um controle, pelo ``uniq`` dele.
     """
 
-    #: os ``uniq`` dos controles conectados agora (os quatro da mesa)
     conectados: Callable[[], list[str]]
-    #: o fone ligado no controle (byte 53 do report de entrada, lido no pad virtual);
-    #: ``None`` = ninguém sabe dizer, e conta como sem fone
     fone: Callable[[str], bool | None]
-    #: o jogo já põe som no alto-falante deste controle (o carimbo de áudio do pad virtual)
     jogo_no_alto_falante: Callable[[str], bool]
-    #: escreve a ``fonte`` (``mix``/``sfx``) no nó de som deste controle, ao vivo
     escolher_a_fonte: Callable[[str, str], bool]
-    #: abre o microfone deste controle, pelo mesmo ato do nascimento no (re)connect
     abrir_o_microfone: Callable[[str], object]
-    #: ``{uniq: fonte}`` que o ESTILO pôs, para devolver quando o estilo sai (a fonte viva do
-    #: daemon não se limpa sozinha); vive com quem monta as pontes
     do_estilo: dict[str, str] = field(default_factory=dict)
 
 
@@ -260,26 +249,17 @@ class PontesDoSom:
 class ProfileManager:
     controller: IController
     store: StateStore = field(default_factory=StateStore)
-    # Quando presente, `activate()` propaga o `key_bindings` resolvido para
     keyboard_device: object | None = None
     keyboard_device_provider: Callable[[], object | None] | None = None
-    # pelo qual `apply_button_actions` empurra o que cada botão faz. É LAZY pela
     mouse_device_provider: Callable[[], object | None] | None = None
-    # `button_actions` e o único que não é device. Recebe o token que o perfil
-    #
-    # no poll loop, e o comentário dele proíbe trabalho bloqueante ali com um
     ps_action_sink: Callable[[str | None], object] | None = None
     mouse_applier: Callable[..., object] | None = None
     suppression_applier: Callable[..., object] | None = None
     mode_applier: Callable[..., object] | None = None
-    # só política aplicada por OUTRO perfil; política manual fica), mais o
     rumble_policy_applier: Callable[..., object] | None = None
-    # Os callsites injetam `daemon.apply_profile_rumble_passthrough` — recebe o
     rumble_passthrough_applier: Callable[[bool], None] | None = None
     speaker_applier: Callable[..., object] | None = None
-    #
     mic_applier: Callable[..., object] | None = None
-    # O som que o ESTILO do perfil escolhe (Modo automático da aba Controles ligado).
     som_do_estilo: PontesDoSom | None = None
     _ultimo_veto_catch_all: str | None = field(default=None, repr=False)
     _ultimo_empate_logado: tuple[str, str] | None = field(default=None, repr=False)
@@ -399,8 +379,6 @@ class ProfileManager:
         )
         from hefesto_dualsense4unix.integrations import uinput_mouse
 
-        # Sem perfil que volte, nada do Freestyle segue valendo: o modo e o filtro do botão,
-        # a curva dos analógicos e o ajuste do cursor (que solta o clique travado).
         ativacao_de_botao.definir_ativo(self.store, None)
         filtro_de_botao.definir_ativo(self.store, None)
         curva_do_analogico.definir_ativo(self.store, None)
@@ -459,7 +437,6 @@ class ProfileManager:
         if e_a_escolha:
             from hefesto_dualsense4unix.utils.session import gravar_a_escolha
 
-            # liga (acima, antes do `set_active_profile`), o de qualquer outro
             if not e_o_freestyle(profile.name):
                 ligar_o_freestyle(self.store, False)
             gravar_a_escolha(profile.name)
@@ -546,7 +523,6 @@ class ProfileManager:
             logger.warning(
                 "perfil_com_gatilho_recusado", name=profile.name, gatilhos=recusados
             )
-        # sair. ABAS-05 (25/07): o `trigger.reset` (botão "Desligar" da aba
         if origin == "manual":
             soltar = getattr(self.controller, "clear_user_output_overrides", None)
             if callable(soltar):
@@ -559,7 +535,6 @@ class ProfileManager:
         right = build_from_name(profile.triggers.right.mode, profile.triggers.right.params)
         settings = _to_led_settings(profile.leds)
         effective = settings.apply_brightness(settings.brightness_level)
-        # ESCOLHIDA (antes do brilho): depois dele, um `lightbar_brightness`
         cor_do_global = cor_escolhida(settings.lightbar)
         self._configure_auto_player_colors(profile)
         resultado_da_saida = self.controller.apply_output_defaults(
@@ -576,7 +551,6 @@ class ProfileManager:
             )
         )
         overrides = _controllers_to_specs(profile.controllers, profile.leds)
-        # `#0000FF` do disco é a escolha do usuário para o número de hoje ou o
         procedencias = _controllers_to_procedencias(profile.controllers)
         escalas = _controllers_to_led_scales(profile.controllers, profile.leds)
         escalar = getattr(self.controller, "set_led_scales", None)
@@ -804,7 +778,6 @@ class ProfileManager:
         if device is None:
             return
         try:
-            # `None` é o de fábrica do device (`UinputMouseDevice.set_button_actions`).
             device.set_button_actions(None)  # type: ignore[attr-defined]
         except Exception as exc:
             logger.warning("button_actions_de_fabrica_falhou",
@@ -894,7 +867,7 @@ class ProfileManager:
         pecas = {
             str(uniq): cfg
             for uniq, cfg in (profile.controllers or {}).items()
-            if getattr(cfg, "ativacao", None) is not None  # (noqa-acento) identificador ASCII
+            if getattr(cfg, "ativacao", None) is not None  # (noqa-acento)
         }
         modo = ativacao_de_botao.montar(profile.ativacao)
         modo_por_peca = {
@@ -904,12 +877,12 @@ class ProfileManager:
             u: filtro_de_botao.montar(profile.ativacao, c.ativacao) for u, c in pecas.items()}
         ativacao_de_botao.definir_ativo(self.store, modo, modo_por_peca)
         filtro_de_botao.definir_ativo(self.store, filtro, filtro_por_peca)
-        analogicos = profile.analogicos  # (noqa-acento) identificador ASCII
+        analogicos = profile.analogicos
         curva = curva_do_analogico.montar(analogicos)
         curva_por_peca = {
-            str(uniq): curva_do_analogico.montar(analogicos, cfg.analogicos)  # (noqa-acento) chave
+            str(uniq): curva_do_analogico.montar(analogicos, cfg.analogicos)
             for uniq, cfg in (profile.controllers or {}).items()
-            if getattr(cfg, "analogicos", None) is not None  # (noqa-acento) identificador ASCII
+            if getattr(cfg, "analogicos", None) is not None
         }
         curva_do_analogico.definir_ativo(self.store, curva, curva_por_peca)
         from hefesto_dualsense4unix.integrations import uinput_mouse
@@ -992,7 +965,6 @@ class ProfileManager:
                     profile=profile.name,
                     err=str(exc),
                 )
-        # o P3 ficaram com a DualSense do Freestyle. E os secundários renasciam
         self.apply_controller_mascaras(profile, origin=origin, relatorio=resultado)
         if self.mode_applier is not None:
             try:
@@ -1028,7 +1000,6 @@ class ProfileManager:
                     profile=profile.name,
                     err=str(exc),
                 )
-        # (`lifecycle.apply_profile_rumble_passthrough`) devolve `None` em TODOS
         if self.rumble_passthrough_applier is not None:
             rumble_cfg = getattr(profile, "rumble", None)
             try:
@@ -1049,7 +1020,6 @@ class ProfileManager:
         self.apply_mic(profile, origin=origin, relatorio=resultado)
         self.apply_controller_mics(profile, origin=origin, relatorio=resultado)
         self.apply_controller_sensores(profile, origin=origin, relatorio=resultado)
-        # por último: no Modo automático o estilo vale por cima do que a aba diz do som
         _faltas_do_som_do_estilo(self.apply_som_do_estilo(profile, origin=origin), resultado)
         return resultado
 
@@ -1317,7 +1287,6 @@ class ProfileManager:
             return "falhou"
         estado = "aplicado"
         if querido.rota is not None:
-            # a rota vai com o volume que o perfil já dá ao controle (sem seção, o «Padrão»)
             secao = _secao_de_som_do_controle(profile, uniq)
             vista = profile.model_copy(update={"speaker": ProfileSpeakerConfig(
                 volume=VOLUME_DO_PADRAO if secao is None else int(secao.volume),
@@ -1406,16 +1375,11 @@ class ProfileManager:
         try:
             estado = _estado_da_secao(
                 self.speaker_applier(
-                    # «Padrão» (04/10/2026): o volume é o do jogo, 100% do registrador; o
-                    # `volume` guardado espera o botão desligar.
                     VOLUME_DO_PADRAO if getattr(secao, "volume_padrao", None) is True
                     else int(secao.volume),
                     bool(secao.muted),
                     uniq=uniq,
                     origin=origin,
-                    # (o default de quem nunca mexeu no seletor) significa
-                    # NÃO TOCAR no `common[7]`, que é o mesmo byte do caminho
-                    # do microfone: sem opinião continua sendo silêncio.
                     rota=getattr(secao, "rota", None),
                 )
             )
@@ -1483,7 +1447,7 @@ class ProfileManager:
             return "sem_uniq"
         try:
             ficou = ganho_do_microfone.definir(str(uniq), int(pedido), [str(uniq)])
-        except Exception as exc:  # pragma: no cover - defesa
+        except Exception as exc:  # pragma: no cover
             logger.warning("profile_mic_gain_failed", uniq=uniq, err=str(exc))
             resultado[f"mic:ganho:{uniq}"] = "falhou"
             return "falhou"
@@ -1556,7 +1520,6 @@ class ProfileManager:
         if override is not None:
             vista = profile.model_copy(update={"speaker": override})
             estado = self.apply_speaker(vista, origin="system", uniq=uniq)
-        # o estilo entra por último, como na ativação; o microfone nasce no (re)connect, que já roda
         do_estilo = self.apply_som_do_estilo(
             profile, origin="system", so_uniq=uniq, com_microfone=False
         )
@@ -1665,11 +1628,6 @@ class ProfileManager:
                    if not p.so_entra_por_evento and p.matches(dict(window_info))]
         candidates = [p for p in casaram if not p.e_catch_all]
         if e_janela_de_lancador(wm_class):
-            # D-1410-O-PERFIL-FICA-NO-ULTIMO-JOGO: o lançador (Steam, Heroic,
-            # Lutris…) não é jogo, e perfil NENHUM entra pela janela dele, nem o
-            # de jogo cuja regra traz a classe dele, nem o feito para ela (a
-            # Navegação da Steam). Até 14/10 este último seguia, e a Navegação
-            # entrava por cima do perfil do jogo que ela tinha acabado de fechar.
             candidates = []
         e_janela_de_jogo = e_endereco_de_jogo(wm_class)
         if not candidates:
@@ -2017,7 +1975,6 @@ def secao_do_modo_com_o_caminho(
     return ProfileModeConfig(**campos)  # type: ignore[arg-type]
 
 
-#: o modo que nenhum estilo de jogo deixa no perfil sem pedir (teclado e mouse)
 MODO_QUE_O_ESTILO_TIRA = "desktop"
 
 
@@ -2250,9 +2207,6 @@ def gravar_a_navegacao_no_perfil_ativo(
     mudou: dict[str, Any] = {}
     if profile.mouse is None or profile.mouse.model_dump() != mouse.model_dump():
         mudou["mouse"] = mouse
-    # O STATUS DO MODO NÃO ESCOLHE O TECLADO DO JOGO (O-ESCOPO-SAI-DAS-ABAS-01):
-    # vai ao perfil só quando ele já sobrepõe o cartão do teclado; nos outros
-    # casos vai ao computador, para o jogo não ganhar uma escolha que o usuário não fez.
     from hefesto_dualsense4unix.profiles import o_padrao_do_computador as opc
 
     if opc.sobrepoe(profile, "teclado"):
@@ -2582,14 +2536,8 @@ def _controllers_to_led_scales(
     return out
 
 
-#: Política de intensidade que o daemon assume quando NINGUÉM opinou — o
-#: default de `DaemonConfig.rumble_policy`. É o denominador honesto do fator
-#: por unidade num perfil sem seção `rumble.policy` própria: sem opinião
-#: global, o que o hardware recebe é o "balanceado" do daemon.
 _RUMBLE_POLICY_PADRAO = "balanceado"
 
-#: O volume do alto-falante em «Padrão» (04/10/2026): os 100% de sempre, que o controle já ganha na
-#: adoção (`backend_pydualsense.VOLUME_PADRAO_DO_SOM`); o jogo decide o quanto toca.
 VOLUME_DO_PADRAO = volume_do_percentual(100)
 
 
@@ -2701,7 +2649,6 @@ def _to_led_settings(leds: LedsConfig) -> LedSettings:
     )
 
 
-#: o que o som do estilo devolve quando fez, ou deixou de fazer de propósito (o jogo manda, o fone)
 _O_SOM_DO_ESTILO_SEM_FALTA = frozenset(
     {"aplicado", "devolvido", "pedido", "ignorado_o_jogo_manda", "ignorado_com_fone"}
 )
@@ -2831,7 +2778,6 @@ APPLIERS_DO_DAEMON: tuple[tuple[str, str], ...] = (
 )
 
 
-#: «falta `rumble_passthrough_applier`» — que é o nome do parâmetro, não o
 SECAO_DO_APPLIER: dict[str, str] = {
     "mouse_applier": "mouse",
     "suppression_applier": "suppress_desktop_emulation",
@@ -2870,9 +2816,7 @@ def gerente_do_daemon(
     argumentos: dict[str, Any] = {
         "controller": controller if controller is not None else daemon.controller,
         "keyboard_device_provider": lambda: getattr(daemon, "_keyboard_device", None),
-        # `button_actions` do perfil existiria, gravaria e nunca acenderia nada
         "mouse_device_provider": lambda: getattr(daemon, "_mouse_device", None),
-        # manager, e sem esta linha o `button_actions["ps"]` seria gravado,
         "ps_action_sink": _canal_do_ps(daemon),
     }
     if store is not None:

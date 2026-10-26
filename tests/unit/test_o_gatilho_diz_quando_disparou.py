@@ -98,9 +98,6 @@ def _como_o_laco(leitor: PhysicalReportReader, report: bytes) -> None:
         leitor._observe_gatilho(report, base)
 
 
-# --- o extrator ---------------------------------------------------------------
-
-
 @pytest.mark.parametrize("monta", [_usb, _bt], ids=["cabo", "radio"])
 def test_o_extrator_le_o_nibble_alto_de_cada_lado(
     monta: Callable[..., bytes],
@@ -150,9 +147,6 @@ def test_report_curto_ou_de_outro_id_da_none() -> None:
     assert extract_estado_do_gatilho(bytes([0x05]) + bytes(63)) is None
 
 
-# --- o leitor: borda, instante e contagem ------------------------------------
-
-
 @pytest.mark.parametrize("monta", [_usb, _bt], ids=["cabo", "radio"])
 def test_a_arma_que_dispara_conta_uma_vez_e_diz_quando(
     monta: Callable[..., bytes],
@@ -165,7 +159,7 @@ def test_a_arma_que_dispara_conta_uma_vez_e_diz_quando(
     relogio.t = 101.0
     _como_o_laco(leitor, monta(r2=1))
     relogio.t = 101.5
-    for _ in range(5):  # o relatório repete a 250 Hz: só a borda vale
+    for _ in range(5):
         _como_o_laco(leitor, monta(r2=2))
 
     assert leitor.estado_do_gatilho == (0, 2)
@@ -221,7 +215,6 @@ def test_perder_o_controle_esquece_o_estado_e_guarda_a_conta() -> None:
     leitor._reset_gatilho()
     assert leitor.estado_do_gatilho is None
     assert leitor.disparos_do_gatilho["R2"] == 1
-    # o controle volta já no 2: sem estado anterior, não é um disparo novo
     _como_o_laco(leitor, _usb(r2=2))
     assert leitor.disparos_do_gatilho["R2"] == 1
 
@@ -256,9 +249,6 @@ def test_o_dado_e_so_de_leitura() -> None:
     assert tocados == []
 
 
-# --- pelo laço vivo, com a thread e um pipe no lugar do hidraw -----------------
-
-
 def _esperar(cond: Callable[[], bool], limite_s: float = 3.0) -> bool:
     fim = time.monotonic() + limite_s
     while time.monotonic() < fim:
@@ -289,7 +279,7 @@ def test_pelo_laco_da_thread_o_disparo_chega_ao_ouvinte(
     leitor.ouvir_gatilho(_ouve)
     try:
         assert leitor.start() is True
-        for r2 in (0, 1, 2):  # um por vez: o pipe junta o que se escreve junto
+        for r2 in (0, 1, 2):
             os.write(escrita, monta(r2=r2))
             assert _esperar_o_estado(leitor, (0, r2))
         assert leitor.disparos_do_gatilho["R2"] == 1

@@ -35,7 +35,6 @@ WP_CASA = "0.5.18-0~hefesto24.04.1"
 PW_POP = "1.6.8-1pop1~1787688714~24.04~fdff050"
 WP_POP = "0.5.12-2pop1~1766191027~24.04~d4bf441"
 
-#: O que o install gravou: o que a máquina tinha antes, um ``pacote=versão`` por linha.
 REGISTRO = (
     f"pipewire={PW_POP}\n"
     f"libpipewire-0.3-0t64:amd64={PW_POP}\n"
@@ -43,7 +42,6 @@ REGISTRO = (
     f"wireplumber={WP_POP}\n"
 )
 
-#: A máquina depois do install: tudo na versão da casa.
 MAQUINA_DA_CASA = {
     "pipewire": PW_CASA,
     "libpipewire-0.3-0t64": PW_CASA,
@@ -178,9 +176,6 @@ def _correr(
     return Corrida(rc, saida, chamadas, trava)
 
 
-# ---------------------------------------------------------------- devolver
-
-
 def test_a_flag_devolve_sem_perguntar_com_as_versoes_do_arquivo(tmp_path: Path) -> None:
     c = _correr(tmp_path, flag=True)
     assert c.rc == 0, c.saida
@@ -232,9 +227,6 @@ def test_sem_tty_e_sem_yes_tambem_preserva(tmp_path: Path) -> None:
     assert "--restore-pipewire" in c.saida
 
 
-# ---------------------------------------------------------------- a trava do apt
-
-
 @pytest.mark.parametrize(
     "caso",
     ["devolvendo", "preservando", "sem-registro", "steam-aberta", "resposta-nao"],
@@ -278,9 +270,6 @@ def test_sem_sudo_a_trava_fica_e_a_fala_diz_o_comando(tmp_path: Path) -> None:
     assert "apt-get install --allow-downgrades" in c.saida, "diz como devolver à mão"
 
 
-# ---------------------------------------------------------------- a Steam aberta
-
-
 def test_com_a_steam_aberta_a_flag_recusa_e_diz_por_que(tmp_path: Path) -> None:
     """MORDIDA: tirar a recusa faz o apt trocar o PipeWire com a Steam aberta."""
     c = _correr(tmp_path, flag=True, steam_aberta=True)
@@ -296,9 +285,6 @@ def test_com_a_steam_aberta_a_pergunta_nem_e_feita(tmp_path: Path) -> None:
     assert not c.devolveu(), c.chamadas
     assert "Devolver o PipeWire de antes?" not in c.saida
     assert "Steam" in c.saida
-
-
-# ---------------------------------------------------------------- nada a fazer
 
 
 def test_sem_registro_e_sem_trava_nao_faz_nada(tmp_path: Path) -> None:
@@ -332,9 +318,6 @@ def test_linha_vazia_ou_pela_metade_do_registro_nao_quebra(tmp_path: Path) -> No
     assert install.endswith(f"pipewire={PW_POP}"), install
 
 
-# ---------------------------------------------------------------- o que o apt diria
-
-
 def test_se_a_simulacao_tira_pacote_da_maquina_nada_e_trocado(tmp_path: Path) -> None:
     """MORDIDA: tirar a conferência do `Remv` troca o PipeWire levando pacote junto."""
     c = _correr(tmp_path, flag=True, remv=("steam-devices",))
@@ -355,9 +338,6 @@ def test_sem_sudo_o_pipewire_nao_e_devolvido_e_a_fala_diz_como(tmp_path: Path) -
     c = _correr(tmp_path, flag=True, sudo_ok=False)
     assert not c.devolveu()
     assert "sudo indisponível" in c.saida
-
-
-# ---------------------------------------------------------------- a casa inteira
 
 
 def test_a_flag_esta_no_roteiro_na_ajuda_e_no_preparo_do_sudo() -> None:
@@ -411,7 +391,7 @@ def test_o_ensaio_com_a_flag_so_descreve_e_deixa_a_casa_igual(tmp_path: Path) ->
     }
     assert not env["HOME"].startswith("/home/"), "o lar de mentira caiu numa casa de verdade"
     flatpak = tmp_path / "dubles" / "flatpak"
-    if flatpak.is_file():  # o `flatpak list` real cria o cache dele na primeira vez
+    if flatpak.is_file():
         subprocess.run(
             [str(flatpak), "--user", "list"], env=env, capture_output=True, timeout=60,
             check=False,

@@ -179,9 +179,6 @@ def mesa_de_mentira(monkeypatch: pytest.MonkeyPatch) -> pytest.MonkeyPatch:
 MESA_MISTA = {P1: "/dev/input/event5", P2: "/dev/input/event7",
               P3: "/dev/input/event9", P4: "/dev/input/event11"}
 
-#: (rótulo da mesa, quem sai junto, quem fica olhando). O transporte de cada um
-#: está no rótulo: o laço do co-op não tem ramo de transporte, e a régua prova
-#: que a cura não ganha um.
 MATRIZ = [
     ("p1-usb,p2-bt,p3-usb,p4-bt", (P2, P3), (P4,)),
     ("tres-adaptadores-e-um-no-cabo", (P4,), (P2, P3)),
@@ -194,13 +191,13 @@ def test_quem_cai_e_volta_no_prazo_fica_no_mesmo_vpad(
     mesa_de_mentira: pytest.MonkeyPatch, mesa: str, saem: tuple[str, ...],
     ficam: tuple[str, ...],
 ) -> None:
-    # D-2410-O-LUGAR-GUARDADO-ESPERA-NOS-QUATRO
+    """Prova da D-2410-O-LUGAR-GUARDADO-ESPERA-NOS-QUATRO."""
     m = _Mesa(mesa_de_mentira, MESA_MISTA)
     mgr = m.mgr
     vpads = {mac: mgr._players[mac].vpad for mac in (P2, P3, P4)}
     leitores = {mac: mgr._players[mac].reader for mac in (P2, P3, P4)}
     numeros = mgr.player_indexes()
-    mgr.forward_all()  # o Cruz e o stick torto chegam ao vpad antes da queda
+    mgr.forward_all()
 
     m.sai(*saem)
     for mac in saem:
@@ -217,7 +214,6 @@ def test_quem_cai_e_volta_no_prazo_fica_no_mesmo_vpad(
     m.passa(1.0)
     mgr.forward_all()
     for mac in saem:
-        # Um quadro neutro só: o tique não volta a escrever no vpad que espera.
         assert len(vpads[mac].buttons) == neutros[mac]
         assert mac not in mgr.live_snapshots()
 
@@ -254,11 +250,10 @@ def test_todos_no_radio_o_prazo_de_cada_um_corre_sozinho(
     m.sai(P4)
     assert mgr._players[P2].a_espera and mgr._players[P4].a_espera
 
-    m.passa(5.0)  # o prazo do P2 venceu (31 s); o do P4 tem 5 s
+    m.passa(5.0)
     assert P2 not in mgr._players
     assert mgr._players[P4].a_espera and mgr._players[P4].vpad is vpad_p4
     assert vpad_p4.paradas == 0
-    # O P3 não desce para o 2: o vpad dele é o mesmo e o número também.
     assert mgr._players[P3].vpad is vpad_p3 and vpad_p3.paradas == 0
     assert mgr.player_indexes()[P3] == 3
 

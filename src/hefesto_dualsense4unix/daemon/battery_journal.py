@@ -88,12 +88,10 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: Raiz dos nós de bateria do kernel (driver ``hid-playstation``).
 RAIZ_POWER_SUPPLY = Path("/sys/class/power_supply")
 
 PREFIXO_NO_KERNEL = "ps-controller-battery-"
 
-#: ``portao_a_casa_sabe_e_o_produto_nao_faz`` a acusou pelo nome. Ela tem lugar
 PREFIXO_DO_VPAD = "02fe"
 
 INTERVALO_SONDA_S = 30.0
@@ -422,7 +420,7 @@ def registrar_queda_da_bateria(daemon: Any, motivo: str, agora: float) -> None:
     """Gancho da borda de desconexão. Best-effort: nunca levanta ao chamador."""
     try:
         diario_da_bateria(daemon).registrar_queda(motivo, agora)
-    except Exception as exc:  # pragma: no cover - defesa de borda
+    except Exception as exc:  # pragma: no cover
         logger.debug("bateria_na_queda_falhou", err=str(exc))
 
 

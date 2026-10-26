@@ -14,7 +14,7 @@ INSTRUMENTO = RAIZ / "scripts" / "ensaios" / "entrada_em_repouso.py"
 @pytest.fixture(scope="module")
 def mod():
     """Importa o instrumento pelo caminho, como a casa já faz com os scripts."""
-    if not INSTRUMENTO.exists():  # pragma: no cover - só se alguém apagar o arquivo
+    if not INSTRUMENTO.exists():  # pragma: no cover
         pytest.skip("o instrumento não está na árvore")
     sys.path.insert(0, str(INSTRUMENTO.parent))
     sys.path.insert(0, str(RAIZ / "scripts"))

@@ -42,7 +42,7 @@ def _escolhe(efeito: str | None, uniq: str | None = None) -> None:
 
 
 def test_sem_perfil_o_efeito_do_computador_chega_a_luz() -> None:
-    # D-1810-A-LUZ-E-O-GATILHO-LEEM-O-COMPUTADOR-SEM-PERFIL-ATIVO
+    """Prova da D-1810-A-LUZ-E-O-GATILHO-LEEM-O-COMPUTADOR-SEM-PERFIL-ATIVO."""
     _escolhe(RESPIRAR)
 
     perfil = luz.perfil_ativo(_daemon(None))

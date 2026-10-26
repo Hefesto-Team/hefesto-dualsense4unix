@@ -23,7 +23,6 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 MascaraDeGamepad = Literal["dualsense", "xbox", "nintendo"]
 
-#: teto o acompanha. O tooltip do deslizador já prometia.
 RUMBLE_CUSTOM_MULT_MAX = 2.0
 
 
@@ -224,15 +223,11 @@ def _gatilho_de_nascimento() -> TriggerConfig:
     )
 
 
-#: Os dois modos da aba Gatilhos e da aba Iluminação (A-O-MODO-AUTOMATICO-E-O-
-#: PERSONALIZADO-01, 08/10/2026). Automático: o Hefesto não escolhe nada e o jogo
-#: decide. Personalizado: vale o que a pessoa escolheu, e é o que ficou guardado.
-MODO_AUTOMATICO = "automatico"  # (noqa-acento) chave ASCII
+MODO_AUTOMATICO = "automatico"  # (noqa-acento)
 MODO_PERSONALIZADO = "personalizado"
-ModoDaAba = Literal["automatico", "personalizado"]  # (noqa-acento) chave ASCII
-#: Onde o perfil vale (o «Aplicar em» da aba Perfis) e, nos «eventos», o momento que o chama.
-AlvoDoPerfil = Literal["jogos", "navegacao", "programas", "eventos"]  # (noqa-acento) chaves ASCII
-EventoDoPerfil = Literal[  # (noqa-acento) chaves ASCII
+ModoDaAba = Literal["automatico", "personalizado"]  # (noqa-acento)
+AlvoDoPerfil = Literal["jogos", "navegacao", "programas", "eventos"]
+EventoDoPerfil = Literal[
     "cena", "menu", "pausa", "controle_conectado", "programa_aberto", "hora_marcada", "meu_comando",
 ]
 
@@ -242,12 +237,7 @@ class TriggersConfig(BaseModel):
 
     left: TriggerConfig = Field(default_factory=_gatilho_de_nascimento)
     right: TriggerConfig = Field(default_factory=_gatilho_de_nascimento)
-    #: ``None`` = ninguém escolheu o modo: vale a leitura de :func:`decidir_o_modo_dos_gatilhos`.
     modo: ModoDaAba | None = None
-    #: A «Intensidade do gatilho» de UM controle (`controllers[uniq].triggers`), de 0 a 2 (0 a
-    #: 200%); ``None`` = 100%. Multiplica o efeito do jogo e o do Hefesto: até 100% pelo byte de
-    #: atenuação do firmware, acima pelas forças do bloco. No perfil global não vale (o trilho é
-    #: por controle). A-INTENSIDADE-DA-VIBRACAO-E-DO-GATILHO-SAI-DO-FIRMWARE-COMO-NO-PS5-01.
     intensidade: float | None = Field(default=None, ge=0.0, le=RUMBLE_CUSTOM_MULT_MAX)
 
     @model_serializer(mode="wrap")
@@ -261,22 +251,13 @@ class TriggersConfig(BaseModel):
         return dados
 
 
-#: As bases do efeito de luz que a pessoa cria na aba Iluminação (A-ABA-ILUMINACAO-DO-TODO-01).
-BASES_DA_LUZ = ("respirar", "piscar", "arco-iris", "batimento", "chama", "mare", "onda", "relampago")  # noqa: E501  # noqa-acento: chave ASCII
-#: As bases que só a lista da aba Iluminação oferece (22/10/2026): as que dependem de um dado vivo
-#: (a mão, o som) e não se criam em «Criar efeitos novos». As oito acima são as que a pessoa
-#: também pode CRIAR. Os modos dos periféricos RGB: OS-EFEITOS-DE-LUZ-DOS-PERIFERICOS-RGB-01.
+BASES_DA_LUZ = ("respirar", "piscar", "arco-iris", "batimento", "chama", "mare", "onda", "relampago")  # noqa: E501
 BASES_DA_MAO_DA_LUZ = ("reage-ao-botao", "inclinacao", "dedo-no-touchpad")
-#: «Ao som» (A-LUZ-DANCA-COM-O-SOM-01): lê só o monitor da saída padrão.
 BASES_DO_SOM_DA_LUZ = ("ao-som",)
-#: A luz de ambiente e de aviso (A-LUZ-DE-AMBIENTE-E-DE-AVISO-01): a Aurora (degradê lento), as
-#: Estrelas (as luzinhas cintilam), e as que mostram um número da máquina, a carga do controle e o
-#: calor da placa e do processador.
 BASES_DE_AMBIENTE_DA_LUZ = ("aurora", "estrelas", "cor-da-bateria", "cor-da-temperatura")
 BASES_DOS_PERIFERICOS_DA_LUZ = ("ondulacao", "vaivem", "enche", "respira-em-cores")
 BASES_NOVAS_DA_LUZ = BASES_DA_MAO_DA_LUZ + BASES_DO_SOM_DA_LUZ + BASES_DE_AMBIENTE_DA_LUZ
 TODAS_AS_BASES_DA_LUZ = BASES_DA_LUZ + BASES_NOVAS_DA_LUZ + BASES_DOS_PERIFERICOS_DA_LUZ
-#: As bases sem cor: giram a roda sozinhas (o Arco-íris, o Respira em cores) ou pintam pelo dado.
 BASES_SEM_COR_DA_LUZ = ("arco-iris", "inclinacao", "dedo-no-touchpad", "cor-da-bateria",
                         "cor-da-temperatura", "respira-em-cores")
 RITMO_MINIMO_DA_LUZ = 1
@@ -317,7 +298,7 @@ def ler_o_efeito_da_luz(texto: object) -> EfeitoDaLuz | None:
     nomes = [c for c in brutas.split(",") if c] if brutas else []
     if len(nomes) > TETO_DE_CORES_DO_EFEITO or not all(_COR_DO_EFEITO.match(c) for c in nomes):
         return None
-    if base not in BASES_SEM_COR_DA_LUZ and not nomes:  # (noqa-acento) chave ASCII
+    if base not in BASES_SEM_COR_DA_LUZ and not nomes:
         return None
     if not (ritmo_cru.isascii() and ritmo_cru.isdigit()):
         return None
@@ -334,18 +315,10 @@ class LedsConfig(BaseModel):
     lightbar: tuple[int, int, int] = (0, 0, 0)
     player_leds: list[bool] = Field(default_factory=lambda: [False] * 5)
     lightbar_brightness: float = Field(default=1.0, ge=0.0, le=1.0)
-    # — cada DualSense acende a cor do SEU slot (paleta PS5) + o LED do número
     auto_player_colors: bool = True
-    # outro dia fossilizado no arquivo — e dois DualSense acendiam o MESMO
-    # `#0000FF`. Sem este campo o resolvedor tinha de ADIVINHAR qual repetição
     lightbar_para_o_numero: int | None = None
-    # Quem enxerga pouco não tinha como
-    player_led_brightness: Literal["fraco", "medio", "forte"] = "fraco"  # (noqa-acento) chave ASCII
-    #: ``None`` = ninguém escolheu o modo: vale a leitura de :func:`decidir_o_modo_da_luz`.
+    player_led_brightness: Literal["fraco", "medio", "forte"] = "fraco"  # (noqa-acento)
     modo: ModoDaAba | None = None
-    #: O efeito da barra (``base;cores;ritmo``, ver :func:`ler_o_efeito_da_luz`). ``None`` = luz
-    #: fixa, a cor de sempre. Texto que não é um efeito válido volta como ``None``: um enfeite
-    #: ilegível não derruba o perfil.
     efeito: str | None = None
 
     @field_validator("efeito")
@@ -407,7 +380,6 @@ class RumbleConfig(BaseModel):
     passthrough: bool = True
     policy: Literal["economia", "balanceado", "max", "auto", "custom"] | None = None
     custom_mult: float | None = None
-    #: ``None`` = ninguém escolheu o modo da aba Vibração (o botão «Modo automático»).
     modo: ModoDaAba | None = None
 
     @model_serializer(mode="wrap")
@@ -468,19 +440,11 @@ class ProfileMovimentoConfig(BaseModel):
     teto_graus_s: float = Field(default=220.0, gt=0.0, le=2000.0)
     pixels_por_grau: float = Field(default=12.0, gt=0.0, le=200.0)
     gatilho: str | None = None
-    #: quem não os alcança. `nenhum` = sem opinião: o touchpad é o do computador
-    #: (TOUCHPAD-DO-SISTEMA-01). Vale onde há controle virtual, P1 a P4.
     toque: Literal["nenhum", "cursor", "zonas"] = "nenhum"
-    #: A INCLINAÇÃO — o acelerômetro vira analógico (mesma resposta). O lado vem
-    #: do Analógico Virtual (o `lado` abaixo); o `nenhum` é a inclinação apagada.
     acelerometro: Literal["nenhum", "analogico_esquerdo", "analogico_direito"] = (
         "nenhum"
     )
-    #: O «Mesmo parado» da lista «Só enquanto eu segurar» (D-2909-O-CONTROLE-PARADO-NAO-INCLINA):
-    #: o controle num suporte segue inclinando, e a pausa do parado não vale para ele.
     mesmo_parado: bool = False
-    #: O lado do Analógico Virtual (O-ANALOGICO-VIRTUAL-E-UM-SO, 08/10): ligar liga neste
-    #: lado. O perfil que não o escreveu lê o direito, o lado de antes.
     lado: Literal["analogico_esquerdo", "analogico_direito"] = "analogico_direito"
 
     @model_serializer(mode="wrap")
@@ -570,7 +534,6 @@ class ProfileAtivacaoConfig(BaseModel):
     duplo_ms: int = Field(default=300, ge=100, le=1000)
     repete_apos_ms: int = Field(default=500, ge=100, le=3000)
     repete_por_segundo: int = Field(default=6, ge=1, le=20)
-    # O tremor e o aperto junto (O-TREMOR-E-O-APERTO-JUNTO-NAO-DECIDEM-O-BOTAO-01): zero desliga.
     repique_ms: int = Field(default=0, ge=0, le=1000)
     aperto_minimo_ms: int = Field(default=0, ge=0, le=500)
     travar: list[str] = Field(default_factory=list)
@@ -585,11 +548,11 @@ class ProfileAtivacaoConfig(BaseModel):
         motivo = recusar(self.alternar, self.repetir, self.longo, self.duplo, self.travar,
                          self.sequencia)
         if motivo:
-            raise ValueError(f"ativacao: {motivo}")  # (noqa-acento) identificador ASCII
+            raise ValueError(f"ativacao: {motivo}")  # (noqa-acento)
         return self
 
 
-class ProfileAnalogicosConfig(BaseModel):  # (noqa-acento) identificador ASCII
+class ProfileAnalogicosConfig(BaseModel):
     """Zona morta, curva, sensibilidade, inversão, troca e uma mão só dos analógicos e gatilhos.
 
     Aditiva ao schema v1 (OS-ANALOGICOS-DO-JOGO-GANHAM-ZONA-MORTA-CURVA-E-UMA-MAO-01): perfil
@@ -618,7 +581,7 @@ class ProfileAnalogicosConfig(BaseModel):  # (noqa-acento) identificador ASCII
 
         motivo = recusar(self.trocar, self.mao)
         if motivo:
-            raise ValueError(f"analogicos: {motivo}")  # (noqa-acento) identificador ASCII
+            raise ValueError(f"analogicos: {motivo}")
         return self
 
 
@@ -705,7 +668,6 @@ class ProfileMouseConfig(BaseModel):
     enabled: bool
     speed: int = Field(default=6, ge=1, le=12)
     scroll_speed: int = Field(default=1, ge=1, le=5)
-    # O perfil de point and click que a aba Navegação guarda: `molde:<chave>` ou `perfil:<nome>`.
     point_and_click: str | None = None
 
     @field_validator("point_and_click")
@@ -810,7 +772,6 @@ class ProfileMicConfig(BaseModel):
     button_toggles_system: bool
     volume: int | None = Field(default=None, ge=0, le=100)
     muted: bool | None = None
-    #: controle — o `Headset Capture Volume` do DualSense. São eixos diferentes
     gain: int | None = Field(default=None, ge=0, le=100)
 
 
@@ -905,22 +866,7 @@ class ProfileSpeakerConfig(BaseModel):
     volume: int = Field(ge=0, le=255)
     muted: bool = False
     rota: int | None = Field(default=None, ge=0, le=3)
-    #: A FONTE do nó de som deste controle — ``"mix"`` (todo o som do PC cai
-    #: aqui também, o «HDMI completo») ou ``"sfx"`` (o nó fica livre para
-    #: a corrente que o jogo mandar). Decisão de produto, 08/09/2026: cada
-    #: controle é o HDMI completo (``mix``) ou o canal do sfx (``sfx``).
-    #: <!-- noqa-acento: citação literal -->
-    #:
-    #: **ADITIVO e sem bump de versão**, como a ``rota``: perfil antigo carrega
-    #: com ``None``, que é **não mexer** — o nó daquele controle segue o padrão
-    #: da casa, que é ``sfx`` por decisão de produto
     fonte: Literal["mix", "sfx"] | None = None
-    #: O BOTÃO «PADRÃO» DO VOLUME (04/10/2026, desenho aprovado em `docs/process/estudos/
-    #: 2026-10-04-o-jogo-decide/`): ligado, o volume do alto-falante deste controle é o do JOGO
-    #: (100% do registrador, sem ajuste do Hefesto) e a barra fica travada; o ``volume`` guardado
-    #: espera e volta quando o usuário desliga o botão. ``None`` e ``False`` não mudam o perfil
-    #: já fazia: quem tinha um volume escolhido segue com ele. O perfil SEM a seção também é Padrão
-    #: (não opina; a adoção põe o controle em 100%), e é assim que o perfil novo nasce.
     volume_padrao: bool | None = None
 
     @model_validator(mode="before")
@@ -966,7 +912,6 @@ class ProfileModeConfig(BaseModel):
 
     kind: Literal["desktop", "gamepad", "native"]
     gamepad_flavor: MascaraDeGamepad | None = None
-    #: próprio do DualSense, o vpad `uhid`) ou ``"xbox"`` (o canal comum, o vpad
     caminho: Literal["dualsense", "xbox"] | None = None
 
     @model_serializer(mode="wrap")
@@ -1087,7 +1032,6 @@ class PonteConfirmada(BaseModel):
 
 MOTOR_PCT_PADRAO = 100
 
-#: Teto da barra de motor. **Não é o ``RUMBLE_CUSTOM_MULT_MAX``, e a diferença
 MOTOR_PCT_MAX = 100
 
 
@@ -1150,9 +1094,6 @@ class ControllerRumbleOverride(BaseModel):
 
     haptica_pct: int | None = None
 
-    #: A forma do toque háptico deste controle (``profiles.formas_de_haptica.ESCOLHAS``).
-    #: ``None`` = «Do estilo»: o que o estilo pede, e o Toque de hoje quando ele não pede. Texto
-    #: que não é uma forma conhecida volta como ``None``: um enfeite ilegível não derruba o perfil.
     efeito_haptico: str | None = None
 
     @field_validator("efeito_haptico")
@@ -1160,8 +1101,6 @@ class ControllerRumbleOverride(BaseModel):
     def _efeito_haptico_legivel(cls, value: str | None) -> str | None:
         return value if isinstance(value, str) and value in FORMAS_DE_HAPTICA else None
 
-    #: O padrão que os motores tocam neste controle (``padroes_de_vibracao.ESCOLHAS``). ``None`` =
-    #: «Do estilo». Texto desconhecido volta como ``None``, como o ``efeito_haptico``.
     efeito_imersao: str | None = None
 
     @field_validator("efeito_imersao")
@@ -1318,10 +1257,8 @@ class ControllerMicOverride(BaseModel):
 
     muted: bool | None = None
 
-    #: Com dois DualSense no cabo há DUAS placas de som
     volume: int | None = Field(default=None, ge=0, le=100)
 
-    #: acima, só que mais forte: o ganho é da PLACA ALSA, e com dois DualSense
     gain: int | None = Field(default=None, ge=0, le=100)
 
     @model_validator(mode="before")
@@ -1388,9 +1325,6 @@ class ControllerSensoresOverride(BaseModel):
 
     acelerometro: bool | None = None
 
-    #: O touchpad DESTA peça. Desligado, o toque não chega ao jogo nem vira mouse do sistema
-    #: enquanto o jogo está aberto; Ligado, vai ao jogo que tem toque próprio e, nos outros, é o
-    #: cursor. Perfil velho sem o campo carrega Ligado. Quem lê é ``apply_controller_sensores``.
     touchpad: Literal["ligado", "desligado"] = "ligado"
 
 
@@ -1407,43 +1341,16 @@ class ControllerOverrides(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    # SÃO ONZE, e a tela oferece treze. O que falta, e o CAMINHO que cada um
-    # espera antes de poder entrar, está na seção «ControllerOverrides» de
-    # docs/research/o-porque-dos-modulos.md, ordenada
-    # por custo. O `mic` entrou em 03/09/2026 pelo `muted`, que é o campo dele
-    # cuja escada carrega o `uniq` em todo degrau; o `sensores` entrou em
-    # 04/09/2026, quando o interruptor que ele prometia passou a existir; a
-    # `mascara` entrou em 08/09/2026, por decisão de produto — e é a primeira que não
-    # é uma SEÇÃO, e sim um valor só; o `movimento` entrou em 24/09/2026, com o
-    # chip «Mira Virtual» que o usuário pediu no cartão de cada controle; o modo de
-    # ativação e os analógicos, em 16/10/2026, com o consumidor por peça já em
-    # `apply_acessibilidade`; a troca de botões, em 20/10/2026, com o consumidor em
-    # `apply_remapeamento` e o «Vale para» do mapa do controle.
     leds: LedsConfig | None = None
     triggers: TriggersConfig | None = None
     rumble: ControllerRumbleOverride | None = None
     speaker: ProfileSpeakerConfig | None = None
     mic: ControllerMicOverride | None = None
     sensores: ControllerSensoresOverride | None = None
-    #: «Como este controle aparece nos jogos», SÓ desta peça — MASCARA-NO-
-    #: PERFIL-01 (08/09/2026, decisão de produto: a máscara entra no perfil).
-    #:
-    #: ``None`` = **volte ao padrão**, e esta é a ÚNICA seção desta classe em
-    #: que ``None`` não quer dizer «sem opinião». É decisão, 09/09/2026:
-    #: o padrão é «Hefesto DualSense padrão». O controle que o perfil não
-    #: declara perde a máscara própria e passa a seguir o
-    #: ``mode.gamepad_flavor`` do perfil e, sem ele, o
-    #: não declara. A régua da ordem mede o comportamento dos três degraus, não
     mascara: MascaraDeGamepad | None = None
     movimento: ProfileMovimentoConfig | None = None
-    #: Como o botão ativa NESTA peça (alternar, repetir, longo, duplo), campo a campo sobre o
-    #: perfil. ``None`` = herda.
     ativacao: ProfileAtivacaoConfig | None = None
-    #: A zona morta, a curva e a mão dos analógicos NESTA peça, campo a campo sobre o perfil.
-    analogicos: ProfileAnalogicosConfig | None = None  # (noqa-acento) identificador ASCII
-    #: A troca de botões SÓ desta peça (O-REMAPEAMENTO-VALE-POR-JOGADOR-01), por cima da do
-    #: perfil, botão a botão: ``{origem: destino}``; ``botão: botão`` cancela, nesta peça, a troca
-    #: que o perfil faz naquele botão. ``None`` = esta peça segue a troca do perfil.
+    analogicos: ProfileAnalogicosConfig | None = None
     remapeamento: dict[str, str] | None = None
 
     @field_validator("remapeamento")
@@ -1493,16 +1400,10 @@ def _e_combinacao_de_teclas(acao: str) -> bool:
     return all(x in SUPPORTED_KEYS for x in partes)
 
 
-#: quem manda no default passam a morar juntos; e este módulo importa só
-#: stdlib + pydantic, o que permite `profiles/`, `app/` e o CLI lerem a faixa
-#: sem nenhum deles puxar GTK.
-#: Quem mudar o teto muda AQUI. O glade tem de acompanhar na mão (XML não
-#: a faixa que a escala oferece.
 PRIORIDADE_MINIMA = 0
 PRIORIDADE_MAXIMA = 200
 
 
-#: As marcas de antes de 12/10/2026 que hoje são estilos de jogo (a mesma chave nos dois).
 _MARCAS_QUE_VIRARAM_ESTILO: frozenset[str] = frozenset({"visual_novel", "adulto"})
 
 
@@ -1518,69 +1419,33 @@ class Profile(BaseModel):
     triggers: TriggersConfig = Field(default_factory=TriggersConfig)
     leds: LedsConfig = Field(default_factory=LedsConfig)
     rumble: RumbleConfig = Field(default_factory=RumbleConfig)
-    # - None = herda DEFAULT_BUTTON_BINDINGS do core.
     key_bindings: dict[str, list[str]] | None = None
-    # - None = herda o de fábrica INTEIRO (`core/acoes_de_botao.padrao()`, que
-    # `acoes_de_botao` é quem os separa. Aposentar um em favor do outro é
     button_actions: dict[str, str] | None = None
-    # GLOBAL no perfil, não por controle (D-0809-A-NAVEGACAO-E-GLOBAL-NO-PERFIL):
-    # POR QUE NÃO É O `button_actions` ACIMA: aquele fala a língua de TECLA e
     remapeamento: dict[str, str] | None = None
     movimento: ProfileMovimentoConfig | None = None
     ativacao: ProfileAtivacaoConfig | None = None
-    analogicos: ProfileAnalogicosConfig | None = None  # (noqa-acento) identificador ASCII
+    analogicos: ProfileAnalogicosConfig | None = None
     cursor: ProfileCursorConfig | None = None
     mouse: ProfileMouseConfig | None = None
-    # flag global `keyboard_emulation.flag` (utils/session.py:306), enquanto o
-    # Por 24 dias foi verdade —
-    # preferência GLOBAL, e esta precedência deixaria de existir na ativação
     teclado_emulado: bool | None = None
-    # «Só dentro do jogo» da Função do teclado: com `teclado_emulado` ligado, o
-    # teclado digita SÓ com um jogo aberto (o sinal do portão trocado). None = sem
-    # opinião (o teclado digita fora do jogo, como sempre).
     teclado_so_no_jogo: bool | None = None
-    # «Sempre» da Função do teclado: com `teclado_emulado` ligado, o teclado digita fora do jogo E
-    # com um jogo aberto. None = sem opinião (vale o par de cima, como antes do «Sempre»).
     teclado_sempre: bool | None = None
-    # A chave «Também no jogo» da tabela de botões (aba Navegação): a tabela
-    # inteira passa a agir JUNTO com o jogo, sem tirar o controle dele. None =
-    # sem opinião (a tabela só age fora do jogo, como sempre).
     tabela_no_jogo: bool | None = None
     mic: ProfileMicConfig | None = None
     speaker: ProfileSpeakerConfig | None = None
     mode: ProfileModeConfig | None = None
-    # Os meus toques (aba 05): None = sem opinião, e o controle vibra só pelo jogo.
     meus_toques: ProfileMeusToquesConfig | None = None
     suppress_desktop_emulation: bool = False
-    # entre USB e BT no DualSense). None = perfil v1 puro, sem opinião
     controllers: dict[str, ControllerOverrides] | None = None
     ponte: PonteConfirmada | None = None
-    # O estilo que o gesto da aba Perfis aplicou: a chave de
-    # `profiles/estilos_de_jogo.POR_CHAVE`. É por ele que o motor do tato acha a
-    # receita invisível (O-ESTILO-DO-PERFIL-LIGA-O-MOTOR-DO-TATO-01). None =
-    # nenhum estilo, e o motor fica desligado. Sem recusa de chave de propósito:
-    # um estilo que sai do produto (o «Co-op local» saiu em 25/09) não pode
-    # impedir o perfil de carregar; o motor só não acha receita e fica desligado.
     estilo: str | None = None
-    # O modo da aba Controles (o botão «Modo automático»): ``None`` = ninguém escolheu, e a aba
-    # segue o que o perfil já diz. Automático: os controles aceitam o que o jogo manda.
     controles_modo: ModoDaAba | None = None
-    # O desvio da bancada: campos da receita do motor (`tato_vivo.Receita`) que
-    # sobrepõem, um a um, a receita do estilo. None = a receita do estilo inteira.
-    # O motor ignora o campo que não conhece e limita cada valor (`Receita.de`).
     receita_do_tato: dict[str, Any] | None = None
-    # Quando o arquivo do perfil nasceu e quando ela o mudou pela última vez, em hora local
-    # ISO 8601. None = perfil de antes das datas: a lista mostra «—», nunca uma data inventada.
     criado_em: str | None = None
     modificado_em: str | None = None
-    # O «Aplicar em» e o «Quando» da aba Perfis. None = o alvo que o `match` já dizia. Quem lê:
-    # `daemon/subsystems/eventos_do_perfil.py` (três dos sete momentos) e a escolha por janela,
-    # que deixa de fora o perfil de evento (`so_entra_por_evento`).
     alvo: AlvoDoPerfil | None = None
     evento: EventoDoPerfil | None = None
     evento_comando: str | None = None
-    # O jogo com que o perfil nasceu (a Lançadores o passa); o editor o mostra quando a regra de
-    # janela não diz um jogo sozinha. None = o campo mostra o que a regra diz.
     nome_do_jogo: str | None = None
 
     @model_serializer(mode="wrap")
@@ -1592,8 +1457,8 @@ class Profile(BaseModel):
         if isinstance(dados, dict):
             for opcional in (
                 "ponte", "remapeamento", "movimento", "estilo", "receita_do_tato",
-                "ativacao",  # (noqa-acento) identificador ASCII
-                "analogicos",  # (noqa-acento) identificador ASCII
+                "ativacao",  # (noqa-acento)
+                "analogicos",
                 "cursor", "meus_toques",
                 "controles_modo", "criado_em", "modificado_em",
                 "alvo", "evento", "evento_comando", "nome_do_jogo",
@@ -1894,9 +1759,6 @@ def resolver_teclado_emulado(profile: Profile | None, flag_global: bool) -> bool
     return profile.teclado_emulado
 
 
-# <!-- noqa-acento: citação literal -->
-
-
 BRILHO_DA_BARRA_NA_ECONOMIA = 0.3
 
 BRILHO_DAS_LUZES_NA_ECONOMIA: Literal["fraco"] = "fraco"
@@ -1911,14 +1773,14 @@ FORCAS_DO_GATILHO: dict[str, tuple[int, ...]] = {
     "PulseA": (2,),
     "PulseB": (2,),
     "Resistance": (1,),
-    "Bow": (2, 3),  # (start, end, force, snap)
-    "SemiAutoGun": (2,),  # (start, end, force)
-    "AutoGun": (1,),  # (start, strength, frequency)
-    "Machine": (2, 3),  # (start, end, amp_a, amp_b, frequency, period)
-    "Feedback": (1,),  # (position, strength)
-    "Weapon": (2,),  # (start, end, force)
-    "Vibration": (1,),  # (position, amplitude, frequency)
-    "SlopeFeedback": (2, 3),  # (start, end, start_strength, end_strength)
+    "Bow": (2, 3),
+    "SemiAutoGun": (2,),
+    "AutoGun": (1,),
+    "Machine": (2, 3),
+    "Feedback": (1,),
+    "Weapon": (2,),
+    "Vibration": (1,),
+    "SlopeFeedback": (2, 3),
     "MultiPositionFeedback": tuple(range(10)),
     "MultiPositionVibration": tuple(range(1, 11)),
 }
@@ -2128,7 +1990,6 @@ def gatilhos_do_perfil_na_economia(triggers: TriggersConfig) -> TriggersConfig:
     )
 
 
-#: O gatilho «Sem efeito»: o que o modo Automático põe nos dois lados de todo controle.
 MODO_SEM_EFEITO_DO_GATILHO = "Off"
 
 
@@ -2260,8 +2121,6 @@ def vibracao_na_economia(
         return None
     return ControllerRumbleOverride.model_validate(campos)
 
-
-#     teclado      `DaemonConfig.keyboard_emulation_enabled` nasce True
 
 E_CONTRATO = "contrato"
 
@@ -2643,7 +2502,7 @@ NASCIMENTO_DOS_CAMPOS: dict[str, Nascimento] = {
         NASCE_NO_LEITOR,
         "`None` herda o de fábrica INTEIRO, derivado dos mapas do produto. "
         "Nenhum botão da tela nasce sem ação.",
-        dono="hefesto_dualsense4unix.core.acoes_de_botao:padrao",  # (noqa-acento) símbolo real
+        dono="hefesto_dualsense4unix.core.acoes_de_botao:padrao",  # (noqa-acento)
     ),
     "Profile.remapeamento": Nascimento(
         NASCE_NO_LEITOR,
@@ -3109,8 +2968,6 @@ __all__ = [
 
 HAPTICA_PCT_PADRAO = 150
 
-#: O vocabulário do ``efeito_imersao``. É o de ``daemon.subsystems.padroes_de_vibracao.ESCOLHAS``,
-#: copiado porque o esquema não importa o daemon; um teste confere que os dois são o mesmo.
 ESCOLHAS_DE_IMERSAO = (
     "do_estilo", "sem_efeito", "tranco", "batida", "onda", "coice", "pancada_do_lado", "ressoar",
     "ricochete")
@@ -3162,8 +3019,6 @@ def rumble_com_a_forca(
 
 
 
-# A linha do campo novo mora no fim do arquivo, e não no meio da tabela, para as citações
-# `schema.py:<linha>` dos documentos continuarem abrindo no que prometem.
 NASCIMENTO_DOS_CAMPOS["TriggersConfig.intensidade"] = Nascimento(
     E_CONTRATO,
     "`None` = 100%: o firmware sem o byte de atenuação e o efeito sem reforço. Só o trilho "

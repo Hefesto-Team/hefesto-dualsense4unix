@@ -168,9 +168,6 @@ def test_a_linha_que_pede_acao_quebra_em_vez_de_cortar() -> None:
     assert 'class="saude longa"' in a09.linha_do_status({**aviso, "id": "x"})
     desenho = DESENHO.read_text(encoding="utf-8")
     assert re.search(r"\.saude\.longa \.txt span:last-child\{white-space:normal", desenho)
-    # a linha cresce com a frase: na altura fixa a segunda linha invadia a de cima
     assert re.search(r"\.saude\.longa\{height:auto", desenho), "a linha longa ficou na altura fixa"
-    # o aviso do Steam Input leva à aba Perfis (O-STATUS-DO-SISTEMA-TEM-SEIS-LINHAS-SEMPRE-01):
-    # é link, `vai longa`
     assert re.search(r'class="saude(?: vai)? longa"', desenho), \
         "o desenho não mostra o aviso que quebra"

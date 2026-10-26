@@ -177,8 +177,6 @@ class _Mesa:
 
 MESA_MISTA = (P1, P2, P3, P4)
 
-#: (rótulo da mesa, os degradados). O transporte de cada um está no rótulo: a
-#: queda para o `uinput` é do `/dev/uhid`, e a cura não tem ramo de transporte.
 MATRIZ = [
     ("p1-usb,p2-bt,p3-usb,p4-bt", (P2, P3)),
     ("tres-adaptadores-e-um-no-cabo", (P4,)),
@@ -242,11 +240,12 @@ def test_sem_uhid_nada_se_recria(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_o_uhid_que_volta_a_cair_tenta_uma_vez_so(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    # D-2410-A-PROMOCAO-DO-VPAD-NAO-RENASCE-EM-LACO
     """O `uhid_available()` diz sim e o bind cai: uma volta só, nunca um laço por janela.
 
     A máquina sem o canal (o `hid_playstation` que não faz bind) recriaria os pads do
     P2 ao P4 a cada janela, para sempre; o P1 só tenta na borda de conexão.
+
+    Prova da D-2410-A-PROMOCAO-DO-VPAD-NAO-RENASCE-EM-LACO.
     """
     m = _Mesa(monkeypatch, MESA_MISTA)
     monkeypatch.setattr(

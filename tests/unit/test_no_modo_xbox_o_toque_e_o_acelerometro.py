@@ -49,7 +49,6 @@ _P1, _P2, _P3, _P4 = (
     "aa:bb:cc:00:00:04",
 )
 
-#: O touchpad do DualSense, nas unidades do kernel (`TouchpadReader`).
 _LARGURA, _ALTURA = 1920, 1080
 _DEDO_NO_CIMA = (640, 60)
 _DEDO_NO_L1 = (1700, 200)

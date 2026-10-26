@@ -183,7 +183,6 @@ class EntradasDoControle(NamedTuple):
     r2: int
 
 
-#: O controle parado, ou sem leitura neste tique: nada apertado, os analógicos no centro.
 PARADO = EntradasDoControle(frozenset(), 128, 128, 128, 128, 0, 0)
 
 
@@ -234,7 +233,6 @@ def gatilhos_de_cada_controle(
     return {u: (e.botoes, e.l2, e.r2) for u, e in entradas_de_cada_controle(daemon).items()}
 
 
-#: Os campos do leitor (o snapshot do co-op e a leitura do hub), na ordem de `EntradasDoControle`.
 _CAMPOS_DAS_ENTRADAS = ("lx", "ly", "rx", "ry", "l2_raw", "r2_raw")
 
 
@@ -385,7 +383,6 @@ def _o_proximo_da_fila(daemon: object) -> str | None:
         return None
     try:
         dono = getattr(getattr(daemon, "controller", None), "primary_uniq", None)
-        # Quem caiu e espera no vpad guarda o número, mas não tem mão para segurar.
         esperam = getattr(coop, "quem_espera_no_lugar", None)
         fora = esperam() if callable(esperam) else frozenset()
         sentados = {

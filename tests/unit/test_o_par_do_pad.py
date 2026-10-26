@@ -35,8 +35,6 @@ from typing import Any
 
 import pytest
 
-# O ``external_mask`` sobe antes do leitor falso da bancada do co-op, que não
-# tem o ``BUTTON_MAP`` que o módulo lê ao carregar.
 from hefesto_dualsense4unix.daemon.subsystems import (  # noqa: F401
     alto_falante,
     external_mask,
@@ -52,7 +50,6 @@ from tests.unit.test_o_pad_nasce_no_mesmo_usb_do_som import (
 )
 from tests.unit.test_steam_no_fisico_01_o_jogo_ve_p1_a_p4 import nascimentos  # noqa: F401
 
-# Faixas forjadas da casa (``aa:bb:cc`` e ``02:fe``); nunca um endereço real.
 OUTRA = "aa:bb:cc:00:00:12"
 INTERFACE_DA_OUTRA = "/devices/platform/vhci_hcd.0/usb3/3-2/3-2:1.0"
 ENUMERADO = ("hidraw9", INTERFACE_DO_GADGET)
@@ -61,9 +58,6 @@ ENUMERADO = ("hidraw9", INTERFACE_DO_GADGET)
 @pytest.fixture
 def bancada(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> BancadaDoGadget:
     return BancadaDoGadget(monkeypatch, tmp_path)
-
-
-# --- 1. A identidade que chega depois -----------------------------------------
 
 
 class TestAIdentidadeQueChegaDepois:
@@ -160,9 +154,6 @@ class TestAIdentidadeQueChegaDepois:
         assert pad_usb.a_ancora_ou_a_espera(IDENTIDADE, agora=depois)[1] is False
 
 
-# --- 2. A identidade que muda --------------------------------------------------
-
-
 class TestAIdentidadeQueMuda:
     def test_o_posto_que_passa_a_outro_controle_leva_a_ancora(
         self, bancada: BancadaDoGadget
@@ -250,9 +241,6 @@ class TestAIdentidadeQueMuda:
         assert livre == [False]
 
 
-# --- 3. Quem avisa o pad --------------------------------------------------------
-
-
 class _PadQueOuve:
     def __init__(self) -> None:
         self.ouviu: list[str | None] = []
@@ -294,8 +282,6 @@ class TestQuemAvisaOPad:
         relogio = relogio.split("elif nome ==", 1)[0]
         assert "ancorar_o_p1_no_aparelho(self)" in relogio
 
-
-# --- 4. O endpoint nasce casado ------------------------------------------------
 
 _PADS = {h._P1: 1, h._P4: 4}
 _NO_CABO = {h._P1: ("3-8", 28), h._P4: ("3-5", 31)}
@@ -472,9 +458,6 @@ def test_com_o_jogo_tocando_o_endpoint_da_porta_velha_fica(
     assert mesa.servidor.quedas == []
 
 
-# --- 5. O pad nosso não é aparelho ---------------------------------------------
-
-
 def _hidraw(classe: Path, nome: str, hid: Path, uevent: str) -> None:
     hid.mkdir(parents=True, exist_ok=True)
     (hid / "uevent").write_text(uevent, encoding="utf-8")
@@ -509,9 +492,6 @@ def test_o_hidraw_do_gadget_nao_e_aparelho(tmp_path: Path, uniq_do_gadget: str) 
             "HID_UNIQ=02:fe:00:80:00:05\n")
     achados = {c.uniq: c.transporte for c in controles_na_lista(str(classe))}
     assert achados == {h._P1: "rádio", h._P2: "cabo"}
-
-
-# --- 6. A fila, o dono único e o número -----------------------------------------
 
 
 def test_o_terceiro_gadget_da_fila_espera_a_vez_dele(bancada: BancadaDoGadget) -> None:

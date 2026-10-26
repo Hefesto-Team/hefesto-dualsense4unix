@@ -51,7 +51,6 @@ def test_o_start_de_cada_jogador_vira_o_salvar_com_o_mouse_ligado(
     interna = _interna()
     zero = {u: {"options": 0} for u in JOGADORES}
     interna.contar(zero)
-    # O primário navega o PC (o mouse não está desligado): é quem fica sem a seleção.
     assert a06_navegacao.o_mouse_navega(estado)
     sem = {JOGADORES[0]}
     navegador = nav.Navegador(relogio=_Relogio())

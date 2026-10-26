@@ -44,7 +44,7 @@ RAIZ = Path(__file__).resolve().parents[2]
 SRC = RAIZ / "src" / "hefesto_dualsense4unix"
 MOCKUP = RAIZ / "mockup" / "08-conexoes.html"
 
-MEDIO = "medio"  # (noqa-acento): nome de máquina, o valor do `data-nivel`
+MEDIO = "medio"  # (noqa-acento)
 U = ["aabbcc000011", "aabbcc000022", "aabbcc000033", "aabbcc000044", "aabbcc000055"]
 
 
@@ -169,7 +169,7 @@ def test_cada_controle_tem_o_nivel_dele_na_ordem_da_sala(a08: Any) -> None:
     assert _alvos(sala, "hz-nivel") == ordem and _alvos(sala, "hz-dica") == ordem
     assert campos["hz-nivel"] == ["liso", MEDIO, "engasga", ""], campos["hz-nivel"]
     assert len(campos["hz-dica"]) == 4
-    causa = a08.FRASE_DA_CAUSA["interferencia"]  # o sinal é bom: quem cai, cai por interferência
+    causa = a08.FRASE_DA_CAUSA["interferencia"]
     assert campos["hz-dica"] == [a08.DICA_DO_MOVIMENTO["liso"], causa, causa,
                                  a08.DICA_DO_MOVIMENTO[""]]
     assert U[4] not in sala, "o controle do cabo apareceu na seção do rádio"
@@ -274,7 +274,7 @@ def _rodar_no_webkit(sala: str) -> dict[str, Any]:
     def guardou(v: Any, res: Any) -> None:
         try:
             saiu.append(v.evaluate_javascript_finish(res).to_string())
-        except Exception as e:  # pragma: no cover — só quando o roteiro quebra
+        except Exception as e:  # pragma: no cover
             saiu.append(f"ERRO {e}")
         Gtk.main_quit()
 
@@ -319,7 +319,6 @@ def test_a_cor_de_cada_nivel_na_tela(a08: Any) -> None:
     medido = _rodar_no_webkit(sala)
     tokens = {k: _rgb(v) for k, v in medido["tokens"].items()}
     painel = tokens["--panel"]
-    # sem medida, o número fica na cor do texto (D-1610-O-CINZA-SAI-DA-LETRA); a dica o separa
     por_nivel = {"liso": ("--green", ["1", "1"]), MEDIO: ("--fg", ["1", "0"]),
                  "engasga": ("--red", ["0", "0"]), None: ("--fg", ["1", "0"])}
     vistos = set()

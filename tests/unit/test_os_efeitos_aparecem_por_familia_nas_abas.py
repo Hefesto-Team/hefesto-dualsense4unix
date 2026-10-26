@@ -48,7 +48,7 @@ if TYPE_CHECKING:
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 MOCKUP = RAIZ / "mockup"
 _INTERFACE = RAIZ / "src" / "hefesto_dualsense4unix" / "interface"
-PUBLICADO = _INTERFACE / "paginas"  # (noqa-acento: nome da pasta)
+PUBLICADO = _INTERFACE / "paginas"  # (noqa-acento)
 CHROME = pathlib.Path("/usr/bin/google-chrome")
 LARGURAS = ((1212, 809), (1918, 840), (1212, 740))
 
@@ -59,8 +59,6 @@ LUZ_DA_04 = ("Sem efeito", "Luz fixa", "Respirar", "Batida", "Chama", "Maré", "
 MOTORES_DA_05 = ("Tranco", "Batida", "Onda", "Coice", "Pancada do lado")
 HAPTICA_NOVA = ("Eco", "Grão", "Motor de época")
 
-#: As 35 chaves das imersões do gatilho em 19/10/2026: o perfil e o clique falam por elas, e o
-#: nome que a tela mostra nunca as define.
 CHAVES_DAS_IMERSOES = (
     "ferrolho-que-volta", "trava-seca", "pino-que-falha", "batida-do-coracao", "arma-pesada",
     "aperto-que-trava", "golpe-leve", "golpe-pesado", "clique-no-meio", "clique-mouse",
@@ -73,12 +71,9 @@ CHAVES_DAS_IMERSOES = (
 HAPTICA_ANTIGA = ("do_estilo", "sem_efeito", "toque", "impacto", "estalo", "guarda", "aparo",
                   "som_no_corpo")
 LUZ_ANTIGA = ("respirar", "piscar", "arco-iris", "batimento", "chama", "mare", "onda", "relampago")
-#: As chaves dos acionamentos que o perfil guarda (`trigger_specs`), cravadas: depois do
-#: `--publicar` a página publicada É o desenho, e comparar com ela deixaria de morder.
 CHAVES_DOS_ACIONAMENTOS = ("Off", "Resistance", "Weapon", "Bow", "Galloping", "Machine",
                            "Vibration", "SlopeFeedback", "MultiPositionFeedback",
                            "MultiPositionVibration")
-#: As abas que já não rolavam na vertical em 20/10/2026: nelas o teto é zero, não a publicada.
 SEM_SOBRA = ("03-gatilhos", "05-vibracao")
 
 
@@ -106,10 +101,6 @@ def _grupos(select: str) -> list[str]:
 def _valores(select: str) -> list[str]:
     return re.findall(r'<option value="([^"]*)"', select)
 
-
-# ---------------------------------------------------------------------------------------------
-# 03 — a família e a frase na dica
-# ---------------------------------------------------------------------------------------------
 
 def _problemas_da_lista_do_03(doc: str) -> list[str]:
     falta: list[str] = []
@@ -140,7 +131,7 @@ def _problemas_da_lista_do_03(doc: str) -> list[str]:
 
 
 def test_a_03_agrupa_o_efeito_do_gatilho_por_familia() -> None:
-    # D-2010-O-EFEITO-DO-GATILHO-SE-AGRUPA-POR-FAMILIA
+    """Prova da D-2010-O-EFEITO-DO-GATILHO-SE-AGRUPA-POR-FAMILIA."""
     assert _problemas_da_lista_do_03(_doc("03-gatilhos")) == []
 
 
@@ -155,8 +146,10 @@ def _problemas_da_frase_do_03(doc: str) -> list[str]:
 
 
 def test_a_03_nao_escreve_a_frase_embaixo_da_caixa() -> None:
-    # D-2010-A-FRASE-DO-EFEITO-MORA-NA-DICA
-    """MORDIDA: devolver `<span class="g2-frase">` sob o select reprova."""
+    """MORDIDA: devolver `<span class="g2-frase">` sob o select reprova.
+
+    Prova da D-2010-A-FRASE-DO-EFEITO-MORA-NA-DICA.
+    """
     doc = _doc("03-gatilhos")
     assert _problemas_da_frase_do_03(doc) == []
     frase = '<span class="g2-frase">Uma frase.</span>'
@@ -215,10 +208,6 @@ def test_as_chaves_dos_acionamentos_nao_mudam() -> None:
     assert tuple(p.name for p in PRESETS if p.name != "Custom") == CHAVES_DOS_ACIONAMENTOS
 
 
-# ---------------------------------------------------------------------------------------------
-# 04 e 05
-# ---------------------------------------------------------------------------------------------
-
 def test_a_04_tem_os_nomes_novos_da_luz_com_a_frase_na_dica() -> None:
     doc = _doc("04-iluminacao")
     listas = _selects(doc, "g4-efeito")
@@ -234,7 +223,7 @@ def test_a_04_tem_os_nomes_novos_da_luz_com_a_frase_na_dica() -> None:
 
 
 def test_o_05_chama_de_padrao_dos_motores_e_traz_a_haptica_nova() -> None:
-    # D-2010-O-EFEITO-IMERSAO-VIRA-PADRAO-DOS-MOTORES
+    """Prova da D-2010-O-EFEITO-IMERSAO-VIRA-PADRAO-DOS-MOTORES."""
     doc = _doc("05-vibracao")
     texto = _sem_estilo(doc)
     assert "Efeito imersão" not in texto
@@ -253,13 +242,9 @@ def test_o_05_chama_de_padrao_dos_motores_e_traz_a_haptica_nova() -> None:
 
 
 def test_a_10_nao_ganha_a_receita_do_estilo() -> None:
-    # D-2010-A-PERFIS-NAO-GANHA-A-RECEITA-DO-ESTILO
+    """Prova da D-2010-A-PERFIS-NAO-GANHA-A-RECEITA-DO-ESTILO."""
     assert "estilo-liga" not in _doc("10-perfis")
 
-
-# ---------------------------------------------------------------------------------------------
-# as chaves não mudam
-# ---------------------------------------------------------------------------------------------
 
 def test_as_chaves_dos_efeitos_nao_mudam() -> None:
     """O perfil guarda os números e a chave; o nome da tela é só rótulo.
@@ -303,10 +288,6 @@ def test_a_escolha_de_um_efeito_de_outro_acionamento_leva_ao_acionamento_dele() 
     assert imersoes.modo_que_a_imersao_pede(golpe, "Resistance") == "Weapon"
 
 
-# ---------------------------------------------------------------------------------------------
-# sem rolagem vertical
-# ---------------------------------------------------------------------------------------------
-
 _ROLADORES = """() => { const d = document.documentElement;
   const rol = [...document.querySelectorAll('*')].filter(e => e.clientHeight > 0
     && e.scrollHeight > e.clientHeight + 1
@@ -337,5 +318,5 @@ def test_nenhuma_das_tres_abas_rola_na_vertical(navegador: Browser, nome: str, l
     novos = [r for r in cena["rol"] if r not in base["rol"]]
     assert not novos and not cena["lateral"], (nome, larg, alt, novos)
     assert cena["sobra"] <= base["sobra"], (nome, larg, alt, cena["sobra"], base["sobra"])
-    if nome in SEM_SOBRA:  # a publicada vira o desenho no fecho: o zero não depende dela
+    if nome in SEM_SOBRA:
         assert cena["sobra"] == 0 and not cena["rol"], (nome, larg, alt, cena)

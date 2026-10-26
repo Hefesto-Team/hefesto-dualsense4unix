@@ -15,23 +15,15 @@ from pathlib import Path
 RAIZ = "/sys/class/hidraw"
 SRC = Path(__file__).resolve().parents[2] / "src" / "hefesto_dualsense4unix"
 
-#: o dono.
 DONO = "integrations/usb_pai.py"
 
-#: os outros módulos com a constante cravada. A lista só encolhe, e está vazia desde 25/10/2026.
 AINDA_CRAVADA: set[str] = set()
 
-#: o broker é 100% stdlib e autocontido de propósito (a docstring dele): o install copia só ele, e
-#: ele roda no python3 do sistema, sem o pacote, logo não pode importar o dono. O porquê se mede
-#: em `test_o_broker_isento_nao_importa_o_pacote`.
 ISENTO = "broker/hidraw_broker.py"
-CONSTANTE_DO_ISENTO = "SYS_CLASS_HIDRAW"  # a raiz cravada uma vez no broker; os parâmetros a leem
+CONSTANTE_DO_ISENTO = "SYS_CLASS_HIDRAW"
 
-#: quantos textos com a raiz (fora das docstrings) cada módulo ainda tem, em qualquer forma. Só o
-#: isento fica, com o texto da constante dele; um módulo fora dela tem zero.
 TEXTOS_AINDA_CRAVADOS = {ISENTO: 1}
 
-#: os que importam do dono; neles a raiz não aparece em texto nenhum fora das docstrings.
 IMPORTAM_DO_DONO = ("integrations/conexao_zumbi.py", "core/physical_report_reader.py")
 
 

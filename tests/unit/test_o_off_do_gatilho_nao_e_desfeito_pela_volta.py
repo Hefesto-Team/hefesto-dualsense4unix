@@ -63,7 +63,6 @@ def _volta_com_o_soltar_no_meio(monkeypatch: pytest.MonkeyPatch) -> _Fio:
 
     def _montar() -> list[int]:
         montado = list(RIGIDO)
-        # O outro fio: o Off armado depois do report montado, e o quadro dele escrito.
         ds._geracao_da_saida += 1
         ds.writeReport(list(OFF))
         return montado

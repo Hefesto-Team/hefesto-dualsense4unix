@@ -59,9 +59,6 @@ def mv():
     return mesa_viva
 
 
-# 1. A COR
-
-
 def test_a_cor_declarada_pinta_o_controle_que_o_aparelho_nao_respondeu(mv) -> None:
     item = _mesa(mv, declaracao=_maquina(cor="Cosmic Red"))
     esperado = cor_do_nome("Cosmic Red")
@@ -95,9 +92,6 @@ def test_a_cor_e_do_controle_dela_e_nao_do_vizinho(mv) -> None:
     assert por_uniq[UNIQ]["cor"] != "" and por_uniq[OUTRO]["cor"] == ""
 
 
-# 2. A FAMÍLIA DOS BOTÕES
-
-
 @pytest.mark.parametrize(("campos", "familia"), [
     ({"botoes": "xbox"}, "xbox"),
     ({"botoes": "nintendo"}, "nintendo"),
@@ -122,9 +116,6 @@ def test_as_letras_da_face_cobrem_os_quatro_botoes_de_cada_familia(mv) -> None:
     assert set(mv.FAMILIA_DO_MODO.values()) <= set(mv.LETRAS_DA_FACE)
 
 
-# 3. O DISCO (o caminho sem a declaração injetada)
-
-
 def test_o_disco_e_relido_quando_o_arquivo_muda(mv) -> None:
     """A mesa lê o `maquina.json` do lar (o `conftest` o desvia) e o relê no gesto do usuário."""
     assert gravar_maquina({"controles": {CHAVE: {"botoes": "xbox"}}})
@@ -132,9 +123,6 @@ def test_o_disco_e_relido_quando_o_arquivo_muda(mv) -> None:
     assert gravar_maquina({"controles": {CHAVE: {"botoes": "nintendo", "cor": "Cosmic Red"}}})
     item = _mesa(mv)
     assert item["botoes"] == "nintendo" and item["cor"] == cor_do_nome("Cosmic Red").id
-
-
-# 4. O DESENHO DA 02
 
 
 def _pagina() -> str:
@@ -197,9 +185,6 @@ def test_pagina_sem_o_endereco_nao_recebe_o_campo(monkeypatch) -> None:
                      "battery_pct": 95, "is_primary": True, "inputs": {}, "audio": {}}],
         estados={})
     assert "botoes" not in a02.pacote(ctx)["cards"][UNIQ]
-
-
-# 5. A RÉGUA DO CADERNO
 
 
 def test_o_consumidor_de_cada_campo_e_chamado_em_algum_lugar() -> None:

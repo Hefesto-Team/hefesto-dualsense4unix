@@ -44,9 +44,6 @@ def _ensaio() -> ModuleType:
     return modulo
 
 
-# --- o pino --------------------------------------------------------------------------------
-
-
 def test_o_pino_grava_o_sha256_da_peca_e_da_sonda_e_o_endereco_versionado() -> None:
     pino = _pino()
     for chave in ("sha256", "sonda_sha256"):
@@ -66,9 +63,6 @@ def test_o_pino_sem_sha256_valido_nao_aceita_peca_nenhuma(tmp_path: Path) -> Non
     dll.write_bytes(b"MZ")
     assert not rda.peca_do_hefesto_instalada(tmp_path, pino)
     assert not rda.peca_do_hefesto_instalada(tmp_path, tmp_path / "nao-existe.txt")
-
-
-# --- a marca builtin -----------------------------------------------------------------------
 
 
 def _pe_de_mentira(caminho: Path, lfanew: int) -> bytes:
@@ -106,9 +100,6 @@ def test_a_marca_recusa_o_que_nao_e_pe(tmp_path: Path) -> None:
     dll = tmp_path / "x.dll"
     dll.write_bytes(b"\x7fELF" + b"\0" * 200)
     assert _marcar(dll).returncode != 0
-
-
-# --- o juiz do ensaio ----------------------------------------------------------------------
 
 
 def test_o_juiz_passa_so_a_prova_que_apareceu_com_ok() -> None:
@@ -154,9 +145,6 @@ def test_o_ensaio_recusa_prefixo_no_home(tmp_path: Path) -> None:
     ).resolve()
 
 
-# --- as três pontas na mesma pasta ---------------------------------------------------------
-
-
 def test_install_wrapper_e_tabela_nomeiam_a_mesma_pasta_da_peca() -> None:
     install = (_RAIZ / "install.sh").read_text(encoding="utf-8")
     uninstall = (_RAIZ / "uninstall.sh").read_text(encoding="utf-8")
@@ -168,7 +156,7 @@ def test_install_wrapper_e_tabela_nomeiam_a_mesma_pasta_da_peca() -> None:
 
 
 def test_o_install_so_aceita_a_peca_com_o_sha256_do_pino() -> None:
-    # D-1710-A-PECA-GDK-DO-HEFESTO-VAI-PELO-PAR-B-E-WINEDLLPATH
+    """Prova da D-1710-A-PECA-GDK-DO-HEFESTO-VAI-PELO-PAR-B-E-WINEDLLPATH."""
     install = (_RAIZ / "install.sh").read_text(encoding="utf-8")
     bloco = install.split("# 4b-5. A peça GDK", 1)[1].split("# 4c.", 1)[0]
     assert bloco.count('== "${_peca_sha_pino}"') >= 3, "um caminho do install não confere o pino"
@@ -181,9 +169,6 @@ def test_a_release_compila_confere_e_publica_a_peca() -> None:
     assert "runs-on: ubuntu-24.04" in job, "o sha256 do pino só se repete com o compilador fixo"
     assert "construir.sh dist/peca-gdk --conferir" in job
     assert "'xgameruntime.dll' 'sonda-gdk.exe'" in release
-
-
-# --- a compilação bate com o pino (só com o mingw à mão) -----------------------------------
 
 
 @pytest.mark.skipif(shutil.which(_CC) is None, reason="sem o mingw-w64 no PATH")

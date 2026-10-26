@@ -244,7 +244,7 @@ def _humano(n: int) -> str:
         if n < 1024 or unidade == "GB":
             return f"{n:.0f} {unidade}" if unidade == "B" else f"{n:.1f} {unidade}"
         n = int(n / 1024)
-    return f"{n} B"  # pragma: no cover — inalcançável, o laço sempre devolve
+    return f"{n} B"  # pragma: no cover
 
 
 def apagar(alvo: Alvo) -> bool:

@@ -3,7 +3,6 @@
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    # o mypy lê o nome declarado; um `__getattr__` visível a ele aceitaria qualquer atributo
     __version__: str
 else:
 

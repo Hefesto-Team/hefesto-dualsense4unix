@@ -40,8 +40,7 @@ tests/unit/test_install_headless.py (leitura do texto do install.sh).
 Nenhum teste deste arquivo toca o áudio da máquina: o `pactl` é um dublê num
 diretório temporário, e o PATH do subprocesso não alcança o de verdade.
 """
-# ruff: noqa: E501 — as amostras de `pactl` são cópias FIÉIS da saída desta
-# máquina, e o nome do card do DualSense sozinho já passa de 100 colunas.
+# ruff: noqa: E501
 from __future__ import annotations
 
 import subprocess
@@ -84,7 +83,6 @@ SOURCES_SHORT = f"""\
 7745\talsa_output.pci-0000_0a_00.1.hdmi-stereo.monitor\tPipeWire\ts16le 2ch 48000Hz\tSUSPENDED
 """
 
-#: (nada plugado no jack); a do DualSense tem `availability unknown` — e é ela
 SOURCES_LONGO = f"""\
 Source #62
 \tState: SUSPENDED

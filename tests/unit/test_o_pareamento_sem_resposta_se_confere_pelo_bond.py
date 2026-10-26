@@ -23,9 +23,6 @@ NO = bm.no_de(bm.CONTROLE)
 SEM_RESPOSTA_GIO = "Timeout was reached"
 
 
-# --- o dono vivo, sobre o barramento de mentira ------------------------------
-
-
 class _PairQueNaoResponde(bm.BarramentoDeMentira):
     """O ``Pair`` volta sem resposta (ou com ``erro``); o bond nasce se ``bond``."""
 
@@ -113,9 +110,6 @@ def test_o_bond_velho_nao_vira_pareamento_deste_pair() -> None:
     assert _trusted(barramento) == []
 
 
-# --- o piso do ``busctl`` -----------------------------------------------------
-
-
 class _BusctlDeMentira:
     """Um executor no formato ``busctl``: o ``Pair`` falha calado e faz o bond se ``bond``."""
 
@@ -160,9 +154,6 @@ def test_pelo_busctl_o_bond_velho_nao_responde_pelo_pair() -> None:
     assert executor.trusted() == []
 
 
-# --- o dono vivo de ponta a ponta, por um dbus-daemon particular --------------
-
-
 class _BluezQueNaoResponde(bm.BluezParticular):
     """O 5.86 do defeito: o bond fica feito e o ``Pair`` nunca recebe resposta."""
 
@@ -197,8 +188,6 @@ def test_pelo_gio_o_silencio_do_pair_se_confere_pelo_bond(tmp_path: Path, erro: 
         finally:
             vivo.fechar()
 
-
-# --- a ponte root, com um ``busctl`` de mentira no PATH -----------------------
 
 _BUSCTL_DA_PONTE = """#!/usr/bin/env bash
 set -u

@@ -37,7 +37,6 @@ from tests.unit.test_no_modo_xbox_a_haptica_fina import (
     _Tocador,
 )
 
-# As duas fixtures do mundo dublado, reexportadas com o mesmo nome para o pytest as achar.
 mesa = _da_mesa.mesa
 mundo = _do_mundo.mundo
 
@@ -191,9 +190,6 @@ def test_o_init_solta_o_motor_antes_da_volta_de_report() -> None:
     assert fonte.index("self.soltar_o_motor_preso()") < fonte.index("self.ds_thread = True")
 
 
-# --- o pad DualSense do jogo (uhid): a vibração soma na háptica dele ---------------------------
-
-
 def _montar(mundo: _Mundo, transporte: str) -> list[Any]:
     return (_no_cabo_os_quatro if transporte == "cabo" else _no_radio_os_quatro)(mundo)
 
@@ -281,9 +277,6 @@ def test_o_marcador_do_tocador_separa_o_nosso_fluxo_do_do_jogo(mundo: _Mundo) ->
     mundo.mesa.volta(*controles)
     assert mundo.fluxos.tocando == {_MARCA[_QUATRO[0]]: "61"}
     assert mundo.sub._donos_dos_fluxos() == frozenset()
-
-
-# --- a soma das duas curas: a ponte do rádio e o ganho em 0 não calam o motor -----------------
 
 
 @pytest.mark.parametrize("uniq", _QUATRO, ids=["P1", "P2", "P3", "P4"])

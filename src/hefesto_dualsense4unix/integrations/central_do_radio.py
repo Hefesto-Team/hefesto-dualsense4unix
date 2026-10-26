@@ -159,7 +159,7 @@ QUEM = "central"
 
 ESPERANDO = "esperando"
 CHEGOU = "chegou"
-NAO_CHEGOU = "nao_chegou"  # (noqa-acento): chave de máquina
+NAO_CHEGOU = "nao_chegou"
 ESTADOS = (ESPERANDO, CHEGOU, NAO_CHEGOU)
 
 CONECTANDO = ""
@@ -179,10 +179,10 @@ MOTIVO_OCUPADO = "ocupado"
 MOTIVO_SEM_BLUEZ = "sem_bluez"
 MOTIVO_FORA_DO_RADIO = "fora_do_radio"
 MOTIVO_SEM_DESTINO = "sem_destino"
-MOTIVO_JA_ESTAVA = "ja_estava"  # (noqa-acento): chave de máquina
+MOTIVO_JA_ESTAVA = "ja_estava"
 MOTIVO_SEM_JANELA = "sem_janela"
 MOTIVO_SEM_GESTO = "sem_gesto"
-MOTIVO_NAO_PAREOU = "nao_pareou"  # (noqa-acento): chave de máquina
+MOTIVO_NAO_PAREOU = "nao_pareou"
 MOTIVO_SEM_CONFIRMACAO = "sem_confirmacao"
 MOTIVO_VOLTOU = "voltou"
 MOTIVO_PRAZO = "prazo"
@@ -202,7 +202,6 @@ ENTERROU_O_QUE_SAIU_POR_FORA = "gravou a lápide de um pareamento tirado por for
 
 ICONE_DE_CONTROLE = "input-gaming"
 
-#: O ``Modalias`` do controle cujo movimento o daemon lê: o DualSense (Sony
 _MODALIAS_QUE_O_DAEMON_MEDE = re.compile(r"v054Cp(0CE6|0DF2)", re.IGNORECASE)
 
 
@@ -214,15 +213,12 @@ PASSO_S = 0.5
 
 PRAZO_DO_PENDENTE_S = 60.0
 
-#: A chave que o movimento acabou de fazer e que ainda não conectou recebe ``Trusted`` e
-#: ``Connect`` de novo a cada tanto, até o prazo (O-CONTROLE-NOVO-SE-CONECTA-E-SE-TIRA-…-01).
 REPROVOCAR_S = 5.0
 
 ESPERA_DO_SUMICO_S = 2.0
 
 ESPERA_DO_DESLIGAR_S = 3.0
 
-#: cada ``state_full``, e pelo caminho de reserva (``busctl``) cada foto custa
 VALIDADE_DOS_ADAPTADORES_S = 2.0
 
 ESPERA_DA_PONTE_S = 20.0
@@ -263,7 +259,6 @@ class Movimento:
     nome: str = ""
     comecou: float = 0.0
     quando: float = field(default_factory=time.time)
-    #: o relógio da central e a hora de parede do ``Pair`` que deu; 0 = ainda não pareou
     pareou_em: float = 0.0
     pareou_quando: float = 0.0
 
@@ -534,12 +529,9 @@ class PedidoDePareamento:
     """
 
     aparelho: str
-    #: o adaptador que o ouve mais forte, onde o par novo se faz
     adaptador: str
     rssi: int
-    #: todos os adaptadores que o ouvem agora
     ouvido_por: tuple[str, ...]
-    #: os adaptadores onde mora o par velho
     par_velho: tuple[str, ...]
     nome: str = ""
 
@@ -640,7 +632,6 @@ class CentralDoRadio:
             None
         )
         self._refrescando = False
-        #: O dono já foi aberto? Antes disso o ``state_full`` não o abre: o
         self._ligada = dono is not None
         self._dono_visto: bluez_dbus.LeitorDoBluez | None = dono
         self._tranca_da_limpeza = threading.Lock()
@@ -650,7 +641,6 @@ class CentralDoRadio:
         self._provocado_em: dict[str, float] = {}
         self._saidas_de_fora: list[tuple[str, str, float, str]] = []
         self._sem_lapide_dito: set[tuple[str, str]] = set()
-        #: o controle que a janela escolheu sozinha por pedir para parear (o par se refaz)
         self._pedido_da_janela = ""
         self._ouvindo: object | None = None
         if dono is not None:
@@ -1598,13 +1588,10 @@ class CentralDoRadio:
                 return None
             movimento = pareando
             if conectar and self._pedido_da_janela == movimento.aparelho:
-                # o controle conhecido que pediu um par novo: o velho no destino sai antes
                 self._refazer_o_par_no_destino(dono, movimento.aparelho, movimento.destino)
             resultado = janela.parear(movimento.aparelho)
             if resultado.estado not in (ESTADO_PAREOU, ESTADO_JA_PAREADO):
                 return self._acabou(movimento, NAO_CHEGOU, MOTIVO_NAO_PAREOU)
-            # a busca sai do destino ANTES do ``Connect``: no diário de 06/10 o ``Connect`` correu
-            # com a varredura de pé no mesmo adaptador e voltou ``Failed`` duas vezes
             janela.fechar()
             agora = self._relogio()
             movimento = self._guardar(replace(
@@ -1875,8 +1862,6 @@ class CentralDoRadio:
             if bluez_dbus.como_booleano(
                     dono.propriedade(no, bluez_dbus.APARELHO, "Trusted")) is not True:
                 dono.confiar(no, quem=QUEM)
-            # o ``Connect`` espera no máximo o que sobra do prazo: o veredito não passa do
-            # instante em que a tela diz «Não conectou»
             resta = self._prazo_do_pendente_s - (self._relogio() - movimento.prazo_desde)
             if resta < 1.0 or bluez_dbus.como_booleano(
                     dono.propriedade(no, bluez_dbus.APARELHO, "Connected")) is True:
@@ -2400,8 +2385,6 @@ class CentralDoRadio:
         vencido = self.movimento_de(alvo)
         if (vencido is not None and vencido.em_curso and vencido.passo == PASSO_CONFERINDO
                 and self._relogio() - vencido.prazo_desde >= self._prazo_do_pendente_s):
-            # a tela já diz «Não conectou» (o mesmo prazo) e a vigia ainda não falou: o clique
-            # do usuário é o veredito, e o fecho é o da vigia (a meia chave sai antes)
             self._vigiar_um(vencido)
         with self._tranca:
             atual = self._movimentos.get(alvo)

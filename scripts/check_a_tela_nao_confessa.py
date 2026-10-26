@@ -9,7 +9,7 @@ import sys
 
 RAIZ = pathlib.Path(__file__).resolve().parents[1]
 BANCADA = RAIZ / "mockup"
-PUBLICADO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento) nome de PASTA, e caminho nao leva acento
+PUBLICADO = RAIZ / "src" / "hefesto_dualsense4unix" / "interface" / "paginas"  # (noqa-acento)
 FONTE = RAIZ / "src"
 sys.path.insert(0, str(FONTE))
 PACOTES = FONTE / "hefesto_dualsense4unix" / "interface" / "pacotes"
@@ -146,7 +146,6 @@ def _falas() -> list[tuple[str, str]]:
     return fora
 
 
-# `hefesto_vivo._recusou_dizendo` faz `str(erro)` e deposita o texto
 def _arvore(p: pathlib.Path) -> ast.Module | None:
     if p not in _ARVORES:
         try:

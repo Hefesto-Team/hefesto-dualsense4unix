@@ -70,32 +70,25 @@ from typing import Any
 try:
     from . import fora_do_servico
     from .ambiente_do_jogo import ambiente_limpo
-except ImportError:  # pragma: no cover - executado como script avulso pelo install/uninstall
+except ImportError:  # pragma: no cover
     import fora_do_servico  # type: ignore[no-redef]
     from ambiente_do_jogo import ambiente_limpo  # type: ignore[no-redef]
 
 WRAPPER_HOME_RELPATH = ".local/share/hefesto-dualsense4unix/bin/hefesto-launch"
 
-#: O motivo de erro de quem foi gravado e, relido do disco, não está como gravamos.
 MOTIVO_NAO_FIRMOU = "nao_firmou"
 
-#: LaunchOption pré-existente `VAR=VAL %command%` vira `$1` e o env(1) a
-#: processa como assignment em vez de tentar executá-la (ENOENT).
 _WRAPPER_INNER = (
     'W="$HOME/' + WRAPPER_HOME_RELPATH + '"; '
     '[ -x "$W" ] && exec "$W" "$@"; exec env "$@"'
 )
 
-#: Prefixo da string constante (sem o `%command%` final) — é o que a migração
 WRAPPER_PREFIX = "sh -c '" + _WRAPPER_INNER + "' hefesto-launch"
 
-#: A string constante completa — o que o botão da GUI copia e o que fica no
 WRAPPER_LAUNCH = WRAPPER_PREFIX + " %command%"
 
-#: DualSense físico). Ela cola a variável ao par, e por isso só enxerga o
 IGNORE_SIGNATURE = "SDL_GAMECONTROLLER_IGNORE_DEVICES=0x054c/0x0ce6"
 
-#: DualSense físico) separados. A separação é o mecanismo inteiro da
 IGNORE_VAR = "SDL_GAMECONTROLLER_IGNORE_DEVICES"
 IGNORE_PAR_HEFESTO = "0x054c/0x0ce6"
 
@@ -997,7 +990,7 @@ def do_meu_lar(lar_do_processo: str, lar: Path | None = None) -> bool:
     meu = Path.home() if lar is None else lar
     try:
         dele, meu = Path(lar_do_processo).resolve(), meu.resolve()
-    except OSError:  # pragma: no cover - caminho impossível
+    except OSError:  # pragma: no cover
         return False
     return dele == meu or meu in dele.parents
 
@@ -1321,12 +1314,9 @@ def stop_steam(
     return not de_pe()
 
 
-#: Quanto esperar a Steam aparecer de pé depois do pedido de reabrir, e o passo da conferência.
 ESPERA_DA_STEAM_S: float = 15.0
 PASSO_DA_STEAM_S: float = 0.5
 
-#: As portas de reabrir, na ordem: o binário e a URL ``steam://`` (a que o `.desktop` da Flatpak e
-#: da Snap registra). Cada uma só vale o que o estado lido diz: a Steam de pé.
 _PORTAS_DE_REABRIR: tuple[tuple[str, ...], ...] = (
     ("steam",),
     ("xdg-open", "steam://open/main"),
@@ -1406,7 +1396,6 @@ def reopen_steam(
     return False
 
 
-#: Status possíveis de `with_steam_closed` — contrato do chamador (a GUI faz
 STEAM_JANELA_OK = "ok"
 STEAM_JANELA_JOGO_ABERTO = "jogo_aberto"
 STEAM_JANELA_NAO_FECHOU = "nao_fechou"
@@ -1474,7 +1463,7 @@ def _real(caminho: Path) -> Path:
     """O diretório de verdade. Link ilegível vale por si mesmo."""
     try:
         return caminho.resolve()
-    except OSError:  # pragma: no cover - link quebrado ou permissão
+    except OSError:  # pragma: no cover
         return caminho
 
 
@@ -1499,7 +1488,7 @@ def pastas_steamapps(home: Path | None = None) -> list[Path]:
     """A `steamapps` de CADA raiz de Steam mais as bibliotecas do `libraryfolders.vdf`."""
     try:
         from .proton_pin import default_steam_root
-    except ImportError:  # pragma: no cover - executado como script avulso
+    except ImportError:  # pragma: no cover
         from proton_pin import default_steam_root  # type: ignore[no-redef]
 
     raizes = raizes_de_jogos(home)
@@ -1822,7 +1811,6 @@ def _warn_extended(vdf: Path, text: str) -> None:
         )
 
 
-#: Motivos de RECUSA do `apply_wrapper_to_all_games` (nada foi tocado) e a
 _APPLY_RECUSAS = {
     "jogo_da_steam_aberto": (
         "há um JOGO da Steam em execução — fechar a Steam agora MATARIA o jogo "
@@ -2061,7 +2049,6 @@ def main(argv: list[str] | None = None) -> int:
             return 3
 
     if mode == "apply":
-        # de Steam/jogo aberto de `apply_wrapper_to_all_games` é a segunda
         recusados = ler_jogos_sem_wrapper()
         if recusados:
             print(
@@ -2070,7 +2057,7 @@ def main(argv: list[str] | None = None) -> int:
             )
         try:
             from .vigia_do_jogo_novo import jogos_novos_a_receber
-        except ImportError:  # pragma: no cover - executado como script avulso
+        except ImportError:  # pragma: no cover
             from vigia_do_jogo_novo import jogos_novos_a_receber  # type: ignore[no-redef]
         try:
             return _report_apply(
@@ -2146,5 +2133,5 @@ def appids_de_jogo_vivos(proc: Path | None = None) -> set[int]:
     return vivos
 
 
-if __name__ == "__main__":  # pragma: no cover - entrypoint do install/uninstall
+if __name__ == "__main__":  # pragma: no cover
     sys.exit(main())

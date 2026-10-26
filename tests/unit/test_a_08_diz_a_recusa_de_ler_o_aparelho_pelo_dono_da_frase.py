@@ -35,7 +35,6 @@ RAIZ = Path(__file__).resolve().parents[2]
 REGUA = RAIZ / "scripts" / "check_a_tela_nao_confessa.py"
 FONTE = RAIZ / "src" / "hefesto_dualsense4unix"
 
-#: As duas recusas da abertura: o erro do sistema e o nome da frase no dono.
 RECUSAS = (
     (PermissionError(errno.EACCES, "Permission denied"), "FRASE_SEM_PERMISSAO_DE_LER"),
     (FileNotFoundError(errno.ENOENT, "No such file or directory"), "FRASE_O_APARELHO_NAO_ABRE"),
@@ -67,7 +66,6 @@ def evdev_que_recusa(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Any:
     return pedido
 
 
-# --- 1. o dono diz as duas recusas ------------------------------------------------------------
 @pytest.mark.parametrize(("erro", "nome"), RECUSAS, ids=IDS)
 def test_o_dono_da_abertura_levanta_a_recusa_com_a_frase_dela(
         evdev_que_recusa: Any, erro: OSError, nome: str) -> None:
@@ -79,7 +77,6 @@ def test_o_dono_da_abertura_levanta_a_recusa_com_a_frase_dela(
         "a recusa do dono mudou de família: o doctor e a ponte separam a permissão por ela")
 
 
-# --- 2. o clique da 08 diz a frase do dono ----------------------------------------------------
 @pytest.mark.parametrize(("erro", "nome"), RECUSAS, ids=IDS)
 @pytest.mark.parametrize("abertura", ["pelo-dono", "crua"])
 def test_o_clique_diz_a_recusa_do_dono_e_nao_fica_esperando(
@@ -116,7 +113,6 @@ def test_nenhuma_frase_da_recusa_de_ler_mora_na_08() -> None:
     assert escritas == [], f"a 08 escreve a frase da recusa: {escritas}"
 
 
-# --- 3. a régua da tela que não confessa lê o dono --------------------------------------------
 def _a_regua() -> Any:
     spec = importlib.util.spec_from_file_location("_regua_da_confissao_p1fio", REGUA)
     assert spec and spec.loader

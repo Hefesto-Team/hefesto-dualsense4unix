@@ -34,7 +34,7 @@ import pytest
 
 from hefesto_dualsense4unix.interface import onde
 
-PAGINA = "02-controles.html"  # (noqa-acento) nome de arquivo
+PAGINA = "02-controles.html"
 
 ESTRUTURA = "gb"
 
@@ -54,7 +54,7 @@ def _paginas() -> list[pathlib.Path]:
 @pytest.fixture(params=["bancada", "publicado"])
 def pagina(request: pytest.FixtureRequest) -> str:
     caminho = _paginas()[0 if request.param == "bancada" else 1]
-    if not caminho.exists():  # pragma: no cover - a página existe nas duas
+    if not caminho.exists():  # pragma: no cover
         pytest.skip(f"{caminho} não existe")
     return caminho.read_text(encoding="utf-8")
 

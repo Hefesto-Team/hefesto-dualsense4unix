@@ -45,7 +45,6 @@ from hefesto_dualsense4unix.app.actions.emulation_actions import (
 PROMOTOR = "51-hefesto-dualsense-no-default-source.conf"
 DISABLE_SRC = "52-hefesto-dualsense-disable-source.conf"
 
-#: Duas placas DualSense, no formato de duas linhas por placa que o
 CARDS_COM_DUALSENSE = """\
  0 [HDMI           ]: HDA-Intel - HDA ATI HDMI
                       HDA ATI HDMI at 0xfe960000 irq 66

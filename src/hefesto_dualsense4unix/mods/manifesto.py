@@ -47,72 +47,43 @@ def ids_de_fabrica() -> frozenset[str]:
     except OSError:
         return frozenset()
 
-#: O que uma modificação pode ser. ``processo`` é a única que leva código; as
-#: outras três são declaração, e o Hefesto as lê sem abrir processo nenhum.
 TIPOS = ("processo", "lancador", "tema", "perfil")
 
-#: O ``nome`` do evento do tópico ``entradas``.
 NOME_DAS_ENTRADAS = "controle.entradas"
-#: O ``nome`` do evento do tópico ``movimento``.
 NOME_DO_MOVIMENTO = "controle.movimento"
 
-#: ``ler:<tópico>``: o nome público de cada tópico e os tópicos do barramento
-#: que ele entrega. O nome público é o contrato; o do barramento pode mudar.
 TOPICOS_DE_LEITURA: dict[str, tuple[str, ...]] = {
     "estado": (EventTopic.STATE_UPDATE,),
     "botoes": (EventTopic.BUTTON_DOWN, EventTopic.BUTTON_UP),
-    # Os analógicos, os gatilhos e o touchpad de CADA controle: como o `botoes`, o serviço enche a
-    # fila (`Porta.entradas_do_tique`) e o barramento não leva este tópico.
     "entradas": (NOME_DAS_ENTRADAS,),
-    # O giroscópio e o acelerômetro de CADA controle, à parte das entradas: o leitor de movimento
-    # só fica vivo enquanto alguém o pede, e o serviço enche a fila (`Porta.movimento_do_tique`).
     "movimento": (NOME_DO_MOVIMENTO,),
     "bateria": (EventTopic.BATTERY_CHANGE,),
-    "conexao": (  # (noqa-acento): contrato ASCII
+    "conexao": (  # (noqa-acento)
         EventTopic.CONTROLLER_CONNECTED,
         EventTopic.CONTROLLER_DISCONNECTED,
     ),
-    # A vibração que o jogo pede a cada controle (com o número do jogador) e o aviso de que o
-    # jogo fechou: quem acompanha a vibração precisa dos dois, e por isso é uma permissão só.
-    "jogo.vibracao": (  # (noqa-acento): contrato ASCII
+    "jogo.vibracao": (
         EventTopic.JOGO_VIBRACAO,
         EventTopic.JOGO_FECHOU,
     ),
-    # O que o jogo pede ao gatilho de CADA controle e a intensidade da háptica por áudio dele:
-    # permissões à parte da vibração, porque são dois sinais diferentes e a extensão escolhe.
-    "jogo.gatilho": (EventTopic.JOGO_GATILHO,),  # (noqa-acento): contrato ASCII
-    "jogo.haptica": (EventTopic.JOGO_HAPTICA,),  # (noqa-acento): contrato ASCII
-    # O perfil efetivo, o jogo e o estilo de cada controle (`perfil.trocou`, sem marca nenhuma).
-    # Fica à parte da vibração: saber QUAL jogo está aberto é dado da pessoa, e quem só quer a
-    # vibração não o recebe.
+    "jogo.gatilho": (EventTopic.JOGO_GATILHO,),
+    "jogo.haptica": (EventTopic.JOGO_HAPTICA,),
     "perfil.jogo": (EventTopic.PERFIL_TROCOU,),
-    # O que o jogo pede a um acessório, passado de uma extensão a outra (`eventos.publicar`). O
-    # Hefesto não sabe que acessório é nem o que cada função faz: os nomes são das extensões.
-    "jogo.acessorio": (EventTopic.JOGO_ACESSORIO,),  # (noqa-acento): contrato ASCII
-    # Os gestos do PS que comandam os acessórios (sobe, desce, para, perfil…). A mesma permissão
-    # deixa a modificação devolver o estado (`acessorios.estado`), que liga e desliga os gestos.
-    "acessorios.gesto": (EventTopic.ACESSORIOS_GESTO,),  # (noqa-acento): contrato ASCII
+    "jogo.acessorio": (EventTopic.JOGO_ACESSORIO,),
+    "acessorios.gesto": (EventTopic.ACESSORIOS_GESTO,),
 }
 
-#: ``publicar:<tópico>``: os tópicos que uma extensão pode publicar para as outras
-#: (``eventos.publicar``), com o tópico do barramento que cada um entrega. Quem lê pede
-#: ``ler:<tópico>``; quem publica pede ``publicar:<tópico>``.
 TOPICOS_DE_PUBLICACAO: dict[str, str] = {
-    "jogo.acessorio": EventTopic.JOGO_ACESSORIO,  # (noqa-acento): contrato ASCII
+    "jogo.acessorio": EventTopic.JOGO_ACESSORIO,
 }
 
-#: O nome de uma função de um pedido ao acessório: o vocabulário é das extensões que conversam.
 NOME_DA_FUNCAO = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
-#: Quantas funções cabem numa publicação, cada uma de 0 a 1.
 FUNCOES_POR_PEDIDO = 16
 
-#: ``escrever:<canal>``: os canais do controle que uma modificação pode pedir.
 CANAIS_DE_ESCRITA = ("luz", "vibracao", "gatilho")
 
-#: ``rede:<alcance>``. Sem a palavra, vale ``nenhuma``.
 ALCANCES_DE_REDE = ("nenhuma", "local", "internet")
 
-#: As permissões de uma palavra só.
 PERMISSOES_SIMPLES = ("bluetooth", "lancador", "tema", "aparelhos")
 
 _O_QUE_DEIXA: dict[str, str] = {
@@ -121,30 +92,30 @@ _O_QUE_DEIXA: dict[str, str] = {
     "ler:entradas": "Ler os analógicos, os gatilhos e o touchpad de cada controle.",
     "ler:movimento": "Ler o giroscópio e o acelerômetro de cada controle.",
     "ler:bateria": "Saber a carga da bateria.",
-    "ler:conexao": "Saber quando um controle entra ou sai.",  # (noqa-acento): contrato ASCII
-    "ler:jogo.vibracao": (  # (noqa-acento): contrato ASCII
+    "ler:conexao": "Saber quando um controle entra ou sai.",  # (noqa-acento)
+    "ler:jogo.vibracao": (
         "Saber a vibração que o jogo pede a cada controle e quando o jogo fecha."
     ),
-    "ler:jogo.gatilho": (  # (noqa-acento): contrato ASCII
+    "ler:jogo.gatilho": (
         "Saber o efeito de gatilho que o jogo pede a cada controle."
     ),
-    "ler:jogo.haptica": (  # (noqa-acento): contrato ASCII
+    "ler:jogo.haptica": (
         "Saber a intensidade da vibração fina que o jogo manda a cada controle."
     ),
     "ler:perfil.jogo": "Saber o perfil, o jogo e o estilo em uso em cada controle.",
-    "ler:jogo.acessorio": (  # (noqa-acento): contrato ASCII
+    "ler:jogo.acessorio": (
         "Receber o que o jogo pede a um acessório, passado por outra extensão."
     ),
-    "publicar:jogo.acessorio": (  # (noqa-acento): contrato ASCII
+    "publicar:jogo.acessorio": (
         "Passar a outras extensões o que o jogo pede a um acessório."
     ),
-    "ler:acessorios.gesto": (  # (noqa-acento): contrato ASCII
+    "ler:acessorios.gesto": (
         "Receber os gestos do botão PS que comandam os acessórios, sem receber botão nenhum."
     ),
-    "publicar:acessorios.estado": (  # (noqa-acento): contrato ASCII
+    "publicar:acessorios.estado": (
         "Mostrar na janela dela e na aba Conexões as conexões e os aparelhos que ela liga."
     ),
-    "pedir:luz.pulso": (  # (noqa-acento): contrato ASCII
+    "pedir:luz.pulso": (
         "Pedir que a barra de luz de um controle pulse na cor escolhida, nos perfis «Adulto»."
     ),
     "escrever:luz": "Mudar a cor da luz de um controle.",
@@ -159,25 +130,18 @@ _O_QUE_DEIXA: dict[str, str] = {
     "aparelhos": "Abrir aparelhos ligados ao computador.",
 }
 
-#: Os botões que uma opção ``por_botao`` aceita, nos nomes do tópico ``botoes``. O PS e o
-#: microfone ficam de fora: são os gestos da casa.
 BOTOES_DO_POR_BOTAO = (
     "cross", "circle", "square", "triangle", "l1", "r1", "l2", "r2", "l3", "r3",
     "dpad_up", "dpad_down", "dpad_left", "dpad_right", "options", "create",
     "touchpad_left_press", "touchpad_middle_press", "touchpad_right_press",
 )
-#: Uma forma de ``por_botao``: até 16 passos ``[força 0..1, segundos]``, cada passo até 10 s.
 PASSOS_DA_FORMA = 16
 SEGUNDOS_DO_PASSO = 10.0
 FORMAS_POR_OPCAO = 16
-#: Uma ação da janela (nas duas listas do manifesto): o botão que AGE na hora, sem rascunho.
 ACOES_DA_JANELA = 8
 ACOES_DO_APARELHO = 6
-#: A ação do aparelho com este id é a chave «ligado» do cartão, e não um botão.
 ACAO_DE_LIGAR = "ligar"
-#: Os desenhos que uma ação pode pedir; sem ``icone``, o botão é só o rótulo.
 ICONES_DA_ACAO = ("procurar", "testar", "esquecer", "ligar", "atualizar")
-#: O que o ``livre`` com ``modos`` faz ao soltar; o primeiro é o de fábrica.
 MODOS_DO_LIVRE = ("soltar", "segurar", "repetir")
 
 
@@ -196,11 +160,8 @@ def forma_valida(nome: object, passos: object) -> bool:
             return False
     return True
 
-#: A cor de uma opção ``cor``: ``#rrggbb``, minúsculas ou maiúsculas.
 COR_HEXA = re.compile(r"^#[0-9a-fA-F]{6}$")
 
-#: As permissões que deixam a extensão devolver ``acessorios.estado``. Só a do gesto liga os
-#: gestos do PS; a do estado só mostra (a janela e a aba Conexões).
 PERMISSOES_DO_ESTADO = ("ler:acessorios.gesto", "publicar:acessorios.estado")
 
 _NOME_DE_HOST = re.compile(r"^(?=.{1,253}$)[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
@@ -229,7 +190,6 @@ def endereco_valido(texto: str) -> tuple[str, int] | None:
     return (host, int(porta)) if _NOME_DE_HOST.match(host) else None
 
 
-#: A chave de um jogo numa opção ``jogos`` e no ``perfil.trocou``: a classe de janela da Steam.
 CHAVE_DE_JOGO = re.compile(r"^steam_app_[0-9]{1,12}$")
 
 _SPDX = re.compile(r"^[A-Za-z0-9.+-]+(?: (?:AND|OR|WITH) [A-Za-z0-9.+-]+)*$")
@@ -317,24 +277,13 @@ class Opcao(BaseModel):
     escolhas: list[str] = Field(default_factory=list)
     padrao: (str | bool | float | list[str] | dict[str, str] | dict[str, list[list[float]]]
              | None) = None
-    # O ``por_botao``: as formas pelo nome (cada uma, passos ``[força, segundos]``; a lista vazia é
-    # a forma que não toca) e os botões que a janela mostra. O valor é ``{botão: forma}``.
     formas: dict[str, list[list[float]]] = Field(default_factory=dict)
     botoes: list[str] = Field(default_factory=list)
-    # O ``deslizante`` declara a faixa inteira e a posição inicial (obrigatória e
-    # dentro da faixa); os três ficam vazios nos outros tipos.
     minimo: float | None = None
     maximo: float | None = None
     passo: float | None = None
-    # A aba interna da janela em que a opção mora; sem ela, a opção vai à primeira aba. Com
-    # um grupo só, a janela não desenha aba nenhuma.
     grupo: str | None = Field(default=None, min_length=1, max_length=30)
-    # O ``livre`` com ``modos``: a faixa ganha «Soltar», «Segurar» e «Repetir» (``MODOS_DO_LIVRE``).
     modos: bool = False
-    # A janela só mostra a opção quando cada outra opção daqui vale o que se pede: ``{id: valor}``,
-    # o valor de uma ``escolha`` (ou a lista dos que servem) ou o ``true``/``false`` de um
-    # ``ligado``.
-    # Esconder é só da tela: o valor guardado fica e segue indo à extensão.
     aparece_com: dict[str, str | bool | list[str]] | None = None
 
     @field_validator("id")
@@ -456,7 +405,6 @@ class Acao(BaseModel):
 
     id: str
     rotulo: str = Field(min_length=1, max_length=30)
-    # A aba da janela em que o botão mora; sem ela, a primeira aba.
     grupo: str | None = Field(default=None, min_length=1, max_length=30)
     icone: Literal["procurar", "testar", "esquecer", "ligar", "atualizar"] | None = None
 
@@ -509,36 +457,22 @@ class Manifesto(BaseModel):
     api: str
     licenca: str
     descricao: str = Field(default="", max_length=400)
-    # O aviso de uso (marca, jogo comprado, idade): o terminal o mostra antes de instalar, e a
-    # tela, no ⋮ do primeiro «sim» da chave; o aviso que muda volta a pedir o «sim».
     aviso: str = Field(default="", max_length=400)
     tipos: list[Literal["processo", "lancador", "tema", "perfil"]] = Field(min_length=1)
     processo: Processo | None = None
-    # O preparo (``instalador._preparar``): o comando, relativo à pasta da modificação, que o
-    # instalador roda fora da caixa, como quem usa, depois de trocar o código e antes de ligar.
     preparar: list[str] | None = None
     permissoes: list[str] = Field(default_factory=list)
     opcoes: list[Opcao] = Field(default_factory=list)
-    # A coluna «Agora» da janela: o que mostrar ao vivo do que a extensão devolve em
-    # ``acessorios.estado``. Pede ``ler:acessorios.gesto`` ou ``publicar:acessorios.estado``.
     agora: list[
-        Literal["nivel", "perfil", "aparelhos", "conexoes"]  # (noqa-acento): a chave do estado
+        Literal["nivel", "perfil", "aparelhos", "conexoes"]  # (noqa-acento)
     ] = Field(default_factory=list)
-    # O botão «Parar tudo», sempre à vista: a extensão o recebe como o evento ``extensao.parar``
-    # (e, com ``ler:acessorios.gesto``, como o gesto ``para``). O nível e o perfil ficam guardados.
     parar_tudo: bool = False
-    # Os botões que agem na hora (``extensao.acao``), as ações de cada aparelho da lista e a aba dos
-    # controles de cada um: os três pedem a permissão da coluna «Agora», porque a resposta da
-    # extensão é o estado que ela devolve.
     acoes: list[Acao] = Field(default_factory=list, max_length=ACOES_DA_JANELA)
     aparelhos_acoes: AcoesDosAparelhos | None = None
     aparelhos_controles: ControlesDosAparelhos | None = None
-    # O conteúdo destes três é das sprints que os consomem (o lançador do
-    # KytyPS5, o tema da interface, a ponte dos acessórios): aqui só a forma.
     lancador: dict[str, Any] | None = None
     tema: dict[str, Any] | None = None
     aparelhos: list[dict[str, Any]] | None = None
-    # As extensões que esta toma o lugar: ao instalar, as escolhas delas passam e elas saem.
     substitui: list[str] = Field(default_factory=list)
 
     @field_validator("id")
@@ -570,7 +504,7 @@ class Manifesto(BaseModel):
             raise ValueError("preparar é uma lista vazia")
         return _comando_dentro_da_pasta(valor, "preparar")
 
-    @field_validator("permissoes")  # (noqa-acento): contrato ASCII
+    @field_validator("permissoes")  # (noqa-acento)
     @classmethod
     def _permissoes_conhecidas(cls, valor: list[str]) -> list[str]:
         estranhas = [p for p in valor if not permissao_valida(p)]
@@ -618,7 +552,7 @@ class Manifesto(BaseModel):
         """As ações, os aparelhos geridos e o ``livre``: a permissão do estado, ids sem repetição,
         um ``livre`` só, e a lista sem ``grupo`` só onde a coluna «Agora» mostra os aparelhos."""
         livres = [o.id for o in self.opcoes if o.tipo == "livre"]
-        pedem = [nome for nome, tem in (("acoes", bool(self.acoes)),  # (noqa-acento) contrato
+        pedem = [nome for nome, tem in (("acoes", bool(self.acoes)),  # (noqa-acento)
                                         ("aparelhos_acoes", self.aparelhos_acoes is not None),
                                         ("aparelhos_controles",
                                          self.aparelhos_controles is not None),
@@ -628,7 +562,7 @@ class Manifesto(BaseModel):
         if len(livres) > 1:
             raise ValueError("mais de uma opção livre")
         if len({a.id for a in self.acoes}) != len(self.acoes):
-            raise ValueError("ação repetida em acoes")  # (noqa-acento) contrato ASCII
+            raise ValueError("ação repetida em acoes")  # (noqa-acento)
         geridos = self.aparelhos_acoes
         if geridos is not None and geridos.grupo is None and "aparelhos" not in self.agora:
             raise ValueError(
@@ -785,11 +719,11 @@ __all__ = [
     "TIPOS",
     "TOPICOS_DE_LEITURA",
     "TOPICOS_DE_PUBLICACAO",
-    "Acao",  # (noqa-acento) contrato ASCII
+    "Acao",  # (noqa-acento)
     "AcoesDosAparelhos",
     "Manifesto",
     "ManifestoRecusadoError",
-    "Opcao",  # (noqa-acento): contrato ASCII
+    "Opcao",  # (noqa-acento)
     "Processo",
     "aceita_a_api",
     "endereco_valido",

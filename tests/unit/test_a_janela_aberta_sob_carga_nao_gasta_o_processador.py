@@ -29,7 +29,6 @@ from tests.unit.janela_aberta_comum import (
 )
 
 
-#: A carga que roda no tempo de verdade, a de 28/09; as outras andam na cadência acelerada.
 NO_TEMPO_REAL = "buraco"
 
 

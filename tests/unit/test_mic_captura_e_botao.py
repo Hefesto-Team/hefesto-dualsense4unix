@@ -25,7 +25,7 @@ confundindo as duas em três lugares diferentes.
     `hefesto_dualsense_bt_<hex>`. Com dois controles ou mais por Bluetooth —
     o cenário-alvo declarado do projeto — o medidor NUNCA aparecia.
 """
-# ruff: noqa: E501 — as amostras do `default-routes` são cópias FIÉIS do
+# ruff: noqa: E501
 from __future__ import annotations
 
 import subprocess

@@ -163,7 +163,6 @@ def test_o_cabecalho_diz_de_quando_e_o_que_esta_na_tela() -> None:
     linha = re.search(r'<p class="([^"]+)" id="de-quando">([^<]+)</p>', cabecalho)
     assert linha, "o exemplo deixou de dizer, no cabeçalho, que é exemplo"
     classe, texto = linha.group(1), linha.group(2)
-    # a bancada escreve a linha com a primeira maiúscula (o conjunto «Conexões 3», 05/10/2026)
     assert texto.lower() == pagina_do_mapa.QUANDO_DO_EXEMPLO.lower()
     escondidas = {s.lstrip(".").split()[-1] for s in seletores_escondidos()}
     assert classe not in escondidas, (

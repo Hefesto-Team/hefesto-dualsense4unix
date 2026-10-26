@@ -471,5 +471,3 @@ def test_a_regua_nao_sai_do_lar_de_mentira(tmp_path, monkeypatch) -> None:
     assert not fora, (
         f"a medição saiu do lar de mentira e foi ao disco desta máquina: "
         f"{sorted(set(fora))[:8]}")
-
-# `tests/unit/portao_a_casa_sabe_e_o_produto_nao_faz.py`, com o endereço da

@@ -221,7 +221,7 @@ def relata(arq, ident, o):
           f"· rodapé fecha em y={o['rod_no_produto']} da janela de {o['janela']['h']}")
     for r in o["rolam"]:
         print(f"      rola por dentro: \"{r['quem']}\" mostra {r['vao']} de "
-              f"{r['conteudo']}px (esconde {r['esconde']})")  # (noqa-acento): chave do JSON da sonda
+              f"{r['conteudo']}px (esconde {r['esconde']})")  # (noqa-acento)
     if not o["rolam"]:
         print("      não rola nada por dentro — cabe inteira")
     for e in o["erros"]:

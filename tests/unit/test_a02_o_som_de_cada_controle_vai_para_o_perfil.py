@@ -86,7 +86,6 @@ import pytest
 RAIZ = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 
-#: Os dois DualSense da bancada, com a máscara da casa (octetos 4 e 5
 P1 = "aa:bb:cc:00:00:01"
 P2 = "aa:bb:cc:00:00:02"
 
@@ -207,7 +206,6 @@ def test_o_mudo_do_microfone_nao_vai_ao_perfil(casa: Any) -> None:
     assert _bytes_do_perfil() == antes, (
         "o clique no mudo do microfone regravou o perfil — o mudo é do "
         f"controle. No disco: {_perfil_do_disco().get('controllers')!r}")
-    # NADA DE REAPLICAR: o aparelho JÁ está no valor, e um `profile.switch`
     assert p.nomes == ["mic_canal_set_detalhado"], (
         f"o clique no mudo pediu mais que o ato ao daemon: {p.nomes!r}")
 

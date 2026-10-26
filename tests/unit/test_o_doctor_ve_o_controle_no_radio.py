@@ -29,8 +29,8 @@ RAIZ = Path(__file__).resolve().parents[2]
 DOCTOR = RAIZ / "scripts" / "doctor.sh"
 
 CONTROLES = (
-    ("054c", "0ce6"),  # DualSense
-    ("054c", "0df2"),  # DualSense Edge
+    ("054c", "0ce6"),
+    ("054c", "0df2"),
     ("057e", "2009"),
     ("2dc8", "6012"),
 )
@@ -127,7 +127,6 @@ def test_a_mesa_inteira(tmp_path: Path, jogadores: int, transporte: str, mascara
         nos.append(_uevent(bus, vid, pid, phys, f"aa:bb:cc:00:00:0{i + 1}"))
         esperado["BT" if pelo_bt else "USB"] += 1
         if mascara == "dualsense":
-            # A forma medida em 25/09: o vpad anuncia USB e DualSense Edge.
             nos.append(_uevent("0003", "054c", "0df2", "hefesto-vpad", f"02:fe:00:00:00:0{i + 1}"))
     raiz = _sys(tmp_path, nos)
     saida = _rodar(raiz)

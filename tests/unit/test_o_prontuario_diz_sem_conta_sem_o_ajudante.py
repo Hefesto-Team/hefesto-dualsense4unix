@@ -87,11 +87,8 @@ def _por_o_ajudante(casa: Path) -> Path:
     return alvo
 
 
-# --- o prontuário ---------------------------------------------------------------------------
-
-
 def test_o_jogo_gdk_com_a_peca_e_sem_o_ajudante_ganha_o_estorvo_sem_conta(casa: Path) -> None:
-    # D-1710-O-JOGO-GDK-SEM-O-AJUDANTE-AVISA-QUE-ABRE-SEM-CONTA
+    """Prova da D-1710-O-JOGO-GDK-SEM-O-AJUDANTE-AVISA-QUE-ABRE-SEM-CONTA."""
     _jogo(_biblioteca(casa), "800001")
     ficha = _ficha("800001")
     assert pdj.SEM_CONTA in _chaves(ficha)
@@ -152,8 +149,7 @@ def test_a_varredura_rapida_nao_examina_e_nao_diz(casa: Path) -> None:
 
 
 def test_sem_conta_e_aviso_e_o_jogo_que_abre_nao_e_impedido(casa: Path) -> None:
-    # D-1810-ESTAR-SEM-CONTA-E-AVISO-E-NAO-IMPEDIMENTO
-    # D-1710-O-JOGO-SEM-CONTA-ABRE-E-NAO-E-IMPEDIDO
+    """Prova da D-1810-ESTAR-SEM-CONTA-E-AVISO-E-NAO-IMPEDIMENTO."""
     _jogo(_biblioteca(casa), "800009")
     ficha = _com_o_wrapper(_ficha("800009"))
     assert _chaves(ficha) == [pdj.SEM_CONTA]
@@ -187,7 +183,6 @@ def test_o_que_impede_continua_impedindo_e_o_aviso_vai_junto(casa: Path) -> None
     assert ficha.veredito == pdj.IMPEDIDO
     assert [e.chave for e in ficha.impedimentos] == [pdj.SEM_WRAPPER]
     assert [e.chave for e in ficha.avisos] == [pdj.SEM_CONTA]
-    # o aviso manual não tira do jogo o «o Hefesto repõe sozinho» do estorvo que impede
     assert pdj.Censo(jogos=[ficha]).curaveis_sozinho == [ficha]
 
 
@@ -204,7 +199,7 @@ def test_a_cura_nao_conta_o_aviso_como_reparo_manual(
 ) -> None:
     """O que o produto cura sozinho e o que sobrou à mão só falam de impedimento."""
     _jogo(_biblioteca(casa), "800014")
-    ficha = _ficha("800014")  # sem wrapper (impede, automático) e sem conta (aviso)
+    ficha = _ficha("800014")
     monkeypatch.setitem(pdj._CURAS, pdj.SEM_WRAPPER, lambda _home, *, dry_run: ("ok", ["800014"]))
     cura = pdj.curar_o_que_e_automatico(censo=pdj.Censo(jogos=[ficha]), dry_run=True)
     assert cura.manuais == [], "o aviso sem conta virou «só reparo manual»"
@@ -215,9 +210,6 @@ def test_todo_estorvo_tem_a_natureza_e_so_o_sem_conta_nao_impede() -> None:
     assert all(len(v) == 4 for v in pdj._ESTORVOS.values())
     avisos = [chave for chave in pdj._ESTORVOS if not pdj.Estorvo(chave).impede]
     assert avisos == [pdj.SEM_CONTA]
-
-
-# --- o caminho: o fonte C é o dono ----------------------------------------------------------
 
 
 def _formatos_do_c() -> dict[str, str]:
@@ -261,7 +253,7 @@ def test_a_escada_da_casa_e_a_do_fonte_c(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setenv("HOME", "/h/a")
     monkeypatch.setenv("WINE_HOST_HOME", "/h/b")
     assert str(rda.caminho_do_ajudante_de_login()) == onde("/h/a")
-    monkeypatch.setenv("HOME", "relativa")  # só caminho absoluto vale
+    monkeypatch.setenv("HOME", "relativa")
     assert str(rda.caminho_do_ajudante_de_login()) == onde("/h/b")
     monkeypatch.delenv("WINE_HOST_HOME")
     monkeypatch.setenv("USER", "fulana")

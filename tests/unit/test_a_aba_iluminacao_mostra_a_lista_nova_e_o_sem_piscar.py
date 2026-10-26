@@ -33,7 +33,6 @@ sys.path.insert(0, str(RAIZ / "src/hefesto_dualsense4unix/interface"))
 MOCKUP = RAIZ / "mockup" / "04-iluminacao.html"
 JOGADORES = [f"aa:bb:cc:00:00:0{n}" for n in range(1, 5)]
 
-#: O que a lista mostra, na ordem do desenho A: do mais calmo ao mais vivo, agrupado pelo que se vê.
 ROTULOS_NA_ORDEM = ["Sem efeito", "Luz fixa", "Respirar", "Batida", "Chama", "Maré",
                     "Respira em cores", "Piscar", "Arco-íris", "Onda", "Relâmpago", "Vaivém",
                     "Enche", "Reage ao botão", "Inclinação", "Dedo no touchpad", "Ao som",
@@ -73,10 +72,8 @@ def _options(html: str) -> list[tuple[str, str]]:
     return re.findall(r'<option value="([^"]*)"[^>]*>([^<]*)</option>', html)
 
 
-# ---------------------------------------------------------------- a lista tem as dez opções
-
 def test_a_lista_tem_as_dez_opcoes_na_ordem_do_desenho() -> None:
-    # Prova da D-1510-A-LISTA-DE-EFEITOS-TEM-OITO-OPCOES.
+    """Prova da D-1510-A-LISTA-DE-EFEITOS-TEM-OITO-OPCOES."""
     from pacotes import a04_iluminacao as a04
 
     html = a04.opcoes_do_efeito({})
@@ -110,7 +107,7 @@ def test_toda_base_do_motor_esta_na_lista_e_tem_a_sua_frase() -> None:
 
 
 def test_cada_frase_e_de_uma_linha_com_a_primeira_maiuscula() -> None:
-    # Prova da D-1510-A-LISTA-DE-EFEITOS-TEM-OITO-OPCOES.
+    """Prova da D-1510-A-LISTA-DE-EFEITOS-TEM-OITO-OPCOES."""
     from pacotes import a04_iluminacao as a04
 
     frases = [a04.DICA_SEM_EFEITO, a04.DICA_LUZ_FIXA, a04.DICA_DO_EFEITO_CRIADO,
@@ -118,15 +115,11 @@ def test_cada_frase_e_de_uma_linha_com_a_primeira_maiuscula() -> None:
     assert len(set(frases)) == len(frases), "duas opções com a mesma frase não se distinguem"
     for frase in frases:
         assert frase[0].isupper() and frase.endswith("."), frase
-        # A coluna tem 232px e a frase não quebra: com 40 a 60 letras ela saía cortada com
-        # reticências no meio da palavra (medido na tela, 15/10/2026); 36 cabe inteira.
         assert "\n" not in frase and len(frase) <= 36, f"a frase não cabe na coluna: {frase}"
     for valor in VALORES_NA_ORDEM:
         assert a04.dica_do_efeito(valor)
     assert a04.dica_do_efeito("piscar;FF0000;6") == a04.DICA_DO_EFEITO_CRIADO
 
-
-# ---------------------------------------------------------------- o desenho (mockup)
 
 def _doc() -> str:
     bruto = MOCKUP.read_text(encoding="utf-8")
@@ -149,12 +142,12 @@ def test_o_desenho_tem_uma_lista_por_controle_com_as_dez_opcoes_e_a_frase() -> N
     assert "g4-dica-do-efeito" not in doc, "a frase do efeito voltou para a tela"
 
 
-# ---------------------------------------------------------------- o gesto da lista
-
 @pytest.mark.parametrize("n", [1, 2, 3, 4])
 def test_escolher_uma_base_grava_o_texto_com_a_cor_do_controle(n: int) -> None:
-    """A cor é a do controle (a mesma que a coluna mostra); o ritmo, o com que a base nasce."""
-    # Prova da D-1510-A-BASE-ANIMADA-SEGUE-A-COR-DO-CONTROLE.
+    """A cor é a do controle (a mesma que a coluna mostra); o ritmo, o com que a base nasce.
+
+    Prova da D-1510-A-BASE-ANIMADA-SEGUE-A-COR-DO-CONTROLE.
+    """
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
     from hefesto_dualsense4unix.profiles.schema import ler_o_efeito_da_luz
     from pacotes import a04_iluminacao as a04
@@ -191,10 +184,8 @@ def test_o_efeito_com_outra_cor_nao_finge_ser_a_base() -> None:
         "respirar;00FFFF;2"
     assert a04.escolha_da_lista(cru, JOGADORES[0], 1.0, frozenset(), (0, 255, 255)) == \
         "base:respirar"
-    # Um efeito que a pessoa criou com o mesmo texto da base continua sendo o dela.
     assert a04.escolha_da_lista(cru, JOGADORES[0], 1.0, frozenset({"respirar;00FFFF;2"}),
                                 (0, 255, 255)) == "respirar;00FFFF;2"
-    # E a lista oferece o texto que não é base, para nunca ficar em branco.
     assert 'value="respirar;00FFFF;2"' in a04.opcoes_do_efeito({}, "respirar;00FFFF;2",
                                                                 (255, 0, 0))
     assert 'value="respirar;00FFFF;2"' not in a04.opcoes_do_efeito({}, "respirar;00FFFF;2",
@@ -214,8 +205,6 @@ def test_sem_efeito_e_luz_fixa_continuam_a_valer() -> None:
     dele = o_computador().controles.get("aabbcc000001")
     assert dele is None or dele.leds is None or dele.leds.efeito is None
 
-
-# ---------------------------------------------------------------- a base segue a cor do controle
 
 class _PonteDaCor:
     """O `led_set_detalhado` do daemon, no que o gesto `cor` lê: aplicado neste controle."""
@@ -242,8 +231,9 @@ def test_trocar_a_cor_leva_a_base_junto_no_cabo_e_no_radio(n: int, via: str) -> 
 
     Sem isso a barra respirava a cor velha, a linha Cor dizia a nova e a lista pulava para «Seus
     efeitos».
+
+    Prova da D-1510-A-BASE-ANIMADA-SEGUE-A-COR-DO-CONTROLE.
     """
-    # Prova da D-1510-A-BASE-ANIMADA-SEGUE-A-COR-DO-CONTROLE.
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
     from pacotes import a04_iluminacao as a04
 
@@ -259,7 +249,7 @@ def test_trocar_a_cor_leva_a_base_junto_no_cabo_e_no_radio(n: int, via: str) -> 
 
 
 def test_trocar_a_cor_nao_mexe_no_arco_iris_nem_no_efeito_criado() -> None:
-    # Prova da D-1510-A-BASE-ANIMADA-SEGUE-A-COR-DO-CONTROLE.
+    """Prova da D-1510-A-BASE-ANIMADA-SEGUE-A-COR-DO-CONTROLE."""
     from hefesto_dualsense4unix.profiles.o_padrao_do_computador import o_computador
     from pacotes import a04_iluminacao as a04
 

@@ -62,7 +62,6 @@ class Contexto:
     mesa: list[dict[str, Any]] = field(default_factory=list)
     conectados: list[dict[str, Any]] = field(default_factory=list)
     estados: dict[str, Any] = field(default_factory=dict)
-    #: **DE ONDE ELE VEM, e não é o `state_full`:** o daemon publica esta lista
     externos: list[dict[str, Any]] = field(default_factory=list)
     escolhido: str = ""
 
@@ -144,9 +143,6 @@ def gesto(pagina: str, nome: str, *,
 
         @functools.wraps(fn)
         def guardado(ctx: Contexto, o: dict[str, Any], ipc: Any) -> Any:
-            # A CAMADA RECUSA NO NATIVO (DESLIGAR-O-HEFESTO-DEVOLVE-O-CONTROLE-AO-LINUX-01,
-            # item 5): é daqui, e não de um `if` em cada tela, que o gesto das cinco abas por
-            # controle morre antes de chegar ao `ipc`. Todo chamador passa por este fio.
             recusa = recusa_no_nativo(pagina, nome, getattr(ctx, "state", None))
             if recusa:
                 raise RuntimeError(recusa)
@@ -159,15 +155,8 @@ def gesto(pagina: str, nome: str, *,
     return dentro
 
 
-#: teste naquele momento isso nao interfere in game (noqa-acento: citação literal). (…)
-#: `rumble_passthrough=False` para sempre, e o jogo ficava mudo sem que nada na
-#: o dono das DEZ abas e não conhece o assunto de nenhuma. Uma segunda aba que
-#: Um batimento: a chamada ao serviço de UM controle. Devolve a recusa dele, ou
-#: `""` quando ele aceitou.
 Batimento = Callable[[], str]
 
-#: Um coração: a cada tique, diz quem bate e o quê (`uniq` → batimento). Ele não
-#: fala com o serviço: quem bate é a fila do controle, fora do fio do GTK.
 Coracao = Callable[["Contexto", Any], "dict[str, Batimento] | None"]
 
 CORACOES: list[Coracao] = []
@@ -187,7 +176,6 @@ def largada(fn: Callable[[Any], None]) -> Callable[[Any], None]:
     return fn
 
 
-#: começa com `if not na_mesa: return`, então com a mesa vazia a thread de
 PODAS: list[Callable[[frozenset[str]], None]] = []
 
 _NA_MESA_ANTES: list[frozenset[str]] = [frozenset()]
@@ -235,10 +223,8 @@ def podar_o_que_saiu(ctx: Contexto) -> frozenset[str]:
 
 _TRAVA_DOS_BATIMENTOS = threading.Lock()
 
-#: `(coração, fila)` com um batimento entregue e ainda não saído.
 _BATIMENTO_NA_FILA: set[tuple[str, str]] = set()
 
-#: `(coração, fila)` cuja recusa já foi ao diário neste episódio.
 _RECUSA_NO_DIARIO: set[tuple[str, str]] = set()
 
 
@@ -331,13 +317,10 @@ def largar_o_que_as_abas_seguram(p: Any, *, esperar_s: float = 0.0,
     return fio
 
 
-#: A fila de quem grava algo do usuário: dois gestos com `grava=` nunca se cruzam.
 FILA_DE_QUEM_GRAVA = "grava"
 
 _TRAVA_DAS_FILAS = threading.Lock()
 
-#: O último trabalho entregue a cada fila, ainda por terminar. Quem chega depois
-#: espera o sinal dele; quem termina sai daqui se ninguém entrou atrás.
 _O_ULTIMO_DA_FILA: dict[str, threading.Event] = {}
 
 
@@ -422,8 +405,6 @@ def gesto_da_pagina(pagina: str, nome: str) -> Gesto | None:
 
     @functools.wraps(coringa)
     def na_pagina(ctx: Contexto, o: dict[str, Any], ipc: Any) -> Any:
-        # O gesto do rodapé é de toda página e não sabe em qual está: quem sabe
-        # é quem o despacha. No Nativo, as cinco abas por controle o recusam.
         frase = recusa_no_nativo(pagina, nome, getattr(ctx, "state", None))
         if frase:
             raise RuntimeError(frase)
@@ -457,7 +438,6 @@ CAMPOS_DO_LUGAR = "campos-do-lugar"
 NAO_SAO_VALOR = {"cobertura", "sem_dono", CAMPOS_DO_LUGAR}
 
 
-#: `data-conectado="nao"` / classe `off` no que sobra dessa conta
 LUGAR_SEM_DONO = "*"
 
 LUGAR_VAZIO = "vazio"
@@ -489,10 +469,8 @@ def apagar_os_lugares_sem_dono(
     chaves: set[str] = set()
     for campos in colunas.values():
         chaves |= set(campos)
-    # tela passou a dizer `data-conectado="sim"` em dois lugares vazios.
     ocupados = sorted(set(com_dono or ()) & TODOS_OS_LUGARES)
     apagar = sorted(TODOS_OS_LUGARES - set(colunas))
-    # O QUE A ABA JÁ ESCREVEU POR BLOCO NÃO SE APAGA — 11/09/2026, e a razão
     ja_escrito = _o_que_o_bloco_ja_escreveu(carga)
     vazio = carga.pop(LUGAR_VAZIO, None) or {}
     pinta = chaves | {str(k) for k in (carga.pop(CAMPOS_DO_LUGAR, None) or ())}
@@ -508,7 +486,6 @@ def apagar_os_lugares_sem_dono(
         colunas[pref].update({k: v for k, v in vazio.items()
                               if k not in ja_escrito.get(pref, set())})
     carga["vazios"] = apagar
-    # `data-conectado="nao"` e a classe `off`, e não havia uma linha em lugar
     carga["ocupados"] = ocupados
     return carga
 
@@ -547,10 +524,8 @@ PONTO_DO_ROTULO = "\u2022"
 SEM_NINGUEM_AQUI = "Desconectado"
 
 
-#:   CSSOM não guarda, a comparação nunca casa e o contador soma +1 por tique
 ALVOS_QUE_O_TRAVESSAO_NAO_ATENDE = {"largura", "altura", "html", "fundo"}
 
-#: cartão que o desenho publica vazio (`data-conectado="nao"`), com o número do
 ALVOS_QUE_O_DESENHO_DIZ = frozenset({"html", "cor", "atributo"})
 
 _LUGAR_NO_HTML = re.compile(r'data-controle="(p\d+)"')
@@ -598,7 +573,6 @@ class _OlhoNaPagina(html.parser.HTMLParser):
             quadro["texto"].append(data)
 
     def _fechar(self, tag: str) -> None:
-        # sobrando desalinharia a pilha para sempre.
         for i in range(len(self._pilha) - 1, -1, -1):
             if self._pilha[i]["tag"] == tag:
                 break
@@ -629,7 +603,6 @@ def lugares_da_pagina(pagina: str) -> frozenset[str]:
     _LUGARES[pagina] = fora
     return fora
 
-#: `pagina` → o olho já passado por ela. Lido uma vez por página.  # (noqa-acento): nome de campo
 _ALVOS: dict[str, _OlhoNaPagina] = {}
 
 
@@ -701,7 +674,7 @@ class _OLugarNoDesenho(html.parser.HTMLParser):
         d = {k: (v or "") for k, v in attrs}
         lugar = d.get("data-controle", "")
         lugar = lugar if _E_LUGAR.fullmatch(lugar) else ""
-        vazio = d.get("data-conectado") == "nao"  # (noqa-acento) valor do atributo
+        vazio = d.get("data-conectado") == "nao"  # (noqa-acento)
         if lugar and vazio and lugar not in self.vazios:
             self.vazios.append(lugar)
         dentro = next((q["lugar"] for q in reversed(self._pilha) if q["lugar"]), "")
@@ -878,24 +851,14 @@ def topo(ctx: Contexto) -> dict[str, Any]:
     from hefesto_dualsense4unix.interface import mesa_viva
 
     _, conta_b = mesa_viva.texto_da_contagem(ctx.mesa)
-    # costura da ONDA D, 06/09/2026. Aqui estava `ctx.state.get("active_profile")`
-    # `perfil.nome_do_ativo` resolve as duas pernas (daemon, depois o marcador em
     from hefesto_dualsense4unix.interface.pacotes import perfil as _perfil
 
     ativo = _perfil.nome_do_ativo(ctx.state)
     do_rodape = ativo or _o_perfil_do_rodape()
-    # Com o serviço parado nenhum perfil está em uso: o marcador do disco é o que VAI valer quando
-    # ele voltar, e o topo que o nomeava dizia um perfil que ninguém aplica
-    # (O-ATIVAR-DO-PERFIL-VALE-OU-A-TELA-DIZ-POR-QUE-01).
     em_uso = ativo if servico_do_menu(ctx.state) != "parado" else ""
     return {
-        # O NATIVO, para as cinco abas por controle (a camada recusa o gesto; a tela só se
-        # ACINZENTA). `sim` com o `native_mode` de pé; o resto, não, inclusive o daemon calado.
-        "nativo": "sim" if no_nativo(ctx.state) else "nao",  # (noqa-acento) valor que a página lê
-        # O item «Desligar»/«Ligar» do menu do botão direito lê daqui (A-BASE-COMUM-DAS-ABAS-01).
-        "servico": servico_do_menu(ctx.state),  # (noqa-acento) endereço da página
-        # O botão que trava a navegação dos controles, na moldura de toda aba: aceso quando a
-        # Interna está travada (``interna_ligada`` falso). Sem o bloco do daemon, solto.
+        "nativo": "sim" if no_nativo(ctx.state) else "nao",  # (noqa-acento)
+        "servico": servico_do_menu(ctx.state),  # (noqa-acento)
         "navegacao-travada": _a_navegacao_travada(ctx.state),
         "conta-b": conta_b or _o_que_o_topo_diz_da_mesa_vazia(ctx.state),
         "perfil": em_uso or "—",
@@ -933,15 +896,11 @@ def servico_do_menu(state: dict[str, Any] | None) -> str:
 _SEM_PERFIL = "no perfil ativo"
 
 
-# O `any` não entra em seleção automática nenhuma (o gerente, desde 01/10): ele
-# vale quando o usuário o escolhe, que é a cauda do `manual`. O Freestyle é o botão, e
-# a cauda dele mora no Aplicar (`_dica_do_aplicar`), não aqui.
 _QUANDO_VOLTA = {
     "jogo": "o que você salvar aqui volta sozinho toda vez que este jogo abrir.",
     "manual": "vale quando você escolher este perfil.",
 }
 
-#: O Aplicar congelado do `fim.html`, e a cauda que ele ganha com o Freestyle ligado.
 DICA_DO_APLICAR = (
     "Vale agora: envia a configuração aos controles na hora. Não grava — ao "
     "trocar de perfil ou reiniciar, volta ao que está salvo.")
@@ -1005,9 +964,6 @@ def _dica_do_exportar(ativo: str) -> str:
             "outra máquina.")
 
 
-#     player_slot            6     1   <- a assinatura: `jogador_de`
-
-
 def jogador_de(c: dict[str, Any]) -> int | None:
     """Que jogador é este controle — o NÚMERO que a tela mostra, ou ``None``.
 
@@ -1056,11 +1012,8 @@ def jogador_de(c: dict[str, Any]) -> int | None:
     return None
 
 
-#: string; a régua `test_os_donos_de_fato.py` confere que as duas são a MESMA.
 NOME_SEM_LEITURA = "Não sei"
 
-#: `mesa_viva.mesa_do_estado`", que era `"USB" if transporte == "usb" else
-#: `via` é a chave que `mesa_viva.mesa_do_estado` publica, e ela é COMPARADA em
 VIA_DO_TRANSPORTE = {"usb": "USB", "bt": "BT"}
 
 
@@ -1085,7 +1038,6 @@ def identidade_de(
             return nome.strip()
         break
 
-    # A PALAVRA VEM DO DONO — costura da ONDA B, 06/09/2026. `VIA_DO_TRANSPORTE`
     from hefesto_dualsense4unix.app.actions.home_actions import (
         palavra_do_transporte,
     )
@@ -1142,8 +1094,6 @@ def _so_hex(chave: str) -> str:
     return chave.replace(":", "").lower()
 
 
-#: `portao_a_casa_sabe_e_o_produto_nao_faz` segue o fecho de import lendo o
-#: de tela que eles chamam (`app/telas/vibracao.py`, `interface/sistema.py`,
 from . import (  # noqa: E402
     a01_jogar,  # noqa: F401
     a02_controles,  # noqa: F401
@@ -1155,7 +1105,6 @@ from . import (  # noqa: E402
     a08_conexoes,  # noqa: F401
     a09_sistema,  # noqa: F401
     a10_perfis,  # noqa: F401
-    # do `portao_a_casa_sabe_e_o_produto_nao_faz` lê o AST, e um nome montado
     a11_calibrar_sensores,  # noqa: F401
     a12_mapa_das_portas,  # noqa: F401
     a13_mapa_do_controle,  # noqa: F401

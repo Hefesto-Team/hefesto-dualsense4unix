@@ -138,11 +138,3 @@ def test_brightness_default_1(isolated_profiles_dir: Path) -> None:
 
     reloaded = load_profile("full_bright")
     assert reloaded.leds.lightbar_brightness == pytest.approx(1.0)
-
-
-# Testes do _build_profile_from_editor: inclui _pending_brightness
-
-
-# Teste do guard de refresh: on_lightbar_brightness_changed
-
-

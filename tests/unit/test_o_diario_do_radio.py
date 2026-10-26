@@ -605,7 +605,7 @@ def test_os_ganchos_do_reinicio_morrem_sob_sudo(tmp_path: Path) -> None:
     """Sob sudo o /sys de mentira some: o verbo mira o /sys real e exige root."""
     sysfs = _mesa_sysfs(tmp_path / "sys", {"hci0": "3-1.1.2"})
     resultado = _reiniciar(tmp_path, sysfs, SUDO_UID="1000")
-    if os.geteuid() == 0:  # pragma: no cover - a suíte não roda como root
+    if os.geteuid() == 0:  # pragma: no cover
         pytest.skip("como root o verbo alcançaria o /sys real")
     assert resultado.returncode == 1
     assert "requer root" in resultado.stderr
@@ -724,7 +724,7 @@ def test_o_watchdog_na_arvore_de_teste_nao_pega_a_trava_da_maquina(tmp_path: Pat
 
 
 def _bloco_do_diario(texto: str) -> str:
-    return texto[texto.index("#: Texto -> string JSON.") : texto.index("_diario_escrever() {")] + (
+    return texto[texto.index("_json_texto() {") : texto.index("_diario_escrever() {")] + (
         texto[texto.index("_diario_escrever() {") :].split("\n}\n", 1)[0]
     )
 

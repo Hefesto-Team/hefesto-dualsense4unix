@@ -69,13 +69,12 @@ JOGADORES = (1, 2, 3, 4)
 DS = vp.CAMINHO_DUALSENSE
 
 
-# --- 1. O broker veste o comum e recusa o resto ---------------------------------
-
-
 @pytest.mark.parametrize("produto", ROUPAS)
 def test_o_broker_veste_o_comum_e_recusa_o_resto(tmp_path: Path, produto: int) -> None:
-    """``0ce6`` e ``0df2`` montam nos quatro; ``05c4``, ``09cc`` e o Xbox voltam recusados."""
-    # D-2210-O-PAD-PODE-VESTIR-O-DUALSENSE-COMUM.
+    """``0ce6`` e ``0df2`` montam nos quatro; ``05c4``, ``09cc`` e o Xbox voltam recusados.
+
+    Prova da D-2210-O-PAD-PODE-VESTIR-O-DUALSENSE-COMUM.
+    """
     kernel = KernelDeMentira(tmp_path)
     estado = kernel.estado()
     for jogador in JOGADORES:
@@ -94,8 +93,6 @@ def test_o_broker_veste_o_comum_e_recusa_o_resto(tmp_path: Path, produto: int) -
         assert resposta.get("error") == "reject_bad_product", (vendor, product, resposta)
 
 
-# --- 2. O pad comum nunca passa por físico -------------------------------------
-
 _RDEV_MAJOR = 237
 
 
@@ -104,9 +101,9 @@ class _Hidraw:
     """Um ``hidrawN`` do sysfs de mentira: o pai HID real, o uevent e o ``dev``."""
 
     base: str
-    pai: str  # relativo a sys/devices
+    pai: str
     uevent: str
-    serial_do_usb: str | None = None  # o ``serial`` do usb_device acima do pai
+    serial_do_usb: str | None = None
 
 
 def _sysfs(tmp_path: Path, nos: list[_Hidraw]) -> dict[str, str]:
@@ -141,7 +138,6 @@ def _uevent(hid_id: str, phys: str, uniq: str) -> str:
 _ID_USB_COMUM = f"0003:0000{SONY:04X}:0000{COMUM:04X}"
 _ID_BT_COMUM = f"0005:0000{SONY:04X}:0000{COMUM:04X}"
 
-#: (nó, é pad nosso?) — o pad uhid e o gadget nas duas roupas, o físico no cabo e no rádio.
 _NOS = [
     (_Hidraw("hidraw5", "virtual/misc/uhid/0003:054C:0CE6.0001",
              _uevent(_ID_USB_COMUM, "hefesto-vpad-p1", "02:fe:00:00:00:01")), True),
@@ -159,8 +155,10 @@ _NOS = [
 def test_o_pad_comum_nunca_passa_por_fisico(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """MORDIDA: tire a guarda de posse do `_is_dualsense`, e o pad comum vira físico."""
-    # D-2210-O-PAD-SE-RECONHECE-PELA-POSSE.
+    """MORDIDA: tire a guarda de posse do `_is_dualsense`, e o pad comum vira físico.
+
+    Prova da D-2210-O-PAD-SE-RECONHECE-PELA-POSSE.
+    """
     raizes = _sysfs(tmp_path, [no for no, _nosso in _NOS])
     monkeypatch.setattr(uhid_gamepad, "RAIZ_DOS_HIDRAW", raizes["classe"])
     for indice, (no, nosso) in enumerate(_NOS):
@@ -178,8 +176,6 @@ def test_o_pad_comum_nunca_passa_por_fisico(
         assert uhid_gamepad._is_dualsense(no.base) is (not nosso), no.pai
         assert validado == (None if nosso else no.base), f"{no.pai}: o broker disse {validado}"
 
-
-# --- 3. A regra 73 abre o pad comum e fecha o físico ----------------------------
 
 _CHAVE = re.compile(
     r'(?P<k>[A-Z_]+)(?:\{(?P<a>[^}]+)\})?\s*(?P<op>==|!=|\+=|-=|:=|=)\s*"(?P<v>[^"]*)"')
@@ -278,8 +274,10 @@ def _nos_do_udev(produto: int) -> list[tuple[_No, bool]]:
 
 @pytest.mark.parametrize("produto", ROUPAS)
 def test_a_regra_73_abre_o_pad_comum_e_fecha_o_fisico(tmp_path: Path, produto: int) -> None:
-    """MORDIDA: tire o ``ENV{HEFESTO_PAD_USB}!="1"`` da linha USB do ``0ce6``, e o pad USB fecha."""
-    # D-2210-O-FISICO-SE-ESCONDE-PELO-DONO.
+    """MORDIDA: tire o ``ENV{HEFESTO_PAD_USB}!="1"`` da linha USB do ``0ce6``, e o pad USB fecha.
+
+    Prova da D-2210-O-FISICO-SE-ESCONDE-PELO-DONO.
+    """
     texto = REGRA_73.read_text(encoding="utf-8")
     for no, nosso in _nos_do_udev(produto):
         modo, dono, tags = _o_udev_aplica(texto, no)
@@ -298,9 +296,6 @@ def test_a_regra_73_abre_o_pad_comum_e_fecha_o_fisico(tmp_path: Path, produto: i
     for no, _nosso in _nos_do_udev(produto):
         modo, _dono, tags = _o_udev_aplica(aberta.read_text(encoding="utf-8"), no)
         assert (modo, "uaccess" in tags) == ("0660", True), f"aberta: {no.rotulo}"
-
-
-# --- 4. Com a quirk n, o comum fica no uhid -------------------------------------
 
 
 @pytest.fixture
@@ -346,8 +341,6 @@ def test_com_a_quirk_n_o_comum_fica_no_uhid(
         assert [(p["vendor"], p["product"]) for p in gravador.pedidos] == [(SONY, produto)]
 
 
-# --- 5. A env não nomeia o PID que o pad veste ----------------------------------
-
 _HOJE_DUALSENSE = {
     "PROTON_DISABLE_HIDRAW": launch_env._DISABLE_HIDRAW_VALUE,
     "SDL_GAMECONTROLLER_IGNORE_DEVICES": launch_env._IGNORE_VALUE,
@@ -376,9 +369,6 @@ def test_a_env_nao_nomeia_o_pid_que_o_pad_veste(vpads: int) -> None:
         assert launch_env.compose_env(**outra, roupa=COMUM) == launch_env.compose_env(**outra)  # type: ignore[arg-type]
 
 
-# --- 6. Sem o broker, a roupa é o Edge ------------------------------------------
-
-
 def test_sem_o_broker_a_roupa_e_o_edge(monkeypatch: pytest.MonkeyPatch) -> None:
     """A pedida só vale com o dono escondendo o físico; o uinput nunca veste o comum."""
     atende = {"broker": True}
@@ -402,9 +392,6 @@ def test_sem_o_broker_a_roupa_e_o_edge(monkeypatch: pytest.MonkeyPatch) -> None:
         assert not vp.a_roupa_mudou(pad, COMUM), "o uinput não tem roupa a comparar"
     finally:
         pad.stop()
-
-
-# --- 7. O gadget estacionado não troca de roupa ----------------------------------
 
 
 @dataclass
@@ -435,16 +422,12 @@ def test_o_gadget_estacionado_nao_troca_de_roupa(monkeypatch: pytest.MonkeyPatch
     estacionados.estacionar(MACS[1], edge)  # type: ignore[arg-type]
     assert estacionados.retomar(MACS[1], (SONY, COMUM)) is None
     assert edge.na_casa == 1, "o gadget de outra roupa desce na hora"
-    # a devolução ao broker vai ao fio da descida: o refazer do tique passa por aqui
     assert descida.esperar_tudo(2.0) and edge.desmontado == 1
     assert estacionados.quantos() == 0
     outro = _GadgetDeMentira((SONY, EDGE))
     estacionados.estacionar(MACS[1], outro)  # type: ignore[arg-type]
     assert estacionados.retomar(MACS[1], (SONY, EDGE)) is outro
     assert outro.desmontado == 0
-
-
-# --- 8. vestir_a_roupa recria os quatro ------------------------------------------
 
 
 def _uhid_de_pe(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -490,7 +473,7 @@ class _PadUhidDeMentira:
     """O pad uhid dos secundários: veste a roupa que a fábrica recebeu."""
 
     backend = "uhid"
-    criados: list[_PadUhidDeMentira] = []  # noqa: RUF012 - o registro da régua
+    criados: list[_PadUhidDeMentira] = []  # noqa: RUF012
 
     def __init__(self, flavor: str | None, identity: str | None, roupa: object) -> None:
         self.flavor = flavor or "dualsense"

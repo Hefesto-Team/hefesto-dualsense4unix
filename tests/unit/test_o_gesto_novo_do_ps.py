@@ -44,7 +44,6 @@ from hefesto_dualsense4unix.integrations import (
 from hefesto_dualsense4unix.integrations.hotkey_daemon import HotkeyManager
 from hefesto_dualsense4unix.utils import maquina as mq
 
-#: Os dois controles da régua, pela cor do plástico, na faixa sintética da casa.
 STARLIGHT_BLUE_NO_CABO = ("aa:bb:cc:00:00:01", "usb", 1)
 GALACTIC_PURPLE_NO_RADIO = ("aa:bb:cc:00:00:04", "bt", 2)
 DOIS = [STARLIGHT_BLUE_NO_CABO, GALACTIC_PURPLE_NO_RADIO]
@@ -173,7 +172,7 @@ def test_sem_declaracao_o_triangulo_e_do_jogo(chamou: list[tuple[str, Any]]) -> 
 
 def test_o_de_fabrica_removido_nao_dispara_nem_cala(
         chamou: list[tuple[str, Any]]) -> None:
-    # D-1610-OS-GESTOS-DO-PS-SE-ACRESCENTAM
+    """Prova da D-1610-OS-GESTOS-DO-PS-SE-ACRESCENTAM."""
     d = _daemon()
     hotkey.start_hotkey_manager(d)
     ponte = _Ponte(d)
@@ -187,14 +186,13 @@ def test_o_de_fabrica_removido_nao_dispara_nem_cala(
     assert d.chamados == [], "o PS + Options removido ainda suspendeu"
     _apertar(mgr, ag.GESTOS["ps_cima"].botoes, de=DOIS[1][0])
     assert chamou == [("perfil+", DOIS[1][0])], "tirar um gesto levou os outros junto"
-    # O «+ Gesto» com o Options devolve o gesto de fábrica com o que ele fazia.
     _gesto("novo-gesto")({"b": "options"}, ponte)
     _apertar(mgr, ("ps", "options"), de=DOIS[0][0])
     assert d.chamados == [("suspender", ())]
 
 
 def test_a_tela_e_o_validador_recusam_o_repetido_o_proibido_e_o_ps_sozinho() -> None:
-    # D-1610-OS-GESTOS-DO-PS-SE-ACRESCENTAM
+    """Prova da D-1610-OS-GESTOS-DO-PS-SE-ACRESCENTAM."""
     d = _daemon()
     ponte = _Ponte(d)
     for b in ("options", "dpad_up", "l1", "r2", "dpad_left", "ps", "touchpad"):

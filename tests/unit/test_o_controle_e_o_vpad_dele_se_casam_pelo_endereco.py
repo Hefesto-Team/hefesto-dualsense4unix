@@ -65,9 +65,6 @@ def test_controle_sem_endereco_nao_casa_com_vpad_nenhum() -> None:
     assert cartao._item_do_vpad({"player": 1, "is_primary": True}, estado) is None
 
 
-# O serviço: o handler de verdade publica o endereço em cada item.
-
-
 def _vpad_ns() -> SimpleNamespace:
     return SimpleNamespace(backend="uhid", flavor="dualsense", ff_supported=True,
                            ff_play_count=0, output_count=0, trigger_replicas=0,
@@ -119,9 +116,6 @@ async def test_o_servico_publica_o_endereco_do_fisico_em_cada_vpad(
     per_vpad = resultado["rumble_ff"]["per_vpad"]
     assert {item["uniq"]: item["player"] for item in per_vpad} == {
         U1: 2, U2: 3, U3: 1}
-
-
-# A fonte: um leitor só de `per_vpad` na interface.
 
 
 def _quem_le_per_vpad(caminho: Path) -> set[str]:

@@ -17,7 +17,6 @@ import pytest
 from hefesto_dualsense4unix.daemon.subsystems import coop as coop_mod
 from hefesto_dualsense4unix.daemon.subsystems.coop import CoopManager, _SecondaryPlayer
 
-#: P2 a P4 (faixa forjada `aa:bb:cc`); o transporte não muda o corte.
 IDENTIDADES = ("AA:BB:CC:00:00:02", "AA:BB:CC:00:00:03", "AA:BB:CC:00:00:04")
 _BLOCO = bytes(11)
 
@@ -113,7 +112,6 @@ def test_o_recolhimento_nao_toca_o_led_nem_fecha_a_sessao_do_p1(
     monkeypatch.setattr(mgr, "_materialize_launch_env", lambda: None)
     mgr.ceder_ao_primario(None, identity)
     mgr._teardown_player(identity)
-    # O `stop` do pad fecha a sessão DEPOIS de o jogador sair de `_players`.
     ralos["session_end_sink"]()
     assert devolvidos == []
     assert aparelho.chegou == []

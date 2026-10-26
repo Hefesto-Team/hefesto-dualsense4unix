@@ -70,9 +70,6 @@ def test_a_arvore_de_partida_passa(arvore):
     assert rodar() == 0
 
 
-# 1. O caso especial fora do dono
-
-
 def test_ramo_por_transporte_fora_do_dono_reprova(arvore):
     raiz, _mod, rodar = arvore
     _escreve(raiz, FORA,
@@ -135,9 +132,6 @@ def test_eixo_sem_dono_declarado_recusa(arvore):
     assert rodar() == 2
 
 
-# 2. O remendo de sintoma
-
-
 @pytest.mark.parametrize("remendo", [
     "time.sleep(0.5)",
     "client.pedir(timeout=5)",
@@ -172,7 +166,6 @@ def test_o_remendo_novo_nao_se_esconde_atras_de_um_velho_que_saiu(arvore):
     raiz, _mod, rodar = arvore
     _escreve(raiz, FORA, "import time\n\n\ndef f():\n    time.sleep(1)\n")
     assert rodar("--forcar-piso", "remendos-de-sintoma", "um remendo de partida") == 0
-    # o velho sai de `aba.py` e um novo nasce em outro arquivo: o total não muda
     _escreve(raiz, FORA, "def f():\n    return 1\n")
     _escreve(raiz, "src/hefesto_dualsense4unix/outro.py",
              "import time\n\n\ndef g():\n    time.sleep(1)\n")
@@ -210,9 +203,6 @@ def test_trocar_o_except_pelo_suppress_nao_baixa_a_conta(arvore):
         "import contextlib\n\n\ndef f():\n    with contextlib.suppress(Exception):\n"
         "        g()\n    with contextlib.suppress(Exception):\n        h()\n"))
     assert rodar() == 1
-
-
-# 3. O tamanho exige a origem
 
 
 def _cresce(raiz: Path, linhas: int = 100) -> None:
@@ -259,9 +249,6 @@ def test_o_teto_nunca_sobe_sozinho(arvore):
     assert _teto(raiz, "tamanho")["piso"] == antes
 
 
-# 4. A mordida da própria régua
-
-
 def test_com_o_detector_desligado_os_tres_casos_passam(arvore, monkeypatch):
     """Sem o detector de AST, os casos 1 e 2 passam: é ele que morde, e o teste acima prova."""
     raiz, mod, rodar = arvore
@@ -281,9 +268,6 @@ def test_os_donos_da_casa_declaram_os_cinco_eixos():
     for eixo, arquivos in donos.items():
         for arquivo in arquivos:
             assert (RAIZ / mod.PACOTE / arquivo).exists(), f"o dono de {eixo} sumiu: {arquivo}"
-
-
-# 5. A faixa de commits: a Origem vem da mensagem, que é o que o cherry-pick leva
 
 
 def _git(raiz: Path, *args: str) -> str:
@@ -340,8 +324,6 @@ def test_a_faixa_e_a_leva_e_nao_encolhe_quando_o_teto_se_regrava(arvore):
     _git(raiz, "merge", "-q", "--ff-only", "integra/leva")
     assert rodar(paga=False) == 1, "no dev, a faixa vazia não pode pagar o que o teto não subiu"
 
-
-# 6. O pagamento viaja com o crescimento: o fecho registra a subida ANTES do merge ff
 
 CADERNO = "docs/data/a-catraca-da-origem.json"
 FECHO = RAIZ / "docs" / "process" / "ferramentas-da-leva" / "fecho.sh"
@@ -482,7 +464,6 @@ def test_o_fecho_registra_a_subida_e_commita_so_o_caderno(arvore, tmp_path_facto
     fecho = _fecho_de_brinquedo(
         raiz, rodar, PAGA, tmp_path_factory.mktemp("fecho"))
     topo = _git(raiz, "rev-parse", "HEAD")
-    # O índice da integração pode ter o que já foi adicionado à mão: o passo não o leva junto.
     (raiz / "outro.bin").write_bytes(b"\x00")
     _git(raiz, "add", "outro.bin")
     conferido = fecho("--so", "catraca", "--conferir")

@@ -47,7 +47,7 @@ from hefesto_dualsense4unix.app.actions import perfis_web
 from hefesto_dualsense4unix.interface import onde
 from hefesto_dualsense4unix.interface.pacotes import Contexto, a10_perfis
 
-PAGINA = "10-perfis.html"  # (noqa-acento) nome de arquivo
+PAGINA = "10-perfis.html"
 
 MESA = [
     {"pref": "p1", "uniq": "aabbcc000001", "jogador": 1, "cor": "cosmic-red",
@@ -58,7 +58,6 @@ MESA = [
      "mascara": "DualSense"},
 ]
 
-#: «campo `None` = sem opinião», e ``_secoes_do_controle`` pergunta exatamente
 MENOR_CORPO: dict[str, dict[str, Any]] = {
     "leds": {}, "triggers": {}, "rumble": {}, "speaker": {"volume": 40},
     "mic": {},
@@ -473,7 +472,6 @@ def test_a_altura_reservada_e_a_conta_das_linhas_que_a_tira_mostra() -> None:
         f"— ou ela corta o aviso, ou sobra espaço morto sobre a lista")
 
 
-#: AS FORMAS QUE `from_simple_choice` SABE ESCREVER e que NÃO são chave de
 FORMAS_FORA_DO_DICIONARIO = ("game", "steam_game", "janela")
 
 

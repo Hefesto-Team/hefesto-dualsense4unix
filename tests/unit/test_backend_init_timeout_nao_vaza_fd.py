@@ -167,7 +167,7 @@ class TestInitQueEstouraNaoVazaFd:
                 inst._open_one(b"/dev/hidraw-de-teste", is_edge=False)
             except PermissionError:
                 pass
-            else:  # pragma: no cover - só roda se o contrato quebrar
+            else:  # pragma: no cover
                 raise AssertionError("a exceção dentro do prazo tem de propagar")
         assert criados[0].close_chamado is False
         criados[0].descartar()

@@ -26,7 +26,6 @@ from hefesto_dualsense4unix.profiles.schema import (
     Profile,
 )
 
-#: Os quatro controles, nos dois transportes: o nó do touchpad muda de nome, a regra não.
 _PECAS = [
     ("aa:bb:cc:00:00:01", "usb"),
     ("aa:bb:cc:00:00:02", "bt"),
@@ -69,7 +68,7 @@ class _LeitorDoToque:
         return True
 
     def stop(self) -> None:
-        self.grab_state = "off"  # fechar o fd solta o EVIOCGRAB
+        self.grab_state = "off"
 
     def touch_state(self) -> Any:
         return SimpleNamespace(touching=False, fingers=())
@@ -225,7 +224,7 @@ class TestAUniaoDasDemandas:
         hub.reconciliar()
         assert leitores[_P1].grab_state == "held" and leitores[_P2].grab_state == "held"
 
-        relogio.agora += 6.0  # o emulador calou: o DSU vence, o Desligado segue
+        relogio.agora += 6.0
         hub.reconciliar()
         assert leitores[_P1].grab_state == "off", "o DSU vencido segurou o nó"
         assert leitores[_P2].grab_state == "held", "o DSU soltou o grab do Desligado"
@@ -241,12 +240,12 @@ class TestAUniaoDasDemandas:
         hub, leitores = _hub(cena, relogio)
         cena.jogo = True
         REGISTRO.definir_touchpad(_P1, ligado=False)
-        hub.toque_da_peca(_P1)  # a rota cursor/zonas pede o nó
-        hub.segurar_o_dedo(_P1)  # e o emulador também
+        hub.toque_da_peca(_P1)
+        hub.segurar_o_dedo(_P1)
         hub.reconciliar()
         assert leitores[_P1].grab_state == "held"
 
-        relogio.agora += 6.0  # a rota e o DSU venceram; sobra o Desligado
+        relogio.agora += 6.0
         hub.reconciliar()
         assert leitores[_P1].grab_state == "held", "o Desligado perdeu o nó para a rota que parou"
 

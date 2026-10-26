@@ -65,13 +65,10 @@ import os
 import re
 from collections.abc import Iterable, Mapping
 
-#: produto escreve. Num DualSense de verdade este campo é o MAC do adaptador
 VPAD_HID_PHYS = "hefesto-vpad"
 
 VPAD_UNIQ_PREFIXO = "02:fe:"
 
-#: (`DualSense Wireless Controller (Hefesto P1)`). Nome é frágil por natureza —
-#: este mesmo já mudou uma vez (BT-E-VPAD-01 trocou `Hefesto Virtual DualSense
 VPAD_MARCA_NO_NOME = "(Hefesto P"
 
 _PHYS_DO_NO_NAO_SERVE = True
@@ -109,8 +106,6 @@ def e_vpad_do_hefesto(
     return VPAD_MARCA_NO_NOME in (nome or campos.get("HID_NAME", ""))
 
 
-#: máscara DualSense. Até a marca `phys` que a A-ENTRADA vai carimbar, a régua
-#: DualSense Edge de verdade tem device HID pai — os dois ficam fora.
 _MORADA_DO_UINPUT = re.compile(r"/devices/virtual/input/input\d+/?$")
 
 

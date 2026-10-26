@@ -42,8 +42,6 @@ import sys
 
 import pytest
 
-# OS GLIFOS VÊM DO PRODUTO, e não digitados: `aba_sistema.py:96` é o dono, e um
-
 
 from hefesto_dualsense4unix.interface.sistema import GLIFO_INFO, GLIFO_OK
 

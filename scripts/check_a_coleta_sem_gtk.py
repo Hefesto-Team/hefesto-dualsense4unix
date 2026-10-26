@@ -50,7 +50,6 @@ class _SemGtk:
 sys.meta_path.insert(0, _SemGtk())
 '''
 
-# --- o lado do pytest: o plugin -----------------------------------------------------------------
 _PULADOS: dict[str, str] = {}
 _ERROS: dict[str, str] = {}
 _VAZIOS: set[str] = set()
@@ -94,7 +93,6 @@ def pytest_report_collectionfinish(config, start_path, items) -> list[str]:  # t
     return linhas
 
 
-# --- o julgamento ------------------------------------------------------------------------------
 _RE_NO = re.compile(r"^(tests/[^\s:]+\.py)::")
 _RE_PULADO = re.compile(r"^CENSO pulado (\S+) :: ?(.*)$")
 _RE_ERRO = re.compile(r"^CENSO erro (\S+) :: ?(.*)$")
@@ -129,7 +127,7 @@ def julgar(saida: str, modulos: list[str]) -> tuple[list[str], int, int]:
             erros[m.group(1)] = m.group(2).strip()
         elif (
             m := _RE_ERRO_DO_PYTEST.match(ln)
-        ) is not None:  # o resumo do pytest, quando o `-r` o pede
+        ) is not None:
             erros.setdefault(m.group(1), ln[len("ERROR ") :].strip())
         elif (m := _RE_VAZIO.match(ln)) is not None:
             vazios.append(m.group(1))

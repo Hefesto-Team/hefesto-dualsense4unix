@@ -52,7 +52,6 @@ PRESENCA = "hefesto-dualsense4unix-presenca.service"
 UNIT_PRESENCA = RAIZ / "assets" / PRESENCA
 UNIT_DAEMON = RAIZ / "assets" / "hefesto-dualsense4unix.service"
 UNIT_BROKER = RAIZ / "assets" / "systemd" / "hefesto-hidraw-broker.service"
-#: O pad do Hefesto e um externo: a entrega não os toca.
 OS_DE_FORA = (("hidraw11", "pad"), ("hidraw12", "teclado"))
 
 
@@ -163,9 +162,6 @@ def _os_seis_fechados(mesa: Mesa) -> bool:
     return all(_fechado(no) for base, _ in OS_SEIS for no in _tudo_do_aparelho(mesa, base))
 
 
-# --- 1. O ping da presença é a evidência do login ---------------------------------
-
-
 def test_o_boot_sem_login_nunca_entrega(bancada: Bancada) -> None:
     """MORDIDA: troque o ``None`` do ``_sem_cliente_desde`` do ``Broker.__init__``
     por ``relogio()`` e o broker entrega antes do daemon (o login chega em +304 s)."""
@@ -205,9 +201,6 @@ def test_o_ping_sem_broker_diz_que_nao_chegou(pasta: Path, mesa: Mesa) -> None:
     b = Bancada(mesa, pasta)
     b.sock_path.unlink()
     assert b.ping(pasta, "--ping") != 0
-
-
-# --- 2. A unit de presença: quando roda ------------------------------------------
 
 
 def _diretivas(unit: Path, chave: str) -> list[str]:
@@ -274,9 +267,6 @@ def test_o_ping_nao_retoma_o_esconderijo() -> None:
     assert "ping" not in hb.PEDIDOS_QUE_RETOMAM
 
 
-# --- 3. A unit nova em toda rota --------------------------------------------------
-
-
 def _texto(caminho: str) -> str:
     return (RAIZ / caminho).read_text(encoding="utf-8")
 
@@ -308,9 +298,6 @@ def test_o_deb_leva_a_presenca_com_o_python_dele() -> None:
 def test_a_chave_nao_desliga_a_presenca() -> None:
     """O ``off`` desliga o Hefesto; a presença é o que devolve o controle depois."""
     assert PRESENCA not in _texto("scripts/hefesto-chave.sh")
-
-
-# --- 4. O broker reiniciado com o Hefesto parado continua entregue ----------------
 
 
 def test_a_marca_nasce_com_a_entrega_e_some_com_a_retomada(mesa: Mesa, tmp_path: Path) -> None:
@@ -406,9 +393,6 @@ def test_a_unit_do_broker_deixa_gravar_a_marca() -> None:
     gravaveis = " ".join(_diretivas(UNIT_BROKER, "ReadWritePaths")).split()
     assert "-/run/hefesto-hidraw-broker" in gravaveis
     assert Path(hb.MARCA_DA_ENTREGA_PATH).parent == Path(hb.DEFAULT_SOCKET_PATH).parent
-
-
-# --- 5. O bloco do install, rodado com dublês ---------------------------------------
 
 
 def _bloco_da_presenca() -> str:

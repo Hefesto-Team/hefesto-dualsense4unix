@@ -20,27 +20,13 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 logger = get_logger(__name__)
 
 
-# "/dev/input/js*"))`. Medido nesta máquina em 31/07/2026, com UM DualSense no
-#   js0  Sony … DualSense Wireless Controller           uniq=<MAC do controle>
-#   js1  Sony … DualSense … Motion Sensors              uniq=<O MESMO MAC>
-#   js2  DualSense Wireless Controller (Hefesto P1)    uniq=02:fe:00:00:00:01
-#   js3  DualSense … (Hefesto P1) Motion Sensors        uniq=<O MESMO>
-#   (o nome do vpad era `Hefesto Virtual DualSense P1` quando isto foi medido;
-# 1. todo controle da classe DualSense abre DOIS nós (o gamepad e os sensores
-
 _VPAD_UNIQ_PREFIX = "02:fe:"
 
-#: publica `DualSense Wireless Controller (Hefesto P{n})`
-#: POR QUE SUBSTRING E NÃO PREFIXO: o nome de hoje COMEÇA por "DualSense
 _VPAD_MARCA_NO_NOME = "(Hefesto P"
 
 _UINPUT_SUBTREE = "/devices/virtual/input/"
 
-#: mostra: um DualSense Edge REAL publica exatamente `DUALSENSE_EDGE_NAME`, e
 _VPAD_NOMES_EM_UINPUT = (XBOX360_NAME, DUALSENSE_EDGE_NAME)
-
-
-# DualSense "funcionam completos: vibração, giroscópio e lightbar". O mapa de
 
 
 def _e_vpad_do_hefesto(no: dict[str, str]) -> bool:
@@ -63,8 +49,6 @@ def steam_input_result_tag(saida: str) -> str | None:
     return achados[-1] if achados else None
 
 
-#: publicado pelo daemon no bloco ``keyboard_emulation`` do ``daemon.status`` e
-#: do ``daemon.state_full`` (``daemon/ipc_handlers.py:_keyboard_emulation_payload``;
 BLOQUEIO_DO_TECLADO_EM_PORTUGUES: dict[str, str] = {
     "desligada": (
         "Desligado: o controle não digita mais nada — nem os atalhos da lista "
@@ -107,15 +91,6 @@ class EmulationActionsMixin(WidgetAccessMixin):
     """Controla a aba Emulação."""
 
 
-    # --- handlers ---
-
-
-    # ambiente e do canal `daemon.reload`). Enquanto o código existisse, bastava
-
-
-    # --- microfone do DualSense (FEAT-DUALSENSE-MIC-TOGGLE-01) ---
-    # (scripts/fix_wireplumber_default_source.sh). Mic ON = sem os drop-ins de
-
     @staticmethod
     def _wp_dropin_dir() -> Path:
         """Diretório dos drop-ins do WirePlumber, resolvido a cada chamada.
@@ -139,10 +114,8 @@ class EmulationActionsMixin(WidgetAccessMixin):
     MIC_SEM_PROMOTOR = "sem-promotor"
     MIC_LIGADO = "ligado"
 
-    #: placa de áudio do controle no sistema o ramo era o mesmo, e a tela
     MIC_SEM_ALVO = "sem-alvo"
 
-    #: de PLACA ALSA do DualSense em `/proc/asound/cards`, contada pela função
     _PLACAS_ALSA = "/proc/asound/cards"
 
 
@@ -186,7 +159,6 @@ class EmulationActionsMixin(WidgetAccessMixin):
         """Mic ligado DE VERDADE: sem supressão (52/53) **e** com o promotor (51)."""
         return self._mic_state() == self.MIC_LIGADO
 
-    # BUG-MIC-ON-SEM-QUIRK-REABRE-STORM-01: o quirk de áudio USB
     _USB_QUIRK_MARKER = "054c:0ce6:gn"
     _USB_QUIRK_PATHS: ClassVar[tuple[str, ...]] = (
         "/proc/cmdline",
@@ -262,8 +234,6 @@ class EmulationActionsMixin(WidgetAccessMixin):
         else:
             hint.set_text("")
 
-
-    # (`keyboard.emulation.set` + bloco `keyboard_emulation`) já está no daemon;
 
     _keyboard_guard_refresh: bool = False
 

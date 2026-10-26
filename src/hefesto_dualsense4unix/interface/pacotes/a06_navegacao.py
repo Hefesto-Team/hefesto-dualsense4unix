@@ -35,17 +35,10 @@ TECLADO_DESATIVADO = "Desativado"
 TECLADO_SO_DENTRO = "Só dentro do jogo"
 TECLADO_SEMPRE = "Sempre"
 
-#: O `data-quem` do quadro (o que esmaece as linhas quando a Steam navega), e o que a Steam faz do
-#: lado dela.
 QUEM_HEFESTO = "hefesto"
 QUEM_STEAM = "steam"
 
-#: «Permitir navegação» (AS-TELAS-QUE-ELA-PEDIU-EM-16-10-01, N5, 16/10/2026): os três botões que
-#: tomaram o lugar de «Quem navega», «Tipo de navegação» e «Navega com». Cada um acende pelas
-#: bandeiras que o daemon já guarda (o Big Picture e o tipo da Interna), sem campo novo no perfil.
 PERMITIR = "permitir-navegacao"
-#: O botão que trava a navegação dos controles, na moldura de TODA aba (`topo.html`), e o campo que
-#: o pinta (`pacotes.topo()`). O valor tem um dono só: a ``ligada`` do ``navegacao_interna.flag``.
 TRAVAR = "travar-navegacao"
 CAMPO_DA_TRAVA = "navegacao-travada"
 PERMITIR_INTERNA = "interna"
@@ -56,15 +49,11 @@ DO_PERMITIR: dict[str, tuple[str, str]] = {
     PERMITIR_STEAM: ("Steam", "A Steam navega com o controle, no Big Picture"),
     PERMITIR_USO_GERAL: ("Uso geral", "O controle vira mouse e teclado do computador"),
 }
-#: Os endereços das linhas de gesto que valem e dos botões livres do «+ Gesto».
 PREFIXO_DA_VALIDADE = "vale-"
 PREFIXO_DA_LIBERDADE = "livre-"
 NA_STEAM_BIG_PICTURE = "big-picture"
-NA_STEAM_PADRAO = "padrao"  # (noqa-acento) valor de contrato do gesto
-#: A recusa do «Steam padrão», só no diário (a tela pisca o botão): o modo não tem quem o aplique.
+NA_STEAM_PADRAO = "padrao"  # (noqa-acento)
 FRASE_DO_STEAM_PADRAO = "O «Steam padrão» não tem quem o aplique; a navegação segue no Big Picture."
-#: Os blocos que a página repinta por inteiro, e os prefixos dos valores do seletor de point and
-#: click (os mesmos do mapa: `molde:<chave>` e `perfil:<nome>`).
 BLOCO_PARA_QUEM = "para-quem"
 BLOCO_DOS_MEUS_PERFIS = "meus-perfis"
 PREFIXO_DO_ATALHO = "atalho-"
@@ -72,8 +61,6 @@ PREFIXO_DO_MOLDE = "molde:"
 PREFIXO_DO_PERFIL = "perfil:"
 PADRAO_DO_POINT_AND_CLICK = "molde:point_and_click"
 
-#: O endereço de CADA chip da fita é o do `monta.fita()` e da 09: sem ele o `--plastico` do chip é
-#: cor cravada para `check_identidade_vem_de_cima.py`.
 CAMPO_DO_CHIP = "fita-chip"
 
 PALAVRAS_DO_TECLADO: dict[bool, tuple[str, ...]] = {
@@ -81,9 +68,6 @@ PALAVRAS_DO_TECLADO: dict[bool, tuple[str, ...]] = {
     False: (TECLADO_DESATIVADO,),
 }
 
-#: O tipo que o daemon guarda (`navegacao.interna.set {tipo}`,
-#: A-NAVEGACAO-INTERNA-E-UM-MODO-QUE-SE-LIGA-EM-QUALQUER-ABA-01) e o rótulo dele; «Permitir
-#: navegação» grava a Interna pelo botão «Interna» e o computador pelo «Uso geral».
 TIPO_INTERNA = "interna"
 TIPO_COMPUTADOR = "computador"
 ROTULOS_DO_TIPO: dict[str, str] = {
@@ -121,10 +105,9 @@ def interna_ligada(estado: dict[str, Any] | None) -> bool:
     """A Navegação Interna está ligada, pelo bloco do daemon; sem ele, não."""
     return _navegacao(estado).get("interna_ligada") is True
 
-#: `core/acoes_de_botao.BOTOES` — a lista é do produto, e não se digita aqui.
-CAMPO_DA_COR = "cor-de-quem-navega"  # endereço da cor do chip: o produto a reescreve
-CHAVE_PRIMARIA = "primario"  # (noqa-acento) chave do contrato com o resto da tela
-PREFIXO_DA_ACAO = "acao-"  # (noqa-acento) prefixo de endereço, não é prosa
+CAMPO_DA_COR = "cor-de-quem-navega"
+CHAVE_PRIMARIA = "primario"  # (noqa-acento)
+PREFIXO_DA_ACAO = "acao-"
 
 ROTULOS_DA_TROCA: dict[str, str] = {
     "Triângulo": "triangle",
@@ -251,7 +234,6 @@ def cor_do_plastico(slug: str) -> str:
     if not slug:
         return SEM_LEITURA
     try:
-        # Os modelos sem hexa amostrado devolvem `url(#hachura-sem-hex)`, que
         return str(_monta().cor_de_css(slug))
     except Exception:
         return SEM_LEITURA
@@ -443,7 +425,6 @@ def chips_de_quem_navega(lugares: list[dict[str, Any]], *, so_o_primeiro: bool =
                    f' style="--plastico:{monta.cor_da_zona(slug)}"')
         marca = " on" if i == aceso else ""
         move = not (so_o_primeiro or i != aceso)
-        # com quatro controles o nome encolhe com reticências, e o `title` o guarda inteiro
         dica = f' data-dica="{nome}: só este controle move o cursor"' if move else ""
         chips.append(f'<span class="chip plastico{marca}"{cor}{dica}>'
                      f'<span class="nm" title="{nome}">{nome}</span></span>')
@@ -534,8 +515,6 @@ def _o_ps_digita(token: str | None) -> bool | None:
     return bool(do_dono(token))
 
 
-#: Quanto a pausa de outra aba vale (segundos); `TIQUE_MS` não se importa daqui: `hefesto_vivo` puxa
-#: GTK no topo.
 PAUSA_DE_OUTRA_ABA = 5.0
 
 
@@ -652,8 +631,6 @@ def _rato(ctx: Contexto) -> dict[str, Any]:
     return ctx.state.get("mouse_emulation") or {}
 
 
-#: DISCO, E SÓ: nunca `perfil.gravar_e_reaplicar`. O aparelho já recebeu a mudança pelo
-#: `mouse.emulation.set`; o perfil guarda o que este clique mudou.
 _DO_RATO: dict[str, str] = {
     "mouse_speed": "speed",
     "mouse_scroll": "scroll_speed",
@@ -954,7 +931,6 @@ def point_and_click_perfil(ctx: Contexto, o: dict[str, Any], p: Any) -> dict[str
     return {"recado": recado} if recado else None
 
 
-#: (teclado ligado, só dentro do jogo, sempre) de cada palavra da lista.
 _ESCOLHA: dict[str, tuple[bool, bool, bool]] = {
     "fora": (True, False, False), "desativado": (False, False, False),
     "dentro": (True, True, False), "sempre": (True, False, True)}
@@ -1208,8 +1184,6 @@ def _frase_da_troca(exc: remap.RemapeamentoRecusadoError) -> str:
     return f"não guardei: a troca traz um botão desconhecido ({nomes})."
 
 
-#: Os gestos cujo efeito o daemon não publica no estado do tique: a linha de botão e o perfil de
-#: point and click são do disco (perfil e `maquina.json`), sem eco.
 SEM_ECO = ("linha-de-botao", "point-and-click-perfil")
 
 SEM_GESTO: dict[str, str] = {}
@@ -1226,7 +1200,7 @@ PISO_DA_ABA = 8
 
 def _prova(nome: str, clique: dict[str, Any], chama: list[Any]) -> dict[str, Any]:
     """Uma linha do `PROVAS`, para a chave da régua ser escrita UMA vez."""
-    return {"pagina": PAGINA, "gesto": nome,  # (noqa-acento) chave do contrato
+    return {"pagina": PAGINA, "gesto": nome,  # (noqa-acento)
             "clique": clique, "chama": chama}
 
 
@@ -1255,7 +1229,6 @@ PROVAS = [
            [("resultado", [_MOUSE], {"scroll_speed": SCROLL_SPEED_MIN, "origin": "manual"})]),
     _prova("teclado", {"valor": TECLADO_SO_FORA},
            [("resultado", ["keyboard.emulation.set"], {"enabled": True})]),
-    # «Sempre» troca o portão do perfil, e o daemon só o lê ao ativar: reaplica.
     _prova("teclado", {"valor": TECLADO_SEMPRE},
            [("resultado", ["keyboard.emulation.set"], {"enabled": True}),
             ("profile_reaplicar", ["regua"], {}),
@@ -1338,12 +1311,12 @@ def _o_que_os_gestos_fazem() -> dict[str, str]:
             continue
         fora[PREFIXO_DO_GESTO + chave] = ag.rotulo_da_escolha(escolha)
         fora[PREFIXO_DA_VALIDADE + chave] = (
-            "sim" if chave in ativos else "nao")  # (noqa-acento) valor do atributo
+            "sim" if chave in ativos else "nao")  # (noqa-acento)
     for botao in ag.BOTOES_DA_ESCOLHA:
         if botao in ag.BOTOES_PROIBIDOS:
             continue
         fora[PREFIXO_DA_LIBERDADE + botao] = (
-            "sim" if ag.botao_livre(maquina, botao) else "nao")  # (noqa-acento) valor do atributo
+            "sim" if ag.botao_livre(maquina, botao) else "nao")  # (noqa-acento)
     return fora
 
 

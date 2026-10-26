@@ -145,7 +145,7 @@ def _enderecos_da_pagina(html: str) -> set[str]:
 
 
 @pytest.mark.parametrize(
-    "pagina", _paginas(), ids=lambda p: p.name  # (noqa-acento) nome de parâmetro
+    "pagina", _paginas(), ids=lambda p: p.name  # (noqa-acento)
 )
 def test_a_pagina_publicada_tem_endereco_para_o_que_a_aba_promete(
     pagina: pathlib.Path,

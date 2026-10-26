@@ -158,13 +158,7 @@ class MicMonitor:
         self._ativo = False
         self._controles: tuple[str, ...] = ()
         self._leituras: dict[str, LeituraMic] = {}
-        #: Camada 1 do alto-falante por controle. Só entra aqui o que foi LIDO
-        #: e casado com certeza; ausência = "não sei", nunca "não está mudo".
         self._saidas_mudas: dict[str, bool] = {}
-        #: NOME do sink de saída por controle (SOM-04). Mesma regra: só entra o
-        #: que casou com certeza. Este mapa é o que evita um segundo leitor de
-        #: PipeWire na janela — ele existe mesmo quando o mudo do sink não deu
-        #: para ler, porque roteirizar e tocar dependem do NOME, não do mudo.
         self._sinks: dict[str, str] = {}
         self._capturas: dict[str, _Captura] = {}
         self._acordar = threading.Event()

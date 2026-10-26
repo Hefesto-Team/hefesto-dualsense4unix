@@ -133,13 +133,9 @@ class TestOParQueTiraAsDezDoAr:
     @pytest.mark.parametrize(
         ("flavor", "backend", "caminho", "sem_dez", "porque"),
         [
-            # O caso DO USUÁRIO: o jogo vê um DualSense, e o canal é o comum.
             ("dualsense", "uinput", "xbox", True, "o par do PRAGMATA"),
-            # O canal do DualSense entrega as dez — nada a dizer.
             ("dualsense", "uhid", "dualsense", False, "o primeiro degrau"),
             ("xbox", "uinput", "xbox", False, "o segundo degrau, declarado"),
-            # Sem caminho escolhido, a máscara DualSense resolve para o canal
-            # DualSense (`caminho_resolvido`) — o produto de antes de 13/09.
             ("dualsense", "uhid", None, False, "sem escolha, a máscara decide"),
         ],
     )
@@ -311,9 +307,6 @@ class TestOJournalNomeiaAsDez:
         assert (tmp_path / "default.env").exists()
 
 
-# PARTE 4 — o `state_full`, com a decisão de produto intacta ao lado
-
-
 @pytest.fixture
 def perfis_isolados(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     alvo = tmp_path / "profiles"
@@ -352,8 +345,6 @@ async def servidor(perfis_isolados: Path) -> Any:
         gamepad_caminho="xbox",
     )
 
-    # O socket nasce em `/tmp`, e não no `tmp_path`: sob um `TMPDIR` longo o caminho
-    # estoura o limite de ~108 bytes do AF_UNIX antes do servidor subir.
     curto = Path(tempfile.mkdtemp(prefix="hf-imu-", dir="/tmp"))
     socket_path = curto / "hefesto-dualsense4unix.sock"
     servidor = IpcServer(

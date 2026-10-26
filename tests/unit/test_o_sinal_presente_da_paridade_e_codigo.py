@@ -43,9 +43,6 @@ def _arquivo(tmp_path: Path, nome: str, corpo: str) -> Path:
     return p
 
 
-# ── A forma ─────────────────────────────────────────────────────────────────────────────────────
-
-
 @pytest.mark.parametrize("sinal", [
     "app/actions/mode_transition.plan_mode_transition",
     "core/ds_output_report.py:106",
@@ -118,9 +115,6 @@ def test_a_docstring_com_acento_nao_desloca_o_comentario(tmp_path: Path) -> None
     assert "SIMBOLO_FANTASMA" not in limpo
     assert "valor = 1" in limpo and "return valor" in limpo
     assert limpo.count("\n") == corpo.count("\n")
-
-
-# ── Os sufixos ──────────────────────────────────────────────────────────────────────────────────
 
 
 CASOS_DE_SUFIXO = {

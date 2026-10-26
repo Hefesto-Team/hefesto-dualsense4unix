@@ -23,14 +23,13 @@ from hefesto_dualsense4unix.utils.logging_config import get_logger
 
 logger = get_logger(__name__)
 
-#: O estilo do perfil que libera o pulso da barra (a chave «adulto» de ``estilos_de_jogo``).
 ESTILO_DO_PULSO = "adulto"
 
 JANELA_DO_MEDIDOR_S = 2.0
-DEGRAU_DO_MEDIDOR = 0  # o brilho forte das luzinhas (0 forte, 2 fraco)
+DEGRAU_DO_MEDIDOR = 0
 LAMPADAS = 5
 
-PERIODO_MINIMO_S = 1.0  # um ciclo por segundo, no máximo (WCAG 2.3.1)
+PERIODO_MINIMO_S = 1.0
 PERIODO_MAXIMO_S = 4.0
 PERIODO_PADRAO_S = 2.0
 FUNDO_MAXIMO = 0.5
@@ -40,7 +39,6 @@ LUZ_MINIMA_SEM_PISCA = 0.1
 SUBIDA_SEM_PISCA_POR_S = 0.5
 NIVEL_DO_TETO = 10
 
-#: Os toques como ``(início_ms, fim_ms, esquerdo, direito)``: direito fino, esquerdo grosso.
 TOQUE_SOBE = ((0, 40, 0, 200),)
 TOQUE_DESCE = ((0, 60, 220, 0),)
 TOQUE_PARA = ((0, 160, 255, 255), (260, 420, 255, 255))
@@ -56,10 +54,7 @@ Luzinhas = tuple[bool, bool, bool, bool, bool]
 class Ligacoes:
     """As pontas de fora: o que escreve e o que pergunta. Em produção, o backend e o daemon."""
 
-    #: ``motores(uniq, fraco, forte)``: o motor direito é o fraco, o esquerdo o forte. Em
-    #: produção o toque soma ao par que o jogo deixou nos motores, e o zero devolve esse par.
     motores: Callable[[str, int, int], object]
-    #: ``(luzinhas, degrau)`` de agora do controle, ou ``None`` se não se sabe lê-las
     ler_luzinhas: Callable[[str], tuple[Luzinhas, int] | None]
     luzinhas: Callable[[str, Luzinhas, int], object]
     barra: Callable[[str, RGB], object]
@@ -142,8 +137,6 @@ class VoltaDosAcessorios:
         self._pulsos: dict[str, _Pulso] = {}
         self.escritas = 0
 
-    # -- o que chega do barramento ------------------------------------------------------
-
     def ao_estado(self, carga: Any, agora: float) -> None:
         """O ``acessorios.estado``: o nível, os ajustes e se a modificação está de pé."""
         if not isinstance(carga, dict):
@@ -192,14 +185,12 @@ class VoltaDosAcessorios:
                 except asyncio.QueueEmpty:
                     break
                 try:
-                    if do_gesto:  # chamada direta: a régua do par só enxerga quem chama
+                    if do_gesto:
                         self.ao_gesto(carga, agora)
                     else:
                         self.ao_estado(carga, agora)
                 except Exception:
                     logger.debug("volta_dos_acessorios_carga_falhou", exc_info=True)
-
-    # -- o toque ------------------------------------------------------------------------
 
     def _tocar(self, uniq: str, passos: Passos, agora: float) -> None:
         if self._ajustes.get("toque_de_confirmacao", True) is False:
@@ -233,8 +224,6 @@ class VoltaDosAcessorios:
         if ms >= toque.passos[-1][1]:
             del self._toques[uniq]
 
-    # -- as luzinhas medidor --------------------------------------------------------------
-
     def _abrir_o_medidor(self, uniq: str, agora: float, *, camada: bool) -> None:
         medidor = self._medidores.get(uniq)
         if medidor is None:
@@ -262,7 +251,7 @@ class VoltaDosAcessorios:
         if medidor is None:
             return
         if not self._l.pode_falar(uniq):
-            del self._medidores[uniq]  # o Modo Nativo: nada do Hefesto escreve por cima
+            del self._medidores[uniq]
             return
         if agora >= medidor.ate and not medidor.camada:
             del self._medidores[uniq]
@@ -273,8 +262,6 @@ class VoltaDosAcessorios:
             medidor.escrito = alvo
             self._l.luzinhas(uniq, *alvo)
             self.escritas += 1
-
-    # -- o pulso da barra -----------------------------------------------------------------
 
     def _recusa_do_pulso(self, uniq: str) -> str | None:
         if not self._l.pode_falar(uniq):
@@ -361,8 +348,6 @@ class VoltaDosAcessorios:
         self._l.barra(uniq, quadro)
         self.escritas += 1
 
-    # -- o tique e o fim --------------------------------------------------------------------
-
     def tique(self, agora: float) -> int:
         """Anda o toque, o medidor e o pulso de cada controle; devolve quantas escritas saíram."""
         antes = self.escritas
@@ -433,7 +418,6 @@ def volta_de_producao(daemon: Any) -> VoltaDosAcessorios:
         if not callable(escrever):
             return False
         forte_pct, fraco_pct = _barras_dos_motores(daemon, uniq)
-        # O par fixado pela tela vence o FF do jogo: é ele que está nos motores, e é ele que volta.
         por_baixo = par_fixado_nos_motores(daemon, uniq) or par_nos_motores(daemon, uniq)
         return escrever(uniq, *somar_ao_par_do_jogo(
             (_na_barra(fraco, fraco_pct), _na_barra(forte, forte_pct)), por_baixo,
@@ -441,7 +425,6 @@ def volta_de_producao(daemon: Any) -> VoltaDosAcessorios:
 
     def ler_luzinhas(uniq: str) -> tuple[Luzinhas, int] | None:
         ler = getattr(controller, "resolved_player_leds_for", None)
-        # Com a camada do co-op: é o número que o controle mostra, e é ele que volta.
         luzes = ler(uniq, incluir_coop=True) if callable(ler) else None
         if not isinstance(luzes, tuple) or len(luzes) != LAMPADAS:
             return None
@@ -450,8 +433,6 @@ def volta_de_producao(daemon: Any) -> VoltaDosAcessorios:
         return (luzes, degrau if isinstance(degrau, int) else DEGRAU_DO_MEDIDOR)
 
     def luzinhas(uniq: str, acesas: Luzinhas, degrau: int) -> object:
-        # Sem lembrar: o `apply_output_for` gravava o medidor na camada usuária, e o número do
-        # jogador da troca automática sumia daquele controle até o próximo aplicar de perfil.
         pintar = getattr(controller, "pintar_as_luzinhas_sem_lembrar", None)
         return pintar(uniq, acesas, degrau) if callable(pintar) else False
 
@@ -463,12 +444,11 @@ def volta_de_producao(daemon: Any) -> VoltaDosAcessorios:
 
     def estilo() -> str | None:
         bus = getattr(daemon, "bus", None)
-        ultimo = getattr(bus, "ultimo", None)  # (noqa-acento): o nome do método do barramento
+        ultimo = getattr(bus, "ultimo", None)  # (noqa-acento)
         carga = ultimo(EventTopic.PERFIL_TROCOU) if callable(ultimo) else None
         nome = carga.get("perfil") if isinstance(carga, dict) else None
         if not isinstance(nome, str):
             return None
-        # O evento não leva o estilo (diz o jogo): o estilo é do arquivo do perfil.
         from hefesto_dualsense4unix.profiles.loader import perfil_em_disco
 
         guardado = getattr(perfil_em_disco(nome), "estilo", None)

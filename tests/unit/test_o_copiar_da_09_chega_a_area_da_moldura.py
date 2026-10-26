@@ -53,7 +53,7 @@ _FILHO = textwrap.dedent(
 
 @skip_sem_gi_real
 def test_o_copiar_da_09_chega_a_area_de_transferencia_pela_janela(tmp_path: pathlib.Path) -> None:
-    if shutil.which("xvfb-run") is None:  # pragma: no cover - máquina sem xvfb
+    if shutil.which("xvfb-run") is None:  # pragma: no cover
         pytest.skip("sem `xvfb-run` a janela nasceria na tela de quem roda")
     html = tmp_path / "copiar.html"
     html.write_text(

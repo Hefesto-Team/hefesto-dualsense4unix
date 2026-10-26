@@ -26,7 +26,6 @@ from typing import Any, ClassVar
 
 import pytest
 
-#: O `casamento.py` é instrumento de tela e mora em `scripts/tela/` desde 22/10/2026.
 _TELA = str(Path(__file__).resolve().parents[2] / "scripts" / "tela")
 if _TELA not in sys.path:
     sys.path.insert(0, _TELA)

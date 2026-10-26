@@ -70,8 +70,6 @@ def _fileira(corpo: str, lado: str) -> list[tuple[str, str]]:
             for m in re.finditer(r'<span class="degrau[^"]*"([^>]*)>([^<]+)</span>', secao)]
 
 
-# 1. OS RÓTULOS ---------------------------------------------------------------------------------
-
 def test_os_rotulos_do_gerador_sao_os_do_desenho() -> None:
     assert [m["rot"] for m in aba01.MODOS] == LIGADO
     assert [m["rot"] for m in aba01.DO_DESLIGADO] == DESLIGADO
@@ -88,8 +86,6 @@ def test_a_navegacao_nao_mora_no_ligado_nem_o_point_and_click_no_desligado() -> 
     assert "Navegação" not in [r for r, _ in _fileira(corpo, "so-ligado")]
     assert "Point and click" not in [r for r, _ in _fileira(corpo, "so-desligado")]
 
-
-# 2. O MODO DE CADA CHIP ------------------------------------------------------------------------
 
 @pytest.mark.parametrize(("chip", "modo", "steam"), [
     ("dualsense", "gamepad", False),
@@ -131,8 +127,6 @@ def test_o_gesto_do_point_and_click_existe_e_tem_prova() -> None:
     assert any(p["gesto"] == "modo-point-and-click" for p in aba.PROVAS)
 
 
-# 3. O LADO DA TELA -----------------------------------------------------------------------------
-
 def _tela(state: dict[str, Any]) -> dict[str, str]:
     return aba._estado_da_tela(state)
 
@@ -163,12 +157,6 @@ def test_o_clique_em_cada_chip_leva_o_arranjo_dele(monkeypatch) -> None:
     assert [plano[-1][1].get("arranjo") for plano in planos] == ["navegacao", "point_and_click"]
 
 
-# 3b. A NAVEGAÇÃO SE ESCOLHE COM O HEFESTO DESLIGADO ---------------------------------------------
-# (conferência de 15/10/2026). O chip mora no lado Desligado, e é com o Nativo ligado que ela o
-# clica: o despachante guardado (`pacotes.GESTOS`, com a recusa da camada) e a folha do Nativo
-# (`monta.CSS_DO_NATIVO`) recusavam o clique com «Em modo nativo o jogo lê este controle direto».
-# MORDIDA: tire `("01-jogar.html", "modo-navegacao")` de `camada.VIVOS_NO_NATIVO` e o caso reprova.
-
 VIVO_NATIVO: dict[str, Any] = {**VIVO_DESKTOP, "native_mode": True}
 
 
@@ -195,8 +183,6 @@ def test_a_folha_do_nativo_deixa_a_navegacao_clicavel() -> None:
     assert monta.CSS_DO_NATIVO.strip() in _pagina(), "a página não leva a folha do Nativo de agora"
 
 
-# 4. AS CORES E O ALVO --------------------------------------------------------------------------
-
 def _hex(rgb: tuple[int, int, int]) -> str:
     return "#{:02x}{:02x}{:02x}".format(*rgb)
 
@@ -217,8 +203,6 @@ def test_a_cor_do_chip_do_desligado_e_a_da_barra(chip: str, modo: str) -> None:
 def test_todo_alvo_clicavel_tem_24_px() -> None:
     assert "[data-gesto]{min-height:24px}" in aba01.CSS.replace(" ", "")
 
-
-# 5. SEM «?» E SEM title ------------------------------------------------------------------------
 
 def _miolo_da_pagina() -> str:
     """O miolo da aba, sem comentário e sem SVG: a fita e o rodapé são do esqueleto."""

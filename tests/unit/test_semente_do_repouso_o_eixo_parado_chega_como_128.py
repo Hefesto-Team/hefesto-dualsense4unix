@@ -65,17 +65,14 @@ from hefesto_dualsense4unix.core.evdev_reader import (
     posicoes_de_eixo,
 )
 
-#: A faixa que o `hid_playstation` declara para os eixos do DualSense: 0..255,
 def _abs_dualsense(valor: int) -> AbsInfo:
     return AbsInfo(value=valor, min=0, max=255, fuzz=0, flat=0, resolution=0)
 
 
-#: Aqui o CENTRO é 0 e o mínimo é o talo de verdade — o oposto do DualSense.
 def _abs_pro(valor: int) -> AbsInfo:
     return AbsInfo(value=valor, min=-32767, max=32767, fuzz=250, flat=500, resolution=0)
 
 
-#: O hat do D-pad. Entra nas caps porque um DualSense de verdade o publica, e
 _ABS_HAT = AbsInfo(value=0, min=-1, max=1, fuzz=0, flat=0, resolution=0)
 
 

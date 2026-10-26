@@ -52,7 +52,6 @@ def _uhid(monkeypatch: pytest.MonkeyPatch, *, sobe: bool = True, binda: bool = T
     monkeypatch.setattr(uhid_gamepad.UhidDualSense, "stop", lambda self: None)
 
 
-#: Cada jeito de o canal próprio não subir (o motivo que a fábrica pendura no pad).
 _QUEDAS = ("uhid_indisponivel", "uhid_start_falhou", "uhid_bind_falhou",
            "uhid_vetado_pelo_chamador")
 
@@ -70,7 +69,7 @@ def _pad_que_caiu(queda: str, monkeypatch: pytest.MonkeyPatch, jogador: int = 1)
 
 
 def test_a_regra_tem_um_dono() -> None:
-    # D-1610-SEM-CANAL-PROPRIO-O-DUALSENSE-VESTE-O-XBOX-360
+    """Prova da D-1610-SEM-CANAL-PROPRIO-O-DUALSENSE-VESTE-O-XBOX-360."""
     for caminho in (None, DS):
         assert vp.mascara_no_jogo(caminho, "dualsense", sem_canal=True) == "xbox"
         assert vp.mascara_no_jogo(caminho, "dualsense") == "dualsense"

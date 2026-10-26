@@ -32,9 +32,7 @@ SERIAL = re.compile(r"(?<![0-9A-Fa-f])([0-9A-Fa-f]{12})(?![0-9A-Fa-f])")
 
 CONSTANTES_DE_ESPECIFICACAO = {
     "00805F9B34FB",
-    # interface que a RE Engine enumera para achar a háptica do DualSense
     "00A0C9223196",
-    # o fim do GUID da classe MEDIA do Windows, que o Proton registra para o som Sony
     "08002BE10318",
 }
 

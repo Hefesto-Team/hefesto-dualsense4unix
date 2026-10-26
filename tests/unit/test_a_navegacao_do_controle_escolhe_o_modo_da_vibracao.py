@@ -37,7 +37,7 @@ for _caminho in (str(RAIZ / "src"), str(RAIZ / "scripts")):
     if _caminho not in sys.path:
         sys.path.insert(0, _caminho)
 
-import chrome_sem_rede  # o ponto comum dos portões de página, sem a rede
+import chrome_sem_rede
 
 from tests.conftest import exigir_gi_real
 
@@ -51,16 +51,12 @@ CHROME = pathlib.Path("/usr/bin/google-chrome")
 MOCKUP = RAIZ / "mockup"
 LARGURA, ALTURA = 1212, 809
 ASSENTOS = ("p1", "p2", "p3", "p4")
-#: Faixa forjada: nenhum endereço é de controle de ninguém.
 UNIQ = {p: f"aa:bb:cc:00:00:0{n}" for n, p in enumerate(ASSENTOS, start=1)}
-#: (a lista, o interruptor logo acima dela, o gesto do `<select>`)
 LISTAS = (
     ("imersao-escolha", "lado-d", "efeito-imersao"),
     ("haptico-escolha", "lado-h", "efeito-haptico"),
 )
 
-#: Os quatro lugares ocupados, com as MESMAS marcas que a pintura do piloto escreve num lugar que
-#: tem dono (`hefesto_vivo`, o passo 1c): o desenho nasce com o P3 e o P4 desconectados.
 QUATRO_NA_MESA = r"""() => {
   for (const p of ['p1','p2','p3','p4']) {
     for (const el of document.querySelectorAll('[data-controle="' + p + '"]')) {
@@ -70,7 +66,6 @@ QUATRO_NA_MESA = r"""() => {
   }
 }"""
 
-#: O bloco do assento, como o ouvinte do piloto o acha.
 DONO = '[data-controle="p1"],[data-controle="p2"],[data-controle="p3"],[data-controle="p4"]'
 
 OUVIR_O_CHANGE = r"""() => {
@@ -154,7 +149,6 @@ def test_na_05_cada_controle_chega_a_lista_e_troca_a_opcao(navegador: Any) -> No
                 navegador_ = nav.Navegador(relogio=lambda: 0.0)
                 navegador_.atos(pagina="05-vibracao.html", dez=["05-vibracao.html"],
                                 toques={uniq: _toques()}, ativa=True)
-                # O dedo no touchpad senta a seleção no interruptor; o resto é o direcional e o X.
                 selecoes.aplicar([nav.Ato("dedo", uniq=uniq, ponto=de_cima.centro)], caixas_de,
                                  pref_de=pref_de, popup=False)
                 ops: list[dict[str, Any]] = []
@@ -180,7 +174,6 @@ def test_na_05_cada_controle_chega_a_lista_e_troca_a_opcao(navegador: Any) -> No
         mudancas = pg.evaluate("() => window.__mudancas")
     finally:
         pg.close()
-    # Cada lista trocou uma vez, no assento dela, para a opção seguinte; nenhuma outra mexeu.
     esperadas = sorted((p, g, antes[f"{p}|{g}|seguinte"]) for p in ASSENTOS for _c, _i, g in LISTAS)
     assert all(v for *_r, v in esperadas), f"lista sem opção seguinte: {esperadas}"
     assert {antes["p1|efeito-imersao|seguinte"]} <= set(padroes.ESCOLHAS)
@@ -209,7 +202,7 @@ def _paginas() -> list[pathlib.Path]:
 
 
 def test_o_direcional_nunca_pula_a_caixa_da_frente(navegador: Any) -> None:
-    # D-2210-O-DIRECIONAL-NAO-PULA-A-CAIXA-DA-FRENTE
+    """Prova da D-2210-O-DIRECIONAL-NAO-PULA-A-CAIXA-DA-FRENTE."""
     pulos: list[str] = []
     for pagina in _paginas():
         pg = _abrir(navegador, pagina)

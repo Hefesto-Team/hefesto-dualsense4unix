@@ -221,7 +221,6 @@ def resolver_no_do_vpad(
         uniq=uniq_norm, nome=nome_norm, raiz_class_input=raiz_class_input
     )
     if not uniq_norm and len(candidatos) > 1:
-        # `state_full` passa a publicar o inode de P1 dentro do bloco de P2 —
         return dict(NO_DESCONHECIDO)
     entrada = _escolher(candidatos, nome_norm)
     if entrada is None:
