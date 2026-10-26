@@ -243,14 +243,14 @@
       "data": "2026-10-26",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1217474,
+      "piso": 1219641,
       "por_item": {
-        "docs": 121640,
-        "scripts": 121414,
-        "src": 324265,
-        "tests": 650155
+        "docs": 121653,
+        "scripts": 121437,
+        "src": 325048,
+        "tests": 651503
       },
-      "razao": "o teto desceu sozinho com o número",
+      "razao": "tamanho: +2167 linhas (1217474 -> 1219641), pagas por Origem: D-1310-A-ENERGIA-USB-DE-DESKTOP-SO-SEM-BATERIA, D-2309-ESCONDER-OS-QUATRO-NOS, D-2510-O-PACOTE-DECLARA-OS-TIPOS; registrado no fecho, topo da2c4bedcf09",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1175,10 +1175,16 @@
           "de": 1219309,
           "para": 1219320,
           "razao": "tamanho: +11 linhas (1219309 -> 1219320), pagas por Origem: D-2510-O-ACIONADOR-SE-LE-PELO-FD-DO-BROKER; registrado no fecho, topo 6948bd95dee9"
+        },
+        {
+          "data": "2026-10-26",
+          "de": 1217474,
+          "para": 1219641,
+          "razao": "tamanho: +2167 linhas (1217474 -> 1219641), pagas por Origem: D-1310-A-ENERGIA-USB-DE-DESKTOP-SO-SEM-BATERIA, D-2309-ESCONDER-OS-QUATRO-NOS, D-2510-O-PACOTE-DECLARA-OS-TIPOS; registrado no fecho, topo da2c4bedcf09"
         }
       ],
       "unidade": "linhas",
-      "universo": 3190
+      "universo": 3195
     }
   }
 }
