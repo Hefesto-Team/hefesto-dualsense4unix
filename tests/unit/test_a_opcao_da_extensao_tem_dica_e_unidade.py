@@ -54,6 +54,7 @@ def _deslizante(**extra: Any) -> dict[str, Any]:
 
 
 def test_os_tres_campos_passam() -> None:
+    """Prova da D-2610-A-OPCAO-TEM-DICA-UNIDADE-E-ZERO."""
     from hefesto_dualsense4unix.mods.manifesto import Opcao
 
     o = Opcao(**_deslizante(unidade="s", zero="Sem limite", dica=DICA))

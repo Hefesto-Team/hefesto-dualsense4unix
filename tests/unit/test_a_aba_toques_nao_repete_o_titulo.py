@@ -59,6 +59,7 @@ def _telas(html: str) -> dict[str, str]:
 
 
 def test_nenhuma_linha_repete_o_nome_da_aba(janela: Any) -> None:  # noqa: F811
+    """Prova da D-2610-A-CHAVE-DO-GRUPO-E-A-BOLINHA-DA-ABA."""
     html = montada(janela, VIVO)
     telas = _telas(html)
     assert "Toques" in telas, list(telas)

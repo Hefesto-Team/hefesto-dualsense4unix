@@ -75,6 +75,7 @@ def _guardado(a07: Any) -> bytes | None:
 
 
 def test_o_guardar_acende_com_o_rascunho_e_apaga_sem_ele(janela: Any, ctx: Any) -> None:  # noqa: F811
+    """Prova da D-2610-O-RASCUNHO-ACENDE-O-GUARDAR."""
     a07, _instalar, _abrir = janela
     html = montada(janela, VIVO)
     ponte = _Ponte(VIVO)

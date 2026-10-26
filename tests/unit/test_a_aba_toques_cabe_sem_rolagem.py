@@ -120,6 +120,7 @@ def test_nenhuma_aba_rola_e_nenhum_seletor_corta(medidas: dict[str, Any]) -> Non
 
 
 def test_a_bancada_tem_tres_colunas(medidas: dict[str, Any]) -> None:
+    """Prova da D-2610-A-TOQUES-EM-TRES-COLUNAS."""
     for caso, medida in medidas.items():
         colunas = medida["abas"]["Toques"]["colunas"]
         assert colunas and min(colunas) >= 3, f"{caso}: colunas {colunas}"

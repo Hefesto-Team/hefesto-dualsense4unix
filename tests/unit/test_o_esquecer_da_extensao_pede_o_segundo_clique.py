@@ -93,6 +93,7 @@ def _botao(blocos: dict[str, Any], v: str) -> str:
 @pytest.mark.parametrize("onde", ["aba", "coluna"])
 def test_o_primeiro_clique_arma_e_o_segundo_manda(janela: Any, ctx: Any,  # noqa: F811
                                                   onde: str) -> None:
+    """Prova da D-2610-O-ESQUECER-PEDE-O-SEGUNDO-CLIQUE."""
     a07, ponte, _html = _abrir(janela, onde)
     primeiro = _clicar(a07, ctx, ponte, "esquecer:ap-1")
     assert _enviadas(ponte) == [], "o primeiro clique mandou o Esquecer"

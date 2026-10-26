@@ -100,6 +100,7 @@ def _apagados(html: str) -> dict[str, bool]:
 
 def test_desligar_apaga_os_quatro_lugares_juntos_e_religar_acende(
         janela: Any, ctx: Any, lar: Any) -> None:  # noqa: F811
+    """Prova da D-2610-O-ESTADO-DO-APARELHO-TEM-UM-DONO-SO."""
     a07, ponte, html = _abrir(janela, ctx, lar, _estado(_aparelho(1), _aparelho(2)))
     assert set(_apagados(html).values()) == {False}, _apagados(html)
     desligado = _tique(a07, ponte, _estado(_aparelho(1), _aparelho(2, False), serie=2))
