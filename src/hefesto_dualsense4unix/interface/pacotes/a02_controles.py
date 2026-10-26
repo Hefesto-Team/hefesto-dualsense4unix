@@ -1262,7 +1262,6 @@ def pacote(ctx: Contexto) -> dict[str, Any]:
         estado = mesa_viva.estado_do_card(c, mic_vol=mic_volume)
         sp_lido = speaker_do_entry(c)
         alto_em_padrao = volume_em_padrao(ctx, uniq, sp_lido)
-        # type: ignore[arg-type]
         rotulo_da_luz, base_da_luz = rotulo_lightbar(c, getattr(ctx, "state", None) or {})
         casa = next((m for m in ctx.mesa if str(m.get("uniq") or "") == uniq), {})
 

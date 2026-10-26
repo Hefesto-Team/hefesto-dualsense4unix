@@ -688,7 +688,7 @@ def saida_muda_do_entry(entry: Any, mic: Any = None) -> bool | None:
 
     **A posição 2 EXISTE desde então, e é por ela que o selo acende hoje.** O
     ``MicMonitor`` ganhou a thread supervisora do sink (``_saidas_mudas``,
-    `app/mic_monitor.py:335`, preenchida em `:622` e servida em `:513`), e a
+    `app/mic_monitor.py:335`, preenchida em `:622` e servida em `:507`), e a
     ``LeituraMic`` carrega o campo. A posição 1 (o daemon publicar
     ``speaker.saida_muda``) continua não existindo, e continua sendo um encaixe
     válido — quem a implementar não precisa tocar no card.
