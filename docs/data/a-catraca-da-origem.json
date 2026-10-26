@@ -242,17 +242,17 @@
       "universo": 405
     },
     "tamanho": {
-      "data": "2026-10-25",
+      "data": "2026-10-26",
       "nota": "linhas de src, tests, scripts e docs versionados",
       "o_que_conta": "linhas de src, tests, scripts e docs versionados",
-      "piso": 1219309,
+      "piso": 1219320,
       "por_item": {
         "docs": 121473,
-        "scripts": 121407,
-        "src": 324982,
-        "tests": 651447
+        "scripts": 121414,
+        "src": 324981,
+        "tests": 651452
       },
-      "razao": "tamanho: +1266 linhas (1218043 -> 1219309), pagas por Origem: D-2309-O-REPO-QUE-SE-LE, D-2609-O-DESENHO-DA-08-EM-CARTOES-APROVADO, D-2809-A-RAIZ-DO-HIDRAW-DO-BACKEND-SE-DESVIA, D-MAPA-2D-DAS-PORTAS, plataforma.udev_autosuspend; registrado no fecho, topo 691b64e16269",
+      "razao": "tamanho: +11 linhas (1219309 -> 1219320), pagas por Origem: D-2510-O-ACIONADOR-SE-LE-PELO-FD-DO-BROKER; registrado no fecho, topo 6948bd95dee9",
       "subidas": [
         {
           "data": "2026-10-03",
@@ -1171,6 +1171,12 @@
           "de": 1218043,
           "para": 1219309,
           "razao": "tamanho: +1266 linhas (1218043 -> 1219309), pagas por Origem: D-2309-O-REPO-QUE-SE-LE, D-2609-O-DESENHO-DA-08-EM-CARTOES-APROVADO, D-2809-A-RAIZ-DO-HIDRAW-DO-BACKEND-SE-DESVIA, D-MAPA-2D-DAS-PORTAS, plataforma.udev_autosuspend; registrado no fecho, topo 691b64e16269"
+        },
+        {
+          "data": "2026-10-26",
+          "de": 1219309,
+          "para": 1219320,
+          "razao": "tamanho: +11 linhas (1219309 -> 1219320), pagas por Origem: D-2510-O-ACIONADOR-SE-LE-PELO-FD-DO-BROKER; registrado no fecho, topo 6948bd95dee9"
         }
       ],
       "unidade": "linhas",
