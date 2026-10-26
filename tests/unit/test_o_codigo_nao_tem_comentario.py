@@ -195,21 +195,50 @@ def _o_py_sobrevive(limpar: object) -> bool:
         return False
 
 
+def _leitor_ingenuo(texto: str) -> list[object]:
+    achados = []
+    for numero, linha in enumerate(texto.split("\n"), 1):
+        if (pos := linha.find(CERQUILHA)) >= 0:
+            inicio = sum(len(x) + 1 for x in texto.split("\n")[:numero - 1]) + pos
+            achados.append(T.G.Comentario(inicio, inicio + len(linha) - pos, linha[pos:],
+                                        numero, CERQUILHA))
+    return achados
+
+
 def test_a_mordida_o_removedor_sem_a_guarda_da_string_reprova(
         monkeypatch: pytest.MonkeyPatch) -> None:
     assert _o_py_sobrevive(T.limpar)
-
-    def ingenuo(texto: str) -> list[object]:
-        achados = []
-        for numero, linha in enumerate(texto.split("\n"), 1):
-            if (pos := linha.find(CERQUILHA)) >= 0:
-                inicio = sum(len(x) + 1 for x in texto.split("\n")[:numero - 1]) + pos
-                achados.append(T.G.Comentario(inicio, inicio + len(linha) - pos, linha[pos:],
-                                            numero, CERQUILHA))
-        return achados
-
-    monkeypatch.setitem(T.G.LEITORES, "py", ingenuo)
+    monkeypatch.setitem(T.G.LEITORES, "py", _leitor_ingenuo)
     assert not _o_py_sobrevive(T.limpar), "o removedor sem a guarda da string passou na prova"
+
+
+PROGRAMA_QUE_MUDOU = {
+    "py": ("x = 1\n", "x = 2\n"),
+    "sh": ("echo um\n", "echo dois\n"),
+    "js": ("const a = 1;\n", "const a = 2;\n"),
+    "css": ("p { color: red; }\n", "p { color: blue; }\n"),
+    "html": ("<p>um</p>\n<script>const a = 1;</script>\n",
+             "<p>um</p>\n<script>const a = 2;</script>\n"),
+}
+
+
+@pytest.mark.parametrize("tipo", sorted(PROGRAMA_QUE_MUDOU))
+def test_a_prova_de_cada_tipo_recusa_o_programa_que_mudou(tipo: str) -> None:
+    antes, depois = PROGRAMA_QUE_MUDOU[tipo]
+    T.PROVAS[tipo](antes, antes)
+    with pytest.raises(T.ProvaFalhou):
+        T.PROVAS[tipo](antes, depois)
+
+
+def test_o_removedor_sem_a_guarda_da_string_nao_grava_o_arquivo(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    rel = "src/x.py"
+    alvo = tmp_path / rel
+    alvo.parent.mkdir(parents=True)
+    alvo.write_text(PY_EM_TODA_POSICAO, encoding="utf-8")
+    monkeypatch.setitem(T.G.LEITORES, "py", _leitor_ingenuo)
+    assert T.aplicar([(rel, "py")], tmp_path, gravar=True) == 1
+    assert alvo.read_text(encoding="utf-8") == PY_EM_TODA_POSICAO
 
 
 def _src_versionado() -> list[str]:
